@@ -18,6 +18,9 @@ data/db.sqlite3
 data/db.sqlite3-shm
 data/db.sqlite3-wal
 data/db.sqlite3.bak.*
+data/*.db
+data/*.db-*
+data/*.db.*
 data/screenshots/
 data/avatars/
 data/chromadb/

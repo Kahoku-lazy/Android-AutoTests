@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>用例编辑器 — 功能设计与实现全览</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --primary: #19c8b9; --primary-hover: #3dd4c6; --primary-active: #11a89b; --primary-bg: #e6f9f6;
+    --text: #794f27; --text-body: #725d42; --text-secondary: #9f927d; --text-muted: #8a7b66;
+    --bg: #f8f8f0; --bg-content: rgb(247, 243, 223);
+    --border: #c4b89e; --success: #6fba2c; --warning: #f5c31c; --error: #e05a5a;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Nunito, 'Noto Sans SC', -apple-system, 'PingFang SC', sans-serif; font-weight:500; letter-spacing:0.01em; background:var(--bg); color:var(--text-body); line-height:1.7; }
+  .container { max-width:960px; margin:0 auto; padding:40px 20px; }
+  h1 { font-weight:800; color:var(--text); font-size:1.8em; text-align:center; margin-bottom:6px; }
+  h2 { font-weight:700; font-size:1.1em; color:var(--text); margin:0 0 8px 0; display:flex; align-items:center; gap:8px; letter-spacing:0.02em; }
+  h3 { font-weight:700; font-size:1em; color:var(--text); margin:20px 0 8px; }
+  .subtitle { text-align:center; color:var(--text-secondary); font-size:0.95em; margin-bottom:36px; }
+  .card { background:var(--bg-content); border-radius:20px; padding:24px; margin-bottom:20px; border:2px solid transparent; transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+  .card:hover { transform:translateY(-2px); }
+  .card-em { border-color:var(--warning); background:#fffdf5; }
+  .sec-num { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:10px; font-size:14px; font-weight:800; color:#fff; flex-shrink:0; }
+  .sn-green { background:var(--success); } .sn-teal { background:var(--primary); }
+  .sn-pink { background:#f8a6b2; } .sn-purple { background:#b39ef3; } .sn-yellow { background:var(--warning); } .sn-blue { background:#889df0; }
+  .story { background:#fff; border-radius:16px; padding:18px 20px; margin:12px 0; border-left:4px solid var(--primary); }
+  .story .who { font-size:12px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; font-weight:700; }
+  .story .goal { font-size:15px; color:var(--text); font-weight:700; margin:4px 0; }
+  .story .why { font-size:13px; color:var(--text-muted); }
+  .pain-gain { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+  .pain { background:#fef2f2; border-radius:14px; padding:16px; border-left:4px solid var(--error); }
+  .gain { background:#f0fdf4; border-radius:14px; padding:16px; border-left:4px solid var(--success); }
+  .pain h4 { color:var(--error); font-size:14px; margin-bottom:6px; }
+  .gain h4 { color:var(--success); font-size:14px; margin-bottom:6px; }
+  .pain li, .gain li { font-size:13px; margin:4px 0; padding-left:4px; }
+  @media (max-width:600px) { .pain-gain { grid-template-columns:1fr; } }
+  code { font-family:'SF Mono','Fira Code','Cascadia Code',Consolas,monospace; font-weight:600; font-size:12px; background:rgba(121,79,39,0.06); padding:2px 7px; border-radius:6px; color:var(--text); }
+  pre { background:#2b2118; color:#e8d5bc; padding:16px 20px; border-radius:20px; overflow-x:auto; font-size:12px; line-height:1.8; margin:12px 0; font-family:'SF Mono','Fira Code','Cascadia Code',Consolas,monospace; font-weight:600; tab-size:2; }
+  pre .cm { color:#6b5e50; } pre .kw { color:#d4a0e0; } pre .fn { color:#61afef; } pre .str { color:#a8d4a0; } pre .num { color:#e8c87a; }
+  table { width:100%; border-collapse:collapse; margin:10px 0; border-radius:20px; overflow:hidden; }
+  th { background:rgba(121,79,39,0.06); padding:10px 14px; text-align:left; font-size:12px; font-weight:700; letter-spacing:0.02em; color:var(--text); }
+  td { padding:9px 14px; font-size:13px; border-top:1px dashed rgba(196,184,158,0.4); }
+  tr:hover td { background:rgba(25,200,185,0.04); }
+  .tag { display:inline-block; padding:2px 8px; border-radius:50px; font-size:10px; font-weight:700; letter-spacing:0.02em; margin-right:4px; }
+  .tag-vue { background:#dbeafe; color:#1e40af; } .tag-py { background:#e0e7ff; color:#3730a3; }
+  .tag-warn { background:#fef3c7; color:#92400e; } .tag-ok { background:#f0fdf4; color:#15803d; }
+  .footer { text-align:center; color:var(--text-secondary); font-size:12px; margin-top:40px; padding:20px 0; border-top:1px dashed rgba(196,184,158,0.5); }
+  .step-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0; }
+  .step-chip { background:#fff; border-radius:12px; padding:10px 12px; text-align:center; font-size:11px; font-weight:700; border:1.5px solid var(--border); }
+  .step-chip .en { font-size:10px; color:var(--text-secondary); margin-top:2px; }
+  @media (max-width:700px) { .step-grid { grid-template-columns:repeat(2,1fr); } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>📝 用例编辑器 — 功能设计与实现全览</h1>
+<p class="subtitle">case-manager 核心功能：新建/编辑测试用例，编排 14 种执行步骤</p>
+
+<!-- ===== PART 1 ===== -->
+<div class="card card-em">
+  <h2><span class="sec-num sn-yellow">🎯</span> 第一部分：业务视角 — 用例编辑器是做什么的</h2>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-green">1</span> 功能定位</h2>
+  <p style="font-size:15px;">
+    <strong>用例编辑器</strong>是测试工程师创建和维护自动化测试用例的核心工具，<strong>用表单 + 步骤编排的方式，让不写代码的人也能构建可在真机上执行的测试脚本</strong>。
+  </p>
+  <p style="font-size:14px; color:var(--text-secondary); margin-top:8px;">
+    它不是一个简单的表单——用户在这里定义用例的基本信息（标题、包名、分类），然后通过<strong>步骤编辑器</strong>一条条添加操作步骤（点击、等待、验证、滑动等 14 种类型），
+    每条步骤可以绑定从元素定位模块获取的真实 XPath 定位符。保存后的用例可以在执行引擎中一键运行。
+  </p>
+  <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;">
+    <div style="flex:1; min-width:150px; background:rgba(25,200,185,0.06); border-radius:14px; padding:16px; text-align:center;">
+      <div style="font-size:24px;">📋</div>
+      <div style="font-size:13px; font-weight:700; color:var(--text); margin-top:4px;">基本信息表单</div>
+      <div style="font-size:12px; color:var(--text-secondary);">ID / 标题 / 包名 / 分类 / 描述</div>
+    </div>
+    <div style="flex:1; min-width:150px; background:rgba(111,186,44,0.06); border-radius:14px; padding:16px; text-align:center;">
+      <div style="font-size:24px;">🧩</div>
+      <div style="font-size:13px; font-weight:700; color:var(--text); margin-top:4px;">步骤编排器</div>
+      <div style="font-size:12px; color:var(--text-secondary);">14 种步骤类型，拖拽排序</div>
+    </div>
+    <div style="flex:1; min-width:150px; background:rgba(247,205,103,0.12); border-radius:14px; padding:16px; text-align:center;">
+      <div style="font-size:24px;">🔗</div>
+      <div style="font-size:13px; font-weight:700; color:var(--text); margin-top:4px;">元素库集成</div>
+      <div style="font-size:12px; color:var(--text-secondary);">一键跳转选取 XPath</div>
+    </div>
+    <div style="flex:1; min-width:150px; background:rgba(136,157,240,0.06); border-radius:14px; padding:16px; text-align:center;">
+      <div style="font-size:24px;">▶️</div>
+      <div style="font-size:13px; font-weight:700; color:var(--text); margin-top:4px;">单步调试</div>
+      <div style="font-size:12px; color:var(--text-secondary);">选设备后逐条验证步骤</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-green">2</span> 用户故事</h2>
+  <div class="story">
+    <div class="who">👤 测试工程师 · 接到新需求</div>
+    <div class="goal">"我要为登录功能创建一条自动化测试用例：启动 App → 点击登录按钮 → 输入用户名密码 → 点击确定 → 验证跳转到首页。"</div>
+    <div class="why">打开用例编辑器 → 填写标题"登录测试"和包名 → 在步骤编排器中添加 5 个步骤（start_app / click / click / click / verify_text）→ 从元素库选取每个步骤的 XPath → 保存 → 去执行引擎运行。</div>
+  </div>
+  <div class="story">
+    <div class="who">👤 测试开发 · 维护已有用例</div>
+    <div class="goal">"产品改了登录按钮的文案，我需要更新用例里的验证文本。"</div>
+    <div class="why">在用例列表中找到"登录测试"→ 点击编辑 → 找到 verify_text 步骤 → 修改 expected_text 字段 → 保存。编辑器自动检测到修改，离开时提醒保存。</div>
+  </div>
+  <div class="story">
+    <div class="who">👤 自动化测试新手 · 不会写 XPath</div>
+    <div class="goal">"我想为首页各个入口写点击测试，但不知道怎么拿到元素的定位符。"</div>
+    <div class="why">在编辑器中点击"去元素定位"按钮 → 跳转到元素定位页面 → dump 当前手机屏幕 → 选中目标元素 → 复制 XPath → 回到编辑器粘贴。不用手写一行 XPath。</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-green">3</span> 解决的痛点</h2>
+  <div class="pain-gain">
+    <div class="pain">
+      <h4>❌ 没有用例编辑器之前</h4>
+      <ul>
+        <li>用例是手写的 YAML 文本，语法容易出错，缩进不对就解析失败</li>
+        <li>XPath 要靠人工从 dump 文件里找，复制粘贴容易漏字符</li>
+        <li>改了步骤忘记保存，切换页面后丢失全部修改</li>
+        <li>步骤类型记不住——不知道 wait 和 wait_disappear 的区别</li>
+        <li>调试步骤要到命令行手动执行，没有可视化界面</li>
+      </ul>
+    </div>
+    <div class="gain">
+      <h4>✅ 有了用例编辑器之后</h4>
+      <ul>
+        <li><strong>表单化输入</strong>：下拉选步骤类型、填参数，不用记语法</li>
+        <li><strong>集成元素库</strong>：一键跳转选取 XPath，零手写</li>
+        <li><strong>防丢保护</strong>：未保存修改离开时弹窗确认，浏览器后退也拦截</li>
+        <li><strong>14 种步骤可视化</strong>：每种有中文名和说明，新手也能上手</li>
+        <li><strong>在线调试</strong>：选设备后可以单步/批量执行，实时看到结果</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-green">4</span> 界面信息架构</h2>
+  <p style="font-size:14px; margin-bottom:14px;">用例编辑器页面分为<strong>上下两个区域</strong>：基本信息表单 + 步骤编排器。</p>
+  <table>
+    <tr><th>区域</th><th>包含内容</th><th>回答的问题</th></tr>
+    <tr><td>📋 基本信息</td><td>用例 ID（自动生成 / 手动输入）、标题、分类、包名、描述、启用开关</td><td>"这条用例叫什么？测哪个 App？"</td></tr>
+    <tr><td>🧩 步骤编排</td><td>StepEditor 组件 — 步骤列表 + 添加按钮 + 14 种类型选择 + 每步的参数表单</td><td>"要执行哪些操作？顺序是什么？每个操作的具体参数？"</td></tr>
+    <tr><td>🔧 工具栏</td><td>设备选择器（调试用）、"去元素定位"按钮（跳转元素库）</td><td>"在哪个设备上调试？怎么获取 XPath？"</td></tr>
+  </table>
+
+  <h3 style="margin-top:20px;">14 种步骤类型</h3>
+  <div class="step-grid">
+    <div class="step-chip">👆 点击元素<div class="en">click</div></div>
+    <div class="step-chip">👆🔢 点击第N个<div class="en">click_indexed</div></div>
+    <div class="step-chip">👆🔄 点击重试<div class="en">retry_click</div></div>
+    <div class="step-chip">⏳ 等待出现<div class="en">wait</div></div>
+    <div class="step-chip">⏳🚫 等待消失<div class="en">wait_disappear</div></div>
+    <div class="step-chip">⏳🔀 等待二选一<div class="en">wait_either</div></div>
+    <div class="step-chip">💬 等待Toast<div class="en">wait_toast</div></div>
+    <div class="step-chip">✅ 验证文本<div class="en">verify_text</div></div>
+    <div class="step-chip">🔄🔍 轮询文本<div class="en">poll_text</div></div>
+    <div class="step-chip">😴 固定等待<div class="en">sleep</div></div>
+    <div class="step-chip">▶️ 启动App<div class="en">start_app</div></div>
+    <div class="step-chip">⏹️ 关闭App<div class="en">kill_app</div></div>
+    <div class="step-chip">🔄📱 重启App<div class="en">restart_app</div></div>
+    <div class="step-chip">📝 打印日志<div class="en">log</div></div>
+  </div>
+</div>
+
+<!-- ===== PART 2 ===== -->
+<div class="card card-em" style="margin-top:36px;">
+  <h2><span class="sec-num sn-yellow">🔧</span> 第二部分：技术视角 — 用例编辑器是如何实现的</h2>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-teal">5</span> 数据流全景 — 7 层逐层展开</h2>
+
+  <div style="background:#fffdf5; border-radius:14px; padding:16px 20px; margin-bottom:16px; border:2px dashed var(--warning);">
+    <h4 style="color:#92400e; font-size:13px; margin:0 0 10px 0;">📖 数据流概览</h4>
+    <p style="font-size:13px; color:var(--text-body); margin:0;">
+      用例编辑器涉及<strong>读</strong>（打开编辑页时加载已有用例）和<strong>写</strong>（保存时创建/更新用例）两条路径。
+      写路径比读路径复杂——前端收集表单数据 + 步骤 JSON → POST 到后端 → <code>update_or_create</code> 写入 <code>cm_test_definitions</code> 表。
+    </p>
+  </div>
+
+  <!-- Layer 1 -->
+  <div style="background:rgba(246,186,44,0.06); border-radius:14px; padding:16px 18px; margin-bottom:0;">
+    <h4 style="color:#92400e; font-size:14px; margin:0 0 10px 0;">🟡 第 1 层：数据库 — cm_test_definitions 表</h4>
+    <table style="margin:0;">
+      <tr><th style="width:140px;">字段</th><th>通俗含义</th><th>编辑器用它做什么</th></tr>
+      <tr><td><code>id</code></td><td><strong>用例编号</strong>——格式 TC-20260705-143000-1234</td><td>自动生成或手动输入，保存后作为主键</td></tr>
+      <tr><td><code>title</code></td><td>用例标题</td><td>基本信息表单的标题输入框</td></tr>
+      <tr><td><code>category</code></td><td>分类标签（如"登录""支付"）</td><td>基本信息表单的分类输入框</td></tr>
+      <tr><td><code>package_name</code></td><td><strong>被测 App 的包名</strong>（如 com.example.app）</td><td>启动/关闭/重启 App 步骤的必需参数</td></tr>
+      <tr><td><code>description</code></td><td>用例说明文字</td><td>基本信息表单的描述文本域</td></tr>
+      <tr><td><code>steps</code></td><td>步骤的可读文本摘要（自动生成）</td><td>后端从 steps_json 自动生成，方便列表页预览</td></tr>
+      <tr><td><code>steps_json</code></td><td><strong>步骤的结构化 JSON</strong>（核心数据）</td><td>StepEditor 组件产出 → 序列化存入此字段</td></tr>
+      <tr><td><code>enabled</code></td><td>是否启用</td><td>基本信息表单的启用/禁用开关</td></tr>
+    </table>
+  </div>
+  <div style="display:flex; align-items:center; justify-content:center; gap:12px; padding:6px 0;">
+    <span style="font-size:22px; color:var(--text-secondary);">↓</span>
+    <span style="font-size:11px; color:var(--text-muted); background:var(--bg); padding:4px 12px; border-radius:50px; font-weight:600;">Django ORM update_or_create() — 存在则更新，不存在则新建</span>
+    <span style="font-size:22px; color:var(--text-secondary);">↓</span>
+  </div>
+
+  <!-- Layer 2+3 -->
+  <div style="background:#e0e7ff; border-radius:14px; padding:14px 18px; margin-bottom:0;">
+    <h4 style="color:#3730a3; font-size:14px; margin:0 0 8px 0;">🔵 第 2-3 层：后端 — 两个入口处理读写</h4>
+    <table style="margin:0;">
+      <tr><th style="width:100px;">HTTP 方法</th><th>端点</th><th>函数</th><th>做的事情</th></tr>
+      <tr><td>GET</td><td><code>/api/cases/definitions/{id}</code></td><td><code>definition_detail</code></td><td>根据 ID 从表里取一条用例，steps_json 反序列化为数组返回</td></tr>
+      <tr><td>POST</td><td><code>/api/cases/definitions</code></td><td><code>definitions_handler</code></td><td>接收表单 + 步骤数组，自动生成 ID（如果没填），<strong>update_or_create 写入数据库</strong></td></tr>
+    </table>
+  </div>
+  <div style="display:flex; align-items:center; justify-content:center; gap:12px; padding:6px 0;">
+    <span style="font-size:22px; color:var(--text-secondary);">↓</span>
+    <span style="font-size:11px; color:var(--text-muted); background:var(--bg); padding:4px 12px; border-radius:50px; font-weight:600;">JSON 响应：GET 返回 {ok, definition} / POST 返回 {ok, id} — 通过 HTTP + JWT 鉴权传输</span>
+    <span style="font-size:22px; color:var(--text-secondary);">↓</span>
+  </div>
+
+  <!-- Layer 4-5 -->
+  <div style="background:#f0fdf4; border-radius:14px; padding:14px 18px; margin-bottom:0;">
+    <h4 style="color:#15803d; font-size:14px; margin:0 0 8px 0;">🟢 第 4-5 层：JSON 响应 → HTTP 传输</h4>
+    <table style="margin:0;">
+      <tr><th>操作</th><th>请求 JSON</th><th>响应 JSON</th></tr>
+      <tr><td><strong>新建用例</strong></td><td><code>{title, package_name, steps_data: [...], ...}</code></td><td><code>{ok: true, id: "TC-..."}</code></td></tr>
+      <tr><td><strong>编辑用例</strong></td><td><code>{id: "TC-...", title, steps_data: [...], ...}</code></td><td><code>{ok: true, id: "TC-..."}</code></td></tr>
+      <tr><td><strong>加载用例</strong></td><td>无 body（URL 参数传 ID）</td><td><code>{ok: true, definition: {id, title, steps_data: [...], ...}}</code></td></tr>
+    </table>
+    <p style="font-size:12px; color:var(--text-secondary); margin-top:8px;">
+      🔑 <strong>关键设计</strong>：<code>steps_data</code> 字段在 JSON 中是数组，存到数据库时序列化为 JSON 字符串（<code>steps_json</code>），取出时反序列化为数组。前后端都用数组操作，数据库只存字符串。
+    </p>
+  </div>
+  <div style="display:flex; align-items:center; justify-content:center; gap:12px; padding:6px 0;">
+    <span style="font-size:22px; color:var(--text-secondary);">↓</span>
+    <span style="font-size:11px; color:var(--text-muted); background:var(--bg); padding:4px 12px; border-radius:50px; font-weight:600;">前端拿到 JSON → form 对象绑定到 el-form + StepEditor 组件</span>
+    <span style="font-size:22px; color:var(--text-secondary);">↓</span>
+  </div>
+
+  <!-- Layer 6-7 -->
+  <div style="background:#fff; border-radius:14px; padding:14px 18px; border:2px solid var(--border);">
+    <h4 style="color:var(--text); font-size:14px; margin:0 0 8px 0;">🟠 第 6-7 层：前端渲染 → 两个区域 + 动森混用 Element Plus</h4>
+    <table style="margin:0;">
+      <tr><th style="width:120px;">区域</th><th>使用的 UI 组件</th><th>渲染内容</th></tr>
+      <tr><td>基本信息表单</td><td><code>el-form</code> + <code>el-input</code> + <code>el-switch</code> — <strong>Element Plus 表单组件</strong></td><td>ID（自动生成+重新生成按钮）、标题、分类、包名、描述文本域、启用开关</td></tr>
+      <tr><td>步骤编排器</td><td><code>StepEditor</code> 自定义组件</td><td>步骤列表（每步一个卡片：类型选择器 + 参数表单 + 删除按钮）+ 添加步骤按钮</td></tr>
+      <tr><td>顶部工具栏</td><td><code>AnimalButton</code> + <code>el-button</code> — <strong>混用</strong></td><td>退出（el-button）、保存（el-button type=primary）、去元素定位（AnimalButton）</td></tr>
+      <tr><td>调试设备选择</td><td><code>el-select</code></td><td>下拉选在线设备，选中的设备传给 StepEditor 做单步调试</td></tr>
+    </table>
+    <div style="margin-top:12px; padding-top:12px; border-top:1px dashed var(--border);">
+      <h5 style="font-size:13px; color:var(--text); margin:0 0 8px 0;">🎨 视觉主题：Element Plus 为主 + animal-island-vue 点缀</h5>
+      <table style="margin:0;">
+        <tr><th style="width:100px;">维度</th><th>用例编辑器的用法</th></tr>
+        <tr><td>表单容器</td><td><code>el-form</code> Element Plus 表单 — 与 Dashboard 不同，编辑器大量使用 Element Plus 的表单和输入组件</td></tr>
+        <tr><td>按钮</td><td>退出/保存用 <code>el-button</code>，"去元素定位"用 <code>AnimalButton</code>（动森风格）</td></tr>
+        <tr><td>顶部标题</td><td><code>PageHeader</code>（来自共享组件，内部用 Title 动森组件）</td></tr>
+        <tr><td>配色</td><td><code>color="app-yellow"</code> — 用例管理模块主色调</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-teal">6</span> 前端实现 — CaseEditor.vue</h2>
+  <div style="background:#fce7f3; border-radius:14px; padding:16px 20px; margin-bottom:16px; border-left:4px solid #f8a6b2;">
+    <h4 style="color:#be185d; font-size:13px; margin:0 0 8px 0;">👁️ 从交互上你能感知到什么？</h4>
+    <p style="font-size:13px; color:var(--text-body); margin:0;">
+      <strong>新建模式</strong>：ID 自动生成为 TC-日期-时间-4位随机码，可以点"重新生成"换一个。标题和包名是必填项，保存前校验。步骤列表初始为空，逐条添加。<br>
+      <strong>编辑模式</strong>：根据 URL 中的 <code>/cases/:id/edit</code> 加载已有数据填充表单。修改后如果未保存就离开，浏览器会<strong>弹窗拦截</strong>（包括浏览器的后退按钮和页面内导航）。<br>
+      <strong>调试模式</strong>：选设备后，StepEditor 中的步骤可以逐条在真机上执行，即时反馈。
+    </p>
+  </div>
+  <h3>核心状态（5 个 ref + 2 个 computed）</h3>
+  <table>
+    <tr><th>变量</th><th>类型</th><th>作用</th></tr>
+    <tr><td><code>form</code></td><td>ref</td><td>表单数据对象：id / title / category / package_name / description / enabled / steps_data</td></tr>
+    <tr><td><code>isNew</code></td><td>computed</td><td>根据路由名判断是新建还是编辑模式</td></tr>
+    <tr><td><code>isDirty</code></td><td>computed</td><td>比较当前 form 和初始快照 initialForm，检测是否有未保存修改</td></tr>
+    <tr><td><code>loading</code></td><td>ref</td><td>编辑模式下加载已有用例时的骨架屏状态</td></tr>
+    <tr><td><code>saving</code></td><td>ref</td><td>保存按钮的 loading 状态</td></tr>
+    <tr><td><code>debugDevice</code></td><td>ref</td><td>当前选中的调试设备序列号</td></tr>
+  </table>
+  <h3>保存流程</h3>
+  <pre><span class="kw">async function</span> <span class="fn">save</span>() {
+  <span class="cm">// 1. 前置校验</span>
+  <span class="kw">if</span> (!form.value.title.<span class="fn">trim</span>()) { <span class="fn">ElMessage</span>.<span class="fn">warning</span>(<span class="str">'请输入用例标题'</span>); <span class="kw">return</span> }
+  <span class="kw">if</span> (!form.value.package_name.<span class="fn">trim</span>()) { <span class="fn">ElMessage</span>.<span class="fn">warning</span>(<span class="str">'请输入 APP 包名'</span>); <span class="kw">return</span> }
+
+  <span class="cm">// 2. POST 到后端</span>
+  <span class="kw">const</span> { data } = <span class="kw">await</span> client.<span class="fn">post</span>(<span class="str">'/cases/definitions'</span>, form.value)
+
+  <span class="cm">// 3. 新建 → 跳转到编辑模式（URL 变为 /cases/{id}/edit）</span>
+  <span class="kw">if</span> (isNew.value && data.id) {
+    form.value.id = data.id
+    <span class="kw">await</span> router.<span class="fn">replace</span>(<span class="str">`/cases/</span><span class="num">${data.id}</span><span class="str">/edit`</span>)
+  }
+
+  <span class="cm">// 4. 更新脏标记快照</span>
+  initialForm.value = <span class="fn">JSON</span>.<span class="fn">parse</span>(<span class="fn">JSON</span>.<span class="fn">stringify</span>(form.value))
+}</pre>
+  <h3>⚠️ 违规项</h3>
+  <p style="font-size:13px; color:var(--error); margin-top:8px;">
+    🔴 <strong>绕过 api.js</strong>：CaseEditor.vue 直接 <code>import client from '@/shared/api-client.js'</code>（第 6 行），
+    没有通过模块的 <code>api.js</code> 调用 <code>saveDefinition()</code> / <code>getDefinition()</code>。
+    这违反了前端规范中的"组件不直接 import client"规则。
+  </p>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-teal">7</span> 后端实现 — definitions_handler</h2>
+  <div style="background:#e0e7ff; border-radius:14px; padding:16px 20px; margin-bottom:16px; border-left:4px solid #889df0;">
+    <h4 style="color:#3730a3; font-size:13px; margin:0 0 8px 0;">🔄 后端数据流转 — 用大白话讲</h4>
+    <p style="font-size:13px; color:var(--text-body); margin:0;">
+      保存时 POST 一个 JSON 到后端 → 后端检查有没有传 case_id → 没有就自动生成一个 TC- 格式的 ID →
+      把 steps_data 数组序列化为 JSON 字符串（steps_json）→ 从 steps_data 自动生成可读文本摘要（steps）→
+      <strong>update_or_create</strong>：如果数据库里已有这个 ID 就更新，没有就新建 → 返回新 ID 给前端。
+    </p>
+  </div>
+  <pre><span class="cm">// POST /api/cases/definitions — 核心保存逻辑</span>
+<span class="kw">def</span> <span class="fn">definitions_handler</span>(request):
+    data = json.<span class="fn">loads</span>(request.body)
+    case_id = data.<span class="fn">get</span>(<span class="str">"id"</span>, <span class="str">""</span>).<span class="fn">strip</span>()
+
+    <span class="cm">// 自动生成 ID：TC-20260705-143000-1234</span>
+    <span class="kw">if not</span> case_id:
+        suffix = <span class="str">''</span>.join(random.<span class="fn">choices</span>(string.digits, k=<span class="num">4</span>))
+        case_id = <span class="str">f"TC-</span><span class="num">{now.strftime('%Y%m%d')}</span><span class="str">-</span><span class="num">{now.strftime('%H%M%S')}</span><span class="str">-</span><span class="num">{suffix}</span><span class="str">"</span>
+
+    <span class="cm">// 序列化步骤 + 自动生成文本摘要</span>
+    steps_json = json.<span class="fn">dumps</span>(data.<span class="fn">get</span>(<span class="str">"steps_data"</span>, []), ensure_ascii=<span class="kw">False</span>)
+
+    <span class="cm">// 写入数据库（存在则更新，不存在则创建）</span>
+    TestDefinition.objects.<span class="fn">update_or_create</span>(id=case_id, defaults={...})
+
+    <span class="kw">return</span> <span class="fn">JsonResponse</span>({<span class="str">"ok"</span>: <span class="kw">True</span>, <span class="str">"id"</span>: case_id})</pre>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-teal">8</span> 涉及文件清单</h2>
+  <div style="background:rgba(136,157,240,0.06); border-radius:14px; padding:14px 18px; margin-bottom:14px;">
+    <h4 style="color:var(--text); font-size:13px; margin:0 0 8px 0;">📂 这些文件的关系</h4>
+    <p style="font-size:13px; color:var(--text-body); margin:0;">
+      用例编辑器涉及 <strong>7 个文件</strong>。前端 CaseEditor.vue 是入口，StepEditor.vue 负责步骤编排，api.js 封装 HTTP 调用。
+      后端 views.py 处理读写，api.py 提供跨模块调用。步骤类型定义在共享的 models/step_types.py 中。
+    </p>
+  </div>
+  <table>
+    <tr><th>层</th><th>文件</th><th>行数</th><th>职责</th></tr>
+    <tr><td>前端入口</td><td><code>.../case-manager/CaseEditor.vue</code></td><td>262</td><td>表单 + 步骤编排 + 调试设备选择 + 脏检测</td></tr>
+    <tr><td>步骤编辑器</td><td><code>.../case-manager/components/StepEditor.vue</code></td><td>-</td><td>14 种步骤类型的增删排序 + 参数表单</td></tr>
+    <tr><td>前端 API</td><td><code>.../case-manager/api.js</code></td><td>44</td><td>CRUD + 跨模块调用（设备/元素/调试）</td></tr>
+    <tr><td>步骤类型定义</td><td><code>models/step_types.py</code></td><td>101</td><td>StepType 枚举 + TestStep 数据类</td></tr>
+    <tr><td>后端视图</td><td><code>apps/case_manager/views.py</code></td><td>178</td><td>definitions_handler + definition_detail</td></tr>
+    <tr><td>后端 API</td><td><code>apps/case_manager/api.py</code></td><td>50</td><td>save_definition + get_definition（跨模块调用入口）</td></tr>
+    <tr><td>数据库表</td><td><code>apps/case_manager/models.py</code></td><td>36</td><td>cm_test_definitions 表字段定义</td></tr>
+  </table>
+</div>
+
+<!-- ===== PART 3 ===== -->
+<div class="card card-em" style="margin-top:36px;">
+  <h2><span class="sec-num sn-yellow">📐</span> 第三部分：AI 编码治理</h2>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-purple">9</span> 模块边界与依赖注入</h2>
+  <h3>允许依赖白名单</h3>
+  <table>
+    <tr><th>来源</th><th>允许</th><th>示例</th></tr>
+    <tr><td>跨 App Model（只读）</td><td><span class="tag tag-ok">✅</span></td><td><code>from apps.element_locator.models import Element</code></td></tr>
+    <tr><td>跨 App api.py（写操作）</td><td><span class="tag tag-ok">✅</span></td><td><code>from apps.element_locator.api import simple_yaml_dump</code></td></tr>
+    <tr><td>models/step_types.py</td><td><span class="tag tag-ok">✅</span></td><td><code>from models.step_types import StepType, TestStep</code></td></tr>
+    <tr><td>前端直接 import client</td><td><span class="tag tag-warn">🔴 违规</span></td><td>CaseEditor.vue 第 6 行直接 import client</td></tr>
+  </table>
+  <h3>输入输出契约</h3>
+  <table>
+    <tr><th>端点</th><th>方法</th><th>响应格式（不可修改）</th></tr>
+    <tr><td><code>/api/cases/definitions</code></td><td>GET</td><td><code>{ok: true, definitions: [...]}</code></td></tr>
+    <tr><td><code>/api/cases/definitions</code></td><td>POST</td><td><code>{ok: true, id: "TC-..."}</code></td></tr>
+    <tr><td><code>/api/cases/definitions/{id}</code></td><td>GET</td><td><code>{ok: true, definition: {id, title, steps_data: [...], ...}}</code></td></tr>
+    <tr><td><code>/api/cases/definitions/{id}</code></td><td>DELETE</td><td><code>{ok: true}</code></td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-purple">10</span> 命名规则</h2>
+  <table>
+    <tr><th>层级</th><th>规范</th><th>用例编辑器示例</th></tr>
+    <tr><td>Python 文件</td><td><code>snake_case</code></td><td><code>views.py</code></td></tr>
+    <tr><td>Python 函数</td><td><code>snake_case</code></td><td><code>definitions_handler</code></td></tr>
+    <tr><td>Vue 文件</td><td><code>PascalCase.vue</code></td><td><code>CaseEditor.vue</code></td></tr>
+    <tr><td>数据库表</td><td><code>{module}_snake_case</code></td><td><code>cm_test_definitions</code></td></tr>
+    <tr><td>用例 ID 格式</td><td><code>TC-YYYYMMDD-HHMMSS-NNNN</code></td><td><code>TC-20260705-143000-1234</code></td></tr>
+    <tr><td>步骤类型</td><td><code>snake_case</code> 枚举值</td><td><code>"click"</code>, <code>"verify_text"</code>, <code>"wait_toast"</code></td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-purple">11</span> 错误处理与日志规范</h2>
+  <div class="pain-gain">
+    <div class="pain"><h4>❌ 禁止</h4>
+      <ul><li><code>catch {}</code> — CaseEditor 中 <code>loadDevices()</code> 的 catch(_) 是违规</li><li>保存失败不报错 — 用户以为保存成功实际没存</li><li>脏检测在保存成功后不更新快照 — 导致永远显示"未保存"</li></ul>
+    </div>
+    <div class="gain"><h4>✅ 必须（当前已部分做到）</h4>
+      <ul><li>保存前校验必填字段 + <code>ElMessage.warning()</code></li><li>保存失败 <code>ElMessage.error()</code> + 返回 false</li><li>浏览器后退拦截未保存修改（<code>onBeforeRouteLeave</code>）</li><li>页面内退出拦截未保存修改（<code>ElMessageBox.confirm</code>）</li></ul>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-purple">12</span> 数据流转与持久化规则</h2>
+  <table>
+    <tr><th>规则</th><th>说明</th></tr>
+    <tr><td>步骤存储</td><td>前端用数组操作 steps_data → 后端 json.dumps 序列化为 steps_json TEXT 字段 → 取出时 json.loads 反序列化为数组</td></tr>
+    <tr><td>ID 生成</td><td>前后端各有一套 ID 生成逻辑。前端在新建时先生成一个预览 ID，后端在 POST 时如果没传 ID 也会自动生成</td></tr>
+    <tr><td>文本摘要生成</td><td>后端自动从 steps_data 提取每步的 type 和 description，拼接为 steps 字段的可读文本</td></tr>
+    <tr><td>写入方式</td><td><code>update_or_create</code> — 存在则更新，不存在则新建。同一个 API 处理创建和编辑</td></tr>
+    <tr><td>跨模块数据访问</td><td>编辑器需要设备列表（device_pool）和元素列表（element_locator），通过跨模块 HTTP 调用获取，不直接访问其他 App 的 ORM</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-purple">13</span> 单元测试与验收标准</h2>
+  <table>
+    <tr><th>类型</th><th>最低覆盖</th><th>必须包含</th></tr>
+    <tr><td>保存接口</td><td>100%</td><td>新建（无 ID 自动生成）/ 更新（有 ID）/ 必填校验 / steps_data 序列化正确</td></tr>
+    <tr><td>加载接口</td><td>100%</td><td>正常加载 / 不存在的 ID 返回 404 / steps_json 反序列化正确</td></tr>
+    <tr><td>CaseEditor 组件</td><td>80%+</td><td>新建模式 / 编辑模式加载 / 脏检测触发 / 保存校验 / 未保存退出拦截</td></tr>
+    <tr><td>StepEditor 组件</td><td>80%+</td><td>添加步骤 / 删除步骤 / 14 种类型切换 / 参数表单联动</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-purple">14</span> 用例编辑器专属 AI 提示词</h2>
+
+  <div style="background:var(--primary-bg); border-radius:16px; padding:18px 20px; margin-bottom:12px; border-left:4px solid var(--primary);">
+    <h4 style="color:var(--primary-active); font-size:14px; margin:0 0 6px 0;">【角色与任务】</h4>
+    <p style="font-size:13px; color:var(--text-body); margin:0;">你是 case-manager 模块（用例编辑器）的专属开发工程师。你的任务是在该模块内生成/修改代码，严格遵守以下约束。</p>
+  </div>
+
+  <div style="background:#fef2f2; border-radius:16px; padding:18px 20px; margin-bottom:12px; border-left:4px solid var(--error);">
+    <h4 style="color:var(--error); font-size:14px; margin:0 0 12px 0;">【绝对红线】</h4>
+    <table style="margin:0;">
+      <tr><th style="width:120px;">规则</th><th>要求</th></tr>
+      <tr><td>1. API 封装</td><td>CaseEditor.vue 必须通过 <code>api.js</code> 调用后端，<strong>禁止直接 import client</strong>（当前有违规）</td></tr>
+      <tr><td>2. 步骤类型</td><td>新增步骤类型必须先在 <code>models/step_types.py</code> 的 StepType 枚举中注册，再修改 StepEditor.vue 添加对应的表单</td></tr>
+      <tr><td>3. 脏检测</td><td>修改保存逻辑后必须同步更新 <code>initialForm</code> 快照，防止脏检测失效</td></tr>
+      <tr><td>4. 包名校验</td><td>如果用例包含 start_app/kill_app/restart_app 步骤，package_name 不能为空</td></tr>
+      <tr><td>5. ID 格式</td><td>用例 ID 格式必须保持 <code>TC-YYYYMMDD-HHMMSS-NNNN</code>，禁止随意修改生成规则</td></tr>
+    </table>
+  </div>
+
+  <div style="background:var(--bg-content); border-radius:16px; padding:18px 20px; margin-bottom:12px; border:2px solid var(--border);">
+    <h4 style="color:var(--text); font-size:14px; margin:0 0 8px 0;">【代码生成要求】</h4>
+    <ul style="margin:0; padding-left:20px; font-size:13px;">
+      <li>每次修改保存逻辑后必须附带测试：新建用例 / 编辑已有用例 / 空标题校验 / 空包名校验</li>
+      <li>新增步骤类型后必须附带 StepEditor 中的渲染测试</li>
+      <li>Python 用 snake_case · Vue 用 PascalCase 文件 / kebab-case 模板 · 数据库表用 cm_ 前缀</li>
+    </ul>
+  </div>
+
+  <div style="background:#f0fdf4; border-radius:16px; padding:18px 20px; border-left:4px solid var(--success);">
+    <h4 style="color:var(--success-active); font-size:14px; margin:0 0 8px 0;">【接口契约 — 禁止修改】</h4>
+    <table style="margin:0;">
+      <tr><th>端点</th><th>不可修改的字段</th></tr>
+      <tr><td>POST <code>/api/cases/definitions</code></td><td>响应格式 <code>{ok, id}</code> · steps_data 序列化方式 · ID 自动生成逻辑</td></tr>
+      <tr><td>GET <code>/api/cases/definitions/{id}</code></td><td>响应格式 <code>{ok, definition}</code> · steps_json 反序列化方式</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="card card-em" style="margin-top:36px;">
+  <h2><span class="sec-num sn-yellow">📋</span> 三部分总结</h2>
+  <table>
+    <tr><th>部分</th><th>视角</th><th>回答的问题</th><th>受众</th></tr>
+    <tr><td>第一部分</td><td>🎯 业务</td><td>用例编辑器是什么、谁在用、14 种步骤分别做什么</td><td>测试工程师 / 产品经理</td></tr>
+    <tr><td>第二部分</td><td>🔧 技术</td><td>表单数据如何存入 cm_test_definitions、StepEditor 如何实现、前后端如何协作</td><td>前端/后端工程师</td></tr>
+    <tr><td>第三部分</td><td>📐 治理</td><td>AI 改编辑器时能做什么、不能做什么 — 发现 1 项违规（直接 import client）</td><td>AI 编码助手</td></tr>
+  </table>
+</div>
+
+<div class="footer">
+  Android-AutoTests · case-manager 用例编辑器 — 功能设计与实现全览 · 2026-07-05<br>
+  由 feature-analysis skill 生成
+</div>
+
+</div>
+</body>
+</html>

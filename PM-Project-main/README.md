@@ -1,0 +1,204 @@
+# PM-Project
+
+面向 GitHub Copilot 和 OpenAI Codex 的自定义 Agent 与 Skill 仓库，用于把需求分析、架构设计、代码审查、测试、文档、发布等工作流沉淀为可复用的协作能力。
+
+## 仓库用途
+
+这个仓库当前主要包含两类内容：
+
+- **Custom Agents**：负责需求验证、架构设计、评审决策、原型设计、复盘等角色化协作。
+- **Skills**：负责沉淀特定领域的方法论、模板、参考文档和执行流程。
+
+运行时目录约定：
+
+- `AGENTS.md`：Codex 仓库级项目指令。
+- `.codex/agents/`：Codex 自定义 Agent 定义（`.toml`）。
+- `.codex/config.toml`：Codex 项目级配置与 MCP 服务器注册。
+- `.codex/rules/`：Codex 运行时补充规则。
+- `.github/agents/`：GitHub Copilot 侧 Agent 主定义（`.agent.md`）。
+- `.github/skills/`：Skill 主目录。
+- `.agents/skills/`：指向 `.github/skills/` 的兼容软链接镜像，供 Codex 发现技能。
+- `plans/`：运行时 Planning 结果与路由中间产物目录。
+
+适合的使用场景：
+
+- 为团队建立统一的 Copilot / Codex 协作工作流。
+- 复用需求分析、PRD、架构设计、代码审查、测试与发布规范。
+- 在 GitHub Copilot 与 Codex App / CLI 中复用同一套 Agent / Skill 语义定义。
+
+## 目录结构
+
+```text
+.
+├── .agents/
+│   └── skills/
+│       ├── architect-doc -> ../../.github/skills/architect-doc
+│       ├── ...
+│       └── workflow-dashboard -> ../../.github/skills/workflow-dashboard
+├── .codex/
+│   ├── agents/
+│   │   ├── architect.toml
+│   │   ├── ...
+│   │   └── tdd_developer.toml
+│   ├── config.toml
+│   └── rules/
+│       ├── general.md
+│       └── workflow-manifest.md
+├── .github/
+│   ├── agents/
+│   │   ├── architect.agent.md
+│   │   ├── code_review.agent.md
+│   │   ├── code_testing.agent.md
+│   │   ├── designer.agent.md
+│   │   ├── gate_review.agent.md
+│   │   ├── planning.agent.md
+│   │   ├── pm_assistant.agent.md
+│   │   ├── pm_workflow_evaluator.agent.md
+│   │   ├── post_launch_review.agent.md
+│   │   ├── pr_review_submit.agent.md
+│   │   ├── tdd_developer.agent.md
+│   └── skills/
+│       ├── architect-doc/
+│       ├── code-review/
+│       ├── doc-lint/
+│       ├── doc-quality-judge/
+│       ├── feishu-docs/
+│       ├── gate-review/
+│       ├── github-publish/
+│       ├── microservices/
+│       ├── playwright-testing/
+│       ├── premium-frontend-ui/
+│       ├── prototype-design/
+│       ├── prototype-publish/
+│       ├── requirement-doc/
+│       ├── requirement-to-issues/
+│       ├── security-audit/
+│       ├── tdd-coder/
+│       └── workflow-dashboard/
+├── docs/
+│   └── ai-era-metrics-framework.md
+├── Hands-on/
+│   └── hands-on-guide.md
+├── Presentations/                  ← 演示文稿（.gitignore 忽略）
+├── scripts/                       ← PPT 生成脚本（pptxgenjs）
+├── plans/
+│   └── README.md
+├── projects/
+├── AGENTS.md
+├── CONTRIBUTING.md
+└── README.md
+```
+
+## 核心能力
+
+### Agents
+
+| Agent | 作用 |
+| --- | --- |
+| pm_assistant | 需求分析与立项前验证（含飞书查重、竞品分析、商业快评） |
+| architect | 根据 PRD 设计技术架构方案（支持模块级架构设计） |
+| code_review | 代码审查（MUST/SHOULD/NIT 三级分类，5 大维度） |
+| code_testing | 测试编排（单元/集成/API/UI/E2E 多层策略） |
+| designer | 基于 PRD 和低保真 wireframe 生成高保真原型 |
+| gate_review | Stage-Gate 评审门，在 PRD/架构/上线前执行 Go/No-Go 决策 |
+| planning | 任务规划与上下文研究（只研究不执行） |
+| pm_workflow_evaluator | 工作流健康度评估（跨阶段流程扫描、量化仪表板、瓶颈识别） |
+| post_launch_review | 上线复盘，收集埋点数据和用户反馈，输出迭代建议 |
+| pr_review_submit | 将审查结果写入 GitHub PR Review |
+| tdd_developer | 基于 GitHub Issue + 架构文档，通过 TDD 流程（Red-Green-Refactor）实现代码 |
+
+> 当前仓库提供 11 个 GitHub Agent 主定义，并为这 11 个 Agent 各自补齐了 Codex 自定义 Agent 适配。完整索引见 [AGENTS.md](AGENTS.md)。
+
+### Skills
+
+| Skill | 作用 |
+| --- | --- |
+| requirement-doc | 生成模块化 PRD（主 PRD + Module PRD）与低保真 wireframe |
+| requirement-to-issues | 将 PRD 按模块拆分为 GitHub Issues（Epic + Task） |
+| architect-doc | 架构设计模板和 ADR（支持模块级架构设计） |
+| code-review | 代码审查规范（5 维度 × MUST/SHOULD/NIT 分级） |
+| security-audit | OWASP Top 10 安全审查 |
+| tdd-coder | TDD 编码方法论（Red-Green-Refactor） |
+| prototype-design | 从低保真升级高保真原型 |
+| github-publish | 管理提交、推送、PR 与发布流程 |
+| feishu-docs | 对接飞书文档查询与同步（MCP） |
+| prototype-publish | 压生成并发布墨刀/Figma 原型（支持墨刀 MCP 和 Figma MCP 双路径） |
+| microservices | 微服务设计、治理与部署规范 |
+| playwright-testing | Playwright UI/E2E 测试规范 |
+| premium-frontend-ui | 沉浸式高端前端 UI 设计（Awwwards 级别） |
+| gate-review | Gate 评审检查清单与辅助材料 |
+| doc-lint | 文档结构化 Lint、RTM 生成、Warning 追踪 |
+| doc-quality-judge | LLM-as-Judge 文档语义质量评估 |
+| workflow-dashboard | 工作流度量仪表盘（Gate 评审可视化、产物统计） |
+
+## 使用方式
+
+### 1. 克隆仓库
+
+```bash
+git clone https://github.com/nickhou1983/PM-Project.git
+cd PM-Project
+npm install  # 安装 PPT 生成等脚本依赖
+```
+
+### 2. 在 GitHub Copilot / Codex 中使用
+
+如果你使用支持自定义 Agent / Skill 的 GitHub Copilot 工作流，或直接在 Codex App / CLI 中打开该仓库，可以直接复用以下内容：
+
+- GitHub Copilot 读取 `.github/agents/*.agent.md` 与 `.github/copilot-instructions.md`。
+- Codex 读取根目录 `AGENTS.md`、`.codex/config.toml`、`.codex/agents/*.toml`。
+- Skill 主定义维护在 `.github/skills/`，通过 `.agents/skills/` 软链接镜像暴露给 Codex。
+- `plans/` 下保留运行时 Planning 输出。
+
+建议把这个仓库作为团队知识库维护，而不是把临时业务代码直接混入其中。
+
+### 3. 推荐协作流程
+
+```text
+pm_assistant (立项验证)
+  → requirement-doc (生成主 PRD + Module PRD + wireframe)
+    → gate_review Gate 1 (PRD 评审)
+      → designer (高保真原型)
+        → architect (主架构 + 模块级架构)
+          → gate_review Gate 2 (架构评审)
+            → requirement-to-issues (按模块拆分 Issues)
+              → 开发 → code_review → gate_review Gate 3 (上线评审)
+                → github-publish → post_launch_review (复盘)
+```
+
+### 4. 生成演示文稿
+
+```bash
+node scripts/generate-ppt.js           # PM-Project 介绍
+node scripts/generate-pm-assistant-ppt.js  # PM Assistant Agent 说明
+node scripts/generate-skills-ppt.js     # Skills 能力总览
+# 更多脚本见 scripts/ 目录
+```
+
+## 项目文档
+
+- [AGENTS.md](AGENTS.md)：Codex 项目级指令与完整 Agent/Skill 索引。
+- [CONTRIBUTING.md](CONTRIBUTING.md)：贡献方式、提交规范与新增 Agent/Skill 的约定。
+- [docs/pm-assistant-downstream-workflow.md](docs/pm-assistant-downstream-workflow.md)：`pm_assistant` 下游工作流分析报告。
+- [Hands-on/hands-on-guide.md](Hands-on/hands-on-guide.md)：动手实践指南。
+- [docs/ai-era-metrics-framework.md](docs/ai-era-metrics-framework.md)：AI 时代指标框架。
+- [LICENSE](LICENSE)：MIT License。
+
+## 维护建议
+
+- Agent 负责角色分工与路由，不要把长篇参考材料塞进单个 Agent 文件。
+- Skill 负责方法、模板和操作步骤，尽量把可复用知识放进 references。
+- `.github/skills/` 是 Skill 主定义源；`.agents/skills/` 仅作为 Codex 兼容镜像层。
+- 运行时规划文档建议统一沉淀到 `plans/`；如果需要保留阶段性设计过程，建议放入对应项目产物目录或单独的规划文档目录。
+- 提交信息建议使用 Conventional Commits，便于后续自动化处理。
+
+## 双平台适配
+
+| 平台 | Agent 入口 | 项目级指令 | Skill 入口 |
+| --- | --- | --- | --- |
+| GitHub Copilot | `.github/agents/*.agent.md` | `.github/copilot-instructions.md` | `.github/skills/` |
+| OpenAI Codex | `.codex/agents/*.toml` | `AGENTS.md` | `.agents/skills/` |
+
+## 许可证
+
+本仓库使用 MIT License，详见 [LICENSE](LICENSE)。

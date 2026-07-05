@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agent_factory.py — 四齿轮质量关卡报告</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --primary: #19c8b9; --text: #794f27; --text-body: #725d42; --text-secondary: #9f927d; --text-muted: #8a7b66;
+    --bg: #f8f8f0; --bg-content: rgb(247, 243, 223); --border: #c4b89e;
+    --success: #6fba2c; --warning: #f5c31c; --error: #e05a5a;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Nunito, 'Noto Sans SC', -apple-system, 'PingFang SC', sans-serif; font-weight:500; letter-spacing:0.01em; background:var(--bg); color:var(--text-body); line-height:1.7; }
+  .container { max-width:1100px; margin:0 auto; padding:40px 20px; }
+  h1 { font-weight:800; color:var(--text); font-size:1.8em; text-align:center; margin-bottom:4px; }
+  h2 { font-weight:700; font-size:1.1em; color:var(--text); margin:28px 0 12px; display:flex; align-items:center; gap:8px; }
+  h3 { font-weight:700; font-size:0.95em; color:var(--text); margin:16px 0 6px; }
+  .subtitle { text-align:center; color:var(--text-secondary); font-size:0.9em; margin-bottom:24px; }
+  .card { background:var(--bg-content); border-radius:20px; padding:20px 24px; margin-bottom:16px; border:2px solid transparent; }
+  .card-red { border-left:4px solid var(--error); }
+  .card-yellow { border-left:4px solid var(--warning); }
+  .card-green { border-left:4px solid var(--success); }
+
+  /* KPI */
+  .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+  .kpi { background:var(--bg-content); border-radius:18px; padding:18px; text-align:center; border-top:4px solid var(--border); }
+  .kpi .num { font-size:2em; font-weight:800; }
+  .kpi .label { font-size:11px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; margin-top:4px; }
+  .kpi.red { border-top-color:var(--error); } .kpi.red .num { color:var(--error); }
+  .kpi.yellow { border-top-color:var(--warning); } .kpi.yellow .num { color:#a16207; }
+  .kpi.green { border-top-color:var(--success); } .kpi.green .num { color:var(--success); }
+  .kpi.blue { border-top-color:#889df0; } .kpi.blue .num { color:#889df0; }
+  @media (max-width:700px) { .kpi-grid { grid-template-columns:repeat(2,1fr); } }
+
+  /* Matrix */
+  .matrix { overflow-x:auto; }
+  .matrix th { background:rgba(121,79,39,0.06); padding:8px 10px; font-size:11px; text-align:center; }
+  .matrix td { padding:7px 10px; font-size:11px; text-align:center; border-top:1px dashed rgba(196,184,158,0.3); }
+  .matrix .issue { text-align:left; font-weight:600; }
+  .hit-red { background:rgba(224,90,90,0.12); color:var(--error); font-weight:800; }
+  .hit-yellow { background:rgba(245,195,28,0.1); color:#92400e; font-weight:800; }
+  .hit-green { background:rgba(111,186,44,0.06); color:var(--success); }
+  .hit-gray { color:var(--text-disabled); }
+
+  /* Code */
+  code { font-family:'SF Mono','Fira Code','Cascadia Code',Consolas,monospace; font-weight:600; font-size:11px; background:rgba(121,79,39,0.06); padding:1px 6px; border-radius:5px; color:var(--text); }
+  pre { background:#2b2118; color:#e8d5bc; padding:14px 18px; border-radius:16px; overflow-x:auto; font-size:11px; line-height:1.8; margin:8px 0; font-family:'SF Mono','Fira Code','Cascadia Code',Consolas,monospace; font-weight:600; }
+  pre .cm { color:#6b5e50; } pre .kw { color:#d4a0e0; } pre .fn { color:#61afef; } pre .str { color:#a8d4a0; } pre .err { color:#e06c75; }
+
+  /* Explain box */
+  .explain { background:#fffdf5; border-radius:14px; padding:14px 18px; margin:10px 0; border:1.5px dashed var(--warning); }
+  .explain h5 { color:#92400e; font-size:12px; margin:0 0 6px 0; }
+  .explain p, .explain li { font-size:12px; color:var(--text-body); margin:0; }
+
+  /* Flow */
+  .path-flow { background:#f0fdf4; border-radius:14px; padding:14px 18px; margin:8px 0; }
+  .path-flow .path { font-size:12px; margin:4px 0; font-family:monospace; color:var(--text-body); }
+  .path-flow .path .bad { color:var(--error); font-weight:700; }
+
+  /* Tag */
+  .tag { display:inline-block; padding:2px 8px; border-radius:50px; font-size:10px; font-weight:700; letter-spacing:0.02em; }
+  .tag-red { background:#fef2f2; color:#b91c1c; } .tag-yellow { background:#fef3c7; color:#92400e; } .tag-green { background:#f0fdf4; color:#15803d; }
+
+  .footer { text-align:center; color:var(--text-secondary); font-size:12px; margin-top:40px; padding:20px 0; border-top:1px dashed rgba(196,184,158,0.5); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>🔬 agent_factory.py — 四齿轮质量关卡</h1>
+<p class="subtitle">目标文件: agentscope_service/agent_factory.py · 276 行 · 3 个函数 · 全量检查 27 项</p>
+
+<!-- ===== KPI ===== -->
+<div class="kpi-grid">
+  <div class="kpi red">
+    <div class="num">3</div>
+    <div class="label">🔴 P0 严重</div>
+  </div>
+  <div class="kpi yellow">
+    <div class="num">5</div>
+    <div class="label">🟠 P1 重要</div>
+  </div>
+  <div class="kpi blue">
+    <div class="num">27</div>
+    <div class="label">检查项执行</div>
+  </div>
+  <div class="kpi green">
+    <div class="num">4</div>
+    <div class="label">齿轮并行</div>
+  </div>
+</div>
+
+<!-- ===== COVERAGE MATRIX ===== -->
+<h2>📊 四齿轮覆盖矩阵</h2>
+<p style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">
+  下面这张表告诉你：<strong>同一个问题，哪个齿轮能发现，哪个齿轮发现不了。</strong>
+  ✓ = 命中 &nbsp; — = 该齿轮无法发现此类问题
+</p>
+<div class="card" style="padding:14px 8px;">
+<div class="matrix">
+<table>
+  <tr><th style="width:280px;">发现的问题</th><th style="width:60px;">🔧写法</th><th style="width:60px;">📋契约</th><th style="width:60px;">🔬白盒</th><th style="width:60px;">🌐灰黑</th></tr>
+
+  <tr>
+    <td class="issue">user_id 声明但未消费 → 权限校验缺失</td>
+    <td class="hit-gray">—</td><td class="hit-red">✓</td><td class="hit-yellow">✓</td><td class="hit-red">✓</td>
+  </tr>
+  <tr>
+    <td class="issue">decrypt_key() 无 try/except → 解密失败崩</td>
+    <td class="hit-red">✓</td><td class="hit-red">✓</td><td class="hit-red">✓</td><td class="hit-gray">—</td>
+  </tr>
+  <tr>
+    <td class="issue">AIAgent.objects.get() 无 try → DoesNotExist 崩</td>
+    <td class="hit-red">✓</td><td class="hit-red">✓</td><td class="hit-red">✓</td><td class="hit-gray">—</td>
+  </tr>
+  <tr>
+    <td class="issue">os.environ.get("") 空字符串 → API 静默失败</td>
+    <td class="hit-gray">—</td><td class="hit-red">✓</td><td class="hit-red">✓</td><td class="hit-gray">—</td>
+  </tr>
+  <tr>
+    <td class="issue">声明返回 Agent，实际 4 种返回值形态</td>
+    <td class="hit-yellow">✓</td><td class="hit-red">✓</td><td class="hit-gray">—</td><td class="hit-gray">—</td>
+  </tr>
+  <tr>
+    <td class="issue">5 个硬编码默认值散落无集中管理</td>
+    <td class="hit-yellow">✓</td><td class="hit-yellow">✓</td><td class="hit-gray">—</td><td class="hit-gray">—</td>
+  </tr>
+  <tr>
+    <td class="issue">toolkit=None 依赖外部注入 → 时序无守护</td>
+    <td class="hit-gray">—</td><td class="hit-yellow">✓</td><td class="hit-red">✓</td><td class="hit-yellow">✓</td>
+  </tr>
+  <tr>
+    <td class="issue">cred_cls(api_key="") 空 Key 创建凭证</td>
+    <td class="hit-gray">—</td><td class="hit-red">✓</td><td class="hit-red">✓</td><td class="hit-gray">—</td>
+  </tr>
+  <tr>
+    <td class="issue">anthropic/custom 与 openai 映射完全相同 → 冗余</td>
+    <td class="hit-yellow">✓</td><td class="hit-gray">—</td><td class="hit-gray">—</td><td class="hit-gray">—</td>
+  </tr>
+  <tr>
+    <td class="issue">import os 仅用 1 次 → 可移除或降级为局部 import</td>
+    <td class="hit-yellow">✓</td><td class="hit-gray">—</td><td class="hit-gray">—</td><td class="hit-gray">—</td>
+  </tr>
+</table>
+</div>
+</div>
+
+<!-- ===== GEAR 1: WRITING ===== -->
+<h2>🔧 齿轮 1: 写法层 — ruff 工具 + AI 语义</h2>
+
+<div class="card card-yellow">
+  <div class="explain">
+    <h5>📖 这个齿轮做什么？</h5>
+    <p>检查代码<strong>怎么写</strong>——命名对不对、类型注没注、异常处没处理、有没有重复代码。ruff 工具自动扫机器能发现的问题，AI 再逐项排查工具到不了的深层写法问题。</p>
+  </div>
+
+  <h3>引擎 1: ruff 自动扫描</h3>
+  <table>
+    <tr><th>规则</th><th>命中</th><th>典型问题</th></tr>
+    <tr><td><code>ANN</code> 类型注解</td><td>2</td><td><code>build_agent_from_db</code> 缺返回类型注解、<code>_build_system_prompt</code> 缺参数注解</td></tr>
+    <tr><td><code>RUF001</code> 全角标点</td><td>151</td><td>中文提示词中的全角括号/逗号/冒号 — 提示词是给 LLM 读的，这些是故意的，建议加 <code># noqa: RUF001</code></td></tr>
+  </table>
+
+  <h3>引擎 2: AI 语义审查</h3>
+  <table>
+    <tr><th style="width:140px;">检查项</th><th>命中</th><th>详情</th></tr>
+    <tr><td>魔法字符串</td><td><span class="tag tag-yellow">7处</span></td><td><code>"dashscope"/"openai"/"qwen-max"/"gpt-4o"/"TestAssistant"</code> 等硬编码在函数体中</td></tr>
+    <tr><td>静默吞错</td><td><span class="tag tag-red">3处</span></td><td><code>decrypt_key()</code> / <code>AIAgent.objects.get()</code> / <code>cred_cls()</code> 无异常保护</td></tr>
+    <tr><td>硬编码散落</td><td><span class="tag tag-yellow">5处</span></td><td>默认模型名/URL/Agent 名散落在 L242-L269</td></tr>
+    <tr><td>日志规范</td><td><span class="tag tag-red">0次</span></td><td>全文件无任何 <code>logger</code> 调用 — 构建 Agent 失败时无日志记录</td></tr>
+  </table>
+</div>
+
+<!-- ===== GEAR 2: CONTRACT ===== -->
+<h2>📋 齿轮 2: 契约层 — 输入输出 + 数据协议</h2>
+
+<div class="card card-red">
+  <div class="explain">
+    <h5>📖 这个齿轮做什么？</h5>
+    <p>检查函数的<strong>输入输出约定</strong>——参数有没有被用到、返回值形态与声明是否一致、跨层数据传递有没有断裂。这是写法层发现了但需要业务理解才能判断的问题。</p>
+  </div>
+
+  <h3>A 组: 输入契约</h3>
+  <table>
+    <tr><th style="width:100px;">检查</th><th>目标</th><th>结果</th></tr>
+    <tr><td>A1 参数消费</td><td><code>user_id</code></td><td><span class="tag tag-red">🔴 未消费</span> — 声明了但函数体内 0 次引用。要么是死参数，要么漏了权限校验</td></tr>
+    <tr><td>A2 非空假设</td><td><code>db_agent.api_key</code> 等 4 个属性</td><td><span class="tag tag-green">✅</span> 均有 <code>or</code> fallback 守卫</td></tr>
+    <tr><td>A3 外部依赖防御</td><td>3 个外部调用</td><td><span class="tag tag-red">🔴 全部无 try</span> — <code>AIAgent.objects.get()</code> / <code>decrypt_key()</code> / <code>cred_cls()</code></td></tr>
+    <tr><td>A4 环境变量</td><td><code>os.environ.get("DASHSCOPE_API_KEY", "")</code></td><td><span class="tag tag-yellow">⚠️ 默认空字符串</span> — 传给 cred_cls(api_key="") 可能导致 API 调用静默失败</td></tr>
+  </table>
+
+  <h3>B 组: 输出契约</h3>
+  <table>
+    <tr><th style="width:100px;">检查</th><th>结果</th></tr>
+    <tr><td>B1 返回形态</td><td><span class="tag tag-red">🔴 声明 1 种实际 4 种</span> — 函数签名说返回 <code>Agent</code>，实际可能抛 <code>DoesNotExist</code> / <code>InvalidToken</code> / <code>KeyError</code> / <code>TypeError</code></td></tr>
+    <tr><td>B2 异常输出</td><td><span class="tag tag-red">🔴 无异常路径</span> — 全函数无 try/except，所有异常直接向上抛给调用方</td></tr>
+    <tr><td>B3 对象完整性</td><td><span class="tag tag-yellow">⚠️ toolkit=None</span> — 返回的 Agent 对象依赖外部后续注入 toolkit，运行时无守护</td></tr>
+  </table>
+
+  <h3>C 组: 数据协议</h3>
+  <table>
+    <tr><th style="width:100px;">检查</th><th>结果</th></tr>
+    <tr><td>C1 字段名一致性</td><td><span class="tag tag-green">✅</span> agent_factory 直接使用 AIAgent Model 的字段名，无转换</td></tr>
+    <tr><td>C2 默认值集中</td><td><span class="tag tag-yellow">⚠️ 5 个默认值散落</span> — 应提取到 <code>agentscope_config.py</code> 或 settings 集中管理</td></tr>
+    <tr><td>C3 映射完整性</td><td><span class="tag tag-green">✅</span> <code>_MODEL_CLASS</code> 和 <code>_CREDENTIAL_CLASS</code> 覆盖了 ModelProvider 的全部 4 个值</td></tr>
+  </table>
+</div>
+
+<!-- ===== GEAR 3: WHITE-BOX ===== -->
+<h2>🔬 齿轮 3: 白盒层 — 路径覆盖 + 边界值</h2>
+
+<div class="card card-red">
+  <div class="explain">
+    <h5>📖 这个齿轮做什么？</h5>
+    <p>基于代码内部结构，<strong>逐条函数画执行路径图</strong>，找出那些"可能永远跑不到"的分支、"一碰就崩"的边界值和"依赖隐式假设"的时序问题。不需要实际运行代码。</p>
+  </div>
+
+  <h3>D1: build_agent_from_db 的 7 条执行路径</h3>
+  <div class="path-flow">
+    <div class="path">路径 1 <span class="tag tag-green">正常</span> provider=dashscope, 有 api_key → decrypt_key → DashScope 模型</div>
+    <div class="path">路径 2 <span class="tag tag-green">正常</span> provider=dashscope, 无 api_key → os.environ → DashScope 模型</div>
+    <div class="path">路径 3 <span class="tag tag-green">正常</span> provider=openai/anthropic/custom, 有 base_url → OpenAI+自定义URL</div>
+    <div class="path">路径 4 <span class="tag tag-green">正常</span> provider=openai/anthropic/custom, 无 base_url → OpenAI+默认URL</div>
+    <div class="path" style="margin-top:8px; padding-top:8px; border-top:1px dashed rgba(0,0,0,0.1);">
+      <span class="bad">路径 5</span> <span class="tag tag-red">崩</span> AIAgent.objects.get() 抛 DoesNotExist → 函数崩 (无 try)
+    </div>
+    <div class="path">
+      <span class="bad">路径 6</span> <span class="tag tag-red">崩</span> decrypt_key() 抛 InvalidToken → 函数崩 (无 try)
+    </div>
+    <div class="path">
+      <span class="bad">路径 7</span> <span class="tag tag-yellow">异常</span> os.environ.get() 返回 "" → DashScope 收到空 Key → API 静默失败
+    </div>
+  </div>
+
+  <h3>D3: 异常路径明细</h3>
+  <table>
+    <tr><th>异常来源</th><th>触发条件</th><th>当前行为</th><th>严重度</th></tr>
+    <tr><td><code>AIAgent.objects.get()</code></td><td>agent_id 不存在于数据库</td><td>抛 DoesNotExist → 调用方收到 500</td><td><span class="tag tag-red">🔴</span></td></tr>
+    <tr><td><code>decrypt_key()</code></td><td>密钥被篡改 / SECRET_KEY 变更</td><td>抛 InvalidToken → 调用方收到 500</td><td><span class="tag tag-red">🔴</span></td></tr>
+    <tr><td><code>os.environ.get()</code></td><td>环境变量 DASHSCOPE_API_KEY 未设置</td><td>返回 "" → cred_cls(api_key="")</td><td><span class="tag tag-yellow">🟠</span></td></tr>
+    <tr><td><code>cred_cls(api_key="")</code></td><td>收到空字符串作为 API Key</td><td>凭证创建成功但 Key 无效 → API 调用失败</td><td><span class="tag tag-yellow">🟠</span></td></tr>
+    <tr><td><code>_MODEL_CLASS.get()</code></td><td>provider 是未知值</td><td>返回默认 OpenAIChatModel → 可能行为不符合预期</td><td><span class="tag tag-yellow">🟠</span></td></tr>
+  </table>
+
+  <h3>E1: 空值边界测试</h3>
+  <table>
+    <tr><th>输入</th><th>当前行为</th><th>期望行为</th></tr>
+    <tr><td><code>agent_id=0</code></td><td>AIAgent.objects.get(id=0) → DoesNotExist</td><td>应返回 None 或抛参数错误</td></tr>
+    <tr><td><code>agent_id=None</code></td><td>TypeError</td><td>应校验类型</td></tr>
+    <tr><td><code>db_agent.api_key=None</code></td><td>os.environ fallback ✅</td><td>—</td></tr>
+    <tr><td><code>db_agent.api_key=""</code></td><td>os.environ fallback ✅</td><td>—</td></tr>
+    <tr><td><code>db_agent.model_provider=None</code></td><td>fallback 到 OpenAIChatModel</td><td>应使用默认 provider 或报错</td></tr>
+  </table>
+
+  <h3>D4: 时序依赖</h3>
+  <div class="card card-yellow" style="margin-top:8px;">
+    <pre><span class="cm"># agent_factory.py L272 — 返回的对象有未初始化的属性</span>
+agent = <span class="fn">Agent</span>(
+    name=db_agent.name or <span class="str">"TestAssistant"</span>,
+    system_prompt=system_prompt,
+    model=model,
+    toolkit=<span class="err">None</span>,  <span class="cm"># ← 依赖外部 extra_agent_tools 注入</span>
+)
+<span class="kw">return</span> agent
+
+<span class="cm"># 如果调用方拿到 agent 后直接 .reply()，而不走 App.create_app():
+#   → agent 没有任何 Tool → SOP 工作流完全瘫痪
+#   → 不报错，Agent 只能"空谈"，不能操作平台
+# 🔴 这个时序依赖仅靠注释保证，无运行时检查</span></pre>
+  </div>
+</div>
+
+<!-- ===== GEAR 4: GRAY/BLACK ===== -->
+<h2>🌐 齿轮 4: 灰黑盒层 — 接口 + 端到端</h2>
+
+<div class="card card-red">
+  <div class="explain">
+    <h5>📖 这个齿轮做什么？</h5>
+    <p>不看代码内部，只从<strong>外部调用方的视角</strong>验证。灰盒知道函数签名，验证<strong>输入→输出</strong>的契约。黑盒只知道 HTTP 端点，验证<strong>用户实际调用</strong>时的行为。</p>
+  </div>
+
+  <h3>F1: 接口契约断言</h3>
+  <table>
+    <tr><th style="width:100px;">维度</th><th>输入</th><th>期望输出</th><th>当前实际</th></tr>
+    <tr><td>正常</td><td><code>agent_id=1, user_id="admin"</code></td><td>Agent 对象，name 与 DB 一致</td><td><span class="tag tag-green">✅</span></td></tr>
+    <tr><td>正常</td><td><code>agent_id 对应 dashscope provider</code></td><td>Agent.model 是 DashScopeChatModel</td><td><span class="tag tag-green">✅</span></td></tr>
+    <tr><td>异常</td><td><code>agent_id=999 (不存在)</code></td><td>应返回 None 或抛明确异常</td><td><span class="tag tag-red">🔴 崩</span></td></tr>
+    <tr><td>安全</td><td><code>user_id="other_user"</code></td><td>应 403 拒绝</td><td><span class="tag tag-red">🔴 无校验</span></td></tr>
+  </table>
+
+  <h3>F3: 权限边界 — 🔴 P0 安全漏洞</h3>
+  <div class="card card-red" style="margin-top:8px;">
+    <p style="font-size:13px; color:var(--text-body);">
+      <strong>场景</strong>：用户 A 创建了 Agent(id=1)，配置了自己的 API Key。用户 B 登录后通过 API 请求构建 agent_id=1。
+    </p>
+    <p style="font-size:13px; color:var(--error); margin-top:6px;">
+      <strong>当前行为</strong>：返回用户 A 的 Agent 对象，包含解密后的 API Key。<br>
+      <strong>根因</strong>：<code>user_id</code> 参数传入了但函数体中从未使用。没有 <code>AIAgent.objects.filter(id=agent_id, owner=request.user)</code> 的归属过滤。
+    </p>
+    <p style="font-size:12px; color:var(--text-secondary); margin-top:4px;">
+      触发齿轮: 契约层 A1 发现 user_id 未消费 → 白盒层 D2 确认无权限分支 → 灰盒层 F3 确认跨用户可访问
+    </p>
+  </div>
+
+  <h3>G1: 关联的 HTTP 端点</h3>
+  <p style="font-size:13px; color:var(--text-secondary); margin:8px 0;">
+    <code>build_agent_from_db</code> 的调用方在 <code>apps/ai_assistant/views.py</code> 中，涉及以下端点：
+  </p>
+  <table>
+    <tr><th>端点</th><th>用途</th><th>是否调用了 build_agent_from_db</th></tr>
+    <tr><td><code>POST /api/ai/agents/{id}/test</code></td><td>测试 Agent 连接</td><td>是 — 构建后调 reply()</td></tr>
+    <tr><td><code>POST /api/ai/agents/{id}/register-scope</code></td><td>注册到 AgentScope</td><td>是 — 构建后注册</td></tr>
+  </table>
+  <div style="background:#fef2f2; border-radius:14px; padding:12px 16px; margin-top:8px;">
+    <p style="font-size:12px; color:var(--error); font-weight:700; margin:0;">
+      ⚠️ 这两个端点都依赖 build_agent_from_db，但该函数无 try/except。如果 agent_id 不存在或解密失败，用户看到的是 500 错误页而非友好提示。
+    </p>
+  </div>
+</div>
+
+<!-- ===== SUMMARY ===== -->
+<h2>📋 问题汇总 + 优先级</h2>
+
+<div class="card">
+  <table>
+    <tr><th style="width:40px;">优先级</th><th>问题</th><th>发现齿轮</th><th>修复方向</th></tr>
+    <tr>
+      <td><span class="tag tag-red">P0</span></td>
+      <td><strong>权限校验缺失</strong> — user_id 未消费，任何用户可构建任何 Agent 并获取其 API Key</td>
+      <td>齿轮2+3+4</td>
+      <td>加 <code>AIAgent.objects.filter(id=agent_id, user_id=user_id)</code> 归属校验</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-red">P0</span></td>
+      <td><strong>AIAgent.objects.get() 无 try</strong> — agent_id 不存在时崩，用户看到 500</td>
+      <td>齿轮1+2+3</td>
+      <td>加 try/except DoesNotExist → return None 或抛业务异常</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-red">P0</span></td>
+      <td><strong>decrypt_key() 无 try</strong> — 密钥损坏时崩，用户看到 500</td>
+      <td>齿轮1+2+3</td>
+      <td>加 try/except → 记录日志 + 抛明确错误</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-yellow">P1</span></td>
+      <td><strong>os.environ.get("") 空字符串</strong> → API 静默失败</td>
+      <td>齿轮2+3</td>
+      <td>默认值改为 None，调用前检查 if not api_key: raise</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-yellow">P1</span></td>
+      <td><strong>返回形态不一致</strong> — 声明 1 种实际 4 种</td>
+      <td>齿轮1+2</td>
+      <td>统一异常处理 → 所有异常转为业务异常或 None</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-yellow">P1</span></td>
+      <td><strong>5 个硬编码默认值散落</strong></td>
+      <td>齿轮1+2</td>
+      <td>提取到 agentscope_config.py 或 settings</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-yellow">P1</span></td>
+      <td><strong>toolkit=None 时序无守护</strong></td>
+      <td>齿轮2+3+4</td>
+      <td>Agent 构造后立即注入 toolkit，或在 Agent 使用前校验</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-yellow">P1</span></td>
+      <td><strong>零日志</strong> — Agent 构建全程无 logger 调用</td>
+      <td>齿轮1</td>
+      <td>构建成功/失败、provider 选择、解密调用均加 INFO/WARN/ERROR 日志</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-green">P2</span></td>
+      <td>151 个全角标点（提示词中）</td>
+      <td>齿轮1</td>
+      <td>加 <code># noqa: RUF001</code> 注释或替换为半角</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-green">P2</span></td>
+      <td>anthropic/custom 与 openai 映射完全相同</td>
+      <td>齿轮1</td>
+      <td>评估是否需要独立类，或加注释说明设计意图</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ===== FOOTER ===== -->
+<div class="footer">
+  Android-AutoTests · agent_factory.py 四齿轮质量关卡 · 2026-07-05<br>
+  由 quality-gate skill 生成 · 4 齿轮 27 检查项 · 发现 3🔴P0 + 5🟠P1 + 2🟡P2
+</div>
+
+</div>
+</body>
+</html>

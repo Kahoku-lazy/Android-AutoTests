@@ -1,0 +1,306 @@
+<script setup>
+import { ref } from 'vue'
+import { Modal, Button as AnimalButton, Input } from 'animal-island-vue'
+import { ElMessage } from 'element-plus'
+import client, { formatApiError } from '@/shared/api-client.js'
+import { useElementStore } from '../store.js'
+
+const props = defineProps({ element: { type: Object, default: null } })
+const emit = defineEmits(['add-step', 'do-action'])
+const store = useElementStore()
+
+const inputVisible = ref(false)
+const inputText = ref('')
+
+// ── Save to element-manager ──
+const saveVisible = ref(false)
+const pagesLoading = ref(false)
+const saving = ref(false)
+const pages = ref([])
+const saveForm = ref({ pageId: null, alias: '' })
+
+function pageLabel(p) {
+  return p.label || `Page #${p.id}`
+}
+
+async function loadPages() {
+  pagesLoading.value = true
+  try {
+    const { data } = await client.get('/elements/pages')
+    if (data.ok) pages.value = data.pages || []
+  } catch (e) {
+    ElMessage.error({ message: formatApiError(e, '加载页面列表失败'), duration: 4000, showClose: true })
+  } finally {
+    pagesLoading.value = false
+  }
+}
+
+async function openSaveDialog() {
+  if (!props.element) return
+  await loadPages()
+  const autoName = props.element.text || props.element.resource_id?.split('/').pop() || ''
+  saveForm.value = { pageId: pages.value[0]?.id || null, alias: autoName }
+  if (!saveForm.value.pageId) {
+    const pkg = store.lastDump?.package || store.currentDevice?.package || ''
+    const activity = store.lastDump?.activity || ''
+    try {
+      const { data } = await client.post('/elements/pages/create', {
+        label: `Page_${new Date().toISOString().slice(0, 10)}`,
+        package: pkg,
+        activity,
+      })
+      if (data.ok) {
+        const page = data.page || {}
+        saveForm.value.pageId = page.id
+        pages.value.push({
+          id: page.id,
+          label: page.label || data.label,
+        })
+      } else {
+        ElMessage.error(data.error || '自动创建页面失败')
+        return
+      }
+    } catch (e) {
+      ElMessage.error({ message: formatApiError(e, '自动创建页面失败'), duration: 4000, showClose: true })
+      return
+    }
+  }
+  saveVisible.value = true
+}
+
+async function doSave() {
+  if (!saveForm.value.pageId) { ElMessage.warning('请先选择目标页面'); return }
+  if (!saveForm.value.alias.trim()) { ElMessage.warning('请输入元素名称'); return }
+  const el = props.element
+  const xpath = (el.xpaths || [{}])[0] || {}
+  saving.value = true
+  try {
+    const { data } = await client.post(`/elements/pages/${saveForm.value.pageId}/elements`, {
+      alias: saveForm.value.alias.trim(),
+      xpath: xpath.xpath || '',
+      class_name: el.class_name || '',
+      text_val: el.text || '',
+      resource_id: el.resource_id || '',
+      bounds: el.bounds || '',
+      clickable: el.clickable || false,
+      content_desc: el.content_desc || '',
+    })
+    if (data.ok) {
+      const name = saveForm.value.alias.trim()
+      ElMessage.success({
+        message: data.updated ? `元素「${name}」已更新` : `元素「${name}」已保存`,
+        duration: 2500,
+      })
+      saveVisible.value = false
+    } else {
+      ElMessage.warning({ message: data.error || '保存未完成，请检查填写内容', duration: 4000, showClose: true })
+    }
+  } catch (e) {
+    const status = e.response?.status
+    const hint = formatApiError(e, '保存元素失败，请稍后重试')
+    if (status === 409 || hint.includes('已在当前页面')) {
+      ElMessage.warning({ message: hint, duration: 5000, showClose: true })
+    } else {
+      ElMessage.error({ message: hint, duration: 5000, showClose: true })
+    }
+  } finally {
+    saving.value = false
+  }
+}
+
+function centerOf(el) {
+  return {
+    x: el.x + Math.round(el.width / 2),
+    y: el.y + Math.round(el.height / 2),
+  }
+}
+
+function doClick() {
+  if (!props.element) return
+  const c = centerOf(props.element)
+  emit('do-action', 'click', c.x, c.y)
+}
+
+function doLongClick() {
+  if (!props.element) return
+  const c = centerOf(props.element)
+  emit('do-action', 'longclick', c.x, c.y)
+}
+
+function openInput() {
+  if (!props.element) return
+  inputText.value = ''
+  inputVisible.value = true
+}
+
+function doInput() {
+  if (!props.element || !inputText.value.trim()) return
+  const c = centerOf(props.element)
+  emit('do-action', 'input', c.x, c.y, inputText.value.trim())
+  inputVisible.value = false
+}
+
+async function copyXPath(xpath) {
+  try {
+    await navigator.clipboard.writeText(xpath)
+  } catch (_) {
+    // Fallback for non-HTTPS
+    const ta = document.createElement('textarea')
+    ta.value = xpath
+    ta.style.position = 'fixed'; ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand('copy')
+    document.body.removeChild(ta)
+  }
+}
+</script>
+
+<template>
+  <div class="panel">
+    <h3>XPath 候选</h3>
+
+    <!-- Action bar (only when element selected) -->
+    <div v-if="element" class="action-bar">
+      <el-button size="small" type="primary" @click="doClick">👆 点击</el-button>
+      <el-button size="small" type="warning" @click="openInput">⌨ 输入</el-button>
+      <el-button size="small" type="danger" @click="doLongClick">⏱ 长按</el-button>
+      <el-button size="small" type="success" @click="openSaveDialog" style="margin-left:auto">💾 保存到元素管理</el-button>
+    </div>
+
+    <!-- Save to element-manager dialog -->
+    <Modal
+      v-model:open="saveVisible"
+      title="保存到元素管理"
+      width="420px"
+      :mask-closable="false"
+      :typewriter="false"
+      @close="saveVisible = false"
+      @ok="doSave"
+    >
+      <div class="form-grid">
+        <label class="form-label required">目标页面</label>
+        <el-select
+          v-model="saveForm.pageId"
+          placeholder="选择页面"
+          :disabled="pagesLoading"
+          filterable
+          style="width:100%"
+        >
+          <el-option
+            v-for="p in pages"
+            :key="p.id"
+            :label="pageLabel(p)"
+            :value="p.id"
+          />
+        </el-select>
+        <label class="form-label required">元素名称</label>
+        <Input v-model="saveForm.alias" placeholder="如：登录按钮" size="medium" />
+      </div>
+      <template #footer>
+        <AnimalButton @click="saveVisible = false">取消</AnimalButton>
+        <AnimalButton type="primary" :disabled="saving || pagesLoading" @click="doSave">保存</AnimalButton>
+      </template>
+    </Modal>
+
+    <!-- Input dialog -->
+    <Modal
+      v-model:open="inputVisible"
+      title="输入文本"
+      width="340px"
+      :mask-closable="false"
+      :typewriter="false"
+      @close="inputVisible = false"
+      @ok="doInput"
+    >
+      <Input v-model="inputText" placeholder="输入要发送的文本" size="medium" />
+      <template #footer>
+        <AnimalButton @click="inputVisible = false">取消</AnimalButton>
+        <AnimalButton type="primary" @click="doInput">发送</AnimalButton>
+      </template>
+    </Modal>
+
+    <!-- XPath table -->
+    <div v-if="!element" class="empty">点击截图中元素查看 XPath</div>
+    <div v-else class="table-wrap">
+      <el-table
+        :data="element.xpaths || []"
+        size="small"
+        style="width: 100%"
+      >
+        <el-table-column prop="type" label="策略" width="120" />
+        <el-table-column prop="xpath" label="XPath" show-overflow-tooltip min-width="200" />
+        <el-table-column prop="count" label="匹配数" width="60" align="center" />
+        <el-table-column label="" width="50" align="center">
+          <template #default="{ row }">
+            <el-button size="small" text title="复制" @click="copyXPath(row.xpath)">📋</el-button>
+          </template>
+        </el-table-column>
+        <el-table-column label="" width="50" align="center">
+          <template #default="{ row }">
+            <el-button size="small" type="primary" plain @click="emit('add-step', row)">+</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.panel {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 20px;
+  border: 1px solid var(--glass-border);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+h3 {
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+.action-bar {
+  display: flex; gap: 6px; margin-bottom: 10px; flex-shrink: 0;
+  padding: 8px; background: rgba(255,255,255,0.03);
+  border-radius: 8px; border: 1px solid var(--glass-border);
+}
+.empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 14px 10px;
+  align-items: center;
+}
+.form-label {
+  text-align: right;
+  font-size: 13px;
+  color: var(--text-secondary, #988B7A);
+  font-weight: 500;
+  user-select: none;
+}
+.form-label.required::before {
+  content: '*';
+  color: var(--animal-error-color, #e05a5a);
+  margin-right: 3px;
+}
+</style>

@@ -1,0 +1,81 @@
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+.venv/
+
+# ── Django ──
+*.log
+staticfiles/
+media/
+
+# ── Database & Data (contains real user data, screenshots, device info) ──
+data/db.sqlite3
+data/db.sqlite3-shm
+data/db.sqlite3-wal
+data/db.sqlite3.bak.*
+data/screenshots/
+data/avatars/
+data/chromadb/
+
+# ── AgentScope Runtime ──
+data/agentscope_workspaces/
+agentscope_workspaces/
+
+# ── Logs ──
+logs/
+*.log
+
+# ── Test Exports & Results ──
+exports/*.yaml
+exports/*.csv
+exports/*.json
+exports/*.md
+result_*.csv
+result_*.md
+
+# ── Frontend ──
+frontend/node_modules/
+frontend/dist/
+frontend/src/auto-imports.d.ts
+frontend/src/components.d.ts
+
+# ── Environment ──
+.env
+.env.local
+.env.*.local
+
+# ── IDS & Editor ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.ruff_cache/
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Claude Code (personal session data, paths, permissions) ──
+.claude/
+.workbuddy/
+
+# ── Legacy frontend (pre-Vue migration, contains hardcoded device IDs) ──
+frontend/_legacy/
+
+# ── Data migration (contains API keys + password hashes) ──
+data_migration.json
+
+# ── Test exports ──
+demo_test_*.yaml
+
+# ── Temp files ──
+*.tmp.*
+skills-lock.json
+agent_scope_map.html

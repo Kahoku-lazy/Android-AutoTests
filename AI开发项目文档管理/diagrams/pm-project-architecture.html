@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PM-Project 架构总览</title>
+  <style>
+    :root {
+      --c-bg: #f8fafc;
+      --c-canvas: #ffffff;
+      --c-border: #cbd5e1;
+      --c-text-main: #0f172a;
+      --c-text-sub: #64748b;
+      --font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      --font-mono: 'SF Mono', Monaco, Consolas, monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--c-bg); font-family: var(--font-ui); color: var(--c-text-main); padding: 20px; }
+    .canvas { background: var(--c-canvas); border: 2px solid var(--c-border); padding: 24px; max-width: 1100px; margin: 0 auto; }
+    .header { border-bottom: 1px solid var(--c-border); padding-bottom: 12px; margin-bottom: 20px; }
+    .title { font-size: 22px; font-weight: 600; }
+    .sub { font-size: 11px; color: var(--c-text-sub); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+    .row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: flex-start; }
+    .label { font-size: 10px; font-family: var(--font-mono); color: var(--c-text-sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; width: 100%; }
+
+    .box { background: var(--c-canvas); border: 1px solid var(--c-border); padding: 7px 12px; font-size: 12px; }
+    .box--dark { background: #0f172a; color: #ffffff; border-color: #0f172a; }
+    .box--blue { background: #E6F1FB; border-color: #185FA5; color: #0C447C; font-weight: 500; }
+    .box--green { background: #EAF3DE; border-color: #639922; color: #3B6D11; font-weight: 500; }
+    .box--amber { background: #FAEEDA; border-color: #BA7517; color: #854F0B; font-weight: 500; }
+
+    .divider { border-top: 1px dashed var(--c-border); margin: 12px 0; }
+    .flex { display: flex; gap: 6px; flex-wrap: wrap; }
+    .gap-4 { gap: 4px; }
+    .tag { display: inline-block; font-size: 9px; font-family: var(--font-mono); padding: 2px 5px; border: 1px solid var(--c-border); }
+    .tag--fill { background: #0f172a; color: #fff; border-color: #0f172a; }
+    .mt-2 { margin-top: 8px; }
+  </style>
+</head>
+<body>
+<div class="canvas">
+  <div class="header">
+    <h1 class="title">PM-Project — GitHhub Copilot Agent/Skill 架构</h1>
+    <p class="sub">13 Agents · 13 Skills · 6 Stages · Stage-Gate Lifecycle</p>
+  </div>
+
+  <div class="label">Platform Layer — 运行环境</div>
+  <div class="row">
+    <div class="box">VS Code</div>
+    <div class="box box--dark">GitHub Copilot Agent Mode</div>
+    <div class="box">飞书 MCP</div>
+    <div class="box">墨刀 MCP</div>
+    <div class="box">Playwright MCP</div>
+    <div class="box">OpenAI API</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="label">Agent Layer — 13 个角色化智能体 (入口)</div>
+  <div class="row gap-4">
+    <div class="box box--dark">planning · 任务规划</div>
+    <div class="box box--dark">new-employee-mentor · 统一入口</div>
+    <div class="box box--blue">PM-assistant · 立项验证</div>
+    <div class="box box--blue">requirement-analyst · 需求分析</div>
+    <div class="box box--amber">designer · 高保真原型</div>
+    <div class="box box--amber">architect · 架构设计</div>
+    <div class="box box--green">gate-review · Stage-Gate 评审</div>
+    <div class="box box--green">post-launch-review · 复盘</div>
+    <div class="box">code-review · 代码审查</div>
+    <div class="box">code-debug · 报错诊断</div>
+    <div class="box">code-testing · 测试生成</div>
+    <div class="box">code-docs · 文档生成</div>
+    <div class="box">ui-testing · UI 自动化测试</div>
+    <div class="box">pr-review-submit · PR 提交</div>
+  </div>
+
+  <div class="mt-2 flex">
+    <span class="tag tag--fill">BLUE</span><span style="font-size:10px;color:var(--c-text-sub);margin-right:8px;">= 产品阶段</span>
+    <span class="tag" style="background:#EAF3DE;border-color:#639922;">GREEN</span><span style="font-size:10px;color:var(--c-text-sub);margin-right:8px;">= 评审/决策</span>
+    <span class="tag" style="background:#FAEEDA;border-color:#BA7517;">AMBER</span><span style="font-size:10px;color:var(--c-text-sub);margin-right:8px;">= 设计/架构</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="label">Skill Layer — 13 个领域化技能 (工具)</div>
+  <div class="row gap-4">
+    <div class="box">requirement-doc · PRD 生成</div>
+    <div class="box">requirement-to-issues · 需求转 Issue</div>
+    <div class="box">prototype-design · 原型升级</div>
+    <div class="box">modao-prototype · 墨刀导入</div>
+    <div class="box">architect · 架构模板</div>
+    <div class="box">coding-standards · 编码规范</div>
+    <div class="box">code-review · 审查流程</div>
+    <div class="box">code-standards-check · 合规扫描</div>
+    <div class="box">github-publish · 发布流程</div>
+    <div class="box">feishu-docs · 飞书文档</div>
+    <div class="box">microservices · 微服务</div>
+    <div class="box">playwright-testing · Playwright 规范</div>
+    <div class="box">security-audit · 安全审计</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="label">Repository Structure — 仓库目录</div>
+  <div class="row">
+    <div class="box" style="font-family:var(--font-mono);font-size:11px;">.github/agents/*.agent.md</div>
+    <div class="box" style="font-family:var(--font-mono);font-size:11px;">.github/skills/*/SKILL.md</div>
+    <div class="box" style="font-family:var(--font-mono);font-size:11px;">skills/*/references/*.md</div>
+    <div class="box" style="font-family:var(--font-mono);font-size:11px;">skills/*/scripts/*</div>
+    <div class="box" style="font-family:var(--font-mono);font-size:11px;">docs/ · PRD/架构/线框</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="label">Demo Case — VideoPrompt AI 实操案例</div>
+  <div class="row">
+    <div class="box" style="font-family:var(--font-mono);font-size:11px;">prd-videoprompt-ai.md &nbsp; (594 行 PRD, 10+ AI 模型适配)</div>
+    <div class="box" style="font-family:var(--font-mono);font-size:11px;">architecture-videoprompt-ai.md &nbsp; (826 行, Next.js+Supabase)</div>
+    <div class="box" style="font-family:var(--font-mono);font-size:11px;">analysis-report*.md ×2</div>
+    <div class="box" style="font-family:var(--font-mono);font-size:11px;">wireframes/ &nbsp; (7 个 HTML 低保真原型)</div>
+  </div>
+
+  <div style="margin-top:16px;font-size:10px;color:var(--c-text-sub);font-family:var(--font-mono);text-align:right;">
+    83 files · 2.1 MB · MIT License · github.com/nickhou1983/PM-Project
+  </div>
+</div>
+</body>
+</html>

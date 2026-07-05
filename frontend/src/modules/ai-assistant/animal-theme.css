@@ -1,0 +1,91 @@
+/* ================================================================
+   Animal Crossing theme for AI Assistant module
+   Overrides Element Plus CSS variables with warm, nature-inspired tones.
+   Also adjusts the glass-morphism framework variables used by all pages.
+   ================================================================ */
+
+/* ── Element Plus primary color → warm wood ── */
+.ai-animal-theme {
+  --el-color-primary: #8B7355;
+  --el-color-primary-light-3: #A0896C;
+  --el-color-primary-light-5: #C4B5A0;
+  --el-color-primary-light-7: #DFD5C7;
+  --el-color-primary-light-8: #EDE7DE;
+  --el-color-primary-light-9: #F5F1EB;
+  --el-color-primary-dark-2: #6B5A3E;
+
+  --el-color-success: #6B9E6B;
+  --el-color-warning: #D4A853;
+  --el-color-danger: #C47373;
+
+  --el-border-radius-base: 12px;
+  --el-border-radius-small: 8px;
+  --el-border-radius-round: 20px;
+
+  --el-bg-color: #FDF8F0;
+  --el-bg-color-overlay: #FFFBF5;
+  --el-bg-color-page: #F5EDE0;
+  --el-fill-color-blank: #FFFBF5;
+  --el-fill-color-light: rgba(139,115,85,0.06);
+
+  --el-text-color-primary: #4A3A28;
+  --el-text-color-regular: #5C4A35;
+  --el-text-color-secondary: #988B7A;
+
+  --el-box-shadow-light: 0 2px 12px rgba(139, 115, 85, 0.08);
+  --el-box-shadow: 0 4px 16px rgba(139, 115, 85, 0.10);
+  --el-box-shadow-dark: 0 8px 24px rgba(139, 115, 85, 0.14);
+
+  --el-color-info: #909399;
+  --el-border-color: rgba(139, 115, 85, 0.12);
+  --el-border-color-light: rgba(139, 115, 85, 0.06);
+
+  font-family: 'Nunito', 'Noto Sans SC', system-ui, sans-serif;
+}
+
+/* ── Glass-morphism variables (shared by all pages) ── */
+.ai-animal-theme {
+  --glass-bg: rgba(139, 115, 85, 0.04);
+  --glass-border: rgba(139, 115, 85, 0.12);
+  --accent-blue: #8B7355;
+  --accent-green: #6B9E6B;
+  --accent-pink: #D4A853;
+  --text-primary: #4A3A28;
+  --text-secondary: #988B7A;
+  --shadow: 0 2px 12px rgba(139, 115, 85, 0.06);
+}
+
+/* ── Blob colors → earthy tones ── */
+.ai-animal-theme .blob-1 { background: rgba(212, 168, 83, 0.6) !important; }  /* warm gold */
+.ai-animal-theme .blob-2 { background: rgba(139, 115, 85, 0.5) !important; }  /* wood */
+.ai-animal-theme .blob-3 { background: rgba(107, 158, 107, 0.5) !important; }  /* leaf */
+
+/* ── Element Plus component overrides ── */
+.ai-animal-theme .el-button--primary {
+  --el-button-bg-color: var(--el-color-primary);
+  --el-button-border-color: var(--el-color-primary);
+  --el-button-hover-bg-color: var(--el-color-primary-light-3);
+  --el-button-hover-border-color: var(--el-color-primary-light-3);
+}
+
+.ai-animal-theme .el-input__wrapper,
+.ai-animal-theme .el-textarea__inner {
+  border-radius: 10px;
+}
+
+.ai-animal-theme .el-select .el-input__wrapper {
+  border-radius: 10px;
+}
+
+.ai-animal-theme .el-tag {
+  border-radius: 8px;
+}
+
+.ai-animal-theme .el-step__head.is-finish .el-step__icon {
+  background: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+}
+
+.ai-animal-theme .el-step__title.is-finish {
+  color: var(--el-color-primary);
+}

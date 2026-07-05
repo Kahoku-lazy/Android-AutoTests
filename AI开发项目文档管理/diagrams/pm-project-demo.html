@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PM-Project Demo Case</title>
+  <style>
+    :root {
+      --c-bg: #f8fafc; --c-canvas: #ffffff; --c-border: #cbd5e1;
+      --c-text-main: #0f172a; --c-text-sub: #64748b;
+      --font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      --font-mono: 'SF Mono', Monaco, Consolas, monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--c-bg); font-family: var(--font-ui); color: var(--c-text-main); padding: 20px; }
+    .canvas { background: var(--c-canvas); border: 2px solid var(--c-border); padding: 24px; max-width: 1100px; margin: 0 auto; }
+    .header { border-bottom: 1px solid var(--c-border); padding-bottom: 12px; margin-bottom: 20px; }
+    .title { font-size: 22px; font-weight: 600; }
+    .sub { font-size: 11px; color: var(--c-text-sub); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+    .flex-col { display: flex; flex-direction: column; gap: 12px; }
+    .section-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #0f172a; }
+    .section-sub { font-size: 10px; color: var(--c-text-sub); font-family: var(--font-mono); margin-bottom: 6px; }
+
+    .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .node { font-size: 11px; padding: 6px 10px; border: 1px solid var(--c-border); font-family: var(--font-mono); }
+    .node--fill { background: #0f172a; color: #fff; border-color: #0f172a; }
+    .arrow { font-size: 14px; color: var(--c-text-sub); }
+    .divider { border-top: 1px dashed var(--c-border); margin: 14px 0; }
+
+    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .card { border: 1px solid var(--c-border); padding: 10px 14px; }
+    .card-title { font-size: 13px; font-weight: 600; }
+    .card-sub { font-size: 10px; color: var(--c-text-sub); font-family: var(--font-mono); margin-top: 2px; }
+    .card-stats { font-size: 10px; color: var(--c-text-sub); margin-top: 4px; }
+
+    .tech-stack { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tech { font-size: 10px; font-family: var(--font-mono); padding: 3px 7px; border: 1px solid var(--c-border); background: #f1f5f9; }
+
+    .wireframe-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+    .wf { font-size: 9px; font-family: var(--font-mono); padding: 5px 4px; border: 1px solid var(--c-border); text-align: center; background: #f8fafc; }
+  </style>
+</head>
+<body>
+<div class="canvas">
+  <div class="header">
+    <h1 class="title">PM-Project Demo Case — VideoPrompt AI</h1>
+    <p class="sub">Full Demo: Idea → PRD → Architecture → Wireframes</p>
+  </div>
+
+  <div class="section-title">产品定位</div>
+  <div class="section-sub">AI 视频提示词一站式创作平台 · 适配 10+ 视频生成模型</div>
+
+  <div class="divider"></div>
+
+  <div class="section-title">工作流输出链</div>
+  <div class="flow">
+    <span class="node node--fill">需求分析</span><span class="arrow">→</span>
+    <span class="node">analysis-report.md</span><span class="arrow">→</span>
+    <span class="node node--fill">PRD 生成</span><span class="arrow">→</span>
+    <span class="node">prd-videoprompt-ai.md</span><span class="arrow">→</span>
+    <span class="node node--fill">架构设计</span><span class="arrow">→</span>
+    <span class="node">architecture-videoprompt-ai.md</span><span class="arrow">→</span>
+    <span class="node node--fill">原型</span><span class="arrow">→</span>
+    <span class="node">wireframes/ (7页)</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-title">技术栈 (PRD 指定)</div>
+  <div class="tech-stack">
+    <span class="tech">Next.js 14</span>
+    <span class="tech">Supabase</span>
+    <span class="tech">Vercel Serverless</span>
+    <span class="tech">OpenAI API</span>
+    <span class="tech">Replicate</span>
+    <span class="tech">Stripe</span>
+    <span class="tech">Tailwind CSS</span>
+    <span class="tech">TypeScript</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-title">交付物详情</div>
+  <div class="cards">
+    <div class="card">
+      <div class="card-title">PRD v2.0</div>
+      <div class="card-sub">docs/prd-videoprompt-ai/prd-videoprompt-ai.md</div>
+      <div class="card-stats">594 行 · 10 章节 · 支持 10+ AI 模型</div>
+      <div class="card-stats" style="margin-top:4px;">Sora / Seedance / Runway / Kling / Pika · 图片: MJ / SD / Flux / DALL·E / Ideogram</div>
+      <div class="card-stats" style="margin-top:2px;">含 RICE 评分体系 · 订阅定价 · 里程碑路线图</div>
+    </div>
+    <div class="card">
+      <div class="card-title">架构文档 v1.0</div>
+      <div class="card-sub">docs/prd-videoprompt-ai/architecture-videoprompt-ai.md</div>
+      <div class="card-stats">826 行 · 10 章节 · Mermaid 架构图</div>
+      <div class="card-stats" style="margin-top:4px;">Next.js App Router · Zustand · Zod · Vitest · Playwright</div>
+      <div class="card-stats" style="margin-top:2px;">数据库 Schema · API 设计 · 安全架构 · 部署方案 · LaaS vs PaaS 选型</div>
+    </div>
+    <div class="card">
+      <div class="card-title">需求分析 v1.0</div>
+      <div class="card-sub">analysis-report.md</div>
+      <div class="card-stats">双模型版本 (Sora + Runway) · 市场分析 · 功能规划</div>
+    </div>
+    <div class="card">
+      <div class="card-title">需求分析 v2.0</div>
+      <div class="card-sub">analysis-report-universal-model.md</div>
+      <div class="card-stats">通用模型扩展 · 多模态支持 · 兼容性分析</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-title">低保真原型 (7 个页面)</div>
+  <div class="wireframe-grid">
+    <div class="wf">index.html<br/>导航首页</div>
+    <div class="wf">editor.html<br/>编辑器</div>
+    <div class="wf">ai-result.html<br/>AI 结果</div>
+    <div class="wf">templates.html<br/>模板库</div>
+    <div class="wf">my-prompts.html<br/>我的提示词</div>
+    <div class="wf">login.html<br/>登录注册</div>
+    <div class="wf">model-selector<br/>模型选择</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-title">使用的 Agent/Skill</div>
+  <div class="flow">
+    <span class="node" style="background:#E6F1FB;border-color:#185FA5;">planning (路由)</span>
+    <span class="node" style="background:#E6F1FB;border-color:#185FA5;">PM-assistant (验证)</span>
+    <span class="node" style="background:#E6F1FB;border-color:#185FA5;">requirement-analyst</span>
+    <span class="node" style="background:#E6F1FB;border-color:#185FA5;">architect</span>
+    <span class="node" style="background:#FAEEDA;border-color:#BA7517;">requirement-doc skill</span>
+    <span class="node" style="background:#FAEEDA;border-color:#BA7517;">architect skill</span>
+    <span class="node" style="background:#FAEEDA;border-color:#BA7517;">prototype-design skill</span>
+  </div>
+
+  <div style="margin-top:16px;font-size:10px;color:var(--c-text-sub);font-family:var(--font-mono);text-align:right;">
+    PM-Project · github.com/nickhou1983/PM-Project · MIT License
+  </div>
+</div>
+</body>
+</html>

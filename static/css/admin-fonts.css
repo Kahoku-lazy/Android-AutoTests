@@ -1,0 +1,48 @@
+/* ============================================================
+ * Android-AutoTests — Admin 自定义字体覆盖
+ * 覆盖 jazzmin 默认 Source Sans Pro，改用中英文兼容字体栈
+ * ============================================================ */
+
+/* 全局字体栈：英文 Source Sans Pro + 中文微软雅黑/思源黑体回退 */
+body,
+.form-control,
+.btn,
+.dropdown-menu,
+.nav-link,
+.navbar-brand,
+.breadcrumb,
+.pagination,
+.alert,
+.badge,
+.card-title,
+.card-text,
+.table,
+.modal-content,
+.select2-container--default .select2-selection--single .select2-selection__rendered,
+.select2-results__option {
+    font-family: "Source Sans Pro", "Microsoft YaHei", "Noto Sans SC",
+                 "DengXian", -apple-system, "Segoe UI", Roboto, sans-serif !important;
+}
+
+/* 标题加粗：思源黑体在标题上更稳重 */
+h1, h2, h3, h4, h5, h6,
+.card-title,
+.navbar-brand,
+.sidebar-brand-text {
+    font-family: "Source Sans Pro", "Microsoft YaHei", "Noto Sans SC",
+                 "DengXian", -apple-system, "Segoe UI", sans-serif !important;
+    font-weight: 600;
+}
+
+/* 代码块 / 预格式化文本：Consolas 优先，Courier New 兜底 */
+pre, code, kbd, samp,
+.CodeMirror, .monospace,
+.djangocms-admin-style pre {
+    font-family: "Consolas", "Courier New", "Source Code Pro",
+                 "Microsoft YaHei", monospace !important;
+}
+
+/* 表格等宽数字对齐 */
+.table td, .table th {
+    font-variant-numeric: tabular-nums;
+}

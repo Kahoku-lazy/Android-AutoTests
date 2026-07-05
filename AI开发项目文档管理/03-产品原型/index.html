@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>原型导航 · Android-AutoTests</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap');
+  :root {
+    --glass-bg: rgba(255,255,255,0.45); --glass-border: rgba(255,255,255,0.6);
+    --text-primary: #4a4e69; --text-secondary: #9a8c98;
+    --shadow: 0 8px 32px 0 rgba(31,38,135,0.07);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Quicksand',sans-serif; min-height:100vh; padding:40px; background:linear-gradient(45deg,#ffc8dd,#bde0fe,#a2d2ff); background-size:200% 200%; animation:gradientBG 15s ease infinite; position:relative; overflow:hidden; }
+  @keyframes gradientBG { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+  .blob { position:absolute; border-radius:50%; filter:blur(60px); z-index:0; opacity:.8; }
+  .blob-1 { top:-10%; left:-10%; width:400px; height:400px; background:#ffafcc; }
+  .blob-2 { bottom:-10%; right:-10%; width:300px; height:300px; background:#a2d2ff; }
+  .blob-3 { top:40%; left:60%; width:250px; height:250px; background:#e2ece9; }
+  .content { position:relative; z-index:1; max-width:900px; margin:0 auto; }
+  .header { background:var(--glass-bg); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-radius:24px; border:1px solid var(--glass-border); box-shadow:var(--shadow); padding:28px 32px; margin-bottom:24px; }
+  .header h1 { font-size:26px; font-weight:700; color:var(--text-primary); letter-spacing:-0.5px; }
+  .header .sub { font-size:13px; color:var(--text-secondary); margin-top:6px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; }
+  .card { background:var(--glass-bg); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border-radius:20px; border:1px solid var(--glass-border); padding:20px; text-decoration:none; color:var(--text-primary); transition:all .3s; box-shadow:var(--shadow); }
+  .card:hover { transform:translateY(-3px); background:rgba(255,255,255,0.65); box-shadow:0 12px 36px rgba(31,38,135,0.1); }
+  .card h3 { font-size:15px; font-weight:600; margin-bottom:6px; }
+  .card p { font-size:12px; color:var(--text-secondary); line-height:1.5; }
+  .badge { display:inline-block; padding:4px 10px; border-radius:50px; font-size:10px; font-weight:700; margin-right:4px; margin-top:8px; }
+  .b-p0 { background:rgba(255,175,204,0.4); color:#7a5560; }
+  .b-p1 { background:rgba(162,210,255,0.4); color:#1c4a7a; }
+  .b-mod { background:rgba(184,232,198,0.4); color:#1a5c2a; }
+  .footer { margin-top:32px; font-size:11px; color:var(--text-secondary); text-align:center; }
+</style>
+</head>
+<body>
+<div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div>
+<div class="content">
+  <div class="header">
+    <h1>Android-AutoTests · 低保真原型</h1>
+    <p class="sub">v2.0 Soft Glass Edition / 灰度线框图 / 8 个核心页面</p>
+  </div>
+  <div class="grid">
+    <a class="card" href="login.html">
+      <h3>1. 登录</h3><p>JWT 认证入口</p><span class="badge b-p0">P0</span><span class="badge b-mod">auth</span>
+    </a>
+    <a class="card" href="dashboard.html">
+      <h3>2. 仪表盘</h3><p>项目概览 · 快捷操作</p><span class="badge b-p0">P0</span><span class="badge b-mod">core</span>
+    </a>
+    <a class="card" href="devices.html">
+      <h3>3. 设备管理</h3><p>设备池 · 状态监控</p><span class="badge b-p0">P0</span><span class="badge b-mod">device-pool</span>
+    </a>
+    <a class="card" href="elements.html">
+      <h3>4. 元素定位</h3><p>实时截图 · XPath 策略</p><span class="badge b-p0">P0</span><span class="badge b-mod">element-loc</span>
+    </a>
+    <a class="card" href="cases.html">
+      <h3>5. 用例编辑</h3><p>CRUD · 拖拽编排</p><span class="badge b-p0">P0</span><span class="badge b-mod">case-mgr</span>
+    </a>
+    <a class="card" href="runner.html">
+      <h3>6. 执行引擎</h3><p>批量执行 · WS 进度</p><span class="badge b-p1">P1</span><span class="badge b-mod">test-runner</span>
+    </a>
+    <a class="card" href="reports.html">
+      <h3>7. 测试报告</h3><p>Allure · 趋势图</p><span class="badge b-p1">P1</span><span class="badge b-mod">report</span>
+    </a>
+    <a class="card" href="#" style="opacity:0.4;pointer-events:none;">
+      <h3>8. AgentScope</h3><p>多 Agent 协作 · v4 预留</p><span class="badge b-p1" style="background:rgba(255,175,204,0.2);">P2</span><span class="badge b-mod" style="background:rgba(162,210,255,0.2);">AI</span>
+    </a>
+  </div>
+  <p class="footer">Android-AutoTests v2.0 · Soft Glass Wireframe · 仅供信息架构验证</p>
+</div>
+</body>
+</html>

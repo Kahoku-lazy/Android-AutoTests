@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>统计概览 — 功能设计与实现全览</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --primary: #19c8b9; --primary-hover: #3dd4c6; --primary-active: #11a89b; --primary-bg: #e6f9f6;
+    --text: #794f27; --text-body: #725d42; --text-secondary: #9f927d; --text-muted: #8a7b66; --text-disabled: #c4b89e;
+    --bg: #f8f8f0; --bg-content: rgb(247, 243, 223); --bg-disabled: #f0ece2;
+    --border: #c4b89e; --border-hover: #a89878; --border-strong: #9f927d;
+    --success: #6fba2c; --success-active: #5a9e1e; --warning: #f5c31c;
+    --warning-active: #dba90e; --error: #e05a5a; --error-active: #c94444;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Nunito, 'Noto Sans SC', -apple-system, 'PingFang SC', sans-serif; font-weight:500; letter-spacing:0.01em; background:var(--bg); color:var(--text-body); line-height:1.7; }
+  .container { max-width:960px; margin:0 auto; padding:40px 20px; }
+  h1 { font-weight:800; color:var(--text); font-size:1.8em; text-align:center; margin-bottom:6px; }
+  h2 { font-weight:700; font-size:1.1em; color:var(--text); margin:0 0 8px 0; display:flex; align-items:center; gap:8px; letter-spacing:0.02em; }
+  h3 { font-weight:700; font-size:1em; color:var(--text); margin:20px 0 8px; }
+  .subtitle { text-align:center; color:var(--text-secondary); font-size:0.95em; margin-bottom:36px; }
+  .card { background:var(--bg-content); border-radius:20px; padding:24px; margin-bottom:20px; border:2px solid transparent; transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+  .card:hover { transform:translateY(-2px); }
+  .card-em { border-color:var(--warning); background:#fffdf5; }
+  .sec-num { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:10px; font-size:14px; font-weight:800; color:#fff; flex-shrink:0; }
+  .sn-green { background:var(--success); } .sn-teal { background:var(--primary); }
+  .sn-pink { background:#f8a6b2; } .sn-purple { background:#b39ef3; } .sn-yellow { background:var(--warning); } .sn-blue { background:#889df0; }
+  .story { background:#fff; border-radius:16px; padding:18px 20px; margin:12px 0; border-left:4px solid var(--primary); }
+  .story .who { font-size:12px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; font-weight:700; }
+  .story .goal { font-size:15px; color:var(--text); font-weight:700; margin:4px 0; }
+  .story .why { font-size:13px; color:var(--text-muted); }
+  .pain-gain { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+  .pain { background:#fef2f2; border-radius:14px; padding:16px; border-left:4px solid var(--error); }
+  .gain { background:#f0fdf4; border-radius:14px; padding:16px; border-left:4px solid var(--success); }
+  .pain h4 { color:var(--error); font-size:14px; margin-bottom:6px; }
+  .gain h4 { color:var(--success); font-size:14px; margin-bottom:6px; }
+  .pain li, .gain li { font-size:13px; margin:4px 0; padding-left:4px; }
+  @media (max-width:600px) { .pain-gain { grid-template-columns:1fr; } }
+  code { font-family:'SF Mono','Fira Code','Cascadia Code',Consolas,monospace; font-weight:600; font-size:12px; background:rgba(121,79,39,0.06); padding:2px 7px; border-radius:6px; color:var(--text); }
+  pre { background:#2b2118; color:#e8d5bc; padding:16px 20px; border-radius:20px; overflow-x:auto; font-size:12px; line-height:1.8; margin:12px 0; font-family:'SF Mono','Fira Code','Cascadia Code',Consolas,monospace; font-weight:600; tab-size:2; }
+  pre .cm { color:#6b5e50; } pre .kw { color:#d4a0e0; } pre .fn { color:#61afef; } pre .str { color:#a8d4a0; } pre .num { color:#e8c87a; }
+  table { width:100%; border-collapse:collapse; margin:10px 0; border-radius:20px; overflow:hidden; }
+  th { background:rgba(121,79,39,0.06); padding:10px 14px; text-align:left; font-size:12px; font-weight:700; letter-spacing:0.02em; color:var(--text); }
+  td { padding:9px 14px; font-size:13px; border-top:1px dashed rgba(196,184,158,0.4); }
+  tr:hover td { background:rgba(25,200,185,0.04); }
+  .tag { display:inline-block; padding:2px 8px; border-radius:50px; font-size:10px; font-weight:700; letter-spacing:0.02em; margin-right:4px; }
+  .tag-vue { background:#dbeafe; color:#1e40af; } .tag-py { background:#e0e7ff; color:#3730a3; }
+  .tag-warn { background:#fef3c7; color:#92400e; } .tag-ok { background:#f0fdf4; color:#15803d; }
+  .footer { text-align:center; color:var(--text-secondary); font-size:12px; margin-top:40px; padding:20px 0; border-top:1px dashed rgba(196,184,158,0.5); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>📊 统计概览 — 功能设计与实现全览</h1>
+<p class="subtitle">仪表盘顶部 4 张指标卡片：在线设备 · 测试用例 · 活跃 Agent · 运行中任务</p>
+
+<!-- ===== PART 1 ===== -->
+<div class="card card-em">
+  <h2><span class="sec-num sn-yellow">🎯</span> 第一部分：业务视角 — 统计概览是做什么的</h2>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-green">1</span> 功能定位</h2>
+  <p style="font-size:15px;">
+    <strong>统计概览</strong>是仪表盘最顶部的 4 张指标卡片，<strong>用一瞥就能回答：平台现在状态如何？</strong>
+  </p>
+  <p style="font-size:14px; color:var(--text-secondary); margin-top:8px;">
+    4 张卡片对应平台的 4 个核心维度——设备有没有在线的、用例库有多大、AI Agent 有多少在干活、有没有任务正在跑。它是整个平台的<strong>心率监测器</strong>。
+  </p>
+  <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;">
+    <div style="flex:1; min-width:150px; background:rgba(111,186,44,0.06); border-radius:14px; padding:16px; text-align:center;">
+      <div style="font-size:24px;">📱</div>
+      <div style="font-size:13px; font-weight:700; color:var(--text); margin-top:4px;">在线设备</div>
+      <div style="font-size:12px; color:var(--text-secondary);">连接了多少台手机</div>
+    </div>
+    <div style="flex:1; min-width:150px; background:rgba(136,157,240,0.06); border-radius:14px; padding:16px; text-align:center;">
+      <div style="font-size:24px;">📋</div>
+      <div style="font-size:13px; font-weight:700; color:var(--text); margin-top:4px;">测试用例</div>
+      <div style="font-size:12px; color:var(--text-secondary);">有多少条可执行的用例</div>
+    </div>
+    <div style="flex:1; min-width:150px; background:rgba(247,205,103,0.12); border-radius:14px; padding:16px; text-align:center;">
+      <div style="font-size:24px;">🧠</div>
+      <div style="font-size:13px; font-weight:700; color:var(--text); margin-top:4px;">活跃 Agent</div>
+      <div style="font-size:12px; color:var(--text-secondary);">有多少 AI 智能体在线</div>
+    </div>
+    <div style="flex:1; min-width:150px; background:rgba(248,166,178,0.06); border-radius:14px; padding:16px; text-align:center;">
+      <div style="font-size:24px;">▶️</div>
+      <div style="font-size:13px; font-weight:700; color:var(--text); margin-top:4px;">运行中任务</div>
+      <div style="font-size:12px; color:var(--text-secondary);">有多少测试正在执行</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-green">2</span> 用户故事</h2>
+  <div class="story">
+    <div class="who">👤 测试工程师 · 上班第一件事</div>
+    <div class="goal">"打开仪表盘，一眼确认设备都在线、昨天跑的任务没挂。"</div>
+    <div class="why">统计概览在页面最顶部，不需要滚动。4 个数字 3 秒内扫完——在线设备 > 0、运行中任务 = 0（说明昨晚的任务跑完了）、用例数没变少。</div>
+  </div>
+  <div class="story">
+    <div class="who">👤 运维人员 · 设备故障排查</div>
+    <div class="goal">"我要快速知道现在有几台设备连不上，是否需要紧急处理。"</div>
+    <div class="why">在线设备卡片显示"在线数 / 总数"，如果在线数远小于总数，说明有设备掉线——立即去设备管理页排查。趋势箭头向下也提示最近活动减少。</div>
+  </div>
+  <div class="story">
+    <div class="who">👤 团队 Leader · 了解团队产出</div>
+    <div class="goal">"这周新增了多少用例？Agent 有没有人在用？"</div>
+    <div class="why">测试用例卡片显示总数 + 本周新增趋势，Agent 卡片显示活跃数。两个数字反映团队在<strong>建用例</strong>和<strong>用 AI</strong>方面的活跃度。</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-green">3</span> 解决的痛点</h2>
+  <div class="pain-gain">
+    <div class="pain">
+      <h4>❌ 没有统计概览之前</h4>
+      <ul>
+        <li>不知道设备在线状态，要进设备管理页一个个看</li>
+        <li>不知道有没有任务在跑，可能同时启动两个测试</li>
+        <li>用例总数靠记忆——"大概两三百条吧"</li>
+        <li>Agent 状态不可见——创建了但不知道有没有启用</li>
+        <li>每次想了解平台状态至少要点 3-4 个页面</li>
+      </ul>
+    </div>
+    <div class="gain">
+      <h4>✅ 有了统计概览之后</h4>
+      <ul>
+        <li><strong>一页知全局</strong>：4 个数字覆盖平台核心维度</li>
+        <li><strong>异常可见</strong>：设备离线、任务异常一眼发现</li>
+        <li><strong>趋势感知</strong>：每个卡片带趋势箭头，知道在变好还是变差</li>
+        <li><strong>零点击</strong>：打开仪表盘即看，不需要任何操作</li>
+        <li><strong>心跳动画</strong>：有任务在跑时显示红色脉冲点，视觉提醒</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-green">4</span> 界面信息架构</h2>
+  <p style="font-size:14px; margin-bottom:14px;">4 张卡片排成一行的网格布局，每张卡片独立回答一个问题：</p>
+  <table>
+    <tr><th>卡片</th><th>颜色</th><th>显示数字</th><th>趋势</th><th>回答的问题</th></tr>
+    <tr><td>📱 在线设备</td><td style="color:var(--success);">app-green</td><td>在线数 / 总数</td><td>近期活跃</td><td>"有多少设备可以用？"</td></tr>
+    <tr><td>📋 测试用例</td><td style="color:#889df0;">app-blue</td><td>用例总数</td><td>本周新增</td><td>"用例库有多大？增长快吗？"</td></tr>
+    <tr><td>🧠 活跃 Agent</td><td style="color:#d4a030;">app-yellow</td><td>活跃数</td><td>活跃数</td><td>"有多少 AI 助手在工作？"</td></tr>
+    <tr><td>▶️ 运行中任务</td><td style="color:#f8a6b2;">app-pink</td><td>运行数</td><td>近期活跃</td><td>"现在有任务在跑吗？"</td></tr>
+  </table>
+</div>
+
+<!-- ===== PART 2 ===== -->
+<div class="card card-em" style="margin-top:36px;">
+  <h2><span class="sec-num sn-yellow">🔧</span> 第二部分：技术视角 — 统计概览是如何实现的</h2>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-teal">5</span> 数据流全景 — 逐层展开</h2>
+
+  <div style="background:#fffdf5; border-radius:14px; padding:16px 20px; margin-bottom:16px; border:2px dashed var(--warning);">
+    <h4 style="color:#92400e; font-size:13px; margin:0 0 10px 0;">📖 7 层流水线 — 从数据库到 4 张卡片</h4>
+    <p style="font-size:13px; color:var(--text-body); margin:0;">
+      统计概览的数据旅程比趋势数据更简单——不涉及复杂的循环查询，后端直接用 <code>.count()</code> 数一下各表有多少条符合条件的记录，返回给前端渲染成 4 张卡片。
+    </p>
+  </div>
+
+  <!-- Layer 1 -->
+  <div style="background:rgba(246,186,44,0.06); border-radius:14px; padding:16px 18px; margin-bottom:0;">
+    <h4 style="color:#92400e; font-size:14px; margin:0 0 10px 0;">🟡 第 1 层：数据库（4 张表）</h4>
+    <table style="margin:0;">
+      <tr><th style="width:140px;">表名</th><th>通俗含义</th><th>统计概览用它做什么</th></tr>
+      <tr><td><code>dp_devices</code></td><td><strong>设备花名册</strong>——记录每台连接过的手机，含在线/离线状态</td><td>数在线设备数和总设备数</td></tr>
+      <tr><td><code>cm_test_definitions</code></td><td><strong>用例库目录</strong>——平台上所有测试用例的定义</td><td>数总用例数和已启用数</td></tr>
+      <tr><td><code>ai_agents</code></td><td><strong>AI 员工表</strong>——所有创建的智能体配置</td><td>数总 Agent 数和活跃数</td></tr>
+      <tr><td><code>tr_test_runs</code></td><td><strong>测试任务工单</strong>——每次批量执行的任务记录</td><td>数总执行次数和正在运行的任务</td></tr>
+    </table>
+  </div>
+  <div style="display:flex; align-items:center; justify-content:center; gap:12px; padding:6px 0;">
+    <span style="font-size:22px; color:var(--text-secondary);">↓</span>
+    <span style="font-size:11px; color:var(--text-muted); background:var(--bg); padding:4px 12px; border-radius:50px; font-weight:600;">Django ORM 逐表 .count() — 数据库内部计数，只返回数字</span>
+    <span style="font-size:22px; color:var(--text-secondary);">↓</span>
+  </div>
+
+  <!-- Layer 2 -->
+  <div style="background:#f5ede0; border-radius:14px; padding:14px 18px; margin-bottom:0;">
+    <h4 style="color:#8b7355; font-size:14px; margin:0 0 8px 0;">🟤 第 2 层：ORM 聚合查询 — 简单的 COUNT</h4>
+    <table style="margin:0;">
+      <tr><th style="width:180px;">查询操作</th><th>通俗解释</th></tr>
+      <tr><td><code>Device.objects.count()</code></td><td>"设备表里一共有多少行？" → 返回一个数字</td></tr>
+      <tr><td><code>Device.objects.filter(status="ONLINE").count()</code></td><td>"其中状态是在线的有多少行？" → 先筛再数</td></tr>
+      <tr><td><strong>统计概览的查询特点</strong></td><td>全是简单的 COUNT 查询，<strong>没有循环、没有 JOIN</strong>，性能很好（每条 < 1ms）</td></tr>
+    </table>
+  </div>
+  <div style="display:flex; align-items:center; justify-content:center; gap:12px; padding:6px 0;">
+    <span style="font-size:22px; color:var(--text-secondary);">↓</span>
+    <span style="font-size:11px; color:var(--text-muted); background:var(--bg); padding:4px 12px; border-radius:50px; font-weight:600;">8 个数字 → 交给 dashboard_stats() 组装为 JSON</span>
+    <span style="font-size:22px; color:var(--text-secondary);">↓</span>
+  </div>
+
+  <!-- Layer 3 -->
+  <div style="background:#e0e7ff; border-radius:14px; padding:14px 18px; margin-bottom:0;">
+    <h4 style="color:#3730a3; font-size:14px; margin:0 0 8px 0;">🔵 第 3 层：后端函数 — dashboard_stats() 前 10 行</h4>
+    <table style="margin:0;">
+      <tr><th style="width:150px;">变量</th><th>含义</th><th>来自哪张表</th></tr>
+      <tr><td><code>device_online</code></td><td>在线设备数</td><td><code>dp_devices</code> WHERE status='ONLINE'</td></tr>
+      <tr><td><code>device_total</code></td><td>设备总数</td><td><code>dp_devices</code> COUNT(*)</td></tr>
+      <tr><td><code>case_total</code></td><td>用例总数</td><td><code>cm_test_definitions</code> COUNT(*)</td></tr>
+      <tr><td><code>case_enabled</code></td><td>已启用用例数</td><td><code>cm_test_definitions</code> WHERE enabled=True</td></tr>
+      <tr><td><code>agent_total</code></td><td>Agent 总数</td><td><code>ai_agents</code> COUNT(*)</td></tr>
+      <tr><td><code>agent_active</code></td><td>活跃 Agent 数</td><td><code>ai_agents</code> WHERE status='active'</td></tr>
+      <tr><td><code>run_total</code></td><td>任务总数</td><td><code>tr_test_runs</code> COUNT(*)</td></tr>
+      <tr><td><code>run_active</code></td><td>运行中任务数</td><td><code>tr_test_runs</code> WHERE status='RUNNING'</td></tr>
+    </table>
+  </div>
+  <div style="display:flex; align-items:center; justify-content:center; gap:12px; padding:6px 0;">
+    <span style="font-size:22px; color:var(--text-secondary);">↓</span>
+    <span style="font-size:11px; color:var(--text-muted); background:var(--bg); padding:4px 12px; border-radius:50px; font-weight:600;">8 个数字包装为 JSON → 通过 HTTP 发回浏览器 → 带 JWT 鉴权</span>
+    <span style="font-size:22px; color:var(--text-secondary);">↓</span>
+  </div>
+
+  <!-- Layer 4+5 -->
+  <div style="background:#f0fdf4; border-radius:14px; padding:14px 18px; margin-bottom:0;">
+    <h4 style="color:#15803d; font-size:14px; margin:0 0 8px 0;">🟢 第 4 层：JSON 响应 — 统计概览相关的字段</h4>
+    <table style="margin:0;">
+      <tr><th>JSON 字段</th><th>值</th><th>最终显示在</th></tr>
+      <tr><td><code>data.devices.online</code></td><td>在线设备数</td><td>第 1 张卡片 大数字</td></tr>
+      <tr><td><code>data.devices.total</code></td><td>设备总数</td><td>第 1 张卡片 后缀 " / N"</td></tr>
+      <tr><td><code>data.devices.trend</code></td><td>近期活跃趋势</td><td>第 1 张卡片 趋势箭头</td></tr>
+      <tr><td><code>data.cases.total</code></td><td>用例总数</td><td>第 2 张卡片 大数字</td></tr>
+      <tr><td><code>data.cases.trend</code></td><td>本周新增</td><td>第 2 张卡片 趋势箭头</td></tr>
+      <tr><td><code>data.agents.active</code></td><td>活跃 Agent 数</td><td>第 3 张卡片 大数字</td></tr>
+      <tr><td><code>data.runs.active</code></td><td>运行中任务数</td><td>第 4 张卡片 大数字 + 红点动画</td></tr>
+    </table>
+  </div>
+  <div style="display:flex; align-items:center; justify-content:center; gap:12px; padding:6px 0;">
+    <span style="font-size:22px; color:var(--text-secondary);">↓</span>
+    <span style="font-size:11px; color:var(--text-muted); background:var(--bg); padding:4px 12px; border-radius:50px; font-weight:600;">index.vue 拆解 JSON → 4 组 stats 对象 → 通过 Props 传给 4 个 StatsCard 实例</span>
+    <span style="font-size:22px; color:var(--text-secondary);">↓</span>
+  </div>
+
+  <!-- Layer 6+7 -->
+  <div style="background:#fff; border-radius:14px; padding:14px 18px; border:2px solid var(--border);">
+    <h4 style="color:var(--text); font-size:14px; margin:0 0 8px 0;">🟠 第 5-7 层：前端数据 → StatsCard 组件 → 浏览器渲染</h4>
+    <table style="margin:0;">
+      <tr><th style="width:120px;">卡片实例</th><th>传入的 Props</th><th>你看到的效果</th></tr>
+      <tr>
+        <td style="font-weight:700; color:var(--success);">在线设备</td>
+        <td><code>value=online, suffix="/total", color="app-green", trend=xxx</code></td>
+        <td>绿色卡片，大数字（如 3 / 5），绿色向上箭头 + 百分比</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700; color:#889df0;">测试用例</td>
+        <td><code>value=total, color="app-blue", trend=本周新增数</code></td>
+        <td>蓝色卡片，大数字，蓝色向上箭头</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700; color:#d4a030;">活跃 Agent</td>
+        <td><code>value=active, color="app-yellow"</code></td>
+        <td>黄色卡片，活跃数</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700; color:#f8a6b2;">运行中任务</td>
+        <td><code>value=active, color="app-pink"</code></td>
+        <td>粉色卡片 + <strong>红色脉冲动画圆点</strong>（仅当 >0 时显示）</td>
+      </tr>
+    </table>
+    <div style="margin-top:12px; padding-top:12px; border-top:1px dashed var(--border);">
+      <h5 style="font-size:13px; color:var(--text); margin:0 0 8px 0;">🎨 视觉主题：animal-island-vue</h5>
+      <table style="margin:0;">
+        <tr><th style="width:100px;">维度</th><th>统计概览的具体用法</th></tr>
+        <tr><td>UI 库</td><td>纯 animal-island-vue 的 <code>&lt;Card&gt;</code> 作为卡片容器，无 Element Plus</td></tr>
+        <tr><td>配色</td><td>4 张卡片用 4 种模块主色（绿/蓝/黄/粉），视觉区分明确</td></tr>
+        <tr><td>动画</td><td>数字滚动动画（countUpFormatted）+ 卡片 hover 弹性缩放（elasticHover）+ 红色脉冲点（CSS @keyframes）</td></tr>
+        <tr><td>加载态</td><td>骨架屏占位（3 条灰色闪烁 bar），数据到达后切换为真实内容</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-teal">6</span> 前端实现 — StatsCard 组件</h2>
+  <div style="background:#fce7f3; border-radius:14px; padding:16px 20px; margin-bottom:16px; border-left:4px solid #f8a6b2;">
+    <h4 style="color:#be185d; font-size:13px; margin:0 0 8px 0;">👁️ 从交互上你能感知到什么？</h4>
+    <p style="font-size:13px; color:var(--text-body); margin:0;">
+      StatsCard 不是一个简单的 <code>&lt;div&gt;数字&lt;/div&gt;</code>，它有三个细节：
+      <strong>①</strong> 首次进入视野时数字从 0 滚动到目标值（约 1.2 秒），<strong>②</strong> 鼠标悬停时卡片微微放大（弹性动画），
+      <strong>③</strong> 数据加载中显示骨架屏而非空白。这些细节让页面感觉"活"的。
+    </p>
+  </div>
+  <h3>Props 接口（8 个）</h3>
+  <table>
+    <tr><th>Prop</th><th>类型</th><th>默认</th><th>说明</th></tr>
+    <tr><td><code>label</code></td><td>String</td><td>必填</td><td>卡片标题</td></tr>
+    <tr><td><code>value</code></td><td>Number</td><td>0</td><td>主数字</td></tr>
+    <tr><td><code>suffix</code></td><td>String</td><td>''</td><td>数字后缀（如 " / 5"）</td></tr>
+    <tr><td><code>trend</code></td><td>Number</td><td>0</td><td>趋势数值，非 0 时显示箭头</td></tr>
+    <tr><td><code>color</code></td><td>String</td><td>'app-teal'</td><td>动森 13 色之一</td></tr>
+    <tr><td><code>pattern</code></td><td>String</td><td>'app-teal'</td><td>波点纹理颜色</td></tr>
+    <tr><td><code>loading</code></td><td>Boolean</td><td>false</td><td>是否显示骨架屏</td></tr>
+    <tr><td><code>icon</code></td><td>Slot</td><td>-</td><td>卡片顶部的 SVG 图标</td></tr>
+  </table>
+  <h3>动画机制</h3>
+  <pre><span class="cm">// 鼠标首次进入 → 触发数字滚动动画</span>
+<span class="kw">function</span> <span class="fn">onCardEnter</span>() {
+  <span class="kw">if</span> (!displayed.value) {
+    displayed.value = <span class="kw">true</span>
+    <span class="fn">setTimeout</span>(() =&gt; {
+      <span class="fn">countUpFormatted</span>(valueRef.value, <span class="num">0</span>, props.value, <span class="num">1200</span>, ...)
+    }, <span class="num">200</span>)
+  }
+}
+<span class="cm">// 数据更新时 → 数字从旧值滚到新值</span>
+<span class="fn">watch</span>(() =&gt; props.value, (newVal) =&gt; {
+  <span class="fn">countUpFormatted</span>(valueRef.value, <span class="num">0</span>, newVal, <span class="num">800</span>, ...)
+})</pre>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-teal">7</span> 后端实现 — 8 个数字的来源</h2>
+  <div style="background:#e0e7ff; border-radius:14px; padding:16px 20px; margin-bottom:16px; border-left:4px solid #889df0;">
+    <h4 style="color:#3730a3; font-size:13px; margin:0 0 8px 0;">🔄 后端数据流转 — 用大白话讲</h4>
+    <p style="font-size:13px; color:var(--text-body); margin:0;">
+      统计概览的数据生产非常简单——<code>dashboard_stats()</code> 函数的前 10 行就是它。<strong>逐一去 4 张表里 COUNT 一下</strong>，每张表数两次数（总数 + 条件筛选数），得到 8 个数字，和其他统计一起打包成 JSON 返回。没有复杂计算，没有循环查询，<strong>是整个 dashboard_stats 中性能最好的部分</strong>。
+    </p>
+  </div>
+  <pre><span class="cm">// apps/dashboard/views.py — dashboard_stats() 前 10 行</span>
+device_online = Device.objects.<span class="fn">filter</span>(status=<span class="str">"ONLINE"</span>).<span class="fn">count</span>()   <span class="cm">// 在线设备</span>
+device_total  = Device.objects.<span class="fn">count</span>()                        <span class="cm">// 设备总数</span>
+case_total    = TestDefinition.objects.<span class="fn">count</span>()                 <span class="cm">// 用例总数</span>
+case_enabled  = TestDefinition.objects.<span class="fn">filter</span>(enabled=<span class="kw">True</span>).<span class="fn">count</span>()
+run_total     = TestRunRecord.objects.<span class="fn">count</span>()                  <span class="cm">// 任务总数</span>
+run_active    = TestRunRecord.objects.<span class="fn">filter</span>(status=<span class="str">"RUNNING"</span>).<span class="fn">count</span>()
+agent_total   = AIAgent.objects.<span class="fn">count</span>()                       <span class="cm">// Agent 总数</span>
+agent_active  = AIAgent.objects.<span class="fn">filter</span>(status=<span class="str">"active"</span>).<span class="fn">count</span>()
+
+<span class="cm">// 打包为 JSON 返回给前端</span>
+<span class="kw">return</span> <span class="fn">JsonResponse</span>({<span class="str">"ok"</span>: <span class="kw">True</span>, <span class="str">"data"</span>: {
+    <span class="str">"devices"</span>:  {<span class="str">"online"</span>: device_online, <span class="str">"total"</span>: device_total, <span class="str">"trend"</span>: ...},
+    <span class="str">"cases"</span>:    {<span class="str">"total"</span>: case_total, <span class="str">"enabled"</span>: case_enabled, <span class="str">"trend"</span>: ...},
+    <span class="str">"agents"</span>:   {<span class="str">"total"</span>: agent_total, <span class="str">"active"</span>: agent_active, <span class="str">"trend"</span>: ...},
+    <span class="str">"runs"</span>:     {<span class="str">"total"</span>: run_total, <span class="str">"active"</span>: run_active, <span class="str">"trend"</span>: ...},
+}})</pre>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-teal">8</span> 涉及文件清单</h2>
+  <div style="background:rgba(136,157,240,0.06); border-radius:14px; padding:14px 18px; margin-bottom:14px;">
+    <h4 style="color:var(--text); font-size:13px; margin:0 0 8px 0;">📂 这些文件的关系</h4>
+    <p style="font-size:13px; color:var(--text-body); margin:0;">
+      统计概览比趋势数据简单——只涉及 4 个文件。改卡片颜色改 <code>index.vue</code> 的 color prop，改数据来源改 <code>views.py</code> 的 ORM 查询，互不影响。
+    </p>
+  </div>
+  <table>
+    <tr><th>层</th><th>文件</th><th>行数</th><th>职责</th></tr>
+    <tr><td>前端入口</td><td><code>frontend/src/modules/dashboard/index.vue</code></td><td>417</td><td>4 个 StatsCard 实例的布局和数据绑定</td></tr>
+    <tr><td>卡片组件</td><td><code>.../components/StatsCard.vue</code></td><td>203</td><td>骨架屏 + 数字动画 + 趋势箭头</td></tr>
+    <tr><td>动画工具</td><td><code>.../shared/animations.js</code></td><td>-</td><td>countUpFormatted / elasticHover</td></tr>
+    <tr><td>后端逻辑</td><td><code>apps/dashboard/views.py</code></td><td>327</td><td>dashboard_stats() 前 10 行生产统计数字</td></tr>
+  </table>
+</div>
+
+<!-- ===== PART 3 ===== -->
+<div class="card card-em" style="margin-top:36px;">
+  <h2><span class="sec-num sn-yellow">📐</span> 第三部分：AI 编码治理</h2>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-purple">9</span> 模块边界与依赖注入</h2>
+  <h3>允许依赖白名单</h3>
+  <table>
+    <tr><th>来源</th><th>允许</th><th>示例</th></tr>
+    <tr><td>Django ORM（跨 App 只读）</td><td><span class="tag tag-ok">✅</span></td><td><code>from apps.device_pool.models import Device</code></td></tr>
+    <tr><td>models/constants.py</td><td><span class="tag tag-ok">✅</span></td><td><code>from models.constants import DeviceStatus</code></td></tr>
+    <tr><td>跨 App 内部实现</td><td><span class="tag tag-warn">🔴 严禁</span></td><td><code>from apps.test_runner.runner import _active_runs</code></td></tr>
+  </table>
+  <h3>输入输出契约</h3>
+  <p style="font-size:13px; color:var(--text-secondary);">统计概览的响应格式嵌入在 <code>/api/dashboard/stats/</code> 中，AI 修改统计逻辑时<strong>不得修改 devices/cases/agents/runs 这 4 个字段的结构</strong>。</p>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-purple">10</span> 命名规则</h2>
+  <table>
+    <tr><th>层级</th><th>规范</th><th>统计概览示例</th></tr>
+    <tr><td>Python 函数</td><td><code>snake_case</code></td><td><code>dashboard_stats</code></td></tr>
+    <tr><td>Vue 组件</td><td><code>PascalCase.vue</code></td><td><code>StatsCard.vue</code></td></tr>
+    <tr><td>Vue 模板</td><td><code>kebab-case</code></td><td><code>&lt;stats-card&gt;</code></td></tr>
+    <tr><td>CSS class</td><td><code>kebab-case</code> + 模块前缀</td><td><code>.stats-card__value</code></td></tr>
+    <tr><td>数据库表</td><td><code>{prefix}_snake_case</code></td><td><code>dp_devices</code>, <code>ai_agents</code></td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-purple">11</span> 错误处理与日志规范</h2>
+  <div class="pain-gain">
+    <div class="pain"><h4>❌ 禁止</h4><ul><li><code>catch {}</code> 空块</li><li><code>console.log(err)</code></li><li>数字加载失败仍显示旧数据</li></ul></div>
+    <div class="gain"><h4>✅ 必须</h4><ul><li>后端异常返回 <code>{ok: false, error}</code></li><li>前端 catch 后 <code>loading.value = false</code></li><li>骨架屏超时后显示错误提示</li></ul></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-purple">12</span> 数据流转与持久化规则</h2>
+  <table>
+    <tr><th>规则</th><th>说明</th></tr>
+    <tr><td>只读原则</td><td>统计概览只做 SELECT COUNT，禁止 INSERT/UPDATE/DELETE</td></tr>
+    <tr><td>查询方式</td><td>Django ORM 的 <code>.count()</code> 和 <code>.filter().count()</code></td></tr>
+    <tr><td>DTO 转换</td><td>ORM 返回数字 → 构造纯 dict → JsonResponse 返回，不直接返回 Model 对象</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-purple">13</span> 单元测试与验收标准</h2>
+  <table>
+    <tr><th>类型</th><th>最低覆盖</th><th>必须包含</th></tr>
+    <tr><td>StatsCard 组件</td><td>80%+</td><td>正常渲染 + loading 骨架屏 + 数字格式化 + 趋势箭头方向</td></tr>
+    <tr><td>dashboard_stats API</td><td>100%</td><td>正常返回 + devices/cases/agents/runs 字段完整性 + 未认证 401</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-purple">14</span> 统计概览专属 AI 提示词</h2>
+  <div style="background:#fef2f2; border-radius:16px; padding:18px 20px; margin-bottom:12px; border-left:4px solid var(--error);">
+    <h4 style="color:var(--error); font-size:14px; margin:0 0 12px 0;">【绝对红线】</h4>
+    <table style="margin:0;">
+      <tr><th style="width:140px;">规则</th><th>要求</th></tr>
+      <tr><td>1. 数据来源</td><td>统计数字必须来自 ORM COUNT 查询，禁止硬编码、禁止假数据</td></tr>
+      <tr><td>2. 响应格式</td><td>devices/cases/agents/runs 四个字段的结构不可修改</td></tr>
+      <tr><td>3. 状态值</td><td>必须用 <code>DeviceStatus.ONLINE</code> 等 Enum，禁止 "ONLINE" 字符串</td></tr>
+      <tr><td>4. 动画</td><td>数字滚动用 <code>countUpFormatted</code>，禁止自己写动画逻辑</td></tr>
+      <tr><td>5. UI 库</td><td>纯 animal-island-vue 的 Card，禁止引入 el-card 或其他库</td></tr>
+    </table>
+  </div>
+  <div style="background:var(--bg-content); border-radius:16px; padding:18px 20px; margin-bottom:12px; border:2px solid var(--border);">
+    <h4 style="color:var(--text); font-size:14px; margin:0 0 8px 0;">【代码生成要求】</h4>
+    <ul style="margin:0; padding-left:20px; font-size:13px;">
+      <li>新增统计指标时，在 <code>dashboard_stats()</code> 中加 COUNT 查询 + 在 JSON 响应中加字段 + 在 index.vue 中加 StatsCard 实例</li>
+      <li>同步输出测试：后端验证新字段存在 + 前端验证新卡片渲染</li>
+      <li>保持 4 卡片网格布局（响应式：900px 以下 2 列，480px 以下 1 列）</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card card-em" style="margin-top:36px;">
+  <h2><span class="sec-num sn-yellow">📋</span> 三部分总结</h2>
+  <table>
+    <tr><th>部分</th><th>视角</th><th>回答的问题</th><th>受众</th></tr>
+    <tr><td>第一部分</td><td>🎯 业务</td><td>统计概览是什么、谁在用、解决什么痛点</td><td>产品经理 / 测试负责人</td></tr>
+    <tr><td>第二部分</td><td>🔧 技术</td><td>4 张卡片的数据从哪来、经过哪些层、渲染成什么</td><td>前端/后端工程师</td></tr>
+    <tr><td>第三部分</td><td>📐 治理</td><td>AI 改统计概览时能做什么、不能做什么</td><td>AI 编码助手</td></tr>
+  </table>
+</div>
+
+<div class="footer">
+  Android-AutoTests · Dashboard 统计概览 — 功能设计与实现全览 · 2026-07-05<br>
+  由 feature-analysis skill 生成
+</div>
+
+</div>
+</body>
+</html>

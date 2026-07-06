@@ -246,6 +246,52 @@ animal-island-vue 的 `Tabs` 与 Element Plus `el-tabs` 一样：标签头 + 内
 grep -r "<Tabs" frontend/src/modules/  # 看正确写法
 ```
 
+## 🔴 Element Plus 组件默认值陷阱
+
+Element Plus 部分组件的默认行为与直觉相反，**使用前必须查文档确认关键 prop 的默认值**。以下为已验证的陷阱：
+
+### el-cascader：v-model 默认绑定路径数组，不是叶子值
+
+```html
+<!-- ❌ 错误：默认 emitPath=true，v-model 绑定的是路径数组 [1, 5]，不是单个 ID -->
+<el-cascader v-model="form.directory_id" :options="dirOptions" :props="{ checkStrictly: true }" />
+
+<!-- ✅ 正确：显式设置 emitPath: false，v-model 才绑定叶子节点值 -->
+<el-cascader
+  v-model="form.directory_id"
+  :options="dirOptions"
+  :props="{ checkStrictly: true, emitPath: false, value: 'value', label: 'label' }"
+  placeholder="选择目录"
+  clearable
+/>
+```
+
+> **后果**：`emitPath` 默认 `true` → v-model 值是 `[1, 5]`（路径数组），后端期望单个整数 `5`。保存时类型不匹配，编辑回显时 cascade 不识别单个 ID。**两边都静默失败，只有功能测试能暴露。**
+
+### 强制流程：使用不熟悉的 Element Plus 组件时
+
+```
+决定使用 el-cascader / el-tree-select / el-transfer 等复杂组件
+  ↓
+1. 查文档确认默认值：emitPath / value-key / node-key 等关键 prop
+  ↓
+2. 确认 v-model 类型与后端期望类型一致（单个值 vs 路径数组 vs 对象）
+  ↓
+3. 写完代码后 grep 搜索已知陷阱模式：
+     grep -rn 'el-cascader' frontend/src/modules/ | grep -v 'emitPath'
+     → 命中说明有 cascader 没设置 emitPath，可能有问题
+  ↓
+4. Phase 4 用 curl 做 POST+GET 往返验证（参考 §数据链路完整性）
+```
+
+### 写完代码后自查命令（补充）
+
+```bash
+# 检查 el-cascader 是否设置了 emitPath
+grep -rn 'el-cascader' frontend/src/modules/ | grep -v 'emitPath'
+# 命中 → 可能 v-model 绑定类型与后端不一致，需确认
+```
+
 ## 错误处理
 
 - API 返回 `ok: false` → 显示 `ElMessage.error(error)`
@@ -334,6 +380,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:5173/src/modules/ai-assi
 | API 路径拼写错误 | 404 + `data` 为 undefined | 检查 api.js 中的 URL 路径 |
 | `data.ok` 解构错误 | 有响应但页面无数据 | 检查 API 响应格式 `{ok, data, items?}` |
 | 字段名不匹配 | 列表为空 | 检查 `response.data.xxx` 与 `store.items` 赋值字段名一致 |
+| **组件 v-model 类型 ≠ 后端期望类型** 🔴 | **保存成功但数据错 / 编辑回显不显示** | **对比前端组件 v-model 输出类型 vs 后端字段类型。常见：el-cascader 默认输出路径数组，后端期望单个 ID** |
 
 ### 编辑后快速自检
 
@@ -384,4 +431,46 @@ try {
 |------|---------|
 | **写操作**（delete/create/update） | catch 必须 `ElMessage.error()` + 乐观更新或重新加载。禁止静默吞错 |
 | **读操作**（list/get/query） | catch 可静默，但必须保证数据为空态（不残留旧数据） |
+
+## 🔴 页面区域空白/不可见排查流程
+
+> **触发条件**: 用户反馈"某区域没有内容"、"右侧空白"、"XX 不显示"等视觉缺失问题。
+> **来源**: 2026-07-06 case-manager 右侧空白排查耗时过长，根因是 CSS 而非代码逻辑。
+
+### 强制两步排查（不可跳过）
+
+```
+用户反馈"XX 区域空白/没有内容"
+  ↓
+第一步: DevTools Elements → 搜关键 class/文字 → 确认 DOM 中是否存在目标元素？
+  ├── 不存在 → 模板/JS 问题 → 检查 v-if 条件、组件是否注册、编译是否报错
+  └── 存在 → 第二步
+        ↓
+第二步: DevTools → 选中目标元素 → Computed 面板 → 逐项检查:
+  ├── display: none? → v-if/v-show 或 CSS 隐藏
+  ├── width/height: 0? → 内容为空或 CSS 未撑开
+  ├── opacity: 0? → 动画或过渡隐藏
+  ├── visibility: hidden? → CSS 显式隐藏
+  ├── position: absolute + 负坐标? → 被定位到视口外
+  ├── overflow: hidden + 子元素被裁剪?
+  └── ⚠️ flex-direction 方向是否与预期一致?
+       └── 全局 CSS 继承冲突是最隐蔽的坑
+           → 必须检查 computed styles 中的 flex-direction 来源
+           → 特别注意 scoped 样式没有覆盖全局样式的情况
+```
+
+### 关键原则
+
+1. **优先用浏览器 DevTools，不要纯代码分析** — curl/grep/vite build 全部通过 ≠ 渲染没问题。CSS 问题不会被任何 CLI 工具捕获
+2. **全局样式冲突是盲区** — scoped 组件内看代码完全正常，但全局 `style.css` 或父级 CSS 可能覆盖关键属性。必须看浏览器 computed styles 面板确认**最终生效值**及其**来源文件**
+3. **flex-direction 是最常见的布局杀手** — `.doc-body` 这种全局容器设了 `flex-direction: column`，子组件的 `display: flex` 如果没有显式设 `flex-direction: row`，就会继承 column 方向，导致左右布局变成上下布局
+4. **不要反复重写模板** — 如果 vite build 通过了且 API 返回数据，大概率不是模板结构问题。先排除 CSS 再改代码
+
+### 本次教训速查
+
+| 症状 | 排查方向错误（❌） | 正确排查（✅） |
+|------|-------------------|--------------|
+| 右侧看不到内容 | 数 div 闭合、改 v-if/v-else 链、重写模板 | DevTools computed → `flex-direction: column` 来自全局 `.doc-body` |
+| 编译/API/模块全部正常 | 反复 curl + grep 验证已知结论 | 打开浏览器看实际渲染 |
+| 怀疑组件 API 用错 | 逐行对照 animal-island-ui.md | 先看 Elements 面板确认组件是否在 DOM 中 |
 ```

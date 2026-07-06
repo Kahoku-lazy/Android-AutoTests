@@ -1,4 +1,5 @@
 """Agent factory — builds AgentScope Agent instances from Django AIAgent records."""
+
 import os
 from typing import Optional
 from agentscope.agent import Agent
@@ -18,7 +19,7 @@ from apps.ai_assistant.api import decrypt_key
 _MODEL_CLASS = {
     "dashscope": DashScopeChatModel,
     "openai": OpenAIChatModel,
-    "anthropic": OpenAIChatModel,   # Anthropic via OpenAI-compatible
+    "anthropic": OpenAIChatModel,  # Anthropic via OpenAI-compatible
     "custom": OpenAIChatModel,
 }
 
@@ -120,6 +121,28 @@ create_test_sop 参数：
 
 ⚠️ 关键约束：需求不明确时**禁止跳过询问**，必须让用户确认设计方案后再继续。
 
+┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+【PRD 需求文档 → 用例设计子流程】（新增）
+┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+当用户上传 PRD 需求文档（.md / .docx / .pdf）并要求生成测试用例时，
+使用以下专项工具流程：
+
+1. 调用 parse_prd 解析文档 → 获取产品信息 + 章节结构
+2. 告知用户检测到的产品信息，确认是否需要调整
+3. 调用 design_test_cases_from_prd 运行三阶段流水线：
+   - Phase 1: 矛盾分析 + 复杂度 L1~L4 + 方案对比（2-3 个方案）
+   - Phase 2: 五法组合生成「用例设计思路」+「测试用例」（9 列标准格式）
+   - Phase 3: 四维审计（捏造需求/数据不实/需求遗漏/用例缺陷）→ 阻断修正
+4. 展示生成结果（用例数量、优先级分布），询问是否导入
+5. 用户确认后 → 调用 import_designed_cases 批量入库
+6. 入库完成后提示："用例已保存到用例库，可在 case-manager 中编辑 XPath 后执行"
+
+⚠️ 注意：
+- design_test_cases_from_prd 需要较长时间（2-5 分钟），请告知用户耐心等待
+- 生成的用例 enabled=false（描述文本，需补充 XPath 定位器后方可执行）
+- 如果设计引擎不可用，直接在对话中基于 PRD 内容手动设计用例
+┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 【第二阶段：元素准备】
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -220,7 +243,7 @@ SOP 步骤：
 
 def _build_system_prompt(db_agent: AIAgent) -> str:
     """Build the full system prompt by combining user config with platform context + planning hints."""
-    db_prompt = (db_agent.system_prompt or '').strip()
+    db_prompt = (db_agent.system_prompt or "").strip()
 
     # Always inject platform context + SOP 4-phase workflow hints
     base = _PLATFORM_CONTEXT + "\n" + _SOP_WORKFLOW_HINT
@@ -237,9 +260,13 @@ def build_agent_from_db(agent_id: int, user_id: str) -> Agent:
 
     Returns a fully configured Agent instance ready for .reply() / .reply_stream().
     """
-    db_agent = AIAgent.objects.prefetch_related('tools').get(id=agent_id)
+    db_agent = AIAgent.objects.prefetch_related("tools").get(id=agent_id)
     provider = db_agent.model_provider or "dashscope"
-    api_key = decrypt_key(db_agent.api_key) if db_agent.api_key else os.environ.get("DASHSCOPE_API_KEY", "")
+    api_key = (
+        decrypt_key(db_agent.api_key)
+        if db_agent.api_key
+        else os.environ.get("DASHSCOPE_API_KEY", "")
+    )
 
     # Model
     model_cls = _MODEL_CLASS.get(provider, OpenAIChatModel)

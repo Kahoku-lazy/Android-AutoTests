@@ -86,3 +86,7 @@ PM-Project-main/
 *.tmp.*
 skills-lock.json
 agent_scope_map.html
+
+# Test reports
+tests/functional/*/reports/
+.playwright-mcp/

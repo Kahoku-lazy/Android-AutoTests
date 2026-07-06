@@ -1,4 +1,5 @@
 """Tool factory — builds the tool list for AgentScope agents from Django config."""
+
 from agentscope.tool import ToolBase, TaskCreate, TaskGet, TaskList, TaskUpdate
 from .element_tools import GetTestPointsTool, SearchElementsTool
 from .case_tools import SaveTestCaseTool, GetTestCaseTool, ListTestCasesTool, DebugTestCaseTool
@@ -6,7 +7,15 @@ from .device_tools import GetOnlineDevicesTool, AcquireDeviceTool, ReleaseDevice
 from .runner_tools import RunTestTool, GetRunResultsTool, StopRunTool
 from .report_tools import SaveReportTool, ListReportsTool
 from .rag_tool import KnowledgeBaseSearchTool
-from .task_tools import FetchPageElementsTool, CreateRunnerTaskTool, ListAITasksTool, UpdateAITaskTool, CreateTestSOPTool, UpdateTestSOPTool
+from .task_tools import (
+    FetchPageElementsTool,
+    CreateRunnerTaskTool,
+    ListAITasksTool,
+    UpdateAITaskTool,
+    CreateTestSOPTool,
+    UpdateTestSOPTool,
+)
+from .prd_tools import ParsePRDTool, DesignTestCasesFromPRDTool, ImportDesignedCasesTool
 
 
 # AgentScope built-in Plan tools — for intra-phase sub-task tracking
@@ -41,6 +50,9 @@ _ALL_BUSINESS_TOOLS = [
     SaveReportTool(),
     ListReportsTool(),
     KnowledgeBaseSearchTool(),
+    ParsePRDTool(),
+    DesignTestCasesFromPRDTool(),
+    ImportDesignedCasesTool(),
 ]
 
 

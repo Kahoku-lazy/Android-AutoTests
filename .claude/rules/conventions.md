@@ -72,3 +72,19 @@
 - `LoginView.vue` 是平台唯一登录入口
 - `beforeEach` 守卫保护全部路由
 - 前端 Axios 拦截器自动处理 401 刷新
+
+## 文件行数限制
+
+单文件超过上限必须拆分，禁止继续堆代码。
+
+| 文件类型 | 上限 | 超限处理 |
+|------|:--:|------|
+| `.vue` 组件 | 500 行 | 拆出 composables / 子组件 |
+| `.py` 模块 | 400 行 | 拆出独立模块 |
+| 测试入口 `run_tests.py` | 300 行 | 拆出 `{layer}_tests.py` + `helpers.py` |
+| 测试层文件 | 300 行 | 拆更细的测试分组文件 |
+
+**自查命令**：
+```bash
+find . -name "*.py" -o -name "*.vue" | xargs wc -l | sort -rn | head -20
+```

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import { useRoute, useRouter, onBeforeRouteLeave } from "vue-router";
 import { animate } from "animejs";
 import { ElMessage, ElMessageBox, ElCascader } from "element-plus";
@@ -26,6 +26,12 @@ const form = ref({
   enabled: true,
   steps_data: [],
   directory_id: null,
+  // IoT PRD fields
+  priority: "P1",
+  design_method: "",
+  precondition: "",
+  expected_result: "",
+  metrics: "",
 });
 
 // ── Directory cascader options ──
@@ -77,6 +83,8 @@ async function loadDevices() {
 }
 
 onMounted(async () => {
+  // B10: 浏览器刷新/关标签页时提示保存
+  window.addEventListener("beforeunload", onBeforeUnload);
   loadDevices();
   await loadDirOptions();
   if (!isNew.value) {
@@ -94,6 +102,11 @@ onMounted(async () => {
           enabled: d.enabled !== false,
           steps_data: d.steps_data ? [...d.steps_data] : [],
           directory_id: d.directory_id || null,
+          priority: d.priority || "P1",
+          design_method: d.design_method || "",
+          precondition: d.precondition || "",
+          expected_result: d.expected_result || "",
+          metrics: d.metrics || "",
         };
       }
     } catch (_) {}
@@ -133,12 +146,12 @@ async function save() {
     const { data } = await client.post("/cases/definitions", form.value);
     if (data.ok) {
       ElMessage.success("保存成功");
+      // Reset dirty tracker BEFORE router.replace — 否则 onBeforeRouteLeave 看到 isDirty=true
+      initialForm.value = JSON.parse(JSON.stringify(form.value));
       if (isNew.value && data.id) {
         form.value.id = data.id;
         await router.replace(`/cases/${data.id}/edit`);
       }
-      // Reset dirty tracker after successful save
-      initialForm.value = JSON.parse(JSON.stringify(form.value));
       return true;
     } else {
       ElMessage.error(data.error || "保存失败");
@@ -168,19 +181,49 @@ async function exitPage() {
       return; // user cancelled
     }
   }
+  skipGuard.value = true; // B6修复: 防止onBeforeRouteLeave二次弹窗
   router.push("/cases");
 }
 
 async function goToElementLocator() {
-  // Save first, then navigate
+  // 有未保存修改 → 先问用户是否保存后跳转
+  if (isDirty.value) {
+    try {
+      await ElMessageBox.confirm(
+        "当前用例有未保存的修改，是否保存后跳转到元素定位页面？",
+        "保存并跳转",
+        {
+          confirmButtonText: "保存并跳转",
+          cancelButtonText: "取消",
+          type: "warning",
+        },
+      );
+    } catch (_) {
+      return; // 用户取消 → 留在编辑页
+    }
+  }
   const ok = await save();
   if (!ok) return;
   router.push("/elements");
 }
 
+const skipGuard = ref(false); // B6修复: 防止exitPage+onBeforeRouteLeave双重弹窗
+
+// B10: 浏览器刷新/关标签页时提示
+function onBeforeUnload(e) {
+  if (isDirty.value) {
+    e.preventDefault();
+    e.returnValue = ""; // Chrome需要
+  }
+}
+
+onUnmounted(() => {
+  window.removeEventListener("beforeunload", onBeforeUnload);
+});
+
 // Browser back / router navigation guard
 onBeforeRouteLeave((_to, _from, next) => {
-  if (!isDirty.value) return next();
+  if (!isDirty.value || skipGuard.value) return next();
   ElMessageBox.confirm(
     "当前用例有未保存的修改，离开后数据将会丢失。是否继续？",
     "未保存的修改",
@@ -271,6 +314,7 @@ onBeforeRouteLeave((_to, _from, next) => {
                   :options="dirOptions"
                   :props="{
                     checkStrictly: true,
+                    emitPath: false,
                     value: 'value',
                     label: 'label',
                   }"
@@ -307,6 +351,61 @@ onBeforeRouteLeave((_to, _from, next) => {
               placeholder="用例说明、前置条件、预期结果"
             />
           </el-form-item>
+
+          <!-- 优先级（始终可见） -->
+          <el-row :gutter="16">
+            <el-col :span="12">
+              <el-form-item label="优先级">
+                <el-select v-model="form.priority" style="width: 100%">
+                  <el-option label="P0 — 必测" value="P0" />
+                  <el-option label="P1 — 应测" value="P1" />
+                  <el-option label="P2 — 可测" value="P2" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <!-- IoT PRD 字段（从 PRD 文档生成时自动填充） -->
+          <template
+            v-if="
+              form.design_method ||
+              form.precondition ||
+              form.expected_result ||
+              form.metrics
+            "
+          >
+            <el-divider content-position="left">PRD 导入字段</el-divider>
+
+            <el-form-item label="设计方法">
+              <el-input
+                v-model="form.design_method"
+                readonly
+                placeholder="五法之一"
+              />
+            </el-form-item>
+
+            <el-form-item label="前置条件">
+              <el-input
+                v-model="form.precondition"
+                type="textarea"
+                :rows="2"
+                placeholder="测试前置条件"
+              />
+            </el-form-item>
+
+            <el-form-item label="预期结果">
+              <el-input
+                v-model="form.expected_result"
+                type="textarea"
+                :rows="2"
+                placeholder="预期结果"
+              />
+            </el-form-item>
+
+            <el-form-item label="量化指标">
+              <el-input v-model="form.metrics" placeholder="可量化的测试指标" />
+            </el-form-item>
+          </template>
         </el-form>
       </section>
 

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { bus } from "@/shared/event-bus.js";
 import client from "@/shared/api-client.js";
 import { ElMessageBox, ElMessage } from "element-plus";
@@ -150,7 +150,7 @@ const STEP_FIELDS = {
   drag: { required: ["xpath", "direction", "distance"] },
   wait: { required: ["xpath"], optional: ["timeout"] },
   wait_disappear: { required: ["xpath"], optional: ["timeout"] },
-  wait_any: { required: ["xpath"], optional: ["timeout"] },
+  wait_any: { required: ["xpath", "xpath2"], optional: ["timeout"] },
   wait_toast: { required: ["expected_text"], optional: ["timeout"] },
   verify_text: { required: ["xpath", "expected_text"] },
   poll_text: { required: ["xpath", "expected_text"], optional: ["timeout"] },
@@ -158,7 +158,7 @@ const STEP_FIELDS = {
   start_app: { required: ["xpath"] },
   kill_app: { required: ["xpath"] },
   restart_app: { required: ["xpath"], optional: ["index", "timeout"] },
-  retry_click: { required: ["xpath", "xpath2"], optional: ["index"] },
+  retry_click: { required: ["xpath", "index"], optional: [] },
   log: { required: ["description"] },
 };
 
@@ -326,6 +326,10 @@ function isFieldRequired(step, field) {
 }
 
 function addStep() {
+  if (steps.value.length >= 100) {
+    ElMessage.warning("单用例最多 100 个步骤");
+    return;
+  }
   const newSteps = [...steps.value, defaultStep()];
   steps.value = newSteps;
   expanded.value[newSteps.length - 1] = true;
@@ -422,13 +426,22 @@ function onTypeChange(idx, newType) {
 }
 
 // ── Event bus: receive element from locator ──
-bus.on("add-step-to-case", (payload) => {
+const onAddStepFromLocator = (payload) => {
+  if (steps.value.length >= 100) {
+    ElMessage.warning("单用例最多 100 个步骤，请先删除多余步骤后再添加");
+    return;
+  }
   const step = defaultStep("click");
   step.xpath = payload.xpath || "";
   step.description =
     payload.description ||
     `${payload.type}: ${(payload.xpath || "").slice(0, 60)}`;
   steps.value = [...steps.value, step];
+};
+bus.on("add-step-to-case", onAddStepFromLocator);
+// B9修复: 组件卸载时清理事件监听
+onUnmounted(() => {
+  bus.off("add-step-to-case", onAddStepFromLocator);
 });
 
 // ── Step summary with clear action description ──

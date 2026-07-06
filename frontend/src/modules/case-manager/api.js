@@ -43,6 +43,38 @@ export function deleteDefinition(id) {
   return client.delete(`/cases/definitions/${id}`);
 }
 
+// ── YAML 导出 ──
+
+export function exportYaml(testCaseName) {
+  return client.post("/cases/export/yaml", {
+    test_case_name: testCaseName || "auto_test",
+  });
+}
+
+export function listExports() {
+  return client.get("/cases/exports");
+}
+
+// ── 批量移动 ──
+
+export function batchMoveItems(items, targetDirectoryId) {
+  return client.post("/cases/directories/batch-move", {
+    items,
+    target_directory_id: targetDirectoryId,
+  });
+}
+
+// ── 批量导入（PRD 用例设计 → 入库）──
+
+export function batchImportDefinitions(cases, options = {}) {
+  return client.post("/cases/definitions/batch", {
+    cases,
+    overwrite: options.overwrite || false,
+    directory_id: options.directoryId || null,
+    package_name: options.packageName || "",
+  });
+}
+
 // ── 设备（跨模块，调试用）──
 
 export function listDevices() {

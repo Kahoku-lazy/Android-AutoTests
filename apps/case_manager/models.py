@@ -38,6 +38,21 @@ class TestDefinition(models.Model):
     steps_json = models.TextField(default="[]")
     enabled = models.BooleanField(default=True)
     package_name = models.CharField(max_length=200, default="", blank=True)
+    # ── IoT PRD → test-case fields (from iot-test-case-agent) ──
+    priority = models.CharField(
+        max_length=4,
+        choices=[("P0", "P0 — 必测"), ("P1", "P1 — 应测"), ("P2", "P2 — 可测")],
+        default="P1",
+    )
+    design_method = models.CharField(
+        max_length=100,
+        default="",
+        blank=True,
+        help_text="五法之一：场景流法 / 等价类边界值 / 判定表 / 正交排列 / 错误推测",
+    )
+    precondition = models.TextField(default="", blank=True)
+    expected_result = models.TextField(default="", blank=True)
+    metrics = models.TextField(default="", blank=True, help_text="量化指标")
     directory = models.ForeignKey(
         CaseDirectory,
         on_delete=models.SET_NULL,

@@ -1,0 +1,17 @@
+- [output-format-preference](output-format-preference.md) — 用户偏好 HTML 格式输出方案文档和分析报告
+- [css-flex-direction-debug](css-flex-direction-debug.md) — 页面区域空白/不显示必须先查浏览器 DevTools computed styles
+- [prd-first-workflow](prd-first-workflow.md) — 收到功能需求必须先同步 PRD 文档再进入技术流程
+- [animal-island-ui-api-traps](animal-island-ui-api-traps.md) — animal-island-vue 与 Element Plus API 差异速查
+- [el-cascader-emit-path](el-cascader-emit-path.md) — el-cascader 默认 emitPath: true 陷阱
+- [write-ops-catch-must-report](write-ops-catch-must-report.md) — 写操作 catch 必须报错，禁止静默吞错
+- [hardcoded-credentials](hardcoded-credentials.md) — 代码中禁止硬编码密码/API Key/Token
+- [test-plan-workflow](test-plan-workflow.md) — 编写模块测试方案的标准四阶段流程：探索→PRD审查→规范加载→输出
+- [task-completion-summary](task-completion-summary.md) — 每个任务完成后必须输出执行过程摘要（含触发的 Skill/Agent/MCP）
+- [agent-must-be-used](agent-must-be-used.md) — 创建了专用 agent 的任务必须通过该 agent 执行，禁止手动替代
+- [ui-test-screenshot-on-failure](ui-test-screenshot-on-failure.md) — UI 测试失败必须截图嵌入 HTML 报告，所有修复必须留痕
+- [quality-retrospective-case-manager](quality-retrospective-case-manager.md) — case-manager 质量回顾：漏测根因(组件存在 vs 操作流)、Bug 根因(时序/交互/数据流/类型)、4 项系统性改进
+
+- [agent-ownership-thinking](agent-ownership-thinking.md) — AI agent 必须具备项目负责人的思考深度——发现问题→归类根因→提出方案→让用户决策
+- [five-phase-workflow-with-review-gates](five-phase-workflow-with-review-gates.md) — 五阶段流程 + 每阶段审核门禁：探索→审核→规划→审核→拆解→审核→执行→审核→验收
+- [ask-when-uncertain](ask-when-uncertain.md) — 知行合一，不懂就问——任何无法判断或有疑惑的问题必须提出来
+- [three-principles](three-principles.md) — 知行合一、三省吾身、知之为知之——每次任务执行时自检三个问题

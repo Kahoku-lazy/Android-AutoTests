@@ -9,7 +9,7 @@ from django.conf import settings
 from apps.element_locator.api import simple_yaml_dump
 from apps.element_locator.models import Element, PageFlow
 from .models import TestDefinition, TestCaseCache, CaseDirectory
-from .api import get_directory_tree, create_directory, update_directory, delete_directory
+from .api import get_directory_tree, create_directory, update_directory, delete_directory, batch_move_items
 
 
 # ── Directory Management ──
@@ -65,6 +65,22 @@ def directory_detail(request, dir_id):
             status=status,
         )
     return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+
+
+@csrf_exempt
+def directory_batch_move(request):
+    """POST /api/cases/directories/batch-move — Batch move cases/directories."""
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+    data = json.loads(request.body)
+    items = data.get("items", [])
+    target_id = data.get("target_directory_id")
+    if not isinstance(items, list) or not items:
+        return JsonResponse({"ok": False, "error": "items 必须是非空数组"}, status=400)
+    if target_id is None:
+        return JsonResponse({"ok": False, "error": "target_directory_id 是必填项"}, status=400)
+    result = batch_move_items(items, target_id)
+    return JsonResponse({"ok": True, **result})
 
 
 # ── Test Definition CRUD ──
@@ -133,6 +149,11 @@ def definitions_handler(request):
             "enabled": bool(data.get("enabled", True)),
             "package_name": data.get("package_name", ""),
             "directory": directory,
+            "priority": data.get("priority", "P1"),
+            "design_method": data.get("design_method", ""),
+            "precondition": data.get("precondition", ""),
+            "expected_result": data.get("expected_result", ""),
+            "metrics": data.get("metrics", ""),
         }
         TestDefinition.objects.update_or_create(id=case_id, defaults=defaults)
         return JsonResponse({"ok": True, "id": case_id})
@@ -156,6 +177,70 @@ def definition_detail(request, case_id):
     return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
 
 
+@csrf_exempt
+def definitions_batch(request):
+    """POST /api/cases/definitions/batch — Batch import test definitions.
+
+    Request body:
+        {
+            "cases": [{"id": "...", "title": "...", ...}, ...],
+            "overwrite": false,
+            "directory_id": null,
+            "package_name": ""
+        }
+    """
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "无效的 JSON"}, status=400)
+
+    cases = data.get("cases", [])
+    if not isinstance(cases, list) or not cases:
+        return JsonResponse({"ok": False, "error": "cases 必须是非空数组"}, status=400)
+    if len(cases) > 500:
+        return JsonResponse({"ok": False, "error": "单次批量导入最多 500 条用例"}, status=400)
+
+    overwrite = data.get("overwrite", False)
+    directory_id = data.get("directory_id")
+    package_name = data.get("package_name", "")
+
+    # Resolve directory
+    directory = None
+    if directory_id is not None:
+        try:
+            directory = CaseDirectory.objects.get(id=directory_id)
+        except CaseDirectory.DoesNotExist:
+            pass
+
+    from .api import batch_save_definitions
+
+    normalized = []
+    for c in cases:
+        normalized.append(
+            {
+                "case_id": c.get("id", c.get("case_id", "")),
+                "title": c.get("title", ""),
+                "category": c.get("category", c.get("method", "")),
+                "description": c.get("description", ""),
+                "steps": c.get("steps", ""),
+                "steps_data": c.get("steps_data", []),
+                "enabled": c.get("enabled", False),
+                "package_name": c.get("package_name", package_name),
+                "directory_id": directory_id,
+                "priority": c.get("priority", "P1"),
+                "design_method": c.get("design_method", c.get("method", "")),
+                "precondition": c.get("precondition", ""),
+                "expected_result": c.get("expected_result", ""),
+                "metrics": c.get("metrics", ""),
+            }
+        )
+
+    result = batch_save_definitions(normalized, overwrite=overwrite)
+    return JsonResponse({"ok": True, **result})
+
+
 def _serialize_definition(row):
     """Convert a TestDefinition ORM row to a dict for JSON responses."""
     d = {
@@ -170,6 +255,12 @@ def _serialize_definition(row):
         "updated_at": str(row.updated_at),
         "directory_id": row.directory_id,
         "directory_name": row.directory.name if row.directory else None,
+        # IoT PRD fields
+        "priority": row.priority,
+        "design_method": row.design_method,
+        "precondition": row.precondition,
+        "expected_result": row.expected_result,
+        "metrics": row.metrics,
     }
     try:
         d["steps_data"] = json.loads(row.steps_json or "[]")

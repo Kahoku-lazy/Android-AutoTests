@@ -27,28 +27,29 @@ Lite 的 5 项 + 以下:
 | 10 | 新增函数有参数校验 | 必须 |
 | 11 | 日志使用 logging 而非 print | 必须 |
 | 12 | 输入输出契约不改 (API 端点签名不变) | 必须 |
+| 13 | 🔴 前后端数据契约一致 (前端 v-model 类型 vs 后端字段类型) | 必须 |
 
 ## 🏛️ Strict Gate（严格门）
 
 适用: 新模块 / 跨模块 / API变更 / 3+文件 / >200行
 
-Standard 的 12 项 + 以下:
+Standard 的 13 项 + 以下:
 
 | # | 检查项 | 判定 |
 |---|--------|:--:|
-| 13 | 依赖方向单向向下（无循环依赖） | 必须 |
-| 14 | 新增表有 Migration 脚本 | 必须 |
-| 15 | 模块结构完整 (api/serializers/permissions/models 齐全) | 必须 |
-| 16 | 单元测试覆盖核心路径 (正常+异常+边界) | 必须 |
-| 17 | 数据库表前缀与模块一致 | 必须 |
-| 18 | 前端 api.js 封装完整 (组件不直接 import client) | 必须 |
-| 19 | WebSocket 有 JWT 鉴权 | 必须 |
-| 20 | 无凭据硬编码 (os.environ.get) | 必须 |
+| 14 | 依赖方向单向向下（无循环依赖） | 必须 |
+| 15 | 新增表有 Migration 脚本 | 必须 |
+| 16 | 模块结构完整 (api/serializers/permissions/models 齐全) | 必须 |
+| 17 | 单元测试覆盖核心路径 (正常+异常+边界) | 必须 |
+| 18 | 数据库表前缀与模块一致 | 必须 |
+| 19 | 前端 api.js 封装完整 (组件不直接 import client) | 必须 |
+| 20 | WebSocket 有 JWT 鉴权 | 必须 |
+| 21 | 无凭据硬编码 (os.environ.get) | 必须 |
 
 ## 判定逻辑
 
 ```
 Lite:   5项全通过 → Go / 任意❌ → No-Go
-Standard: 12项全通过 → Go / ⭐项❌ → No-Go / 非⭐项⚠️ → Go(有备注)
-Strict:  20项全通过 → Go / 任意❌ → No-Go / ⚠️≥3项 → No-Go
+Standard: 13项全通过 → Go / ⭐项❌ → No-Go / 非⭐项⚠️ → Go(有备注)
+Strict:  21项全通过 → Go / 任意❌ → No-Go / ⚠️≥3项 → No-Go
 ```

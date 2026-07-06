@@ -6,7 +6,7 @@ const props = defineProps({
   item: { type: Object, required: true },
 });
 
-const emit = defineEmits(["edit", "delete"]);
+const emit = defineEmits(["edit", "delete", "select"]);
 
 function cardColor() {
   if (props.item.enabled) return "app-teal";
@@ -32,11 +32,20 @@ function stepCount() {
     :color="cardColor()"
     :pattern="cardPattern()"
     class="case-card"
-    @click="$emit('edit', item)"
+    @click="$emit('select', item)"
   >
     <div class="case-card__body">
       <div class="case-card__header">
-        <span class="case-card__id">{{ item.id }}</span>
+        <div class="case-card__header-left">
+          <span class="case-card__id">{{ item.id }}</span>
+          <span
+            class="case-card__priority"
+            :class="
+              'case-card__priority--' + (item.priority || 'P1').toLowerCase()
+            "
+            >{{ item.priority }}</span
+          >
+        </div>
         <el-tag
           :type="item.enabled ? 'success' : 'info'"
           effect="dark"
@@ -88,6 +97,12 @@ function stepCount() {
   justify-content: space-between;
 }
 
+.case-card__header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .case-card__id {
   font-family: "SF Mono", "Fira Code", Consolas, monospace;
   font-size: 11px;
@@ -96,6 +111,29 @@ function stepCount() {
   background: rgba(139, 115, 85, 0.06);
   padding: 2px 8px;
   border-radius: 6px;
+}
+
+.case-card__priority {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+  letter-spacing: 0.02em;
+}
+
+.case-card__priority--p0 {
+  background: rgba(224, 90, 90, 0.12);
+  color: #c0392b;
+}
+
+.case-card__priority--p1 {
+  background: rgba(245, 195, 28, 0.15);
+  color: #8b6914;
+}
+
+.case-card__priority--p2 {
+  background: rgba(139, 115, 85, 0.08);
+  color: #9f927d;
 }
 
 .case-card__title {

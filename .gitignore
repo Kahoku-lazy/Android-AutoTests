@@ -24,6 +24,8 @@ data/*.db.*
 data/screenshots/
 data/avatars/
 data/chromadb/
+data/uploads/
+data/sop_*.json
 
 # ── AgentScope Runtime ──
 data/agentscope_workspaces/
@@ -77,6 +79,9 @@ data_migration.json
 
 # ── Test exports ──
 demo_test_*.yaml
+
+# ── Third-party project (not part of this repo) ──
+PM-Project-main/
 
 # ── Temp files ──
 *.tmp.*

@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Android-AutoTests · Agent 工作流全景报告</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #19c8b9;
+      --primary-hover: #3dd4c6;
+      --primary-active: #11a89b;
+      --primary-bg: #e6f9f6;
+      --text: #794f27;
+      --text-body: #725d42;
+      --text-secondary: #9f927d;
+      --text-muted: #8a7b66;
+      --text-disabled: #c4b89e;
+      --bg: #f8f8f0;
+      --bg-content: rgb(247, 243, 223);
+      --bg-disabled: #f0ece2;
+      --border: #c4b89e;
+      --border-hover: #a89878;
+      --border-strong: #9f927d;
+      --success: #6fba2c;
+      --warning: #f5c31c;
+      --error: #e05a5a;
+      --focus-yellow: #ffcc00;
+      --shadow-btn: #bdaea0;
+      --shadow-input: #d4c9b4;
+      --r-sm: 12px;
+      --r-base: 18px;
+      --r-lg: 24px;
+      --r-pill: 50px;
+      --ease: cubic-bezier(0.4, 0, 0.2, 1);
+      --d-fast: 0.15s;
+      --d-base: 0.25s;
+      --d-slow: 0.35s;
+
+      --claude: #f7cd67;
+      --agentscope: #f8a6b2;
+      --django: #6fba2c;
+      --device: #889df0;
+      --tool-teal: #19c8b9;
+      --tool-purple: #b39ef3;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Nunito, 'Noto Sans SC', -apple-system, 'PingFang SC', sans-serif;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      background: var(--bg);
+      color: var(--text-body);
+      line-height: 1.7;
+    }
+
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 48px 32px;
+    }
+
+    /* Hero Banner */
+    .hero {
+      text-align: center;
+      padding: 56px 32px;
+      background: var(--bg-content);
+      border-radius: var(--r-lg);
+      margin-bottom: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -60px; left: -60px;
+      width: 160px; height: 160px;
+      background: radial-gradient(circle, rgba(25,200,185,0.12) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -40px; right: -40px;
+      width: 120px; height: 120px;
+      background: radial-gradient(circle, rgba(247,205,103,0.12) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .hero h1 {
+      font-family: Nunito, sans-serif;
+      font-weight: 800;
+      font-size: 32px;
+      color: var(--text);
+      letter-spacing: 0.02em;
+      position: relative;
+      z-index: 1;
+    }
+    .hero .subtitle {
+      margin-top: 8px;
+      font-size: 15px;
+      color: var(--text-secondary);
+      position: relative;
+      z-index: 1;
+    }
+    .hero .meta-row {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+    .hero .meta-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 16px;
+      border-radius: var(--r-pill);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-body);
+      background: rgba(255,255,255,0.6);
+      border: 1.5px solid var(--border);
+    }
+    .meta-tag .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    /* KPI Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    .kpi-card {
+      background: var(--bg-content);
+      border-radius: var(--r-base);
+      padding: 24px;
+      position: relative;
+      transition: transform var(--d-base) var(--ease);
+      cursor: default;
+    }
+    .kpi-card:hover { transform: translateY(-2px); }
+    .kpi-card .kpi-dot {
+      position: absolute;
+      top: 16px; left: 16px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+    .kpi-card .kpi-number {
+      font-family: Nunito, sans-serif;
+      font-weight: 900;
+      font-size: 40px;
+      color: var(--text);
+      letter-spacing: 0.02em;
+      margin: 8px 0 4px;
+    }
+    .kpi-card .kpi-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .kpi-card .kpi-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Section */
+    .section {
+      margin-bottom: 40px;
+    }
+    .section-title {
+      font-family: Nunito, sans-serif;
+      font-weight: 700;
+      font-size: 22px;
+      color: var(--text);
+      letter-spacing: 0.02em;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title .icon-dot {
+      width: 14px; height: 14px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    /* Card */
+    .card {
+      background: var(--bg-content);
+      border-radius: var(--r-base);
+      padding: 28px 32px;
+      margin-bottom: 20px;
+      transition: transform var(--d-base) var(--ease);
+    }
+    .card:hover { transform: translateY(-2px); }
+    .card h3 {
+      font-family: Nunito, sans-serif;
+      font-weight: 700;
+      font-size: 17px;
+      color: var(--text);
+      letter-spacing: 0.02em;
+      margin-bottom: 12px;
+    }
+    .card p { font-size: 14px; line-height: 1.8; }
+
+    /* Flow diagram */
+    .flow-container {
+      background: var(--bg-content);
+      border-radius: var(--r-lg);
+      padding: 36px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+    .flow-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 8px;
+      min-width: 900px;
+    }
+    .flow-node {
+      padding: 10px 16px;
+      border-radius: var(--r-sm);
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      white-space: nowrap;
+      letter-spacing: 0.01em;
+    }
+    .flow-arrow {
+      color: var(--text-secondary);
+      font-size: 16px;
+      margin: 0 8px;
+      flex-shrink: 0;
+    }
+    .flow-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 2px;
+    }
+    .node-claude { background: #fef9e7; color: #8a6010; border: 1.5px solid var(--claude); }
+    .node-agentscope { background: #fef0f3; color: #a03060; border: 1.5px solid var(--agentscope); }
+    .node-django { background: #edf7e7; color: #205020; border: 1.5px solid var(--success); }
+    .node-device { background: #eef1fb; color: #2030a0; border: 1.5px solid var(--device); }
+    .node-db { background: #f5f0e8; color: #5a4020; border: 1.5px solid var(--border-strong); }
+
+    /* Phase steps */
+    .phase-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+    .phase-item {
+      background: var(--bg-content);
+      border-radius: var(--r-base);
+      padding: 20px 24px;
+      border-left: 4px solid var(--primary);
+      transition: transform var(--d-base) var(--ease);
+    }
+    .phase-item:hover { transform: translateY(-2px); }
+    .phase-item .phase-num {
+      font-family: Nunito, sans-serif;
+      font-weight: 900;
+      font-size: 12px;
+      color: var(--primary);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .phase-item .phase-name {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .phase-item .phase-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .phase-item.warn { border-left-color: var(--warning); }
+    .phase-item.warn .phase-num { color: #dba90e; }
+    .phase-item.success { border-left-color: var(--success); }
+    .phase-item.success .phase-num { color: var(--success); }
+    .phase-item.error { border-left-color: var(--error); }
+    .phase-item.error .phase-num { color: var(--error); }
+    .phase-item.pink { border-left-color: var(--agentscope); }
+    .phase-item.pink .phase-num { color: #e06880; }
+
+    /* Table */
+    .table-wrap {
+      background: var(--bg-content);
+      border-radius: var(--r-base);
+      padding: 6px;
+      overflow-x: auto;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    thead th {
+      padding: 16px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 0.02em;
+      text-align: left;
+      position: relative;
+    }
+    thead th::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 20px; right: 20px;
+      border-bottom: 1.5px dashed rgb(240,232,216);
+    }
+    tbody td {
+      padding: 14px 20px;
+      font-size: 13px;
+      line-height: 1.6;
+      position: relative;
+    }
+    tbody td::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 20px; right: 20px;
+      border-bottom: 1px dashed rgb(240,232,216);
+    }
+    tbody tr:nth-child(even) { background: rgba(248,248,240,0.6); }
+    tbody tr:hover {
+      background: repeating-linear-gradient(-45deg, rgba(25,200,185,0.06) 0 10px, rgba(14,196,182,0.04) 10px 20px);
+      background-size: 28.28px 28.28px;
+    }
+
+    /* Badge */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: var(--r-pill);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+    .badge-teal { background: #e6f9f6; color: #11a89b; }
+    .badge-yellow { background: #fef9e7; color: #8a6010; }
+    .badge-pink { background: #fef0f3; color: #a03060; }
+    .badge-green { background: #edf7e7; color: #205020; }
+    .badge-blue { background: #eef1fb; color: #2030a0; }
+    .badge-purple { background: #f3eefb; color: #5a1a9a; }
+
+    /* SOP flow */
+    .sop-flow {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 16px 0;
+    }
+    .sop-node {
+      padding: 14px 22px;
+      border-radius: var(--r-lg);
+      font-weight: 700;
+      font-size: 14px;
+      text-align: center;
+      min-width: 140px;
+      letter-spacing: 0.01em;
+      color: #fff;
+    }
+    .sop-arrow {
+      font-size: 22px;
+      color: var(--text-secondary);
+      margin: 0 4px;
+      font-weight: 700;
+    }
+    .sop-p1 { background: #f7cd67; color: #725d42; }
+    .sop-p2 { background: #b39ef3; }
+    .sop-p3 { background: #19c8b9; }
+    .sop-p4 { background: #6fba2c; }
+
+    /* Compare grid */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .compare-card {
+      background: var(--bg-content);
+      border-radius: var(--r-base);
+      padding: 28px;
+    }
+    .compare-card h3 {
+      font-family: Nunito, sans-serif;
+      font-weight: 700;
+      font-size: 17px;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    /* Tool grid */
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .tool-item {
+      background: rgba(255,255,255,0.6);
+      padding: 10px 14px;
+      border-radius: var(--r-sm);
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1.5px solid transparent;
+      transition: all var(--d-fast) var(--ease);
+    }
+    .tool-item:hover { border-color: var(--border); background: var(--bg-content); }
+    .tool-tag {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: var(--r-pill);
+      flex-shrink: 0;
+    }
+    .tool-tag.ro { background: #edf7e7; color: #205020; }
+    .tool-tag.wo { background: #fef0f3; color: #a03060; }
+
+    /* Footer */
+    .report-footer {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1.5px dashed var(--border);
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .report-footer .leaf {
+      display: inline-block;
+      animation: leafWiggle 2s ease-in-out infinite;
+    }
+    @keyframes leafWiggle {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(5deg); }
+      75% { transform: rotate(-5deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .page { padding: 24px 16px; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .phase-list { grid-template-columns: 1fr; }
+      .compare-grid { grid-template-columns: 1fr; }
+      .tool-grid { grid-template-columns: repeat(2, 1fr); }
+      .hero h1 { font-size: 24px; }
+    }
+
+    @media print {
+      body { background: #fff; }
+      .card, .kpi-card, .hero, .flow-container, .table-wrap { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>Agent 工作流全景报告</h1>
+    <p class="subtitle">Android-AutoTests 平台的双 Agent 体系：架构 · 流程 · 工具 · 协同</p>
+    <div class="meta-row">
+      <span class="meta-tag"><span class="dot" style="background:var(--claude)"></span> Claude Code Agent</span>
+      <span class="meta-tag"><span class="dot" style="background:var(--agentscope)"></span> AgentScope Agent</span>
+      <span class="meta-tag"><span class="dot" style="background:var(--success)"></span> Django 后端</span>
+      <span class="meta-tag"><span class="dot" style="background:var(--device)"></span> Android 设备层</span>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <span class="kpi-dot" style="background:var(--claude)"></span>
+      <div class="kpi-number">7</div>
+      <div class="kpi-label">Auto-Dev 工作阶段</div>
+      <div class="kpi-desc">Phase -1 到 Phase 5 + Feedback</div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-dot" style="background:var(--agentscope)"></span>
+      <div class="kpi-number">4</div>
+      <div class="kpi-label">SOP 测试阶段</div>
+      <div class="kpi-desc">需求 → 元素 → 用例 → 执行</div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-dot" style="background:var(--primary)"></span>
+      <div class="kpi-number">25</div>
+      <div class="kpi-label">AgentScope Tools</div>
+      <div class="kpi-desc">21 业务 + 4 Plan，跨 6 模块</div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-dot" style="background:var(--device)"></span>
+      <div class="kpi-number">5</div>
+      <div class="kpi-label">SubAgent 角色</div>
+      <div class="kpi-desc">Leader-Worker 协作模式</div>
+    </div>
+  </div>
+
+  <!-- Section: Overview -->
+  <div class="section">
+    <div class="section-title">
+      <span class="icon-dot" style="background:var(--primary)"></span>
+      双 Agent 体系概览
+    </div>
+
+    <div class="compare-grid">
+      <div class="compare-card">
+        <h3><span class="badge badge-yellow">Claude Code</span> &nbsp; Auto-Dev 开发 Agent</h3>
+        <table style="margin-top:12px">
+          <tr><td style="color:var(--text-muted);width:80px">用户</td><td>项目开发者</td></tr>
+          <tr><td style="color:var(--text-muted)">定位</td><td>开发工具 — 协助写代码</td></tr>
+          <tr><td style="color:var(--text-muted)">运行时</td><td>Claude Code CLI</td></tr>
+          <tr><td style="color:var(--text-muted)">入口</td><td>CLAUDE.md 指令</td></tr>
+          <tr><td style="color:var(--text-muted)">工具</td><td>Bash / Read / Write / Edit / Grep</td></tr>
+          <tr><td style="color:var(--text-muted)">产出</td><td>代码变更 + HTML 报告</td></tr>
+        </table>
+      </div>
+      <div class="compare-card">
+        <h3><span class="badge badge-pink">AgentScope</span> &nbsp; AI 测试助手 Agent</h3>
+        <table style="margin-top:12px">
+          <tr><td style="color:var(--text-muted);width:80px">用户</td><td>测试人员（终端用户）</td></tr>
+          <tr><td style="color:var(--text-muted)">定位</td><td>产品功能 — 对话式自动化测试</td></tr>
+          <tr><td style="color:var(--text-muted)">运行时</td><td>AgentScope 2.0 + FastAPI :8000</td></tr>
+          <tr><td style="color:var(--text-muted)">入口</td><td>Vue ChatView 聊天界面</td></tr>
+          <tr><td style="color:var(--text-muted)">工具</td><td>25 个 Tool + Django ORM</td></tr>
+          <tr><td style="color:var(--text-muted)">产出</td><td>测试用例 + 执行结果 + 报告</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Agent-Platform Relationship -->
+  <div class="section">
+    <div class="section-title">
+      <span class="icon-dot" style="background:var(--warning)"></span>
+      Agent 与平台项目的关系
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="display:flex;flex-wrap:wrap;min-height:300px">
+        <!-- Left: Claude Code -->
+        <div style="flex:1;min-width:280px;padding:32px 28px;background:linear-gradient(135deg, rgba(247,205,103,0.08) 0%, rgba(247,205,103,0.02) 100%);border-right:1.5px dashed #e8dcc8">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <div style="width:40px;height:40px;border-radius:var(--r-sm);background:#fef9e7;border:2px solid #f7cd67;display:flex;align-items:center;justify-content:center;font-size:20px">🤖</div>
+            <div>
+              <div style="font-weight:700;font-size:14px;color:#8a6010">Claude Code Agent</div>
+              <div style="font-size:11px;color:var(--text-muted)">Auto-Dev 开发助手</div>
+            </div>
+          </div>
+          <div style="font-size:13px;color:var(--text-body);line-height:2">
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0">
+              <span style="color:var(--success);font-weight:700;flex-shrink:0">▸</span>
+              <span>处于平台<strong>外部</strong>，通过 CLI 操作文件系统</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0">
+              <span style="color:var(--success);font-weight:700;flex-shrink:0">▸</span>
+              <span><strong>构建</strong>这个平台 — 写 Vue/Django/AgentScope 代码</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0">
+              <span style="color:var(--success);font-weight:700;flex-shrink:0">▸</span>
+              <span>修改的对象是<strong>源代码</strong>（.vue / .py / .js）</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0">
+              <span style="color:var(--success);font-weight:700;flex-shrink:0">▸</span>
+              <span>产出：<strong>代码变更</strong> + 编译产物 + HTML 报告</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0">
+              <span style="color:var(--success);font-weight:700;flex-shrink:0">▸</span>
+              <span>不感知运行时数据，不操作业务数据库</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Center: Platform -->
+        <div style="flex:1.2;min-width:360px;padding:32px 28px;background:linear-gradient(180deg, rgba(25,200,185,0.04) 0%, rgba(111,186,44,0.04) 100%);display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <div style="text-align:center;margin-bottom:12px">
+            <div style="font-weight:900;font-size:11px;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase">Android-AutoTests 平台</div>
+          </div>
+          <div style="position:relative;width:200px;height:180px">
+            <!-- Platform layers -->
+            <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:180px;padding:10px 0;text-align:center;background:rgb(247,243,223);border:2px solid #889df0;border-radius:var(--r-sm);font-weight:700;font-size:13px;color:#2030a0;z-index:3">
+              Vue 前端 :5173
+            </div>
+            <div style="position:absolute;top:45px;left:50%;transform:translateX(-50%);width:180px;padding:10px 0;text-align:center;background:rgb(247,243,223);border:2px solid #6fba2c;border-radius:var(--r-sm);font-weight:700;font-size:13px;color:#205020;z-index:2">
+              Django 后端 :8765
+            </div>
+            <div style="position:absolute;top:90px;left:50%;transform:translateX(-50%);width:160px;padding:8px 0;text-align:center;background:rgb(247,243,223);border:2px solid #f8a6b2;border-radius:var(--r-sm);font-weight:700;font-size:12px;color:#a03060;z-index:1">
+              AgentScope :8000
+            </div>
+            <div style="position:absolute;top:130px;left:50%;transform:translateX(-50%);width:140px;padding:6px 0;text-align:center;background:rgb(247,243,223);border:1.5px dashed #9f927d;border-radius:var(--r-sm);font-weight:600;font-size:11px;color:var(--text-muted)">
+              DB + Redis + ADB
+            </div>
+          </div>
+          <div style="text-align:center;margin-top:12px">
+            <div style="font-size:11px;color:var(--text-secondary)">Claude Code 构建的产物</div>
+            <div style="font-size:11px;color:var(--text-secondary)">AgentScope Agent 运行的环境</div>
+          </div>
+        </div>
+
+        <!-- Right: AgentScope -->
+        <div style="flex:1;min-width:280px;padding:32px 28px;background:linear-gradient(135deg, rgba(248,166,178,0.08) 0%, rgba(248,166,178,0.02) 100%);border-left:1.5px dashed #e8dcc8">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <div style="width:40px;height:40px;border-radius:var(--r-sm);background:#fef0f3;border:2px solid #f8a6b2;display:flex;align-items:center;justify-content:center;font-size:20px">🧪</div>
+            <div>
+              <div style="font-weight:700;font-size:14px;color:#a03060">AgentScope Agent</div>
+              <div style="font-size:11px;color:var(--text-muted)">AI 测试助手</div>
+            </div>
+          </div>
+          <div style="font-size:13px;color:var(--text-body);line-height:2">
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0">
+              <span style="color:#e06880;font-weight:700;flex-shrink:0">▸</span>
+              <span>处于平台<strong>内部</strong>，是平台的功能模块</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0">
+              <span style="color:#e06880;font-weight:700;flex-shrink:0">▸</span>
+              <span>被 Claude Code <strong>构建出来</strong>的产物</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0">
+              <span style="color:#e06880;font-weight:700;flex-shrink:0">▸</span>
+              <span>操作的对象是<strong>业务数据</strong>（设备/元素/用例/报告）</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0">
+              <span style="color:#e06880;font-weight:700;flex-shrink:0">▸</span>
+              <span>产出：<strong>测试用例</strong> + 执行结果 + 测试报告</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0">
+              <span style="color:#e06880;font-weight:700;flex-shrink:0">▸</span>
+              <span>通过 Django ORM 读写 DB，不接触源代码</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Relationship summary -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px">
+      <div class="kpi-card" style="text-align:center">
+        <div style="font-size:28px;margin-bottom:4px">🏗️</div>
+        <div style="font-weight:700;font-size:14px;color:var(--text)">构建关系</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:8px;line-height:1.7">
+          Claude Code 是<strong>建造者</strong><br>
+          AgentScope Agent 是<strong>建筑物</strong><br>
+          开发者用 Claude Code 写代码<br>→ 部署后 AgentScope Agent 上线
+        </div>
+      </div>
+      <div class="kpi-card" style="text-align:center">
+        <div style="font-size:28px;margin-bottom:4px">🔗</div>
+        <div style="font-weight:700;font-size:14px;color:var(--text)">共享关系</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:8px;line-height:1.7">
+          共享 Django 后端 + 数据库<br>
+          共享 JWT 鉴权（SECRET_KEY）<br>
+          共享 .claude/rules/ 规则体系<br>
+          各自读写不同的数据层
+        </div>
+      </div>
+      <div class="kpi-card" style="text-align:center">
+        <div style="font-size:28px;margin-bottom:4px">🔄</div>
+        <div style="font-weight:700;font-size:14px;color:var(--text)">迭代关系</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:8px;line-height:1.7">
+          Claude Code 修改 AgentScope<br>
+          Agent 的 Tool/Team/Prompt<br>
+          → 重新部署 → Agent 能力升级<br>
+          形成<strong>开发→部署→反馈</strong>闭环
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Positioning -->
+  <div class="section">
+    <div class="section-title">
+      <span class="icon-dot" style="background:var(--focus-yellow)"></span>
+      Agent 定位
+    </div>
+
+    <div class="card">
+      <h3>Claude Code Agent — 项目的专属 AI 开发工程师</h3>
+      <p>你不是通用问答机器人——你是这个项目的<strong>技术负责人</strong>。你的职责覆盖从需求理解到交付报告的完整软件开发生命周期。你操作的是<strong>代码仓库</strong>（文件系统），通过 Bash/Read/Write/Edit/Grep 等工具完成开发任务。你负责<strong>构建</strong>这个平台。</p>
+    </div>
+
+    <div class="card" style="border-left:4px solid var(--agentscope)">
+      <h3>AgentScope Agent — 平台内置的 AI 测试助手</h3>
+      <p>这是平台<strong>构建出来</strong>的功能，面向测试人员。用户通过自然语言对话完成 Android UI 自动化测试全流程：智能体创建 → 知识库检索 → 用例生成 → 测试执行 → 报告输出。底层由 AgentScope 2.0 驱动，封装 25 个 Tool，LLM 通过 Function Calling 自动选择。操作的是<strong>业务数据库</strong>（Django ORM），通过 Tool 层间接写入。</p>
+    </div>
+  </div>
+
+  <!-- Section: User Stories -->
+  <div class="section">
+    <div class="section-title">
+      <span class="icon-dot" style="background:var(--success)"></span>
+      用户故事
+    </div>
+
+    <div class="compare-grid">
+      <div class="compare-card" style="border-top:3px solid var(--claude)">
+        <h3 style="color:#8a6010">Claude Code Agent</h3>
+        <div style="margin-top:16px">
+          <div style="padding:14px 18px;background:rgba(247,205,103,0.08);border-radius:var(--r-sm);margin-bottom:10px">
+            <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px">故事 1：开发者说"加一个批量删除功能"</div>
+            <div style="font-size:12px;color:var(--text-secondary)">
+              🎯 目标：给设备管理页面增加多选+批量删除<br>
+              📍 场景：在 device-pool 模块中<br>
+              🛤 路径：Agent 自动探索 → 出方案等审批 → 编码+格式化+编译 → 审查+测试 → 交付 HTML 报告
+            </div>
+          </div>
+          <div style="padding:14px 18px;background:rgba(247,205,103,0.08);border-radius:var(--r-sm);margin-bottom:10px">
+            <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px">故事 2：开发者说"Agent创建有点问题"</div>
+            <div style="font-size:12px;color:var(--text-secondary)">
+              🎯 目标：定位并修复 Agent 创建的 Bug<br>
+              📍 场景：模糊输入，AI 自动走 Phase -1 需求提炼<br>
+              🛤 路径：领域映射 → grep 日志/代码 → 输出对比方案 → 用户选 → 进入 Phase 0
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="compare-card" style="border-top:3px solid var(--agentscope)">
+        <h3 style="color:#a03060">AgentScope Agent</h3>
+        <div style="margin-top:16px">
+          <div style="padding:14px 18px;background:rgba(248,166,178,0.08);border-radius:var(--r-sm);margin-bottom:10px">
+            <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px">故事 1：测试人员说"帮我测一下登录功能"</div>
+            <div style="font-size:12px;color:var(--text-secondary)">
+              🎯 目标：通过对话创建并执行登录功能的自动化测试<br>
+              📍 场景：在 AI 助手 ChatView 中<br>
+              🛤 路径：需求分析 → 设计用例 → 找元素(XPath) → 创建用例 → 调试到 PASS → 锁设备 → 执行 → 报告
+            </div>
+          </div>
+          <div style="padding:14px 18px;background:rgba(248,166,178,0.08);border-radius:var(--r-sm);margin-bottom:10px">
+            <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px">故事 2：对话中断后恢复</div>
+            <div style="font-size:12px;color:var(--text-secondary)">
+              🎯 目标：从上次中断的阶段继续完成测试<br>
+              📍 场景：AgentScope 重启或页面刷新后<br>
+              🛤 路径：读取 tr_test_sop 表的 sop_context → 恢复阶段状态 → 从上次断点继续
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Agent Responsibilities & Skills -->
+  <div class="section">
+    <div class="section-title">
+      <span class="icon-dot" style="background:var(--tool-purple)"></span>
+      Agent 职责与技能
+    </div>
+
+    <div class="compare-grid">
+      <div class="compare-card" style="border-top:3px solid var(--claude)">
+        <h3 style="color:#8a6010">Claude Code Agent · 6 项核心职责</h3>
+        <div style="margin-top:16px">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed rgb(240,232,216)">
+            <span style="font-weight:900;font-size:20px;color:var(--claude)">1</span>
+            <div><strong>理解需求</strong> — 主动探索代码，搞清楚影响面</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed rgb(240,232,216)">
+            <span style="font-weight:900;font-size:20px;color:var(--claude)">2</span>
+            <div><strong>设计方案</strong> — 出实施计划，等用户审批</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed rgb(240,232,216)">
+            <span style="font-weight:900;font-size:20px;color:var(--claude)">3</span>
+            <div><strong>编写代码</strong> — 改代码、格式化、编译验证</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed rgb(240,232,216)">
+            <span style="font-weight:900;font-size:20px;color:var(--claude)">4</span>
+            <div><strong>审查质量</strong> — 自动 review 自己的代码，发现问题主动修</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed rgb(240,232,216)">
+            <span style="font-weight:900;font-size:20px;color:var(--claude)">5</span>
+            <div><strong>测试验证</strong> — 探测环境，能跑的就跑，不能跑的标注清楚</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0">
+            <span style="font-weight:900;font-size:20px;color:var(--claude)">6</span>
+            <div><strong>交付报告</strong> — 输出 HTML 报告，说明改了什么、测试结果</div>
+          </div>
+        </div>
+
+        <h4 style="margin-top:20px;font-weight:700;font-size:14px;color:var(--text)">8 个 Skill（开发工具链）</h4>
+        <div class="tool-grid" style="margin-top:12px">
+          <div class="tool-item">auto-dev · 5阶段全流程</div>
+          <div class="tool-item">feature-analysis · 三视角分析</div>
+          <div class="tool-item">quality-gate · 四齿轮审查</div>
+          <div class="tool-item">code-health-check · 双引擎检查</div>
+          <div class="tool-item">architecture-review · 架构审查</div>
+          <div class="tool-item">module-design · 模块化设计</div>
+          <div class="tool-item">functional-testing · 功能测试</div>
+          <div class="tool-item">github-manager · Git 管理</div>
+        </div>
+      </div>
+
+      <div class="compare-card" style="border-top:3px solid var(--agentscope)">
+        <h3 style="color:#a03060">AgentScope Agent · 核心能力</h3>
+        <div style="margin-top:16px">
+          <div style="padding:10px 0;border-bottom:1px dashed rgb(240,232,216)">
+            <strong>Task 规划</strong>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">TaskCreate/TaskGet/TaskList/TaskUpdate — 阶段内子任务拆解和进度追踪，基于 agent.state.tasks_context 内存态跨 ReAct 轮次保持</div>
+          </div>
+          <div style="padding:10px 0;border-bottom:1px dashed rgb(240,232,216)">
+            <strong>SOP 状态机</strong>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">create_test_sop/update_test_sop — 跨阶段持久化状态机，记录各阶段产出，推进 phase 1→2→3→4</div>
+          </div>
+          <div style="padding:10px 0;border-bottom:1px dashed rgb(240,232,216)">
+            <strong>元素定位</strong>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">fetch_page_elements/search_elements/get_test_points — dump UI 层级、8 种 XPath 策略、匹配数升序排列</div>
+          </div>
+          <div style="padding:10px 0;border-bottom:1px dashed rgb(240,232,216)">
+            <strong>用例管理</strong>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">save_test_case/get_test_case/list_test_cases/debug_test_case — 14 种步骤编排、单用例调试到 PASS</div>
+          </div>
+          <div style="padding:10px 0;border-bottom:1px dashed rgb(240,232,216)">
+            <strong>设备控制</strong>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">get_online_devices/acquire_device/release_device — 设备池管理、锁机制、心跳超时自动释放</div>
+          </div>
+          <div style="padding:10px 0;border-bottom:1px dashed rgb(240,232,216)">
+            <strong>执行与报告</strong>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">run_test/get_run_results/stop_run/save_report/list_reports — 支持循环执行、实时状态推送、CSV/HTML 报告</div>
+          </div>
+          <div style="padding:10px 0">
+            <strong>知识检索</strong>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">search_knowledge_base — ChromaDB 向量检索 32 篇文档，为对话提供 RAG 上下文</div>
+          </div>
+        </div>
+
+        <h4 style="margin-top:20px;font-weight:700;font-size:14px;color:var(--text)">5 个 SubAgent 角色模板</h4>
+        <div class="tool-grid" style="margin-top:12px">
+          <div class="tool-item"><span class="badge badge-purple" style="font-size:10px">Sub</span> element-inspector</div>
+          <div class="tool-item"><span class="badge badge-teal" style="font-size:10px">Sub</span> case-writer</div>
+          <div class="tool-item"><span class="badge badge-green" style="font-size:10px">Sub</span> device-operator</div>
+          <div class="tool-item"><span class="badge badge-pink" style="font-size:10px">Sub</span> test-executor</div>
+          <div class="tool-item"><span class="badge badge-yellow" style="font-size:10px">Sub</span> report-writer</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Claude Auto-Dev Workflow -->
+  <div class="section">
+    <div class="section-title">
+      <span class="icon-dot" style="background:var(--claude)"></span>
+      Claude Code Agent — Auto-Dev 7 阶段工作流
+    </div>
+
+    <div class="flow-container">
+      <div class="flow-row" style="margin-bottom:16px">
+        <div style="text-align:center">
+          <div class="flow-node node-claude" style="font-size:14px">用户输入</div>
+          <div class="flow-label">开发需求/反馈</div>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div style="text-align:center">
+          <div class="flow-node" style="background:#fef9e7;color:#8a6010;border:1.5px solid #f5c31c">Phase -1<br>需求提炼</div>
+          <div class="flow-label">模糊输入时触发</div>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div style="text-align:center">
+          <div class="flow-node node-claude">Phase 0<br>探索</div>
+          <div class="flow-label">只读，不改代码</div>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div style="text-align:center">
+          <div class="flow-node" style="background:#fef0f3;color:#a03060;border:1.5px solid #f8a6b2">Phase 1<br>方案</div>
+          <div class="flow-label">⚠ 需用户审批</div>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div style="text-align:center">
+          <div class="flow-node node-django">Phase 2<br>编码</div>
+          <div class="flow-label">自动执行+自修复</div>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div style="text-align:center">
+          <div class="flow-node node-device">Phase 3<br>审查</div>
+          <div class="flow-label">Lite/Standard/Strict</div>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div style="text-align:center">
+          <div class="flow-node" style="background:#f3eefb;color:#5a1a9a;border:1.5px solid #b39ef3">Phase 4<br>测试</div>
+          <div class="flow-label">降级容错</div>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div style="text-align:center">
+          <div class="flow-node" style="background:#e6f9f6;color:#11a89b;border:1.5px solid #19c8b9">Phase 5<br>交付</div>
+          <div class="flow-label">HTML 报告</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:8px">
+        <span class="flow-node" style="background:#fef0f3;color:#e05a5a;border:1.5px solid #e05a5a;font-size:12px;padding:6px 14px">Feedback Phase · 用户反馈 → 四层下钻排查 → 回到 Phase 1</span>
+      </div>
+    </div>
+
+    <div class="phase-list" style="margin-top:20px">
+      <div class="phase-item">
+        <div class="phase-num">Phase -1</div>
+        <div class="phase-name">需求提炼</div>
+        <div class="phase-desc">领域映射 → 快速探索 → 对比方案输出（1-3 个候选 + 预估时间 + 推荐）</div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-num">Phase 0</div>
+        <div class="phase-name">探索（只读）</div>
+        <div class="phase-desc">并行 2-3 个探索任务：定位文件 + 追踪依赖 + 关键字搜索，输出 workflow-manifest.json</div>
+      </div>
+      <div class="phase-item warn">
+        <div class="phase-num">Phase 1</div>
+        <div class="phase-name">方案（需审批）</div>
+        <div class="phase-desc">精确实施计划：目标 + 文件 + 步骤 + 风险 + 验证方式。⚠ 必须用户审批通过</div>
+      </div>
+      <div class="phase-item success">
+        <div class="phase-num">Phase 2</div>
+        <div class="phase-name">编码（自动执行）</div>
+        <div class="phase-desc">逐文件修改 → ruff+prettier 格式化 → 编译检查 → 失败自动修复（最多 3 次）</div>
+      </div>
+      <div class="phase-item pink">
+        <div class="phase-num">Phase 3</div>
+        <div class="phase-name">审查（自动）</div>
+        <div class="phase-desc">Lite: ruff+语义 / Standard: quality-gate 齿轮1+2 / Strict: 全四齿轮+架构审查</div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-num">Phase 4</div>
+        <div class="phase-name">测试（降级容错）</div>
+        <div class="phase-desc">环境探测 5 秒 → 三级降级：全就绪→端到端 / 无设备→API校验 / 全不可用→静态分析</div>
+      </div>
+      <div class="phase-item success">
+        <div class="phase-num">Phase 5</div>
+        <div class="phase-name">交付</div>
+        <div class="phase-desc">HTML 报告到 tests/functional/{module}/reports/，manifest → completed</div>
+      </div>
+      <div class="phase-item error">
+        <div class="phase-num">Feedback</div>
+        <div class="phase-name">用户反馈排查</div>
+        <div class="phase-desc">症状分类 → 四层下钻（浏览器→前端→API→数据库）→ 定位报告 → 回到 Phase 1</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: AgentScope Agent -->
+  <div class="section">
+    <div class="section-title">
+      <span class="icon-dot" style="background:var(--agentscope)"></span>
+      AgentScope Agent — AI 测试助手 SOP 四阶段
+    </div>
+
+    <div class="sop-flow" style="background:var(--bg-content);border-radius:var(--r-lg);padding:32px 16px;margin-bottom:20px">
+      <div class="sop-node sop-p1">
+        阶段 1<br><small style="font-weight:500">需求分析与用例设计</small>
+      </div>
+      <span class="sop-arrow">→</span>
+      <div class="sop-node sop-p2">
+        阶段 2<br><small style="font-weight:500">元素准备</small>
+      </div>
+      <span class="sop-arrow">→</span>
+      <div class="sop-node sop-p3">
+        阶段 3<br><small style="font-weight:500">用例创建与调试</small>
+      </div>
+      <span class="sop-arrow">→</span>
+      <div class="sop-node sop-p4">
+        阶段 4<br><small style="font-weight:500">任务执行</small>
+      </div>
+    </div>
+
+    <div class="phase-list">
+      <div class="phase-item" style="border-left-color:var(--claude)">
+        <div class="phase-num" style="color:#d4a030">阶段 1</div>
+        <div class="phase-name">需求分析与用例设计</div>
+        <div class="phase-desc"><strong>Tools:</strong> TaskCreate → TaskUpdate → create_test_sop<br><strong>产出:</strong> case_design JSON（名称/描述/步骤）<br><strong>规则:</strong> 需求不明确逐项询问，方案等用户确认</div>
+      </div>
+      <div class="phase-item" style="border-left-color:#b39ef3">
+        <div class="phase-num" style="color:#9050d0">阶段 2</div>
+        <div class="phase-name">元素准备</div>
+        <div class="phase-desc"><strong>Tools:</strong> fetch_page_elements → search_elements → update_test_sop<br><strong>产出:</strong> element_mapping + element_gaps<br><strong>规则:</strong> 缺失元素告知用户，记录 gaps 到 sop_context</div>
+      </div>
+      <div class="phase-item" style="border-left-color:var(--primary)">
+        <div class="phase-num" style="color:var(--primary)">阶段 3</div>
+        <div class="phase-name">用例创建与调试</div>
+        <div class="phase-desc"><strong>Tools:</strong> save_test_case → debug_test_case → update_test_sop<br><strong>产出:</strong> case_ids（通过的用例 ID 列表）<br><strong>规则:</strong> 全部 PASS 才能进入执行阶段</div>
+      </div>
+      <div class="phase-item" style="border-left-color:var(--success)">
+        <div class="phase-num" style="color:var(--success)">阶段 4</div>
+        <div class="phase-name">任务执行</div>
+        <div class="phase-desc"><strong>Tools:</strong> get_online_devices → acquire_device → create_runner_task → run_test → get_run_results → release_device → update_test_sop<br><strong>产出:</strong> run_id + run_results<br><strong>规则:</strong> loop_count 默认 3，执行完必须释放设备</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Tools -->
+  <div class="section">
+    <div class="section-title">
+      <span class="icon-dot" style="background:var(--primary)"></span>
+      AgentScope Tool 体系（25 个）
+    </div>
+
+    <div class="card">
+      <h3>两层工具体系</h3>
+      <table>
+        <thead><tr><th>层级</th><th>工具</th><th>存储</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge badge-yellow">Plan 层</span></td><td>TaskCreate / TaskGet / TaskList / TaskUpdate</td><td>agent.state.tasks_context（内存）</td><td>阶段内子任务拆解和进度追踪</td></tr>
+          <tr><td><span class="badge badge-teal">SOP 层</span></td><td>create_test_sop / update_test_sop</td><td>Django DB tr_test_sop（持久化）</td><td>跨阶段状态机，记录产出和推进阶段</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:12px;font-size:13px;color:var(--text-muted)">Plan 管理"怎么做这个阶段"，SOP 管理"做到哪个阶段了"。阶段内 Plan 全部完成 → SOP 推进阶段。</p>
+    </div>
+
+    <div class="card">
+      <h3>业务 Tool 分布（21 个，按模块）</h3>
+      <div class="tool-grid">
+        <div class="tool-item"><span class="tool-tag ro">读</span> get_test_points</div>
+        <div class="tool-item"><span class="tool-tag ro">读</span> search_elements</div>
+        <div class="tool-item"><span class="tool-tag ro">读</span> fetch_page_elements</div>
+        <div class="tool-item"><span class="tool-tag wo">写</span> save_test_case</div>
+        <div class="tool-item"><span class="tool-tag ro">读</span> get_test_case</div>
+        <div class="tool-item"><span class="tool-tag ro">读</span> list_test_cases</div>
+        <div class="tool-item"><span class="tool-tag wo">写</span> debug_test_case</div>
+        <div class="tool-item"><span class="tool-tag wo">写</span> create_test_sop</div>
+        <div class="tool-item"><span class="tool-tag wo">写</span> update_test_sop</div>
+        <div class="tool-item"><span class="tool-tag wo">写</span> create_runner_task</div>
+        <div class="tool-item"><span class="tool-tag ro">读</span> list_ai_tasks</div>
+        <div class="tool-item"><span class="tool-tag wo">写</span> update_ai_task</div>
+        <div class="tool-item"><span class="tool-tag ro">读</span> get_online_devices</div>
+        <div class="tool-item"><span class="tool-tag wo">写</span> acquire_device</div>
+        <div class="tool-item"><span class="tool-tag wo">写</span> release_device</div>
+        <div class="tool-item"><span class="tool-tag wo">写</span> run_test</div>
+        <div class="tool-item"><span class="tool-tag ro">读</span> get_run_results</div>
+        <div class="tool-item"><span class="tool-tag wo">写</span> stop_run</div>
+        <div class="tool-item"><span class="tool-tag wo">写</span> save_report</div>
+        <div class="tool-item"><span class="tool-tag ro">读</span> list_reports</div>
+        <div class="tool-item"><span class="tool-tag ro">读</span> search_knowledge_base</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Agent Team -->
+  <div class="section">
+    <div class="section-title">
+      <span class="icon-dot" style="background:var(--device)"></span>
+      Agent Team — 5 SubAgent 协作角色
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>角色</th><th>type</th><th>职责</th><th style="text-align:center">对应 SOP 阶段</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-purple">🔍 元素侦探</span></td>
+            <td><code style="color:var(--text-body)">element-inspector</code></td>
+            <td>查找 UI 元素，生成 8 种 XPath 定位策略</td>
+            <td style="text-align:center">阶段 2</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-teal">✍ 用编写手</span></td>
+            <td><code style="color:var(--text-body)">case-writer</code></td>
+            <td>编写测试用例，组织 14 种步骤</td>
+            <td style="text-align:center">阶段 3</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-green">📱 设备管家</span></td>
+            <td><code style="color:var(--text-body)">device-operator</code></td>
+            <td>管理设备锁，分配/释放设备</td>
+            <td style="text-align:center">阶段 4</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-pink">▶ 执行引擎</span></td>
+            <td><code style="color:var(--text-body)">test-executor</code></td>
+            <td>执行测试，循环运行，收集结果</td>
+            <td style="text-align:center">阶段 4</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-yellow">📊 报告专员</span></td>
+            <td><code style="color:var(--text-body)">report-writer</code></td>
+            <td>生成测试报告（CSV/HTML）</td>
+            <td style="text-align:center">阶段 4</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Leader-Worker 协作模式</h3>
+      <div class="flow-row" style="min-width:0;flex-wrap:wrap;justify-content:center;gap:12px;padding:12px 0">
+        <div class="flow-node" style="background:#fef9e7;color:#8a6010;border:2px solid #f7cd67;font-size:14px;padding:12px 20px">🎯 Leader Agent</div>
+        <span class="flow-arrow">⇢</span>
+        <div class="flow-node node-agentscope" style="font-size:12px">element-inspector</div>
+        <span style="color:var(--text-muted);font-size:12px">·</span>
+        <div class="flow-node" style="background:#e6f9f6;color:#11a89b;border:1.5px solid #19c8b9;font-size:12px">case-writer</div>
+        <span style="color:var(--text-muted);font-size:12px">·</span>
+        <div class="flow-node node-django" style="font-size:12px">device-operator</div>
+        <span style="color:var(--text-muted);font-size:12px">·</span>
+        <div class="flow-node" style="background:#fef0f3;color:#e06880;border:1.5px solid #f8a6b2;font-size:12px">test-executor</div>
+        <span style="color:var(--text-muted);font-size:12px">·</span>
+        <div class="flow-node" style="background:#fef9e7;color:#8a6010;border:1.5px solid #f7cd67;font-size:12px">report-writer</div>
+      </div>
+      <p style="font-size:13px;color:var(--text-secondary);text-align:center">Leader 根据任务类型分派给对应 SubAgent → SubAgent 完成后返回结果 → Leader 汇总</p>
+    </div>
+  </div>
+
+  <!-- Section: Rules System -->
+  <div class="section">
+    <div class="section-title">
+      <span class="icon-dot" style="background:var(--error)"></span>
+      规则体系
+    </div>
+
+    <div class="card">
+      <h3>Claude Code Agent · 行为准则与约束</h3>
+    </div>
+
+    <div class="compare-grid" style="margin-top:0">
+      <div class="compare-card" style="border-top:3px solid var(--success)">
+        <h3 style="color:var(--success);font-size:15px">✅ 应该做的事</h3>
+        <div style="margin-top:12px;font-size:13px;line-height:2.2">
+          <div>→ 主动探索：自己去 grep/Read 找文件</div>
+          <div>→ 评估影响：告诉用户"涉及 X 文件，预估 Y 分钟"</div>
+          <div>→ 出方案：写清楚改什么、怎么改、风险</div>
+          <div>→ 等审批：方案必须用户点头</div>
+          <div>→ 自动执行：审批后全自动推进</div>
+          <div>→ 遇错自修：编译失败先自己修（最多 3 次）</div>
+          <div>→ 透明降级：测试环境不可用就跳过并标注</div>
+        </div>
+      </div>
+      <div class="compare-card" style="border-top:3px solid var(--error)">
+        <h3 style="color:var(--error);font-size:15px">❌ 不该做的事</h3>
+        <div style="margin-top:12px;font-size:13px;line-height:2.2">
+          <div>→ 用户说"改一下 XX"就回复"请提供文件路径"</div>
+          <div>→ 改完代码说"完成了"但没有编译验证</div>
+          <div>→ 编译失败直接报告用户</div>
+          <div>→ 测试环境不可用就卡住</div>
+          <div>→ 每个步骤都问"要不要继续"</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>错误反思机制（最高优先级）</h3>
+      <p style="font-size:13px;margin-bottom:16px">每次修复完 Bug 或写完代码后，必须自问：<strong>这个错误以前是否也出现过？</strong></p>
+      <div class="table-wrap" style="padding:0">
+      <table>
+        <thead><tr><th>频次</th><th>级别</th><th>触发动作</th></tr></thead>
+        <tbody>
+          <tr><td>第 1 次</td><td><span class="badge badge-teal">记录</span></td><td>记录到本次会话的问题清单</td></tr>
+          <tr><td>第 2 次</td><td><span class="badge badge-yellow">提醒</span></td><td>提醒用户"这个问题之前出现过，建议加规则"</td></tr>
+          <tr><td>第 3 次</td><td><span class="badge badge-pink" style="background:#fef0f3;color:#a03060">⚠ 高频</span></td><td>必须新增规则到 .claude/rules/</td></tr>
+          <tr><td>第 4 次及以上</td><td><span class="badge" style="background:#fef0f3;color:#e05a5a">🔴 严重</span></td><td>新增规则 + 检查已有规则是否表述不清/未被加载/检查时机不对</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>历史高频问题速查（8 项）</h3>
+      <div class="table-wrap" style="padding:0">
+      <table>
+        <thead><tr><th>#</th><th>次数</th><th>级别</th><th>错误</th><th>违反规则</th><th>正确做法</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>1</td><td>4+</td><td><span class="badge" style="background:#fef0f3;color:#e05a5a">🔴</span></td>
+            <td>Vue 文件 <code>&lt;/script&gt;</code> 处 Unexpected token</td>
+            <td>frontend.md</td>
+            <td>改完就跑 <code>npx vite build</code>，括号配对</td>
+          </tr>
+          <tr>
+            <td>2</td><td>3</td><td><span class="badge badge-pink">⚠️</span></td>
+            <td>删除/创建后数据"自动恢复"</td>
+            <td>frontend.md</td>
+            <td>catch 必须报错 + 乐观更新</td>
+          </tr>
+          <tr>
+            <td>3</td><td>5+</td><td><span class="badge" style="background:#fef0f3;color:#e05a5a">🔴</span></td>
+            <td>硬编码密码/Key 在代码中</td>
+            <td>security.md</td>
+            <td><code>os.environ.get()</code> 或加密存储</td>
+          </tr>
+          <tr>
+            <td>4</td><td>3</td><td><span class="badge badge-pink">⚠️</span></td>
+            <td>模块 500 → 页面白屏无数据</td>
+            <td>frontend.md</td>
+            <td>curl 检查 + 三级验证</td>
+          </tr>
+          <tr>
+            <td>5</td><td>3</td><td><span class="badge badge-pink">⚠️</span></td>
+            <td>前端数据与数据库不一致</td>
+            <td>frontend.md</td>
+            <td>禁止硬编码，数据只从 API</td>
+          </tr>
+          <tr>
+            <td>6</td><td>3</td><td><span class="badge badge-pink">⚠️</span></td>
+            <td><code>catch (_) {}</code> 静默吞写操作错误</td>
+            <td>frontend.md</td>
+            <td>写操作 catch 必须报错</td>
+          </tr>
+          <tr>
+            <td>7</td><td>1</td><td><span class="badge badge-pink">⚠️</span></td>
+            <td>Tabs 自闭合导致内容渲染在组件外</td>
+            <td>frontend.md</td>
+            <td>内容放入具名 slot，DevTools 确认 DOM 位置</td>
+          </tr>
+          <tr>
+            <td>8</td><td>2+</td><td><span class="badge badge-pink">⚠️</span></td>
+            <td>animal-island-vue 组件用 Element Plus API</td>
+            <td>animal-island-ui.md</td>
+            <td>写前必查 API 表，grep 已有用法</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>AgentScope Agent · SOP 各阶段硬性规则</h3>
+      <div class="phase-list" style="margin-top:12px">
+        <div class="phase-item" style="border-left-color:var(--claude)">
+          <div class="phase-num" style="color:#d4a030">阶段 1 规则</div>
+          <div class="phase-name">需求不明确时必须逐项询问</div>
+          <div class="phase-desc">设计方案必须等用户确认后才进入下一阶段。禁止跳过需求澄清直接设计方案。</div>
+        </div>
+        <div class="phase-item" style="border-left-color:#b39ef3">
+          <div class="phase-num" style="color:#9050d0">阶段 2 规则</div>
+          <div class="phase-name">缺失元素告知用户具体缺少什么</div>
+          <div class="phase-desc">记录 gaps 到 sop_context。全部就绪后等用户确认才进入阶段 3。</div>
+        </div>
+        <div class="phase-item" style="border-left-color:var(--primary)">
+          <div class="phase-num" style="color:var(--primary)">阶段 3 规则</div>
+          <div class="phase-name">必须全部 PASS 才能进入执行</div>
+          <div class="phase-desc">调试失败 → 分析原因 → 调整 steps → 重新 save + debug。步骤中使用阶段 2 的 XPath 定位符。</div>
+        </div>
+        <div class="phase-item" style="border-left-color:var(--success)">
+          <div class="phase-num" style="color:var(--success)">阶段 4 规则</div>
+          <div class="phase-name">执行完毕必须释放设备</div>
+          <div class="phase-desc">loop_count 默认 3（用户未指定时）。更新 sop_context 的 run_results 字段。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>模块边界防火墙（三道）</h3>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:12px">
+        <div style="padding:20px;background:rgba(25,200,185,0.06);border-radius:var(--r-base);border:1.5px dashed var(--primary)">
+          <div style="font-weight:700;font-size:14px;color:var(--primary);margin-bottom:8px">🛡 防火墙 #1</div>
+          <div style="font-size:12px;line-height:1.8;color:var(--text-secondary)">
+            <strong>service.py 互不 import</strong><br>
+            ✅ 跨 App import Model<br>
+            ✅ 跨 App import api.py<br>
+            ❌ 跨 App import service
+          </div>
+        </div>
+        <div style="padding:20px;background:rgba(111,186,44,0.06);border-radius:var(--r-base);border:1.5px dashed var(--success)">
+          <div style="font-weight:700;font-size:14px;color:var(--success);margin-bottom:8px">🛡 防火墙 #2</div>
+          <div style="font-size:12px;line-height:1.8;color:var(--text-secondary)">
+            <strong>读放开，写收敛</strong><br>
+            ✅ 跨 App SELECT 直接 ORM<br>
+            ❌ 跨 App INSERT/UPDATE/DELETE 必须走 api 函数
+          </div>
+        </div>
+        <div style="padding:20px;background:rgba(136,157,240,0.06);border-radius:var(--r-base);border:1.5px dashed #889df0">
+          <div style="font-weight:700;font-size:14px;color:#5068d8;margin-bottom:8px">🛡 防火墙 #3</div>
+          <div style="font-size:12px;line-height:1.8;color:var(--text-secondary)">
+            <strong>外部访问只走 API</strong><br>
+            Vue → HTTP → Django API → ORM<br>
+            AgentScope → Tool → ORM/API（同进程）<br>
+            Admin → ORM → DB
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>安全规则 · API Key 生命周期</h3>
+      <div class="flow-row" style="min-width:0;flex-wrap:wrap;justify-content:center;gap:8px;padding:8px 0">
+        <span class="badge badge-green">用户输入</span>
+        <span class="flow-arrow">→</span>
+        <span class="badge badge-teal">encrypt_key() 加密</span>
+        <span class="flow-arrow">→</span>
+        <span class="badge badge-yellow">写入 DB（密文）</span>
+        <span class="flow-arrow">→</span>
+        <span class="badge badge-blue">后端 decrypt_key() 使用</span>
+        <span class="flow-arrow">→</span>
+        <span class="badge badge-pink">前端 mask_key() 脱敏展示</span>
+        <span class="flow-arrow">→</span>
+        <span class="badge" style="background:#fef0f3;color:#e05a5a">❌ 禁止导出明文</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px">
+        <div style="font-size:12px;padding:12px;background:rgba(111,186,44,0.05);border-radius:var(--r-sm)">
+          <strong style="color:var(--success)">写入时</strong><br>
+          <span style="color:var(--text-secondary)">encrypt_key() 后写入<br>DB 值不以 "sk-" 开头<br>*** 掩码 → 跳过更新</span>
+        </div>
+        <div style="font-size:12px;padding:12px;background:rgba(247,205,103,0.08);border-radius:var(--r-sm)">
+          <strong style="color:#d4a030">读取时</strong><br>
+          <span style="color:var(--text-secondary)">列表接口不返回 api_key<br>详情返回 mask_key() 脱敏<br>完整 Key 仅 5s reveal 窗口</span>
+        </div>
+        <div style="font-size:12px;padding:12px;background:rgba(224,90,90,0.05);border-radius:var(--r-sm)">
+          <strong style="color:var(--error)">禁止</strong><br>
+          <span style="color:var(--text-secondary)">日志中不输出 api_key<br>API 响应不返回完整 Key<br>迁移/备份跳过 api_key 字段</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Collaboration -->
+  <div class="section">
+    <div class="section-title">
+      <span class="icon-dot" style="background:var(--focus-yellow)"></span>
+      两套 Agent 协同架构
+    </div>
+
+    <div class="card">
+      <h3>五层边界中的 Agent 位置</h3>
+      <div style="overflow-x:auto">
+      <div style="min-width:900px;padding:16px 0">
+        <div class="flow-row" style="justify-content:center">
+          <div style="text-align:center;width:180px">
+            <div style="padding:16px;border-radius:var(--r-lg);background:#fef9e7;border:2px solid #f7cd67">
+              <div style="font-weight:700;color:#8a6010;font-size:14px">① 前端 :5173</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Vue 3 + Vite<br>ChatView 聊天界面</div>
+            </div>
+          </div>
+          <span class="flow-arrow" style="font-size:20px">→</span>
+          <div style="text-align:center;width:180px">
+            <div style="padding:16px;border-radius:var(--r-lg);background:#eef1fb;border:2px solid #889df0">
+              <div style="font-weight:700;color:#2030a0;font-size:14px">③ AgentScope :8000</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px">AI 引擎<br>25 Tool + 5 Team</div>
+            </div>
+          </div>
+          <span class="flow-arrow" style="font-size:20px">↔</span>
+          <div style="text-align:center;width:180px">
+            <div style="padding:16px;border-radius:var(--r-lg);background:#edf7e7;border:2px solid #6fba2c">
+              <div style="font-weight:700;color:#205020;font-size:14px">② Django :8765</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px">后端 API<br>6 App · JWT 鉴权</div>
+            </div>
+          </div>
+          <span class="flow-arrow" style="font-size:20px">→</span>
+          <div style="text-align:center;width:180px">
+            <div style="padding:16px;border-radius:var(--r-lg);background:#f5f0e8;border:2px solid #9f927d">
+              <div style="font-weight:700;color:#5a4020;font-size:14px">④ 数据库</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px">SQLite + Redis<br>20 表 + 消息总线</div>
+            </div>
+          </div>
+        </div>
+        <div class="flow-row" style="justify-content:center;margin-top:12px">
+          <div style="text-align:center;width:180px">
+            <div style="padding:12px;border-radius:var(--r-base);background:#f5f0e8;border:1.5px dashed var(--border);font-size:11px;color:var(--text-muted)">
+              ⑤ uiautomator2 + ADB<br>Android 设备
+            </div>
+          </div>
+          <span style="margin: 0 12px;font-size:11px;color:var(--text-muted)">↑ Django 操作设备</span>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+      <h3>协同对比矩阵</h3>
+      <div class="table-wrap" style="padding:0">
+      <table>
+        <thead><tr><th>维度</th><th><span class="badge badge-yellow">Claude Code Agent</span></th><th><span class="badge badge-pink">AgentScope Agent</span></th></tr></thead>
+        <tbody>
+          <tr><td>操作目标</td><td>代码仓库（文件系统）</td><td>业务数据库（Django ORM）</td></tr>
+          <tr><td>通信协议</td><td>Claude Code CLI</td><td>SSE 流式对话 + HTTP REST</td></tr>
+          <tr><td>工具集</td><td>Bash / Read / Write / Edit / Grep / Agent</td><td>25 个 Tool（21 业务 + 4 Plan）</td></tr>
+          <tr><td>模型</td><td>Claude（Deepseek-v4-pro 等）</td><td>DashScope / OpenAI / Anthropic（可配置）</td></tr>
+          <tr><td>HITL</td><td>Phase 1 方案审批 + Phase 4 三个选项</td><td>REQUIRE_USER_CONFIRM 弹窗确认</td></tr>
+          <tr><td>容错</td><td>编译失败自动修复 3 次 → 暂停</td><td>Redis 不可用降级为 Django 阻塞模式</td></tr>
+          <tr><td>持久化</td><td>plans/{slug}/workflow-manifest.json</td><td>ai_messages + tr_test_sop（DB 持久化）</td></tr>
+          <tr><td>关键约束</td><td>改完必须编译验证 + 自审查 + 测试</td><td>写操作必须走 api.py（防火墙 #2）</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Usage Guide -->
+  <div class="section">
+    <div class="section-title">
+      <span class="icon-dot" style="background:var(--claude)"></span>
+      实战指南：用 Agent 开发、迭代与构建应用
+    </div>
+
+    <!-- 场景一：用 Claude Code 开发新功能 -->
+    <div class="card" style="border-left:4px solid var(--claude)">
+      <h3>场景一：用 Claude Code Agent 开发新功能</h3>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">
+        以<strong>"给设备管理页加批量删除"</strong>为例，完整走一遍 Auto-Dev 工作流。
+      </p>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        <div style="padding:16px;background:rgba(247,205,103,0.08);border-radius:var(--r-sm)">
+          <div style="font-weight:700;font-size:12px;color:#d4a030;margin-bottom:8px">Step 1: 提需求</div>
+          <div style="font-size:11px;color:var(--text-body);line-height:1.7">
+            在 Claude Code 中输入：<br>
+            <code style="background:rgba(0,0,0,0.05);padding:1px 4px;border-radius:3px">给 device-pool 页面加多选+批量删除功能</code>
+          </div>
+        </div>
+        <div style="padding:16px;background:rgba(247,205,103,0.08);border-radius:var(--r-sm)">
+          <div style="font-weight:700;font-size:12px;color:#d4a030;margin-bottom:8px">Step 2: Agent 自动探索</div>
+          <div style="font-size:11px;color:var(--text-body);line-height:1.7">
+            Agent 并行搜索：<br>
+            → device-pool/index.vue<br>
+            → device-pool/api.js<br>
+            → apps/device_pool/views.py<br>
+            → apps/device_pool/api.py
+          </div>
+        </div>
+        <div style="padding:16px;background:rgba(247,205,103,0.08);border-radius:var(--r-sm)">
+          <div style="font-weight:700;font-size:12px;color:#d4a030;margin-bottom:8px">Step 3: Agent 出方案</div>
+          <div style="font-size:11px;color:var(--text-body);line-height:1.7">
+            EnterPlanMode 输出：<br>
+            → 涉及 4 个文件<br>
+            → 预估 15 分钟<br>
+            → 风险：批量操作需事务<br>
+            ⚠ 等你审批
+          </div>
+        </div>
+        <div style="padding:16px;background:rgba(247,205,103,0.08);border-radius:var(--r-sm)">
+          <div style="font-weight:700;font-size:12px;color:#d4a030;margin-bottom:8px">Step 4: 审批后自动执行</div>
+          <div style="font-size:11px;color:var(--text-body);line-height:1.7">
+            编码 → ruff+prettier → vite build<br>
+            → 编译失败自动修<br>
+            → quality-gate 审查<br>
+            → 功能测试 → HTML 报告
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;padding:12px 16px;background:rgba(25,200,185,0.06);border-radius:var(--r-sm);font-size:12px;color:var(--text-secondary)">
+        <strong>🔑 你只需要做两件事</strong>：① 描述需求 ② 审批方案。其余全自动。
+      </div>
+    </div>
+
+    <!-- 场景二：Bug 修复与反馈闭环 -->
+    <div class="card" style="margin-top:16px;border-left:4px solid var(--error)">
+      <h3>场景二：Bug 修复与反馈闭环</h3>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">
+        用户报告"点保存没反应" → Agent 反向追根因 → 修复 → 规则沉淀。
+      </p>
+
+      <div class="flow-row" style="min-width:0;flex-wrap:wrap;justify-content:center;gap:8px;padding:8px 0">
+        <div class="flow-node" style="background:#fef0f3;color:#e05a5a;border:1.5px solid #e05a5a;font-size:12px">用户反馈<br>"点保存没反应"</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node node-device" style="font-size:12px">F1 症状分类<br>"点按钮没反应"</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node node-django" style="font-size:12px">F2 四层下钻<br>浏览器→前端→API→DB</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node" style="background:#e6f9f6;color:#11a89b;border:1.5px solid #19c8b9;font-size:12px">F3 定位报告<br>根因+证据+方案</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node node-claude" style="font-size:12px">回到 Phase 1<br>正常开发流水线</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+        <div>
+          <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:8px">四层排查工具链</div>
+          <div style="font-size:11px;color:var(--text-body);line-height:2">
+            <div><span class="badge badge-yellow">L1</span> 浏览器 DevTools → Console / Network 面板</div>
+            <div><span class="badge badge-teal">L2</span> 前端编译 → <code>npx vite build</code> / <code>curl :5173/src/...</code></div>
+            <div><span class="badge badge-blue">L3</span> API → <code>curl :8765/api/...</code> / <code>tail logs/backend.log</code></div>
+            <div><span class="badge badge-green">L4</span> 数据库 → <code>python manage.py shell</code> + ORM 查询</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:8px">错误反思触发规则</div>
+          <div style="font-size:11px;color:var(--text-body);line-height:2">
+            <div>→ 同类错误第 2 次：提醒用户加规则</div>
+            <div>→ 同类错误第 3 次：⚠️ 强制新增规则到 .claude/rules/</div>
+            <div>→ 同类错误第 4 次：🔴 新增规则 + 检查已有规则是否失效</div>
+            <div>→ 例如：catch 静默吞错 ×3 → 规则已写入 frontend.md</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 场景三：迭代 AgentScope — 新增 Tool -->
+    <div class="card" style="margin-top:16px;border-left:4px solid var(--agentscope)">
+      <h3>场景三：迭代 AgentScope — 新增一个 Tool</h3>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">
+        假设要给 Agent 新增<strong>"发送测试通知到企业微信"</strong>的能力。只需 4 步。
+      </p>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        <div style="padding:16px;background:rgba(248,166,178,0.06);border-radius:var(--r-sm)">
+          <div style="font-weight:700;font-size:12px;color:#e06880;margin-bottom:6px">1. 创建 Tool 类</div>
+          <div style="font-size:10px;color:var(--text-muted);line-height:1.6;font-family:monospace">
+            tools/notify_tools.py<br>
+            class WecomNotifyTool(ToolBase):<br>
+            &nbsp;&nbsp;name = "wecom_notify"<br>
+            &nbsp;&nbsp;description = "发送..."<br>
+            &nbsp;&nbsp;input_schema = {...}<br>
+            &nbsp;&nbsp;async def call(self, params)
+          </div>
+        </div>
+        <div style="padding:16px;background:rgba(248,166,178,0.06);border-radius:var(--r-sm)">
+          <div style="font-weight:700;font-size:12px;color:#e06880;margin-bottom:6px">2. 注册到工厂</div>
+          <div style="font-size:10px;color:var(--text-muted);line-height:1.6;font-family:monospace">
+            factory.py<br>
+            _ALL_BUSINESS_TOOLS.append(<br>
+            &nbsp;&nbsp;WecomNotifyTool()<br>
+            )
+          </div>
+        </div>
+        <div style="padding:16px;background:rgba(248,166,178,0.06);border-radius:var(--r-sm)">
+          <div style="font-weight:700;font-size:12px;color:#e06880;margin-bottom:6px">3. 重启 AgentScope</div>
+          <div style="font-size:10px;color:var(--text-muted);line-height:1.6;font-family:monospace">
+            python run.py restart<br>
+            → 新 Tool 自动注入<br>
+            → LLM Function Calling<br>
+            &nbsp;&nbsp;自动识别
+          </div>
+        </div>
+        <div style="padding:16px;background:rgba(248,166,178,0.06);border-radius:var(--r-sm)">
+          <div style="font-weight:700;font-size:12px;color:#e06880;margin-bottom:6px">4. 验证</div>
+          <div style="font-size:10px;color:var(--text-muted);line-height:1.6;font-family:monospace">
+            在 ChatView 对话：<br>
+            "帮我把测试结果<br>
+            &nbsp;发到企业微信群"<br>
+            → Agent 自动调用<br>
+            &nbsp;wecom_notify Tool
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;padding:12px 16px;background:rgba(111,186,44,0.05);border-radius:var(--r-sm);font-size:12px;color:var(--text-body);line-height:1.8">
+        <strong>Tool 开发约束</strong>（详见 ai-engine.md）：<br>
+        · 必须继承 <code>ToolBase</code>，定义 name/description/input_schema（LLM Function Calling 三要素）<br>
+        · 读 Tool 设 <code>is_read_only=True</code>，写 Tool 必须走 Django <code>api.py</code>（防火墙 #2）<br>
+        · 返回值用 <code>ToolChunk</code> 包装，异步桥接 <code>run_sync()</code> 8s 超时<br>
+        · <code>check_permissions()</code> 方法决定是否需要用户确认（HITL）
+      </div>
+    </div>
+
+    <!-- 场景四：用 AgentScope 构建测试应用 -->
+    <div class="card" style="margin-top:16px;border-left:4px solid var(--primary)">
+      <h3>场景四：用 AgentScope Agent 构建一个完整的自动化测试</h3>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">
+        测试人员在 ChatView 中对话，Agent 自动完成<strong>"测试淘宝登录功能"</strong>。
+      </p>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+        <div style="padding:14px;background:#fef9e7;border-radius:var(--r-sm);border:1.5px dashed #f7cd67">
+          <div style="font-weight:700;font-size:12px;color:#8a6010;margin-bottom:6px">💬 你说</div>
+          <div style="font-size:11px;color:var(--text-body);line-height:1.6">
+            "帮我测一下淘宝 App 的登录功能，<br>
+            用账号 test / 密码 123456，<br>
+            验证登录成功后跳转到首页"
+          </div>
+        </div>
+        <div style="padding:14px;background:#fef9e7;border-radius:var(--r-sm);border:1.5px dashed #f7cd67">
+          <div style="font-weight:700;font-size:12px;color:#8a6010;margin-bottom:6px">🤖 Agent 做</div>
+          <div style="font-size:10px;color:var(--text-body);line-height:1.6">
+            <strong>阶段 1 需求分析</strong><br>
+            TaskCreate → 拆子任务<br>
+            create_test_sop → 记录需求<br>
+            输出 case_design 等你确认
+          </div>
+        </div>
+        <div style="padding:14px;background:#fef9e7;border-radius:var(--r-sm);border:1.5px dashed #f7cd67">
+          <div style="font-weight:700;font-size:12px;color:#8a6010;margin-bottom:6px">🤖 Agent 做</div>
+          <div style="font-size:10px;color:var(--text-body);line-height:1.6">
+            <strong>阶段 2 元素准备</strong><br>
+            fetch_page_elements → dump UI<br>
+            search_elements → 找登录按钮<br>
+            告知你缺失的元素
+          </div>
+        </div>
+        <div style="padding:14px;background:#fef9e7;border-radius:var(--r-sm);border:1.5px dashed #f7cd67">
+          <div style="font-weight:700;font-size:12px;color:#8a6010;margin-bottom:6px">🤖 Agent 做</div>
+          <div style="font-size:10px;color:var(--text-body);line-height:1.6">
+            <strong>阶段 3+4 用例+执行</strong><br>
+            save_test_case → 生成用例<br>
+            debug_test_case → 调通<br>
+            acquire_device → run_test<br>
+            → 报告呈现结果
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:14px 18px;background:rgba(25,200,185,0.06);border-radius:var(--r-sm);font-size:12px;color:var(--text-body);line-height:1.8">
+        <strong>🔑 关键体验</strong>：<br>
+        · 你只需要用自然语言描述要测什么，不需要写代码<br>
+        · SOP 分阶段推进，每阶段有确认点（HITL），不会跑偏<br>
+        · 对话中断了也能恢复 — SOP 状态持久化在 tr_test_sop 表<br>
+        · loop_count 默认 3 次，避免偶发失败<br>
+        · Agent 通过 RAG 检索 32 篇文档，理解 14 种测试步骤的用法
+      </div>
+    </div>
+
+    <!-- 场景五：项目迭代全流程 -->
+    <div class="card" style="margin-top:16px;border-left:4px solid var(--device)">
+      <h3>场景五：项目持续迭代全流程</h3>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:12px">
+        <div style="padding:20px;background:rgba(136,157,240,0.05);border-radius:var(--r-base);border:1.5px dashed #889df0">
+          <div style="font-weight:700;font-size:14px;color:#5068d8;margin-bottom:12px">🔄 迭代 AgentScope 能力</div>
+          <div style="font-size:12px;color:var(--text-body);line-height:2">
+            <div>1. 用 <strong>Claude Code</strong> 新增 Tool</div>
+            <div style="padding-left:12px;color:var(--text-muted)">→ 按 ai-engine.md 规范写 ToolBase 子类</div>
+            <div style="padding-left:12px;color:var(--text-muted)">→ factory.py 注册</div>
+            <div>2. 用 <strong>Claude Code</strong> 新增 Skill</div>
+            <div style="padding-left:12px;color:var(--text-muted)">→ 按现有 skill 格式创建 SKILL.md</div>
+            <div>3. 用 <strong>Claude Code</strong> 更新规则</div>
+            <div style="padding-left:12px;color:var(--text-muted)">→ 错误反思触发 → 新增/修订 .claude/rules/</div>
+            <div>4. <code>python run.py restart</code> 部署</div>
+            <div>5. 在 ChatView 验证新能力</div>
+          </div>
+        </div>
+
+        <div style="padding:20px;background:rgba(111,186,44,0.05);border-radius:var(--r-base);border:1.5px dashed var(--success)">
+          <div style="font-weight:700;font-size:14px;color:#205020;margin-bottom:12px">📋 迭代测试用例</div>
+          <div style="font-size:12px;color:var(--text-body);line-height:2">
+            <div>1. 在 ChatView 对话式创建新用例</div>
+            <div style="padding-left:12px;color:var(--text-muted)">→ Agent 走 SOP 四阶段</div>
+            <div style="padding-left:12px;color:var(--text-muted)">→ 自动 dump UI 获取 XPath</div>
+            <div>2. 添加新的测试步骤</div>
+            <div style="padding-left:12px;color:var(--text-muted)">→ 14 种步骤类型任选</div>
+            <div>3. 调试到 PASS 后保存</div>
+            <div>4. 加入定期执行队列</div>
+            <div>5. 查看 HTML 测试报告</div>
+          </div>
+        </div>
+
+        <div style="padding:20px;background:rgba(247,205,103,0.06);border-radius:var(--r-base);border:1.5px dashed #f7cd67">
+          <div style="font-weight:700;font-size:14px;color:#8a6010;margin-bottom:12px">📊 迭代知识库</div>
+          <div style="font-size:12px;color:var(--text-body);line-height:2">
+            <div>1. 在 <code>AI开发项目文档管理/</code> 新增文档</div>
+            <div>2. 运行 <code>python agentscope_service/rag/init_kb.py --reset</code></div>
+            <div>3. ChromaDB 重新索引</div>
+            <div>4. Agent 对话时自动检索新文档</div>
+            <div style="margin-top:8px;padding:8px;background:rgba(0,0,0,0.03);border-radius:var(--r-sm);font-size:11px;color:var(--text-muted)">
+              覆盖：技术架构 · PRD 需求<br>
+              · API 文档 · 故障手册<br>
+              · 步骤类型 · XPath 策略
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary flow -->
+      <div style="margin-top:20px;text-align:center;padding:20px;background:rgba(247,243,223,0.5);border-radius:var(--r-lg)">
+        <div style="display:inline-flex;align-items:center;gap:0;flex-wrap:wrap;justify-content:center">
+          <span class="badge badge-yellow" style="font-size:12px;padding:8px 16px">Claude Code<br>改代码</span>
+          <span style="font-size:20px;margin:0 8px;color:var(--text-secondary)">→</span>
+          <span class="badge badge-teal" style="font-size:12px;padding:8px 16px">python run.py<br>restart</span>
+          <span style="font-size:20px;margin:0 8px;color:var(--text-secondary)">→</span>
+          <span class="badge badge-pink" style="font-size:12px;padding:8px 16px">AgentScope<br>能力升级</span>
+          <span style="font-size:20px;margin:0 8px;color:var(--text-secondary)">→</span>
+          <span class="badge badge-green" style="font-size:12px;padding:8px 16px">ChatView<br>验证效果</span>
+          <span style="font-size:20px;margin:0 8px;color:var(--text-secondary)">→</span>
+          <span class="badge badge-yellow" style="font-size:12px;padding:8px 16px">反馈<br>继续迭代</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:12px">
+          整个迭代闭环中的每一步都可以用 <strong>Claude Code Agent</strong> 完成 — 从写代码到写文档到更新规则
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: RAG -->
+  <div class="section">
+    <div class="section-title">
+      <span class="icon-dot" style="background:#b39ef3"></span>
+      RAG 知识库能力
+    </div>
+
+    <div class="card">
+      <h3>ChromaDB 向量知识库</h3>
+      <div class="compare-grid" style="margin-top:16px">
+        <div class="compare-card" style="border-top:3px solid #b39ef3">
+          <table>
+            <tr><td style="color:var(--text-muted);width:80px">向量存储</td><td>ChromaDB PersistentClient</td></tr>
+            <tr><td style="color:var(--text-muted)">存储位置</td><td><code>data/chromadb/</code></td></tr>
+            <tr><td style="color:var(--text-muted)">Collection</td><td><code>project_knowledge</code></td></tr>
+            <tr><td style="color:var(--text-muted)">文档数量</td><td><strong>32 篇</strong></td></tr>
+            <tr><td style="color:var(--text-muted)">文档来源</td><td><code>AI开发项目文档管理/</code> 下 .md 文件 + 步骤类型参考</td></tr>
+            <tr><td style="color:var(--text-muted)">检索接口</td><td><code>KnowledgeBaseSearchTool → document_store.search()</code></td></tr>
+            <tr><td style="color:var(--text-muted)">初始化</td><td><code>python agentscope_service/rag/init_kb.py</code></td></tr>
+          </table>
+        </div>
+        <div class="compare-card" style="border-top:3px solid var(--primary)">
+          <h4 style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:12px">RAG 在对话中的角色</h4>
+          <div style="font-size:13px;color:var(--text-secondary);line-height:2">
+            <div>→ Agent 对话时通过 <code>search_knowledge_base</code> Tool 检索</div>
+            <div>→ 为对话提供<strong>上下文增强</strong>（平台能力、步骤类型、API 规范）</div>
+            <div>→ 帮助 LLM 理解平台 14 种测试步骤、XPath 策略、设备操作等</div>
+            <div>→ 32 篇文档覆盖：技术架构、PRD 需求、API 文档、故障手册</div>
+            <div>→ System prompt 已注入 SOP 四阶段工作流，RAG 补充领域知识</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>知识库文档覆盖范围（32 篇）</h3>
+      <div class="tool-grid" style="margin-top:12px">
+        <div class="tool-item">📋 技术架构设计文档</div>
+        <div class="tool-item">📋 报错诊断手册</div>
+        <div class="tool-item">📋 元素定位截图流故障手册</div>
+        <div class="tool-item">📋 环境配置教程</div>
+        <div class="tool-item">📋 子 PRD（6 份）</div>
+        <div class="tool-item">📋 API 接口文档</div>
+        <div class="tool-item">📋 数据库设计文档</div>
+        <div class="tool-item">📋 步骤类型参考（14 种）</div>
+        <div class="tool-item">📋 XPath 定位策略文档</div>
+        <div class="tool-item">📋 AgentScope 集成文档</div>
+        <div class="tool-item">📋 模块交互规则</div>
+        <div class="tool-item">📋 前端组件规范</div>
+      </div>
+      <p style="margin-top:16px;font-size:13px;color:var(--text-secondary)">
+        <strong>核心模式</strong>：System prompt 提供<strong>行为规则</strong>（怎么做），RAG 提供<strong>领域知识</strong>（做的时候需要知道什么）。两者互补，共同构成 Agent 的完整知识体系。
+      </p>
+    </div>
+  </div>
+
+  <!-- Section: Key Files -->
+  <div class="section">
+    <div class="section-title">
+      <span class="icon-dot" style="background:var(--text-muted)"></span>
+      关键文件索引
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>文件</th><th>所属 Agent</th><th>内容</th></tr></thead>
+        <tbody>
+          <tr><td><code>CLAUDE.md</code></td><td><span class="badge badge-yellow">Claude</span></td><td>Auto-Dev Agent 角色定义 + 完整 7 阶段工作流 + 错误反思机制</td></tr>
+          <tr><td><code>.claude/rules/ai-assistant.md</code></td><td><span class="badge badge-pink">AgentScope</span></td><td>SOP 四阶段 + 两层工具体系 + HITL + 消息持久化</td></tr>
+          <tr><td><code>.claude/rules/ai-engine.md</code></td><td><span class="badge badge-pink">AgentScope</span></td><td>Agent 创建流程 + Model 映射 + Tool 开发规范 + RAG</td></tr>
+          <tr><td><code>.claude/rules/agentscope-tools.md</code></td><td><span class="badge badge-pink">AgentScope</span></td><td>25 个 Tool 完整清单 + 文件结构</td></tr>
+          <tr><td><code>.claude/rules/module-boundaries.md</code></td><td><span class="badge badge-green">共享</span></td><td>五层边界 + 三道防火墙 + 跨模块交互规则</td></tr>
+          <tr><td><code>.claude/rules/architecture.md</code></td><td><span class="badge badge-green">共享</span></td><td>系统架构 Mermaid 图 + 完整项目结构</td></tr>
+          <tr><td><code>agentscope_service/agent_factory.py</code></td><td><span class="badge badge-pink">AgentScope</span></td><td>Django AIAgent → AgentScope Agent 构建工厂</td></tr>
+          <tr><td><code>agentscope_service/tools/</code></td><td><span class="badge badge-pink">AgentScope</span></td><td>7 个 Tool 文件 + factory.py 注册工厂</td></tr>
+          <tr><td><code>agentscope_service/teams/</code></td><td><span class="badge badge-pink">AgentScope</span></td><td>5 个 SubAgent 模板 + Leader prompt</td></tr>
+          <tr><td><code>.claude/skills/auto-dev/SKILL.md</code></td><td><span class="badge badge-yellow">Claude</span></td><td>Auto-Dev skill 编排器（Phase -1 到 Phase 5 + Feedback）</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="report-footer">
+    <span>Android-AutoTests · Agent 工作流全景报告</span>
+    <span><span class="leaf">🍃</span> 生成于 2026-07-06 · html-report skill</span>
+  </div>
+
+</div>
+
+</body>
+</html>

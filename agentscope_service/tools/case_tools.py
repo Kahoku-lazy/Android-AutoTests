@@ -1,4 +1,5 @@
 """Case tools — create, read, update test-case definitions."""
+
 import uuid
 from agentscope.tool import ToolBase, ToolChunk
 from agentscope.permission import PermissionDecision, PermissionBehavior, PermissionContext
@@ -15,6 +16,7 @@ _STEP_TYPE_DOC = "\n".join(f"- `{st.value}`: {UI_LABELS.get(st, '')}" for st in 
 
 class SaveTestCaseTool(ToolBase):
     """Create or update a test case definition with structured steps."""
+
     name = "save_test_case"
     description = f"""创建或更新测试用例定义。
 
@@ -75,6 +77,10 @@ class SaveTestCaseTool(ToolBase):
                 "type": "boolean",
                 "description": "是否启用（默认 true）。",
             },
+            "directory_id": {
+                "type": "integer",
+                "description": "所属二级目录 ID（可选，从目录树获取）。",
+            },
             "steps": {
                 "type": "array",
                 "description": "有序测试步骤列表。",
@@ -83,10 +89,19 @@ class SaveTestCaseTool(ToolBase):
                     "properties": {
                         "type": {"type": "string", "description": f"步骤类型: {_STEP_TYPE_NAMES}"},
                         "xpath": {"type": "string", "description": "目标元素的 XPath 定位器"},
-                        "xpath2": {"type": "string", "description": "备用 XPath（用于 wait_either）"},
+                        "xpath2": {
+                            "type": "string",
+                            "description": "备用 XPath（用于 wait_either）",
+                        },
                         "timeout": {"type": "number", "description": "超时秒数（默认 10）"},
-                        "expected_text": {"type": "string", "description": "预期文本（用于 verify_text / poll_text / wait_toast）"},
-                        "index": {"type": "integer", "description": "索引（用于 click_indexed 等）"},
+                        "expected_text": {
+                            "type": "string",
+                            "description": "预期文本（用于 verify_text / poll_text / wait_toast）",
+                        },
+                        "index": {
+                            "type": "integer",
+                            "description": "索引（用于 click_indexed 等）",
+                        },
                         "description": {"type": "string", "description": "步骤描述"},
                     },
                     "required": ["type", "xpath", "description"],
@@ -99,41 +114,65 @@ class SaveTestCaseTool(ToolBase):
     is_read_only = False
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Case creation is always allowed for AI agents.")
+        return PermissionDecision(
+            behavior=PermissionBehavior.ALLOW,
+            message="Case creation is always allowed for AI agents.",
+        )
 
-    async def call(self, case_id, title, steps, category="", description="", package_name="", enabled=True, **kwargs):
+    async def call(
+        self,
+        case_id,
+        title,
+        steps,
+        category="",
+        description="",
+        package_name="",
+        enabled=True,
+        directory_id=None,
+        **kwargs,
+    ):
         # Validate step types
         for i, step in enumerate(steps):
             stype = step.get("type", "click")
             if stype not in _STEP_TYPE_NAMES:
-                return ToolChunk(content=[TextBlock(
-                    text=f"步骤类型无效：'{stype}'（第 {i} 步）。"
-                    f"可用类型：{', '.join(_STEP_TYPE_NAMES)}"
-                )])
+                return ToolChunk(
+                    content=[
+                        TextBlock(
+                            text=f"步骤类型无效：'{stype}'（第 {i} 步）。"
+                            f"可用类型：{', '.join(_STEP_TYPE_NAMES)}"
+                        )
+                    ]
+                )
 
         try:
-            obj = await run_sync(lambda: save_definition(
-                case_id=case_id,
-                title=title,
-                category=category,
-                description=description,
-                steps="\n".join(f"{s['type']}: {s.get('description', '')}" for s in steps),
-                steps_data=steps,
-                enabled=enabled,
-                package_name=package_name,
-            ))
+            obj = await run_sync(
+                lambda: save_definition(
+                    case_id=case_id,
+                    title=title,
+                    category=category,
+                    description=description,
+                    steps="\n".join(f"{s['type']}: {s.get('description', '')}" for s in steps),
+                    steps_data=steps,
+                    enabled=enabled,
+                    package_name=package_name,
+                    directory_id=directory_id,
+                )
+            )
         except Exception as e:
-            return ToolChunk(content=[TextBlock(
-                text=f"保存用例失败：{e}"
-            )])
-        return ToolChunk(content=[TextBlock(
-            text=f"测试用例 '{title}' 保存成功。\n用例 ID: {obj.id}\n步骤数: {len(steps)}\n启用状态: {enabled}\n\n"
-            f"【后续操作】可用 debug_test_case(case_id='{obj.id}') 检查用例是否就绪。"
-        )])
+            return ToolChunk(content=[TextBlock(text=f"保存用例失败：{e}")])
+        return ToolChunk(
+            content=[
+                TextBlock(
+                    text=f"测试用例 '{title}' 保存成功。\n用例 ID: {obj.id}\n步骤数: {len(steps)}\n启用状态: {enabled}\n\n"
+                    f"【后续操作】可用 debug_test_case(case_id='{obj.id}') 检查用例是否就绪。"
+                )
+            ]
+        )
 
 
 class GetTestCaseTool(ToolBase):
     """Retrieve an existing test case definition by ID."""
+
     name = "get_test_case"
     description = """获取指定测试用例的完整详情（包括所有步骤）。
 
@@ -166,28 +205,43 @@ class GetTestCaseTool(ToolBase):
     is_read_only = True
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Read-only case query.")
+        return PermissionDecision(
+            behavior=PermissionBehavior.ALLOW, message="Read-only case query."
+        )
 
     async def call(self, case_id, **kwargs):
         obj = await run_sync(lambda: get_definition(case_id))
         if obj is None:
-            return ToolChunk(content=[TextBlock(text=f"测试用例 '{case_id}' 不存在。请先用 list_test_cases 确认用例 ID。")])
+            return ToolChunk(
+                content=[
+                    TextBlock(
+                        text=f"测试用例 '{case_id}' 不存在。请先用 list_test_cases 确认用例 ID。"
+                    )
+                ]
+            )
         import json
+
         try:
             steps_data = json.loads(obj.steps_json) if obj.steps_json else []
         except Exception:
             steps_data = []
         steps_summary = "\n".join(
-            f"  {i+1}. [{s.get('type','?')}] {s.get('description','')} (xpath={s.get('xpath','')})"
+            f"  {i + 1}. [{s.get('type', '?')}] {s.get('description', '')} (xpath={s.get('xpath', '')})"
             for i, s in enumerate(steps_data)
         )
-        return ToolChunk(content=[TextBlock(
-            text=f"用例: {obj.title}\nID: {obj.id}\n分类: {obj.category}\n包名: {obj.package_name}\n启用: {obj.enabled}\n步骤 ({len(steps_data)}):\n{steps_summary}"
-        )])
+        dir_info = f"\n目录: {obj.directory.name}" if obj.directory else ""
+        return ToolChunk(
+            content=[
+                TextBlock(
+                    text=f"用例: {obj.title}\nID: {obj.id}\n分类: {obj.category}{dir_info}\n包名: {obj.package_name}\n启用: {obj.enabled}\n步骤 ({len(steps_data)}):\n{steps_summary}"
+                )
+            ]
+        )
 
 
 class DebugTestCaseTool(ToolBase):
     """Validate whether a test case's steps are executable on the current device."""
+
     name = "debug_test_case"
     description = """验证测试用例是否可以在当前设备上执行（调试/诊断工具）。
 
@@ -214,10 +268,7 @@ class DebugTestCaseTool(ToolBase):
     input_schema = {
         "type": "object",
         "properties": {
-            "case_id": {
-                "type": "string",
-                "description": "The test case ID to debug/validate."
-            },
+            "case_id": {"type": "string", "description": "The test case ID to debug/validate."},
         },
         "required": ["case_id"],
     }
@@ -225,7 +276,9 @@ class DebugTestCaseTool(ToolBase):
     is_read_only = True
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Read-only debug validation.")
+        return PermissionDecision(
+            behavior=PermissionBehavior.ALLOW, message="Read-only debug validation."
+        )
 
     async def call(self, case_id, **kwargs):
         from apps.case_manager.api import get_definition
@@ -247,7 +300,13 @@ class DebugTestCaseTool(ToolBase):
             steps_data = []
 
         if not steps_data:
-            return ToolChunk(content=[TextBlock(text=f"Case '{cdef.title}' has no steps defined. Add steps with save_test_case first.")])
+            return ToolChunk(
+                content=[
+                    TextBlock(
+                        text=f"Case '{cdef.title}' has no steps defined. Add steps with save_test_case first."
+                    )
+                ]
+            )
 
         valid_types = set(st.value for st in StepType)
 
@@ -259,12 +318,22 @@ class DebugTestCaseTool(ToolBase):
 
             # Validate step type
             if stype not in valid_types:
-                issues.append(f"[Step {step_num}] Unknown type '{stype}'. Valid: {sorted(valid_types)}")
+                issues.append(
+                    f"[Step {step_num}] Unknown type '{stype}'. Valid: {sorted(valid_types)}"
+                )
                 continue
 
             # For steps that need XPath, check element exists
-            xpath_steps = {"click", "click_indexed", "wait", "wait_disappear", "wait_either",
-                          "verify_text", "poll_text", "retry_click"}
+            xpath_steps = {
+                "click",
+                "click_indexed",
+                "wait",
+                "wait_disappear",
+                "wait_either",
+                "verify_text",
+                "poll_text",
+                "retry_click",
+            }
             if stype in xpath_steps and xpath:
                 try:
                     first_element = await run_sync(lambda: Element.objects.first())
@@ -275,7 +344,9 @@ class DebugTestCaseTool(ToolBase):
                 # Check if there's at least one element in the DB (simple existence check)
                 el_count = await run_sync(lambda: Element.objects.count())
                 if el_count == 0:
-                    warnings.append(f"[Step {step_num}] '{desc}' — UI element database is empty. Dump UI first.")
+                    warnings.append(
+                        f"[Step {step_num}] '{desc}' — UI element database is empty. Dump UI first."
+                    )
                 else:
                     ok_count += 1
 
@@ -285,13 +356,16 @@ class DebugTestCaseTool(ToolBase):
 
         # Device check
         from apps.device_pool.models import Device
+
         online = await run_sync(lambda: Device.objects.filter(status="ONLINE").count())
         if online == 0:
             warnings.append("No online devices — run will fail.")
 
-        lines = [f"Debug Report — {cdef.title} ({case_id})",
-                 f"Steps: {len(steps_data)} | Category: {cdef.category or '—'} | Package: {cdef.package_name or '⚠ missing'}",
-                 ""]
+        lines = [
+            f"Debug Report — {cdef.title} ({case_id})",
+            f"Steps: {len(steps_data)} | Category: {cdef.category or '—'} | Package: {cdef.package_name or '⚠ missing'}",
+            "",
+        ]
         if issues:
             lines.append(f"❌ Errors ({len(issues)}):")
             lines.extend(f"  {i}" for i in issues)
@@ -301,7 +375,9 @@ class DebugTestCaseTool(ToolBase):
             lines.extend(f"  {w}" for w in warnings)
             lines.append("")
         if not issues:
-            lines.append(f"✅ Case is ready to execute ({ok_count}/{len(steps_data)} steps validated).")
+            lines.append(
+                f"✅ Case is ready to execute ({ok_count}/{len(steps_data)} steps validated)."
+            )
         if online == 0:
             lines.append("💡 Tip: Connect a device and dump UI before running.")
 
@@ -310,6 +386,7 @@ class DebugTestCaseTool(ToolBase):
 
 class ListTestCasesTool(ToolBase):
     """List all enabled test cases, optionally filtered by IDs."""
+
     name = "list_test_cases"
     description = """列出平台中已启用的测试用例。
 
@@ -338,7 +415,7 @@ class ListTestCasesTool(ToolBase):
             "case_ids": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "Optional list of case IDs to filter."
+                "description": "Optional list of case IDs to filter.",
             },
         },
     }
@@ -346,7 +423,9 @@ class ListTestCasesTool(ToolBase):
     is_read_only = True
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Read-only case listing.")
+        return PermissionDecision(
+            behavior=PermissionBehavior.ALLOW, message="Read-only case listing."
+        )
 
     async def call(self, case_ids=None, **kwargs):
         if case_ids:
@@ -354,6 +433,13 @@ class ListTestCasesTool(ToolBase):
         else:
             items = await run_sync(lambda: list(TestDefinition.objects.filter(enabled=True)[:50]))
         if not items:
-            return ToolChunk(content=[TextBlock(text="没有找到已启用的测试用例。建议先用 save_test_case 创建用例。")])
-        lines = [f"- [{d.id}] {d.title} | category={d.category} | package={d.package_name}" for d in items]
+            return ToolChunk(
+                content=[
+                    TextBlock(text="没有找到已启用的测试用例。建议先用 save_test_case 创建用例。")
+                ]
+            )
+        lines = [
+            f"- [{d.id}] {d.title} | category={d.category} | dir={d.directory.name if d.directory else '—'} | package={d.package_name}"
+            for d in items
+        ]
         return ToolChunk(content=[TextBlock(text=f"测试用例 ({len(items)}):\n" + "\n".join(lines))])

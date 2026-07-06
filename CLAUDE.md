@@ -46,7 +46,24 @@ AI 驱动的 Android UI 自动化测试平台。Vue 3 + Vite 前端，Django 纯
 
 ## Auto-Dev 工作流（接收到开发需求时的标准流程）
 
-当用户表达"做/改/加/修/删/优化/重构 XX"时，自动激活 auto-dev skill。
+### 🔴 Auto-Dev 触发规则（不可跳过）
+
+收到"做/改/加/修/删/优化/重构 + 功能描述"的请求时，**必须严格按以下顺序执行**：
+
+```
+第一步: 调用 Skill 工具加载 auto-dev skill
+第二步: Phase 0 探索 → Phase 1 方案 → Phase 2 编码 → Phase 3 审查 → Phase 4 测试 → Phase 5 交付
+
+禁止：
+  ❌ 绕开 auto-dev skill 直接写代码
+  ❌ 不经探索直接出方案
+  ❌ 方案未审批就开始编码
+  ❌ 用"我觉得很简单"跳过的 Phase 0
+```
+
+> **判定标准**：用户说的是"我要做什么"而非"应该怎么做"→ 走 auto-dev。即使用户需求很简短（如"XX改成红色"），也必须走完 Phase 0→1→2。
+
+用户输入模糊时，先走 Phase -1 需求提炼；输入明确（如指定文件+行号）则跳过 Phase -1 直接进入 Phase 0。
 
 **关键**: 用户输入模糊时先走 Phase -1 需求提炼，交付后用户反馈问题时走 Feedback Phase。
 
@@ -269,12 +286,13 @@ Edit 失败?
 | 6 | 3 | ⚠️ | catch (_) {} 静默吞写操作错误 | frontend.md §写操作静默吞错 | 写操作 catch 必须报错 |
 | 7 | 1 | ⚠️ | Tabs 自闭合导致内容渲染在组件外 | frontend.md §组件常见陷阱 | 内容放入 `#[tab.key]` 具名 slot，DevTools 确认 DOM 位置 |
 | 8 | 2+ | ⚠️ | animal-island-vue 组件用 Element Plus API 写法（如 `type="danger"`）| frontend.md §animal-island-vue 铁律 | 写前必查 animal-island-ui.md API 表，grep 已有用法 |
+| 9 | 1 | ⚠️ | 开发需求请求绕开 auto-dev skill 直接编码/规划 | CLAUDE.md §Auto-Dev 触发规则 | 收到"做/改/加"请求 → 第一步必须加载 auto-dev skill → Phase 0→1→2 |
 
 ## HTML 方案文档输出规范
 
-**每次输出方案/分析/流程等 HTML 文档时，必须参考 `AI开发项目文档管理/PROMPT.md` 的设计规范**，确保视觉风格与项目 animal-island-ui 主题一致。
+**每次输出方案/分析/流程等 HTML 文档时，必须加载 `html-report` skill 获取设计规范**，确保视觉风格与项目 animal-island-ui 主题一致。
 
-关键约束（摘自 PROMPT.md）：
+关键约束（详见 html-report skill）：
 - 配色：暖色系，禁止纯黑 `#000`、冷灰 `#fafafa`、冷蓝聚焦环 `#0066ff`
 - 字体：Nunito + Noto Sans SC，body weight 500，heading 600-900
 - 圆角：最小 12px，交互元素禁止 0px 尖角
@@ -319,3 +337,4 @@ HTML 报告输出到 `tests/functional/{module}/reports/`。
 | `module-design` | 模块化设计规范 | "模块化/拆分/统一规范" |
 | `functional-testing` | 功能测试（编译+接口+安全+数据+性能） | 写完代码自动触发 / "测试/验证" |
 | `github-manager` | GitHub 项目管理（提交/分支/PR/Issue/发布） | "提交/推送/发PR/创建Issue/发布" |
+| `html-report` | HTML 报告设计规范与生成（design token + 组件样式 + 模板） | 生成 HTML 报告时自动加载 |

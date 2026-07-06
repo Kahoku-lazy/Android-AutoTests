@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>用例目录层级 + 双视图切换 — 实施方案</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #19c8b9;
+      --primary-hover: #3dd4c6;
+      --primary-active: #11a89b;
+      --primary-bg: #e6f9f6;
+      --text: #794f27;
+      --text-body: #725d42;
+      --text-secondary: #9f927d;
+      --text-muted: #8a7b66;
+      --text-disabled: #c4b89e;
+      --bg: #f8f8f0;
+      --bg-content: rgb(247, 243, 223);
+      --bg-disabled: #f0ece2;
+      --border: #c4b89e;
+      --border-hover: #a89878;
+      --border-strong: #9f927d;
+      --success: #6fba2c;
+      --success-active: #5a9e1e;
+      --warning: #f5c31c;
+      --warning-active: #dba90e;
+      --error: #e05a5a;
+      --error-active: #c94444;
+      --focus-yellow: #ffcc00;
+      --r-sm: 12px;
+      --r-base: 18px;
+      --r-lg: 24px;
+      --r-pill: 50px;
+      --ease: cubic-bezier(0.4, 0, 0.2, 1);
+      --d-fast: 0.15s;
+      --d-base: 0.25s;
+      --d-slow: 0.35s;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Nunito, 'Noto Sans SC', -apple-system, 'PingFang SC', sans-serif;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      background: var(--bg);
+      color: var(--text-body);
+      line-height: 1.6;
+    }
+
+    /* --- Page Layout --- */
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 32px 60px;
+    }
+
+    /* --- Header --- */
+    .report-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .report-header .badge {
+      display: inline-block;
+      padding: 6px 18px;
+      border-radius: var(--r-pill);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .badge-plan {
+      background: var(--primary-bg);
+      color: var(--primary-active);
+      border: 1.5px solid var(--primary);
+    }
+
+    .badge-strict {
+      background: #fde8e8;
+      color: var(--error-active);
+      border: 1.5px solid var(--error);
+    }
+
+    .report-header h1 {
+      font-family: Nunito, 'Noto Sans SC', sans-serif;
+      font-weight: 900;
+      font-size: 36px;
+      color: var(--text);
+      letter-spacing: 0.02em;
+      margin-bottom: 8px;
+    }
+
+    .report-header .subtitle {
+      font-size: 16px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .report-header .meta-line {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .meta-line span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .meta-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .meta-dot.teal { background: var(--primary); }
+    .meta-dot.orange { background: #e59266; }
+    .meta-dot.pink { background: #f8a6b2; }
+    .meta-dot.green { background: var(--success); }
+
+    /* --- KPI Summary Cards --- */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    @media (max-width: 768px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .page { padding: 24px 16px 40px; }
+      .layout-preview { flex-direction: column; }
+    }
+
+    .kpi-card {
+      background: var(--bg-content);
+      border-radius: var(--r-base);
+      padding: 24px 20px;
+      position: relative;
+      overflow: hidden;
+      transition: transform var(--d-base) var(--ease);
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 16px;
+      bottom: 16px;
+      width: 4px;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .kpi-card.files::before { background: var(--primary); }
+    .kpi-card.lines::before { background: #e59266; }
+    .kpi-card.time::before { background: #f8a6b2; }
+    .kpi-card.tables::before { background: var(--success); }
+
+    .kpi-card .kpi-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-bottom: 10px;
+    }
+
+    .kpi-card.files .kpi-dot { background: var(--primary); }
+    .kpi-card.lines .kpi-dot { background: #e59266; }
+    .kpi-card.time .kpi-dot { background: #f8a6b2; }
+    .kpi-card.tables .kpi-dot { background: var(--success); }
+
+    .kpi-card .kpi-number {
+      font-family: Nunito, sans-serif;
+      font-weight: 900;
+      font-size: 32px;
+      color: var(--text);
+      letter-spacing: 0.02em;
+      line-height: 1.1;
+    }
+
+    .kpi-card .kpi-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* --- Section --- */
+    .section {
+      margin-bottom: 40px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: Nunito, 'Noto Sans SC', sans-serif;
+      font-weight: 800;
+      font-size: 22px;
+      color: var(--text);
+      letter-spacing: 0.02em;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px dashed var(--border);
+    }
+
+    .section-title .section-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: var(--r-sm);
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .icon-model { background: #e6f9f6; }
+    .icon-api { background: #fef3e2; }
+    .icon-layout { background: #fde4f0; }
+    .icon-steps { background: #e8f4e8; }
+    .icon-risk { background: #fde8e8; }
+    .icon-verify { background: #e8f0fc; }
+
+    /* --- Card --- */
+    .card {
+      background: var(--bg-content);
+      border-radius: var(--r-lg);
+      padding: 28px 32px;
+      margin-bottom: 20px;
+    }
+
+    .card h3 {
+      font-family: Nunito, 'Noto Sans SC', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--text);
+      margin-bottom: 12px;
+      letter-spacing: 0.02em;
+    }
+
+    .card p, .card li {
+      font-size: 14px;
+      color: var(--text-body);
+      line-height: 1.7;
+    }
+
+    /* --- Table --- */
+    .spec-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: var(--r-base);
+      overflow: hidden;
+      font-size: 14px;
+    }
+
+    .spec-table thead th {
+      background: linear-gradient(180deg, #f8f4eb 0%, #f0ece2 100%);
+      padding: 14px 18px;
+      text-align: left;
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--text);
+      letter-spacing: 0.02em;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .spec-table tbody td {
+      padding: 12px 18px;
+      border-bottom: 1px dashed var(--border);
+      color: var(--text-body);
+    }
+
+    .spec-table tbody tr:nth-child(even) {
+      background: rgba(248, 248, 240, 0.6);
+    }
+
+    .spec-table tbody tr:hover {
+      background: rgba(25, 200, 185, 0.06);
+    }
+
+    /* --- Tags --- */
+    .tag {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: var(--r-pill);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .tag-create { background: #e6f9f6; color: var(--primary-active); }
+    .tag-modify { background: #fef3e2; color: #b87a20; }
+    .tag-rewrite { background: #fde4f0; color: #c05070; }
+    .tag-p0 { background: #fde8e8; color: var(--error-active); }
+    .tag-p1 { background: #fef3e2; color: #b87a20; }
+    .tag-p2 { background: #e6f9f6; color: var(--primary-active); }
+    .tag-p3 { background: #f0ece2; color: var(--text-muted); }
+    .tag-p4 { background: #e8f0fc; color: #5078c0; }
+    .tag-get { background: #e6f9f6; color: var(--primary-active); }
+    .tag-post { background: #fef3e2; color: #b87a20; }
+    .tag-nullable { font-size: 11px; background: #f0ece2; color: var(--text-muted); }
+
+    /* --- Layout Preview --- */
+    .layout-preview {
+      display: flex;
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    .layout-box {
+      border-radius: var(--r-base);
+      padding: 20px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      position: relative;
+    }
+
+    .layout-sidebar {
+      width: 260px;
+      min-height: 300px;
+      background: #fdfaf0;
+      border: 2px dashed var(--border);
+      flex-shrink: 0;
+    }
+
+    .layout-main {
+      flex: 1;
+      background: var(--bg-content);
+      border: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .layout-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.6);
+      border-radius: var(--r-sm);
+      border: 1px dashed var(--border);
+    }
+
+    .layout-breadcrumb {
+      padding: 8px 16px;
+      background: rgba(25,200,185,0.08);
+      border-radius: var(--r-sm);
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .layout-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      border: 1px dashed var(--border);
+      border-radius: var(--r-sm);
+      background: rgba(248,248,240,0.4);
+      color: var(--text-secondary);
+    }
+
+    .layout-sidebar-title {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+
+    .layout-tree-item {
+      padding: 8px 12px;
+      border-radius: var(--r-sm);
+      margin-bottom: 4px;
+      text-align: left;
+      font-size: 13px;
+      background: rgba(255,255,255,0.7);
+      border: 1px solid transparent;
+      transition: all var(--d-fast) var(--ease);
+    }
+
+    .layout-tree-item.l1 { font-weight: 600; color: var(--text); }
+    .layout-tree-item.l2 { margin-left: 16px; color: var(--text-body); }
+
+    .layout-tree-item:hover {
+      border-color: var(--primary);
+      background: rgba(25,200,185,0.06);
+    }
+
+    .layout-tree-item.active {
+      background: rgba(25,200,185,0.12);
+      border-color: var(--primary);
+      color: var(--primary-active);
+    }
+
+    /* --- Risk badges --- */
+    .risk-high { color: #e05a5a; font-weight: 700; }
+    .risk-mid { color: #e59266; font-weight: 700; }
+    .risk-low { color: #6fba2c; font-weight: 700; }
+
+    /* --- Step list --- */
+    .step-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .step-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    .step-list li:last-child { border-bottom: none; }
+
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--primary-bg);
+      color: var(--primary-active);
+      font-weight: 700;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .step-content strong {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .step-content .step-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* --- Footer --- */
+    .report-footer {
+      margin-top: 48px;
+      padding-top: 20px;
+      border-top: 2px dashed var(--border);
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-disabled);
+    }
+
+    /* --- AI Role Prompt --- */
+    .role-card {
+      border: 2px solid #c4b89e;
+    }
+
+    .role-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px dashed var(--border);
+    }
+
+    .role-badge {
+      display: inline-block;
+      padding: 5px 14px;
+      border-radius: var(--r-pill);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      background: #ede4f8;
+      color: #6a3a9a;
+      border: 1.5px solid #b77dee;
+    }
+
+    .role-badge-sub {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .role-block {
+      margin-bottom: 20px;
+      padding: 20px 24px;
+      background: rgba(248, 248, 240, 0.5);
+      border-radius: var(--r-base);
+      border: 1px solid var(--border);
+    }
+
+    .role-block:last-child {
+      margin-bottom: 0;
+    }
+
+    .role-block-title {
+      font-family: Nunito, 'Noto Sans SC', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text);
+      margin-bottom: 10px;
+      letter-spacing: 0.02em;
+    }
+
+    .role-block-content {
+      font-size: 14px;
+      color: var(--text-body);
+      line-height: 1.7;
+    }
+
+    .role-list {
+      padding-left: 20px;
+    }
+
+    .role-list li {
+      padding: 4px 0;
+      border-bottom: 1px dashed rgba(196, 184, 158, 0.4);
+    }
+
+    .role-list li:last-child {
+      border-bottom: none;
+    }
+
+    .forbid-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    @media (max-width: 768px) {
+      .forbid-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .forbid-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: var(--r-sm);
+      background: #fdf5f5;
+      border: 1px solid #fce4e4;
+      font-size: 13px;
+      color: var(--text-body);
+    }
+
+    .forbid-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ====== Header ====== -->
+  <header class="report-header">
+    <span class="badge badge-plan">IMPLEMENTATION PLAN</span>
+    <span class="badge badge-strict" style="margin-left:8px">STRICT</span>
+    <h1>用例目录层级 + 双视图切换</h1>
+    <p class="subtitle">为 case-manager 模块引入三级层级结构（目录→子目录→用例）与列表/卡片双视图模式</p>
+    <div class="meta-line">
+      <span><span class="meta-dot teal"></span> 12 个文件变更</span>
+      <span><span class="meta-dot orange"></span> 预估 ~140 分钟</span>
+      <span><span class="meta-dot pink"></span> case-manager 模块</span>
+      <span><span class="meta-dot green"></span> 向后兼容</span>
+    </div>
+  </header>
+
+  <!-- ====== KPI Summary ====== -->
+  <div class="kpi-grid">
+    <div class="kpi-card files">
+      <div class="kpi-dot"></div>
+      <div class="kpi-number">12</div>
+      <div class="kpi-label">涉及文件（8 改 + 3 新 + 1 重写）</div>
+    </div>
+    <div class="kpi-card lines">
+      <div class="kpi-dot"></div>
+      <div class="kpi-number">~350</div>
+      <div class="kpi-label">预估代码变更行数</div>
+    </div>
+    <div class="kpi-card time">
+      <div class="kpi-dot"></div>
+      <div class="kpi-number">~140</div>
+      <div class="kpi-label">预估工作量（分钟）</div>
+    </div>
+    <div class="kpi-card tables">
+      <div class="kpi-dot"></div>
+      <div class="kpi-number">1</div>
+      <div class="kpi-label">新增数据库表</div>
+    </div>
+  </div>
+
+  <!-- ====== AI Role Prompt ====== -->
+  <div class="section">
+    <div class="section-title">
+      <span class="section-icon" style="background:#ede4f8;">🎭</span>
+      AI 角色定位提示词
+    </div>
+
+    <div class="card role-card">
+      <div class="role-header">
+        <span class="role-badge">SYSTEM PROMPT</span>
+        <span class="role-badge-sub">注入到执行本方案的 AI Agent 上下文中</span>
+      </div>
+
+      <div class="role-block">
+        <div class="role-block-title">🎯 角色身份</div>
+        <div class="role-block-content">
+          你是 <strong>Android-AutoTests 平台的 case-manager 模块专属开发工程师</strong>。
+          本次任务是实施「用例目录层级 + 双视图切换」方案。你不是通用助手 — 你只负责这个模块的完整交付。
+        </div>
+      </div>
+
+      <div class="role-block">
+        <div class="role-block-title">📋 职责范围</div>
+        <div class="role-block-content">
+          <ol class="role-list">
+            <li><strong>数据层实现</strong> — 创建 CaseDirectory 模型、迁移、api.py 函数</li>
+            <li><strong>API 层实现</strong> — 4 个目录 CRUD 端点 + definitions_handler 过滤改造</li>
+            <li><strong>前端重构</strong> — index.vue 左右布局 + DirectoryTree + CaseCard + 视图切换</li>
+            <li><strong>CaseEditor 适配</strong> — category 文本输入 → el-cascader 级联选择器</li>
+            <li><strong>AgentScope Tool 同步</strong> — case_tools.py 支持 directory 参数</li>
+            <li><strong>质量保证</strong> — 编译检查 + 格式化 + 静态分析 + API 接口测试</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="role-block">
+        <div class="role-block-title">🔒 行为约束</div>
+        <div class="role-block-content">
+          <table class="spec-table">
+            <thead>
+              <tr>
+                <th style="width:40px">#</th>
+                <th>约束</th>
+                <th>说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-weight:900;color:var(--error);text-align:center;">1</td>
+                <td><strong>严格按 P0→P1→P2→P3→P4 顺序执行</strong></td>
+                <td>数据层完工并验证后才进入 API 层，不跳跃、不并行跨阶段</td>
+              </tr>
+              <tr>
+                <td style="font-weight:900;color:var(--error);text-align:center;">2</td>
+                <td><strong>每阶段结束必须验证</strong></td>
+                <td>P0: migrate --dry-run / P1: curl 端点 / P2: vite build / P3: python manage.py check / P4: 全链路</td>
+              </tr>
+              <tr>
+                <td style="font-weight:900;color:var(--error);text-align:center;">3</td>
+                <td><strong>不得擅自扩大改动范围</strong></td>
+                <td>只改方案中列出的 12 个文件，不得顺手重构无关代码</td>
+              </tr>
+              <tr>
+                <td style="font-weight:900;color:var(--warning-active);text-align:center;">4</td>
+                <td><strong>保持向后兼容</strong></td>
+                <td>directory 字段 nullable；现有 category 逻辑不动；旧 API 响应格式不破坏</td>
+              </tr>
+              <tr>
+                <td style="font-weight:900;color:var(--warning-active);text-align:center;">5</td>
+                <td><strong>编译失败自动修复（最多 3 次）</strong></td>
+                <td>3 次仍失败 → 暂停并报告具体原因，等用户介入</td>
+              </tr>
+              <tr>
+                <td style="font-weight:900;color:var(--warning-active);text-align:center;">6</td>
+                <td><strong>测试环境不可用则降级</strong></td>
+                <td>Django 未启动 → 静态分析代替；不因环境缺失卡住交付</td>
+              </tr>
+              <tr>
+                <td style="font-weight:900;color:var(--text-secondary);text-align:center;">7</td>
+                <td><strong>写完代码自动格式化</strong></td>
+                <td>Python: ruff format / Vue: prettier — 每次修改后立即执行</td>
+              </tr>
+              <tr>
+                <td style="font-weight:900;color:var(--text-secondary);text-align:center;">8</td>
+                <td><strong>animal-island-vue 组件 API 逐项核对</strong></td>
+                <td>使用 Card/Button/Tabs 等组件前，先查 .claude/rules/animal-island-ui.md 确认 API</td>
+              </tr>
+              <tr>
+                <td style="font-weight:900;color:var(--text-secondary);text-align:center;">9</td>
+                <td><strong>数据来源铁律</strong></td>
+                <td>所有页面数据必须来自 API 调用数据库，禁止硬编码 ref([{...}]) 假数据</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="role-block">
+        <div class="role-block-title">🚫 禁止事项</div>
+        <div class="role-block-content">
+          <div class="forbid-grid">
+            <div class="forbid-item">
+              <span class="forbid-icon">❌</span>
+              <span>跳过 Phase 0 探索直接写代码</span>
+            </div>
+            <div class="forbid-item">
+              <span class="forbid-icon">❌</span>
+              <span>方案未审批就开始编码</span>
+            </div>
+            <div class="forbid-item">
+              <span class="forbid-icon">❌</span>
+              <span>跨模块直接 ORM 写入（防火墙 #2）</span>
+            </div>
+            <div class="forbid-item">
+              <span class="forbid-icon">❌</span>
+              <span>修改 django.contrib.auth 等系统表</span>
+            </div>
+            <div class="forbid-item">
+              <span class="forbid-icon">❌</span>
+              <span>删除或重建已有数据表（只做增量迁移）</span>
+            </div>
+            <div class="forbid-item">
+              <span class="forbid-icon">❌</span>
+              <span>在前端硬编码 API 响应数据</span>
+            </div>
+            <div class="forbid-item">
+              <span class="forbid-icon">❌</span>
+              <span>ElMessageBox / catch 静默吞写操作错误</span>
+            </div>
+            <div class="forbid-item">
+              <span class="forbid-icon">❌</span>
+              <span>animal-island-vue 组件使用 Element Plus API（如 type="danger"）</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== Context ====== -->
+  <div class="section">
+    <div class="section-title">
+      <span class="section-icon icon-model">📋</span>
+      背景与目标
+    </div>
+    <div class="card">
+      <h3>当前问题</h3>
+      <p>
+        现有 case-manager 模块采用扁平结构管理用例 — 所有用例平铺在列表中，仅靠一个自由文本
+        <code style="background:#f0ece2;padding:2px 8px;border-radius:6px;font-size:13px;">category</code>
+        字段做简单筛选。随着用例数量增长（H6601、Wi-Fi 稳定性、蓝牙性能等多条产品线），扁平列表已无法满足分类浏览和快速定位的需求。
+      </p>
+    </div>
+    <div class="card">
+      <h3>目标产出</h3>
+      <ul style="padding-left:20px;">
+        <li><strong>三级层级</strong>：一级目录 → 二级目录 → 用例，支持嵌套浏览</li>
+        <li><strong>双视图切换</strong>：列表视图（Table）+ 卡片视图（Card Grid），一键切换，偏好记忆</li>
+        <li><strong>向后兼容</strong>：现有用例的 category 文本字段保留，directory 外键 nullable，不强制迁移</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ====== Data Model Design ====== -->
+  <div class="section">
+    <div class="section-title">
+      <span class="section-icon icon-model">🗄️</span>
+      数据模型设计
+    </div>
+
+    <div class="card">
+      <h3>新增表 cm_case_directories</h3>
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th>字段</th>
+            <th>类型</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight:700">id</td>
+            <td>int PK 自增</td>
+            <td>主键</td>
+          </tr>
+          <tr>
+            <td style="font-weight:700">name</td>
+            <td>varchar(200)</td>
+            <td>目录名称（如 "H6601用例"、"开关功能"）</td>
+          </tr>
+          <tr>
+            <td style="font-weight:700">parent</td>
+            <td>FK → self <span class="tag tag-nullable">nullable</span></td>
+            <td>父级目录。一级目录为 null，二级目录指向一级</td>
+          </tr>
+          <tr>
+            <td style="font-weight:700">sort_order</td>
+            <td>int 默认 0</td>
+            <td>排序序号，支持拖拽调整</td>
+          </tr>
+          <tr>
+            <td style="font-weight:700">created_at</td>
+            <td>datetime auto_now_add</td>
+            <td>创建时间</td>
+          </tr>
+          <tr>
+            <td style="font-weight:700">updated_at</td>
+            <td>datetime auto_now</td>
+            <td>更新时间</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="margin-top:12px;font-size:13px;color:var(--text-secondary);">
+        🔒 唯一约束：<code>(parent, name)</code> — 同一父级下目录名不可重复
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>TestDefinition 新增字段</h3>
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th>字段</th>
+            <th>类型</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight:700">directory</td>
+            <td>FK → CaseDirectory <span class="tag tag-nullable">nullable</span></td>
+            <td>所属二级目录。为空时保持向后兼容，category 字段不变</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="margin-top:12px;font-size:13px;color:var(--text-secondary);">
+        💡 <strong>设计意图</strong>：directory 指向二级目录，一级目录通过 directory.parent 间接关联。现有用例 directory=null，category 自由文本保留，后续可通过脚本批量迁移。
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>数据关系示意</h3>
+      <div style="font-family:'SF Mono','Fira Code',Consolas,monospace;font-size:13px;background:#fdfaf0;padding:20px;border-radius:var(--r-base);line-height:2.2;color:var(--text-body);">
+        📁 <strong>H6601用例</strong> (id=1, parent=null)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;├── 📂 <strong>开关功能</strong> (id=2, parent=1)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├── 📄 TC-001 打开Wi-Fi开关 (directory_id=2)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;└── 📄 TC-002 关闭Wi-Fi开关 (directory_id=2)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;└── 📂 <strong>场景功能</strong> (id=3, parent=1)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── 📄 TC-003 多场景切换 (directory_id=3)<br>
+        📁 <strong>Wi-Fi稳定性用例</strong> (id=4, parent=null)<br>
+        📁 <strong>蓝牙性能测试用例</strong> (id=5, parent=null)
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== API Design ====== -->
+  <div class="section">
+    <div class="section-title">
+      <span class="section-icon icon-api">🔌</span>
+      API 设计
+    </div>
+
+    <div class="card">
+      <h3>新增端点</h3>
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th>方法</th>
+            <th>路径</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="tag tag-get">GET</span></td>
+            <td style="font-family:'SF Mono',monospace;font-size:13px;">/api/cases/directories</td>
+            <td>获取完整目录树（嵌套 JSON，含每个节点的 case_count）</td>
+          </tr>
+          <tr>
+            <td><span class="tag tag-post">POST</span></td>
+            <td style="font-family:'SF Mono',monospace;font-size:13px;">/api/cases/directories/create</td>
+            <td>创建目录（name + parent_id + sort_order）</td>
+          </tr>
+          <tr>
+            <td><span class="tag tag-post">POST</span></td>
+            <td style="font-family:'SF Mono',monospace;font-size:13px;">/api/cases/directories/{id}/update</td>
+            <td>更新目录（名称、父级、排序）</td>
+          </tr>
+          <tr>
+            <td><span class="tag tag-post">POST</span></td>
+            <td style="font-family:'SF Mono',monospace;font-size:13px;">/api/cases/directories/{id}/delete</td>
+            <td>删除目录（含子目录或用例时返回警告）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>修改端点</h3>
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th>端点</th>
+            <th>变更内容</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-family:'SF Mono',monospace;font-size:13px;">GET /api/cases/definitions</td>
+            <td>新增查询参数 <code>?directory_id={id}</code>，按目录过滤用例</td>
+          </tr>
+          <tr>
+            <td style="font-family:'SF Mono',monospace;font-size:13px;">POST /api/cases/definitions</td>
+            <td>请求体接受 <code>directory_id</code> 字段</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>目录树响应格式</h3>
+      <div style="font-family:'SF Mono','Fira Code',Consolas,monospace;font-size:12px;background:#fdfaf0;padding:20px;border-radius:var(--r-base);line-height:1.8;color:var(--text-body);overflow-x:auto;">
+{<br>
+&nbsp;&nbsp;<span style="color:#6fba2c">"ok"</span>: <span style="color:#e06c75">true</span>,<br>
+&nbsp;&nbsp;<span style="color:#6fba2c">"tree"</span>: [<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6fba2c">"id"</span>: <span style="color:#e06c75">1</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6fba2c">"name"</span>: <span style="color:#6fba2c">"H6601用例"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6fba2c">"case_count"</span>: <span style="color:#e06c75">12</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6fba2c">"children"</span>: [<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6fba2c">"id"</span>: <span style="color:#e06c75">2</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6fba2c">"name"</span>: <span style="color:#6fba2c">"开关功能"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6fba2c">"case_count"</span>: <span style="color:#e06c75">5</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6fba2c">"children"</span>: []<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;]<br>
+}
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== Frontend Layout ====== -->
+  <div class="section">
+    <div class="section-title">
+      <span class="section-icon icon-layout">🎨</span>
+      前端设计
+    </div>
+
+    <div class="card">
+      <h3>页面布局重构（index.vue）</h3>
+      <div class="layout-preview">
+        <div class="layout-box layout-sidebar">
+          <div class="layout-sidebar-title">📁 目录结构</div>
+          <div class="layout-tree-item l1 active">📁 H6601用例</div>
+          <div class="layout-tree-item l2 active">📂 开关功能</div>
+          <div class="layout-tree-item l2">📂 场景功能</div>
+          <div class="layout-tree-item l1">📁 Wi-Fi稳定性</div>
+          <div class="layout-tree-item l1">📁 蓝牙性能测试</div>
+          <div style="margin-top:16px;font-size:12px;color:var(--text-secondary);border-top:1px dashed var(--border);padding-top:12px;">+ 新建目录</div>
+        </div>
+        <div class="layout-box layout-main">
+          <div class="layout-toolbar">
+            <span style="font-weight:700">用例列表</span>
+            <span style="display:flex;gap:8px;">
+              <span style="padding:4px 12px;border-radius:var(--r-pill);background:var(--primary);color:#fff;font-size:12px;">📋 列表</span>
+              <span style="padding:4px 12px;border-radius:var(--r-pill);background:transparent;border:1px solid var(--border);font-size:12px;">🃏 卡片</span>
+            </span>
+          </div>
+          <div class="layout-breadcrumb">
+            📋 全部 &gt; H6601用例 &gt; 开关功能
+          </div>
+          <div class="layout-content">
+            Table 列表 / Card Grid 卡片
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>新增组件</h3>
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th>组件</th>
+            <th>文件</th>
+            <th>核心功能</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight:700">DirectoryTree</td>
+            <td style="font-family:'SF Mono',monospace;font-size:12px;">components/DirectoryTree.vue</td>
+            <td>el-tree 渲染目录树，右键菜单（新建子目录/重命名/删除），点击过滤用例</td>
+          </tr>
+          <tr>
+            <td style="font-weight:700">CaseCard</td>
+            <td style="font-family:'SF Mono',monospace;font-size:12px;">components/CaseCard.vue</td>
+            <td>animal-island-vue Card 包装，展示用例 ID/标题/分类/步骤数/状态</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>修改组件</h3>
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th>文件</th>
+            <th>变更</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-family:'SF Mono',monospace;font-size:12px;">index.vue</td>
+            <td>重构为左右两栏布局；新增 viewMode 状态、el-breadcrumb、视图切换按钮</td>
+          </tr>
+          <tr>
+            <td style="font-family:'SF Mono',monospace;font-size:12px;">CaseEditor.vue</td>
+            <td>category 输入框 → el-cascader 级联选择器（选项从 /directories 加载）</td>
+          </tr>
+          <tr>
+            <td style="font-family:'SF Mono',monospace;font-size:12px;">api.js</td>
+            <td>新增目录 API 封装函数（fetchDirectories / createDirectory / updateDirectory / deleteDirectory）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>视图切换机制</h3>
+      <ul style="padding-left:20px;">
+        <li>视图偏好存 <code>localStorage('case-view-mode')</code>，刷新保持</li>
+        <li>列表视图：复用现有 animal-island-vue <code>Table</code> 组件</li>
+        <li>卡片视图：CSS Grid <code>repeat(auto-fill, minmax(320px, 1fr))</code> + CaseCard</li>
+        <li>空目录显示引导提示："此目录下暂无用例，点击创建第一个"</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ====== Implementation Steps ====== -->
+  <div class="section">
+    <div class="section-title">
+      <span class="section-icon icon-steps">📝</span>
+      实施步骤
+    </div>
+
+    <div class="card">
+      <h3><span class="tag tag-p0">P0</span> 数据层 — 预估 30 分钟</h3>
+      <ol class="step-list">
+        <li>
+          <span class="step-num">1</span>
+          <div class="step-content">
+            <strong>创建 CaseDirectory 模型</strong>
+            <div class="step-meta">apps/case_manager/models.py — Modify</div>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">2</span>
+          <div class="step-content">
+            <strong>TestDefinition 加 directory 外键</strong>
+            <div class="step-meta">apps/case_manager/models.py — Modify</div>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">3</span>
+          <div class="step-content">
+            <strong>生成迁移文件 + 执行 migrate</strong>
+            <div class="step-meta">python manage.py makemigrations && python manage.py migrate</div>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">4</span>
+          <div class="step-content">
+            <strong>更新 api.py 目录操作函数</strong>
+            <div class="step-meta">apps/case_manager/api.py — Modify（新增 get_directory_tree / create_directory / update_directory / delete_directory）</div>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h3><span class="tag tag-p1">P1</span> API 层 — 预估 25 分钟</h3>
+      <ol class="step-list">
+        <li>
+          <span class="step-num">5</span>
+          <div class="step-content">
+            <strong>新增目录 CRUD 端点</strong>
+            <div class="step-meta">apps/case_manager/views.py + urls.py — Modify</div>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">6</span>
+          <div class="step-content">
+            <strong>definitions_handler 支持 directory_id 过滤</strong>
+            <div class="step-meta">apps/case_manager/views.py — Modify</div>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h3><span class="tag tag-p2">P2</span> 前端 — 预估 60 分钟</h3>
+      <ol class="step-list">
+        <li>
+          <span class="step-num">7</span>
+          <div class="step-content">
+            <strong>重构 index.vue 布局</strong>
+            <div class="step-meta">左侧 DirectoryTree + 右侧面包屑 + 双视图 — Rewrite</div>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">8</span>
+          <div class="step-content">
+            <strong>创建 DirectoryTree.vue</strong>
+            <div class="step-meta">el-tree + 右键菜单 + 节点高亮 — Create</div>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">9</span>
+          <div class="step-content">
+            <strong>创建 CaseCard.vue</strong>
+            <div class="step-meta">Card 包装 + 悬停操作按钮 — Create</div>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">10</span>
+          <div class="step-content">
+            <strong>CaseEditor.vue 改用级联选择器</strong>
+            <div class="step-meta">category → el-cascader — Modify</div>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h3><span class="tag tag-p3">P3</span> 集成 — 预估 15 分钟</h3>
+      <ol class="step-list">
+        <li>
+          <span class="step-num">11</span>
+          <div class="step-content">
+            <strong>更新 AgentScope case_tools.py</strong>
+            <div class="step-meta">save_test_case / list_test_cases 工具支持 directory 参数 — Modify</div>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h3><span class="tag tag-p4">P4</span> 测试 — 预估 10 分钟</h3>
+      <ol class="step-list">
+        <li>
+          <span class="step-num">12</span>
+          <div class="step-content">
+            <strong>编译 + API 测试 + 格式化</strong>
+            <div class="step-meta">vite build + python manage.py check + curl 端点验证 + ruff/prettier</div>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ====== Risk Assessment ====== -->
+  <div class="section">
+    <div class="section-title">
+      <span class="section-icon icon-risk">⚠️</span>
+      风险评估
+    </div>
+
+    <div class="card">
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th style="width:60px">等级</th>
+            <th>风险</th>
+            <th>应对措施</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="risk-mid">🟠 中</span></td>
+            <td>现有用例 category 为自由文本，迁移到目录结构可能丢失数据</td>
+            <td>directory 字段设为 nullable，不强制迁移；后续提供 category → directory 批量映射脚本</td>
+          </tr>
+          <tr>
+            <td><span class="risk-low">🟢 低</span></td>
+            <td>el-tree 大量节点时性能问题</td>
+            <td>目录层级固定 2 层，节点总数有限（通常 &lt;100），性能无虞</td>
+          </tr>
+          <tr>
+            <td><span class="risk-low">🟢 低</span></td>
+            <td>卡片视图渲染大量用例时性能下降</td>
+            <td>用例数量通常 &lt;200，CSS Grid 布局无虚拟滚动需求</td>
+          </tr>
+          <tr>
+            <td><span class="risk-low">🟢 低</span></td>
+            <td>删除含子目录的目录时数据孤立</td>
+            <td>删除前检查子目录和关联用例数，弹窗确认；directory 使用 SET_NULL 而非 CASCADE</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ====== Verification ====== -->
+  <div class="section">
+    <div class="section-title">
+      <span class="section-icon icon-verify">✅</span>
+      验证方案
+    </div>
+    <div class="card">
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th>验证项</th>
+            <th>方法</th>
+            <th>通过标准</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight:700">数据库迁移</td>
+            <td style="font-family:'SF Mono',monospace;font-size:12px;">python manage.py makemigrations --dry-run</td>
+            <td>生成迁移文件无错误，字段类型正确</td>
+          </tr>
+          <tr>
+            <td style="font-weight:700">Django 检查</td>
+            <td style="font-family:'SF Mono',monospace;font-size:12px;">python manage.py check</td>
+            <td>无 ERROR 输出</td>
+          </tr>
+          <tr>
+            <td style="font-weight:700">前端编译</td>
+            <td style="font-family:'SF Mono',monospace;font-size:12px;">npx vite build --mode development</td>
+            <td>✓ built 成功，无语法错误</td>
+          </tr>
+          <tr>
+            <td style="font-weight:700">目录 CRUD</td>
+            <td style="font-family:'SF Mono',monospace;font-size:12px;">curl POST/GET /api/cases/directories/*</td>
+            <td>创建→列表→更新→删除全流程正常</td>
+          </tr>
+          <tr>
+            <td style="font-weight:700">目录过滤</td>
+            <td style="font-family:'SF Mono',monospace;font-size:12px;">curl GET /api/cases/definitions?directory_id=2</td>
+            <td>仅返回该目录下的用例</td>
+          </tr>
+          <tr>
+            <td style="font-weight:700">视图切换</td>
+            <td>浏览器手动验证</td>
+            <td>列表↔卡片一键切换，刷新后偏好保持</td>
+          </tr>
+          <tr>
+            <td style="font-weight:700">向后兼容</td>
+            <td>现有用例列表正常显示</td>
+            <td>directory=null 的用例在"全部"视图可见</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ====== Footer ====== -->
+  <footer class="report-footer">
+    方案生成时间：2026-07-06 · Android-AutoTests · case-manager 模块
+  </footer>
+
+</div>
+
+</body>
+</html>

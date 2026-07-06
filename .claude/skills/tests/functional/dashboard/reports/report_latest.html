@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test Report - Dashboard</title>
+<style>
+  :root {
+    --bg: #f8f6f3; --card: #fff; --text: #3d3226; --text2: #7a6e5d;
+    --green: #6fba2c; --red: #e85f5f; --blue: #889df0; --yellow: #f7cd67;
+    --radius: 10px; --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:var(--font); background:var(--bg); color:var(--text); padding:24px; line-height:1.5; }
+  .container { max-width:1100px; margin:0 auto; }
+  h1 { font-size:24px; margin-bottom:4px; }
+  h2 { font-size:16px; margin:24px 0 12px; color:var(--text); border-bottom:2px solid #e8e3da; padding-bottom:6px; }
+  .meta { color:var(--text2); font-size:13px; margin-bottom:20px; }
+  .summary { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+  .kpi { background:var(--card); border-radius:var(--radius); padding:16px 20px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .kpi-label { font-size:11px; text-transform:uppercase; color:var(--text2); letter-spacing:.5px; }
+  .kpi-value { font-size:32px; font-weight:800; }
+  .kpi-green { color:var(--green); } .kpi-red { color:var(--red); } .kpi-blue { color:var(--blue); }
+  .conclusion { background:var(--card); border-radius:var(--radius); padding:16px 20px; margin-bottom:20px;
+    border-left:4px solid var(--blue); box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .conclusion-text { font-size:15px; }
+  .conclusion-next { font-size:13px; color:var(--text2); margin-top:4px; }
+
+  table { width:100%; border-collapse:collapse; background:var(--card); border-radius:var(--radius);
+    overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.06); margin-bottom:16px; }
+  th { background:#f0ede7; padding:10px 12px; text-align:left; font-size:11px; text-transform:uppercase;
+    letter-spacing:.5px; color:var(--text2); border-bottom:2px solid #e8e3da; }
+  td { padding:8px 12px; font-size:13px; border-bottom:1px solid #f0ede7; }
+  tr:nth-child(even) { background:#faf9f7; }
+  .pass { color:var(--green); font-weight:700; }
+  .fail { color:var(--red); font-weight:700; }
+
+  .heatmap { display:flex; gap:2px; align-items:center; }
+  .heat-bar { height:12px; border-radius:2px; min-width:2px; }
+  .heat-green { background:var(--green); } .heat-red { background:var(--red); } .heat-gray { background:#e0dcd5; }
+
+  .bug-card { background:var(--card); border-radius:var(--radius); padding:16px 20px; margin-bottom:12px;
+    box-shadow:0 1px 3px rgba(0,0,0,.06); border-left:4px solid var(--red); }
+  .bug-header { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  .bug-severity { font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; color:#fff; }
+  .bug-high { background:var(--red); } .bug-med { background:var(--yellow); color:var(--text); }
+  .bug-evidence { font-family:'SF Mono', 'Cascadia Code', 'Consolas', monospace; font-size:12px;
+    background:#f5f2ed; padding:8px 12px; border-radius:6px; margin:8px 0; white-space:pre-wrap; }
+
+  .focus-list { list-style:none; }
+  .focus-item { display:flex; gap:12px; align-items:baseline; padding:6px 0; font-size:13px; }
+  .focus-prio { font-weight:700; font-size:11px; padding:1px 6px; border-radius:4px; min-width:32px; text-align:center; }
+  .prio-p0 { background:#fde8e8; color:var(--red); } .prio-p1 { background:#fef3cd; color:#8a6d14; }
+  .prio-p2 { background:#e8f0fe; color:var(--blue); }
+
+  .footer { text-align:center; color:var(--text2); font-size:11px; margin-top:32px; padding-top:16px;
+    border-top:1px solid #e8e3da; }
+  @media print { body { background:#fff; } .summary { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Dashboard - Functional Test Report</h1>
+<div class="meta">2026-07-03 13:38:35 | Django:8765 + Vite:5173 + MySQL | Total: 9123ms</div>
+
+<!-- KPI Summary -->
+<div class="summary">
+  <div class="kpi"><div class="kpi-label">Total Cases</div><div class="kpi-value kpi-blue">3</div></div>
+  <div class="kpi"><div class="kpi-label">Passed</div><div class="kpi-value kpi-green">3</div></div>
+  <div class="kpi"><div class="kpi-label">Failed</div><div class="kpi-value kpi-red">0</div></div>
+  <div class="kpi"><div class="kpi-label">Pass Rate</div><div class="kpi-value kpi-green">100%</div></div>
+</div>
+
+<!-- Conclusion -->
+<div class="conclusion">
+  <div class="conclusion-text"><strong>Conclusion:</strong> All tests passed. Ready to commit.</div>
+  <div class="conclusion-next"><strong>Next:</strong> No action required.</div>
+</div>
+
+<!-- Case Details -->
+<h2>Case Details</h2>
+<table>
+<thead><tr><th>#</th><th>Case ID</th><th>Dim</th><th>Description</th><th>Expected</th><th>Actual</th><th>Result</th><th>Time</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>DASHBOARD-API-01</td><td>API</td><td>DASHBOARD API #01</td><td style="font-size:11px">OK</td><td style="font-size:11px">OK</td><td class="pass">PASS</td><td>4553ms</td></tr>
+<tr><td>2</td><td>DASHBOARD-API-02</td><td>API</td><td>DASHBOARD API #02</td><td style="font-size:11px">OK</td><td style="font-size:11px">OK</td><td class="pass">PASS</td><td>4567ms</td></tr>
+<tr><td>3</td><td>DASHBOARD-API-03</td><td>API</td><td>DASHBOARD API #03</td><td style="font-size:11px">OK</td><td style="font-size:11px">OK</td><td class="pass">PASS</td><td>3ms</td></tr>
+</tbody>
+</table>
+
+<!-- Dimension Coverage -->
+<h2>Dimension Coverage</h2>
+<table>
+<thead><tr><th>Dimension</th><th>Cases</th><th>Pass</th><th>Fail</th><th>Rate</th><th>Coverage</th><th>Recommendation</th></tr></thead>
+<tbody>
+<tr><td><strong>API</strong></td><td>3</td><td style="color:var(--green)">3</td><td style="color:var(--red)">0</td><td>100%</td><td><div class="heatmap"><span class="heat-bar heat-green" style="width:120px"></span></div></td><td style="font-size:12px">Coverage sufficient</td></tr>
+</tbody>
+</table>
+
+<!-- Bugs -->
+<h2>Bugs Found</h2>
+<p style='color:var(--green);font-size:14px'>No bugs found.</p>
+
+<!-- Next Focus -->
+<h2>Next Test Focus</h2>
+<ul class="focus-list">
+<li class="focus-item"><span class="focus-prio prio-p2">P2</span><strong>API</strong>: Coverage sufficient, maintain current level</li>
+</ul>
+
+<div class="footer">Generated by functional-testing skill | 2026-07-03 13:38:35</div>
+</div>
+</body>
+</html>

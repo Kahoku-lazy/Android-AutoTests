@@ -67,8 +67,7 @@ frontend/src/components.d.ts
 Thumbs.db
 desktop.ini
 
-# ── Claude Code (personal session data, paths, permissions) ──
-.claude/
+# ── Claude Code worktree sessions (auto-generated temporary workspaces) ──
 .workbuddy/
 
 # ── Legacy frontend (pre-Vue migration, contains hardcoded device IDs) ──

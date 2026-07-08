@@ -34,7 +34,7 @@ async function loadPages() {
   try {
     const { data } = await apiGetPages()
     if (data.ok) pages.value = data.pages || []
-  } catch (_) {}
+  } catch (_) { /* 加载失败时保持空列表，不打扰用户 */ }
   loading.value = false
   await nextTick()
   animate('.pages-list .page-row', { opacity: [0,1], translateX: [-12,0], delay: stagger(30), duration: 300 })
@@ -47,7 +47,7 @@ async function selectPage(page) {
   try {
     const { data } = await apiGetPageElements(page.id)
     if (data.ok) elements.value = data.elements || []
-  } catch (_) {}
+  } catch (_) { /* 加载元素失败时保持空列表 */ }
   await nextTick()
   animate('.elements-table tbody tr', {
     opacity: [0, 1],
@@ -77,7 +77,9 @@ async function doCreatePage() {
     } else {
       alert(data.error || '创建失败')
     }
-  } catch (_) {}
+  } catch (e) {
+    alert(e?.response?.data?.error || '创建页面失败，请检查网络连接')
+  }
 }
 
 // ── Add element ──
@@ -95,7 +97,9 @@ async function doAddElement() {
       showAddElement.value = false
       await selectPage(selectedPage.value)  // refresh elements
     }
-  } catch (_) {}
+  } catch (e) {
+    alert(e?.response?.data?.error || '添加元素失败，请检查网络连接')
+  }
 }
 
 // ── Page label edit ──
@@ -120,7 +124,9 @@ async function saveLabel(page) {
     } else {
       alert(data.error || '重命名失败')
     }
-  } catch (_) {}
+  } catch (e) {
+    alert(e?.response?.data?.error || '重命名失败，请检查网络连接')
+  }
   editingLabel.value = null
 }
 function cancelEdit() { editingLabel.value = null }
@@ -283,14 +289,15 @@ const columns = [
               >
                 <template v-for="tab in filterTabs" #[tab.key] :key="tab.key">
                   <Card color="brown" pattern="brown" class="table-card">
-                    <Table
-                      :columns="columns"
-                      :data-source="filteredElements"
-                      row-key="id"
-                      :striped="true"
-                      empty-text="暂无元素"
-                      class="elements-table"
-                    >
+                    <div class="table-scroll">
+                      <Table
+                        :columns="columns"
+                        :data-source="filteredElements"
+                        row-key="id"
+                        :striped="true"
+                        empty-text="暂无元素"
+                        class="elements-table"
+                      >
                       <!-- Custom cell: alias (inline edit) -->
                       <template #cell-alias="{ record }">
                         <input
@@ -349,6 +356,7 @@ const columns = [
                         </div>
                       </template>
                     </Table>
+                    </div>
                   </Card>
                 </template>
               </Tabs>
@@ -417,8 +425,21 @@ const columns = [
 </template>
 
 <style scoped>
-.doc-page { display: flex; flex-direction: column; height: 100%; }
-.main-layout { flex: 1; display: grid; grid-template-columns: 300px 1fr; gap: 16px; min-height: 0; }
+.doc-page {
+  display: flex;
+  flex-direction: column;
+  min-height: min-content;
+}
+.doc-body {
+  flex: 1;
+  padding-bottom: 24px;
+}
+.main-layout {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
 
 /* ── Panel header ── */
 .panel-header {
@@ -465,20 +486,14 @@ const columns = [
 
 /* ── Pages card ── */
 .pages-card {
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
-}
-.pages-card :deep(.animal-card-body) {
-  padding: 18px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
+  max-height: calc(100vh - 280px);
 }
 .pages-list {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 .page-row {
   padding: 10px 12px;
@@ -524,37 +539,31 @@ const columns = [
 .elements-panel {
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  min-width: 0;
   gap: 8px;
 }
 .elements-subheader {
   display: flex;
+  flex-direction: row;
   align-items: flex-start;
   justify-content: space-between;
-  flex: 1;
-  min-height: 0;
+  min-width: 0;
+  width: 100%;
   gap: 12px;
 }
 .element-tabs {
   flex: 1;
   min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  width: 100%;
 }
-/* 标签头不随表格扩展 */
-.element-tabs :deep(.animal-tabs-list) {
-  flex-shrink: 0;
-  overflow: hidden;
+.element-tabs :deep(.animal-tabs) {
+  width: 100%;
 }
-/* 内容区支持横向滚动 */
 .element-tabs :deep(.animal-tabs__content) {
-  flex: 1;
-  min-height: 0;
-  padding-top: 12px;
-  overflow-x: auto;
-  overflow-y: auto;
+  padding: 12px 16px 16px;
+}
+.element-tabs :deep(.animal-tabs__inner) {
+  min-height: min-content;
 }
 .element-count {
   font-size: 12px;
@@ -566,26 +575,40 @@ const columns = [
 
 /* ── Table card ── */
 .table-card {
-  flex: 1;
-  min-height: 0;
   min-width: 0;
+  padding: 0 !important;
 }
-.table-card :deep(.animal-card__content) {
-  padding: 0;
-  border-radius: 14px;
-  overflow: visible;
+
+/* ── Table scroll wrapper：仅横向溢出时滚动，纵向随内容撑开 */
+.table-scroll {
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 115, 85, 0.25) transparent;
 }
-/* 表格最小宽度：触发 tabs content 横向滚动 */
-.table-card :deep(.animal-table) {
-  min-width: 780px;
+.table-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.table-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.table-scroll::-webkit-scrollbar-thumb {
+  background: rgba(139, 115, 85, 0.25);
+  border-radius: 3px;
+}
+.table-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 115, 85, 0.45);
 }
 
 /* ── Elements table ── */
 .elements-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
 }
 .elements-table :deep(table) {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: auto;
@@ -735,7 +758,7 @@ const columns = [
   font-size: 14px;
   padding: 60px 0;
 }
-.empty-card :deep(.animal-card-body) {
+.empty-card {
   display: flex;
   align-items: center;
   justify-content: center;

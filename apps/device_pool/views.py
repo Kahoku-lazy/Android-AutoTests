@@ -44,11 +44,11 @@ def _update_device_status():
     在 list_devices 和 heartbeat 端点中调用。
 
     Rules:
-        - adb devices 列表中的 → OFFLINE→ONLINE, DISCONNECTED→ONLINE（重新出现）
+        - adb devices 列表中的 OFFLINE → ONLINE
         - DB 中 BUSY 但锁已超时 → 自动释放 (reason=timeout)
         - 不在 adb 列表中且非 BUSY → 标记 OFFLINE
-        - DISCONNECTED 不在 adb 中 → 保持 DISCONNECTED（不自动恢复）
     """
+    _purge_disconnected_devices()
     now = datetime.now()
     adb_serials = _adb_device_serials()
     updated = 0
@@ -57,7 +57,7 @@ def _update_device_status():
     for dev in Device.objects.all():
         if dev.serial in adb_serials:
             # 设备在线
-            if dev.status in ("OFFLINE", "DISCONNECTED"):
+            if dev.status == "OFFLINE":
                 dev.status = "ONLINE"
                 dev.last_seen = now
                 dev.save(update_fields=["status", "last_seen"])
@@ -99,12 +99,21 @@ def _update_device_status():
                     updated += 1
                     offline += 1
                 # 否则保持 BUSY（保护进行中的任务）
-            elif dev.status != "DISCONNECTED":
+            else:
                 dev.status = "OFFLINE"
                 dev.save(update_fields=["status"])
                 offline += 1
 
     return updated, offline
+
+
+def _delete_device_record(dev, *, reason="disconnect"):
+    """Remove a device row and its pool cache entry (no DISCONNECTED tombstone)."""
+    serial = dev.serial
+    if dev.status == "BUSY":
+        _release_internal(dev, reason=reason)
+    device_pool.remove_device(serial)
+    dev.delete()
 
 
 def _release_internal(dev, reason="manual", clear_lock=False):
@@ -140,6 +149,14 @@ def _release_internal(dev, reason="manual", clear_lock=False):
     assigned = _auto_assign_from_queue(dev)
     if assigned:
         print(f"[INFO] 设备 {dev.serial} 已从队列分配给 {assigned}")
+
+
+def _purge_disconnected_devices():
+    """Delete legacy DISCONNECTED rows — not kept as history."""
+    stale = list(Device.objects.filter(status="DISCONNECTED"))
+    for dev in stale:
+        _delete_device_record(dev, reason="purge")
+    return len(stale)
 
 
 def _collect_device_info(dev, serial):
@@ -727,12 +744,11 @@ def disconnect_device(request, serial):
         _release_internal(dev, reason=rsn)
         locks_released = 1
 
-    # 6. 标记 DISCONNECTED（不删除）
-    dev.status = "DISCONNECTED"
-    dev.save(update_fields=["status"])
-
+    # 6. 删除记录（不保留 DISCONNECTED 历史）
+    serial = dev.serial
     user = data.get("user_id", "system")
-    print(f"[WARNING] 设备 {serial} 已被 {user} 强制断开 (reason={reason or 'manual'})")
+    _delete_device_record(dev, reason="force" if force else "disconnect")
+    print(f"[WARNING] 设备 {serial} 已被 {user} 断开并移除 (reason={reason or 'manual'})")
 
     return JsonResponse(
         {

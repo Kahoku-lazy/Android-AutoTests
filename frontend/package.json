@@ -12,6 +12,7 @@
     "animal-island-vue": "^0.2.1",
     "animejs": "^4.5.0",
     "axios": "^1.7.0",
+    "chart.js": "^4.4.7",
     "echarts": "^5.5.0",
     "element-plus": "^2.7.0",
     "marked": "^18.0.5",

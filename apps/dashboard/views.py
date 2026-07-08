@@ -45,6 +45,18 @@ def _daily_counts(queryset, date_field, days=12):
 PASS_Q = Q(result__iexact="pass") | Q(result__iexact="passed")
 FAIL_Q = Q(result__iexact="fail") | Q(result__iexact="failed")
 
+# Match device-pool UI: hide stale OFFLINE / DISCONNECTED records from totals
+_VISIBLE_DEVICE_STATUSES = ("ONLINE", "BUSY")
+_HIDDEN_DEVICE_STATUSES = ("OFFLINE", "DISCONNECTED")
+
+
+def _device_dashboard_stats():
+    """Return (online, total) consistent with /devices list filtering."""
+    visible = Device.objects.exclude(status__in=_HIDDEN_DEVICE_STATUSES)
+    total = visible.count()
+    online = visible.filter(status__in=_VISIBLE_DEVICE_STATUSES).count()
+    return online, total
+
 
 def _daily_execution_series(days=12):
     """Daily success / failed executions and newly created cases."""
@@ -159,8 +171,7 @@ def _recent_tasks(limit=8):
 
 def dashboard_stats(request):
     """GET /api/dashboard/stats/ — platform-level statistics."""
-    device_online = Device.objects.filter(status="ONLINE").count()
-    device_total = Device.objects.count()
+    device_online, device_total = _device_dashboard_stats()
     case_total = TestDefinition.objects.count()
     case_enabled = TestDefinition.objects.filter(enabled=True).count()
     run_total = TestRunRecord.objects.count()
@@ -299,14 +310,16 @@ def dashboard_activities(request):
 
 def device_stats(request):
     """GET /api/devices/stats/ — device pool summary."""
+    online, total = _device_dashboard_stats()
     return JsonResponse(
         {
             "ok": True,
             "data": {
-                "online": Device.objects.filter(status="ONLINE").count(),
+                "online": online,
                 "busy": Device.objects.filter(status="BUSY").count(),
                 "offline": Device.objects.filter(status="OFFLINE").count(),
-                "total": Device.objects.count(),
+                "disconnected": Device.objects.filter(status="DISCONNECTED").count(),
+                "total": total,
             },
         }
     )

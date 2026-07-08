@@ -1,97 +1,56 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { animate, stagger } from 'animejs'
-import client from '@/shared/api-client.js'
 import { Button as AnimalButton, Card, Table, Tabs } from 'animal-island-vue'
 import PageHeader from '@/shared/components/PageHeader.vue'
+import { listRuns, statusLabel, statusBadgeClass, formatTime } from './api.js'
 
-const reports = ref([])
+const router = useRouter()
+
 const runs = ref([])
 const loading = ref(false)
-const viewing = ref(null)  // { name, type, content, rows, headers }
-const viewLoading = ref(false)
 const activeFilter = ref('all')
 
 onMounted(async () => {
   loading.value = true
   try {
-    const [r1, r2] = await Promise.all([client.get('/reports'), client.get('/runner/runs')])
-    if (r1.data.ok) reports.value = r1.data.files
-    if (r2.data.ok) runs.value = r2.data.runs
+    const { data } = await listRuns()
+    if (data.ok) runs.value = data.runs || []
   } catch (_) {}
   loading.value = false
   await nextTick()
   animate('.report-table tbody tr', { opacity: [0, 1], translateY: [16, 0], delay: stagger(40), duration: 380, ease: 'outCubic' })
 })
 
-// ── Report type filter tabs ──
-const reportTypes = computed(() => {
-  const types = [...new Set(reports.value.map(r => {
-    const ext = r.name.split('.').pop()?.toLowerCase()
-    return ['csv', 'json', 'txt', 'log', 'html'].includes(ext) ? ext : 'other'
-  }))]
-  return [
-    { key: 'all', label: `全部 (${reports.value.length})` },
-    ...types.map(t => ({ key: t, label: t.toUpperCase() })),
-  ]
+// ── Filter tabs ──
+const statusTabs = computed(() => [
+  { key: 'all', label: `全部 (${runs.value.length})` },
+  { key: 'COMPLETED', label: '已完成' },
+  { key: 'FAILED', label: '失败' },
+  { key: 'STOPPED', label: '已停止' },
+])
+
+const filteredRuns = computed(() => {
+  if (activeFilter.value === 'all') return runs.value
+  return runs.value.filter(r => r.status === activeFilter.value)
 })
 
-const filteredReports = computed(() => {
-  if (activeFilter.value === 'all') return reports.value
-  return reports.value.filter(r => {
-    const ext = r.name.split('.').pop()?.toLowerCase()
-    return ext === activeFilter.value
-  })
-})
-
-// ── Table column definitions ──
-const reportColumns = [
-  { title: '文件名', dataIndex: 'name' },
-  { title: '大小', dataIndex: 'size', width: '80px' },
-  { title: '时间', dataIndex: 'time', width: '170px' },
-  { title: '操作', dataIndex: 'actions', width: '140px', align: 'center' },
-]
-
-const runColumns = [
-  { title: '总数', dataIndex: 'total', width: '60px', align: 'center' },
+// ── Table columns ──
+const columns = [
+  { title: 'Run ID', dataIndex: 'run_id', width: '200px' },
+  { title: '设备', dataIndex: 'device_serial', width: '130px' },
+  { title: '用例数', dataIndex: 'case_count', width: '70px', align: 'center' },
   { title: '通过', dataIndex: 'passed', width: '60px', align: 'center' },
   { title: '失败', dataIndex: 'failed', width: '60px', align: 'center' },
-  { title: '成功率', dataIndex: 'rate', width: '80px', align: 'center' },
-  { title: '时间', dataIndex: 'last_time' },
+  { title: '通过率', dataIndex: 'rate', width: '150px' },
+  { title: '状态', dataIndex: 'status', width: '90px', align: 'center' },
+  { title: '耗时', dataIndex: 'duration', width: '80px', align: 'center' },
+  { title: '时间', dataIndex: 'started_at', width: '150px' },
 ]
 
-const viewerColumns = computed(() => {
-  if (!viewing.value || viewing.value.type !== 'csv') return []
-  return viewing.value.headers.map(h => ({ title: h, dataIndex: h }))
-})
-
-function downloadUrl(name) {
-  return `/api/reports/${encodeURIComponent(name)}`
-}
-
-async function viewReport(file) {
-  viewLoading.value = true
-  try {
-    const { data } = await client.get(`/reports/${encodeURIComponent(file.name)}/content`)
-    if (data.ok) {
-      viewing.value = {
-        name: data.name,
-        type: data.type,
-        content: data.content,
-        rows: data.rows || [],
-        headers: data.headers || [],
-      }
-    }
-  } catch (_) {}
-  viewLoading.value = false
-}
-
-function closeView() { viewing.value = null }
-
-function formatSize(bytes) {
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / 1048576).toFixed(1) + ' MB'
+function openReport(run) {
+  router.push(`/reports/${encodeURIComponent(run.run_id)}`)
 }
 </script>
 
@@ -99,121 +58,82 @@ function formatSize(bytes) {
   <div class="doc-page">
     <PageHeader
       title="测试报告 Test Reports"
-      subtitle="查看历史测试报告文件与执行统计，支持在线预览与下载"
+      subtitle="查看历史测试执行记录，点击 Run ID 进入详细报告"
       color="app-yellow"
     />
 
     <div class="doc-body">
-      <!-- Report Files -->
-      <section class="doc-section">
-        <div class="doc-section__header">
-          <h3 class="doc-section__title">
-            报告文件
-            <span class="doc-tag">Files</span>
-          </h3>
-        </div>
-        <div class="doc-section__label">已生成的测试报告 ({{ filteredReports.length }})</div>
+      <!-- Filter Tabs -->
+      <Tabs
+        class="report-tabs"
+        :items="statusTabs"
+        v-model="activeFilter"
+        :leaf-animation="true"
+        :shadow="true"
+      >
+        <template v-for="tab in statusTabs" #[tab.key] :key="tab.key">
+          <Card color="brown" pattern="brown" class="table-card">
+            <Table
+              :columns="columns"
+              :data-source="filteredRuns"
+              row-key="run_id"
+              :striped="true"
+              :loading="loading"
+              empty-text="暂无执行记录，请先执行测试"
+              class="report-table"
+            >
+              <!-- Run ID — clickable link -->
+              <template #cell-run_id="{ record }">
+                <a class="run-link" @click.prevent="openReport(record)" href="#">
+                  <code>{{ record.run_id }}</code>
+                </a>
+              </template>
 
-        <Tabs
-          class="report-tabs"
-          :items="reportTypes"
-          v-model="activeFilter"
-          :leaf-animation="true"
-          :shadow="true"
-        >
-          <template v-for="tab in reportTypes" #[tab.key] :key="tab.key">
-            <Card color="brown" pattern="brown" class="table-card">
-              <Table
-                :columns="reportColumns"
-                :data-source="filteredReports"
-                row-key="name"
-                :striped="true"
-                :loading="loading"
-                empty-text="暂无报告，执行测试后自动生成"
-                class="report-table"
-              >
-                <template #cell-size="{ record }">
-                  {{ formatSize(record.size) }}
-                </template>
-                <template #cell-actions="{ record }">
-                  <div class="action-cell">
-                    <AnimalButton size="small" type="primary" @click="viewReport(record)">查看</AnimalButton>
-                    <a :href="downloadUrl(record.name)" download class="dl-link">下载</a>
+              <!-- Passed count — green -->
+              <template #cell-passed="{ record }">
+                <span class="num-pass">{{ record.passed }}</span>
+              </template>
+
+              <!-- Failed count — red -->
+              <template #cell-failed="{ record }">
+                <span :class="record.failed > 0 ? 'num-fail' : ''">{{ record.failed }}</span>
+              </template>
+
+              <!-- Pass rate with progress bar -->
+              <template #cell-rate="{ record }">
+                <div class="rate-cell">
+                  <div class="progress-bar">
+                    <div class="p-pass" :style="{ width: record.rate + '%' }"></div>
+                    <div v-if="record.failed > 0" class="p-fail" :style="{ width: (100 - record.rate) + '%' }"></div>
                   </div>
-                </template>
-                <template #empty>
-                  <div class="table-empty">
-                    <span>📋</span>
-                    <p>暂无报告，执行测试后自动生成</p>
-                  </div>
-                </template>
-              </Table>
-            </Card>
-          </template>
-        </Tabs>
-      </section>
+                  <span class="rate-text" :class="{ 'rate-ok': record.rate >= 95, 'rate-warn': record.rate >= 80 && record.rate < 95, 'rate-bad': record.rate < 80 }">
+                    {{ record.rate }}%
+                  </span>
+                </div>
+              </template>
 
-      <!-- Run History -->
-      <section class="doc-section">
-        <div class="doc-section__header">
-          <h3 class="doc-section__title">
-            执行历史
-            <span class="doc-tag">History</span>
-          </h3>
-        </div>
-        <div class="doc-section__label">历次任务执行统计 ({{ runs.length }})</div>
+              <!-- Status badge -->
+              <template #cell-status="{ record }">
+                <span class="badge" :class="statusBadgeClass(record.status)">{{ statusLabel(record.status) }}</span>
+              </template>
 
-        <Card color="brown" pattern="brown" class="table-card">
-          <Table
-            :columns="runColumns"
-            :data-source="runs"
-            row-key="last_time"
-            :striped="true"
-            :loading="loading"
-            empty-text="暂无执行记录"
-            class="report-table"
-          >
-            <template #cell-rate="{ record }">
-              {{ record.total ? (record.passed / record.total * 100).toFixed(0) + '%' : '—' }}
-            </template>
-            <template #empty>
-              <div class="table-empty">
-                <span>🏃</span>
-                <p>暂无执行记录</p>
-              </div>
-            </template>
-          </Table>
-        </Card>
-      </section>
-    </div>
+              <!-- Time -->
+              <template #cell-started_at="{ record }">
+                <span class="time-text">{{ formatTime(record.started_at) }}</span>
+              </template>
 
-    <!-- Inline viewer overlay -->
-    <div v-if="viewing" class="viewer-overlay" @click.self="closeView">
-      <div class="viewer-panel">
-        <div class="viewer-header">
-          <h3>{{ viewing.name }}</h3>
-          <div class="viewer-header-actions">
-            <a :href="downloadUrl(viewing.name)" download class="dl-btn">⬇ 下载</a>
-            <AnimalButton size="small" @click="closeView">✕ 关闭</AnimalButton>
-          </div>
-        </div>
-
-        <!-- CSV table view -->
-        <div v-if="viewing.type === 'csv' && viewing.rows.length" class="viewer-body">
-          <Table
-            :columns="viewerColumns"
-            :data-source="viewing.rows"
-            :striped="true"
-            :loading="viewLoading"
-            class="report-table"
-          />
-        </div>
-
-        <!-- Text / log view -->
-        <div v-else class="viewer-body">
-          <pre class="viewer-text">{{ viewing.content }}</pre>
-        </div>
-      </div>
+              <!-- Empty state -->
+              <template #empty>
+                <div class="table-empty">
+                  <span>📋</span>
+                  <p>暂无执行记录</p>
+                  <p class="sub">请先在执行引擎中运行测试，完成后将自动生成报告</p>
+                </div>
+              </template>
+            </Table>
+          </Card>
+        </template>
+      </Tabs>
     </div>
   </div>
 </template>
@@ -225,124 +145,57 @@ function formatSize(bytes) {
   padding-top: 16px;
 }
 
-/* Table card wrapper — remove default card padding so Table fills edge-to-edge */
-.table-card {
-  overflow: hidden;
-}
-.table-card :deep(.animal-card__content) {
-  padding: 0;
-  border-radius: 14px;
-  overflow: hidden;
-}
+/* Table card — zero-padding for edge-to-edge Table */
+.table-card { overflow: hidden; }
+.table-card :deep(.animal-card__content) { padding: 0; border-radius: 14px; overflow: hidden; }
 
-/* Shared Table styles (animal-island brown theme) */
-.report-table {
-  width: 100%;
-}
-.report-table :deep(table) {
-  width: 100%;
-  border-collapse: collapse;
-}
+/* Shared Table styles */
+.report-table { width: 100%; }
+.report-table :deep(table) { width: 100%; border-collapse: collapse; }
 .report-table :deep(th) {
-  font-size: 13px;
-  font-weight: 700;
-  color: #6b5b48;
-  padding: 14px 16px;
-  text-align: left;
-  background: rgba(139, 115, 85, 0.06);
-  border-bottom: 2px solid rgba(139, 115, 85, 0.12);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  font-size: 12px; font-weight: 700; color: #6b5b48; padding: 14px 16px;
+  text-align: left; background: rgba(139,115,85,0.06);
+  border-bottom: 2px solid rgba(139,115,85,0.12);
+  text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;
 }
 .report-table :deep(td) {
-  padding: 12px 16px;
-  font-size: 14px;
-  color: #4a3a28;
-  border-bottom: 1px solid rgba(139, 115, 85, 0.06);
-  vertical-align: middle;
+  padding: 12px 16px; font-size: 14px; color: #4a3a28;
+  border-bottom: 1px dashed rgba(196,184,158,0.4); vertical-align: middle;
 }
-.report-table :deep(tr:hover td) {
-  background: rgba(139, 115, 85, 0.03);
-}
-.report-table :deep(tr:last-child td) {
-  border-bottom: none;
-}
+.report-table :deep(tr:hover td) { background: rgba(25,200,185,0.04); }
+.report-table :deep(tr:last-child td) { border-bottom: none; }
 
-/* Zebra striping */
-.report-table :deep(tr:nth-child(even) td) {
-  background: rgba(139, 115, 85, 0.02);
-}
-.report-table :deep(tr:nth-child(even):hover td) {
-  background: rgba(139, 115, 85, 0.04);
-}
+/* Run ID link */
+.run-link { color: var(--primary, #19c8b9); text-decoration: none; font-weight: 600; }
+.run-link:hover { text-decoration: underline; color: #11a89b; }
+.run-link code { font-family: 'SF Mono','Fira Code','Cascadia Code',Consolas,monospace; font-size: 12px; }
 
-/* Action buttons row */
-.action-cell {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-}
-.dl-link {
-  font-size: 13px;
-  color: var(--accent-blue);
-  text-decoration: none;
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-.dl-link:hover {
-  background: rgba(64, 158, 255, 0.1);
-}
+/* Pass/Fail numbers */
+.num-pass { color: #6fba2c; font-weight: 700; }
+.num-fail { color: #e05a5a; font-weight: 700; }
+
+/* Rate cell */
+.rate-cell { display: flex; align-items: center; gap: 10px; }
+.progress-bar { display: flex; height: 8px; border-radius: 50px; overflow: hidden; background: #f0ece2; flex: 1; max-width: 100px; }
+.p-pass { background: #6fba2c; transition: width 0.5s ease; border-radius: 50px; }
+.p-fail { background: #e05a5a; transition: width 0.5s ease; border-radius: 50px; }
+.rate-text { font-weight: 700; font-size: 13px; min-width: 42px; text-align: right; }
+.rate-ok { color: #6fba2c; }
+.rate-warn { color: #dba90e; }
+.rate-bad { color: #e05a5a; }
+
+/* Status badges */
+.badge { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 50px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
+.badge-pass { background: rgba(111,186,44,0.12); color: #6fba2c; border: 1.5px solid rgba(111,186,44,0.25); }
+.badge-fail { background: rgba(224,90,90,0.12); color: #e05a5a; border: 1.5px solid rgba(224,90,90,0.25); }
+.badge-running { background: rgba(245,195,28,0.12); color: #dba90e; border: 1.5px solid rgba(245,195,28,0.25); }
+.badge-stopped { background: rgba(138,123,102,0.10); color: #8a7b66; border: 1.5px solid rgba(138,123,102,0.20); }
+
+.time-text { font-size: 13px; color: #8a7b66; white-space: nowrap; }
 
 /* Empty state */
-.table-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 48px 24px;
-  color: #988b7a;
-}
+.table-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 24px; color: #988b7a; }
 .table-empty span { font-size: 36px; }
 .table-empty p { font-size: 15px; margin: 0; }
-
-/* ── Viewer overlay ── */
-.viewer-overlay {
-  position: fixed; inset: 0; z-index: 1000;
-  background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px);
-  display: flex; align-items: center; justify-content: center;
-}
-.viewer-panel {
-  width: 90vw; max-width: 1100px; max-height: 85vh;
-  background: var(--animal-bg-color, #f8f8f0); backdrop-filter: blur(20px);
-  border-radius: 20px; border: 1px solid var(--glass-border);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  display: flex; flex-direction: column; overflow: hidden;
-}
-.viewer-header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 14px 20px; border-bottom: 1px solid var(--glass-border);
-  flex-shrink: 0;
-}
-.viewer-header h3 { margin: 0; font-size: 16px; }
-.viewer-header-actions {
-  display: flex; align-items: center; gap: 12px;
-}
-.viewer-body {
-  flex: 1; overflow: auto; padding: 16px;
-}
-.viewer-body .report-table :deep(.animal-card__content) {
-  padding: 0;
-  border-radius: 0;
-}
-.viewer-text {
-  font-family: 'Cascadia Code', monospace; font-size: 13px;
-  line-height: 1.6; white-space: pre-wrap; word-break: break-all;
-  margin: 0; color: var(--text-primary);
-}
-.dl-btn {
-  font-size: 13px; color: var(--accent-blue); text-decoration: none;
-  font-weight: 500;
-}
+.table-empty .sub { font-size: 13px; color: #b8a898; }
 </style>

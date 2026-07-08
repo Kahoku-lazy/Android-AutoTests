@@ -118,13 +118,33 @@ python run.py status     # 查看状态
 python run.py logs       # 查看日志
 ```
 
-| 服务 | 地址 | 账号 |
+### 🌐 平台访问地址
+
+| 服务 | 地址 | 说明 |
 |------|------|------|
-| 前端 | http://localhost:5173 | admin / admin123 |
-| Django API | http://localhost:8765 | — |
-| AgentScope AI | http://localhost:8000/docs | — |
-| Django Admin | http://localhost:8765/admin/ | admin / admin123 |
-| 接口文档 | http://localhost:8765/api/docs.html | — |
+| 🏠 **前端页面** | http://localhost:5173 | Vue 3 主界面 |
+| ⚙️ **管理后台** | http://localhost:8765/admin/ | Django Admin（Jazzmin cosmo 主题） |
+| 🔌 **后端 API** | http://localhost:8765/api/ | Django REST JSON |
+| 🤖 **AI 引擎** | http://localhost:8000/docs | AgentScope FastAPI Swagger |
+| 📡 **接口文档** | http://localhost:8765/api/docs.html | 在线 API 文档 |
+| 📦 **Redis** | `redis://localhost:6379` | 消息总线 + 状态存储 |
+
+> **登录账号**: `admin` / `admin123`
+
+### 🛠️ 常用命令
+
+```bash
+python run.py start      # 一键启动所有服务
+python run.py stop       # 停止所有服务
+python run.py restart    # 重启所有服务
+python run.py status     # 查看各服务运行状态
+python run.py logs       # 查看日志
+
+# 各服务日志
+tail -f logs/backend.log      # Django 后端日志
+tail -f logs/agentscope.log   # AgentScope AI 日志
+tail -f logs/frontend.log     # Vite 前端日志
+```
 
 ---
 

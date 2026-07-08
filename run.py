@@ -43,8 +43,7 @@ AGENTSCOPE_PORT = 8000
 REDIS_PORT = 6379
 LOG_DIR = ROOT / "logs"
 
-# ── MySQL 配置（如环境变量未设置则使用默认值）──
-# 切换回 SQLite：设置 DB_ENGINE=sqlite 即可
+# ── 数据库配置（settings.py 默认使用 MySQL）──
 MYSQL_ENV = {
     "DB_ENGINE": "mysql",
     "DB_NAME": "android_autotests",
@@ -234,7 +233,7 @@ def cmd_start():
     print("  AI (AgentS) : http://localhost:8000/docs")
     print("  Redis       : redis://localhost:6379")
     print("  Admin       : http://localhost:8765/admin/  (admin/admin123)")
-    print("  DB          : MySQL android_autotests (set DB_ENGINE=sqlite to fallback)")
+    print("  DB          : MySQL android_autotests")
     print("  Logs        : logs/backend.log  logs/frontend.log  logs/agentscope.log  logs/redis.log")
     print("=" * 54)
 

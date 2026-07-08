@@ -176,7 +176,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="dashboard-doc">
+  <div class="doc-page">
     <PageHeader
       title="仪表盘 Dashboard"
       subtitle="自动化测试平台 · 实时监控设备状态、用例执行、AI Agent 与测试报告"

@@ -21,7 +21,7 @@ import django
 django.setup()
 
 from api.models import (
-    Device, Page, Element, PageFlow, TestCaseCache,
+    Device, Page, Element, PageFlow,
     TestDefinition, TestExecutionResult,
 )
 
@@ -138,24 +138,6 @@ def migrate_page_flows(src):
     print(f"  → {count} page_flows migrated")
 
 
-def migrate_test_cases(src):
-    """Migrate test_cases (YAML cache) table."""
-    print("[5/7] Migrating test_cases...")
-    count = 0
-    for row in src.execute("SELECT * FROM test_cases"):
-        TestCaseCache.objects.update_or_create(
-            id=row['id'],
-            defaults={
-                'name': row['name'] or '',
-                'description': row['description'] or '',
-                'yaml_content': row['yaml_content'] or '',
-                'created_at': parse_datetime(row['created_at']),
-            },
-        )
-        count += 1
-    print(f"  → {count} test_cases migrated")
-
-
 def migrate_test_definitions(src):
     """Migrate test_definitions table."""
     print("[6/7] Migrating test_definitions...")
@@ -210,7 +192,6 @@ def verify():
         ("pages", Page),
         ("elements", Element),
         ("page_flows", PageFlow),
-        ("test_cases", TestCaseCache),
         ("test_definitions", TestDefinition),
         ("test_results", TestExecutionResult),
     ]
@@ -245,7 +226,6 @@ def main():
         migrate_pages(src)
         migrate_elements(src)
         migrate_page_flows(src)
-        migrate_test_cases(src)
         migrate_test_definitions(src)
         migrate_test_results(src)
     finally:

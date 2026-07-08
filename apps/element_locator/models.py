@@ -17,6 +17,8 @@ class Page(models.Model):
 
     class Meta:
         db_table = 'el_pages'
+        verbose_name = '页面'
+        verbose_name_plural = '页面'
 
     def __str__(self):
         return self.label or f"Page #{self.id}"
@@ -43,6 +45,8 @@ class Element(models.Model):
 
     class Meta:
         db_table = 'el_elements'
+        verbose_name = '元素'
+        verbose_name_plural = '元素'
         constraints = [
             # 注意：MySQL utf8mb4 下索引上限 3072 字节，
             # 原 (page, resource_id, text_val, bounds) 组合索引超限，
@@ -74,6 +78,8 @@ class PageFlow(models.Model):
 
     class Meta:
         db_table = 'el_page_flows'
+        verbose_name = '页面跳转流'
+        verbose_name_plural = '页面跳转流'
 
     def __str__(self):
         return f"Flow #{self.id}: {self.from_page} → {self.to_page}"

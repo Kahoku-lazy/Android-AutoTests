@@ -55,8 +55,11 @@ class StepExecutor:
         for i, step in enumerate(steps):
             desc = step.description or step.xpath or step.expected_text or ''
             self.exe.log(f'── 步骤 {i+1}/{total} [{step.type}] {desc[:80]}')
+            # Notify step started before execution
+            if self.exe._step_started_callback:
+                self.exe._step_started_callback(i, total, step.type, desc[:100])
             result = self.execute(step)
-            # Notify via adapter callback
+            # Notify step result after execution
             if self.exe._step_callback:
                 self.exe._step_callback(i, total, step.type, desc[:100], result)
             if result != "pass":

@@ -75,7 +75,7 @@ CORS_ALLOW_ALL_ORIGINS = True  # dev only
 CORS_ALLOW_CREDENTIALS = True
 
 # ── Database ──
-DB_ENGINE = os.environ.get('DB_ENGINE', 'sqlite')
+DB_ENGINE = os.environ.get('DB_ENGINE', 'mysql')
 
 if DB_ENGINE == 'mysql':
     DATABASES = {
@@ -83,7 +83,7 @@ if DB_ENGINE == 'mysql':
             'ENGINE': 'django.db.backends.mysql',
             'NAME': os.environ.get('DB_NAME', 'android_autotests'),
             'USER': os.environ.get('DB_USER', 'root'),
-            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'PASSWORD': os.environ.get('DB_PASSWORD', 'autotests2026'),
             'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
             'PORT': os.environ.get('DB_PORT', '3306'),
             'OPTIONS': {

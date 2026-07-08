@@ -12,6 +12,8 @@ class Report(models.Model):
 
     class Meta:
         db_table = 'rg_reports'
+        verbose_name = '报告'
+        verbose_name_plural = '报告'
 
     def __str__(self):
         return f"Report {self.title} ({self.file_type})"
@@ -25,6 +27,8 @@ class ReportTemplate(models.Model):
 
     class Meta:
         db_table = 'rg_report_templates'
+        verbose_name = '报告模板'
+        verbose_name_plural = '报告模板'
 
     def __str__(self):
         return self.name

@@ -2,7 +2,7 @@
 
 > 关联模块：`apps/report_generator/` · 前端：`frontend/src/modules/report-generator/`
 > 关联全局：`../全局PRD.md` · 关联执行：`../子PRD/04-test-runner.md`
-> 版本：v2.0 · 状态：草稿 · 日期：2026-06-30
+> 版本：v3.0 · 状态：已实施 · 日期：2026-07-07
 
 ---
 
@@ -10,22 +10,37 @@
 
 报告分析模块是测试平台的结果收口与质量可视化中枢，承担以下核心职责：
 
-1. **测试报告生成**：在执行引擎完成测试后，自动生成 CSV 结果文件 + 失败详情 Markdown + 运行日志文件 + JSON 结构化报告
-2. **报告查阅与下载**：提供报告文件列表浏览和下载能力，支持历史执行记录聚合统计
-3. **失败原因追溯**：失败详情包含失败步骤、错误信息、执行日志片段，帮助用户快速定位问题
-4. **质量趋势可视化**（v2）：通过执行历史聚合统计，展示通过率趋势、失败 Top N 用例、耗时分布
+1. **在线报告查看**：每次执行完成后，生成结构化的在线 HTML 报告，用户可直接在平台内查看
+2. **用例执行明细**：以表格形式展示每个用例的迭代结果，支持展开查看每次迭代详情
+3. **失败分析定位**：自动聚合失败用例，展示失败迭代、失败原因、XPath 定位信息
+4. **质量趋势可视化**：通过历史聚合统计，展示通过率趋势折线图 + 用例耗时柱状图
+5. **报告导出**：支持 CSV/LOG 文件下载，用于离线分析或归档
 
-### 1.1 模块边界
+### 1.1 用户交互流程
 
 ```
-test-runner (执行引擎)
+/reports (报告列表页)
+  │ 表格展示所有执行任务
+  │ 列：Run ID / 设备 / 用例数 / 通过 / 失败 / 通过率 / 状态 / 耗时 / 时间
+  │
+  ▼ 点击 Run ID 跳转
+/reports/:runId (报告详情页)
+  ├── KPI 摘要卡片（用例数 / 通过 / 失败 / 通过率）
+  ├── Tab 1: 用例执行明细 — 表格 + 展开迭代详情
+  ├── Tab 2: 失败分析 — 失败用例卡片 + 失败迭代详情
+  └── Tab 3: 趋势图表 — 通过率趋势 + 耗时分布 + 历史记录表
+```
+
+### 1.2 数据来源
+
+```
+tr_test_runs (执行记录) + tr_test_results (迭代结果)
       │
-      ▼ 每次执行完成 → TestRunner.run() 调用 ReportGenerator
-report-generator
+      ▼ GET /api/reports/run/{run_id}
+report-generator views.py
       │
-      ├─ save_csv(case_results, failure_details) → logs/result_{ts}.csv + _failures.md
-      ├─ save_log(run_id, log_lines)             → logs/test_{ts}.log
-      └─ generate_json_report(results, failures)  → dict (可选落盘)
+      ├─ JOIN 查询 + 聚合计算
+      └─ 返回结构化 JSON → 前端渲染
 ```
 
 ---
@@ -34,10 +49,10 @@ report-generator
 
 | 编号 | 功能名称 | 优先级 | 一句话描述 |
 |:--:|------|:--:|------|
-| F-01 | 多格式报告生成 | P0 | 测试完成后自动生成 CSV/MD/LOG/JSON 四种格式报告，含失败详情 |
-| F-02 | 报告列表与下载 | P0 | 列出 logs/ 下所有报告文件，支持按时间排序和下载 |
-| F-03 | 执行历史聚合 | P1 | 聚合展示历次执行的总数/通过/失败/通过率，支持按时间排序 |
-| F-04 | Allure 报告（v2 规划）| P1 | 生成 Allure 兼容的 JSON 数据 + 前端集成 Allure Report 展示 |
+| F-01 | 多格式报告生成 | P0 | 测试完成后自动生成 CSV/MD/LOG 文件，含失败详情 |
+| F-02 | 报告列表与下载 | P0 | 执行任务表格列表，支持按状态筛选和文件下载 |
+| F-03 | 在线报告详情页 | P0 | 点击 Run ID 进入完整报告：用例明细 + 失败分析 + 趋势图表 |
+| F-04 | 趋势可视化 | P1 | Chart.js 渲染通过率趋势折线图 + 用例耗时柱状图 |
 
 ---
 
@@ -157,119 +172,113 @@ order_test, "点击下单→验证金额", 3, 3, 2, 1, 66.67%
 
 #### 3.2.1 需求定义
 
-用户可以在平台上浏览所有历史报告文件（CSV/MD/LOG），按修改时间倒序排列，点击下载。
+用户进入报告模块后看到执行任务表格，每行对应一次测试执行，点击 Run ID 进入详情页。同时保留 CSV/LOG 文件下载能力。
 
 #### 3.2.2 需求目标
 
 | 目标 | 衡量方式 | 目标值 |
 |------|----------|:--:|
-| 报告可见性 | 每次执行后报告出现在列表 | 100% |
+| 报告可见性 | 每次执行后记录出现在列表 | 100% |
 | 下载可用性 | 点击下载 → 浏览器下载文件 | 100% |
 
 #### 3.2.3 触发条件
 
-- 用户进入 report-generator 页面 → 自动加载报告列表
-- 用户点击报告行"下载"
+- 用户进入 report-generator 页面 → 自动加载执行记录列表
+- 用户点击 Run ID → 跳转到 `/reports/:runId`
 
 #### 3.2.4 业务规则
 
 ```
-报告列表查询：
-1. 扫描 logs/ 目录下所有文件
-2. 过滤：result_* 和 test_* 前缀的文件
-3. 提取文件类型（csv/md/log）
-4. 按修改时间倒序排列
-5. 返回：文件名 / 类型 / 大小 / 修改时间
+报告列表查询（从 DB 实时查询）：
+1. 查询 tr_test_runs 表，按 id 倒序
+2. annotate 聚合 tr_test_results：total（迭代总数）/ passed（通过数）
+3. 从 selected_cases 快照获取 case_count
+4. 计算 failed = total - passed, rate = passed/total × 100%
+5. 计算 duration = finished_at - started_at
+6. 返回：run_id / status / device_serial / loop_count / case_count / total / passed / failed / rate / duration / started_at / finished_at
 ```
-
-**下载**：`GET /api/reports/{filename}` → 根据文件扩展名设置 Content-Type（text/csv / text/markdown / text/plain），返回文件流。
 
 #### 3.2.5 前端交互要求
 
 | 变动项 | 描述 |
 |--------|------|
-| 报告列表 | el-table 列：文件名 / 类型（图标）/ 大小 / 时间 / 下载 |
-| 下载按钮 | 直接 `<a :href="'/api/reports/' + filename" download>` |
-| 空状态 | 无报告时显示「暂无报告，请先执行测试」 |
-
-#### 3.2.6 后端接口要求
-
-| 接口 | 核心行为 |
-|------|---------|
-| `GET /api/reports` | 列出 logs/ 下报告文件。详见附录 §4.3.1 |
-| `GET /api/reports/{filename}` | 下载指定文件。详见附录 §4.3.2 |
+| 报告列表 | 执行任务表格，列：Run ID(可点击) / 设备 / 用例数 / 通过(绿) / 失败(红) / 通过率(进度条) / 状态(徽章) / 耗时 / 时间 |
+| 状态筛选 | Tabs：全部 / 已完成 / 失败 / 已停止 |
+| 空状态 | 无记录时显示「暂无执行记录，请先执行测试」 |
 
 ---
 
-### 3.3 F-03：执行历史聚合
+### 3.3 F-03：在线报告详情页
 
 #### 3.3.1 需求定义
 
-聚合展示历次测试执行的统计数据（总数/通过/失败/通过率/耗时），帮助用户快速了解整体质量趋势。
+用户从报告列表点击 Run ID，进入该次执行的完整报告页面。报告包含三个页签：
+
+| 页签 | 内容 |
+|------|------|
+| 用例执行明细 | KPI 摘要卡片 + 用例结果表格（用例ID/名称/计划/实际/通过/失败/成功率/状态），点击展开查看每次迭代详情 |
+| 失败分析 | 仅失败时出现，展示每个失败用例的失败迭代、失败原因 |
+| 趋势图表 | Chart.js 通过率趋势折线图 + 用例平均耗时柱状图 + 近期执行记录表 |
 
 #### 3.3.2 需求目标
 
 | 目标 | 衡量方式 | 目标值 |
 |------|----------|:--:|
-| 历史数据完整性 | 每次执行后可从历史中查到 | 100% |
-| 历史查询性能 | 100 条历史记录响应 | ≤500ms |
+| 报告可见性 | 每次执行后点击 Run ID 可查看 | 100% |
+| 失败可定位性 | 失败用例能追溯到具体迭代和原因 | 100% |
+| 图表可交互性 | 鼠标悬停显示具体数值 | ✅ |
 
-#### 3.3.3 触发条件
-
-- 用户进入 report-generator 页面
-- 同时加载报告文件列表和执行历史
-
-#### 3.3.4 业务规则
+#### 3.3.3 业务规则
 
 ```
-执行历史聚合：
-1. 查询 tr_test_runs WHERE status='COMPLETED'
-2. 对每条 run：
-   - 提取 summary JSON 中的 total_pass / total_fail
-   - 计算通过率 = total_pass / (total_pass + total_fail) × 100%
-   - 计算执行时长 = finished_at - started_at
-3. 按 started_at 倒序排列
-4. 返回：run_id / device_serial / 通过/失败/通过率/耗时/时间
+报告详情查询：
+1. 根据 run_id 查询 tr_test_runs 获取运行元数据
+2. 查询 tr_test_results WHERE run_id = ? 获取所有迭代结果
+3. 按 case_id 分组聚合：每用例 pass/fail/rate
+4. 计算整体 pass_rate = total_pass / total_iterations × 100%
+5. 查询最近 10 条 runs 计算通过率趋势
+6. 数据全部来自 DB 实时查询，不依赖预生成的文件
 ```
 
-#### 3.3.5 前端交互要求
+#### 3.3.4 前端交互要求
 
 | 变动项 | 描述 |
 |--------|------|
-| 双栏布局 | 左栏：报告文件列表；右栏：执行历史表 |
-| 历史表列 | run_id / 设备 / 通过数(绿) / 失败数(红) / 通过率(进度条) / 耗时 / 时间 |
-| 通过率进度条 | el-progress：绿 ≥95% / 黄 ≥80% / 红 <80% |
+| 报告列表 | 执行任务表格，点击 Run ID 跳转到 `/reports/:runId` |
+| 详情页头 | 返回按钮 + 运行元数据（设备/轮次/耗时/状态） |
+| KPI 卡片 | 4 列：用例数 / 通过(绿) / 失败(红) / 通过率(颜色随值变化) |
+| 用例表格 | 支持行展开查看迭代详情，失败行红色高亮 |
+| 失败分析 | 失败用例用 red pattern Card 展示，内含迭代失败表 |
+| 趋势图表 | Chart.js 折线图 + 横柱图，卡片容器 |
 
-#### 3.3.6 后端接口要求
+#### 3.3.5 后端接口
 
 | 接口 | 核心行为 |
 |------|---------|
-| `GET /api/runner/runs` | 返回执行历史（由 test-runner 提供）。详见 test-runner PRD §4.3.4 |
+| `GET /api/reports/run/{run_id}` | 聚合查询 + 返回结构化报告 JSON。详见附录 §4.3.3 |
 
 ---
 
-### 3.4 F-04：Allure 报告（v2 规划）
+### 3.4 F-04：趋势可视化
 
 #### 3.4.1 需求定义
 
-生成兼容 Allure Framework 的测试报告数据，前端集成 Allure Report 静态页面展示，提供步骤级失败截图、耗时分布、历史趋势的可视化呈现。
+在报告详情页的趋势页签中，使用 Chart.js 渲染两个图表 + 一个历史记录表：
 
-#### 3.4.2 需求目标
+| 图表 | 数据来源 | 说明 |
+|------|---------|------|
+| 通过率趋势折线图 | recent_runs（近 10 次执行） | 横轴时间，纵轴通过率%，支持 hover 显示具体值 |
+| 用例耗时柱状图 | 本次执行的 cases | 横向柱状图，失败用例红色标注 |
+| 近期执行记录表 | recent_runs | 每次执行的 Run ID / 总数 / 通过 / 失败 / 通过率 / 时间 |
 
-| 目标 | 衡量方式 | 目标值 |
-|------|----------|:--:|
-| Allure 数据生成 | allure-python 标准 JSON 输出 | 100% 兼容 |
-| Allure Report 展示 | 前端可嵌入 Allure 静态报告页面 | — |
-
-#### 3.4.3 业务规则 (v2 规划)
+#### 3.4.2 业务规则
 
 ```
-Allure 集成方案：
-1. allure-python → 生成 allure-results/ 目录（suite/case/step JSON）
-2. allure generate → 生成 allure-report/ 静态 HTML
-3. 方案 A：django 静态文件目录，嵌入前端 iframe
-4. 方案 B：独立 nginx 服务，前端跳转
-5. 优先方案 A（简单，无额外服务依赖）
+Chart.js 集成：
+1. 通过 CDN script 标签加载 chart.js@4.4.7 UMD 版本
+2. 组件内通过 window.Chart 引用
+3. watch activeTab → 切换到 trend 时延迟 100ms 渲染（确保 canvas 已挂载）
+4. onUnmounted 时 destroy 图表实例防止内存泄漏
 ```
 
 ---
@@ -304,8 +313,10 @@ Allure 集成方案：
 
 | # | 方法 | 路径 | 功能 |
 |---|------|------|------|
-| 1 | GET | `/api/reports` | 报告文件列表 |
-| 2 | GET | `/api/reports/{filename}` | 下载报告文件 |
+| 1 | GET | `/api/reports` | 执行记录列表（查询 tr_test_runs） |
+| 2 | GET | `/api/reports/run/{run_id}` | 单次执行完整报告（聚合查询） |
+| 3 | GET | `/api/reports/{filename}` | 下载报告文件 |
+| 4 | GET | `/api/reports/{filename}/content` | 在线查看文件内容 |
 
 **GET /api/reports**
 
@@ -313,20 +324,52 @@ Response 200:
 ```json
 {
   "ok": true,
-  "reports": [
+  "runs": [
     {
-      "name": "result_20260630_153000.csv",
-      "type": "csv",
-      "size": 2048,
-      "modified": "2026-06-30T15:30:10+08:00"
-    },
-    {
-      "name": "result_20260630_153000_failures.md",
-      "type": "md",
-      "size": 1024,
-      "modified": "2026-06-30T15:30:10+08:00"
+      "run_id": "run_RF8N21MSW7A_20260707_143025",
+      "status": "COMPLETED",
+      "device_serial": "RF8N21MSW7A",
+      "loop_count": 3,
+      "case_count": 8,
+      "total": 24, "passed": 22, "failed": 2,
+      "rate": 92, "duration": "1m53s",
+      "started_at": "2026-07-07T14:30:25",
+      "finished_at": "2026-07-07T14:32:18"
     }
   ]
+}
+```
+
+**GET /api/reports/run/{run_id}**
+
+Response 200:
+```json
+{
+  "ok": true,
+  "run": {
+    "run_id": "...",
+    "status": "COMPLETED",
+    "device_serial": "...",
+    "loop_count": 3,
+    "started_at": "...",
+    "finished_at": "...",
+    "duration": "1m53s",
+    "total_iterations": 24, "total_pass": 22, "total_fail": 2,
+    "pass_rate": 91.7, "case_count": 8,
+    "cases": [
+      {
+        "case_id": "login_test",
+        "case_title": "登录流程测试",
+        "planned": 3, "actual": 3, "pass": 3, "fail": 0, "rate": 100,
+        "iterations": [
+          {"iteration": 1, "result": "pass", "duration_ms": 3200, "detail": ""}
+        ]
+      }
+    ],
+    "recent_runs": [
+      {"run_id": "...", "started_at": "...", "total": 24, "passed": 22, "failed": 2, "rate": 92}
+    ]
+  }
 }
 ```
 
@@ -342,15 +385,15 @@ Response 200:
 
 ---
 
-### 4.4 非目标（Non-goals）
+### 4.6 非目标（Non-goals）
 
 | 功能 | 原因 | 归属 |
 |------|------|------|
+| Allure 报告集成 | 已替换为自建 HTML 在线报告，更可控无外部依赖 | — |
 | 报告邮件推送 | v3 通知系统 | project-hub |
 | 报告在线编辑/批注 | 非测试工具核心 | v4 |
 | 报告对比/差异分析 | v3 | v3 |
 | 多团队报告隔离 | 依赖 project-hub | project-hub v3 |
-| 报告导出 PDF/PPT | 当前 CSV + JSON 已够用 | v4 |
 
 ---
 
@@ -358,9 +401,9 @@ Response 200:
 
 | 阶段 | 交付物 | 对应功能 |
 |------|------|----------|
-| v1 ✅ | CSV/MD/LOG/JSON 生成 + 报告列表下载 | F-01, F-02 |
-| v2 当前 | 执行历史聚合 + Allure 报告 | F-03, F-04 |
-| v3 | 趋势图表 + 邮件推送 + 报告对比 | — |
+| v1 ✅ | CSV/MD/LOG 生成 + 报告列表下载 | F-01, F-02 |
+| v2 ✅ | 在线报告详情页 + 趋势图表 | F-03, F-04 |
+| v3 | 趋势对比 + 邮件推送 + 报告导出 PDF | — |
 
 ---
 
@@ -370,3 +413,4 @@ Response 200:
 |------|------|----------|----------|
 | v1.0 | 2026-06-30 | — | v1 实现完成：CSV/MD/LOG 生成 + 列表下载 |
 | v2.0 | 2026-06-30 | 重写 | 统一 6 维度结构，补充 Allure 规划和执行历史方案 |
+| v3.0 | 2026-07-07 | 重设计 | 报告模块重设计：两级页面结构（列表→详情），三页签（用例明细/失败分析/趋势图表），DB 驱动 API，Chart.js 可视化，Allure 方案替换为自建 HTML 报告 |

@@ -4,7 +4,7 @@ Semi-shared: models (cross-app read), api functions (cross-app write).
 """
 
 import json
-from .models import TestDefinition, TestCaseCache, CaseDirectory
+from .models import TestDefinition, CaseDirectory
 
 
 # ── Directory helpers ──
@@ -49,7 +49,30 @@ def get_directory_tree():
         }
 
     roots = CaseDirectory.objects.filter(parent__isnull=True).order_by("sort_order", "id")
-    return [_build_node(r) for r in roots]
+    tree = [_build_node(r) for r in roots]
+
+    # Append orphan cases (directory_id=NULL) as root-level case nodes
+    orphan_cases = TestDefinition.objects.filter(directory__isnull=True).order_by("title")
+    for td in orphan_cases:
+        try:
+            step_count = len(json.loads(td.steps_json or "[]"))
+        except Exception:
+            step_count = 0
+        tree.append(
+            {
+                "id": f"case:{td.id}",
+                "name": td.title or td.id,
+                "node_type": "case",
+                "case_id": td.id,
+                "enabled": td.enabled,
+                "priority": td.priority,
+                "category": td.category,
+                "step_count": step_count,
+                "children": [],
+            }
+        )
+
+    return tree
 
 
 def create_directory(name, parent_id=None, sort_order=0):
@@ -157,7 +180,7 @@ def get_definition(case_id):
 
 
 def save_definition(case_id, **fields):
-    """Create or update a test definition."""
+    """Create or update a test definition. Raises ValueError on duplicate title."""
     directory_id = fields.get("directory_id")
     directory = None
     if directory_id is not None:
@@ -165,6 +188,16 @@ def save_definition(case_id, **fields):
             directory = CaseDirectory.objects.get(id=directory_id)
         except CaseDirectory.DoesNotExist:
             pass  # Keep null if not found
+
+    title = fields.get("title", "")
+
+    # Check for duplicate title in the same directory
+    existing = TestDefinition.objects.filter(
+        directory=directory, title=title
+    ).exclude(id=case_id).first()
+    if existing:
+        dir_label = directory.name if directory else "根级（未分类）"
+        raise ValueError(f"目录「{dir_label}」下已存在同名用例「{title}」")
 
     defaults = {
         "title": fields.get("title", ""),
@@ -185,10 +218,6 @@ def save_definition(case_id, **fields):
     obj, _ = TestDefinition.objects.update_or_create(id=case_id, defaults=defaults)
     return obj
 
-
-def cache_yaml(name, yaml_content):
-    """Cache YAML export to DB."""
-    return TestCaseCache.objects.create(name=name, yaml_content=yaml_content)
 
 
 def batch_save_definitions(cases: list[dict], overwrite: bool = False) -> dict:
@@ -289,13 +318,11 @@ def batch_move_items(items: list[dict], target_directory_id: int) -> dict:
 
 __all__ = [
     "TestDefinition",
-    "TestCaseCache",
     "CaseDirectory",
     "get_enabled_definitions",
     "get_definition",
     "save_definition",
     "batch_save_definitions",
-    "cache_yaml",
     "get_directory_tree",
     "create_directory",
     "update_directory",

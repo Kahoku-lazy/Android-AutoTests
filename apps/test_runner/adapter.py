@@ -31,6 +31,7 @@ class DeviceAdapter:
         self._emit_log = logger or (lambda msg: None)
         self._should_stop = should_stop or (lambda: False)
         self._step_callback = None  # (step_index, total, type, description, result)
+        self._step_started_callback = None  # (step_index, total, type, description)
         self._log_buffer: list[str] = []
 
     # ---- Logging ----

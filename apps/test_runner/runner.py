@@ -66,6 +66,11 @@ class TestRunnerCallback:
                                csv_path: str, log_path: str):
         """All test cases completed (or stopped)."""
 
+    async def on_step_started(self, run_id: str, case_id: str,
+                               iteration: int, step_index: int, total_steps: int,
+                               step_type: str, description: str):
+        """A step is about to execute."""
+
     async def on_step_result(self, run_id: str, case_id: str,
                               iteration: int, step_index: int, total_steps: int,
                               step_type: str, description: str, result: str):
@@ -119,7 +124,7 @@ class TestRunner:
         self.callback = callback or TestRunnerCallback()
 
     async def run(self, run_id: str, test_cases: list[TestCaseDef],
-                  loop_count: int = 3) -> TestRun:
+                  loop_count: int = 3, interval_seconds: int = 5) -> TestRun:
         """Run all test cases sequentially."""
         run_model = TestRun(
             run_id=run_id,
@@ -158,7 +163,7 @@ class TestRunner:
                     break
                 await self.callback.on_case_started(
                     run_id, case.id, case.title, loop_count)
-                await self._run_case(state, case, executor, loop_count)
+                await self._run_case(state, case, executor, loop_count, interval_seconds)
                 # Save CSV per case (append mode)
                 if state.all_results:
                     last = state.all_results[-1]
@@ -201,7 +206,8 @@ class TestRunner:
         return run_model
 
     async def _run_case(self, state: _RunState, case: TestCaseDef,
-                        executor: StepExecutor, loop_count: int):
+                        executor: StepExecutor, loop_count: int,
+                        interval_seconds: int = 5):
         loop = asyncio.get_event_loop()
         pass_count = 0
         fail_count = 0
@@ -217,7 +223,7 @@ class TestRunner:
             step_count = len(case.steps_data) if case.steps_data else 0
             state.adapter.log(f'━━━ 第 {i}/{loop_count} 轮 ({step_count} 个步骤) ━━━')
 
-            # Wire step callback to broadcast results (sync → async bridge)
+            # Wire step callbacks to broadcast results (sync → async bridge)
             def _make_step_cb(iter_no):
                 def cb(si, total, st, desc, r):
                     try:
@@ -229,7 +235,21 @@ class TestRunner:
                     except Exception:
                         pass
                 return cb
+
+            def _make_step_started_cb(iter_no):
+                def cb(si, total, st, desc):
+                    try:
+                        asyncio.run_coroutine_threadsafe(
+                            self.callback.on_step_started(
+                                state.run_model.run_id, case.id, iter_no,
+                                si, total, st, desc,
+                            ), loop)
+                    except Exception:
+                        pass
+                return cb
+
             state.adapter._step_callback = _make_step_cb(i)
+            state.adapter._step_started_callback = _make_step_started_cb(i)
 
             if case.steps_data:
                 try:
@@ -270,7 +290,7 @@ class TestRunner:
                 state.run_model.run_id, case.id, i, result, elapsed)
 
             if i < loop_count and state.is_running:
-                await asyncio.sleep(1)
+                await asyncio.sleep(interval_seconds)
 
         rate = f"{(pass_count / actual_count * 100):.1f}%" if actual_count > 0 else "0%"
         state.all_results.append({

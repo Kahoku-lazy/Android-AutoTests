@@ -15,3 +15,4 @@
 - [five-phase-workflow-with-review-gates](five-phase-workflow-with-review-gates.md) — 五阶段流程 + 每阶段审核门禁：探索→审核→规划→审核→拆解→审核→执行→审核→验收
 - [ask-when-uncertain](ask-when-uncertain.md) — 知行合一，不懂就问——任何无法判断或有疑惑的问题必须提出来
 - [three-principles](three-principles.md) — 知行合一、三省吾身、知之为知之——每次任务执行时自检三个问题
+- [css-debug-workflow](css-debug-workflow.md) — CSS 布局问题排查三步铁律：查DOM→画高度链→选滚动策略

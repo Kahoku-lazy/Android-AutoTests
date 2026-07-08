@@ -30,8 +30,8 @@ _django_ready = False
 _models = {}
 try:
     import django; django.setup()
-    from apps.case_manager.models import TestDefinition, CaseDirectory, TestCaseCache
-    _models = {"TestDefinition": TestDefinition, "CaseDirectory": CaseDirectory, "TestCaseCache": TestCaseCache}
+    from apps.case_manager.models import TestDefinition, CaseDirectory
+    _models = {"TestDefinition": TestDefinition, "CaseDirectory": CaseDirectory}
     _django_ready = True
 except Exception:
     pass

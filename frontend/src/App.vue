@@ -72,13 +72,12 @@ function onAfterEnter(el) {
 
 .main-content {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   padding: 0;
   position: relative;
   z-index: 1;
   background: url('/animal-assets/content_bg_pc.jpg') center / auto repeat;
-  min-height: 100vh;
+  min-height: 0;
 }
 
 .guide-line {

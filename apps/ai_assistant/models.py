@@ -43,7 +43,11 @@ class AIAgent(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta: db_table = 'ai_agents'
+    class Meta:
+        db_table = 'ai_agents'
+        verbose_name = '智能体'
+        verbose_name_plural = '智能体'
+
     def __str__(self): return self.name
 
 
@@ -56,7 +60,11 @@ class AITool(models.Model):
     enabled = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta: db_table = 'ai_tools'
+    class Meta:
+        db_table = 'ai_tools'
+        verbose_name = '工具配置'
+        verbose_name_plural = '工具配置'
+
     def __str__(self): return f"{self.name} [{self.tool_type}]"
 
 
@@ -69,7 +77,11 @@ class AIConversation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta: db_table = 'ai_conversations'
+    class Meta:
+        db_table = 'ai_conversations'
+        verbose_name = '对话'
+        verbose_name_plural = '对话'
+
     def __str__(self): return f"{self.title} [{self.agent.name}]"
 
 
@@ -89,7 +101,12 @@ class AIMessage(models.Model):
     model_name = models.CharField(max_length=100, default='', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta: db_table = 'ai_messages'; ordering = ['created_at']
+    class Meta:
+        db_table = 'ai_messages'
+        ordering = ['created_at']
+        verbose_name = '消息'
+        verbose_name_plural = '消息'
+
     def __str__(self): return f"[{self.role}] {self.content[:60]}"
 
 
@@ -105,7 +122,11 @@ class AITask(models.Model):
     finished_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta: db_table = 'ai_tasks'
+    class Meta:
+        db_table = 'ai_tasks'
+        verbose_name = '任务'
+        verbose_name_plural = '任务'
+
     def __str__(self): return f"{self.title} [{self.status}]"
 
 
@@ -118,5 +139,10 @@ class AIExecutionLog(models.Model):
     metadata = models.TextField(default='{}', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta: db_table = 'ai_execution_logs'; ordering = ['-created_at']
+    class Meta:
+        db_table = 'ai_execution_logs'
+        ordering = ['-created_at']
+        verbose_name = '执行日志'
+        verbose_name_plural = '执行日志'
+
     def __str__(self): return f"[{self.level}] {self.message[:60]}"

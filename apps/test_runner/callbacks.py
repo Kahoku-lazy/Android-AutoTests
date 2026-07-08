@@ -49,6 +49,16 @@ class WsTestCallback(TestRunnerCallback):
                                         "case_id": case_id, "pass": pass_count,
                                         "fail": fail_count, "rate": rate})
 
+    async def on_step_started(self, run_id: str, case_id: str,
+                               iteration: int, step_index: int, total_steps: int,
+                               step_type: str, description: str):
+        await self._broadcast(run_id, {
+            "type": "step_started", "run_id": run_id,
+            "case_id": case_id, "iteration": iteration,
+            "step_index": step_index, "total_steps": total_steps,
+            "step_type": step_type, "description": description,
+        })
+
     async def on_step_result(self, run_id: str, case_id: str,
                               iteration: int, step_index: int, total_steps: int,
                               step_type: str, description: str, result: str):

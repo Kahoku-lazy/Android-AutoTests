@@ -8,7 +8,7 @@ from django.conf import settings
 
 from apps.element_locator.api import simple_yaml_dump
 from apps.element_locator.models import Element, PageFlow
-from .models import TestDefinition, TestCaseCache, CaseDirectory
+from .models import TestDefinition, CaseDirectory
 from .api import get_directory_tree, create_directory, update_directory, delete_directory, batch_move_items
 
 
@@ -155,6 +155,19 @@ def definitions_handler(request):
             "expected_result": data.get("expected_result", ""),
             "metrics": data.get("metrics", ""),
         }
+
+        # Check for duplicate title in the same directory
+        title = defaults["title"]
+        existing = TestDefinition.objects.filter(
+            directory=directory, title=title
+        ).exclude(id=case_id).first()
+        if existing:
+            dir_name = directory.name if directory else "根级（未分类）"
+            return JsonResponse({
+                "ok": False,
+                "error": f"目录「{dir_name}」下已存在同名用例「{title}」（ID: {existing.id}）",
+            }, status=409)
+
         TestDefinition.objects.update_or_create(id=case_id, defaults=defaults)
         return JsonResponse({"ok": True, "id": case_id})
 
@@ -333,12 +346,6 @@ def export_yaml(request):
     export_dir.mkdir(parents=True, exist_ok=True)
     filepath = export_dir / filename
     filepath.write_text(yaml_str, encoding="utf-8")
-
-    TestCaseCache.objects.create(
-        name=data.get("test_case_name", "auto"),
-        description="",
-        yaml_content=yaml_str,
-    )
 
     return JsonResponse({"ok": True, "filename": filename, "yaml": yaml_str})
 

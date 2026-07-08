@@ -44,8 +44,12 @@ def test_dashboard_func_01():
     assert r2.json()["ok"]
     devices = r2.json().get("devices", [])
 
-    assert dash["devices"]["online"] == sum(1 for d in devices if d.get("status") == "ONLINE")
-    assert dash["devices"]["total"] == len(devices)
+    visible = [d for d in devices if d.get("status") not in ("OFFLINE", "DISCONNECTED")]
+
+    assert dash["devices"]["online"] == sum(
+        1 for d in visible if d.get("status") in ("ONLINE", "BUSY")
+    )
+    assert dash["devices"]["total"] == len(visible)
     return True
 
 

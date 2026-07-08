@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ElMessage } from 'element-plus'
 import { wsUrl } from '@/shared/ws-url.js'
 import { apiGetScreenshot } from '../api.js'
 
@@ -46,7 +47,7 @@ const aspectStyle = computed(() => {
 })
 
 onMounted(() => {
-  fetchSnapshot()
+  fetchSnapshot({ silent: true })
   connectWS()
   resizeObserver = new ResizeObserver(() => scheduleDrawOverlay())
 })
@@ -66,21 +67,33 @@ onUnmounted(() => {
   revokeBlobUrl()
 })
 
-async function fetchSnapshot() {
+async function fetchSnapshot({ silent = false } = {}) {
   try {
     const { data } = await apiGetScreenshot()
     if (data.ok && data.image) {
       applyScreenshot(data.image, data.format || 'jpeg')
       wsState.value = 'connected'
+      statusMessage.value = ''
       if (data.screen_w) emit('device-changed', data)
-    } else if (data.error) {
+      return true
+    }
+    if (data.error) {
       wsState.value = 'no_device'
       statusMessage.value = data.error
+      if (!silent) ElMessage.error(data.error)
     }
-  } catch (_) {
-    // WS may still connect; keep current state
+    return false
+  } catch (e) {
+    if (!silent) ElMessage.error(e?.message || '截图获取失败')
+    return false
   }
 }
+
+async function refresh() {
+  return fetchSnapshot()
+}
+
+defineExpose({ refresh })
 
 function revokeBlobUrl() {
   if (blobUrl) {
@@ -119,7 +132,7 @@ function connectWS() {
     wsState.value = 'connected'
     statusMessage.value = screenshotUrl.value ? '' : '已连接，正在获取画面…'
     emit('device-changed', { type: 'connected' })
-    if (!screenshotUrl.value) fetchSnapshot()
+    if (!screenshotUrl.value) fetchSnapshot({ silent: true })
   }
   ws.value.onerror = () => {
     wsState.value = 'error'

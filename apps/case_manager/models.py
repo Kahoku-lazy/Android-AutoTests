@@ -21,6 +21,8 @@ class CaseDirectory(models.Model):
     class Meta:
         db_table = "cm_case_directories"
         unique_together = ("parent", "name")
+        verbose_name = '用例目录'
+        verbose_name_plural = '用例目录'
 
     def __str__(self):
         prefix = f"{self.parent.name} / " if self.parent else ""
@@ -65,21 +67,14 @@ class TestDefinition(models.Model):
 
     class Meta:
         db_table = "cm_test_definitions"
+        verbose_name = '用例定义'
+        verbose_name_plural = '用例定义'
+        constraints = [
+            models.UniqueConstraint(
+                fields=["directory", "title"],
+                name="unique_directory_title",
+            ),
+        ]
 
     def __str__(self):
         return self.title
-
-
-class TestCaseCache(models.Model):
-    """YAML export cache → cm_test_cases."""
-
-    name = models.CharField(max_length=500)
-    description = models.TextField(default="", blank=True)
-    yaml_content = models.TextField(default="", blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "cm_test_cases"
-
-    def __str__(self):
-        return self.name

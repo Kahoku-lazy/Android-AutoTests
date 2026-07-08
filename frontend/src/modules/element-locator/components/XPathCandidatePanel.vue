@@ -17,7 +17,8 @@ const saveVisible = ref(false)
 const pagesLoading = ref(false)
 const saving = ref(false)
 const pages = ref([])
-const saveForm = ref({ pageId: null, alias: '' })
+const saveCandidates = ref([])
+const saveForm = ref({ pageId: null, alias: '', selectedXpath: '' })
 
 function pageLabel(p) {
   return p.label || `Page #${p.id}`
@@ -37,9 +38,23 @@ async function loadPages() {
 
 async function openSaveDialog() {
   if (!props.element) return
+  const rank = ['resource-id','text','content-desc','class','index','combined','resource-id (any)','text (any)']
+  const prio = t => { const i = rank.indexOf(t); return i === -1 ? 999 : i }
+  const candidates = (props.element.xpaths || [])
+    .filter(x => x.count === 1 && x.xpath)
+    .sort((a, b) => prio(a.type) - prio(b.type))
+  if (!candidates.length) {
+    ElMessage.warning('当前元素没有唯一定位策略（匹配数=1），无法保存')
+    return
+  }
   await loadPages()
   const autoName = props.element.text || props.element.resource_id?.split('/').pop() || ''
-  saveForm.value = { pageId: pages.value[0]?.id || null, alias: autoName }
+  saveCandidates.value = candidates
+  saveForm.value = {
+    pageId: pages.value[0]?.id || null,
+    alias: autoName,
+    selectedXpath: candidates[0].xpath,
+  }
   if (!saveForm.value.pageId) {
     const pkg = store.lastDump?.package || store.currentDevice?.package || ''
     const activity = store.lastDump?.activity || ''
@@ -71,13 +86,15 @@ async function openSaveDialog() {
 async function doSave() {
   if (!saveForm.value.pageId) { ElMessage.warning('请先选择目标页面'); return }
   if (!saveForm.value.alias.trim()) { ElMessage.warning('请输入元素名称'); return }
+  const candidate = saveCandidates.value.find(c => c.xpath === saveForm.value.selectedXpath)
+  if (!candidate) { ElMessage.warning('请选择唯一定位策略'); return }
   const el = props.element
-  const xpath = (el.xpaths || [{}])[0] || {}
   saving.value = true
   try {
     const { data } = await client.post(`/elements/pages/${saveForm.value.pageId}/elements`, {
       alias: saveForm.value.alias.trim(),
-      xpath: xpath.xpath || '',
+      xpath: candidate.xpath,
+      xpath_candidates: saveCandidates.value,
       class_name: el.class_name || '',
       text_val: el.text || '',
       resource_id: el.resource_id || '',
@@ -196,6 +213,25 @@ async function copyXPath(xpath) {
         </el-select>
         <label class="form-label required">元素名称</label>
         <Input v-model="saveForm.alias" placeholder="如：登录按钮" size="medium" />
+        <label class="form-label required">定位策略</label>
+        <el-select
+          v-model="saveForm.selectedXpath"
+          placeholder="选择唯一定位策略"
+          filterable
+          style="width:100%"
+        >
+          <el-option
+            v-for="c in saveCandidates"
+            :key="c.xpath"
+            :label="`${c.type} — ${c.xpath}`"
+            :value="c.xpath"
+          >
+            <div class="xpath-opt">
+              <span class="xpath-opt-type">{{ c.type }}</span>
+              <span class="xpath-opt-path">{{ c.xpath }}</span>
+            </div>
+          </el-option>
+        </el-select>
       </div>
       <template #footer>
         <AnimalButton @click="saveVisible = false">取消</AnimalButton>
@@ -302,5 +338,22 @@ h3 {
   content: '*';
   color: var(--animal-error-color, #e05a5a);
   margin-right: 3px;
+}
+.xpath-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.3;
+  padding: 2px 0;
+}
+.xpath-opt-type {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #5c4a32);
+}
+.xpath-opt-path {
+  font-size: 11px;
+  color: var(--text-secondary, #988B7A);
+  word-break: break-all;
 }
 </style>

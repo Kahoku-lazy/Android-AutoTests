@@ -1,13 +1,21 @@
 /**
- * report-generator API — 测试报告模块
+ * report-generator API & shared helpers — 测试报告模块
  */
 import client from '@/shared/api-client.js'
 
-// ── 报告 ──
+// ── 执行记录（报告列表）──
 
-export function listReports() {
+export function listRuns() {
   return client.get('/reports')
 }
+
+// ── 报告详情 ──
+
+export function getRunReport(runId) {
+  return client.get(`/reports/run/${encodeURIComponent(runId)}`)
+}
+
+// ── 文件下载 ──
 
 export function getReportContent(filename) {
   return client.get(`/reports/${encodeURIComponent(filename)}/content`)
@@ -17,8 +25,38 @@ export function getReportDownloadUrl(filename) {
   return `/api/reports/${encodeURIComponent(filename)}`
 }
 
-// ── 执行历史（跨模块）──
+// ── 共享工具函数 ──
 
-export function listRuns() {
-  return client.get('/runner/runs')
+const STATUS_LABEL_MAP = {
+  COMPLETED: '通过', completed: '通过',
+  FAILED: '失败', failed: '失败',
+  RUNNING: '运行中', running: '运行中',
+  STOPPED: '已停止', stopped: '已停止',
+  PENDING: '排队中',
+}
+
+export function statusLabel(status) {
+  return STATUS_LABEL_MAP[status] || status
+}
+
+export function statusBadgeClass(status) {
+  if (status === 'COMPLETED' || status === 'completed') return 'badge-pass'
+  if (status === 'FAILED' || status === 'failed') return 'badge-fail'
+  if (status === 'RUNNING' || status === 'running') return 'badge-running'
+  return 'badge-stopped'
+}
+
+export function iterBadgeClass(result) {
+  if (result === 'pass') return 'badge-pass'
+  if (result === 'fail' || result === 'stopped') return 'badge-fail'
+  return 'badge-stopped'
+}
+
+export function formatTime(iso) {
+  if (!iso) return '—'
+  try {
+    const d = new Date(iso)
+    const pad = n => String(n).padStart(2, '0')
+    return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  } catch (_) { return iso }
 }

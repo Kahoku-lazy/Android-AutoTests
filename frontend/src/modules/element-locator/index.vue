@@ -16,6 +16,8 @@ import ElementManager from './components/ElementManager.vue'
 const route = useRoute()
 const router = useRouter()
 const store = useElementStore()
+const screenshotRef = ref(null)
+const screenRefreshing = ref(false)
 
 const activeTab = ref('discovery')
 const tabs = [
@@ -113,6 +115,24 @@ async function doDump() {
   }
 }
 
+async function refreshScreen() {
+  if (!store.currentSerial) {
+    store.error = '请先选择设备'
+    return
+  }
+  if (!store.isDeviceOnline) {
+    store.error = `设备 ${store.currentSerial} 已离线`
+    return
+  }
+  screenRefreshing.value = true
+  try {
+    await screenshotRef.value?.refresh()
+    await doDump()
+  } finally {
+    screenRefreshing.value = false
+  }
+}
+
 // ── Action ──
 
 async function doAction(action, x, y, text) {
@@ -172,6 +192,14 @@ function onDeviceChanged(msg) {
               <DeviceSelector />
               <el-divider direction="vertical" />
               <el-button
+                :icon="'Refresh'"
+                :loading="screenRefreshing"
+                :disabled="!store.currentSerial || !store.isDeviceOnline"
+                @click="refreshScreen"
+              >
+                刷新屏幕
+              </el-button>
+              <el-button
                 type="primary"
                 :loading="store.loading"
                 :disabled="!store.currentSerial || !store.isDeviceOnline"
@@ -205,6 +233,7 @@ function onDeviceChanged(msg) {
             <div class="workspace">
               <section class="col col-phone">
                 <ScreenshotView
+                  ref="screenshotRef"
                   :screen-w="store.screenW"
                   :screen-h="store.screenH"
                   :elements="filteredElements"
@@ -241,7 +270,33 @@ function onDeviceChanged(msg) {
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: calc(100vh - 0px);
+  overflow: hidden;
+}
+/* Tabs 整体填满页面高度 */
+.doc-page :deep(.animal-tabs) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* 内容区：占满剩余高度，纵向不足时在此滚动 */
+.doc-page :deep(.animal-tabs__content) {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: block;
+}
+.doc-page :deep(.animal-tabs__inner) {
+  min-height: min-content;
+}
+/* tab-pane 和内部 doc-body 填满 */
+.doc-page :deep(.animal-tab-pane) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .locator-section {
   flex: 1;

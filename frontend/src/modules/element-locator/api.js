@@ -33,7 +33,7 @@ export function apiGetScreenshot()     { return client.get('/elements/screenshot
 // ── Element Manager (page & element CRUD) ──
 
 export function apiGetPages()          { return client.get('/elements/pages') }
-export function apiCreatePage(label)   { return client.post('/elements/pages/create', { label }) }
+export function apiCreatePage(data)    { return client.post('/elements/pages/create', data) }
 export function apiDeletePage(id)      { return client.delete(`/elements/pages/${id}`) }
 export function apiGetPageElements(pid) { return client.get(`/elements/pages/${pid}/items`) }
 export function apiAddElementToPage(pid, el) { return client.post(`/elements/pages/${pid}/elements`, el) }

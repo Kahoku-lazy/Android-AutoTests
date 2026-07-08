@@ -239,7 +239,13 @@ def add_element_to_page(request, page_id):
             return JsonResponse({"ok": False, "error": "元素名称(alias)必填"})
 
         xpath = data.get("xpath", "")
-        xpaths = json.dumps([{"type": "manual", "xpath": xpath, "count": 1}]) if xpath else "[]"
+        xpath_candidates_data = data.get("xpath_candidates")
+        if xpath_candidates_data:
+            xpaths = json.dumps(xpath_candidates_data)
+        elif xpath:
+            xpaths = json.dumps([{"type": "manual", "xpath": xpath, "count": 1}])
+        else:
+            xpaths = "[]"
         fields = {
             "alias": alias,
             "class_name": data.get("class_name", ""),

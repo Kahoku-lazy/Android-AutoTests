@@ -1,14 +1,21 @@
 from django.contrib import admin
-from .models import TestDefinition, TestCaseCache
+from .models import TestDefinition, CaseDirectory
+
+
+@admin.register(CaseDirectory)
+class CaseDirectoryAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "parent", "sort_order", "case_count", "created_at")
+    list_filter = ("parent",)
+    search_fields = ("name",)
+    ordering = ("parent__id", "sort_order", "id")
+
+    def case_count(self, obj):
+        return obj.test_definitions.count()
+    case_count.short_description = "用例数"
 
 
 @admin.register(TestDefinition)
 class TestDefinitionAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "category", "enabled", "updated_at")
-    list_filter = ("category", "enabled")
+    list_display = ("id", "title", "category", "directory", "priority", "enabled", "updated_at")
+    list_filter = ("category", "enabled", "priority")
     search_fields = ("id", "title")
-
-
-@admin.register(TestCaseCache)
-class TestCaseCacheAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "created_at")

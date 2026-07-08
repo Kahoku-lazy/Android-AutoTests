@@ -87,18 +87,20 @@ def test_cm_db_05_disabled_default():
              f"enabled={d.get('enabled')}","enabled=True",int((time.time()-t0)*1000))
     return passed
 
-def test_cm_db_06_yaml_cache_created():
-    """YAML 导出后 TestCaseCache 有记录"""
+def test_cm_db_06_yaml_export():
+    """YAML 导出后文件系统有文件"""
     if not H._django_ready: return None
     t0 = time.time(); h = H.api_headers()
-    TCC = H.get_model("TestCaseCache"); before = TCC.objects.count()
+    import os, glob
+    export_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'exports')
+    before = len(glob.glob(os.path.join(export_dir, '*.yaml')))
     try: requests.post(f"{H.API_BASE}/cases/export/yaml", headers=h,
                        json={"test_case_name":"TEST-DB-06"}, timeout=10)
     except Exception: pass
-    after = TCC.objects.count()
-    passed = after >= before
-    H.record("CASE-DB-06","DB","YAML 缓存记录",passed,
-             f"before={before},after={after}","after>=before",int((time.time()-t0)*1000))
+    after = len(glob.glob(os.path.join(export_dir, '*.yaml')))
+    passed = after > before
+    H.record("CASE-DB-06","DB","YAML 导出文件",passed,
+             f"before={before},after={after}","after>before",int((time.time()-t0)*1000))
     return passed
 
 def test_cm_db_07_tc_id_format():
@@ -135,7 +137,7 @@ DB_TESTS = {
     "CASE-DB-03":("DB",test_cm_db_03_iot_defaults,"IoT 默认值"),
     "CASE-DB-04":("DB",test_cm_db_04_steps_json_stored,"steps_json"),
     "CASE-DB-05":("DB",test_cm_db_05_disabled_default,"enabled 默认"),
-    "CASE-DB-06":("DB",test_cm_db_06_yaml_cache_created,"YAML 缓存"),
+    "CASE-DB-06":("DB",test_cm_db_06_yaml_export,"YAML 导出文件"),
     "CASE-DB-07":("DB",test_cm_db_07_tc_id_format,"TC-ID 格式"),
     "CASE-DB-08":("DB",test_cm_db_08_unique_dir_name,"唯一约束"),
 }

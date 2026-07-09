@@ -16,3 +16,7 @@
 - [ask-when-uncertain](ask-when-uncertain.md) — 知行合一，不懂就问——任何无法判断或有疑惑的问题必须提出来
 - [three-principles](three-principles.md) — 知行合一、三省吾身、知之为知之——每次任务执行时自检三个问题
 - [css-debug-workflow](css-debug-workflow.md) — CSS 布局问题排查三步铁律：查DOM→画高度链→选滚动策略
+- [full-stack-verification-workflow](full-stack-verification-workflow.md) — 验证必须从前端浏览器出发走完整闭环，不能只看后端代码和API
+
+- [run-py-cross-platform](run-py-cross-platform.md) — run.py 跨平台修复：kill_port 用 lsof、后台服务加 stdin=DEVNULL
+- [test-runner-statemachine-not-wired](test-runner-statemachine-not-wired.md) — 执行引擎状态机没接入主路径→status/running双源不一致+崩溃恢复漏僵尸

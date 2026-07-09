@@ -1,17 +1,34 @@
-/** element-locator Pinia store — device + element state */
+/** element-locator Pinia store — device + element state
+
+  Device connection is now manual (observe mode):
+  - User selects a device and clicks "Connect" to observe it
+  - Occupied devices are filtered from the dropdown
+  - Leaving the page auto-disconnects
+*/
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { ElMessage } from 'element-plus'
 import {
   apiDump, apiAction,
   apiGetDevices, apiActivateDevice, apiGetDeviceInfo,
+  apiConnectObserve, apiDisconnectObserve,
 } from './api.js'
+
+// Process prefixes that indicate execution engine occupation — these devices
+// are unavailable for element-locator and case-manager
+const EXEC_PREFIXES = ['runner-', 'ai_agent', 'task-', 'run-']
+
+function isExecutionOccupied(device) {
+  return device.status === 'BUSY' && device.occupied_by &&
+    EXEC_PREFIXES.some(p => device.occupied_by.startsWith(p))
+}
 
 export const useElementStore = defineStore('element-locator', () => {
   // ── Device state ──
   const devices = ref([])
   const currentSerial = ref('')
-  const currentDevice = ref(null)   // { serial, model, brand, screen_w, screen_h, connection_type, package }
+  const connectedSerial = ref('')   // explicitly connected (observe mode)
+  const currentDevice = ref(null)
   const screenW = ref(1440)
   const screenH = ref(3040)
   const wsConnected = ref(false)
@@ -23,13 +40,18 @@ export const useElementStore = defineStore('element-locator', () => {
   const pageId = ref(null)
   const loading = ref(false)
   const error = ref('')
-  const lastDump = ref(null)        // last dump response
+  const lastDump = ref(null)
 
   // ── Computed ──
   const onlineDevices = computed(() =>
     devices.value.filter(d => d.status === 'ONLINE' || d.status === 'BUSY')
   )
-  const hasDevices = computed(() => onlineDevices.value.length > 0)
+  /** Devices available for observe connection (excludes execution-occupied) */
+  const availableDevices = computed(() =>
+    onlineDevices.value.filter(d => !isExecutionOccupied(d))
+  )
+  const hasDevices = computed(() => availableDevices.value.length > 0)
+  const isConnected = computed(() => !!connectedSerial.value)
   const isDeviceOnline = computed(() => {
     const d = devices.value.find(d => d.serial === currentSerial.value)
     return d && (d.status === 'ONLINE' || d.status === 'BUSY')
@@ -42,29 +64,62 @@ export const useElementStore = defineStore('element-locator', () => {
       const { data } = await apiGetDevices()
       if (data.ok) {
         devices.value = data.devices || []
-        if (data.current) {
-          currentSerial.value = data.current
-        }
-        if (currentSerial.value) {
-          const cd = devices.value.find(d => d.serial === currentSerial.value)
+        // Restore current device info if still connected
+        if (connectedSerial.value) {
+          const cd = devices.value.find(d => d.serial === connectedSerial.value)
           if (cd) {
+            currentSerial.value = cd.serial
             currentDevice.value = {
-              serial: cd.serial,
-              model: cd.model,
-              brand: cd.brand,
-              screen_w: cd.screen_w || (cd.screen ? parseInt(cd.screen.split('x')[0]) : 0),
-              screen_h: cd.screen_h || (cd.screen ? parseInt(cd.screen.split('x')[1]) : 0),
+              serial: cd.serial, model: cd.model, brand: cd.brand,
+              screen_w: cd.screen_w || 0,
+              screen_h: cd.screen_h || 0,
               connection_type: cd.connection_type,
               status: cd.status,
             }
             if (currentDevice.value.screen_w) screenW.value = currentDevice.value.screen_w
             if (currentDevice.value.screen_h) screenH.value = currentDevice.value.screen_h
+          } else {
+            // Connected device went offline — clear connection
+            disconnectDevice()
           }
-        } else if (onlineDevices.value.length) {
-          await activateDevice(onlineDevices.value[0].serial, { silent: true })
         }
+        // NOTE: No auto-select — user must explicitly connect
       }
     } catch (_) { /* silent */ }
+  }
+
+  /** Connect to a device in observe mode (lightweight, no lock) */
+  async function connectDevice(serial) {
+    try {
+      const { data } = await apiConnectObserve(serial)
+      if (data.ok) {
+        connectedSerial.value = serial
+        currentSerial.value = serial
+        await fetchCurrentDevice()
+        ElMessage.success(`已连接设备 ${serial}`)
+        return true
+      }
+      ElMessage.error(data.error || '连接设备失败')
+      return false
+    } catch (_) {
+      ElMessage.error('连接设备失败')
+      return false
+    }
+  }
+
+  /** Disconnect from the currently observed device */
+  function disconnectDevice() {
+    const serial = connectedSerial.value
+    if (!serial) return
+    apiDisconnectObserve(serial).catch(() => {})
+    connectedSerial.value = ''
+    currentSerial.value = ''
+    currentDevice.value = null
+    // Reset element state
+    elements.value = []
+    actionable.value = []
+    pageId.value = null
+    selected.value = null
   }
 
   async function activateDevice(serial, { silent = false } = {}) {
@@ -161,12 +216,12 @@ export const useElementStore = defineStore('element-locator', () => {
 
   return {
     // device state
-    devices, currentSerial, currentDevice, screenW, screenH, wsConnected,
-    onlineDevices, hasDevices, isDeviceOnline,
+    devices, currentSerial, connectedSerial, currentDevice, screenW, screenH, wsConnected,
+    onlineDevices, availableDevices, hasDevices, isConnected, isDeviceOnline,
     // element state
     elements, actionable, selected, pageId, loading, error, lastDump,
     // device actions
-    fetchDevices, activateDevice, fetchCurrentDevice,
+    fetchDevices, connectDevice, disconnectDevice, activateDevice, fetchCurrentDevice,
     // element actions
     doDump, doAction, selectElement, clearError,
   }

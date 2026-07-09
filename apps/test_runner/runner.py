@@ -1,5 +1,9 @@
 """
 Async test runner — executes selected test cases sequentially with loop_count iterations.
+
+Device isolation: acquires device via device_pool.api.acquire_device before execution
+and releases it in finally. The DB-level Device.status=BUSY + Device.occupied_by
+are the source of truth for cross-module device availability checks.
 """
 import time
 import asyncio
@@ -11,21 +15,29 @@ from typing import Optional
 from models.test_models import TestCaseDef, TestResult, TestRun, TestRunStatus
 from .adapter import DeviceAdapter
 from .executor import StepExecutor
+from apps.device_pool.api import acquire_device, release_device
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 LOG_DIR = BASE_DIR / "logs"
 EXPORT_DIR = BASE_DIR / "exports"
 
 
+# Dedicated thread pool for uiautomator2 operations — isolated from Django's
+# sync_to_async pool to prevent CurrentThreadExecutor corruption from breaking
+# all ORM operations.
+import concurrent.futures
+_u2_executor = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix='u2')
+
+
 async def _safe_run_in_executor(loop, func, *args, error_msg="executor failed"):
     """Run a sync function in executor with protection against CurrentThreadExecutor quit.
 
-    uiautomator2 uses a CurrentThreadExecutor that can get into a broken state
-    when the device disconnects. This wrapper catches RuntimeError and raises
-    a cleaner exception that the runner can handle gracefully.
+    Uses a dedicated thread pool (_u2_executor) instead of the default (None)
+    to prevent uiautomator2's CurrentThreadExecutor from corrupting the shared
+    thread pool used by Django's sync_to_async.
     """
     try:
-        return await loop.run_in_executor(None, func, *args)
+        return await loop.run_in_executor(_u2_executor, func, *args)
     except RuntimeError as e:
         msg = str(e)
         if 'quit' in msg.lower() or 'broken' in msg.lower():
@@ -137,6 +149,10 @@ class TestRunner:
 
         state = _RunState(run_model=run_model, callback=self.callback)
         _active_runs[run_id] = state
+
+        # DB-level device occupation — source of truth for cross-module checks
+        acquire_device(self.device.serial, user_id=f"runner-{self.device.serial}", timeout=3600)
+        # Memory-level fast check for same-process scheduling
         mark_device_busy(self.device.serial)
 
         loop = asyncio.get_event_loop()
@@ -202,6 +218,11 @@ class TestRunner:
         finally:
             _active_runs.pop(run_id, None)
             mark_device_idle(self.device.serial)
+            # Release DB-level device occupation
+            try:
+                release_device(self.device.serial, reason="manual")
+            except Exception as e:
+                print(f"[runner] WARNING: release_device failed for {self.device.serial}: {e}")
 
         return run_model
 
@@ -232,8 +253,8 @@ class TestRunner:
                                 state.run_model.run_id, case.id, iter_no,
                                 si, total, st, desc, r,
                             ), loop)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        print(f"[runner] on_step_result callback failed: {e}")
                 return cb
 
             def _make_step_started_cb(iter_no):
@@ -244,8 +265,8 @@ class TestRunner:
                                 state.run_model.run_id, case.id, iter_no,
                                 si, total, st, desc,
                             ), loop)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        print(f"[runner] on_step_started callback failed: {e}")
                 return cb
 
             state.adapter._step_callback = _make_step_cb(i)

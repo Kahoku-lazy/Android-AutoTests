@@ -68,25 +68,12 @@ const filteredElements = computed(() => {
 })
 
 onMounted(async () => {
-  const { serial, autoStart } = route.query
-
-  // Device list + optional activate in parallel where possible
+  // Just load the device list — no auto-connect. User must manually select and connect.
   await store.fetchDevices()
-  if (serial) {
-    await store.activateDevice(serial)
-  } else if (!store.currentDevice?.screen_w) {
-    // Non-blocking: WS device_changed will also supply dimensions
-    store.fetchCurrentDevice()
-  }
-
-  if (autoStart === '1' && store.currentSerial) {
-    nextTick(() => store.doDump())
-  }
 
   // Periodic device list refresh (30s)
   devicePollTimer = setInterval(async () => {
     await store.fetchDevices()
-    // Check if current device went offline
     if (!store.isDeviceOnline && store.currentSerial) {
       store.error = `设备 ${store.currentSerial} 已离线`
     }
@@ -95,13 +82,19 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (devicePollTimer) { clearInterval(devicePollTimer); devicePollTimer = null }
+  // Auto-disconnect on page leave
+  store.disconnectDevice()
 })
 
 // ── Dump ──
 
 async function doDump() {
-  if (!store.currentSerial) {
-    store.error = '请先选择设备'
+  if (!store.isConnected) {
+    store.error = '请先选择设备并点击"连接"'
+    return
+  }
+  if (!store.isConnected) {
+    store.error = '请先选择设备并点击"连接"'
     return
   }
   if (!store.isDeviceOnline) {
@@ -116,8 +109,8 @@ async function doDump() {
 }
 
 async function refreshScreen() {
-  if (!store.currentSerial) {
-    store.error = '请先选择设备'
+  if (!store.isConnected) {
+    store.error = '请先选择设备并点击"连接"'
     return
   }
   if (!store.isDeviceOnline) {
@@ -194,7 +187,7 @@ function onDeviceChanged(msg) {
               <el-button
                 :icon="'Refresh'"
                 :loading="screenRefreshing"
-                :disabled="!store.currentSerial || !store.isDeviceOnline"
+                :disabled="!store.isConnected || !store.isDeviceOnline"
                 @click="refreshScreen"
               >
                 刷新屏幕
@@ -202,7 +195,7 @@ function onDeviceChanged(msg) {
               <el-button
                 type="primary"
                 :loading="store.loading"
-                :disabled="!store.currentSerial || !store.isDeviceOnline"
+                :disabled="!store.isConnected || !store.isDeviceOnline"
                 @click="doDump"
               >
                 {{ store.loading ? 'Dumping...' : 'Dump UI' }}

@@ -12,6 +12,29 @@ from apps.device_pool.api import ensure_device
 from .models import Page, Element, PageFlow
 from .service import gen_xpath_candidates
 
+# Process prefixes that indicate execution engine occupation
+_EXECUTION_OCCUPY_PREFIXES = ('runner-', 'ai_agent', 'task-', 'run-')
+
+
+def _check_device_available(serial: str) -> tuple[bool, str, str]:
+    """Check if a device is available for element-locator operations.
+
+    Returns (available, error_message, occupied_by).
+    """
+    if not serial:
+        return False, "未选择设备，请先连接设备", ""
+    try:
+        dev = Device.objects.get(serial=serial)
+    except Device.DoesNotExist:
+        return False, "设备未注册", ""
+    if dev.status == 'OFFLINE':
+        return False, "设备已离线", ""
+    if dev.status == 'BUSY' and dev.occupied_by:
+        for prefix in _EXECUTION_OCCUPY_PREFIXES:
+            if dev.occupied_by.startswith(prefix):
+                return False, f"设备正被执行引擎占用（{dev.occupied_by}），请等待执行完毕", dev.occupied_by
+    return True, "", dev.occupied_by or ""
+
 
 @csrf_exempt
 def dump_page(request):
@@ -20,6 +43,10 @@ def dump_page(request):
     Pages and elements are now managed manually via the element-manager.
     This endpoint only returns the live hierarchy for the locator UI.
     """
+    available, err_msg, _ = _check_device_available(device.current_serial)
+    if not available:
+        return JsonResponse({"ok": False, "error": err_msg}, status=409)
+
     nodes = device.dump_hierarchy()
 
     # Save screenshot for visual reference (keep last 3)
@@ -61,6 +88,10 @@ def dump_page(request):
 @csrf_exempt
 def do_action(request):
     """POST /api/elements/action — Execute click or input on device."""
+    available, err_msg, _ = _check_device_available(device.current_serial)
+    if not available:
+        return JsonResponse({"ok": False, "error": err_msg}, status=409)
+
     try:
         data = json.loads(request.body)
     except Exception:
@@ -92,9 +123,21 @@ def device_info_view(request):
     """GET /api/elements/device-info — Current device info with resolution.
 
     Combines DB cached fields with live u2 info for the active device.
+    Includes occupation status for frontend awareness.
     """
     info = device.info()
     serial = device.current_serial
+    # Check occupation status from DB
+    occupied_by = ""
+    is_occupied = False
+    try:
+        dev = Device.objects.get(serial=serial)
+        if dev.status == 'BUSY' and dev.occupied_by:
+            occupied_by = dev.occupied_by
+            is_occupied = True
+    except Device.DoesNotExist:
+        pass
+
     try:
         dev = Device.objects.get(serial=serial)
         return JsonResponse({
@@ -106,6 +149,8 @@ def device_info_view(request):
             "screen_h": dev.screen_h or info.get("displayHeight", 3040),
             "connection_type": device.get_connection_type(serial),
             "package": info.get("currentPackageName", ""),
+            "occupied": is_occupied,
+            "occupied_by": occupied_by,
         })
     except Device.DoesNotExist:
         return JsonResponse({
@@ -124,6 +169,9 @@ def screenshot_snapshot(request):
     """GET /api/elements/screenshot — Single JPEG snapshot for fast first paint."""
     if not device.current_serial:
         return JsonResponse({"ok": False, "error": "未选择设备"})
+    available, err_msg, _ = _check_device_available(device.current_serial)
+    if not available:
+        return JsonResponse({"ok": False, "error": err_msg}, status=409)
     try:
         b64 = device.screenshot_b64(quality=50, max_width=720)
         info = device.info()

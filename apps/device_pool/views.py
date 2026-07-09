@@ -460,6 +460,9 @@ def connect_device(request, serial):
     """POST /api/devices/{serial} — 连接设备 + 自动激活 + 锁定。
 
     PRD §6.2.3: 建立 u2 连接，采集设备信息，自动切换+锁定。
+
+    mode="observe": 轻量连接模式，仅切换 DevicePool 指针，不锁定设备。
+    供 element-locator / case-manager 等临时使用场景。
     """
     try:
         data = json.loads(request.body) if request.body else {}
@@ -467,6 +470,7 @@ def connect_device(request, serial):
         data = {}
 
     activate = data.get("activate", True)
+    observe_mode = data.get("mode", "") == "observe"
 
     # 1. 查找设备记录
     try:
@@ -573,24 +577,25 @@ def connect_device(request, serial):
     if activate:
         device_pool.switch_to(serial, ct)
 
-    # 7. 自动锁定（如果提供了 user_id）
-    user_id = data.get("user_id", "").strip()
-    if user_id:
-        # 先检查是否已有活跃锁
-        has_active = DeviceLock.objects.filter(device=dev, status="active").exists()
-        if not has_active:
-            timeout = data.get("timeout", 300)
-            dev.status = "BUSY"
-            dev.locked_by = user_id
-            dev.locked_at = datetime.now()
-            dev.save(update_fields=["status", "locked_by", "locked_at"])
-            DeviceLock.objects.create(
-                device=dev,
-                user_id=user_id,
-                lock_type="user",
-                timeout_seconds=timeout,
-                status="active",
-            )
+    # 7. 自动锁定（如果提供了 user_id）— observe 模式跳过
+    if not observe_mode:
+        user_id = data.get("user_id", "").strip()
+        if user_id:
+            # 先检查是否已有活跃锁
+            has_active = DeviceLock.objects.filter(device=dev, status="active").exists()
+            if not has_active:
+                timeout = data.get("timeout", 300)
+                dev.status = "BUSY"
+                dev.locked_by = user_id
+                dev.locked_at = datetime.now()
+                dev.save(update_fields=["status", "locked_by", "locked_at"])
+                DeviceLock.objects.create(
+                    device=dev,
+                    user_id=user_id,
+                    lock_type="user",
+                    timeout_seconds=timeout,
+                    status="active",
+                )
 
     # 8. 重新读取最新值
     dev.refresh_from_db()
@@ -758,6 +763,17 @@ def disconnect_device(request, serial):
             "locks_released": locks_released,
         }
     )
+
+
+@csrf_exempt
+def disconnect_observe(request, serial):
+    """POST /api/devices/{serial}/disconnect-observe — 轻量断开设备连接。
+
+    element-locator / case-manager observe 模式下的断开操作。
+    仅清理 uiautomator2 连接缓存，不删除 DB 记录，不释放锁。
+    """
+    device_pool.remove_device(serial)
+    return JsonResponse({"ok": True, "serial": serial, "message": "设备观察连接已断开"})
 
 
 # ═══════════════════════════════════════════════

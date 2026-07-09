@@ -458,16 +458,27 @@ function connectionLabel(type) {
                         >
                           {{ statusTag(record.status).text }}
                         </el-tag>
-                        <span
-                          v-if="record.occupied_by"
-                          class="occupied-badge"
-                          style="background: #fde8e8; color: #e85f5f"
+                        <!-- Execution engine occupation — highest priority -->
+                        <el-tooltip
+                          v-if="record.occupied_by && record.status === 'BUSY' && ['runner-','ai_agent','task-','run-'].some(p => record.occupied_by.startsWith(p))"
+                          :content="record.occupied_by"
+                          placement="top"
                         >
-                          {{ record.occupied_by }}
-                        </span>
-                        <span v-if="record.locked_by" class="occupied-badge">
-                          {{ record.locked_by }}
-                        </span>
+                          <span class="occupied-badge executing-badge">执行中</span>
+                        </el-tooltip>
+                        <!-- Other process occupation -->
+                        <el-tooltip
+                          v-else-if="record.occupied_by"
+                          :content="record.occupied_by"
+                          placement="top"
+                        >
+                          <span class="occupied-badge process-badge">占用中: {{ record.occupied_by }}</span>
+                        </el-tooltip>
+                        <!-- User binding (no process occupation) -->
+                        <span
+                          v-else-if="record.locked_by"
+                          class="occupied-badge locked-badge"
+                        >已绑定: {{ record.locked_by }}</span>
                       </div>
                     </template>
 
@@ -634,15 +645,25 @@ function connectionLabel(type) {
 }
 .occupied-badge {
   font-size: 11px;
-  color: #8a6d14;
-  background: #fef3cd;
   padding: 1px 6px;
   border-radius: 8px;
   font-weight: 600;
-  max-width: 80px;
+  max-width: 130px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.executing-badge {
+  background: #fde8e8;
+  color: #e85f5f;
+}
+.process-badge {
+  background: #fef3cd;
+  color: #8a6d14;
+}
+.locked-badge {
+  background: #e8f0fe;
+  color: #5a7d9a;
 }
 
 /* ── Monospace serial text ── */

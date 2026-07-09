@@ -7,8 +7,9 @@ class TestRunnerConfig(AppConfig):
     verbose_name = '执行引擎'
 
     def ready(self):
-        """On startup: recover queued tasks + mark orphan running tasks as interrupted."""
+        """On startup: recover queued tasks + mark orphan tasks and stale runs."""
         try:
+            from .state_machine import recover_orphans
             from .models import TaskCard
             from .views import _enqueue, _device_queue, _schedule_next_queued
             from .runner import is_device_busy, _device_busy
@@ -16,11 +17,13 @@ class TestRunnerConfig(AppConfig):
             # 1. Clear in-memory device busy — fresh start, no devices are running
             _device_busy.clear()
 
-            # 2. Recover orphan running tasks (stuck from previous server session)
-            orphans = TaskCard.objects.filter(status='running')
-            if orphans.exists():
-                orphans.update(status='done', running=False, outcome='interrupted')
-                print(f"[test_runner] Marked {orphans.count()} orphan running task(s) as interrupted")
+            # 2. Atomic orphan recovery: TaskCard(running)→interrupted
+            #    + TestRunRecord(RUNNING)→FAILED in one function
+            recovered = recover_orphans()
+            if recovered['tasks'] or recovered['runs']:
+                print(f"[test_runner] Startup recovery: "
+                      f"{recovered['tasks']} task(s) interrupted, "
+                      f"{recovered['runs']} stale run(s) → FAILED")
 
             # 3. Recover queued tasks into memory queues
             queued = TaskCard.objects.filter(status='queued').order_by('created_at')
@@ -30,6 +33,7 @@ class TestRunnerConfig(AppConfig):
                     _enqueue(serial, {
                         "case_ids": tc.case_ids,
                         "loop_count": tc.loop_count,
+                        "interval_seconds": tc.interval_seconds,
                         "package_name": "",
                         "start_at": None,
                         "end_at": None,
@@ -49,4 +53,6 @@ class TestRunnerConfig(AppConfig):
                     except RuntimeError:
                         pass
         except Exception as e:
-            print(f"[test_runner] Startup recovery skipped: {e}")
+            import traceback
+            print(f"[test_runner] Startup recovery failed: {e}")
+            traceback.print_exc()

@@ -66,20 +66,59 @@ const isDirty = computed(() => {
   return curr !== orig;
 });
 
-// ── Device selector for step debugging ──
+// ── Device selector for step debugging (manual connect/disconnect) ──
+const EXEC_PREFIXES = ['runner-', 'ai_agent', 'task-', 'run-']
 const devices = ref([]);
 const debugDevice = ref("");
+const debugConnected = ref(false)
+const debugConnecting = ref(false)
+
+function isExecutionOccupied(d) {
+  return d.status === 'BUSY' && d.occupied_by &&
+    EXEC_PREFIXES.some(p => d.occupied_by.startsWith(p))
+}
+
+const availableDevices = computed(() =>
+  devices.value.filter(d => !isExecutionOccupied(d))
+)
+
 async function loadDevices() {
   try {
     const { data } = await client.get("/devices");
     if (data.ok) {
-      devices.value = (data.devices || []).filter(
-        (d) => d.status === "ONLINE" || d.status === "BUSY",
-      );
-      if (!debugDevice.value && devices.value.length)
-        debugDevice.value = devices.value[0].serial;
+      devices.value = data.devices || [];
+      // No auto-select — user must explicitly connect
     }
   } catch (_) {}
+}
+
+async function connectDebugDevice() {
+  if (!debugDevice.value) return
+  debugConnecting.value = true
+  try {
+    const { data } = await client.post(`/devices/${debugDevice.value}`, {
+      activate: true, mode: 'observe',
+    })
+    if (data.ok) {
+      debugConnected.value = true
+      ElMessage.success(`已连接调试设备 ${debugDevice.value}`)
+    } else {
+      ElMessage.error(data.error || '连接设备失败')
+    }
+  } catch (_) {
+    ElMessage.error('连接设备失败')
+  } finally {
+    debugConnecting.value = false
+  }
+}
+
+function disconnectDebugDevice() {
+  const serial = debugDevice.value
+  if (serial) {
+    client.post(`/devices/${serial}/disconnect-observe`).catch(() => {})
+  }
+  debugConnected.value = false
+  debugDevice.value = ''
 }
 
 onMounted(async () => {
@@ -219,6 +258,8 @@ function onBeforeUnload(e) {
 
 onUnmounted(() => {
   window.removeEventListener("beforeunload", onBeforeUnload);
+  // Auto-disconnect debug device on page leave
+  disconnectDebugDevice();
 });
 
 // Browser back / router navigation guard
@@ -421,11 +462,12 @@ onBeforeRouteLeave((_to, _from, next) => {
               v-model="debugDevice"
               size="small"
               placeholder="选择调试设备"
-              style="width: 260px"
+              style="width: 220px"
               @focus="loadDevices"
+              :disabled="debugConnected"
             >
               <el-option
-                v-for="d in devices"
+                v-for="d in availableDevices"
                 :key="d.serial"
                 :label="`${d.model || d.serial} [${d.serial}]`"
                 :value="d.serial"
@@ -436,6 +478,25 @@ onBeforeRouteLeave((_to, _from, next) => {
                 }}</span>
               </el-option>
             </el-select>
+            <el-button
+              v-if="!debugConnected"
+              type="primary"
+              size="small"
+              :disabled="!debugDevice"
+              :loading="debugConnecting"
+              @click="connectDebugDevice"
+            >
+              连接设备
+            </el-button>
+            <el-button
+              v-else
+              type="danger"
+              size="small"
+              plain
+              @click="disconnectDebugDevice"
+            >
+              断开
+            </el-button>
             <AnimalButton
               type="primary"
               size="small"

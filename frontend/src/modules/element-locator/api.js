@@ -25,10 +25,19 @@ export function apiDeleteFlow(id) { return client.delete(`/elements/flows/${id}`
 
 // ── Device integration (v2) ──
 
-export function apiGetDevices()        { return client.get('/devices') }
-export function apiActivateDevice(s)   { return client.post(`/devices/${s}/activate`) }
-export function apiGetDeviceInfo()     { return client.get('/elements/device-info') }
-export function apiGetScreenshot()     { return client.get('/elements/screenshot') }
+export function apiGetDevices()           { return client.get('/devices') }
+export function apiActivateDevice(s)      { return client.post(`/devices/${s}/activate`) }
+export function apiGetDeviceInfo()        { return client.get('/elements/device-info') }
+export function apiGetScreenshot()        { return client.get('/elements/screenshot') }
+
+// ── Observe-mode connect/disconnect (manual device control) ──
+
+export function apiConnectObserve(serial) {
+  return client.post(`/devices/${serial}`, { activate: true, mode: 'observe' })
+}
+export function apiDisconnectObserve(serial) {
+  return client.post(`/devices/${serial}/disconnect-observe`)
+}
 
 // ── Element Manager (page & element CRUD) ──
 

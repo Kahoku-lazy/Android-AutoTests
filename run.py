@@ -7,6 +7,7 @@ Usage:
     python run.py status
     python run.py logs
 """
+
 import sys
 import os
 import time
@@ -48,7 +49,7 @@ MYSQL_ENV = {
     "DB_ENGINE": "mysql",
     "DB_NAME": "android_autotests",
     "DB_USER": "root",
-    "DB_PASSWORD": "autotests2026",
+    "DB_PASSWORD": os.environ.get("DB_PASSWORD", ""),
     "DB_HOST": "127.0.0.1",
     "DB_PORT": "3306",
     "PYTHONUTF8": "1",
@@ -74,17 +75,27 @@ def port_in_use(port):
 
 
 def kill_port(port):
+    """按平台释放端口占用进程（Windows 用 netstat+taskkill，*nix 用 lsof+kill）。"""
     killed = False
     try:
-        result = subprocess.run(
-            ["netstat", "-ano"], capture_output=True, text=True, timeout=5
-        )
-        for line in result.stdout.split("\n"):
-            if f":{port}" in line and "LISTENING" in line:
-                parts = line.strip().split()
-                pid = parts[-1]
-                subprocess.run(["taskkill", "/PID", pid, "/F"],
-                               capture_output=True, timeout=5)
+        if sys.platform == "win32":
+            result = subprocess.run(["netstat", "-ano"], capture_output=True, text=True, timeout=5)
+            for line in result.stdout.split("\n"):
+                if f":{port}" in line and "LISTENING" in line:
+                    pid = line.strip().split()[-1]
+                    subprocess.run(["taskkill", "/PID", pid, "/F"], capture_output=True, timeout=5)
+                    print(f"  Killed PID {pid} (port {port})")
+                    killed = True
+        else:
+            # macOS / Linux：lsof 查监听该端口的 PID，逐个 kill
+            result = subprocess.run(
+                ["lsof", "-ti", f"tcp:{port}", "-sTCP:LISTEN"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            for pid in result.stdout.split():
+                subprocess.run(["kill", "-9", pid], capture_output=True, timeout=5)
                 print(f"  Killed PID {pid} (port {port})")
                 killed = True
     except Exception as e:
@@ -95,6 +106,7 @@ def kill_port(port):
 def wait_http(url, timeout=20):
     """Wait for HTTP server to respond with 2xx/3xx on given URL."""
     import urllib.request
+
     for i in range(timeout):
         try:
             urllib.request.urlopen(url, timeout=1)
@@ -126,6 +138,7 @@ def start_redis():
         subprocess.Popen(
             [redis_cmd, "--port", str(REDIS_PORT)],
             cwd=str(ROOT),
+            stdin=subprocess.DEVNULL,
             stdout=open(str(LOG_DIR / "redis.log"), "a"),
             stderr=subprocess.STDOUT,
             creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
@@ -149,9 +162,18 @@ def start_backend():
     LOG_DIR.mkdir(exist_ok=True)
     env = make_env()
     subprocess.Popen(
-        [sys.executable, "-m", "daphne", "-p", str(BACKEND_PORT),
-         "-b", "0.0.0.0", "config.asgi:application"],
+        [
+            sys.executable,
+            "-m",
+            "daphne",
+            "-p",
+            str(BACKEND_PORT),
+            "-b",
+            "0.0.0.0",
+            "config.asgi:application",
+        ],
         cwd=str(ROOT),
+        stdin=subprocess.DEVNULL,
         stdout=open(str(log_file), "a"),
         stderr=subprocess.STDOUT,
         env=env,
@@ -173,6 +195,7 @@ def start_agentscope():
     subprocess.Popen(
         [sys.executable, "run_agentscope.py", "--port", str(AGENTSCOPE_PORT)],
         cwd=str(ROOT),
+        stdin=subprocess.DEVNULL,
         stdout=open(str(log_file), "a"),
         stderr=subprocess.STDOUT,
         env=env,
@@ -195,6 +218,7 @@ def start_frontend():
     subprocess.Popen(
         [npx_cmd, "vite", "--host"],
         cwd=str(ROOT / "frontend"),
+        stdin=subprocess.DEVNULL,
         stdout=open(str(log_file), "a"),
         stderr=subprocess.STDOUT,
         creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
@@ -234,7 +258,9 @@ def cmd_start():
     print("  Redis       : redis://localhost:6379")
     print("  Admin       : http://localhost:8765/admin/  (admin/admin123)")
     print("  DB          : MySQL android_autotests")
-    print("  Logs        : logs/backend.log  logs/frontend.log  logs/agentscope.log  logs/redis.log")
+    print(
+        "  Logs        : logs/backend.log  logs/frontend.log  logs/agentscope.log  logs/redis.log"
+    )
     print("=" * 54)
 
 
@@ -255,12 +281,14 @@ def cmd_restart():
 
 def cmd_status():
     import urllib.request
+
     def check(url):
         try:
             urllib.request.urlopen(url, timeout=2)
             return True
         except Exception:
             return False
+
     redis_on = port_in_use(REDIS_PORT)
     backend_on = check(f"http://127.0.0.1:{BACKEND_PORT}/")
     agentscope_on = check(f"http://127.0.0.1:{AGENTSCOPE_PORT}/docs")

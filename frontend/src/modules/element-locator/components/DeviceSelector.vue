@@ -1,32 +1,33 @@
 <script setup>
-/** DeviceSelector — 设备选择下拉框 + 当前设备信息栏 */
-import { ref, computed, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+/** DeviceSelector — 设备选择下拉框 + 手动连接/断开 + 当前设备信息栏
+
+  Obser mode: 用户主动选择设备 → 点击"连接" → 使用 → 离开页面自动断开。
+  已占用的设备（执行引擎运行中）不显示在下拉列表中。
+*/
+import { ref } from 'vue'
 import { useElementStore } from '../store.js'
 
 const store = useElementStore()
 const refreshing = ref(false)
-
-const selectedSerial = computed({
-  get: () => store.currentSerial,
-  set: (val) => { /* handled by @change */ },
-})
+const pendingSerial = ref('')   // selected but not yet connected
 
 const statusText = (status) => status === 'BUSY' ? '使用中' : '在线'
 const statusTagType = (status) => status === 'BUSY' ? 'warning' : 'success'
 
-function deviceLabel(d) {
-  const parts = []
-  if (d.brand) parts.push(d.brand)
-  if (d.model) parts.push(d.model)
-  if (!parts.length) parts.push(d.serial)
-  if (d.screen) parts.push(`(${d.screen})`)
-  return parts.join(' ')
+function onDropdownChange(serial) {
+  pendingSerial.value = serial
 }
 
-async function onDeviceSelect(serial) {
-  if (!serial || serial === store.currentSerial) return
-  await store.activateDevice(serial)
+async function handleConnect() {
+  const serial = pendingSerial.value || store.currentSerial
+  if (!serial) return
+  await store.connectDevice(serial)
+  pendingSerial.value = ''
+}
+
+function handleDisconnect() {
+  store.disconnectDevice()
+  pendingSerial.value = ''
 }
 
 async function refreshDevices() {
@@ -38,20 +39,20 @@ async function refreshDevices() {
 
 <template>
   <div class="device-selector">
-    <!-- Device dropdown -->
+    <!-- Device dropdown — filtered to available (non-occupied) devices -->
     <el-select
-      :model-value="store.currentSerial"
+      :model-value="store.isConnected ? store.connectedSerial : pendingSerial"
       placeholder="选择设备"
       size="default"
       style="width:260px"
-      @change="onDeviceSelect"
-      :disabled="!store.hasDevices"
+      @change="onDropdownChange"
+      :disabled="store.isConnected"
     >
-      <el-option-group v-if="store.onlineDevices.length" label="可用设备">
+      <el-option-group v-if="store.availableDevices.length" label="可用设备">
         <el-option
-          v-for="d in store.onlineDevices"
+          v-for="d in store.availableDevices"
           :key="d.serial"
-          :label="deviceLabel(d)"
+          :label="`${d.brand || ''} ${d.model || d.serial}`"
           :value="d.serial"
         >
           <div class="opt-row">
@@ -75,8 +76,29 @@ async function refreshDevices() {
       </template>
     </el-select>
 
+    <!-- Connect / Disconnect buttons -->
+    <el-button
+      v-if="!store.isConnected"
+      type="primary"
+      size="small"
+      :disabled="!pendingSerial"
+      @click="handleConnect"
+    >
+      连接
+    </el-button>
+    <el-button
+      v-else
+      type="danger"
+      size="small"
+      plain
+      @click="handleDisconnect"
+    >
+      断开
+    </el-button>
+
     <!-- Current device indicator -->
-    <div v-if="store.currentDevice" class="current-info">
+    <div v-if="store.isConnected && store.currentDevice" class="current-info">
+      <el-tag type="success" size="small" effect="dark">已连接</el-tag>
       <span class="dev-label">
         {{ store.currentDevice.brand }} {{ store.currentDevice.model || store.currentSerial }}
       </span>
@@ -85,8 +107,8 @@ async function refreshDevices() {
         {{ store.currentDevice.connection_type === 'WIFI' ? '📶 WiFi' : '🔌 USB' }}
       </el-tag>
     </div>
-    <div v-else class="current-info no-device">
-      <span>未连接设备</span>
+    <div v-else-if="!store.isConnected" class="current-info no-device">
+      <span>未连接设备 — 请选择设备并点击"连接"</span>
     </div>
 
     <!-- Refresh -->
@@ -99,6 +121,7 @@ async function refreshDevices() {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 .current-info {
   display: flex;
@@ -108,7 +131,7 @@ async function refreshDevices() {
   color: var(--text-secondary);
 }
 .current-info.no-device {
-  color: var(--el-color-danger);
+  color: var(--el-color-warning);
 }
 .dev-label {
   font-weight: 600;

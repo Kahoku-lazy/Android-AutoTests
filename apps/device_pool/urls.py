@@ -6,6 +6,7 @@ from .views import (
     scan_device,
     connect_device,
     disconnect_device,
+    disconnect_observe,
     activate_device,
     device_current,
     lock_device,
@@ -28,6 +29,7 @@ urlpatterns = [
     # v1 serial routes
     path("<str:serial>", connect_device, name="connect"),
     path("<str:serial>/disconnect", disconnect_device, name="disconnect"),
+    path("<str:serial>/disconnect-observe", disconnect_observe, name="disconnect-observe"),
     path("<str:serial>/activate", activate_device, name="activate"),
     # v2
     path("<str:serial>/lock", lock_device, name="lock"),

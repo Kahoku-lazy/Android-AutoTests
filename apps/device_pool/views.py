@@ -6,6 +6,7 @@ v2 per PRD §6.2:
 """
 
 import json
+import re
 import subprocess
 import time
 from datetime import datetime, timedelta
@@ -347,7 +348,18 @@ def scan_device(request):
         if target:
             # 指定目标：USB 串号 或 IP:port
             if ":" in target:
-                # 无线 ADB
+                # 无线 ADB — 纵深防御：校验 IP/端口格式，避免非法输入透传给 adb（PRD §3.7）
+                _ip, _, _port = target.partition(":")
+                _ip_ok = bool(
+                    re.match(
+                        r"^((25[0-5]|2[0-4]\d|[01]?\d?\d)\.){3}"
+                        r"(25[0-5]|2[0-4]\d|[01]?\d?\d)$",
+                        _ip,
+                    )
+                )
+                _port_ok = _port.isdigit() and 1 <= int(_port) <= 65535
+                if not (_ip_ok and _port_ok):
+                    return JsonResponse({"ok": False, "error": "无效的 IP 或端口"}, status=400)
                 result = subprocess.run(
                     ["adb", "connect", target],
                     capture_output=True,

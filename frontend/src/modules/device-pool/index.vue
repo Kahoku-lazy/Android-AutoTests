@@ -8,6 +8,7 @@ import { Button as AnimalButton, Card, Table, Tabs } from "animal-island-vue";
 import { useDevicePoolStore } from "./store.js";
 import LockDialog from "./components/LockDialog.vue";
 import DisconnectDialog from "./components/DisconnectDialog.vue";
+import NetworkConnectDialog from "./components/NetworkConnectDialog.vue";
 import QueuePanel from "./components/QueuePanel.vue";
 import PageHeader from "@/shared/components/PageHeader.vue";
 
@@ -30,6 +31,9 @@ const disconnectDialog = ref({
   lockedBy: "",
   isBusyOthers: false,
 });
+
+// Network (LAN) connect dialog — PRD §3.7 F-07
+const networkDialog = ref({ visible: false, loading: false });
 
 // ── Tabs filtering ──
 const activeFilter = ref("all");
@@ -128,6 +132,32 @@ async function handleRefresh() {
     ElMessage.error(result.error || "扫描失败");
   }
   await loadDevices();
+}
+
+// Network (LAN) connect flow — PRD §3.7 F-07
+function openNetworkDialog() {
+  networkDialog.value = { visible: true, loading: false };
+}
+
+async function handleNetworkConnect({ target }) {
+  if (!target) return;
+  networkDialog.value.loading = true;
+  // store.doScan 内部已 try/catch，恒返回 { ok, error? }
+  const result = await store.doScan(target);
+  networkDialog.value.loading = false;
+  if (result && result.ok) {
+    ElMessage.success(`已连接 ${target}`);
+    networkDialog.value.visible = false;
+    // 单 target scan 只返回该设备，必须全量刷新以恢复完整列表
+    await loadDevices();
+  } else {
+    // 失败：透传后端 error，弹窗保持打开可重试
+    ElMessage.error((result && result.error) || "连接失败");
+  }
+}
+
+function cancelNetworkDialog() {
+  networkDialog.value.visible = false;
 }
 
 function handleRowClick(record) {
@@ -395,6 +425,9 @@ function connectionLabel(type) {
               :count="store.queueLength"
               @cancel="handleCancelQueue"
             />
+            <AnimalButton type="primary" @click="openNetworkDialog">
+              局域网连接
+            </AnimalButton>
             <AnimalButton
               type="primary"
               @click="handleRefresh"
@@ -460,11 +493,19 @@ function connectionLabel(type) {
                         </el-tag>
                         <!-- Execution engine occupation — highest priority -->
                         <el-tooltip
-                          v-if="record.occupied_by && record.status === 'BUSY' && ['runner-','ai_agent','task-','run-'].some(p => record.occupied_by.startsWith(p))"
+                          v-if="
+                            record.occupied_by &&
+                            record.status === 'BUSY' &&
+                            ['runner-', 'ai_agent', 'task-', 'run-'].some((p) =>
+                              record.occupied_by.startsWith(p),
+                            )
+                          "
                           :content="record.occupied_by"
                           placement="top"
                         >
-                          <span class="occupied-badge executing-badge">执行中</span>
+                          <span class="occupied-badge executing-badge"
+                            >执行中</span
+                          >
                         </el-tooltip>
                         <!-- Other process occupation -->
                         <el-tooltip
@@ -472,13 +513,16 @@ function connectionLabel(type) {
                           :content="record.occupied_by"
                           placement="top"
                         >
-                          <span class="occupied-badge process-badge">占用中: {{ record.occupied_by }}</span>
+                          <span class="occupied-badge process-badge"
+                            >占用中: {{ record.occupied_by }}</span
+                          >
                         </el-tooltip>
                         <!-- User binding (no process occupation) -->
                         <span
                           v-else-if="record.locked_by"
                           class="occupied-badge locked-badge"
-                        >已绑定: {{ record.locked_by }}</span>
+                          >已绑定: {{ record.locked_by }}</span
+                        >
                       </div>
                     </template>
 
@@ -573,6 +617,12 @@ function connectionLabel(type) {
       v-bind="disconnectDialog"
       @confirm="handleDisconnectConfirm"
       @cancel="cancelDisconnectDialog"
+    />
+    <NetworkConnectDialog
+      :visible="networkDialog.visible"
+      :loading="networkDialog.loading"
+      @confirm="handleNetworkConnect"
+      @cancel="cancelNetworkDialog"
     />
   </div>
 </template>

@@ -3,9 +3,23 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import client from '@/shared/api-client.js'
-import { wsUrl } from '@/shared/ws-url.js'
 import { Button as AnimalButton } from 'animal-island-vue'
 import PageHeader from '@/shared/components/PageHeader.vue'
+import {
+  isTaskQueued,
+  taskStatusInfo as getTaskStatusInfo,
+  taskProgress as calcTaskProgress,
+  taskCompletedCount,
+  taskTotalCount,
+  buildTaskSavePayload,
+  generateTaskId,
+} from '../composables/taskUtils.js'
+import {
+  connectTaskWebSocket,
+  closeTaskWebSocket,
+  applyWsMessage,
+} from '../composables/useTaskWebSocket.js'
+import { getActiveRuns, listDefinitions } from '../api.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -68,7 +82,7 @@ async function ensureStepDefs() {
   // Load case definitions once
   if (!casesDefs.value.length) {
     try {
-      const { data } = await client.get('/cases/definitions')
+      const { data } = await listDefinitions()
       if (data.ok) casesDefs.value = data.definitions || []
     } catch (_) {}
   }
@@ -118,20 +132,7 @@ async function ensureStepDefs() {
 
 function saveTask() {
   if (!task.value) return
-  const t = task.value
-  client.post('/runner/tasks/save', {
-    id: t.id, name: t.name, mode: t.mode, deviceSerial: t.deviceSerial,
-    caseIds: t.caseIds, loopCount: t.loopCount, intervalSeconds: t.intervalSeconds || 5, running: t.running,
-    runId: t.runId || '', caseItems: t.caseItems, stepStates: t.stepStates,
-    overallPass: t.overallPass, overallFail: t.overallFail,
-    logs: (t.logs || []).slice(-200),
-    createdAt: t.createdAt, creator: t.creator,
-    currentCaseTitle: t.currentCaseTitle, currentIteration: t.currentIteration,
-    failedSteps: (t.failedSteps || []).slice(-200),
-    conclusion: t.conclusion || '', bugTicket: t.bugTicket || '',
-    outcome: t.outcome || '', round: t.round || 0,
-    status: t.status || (t.running ? 'running' : t.outcome === 'completed' ? 'done' : 'idle'),
-  }).catch(() => {})
+  client.post('/runner/tasks/save', buildTaskSavePayload(task.value)).catch(() => {})
 }
 
 const logPanel = ref(null)
@@ -147,28 +148,16 @@ function taskAddLog(msg, level = 'info') {
 
 // ── Helpers ──
 function taskProgress() {
-  const ci = task.value?.caseItems; if (!ci?.length) return 0
-  const total = ci.reduce((s, c) => s + c.total, 0)
-  const done = ci.reduce((s, c) => s + c.pass + c.fail, 0)
-  return total ? Math.round(done / total * 100) : 0
+  return calcTaskProgress(task.value || {})
 }
 function taskCompleted() {
-  const ci = task.value?.caseItems; if (!ci?.length) return 0
-  return ci.reduce((s, c) => s + c.pass + c.fail, 0)
+  return taskCompletedCount(task.value || {})
 }
 function taskTotal() {
-  const ci = task.value?.caseItems; if (!ci?.length) return 0
-  return ci.reduce((s, c) => s + c.total, 0)
+  return taskTotalCount(task.value || {})
 }
 function taskStatusInfo() {
-  const t = task.value; if (!t) return { label: '', color: '#888' }
-  if (t.running) return { label: '执行中', color: '#889df0', icon: '⚡' }
-  if (t.status === 'queued' || (t.caseItems?.length && t.caseItems[0]?.status === 'pending' && !t.runId)) return { label: '等待中', color: '#f7cd67', icon: '⏳' }
-  if (t.outcome === 'stopped') return { label: '未完成', color: '#e85f5f', icon: '⏹' }
-  if (t.outcome === 'interrupted') return { label: '运行中断', color: '#f7a8c4', icon: '⚠️' }
-  if (t.outcome === 'error') return { label: '异常终止', color: '#e85f5f', icon: '💥' }
-  if (t.outcome === 'completed') return { label: '已完成', color: '#6fba2c', icon: '✅' }
-  return { label: '未执行', color: '#8b7355', icon: '📝' }
+  return getTaskStatusInfo(task.value || {})
 }
 function formatTime(isoStr) {
   if (!isoStr) return '—'
@@ -279,126 +268,44 @@ function getBugMeta(entry) {
   }
 }
 
-// ── WS ──
-function getWsMap() { return window[WS_KEY] || {} }
-function setWsMap(m) { window[WS_KEY] = m }
-
-function connectTaskWS(runId) {
+// ── WS（进入详情页始终重绑 handler，修复列表页→详情页闭包陈旧） ──
+function bindDetailTaskWS(runId) {
   if (!task.value) return
-  const wm = getWsMap()
-  if (wm[task.value.id]) { try { wm[task.value.id].close() } catch (_) {} }
-  const url = `${wsUrl('/ws/test-run/' + runId)}?token=${encodeURIComponent(localStorage.getItem('access_token') || '')}`
-  const ws = new WebSocket(url)
-  wm[task.value.id] = ws
-  setWsMap(wm)
-
-  ws.onopen = () => {
-    taskAddLog('🟢 日志已连接', 'success')
-    if (task.value) task.value._wsJustReconnected = true
-  }
-
-  ws.onmessage = (e) => {
+  const taskId = task.value.id
+  connectTaskWebSocket(taskId, runId, (msg) => {
     if (!task.value) return
-    try {
-      const msg = JSON.parse(e.data)
-      const ci = task.value.caseItems?.find(c => c.id === msg.case_id)
-      switch (msg.type) {
-        case 'log': taskAddLog(msg.message); break
-        case 'case_started':
-          if (ci) { ci.status = 'running'; ci.pass = 0; ci.fail = 0 }
-          if (!task.value.stepStates) task.value.stepStates = []
-          task.value.stepStates = []
-          task.value.currentCaseTitle = ci?.title || msg.case_id || ''
-          task.value.currentIteration = 1
-          // Auto-expand the running case
-          if (ci) expandedCases.value = new Set([...expandedCases.value, ci.id])
-          saveTask()
-          break
-        case 'step_started':
-          if (!task.value.stepStates) task.value.stepStates = []
-          // 新迭代开始：step 0 已完成(非running) 且非刚重连 → 清空步骤
-          if (msg.step_index === 0 && !task.value._wsJustReconnected) {
-            const s0 = task.value.stepStates.find(s => s.index === 0)
-            if (s0 && s0.result !== 'running') task.value.stepStates = []
-          }
-          task.value.stepStates = [...task.value.stepStates.filter(s => s.index !== msg.step_index),
-            { index: msg.step_index, total: msg.total_steps, type: msg.step_type,
-              desc: msg.description, result: 'running' }
-          ].sort((a, b) => a.index - b.index)
-          task.value.currentIteration = msg.iteration
-          break
-        case 'step_result':
-          if (!task.value.stepStates) task.value.stepStates = []
-          task.value.stepStates = [...task.value.stepStates.filter(s => s.index !== msg.step_index),
-            { index: msg.step_index, total: msg.total_steps, type: msg.step_type, desc: msg.description, result: msg.result }
-          ].sort((a, b) => a.index - b.index)
-          if (msg.result !== 'pass' && msg.result !== 'stopped') {
-            if (!task.value.failedSteps) task.value.failedSteps = []
-            const dup = task.value.failedSteps.find(
-              f => f.caseTitle === ci?.title && f.iteration === (task.value.currentIteration || 1) && f.stepIndex === msg.step_index
-            )
-            if (!dup) {
-              task.value.failedSteps.push({
-                caseTitle: ci?.title || msg.case_id || '',
-                iteration: task.value.currentIteration || 1,
-                stepIndex: msg.step_index,
-                stepType: msg.step_type,
-                description: msg.description || '',
-                result: msg.result,
-              })
-            }
-          }
-          break
-        case 'iteration_result':
-          // WS 重连后首条消息：用真实轮次初始化计数（之前完成的轮次我们错过了）
-          if (task.value._wsJustReconnected && ci && !ci.pass && !ci.fail && msg.iteration > 1) {
-            const prevTotal = msg.iteration - 1  // 本轮之前已完成的总轮次
-            // 乐观假设之前全部通过（后续会通过失败记录纠正）
-            ci.pass = prevTotal
-            task.value.overallPass = (task.value.overallPass || 0) + prevTotal
-          }
-          task.value._wsJustReconnected = false
-
-          if (msg.result === 'pass') { if (ci) ci.pass++; task.value.overallPass = (task.value.overallPass || 0) + 1 }
-          else { if (ci) ci.fail++; task.value.overallFail = (task.value.overallFail || 0) + 1 }
-          if (ci) ci.rate = ci.total ? Math.round((ci.pass + ci.fail) / ci.total * 100) : 0
-          task.value.currentIteration = msg.iteration  // 使用 WS 消息中的真实轮次
-          saveTask()
-          break
-        case 'case_finished':
-          if (ci) { ci.status = 'done'; ci.pass = parseInt(msg.pass); ci.fail = parseInt(msg.fail); ci.rate = 100 }
-          saveTask()
-          break
-        case 'run_finished':
-          task.value.running = false
-          if (task.value.outcome !== 'stopped') task.value.outcome = 'completed'
-          delete wm[task.value.id]; setWsMap(wm)
-          task.value.caseItems?.forEach(c => { if (c.status !== 'done') c.status = 'done' })
-          task.value.currentCaseTitle = ''; task.value.currentIteration = 0
-          if (!task.value.conclusion) {
-            const pf = task.value.overallFail || 0
-            task.value.conclusion = pf === 0 ? '✅ 测试通过：所有用例全部执行成功' : `❌ 测试不通过：${pf} 个用例执行失败`
-          }
-          taskAddLog(`🏁 完成 ✅${task.value.overallPass || 0} ❌${task.value.overallFail || 0}`, 'success')
-          saveTask()
-          break
-        case 'device_error':
-          task.value.running = false
-          taskAddLog(`💥 ${msg.error}`, 'error')
-          saveTask()
-          break
-      }
-    } catch (_) {}
+    if (msg.type === 'log') {
+      taskAddLog(msg.message)
+      return
+    }
+    applyWsMessage(task.value, msg, {
+      reconnectAware: true,
+      addLog: (text, level) => taskAddLog(text, level),
+      save: saveTask,
+      onCaseStarted: (ci) => {
+        if (ci) expandedCases.value = new Set([...expandedCases.value, ci.id])
+      },
+      onRunFinished: () => closeTaskWebSocket(taskId),
+    })
+  })
+  const wm = getWsMap()
+  const ws = wm[taskId]
+  if (ws) {
+    ws.onopen = () => {
+      taskAddLog('🟢 日志已连接', 'success')
+      if (task.value) task.value._wsJustReconnected = true
+    }
+    ws.onclose = () => { if (task.value?.running) taskAddLog('🔴 日志断开', 'warn') }
   }
-  ws.onclose = () => { if (task.value?.running) taskAddLog('🔴 日志断开', 'warn') }
 }
+
+function getWsMap() { return window[WS_KEY] || {} }
 
 let saveTimer = null
 watch(taskId, () => {
   loadTask()
   if (task.value?.running && task.value.runId) {
-    const wm = getWsMap()
-    if (!wm[task.value.id]) connectTaskWS(task.value.runId)
+    bindDetailTaskWS(task.value.runId)
   }
 })
 
@@ -406,24 +313,22 @@ onMounted(() => {
   loadTask().then(async () => {
     if (!task.value) return
     if (task.value.running && task.value.runId) {
-      const wm = getWsMap()
-      if (!wm[task.value.id]) connectTaskWS(task.value.runId)
+      bindDetailTaskWS(task.value.runId)
     } else if (task.value.running && !task.value.runId) {
-      // 旧任务没有 runId：从 /runner/active 查找并恢复 WS 连接
       try {
-        const { data } = await client.get('/runner/active')
+        const { data } = await getActiveRuns()
         if (data.ok && data.active?.length) {
           const active = data.active.find(a => a.client_task_id === task.value.id)
           if (active) {
             task.value.runId = active.run_id
-            connectTaskWS(active.run_id)
+            bindDetailTaskWS(active.run_id)
             taskAddLog('🔄 已恢复实时连接')
           }
         }
       } catch (_) {}
     }
     saveTimer = setInterval(() => { if (task.value) saveTask() }, 3000)
-    if (task.value && !task.value.running && task.value.caseItems?.length && task.value.caseItems[0]?.status === 'pending') {
+    if (task.value && isTaskQueued(task.value)) {
       startDetailQueuePolling()
     }
   })
@@ -448,67 +353,50 @@ async function stopTask() {
   try { await ElMessageBox.confirm('确定停止该任务？', '停止任务', { confirmButtonText: '停止', cancelButtonText: '取消', type: 'warning' }) } catch (_) { return }
   try { await client.post(`/runner/run/${task.value.runId}/stop`) } catch (_) {}
   task.value.running = false
+  task.value.status = 'done'
   task.value.currentCaseTitle = ''
   task.value.currentIteration = 0
+  task.value.outcome = 'stopped'
+  closeTaskWebSocket(task.value.id)
   saveTask()
 }
 
 async function restartTask() {
   if (!task.value) return
-  task.value.stepStates = []; task.value.overallPass = 0
-  task.value.overallFail = 0; task.value.logs = []
-  task.value.currentCaseTitle = ''; task.value.currentIteration = 0
-
-  // Load case definitions and populate caseItems with step definitions
-  try {
-    const { data } = await client.get('/cases/definitions')
-    if (!data.ok || !data.definitions?.length) { ElMessage.error('无法加载用例'); return }
-    casesDefs.value = data.definitions
-    const idSet = new Set((task.value.caseIds || []).map(String))
-    task.value.caseItems = data.definitions
-      .filter(c => idSet.has(String(c.id)))
-      .map((c, i) => {
-        let rawSteps = c.steps_data || []
-        if (!rawSteps.length && c.steps_json) {
-          try { rawSteps = JSON.parse(c.steps_json) } catch (_) {}
-        }
-        const steps = rawSteps.map(s => ({
-            type: s.type || '', xpath: s.xpath || '',
-            description: s.description || s.xpath || s.expected_text || '',
-          }))
-        return {
-          id: c.id, title: c.title, index: i + 1, status: 'pending',
-          pass: 0, fail: 0, total: task.value.loopCount, rate: 0, steps,
-        }
-      })
-  } catch (_) { ElMessage.error('无法加载用例'); return }
-
-  saveTask()
-  const body = { case_ids: task.value.caseIds, loop_count: task.value.loopCount, interval_seconds: task.value.intervalSeconds || 5, device_serial: task.value.deviceSerial, client_task_id: task.value.id }
-  try {
-    const { data } = await client.post('/runner/run', body)
-    if (data.ok && data.runs?.[0]?.run_id) {
-      task.value.running = true
-      task.value.status = 'running'
-      task.value.runId = data.runs[0].run_id
-      task.value.currentCaseTitle = ''
-      task.value.currentIteration = 0
-      connectTaskWS(task.value.runId)
-      taskAddLog('🚀 任务已重新启动')
-    } else if (data.ok && data.queued?.length) {
-      task.value.running = false
-      task.value.status = 'queued'
-      taskAddLog('⏳ 设备正忙，任务已加入队列等待执行')
-      ElMessage.info('设备正忙，任务已加入队列，设备空闲后自动执行')
-      startDetailQueuePolling()
-    } else {
-      taskAddLog('❌ 启动失败', 'error')
-      ElMessage.error(data.error || '启动失败')
-    }
-  } catch (e) {
-    taskAddLog(`❌ ${e.message}`, 'error')
-    ElMessage.error('启动失败')
+  const prev = task.value
+  const round = (prev.round || 0) + 1
+  const tid = generateTaskId()
+  const newTask = {
+    id: tid,
+    name: prev.name,
+    round,
+    mode: prev.mode,
+    deviceSerial: prev.deviceSerial,
+    caseIds: [...prev.caseIds],
+    loopCount: prev.loopCount,
+    intervalSeconds: prev.intervalSeconds || 5,
+    running: false,
+    runId: '',
+    status: 'idle',
+    caseItems: [],
+    stepStates: [],
+    logs: [],
+    overallPass: 0,
+    overallFail: 0,
+    createdAt: new Date().toISOString(),
+    creator: prev.creator || '',
+    currentCaseTitle: '',
+    currentIteration: 0,
+    outcome: '',
   }
+  try {
+    await client.post('/runner/tasks/save', buildTaskSavePayload(newTask))
+  } catch (_) {
+    ElMessage.error('创建新任务失败')
+    return
+  }
+  ElMessage.success(`已创建新任务「${newTask.name}」第${round}轮`)
+  router.push(`/runner/task/${tid}`)
 }
 
 // ── Detail queue polling ──
@@ -516,18 +404,16 @@ const detailPollTimer = ref(null)
 
 async function pollDetailQueuedTask() {
   if (!task.value || task.value.running) { stopDetailQueuePolling(); return }
-  if (!task.value.caseItems?.length || task.value.caseItems[0]?.status !== 'pending') {
-    stopDetailQueuePolling(); return
-  }
+  if (!isTaskQueued(task.value)) { stopDetailQueuePolling(); return }
   try {
-    const { data } = await client.get('/runner/active')
+    const { data } = await getActiveRuns()
     if (!data.ok || !data.active?.length) return
     for (const active of data.active) {
       if (active.client_task_id === task.value.id) {
         task.value.running = true
         task.value.status = 'running'
         task.value.runId = active.run_id
-        connectTaskWS(active.run_id)
+        bindDetailTaskWS(active.run_id)
         taskAddLog('🚀 排队任务已被后台调度，开始执行')
         stopDetailQueuePolling()
         return
@@ -550,7 +436,7 @@ async function removeTask() {
   try { await ElMessageBox.confirm(`删除任务「${task.value.name || task.value.id}」？`, '确认删除', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }) } catch (_) { return }
   if (task.value.running) {
     try { await client.post(`/runner/run/${task.value.runId}/stop`) } catch (_) {}
-    const wm = getWsMap(); if (wm[task.value.id]) { try { wm[task.value.id].close() } catch (_) {}; delete wm[task.value.id]; setWsMap(wm) }
+    const wm = getWsMap(); if (wm[task.value.id]) closeTaskWebSocket(task.value.id)
   }
   try { await client.delete(`/runner/tasks/${taskId.value}`) } catch (_) {}
   router.push('/runner')
@@ -620,7 +506,7 @@ async function removeTask() {
           <AnimalButton @click="router.push('/runner')">← 返回列表</AnimalButton>
           <AnimalButton v-if="task.running" type="danger" @click="stopTask">⏹ 停止</AnimalButton>
           <AnimalButton v-else-if="!task.caseItems?.length" type="primary" @click="restartTask">▶ 执行</AnimalButton>
-          <AnimalButton v-else-if="task.caseItems?.[0]?.status === 'pending'" type="warning" @click="stopTask">⏸ 停止执行</AnimalButton>
+          <AnimalButton v-else-if="isTaskQueued(task)" type="warning" @click="stopTask">⏸ 取消排队</AnimalButton>
           <AnimalButton v-else type="primary" @click="restartTask">↻ 重新执行</AnimalButton>
           <AnimalButton type="danger" plain @click="removeTask">🗑 删除</AnimalButton>
         </div>

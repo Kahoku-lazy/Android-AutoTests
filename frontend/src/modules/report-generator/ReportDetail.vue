@@ -373,14 +373,42 @@ watch(activeTab, async (tab) => {
 </template>
 
 <style scoped>
-.doc-page { display: flex; flex-direction: column; height: 100%; }
+.doc-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.doc-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.detail-tabs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-tabs :deep(.animal-tabs) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
 /* ── Top bar ── */
-.top-bar { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.top-bar { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; flex-shrink: 0; }
 .run-meta { display: flex; align-items: center; gap: 12px; font-size: 13px; color: #8a7b66; flex-wrap: wrap; }
 
 /* ── KPI Cards ── */
-.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; flex-shrink: 0; }
 .kpi-card {
   background: rgb(247,243,223); border-radius: 18px; padding: 20px 24px;
   border: 1.5px solid #c4b89e; position: relative; overflow: hidden;
@@ -400,7 +428,18 @@ watch(activeTab, async (tab) => {
 .num-warn { color: #dba90e; }
 
 /* ── Tabs ── */
-.detail-tabs :deep(.animal-tabs__content) { padding-top: 16px; }
+.detail-tabs :deep(.animal-tabs__content) {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: block;
+  padding-top: 16px;
+}
+
+.detail-tabs :deep(.animal-tabs__inner) {
+  min-height: min-content;
+}
 
 /* ── Table card ── */
 .table-card { overflow: hidden; }

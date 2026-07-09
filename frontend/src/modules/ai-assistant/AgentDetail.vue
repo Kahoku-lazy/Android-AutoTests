@@ -460,10 +460,22 @@ async function save() {
 </template>
 
 <style scoped>
+.ai-animal-theme {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
 .agent-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
   flex-direction: column;
   gap: 18px;
   padding-bottom: 40px;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* Back button */

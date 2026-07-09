@@ -3,9 +3,27 @@ import { ref, computed, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import client from "@/shared/api-client.js";
-import { wsUrl } from "@/shared/ws-url.js";
 import { Button as AnimalButton, Card, Tabs, Modal } from "animal-island-vue";
 import PageHeader from "@/shared/components/PageHeader.vue";
+import {
+  generateTaskId,
+  readTaskCounter,
+  writeTaskCounter,
+  isTaskQueued,
+  taskBucket,
+  taskCardClass,
+  taskStatusInfo,
+  taskCompletedCount,
+  taskTotalCount,
+  taskProgress,
+  buildTaskSavePayload,
+} from "./composables/taskUtils.js";
+import {
+  connectTaskWebSocket,
+  closeTaskWebSocket,
+  applyWsMessage,
+} from "./composables/useTaskWebSocket.js";
+import { startRun, listDefinitions, listDevices } from "./api.js";
 
 const router = useRouter();
 
@@ -13,33 +31,7 @@ const cases = ref([]);
 const devices = ref([]);
 const showNewTask = ref(false);
 const activeTab = ref("all");
-
-const WS_MAP_KEY = "_task_ws_map";
-const COUNTER_KEY = "_task_id_counter";
 const tasks = ref([]);
-
-// ── Sequential ID generator: ID-001, ID-002, ... (collision-safe) ──
-function _readCounter() {
-  try {
-    return parseInt(localStorage.getItem(COUNTER_KEY)) || 0;
-  } catch (_) {
-    return 0;
-  }
-}
-function _writeCounter(n) {
-  localStorage.setItem(COUNTER_KEY, String(n));
-}
-function generateTaskId() {
-  const existing = new Set(tasks.value.map((t) => t.id));
-  let n = Math.max(_readCounter(), 0);
-  let tid;
-  do {
-    n++;
-    tid = `ID-${String(n).padStart(3, "0")}`;
-  } while (existing.has(tid));
-  _writeCounter(n);
-  return tid;
-}
 
 // ── JWT decode for creator ──
 function getCurrentUsername() {
@@ -53,69 +45,31 @@ function getCurrentUsername() {
   }
 }
 
-// ── Card style ──
-const CARD_BG = "rgb(247,243,223)";
 
-// ── Server persistence (replaces localStorage) ──
-function getWsMap() {
-  return window[WS_MAP_KEY] || {};
-}
-function setWsMap(m) {
-  window[WS_MAP_KEY] = m;
-}
-
+// ── Server persistence ──
 async function saveTaskToServer(task) {
   try {
-    const body = {
-      id: task.id,
-      name: task.name,
-      mode: task.mode,
-      deviceSerial: task.deviceSerial,
-      caseIds: task.caseIds,
-      loopCount: task.loopCount,
-      intervalSeconds: task.intervalSeconds,
-      running: task.running,
-      runId: task.runId || "",
-      caseItems: task.caseItems,
-      stepStates: task.stepStates,
-      overallPass: task.overallPass,
-      overallFail: task.overallFail,
-      logs: (task.logs || []).slice(-200),
-      createdAt: task.createdAt,
-      creator: task.creator,
-      currentCaseTitle: task.currentCaseTitle,
-      currentIteration: task.currentIteration,
-      failedSteps: (task.failedSteps || []).slice(-200),
-      conclusion: task.conclusion || "",
-      bugTicket: task.bugTicket || "",
-      outcome: task.outcome || "",
-      round: task.round || 0,
-      status: task.status || deriveTaskStatus(task),
-    };
-    await client.post("/runner/tasks/save", body);
+    await client.post("/runner/tasks/save", buildTaskSavePayload(task));
   } catch (e) {
     console.error("[saveTaskToServer] failed:", e);
     ElMessage.error("保存任务失败，请检查网络");
   }
 }
 
-function deriveTaskStatus(task) {
-  if (task.running) return "running";
-  if (task.status === "queued") return "queued";
-  // Terminal outcomes take priority — a done task should never be re-classified
-  if (task.outcome === "completed") return "done";
-  if (
-    task.outcome &&
-    ["stopped", "interrupted", "error"].includes(task.outcome)
-  )
-    return "done";
-  // 后端 status 是排队的唯一真相（第79行已覆盖）；不再用 caseItems 猜测，
-  // 否则遗留 pending caseItems 的 idle 任务会被误判为"排队中"（取消排队按钮还会失败）
-  return "idle";
-}
-
-function isTaskQueued(task) {
-  return deriveTaskStatus(task) === "queued";
+// 脏任务 ID 集合 — 仅保存有变更的任务，避免 WS 风暴时全表写入
+const _dirtyTaskIds = new Set();
+let _saveTimer = null;
+function scheduleSave(taskId) {
+  if (taskId) _dirtyTaskIds.add(taskId);
+  if (_saveTimer) return;
+  _saveTimer = setTimeout(() => {
+    _saveTimer = null;
+    for (const id of _dirtyTaskIds) {
+      const t = tasks.value.find((x) => x.id === id);
+      if (t) saveTaskToServer(t);
+    }
+    _dirtyTaskIds.clear();
+  }, 1000);
 }
 
 async function loadTasks() {
@@ -135,6 +89,8 @@ async function loadTasks() {
         round: d.round || 0,
         conclusion: d.conclusion || "",
         bugTicket: d.bugTicket || "",
+        startAt: d.startAt || "",
+        endAt: d.endAt || "",
       }));
       // Sync counter
       let maxSeq = 0;
@@ -142,25 +98,14 @@ async function loadTasks() {
         const m = String(t.id).match(/^ID-(\d+)$/);
         if (m) maxSeq = Math.max(maxSeq, parseInt(m[1]));
       }
-      if (maxSeq >= _readCounter()) _writeCounter(maxSeq);
+      if (maxSeq >= readTaskCounter()) writeTaskCounter(maxSeq);
     }
   } catch (_) {
     /* 加载失败保持空列表 */
   }
 }
 
-// Throttled save: persists the full task list at most once per second.
-// Uses non-resetting timer to prevent WebSocket message storms from
-// perpetually deferring the save (starvation). Once the timer fires,
-// the next call starts a fresh cycle.
-let _saveTimer = null;
-function scheduleSave() {
-  if (_saveTimer) return; // 已有定时器，不重置（防止 WS 消息饿死）
-  _saveTimer = setTimeout(() => {
-    _saveTimer = null;
-    for (const t of tasks.value) saveTaskToServer(t);
-  }, 1000);
-}
+// Throttled save — 见上方 scheduleSave
 
 // ── Filter ──
 const runningTasks = computed(() => tasks.value.filter((t) => t.running));
@@ -193,20 +138,6 @@ function tasksForTab(key) {
   return notExecutedTasks.value;
 }
 
-function taskBucket(task) {
-  if (task.running) return "running";
-  if (isTaskQueued(task)) return "waiting";
-  if (task.outcome === "completed") return "completed";
-  // Terminal states (stopped/interrupted/error) → incomplete regardless of caseItems
-  if (
-    task.outcome &&
-    ["stopped", "interrupted", "error"].includes(task.outcome)
-  )
-    return "incomplete";
-  if (task.caseItems?.length) return "incomplete";
-  return "notExecuted";
-}
-
 // ── Helpers ──
 function ts() {
   return new Date().toLocaleTimeString("zh-CN", { hour12: false });
@@ -227,37 +158,6 @@ function findDevice(serial) {
   return (
     devices.value.find((d) => d.serial === serial) || { serial, model: serial }
   );
-}
-
-function taskCompletedCount(task) {
-  const ci = task.caseItems;
-  if (!ci?.length) return 0;
-  return ci.reduce((s, c) => s + c.pass + c.fail, 0);
-}
-function taskTotalCount(task) {
-  const ci = task.caseItems;
-  if (ci?.length) return ci.reduce((s, c) => s + c.total, 0);
-  return (task.caseIds?.length || 0) * (task.loopCount || 1);
-}
-function taskProgress(task) {
-  const total = taskTotalCount(task);
-  if (!total) return 0;
-  return Math.round((taskCompletedCount(task) / total) * 100);
-}
-
-function taskStatusInfo(task) {
-  if (task.running) return { label: "执行中", color: "#889df0", icon: "⚡" };
-  if (isTaskQueued(task))
-    return { label: "等待中", color: "#f7cd67", icon: "⏳" };
-  if (task.outcome === "stopped")
-    return { label: "未完成", color: "#e85f5f", icon: "⏹" };
-  if (task.outcome === "interrupted")
-    return { label: "运行中断", color: "#f7a8c4", icon: "⚠️" };
-  if (task.outcome === "error")
-    return { label: "异常终止", color: "#e85f5f", icon: "💥" };
-  if (task.outcome === "completed")
-    return { label: "已完成", color: "#6fba2c", icon: "✅" };
-  return { label: "未执行", color: "#8b7355", icon: "📝" };
 }
 
 function formatTime(isoStr) {
@@ -331,7 +231,7 @@ async function createAndStart() {
     ElMessage.warning("轮间间隔最小为 5 秒，请重新设置");
     return;
   }
-  const tid = generateTaskId();
+  const tid = generateTaskId(new Set(tasks.value.map((t) => t.id)));
   const task = {
     id: tid,
     name: newForm.value.name.trim(),
@@ -427,7 +327,7 @@ async function doStartTask(task) {
     if (task.endAt) body.end_at = new Date(task.endAt).toISOString();
   }
   try {
-    const { data } = await client.post("/runner/run", body);
+    const { data } = await startRun(body);
     if (data.ok && data.runs?.[0]?.run_id) {
       const idx = tasks.value.findIndex((t) => t.id === task.id);
       if (idx !== -1) {
@@ -437,7 +337,7 @@ async function doStartTask(task) {
           runId: data.runs[0].run_id,
           status: "running",
         };
-        connectTaskWS(tasks.value[idx], data.runs[0].run_id);
+        bindListTaskWS(tasks.value[idx], data.runs[0].run_id);
         taskAddLog(tasks.value[idx], "🚀 任务已启动");
       }
     } else if (data.ok && data.queued?.length) {
@@ -462,7 +362,7 @@ async function doStartTask(task) {
     taskAddLog(task, `❌ ${errMsg}`, "error");
     ElMessage.error(`启动失败：${errMsg}`);
   }
-  scheduleSave();
+  scheduleSave(task.id);
 }
 
 async function stopTask(task) {
@@ -522,17 +422,11 @@ async function stopTask(task) {
     ElMessage.error("停止请求失败，请检查网络连接");
   }
   task.running = false;
+  task.status = "done";
   task.currentCaseTitle = "";
   task.currentIteration = 0;
   task.outcome = "stopped";
-  const wm = getWsMap();
-  if (wm[task.id]) {
-    try {
-      wm[task.id].close();
-    } catch (_) {}
-    delete wm[task.id];
-    setWsMap(wm);
-  }
+  closeTaskWebSocket(task.id);
   saveTaskToServer(task); // 立即持久化，不依赖防抖
 }
 
@@ -552,14 +446,7 @@ async function removeTask(task) {
         await client.post(`/runner/run/${task.runId}/stop`);
       } catch (_) {}
     }
-    const wm = getWsMap();
-    if (wm[task.id]) {
-      try {
-        wm[task.id].close();
-      } catch (_) {}
-      delete wm[task.id];
-      setWsMap(wm);
-    }
+    closeTaskWebSocket(task.id);
   }
   try {
     await client.delete(`/runner/tasks/${task.id}`);
@@ -571,7 +458,7 @@ async function removeTask(task) {
 function restartTask(task) {
   // Create a brand-new task card with new ID, copying config from original
   const round = (task.round || 0) + 1;
-  const tid = generateTaskId();
+  const tid = generateTaskId(new Set(tasks.value.map((t) => t.id)));
   const newTask = {
     id: tid,
     name: task.name, // keep original name, not appended
@@ -601,148 +488,22 @@ function restartTask(task) {
   doStartTask(newTask);
 }
 
-// ── WebSocket ──
-function connectTaskWS(task, runId) {
-  const wm = getWsMap();
-  if (wm[task.id]) {
-    try {
-      wm[task.id].close();
-    } catch (_) {}
-  }
-  const url = `${wsUrl("/ws/test-run/" + runId)}?token=${encodeURIComponent(localStorage.getItem("access_token") || "")}`;
-  const ws = new WebSocket(url);
-  wm[task.id] = ws;
-  setWsMap(wm);
-  ws.onmessage = (e) => {
-    try {
-      const msg = JSON.parse(e.data);
-      const ci = task.caseItems?.find((c) => c.id === msg.case_id);
-      switch (msg.type) {
-        case "log":
-          taskAddLog(task, msg.message);
-          break;
-        case "case_started":
-          if (ci) {
-            ci.status = "running";
-            ci.pass = 0;
-            ci.fail = 0;
-          }
-          task.stepStates = [];
-          task.currentCaseTitle = ci?.title || msg.case_id || "";
-          task.currentIteration = 1;
-          break;
-        case "step_started":
-          // 标记当前步骤为执行中（蓝色脉冲），移除同步骤旧状态
-          task.stepStates = [
-            ...(task.stepStates || []).filter(
-              (s) => s.index !== msg.step_index,
-            ),
-            {
-              index: msg.step_index,
-              total: msg.total_steps,
-              type: msg.step_type,
-              desc: msg.description,
-              result: "running",
-            },
-          ].sort((a, b) => a.index - b.index);
-          task.currentIteration = msg.iteration;
-          break;
-        case "step_result":
-          task.stepStates = [
-            ...(task.stepStates || []).filter(
-              (s) => s.index !== msg.step_index,
-            ),
-            {
-              index: msg.step_index,
-              total: msg.total_steps,
-              type: msg.step_type,
-              desc: msg.description,
-              result: msg.result,
-            },
-          ].sort((a, b) => a.index - b.index);
-          // Track failed steps for report
-          if (msg.result !== "pass" && msg.result !== "stopped") {
-            if (!task.failedSteps) task.failedSteps = [];
-            const dup = task.failedSteps.find(
-              (f) =>
-                f.caseTitle === ci?.title &&
-                f.iteration === (task.currentIteration || 1) &&
-                f.stepIndex === msg.step_index,
-            );
-            if (!dup) {
-              task.failedSteps.push({
-                caseTitle: ci?.title || msg.case_id || "",
-                iteration: task.currentIteration || 1,
-                stepIndex: msg.step_index,
-                stepType: msg.step_type,
-                description: msg.description || "",
-                result: msg.result,
-              });
-            }
-          }
-          break;
-        case "iteration_result":
-          if (msg.result === "pass") {
-            if (ci) ci.pass++;
-            task.overallPass = (task.overallPass || 0) + 1;
-          } else {
-            if (ci) ci.fail++;
-            task.overallFail = (task.overallFail || 0) + 1;
-          }
-          if (ci)
-            ci.rate = ci.total
-              ? Math.round(((ci.pass + ci.fail) / ci.total) * 100)
-              : 0;
-          task.currentIteration = msg.iteration; // 使用 WS 消息中的真实轮次
-          scheduleSave(); // persist progress on each iteration result
-          break;
-        case "case_finished":
-          if (ci) {
-            ci.status = "done";
-            ci.pass = parseInt(msg.pass);
-            ci.fail = parseInt(msg.fail);
-            ci.rate = 100;
-          }
-          scheduleSave(); // persist on case completion
-          break;
-        case "run_finished":
-          task.running = false;
-          task.status = "done";
-          // Only set completed if user didn't already stop the task
-          if (task.outcome !== "stopped") task.outcome = "completed";
-          delete wm[task.id];
-          setWsMap(wm);
-          task.caseItems?.forEach((c) => {
-            if (c.status !== "done") c.status = "done";
-          });
-          task.currentCaseTitle = "";
-          task.currentIteration = 0;
-          // Auto-generate conclusion if not manually set
-          if (!task.conclusion) {
-            const pf = task.overallFail || 0;
-            task.conclusion =
-              pf === 0
-                ? "✅ 测试通过：所有用例全部执行成功"
-                : `❌ 测试不通过：${pf} 个用例执行失败`;
-          }
-          taskAddLog(
-            task,
-            `🏁 完成 ✅${task.overallPass || 0} ❌${task.overallFail || 0}`,
-            "success",
-          );
-          pollQueuedTasks();
-          scheduleSave();
-          break;
-        case "device_error":
-          task.running = false;
-          task.status = "done";
-          task.outcome = "error";
-          taskAddLog(task, `💥 ${msg.error}`, "error");
-          pollQueuedTasks();
-          break;
-      }
-    } catch (_) {}
-  };
+// ── WebSocket（handler 注册表：详情页进入时重绑，避免闭包陈旧） ──
+function bindListTaskWS(task, runId) {
+  connectTaskWebSocket(task.id, runId, (msg) => {
+    const t = tasks.value.find((x) => x.id === task.id);
+    if (!t) return;
+    if (msg.type === "log") {
+      taskAddLog(t, msg.message);
+      return;
+    }
+    applyWsMessage(t, msg, {
+      addLog: (text, level) => taskAddLog(t, text, level),
+      save: () => scheduleSave(t.id),
+      onPollQueue: pollQueuedTasks,
+      onRunFinished: () => closeTaskWebSocket(t.id),
+    });
+  });
 }
 
 // ── Queue polling: detect when a queued task gets picked up by the backend ──
@@ -777,9 +538,9 @@ async function pollQueuedTasks() {
             status: "running",
           };
           tasks.value.splice(idx, 1, updated);
-          connectTaskWS(updated, active.run_id);
+          bindListTaskWS(updated, active.run_id);
           taskAddLog(updated, "🚀 排队任务已被后台调度，开始执行");
-          scheduleSave();
+          scheduleSave(updated.id);
         }
       }
     }
@@ -807,7 +568,7 @@ function stopQueuePolling() {
 onMounted(async () => {
   await Promise.all([loadTasks(), loadDevices(), loadCases()]);
   tasks.value.forEach((t) => {
-    if (t.running && t.runId) connectTaskWS(t, t.runId);
+    if (t.running && t.runId) bindListTaskWS(t, t.runId);
   });
   if (hasQueuedTasks()) startQueuePolling();
 });
@@ -821,13 +582,13 @@ watch(
 );
 async function loadCases() {
   try {
-    const { data } = await client.get("/cases/definitions");
+    const { data } = await listDefinitions();
     if (data.ok) cases.value = data.definitions;
   } catch (_) {}
 }
 async function loadDevices() {
   try {
-    const { data } = await client.get("/devices");
+    const { data } = await listDevices();
     if (data.ok)
       devices.value = (data.devices || []).filter(
         (d) => d.status === "ONLINE" || d.status === "BUSY",
@@ -869,7 +630,7 @@ async function loadDevices() {
                   v-for="(task, idx) in tasksForTab(tab.key)"
                   :key="task.id"
                   class="task-card"
-                  :style="{ background: CARD_BG }"
+                  :class="taskCardClass(task)"
                   @click="openTaskDetail(task)"
                 >
                   <!-- Row 1: task name + round badge + status badge -->
@@ -1197,12 +958,38 @@ async function loadDevices() {
   cursor: pointer;
   border-radius: 14px;
   border: 1px solid rgba(139, 115, 85, 0.12);
+  border-left-width: 4px;
   padding: 16px 18px 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   transition: all 0.2s;
   box-shadow: 0 1px 4px rgba(61, 52, 40, 0.04);
+}
+.task-card--running {
+  background: linear-gradient(135deg, #e8edff 0%, #f3f6ff 100%);
+  border-color: rgba(136, 157, 240, 0.28);
+  border-left-color: #889df0;
+}
+.task-card--waiting {
+  background: linear-gradient(135deg, #fff8e0 0%, #fffdf5 100%);
+  border-color: rgba(247, 205, 103, 0.35);
+  border-left-color: #f7cd67;
+}
+.task-card--completed {
+  background: linear-gradient(135deg, #e8f5e0 0%, #f3faf0 100%);
+  border-color: rgba(111, 186, 44, 0.3);
+  border-left-color: #6fba2c;
+}
+.task-card--incomplete {
+  background: linear-gradient(135deg, #ffe8ec 0%, #fff5f7 100%);
+  border-color: rgba(232, 95, 95, 0.28);
+  border-left-color: #e85f5f;
+}
+.task-card--idle {
+  background: rgb(247, 243, 223);
+  border-color: rgba(139, 115, 85, 0.12);
+  border-left-color: #b8a898;
 }
 .task-card:hover {
   transform: translateY(-2px);

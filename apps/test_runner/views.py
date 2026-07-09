@@ -63,6 +63,10 @@ _device_queue: dict[str, list] = {}
 # Maps run_id → client_task_id so the frontend can discover queued-task execution
 _run_client_task: dict[str, str] = {}
 
+# u2.connect() 超时上限（秒）—— USB 松动 / ATX agent 卡死时快速失败，
+# 避免阻塞占用 _u2_executor 线程 / Daphne 事件循环。
+U2_CONNECT_TIMEOUT = 15
+
 
 def _enqueue(serial: str, payload: dict):
     """Add a test request to the device's queue."""
@@ -208,9 +212,15 @@ async def start_test_run(request):
             continue
         mark_device_busy(serial)
         if client_task_id:
-            await sync_to_async(TaskCard.objects.filter(task_id=client_task_id).update)(
-                status="running", running=True
-            )
+            schedule_update = {}
+            if start_at:
+                schedule_update["start_at"] = start_at
+            if end_at:
+                schedule_update["end_at"] = end_at
+            if schedule_update:
+                await sync_to_async(TaskCard.objects.filter(task_id=client_task_id).update)(
+                    **schedule_update
+                )
 
         # Create independent u2 connection per device
         def make_connection(s=serial):
@@ -219,7 +229,10 @@ async def start_test_run(request):
             return u2.connect(s)
 
         try:
-            d = await asyncio.get_event_loop().run_in_executor(_u2_executor, make_connection)
+            d = await asyncio.wait_for(
+                asyncio.get_event_loop().run_in_executor(_u2_executor, make_connection),
+                timeout=U2_CONNECT_TIMEOUT,
+            )
         except Exception as e:
             mark_device_idle(serial)
             await sync_to_async(dp_release_device)(serial, reason="manual")
@@ -338,7 +351,9 @@ async def _execute_tests(
         client_tid = _run_client_task.get(run_id, "")
         if client_tid:
             await sync_to_async(TaskCard.objects.filter(task_id=client_tid).update)(
-                run_id=run_record.id
+                run_id=run_record.id,
+                status="running",
+                running=True,
             )
 
         # Log device info
@@ -419,21 +434,38 @@ async def _execute_tests(
                         if sc.get("case_id") == cid:
                             title = sc.get("title", cid)
                             break
-                    case_items.append(
-                        {
-                            "id": cid,
-                            "title": title,
-                            "total": counts["total"],
-                            "pass": counts["pass"],
-                            "fail": counts["fail"],
-                            "rate": round(counts["pass"] / counts["total"] * 100)
-                            if counts["total"]
-                            else 0,
-                            "status": "done",
-                        }
-                    )
-                # Determine outcome based on actual run status (not hardcoded 'completed')
-                final_outcome = "completed" if run_model.status.value == "completed" else "stopped"
+                    # Preserve step definitions from existing TaskCard case_items
+                    steps = []
+                    try:
+                        existing = TaskCard.objects.get(task_id=client_tid)
+                        for old_ci in existing.case_items or []:
+                            if str(old_ci.get("id")) == str(cid) and old_ci.get("steps"):
+                                steps = old_ci["steps"]
+                                break
+                    except TaskCard.DoesNotExist:
+                        pass
+                    item = {
+                        "id": cid,
+                        "title": title,
+                        "total": counts["total"],
+                        "pass": counts["pass"],
+                        "fail": counts["fail"],
+                        "rate": round(counts["pass"] / counts["total"] * 100)
+                        if counts["total"]
+                        else 0,
+                        "status": "done",
+                    }
+                    if steps:
+                        item["steps"] = steps
+                    case_items.append(item)
+                # 尊重用户手动停止 / 已记录的终态，不被 completed 覆盖
+                existing = TaskCard.objects.filter(task_id=client_tid).first()
+                if existing and existing.outcome in ("stopped", "interrupted", "error"):
+                    final_outcome = existing.outcome
+                elif run_model.status.value == "completed":
+                    final_outcome = "completed"
+                else:
+                    final_outcome = "stopped"
                 TaskCard.objects.filter(task_id=client_tid).update(
                     status="done",
                     running=False,
@@ -467,6 +499,9 @@ async def _execute_tests(
 
             @sync_to_async
             def _mark_error():
+                tc = TaskCard.objects.filter(task_id=client_tid).first()
+                if tc and tc.outcome == "stopped":
+                    return
                 TaskCard.objects.filter(task_id=client_tid).update(
                     status="done",
                     running=False,
@@ -521,12 +556,7 @@ async def _start_next_queued(serial: str):
         )
         _schedule_next_queued(serial)
         return
-    # Update TaskCard status to 'running' so it's not re-queued on restart
     client_task_id = next_req.get("client_task_id", "")
-    if client_task_id:
-        await sync_to_async(TaskCard.objects.filter(task_id=client_task_id).update)(
-            status="running", running=True
-        )
 
     await test_callbacks.on_log(
         f"queue_{serial}",
@@ -574,7 +604,10 @@ async def _start_next_queued(serial: str):
 
             return u2.connect(serial)
 
-        d = await asyncio.get_event_loop().run_in_executor(_u2_executor, make_connection)
+        d = await asyncio.wait_for(
+            asyncio.get_event_loop().run_in_executor(_u2_executor, make_connection),
+            timeout=U2_CONNECT_TIMEOUT,
+        )
         run_id = f"run_{serial}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         client_task_id = next_req.get("client_task_id", "")
         if client_task_id:
@@ -679,16 +712,15 @@ def cancel_queued_task(request):
     )
 
 
+@require_auth
 def list_active(request):
     """GET /api/runner/active — List currently active runs.
 
     Also triggers lazy recovery: rebuild queues, mark orphan running tasks.
     """
-    # Recover orphan running tasks (stuck after server restart)
-    if not list_active_runs:
-        orphans = TaskCard.objects.filter(status="running")
-        if orphans.exists():
-            orphans.update(status="done", running=False, outcome="interrupted")
+    from .recovery_helpers import recover_stale_running_taskcards, queue_payload_from_taskcard
+
+    recover_stale_running_taskcards()
 
     # Lazy queue recovery: rebuild from DB and/or kick stalled in-memory queues
     active_runs_empty = not list_active_runs
@@ -705,18 +737,7 @@ def list_active(request):
             existing = _device_queue.get(serial, [])
             already_enqueued = any(item.get("client_task_id") == tc.task_id for item in existing)
             if not already_enqueued:
-                _enqueue(
-                    serial,
-                    {
-                        "case_ids": tc.case_ids,
-                        "loop_count": tc.loop_count,
-                        "interval_seconds": tc.interval_seconds,
-                        "package_name": "",
-                        "start_at": None,
-                        "end_at": None,
-                        "client_task_id": tc.task_id,
-                    },
-                )
+                _enqueue(serial, queue_payload_from_taskcard(tc))
             devices_to_start.add(serial)
 
         for serial, q in _device_queue.items():
@@ -913,13 +934,12 @@ def run_single_step(request):
 # ═══════════════════════════════════════════════════════
 
 
+@require_auth
 def task_card_list(request):
     """GET /api/runner/tasks — List all task cards."""
-    # 恢复孤儿任务（服务重启后残留）：status='running' 或 running=True 双重兜底
-    if not list_active_runs:
-        orphans = TaskCard.objects.filter(Q(status="running") | Q(running=True))
-        if orphans.exists():
-            orphans.update(status="done", running=False, outcome="interrupted")
+    from .recovery_helpers import recover_stale_running_taskcards
+
+    recover_stale_running_taskcards()
 
     qs = TaskCard.objects.all().order_by("-created_at")[:200]
     cards = []
@@ -943,14 +963,16 @@ def task_card_list(request):
                 "logs": tc.logs,
                 "createdAt": str(tc.created_at),
                 "creator": tc.creator,
-                "currentCaseTitle": "",
-                "currentIteration": 0,
+                "currentCaseTitle": tc.current_case_title or "",
+                "currentIteration": tc.current_iteration or 0,
                 "failedSteps": tc.failed_steps,
                 "status": tc.status,
                 "outcome": tc.outcome,
                 "round": tc.round,
                 "conclusion": tc.conclusion,
                 "bugTicket": tc.bug_ticket,
+                "startAt": tc.start_at or "",
+                "endAt": tc.end_at or "",
             }
         )
     return JsonResponse({"ok": True, "tasks": cards})
@@ -985,6 +1007,10 @@ def task_card_save(request):
         "conclusion": data.get("conclusion", ""),
         "bug_ticket": data.get("bugTicket", ""),
         "failed_steps": (data.get("failedSteps") or [])[-200:],
+        "current_case_title": data.get("currentCaseTitle", ""),
+        "current_iteration": int(data.get("currentIteration") or 0),
+        "start_at": data.get("startAt") or "",
+        "end_at": data.get("endAt") or "",
     }
     # status is backend-managed — only set on create, never overwrite from frontend
     try:
@@ -1014,6 +1040,10 @@ def task_card_save(request):
             conclusion=data.get("conclusion", ""),
             bug_ticket=data.get("bugTicket", ""),
             failed_steps=(data.get("failedSteps") or [])[-200:],
+            current_case_title=data.get("currentCaseTitle", ""),
+            current_iteration=int(data.get("currentIteration") or 0),
+            start_at=data.get("startAt") or "",
+            end_at=data.get("endAt") or "",
             status="idle",
         )
         task.save()

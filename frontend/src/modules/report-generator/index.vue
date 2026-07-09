@@ -77,16 +77,24 @@ function openReport(run) {
               :columns="columns"
               :data-source="filteredRuns"
               row-key="run_id"
-              :striped="true"
+              :striped="false"
               :loading="loading"
               empty-text="暂无执行记录，请先执行测试"
-              class="report-table"
+              class="report-table report-table--rainbow"
             >
               <!-- Run ID — clickable link -->
               <template #cell-run_id="{ record }">
                 <a class="run-link" @click.prevent="openReport(record)" href="#">
-                  <code>{{ record.run_id }}</code>
+                  <code class="cell-run-id">{{ record.run_id }}</code>
                 </a>
+              </template>
+
+              <template #cell-device_serial="{ value }">
+                <span class="cell-device">{{ value }}</span>
+              </template>
+
+              <template #cell-case_count="{ value }">
+                <span class="cell-count">{{ value }}</span>
               </template>
 
               <!-- Passed count — green -->
@@ -118,8 +126,11 @@ function openReport(run) {
               </template>
 
               <!-- Time -->
+              <template #cell-duration="{ value }">
+                <span class="cell-duration">{{ value }}</span>
+              </template>
               <template #cell-started_at="{ record }">
-                <span class="time-text">{{ formatTime(record.started_at) }}</span>
+                <span class="cell-time">{{ formatTime(record.started_at) }}</span>
               </template>
 
               <!-- Empty state -->
@@ -139,59 +150,204 @@ function openReport(run) {
 </template>
 
 <style scoped>
-.doc-page { display: flex; flex-direction: column; height: 100%; }
+.doc-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.doc-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.report-tabs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.report-tabs :deep(.animal-tabs) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
 .report-tabs :deep(.animal-tabs__content) {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: block;
   padding-top: 16px;
 }
 
-/* Table card — zero-padding for edge-to-edge Table */
-.table-card { overflow: hidden; }
-.table-card :deep(.animal-card__content) { padding: 0; border-radius: 14px; overflow: hidden; }
+.report-tabs :deep(.animal-tabs__inner) {
+  min-height: min-content;
+}
 
-/* Shared Table styles */
+/* Table card — zero-padding for edge-to-edge Table */
+.table-card { overflow: hidden; border-radius: 16px; }
+.table-card :deep(.animal-card__content) { padding: 0; border-radius: 16px; overflow: hidden; }
+
+/* Rainbow gradient table */
 .report-table { width: 100%; }
-.report-table :deep(table) { width: 100%; border-collapse: collapse; }
-.report-table :deep(th) {
-  font-size: 12px; font-weight: 700; color: #6b5b48; padding: 14px 16px;
-  text-align: left; background: rgba(139,115,85,0.06);
-  border-bottom: 2px solid rgba(139,115,85,0.12);
-  text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;
+.report-table :deep(table) {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
 }
-.report-table :deep(td) {
-  padding: 12px 16px; font-size: 14px; color: #4a3a28;
-  border-bottom: 1px dashed rgba(196,184,158,0.4); vertical-align: middle;
+
+.report-table--rainbow :deep(th) {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 13px 12px;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  border: none;
 }
-.report-table :deep(tr:hover td) { background: rgba(25,200,185,0.04); }
-.report-table :deep(tr:last-child td) { border-bottom: none; }
+.report-table--rainbow :deep(th:nth-child(1)) {
+  background: linear-gradient(135deg, #f8a6b2 0%, #e85f5f 100%);
+  color: #fff;
+}
+.report-table--rainbow :deep(th:nth-child(2)) {
+  background: linear-gradient(135deg, #ffd97a 0%, #f7cd67 45%, #f5a623 100%);
+  color: #5c3d10;
+}
+.report-table--rainbow :deep(th:nth-child(3)) {
+  background: linear-gradient(135deg, #d4e87a 0%, #c5db5a 100%);
+  color: #3d5010;
+  text-align: center;
+}
+.report-table--rainbow :deep(th:nth-child(4)) {
+  background: linear-gradient(135deg, #9ed456 0%, #6fba2c 100%);
+  color: #1e4010;
+  text-align: center;
+}
+.report-table--rainbow :deep(th:nth-child(5)) {
+  background: linear-gradient(135deg, #ff8a8a 0%, #e85f5f 100%);
+  color: #fff;
+  text-align: center;
+}
+.report-table--rainbow :deep(th:nth-child(6)) {
+  background: linear-gradient(135deg, #7ee8df 0%, #19c8b9 100%);
+  color: #064a44;
+}
+.report-table--rainbow :deep(th:nth-child(7)) {
+  background: linear-gradient(135deg, #a8b8ff 0%, #889df0 100%);
+  color: #2a3568;
+  text-align: center;
+}
+.report-table--rainbow :deep(th:nth-child(8)) {
+  background: linear-gradient(135deg, #d4c4ff 0%, #b39ef3 100%);
+  color: #3d2d6b;
+  text-align: center;
+}
+.report-table--rainbow :deep(th:nth-child(9)) {
+  background: linear-gradient(135deg, #f5c6a3 0%, #f7a8c4 100%);
+  color: #6b3d28;
+}
+
+.report-table--rainbow :deep(td) {
+  padding: 11px 12px;
+  font-size: 14px;
+  color: #4a3a28;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(139, 115, 85, 0.08);
+  vertical-align: middle;
+}
+.report-table--rainbow :deep(tr:nth-child(even) td) {
+  background: rgba(139, 115, 85, 0.03);
+}
+.report-table--rainbow :deep(tr:hover td) {
+  background: rgba(25, 200, 185, 0.06);
+}
+.report-table--rainbow :deep(tr:last-child td) {
+  border-bottom: none;
+}
+.report-table--rainbow :deep(td:nth-child(3)),
+.report-table--rainbow :deep(td:nth-child(4)),
+.report-table--rainbow :deep(td:nth-child(5)),
+.report-table--rainbow :deep(td:nth-child(7)),
+.report-table--rainbow :deep(td:nth-child(8)) {
+  text-align: center;
+}
 
 /* Run ID link */
-.run-link { color: var(--primary, #19c8b9); text-decoration: none; font-weight: 600; }
-.run-link:hover { text-decoration: underline; color: #11a89b; }
-.run-link code { font-family: 'SF Mono','Fira Code','Cascadia Code',Consolas,monospace; font-size: 12px; }
+.run-link {
+  text-decoration: none;
+  color: inherit;
+}
+.run-link:hover .cell-run-id {
+  color: #19c8b9;
+  text-decoration: underline;
+}
+.cell-run-id {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: #c0392b;
+  line-height: 1.4;
+  word-break: break-all;
+  transition: color 0.15s ease;
+}
+.cell-device {
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: #b8860b;
+}
+.cell-count {
+  font-weight: 700;
+  font-size: 14px;
+  color: #6b8f1a;
+}
+.cell-duration {
+  font-size: 12px;
+  font-weight: 600;
+  color: #7b5fbf;
+  white-space: nowrap;
+}
+.cell-time {
+  font-size: 12px;
+  font-weight: 600;
+  color: #b06b48;
+  white-space: nowrap;
+}
 
 /* Pass/Fail numbers */
-.num-pass { color: #6fba2c; font-weight: 700; }
-.num-fail { color: #e05a5a; font-weight: 700; }
+.num-pass { color: #4a8c1c; font-weight: 700; }
+.num-fail { color: #c0392b; font-weight: 700; }
 
 /* Rate cell */
 .rate-cell { display: flex; align-items: center; gap: 10px; }
-.progress-bar { display: flex; height: 8px; border-radius: 50px; overflow: hidden; background: #f0ece2; flex: 1; max-width: 100px; }
+.progress-bar {
+  display: flex; height: 8px; border-radius: 50px; overflow: hidden;
+  background: #f0ece2; flex: 1; max-width: 100px;
+}
 .p-pass { background: #6fba2c; transition: width 0.5s ease; border-radius: 50px; }
 .p-fail { background: #e05a5a; transition: width 0.5s ease; border-radius: 50px; }
 .rate-text { font-weight: 700; font-size: 13px; min-width: 42px; text-align: right; }
-.rate-ok { color: #6fba2c; }
-.rate-warn { color: #dba90e; }
-.rate-bad { color: #e05a5a; }
+.rate-ok { color: #4a8c1c; }
+.rate-warn { color: #b8860b; }
+.rate-bad { color: #c0392b; }
 
 /* Status badges */
 .badge { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 50px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
-.badge-pass { background: rgba(111,186,44,0.12); color: #6fba2c; border: 1.5px solid rgba(111,186,44,0.25); }
-.badge-fail { background: rgba(224,90,90,0.12); color: #e05a5a; border: 1.5px solid rgba(224,90,90,0.25); }
-.badge-running { background: rgba(245,195,28,0.12); color: #dba90e; border: 1.5px solid rgba(245,195,28,0.25); }
+.badge-pass { background: rgba(111,186,44,0.12); color: #4a8c1c; border: 1.5px solid rgba(111,186,44,0.25); }
+.badge-fail { background: rgba(224,90,90,0.12); color: #c0392b; border: 1.5px solid rgba(224,90,90,0.25); }
+.badge-running { background: rgba(245,195,28,0.12); color: #b8860b; border: 1.5px solid rgba(245,195,28,0.25); }
 .badge-stopped { background: rgba(138,123,102,0.10); color: #8a7b66; border: 1.5px solid rgba(138,123,102,0.20); }
-
-.time-text { font-size: 13px; color: #8a7b66; white-space: nowrap; }
 
 /* Empty state */
 .table-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 24px; color: #988b7a; }

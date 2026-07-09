@@ -160,7 +160,8 @@ def start_backend():
     print("[Backend] Starting Django on port 8765...")
     log_file = LOG_DIR / "backend.log"
     LOG_DIR.mkdir(exist_ok=True)
-    env = make_env()
+    # 标记本进程为 ASGI 服务进程 —— test_runner 的启动恢复只在此进程执行
+    env = make_env({"DJANGO_ASGI_SERVER": "1"})
     subprocess.Popen(
         [
             sys.executable,

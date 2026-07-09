@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { animate } from 'animejs'
 import { sidebarNavEnter } from '../animations.js'
@@ -10,6 +10,50 @@ import AnimatedMenuIcon from './AnimatedMenuIcon.vue'
 const router = useRouter()
 const route = useRoute()
 const username = ref(localStorage.getItem('username') || 'admin')
+
+const SIDEBAR_WIDTH_KEY = 'app-sidebar-width'
+const SIDEBAR_MIN = 180
+const SIDEBAR_MAX = 360
+const SIDEBAR_DEFAULT = 220
+
+function clampSidebarWidth(width) {
+  return Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, width))
+}
+
+const sidebarWidth = ref(SIDEBAR_DEFAULT)
+const isResizing = ref(false)
+
+function applySidebarWidth(width) {
+  const w = clampSidebarWidth(width)
+  sidebarWidth.value = w
+  document.documentElement.style.setProperty('--side-w', `${w}px`)
+}
+
+function onSidebarResizeStart(e) {
+  if (e.button !== 0) return
+  e.preventDefault()
+  isResizing.value = true
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+function onSidebarResizeMove(e) {
+  if (!isResizing.value) return
+  applySidebarWidth(e.clientX)
+}
+
+function onSidebarResizeEnd() {
+  if (!isResizing.value) return
+  isResizing.value = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  localStorage.setItem(SIDEBAR_WIDTH_KEY, String(sidebarWidth.value))
+}
+
+function resetSidebarWidth() {
+  applySidebarWidth(SIDEBAR_DEFAULT)
+  localStorage.setItem(SIDEBAR_WIDTH_KEY, String(SIDEBAR_DEFAULT))
+}
 
 function logout() {
   localStorage.removeItem('access_token')
@@ -43,6 +87,10 @@ function onNavClick(path) {
 }
 
 onMounted(async () => {
+  applySidebarWidth(Number(localStorage.getItem(SIDEBAR_WIDTH_KEY)) || SIDEBAR_DEFAULT)
+  window.addEventListener('mousemove', onSidebarResizeMove)
+  window.addEventListener('mouseup', onSidebarResizeEnd)
+
   await nextTick()
   sidebarNavEnter('.sidebar-menu__item')
 
@@ -87,10 +135,17 @@ onMounted(async () => {
     delay: (el, i) => i * 100,
   })
 })
+
+onUnmounted(() => {
+  window.removeEventListener('mousemove', onSidebarResizeMove)
+  window.removeEventListener('mouseup', onSidebarResizeEnd)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+})
 </script>
 
 <template>
-  <aside class="sidebar">
+  <aside class="sidebar" :class="{ 'sidebar--resizing': isResizing }">
     <!-- 头部品牌 -->
     <div class="sidebar__header" @click="router.push('/dashboard')">
       <AnimatedMascot :size="26" />
@@ -129,6 +184,14 @@ onMounted(async () => {
         退出
       </Button>
     </div>
+
+    <div
+      class="sidebar__resizer"
+      :class="{ 'is-dragging': isResizing }"
+      title="拖动调整宽度，双击恢复默认"
+      @mousedown="onSidebarResizeStart"
+      @dblclick="resetSidebarWidth"
+    />
   </aside>
 </template>
 
@@ -138,7 +201,6 @@ onMounted(async () => {
   width: var(--side-w, 220px);
   min-width: var(--side-w, 220px);
   max-width: var(--side-w, 220px);
-  resize: none;
   height: 100%;
   background: url('/animal-assets/menu_bg.svg') center/cover no-repeat;
   display: flex;
@@ -148,6 +210,45 @@ onMounted(async () => {
   z-index: 2;
   color: var(--animal-text-color, #794f27);
   font-family: var(--animal-font-family, Nunito, 'Noto Sans SC', sans-serif);
+}
+
+.sidebar--resizing {
+  user-select: none;
+}
+
+.sidebar__resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  transform: translateX(50%);
+}
+
+.sidebar__resizer::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: rgba(196, 184, 158, 0.45);
+  transition: background 0.15s ease, width 0.15s ease;
+}
+
+.sidebar__resizer:hover::before,
+.sidebar__resizer.is-dragging::before {
+  width: 3px;
+  background: #19c8b9;
+}
+
+.sidebar__resizer:hover,
+.sidebar__resizer.is-dragging {
+  background: rgba(25, 200, 185, 0.08);
 }
 
 /* Header */
@@ -264,7 +365,12 @@ onMounted(async () => {
 }
 
 .sidebar-menu__label {
+  flex: 1;
+  min-width: 0;
   line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   background: linear-gradient(90deg, #7a6b58 0%, #9a8568 50%, #c4a06a 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

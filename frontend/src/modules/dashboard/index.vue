@@ -328,6 +328,20 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.doc-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.doc-body {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 /* Stats grid */
 .dashboard__stats-grid {
   display: grid;

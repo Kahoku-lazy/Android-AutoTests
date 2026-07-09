@@ -15,6 +15,13 @@ from typing import Optional
 from models.test_models import TestCaseDef, TestResult, TestRun, TestRunStatus
 from .adapter import DeviceAdapter
 from .executor import StepExecutor
+from .u2_recovery import (
+    U2_CASE_RETRY_MAX,
+    U2_RECONNECT_INTERVAL,
+    check_u2_alive,
+    is_u2_crash,
+    wait_and_reconnect,
+)
 from apps.device_pool.api import acquire_device, release_device
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -179,7 +186,11 @@ class TestRunner:
                     break
                 await self.callback.on_case_started(
                     run_id, case.id, case.title, loop_count)
-                await self._run_case(state, case, executor, loop_count, interval_seconds)
+                executor = await self._run_case(
+                    state, case, executor, loop_count, interval_seconds,
+                )
+                if not state.is_running:
+                    break
                 # Save CSV per case (append mode)
                 if state.all_results:
                     last = state.all_results[-1]
@@ -226,9 +237,135 @@ class TestRunner:
 
         return run_model
 
+    def _wire_step_callbacks(self, state: _RunState, case: TestCaseDef, iteration: int, loop):
+        """绑定步骤 WS 回调到当前 adapter。"""
+        def _make_step_cb(iter_no):
+            def cb(si, total, st, desc, r):
+                try:
+                    asyncio.run_coroutine_threadsafe(
+                        self.callback.on_step_result(
+                            state.run_model.run_id, case.id, iter_no,
+                            si, total, st, desc, r,
+                        ), loop)
+                except Exception as e:
+                    print(f"[runner] on_step_result callback failed: {e}")
+            return cb
+
+        def _make_step_started_cb(iter_no):
+            def cb(si, total, st, desc):
+                try:
+                    asyncio.run_coroutine_threadsafe(
+                        self.callback.on_step_started(
+                            state.run_model.run_id, case.id, iter_no,
+                            si, total, st, desc,
+                        ), loop)
+                except Exception as e:
+                    print(f"[runner] on_step_started callback failed: {e}")
+            return cb
+
+        state.adapter._step_callback = _make_step_cb(iteration)
+        state.adapter._step_started_callback = _make_step_started_cb(iteration)
+
+    async def _recreate_adapter_executor(self, state: _RunState, loop) -> StepExecutor:
+        """u2 重连后重建 adapter 与 executor。"""
+        def create_adapter():
+            return DeviceAdapter(
+                self.device, package_name=self.package_name,
+                logger=lambda msg, l=loop: self._sync_log(state, msg, l),
+                should_stop=lambda: not state.is_running,
+            )
+
+        state.adapter = await _safe_run_in_executor(
+            loop, create_adapter, error_msg="重建设备适配器失败",
+        )
+        return StepExecutor(state.adapter)
+
+    async def _execute_iteration_with_retry(
+        self,
+        state: _RunState,
+        case: TestCaseDef,
+        executor: StepExecutor,
+        iteration: int,
+        loop,
+    ) -> tuple[str, StepExecutor, bool]:
+        """执行单轮步骤，u2 崩溃时最多重试 U2_CASE_RETRY_MAX 次。
+
+        Returns:
+            (result, executor, fatal_u2)
+            - fatal_u2=True: u2 服务无法恢复，停止整个任务
+        """
+        if not case.steps_data:
+            state.adapter.log(f'用例 "{case.title}" 无步骤，直接通过')
+            return "pass", executor, False
+
+        last_error = ""
+        for attempt in range(1, U2_CASE_RETRY_MAX + 1):
+            if not state.is_running:
+                return "stopped", executor, False
+
+            self._wire_step_callbacks(state, case, iteration, loop)
+
+            try:
+                if not check_u2_alive(self.device):
+                    state.adapter.log(
+                        f"⚠️ u2 连接不可用，尝试重连 ({attempt}/{U2_CASE_RETRY_MAX})..."
+                    )
+                    self.device = await _safe_run_in_executor(
+                        loop,
+                        wait_and_reconnect,
+                        self.device.serial,
+                        U2_RECONNECT_INTERVAL,
+                        error_msg="u2 重连失败",
+                    )
+                    executor = await self._recreate_adapter_executor(state, loop)
+                    self._wire_step_callbacks(state, case, iteration, loop)
+
+                result = await _safe_run_in_executor(
+                    loop, executor.execute_all, case.steps_data,
+                    error_msg=f"执行用例 '{case.title}' 步骤时设备断连",
+                )
+                return result, executor, False
+
+            except Exception as e:
+                if not is_u2_crash(e):
+                    raise
+                last_error = str(e)
+                state.adapter.log(
+                    f"⚠️ u2 崩溃 ({attempt}/{U2_CASE_RETRY_MAX}): {last_error}"
+                )
+                if attempt >= U2_CASE_RETRY_MAX:
+                    break
+                try:
+                    self.device = await _safe_run_in_executor(
+                        loop,
+                        wait_and_reconnect,
+                        self.device.serial,
+                        U2_RECONNECT_INTERVAL,
+                        error_msg="u2 重连失败",
+                    )
+                    executor = await self._recreate_adapter_executor(state, loop)
+                except Exception as reconnect_err:
+                    state.adapter.log(f"  重连失败: {reconnect_err}")
+
+        if not check_u2_alive(self.device):
+            state.adapter.log(
+                f"💥 u2 服务 {U2_CASE_RETRY_MAX} 次重试后仍无法恢复，停止当前任务"
+            )
+            await self.callback.on_device_error(
+                state.run_model.run_id,
+                f"u2 服务无法恢复: {last_error}",
+            )
+            return "fail", executor, True
+
+        state.adapter.log(
+            f"✘ 用例「{case.title}」第 {iteration} 轮："
+            f"u2 崩溃 {U2_CASE_RETRY_MAX} 次后仍未完成，标记失败，继续下一条用例"
+        )
+        return "fail", executor, False
+
     async def _run_case(self, state: _RunState, case: TestCaseDef,
                         executor: StepExecutor, loop_count: int,
-                        interval_seconds: int = 5):
+                        interval_seconds: int = 5) -> StepExecutor:
         loop = asyncio.get_event_loop()
         pass_count = 0
         fail_count = 0
@@ -244,48 +381,24 @@ class TestRunner:
             step_count = len(case.steps_data) if case.steps_data else 0
             state.adapter.log(f'━━━ 第 {i}/{loop_count} 轮 ({step_count} 个步骤) ━━━')
 
-            # Wire step callbacks to broadcast results (sync → async bridge)
-            def _make_step_cb(iter_no):
-                def cb(si, total, st, desc, r):
-                    try:
-                        asyncio.run_coroutine_threadsafe(
-                            self.callback.on_step_result(
-                                state.run_model.run_id, case.id, iter_no,
-                                si, total, st, desc, r,
-                            ), loop)
-                    except Exception as e:
-                        print(f"[runner] on_step_result callback failed: {e}")
-                return cb
+            result, executor, fatal_u2 = await self._execute_iteration_with_retry(
+                state, case, executor, i, loop,
+            )
 
-            def _make_step_started_cb(iter_no):
-                def cb(si, total, st, desc):
-                    try:
-                        asyncio.run_coroutine_threadsafe(
-                            self.callback.on_step_started(
-                                state.run_model.run_id, case.id, iter_no,
-                                si, total, st, desc,
-                            ), loop)
-                    except Exception as e:
-                        print(f"[runner] on_step_started callback failed: {e}")
-                return cb
-
-            state.adapter._step_callback = _make_step_cb(i)
-            state.adapter._step_started_callback = _make_step_started_cb(i)
-
-            if case.steps_data:
-                try:
-                    result = await _safe_run_in_executor(
-                        loop, executor.execute_all, case.steps_data,
-                        error_msg=f"执行用例 '{case.title}' 步骤时设备断连")
-                except ConnectionError as e:
-                    state.adapter.log(f'💥 设备连接错误: {e}')
-                    await self.callback.on_device_error(state.run_model.run_id, str(e))
-                    state.is_running = False
-                    break
-            else:
-                # No steps: treat as pass (empty sequence always succeeds)
-                state.adapter.log(f'用例 "{case.title}" 无步骤，直接通过')
-                result = "pass"
+            if fatal_u2:
+                state.is_running = False
+                fail_count += 1
+                actual_count = i
+                elapsed = (time.time() - start) * 1000
+                state.failure_details.append({
+                    "case_title": case.title, "iteration": i,
+                    "elapsed_ms": f"{elapsed:.0f}",
+                    "timestamp": datetime.now().strftime("%H:%M:%S"),
+                    "log": state.adapter.get_log_buffer(),
+                })
+                await self.callback.on_iteration_result(
+                    state.run_model.run_id, case.id, i, "fail", elapsed)
+                break
 
             elapsed = (time.time() - start) * 1000
             actual_count = i
@@ -322,6 +435,8 @@ class TestRunner:
 
         await self.callback.on_case_finished(
             state.run_model.run_id, case.id, pass_count, fail_count, rate)
+
+        return executor
 
     def _sync_log(self, state: _RunState, msg: str, loop=None):
         state.log_lines.append(msg)

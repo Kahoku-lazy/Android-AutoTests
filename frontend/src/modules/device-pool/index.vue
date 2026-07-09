@@ -579,7 +579,18 @@ function connectionLabel(type) {
 
 <style scoped>
 .dp-animal-theme {
-  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.doc-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .header-actions {
@@ -589,11 +600,22 @@ function connectionLabel(type) {
 }
 
 .device-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 20px 24px 24px;
+}
+
+.device-section .doc-section__header {
+  flex-shrink: 0;
 }
 
 /* ── Filter bar ── */
 .filter-bar {
+  flex: 1;
+  min-height: 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -603,9 +625,27 @@ function connectionLabel(type) {
 .device-tabs {
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.device-tabs :deep(.animal-tabs) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .device-tabs :deep(.animal-tabs__content) {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: block;
   padding-top: 16px;
+}
+.device-tabs :deep(.animal-tabs__inner) {
+  min-height: min-content;
 }
 .filter-count {
   font-size: 13px;

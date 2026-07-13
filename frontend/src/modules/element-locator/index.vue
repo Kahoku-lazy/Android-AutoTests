@@ -25,6 +25,18 @@ const tabs = [
   { key: 'manage', label: '📋 元素管理' },
 ]
 
+const pageMeta = computed(() =>
+  activeTab.value === 'manage'
+    ? {
+        title: '元素管理 Element Manager',
+        subtitle: '按页面组织元素库，维护 XPath、别名、测试点等定位信息',
+      }
+    : {
+        title: '元素定位 Element Locator',
+        subtitle: '连接设备、Dump UI、生成 XPath 候选并保存到元素管理',
+      },
+)
+
 let devicePollTimer = null
 const wsDeviceSerial = ref('')
 const filterMode = ref('all')
@@ -171,12 +183,12 @@ function onDeviceChanged(msg) {
 <template>
   <div class="doc-page">
     <PageHeader
-      title="元素定位 Element Locator"
-      subtitle="连接设备、Dump UI、生成 XPath 候选并保存到元素管理"
+      :title="pageMeta.title"
+      :subtitle="pageMeta.subtitle"
       color="app-yellow"
     />
 
-    <Tabs :items="tabs" v-model="activeTab" :leaf-animation="true" :shadow="true">
+    <Tabs :items="tabs" v-model="activeTab" :leaf-animation="true" :shadow="true" class="locator-tabs">
       <template #discovery>
         <div class="doc-body">
           <section class="doc-section locator-section">
@@ -265,68 +277,111 @@ function onDeviceChanged(msg) {
   height: 100%;
   overflow: hidden;
 }
-/* Tabs 整体填满页面高度 */
-.doc-page :deep(.animal-tabs) {
+
+.locator-tabs {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
-/* 内容区：占满剩余高度，纵向不足时在此滚动 */
-.doc-page :deep(.animal-tabs__content) {
-  flex: 1;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  display: block;
-}
-.doc-page :deep(.animal-tabs__inner) {
-  min-height: min-content;
-  width: 100%;
-}
-/* tab-pane 和内部 doc-body 填满 */
-.doc-page :deep(.animal-tab-pane) {
+
+.doc-page :deep(.locator-tabs.animal-tabs) {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
+
+.doc-page :deep(.locator-tabs.animal-tabs > .animal-tabs__content) {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.doc-page :deep(.locator-tabs.animal-tabs > .animal-tabs__content > .animal-tabs__inner) {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.doc-page :deep(.doc-body) {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .locator-section {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
   padding: 16px 20px 20px;
+  overflow: hidden;
 }
+
 .toolbar {
-  display: flex; align-items: center; gap: 12px;
-  margin-bottom: 10px; flex-shrink: 0; flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
+
 .filter-bar {
-  display: flex; align-items: center; gap: 12px;
-  margin-bottom: 14px; flex-shrink: 0; flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
   padding: 10px 14px;
   background: var(--animal-bg-color-secondary, #f0e8d8);
   border-radius: 10px;
 }
+
 .info { font-size: 14px; color: var(--text-secondary); white-space: nowrap; }
 .error { font-size: 14px; color: #e74c3c; white-space: nowrap; }
+
 .workspace {
   flex: 1;
+  min-height: 0;
+  width: 100%;
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(360px, 2fr) minmax(260px, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
   gap: 16px;
-  min-height: 480px;
+  overflow: hidden;
 }
+
 .col {
   min-height: 0;
   min-width: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
-.col-phone {
-  max-width: 420px;
-  height: 100%;
+
+@media (max-width: 1200px) {
+  .workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(280px, 1fr) minmax(200px, auto) minmax(160px, auto);
+    overflow-y: auto;
+  }
 }
 </style>

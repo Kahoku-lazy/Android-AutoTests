@@ -4,6 +4,7 @@ from .views import (
     dump_page, do_action, device_info_view, screenshot_snapshot,
     list_pages, create_page, page_detail, clear_pages, page_elements,
     add_element_to_page, update_element, flows_handler, delete_flow,
+    pages_batch_move,
 )
 
 app_name = 'elements'
@@ -16,6 +17,7 @@ urlpatterns = [
     path('pages', list_pages, name='pages_list'),
     path('pages/create', create_page, name='page_create'),
     path('pages/clear', clear_pages, name='pages_clear'),
+    path('pages/batch-move', pages_batch_move, name='pages_batch_move'),
     path('pages/<int:page_id>', page_detail, name='page_detail'),
     path('pages/<int:page_id>/items', page_elements, name='page_items'),
     path('pages/<int:page_id>/elements', add_element_to_page, name='page_add_element'),

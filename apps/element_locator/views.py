@@ -10,6 +10,13 @@ from apps.device_pool.models import Device
 from apps.device_pool.api import device
 from apps.device_pool.api import ensure_device
 from .models import Page, Element, PageFlow
+from .page_tree import (
+    MAX_PAGE_TREE_DEPTH,
+    page_depth,
+    validate_parent_and_depth,
+    sibling_label_exists,
+    batch_move_pages,
+)
 from .service import gen_xpath_candidates
 
 # Process prefixes that indicate execution engine occupation
@@ -189,20 +196,33 @@ def screenshot_snapshot(request):
 
 # ── Page CRUD ──
 
+def _page_payload(p):
+  return {
+      "id": p.id,
+      "device_id": p.device_id,
+      "parent_id": p.parent_id,
+      "is_folder": p.is_folder,
+      "depth": page_depth(p),
+      "label": p.label,
+      "package": p.package,
+      "activity": p.activity,
+      "screenshot_path": p.screenshot_path,
+      "element_count": p.element_count,
+      "created_at": str(p.created_at),
+      "flow_out": getattr(p, "flow_out", 0),
+      "flow_in": getattr(p, "flow_in", 0),
+  }
+
+
 def list_pages(request):
-    """GET /api/elements/pages — List recorded pages."""
-    pages = Page.objects.annotate(
+    """GET /api/elements/pages — List recorded pages (flat, with parent_id)."""
+    pages = Page.objects.select_related("parent").annotate(
         flow_out=dm.Count('outgoing_flows', distinct=True),
         flow_in=dm.Count('incoming_flows', distinct=True),
-    ).order_by('-created_at')
+    ).order_by('is_folder', 'label', '-created_at')
 
-    result = [{
-        "id": p.id, "device_id": p.device_id, "label": p.label,
-        "package": p.package, "activity": p.activity,
-        "screenshot_path": p.screenshot_path, "element_count": p.element_count,
-        "created_at": str(p.created_at), "flow_out": p.flow_out, "flow_in": p.flow_in,
-    } for p in pages]
-    return JsonResponse({"ok": True, "pages": result})
+    result = [_page_payload(p) for p in pages]
+    return JsonResponse({"ok": True, "pages": result, "max_depth": MAX_PAGE_TREE_DEPTH})
 
 
 @csrf_exempt
@@ -213,9 +233,12 @@ def page_detail(request, page_id):
         new_label = data.get("label", "").strip()
         if not new_label:
             return JsonResponse({"ok": False, "error": "页面名称不能为空"}, status=400)
-        # 检查名称是否已被其他页面占用
-        if Page.objects.filter(label=new_label).exclude(id=page_id).exists():
-            return JsonResponse({"ok": False, "error": f"页面名称「{new_label}」已存在"}, status=409)
+        try:
+            page = Page.objects.get(id=page_id)
+        except Page.DoesNotExist:
+            return JsonResponse({"ok": False, "error": "页面不存在"}, status=404)
+        if sibling_label_exists(new_label, page.parent_id, exclude_id=page_id):
+            return JsonResponse({"ok": False, "error": f"同级名称「{new_label}」已存在"}, status=409)
         Page.objects.filter(id=page_id).update(label=new_label)
         return JsonResponse({"ok": True})
     elif request.method == 'DELETE':
@@ -226,34 +249,86 @@ def page_detail(request, page_id):
 
 @csrf_exempt
 def create_page(request):
-    """POST /api/elements/pages (with body) — Manually create a page.
+    """POST /api/elements/pages/create — Manually create a page or folder.
 
-    Body: { label, package?, activity? }
-    Device is auto-set from current active device.
+    Body: { label, parent_id?, is_folder?, package?, activity? }
     """
     if request.method != 'POST':
         return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
     data = json.loads(request.body)
     label = data.get("label", "").strip()
     if not label:
-        return JsonResponse({"ok": False, "error": "页面名称(label)必填"})
+        return JsonResponse({"ok": False, "error": "名称(label)必填"})
+
+    parent_id = data.get("parent_id")
+    if parent_id in ("", 0, "0"):
+        parent_id = None
+    is_folder = bool(data.get("is_folder", False))
+
+    try:
+        validate_parent_and_depth(parent_id, is_folder=is_folder)
+    except ValueError as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=400)
+
+    if parent_id:
+        try:
+            parent = Page.objects.get(pk=parent_id)
+        except Page.DoesNotExist:
+            return JsonResponse({"ok": False, "error": "父级目录不存在"}, status=404)
+        if not parent.is_folder:
+            return JsonResponse({"ok": False, "error": "只能在目录下创建子级"}, status=400)
+
+    if sibling_label_exists(label, parent_id):
+        return JsonResponse({"ok": False, "error": f"同级名称「{label}」已存在"}, status=409)
 
     dev_obj = ensure_device(serial=device.current_serial, name="Samsung")
     try:
         page = Page.objects.create(
             device=dev_obj,
+            parent_id=parent_id,
+            is_folder=is_folder,
             label=label,
             package=data.get("package", ""),
             activity=data.get("activity", ""),
         )
     except IntegrityError:
-        return JsonResponse({"ok": False, "error": f"页面名称「{label}」已存在，请使用其他名称"}, status=409)
-    return JsonResponse({"ok": True, "page": {
-        "id": page.id, "device_id": page.device_id,
-        "label": page.label, "package": page.package,
-        "activity": page.activity, "element_count": page.element_count,
-        "created_at": str(page.created_at),
-    }})
+        return JsonResponse({"ok": False, "error": f"创建失败，名称「{label}」可能已存在"}, status=409)
+    return JsonResponse({"ok": True, "page": _page_payload(page)})
+
+
+@csrf_exempt
+def pages_batch_move(request):
+    """POST /api/elements/pages/batch-move — Move pages/folders to a target parent.
+
+    Body: { page_ids: [1, 2], parent_id: 5 | null }
+    parent_id=null moves items to root level.
+    """
+    if request.method != 'POST':
+        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+    data = json.loads(request.body)
+    page_ids = data.get("page_ids") or []
+    if not page_ids:
+        return JsonResponse({"ok": False, "error": "page_ids 不能为空"}, status=400)
+
+    parent_id = data.get("parent_id")
+    if parent_id in ("", 0, "0"):
+        parent_id = None
+
+    if parent_id:
+        try:
+            parent = Page.objects.get(pk=parent_id)
+        except Page.DoesNotExist:
+            return JsonResponse({"ok": False, "error": "目标目录不存在"}, status=404)
+        if not parent.is_folder:
+            return JsonResponse({"ok": False, "error": "目标必须是目录"}, status=400)
+
+    try:
+        ids = [int(x) for x in page_ids]
+    except (TypeError, ValueError):
+        return JsonResponse({"ok": False, "error": "page_ids 格式无效"}, status=400)
+
+    result = batch_move_pages(ids, parent_id)
+    return JsonResponse({"ok": True, **result})
 
 
 def _element_payload(el):
@@ -280,6 +355,8 @@ def add_element_to_page(request, page_id):
             page = Page.objects.get(id=page_id)
         except Page.DoesNotExist:
             return JsonResponse({"ok": False, "error": "页面不存在"}, status=404)
+        if page.is_folder:
+            return JsonResponse({"ok": False, "error": "目录节点不能添加元素，请选择子页面"}, status=400)
 
         data = json.loads(request.body)
         alias = data.get("alias", "").strip()

@@ -47,3 +47,9 @@ export function apiDeletePage(id)      { return client.delete(`/elements/pages/$
 export function apiGetPageElements(pid) { return client.get(`/elements/pages/${pid}/items`) }
 export function apiAddElementToPage(pid, el) { return client.post(`/elements/pages/${pid}/elements`, el) }
 export function apiClearAll()          { return client.post('/elements/pages/clear') }
+export function apiBatchMovePages(pageIds, parentId) {
+  return client.post('/elements/pages/batch-move', {
+    page_ids: pageIds,
+    parent_id: parentId ?? null,
+  })
+}

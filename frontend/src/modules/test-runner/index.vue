@@ -30,7 +30,7 @@ const router = useRouter();
 const cases = ref([]);
 const devices = ref([]);
 const showNewTask = ref(false);
-const activeTab = ref("all");
+const activeTab = ref("running");
 const tasks = ref([]);
 
 // ── JWT decode for creator ──
@@ -111,22 +111,17 @@ async function loadTasks() {
 const runningTasks = computed(() => tasks.value.filter((t) => t.running));
 const waitingTasks = computed(() => tasks.value.filter((t) => isTaskQueued(t)));
 const completedTasks = computed(() =>
-  tasks.value.filter((t) => !t.running && t.outcome === "completed"),
+  tasks.value.filter((t) => !t.running && t.outcome && t.outcome !== ""),
 );
 const incompleteTasks = computed(() =>
   tasks.value.filter((t) => taskBucket(t) === "incomplete"),
 );
-const notExecutedTasks = computed(() =>
-  tasks.value.filter((t) => taskBucket(t) === "notExecuted"),
-);
-
 const filterTabs = computed(() => [
   { key: "all", label: `📋 全部 (${tasks.value.length})` },
   { key: "running", label: `⚡ 执行中 (${runningTasks.value.length})` },
   { key: "waiting", label: `⏳ 等待中 (${waitingTasks.value.length})` },
   { key: "completed", label: `✅ 已完成 (${completedTasks.value.length})` },
   { key: "incomplete", label: `⏹ 未完成 (${incompleteTasks.value.length})` },
-  { key: "notExecuted", label: `📝 未执行 (${notExecutedTasks.value.length})` },
 ]);
 
 function tasksForTab(key) {
@@ -134,8 +129,7 @@ function tasksForTab(key) {
   if (key === "running") return runningTasks.value;
   if (key === "waiting") return waitingTasks.value;
   if (key === "completed") return completedTasks.value;
-  if (key === "incomplete") return incompleteTasks.value;
-  return notExecutedTasks.value;
+  return incompleteTasks.value;
 }
 
 // ── Helpers ──
@@ -266,7 +260,11 @@ async function createAndStart() {
   // doStartTask 替换了 tasks 中的对象，重新获取最新引用
   const updated = tasks.value.find((t) => t.id === task.id) || task;
   await saveTaskToServer(updated); // ② 再次保存（含步骤定义的 caseItems + 最新状态）
-  router.push(`/runner/task/${task.id}`); // ③ 跳转详情页展示卡片布局
+  // ③ 跳转详情页，携带 runId 避免服务端尚未关联时 WS 连不上
+  router.push({
+    path: `/runner/task/${task.id}`,
+    state: { runId: updated.runId || "" },
+  });
 }
 
 function initTaskProgress(task) {
@@ -331,13 +329,15 @@ async function doStartTask(task) {
     if (data.ok && data.runs?.[0]?.run_id) {
       const idx = tasks.value.findIndex((t) => t.id === task.id);
       if (idx !== -1) {
+        const runId = data.runs[0].run_id;
         tasks.value[idx] = {
           ...tasks.value[idx],
           running: true,
-          runId: data.runs[0].run_id,
+          runId,
           status: "running",
         };
-        bindListTaskWS(tasks.value[idx], data.runs[0].run_id);
+        // 先绑 WS 再写前台日志，确保能收到后台「设备 ID / 开始执行测试」推送
+        bindListTaskWS(tasks.value[idx], runId);
         taskAddLog(tasks.value[idx], "🚀 任务已启动");
       }
     } else if (data.ok && data.queued?.length) {
@@ -386,8 +386,12 @@ async function stopTask(task) {
         client_task_id: task.id,
         device_serial: task.deviceSerial,
       });
-    } catch (_) {
-      /* backend may return 404 if already started */
+    } catch (e) {
+      // 404 表示任务已开始执行,属正常情况,继续按已取消重置;其余为真实失败
+      if (e?.response?.status !== 404) {
+        ElMessage.error("取消排队失败，请检查网络后重试");
+        return;
+      }
     }
     // Reset to idle: keep task config, clear execution state
     task.running = false;
@@ -444,13 +448,19 @@ async function removeTask(task) {
     if (task.runId) {
       try {
         await client.post(`/runner/run/${task.runId}/stop`);
-      } catch (_) {}
+      } catch (e) {
+        console.error("[removeTask] stop failed:", e);
+      }
     }
     closeTaskWebSocket(task.id);
   }
   try {
     await client.delete(`/runner/tasks/${task.id}`);
-  } catch (_) {}
+  } catch (e) {
+    console.error("[removeTask] delete failed:", e);
+    ElMessage.error("删除失败，请检查网络后重试");
+    return;
+  }
   tasks.value = tasks.value.filter((x) => x.id !== task.id);
   ElMessage.success("已删除");
 }
@@ -495,6 +505,7 @@ function bindListTaskWS(task, runId) {
     if (!t) return;
     if (msg.type === "log") {
       taskAddLog(t, msg.message);
+      scheduleSave(t.id);
       return;
     }
     applyWsMessage(t, msg, {
@@ -739,6 +750,12 @@ async function loadDevices() {
                         type="primary"
                         @click="restartTask(task)"
                         >↻ 重新执行</el-button
+                      >
+                      <el-button
+                        size="small"
+                        type="info"
+                        @click="router.push(`/reports/task/${encodeURIComponent(task.id)}`)"
+                        >📊 查看报告</el-button
                       >
                     </template>
                     <template v-else-if="!task.caseIds?.length">

@@ -6,7 +6,23 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'android-autotests-dev-key-change-in-production')
+# ── Load .env into os.environ (manage.py doesn't auto-load it) ──
+def _load_dotenv():
+    env_file = BASE_DIR / ".env"
+    if not env_file.exists():
+        return
+    with open(env_file, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key, value = key.strip(), value.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+_load_dotenv()
+
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
 
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
@@ -83,7 +99,7 @@ if DB_ENGINE == 'mysql':
             'ENGINE': 'django.db.backends.mysql',
             'NAME': os.environ.get('DB_NAME', 'android_autotests'),
             'USER': os.environ.get('DB_USER', 'root'),
-            'PASSWORD': os.environ.get('DB_PASSWORD', 'autotests2026'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
             'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
             'PORT': os.environ.get('DB_PORT', '3306'),
             'OPTIONS': {

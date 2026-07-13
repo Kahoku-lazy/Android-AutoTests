@@ -18,38 +18,17 @@ import argparse
 from pathlib import Path
 
 ROOT = Path(__file__).parent
-
-
-# ── Load .env file ──
-def _load_dotenv():
-    """Load .env file into os.environ. No dependency on python-dotenv."""
-    env_file = ROOT / ".env"
-    if not env_file.exists():
-        return
-    with open(env_file, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, value = line.partition("=")
-            key, value = key.strip(), value.strip().strip('"').strip("'")
-            if key and key not in os.environ:  # 不覆盖已有的环境变量
-                os.environ[key] = value
-
-
-_load_dotenv()
 BACKEND_PORT = 8765
 FRONTEND_PORT = 5173
 AGENTSCOPE_PORT = 8000
 REDIS_PORT = 6379
 LOG_DIR = ROOT / "logs"
 
-# ── 数据库配置（settings.py 默认使用 MySQL）──
+# ── 基础环境变量（密码由 config/settings.py 从 .env 加载，此处不注入）──
 MYSQL_ENV = {
     "DB_ENGINE": "mysql",
     "DB_NAME": "android_autotests",
     "DB_USER": "root",
-    "DB_PASSWORD": os.environ.get("DB_PASSWORD", ""),
     "DB_HOST": "127.0.0.1",
     "DB_PORT": "3306",
     "PYTHONUTF8": "1",

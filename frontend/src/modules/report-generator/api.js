@@ -5,14 +5,20 @@ import client from '@/shared/api-client.js'
 
 // ── 执行记录（报告列表）──
 
-export function listRuns() {
-  return client.get('/reports')
+export function listRuns(params = {}) {
+  return client.get('/reports', { params })
 }
 
 // ── 报告详情 ──
 
 export function getRunReport(runId) {
   return client.get(`/reports/run/${encodeURIComponent(runId)}`)
+}
+
+// ── 任务视角报告 ──
+
+export function getTaskReport(taskId) {
+  return client.get(`/reports/task/${encodeURIComponent(taskId)}`)
 }
 
 // ── 文件下载 ──

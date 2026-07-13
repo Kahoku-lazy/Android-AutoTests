@@ -132,7 +132,10 @@ async function ensureStepDefs() {
 
 function saveTask() {
   if (!task.value) return
-  client.post('/runner/tasks/save', buildTaskSavePayload(task.value)).catch(() => {})
+  client.post('/runner/tasks/save', buildTaskSavePayload(task.value)).catch((e) => {
+    // 高频后台自动保存:失败仅记录到控制台,避免每条日志都弹 toast 打扰用户
+    console.error('[saveTask] 保存失败:', e)
+  })
 }
 
 const logPanel = ref(null)
@@ -276,6 +279,7 @@ function bindDetailTaskWS(runId) {
     if (!task.value) return
     if (msg.type === 'log') {
       taskAddLog(msg.message)
+      saveTask()
       return
     }
     applyWsMessage(task.value, msg, {
@@ -303,15 +307,26 @@ function getWsMap() { return window[WS_KEY] || {} }
 
 let saveTimer = null
 watch(taskId, () => {
-  loadTask()
-  if (task.value?.running && task.value.runId) {
-    bindDetailTaskWS(task.value.runId)
-  }
+  loadTask().then(() => {
+    if (!task.value) return
+    const pendingRunId = history.state?.runId
+    if (!task.value.runId && pendingRunId) {
+      task.value.runId = pendingRunId
+    }
+    if (task.value?.running && task.value.runId) {
+      bindDetailTaskWS(task.value.runId)
+    }
+  })
 })
 
 onMounted(() => {
   loadTask().then(async () => {
     if (!task.value) return
+    // 创建任务后跳转详情时，history.state 可能带有 runId（早于 DB 关联）
+    const pendingRunId = history.state?.runId
+    if (!task.value.runId && pendingRunId) {
+      task.value.runId = pendingRunId
+    }
     if (task.value.running && task.value.runId) {
       bindDetailTaskWS(task.value.runId)
     } else if (task.value.running && !task.value.runId) {
@@ -346,12 +361,23 @@ async function stopTask() {
     try { await ElMessageBox.confirm('确定移除该排队任务？', '移除排队任务', { confirmButtonText: '移除', cancelButtonText: '取消', type: 'warning' }) } catch (_) { return }
     try {
       await client.post('/runner/queue/cancel', { client_task_id: task.value.id, device_serial: task.value.deviceSerial })
-    } catch (_) {}
+    } catch (e) {
+      // 404 表示任务已开始执行,属正常;其余为真实失败,报错并留在当前页
+      if (e?.response?.status !== 404) {
+        ElMessage.error('取消排队失败，请检查网络后重试')
+        return
+      }
+    }
     router.push('/runner')
     return
   }
   try { await ElMessageBox.confirm('确定停止该任务？', '停止任务', { confirmButtonText: '停止', cancelButtonText: '取消', type: 'warning' }) } catch (_) { return }
-  try { await client.post(`/runner/run/${task.value.runId}/stop`) } catch (_) {}
+  try {
+    await client.post(`/runner/run/${task.value.runId}/stop`)
+    ElMessage.success('停止请求已发送')
+  } catch (e) {
+    ElMessage.error('停止请求失败，请检查网络连接')
+  }
   task.value.running = false
   task.value.status = 'done'
   task.value.currentCaseTitle = ''
@@ -435,10 +461,16 @@ async function removeTask() {
   if (!task.value) return
   try { await ElMessageBox.confirm(`删除任务「${task.value.name || task.value.id}」？`, '确认删除', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }) } catch (_) { return }
   if (task.value.running) {
-    try { await client.post(`/runner/run/${task.value.runId}/stop`) } catch (_) {}
+    try { await client.post(`/runner/run/${task.value.runId}/stop`) } catch (e) { console.error('[removeTask] stop failed:', e) }
     const wm = getWsMap(); if (wm[task.value.id]) closeTaskWebSocket(task.value.id)
   }
-  try { await client.delete(`/runner/tasks/${taskId.value}`) } catch (_) {}
+  try {
+    await client.delete(`/runner/tasks/${taskId.value}`)
+  } catch (e) {
+    console.error('[removeTask] delete failed:', e)
+    ElMessage.error('删除失败，请检查网络后重试')
+    return
+  }
   router.push('/runner')
 }
 </script>
@@ -508,6 +540,10 @@ async function removeTask() {
           <AnimalButton v-else-if="!task.caseItems?.length" type="primary" @click="restartTask">▶ 执行</AnimalButton>
           <AnimalButton v-else-if="isTaskQueued(task)" type="warning" @click="stopTask">⏸ 取消排队</AnimalButton>
           <AnimalButton v-else type="primary" @click="restartTask">↻ 重新执行</AnimalButton>
+          <AnimalButton
+            v-if="task.outcome && ['completed', 'stopped', 'interrupted', 'error'].includes(task.outcome)"
+            @click="router.push(`/reports/task/${encodeURIComponent(task.id)}`)"
+          >📊 查看报告</AnimalButton>
           <AnimalButton type="danger" plain @click="removeTask">🗑 删除</AnimalButton>
         </div>
       </section>

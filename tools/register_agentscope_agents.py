@@ -43,7 +43,7 @@ for a in AIAgent.objects.filter(status="active"):
         # Get JWT token from Django
         login_resp = requests.post(
             f"http://127.0.0.1:8765/api/ai/auth/login",
-            json={"username": "admin", "password": "admin123"},
+            json={"username": os.environ.get("ADMIN_USER", "admin"), "password": os.environ.get("ADMIN_PASSWORD", "")},
             timeout=5,
         )
         token = login_resp.json().get("access_token", "")

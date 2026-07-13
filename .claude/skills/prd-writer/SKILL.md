@@ -387,7 +387,7 @@ description: |
 | # | 边界 | 说明 |
 |---|------|------|
 | B8 | **术语对齐项目规范** | 用项目已有的术语（查 `conventions.md`），不发明新词。"设备"不要说成"手机"，"用例"不要说成"案例"。 |
-| B9 | **PRD 文档存放位置固定** | 输出到 `AI开发项目文档管理/02-PRD需求/子PRD/`，命名格式 `{序号}-{模块名}.md` |
+| B9 | **PRD 文档存放位置固定** | 输出到 `dev_docs/02-PRD需求/`，命名格式 `子PRD-{序号}-{模块名}.md` |
 | B10 | **不自作主张定义技术方案** | 你可以建议"这个功能需要 WebSocket 推送"，但不能决定"用 Django Channels 的 AsyncConsumer"。技术选型是架构师的职责。 |
 
 ---
@@ -467,8 +467,8 @@ Step C.3 — 输出校验报告
 | 文件 | 用途 |
 |------|------|
 | `references/prd-checklist.md` | PRD 验收检查清单（6 维度 × 47 检查项） |
-| `AI开发项目文档管理/02-PRD需求/实际需求文档.md` | 全局 PRD（平台定位/目标用户/非功能基准） |
-| `AI开发项目文档管理/02-PRD需求/子PRD/` | 6 份子 PRD 参考模板 |
+| `dev_docs/02-PRD需求/实际需求文档.md` | 全局 PRD（平台定位/目标用户/非功能基准） |
+| `dev_docs/02-PRD需求/` | 6 份子 PRD 参考模板 |
 | `.claude/rules/database.md` | 数据库 20 张表完整字段 — 写数据模型前必读 |
 | `.claude/rules/api-conventions.md` | 50 REST + 2 WS 端点规范 — 写 API 规格前必读 |
 | `.claude/rules/frontend.md` | 前端规范（组件/路由/数据链路）— 写交互要求前必读 |
@@ -484,7 +484,7 @@ Step C.3 — 输出校验报告
 ```
 prd-writer (本 skill — 高级产品经理角色)
   │
-  ├─ 写完 PRD → 输出 PRD 文档到 子PRD/ 目录
+  ├─ 写完 PRD → 输出到 `dev_docs/02-PRD需求/`，命名 `子PRD-{序号}-{模块}.md`
   │     │
   │     ├─ → feature-analysis  从业务/技术/治理三个视角深度分析 PRD 中定义的功能
   │     └─ → auto-dev          按 PRD 规格进入 Phase 0 探索 → 编码实现

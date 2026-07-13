@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>执行引擎 — 质量与验收手册</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --primary:#19c8b9; --primary-active:#11a89b; --primary-bg:#e6f9f6;
+    --text:#794f27; --text-body:#725d42; --text-secondary:#9f927d; --text-muted:#8a7b66;
+    --bg:#f8f8f0; --bg-content:rgb(247,243,223); --border:#c4b89e;
+    --success:#6fba2c; --warning:#f5c31c; --error:#e05a5a;
+    --blue:#889df0; --purple:#b39ef3; --pink:#f8a6b2;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Nunito,'Noto Sans SC',-apple-system,'PingFang SC',sans-serif;font-weight:500;letter-spacing:.01em;background:var(--bg);color:var(--text-body);line-height:1.7}
+  .container{max-width:980px;margin:0 auto;padding:40px 20px}
+  h1{font-weight:800;color:var(--text);font-size:1.7em;text-align:center;margin-bottom:6px}
+  .subtitle{text-align:center;color:var(--text-secondary);font-size:.95em;margin-bottom:16px}
+  .card{background:var(--bg-content);border-radius:20px;padding:20px 22px;margin-bottom:16px;border:2px solid transparent}
+  .card-em{border-color:var(--warning);background:#fffdf5}
+  h2{font-weight:800;font-size:1.05em;color:var(--text);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+  h3{font-weight:700;font-size:.98em;color:var(--text);margin:14px 0 8px}
+  .sec-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:10px;font-size:12px;font-weight:800;color:#fff;flex-shrink:0}
+  .sn-teal{background:var(--primary)}.sn-green{background:var(--success)}.sn-pink{background:var(--pink)}
+  .sn-purple{background:var(--purple)}.sn-yellow{background:var(--warning)}.sn-blue{background:var(--blue)}
+  table{width:100%;border-collapse:collapse;margin:8px 0;border-radius:14px;overflow:hidden}
+  th{background:rgba(121,79,39,.06);padding:9px 12px;text-align:left;font-size:12px;font-weight:700;color:var(--text)}
+  td{padding:8px 12px;font-size:13px;border-top:1px dashed rgba(196,184,158,.4);vertical-align:top}
+  code{font-family:'SF Mono','Fira Code',Consolas,monospace;font-weight:600;font-size:11px;background:rgba(121,79,39,.06);padding:2px 6px;border-radius:6px;color:var(--text)}
+  .wire{background:#fff;border:2px dashed var(--border);border-radius:14px;padding:12px;font-family:'SF Mono',monospace;font-size:11px;line-height:1.5;color:var(--text);white-space:pre;overflow-x:auto;margin:8px 0}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin:12px 0}
+  .flow-step{padding:8px 12px;border-radius:50px;font-size:12px;font-weight:800;background:#fff;border:1.5px solid var(--border)}
+  .flow-arrow{color:var(--text-secondary);font-weight:700}
+  .tag{display:inline-block;padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700}
+  .tag-must{background:#fef2f2;color:#b91c1c}.tag-ok{background:#f0fdf4;color:#15803d}.tag-warn{background:#fff7ed;color:#c2410c}
+  .badge-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:16px}
+  .badge{padding:4px 12px;border-radius:50px;font-size:12px;font-weight:700;border:1.5px solid}
+  .b-p0{background:#fef2f2;color:var(--error);border-color:#f0b8b8}
+  .b-p1{background:#fff7ed;color:#c2410c;border-color:#f5c89a}
+  .b-ok{background:#f0fdf4;color:#15803d;border-color:#b8d8a0}
+  .b-meta{background:var(--bg-content);color:var(--text);border-color:var(--border)}
+  .footer{text-align:center;color:var(--text-secondary);font-size:12px;margin-top:28px;padding:16px 0;border-top:1px dashed rgba(196,184,158,.5)}
+  .diag{background:#fff;border-radius:14px;padding:12px 14px;margin:8px 0;border-left:4px solid var(--error)}
+  .diag h4{font-size:13px;color:var(--text);margin-bottom:4px}
+  .diag p,.diag li{font-size:12px;color:var(--text-secondary)}
+  .diag ul{margin:4px 0 0 16px}
+  .toc{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:18px}
+  .toc a{font-size:12px;font-weight:700;padding:5px 11px;border-radius:50px;border:2px solid var(--border);background:var(--bg-content);color:var(--text);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>执行引擎 — 质量与验收手册</h1>
+<p class="subtitle">Review 规则 · 质量分析流程 · 报错诊断 · 功能验收 · 一册四章</p>
+<nav class="toc">
+  <a href="#c1">① Review</a><a href="#c2">② 质量流程</a><a href="#c3">③ 报错诊断</a><a href="#c4">④ 验收</a>
+</nav>
+<div class="card card-em" id="c1"><h2><span class="sec-num sn-yellow">①</span> Code Review 规则</h2>
+<p style="font-size:13px;color:var(--text-secondary)">执行引擎：调度、状态机、WS 进度、设备控制 · PRD：<code>子PRD-04-test-runner.md</code></p></div>
+<div class="card">
+  <table><tr><th>#</th><th>检查项</th><th>通过标准</th><th>等级</th></tr><tr><td>M1</td><td>改动范围</td><td>仅 apps/test_runner + modules/test-runner（及必要注册）</td><td><span class='tag tag-must'>🔴</span></td></tr><tr><td>M2</td><td>防火墙</td><td>无跨 App import service/runner 私有符号</td><td><span class='tag tag-must'>🔴</span></td></tr><tr><td>M3</td><td>跨模块写</td><td>必须走对方或本模块 api.py</td><td><span class='tag tag-must'>🔴</span></td></tr><tr><td>M4</td><td>响应格式</td><td>{ok,data|error}</td><td><span class='tag tag-must'>🔴</span></td></tr><tr><td>M5</td><td>URL include</td><td>include('apps.test_runner.urls')</td><td><span class='tag tag-must'>🔴</span></td></tr><tr><td>M6</td><td>前端 api.js</td><td>组件不直连 api-client</td><td><span class='tag tag-must'>🔴</span></td></tr><tr><td>M7</td><td>无硬编码业务数据</td><td>列表/统计来自 API</td><td><span class='tag tag-must'>🔴</span></td></tr><tr><td>M8</td><td>错误处理</td><td>禁止空 catch{}；须提示</td><td><span class='tag tag-must'>🔴</span></td></tr><tr><td>M9</td><td>契约稳定</td><td>不擅自改 /api/runner 既有字段名</td><td><span class='tag tag-must'>🟡</span></td></tr><tr><td>M10</td><td>文档同步</td><td>重大变更更新子 PRD / 本目录 HTML</td><td><span class='tag tag-must'>🟡</span></td></tr></table>
+  <div class="wire">无 🔴 → APPROVED
+有 🔴 → NEEDS_REVISION
+有 🟡 无 🔴 → NEEDS_REVISION 或 APPROVED+记录理由</div>
+</div>
+<div class="card card-em" id="c2"><h2><span class="sec-num sn-yellow">②</span> 质量分析流程</h2></div>
+<div class="card">
+  <div class="flow">
+    <span class="flow-step">Inventory</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Partition</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Standardize</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Cleanup</span><span class="flow-arrow">→</span>
+    <span class="flow-step">更新本目录 HTML</span>
+  </div>
+  <ol style="margin-left:18px;font-size:13px">
+    <li>盘点 <code>apps/test_runner</code> 与 <code>modules/test-runner</code> 文件/行数/死代码</li>
+    <li>扫 <code>from apps.</code> 依赖，标防火墙违规</li>
+    <li>对照 Review 清单打分，写 P0/P1/P2</li>
+    <li>输出/覆盖 <code>代码质量分析.html</code>（禁止只 copy 旧稿）</li>
+  </ol>
+</div>
+<div class="card card-em" id="c3"><h2><span class="sec-num sn-yellow">③</span> 报错诊断</h2>
+<p style="font-size:13px;color:var(--text-secondary)">通用项见 <code>平台级/报错诊断手册.md</code></p></div>
+<div class="card"><div class='diag'><h4>任务卡在 RUNNING</h4><p><strong>原因</strong>：状态机未收尾 / 回调丢失</p><p><strong>处理</strong>：查 state_machine + callbacks</p></div><div class='diag'><h4>WS 无进度</h4><p><strong>原因</strong>：Channels/Redis / 鉴权</p><p><strong>处理</strong>：查 /ws/test-run/{id}</p></div><div class='diag'><h4>设备执行失败</h4><p><strong>原因</strong>：u2 断连 / recovery</p><p><strong>处理</strong>：查 u2_recovery / device_connect</p></div></div>
+<div class="card card-em" id="c4"><h2><span class="sec-num sn-yellow">④</span> 功能验收</h2></div>
+<div class="card">
+  <div class="flow">
+    <span class="flow-step">PRD</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Review</span><span class="flow-arrow">→</span>
+    <span class="flow-step">编译</span><span class="flow-arrow">→</span>
+    <span class="flow-step">接口/页面</span><span class="flow-arrow">→</span>
+    <span class="flow-step">勾选 AC</span>
+  </div>
+  <table><tr><th>ID</th><th>场景</th><th>期望</th></tr><tr><td>TR-AC-01</td><td>发起 run 返回 run_id</td><td>状态 PENDING→RUNNING</td></tr><tr><td>TR-AC-02</td><td>WS 推送步骤结果</td><td>前端实时可见</td></tr><tr><td>TR-AC-03</td><td>停止 run 生效</td><td>状态终态 + 设备释放</td></tr></table>
+  <p style="font-size:13px;margin-top:8px">测试方案 HTML 暂缓；可用既有 <code>测试方案-*.md</code> 作参考。命令预留：<code>python tests/functional/test-runner/run_tests.py</code></p>
+</div>
+<div class="footer">执行引擎 · 质量与验收手册 · 2026-07-10 · 05-开发与测试/执行引擎/</div>
+
+</div>
+</body>
+</html>

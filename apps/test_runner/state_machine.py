@@ -111,6 +111,7 @@ def cancel(task_card):
     _save_transition(task_card, None, "idle", "")
 
 
+@transaction.atomic
 def dequeue(task_card, run_id, device_serial, selected_cases, loop_count):
     """TaskCard QUEUED → RUNNING. Creates TestRunRecord atomically.
 
@@ -180,29 +181,40 @@ def complete(
     )
 
 
-def fail(task_card, run_record, outcome="error", overall_pass=0, overall_fail=0):
+def fail(
+    task_card,
+    run_record,
+    outcome="error",
+    overall_pass=0,
+    overall_fail=0,
+    case_items=None,
+    summary=None,
+):
     """TaskCard RUNNING → DONE (error|stopped|interrupted).
 
     Args:
         outcome: one of 'error', 'stopped', 'interrupted'
+        case_items: optional per-case aggregation to persist on the TaskCard
+        summary: optional run summary to persist on the TestRunRecord
     """
     if outcome not in ("error", "stopped", "interrupted"):
         raise ValueError(f"Invalid outcome for fail(): {outcome}")
     run_status = {"error": "FAILED", "stopped": "STOPPED", "interrupted": "STOPPED"}[outcome]
+
+    task_extra = {"overall_pass": overall_pass, "overall_fail": overall_fail}
+    if case_items is not None:
+        task_extra["case_items"] = case_items
+    run_extra = {"status": run_status, "finished_at": datetime.now().isoformat()}
+    if summary is not None:
+        run_extra["summary"] = summary
 
     _save_transition(
         task_card,
         run_record,
         "done",
         outcome,
-        task_extra={
-            "overall_pass": overall_pass,
-            "overall_fail": overall_fail,
-        },
-        run_extra={
-            "status": run_status,
-            "finished_at": datetime.now().isoformat(),
-        },
+        task_extra=task_extra,
+        run_extra=run_extra,
     )
 
 

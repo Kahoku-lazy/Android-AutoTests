@@ -72,12 +72,21 @@ function onAfterEnter(el) {
 
 .main-content {
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   padding: 0;
   position: relative;
   z-index: 1;
   background: url('/animal-assets/content_bg_pc.jpg') center / auto repeat;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 路由页面根节点占满主内容区，由页面内部纵向滚动 */
+.main-content :deep(.doc-page) {
+  flex: 1;
   min-height: 0;
+  height: 100%;
 }
 
 .guide-line {

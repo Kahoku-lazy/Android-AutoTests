@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>平台质量全面评估报告 — Android-AutoTests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary:#19c8b9; --primary-active:#11a89b; --primary-bg:#e6f9f6;
+  --text:#794f27; --text-body:#725d42; --text-secondary:#9f927d; --text-muted:#8a7b66;
+  --bg:#f8f8f0; --bg-content:rgb(247,243,223); --border:#c4b89e;
+  --success:#6fba2c; --warning:#f5c31c; --error:#e05a5a;
+  --blue:#889df0; --purple:#b39ef3; --orange:#e8a04a;
+  --r-sm:12px; --r-base:18px; --r-lg:24px; --r-pill:50px;
+  --ease:cubic-bezier(0.4,0,0.2,1); --d-base:0.25s;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Nunito,'Noto Sans SC',-apple-system,'PingFang SC',sans-serif;font-weight:500;letter-spacing:.01em;background:var(--bg);background-image:radial-gradient(ellipse at 12% 0%,rgba(25,200,185,.07) 0%,transparent 55%),radial-gradient(ellipse at 88% 100%,rgba(179,158,243,.06) 0%,transparent 50%);color:var(--text-body);padding:32px 20px 56px;line-height:1.65}
+.container{max-width:1200px;margin:0 auto}
+.header{text-align:center;margin-bottom:36px}
+.header-badge{display:inline-block;background:var(--primary-bg);color:var(--primary-active);font-size:11px;font-weight:700;letter-spacing:.06em;padding:5px 16px;border-radius:var(--r-pill);border:2px solid var(--primary);margin-bottom:14px}
+h1{font-size:28px;font-weight:900;color:var(--text);letter-spacing:.02em;line-height:1.3}
+.meta{color:var(--text-secondary);font-size:13px;margin-top:8px}
+
+/* Grade banner */
+.grade-banner{background:var(--bg-content);border-radius:var(--r-lg);border:2px solid var(--border);padding:28px 32px;margin-bottom:28px;display:grid;grid-template-columns:140px 1fr;gap:28px;align-items:center}
+.grade-circle{width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,var(--warning),#e8a04a);display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid var(--border)}
+.grade-letter{font-size:48px;font-weight:900;color:#fff;line-height:1;text-shadow:0 2px 4px rgba(0,0,0,.15)}
+.grade-score{font-size:13px;font-weight:700;color:rgba(255,255,255,.9);margin-top:4px}
+.grade-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:10px}
+.grade-desc{font-size:14px}
+.grade-desc strong{color:var(--text);font-weight:700}
+.grade-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.gtag{font-size:11px;font-weight:700;padding:4px 12px;border-radius:var(--r-pill);border:1.5px solid}
+.gtag-good{background:#e8f5e0;color:#3d7a14;border-color:#b8d8a0}
+.gtag-mid{background:#fef3cd;color:#8a6d14;border-color:#e8d080}
+.gtag-bad{background:#fde8e8;color:var(--error);border-color:#f0b8b8}
+
+/* Radar / dimension grid */
+.dim-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:28px}
+.dim-card{background:var(--bg-content);border-radius:var(--r-base);border:2px solid var(--border);padding:16px;text-align:center;transition:transform var(--d-base) var(--ease)}
+.dim-card:hover{transform:translateY(-2px)}
+.dim-grade{font-size:28px;font-weight:900;margin:4px 0}
+.dim-name{font-size:11px;font-weight:700;color:var(--text-secondary);letter-spacing:.04em}
+.dim-note{font-size:10px;color:var(--text-muted);margin-top:4px}
+.g-a{color:var(--success)}.g-b{color:#5a9e1e}.g-bm{color:var(--primary-active)}
+.g-c{color:var(--warning)}.g-d{color:var(--error)}
+
+h2{font-size:17px;font-weight:800;color:var(--text);margin:36px 0 14px;display:flex;align-items:center;gap:10px;letter-spacing:.02em}
+h2 .num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;background:var(--primary);color:#fff;border-radius:50%;font-size:12px;font-weight:900;flex-shrink:0}
+h3{font-size:14px;font-weight:800;color:var(--text);margin:18px 0 10px}
+
+.card{background:var(--bg-content);border-radius:var(--r-base);border:2px solid var(--border);padding:18px 20px;margin-bottom:14px}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin-bottom:8px}
+
+.table-wrap{background:var(--bg-content);border-radius:var(--r-lg);border:2px solid var(--border);overflow:hidden;margin-bottom:16px}
+table{width:100%;border-collapse:collapse}
+th{background:linear-gradient(180deg,#faf5ed 0%,#f0ebe0 100%);padding:10px 13px;text-align:left;font-size:10px;letter-spacing:.05em;color:var(--text-secondary);font-weight:700;border-bottom:2px solid var(--border)}
+td{padding:9px 13px;font-size:13px;border-bottom:1px solid rgba(196,184,158,.3);font-weight:500}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:rgba(255,255,255,.3)}
+
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--r-pill)}
+.b-p0{background:#fde8e8;color:var(--error)}.b-p1{background:#fef3cd;color:#8a6d14}
+.b-p2{background:#e8f0fe;color:#4a6eb8}.b-p3{background:#f0ece2;color:var(--text-muted)}
+.b-ok{background:#e8f5e0;color:#3d7a14}.b-warn{background:#fef3cd;color:#8a6d14}
+.b-err{background:#fde8e8;color:var(--error)}
+
+/* Score bars */
+.score-row{display:grid;grid-template-columns:180px 1fr 44px;align-items:center;gap:12px;margin-bottom:10px}
+.score-label{font-size:12px;font-weight:700;color:var(--text)}
+.score-track{height:16px;background:var(--bg-disabled,#f0ece2);border-radius:var(--r-pill);overflow:hidden;border:1.5px solid var(--border)}
+.score-fill{height:100%;border-radius:var(--r-pill)}
+.score-val{font-size:12px;font-weight:800;color:var(--text-secondary);text-align:right}
+
+/* Two-col analysis */
+.analysis-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.pros,.cons{border-radius:var(--r-base);padding:16px 18px;border:2px solid}
+.pros{background:rgba(111,186,44,.06);border-color:rgba(111,186,44,.3)}
+.cons{background:rgba(224,90,90,.06);border-color:rgba(224,90,90,.25)}
+.pros h3,.cons h3{margin-top:0;font-size:13px}
+.pros ul,.cons ul{padding-left:18px;font-size:12px;line-height:1.7}
+.pros li{color:#3d5a1e}.cons li{color:#8a3030}
+
+/* Roadmap */
+.roadmap{display:flex;flex-direction:column;gap:0;margin-bottom:16px}
+.phase{display:grid;grid-template-columns:100px 1fr;gap:16px;padding:16px 0;border-bottom:1.5px dashed var(--border)}
+.phase:last-child{border-bottom:none}
+.phase-label{font-size:11px;font-weight:800;color:var(--text-secondary);letter-spacing:.04em;padding-top:2px}
+.phase-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px}
+.phase-items{font-size:12px;color:var(--text-muted);line-height:1.6}
+.phase-items li{margin-bottom:3px}
+
+/* Verdict box */
+.verdict{background:var(--bg-content);border-radius:var(--r-lg);border:2px solid var(--border);border-left:5px solid var(--primary);padding:22px 26px;margin:24px 0}
+.verdict-title{font-size:15px;font-weight:800;color:var(--text);margin-bottom:10px}
+
+.code{font-family:'SF Mono','Fira Code',Consolas,monospace;font-size:11px;font-weight:600;background:rgba(255,255,255,.5);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;overflow-x:auto;color:var(--text);margin:8px 0;line-height:1.6}
+
+.footer{text-align:center;color:var(--text-secondary);font-size:11px;margin-top:48px;padding-top:20px;border-top:2px dashed var(--border)}
+
+@media(max-width:900px){
+  .dim-grid{grid-template-columns:repeat(3,1fr)}
+  .grade-banner{grid-template-columns:1fr;text-align:center}
+  .grade-circle{margin:0 auto}
+  .analysis-cols{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .dim-grid{grid-template-columns:repeat(2,1fr)}
+  h1{font-size:22px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <div class="header-badge">CHIEF ARCHITECT REVIEW</div>
+  <h1>Android-AutoTests 平台质量全面评估</h1>
+  <p class="meta">首席架构师视角 · 10 维度深度审查 · 2026-07-09 · 代码量 28,621 行 · 7 前端模块 · 6 后端 App</p>
+</div>
+
+<!-- Overall Grade -->
+<div class="grade-banner">
+  <div class="grade-circle">
+    <div class="grade-letter">B-</div>
+    <div class="grade-score">综合 74/100</div>
+  </div>
+  <div>
+    <div class="grade-title">AI 开发平台的总体质量判定</div>
+    <div class="grade-desc">
+      这是一个<strong>产品完成度高、架构设计有意识、文档体系优秀</strong>的 AI 辅助开发项目，已达到「可演示、可内测」水平。
+      但在<strong>安全门禁、自动化测试、CI/CD、代码内聚性</strong>四个工程化维度存在明显短板，距「生产就绪」尚有距离。
+      作为 AI 从零构建的全栈平台，<strong>超出同类 AI 生成项目的平均水平</strong>；作为企业级测试平台，<strong>需 2~3 轮工程加固</strong>。
+    </div>
+    <div class="grade-tags">
+      <span class="gtag gtag-good">产品完整度 A</span>
+      <span class="gtag gtag-good">架构设计 B+</span>
+      <span class="gtag gtag-good">文档体系 A-</span>
+      <span class="gtag gtag-mid">代码质量 C+</span>
+      <span class="gtag gtag-mid">AI 工程化 B-</span>
+      <span class="gtag gtag-bad">安全 D</span>
+      <span class="gtag gtag-bad">测试/CI D+</span>
+    </div>
+  </div>
+</div>
+
+<!-- 10 Dimension Grades -->
+<div class="dim-grid">
+  <div class="dim-card"><div class="dim-grade g-a">A</div><div class="dim-name">产品完整度</div><div class="dim-note">7 模块闭环</div></div>
+  <div class="dim-card"><div class="dim-grade g-b">B+</div><div class="dim-name">模块化架构</div><div class="dim-note">Modular Monolith</div></div>
+  <div class="dim-card"><div class="dim-grade g-a">A-</div><div class="dim-name">文档体系</div><div class="dim-note">PRD+契约+测试</div></div>
+  <div class="dim-card"><div class="dim-grade g-bm">B</div><div class="dim-name">后端工程</div><div class="dim-note">分层清晰</div></div>
+  <div class="dim-card"><div class="dim-grade g-bm">B-</div><div class="dim-name">前端工程</div><div class="dim-note">结构好细节差</div></div>
+  <div class="dim-card"><div class="dim-grade g-bm">B-</div><div class="dim-name">AI 引擎</div><div class="dim-note">AgentScope 双轨</div></div>
+  <div class="dim-card"><div class="dim-grade g-c">C+</div><div class="dim-name">代码质量</div><div class="dim-note">巨型文件多</div></div>
+  <div class="dim-card"><div class="dim-grade g-c">C</div><div class="dim-name">可维护性</div><div class="dim-note">CC 最高 49</div></div>
+  <div class="dim-card"><div class="dim-grade g-d">D+</div><div class="dim-name">测试自动化</div><div class="dim-note">无 CI 无单测</div></div>
+  <div class="dim-card"><div class="dim-grade g-d">D</div><div class="dim-name">安全合规</div><div class="dim-note">JWT 可绕过</div></div>
+</div>
+
+<!-- PART 1: DETAILED ANALYSIS -->
+<h2><span class="num">1</span>详解分析 — 十个维度</h2>
+
+<h3>1.1 产品完整度与业务闭环（A）</h3>
+<div class="card">
+  <p style="font-size:13px;margin-bottom:10px">平台覆盖了 Android UI 自动化测试的<strong>完整业务链路</strong>，不是 demo 级拼凑：</p>
+  <div class="table-wrap" style="margin:0">
+    <table>
+      <thead><tr><th>阶段</th><th>模块</th><th>能力</th><th>完成度</th></tr></thead>
+      <tbody>
+        <tr><td>设备接入</td><td>device-pool</td><td>扫描/连接/锁/队列/心跳，13 REST 端点</td><td><span class="badge b-ok">成熟</span></td></tr>
+        <tr><td>元素定位</td><td>element-locator</td><td>UI dump、8 种 XPath、截图流 WS、元素 CRUD</td><td><span class="badge b-ok">成熟</span></td></tr>
+        <tr><td>用例编排</td><td>case-manager</td><td>14 种步骤、目录树、YAML 导出、单步调试</td><td><span class="badge b-ok">成熟</span></td></tr>
+        <tr><td>测试执行</td><td>test-runner</td><td>状态机、异步执行、TaskCard、WS 实时推送</td><td><span class="badge b-ok">成熟</span></td></tr>
+        <tr><td>报告生成</td><td>report-generator</td><td>报告列表/详情，4 端点</td><td><span class="badge b-warn">待完善</span></td></tr>
+        <tr><td>AI 助手</td><td>ai-assistant</td><td>SSE 流式、22 Tool、RAG、HITL、SOP 四阶段</td><td><span class="badge b-warn">开发中</span></td></tr>
+        <tr><td>数据概览</td><td>dashboard</td><td>跨模块统计聚合、快捷导航</td><td><span class="badge b-ok">可用</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:12px;color:var(--text-muted);margin-top:10px">评价：作为 AI 辅助开发的项目，能在单一仓库内交付 7 个互通模块 + AgentScope AI 引擎，产品野心和完成度值得肯定。报告和 AI 模块标注「待完善」是诚实的边界管理。</p>
+</div>
+
+<h3>1.2 模块化架构（B+）</h3>
+<div class="analysis-cols">
+  <div class="pros">
+    <h3>✓ 架构优势</h3>
+    <ul>
+      <li>前后端 7 模块对称拆分，目录结构统一（api.js + routes.js + index.vue）</li>
+      <li>后端三道防火墙规则文档化且大体遵守（读 Model、写 api.py、外部走 HTTP）</li>
+      <li>前端模块间零直接 import，跨模块协作走 HTTP 契约</li>
+      <li>数据表前缀隔离（dp_/el_/cm_/tr_/rg_/ai_）</li>
+      <li>API URL 按域前缀隔离（/api/devices/、/api/cases/ 等）</li>
+      <li>准确定义为 Modular Monolith，不是无序单体</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h3>✗ 架构短板</h3>
+    <ul>
+      <li>2 处防火墙穿透（dashboard/ai_assistant → runner._active_runs）</li>
+      <li>device_pool 被引用 13 次，test_runner 8 次 — 枢纽依赖过重</li>
+      <li>DB 层跨模块外键（tr_test_results → case_manager，el_pages → device_pool）</li>
+      <li>共享 models/ 包（step_types、test_models）偏紧耦合</li>
+      <li>dashboard 直接跨 6 个 App ORM 聚合，无 api 层缓冲</li>
+      <li>模块内巨型文件（ChatView 3334 行）破坏模块内聚性</li>
+    </ul>
+  </div>
+</div>
+
+<h3>1.3 代码质量与复杂度（C+）</h3>
+<div class="card">
+  <div class="table-wrap" style="margin-bottom:12px">
+    <table>
+      <thead><tr><th>风险文件</th><th>行数</th><th>复杂度</th><th>问题</th></tr></thead>
+      <tbody>
+        <tr><td>ai-assistant/ChatView.vue</td><td>3,334</td><td>≈341</td><td>单文件承载 SSE/消息/HITL/SOP/PRD 全部逻辑</td></tr>
+        <tr><td>test-runner/views.py</td><td>1,226</td><td>CC 49</td><td>路由+队列+调度+CRUD God File</td></tr>
+        <tr><td>ai_assistant/views.py</td><td>1,151</td><td>CC 18</td><td>auth+CRUD+LLM+文件上传+AgentScope 混合</td></tr>
+        <tr><td>device-pool/views.py</td><td>1,131</td><td>CC 21</td><td>ADB subprocess 直接在 view 层</td></tr>
+        <tr><td>case-manager/StepEditor.vue</td><td>1,130</td><td>≈181</td><td>14 种步骤编辑器未拆分</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:13px">全平台 28,621 行中，前端占 66.9%。<strong>7 个模块全部达标标准三件套</strong>，但模块<strong>内部</strong>缺乏小模块化：仅 test-runner 有 composables（2 个），Pinia 仅 2/7 模块使用。AI 生成代码的典型特征——「外层结构整齐、内层堆砌」——在此项目中表现明显。</p>
+</div>
+
+<h3>1.4 后端工程（B）</h3>
+<div class="analysis-cols">
+  <div class="pros">
+    <h3>✓ 后端亮点</h3>
+    <ul>
+      <li>views → api.py → models 三层分离基本成立</li>
+      <li>test_runner 独立 _u2_executor 线程池隔离 u2 与 Django ORM — 设计成熟</li>
+      <li>asyncio + sync_to_async + 超时控制执行模型合理</li>
+      <li>统一 {"ok":true/false} 响应格式</li>
+      <li>device_pool.api.py 作为公共设备接口，注释清晰</li>
+      <li>32 个 migration 链完整，无分叉冲突</li>
+      <li>API Key Fernet 加密存储 + mask 脱敏</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h3>✗ 后端问题</h3>
+    <ul>
+      <li>serializers.py 6 个 App 全部存在但 views 零引用 — 死代码</li>
+      <li>permissions.py 5/6 为占位符，ai_assistant 有实现但未接入</li>
+      <li>仅 test_runner 有 require_auth，鉴权装饰器不统一</li>
+      <li>_device_queue / _active_runs 进程内内存状态 — 多 worker 不兼容</li>
+      <li>时间字段用 CharField 存 ISO 字符串 — 查询/索引受限</li>
+      <li>后台异常用 print 而非 logger — 生产难追踪</li>
+      <li>多处 except Exception: pass 静默吞错</li>
+    </ul>
+  </div>
+</div>
+
+<h3>1.5 前端工程（B-）</h3>
+<div class="analysis-cols">
+  <div class="pros">
+    <h3>✓ 前端亮点</h3>
+    <ul>
+      <li>全项目 Composition API + script setup 统一</li>
+      <li>shared/api-client.js JWT 自动刷新 + formatApiError 设计成熟</li>
+      <li>Vite manualChunks 分包（element-plus / animal-island / vendor）</li>
+      <li>构建时剔除 3.4MB 中文字体 — 性能意识</li>
+      <li>7 模块 routes 懒加载，登录页不被 vendor 拖累</li>
+      <li>AI 模块独立 animal-island 主题，业务模块 Element Plus — 主题隔离</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h3>✗ 前端问题</h3>
+    <ul>
+      <li>无 TypeScript、无 ESLint 构建链路</li>
+      <li>无 Vitest/Jest 单元测试（0 个 .test.js）</li>
+      <li>写操作 catch 静默吞错 30+ 处，违反项目规则</li>
+      <li>ElementManager.vue 用 alert() 替代 ElMessage</li>
+      <li>test-runner WS 状态挂 window 全局变量</li>
+      <li>Pinia 仅 2/7 模块，其余 ref + localStorage</li>
+      <li>composables 仅 test-runner 有，未推广</li>
+    </ul>
+  </div>
+</div>
+
+<h3>1.6 AI 引擎架构（B-）</h3>
+<div class="card">
+  <p style="font-size:13px;margin-bottom:12px">AgentScope 2.0 + FastAPI 独立服务，22 个业务 Tool + 4 个 Plan Tool，ChromaDB RAG 知识库，5 个 SubAgent 模板 — <strong>AI 工程化广度令人印象深刻</strong>。</p>
+  <div class="table-wrap" style="margin-bottom:12px">
+    <table>
+      <thead><tr><th>组件</th><th>状态</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>Tool 分层（Plan + 业务）</td><td><span class="badge b-ok">优秀</span></td><td>跨模块写走 api.py，描述详尽，LLM 友好</td></tr>
+        <tr><td>SSE 流式对话</td><td><span class="badge b-ok">优秀</span></td><td>SSEMessageBuilder 与 AgentScope 2.0 协议对齐</td></tr>
+        <tr><td>RAG 知识库</td><td><span class="badge b-warn">可用</span></td><td>32 篇文档，但截断 4000 字符无分块策略</td></tr>
+        <tr><td>双轨降级（SSE → Django LLM）</td><td><span class="badge b-err">风险</span></td><td>降级后无 Tool 能力，UI 未明确提示</td></tr>
+        <tr><td>agent_factory 平台 Prompt</td><td><span class="badge b-err">死代码</span></td><td>200+ 行 SOP 约束未注入注册流</td></tr>
+        <tr><td>per-agent 工具配置</td><td><span class="badge b-err">未生效</span></td><td>ai_tools 表配置被忽略，全 Agent 获 26 工具</td></tr>
+        <tr><td>Leader Team Prompt</td><td><span class="badge b-err">死代码</span></td><td>teams/leader.py 未被引用</td></tr>
+        <tr><td>Redis 依赖</td><td><span class="badge b-err">硬依赖</span></td><td>无 Redis 则 AgentScope 完全不可用</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<h3>1.7 安全合规（D）— 最大短板</h3>
+<div class="card" style="border-color:rgba(224,90,90,.4)">
+  <div class="table-wrap" style="margin:0">
+    <table>
+      <thead><tr><th>严重度</th><th>问题</th><th>位置</th><th>影响</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="badge b-p0">P0</span></td>
+          <td>JWT 中间件无 Token 仍放行所有 /api/</td>
+          <td>gateway/middleware.py L60-66</td>
+          <td>全部 API 可被匿名调用</td>
+        </tr>
+        <tr>
+          <td><span class="badge b-p0">P0</span></td>
+          <td>reveal_api_key 无鉴权，返回明文 API Key</td>
+          <td>ai_assistant/views.py</td>
+          <td>密钥泄露</td>
+        </tr>
+        <tr>
+          <td><span class="badge b-p0">P0</span></td>
+          <td>设备锁 user_id 来自请求体，可伪造</td>
+          <td>device_pool/views.py</td>
+          <td>冒充占设备</td>
+        </tr>
+        <tr>
+          <td><span class="badge b-p0">P0</span></td>
+          <td>AI Agent CRUD 基本无鉴权</td>
+          <td>ai_assistant/views.py</td>
+          <td>任意创建/删除 Agent</td>
+        </tr>
+        <tr>
+          <td><span class="badge b-p1">P1</span></td>
+          <td>JWT 无 jti，logout 黑名单无效</td>
+          <td>shared/auth/jwt_auth.py</td>
+          <td>Token 注销形同虚设</td>
+        </tr>
+        <tr>
+          <td><span class="badge b-p1">P1</span></td>
+          <td>黑名单存进程内存，多 worker 不共享</td>
+          <td>jwt_auth.py _token_blacklist</td>
+          <td>分布式失效</td>
+        </tr>
+        <tr>
+          <td><span class="badge b-p1">P1</span></td>
+          <td>test_run_status / list_test_runs 无鉴权</td>
+          <td>test_runner/views.py</td>
+          <td>执行数据泄露</td>
+        </tr>
+        <tr>
+          <td><span class="badge b-p2">P2</span></td>
+          <td>permissions.py 完整实现但 views 零引用</td>
+          <td>ai_assistant/</td>
+          <td>多用户无隔离</td>
+        </tr>
+        <tr>
+          <td><span class="badge b-p2">P2</span></td>
+          <td>22 个 @csrf_exempt 端点</td>
+          <td>ai_assistant/views.py</td>
+          <td>缺 CSRF 纵深防御</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:12px;color:var(--error);margin-top:10px;font-weight:600">架构师判定：安全是当前最大风险。项目文档（security.md）写了规则，但 gateway 中间件主动注释掉了强制鉴权 — 这是 AI 开发「知道规则但做不到」的典型表现。</p>
+</div>
+
+<h3>1.8 测试与质量保障（D+）</h3>
+<div class="card">
+  <div class="table-wrap" style="margin-bottom:12px">
+    <table>
+      <thead><tr><th>测试类型</th><th>存在</th><th>质量</th><th>问题</th></tr></thead>
+      <tbody>
+        <tr><td>Django 单元测试</td><td>ai_assistant/tests.py</td><td><span class="badge b-err">空壳</span></td><td>仅 import TestCase，零用例</td></tr>
+        <tr><td>功能集成测试</td><td>tests/functional/</td><td><span class="badge b-warn">有但旧</span></td><td>~130 条用例，部分规格</td></tr>
+        <tr><td>前端 Selenium</td><td>tests/frontend/</td><td><span class="badge b-err">过时</span></td><td>假设 5 导航项，实际 7；无登录 fixture</td></tr>
+        <tr><td>前端单元测试</td><td>—</td><td><span class="badge b-err">不存在</span></td><td>0 个 .test.js / .spec.vue</td></tr>
+        <tr><td>AgentScope Tool 测试</td><td>—</td><td><span class="badge b-err">不存在</span></td><td>22 个 Tool 零测试</td></tr>
+        <tr><td>CI/CD 流水线</td><td>—</td><td><span class="badge b-err">不存在</span></td><td>无 .github/workflows/</td></tr>
+        <tr><td>state_machine 单测</td><td>—</td><td><span class="badge b-err">不存在</span></td><td>CC=49 的核心逻辑无覆盖</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:13px">测试方案文档（04-测试方案/）写得很好，但<strong>文档与自动化执行严重脱节</strong>。有测试资产但未接入 CI，测试本身也已过时 — 这是「有测试文化意识但工程化未落地」。</p>
+</div>
+
+<h3>1.9 文档与知识管理（A-）</h3>
+<div class="card">
+  <p style="font-size:13px">这是本项目<strong>最突出的优势之一</strong>，在 AI 开发项目中极为罕见：</p>
+  <ul style="font-size:13px;padding-left:20px;margin-top:8px;line-height:1.8">
+    <li><strong>PRD 体系</strong>：总需求 + 6 份子 PRD，用户故事 + NFR 指标完整</li>
+    <li><strong>VUE_API_CONTRACT.md</strong>：前后端契约表，改 API 时可对照 — 极佳实践</li>
+    <li><strong>AGENTS.md + CLAUDE.md</strong>：Agent 路由、五阶段 workflow、验证铁律</li>
+    <li><strong>14 条 .claude/rules/</strong>：frontend/backend/security/architecture 等专项规则</li>
+    <li><strong>测试方案</strong>：8 份模块用例 + E2E 规格</li>
+    <li><strong>HTML 架构报告</strong>：可视化程度高</li>
+  </ul>
+  <p style="font-size:12px;color:var(--text-muted);margin-top:10px">不足：文档与代码存在漂移（导航 5→7、默认路由 /elements→/dashboard、element-manager 合并），无文档版本与 commit 自动关联。</p>
+</div>
+
+<h3>1.10 DevOps 与工程化（D+）</h3>
+<div class="card">
+  <div class="analysis-cols" style="margin:0">
+    <div class="pros" style="margin:0">
+      <h3>✓ 做得好的</h3>
+      <ul>
+        <li>run.py 一键启停 4 服务（Redis+Django+AgentScope+Vite）</li>
+        <li>跨平台端口释放（Windows/macOS）</li>
+        <li>AgentScope/Redis 失败降级继续启动</li>
+        <li>logs/ 分服务日志</li>
+        <li>ruff.toml Python 格式化配置</li>
+      </ul>
+    </div>
+    <div class="cons" style="margin:0">
+      <h3>✗ 缺失的</h3>
+      <ul>
+        <li>零 CI/CD（无 GitHub Actions / GitLab CI）</li>
+        <li>无 Docker / docker-compose</li>
+        <li>requirements.txt 无 lock file，构建不可复现</li>
+        <li>无 dependabot / pip-audit 漏洞扫描</li>
+        <li>无结构化日志 / log rotation</li>
+        <li>无监控/告警（Prometheus/Sentry）</li>
+        <li>无部署 Runbook（生产环境）</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- PART 2: EVALUATION -->
+<h2><span class="num">2</span>架构师综合评价</h2>
+
+<div class="verdict">
+  <div class="verdict-title">一句话定性</div>
+  <p style="font-size:14px">这是一个<strong>「产品架构优秀、文档体系领先、AI 工程化有野心，但安全与工程化欠账明显」</strong>的 AI 辅助开发项目。它证明了 AI 可以构建功能完整的全栈平台，但<strong>尚未证明 AI 可以构建生产就绪的企业级系统</strong>——后者需要人类架构师在安全、测试、CI 三个维度补齐。</p>
+</div>
+
+<h3>2.1 与行业基准对比</h3>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>评估维度</th>
+        <th>本项目</th>
+        <th>行业 MVP 基准</th>
+        <th>企业生产基准</th>
+        <th>判定</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>功能完整度</td><td>7 模块闭环</td><td>2~3 模块</td><td>5+ 模块</td><td><span class="badge b-ok">超 MVP</span></td></tr>
+      <tr><td>架构文档</td><td>PRD+契约+规则+测试方案</td><td>README</td><td>ADR+Runbook</td><td><span class="badge b-ok">超 MVP</span></td></tr>
+      <tr><td>模块化程度</td><td>Modular Monolith</td><td>单体</td><td>微服务/模块化</td><td><span class="badge b-ok">达标</span></td></tr>
+      <tr><td>安全门禁</td><td>JWT 可绕过</td><td>基本鉴权</td><td>OAuth2+RBAC+审计</td><td><span class="badge b-err">不达标</span></td></tr>
+      <tr><td>自动化测试</td><td>有资产无 CI</td><td>少量单测</td><td>CI+80% 覆盖</td><td><span class="badge b-err">不达标</span></td></tr>
+      <tr><td>CI/CD</td><td>无</td><td>基本 build</td><td>全链路 DevOps</td><td><span class="badge b-err">不达标</span></td></tr>
+      <tr><td>代码内聚性</td><td>外层好内层差</td><td>—</td><td>模块内 < 500 行</td><td><span class="badge b-warn">部分达标</span></td></tr>
+      <tr><td>AI 集成深度</td><td>22 Tool+RAG+Team</td><td>简单 chat</td><td>Tool+RAG+评估</td><td><span class="badge b-ok">超 MVP</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h3>2.2 AI 开发特征画像</h3>
+<div class="card">
+  <p style="font-size:13px;margin-bottom:12px">从代码模式和工程痕迹，可以识别出以下 <strong>AI 开发的典型特征</strong>：</p>
+  <div class="table-wrap" style="margin:0">
+    <table>
+      <thead><tr><th>特征</th><th>表现</th><th>好/坏</th></tr></thead>
+      <tbody>
+        <tr><td>「知道但做不到」</td><td>security.md 写满规则，gateway 注释掉 JWT 强制</td><td><span class="badge b-err">坏</span></td></tr>
+        <tr><td>「外层整齐内层堆砌」</td><td>7 模块结构完美，ChatView 3334 行单体</td><td><span class="badge b-warn">中</span></td></tr>
+        <tr><td>「文档超前于代码」</td><td>测试方案 130 条，自动化覆盖率 ≈ 0</td><td><span class="badge b-warn">中</span></td></tr>
+        <tr><td>「死代码积累」</td><td>serializers×6、permissions 未接入、agent_factory 未引用</td><td><span class="badge b-err">坏</span></td></tr>
+        <tr><td>「规则体系完善」</td><td>14 条 .claude/rules/ + Agent 路由 + 五阶段 workflow</td><td><span class="badge b-ok">好</span></td></tr>
+        <tr><td>「功能野心大」</td><td>7 模块 + AgentScope + RAG + 14 种步骤 + WS 流</td><td><span class="badge b-ok">好</span></td></tr>
+        <tr><td>「复制粘贴扩展」</td><td>views.py 逐模块膨胀，未抽取公共模式</td><td><span class="badge b-warn">中</span></td></tr>
+        <tr><td>「渐进式演进」</td><td>test_runner 13 个 migration，TaskCard 持续迭代</td><td><span class="badge b-ok">好</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<h3>2.3 综合评分雷达</h3>
+<div class="card">
+  <div class="score-row"><div class="score-label">产品完整度</div><div class="score-track"><div class="score-fill" style="width:92%;background:var(--success)"></div></div><div class="score-val">92</div></div>
+  <div class="score-row"><div class="score-label">架构设计</div><div class="score-track"><div class="score-fill" style="width:82%;background:var(--primary)"></div></div><div class="score-val">82</div></div>
+  <div class="score-row"><div class="score-label">文档体系</div><div class="score-track"><div class="score-fill" style="width:88%;background:var(--success)"></div></div><div class="score-val">88</div></div>
+  <div class="score-row"><div class="score-label">后端工程</div><div class="score-track"><div class="score-fill" style="width:72%;background:var(--primary)"></div></div><div class="score-val">72</div></div>
+  <div class="score-row"><div class="score-label">前端工程</div><div class="score-track"><div class="score-fill" style="width:68%;background:var(--primary-active)"></div></div><div class="score-val">68</div></div>
+  <div class="score-row"><div class="score-label">AI 引擎</div><div class="score-track"><div class="score-fill" style="width:70%;background:var(--purple)"></div></div><div class="score-val">70</div></div>
+  <div class="score-row"><div class="score-label">代码质量</div><div class="score-track"><div class="score-fill" style="width:58%;background:var(--warning)"></div></div><div class="score-val">58</div></div>
+  <div class="score-row"><div class="score-label">可维护性</div><div class="score-track"><div class="score-fill" style="width:52%;background:var(--warning)"></div></div><div class="score-val">52</div></div>
+  <div class="score-row"><div class="score-label">测试自动化</div><div class="score-track"><div class="score-fill" style="width:35%;background:var(--error)"></div></div><div class="score-val">35</div></div>
+  <div class="score-row"><div class="score-label">安全合规</div><div class="score-track"><div class="score-fill" style="width:28%;background:var(--error)"></div></div><div class="score-val">28</div></div>
+  <div class="score-row"><div class="score-label">DevOps/CI</div><div class="score-track"><div class="score-fill" style="width:30%;background:var(--error)"></div></div><div class="score-val">30</div></div>
+</div>
+
+<!-- PART 3: IMPROVEMENT ROADMAP -->
+<h2><span class="num">3</span>改进路线图</h2>
+
+<div class="roadmap">
+  <div class="phase">
+    <div class="phase-label"><span class="badge b-p0">第 1 周</span><br>安全加固</div>
+    <div>
+      <div class="phase-title">P0 — 堵住安全漏洞（不做则不能上线）</div>
+      <ul class="phase-items">
+        <li>启用 JWT 强制校验：取消 gateway/middleware.py L60-66 注释</li>
+        <li>设备 lock/release 的 user_id 改从 JWT 取，禁止请求体自报</li>
+        <li>reveal_api_key、Agent CRUD、test_run_status 加 @require_auth</li>
+        <li>接入 ai_assistant/permissions.py 的 check_agent_owner</li>
+        <li>JWT 加 jti 字段 + Redis 黑名单替代进程内存 set</li>
+      </ul>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="phase-label"><span class="badge b-p1">第 2~3 周</span><br>工程化基建</div>
+    <div>
+      <div class="phase-title">P1 — 建立质量门禁（ROI 最高）</div>
+      <ul class="phase-items">
+        <li>创建 GitHub Actions：vite build + manage.py check + pytest smoke</li>
+        <li>修复 tests/frontend/ 过时测试（登录 fixture、7 导航项、/dashboard 路由）</li>
+        <li>补 test_runner/state_machine.py 单元测试（核心 CC=49 逻辑）</li>
+        <li>补 device_pool.api.acquire_device / release_device 单元测试</li>
+        <li>写操作 catch 审计：统一 ElMessage.error + formatApiError</li>
+        <li>requirements.txt 加 pip-tools lock file</li>
+      </ul>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="phase-label"><span class="badge b-p1">第 3~4 周</span><br>架构修复</div>
+    <div>
+      <div class="phase-title">P1 — 修复架构违规和技术债</div>
+      <ul class="phase-items">
+        <li>dashboard/ai_assistant 改调 test_runner/api.py 公开函数，消除 _active_runs 穿透</li>
+        <li>_device_queue / _active_runs 迁到 Redis 或 DB，支持多 worker</li>
+        <li>拆分 test_runner/views.py（1226 行，CC=49）→ service + scheduler</li>
+        <li>拆分 ChatView.vue（3334 行）→ useSSEChat / useTaskCards / useSOPPhase composables</li>
+        <li>统一 API 响应为 {"ok":true,"data":{...}} 包装</li>
+      </ul>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="phase-label"><span class="badge b-p2">第 5~8 周</span><br>AI 引擎优化</div>
+    <div>
+      <div class="phase-title">P2 — AI 能力落地与统一</div>
+      <ul class="phase-items">
+        <li>register_agent_in_agentscope 复用 agent_factory 平台 SOP prompt</li>
+        <li>build_business_tools 按 AIAgent.tools 配置过滤工具</li>
+        <li>Redis 启动探测 + fallback 模式 UI 明确标注「无工具能力」</li>
+        <li>RAG 加分块策略（chunk_size=500, overlap=50）替代 4000 字符截断</li>
+        <li>接入 teams/leader.py 多 Agent 编排 prompt</li>
+        <li>清理死代码：serializers、SKILL_PATHS、agent_factory 双轨</li>
+      </ul>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="phase-label"><span class="badge b-p3">持续</span><br>长期演进</div>
+    <div>
+      <div class="phase-title">P3 — 迈向生产就绪</div>
+      <ul class="phase-items">
+        <li>docker-compose.yml（MySQL + Redis + 三服务）</li>
+        <li>前端渐进式 TypeScript 迁移 + ESLint</li>
+        <li>推广 Pinia + composables，消除 window 全局状态</li>
+        <li>时间字段 CharField → DateTimeField 迁移</li>
+        <li>chart.js/echarts 独立分包；Sentry 错误监控</li>
+        <li>文档与代码 drift 检测（CI 中校验导航项数量等）</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- PART 4: FINAL VERDICT -->
+<h2><span class="num">4</span>最终判定</h2>
+
+<div class="card-grid">
+  <div class="card">
+    <h3 style="margin-top:0;color:var(--success)">作为 AI 开发项目的评价</h3>
+    <p style="font-size:24px;font-weight:900;color:var(--success);margin:8px 0">A- · 优秀</p>
+    <p style="font-size:13px">在 AI 辅助开发的全栈项目中属于<strong>上乘之作</strong>。7 模块闭环、AgentScope 深度集成、文档体系完善、架构规则自觉 — 这些在同类 AI 生成项目中极为罕见。证明了「AI + 人类架构约束」可以产出有体系的产品。</p>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0;color:var(--warning)">作为企业测试平台的评价</h3>
+    <p style="font-size:24px;font-weight:900;color:var(--warning);margin:8px 0">C+ · 待加固</p>
+    <p style="font-size:13px">距生产就绪差<strong>安全门禁、CI/CD、核心逻辑单测</strong>三板斧。功能可以演示，但不能放心给多团队使用。需要 2~3 轮人工架构师介入的工程加固，预计 4~8 周可达 B+ 生产水平。</p>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0;color:var(--primary-active)">给产品负责人的建议</h3>
+    <p style="font-size:13px;line-height:1.7">
+      <strong>现在可以做的：</strong>内部演示、单人试用、AI 能力验证、用例编排 PoC<br><br>
+      <strong>现在不要做的：</strong>多团队生产部署、公网暴露、存储真实 API Key<br><br>
+      <strong>最先投入的 1 件事：</strong>安全加固（1 周）→ CI 门禁（1 周）→ 再谈功能迭代
+    </p>
+  </div>
+</div>
+
+<div class="footer">
+  <p>审查方法：静态代码分析 + 跨模块依赖矩阵 + 安全审计 + 测试资产盘点 + 文档对照</p>
+  <p>审查范围：frontend/ · apps/ · agentscope_service/ · gateway/ · shared/ · models/ · tests/ · dev_docs/</p>
+  <p style="margin-top:6px">Android-AutoTests · 首席架构师评估报告 · 2026-07-09 · animal-island-ui 设计规范</p>
+</div>
+
+</div>
+</body>
+</html>

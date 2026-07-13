@@ -145,7 +145,7 @@ done
 
 ```bash
 python .claude/skills/architecture-review/scripts/report_generator.py \
-  --output AI开发项目文档管理/01-技术架构/架构审查报告.html
+  --output dev_docs/03-设计与架构/架构审查报告.html
 ```
 
 报告内容:
@@ -180,9 +180,9 @@ python .claude/skills/architecture-review/scripts/report_generator.py \
 |------|---------|
 | `references/analysis-checklist.md` | 执行 Phase 2 时加载 |
 | `scripts/report_generator.py` | 生成 HTML 报告时调用 |
-| 已有的 `AI开发项目文档管理/01-技术架构/模块化架构设计方案.html` | 作为报告模板参考 |
+| 已有的 `dev_docs/03-设计与架构/html/总设计-模块化架构设计方案.html` | 作为报告模板参考 |
 | `html-report` skill | 生成 HTML 报告时加载 design token |
 
 ## 输出位置
 
-`AI开发项目文档管理/01-技术架构/架构审查报告_{timestamp}.html`
+`dev_docs/03-设计与架构/架构审查报告_{timestamp}.html`

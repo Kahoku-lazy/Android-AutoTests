@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PM-Project → .agents 移植方案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary:#19c8b9; --primary-active:#11a89b; --primary-bg:#e6f9f6;
+  --text:#794f27; --text-body:#725d42; --text-secondary:#9f927d; --text-muted:#8a7b66;
+  --bg:#f8f8f0; --bg-content:rgb(247,243,223); --border:#c4b89e;
+  --success:#6fba2c; --warning:#f5c31c; --error:#e05a5a;
+  --blue:#889df0; --purple:#b39ef3; --pm-dark:#0f172a; --pm-blue:#185FA5;
+  --r-sm:12px; --r-base:18px; --r-lg:24px; --r-pill:50px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Nunito,'Noto Sans SC',-apple-system,'PingFang SC',sans-serif;font-weight:500;letter-spacing:.01em;background:var(--bg);background-image:radial-gradient(ellipse at 8% 0%,rgba(25,200,185,.07) 0%,transparent 55%),radial-gradient(ellipse at 92% 100%,rgba(136,157,240,.06) 0%,transparent 50%);color:var(--text-body);padding:32px 20px 56px;line-height:1.65}
+.container{max-width:1180px;margin:0 auto}
+.header{text-align:center;margin-bottom:36px}
+.header-badge{display:inline-block;background:var(--primary-bg);color:var(--primary-active);font-size:11px;font-weight:700;letter-spacing:.06em;padding:5px 16px;border-radius:var(--r-pill);border:2px solid var(--primary);margin-bottom:14px}
+h1{font-size:26px;font-weight:900;color:var(--text);letter-spacing:.02em;line-height:1.3}
+.meta{color:var(--text-secondary);font-size:13px;margin-top:8px}
+
+/* Key constraint banner */
+.constraint-banner{background:linear-gradient(135deg,#fff8e6 0%,#fef3cd 100%);border:3px solid var(--warning);border-radius:var(--r-lg);padding:20px 24px;margin-bottom:28px;display:grid;grid-template-columns:48px 1fr;gap:16px;align-items:start}
+.constraint-icon{font-size:28px;line-height:1}
+.constraint-title{font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px}
+.constraint-body{font-size:13px;color:var(--text-body)}
+.constraint-body code{background:rgba(255,255,255,.7);padding:1px 6px;border-radius:6px;font-size:12px;border:1px solid var(--border)}
+
+/* Summary cards */
+.summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
+.sum-card{background:var(--bg-content);border-radius:var(--r-base);border:2px solid var(--border);padding:16px;text-align:center}
+.sum-num{font-size:28px;font-weight:900;color:var(--primary-active)}
+.sum-label{font-size:11px;font-weight:700;color:var(--text-secondary);margin-top:4px;letter-spacing:.04em}
+
+h2{font-size:17px;font-weight:800;color:var(--text);margin:34px 0 14px;display:flex;align-items:center;gap:10px;letter-spacing:.02em}
+h2 .num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;background:var(--primary);color:#fff;border-radius:50%;font-size:12px;font-weight:900;flex-shrink:0}
+h3{font-size:14px;font-weight:800;color:var(--text);margin:18px 0 10px}
+
+.card{background:var(--bg-content);border-radius:var(--r-base);border:2px solid var(--border);padding:18px 20px;margin-bottom:14px}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin-bottom:8px}
+
+.table-wrap{background:var(--bg-content);border-radius:var(--r-lg);border:2px solid var(--border);overflow:hidden;margin-bottom:16px}
+table{width:100%;border-collapse:collapse}
+th{background:linear-gradient(180deg,#faf5ed 0%,#f0ebe0 100%);padding:10px 13px;text-align:left;font-size:10px;letter-spacing:.05em;color:var(--text-secondary);font-weight:700;border-bottom:2px solid var(--border)}
+td{padding:9px 13px;font-size:13px;border-bottom:1px solid rgba(196,184,158,.3);font-weight:500;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:rgba(255,255,255,.3)}
+
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--r-pill);white-space:nowrap}
+.b-ok{background:#e8f5e0;color:#3d7a14}.b-warn{background:#fef3cd;color:#8a6d14}
+.b-err{background:#fde8e8;color:var(--error)}.b-info{background:#e8f0fe;color:#4a6eb8}
+.b-pm{background:#e8edf5;color:var(--pm-dark)}.b-new{background:var(--primary-bg);color:var(--primary-active)}
+.b-keep{background:#f0ebe0;color:var(--text-muted)}.b-user{background:#fff0e6;color:#c45a1a;border:1px solid #e8c4a0}
+
+/* Directory tree */
+.tree{background:#1e1e2e;color:#cdd6f4;border-radius:var(--r-base);padding:18px 20px;font-family:'SF Mono',Monaco,Consolas,monospace;font-size:12px;line-height:1.7;margin-bottom:14px;overflow-x:auto}
+.tree .dir{color:#89b4fa}.tree .file{color:#a6e3a1}.tree .comment{color:#6c7086;font-style:italic}
+.tree .highlight{color:#fab387;font-weight:700}.tree .omit{color:#f38ba8}
+.tree .user{color:#f9e2af;font-weight:700}
+
+/* Compare */
+.compare-grid{display:grid;grid-template-columns:1fr 40px 1fr;gap:0;margin-bottom:16px;align-items:stretch}
+.compare-col{background:var(--bg-content);border-radius:var(--r-base);border:2px solid var(--border);padding:16px 18px}
+.compare-col.src{border-color:var(--pm-dark)}.compare-col.dst{border-color:var(--primary)}
+.compare-head{font-size:12px;font-weight:800;letter-spacing:.04em;margin-bottom:10px;padding-bottom:8px;border-bottom:1.5px solid var(--border)}
+.compare-head.src{color:var(--pm-dark)}.compare-head.dst{color:var(--primary-active)}
+.compare-vs{display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:var(--text-muted)}
+.compare-item{font-size:12px;padding:5px 0;border-bottom:1px dashed rgba(196,184,158,.3)}
+
+/* Workflow */
+.wf{display:flex;flex-direction:column;gap:0;margin-bottom:16px}
+.wf-stage{display:flex;align-items:flex-start;gap:0}
+.wf-num{width:36px;height:36px;border:2px solid var(--pm-dark);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0;background:var(--pm-dark);color:#fff}
+.wf-body{flex:1;padding:10px 16px 10px 20px;border-left:2px solid var(--border);margin-left:18px}
+.wf-title{font-size:14px;font-weight:800;color:var(--text)}
+.wf-sub{font-size:11px;color:var(--text-secondary);margin-top:2px}
+.wf-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.wf-agent{font-size:10px;font-family:monospace;padding:3px 7px;border:1px solid var(--border);background:var(--pm-dark);color:#fff}
+.wf-skill{font-size:10px;font-family:monospace;padding:3px 7px;border:1px solid var(--pm-blue);background:#E6F1FB;color:#0C447C}
+.wf-gate{text-align:center;padding:6px 0;margin:2px 0 2px 36px;font-size:11px;font-weight:700;border-top:1px solid var(--border);border-bottom:1px solid var(--border);color:var(--error)}
+
+/* Decision cards */
+.decision-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:16px}
+.decision{background:var(--bg-content);border-radius:var(--r-base);border:2px solid var(--border);padding:16px 18px}
+.decision.rec{border-color:var(--primary);background:linear-gradient(135deg,var(--bg-content) 0%,var(--primary-bg) 100%)}
+.decision-id{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--text-muted);margin-bottom:4px}
+.decision-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:8px}
+.decision-opt{font-size:12px;padding:4px 0;border-bottom:1px dashed rgba(196,184,158,.25)}
+.decision-opt:last-child{border-bottom:none}
+.decision-opt strong{color:var(--primary-active)}
+
+/* Phase timeline */
+.phases{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}
+.phase{background:var(--bg-content);border-radius:var(--r-sm);border:2px solid var(--border);padding:12px 10px;text-align:center}
+.phase-num{font-size:18px;font-weight:900;color:var(--primary-active)}
+.phase-name{font-size:11px;font-weight:800;color:var(--text);margin:4px 0}
+.phase-desc{font-size:10px;color:var(--text-muted);line-height:1.4}
+
+/* Dual track */
+.dual{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.dual-col{border-radius:var(--r-base);border:2px solid var(--border);padding:16px 18px;background:var(--bg-content)}
+.dual-col.claude{border-color:var(--primary)}.dual-col.agents{border-color:var(--pm-dark)}
+.dual-head{font-size:13px;font-weight:800;margin-bottom:8px;padding-bottom:6px;border-bottom:1.5px solid var(--border)}
+.dual-head.claude{color:var(--primary-active)}.dual-head.agents{color:var(--pm-dark)}
+.dual-item{font-size:12px;padding:3px 0}
+
+.note{font-size:12px;color:var(--text-secondary);padding:12px 16px;background:rgba(255,255,255,.5);border-radius:var(--r-sm);border:1px dashed var(--border);margin-top:8px}
+.footer{text-align:center;margin-top:40px;font-size:11px;color:var(--text-muted)}
+
+@media(max-width:900px){
+  .summary-row,.phases,.decision-grid,.dual,.compare-grid{grid-template-columns:1fr}
+  .compare-vs{display:none}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-badge">移植方案 · 已确认范围</div>
+    <h1>PM-Project → .agents 移植方案</h1>
+    <p class="meta">Android-AutoTests · 2026-07-10 修订 · 仅智能体 + 工作流 · 移植后清除 PM-Project-main</p>
+  </div>
+
+  <!-- 核心约束 -->
+  <div class="constraint-banner">
+    <div class="constraint-icon">⚠️</div>
+    <div>
+      <div class="constraint-title">已确认约束：只移植智能体引擎，不保留 PM-Project 项目内容</div>
+      <div class="constraint-body">
+        <code>.agents/</code> 只承载 <strong>Agent 定义、Skill 方法论、工作流规则、流程文档</strong>（引擎层）。<br>
+        <code>PM-Project-main/</code> 内的<strong>示例项目、子应用、npm 工具、教程素材</strong>一律不移植；移植验收通过后<strong>整目录删除</strong>。<br>
+        PRD、架构文档、workflow-manifest.json 等运行时产物写入 <code>dev_docs/projects/</code>，通过 <code>PROJECT_ROOT</code> 变量引用。
+      </div>
+    </div>
+  </div>
+
+  <!-- 摘要 -->
+  <div class="summary-row">
+    <div class="sum-card"><div class="sum-num">11</div><div class="sum-label">PM Agent 移植</div></div>
+    <div class="sum-card"><div class="sum-num">17</div><div class="sum-label">PM Skill 移植</div></div>
+    <div class="sum-card"><div class="sum-num">4</div><div class="sum-label">流程文档移植</div></div>
+    <div class="sum-card"><div class="sum-num">0</div><div class="sum-label">源目录保留</div></div>
+  </div>
+
+  <!-- §1 目标 -->
+  <h2><span class="num">1</span>移植目标</h2>
+  <div class="card">
+    <p>将 <code>PM-Project-main/</code> 中<strong>与智能体和工作流直接相关</strong>的内容，按 <code>.claude/</code> 组织方式移植到 <code>.agents/</code>，成为 <strong>Cursor 侧可发现的 PM 全生命周期协作体系</strong>。</p>
+    <p style="margin-top:10px">与现有 <code>.claude/</code> <strong>双轨并存</strong>：不替换、不合并，各司其职。移植完成后 <strong>删除 <code>PM-Project-main/</code></strong>，移除 <code>.gitignore</code> 对应条目。</p>
+  </div>
+
+  <h3>1.1 移植范围边界（白名单 / 黑名单）</h3>
+  <div class="card-grid">
+    <div class="card" style="border-color:var(--primary)">
+      <h3 style="color:var(--primary-active)">✅ 移植（白名单）</h3>
+      <table style="width:100%;font-size:12px;margin-top:6px">
+        <tr><td><code>.github/agents/*.agent.md</code></td><td>11 个 PM Agent 定义</td></tr>
+        <tr><td><code>.github/skills/*/SKILL.md</code></td><td>17 个 PM Skill + 附属模板/脚本</td></tr>
+        <tr><td><code>docs/workflow-manifest-spec.md</code></td><td>manifest 跨阶段契约规范</td></tr>
+        <tr><td><code>docs/pm-assistant-downstream-workflow.md</code></td><td>PM 下游工作流全景</td></tr>
+        <tr><td><code>docs/ai-era-metrics-framework.md</code></td><td>流程度量方法论（参考）</td></tr>
+        <tr><td><code>docs/claude-code-vs-openai-harness-engineering.md</code></td><td>双引擎协作参考（参考）</td></tr>
+        <tr><td><code>.codex/rules/*.md</code></td><td>workflow-manifest + general 规则</td></tr>
+        <tr><td><code>AGENTS.md</code> 路由表</td><td>改写为 .agents/AGENTS.md 索引</td></tr>
+      </table>
+    </div>
+    <div class="card" style="border-color:var(--error)">
+      <h3 style="color:var(--error)">❌ 不移植（黑名单）</h3>
+      <table style="width:100%;font-size:12px;margin-top:6px">
+        <tr><td><code>iot-test-case-agent/</code></td><td>独立子项目（含 .venv / business 样例）</td></tr>
+        <tr><td><code>projects/prd-{name}/</code></td><td>示例 PRD 产物（本项目用 dev_docs/）</td></tr>
+        <tr><td><code>create-pm-agents/</code></td><td>npm Agent 生成器</td></tr>
+        <tr><td><code>Hands-on/</code></td><td>教程截图与实操指南</td></tr>
+        <tr><td><code>.codex/agents/*.toml</code></td><td>Codex 专属格式</td></tr>
+        <tr><td><code>.agents/skills/</code> 软链接</td><td>镜像层，目标为实体目录</td></tr>
+        <tr><td><code>scripts/</code> · <code>plans/</code></td><td>运行时脚本与 Planning 输出</td></tr>
+        <tr><td><code>package.json</code> · <code>LICENSE</code> · <code>README.md</code></td><td>PM-Project 仓库元数据</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="dual">
+    <div class="dual-col claude">
+      <div class="dual-head claude">.claude/ — 日常开发（Claude Code）</div>
+      <div class="dual-item">6 Agent：prd-writer · architect · developer · reviewer · tester · test-automator</div>
+      <div class="dual-item">10+ Skill：auto-dev · quality-gate · functional-testing …</div>
+      <div class="dual-item">14 Rules + 4 Hooks + Memory</div>
+      <div class="dual-item"><strong>场景</strong>：改代码、修 Bug、模块开发、auto-dev 五阶段</div>
+    </div>
+    <div class="dual-col agents">
+      <div class="dual-head agents">.agents/ — 项目管理（Cursor）</div>
+      <div class="dual-item">11 Agent：pm-assistant · gate-review · architect · designer …</div>
+      <div class="dual-item">17 PM Skill + 7 现有通用 Skill 保留</div>
+      <div class="dual-item">Rules + Docs（workflow-manifest 规范）</div>
+      <div class="dual-item"><strong>场景</strong>：立项验证、PRD→架构→Gate→上线→复盘</div>
+    </div>
+  </div>
+
+  <!-- §2 目录结构 -->
+  <h2><span class="num">2</span>目标目录结构</h2>
+
+  <h3>2.1 .agents/ 引擎层（固定，无 subprojects）</h3>
+  <div class="tree">
+<span class="dir">.agents/</span>
+├── <span class="file">AGENTS.md</span>                     <span class="comment"># 路由索引（从 PM-Project AGENTS.md 改写）</span>
+├── <span class="dir">agents/</span>                       <span class="comment"># 11 个 PM Agent（从 .github/agents 转换）</span>
+│   ├── <span class="file">pm-assistant.md</span>
+│   ├── <span class="file">gate-review.md</span>
+│   ├── <span class="file">architect.md</span>
+│   ├── <span class="file">designer.md</span>
+│   ├── <span class="file">planning.md</span>
+│   ├── <span class="file">tdd-developer.md</span>
+│   ├── <span class="file">code-testing.md</span>
+│   ├── <span class="file">code-review.md</span>
+│   ├── <span class="file">pr-review-submit.md</span>
+│   ├── <span class="file">pm-workflow-evaluator.md</span>
+│   └── <span class="file">post-launch-review.md</span>
+├── <span class="dir">skills/</span>                       <span class="comment"># PM Skills（17）+ 现有通用 Skills（7）并存</span>
+│   ├── <span class="dir">gate-review/</span>  <span class="dir">requirement-doc/</span>  <span class="dir">architect-doc/</span>  … <span class="comment">（17 个 PM）</span>
+│   ├── <span class="dir">code-review-expert/</span>  <span class="dir">webapp-testing/</span>  … <span class="comment">（7 个现有，保留）</span>
+├── <span class="dir">rules/</span>
+│   ├── <span class="file">workflow-manifest.md</span>        <span class="comment"># 从 .codex/rules/ 移植</span>
+│   ├── <span class="file">general.md</span>                    <span class="comment"># 通用协作规则</span>
+│   └── <span class="file">project-paths.md</span>            <span class="comment"># PROJECT_ROOT 配置声明</span>
+└── <span class="dir">docs/</span>                         <span class="comment"># 流程方法论（非项目产物）</span>
+    ├── <span class="file">workflow-manifest-spec.md</span>
+    ├── <span class="file">pm-assistant-downstream-workflow.md</span>
+    ├── <span class="file">ai-era-metrics-framework.md</span>
+    └── <span class="file">claude-code-vs-openai-harness-engineering.md</span>
+  </div>
+  <div class="note"><strong>不含 <code>subprojects/</code></strong>：<code>iot-test-case-agent</code> 属于示例子项目，不在本次移植范围。若平台仍需 PRD→用例能力，由 <code>agentscope_service/tools/prd_tools.py</code> 独立处理（见 §7）。</div>
+
+  <h3>2.2 项目产物目录（<span style="color:var(--error)">不在 .agents，沿用本项目文档体系</span>）</h3>
+  <div class="card" style="border-color:#e8c4a0;background:linear-gradient(135deg,#fff8f0 0%,var(--bg-content) 100%)">
+    <p>PM-Project 原约定为 <code>projects/prd-{name}/</code>，<strong>不移植示例产物</strong>。本项目统一使用已有文档体系 + 新增运行时产物子目录：</p>
+    <div class="tree" style="margin-top:12px">
+<span class="user">dev_docs/</span>                <span class="comment"># PROJECT_ROOT（已确认）</span>
+├── <span class="dir">02-PRD需求/</span>                   <span class="comment"># PRD / 子 PRD（已有）</span>
+├── <span class="dir">01-技术架构/</span>                  <span class="comment"># 架构文档（已有）</span>
+└── <span class="dir">projects/</span>                     <span class="comment"># 新增：按项目聚合的运行时产物</span>
+    └── <span class="dir">prd-{name}/</span>
+        ├── <span class="file">workflow-manifest.json</span>    <span class="highlight">← 跨阶段契约</span>
+        ├── <span class="file">gate1-results.json</span>
+        ├── <span class="file">gate2-results.json</span>
+        ├── <span class="file">gate3-results.json</span>
+        └── <span class="dir">reports/</span>                  <span class="comment"># 各阶段评审报告</span>
+    </div>
+    <div class="note">
+      配置入口：<code>.agents/rules/project-paths.md</code> 声明 <code>project_root: dev_docs</code>。所有 Agent/Skill 引用该变量，不硬编码路径。
+    </div>
+  </div>
+
+  <h3>2.3 源 → 目标对照</h3>
+  <div class="compare-grid">
+    <div class="compare-col src">
+      <div class="compare-head src">PM-Project-main（源）</div>
+      <div class="compare-item"><code>.github/agents/*.agent.md</code> — Copilot Agent</div>
+      <div class="compare-item"><code>.github/skills/*/SKILL.md</code> — Skill 主定义</div>
+      <div class="compare-item"><code>.agents/skills/</code> — 软链接镜像</div>
+      <div class="compare-item"><code>.codex/agents/*.toml</code> — Codex 专属</div>
+      <div class="compare-item"><code>projects/prd-{name}/</code> — 示例产物</div>
+      <div class="compare-item"><code>iot-test-case-agent/</code> — 子项目</div>
+      <div class="compare-item"><code>create-pm-agents/</code> — npm 生成器</div>
+      <div class="compare-item"><code>Hands-on/</code> · <code>scripts/</code> — 教程与工具</div>
+    </div>
+    <div class="compare-vs">→</div>
+    <div class="compare-col dst">
+      <div class="compare-head dst">Android-AutoTests（目标）</div>
+      <div class="compare-item"><code>.agents/agents/*.md</code> — Cursor Agent</div>
+      <div class="compare-item"><code>.agents/skills/*/SKILL.md</code> — 实体目录</div>
+      <div class="compare-item"><span class="badge b-omit">不移植</span> 软链接层 · Codex · npm 工具</div>
+      <div class="compare-item"><code>dev_docs/projects/</code> — 运行时产物</div>
+      <div class="compare-item"><span class="badge b-omit">不移植</span> iot-test-case-agent</div>
+      <div class="compare-item"><span class="badge b-omit">删除</span> PM-Project-main/ 整目录</div>
+      <div class="compare-item"><code>.agents/docs/</code> — 4 份流程文档</div>
+    </div>
+  </div>
+
+  <!-- §3 Agent 映射 -->
+  <h2><span class="num">3</span>Agent 映射（11 个移植 + 6 个保留）</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>PM Agent</th><th>移植到 .agents/</th><th>与 .claude 关系</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>pm_assistant</code></td><td><span class="badge b-new">新增</span></td><td>—</td><td>立项前验证：查重、竞品、价值评估</td></tr>
+        <tr><td><code>gate_review</code></td><td><span class="badge b-new">新增</span></td><td>≠ reviewer</td><td>正式 Stage-Gate 1/2/3 Go/No-Go</td></tr>
+        <tr><td><code>planning</code></td><td><span class="badge b-new">新增</span></td><td>≈ architect Phase 0</td><td>开发前上下文研究与实施规划</td></tr>
+        <tr><td><code>architect</code></td><td><span class="badge b-new">新增 PM 版</span></td><td>≈ architect</td><td>PM 版模板更全（ADR、模块架构）</td></tr>
+        <tr><td><code>designer</code></td><td><span class="badge b-new">新增</span></td><td>—</td><td>低保真→高保真原型</td></tr>
+        <tr><td><code>tdd_developer</code></td><td><span class="badge b-new">新增 PM 版</span></td><td>≈ developer</td><td>TDD 约束 + Issue 驱动开发</td></tr>
+        <tr><td><code>code_testing</code></td><td><span class="badge b-new">新增 PM 版</span></td><td>≈ tester</td><td>多层测试策略与覆盖分析</td></tr>
+        <tr><td><code>code_review</code></td><td><span class="badge b-new">新增 PM 版</span></td><td>≈ reviewer</td><td>MUST/SHOULD/NIT 三级审查</td></tr>
+        <tr><td><code>pr_review_submit</code></td><td><span class="badge b-new">新增</span></td><td>—</td><td>GitHub PR Review 写入</td></tr>
+        <tr><td><code>post_launch_review</code></td><td><span class="badge b-new">新增</span></td><td>—</td><td>上线复盘与迭代建议</td></tr>
+        <tr><td><code>pm_workflow_evaluator</code></td><td><span class="badge b-new">新增</span></td><td>—</td><td>横向评估整条 PM 工作流健康度</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">.claude/ 的 6 个 Agent <strong>全部保留不动</strong>。用户说「帮我改代码」→ .claude/auto-dev；说「立项做新模块」→ .agents/pm-assistant。</div>
+
+  <!-- §4 Skill -->
+  <h2><span class="num">4</span>Skill 迁移策略（17 个 PM + 7 个现有保留）</h2>
+  <div class="card-grid">
+    <div class="card">
+      <h3>直接复制（15 个）</h3>
+      <p style="font-size:12px;margin-top:6px">方法论 + 模板类，批量复制后替换路径 <code>.github/skills/</code> → <code>.agents/skills/</code></p>
+      <p style="font-size:11px;margin-top:8px;color:var(--text-muted)">gate-review · requirement-doc · architect-doc · code-review · tdd-coder · security-audit · doc-lint · doc-quality-judge · requirement-to-issues · github-publish · workflow-dashboard · microservices · premium-frontend-ui · prototype-design · playwright-testing</p>
+    </div>
+    <div class="card">
+      <h3>适配后复制（2 个）</h3>
+      <p style="font-size:12px;margin-top:6px"><code>feishu-docs</code> — 保留脚本，标注「可选 MCP」；无飞书时降级为本地文档查重</p>
+      <p style="font-size:12px;margin-top:6px"><code>prototype-publish</code> — 保留模板，墨刀/Figma 发布标为可选步骤</p>
+    </div>
+    <div class="card">
+      <h3>与现有 Skill 并存</h3>
+      <table style="width:100%;font-size:12px;margin-top:6px">
+        <tr><td><code>code-review</code></td><td>vs</td><td><code>code-review-expert</code></td><td>PM 偏流程；expert 偏 SOLID</td></tr>
+        <tr><td><code>playwright-testing</code></td><td>vs</td><td><code>webapp-testing</code></td><td>PM 偏 E2E 策略；webapp 偏实操</td></tr>
+        <tr><td><code>requirement-doc</code></td><td>vs</td><td><code>.claude/prd-writer</code></td><td>PM 模板更全；prd-writer 已绑定本项目 PRD 目录</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>不移植</h3>
+      <p style="font-size:12px;margin-top:6px"><code>create-pm-agents/</code> · <code>.codex/</code> · <code>Hands-on/</code> · <code>iot-test-case-agent/</code> · <code>scripts/</code> · <code>package.json</code> · Copilot instructions · PM-Project 示例产物</p>
+    </div>
+  </div>
+
+  <!-- §5 格式转换 -->
+  <h2><span class="num">5</span>格式转换（Copilot → Cursor）</h2>
+  <div class="card-grid">
+    <div class="card">
+      <h3>源格式（PM-Project）</h3>
+      <div class="tree" style="font-size:11px">
+---
+name: "gate_review"
+tools: [read, search, web, edit, execute, todo, agent]
+agents: []
+---
+      </div>
+    </div>
+    <div class="card">
+      <h3>目标格式（.agents/）</h3>
+      <div class="tree" style="font-size:11px">
+---
+name: gate-review
+description: Stage-Gate 评审门 Agent...
+tools: Read, Write, Edit, Grep, Glob, WebFetch, Skill, Task
+skills:
+  - gate-review
+project_root: "{PROJECT_ROOT}"  <span class="comment"># 指向你指定的目录</span>
+---
+      </div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>转换项</th><th>处理方式</th></tr></thead>
+      <tbody>
+        <tr><td>tools 映射</td><td><code>read→Read</code> · <code>search→Grep/Glob</code> · <code>web→WebSearch/WebFetch</code> · <code>agent→Task</code></td></tr>
+        <tr><td>路径引用</td><td>所有 <code>.github/skills/</code> → <code>.agents/skills/</code>；所有 <code>projects/prd-{name}/</code> → <code>dev_docs/projects/prd-{name}/</code></td></tr>
+        <tr><td>Copilot MCP</td><td><code>tavily-mcp</code> → <code>WebSearch</code>；飞书 MCP → 标注可选</td></tr>
+        <tr><td>agents 数组</td><td>内嵌子 Agent 调度 → 改为 Task 工具调用说明</td></tr>
+        <tr><td>命名</td><td>下划线 → 连字符（<code>gate_review</code> → <code>gate-review</code>）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- §6 工作流 -->
+  <h2><span class="num">6</span>移植后工作流（Stage-Gate 全生命周期）</h2>
+  <div class="card">
+    <div class="wf">
+      <div class="wf-stage">
+        <div class="wf-num">1</div>
+        <div class="wf-body">
+          <div class="wf-title">立项验证</div>
+          <div class="wf-sub">灵感分析 · 竞品调研 · 价值评估 · UI/技术快评</div>
+          <div class="wf-tags"><span class="wf-agent">pm-assistant</span><span class="wf-skill">feishu-docs</span></div>
+        </div>
+      </div>
+      <div class="wf-stage">
+        <div class="wf-num">2</div>
+        <div class="wf-body">
+          <div class="wf-title">需求文档</div>
+          <div class="wf-sub">主 PRD · Module PRD · 低保真线框 → 写入 <span class="badge b-user">你指定的目录</span></div>
+          <div class="wf-tags"><span class="wf-skill">requirement-doc</span></div>
+        </div>
+      </div>
+      <div class="wf-gate">◆ Gate 1 — PRD 评审（gate-review Agent）◆</div>
+      <div class="wf-stage">
+        <div class="wf-num">3</div>
+        <div class="wf-body">
+          <div class="wf-title">设计与架构</div>
+          <div class="wf-sub">高保真原型 · 技术架构 · ADR · 模块级架构</div>
+          <div class="wf-tags"><span class="wf-agent">designer</span><span class="wf-agent">architect</span><span class="wf-skill">architect-doc</span><span class="wf-skill">prototype-design</span></div>
+        </div>
+      </div>
+      <div class="wf-gate">◆ Gate 2 — 架构 + Issues 就绪门 ◆</div>
+      <div class="wf-stage">
+        <div class="wf-num">4</div>
+        <div class="wf-body">
+          <div class="wf-title">任务拆分</div>
+          <div class="wf-sub">PRD → Epic/Task · 测试骨架生成</div>
+          <div class="wf-tags"><span class="wf-skill">requirement-to-issues</span></div>
+        </div>
+      </div>
+      <div class="wf-stage">
+        <div class="wf-num">5</div>
+        <div class="wf-body">
+          <div class="wf-title">开发与测试</div>
+          <div class="wf-sub">TDD 开发 · 多层测试 · 代码审查 → 可交接 .claude/developer</div>
+          <div class="wf-tags"><span class="wf-agent">tdd-developer</span><span class="wf-agent">code-testing</span><span class="wf-agent">code-review</span><span class="wf-skill">tdd-coder</span></div>
+        </div>
+      </div>
+      <div class="wf-gate">◆ Gate 3 — 上线评审 ◆</div>
+      <div class="wf-stage">
+        <div class="wf-num">6</div>
+        <div class="wf-body">
+          <div class="wf-title">发布与复盘</div>
+          <div class="wf-sub">PR 合并 · 发布 · 上线复盘</div>
+          <div class="wf-tags"><span class="wf-agent">pr-review-submit</span><span class="wf-skill">github-publish</span><span class="wf-agent">post-launch-review</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="note">跨阶段契约：<code>dev_docs/projects/prd-{name}/workflow-manifest.json</code> — 所有 Agent 启动前校验上游 Gate 已通过。</div>
+  </div>
+
+  <!-- §7 代码集成 -->
+  <h2><span class="num">7</span>与现有代码的集成点</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>文件</th><th>当前状态</th><th>移植后变更</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>agentscope_service/tools/prd_tools.py</code></td>
+          <td>硬编码 <code>PM-Project-main/iot-test-case-agent</code></td>
+          <td><span class="badge b-warn">独立处理</span> iot-test-case-agent 不移植；<code>prd_tools.py</code> 保持 lazy-import 降级（路径不存在时 <code>_DESIGNER_AVAILABLE=False</code>）。若后续需要该能力，将 testcase_designer 迁入 <code>agentscope_service/</code> 或 <code>tools/</code>，与 .agents 解耦</td>
+        </tr>
+        <tr>
+          <td><code>.gitignore</code></td>
+          <td><code>PM-Project-main/</code> 被忽略</td>
+          <td>Phase 5 删除源目录后移除该条目</td>
+        </tr>
+        <tr>
+          <td><code>CLAUDE.md</code> / <code>AGENTS.md</code></td>
+          <td>仅引用 .claude</td>
+          <td>根 <code>AGENTS.md</code> 增加 .agents 双轨路由说明</td>
+        </tr>
+        <tr>
+          <td><code>dev_docs/</code></td>
+          <td>已有 PRD + 架构文档</td>
+          <td>确认为 <code>PROJECT_ROOT</code>，新增 <code>projects/prd-{name}/</code> 放 manifest</td>
+        </tr>
+        <tr>
+          <td><code>PM-Project-main/</code></td>
+          <td>完整外部仓库副本（.gitignore）</td>
+          <td><span class="badge b-err">整目录删除</span> 移植验收通过后清除，不保留参考副本</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- §8 实施阶段 -->
+  <h2><span class="num">8</span>实施阶段</h2>
+  <div class="phases" style="grid-template-columns:repeat(6,1fr)">
+    <div class="phase"><div class="phase-num">0</div><div class="phase-name">脚手架</div><div class="phase-desc">建 agents/ rules/ docs/ 目录；写 project-paths.md</div></div>
+    <div class="phase"><div class="phase-num">1</div><div class="phase-name">Skills</div><div class="phase-desc">复制 17 个 PM Skill + 路径替换</div></div>
+    <div class="phase"><div class="phase-num">2</div><div class="phase-name">Agents</div><div class="phase-desc">转换 11 个 Agent 为 Cursor 格式</div></div>
+    <div class="phase"><div class="phase-num">3</div><div class="phase-name">Docs+Rules</div><div class="phase-desc">4 份流程文档 + 2 份规则 + AGENTS.md</div></div>
+    <div class="phase"><div class="phase-num">4</div><div class="phase-name">集成验证</div><div class="phase-desc">根 AGENTS.md · manifest 路径 · Agent 可发现性</div></div>
+    <div class="phase" style="border-color:var(--error)"><div class="phase-num" style="color:var(--error)">5</div><div class="phase-name">清除源目录</div><div class="phase-desc">删除 PM-Project-main/ · 移除 .gitignore 条目</div></div>
+  </div>
+  <div class="note">预估工作量 2–3 小时。Phase 5 必须在 Phase 0–4 验收通过后执行，确保无残留路径引用。</div>
+
+  <!-- §9 已确认决策 -->
+  <h2><span class="num">9</span>已确认决策项</h2>
+  <div class="decision-grid">
+    <div class="decision rec">
+      <div class="decision-id">决策 1 · 移植范围</div>
+      <div class="decision-title">✅ 仅智能体 + 工作流</div>
+      <div class="decision-opt"><strong>已确认</strong>：11 Agent + 17 Skill + 4 流程文档 + 2 规则</div>
+      <div class="decision-opt">不移植 iot-test-case-agent、Hands-on、create-pm-agents 等项目内容</div>
+      <div class="decision-opt">与 .claude 双轨并存，不替换</div>
+    </div>
+    <div class="decision rec">
+      <div class="decision-id">决策 2 · 项目产物目录</div>
+      <div class="decision-title">✅ PROJECT_ROOT 已确定</div>
+      <div class="decision-opt"><strong>已确认</strong>：<code>dev_docs/</code></div>
+      <div class="decision-opt">运行时产物：<code>dev_docs/projects/prd-{name}/</code></div>
+    </div>
+    <div class="decision rec">
+      <div class="decision-id">决策 3 · 外部依赖</div>
+      <div class="decision-title">✅ 飞书 / 墨刀 Skill 保留可选</div>
+      <div class="decision-opt"><strong>已确认</strong>：保留 feishu-docs · prototype-publish，标注「可选 MCP」，无 MCP 时降级</div>
+    </div>
+    <div class="decision rec">
+      <div class="decision-id">决策 4 · 源目录处理</div>
+      <div class="decision-title">✅ 移植后整目录删除</div>
+      <div class="decision-opt"><strong>已确认</strong>：.agents/ 正式入库后删除 <code>PM-Project-main/</code></div>
+      <div class="decision-opt">移除 <code>.gitignore</code> 中 <code>PM-Project-main/</code> 条目</div>
+      <div class="decision-opt">不保留参考副本</div>
+    </div>
+  </div>
+
+  <div class="card" style="border-color:var(--primary);background:var(--primary-bg)">
+    <h3 style="color:var(--primary-active)">下一步：执行移植</h3>
+    <p style="font-size:13px;margin-top:8px">方案已确认，可按 Phase 0→5 顺序执行。建议从 Phase 0（脚手架 + project-paths.md）开始，完成后逐阶段验收。</p>
+  </div>
+
+  <div class="footer">
+    Android-AutoTests · PM-Project 移植方案 · 修订于 2026-07-10 · 状态：范围已确认，待执行
+  </div>
+</div>
+</body>
+</html>

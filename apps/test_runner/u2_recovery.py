@@ -9,8 +9,17 @@ U2_RECONNECT_INTERVAL = 2
 
 
 def is_u2_crash(exc: BaseException) -> bool:
-    """判断异常是否由 u2/ADB 连接崩溃引起。"""
+    """判断异常是否由 u2/ADB 连接崩溃或超时引起。"""
     if isinstance(exc, ConnectionError):
+        return True
+    # u2 3.x 的 HTTPTimeoutError/DeviceError 等按类型名兜底识别(不依赖 str 匹配)
+    if type(exc).__name__ in (
+        "HTTPTimeoutError",
+        "HTTPError",
+        "ConnectError",
+        "DeviceError",
+        "SessionBrokenError",
+    ):
         return True
     msg = str(exc).lower()
     keywords = (
@@ -24,6 +33,9 @@ def is_u2_crash(exc: BaseException) -> bool:
         "remote end closed",
         "device offline",
         "cannot connect",
+        "timeout",
+        "timed out",
+        "http request",
     )
     return any(k in msg for k in keywords)
 

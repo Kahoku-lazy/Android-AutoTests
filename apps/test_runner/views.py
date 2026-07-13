@@ -6,7 +6,18 @@ from datetime import datetime
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Count, Q
-from asgiref.sync import sync_to_async
+from asgiref.sync import sync_to_async as _original_sta
+
+# All sync_to_async in this file use thread_sensitive=False to avoid capturing
+# the request-scoped CurrentThreadExecutor which dies after the HTTP response,
+# breaking all background tasks (delayed_execute / _execute_tests / etc).
+# None of our code relies on thread-sensitive DB state.
+def _sta(fn):
+    return _original_sta(fn, thread_sensitive=False)
+
+# Drop-in replacements for @sync_to_async decorator and sync_to_async(func)() calls
+_bg_sync = _sta           # decorator: @_bg_sync
+sync_to_async = _sta       # inline:   sync_to_async(func)(args)
 
 from models.step_types import TestStep
 from models.test_models import TestCaseDef
@@ -20,8 +31,10 @@ from .runner import (
 )
 from .runner import _active_runs as list_active_runs
 from .runner import _u2_executor
+from .device_connect import DeviceCheckError, check_and_connect_async
 from .callbacks import test_callbacks
 from .models import TestResult, TestRunRecord, TaskCard
+from . import state_machine as sm
 from apps.device_pool.api import device
 from apps.device_pool.api import acquire_device as dp_acquire_device
 from apps.device_pool.api import release_device as dp_release_device
@@ -63,6 +76,38 @@ _device_queue: dict[str, list] = {}
 # Maps run_id → client_task_id so the frontend can discover queued-task execution
 _run_client_task: dict[str, str] = {}
 
+# 后台任务引用保存 —— 防止 asyncio.create_task 的 Task 被 GC 回收、异常被静默吞掉
+_bg_tasks: set = set()
+# run_id → 预检阶段登记(锁了手机但还没真正执行)。供 stop 打"停止标记";
+# delayed_execute 据此在释放设备+标记停止后退出,避免设备锁泄漏。
+# 结构: {run_id: {"stopped": bool, "serial": str, "client_task_id": str}}
+_preflight_runs: dict = {}
+
+
+def _spawn_bg(coro, label: str = "bg"):
+    """创建后台任务并保存引用,完成时记录异常(替代 fire-and-forget 吞错)。"""
+    import logging, traceback, sys
+    _bg_log = logging.getLogger("test_runner.bg")
+    t = asyncio.create_task(coro)
+    _bg_tasks.add(t)
+    _bg_log.info(f"后台任务已创建: {label} (active={len(_bg_tasks)})")
+
+    def _done(task):
+        _bg_tasks.discard(task)
+        if not task.cancelled():
+            exc = task.exception()
+            if exc is not None:
+                tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+                _bg_log.error(f"后台任务 {label} 异常: {exc!r}\n{tb}")
+                print(f"[views] 后台任务 {label} 异常: {exc!r}", file=sys.stderr)
+            else:
+                _bg_log.info(f"后台任务 {label} 正常完成 (remaining={len(_bg_tasks)})")
+        else:
+            _bg_log.info(f"后台任务 {label} 被取消 (remaining={len(_bg_tasks)})")
+
+    t.add_done_callback(_done)
+    return t
+
 # u2.connect() 超时上限（秒）—— USB 松动 / ATX agent 卡死时快速失败，
 # 避免阻塞占用 _u2_executor 线程 / Daphne 事件循环。
 U2_CONNECT_TIMEOUT = 15
@@ -89,7 +134,78 @@ def _queue_size(serial: str) -> int:
 def _schedule_next_queued(serial: str):
     """Fire-and-forget: start the next queued task for a device."""
     if serial:
-        asyncio.create_task(_start_next_queued(serial))
+        _spawn_bg(_start_next_queued(serial), f"next_queued:{serial}")
+
+
+async def _enqueue_taskcard(client_task_id: str, serial: str):
+    """Route a TaskCard IDLE → QUEUED through the state machine.
+
+    Used when a device is busy and the task is parked in the in-memory queue.
+    Idempotent + fault-tolerant: never raises to the caller.
+    """
+    if not client_task_id:
+        return
+
+    @_bg_sync
+    def _do():
+        try:
+            tc = TaskCard.objects.get(task_id=client_task_id)
+        except TaskCard.DoesNotExist:
+            return
+        try:
+            sm.enqueue(tc, serial)
+        except sm.InvalidTransition as e:
+            print(f"[views] enqueue transition {client_task_id}: {e}")
+        except Exception as e:
+            print(f"[views] enqueue {client_task_id}: {e}")
+
+    await _do()
+
+
+async def _abort_run_before_execute(
+    run_id: str, serial: str, client_task_id: str, error: str, outcome: str = "error"
+):
+    """执行前退出(设备检查失败 / 执行前异常 / 用户中途停止):
+    释放设备、把 TaskCard 推到 done 终态、通知前端。outcome='error' 或 'stopped'。
+    """
+    import logging
+    _log = logging.getLogger("test_runner.bg")
+    _log.info(f"_abort_run_before_execute: {run_id} error={error} outcome={outcome}")
+    icon = "⏹" if outcome == "stopped" else "❌"
+    await test_callbacks.on_log(run_id, f"{icon} {error}")
+    # 停止是用户主动行为,不当作"设备错误"上报(避免前端标红为 error)
+    if outcome != "stopped":
+        await test_callbacks.on_device_error(run_id, error)
+    mark_device_idle(serial)
+    try:
+        await sync_to_async(dp_release_device)(serial, reason="manual")
+    except Exception as e:
+        print(f"[views] release after pre-run abort ({serial}): {e}")
+    if client_task_id:
+
+        @_bg_sync
+        def mark_terminal():
+            try:
+                tc = TaskCard.objects.get(task_id=client_task_id)
+            except TaskCard.DoesNotExist:
+                return
+            # 走完整合法路径 idle→queued→running→done,dequeue 建一条审计 TestRunRecord
+            try:
+                sm.enqueue(tc, serial)
+                rec = sm.dequeue(tc, run_id, serial, [], tc.loop_count or 1)
+                sm.fail(tc, rec, outcome=outcome)
+            except sm.InvalidTransition as e:
+                print(f"[views] pre-run mark {client_task_id}: {e}")
+            except Exception as e:
+                print(f"[views] pre-run mark task {client_task_id}: {e}")
+
+        try:
+            await mark_terminal()
+        except Exception as e:
+            print(f"[views] pre-run mark task {client_task_id}: {e}")
+    _run_client_task.pop(run_id, None)
+    _preflight_runs.pop(run_id, None)
+    _schedule_next_queued(serial)
 
 
 @require_auth
@@ -114,7 +230,7 @@ async def start_test_run(request):
     if not case_ids:
         return JsonResponse({"ok": False, "error": "case_ids required"})
 
-    @sync_to_async
+    @_bg_sync
     def load_definitions():
         rows = TestDefinition.objects.filter(id__in=case_ids, enabled=True)
         test_cases = []
@@ -176,9 +292,7 @@ async def start_test_run(request):
             )
             # Mark TaskCard as queued so it can be recovered on restart
             if client_task_id:
-                await sync_to_async(TaskCard.objects.filter(task_id=client_task_id).update)(
-                    status="queued", running=False
-                )
+                await _enqueue_taskcard(client_task_id, serial)
             await test_callbacks.on_log(
                 f"queue_{serial}",
                 f"⏳ 设备 {serial} 正忙，任务已加入队列（前面有 {_queue_size(serial)} 个任务）",
@@ -204,9 +318,7 @@ async def start_test_run(request):
                 },
             )
             if client_task_id:
-                await sync_to_async(TaskCard.objects.filter(task_id=client_task_id).update)(
-                    status="queued", running=False
-                )
+                await _enqueue_taskcard(client_task_id, serial)
             await test_callbacks.on_log(f"queue_{serial}", f"⏳ 设备 {serial} {e}，任务已加入队列")
             queued_serials.append(serial)
             continue
@@ -222,65 +334,110 @@ async def start_test_run(request):
                     **schedule_update
                 )
 
-        # Create independent u2 connection per device
-        def make_connection(s=serial):
-            import uiautomator2 as u2
-
-            return u2.connect(s)
-
-        try:
-            d = await asyncio.wait_for(
-                asyncio.get_event_loop().run_in_executor(_u2_executor, make_connection),
-                timeout=U2_CONNECT_TIMEOUT,
-            )
-        except Exception as e:
-            mark_device_idle(serial)
-            await sync_to_async(dp_release_device)(serial, reason="manual")
-            if client_task_id:
-                await sync_to_async(TaskCard.objects.filter(task_id=client_task_id).update)(
-                    status="idle", running=False
-                )
-            _schedule_next_queued(serial)
-            await test_callbacks.on_log(f"queue_{serial}", f"❌ 设备 {serial} 连接失败: {e}")
-            continue
-
         run_id = f"run_{serial}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         if client_task_id:
             _run_client_task[run_id] = client_task_id
-        runner = TestRunner(d, effective_pkg, callback=test_callbacks)
 
         # Capture serial in default arg to avoid closure-over-loop-variable bug
-        async def delayed_execute(rid, r, tcs, lc, interval, st, et, _serial=serial):
-            if st:
-                try:
-                    target = datetime.fromisoformat(st)
-                    delay = (target - datetime.now()).total_seconds()
-                    if delay > 0:
-                        await test_callbacks.on_log(rid, f"⏰ 计划 {delay:.0f}s 后开始执行")
-                        await asyncio.sleep(delay)
-                except Exception:
-                    pass
-            if et:
-
-                async def auto_stop():
+        async def delayed_execute(
+            rid, tcs, lc, interval, st, et, pkg, _serial=serial, _ctid=client_task_id
+        ):
+            pending_release = True  # 已持有设备锁,退出前须确保释放(除非交接给 _execute_tests)
+            import logging
+            _bg_log = logging.getLogger("test_runner.bg")
+            _bg_log.info(f"delayed_execute 开始: {rid} device={_serial}")
+            try:
+                if st:
                     try:
-                        target = datetime.fromisoformat(et)
+                        target = datetime.fromisoformat(st)
                         delay = (target - datetime.now()).total_seconds()
                         if delay > 0:
+                            await test_callbacks.on_log(rid, f"⏰ 计划 {delay:.0f}s 后开始执行")
                             await asyncio.sleep(delay)
-                            stop_run(rid)
-                            await test_callbacks.on_log(rid, "⏰ 到达结束时间，自动停止")
                     except Exception:
                         pass
+                if et:
 
-                asyncio.create_task(auto_stop())
-            await _execute_tests(rid, r, tcs, lc, interval, _serial)
+                    async def auto_stop():
+                        try:
+                            target = datetime.fromisoformat(et)
+                            delay = (target - datetime.now()).total_seconds()
+                            if delay > 0:
+                                await asyncio.sleep(delay)
+                                stop_run(rid)
+                                await test_callbacks.on_log(rid, "⏰ 到达结束时间，自动停止")
+                        except Exception:
+                            pass
 
-        asyncio.create_task(
+                    _spawn_bg(auto_stop(), f"auto_stop:{rid}")
+
+                # 延迟阶段就被停止
+                if _preflight_runs.get(rid, {}).get("stopped"):
+                    await _abort_run_before_execute(
+                        rid, _serial, _ctid, "任务已被停止", outcome="stopped"
+                    )
+                    pending_release = False
+                    return
+
+                # ── 预检:检测在线 → 连接 → 验证能跑用例 ──
+                try:
+                    d = await check_and_connect_async(_serial, rid, test_callbacks, _u2_executor)
+                except DeviceCheckError as e:
+                    await _abort_run_before_execute(rid, _serial, _ctid, f"手机连接不上: {e}")
+                    pending_release = False
+                    return
+                except Exception as e:
+                    await _abort_run_before_execute(rid, _serial, _ctid, f"执行前异常: {e}")
+                    pending_release = False
+                    return
+
+                # 连接期间被停止 → 按停止善后,不进入执行
+                if _preflight_runs.get(rid, {}).get("stopped"):
+                    await _abort_run_before_execute(
+                        rid, _serial, _ctid, "任务已被停止", outcome="stopped"
+                    )
+                    pending_release = False
+                    return
+
+                # ── 预检通过:交接给执行(由 _execute_tests 的 finally 负责释放设备)──
+                _preflight_runs.pop(rid, None)
+                await test_callbacks.on_run_started(rid)
+                pending_release = False
+                try:
+                    runner = TestRunner(d, pkg, callback=test_callbacks)
+                    await _execute_tests(rid, runner, tcs, lc, interval, _serial)
+                except Exception as e:
+                    print(f"[runner] delayed_execute failed {rid}: {e}")
+                    await _abort_run_before_execute(rid, _serial, _ctid, str(e))
+            finally:
+                # 兜底:持有锁却未交接执行、也未走 abort 的异常退出,确保释放设备(幂等)
+                if pending_release:
+                    mark_device_idle(_serial)
+                    try:
+                        await sync_to_async(dp_release_device)(_serial, reason="manual")
+                    except Exception as e:
+                        print(f"[views] delayed_execute finally release {_serial}: {e}")
+                    _preflight_runs.pop(rid, None)
+                    _schedule_next_queued(_serial)
+
+        _spawn_bg(
             delayed_execute(
-                run_id, runner, test_cases, loop_count, interval_seconds, start_at, end_at
-            )
+                run_id,
+                test_cases,
+                loop_count,
+                interval_seconds,
+                start_at,
+                end_at,
+                effective_pkg,
+            ),
+            f"delayed:{run_id}",
         )
+        # 登记预检阶段,供 stop 在"锁了手机但还没真正执行"时打停止标记
+        _preflight_runs[run_id] = {
+            "stopped": False,
+            "serial": serial,
+            "client_task_id": client_task_id,
+        }
         run_ids.append({"run_id": run_id, "serial": serial})
 
     if not run_ids and not queued_serials:
@@ -312,13 +469,20 @@ async def _execute_tests(
     interval_seconds: int = 5,
     serial: str = "",
 ):
+    import logging
+    _log = logging.getLogger("test_runner.bg")
     run_record = None
     run_completed = False
     effective_serial = serial or (getattr(runner.device, "serial", None) or "")
     try:
-        # Persist run record with case snapshot before execution
-        @sync_to_async
-        def create_run_record():
+        client_tid = _run_client_task.get(run_id, "")
+        dev_serial = serial or (runner.device.serial if hasattr(runner.device, "serial") else "")
+        _log.info(f"_execute_tests 开始: {run_id} client_tid={client_tid} serial={dev_serial}")
+
+        # Persist run record with case snapshot before execution. The snapshot
+        # (case_id/title/steps_data) must survive later case edits for auditing.
+        @_bg_sync
+        def start_run():
             snapshots = []
             for tc in test_cases:
                 snapshots.append(
@@ -333,44 +497,44 @@ async def _execute_tests(
                         ],
                     }
                 )
-            ctid = _run_client_task.get(run_id, "")
+            # Unified state path: enqueue (idle→queued) then dequeue (queued→running).
+            # dequeue atomically creates the TestRunRecord and links it to the card.
+            tc_card = None
+            if client_tid:
+                try:
+                    tc_card = TaskCard.objects.get(task_id=client_tid)
+                except TaskCard.DoesNotExist:
+                    tc_card = None
+            if tc_card is not None:
+                try:
+                    sm.enqueue(tc_card, dev_serial)
+                    return sm.dequeue(tc_card, run_id, dev_serial, snapshots, loop_count)
+                except sm.InvalidTransition as e:
+                    print(f"[views] start_run transition {client_tid}: {e}")
+                except Exception as e:
+                    print(f"[views] start_run {client_tid}: {e}")
+            # No TaskCard (or transition failed) → standalone record so execution
+            # still proceeds and stays auditable.
             return TestRunRecord.objects.create(
                 run_id=run_id,
-                client_task_id=ctid,
+                client_task_id=client_tid or "",
                 status="RUNNING",
-                device_serial=serial
-                or (runner.device.serial if hasattr(runner.device, "serial") else ""),
+                device_serial=dev_serial,
                 selected_cases=snapshots,
                 loop_count=loop_count,
                 started_at=datetime.now().isoformat(),
             )
 
-        run_record = await create_run_record()
+        run_record = await start_run()
+        _log.info(f"_execute_tests run_record={run_record.id if run_record else 'None'} status={run_record.status if run_record else 'N/A'}")
 
-        # 链接 TaskCard 到 TestRunRecord，供前端页面刷新后重连 WebSocket
-        client_tid = _run_client_task.get(run_id, "")
-        if client_tid:
-            await sync_to_async(TaskCard.objects.filter(task_id=client_tid).update)(
-                run_id=run_record.id,
-                status="running",
-                running=True,
-            )
-
-        # Log device info
-        dev_serial = serial or runner.device.serial if hasattr(runner.device, "serial") else "?"
-        await test_callbacks.on_log(run_id, f"📱 设备: {dev_serial}")
-        try:
-            d_info = runner.device.info
-            await test_callbacks.on_log(
-                run_id,
-                f"分辨率: {d_info.get('displayWidth', '?')}x{d_info.get('displayHeight', '?')}",
-            )
-        except Exception:
-            pass
-        await test_callbacks.on_log(run_id, f"循环次数: {loop_count}")
+        # 设备检查已在 delayed_execute 完成；此处输出执行计划
+        dev_serial = serial or (runner.device.serial if hasattr(runner.device, "serial") else "?")
+        await test_callbacks.on_log(run_id, f"📱 当前设备 ID: {dev_serial}")
+        await test_callbacks.on_log(run_id, f"循环 {loop_count} 轮 · 共 {len(test_cases)} 个用例")
         for tc in test_cases:
             step_count = len(tc.steps_data) if tc.steps_data else 0
-            await test_callbacks.on_log(run_id, f"用例: [{tc.id}] {tc.title} ({step_count} 步)")
+            await test_callbacks.on_log(run_id, f"  · 用例 [{tc.id}] {tc.title} ({step_count} 步)")
         await test_callbacks.on_log(run_id, "────────────────────")
 
         run_model = await runner.run(run_id, test_cases, loop_count, interval_seconds)
@@ -378,7 +542,7 @@ async def _execute_tests(
         # Device is free — schedule next queued task before slow DB writes
         _schedule_next_queued(effective_serial)
 
-        @sync_to_async
+        @_bg_sync
         def persist():
             results = [
                 TestResult(
@@ -396,130 +560,158 @@ async def _execute_tests(
 
         await persist()
 
-        # Update run record with final status
-        @sync_to_async
-        def finalize_run():
-            run_record.status = run_model.status.value
-            run_record.summary = run_model.summary
-            run_record.finished_at = datetime.now().isoformat()
-            run_record.save(update_fields=["status", "summary", "finished_at"])
-
-        await finalize_run()
-
-        # Mark TaskCard as done with full execution results
+        # Finalize: aggregate results, then drive the terminal transition through
+        # the state machine (complete/fail update TaskCard + TestRunRecord atomically).
         client_tid = _run_client_task.get(run_id, "")
-        if client_tid:
 
-            @sync_to_async
-            def _mark_done():
-                # Build case_items from run results — single pass
-                case_items = []
-                by_case = {}
-                overall_pass = 0
-                overall_fail = 0
-                for r in run_model.case_results:
-                    if r.case_id not in by_case:
-                        by_case[r.case_id] = {"pass": 0, "fail": 0, "total": 0}
-                    by_case[r.case_id]["total"] += 1
-                    if r.result == "pass":
-                        by_case[r.case_id]["pass"] += 1
-                        overall_pass += 1
-                    elif r.result in ("fail", "stopped"):
-                        by_case[r.case_id]["fail"] += 1
-                        overall_fail += 1
-                for cid, counts in by_case.items():
-                    # Try to get title from selected_cases snapshot
-                    title = cid
-                    for sc in run_record.selected_cases or []:
-                        if sc.get("case_id") == cid:
-                            title = sc.get("title", cid)
+        @_bg_sync
+        def finalize():
+            # Build case_items + overall counts from run results — single pass
+            case_items = []
+            by_case = {}
+            overall_pass = 0
+            overall_fail = 0
+            for r in run_model.case_results:
+                if r.case_id not in by_case:
+                    by_case[r.case_id] = {"pass": 0, "fail": 0, "total": 0}
+                by_case[r.case_id]["total"] += 1
+                if r.result == "pass":
+                    by_case[r.case_id]["pass"] += 1
+                    overall_pass += 1
+                elif r.result in ("fail", "stopped"):
+                    by_case[r.case_id]["fail"] += 1
+                    overall_fail += 1
+
+            tc_card = None
+            if client_tid:
+                try:
+                    tc_card = TaskCard.objects.get(task_id=client_tid)
+                except TaskCard.DoesNotExist:
+                    tc_card = None
+
+            for cid, counts in by_case.items():
+                # Title from selected_cases snapshot
+                title = cid
+                for sc in run_record.selected_cases or []:
+                    if sc.get("case_id") == cid:
+                        title = sc.get("title", cid)
+                        break
+                # Preserve step definitions from existing TaskCard case_items
+                steps = []
+                if tc_card is not None:
+                    for old_ci in tc_card.case_items or []:
+                        if str(old_ci.get("id")) == str(cid) and old_ci.get("steps"):
+                            steps = old_ci["steps"]
                             break
-                    # Preserve step definitions from existing TaskCard case_items
-                    steps = []
-                    try:
-                        existing = TaskCard.objects.get(task_id=client_tid)
-                        for old_ci in existing.case_items or []:
-                            if str(old_ci.get("id")) == str(cid) and old_ci.get("steps"):
-                                steps = old_ci["steps"]
-                                break
-                    except TaskCard.DoesNotExist:
-                        pass
-                    item = {
-                        "id": cid,
-                        "title": title,
-                        "total": counts["total"],
-                        "pass": counts["pass"],
-                        "fail": counts["fail"],
-                        "rate": round(counts["pass"] / counts["total"] * 100)
-                        if counts["total"]
-                        else 0,
-                        "status": "done",
-                    }
-                    if steps:
-                        item["steps"] = steps
-                    case_items.append(item)
-                # 尊重用户手动停止 / 已记录的终态，不被 completed 覆盖
-                existing = TaskCard.objects.filter(task_id=client_tid).first()
-                if existing and existing.outcome in ("stopped", "interrupted", "error"):
-                    final_outcome = existing.outcome
-                elif run_model.status.value == "completed":
-                    final_outcome = "completed"
-                else:
-                    final_outcome = "stopped"
-                TaskCard.objects.filter(task_id=client_tid).update(
-                    status="done",
-                    running=False,
-                    outcome=final_outcome,
-                    case_items=case_items,
-                    overall_pass=overall_pass,
-                    overall_fail=overall_fail,
-                )
+                item = {
+                    "id": cid,
+                    "title": title,
+                    "total": counts["total"],
+                    "pass": counts["pass"],
+                    "fail": counts["fail"],
+                    "rate": round(counts["pass"] / counts["total"] * 100) if counts["total"] else 0,
+                    "status": "done",
+                }
+                if steps:
+                    item["steps"] = steps
+                case_items.append(item)
 
-            await _mark_done()
+            if tc_card is not None:
+                try:
+                    # 尊重用户手动停止 / 已记录的终态，不被 completed 覆盖
+                    if tc_card.outcome in ("stopped", "interrupted", "error"):
+                        sm.fail(
+                            tc_card,
+                            run_record,
+                            outcome=tc_card.outcome,
+                            overall_pass=overall_pass,
+                            overall_fail=overall_fail,
+                            case_items=case_items,
+                            summary=run_model.summary,
+                        )
+                    elif run_model.status.value == "completed":
+                        sm.complete(
+                            tc_card,
+                            run_record,
+                            run_model.summary,
+                            case_items,
+                            overall_pass=overall_pass,
+                            overall_fail=overall_fail,
+                        )
+                    else:
+                        sm.fail(
+                            tc_card,
+                            run_record,
+                            outcome="stopped",
+                            overall_pass=overall_pass,
+                            overall_fail=overall_fail,
+                            case_items=case_items,
+                            summary=run_model.summary,
+                        )
+                except sm.InvalidTransition as e:
+                    print(f"[views] finalize transition {client_tid}: {e}")
+                except Exception as e:
+                    print(f"[views] finalize {client_tid}: {e}")
+            else:
+                # No TaskCard — finalize the run record standalone.
+                run_record.status = run_model.status.value
+                run_record.summary = run_model.summary
+                run_record.finished_at = datetime.now().isoformat()
+                run_record.save(update_fields=["status", "summary", "finished_at"])
+
+        await finalize()
 
     except Exception as e:
+        import traceback
+        _log.error(f"Test run {run_id} error: {e}\n{traceback.format_exc()}")
         print(f"Test run {run_id} error: {e}")
         await test_callbacks.on_device_error(run_id, str(e))
-        # Mark run record as failed if it was created
-        if run_record:
+        # Drive TaskCard to error via the state machine; always finalize the run
+        # record as FAILED when the card can't take the transition.
+        client_tid = _run_client_task.get(run_id, "")
 
-            @sync_to_async
-            def mark_failed():
+        @_bg_sync
+        def mark_failed():
+            tc_card = None
+            if client_tid:
+                try:
+                    tc_card = TaskCard.objects.get(task_id=client_tid)
+                except TaskCard.DoesNotExist:
+                    tc_card = None
+            # Preserve an already-recorded terminal outcome (e.g. user stopped).
+            if tc_card is not None and tc_card.outcome not in (
+                "stopped",
+                "interrupted",
+                "error",
+            ):
+                try:
+                    sm.fail(tc_card, run_record, outcome="error")
+                    return  # fail() also finalized run_record
+                except sm.InvalidTransition as e:
+                    print(f"[views] mark_failed transition {client_tid}: {e}")
+                except Exception as e:
+                    print(f"[views] mark_failed {client_tid}: {e}")
+            # TaskCard terminal/missing or transition failed → finalize run record.
+            if run_record:
                 run_record.status = "FAILED"
                 run_record.finished_at = datetime.now().isoformat()
                 run_record.save(update_fields=["status", "finished_at"])
 
-            try:
-                await mark_failed()
-            except Exception as e:
-                print(f"[views] mark_failed({run_id}) failed: {e}")
-        # Update TaskCard to reflect error so frontend doesn't hang forever
-        client_tid = _run_client_task.get(run_id, "")
-        if client_tid:
-
-            @sync_to_async
-            def _mark_error():
-                tc = TaskCard.objects.filter(task_id=client_tid).first()
-                if tc and tc.outcome == "stopped":
-                    return
-                TaskCard.objects.filter(task_id=client_tid).update(
-                    status="done",
-                    running=False,
-                    outcome="error",
-                )
-
-            try:
-                await _mark_error()
-            except Exception as e:
-                print(f"[views] _mark_error({run_id}, {client_tid}) failed: {e}")
+        try:
+            await mark_failed()
+        except Exception as e:
+            print(f"[views] mark_failed({run_id}) failed: {e}")
     finally:
+        _log.info(f"_execute_tests finally: run_completed={run_completed} device={effective_serial}")
         # runner.run() also calls mark_device_idle in its own finally;
         # discard is idempotent. Only schedule dequeue if run never started.
         mark_device_idle(effective_serial)
         # Release DB-level device occupation
         try:
             await sync_to_async(dp_release_device)(effective_serial, reason="manual")
+            _log.info(f"_execute_tests dp_release_device OK: {effective_serial}")
         except Exception as e:
+            _log.error(f"_execute_tests dp_release_device({effective_serial}) failed: {e}")
             print(f"[views] dp_release_device({effective_serial}) in finally failed: {e}")
         if not run_completed:
             _schedule_next_queued(effective_serial)
@@ -566,7 +758,7 @@ async def _start_next_queued(serial: str):
     executed = False  # tracks whether _execute_tests was reached
     try:
         # Load test cases
-        @sync_to_async
+        @_bg_sync
         def load():
             rows = TestDefinition.objects.filter(id__in=next_req["case_ids"], enabled=True)
             tcs = []
@@ -598,20 +790,17 @@ async def _start_next_queued(serial: str):
             mark_device_idle(serial)
             return
 
-        # Create u2 connection and runner
-        def make_connection():
-            import uiautomator2 as u2
-
-            return u2.connect(serial)
-
-        d = await asyncio.wait_for(
-            asyncio.get_event_loop().run_in_executor(_u2_executor, make_connection),
-            timeout=U2_CONNECT_TIMEOUT,
-        )
         run_id = f"run_{serial}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         client_task_id = next_req.get("client_task_id", "")
         if client_task_id:
             _run_client_task[run_id] = client_task_id
+
+        try:
+            d = await check_and_connect_async(serial, run_id, test_callbacks, _u2_executor)
+        except DeviceCheckError as e:
+            await _abort_run_before_execute(run_id, serial, client_task_id, str(e))
+            return
+
         runner = TestRunner(d, next_req.get("package_name", ""), callback=test_callbacks)
         executed = True
         # _execute_tests.finally handles cleanup + schedules next dequeue
@@ -644,8 +833,15 @@ async def _start_next_queued(serial: str):
 @csrf_exempt
 def stop_test_run(request, run_id):
     """POST /api/runner/run/{run_id}/stop."""
+    # 活跃 run:走优雅停止(设置 is_running=False,执行循环到检查点自然收尾)
     if stop_run(run_id):
         return JsonResponse({"ok": True, "message": "stop requested"})
+    # 预检阶段(锁了手机但还没真正执行):打停止标记,
+    # delayed_execute 会在预检检查点释放设备 + 标记停止,避免设备锁泄漏
+    pf = _preflight_runs.get(run_id)
+    if pf is not None:
+        pf["stopped"] = True
+        return JsonResponse({"ok": True, "message": "stopping (pre-flight)"})
     return JsonResponse({"ok": False, "error": "run not found or already finished"})
 
 
@@ -679,8 +875,14 @@ def cancel_queued_task(request):
         _device_queue[serial] = new_q
         if not new_q:
             del _device_queue[serial]
-        # Reset TaskCard status so it can be re-executed
-        TaskCard.objects.filter(task_id=client_task_id).update(status="idle", running=False)
+        # Reset TaskCard status so it can be re-executed — via state machine.
+        try:
+            tc = TaskCard.objects.get(task_id=client_task_id)
+            sm.cancel(tc)
+        except TaskCard.DoesNotExist:
+            pass
+        except sm.InvalidTransition as e:
+            print(f"[views] cancel transition {client_task_id}: {e}")
         return JsonResponse(
             {
                 "ok": True,
@@ -691,9 +893,7 @@ def cancel_queued_task(request):
     # Fallback: task may be queued in DB but not in memory (e.g. after server restart)
     try:
         tc = TaskCard.objects.get(task_id=client_task_id, status="queued", device_serial=serial)
-        tc.status = "idle"
-        tc.running = False
-        tc.save(update_fields=["status", "running"])
+        sm.cancel(tc)
         return JsonResponse(
             {
                 "ok": True,
@@ -1059,3 +1259,115 @@ def task_card_delete(request, task_id):
         return JsonResponse({"ok": True, "message": "已删除"})
     except TaskCard.DoesNotExist:
         return JsonResponse({"ok": True, "message": "任务不存在或已删除"})
+
+
+# ═══════════════════════════════════════════════════════════════
+# TREP v1.0 Phase 0: 监控端点 + 状态快照
+# ═══════════════════════════════════════════════════════════════
+
+
+@require_auth
+def run_monitor(request, run_id):
+    """GET /api/runner/monitor/:run_id — TREP v1.0 协议健康监控。
+
+    返回: {ok, live, status, device, log_tail, is_running, started_at, ...}
+    WS 断开时前端可降级轮询此端点。
+    """
+    state = get_active_run(run_id)
+
+    if not state:
+        # 已完成/不存在的 run → 查 DB
+        try:
+            record = TestRunRecord.objects.get(run_id=run_id)
+            return JsonResponse({
+                "ok": True, "run_id": run_id,
+                "live": False,
+                "status": record.status,
+                "device_serial": record.device_serial,
+                "selected_cases": record.selected_cases,
+                "loop_count": record.loop_count,
+                "summary": record.summary,
+                "started_at": record.started_at,
+                "finished_at": record.finished_at,
+            })
+        except TestRunRecord.DoesNotExist:
+            return JsonResponse({"ok": False, "error": "run not found"}, status=404)
+
+    # Live run — 组装实时状态快照
+    adapter = state.adapter
+    device_info = {"serial": state.run_model.device_serial, "status": "connected"}
+    if adapter and adapter.d:
+        try:
+            info = adapter.d.info
+            device_info.update({
+                "resolution": f"{info.get('displayWidth', '?')}x{info.get('displayHeight', '?')}",
+                "sdk": info.get("sdkVersion", "?"),
+                "battery": info.get("battery", {}).get("level", "?"),
+            })
+        except Exception:
+            device_info["status"] = "disconnected"
+
+    return JsonResponse({
+        "ok": True, "run_id": run_id,
+        "live": True,
+        "status": state.run_model.status.value if hasattr(state.run_model.status, 'value') else str(state.run_model.status),
+        "is_running": state.is_running,
+        "device": device_info,
+        "selected_cases": state.run_model.selected_cases,
+        "loop_count": state.run_model.loop_count,
+        "started_at": state.run_model.started_at,
+        "log_tail": state.log_lines[-50:],
+    })
+
+
+@require_auth
+def run_snapshot(request, run_id):
+    """GET /api/runner/run/:run_id/snapshot — TREP v1.0 状态快照（WS 降级兜底）。
+
+    返回: {ok, live, status, cases: [{case_id, pass, fail, total}], client_task_id}
+    """
+    state = get_active_run(run_id)
+    client_tid = _run_client_task.get(run_id, "")
+
+    if state:
+        # Live run — 从内存组装
+        cases = []
+        for r in state.all_results:
+            cases.append({
+                "case_title": r.get("case_title", ""),
+                "pass": int(r.get("pass", 0)),
+                "fail": int(r.get("fail", 0)),
+                "rate": r.get("rate", "0%"),
+            })
+        return JsonResponse({
+            "ok": True, "run_id": run_id,
+            "live": True,
+            "status": state.run_model.status.value if hasattr(state.run_model.status, 'value') else str(state.run_model.status),
+            "cases": cases,
+            "client_task_id": client_tid,
+        })
+
+    # 已完成 run → 从 DB
+    try:
+        record = TestRunRecord.objects.get(run_id=run_id)
+        from .models import TestResult as TR
+        results = TR.objects.filter(run=record)
+        by_case = {}
+        for r in results:
+            cid = str(r.case_id) if r.case_id else "unknown"
+            if cid not in by_case:
+                by_case[cid] = {"case_id": cid, "pass": 0, "fail": 0, "total": 0}
+            by_case[cid]["total"] += 1
+            if r.result == "pass":
+                by_case[cid]["pass"] += 1
+            else:
+                by_case[cid]["fail"] += 1
+        return JsonResponse({
+            "ok": True, "run_id": run_id,
+            "live": False,
+            "status": record.status,
+            "cases": list(by_case.values()),
+            "client_task_id": record.client_task_id,
+        })
+    except TestRunRecord.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "run not found"}, status=404)

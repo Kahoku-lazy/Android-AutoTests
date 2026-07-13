@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>设备管理 Device Pool — 全功能需求规格</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --primary: #19c8b9; --primary-hover: #3dd4c6; --primary-active: #11a89b; --primary-bg: #e6f9f6;
+    --text: #794f27; --text-body: #725d42; --text-secondary: #9f927d; --text-muted: #8a7b66;
+    --bg: #f8f8f0; --bg-content: rgb(247, 243, 223); --border: #c4b89e;
+    --success: #6fba2c; --warning: #f5c31c; --error: #e05a5a;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: Nunito, 'Noto Sans SC', -apple-system, 'PingFang SC', sans-serif;
+    font-weight: 500; letter-spacing: 0.01em; background: var(--bg); color: var(--text-body); line-height: 1.7;
+  }
+  .container { max-width: 980px; margin:0 auto; padding:40px 20px; }
+  h1 { font-weight:800; color:var(--text); font-size:1.8em; text-align:center; margin-bottom:6px; }
+  h2 { font-weight:700; font-size:1.1em; color:var(--text); margin:0 0 8px 0; display:flex; align-items:center; gap:8px; }
+  h3 { font-weight:700; font-size:1em; color:var(--text); margin:20px 0 8px; }
+  .subtitle { text-align:center; color:var(--text-secondary); font-size:0.95em; margin-bottom:12px; }
+  .meta-row { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:28px; }
+  .meta-pill { font-size:11px; font-weight:700; padding:4px 12px; border-radius:50px; border:1.5px solid var(--border); background:var(--bg-content); color:var(--text); }
+  .card { background:var(--bg-content); border-radius:20px; padding:24px; margin-bottom:20px; border:2px solid transparent; }
+  .card-em { border-color: var(--warning); background: #fffdf5; }
+  .sec-num { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:10px; font-size:14px; font-weight:800; color:#fff; flex-shrink:0; }
+  .sn-green { background:var(--success); } .sn-teal { background:var(--primary); }
+  .sn-pink { background:#f8a6b2; } .sn-purple { background:#b39ef3; }
+  .sn-yellow { background:var(--warning); } .sn-blue { background:#889df0; }
+  .story { background:#fff; border-radius:16px; padding:18px 20px; margin:12px 0; border-left:4px solid var(--primary); }
+  .story .who { font-size:12px; color:var(--text-secondary); letter-spacing:0.04em; font-weight:700; }
+  .story .goal { font-size:15px; color:var(--text); font-weight:700; margin:4px 0; }
+  .story .why { font-size:13px; color:var(--text-muted); }
+  .pain-gain { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+  .pain { background:#fef2f2; border-radius:14px; padding:16px; border-left:4px solid var(--error); }
+  .gain { background:#f0fdf4; border-radius:14px; padding:16px; border-left:4px solid var(--success); }
+  .pain h4 { color:var(--error); font-size:14px; margin-bottom:6px; }
+  .gain h4 { color:var(--success); font-size:14px; margin-bottom:6px; }
+  .pain li, .gain li { font-size:13px; margin:4px 0; }
+  @media (max-width:600px) { .pain-gain { grid-template-columns:1fr; } }
+  code { font-family:'SF Mono',Consolas,monospace; font-weight:600; font-size:12px; background:rgba(121,79,39,0.06); padding:2px 7px; border-radius:6px; color:var(--text); }
+  pre { background:#2b2118; color:#e8d5bc; padding:16px 20px; border-radius:20px; overflow-x:auto; font-size:12px; line-height:1.8; margin:12px 0; font-family:'SF Mono',Consolas,monospace; }
+  table { width:100%; border-collapse:collapse; margin:10px 0; border-radius:20px; overflow:hidden; }
+  th { background:rgba(121,79,39,0.06); padding:10px 14px; text-align:left; font-size:12px; font-weight:700; color:var(--text); }
+  td { padding:9px 14px; font-size:13px; border-top:1px dashed rgba(196,184,158,0.4); vertical-align:top; }
+  .tag { display:inline-block; padding:2px 8px; border-radius:50px; font-size:10px; font-weight:700; margin-right:4px; }
+  .tag-vue { background:#dbeafe; color:#1e40af; } .tag-py { background:#e0e7ff; color:#3730a3; }
+  .tag-ok { background:#f0fdf4; color:#15803d; } .tag-warn { background:#fef3c7; color:#92400e; }
+  .tag-p0 { background:#fef2f2; color:#b91c1c; } .tag-p1 { background:#fff7ed; color:#c2410c; }
+  .tag-gap { background:#fce7f3; color:#be185d; }
+  .wire { background:#fff; border:2px dashed var(--border); border-radius:16px; padding:16px; font-family:'SF Mono',monospace; font-size:11px; line-height:1.55; color:var(--text); white-space:pre; overflow-x:auto; margin:12px 0; }
+  .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:14px 0; }
+  .kpi { background:#fff; border-radius:14px; padding:14px; text-align:center; border:1.5px solid rgba(196,184,158,0.45); }
+  .kpi .n { font-size:20px; font-weight:900; color:var(--text); }
+  .kpi .l { font-size:12px; color:var(--text-secondary); margin-top:4px; font-weight:700; }
+  @media (max-width:700px) { .kpi-grid { grid-template-columns:1fr 1fr; } }
+  .toc { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:28px; }
+  .toc a { font-size:12px; font-weight:700; padding:6px 12px; border-radius:50px; border:2px solid var(--border); background:var(--bg-content); color:var(--text); text-decoration:none; }
+  .toc a:hover { border-color:var(--primary); background:var(--primary-bg); color:var(--primary-active); }
+  .footer { text-align:center; color:var(--text-secondary); font-size:12px; margin-top:40px; padding:20px 0; border-top:1px dashed rgba(196,184,158,0.5); }
+  ul.bul { margin:8px 0 0 18px; font-size:13px; }
+  ul.bul li { margin:4px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>设备管理 Device Pool — 全功能需求规格</h1>
+<p class="subtitle">对齐 <code>子PRD-02-device-pool.md</code> · <strong>以现网代码为准</strong> · 扫描 / 连接 / 锁定释放 / 排队 / 局域网 WIFI（现网已交付）</p>
+<div class="meta-row">
+  <span class="meta-pill">模块 · device-pool</span>
+  <span class="meta-pill">路由 · /devices</span>
+  <span class="meta-pill">后端 · apps/device_pool</span>
+  <span class="meta-pill">前端 · modules/device-pool</span>
+  <span class="meta-pill">API · /api/devices/*</span>
+  <span class="meta-pill">版本 · v1.0 · 2026-07-10 · 现网对齐</span>
+</div>
+
+<nav class="toc">
+  <a href="#p1">① 业务视角</a>
+  <a href="#p2">② 技术视角</a>
+  <a href="#data-chain">③ 数据链</a>
+  <a href="#state-machine">④ 状态机</a>
+  <a href="#p3">⑤ 治理与验收</a>
+  <a href="#agent-prompt">⑥ Agent 提示词</a>
+  <a href="#gaps">⑦ 现状差距</a>
+</nav>
+
+<div class="card card-em" id="p1">
+  <h2><span class="sec-num sn-yellow">🎯</span> 第一部分：业务视角</h2>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-green">1</span> 功能定位</h2>
+  <p style="font-size:15px;"><strong>设备管理</strong>是平台设备资产中枢：ADB 发现、状态、锁定/释放、排队、USB/WIFI 连接，供元素定位与执行引擎独占使用。</p>
+  <p style="font-size:14px; color:var(--text-secondary); margin-top:8px;">一句话：看清哪台空闲、锁住再测、测完释放；支持 USB 与局域网 adb connect。</p>
+  <div class="kpi-grid"><div class="kpi"><div class="n">F-01</div><div class="l">扫描注册</div></div><div class="kpi"><div class="n">F-02</div><div class="l">连接激活</div></div><div class="kpi"><div class="n">F-03</div><div class="l">锁定释放</div></div><div class="kpi"><div class="n">F-04</div><div class="l">强制断开</div></div><div class="kpi"><div class="n">F-05</div><div class="l">排队</div></div><div class="kpi"><div class="n">F-06</div><div class="l">心跳</div></div><div class="kpi"><div class="n">F-07</div><div class="l">局域网</div></div><div class="kpi"><div class="n">F-08</div><div class="l">跨模块API</div></div></div>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-green">2</span> 用户故事</h2>
+  <div class="story">
+    <div class="who">US-DP-01 · 列表</div>
+    <div class="goal">看到全部设备状态一览。</div>
+    <div class="why">验收：GET /api/devices 含 ONLINE/BUSY/OFFLINE。</div>
+  </div><div class="story">
+    <div class="who">US-DP-02 · 扫描</div>
+    <div class="goal">一键 adb 扫描入库。</div>
+    <div class="why">验收：POST /api/devices/scan。</div>
+  </div><div class="story">
+    <div class="who">US-DP-03 · 连接</div>
+    <div class="goal">连接后可进元素定位。</div>
+    <div class="why">验收：POST /devices/{serial} + activate。</div>
+  </div><div class="story">
+    <div class="who">US-DP-04 · 锁定</div>
+    <div class="goal">锁定防抢占，超时释放。</div>
+    <div class="why">验收：lock/release + DeviceLock。</div>
+  </div><div class="story">
+    <div class="who">US-DP-09 · 局域网</div>
+    <div class="goal">输入 IP:Port 无线接入。</div>
+    <div class="why">验收：scan target=ip:port → WIFI。</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-green">3</span> 解决的痛点</h2>
+  <div class="pain-gain">
+    <div class="pain"><h4>没有本模块之前</h4><ul><li>不知谁空闲</li><li>多人抢设备</li><li>无线连接靠命令行</li></ul></div>
+    <div class="gain"><h4>有了本模块之后</h4><ul><li>状态一览</li><li>锁+排队</li><li>页面局域网连接</li></ul></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-green">4</span> 界面信息架构</h2>
+  <div class="wire">┌ 设备管理 [/devices] ──────────────────────────────┐
+│ [局域网连接] [扫描] [刷新]  排队徽标                 │
+│ Tab: 在线 | 使用中                                   │
+│ 表格: serial/型号/分辨率/状态/锁/连接类型/操作       │
+│ 操作: 连接·锁定·释放·断开·排队                       │
+└────────────────────────────────────────────────────┘</div>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-green">5</span> 功能详细规格</h2>
+  <h3>F-01 设备发现与注册 <span class="tag tag-p0">P0</span></h3>
+<p style="font-size:13px">adb devices → update_or_create；BUSY 保护不降 ONLINE；采集 model/brand/分辨率/android_version/connection_type。</p>
+<h3>F-02 连接与激活 <span class="tag tag-p0">P0</span></h3>
+<p style="font-size:13px"><code>POST /api/devices/{serial}</code> u2.connect；activate 切当前；可跳转 /elements。</p>
+<h3>F-03 锁定 / 释放 <span class="tag tag-p0">P0</span></h3>
+<p style="font-size:13px">lock_type: user/process；timeout 默认 300s；release_reason: manual/timeout/disconnect/force。表 dp_device_locks。</p>
+<h3>F-04 强制断开 <span class="tag tag-p1">P1</span></h3>
+<p style="font-size:13px">disconnect / disconnect-observe；清缓存与锁。</p>
+<h3>F-05 排队 <span class="tag tag-p1">P1</span></h3>
+<p style="font-size:13px">join/leave queue；状态 waiting/assigned/cancelled/timeout。表 dp_device_queue。</p>
+<h3>F-06 心跳 <span class="tag tag-p1">P1</span></h3>
+<p style="font-size:13px"><code>GET /api/devices/heartbeat</code> + 列表内状态同步。</p>
+<h3>F-07 局域网连接 <span class="tag tag-p0">P0</span></h3>
+<p style="font-size:13px"><strong>现网已交付</strong>：弹窗 IP+端口(默认5555) → <code>POST /scan {"target":"ip:port"}</code> → adb connect → WIFI 入库。动态无线调试端口须本机先 <code>adb pair</code>（平台外前提）。</p>
+<h3>F-08 跨模块 api.py <span class="tag tag-p0">P0</span></h3>
+<p style="font-size:13px">acquire_device / release_device / get_online_devices / ensure_device — runner、AI Tool、element-locator 共用。</p>
+
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-green">6</span> 模块边界</h2>
+  <pre>device-pool
+  ├─ 唯一写入口：本模块 views + api.acquire/release
+  ├─ 他模块禁止 Device.objects.update(status=...)
+  └─ 被 element-locator / test-runner / agentscope 消费</pre>
+  <ul class="bul"><li>仅 Android/ADB（UI 若写 iOS 属文案错误）</li><li>跨模块锁设备必须 api.acquire_device</li><li>api→views 内部依赖需逐步收敛，对外仍只暴露 api</li></ul>
+</div>
+
+<div class="card card-em" id="p2" style="margin-top:28px;">
+  <h2><span class="sec-num sn-yellow">🔧</span> 第二部分：技术视角</h2>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-teal">7</span> 数据流全景</h2>
+  <pre>Vue /devices
+  → /api/devices/*
+  → views + DevicePool(u2)
+  → dp_devices / locks / queue
+  → 被 runner.acquire / element ensure_device 调用</pre>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-teal">8</span> REST / WS 端点（现网）</h2>
+  <table><tr><th>方法</th><th>路径</th><th>说明</th></tr><tr><td>GET</td><td>/api/devices/</td><td>列表+状态同步</td></tr><tr><td>POST</td><td>/api/devices/scan</td><td>扫描或 target=ip:port</td></tr><tr><td>GET</td><td>/api/devices/current|heartbeat|queue</td><td>当前/心跳/排队</td></tr><tr><td>POST</td><td>/api/devices/{serial}</td><td>连接</td></tr><tr><td>POST</td><td>.../activate|lock|release|disconnect*</td><td>激活/锁/释放/断开</td></tr><tr><td>POST</td><td>.../queue|queue/leave</td><td>入队/出队</td></tr></table>
+  <p style="font-size:12px; color:var(--text-secondary); margin-top:8px;">统计：REST 13 · WS 0 · 与 urls.py 对齐</p>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-teal">9</span> 数据模型</h2>
+  <table><tr><th>表</th><th>关键字段</th></tr><tr><td>dp_devices</td><td>serial, status, locked_by, occupied_*, connection_type, last_seen</td></tr><tr><td>dp_device_locks</td><td>lock_type, status, timeout_seconds, release_reason</td></tr><tr><td>dp_device_queue</td><td>user_id, status waiting|assigned|cancelled|timeout</td></tr></table>
+</div>
+
+<div class="card" id="data-chain">
+  <h2><span class="sec-num sn-blue">10</span> 数据链（入库 / 出库）</h2>
+  <table><tr><th>方向</th><th>规则</th></tr><tr><td>入库</td><td>scan/connect update_or_create；lock INSERT</td></tr><tr><td>出库</td><td>列表 API；get_online_devices 给 AI/runner</td></tr><tr><td>状态</td><td>ONLINE↔BUSY↔OFFLINE；UI 仍可能见 DISCONNECTED</td></tr></table>
+</div>
+
+<div class="card" id="state-machine">
+  <h2><span class="sec-num sn-purple">11</span> 状态机</h2>
+  <div class="wire">(new) --scan--> ONLINE --lock--> BUSY --release/timeout--> ONLINE
+ONLINE --scan miss--> OFFLINE --scan--> ONLINE
+* --disconnect--> DISCONNECTED(或清缓存) --scan--> ONLINE</div>
+  <table><tr><th>状态</th><th>含义</th></tr><tr><td>ONLINE</td><td>在线可连</td></tr><tr><td>BUSY</td><td>锁定/占用中</td></tr><tr><td>OFFLINE</td><td>adb 不可见</td></tr><tr><td>DISCONNECTED</td><td>主动断开（前端仍处理）</td></tr></table>
+</div>
+
+<div class="card card-em" id="p3" style="margin-top:28px;">
+  <h2><span class="sec-num sn-yellow">✅</span> 第三部分：治理与验收</h2>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-pink">12</span> Review 清单</h2>
+  <table><tr><th>#</th><th>检查项</th><th>通过标准</th></tr><tr><td>D1</td><td>跨模块写</td><td>只走 api.acquire/release</td></tr><tr><td>D2</td><td>扫描幂等</td><td>同 serial 不重复行</td></tr><tr><td>D3</td><td>WIFI 校验</td><td>前端 IP/端口校验必做</td></tr></table>
+</div>
+
+<div class="card">
+  <h2><span class="sec-num sn-pink">13</span> 验收标准 AC</h2>
+  <table><tr><th>ID</th><th>场景</th><th>期望</th></tr><tr><td>DP-AC-01</td><td>扫描</td><td>USB 设备出现在列表</td></tr><tr><td>DP-AC-02</td><td>锁定</td><td>他人不可抢</td></tr><tr><td>DP-AC-03</td><td>释放</td><td>回 ONLINE</td></tr><tr><td>DP-AC-04</td><td>局域网</td><td>合法 IP:5555 可 WIFI 入库</td></tr><tr><td>DP-AC-05</td><td>排队</td><td>join/leave 生效</td></tr></table>
+</div>
+
+<div class="card" id="agent-prompt">
+  <h2><span class="sec-num sn-purple">14</span> Agent 专属提示词（编码时粘贴）</h2>
+  <pre>你在改「设备管理」。
+红线：他模块禁止直接改 Device.status；锁/放必须 api.py。
+局域网：复用 POST /scan target；动态端口需用户先 adb pair。
+验证：/devices 扫描→锁定→释放；局域网弹窗连 WIFI 设备。</pre>
+</div>
+
+<div class="card card-em" id="gaps">
+  <h2><span class="sec-num sn-yellow">15</span> 现状差距（MD PRD vs 现网）</h2>
+  <table>
+    <tr><th></th><th>MD / 文档说法</th><th>现网事实</th><th>处理</th></tr>
+    <tr><td><span class="tag tag-gap">GAP</span></td><td>MD v2.2 标 F-07「待开发」</td><td>前端局域网弹窗+scan target 已交付</td><td>MD 状态改为已实现</td></tr><tr><td><span class="tag tag-gap">GAP</span></td><td>副标题写 Android/iOS</td><td>仅 ADB/Android</td><td>改文案</td></tr><tr><td><span class="tag tag-gap">GAP</span></td><td>MD API 表 10 条</td><td>现网 13 REST</td><td>以 urls 为准</td></tr>
+  </table>
+</div>
+
+<div class="footer">设备管理 Device Pool — 全功能需求规格 · 全功能需求规格 · 以现网为准 · 2026-07-10 · 02-PRD需求/html/</div>
+
+</div>
+</body>
+</html>

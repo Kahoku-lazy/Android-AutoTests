@@ -205,15 +205,15 @@ const filteredElements = computed(() => {
   }
 })
 
-// ── Table columns ──
+// ── Table columns（百分比宽度，铺满容器）──
 const columns = [
-  { title: '名称', dataIndex: 'alias', key: 'alias', width: '100px' },
-  { title: 'XPath', dataIndex: 'xpath', key: 'xpath', width: '180px' },
-  { title: '类名', dataIndex: 'class_name', key: 'class_name', width: '120px' },
-  { title: '文本', dataIndex: 'text_val', key: 'text_val', width: '80px' },
-  { title: 'Resource ID', dataIndex: 'resource_id', key: 'resource_id', width: '140px' },
-  { title: '可点击', dataIndex: 'clickable', key: 'clickable', width: '65px', align: 'center' },
-  { title: '测试点', dataIndex: 'is_test_point', key: 'is_test_point', width: '75px', align: 'center' },
+  { title: '名称', dataIndex: 'alias', key: 'alias', width: '12%' },
+  { title: 'XPath', dataIndex: 'xpath', key: 'xpath', width: '28%' },
+  { title: '类名', dataIndex: 'class_name', key: 'class_name', width: '15%' },
+  { title: '文本', dataIndex: 'text_val', key: 'text_val', width: '12%' },
+  { title: 'Resource ID', dataIndex: 'resource_id', key: 'resource_id', width: '18%' },
+  { title: '可点击', dataIndex: 'clickable', key: 'clickable', width: '7%', align: 'center' },
+  { title: '测试点', dataIndex: 'is_test_point', key: 'is_test_point', width: '8%', align: 'center' },
 ]
 </script>
 
@@ -429,16 +429,21 @@ const columns = [
   display: flex;
   flex-direction: column;
   min-height: min-content;
+  width: 100%;
+  min-width: 0;
 }
 .doc-body {
   flex: 1;
   padding-bottom: 24px;
+  width: 100%;
+  min-width: 0;
 }
 .main-layout {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
   gap: 16px;
   align-items: start;
+  width: 100%;
 }
 
 /* ── Panel header ── */
@@ -544,12 +549,11 @@ const columns = [
 }
 .elements-subheader {
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   min-width: 0;
   width: 100%;
-  gap: 12px;
+  gap: 8px;
 }
 .element-tabs {
   flex: 1;
@@ -560,27 +564,35 @@ const columns = [
   width: 100%;
 }
 .element-tabs :deep(.animal-tabs__content) {
-  padding: 12px 16px 16px;
+  padding: 12px 0 0;
+  width: 100%;
 }
 .element-tabs :deep(.animal-tabs__inner) {
   min-height: min-content;
+  width: 100%;
 }
 .element-count {
   font-size: 12px;
   color: var(--text-secondary);
   white-space: nowrap;
-  flex-shrink: 0;
-  padding-top: 10px;
+  align-self: flex-end;
+  padding-top: 0;
 }
 
 /* ── Table card ── */
 .table-card {
   min-width: 0;
+  width: 100%;
   padding: 0 !important;
 }
+.table-card :deep(.animal-card__content) {
+  padding: 0;
+  width: 100%;
+}
 
-/* ── Table scroll wrapper：仅横向溢出时滚动，纵向随内容撑开 */
+/* ── Table scroll wrapper：极窄屏横向滚动，默认铺满宽度 */
 .table-scroll {
+  width: 100%;
   overflow-x: auto;
   overflow-y: visible;
   scrollbar-width: thin;
@@ -603,48 +615,52 @@ const columns = [
 
 /* ── Elements table ── */
 .elements-table {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+}
+.elements-table :deep(.animal-table-wrapper) {
+  width: 100%;
 }
 .elements-table :deep(table) {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
-  table-layout: auto;
 }
 
-/* ── 表头：彩色渐变，比正文大 ── */
+/* ── 表头：彩色渐变 ── */
 .elements-table :deep(th) {
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 800;
   color: #fff;
-  padding: 14px 16px;
+  padding: 16px 12px;
   text-align: left;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.4px;
   position: sticky;
   top: 0;
   z-index: 2;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.elements-table :deep(th:nth-child(1)) { background: linear-gradient(135deg, #19c8b9, #15b0a3); border-radius: 10px 0 0 0; min-width: 100px; }
-.elements-table :deep(th:nth-child(2)) { background: linear-gradient(135deg, #9b8fd4, #8275c2); min-width: 180px; }
-.elements-table :deep(th:nth-child(3)) { background: linear-gradient(135deg, #f0a06a, #e88d52); min-width: 130px; }
-.elements-table :deep(th:nth-child(4)) { background: linear-gradient(135deg, #7db84d, #6ba33b); min-width: 80px; }
-.elements-table :deep(th:nth-child(5)) { background: linear-gradient(135deg, #6c93d4, #557ec0); min-width: 150px; }
-.elements-table :deep(th:nth-child(6)) { background: linear-gradient(135deg, #f0c64a, #e0b830); text-align: center; min-width: 90px; }
-.elements-table :deep(th:nth-child(7)) { background: linear-gradient(135deg, #e8879b, #d47085); text-align: center; border-radius: 0 10px 0 0; min-width: 80px; }
+.elements-table :deep(th:nth-child(1)) { background: linear-gradient(135deg, #19c8b9, #15b0a3); border-radius: 10px 0 0 0; }
+.elements-table :deep(th:nth-child(2)) { background: linear-gradient(135deg, #9b8fd4, #8275c2); }
+.elements-table :deep(th:nth-child(3)) { background: linear-gradient(135deg, #f0a06a, #e88d52); }
+.elements-table :deep(th:nth-child(4)) { background: linear-gradient(135deg, #7db84d, #6ba33b); }
+.elements-table :deep(th:nth-child(5)) { background: linear-gradient(135deg, #6c93d4, #557ec0); }
+.elements-table :deep(th:nth-child(6)) { background: linear-gradient(135deg, #f0c64a, #e0b830); text-align: center; }
+.elements-table :deep(th:nth-child(7)) { background: linear-gradient(135deg, #e8879b, #d47085); text-align: center; border-radius: 0 10px 0 0; }
 
 /* ── 单元格 ── */
 .elements-table :deep(td) {
-  padding: 11px 16px;
+  padding: 13px 12px;
   font-size: 14px;
   color: #4A3A28;
   border-bottom: 1px solid rgba(0,0,0,0.04);
   vertical-align: middle;
   transition: all 0.2s ease;
-  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── 行交替配色（彩色） ── */
@@ -672,13 +688,13 @@ const columns = [
 /* XPath 列 — 紫色调，等宽字体 */
 .elements-table :deep(td:nth-child(2)) {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 13px;
+  font-size: 14px;
   color: #6254a0;
 }
 /* 类名列 — 橙色调等宽 */
 .elements-table :deep(td:nth-child(3)) {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 13px;
+  font-size: 14px;
   color: #b8652e;
 }
 /* 文本列 — 绿色调 */
@@ -686,7 +702,7 @@ const columns = [
 /* Resource ID 列 — 蓝色调等宽 */
 .elements-table :deep(td:nth-child(5)) {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 13px;
+  font-size: 14px;
   color: #3b5fa0;
 }
 /* 可点击列 — 彩色徽章 */
@@ -740,12 +756,20 @@ const columns = [
 
 /* ── Cell code (XPath, class_name, resource_id) ── */
 .cell-code {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: 0.2px;
 }
 .cell-text {
   font-size: 14px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ── Empty states ── */

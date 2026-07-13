@@ -137,7 +137,7 @@ flowchart TB
 │           ├── report-generator/   # 测试报告
 │           └── ai-assistant/       # AI 助手 (animal-island-vue 动森主题)
 │
-├── AI开发项目文档管理/         # 项目文档
+├── dev_docs/         # 项目文档
 ├── data/                      # SQLite + avatars/ + screenshots/ + chromadb/
 ├── logs/                      # backend / agentscope / frontend 日志
 ├── exports/                   # YAML 导出

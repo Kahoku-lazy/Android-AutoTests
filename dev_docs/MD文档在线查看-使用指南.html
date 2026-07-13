@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MD 文档在线查看 · 使用指南</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#19c8b9;--primary-bg:#e6f9f6;--text:#794f27;--text-body:#725d42;--text-secondary:#9f927d;--text-muted:#8a7b66;--bg:#f8f8f0;--bg-card:#fff;--border:#c4b89e;--border-light:#e0d8c8;--success:#6fba2c;--warning:#f5c31c;--error:#e05a5a;--r-sm:10px;--r-base:16px;--r-lg:22px;--r-pill:50px;--shadow:0 2px 12px rgba(0,0,0,.06);--shadow-lg:0 6px 24px rgba(0,0,0,.10);--font-display:Nunito,'Noto Sans SC',sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Nunito,'Noto Sans SC',-apple-system,'PingFang SC',sans-serif;font-weight:500;color:var(--text-body);background:var(--bg);line-height:1.75;min-height:100vh}
+.container{max-width:900px;margin:0 auto;padding:48px 24px 80px}
+.hero{text-align:center;padding:40px 0 36px}
+.hero-badge{display:inline-block;background:var(--primary-bg);color:#11a89b;font-size:10px;font-weight:800;letter-spacing:.06em;padding:4px 12px;border-radius:var(--r-pill);border:1.5px solid var(--primary);margin-bottom:14px}
+.hero h1{font-family:var(--font-display);font-size:36px;font-weight:900;color:var(--text);margin-bottom:10px}
+.hero .subtitle{font-size:15px;color:var(--text-secondary)}
+
+section{margin-bottom:40px}
+section h2{font-family:var(--font-display);font-size:20px;font-weight:900;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:10px}
+section h2 .n{width:30px;height:30px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0}
+section h3{font-family:var(--font-display);font-size:15px;font-weight:800;color:var(--text);margin:20px 0 8px}
+section p{font-size:14px;margin-bottom:10px}
+
+/* Steps */
+.step{display:flex;gap:16px;margin-bottom:20px;background:var(--bg-card);border-radius:var(--r-lg);padding:24px 28px;border:1.5px solid var(--border-light);box-shadow:var(--shadow)}
+.step .step-num{width:40px;height:40px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;flex-shrink:0}
+.step .step-body{flex:1}
+.step .step-body h4{font-family:var(--font-display);font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px}
+.step .step-body p{font-size:13px;color:var(--text-secondary);line-height:1.7;margin-bottom:8px}
+
+/* Code blocks */
+pre{background:#1e293b;color:#e2e8f0;border-radius:var(--r-base);padding:16px 20px;overflow-x:auto;margin:10px 0;font-size:13px;line-height:1.7;font-family:'SF Mono',Monaco,Menlo,monospace}
+pre .cmd{color:#7dd3fc}
+pre .path{color:#fde68a}
+pre .note{color:#94a3b8}
+code{font-family:'SF Mono',Monaco,Menlo,monospace;font-size:12px;background:rgba(0,0,0,.05);padding:2px 6px;border-radius:4px}
+pre code{background:transparent;padding:0;font-size:inherit}
+
+/* Info cards */
+.info-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.info-card{background:var(--bg-card);border-radius:var(--r-base);padding:20px 24px;border:1.5px solid var(--border-light)}
+.info-card.tip{border-left:4px solid var(--success)}
+.info-card.warn{border-left:4px solid var(--warning)}
+.info-card h4{font-family:var(--font-display);font-size:13px;font-weight:800;margin-bottom:6px}
+.info-card.tip h4{color:var(--success)}
+.info-card.warn h4{color:#c7840a}
+.info-card p,.info-card ul{font-size:12px;color:var(--text-secondary);line-height:1.7}
+.info-card ul{padding-left:16px}
+.info-card li{margin-bottom:3px}
+
+/* Feature grid */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.feat{background:var(--bg-card);border-radius:var(--r-base);padding:18px 20px;border:1.5px solid var(--border-light);text-align:center}
+.feat .icon{font-size:28px;margin-bottom:8px}
+.feat h4{font-family:var(--font-display);font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px}
+.feat p{font-size:11px;color:var(--text-secondary);line-height:1.5;margin:0}
+
+/* Shortcut table */
+table{width:100%;border-collapse:collapse;font-size:13px;background:var(--bg-card);border-radius:var(--r-base);overflow:hidden;border:1.5px solid var(--border-light)}
+thead th{background:rgba(25,200,185,.08);color:var(--text);font-size:11px;font-weight:800;letter-spacing:.04em;padding:12px 16px;text-align:left;border-bottom:2px solid var(--border)}
+tbody td{padding:10px 16px;border-bottom:1px solid var(--border-light)}
+tbody tr:last-child td{border-bottom:none}
+kbd{display:inline-block;padding:2px 8px;font-size:11px;font-weight:700;background:rgba(0,0,0,.06);border:1px solid var(--border);border-radius:4px;font-family:inherit;box-shadow:0 1px 0 var(--border)}
+
+.footer{text-align:center;padding:28px 0 0;border-top:1px solid var(--border-light);margin-top:40px;font-size:11px;color:var(--text-muted)}
+.footer a{color:#11a89b;font-weight:700;text-decoration:none}
+
+@media(max-width:700px){.info-row,.feat-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+  <div class="hero-badge">📖 使用指南</div>
+  <h1>MD 文档在线查看器</h1>
+  <p class="subtitle">在 index.html 文档索引中点击 .md 文件卡片，即可在浏览器中查看渲染后的 Markdown 内容——无需离开页面，无需安装任何工具。</p>
+</div>
+
+<!-- ════════════════ 1. 启动 ════════════════ -->
+<section>
+  <h2><span class="n">1</span>启动方式</h2>
+  <p>MD 查看器需要通过 <strong>HTTP 服务器</strong>访问 <code>index.html</code>（浏览器安全策略限制 <code>file://</code> 协议下 fetch 请求）。任选以下一种方式：</p>
+
+  <h3>方式 A：Python 内置服务器（推荐，最简单）</h3>
+  <div class="step">
+    <div class="step-num">A</div>
+    <div class="step-body">
+      <h4>在 <code>dev_docs</code> 目录下启动 HTTP 服务</h4>
+      <pre><span class="note"># 进入文档目录</span>
+<span class="cmd">cd</span> <span class="path">/Users/aeron/Desktop/workspace/Android-AutoTests/dev_docs</span>
+
+<span class="note"># 仅本机访问</span>
+<span class="cmd">python3 -m http.server</span> 9999
+
+<span class="note"># 局域网访问（绑定所有网络接口）</span>
+<span class="cmd">python3 -m http.server</span> 9999 --bind 0.0.0.0</pre>
+      <p>本机打开 <code>http://localhost:9999/index.html</code>，局域网设备访问 <code>http://&lt;本机IP&gt;:9999/index.html</code>。</p>
+      <p style="margin-top:4px;font-size:12px;color:var(--text-muted)">💡 查看本机 IP：macOS 执行 <code>ipconfig getifaddr en0</code>，Windows 执行 <code>ipconfig</code> 找 IPv4 地址。</p>
+    </div>
+  </div>
+
+  <h3>方式 B：使用项目自带的 Vite 开发服务器</h3>
+  <div class="step">
+    <div class="step-num">B</div>
+    <div class="step-body">
+      <h4>在项目根目录启动（需要 <code>dev_docs</code> 在 Vite 的静态服务范围内）</h4>
+      <pre><span class="note"># 在项目根目录</span>
+<span class="cmd">cd</span> <span class="path">/Users/aeron/Desktop/workspace/Android-AutoTests</span>
+<span class="cmd">python run.py start</span>
+
+<span class="note"># 浏览器打开</span>
+<span class="cmd">open</span> http://localhost:5173/dev_docs/index.html</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ 2. 操作 ════════════════ -->
+<section>
+  <h2><span class="n">2</span>操作说明</h2>
+
+  <div class="step">
+    <div class="step-num">①</div>
+    <div class="step-body">
+      <h4>打开 index.html → 选择阶段 → 找到 MD 文档卡片</h4>
+      <p>左侧导航点击任意阶段（如「PRD 需求」或「设计与架构」），右侧内容区中带有 <span style="display:inline-block;background:var(--primary-bg);color:#11a89b;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:800">MD</span> 绿色标签的卡片即为 Markdown 文档。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">②</div>
+    <div class="step-body">
+      <h4>点击卡片 → 弹出全屏查看器</h4>
+      <p>点击 MD 文档卡片，页面会弹出全屏遮罩层，自动加载并渲染文档内容。顶部栏显示文件路径和 <span style="display:inline-block;background:var(--primary-bg);color:#11a89b;padding:2px 10px;border-radius:10px;font-size:10px;font-weight:800;border:1.5px solid var(--primary)">Markdown 渲染</span> 标识。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">③</div>
+    <div class="step-body">
+      <h4>关闭查看器 — 三种方式</h4>
+      <p>① 点击右上角 <strong>✕</strong> 按钮 　 ② 点击遮罩背景区域 　 ③ 按键盘 <kbd>Esc</kbd> 键</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ 3. 功能 ════════════════ -->
+<section>
+  <h2><span class="n">3</span>查看器功能</h2>
+  <div class="feat-grid">
+    <div class="feat">
+      <div class="icon">📝</div>
+      <h4>Markdown 渲染</h4>
+      <p>标题、列表、表格、引用块、代码块——完整 GFM 语法支持</p>
+    </div>
+    <div class="feat">
+      <div class="icon">🧜</div>
+      <h4>Mermaid 图表</h4>
+      <p>自动识别并渲染流程图、时序图、ER 图，每张图有「mermaid」标签</p>
+    </div>
+    <div class="feat">
+      <div class="icon">💻</div>
+      <h4>代码高亮</h4>
+      <p>深色背景代码块，左上角显示语言标签（python/bash/json/mermaid）</p>
+    </div>
+    <div class="feat">
+      <div class="icon">📄</div>
+      <h4>不修改源文件</h4>
+      <p>浏览器端实时渲染 .md 原始文件，不影响本地文档内容</p>
+    </div>
+    <div class="feat">
+      <div class="icon">⌨️</div>
+      <h4>键盘操作</h4>
+      <p><kbd>Esc</kbd> 关闭 　 点击遮罩关闭 　 滚动阅读</p>
+    </div>
+    <div class="feat">
+      <div class="icon">📱</div>
+      <h4>响应式布局</h4>
+      <p>桌面端最大 960px 居中；移动端全宽，触摸滚动</p>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ 4. Mermaid 标签 ════════════════ -->
+<section>
+  <h2><span class="n">4</span>Mermaid 标签说明</h2>
+  <p>文档中的 <code>```mermaid</code> 代码块会被渲染为可交互的 SVG 图表。每张图表左上角有一个 <span style="display:inline-block;background:#e6f1fb;color:#185FA5;padding:2px 10px;border-radius:10px;font-size:10px;font-weight:800;border:1px solid #185FA5">🧜 mermaid</span> 标签，用于：</p>
+  <ul style="padding-left:22px;line-height:2;color:var(--text-secondary);font-size:13px">
+    <li><strong>区分格式</strong>：一眼识别这是 Mermaid 代码渲染的图表，而非静态图片</li>
+    <li><strong>来源追溯</strong>：知道原始文档中有 <code>```mermaid</code> 代码块</li>
+    <li><strong>不混淆</strong>：与 HTML 内嵌的 ECharts / 静态 PNG 图区分开来</li>
+  </ul>
+  <p style="margin-top:12px;font-size:13px;color:var(--text-secondary)">示例：在 <code>02-PRD需求/实际需求文档.md</code> 中包含多张 Mermaid 架构图，点击查看时每张图都会自动渲染并标注「🧜 mermaid」。</p>
+</section>
+
+<!-- ════════════════ 5. 快捷键 ════════════════ -->
+<section>
+  <h2><span class="n">5</span>快捷键速查</h2>
+  <table>
+    <thead><tr><th>操作</th><th>方式</th></tr></thead>
+    <tbody>
+      <tr><td>打开 MD 查看器</td><td>点击 index.html 中带 <span style="display:inline-block;background:var(--primary-bg);color:#11a89b;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:800">MD</span> 标签的文档卡片</td></tr>
+      <tr><td>关闭查看器</td><td><kbd>Esc</kbd> / 点击 ✕ / 点击遮罩背景</td></tr>
+      <tr><td>滚动内容</td><td>鼠标滚轮 / 触控板滑动 / 触摸屏拖动</td></tr>
+      <tr><td>侧边栏切换阶段</td><td>点击左侧导航项（查看器打开时先关闭）</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ════════════════ 6. FAQ ════════════════ -->
+<section>
+  <h2><span class="n">6</span>常见问题</h2>
+
+  <div style="background:var(--bg-card);border-radius:var(--r-lg);border:1.5px solid var(--border-light);padding:20px 24px;margin-bottom:14px">
+    <h4 style="font-weight:800;color:var(--text);margin-bottom:6px">Q：直接双击 index.html 打开，点击 MD 卡片没反应？</h4>
+    <p style="font-size:13px;color:var(--text-secondary)">A：浏览器安全策略禁止 <code>file://</code> 协议下 fetch 请求。请用 <code>python3 -m http.server 9999</code> 启动一个本地 HTTP 服务再访问。</p>
+  </div>
+
+  <div style="background:var(--bg-card);border-radius:var(--r-lg);border:1.5px solid var(--border-light);padding:20px 24px;margin-bottom:14px">
+    <h4 style="font-weight:800;color:var(--text);margin-bottom:6px">Q：Mermaid 图显示空白或报错？</h4>
+    <p style="font-size:13px;color:var(--text-secondary)">A：检查网络——Mermaid 库从 CDN 加载（v10.x，与项目 MD 文档语法兼容）。确认能访问 <code>cdn.jsdelivr.net</code>。Mermaid 11.x 解析器对 <code>graph TB</code> 等旧语法不兼容，已选定 v10 版本。</p>
+  </div>
+
+  <div style="background:var(--bg-card);border-radius:var(--r-lg);border:1.5px solid var(--border-light);padding:20px 24px;margin-bottom:14px">
+    <h4 style="font-weight:800;color:var(--text);margin-bottom:6px">Q：能同时打开多篇 MD 文档吗？</h4>
+    <p style="font-size:13px;color:var(--text-secondary)">A：当前版本同一时间只能打开一篇。关闭当前查看器后才能打开下一篇。</p>
+  </div>
+
+  <div style="background:var(--bg-card);border-radius:var(--r-lg);border:1.5px solid var(--border-light);padding:20px 24px;margin-bottom:14px">
+    <h4 style="font-weight:800;color:var(--text);margin-bottom:6px">Q：查看器能打印或导出 PDF 吗？</h4>
+    <p style="font-size:13px;color:var(--text-secondary)">A：可以。打开 MD 查看器后按 <kbd>Cmd+P</kbd>（Windows: <kbd>Ctrl+P</kbd>）使用浏览器打印功能，选择「另存为 PDF」即可。</p>
+  </div>
+
+  <div style="background:var(--bg-card);border-radius:var(--r-lg);border:1.5px solid var(--border-light);padding:20px 24px">
+    <h4 style="font-weight:800;color:var(--text);margin-bottom:6px">Q：HTML 格式的文档怎么查看？</h4>
+    <p style="font-size:13px;color:var(--text-secondary)">A：HTML 文档卡片点击后直接在浏览器中打开。MD 查看器只拦截 <code>.md</code> 结尾的链接。带 <span style="display:inline-block;background:#eef1fb;color:#2030a0;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:800">HTML</span> 蓝色标签的卡片不受影响。</p>
+  </div>
+</section>
+
+<div class="footer">
+  <p>Android-AutoTests · dev_docs · MD 文档在线查看器使用指南 · 2026-07-13</p>
+  <p style="margin-top:6px"><a href="index.html">← 返回文档索引</a></p>
+</div>
+
+</div>
+</body>
+</html>

@@ -6,9 +6,9 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 def load_project_docs() -> list[dict]:
-    """Scan AI开发项目文档管理/ for markdown files and load them as knowledge docs."""
+    """Scan dev_docs/ for markdown files and load them as knowledge docs."""
     docs = []
-    doc_dir = ROOT / 'AI开发项目文档管理'
+    doc_dir = ROOT / 'dev_docs'
     if not doc_dir.exists():
         return docs
 

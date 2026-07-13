@@ -86,7 +86,12 @@ class DeviceAdapter:
 
     # ---- Element actions ----
     def click(self, xpath: str):
-        self.d.xpath(xpath).click()
+        try:
+            self.d.xpath(xpath).click()
+        except Exception as e:
+            # u2 卡死/超时会在此抛出;log 后重新抛出,交由上层 is_u2_crash 判定并重连重试
+            self.log(f"点击失败: {e}")
+            raise
 
     def click_indexed(self, xpath: str, index: int) -> bool:
         try:

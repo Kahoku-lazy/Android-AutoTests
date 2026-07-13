@@ -47,6 +47,11 @@ export function applyWsMessage(task, msg, hooks = {}) {
     case "log":
       addLog(msg.message);
       break;
+    case "heartbeat":
+      // TREP v1.0: 更新心跳时间戳，前端据此检测连接存活
+      task._lastHeartbeat = Date.now();
+      task._connectionHealthy = true;
+      break;
     case "case_started":
       if (ci) {
         ci.status = "running";
@@ -220,6 +225,17 @@ export function connectTaskWebSocket(taskId, runId, createHandler) {
     if (!handler) return;
     try {
       const msg = JSON.parse(e.data);
+      // TREP v1.0: seq gap 检测
+      if (msg.seq !== undefined) {
+        const prev = ws._lastSeq || 0;
+        if (prev > 0 && msg.seq > prev + 1) {
+          console.warn(
+            `[WS] seq gap: ${prev} → ${msg.seq} (${msg.seq - prev - 1} lost) for ${taskId}`,
+          );
+          ws._seqGapDetected = true;
+        }
+        ws._lastSeq = msg.seq;
+      }
       handler(msg);
     } catch (_) {}
   };

@@ -1,9 +1,8 @@
 """
 Async test runner — executes selected test cases sequentially with loop_count iterations.
 
-Device isolation: acquires device via device_pool.api.acquire_device before execution
-and releases it in finally. The DB-level Device.status=BUSY + Device.occupied_by
-are the source of truth for cross-module device availability checks.
+TREP v1.0: 纯执行单元。设备锁定由调度器在调用 run() 前完成，执行器不负责
+设备生命周期管理。通过 TestRunnerCallback 上报进度，每 5s 发送心跳。
 """
 import time
 import asyncio
@@ -22,7 +21,6 @@ from .u2_recovery import (
     is_u2_crash,
     wait_and_reconnect,
 )
-from apps.device_pool.api import acquire_device, release_device
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 LOG_DIR = BASE_DIR / "logs"
@@ -70,6 +68,9 @@ class TestRunnerCallback:
     async def on_log(self, run_id: str, message: str):
         """A log message was emitted."""
 
+    async def on_run_started(self, run_id: str):
+        """Pre-flight passed; execution is starting (frontend: 准备中 → 执行中)."""
+
     async def on_case_started(self, run_id: str, case_id: str, case_title: str, loop_count: int):
         """A test case is starting."""
 
@@ -82,7 +83,7 @@ class TestRunnerCallback:
         """A test case finished all iterations."""
 
     async def on_run_finished(self, run_id: str, summary: dict,
-                               csv_path: str, log_path: str):
+                               log_path: str):
         """All test cases completed (or stopped)."""
 
     async def on_step_started(self, run_id: str, case_id: str,
@@ -97,6 +98,9 @@ class TestRunnerCallback:
 
     async def on_device_error(self, run_id: str, error: str):
         """Device connection failed."""
+
+    async def on_heartbeat(self, run_id: str):
+        """Periodic keep-alive signal (every 5s while run is active)."""
 
 
 @dataclass
@@ -157,10 +161,8 @@ class TestRunner:
         state = _RunState(run_model=run_model, callback=self.callback)
         _active_runs[run_id] = state
 
-        # DB-level device occupation — source of truth for cross-module checks
-        acquire_device(self.device.serial, user_id=f"runner-{self.device.serial}", timeout=3600)
-        # Memory-level fast check for same-process scheduling
-        mark_device_busy(self.device.serial)
+        # TREP v1.0: 设备锁定由调度器（views.py）在调用 run() 前完成。
+        # 执行器不负责设备生命周期管理。
 
         loop = asyncio.get_event_loop()
 
@@ -176,14 +178,20 @@ class TestRunner:
         state.adapter = adapter
         executor = StepExecutor(adapter)
 
+        # TREP v1.0: 每 5s 心跳，前端据此检测 WS 连接存活
+        hb_task = None
+        hb_task = asyncio.create_task(self._heartbeat(run_id, state))
+
         try:
             from apps.report_generator.api import ReportGenerator
-            csv_paths = []
             log_path = ""
 
             for case in test_cases:
                 if not state.is_running:
                     break
+                await self.callback.on_log(
+                    run_id, f"🏃 开始运行用例: [{case.id}] {case.title}"
+                )
                 await self.callback.on_case_started(
                     run_id, case.id, case.title, loop_count)
                 executor = await self._run_case(
@@ -191,14 +199,6 @@ class TestRunner:
                 )
                 if not state.is_running:
                     break
-                # Save CSV per case (append mode)
-                if state.all_results:
-                    last = state.all_results[-1]
-                    fp = await _safe_run_in_executor(
-                        loop, ReportGenerator.save_csv,
-                        last, state.failure_details,
-                        error_msg="保存 CSV 报告失败")
-                    csv_paths.append(fp)
 
             if state.all_results:
                 case_name = state.all_results[0]["case_title"] if state.all_results else ""
@@ -210,8 +210,6 @@ class TestRunner:
             run_model.status = (TestRunStatus.COMPLETED
                                 if state.is_running
                                 else TestRunStatus.STOPPED)
-            run_model.case_results = [r for r in run_model.case_results]
-            run_model.csv_path = "; ".join(csv_paths)
             run_model.log_path = log_path
             run_model.finished_at = datetime.now().isoformat()
 
@@ -221,21 +219,29 @@ class TestRunner:
                 }
 
             await self.callback.on_run_finished(
-                run_id, run_model.summary, csv_path, log_path)
+                run_id, run_model.summary, log_path)
 
         except Exception as e:
             await self.callback.on_device_error(run_id, str(e))
             run_model.status = TestRunStatus.STOPPED
         finally:
+            if hb_task is not None:
+                hb_task.cancel()
+                try:
+                    await hb_task
+                except asyncio.CancelledError:
+                    pass
             _active_runs.pop(run_id, None)
-            mark_device_idle(self.device.serial)
-            # Release DB-level device occupation
-            try:
-                release_device(self.device.serial, reason="manual")
-            except Exception as e:
-                print(f"[runner] WARNING: release_device failed for {self.device.serial}: {e}")
+            # TREP v1.0: 设备释放由调度器（views.py）在 _execute_tests.finally 中完成
 
         return run_model
+
+    async def _heartbeat(self, run_id: str, state: _RunState, interval: float = 5.0):
+        """TREP v1.0: 每 interval 秒发送心跳，前端 15s 无心跳 → 连接丢失指示。"""
+        while state.is_running and run_id in _active_runs:
+            await asyncio.sleep(interval)
+            if run_id in _active_runs and state.is_running:
+                await self.callback.on_heartbeat(run_id)
 
     def _wire_step_callbacks(self, state: _RunState, case: TestCaseDef, iteration: int, loop):
         """绑定步骤 WS 回调到当前 adapter。"""

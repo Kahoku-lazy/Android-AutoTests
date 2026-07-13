@@ -45,14 +45,9 @@ export function isTaskQueued(task) {
 export function taskBucket(task) {
   if (task.running) return "running";
   if (isTaskQueued(task)) return "waiting";
-  if (task.outcome === "completed") return "completed";
-  if (
-    task.outcome &&
-    ["stopped", "interrupted", "error"].includes(task.outcome)
-  )
-    return "incomplete";
-  if (task.caseItems?.length) return "incomplete";
-  return "notExecuted";
+  // 所有已执行过的任务（无论成功/失败/停止）都属于"已完成"
+  if (task.outcome && task.outcome !== "") return "completed";
+  return "incomplete";
 }
 
 export function taskCardClass(task) {
@@ -70,14 +65,14 @@ export function taskStatusInfo(task) {
   if (task.running) return { label: "执行中", color: "#889df0", icon: "⚡" };
   if (isTaskQueued(task))
     return { label: "等待中", color: "#f7cd67", icon: "⏳" };
+  if (task.outcome === "completed")
+    return { label: "已完成", color: "#6fba2c", icon: "✅" };
   if (task.outcome === "stopped")
-    return { label: "未完成", color: "#e85f5f", icon: "⏹" };
+    return { label: "已停止", color: "#f7a8c4", icon: "⏹" };
   if (task.outcome === "interrupted")
     return { label: "运行中断", color: "#f7a8c4", icon: "⚠️" };
   if (task.outcome === "error")
     return { label: "异常终止", color: "#e85f5f", icon: "💥" };
-  if (task.outcome === "completed")
-    return { label: "已完成", color: "#6fba2c", icon: "✅" };
   return { label: "未执行", color: "#8b7355", icon: "📝" };
 }
 

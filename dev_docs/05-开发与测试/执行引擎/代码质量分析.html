@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>执行引擎 — 代码质量与复杂度分析</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --primary:#19c8b9; --primary-active:#11a89b; --primary-bg:#e6f9f6;
+    --text:#794f27; --text-body:#725d42; --text-secondary:#9f927d; --text-muted:#8a7b66;
+    --bg:#f8f8f0; --bg-content:rgb(247,243,223); --border:#c4b89e;
+    --success:#6fba2c; --warning:#f5c31c; --error:#e05a5a;
+    --blue:#889df0; --purple:#b39ef3; --pink:#f8a6b2;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Nunito,'Noto Sans SC',-apple-system,'PingFang SC',sans-serif;font-weight:500;letter-spacing:.01em;background:var(--bg);color:var(--text-body);line-height:1.7}
+  .container{max-width:980px;margin:0 auto;padding:40px 20px}
+  h1{font-weight:800;color:var(--text);font-size:1.7em;text-align:center;margin-bottom:6px}
+  .subtitle{text-align:center;color:var(--text-secondary);font-size:.95em;margin-bottom:16px}
+  .card{background:var(--bg-content);border-radius:20px;padding:20px 22px;margin-bottom:16px;border:2px solid transparent}
+  .card-em{border-color:var(--warning);background:#fffdf5}
+  h2{font-weight:800;font-size:1.05em;color:var(--text);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+  h3{font-weight:700;font-size:.98em;color:var(--text);margin:14px 0 8px}
+  .sec-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:10px;font-size:12px;font-weight:800;color:#fff;flex-shrink:0}
+  .sn-teal{background:var(--primary)}.sn-green{background:var(--success)}.sn-pink{background:var(--pink)}
+  .sn-purple{background:var(--purple)}.sn-yellow{background:var(--warning)}.sn-blue{background:var(--blue)}
+  table{width:100%;border-collapse:collapse;margin:8px 0;border-radius:14px;overflow:hidden}
+  th{background:rgba(121,79,39,.06);padding:9px 12px;text-align:left;font-size:12px;font-weight:700;color:var(--text)}
+  td{padding:8px 12px;font-size:13px;border-top:1px dashed rgba(196,184,158,.4);vertical-align:top}
+  code{font-family:'SF Mono','Fira Code',Consolas,monospace;font-weight:600;font-size:11px;background:rgba(121,79,39,.06);padding:2px 6px;border-radius:6px;color:var(--text)}
+  .wire{background:#fff;border:2px dashed var(--border);border-radius:14px;padding:12px;font-family:'SF Mono',monospace;font-size:11px;line-height:1.5;color:var(--text);white-space:pre;overflow-x:auto;margin:8px 0}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin:12px 0}
+  .flow-step{padding:8px 12px;border-radius:50px;font-size:12px;font-weight:800;background:#fff;border:1.5px solid var(--border)}
+  .flow-arrow{color:var(--text-secondary);font-weight:700}
+  .tag{display:inline-block;padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700}
+  .tag-must{background:#fef2f2;color:#b91c1c}.tag-ok{background:#f0fdf4;color:#15803d}.tag-warn{background:#fff7ed;color:#c2410c}
+  .badge-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:16px}
+  .badge{padding:4px 12px;border-radius:50px;font-size:12px;font-weight:700;border:1.5px solid}
+  .b-p0{background:#fef2f2;color:var(--error);border-color:#f0b8b8}
+  .b-p1{background:#fff7ed;color:#c2410c;border-color:#f5c89a}
+  .b-ok{background:#f0fdf4;color:#15803d;border-color:#b8d8a0}
+  .b-meta{background:var(--bg-content);color:var(--text);border-color:var(--border)}
+  .footer{text-align:center;color:var(--text-secondary);font-size:12px;margin-top:28px;padding:16px 0;border-top:1px dashed rgba(196,184,158,.5)}
+  .diag{background:#fff;border-radius:14px;padding:12px 14px;margin:8px 0;border-left:4px solid var(--error)}
+  .diag h4{font-size:13px;color:var(--text);margin-bottom:4px}
+  .diag p,.diag li{font-size:12px;color:var(--text-secondary)}
+  .diag ul{margin:4px 0 0 16px}
+  .toc{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:18px}
+  .toc a{font-size:12px;font-weight:700;padding:5px 11px;border-radius:50px;border:2px solid var(--border);background:var(--bg-content);color:var(--text);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>📊 执行引擎 — 代码质量与复杂度分析</h1>
+<p class="subtitle">现网扫描 · module-design 四阶段 · 2026-07-10<br>非占位 · 基于目录/依赖/体量盘点（结构层重扫）</p>
+<div class="badge-row">
+  <span class="badge b-p0">P0 × 1</span>
+  <span class="badge b-p1">P1 × 4</span>
+  <span class="badge b-ok">结构合规项 ≈ 10</span>
+  <span class="badge b-meta">views 1373 行 · 前端文件 6</span>
+</div>
+<div class="card card-em">
+  <h2><span class="sec-num sn-yellow">结论</span></h2>
+  <p style="font-size:14px">执行引擎：调度、状态机、WS 进度、设备控制。后端文件：<code>adapter.py, admin.py, api.py, apps.py, callbacks.py, consumers.py, device_connect.py, executor.py, models.py, permissions.py, recovery_helpers.py, runner.py…</code>。URL include：✅。api.py：✅ 30 行。</p>
+</div>
+<div class="card">
+  <h2><span class="sec-num sn-teal">1</span> Inventory</h2>
+  <table>
+    <tr><th>项</th><th>值</th></tr>
+    <tr><td>后端 App</td><td><code>apps/test_runner/</code> · 17 个 py</td></tr>
+    <tr><td>前端模块</td><td><code>modules/test-runner/</code> · 6 个 vue/js</td></tr>
+    <tr><td>views.py</td><td>1373 行</td></tr>
+    <tr><td>api.py</td><td>30 行</td></tr>
+  </table>
+  <h3>结构完整性</h3>
+  <table><tr><th>文件/注册</th><th>状态</th></tr><tr><td><code>models.py</code></td><td>✅</td></tr><tr><td><code>api.py</code></td><td>✅</td></tr><tr><td><code>urls.py</code></td><td>✅</td></tr><tr><td><code>admin.py</code></td><td>✅</td></tr><tr><td><code>urls include</code></td><td>✅</td></tr></table>
+</div>
+<div class="card">
+  <h2><span class="sec-num sn-green">2</span> Partition / 问题</h2>
+  <div class="diag"><h4><span class="tag tag-must">P0</span> 疑似穿透内部实现 / 私有态</h4>
+        <p>位置：<code>apps/test_runner</code></p><p>建议：改为 api.py 公开函数</p></div><div class="diag"><h4><span class="tag tag-warn">P1</span> views.py 过大（1373 行）</h4>
+        <p>位置：<code>apps/test_runner/views.py</code></p><p>建议：拆分 service/handlers，降低圈复杂度</p></div><div class="diag"><h4><span class="tag tag-warn">P1</span> 前端使用 Element Plus</h4>
+        <p>位置：<code>modules/test-runner</code></p><p>建议：业务模块允许 EP；勿污染 AI 动森主题边界</p></div><div class="diag"><h4><span class="tag tag-warn">P1</span> 存在对内部 runner 的引用风险（防火墙）</h4>
+        <p>位置：<code>apps/test_runner + modules/test-runner</code></p><p>建议：见质量与验收手册行动项</p></div><div class="diag"><h4><span class="tag tag-warn">P1</span> 多文件协作：runner/executor/adapter/state_machine</h4>
+        <p>位置：<code>apps/test_runner + modules/test-runner</code></p><p>建议：见质量与验收手册行动项</p></div>
+</div>
+<div class="card">
+  <h2><span class="sec-num sn-blue">3</span> Standardize 要点</h2>
+  <table>
+    <tr><th>规则</th><th>本模块关注点</th></tr>
+    <tr><td>防火墙</td><td>跨模块写走 api；禁止 service/runner 私有 import</td></tr>
+    <tr><td>响应格式</td><td><code>{"ok": true, "data": {}}</code></td></tr>
+    <tr><td>前端数据</td><td>经 <code>api.js</code>，禁止硬编码业务列表</td></tr>
+    <tr><td>主题</td><td>业务模块可用 Element Plus</td></tr>
+  </table>
+</div>
+<div class="card">
+  <h2><span class="sec-num sn-purple">4</span> Cleanup 行动</h2>
+  <ol style="margin-left:18px;font-size:13px">
+    <li>先清 P0（若有防火墙穿透）</li>
+    <li>拆分过大 views / 补测试索引</li>
+    <li>与「质量与验收手册」AC 对齐后回归</li>
+  </ol>
+</div>
+<div class="footer">执行引擎 · 代码质量分析 · 2026-07-10 · 05-开发与测试/执行引擎/</div>
+
+</div>
+</body>
+</html>

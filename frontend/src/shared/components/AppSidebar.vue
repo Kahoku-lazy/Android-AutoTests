@@ -67,12 +67,12 @@ const categories = [
     key: 'cat-basic',
     label: '',
     items: [
-      { path: '/dashboard',   icon: 'dashboard',        label: '仪表盘', isNew: true },
+      { path: '/dashboard',   icon: 'dashboard',        label: '仪表盘' },
       { path: '/devices',     icon: 'devices',          label: '设备管理' },
       { path: '/elements',    icon: 'elements',         label: '元素定位' },
       { path: '/cases',       icon: 'cases',            label: '测试用例' },
       { path: '/runner',      icon: 'runner',           label: '执行引擎' },
-      { path: '/reports',     icon: 'reports',          label: '测试报告', isPending: true },
+      { path: '/reports',     icon: 'reports',          label: '测试报告' },
       { path: '/ai-assistant', icon: 'ai-assistant',    label: 'AI 助手', isDev: true },
     ],
   },
@@ -167,9 +167,7 @@ onUnmounted(() => {
         >
           <AnimatedMenuIcon :name="item.icon" :size="20" :active="isActive(item.path)" />
           <span class="sidebar-menu__label">{{ item.label }}</span>
-          <span v-if="item.isNew" class="sidebar-menu__badge">NEW</span>
           <span v-if="item.isDev" class="sidebar-menu__badge sidebar-menu__badge--dev">开发中</span>
-          <span v-if="item.isPending" class="sidebar-menu__badge sidebar-menu__badge--pending">待开发</span>
         </div>
       </div>
     </nav>
@@ -410,10 +408,6 @@ onUnmounted(() => {
 }
 .sidebar-menu__badge--dev {
   background: linear-gradient(135deg, #b39ef3, #889df0);
-  animation: none;
-}
-.sidebar-menu__badge--pending {
-  background: #9f927d;
   animation: none;
 }
 

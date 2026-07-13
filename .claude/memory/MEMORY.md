@@ -20,3 +20,14 @@
 
 - [run-py-cross-platform](run-py-cross-platform.md) — run.py 跨平台修复：kill_port 用 lsof、后台服务加 stdin=DEVNULL
 - [test-runner-statemachine-not-wired](test-runner-statemachine-not-wired.md) — 执行引擎状态机没接入主路径→status/running双源不一致+崩溃恢复漏僵尸
+- [test-runner-root-cause-state-machine-bypassed](test-runner-root-cause-state-machine-bypassed.md) — 执行引擎"用不了"根因=状态机被架空+u2阻塞无超时;P0-1~P0-4已修复(2026-07-09)
+- [test-runner-module-architecture](test-runner-module-architecture.md) — 执行引擎三层模块化方案(前端显示/调度器/执行器)+TREP v1.0协议;前端已改默认Tab+移除未执行;待实施四阶段渐进重构
+- [doc-mgmt-flat-main-dirs](doc-mgmt-flat-main-dirs.md) — 文档管理：主目录平铺；PRD=1总+7子+README；优秀设计/矛盾分析内嵌 index.html
+- [doc-mgmt-prd-html-fullspec](doc-mgmt-prd-html-fullspec.md) — 02-PRD/html 七模块全功能 HTML 以现网为准；MD 冲突回写
+- [doc-mgmt-design-arch-prd-format](doc-mgmt-design-arch-prd-format.md) — 03-设计与架构：1总设计+html/+同主题对比；对齐 PRD 格式
+- [doc-mgmt-devtest-module-triad](doc-mgmt-devtest-module-triad.md) — 05-开发与测试：按模块子目录；每模块编程工作流/代码质量/质量与验收手册（测试方案暂缓）
+- [doc-mgmt-agent-column](doc-mgmt-agent-column.md) — 00-智能体栏目：只读引用 CLAUDE/AGENTS/.claude/.agents；侧边栏与管理员并列
+- [doc-mgmt-agent-design-html](doc-mgmt-agent-design-html.md) — 00-智能体主图册：智能体体系设计.html（Auto-Dev 7 阶段等多图）
+- [doc-mgmt-index-split-color-flow](doc-mgmt-index-split-color-flow.md) — index 拆 assets；智能体设计页多彩流程图风格
+- [doc-mgmt-ai-workflow-overview](doc-mgmt-ai-workflow-overview.md) — 总览「AI工作流」：自包含 Stage-Gate/Agent/用法/案例，不链文件
+- [doc-mgmt-consolidate-root-docs](doc-mgmt-consolidate-root-docs.md) — 散落文档统一迁入 dev_docs；根目录仅软链兼容

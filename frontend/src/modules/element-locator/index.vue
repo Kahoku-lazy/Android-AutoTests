@@ -283,6 +283,7 @@ function onDeviceChanged(msg) {
 }
 .doc-page :deep(.animal-tabs__inner) {
   min-height: min-content;
+  width: 100%;
 }
 /* tab-pane 和内部 doc-body 填满 */
 .doc-page :deep(.animal-tab-pane) {

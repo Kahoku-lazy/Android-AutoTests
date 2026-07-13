@@ -132,7 +132,7 @@ AgentScope 默认通过 `X-User-ID` header 识别用户 → 替换为 JWT Bearer
 |------|------|------|
 | 向量存储 | ChromaDB PersistentClient | `data/chromadb/` |
 | Collection | `project_knowledge` | 32 篇文档 |
-| 文档来源 | `AI开发项目文档管理/` 下 `.md` 文件 + 步骤类型参考 | — |
+| 文档来源 | `dev_docs/` 下 `.md` 文件 + 步骤类型参考 | — |
 | 检索接口 | `KnowledgeBaseSearchTool` → `document_store.search()` | `tools/rag_tool.py` |
 | 初始化 | `python agentscope_service/rag/init_kb.py` | 首次运行 |
 

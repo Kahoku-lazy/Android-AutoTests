@@ -159,10 +159,11 @@ python generate_html.py    # 生成自包含 phone_ui.html 检查器
 │               ├── api.js          #   AgentScope SSE 封装
 │               └── animal-theme.css #  动森 CSS 变量覆盖
 │
-├── AI开发项目文档管理/         # 项目文档
-│   ├── 01-技术架构/            # 架构方案 · Review规则 · 命名标准 · 诊断手册
-│   ├── 02-PRD需求/             # 总需求 + 6 份子PRD
-│   └── 04-测试方案/            # 平台测试方案 + 8 份模块用例 (~130条)
+├── dev_docs/         # 项目文档（Stage-Gate 主目录平铺，只认新路径）
+│   ├── 立项验证/ · 02-PRD需求/ · 03-设计与架构/
+│   ├── 04-任务拆分/ · 05-开发与测试/ · 06-发布与复盘/
+│   ├── 00-管理员/ · 00-智能体/
+│   └── index.html              # 文档索引入口
 │
 ├── data/                      # SQLite + avatars/ + screenshots/ + chromadb/
 ├── logs/                      # backend / agentscope / frontend 日志

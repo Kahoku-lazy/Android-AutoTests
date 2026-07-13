@@ -228,12 +228,12 @@ const breadcrumbPath = computed(() => {
 
 // ── Table columns ──
 const columns = [
-  { title: "ID", dataIndex: "id", width: "16%" },
-  { title: "标题", dataIndex: "title" },
+  { title: "ID", dataIndex: "id", width: "18%" },
+  { title: "标题", dataIndex: "title", width: "28%" },
   { title: "目录", dataIndex: "directory_name", width: "12%" },
-  { title: "分类", dataIndex: "category", width: "11%" },
-  { title: "启用", dataIndex: "enabled", width: "72px", align: "center" },
-  { title: "操作", dataIndex: "actions", width: "148px", align: "center" },
+  { title: "分类", dataIndex: "category", width: "12%" },
+  { title: "启用", dataIndex: "enabled", width: "8%", align: "center" },
+  { title: "操作", dataIndex: "actions", width: "22%", align: "center" },
 ];
 
 // ── Actions ──
@@ -864,74 +864,46 @@ async function remove(row) {
   width: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   border-radius: 16px;
   padding: 0;
   cursor: default;
 }
+.table-card :deep(.animal-card__content) {
+  padding: 0;
+  width: 100%;
+}
 .case-table {
   width: 100%;
   flex: 1;
-  min-height: 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
 .case-table :deep(.animal-table-wrapper) {
   width: 100%;
-  flex: 1;
-  min-height: 0;
-  max-height: 100%;
-  overflow: auto;
-  box-sizing: border-box;
+  overflow: visible !important;
+  max-height: none !important;
 }
 .case-table :deep(table) {
   width: 100%;
-  min-width: 640px;
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
 }
-.case-table--rainbow :deep(th:nth-child(1)),
-.case-table--rainbow :deep(td:nth-child(1)) {
-  width: 16%;
-  min-width: 120px;
-}
-.case-table--rainbow :deep(th:nth-child(2)),
-.case-table--rainbow :deep(td:nth-child(2)) {
-  width: auto;
-  min-width: 100px;
-}
-.case-table--rainbow :deep(th:nth-child(3)),
-.case-table--rainbow :deep(td:nth-child(3)) {
-  width: 12%;
-  min-width: 72px;
-}
-.case-table--rainbow :deep(th:nth-child(4)),
-.case-table--rainbow :deep(td:nth-child(4)) {
-  width: 11%;
-  min-width: 68px;
-}
-.case-table--rainbow :deep(th:nth-child(5)),
-.case-table--rainbow :deep(td:nth-child(5)) {
-  width: 72px;
-}
-.case-table--rainbow :deep(th:nth-child(6)),
-.case-table--rainbow :deep(td:nth-child(6)) {
-  width: 148px;
-  min-width: 148px;
-}
 
 /* 表头：每列独立彩虹渐变 */
 .case-table--rainbow :deep(th) {
-  font-size: 11px;
+  font-size: 18px;
   font-weight: 800;
-  padding: 10px 10px;
+  padding: 16px 12px;
   text-align: left;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   border: none;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .case-table--rainbow :deep(th:nth-child(1)) {
   background: linear-gradient(135deg, #f8a6b2 0%, #e85f5f 100%);
@@ -961,8 +933,8 @@ async function remove(row) {
 
 /* 数据行：中性背景，字体按列着色 */
 .case-table--rainbow :deep(td) {
-  padding: 8px 10px;
-  font-size: 13px;
+  padding: 13px 12px;
+  font-size: 14px;
   color: #4a3a28;
   background: transparent;
   border: none;
@@ -995,8 +967,8 @@ async function remove(row) {
   white-space: nowrap;
 }
 .act-btn {
-  padding: 2px 7px;
-  font-size: 11px;
+  padding: 3px 8px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1.35;
   border-radius: 6px;
@@ -1038,20 +1010,24 @@ async function remove(row) {
 }
 .cell-id {
   font-family: "SF Mono", "Fira Code", Consolas, monospace;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   color: #c0392b;
   word-break: break-all;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 .cell-title {
   font-weight: 700;
   font-size: 14px;
   color: #b8860b;
   line-height: 1.45;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .cell-dir {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: #4a8c1c;
 }
@@ -1060,7 +1036,7 @@ async function remove(row) {
   font-weight: 500;
 }
 .cell-category {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: #0d8a7f;
 }

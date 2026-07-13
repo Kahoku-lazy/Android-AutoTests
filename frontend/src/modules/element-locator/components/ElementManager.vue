@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { animate, stagger } from 'animejs'
 import {
@@ -411,6 +411,7 @@ async function loadPages() {
 async function selectPage(page) {
   selectedPage.value = page
   elements.value = []
+  currentPage.value = 1
   if (!page) return
   try {
     const { data } = await apiGetPageElements(page.id)
@@ -570,6 +571,29 @@ const filteredElements = computed(() => {
   }
 })
 
+// ── Pagination ──
+const PAGE_SIZE_OPTIONS = [10, 30, 50]
+const pageSize = ref(10)
+const currentPage = ref(1)
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredElements.value.length / pageSize.value)))
+
+const pagedElements = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredElements.value.slice(start, start + pageSize.value)
+})
+
+watch([filterMode, pageSize], () => { currentPage.value = 1 })
+
+function setPageSize(size) {
+  pageSize.value = size
+  currentPage.value = 1
+}
+
+function goPage(page) {
+  currentPage.value = Math.min(Math.max(1, page), totalPages.value)
+}
+
 // ── Table columns（百分比宽度，铺满容器）──
 const columns = [
   { title: '名称', dataIndex: 'alias', key: 'alias', width: '12%' },
@@ -700,11 +724,35 @@ const columns = [
               >
                 <template v-for="tab in filterTabs" #[tab.key] :key="tab.key">
                   <div class="table-area">
+                    <div class="table-toolbar">
+                      <div class="page-size-control">
+                        <span class="toolbar-label">显示行数</span>
+                        <div class="page-size-btns">
+                          <button
+                            v-for="n in PAGE_SIZE_OPTIONS"
+                            :key="n"
+                            type="button"
+                            class="page-size-btn"
+                            :class="{ active: pageSize === n }"
+                            @click="setPageSize(n)"
+                          >{{ n }}</button>
+                        </div>
+                      </div>
+                      <div v-if="filteredElements.length > 0" class="table-toolbar-right">
+                        <span class="page-info">
+                          第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ filteredElements.length }} 条
+                        </span>
+                        <div v-if="totalPages > 1" class="page-nav">
+                          <AnimalButton size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</AnimalButton>
+                          <AnimalButton size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</AnimalButton>
+                        </div>
+                      </div>
+                    </div>
                     <Card color="brown" pattern="brown" class="table-card">
                       <div class="table-scroll">
                         <Table
                         :columns="columns"
-                        :data-source="filteredElements"
+                        :data-source="pagedElements"
                         row-key="id"
                         :striped="true"
                         empty-text="暂无元素"
@@ -1210,6 +1258,41 @@ const columns = [
   padding-top: 0;
   flex-shrink: 0;
 }
+
+/* ── Table toolbar ── */
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 0 8px;
+  flex-shrink: 0;
+}
+.page-size-control { display: flex; align-items: center; gap: 10px; }
+.toolbar-label { font-size: 12px; font-weight: 700; color: #8a7b66; white-space: nowrap; }
+.page-size-btns { display: flex; gap: 6px; }
+.page-size-btn {
+  min-width: 40px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(139, 115, 85, 0.2);
+  background: #f7f3df;
+  color: #6b5b48;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.page-size-btn:hover { border-color: #19c8b9; color: #19c8b9; }
+.page-size-btn.active {
+  background: rgba(25, 200, 185, 0.12);
+  border-color: #19c8b9;
+  color: #0f9a8e;
+}
+.table-toolbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
+.page-info { font-size: 12px; color: #8a7b66; font-weight: 600; white-space: nowrap; }
+.page-nav { display: flex; gap: 8px; }
 
 /* ── Table card ── */
 .table-area {

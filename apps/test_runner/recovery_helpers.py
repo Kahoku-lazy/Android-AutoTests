@@ -1,5 +1,9 @@
 """任务卡片孤儿检测 — 避免将「已分配 run_id 但未入 _active_runs」的任务误判为中断。"""
 
+import threading
+
+_recovery_lock = threading.Lock()
+
 
 def get_protected_running_task_ids() -> set[str]:
     """返回不应被标为 interrupted 的 client_task_id 集合。
@@ -25,12 +29,13 @@ def recover_stale_running_taskcards() -> int:
     """仅将真正孤儿的 running TaskCard 标为 interrupted。返回修复数量。"""
     from .models import TaskCard
 
-    protected = get_protected_running_task_ids()
-    stale = TaskCard.objects.filter(status="running").exclude(task_id__in=protected)
-    count = stale.count()
-    if count:
-        stale.update(status="done", running=False, outcome="interrupted")
-    return count
+    with _recovery_lock:
+        protected = get_protected_running_task_ids()
+        stale = TaskCard.objects.filter(status="running").exclude(task_id__in=protected)
+        count = stale.count()
+        if count:
+            stale.update(status="done", running=False, outcome="interrupted")
+        return count
 
 
 def queue_payload_from_taskcard(tc, package_name: str = "") -> dict:

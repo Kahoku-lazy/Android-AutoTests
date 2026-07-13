@@ -11,7 +11,7 @@ from datetime import datetime
 from dataclasses import dataclass, field
 from typing import Optional
 
-from models.test_models import TestCaseDef, TestResult, TestRun, TestRunStatus
+from models.test_models import TestCaseDef, TestResult as CaseIterationResult, TestRun, TestRunStatus
 from .adapter import DeviceAdapter
 from .executor import StepExecutor
 from .u2_recovery import (
@@ -224,6 +224,7 @@ class TestRunner:
         except Exception as e:
             await self.callback.on_device_error(run_id, str(e))
             run_model.status = TestRunStatus.STOPPED
+            run_model.finished_at = datetime.now().isoformat()
         finally:
             if hb_task is not None:
                 hb_task.cancel()
@@ -369,6 +370,22 @@ class TestRunner:
         )
         return "fail", executor, False
 
+    def _record_case_result(
+        self, state: _RunState, case: TestCaseDef, iteration: int,
+        result: str, duration_ms: float, detail: str = "",
+    ):
+        """Append one iteration result for DB persist / TaskCard finalize."""
+        state.run_model.case_results.append(
+            CaseIterationResult(
+                case_id=case.id,
+                case_title=case.title,
+                iteration=iteration,
+                result=result,
+                duration_ms=duration_ms,
+                detail=detail,
+            )
+        )
+
     async def _run_case(self, state: _RunState, case: TestCaseDef,
                         executor: StepExecutor, loop_count: int,
                         interval_seconds: int = 5) -> StepExecutor:
@@ -404,6 +421,7 @@ class TestRunner:
                 })
                 await self.callback.on_iteration_result(
                     state.run_model.run_id, case.id, i, "fail", elapsed)
+                self._record_case_result(state, case, i, "fail", elapsed)
                 break
 
             elapsed = (time.time() - start) * 1000
@@ -411,6 +429,7 @@ class TestRunner:
 
             if result == "stopped":
                 await self.callback.on_log(state.run_model.run_id, f"  第{i}轮: 已中断")
+                self._record_case_result(state, case, i, "stopped", elapsed)
                 break
 
             if result == "pass":
@@ -428,6 +447,7 @@ class TestRunner:
 
             await self.callback.on_iteration_result(
                 state.run_model.run_id, case.id, i, result, elapsed)
+            self._record_case_result(state, case, i, result, elapsed)
 
             if i < loop_count and state.is_running:
                 await asyncio.sleep(interval_seconds)

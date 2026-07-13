@@ -32,7 +32,8 @@ class FetchPageElementsTool(ToolBase):
     is_read_only = True
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Read-only element fetch.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, page_id=None, page_label=None, limit=30, **kwargs):
         from apps.element_locator.models import Element, Page
@@ -120,7 +121,8 @@ class CreateTestSOPTool(ToolBase):
     is_read_only = False
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="SOP creation allowed.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, requirement, case_design, **kwargs):
         from apps.test_runner.models import TestSOP
@@ -242,7 +244,8 @@ class UpdateTestSOPTool(ToolBase):
     is_read_only = False
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="SOP update allowed.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, sop_id, phase, element_mapping=None, element_gaps=None,
                    case_ids=None, run_id=None, run_results=None, status=None, **kwargs):
@@ -350,7 +353,8 @@ class CreateRunnerTaskTool(ToolBase):
     is_read_only = False
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Task creation allowed.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, task_name, device_serial, case_ids, loop_count=3,
                    sop_id=None, start_immediately=False, **kwargs):
@@ -474,7 +478,8 @@ class ListAITasksTool(ToolBase):
     is_read_only = True
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Read-only task listing.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, status="all", limit=20, **kwargs):
         from apps.test_runner.models import TestRunRecord
@@ -542,7 +547,8 @@ class UpdateAITaskTool(ToolBase):
     is_read_only = False
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Task update allowed.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, run_id, status, progress_current=None, progress_total=None, **kwargs):
         from apps.test_runner.models import TestRunRecord

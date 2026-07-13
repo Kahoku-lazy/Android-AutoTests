@@ -2,6 +2,7 @@
 
 import json
 import asyncio
+import logging
 from datetime import datetime
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -72,9 +73,13 @@ def require_auth(view_func):
 
 # Per-device task queue: serial → [request_payload]
 _device_queue: dict[str, list] = {}
+# Per-device asyncio lock — atomic check→dequeue→mark_busy
+_device_locks: dict[str, asyncio.Lock] = {}
 
 # Maps run_id → client_task_id so the frontend can discover queued-task execution
 _run_client_task: dict[str, str] = {}
+
+_bg_log = logging.getLogger("test_runner.bg")
 
 # 后台任务引用保存 —— 防止 asyncio.create_task 的 Task 被 GC 回收、异常被静默吞掉
 _bg_tasks: set = set()
@@ -118,6 +123,17 @@ def _enqueue(serial: str, payload: dict):
     _device_queue.setdefault(serial, []).append(payload)
 
 
+def _enqueue_front(serial: str, payload: dict):
+    """Re-insert a dequeued task at the front (e.g. after acquire failure)."""
+    _device_queue.setdefault(serial, []).insert(0, payload)
+
+
+def _device_lock(serial: str) -> asyncio.Lock:
+    if serial not in _device_locks:
+        _device_locks[serial] = asyncio.Lock()
+    return _device_locks[serial]
+
+
 def _dequeue(serial: str) -> dict | None:
     """Pop the next queued request for a device."""
     q = _device_queue.get(serial)
@@ -155,9 +171,9 @@ async def _enqueue_taskcard(client_task_id: str, serial: str):
         try:
             sm.enqueue(tc, serial)
         except sm.InvalidTransition as e:
-            print(f"[views] enqueue transition {client_task_id}: {e}")
-        except Exception as e:
-            print(f"[views] enqueue {client_task_id}: {e}")
+            _bg_log.warning("enqueue transition %s: %s", client_task_id, e)
+        except Exception:
+            _bg_log.exception("enqueue %s failed", client_task_id)
 
     await _do()
 
@@ -179,8 +195,8 @@ async def _abort_run_before_execute(
     mark_device_idle(serial)
     try:
         await sync_to_async(dp_release_device)(serial, reason="manual")
-    except Exception as e:
-        print(f"[views] release after pre-run abort ({serial}): {e}")
+    except Exception:
+        _bg_log.exception("release after pre-run abort (%s)", serial)
     if client_task_id:
 
         @_bg_sync
@@ -195,14 +211,14 @@ async def _abort_run_before_execute(
                 rec = sm.dequeue(tc, run_id, serial, [], tc.loop_count or 1)
                 sm.fail(tc, rec, outcome=outcome)
             except sm.InvalidTransition as e:
-                print(f"[views] pre-run mark {client_task_id}: {e}")
-            except Exception as e:
-                print(f"[views] pre-run mark task {client_task_id}: {e}")
+                _bg_log.warning("pre-run mark %s: %s", client_task_id, e)
+            except Exception:
+                _bg_log.exception("pre-run mark task %s failed", client_task_id)
 
         try:
             await mark_terminal()
-        except Exception as e:
-            print(f"[views] pre-run mark task {client_task_id}: {e}")
+        except Exception:
+            _bg_log.exception("pre-run mark task %s failed", client_task_id)
     _run_client_task.pop(run_id, None)
     _preflight_runs.pop(run_id, None)
     _schedule_next_queued(serial)
@@ -355,19 +371,19 @@ async def start_test_run(request):
                             await test_callbacks.on_log(rid, f"⏰ 计划 {delay:.0f}s 后开始执行")
                             await asyncio.sleep(delay)
                     except Exception:
-                        pass
+                        _bg_log.exception("invalid start_at for %s: %r", rid, st)
                 if et:
 
-                    async def auto_stop():
+                    async def auto_stop(_rid=rid, _end_at=et):
                         try:
-                            target = datetime.fromisoformat(et)
+                            target = datetime.fromisoformat(_end_at)
                             delay = (target - datetime.now()).total_seconds()
                             if delay > 0:
                                 await asyncio.sleep(delay)
-                                stop_run(rid)
-                                await test_callbacks.on_log(rid, "⏰ 到达结束时间，自动停止")
+                                stop_run(_rid)
+                                await test_callbacks.on_log(_rid, "⏰ 到达结束时间，自动停止")
                         except Exception:
-                            pass
+                            _bg_log.exception("auto_stop failed for %s", _rid)
 
                     _spawn_bg(auto_stop(), f"auto_stop:{rid}")
 
@@ -407,7 +423,7 @@ async def start_test_run(request):
                     runner = TestRunner(d, pkg, callback=test_callbacks)
                     await _execute_tests(rid, runner, tcs, lc, interval, _serial)
                 except Exception as e:
-                    print(f"[runner] delayed_execute failed {rid}: {e}")
+                    _bg_log.exception("delayed_execute failed %s", rid)
                     await _abort_run_before_execute(rid, _serial, _ctid, str(e))
             finally:
                 # 兜底:持有锁却未交接执行、也未走 abort 的异常退出,确保释放设备(幂等)
@@ -415,11 +431,17 @@ async def start_test_run(request):
                     mark_device_idle(_serial)
                     try:
                         await sync_to_async(dp_release_device)(_serial, reason="manual")
-                    except Exception as e:
-                        print(f"[views] delayed_execute finally release {_serial}: {e}")
+                    except Exception:
+                        _bg_log.exception("delayed_execute finally release %s", _serial)
                     _preflight_runs.pop(rid, None)
                     _schedule_next_queued(_serial)
 
+        # 登记预检阶段,供 stop 在"锁了手机但还没真正执行"时打停止标记
+        _preflight_runs[run_id] = {
+            "stopped": False,
+            "serial": serial,
+            "client_task_id": client_task_id,
+        }
         _spawn_bg(
             delayed_execute(
                 run_id,
@@ -432,12 +454,6 @@ async def start_test_run(request):
             ),
             f"delayed:{run_id}",
         )
-        # 登记预检阶段,供 stop 在"锁了手机但还没真正执行"时打停止标记
-        _preflight_runs[run_id] = {
-            "stopped": False,
-            "serial": serial,
-            "client_task_id": client_task_id,
-        }
         run_ids.append({"run_id": run_id, "serial": serial})
 
     if not run_ids and not queued_serials:
@@ -507,12 +523,29 @@ async def _execute_tests(
                     tc_card = None
             if tc_card is not None:
                 try:
-                    sm.enqueue(tc_card, dev_serial)
-                    return sm.dequeue(tc_card, run_id, dev_serial, snapshots, loop_count)
+                    if tc_card.status == "queued":
+                        # 已在队列中（设备忙时入队）— 只需 dequeue，不可再 enqueue
+                        return sm.dequeue(
+                            tc_card, run_id, dev_serial, snapshots, loop_count
+                        )
+                    if tc_card.status == "idle":
+                        sm.enqueue(tc_card, dev_serial)
+                        return sm.dequeue(
+                            tc_card, run_id, dev_serial, snapshots, loop_count
+                        )
+                    if tc_card.status == "running" and tc_card.run_id:
+                        # 幂等：已有运行中记录（如重入）
+                        return tc_card.run
+                    _bg_log.warning(
+                        "start_run skip transition %s: status=%s outcome=%s",
+                        client_tid,
+                        tc_card.status,
+                        tc_card.outcome or "",
+                    )
                 except sm.InvalidTransition as e:
-                    print(f"[views] start_run transition {client_tid}: {e}")
-                except Exception as e:
-                    print(f"[views] start_run {client_tid}: {e}")
+                    _bg_log.warning("start_run transition %s: %s", client_tid, e)
+                except Exception:
+                    _bg_log.exception("start_run %s failed", client_tid)
             # No TaskCard (or transition failed) → standalone record so execution
             # still proceeds and stays auditable.
             return TestRunRecord.objects.create(
@@ -539,8 +572,6 @@ async def _execute_tests(
 
         run_model = await runner.run(run_id, test_cases, loop_count, interval_seconds)
         run_completed = True
-        # Device is free — schedule next queued task before slow DB writes
-        _schedule_next_queued(effective_serial)
 
         @_bg_sync
         def persist():
@@ -562,7 +593,6 @@ async def _execute_tests(
 
         # Finalize: aggregate results, then drive the terminal transition through
         # the state machine (complete/fail update TaskCard + TestRunRecord atomically).
-        client_tid = _run_client_task.get(run_id, "")
 
         @_bg_sync
         def finalize():
@@ -649,9 +679,9 @@ async def _execute_tests(
                             summary=run_model.summary,
                         )
                 except sm.InvalidTransition as e:
-                    print(f"[views] finalize transition {client_tid}: {e}")
-                except Exception as e:
-                    print(f"[views] finalize {client_tid}: {e}")
+                    _bg_log.warning("finalize transition %s: %s", client_tid, e)
+                except Exception:
+                    _bg_log.exception("finalize %s failed", client_tid)
             else:
                 # No TaskCard — finalize the run record standalone.
                 run_record.status = run_model.status.value
@@ -660,15 +690,14 @@ async def _execute_tests(
                 run_record.save(update_fields=["status", "summary", "finished_at"])
 
         await finalize()
+        _run_client_task.pop(run_id, None)
 
     except Exception as e:
         import traceback
         _log.error(f"Test run {run_id} error: {e}\n{traceback.format_exc()}")
-        print(f"Test run {run_id} error: {e}")
         await test_callbacks.on_device_error(run_id, str(e))
         # Drive TaskCard to error via the state machine; always finalize the run
         # record as FAILED when the card can't take the transition.
-        client_tid = _run_client_task.get(run_id, "")
 
         @_bg_sync
         def mark_failed():
@@ -688,9 +717,9 @@ async def _execute_tests(
                     sm.fail(tc_card, run_record, outcome="error")
                     return  # fail() also finalized run_record
                 except sm.InvalidTransition as e:
-                    print(f"[views] mark_failed transition {client_tid}: {e}")
-                except Exception as e:
-                    print(f"[views] mark_failed {client_tid}: {e}")
+                    _bg_log.warning("mark_failed transition %s: %s", client_tid, e)
+                except Exception:
+                    _bg_log.exception("mark_failed %s failed", client_tid)
             # TaskCard terminal/missing or transition failed → finalize run record.
             if run_record:
                 run_record.status = "FAILED"
@@ -699,21 +728,19 @@ async def _execute_tests(
 
         try:
             await mark_failed()
-        except Exception as e:
-            print(f"[views] mark_failed({run_id}) failed: {e}")
+        except Exception:
+            _bg_log.exception("mark_failed(%s) failed", run_id)
+        _run_client_task.pop(run_id, None)
     finally:
         _log.info(f"_execute_tests finally: run_completed={run_completed} device={effective_serial}")
-        # runner.run() also calls mark_device_idle in its own finally;
-        # discard is idempotent. Only schedule dequeue if run never started.
         mark_device_idle(effective_serial)
         # Release DB-level device occupation
         try:
             await sync_to_async(dp_release_device)(effective_serial, reason="manual")
             _log.info(f"_execute_tests dp_release_device OK: {effective_serial}")
-        except Exception as e:
-            _log.error(f"_execute_tests dp_release_device({effective_serial}) failed: {e}")
-            print(f"[views] dp_release_device({effective_serial}) in finally failed: {e}")
-        if not run_completed:
+        except Exception:
+            _bg_log.exception("dp_release_device(%s) in finally failed", effective_serial)
+        if effective_serial:
             _schedule_next_queued(effective_serial)
 
 
@@ -726,22 +753,21 @@ async def _start_next_queued(serial: str):
     if not serial:
         return
 
-    # Atomic: claim the device before anything else
-    # If somehow already busy again (e.g. direct request beat us), abort
-    if is_device_busy(serial):
-        return
+    lock = _device_lock(serial)
+    async with lock:
+        if is_device_busy(serial):
+            return
+        next_req = _dequeue(serial)
+        if not next_req:
+            return
+        mark_device_busy(serial)
 
-    next_req = _dequeue(serial)
-    if not next_req:
-        return  # No queued tasks, device stays idle
-
-    # Mark busy NOW to prevent _start_next_queued or direct requests from racing
-    mark_device_busy(serial)
-    # DB-level acquire — cross-process protection
+    # DB-level acquire — cross-process protection (outside lock)
     try:
         await sync_to_async(dp_acquire_device)(serial, user_id=f"runner-{serial}", timeout=3600)
     except ValueError as e:
         mark_device_idle(serial)
+        _enqueue_front(serial, next_req)
         await test_callbacks.on_log(
             f"queue_{serial}",
             f"❌ 设备 {serial} 已被占用: {e}（剩余 {_queue_size(serial)} 个排队）",
@@ -788,6 +814,11 @@ async def _start_next_queued(serial: str):
         test_cases = await load()
         if not test_cases:
             mark_device_idle(serial)
+            try:
+                await sync_to_async(dp_release_device)(serial, reason="error")
+            except Exception:
+                _bg_log.exception("release device %s after empty queue load", serial)
+            _schedule_next_queued(serial)
             return
 
         run_id = f"run_{serial}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -813,20 +844,20 @@ async def _start_next_queued(serial: str):
             serial,
         )
     except Exception as e:
-        print(f"[queue] Failed to start queued task on {serial}: {e}")
+        _bg_log.exception("queue task start failed on %s", serial)
         await test_callbacks.on_log(
             f"queue_{serial}", f"❌ 队列任务启动失败: {e}（剩余 {_queue_size(serial)} 个排队）"
         )
         mark_device_idle(serial)
         try:
             await sync_to_async(dp_release_device)(serial, reason="manual")
-        except Exception as release_err:
-            print(f"[views] dp_release_device({serial}) in queue handler failed: {release_err}")
+        except Exception:
+            _bg_log.exception("dp_release_device(%s) in queue handler failed", serial)
         if not executed:
             # Exception happened before _execute_tests was reached
             # (e.g. load() or u2.connect() failed). Retry next queued task.
             _schedule_next_queued(serial)
-        # else: _execute_tests already scheduled the next dequeue
+        # else: _execute_tests.finally handles cleanup + schedules next dequeue
 
 
 @require_auth
@@ -882,7 +913,7 @@ def cancel_queued_task(request):
         except TaskCard.DoesNotExist:
             pass
         except sm.InvalidTransition as e:
-            print(f"[views] cancel transition {client_task_id}: {e}")
+            _bg_log.warning("cancel transition %s: %s", client_task_id, e)
         return JsonResponse(
             {
                 "ok": True,
@@ -967,10 +998,6 @@ def list_active(request):
                     "client_task_id": _run_client_task.get(run_id, ""),
                 }
             )
-    # Clean up stale client_task_id mappings for finished runs
-    for rid in list(_run_client_task.keys()):
-        if rid not in list_active_runs:
-            del _run_client_task[rid]
     return JsonResponse({"ok": True, "active": active})
 
 
@@ -1140,6 +1167,7 @@ def task_card_list(request):
     from .recovery_helpers import recover_stale_running_taskcards
 
     recover_stale_running_taskcards()
+    sm.repair_queued_terminal_drift()
 
     qs = TaskCard.objects.all().order_by("-created_at")[:200]
     cards = []

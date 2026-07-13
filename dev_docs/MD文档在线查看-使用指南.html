@@ -89,16 +89,16 @@ kbd{display:inline-block;padding:2px 8px;font-size:11px;font-weight:700;backgrou
     <div class="step-num">A</div>
     <div class="step-body">
       <h4>在 <code>dev_docs</code> 目录下启动 HTTP 服务</h4>
-      <pre><span class="note"># 进入文档目录</span>
-<span class="cmd">cd</span> <span class="path">/Users/aeron/Desktop/workspace/Android-AutoTests/dev_docs</span>
+      <pre><span class="note"># 必须在项目根目录启动（测试报告路径需访问上级 tests/ 目录）</span>
+<span class="cmd">cd</span> <span class="path">/Users/aeron/Desktop/workspace/Android-AutoTests</span>
 
 <span class="note"># 仅本机访问</span>
 <span class="cmd">python3 -m http.server</span> 9999
 
 <span class="note"># 局域网访问（绑定所有网络接口）</span>
 <span class="cmd">python3 -m http.server</span> 9999 --bind 0.0.0.0</pre>
-      <p>本机打开 <code>http://localhost:9999/index.html</code>，局域网设备访问 <code>http://&lt;本机IP&gt;:9999/index.html</code>。</p>
-      <p style="margin-top:4px;font-size:12px;color:var(--text-muted)">💡 查看本机 IP：macOS 执行 <code>ipconfig getifaddr en0</code>，Windows 执行 <code>ipconfig</code> 找 IPv4 地址。</p>
+      <p>本机打开 <code>http://localhost:9999/dev_docs/index.html</code>，局域网设备访问 <code>http://&lt;本机IP&gt;:9999/dev_docs/index.html</code>。</p>
+      <p style="margin-top:4px;font-size:12px;color:var(--text-muted)">💡 必须在项目根目录启动——测试报告存放在项目根 <code>tests/</code> 下，路径使用 <code>../tests/</code> 相对引用。从 <code>dev_docs/</code> 启动会导致 404。</p>
     </div>
   </div>
 
@@ -215,7 +215,7 @@ kbd{display:inline-block;padding:2px 8px;font-size:11px;font-weight:700;backgrou
 
   <div style="background:var(--bg-card);border-radius:var(--r-lg);border:1.5px solid var(--border-light);padding:20px 24px;margin-bottom:14px">
     <h4 style="font-weight:800;color:var(--text);margin-bottom:6px">Q：直接双击 index.html 打开，点击 MD 卡片没反应？</h4>
-    <p style="font-size:13px;color:var(--text-secondary)">A：浏览器安全策略禁止 <code>file://</code> 协议下 fetch 请求。请用 <code>python3 -m http.server 9999</code> 启动一个本地 HTTP 服务再访问。</p>
+    <p style="font-size:13px;color:var(--text-secondary)">A：浏览器安全策略禁止 <code>file://</code> 协议下 fetch 请求。请在<strong>项目根目录</strong>执行 <code>python3 -m http.server 9999</code>，然后访问 <code>http://localhost:9999/dev_docs/index.html</code>。</p>
   </div>
 
   <div style="background:var(--bg-card);border-radius:var(--r-lg);border:1.5px solid var(--border-light);padding:20px 24px;margin-bottom:14px">

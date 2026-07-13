@@ -487,6 +487,10 @@ async function removeTask() {
       <!-- ① 信息卡片 -->
       <section class="info-card">
         <div class="info-grid">
+          <div class="info-item info-item--name full-width">
+            <span class="info-label">🏷️ 任务名称</span>
+            <span class="info-value task-name">{{ task.name || task.id }}</span>
+          </div>
           <div class="info-item">
             <span class="info-label">📱 设备</span>
             <span class="info-value">{{ task.deviceSerial }}</span>
@@ -705,6 +709,8 @@ async function removeTask() {
 .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 20px; }
 .info-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .info-item.full-width { grid-column: 1 / -1; }
+.info-item--name { padding-bottom: 4px; border-bottom: 1px dashed rgba(139,115,85,0.12); margin-bottom: 2px; }
+.info-value.task-name { font-size: 15px; line-height: 1.4; word-break: break-word; }
 .info-label { color: #9f927d; font-weight: 500; white-space: nowrap; }
 .info-value { color: #4A3A28; font-weight: 600; }
 .info-value.current-case { color: #409eff; }

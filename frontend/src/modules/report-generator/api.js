@@ -9,6 +9,10 @@ export function listRuns(params = {}) {
   return client.get('/reports', { params })
 }
 
+export function getCaseBreakdown(result, params = {}) {
+  return client.get('/reports/cases', { params: { result, ...params } })
+}
+
 // ── 报告详情 ──
 
 export function getRunReport(runId) {

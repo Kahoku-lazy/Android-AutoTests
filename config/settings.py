@@ -159,6 +159,10 @@ CHANNEL_LAYERS = _channel_layers_config()
 
 # ── AgentScope ──
 AGENTSCOPE_SERVICE_PORT = int(os.environ.get('AGENTSCOPE_PORT', '8000'))
+AGENTSCOPE_SERVICE_URL = os.environ.get(
+    'AGENTSCOPE_URL',
+    f'http://127.0.0.1:{AGENTSCOPE_SERVICE_PORT}',
+)
 AGENTSCOPE_WORKSPACE_DIR = BASE_DIR / 'data' / 'agentscope_workspaces'
 AGENTSCOPE_SERVICE_TITLE = 'Android-AutoTests Agent Service'
 AGENTSCOPE_SERVICE_VERSION = '2.0.0'
@@ -166,6 +170,9 @@ AGENTSCOPE_SERVICE_VERSION = '2.0.0'
 # ── JWT ──
 JWT_ACCESS_TTL = int(os.environ.get('JWT_ACCESS_TTL', '3600'))      # 1 hour
 JWT_REFRESH_TTL = int(os.environ.get('JWT_REFRESH_TTL', '604800'))  # 7 days
+
+# Chat upload temp files — cleanup_uploads management command
+UPLOAD_CLEANUP_MAX_AGE_DAYS = int(os.environ.get('UPLOAD_CLEANUP_MAX_AGE_DAYS', '7'))
 
 # ── Project-specific configuration ──
 DEVICE_SERIAL = os.environ.get('DEVICE_SERIAL', '')

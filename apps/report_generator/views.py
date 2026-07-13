@@ -41,18 +41,50 @@ def _compute_duration(started_at, finished_at):
 
 # ── Run-level reports (DB-driven) ──
 
-def list_reports(request):
-    """GET /api/reports — List execution runs with optional date filter + KPI summary.
+def _resolve_run_row(r, task_map):
+    """Build a single run dict from TestRunRecord + optional TaskCard."""
+    tc = task_map.get(r.client_task_id)
+    if tc:
+        total = tc.overall_pass + tc.overall_fail
+        passed = tc.overall_pass
+        failed = tc.overall_fail
+        case_count = len(tc.case_ids) if tc.case_ids else 0
+    else:
+        case_count = len(r.selected_cases) if r.selected_cases else 0
+        total = r.total or 0
+        passed = r.passed or 0
+        failed = total - passed
+    rate = round(passed / total * 100) if total else 0
+    return {
+        "run_id": r.run_id,
+        "status": r.status,
+        "device_serial": r.device_serial,
+        "loop_count": tc.loop_count if tc else r.loop_count,
+        "case_count": case_count,
+        "total": total,
+        "passed": passed,
+        "failed": failed,
+        "rate": rate,
+        "duration": _compute_duration(r.started_at, r.finished_at),
+        "started_at": r.started_at,
+        "finished_at": r.finished_at,
+        "client_task_id": r.client_task_id or "",
+        "task_name": tc.name if tc else None,
+        "creator": tc.creator if tc else None,
+        "outcome": tc.outcome if tc else None,
+    }
 
-    Query params:
-        start_date  ISO date string (e.g. 2026-07-01)
-        end_date    ISO date string (e.g. 2026-07-13)
-    """
+
+PASS_RESULTS = {'pass', 'passed'}
+FAIL_RESULTS = {'fail', 'failed', 'stopped'}
+
+
+def _filter_run_queryset(request):
+    """Apply shared report list filters to a TestRunRecord queryset."""
     from apps.test_runner.models import TestRunRecord, TaskCard
 
     qs = TestRunRecord.objects.all()
 
-    # ── Date filtering (started_at is CharField storing ISO timestamps) ──
     start_date = request.GET.get('start_date', '').strip()
     end_date = request.GET.get('end_date', '').strip()
     if start_date:
@@ -64,20 +96,78 @@ def list_reports(request):
         except ValueError:
             pass
 
+    run_id = request.GET.get('run_id', '').strip()
+    task_name = request.GET.get('task_name', '').strip()
+    device_serial = request.GET.get('device_serial', '').strip()
+    creator = request.GET.get('creator', '').strip()
+
+    if run_id:
+        qs = qs.filter(run_id__icontains=run_id)
+    if device_serial:
+        qs = qs.filter(device_serial__icontains=device_serial)
+    if task_name:
+        task_ids = TaskCard.objects.filter(name__icontains=task_name).values_list('task_id', flat=True)
+        qs = qs.filter(client_task_id__in=task_ids)
+    if creator:
+        task_ids = TaskCard.objects.filter(creator__icontains=creator).values_list('task_id', flat=True)
+        qs = qs.filter(client_task_id__in=task_ids)
+
+    return qs
+
+
+def _build_case_title_map(run_record):
+    title_map = {}
+    for sc in (run_record.selected_cases or []):
+        cid = sc.get('case_id', '')
+        if cid:
+            title_map[str(cid)] = sc.get('title', cid)
+    return title_map
+
+
+def _failed_steps_for_case(failed_steps, case_title, case_id):
+    matched = []
+    for fs in (failed_steps or []):
+        fs_title = fs.get('caseTitle') or ''
+        fs_id = str(fs.get('caseId') or '')
+        if fs_title == case_title or fs_id == case_id or fs_title == case_id:
+            matched.append(fs)
+    return matched
+
+
+def _result_matches_type(result, result_type):
+    res = (result or '').lower()
+    if result_type == 'pass':
+        return res in PASS_RESULTS
+    if result_type == 'fail':
+        return res in FAIL_RESULTS
+    return False
+
+
+def list_reports(request):
+    """GET /api/reports — List execution runs with optional filters + KPI summary.
+
+    Query params:
+        start_date      ISO date string (e.g. 2026-07-01)
+        end_date        ISO date string (e.g. 2026-07-13)
+        run_id          partial match on run_id
+        task_name       partial match on linked TaskCard name
+        device_serial   partial match on device serial
+        creator         partial match on linked TaskCard creator
+    """
+    from apps.test_runner.models import TestRunRecord, TaskCard
+
+    qs = _filter_run_queryset(request)
+
     # ── Annotate with pass/fail counts ──
     annotated = qs.annotate(
         total=Count('results'),
         passed=Count('results', filter=PASS_Q),
     )
 
-    # ── KPI summary computed from resolved pass/fail (see loop below) ──
-
-    # ── Paginated rows for display ──
-    rows = annotated.order_by('-id')[:50]
+    # ── All matching rows (KPI / trend / table share the same filtered set) ──
+    rows = list(annotated.order_by('-id'))
 
     # ── Bulk-fetch TaskCard data (single query, no N+1) ──
-    # TaskCard.overall_pass/overall_fail is the source of truth for pass/fail counts.
-    # TestResult aggregation is only a fallback for runs without a TaskCard.
     client_task_ids = [r.client_task_id for r in rows if r.client_task_id]
     task_map = {}
     if client_task_ids:
@@ -87,40 +177,7 @@ def list_reports(request):
         )
         task_map = {tc.task_id: tc for tc in tcs}
 
-    runs = []
-    for r in rows:
-        tc = task_map.get(r.client_task_id)
-        if tc:
-            # ── Use TaskCard data (source of truth) ──
-            total = tc.overall_pass + tc.overall_fail
-            passed = tc.overall_pass
-            failed = tc.overall_fail
-            case_count = len(tc.case_ids) if tc.case_ids else 0
-        else:
-            # ── Fallback: TestResult aggregation ──
-            case_count = len(r.selected_cases) if r.selected_cases else 0
-            total = r.total or 0
-            passed = r.passed or 0
-            failed = total - passed
-        rate = round(passed / total * 100) if total else 0
-        runs.append({
-            "run_id": r.run_id,
-            "status": r.status,
-            "device_serial": r.device_serial,
-            "loop_count": tc.loop_count if tc else r.loop_count,
-            "case_count": case_count,
-            "total": total,
-            "passed": passed,
-            "failed": failed,
-            "rate": rate,
-            "duration": _compute_duration(r.started_at, r.finished_at),
-            "started_at": r.started_at,
-            "finished_at": r.finished_at,
-            "client_task_id": r.client_task_id or "",
-            "task_name": tc.name if tc else None,
-            "creator": tc.creator if tc else None,
-            "outcome": tc.outcome if tc else None,
-        })
+    runs = [_resolve_run_row(r, task_map) for r in rows]
 
     # ── KPI summary: aggregate from TaskCard data when available ──
     # Recompute over displayed rows using the resolved pass/fail values
@@ -128,27 +185,15 @@ def list_reports(request):
     summary_total_fail = sum(r['failed'] for r in runs)
     summary_total_iterations = summary_total_pass + summary_total_fail
 
-    # ── Daily trend: group runs by day for pass/fail/rate chart ──
-    from collections import defaultdict, OrderedDict
-    daily = defaultdict(lambda: {"pass": 0, "fail": 0, "durations": []})
-    for r in runs:
-        if r["started_at"]:
-            day = r["started_at"][:10]  # "2026-07-13"
-            daily[day]["pass"] += r["passed"]
-            daily[day]["fail"] += r["failed"]
-            if r["duration"]:
-                daily[day]["durations"].append(r["duration"])
-    sorted_days = sorted(daily.keys())
-    trend = {
-        "labels": [d[5:] for d in sorted_days],  # "07-13"
-        "pass": [daily[d]["pass"] for d in sorted_days],
-        "fail": [daily[d]["fail"] for d in sorted_days],
-        "rate": [
-            round(daily[d]["pass"] / (daily[d]["pass"] + daily[d]["fail"]) * 100, 1)
-            if (daily[d]["pass"] + daily[d]["fail"]) else 0
-            for d in sorted_days
-        ],
-    }
+    # ── Daily trend: fill chart window (week / month / quarter) ──
+    chart_range = request.GET.get('chart_range', '30').strip()
+    try:
+        range_days = int(chart_range)
+    except ValueError:
+        range_days = 30
+    if range_days not in (7, 30, 90):
+        range_days = 30
+    trend = _build_trend_from_runs(runs, range_days)
 
     return JsonResponse({
         "ok": True,
@@ -159,9 +204,312 @@ def list_reports(request):
             "total_fail": summary_total_fail,
             "pass_rate": _safe_pct(summary_total_pass, summary_total_iterations),
         },
+        "bug_summary": {
+            k: v for k, v in _build_bug_summary(
+                _collect_case_groups(request, 'fail')[0]
+            ).items() if k != 'cases'
+        },
         "trend": trend,
         "runs": runs,
     })
+
+
+def _build_trend_from_runs(runs, range_days=30):
+    """Build daily pass/fail/rate trend with zero-filled days for chart scrolling."""
+    from collections import defaultdict
+    from datetime import date, timedelta
+
+    daily = defaultdict(lambda: {"pass": 0, "fail": 0})
+    for r in runs:
+        if r.get("started_at"):
+            day = r["started_at"][:10]
+            daily[day]["pass"] += r.get("passed", 0) or 0
+            daily[day]["fail"] += r.get("failed", 0) or 0
+
+    end = date.today()
+    for day_key in daily.keys():
+        try:
+            d = date.fromisoformat(day_key)
+            if d > end:
+                end = d
+        except ValueError:
+            pass
+
+    start = end - timedelta(days=range_days - 1)
+    dates = []
+    labels = []
+    pass_list = []
+    fail_list = []
+    rate_list = []
+
+    d = start
+    while d <= end:
+        key = d.isoformat()
+        dates.append(key)
+        labels.append(f"{d.month:02d}-{d.day:02d}")
+        p = daily[key]["pass"] if key in daily else 0
+        f = daily[key]["fail"] if key in daily else 0
+        pass_list.append(p)
+        fail_list.append(f)
+        total = p + f
+        rate_list.append(round(p / total * 100, 1) if total else 0)
+        d += timedelta(days=1)
+
+    return {
+        "range_days": range_days,
+        "dates": dates,
+        "labels": labels,
+        "pass": pass_list,
+        "fail": fail_list,
+        "rate": rate_list,
+    }
+
+
+def _accumulate_case_entry(cases_map, case_title, case_id, task_id, task_name, run_id, count):
+    """Add pass/fail counts into the hierarchical cases_map."""
+    if count <= 0:
+        return
+    if case_title not in cases_map:
+        cases_map[case_title] = {
+            'case_title': case_title,
+            'case_id': case_id,
+            'count': 0,
+            'tasks': {},
+        }
+    centry = cases_map[case_title]
+    centry['count'] += count
+    if case_id and not centry['case_id']:
+        centry['case_id'] = case_id
+    if task_id not in centry['tasks']:
+        centry['tasks'][task_id] = {
+            'task_id': task_id,
+            'task_name': task_name,
+            'run_id': run_id,
+            'count': 0,
+            'failed_steps': [],
+        }
+    centry['tasks'][task_id]['count'] += count
+
+
+def _failure_signature(step):
+    """Normalize a failed step into a deduplication key."""
+    return (
+        (step.get('stepType') or '').strip(),
+        (step.get('description') or '').strip(),
+        (step.get('result') or '').strip(),
+    )
+
+
+def _build_bug_summary(groups):
+    """Aggregate failures by case; identical issues are merged with occurrence count."""
+    cases_out = []
+    unique_issues = 0
+    total_occurrences = 0
+
+    for group in groups:
+        issue_map = {}
+
+        for task in group.get('tasks', []):
+            steps = task.get('failed_steps') or []
+            remainder = max(0, (task.get('count') or 0) - len(steps))
+
+            for step in steps:
+                sig = _failure_signature(step)
+                if sig not in issue_map:
+                    issue_map[sig] = {
+                        'step_type': sig[0],
+                        'description': sig[1],
+                        'result': sig[2],
+                        'count': 0,
+                        'task_ids': set(),
+                    }
+                issue_map[sig]['count'] += 1
+                issue_map[sig]['task_ids'].add(task.get('task_id', ''))
+
+            if remainder > 0:
+                sig = ('iteration', '执行失败（无步骤明细）', 'fail')
+                if sig not in issue_map:
+                    issue_map[sig] = {
+                        'step_type': sig[0],
+                        'description': sig[1],
+                        'result': sig[2],
+                        'count': 0,
+                        'task_ids': set(),
+                    }
+                issue_map[sig]['count'] += remainder
+                issue_map[sig]['task_ids'].add(task.get('task_id', ''))
+
+        if not issue_map:
+            continue
+
+        issues = []
+        for issue in sorted(issue_map.values(), key=lambda x: (-x['count'], x['description'])):
+            issues.append({
+                'step_type': issue['step_type'],
+                'description': issue['description'],
+                'result': issue['result'],
+                'count': issue['count'],
+                'task_count': len(issue['task_ids']),
+                'task_ids': sorted(t for t in issue['task_ids'] if t),
+            })
+
+        case_occurrences = sum(i['count'] for i in issues)
+        cases_out.append({
+            'case_title': group['case_title'],
+            'case_id': group.get('case_id', ''),
+            'issue_count': len(issues),
+            'total_occurrences': case_occurrences,
+            'issues': issues,
+        })
+        unique_issues += len(issues)
+        total_occurrences += case_occurrences
+
+    return {
+        'unique_issues': unique_issues,
+        'total_occurrences': total_occurrences,
+        'affected_cases': len(cases_out),
+        'cases': cases_out,
+    }
+
+
+def _collect_case_groups(request, result_type):
+    """Build hierarchical case groups for pass/fail breakdown."""
+    from collections import defaultdict
+    from apps.test_runner.models import TaskCard, TestResult
+
+    rows = list(_filter_run_queryset(request).order_by('-id'))
+    run_db_ids = [r.id for r in rows]
+
+    client_task_ids = list({r.client_task_id for r in rows if r.client_task_id})
+    task_map = {}
+    if client_task_ids:
+        for tc in TaskCard.objects.filter(task_id__in=client_task_ids).only(
+            'task_id', 'name', 'case_items', 'failed_steps',
+        ):
+            task_map[tc.task_id] = tc
+
+    results_by_run = defaultdict(list)
+    if run_db_ids:
+        for tr in TestResult.objects.filter(run_id__in=run_db_ids):
+            results_by_run[tr.run_id].append(tr)
+
+    cases_map = {}
+    total_count = 0
+    steps_attached = set()
+
+    for r in rows:
+        tc = task_map.get(r.client_task_id)
+        task_id = r.client_task_id or r.run_id
+        task_name = (tc.name if tc else None) or task_id
+
+        if tc and tc.case_items:
+            for ci in tc.case_items:
+                case_id = str(ci.get('id', ''))
+                case_title = ci.get('title', case_id) or case_id
+                passed = ci.get('pass', 0) or 0
+                failed = ci.get('fail', 0) or 0
+                cnt = passed if result_type == 'pass' else failed
+                if cnt <= 0:
+                    continue
+
+                total_count += cnt
+                _accumulate_case_entry(
+                    cases_map, case_title, case_id, task_id, task_name, r.run_id, cnt,
+                )
+
+                if result_type == 'fail':
+                    step_key = (task_id, case_title)
+                    if step_key not in steps_attached and tc.failed_steps:
+                        steps = _failed_steps_for_case(tc.failed_steps, case_title, case_id)
+                        if steps:
+                            tentry = cases_map[case_title]['tasks'][task_id]
+                            existing = {
+                                (s.get('iteration'), s.get('stepIndex'))
+                                for s in tentry['failed_steps']
+                            }
+                            for step in sorted(
+                                steps,
+                                key=lambda s: (s.get('iteration', 0), s.get('stepIndex', 0)),
+                            ):
+                                key = (step.get('iteration'), step.get('stepIndex'))
+                                if key not in existing:
+                                    tentry['failed_steps'].append(step)
+                                    existing.add(key)
+                            steps_attached.add(step_key)
+            continue
+
+        title_map = _build_case_title_map(r)
+        for tr in results_by_run.get(r.id, []):
+            if not _result_matches_type(tr.result, result_type):
+                continue
+
+            cid = str(tr.case_id) if tr.case_id else 'unknown'
+            case_title = title_map.get(cid, cid)
+            total_count += 1
+            _accumulate_case_entry(
+                cases_map, case_title, cid, task_id, task_name, r.run_id, 1,
+            )
+
+            if result_type == 'fail':
+                tentry = cases_map[case_title]['tasks'][task_id]
+                tentry['failed_steps'].append({
+                    'caseTitle': case_title,
+                    'caseId': cid,
+                    'iteration': tr.iteration,
+                    'stepIndex': -1,
+                    'stepType': 'iteration',
+                    'description': tr.detail or f"第 {tr.iteration} 轮执行失败",
+                    'result': tr.result,
+                })
+
+    groups = []
+    for centry in sorted(cases_map.values(), key=lambda c: c['case_title']):
+        tasks = sorted(centry['tasks'].values(), key=lambda t: t['task_id'])
+        if result_type == 'pass':
+            for t in tasks:
+                t.pop('failed_steps', None)
+        else:
+            for t in tasks:
+                t['failed_steps'].sort(
+                    key=lambda s: (s.get('iteration', 0), s.get('stepIndex', 0)),
+                )
+        groups.append({
+            'case_title': centry['case_title'],
+            'case_id': centry['case_id'],
+            'count': centry['count'],
+            'tasks': tasks,
+        })
+
+    return groups, total_count
+
+
+def case_breakdown(request):
+    """GET /api/reports/cases — Hierarchical pass/fail case list under current filters.
+
+    Uses TaskCard.case_items (same source as KPI summary), with TestResult fallback.
+
+    Query params:
+        result          required: pass | fail
+        (+ same filters as list_reports)
+    """
+    result_type = request.GET.get('result', '').strip().lower()
+    if result_type not in ('pass', 'fail'):
+        return JsonResponse({"ok": False, "error": "result 必须为 pass 或 fail"}, status=400)
+
+    groups, total_count = _collect_case_groups(request, result_type)
+
+    payload = {
+        "ok": True,
+        "result_type": result_type,
+        "total": total_count,
+        "case_count": len(groups),
+        "groups": groups,
+    }
+    if result_type == 'fail':
+        bug_summary = _build_bug_summary(groups)
+        payload["bug_summary"] = bug_summary
+
+    return JsonResponse(payload)
 
 
 def run_report(request, run_id):

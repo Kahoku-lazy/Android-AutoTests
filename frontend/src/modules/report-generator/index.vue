@@ -13,9 +13,16 @@ const router = useRouter()
 
 const runs = ref([])
 const summary = ref(null)
+const bugSummary = ref(null)
 const loading = ref(false)
 const activeFilter = ref('all')
 const dateRange = ref([])
+const filterRunId = ref('')
+const filterTaskName = ref('')
+const filterDevice = ref('')
+const filterCreator = ref('')
+
+let filterDebounceTimer = null
 
 const PAGE_SIZE_OPTIONS = [10, 50, 100]
 const TABLE_TOOLBAR_HEIGHT = 52
@@ -24,26 +31,112 @@ const TABLE_ROW_HEIGHT = 50
 const pageSize = ref(10)
 const currentPage = ref(1)
 
-// ── Format date to YYYY-MM-DD ──
-function fmtDate(d) {
-  const pad = n => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
-
 const trend = ref(null)
+
+const CHART_RANGE_OPTIONS = [
+  { key: 7, label: '一周' },
+  { key: 30, label: '一月' },
+  { key: 90, label: '一季度' },
+]
+const chartRange = ref(30)
+const CHART_VISIBLE_DAYS = 5
+
+const chartRangeLabel = computed(() => {
+  const opt = CHART_RANGE_OPTIONS.find(o => o.key === chartRange.value)
+  return opt ? opt.label : '一月'
+})
 
 // Chart.js instances
 let passRateChart = null
 let dailyCountChart = null
 
-onMounted(() => fetchReports())
+onMounted(() => {
+  fetchReports()
+  window.addEventListener('resize', onChartResize)
+})
 watch(dateRange, () => { currentPage.value = 1; fetchReports() }, { deep: true })
+watch([filterRunId, filterTaskName, filterDevice, filterCreator], () => {
+  currentPage.value = 1
+  clearTimeout(filterDebounceTimer)
+  filterDebounceTimer = setTimeout(fetchReports, 350)
+})
 watch(activeFilter, () => { currentPage.value = 1 })
+watch(chartRange, () => { fetchReports() })
 
 onUnmounted(() => {
+  clearTimeout(filterDebounceTimer)
+  clearTimeout(chartResizeTimer)
+  window.removeEventListener('resize', onChartResize)
   if (passRateChart) passRateChart.destroy()
   if (dailyCountChart) dailyCountChart.destroy()
 })
+
+let chartResizeTimer = null
+let syncingChartScroll = false
+
+function onChartResize() {
+  clearTimeout(chartResizeTimer)
+  chartResizeTimer = setTimeout(renderTrendCharts, 150)
+}
+
+function getChartDayWidth(scrollEl) {
+  if (!scrollEl || scrollEl.clientWidth <= 0) return 72
+  return scrollEl.clientWidth / CHART_VISIBLE_DAYS
+}
+
+function getChartMetrics() {
+  const n = trend.value?.labels?.length || 0
+  const passScroll = document.getElementById('chartScrollPass')
+  const dayW = getChartDayWidth(passScroll)
+  const totalW = Math.max(Math.round(n * dayW), passScroll?.clientWidth || 360)
+  return { n, dayW, totalW, height: 200 }
+}
+
+function applyChartInnerWidths(metrics) {
+  const innerW = `${metrics.totalW}px`
+  for (const id of ['chartInnerPass', 'chartInnerDaily']) {
+    const el = document.getElementById(id)
+    if (!el) continue
+    el.style.width = innerW
+    el.style.minWidth = innerW
+    el.style.maxWidth = innerW
+    const wrap = el.querySelector('.chart-wrap')
+    if (wrap) {
+      wrap.style.width = innerW
+      wrap.style.minWidth = innerW
+    }
+  }
+}
+
+function prepareChartCanvas(canvas, metrics) {
+  const dpr = window.devicePixelRatio || 1
+  canvas.style.width = `${metrics.totalW}px`
+  canvas.style.height = `${metrics.height}px`
+  canvas.width = Math.round(metrics.totalW * dpr)
+  canvas.height = Math.round(metrics.height * dpr)
+  const ctx = canvas.getContext('2d')
+  if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+}
+
+function scrollChartsToEnd() {
+  const passScroll = document.getElementById('chartScrollPass')
+  const dailyScroll = document.getElementById('chartScrollDaily')
+  if (!passScroll) return
+  const left = Math.max(0, passScroll.scrollWidth - passScroll.clientWidth)
+  passScroll.scrollLeft = left
+  if (dailyScroll) dailyScroll.scrollLeft = left
+}
+
+function syncChartScroll(source) {
+  if (syncingChartScroll) return
+  syncingChartScroll = true
+  const passScroll = document.getElementById('chartScrollPass')
+  const dailyScroll = document.getElementById('chartScrollDaily')
+  const src = source === 'pass' ? passScroll : dailyScroll
+  const dst = source === 'pass' ? dailyScroll : passScroll
+  if (src && dst) dst.scrollLeft = src.scrollLeft
+  syncingChartScroll = false
+}
 
 // Watch trend data to re-render charts
 watch(trend, async () => { await nextTick(); setTimeout(renderTrendCharts, 100) })
@@ -53,13 +146,23 @@ async function fetchReports() {
   try {
     const params = {}
     if (dateRange.value && dateRange.value.length === 2) {
-      params.start_date = fmtDate(dateRange.value[0])
-      params.end_date = fmtDate(dateRange.value[1])
+      params.start_date = dateRange.value[0]
+      params.end_date = dateRange.value[1]
     }
+    const runId = filterRunId.value.trim()
+    const taskName = filterTaskName.value.trim()
+    const device = filterDevice.value.trim()
+    const creator = filterCreator.value.trim()
+    if (runId) params.run_id = runId
+    if (taskName) params.task_name = taskName
+    if (device) params.device_serial = device
+    if (creator) params.creator = creator
+    params.chart_range = String(chartRange.value)
     const { data } = await listRuns(params)
     if (data.ok) {
       runs.value = data.runs || []
       summary.value = data.summary || null
+      bugSummary.value = data.bug_summary || null
       trend.value = data.trend || null
     }
   } catch (_) {}
@@ -68,16 +171,30 @@ async function fetchReports() {
   animate('.report-table tbody tr', { opacity: [0, 1], translateY: [16, 0], delay: stagger(40), duration: 380, ease: 'outCubic' })
 }
 
-function renderTrendCharts() {
+async function renderTrendCharts() {
   if (!trend.value || !trend.value.labels?.length) return
-  renderPassRateChart()
-  renderDailyCountChart()
+  await nextTick()
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const metrics = getChartMetrics()
+      if (!metrics.n) return
+      applyChartInnerWidths(metrics)
+      renderPassRateChart(metrics)
+      renderDailyCountChart(metrics)
+      requestAnimationFrame(() => scrollChartsToEnd())
+    })
+  })
 }
 
-function renderPassRateChart() {
+function setChartRange(days) {
+  chartRange.value = days
+}
+
+function renderPassRateChart(metrics) {
   const canvas = document.getElementById('overviewPassRateCanvas')
   if (!canvas) return
   if (passRateChart) passRateChart.destroy()
+  prepareChartCanvas(canvas, metrics)
   passRateChart = new Chart(canvas, {
     type: 'line',
     data: {
@@ -93,32 +210,72 @@ function renderPassRateChart() {
       }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
+      responsive: false,
+      maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
+        x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 0 } },
         y: { min: 0, max: 105, ticks: { callback: v => v + '%' } },
       }
     }
   })
 }
 
-function renderDailyCountChart() {
+function renderDailyCountChart(metrics) {
   const canvas = document.getElementById('overviewDailyCountCanvas')
   if (!canvas) return
   if (dailyCountChart) dailyCountChart.destroy()
+  prepareChartCanvas(canvas, metrics)
   dailyCountChart = new Chart(canvas, {
     type: 'bar',
     data: {
       labels: trend.value.labels,
       datasets: [
-        { label: '通过', data: trend.value.pass, backgroundColor: 'rgba(111,186,44,0.6)', borderColor: '#6fba2c', borderWidth: 1, borderRadius: 6, borderSkipped: false },
-        { label: '失败', data: trend.value.fail, backgroundColor: 'rgba(224,90,90,0.6)', borderColor: '#e05a5a', borderWidth: 1, borderRadius: 6, borderSkipped: false },
+        {
+          label: '通过',
+          data: trend.value.pass,
+          backgroundColor: 'rgba(111,186,44,0.75)',
+          borderColor: '#6fba2c',
+          borderWidth: 1.5,
+          borderRadius: 6,
+          borderSkipped: false,
+          barPercentage: 0.9,
+          categoryPercentage: 0.7,
+        },
+        {
+          label: '失败',
+          data: trend.value.fail,
+          backgroundColor: 'rgba(224,90,90,0.75)',
+          borderColor: '#e05a5a',
+          borderWidth: 1.5,
+          borderRadius: 6,
+          borderSkipped: false,
+          barPercentage: 0.9,
+          categoryPercentage: 0.7,
+        },
       ]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } },
-      scales: { x: { stacked: true }, y: { stacked: true, ticks: { stepSize: 1 } } },
+      responsive: false,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+        },
+      },
+      scales: {
+        x: {
+          stacked: false,
+          grid: { display: false },
+        },
+        y: {
+          stacked: false,
+          beginAtZero: true,
+          ticks: { stepSize: 1, precision: 0 },
+        },
+      },
     }
   })
 }
@@ -179,6 +336,48 @@ function setPageSize(size) {
 function goPage(page) {
   currentPage.value = Math.min(Math.max(1, page), totalPages.value)
 }
+
+const hasActiveFilters = computed(() => (
+  (dateRange.value && dateRange.value.length === 2)
+  || filterRunId.value.trim()
+  || filterTaskName.value.trim()
+  || filterDevice.value.trim()
+  || filterCreator.value.trim()
+))
+
+function clearFilters() {
+  dateRange.value = []
+  filterRunId.value = ''
+  filterTaskName.value = ''
+  filterDevice.value = ''
+  filterCreator.value = ''
+  currentPage.value = 1
+  fetchReports()
+}
+
+function buildFilterQuery() {
+  const query = {}
+  if (dateRange.value && dateRange.value.length === 2) {
+    query.start_date = dateRange.value[0]
+    query.end_date = dateRange.value[1]
+  }
+  const runId = filterRunId.value.trim()
+  const taskName = filterTaskName.value.trim()
+  const device = filterDevice.value.trim()
+  const creator = filterCreator.value.trim()
+  if (runId) query.run_id = runId
+  if (taskName) query.task_name = taskName
+  if (device) query.device_serial = device
+  if (creator) query.creator = creator
+  return query
+}
+
+function openCaseBreakdown(type, tab = 'detail') {
+  router.push({
+    path: `/reports/cases/${type}`,
+    query: { ...buildFilterQuery(), ...(tab !== 'detail' ? { tab } : {}) },
+  })
+}
 </script>
 
 <template>
@@ -190,22 +389,55 @@ function goPage(page) {
     />
 
     <div class="doc-body">
-      <!-- Date range filter -->
-      <div class="date-filter-bar">
-        <el-date-picker
-          v-model="dateRange"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          value-format="YYYY-MM-DD"
-          :clearable="true"
-          :unlink-panels="true"
-          style="width: 280px"
-        />
-        <span v-if="summary" class="date-summary">
-          共 {{ summary.total_runs }} 次执行 · {{ summary.total_iterations }} 次迭代
-        </span>
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <div class="filter-fields">
+          <el-date-picker
+            v-model="dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="YYYY-MM-DD"
+            :clearable="true"
+            :unlink-panels="true"
+            class="filter-date"
+          />
+          <el-input
+            v-model="filterRunId"
+            placeholder="Run ID"
+            clearable
+            class="filter-input"
+          />
+          <el-input
+            v-model="filterTaskName"
+            placeholder="任务名称"
+            clearable
+            class="filter-input"
+          />
+          <el-input
+            v-model="filterDevice"
+            placeholder="设备"
+            clearable
+            class="filter-input"
+          />
+          <el-input
+            v-model="filterCreator"
+            placeholder="创建人"
+            clearable
+            class="filter-input"
+          />
+        </div>
+        <div class="filter-actions">
+          <AnimalButton
+            v-if="hasActiveFilters"
+            size="small"
+            @click="clearFilters"
+          >清空条件</AnimalButton>
+          <span v-if="summary" class="filter-summary">
+            共 {{ summary.total_runs }} 次执行 · {{ summary.total_iterations }} 次迭代
+          </span>
+        </div>
       </div>
 
       <!-- KPI Summary Cards -->
@@ -215,15 +447,20 @@ function goPage(page) {
           <div class="kpi-value">{{ summary.total_runs }}</div>
           <div class="kpi-label">总执行次数</div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card kpi-card--clickable" @click="openCaseBreakdown('pass')">
           <div class="kpi-accent accent-green"></div>
           <div class="kpi-value num-pass">{{ summary.total_pass }}</div>
           <div class="kpi-label">✅ 通过</div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card kpi-card--clickable" @click="openCaseBreakdown('fail', 'bugs')">
           <div class="kpi-accent accent-red"></div>
           <div class="kpi-value num-fail">{{ summary.total_fail }}</div>
           <div class="kpi-label">❌ 失败</div>
+          <div v-if="bugSummary" class="kpi-sub kpi-sub--bug">
+            <span class="kpi-sub-num kpi-sub-num--bug">{{ bugSummary.unique_issues }}</span> 类 BUG ·
+            <span class="kpi-sub-num kpi-sub-num--occur">{{ bugSummary.total_occurrences }}</span> 次出现 ·
+            <span class="kpi-sub-num kpi-sub-num--case">{{ bugSummary.affected_cases }}</span> 个用例
+          </div>
         </div>
         <div class="kpi-card">
           <div class="kpi-accent accent-yellow"></div>
@@ -231,20 +468,46 @@ function goPage(page) {
             {{ summary.pass_rate }}%
           </div>
           <div class="kpi-label">📊 总通过率</div>
-          <div class="kpi-sub">{{ summary.total_iterations }} 次迭代</div>
+          <div class="kpi-sub kpi-sub--iter">
+            <span class="kpi-sub-num">{{ summary.total_iterations }}</span> 次迭代
+          </div>
         </div>
       </div>
 
       <!-- Trend Charts -->
-      <div v-if="trend && trend.labels?.length" class="chart-row">
+      <div v-if="trend && trend.labels?.length" class="chart-section">
+        <div class="chart-toolbar">
+          <span class="toolbar-label">图表范围</span>
+          <div class="page-size-btns">
+            <button
+              v-for="opt in CHART_RANGE_OPTIONS"
+              :key="opt.key"
+              type="button"
+              class="page-size-btn"
+              :class="{ active: chartRange === opt.key }"
+              @click="setChartRange(opt.key)"
+            >{{ opt.label }}</button>
+          </div>
+          <span class="chart-hint">固定显示 {{ CHART_VISIBLE_DAYS }} 天 · 默认最近 {{ CHART_VISIBLE_DAYS }} 天 · 左滑查看更早（共 {{ trend.labels.length }} 天）</span>
+        </div>
+        <div class="chart-row">
         <Card color="brown" pattern="brown" class="chart-card">
           <h4 class="chart-title">通过率趋势</h4>
-          <div class="chart-wrap"><canvas id="overviewPassRateCanvas"></canvas></div>
+          <div id="chartScrollPass" class="chart-scroll" @scroll="syncChartScroll('pass')">
+            <div id="chartInnerPass" class="chart-inner">
+              <div class="chart-wrap"><canvas id="overviewPassRateCanvas"></canvas></div>
+            </div>
+          </div>
         </Card>
         <Card color="brown" pattern="brown" class="chart-card">
           <h4 class="chart-title">每日通过/失败</h4>
-          <div class="chart-wrap"><canvas id="overviewDailyCountCanvas"></canvas></div>
+          <div id="chartScrollDaily" class="chart-scroll" @scroll="syncChartScroll('daily')">
+            <div id="chartInnerDaily" class="chart-inner">
+              <div class="chart-wrap"><canvas id="overviewDailyCountCanvas"></canvas></div>
+            </div>
+          </div>
         </Card>
+        </div>
       </div>
 
       <!-- Filter Tabs -->
@@ -389,46 +652,122 @@ function goPage(page) {
 .doc-body {
   flex: 0 0 auto;
   min-height: auto;
+  min-width: 0;
   width: 100%;
   display: flex;
   flex-direction: column;
   overflow: visible;
 }
 
-/* ── Date filter bar ── */
-.date-filter-bar {
+/* ── Filter bar ── */
+.filter-bar {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
   margin-bottom: 14px;
   flex-shrink: 0;
 }
-.date-summary {
+.filter-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.filter-date {
+  width: 280px;
+  flex-shrink: 0;
+}
+.filter-input {
+  width: 150px;
+  flex-shrink: 0;
+}
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.filter-summary {
   font-size: 13px;
   color: #8a7b66;
   font-weight: 600;
 }
 
 /* ── Trend Charts ── */
-.chart-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
+.chart-section {
   margin-bottom: 16px;
   flex-shrink: 0;
+  min-width: 0;
+  width: 100%;
 }
-.chart-card :deep(.animal-card__content) { padding: 14px 18px; }
+.chart-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.chart-hint {
+  font-size: 12px;
+  color: #8a7b66;
+  font-weight: 600;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.chart-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  min-width: 0;
+  width: 100%;
+}
+.chart-card {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+.chart-card :deep(.animal-card__content) {
+  padding: 14px 18px;
+  overflow: hidden;
+  min-width: 0;
+}
 .chart-title {
   font-size: 13px;
   font-weight: 700;
   color: #794f27;
   margin: 0 0 6px;
 }
-.chart-wrap {
-  position: relative;
+.chart-scroll {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 115, 85, 0.3) transparent;
+}
+.chart-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.chart-scroll::-webkit-scrollbar-thumb {
+  background: rgba(139, 115, 85, 0.3);
+  border-radius: 3px;
+}
+.chart-inner {
+  display: block;
+  flex-shrink: 0;
+  width: auto;
   height: 200px;
 }
-.chart-wrap canvas { width: 100% !important; height: 100% !important; }
+.chart-wrap {
+  position: relative;
+  flex-shrink: 0;
+  height: 200px;
+}
+.chart-wrap canvas {
+  display: block;
+}
 
 /* ── KPI Cards ── */
 .kpi-row {
@@ -448,6 +787,13 @@ function goPage(page) {
   transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
 }
 .kpi-card:hover { transform: translateY(-2px); }
+.kpi-card--clickable {
+  cursor: pointer;
+}
+.kpi-card--clickable:hover {
+  border-color: #19c8b9;
+  box-shadow: 0 4px 16px rgba(25, 200, 185, 0.15);
+}
 .kpi-accent {
   position: absolute;
   left: 0; top: 0; bottom: 0;
@@ -471,9 +817,22 @@ function goPage(page) {
   font-weight: 600;
 }
 .kpi-sub {
-  font-size: 11px;
-  color: #8a7b66;
-  margin-top: 2px;
+  font-size: 12px;
+  color: #9f927d;
+  margin-top: 6px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.kpi-sub-num {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+.kpi-sub-num--bug { color: #d63031; }
+.kpi-sub-num--occur { color: #7b5fbf; }
+.kpi-sub-num--case { color: #2980b9; }
+.kpi-sub--iter .kpi-sub-num {
+  color: #0f9a8e;
 }
 .num-pass { color: #6fba2c; }
 .num-fail { color: #e05a5a; }

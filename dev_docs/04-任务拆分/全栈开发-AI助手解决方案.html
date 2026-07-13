@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI助手解决方案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #19c8b9; --primary-hover: #3dd4c6; --primary-active: #11a89b; --primary-bg: #e6f9f6;
+  --text: #794f27; --text-body: #725d42; --text-secondary: #9f927d; --text-muted: #8a7b66;
+  --bg: #f8f8f0; --bg-content: rgb(247,243,223); --bg-disabled: #f0ece2;
+  --border: #c4b89e; --border-hover: #a89878;
+  --success: #6fba2c; --warning: #f5c31c; --error: #e05a5a;
+  --focus-yellow: #ffcc00;
+  --r-sm: 12px; --r-base: 18px; --r-lg: 24px; --r-pill: 50px;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1); --d-fast: 0.15s; --d-base: 0.25s;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Nunito,'Noto Sans SC',-apple-system,'PingFang SC',sans-serif;font-weight:500;letter-spacing:0.01em;background:var(--bg);color:var(--text-body);line-height:1.6}
+.wrap{max-width:1200px;margin:0 auto;padding:48px 32px}
+hr{height:1px;border:none;border-top:1px dashed var(--border);margin:36px 0}
+.hdr{text-align:center;padding:48px 0 40px}
+.hdr .badge{display:inline-block;background:var(--primary-bg);color:var(--primary-active);padding:6px 16px;border-radius:var(--r-pill);font-size:13px;font-weight:700;letter-spacing:0.02em;margin-bottom:16px}
+.hdr h1{font-weight:900;font-size:2rem;color:var(--text);letter-spacing:0.02em;margin-bottom:8px}
+.hdr .sub{color:var(--text-secondary);font-size:14px;max-width:720px;margin:0 auto}
+.hdr .ref{font-size:12px;color:var(--text-muted);margin-top:10px}
+.hdr .ref a{color:var(--primary-active);text-decoration:none;font-weight:600}
+.hdr .ref a:hover{text-decoration:underline}
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:40px}
+@media(max-width:900px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--bg-content);border-radius:var(--r-base);padding:20px;border-left:4px solid var(--primary)}
+.kpi.crit{border-left-color:var(--error)}
+.kpi .n{font-size:2rem;font-weight:900;color:var(--text);line-height:1.2}
+.kpi .l{font-size:12px;color:var(--text-secondary);letter-spacing:0.04em}
+.sec{margin-bottom:40px}
+.sec h2{font-weight:800;font-size:1.4rem;color:var(--text);margin-bottom:6px;letter-spacing:0.02em}
+.sec h3{font-weight:700;font-size:1.05rem;color:var(--text);margin:24px 0 12px}
+.sec .sdesc{color:var(--text-secondary);font-size:13px;margin-bottom:20px}
+.card{background:var(--bg-content);border-radius:var(--r-lg);padding:24px;margin-bottom:20px}
+.card.design{border-left:5px solid var(--primary)}
+.card.impl{border-left:5px solid var(--success)}
+.card.risk{border-left:5px solid var(--warning)}
+.card.crit{border-left:5px solid var(--error)}
+.card h4{font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0}
+.tbl thead th{background:linear-gradient(180deg,rgb(247,243,223),#f0ece2);color:var(--text);font-weight:700;padding:10px 14px;text-align:left;border-bottom:2px solid var(--border);font-size:12px;letter-spacing:0.02em}
+.tbl tbody td{padding:10px 14px;border-bottom:1px dashed var(--border);vertical-align:top}
+.tbl tbody tr:nth-child(even){background:rgba(25,200,185,0.03)}
+.badge{display:inline-block;padding:2px 10px;border-radius:var(--r-pill);font-size:11px;font-weight:700;letter-spacing:0.02em}
+.b-p0{background:#fde8e8;color:var(--error)} .b-p1{background:#fef3cd;color:#8a6d14}
+.b-p2{background:#e8f0fe;color:#5a7d9a} .b-ok{background:#e8f5e0;color:var(--success)}
+.b-new{background:var(--primary-bg);color:var(--primary-active)} .b-phase{background:#e8f0fe;color:#5a7d9a}
+code{font-family:'SF Mono','Fira Code','Cascadia Code',Consolas,monospace;font-size:12px;font-weight:600;background:rgba(0,0,0,0.04);padding:1px 6px;border-radius:4px}
+pre{background:#2b2520;color:#e8dcc8;padding:16px 20px;border-radius:var(--r-base);overflow-x:auto;font-size:12px;line-height:1.6;margin:10px 0}
+pre code{background:none;padding:0;color:inherit;font-weight:500}
+pre .kw{color:#f5c31c} pre .str{color:#6fba2c} pre .cm{color:#9f927d}
+.diagram{background:var(--bg-content);border-radius:var(--r-lg);padding:24px;margin:16px 0;overflow-x:auto}
+.diagram pre{background:none;color:var(--text-body);padding:8px 0;font-size:13px;line-height:1.8}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:768px){.g2{grid-template-columns:1fr}}
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:768px){.compare-grid{grid-template-columns:1fr}}
+.compare-old{background:#fef3cd;border-radius:var(--r-base);padding:16px}
+.compare-new{background:#e8f5e0;border-radius:var(--r-base);padding:16px}
+.compare-old h5,.compare-new h5{margin-bottom:8px;font-size:13px}
+.compare-old h5{color:#8a6d14}.compare-new h5{color:var(--success)}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:32px}
+.toc a{display:inline-block;padding:6px 16px;border-radius:var(--r-pill);background:var(--bg-content);color:var(--text-body);text-decoration:none;font-size:13px;font-weight:600;border:1px solid var(--border);transition:all var(--d-fast) var(--ease)}
+.toc a:hover{background:var(--primary-bg);border-color:var(--primary);color:var(--primary-active);transform:translateY(-1px)}
+ul,ol{padding-left:20px;font-size:13px;line-height:2}
+.ft{border-top:1px dashed var(--border);padding-top:20px;margin-top:40px;font-size:12px;color:var(--text-muted);text-align:center}
+.phase-row{display:grid;grid-template-columns:80px 1fr 80px 80px;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px dashed var(--border);font-size:13px}
+.phase-row:first-child{font-weight:700;background:rgba(25,200,185,0.06)}
+@media(max-width:768px){.phase-row{grid-template-columns:1fr;gap:4px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hdr">
+  <div class="badge">FULL-STACK SOLUTION · 2026-07-13</div>
+  <h1>AI 助手模块 · 综合解决方案</h1>
+  <p class="sub">安全热修 + 模块化重构 · Django / AgentScope / Vue 三层统一治理</p>
+  <p class="ref">来源：
+    <a href="问题管理/联调功能-AI助手模块问题记录.md">联调功能-AI助手模块问题记录</a>
+    ·
+    <a href="问题管理/联调功能-AI助手模块化重构方案.md">联调功能-AI助手模块化重构方案</a>
+  </p>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi crit"><div class="n">43</div><div class="l">问题项（已核实）</div></div>
+  <div class="kpi crit"><div class="n">7</div><div class="l">CRITICAL 安全</div></div>
+  <div class="kpi"><div class="n">6</div><div class="l">实施阶段</div></div>
+  <div class="kpi"><div class="n">~14d</div><div class="l">预估工时</div></div>
+  <div class="kpi"><div class="n">28</div><div class="l">REST 回归端点</div></div>
+</div>
+
+<div class="toc">
+  <a href="#s1">一、问题核实</a>
+  <a href="#s2">二、方案评估</a>
+  <a href="#s3">三、Phase 0 安全热修</a>
+  <a href="#s4">四、Phase 1 横切接入</a>
+  <a href="#s5">五、Phase 2–5 重构</a>
+  <a href="#s6">六、文件变更清单</a>
+  <a href="#s7">七、验证方案</a>
+  <a href="#s8">八、结论</a>
+</div>
+
+<!-- ═══════════ SECTION 1 ═══════════ -->
+<div class="sec" id="s1">
+<h2>一、问题核实结论</h2>
+<p class="sdesc">2026-07-13 对照代码逐项核实。问题记录中 43 项<strong>基本属实</strong>，行号可能因后续改动略有偏移。</p>
+
+<h3>🔴 CRITICAL — 全部确认存在</h3>
+<table class="tbl">
+<thead><tr><th>#</th><th>问题</th><th>代码位置</th><th>核实</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>无 token 仍放行</td><td><code>gateway/middleware.py:59-66</code></td><td>设 <code>user_id=None</code> 后继续，未 401</td></tr>
+<tr><td>2</td><td>权限模块未接入</td><td><code>permissions.py</code> → <code>views.py</code></td><td>permissions 从未被 import</td></tr>
+<tr><td>3</td><td>JWT 黑名单失效</td><td><code>shared/auth/jwt_auth.py</code></td><td>无 <code>jti</code> claim；内存 set 重启消失</td></tr>
+<tr><td>4</td><td>头像路径穿越</td><td><code>views.py serve_avatar</code></td><td>URL filename 直接拼路径</td></tr>
+<tr><td>5</td><td>用户身份被丢弃</td><td><code>agent_factory.py</code> + <code>factory.py</code></td><td><code>user_id</code> 参数未使用；Tool 未注入</td></tr>
+<tr><td>6</td><td>PRD 工具路径穿越</td><td><code>prd_tools.py:81,267</code></td><td>任意 <code>file_path</code> 可读文件</td></tr>
+<tr><td>7</td><td>前端 XSS</td><td><code>ChatView.vue</code></td><td><code>marked()</code> + <code>v-html</code>，无 DOMPurify</td></tr>
+</tbody>
+</table>
+
+<h3>🟠 HIGH — 全部确认</h3>
+<table class="tbl">
+<thead><tr><th>#</th><th>问题</th><th>要点</th></tr></thead>
+<tbody>
+<tr><td>8</td><td>Token 类型不校验</td><td>refresh token 可当 access token 用</td></tr>
+<tr><td>9</td><td><code>reveal_api_key</code> 无认证</td><td>知道 agent_id 即可获取明文 key</td></tr>
+<tr><td>10</td><td><code>decrypt_key</code> 明文回退</td><td>解密失败且 <code>sk-/fk-</code> 开头直接返回</td></tr>
+<tr><td>11</td><td>前端传裸 API key</td><td><code>list_available_models</code> POST 转发第三方</td></tr>
+<tr><td>12</td><td>Fernet 无盐派生</td><td><code>sha256(SECRET_KEY)</code> 确定性密钥</td></tr>
+<tr><td>13</td><td>AgentScope HTTP 硬编码</td><td><code>http://127.0.0.1:8000</code></td></tr>
+<tr><td>14</td><td><code>base_url</code> 未校验</td><td>DB 值直接传给 SDK，可指向恶意代理</td></tr>
+<tr><td>15</td><td>JWT 默认密钥</td><td>回退 <code>'change-me'</code></td></tr>
+<tr><td>16</td><td>HITL 取消不发拒绝</td><td>Cancel 仅清 <code>pendingConfirm</code>，流挂起</td></tr>
+</tbody>
+</table>
+
+<h3>🟡 MEDIUM / 设计缺陷 — 抽样确认</h3>
+<div class="g2">
+  <div class="card">
+    <h4>体量与结构</h4>
+    <ul>
+      <li><code>views.py</code> 1151 行 · <code>ChatView.vue</code> 3334 行</li>
+      <li><code>serializers.py</code> 零引用 · <code>stream_chat</code> 501 stub</li>
+      <li>Provider→BaseURL 映射至少 4 处重复</li>
+      <li><code>dashboard_views.py</code> DEPRECATED 副本仍在</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>行为不一致</h4>
+    <ul>
+      <li><code>send_message</code> 不保存 blocks；SSE <code>save_message</code> 保存</li>
+      <li><code>_staged_cases</code> 模块级 dict 跨 session 泄露</li>
+      <li>模型无 User FK — 多租户需大改</li>
+      <li>permissions 即使接入也只是占位（非真正 owner 校验）</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════ SECTION 2 ═══════════ -->
+<div class="sec" id="s2">
+<h2>二、重构方案评估</h2>
+<p class="sdesc">模块化重构方案方向正确，但实施顺序和部分技术细节需调整。</p>
+
+<div class="compare-grid">
+  <div class="compare-new">
+    <h5>✅ 合理之处</h5>
+    <ul>
+      <li>Django views 按子域拆 6 文件 — 职责清晰</li>
+      <li>ChatView 拆 8 组件 + 4 composables — SSE/UI 解耦</li>
+      <li>Tool 工厂按 agent <code>ai_tools</code> 过滤 — 与表设计一致</li>
+      <li>Provider 映射抽取 <code>provider_registry.py</code></li>
+      <li>分阶段实施降低一次性大改风险</li>
+    </ul>
+  </div>
+  <div class="compare-old">
+    <h5>⚠️ 需调整</h5>
+    <ul>
+      <li><strong>阶段顺序</strong>：原 Phase 1 只做 permissions，安全漏洞未优先</li>
+      <li><strong>permissions 接入</strong>：当前是占位逻辑，需配合 owner FK</li>
+      <li><strong>Tool user_id 注入</strong>：<code>tool._user_id =</code> 改单例 — 并发不安全</li>
+      <li><strong>ChatView 拆分</strong>：应先抽 SSE composable，边拆边修 XSS</li>
+      <li><strong>JWT 统一</strong>：需覆盖 jti + Redis 黑名单</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════ SECTION 3 ═══════════ -->
+<div class="sec" id="s3">
+<h2>三、Phase 0 — 安全热修（1–2 天，阻塞上线）</h2>
+<p class="sdesc">堵住可被直接利用的漏洞。改动小、风险低，<strong>必须在重构之前完成</strong>。</p>
+
+<div class="card crit">
+<h4><span class="badge b-p0">P0</span> 立即修复清单</h4>
+<table class="tbl">
+<thead><tr><th>编号</th><th>文件</th><th>改动</th><th>对应问题</th></tr></thead>
+<tbody>
+<tr>
+  <td>P0-1</td><td><code>gateway/middleware.py</code></td>
+  <td>删除 dev fallback，无 token → 401；verify 后检查 <code>type == "access"</code></td>
+  <td>#1 #8</td></tr>
+<tr>
+  <td>P0-2</td><td><code>shared/auth/jwt_auth.py</code></td>
+  <td><code>create_*_token</code> 加 <code>jti=uuid4()</code>；黑名单迁 Redis；SECRET_KEY 未设启动报错</td>
+  <td>#3 #15 #30</td></tr>
+<tr>
+  <td>P0-3</td><td><code>views.py serve_avatar</code></td>
+  <td><code>safe_name = Path(filename).name</code>；拒绝 <code>..</code> / <code>/</code>；<code>resolve()</code> 必须在 AVATAR_DIR 下</td>
+  <td>#4</td></tr>
+<tr>
+  <td>P0-4</td><td><code>prd_tools.py</code></td>
+  <td>新增 <code>_safe_read(path)</code>：限制在 <code>BASE_DIR/dev_docs/02-PRD需求/</code> 内</td>
+  <td>#6</td></tr>
+<tr>
+  <td>P0-5</td><td><code>ChatView.vue</code></td>
+  <td>引入 DOMPurify；<code>renderMarkdown</code> + thinking 块 sanitize；Mermaid <code>securityLevel: "strict"</code></td>
+  <td>#7 #19 #20</td></tr>
+<tr>
+  <td>P0-6</td><td><code>views.py</code> 写操作</td>
+  <td>新增 <code>@require_auth</code>；<code>reveal_api_key</code> 必须认证 + <code>check_agent_owner</code></td>
+  <td>#2 #9</td></tr>
+<tr>
+  <td>P0-7</td><td><code>api.py decrypt_key</code></td>
+  <td>删除 <code>sk-/fk-</code> 明文回退，解密失败直接 raise</td>
+  <td>#10</td></tr>
+<tr>
+  <td>P0-8</td><td><code>ChatView.vue</code> HITL</td>
+  <td>Cancel 改为调用 <code>denyAll()</code> 或 <code>resolveConfirm(id, false)</code></td>
+  <td>#16</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="card design">
+<h4>关键代码模式</h4>
+<pre><code><span class="cm"># gateway/middleware.py — 认证兜底</span>
+<span class="kw">else</span>:
+    <span class="kw">return</span> JsonResponse({<span class="str">'ok'</span>: <span class="kw">False</span>, <span class="str">'error'</span>: <span class="str">'Authorization required'</span>}, status=<span class="str">401</span>)
+
+<span class="cm"># jwt_auth.py — jti 生成</span>
+payload = {<span class="str">"sub"</span>: user_id, <span class="str">"jti"</span>: str(uuid.uuid4()), <span class="str">"type"</span>: <span class="str">"access"</span>, ...}
+
+<span class="cm"># ChatView.vue — XSS 防护</span>
+<span class="kw">import</span> DOMPurify <span class="kw">from</span> <span class="str">'dompurify'</span>
+<span class="kw">function</span> renderMarkdown(text) {
+  <span class="kw">return</span> DOMPurify.sanitize(marked.parse(text, { breaks: <span class="kw">true</span>, gfm: <span class="kw">true</span> }))
+}</code></pre>
+</div>
+</div>
+
+<!-- ═══════════ SECTION 4 ═══════════ -->
+<div class="sec" id="s4">
+<h2>四、Phase 1 — 横切能力接入（2–3 天）</h2>
+<p class="sdesc">在现有 <code>views.py</code> 上增量改造，不先拆分文件。让 permissions 和 serializers 真正发挥作用。</p>
+
+<div class="card impl">
+<h4>新增 <code>decorators.py</code></h4>
+<pre><code><span class="kw">def</span> require_auth(view):
+    <span class="kw">def</span> wrapper(request, *args, **kwargs):
+        <span class="kw">if not</span> getattr(request, <span class="str">'user_id'</span>, <span class="kw">None</span>):
+            <span class="kw">return</span> JsonResponse({<span class="str">'ok'</span>: <span class="kw">False</span>, <span class="str">'error'</span>: <span class="str">'Unauthorized'</span>}, status=<span class="str">401</span>)
+        <span class="kw">return</span> view(request, *args, **kwargs)
+    <span class="kw">return</span> wrapper
+
+<span class="cm"># 写操作统一模式</span>
+<span class="kw">@require_auth</span>
+<span class="kw">def</span> update_agent(request, agent_id):
+    <span class="kw">if not</span> check_can_update_agent(request.user_id, agent_id):
+        <span class="kw">return</span> JsonResponse({<span class="str">'ok'</span>: <span class="kw">False</span>, <span class="str">'error'</span>: <span class="str">'Forbidden'</span>}, status=<span class="str">403</span>)
+    data = validate_agent_update(json.loads(request.body))  <span class="cm"># serializers.py</span>
+    ...</code></pre>
+</div>
+
+<ul>
+  <li><code>serializers.py</code>：输入校验（空 name、非法 provider、base_url 白名单）</li>
+  <li><code>AGENTSCOPE_BASE</code> → <code>settings.AGENTSCOPE_URL</code>（支持 HTTPS）</li>
+  <li><code>agent_factory.py</code> 的 base_url 走 <code>provider_registry.validate_base_url()</code></li>
+  <li>同步为 <code>AIAgent</code> / <code>AIConversation</code> 加 <code>owner_id</code> FK（多租户铺路）</li>
+</ul>
+</div>
+
+<!-- ═══════════ SECTION 5 ═══════════ -->
+<div class="sec" id="s5">
+<h2>五、Phase 2–5 — 模块化重构</h2>
+<p class="sdesc">安全兜底后执行。按风险从低到高排列。</p>
+
+<div class="diagram">
+<pre>Phase 0 安全热修（认证/XSS/路径穿越/JWT）
+    ↓
+Phase 1 横切接入（decorators + serializers + permissions）
+    ↓
+    ├─→ Phase 2 Django views 拆分（6 子模块）
+    └─→ Phase 3 Tool 工厂改造（agent 配置 + user_id 实例注入）
+            ↓
+        Phase 4 ChatView 拆分（8 组件 + 4 composables）
+            ↓
+        Phase 5 公共去重 + 清理（provider_registry / 删 dashboard_views）</pre>
+</div>
+
+<h3>Phase 2 — Django views 拆分（3–4 天）</h3>
+<div class="card design">
+<pre><code>apps/ai_assistant/views/
+├── __init__.py          # 汇总导出，urls.py 改动最小
+├── auth_views.py        # login / register / refresh / logout / me
+├── agent_views.py       # CRUD + reveal-key + health
+├── conversation_views.py # create / list / messages / send / stream / save-message
+├── file_views.py        # upload-avatar / serve-avatar / upload-file
+├── model_views.py       # detect-models / list-available-models
+└── hitl_views.py        # create-scope-session / confirm-result</code></pre>
+</div>
+
+<h3>Phase 3 — Tool 工厂改造（2–3 天）</h3>
+<div class="card design">
+<h4>关键：每次新建实例，禁止改单例属性</h4>
+<pre><code><span class="kw">def</span> build_business_tools(user_id, agent_id, session_id):
+    enabled = set(
+        AITool.objects.filter(agent_id=agent_id, enabled=<span class="kw">True</span>)
+        .values_list(<span class="str">'name'</span>, flat=<span class="kw">True</span>)
+    )
+    tools = []
+    <span class="kw">for</span> cls <span class="kw">in</span> _TOOL_REGISTRY:
+        <span class="kw">if</span> cls.name <span class="kw">in</span> enabled:
+            tool = cls()  <span class="cm"># 新实例，非单例</span>
+            tool._ctx = ToolContext(user_id=user_id, agent_id=agent_id, session_id=session_id)
+            tools.append(tool)
+    <span class="kw">return</span> _PLAN_TOOLS + tools</code></pre>
+<ul>
+  <li><code>_staged_cases</code> 改为按 <code>session_id</code> 隔离 + TTL 清理</li>
+  <li>写操作 Tool 的 <code>check_permissions</code> 检查 <code>self._ctx.user_id</code></li>
+</ul>
+</div>
+
+<h3>Phase 4 — ChatView 拆分（4–5 天）</h3>
+<table class="tbl">
+<thead><tr><th>顺序</th><th>文件</th><th>职责</th><th>风险</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><code>composables/useSSE.js</code></td><td>SSE 连接/重连/事件解析</td><td><span class="badge b-p0">高</span></td></tr>
+<tr><td>2</td><td><code>composables/useMessageStore.js</code></td><td>消息列表 + 持久化</td><td>中</td></tr>
+<tr><td>3</td><td><code>components/MessageBubble.vue</code></td><td>气泡渲染（含 DOMPurify）</td><td>中</td></tr>
+<tr><td>4</td><td><code>ThinkingBlock / ToolCallCard / ConfirmDialog</code></td><td>思考/HITL/工具卡片</td><td>中</td></tr>
+<tr><td>5</td><td><code>ChatInput / FileUploader / MermaidRenderer</code></td><td>输入/上传/图表</td><td>低</td></tr>
+<tr><td>6</td><td><code>ChatView.vue</code></td><td>瘦身为 ~300 行布局壳</td><td>低</td></tr>
+</tbody>
+</table>
+
+<h3>Phase 5 — 公共去重 + 清理（1–2 天）</h3>
+<ul>
+  <li>新建 <code>agentscope_service/provider_registry.py</code> — 统一 5 处 Provider 映射</li>
+  <li>删除 <code>apps/ai_assistant/dashboard_views.py</code></li>
+  <li>上传文件定时清理任务</li>
+  <li>JWT 配置统一：AgentScope 侧读 <code>shared/auth/jwt_auth.py</code></li>
+</ul>
+
+<h3>阶段总览</h3>
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="phase-row"><span>阶段</span><span>内容</span><span>工时</span><span>风险</span></div>
+  <div class="phase-row"><span><span class="badge b-p0">P0</span></span><span>安全热修</span><span>1–2d</span><span>低</span></div>
+  <div class="phase-row"><span><span class="badge b-p1">P1</span></span><span>横切接入</span><span>2–3d</span><span>低</span></div>
+  <div class="phase-row"><span><span class="badge b-phase">P2</span></span><span>views 拆分</span><span>3–4d</span><span>中</span></div>
+  <div class="phase-row"><span><span class="badge b-phase">P3</span></span><span>Tool 工厂</span><span>2–3d</span><span>中</span></div>
+  <div class="phase-row"><span><span class="badge b-phase">P4</span></span><span>ChatView 拆分</span><span>4–5d</span><span>中</span></div>
+  <div class="phase-row"><span><span class="badge b-ok">P5</span></span><span>去重清理</span><span>1–2d</span><span>低</span></div>
+</div>
+</div>
+
+<!-- ═══════════ SECTION 6 ═══════════ -->
+<div class="sec" id="s6">
+<h2>六、文件变更清单</h2>
+<table class="tbl">
+<thead><tr><th>文件</th><th>操作</th><th>阶段</th></tr></thead>
+<tbody>
+<tr><td><code>gateway/middleware.py</code></td><td>删除 dev fallback · 校验 token type</td><td>P0</td></tr>
+<tr><td><code>shared/auth/jwt_auth.py</code></td><td>jti + Redis 黑名单</td><td>P0</td></tr>
+<tr><td><code>apps/ai_assistant/views.py</code></td><td>安全热修 → 拆为 <code>views/</code> 6 文件</td><td>P0→P2</td></tr>
+<tr><td><code>apps/ai_assistant/decorators.py</code></td><td><strong>新建</strong> require_auth</td><td>P1</td></tr>
+<tr><td><code>apps/ai_assistant/permissions.py</code></td><td>接入 views + owner FK</td><td>P1</td></tr>
+<tr><td><code>apps/ai_assistant/serializers.py</code></td><td>接入 views 统一校验</td><td>P1</td></tr>
+<tr><td><code>agentscope_service/tools/factory.py</code></td><td>按 agent 过滤 + 实例注入 user_id</td><td>P3</td></tr>
+<tr><td><code>agentscope_service/tools/*.py</code></td><td>check_permissions 检查 user_id</td><td>P3</td></tr>
+<tr><td><code>agentscope_service/provider_registry.py</code></td><td><strong>新建</strong> 统一 provider 映射</td><td>P5</td></tr>
+<tr><td><code>frontend/.../ChatView.vue</code></td><td>DOMPurify → 瘦身为布局壳</td><td>P0→P4</td></tr>
+<tr><td><code>frontend/.../components/</code></td><td><strong>新建</strong> 8 个子组件</td><td>P4</td></tr>
+<tr><td><code>frontend/.../composables/</code></td><td><strong>新建</strong> 4 个 composable</td><td>P4</td></tr>
+<tr><td><code>apps/ai_assistant/dashboard_views.py</code></td><td>删除</td><td>P5</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ═══════════ SECTION 7 ═══════════ -->
+<div class="sec" id="s7">
+<h2>七、验证方案</h2>
+<table class="tbl">
+<thead><tr><th>#</th><th>场景</th><th>操作</th><th>期望</th><th>阶段</th></tr></thead>
+<tbody>
+<tr><td>V1</td><td>编译检查</td><td><code>python manage.py check</code> + <code>npx vite build</code></td><td>0 errors</td><td>每阶段</td></tr>
+<tr><td>V2</td><td>无 token 访问</td><td>curl 不带 Authorization 调 <code>/api/ai/agents</code></td><td>401</td><td>P0</td></tr>
+<tr><td>V3</td><td>路径穿越</td><td><code>/api/ai/avatars/../../../config/settings.py</code></td><td>403/404</td><td>P0</td></tr>
+<tr><td>V4</td><td>XSS 防护</td><td>LLM 输出 <code>&lt;script&gt;alert(1)&lt;/script&gt;</code></td><td>脚本不执行</td><td>P0</td></tr>
+<tr><td>V5</td><td>JWT 注销</td><td>logout → 用旧 token 访问</td><td>401 revoked</td><td>P0</td></tr>
+<tr><td>V6</td><td>HITL 取消</td><td>工具确认弹窗点取消</td><td>后端收到 DENY，流恢复</td><td>P0</td></tr>
+<tr><td>V7</td><td>REST 回归</td><td>28 端点 CRUD 矩阵</td><td>全部 200/401/403 符合预期</td><td>P2</td></tr>
+<tr><td>V8</td><td>Tool 过滤</td><td>agent 只启用 3 个 tool → 对话</td><td>LLM 只能调用 3 个</td><td>P3</td></tr>
+<tr><td>V9</td><td>SSE 全链路</td><td>创建对话 → 发消息 → 工具调用 → HITL → 保存</td><td>消息持久化 + blocks 完整</td><td>P4</td></tr>
+<tr><td>V10</td><td>浏览器验收</td><td>Playwright 走完整对话流程</td><td>UI 正常渲染，无控制台报错</td><td>每阶段</td></tr>
+</tbody>
+</table>
+
+<div class="card risk" style="margin-top:20px">
+<h4><span class="badge b-p1">风险</span> 迁移与回滚</h4>
+<ul>
+  <li><strong>views 拆分</strong>：<code>views/__init__.py</code> 重导出，urls.py 一行不改即可回滚</li>
+  <li><strong>ChatView 拆分</strong>：先抽 composable 再拆组件；每步保持可运行</li>
+  <li><strong>认证收紧</strong>：开发环境可通过 <code>DEBUG=True</code> + 显式 env 开关保留测试便利，但默认必须 401</li>
+  <li><strong>Tool 工厂</strong>：未配置 tool 的 agent 默认给只读 tool 子集，避免空 toolkit</li>
+</ul>
+</div>
+</div>
+
+<!-- ═══════════ SECTION 8 ═══════════ -->
+<div class="sec" id="s8">
+<h2>八、结论与优先级</h2>
+
+<div class="g2">
+  <div class="card design">
+    <h4>核实结论</h4>
+    <p>问题记录 43 项经代码核实<strong>基本成立</strong>。重构方案<strong>方向正确</strong>，但须将安全热修前置、Tool 注入改实例化、permissions 配合 owner 模型。</p>
+  </div>
+  <div class="card impl">
+    <h4>执行建议</h4>
+    <table class="tbl">
+    <thead><tr><th>时间</th><th>动作</th></tr></thead>
+    <tbody>
+    <tr><td><strong>立即</strong></td><td>P0 安全热修 #1 #3 #4 #6 #7</td></tr>
+    <tr><td><strong>本周</strong></td><td>P1 认证贯穿 #2 #5 #9 #10 #16</td></tr>
+    <tr><td><strong>下周</strong></td><td>P2 views 拆分 + serializers 接入</td></tr>
+    <tr><td><strong>再下周</strong></td><td>P3 Tool 工厂 + P4 ChatView 拆分</td></tr>
+    </tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<div class="ft">
+  <p>Android-AutoTests · AI 助手模块综合解决方案 · 2026-07-13</p>
+  <p>来源：联调功能-AI助手模块问题记录 · 联调功能-AI助手模块化重构方案</p>
+  <p>原则：安全先行 · 增量重构 · 每阶段可验证可回滚</p>
+</div>
+
+</div>
+</body>
+</html>

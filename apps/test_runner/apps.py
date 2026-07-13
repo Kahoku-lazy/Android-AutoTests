@@ -25,7 +25,7 @@ class TestRunnerConfig(AppConfig):
 
         try:
             from .recovery_helpers import queue_payload_from_taskcard
-            from .state_machine import recover_orphans
+            from .state_machine import recover_orphans, repair_queued_terminal_drift
             from .models import TaskCard
             from .views import _enqueue, _device_queue, _schedule_next_queued
             from .runner import is_device_busy, _device_busy
@@ -36,7 +36,8 @@ class TestRunnerConfig(AppConfig):
             # 2. Atomic orphan recovery: TaskCard(running)→interrupted
             #    + TestRunRecord(RUNNING)→FAILED in one function
             recovered = recover_orphans()
-            if recovered["tasks"] or recovered["runs"]:
+            repaired = repair_queued_terminal_drift()
+            if recovered["tasks"] or recovered["runs"] or repaired:
                 print(
                     f"[test_runner] Startup recovery: "
                     f"{recovered['tasks']} task(s) interrupted, "
@@ -48,7 +49,12 @@ class TestRunnerConfig(AppConfig):
             for tc in queued:
                 serial = tc.device_serial
                 if serial:
-                    _enqueue(serial, queue_payload_from_taskcard(tc))
+                    existing = _device_queue.get(serial, [])
+                    already_enqueued = any(
+                        item.get("client_task_id") == tc.task_id for item in existing
+                    )
+                    if not already_enqueued:
+                        _enqueue(serial, queue_payload_from_taskcard(tc))
             if queued:
                 print(f"[test_runner] Recovered {queued.count()} queued task(s) from DB")
 

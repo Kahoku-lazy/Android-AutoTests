@@ -17,15 +17,15 @@ class TestRunConsumer(AsyncWebsocketConsumer):
         params = parse_qs(query_string)
         token = (params.get("token", [None])[0])
         if not token:
-            await self.close()
+            await self.close(code=4001, reason="missing token")
             return
         try:
             payload = verify_token(token)
             if not payload:
-                await self.close()
+                await self.close(code=4001, reason="invalid token")
                 return
         except Exception:
-            await self.close()
+            await self.close(code=4001, reason="token verification failed")
             return
         self.run_id = self.scope['url_route']['kwargs']['run_id']
         await self.accept()

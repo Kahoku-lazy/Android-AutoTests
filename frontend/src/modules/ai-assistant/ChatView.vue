@@ -2,7 +2,6 @@
 import { ref, onMounted, onUnmounted, nextTick, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import client from "@/shared/api-client.js";
-import { streamChat, SSEMessageBuilder } from "./api.js";
 import { Button as AnimalButton, Collapse } from "animal-island-vue";
 import PageHeader from "@/shared/components/PageHeader.vue";
 import AnimatedMascot from "@/shared/components/AnimatedMascot.vue";
@@ -10,73 +9,145 @@ import {
   IconPlus,
   IconSearch,
   IconArrowLeft,
-  IconSend,
   IconMessageCircle,
   IconPlay,
 } from "@/shared/icons/index.js";
-import { ElMessage, ElMessageBox } from "element-plus";
-import { marked } from "marked";
-import mermaid from "mermaid";
-
-mermaid.initialize({
-  startOnLoad: false,
-  theme: "base",
-  securityLevel: "loose",
-  themeVariables: {
-    primaryColor: "#19c8b9",
-    primaryTextColor: "#4A3A28",
-    lineColor: "#8a7b66",
-    fontSize: "14px",
-  },
-});
+import { ElMessage } from "element-plus";
+import { renderMermaidBlocks } from "./composables/useMarkdown.js";
+import MessageBubble from "./components/MessageBubble.vue";
+import ConfirmDialog from "./components/ConfirmDialog.vue";
+import ChatInput from "./components/ChatInput.vue";
+import { useMessageStore } from "./composables/useMessageStore.js";
+import { useToolCalls } from "./composables/useToolCalls.js";
+import { useConversation } from "./composables/useConversation.js";
+import { useSSE } from "./composables/useSSE.js";
 
 const route = useRoute();
 const router = useRouter();
 const agentId = ref(parseInt(route.params.agentId));
 const agent = ref(null);
-const conversations = ref([]);
-const activeConv = ref(null);
-const messages = ref([]);
 const inputText = ref("");
-const sending = ref(false);
 const chatBody = ref(null);
 
-// SSE streaming state
-const streamMode = ref(null); // 'sse' | 'fallback' | null
-const abortController = ref(null); // AbortController for SSE stream
-const assistIdx = ref(-1); // Index of the current assistant message being streamed
-const toolCalls = ref([]); // Tool call events during streaming
-const connectionMode = ref("unknown"); // 'sse' | 'fallback' | 'unknown' — persistent connection state
-const sseBuilder = ref(null); // SSEMessageBuilder for current stream — tracks thinking, tool calls, etc.
-const modelStatus = ref("idle"); // 'idle' | 'thinking' | 'calling_model' | 'tool_calling' | 'streaming' | 'done' — live model activity
-const importingPRD = ref(false); // PRD case batch import in progress
+const messageStore = useMessageStore();
+const { messages, assistIdx } = messageStore;
 
-// User confirmation state — drives the confirm dialog during SSE stream
-const pendingConfirm = ref(null); // null | { replyId, toolCalls: [...] }
-const pendingConfirmMsgIdx = ref(-1); // which message index to update after confirm
+const { toolCalls, resetToolCalls } = useToolCalls();
+
+const {
+  conversations,
+  activeConv,
+  connectionMode,
+  editingConvId,
+  editingTitle,
+  loadConversations,
+  newChat: createChat,
+  selectChat: switchChat,
+  startRename,
+  finishRename,
+  cancelRename,
+  deleteConversation,
+} = useConversation(agentId, messageStore);
 
 // File upload
-const fileInput = ref(null);
 const uploading = ref(false);
 const uploadedFile = ref(null);
 
-// Conversation rename
-const editingConvId = ref(null);
-const editingTitle = ref("");
-
 // Task records
 const taskRecords = ref([]);
-
-// Live task cards — keyed by run_id, updated as SSE events arrive
-// Each card: { run_id, title, status, device, device_model, cases, case_titles, loop_count, progress, actions }
 const taskCards = ref({});
-
-// Historical task cards — loaded from conversation API when switching chats
 const taskHistory = ref([]);
+const importingPRD = ref(false);
+
+function scrollBottom() {
+  nextTick(() => {
+    if (chatBody.value) chatBody.value.scrollTop = chatBody.value.scrollHeight;
+  });
+}
+
+function _parseTaskCardProgress(output) {
+  if (!output) return null;
+  const str = typeof output === "string" ? output : JSON.stringify(output);
+  const passedMatch = str.match(/(?:passed|通过)[=:]?\s*(\d+)/i);
+  const failedMatch = str.match(/(?:failed|失败)[=:]?\s*(\d+)/i);
+  const totalMatch = str.match(/Total:\s*(\d+)/i);
+  if (!passedMatch && !failedMatch) return null;
+  const passed = parseInt(passedMatch?.[1] || "0");
+  const failed = parseInt(failedMatch?.[1] || "0");
+  const total = parseInt(totalMatch?.[1] || passed + failed);
+  return { passed, failed, total };
+}
+
+function _updateTaskCardProgress(tr) {
+  const name = tr?.name || "";
+  const output = tr?.output || "";
+  const state = tr?.state || "";
+  for (const [runId, card] of Object.entries(taskCards.value)) {
+    if (name === "create_runner_task") {
+      taskCards.value[runId] = {
+        ...card,
+        status: "PENDING",
+        updatedAt: Date.now(),
+      };
+    } else if (name === "run_test") {
+      const parsed = _parseTaskCardProgress(output);
+      const isDone = state === "success" || state === "finished";
+      const status = isDone
+        ? parsed?.failed > 0
+          ? "FAILED"
+          : "COMPLETED"
+        : "RUNNING";
+      const progress = parsed
+        ? { current: parsed.total, total: parsed.total }
+        : card.progress;
+      taskCards.value[runId] = {
+        ...card,
+        status,
+        progress,
+        updatedAt: Date.now(),
+      };
+      for (const m of messages.value) {
+        if (m.hint?.run_id === runId) m.hint = { ...card, status, progress };
+      }
+    } else if (name === "stop_run") {
+      taskCards.value[runId] = {
+        ...card,
+        status: "STOPPED",
+        updatedAt: Date.now(),
+      };
+    }
+  }
+}
+
+const {
+  streamMode,
+  abortController,
+  sseBuilder,
+  modelStatus,
+  sending,
+  pendingConfirm,
+  pendingConfirmMsgIdx,
+  sendStreamMessage,
+  stopStream,
+  resolveConfirm,
+  approveAll,
+  denyAll,
+} = useSSE({
+  activeConv,
+  conversations,
+  messages,
+  assistIdx,
+  toolCalls,
+  taskCards,
+  connectionMode,
+  scrollBottom,
+  renderMermaidBlocks,
+  loadConversations,
+  updateTaskCardProgress: _updateTaskCardProgress,
+});
 
 onMounted(() => loadAgent());
 onUnmounted(() => {
-  // Abort any active SSE stream when leaving the page
   if (abortController.value) abortController.value.abort();
 });
 
@@ -153,14 +224,6 @@ async function loadAgent() {
     }
   } catch (_) {}
 }
-async function loadConversations() {
-  try {
-    const { data } = await client.get(
-      `/ai/agents/${agentId.value}/conversations`,
-    );
-    if (data.ok) conversations.value = data.conversations;
-  } catch (_) {}
-}
 
 // Task records
 async function loadTaskRecords() {
@@ -208,10 +271,6 @@ function goToTask(runId) {
   router.push("/runner");
 }
 
-// File upload
-function triggerUpload() {
-  fileInput.value?.click();
-}
 async function handleFileUpload(e) {
   const file = e.target.files?.[0];
   if (!file) return;
@@ -244,130 +303,22 @@ function removeFile() {
 
 // Chat
 async function newChat() {
-  try {
-    const { data } = await client.post(
-      `/ai/agents/${agentId.value}/conversations/create`,
-      { title: "新对话" },
-    );
-    if (data.ok) {
-      conversations.value.unshift({
-        id: data.id,
-        title: "新对话",
-        status: "active",
-        agent_scope_session_id: data.agent_scope_session_id || "",
-      });
-      connectionMode.value = data.agent_scope_session_id ? "sse" : "fallback";
-      selectChat(data.id);
-    }
-  } catch (_) {
-    connectionMode.value = "unknown";
-  }
+  await createChat((id) => selectChat(id));
 }
+
 async function selectChat(id) {
-  activeConv.value = id;
-  try {
-    const { data } = await client.get(`/ai/conversations/${id}/messages`);
-    if (data.ok) {
-      // Connection mode: SSE if session exists, otherwise 'connecting' (will auto-upgrade on first message)
-      const conv = conversations.value.find((c) => c.id === id);
-      if (conv?.agent_scope_session_id) {
-        connectionMode.value = "sse";
-      } else {
-        // Old conversation without session — will auto-create on next sendMessage via trySSEStream
-        connectionMode.value = "connecting";
-      }
-      // Tag each assistant message with its flow
-      messages.value = data.messages.map((m) => {
-        const flow =
-          m.role === "assistant"
-            ? conv?.agent_scope_session_id
-              ? "sse"
-              : "fallback"
-            : null;
-        // Rebuild SSE UI state from stored blocks (跨 Turn 上下文)
-        const blocks = m.blocks || [];
-        const textBlock = blocks.find((b) => b.type === "text");
-        const thinkingBlock = blocks.find((b) => b.type === "thinking");
-        const toolBlocks = blocks.filter(
-          (b) =>
-            b.type === "tool_call" ||
-            b.type === "tool_result" ||
-            b.type === "tool_pair",
-        );
-        const hintBlock = blocks.find((b) => b.type === "hint");
-        return {
-          ...m,
-          flow,
-          content: m.content || textBlock?.text || "",
-          thinking: thinkingBlock?.thinking || "",
-          thinkingDone: !!thinkingBlock?.thinking,
-          toolFlow: rebuildToolFlow(toolBlocks),
-          hint: _parseHintFromBlocks(hintBlock, blocks),
-          reason: m.reason || "normal",
-        };
-      });
-    }
-  } catch (_) {
-    connectionMode.value = "unknown";
-  }
-  // Load task history for this conversation
-  loadTaskHistory(id);
-  scrollBottom();
-}
-
-// Parse hint from stored blocks — handles both plain string and JSON object hints
-function _parseHintFromBlocks(hintBlock, allBlocks) {
-  if (!hintBlock) return "";
-  const raw = hintBlock.hint || "";
-  if (typeof raw === "object") return raw;
-  if (typeof raw === "string") {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return raw;
-    }
-  }
-  return raw;
-}
-
-// Rebuild toolFlow array from stored ContentBlocks for cross-session display
-function rebuildToolFlow(blocks) {
-  if (!blocks.length) return [];
-  // tool_pair blocks have .call and .result
-  const pairs = blocks.filter((b) => b.type === "tool_pair");
-  if (pairs.length) {
-    return pairs.map((p) => ({
-      id: p.call?.id || "",
-      name: p.call?.name || "",
-      displayArgs:
-        p.call?.inputRaw || (p.call?.input ? JSON.stringify(p.call.input) : ""),
-      state: p.result?.state || "success",
-      output: p.result?.output || "",
-    }));
-  }
-  // Separate tool_call + tool_result blocks
-  const calls = blocks.filter((b) => b.type === "tool_call");
-  const results = blocks.filter((b) => b.type === "tool_result");
-  return calls.map((c) => {
-    const r = results.find((r) => r.id === c.id);
-    return {
-      id: c.id || "",
-      name: c.name || "",
-      displayArgs: c.inputRaw || (c.input ? JSON.stringify(c.input) : ""),
-      state: r?.state || "success",
-      output: r?.output || "",
-    };
+  await switchChat(id, {
+    onAfterSelect: async (convId) => {
+      await loadTaskHistory(convId);
+      scrollBottom();
+    },
   });
 }
 
 async function sendMessage() {
   const text = inputText.value.trim();
-  if ((!text && !uploadedFile.value) || !activeConv.value || sending.value)
-    return;
+  if ((!text && !uploadedFile.value) || !activeConv.value || sending.value) return;
   inputText.value = "";
-  sending.value = true;
-  toolCalls.value = [];
-  modelStatus.value = "calling_model"; // optimistic: we just kicked off the request
 
   let msgText = text;
   let displayText = text || "";
@@ -381,534 +332,14 @@ async function sendMessage() {
     uploadedFile.value = null;
   }
 
-  // Add user message to local list (user messages don't need flow tag)
-  messages.value.push({ role: "user", content: displayText });
-  assistIdx.value = messages.value.length;
-  // Placeholder for assistant response — flow will be set after actual delivery
-  messages.value.push({
-    role: "assistant",
-    content: "",
-    tokens: 0,
-    flow: null,
-  });
-  scrollBottom();
-
-  // Try SSE streaming first, fall back to Django blocking mode
-  try {
-    await trySSEStream(msgText);
-  } catch (e) {
-    console.warn("SSE setup failed, falling back to Django /send:", e);
-    streamMode.value = "fallback";
-    connectionMode.value = "fallback"; // persist connection state
-    // Mark this message as fallback flow
-    if (assistIdx.value < messages.value.length) {
-      messages.value[assistIdx.value].flow = "fallback";
-    }
-    await fallbackSend(msgText);
-  }
+  await sendStreamMessage(msgText, displayText);
 }
 
-async function trySSEStream(msgText) {
-  // Step 1: Ensure AgentScope session exists (Django backend handles agent registration + session creation)
-  const { data: sessionData } = await client.post(
-    `/ai/conversations/${activeConv.value}/create-scope-session`,
-  );
-  if (!sessionData.ok) {
-    throw new Error(sessionData.error || "AgentScope session creation failed");
-  }
-
-  const sessionId = sessionData.session_id;
-  const agentScopeId = sessionData.agent_scope_id;
-
-  // Update conversation list so selectChat knows this is SSE next time
-  const conv = conversations.value.find((c) => c.id === activeConv.value);
-  if (conv) conv.agent_scope_session_id = sessionId;
-
-  // Step 2: Save user message to Django
-  await client.post(`/ai/conversations/${activeConv.value}/save-message`, {
-    role: "user",
-    content: msgText,
-  });
-
-  // Step 3: Subscribe to SSE + Trigger chat
-  streamMode.value = "sse";
-  connectionMode.value = "sse";
-  if (assistIdx.value < messages.value.length) {
-    messages.value[assistIdx.value].flow = "sse";
-  }
-  let streamDone = false;
-  let fullContent = "";
-  let thinkingContent = "";
-  // Track active tool call args being accumulated from deltas
-  let currentToolName = "";
-  let currentToolArgsJson = "";
-  // Cache of completed toolCalls (name+args) by tool_call_id, so we can attach results
-  const completedToolCalls = {};
-
-  const { controller, builder } = streamChat(sessionId, agentScopeId, msgText, {
-    // ── Live status (drives the header indicator) ──
-    onStatus: (status) => {
-      modelStatus.value = status;
-      // Auto-clear "done" after 3s so the badge doesn't linger
-      if (status === "done") {
-        setTimeout(() => {
-          if (modelStatus.value === "done") modelStatus.value = "idle";
-        }, 3000);
-      }
-    },
-    // ── Thinking process ──
-    onThinkingStart: () => {
-      thinkingContent = "";
-      if (assistIdx.value < messages.value.length) {
-        messages.value[assistIdx.value].thinking = "";
-        messages.value[assistIdx.value].content = fullContent;
-        scrollBottom();
-      }
-    },
-    onThinkingDelta: (delta, full) => {
-      thinkingContent = full || thinkingContent + delta;
-      if (assistIdx.value < messages.value.length) {
-        messages.value[assistIdx.value].thinking = thinkingContent;
-        scrollBottom();
-      }
-    },
-    onThinkingEnd: (evt) => {
-      if (assistIdx.value < messages.value.length) {
-        messages.value[assistIdx.value].thinkingDone = true;
-        if (evt?.block?.thinking) {
-          messages.value[assistIdx.value].thinking = evt.block.thinking;
-        }
-        scrollBottom();
-      }
-    },
-
-    // ── Text content ──
-    onTextDelta: (delta, full) => {
-      fullContent = full != null ? full : fullContent + delta;
-      if (assistIdx.value < messages.value.length) {
-        messages.value[assistIdx.value].content = fullContent;
-        scrollBottom();
-      }
-    },
-    onTextEnd: (evt) => {
-      if (evt?.text != null) {
-        fullContent = evt.text;
-        if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value].content = fullContent;
-        }
-      }
-    },
-
-    // ── Tool call (ReAct loop) — name from START, args from DELTAs, completed at END ──
-    onToolCallStart: (evt) => {
-      currentToolName = evt.name;
-      currentToolArgsJson = "";
-      toolCalls.value.push({
-        id: evt.toolCallId,
-        name: evt.name,
-        state: "calling",
-      });
-      if (assistIdx.value < messages.value.length) {
-        messages.value[assistIdx.value].toolFlow = [...toolCalls.value];
-        scrollBottom();
-      }
-    },
-    onToolCallDelta: (evt) => {
-      currentToolArgsJson =
-        evt.argsJson != null
-          ? evt.argsJson
-          : currentToolArgsJson + (evt.delta || "");
-    },
-    onToolCallEnd: (evt) => {
-      // evt.toolCall has the reconstructed { id, name, input, inputRaw, state: 'submitted' }
-      const tc = evt.toolCall;
-      if (tc) {
-        completedToolCalls[tc.id] = tc;
-        const idx = toolCalls.value.findIndex((t) => t.id === tc.id);
-        const displayArgs = tc.inputRaw || currentToolArgsJson;
-        if (idx >= 0) {
-          toolCalls.value[idx] = { ...tc, state: "submitted", displayArgs };
-        }
-      }
-      if (assistIdx.value < messages.value.length) {
-        messages.value[assistIdx.value].toolFlow = [...toolCalls.value];
-        scrollBottom();
-      }
-    },
-
-    // ── Tool result — output streamed via TEXT_DELTA, finalized at END ──
-    onToolResultStart: (evt) => {
-      const idx = toolCalls.value.findIndex((t) => t.id === evt.toolCallId);
-      if (idx >= 0) toolCalls.value[idx].state = "running";
-      if (assistIdx.value < messages.value.length) {
-        messages.value[assistIdx.value].toolFlow = [...toolCalls.value];
-        scrollBottom();
-      }
-    },
-    onToolResultDelta: (evt) => {
-      const idx = toolCalls.value.findIndex((t) => t.id === evt.toolCallId);
-      if (idx >= 0) {
-        toolCalls.value[idx].partialOutput =
-          evt.output != null
-            ? evt.output
-            : (toolCalls.value[idx].partialOutput || "") + (evt.delta || "");
-      }
-      if (assistIdx.value < messages.value.length) {
-        messages.value[assistIdx.value].toolFlow = [...toolCalls.value];
-        scrollBottom();
-      }
-    },
-    onToolResultEnd: (evt) => {
-      // evt.toolResult = { id, name, output, state }
-      const tr = evt.toolResult;
-      if (tr) {
-        const idx = toolCalls.value.findIndex((t) => t.id === tr.id);
-        if (idx >= 0) {
-          toolCalls.value[idx].state = tr.state || "success";
-          toolCalls.value[idx].output = tr.output;
-          toolCalls.value[idx].partialOutput = null;
-        }
-        // Auto-update task card progress when run_test completes
-        _updateTaskCardProgress(tr);
-      }
-      if (assistIdx.value < messages.value.length) {
-        messages.value[assistIdx.value].toolFlow = [...toolCalls.value];
-        scrollBottom();
-      }
-    },
-
-    // ── Model call info ──
-    onModelCallStart: (evt) => {
-      if (assistIdx.value < messages.value.length) {
-        messages.value[assistIdx.value].modelName = evt.modelName;
-      }
-    },
-    onModelCallEnd: (evt) => {
-      if (assistIdx.value < messages.value.length) {
-        messages.value[assistIdx.value].tokens = evt.outputTokens || 0;
-        messages.value[assistIdx.value].inputTokens = evt.inputTokens || 0;
-      }
-    },
-
-    // ── Hint — parse task cards and store for live updates ──
-    onHint: (evt) => {
-      let hintData = evt.hint;
-      if (typeof hintData === "string") {
-        try {
-          hintData = JSON.parse(hintData);
-        } catch {}
-      }
-      if (hintData?.type === "task_card" && hintData?.run_id) {
-        // Merge with existing card (preserve live progress)
-        const existing = taskCards.value[hintData.run_id] || {};
-        taskCards.value[hintData.run_id] = {
-          ...existing,
-          ...hintData,
-          updatedAt: Date.now(),
-        };
-        // Store parsed card as hint for rendering
-        if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value].hint = hintData; // parsed object → triggers task-card rendering
-        }
-        scrollBottom();
-      } else {
-        // Plain text hint (e.g. plan steps)
-        if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value].hint = hintData;
-          scrollBottom();
-        }
-      }
-    },
-
-    // ── User confirmation (P0 — dangerous tool calls require approval) ──
-    // When AgentScope emits REQUIRE_USER_CONFIRM, pause display and prompt the user.
-    // The stream continues but we hold off rendering pending tool calls until confirmed.
-    onRequireConfirm: (evt) => {
-      // evt = { toolCalls: [{tool_call_id, tool_call_name, arguments}] }
-      modelStatus.value = "idle"; // pause the status indicator
-      pendingConfirm.value = evt;
-      pendingConfirmMsgIdx.value = assistIdx.value;
-    },
-
-    // ── Exceed max iterations — more visible display ──
-    onExceedMaxIters: (evt) => {
-      if (assistIdx.value < messages.value.length) {
-        const block = builder.getFullThinking();
-        messages.value[assistIdx.value].thinking = block;
-        messages.value[assistIdx.value].thinkingDone = true;
-        messages.value[assistIdx.value].reason = "exceed_max_iters";
-        // Show a prominent warning banner instead of inline text
-        messages.value[assistIdx.value].content =
-          (messages.value[assistIdx.value].content || "") +
-          "\n\n⚠️ **[智能体已达最大推理次数]** 响应可能被截断，建议简化问题或分步提问。";
-        scrollBottom();
-      }
-    },
-
-    // ── Stream lifecycle ──
-    onDone: async () => {
-      if (streamDone) return;
-      streamDone = true;
-      const finalContent = builder.getFullText() || fullContent;
-      const blocks = builder.getBlocks();
-      const reason = builder.getReason();
-      try {
-        await client.post(
-          `/ai/conversations/${activeConv.value}/save-message`,
-          {
-            role: "assistant",
-            content: finalContent,
-            blocks,
-            reason,
-            tokens: builder.getTokenUsage().total || 0,
-            input_tokens: builder.getTokenUsage().input || 0,
-            model_name: builder.modelName || "",
-          },
-        );
-        loadConversations();
-        await nextTick();
-        renderMermaidBlocks();
-      } catch (e) {
-        console.error("Failed to save streamed message:", e);
-      }
-      sending.value = false;
-      streamMode.value = null;
-      abortController.value = null;
-      scrollBottom();
-    },
-    onError: async (err) => {
-      if (streamDone) return;
-      streamDone = true;
-      console.warn("SSE stream error, falling back:", err);
-      streamMode.value = "fallback";
-      connectionMode.value = "fallback";
-      modelStatus.value = "idle";
-      if (assistIdx.value < messages.value.length) {
-        messages.value[assistIdx.value].flow = "fallback";
-      }
-      await fallbackSend(msgText);
-    },
-  });
-
-  abortController.value = controller;
-  sseBuilder.value = builder;
-
-  // Update conversation title from first user message
-  try {
-    const conv = conversations.value.find((c) => c.id === activeConv.value);
-    if (conv && conv.title === "新对话") {
-      const { data } = await client.post(
-        `/ai/conversations/${activeConv.value}/rename`,
-        { title: msgText.slice(0, 30) },
-      );
-      if (data.ok) conv.title = data.title;
-    }
-  } catch (_) {}
-}
-
-async function fallbackSend(msgText) {
-  // Django blocking mode — already saves both messages
-  try {
-    const { data } = await client.post(
-      `/ai/conversations/${activeConv.value}/send`,
-      { message: msgText },
-    );
-    if (data.ok) {
-      // Replace our placeholder with the actual response from Django
-      if (assistIdx.value < messages.value.length) {
-        messages.value[assistIdx.value] = { ...data.message, flow: "fallback" };
-      }
-      loadConversations();
-      await nextTick();
-      renderMermaidBlocks();
-    } else {
-      if (assistIdx.value < messages.value.length) {
-        messages.value[assistIdx.value] = {
-          role: "assistant",
-          content: data.error || "发送失败",
-          tokens: 0,
-          flow: "fallback",
-        };
-      }
-    }
-  } catch (e) {
-    console.error("Fallback send failed:", e);
-    const errMsg =
-      e.code === "ECONNABORTED"
-        ? "请求超时，请重试"
-        : e.response?.status === 500
-          ? "服务器错误"
-          : "发送失败，请检查服务状态。";
-    if (assistIdx.value < messages.value.length) {
-      messages.value[assistIdx.value] = {
-        role: "assistant",
-        content: errMsg,
-        tokens: 0,
-        flow: "fallback",
-      };
-    }
-  }
-  sending.value = false;
-  streamMode.value = null;
-  abortController.value = null;
-  scrollBottom();
-}
-
-function stopStream() {
-  if (abortController.value) {
-    abortController.value.abort();
-    // Mark as stopped before saving so the reason is persisted
-    if (
-      assistIdx.value < messages.value.length &&
-      messages.value[assistIdx.value].flow === "sse"
-    ) {
-      const partial = messages.value[assistIdx.value].content;
-      client
-        .post(`/ai/conversations/${activeConv.value}/save-message`, {
-          role: "assistant",
-          content: partial || "（用户主动停止）",
-          tokens: 0,
-          reason: "stopped",
-          blocks: sseBuilder.value ? sseBuilder.value.getBlocks() : [],
-        })
-        .catch((e) => console.error("Failed to save partial stream:", e));
-    }
-    sending.value = false;
-    abortController.value = null;
-    streamMode.value = null;
-    modelStatus.value = "idle";
-    scrollBottom();
-  }
-  // Also cancel any pending confirmation
-  pendingConfirm.value = null;
-}
-
-// User confirmation — approve or deny a dangerous tool call
-async function resolveConfirm(toolCallId, approved, reason = "") {
-  const confirm = pendingConfirm.value;
-  if (!confirm) return;
-  // Mark the tool call in the UI as approved/denied
-  if (
-    pendingConfirmMsgIdx.value >= 0 &&
-    pendingConfirmMsgIdx.value < messages.value.length
-  ) {
-    const msg = messages.value[pendingConfirmMsgIdx.value];
-    if (!msg.toolFlow) msg.toolFlow = [];
-    const idx = msg.toolFlow.findIndex((t) => t.id === toolCallId);
-    if (idx >= 0) {
-      msg.toolFlow[idx] = {
-        ...msg.toolFlow[idx],
-        state: approved ? "submitted" : "denied",
-      };
-    } else {
-      msg.toolFlow.push({
-        id: toolCallId,
-        state: approved ? "submitted" : "denied",
-        name: "",
-      });
-    }
-  }
-  pendingConfirm.value = null;
-  modelStatus.value = "tool_calling"; // resume indicator
-
-  // Send result back to AgentScope via Django backend
-  const result = {
-    reply_id: confirm.replyId || "",
-    confirm_results: [
-      {
-        tool_call_id: toolCallId,
-        approved,
-        ...(reason ? { reason } : {}),
-      },
-    ],
-  };
-  try {
-    await client.post(
-      `/ai/conversations/${activeConv.value}/confirm-result`,
-      result,
-    );
-  } catch (e) {
-    console.error("Failed to send confirm result:", e);
-    ElMessage.warning("确认结果发送失败，工具调用可能无法继续");
-  }
-}
-
-async function approveAll() {
-  const confirm = pendingConfirm.value;
-  if (!confirm?.toolCalls) return;
-  for (const tc of confirm.toolCalls) {
-    await resolveConfirm(tc.tool_call_id, true);
-  }
-}
-
-async function denyAll() {
-  const confirm = pendingConfirm.value;
-  if (!confirm?.toolCalls) return;
-  for (const tc of confirm.toolCalls) {
-    await resolveConfirm(tc.tool_call_id, false, "用户拒绝");
-  }
-}
-
-function scrollBottom() {
-  nextTick(() => {
-    if (chatBody.value) chatBody.value.scrollTop = chatBody.value.scrollHeight;
-  });
-}
 function handleKey(e) {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     sendMessage();
   }
-}
-
-// Conversation rename
-function startRename(conv) {
-  editingConvId.value = conv.id;
-  editingTitle.value = conv.title;
-  nextTick(() => {
-    const input = document.querySelector(".conv-rename-input");
-    if (input) {
-      input.focus();
-      input.select();
-    }
-  });
-}
-async function finishRename() {
-  const id = editingConvId.value;
-  const title = editingTitle.value.trim();
-  editingConvId.value = null;
-  if (!title || !id) return;
-  try {
-    const { data } = await client.post(`/ai/conversations/${id}/rename`, {
-      title,
-    });
-    if (data.ok) {
-      const c = conversations.value.find((x) => x.id === id);
-      if (c) c.title = data.title;
-    }
-  } catch (_) {}
-}
-function cancelRename() {
-  editingConvId.value = null;
-}
-
-async function deleteConversation(conv) {
-  try {
-    await ElMessageBox.confirm(`删除对话「${conv.title}」？`, "确认删除", {
-      confirmButtonText: "删除",
-      cancelButtonText: "取消",
-      type: "warning",
-    });
-    const { data } = await client.post(`/ai/conversations/${conv.id}/delete`);
-    if (data.ok) {
-      ElMessage.success("已删除");
-      if (activeConv.value === conv.id) {
-        activeConv.value = null;
-        messages.value = [];
-      }
-      loadConversations();
-    }
-  } catch (_) {}
 }
 
 // Avatars
@@ -925,99 +356,18 @@ function avatarText(avatar) {
   return avatar?.startsWith("/api/ai/avatars/") ? "" : avatar || "";
 }
 
-// Markdown
-function renderMarkdown(text) {
-  if (!text) return "";
-  pendingMermaidBlocks = [];
-  return marked(text, { breaks: true, gfm: true });
-}
-
 function toggleThinking(m) {
   m.thinkingExpanded = !m.thinkingExpanded;
 }
 
-function toolStateLabel(state) {
-  const labels = {
-    calling: "调用中...",
-    submitted: "参数已提交",
-    running: "执行中...",
-    success: "执行完成",
-    error: "执行出错",
-    finished: "已完成",
-    denied: "已拒绝",
-  };
-  return labels[state] || state || "";
-}
-
-// Format tool arguments for the confirm dialog — makes JSON readable
-function formatConfirmArgs(args) {
-  if (!args) return "";
-  if (typeof args === "string") {
-    try {
-      return JSON.stringify(JSON.parse(args), null, 2);
-    } catch {
-      return args;
-    }
-  }
-  return JSON.stringify(args, null, 2);
-}
-
-// Parse run_test output to extract case-by-case results → update task card progress
-function _parseTaskCardProgress(output) {
-  if (!output) return null;
-  const str = typeof output === "string" ? output : JSON.stringify(output);
-  // Match patterns like "passed=X" or "通过=X" or "X/Y passed"
-  const passedMatch = str.match(/(?:passed|通过)[=:]?\s*(\d+)/i);
-  const failedMatch = str.match(/(?:failed|失败)[=:]?\s*(\d+)/i);
-  const totalMatch = str.match(/Total:\s*(\d+)/i);
-  if (!passedMatch && !failedMatch) return null;
-  const passed = parseInt(passedMatch?.[1] || "0");
-  const failed = parseInt(failedMatch?.[1] || "0");
-  const total = parseInt(totalMatch?.[1] || passed + failed);
-  return { passed, failed, total };
-}
-
-// Update task card state when a relevant tool call completes
-function _updateTaskCardProgress(tr) {
-  const name = tr?.name || "";
-  const output = tr?.output || "";
-  const state = tr?.state || "";
-  // Find any task card that should be updated
-  for (const [runId, card] of Object.entries(taskCards.value)) {
-    if (name === "create_runner_task") {
-      taskCards.value[runId] = {
-        ...card,
-        status: "PENDING",
-        updatedAt: Date.now(),
-      };
-    } else if (name === "run_test") {
-      const parsed = _parseTaskCardProgress(output);
-      const isDone = state === "success" || state === "finished";
-      const status = isDone
-        ? parsed?.failed > 0
-          ? "FAILED"
-          : "COMPLETED"
-        : "RUNNING";
-      const progress = parsed
-        ? { current: parsed.total, total: parsed.total }
-        : card.progress;
-      taskCards.value[runId] = {
-        ...card,
-        status,
-        progress,
-        updatedAt: Date.now(),
-      };
-      // Also update in message hints
-      for (const m of messages.value) {
-        if (m.hint?.run_id === runId) m.hint = { ...card, status, progress };
-      }
-    } else if (name === "stop_run") {
-      taskCards.value[runId] = {
-        ...card,
-        status: "STOPPED",
-        updatedAt: Date.now(),
-      };
-    }
+async function handleImportPRD({ sessionId }) {
+  if (!sessionId || sending.value) return;
+  importingPRD.value = true;
+  inputText.value = `请将 session_id=${sessionId} 的设计用例全部导入到用例库（调用 import_designed_cases）`;
+  try {
+    await sendMessage();
+  } finally {
+    importingPRD.value = false;
   }
 }
 
@@ -1061,48 +411,6 @@ function progressPercent(progress) {
   if (!progress) return 0;
   const p = progress.current / progress.total;
   return Math.round(Math.max(0, Math.min(100, p * 100)));
-}
-let mermaidId = 0;
-let pendingMermaidBlocks = [];
-const mermaidRenderer = {
-  code(code, lang) {
-    if (lang === "mermaid") {
-      const id = `mm-${++mermaidId}`;
-      const escaped = code
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-      pendingMermaidBlocks.push({ id, code });
-      return `<div class="mermaid-placeholder" data-mm-id="${id}"><pre><code class="language-mermaid">${escaped}</code></pre></div>`;
-    }
-    const escaped = code
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-    return `<pre><code class="language-${lang || ""}">${escaped}</code></pre>`;
-  },
-};
-marked.use({ renderer: mermaidRenderer });
-
-async function renderMermaidBlocks() {
-  if (!pendingMermaidBlocks.length) return;
-  const jobs = pendingMermaidBlocks.splice(0);
-  await nextTick();
-  await new Promise((r) => requestAnimationFrame(r));
-  for (const { id, code } of jobs) {
-    const placeholder = document.querySelector(`[data-mm-id="${id}"]`);
-    if (!placeholder) continue;
-    try {
-      const { svg } = await mermaid.render(id, code);
-      const wrapper = document.createElement("div");
-      wrapper.className = "mermaid-diagram";
-      wrapper.innerHTML = svg;
-      placeholder.replaceWith(wrapper);
-    } catch (e) {
-      placeholder.classList.remove("mermaid-placeholder");
-      placeholder.removeAttribute("data-mm-id");
-    }
-  }
 }
 </script>
 
@@ -1320,272 +628,21 @@ async function renderMermaidBlocks() {
             </div>
 
             <div ref="chatBody" class="chat-body">
-              <div v-for="(m, i) in messages" :key="i" :class="['msg', m.role]">
-                <div
-                  class="msg-avatar"
-                  :style="
-                    avatarStyle(m.role === 'assistant' ? agent?.avatar : '')
-                  "
-                >
-                  <span v-if="m.role === 'user'">👤</span>
-                  <template v-else
-                    ><span v-if="avatarText(agent?.avatar)">{{
-                      avatarText(agent?.avatar)
-                    }}</span></template
-                  >
-                </div>
-                <div class="msg-content">
-                  <div class="msg-author">
-                    {{ m.role === "user" ? "我" : agent?.name || "AI"
-                    }}<span
-                      v-if="m.role === 'assistant' && m.flow"
-                      class="msg-flow-tag"
-                      :class="m.flow"
-                      >{{ m.flow === "sse" ? "⚡ SSE" : "⏳ Django" }}</span
-                    >
-                  </div>
-                  <!-- Thinking process (collapsible, only for SSE messages) -->
-                  <div
-                    v-if="m.role === 'assistant' && m.thinking"
-                    class="thinking-block"
-                    :class="{ 'thinking-done': m.thinkingDone }"
-                  >
-                    <div class="thinking-header" @click="toggleThinking(m)">
-                      <span class="thinking-icon">{{
-                        m.thinkingDone ? "💭" : "🤔"
-                      }}</span>
-                      <span class="thinking-label">思考过程</span>
-                      <span class="thinking-toggle">{{
-                        m.thinkingExpanded ? "收起" : "展开"
-                      }}</span>
-                    </div>
-                    <div
-                      v-if="m.thinkingExpanded || !m.thinkingDone"
-                      class="thinking-body"
-                      v-html="m.thinking"
-                    ></div>
-                  </div>
-                  <!-- Tool call flow (only for SSE messages) -->
-                  <div
-                    v-if="
-                      m.role === 'assistant' && m.toolFlow && m.toolFlow.length
-                    "
-                    class="tool-flow-block"
-                  >
-                    <div
-                      v-for="tc in m.toolFlow"
-                      :key="tc.id"
-                      class="tool-step"
-                      :class="tc.state"
-                    >
-                      <div class="tool-step-header">
-                        <span class="tool-step-icon">{{
-                          tc.state === "calling"
-                            ? "⏳"
-                            : tc.state === "running"
-                              ? "🔄"
-                              : tc.state === "success"
-                                ? "✅"
-                                : tc.state === "error"
-                                  ? "❌"
-                                  : "🔧"
-                        }}</span>
-                        <span class="tool-step-name">{{ tc.name }}</span>
-                        <span class="tool-step-state">{{
-                          toolStateLabel(tc.state)
-                        }}</span>
-                      </div>
-                      <div v-if="tc.displayArgs" class="tool-step-args">
-                        <details>
-                          <summary>参数</summary>
-                          <pre>{{ tc.displayArgs }}</pre>
-                        </details>
-                      </div>
-                      <div
-                        v-if="tc.partialOutput"
-                        class="tool-step-output streaming"
-                      >
-                        <span class="tool-streaming-dot"></span>
-                        {{ tc.partialOutput.slice(0, 200) }}...
-                      </div>
-                      <div
-                        v-if="tc.output && !tc.partialOutput"
-                        class="tool-step-output"
-                      >
-                        {{
-                          typeof tc.output === "string"
-                            ? tc.output.slice(0, 300)
-                            : JSON.stringify(tc.output).slice(0, 300)
-                        }}
-                      </div>
-                    </div>
-                  </div>
-                  <!-- Hint block — task card OR plain hint text -->
-                  <template v-if="m.role === 'assistant' && m.hint">
-                    <!-- Task card: rendered when m.hint is an object with type === 'task_card' -->
-                    <div
-                      v-if="m.hint && m.hint.type === 'task_card'"
-                      class="task-card"
-                    >
-                      <div class="task-card-header">
-                        <span
-                          class="task-status-badge"
-                          :class="taskStatusClass(m.hint.status)"
-                          >{{ taskStatusLabel(m.hint.status) }}</span
-                        >
-                        <span class="task-id"
-                          >#{{
-                            m.hint.run_id?.replace("ai-task-", "").slice(0, 12)
-                          }}</span
-                        >
-                      </div>
-                      <div class="task-title">
-                        {{ m.hint.title || "AI 任务" }}
-                      </div>
-                      <div class="task-meta">
-                        <span>📱 {{ m.hint.device || "—" }}</span>
-                        <span v-if="m.hint.device_model">
-                          ({{ m.hint.device_model }})</span
-                        >
-                      </div>
-                      <div class="task-meta">
-                        <span
-                          >📋
-                          {{ (m.hint.case_titles || []).length }} 个用例</span
-                        >
-                        <span v-if="m.hint.loop_count > 1">
-                          · 🔁 {{ m.hint.loop_count }} 轮</span
-                        >
-                      </div>
-                    </div>
-                    <!-- SOP card: rendered when m.hint.type === 'sop_card' -->
-                    <div
-                      v-else-if="m.hint && m.hint.type === 'sop_card'"
-                      class="sop-card"
-                    >
-                      <div class="sop-card-header">
-                        <span class="sop-icon">📋</span>
-                        <span class="sop-title">SOP 工作流</span>
-                        <span
-                          class="sop-phase-badge"
-                          :class="'phase-' + m.hint.phase"
-                        >
-                          阶段 {{ m.hint.phase }}: {{ m.hint.phase_label }}
-                        </span>
-                      </div>
-                      <div class="sop-requirement" v-if="m.hint.requirement">
-                        <strong>需求:</strong> {{ m.hint.requirement }}
-                      </div>
-                      <div class="sop-cases" v-if="m.hint.case_count > 0">
-                        <strong>用例设计 ({{ m.hint.case_count }} 个):</strong>
-                        <ol>
-                          <li v-for="(name, i) in m.hint.case_names" :key="i">
-                            {{ name }}
-                          </li>
-                        </ol>
-                      </div>
-                      <div class="sop-hint" v-if="m.hint.next_hint">
-                        <span class="arrow">→</span> {{ m.hint.next_hint }}
-                      </div>
-                    </div>
-                    <!-- PRD case preview card: rendered when m.hint.type === 'prd_case_preview' -->
-                    <div
-                      v-else-if="m.hint && m.hint.type === 'prd_case_preview'"
-                      class="prd-preview-card"
-                    >
-                      <div class="prd-preview-header">
-                        <span class="prd-icon">📄</span>
-                        <span class="prd-title">PRD 用例设计完成</span>
-                      </div>
-                      <div class="prd-preview-body">
-                        <div class="prd-preview-stat">
-                          <span class="prd-stat-value">{{
-                            m.hint.total_cases || 0
-                          }}</span>
-                          <span class="prd-stat-label">生成用例</span>
-                        </div>
-                        <div class="prd-preview-stat" v-if="m.hint.p0_count">
-                          <span class="prd-stat-value p0">{{
-                            m.hint.p0_count
-                          }}</span>
-                          <span class="prd-stat-label">P0 必测</span>
-                        </div>
-                        <div class="prd-preview-stat" v-if="m.hint.p1_count">
-                          <span class="prd-stat-value p1">{{
-                            m.hint.p1_count
-                          }}</span>
-                          <span class="prd-stat-label">P1 应测</span>
-                        </div>
-                      </div>
-                      <div class="prd-preview-actions">
-                        <button
-                          class="prd-import-btn"
-                          :disabled="importingPRD"
-                          @click="
-                            $emit('importPRDCases', {
-                              sessionId: m.hint.session_id,
-                              cases: m.hint.cases_preview,
-                            })
-                          "
-                        >
-                          {{ importingPRD ? "导入中..." : "📥 导入到用例库" }}
-                        </button>
-                      </div>
-                    </div>
-                    <!-- Generic hint: rendered as plain text hint block -->
-                    <div v-else class="hint-block">
-                      <span class="hint-icon">💡</span>
-                      <span class="hint-text">{{
-                        typeof m.hint === "string"
-                          ? m.hint
-                          : m.hint.hint || m.hint.text || JSON.stringify(m.hint)
-                      }}</span>
-                    </div>
-                  </template>
-                  <!-- Main text content -->
-                  <div
-                    class="msg-text"
-                    v-html="
-                      m.role === 'user' ? m.content : renderMarkdown(m.content)
-                    "
-                  ></div>
-                  <!-- Token usage -->
-                  <div v-if="m.tokens" class="msg-tokens">
-                    <span v-if="m.model_name" class="model-name-tag">{{
-                      m.model_name
-                    }}</span>
-                    {{ m.tokens }} tokens
-                    <span
-                      v-if="m.inputTokens"
-                      style="color: #8a7b66; font-size: 11px"
-                      >(输入 {{ m.inputTokens }} / 输出
-                      {{ m.tokens - m.inputTokens || m.tokens }})</span
-                    >
-                  </div>
-                  <!-- End reason badge (non-normal) -->
-                  <div
-                    v-if="
-                      m.role === 'assistant' &&
-                      m.reason &&
-                      m.reason !== 'normal'
-                    "
-                    class="reason-badge"
-                    :class="m.reason"
-                  >
-                    <span v-if="m.reason === 'exceed_max_iters'"
-                      >⚠️ 达到最大迭代次数</span
-                    >
-                    <span v-else-if="m.reason === 'stopped'"
-                      >⏹ 用户主动停止</span
-                    >
-                    <span v-else-if="m.reason === 'error'">❌ 异常终止</span>
-                    <span v-else>{{ m.reason }}</span>
-                  </div>
-                </div>
-              </div>
+              <MessageBubble
+                v-for="(m, i) in messages"
+                :key="i"
+                :message="m"
+                :agent-name="agent?.name || 'AI'"
+                :agent-avatar="agent?.avatar || ''"
+                :avatar-style-fn="avatarStyle"
+                :avatar-text-fn="avatarText"
+                :importing-prd="importingPRD"
+                @toggle-thinking="toggleThinking"
+                @import-prd="handleImportPRD"
+              />
               <div
                 v-if="sending && !messages[messages.length - 1]?.content"
-                class="msg assistant"
+                class="msg assistant typing-row"
               >
                 <div class="msg-avatar">
                   <span v-if="avatarText(agent?.avatar)">{{
@@ -1601,111 +658,25 @@ async function renderMermaidBlocks() {
               </div>
             </div>
 
-            <!-- User confirmation dialog — shown when LLM emits REQUIRE_USER_CONFIRM (P0 security) -->
-            <div v-if="pendingConfirm" class="confirm-overlay">
-              <div class="confirm-dialog">
-                <div class="confirm-header">
-                  <span class="confirm-icon">⚠️</span>
-                  <span class="confirm-title">操作需要确认</span>
-                </div>
-                <div class="confirm-body">
-                  <p class="confirm-desc">AI 助手请求执行以下敏感操作：</p>
-                  <div class="confirm-tools">
-                    <div
-                      v-for="tc in pendingConfirm.toolCalls || []"
-                      :key="tc.tool_call_id"
-                      class="confirm-tool-item"
-                    >
-                      <span class="confirm-tool-icon">🔧</span>
-                      <div class="confirm-tool-info">
-                        <span class="confirm-tool-name">{{
-                          tc.tool_call_name
-                        }}</span>
-                        <pre class="confirm-tool-args">{{
-                          formatConfirmArgs(tc.arguments)
-                        }}</pre>
-                      </div>
-                      <div class="confirm-tool-actions">
-                        <button
-                          class="confirm-btn approve"
-                          @click="resolveConfirm(tc.tool_call_id, true)"
-                        >
-                          ✅ 允许
-                        </button>
-                        <button
-                          class="confirm-btn deny"
-                          @click="resolveConfirm(tc.tool_call_id, false)"
-                        >
-                          ❌ 拒绝
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div class="confirm-footer">
-                  <button class="confirm-btn approve-all" @click="approveAll">
-                    ✅ 全部允许
-                  </button>
-                  <button class="confirm-btn deny-all" @click="denyAll">
-                    ❌ 全部拒绝
-                  </button>
-                  <button
-                    class="confirm-btn cancel"
-                    @click="pendingConfirm = null"
-                  >
-                    取消
-                  </button>
-                </div>
-              </div>
-            </div>
+            <ConfirmDialog
+              :confirm="pendingConfirm"
+              @approve="resolveConfirm($event, true)"
+              @deny="resolveConfirm($event, false)"
+              @approve-all="approveAll"
+              @deny-all="denyAll"
+              @cancel="denyAll"
+            />
 
-            <!-- File preview -->
-            <div v-if="uploadedFile" class="file-preview">
-              <span class="file-preview-icon">📎</span
-              ><span class="file-preview-name">{{ uploadedFile.filename }}</span
-              ><span class="file-preview-size"
-                >({{ (uploadedFile.size / 1024).toFixed(1) }} KB)</span
-              >
-              <button class="file-preview-remove" @click="removeFile">✕</button>
-            </div>
-
-            <div class="chat-input">
-              <input
-                ref="fileInput"
-                type="file"
-                accept=".txt,.log,.md,.json,.xml,.csv,.py,.js,.html,.css,.yaml,.yml,.docx,.xlsx,.pdf"
-                @change="handleFileUpload"
-                style="display: none"
-              />
-              <button
-                class="upload-btn"
-                @click="triggerUpload"
-                :disabled="sending"
-                title="上传文件 (txt/log/md/docx/xlsx/pdf 等)"
-              >
-                📎
-              </button>
-              <div class="input-box">
-                <el-input
-                  v-model="inputText"
-                  type="textarea"
-                  :rows="3"
-                  placeholder="输入消息，Enter 发送，Shift+Enter 换行..."
-                  @keydown="handleKey"
-                  :disabled="sending"
-                  resize="none"
-                />
-              </div>
-              <button
-                class="send-btn"
-                @click="sendMessage"
-                :disabled="(!inputText.trim() && !uploadedFile) || sending"
-              >
-                <IconSend :size="20" /><span>{{
-                  sending ? "发送中" : "发送"
-                }}</span>
-              </button>
-            </div>
+            <ChatInput
+              v-model="inputText"
+              :sending="sending"
+              :uploaded-file="uploadedFile"
+              :uploading="uploading"
+              @send="sendMessage"
+              @keydown="handleKey"
+              @upload="handleFileUpload"
+              @remove-file="removeFile"
+            />
           </template>
         </section>
       </div>
@@ -2291,723 +1262,6 @@ async function renderMermaidBlocks() {
   border: 1.5px solid #d0c8b8;
 }
 
-/* Message flow tag — shown on each assistant message */
-.msg-flow-tag {
-  font-size: 10px;
-  padding: 2px 7px;
-  border-radius: 6px;
-  font-weight: 700;
-  margin-left: 8px;
-  vertical-align: middle;
-  display: inline-block;
-}
-.msg-flow-tag.sse {
-  background: #e6f9f6;
-  color: #158a80;
-  border: 1px solid rgba(25, 200, 185, 0.4);
-}
-.msg-flow-tag.fallback {
-  background: #fef6e6;
-  color: #8a6d14;
-  border: 1px solid rgba(232, 167, 53, 0.4);
-}
-
-/* Thinking block */
-.thinking-block {
-  margin: 4px 0;
-  border-radius: 12px;
-  border: 1px solid #d6c9a8;
-  background: rgba(230, 222, 198, 0.15);
-  overflow: hidden;
-}
-.thinking-block.thinking-done {
-  border-color: #c9be9e;
-  background: rgba(230, 222, 198, 0.08);
-}
-.thinking-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  cursor: pointer;
-  font-size: 13px;
-  color: #8a7b66;
-  user-select: none;
-}
-.thinking-icon {
-  font-size: 14px;
-}
-.thinking-label {
-  font-weight: 700;
-}
-.thinking-toggle {
-  font-size: 11px;
-  color: #b5a68e;
-  margin-left: auto;
-}
-.thinking-body {
-  padding: 10px 14px;
-  font-size: 13px;
-  line-height: 1.6;
-  color: #6d5f4b;
-  border-top: 1px solid #d6c9a8;
-  white-space: pre-wrap;
-  max-height: 200px;
-  overflow-y: auto;
-}
-.thinking-block:not(.thinking-done) .thinking-header {
-  color: #19c8b9;
-}
-.thinking-block:not(.thinking-done) .thinking-icon {
-  animation: pulse 1.2s infinite;
-}
-
-/* Tool flow block */
-.tool-flow-block {
-  margin: 4px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.tool-step {
-  border-radius: 10px;
-  border: 1px solid #e8e2d6;
-  background: rgba(255, 255, 255, 0.7);
-  padding: 8px 12px;
-}
-.tool-step.calling {
-  border-color: #19c8b9;
-  background: rgba(230, 249, 246, 0.4);
-}
-.tool-step.running {
-  border-color: #e8a735;
-  background: rgba(254, 246, 230, 0.4);
-}
-.tool-step.success {
-  border-color: #a3d977;
-  background: rgba(242, 251, 230, 0.4);
-}
-.tool-step.error {
-  border-color: #e85f5f;
-  background: rgba(254, 237, 237, 0.4);
-}
-.tool-step-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-}
-.tool-step-icon {
-  font-size: 14px;
-}
-.tool-step-name {
-  font-weight: 700;
-  color: #4a3a28;
-}
-.tool-step-state {
-  font-size: 11px;
-  color: #8a7b66;
-}
-.tool-step-args {
-  margin: 6px 0 0;
-  font-size: 12px;
-  color: #6d5f4b;
-}
-.tool-step-args details summary {
-  cursor: pointer;
-  color: #8a7b66;
-  font-size: 12px;
-}
-.tool-step-args pre {
-  margin: 4px 0;
-  padding: 8px;
-  background: #2d2d2d;
-  border-radius: 8px;
-  color: #e6db74;
-  font-size: 12px;
-  overflow-x: auto;
-  white-space: pre-wrap;
-}
-.tool-step-output {
-  margin: 6px 0 0;
-  font-size: 12px;
-  color: #6d5f4b;
-  line-height: 1.5;
-  white-space: pre-wrap;
-}
-.tool-step-output.streaming {
-  color: #19c8b9;
-}
-.tool-streaming-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #19c8b9;
-  animation: pulse 1s infinite;
-  margin-right: 4px;
-  vertical-align: middle;
-}
-
-/* Hint block */
-.hint-block {
-  margin: 4px 0;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: rgba(230, 249, 246, 0.3);
-  border: 1px solid rgba(25, 200, 185, 0.2);
-  font-size: 13px;
-  color: #4a3a28;
-}
-.hint-icon {
-  margin-right: 6px;
-}
-.hint-text {
-  white-space: pre-wrap;
-}
-
-/* SOP card — rendered when AI emits a sop_card hint (after create_test_sop) */
-.sop-card {
-  margin: 8px 0;
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #eeedfe 0%, #e1f5ee 100%);
-  border: 1.5px solid #afa9ec;
-  box-shadow: 0 2px 8px rgba(83, 74, 183, 0.08);
-}
-.sop-card-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.sop-icon {
-  font-size: 20px;
-}
-.sop-title {
-  font-weight: 600;
-  font-size: 14px;
-  color: #3c3489;
-}
-.sop-phase-badge {
-  margin-left: auto;
-  padding: 3px 10px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 500;
-  background: #534ab7;
-  color: white;
-}
-.sop-phase-badge.phase-1 {
-  background: #378add;
-}
-.sop-phase-badge.phase-2 {
-  background: #1d9e75;
-}
-.sop-phase-badge.phase-3 {
-  background: #ba7517;
-}
-.sop-phase-badge.phase-4 {
-  background: #d85a30;
-}
-.sop-requirement {
-  font-size: 13px;
-  color: #2c2c2a;
-  margin: 6px 0;
-  line-height: 1.5;
-}
-.sop-cases {
-  font-size: 13px;
-  color: #2c2c2a;
-  margin: 6px 0;
-}
-.sop-cases ol {
-  margin: 4px 0 0 20px;
-  padding: 0;
-}
-.sop-cases li {
-  margin: 3px 0;
-}
-.sop-hint {
-  margin-top: 10px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.5);
-  font-size: 13px;
-  color: #3c3489;
-  font-weight: 500;
-}
-.sop-hint .arrow {
-  color: #1d9e75;
-  font-weight: 600;
-  margin-right: 4px;
-}
-
-/* PRD case preview card — rendered when AI emits a prd_case_preview hint */
-.prd-preview-card {
-  margin: 8px 0;
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #fff8e7 0%, #fff0e0 100%);
-  border: 1.5px solid #f7cd67;
-  box-shadow: 0 2px 8px rgba(247, 205, 103, 0.12);
-  animation: card-appear 0.25s ease;
-}
-.prd-preview-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.prd-icon {
-  font-size: 20px;
-}
-.prd-title {
-  font-weight: 600;
-  font-size: 14px;
-  color: #8b6914;
-}
-.prd-preview-body {
-  display: flex;
-  gap: 16px;
-  margin: 10px 0;
-}
-.prd-preview-stat {
-  text-align: center;
-}
-.prd-stat-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: #f7a826;
-}
-.prd-stat-value.p0 {
-  color: #e85f5f;
-}
-.prd-stat-value.p1 {
-  color: #f7a826;
-}
-.prd-stat-label {
-  font-size: 12px;
-  color: #9f927d;
-  margin-top: 2px;
-}
-.prd-preview-actions {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(247, 205, 103, 0.3);
-}
-.prd-import-btn {
-  width: 100%;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #f7cd67, #f5c6a3);
-  color: #5c3d1a;
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-.prd-import-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 12px rgba(247, 205, 103, 0.4);
-}
-.prd-import-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* Task card — rendered when AI emits a task_card hint */
-.task-card {
-  margin: 8px 0;
-  border: 1.5px solid #534ab7;
-  border-radius: 12px;
-  padding: 14px 16px;
-  background: #faf9f6;
-  max-width: 420px;
-  box-shadow: 0 2px 12px rgba(83, 74, 183, 0.1);
-  animation: card-appear 0.25s ease;
-}
-@keyframes card-appear {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.task-card-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.task-status-badge {
-  font-size: 11px;
-  padding: 2px 9px;
-  border-radius: 10px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-}
-.task-status-badge.pending {
-  background: #eef2ff;
-  color: #4f46e5;
-  border: 1px solid #c7d2fe;
-}
-.task-status-badge.running {
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fde68a;
-  animation: pulse-badge 1.5s infinite;
-}
-.task-status-badge.completed {
-  background: #d1fae5;
-  color: #065f46;
-  border: 1px solid #6ee7b7;
-}
-.task-status-badge.failed {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fca5a5;
-}
-.task-status-badge.stopped {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-.task-id {
-  font-size: 11px;
-  color: #9ca3af;
-  font-family: "Cascadia Code", monospace;
-}
-.task-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #1f2937;
-  margin-bottom: 6px;
-}
-.task-meta {
-  font-size: 12px;
-  color: #6b7280;
-  margin-bottom: 2px;
-}
-.task-cases {
-  margin: 6px 0 4px;
-  border-top: 1px solid #f0ede8;
-  padding-top: 6px;
-}
-.case-item {
-  font-size: 12px;
-  color: #374151;
-  padding: 2px 0;
-  display: flex;
-  gap: 4px;
-}
-.case-num {
-  color: #9ca3af;
-  flex-shrink: 0;
-}
-.case-more {
-  font-size: 11px;
-  color: #9ca3af;
-  padding: 2px 0;
-  font-style: italic;
-}
-.progress-bar {
-  height: 4px;
-  background: #e5e7eb;
-  border-radius: 2px;
-  margin: 8px 0 4px;
-  overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.4s ease;
-  background: linear-gradient(90deg, #818cf8, #534ab7);
-}
-.progress-fill.completed {
-  background: linear-gradient(90deg, #6ee7b7, #059669);
-}
-.progress-fill.failed {
-  background: linear-gradient(90deg, #fca5a5, #dc2626);
-}
-.progress-label {
-  font-size: 11px;
-  color: #9ca3af;
-  text-align: right;
-  margin-top: -2px;
-}
-.task-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-}
-.task-btn {
-  flex: 1;
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.15s;
-  border: 1.5px solid;
-}
-.task-btn.primary {
-  background: #eef2ff;
-  color: #4f46e5;
-  border-color: #c7d2fe;
-}
-.task-btn.primary:hover {
-  background: #e0e7ff;
-}
-.task-btn.secondary {
-  background: #f9fafb;
-  color: #374151;
-  border-color: #d1d5db;
-}
-.task-btn.secondary:hover {
-  background: #f3f4f6;
-}
-.task-btn.danger {
-  background: #fef2f2;
-  color: #991b1b;
-  border-color: #fca5a5;
-}
-.task-btn.danger:hover {
-  background: #fee2e2;
-}
-
-/* Stop button */
-.stop-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 14px;
-  border: 1.5px solid #e85f5f;
-  border-radius: 8px;
-  background: none;
-  color: #e85f5f;
-  font-size: 13px;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.stop-btn:hover {
-  background: rgba(232, 95, 95, 0.1);
-}
-
-/* Model name tag in token display */
-.model-name-tag {
-  font-size: 10px;
-  padding: 2px 7px;
-  border-radius: 6px;
-  background: rgba(25, 200, 185, 0.1);
-  color: #19c8b9;
-  border: 1px solid rgba(25, 200, 185, 0.3);
-  margin-right: 6px;
-}
-
-/* End reason badge — shown when reply ended abnormally */
-.reason-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 8px;
-  margin-top: 4px;
-  font-weight: 600;
-}
-.reason-badge.exceed_max_iters {
-  background: #fff3e0;
-  color: #bf360c;
-  border: 1px solid #ff8a65;
-}
-.reason-badge.stopped {
-  background: #f5f5f5;
-  color: #616161;
-  border: 1px solid #bdbdbd;
-}
-.reason-badge.error {
-  background: #ffebee;
-  color: #b71c1c;
-  border: 1px solid #ef5350;
-}
-
-/* User confirmation dialog — P0 security: dangerous tool calls require explicit approval */
-.confirm-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-.confirm-dialog {
-  background: #fff;
-  border-radius: 16px;
-  max-width: 560px;
-  width: 100%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-  overflow: hidden;
-  animation: dialog-appear 0.2s ease;
-}
-@keyframes dialog-appear {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-.confirm-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 20px 24px;
-  background: linear-gradient(135deg, #fff8e1, #fff3e0);
-  border-bottom: 2px solid #ffcc02;
-}
-.confirm-icon {
-  font-size: 24px;
-}
-.confirm-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #bf360c;
-}
-.confirm-body {
-  padding: 20px 24px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-.confirm-desc {
-  font-size: 14px;
-  color: #6d5f4b;
-  margin: 0 0 14px;
-}
-.confirm-tools {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.confirm-tool-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px;
-  border-radius: 10px;
-  border: 1.5px solid #e8e2d6;
-  background: #faf9f4;
-}
-.confirm-tool-icon {
-  font-size: 20px;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-.confirm-tool-info {
-  flex: 1;
-  min-width: 0;
-}
-.confirm-tool-name {
-  font-size: 14px;
-  font-weight: 700;
-  color: #4a3a28;
-  display: block;
-  margin-bottom: 6px;
-}
-.confirm-tool-args {
-  font-size: 12px;
-  color: #6d5f4b;
-  background: #fff;
-  border-radius: 8px;
-  padding: 8px 10px;
-  margin: 0;
-  overflow-x: auto;
-  max-height: 120px;
-  font-family: "Cascadia Code", Consolas, monospace;
-  white-space: pre;
-}
-.confirm-tool-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex-shrink: 0;
-}
-.confirm-btn {
-  padding: 7px 14px;
-  border-radius: 8px;
-  border: 1.5px solid;
-  font-size: 13px;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-.confirm-btn.approve {
-  background: #e8f5e9;
-  color: #2e7d32;
-  border-color: #66bb6a;
-}
-.confirm-btn.approve:hover {
-  background: #c8e6c9;
-}
-.confirm-btn.deny {
-  background: #ffebee;
-  color: #c62828;
-  border-color: #ef5350;
-}
-.confirm-btn.deny:hover {
-  background: #ffcdd2;
-}
-.confirm-btn.cancel {
-  background: #f5f5f5;
-  color: #616161;
-  border-color: #bdbdbd;
-}
-.confirm-btn.cancel:hover {
-  background: #eeeeee;
-}
-.confirm-footer {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 24px;
-  background: #faf9f4;
-  border-top: 1px solid #e8e2d6;
-  flex-wrap: wrap;
-}
-.confirm-btn.approve-all {
-  background: #e6f9f6;
-  color: #158a80;
-  border-color: #19c8b9;
-  flex: 1;
-  justify-content: center;
-}
-.confirm-btn.approve-all:hover {
-  background: #b2dfdb;
-}
-.confirm-btn.deny-all {
-  background: #ffebee;
-  color: #c62828;
-  border-color: #ef5350;
-  flex: 1;
-  justify-content: center;
-}
-.confirm-btn.deny-all:hover {
-  background: #ffcdd2;
-}
 
 .chat-body {
   flex: 1;
@@ -3018,19 +1272,15 @@ async function renderMermaidBlocks() {
   gap: 22px;
   background: #faf9f4;
 }
-.msg {
+
+/* Typing indicator (stream placeholder) */
+.typing-row {
   display: flex;
   gap: 14px;
   max-width: 80%;
-}
-.msg.user {
-  align-self: flex-end;
-  flex-direction: row-reverse;
-}
-.msg.assistant {
   align-self: flex-start;
 }
-.msg-avatar {
+.typing-row .msg-avatar {
   width: 44px;
   height: 44px;
   border-radius: 12px;
@@ -3041,123 +1291,26 @@ async function renderMermaidBlocks() {
   justify-content: center;
   font-size: 22px;
   flex-shrink: 0;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(61, 52, 40, 0.08);
 }
-.msg-content {
+.typing-row .msg-content {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  min-width: 0;
 }
-.msg-author {
+.typing-row .msg-author {
   font-size: 13px;
   font-weight: 700;
   color: #a0936e;
   padding: 0 6px;
 }
-.msg.user .msg-author {
-  text-align: right;
-}
-.msg-text {
+.typing-row .msg-text {
   padding: 16px 20px;
   border-radius: 18px;
-  font-size: 15px;
-  line-height: 1.75;
-  white-space: pre-wrap;
-  word-break: break-word;
-  box-shadow: 0 2px 10px rgba(61, 52, 40, 0.08);
-}
-.msg.user .msg-text {
-  background: linear-gradient(135deg, #19c8b9 0%, #15a89c 100%);
-  color: #fff;
-  border-bottom-right-radius: 6px;
-}
-.msg.assistant .msg-text {
   background: #fff;
-  color: #4a3a28;
   border: 1px solid #e8e2d6;
   border-bottom-left-radius: 6px;
 }
-.msg-tokens {
-  font-size: 11px;
-  color: #a0936e;
-  padding: 0 6px;
-}
 
-/* Markdown */
-.msg-text :deep(p) {
-  margin: 0 0 8px;
-}
-.msg-text :deep(p:last-child) {
-  margin-bottom: 0;
-}
-.msg-text :deep(code) {
-  font-family: "Cascadia Code", Consolas, monospace;
-  font-size: 13px;
-  padding: 2px 6px;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.06);
-}
-.msg.user .msg-text :deep(code) {
-  background: rgba(255, 255, 255, 0.2);
-}
-.msg-text :deep(pre) {
-  margin: 10px 0;
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: #2d2d2d;
-  overflow-x: auto;
-}
-.msg-text :deep(pre code) {
-  background: transparent;
-  padding: 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: #e6db74;
-}
-.msg-text :deep(ul),
-.msg-text :deep(ol) {
-  margin: 6px 0;
-  padding-left: 22px;
-}
-.msg-text :deep(li) {
-  margin-bottom: 3px;
-  line-height: 1.6;
-}
-.msg-text :deep(table) {
-  width: 100%;
-  margin: 10px 0;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-.msg-text :deep(th) {
-  background: rgba(0, 0, 0, 0.05);
-  font-weight: 700;
-  padding: 8px 12px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  text-align: left;
-}
-.msg-text :deep(td) {
-  padding: 6px 12px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-}
-.msg-text :deep(blockquote) {
-  margin: 8px 0;
-  padding: 8px 14px;
-  border-left: 3px solid rgba(25, 200, 185, 0.5);
-  background: rgba(25, 200, 185, 0.06);
-  border-radius: 0 8px 8px 0;
-}
-.msg-text :deep(h1),
-.msg-text :deep(h2) {
-  margin: 12px 0 6px;
-  font-weight: 700;
-}
-.msg-text :deep(a) {
-  color: #19c8b9;
-  text-decoration: underline;
-}
 
 .mermaid-placeholder {
   opacity: 0.6;
@@ -3213,122 +1366,4 @@ async function renderMermaidBlocks() {
 }
 
 /* File preview */
-.file-preview {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  margin: 0 24px;
-  background: #e6f9f6;
-  border: 1px solid #19c8b9;
-  border-radius: 10px;
-  font-size: 13px;
-}
-.file-preview-icon {
-  font-size: 16px;
-}
-.file-preview-name {
-  font-weight: 600;
-  color: #158a80;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.file-preview-size {
-  color: #6b5b48;
-  white-space: nowrap;
-}
-.file-preview-remove {
-  margin-left: auto;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 16px;
-  color: #e85f5f;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-.file-preview-remove:hover {
-  background: rgba(232, 95, 95, 0.1);
-}
-
-/* Input */
-.upload-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  border: 2px solid #e8e2d6;
-  border-radius: 12px;
-  background: #faf9f4;
-  font-size: 20px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-}
-.upload-btn:hover {
-  border-color: #19c8b9;
-  background: #e6f9f6;
-}
-.upload-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.chat-input {
-  display: flex;
-  align-items: flex-end;
-  gap: 14px;
-  padding: 18px 24px;
-  border-top: 2px solid #e8e2d6;
-  background: #fff;
-  flex-shrink: 0;
-}
-.input-box {
-  flex: 1;
-}
-.chat-input :deep(.el-textarea__inner) {
-  background: #faf9f4;
-  border: 1.5px solid #e8e2d6;
-  border-radius: 14px;
-  padding: 14px 18px;
-  font-size: 15px;
-  line-height: 1.7;
-  color: #4a3a28;
-  resize: none;
-  transition: all 0.2s ease;
-  font-family: inherit;
-}
-.chat-input :deep(.el-textarea__inner:focus) {
-  background: #fff;
-  border-color: #19c8b9;
-  box-shadow: 0 0 0 4px rgba(25, 200, 185, 0.12);
-}
-.send-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 26px;
-  border: none;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #19c8b9 0%, #15a89c 100%);
-  color: #fff;
-  font-size: 16px;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(25, 200, 185, 0.35);
-}
-.send-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(25, 200, 185, 0.5);
-}
-.send-btn:disabled {
-  background: #d0c8b8;
-  box-shadow: none;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
 </style>

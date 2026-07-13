@@ -41,7 +41,8 @@ class GetOnlineDevicesTool(ToolBase):
     is_read_only = True
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Read-only device listing.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, **kwargs):
         try:
@@ -104,11 +105,18 @@ class AcquireDeviceTool(ToolBase):
     is_read_only = False
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Device acquisition allowed for test runs.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, serial, timeout=300, **kwargs):
         try:
-            result = await run_sync(lambda: acquire_device(serial, user_id="ai_agent", timeout=timeout))
+            result = await run_sync(
+                lambda: acquire_device(
+                    serial,
+                    user_id=getattr(getattr(self, "_ctx", None), "user_id", None) or "ai_agent",
+                    timeout=timeout,
+                )
+            )
             return ToolChunk(content=[TextBlock(
                 text=f"设备 {serial} 已锁定。\n锁定时间: {result.get('locked_at')}\n超时时间: {result.get('timeout')}s\n\n【后续操作】请调用 run_test 执行测试，执行完毕后记得调用 release_device 释放设备。"
             )])
@@ -157,7 +165,8 @@ class ReleaseDeviceTool(ToolBase):
     is_read_only = False
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Device release is always allowed.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, serial, reason="ai_release", **kwargs):
         ok = await run_sync(lambda: release_device(serial, reason=reason))

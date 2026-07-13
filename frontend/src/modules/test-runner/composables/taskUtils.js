@@ -28,6 +28,14 @@ export function generateTaskId(existingIds = new Set()) {
 
 export function deriveTaskStatus(task) {
   if (task.running) return "running";
+  // 历史数据漂移：DB status=queued 但 outcome 已终态 → 视为已完成
+  if (
+    task.status === "queued" &&
+    task.outcome &&
+    ["completed", "stopped", "interrupted", "error"].includes(task.outcome)
+  ) {
+    return "done";
+  }
   if (task.status === "queued") return "queued";
   if (task.outcome === "completed") return "done";
   if (
@@ -45,8 +53,8 @@ export function isTaskQueued(task) {
 export function taskBucket(task) {
   if (task.running) return "running";
   if (isTaskQueued(task)) return "waiting";
-  // 所有已执行过的任务（无论成功/失败/停止）都属于"已完成"
-  if (task.outcome && task.outcome !== "") return "completed";
+  // 仅成功跑完全部用例归入「已完成」；停止/中断/异常归入「未完成」
+  if (task.outcome === "completed") return "completed";
   return "incomplete";
 }
 

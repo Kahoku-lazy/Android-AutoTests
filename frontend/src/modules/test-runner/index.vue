@@ -111,7 +111,7 @@ async function loadTasks() {
 const runningTasks = computed(() => tasks.value.filter((t) => t.running));
 const waitingTasks = computed(() => tasks.value.filter((t) => isTaskQueued(t)));
 const completedTasks = computed(() =>
-  tasks.value.filter((t) => !t.running && t.outcome && t.outcome !== ""),
+  tasks.value.filter((t) => taskBucket(t) === "completed"),
 );
 const incompleteTasks = computed(() =>
   tasks.value.filter((t) => taskBucket(t) === "incomplete"),
@@ -260,11 +260,7 @@ async function createAndStart() {
   // doStartTask 替换了 tasks 中的对象，重新获取最新引用
   const updated = tasks.value.find((t) => t.id === task.id) || task;
   await saveTaskToServer(updated); // ② 再次保存（含步骤定义的 caseItems + 最新状态）
-  // ③ 跳转详情页，携带 runId 避免服务端尚未关联时 WS 连不上
-  router.push({
-    path: `/runner/task/${task.id}`,
-    state: { runId: updated.runId || "" },
-  });
+  activeTab.value = taskBucket(updated);
 }
 
 function initTaskProgress(task) {
@@ -344,6 +340,8 @@ async function doStartTask(task) {
       // Device busy — task queued
       task.running = false;
       task.status = "queued";
+      task.outcome = "";
+      task.conclusion = "";
       taskAddLog(task, `⏳ 设备正忙，任务已加入队列等待执行`);
       ElMessage.info("设备正忙，任务已加入队列，设备空闲后自动执行");
       startQueuePolling();
@@ -692,24 +690,31 @@ async function loadDevices() {
                   </div>
                   <div class="tc-row3">
                     <span class="tc-progress-text">
-                      已执行 {{ taskCompletedCount(task) }}/{{
-                        taskTotalCount(task)
-                      }}
-                      次
-                      <template v-if="task.running && task.currentIteration"
-                        >（第 {{ task.currentIteration }} 轮循环）</template
-                      >
-                      <template v-if="task.outcome === 'completed'">
-                        · ✅ 全部通过</template
-                      >
-                      <template v-if="task.outcome === 'stopped'">
-                        · ⏹ 已中止</template
-                      >
+                      <template v-if="isTaskQueued(task)">
+                        排队等待执行（{{ task.caseIds?.length || 0 }} 用例 ·
+                        {{ task.loopCount || 1 }} 轮）
+                      </template>
+                      <template v-else>
+                        已执行 {{ taskCompletedCount(task) }}/{{
+                          taskTotalCount(task)
+                        }}
+                        次
+                        <template v-if="task.running && task.currentIteration"
+                          >（第 {{ task.currentIteration }} 轮循环）</template
+                        >
+                        <template v-if="task.outcome === 'completed'">
+                          · ✅ 全部通过</template
+                        >
+                        <template v-if="task.outcome === 'stopped'">
+                          · ⏹ 已中止</template
+                        >
+                      </template>
                     </span>
                   </div>
 
-                  <!-- Progress bar: always show -->
+                  <!-- Progress bar: hide for pure waiting state -->
                   <el-progress
+                    v-if="!isTaskQueued(task)"
                     :percentage="taskProgress(task)"
                     :stroke-width="6"
                     :show-text="taskProgress(task) > 0"

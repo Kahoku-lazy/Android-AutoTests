@@ -25,7 +25,8 @@ class GetTestPointsTool(ToolBase):
     is_read_only = True
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Read-only element query.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, page_ids=None, **kwargs):
         elements = await run_sync(lambda: get_test_points(page_ids=page_ids))
@@ -60,7 +61,8 @@ class SearchElementsTool(ToolBase):
     is_read_only = True
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Read-only element search.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, query, limit=20, **kwargs):
         from django.db.models import Q

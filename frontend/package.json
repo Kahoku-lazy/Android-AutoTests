@@ -13,6 +13,7 @@
     "animejs": "^4.5.0",
     "axios": "^1.7.0",
     "chart.js": "^4.4.7",
+    "dompurify": "^3.4.12",
     "echarts": "^5.5.0",
     "element-plus": "^2.7.0",
     "marked": "^18.0.5",

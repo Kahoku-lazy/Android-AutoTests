@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>workflow-demo 技术架构与 PRD · Android-AutoTests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root {
+  --bg: #fdf8f0;
+  --bg-card: #fffbf5;
+  --bg-code: #f5ede0;
+  --ink: #4a3a28;
+  --ink-muted: #5c4a35;
+  --ink-faint: #988b7a;
+  --border: rgba(139,115,85,0.16);
+  --border-soft: rgba(139,115,85,0.08);
+  --teal: #19c8b9;
+  --green: #6fba2c;
+  --blue: #5b9cf5;
+  --yellow: #f7cd67;
+  --purple: #a78bfa;
+  --pink: #f8a6b2;
+  --red: #e85f5f;
+  --orange: #f5a623;
+  --slate: #8a8a96;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 4px 16px rgba(139,115,85,0.10);
+  --shadow-lg: 0 12px 32px rgba(139,115,85,0.14);
+  --font: 'Nunito', 'Noto Sans SC', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 10% 0%, rgba(247,205,103,0.22), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(25,200,185,0.12), transparent 45%),
+    radial-gradient(ellipse 50% 40% at 50% 100%, rgba(111,186,44,0.10), transparent 40%);
+  min-height: 100vh;
+  line-height: 1.7;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+/* ── Hero ── */
+.hero {
+  text-align: center;
+  padding: 48px 24px 36px;
+  margin-bottom: 32px;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+.hero-badge {
+  display: inline-block;
+  padding: 5px 14px;
+  background: rgba(25,200,185,0.14);
+  color: #0d7a70;
+  font-size: 12px;
+  font-weight: 800;
+  border-radius: 999px;
+  margin-bottom: 14px;
+  letter-spacing: 0.04em;
+}
+.hero h1 {
+  font-size: 32px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #19c8b9, #6fba2c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+.hero .sub {
+  font-size: 15px;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+.hero .meta-row {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.hero .meta-chip {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  color: var(--ink-muted);
+}
+
+/* ── TOC ── */
+.toc {
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  margin-bottom: 32px;
+  box-shadow: var(--shadow);
+}
+.toc h2 {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--teal);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.toc ol {
+  list-style: none;
+  counter-reset: toc;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 24px;
+}
+.toc li { counter-increment: toc; font-size: 13px; font-weight: 600; }
+.toc a {
+  color: var(--ink-muted);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  transition: color 0.15s;
+}
+.toc a::before {
+  content: counter(toc);
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  background: var(--bg-code);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink-faint);
+  flex-shrink: 0;
+}
+.toc a:hover { color: var(--teal); }
+
+/* ── Section Cards ── */
+.section {
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow);
+  border-left: 5px solid var(--teal);
+}
+.section.prd { border-left-color: var(--yellow); }
+.section.data { border-left-color: var(--blue); }
+.section.ui { border-left-color: var(--purple); }
+.section.integration { border-left-color: var(--green); }
+.section.gap { border-left-color: var(--red); }
+
+.section h2 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink-muted);
+  margin: 20px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.section h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--teal);
+  margin: 16px 0 6px;
+}
+
+/* ── Tables ── */
+.tbl-wrap { overflow-x: auto; margin: 12px 0; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+thead th {
+  background: var(--bg-code);
+  color: var(--ink);
+  font-weight: 800;
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+  font-size: 12px;
+}
+tbody td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--ink-muted);
+  vertical-align: top;
+}
+tbody tr:hover { background: rgba(25,200,185,0.04); }
+td code, th code {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--bg-code);
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-weight: 600;
+}
+
+/* ── Code Block ── */
+pre {
+  background: #2d2a26;
+  color: #e8dcc8;
+  padding: 16px 20px;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 12px 0;
+}
+pre .kw { color: #c792ea; }
+pre .str { color: #c3e88d; }
+pre .fn { color: #82aaff; }
+pre .cm { color: #6a6a78; font-style: italic; }
+pre .num { color: #f78c6c; }
+
+/* ── Mermaid ── */
+.mermaid-wrap {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  margin: 14px 0;
+  text-align: center;
+  overflow-x: auto;
+}
+
+/* ── Chips & Tags ── */
+.tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  margin-left: 6px;
+}
+.tag-teal { background: rgba(25,200,185,0.16); color: #0d7a70; }
+.tag-green { background: rgba(111,186,44,0.16); color: #3d7a12; }
+.tag-blue { background: rgba(91,156,245,0.16); color: #2a5fc0; }
+.tag-yellow { background: rgba(247,205,103,0.22); color: #8a6d15; }
+.tag-red { background: rgba(232,95,95,0.16); color: #b83a3a; }
+.tag-purple { background: rgba(167,139,250,0.16); color: #5a3eb0; }
+.tag-orange { background: rgba(245,166,35,0.16); color: #b8700a; }
+
+/* ── Grids ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+
+.stat-card {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  text-align: center;
+}
+.stat-card .num {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--teal);
+}
+.stat-card .lbl {
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+/* ── List ── */
+ul, ol { padding-left: 20px; margin: 8px 0; }
+li { margin: 4px 0; font-size: 13px; color: var(--ink-muted); }
+li strong { color: var(--ink); }
+
+/* ── Color legend ── */
+.color-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* ── Footer ── */
+.footer {
+  text-align: center;
+  padding: 24px;
+  color: var(--ink-faint);
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .toc ol { grid-template-columns: 1fr; }
+  .container { padding: 16px; }
+  .section { padding: 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ═══════════════ HERO ═══════════════ -->
+  <header class="hero">
+    <div class="hero-badge">TESTS / WORKFLOW-DEMO</div>
+    <h1>工作流工作台 · 技术架构与 PRD</h1>
+    <p class="sub">ComfyUI 风格页面流画布 + Scratch 积木用例编排 · 独立 Vue 3 SPA</p>
+    <div class="meta-row">
+      <span class="meta-chip">📦 Vue 3.4 + TypeScript</span>
+      <span class="meta-chip">🎨 动森主题</span>
+      <span class="meta-chip">🧩 Vue Flow + Blockly</span>
+      <span class="meta-chip">📡 Pinia 双 Store</span>
+      <span class="meta-chip">🔌 :9998 端口</span>
+      <span class="meta-chip">📐 18 源文件 · ~3200 行</span>
+    </div>
+  </header>
+
+  <!-- ═══════════════ TOC ═══════════════ -->
+  <nav class="toc">
+    <h2>📑 目录</h2>
+    <ol>
+      <li><a href="#s1">产品定位与概述</a></li>
+      <li><a href="#s2">技术架构全景</a></li>
+      <li><a href="#s3">核心类型系统</a></li>
+      <li><a href="#s4">状态管理设计</a></li>
+      <li><a href="#s5">组件架构与交互</a></li>
+      <li><a href="#s6">数据流与桥接</a></li>
+      <li><a href="#s7">PRD 功能需求清单</a></li>
+      <li><a href="#s8">与主平台集成方案</a></li>
+      <li><a href="#s9">当前差距与待办</a></li>
+    </ol>
+  </nav>
+
+  <!-- ═══════════════ 1. 产品定位 ═══════════════ -->
+  <section class="section" id="s1">
+    <h2>1. 产品定位与概述</h2>
+
+    <div class="grid-2">
+      <div class="stat-card">
+        <div class="num">🏝️</div>
+        <div class="lbl">产品代号：工作流工作台</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">2</div>
+        <div class="lbl">双视图 Tab：页面流 + 测试用例</div>
+      </div>
+    </div>
+
+    <h3>1.1 解决什么问题</h3>
+    <p>在 Android-AutoTests 主平台中，<strong>页面关系建模</strong>和<strong>测试用例编排</strong>是两件独立的事，用户需要在 element-locator 和 case-manager 之间来回切换，缺乏可视化联动。workflow-demo 尝试用 <strong>ComfyUI 风格节点图 + Scratch 风格积木块</strong> 两种可视化范式，将页面跳转关系和测试步骤编排统一到一个工作台中。</p>
+
+    <h3>1.2 核心价值主张</h3>
+    <ul>
+      <li><strong>可视化页面关系</strong>：用带类型的端口（entry / navigation / popup_trigger）连接页面节点，连线规则内置校验</li>
+      <li><strong>Scratch 积木式用例编写</strong>：14 种测试步骤 + 条件分支 + 循环，拖拽拼接，所见即所得</li>
+      <li><strong>元素桥接</strong>：页面流的输出端口（绑定 UI 元素 + XPath）一键灌入测试用例积木的定位字段</li>
+      <li><strong>离线可运行</strong>：内置 Mock 演示数据（5 页淘宝结构 + 8 步示例用例），不依赖后端即可体验完整流程</li>
+      <li><strong>动森主题</strong>：与主平台 AI 助手模块一致的暖木色、大圆角视觉风格</li>
+    </ul>
+
+    <h3>1.3 运行方式</h3>
+    <pre><span class="cm"># 独立启动（不依赖 Django 后端）</span>
+<span class="kw">cd</span> tests/workflow-demo
+<span class="kw">bash</span> serve.sh        <span class="cm"># 默认 :9998，自动安装依赖</span>
+
+<span class="cm"># 或手动</span>
+<span class="kw">npm</span> install
+<span class="kw">npx</span> vite --port 9998 --host 0.0.0.0</pre>
+  </section>
+
+  <!-- ═══════════════ 2. 技术架构 ═══════════════ -->
+  <section class="section" id="s2">
+    <h2>2. 技术架构全景</h2>
+
+    <h3>2.1 架构分层图</h3>
+    <div class="mermaid-wrap">
+      <pre class="mermaid">
+flowchart TB
+    subgraph UI["🖥️ UI 层 — App.vue"]
+        TabPF["页面流 Tab"]
+        TabTC["测试用例 Tab"]
+    end
+
+    subgraph Canvas["🎨 可视化画布层"]
+        VF["Vue Flow
+        ─────────
+        PageFlowVueFlow
+        PageFlowNode
+        NodeContextMenu"]
+        BL["Google Blockly
+        ─────────
+        TestCaseBlockly
+        ScratchPalette"]
+    end
+
+    subgraph Adapter["🔌 适配层"]
+        VFA["useVueFlowAdapter
+        ─────────
+        toVueFlowNodes()
+        toVueFlowEdges()
+        explainConnection()
+        applyVueFlowConnect()"]
+        BLS["blocklySerializer
+        ─────────
+        workspaceToBlocks()
+        loadBlocksIntoWorkspace()
+        applyXpathToSelected()"]
+    end
+
+    subgraph Store["🗄️ 状态层 — Pinia"]
+        WFS["workflowStore
+        ─────────
+        nodes / links / scale
+        bridgedElements
+        createNode / addLink
+        saveToLocal / loadFromLocal"]
+        TCS["testCaseStore
+        ─────────
+        rootBlocks / selectedId
+        递归树操作
+        startExecution / exportJSON"]
+    end
+
+    subgraph Types["📐 类型层"]
+        WFT["types/workflow.ts
+        ─────────
+        PortDefinition
+        WorkflowNode / Connection
+        LINK_RULES / PORT_COLORS
+        ElementDef / BridgedElement"]
+        TCT["types/testCase.ts
+        ─────────
+        StepBlock / BranchBlock / LoopBlock
+        STEP_TYPE_META (14种)
+        STEPS_NEED_XPATH / FlatTestStep"]
+    end
+
+    subgraph Data["📦 数据层"]
+        REG["registry/nodeRegistry.ts
+        ─────────
+        4 节点模板注册"]
+        CAT["data/pageCatalog.ts
+        ─────────
+        Mock 5 页 + API 回退"]
+        BB["composables/blocklyBlocks.ts
+        ─────────
+        16 Blockly 积木定义"]
+    end
+
+    subgraph Ext["🌐 外部"]
+        API["Django API
+        :8765/api/elements/pages"]
+        LS["localStorage
+        ─────────
+        wf_vue_* / tc_tree_*"]
+    end
+
+    UI --> Canvas
+    Canvas --> Adapter
+    Adapter --> Store
+    Store --> Types
+    Types --> Data
+    Store --> LS
+    CAT -.-> API
+  </pre>
+    </div>
+
+    <h3>2.2 技术栈</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>层级</th><th>技术</th><th>版本</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td>框架</td><td><code>Vue 3</code> + Composition API</td><td>3.4</td><td>响应式 UI 框架</td></tr>
+          <tr><td>语言</td><td><code>TypeScript</code></td><td>5.4</td><td>全量类型约束</td></tr>
+          <tr><td>构建</td><td><code>Vite</code></td><td>5.4</td><td>开发服务器 + 生产构建</td></tr>
+          <tr><td>状态</td><td><code>Pinia</code></td><td>2.1</td><td>双 Store 状态管理</td></tr>
+          <tr><td>节点图</td><td><code>@vue-flow/core</code> + background/controls/minimap</td><td>1.48</td><td>ComfyUI 风格节点画布</td></tr>
+          <tr><td>积木块</td><td><code>blockly</code></td><td>13.1</td><td>Google Blockly 可视化编程</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>2.3 目录结构</h3>
+    <pre>tests/workflow-demo/
+├── index.html              # SPA 入口 · Nunito 字体
+├── package.json            # 依赖: vue-flow + blockly + pinia
+├── vite.config.ts          # @ 别名 · optimizeDeps
+├── tsconfig.json           # strict mode
+├── serve.sh                # 一键启动脚本（自动安装/局域网IP检测）
+└── src/
+    ├── main.ts             # createApp → Pinia → mount
+    ├── App.vue             # 双 Tab 根布局 · 页头 · handleAddToCase 桥接
+    ├── env.d.ts            # Vite + Vue SFC 类型声明
+    ├── types/
+    │   ├── workflow.ts     # 端口系统 · 节点/连线类型 · 元素池 · 桥接类型
+    │   └── testCase.ts     # 14 StepType · 树形Block · Mock数据 · 辅助函数
+    ├── stores/
+    │   ├── workflowStore.ts # 节点CRUD · 连线校验 · 持久化 · demo种子
+    │   └── testCaseStore.ts # 树递归操作 · 拖拽排序 · 执行模拟 · 持久化
+    ├── registry/
+    │   └── nodeRegistry.ts  # 4 节点模板 · 颜色样式表
+    ├── data/
+    │   └── pageCatalog.ts   # Mock 5 页 + API 回退获取
+    ├── composables/
+    │   ├── useVueFlowAdapter.ts  # Store ↔ VueFlow 双向适配
+    │   ├── blocklyBlocks.ts      # 16 Blockly 积木注册 + 调色板分类
+    │   ├── blocklySerializer.ts  # Blockly ↔ Block Tree 双向序列化
+    │   └── useImportExport.ts    # JSON 导出/导入/剪贴板/flat_steps
+    ├── components/
+    │   ├── vueflow/
+    │   │   ├── PageFlowVueFlow.vue   # VueFlow 主画布 · 工具栏 · 元素选择器
+    │   │   ├── PageFlowNode.vue      # 自定义节点 · Handle · 重命名 · 桥接按钮
+    │   │   └── NodeContextMenu.vue   # 右键菜单 · 关联页面 · 删除
+    │   └── blockly/
+    │       ├── TestCaseBlockly.vue   # Blockly 主画布 · 桥接面板 · 拖放
+    │       └── ScratchPalette.vue    # 自定义积木箱侧栏（替代原生 Toolbox）
+    └── styles/
+        └── animal-theme.css  # 动森 CSS 变量 · 布纹渐变背景</pre>
+  </section>
+
+  <!-- ═══════════════ 3. 核心类型系统 ═══════════════ -->
+  <section class="section data" id="s3">
+    <h2>3. 核心类型系统</h2>
+
+    <h3>3.1 端口类型体系 <span class="tag tag-teal">types/workflow.ts</span></h3>
+    <p>这是整个画布连线校验的基石——5 种端口类型 + 连线规则表，实现了<strong>强类型连线</strong>（类似 ComfyUI 的节点端口类型约束）：</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>端口类型</th><th>常量</th><th>颜色</th><th>允许连入</th><th>语义</th></tr></thead>
+        <tbody>
+          <tr><td><code>entry</code></td><td><span class="color-dot" style="background:#5b9cf5"></span>蓝色</td><td>—</td><td>navigation / popup_close</td><td>页面入口，支持多连入</td></tr>
+          <tr><td><code>navigation</code></td><td><span class="color-dot" style="background:#a78bfa"></span>紫色</td><td>entry</td><td>—</td><td>页面跳转</td></tr>
+          <tr><td><code>popup_trigger</code></td><td><span class="color-dot" style="background:#f87171"></span>红色</td><td>popup_fixed</td><td>—</td><td>弹窗触发入口（单连入）</td></tr>
+          <tr><td><code>popup_fixed</code></td><td><span class="color-dot" style="background:#f87171"></span>红色</td><td>—</td><td>popup_trigger</td><td>弹窗固定触发元素</td></tr>
+          <tr><td><code>popup_close</code></td><td><span class="color-dot" style="background:#8a8a96"></span>灰色</td><td>entry</td><td>—</td><td>弹窗关闭 → 返回页面入口</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>连线规则表</h4>
+    <pre><span class="kw">export const</span> LINK_RULES: Record&lt;string, string[]&gt; = {
+  <span class="str">navigation</span>:   [<span class="str">'entry'</span>],           <span class="cm">// 页面跳转 → 目标页面入口</span>
+  <span class="str">popup_fixed</span>:  [<span class="str">'popup_trigger'</span>],  <span class="cm">// 弹窗触发元素 → 弹窗入口</span>
+  <span class="str">popup_close</span>:  [<span class="str">'entry'</span>],           <span class="cm">// 弹窗关闭 → 返回页面入口</span>
+}
+
+<span class="cm">// entry 端口允许多条线同时连入（MULTI_IN_PORT_TYPES）</span></pre>
+
+    <h3>3.2 节点类型 <span class="tag tag-green">4 种</span></h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>节点类型</th><th>颜色</th><th>入口</th><th>输出</th><th>最大实例</th><th>特殊行为</th></tr></thead>
+        <tbody>
+          <tr><td><code>StartNode</code> <span class="tag tag-green">起点</span></td><td>绿</td><td>无</td><td>「启动」或元素端口</td><td>1</td><td>双模式：启动App / 页面起点</td></tr>
+          <tr><td><code>PageNode</code> <span class="tag tag-teal">页面</span></td><td>青</td><td>entry</td><td>元素端口（动态创建）</td><td>10</td><td>可关联平台页面目录</td></tr>
+          <tr><td><code>PopupNode</code> <span class="tag tag-red">弹窗</span></td><td>红</td><td>popup_trigger</td><td>关闭 + 元素端口</td><td>∞</td><td>需先连触发→才可添加元素</td></tr>
+          <tr><td><code>EndNode</code> <span class="tag tag-purple">终点</span></td><td>灰</td><td>entry</td><td>无</td><td>5</td><td>纯接收，表示流程结束</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>3.3 测试步骤类型 <span class="tag tag-yellow">14 种</span></h3>
+    <p>与主平台 <code>models/step_types.py</code> 的 <code>StepType</code> 枚举完全对齐：</p>
+
+    <div class="grid-4">
+      <div class="stat-card"><div class="num">👆</div><div class="lbl">click<br><code style="color:#5b9cf5">点击操作</code></div></div>
+      <div class="stat-card"><div class="num">👆</div><div class="lbl">click_indexed<br><code style="color:#5b9cf5">点击操作</code></div></div>
+      <div class="stat-card"><div class="num">🔄</div><div class="lbl">retry_click<br><code style="color:#f5a623">点击操作</code></div></div>
+      <div class="stat-card"><div class="num">⏳</div><div class="lbl">wait<br><code style="color:#f7cd67">等待操作</code></div></div>
+      <div class="stat-card"><div class="num">👻</div><div class="lbl">wait_disappear<br><code style="color:#f7cd67">等待操作</code></div></div>
+      <div class="stat-card"><div class="num">⑂</div><div class="lbl">wait_either<br><code style="color:#f7cd67">等待操作</code></div></div>
+      <div class="stat-card"><div class="num">💬</div><div class="lbl">wait_toast<br><code style="color:#f7cd67">等待操作</code></div></div>
+      <div class="stat-card"><div class="num">✓</div><div class="lbl">verify_text<br><code style="color:#6fba2c">验证操作</code></div></div>
+      <div class="stat-card"><div class="num">🔍</div><div class="lbl">poll_text<br><code style="color:#6fba2c">验证操作</code></div></div>
+      <div class="stat-card"><div class="num">💤</div><div class="lbl">sleep<br><code style="color:#8a8a96">工具</code></div></div>
+      <div class="stat-card"><div class="num">📱</div><div class="lbl">start_app<br><code style="color:#19c8b9">应用控制</code></div></div>
+      <div class="stat-card"><div class="num">💀</div><div class="lbl">kill_app<br><code style="color:#f87171">应用控制</code></div></div>
+      <div class="stat-card"><div class="num">🔁</div><div class="lbl">restart_app<br><code style="color:#a78bfa">应用控制</code></div></div>
+      <div class="stat-card"><div class="num">📝</div><div class="lbl">log<br><code style="color:#8a8a96">工具</code></div></div>
+    </div>
+
+    <h4>步骤字段分类</h4>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>分类</th><th>步骤</th><th>需要字段</th></tr></thead>
+        <tbody>
+          <tr><td>需要 XPath 定位</td><td>click / click_indexed / retry_click / wait / wait_disappear / wait_either / verify_text / poll_text</td><td><code>xpath</code> + <code>xpath2</code> (wait_either)</td></tr>
+          <tr><td>需要包名</td><td>start_app / kill_app / restart_app</td><td><code>package_name</code></td></tr>
+          <tr><td>需要超时</td><td>click / click_indexed / retry_click / wait / wait_disappear / wait_either / wait_toast / verify_text / poll_text / sleep / restart_app</td><td><code>timeout</code> (秒)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>3.4 树形 Block 模型</h3>
+    <p>用例不是扁平的步骤列表，而是<strong>可嵌套的树形结构</strong>：</p>
+    <div class="mermaid-wrap">
+      <pre class="mermaid">
+flowchart LR
+    subgraph Tree["Block Tree"]
+        S1["StepBlock
+        ─────
+        kind: 'step'
+        stepType: start_app"]
+        S2["StepBlock
+        ─────
+        kind: 'step'
+        stepType: wait"]
+        BR["BranchBlock
+        ─────
+        kind: 'branch'
+        condition: '搜索结果>0?'
+        passChildren[]
+        failChildren[]"]
+        S3["StepBlock · click"]
+        S4["StepBlock · verify_text"]
+        S5["StepBlock · log"]
+        LP["LoopBlock
+        ─────
+        kind: 'loop'
+        count: 3
+        children[]"]
+        S6["StepBlock · sleep"]
+        S7["StepBlock · click(上滑)"]
+        S8["StepBlock · log"]
+    end
+    S1 --> S2 --> BR
+    BR -->|"pass"| S3 --> S4
+    BR -->|"fail"| S5
+    S4 --> LP
+    LP --> S6 --> S7
+    S7 --> S8
+  </pre>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 4. 状态管理 ═══════════════ -->
+  <section class="section" id="s4">
+    <h2>4. 状态管理设计</h2>
+
+    <h3>4.1 workflowStore <span class="tag tag-teal">Pinia · 工作流 Store</span></h3>
+    <div class="grid-2">
+      <div>
+        <h4>State</h4>
+        <table>
+          <tr><td><code>nodes</code></td><td>WorkflowNode[] — 所有节点</td></tr>
+          <tr><td><code>links</code></td><td>Connection[] — 所有连线</td></tr>
+          <tr><td><code>scale / panX / panY</code></td><td>视口状态</td></tr>
+          <tr><td><code>selectedId</code></td><td>当前选中节点/连线 ID</td></tr>
+          <tr><td><code>statusMessage</code></td><td>状态栏消息</td></tr>
+        </table>
+      </div>
+      <div>
+        <h4>Computed Getters</h4>
+        <table>
+          <tr><td><code>pageNodes / popupNodes</code></td><td>按类型过滤</td></tr>
+          <tr><td><code>startNodes / endNodes</code></td><td>起点/终点过滤</td></tr>
+          <tr><td><code>bridgedElements</code></td><td>所有已挂元素的桥接列表</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h4>关键 Actions</h4>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>分类</th><th>方法</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>节点</td><td><code>createNode / removeNode / renameNode</code></td><td>模板工厂 + 实例上限检查</td></tr>
+          <tr><td>起点</td><td><code>setStartKind / setStartPackage</code></td><td>切换「启动App / 页面起点」模式</td></tr>
+          <tr><td>端口</td><td><code>addPort / addPortFromElement / removePort / togglePortType / clearElementOutputs / addInput</code></td><td>元素池查找 + 去重 + 重新索引</td></tr>
+          <tr><td>连线</td><td><code>addLink / removeLink</code></td><td>类型校验 + 多连入/单连入规则 + 去重</td></tr>
+          <tr><td>页面关联</td><td><code>linkPage</code></td><td>一键同步平台页面的所有元素为端口</td></tr>
+          <tr><td>持久化</td><td><code>saveToLocal / loadFromLocal / deleteSaved</code></td><td>localStorage · wf_vue_* key 模式</td></tr>
+          <tr><td>导出</td><td><code>exportAPI</code></td><td>ComfyUI 风格 workflow.json 格式</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>4.2 testCaseStore <span class="tag tag-yellow">Pinia · 用例 Store</span></h3>
+
+    <h4>递归树操作</h4>
+    <p>所有 CRUD 基于树的递归查找（<code>findInList → findParent → splice</code>），支持无限嵌套：</p>
+    <pre><span class="cm">// 核心递归函数</span>
+<span class="kw">function</span> <span class="fn">findInList</span>(id, blocks): Block | null   <span class="cm">// 深度优先查找</span>
+<span class="kw">function</span> <span class="fn">findParent</span>(id, blocks): {list, index}  <span class="cm">// 查找父列表 + 位置</span>
+<span class="kw">function</span> <span class="fn">removeFromList</span>(id, blocks): Block | null <span class="cm">// 递归删除</span>
+<span class="kw">function</span> <span class="fn">getAllBlocks</span>(blocks): Block[]            <span class="cm">// 展平所有节点</span></pre>
+
+    <h4>关键 Actions</h4>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>方法</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><code>addStepAfter / addBranchAfter / addLoopAfter</code></td><td>在指定位置插入，支持 null = 追加到根</td></tr>
+          <tr><td><code>moveBlock</code></td><td>拖拽重排（同列表/跨列表）</td></tr>
+          <tr><td><code>updateStepData</code></td><td>更新 xpath/timeout/expected_text 等字段</td></tr>
+          <tr><td><code>wrapInBranch / unwrapBlock</code></td><td>选中步骤包裹为分支 / 展开容器</td></tr>
+          <tr><td><code>startExecution / stopExecution</code></td><td>前端模拟执行（15% 随机失败率）</td></tr>
+          <tr><td><code>saveToLocal / loadFromLocal / loadByName</code></td><td>localStorage 持久化</td></tr>
+          <tr><td><code>exportJSON / importJSON</code></td><td>JSON 导入导出</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 5. 组件架构 ═══════════════ -->
+  <section class="section ui" id="s5">
+    <h2>5. 组件架构与交互</h2>
+
+    <h3>5.1 组件树</h3>
+    <div class="mermaid-wrap">
+      <pre class="mermaid">
+flowchart TB
+    App["App.vue
+    ─────
+    activeTab: 'page-flow' | 'test-case'
+    handleAddToCase() 桥接"]
+    App --> PFlow["PageFlowVueFlow.vue
+    ─────
+    VueFlow 主画布
+    · 工具栏（+起点/页面/弹窗/终点）
+    · ElementPicker 弹窗
+    · isValidConnection 校验
+    · onConnect / onNodeDragStop"]
+    App --> TC["TestCaseBlockly.vue
+    ─────
+    Blockly 主画布
+    · 桥接面板（BridgedElement）
+    · 工具栏（加载/保存/导出）
+    · 拖放接收"]
+    PFlow --> PFNode["PageFlowNode.vue
+    ─────
+    自定义节点渲染
+    · Handle（输入/输出）
+    · renameNode / addPort
+    · 桥接按钮（👆点击/⏳等待）
+    · StartNode 双模式切换"]
+    PFlow --> NCtx["NodeContextMenu.vue
+    ─────
+    右键菜单
+    · 关联页面（Mock/API）
+    · 删除节点"]
+    TC --> SPal["ScratchPalette.vue
+    ─────
+    自定义积木箱侧栏
+    · 6 分类折叠面板
+    · 搜索过滤
+    · 点击/拖拽添加"]
+  </pre>
+    </div>
+
+    <h3>5.2 Vue Flow 集成细节 <span class="tag tag-teal">PageFlowVueFlow</span></h3>
+    <ul>
+      <li><strong>Loose 连接模式</strong>：允许从任意 Handle 拖出，通过 <code>normalizeConnection()</code> 自动翻转源/目标</li>
+      <li><strong>连接校验链</strong>：<code>isValidConnection → explainConnection → LINK_RULES 查表</code></li>
+      <li><strong>连接应用链</strong>：<code>onConnect → explainConnection → applyVueFlowConnect → store.addLink</code></li>
+      <li><strong>节点拖拽同步</strong>：<code>onNodeDragStop → syncNodePositionFromVueFlow</code></li>
+      <li><strong>删除连线同步</strong>：<code>onEdgesChange (remove) → store.removeLink</code></li>
+      <li><strong>元素选择器</strong>：Teleport 到 body 的浮层，从元素池搜索/选择，去重检查</li>
+      <li><strong>MiniMap + Controls</strong>：右下角小地图 + 左下角缩放控件</li>
+    </ul>
+
+    <h3>5.3 Blockly 集成细节 <span class="tag tag-yellow">TestCaseBlockly</span></h3>
+    <ul>
+      <li><strong>自定义主题</strong>：基于 Zelos 渲染器，动森配色（暖木色背景 / Nunito 字体 / 青绿光标）</li>
+      <li><strong>自定义积木箱</strong>：用 Vue 组件 <code>ScratchPalette.vue</code> 替代 Blockly 原生 Toolbox（通过 <code>toolbox: undefined</code> 禁用原生，隐藏 flyout）</li>
+      <li><strong>双向序列化</strong>：<code>workspaceToBlocks</code> (Blockly→Store) / <code>loadBlocksIntoWorkspace</code> (Store→Blockly)</li>
+      <li><strong>自动同步</strong>：<code>workspace.addChangeListener</code> 监听非 UI 事件 → 自动 pushToStore</li>
+      <li><strong>尺寸自适应</strong>：ResizeObserver + <code>Blockly.svgResize</code>，处理 v-show 切换导致的 0 尺寸问题</li>
+      <li><strong>拖放接收</strong>：监听 <code>dragover/drop</code> 事件，从 <code>dataTransfer</code> 读取 <code>application/x-blockly-type</code></li>
+      <li><strong>积木放置位置</strong>：计算 viewport 相对坐标，叠放在已有积木下方</li>
+    </ul>
+
+    <h3>5.4 桥接面板（元素绑定）</h3>
+    <p>TestCaseBlockly 顶部可展开的 <strong>桥接面板</strong>，列出 workflowStore 中所有 <code>bridgedElements</code>：</p>
+    <ol>
+      <li>用户在页面流 Tab 为节点输出端口挂载元素（如「搜索图标」+ XPath）</li>
+      <li><code>bridgedElements</code> getter 自动收集所有带 <code>el</code> 的输出端口</li>
+      <li>切换到测试用例 Tab → 展开桥接面板 → 看到所有已挂元素</li>
+      <li>点击某个桥接元素 → 调用 <code>applyXpathToSelected</code>，写入当前选中积木的 XPATH + LABEL 字段</li>
+      <li>同时标记 <code>element_id</code> / <code>element_label</code> 到 StepBlock 数据中</li>
+    </ol>
+
+    <h3>5.5 handleAddToCase（一键添加步骤）</h3>
+    <p>页面流节点端口上的 👆 / ⏳ 按钮可直接将元素生成为测试步骤：</p>
+    <pre><span class="cm">// App.vue</span>
+<span class="kw">function</span> <span class="fn">handleAddToCase</span>({ nodeId, slotIndex, stepType }) {
+  <span class="kw">const</span> node = store.<span class="fn">findNode</span>(nodeId)
+  <span class="kw">const</span> port = node?.outputs[slotIndex]
+  <span class="kw">if</span> (!port?.el) <span class="kw">return</span>  <span class="cm">// 端口没有挂元素</span>
+
+  <span class="kw">const</span> block = tcStore.<span class="fn">addStepAfter</span>(tcStore.selectedId, stepType)
+  tcStore.<span class="fn">updateStepData</span>(block.id, {
+    label: port.name,
+    xpath: port.el.xpath || <span class="str">''</span>,
+    element_id: port.el.id,
+    element_label: port.name,
+    timeout: stepType === <span class="str">'wait'</span> ? <span class="num">10</span> : <span class="num">5</span>,
+  })
+  activeTab.value = <span class="str">'test-case'</span>  <span class="cm">// 自动切换到用例 Tab</span>
+}</pre>
+  </section>
+
+  <!-- ═══════════════ 6. 数据流 ═══════════════ -->
+  <section class="section data" id="s6">
+    <h2>6. 数据流与桥接</h2>
+
+    <h3>6.1 全景数据流</h3>
+    <div class="mermaid-wrap">
+      <pre class="mermaid">
+flowchart LR
+    subgraph PF["页面流 Tab"]
+        VFCanvas["Vue Flow 画布"]
+        VFNode["节点输出端口
+        ─────
+        port.el = {id, type, xpath}"]
+    end
+
+    subgraph Bridge["🔗 桥接层"]
+        BE["bridgedElements
+        ─────
+        workflowStore getter
+        收集所有 port.el"]
+        ATC["handleAddToCase()
+        ─────
+        元素 → 步骤积木"]
+        AX["applyXpathToSelected()
+        ─────
+        写入选中积木 XPATH"]
+    end
+
+    subgraph TC["测试用例 Tab"]
+        BP["桥接面板
+        ─────
+        bridgedElement 列表"]
+        BL["Blockly 积木
+        ─────
+        StepBlock.xpath
+        StepBlock.element_id"]
+        FR["导出 flat_steps[]
+        ─────
+        FlatTestStep[]
+        platform compatible"]
+    end
+
+    VFNode --> BE
+    BE --> BP
+    BP --> AX
+    AX --> BL
+    VFNode --> ATC
+    ATC --> BL
+    BL --> FR
+  </pre>
+    </div>
+
+    <h3>6.2 持久化策略</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Key 前缀</th><th>存储内容</th><th>Store</th></tr></thead>
+        <tbody>
+          <tr><td><code>wf_vue_{name}</code></td><td>WorkflowSaveData (nodes + links)</td><td>workflowStore</td></tr>
+          <tr><td><code>wf_vue_idx</code></td><td>所有已保存工作流名称列表</td><td>workflowStore</td></tr>
+          <tr><td><code>tc_tree_current</code></td><td>当前用例（自动保存）</td><td>testCaseStore</td></tr>
+          <tr><td><code>tc_tree_{name}</code></td><td>命名保存的用例</td><td>testCaseStore</td></tr>
+          <tr><td><code>tc_tree_idx</code></td><td>所有已保存用例名称列表</td><td>testCaseStore</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>6.3 API 集成模式</h3>
+    <div class="mermaid-wrap">
+      <pre class="mermaid">
+sequenceDiagram
+    participant U as 用户右键节点
+    participant Ctx as NodeContextMenu
+    participant Cat as pageCatalog.ts
+    participant API as Django :8765
+
+    U->>Ctx: 右键 → "关联页面…"
+    Ctx->>Cat: fetchCatalogPages()
+    Cat->>API: GET /api/elements/pages
+    alt API 可用
+        API-->>Cat: {ok:true, pages:[...]}
+        loop 每个页面
+            Cat->>API: GET /api/elements/pages/{id}/items
+            API-->>Cat: {elements:[...]}
+        end
+        Cat-->>Ctx: {pages, source:'api'}
+    else API 不可用
+        Cat-->>Ctx: {pages: MOCK_PAGES, source:'mock'}
+    end
+    Ctx->>U: 显示页面列表（标注数据源）
+    U->>Ctx: 选择一个页面
+    Ctx->>Store: linkPage(nodeId, page)
+    Store->>Store: clearElementOutputs + addPortFromElement × N
+  </pre>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 7. PRD 需求清单 ═══════════════ -->
+  <section class="section prd" id="s7">
+    <h2>7. PRD 功能需求清单</h2>
+
+    <h3>7.1 已实现功能 <span class="tag tag-green">18 项</span></h3>
+
+    <h4>页面流 Tab（Vue Flow）</h4>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>功能</th><th>状态</th><th>优先级</th></tr></thead>
+        <tbody>
+          <tr><td>F-01</td><td><strong>4 类节点创建</strong>：起点（启动App/页面）、页面节点、弹窗节点、终点</td><td>✅</td><td>P0</td></tr>
+          <tr><td>F-02</td><td><strong>强类型端口连线</strong>：5 种端口类型 + 连线规则校验 + 友好错误提示</td><td>✅</td><td>P0</td></tr>
+          <tr><td>F-03</td><td><strong>Entry 端口多连入</strong>：多条 navigation / popup_close 可同时连到同一 entry</td><td>✅</td><td>P1</td></tr>
+          <tr><td>F-04</td><td><strong>元素端口动态管理</strong>：从元素池添加/移除输出端口 + 去重检查</td><td>✅</td><td>P0</td></tr>
+          <tr><td>F-05</td><td><strong>端口类型切换</strong>：双击端口类型标签，navigation ↔ popup_fixed</td><td>✅</td><td>P1</td></tr>
+          <tr><td>F-06</td><td><strong>节点关联平台页面</strong>：右键菜单选择页面 → 一键同步所有元素为端口</td><td>✅</td><td>P0</td></tr>
+          <tr><td>F-07</td><td><strong>StartNode 双模式</strong>：启动 App（输出「启动」navigation）vs 页面起点（可挂元素）</td><td>✅</td><td>P1</td></tr>
+          <tr><td>F-08</td><td><strong>工作流持久化</strong>：localStorage 保存/加载/删除 · 多工作流管理</td><td>✅</td><td>P1</td></tr>
+          <tr><td>F-09</td><td><strong>视图控制</strong>：缩放控件 + 小地图 + 适配视图 + 网格对齐</td><td>✅</td><td>P2</td></tr>
+          <tr><td>F-10</td><td><strong>元素选择器</strong>：Teleport 浮层 · 搜索过滤 · 已用元素标记</td><td>✅</td><td>P1</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>测试用例 Tab（Blockly）</h4>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>功能</th><th>状态</th><th>优先级</th></tr></thead>
+        <tbody>
+          <tr><td>F-11</td><td><strong>14 种步骤积木</strong>：与平台 StepType 完全对齐，每种不同颜色</td><td>✅</td><td>P0</td></tr>
+          <tr><td>F-12</td><td><strong>条件分支 + 循环</strong>：IF/ELSE 分支 + REPEAT N 次循环，支持嵌套</td><td>✅</td><td>P1</td></tr>
+          <tr><td>F-13</td><td><strong>自定义积木箱侧栏</strong>：6 分类折叠面板 + 搜索过滤 + 点击/拖拽添加</td><td>✅</td><td>P0</td></tr>
+          <tr><td>F-14</td><td><strong>拖拽排序与包裹</strong>：积木拖拽重排 + 选中包裹为分支 + 展开容器</td><td>✅</td><td>P1</td></tr>
+          <tr><td>F-15</td><td><strong>积木属性编辑</strong>：内联编辑 XPath / timeout / expected_text / package_name</td><td>✅</td><td>P0</td></tr>
+          <tr><td>F-16</td><td><strong>前端执行模拟</strong>：逐步骤高亮动画 + 15% 随机失败率 + 可中断</td><td>✅</td><td>P2</td></tr>
+          <tr><td>F-17</td><td><strong>JSON 导出/导入</strong>：含 flat_steps 平台兼容扁平步骤 + 剪贴板 + 文件</td><td>✅</td><td>P1</td></tr>
+          <tr><td>F-18</td><td><strong>用例持久化</strong>：localStorage 保存/加载/多版本管理</td><td>✅</td><td>P1</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>桥接功能</h4>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>功能</th><th>状态</th><th>优先级</th></tr></thead>
+        <tbody>
+          <tr><td>F-19</td><td><strong>一键生成步骤</strong>：端口 👆/⏳ 按钮 → 自动创建 click/wait 积木 + 写入 xpath</td><td>✅</td><td>P0</td></tr>
+          <tr><td>F-20</td><td><strong>桥接面板绑定</strong>：展开 bridgedElements 列表 → 点击写入选中积木 XPATH</td><td>✅</td><td>P0</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>7.2 待实现需求 <span class="tag tag-red">P1/P2 共 10 项</span></h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>需求</th><th>优先级</th><th>依赖</th></tr></thead>
+        <tbody>
+          <tr><td>R-01</td><td><strong>后端持久化</strong>：工作流和用例保存到 Django DB（替代 localStorage）</td><td>P0</td><td>Django API 端点开发</td></tr>
+          <tr><td>R-02</td><td><strong>真机执行</strong>：点击"执行"实际在设备上运行用例（替代前端模拟）</td><td>P0</td><td>test-runner 集成</td></tr>
+          <tr><td>R-03</td><td><strong>暂停/断点/单步调试</strong>：用例执行控制面板</td><td>P1</td><td>R-02</td></tr>
+          <tr><td>R-04</td><td><strong>导入平台用例</strong>：从 case-manager 加载已有用例到 Blockly 编辑</td><td>P1</td><td>API 对接</td></tr>
+          <tr><td>R-05</td><td><strong>导出到平台用例</strong>：Blockly 用例直接保存到 case-manager DB</td><td>P1</td><td>API 对接</td></tr>
+          <tr><td>R-06</td><td><strong>AI 辅助生成</strong>：自然语言描述 → 自动生成页面流 + 用例积木</td><td>P2</td><td>AgentScope 集成</td></tr>
+          <tr><td>R-07</td><td><strong>多设备切换</strong>：页面流节点绑定不同设备/App 包名</td><td>P2</td><td>device-pool 集成</td></tr>
+          <tr><td>R-08</td><td><strong>Undo/Redo</strong>：Vue Flow + Blockly 双画布统一撤销栈</td><td>P2</td><td>—</td></tr>
+          <tr><td>R-09</td><td><strong>协同编辑</strong>：WebSocket 实时同步画布状态</td><td>P3</td><td>Channels WS</td></tr>
+          <tr><td>R-10</td><td><strong>更多节点类型</strong>：条件节点（A/B 分支路由）、等待节点（定时器）、子流程节点</td><td>P2</td><td>类型系统扩展</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 8. 集成方案 ═══════════════ -->
+  <section class="section integration" id="s8">
+    <h2>8. 与主平台集成方案</h2>
+
+    <h3>8.1 当前集成状态</h3>
+    <p>workflow-demo 目前是<strong>完全独立的 SPA</strong>（独立 package.json、Vite 配置、端口 9998），通过以下方式与主平台弱耦合：</p>
+    <ul>
+      <li><strong>元素 API</strong>：<code>fetchCatalogPages()</code> 直接调用 Django <code>:8765/api/elements/pages</code>（带 JWT Bearer Token）</li>
+      <li><strong>步骤类型对齐</strong>：14 种 StepType 与 <code>models/step_types.py</code> 完全一致</li>
+      <li><strong>导出格式兼容</strong>：<code>flat_steps[]</code> 字段结构与平台 TestStep 一致</li>
+      <li><strong>JWT Token 复用</strong>：从 localStorage 读取 <code>access_token</code>（与主平台登录共享）</li>
+    </ul>
+
+    <h3>8.2 推荐集成路径</h3>
+    <div class="mermaid-wrap">
+      <pre class="mermaid">
+flowchart LR
+    subgraph Phase1["Phase 1: 嵌入（低风险）"]
+        A1["iframe 嵌入主平台"]
+        A2["postMessage 通信"]
+        A3["共享 JWT Token"]
+    end
+
+    subgraph Phase2["Phase 2: 独立模块（标准集成）"]
+        B1["迁移到 frontend/src/modules/"]
+        B2["共用 api-client.js"]
+        B3["共用 animal-island-vue 主题"]
+        B4["Vite proxy 转发"]
+    end
+
+    subgraph Phase3["Phase 3: 深度耦合"]
+        C1["workflowStore ↔ Django ORM"]
+        C2["Blockly 导出 → case-manager"]
+        C3["执行引擎直连"]
+        C4["AgentScope AI 协作"]
+    end
+
+    Phase1 --> Phase2 --> Phase3
+  </pre>
+    </div>
+
+    <h3>8.3 集成要点</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>集成维度</th><th>当前</th><th>目标</th></tr></thead>
+        <tbody>
+          <tr><td>路由</td><td>独立 :9998</td><td>主平台 <code>/workflow</code> 路由</td></tr>
+          <tr><td>认证</td><td>读取 localStorage token</td><td>共用 Axios 拦截器 + JWT 守卫</td></tr>
+          <tr><td>主题</td><td>独立 animal-theme.css（手动同步的变量）</td><td>共用 animal-island-vue CSS 变量</td></tr>
+          <tr><td>数据存储</td><td>localStorage</td><td>Django ORM（新增 wf_ 前缀表）</td></tr>
+          <tr><td>用例格式</td><td>flat_steps[] 兼容</td><td>cm_test_definitions 表直接读写</td></tr>
+          <tr><td>元素来源</td><td>fetchCatalogPages API + Mock 回退</td><td>element-locator Store / Pinia 共享</td></tr>
+          <tr><td>执行</td><td>前端模拟（setTimeout）</td><td>test-runner run_test Tool</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 9. 差距分析 ═══════════════ -->
+  <section class="section gap" id="s9">
+    <h2>9. 当前差距与待办</h2>
+
+    <h3>9.1 技术债务</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>问题</th><th>影响</th><th>修复方向</th></tr></thead>
+        <tbody>
+          <tr><td>T-01</td><td><strong>独立 CSS 变量</strong>：animal-theme.css 手动复制了主平台的变量，两边不同步</td><td>🟡 中</td><td>抽离为共享 npm 包或 CSS 文件</td></tr>
+          <tr><td>T-02</td><td><strong>Blockly 原生 Toolbox 隐藏 hack</strong>：通过 CSS <code>display:none</code> 隐藏 flyout</td><td>🟡 中</td><td>升级到 Blockly 插件体系或完全自定义渲染</td></tr>
+          <tr><td>T-03</td><td><strong>双向序列化精度</strong>：workspaceToBlocks → loadBlocksIntoWorkspace 来回可能丢失 layout 信息</td><td>🟡 中</td><td>保存 Blockly XML 原始状态作为备份</td></tr>
+          <tr><td>T-04</td><td><strong>无单元测试</strong>：18 个源文件零测试覆盖</td><td>🟠 高</td><td>Vitest + @vue/test-utils 补充核心逻辑测试</td></tr>
+          <tr><td>T-05</td><td><strong>Mock 数据硬编码</strong>：页面数据、元素池全部是淘宝示例</td><td>🟢 低</td><td>抽象为配置文件，支持用户自定义 Demo</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>9.2 架构改进建议</h3>
+    <ol>
+      <li><strong>抽离共享类型包</strong>：<code>types/workflow.ts</code> 的 <code>StepTypeValue</code>、<code>FlatTestStep</code> 等应与平台的 <code>models/step_types.py</code> 有自动生成的 TypeScript 类型定义</li>
+      <li><strong>Blockly 积木按需加载</strong>：当前 16 个积木在 <code>registerAutotestBlocks()</code> 中一次性注册，改用动态注册 + 懒加载</li>
+      <li><strong>端口类型可扩展</strong>：<code>LINK_RULES</code> 表当前硬编码，应有注册机制允许新节点类型定义自己的端口规则</li>
+      <li><strong>桥接双向化</strong>：当前只有 页面流→测试用例 单向桥接，应支持从用例反向定位到页面流节点</li>
+      <li><strong>Clipboard 格式标准化</strong>：<code>testcase-scratch-v1</code> 格式应文档化，增加版本迁移逻辑</li>
+    </ol>
+  </section>
+
+  <footer class="footer">
+    <p>Android-AutoTests · workflow-demo 技术架构与 PRD · 生成于 2026-07-14</p>
+    <p>源目录: <code>tests/workflow-demo/</code> · 18 源文件 · Vue 3.4 + TypeScript + Pinia + Vue Flow + Blockly</p>
+  </footer>
+
+</div>
+
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+</script>
+</body>
+</html>

@@ -31,3 +31,5 @@
 - [doc-mgmt-index-split-color-flow](doc-mgmt-index-split-color-flow.md) — index 拆 assets；智能体设计页多彩流程图风格
 - [doc-mgmt-ai-workflow-overview](doc-mgmt-ai-workflow-overview.md) — 总览「AI工作流」：自包含 Stage-Gate/Agent/用法/案例，不链文件
 - [doc-mgmt-consolidate-root-docs](doc-mgmt-consolidate-root-docs.md) — 散落文档统一迁入 dev_docs；根目录仅软链兼容
+- [port-defaults-doc-demo](port-defaults-doc-demo.md) — 文档门户(9999)和工作流Demo(9998)端口约定及file://约束
+- [no-retry-loop-on-blocked-commands](no-retry-loop-on-blocked-commands.md) — 安全分类器持续拦截时禁止重试，必须立即告知用户手动执行

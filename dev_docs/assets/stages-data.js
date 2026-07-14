@@ -276,6 +276,16 @@ const STAGES = [
             html: [{ title: '低保真原型', path: '03-设计与架构/html/模块-元素定位-elements.html', desc: '早期 UI 示意。', badge: '原型' }],
           },
           {
+            title: '工作流模块', dir: '03-设计与架构/html/',
+            md: [],
+            html: [
+              { title: 'Vue Flow 工作流可视化方案', path: '03-设计与架构/html/模块-工作流-VueFlow工作流可视化方案.html', desc: 'ComfyUI风格节点图：页面跳转图 + 测试执行轨迹，四阶段实施方案。', badge: '方案', emphasis: true },
+              { title: '工作流具体实现方案', path: '03-设计与架构/html/模块-工作流-工作流具体实现方案.html', desc: '纯前端 SVG 渲染引擎 + 交互系统 + 动画系统 + 布局算法的完整实现级方案。', badge: '实现' },
+              { title: '测试用例 Scratch 块设计', path: '03-设计与架构/html/模块-工作流-测试用例Scratch块设计.html', desc: 'Scratch 风格容器化块组件：树形 Block 模型、C 形容器、垂直流布局、任意嵌套。', badge: '设计', emphasis: true },
+              { title: 'workflow-demo 技术架构与 PRD', path: '03-设计与架构/html/模块-工作流-workflow-demo技术架构与PRD.html', desc: '独立 Vue 3 SPA 全量分析：VueFlow + Blockly 双画布架构、类型系统、状态管理、桥接机制、PRD 功能清单、集成方案。', badge: '架构+PRD', emphasis: true },
+            ],
+          },
+          {
             title: '其它原型（设备 / 用例 / 仪表盘 / 登录）', dir: '03-设计与架构/html/',
             layout: 'grid',
             md: [],

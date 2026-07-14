@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'apps.element_locator',
     'apps.device_pool',
     'apps.case_manager',
+    'apps.workflow',
     'apps.test_runner',
     'apps.report_generator',
     'apps.ai_assistant',

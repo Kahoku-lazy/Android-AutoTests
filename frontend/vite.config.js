@@ -73,6 +73,13 @@ export default defineConfig({
           'element-plus': ['element-plus'],
           'animal-island': ['animal-island-vue'],
           'vendor': ['vue', 'vue-router', 'pinia', 'axios', 'animejs'],
+          'vue-flow': [
+            '@vue-flow/core',
+            '@vue-flow/background',
+            '@vue-flow/controls',
+            '@vue-flow/minimap',
+          ],
+          blockly: ['blockly'],
         },
       },
     },

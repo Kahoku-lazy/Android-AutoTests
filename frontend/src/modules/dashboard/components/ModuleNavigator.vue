@@ -42,6 +42,13 @@ const modules = computed(() => {
       features: ['可视化编辑', '参数化', '分组管理'], size: 'normal',
     },
     {
+      id: 'workflow', title: '工作流',
+      subtitle: '页面关系图 · Scratch 积木',
+      path: '/workflow', cardColor: 'app-orange', pattern: 'app-orange',
+      stats: { label: '工作台', value: 'Demo', total: '' },
+      features: ['起点/终点', 'Vue Flow', 'Blockly'], size: 'normal',
+    },
+    {
       id: 'report-generator', title: '测试报告',
       subtitle: 'Allure · 趋势分析',
       path: '/reports', cardColor: 'app-green', pattern: 'app-green',

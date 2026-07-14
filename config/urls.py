@@ -29,6 +29,7 @@ urlpatterns = [
     path('api/elements/', include('apps.element_locator.urls')),
     path('api/devices/',  include('apps.device_pool.urls')),
     path('api/cases/',    include('apps.case_manager.urls')),
+    path('api/workflow/', include('apps.workflow.urls')),
     path('api/runner/',   include('apps.test_runner.urls')),
     path('api/reports/',  include('apps.report_generator.urls')),
     path('api/ai/',       include('apps.ai_assistant.urls')),

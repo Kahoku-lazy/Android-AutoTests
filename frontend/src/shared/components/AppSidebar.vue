@@ -12,9 +12,11 @@ const route = useRoute()
 const username = ref(localStorage.getItem('username') || 'admin')
 
 const SIDEBAR_WIDTH_KEY = 'app-sidebar-width'
+const SIDEBAR_COLLAPSED_KEY = 'app-sidebar-collapsed'
 const SIDEBAR_MIN = 180
 const SIDEBAR_MAX = 360
 const SIDEBAR_DEFAULT = 220
+const SIDEBAR_COLLAPSED_W = 64
 
 function clampSidebarWidth(width) {
   return Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, width))
@@ -22,15 +24,26 @@ function clampSidebarWidth(width) {
 
 const sidebarWidth = ref(SIDEBAR_DEFAULT)
 const isResizing = ref(false)
+const collapsed = ref(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1')
 
 function applySidebarWidth(width) {
+  if (collapsed.value) {
+    document.documentElement.style.setProperty('--side-w', `${SIDEBAR_COLLAPSED_W}px`)
+    return
+  }
   const w = clampSidebarWidth(width)
   sidebarWidth.value = w
   document.documentElement.style.setProperty('--side-w', `${w}px`)
 }
 
+function toggleCollapsed() {
+  collapsed.value = !collapsed.value
+  localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed.value ? '1' : '0')
+  applySidebarWidth(sidebarWidth.value)
+}
+
 function onSidebarResizeStart(e) {
-  if (e.button !== 0) return
+  if (e.button !== 0 || collapsed.value) return
   e.preventDefault()
   isResizing.value = true
   document.body.style.cursor = 'col-resize'
@@ -71,6 +84,7 @@ const categories = [
       { path: '/devices',     icon: 'devices',          label: '设备管理' },
       { path: '/elements',    icon: 'elements',         label: '元素定位' },
       { path: '/cases',       icon: 'cases',            label: '测试用例' },
+      { path: '/workflow',    icon: 'workflow',         label: '工作流', isDev: true },
       { path: '/runner',      icon: 'runner',           label: '执行引擎' },
       { path: '/reports',     icon: 'reports',          label: '测试报告' },
       { path: '/ai-assistant', icon: 'ai-assistant',    label: 'AI 助手', isDev: true },
@@ -145,45 +159,79 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <aside class="sidebar" :class="{ 'sidebar--resizing': isResizing }">
-    <!-- 头部品牌 -->
-    <div class="sidebar__header" @click="router.push('/dashboard')">
-      <AnimatedMascot :size="26" />
-      <div class="sidebar__brand">
-        <span class="brand-ai">AI</span>
-        <span class="brand-name">测试平台</span>
+  <aside
+    class="sidebar"
+    :class="{ 'sidebar--resizing': isResizing, 'sidebar--collapsed': collapsed }"
+  >
+    <!-- 头部品牌 + 折叠 -->
+    <div class="sidebar__header-row">
+      <div class="sidebar__header" @click="router.push('/dashboard')" :title="collapsed ? 'AI 测试平台' : ''">
+        <AnimatedMascot :size="26" />
+        <div v-show="!collapsed" class="sidebar__brand">
+          <span class="brand-ai">AI</span>
+          <span class="brand-name">测试平台</span>
+        </div>
       </div>
+      <button
+        type="button"
+        class="sidebar__toggle"
+        :title="collapsed ? '展开侧边栏' : '收起侧边栏'"
+        @click.stop="toggleCollapsed"
+      >
+        {{ collapsed ? '›' : '‹' }}
+      </button>
     </div>
 
     <!-- 导航菜单 -->
     <nav class="sidebar__nav">
       <div v-for="cat in categories" :key="cat.key" class="sidebar__group">
-        <div v-if="cat.label" class="sidebar__group-title">{{ cat.label }}</div>
+        <div v-if="cat.label && !collapsed" class="sidebar__group-title">{{ cat.label }}</div>
         <div
           v-for="item in cat.items"
           :key="item.path"
           :class="['sidebar-menu__item', { active: isActive(item.path) }]"
+          :title="collapsed ? item.label : ''"
           @click="onNavClick(item.path)"
         >
           <AnimatedMenuIcon :name="item.icon" :size="20" :active="isActive(item.path)" />
-          <span class="sidebar-menu__label">{{ item.label }}</span>
-          <span v-if="item.isDev" class="sidebar-menu__badge sidebar-menu__badge--dev">开发中</span>
+          <span v-show="!collapsed" class="sidebar-menu__label">{{ item.label }}</span>
+          <span
+            v-if="item.isDev && !collapsed"
+            class="sidebar-menu__badge sidebar-menu__badge--dev"
+          >开发中</span>
         </div>
       </div>
     </nav>
 
     <!-- 底部用户区 -->
     <div class="sidebar__footer">
-      <div class="sidebar__user">
+      <div class="sidebar__user" :title="collapsed ? username : ''">
         <AnimatedMascot :size="20" />
-        <span class="sidebar__user-name">{{ username }}</span>
+        <span v-show="!collapsed" class="sidebar__user-name">{{ username }}</span>
       </div>
-      <Button type="text" size="small" danger class="logout-btn" @click.stop="logout">
+      <Button
+        v-show="!collapsed"
+        type="text"
+        size="small"
+        danger
+        class="logout-btn"
+        @click.stop="logout"
+      >
         退出
       </Button>
+      <button
+        v-show="collapsed"
+        type="button"
+        class="sidebar__icon-logout"
+        title="退出登录"
+        @click.stop="logout"
+      >
+        ⎋
+      </button>
     </div>
 
     <div
+      v-if="!collapsed"
       class="sidebar__resizer"
       :class="{ 'is-dragging': isResizing }"
       title="拖动调整宽度，双击恢复默认"
@@ -208,7 +256,74 @@ onUnmounted(() => {
   z-index: 2;
   color: var(--animal-text-color, #794f27);
   font-family: var(--animal-font-family, Nunito, 'Noto Sans SC', sans-serif);
+  transition: width 0.2s ease, min-width 0.2s ease, max-width 0.2s ease, flex-basis 0.2s ease;
 }
+
+.sidebar--collapsed {
+  flex: 0 0 64px;
+  width: 64px;
+  min-width: 64px;
+  max-width: 64px;
+}
+
+.sidebar__header-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 6px;
+  border-bottom: 1px solid rgba(121, 79, 39, 0.08);
+  flex-shrink: 0;
+}
+.sidebar__toggle {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin-top: 4px;
+  border: 1.5px solid rgba(121, 79, 39, 0.15);
+  border-radius: 8px;
+  background: rgba(255, 251, 245, 0.85);
+  color: #794f27;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+.sidebar__toggle:hover {
+  border-color: #19c8b9;
+  color: #0d7a70;
+}
+
+.sidebar--collapsed .sidebar__header-row {
+  flex-direction: column;
+  padding: 8px 6px;
+  gap: 6px;
+}
+.sidebar--collapsed .sidebar__header {
+  justify-content: center;
+  padding: 4px 0;
+}
+.sidebar--collapsed .sidebar-menu__item {
+  justify-content: center;
+  padding: 10px 8px;
+}
+.sidebar--collapsed .sidebar__footer {
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px;
+}
+.sidebar__icon-logout {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: #c44;
+  padding: 4px;
+  border-radius: 6px;
+}
+.sidebar__icon-logout:hover { background: rgba(232, 95, 95, 0.12); }
 
 .sidebar--resizing {
   user-select: none;
@@ -254,8 +369,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 20px 16px 12px;
-  border-bottom: 1px solid #e8e2d6;
+  flex: 1;
+  min-width: 0;
+  padding: 16px 8px 12px 16px;
+  border-bottom: none;
   font-weight: 700;
   letter-spacing: -0.3px;
   cursor: pointer;

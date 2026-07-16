@@ -377,3 +377,42 @@ h4 {
   .doc-body { padding: 18px 16px 48px; }
   .doc-section { padding: 18px; }
 }
+
+/* ═══════════════════════════════════════════════════
+   工作台壳层（业务模块主页）
+   ═══════════════════════════════════════════════════ */
+.doc-page.wb-shell {
+  background: var(--ac-cream, #fdf8f0);
+  overflow: hidden;
+}
+
+.doc-page.wb-shell .doc-body {
+  background: transparent;
+  padding: 16px 18px 28px;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.doc-page.wb-shell .doc-section {
+  background: var(--ac-paper, #fffbf5);
+  border: 2px solid var(--ac-border, rgba(139, 115, 85, 0.16));
+  border-radius: var(--ac-radius, 16px);
+  box-shadow: var(--ac-shadow, 0 4px 16px rgba(139, 115, 85, 0.1));
+  padding: 18px 20px;
+}
+
+.doc-page.wb-shell .doc-section__title {
+  color: var(--ac-ink, #4a3a28);
+  font-weight: 800;
+}
+
+.doc-page.wb-shell .doc-section__label {
+  color: var(--ac-ink-faint, #988b7a);
+  font-weight: 600;
+}
+
+.doc-page.wb-shell .doc-tag {
+  background: rgba(139, 115, 85, 0.12);
+  color: var(--ac-ink-muted, #5c4a35);
+}
+

@@ -384,23 +384,22 @@ class CreateRunnerTaskTool(ToolBase):
             )])
 
         run_id = f"ai-task-{uuid.uuid4().hex[:8]}"
-        record = await run_sync(lambda: TestRunRecord.objects.create(
-            run_id=run_id,
-            status="PENDING",
-            device_serial=device_serial,
-            selected_cases=case_ids,
-            loop_count=loop_count,
-        ))
 
-        # Link to SOP context if provided
-        if sop_id:
-            sop = await run_sync(lambda: TestSOP.objects.filter(sop_id=sop_id).first())
-            if sop:
-                sop.run_id = run_id
-                sop.phase = 4
-                await run_sync(lambda: sop.save())
+        # Resolve agent from tool context for workbench sticky notes
+        ctx = getattr(self, "_ctx", None)
+        agent_id = ""
+        agent_name = ""
+        if ctx and getattr(ctx, "agent_id", None):
+            agent_id = str(ctx.agent_id)
+            try:
+                from apps.ai_assistant.models import AIAgent
+                ag = await run_sync(lambda: AIAgent.objects.filter(id=int(agent_id)).first())
+                if ag:
+                    agent_name = ag.name or ""
+            except Exception:
+                pass
 
-        # Build case summaries
+        # Build case titles first (needed in summary)
         case_summaries = []
         case_titles = []
         for cid in case_ids:
@@ -413,6 +412,34 @@ class CreateRunnerTaskTool(ToolBase):
                 pass
             case_summaries.append(f"  - {cdef.title} ({steps_count} steps)")
             case_titles.append(cdef.title)
+
+        progress = {"current": 0, "total": max(1, len(case_ids) * (loop_count or 1))}
+        summary_meta = {
+            "title": task_name,
+            "agent_id": agent_id,
+            "agent_name": agent_name,
+            "case_titles": case_titles,
+            "device_model": device.model or device.name or "",
+            "progress": progress,
+            "sop_id": sop_id or "",
+        }
+
+        record = await run_sync(lambda: TestRunRecord.objects.create(
+            run_id=run_id,
+            status="PENDING",
+            device_serial=device_serial,
+            selected_cases=case_ids,
+            loop_count=loop_count,
+            summary=summary_meta,
+        ))
+
+        # Link to SOP context if provided
+        if sop_id:
+            sop = await run_sync(lambda: TestSOP.objects.filter(sop_id=sop_id).first())
+            if sop:
+                sop.run_id = run_id
+                sop.phase = 4
+                await run_sync(lambda: sop.save())
 
         result = (
             f"Task card created!\n"
@@ -438,7 +465,9 @@ class CreateRunnerTaskTool(ToolBase):
             "loop_count": loop_count,
             "run_id": run_id,
             "sop_id": sop_id or "",
-            "progress": {"current": 0, "total": len(case_ids) * loop_count},
+            "agent_id": agent_id,
+            "agent_name": agent_name,
+            "progress": progress,
             "actions": ["view_detail", "start", "rerun"],
         }
         return ToolChunk(content=[

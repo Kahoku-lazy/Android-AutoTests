@@ -18,183 +18,7 @@ const props = defineProps({
 });
 const emit = defineEmits(["update:modelValue"]);
 
-// ── Step type definitions ──
-const STEP_TYPES = [
-  {
-    value: "click",
-    label: "点击元素",
-    icon: "👆",
-    desc: "点击屏幕上的一个元素",
-    group: "元素操作",
-  },
-  {
-    value: "long_click",
-    label: "长按元素",
-    icon: "🖐",
-    desc: "按住元素不放，持续N秒后松开",
-    group: "元素操作",
-  },
-  {
-    value: "click_indexed",
-    label: "点击第N个元素",
-    icon: "👆",
-    desc: "多个相同元素时，点击其中第N个",
-    group: "元素操作",
-  },
-  {
-    value: "swipe",
-    label: "滑动屏幕",
-    icon: "👈",
-    desc: "在屏幕上向某个方向滑动一段距离",
-    group: "滑动操作",
-  },
-  {
-    value: "drag",
-    label: "拖动元素",
-    icon: "✋",
-    desc: "按住一个元素，向某个方向拖动",
-    group: "滑动操作",
-  },
-  {
-    value: "wait",
-    label: "等待元素出现",
-    icon: "⏳",
-    desc: "等待某个元素出现在屏幕上，超时则失败",
-    group: "等待操作",
-  },
-  {
-    value: "wait_disappear",
-    label: "等待元素消失",
-    icon: "⏳",
-    desc: "等待某个元素从屏幕上消失，超时则失败",
-    group: "等待操作",
-  },
-  {
-    value: "wait_any",
-    label: "等待任意一个出现",
-    icon: "⏳",
-    desc: "等待多个元素中任意一个出现即可",
-    group: "等待操作",
-  },
-  {
-    value: "wait_toast",
-    label: "等待Toast消息",
-    icon: "💬",
-    desc: "等待系统弹出指定的Toast提示",
-    group: "等待操作",
-  },
-  {
-    value: "sleep",
-    label: "暂停几秒",
-    icon: "😴",
-    desc: "什么都不做，暂停等待一段时间",
-    group: "等待操作",
-  },
-  {
-    value: "verify_text",
-    label: "校验文字",
-    icon: "✅",
-    desc: "检查元素的文字内容是否等于预期值",
-    group: "检查操作",
-  },
-  {
-    value: "poll_text",
-    label: "等待文字出现",
-    icon: "🔄",
-    desc: "等待元素出现并且文字等于预期值",
-    group: "检查操作",
-  },
-  {
-    value: "start_app",
-    label: "打开应用",
-    icon: "🚀",
-    desc: "启动手机上的某个应用",
-    group: "应用操作",
-  },
-  {
-    value: "kill_app",
-    label: "关闭应用",
-    icon: "💀",
-    desc: "强制退出手机上的某个应用",
-    group: "应用操作",
-  },
-  {
-    value: "restart_app",
-    label: "重启应用",
-    icon: "🔄",
-    desc: "先关闭应用，再重新打开",
-    group: "应用操作",
-  },
-  {
-    value: "retry_click",
-    label: "点击后等待结果",
-    icon: "🔁",
-    desc: "点击一个元素，然后等待另一个元素出现确认生效",
-    group: "应用操作",
-  },
-  {
-    value: "log",
-    label: "记录信息",
-    icon: "📝",
-    desc: "在测试日志中记录一条文字信息",
-    group: "应用操作",
-  },
-];
-
-// ── Field definitions per step type ──
-const STEP_FIELDS = {
-  click: { required: ["xpath"] },
-  long_click: { required: ["xpath"], optional: ["timeout"] },
-  click_indexed: { required: ["xpath", "index"] },
-  swipe: { required: ["direction", "distance"] },
-  drag: { required: ["xpath", "direction", "distance"] },
-  wait: { required: ["xpath"], optional: ["timeout"] },
-  wait_disappear: { required: ["xpath"], optional: ["timeout"] },
-  wait_any: { required: ["xpath", "xpath2"], optional: ["timeout"] },
-  wait_toast: { required: ["expected_text"], optional: ["timeout"] },
-  verify_text: { required: ["xpath", "expected_text"] },
-  poll_text: { required: ["xpath", "expected_text"], optional: ["timeout"] },
-  sleep: { required: ["timeout"] },
-  start_app: { required: ["xpath"] },
-  kill_app: { required: ["xpath"] },
-  restart_app: { required: ["xpath"], optional: ["index", "timeout"] },
-  retry_click: { required: ["xpath", "index"], optional: [] },
-  log: { required: ["description"] },
-};
-
-const FIELD_LABELS = {
-  xpath: "目标元素",
-  xpath2: "确认元素",
-  timeout: "超时(秒)",
-  expected_text: "预期文本",
-  index: "索引",
-  description: "描述",
-  direction: "方向",
-  distance: "距离(像素)",
-};
-
-const DIRECTION_OPTIONS = [
-  { value: "up", label: "↑ 向上" },
-  { value: "down", label: "↓ 向下" },
-  { value: "left", label: "← 向左" },
-  { value: "right", label: "→ 向右" },
-];
-
-const FIELD_HINTS = {
-  xpath_click: "选择要点击的元素",
-  xpath_wait: "选择要等待出现的元素",
-  xpath_verify: "选择要验证文本的元素",
-  xpath_input: "选择要输入文本的元素",
-  xpath_app: "输入APP包名",
-  xpath2_retry: "点击后等待出现的确认元素",
-  xpath2_either: "第二个候选元素",
-  timeout_wait: "等待超时时间(秒)",
-  timeout_sleep: "等待时长(秒)",
-  index_click: "匹配元素的序号(0=第一个)",
-  index_retry: "最大重试次数",
-  expected_text: "期望出现的文本内容",
-};
-
+import { STEP_TYPES, STEP_FIELDS, FIELD_LABELS, DIRECTION_OPTIONS, FIELD_HINTS, APP_LIFECYCLE_TYPES } from '@/shared/constants/steps.js'
 // ── Element manager data for XPath picker ──
 const pages = ref([]);
 const allElements = ref([]); // flat list with page info
@@ -297,7 +121,6 @@ const steps = computed({
   set: (val) => emit("update:modelValue", val),
 });
 
-const APP_LIFECYCLE_TYPES = ["start_app", "kill_app", "restart_app"];
 
 function defaultStep(type = "click") {
   const xpath = APP_LIFECYCLE_TYPES.includes(type)
@@ -627,26 +450,25 @@ function runFromCurrent(idx) {
       <span class="step-header__title">步骤列表 ({{ steps.length }})</span>
       <div class="step-header__actions">
         <template v-if="steps.length">
-          <el-button
+          <AnimalButton
             size="small"
-            type="success"
+            type="primary"
             plain
             :loading="runningBatch && runningFromIdx === 0"
             @click="runAllSteps"
             :disabled="runningBatch"
-            >▶▶ 从头执行</el-button
-          >
-          <el-button
+            >▶▶ 从头执行</AnimalButton>
+          <AnimalButton
             size="small"
             @click="loadElementLibrary"
             text
             title="刷新元素库"
             ><IconRefresh :size="14"
-          /></el-button>
+          /></AnimalButton>
         </template>
-        <el-button size="small" type="primary" @click="addStep">
+        <AnimalButton size="small" type="primary" @click="addStep">
           <IconPlus :size="14" style="margin-right: 4px" />添加步骤
-        </el-button>
+        </AnimalButton>
       </div>
     </div>
 
@@ -690,40 +512,37 @@ function runFromCurrent(idx) {
           >
         </span>
         <span class="step-actions" @click.stop>
-          <el-button
+          <AnimalButton
             size="small"
-            type="success"
+            type="primary"
             plain
             :loading="runningStep === idx"
             @click="runStep(idx, step)"
             title="单步执行"
-            >▶</el-button
-          >
-          <el-button
+            >▶</AnimalButton>
+          <AnimalButton
             size="small"
-            type="warning"
+            type="primary"
             plain
             :loading="runningFromIdx === idx"
             @click="runFromCurrent(idx)"
             title="从这步开始执行到结束"
             :disabled="runningBatch && runningFromIdx !== idx"
-            >▶▶ ▸</el-button
-          >
-          <el-button
+            >▶▶ ▸</AnimalButton>
+          <AnimalButton
             size="small"
             plain
             @click="duplicateStep(idx)"
             title="复制步骤"
-            >📋</el-button
-          >
-          <el-button
+            >📋</AnimalButton>
+          <AnimalButton type="primary"
             size="small"
-            type="danger"
+            
             plain
             @click="requestRemoveStep(idx)"
-          >
+           danger>
             <IconTrash :size="14" style="margin-right: 4px" />删除
-          </el-button>
+          </AnimalButton>
         </span>
       </div>
 
@@ -892,9 +711,9 @@ function runFromCurrent(idx) {
     </div>
 
     <div v-if="steps.length > 0" class="add-bottom">
-      <el-button size="small" type="primary" @click="addStep">
+      <AnimalButton size="small" type="primary" @click="addStep">
         <IconPlus :size="14" style="margin-right: 4px" />添加步骤
-      </el-button>
+      </AnimalButton>
     </div>
 
     <!-- Delete confirmation -->
@@ -908,7 +727,7 @@ function runFromCurrent(idx) {
       <el-checkbox v-model="deleteDialog.skip">本次编辑不再询问</el-checkbox>
       <template #footer>
         <AnimalButton @click="deleteDialog.visible = false">取消</AnimalButton>
-        <AnimalButton type="danger" @click="confirmRemove"
+        <AnimalButton type="primary" danger @click="confirmRemove"
           >确定删除</AnimalButton
         >
       </template>

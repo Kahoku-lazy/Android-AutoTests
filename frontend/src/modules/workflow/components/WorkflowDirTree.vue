@@ -21,6 +21,7 @@ const emit = defineEmits<{
   createFolder: [parentId: string | null]
   createFlow: [parentId: string | null]
   createCase: [parentId: string | null]
+  importCases: [parentId: string | null]
   export: [node: LibNode]
 }>()
 
@@ -296,6 +297,14 @@ function onCreateRoot() {
           >
             + 用例
           </button>
+          <button
+            type="button"
+            class="mini import"
+            title="从测试用例模块导入"
+            @click="emit('importCases', selectedFolderId)"
+          >
+            + 导入用例
+          </button>
         </div>
       </div>
 
@@ -506,6 +515,15 @@ function onCreateRoot() {
   color: var(--ac-ink-muted);
 }
 .mini:hover { border-color: var(--ac-teal); color: #0d7a70; }
+.mini.import {
+  border-color: rgba(136, 157, 240, 0.45);
+  color: #4a5bb8;
+  background: rgba(136, 157, 240, 0.1);
+}
+.mini.import:hover {
+  border-color: #889df0;
+  color: #3a4aa0;
+}
 .dir-scroll { flex: 1; overflow: auto; padding: 8px 6px 12px; }
 .empty-hint {
   margin: 12px 8px;

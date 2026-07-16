@@ -174,3 +174,92 @@ jobs:
           echo "╔══════════════════════════════════╗"
           echo "║  ✅ 安全扫描通过               ║"
           echo "╚══════════════════════════════════╝"
+
+  # ═══════════════════════════════════════════
+  # Job 4: 模块边界检查（防火墙 #1 + #2）
+  # ═══════════════════════════════════════════
+  boundary-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Module boundary check
+        env:
+          DJANGO_SECRET_KEY: ci-boundary-check-key-not-for-prod
+        run: |
+          echo "╔══════════════════════════════════╗"
+          echo "║  模块边界检查                   ║"
+          echo "║  防火墙 #1: 跨模块内部实现 import  ║"
+          echo "║  防火墙 #2: 跨模块 ORM 直接写入   ║"
+          echo "╚══════════════════════════════════╝"
+          echo ""
+          python tools/gen_arch_stats.py --check-boundaries
+
+  # ═══════════════════════════════════════════
+  # Job 5: 前端质量检查（文件体积 + 硬编码数据）
+  # ═══════════════════════════════════════════
+  frontend-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check Vue file sizes
+        run: |
+          echo "╔══════════════════════════════════╗"
+          echo "║  前端文件体积检查 (<500行)      ║"
+          echo "╚══════════════════════════════════╝"
+          echo ""
+          python tools/gen_arch_stats.py --check-frontend
+
+      - name: Check for hardcoded mock data
+        run: |
+          echo "▶ 检查：硬编码假数据 (ref([{...id:...]))"
+          if grep -rnE "ref\(\s*\[\s*\{[^}]*id:" frontend/src/modules/ --include="*.vue" 2>/dev/null; then
+            echo "❌ 发现前端硬编码假数据，请从 API 获取"
+            exit 1
+          fi
+          echo "  ✅ 未发现"
+
+      - name: Check large inline styles
+        run: |
+          echo "▶ 检查：120行以上的内联样式（建议外置 CSS）"
+          python3 -c "
+          import re, sys
+          issues = []
+          for f in sys.argv[1:]:
+              with open(f) as fh:
+                  content = fh.read()
+              m = re.search(r'<style[^>]*>', content)
+              if m:
+                  start = content[:m.start()].count('\n')
+                  end = content[m.end():].find('</style>')
+                  if end >= 0:
+                      style_end = start + content[m.end():m.end()+end].count('\n') + 1
+                      size = style_end - start
+                      if size > 120:
+                          issues.append(f'{f}: {size}行内联样式 (建议外置)')
+          if issues:
+              print('⚠️  以下文件内联样式过大：')
+              for i in issues: print(f'  {i}')
+          " frontend/src/modules/**/*.vue 2>/dev/null || true
+          echo "  ✅ 检查完成"

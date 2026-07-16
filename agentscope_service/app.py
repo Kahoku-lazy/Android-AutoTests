@@ -20,6 +20,7 @@ from config.agentscope_config import (
     TITLE, VERSION,
     WORKSPACE_DIR, WORKSPACE_TTL,
     SKILL_PATHS,
+    check_redis_connection,
 )
 from .auth import get_current_user_id
 from .tools.factory import build_business_tools
@@ -28,8 +29,37 @@ from .teams.templates import SUB_AGENT_TEMPLATES
 logger = logging.getLogger('agentscope')
 
 
+class RedisUnavailableError(RuntimeError):
+    """Raised when Redis is unreachable at AgentScope startup.
+
+    This is a fatal error — AgentScope requires Redis for both
+    session storage (RedisStorage) and streaming (RedisMessageBus).
+    The caller (run.py) should catch this and exit with
+    a clear user-facing message.
+    """
+
+
 def create_agentscope_app():
-    """Create and return the AgentScope FastAPI application."""
+    """Create and return the AgentScope FastAPI application.
+
+    Raises RedisUnavailableError if Redis is not reachable,
+    so the launcher can report a clear error instead of crashing mid-init.
+    """
+
+    # ── Redis pre-flight check ──
+    ok, err = check_redis_connection()
+    if not ok:
+        logger.error(
+            'AgentScope 启动失败：Redis 不可用\n'
+            '  Redis 地址: %s:%s/%s\n'
+            '  错误详情: %s\n'
+            '  请先启动 Redis: redis-server --port %s',
+            REDIS_HOST, REDIS_PORT, REDIS_DB, err, REDIS_PORT,
+        )
+        raise RedisUnavailableError(
+            f'Redis 不可用 ({REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}): {err}\n'
+            f'请先启动 Redis: redis-server --port {REDIS_PORT}'
+        )
 
     # ── Storage (Redis) ──
     storage = RedisStorage(

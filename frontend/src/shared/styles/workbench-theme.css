@@ -1,0 +1,117 @@
+/**
+ * 工作台共享设计 token
+ * 挂在 .wb-shell / .workflow-workbench 上，业务主页与工作流共用色板
+ */
+.wb-shell,
+.workflow-workbench {
+  --ac-cream: #fdf8f0;
+  --ac-cream-deep: #f5ede0;
+  --ac-paper: #fffbf5;
+  --ac-wood: #8b7355;
+  --ac-wood-light: #a0896c;
+  --ac-wood-soft: #c4b5a0;
+  --ac-ink: #4a3a28;
+  --ac-ink-muted: #5c4a35;
+  --ac-ink-faint: #988b7a;
+  --ac-border: rgba(139, 115, 85, 0.16);
+  --ac-border-soft: rgba(139, 115, 85, 0.08);
+  --ac-teal: #19c8b9;
+  --ac-green: #6fba2c;
+  --ac-blue: #889df0;
+  --ac-yellow: #f7cd67;
+  --ac-purple: #b39ef3;
+  --ac-pink: #f8a6b2;
+  --ac-red: #e85f5f;
+  --ac-orange: #f5a623;
+  --ac-radius: 16px;
+  --ac-radius-sm: 10px;
+  --ac-shadow: 0 4px 16px rgba(139, 115, 85, 0.1);
+  --ac-shadow-lg: 0 12px 32px rgba(139, 115, 85, 0.14);
+  --ac-font: 'Nunito', 'Noto Sans SC', system-ui, sans-serif;
+
+  font-family: var(--ac-font);
+  color: var(--ac-ink);
+  box-sizing: border-box;
+}
+
+.wb-shell *,
+.wb-shell *::before,
+.wb-shell *::after,
+.workflow-workbench *,
+.workflow-workbench *::before,
+.workflow-workbench *::after {
+  box-sizing: border-box;
+}
+
+/* Element Plus 按钮 → 工作台 pill 皮肤（非 animal Button 组件） */
+.wb-shell .wb-btn.el-button,
+.wb-shell .el-button.wb-btn {
+  --el-button-border-color: var(--ac-border);
+  --el-button-bg-color: var(--ac-paper);
+  --el-button-text-color: var(--ac-ink-muted);
+  --el-button-hover-border-color: var(--ac-teal);
+  --el-button-hover-bg-color: rgba(25, 200, 185, 0.1);
+  --el-button-hover-text-color: #0d7a70;
+  border-radius: 999px;
+  font-weight: 700;
+  font-family: inherit;
+  border-width: 2px;
+  box-shadow: 0 2px 0 rgba(139, 115, 85, 0.06);
+}
+
+.wb-shell .wb-btn.el-button--primary,
+.wb-shell .el-button.wb-btn.el-button--primary {
+  --el-button-bg-color: var(--ac-teal);
+  --el-button-border-color: #14b3a5;
+  --el-button-text-color: #fff;
+  --el-button-hover-bg-color: #16d4c4;
+  --el-button-hover-border-color: #14b3a5;
+  --el-button-hover-text-color: #fff;
+}
+
+.wb-shell .wb-btn.el-button--danger,
+.wb-shell .el-button.wb-btn.el-button--danger {
+  --el-button-bg-color: #fffbf5;
+  --el-button-border-color: rgba(232, 95, 95, 0.4);
+  --el-button-text-color: var(--ac-red);
+  --el-button-hover-bg-color: rgba(232, 95, 95, 0.1);
+  --el-button-hover-border-color: var(--ac-red);
+  --el-button-hover-text-color: var(--ac-red);
+}
+
+.wb-shell .wb-btn.el-button--success {
+  --el-button-bg-color: var(--ac-green);
+  --el-button-border-color: #5a9a20;
+  --el-button-text-color: #fff;
+}
+
+/* 筛选 chip（可用 button[type=button].wb-chip） */
+.wb-shell .wb-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ac-border);
+  background: var(--ac-paper);
+  font-size: 11px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--ac-ink-muted);
+}
+
+.wb-shell .wb-chip.is-active,
+.wb-shell .wb-chip.on {
+  background: rgba(25, 200, 185, 0.16);
+  border-color: rgba(25, 200, 185, 0.4);
+  color: #0d7a70;
+}
+
+.wb-shell .wb-status-pill {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0d7a70;
+  padding: 4px 10px;
+  background: rgba(25, 200, 185, 0.12);
+  border-radius: 999px;
+}

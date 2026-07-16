@@ -10,7 +10,7 @@ import DeviceSelector from './components/DeviceSelector.vue'
 import ScreenshotView from './components/ScreenshotView.vue'
 import XPathCandidatePanel from './components/XPathCandidatePanel.vue'
 import ElementDetailPanel from './components/ElementDetailPanel.vue'
-import PageHeader from '@/shared/components/PageHeader.vue'
+import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import ElementManager from './components/ElementManager.vue'
 
 const route = useRoute()
@@ -181,11 +181,11 @@ function onDeviceChanged(msg) {
 </script>
 
 <template>
-  <div class="doc-page">
-    <PageHeader
+  <div class="doc-page wb-shell">
+    <WorkbenchHeader
       :title="pageMeta.title"
       :subtitle="pageMeta.subtitle"
-      color="app-yellow"
+      mark="🎯"
     />
 
     <Tabs :items="tabs" v-model="activeTab" :leaf-animation="true" :shadow="true" class="locator-tabs">
@@ -196,22 +196,22 @@ function onDeviceChanged(msg) {
             <div class="toolbar">
               <DeviceSelector />
               <el-divider direction="vertical" />
-              <el-button
+              <AnimalButton class="wb-btn"
                 :icon="'Refresh'"
                 :loading="screenRefreshing"
                 :disabled="!store.isConnected || !store.isDeviceOnline"
                 @click="refreshScreen"
               >
                 刷新屏幕
-              </el-button>
-              <el-button
+              </AnimalButton>
+              <AnimalButton class="wb-btn"
                 type="primary"
                 :loading="store.loading"
                 :disabled="!store.isConnected || !store.isDeviceOnline"
                 @click="doDump"
               >
                 {{ store.loading ? 'Dumping...' : 'Dump UI' }}
-              </el-button>
+              </AnimalButton>
               <span v-if="store.pageId" class="info">
                 {{ filteredElements.length }}/{{ store.elements.length }} 元素
               </span>
@@ -352,8 +352,9 @@ function onDeviceChanged(msg) {
   flex-shrink: 0;
   flex-wrap: wrap;
   padding: 10px 14px;
-  background: var(--animal-bg-color-secondary, #f0e8d8);
-  border-radius: 10px;
+  background: var(--ac-cream-deep, #f5ede0);
+  border: 1px solid var(--ac-border, rgba(139, 115, 85, 0.16));
+  border-radius: var(--ac-radius-sm, 10px);
 }
 
 .info { font-size: 14px; color: var(--text-secondary); white-space: nowrap; }

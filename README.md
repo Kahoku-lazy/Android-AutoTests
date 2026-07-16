@@ -17,82 +17,79 @@
 
 ## 📖 项目简介
 
-Android-AutoTests 是一个 AI 驱动的 Android UI 自动化测试平台。通过**可视化元素定位**将手机实时截图与 XPath 自动生成结合，通过 **AgentScope 2.0 智能体**将自然语言指令转化为平台操作，实现从元素发现到报告输出的全流程闭环。
+> 为 **Android 测试工程师**打造的 **AI 驱动的 UI 自动化测试平台**，将元素定位、用例编排、执行调度、报告输出整合为**自然语言驱动的全流程闭环**。
 
-> 架构参考：[TestHub Platform](https://github.com/chenjigang4167/testhub_platform) · AI 引擎：[AgentScope](https://docs.agentscope.io/versions/2.0.3/zh/building-blocks/message-and-event) · AI 主题：[animal-island-ui](https://github.com/guokaigdg/animal-island-ui) · 动画：[animejs](https://animejs.com/documentation/)
+### 价值主张
 
----
+| 维度 | 传统方式 | Android-AutoTests |
+|------|---------|-------------------|
+| **元素定位** | 手写 XPath / UI Automator Viewer | 实时截图 + 点击自动生成 8 种 XPath，所见即所得 |
+| **用例创建** | 代码编写 / 录制回放 | 拖拽编排 14 种原子步骤，或 AI 自然语言生成 |
+| **测试执行** | 手动或 CI 脚本触发 | 一键执行 + 循环压测 + TREP v1.0 实时监控 |
+| **结果分析** | 翻日志文件 | 在线报告 + 失败步骤级诊断 + 仪表盘趋势图 |
+| **AI 协作** | 无 | 自然语言驱动全流程：需求→元素→用例→执行→报告 |
 
-## ✨ 核心特性
+### 目标用户
 
-### 📱 可视化元素定位
-- **实时截图流**：WebSocket 推送手机画面（≥2fps，延迟 ≤500ms）
-- **UI 层级抓取**：一键 dump 完整 UI 树，结构化存储
-- **8 种 XPath 自动生成**：resource-id / text / content-desc / class / index / combined / wildcard，按匹配数升序排列
-- **截图叠加层交互**：右键重叠元素菜单，点击候选 XPath 高亮
+| 角色 | 核心需求 | 使用频率 |
+|------|----------|:--:|
+| **测试工程师**（主要） | 快速定位元素 → 编排步骤 → 批量回归 → 专业报告 | 每日 |
+| **产品经理**（次要） | 一键执行冒烟用例、查看通过率和趋势 | 每周 |
+| **QA 负责人**（次要） | 多设备并行、执行历史审计、质量趋势 | 每周 |
 
-### 📋 测试用例工程
-- **14 种原子步骤**：click / wait / verify_text / sleep / kill_app / start_app / restart_app / retry_click / log 等
-- **拖拽编排** + **XPath 接入** + **YAML 导入导出**
+### 产品边界
 
-### 🔧 设备资源池
-- USB + WiFi 双连接 · 锁定/释放/排队 · 超时自动释放 · 在线/离线/忙碌三态
+**✅ 本期范围**：Android 8.0+ UI 自动化 · USB + WiFi ADB · JWT 认证 · AI 自然语言生成用例 · 14 种原子步骤 · SQLite/MySQL · 在线报告
 
-### ▶️ 异步执行引擎
-- asyncio 后台执行 · run_id 立即返回 · WebSocket 6 种实时推送 · 循环压测 · 中途停止
-
-### 📊 测试报告
-- CSV / Markdown / JSON 三种格式 · 失败详情含步骤级诊断
-
-### 🤖 AI 智能助手（AgentScope 2.0）
-- **ReAct 推理**：思考→工具调用→观察→再思考
-- **14 个自定义 Tool**：封装全部 5 个业务模块 API
-- **SSE 流式对话**：逐字实时推送，AgentScope 不可用时自动降级
-- **Agent Team 编队**：Leader 派发 5 种 Worker（inspector / writer / operator / executor / reporter）
-- **Cron 定时任务** + **知识库 RAG**（ChromaDB · 32 篇文档）
-- **动物森友会主题**：AI 模块独立暖木色调视觉
-
-### 🔐 平台基础
-- **JWT 统一认证**：Django + AgentScope 共享密钥 · access + refresh 双 token
-- **一键启停**：`python run.py start/stop/restart/status/logs`
-- **Jazzmin 管理后台**：cosmo 主题 · 18 张表注册
-- **24 个自定义 SVG 图标** · **animejs 动效** · **ECharts 图表**
+**❌ 非本期**：iOS 设备 · 设备云租用 · 多团队隔离 · OAuth/SSO · AI 自主修复失败用例 · 分布式集群
 
 ---
 
-## 🏗️ 技术栈
-
-| 层 | 技术 | 版本 |
-|----|------|------|
-| 前端框架 | [Vue](https://vuejs.org/) 3 + Vite + Element Plus | 3.4 / 5.4 / 2.7 |
-| AI 模块主题 | [animal-island-vue](https://github.com/guokaigdg/animal-island-ui) | 0.2 |
-| 状态管理 | Pinia | 2.1 |
-| 动画 | [animejs](https://animejs.com/documentation/) | 4.5 |
-| 后端框架 | [Django](https://www.djangoproject.com/) | 4.2 |
-| ASGI | Daphne + Django Channels | 4.0 |
-| 设备控制 | uiautomator2 + ADB | 3.0 |
-| AI 引擎 | [AgentScope](https://docs.agentscope.io/versions/2.0.3/zh/) + FastAPI + Redis | 2.0.3 |
-| 向量库 | ChromaDB | 1.5 |
+## 🏗️ 架构概览
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│ Vue 3 :5173                                              │
-│   proxy: /api → :8765   /agentscope → :8000              │
-│   AI 模块: animal-island-vue 动森主题                     │
-├───────────────────┬──────────────────────────────────────┤
-│ Django :8765       │ AgentScope :8000                    │
-│ 6 App · 37 端点    │ 14 Tool · 5 Worker · RAG            │
-│ SQLite / MySQL     │ Redis                               │
-└───────────────────┴──────────────────────────────────────┘
-         │                        │
-         └──────── uiautomator2 ──┘
+Vue 前端 :5173  ──HTTP/WS──→  Django :8765  ──ORM──→  SQLite/MySQL
+       │                           │
+       └──SSE──→  AgentScope :8000 ──→  Redis :6379
                       │
-                 Android 设备
+                      └── 同进程调用 Django ORM（28 Tool + 5 Agent Team + RAG）
+
+Django ──uiautomator2──→  Android 设备
 ```
+
+| 层 | 技术 | 说明 |
+|----|------|------|
+| 前端 | Vue 3.4 + Vite + Element Plus + animal-island-vue | 8 个业务模块，AI 助手独立动森主题 |
+| 后端 | Django 4.2 + Daphne + Channels | 8 个 App，纯 API，JWT 鉴权 |
+| AI 引擎 | AgentScope 2.0 + FastAPI + Redis | 28 Tool，SOP 四阶段工作流，ChromaDB 知识库 |
+| 设备控制 | uiautomator2 + ADB | UI dump、8 种 XPath、14 种步骤、2fps 截图流 |
+| 数据 | SQLite (开发) / MySQL (生产) + Redis | 22 张业务表，7 组前缀 |
+
+### 模块地图
+
+| 模块 | 数据表 | 核心能力 |
+|------|--------|---------|
+| **设备管理** | `dp_` (3表) | USB/WiFi 连接 · 锁定/释放 · FIFO 排队 · 心跳超时 |
+| **元素定位** | `el_` (3表) | 实时截图流 · UI dump · 8 种 XPath · 页面跳转流 |
+| **用例管理** | `cm_` (2表) | 14 种步骤 · 拖拽编排 · 目录树 · YAML 导入导出 |
+| **执行引擎** | `tr_` (4表) | asyncio 异步 · TREP v1.0 监控 · 循环压测 · 中途停止 |
+| **测试报告** | `rg_` (2表) | CSV/Markdown/JSON · 步骤级诊断 · HTML 在线预览 |
+| **AI 助手** | `ai_` (6表) | SSE 流式对话 · SOP 四阶段 · HITL 确认 · 知识库 RAG |
+| **仪表盘** | 无（聚合） | ECharts 趋势图 · KPI 卡片 · 实时统计 |
+| **工作流工作台** | `wf_` (2表) | JSON 持久化 · 目录管理 · 文档复制/移动 |
 
 ---
 
-## 🚀 快速开始
+## 🚀 环境配置
+
+### 前置依赖
+
+| 依赖 | 版本要求 | 检查命令 |
+|------|---------|---------|
+| Python | 3.11+ | `python --version` |
+| Node.js | 18+ | `node --version` |
+| Redis | 6.0+ | `redis-cli ping` |
+| ADB | 任意 | `adb version` |
 
 ### 安装
 
@@ -100,220 +97,101 @@ Android-AutoTests 是一个 AI 驱动的 Android UI 自动化测试平台。通�
 git clone https://github.com/your-org/Android-AutoTests.git
 cd Android-AutoTests
 
-pip install -r requirements.txt          # 后端依赖
-cd frontend && npm install && cd ..      # 前端依赖
-python manage.py migrate                 # 数据库初始化
-python manage.py shell -c \              # 创建管理员
-  "from django.contrib.auth.models import User; \
-   User.objects.create_superuser('admin','admin@local','admin123') \
-   if not User.objects.filter(username='admin').exists() else None"
-python agentscope_service/rag/init_kb.py # 知识库初始化
+# 后端依赖
+pip install -r requirements.txt
+
+# 前端依赖
+cd frontend && npm install && cd ..
+
+# 数据库初始化
+python manage.py migrate
+python manage.py shell -c "
+from django.contrib.auth.models import User;
+User.objects.create_superuser('admin','admin@local','admin123')
+if not User.objects.filter(username='admin').exists() else None
+"
+
+# 知识库初始化（AI 助手 RAG，首次运行）
+python agentscope_service/rag/init_kb.py
 ```
 
 ### 启动
 
 ```bash
 python run.py start      # 一键启动 Django + AgentScope + Vite
-python run.py status     # 查看状态
+python run.py status     # 查看服务状态
 python run.py logs       # 查看日志
 ```
 
-### 🌐 平台访问地址
+### 访问地址
 
 | 服务 | 地址 | 说明 |
 |------|------|------|
-| 🏠 **前端页面** | http://localhost:5173 | Vue 3 主界面 |
-| ⚙️ **管理后台** | http://localhost:8765/admin/ | Django Admin（Jazzmin cosmo 主题） |
-| 🔌 **后端 API** | http://localhost:8765/api/ | Django REST JSON |
-| 🤖 **AI 引擎** | http://localhost:8000/docs | AgentScope FastAPI Swagger |
-| 📡 **接口文档** | http://localhost:8765/api/docs.html | 在线 API 文档 |
-| 📦 **Redis** | `redis://localhost:6379` | 消息总线 + 状态存储 |
-
-> **登录账号**: `admin` / `admin123`
-
-### 🛠️ 常用命令
-
-```bash
-python run.py start      # 一键启动所有服务
-python run.py stop       # 停止所有服务
-python run.py restart    # 重启所有服务
-python run.py status     # 查看各服务运行状态
-python run.py logs       # 查看日志
-
-# 各服务日志
-tail -f logs/backend.log      # Django 后端日志
-tail -f logs/agentscope.log   # AgentScope AI 日志
-tail -f logs/frontend.log     # Vite 前端日志
-```
+| 🏠 前端 | http://localhost:5173 | Vue 3 主界面 |
+| ⚙️ 管理后台 | http://localhost:8765/admin/ | Django Admin（admin/admin123） |
+| 🔌 后端 API | http://localhost:8765/api/ | REST JSON |
+| 🤖 AI 引擎 | http://localhost:8000/docs | AgentScope Swagger |
 
 ---
 
-## 📁 项目结构
+## 🤖 AI Agent 自动配置环境
 
-```
-Android-AutoTests/
-├── run.py                          # 一键启停
-├── run_agentscope.py               # AgentScope 启动
-├── config/                         # Django 配置 (settings/urls/asgi)
-├── gateway/                        # JWT 中间件 + WS 路由
-├── shared/auth/                    # JWT 签发/验证
-├── apps/                           # 6 个业务 App
-│   ├── device_pool/                #   设备管理 (5 端点)
-│   ├── element_locator/            #   元素定位 (11 端点)
-│   ├── case_manager/               #   测试用例 (8 端点)
-│   ├── test_runner/                #   执行引擎 (4 端点)
-│   ├── report_generator/           #   测试报告 (2 端点)
-│   └── ai_assistant/               #   AI 助手 (13 端点)
-├── agentscope_service/             # AgentScope AI 服务
-│   ├── tools/ (14 Tool) · teams/ (5 Worker) · rag/ (ChromaDB)
-├── models/                         # 共享 Dataclass (StepType 14种)
-├── frontend/src/                   # Vue 3 前端
-│   ├── views/LoginView.vue         #   平台登录页
-│   ├── shared/                     #   公共组件/图标/API客户端
-│   └── modules/ (7个)              #   业务模块 (含 ai-assistant 动森主题)
-├── data/ · logs/                   # 数据与日志
-└── dev_docs/              # 架构/PRD/测试方案
-```
+将以下提示词发送给 Claude Code（或其他 AI 编码助手），Agent 将自动完成环境配置：
 
----
+````text
+请帮我配置 Android-AutoTests 项目的开发环境。按以下步骤执行：
 
-## 📚 文档索引
+1. 检查前置依赖：python --version, node --version, redis-cli ping, adb version
+   如有缺失，提示我安装后再继续。
 
-| 文档 | 说明 |
-|------|------|
-| `dev_docs/03-设计与架构/当前实现架构方案.md` | 架构方案（含 Mermaid 图） |
-| `dev_docs/05-开发与测试/平台级/代码Review规则.md` | 30 项 Review 检查清单 |
-| `dev_docs/03-设计与架构/技术栈-命名统一标准.md` | 全项目命名权威来源 |
-| `dev_docs/02-PRD需求/实际需求文档.md` | 总需求（8 模块） |
-| `dev_docs/02-PRD需求/` | 6 份模块详细规格 |
-| `dev_docs/05-开发与测试/平台级/平台测试方案.md` | 测试计划（~130 条用例） |
+2. 安装后端依赖：pip install -r requirements.txt
 
----
+3. 安装前端依赖：cd frontend && npm install && cd ..
 
-## 🎓 案例：用例目录层级 + 双视图切换
+4. 初始化数据库：
+   python manage.py migrate
+   python manage.py shell -c "from django.contrib.auth.models import User; User.objects.create_superuser('admin','admin@local','admin123') if not User.objects.filter(username='admin').exists() else None"
 
-### 案例背景
+5. 初始化知识库：python agentscope_service/rag/init_kb.py
 
-**case-manager** 模块原有用例管理是扁平结构——所有用例平铺在列表中，仅靠自由文本 `category` 字段做简单筛选。随着用例数量增长，用户提出：
+6. 检查 Redis 是否运行，如果未运行则启动：redis-server --daemonize yes
 
-> 1. 可以新建一级目录，例如 H6601用例、Wi-Fi稳定性用例、蓝牙性能测试用例
-> 2. 可以新建二级目录，例如 开关功能、场景功能
-> 3. 第三层才是用例
-> 4. 用例视图采用两种方式显示，列表和卡片
+7. 启动全部服务：python run.py start
 
-这是一个典型的 **Strict 级别** 需求（新数据表 + API 变更 + 前端重构 + 跨模块影响），通过 auto-dev 工作流完成交付。
+8. 验证服务状态：python run.py status
+   期望 4 个服务全部 ONLINE：Redis / Django backend / AgentScope AI / Vue frontend
+
+9. 健康检查：
+   curl -s http://localhost:8765/api/ | python -m json.tool
+   curl -s -o /dev/null -w "%{http_code}" http://localhost:5173
+
+10. 如果任何步骤失败，分析日志并修复：
+    tail -20 logs/backend.log
+    tail -20 logs/agentscope.log
+    tail -20 logs/frontend.log
+
+完成后告诉我各服务状态和访问地址。
+````
 
 ---
 
-### Auto-Dev 工作流
+## 📚 参考文档
 
-本项目内置 **auto-dev** 技能——面向 AI 编码助手的 5 阶段自动开发编排器。收到开发需求后严格按以下流程推进：
-
-```
-用户需求
-  ↓
-Phase 0: 探索（只读，不改代码）
-  ├── 并行启动 2-3 个 Agent 探索代码库
-  ├── 定位目标文件、追踪依赖、发现隐藏关联
-  └── 输出：涉及文件数/模块数/预估行数 + 强度判定
-  ↓
-Phase 1: 方案（出计划，等审批）
-  ├── 输出完整实施计划 → HTML 报告
-  ├── 包含：数据模型/AI 角色定位/API 设计/前端设计/实施步骤/风险评估
-  └── ⚠️ 必须等用户审批通过才进入下一阶段
-  ↓
-Phase 2: 编码（审批后自动执行）
-  ├── 按方案逐文件修改 → ruff + prettier 格式化
-  └── 编译检查 → 失败自动修复（最多 3 次）
-  ↓
-Phase 3: 审查（自动 Review）
-  ├── 代码质量检查 + 安全审查
-  └── 发现 P0 问题暂停，否则继续
-  ↓
-Phase 4: 测试（自动执行，遇不可用则降级）
-  ├── 环境探测 → 分级执行
-  └── 不因环境缺失卡住交付
-  ↓
-Phase 5: 交付（输出 HTML 报告）
-```
-
-**三档强度判定**：
-
-| 强度 | 触发条件 | 审查深度 | 报告 |
-|------|---------|---------|------|
-| 🪶 **Lite** | 1 文件 ≤50 行 / 修 Bug / 改文案 | 终端打印 | 无 HTML |
-| 🛡️ **Standard** | 2-3 文件 50-200 行 / 单模块功能增删 | quality-gate 齿轮 1+2 | HTML |
-| 🏛️ **Strict** | 新模块 / 跨模块 / API 变更 / 3+ 文件 / >200 行 | quality-gate 全齿轮 | HTML × 2 |
-
----
-
-### 案例产出
-
-本案例判定为 **🏛️ Strict**，走完 Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 全流程。
-
-#### Phase 0 探索 → 发现
-
-| 维度 | 发现 |
-|------|------|
-| 当前数据模型 | `TestDefinition` 仅 `category` 文本字段，无层级概念 |
-| 后端 API | 5 个 CRUD 端点，无目录管理 |
-| 前端视图 | 仅 Table 列表，无卡片/切换模式 |
-| 可用组件 | Element Plus `el-tree`/`el-breadcrumb` 可直接使用 |
-| 影响范围 | 新数据表 + 新 API + 重构前端 + 更新 AgentScope Tool |
-
-#### Phase 1 方案 → 审批
-
-输出 HTML 方案报告到 `tests/functional/case-manager/reports/case-directory-plan.html`，包含：
-
-- 🎭 **AI 角色定位提示词**（角色身份 + 6 项职责 + 9 条行为约束 + 8 条禁止事项）
-- 🗄️ 数据模型设计（`cm_case_directories` 表 + Tree 模式）
-- 🔌 API 设计（4 新端点 + 2 修改端点）
-- 🎨 前端布局重构（左目录树 + 右双视图 + 面包屑）
-- 📝 实施步骤（P0~P4，12 步，预估 140 分钟）
-- ⚠️ 风险评估 + ✅ 验证方案
-
-#### Phase 2-4 实施 → 交付
-
-| 阶段 | 内容 | 状态 |
-|------|------|:--:|
-| **P0 数据层** | CaseDirectory 模型 + TestDefinition.directory 外键 + 迁移 + api.py 7 函数 | ✅ |
-| **P1 API 层** | 4 个目录端点 + definitions_handler 过滤 + urls.py 注册 | ✅ |
-| **P2 前端** | 新建 DirectoryTree.vue + CaseCard.vue · 重写 index.vue（左右布局+双视图）· 改造 CaseEditor.vue（级联选择器） | ✅ |
-| **P3 集成** | AgentScope case_tools.py 支持 directory 参数 | ✅ |
-| **P4 测试** | `python manage.py check` ✅ / `npx vite build` ✅ / ruff ✅ / prettier ✅ | ✅ |
-
-**12 个文件变更**（8 改 + 3 新 + 1 重写），约 380 行代码：
-
-```
-apps/case_manager/
-  models.py          → Modify   (新增 CaseDirectory 模型)
-  api.py             → Modify   (新增 7 个目录函数)
-  views.py           → Modify   (新增 3 个目录视图)
-  urls.py            → Modify   (新增 3 条路由)
-  migrations/0002    → Auto     (CreateModel + AddField)
-
-frontend/src/modules/case-manager/
-  api.js             → Modify   (新增 5 个目录 API)
-  index.vue          → Rewrite  (左右布局 + 双视图)
-  CaseEditor.vue     → Modify   (el-cascader 级联选择器)
-  components/DirectoryTree.vue  → Create  (el-tree + 右键菜单)
-  components/CaseCard.vue       → Create  (卡片视图组件)
-
-agentscope_service/tools/
-  case_tools.py      → Modify   (3 个 Tool 支持 directory)
-```
-
-#### 最终交付
-
-输出 HTML 交付报告到 `tests/functional/case-manager/reports/case-directory-delivery.html`，包含完整验证结果。
-
----
-
-### 报告文件
-
-| 报告 | 路径 | 说明 |
+| 文档 | 路径 | 说明 |
 |------|------|------|
-| 📋 方案报告 | `tests/functional/case-manager/reports/case-directory-plan.html` | Phase 1 输出，含 AI 角色定位 |
-| 📦 交付报告 | `tests/functional/case-manager/reports/case-directory-delivery.html` | Phase 5 输出，含验证结果 |
+| 需求大纲 | `dev_docs/02-PRD需求/需求大纲.md` | 项目定位 · 用户 · 状态机 · 模块边界 |
+| 子模块 PRD（8 份） | `dev_docs/02-PRD需求/PRD-0*.md` | 各模块详细功能规格 |
+| AI 编码速查 | `dev_docs/02-PRD需求/AI编程参考手册.md` | 数据契约 · 约束清单 · 陷阱 |
+| 项目架构 | `dev_docs/03-设计与架构/项目架构.md` | 总纲 · 8 模块全景 · 设计决策 |
+| 技术栈标准 | `dev_docs/03-设计与架构/技术栈-命名统一标准.md` | 全项目命名权威来源 |
+| AI 助手指令 | `CLAUDE.md` | Agent 路由 · 身份定位 · 验证铁律 |
+| 项目技术总览 | `AGENTS.md` | 架构概念 · 通信规则 · 约定索引 |
 
-> **关键理念**：方案报告用于审阅决策，交付报告用于验收确认。两份报告均采用 animal-island-ui 暖木色主题，可直接在浏览器中打开。
+### 外部引用
+
+| 项目 | 链接 | 说明 |
+|------|------|------|
+| AgentScope 2.0 | https://docs.agentscope.io/versions/2.0.3/zh/ | AI 引擎框架 |
+| animal-island-ui | https://github.com/guokaigdg/animal-island-ui | 动森主题 UI 库 |
+| animejs | https://animejs.com/documentation/ | 动画引擎 |
+| TestHub Platform | https://github.com/chenjigang4167/testhub_platform | 架构参考 |

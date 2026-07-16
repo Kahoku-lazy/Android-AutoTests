@@ -1,7 +1,7 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { animate, stagger } from 'animejs'
+import { pageEnter, pageLeave, staggerIn, iconBounce } from '@/shared/animations.js'
 import AppSidebar from '@/shared/components/AppSidebar.vue'
 import { Cursor } from 'animal-island-vue'
 
@@ -9,26 +9,25 @@ const route = useRoute()
 const transitionName = ref('fade-slide')
 const showSidebar = computed(() => route.path !== '/login')
 
-// Route transition hooks
 function onBeforeEnter(el) {
   el.style.opacity = '0'
-  el.style.transform = 'translateY(24px)'
+  el.style.transform = 'translateY(20px)'
 }
 
-function onAfterEnter(el) {
-  animate(el, {
-    opacity: [0, 1],
-    translateY: [24, 0],
-    duration: 420,
-    ease: 'outCubic',
+function onEnter(el, done) {
+  pageEnter(el, () => {
+    const sections = el.querySelectorAll(
+      '.doc-section, .animal-card, .agent-card, .kpi-card, .task-card, .wb-header'
+    )
+    if (sections.length) staggerIn(sections, 45)
+    const mark = el.querySelector('.brand-mark')
+    if (mark) iconBounce(mark)
+    done()
   })
-  animate(el.querySelectorAll('.doc-section, .animal-card'), {
-    opacity: [0, 1],
-    translateY: [20, 0],
-    delay: stagger(50),
-    duration: 500,
-    ease: 'outCubic',
-  })
+}
+
+function onLeave(el, done) {
+  pageLeave(el, done)
 }
 </script>
 
@@ -40,14 +39,15 @@ function onAfterEnter(el) {
         <router-view v-slot="{ Component }">
           <transition
             :name="transitionName"
+            mode="out-in"
             @before-enter="onBeforeEnter"
-            @after-enter="onAfterEnter"
+            @enter="onEnter"
+            @leave="onLeave"
           >
-            <component :is="Component" />
+            <component :is="Component" :key="route.path" />
           </transition>
         </router-view>
 
-        <!-- 文档站底部装饰线 -->
         <img
           v-if="showSidebar"
           src="/animal-assets/guide-bg-line.webp"
@@ -82,7 +82,6 @@ function onAfterEnter(el) {
   flex-direction: column;
 }
 
-/* 路由页面根节点占满主内容区，由页面内部纵向滚动 */
 .main-content :deep(.doc-page) {
   flex: 1;
   min-height: 0;

@@ -39,6 +39,7 @@ class AIAgent(models.Model):
     compression_prompt = models.TextField(default='', blank=True)
     compression_template = models.TextField(default='', blank=True)
     tts_enabled = models.BooleanField(default=False)
+    enable_knowledge_base = models.BooleanField(default=True)
     status = models.CharField(max_length=20, default='active')
     # Health check fields
     last_checked_at = models.DateTimeField(null=True, blank=True)

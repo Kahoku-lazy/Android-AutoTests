@@ -7,11 +7,12 @@ from .views import (
     list_messages, send_message,
     upload_avatar, serve_avatar,
     login, register, refresh_token, logout, me,
-    save_message, stream_chat, send_confirm_result,
+    save_message, stream_chat, send_confirm_result, health_check,
     upload_and_parse_file,
     test_agent_connection, list_available_models, health_check_all_agents,
     register_agent_in_agentscope, create_scope_session,
-    list_conv_tasks, get_conv_task,
+    list_conv_tasks, get_conv_task, list_ai_tasks,
+    kb_status, kb_documents, kb_reindex, kb_add_document,
 )
 
 app_name = 'ai'
@@ -51,8 +52,17 @@ urlpatterns = [
     # Conversation-level task history
     path('conversations/<int:conv_id>/tasks', list_conv_tasks, name='conv_tasks'),
     path('conversations/<int:conv_id>/tasks/<str:run_id>', get_conv_task, name='conv_task_detail'),
+    # Health check
+    path('health', health_check, name='health_check'),
+    # Workbench task board
+    path('tasks', list_ai_tasks, name='ai_tasks_list'),
     # Uploads
     path('upload-avatar', upload_avatar, name='upload_avatar'),
     path('upload-file', upload_and_parse_file, name='upload_file'),
     path('avatars/<str:filename>', serve_avatar, name='serve_avatar'),
+    # Knowledge base
+    path('knowledge/status', kb_status, name='kb_status'),
+    path('knowledge/documents', kb_documents, name='kb_documents'),
+    path('knowledge/reindex', kb_reindex, name='kb_reindex'),
+    path('knowledge/documents/add', kb_add_document, name='kb_add_doc'),
 ]

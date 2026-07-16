@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { animate } from 'animejs'
-import { sidebarNavEnter } from '../animations.js'
+import { sidebarNavEnter, selectPop } from '../animations.js'
 import { Icon, Button, Title, Divider, Card } from 'animal-island-vue'
 import AnimatedMascot from './AnimatedMascot.vue'
 import AnimatedMenuIcon from './AnimatedMenuIcon.vue'
@@ -96,7 +96,9 @@ function isActive(path) {
   return route.path === path || route.path.startsWith(path + '/')
 }
 
-function onNavClick(path) {
+function onNavClick(path, ev) {
+  const item = ev?.currentTarget
+  if (item) selectPop(item)
   router.push(path)
 }
 
@@ -191,7 +193,7 @@ onUnmounted(() => {
           :key="item.path"
           :class="['sidebar-menu__item', { active: isActive(item.path) }]"
           :title="collapsed ? item.label : ''"
-          @click="onNavClick(item.path)"
+          @click="onNavClick(item.path, $event)"
         >
           <AnimatedMenuIcon :name="item.icon" :size="20" :active="isActive(item.path)" />
           <span v-show="!collapsed" class="sidebar-menu__label">{{ item.label }}</span>

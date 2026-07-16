@@ -7,6 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from shared.auth.jwt_auth import (
     blacklist_token,
+    BlacklistUnavailableError,
     create_access_token,
     create_token_pair,
     verify_token,
@@ -70,10 +71,20 @@ def refresh_token(request):
 @csrf_exempt
 @require_auth
 def logout(request):
-    """POST /api/ai/auth/logout — blacklist the current token."""
+    """POST /api/ai/auth/logout — blacklist the current token.
+
+    Returns 503 if Redis is unavailable (token revocation cannot be persisted).
+    """
     auth_header = request.META.get('HTTP_AUTHORIZATION', '')
     if auth_header.startswith('Bearer '):
-        blacklist_token(auth_header[7:])
+        try:
+            blacklist_token(auth_header[7:])
+        except BlacklistUnavailableError as e:
+            return JsonResponse({
+                'ok': False,
+                'error': str(e),
+                'retry': True,
+            }, status=503)
     return JsonResponse({'ok': True})
 
 

@@ -395,3 +395,88 @@ export function slideIn(el, direction = 'left', distance = 40, duration = 500) {
     ease: 'outCubic',
   })
 }
+
+// ═══════════════════════════════════════════
+// ✨ Motion System v3 — 加载 / 选中 / 图标
+// ═══════════════════════════════════════════
+
+/** 选择特效：短暂放大 + 描边闪烁 */
+export function selectPop(el) {
+  if (!el) return
+  el.classList.add('wb-select-ring')
+  return animate(el, {
+    scale: [1, 1.03, 1],
+    duration: 380,
+    ease: 'outBack(1.6)',
+    onComplete: () => {
+      setTimeout(() => el.classList.remove('wb-select-ring'), 280)
+    },
+  })
+}
+
+/** 图标弹跳（顶栏 brand-mark / 侧栏图标） */
+export function iconBounce(el) {
+  if (!el) return
+  return animate(el, {
+    scale: [1, 1.18, 0.92, 1.06, 1],
+    rotate: [0, -8, 6, -3, 0],
+    duration: 520,
+    ease: 'outCubic',
+  })
+}
+
+/** 图标持续微动（悬停装饰） */
+export function iconWiggle(el) {
+  if (!el) return
+  return animate(el, {
+    rotate: [-6, 6, -4, 4, 0],
+    duration: 700,
+    ease: 'inOutSine',
+  })
+}
+
+/**
+ * 三点加载跳动；返回动画实例
+ * @param {NodeList|Element[]|string} targets
+ */
+export function loadingDots(targets) {
+  return animate(targets, {
+    scale: [1, 1.35, 1],
+    opacity: [0.55, 1, 0.55],
+    delay: stagger(120),
+    duration: 720,
+    loop: true,
+    ease: 'inOutSine',
+  })
+}
+
+/** 旋转环加载 */
+export function loadingSpin(el) {
+  if (!el) return
+  return animate(el, {
+    rotate: '1turn',
+    duration: 900,
+    loop: true,
+    ease: 'linear',
+  })
+}
+
+/** Tab / 内容切换淡入 */
+export function contentSwap(el) {
+  if (!el) return
+  return animate(el, {
+    opacity: [0, 1],
+    translateY: [10, 0],
+    duration: 320,
+    ease: 'outCubic',
+  })
+}
+
+/** 按键点击回馈 + 可选彩色粒子 */
+export function pressFeedback(el, event) {
+  if (!el) return
+  buttonPress(el)
+  if (event?.clientX != null) {
+    particleBurst(event.clientX, event.clientY, null, 8)
+  }
+}

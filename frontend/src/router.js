@@ -14,10 +14,16 @@ const routes = [
     component: () => import('@/views/LoginView.vue') },
   ...dbRoutes, ...elRoutes, ...dpRoutes, ...cmRoutes, ...trRoutes, ...rgRoutes, ...aiRoutes, ...wfRoutes,
   { path: '/', redirect: '/dashboard' },
-  { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
+  { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('@/views/NotFound.vue'), meta: { title: '404 - 页面未找到' } },
 ]
 
 const router = createRouter({ history: createWebHistory(), routes })
+
+// ── Update document.title after each navigation ──
+router.afterEach((to) => {
+  const base = 'Android-AutoTests'
+  document.title = to.meta?.title ? `${to.meta.title} — ${base}` : base
+})
 
 // ── Auth guard — all pages require login except /login itself ──
 router.beforeEach((to) => {

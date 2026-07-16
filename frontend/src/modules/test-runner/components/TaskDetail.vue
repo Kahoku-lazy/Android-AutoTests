@@ -1,9 +1,10 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import client from '@/shared/api-client.js'
 import { Button as AnimalButton } from 'animal-island-vue'
+import ConfirmButton from '@/shared/components/patterns/ConfirmButton.vue'
 import PageHeader from '@/shared/components/PageHeader.vue'
 import {
   isTaskQueued,
@@ -540,15 +541,15 @@ async function removeTask() {
         />
         <div class="info-actions">
           <AnimalButton @click="router.push('/runner')">← 返回列表</AnimalButton>
-          <AnimalButton v-if="task.running" type="danger" @click="stopTask">⏹ 停止</AnimalButton>
+          <ConfirmButton v-if="task.running" type="primary" danger message="确定停止该任务？" title="停止任务" confirm-text="停止" @confirm="doStopTask">⏹ 停止</ConfirmButton>
           <AnimalButton v-else-if="!task.caseItems?.length" type="primary" @click="restartTask">▶ 执行</AnimalButton>
-          <AnimalButton v-else-if="isTaskQueued(task)" type="warning" @click="stopTask">⏸ 取消排队</AnimalButton>
+          <ConfirmButton v-else-if="isTaskQueued(task)" type="primary" message="确定移除该排队任务？" title="移除排队任务" confirm-text="移除" @confirm="doCancelQueue">⏸ 取消排队</ConfirmButton>
           <AnimalButton v-else type="primary" @click="restartTask">↻ 重新执行</AnimalButton>
           <AnimalButton
             v-if="task.outcome && ['completed', 'stopped', 'interrupted', 'error'].includes(task.outcome)"
             @click="router.push(`/reports/task/${encodeURIComponent(task.id)}`)"
           >📊 查看报告</AnimalButton>
-          <AnimalButton type="danger" plain @click="removeTask">🗑 删除</AnimalButton>
+          <ConfirmButton type="primary" danger plain :message="`删除任务「${task.name || task.id}」？`" title="确认删除" confirm-text="删除" @confirm="doRemoveTask">🗑 删除</ConfirmButton>
         </div>
       </section>
 
@@ -673,7 +674,7 @@ async function removeTask() {
       <section class="log-section">
         <div class="doc-section__header">
           <h3 class="doc-section__title log-title">执行日志 <span class="doc-tag">Logs</span></h3>
-          <el-button size="small" text @click="task.logs = []" style="color:#999;">清空</el-button>
+          <AnimalButton size="small" type="text" @click="task.logs = []" style="color:#999;">清空</AnimalButton>
         </div>
         <div class="doc-section__label log-sub">实时 WebSocket 日志输出 ({{ task.logs?.length || 0 }} 条)</div>
         <div ref="logPanel" class="log-card-body">

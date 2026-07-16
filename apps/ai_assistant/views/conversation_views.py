@@ -1,5 +1,6 @@
 """Conversation & message endpoints."""
 import json
+import logging
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -21,6 +22,68 @@ from ..serializers import (
     validate_send_message_input,
 )
 from .common import validation_error
+
+logger = logging.getLogger('ai_assistant')
+
+
+def _check_agentscope_available():
+    """Check if AgentScope service is reachable.
+
+    Returns (True, None) or (False, error_message).
+    """
+    import urllib.request
+    try:
+        req = urllib.request.Request('http://127.0.0.1:8000/docs', method='HEAD')
+        urllib.request.urlopen(req, timeout=2)
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+
+def _check_redis_available():
+    """Check if Redis is reachable.
+
+    Returns (True, None) or (False, error_message).
+    """
+    try:
+        from config.agentscope_config import check_redis_connection
+        return check_redis_connection()
+    except Exception as e:
+        return False, str(e)
+
+
+def health_check(request):
+    """GET /api/ai/health — 平台健康检查（无需认证）。
+
+    Returns:
+        {
+            "ok": true,
+            "redis_available": bool,
+            "agentscope_available": bool,
+            "mode": "full" | "degraded" | "offline"
+        }
+
+    mode:
+      - "full":     Redis + AgentScope 都正常，SSE 流式对话可用
+      - "degraded": Redis 或 AgentScope 不可用，AI 对话降级为 Django 直调模式
+      - "offline":  两者都不可用
+    """
+    redis_ok, _ = _check_redis_available()
+    agentscope_ok, _ = _check_agentscope_available()
+
+    if redis_ok and agentscope_ok:
+        mode = 'full'
+    elif not redis_ok and not agentscope_ok:
+        mode = 'offline'
+    else:
+        mode = 'degraded'
+
+    return JsonResponse({
+        'ok': True,
+        'redis_available': redis_ok,
+        'agentscope_available': agentscope_ok,
+        'mode': mode,
+    })
 
 
 def list_conversations(request, agent_id):
@@ -134,7 +197,12 @@ def send_message(request, conv_id):
     conv.title = user_text[:30] if conv.title == "新对话" else conv.title
     conv.save(update_fields=["title", "updated_at"])
 
-    return JsonResponse({"ok": True, "message": {"role": role, "content": response_text, "tokens": tokens}})
+    agentscope_ok, _ = _check_agentscope_available()
+    return JsonResponse({
+        "ok": True,
+        "message": {"role": role, "content": response_text, "tokens": tokens},
+        "degraded": not agentscope_ok,
+    })
 
 
 def _run_agent(agent_cfg, user_text, conv) -> tuple:
@@ -227,7 +295,103 @@ def save_message(request, conv_id):
 @csrf_exempt
 @require_auth
 def stream_chat(request, conv_id):
-    return JsonResponse({"ok": False, "error": "streaming not yet available — use /send for now"}, status=501)
+    """POST /api/ai/conversations/{id}/stream — Django-native SSE streaming.
+
+    Calls the AI model API directly with stream=True and relays chunks as
+    SSE events.  Does NOT require AgentScope or Redis — works in degraded mode.
+    """
+    from django.http import StreamingHttpResponse
+
+    if not check_conversation_access(request.user_id, conv_id):
+        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+
+    try:
+        conv = AIConversation.objects.select_related('agent').get(id=conv_id)
+    except AIConversation.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "conversation not found"}, status=404)
+
+    data = json.loads(request.body)
+    user_text = data.get('message', '').strip()
+    if not user_text:
+        return JsonResponse({"ok": False, "error": "message required"}, status=400)
+
+    # Save user message
+    AIMessage.objects.create(conversation=conv, role="user", content=user_text)
+
+    agent_cfg = conv.agent
+    api_key = decrypt_key(agent_cfg.api_key) if agent_cfg.api_key else ''
+    provider = agent_cfg.model_provider
+    model_name = agent_cfg.model_name
+    system_prompt = agent_cfg.system_prompt or "你是一个有用的AI助手。"
+    base_url = (get_provider_config(provider, agent_cfg.base_url) or {}).get("base_url", "")
+
+    if not api_key:
+        return JsonResponse({"ok": False, "error": "Agent 未配置 API Key"}, status=400)
+
+    # Build message history
+    messages = [{"role": "system", "content": system_prompt}]
+    history = AIMessage.objects.filter(conversation=conv).order_by('-created_at')[:20]
+    for m in reversed(list(history)):
+        if m.role in ('user', 'assistant'):
+            messages.append({"role": m.role, "content": m.content})
+    messages.append({"role": "user", "content": user_text})
+
+    def generate():
+        full_text = []
+        try:
+            if provider == "dashscope":
+                url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+                headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                body = {"model": model_name, "messages": messages, "stream": True}
+                if agent_cfg.temperature:
+                    body["temperature"] = float(agent_cfg.temperature)
+            else:
+                url = f"{base_url.rstrip('/')}/chat/completions"
+                headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                body = {"model": model_name, "messages": messages, "stream": True}
+                if agent_cfg.temperature:
+                    body["temperature"] = float(agent_cfg.temperature)
+
+            import requests as req
+            resp = req.post(url, headers=headers, json=body, stream=True, timeout=120)
+            if resp.status_code != 200:
+                yield f'data: {{"type":"error","error":"API error {resp.status_code}: {resp.text[:200]}"}}\n\n'
+                return
+
+            for line in resp.iter_lines(decode_unicode=True):
+                if not line or not line.startswith("data: "):
+                    continue
+                data_str = line[6:]  # strip "data: " prefix
+                if data_str == "[DONE]":
+                    yield f'data: {{"type":"done"}}\n\n'
+                    continue
+                try:
+                    chunk = json.loads(data_str)
+                    delta = chunk.get("choices", [{}])[0].get("delta", {})
+                    content = delta.get("content", "")
+                    if content:
+                        full_text.append(content)
+                        escaped = json.dumps({"type": "delta", "content": content})
+                        yield f"data: {escaped}\n\n"
+                except (json.JSONDecodeError, KeyError, IndexError):
+                    continue
+        except Exception as e:
+            yield f'data: {{"type":"error","error":"{str(e)}"}}\n\n'
+
+        # Save assistant message after stream completes
+        final = "".join(full_text)
+        if final.strip():
+            AIMessage.objects.create(
+                conversation=conv, role="assistant", content=final,
+                tokens=len(final), model_name=model_name,
+            )
+
+    response = StreamingHttpResponse(
+        generate(), content_type='text/event-stream', status=200,
+    )
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    return response
 
 
 def list_conv_tasks(request, conv_id):
@@ -243,19 +407,81 @@ def list_conv_tasks(request, conv_id):
         ).order_by("-started_at")[:50]
 
         return JsonResponse({"ok": True, "tasks": [
-            {
-                "run_id": t.run_id,
-                "status": t.status,
-                "device_serial": t.device_serial,
-                "device_model": "",
-                "cases": t.selected_cases or [],
-                "loop_count": t.loop_count or 1,
-                "started_at": str(t.started_at) if t.started_at else None,
-                "completed_at": str(t.completed_at) if getattr(t, 'completed_at', None) else None,
-                "summary": t.summary or "",
-            }
-            for t in tasks
+            _serialize_ai_task(t) for t in tasks
         ]})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=500)
+
+
+def _parse_summary(summary):
+    if isinstance(summary, dict):
+        return summary
+    if isinstance(summary, str) and summary.strip():
+        try:
+            import json
+            data = json.loads(summary)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {"title": summary}
+    return {}
+
+
+def _serialize_ai_task(t, total=0, passed=0):
+    meta = _parse_summary(t.summary)
+    cases = t.selected_cases or []
+    loop = t.loop_count or 1
+    progress = meta.get("progress") or {}
+    if not isinstance(progress, dict):
+        progress = {}
+    prog_total = int(progress.get("total") or 0) or max(1, (len(cases) if isinstance(cases, list) else 0) * loop)
+    prog_current = int(total) if total else int(progress.get("current") or 0)
+    status = (t.status or "PENDING").upper()
+    return {
+        "run_id": t.run_id,
+        "title": meta.get("title") or t.run_id,
+        "status": status,
+        "agent_id": str(meta.get("agent_id") or ""),
+        "agent_name": meta.get("agent_name") or "未知智能体",
+        "device_serial": t.device_serial or "",
+        "device_model": meta.get("device_model") or "",
+        "cases": cases if isinstance(cases, list) else [],
+        "case_titles": meta.get("case_titles") or [],
+        "loop_count": loop,
+        "progress": {"current": prog_current, "total": prog_total},
+        "started_at": str(t.started_at) if t.started_at else None,
+        "finished_at": str(t.finished_at) if t.finished_at else None,
+    }
+
+
+@csrf_exempt
+@require_auth
+def list_ai_tasks(request):
+    """GET /api/ai/tasks — 工作台任务便签看板（全部 ai-task-*）。
+
+    Query: status=all|pending|running|completed|failed|stopped
+    """
+    try:
+        from django.db.models import Count, Q
+        from apps.test_runner.models import TestRunRecord
+
+        status_q = (request.GET.get("status") or "all").strip().lower()
+        qs = TestRunRecord.objects.filter(run_id__startswith="ai-task-").annotate(
+            total=Count("results"),
+            passed=Count("results", filter=Q(results__result="pass")),
+        ).order_by("-id")
+
+        status_map = {
+            "pending": ["PENDING"],
+            "running": ["RUNNING"],
+            "completed": ["COMPLETED", "SUCCESS"],
+            "failed": ["FAILED", "ERROR"],
+            "stopped": ["STOPPED", "CANCELLED"],
+        }
+        if status_q in status_map:
+            qs = qs.filter(status__in=status_map[status_q])
+
+        tasks = [_serialize_ai_task(t, total=t.total, passed=t.passed) for t in qs[:80]]
+        return JsonResponse({"ok": True, "tasks": tasks})
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)}, status=500)
 

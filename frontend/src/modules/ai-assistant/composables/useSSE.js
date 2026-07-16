@@ -26,6 +26,34 @@ export function useSSE({
   const sending = ref(false);
   const pendingConfirm = ref(null);
   const pendingConfirmMsgIdx = ref(-1);
+  const degradedMode = ref(false);
+
+  /** Check platform health; update degradedMode if AgentScope is unavailable. */
+  async function checkHealth() {
+    try {
+      const { data } = await client.get("/ai/health");
+      if (data.ok && data.mode !== "full") {
+        degradedMode.value = true;
+        if (data.mode === "offline") {
+          ElMessage.warning(
+            "AgentScope 和 Redis 均不可用，AI 对话将使用 Django 降级模式（直接调用模型 API）",
+            { duration: 6000 },
+          );
+        } else {
+          ElMessage.warning(
+            "AgentScope 服务不可用，AI 对话已切换到 Django 降级模式",
+            { duration: 5000 },
+          );
+        }
+      } else {
+        degradedMode.value = false;
+      }
+    } catch (_) {
+      // Health endpoint itself unreachable — assume degraded
+      degradedMode.value = true;
+    }
+    return degradedMode.value;
+  }
 
   async function fallbackSend(msgText) {
     try {
@@ -34,6 +62,7 @@ export function useSSE({
         { message: msgText },
       );
       if (data.ok) {
+        if (data.degraded) degradedMode.value = true;
         if (assistIdx.value < messages.value.length) {
           messages.value[assistIdx.value] = {
             ...data.message,
@@ -461,6 +490,8 @@ export function useSSE({
     sending,
     pendingConfirm,
     pendingConfirmMsgIdx,
+    degradedMode,
+    checkHealth,
     trySSEStream,
     fallbackSend,
     sendStreamMessage,

@@ -1,0 +1,6 @@
+# ── Production export-ignore ──
+# These directories are excluded from git archive exports
+# for production deployment
+
+dev_docs/   export-ignore
+tests/      export-ignore

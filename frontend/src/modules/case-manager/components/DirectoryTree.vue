@@ -3,6 +3,7 @@ import { ref, watch, nextTick, computed, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Button as AnimalButton } from "animal-island-vue";
+import EmptyState from "@/shared/components/patterns/EmptyState.vue";
 import { formatApiError } from "@/shared/api-client.js";
 import {
   createDirectory,
@@ -528,11 +529,7 @@ onUnmounted(() => {
 
     <!-- el-tree -->
     <div class="tree-body">
-      <div v-if="treeData.length === 0" class="tree-empty">
-        <span class="tree-empty__icon">📁</span>
-        <p class="tree-empty__text">暂无目录</p>
-        <p class="tree-empty__hint">点击上方 + 按钮创建第一个目录</p>
-      </div>
+      <EmptyState v-if="treeData.length === 0" icon="📁" text="暂无目录" hint="点击上方 + 按钮创建第一个目录" />
 
       <el-tree
         v-else
@@ -639,8 +636,8 @@ onUnmounted(() => {
         @keyup.enter="handleDialogConfirm"
       />
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleDialogConfirm">确定</el-button>
+        <AnimalButton @click="dialogVisible = false">取消</AnimalButton>
+        <AnimalButton type="primary" @click="handleDialogConfirm">确定</AnimalButton>
       </template>
     </el-dialog>
 
@@ -664,13 +661,12 @@ onUnmounted(() => {
         />
       </el-select>
       <template #footer>
-        <el-button @click="moveDialogVisible = false">取消</el-button>
-        <el-button
+        <AnimalButton @click="moveDialogVisible = false">取消</AnimalButton>
+        <AnimalButton
           type="primary"
           :disabled="!moveTargetDirId"
           @click="confirmBatchMove"
-          >确认移动</el-button
-        >
+          >确认移动</AnimalButton>
       </template>
     </el-dialog>
   </div>

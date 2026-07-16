@@ -10,8 +10,8 @@ const router = useRouter()
 
 // ── 登录表单 ──
 const savedUser = localStorage.getItem('saved_username')
-const loginUsername = ref(savedUser || 'admin')
-const loginPassword = ref('admin123')
+const loginUsername = ref(savedUser || '')
+const loginPassword = ref('')
 const rememberMe = ref(!!savedUser)
 
 // ── 注册表单 ──

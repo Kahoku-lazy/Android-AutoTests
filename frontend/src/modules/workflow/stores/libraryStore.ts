@@ -233,15 +233,20 @@ export const useLibraryStore = defineStore('wf-library', () => {
   async function createTestCase(
     name: string,
     parentId: string | null = null,
-    _opts?: { packageName?: string; syncPlatform?: boolean }
+    _opts?: {
+      packageName?: string
+      syncPlatform?: boolean
+      blocks?: unknown[]
+      linkedCaseId?: string
+    }
   ): Promise<LibNode> {
     const title = name.trim() || '未命名用例'
     const config = {
       format: 'testcase-scratch-v1',
       name: title,
       package_name: _opts?.packageName || 'com.example.app',
-      blocks: [] as unknown[],
-      linkedCaseId: '',
+      blocks: Array.isArray(_opts?.blocks) ? _opts!.blocks! : ([] as unknown[]),
+      linkedCaseId: _opts?.linkedCaseId || '',
     }
     try {
       const res = await saveWorkflowDocument({
@@ -561,6 +566,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
     createFolder,
     createPageFlow,
     createTestCase,
+    configCache,
     renameNode,
     deleteNode,
     moveNode,

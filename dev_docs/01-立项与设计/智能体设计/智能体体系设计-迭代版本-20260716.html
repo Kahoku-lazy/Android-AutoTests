@@ -69,7 +69,7 @@ code{font-family:'SF Mono',Consolas,monospace;font-size:11px;font-weight:600;bac
 
 <div class="hero">
   <h1>Claude Code 运行机制</h1>
-  <p class="subtitle">不是设计文档——是我实际怎么工作的。启动顺序 · 信息获取 · 决策逻辑 · 边界</p>
+  <p class="subtitle">v2 · 已补全 CLAUDE.md + 7 Agent + 14 Rules + 12 Skills · 全部 git 追踪</p>
 </div>
 
 <!-- ═══════════ 一：启动时我得到了什么 ═══════════ -->
@@ -92,61 +92,61 @@ code{font-family:'SF Mono',Consolas,monospace;font-size:11px;font-weight:600;bac
   </div>
 
   <div class="card" style="border-left:4px solid var(--error)">
-    <h3>这个项目的实际情况</h3>
+    <h3>这个项目的实际情况（v2 · 2026-07-16 更新）</h3>
     <table>
       <thead><tr><th>配置项</th><th>设计预期</th><th>实际状态</th><th>对我的影响</th></tr></thead>
       <tbody>
         <tr>
           <td><code>CLAUDE.md</code></td>
           <td>路由表 · 身份 · 铁律</td>
-          <td><span class="reality-tag tag-missing">不存在</span></td>
-          <td>没有统一的入口指令。我必须自己从 dev_docs/ 推断项目结构</td>
-        </tr>
-        <tr>
-          <td><code>AGENTS.md</code></td>
-          <td>架构真相 · 防火墙 · API/DB</td>
-          <td><span class="reality-tag tag-missing">不存在</span></td>
-          <td>没有预加载的架构摘要。我通过 Read 工具按需读取 dev_docs/</td>
-        </tr>
-        <tr>
-          <td><code>.claude/rules/</code></td>
-          <td>始终生效的硬约束</td>
-          <td><span class="reality-tag tag-missing">目录不存在</span></td>
-          <td>没有自动注入的规则。约束来自文档（PRD/ARCH/CHECKLIST）</td>
-        </tr>
-        <tr>
-          <td><code>.claude/memory/</code></td>
-          <td>教训沉淀，自动加载</td>
-          <td><span class="reality-tag tag-exists">20 个文件</span></td>
-          <td>MEMORY.md 索引加载到上下文。我能"记住"过去的模式和偏好</td>
-        </tr>
-        <tr>
-          <td><code>.claude/settings.local.json</code></td>
-          <td>权限管理</td>
-          <td><span class="reality-tag tag-exists">已配置</span></td>
-          <td>Bash/WebFetch 等操作的权限白名单</td>
+          <td><span class="reality-tag tag-exists">已创建</span></td>
+          <td>每次会话加载：文档体系 → 4 条行为准则 → 变更级别判定 → 防火墙 → 工具 → 关键约定</td>
         </tr>
         <tr>
           <td><code>.claude/agents/</code></td>
           <td>子 Agent 定义</td>
-          <td><span class="reality-tag tag-partial">1 个</span></td>
-          <td>仅 frontend-evaluator 可用。没有 prd-writer/architect 等角色 Agent</td>
+          <td><span class="reality-tag tag-exists">7 个</span></td>
+          <td>architect / developer / prd-writer / reviewer / tester / test-automator / frontend-evaluator</td>
         </tr>
         <tr>
-          <td><code>.claude/skills/</code></td>
-          <td>专项流程</td>
-          <td><span class="reality-tag tag-partial">2 个</span></td>
-          <td>functional-testing + architecture-review 可用</td>
+          <td><code>.claude/rules/</code></td>
+          <td>始终生效的硬约束</td>
+          <td><span class="reality-tag tag-exists">14 个</span></td>
+          <td>frontend / backend / architecture / module-boundaries / security / phone-control / conventions / database / agentscope-tools / ai-assistant / ai-engine / animal-island-ui / api-conventions / setup / troubleshooting</td>
         </tr>
         <tr>
           <td><code>.claude/hooks/</code></td>
           <td>生命周期钩子</td>
-          <td><span class="reality-tag tag-partial">2 个</span></td>
-          <td>check-boundary.sh + check-doc-drift.sh</td>
+          <td><span class="reality-tag tag-exists">6 个</span></td>
+          <td>check-boundary / check-doc-drift / auto-format / post-turn-build / protect-credentials / session-health</td>
+        </tr>
+        <tr>
+          <td><code>.claude/skills/</code></td>
+          <td>专项流程</td>
+          <td><span class="reality-tag tag-exists">12 个</span></td>
+          <td>auto-dev / prd-writer / architecture-review / quality-gate / code-health-check / feature-analysis / functional-testing / boundary-check / module-design / github-manager / html-report</td>
+        </tr>
+        <tr>
+          <td><code>.claude/memory/</code></td>
+          <td>教训沉淀</td>
+          <td><span class="reality-tag tag-exists">~55 个 + MEMORY.md</span></td>
+          <td>索引自动加载到上下文。覆盖：文档管理 / test-runner / CSS / 工作流 / 安全 / 编码习惯</td>
+        </tr>
+        <tr>
+          <td><code>.claude/settings.json</code></td>
+          <td>权限与配置</td>
+          <td><span class="reality-tag tag-exists">2 个</span></td>
+          <td>settings.json + settings.local.json（Bash/WebFetch 权限白名单）</td>
+        </tr>
+        <tr>
+          <td><code>dev_docs/</code></td>
+          <td>项目文档</td>
+          <td><span class="reality-tag tag-exists">已追踪</span></td>
+          <td>PRD(02) + ARCH(03) + CHECKLIST + 工作流报告 + 智能体设计 · 全部 git 版本控制</td>
         </tr>
       </tbody>
     </table>
-    <p class="note">因为没有 CLAUDE.md 路由和 rules 目录，我的行为更多依赖于你当前的消息内容 + dev_docs/ 中的 PRD/ARCH 文档 + memory 中沉淀的模式。</p>
+    <p class="note">v1（旧版）时 CLAUDE.md、AGENTS.md、.claude/rules/ 均不存在，dev_docs/ 在 gitignore 中。v2 全部补齐并纳入 git 追踪。</p>
   </div>
 </div>
 
@@ -459,8 +459,8 @@ code{font-family:'SF Mono',Consolas,monospace;font-size:11px;font-weight:600;bac
 </div>
 
 <div class="footer">
-  <span>Claude Code 运行机制 · 基于 Android-AutoTests 实际项目配置</span>
-  <span>2026-07-16</span>
+  <span>Claude Code 运行机制 · v2 · CLAUDE.md + 7 Agents + 14 Rules + 12 Skills + 55 Memories · 全部 git 追踪</span>
+  <span>2026-07-16 20:50</span>
 </div>
 </div>
 </body>

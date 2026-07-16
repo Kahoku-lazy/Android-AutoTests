@@ -1,17 +1,16 @@
 <script setup>
 /** Device Pool v2 — 设备管理主页面 per PRD §7 (animal-island-vue redesign) */
-import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
-import { useRouter } from "vue-router";
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { animate, stagger } from "animejs";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Button as AnimalButton, Card, Table, Tabs } from "animal-island-vue";
 import { useDevicePoolStore } from "./store.js";
 import LockDialog from "./components/LockDialog.vue";
 import DisconnectDialog from "./components/DisconnectDialog.vue";
+import NetworkConnectDialog from "./components/NetworkConnectDialog.vue";
 import QueuePanel from "./components/QueuePanel.vue";
 import PageHeader from "@/shared/components/PageHeader.vue";
 
-const router = useRouter();
 const store = useDevicePoolStore();
 
 // ── Local state ──
@@ -30,6 +29,9 @@ const disconnectDialog = ref({
   lockedBy: "",
   isBusyOthers: false,
 });
+
+// Network (LAN) connect dialog — PRD §3.7 F-07
+const networkDialog = ref({ visible: false, loading: false });
 
 // ── Tabs filtering ──
 const activeFilter = ref("all");
@@ -52,6 +54,39 @@ const filteredDevices = computed(() => {
     (d) => d.status === activeFilter.value.toUpperCase(),
   );
 });
+
+// ── Pagination ──
+const PAGE_SIZE_OPTIONS = [5, 10, 20];
+const pageSize = ref(10);
+const currentPage = ref(1);
+
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredDevices.value.length / pageSize.value)),
+);
+
+const pagedDevices = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  return filteredDevices.value.slice(start, start + pageSize.value);
+});
+
+watch([activeFilter, pageSize], () => {
+  currentPage.value = 1;
+});
+
+watch(filteredDevices, () => {
+  if (currentPage.value > totalPages.value) {
+    currentPage.value = totalPages.value;
+  }
+});
+
+function setPageSize(size) {
+  pageSize.value = size;
+  currentPage.value = 1;
+}
+
+function goPage(page) {
+  currentPage.value = Math.min(Math.max(1, page), totalPages.value);
+}
 
 // ── Table columns definition (animal-island Table API) ──
 const columns = [
@@ -130,42 +165,38 @@ async function handleRefresh() {
   await loadDevices();
 }
 
+// Network (LAN) connect flow — PRD §3.7 F-07
+function openNetworkDialog() {
+  networkDialog.value = { visible: true, loading: false };
+}
+
+async function handleNetworkConnect({ target }) {
+  if (!target) return;
+  networkDialog.value.loading = true;
+  // store.doScan 内部已 try/catch，恒返回 { ok, error? }
+  const result = await store.doScan(target);
+  networkDialog.value.loading = false;
+  if (result && result.ok) {
+    ElMessage.success(`已连接 ${target}`);
+    networkDialog.value.visible = false;
+    // 单 target scan 只返回该设备，必须全量刷新以恢复完整列表
+    await loadDevices();
+  } else {
+    // 失败：透传后端 error，弹窗保持打开可重试
+    ElMessage.error((result && result.error) || "连接失败");
+  }
+}
+
+function cancelNetworkDialog() {
+  networkDialog.value.visible = false;
+}
+
 function handleRowClick(record) {
   if (!record || !record.serial) return;
   const dev = store.devices.find((d) => d.serial === record.serial);
   if (!dev) return;
   if (dev.status === "OFFLINE" || dev.status === "DISCONNECTED") return;
   store.selectDevice(record.serial);
-}
-
-async function handleConnect(serial) {
-  if (!serial) return;
-  const dev = store.devices.find((d) => d.serial === serial);
-  if (!dev) return;
-
-  if (dev.status === "OFFLINE" || dev.status === "DISCONNECTED") {
-    ElMessage.warning("设备已离线，请重新扫描");
-    return;
-  }
-  if (dev.status === "BUSY" && dev.occupied_by) {
-    ElMessage.warning(`设备正被 ${dev.occupied_by} 占用中`);
-    return;
-  }
-  if (dev.locked_by && dev.locked_by !== userId.value) {
-    ElMessage.warning(`设备已被 ${dev.locked_by} 绑定`);
-    return;
-  }
-
-  const result = await store.doConnect(serial, {
-    activate: true,
-    userId: userId.value,
-  });
-  if (result.ok) {
-    ElMessage.success(`已连接 ${result.model || serial}`);
-    router.push({ path: "/elements", query: { serial, autoStart: "1" } });
-  } else {
-    ElMessage.error(result.error || "连接失败");
-  }
 }
 
 // Lock flow
@@ -395,6 +426,9 @@ function connectionLabel(type) {
               :count="store.queueLength"
               @cancel="handleCancelQueue"
             />
+            <AnimalButton type="primary" @click="openNetworkDialog">
+              局域网连接
+            </AnimalButton>
             <AnimalButton
               type="primary"
               @click="handleRefresh"
@@ -415,11 +449,36 @@ function connectionLabel(type) {
             :shadow="true"
           >
             <template v-for="tab in filterTabs" #[tab.key] :key="tab.key">
-              <Card color="app-yellow" pattern="app-yellow" type="default">
-                <div class="device-table-wrapper">
-                  <Table
-                    :columns="columns"
-                    :data-source="filteredDevices"
+              <div class="tab-panel">
+                <div class="table-toolbar">
+                  <div class="page-size-control">
+                    <span class="toolbar-label">显示行数</span>
+                    <div class="page-size-btns">
+                      <button
+                        v-for="n in PAGE_SIZE_OPTIONS"
+                        :key="n"
+                        type="button"
+                        class="page-size-btn"
+                        :class="{ active: pageSize === n }"
+                        @click="setPageSize(n)"
+                      >{{ n }}</button>
+                    </div>
+                  </div>
+                  <div v-if="filteredDevices.length > 0" class="table-toolbar-right">
+                    <span class="page-info">
+                      第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ filteredDevices.length }} 台
+                    </span>
+                    <div v-if="totalPages > 1" class="page-nav">
+                      <AnimalButton size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</AnimalButton>
+                      <AnimalButton size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</AnimalButton>
+                    </div>
+                  </div>
+                </div>
+                <Card color="app-yellow" pattern="app-yellow" type="default" class="table-card">
+                  <div class="device-table-wrapper">
+                    <Table
+                      :columns="columns"
+                      :data-source="pagedDevices"
                     row-key="serial"
                     :striped="true"
                     :loading="store.loading"
@@ -460,11 +519,19 @@ function connectionLabel(type) {
                         </el-tag>
                         <!-- Execution engine occupation — highest priority -->
                         <el-tooltip
-                          v-if="record.occupied_by && record.status === 'BUSY' && ['runner-','ai_agent','task-','run-'].some(p => record.occupied_by.startsWith(p))"
+                          v-if="
+                            record.occupied_by &&
+                            record.status === 'BUSY' &&
+                            ['runner-', 'ai_agent', 'task-', 'run-'].some((p) =>
+                              record.occupied_by.startsWith(p),
+                            )
+                          "
                           :content="record.occupied_by"
                           placement="top"
                         >
-                          <span class="occupied-badge executing-badge">执行中</span>
+                          <span class="occupied-badge executing-badge"
+                            >执行中</span
+                          >
                         </el-tooltip>
                         <!-- Other process occupation -->
                         <el-tooltip
@@ -472,13 +539,16 @@ function connectionLabel(type) {
                           :content="record.occupied_by"
                           placement="top"
                         >
-                          <span class="occupied-badge process-badge">占用中: {{ record.occupied_by }}</span>
+                          <span class="occupied-badge process-badge"
+                            >占用中: {{ record.occupied_by }}</span
+                          >
                         </el-tooltip>
                         <!-- User binding (no process occupation) -->
                         <span
                           v-else-if="record.locked_by"
                           class="occupied-badge locked-badge"
-                        >已绑定: {{ record.locked_by }}</span>
+                          >已绑定: {{ record.locked_by }}</span
+                        >
                       </div>
                     </template>
 
@@ -538,23 +608,8 @@ function connectionLabel(type) {
                       </div>
                     </template>
                   </Table>
-                </div>
-              </Card>
-
-              <div class="bottom-bar">
-                <AnimalButton
-                  type="primary"
-                  :disabled="!store.selectedSerial"
-                  @click="handleConnect(store.selectedSerial)"
-                >
-                  连接选中设备
-                </AnimalButton>
-                <span v-if="!store.selectedSerial" class="bottom-hint">
-                  请先点击设备行选中一台设备
-                </span>
-                <span v-else class="bottom-hint selected-hint">
-                  已选择：{{ store.selectedSerial }}
-                </span>
+                  </div>
+                </Card>
               </div>
             </template>
           </Tabs>
@@ -574,12 +629,29 @@ function connectionLabel(type) {
       @confirm="handleDisconnectConfirm"
       @cancel="cancelDisconnectDialog"
     />
+    <NetworkConnectDialog
+      :visible="networkDialog.visible"
+      :loading="networkDialog.loading"
+      @confirm="handleNetworkConnect"
+      @cancel="cancelNetworkDialog"
+    />
   </div>
 </template>
 
 <style scoped>
 .dp-animal-theme {
-  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.doc-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .header-actions {
@@ -589,23 +661,68 @@ function connectionLabel(type) {
 }
 
 .device-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 20px 24px 24px;
+}
+
+.device-section .doc-section__header {
+  flex-shrink: 0;
 }
 
 /* ── Filter bar ── */
 .filter-bar {
+  flex: 1;
+  min-height: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: space-between;
   gap: 16px;
   padding: 0 4px;
+  overflow: hidden;
 }
 .device-tabs {
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.device-tabs :deep(.animal-tabs) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.device-tabs :deep(.animal-tabs__list) {
+  flex-shrink: 0;
 }
 .device-tabs :deep(.animal-tabs__content) {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   padding-top: 16px;
+}
+.device-tabs :deep(.animal-tabs__inner) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.tab-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .filter-count {
   font-size: 13px;
@@ -614,18 +731,88 @@ function connectionLabel(type) {
   white-space: nowrap;
   flex-shrink: 0;
   padding-top: 10px;
+  align-self: flex-start;
 }
 
-/* ── Table wrapper inside Card ── */
-.device-table-wrapper {
-  padding: 0;
+/* ── Table toolbar ── */
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 0 10px;
+  flex-shrink: 0;
 }
-.device-table-wrapper :deep(.animal-card__content) {
+.page-size-control { display: flex; align-items: center; gap: 10px; }
+.toolbar-label { font-size: 12px; font-weight: 700; color: #8a7b66; white-space: nowrap; }
+.page-size-btns { display: flex; gap: 6px; }
+.page-size-btn {
+  min-width: 40px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(139, 115, 85, 0.2);
+  background: #f7f3df;
+  color: #6b5b48;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.page-size-btn:hover { border-color: #19c8b9; color: #19c8b9; }
+.page-size-btn.active {
+  background: rgba(25, 200, 185, 0.12);
+  border-color: #19c8b9;
+  color: #0f9a8e;
+}
+.table-toolbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
+.page-info { font-size: 12px; color: #8a7b66; font-weight: 600; white-space: nowrap; }
+.page-nav { display: flex; gap: 8px; }
+
+/* ── Table card ── */
+.table-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.table-card :deep(.animal-card__content) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 0;
   border-radius: 16px;
   background: rgba(255, 248, 240, 0.85);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+}
+
+/* ── Table wrapper inside Card ── */
+.device-table-wrapper {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 115, 85, 0.25) transparent;
+}
+.device-table-wrapper::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.device-table-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(139, 115, 85, 0.25);
+  border-radius: 3px;
+}
+.device-table-wrapper :deep(.animal-table-wrapper),
+.device-table-wrapper :deep(.animal-table__body) {
+  overflow: visible !important;
+  max-height: none !important;
 }
 
 /* ── Row dot indicator ── */
@@ -706,25 +893,6 @@ function connectionLabel(type) {
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
-}
-
-/* ── Bottom bar ── */
-.bottom-bar {
-  display: flex;
-  align-items: center;
-  padding: 16px 0 0;
-  margin-top: 16px;
-  border-top: 1px solid var(--el-border-color-lighter, #ebeef5);
-}
-.bottom-hint {
-  margin-left: 12px;
-  color: var(--text-secondary, #909399);
-  font-size: 13px;
-}
-.selected-hint {
-  color: var(--accent-blue, #409eff);
-  font-weight: 600;
-  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
 }
 
 /* ── Empty state ── */

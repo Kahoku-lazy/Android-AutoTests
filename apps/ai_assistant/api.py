@@ -102,16 +102,10 @@ def encrypt_key(plain: str) -> str:
 
 
 def decrypt_key(encrypted: str) -> str:
-    """解密 API Key，兼容旧版明文存储。"""
+    """解密 API Key。"""
     if not encrypted:
         return ""
-    try:
-        return _get_cipher().decrypt(encrypted.encode()).decode()
-    except Exception:
-        # 旧版明文 key（不以 sk- 开头可能是加密后的），尝试直接返回
-        if encrypted.startswith("sk-") or encrypted.startswith("fk-"):
-            return encrypted
-        raise
+    return _get_cipher().decrypt(encrypted.encode()).decode()
 
 
 def mask_key(key: str) -> str:

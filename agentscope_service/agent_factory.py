@@ -13,6 +13,7 @@ from agentscope.credential import (
 )
 from apps.ai_assistant.models import AIAgent
 from apps.ai_assistant.api import decrypt_key
+from agentscope_service.provider_registry import get_provider_config, validate_base_url
 
 
 # Provider → model class mapping
@@ -20,6 +21,7 @@ _MODEL_CLASS = {
     "dashscope": DashScopeChatModel,
     "openai": OpenAIChatModel,
     "anthropic": OpenAIChatModel,  # Anthropic via OpenAI-compatible
+    "deepseek": OpenAIChatModel,
     "custom": OpenAIChatModel,
 }
 
@@ -28,6 +30,7 @@ _CREDENTIAL_CLASS = {
     "dashscope": DashScopeCredential,
     "openai": OpenAICredential,
     "anthropic": OpenAICredential,
+    "deepseek": OpenAICredential,
     "custom": OpenAICredential,
 }
 
@@ -273,8 +276,13 @@ def build_agent_from_db(agent_id: int, user_id: str) -> Agent:
     cred_cls = _CREDENTIAL_CLASS.get(provider, OpenAICredential)
 
     credential = cred_cls(api_key=api_key)
-    if provider in ("openai", "anthropic", "custom"):
-        base_url = db_agent.base_url or "https://api.openai.com/v1"
+    provider_cfg = get_provider_config(provider, db_agent.base_url)
+    if db_agent.base_url:
+        ok, err = validate_base_url(provider, db_agent.base_url)
+        if not ok:
+            raise ValueError(f"Invalid base_url: {err}")
+    base_url = provider_cfg["base_url"]
+    if provider in ("openai", "anthropic", "custom", "deepseek", "gemini"):
         model = model_cls(
             credential=credential,
             model=db_agent.model_name or "gpt-4o",

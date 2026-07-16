@@ -12,11 +12,17 @@ def get_run_results(run_id):
 
 # ── Write helpers ──
 
-def persist_results(run_id, case_results):
+def persist_results(run_record, case_results):
     """Persist test results to DB."""
     objs = [
-        TestResult(run_id=run_id, case_id=r.case_id, iteration=r.iteration,
-                   result=r.result, duration_ms=r.duration_ms, detail=r.detail)
+        TestResult(
+            run=run_record,
+            case_id=r.case_id,
+            iteration=r.iteration,
+            result=r.result,
+            duration_ms=r.duration_ms,
+            detail=getattr(r, "detail", "") or "",
+        )
         for r in case_results
     ]
     return TestResult.objects.bulk_create(objs)

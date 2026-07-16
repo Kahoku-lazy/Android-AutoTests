@@ -7,11 +7,12 @@ import trRoutes   from '@/modules/test-runner/routes.js'
 import rgRoutes   from '@/modules/report-generator/routes.js'
 // element-manager 已合并到 element-locator (routes.js 中 /element-mgr 路由)
 import aiRoutes   from '@/modules/ai-assistant/routes.js'
+import wfRoutes   from '@/modules/workflow/routes.js'
 
 const routes = [
   { path: '/login', name: 'login',
     component: () => import('@/views/LoginView.vue') },
-  ...dbRoutes, ...elRoutes, ...dpRoutes, ...cmRoutes, ...trRoutes, ...rgRoutes, ...aiRoutes,
+  ...dbRoutes, ...elRoutes, ...dpRoutes, ...cmRoutes, ...trRoutes, ...rgRoutes, ...aiRoutes, ...wfRoutes,
   { path: '/', redirect: '/dashboard' },
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]

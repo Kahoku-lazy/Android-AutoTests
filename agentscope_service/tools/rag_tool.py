@@ -32,7 +32,8 @@ class KnowledgeBaseSearchTool(ToolBase):
     is_read_only = True
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Read-only knowledge search.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, query, top_k=5, **kwargs):
         # Quick check: if collection is empty or unavailable, return immediately

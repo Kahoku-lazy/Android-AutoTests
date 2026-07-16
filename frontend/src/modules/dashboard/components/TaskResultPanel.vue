@@ -72,12 +72,15 @@ function meta(status) {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  flex: 1;
+  min-height: 0;
 }
 
 .task-result-panel__summary {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .summary-chip {
@@ -115,6 +118,11 @@ function meta(status) {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  --task-row-height: 72px;
+  max-height: calc(var(--task-row-height) * 4 + 8px * 3);
 }
 
 .task-row {

@@ -37,7 +37,8 @@ class SaveReportTool(ToolBase):
     is_read_only = False
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Report saving is always allowed.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, run_id, title, file_path, file_type="json", **kwargs):
         obj = await run_sync(lambda: save_report(run_id=run_id, title=title, file_type=file_type, file_path=file_path))
@@ -58,7 +59,8 @@ class ListReportsTool(ToolBase):
     is_read_only = True
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Read-only report listing.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, **kwargs):
         reports = await run_sync(lambda: list(Report.objects.order_by('-created_at')[:30]))

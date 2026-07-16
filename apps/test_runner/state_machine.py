@@ -75,6 +75,10 @@ def _save_transition(
         task_extra: dict of extra TaskCard fields to update
         run_extra: dict of extra TestRunRecord fields to update
     """
+    task_card = TaskCard.objects.select_for_update().get(pk=task_card.pk)
+    if run_record is not None:
+        run_record = TestRunRecord.objects.select_for_update().get(pk=run_record.pk)
+
     _validate(task_card, new_status, new_outcome)
 
     task_card.status = new_status
@@ -111,6 +115,7 @@ def cancel(task_card):
     _save_transition(task_card, None, "idle", "")
 
 
+@transaction.atomic
 def dequeue(task_card, run_id, device_serial, selected_cases, loop_count):
     """TaskCard QUEUED → RUNNING. Creates TestRunRecord atomically.
 
@@ -128,6 +133,7 @@ def dequeue(task_card, run_id, device_serial, selected_cases, loop_count):
         started_at=datetime.now().isoformat(),
     )
 
+    task_card = TaskCard.objects.select_for_update().get(pk=task_card.pk)
     task_card.status = "running"
     task_card.running = True
     task_card.run = run_record
@@ -180,29 +186,40 @@ def complete(
     )
 
 
-def fail(task_card, run_record, outcome="error", overall_pass=0, overall_fail=0):
+def fail(
+    task_card,
+    run_record,
+    outcome="error",
+    overall_pass=0,
+    overall_fail=0,
+    case_items=None,
+    summary=None,
+):
     """TaskCard RUNNING → DONE (error|stopped|interrupted).
 
     Args:
         outcome: one of 'error', 'stopped', 'interrupted'
+        case_items: optional per-case aggregation to persist on the TaskCard
+        summary: optional run summary to persist on the TestRunRecord
     """
     if outcome not in ("error", "stopped", "interrupted"):
         raise ValueError(f"Invalid outcome for fail(): {outcome}")
     run_status = {"error": "FAILED", "stopped": "STOPPED", "interrupted": "STOPPED"}[outcome]
+
+    task_extra = {"overall_pass": overall_pass, "overall_fail": overall_fail}
+    if case_items is not None:
+        task_extra["case_items"] = case_items
+    run_extra = {"status": run_status, "finished_at": datetime.now().isoformat()}
+    if summary is not None:
+        run_extra["summary"] = summary
 
     _save_transition(
         task_card,
         run_record,
         "done",
         outcome,
-        task_extra={
-            "overall_pass": overall_pass,
-            "overall_fail": overall_fail,
-        },
-        run_extra={
-            "status": run_status,
-            "finished_at": datetime.now().isoformat(),
-        },
+        task_extra=task_extra,
+        run_extra=run_extra,
     )
 
 
@@ -281,3 +298,16 @@ def recover_orphans():
         print(f"[state] recover_orphans: {busy_devices.count()} BUSY device(s) → ONLINE")
 
     return fixed
+
+
+def repair_queued_terminal_drift() -> int:
+    """修复 status=queued 但 outcome 已终态的数据漂移（历史 bug 遗留）。"""
+    drift = TaskCard.objects.filter(
+        status="queued",
+        outcome__in=["completed", "stopped", "interrupted", "error"],
+    )
+    count = drift.count()
+    if count:
+        drift.update(status="done", running=False)
+        print(f"[state] repair_queued_terminal_drift: {count} TaskCard(s) queued→done")
+    return count

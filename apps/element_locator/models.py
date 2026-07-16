@@ -3,12 +3,17 @@ from django.db import models
 
 
 class Page(models.Model):
-    """Recorded UI page snapshot → el_pages."""
+    """Recorded UI page snapshot or folder node → el_pages."""
     device = models.ForeignKey(
         'device_pool.Device', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='element_locator_pages'
     )
-    label = models.CharField(max_length=500, default='', blank=True, unique=True)
+    parent = models.ForeignKey(
+        'self', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='children',
+    )
+    is_folder = models.BooleanField(default=False)
+    label = models.CharField(max_length=500, default='', blank=True)
     package = models.CharField(max_length=500, default='', blank=True)
     activity = models.CharField(max_length=500, default='', blank=True)
     screenshot_path = models.CharField(max_length=1000, default='', blank=True)

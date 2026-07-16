@@ -314,7 +314,7 @@ function onMouseLeave() {
 <style scoped>
 .screenshot-panel {
   height: 100%;
-  min-height: 420px;
+  min-height: 0;
   width: 100%;
   background: var(--glass-bg);
   backdrop-filter: blur(16px);

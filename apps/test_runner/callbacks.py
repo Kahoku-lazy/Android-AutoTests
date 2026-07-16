@@ -1,13 +1,24 @@
-"""TestRunnerCallback bridge → Channels consumers."""
+"""TestRunnerCallback bridge → Channels consumers.
+
+TREP v1.0 Protocol 3: Scheduler → Frontend WebSocket events.
+- gather + timeout 并发广播，慢客户端不拖垮其他人
+- seq 递增序号，前端检测 gap → 触发对账
+- heartbeat 每 5s，前端 15s 无心跳 → 连接丢失指示
+"""
 import json
+import asyncio
 from .runner import TestRunnerCallback
 
 
 class WsTestCallback(TestRunnerCallback):
-    """Bridges TestRunnerCallback events to Django Channels WebSocket consumers."""
+    """Bridges TestRunnerCallback events to Django Channels WebSocket consumers.
+
+    TREP v1.0: 每条消息带 seq 递增序号，广播用 gather + 2s 超时。
+    """
 
     def __init__(self):
         self.clients: dict[str, set] = {}
+        self._seq: dict[str, int] = {}  # run_id → next sequence number
 
     def register(self, run_id: str, consumer):
         if run_id not in self.clients:
@@ -18,19 +29,39 @@ class WsTestCallback(TestRunnerCallback):
         if run_id in self.clients:
             self.clients[run_id].discard(consumer)
 
-    async def _broadcast(self, run_id: str, msg: dict):
-        dead = []
-        if run_id in self.clients:
-            for consumer in self.clients[run_id]:
-                try:
-                    await consumer.send(text_data=json.dumps(msg, ensure_ascii=False))
-                except Exception:
-                    dead.append(consumer)
-            for consumer in dead:
-                self.unregister(run_id, consumer)
+    def _next_seq(self, run_id: str) -> int:
+        """Return next monotonic seq for run_id, starting from 1."""
+        n = self._seq.get(run_id, 0) + 1
+        self._seq[run_id] = n
+        return n
+
+    async def _broadcast(self, run_id: str, msg: dict, timeout: float = 2.0):
+        """并发广播到所有注册的 consumer，每个 send 最多等 timeout 秒。
+
+        TREP v1.0: gather + timeout — 慢客户端不拖垮其他人。
+        """
+        if run_id not in self.clients or not self.clients[run_id]:
+            return
+        msg["seq"] = self._next_seq(run_id)
+        consumers = list(self.clients[run_id])
+
+        async def _send_one(consumer):
+            try:
+                await asyncio.wait_for(
+                    consumer.send(text_data=json.dumps(msg, ensure_ascii=False)),
+                    timeout=timeout,
+                )
+            except (asyncio.TimeoutError, Exception):
+                self.clients[run_id].discard(consumer)
+
+        await asyncio.gather(*[_send_one(c) for c in consumers], return_exceptions=True)
 
     async def on_log(self, run_id: str, message: str):
         await self._broadcast(run_id, {"type": "log", "run_id": run_id, "message": message})
+
+    async def on_run_started(self, run_id: str):
+        """预检通过、正式进入执行 —— 前端据此从「准备中」切到「执行中」。"""
+        await self._broadcast(run_id, {"type": "run_started", "run_id": run_id})
 
     async def on_case_started(self, run_id: str, case_id: str, case_title: str, loop_count: int):
         await self._broadcast(run_id, {"type": "case_started", "run_id": run_id,
@@ -71,13 +102,18 @@ class WsTestCallback(TestRunnerCallback):
         })
 
     async def on_run_finished(self, run_id: str, summary: dict,
-                               csv_path: str, log_path: str):
+                               log_path: str):
         await self._broadcast(run_id, {"type": "run_finished", "run_id": run_id,
-                                        "summary": summary, "csv_path": csv_path,
+                                        "summary": summary,
                                         "log_path": log_path})
+        self._seq.pop(run_id, None)  # 清理 seq 计数器
 
     async def on_device_error(self, run_id: str, error: str):
         await self._broadcast(run_id, {"type": "device_error", "run_id": run_id, "error": error})
+
+    async def on_heartbeat(self, run_id: str):
+        """每 5s 心跳 — 前端据此检测连接存活（15s 无心跳 → 连接丢失）。"""
+        await self._broadcast(run_id, {"type": "heartbeat", "run_id": run_id})
 
 
 test_callbacks = WsTestCallback()

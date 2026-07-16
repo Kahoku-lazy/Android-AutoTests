@@ -6,6 +6,7 @@ import django; django.setup()
 
 from apps.ai_assistant.models import AIAgent
 from apps.ai_assistant.api import decrypt_key
+from agentscope_service.provider_registry import get_provider_config
 
 AGENTSCOPE_URL = "http://127.0.0.1:8000"
 
@@ -15,17 +16,8 @@ for a in AIAgent.objects.filter(status="active"):
         print(f"SKIP agent-{a.id} ({a.name}): no API key configured")
         continue
 
-    # Build base URL
-    base_url = a.base_url
-    if not base_url:
-        if a.model_provider == "dashscope":
-            base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-        elif a.model_provider == "deepseek":
-            base_url = "https://api.deepseek.com/v1"
-        elif a.model_provider == "openai":
-            base_url = "https://api.openai.com/v1"
-        else:
-            base_url = "https://api.deepseek.com/v1"
+    provider_cfg = get_provider_config(a.model_provider or "custom", a.base_url or "")
+    base_url = provider_cfg["base_url"]
 
     body = {
         "agent_id": f"agent-{a.id}",
@@ -43,7 +35,7 @@ for a in AIAgent.objects.filter(status="active"):
         # Get JWT token from Django
         login_resp = requests.post(
             f"http://127.0.0.1:8765/api/ai/auth/login",
-            json={"username": "admin", "password": "admin123"},
+            json={"username": os.environ.get("ADMIN_USER", "admin"), "password": os.environ.get("ADMIN_PASSWORD", "")},
             timeout=5,
         )
         token = login_resp.json().get("access_token", "")

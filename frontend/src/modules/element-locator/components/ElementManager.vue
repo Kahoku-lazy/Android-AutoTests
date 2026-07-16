@@ -1,48 +1,417 @@
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { animate, stagger } from 'animejs'
 import {
   apiGetPages, apiCreatePage, apiUpdatePage, apiDeletePage,
   apiGetPageElements, apiAddElementToPage, apiUpdateElement, apiClearAll,
+  apiBatchMovePages,
 } from '../api.js'
-import PageHeader from '@/shared/components/PageHeader.vue'
 import { Modal, Button as AnimalButton, Card, Table, Tabs, Input, Switch } from 'animal-island-vue'
 
 const pages = ref([])
 const selectedPage = ref(null)
 const elements = ref([])
 const loading = ref(false)
-const editingLabel = ref(null)
-const labelInput = ref('')
+const maxDepth = ref(5)
+const treeRef = ref(null)
+
+// ── Context menu ──
+const menuVisible = ref(false)
+const menuX = ref(0)
+const menuY = ref(0)
+const menuNode = ref(null)
 
 // ── Dialogs ──
 const showCreatePage = ref(false)
+const createParentId = ref(null)
+const createIsFolder = ref(false)
 const newPageForm = ref({ label: '', package: '', activity: '' })
 
 const showAddElement = ref(false)
 const newElForm = ref({ alias: '', xpath: '', class_name: '', text_val: '', resource_id: '', bounds: '', clickable: false })
+
+const showRenameDialog = ref(false)
+const renameTarget = ref(null)
+const renameLabel = ref('')
 
 // ── Selection & Clear dialog ──
 const selectedPageIds = reactive(new Set())
 const showClearDialog = ref(false)
 const clearSelectedOnly = ref(false)
 
-onMounted(() => loadPages())
+// ── Long-press drag ──
+const dragEnabled = ref(false)
+const longPressTimer = ref(null)
+const dragSourceNode = ref(null)
+
+// ── Batch select / move ──
+const selectMode = ref(false)
+const selectAll = ref(false)
+const moveDialogVisible = ref(false)
+const moveTargetDirId = ref(null)
+
+function buildPageTree(flatPages) {
+  const byId = new Map()
+  const roots = []
+  for (const p of flatPages) {
+    byId.set(p.id, { ...p, children: [] })
+  }
+  for (const p of flatPages) {
+    const node = byId.get(p.id)
+    if (p.parent_id && byId.has(p.parent_id)) {
+      byId.get(p.parent_id).children.push(node)
+    } else {
+      roots.push(node)
+    }
+  }
+  const sortNodes = (nodes) => {
+    nodes.sort((a, b) => {
+      if (a.is_folder !== b.is_folder) return a.is_folder ? -1 : 1
+      return (a.label || '').localeCompare(b.label || '', 'zh-CN')
+    })
+    nodes.forEach((n) => sortNodes(n.children))
+  }
+  sortNodes(roots)
+  return roots
+}
+
+const pageTree = computed(() => buildPageTree(pages.value))
+
+function collectTreeNodes(nodes, result = []) {
+  for (const node of nodes) {
+    result.push(node)
+    if (node.children?.length) collectTreeNodes(node.children, result)
+  }
+  return result
+}
+
+const allCheckableIds = computed(() =>
+  collectTreeNodes(pageTree.value).map((n) => n.id),
+)
+
+const checkedCount = computed(() => selectedPageIds.size)
+
+const folderList = computed(() => {
+  const selected = new Set(selectedPageIds)
+  const blocked = new Set()
+  for (const id of selected) {
+    const node = findNodeById(pageTree.value, id)
+    if (node?.is_folder) {
+      collectTreeNodes([node]).forEach((n) => blocked.add(n.id))
+    }
+  }
+  const result = [{ id: '__root__', label: '📁 根目录（顶层）', depth: 0 }]
+  const walk = (nodes, depth) => {
+    for (const n of nodes) {
+      if (!n.is_folder || blocked.has(n.id)) continue
+      result.push({
+        id: n.id,
+        label: `${'  '.repeat(depth)}${depth ? '📂 ' : '📁 '}${n.label}`,
+        depth,
+      })
+      if (n.children?.length) walk(n.children, depth + 1)
+    }
+  }
+  walk(pageTree.value, 0)
+  return result
+})
+
+function findNodeById(nodes, id) {
+  for (const node of nodes) {
+    if (node.id === id) return node
+    if (node.children?.length) {
+      const found = findNodeById(node.children, id)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+function isDescendantOf(ancestorId, nodeId) {
+  const node = findNodeById(pageTree.value, nodeId)
+  if (!node) return false
+  let current = pages.value.find((p) => p.id === nodeId)
+  while (current?.parent_id) {
+    if (current.parent_id === ancestorId) return true
+    current = pages.value.find((p) => p.id === current.parent_id)
+  }
+  return false
+}
+
+function getPageDepth(pageId) {
+  let depth = 1
+  let current = pages.value.find((p) => p.id === pageId)
+  while (current?.parent_id) {
+    depth += 1
+    current = pages.value.find((p) => p.id === current.parent_id)
+  }
+  return depth
+}
+
+function canCreateSubFolder(parentId) {
+  if (!parentId) return true
+  return getPageDepth(parentId) < maxDepth.value
+}
+
+function siblingLabelTaken(label, parentId, excludeId = null) {
+  const pid = parentId || null
+  return pages.value.some(
+    (p) => p.label === label && (p.parent_id || null) === pid && p.id !== excludeId,
+  )
+}
+
+function openCreatePage(parentId = null) {
+  createParentId.value = parentId
+  createIsFolder.value = false
+  newPageForm.value = { label: '', package: '', activity: '' }
+  showCreatePage.value = true
+}
+
+function openCreateFolder(parentId = null) {
+  if (!canCreateSubFolder(parentId)) {
+    ElMessage.warning(`目录最多嵌套 ${maxDepth.value} 层`)
+    return
+  }
+  createParentId.value = parentId
+  createIsFolder.value = true
+  newPageForm.value = { label: '', package: '', activity: '' }
+  showCreatePage.value = true
+}
+
+function handleTreeNodeClick(data) {
+  if (selectMode.value) return
+  if (data.is_folder) return
+  selectPage(data)
+}
+
+function handleTreeCheck() {
+  nextTick(() => {
+    if (!treeRef.value) return
+    const keys = treeRef.value.getCheckedKeys()
+    selectedPageIds.clear()
+    for (const id of keys) selectedPageIds.add(id)
+    selectAll.value = keys.length > 0 && keys.length === allCheckableIds.value.length
+  })
+}
+
+function toggleSelectMode() {
+  selectMode.value = !selectMode.value
+  if (!selectMode.value) {
+    selectedPageIds.clear()
+    selectAll.value = false
+    treeRef.value?.setCheckedKeys([])
+  }
+}
+
+function handleSelectAll() {
+  if (!treeRef.value) return
+  if (selectAll.value) {
+    selectedPageIds.clear()
+    selectAll.value = false
+    treeRef.value.setCheckedKeys([])
+  } else {
+    const ids = allCheckableIds.value
+    selectedPageIds.clear()
+    for (const id of ids) selectedPageIds.add(id)
+    selectAll.value = true
+    treeRef.value.setCheckedKeys(ids)
+  }
+}
+
+function resetDragState() {
+  dragEnabled.value = false
+  dragSourceNode.value = null
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+  treeRef.value?.$el?.classList.remove('drag-mode-active')
+}
+
+function onNodeMouseDown(e, data) {
+  if (selectMode.value || e.button !== 0) return
+  dragSourceNode.value = data
+  longPressTimer.value = setTimeout(() => {
+    dragEnabled.value = true
+    treeRef.value?.$el?.classList.add('drag-mode-active')
+    ElMessage.info({ message: '拖动模式已激活，拖到目标目录后松开', duration: 2000 })
+  }, 500)
+}
+
+function onNodeMouseUp() {
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+}
+
+function onNodeMouseLeave() {
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+}
+
+function allowDrag() {
+  return dragEnabled.value
+}
+
+function allowDrop(draggingNode, dropNode, type) {
+  const source = draggingNode.data
+  const target = dropNode.data
+  if (source.id === target.id) return false
+  if (isDescendantOf(source.id, target.id)) return false
+  if (type === 'inner') return target.is_folder
+  return true
+}
+
+function resolveDropParentId(target, dropType) {
+  if (dropType === 'inner') return target.id
+  return target.parent_id ?? null
+}
+
+async function handleNodeDrop(draggingNode, dropNode, dropType) {
+  const source = draggingNode.data
+  const target = dropNode.data
+  const targetParentId = resolveDropParentId(target, dropType)
+  resetDragState()
+
+  if ((source.parent_id ?? null) === (targetParentId ?? null)) {
+    ElMessage.info('已在目标位置')
+    return
+  }
+
+  const targetLabel = dropType === 'inner'
+    ? `目录「${target.label}」`
+    : (targetParentId
+      ? `目录「${pages.value.find((p) => p.id === targetParentId)?.label || targetParentId}」`
+      : '根目录')
+
+  try {
+    await ElMessageBox.confirm(
+      `将「${source.label}」移动到 ${targetLabel}？`,
+      '确认移动',
+      { confirmButtonText: '确认移动', cancelButtonText: '取消', type: 'warning' },
+    )
+  } catch {
+    return
+  }
+
+  await executeBatchMove([source.id], targetParentId)
+}
+
+async function executeBatchMove(pageIds, parentId) {
+  try {
+    const { data } = await apiBatchMovePages(pageIds, parentId)
+    if (data.ok) {
+      data.errors?.forEach((e) => ElMessage.error(`${e.id}: ${e.reason}`))
+      if (data.moved > 0) {
+        ElMessage.success(`已移动 ${data.moved} 项`)
+        selectedPageIds.clear()
+        selectAll.value = false
+        selectMode.value = false
+        treeRef.value?.setCheckedKeys([])
+        await loadPages()
+      }
+    } else {
+      ElMessage.error(data.error || '移动失败')
+    }
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.error || '移动失败，请检查网络连接')
+  }
+}
+
+function openBatchMoveDialog() {
+  if (selectedPageIds.size === 0) {
+    ElMessage.warning('请先勾选要移动的页面或目录')
+    return
+  }
+  moveTargetDirId.value = null
+  moveDialogVisible.value = true
+}
+
+async function confirmBatchMove() {
+  if (moveTargetDirId.value === null || moveTargetDirId.value === undefined) {
+    ElMessage.warning('请选择目标目录')
+    return
+  }
+  const parentId = moveTargetDirId.value === '__root__' ? null : moveTargetDirId.value
+  const ids = [...selectedPageIds]
+  try {
+    await ElMessageBox.confirm(
+      `确认将 ${ids.length} 项移动到目标位置？`,
+      '批量移动',
+      { confirmButtonText: '确认移动', cancelButtonText: '取消', type: 'warning' },
+    )
+  } catch {
+    return
+  }
+  moveDialogVisible.value = false
+  await executeBatchMove(ids, parentId)
+}
+
+function handleContextMenu(event, data) {
+  if (selectMode.value) return
+  event.preventDefault()
+  menuNode.value = data
+  menuX.value = event.clientX
+  menuY.value = event.clientY
+  menuVisible.value = true
+}
+
+function closeMenu() {
+  menuVisible.value = false
+  menuNode.value = null
+}
+
+function onDocumentClick() {
+  if (menuVisible.value) closeMenu()
+}
+
+onMounted(() => {
+  window.addEventListener('click', onDocumentClick)
+  loadPages()
+})
+onUnmounted(() => {
+  window.removeEventListener('click', onDocumentClick)
+  resetDragState()
+})
+
+function nodeClass(data) {
+  return {
+    'tree-node--folder': data.is_folder,
+    'tree-node--page': !data.is_folder,
+    'tree-node--active': selectedPage.value?.id === data.id,
+  }
+}
+
+function nodeIcon(data) {
+  if (!data.is_folder) return '📄'
+  return data.children?.length ? '📂' : '📁'
+}
+
+const createDialogTitle = computed(() => {
+  if (createIsFolder.value) return '新建子目录'
+  return createParentId.value ? '新建子页面' : '新建页面'
+})
 
 async function loadPages() {
   loading.value = true
   try {
     const { data } = await apiGetPages()
-    if (data.ok) pages.value = data.pages || []
+    if (data.ok) {
+      pages.value = data.pages || []
+      if (data.max_depth) maxDepth.value = data.max_depth
+    }
   } catch (_) { /* 加载失败时保持空列表，不打扰用户 */ }
   loading.value = false
-  await nextTick()
-  animate('.pages-list .page-row', { opacity: [0,1], translateX: [-12,0], delay: stagger(30), duration: 300 })
 }
 
 async function selectPage(page) {
   selectedPage.value = page
   elements.value = []
+  currentPage.value = 1
   if (!page) return
   try {
     const { data } = await apiGetPageElements(page.id)
@@ -59,26 +428,32 @@ async function selectPage(page) {
   })
 }
 
-// ── Create page ──
+// ── Create page / folder ──
 async function doCreatePage() {
   const label = newPageForm.value.label.trim()
-  if (!label) return
-  // 检查名称唯一
-  if (pages.value.some(p => p.label === label)) {
-    alert(`页面名称「${label}」已存在，请使用其他名称`)
+  if (!label) {
+    ElMessage.warning('请输入名称')
     return
   }
   try {
-    const { data } = await apiCreatePage(newPageForm.value)
+    const { data } = await apiCreatePage({
+      label,
+      package: newPageForm.value.package,
+      activity: newPageForm.value.activity,
+      parent_id: createParentId.value ?? null,
+      is_folder: createIsFolder.value,
+    })
     if (data.ok) {
       showCreatePage.value = false
       newPageForm.value = { label: '', package: '', activity: '' }
+      createParentId.value = null
+      createIsFolder.value = false
       await loadPages()
     } else {
-      alert(data.error || '创建失败')
+      ElMessage.error(data.error || '创建失败')
     }
   } catch (e) {
-    alert(e?.response?.data?.error || '创建页面失败，请检查网络连接')
+    ElMessage.error(e?.response?.data?.error || '创建失败，请检查网络连接')
   }
 }
 
@@ -90,7 +465,10 @@ function openAddElement() {
 }
 
 async function doAddElement() {
-  if (!newElForm.value.alias.trim()) return
+  if (!newElForm.value.alias.trim()) {
+    ElMessage.warning('请输入元素名称')
+    return
+  }
   try {
     const { data } = await apiAddElementToPage(selectedPage.value.id, newElForm.value)
     if (data.ok) {
@@ -98,48 +476,44 @@ async function doAddElement() {
       await selectPage(selectedPage.value)  // refresh elements
     }
   } catch (e) {
-    alert(e?.response?.data?.error || '添加元素失败，请检查网络连接')
+    ElMessage.error(e?.response?.data?.error || '添加元素失败，请检查网络连接')
   }
 }
 
 // ── Page label edit ──
 function startEditLabel(page) {
-  editingLabel.value = page.id
-  labelInput.value = page.label
-  nextTick(() => { const inp = document.querySelector('.label-input'); if (inp) inp.focus() })
+  renameTarget.value = page
+  renameLabel.value = page.label || ''
+  showRenameDialog.value = true
 }
-async function saveLabel(page) {
-  const label = labelInput.value.trim()
-  if (!label) return
-  // 检查名称唯一（排除自身）
-  if (pages.value.some(p => p.id !== page.id && p.label === label)) {
-    alert(`页面名称「${label}」已存在，请使用其他名称`)
+
+async function doRename() {
+  const page = renameTarget.value
+  if (!page) return
+  const label = renameLabel.value.trim()
+  if (!label) {
+    ElMessage.warning('名称不能为空')
+    return
+  }
+  if (siblingLabelTaken(label, page.parent_id, page.id)) {
+    ElMessage.warning(`同级名称「${label}」已存在，请使用其他名称`)
     return
   }
   try {
     const { data } = await apiUpdatePage(page.id, label)
     if (data.ok) {
       page.label = label
-      if (selectedPage.value?.id === page.id) selectedPage.value.label = page.label
+      if (selectedPage.value?.id === page.id) selectedPage.value.label = label
+      showRenameDialog.value = false
+      renameTarget.value = null
+      await loadPages()
     } else {
-      alert(data.error || '重命名失败')
+      ElMessage.error(data.error || '重命名失败')
     }
   } catch (e) {
-    alert(e?.response?.data?.error || '重命名失败，请检查网络连接')
-  }
-  editingLabel.value = null
-}
-function cancelEdit() { editingLabel.value = null }
-
-// ── Page selection ──
-function togglePageSelection(pageId) {
-  if (selectedPageIds.has(pageId)) {
-    selectedPageIds.delete(pageId)
-  } else {
-    selectedPageIds.add(pageId)
+    ElMessage.error(e?.response?.data?.error || '重命名失败，请检查网络连接')
   }
 }
-function isPageSelected(pageId) { return selectedPageIds.has(pageId) }
 
 // ── Clear dialog ──
 function openClearDialog() {
@@ -176,16 +550,8 @@ async function updateEl(el, field, value) {
   el[field] = value
 }
 
-function pageLabel(page) { return page.label || `Page #${page.id}` }
-function timeAgo(iso) {
-  if (!iso) return ''
-  const diff = Date.now() - new Date(iso).getTime()
-  const m = Math.floor(diff / 60000)
-  if (m < 1) return '刚刚'
-  if (m < 60) return `${m}分钟前`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}小时前`
-  return new Date(iso).toLocaleDateString('zh-CN')
+function pageLabel(page) {
+  return page.label || `Page #${page.id}`
 }
 
 // ── Filter ──
@@ -205,69 +571,138 @@ const filteredElements = computed(() => {
   }
 })
 
-// ── Table columns ──
+// ── Pagination ──
+const PAGE_SIZE_OPTIONS = [10, 30, 50]
+const pageSize = ref(10)
+const currentPage = ref(1)
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredElements.value.length / pageSize.value)))
+
+const pagedElements = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredElements.value.slice(start, start + pageSize.value)
+})
+
+watch([filterMode, pageSize], () => { currentPage.value = 1 })
+
+function setPageSize(size) {
+  pageSize.value = size
+  currentPage.value = 1
+}
+
+function goPage(page) {
+  currentPage.value = Math.min(Math.max(1, page), totalPages.value)
+}
+
+// ── Table columns（百分比宽度，铺满容器）──
 const columns = [
-  { title: '名称', dataIndex: 'alias', key: 'alias', width: '100px' },
-  { title: 'XPath', dataIndex: 'xpath', key: 'xpath', width: '180px' },
-  { title: '类名', dataIndex: 'class_name', key: 'class_name', width: '120px' },
-  { title: '文本', dataIndex: 'text_val', key: 'text_val', width: '80px' },
-  { title: 'Resource ID', dataIndex: 'resource_id', key: 'resource_id', width: '140px' },
-  { title: '可点击', dataIndex: 'clickable', key: 'clickable', width: '65px', align: 'center' },
-  { title: '测试点', dataIndex: 'is_test_point', key: 'is_test_point', width: '75px', align: 'center' },
+  { title: '名称', dataIndex: 'alias', key: 'alias', width: '12%' },
+  { title: 'XPath', dataIndex: 'xpath', key: 'xpath', width: '28%' },
+  { title: '类名', dataIndex: 'class_name', key: 'class_name', width: '15%' },
+  { title: '文本', dataIndex: 'text_val', key: 'text_val', width: '12%' },
+  { title: 'Resource ID', dataIndex: 'resource_id', key: 'resource_id', width: '18%' },
+  { title: '可点击', dataIndex: 'clickable', key: 'clickable', width: '7%', align: 'center' },
+  { title: '测试点', dataIndex: 'is_test_point', key: 'is_test_point', width: '8%', align: 'center' },
 ]
 </script>
 
 <template>
-  <div class="doc-page">
-    <PageHeader
-      title="元素管理 Element Manager"
-      subtitle="按页面组织元素库，维护 XPath、别名、测试点等定位信息"
-      color="app-yellow"
-    />
+  <div class="element-manager">
+    <div class="main-layout">
+        <!-- Left: Page tree -->
+        <aside class="page-tree-panel">
+          <div v-if="!selectMode" class="tree-header">
+            <span class="tree-header__title">页面目录</span>
+            <div class="tree-header__actions">
+              <AnimalButton size="small" type="text" title="批量选择" @click="toggleSelectMode">☑ 选择</AnimalButton>
+              <AnimalButton size="small" type="text" title="新建目录" @click="openCreateFolder()">+ 目录</AnimalButton>
+              <AnimalButton size="small" type="text" title="新建页面" @click="openCreatePage()">+ 页面</AnimalButton>
+              <AnimalButton size="small" type="text" danger @click="openClearDialog">清空</AnimalButton>
+            </div>
+          </div>
+          <div v-else class="tree-header tree-header--select">
+            <span class="tree-header__title">已选 {{ checkedCount }} 项</span>
+            <div class="tree-header__actions">
+              <AnimalButton size="small" type="text" @click="handleSelectAll">
+                {{ selectAll ? '☐ 取消全选' : '☑ 全选' }}
+              </AnimalButton>
+              <AnimalButton
+                size="small"
+                type="text"
+                :disabled="checkedCount === 0"
+                @click="openBatchMoveDialog"
+              >📂 移动到...</AnimalButton>
+              <AnimalButton size="small" type="text" danger :disabled="checkedCount === 0" @click="openClearDialog">
+                删除选中
+              </AnimalButton>
+              <AnimalButton size="small" type="text" @click="toggleSelectMode">✕ 退出</AnimalButton>
+            </div>
+          </div>
+          <div class="tree-body" :class="{ 'drag-mode-active': dragEnabled }">
+            <div v-if="loading && !pages.length" class="tree-loading">加载中...</div>
+            <div v-else-if="!pages.length" class="tree-empty">
+              <span class="tree-empty__icon">📁</span>
+              <p class="tree-empty__text">暂无页面</p>
+              <p class="tree-empty__hint">点击「+ 目录」或「+ 页面」创建</p>
+            </div>
+            <el-tree
+              v-else
+              ref="treeRef"
+              :data="pageTree"
+              :props="{ children: 'children', label: 'label' }"
+              node-key="id"
+              :indent="16"
+              :expand-on-click-node="true"
+              :highlight-current="!selectMode"
+              :current-node-key="selectedPage?.id"
+              :show-checkbox="selectMode"
+              :check-strictly="true"
+              :draggable="!selectMode"
+              :allow-drag="allowDrag"
+              :allow-drop="allowDrop"
+              default-expand-all
+              @node-click="handleTreeNodeClick"
+              @node-contextmenu="handleContextMenu"
+              @check="handleTreeCheck"
+              @node-drop="handleNodeDrop"
+            >
+              <template #default="{ data }">
+                <span
+                  class="tree-node"
+                  :class="nodeClass(data)"
+                  @mousedown="onNodeMouseDown($event, data)"
+                  @mouseup="onNodeMouseUp"
+                  @mouseleave="onNodeMouseLeave"
+                >
+                  <span class="tree-node__icon">{{ nodeIcon(data) }}</span>
+                  <span class="tree-node__name" :title="data.label">{{ data.label || `Page #${data.id}` }}</span>
+                  <span v-if="!data.is_folder" class="tree-node__meta">{{ data.element_count ?? 0 }} 元素</span>
+                  <span v-else-if="data.children?.length" class="tree-node__meta">{{ data.children.length }} 项</span>
+                </span>
+              </template>
+            </el-tree>
+          </div>
+        </aside>
 
-    <div class="doc-body">
-      <div class="main-layout">
-        <!-- Left: Page list -->
-        <Card color="brown" pattern="brown" class="pages-card">
-          <div class="panel-header">
-            <h3 class="panel-title">
-              页面列表
-              <span class="doc-tag">Pages</span>
-            </h3>
-            <div class="panel-actions">
-              <AnimalButton size="small" type="primary" @click="showCreatePage = true">+ 新建</AnimalButton>
-              <AnimalButton size="small" type="primary" danger @click="openClearDialog">清空</AnimalButton>
-            </div>
-          </div>
-          <div class="pages-list">
-            <div v-if="loading && !pages.length" class="loading-text">加载中...</div>
-            <div v-for="p in pages" :key="p.id"
-              :class="['page-row', { active: selectedPage?.id === p.id }]"
-              @click="selectPage(p)">
-              <div class="page-row-top">
-                <input type="checkbox" class="page-checkbox"
-                  :checked="isPageSelected(p.id)"
-                  @click.stop @change="togglePageSelection(p.id)"
-                  title="选中此页面" />
-                <span v-if="editingLabel === p.id" class="edit-label" @click.stop>
-                  <input v-model="labelInput" class="label-input"
-                    @keyup.enter="saveLabel(p)" @keyup.escape="cancelEdit" @blur="saveLabel(p)" />
-                </span>
-                <strong v-else class="page-name">{{ pageLabel(p) }}</strong>
-                <span class="page-actions" @click.stop>
-                  <AnimalButton size="small" type="text" @click="startEditLabel(p)">重命名</AnimalButton>
-                  <AnimalButton size="small" type="text" danger @click="deletePage(p)">删除</AnimalButton>
-                </span>
-              </div>
-              <div class="page-row-sub">
-                <span v-if="p.package" class="page-pkg">{{ p.package }}</span>
-                <span class="page-count">{{ p.element_count }} 元素</span>
-                <span class="page-time">{{ timeAgo(p.created_at) }}</span>
-              </div>
-            </div>
-            <div v-if="!pages.length && !loading" class="empty-list">暂无页面，点击「+ 新建页面」创建</div>
-          </div>
-        </Card>
+        <!-- Context menu -->
+        <div
+          v-if="menuVisible && menuNode"
+          class="context-menu"
+          :style="{ left: menuX + 'px', top: menuY + 'px' }"
+          @click.stop
+        >
+          <template v-if="menuNode.is_folder">
+            <div
+              v-if="canCreateSubFolder(menuNode.id)"
+              class="context-menu__item"
+              @click="openCreateFolder(menuNode.id); closeMenu()"
+            >+ 新建子目录</div>
+            <div class="context-menu__item" @click="openCreatePage(menuNode.id); closeMenu()">+ 新建页面</div>
+          </template>
+          <div class="context-menu__item" @click="startEditLabel(menuNode); closeMenu()">✏️ 重命名</div>
+          <div class="context-menu__divider" />
+          <div class="context-menu__item context-menu__item--danger" @click="deletePage(menuNode); closeMenu()">🗑️ 删除</div>
+        </div>
 
         <!-- Right: Element table -->
         <template v-if="selectedPage">
@@ -288,11 +723,36 @@ const columns = [
                 :shadow="true"
               >
                 <template v-for="tab in filterTabs" #[tab.key] :key="tab.key">
-                  <Card color="brown" pattern="brown" class="table-card">
-                    <div class="table-scroll">
-                      <Table
+                  <div class="table-area">
+                    <div class="table-toolbar">
+                      <div class="page-size-control">
+                        <span class="toolbar-label">显示行数</span>
+                        <div class="page-size-btns">
+                          <button
+                            v-for="n in PAGE_SIZE_OPTIONS"
+                            :key="n"
+                            type="button"
+                            class="page-size-btn"
+                            :class="{ active: pageSize === n }"
+                            @click="setPageSize(n)"
+                          >{{ n }}</button>
+                        </div>
+                      </div>
+                      <div v-if="filteredElements.length > 0" class="table-toolbar-right">
+                        <span class="page-info">
+                          第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ filteredElements.length }} 条
+                        </span>
+                        <div v-if="totalPages > 1" class="page-nav">
+                          <AnimalButton size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</AnimalButton>
+                          <AnimalButton size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</AnimalButton>
+                        </div>
+                      </div>
+                    </div>
+                    <Card color="brown" pattern="brown" class="table-card">
+                      <div class="table-scroll">
+                        <Table
                         :columns="columns"
-                        :data-source="filteredElements"
+                        :data-source="pagedElements"
                         row-key="id"
                         :striped="true"
                         empty-text="暂无元素"
@@ -356,8 +816,9 @@ const columns = [
                         </div>
                       </template>
                     </Table>
-                    </div>
-                  </Card>
+                      </div>
+                    </Card>
+                  </div>
                 </template>
               </Tabs>
               <span class="element-count">共 {{ elements.length }} 个元素</span>
@@ -365,16 +826,55 @@ const columns = [
           </div>
         </template>
         <Card v-else color="brown" pattern="brown" class="empty-card">
-          <div class="empty-state">← 选择或创建页面</div>
+          <div class="empty-state">← 选择页面查看元素（目录仅用于分组）</div>
         </Card>
-      </div>
     </div>
 
+    <!-- Batch move dialog -->
+    <Modal
+      v-model:open="moveDialogVisible"
+      title="选择目标目录"
+      width="420px"
+      :typewriter="false"
+      :mask-closable="false"
+      @close="moveDialogVisible = false"
+    >
+      <el-select
+        v-model="moveTargetDirId"
+        placeholder="选择要移动到的目录"
+        filterable
+        style="width: 100%"
+      >
+        <el-option
+          v-for="dir in folderList"
+          :key="dir.id"
+          :label="dir.label"
+          :value="dir.id"
+        />
+      </el-select>
+      <template #footer>
+        <AnimalButton @click="moveDialogVisible = false">取消</AnimalButton>
+        <AnimalButton type="primary" :disabled="!moveTargetDirId" @click="confirmBatchMove">确认移动</AnimalButton>
+      </template>
+    </Modal>
+
     <!-- Create Page Dialog -->
-    <Modal v-model:open="showCreatePage" title="新建页面" width="360px" @close="showCreatePage = false" @ok="doCreatePage">
+    <Modal
+      v-model:open="showCreatePage"
+      :title="createDialogTitle"
+      width="360px"
+      :typewriter="false"
+      :mask-closable="false"
+      @close="showCreatePage = false"
+    >
       <div class="form-grid">
-        <label class="form-label required">页面名称</label>
-        <Input v-model="newPageForm.label" placeholder="如：登录页、首页" size="medium" />
+        <label class="form-label required">{{ createIsFolder ? '目录名称' : '页面名称' }}</label>
+        <Input
+          v-model="newPageForm.label"
+          :placeholder="createIsFolder ? '如：电商模块、登录流程' : '如：登录页、首页'"
+          size="middle"
+          @keyup.enter="doCreatePage"
+        />
       </div>
       <template #footer>
         <AnimalButton @click="showCreatePage = false">取消</AnimalButton>
@@ -382,8 +882,32 @@ const columns = [
       </template>
     </Modal>
 
+    <!-- Rename Dialog -->
+    <Modal
+      v-model:open="showRenameDialog"
+      :title="renameTarget?.is_folder ? '重命名目录' : '重命名页面'"
+      width="360px"
+      :typewriter="false"
+      :mask-closable="false"
+      @close="showRenameDialog = false"
+    >
+      <div class="form-grid">
+        <label class="form-label required">名称</label>
+        <Input
+          v-model="renameLabel"
+          placeholder="输入新名称"
+          size="middle"
+          @keyup.enter="doRename"
+        />
+      </div>
+      <template #footer>
+        <AnimalButton @click="showRenameDialog = false">取消</AnimalButton>
+        <AnimalButton type="primary" @click="doRename">确定</AnimalButton>
+      </template>
+    </Modal>
+
     <!-- Clear Pages Confirm Dialog -->
-    <Modal v-model:open="showClearDialog" title="清空页面" width="440px">
+    <Modal v-model:open="showClearDialog" title="清空页面" width="440px" :typewriter="false" :mask-closable="false">
       <div class="clear-confirm">
         <p class="clear-warning">⚠️ 此操作将永久删除页面及关联元素，不可恢复。</p>
         <p class="clear-question">
@@ -401,18 +925,25 @@ const columns = [
     </Modal>
 
     <!-- Add Element Dialog -->
-    <Modal v-model:open="showAddElement" title="添加元素" width="500px" @close="showAddElement = false" @ok="doAddElement">
+    <Modal
+      v-model:open="showAddElement"
+      title="添加元素"
+      width="500px"
+      :typewriter="false"
+      :mask-closable="false"
+      @close="showAddElement = false"
+    >
       <div class="form-grid">
         <label class="form-label required">元素名称</label>
-        <Input v-model="newElForm.alias" placeholder="如：登录按钮、用户名输入框" size="medium" />
+        <Input v-model="newElForm.alias" placeholder="如：登录按钮、用户名输入框" size="middle" />
         <label class="form-label">XPath</label>
-        <Input v-model="newElForm.xpath" placeholder="元素定位 XPath" size="medium" />
+        <Input v-model="newElForm.xpath" placeholder="元素定位 XPath" size="middle" />
         <label class="form-label">类名</label>
-        <Input v-model="newElForm.class_name" placeholder="android.widget.Button" size="medium" />
+        <Input v-model="newElForm.class_name" placeholder="android.widget.Button" size="middle" />
         <label class="form-label">文本</label>
-        <Input v-model="newElForm.text_val" placeholder="元素文本内容" size="medium" />
+        <Input v-model="newElForm.text_val" placeholder="元素文本内容" size="middle" />
         <label class="form-label">Resource ID</label>
-        <Input v-model="newElForm.resource_id" placeholder="com.example:id/btn" size="medium" />
+        <Input v-model="newElForm.resource_id" placeholder="com.example:id/btn" size="middle" />
         <label class="form-label">可点击</label>
         <Switch v-model="newElForm.clickable" size="medium" />
       </div>
@@ -425,23 +956,221 @@ const columns = [
 </template>
 
 <style scoped>
-.doc-page {
+.element-manager {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  min-height: min-content;
-}
-.doc-body {
-  flex: 1;
-  padding-bottom: 24px;
-}
-.main-layout {
-  display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
+  overflow: hidden;
+  padding: 16px 20px 20px;
+  box-sizing: border-box;
 }
 
-/* ── Panel header ── */
+.main-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  height: 100%;
+}
+
+/* ── Page tree panel ── */
+.page-tree-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(139, 115, 85, 0.18);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.tree-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(139, 115, 85, 0.12);
+  flex-shrink: 0;
+  background: rgba(139, 115, 85, 0.04);
+}
+
+.tree-header--select {
+  background: rgba(25, 200, 185, 0.08);
+}
+
+.tree-header__title {
+  font-weight: 700;
+  font-size: 13px;
+  color: #6b5b48;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.tree-header__actions {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.tree-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 4px 10px;
+}
+
+.tree-loading,
+.tree-empty {
+  text-align: center;
+  color: var(--text-secondary, #988B7A);
+  font-size: 13px;
+  padding: 32px 12px;
+}
+
+.tree-empty__icon {
+  font-size: 32px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.tree-empty__text {
+  margin: 0 0 4px;
+  font-weight: 600;
+  color: #6b5b48;
+}
+
+.tree-empty__hint {
+  margin: 0;
+  font-size: 12px;
+}
+
+.tree-body :deep(.el-tree) {
+  background: transparent;
+  --el-tree-node-hover-bg-color: rgba(139, 115, 85, 0.08);
+}
+
+.tree-body :deep(.el-tree-node__content) {
+  height: 32px;
+  border-radius: 6px;
+  margin: 1px 0;
+}
+
+.tree-body :deep(.el-tree-node.is-current > .el-tree-node__content) {
+  background: rgba(25, 200, 185, 0.12);
+}
+
+/* 长按拖动模式 */
+.tree-body.drag-mode-active :deep(.el-tree-node__content) {
+  cursor: grab;
+}
+
+.tree-body.drag-mode-active :deep(.el-tree-node__content:active) {
+  cursor: grabbing;
+}
+
+.tree-body :deep(.el-tree__drop-indicator) {
+  height: 2px;
+  background-color: #19c8b9;
+  border-radius: 1px;
+}
+
+.tree-body :deep(.el-tree-node.is-drop-inner > .el-tree-node__content) {
+  background: rgba(25, 200, 185, 0.18) !important;
+  box-shadow: inset 0 0 0 2px #19c8b9;
+}
+
+.tree-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+  padding-right: 6px;
+}
+
+.tree-node__icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.tree-node__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: #4a3a28;
+}
+
+.tree-node--folder .tree-node__name {
+  font-weight: 600;
+  color: #6b5b48;
+}
+
+.tree-node--page .tree-node__name {
+  font-weight: 500;
+}
+
+.tree-node--active .tree-node__name {
+  color: #0f8b7e;
+  font-weight: 700;
+}
+
+.tree-node__meta {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #9f927d;
+  background: rgba(139, 115, 85, 0.08);
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+/* ── Context menu ── */
+.context-menu {
+  position: fixed;
+  z-index: 3000;
+  min-width: 148px;
+  background: #fff;
+  border: 1px solid rgba(139, 115, 85, 0.2);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(74, 58, 40, 0.12);
+  padding: 4px 0;
+}
+
+.context-menu__item {
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #4a3a28;
+  cursor: pointer;
+  user-select: none;
+}
+
+.context-menu__item:hover {
+  background: rgba(139, 115, 85, 0.08);
+}
+
+.context-menu__item--danger {
+  color: #e05a5a;
+}
+
+.context-menu__divider {
+  height: 1px;
+  margin: 4px 8px;
+  background: rgba(139, 115, 85, 0.12);
+}
 .panel-header {
   display: flex;
   justify-content: space-between;
@@ -449,6 +1178,7 @@ const columns = [
   margin-bottom: 8px;
   flex-wrap: wrap;
   gap: 8px;
+  flex-shrink: 0;
 }
 .panel-title {
   font-size: 15px;
@@ -469,120 +1199,128 @@ const columns = [
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-.panel-actions {
-  display: flex;
-  gap: 8px;
-}
-/* 让按钮颜色与 brown 卡片协调 */
-.pages-card .panel-actions :deep(.animal-btn--primary:not(.animal-btn--danger)) {
-  background: #8b7355;
-  border-color: #8b7355;
-  color: #fff;
-}
-.pages-card .panel-actions :deep(.animal-btn--primary:not(.animal-btn--danger):hover) {
-  background: #7a6348;
-  border-color: #7a6348;
-}
-
-/* ── Pages card ── */
-.pages-card {
-  display: flex;
-  flex-direction: column;
-  max-height: calc(100vh - 280px);
-}
-.pages-list {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-}
-.page-row {
-  padding: 10px 12px;
-  border-radius: 10px;
-  cursor: pointer;
-  border: 1px solid transparent;
-  margin-bottom: 4px;
-  transition: all .2s;
-}
-/* 相邻页面交替配色 — 3 种淡彩 + 左侧色条，确保相邻行颜色明显不同 */
-.page-row { border-left: 3px solid transparent; }
-.page-row:nth-child(3n+1) { background: #f0f7f4; border-left-color: #19c8b9; }  /* 青绿条 */
-.page-row:nth-child(3n+2) { background: #faf5f0; border-left-color: #f7cd67; }  /* 暖黄条 */
-.page-row:nth-child(3n)   { background: #f3f0f9; border-left-color: #b39ef3; }  /* 柔紫条 */
-.page-row:hover { background: rgba(139, 115, 85, 0.12); border-color: rgba(139, 115, 85, 0.3); border-left-width: 3px; }
-.page-row.active { background: #ddf3ea; border-color: #19c8b9; }
-.page-row-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
-.page-checkbox {
-  flex-shrink: 0;
-  width: 16px; height: 16px;
-  accent-color: var(--accent-blue, #889df0);
-  cursor: pointer;
-  margin: 0;
-}
-.page-name { font-size: 14px; color: var(--text-primary); }
-.page-actions { display: flex; gap: 2px; opacity: 0; transition: opacity .15s; }
-.page-row:hover .page-actions { opacity: 1; }
-.page-actions :deep(.animal-btn--danger.animal-btn--text) {
-  color: var(--animal-error-color, #e05a5a);
-}
-.page-actions :deep(.animal-btn--danger.animal-btn--text:hover:not(:disabled)) {
-  color: var(--animal-error-color-hover, #e87878);
-  background: rgba(224, 90, 90, 0.1);
-}
-.edit-label { flex: 1; }
-.label-input { width: 100%; padding: 4px 8px; border: 1px solid var(--accent-blue); border-radius: 6px; font-size: 13px; background: #fff; color: var(--text-primary); outline: none; }
-.page-row-sub { display: flex; gap: 8px; margin-top: 4px; font-size: 11px; color: var(--text-secondary); }
-.page-pkg { font-family: monospace; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.empty-list { text-align: center; color: var(--text-secondary); font-size: 13px; padding: 30px 0; }
-.loading-text { text-align: center; color: var(--text-secondary); font-size: 13px; padding: 20px 0; }
-
 /* ── Elements panel ── */
 .elements-panel {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
   gap: 8px;
 }
 .elements-subheader {
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 1;
   min-width: 0;
+  min-height: 0;
   width: 100%;
-  gap: 12px;
+  gap: 8px;
+  overflow: hidden;
 }
 .element-tabs {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
-.element-tabs :deep(.animal-tabs) {
-  width: 100%;
+.element-tabs :deep(.animal-tabs__list) {
+  flex-shrink: 0;
 }
 .element-tabs :deep(.animal-tabs__content) {
-  padding: 12px 16px 16px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0 0;
+  width: 100%;
 }
 .element-tabs :deep(.animal-tabs__inner) {
-  min-height: min-content;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .element-count {
   font-size: 12px;
   color: var(--text-secondary);
   white-space: nowrap;
+  align-self: flex-end;
+  padding-top: 0;
   flex-shrink: 0;
-  padding-top: 10px;
 }
+
+/* ── Table toolbar ── */
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 0 8px;
+  flex-shrink: 0;
+}
+.page-size-control { display: flex; align-items: center; gap: 10px; }
+.toolbar-label { font-size: 12px; font-weight: 700; color: #8a7b66; white-space: nowrap; }
+.page-size-btns { display: flex; gap: 6px; }
+.page-size-btn {
+  min-width: 40px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(139, 115, 85, 0.2);
+  background: #f7f3df;
+  color: #6b5b48;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.page-size-btn:hover { border-color: #19c8b9; color: #19c8b9; }
+.page-size-btn.active {
+  background: rgba(25, 200, 185, 0.12);
+  border-color: #19c8b9;
+  color: #0f9a8e;
+}
+.table-toolbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
+.page-info { font-size: 12px; color: #8a7b66; font-weight: 600; white-space: nowrap; }
+.page-nav { display: flex; gap: 8px; }
 
 /* ── Table card ── */
+.table-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 .table-card {
+  flex: 1;
+  min-height: 0;
   min-width: 0;
+  width: 100%;
   padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-/* ── Table scroll wrapper：仅横向溢出时滚动，纵向随内容撑开 */
+/* ── Table scroll：纵向主滚动区 + 窄屏横向滚动 */
 .table-scroll {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
   overflow-x: auto;
-  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: rgba(139, 115, 85, 0.25) transparent;
 }
@@ -603,48 +1341,52 @@ const columns = [
 
 /* ── Elements table ── */
 .elements-table {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+}
+.elements-table :deep(.animal-table-wrapper) {
+  width: 100%;
 }
 .elements-table :deep(table) {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
-  table-layout: auto;
 }
 
-/* ── 表头：彩色渐变，比正文大 ── */
+/* ── 表头：彩色渐变 ── */
 .elements-table :deep(th) {
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 800;
   color: #fff;
-  padding: 14px 16px;
+  padding: 16px 12px;
   text-align: left;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.4px;
   position: sticky;
   top: 0;
   z-index: 2;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.elements-table :deep(th:nth-child(1)) { background: linear-gradient(135deg, #19c8b9, #15b0a3); border-radius: 10px 0 0 0; min-width: 100px; }
-.elements-table :deep(th:nth-child(2)) { background: linear-gradient(135deg, #9b8fd4, #8275c2); min-width: 180px; }
-.elements-table :deep(th:nth-child(3)) { background: linear-gradient(135deg, #f0a06a, #e88d52); min-width: 130px; }
-.elements-table :deep(th:nth-child(4)) { background: linear-gradient(135deg, #7db84d, #6ba33b); min-width: 80px; }
-.elements-table :deep(th:nth-child(5)) { background: linear-gradient(135deg, #6c93d4, #557ec0); min-width: 150px; }
-.elements-table :deep(th:nth-child(6)) { background: linear-gradient(135deg, #f0c64a, #e0b830); text-align: center; min-width: 90px; }
-.elements-table :deep(th:nth-child(7)) { background: linear-gradient(135deg, #e8879b, #d47085); text-align: center; border-radius: 0 10px 0 0; min-width: 80px; }
+.elements-table :deep(th:nth-child(1)) { background: linear-gradient(135deg, #19c8b9, #15b0a3); border-radius: 10px 0 0 0; }
+.elements-table :deep(th:nth-child(2)) { background: linear-gradient(135deg, #9b8fd4, #8275c2); }
+.elements-table :deep(th:nth-child(3)) { background: linear-gradient(135deg, #f0a06a, #e88d52); }
+.elements-table :deep(th:nth-child(4)) { background: linear-gradient(135deg, #7db84d, #6ba33b); }
+.elements-table :deep(th:nth-child(5)) { background: linear-gradient(135deg, #6c93d4, #557ec0); }
+.elements-table :deep(th:nth-child(6)) { background: linear-gradient(135deg, #f0c64a, #e0b830); text-align: center; }
+.elements-table :deep(th:nth-child(7)) { background: linear-gradient(135deg, #e8879b, #d47085); text-align: center; border-radius: 0 10px 0 0; }
 
 /* ── 单元格 ── */
 .elements-table :deep(td) {
-  padding: 11px 16px;
+  padding: 13px 12px;
   font-size: 14px;
   color: #4A3A28;
   border-bottom: 1px solid rgba(0,0,0,0.04);
   vertical-align: middle;
   transition: all 0.2s ease;
-  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── 行交替配色（彩色） ── */
@@ -672,13 +1414,13 @@ const columns = [
 /* XPath 列 — 紫色调，等宽字体 */
 .elements-table :deep(td:nth-child(2)) {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 13px;
+  font-size: 14px;
   color: #6254a0;
 }
 /* 类名列 — 橙色调等宽 */
 .elements-table :deep(td:nth-child(3)) {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 13px;
+  font-size: 14px;
   color: #b8652e;
 }
 /* 文本列 — 绿色调 */
@@ -686,7 +1428,7 @@ const columns = [
 /* Resource ID 列 — 蓝色调等宽 */
 .elements-table :deep(td:nth-child(5)) {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 13px;
+  font-size: 14px;
   color: #3b5fa0;
 }
 /* 可点击列 — 彩色徽章 */
@@ -740,12 +1482,20 @@ const columns = [
 
 /* ── Cell code (XPath, class_name, resource_id) ── */
 .cell-code {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: 0.2px;
 }
 .cell-text {
   font-size: 14px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ── Empty states ── */
@@ -762,7 +1512,8 @@ const columns = [
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 200px;
+  height: 100%;
+  min-height: 0;
 }
 .table-empty {
   display: flex;

@@ -273,7 +273,7 @@ onMounted(() => {
         </div>
         <div class="dashboard__trends">
           <Card color="app-green" pattern="app-green" class="trends-chart-card">
-            <TrendBarChart :chart="executionChart" :height="160" />
+            <TrendBarChart :chart="executionChart" />
           </Card>
           <Card color="app-blue" pattern="app-blue" class="trends-tasks-card">
             <div class="trends-tasks-card__title">任务执行结果</div>
@@ -328,6 +328,20 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.doc-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.doc-body {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 /* Stats grid */
 .dashboard__stats-grid {
   display: grid;
@@ -351,7 +365,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
 @media (max-width: 960px) {
@@ -360,11 +374,21 @@ onMounted(() => {
   }
 }
 
+.trends-chart-card,
+.trends-tasks-card {
+  display: flex;
+  flex-direction: column;
+}
+
 .trends-chart-card :deep(.animal-card__content),
 .trends-tasks-card :deep(.animal-card__content) {
   padding: 18px;
   border-radius: 16px;
   background: rgba(255, 248, 240, 0.85);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .trends-tasks-card__title {

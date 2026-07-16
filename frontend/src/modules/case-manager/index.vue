@@ -1,12 +1,10 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import {
   ElMessage,
   ElMessageBox,
   ElTag,
-  ElBreadcrumb,
-  ElBreadcrumbItem,
 } from "element-plus";
 import { Button as AnimalButton, Card, Table } from "animal-island-vue";
 import PageHeader from "@/shared/components/PageHeader.vue";
@@ -23,6 +21,7 @@ import {
 } from "./api.js";
 
 const router = useRouter();
+const caseLayoutRef = ref(null);
 
 // ── State ──
 const treeData = ref([]);
@@ -44,6 +43,48 @@ const showExports = ref(false);
 const STORAGE_KEY = "case-manager-view-mode";
 const viewMode = ref(localStorage.getItem(STORAGE_KEY) || "card");
 
+// Sidebar resize
+const SIDEBAR_WIDTH_KEY = "case-manager-sidebar-width";
+const SIDEBAR_MIN = 220;
+const SIDEBAR_MAX = 560;
+const SIDEBAR_DEFAULT = 300;
+
+function clampSidebarWidth(width) {
+  return Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, width));
+}
+
+const sidebarWidth = ref(
+  clampSidebarWidth(Number(localStorage.getItem(SIDEBAR_WIDTH_KEY)) || SIDEBAR_DEFAULT),
+);
+const isResizingSidebar = ref(false);
+
+function onSidebarResizeStart(e) {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  isResizingSidebar.value = true;
+  document.body.style.cursor = "col-resize";
+  document.body.style.userSelect = "none";
+}
+
+function onSidebarResizeMove(e) {
+  if (!isResizingSidebar.value || !caseLayoutRef.value) return;
+  const rect = caseLayoutRef.value.getBoundingClientRect();
+  sidebarWidth.value = clampSidebarWidth(e.clientX - rect.left);
+}
+
+function onSidebarResizeEnd() {
+  if (!isResizingSidebar.value) return;
+  isResizingSidebar.value = false;
+  document.body.style.cursor = "";
+  document.body.style.userSelect = "";
+  localStorage.setItem(SIDEBAR_WIDTH_KEY, String(sidebarWidth.value));
+}
+
+function resetSidebarWidth() {
+  sidebarWidth.value = SIDEBAR_DEFAULT;
+  localStorage.setItem(SIDEBAR_WIDTH_KEY, String(SIDEBAR_DEFAULT));
+}
+
 function setViewMode(mode) {
   viewMode.value = mode;
   localStorage.setItem(STORAGE_KEY, mode);
@@ -51,8 +92,17 @@ function setViewMode(mode) {
 
 // ── Data loading ──
 onMounted(async () => {
+  window.addEventListener("mousemove", onSidebarResizeMove);
+  window.addEventListener("mouseup", onSidebarResizeEnd);
   await loadDirectories();
   await loadDefs();
+});
+
+onUnmounted(() => {
+  window.removeEventListener("mousemove", onSidebarResizeMove);
+  window.removeEventListener("mouseup", onSidebarResizeEnd);
+  document.body.style.cursor = "";
+  document.body.style.userSelect = "";
 });
 
 async function loadDirectories() {
@@ -178,12 +228,12 @@ const breadcrumbPath = computed(() => {
 
 // ── Table columns ──
 const columns = [
-  { title: "ID", dataIndex: "id", width: "200px" },
-  { title: "标题", dataIndex: "title" },
-  { title: "目录", dataIndex: "directory_name", width: "140px" },
-  { title: "分类", dataIndex: "category", width: "100px" },
-  { title: "启用", dataIndex: "enabled", width: "80px", align: "center" },
-  { title: "操作", dataIndex: "actions", width: "200px", align: "center" },
+  { title: "ID", dataIndex: "id", width: "18%" },
+  { title: "标题", dataIndex: "title", width: "28%" },
+  { title: "目录", dataIndex: "directory_name", width: "12%" },
+  { title: "分类", dataIndex: "category", width: "12%" },
+  { title: "启用", dataIndex: "enabled", width: "8%", align: "center" },
+  { title: "操作", dataIndex: "actions", width: "22%", align: "center" },
 ];
 
 // ── Actions ──
@@ -229,9 +279,9 @@ async function remove(row) {
       color="app-yellow"
     />
 
-    <div class="doc-body case-layout">
+    <div ref="caseLayoutRef" class="doc-body case-layout" :class="{ 'case-layout--resizing': isResizingSidebar }">
       <!-- Left: Directory Tree -->
-      <aside class="case-sidebar">
+      <aside class="case-sidebar" :style="{ width: sidebarWidth + 'px' }">
         <DirectoryTree
           :tree-data="treeData"
           :active-id="activeDirectoryId"
@@ -240,33 +290,56 @@ async function remove(row) {
         />
       </aside>
 
+      <!-- Resize handle -->
+      <div
+        class="case-sidebar-resizer"
+        :class="{ 'is-dragging': isResizingSidebar }"
+        title="拖动调整宽度，双击恢复默认"
+        @mousedown="onSidebarResizeStart"
+        @dblclick="resetSidebarWidth"
+      />
+
       <!-- Right: Content -->
       <main class="case-main">
         <!-- Toolbar -->
         <div class="case-toolbar">
           <div class="case-toolbar__left">
-            <el-breadcrumb separator="›">
-              <el-breadcrumb-item>
-                <span
-                  class="breadcrumb-link"
-                  :class="{ 'breadcrumb-active': allActive }"
-                  @click="goToAll"
-                >
-                  📋 全部用例
+            <nav class="case-breadcrumb" aria-label="用例导航">
+              <button
+                type="button"
+                class="crumb crumb--root"
+                :class="{ 'crumb--active': allActive && !selectedCase }"
+                @click="goToAll"
+              >
+                <span class="crumb__icon" aria-hidden="true">📋</span>
+                <span class="crumb__label">全部用例</span>
+              </button>
+
+              <template v-for="node in breadcrumbPath" :key="node.id">
+                <span class="crumb-sep" aria-hidden="true">›</span>
+                <span class="crumb crumb--active crumb--dir">
+                  <span class="crumb__icon" aria-hidden="true">{{
+                    node.parent_id === null ? "📁" : "📂"
+                  }}</span>
+                  <span class="crumb__label">{{ node.name }}</span>
                 </span>
-              </el-breadcrumb-item>
-              <el-breadcrumb-item v-for="node in breadcrumbPath" :key="node.id">
-                <span class="breadcrumb-link breadcrumb-active">
-                  {{ node.parent_id === null ? "📁" : "📂" }} {{ node.name }}
+              </template>
+
+              <template v-if="selectedCase">
+                <span class="crumb-sep" aria-hidden="true">›</span>
+                <span class="crumb crumb--active crumb--case">
+                  <span class="crumb__icon" aria-hidden="true">📄</span>
+                  <span class="crumb__label">{{
+                    selectedCase.title || "未命名用例"
+                  }}</span>
                 </span>
-              </el-breadcrumb-item>
-              <el-breadcrumb-item v-if="selectedCase">
-                <span class="breadcrumb-link breadcrumb-active">
-                  📄 {{ selectedCase.title || "未命名用例" }}
-                </span>
-              </el-breadcrumb-item>
-            </el-breadcrumb>
-            <span class="case-count">{{ definitions.length }} 个用例</span>
+              </template>
+            </nav>
+
+            <span class="case-count-badge">
+              <span class="case-count-badge__num">{{ definitions.length }}</span>
+              <span class="case-count-badge__text">个用例</span>
+            </span>
           </div>
           <div class="case-toolbar__right">
             <div class="view-toggle">
@@ -397,11 +470,17 @@ async function remove(row) {
               :columns="columns"
               :data-source="definitions"
               row-key="id"
-              :striped="true"
+              :striped="false"
               :loading="loading"
               empty-text="暂无用例定义"
-              class="case-table"
+              class="case-table case-table--rainbow"
             >
+              <template #cell-id="{ record }">
+                <code class="cell-id">{{ record.id }}</code>
+              </template>
+              <template #cell-title="{ record }">
+                <span class="cell-title">{{ record.title || "未命名用例" }}</span>
+              </template>
               <template #cell-enabled="{ value }">
                 <el-tag
                   :type="value ? 'success' : 'info'"
@@ -413,30 +492,32 @@ async function remove(row) {
                 </el-tag>
               </template>
               <template #cell-directory_name="{ value }">
-                <span v-if="value" class="dir-cell">{{ value }}</span>
-                <span v-else class="dir-cell dir-cell--none">—</span>
+                <span v-if="value" class="cell-dir">{{ value }}</span>
+                <span v-else class="cell-dir cell-dir--none">—</span>
+              </template>
+              <template #cell-category="{ value }">
+                <span class="cell-category">{{ value || "—" }}</span>
               </template>
               <template #cell-actions="{ record }">
                 <div class="action-cell">
-                  <AnimalButton
-                    size="small"
-                    type="primary"
+                  <button
+                    type="button"
+                    class="act-btn act-btn--view"
+                    title="查看详情"
                     @click="loadCaseDetail(record.id)"
-                    >查看</AnimalButton
-                  >
-                  <AnimalButton
-                    size="small"
-                    type="primary"
+                  >查看</button>
+                  <button
+                    type="button"
+                    class="act-btn act-btn--edit"
+                    title="编辑用例"
                     @click="edit(record)"
-                    >编辑</AnimalButton
-                  >
-                  <AnimalButton
-                    size="small"
-                    danger
-                    plain
+                  >编辑</button>
+                  <button
+                    type="button"
+                    class="act-btn act-btn--del"
+                    title="删除用例"
                     @click="remove(record)"
-                    >删除</AnimalButton
-                  >
+                  >删除</button>
                 </div>
               </template>
               <template #empty>
@@ -497,33 +578,90 @@ async function remove(row) {
 </template>
 
 <style scoped>
+/* ── Page scroll ── */
+.doc-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
 /* ── Layout ── */
 .case-layout {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: row;
   gap: 0;
   padding: 0;
-  max-width: 1320px;
-  margin: 0 auto;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+.case-layout--resizing {
+  cursor: col-resize;
+  user-select: none;
 }
 
 .case-sidebar {
-  width: 260px;
   flex-shrink: 0;
   align-self: stretch;
-  min-height: 400px;
+  min-height: 0;
+  min-width: 0;
   background: rgb(247, 243, 223);
-  border-right: 2px solid rgba(196, 184, 158, 0.5);
+  border-right: none;
   border-radius: 18px 0 0 18px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.case-sidebar-resizer {
+  flex-shrink: 0;
+  width: 6px;
+  margin: 0 -3px;
+  cursor: col-resize;
+  position: relative;
+  z-index: 2;
+  align-self: stretch;
+  transition: background 0.15s ease;
+}
+
+.case-sidebar-resizer::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: rgba(196, 184, 158, 0.45);
+  transition: background 0.15s ease, width 0.15s ease;
+}
+
+.case-sidebar-resizer:hover::before,
+.case-sidebar-resizer.is-dragging::before {
+  width: 3px;
+  background: #19c8b9;
+}
+
+.case-sidebar-resizer:hover,
+.case-sidebar-resizer.is-dragging {
+  background: rgba(25, 200, 185, 0.08);
 }
 
 .case-main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 0 0 0 20px;
+  padding: 0 20px 0 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* ── Toolbar ── */
@@ -531,79 +669,168 @@ async function remove(row) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 0;
-  border-bottom: 2px solid rgba(196, 184, 158, 0.3);
+  padding: 12px 14px;
   margin-bottom: 20px;
   flex-wrap: wrap;
   gap: 12px;
+  background: rgb(247, 243, 223);
+  border: 2px solid #c4b89e;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(61, 52, 40, 0.07);
+  flex-shrink: 0;
 }
 
 .case-toolbar__left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+  flex: 1;
 }
 
 .case-toolbar__right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
-.case-count {
+/* Breadcrumb — animal-island app-teal 风格 */
+.case-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 12px;
+  border-radius: 50px;
+  border: 1.5px solid transparent;
+  background: rgba(255, 255, 255, 0.45);
+  color: #794f27;
   font-size: 13px;
-  color: #9f927d;
   font-weight: 600;
+  line-height: 1.3;
+  transition: all 0.15s ease;
 }
 
-/* Breadcrumb */
-.breadcrumb-link {
+.crumb--root {
   cursor: pointer;
-  font-weight: 500;
-  color: #9f927d;
-  transition: color 0.15s ease;
+  font-family: var(--font-display, Nunito, sans-serif);
 }
-.breadcrumb-link:hover {
-  color: #19c8b9;
+
+.crumb--root:not(.crumb--active):hover {
+  background: rgba(25, 200, 185, 0.12);
+  border-color: rgba(25, 200, 185, 0.4);
+  color: #0d6e64;
 }
-.breadcrumb-active {
-  color: #6b5b48;
+
+.crumb--active {
+  background: #ddf3ea;
+  border-color: #19c8b9;
+  color: #0a5c52;
   font-weight: 700;
+  box-shadow: 0 1px 4px rgba(25, 200, 185, 0.18);
+}
+
+.crumb--case .crumb__label {
+  font-style: italic;
+}
+
+.crumb__icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.crumb__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crumb-sep {
+  color: #b8a898;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1;
+  user-select: none;
+  padding: 0 2px;
+}
+
+.case-count-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 50px;
+  background: rgba(25, 200, 185, 0.14);
+  border: 1.5px solid rgba(25, 200, 185, 0.38);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.case-count-badge__num {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0a5c52;
+  font-family: var(--font-display, Nunito, sans-serif);
+  line-height: 1;
+}
+
+.case-count-badge__text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #3d7a72;
 }
 
 /* View toggle */
 .view-toggle {
   display: flex;
-  background: rgba(139, 115, 85, 0.06);
-  border-radius: 10px;
-  padding: 2px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1.5px solid rgba(196, 184, 158, 0.55);
+  border-radius: 12px;
+  padding: 3px;
 }
 .view-btn {
   width: 36px;
   height: 32px;
   border: none;
-  border-radius: 8px;
+  border-radius: 9px;
   cursor: pointer;
   font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  color: #9f927d;
+  color: #8a7b66;
+  transition: all 0.15s ease;
 }
 .view-btn:hover {
-  color: #725d42;
+  background: rgba(25, 200, 185, 0.1);
+  color: #0d6e64;
 }
 .view-btn--active {
   background: #19c8b9;
   color: #fff;
-  box-shadow: 0 2px 6px rgba(25, 200, 185, 0.3);
+  box-shadow: 0 2px 6px rgba(25, 200, 185, 0.35);
 }
 
 /* Card Grid */
 .case-content {
   flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 .card-grid {
   display: grid;
@@ -629,62 +856,189 @@ async function remove(row) {
   font-weight: 600;
 }
 
-/* Table */
+/* Table — 彩虹渐变列（Card 无 __content 层，padding 需直接覆写根节点） */
 .table-card {
-  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  border-radius: 16px;
+  padding: 0;
+  cursor: default;
 }
 .table-card :deep(.animal-card__content) {
   padding: 0;
-  border-radius: 14px;
-  overflow: hidden;
+  width: 100%;
 }
 .case-table {
   width: 100%;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.case-table :deep(.animal-table-wrapper) {
+  width: 100%;
+  overflow: visible !important;
+  max-height: none !important;
 }
 .case-table :deep(table) {
   width: 100%;
-  border-collapse: collapse;
-}
-.case-table :deep(th) {
-  font-size: 13px;
-  font-weight: 700;
-  color: #6b5b48;
-  padding: 14px 16px;
-  text-align: left;
-  background: rgba(139, 115, 85, 0.06);
-  border-bottom: 2px solid rgba(139, 115, 85, 0.12);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-.case-table :deep(td) {
-  padding: 12px 16px;
-  font-size: 14px;
-  color: #4a3a28;
-  border-bottom: 1px solid rgba(139, 115, 85, 0.06);
-  vertical-align: middle;
-}
-.case-table :deep(tr:hover td) {
-  background: rgba(139, 115, 85, 0.03);
-}
-.case-table :deep(tr:nth-child(even) td) {
-  background: rgba(139, 115, 85, 0.02);
-}
-.case-table :deep(tr:nth-child(even):hover td) {
-  background: rgba(139, 115, 85, 0.04);
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
+/* 表头：每列独立彩虹渐变 */
+.case-table--rainbow :deep(th) {
+  font-size: 18px;
+  font-weight: 800;
+  padding: 16px 12px;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.case-table--rainbow :deep(th:nth-child(1)) {
+  background: linear-gradient(135deg, #f8a6b2 0%, #e85f5f 100%);
+  color: #fff;
+}
+.case-table--rainbow :deep(th:nth-child(2)) {
+  background: linear-gradient(135deg, #ffd97a 0%, #f7cd67 45%, #f5a623 100%);
+  color: #5c3d10;
+}
+.case-table--rainbow :deep(th:nth-child(3)) {
+  background: linear-gradient(135deg, #c5db5a 0%, #6fba2c 100%);
+  color: #2d5016;
+}
+.case-table--rainbow :deep(th:nth-child(4)) {
+  background: linear-gradient(135deg, #7ee8df 0%, #19c8b9 100%);
+  color: #064a44;
+}
+.case-table--rainbow :deep(th:nth-child(5)) {
+  background: linear-gradient(135deg, #a8b8ff 0%, #889df0 100%);
+  color: #2a3568;
+}
+.case-table--rainbow :deep(th:nth-child(6)) {
+  background: linear-gradient(135deg, #d4c4ff 0%, #b39ef3 100%);
+  color: #3d2d6b;
+  text-align: center;
+}
+
+/* 数据行：中性背景，字体按列着色 */
+.case-table--rainbow :deep(td) {
+  padding: 13px 12px;
+  font-size: 14px;
+  color: #4a3a28;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(139, 115, 85, 0.08);
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.case-table--rainbow :deep(tr:nth-child(even) td) {
+  background: rgba(139, 115, 85, 0.03);
+}
+.case-table--rainbow :deep(tr:hover td) {
+  background: rgba(25, 200, 185, 0.06);
+}
+.case-table--rainbow :deep(tr:last-child td) {
+  border-bottom: none;
+}
+.case-table--rainbow :deep(td:nth-child(6)) {
+  text-align: center;
+  overflow: visible;
+}
+
+/* 操作按钮 — 紧凑 + 颜色区分 */
 .action-cell {
-  display: flex;
-  gap: 8px;
+  display: inline-flex;
+  gap: 3px;
   justify-content: center;
+  align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
-.dir-cell {
+.act-btn {
+  padding: 3px 8px;
   font-size: 13px;
-  color: #11a89b;
-  font-weight: 600;
+  font-weight: 700;
+  line-height: 1.35;
+  border-radius: 6px;
+  border: 1.5px solid;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  font-family: inherit;
 }
-.dir-cell--none {
-  color: #c4b89e;
+.act-btn--view {
+  color: #0a5c52;
+  background: rgba(25, 200, 185, 0.14);
+  border-color: rgba(25, 200, 185, 0.5);
+}
+.act-btn--view:hover {
+  background: #19c8b9;
+  border-color: #19c8b9;
+  color: #fff;
+}
+.act-btn--edit {
+  color: #2a3568;
+  background: rgba(136, 157, 240, 0.14);
+  border-color: rgba(136, 157, 240, 0.5);
+}
+.act-btn--edit:hover {
+  background: #889df0;
+  border-color: #889df0;
+  color: #fff;
+}
+.act-btn--del {
+  color: #b83232;
+  background: rgba(232, 95, 95, 0.1);
+  border-color: rgba(232, 95, 95, 0.45);
+}
+.act-btn--del:hover {
+  background: #e85f5f;
+  border-color: #e85f5f;
+  color: #fff;
+}
+.cell-id {
+  font-family: "SF Mono", "Fira Code", Consolas, monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: #c0392b;
+  word-break: break-all;
+  line-height: 1.45;
+}
+.cell-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: #b8860b;
+  line-height: 1.45;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cell-dir {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a8c1c;
+}
+.cell-dir--none {
+  color: #b8a898;
+  font-weight: 500;
+}
+.cell-category {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0d8a7f;
 }
 
 .table-empty {
@@ -828,7 +1182,7 @@ async function remove(row) {
 .case-exports__table {
   overflow: hidden;
 }
-.case-exports__table :deep(.animal-card__content) {
+.case-exports__table {
   padding: 0;
 }
 .case-exports__empty {

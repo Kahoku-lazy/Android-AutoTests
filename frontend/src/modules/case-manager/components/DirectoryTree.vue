@@ -540,6 +540,7 @@ onUnmounted(() => {
         :data="treeData"
         :props="{ children: 'children', label: 'name' }"
         node-key="id"
+        :indent="12"
         :expand-on-click-node="false"
         :highlight-current="!selectMode"
         :current-node-key="activeId"
@@ -562,7 +563,7 @@ onUnmounted(() => {
             @mouseleave="onNodeMouseLeave"
           >
             <span class="tree-node__icon">{{ nodeIcon(data) }}</span>
-            <span class="tree-node__name">{{ data.name }}</span>
+            <span class="tree-node__name" :title="data.name">{{ data.name }}</span>
             <span
               v-if="data.node_type === 'case'"
               class="tree-node__priority"
@@ -686,8 +687,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
+  gap: 8px;
+  padding: 12px 10px;
   border-bottom: 2px solid rgba(139, 115, 85, 0.12);
+  flex-shrink: 0;
 }
 
 .tree-header--select {
@@ -696,21 +699,26 @@ onUnmounted(() => {
 
 .tree-header__title {
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
   color: #6b5b48;
   letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .tree-header__actions {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .tree-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 8px;
+  overflow-x: hidden;
+  padding: 6px 4px 8px;
 }
 
 /* el-tree overrides */
@@ -719,10 +727,16 @@ onUnmounted(() => {
 }
 
 .tree-body :deep(.el-tree-node__content) {
-  height: 36px;
-  border-radius: 10px;
-  padding-right: 8px;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  height: auto;
+  min-height: 32px;
+  border-radius: 8px;
+  padding: 3px 6px 3px 2px;
+  transition: background 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tree-body :deep(.el-tree-node__expand-icon) {
+  padding: 4px;
+  font-size: 12px;
 }
 
 .tree-body :deep(.el-tree-node__content:hover) {
@@ -756,35 +770,53 @@ onUnmounted(() => {
 
 .tree-node {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 5px;
   font-size: 13px;
   width: 100%;
+  min-width: 0;
   user-select: none;
+  line-height: 1.35;
+  padding: 1px 0;
 }
 
 .tree-node__icon {
-  font-size: 15px;
+  font-size: 14px;
   flex-shrink: 0;
+  line-height: 1.35;
+  margin-top: 1px;
 }
 
 .tree-node__name {
   flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
   color: #725d42;
   font-weight: 500;
 }
 
+.tree-node--l1 .tree-node__name,
+.tree-node--l2 .tree-node__name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-node--case .tree-node__name {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
 .tree-node__count {
-  font-size: 11px;
+  font-size: 10px;
   color: #9f927d;
   background: rgba(139, 115, 85, 0.08);
-  padding: 1px 7px;
+  padding: 0 6px;
   border-radius: 10px;
   font-weight: 600;
   flex-shrink: 0;
+  line-height: 18px;
+  margin-top: 1px;
 }
 
 .tree-node--l1 .tree-node__name {
@@ -793,11 +825,11 @@ onUnmounted(() => {
 }
 
 .tree-node--l2 {
-  padding-left: 4px;
+  padding-left: 0;
 }
 
 .tree-node--case {
-  padding-left: 8px;
+  padding-left: 0;
 }
 
 .tree-node--case .tree-node__name {
@@ -812,12 +844,14 @@ onUnmounted(() => {
 }
 
 .tree-node__priority {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 8px;
+  padding: 1px 5px;
+  border-radius: 6px;
   flex-shrink: 0;
   letter-spacing: 0.02em;
+  line-height: 16px;
+  margin-top: 1px;
 }
 
 .tree-node__priority--p0 {

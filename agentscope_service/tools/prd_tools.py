@@ -35,8 +35,31 @@ try:
 except Exception:
     pass
 
-# ── Session-scoped staging area for designed cases (before import) ──
-_staged_cases: dict[str, list[dict]] = {}
+# ── Session-scoped staging: see tool_context.stage_designed_cases ──
+
+
+def _safe_prd_path(file_path: str) -> Path | None:
+    """Resolve file_path only if it lies within allowed workspace directories."""
+    if not file_path:
+        return None
+    raw = Path(file_path)
+    if not raw.is_absolute():
+        candidate = (_PROJECT_ROOT / raw).resolve()
+    else:
+        candidate = raw.resolve()
+    allowed_roots = [
+        (_PROJECT_ROOT / "data" / "uploads").resolve(),
+        (_PROJECT_ROOT / "dev_docs" / "02-PRD需求").resolve(),
+        Path(tempfile.gettempdir()).resolve(),
+    ]
+    for root in allowed_roots:
+        try:
+            candidate.relative_to(root)
+            if candidate.is_file():
+                return candidate
+        except ValueError:
+            continue
+    return None
 
 
 class ParsePRDTool(ToolBase):
@@ -73,13 +96,14 @@ class ParsePRDTool(ToolBase):
     is_read_only = True
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Read-only.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, file_path="", content="", **kwargs):
         if not _DESIGNER_AVAILABLE:
-            # Fallback: read file content manually
-            if file_path and Path(file_path).exists():
-                text = Path(file_path).read_text(encoding="utf-8")
+            safe_path = _safe_prd_path(file_path) if file_path else None
+            if safe_path:
+                text = safe_path.read_text(encoding="utf-8")
             elif content:
                 text = content
             else:
@@ -109,8 +133,10 @@ class ParsePRDTool(ToolBase):
 
         # Full mode: use testcase_designer
         try:
-            if file_path and Path(file_path).exists():
-                content_text = convert_to_markdown(Path(file_path))
+            safe_path = _safe_prd_path(file_path) if file_path else None
+            if safe_path:
+                content_text = convert_to_markdown(safe_path)
+                file_path = str(safe_path)
             elif content:
                 # Save content to temp file for the pipeline
                 tmpdir = Path(tempfile.gettempdir())
@@ -131,7 +157,7 @@ class ParsePRDTool(ToolBase):
             # Auto-detect product info
             from testcase_designer.web import _auto_detect
 
-            info = _auto_detect(file_path) if file_path and Path(file_path).exists() else {}
+            info = _auto_detect(str(safe_path)) if safe_path else {}
 
             return ToolChunk(
                 content=[
@@ -139,7 +165,7 @@ class ParsePRDTool(ToolBase):
                         text=json.dumps(
                             {
                                 "status": "parsed",
-                                "filename": Path(file_path).name if file_path else "inline",
+                                "filename": safe_path.name if safe_path else "inline",
                                 "total_chars": len(content_text),
                                 "toc": toc,
                                 "product_code": info.get("product_code", ""),
@@ -230,10 +256,8 @@ class DesignTestCasesFromPRDTool(ToolBase):
     is_read_only = False
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(
-            behavior=PermissionBehavior.ALLOW,
-            message="Test case design is always allowed.",
-        )
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(
         self,
@@ -264,8 +288,9 @@ class DesignTestCasesFromPRDTool(ToolBase):
                 ]
             )
 
-        if not Path(file_path).exists():
-            return ToolChunk(content=[TextBlock(text=f"错误：PRD 文件不存在 — {file_path}")])
+        safe_path = _safe_prd_path(file_path)
+        if not safe_path:
+            return ToolChunk(content=[TextBlock(text=f"错误：PRD 文件路径不允许或不存在 — {file_path}")])
 
         try:
             import asyncio
@@ -289,7 +314,7 @@ class DesignTestCasesFromPRDTool(ToolBase):
                 try:
                     loop.run_until_complete(
                         run_auto(
-                            requirement_file=file_path,
+                            requirement_file=str(safe_path),
                             output_dir=output_dir,
                             version=version,
                             config=config,
@@ -357,7 +382,9 @@ class DesignTestCasesFromPRDTool(ToolBase):
 
             # Store in session-scoped staging
             session_id = output_dir_path.name
-            _staged_cases[session_id] = staged
+            from .tool_context import stage_designed_cases
+
+            stage_designed_cases(session_id, staged)
 
             return ToolChunk(
                 content=[
@@ -459,10 +486,8 @@ class ImportDesignedCasesTool(ToolBase):
     is_read_only = False
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(
-            behavior=PermissionBehavior.ALLOW,
-            message="Case import is always allowed.",
-        )
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(
         self,
@@ -473,7 +498,9 @@ class ImportDesignedCasesTool(ToolBase):
         overwrite=False,
         **kwargs,
     ):
-        staged = _staged_cases.get(session_id, [])
+        from .tool_context import get_staged_cases, pop_staged_cases
+
+        staged = get_staged_cases(session_id)
         if not staged:
             return ToolChunk(
                 content=[
@@ -490,7 +517,7 @@ class ImportDesignedCasesTool(ToolBase):
                 return ToolChunk(
                     content=[
                         TextBlock(
-                            text=f"指定的用例编号未找到。可用编号: {[c.get('id') for c in _staged_cases.get(session_id, [])]}"
+                            text=f"指定的用例编号未找到。可用编号: {[c.get('id') for c in get_staged_cases(session_id)]}"
                         )
                     ]
                 )
@@ -563,7 +590,7 @@ class ImportDesignedCasesTool(ToolBase):
 
         # Clean up staging
         if not failed:
-            _staged_cases.pop(session_id, None)
+            pop_staged_cases(session_id)
 
         return ToolChunk(
             content=[

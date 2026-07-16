@@ -1,27 +1,284 @@
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, BarController, BarElement, Filler, Tooltip, Legend } from 'chart.js'
 import { animate, stagger } from 'animejs'
 import { Button as AnimalButton, Card, Table, Tabs } from 'animal-island-vue'
 import PageHeader from '@/shared/components/PageHeader.vue'
 import { listRuns, statusLabel, statusBadgeClass, formatTime } from './api.js'
 
+Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, BarController, BarElement, Filler, Tooltip, Legend)
+
 const router = useRouter()
 
 const runs = ref([])
+const summary = ref(null)
+const bugSummary = ref(null)
 const loading = ref(false)
 const activeFilter = ref('all')
+const dateRange = ref([])
+const filterRunId = ref('')
+const filterTaskName = ref('')
+const filterDevice = ref('')
+const filterCreator = ref('')
 
-onMounted(async () => {
+let filterDebounceTimer = null
+
+const PAGE_SIZE_OPTIONS = [10, 50, 100]
+const TABLE_TOOLBAR_HEIGHT = 52
+const TABLE_HEADER_HEIGHT = 54
+const TABLE_ROW_HEIGHT = 50
+const pageSize = ref(10)
+const currentPage = ref(1)
+
+const trend = ref(null)
+
+const CHART_RANGE_OPTIONS = [
+  { key: 7, label: '一周' },
+  { key: 30, label: '一月' },
+  { key: 90, label: '一季度' },
+]
+const chartRange = ref(30)
+const CHART_VISIBLE_DAYS = 5
+
+const chartRangeLabel = computed(() => {
+  const opt = CHART_RANGE_OPTIONS.find(o => o.key === chartRange.value)
+  return opt ? opt.label : '一月'
+})
+
+// Chart.js instances
+let passRateChart = null
+let dailyCountChart = null
+
+onMounted(() => {
+  fetchReports()
+  window.addEventListener('resize', onChartResize)
+})
+watch(dateRange, () => { currentPage.value = 1; fetchReports() }, { deep: true })
+watch([filterRunId, filterTaskName, filterDevice, filterCreator], () => {
+  currentPage.value = 1
+  clearTimeout(filterDebounceTimer)
+  filterDebounceTimer = setTimeout(fetchReports, 350)
+})
+watch(activeFilter, () => { currentPage.value = 1 })
+watch(chartRange, () => { fetchReports() })
+
+onUnmounted(() => {
+  clearTimeout(filterDebounceTimer)
+  clearTimeout(chartResizeTimer)
+  window.removeEventListener('resize', onChartResize)
+  if (passRateChart) passRateChart.destroy()
+  if (dailyCountChart) dailyCountChart.destroy()
+})
+
+let chartResizeTimer = null
+let syncingChartScroll = false
+
+function onChartResize() {
+  clearTimeout(chartResizeTimer)
+  chartResizeTimer = setTimeout(renderTrendCharts, 150)
+}
+
+function getChartDayWidth(scrollEl) {
+  if (!scrollEl || scrollEl.clientWidth <= 0) return 72
+  return scrollEl.clientWidth / CHART_VISIBLE_DAYS
+}
+
+function getChartMetrics() {
+  const n = trend.value?.labels?.length || 0
+  const passScroll = document.getElementById('chartScrollPass')
+  const dayW = getChartDayWidth(passScroll)
+  const totalW = Math.max(Math.round(n * dayW), passScroll?.clientWidth || 360)
+  return { n, dayW, totalW, height: 200 }
+}
+
+function applyChartInnerWidths(metrics) {
+  const innerW = `${metrics.totalW}px`
+  for (const id of ['chartInnerPass', 'chartInnerDaily']) {
+    const el = document.getElementById(id)
+    if (!el) continue
+    el.style.width = innerW
+    el.style.minWidth = innerW
+    el.style.maxWidth = innerW
+    const wrap = el.querySelector('.chart-wrap')
+    if (wrap) {
+      wrap.style.width = innerW
+      wrap.style.minWidth = innerW
+    }
+  }
+}
+
+function prepareChartCanvas(canvas, metrics) {
+  const dpr = window.devicePixelRatio || 1
+  canvas.style.width = `${metrics.totalW}px`
+  canvas.style.height = `${metrics.height}px`
+  canvas.width = Math.round(metrics.totalW * dpr)
+  canvas.height = Math.round(metrics.height * dpr)
+  const ctx = canvas.getContext('2d')
+  if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+}
+
+function scrollChartsToEnd() {
+  const passScroll = document.getElementById('chartScrollPass')
+  const dailyScroll = document.getElementById('chartScrollDaily')
+  if (!passScroll) return
+  const left = Math.max(0, passScroll.scrollWidth - passScroll.clientWidth)
+  passScroll.scrollLeft = left
+  if (dailyScroll) dailyScroll.scrollLeft = left
+}
+
+function syncChartScroll(source) {
+  if (syncingChartScroll) return
+  syncingChartScroll = true
+  const passScroll = document.getElementById('chartScrollPass')
+  const dailyScroll = document.getElementById('chartScrollDaily')
+  const src = source === 'pass' ? passScroll : dailyScroll
+  const dst = source === 'pass' ? dailyScroll : passScroll
+  if (src && dst) dst.scrollLeft = src.scrollLeft
+  syncingChartScroll = false
+}
+
+// Watch trend data to re-render charts
+watch(trend, async () => { await nextTick(); setTimeout(renderTrendCharts, 100) })
+
+async function fetchReports() {
   loading.value = true
   try {
-    const { data } = await listRuns()
-    if (data.ok) runs.value = data.runs || []
+    const params = {}
+    if (dateRange.value && dateRange.value.length === 2) {
+      params.start_date = dateRange.value[0]
+      params.end_date = dateRange.value[1]
+    }
+    const runId = filterRunId.value.trim()
+    const taskName = filterTaskName.value.trim()
+    const device = filterDevice.value.trim()
+    const creator = filterCreator.value.trim()
+    if (runId) params.run_id = runId
+    if (taskName) params.task_name = taskName
+    if (device) params.device_serial = device
+    if (creator) params.creator = creator
+    params.chart_range = String(chartRange.value)
+    const { data } = await listRuns(params)
+    if (data.ok) {
+      runs.value = data.runs || []
+      summary.value = data.summary || null
+      bugSummary.value = data.bug_summary || null
+      trend.value = data.trend || null
+    }
   } catch (_) {}
   loading.value = false
   await nextTick()
   animate('.report-table tbody tr', { opacity: [0, 1], translateY: [16, 0], delay: stagger(40), duration: 380, ease: 'outCubic' })
-})
+}
+
+async function renderTrendCharts() {
+  if (!trend.value || !trend.value.labels?.length) return
+  await nextTick()
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const metrics = getChartMetrics()
+      if (!metrics.n) return
+      applyChartInnerWidths(metrics)
+      renderPassRateChart(metrics)
+      renderDailyCountChart(metrics)
+      requestAnimationFrame(() => scrollChartsToEnd())
+    })
+  })
+}
+
+function setChartRange(days) {
+  chartRange.value = days
+}
+
+function renderPassRateChart(metrics) {
+  const canvas = document.getElementById('overviewPassRateCanvas')
+  if (!canvas) return
+  if (passRateChart) passRateChart.destroy()
+  prepareChartCanvas(canvas, metrics)
+  passRateChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: trend.value.labels,
+      datasets: [{
+        label: '通过率',
+        data: trend.value.rate,
+        borderColor: '#19c8b9',
+        backgroundColor: 'rgba(25,200,185,0.08)',
+        fill: true, tension: 0.3,
+        pointBackgroundColor: '#19c8b9', pointBorderColor: '#fff',
+        pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2.5,
+      }]
+    },
+    options: {
+      responsive: false,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 0 } },
+        y: { min: 0, max: 105, ticks: { callback: v => v + '%' } },
+      }
+    }
+  })
+}
+
+function renderDailyCountChart(metrics) {
+  const canvas = document.getElementById('overviewDailyCountCanvas')
+  if (!canvas) return
+  if (dailyCountChart) dailyCountChart.destroy()
+  prepareChartCanvas(canvas, metrics)
+  dailyCountChart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: trend.value.labels,
+      datasets: [
+        {
+          label: '通过',
+          data: trend.value.pass,
+          backgroundColor: 'rgba(111,186,44,0.75)',
+          borderColor: '#6fba2c',
+          borderWidth: 1.5,
+          borderRadius: 6,
+          borderSkipped: false,
+          barPercentage: 0.9,
+          categoryPercentage: 0.7,
+        },
+        {
+          label: '失败',
+          data: trend.value.fail,
+          backgroundColor: 'rgba(224,90,90,0.75)',
+          borderColor: '#e05a5a',
+          borderWidth: 1.5,
+          borderRadius: 6,
+          borderSkipped: false,
+          barPercentage: 0.9,
+          categoryPercentage: 0.7,
+        },
+      ]
+    },
+    options: {
+      responsive: false,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+        },
+      },
+      scales: {
+        x: {
+          stacked: false,
+          grid: { display: false },
+        },
+        y: {
+          stacked: false,
+          beginAtZero: true,
+          ticks: { stepSize: 1, precision: 0 },
+        },
+      },
+    }
+  })
+}
 
 // ── Filter tabs ──
 const statusTabs = computed(() => [
@@ -36,21 +293,90 @@ const filteredRuns = computed(() => {
   return runs.value.filter(r => r.status === activeFilter.value)
 })
 
-// ── Table columns ──
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredRuns.value.length / pageSize.value)))
+
+const pagedRuns = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredRuns.value.slice(start, start + pageSize.value)
+})
+
+const displayRowCount = computed(() => {
+  if (pagedRuns.value.length === 0) return 3
+  return pagedRuns.value.length
+})
+
+const tableAreaMinHeight = computed(() => (
+  TABLE_TOOLBAR_HEIGHT + TABLE_HEADER_HEIGHT + displayRowCount.value * TABLE_ROW_HEIGHT
+))
+
+// ── Table columns（百分比宽度，铺满容器）──
 const columns = [
-  { title: 'Run ID', dataIndex: 'run_id', width: '200px' },
-  { title: '设备', dataIndex: 'device_serial', width: '130px' },
-  { title: '用例数', dataIndex: 'case_count', width: '70px', align: 'center' },
-  { title: '通过', dataIndex: 'passed', width: '60px', align: 'center' },
-  { title: '失败', dataIndex: 'failed', width: '60px', align: 'center' },
-  { title: '通过率', dataIndex: 'rate', width: '150px' },
-  { title: '状态', dataIndex: 'status', width: '90px', align: 'center' },
-  { title: '耗时', dataIndex: 'duration', width: '80px', align: 'center' },
-  { title: '时间', dataIndex: 'started_at', width: '150px' },
+  { title: 'Run ID', dataIndex: 'run_id', width: '13%' },
+  { title: '设备', dataIndex: 'device_serial', width: '9%' },
+  { title: '任务名称', dataIndex: 'task_name', width: '20%' },
+  { title: '创建人', dataIndex: 'creator', width: '7%' },
+  { title: '用例数', dataIndex: 'case_count', width: '5%', align: 'center' },
+  { title: '通过', dataIndex: 'passed', width: '5%', align: 'center' },
+  { title: '失败', dataIndex: 'failed', width: '5%', align: 'center' },
+  { title: '通过率', dataIndex: 'rate', width: '11%' },
+  { title: '状态', dataIndex: 'status', width: '7%', align: 'center' },
+  { title: '耗时', dataIndex: 'duration', width: '6%', align: 'center' },
+  { title: '时间', dataIndex: 'started_at', width: '12%' },
 ]
 
 function openReport(run) {
   router.push(`/reports/${encodeURIComponent(run.run_id)}`)
+}
+
+function setPageSize(size) {
+  pageSize.value = size
+  currentPage.value = 1
+}
+
+function goPage(page) {
+  currentPage.value = Math.min(Math.max(1, page), totalPages.value)
+}
+
+const hasActiveFilters = computed(() => (
+  (dateRange.value && dateRange.value.length === 2)
+  || filterRunId.value.trim()
+  || filterTaskName.value.trim()
+  || filterDevice.value.trim()
+  || filterCreator.value.trim()
+))
+
+function clearFilters() {
+  dateRange.value = []
+  filterRunId.value = ''
+  filterTaskName.value = ''
+  filterDevice.value = ''
+  filterCreator.value = ''
+  currentPage.value = 1
+  fetchReports()
+}
+
+function buildFilterQuery() {
+  const query = {}
+  if (dateRange.value && dateRange.value.length === 2) {
+    query.start_date = dateRange.value[0]
+    query.end_date = dateRange.value[1]
+  }
+  const runId = filterRunId.value.trim()
+  const taskName = filterTaskName.value.trim()
+  const device = filterDevice.value.trim()
+  const creator = filterCreator.value.trim()
+  if (runId) query.run_id = runId
+  if (taskName) query.task_name = taskName
+  if (device) query.device_serial = device
+  if (creator) query.creator = creator
+  return query
+}
+
+function openCaseBreakdown(type, tab = 'detail') {
+  router.push({
+    path: `/reports/cases/${type}`,
+    query: { ...buildFilterQuery(), ...(tab !== 'detail' ? { tab } : {}) },
+  })
 }
 </script>
 
@@ -63,30 +389,197 @@ function openReport(run) {
     />
 
     <div class="doc-body">
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <div class="filter-fields">
+          <el-date-picker
+            v-model="dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="YYYY-MM-DD"
+            :clearable="true"
+            :unlink-panels="true"
+            class="filter-date"
+          />
+          <el-input
+            v-model="filterRunId"
+            placeholder="Run ID"
+            clearable
+            class="filter-input"
+          />
+          <el-input
+            v-model="filterTaskName"
+            placeholder="任务名称"
+            clearable
+            class="filter-input"
+          />
+          <el-input
+            v-model="filterDevice"
+            placeholder="设备"
+            clearable
+            class="filter-input"
+          />
+          <el-input
+            v-model="filterCreator"
+            placeholder="创建人"
+            clearable
+            class="filter-input"
+          />
+        </div>
+        <div class="filter-actions">
+          <AnimalButton
+            v-if="hasActiveFilters"
+            size="small"
+            @click="clearFilters"
+          >清空条件</AnimalButton>
+          <span v-if="summary" class="filter-summary">
+            共 {{ summary.total_runs }} 次执行 · {{ summary.total_iterations }} 次迭代
+          </span>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <div v-if="summary" class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-accent accent-teal"></div>
+          <div class="kpi-value">{{ summary.total_runs }}</div>
+          <div class="kpi-label">总执行次数</div>
+        </div>
+        <div class="kpi-card kpi-card--clickable" @click="openCaseBreakdown('pass')">
+          <div class="kpi-accent accent-green"></div>
+          <div class="kpi-value num-pass">{{ summary.total_pass }}</div>
+          <div class="kpi-label">✅ 通过</div>
+        </div>
+        <div class="kpi-card kpi-card--clickable" @click="openCaseBreakdown('fail', 'bugs')">
+          <div class="kpi-accent accent-red"></div>
+          <div class="kpi-value num-fail">{{ summary.total_fail }}</div>
+          <div class="kpi-label">❌ 失败</div>
+          <div v-if="bugSummary" class="kpi-sub kpi-sub--bug">
+            <span class="kpi-sub-num kpi-sub-num--bug">{{ bugSummary.unique_issues }}</span> 类 BUG ·
+            <span class="kpi-sub-num kpi-sub-num--occur">{{ bugSummary.total_occurrences }}</span> 次出现 ·
+            <span class="kpi-sub-num kpi-sub-num--case">{{ bugSummary.affected_cases }}</span> 个用例
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-accent accent-yellow"></div>
+          <div class="kpi-value" :class="summary.pass_rate >= 95 ? 'num-pass' : summary.pass_rate >= 80 ? 'num-warn' : 'num-fail'">
+            {{ summary.pass_rate }}%
+          </div>
+          <div class="kpi-label">📊 总通过率</div>
+          <div class="kpi-sub kpi-sub--iter">
+            <span class="kpi-sub-num">{{ summary.total_iterations }}</span> 次迭代
+          </div>
+        </div>
+      </div>
+
+      <!-- Trend Charts -->
+      <div v-if="trend && trend.labels?.length" class="chart-section">
+        <div class="chart-toolbar">
+          <span class="toolbar-label">图表范围</span>
+          <div class="page-size-btns">
+            <button
+              v-for="opt in CHART_RANGE_OPTIONS"
+              :key="opt.key"
+              type="button"
+              class="page-size-btn"
+              :class="{ active: chartRange === opt.key }"
+              @click="setChartRange(opt.key)"
+            >{{ opt.label }}</button>
+          </div>
+          <span class="chart-hint">固定显示 {{ CHART_VISIBLE_DAYS }} 天 · 默认最近 {{ CHART_VISIBLE_DAYS }} 天 · 左滑查看更早（共 {{ trend.labels.length }} 天）</span>
+        </div>
+        <div class="chart-row">
+        <Card color="brown" pattern="brown" class="chart-card">
+          <h4 class="chart-title">通过率趋势</h4>
+          <div id="chartScrollPass" class="chart-scroll" @scroll="syncChartScroll('pass')">
+            <div id="chartInnerPass" class="chart-inner">
+              <div class="chart-wrap"><canvas id="overviewPassRateCanvas"></canvas></div>
+            </div>
+          </div>
+        </Card>
+        <Card color="brown" pattern="brown" class="chart-card">
+          <h4 class="chart-title">每日通过/失败</h4>
+          <div id="chartScrollDaily" class="chart-scroll" @scroll="syncChartScroll('daily')">
+            <div id="chartInnerDaily" class="chart-inner">
+              <div class="chart-wrap"><canvas id="overviewDailyCountCanvas"></canvas></div>
+            </div>
+          </div>
+        </Card>
+        </div>
+      </div>
+
       <!-- Filter Tabs -->
       <Tabs
         class="report-tabs"
+        :style="{ minHeight: `${tableAreaMinHeight + 88}px` }"
         :items="statusTabs"
         v-model="activeFilter"
         :leaf-animation="true"
         :shadow="true"
       >
         <template v-for="tab in statusTabs" #[tab.key] :key="tab.key">
-          <Card color="brown" pattern="brown" class="table-card">
+          <Card
+            color="brown"
+            pattern="brown"
+            class="table-card"
+            :style="{ minHeight: `${tableAreaMinHeight}px` }"
+          >
+            <div class="table-toolbar">
+              <div class="page-size-control">
+                <span class="toolbar-label">显示行数</span>
+                <div class="page-size-btns">
+                  <button
+                    v-for="n in PAGE_SIZE_OPTIONS"
+                    :key="n"
+                    type="button"
+                    class="page-size-btn"
+                    :class="{ active: pageSize === n }"
+                    @click="setPageSize(n)"
+                  >{{ n }}</button>
+                </div>
+              </div>
+              <div v-if="filteredRuns.length > 0" class="table-toolbar-right">
+                <span class="page-info">
+                  第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ filteredRuns.length }} 条
+                </span>
+                <div v-if="totalPages > 1" class="page-nav">
+                  <AnimalButton size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</AnimalButton>
+                  <AnimalButton size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</AnimalButton>
+                </div>
+              </div>
+            </div>
             <Table
               :columns="columns"
-              :data-source="filteredRuns"
+              :data-source="pagedRuns"
               row-key="run_id"
-              :striped="true"
+              :striped="false"
               :loading="loading"
               empty-text="暂无执行记录，请先执行测试"
-              class="report-table"
+              class="report-table report-table--rainbow"
             >
               <!-- Run ID — clickable link -->
               <template #cell-run_id="{ record }">
                 <a class="run-link" @click.prevent="openReport(record)" href="#">
-                  <code>{{ record.run_id }}</code>
+                  <code class="cell-run-id">{{ record.run_id }}</code>
                 </a>
+              </template>
+
+              <template #cell-device_serial="{ value }">
+                <span class="cell-device">{{ value }}</span>
+              </template>
+
+              <template #cell-task_name="{ record }">
+                <span class="cell-task-name">{{ record.task_name || '—' }}</span>
+              </template>
+
+              <template #cell-creator="{ record }">
+                <span class="cell-creator">{{ record.creator || '—' }}</span>
+              </template>
+
+              <template #cell-case_count="{ value }">
+                <span class="cell-count">{{ value }}</span>
               </template>
 
               <!-- Passed count — green -->
@@ -118,8 +611,11 @@ function openReport(run) {
               </template>
 
               <!-- Time -->
+              <template #cell-duration="{ value }">
+                <span class="cell-duration">{{ value }}</span>
+              </template>
               <template #cell-started_at="{ record }">
-                <span class="time-text">{{ formatTime(record.started_at) }}</span>
+                <span class="cell-time">{{ formatTime(record.started_at) }}</span>
               </template>
 
               <!-- Empty state -->
@@ -139,63 +635,482 @@ function openReport(run) {
 </template>
 
 <style scoped>
-.doc-page { display: flex; flex-direction: column; height: 100%; }
+.doc-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.doc-page :deep(.doc-hero) {
+  flex-shrink: 0;
+}
+
+.doc-body {
+  flex: 0 0 auto;
+  min-height: auto;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+}
+
+/* ── Filter bar ── */
+.filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+.filter-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.filter-date {
+  width: 280px;
+  flex-shrink: 0;
+}
+.filter-input {
+  width: 150px;
+  flex-shrink: 0;
+}
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.filter-summary {
+  font-size: 13px;
+  color: #8a7b66;
+  font-weight: 600;
+}
+
+/* ── Trend Charts ── */
+.chart-section {
+  margin-bottom: 16px;
+  flex-shrink: 0;
+  min-width: 0;
+  width: 100%;
+}
+.chart-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.chart-hint {
+  font-size: 12px;
+  color: #8a7b66;
+  font-weight: 600;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.chart-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  min-width: 0;
+  width: 100%;
+}
+.chart-card {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+.chart-card :deep(.animal-card__content) {
+  padding: 14px 18px;
+  overflow: hidden;
+  min-width: 0;
+}
+.chart-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #794f27;
+  margin: 0 0 6px;
+}
+.chart-scroll {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 115, 85, 0.3) transparent;
+}
+.chart-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.chart-scroll::-webkit-scrollbar-thumb {
+  background: rgba(139, 115, 85, 0.3);
+  border-radius: 3px;
+}
+.chart-inner {
+  display: block;
+  flex-shrink: 0;
+  width: auto;
+  height: 200px;
+}
+.chart-wrap {
+  position: relative;
+  flex-shrink: 0;
+  height: 200px;
+}
+.chart-wrap canvas {
+  display: block;
+}
+
+/* ── KPI Cards ── */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+.kpi-card {
+  background: rgb(247,243,223);
+  border-radius: 18px;
+  padding: 18px 22px;
+  border: 1.5px solid #c4b89e;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+.kpi-card:hover { transform: translateY(-2px); }
+.kpi-card--clickable {
+  cursor: pointer;
+}
+.kpi-card--clickable:hover {
+  border-color: #19c8b9;
+  box-shadow: 0 4px 16px rgba(25, 200, 185, 0.15);
+}
+.kpi-accent {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 5px;
+  border-radius: 0 3px 3px 0;
+}
+.accent-teal { background: #19c8b9; }
+.accent-green { background: #6fba2c; }
+.accent-red { background: #e05a5a; }
+.accent-yellow { background: #f5c31c; }
+.kpi-value {
+  font-size: 30px;
+  font-weight: 900;
+  color: #794f27;
+  line-height: 1.1;
+}
+.kpi-label {
+  font-size: 12px;
+  color: #9f927d;
+  margin-top: 4px;
+  font-weight: 600;
+}
+.kpi-sub {
+  font-size: 12px;
+  color: #9f927d;
+  margin-top: 6px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.kpi-sub-num {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+.kpi-sub-num--bug { color: #d63031; }
+.kpi-sub-num--occur { color: #7b5fbf; }
+.kpi-sub-num--case { color: #2980b9; }
+.kpi-sub--iter .kpi-sub-num {
+  color: #0f9a8e;
+}
+.num-pass { color: #6fba2c; }
+.num-fail { color: #e05a5a; }
+.num-warn { color: #dba90e; }
+
+.report-tabs {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.report-tabs :deep(.animal-tabs) {
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  width: 100%;
+}
 
 .report-tabs :deep(.animal-tabs__content) {
+  overflow: visible;
+  display: block;
   padding-top: 16px;
+  width: 100%;
+}
+
+.report-tabs :deep(.animal-tabs__inner) {
+  min-height: min-content;
+  width: 100%;
 }
 
 /* Table card — zero-padding for edge-to-edge Table */
-.table-card { overflow: hidden; }
-.table-card :deep(.animal-card__content) { padding: 0; border-radius: 14px; overflow: hidden; }
+.table-card {
+  overflow: visible;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.table-card :deep(.animal-card__content) {
+  padding: 0;
+  border-radius: 16px;
+  overflow: visible;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
 
-/* Shared Table styles */
-.report-table { width: 100%; }
-.report-table :deep(table) { width: 100%; border-collapse: collapse; }
-.report-table :deep(th) {
-  font-size: 12px; font-weight: 700; color: #6b5b48; padding: 14px 16px;
-  text-align: left; background: rgba(139,115,85,0.06);
-  border-bottom: 2px solid rgba(139,115,85,0.12);
-  text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(139, 115, 85, 0.1);
+  background: rgba(139, 115, 85, 0.03);
 }
-.report-table :deep(td) {
-  padding: 12px 16px; font-size: 14px; color: #4a3a28;
-  border-bottom: 1px dashed rgba(196,184,158,0.4); vertical-align: middle;
+.page-size-control { display: flex; align-items: center; gap: 10px; }
+.toolbar-label { font-size: 12px; font-weight: 700; color: #8a7b66; white-space: nowrap; }
+.page-size-btns { display: flex; gap: 6px; }
+.page-size-btn {
+  min-width: 40px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(139, 115, 85, 0.2);
+  background: #f7f3df;
+  color: #6b5b48;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
-.report-table :deep(tr:hover td) { background: rgba(25,200,185,0.04); }
-.report-table :deep(tr:last-child td) { border-bottom: none; }
+.page-size-btn:hover { border-color: #19c8b9; color: #19c8b9; }
+.page-size-btn.active {
+  background: rgba(25, 200, 185, 0.12);
+  border-color: #19c8b9;
+  color: #0f9a8e;
+}
+.table-toolbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
+.page-info { font-size: 12px; color: #8a7b66; font-weight: 600; white-space: nowrap; }
+.page-nav { display: flex; gap: 8px; }
+
+/* Rainbow gradient table — 11 columns */
+.report-table { width: 100%; flex: 1; }
+.report-table :deep(.animal-table-wrapper) {
+  width: 100%;
+}
+.report-table :deep(.animal-table-wrapper),
+.report-table :deep(.animal-table__body) {
+  overflow: visible !important;
+  max-height: none !important;
+}
+.report-table :deep(table) {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.report-table--rainbow :deep(th) {
+  font-size: 18px;
+  font-weight: 800;
+  padding: 16px 12px;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  border: none;
+}
+/* 1=run_id, 2=device, 3=task_name, 4=creator, 5=case_count, 6=passed, 7=failed, 8=rate, 9=status, 10=duration, 11=time */
+.report-table--rainbow :deep(th:nth-child(1)) {
+  background: linear-gradient(135deg, #f8a6b2 0%, #e85f5f 100%);
+  color: #fff;
+}
+.report-table--rainbow :deep(th:nth-child(2)) {
+  background: linear-gradient(135deg, #ffd97a 0%, #f7cd67 45%, #f5a623 100%);
+  color: #5c3d10;
+}
+.report-table--rainbow :deep(th:nth-child(3)) {
+  background: linear-gradient(135deg, #f5c6a3 0%, #f7a8c4 100%);
+  color: #6b3d28;
+}
+.report-table--rainbow :deep(th:nth-child(4)) {
+  background: linear-gradient(135deg, #d4c4ff 0%, #b39ef3 100%);
+  color: #3d2d6b;
+}
+.report-table--rainbow :deep(th:nth-child(5)) {
+  background: linear-gradient(135deg, #d4e87a 0%, #c5db5a 100%);
+  color: #3d5010;
+  text-align: center;
+}
+.report-table--rainbow :deep(th:nth-child(6)) {
+  background: linear-gradient(135deg, #9ed456 0%, #6fba2c 100%);
+  color: #1e4010;
+  text-align: center;
+}
+.report-table--rainbow :deep(th:nth-child(7)) {
+  background: linear-gradient(135deg, #ff8a8a 0%, #e85f5f 100%);
+  color: #fff;
+  text-align: center;
+}
+.report-table--rainbow :deep(th:nth-child(8)) {
+  background: linear-gradient(135deg, #7ee8df 0%, #19c8b9 100%);
+  color: #064a44;
+}
+.report-table--rainbow :deep(th:nth-child(9)) {
+  background: linear-gradient(135deg, #a8b8ff 0%, #889df0 100%);
+  color: #2a3568;
+  text-align: center;
+}
+.report-table--rainbow :deep(th:nth-child(10)) {
+  background: linear-gradient(135deg, #d4c4ff 0%, #b39ef3 100%);
+  color: #3d2d6b;
+  text-align: center;
+}
+.report-table--rainbow :deep(th:nth-child(11)) {
+  background: linear-gradient(135deg, #f5c6a3 0%, #f7a8c4 100%);
+  color: #6b3d28;
+}
+
+.report-table--rainbow :deep(td) {
+  padding: 13px 12px;
+  font-size: 14px;
+  color: #4a3a28;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(139, 115, 85, 0.08);
+  vertical-align: middle;
+}
+.report-table--rainbow :deep(tr:nth-child(even) td) {
+  background: rgba(139, 115, 85, 0.03);
+}
+.report-table--rainbow :deep(tr:hover td) {
+  background: rgba(25, 200, 185, 0.06);
+}
+.report-table--rainbow :deep(tr:last-child td) {
+  border-bottom: none;
+}
+/* Center-align numeric/status columns */
+.report-table--rainbow :deep(td:nth-child(5)),
+.report-table--rainbow :deep(td:nth-child(6)),
+.report-table--rainbow :deep(td:nth-child(7)),
+.report-table--rainbow :deep(td:nth-child(9)),
+.report-table--rainbow :deep(td:nth-child(10)) {
+  text-align: center;
+}
 
 /* Run ID link */
-.run-link { color: var(--primary, #19c8b9); text-decoration: none; font-weight: 600; }
-.run-link:hover { text-decoration: underline; color: #11a89b; }
-.run-link code { font-family: 'SF Mono','Fira Code','Cascadia Code',Consolas,monospace; font-size: 12px; }
+.run-link {
+  text-decoration: none;
+  color: inherit;
+}
+.run-link:hover .cell-run-id {
+  color: #19c8b9;
+  text-decoration: underline;
+}
+.cell-run-id {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: #c0392b;
+  line-height: 1.45;
+  word-break: break-all;
+  transition: color 0.15s ease;
+}
+.cell-device {
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: #b8860b;
+}
+.cell-task-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #4a3a28;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cell-creator {
+  font-size: 14px;
+  color: #8a7b66;
+}
+.cell-count {
+  font-weight: 700;
+  font-size: 14px;
+  color: #6b8f1a;
+}
+.cell-duration {
+  font-size: 14px;
+  font-weight: 600;
+  color: #7b5fbf;
+  white-space: nowrap;
+}
+.cell-time {
+  font-size: 14px;
+  font-weight: 600;
+  color: #b06b48;
+  white-space: nowrap;
+}
 
 /* Pass/Fail numbers */
-.num-pass { color: #6fba2c; font-weight: 700; }
-.num-fail { color: #e05a5a; font-weight: 700; }
+.num-pass { color: #4a8c1c; font-weight: 700; }
+.num-fail { color: #c0392b; font-weight: 700; }
 
 /* Rate cell */
-.rate-cell { display: flex; align-items: center; gap: 10px; }
-.progress-bar { display: flex; height: 8px; border-radius: 50px; overflow: hidden; background: #f0ece2; flex: 1; max-width: 100px; }
+.rate-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.progress-bar {
+  display: flex; height: 8px; border-radius: 50px; overflow: hidden;
+  background: #f0ece2; flex: 1; max-width: 100px;
+}
 .p-pass { background: #6fba2c; transition: width 0.5s ease; border-radius: 50px; }
 .p-fail { background: #e05a5a; transition: width 0.5s ease; border-radius: 50px; }
-.rate-text { font-weight: 700; font-size: 13px; min-width: 42px; text-align: right; }
-.rate-ok { color: #6fba2c; }
-.rate-warn { color: #dba90e; }
-.rate-bad { color: #e05a5a; }
+.rate-text { font-weight: 700; font-size: 14px; min-width: 42px; text-align: right; }
+.rate-ok { color: #4a8c1c; }
+.rate-warn { color: #b8860b; }
+.rate-bad { color: #c0392b; }
 
 /* Status badges */
-.badge { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 50px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
-.badge-pass { background: rgba(111,186,44,0.12); color: #6fba2c; border: 1.5px solid rgba(111,186,44,0.25); }
-.badge-fail { background: rgba(224,90,90,0.12); color: #e05a5a; border: 1.5px solid rgba(224,90,90,0.25); }
-.badge-running { background: rgba(245,195,28,0.12); color: #dba90e; border: 1.5px solid rgba(245,195,28,0.25); }
+.badge { display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 50px; font-size: 14px; font-weight: 700; letter-spacing: 0.02em; }
+.badge-pass { background: rgba(111,186,44,0.12); color: #4a8c1c; border: 1.5px solid rgba(111,186,44,0.25); }
+.badge-fail { background: rgba(224,90,90,0.12); color: #c0392b; border: 1.5px solid rgba(224,90,90,0.25); }
+.badge-running { background: rgba(245,195,28,0.12); color: #b8860b; border: 1.5px solid rgba(245,195,28,0.25); }
 .badge-stopped { background: rgba(138,123,102,0.10); color: #8a7b66; border: 1.5px solid rgba(138,123,102,0.20); }
-
-.time-text { font-size: 13px; color: #8a7b66; white-space: nowrap; }
 
 /* Empty state */
 .table-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 24px; color: #988b7a; }
 .table-empty span { font-size: 36px; }
 .table-empty p { font-size: 15px; margin: 0; }
 .table-empty .sub { font-size: 13px; color: #b8a898; }
+
+@media (max-width: 900px) {
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .chart-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .kpi-row { grid-template-columns: 1fr; }
+}
 </style>

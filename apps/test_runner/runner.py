@@ -1,9 +1,8 @@
 """
 Async test runner — executes selected test cases sequentially with loop_count iterations.
 
-Device isolation: acquires device via device_pool.api.acquire_device before execution
-and releases it in finally. The DB-level Device.status=BUSY + Device.occupied_by
-are the source of truth for cross-module device availability checks.
+TREP v1.0: 纯执行单元。设备锁定由调度器在调用 run() 前完成，执行器不负责
+设备生命周期管理。通过 TestRunnerCallback 上报进度，每 5s 发送心跳。
 """
 import time
 import asyncio
@@ -12,10 +11,16 @@ from datetime import datetime
 from dataclasses import dataclass, field
 from typing import Optional
 
-from models.test_models import TestCaseDef, TestResult, TestRun, TestRunStatus
+from models.test_models import TestCaseDef, TestResult as CaseIterationResult, TestRun, TestRunStatus
 from .adapter import DeviceAdapter
 from .executor import StepExecutor
-from apps.device_pool.api import acquire_device, release_device
+from .u2_recovery import (
+    U2_CASE_RETRY_MAX,
+    U2_RECONNECT_INTERVAL,
+    check_u2_alive,
+    is_u2_crash,
+    wait_and_reconnect,
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 LOG_DIR = BASE_DIR / "logs"
@@ -63,6 +68,9 @@ class TestRunnerCallback:
     async def on_log(self, run_id: str, message: str):
         """A log message was emitted."""
 
+    async def on_run_started(self, run_id: str):
+        """Pre-flight passed; execution is starting (frontend: 准备中 → 执行中)."""
+
     async def on_case_started(self, run_id: str, case_id: str, case_title: str, loop_count: int):
         """A test case is starting."""
 
@@ -75,7 +83,7 @@ class TestRunnerCallback:
         """A test case finished all iterations."""
 
     async def on_run_finished(self, run_id: str, summary: dict,
-                               csv_path: str, log_path: str):
+                               log_path: str):
         """All test cases completed (or stopped)."""
 
     async def on_step_started(self, run_id: str, case_id: str,
@@ -90,6 +98,9 @@ class TestRunnerCallback:
 
     async def on_device_error(self, run_id: str, error: str):
         """Device connection failed."""
+
+    async def on_heartbeat(self, run_id: str):
+        """Periodic keep-alive signal (every 5s while run is active)."""
 
 
 @dataclass
@@ -150,10 +161,8 @@ class TestRunner:
         state = _RunState(run_model=run_model, callback=self.callback)
         _active_runs[run_id] = state
 
-        # DB-level device occupation — source of truth for cross-module checks
-        acquire_device(self.device.serial, user_id=f"runner-{self.device.serial}", timeout=3600)
-        # Memory-level fast check for same-process scheduling
-        mark_device_busy(self.device.serial)
+        # TREP v1.0: 设备锁定由调度器（views.py）在调用 run() 前完成。
+        # 执行器不负责设备生命周期管理。
 
         loop = asyncio.get_event_loop()
 
@@ -169,25 +178,27 @@ class TestRunner:
         state.adapter = adapter
         executor = StepExecutor(adapter)
 
+        # TREP v1.0: 每 5s 心跳，前端据此检测 WS 连接存活
+        hb_task = None
+        hb_task = asyncio.create_task(self._heartbeat(run_id, state))
+
         try:
             from apps.report_generator.api import ReportGenerator
-            csv_paths = []
             log_path = ""
 
             for case in test_cases:
                 if not state.is_running:
                     break
+                await self.callback.on_log(
+                    run_id, f"🏃 开始运行用例: [{case.id}] {case.title}"
+                )
                 await self.callback.on_case_started(
                     run_id, case.id, case.title, loop_count)
-                await self._run_case(state, case, executor, loop_count, interval_seconds)
-                # Save CSV per case (append mode)
-                if state.all_results:
-                    last = state.all_results[-1]
-                    fp = await _safe_run_in_executor(
-                        loop, ReportGenerator.save_csv,
-                        last, state.failure_details,
-                        error_msg="保存 CSV 报告失败")
-                    csv_paths.append(fp)
+                executor = await self._run_case(
+                    state, case, executor, loop_count, interval_seconds,
+                )
+                if not state.is_running:
+                    break
 
             if state.all_results:
                 case_name = state.all_results[0]["case_title"] if state.all_results else ""
@@ -199,8 +210,6 @@ class TestRunner:
             run_model.status = (TestRunStatus.COMPLETED
                                 if state.is_running
                                 else TestRunStatus.STOPPED)
-            run_model.case_results = [r for r in run_model.case_results]
-            run_model.csv_path = "; ".join(csv_paths)
             run_model.log_path = log_path
             run_model.finished_at = datetime.now().isoformat()
 
@@ -210,25 +219,176 @@ class TestRunner:
                 }
 
             await self.callback.on_run_finished(
-                run_id, run_model.summary, csv_path, log_path)
+                run_id, run_model.summary, log_path)
 
         except Exception as e:
             await self.callback.on_device_error(run_id, str(e))
             run_model.status = TestRunStatus.STOPPED
+            run_model.finished_at = datetime.now().isoformat()
         finally:
+            if hb_task is not None:
+                hb_task.cancel()
+                try:
+                    await hb_task
+                except asyncio.CancelledError:
+                    pass
             _active_runs.pop(run_id, None)
-            mark_device_idle(self.device.serial)
-            # Release DB-level device occupation
-            try:
-                release_device(self.device.serial, reason="manual")
-            except Exception as e:
-                print(f"[runner] WARNING: release_device failed for {self.device.serial}: {e}")
+            # TREP v1.0: 设备释放由调度器（views.py）在 _execute_tests.finally 中完成
 
         return run_model
 
+    async def _heartbeat(self, run_id: str, state: _RunState, interval: float = 5.0):
+        """TREP v1.0: 每 interval 秒发送心跳，前端 15s 无心跳 → 连接丢失指示。"""
+        while state.is_running and run_id in _active_runs:
+            await asyncio.sleep(interval)
+            if run_id in _active_runs and state.is_running:
+                await self.callback.on_heartbeat(run_id)
+
+    def _wire_step_callbacks(self, state: _RunState, case: TestCaseDef, iteration: int, loop):
+        """绑定步骤 WS 回调到当前 adapter。"""
+        def _make_step_cb(iter_no):
+            def cb(si, total, st, desc, r):
+                try:
+                    asyncio.run_coroutine_threadsafe(
+                        self.callback.on_step_result(
+                            state.run_model.run_id, case.id, iter_no,
+                            si, total, st, desc, r,
+                        ), loop)
+                except Exception as e:
+                    print(f"[runner] on_step_result callback failed: {e}")
+            return cb
+
+        def _make_step_started_cb(iter_no):
+            def cb(si, total, st, desc):
+                try:
+                    asyncio.run_coroutine_threadsafe(
+                        self.callback.on_step_started(
+                            state.run_model.run_id, case.id, iter_no,
+                            si, total, st, desc,
+                        ), loop)
+                except Exception as e:
+                    print(f"[runner] on_step_started callback failed: {e}")
+            return cb
+
+        state.adapter._step_callback = _make_step_cb(iteration)
+        state.adapter._step_started_callback = _make_step_started_cb(iteration)
+
+    async def _recreate_adapter_executor(self, state: _RunState, loop) -> StepExecutor:
+        """u2 重连后重建 adapter 与 executor。"""
+        def create_adapter():
+            return DeviceAdapter(
+                self.device, package_name=self.package_name,
+                logger=lambda msg, l=loop: self._sync_log(state, msg, l),
+                should_stop=lambda: not state.is_running,
+            )
+
+        state.adapter = await _safe_run_in_executor(
+            loop, create_adapter, error_msg="重建设备适配器失败",
+        )
+        return StepExecutor(state.adapter)
+
+    async def _execute_iteration_with_retry(
+        self,
+        state: _RunState,
+        case: TestCaseDef,
+        executor: StepExecutor,
+        iteration: int,
+        loop,
+    ) -> tuple[str, StepExecutor, bool]:
+        """执行单轮步骤，u2 崩溃时最多重试 U2_CASE_RETRY_MAX 次。
+
+        Returns:
+            (result, executor, fatal_u2)
+            - fatal_u2=True: u2 服务无法恢复，停止整个任务
+        """
+        if not case.steps_data:
+            state.adapter.log(f'用例 "{case.title}" 无步骤，直接通过')
+            return "pass", executor, False
+
+        last_error = ""
+        for attempt in range(1, U2_CASE_RETRY_MAX + 1):
+            if not state.is_running:
+                return "stopped", executor, False
+
+            self._wire_step_callbacks(state, case, iteration, loop)
+
+            try:
+                if not check_u2_alive(self.device):
+                    state.adapter.log(
+                        f"⚠️ u2 连接不可用，尝试重连 ({attempt}/{U2_CASE_RETRY_MAX})..."
+                    )
+                    self.device = await _safe_run_in_executor(
+                        loop,
+                        wait_and_reconnect,
+                        self.device.serial,
+                        U2_RECONNECT_INTERVAL,
+                        error_msg="u2 重连失败",
+                    )
+                    executor = await self._recreate_adapter_executor(state, loop)
+                    self._wire_step_callbacks(state, case, iteration, loop)
+
+                result = await _safe_run_in_executor(
+                    loop, executor.execute_all, case.steps_data,
+                    error_msg=f"执行用例 '{case.title}' 步骤时设备断连",
+                )
+                return result, executor, False
+
+            except Exception as e:
+                if not is_u2_crash(e):
+                    raise
+                last_error = str(e)
+                state.adapter.log(
+                    f"⚠️ u2 崩溃 ({attempt}/{U2_CASE_RETRY_MAX}): {last_error}"
+                )
+                if attempt >= U2_CASE_RETRY_MAX:
+                    break
+                try:
+                    self.device = await _safe_run_in_executor(
+                        loop,
+                        wait_and_reconnect,
+                        self.device.serial,
+                        U2_RECONNECT_INTERVAL,
+                        error_msg="u2 重连失败",
+                    )
+                    executor = await self._recreate_adapter_executor(state, loop)
+                except Exception as reconnect_err:
+                    state.adapter.log(f"  重连失败: {reconnect_err}")
+
+        if not check_u2_alive(self.device):
+            state.adapter.log(
+                f"💥 u2 服务 {U2_CASE_RETRY_MAX} 次重试后仍无法恢复，停止当前任务"
+            )
+            await self.callback.on_device_error(
+                state.run_model.run_id,
+                f"u2 服务无法恢复: {last_error}",
+            )
+            return "fail", executor, True
+
+        state.adapter.log(
+            f"✘ 用例「{case.title}」第 {iteration} 轮："
+            f"u2 崩溃 {U2_CASE_RETRY_MAX} 次后仍未完成，标记失败，继续下一条用例"
+        )
+        return "fail", executor, False
+
+    def _record_case_result(
+        self, state: _RunState, case: TestCaseDef, iteration: int,
+        result: str, duration_ms: float, detail: str = "",
+    ):
+        """Append one iteration result for DB persist / TaskCard finalize."""
+        state.run_model.case_results.append(
+            CaseIterationResult(
+                case_id=case.id,
+                case_title=case.title,
+                iteration=iteration,
+                result=result,
+                duration_ms=duration_ms,
+                detail=detail,
+            )
+        )
+
     async def _run_case(self, state: _RunState, case: TestCaseDef,
                         executor: StepExecutor, loop_count: int,
-                        interval_seconds: int = 5):
+                        interval_seconds: int = 5) -> StepExecutor:
         loop = asyncio.get_event_loop()
         pass_count = 0
         fail_count = 0
@@ -244,54 +404,32 @@ class TestRunner:
             step_count = len(case.steps_data) if case.steps_data else 0
             state.adapter.log(f'━━━ 第 {i}/{loop_count} 轮 ({step_count} 个步骤) ━━━')
 
-            # Wire step callbacks to broadcast results (sync → async bridge)
-            def _make_step_cb(iter_no):
-                def cb(si, total, st, desc, r):
-                    try:
-                        asyncio.run_coroutine_threadsafe(
-                            self.callback.on_step_result(
-                                state.run_model.run_id, case.id, iter_no,
-                                si, total, st, desc, r,
-                            ), loop)
-                    except Exception as e:
-                        print(f"[runner] on_step_result callback failed: {e}")
-                return cb
+            result, executor, fatal_u2 = await self._execute_iteration_with_retry(
+                state, case, executor, i, loop,
+            )
 
-            def _make_step_started_cb(iter_no):
-                def cb(si, total, st, desc):
-                    try:
-                        asyncio.run_coroutine_threadsafe(
-                            self.callback.on_step_started(
-                                state.run_model.run_id, case.id, iter_no,
-                                si, total, st, desc,
-                            ), loop)
-                    except Exception as e:
-                        print(f"[runner] on_step_started callback failed: {e}")
-                return cb
-
-            state.adapter._step_callback = _make_step_cb(i)
-            state.adapter._step_started_callback = _make_step_started_cb(i)
-
-            if case.steps_data:
-                try:
-                    result = await _safe_run_in_executor(
-                        loop, executor.execute_all, case.steps_data,
-                        error_msg=f"执行用例 '{case.title}' 步骤时设备断连")
-                except ConnectionError as e:
-                    state.adapter.log(f'💥 设备连接错误: {e}')
-                    await self.callback.on_device_error(state.run_model.run_id, str(e))
-                    state.is_running = False
-                    break
-            else:
-                # No steps: treat as pass (empty sequence always succeeds)
-                state.adapter.log(f'用例 "{case.title}" 无步骤，直接通过')
-                result = "pass"
+            if fatal_u2:
+                state.is_running = False
+                fail_count += 1
+                actual_count = i
+                elapsed = (time.time() - start) * 1000
+                state.failure_details.append({
+                    "case_title": case.title, "iteration": i,
+                    "elapsed_ms": f"{elapsed:.0f}",
+                    "timestamp": datetime.now().strftime("%H:%M:%S"),
+                    "log": state.adapter.get_log_buffer(),
+                })
+                await self.callback.on_iteration_result(
+                    state.run_model.run_id, case.id, i, "fail", elapsed)
+                self._record_case_result(state, case, i, "fail", elapsed)
+                break
 
             elapsed = (time.time() - start) * 1000
             actual_count = i
 
             if result == "stopped":
                 await self.callback.on_log(state.run_model.run_id, f"  第{i}轮: 已中断")
+                self._record_case_result(state, case, i, "stopped", elapsed)
                 break
 
             if result == "pass":
@@ -309,6 +447,7 @@ class TestRunner:
 
             await self.callback.on_iteration_result(
                 state.run_model.run_id, case.id, i, result, elapsed)
+            self._record_case_result(state, case, i, result, elapsed)
 
             if i < loop_count and state.is_running:
                 await asyncio.sleep(interval_seconds)
@@ -322,6 +461,8 @@ class TestRunner:
 
         await self.callback.on_case_finished(
             state.run_model.run_id, case.id, pass_count, fail_count, rate)
+
+        return executor
 
     def _sync_log(self, state: _RunState, msg: str, loop=None):
         state.log_lines.append(msg)

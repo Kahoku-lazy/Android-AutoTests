@@ -525,8 +525,19 @@ onBeforeRouteLeave((_to, _from, next) => {
 
 <style scoped>
 .case-editor-page {
-  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
 }
+
+.case-editor-page .doc-body {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 .form-section {
   padding: 18px 24px;
 }

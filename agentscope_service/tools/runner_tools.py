@@ -72,7 +72,8 @@ class RunTestTool(ToolBase):
     is_read_only = False
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Test execution allowed.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, run_id, serial, case_ids, loop_count=1, package_name="", **kwargs):
         from apps.case_manager.api import get_definition
@@ -169,7 +170,8 @@ class GetRunResultsTool(ToolBase):
     is_read_only = True
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Read-only result query.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, run_id, **kwargs):
         results = await run_sync(lambda: get_run_results(run_id))
@@ -207,7 +209,8 @@ class StopRunTool(ToolBase):
     is_read_only = False
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW, message="Stop is always allowed.")
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, run_id, **kwargs):
         ok = await run_sync(lambda: stop_run(run_id))

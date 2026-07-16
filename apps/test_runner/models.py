@@ -130,6 +130,10 @@ class TaskCard(models.Model):
     conclusion = models.TextField(default='', blank=True)
     bug_ticket = models.TextField(default='', blank=True)
     failed_steps = models.JSONField(default=list)
+    current_case_title = models.CharField(max_length=500, default='', blank=True)
+    current_iteration = models.IntegerField(default=0)
+    start_at = models.CharField(max_length=100, default='', blank=True)
+    end_at = models.CharField(max_length=100, default='', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

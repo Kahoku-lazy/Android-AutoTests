@@ -20,7 +20,7 @@ import requests
 BASE_URL = "http://localhost:8765"
 MYSQL_ENV = {
     "DB_ENGINE": "mysql", "DB_NAME": "android_autotests",
-    "DB_USER": "root", "DB_PASSWORD": "autotests2026",
+    "DB_USER": "root", "DB_PASSWORD": os.environ.get("DB_PASSWORD", ""),
     "DB_HOST": "127.0.0.1", "DB_PORT": "3306",
 }
 

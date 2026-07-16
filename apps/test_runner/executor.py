@@ -105,7 +105,7 @@ class StepExecutor:
         while time.time() < deadline:
             if self.exe.stopped():
                 return "stopped"
-            if self.exe.d.xpath(s.xpath).exists:
+            if self.exe.exists(s.xpath, timeout=0):
                 return "pass"
             self.exe.sleep(interval)
         if self.exe.stopped():
@@ -164,7 +164,7 @@ class StepExecutor:
         while time.time() < deadline:
             if self.exe.stopped():
                 return "stopped"
-            if self.exe.d.xpath(s.xpath).exists:
+            if self.exe.exists(s.xpath, timeout=0):
                 text = self.exe.get_text(s.xpath)
                 if text != last_text:
                     self.exe.log(f'  当前: "{text}"')

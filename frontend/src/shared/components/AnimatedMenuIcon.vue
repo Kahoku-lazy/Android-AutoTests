@@ -49,6 +49,16 @@ const ICONS = {
       <polyline data-anim="b" points="14 14 16 16 14 18" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
     `,
   },
+  workflow: {
+    svg: `
+      <circle data-anim="a" cx="6" cy="8" r="2.5" fill="currentColor"/>
+      <circle data-anim="b" cx="18" cy="8" r="2.5" fill="currentColor"/>
+      <circle data-anim="c" cx="12" cy="18" r="2.5" fill="currentColor"/>
+      <path d="M8.2 9.2 L10.5 15.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <path d="M15.8 9.2 L13.5 15.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <path d="M8.5 8 H15.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    `,
+  },
   runner: {
     svg: `
       <circle data-anim="a" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/>

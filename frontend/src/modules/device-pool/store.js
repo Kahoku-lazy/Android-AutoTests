@@ -71,8 +71,10 @@ export const useDevicePoolStore = defineStore("device-pool", () => {
         return data;
       }
       return data;
-    } catch (_) {
-      return { ok: false, error: "扫描失败" };
+    } catch (e) {
+      // 后端失败以 HTTP 400 返回，透传其 error 文案（AC-8）
+      const data = e.response?.data;
+      return data || { ok: false, error: "扫描失败" };
     } finally {
       scanning.value = false;
     }

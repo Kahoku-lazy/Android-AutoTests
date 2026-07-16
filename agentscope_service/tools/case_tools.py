@@ -114,10 +114,8 @@ class SaveTestCaseTool(ToolBase):
     is_read_only = False
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(
-            behavior=PermissionBehavior.ALLOW,
-            message="Case creation is always allowed for AI agents.",
-        )
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(
         self,
@@ -205,9 +203,8 @@ class GetTestCaseTool(ToolBase):
     is_read_only = True
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(
-            behavior=PermissionBehavior.ALLOW, message="Read-only case query."
-        )
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, case_id, **kwargs):
         obj = await run_sync(lambda: get_definition(case_id))
@@ -276,9 +273,8 @@ class DebugTestCaseTool(ToolBase):
     is_read_only = True
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(
-            behavior=PermissionBehavior.ALLOW, message="Read-only debug validation."
-        )
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, case_id, **kwargs):
         from apps.case_manager.api import get_definition
@@ -423,9 +419,8 @@ class ListTestCasesTool(ToolBase):
     is_read_only = True
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(
-            behavior=PermissionBehavior.ALLOW, message="Read-only case listing."
-        )
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
 
     async def call(self, case_ids=None, **kwargs):
         if case_ids:

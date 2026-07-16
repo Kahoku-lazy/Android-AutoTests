@@ -90,3 +90,7 @@ agent_scope_map.html
 # Test reports
 tests/functional/*/reports/
 .playwright-mcp/
+
+# ── Workflow demo（已并入 frontend/src/modules/workflow，不再维护）──
+tests/workflow-demo/
+workflow-demo-*.png

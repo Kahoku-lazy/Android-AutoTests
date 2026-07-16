@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { animate } from 'animejs'
 import { sidebarNavEnter } from '../animations.js'
@@ -10,6 +10,63 @@ import AnimatedMenuIcon from './AnimatedMenuIcon.vue'
 const router = useRouter()
 const route = useRoute()
 const username = ref(localStorage.getItem('username') || 'admin')
+
+const SIDEBAR_WIDTH_KEY = 'app-sidebar-width'
+const SIDEBAR_COLLAPSED_KEY = 'app-sidebar-collapsed'
+const SIDEBAR_MIN = 180
+const SIDEBAR_MAX = 360
+const SIDEBAR_DEFAULT = 220
+const SIDEBAR_COLLAPSED_W = 64
+
+function clampSidebarWidth(width) {
+  return Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, width))
+}
+
+const sidebarWidth = ref(SIDEBAR_DEFAULT)
+const isResizing = ref(false)
+const collapsed = ref(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1')
+
+function applySidebarWidth(width) {
+  if (collapsed.value) {
+    document.documentElement.style.setProperty('--side-w', `${SIDEBAR_COLLAPSED_W}px`)
+    return
+  }
+  const w = clampSidebarWidth(width)
+  sidebarWidth.value = w
+  document.documentElement.style.setProperty('--side-w', `${w}px`)
+}
+
+function toggleCollapsed() {
+  collapsed.value = !collapsed.value
+  localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed.value ? '1' : '0')
+  applySidebarWidth(sidebarWidth.value)
+}
+
+function onSidebarResizeStart(e) {
+  if (e.button !== 0 || collapsed.value) return
+  e.preventDefault()
+  isResizing.value = true
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+function onSidebarResizeMove(e) {
+  if (!isResizing.value) return
+  applySidebarWidth(e.clientX)
+}
+
+function onSidebarResizeEnd() {
+  if (!isResizing.value) return
+  isResizing.value = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  localStorage.setItem(SIDEBAR_WIDTH_KEY, String(sidebarWidth.value))
+}
+
+function resetSidebarWidth() {
+  applySidebarWidth(SIDEBAR_DEFAULT)
+  localStorage.setItem(SIDEBAR_WIDTH_KEY, String(SIDEBAR_DEFAULT))
+}
 
 function logout() {
   localStorage.removeItem('access_token')
@@ -23,12 +80,13 @@ const categories = [
     key: 'cat-basic',
     label: '',
     items: [
-      { path: '/dashboard',   icon: 'dashboard',        label: '仪表盘', isNew: true },
+      { path: '/dashboard',   icon: 'dashboard',        label: '仪表盘' },
       { path: '/devices',     icon: 'devices',          label: '设备管理' },
       { path: '/elements',    icon: 'elements',         label: '元素定位' },
       { path: '/cases',       icon: 'cases',            label: '测试用例' },
+      { path: '/workflow',    icon: 'workflow',         label: '工作流', isDev: true },
       { path: '/runner',      icon: 'runner',           label: '执行引擎' },
-      { path: '/reports',     icon: 'reports',          label: '测试报告', isPending: true },
+      { path: '/reports',     icon: 'reports',          label: '测试报告' },
       { path: '/ai-assistant', icon: 'ai-assistant',    label: 'AI 助手', isDev: true },
     ],
   },
@@ -43,6 +101,10 @@ function onNavClick(path) {
 }
 
 onMounted(async () => {
+  applySidebarWidth(Number(localStorage.getItem(SIDEBAR_WIDTH_KEY)) || SIDEBAR_DEFAULT)
+  window.addEventListener('mousemove', onSidebarResizeMove)
+  window.addEventListener('mouseup', onSidebarResizeEnd)
+
   await nextTick()
   sidebarNavEnter('.sidebar-menu__item')
 
@@ -87,48 +149,95 @@ onMounted(async () => {
     delay: (el, i) => i * 100,
   })
 })
+
+onUnmounted(() => {
+  window.removeEventListener('mousemove', onSidebarResizeMove)
+  window.removeEventListener('mouseup', onSidebarResizeEnd)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+})
 </script>
 
 <template>
-  <aside class="sidebar">
-    <!-- 头部品牌 -->
-    <div class="sidebar__header" @click="router.push('/dashboard')">
-      <AnimatedMascot :size="26" />
-      <div class="sidebar__brand">
-        <span class="brand-ai">AI</span>
-        <span class="brand-name">测试平台</span>
+  <aside
+    class="sidebar"
+    :class="{ 'sidebar--resizing': isResizing, 'sidebar--collapsed': collapsed }"
+  >
+    <!-- 头部品牌 + 折叠 -->
+    <div class="sidebar__header-row">
+      <div class="sidebar__header" @click="router.push('/dashboard')" :title="collapsed ? 'AI 测试平台' : ''">
+        <AnimatedMascot :size="26" />
+        <div v-show="!collapsed" class="sidebar__brand">
+          <span class="brand-ai">AI</span>
+          <span class="brand-name">测试平台</span>
+        </div>
       </div>
+      <button
+        type="button"
+        class="sidebar__toggle"
+        :title="collapsed ? '展开侧边栏' : '收起侧边栏'"
+        @click.stop="toggleCollapsed"
+      >
+        {{ collapsed ? '›' : '‹' }}
+      </button>
     </div>
 
     <!-- 导航菜单 -->
     <nav class="sidebar__nav">
       <div v-for="cat in categories" :key="cat.key" class="sidebar__group">
-        <div v-if="cat.label" class="sidebar__group-title">{{ cat.label }}</div>
+        <div v-if="cat.label && !collapsed" class="sidebar__group-title">{{ cat.label }}</div>
         <div
           v-for="item in cat.items"
           :key="item.path"
           :class="['sidebar-menu__item', { active: isActive(item.path) }]"
+          :title="collapsed ? item.label : ''"
           @click="onNavClick(item.path)"
         >
           <AnimatedMenuIcon :name="item.icon" :size="20" :active="isActive(item.path)" />
-          <span class="sidebar-menu__label">{{ item.label }}</span>
-          <span v-if="item.isNew" class="sidebar-menu__badge">NEW</span>
-          <span v-if="item.isDev" class="sidebar-menu__badge sidebar-menu__badge--dev">开发中</span>
-          <span v-if="item.isPending" class="sidebar-menu__badge sidebar-menu__badge--pending">待开发</span>
+          <span v-show="!collapsed" class="sidebar-menu__label">{{ item.label }}</span>
+          <span
+            v-if="item.isDev && !collapsed"
+            class="sidebar-menu__badge sidebar-menu__badge--dev"
+          >开发中</span>
         </div>
       </div>
     </nav>
 
     <!-- 底部用户区 -->
     <div class="sidebar__footer">
-      <div class="sidebar__user">
+      <div class="sidebar__user" :title="collapsed ? username : ''">
         <AnimatedMascot :size="20" />
-        <span class="sidebar__user-name">{{ username }}</span>
+        <span v-show="!collapsed" class="sidebar__user-name">{{ username }}</span>
       </div>
-      <Button type="text" size="small" danger class="logout-btn" @click.stop="logout">
+      <Button
+        v-show="!collapsed"
+        type="text"
+        size="small"
+        danger
+        class="logout-btn"
+        @click.stop="logout"
+      >
         退出
       </Button>
+      <button
+        v-show="collapsed"
+        type="button"
+        class="sidebar__icon-logout"
+        title="退出登录"
+        @click.stop="logout"
+      >
+        ⎋
+      </button>
     </div>
+
+    <div
+      v-if="!collapsed"
+      class="sidebar__resizer"
+      :class="{ 'is-dragging': isResizing }"
+      title="拖动调整宽度，双击恢复默认"
+      @mousedown="onSidebarResizeStart"
+      @dblclick="resetSidebarWidth"
+    />
   </aside>
 </template>
 
@@ -138,7 +247,6 @@ onMounted(async () => {
   width: var(--side-w, 220px);
   min-width: var(--side-w, 220px);
   max-width: var(--side-w, 220px);
-  resize: none;
   height: 100%;
   background: url('/animal-assets/menu_bg.svg') center/cover no-repeat;
   display: flex;
@@ -148,6 +256,112 @@ onMounted(async () => {
   z-index: 2;
   color: var(--animal-text-color, #794f27);
   font-family: var(--animal-font-family, Nunito, 'Noto Sans SC', sans-serif);
+  transition: width 0.2s ease, min-width 0.2s ease, max-width 0.2s ease, flex-basis 0.2s ease;
+}
+
+.sidebar--collapsed {
+  flex: 0 0 64px;
+  width: 64px;
+  min-width: 64px;
+  max-width: 64px;
+}
+
+.sidebar__header-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 6px;
+  border-bottom: 1px solid rgba(121, 79, 39, 0.08);
+  flex-shrink: 0;
+}
+.sidebar__toggle {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin-top: 4px;
+  border: 1.5px solid rgba(121, 79, 39, 0.15);
+  border-radius: 8px;
+  background: rgba(255, 251, 245, 0.85);
+  color: #794f27;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+.sidebar__toggle:hover {
+  border-color: #19c8b9;
+  color: #0d7a70;
+}
+
+.sidebar--collapsed .sidebar__header-row {
+  flex-direction: column;
+  padding: 8px 6px;
+  gap: 6px;
+}
+.sidebar--collapsed .sidebar__header {
+  justify-content: center;
+  padding: 4px 0;
+}
+.sidebar--collapsed .sidebar-menu__item {
+  justify-content: center;
+  padding: 10px 8px;
+}
+.sidebar--collapsed .sidebar__footer {
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px;
+}
+.sidebar__icon-logout {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: #c44;
+  padding: 4px;
+  border-radius: 6px;
+}
+.sidebar__icon-logout:hover { background: rgba(232, 95, 95, 0.12); }
+
+.sidebar--resizing {
+  user-select: none;
+}
+
+.sidebar__resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  transform: translateX(50%);
+}
+
+.sidebar__resizer::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: rgba(196, 184, 158, 0.45);
+  transition: background 0.15s ease, width 0.15s ease;
+}
+
+.sidebar__resizer:hover::before,
+.sidebar__resizer.is-dragging::before {
+  width: 3px;
+  background: #19c8b9;
+}
+
+.sidebar__resizer:hover,
+.sidebar__resizer.is-dragging {
+  background: rgba(25, 200, 185, 0.08);
 }
 
 /* Header */
@@ -155,8 +369,10 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 20px 16px 12px;
-  border-bottom: 1px solid #e8e2d6;
+  flex: 1;
+  min-width: 0;
+  padding: 16px 8px 12px 16px;
+  border-bottom: none;
   font-weight: 700;
   letter-spacing: -0.3px;
   cursor: pointer;
@@ -264,7 +480,12 @@ onMounted(async () => {
 }
 
 .sidebar-menu__label {
+  flex: 1;
+  min-width: 0;
   line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   background: linear-gradient(90deg, #7a6b58 0%, #9a8568 50%, #c4a06a 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -304,10 +525,6 @@ onMounted(async () => {
 }
 .sidebar-menu__badge--dev {
   background: linear-gradient(135deg, #b39ef3, #889df0);
-  animation: none;
-}
-.sidebar-menu__badge--pending {
-  background: #9f927d;
   animation: none;
 }
 

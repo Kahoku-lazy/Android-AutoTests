@@ -19,11 +19,7 @@ VERSION = getattr(settings, 'AGENTSCOPE_SERVICE_VERSION', '2.0.0')
 WORKSPACE_DIR = Path(getattr(settings, 'AGENTSCOPE_WORKSPACE_DIR', 'data/agentscope_workspaces'))
 WORKSPACE_TTL = float(os.environ.get('AGENTSCOPE_WORKSPACE_TTL', '3600'))  # 1 hour idle timeout
 
-# ── JWT ──
-JWT_SECRET = getattr(settings, 'SECRET_KEY', 'change-me')
-JWT_ACCESS_TTL = getattr(settings, 'JWT_ACCESS_TTL', 3600)
-JWT_REFRESH_TTL = getattr(settings, 'JWT_REFRESH_TTL', 604800)
-JWT_ALGORITHM = 'HS256'
+# JWT: use shared.auth.jwt_auth (verify_token / get_config) — do not duplicate secrets here.
 
 # ── Tools ──
 # Additional skill / MCP directories to pre-load into workspaces

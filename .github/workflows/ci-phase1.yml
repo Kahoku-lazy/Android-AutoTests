@@ -1,0 +1,176 @@
+name: CI Phase 1 — Build & Security
+
+on:
+  push:
+    branches: [main, Kahoku, Aaron, 'feat/**', 'fix/**']
+  pull_request:
+    branches: [main, Kahoku]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ═══════════════════════════════════════════
+  # Job 1: Python 后端编译 + 格式检查
+  # ═══════════════════════════════════════════
+  backend-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff
+
+      # 1. Django 系统检查（配置完整性）
+      - name: Django system check
+        env:
+          DJANGO_SECRET_KEY: ci-django-check-key-not-for-prod
+        run: |
+          python manage.py check --deploy 2>&1 || true
+          python manage.py check
+
+      # 2. Python 代码格式（ruff format）
+      - name: Ruff format check
+        run: ruff format --check apps/ agentscope_service/ config/ gateway/ shared/ models/
+
+      # 3. Python lint（ruff check）
+      - name: Ruff lint
+        run: ruff check apps/ agentscope_service/ config/ gateway/ shared/ models/
+
+  # ═══════════════════════════════════════════
+  # Job 2: 前端编译 + 格式检查
+  # ═══════════════════════════════════════════
+  frontend-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: cd frontend && npm ci
+
+      # 4. 前端编译
+      - name: Vite build
+        run: cd frontend && npx vite build
+
+      # 5. JS/Vue/CSS 格式
+      - name: Prettier check
+        run: cd frontend && npx prettier --check "src/**/*.{vue,js,css}"
+
+  # ═══════════════════════════════════════════
+  # Job 3: 硬编码凭据安全扫描
+  # ═══════════════════════════════════════════
+  security-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan hardcoded credentials
+        run: |
+          echo "╔══════════════════════════════════╗"
+          echo "║  硬编码凭据安全扫描             ║"
+          echo "╚══════════════════════════════════╝"
+          echo ""
+          VIOLATIONS=0
+
+          # ── 规则 1: 硬编码密码 ──
+          echo "▶ 检查：硬编码密码 (password = '...')"
+          PASSWORD_MATCHES=$(grep -rnE "password\s*=\s*'[^']+'" apps/ config/ gateway/ shared/ models/ agentscope_service/ \
+            --include="*.py" 2>/dev/null | grep -v "password\s*=\s*''" | grep -v "PASSWORD" || true)
+          if [ -n "$PASSWORD_MATCHES" ]; then
+            echo "❌ 发现硬编码密码："
+            echo "$PASSWORD_MATCHES"
+            echo ""
+            VIOLATIONS=1
+          else
+            echo "  ✅ 未发现"
+          fi
+
+          # ── 规则 2: 明文 API Key ──
+          echo "▶ 检查：明文 API Key (api_key = 'sk-...')"
+          APIKEY_MATCHES=$(grep -rnE "(api_key|apikey|API_KEY)\s*=\s*'sk-[A-Za-z0-9]+'" \
+            apps/ agentscope_service/ config/ gateway/ shared/ --include="*.py" 2>/dev/null || true)
+          if [ -n "$APIKEY_MATCHES" ]; then
+            echo "❌ 发现明文 API Key："
+            echo "$APIKEY_MATCHES"
+            echo ""
+            VIOLATIONS=1
+          else
+            echo "  ✅ 未发现"
+          fi
+
+          # ── 规则 3: 常见默认密码 ──
+          echo "▶ 检查：常见默认密码 (admin123 / password 等)"
+          DEFAULT_PWD=$(grep -rnE \
+            "'admin123'|'autotests2026'|'password'\s*[:=]" \
+            apps/ config/ gateway/ shared/ --include="*.py" 2>/dev/null \
+            | grep -v "PASSWORD" | grep -v "test" | grep -v "__pycache__" || true)
+          if [ -n "$DEFAULT_PWD" ]; then
+            echo "⚠️  发现疑似默认密码（请人工确认）："
+            echo "$DEFAULT_PWD"
+          else
+            echo "  ✅ 未发现"
+          fi
+
+          # ── 规则 4: Token/Secret 硬编码 ──
+          echo "▶ 检查：硬编码 Token/Secret"
+          TOKEN_MATCHES=$(grep -rnE "(secret_key|SECRET_KEY|private_key)\s*=\s*'[^']+'" \
+            apps/ config/ gateway/ shared/ --include="*.py" 2>/dev/null | grep -v "os.environ" | grep -v "getenv" || true)
+          if [ -n "$TOKEN_MATCHES" ]; then
+            echo "❌ 发现硬编码密钥/Token："
+            echo "$TOKEN_MATCHES"
+            echo ""
+            VIOLATIONS=1
+          else
+            echo "  ✅ 未发现"
+          fi
+
+          # ── 规则 5: 前端硬编码凭据 ──
+          echo "▶ 检查：前端代码中的硬编码凭据"
+          FRONTEND_MATCHES=$(grep -rnE \
+            "(api_key|password|token|secret)\s*[=:]\s*['\"]\\w{8,}" \
+            frontend/src/ --include="*.js" --include="*.vue" 2>/dev/null \
+            | grep -v "node_modules" | grep -v ".test." || true)
+          if [ -n "$FRONTEND_MATCHES" ]; then
+            echo "❌ 前端发现疑似硬编码凭据："
+            echo "$FRONTEND_MATCHES"
+            echo ""
+            VIOLATIONS=1
+          else
+            echo "  ✅ 未发现"
+          fi
+
+          echo ""
+          if [ $VIOLATIONS -eq 1 ]; then
+            echo "╔══════════════════════════════════╗"
+            echo "║  ❌ 安全扫描失败               ║"
+            echo "║  请将硬编码凭据替换为:         ║"
+            echo "║  os.environ.get('KEY', '')      ║"
+            echo "╚══════════════════════════════════╝"
+            exit 1
+          fi
+          echo "╔══════════════════════════════════╗"
+          echo "║  ✅ 安全扫描通过               ║"
+          echo "╚══════════════════════════════════╝"

@@ -86,7 +86,12 @@ class DeviceAdapter:
 
     # ---- Element actions ----
     def click(self, xpath: str):
-        self.d.xpath(xpath).click()
+        try:
+            self.d.xpath(xpath).click()
+        except Exception as e:
+            # u2 卡死/超时会在此抛出;log 后重新抛出,交由上层 is_u2_crash 判定并重连重试
+            self.log(f"点击失败: {e}")
+            raise
 
     def click_indexed(self, xpath: str, index: int) -> bool:
         try:
@@ -95,37 +100,50 @@ class DeviceAdapter:
                 elements[index].click()
                 return True
             return False
-        except Exception:
-            return False
+        except Exception as e:
+            self.log(f"索引点击失败: {e}")
+            raise
 
     def long_click(self, xpath: str, duration: float = 0.8):
-        self.d.xpath(xpath).long_click(duration=duration)
+        try:
+            self.d.xpath(xpath).long_click(duration=duration)
+        except Exception as e:
+            self.log(f"长按失败: {e}")
+            raise
 
     def swipe(self, direction: str, distance: int = 500):
-        w, h = self.d.window_size()
-        cx, cy = w // 2, h // 2
-        dirs = {
-            'up': (cx, h * 3 // 4, cx, h * 3 // 4 - distance),
-            'down': (cx, h // 4, cx, h // 4 + distance),
-            'left': (w * 3 // 4, cy, w * 3 // 4 - distance, cy),
-            'right': (w // 4, cy, w // 4 + distance, cy),
-        }
-        x1, y1, x2, y2 = dirs.get(direction, (cx, h * 3 // 4, cx, h // 4))
-        self.d.swipe(x1, y1, x2, y2)
+        try:
+            w, h = self.d.window_size()
+            cx, cy = w // 2, h // 2
+            dirs = {
+                'up': (cx, h * 3 // 4, cx, h * 3 // 4 - distance),
+                'down': (cx, h // 4, cx, h // 4 + distance),
+                'left': (w * 3 // 4, cy, w * 3 // 4 - distance, cy),
+                'right': (w // 4, cy, w // 4 + distance, cy),
+            }
+            x1, y1, x2, y2 = dirs.get(direction, (cx, h * 3 // 4, cx, h // 4))
+            self.d.swipe(x1, y1, x2, y2)
+        except Exception as e:
+            self.log(f"滑动失败: {e}")
+            raise
 
     def drag(self, xpath: str, direction: str, distance: int = 300):
-        el = self.d.xpath(xpath).get()
-        if el:
-            x = (el.bounds[0] + el.bounds[2]) // 2
-            y = (el.bounds[1] + el.bounds[3]) // 2
-            dirs = {
-                'up': (x, y, x, y - distance),
-                'down': (x, y, x, y + distance),
-                'left': (x, y, x - distance, y),
-                'right': (x, y, x + distance, y),
-            }
-            x1, y1, x2, y2 = dirs.get(direction, (x, y, x, y - distance))
-            self.d.swipe(x1, y1, x2, y2, duration=0.5)
+        try:
+            el = self.d.xpath(xpath).get()
+            if el:
+                x = (el.bounds[0] + el.bounds[2]) // 2
+                y = (el.bounds[1] + el.bounds[3]) // 2
+                dirs = {
+                    'up': (x, y, x, y - distance),
+                    'down': (x, y, x, y + distance),
+                    'left': (x, y, x - distance, y),
+                    'right': (x, y, x + distance, y),
+                }
+                x1, y1, x2, y2 = dirs.get(direction, (x, y, x, y - distance))
+                self.d.swipe(x1, y1, x2, y2, duration=0.5)
+        except Exception as e:
+            self.log(f"拖动失败: {e}")
+            raise
 
     def get_text(self, xpath: str) -> str:
         try:

@@ -26,7 +26,7 @@ async def get_current_user_id(
         token = authorization
 
     try:
-        payload = verify_token(token)
+        payload = verify_token(token, expected_type="access")
         return payload["sub"]
     except Exception as e:
         raise HTTPException(

@@ -414,7 +414,43 @@ def scan_cross_app_internal_imports():
     return new, known
 
 
-# ── 6. 汇总 → Markdown ──
+# ── 6. 步骤类型与设备状态 ──
+
+def scan_step_types():
+    """从 models/step_types.py 的 StepType 枚举中提取步骤类型。"""
+    step_types_path = PROJECT_ROOT / "models" / "step_types.py"
+    if not step_types_path.exists():
+        return {"count": 0, "types": [], "labels": {}}
+
+    content = step_types_path.read_text(encoding="utf-8")
+    types = []
+    for m in re.finditer(r'(\w+)\s*=\s*"(\w+)"', content):
+        name, value = m.group(1), m.group(2)
+        if name.isupper() and not name.startswith('_'):
+            types.append({"name": name, "value": value})
+
+    labels = {}
+    for m in re.finditer(r'StepType\.(\w+):\s*"([^"]+)"', content):
+        labels[m.group(1)] = m.group(2)
+
+    return {"count": len(types), "types": types, "labels": labels}
+
+
+def scan_device_statuses():
+    """从 device_pool/models.py 提取设备状态定义。"""
+    models_path = PROJECT_ROOT / "apps" / "device_pool" / "models.py"
+    if not models_path.exists():
+        return {"count": 0, "statuses": []}
+
+    content = models_path.read_text(encoding="utf-8")
+    # Pattern 1: comment-based # ONLINE | BUSY | OFFLINE
+    for m in re.finditer(r'#\s*((?:ONLINE|BUSY|OFFLINE|DISCONNECTED)(?:\s*\|\s*(?:ONLINE|BUSY|OFFLINE|DISCONNECTED))*)', content):
+        statuses = [s.strip() for s in m.group(1).split("|")]
+        return {"count": len(statuses), "statuses": sorted(statuses)}
+    return {"count": 0, "statuses": []}
+
+
+# ── 7. 汇总 → Markdown ──
 
 def generate_markdown():
     """生成可插入 项目架构.md 的 Markdown 片段。"""
@@ -516,6 +552,38 @@ def generate_markdown():
     lines.append("")
 
     lines.append(f"<!-- ARCH_STATS_END -->")
+
+    # ── 步骤类型 ──
+    steps = scan_step_types()
+    lines.append("")
+    lines.append("### 步骤类型定义（来自 StepType 枚举）")
+    lines.append("")
+    lines.append(f"**{steps['count']} 种步骤类型**：")
+    lines.append("")
+    cat_order = [
+        ("点击类", ["CLICK", "LONG_CLICK", "CLICK_INDEXED", "RETRY_CLICK"]),
+        ("手势类", ["SWIPE", "DRAG"]),
+        ("等待类", ["WAIT", "WAIT_DISAPPEAR", "WAIT_ANY", "WAIT_TOAST"]),
+        ("验证类", ["VERIFY_TEXT", "POLL_TEXT"]),
+        ("控制类", ["START_APP", "KILL_APP", "RESTART_APP"]),
+        ("工具类", ["SLEEP", "LOG"]),
+    ]
+    for cat_name, cat_keys in cat_order:
+        items = []
+        for key in cat_keys:
+            label = steps["labels"].get(key, "")
+            items.append(f"`{key}` ({label})" if label else f"`{key}`")
+        if items:
+            lines.append(f"| {cat_name} | {' · '.join(items)} |")
+    lines.append("")
+
+    # ── 设备状态 ──
+    dev_status = scan_device_statuses()
+    lines.append("### 设备状态定义")
+    lines.append("")
+    lines.append(f"**{dev_status['count']} 种状态**: " + " · ".join(f"`{s}`" for s in dev_status['statuses']))
+    lines.append("")
+
     return "\n".join(lines)
 
 

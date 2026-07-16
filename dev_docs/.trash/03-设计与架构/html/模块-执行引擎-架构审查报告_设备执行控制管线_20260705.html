@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>设备执行控制管线 — 架构审查报告</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --primary: #19c8b9; --primary-hover: #3dd4c6; --primary-active: #11a89b; --primary-bg: #e6f9f6;
+    --text: #794f27; --text-body: #725d42; --text-secondary: #9f927d; --text-muted: #8a7b66;
+    --bg: #f8f8f0; --bg-content: rgb(247, 243, 223);
+    --border: #c4b89e; --success: #6fba2c; --warning: #f5c31c; --error: #e05a5a;
+    --app-green: #6fba2c; --app-purple: #b39ef3; --app-pink: #f8a6b2; --app-blue: #889df0; --app-teal: #19c8b9;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Nunito, 'Noto Sans SC', -apple-system, 'PingFang SC', sans-serif; font-weight:500; letter-spacing:0.01em; background:var(--bg); color:var(--text-body); line-height:1.7; }
+  .container { max-width:1100px; margin:0 auto; padding:40px 20px; }
+  h1 { font-weight:800; color:var(--text); font-size:1.8em; text-align:center; margin-bottom:6px; }
+  h2 { font-weight:700; font-size:1.15em; color:var(--text); margin:24px 0 12px; display:flex; align-items:center; gap:8px; letter-spacing:0.02em; }
+  h3 { font-weight:700; font-size:1em; color:var(--text); margin:16px 0 8px; }
+  .subtitle { text-align:center; color:var(--text-secondary); font-size:0.95em; margin-bottom:20px; }
+  .card { background:var(--bg-content); border-radius:20px; padding:24px; margin-bottom:20px; border:2px solid transparent; transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+  .card:hover { transform:translateY(-2px); }
+  .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+  .kpi-card { background:var(--bg-content); border-radius:20px; padding:20px; text-align:center; border-top:4px solid var(--border); }
+  .kpi-card .num { font-size:2em; font-weight:800; }
+  .kpi-card .label { font-size:12px; color:var(--text-secondary); margin-top:4px; }
+  @media (max-width:700px) { .kpi-grid { grid-template-columns:repeat(2,1fr); } }
+  code { font-family:'SF Mono','Fira Code','Cascadia Code',Consolas,monospace; font-weight:600; font-size:12px; background:rgba(121,79,39,0.06); padding:2px 7px; border-radius:6px; color:var(--text); }
+  pre { background:#2b2118; color:#e8d5bc; padding:16px 20px; border-radius:20px; overflow-x:auto; font-size:12px; line-height:1.8; margin:10px 0; font-family:'SF Mono','Fira Code','Cascadia Code',Consolas,monospace; font-weight:600; }
+  pre .cm { color:#6b5e50; } pre .kw { color:#d4a0e0; } pre .fn { color:#61afef; } pre .str { color:#a8d4a0; }
+  table { width:100%; border-collapse:collapse; margin:10px 0; border-radius:20px; overflow:hidden; }
+  th { background:rgba(121,79,39,0.06); padding:10px 14px; text-align:left; font-size:12px; font-weight:700; letter-spacing:0.02em; color:var(--text); }
+  td { padding:9px 14px; font-size:13px; border-top:1px dashed rgba(196,184,158,0.4); }
+  tr:hover td { background:rgba(25,200,185,0.04); }
+  .tag { display:inline-block; padding:2px 8px; border-radius:50px; font-size:10px; font-weight:700; letter-spacing:0.02em; margin-right:4px; }
+  .tag-ok { background:#f0fdf4; color:#15803d; } .tag-warn { background:#fef3c7; color:#92400e; } .tag-err { background:#fef2f2; color:#b91c1c; }
+  .arch-svg { background:#fff; border-radius:20px; padding:20px; text-align:center; overflow-x:auto; }
+  .footer { text-align:center; color:var(--text-secondary); font-size:12px; margin-top:40px; padding:20px 0; border-top:1px dashed rgba(196,184,158,0.5); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>🔍 设备执行与控制管线 — 架构审查报告</h1>
+<p class="subtitle">device_pool（连接层）+ test_runner（执行层）+ models（类型定义）三层管线架构深度审查</p>
+
+<!-- KPI -->
+<div class="kpi-grid">
+  <div class="kpi-card" style="border-top-color:var(--app-green);">
+    <div class="num" style="color:var(--app-green);">3</div>
+    <div class="label">层级（连接/执行/类型）</div>
+  </div>
+  <div class="kpi-card" style="border-top-color:var(--primary);">
+    <div class="num" style="color:var(--primary);">7</div>
+    <div class="label">核心文件</div>
+  </div>
+  <div class="kpi-card" style="border-top-color:var(--warning);">
+    <div class="num" style="color:#a16207;">1</div>
+    <div class="label">防火墙违规</div>
+  </div>
+  <div class="kpi-card" style="border-top-color:var(--app-green);">
+    <div class="num" style="color:var(--app-green);">0</div>
+    <div class="label">循环依赖</div>
+  </div>
+</div>
+
+<!-- ===== IDEAL ARCHITECTURE ===== -->
+<h2>🏗️ 理想架构图 — 三层管线</h2>
+<div class="card">
+  <div class="arch-svg">
+    <svg viewBox="0 0 900 420" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="sh"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#8b735530"/></filter>
+      </defs>
+
+      <!-- L3: Models -->
+      <rect x="30" y="20" width="840" height="80" rx="16" fill="#f5ede0" stroke="#c4b89e" stroke-width="1.5" filter="url(#sh)"/>
+      <text x="50" y="52" font-size="14" font-weight="800" fill="#8b7355">L3: 类型定义层 · models/</text>
+      <rect x="60" y="62" width="180" height="30" rx="8" fill="#fff" stroke="#d4c9b4" stroke-width="1"/>
+      <text x="150" y="82" text-anchor="middle" font-size="12" font-weight="700" fill="#725d42">step_types.py</text>
+      <text x="260" y="82" font-size="11" fill="#9f927d">StepType 枚举 (14/17 种) + TestStep 数据类 (10 字段)</text>
+
+      <!-- L2: Execution -->
+      <rect x="30" y="135" width="840" height="130" rx="16" fill="#e0e7ff" stroke="#889df0" stroke-width="1.5" filter="url(#sh)"/>
+      <text x="50" y="167" font-size="14" font-weight="800" fill="#3730a3">L2: 执行编排层 · apps/test_runner/</text>
+
+      <rect x="60" y="180" width="160" height="36" rx="8" fill="#fff" stroke="#889df0" stroke-width="1.5"/>
+      <text x="140" y="203" text-anchor="middle" font-size="12" font-weight="700" fill="#3730a3">runner.py</text>
+      <rect x="230" y="180" width="160" height="36" rx="8" fill="#fff" stroke="#889df0" stroke-width="1.5"/>
+      <text x="310" y="203" text-anchor="middle" font-size="12" font-weight="700" fill="#3730a3">executor.py</text>
+      <rect x="400" y="180" width="160" height="36" rx="8" fill="#fff" stroke="#889df0" stroke-width="1.5"/>
+      <text x="480" y="203" text-anchor="middle" font-size="12" font-weight="700" fill="#3730a3">adapter.py</text>
+      <rect x="570" y="180" width="130" height="36" rx="8" fill="#fff" stroke="#889df0" stroke-width="1.5"/>
+      <text x="635" y="203" text-anchor="middle" font-size="12" font-weight="700" fill="#3730a3">consumers.py</text>
+      <rect x="710" y="180" width="70" height="36" rx="8" fill="#fff" stroke="#889df0" stroke-width="1.5"/>
+      <text x="745" y="203" text-anchor="middle" font-size="11" font-weight="700" fill="#3730a3">api.py</text>
+
+      <text x="60" y="242" font-size="11" fill="#3730a3">异步编排 · _active_runs 内存状态 · 回调接口</text>
+      <text x="230" y="242" font-size="11" fill="#3730a3">步骤遍历 · handler 字典映射 17→操作</text>
+      <text x="400" y="242" font-size="11" fill="#3730a3">u2 API 封装 · 可中断 sleep · 日志缓冲</text>
+      <text x="570" y="242" font-size="11" fill="#3730a3">WS 推送 6 种消息类型</text>
+      <text x="710" y="242" font-size="11" fill="#3730a3">跨模块 __all__</text>
+
+      <!-- Arrows L3→L2 -->
+      <line x1="340" y1="100" x2="200" y2="180" stroke="#8b7355" stroke-width="1" stroke-dasharray="5,3"/>
+      <line x1="500" y1="100" x2="400" y2="180" stroke="#8b7355" stroke-width="1" stroke-dasharray="5,3"/>
+
+      <!-- L1: Connection -->
+      <rect x="30" y="300" width="840" height="80" rx="16" fill="#f0fdf4" stroke="#6fba2c" stroke-width="1.5" filter="url(#sh)"/>
+      <text x="50" y="332" font-size="14" font-weight="800" fill="#15803d">L1: 设备连接层 · apps/device_pool/</text>
+      <rect x="60" y="342" width="160" height="30" rx="8" fill="#fff" stroke="#6fba2c" stroke-width="1.5"/>
+      <text x="140" y="362" text-anchor="middle" font-size="12" font-weight="700" fill="#15803d">pool.py</text>
+      <text x="60" y="380" font-size="11" fill="#15803d">DevicePool 单例 · 双重检查锁定 · u2.connect() · 截图 dump</text>
+
+      <!-- Arrows L2→L1 -->
+      <line x1="140" y1="216" x2="180" y2="342" stroke="#8b7355" stroke-width="1" stroke-dasharray="5,3"/>
+      <text x="200" y="285" font-size="10" fill="#9f927d">独立连接（不走 DevicePool）</text>
+
+      <!-- Right side: Android device -->
+      <rect x="780" y="342" width="100" height="30" rx="8" fill="#f8a6b2" filter="url(#sh)"/>
+      <text x="830" y="362" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">Android</text>
+
+      <!-- Labels -->
+      <text x="15" y="55" font-size="10" fill="#8b7355" font-weight="700">类型</text>
+      <text x="15" y="195" font-size="10" fill="#3730a3" font-weight="700">执行</text>
+      <text x="15" y="350" font-size="10" fill="#15803d" font-weight="700">连接</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ===== COMPARISON ===== -->
+<h2>📊 五维审查结果</h2>
+<div class="card">
+  <table>
+    <tr><th style="width:100px;">维度</th><th style="width:60px;">评分</th><th>发现</th></tr>
+    <tr>
+      <td style="font-weight:700;">高内聚</td>
+      <td><span class="tag tag-ok">✅ 良好</span></td>
+      <td>三段职责清晰：pool.py 只管 u2 连接、adapter.py 只管 u2 API 封装、executor.py 只管步骤遍历。没有跨职责的"万能类"。</td>
+    </tr>
+    <tr>
+      <td style="font-weight:700;">低耦合</td>
+      <td><span class="tag tag-warn">⚠️ 1 项违规</span></td>
+      <td>dashboard 和 ai_assistant 的 dashboard_views 直接 import runner._active_runs（防火墙 #1 违规）。其他跨模块调用均走 api.py 或只读 ORM。</td>
+    </tr>
+    <tr>
+      <td style="font-weight:700;">分层合理</td>
+      <td><span class="tag tag-ok">✅ 良好</span></td>
+      <td>依赖方向单向：runner → executor → adapter → u2 device。无循环依赖。device_pool 处于最底层，test_runner 居中。</td>
+    </tr>
+    <tr>
+      <td style="font-weight:700;">安全完整</td>
+      <td><span class="tag tag-ok">✅ 良好</span></td>
+      <td>无硬编码凭据。WebSocket consumer 通过 JWT 验证。设备连接不暴露密码。</td>
+    </tr>
+    <tr>
+      <td style="font-weight:700;">一致性</td>
+      <td><span class="tag tag-ok">✅ 完备</span></td>
+      <td>device_pool 和 test_runner 均具备完整结构（api.py / serializers.py / permissions.py / models.py 齐全）。</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ===== DETAILED ANALYSIS ===== -->
+<h2>📐 分层深度分析</h2>
+
+<div class="card">
+  <h3>第 1 层：L1 设备连接层 — DevicePool 单例模式</h3>
+  <table>
+    <tr><th style="width:160px;">特性</th><th>实现</th><th>评价</th></tr>
+    <tr><td>线程安全</td><td><code>threading.Lock</code> 双重检查锁定 + <code>_u2_lock</code> 串行化所有 u2 操作</td><td><span class="tag tag-ok">✅ 正确</span></td></tr>
+    <tr><td>延迟初始化</td><td><code>@property d</code> 首次访问时才 <code>u2.connect()</code></td><td><span class="tag tag-ok">✅ 合理</span></td></tr>
+    <tr><td>多设备支持</td><td><code>_instances: dict</code> 按 serial 缓存多个 u2 连接</td><td><span class="tag tag-ok">✅ 完整</span></td></tr>
+    <tr><td>截图</td><td><code>screenshot_b64()</code> — PIL 截图 → JPEG 压缩 → base64，quality=55 优化 WebSocket 传输</td><td><span class="tag tag-ok">✅ 性能优化</span></td></tr>
+    <tr><td>UI Dump</td><td><code>dump_hierarchy()</code> — 3 种参数回退 + XML 截断检测修复 + 8 种 XPath 候选生成</td><td><span class="tag tag-ok">✅ 健壮</span></td></tr>
+    <tr><td>连接类型</td><td>自动检测 USB/WIFI（根据 serial 是否含 <code>:</code>）</td><td><span class="tag tag-ok">✅ 自动</span></td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3>第 2 层：L2 执行编排层 — adapter → executor → runner 三级流水线</h3>
+
+  <h4>DeviceAdapter — u2 API 的薄封装 (242 行)</h4>
+  <table>
+    <tr><th style="width:200px;">设计特点</th><th>说明</th></tr>
+    <tr><td><strong>适配器模式</strong></td><td>包装原始 u2 device 实例，对外暴露统一的设备操作接口。StepExecutor 只依赖 DeviceAdapter，不直接 touch u2。</td></tr>
+    <tr><td><strong>可中断 sleep</strong></td><td><code>sleep()</code> 每 100ms 检查 <code>should_stop()</code> 标志。传统 <code>time.sleep()</code> 无法中断，这个实现允许用户随时停止测试。</td></tr>
+    <tr><td><strong>日志缓冲</strong></td><td><code>_log_buffer</code> 收集所有日志，通过 <code>_emit_log</code> 回调实时推送 + 通过 <code>get_log_buffer()</code> 支持批量取回。</td></tr>
+    <tr><td><strong>kill 多重保障</strong></td><td><code>kill_app()</code> 执行 am force-stop → am kill → pkill 三级回退，确保 App 彻底终止而非后台挂起。</td></tr>
+    <tr><td><strong>等待类方法的容错</strong></td><td><code>wait_for_toast()</code> 双重检测（XPath 文本 + <code>d.toast.get_message(0)</code>），任一命中即返回。Timeout 后明确返回 False。</td></tr>
+  </table>
+
+  <h4>StepExecutor — 步骤类型 → 操作的分发器 (232 行)</h4>
+  <table>
+    <tr><th style="width:200px;">设计特点</th><th>说明</th></tr>
+    <tr><td><strong>Handler 字典映射</strong></td><td>17 种步骤类型 → 17 个 <code>_do_xxx()</code> 方法。O(1) 查找，新增步骤类型只需加一个 key-value。</td></tr>
+    <tr><td><strong>步骤回调</strong></td><td>每步执行后调用 <code>_step_callback(i, total, type, desc, result)</code>，供上层 runner 统计和推送。</td></tr>
+    <tr><td><strong>early-exit</strong></td><td>任一步骤失败立即返回，后续步骤不执行。符合"失败即停"的测试执行语义。</td></tr>
+    <tr><td><strong>17 种类型 vs 14 种枚举</strong></td><td><code>step_types.py</code> 定义 14 种 StepType，但 executor 的 handler 字典映射了 17 种——多了 <code>long_click</code> / <code>swipe</code> / <code>drag</code> / <code>wait_any</code>。枚举和实现不同步。</td></tr>
+  </table>
+
+  <h4>TestRunner — 异步编排器 (310 行)</h4>
+  <table>
+    <tr><th style="width:200px;">设计特点</th><th>说明</th></tr>
+    <tr><td><strong>线程池安全</strong></td><td><code>_safe_run_in_executor()</code> 多层 try/except — RuntimeError(quit) / BrokenPipeError / OSError → 统一包装为 ConnectionError。这是生产环境的防御性代码。</td></tr>
+    <tr><td><strong>设备隔离</strong></td><td>测试执行创建<strong>独立 u2 连接</strong>，不走 DevicePool 单例。设计意图：长时间测试不应持有全局锁，且设备池仍可为其他用户服务。</td></tr>
+    <tr><td><strong>7 种回调</strong></td><td>on_log / on_case_started / on_iteration_result / on_case_finished / on_run_finished / on_step_result / on_device_error</td></tr>
+    <tr><td><strong>_RunState 内存态</strong></td><td><code>_active_runs: dict</code> 追踪所有活跃运行。但<strong>被 dashboard 直接引用</strong>（防火墙违规）。</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3>第 3 层：L3 类型定义层 — models/step_types.py</h3>
+  <table>
+    <tr><th style="width:200px;">设计特点</th><th>说明</th></tr>
+    <tr><td><strong>枚举 + 数据类</strong></td><td><code>StepType(str, Enum)</code> 14 种 + <code>TestStep</code> dataclass 10 字段。每个字段有默认值和类型注解。</td></tr>
+    <tr><td><strong>双向映射</strong></td><td><code>UI_LABELS</code> 中文名映射 + <code>STEP_TYPE_MAP</code> 字符串→枚举反向查找。</td></tr>
+    <tr><td><strong>序列化</strong></td><td><code>to_dict()</code> / <code>from_dict()</code> 支持 JSON 双向转换。</td></tr>
+    <tr><td><strong>⚠️ 同步问题</strong></td><td>枚举定义 14 种类型，但 executor 映射 17 种（多了 long_click/swipe/drag/wait_any）。枚举缺少这 4 种但实现了它们的功能，说明枚举落后于实现。</td></tr>
+  </table>
+</div>
+
+<!-- ===== ISSUES ===== -->
+<h2>⚠️ 发现的问题</h2>
+<div class="card">
+  <table>
+    <tr><th style="width:40px;">级别</th><th style="width:80px;">定位</th><th>问题</th><th>修复方案</th></tr>
+    <tr>
+      <td><span class="tag tag-err">P0</span></td>
+      <td>防火墙</td>
+      <td><code>dashboard/views.py:88</code> 和 <code>ai_assistant/dashboard_views.py:90</code> 直接 <code>from apps.test_runner.runner import _active_runs</code></td>
+      <td>在 test_runner/api.py 暴露 <code>get_active_runs()</code> 公开函数，dashboard 改为调用 api</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-warn">P1</span></td>
+      <td>步进同步</td>
+      <td>step_types.py 定义 14 种枚举，executor.py 映射 17 种。long_click/swipe/drag/wait_any 有实现无枚举定义</td>
+      <td>在 StepType 枚举中补全缺少的 4 种类型，或在 executor 中移除未定义的 handler</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-warn">P1</span></td>
+      <td>设备连接</td>
+      <td>test_runner 创建独立 u2 连接绕过 DevicePool，设计合理但缺少文档说明</td>
+      <td>在 runner.py 头部加注释说明独立连接的意图</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-warn">P2</span></td>
+      <td>日志</td>
+      <td>adapter.py 用 <code>print()</code> 风格的 lambda callback，未接入 Django logging</td>
+      <td>改用 <code>logging.getLogger(__name__)</code></td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-warn">P2</span></td>
+      <td>硬编码</td>
+      <td>pool.py:162 等处的 <code>status="ONLINE"</code> 等应使用 models/constants.py 的 DeviceStatus 枚举</td>
+      <td>全局替换硬编码状态字符串</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ===== DATA FLOW ===== -->
+<h2>🔄 执行数据流 — 从步骤定义到设备操作</h2>
+<div class="card">
+  <div style="background:#fffdf5; border-radius:16px; padding:20px; border:2px dashed var(--warning);">
+    <ol style="font-size:14px; line-height:2.2;">
+      <li><strong>用户保存用例</strong> → CaseEditor → POST <code>/api/cases/definitions</code> → <code>cm_test_definitions.steps_json</code></li>
+      <li><strong>用户启动执行</strong> → 前端 POST <code>/api/runner/run</code> → <code>views.py</code> → <code>asyncio.create_task(run_test())</code></li>
+      <li><strong>runner.run_test()</strong> → 创建独立 u2 连接 → <code>DeviceAdapter(device, ...)</code> → <code>StepExecutor(adapter)</code></li>
+      <li><strong>遍历用例</strong> → <code>executor.execute_all(steps)</code> → handler 字典查找步骤类型 → 调用 adapter 对应方法</li>
+      <li><strong>adapter 操作设备</strong> → <code>d.xpath(xp).click()</code> → uiautomator2 → ADB → Android 真机</li>
+      <li><strong>结果回传</strong> → 每步回调 → <code>TestRunnerCallback</code> → <code>consumers.py</code> → WebSocket → 前端实时更新</li>
+      <li><strong>持久化</strong> → 执行完毕 → <code>tr_test_results</code> 写入结果 → <code>ReportGenerator</code> 生成 CSV/HTML 报告</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ===== SUGGEST ===== -->
+<h2>🛠️ 实施建议</h2>
+<div class="card">
+  <table>
+    <tr><th style="width:40px;">优先</th><th style="width:120px;">操作</th><th>影响文件</th><th>预估</th></tr>
+    <tr>
+      <td><span class="tag tag-err">P0</span></td>
+      <td>暴露 get_active_runs() API</td>
+      <td><code>test_runner/api.py</code>（新增函数）+ <code>dashboard/views.py</code>（改为调用 api）</td>
+      <td>10 min</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-warn">P1</span></td>
+      <td>补全 StepType 枚举</td>
+      <td><code>models/step_types.py</code>（加 4 个枚举值 + UI_LABELS）</td>
+      <td>10 min</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-warn">P1</span></td>
+      <td>加独立连接设计注释</td>
+      <td><code>test_runner/runner.py</code>（头部注释）</td>
+      <td>2 min</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-warn">P2</span></td>
+      <td>adapter 日志接入 Django logging</td>
+      <td><code>test_runner/adapter.py</code></td>
+      <td>15 min</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-warn">P2</span></td>
+      <td>硬编码状态值替换为 Enum</td>
+      <td><code>device_pool/pool.py</code></td>
+      <td>10 min</td>
+    </tr>
+  </table>
+
+  <h3>验证检查清单</h3>
+  <pre><span class="cm"># 1. 确认防火墙修复</span>
+grep -rn <span class="str">"from apps.test_runner.runner"</span> apps/ --include=<span class="str">"*.py"</span> | grep -v test_runner
+<span class="cm"># 期望：无结果（dashboard 已改为调用 api）</span>
+
+<span class="cm"># 2. 确认枚举同步</span>
+python -c <span class="str">"from models.step_types import StepType; print(len(StepType))"</span>
+<span class="cm"># 期望：17 或 18（补全后）</span>
+
+<span class="cm"># 3. 确认无硬编码</span>
+grep -rn <span class="str">'status="ONLINE"\|status="BUSY"\|status="OFFLINE"'</span> apps/device_pool/ apps/test_runner/
+<span class="cm"># 期望：0</span></pre>
+</div>
+
+<div class="footer">
+  Android-AutoTests · 设备执行控制管线架构审查 · 2026-07-05<br>
+  由 architecture-review skill 生成 · 五维评分：4✅ 1⚠️
+</div>
+
+</div>
+</body>
+</html>

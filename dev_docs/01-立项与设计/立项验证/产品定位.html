@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>产品定位 · Android-AutoTests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #6fba2c; --primary-hover: #8cc94e; --primary-active: #5a9e1e; --primary-bg: #e8f5e0;
+  --text: #3a7a10; --text-body: #4a5a3a; --text-secondary: #7a8a6a; --text-muted: #9aaa8a;
+  --bg: #fafcf6; --bg-card: #ffffff; --bg-emphasis: #f0f7e8;
+  --border: #c8d8b8; --border-light: #e0e8d4;
+  --accent: #11a89b; --accent-bg: #e6f9f6;
+  --warning: #f5c31c; --error: #e05a5a;
+  --r-sm: 10px; --r-base: 16px; --r-lg: 22px; --r-pill: 50px;
+  --shadow: 0 2px 12px rgba(0,0,0,.06); --shadow-lg: 0 6px 24px rgba(0,0,0,.10);
+  --font-display: Nunito, 'Noto Sans SC', sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Nunito,'Noto Sans SC',-apple-system,'PingFang SC',sans-serif;font-weight:500;color:var(--text-body);background:var(--bg);line-height:1.75;min-height:100vh}
+.container{max-width:960px;margin:0 auto;padding:48px 24px 80px}
+
+/* Hero */
+.hero{text-align:center;padding:48px 0 40px}
+.hero-badge{display:inline-block;background:var(--primary-bg);color:var(--primary-active);font-size:11px;font-weight:800;letter-spacing:.06em;padding:4px 14px;border-radius:var(--r-pill);border:1.5px solid var(--primary);margin-bottom:16px}
+.hero h1{font-family:var(--font-display);font-size:40px;font-weight:900;color:var(--text);line-height:1.25;margin-bottom:12px}
+.hero .subtitle{font-size:17px;color:var(--text-secondary);font-weight:500;max-width:680px;margin:0 auto;line-height:1.7}
+
+/* Positioning statement */
+.pos-statement{background:var(--bg-card);border:2px solid var(--border);border-radius:var(--r-lg);padding:32px 36px;margin-bottom:40px;box-shadow:var(--shadow-lg);position:relative;overflow:hidden}
+.pos-statement::before{content:'';position:absolute;top:0;left:0;width:5px;height:100%;background:var(--primary)}
+.pos-statement .label{font-size:10px;font-weight:800;letter-spacing:.1em;color:var(--primary-active);text-transform:uppercase;margin-bottom:12px}
+.pos-statement .one-liner{font-family:var(--font-display);font-size:26px;font-weight:900;color:var(--text);line-height:1.45;margin-bottom:16px}
+.pos-statement .one-liner em{font-style:normal;color:var(--primary-active);background:linear-gradient(180deg,transparent 60%,rgba(111,186,44,.18) 60%)}
+.pos-statement .breakdown{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px;padding-top:20px;border-top:1px solid var(--border-light)}
+.pos-statement .breakdown dt{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px}
+.pos-statement .breakdown dd{font-size:14px;font-weight:700;color:var(--text-body);line-height:1.55}
+
+/* Sections */
+section{margin-bottom:48px}
+section h2{font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--text);margin-bottom:20px;display:flex;align-items:center;gap:10px}
+section h2 .dot{width:10px;height:10px;border-radius:50%;background:var(--primary);flex-shrink:0}
+section h3{font-family:var(--font-display);font-size:15px;font-weight:800;color:var(--text);margin:24px 0 10px}
+section p{font-size:14px;margin-bottom:12px;color:var(--text-body)}
+
+/* Value cards */
+.value-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+.value-card{background:var(--bg-card);border:1.5px solid var(--border-light);border-radius:var(--r-base);padding:24px;transition:all .2s ease}
+.value-card:hover{border-color:var(--primary);box-shadow:var(--shadow);transform:translateY(-2px)}
+.value-card .icon{font-size:28px;margin-bottom:10px}
+.value-card h4{font-family:var(--font-display);font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px}
+.value-card p{font-size:12px;color:var(--text-secondary);line-height:1.6}
+
+/* Boundary table */
+.boundary-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.boundary-in,.boundary-out{background:var(--bg-card);border-radius:var(--r-base);padding:24px 28px}
+.boundary-in{border:2px solid var(--primary);box-shadow:0 0 0 4px var(--primary-bg)}
+.boundary-out{border:2px solid var(--border);background:var(--bg)}
+.boundary-in h3{color:var(--primary-active);margin-top:0}
+.boundary-out h3{color:var(--text-muted);margin-top:0}
+.boundary-in ul,.boundary-out ul{list-style:none;padding:0}
+.boundary-in li,.boundary-out li{padding:8px 0;font-size:13px;border-bottom:1px solid var(--border-light);display:flex;align-items:flex-start;gap:8px}
+.boundary-in li::before{content:'✓';color:var(--primary);font-weight:900;font-size:14px;flex-shrink:0}
+.boundary-out li::before{content:'✗';color:var(--text-muted);font-weight:700;flex-shrink:0}
+
+/* Module overview */
+.module-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.module-card{background:var(--bg-card);border:1.5px solid var(--border-light);border-radius:var(--r-base);padding:18px 20px;display:flex;align-items:flex-start;gap:14px}
+.module-card .mc-icon{width:40px;height:40px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.module-card h4{font-family:var(--font-display);font-size:14px;font-weight:800;color:var(--text);margin-bottom:3px}
+.module-card p{font-size:12px;color:var(--text-secondary);margin:0;line-height:1.55}
+.mc-green{background:var(--primary-bg);color:var(--primary-active)}
+.mc-teal{background:var(--accent-bg);color:var(--accent)}
+.mc-blue{background:#e6f1fb;color:#185FA5}
+.mc-purple{background:#f0e8fe;color:#7c5cbf}
+.mc-yellow{background:#fef8e6;color:#c7840a}
+.mc-pink{background:#fef0f4;color:#e05a5a}
+.mc-orange{background:#fff3e6;color:#f5a623}
+
+/* Differentiation */
+.diff-card{background:var(--bg-emphasis);border:2px solid var(--primary);border-radius:var(--r-lg);padding:28px 32px;margin-top:16px}
+.diff-card h3{color:var(--primary-active);margin-top:0;font-size:17px}
+.diff-card .diff-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:16px}
+.diff-card .diff-item{background:var(--bg-card);border-radius:var(--r-sm);padding:14px 16px}
+.diff-card .diff-item strong{display:block;font-size:13px;color:var(--text);margin-bottom:4px}
+.diff-card .diff-item span{font-size:12px;color:var(--text-secondary)}
+
+/* Relation diagram */
+.rel-flow{background:var(--bg-card);border:1.5px solid var(--border-light);border-radius:var(--r-base);padding:28px 32px;margin-top:16px}
+.rel-flow .flow-items{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;font-size:13px;font-weight:700}
+.rel-flow .flow-node{padding:10px 18px;border-radius:var(--r-pill);white-space:nowrap}
+.rel-flow .flow-arrow{font-size:18px;color:var(--text-muted);font-weight:900}
+
+/* Footer */
+.footer{text-align:center;padding:32px 0 0;border-top:1px solid var(--border-light);margin-top:48px;font-size:11px;color:var(--text-muted)}
+.footer a{color:var(--primary-active);font-weight:700;text-decoration:none}
+
+@media(max-width:720px){
+  .hero h1{font-size:28px}
+  .pos-statement .breakdown,.value-grid,.boundary-grid,.module-grid,.diff-card .diff-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="hero">
+    <div class="hero-badge">立项验证 · 产品定位</div>
+    <h1>Android-AutoTests 产品定位</h1>
+    <p class="subtitle">一份面向团队内部的产品方向说明——明确我们做什么、为谁做、为什么现在做、以及哪些不做。</p>
+  </div>
+
+  <!-- One-liner -->
+  <div class="pos-statement">
+    <div class="label">一句话定位</div>
+    <div class="one-liner">
+      为 Android 测试工程师打造的 <em>AI 驱动 UI 自动化测试平台</em>——<br>
+      从元素发现到报告输出，<em>一个平台</em>完成全流程闭环。
+    </div>
+    <dl class="breakdown">
+      <div><dt>What · 做什么</dt><dd>可视化元素定位 + 14 种步骤编排 + AI 智能用例生成 + 多设备并行执行 + 报告输出</dd></div>
+      <div><dt>For Whom · 为谁做</dt><dd>Android 测试工程师（主）<br>QA 负责人 / 产品经理（辅）</dd></div>
+      <div><dt>Why Now · 为什么现在</dt><dd>手工测试天花板已到——用例维护成本高、回归效率低、手写 XPath 门槛高</dd></div>
+    </dl>
+  </div>
+
+  <!-- Value proposition -->
+  <section>
+    <h2><span class="dot"></span>核心价值主张</h2>
+    <p>传统 Android 自动化测试需要测试工程师掌握 ADB 命令、手写 XPath、维护脚本、拼接报告。Android-AutoTests 把这四个环节整合到统一平台中，用 AI 降低门槛，用可视化提升效率。</p>
+    <div class="value-grid">
+      <div class="value-card">
+        <div class="icon">🎯</div>
+        <h4>告别手写 XPath</h4>
+        <p>手机实时截图 + 点击元素自动生成 8 种 XPath 候选策略，按匹配数升序排列，优先选 count=1 的唯一表达式。</p>
+      </div>
+      <div class="value-card">
+        <div class="icon">🤖</div>
+        <h4>自然语言驱动测试</h4>
+        <p>「给登录页创建冒烟用例」→ AI 自动搜索元素、构造步骤、保存可执行用例。全程不需要写一行代码。</p>
+      </div>
+      <div class="value-card">
+        <div class="icon">⚡</div>
+        <h4>实时进度可视化</h4>
+        <p>WebSocket 推送每步执行结果到前端——日志 / 迭代结果 / 用例完成 / 运行完成，不再盯着终端等结果。</p>
+      </div>
+      <div class="value-card">
+        <div class="icon">📱</div>
+        <h4>多设备并行</h4>
+        <p>设备池锁定/释放/排队机制，支持多设备同时执行不同用例。局域网 WIFI 连接，摆脱 USB 线束缚。</p>
+      </div>
+      <div class="value-card">
+        <div class="icon">📊</div>
+        <h4>全流程闭环</h4>
+        <p>元素发现 → 用例编写 → 执行测试 → 报告输出，一个平台完成。数据在模块间流转，不需要导出导入。</p>
+      </div>
+      <div class="value-card">
+        <div class="icon">🔌</div>
+        <h4>AI 原生架构</h4>
+        <p>AgentScope 2.0 引擎内置 25 个 Tool，可直接操作平台全部资源。不是外挂，是平台的内建能力。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Boundaries -->
+  <section>
+    <h2><span class="dot"></span>产品边界：做什么 / 不做什么</h2>
+    <p>明确边界是为了集中资源——以下「不做什么」是在立项阶段主动排除的方向，随着产品演进可以重新评估。</p>
+    <div class="boundary-grid">
+      <div class="boundary-in">
+        <h3>✅ 我们做这些</h3>
+        <ul>
+          <li>Android 原生 App 的 UI 自动化测试</li>
+          <li>基于 uiautomator2 的设备控制（点击/滑动/输入/截图）</li>
+          <li>14 种原子步骤类型的测试用例编排</li>
+          <li>AI 辅助的元素搜索与用例生成</li>
+          <li>循环执行（压力测试）与实时进度推送</li>
+          <li>CSV/HTML 格式的测试报告</li>
+          <li>设备池管理（锁定/释放/排队）</li>
+          <li>多模型 AI 智能体（百炼/OpenAI/Anthropic）</li>
+          <li>RAG 知识库增强 AI 回答质量</li>
+        </ul>
+      </div>
+      <div class="boundary-out">
+        <h3>❌ 现阶段不做</h3>
+        <ul>
+          <li>iOS 设备自动化测试（仅 Android）</li>
+          <li>Web/H5/小程序的 UI 测试</li>
+          <li>性能测试（CPU/内存/帧率监控）</li>
+          <li>CI/CD 原生集成（Jenkins/GitLab 插件）</li>
+          <li>SaaS 多租户模式（仅单实例部署）</li>
+          <li>低代码拖拽式用例编排（当前为表单式）</li>
+          <li>测试数据工厂（造测试账号/订单等）</li>
+          <li>真实设备云（当前需自备 Android 设备）</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Module map -->
+  <section>
+    <h2><span class="dot"></span>平台能力全景</h2>
+    <p>平台由 7 个业务模块 + 1 个 AI 引擎组成，每个模块解决测试流程中的一个环节。</p>
+    <div class="module-grid">
+      <div class="module-card">
+        <div class="mc-icon mc-green">📱</div>
+        <div>
+          <h4>设备管理</h4>
+          <p>ADB 设备注册、在线/离线/BUSY 状态、锁定释放、排队机制、WIFI 局域网连接。</p>
+        </div>
+      </div>
+      <div class="module-card">
+        <div class="mc-icon mc-teal">🔍</div>
+        <div>
+          <h4>元素定位</h4>
+          <p>实时截图流 2fps、UI 层级 dump、8 种 XPath 自动生成、元素点击交互定位。</p>
+        </div>
+      </div>
+      <div class="module-card">
+        <div class="mc-icon mc-blue">📋</div>
+        <div>
+          <h4>用例管理</h4>
+          <p>14 种步骤编排、用例 CRUD、XPath 接入、YAML 导出复用。</p>
+        </div>
+      </div>
+      <div class="module-card">
+        <div class="mc-icon mc-purple">▶️</div>
+        <div>
+          <h4>执行引擎</h4>
+          <p>异步执行、循环压测、WebSocket 实时进度、中途停止、执行历史追溯。</p>
+        </div>
+      </div>
+      <div class="module-card">
+        <div class="mc-icon mc-yellow">📊</div>
+        <div>
+          <h4>测试报告</h4>
+          <p>CSV/HTML 报告、失败详情诊断、报告模板、执行结果聚合。</p>
+        </div>
+      </div>
+      <div class="module-card">
+        <div class="mc-icon mc-pink">🤖</div>
+        <div>
+          <h4>AI 助手</h4>
+          <p>自然语言对话、智能体配置、SSE 流式输出、25 个 Tool、Agent Team 协作。</p>
+        </div>
+      </div>
+      <div class="module-card" style="grid-column:1/-1">
+        <div class="mc-icon mc-orange">🏠</div>
+        <div>
+          <h4>平台基础（仪表盘 + JWT 认证 + 导航）</h4>
+          <p>统一登录、跨模块导航、首页 KPI 仪表盘、Django Admin 管理后台、一键启停脚本。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Differentiation -->
+  <section>
+    <h2><span class="dot"></span>差异化：与现有方案的区别</h2>
+    <div class="diff-card">
+      <h3>为什么不用 Appium / Airtest / 自建脚本？</h3>
+      <div class="diff-grid">
+        <div class="diff-item">
+          <strong>vs. Appium</strong>
+          <span>Appium 是通用框架，需要写代码。我们提供可视化界面 + AI 对话两种入口，测试工程师不需要掌握 Selenium/WebDriver 协议。</span>
+        </div>
+        <div class="diff-item">
+          <strong>vs. Airtest</strong>
+          <span>Airtest 以图像识别为核心，适合游戏测试。我们以 XPath 定位为核心，更适合标准 Android App 的 UI 控件级测试。</span>
+        </div>
+        <div class="diff-item">
+          <strong>vs. 自建 u2 脚本</strong>
+          <span>直接写 Python 调用 uiautomator2 可以工作，但用例管理、设备池、循环执行、报告、AI 辅助都需要自己造。我们把这些都做了。</span>
+        </div>
+        <div class="diff-item">
+          <strong>vs. 商业测试平台</strong>
+          <span>Testin/PerfDog 等商业平台是 SaaS 模式，数据在外网。我们是本地部署、数据自持、源码开放，适合对安全有要求的企业。</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Platform relationship -->
+  <section>
+    <h2><span class="dot"></span>与现有平台体系的关系</h2>
+    <p>Android-AutoTests 不是孤立工具，而是项目技术体系中的一环：</p>
+    <div class="rel-flow">
+      <div class="flow-items">
+        <div class="flow-node" style="background:var(--primary-bg);color:var(--primary-active)">.claude/ Rules<br><small>15 份规则约束</small></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="background:#e6f9f6;color:#11a89b">.claude/ Agents<br><small>8 个专用 Agent</small></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="background:#fff3e6;color:#f5a623">Android-AutoTests<br><small>测试平台本身</small></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="background:#fef0f4;color:#e05a5a">AgentScope AI<br><small>智能体引擎</small></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="background:#e6f1fb;color:#185FA5">Android 设备<br><small>uiautomator2</small></div>
+      </div>
+    </div>
+    <p style="margin-top:16px;font-size:13px;color:var(--text-secondary)">
+      <strong>Claude Code Agent（我们）</strong>用 Rules + Memory 体系管理代码仓库 → 产出 <strong>Android-AutoTests 平台</strong> → 平台内置 <strong>AgentScope AI 助手</strong>帮测试同学用平台 → AgentScope 通过 <strong>uiautomator2</strong> 操控设备。<br>
+      两层 AI：我们（建造者）构建平台，平台内的 AI 助手（产物）服务测试用户。
+    </p>
+  </section>
+
+  <div class="footer">
+    <p>Android-AutoTests · 立项验证 · 产品定位 · v1.0 · 2026-07-13</p>
+    <p style="margin-top:4px"><a href="02-PRD需求/实际需求文档.md">← 查看 PRD 总需求</a> · <a href="03-设计与架构/当前实现架构方案.md">查看当前架构方案 →</a></p>
+  </div>
+
+</div>
+</body>
+</html>

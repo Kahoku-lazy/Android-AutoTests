@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>执行引擎架构重构方案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #19c8b9; --primary-hover: #3dd4c6; --primary-active: #11a89b; --primary-bg: #e6f9f6;
+  --text: #794f27; --text-body: #725d42; --text-secondary: #9f927d; --text-muted: #8a7b66;
+  --bg: #f8f8f0; --bg-content: rgb(247,243,223); --bg-disabled: #f0ece2;
+  --border: #c4b89e; --border-hover: #a89878;
+  --success: #6fba2c; --warning: #f5c31c; --error: #e05a5a;
+  --focus-yellow: #ffcc00;
+  --r-sm: 12px; --r-base: 18px; --r-lg: 24px; --r-pill: 50px;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1); --d-fast: 0.15s; --d-base: 0.25s;
+  --shadow-btn: #bdaea0;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Nunito,'Noto Sans SC',-apple-system,'PingFang SC',sans-serif;font-weight:500;letter-spacing:0.01em;background:var(--bg);color:var(--text-body);line-height:1.6}
+.wrap{max-width:1200px;margin:0 auto;padding:48px 32px}
+hr{height:1px;border:none;border-top:1px dashed var(--border);margin:36px 0}
+/* Header */
+.hdr{text-align:center;padding:48px 0 40px}
+.hdr .badge{display:inline-block;background:var(--primary-bg);color:var(--primary-active);padding:6px 16px;border-radius:var(--r-pill);font-size:13px;font-weight:700;letter-spacing:0.02em;margin-bottom:16px}
+.hdr h1{font-weight:900;font-size:2rem;color:var(--text);letter-spacing:0.02em;margin-bottom:8px}
+.hdr .sub{color:var(--text-secondary);font-size:14px}
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:40px}
+@media(max-width:768px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--bg-content);border-radius:var(--r-base);padding:20px;border-left:4px solid var(--primary)}
+.kpi .n{font-size:2rem;font-weight:900;color:var(--text);line-height:1.2}
+.kpi .l{font-size:12px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.04em}
+/* Sections */
+.sec{margin-bottom:40px}
+.sec h2{font-weight:800;font-size:1.4rem;color:var(--text);margin-bottom:6px;letter-spacing:0.02em}
+.sec h3{font-weight:700;font-size:1.05rem;color:var(--text);margin:24px 0 12px}
+.sec .sdesc{color:var(--text-secondary);font-size:13px;margin-bottom:20px}
+/* Cards */
+.card{background:var(--bg-content);border-radius:var(--r-lg);padding:24px;margin-bottom:20px}
+.card.design{border-left:5px solid var(--primary)}
+.card.impl{border-left:5px solid var(--success)}
+.card.risk{border-left:5px solid var(--warning)}
+.card h4{font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+/* Tables */
+.tbl{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0}
+.tbl thead th{background:linear-gradient(180deg,rgb(247,243,223),#f0ece2);color:var(--text);font-weight:700;padding:10px 14px;text-align:left;border-bottom:2px solid var(--border);font-size:12px;letter-spacing:0.02em}
+.tbl tbody td{padding:10px 14px;border-bottom:1px dashed var(--border);vertical-align:top}
+.tbl tbody tr:nth-child(even){background:rgba(25,200,185,0.03)}
+/* Badges */
+.badge{display:inline-block;padding:2px 10px;border-radius:var(--r-pill);font-size:11px;font-weight:700;letter-spacing:0.02em}
+.b-p0{background:#fde8e8;color:var(--error)} .b-p1{background:#fef3cd;color:#8a6d14}
+.b-ok{background:#e8f5e0;color:var(--success)} .b-new{background:var(--primary-bg);color:var(--primary-active)}
+.b-phase{background:#e8f0fe;color:#5a7d9a}
+/* Code */
+code{font-family:'SF Mono','Fira Code','Cascadia Code',Consolas,monospace;font-size:12px;font-weight:600;background:rgba(0,0,0,0.04);padding:1px 6px;border-radius:4px}
+pre{background:#2b2520;color:#e8dcc8;padding:16px 20px;border-radius:var(--r-base);overflow-x:auto;font-size:12px;line-height:1.6;margin:10px 0}
+pre code{background:none;padding:0;color:inherit;font-weight:500}
+pre .kw{color:#f5c31c} pre .str{color:#6fba2c} pre .cm{color:#9f927d}
+/* Flow diagram */
+.diagram{background:var(--bg-content);border-radius:var(--r-lg);padding:24px;margin:16px 0;overflow-x:auto}
+.diagram pre{background:none;color:var(--text-body);padding:8px 0;font-size:13px;line-height:1.8}
+.state-box{display:inline-block;padding:6px 16px;margin:4px;border-radius:var(--r-sm);font-weight:700;font-size:12px;text-align:center;min-width:100px}
+.sb-idle{background:#e8f5e0;color:var(--success);border:2px solid var(--success)}
+.sb-queued{background:#fef3cd;color:#8a6d14;border:2px solid var(--warning)}
+.sb-running{background:#e8f0fe;color:#5a7d9a;border:2px solid #5a7d9a}
+.sb-done{background:#e6f9f6;color:var(--primary-active);border:2px solid var(--primary)}
+.sb-error{background:#fde8e8;color:var(--error);border:2px solid var(--error)}
+.arrow{display:inline-block;margin:0 8px;font-size:16px;color:var(--text-muted)}
+/* Grids */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:768px){.g2{grid-template-columns:1fr}}
+/* Footer */
+.ft{border-top:1px dashed var(--border);padding-top:20px;margin-top:40px;font-size:12px;color:var(--text-muted);text-align:center}
+/* TOC */
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:32px}
+.toc a{display:inline-block;padding:6px 16px;border-radius:var(--r-pill);background:var(--bg-content);color:var(--text-body);text-decoration:none;font-size:13px;font-weight:600;border:1px solid var(--border);transition:all var(--d-fast) var(--ease)}
+.toc a:hover{background:var(--primary-bg);border-color:var(--primary);color:var(--primary-active);transform:translateY(-1px)}
+ul,ol{padding-left:20px;font-size:13px;line-height:2}
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:768px){.compare-grid{grid-template-columns:1fr}}
+.compare-old{background:#fef3cd;border-radius:var(--r-base);padding:16px}
+.compare-new{background:#e8f5e0;border-radius:var(--r-base);padding:16px}
+.compare-old h5{color:#8a6d14;margin-bottom:8px}
+.compare-new h5{color:var(--success);margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="badge">ARCHITECTURE REFACTOR PLAN · 2026-07-08</div>
+  <h1>执行引擎 架构重构方案</h1>
+  <p class="sub">根治状态管理缺陷 · 消除 Fire-and-Forget · 统一设备所有权</p>
+</div>
+
+<!-- KPI -->
+<div class="kpi-grid">
+  <div class="kpi"><div class="n">3</div><div class="l">新增核心类</div></div>
+  <div class="kpi"><div class="n">10</div><div class="l">修改文件</div></div>
+  <div class="kpi"><div class="n">3</div><div class="l">实施阶段</div></div>
+  <div class="kpi"><div class="n">~5d</div><div class="l">预估工时</div></div>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <a href="#s1">一、设计原则</a><a href="#s2">二、核心架构</a><a href="#s3">三、状态机设计</a>
+  <a href="#s4">四、调度器设计</a><a href="#s5">五、设备管理重构</a><a href="#s6">六、实施计划</a>
+  <a href="#s7">七、文件修改清单</a><a href="#s8">八、前后对比</a><a href="#s9">九、验证方案</a>
+</div>
+
+<!-- ═══════════ SECTION 1 ═══════════ -->
+<div class="sec" id="s1">
+<h2>一、设计原则 — 四个"单一"</h2>
+<p class="sdesc">这些原则是评估"改架构还是加代码"的判定标准。违反任一原则的方案都被否决。</p>
+
+<div class="g2">
+<div class="card design">
+<h4>原则 1：单一真相来源</h4>
+<p>每个状态只在<strong>一个位置</strong>存储。对于设备占用状态，DB <code>Device</code> 表是唯一真相。内存变量只是 DB 的只读缓存，不作为决策依据。消除 <code>_device_busy</code> / <code>_active_runs</code> / <code>_device_queue</code> / <code>_run_client_task</code> 四个内存变量。</p>
+</div>
+<div class="card design">
+<h4>原则 2：单一状态转换入口</h4>
+<p>所有状态变更通过 <code>RunStateMachine.transition()</code> 单一入口。该函数原子性地更新 TaskCard + TestRunRecord，任何一步失败则整体回滚。禁止代码中随意 <code>task.status = 'xxx'</code>。</p>
+</div>
+<div class="card design">
+<h4>原则 3：单一设备所有者</h4>
+<p><code>device_pool</code> 是设备的唯一管理者。test_runner 通过"借用-归还"模式获取设备连接，不再自行创建 u2 连接。设备的所有锁/释放/超时检测由 device_pool 统一提供。</p>
+</div>
+<div class="card design">
+<h4>原则 4：单一调度循环</h4>
+<p>每个设备有且只有一个调度协程，循环消费该设备的任务队列。消除多入口的 fire-and-forget 调用链。协程的生命周期在 <code>apps.py</code> 中管理，启动时创建，关闭时优雅终止。</p>
+</div>
+</div>
+</div>
+
+<!-- ═══════════ SECTION 2 ═══════════ -->
+<div class="sec" id="s2">
+<h2>二、核心架构：三件套</h2>
+<p class="sdesc">新的 test_runner 由三个核心类组成，替代当前散落在 runner.py / views.py / apps.py 中的 7 个全局变量和 6 个自由函数。</p>
+
+<div class="diagram">
+<pre style="font-size:14px;line-height:2.2">
+┌─────────────────────────────────────────────────────┐
+│                    test_runner                       │
+│                                                      │
+│  ┌──────────────────┐  ┌──────────────────┐         │
+│  │ RunStateMachine  │  │ DeviceScheduler  │         │
+│  │                  │  │                  │         │
+│  │ · transition()   │  │ · per-device loop│         │
+│  │ · TaskCard ↔ DB  │  │ · queue consumer │         │
+│  │ · atomic update  │  │ · watchdog timer │         │
+│  └────────┬─────────┘  └────────┬─────────┘         │
+│           │                     │                    │
+│           └──────────┬──────────┘                    │
+│                      ▼                               │
+│           ┌──────────────────┐                       │
+│           │ DeviceAdapter    │  (已有，保持)          │
+│           │ · u2 操作封装    │                       │
+│           └──────────────────┘                       │
+│                      │                               │
+└──────────────────────┼───────────────────────────────┘
+                       │ borrow_device() / return_device()
+                       ▼
+┌──────────────────────────────────────────────────────┐
+│                   device_pool                         │
+│  ┌────────────────┐  ┌────────────┐  ┌────────────┐ │
+│  │DevicePool      │  │ DeviceLock │  │ DeviceQueue│ │
+│  │· borrow_device │  │ · audit    │  │ · FIFO     │ │
+│  │· return_device │  │ · timeout  │  │            │ │
+│  └────────────────┘  └────────────┘  └────────────┘ │
+└──────────────────────────────────────────────────────┘
+</pre>
+</div>
+
+<table class="tbl">
+<thead><tr><th>类</th><th>替代的旧代码</th><th>文件</th><th>职责</th></tr></thead>
+<tbody>
+<tr>
+  <td><strong>RunStateMachine</strong></td>
+  <td><code>_active_runs</code> + <code>_run_client_task</code> + TaskCard 手动更新 + TestRunRecord 手动更新</td>
+  <td><code>apps/test_runner/state_machine.py</code>（新建）</td>
+  <td>TaskCard + TestRunRecord 的原子状态转换</td>
+</tr>
+<tr>
+  <td><strong>DeviceScheduler</strong></td>
+  <td><code>_device_queue</code> + <code>_device_busy</code> + <code>_start_next_queued</code> + <code>_schedule_next_queued</code> + 4 处 fire-and-forget</td>
+  <td><code>apps/test_runner/scheduler.py</code>（新建）</td>
+  <td>每设备一个消费者协程，DB-backed 队列</td>
+</tr>
+<tr>
+  <td><strong>DeviceAdapter</strong>（已有）</td>
+  <td>—</td>
+  <td><code>apps/test_runner/adapter.py</code>（保持不变）</td>
+  <td>u2 操作封装</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<!-- ═══════════ SECTION 3 ═══════════ -->
+<div class="sec" id="s3">
+<h2>三、状态机设计：RunStateMachine</h2>
+
+<div class="diagram">
+<h4 style="text-align:center;margin-bottom:16px">TaskCard 状态转换图</h4>
+<div style="text-align:center">
+<span class="state-box sb-idle">IDLE</span>
+<span class="arrow">→</span>
+<span class="state-box sb-queued">QUEUED</span>
+<span class="arrow">→</span>
+<span class="state-box sb-running">RUNNING</span>
+<span class="arrow">→</span>
+<span class="state-box sb-done">DONE</span>
+<br>
+<span style="display:inline-block;margin-top:12px">
+<span class="state-box sb-queued" style="opacity:.6">QUEUED</span>
+<span class="arrow">→</span>
+<span class="state-box sb-idle" style="opacity:.6">CANCELLED→IDLE</span>
+<span style="margin:0 20px">|</span>
+<span class="state-box sb-running" style="opacity:.6">RUNNING</span>
+<span class="arrow">→</span>
+<span class="state-box sb-error">ERROR</span>
+</span>
+</div>
+</div>
+
+<div class="card design">
+<h4>RunStateMachine API</h4>
+<pre><code>class RunStateMachine:
+    """TaskCard + TestRunRecord 原子状态管理器。所有状态变更的唯一入口。"""
+
+    @staticmethod
+    def enqueue(task_card: TaskCard, serial: str) -&gt; None:
+        """IDLE → QUEUED。将任务加入指定设备的等待队列。"""
+
+    @staticmethod
+    def dequeue(task_card: TaskCard) -&gt; None:
+        """QUEUED → RUNNING。从队列取出并开始执行。
+        同时创建 TestRunRecord(status=RUNNING)。原子操作。"""
+
+    @staticmethod
+    def record_iteration(run_record, case_id, iteration, result, duration_ms):
+        """追加一条 TestResult。"""
+
+    @staticmethod
+    def complete(task_card, run_record, summary, case_items):
+        """RUNNING → DONE(outcome=completed)。
+        原子更新: TestRunRecord.status=COMPLETED + TaskCard.status=done。"""
+
+    @staticmethod
+    def fail(task_card, run_record, error_msg, outcome='error'):
+        """RUNNING → DONE(outcome=error|stopped)。
+        原子更新: TestRunRecord.status=FAILED/STOPPED + TaskCard.status=done。"""
+
+    @staticmethod
+    def cancel(task_card):
+        """QUEUED → IDLE。取消排队任务。"""
+
+    @staticmethod
+    def recover_orphans():
+        """启动恢复: TaskCard(running)→interrupted + TestRunRecord(RUNNING)→FAILED。
+        在 apps.py ready() 中调用。"""</code></pre>
+</div>
+
+<div class="card impl">
+<h4>关键实现细节</h4>
+<ul>
+  <li><strong>原子性保证</strong>：<code>transition()</code> 内部所有 DB 操作在同一个 Django 事务中。任一操作失败 → 事务回滚 → 状态不变。</li>
+  <li><strong>幂等性</strong>：同一状态重复转换是安全 no-op（例如 DONE→DONE 直接返回）。</li>
+  <li><strong>合法性校验</strong>：非法转换（如 IDLE→DONE）抛出 <code>InvalidTransition</code> 异常。</li>
+  <li><strong>日志记录</strong>：每次状态转换记录 <code>print(f"[state] {task_id} {from}→{to}")</code>。</li>
+  <li><strong>数据一致性</strong>：<code>run_record</code> 和 <code>task_card</code> 的状态始终同步更新，不存在一个已更新另一个未更新的窗口。</li>
+</ul>
+</div>
+</div>
+
+<!-- ═══════════ SECTION 4 ═══════════ -->
+<div class="sec" id="s4">
+<h2>四、调度器设计：DeviceScheduler</h2>
+
+<div class="card design">
+<h4>核心思路：每设备一个消费者协程</h4>
+<pre><code>class DeviceScheduler:
+    """每个 ONLINE 设备一个后台协程，循环消费该设备的任务队列。
+
+    替代当前的:
+      - _device_queue (内存 dict)
+      - _start_next_queued + _schedule_next_queued (fire-and-forget 链)
+      - 4 处 asyncio.create_task 无监控调用
+    """
+
+    _loops: dict[str, asyncio.Task] = {}  # serial → consumer coroutine
+
+    async def start_device_loop(self, serial: str):
+        """为设备启动消费者协程。在 apps.py ready() + 设备 ONLINE 时调用。"""
+        if serial in self._loops:
+            return  # 已在运行
+        task = asyncio.create_task(self._consume(serial))
+        task.add_done_callback(lambda t: self._on_loop_died(serial, t))
+        self._loops[serial] = task
+
+    async def _consume(self, serial: str):
+        """单设备消费循环（核心调度逻辑）。
+        1. 检查是否有 queued TaskCard for this serial
+        2. 有 → borrow_device → 执行 → return_device → 回到 1
+        3. 无 → sleep 2s → 回到 1
+        4. 异常 → 记录日志，sleep 5s，回到 1（不退出循环！）
+        5. 设备 OFFLINE → 停止循环
+        """
+
+    async def stop_device_loop(self, serial: str):
+        """优雅停止设备的消费者协程。"""
+
+    def _on_loop_died(self, serial, task):
+        """协程意外死亡回调。记录日志 + 尝试重启。"""</code></pre>
+</div>
+
+<div class="card impl">
+<h4>消费者协程监控</h4>
+<table class="tbl">
+<thead><tr><th>场景</th><th>检测方式</th><th>处理</th></tr></thead>
+<tbody>
+<tr><td>协程异常退出</td><td><code>add_done_callback</code> 检测 <code>task.exception()</code></td><td>记录日志 + 3s 后自动重启</td></tr>
+<tr><td>执行超时</td><td><code>asyncio.wait_for(runner.run(), timeout)</code></td><td>超时 → 强制 stop_run → 标记 timeout</td></tr>
+<tr><td>设备离线</td><td>执行前检查 <code>Device.status</code></td><td>停止该设备循环，等待设备恢复</td></tr>
+<tr><td>队列为空</td><td><code>TaskCard.objects.filter(status='queued', device_serial=s).exists()</code></td><td>sleep 2s 后重查，不退出</td></tr>
+<tr><td>协程完全死亡</td><td><code>list_active</code> API 中检测 <code>_loops[serial]</code> 存活</td><td>自动调用 <code>start_device_loop</code> 恢复</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- ═══════════ SECTION 5 ═══════════ -->
+<div class="sec" id="s5">
+<h2>五、设备管理重构：统一所有权</h2>
+
+<div class="card design">
+<h4>device_pool 新增：borrow_device / return_device</h4>
+<pre><code># apps/device_pool/api.py 新增
+
+def borrow_device(serial: str, borrower: str, timeout: int = 3600) -&gt; u2.Device:
+    """借出设备连接。调用者获得 u2 连接的使用权，同时设备被标记为 BUSY。
+
+    Returns: u2.Device 实例（由 DevicePool 管理，非独立连接）
+    Raises: DeviceBusyError 如果设备已被占用
+    """
+
+def return_device(serial: str, borrower: str):
+    """归还设备连接。释放设备占用，触发队列自动分配。
+    幂等：如果 borrower 不匹配则 no-op。
+    """</code></pre>
+
+<table class="tbl" style="margin-top:12px">
+<thead><tr><th>对比维度</th><th>旧架构</th><th>新架构</th></tr></thead>
+<tbody>
+<tr>
+  <td>设备连接</td>
+  <td>test_runner 独立 <code>u2.connect()</code></td>
+  <td><code>device_pool.borrow_device()</code> 借用</td>
+</tr>
+<tr>
+  <td>忙标记</td>
+  <td><code>_device_busy</code> (内存) + <code>Device.status</code> (DB) 双写</td>
+  <td>仅 <code>Device.status</code> (DB) — borrow/return 统一更新</td>
+</tr>
+<tr>
+  <td>并发保护</td>
+  <td>无</td>
+  <td><code>DevicePool._u2_lock</code> 全局保护所有 u2 操作</td>
+</tr>
+<tr>
+  <td>任务队列</td>
+  <td><code>_device_queue</code> (内存 dict)</td>
+  <td><code>TaskCard.objects.filter(status='queued')</code> (DB)</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="card risk">
+<h4><span class="badge b-p1">风险</span> borrow_device 与现有 connect_device 的关系</h4>
+<p><code>connect_device</code> 是用户在前端"连接设备"时调用的，设置 <code>locked_by</code>（用户绑定），属于 device_pool 的现有功能。</p>
+<p><code>borrow_device</code> 是 test_runner 在执行任务时调用的，设置 <code>occupied_by</code>（进程占用）。两者通过 DB 的 <code>Device.status</code> 和 <code>Device.occupied_by</code> 协调，不冲突。这个设计中，borrow_device 实际上复用了现有的 <code>acquire_device</code> 函数，只是增加了返回 u2 连接的能力。</p>
+</div>
+</div>
+
+<!-- ═══════════ SECTION 6 ═══════════ -->
+<div class="sec" id="s6">
+<h2>六、实施计划 — 三阶段递进</h2>
+
+<div class="g2">
+<div class="card impl">
+<h4><span class="badge b-phase">阶段 1</span> 止血 + 状态机 · 1 天</h4>
+<ol>
+  <li><strong>新建 <code>state_machine.py</code></strong> — 实现 RunStateMachine 全部 6 个方法</li>
+  <li><strong>修改 <code>views.py</code></strong> — 替换所有 TaskCard 手动状态更新为 <code>RunStateMachine.xxx()</code> 调用</li>
+  <li><strong>修改 <code>runner.py</code></strong> — 替换 finally 中的手动释放</li>
+  <li><strong>修改 <code>apps.py</code></strong> — 替换孤儿恢复逻辑为 <code>RunStateMachine.recover_orphans()</code>（含 TestRunRecord 清理）</li>
+  <li><strong>替换所有 7 处 <code>except: pass</code></strong> 为至少 <code>print(traceback)</code></li>
+</ol>
+<p style="margin-top:8px;font-size:12px;color:var(--text-secondary)">验收标准：创建任务→执行→崩溃重启→TaskCard 和 TestRunRecord 状态一致，僵尸记录清零</p>
+</div>
+
+<div class="card impl">
+<h4><span class="badge b-phase">阶段 2</span> 调度器重构 · 2 天</h4>
+<ol>
+  <li><strong>新建 <code>scheduler.py</code></strong> — 实现 DeviceScheduler</li>
+  <li><strong>修改 <code>apps.py</code></strong> — 启动时创建调度器，为每个 ONLINE 设备启动消费者协程</li>
+  <li><strong>修改 <code>views.py</code></strong> — start_test_run 改为调用 <code>RunStateMachine.enqueue()</code> + <code>DeviceScheduler.notify(serial)</code>；移除 <code>_device_queue</code> / <code>_start_next_queued</code> / <code>_schedule_next_queued</code> / <code>delayed_execute</code></li>
+  <li><strong>修改 <code>runner.py</code></strong> — 移除 <code>mark_device_busy/idle</code> 和 <code>_device_busy</code> / <code>_active_runs</code> / <code>_run_client_task</code>；dispatch 逻辑由 scheduler 替代</li>
+</ol>
+<p style="margin-top:8px;font-size:12px;color:var(--text-secondary)">验收标准：schedule chain 不再 fire-and-forget；队列任务在设备空闲后 2s 内被消费；协程死亡后自动恢复</p>
+</div>
+</div>
+
+<div class="card impl" style="margin-top:20px">
+<h4><span class="badge b-phase">阶段 3</span> 设备统一管理 · 2 天</h4>
+<ol>
+  <li><strong>修改 <code>device_pool/api.py</code></strong> — <code>borrow_device</code> 在 <code>acquire_device</code> 基础上增加返回 u2 连接</li>
+  <li><strong>修改 <code>test_runner/adapter.py</code></strong> — DeviceAdapter 接受从 device_pool 借来的连接，不自行创建</li>
+  <li><strong>修改 <code>test_runner/views.py</code></strong> — 移除独立 <code>u2.connect(serial)</code>，改为 <code>borrow_device(serial)</code></li>
+  <li><strong>修改 <code>test_runner/runner.py</code></strong> — 移除 runner.run() 中的 <code>acquire_device/release_device</code> 调用，这些由 scheduler 在更高层管理</li>
+  <li><strong>移除 <code>_device_busy</code></strong> — 调度决策改为参考 <code>Device.status</code> (DB)</li>
+</ol>
+<p style="margin-top:8px;font-size:12px;color:var(--text-secondary)">验收标准：test_runner 不再创建独立 u2 连接；element_locator 和 test_runner 不能同时操作同一设备；设备状态始终准确</p>
+</div>
+</div>
+
+<!-- ═══════════ SECTION 7 ═══════════ -->
+<div class="sec" id="s7">
+<h2>七、文件修改清单</h2>
+
+<table class="tbl">
+<thead><tr><th>文件</th><th>阶段</th><th>类型</th><th>变更摘要</th></tr></thead>
+<tbody>
+<tr><td colspan="4" style="font-weight:700;background:rgba(25,200,185,0.05)">新建文件</td></tr>
+<tr>
+  <td><code>apps/test_runner/state_machine.py</code></td>
+  <td>1</td>
+  <td><span class="badge b-new">新建</span></td>
+  <td>RunStateMachine 类：enqueue/dequeue/complete/fail/cancel/recover_orphans 6 个方法</td>
+</tr>
+<tr>
+  <td><code>apps/test_runner/scheduler.py</code></td>
+  <td>2</td>
+  <td><span class="badge b-new">新建</span></td>
+  <td>DeviceScheduler 类：per-device consumer loop + watchdog + 协程生命周期管理</td>
+</tr>
+<tr><td colspan="4" style="font-weight:700;background:rgba(25,200,185,0.05)">后端核心修改</td></tr>
+<tr>
+  <td><code>apps/test_runner/views.py</code></td>
+  <td>1+2+3</td>
+  <td><span class="badge b-p0">重构</span></td>
+  <td>移除：<code>_device_queue</code>、<code>_run_client_task</code>、<code>_enqueue</code>、<code>_dequeue</code>、<code>_queue_size</code>、<code>_schedule_next_queued</code>、<code>_start_next_queued</code>、<code>delayed_execute</code>。改为调用 RunStateMachine + DeviceScheduler</td>
+</tr>
+<tr>
+  <td><code>apps/test_runner/runner.py</code></td>
+  <td>1+2+3</td>
+  <td><span class="badge b-p0">重构</span></td>
+  <td>移除：<code>_device_busy</code>、<code>_active_runs</code>、<code>mark_device_busy</code>、<code>mark_device_idle</code>、<code>is_device_busy</code>、<code>get_active_run</code>、<code>stop_run</code>、<code>list_active_runs</code>。acquire_device/release_device 移到 scheduler 层。finally 中调用 RunStateMachine.complete/fail</td>
+</tr>
+<tr>
+  <td><code>apps/test_runner/apps.py</code></td>
+  <td>1+2</td>
+  <td><span class="badge b-p1">重写</span></td>
+  <td>ready() 中调用 RunStateMachine.recover_orphans() + DeviceScheduler 初始化 + 为 ONLINE 设备启动消费者协程</td>
+</tr>
+<tr>
+  <td><code>apps/test_runner/models.py</code></td>
+  <td>1</td>
+  <td><span class="badge b-ok">小改</span></td>
+  <td>TaskCard 增加 <code>run_record</code> FK（已有），确认 <code>TestRunRecord</code> 的 <code>finished_at</code> 在异常时正确填充</td>
+</tr>
+<tr>
+  <td><code>apps/device_pool/api.py</code></td>
+  <td>3</td>
+  <td><span class="badge b-ok">新增</span></td>
+  <td>新增 <code>borrow_device(serial, borrower, timeout) → u2.Device</code> 和 <code>return_device(serial, borrower)</code></td>
+</tr>
+<tr>
+  <td><code>apps/test_runner/adapter.py</code></td>
+  <td>3</td>
+  <td><span class="badge b-ok">小改</span></td>
+  <td>DeviceAdapter 构造函数从接收 <code>u2.Device</code> 改为接收 <code>serial</code>，内部通过 device_pool 获取连接</td>
+</tr>
+<tr><td colspan="4" style="font-weight:700;background:rgba(25,200,185,0.05)">前端适配</td></tr>
+<tr>
+  <td><code>frontend/.../test-runner/index.vue</code></td>
+  <td>1</td>
+  <td><span class="badge b-ok">小改</span></td>
+  <td>适配新的 outcome 语义（增加 timeout 状态显示）；WS 断开后主动重连</td>
+</tr>
+<tr>
+  <td><code>frontend/.../test-runner/TaskDetail.vue</code></td>
+  <td>1</td>
+  <td><span class="badge b-ok">小改</span></td>
+  <td>增加 runRecord 状态轮询（5s 间隔），不仅仅是 WS；WS 断开自动重连</td>
+</tr>
+<tr><td colspan="4" style="font-weight:700;background:rgba(25,200,185,0.05)">删除内容</td></tr>
+<tr>
+  <td><code>apps/test_runner/runner.py</code></td>
+  <td>2+3</td>
+  <td><span class="badge b-p0">删除</span></td>
+  <td>删除全局变量：<code>_device_busy</code>、<code>_active_runs</code>。删除函数：<code>is_device_busy</code>、<code>mark_device_busy</code>、<code>mark_device_idle</code>、<code>get_active_run</code>、<code>stop_run</code>、<code>list_active_runs</code></td>
+</tr>
+<tr>
+  <td><code>apps/test_runner/views.py</code></td>
+  <td>2</td>
+  <td><span class="badge b-p0">删除</span></td>
+  <td>删除全局变量：<code>_device_queue</code>、<code>_run_client_task</code>。删除函数：<code>_enqueue</code>、<code>_dequeue</code>、<code>_queue_size</code>、<code>_schedule_next_queued</code>、<code>_start_next_queued</code>、<code>delayed_execute</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<!-- ═══════════ SECTION 8 ═══════════ -->
+<div class="sec" id="s8">
+<h2>八、关键场景前后对比</h2>
+
+<div class="compare-grid">
+<div class="compare-old">
+<h5>❌ 旧架构：创建任务并执行</h5>
+<pre style="font-size:11px;line-height:1.5;color:#8a6d14">
+1. start_test_run()
+2. 查 is_device_busy() (内存)
+3. 查 dev.status (DB)
+4. dp_acquire_device (DB写)
+5. mark_device_busy (内存写)
+6. TaskCard→running (DB写)
+7. asyncio.create_task(...) ← fire-and-forget
+8. _execute_tests
+9. 创建 TestRunRecord
+10. runner.run()
+11.   dp_acquire_device (第二次!)
+12.   mark_device_busy (第二次!)
+13.   ...执行...
+14.   finally: dp_release_device (第一次释放!)
+15.   finally: mark_device_idle
+16. 持久化 TestResult (可能失败→吞错)
+17. 更新 TaskCard→done (可能失败→吞错)
+18. _schedule_next_queued
+19.   asyncio.create_task(...) ← fire-and-forget
+
+状态变量涉及: 7 个
+写操作次数: 10+ 次 (3-4 个系统)
+静默吞错点: 7 处
+</pre>
+</div>
+<div class="compare-new">
+<h5>✅ 新架构：创建任务并执行</h5>
+<pre style="font-size:11px;line-height:1.5;color:var(--success)">
+1. start_test_run()
+2. RunStateMachine.enqueue(taskCard, serial)
+   → TaskCard.status=queued (单次 DB 写)
+3. DeviceScheduler 消费者协程 (已在运行)
+4. 检测到 queued 任务
+5. borrow_device(serial) → u2.Device
+   → Device.status=BUSY (单次 DB 写)
+6. RunStateMachine.dequeue(taskCard)
+   → TaskCard.status=running + 创建 TestRunRecord
+   (同一事务，原子操作)
+7. runner.run() ...执行...
+8. RunStateMachine.complete/fail(taskCard, runRecord)
+   → 原子更新 TaskCard + TestRunRecord
+9. return_device(serial) → Device.status=ONLINE
+10. 协程继续循环 → 检查下一个 queued 任务
+
+状态变量涉及: 1 个 (DB，TaskCard 驱动)
+写操作次数: 4 次 (全在同一事务)
+静默吞错点: 0 处 (所有错误可观测)
+</pre>
+</div>
+</div>
+
+<div class="compare-grid" style="margin-top:16px">
+<div class="compare-old">
+<h5>❌ 旧架构：服务崩溃后重启</h5>
+<pre style="font-size:11px;line-height:1.5;color:#8a6d14">
+1. 进程重启
+2. _device_busy 清空 ✓
+3. _active_runs 清空 ✓
+4. _device_queue 从 DB 重建 (部分)
+5. TaskCard(running) → interrupted ✓
+6. TestRunRecord(RUNNING) → 不修复 🔴
+7. Device(BUSY) → 等 300s 超时 🟠
+8. 队列恢复后不一定自启动 🔴
+9. _run_client_task 永久丢失 🔴
+</pre>
+</div>
+<div class="compare-new">
+<h5>✅ 新架构：服务崩溃后重启</h5>
+<pre style="font-size:11px;line-height:1.5;color:var(--success)">
+1. 进程重启
+2. apps.py: RunStateMachine.recover_orphans()
+   → TaskCard(running) → interrupted
+   → TestRunRecord(RUNNING) → FAILED
+   (同一事务)
+3. apps.py: DeviceScheduler 初始化
+   → 为每个 ONLINE 设备启动消费者协程
+4. 每个协程检查该设备是否有 queued 任务
+   → 有 → borrow_device → 执行
+   → 无 → sleep 2s 循环
+5. 所有状态仅存在于 DB 中
+6. 无内存变量丢失问题
+7. 重启后 3s 内队列恢复消费
+</pre>
+</div>
+</div>
+</div>
+
+<!-- ═══════════ SECTION 9 ═══════════ -->
+<div class="sec" id="s9">
+<h2>九、验证方案</h2>
+
+<table class="tbl">
+<thead><tr><th>#</th><th>验证场景</th><th>操作</th><th>期望结果</th><th>工具</th></tr></thead>
+<tbody>
+<tr>
+  <td>V1</td><td>编译检查</td><td><code>python manage.py check</code> + <code>npx vite build</code></td><td>0 errors</td><td>CLI</td></tr>
+<tr>
+  <td>V2</td><td>正常执行流程</td><td>创建 TaskCard → 点击执行 → 等待完成</td><td>TaskCard=done/completed + TestRunRecord=COMPLETED + TestResult 有数据</td><td>浏览器 + API</td></tr>
+<tr>
+  <td>V3</td><td>崩溃恢复</td><td>执行中 → kill Django → 重启 → 查看状态</td><td>TaskCard=done/interrupted + TestRunRecord=FAILED + 设备=ONLINE</td><td>API + DB 查询</td></tr>
+<tr>
+  <td>V4</td><td>队列消费</td><td>连续创建 3 个任务 → 观察执行顺序</td><td>按 FIFO 顺序依次执行，无卡死</td><td>浏览器</td></tr>
+<tr>
+  <td>V5</td><td>设备冲突</td><td>element_locator 连接设备 → 同时 test_runner 执行</td><td>element_locator dump 返回 409 "设备正被占用"</td><td>浏览器 + API</td></tr>
+<tr>
+  <td>V6</td><td>协程死亡恢复</td><td>模拟消费者协程异常 → 等待 3s</td><td>协程自动重启，队列继续消费</td><td>日志 + API</td></tr>
+<tr>
+  <td>V7</td><td>前端 WS 重连</td><td>执行中 → 断开 WS → 观察</td><td>TaskDetail 3s 内自动重连，进度继续更新</td><td>浏览器 DevTools</td></tr>
+<tr>
+  <td>V8</td><td>用例禁用后执行</td><td>创建任务包含用例 A → 禁用例 A → 执行任务</td><td>静默跳过用例 A，其他用例正常执行（与旧行为一致，但不应导致队列卡死）</td><td>API</td></tr>
+</tbody>
+</table>
+
+<div class="card risk" style="margin-top:20px">
+<h4><span class="badge b-p1">风险</span> 迁移兼容性</h4>
+<ul>
+  <li><strong>TaskCard 旧数据</strong>：升级后首次启动时 <code>recover_orphans()</code> 会修复所有旧数据的不一致状态。无需手动迁移。</li>
+  <li><strong>API 兼容</strong>：所有现有 REST 端点保持不变（返回格式不变）。前端无需大改。</li>
+  <li><strong>rollback 方案</strong>：如果阶段 2 调度器有问题，可先回退到阶段 1（仅状态机），阶段 1 只替换状态更新逻辑，不改变调度行为。</li>
+  <li><strong>device_pool API 新增</strong>：<code>borrow_device</code> 和 <code>return_device</code> 是纯新增，不影响现有 API。阶段 3 可独立回退。</li>
+</ul>
+</div>
+</div>
+
+<!-- FOOTER -->
+<div class="ft">
+  <p>Android-AutoTests · test_runner 架构重构方案 · 生成于 2026-07-08</p>
+  <p>设计原则：单一真相来源 · 原子状态转换 · 可观测 · 可恢复 | 避免"加代码不修架构"</p>
+</div>
+
+</div>
+</body>
+</html>

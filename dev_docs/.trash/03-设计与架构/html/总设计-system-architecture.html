@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Android-AutoTests — 系统架构</title>
+  <style>
+    :root {
+      --c-bg: #f8fafc;
+      --c-canvas: #ffffff;
+      --c-border: #cbd5e1;
+      --c-text-main: #0f172a;
+      --c-text-sub: #64748b;
+      --c-accent: #0f172a;
+      --font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      --font-mono: 'SF Mono', Monaco, Consolas, monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--c-bg);
+      font-family: var(--font-ui);
+      color: var(--c-text-main);
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+    }
+    .diagram-canvas {
+      background: var(--c-canvas);
+      border: 2px solid var(--c-border);
+      padding: 32px;
+      width: 1100px;
+    }
+    .diagram-header {
+      border-bottom: 1px solid var(--c-border);
+      padding-bottom: 16px;
+      margin-bottom: 32px;
+    }
+    .diagram-title { font-size: 22px; font-weight: 600; }
+    .diagram-subtitle { font-size: 12px; font-weight: 500; color: var(--c-text-sub); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+    /* Layer Block */
+    .layer {
+      border: 1px solid var(--c-border);
+      margin-bottom: 8px;
+      padding: 16px 20px;
+    }
+    .layer-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--c-text-sub);
+      margin-bottom: 12px;
+    }
+    .layer-content {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Node */
+    .node {
+      background: var(--c-canvas);
+      border: 1px solid var(--c-border);
+      padding: 10px 14px;
+      min-width: 120px;
+    }
+    .node-head {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .node-sub {
+      font-size: 11px;
+      color: var(--c-text-sub);
+      font-family: var(--font-mono);
+    }
+    .node--accent {
+      border-left: 3px solid var(--c-accent);
+    }
+
+    /* Connector */
+    .connectors {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 4px 0 12px 0;
+      padding: 0 20px;
+    }
+    .conn-line {
+      flex: 1;
+      border-top: 1px solid var(--c-border);
+      position: relative;
+    }
+    .conn-dashed { border-top-style: dashed; }
+    .conn-label {
+      font-size: 10px;
+      color: var(--c-text-sub);
+      font-family: var(--font-mono);
+      white-space: nowrap;
+      padding: 0 8px;
+    }
+
+    /* Profile sidebar */
+    .profile-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 16px;
+      padding: 12px;
+      background: #f1f5f9;
+      border: 1px solid var(--c-border);
+    }
+    .profile-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-family: var(--font-mono);
+    }
+    .profile-item .key { color: var(--c-text-sub); }
+    .profile-item .val { font-weight: 500; }
+  </style>
+</head>
+<body>
+
+<!-- ========== DIAGRAM 1: System Architecture ========== -->
+<div class="diagram-canvas">
+  <div class="diagram-header">
+    <h1 class="diagram-title">Android-AutoTests 系统架构</h1>
+    <p class="diagram-subtitle">SYSTEM ARCHITECTURE — 4-LAYER DESIGN</p>
+  </div>
+
+  <!-- Layer 1: Frontend -->
+  <div class="layer">
+    <div class="layer-title">L1 · 前端层 — Vue 3 SPA + iframe 微前端</div>
+    <div class="layer-content">
+      <div class="node node--accent">
+        <div class="node-head">Shell 主框架</div>
+        <div class="node-sub">index.html · Vue 3 App</div>
+      </div>
+      <div class="node">
+        <div class="node-head">store.js</div>
+        <div class="node-sub">reactive proxy 状态</div>
+      </div>
+      <div class="node">
+        <div class="node-head">api.js</div>
+        <div class="node-sub">fetch 封装 · 28 API</div>
+      </div>
+      <div class="node">
+        <div class="node-head">ws.js</div>
+        <div class="node-sub">WebSocket 管理 · 重连</div>
+      </div>
+      <div class="node">
+        <div class="node-head">bridge.js</div>
+        <div class="node-sub">postMessage 桥接</div>
+      </div>
+      <div class="node">
+        <div class="node-head">5 × iframe 功能页</div>
+        <div class="node-sub">elements · runner · reports · cases · flows</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connector: HTTP / WS -->
+  <div class="connectors">
+    <div class="conn-line"></div>
+    <span class="conn-label">REST :8765</span>
+    <div class="conn-line"></div>
+    <span class="conn-label">WS :8765</span>
+    <div class="conn-line"></div>
+  </div>
+
+  <!-- Layer 2: Service -->
+  <div class="layer">
+    <div class="layer-title">L2 · 服务层 — FastAPI · web_server.py</div>
+    <div class="layer-content">
+      <div class="node node--accent">
+        <div class="node-head">DeviceManager</div>
+        <div class="node-sub">u2 设备单例 · connect / disconnect</div>
+      </div>
+      <div class="node">
+        <div class="node-head">ScreenshotStream</div>
+        <div class="node-sub">2fps 截图广播 · /ws/screenshot</div>
+      </div>
+      <div class="node">
+        <div class="node-head">gen_xpath_candidates</div>
+        <div class="node-sub">DUMP → 8 种 XPath 策略 · 排序</div>
+      </div>
+      <div class="node">
+        <div class="node-head">REST Endpoints</div>
+        <div class="node-sub">/api/devices · /api/dump · /api/action · /api/pages · /api/flows · /api/tests/* · /api/export/*</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connector: asyncio -->
+  <div class="connectors">
+    <div class="conn-line conn-dashed"></div>
+    <span class="conn-label">asyncio.run_in_executor</span>
+    <div class="conn-line conn-dashed"></div>
+  </div>
+
+  <!-- Layer 3: Engine -->
+  <div class="layer">
+    <div class="layer-title">L3 · 执行引擎层 — core/</div>
+    <div class="layer-content">
+      <div class="node node--accent">
+        <div class="node-head">DeviceAdapter</div>
+        <div class="node-sub">封装 u2 exists / click / get_text</div>
+      </div>
+      <div class="node">
+        <div class="node-head">StepExecutor</div>
+        <div class="node-sub">14 种步骤 handler 分发</div>
+      </div>
+      <div class="node">
+        <div class="node-head">TestRunner</div>
+        <div class="node-sub">异步压力测试 · WS 回调</div>
+      </div>
+      <div class="node">
+        <div class="node-head">ReportGenerator</div>
+        <div class="node-sub">CSV (BOM) · MD · JSON</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connector -->
+  <div class="connectors">
+    <div class="conn-line"></div>
+    <span class="conn-label">uiautomator2 · ADB</span>
+    <div class="conn-line"></div>
+    <span class="conn-label">SQLite WAL</span>
+    <div class="conn-line"></div>
+  </div>
+
+  <!-- Layer 4: Infrastructure -->
+  <div class="layer" style="display: flex; gap: 24px;">
+    <div style="flex: 1;">
+      <div class="layer-title">L4A · 物理层</div>
+      <div class="layer-content">
+        <div class="node" style="min-width: 180px;">
+          <div class="node-head">Android 设备</div>
+          <div class="node-sub">Samsung RF8N21MSW7A</div>
+          <div class="node-sub">1440 × 3040</div>
+        </div>
+      </div>
+    </div>
+    <div style="flex: 1;">
+      <div class="layer-title">L4B · 数据层</div>
+      <div class="layer-content">
+        <div class="node" style="min-width: 180px;">
+          <div class="node-head">SQLite · data/app.db</div>
+          <div class="node-sub">7 表 · WAL 模式</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile -->
+  <div class="profile-stack">
+    <div class="profile-item"><span class="key">Language</span><span class="val">Python 3 · JavaScript ES Module</span></div>
+    <div class="profile-item"><span class="key">Device SDK</span><span class="val">uiautomator2 · ADB</span></div>
+    <div class="profile-item"><span class="key">Transport</span><span class="val">REST (28 endpoints) + WebSocket (2 channels)</span></div>
+    <div class="profile-item"><span class="key">Lineage</span><span class="val">D:/Github/sku_stress_test (PySide6 → FastAPI)</span></div>
+  </div>
+</div>
+
+</body>
+</html>

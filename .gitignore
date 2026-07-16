@@ -82,17 +82,6 @@ demo_test_*.yaml
 # ── Third-party project (not part of this repo) ──
 PM-Project-main/
 
-# ── Claude Code config (local AI assistant configuration) ──
-.claude/
-.agents/
-
-# ── Dev documentation (design docs, PRD archives) ──
-dev_docs/
-
-# ── Claude Code entry files ──
-AGENTS.md
-CLAUDE.md
-
 # ── Temp files ──
 *.tmp.*
 skills-lock.json

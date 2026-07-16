@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>用户人群分析 · Android-AutoTests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #6fba2c; --primary-hover: #8cc94e; --primary-active: #5a9e1e; --primary-bg: #e8f5e0;
+  --text: #3a7a10; --text-body: #4a5a3a; --text-secondary: #7a8a6a; --text-muted: #9aaa8a;
+  --bg: #fafcf6; --bg-card: #ffffff; --bg-emphasis: #f0f7e8;
+  --border: #c8d8b8; --border-light: #e0e8d4;
+  --accent: #11a89b; --accent-bg: #e6f9f6;
+  --pink: #f8a6b2; --pink-bg: #fef0f4;
+  --blue: #889df0; --blue-bg: #eef1fb;
+  --yellow: #f7cd67; --yellow-bg: #fef9e7;
+  --r-sm: 10px; --r-base: 16px; --r-lg: 22px; --r-pill: 50px;
+  --shadow: 0 2px 12px rgba(0,0,0,.06); --shadow-lg: 0 6px 24px rgba(0,0,0,.10);
+  --font-display: Nunito, 'Noto Sans SC', sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Nunito,'Noto Sans SC',-apple-system,'PingFang SC',sans-serif;font-weight:500;color:var(--text-body);background:var(--bg);line-height:1.75;min-height:100vh}
+.container{max-width:1000px;margin:0 auto;padding:48px 24px 80px}
+
+/* Hero */
+.hero{text-align:center;padding:48px 0 40px}
+.hero-badge{display:inline-block;background:var(--primary-bg);color:var(--primary-active);font-size:11px;font-weight:800;letter-spacing:.06em;padding:4px 14px;border-radius:var(--r-pill);border:1.5px solid var(--primary);margin-bottom:16px}
+.hero h1{font-family:var(--font-display);font-size:40px;font-weight:900;color:var(--text);line-height:1.25;margin-bottom:12px}
+.hero .subtitle{font-size:17px;color:var(--text-secondary);font-weight:500;max-width:680px;margin:0 auto;line-height:1.7}
+
+/* User summary table */
+.user-summary{background:var(--bg-card);border:2px solid var(--border);border-radius:var(--r-lg);overflow:hidden;margin-bottom:40px;box-shadow:var(--shadow-lg)}
+.user-summary table{width:100%;border-collapse:collapse;font-size:13px}
+.user-summary thead th{background:var(--primary-bg);color:var(--primary-active);font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:14px 16px;text-align:left;border-bottom:2px solid var(--primary)}
+.user-summary tbody td{padding:14px 16px;border-bottom:1px solid var(--border-light);vertical-align:top}
+.user-summary tbody tr:last-child td{border-bottom:none}
+.user-summary .role-tag{display:inline-block;font-weight:800;font-size:12px;padding:4px 12px;border-radius:var(--r-pill)}
+.tag-primary{background:var(--primary-bg);color:var(--primary-active);border:1.5px solid var(--primary)}
+.tag-secondary{background:var(--accent-bg);color:var(--accent);border:1.5px solid var(--accent)}
+.tag-tertiary{background:var(--blue-bg);color:var(--blue);border:1.5px solid var(--blue)}
+.priority-star{color:var(--primary);font-weight:900}
+
+/* Sections */
+section{margin-bottom:48px}
+section h2{font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--text);margin-bottom:20px;display:flex;align-items:center;gap:10px}
+section h2 .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+section p{font-size:14px;margin-bottom:12px;color:var(--text-body)}
+
+/* Persona cards */
+.persona{display:grid;grid-template-columns:280px 1fr;gap:0;background:var(--bg-card);border-radius:var(--r-lg);overflow:hidden;margin-bottom:28px;border:2px solid var(--border-light);box-shadow:var(--shadow)}
+.persona-side{padding:28px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.persona-side .avatar{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:14px}
+.persona-side .name{font-family:var(--font-display);font-size:20px;font-weight:900;color:var(--text);margin-bottom:4px}
+.persona-side .role{font-size:12px;color:var(--text-secondary);font-weight:700}
+.persona-side .tag-row{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.persona-side .freq-tag{font-size:10px;font-weight:800;padding:3px 12px;border-radius:var(--r-pill);letter-spacing:.04em}
+.persona-body{padding:28px 28px 28px 0}
+.persona-body h3{font-family:var(--font-display);font-size:14px;font-weight:800;color:var(--text);margin-bottom:8px}
+.persona-body .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.persona-body .info-item{background:var(--bg);border-radius:var(--r-sm);padding:12px 14px}
+.persona-body .info-item dt{font-size:10px;font-weight:800;letter-spacing:.05em;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px}
+.persona-body .info-item dd{font-size:13px;color:var(--text-body);line-height:1.55}
+.persona-body .scenario-list{list-style:none;padding:0}
+.persona-body .scenario-list li{padding:8px 0;font-size:13px;border-bottom:1px solid var(--border-light);display:flex;align-items:flex-start;gap:8px}
+.persona-body .scenario-list li:last-child{border-bottom:none}
+.scenario-icon{flex-shrink:0;font-size:16px}
+
+.p1 .persona-side{background:linear-gradient(180deg,var(--primary-bg) 0%,#f0f8e8 100%)}
+.p1 .avatar{background:var(--primary-bg);border:3px solid var(--primary)}
+.p1{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-bg)}
+.p2 .persona-side{background:linear-gradient(180deg,var(--accent-bg) 0%,#f0fafa 100%)}
+.p2 .avatar{background:var(--accent-bg);border:3px solid var(--accent)}
+.p2{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-bg)}
+.p3 .persona-side{background:linear-gradient(180deg,var(--blue-bg) 0%,#f4f6fd 100%)}
+.p3 .avatar{background:var(--blue-bg);border:3px solid var(--blue)}
+
+/* Journey cards */
+.journey{background:var(--bg-card);border:2px solid var(--border-light);border-radius:var(--r-lg);padding:28px 32px;margin-bottom:20px;box-shadow:var(--shadow)}
+.journey h3{font-family:var(--font-display);font-size:17px;font-weight:900;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.journey h3 .step-num{width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0}
+.journey-steps{display:flex;align-items:flex-start;gap:0;overflow-x:auto}
+.journey-step{flex:1;min-width:140px;text-align:center;padding:0 8px;position:relative}
+.journey-step:not(:last-child)::after{content:'→';position:absolute;right:-4px;top:24px;font-size:18px;color:var(--primary);font-weight:900}
+.journey-step .js-icon{font-size:28px;margin-bottom:8px}
+.journey-step .js-title{font-size:12px;font-weight:800;color:var(--text);margin-bottom:4px}
+.journey-step .js-desc{font-size:11px;color:var(--text-secondary);line-height:1.5}
+
+/* Pain / Gain split */
+.pain-gain-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.pain-card,.gain-card{border-radius:var(--r-base);padding:24px 28px}
+.pain-card{background:#fef5f5;border:2px solid #f5c8c8}
+.gain-card{background:var(--primary-bg);border:2px solid var(--primary)}
+.pain-card h3{color:#c53030;font-family:var(--font-display);font-size:15px;font-weight:900;margin-bottom:12px}
+.gain-card h3{color:var(--primary-active);font-family:var(--font-display);font-size:15px;font-weight:900;margin-bottom:12px}
+.pain-card ul,.gain-card ul{list-style:none;padding:0}
+.pain-card li,.gain-card li{padding:6px 0;font-size:13px;display:flex;align-items:flex-start;gap:8px}
+.pain-card li::before{content:'😣';flex-shrink:0;font-size:14px}
+.gain-card li::before{content:'✨';flex-shrink:0;font-size:14px}
+
+/* Non-target */
+.non-target{background:var(--bg-card);border:2px dashed var(--border);border-radius:var(--r-lg);padding:28px 32px;margin-top:24px}
+.non-target h3{font-family:var(--font-display);font-size:15px;font-weight:800;color:var(--text-muted);margin-bottom:12px}
+.non-target .exclude-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.non-target .exclude-item{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:var(--bg);border-radius:var(--r-sm)}
+.non-target .exclude-item .ei-icon{font-size:20px;flex-shrink:0}
+.non-target .exclude-item strong{display:block;font-size:12px;color:var(--text);margin-bottom:2px}
+.non-target .exclude-item span{font-size:11px;color:var(--text-muted)}
+
+/* Success criteria */
+.criteria-table{background:var(--bg-card);border-radius:var(--r-base);overflow:hidden;border:1.5px solid var(--border-light)}
+.criteria-table table{width:100%;border-collapse:collapse;font-size:13px}
+.criteria-table thead th{background:var(--bg-emphasis);color:var(--text);font-size:10px;font-weight:800;letter-spacing:.05em;padding:12px 16px;text-align:left;border-bottom:2px solid var(--border)}
+.criteria-table tbody td{padding:12px 16px;border-bottom:1px solid var(--border-light)}
+.criteria-table tbody tr:last-child td{border-bottom:none}
+.criteria-table .ok{color:var(--primary-active);font-weight:800}
+.criteria-table .partial{color:#c7840a;font-weight:800}
+.criteria-table .todo{color:var(--text-muted)}
+
+/* Footer */
+.footer{text-align:center;padding:32px 0 0;border-top:1px solid var(--border-light);margin-top:48px;font-size:11px;color:var(--text-muted)}
+.footer a{color:var(--primary-active);font-weight:700;text-decoration:none}
+
+@media(max-width:768px){
+  .persona{grid-template-columns:1fr}
+  .persona-body{padding:0 24px 28px}
+  .persona-body .info-grid,.pain-gain-grid,.non-target .exclude-grid{grid-template-columns:1fr}
+  .journey-steps{flex-direction:column;gap:16px}
+  .journey-step:not(:last-child)::after{content:'↓';right:50%;top:auto;bottom:-18px;transform:translateX(50%)}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="hero">
+    <div class="hero-badge">立项验证 · 用户人群分析</div>
+    <h1>目标用户画像与场景分析</h1>
+    <p class="subtitle">明确谁在用、为什么用、怎么用、以及哪些人不是我们的用户——指导功能优先级与交互设计决策。</p>
+  </div>
+
+  <!-- User summary table -->
+  <div class="user-summary">
+    <table>
+      <thead>
+        <tr><th>角色</th><th>画像</th><th>核心需求</th><th>使用频次</th><th>优先级</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="role-tag tag-primary">测试工程师</span></td>
+          <td>25-35 岁，1-5 年 Android 测试经验，会写简单脚本但不擅长 UI 自动化框架</td>
+          <td>快速定位元素 XPath、批量回归执行、失败自动截图诊断、专业测试报告</td>
+          <td>🟢 每日</td>
+          <td><span class="priority-star">★★★</span> 核心用户</td>
+        </tr>
+        <tr>
+          <td><span class="role-tag tag-secondary">QA 负责人</span></td>
+          <td>30-40 岁，管理 3-10 人测试团队，关注效率与质量指标</td>
+          <td>多设备并行执行、用例通过率趋势、团队工作负载可视化、报告汇总</td>
+          <td>🟡 每周 2-3 次</td>
+          <td><span class="priority-star">★★</span> 次要用户</td>
+        </tr>
+        <tr>
+          <td><span class="role-tag tag-tertiary">产品经理</span></td>
+          <td>28-38 岁，不写代码，关注功能是否正常、冒烟是否通过</td>
+          <td>一键执行冒烟用例、查看通过/失败概览、不需要理解 XPath 和技术细节</td>
+          <td>🟠 按需（发版前/验收时）</td>
+          <td><span class="priority-star">★</span> 辅助用户</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Persona 1: Test Engineer -->
+  <section>
+    <h2><span class="dot" style="background:var(--primary)"></span>核心用户画像</h2>
+
+    <div class="persona p1">
+      <div class="persona-side">
+        <div class="avatar">🧑‍💻</div>
+        <div class="name">张伟</div>
+        <div class="role">Android 测试工程师 · 3年经验</div>
+        <div class="tag-row">
+          <span class="freq-tag" style="background:var(--primary-bg);color:var(--primary-active)">每日使用</span>
+          <span class="freq-tag" style="background:var(--bg);color:var(--text-secondary);border:1px solid var(--border)">核心用户</span>
+        </div>
+      </div>
+      <div class="persona-body">
+        <h3>📋 基本画像</h3>
+        <div class="info-grid">
+          <div class="info-item"><dt>年龄 / 学历</dt><dd>27 岁 · 本科 · 计算机相关</dd></div>
+          <div class="info-item"><dt>技能水平</dt><dd>会 Python + ADB 基础命令；用过 uiautomator2 但不喜欢手写 XPath</dd></div>
+          <div class="info-item"><dt>日常工作</dt><dd>手工回归测试占 60% 时间；每周跑 2-3 轮完整回归，每轮约 50 条用例</dd></div>
+          <div class="info-item"><dt>痛点</dt><dd>手写 XPath 易出错；手工回归耗时长；测试结果靠截图+Excel 记录，复盘困难</dd></div>
+        </div>
+        <h3>🔁 典型使用场景</h3>
+        <ul class="scenario-list">
+          <li><span class="scenario-icon">📱</span><span><strong>场景 1：日常回归</strong> — 早上打开平台 → 连设备 → 选回归用例集 → 设循环 1 次 → 执行 → 下班前看报告。每天重复。</span></li>
+          <li><span class="scenario-icon">🔍</span><span><strong>场景 2：新版本适配</strong> — App 发新版本 → dump 新页面 UI → 检查 XPath 是否变化 → 更新受影响用例的步骤。</span></li>
+          <li><span class="scenario-icon">🐛</span><span><strong>场景 3：Bug 复现</strong> — 收到 Bug → 用元素定位截图看页面状态 → 写一个针对性用例 → 循环执行 10 次确认稳定性。</span></li>
+          <li><span class="scenario-icon">🤖</span><span><strong>场景 4：AI 辅助</strong> — 懒得手动编排步骤 → 打开 AI 助手 →「给支付页创建冒烟用例」→ AI 自动搜索元素生成 → 微调保存。</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="persona p2">
+      <div class="persona-side">
+        <div class="avatar">👩‍💼</div>
+        <div class="name">陈敏</div>
+        <div class="role">QA Team Lead · 8年经验</div>
+        <div class="tag-row">
+          <span class="freq-tag" style="background:var(--accent-bg);color:var(--accent)">每周 2-3 次</span>
+          <span class="freq-tag" style="background:var(--bg);color:var(--text-secondary);border:1px solid var(--border)">次要用户</span>
+        </div>
+      </div>
+      <div class="persona-body">
+        <h3>📋 基本画像</h3>
+        <div class="info-grid">
+          <div class="info-item"><dt>年龄 / 学历</dt><dd>34 岁 · 硕士 · 软件工程</dd></div>
+          <div class="info-item"><dt>技能水平</dt><dd>有编码背景但现在主要做管理；能读脚本但不亲自写；关注数据而非实现细节</dd></div>
+          <div class="info-item"><dt>日常工作</dt><dd>管理 5 人测试团队；分配测试任务；审核测试报告；向研发负责人汇报质量指标</dd></div>
+          <div class="info-item"><dt>痛点</dt><dd>不知道团队测试覆盖率；手工汇总报告费时；设备资源分配冲突（多人抢一台手机）</dd></div>
+        </div>
+        <h3>🔁 典型使用场景</h3>
+        <ul class="scenario-list">
+          <li><span class="scenario-icon">📊</span><span><strong>场景 1：周报准备</strong> — 周五下午打开平台 → 看本周执行历史 → 导出通过率趋势 → 截图贴周报。</span></li>
+          <li><span class="scenario-icon">📱</span><span><strong>场景 2：资源调度</strong> — 团队多人需要同一台设备 → 设备池排队机制自动调度 → 看谁在占用、还要多久。</span></li>
+          <li><span class="scenario-icon">✅</span><span><strong>场景 3：发版验收</strong> — 发版前 → 指定团队成员在平台上跑完整回归 → 查看全部 PASS 才签字放行。</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="persona p3">
+      <div class="persona-side">
+        <div class="avatar">👨‍💼</div>
+        <div class="name">李然</div>
+        <div class="role">产品经理 · 5年经验</div>
+        <div class="tag-row">
+          <span class="freq-tag" style="background:var(--blue-bg);color:var(--blue)">按需使用</span>
+          <span class="freq-tag" style="background:var(--bg);color:var(--text-secondary);border:1px solid var(--border)">辅助用户</span>
+        </div>
+      </div>
+      <div class="persona-body">
+        <h3>📋 基本画像</h3>
+        <div class="info-grid">
+          <div class="info-item"><dt>年龄 / 学历</dt><dd>30 岁 · 本科 · 非技术背景</dd></div>
+          <div class="info-item"><dt>技能水平</dt><dd>不会写代码；用 Excel 管理需求；理解 App 功能但不理解技术实现</dd></div>
+          <div class="info-item"><dt>日常工作</dt><dd>写 PRD、跟进开发进度、验收功能、与测试确认 Bug 修复情况</dd></div>
+          <div class="info-item"><dt>痛点</dt><dd>验收时要等测试同学跑完才能知道结果；想自己快速验证但又不会用测试工具</dd></div>
+        </div>
+        <h3>🔁 典型使用场景</h3>
+        <ul class="scenario-list">
+          <li><span class="scenario-icon">🚀</span><span><strong>场景 1：发版前冒烟</strong> — 版本提测前 → 打开平台 → 点「冒烟用例集」→ 一键执行 → 看到全部绿色 ✓ → 放心提测。</span></li>
+          <li><span class="scenario-icon">💬</span><span><strong>场景 2：AI 快速验证</strong> — 不确定某个功能是否正常 → 打开 AI 助手 →「帮我在设备上打开 App 看看首页是否正常加载」→ AI 截图回复。</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- User Journey -->
+  <section>
+    <h2><span class="dot" style="background:var(--accent)"></span>核心用户旅程</h2>
+    <p>以测试工程师张伟的「每日回归测试」为蓝本，描绘从打开平台到完成报告的完整路径。</p>
+
+    <div class="journey">
+      <h3><span class="step-num">1</span> 登录 & 连接设备</h3>
+      <div class="journey-steps">
+        <div class="journey-step"><div class="js-icon">🔐</div><div class="js-title">登录平台</div><div class="js-desc">admin 账号统一登录，JWT 自动续期</div></div>
+        <div class="journey-step"><div class="js-icon">📱</div><div class="js-title">查看设备池</div><div class="js-desc">确认目标设备 ONLINE</div></div>
+        <div class="journey-step"><div class="js-icon">🔒</div><div class="js-title">锁定设备</div><div class="js-desc">锁定防止他人占用</div></div>
+      </div>
+    </div>
+
+    <div class="journey">
+      <h3><span class="step-num">2</span> 执行回归用例</h3>
+      <div class="journey-steps">
+        <div class="journey-step"><div class="js-icon">📋</div><div class="js-title">选择用例集</div><div class="js-desc">从用例管理模块勾选回归用例</div></div>
+        <div class="journey-step"><div class="js-icon">⚙️</div><div class="js-title">配置参数</div><div class="js-desc">设 loop=1，选目标设备</div></div>
+        <div class="journey-step"><div class="js-icon">▶️</div><div class="js-title">启动执行</div><div class="js-desc">异步后台跑，前端 WS 实时看进度</div></div>
+        <div class="journey-step"><div class="js-icon">👀</div><div class="js-title">监控进度</div><div class="js-desc">每步结果实时推送，失败即时可见</div></div>
+      </div>
+    </div>
+
+    <div class="journey">
+      <h3><span class="step-num">3</span> 分析结果 & 报告</h3>
+      <div class="journey-steps">
+        <div class="journey-step"><div class="js-icon">📊</div><div class="js-title">查看报告</div><div class="js-desc">通过率、失败详情、每步耗时一览</div></div>
+        <div class="journey-step"><div class="js-icon">🔍</div><div class="js-title">定位失败</div><div class="js-desc">点失败用例 → 看每步截图 → 定位根因</div></div>
+        <div class="journey-step"><div class="js-icon">📝</div><div class="js-title">提交 Bug</div><div class="js-desc">截图 + XPath + 日志一起贴到项目管理工具</div></div>
+        <div class="journey-step"><div class="js-icon">🔓</div><div class="js-title">释放设备</div><div class="js-desc">执行完毕释放设备回池</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pain points & success criteria -->
+  <section>
+    <h2><span class="dot" style="background:var(--pink)"></span>核心痛点与成功标准</h2>
+    <div class="pain-gain-grid">
+      <div class="pain-card">
+        <h3>😣 当前痛点（没有我们平台时）</h3>
+        <ul>
+          <li>手写 XPath 需要反复 dump UI + 肉眼解析 XML，一个元素的定位表达式平均耗时 5-10 分钟</li>
+          <li>手工回归一轮 50 条用例耗时 2-3 小时，且容易漏步骤</li>
+          <li>测试结果靠截图 + Excel 手工记录，无法追溯历史、无法自动对比趋势</li>
+          <li>多设备并行需要手动分配——「这台手机谁在用？」是团队日常问题</li>
+          <li>AI 能力与测试流程割裂——用 ChatGPT 问完 XPath 还要手动复制到脚本里</li>
+          <li>测试报告靠手工整理格式，每次发版前要花半天做报告</li>
+        </ul>
+      </div>
+      <div class="gain-card">
+        <h3>✨ 使用平台后期望状态</h3>
+        <ul>
+          <li>点击截图上的元素 → XPath 自动生成，元素定位耗时从 5-10 分钟降到 10 秒</li>
+          <li>回归执行全自动——选用例 → 点执行 → 等报告，50 条用例 15 分钟内跑完</li>
+          <li>所有执行结果持久化存储，可追溯任意历史记录的通过率和失败详情</li>
+          <li>设备池自动调度——锁定/排队/释放，不再有人肉沟通成本</li>
+          <li>AI 与平台深度整合——对话即操作，不需要在工具间切换</li>
+          <li>测试报告自动生成——CSV + HTML 双格式，发版前 1 分钟搞定</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Success criteria table -->
+  <section>
+    <h2><span class="dot" style="background:var(--blue)"></span>成功指标（按角色）</h2>
+    <div class="criteria-table">
+      <table>
+        <thead>
+          <tr><th>角色</th><th>指标</th><th>目标值</th><th>当前状态</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td rowspan="4"><span class="role-tag tag-primary">测试工程师</span></td>
+            <td>元素定位耗时（从打开截屏到拿到可用 XPath）</td>
+            <td>≤ 30 秒</td>
+            <td class="ok">✅ 达标</td>
+          </tr>
+          <tr>
+            <td>回归用例集执行时间（50 条 / loop=1）</td>
+            <td>≤ 15 分钟</td>
+            <td class="partial">⚠ 取决于用例复杂度</td>
+          </tr>
+          <tr>
+            <td>AI 用例生成可用率（生成后无需手动修改步骤）</td>
+            <td>≥ 70%</td>
+            <td class="partial">⚠ 简单场景达标，复杂场景需调优</td>
+          </tr>
+          <tr>
+            <td>截图流延迟</td>
+            <td>≤ 500ms</td>
+            <td class="ok">✅ 达标</td>
+          </tr>
+          <tr>
+            <td rowspan="3"><span class="role-tag tag-secondary">QA 负责人</span></td>
+            <td>周报准备时间（从打开平台到导出数据）</td>
+            <td>≤ 5 分钟</td>
+            <td class="partial">⚠ 有执行历史但缺聚合看板</td>
+          </tr>
+          <tr>
+            <td>设备利用率（多设备并行场景）</td>
+            <td>≥ 60%</td>
+            <td class="todo">○ 待多设备并行功能完善后评估</td>
+          </tr>
+          <tr>
+            <td>报告自动生成覆盖率</td>
+            <td>100% 执行自动产出报告</td>
+            <td class="ok">✅ 达标</td>
+          </tr>
+          <tr>
+            <td rowspan="2"><span class="role-tag tag-tertiary">产品经理</span></td>
+            <td>冒烟执行操作步骤数</td>
+            <td>≤ 3 步（选中用例 → 点击执行 → 看结果）</td>
+            <td class="ok">✅ 达标</td>
+          </tr>
+          <tr>
+            <td>理解测试结果所需培训时间</td>
+            <td>≤ 5 分钟</td>
+            <td class="ok">✅ 通过/失败标识直观</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Non-target users -->
+  <section>
+    <h2><span class="dot" style="background:var(--text-muted)"></span>非目标用户（明确排除）</h2>
+    <p>以下用户群体不是当前阶段的目标用户——他们的需求真实存在，但与平台核心定位不匹配。明确排除是为了不分散开发资源。</p>
+    <div class="non-target">
+      <div class="exclude-grid">
+        <div class="exclude-item">
+          <div class="ei-icon">👨‍💻</div>
+          <div><strong>自动化框架开发者</strong><span>需要的是可编程 API / SDK，不是可视化平台。平台不变提供底层 u2 API 封装为独立库。</span></div>
+        </div>
+        <div class="exclude-item">
+          <div class="ei-icon">🎮</div>
+          <div><strong>游戏测试工程师</strong><span>游戏 UI 不是标准 Android 控件，uiautomator2 无法识别游戏引擎渲染的元素。应用图像识别方案但不属于本平台范围。</span></div>
+        </div>
+        <div class="exclude-item">
+          <div class="ei-icon">📱</div>
+          <div><strong>iOS 测试工程师</strong><span>平台基于 uiautomator2 + ADB，仅支持 Android。iOS 需要 XCUITest / WebDriverAgent，是完全不同的技术栈。</span></div>
+        </div>
+        <div class="exclude-item">
+          <div class="ei-icon">🏢</div>
+          <div><strong>非技术管理者（纯看报表）</strong><span>需要的是 BI 仪表盘 + 趋势大屏，不是测试工具。平台有报告模块但不会做成 BI 产品。</span></div>
+        </div>
+        <div class="exclude-item">
+          <div class="ei-icon">🛠</div>
+          <div><strong>安全测试工程师</strong><span>需要渗透测试、抓包、注入——不是 UI 自动化范畴。平台不做安全测试能力。</span></div>
+        </div>
+        <div class="exclude-item">
+          <div class="ei-icon">🌐</div>
+          <div><strong>Web/H5 测试工程师</strong><span>平台只做 Android 原生 App。Web 测试有 Selenium/Cypress/Playwright 等成熟工具，不是我们的赛道。</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">
+    <p>Android-AutoTests · 立项验证 · 用户人群分析 · v1.0 · 2026-07-13</p>
+    <p style="margin-top:4px"><a href="./产品定位.html">← 产品定位</a> · <a href="02-PRD需求/实际需求文档.md">查看 PRD 总需求 →</a></p>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,10 +1,11 @@
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
 import client from "@/shared/api-client.js";
-import { Button as AnimalButton, Card, Tabs, Modal } from "animal-island-vue";
-import PageHeader from "@/shared/components/PageHeader.vue";
+import ConfirmButton from "@/shared/components/patterns/ConfirmButton.vue";
+import { Card, Tabs } from "animal-island-vue";
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
 import {
   generateTaskId,
   readTaskCounter,
@@ -363,60 +364,23 @@ async function doStartTask(task) {
   scheduleSave(task.id);
 }
 
-async function stopTask(task) {
-  if (!task.runId) {
-    // Queued task — cancel queue entry, reset to idle (keep task config)
-    try {
-      await ElMessageBox.confirm(
-        "确定取消该排队任务？任务将回到未执行列表",
-        "取消排队",
-        {
-          confirmButtonText: "取消排队",
-          cancelButtonText: "返回",
-          type: "warning",
-        },
-      );
-    } catch (_) {
-      return;
-    }
-    try {
-      await client.post("/runner/queue/cancel", {
-        client_task_id: task.id,
-        device_serial: task.deviceSerial,
-      });
-    } catch (e) {
-      // 404 表示任务已开始执行,属正常情况,继续按已取消重置;其余为真实失败
-      if (e?.response?.status !== 404) {
-        ElMessage.error("取消排队失败，请检查网络后重试");
-        return;
-      }
-    }
-    // Reset to idle: keep task config, clear execution state
-    task.running = false;
-    task.runId = "";
-    task.status = "idle";
-    task.caseItems = [];
-    task.stepStates = [];
-    task.overallPass = 0;
-    task.overallFail = 0;
-    task.logs = [];
-    task.currentCaseTitle = "";
-    task.currentIteration = 0;
-    task.failedSteps = [];
-    task.outcome = "";
-    saveTaskToServer(task);
-    ElMessage.success("已取消排队，任务回到未执行列表");
-    return;
-  }
+async function doCancelQueue(task) {
   try {
-    await ElMessageBox.confirm("确定停止该任务？", "停止任务", {
-      confirmButtonText: "停止",
-      cancelButtonText: "取消",
-      type: "warning",
+    await client.post("/runner/queue/cancel", {
+      client_task_id: task.id, device_serial: task.deviceSerial,
     });
-  } catch (_) {
-    return;
+  } catch (e) {
+    if (e?.response?.status !== 404) {
+      ElMessage.error("取消排队失败，请检查网络后重试"); return;
+    }
   }
+  task.running = false; task.runId = ""; task.status = "idle";
+  task.caseItems = []; task.stepStates = []; task.overallPass = 0;
+  task.overallFail = 0; task.failedSteps = []; task.logs = [];
+  saveTaskToServer(task);
+}
+
+async function doStopTask(task) {
   try {
     await client.post(`/runner/run/${task.runId}/stop`);
     ElMessage.success("停止请求已发送");
@@ -429,19 +393,10 @@ async function stopTask(task) {
   task.currentIteration = 0;
   task.outcome = "stopped";
   closeTaskWebSocket(task.id);
-  saveTaskToServer(task); // 立即持久化，不依赖防抖
+  saveTaskToServer(task);
 }
 
-async function removeTask(task) {
-  try {
-    await ElMessageBox.confirm(
-      `删除任务「${task.name || task.id}」？`,
-      "确认删除",
-      { confirmButtonText: "删除", cancelButtonText: "取消", type: "warning" },
-    );
-  } catch (_) {
-    return;
-  }
+async function doRemoveTask(task) {
   if (task.running) {
     if (task.runId) {
       try {
@@ -607,11 +562,11 @@ async function loadDevices() {
 </script>
 
 <template>
-  <div class="doc-page runner-page">
-    <PageHeader
-      title="执行引擎 Test Runner"
+  <div class="doc-page wb-shell runner-page">
+    <WorkbenchHeader
+      title="执行引擎"
       subtitle="创建并监控测试任务，查看实时执行进度与历史结果"
-      color="app-yellow"
+      mark="▶️"
     />
     <div class="doc-body">
       <section class="doc-section runner-section">
@@ -619,9 +574,7 @@ async function loadDevices() {
           <h3 class="doc-section__title">
             任务列表<span class="doc-tag">Tasks</span>
           </h3>
-          <AnimalButton type="primary" @click="openNewTask"
-            >+ 新建任务</AnimalButton
-          >
+          <AnimalButton class="wb-btn" type="primary" @click="openNewTask">+ 新建任务</AnimalButton>
         </div>
 
         <!-- Tabs panel: cards render inside animal-tabs content slots -->
@@ -724,20 +677,14 @@ async function loadDevices() {
                   <!-- Row 4: actions -->
                   <div class="tc-actions" @click.stop>
                     <template v-if="task.running">
-                      <el-button
-                        size="small"
-                        type="danger"
-                        @click="stopTask(task)"
-                        >⏹ 停止</el-button
-                      >
+                      <ConfirmButton size="small" type="primary" danger
+                        message="确定停止该任务？" title="停止任务" confirm-text="停止"
+                        @confirm="doStopTask(task)">⏹ 停止</ConfirmButton>
                     </template>
                     <template v-else-if="isTaskQueued(task)">
-                      <el-button
-                        size="small"
-                        type="warning"
-                        @click="stopTask(task)"
-                        >⏸ 取消排队</el-button
-                      >
+                      <ConfirmButton size="small" type="primary"
+                        message="确定取消该排队任务？任务将回到未执行列表" title="取消排队" confirm-text="取消排队"
+                        @confirm="doCancelQueue(task)">⏸ 取消排队</ConfirmButton>
                     </template>
                     <template
                       v-else-if="
@@ -750,37 +697,30 @@ async function loadDevices() {
                         ].includes(task.outcome)
                       "
                     >
-                      <el-button
+                      <AnimalButton
                         size="small"
                         type="primary"
                         @click="restartTask(task)"
-                        >↻ 重新执行</el-button
-                      >
-                      <el-button
+                        >↻ 重新执行</AnimalButton>
+                      <AnimalButton
                         size="small"
                         type="info"
                         @click="router.push(`/reports/task/${encodeURIComponent(task.id)}`)"
-                        >📊 查看报告</el-button
-                      >
+                        >📊 查看报告</AnimalButton>
                     </template>
                     <template v-else-if="!task.caseIds?.length">
-                      <el-button size="small" disabled>⚠ 无用例</el-button>
+                      <AnimalButton size="small" disabled>⚠ 无用例</AnimalButton>
                     </template>
                     <template v-else>
-                      <el-button
+                      <AnimalButton
                         size="small"
                         type="primary"
                         @click="doStartTask(task)"
-                        >▶ 执行</el-button
-                      >
+                        >▶ 执行</AnimalButton>
                     </template>
-                    <el-button
-                      size="small"
-                      type="danger"
-                      plain
-                      @click="removeTask(task)"
-                      >🗑 删除</el-button
-                    >
+                    <ConfirmButton size="small" type="primary" danger plain
+                      :message="`删除任务「${task.name || task.id}」？`" title="确认删除" confirm-text="删除"
+                      @confirm="doRemoveTask(task)">🗑 删除</ConfirmButton>
                   </div>
                 </div>
               </div>
@@ -796,13 +736,12 @@ async function loadDevices() {
       </section>
     </div>
 
-    <!-- New task modal -->
-    <Modal
-      v-model:open="showNewTask"
+    <!-- New task dialog (Element Plus) -->
+    <el-dialog
+      v-model="showNewTask"
       title="新建测试任务"
       width="520px"
-      :mask-closable="false"
-      :typewriter="false"
+      :close-on-click-modal="false"
       @close="showNewTask = false"
     >
       <div class="new-task-form">
@@ -900,15 +839,15 @@ async function loadDevices() {
         </el-form>
       </div>
       <template #footer>
-        <AnimalButton @click="showNewTask = false">取消</AnimalButton>
+        <AnimalButton class="wb-btn" @click="showNewTask = false">取消</AnimalButton>
         <AnimalButton
+          class="wb-btn"
           type="primary"
           :disabled="!newForm.caseIds.length || !newForm.deviceSerial"
           @click="createAndStart"
-          >创建并执行</AnimalButton
-        >
+        >创建并执行</AnimalButton>
       </template>
-    </Modal>
+    </el-dialog>
   </div>
 </template>
 
@@ -942,10 +881,11 @@ async function loadDevices() {
   flex-direction: column;
   min-height: 0;
   margin-top: 12px;
-  border: 1px solid #e8e2d6;
-  border-radius: 14px;
-  background: #fff;
+  border: 1px solid var(--ac-border, rgba(139, 115, 85, 0.16));
+  border-radius: var(--ac-radius, 16px);
+  background: var(--ac-paper, #fffbf5);
   overflow: hidden;
+  box-shadow: var(--ac-shadow, 0 4px 16px rgba(139, 115, 85, 0.1));
 }
 .tabs-panel :deep(.animal-tabs) {
   flex: 1;
@@ -978,15 +918,16 @@ async function loadDevices() {
 /* Task card */
 .task-card {
   cursor: pointer;
-  border-radius: 14px;
-  border: 1px solid rgba(139, 115, 85, 0.12);
+  border-radius: var(--ac-radius, 16px);
+  border: 1px solid var(--ac-border, rgba(139, 115, 85, 0.16));
   border-left-width: 4px;
   padding: 16px 18px 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   transition: all 0.2s;
-  box-shadow: 0 1px 4px rgba(61, 52, 40, 0.04);
+  background: var(--ac-paper, #fffbf5);
+  box-shadow: 0 2px 8px rgba(139, 115, 85, 0.06);
 }
 .task-card--running {
   background: linear-gradient(135deg, #e8edff 0%, #f3f6ff 100%);

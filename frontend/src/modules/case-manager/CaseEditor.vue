@@ -296,20 +296,20 @@ onBeforeRouteLeave((_to, _from, next) => {
             <span class="doc-tag">Basic</span>
           </h3>
           <div class="actions">
-            <el-button type="danger" @click="exitPage">
+            <AnimalButton type="primary"  @click="exitPage" danger>
               <Icon
                 name="icon-close"
                 :size="14"
                 style="margin-right: 4px"
               />退出
-            </el-button>
-            <el-button type="primary" :loading="saving" @click="save">
+            </AnimalButton>
+            <AnimalButton type="primary" :loading="saving" @click="save">
               <Icon
                 name="icon-check"
                 :size="14"
                 style="margin-right: 4px"
               />保存
-            </el-button>
+            </AnimalButton>
           </div>
         </div>
         <div class="doc-section__label">用例元数据与启动配置</div>
@@ -324,9 +324,9 @@ onBeforeRouteLeave((_to, _from, next) => {
                   placeholder="留空则自动生成 TC-日期-时间-随机码"
                 >
                   <template #append v-if="isNew">
-                    <el-button @click="generateId">
+                    <AnimalButton @click="generateId">
                       <Icon name="icon-refresh" :size="14" /> 重新生成
-                    </el-button>
+                    </AnimalButton>
                   </template>
                 </el-input>
               </el-form-item>
@@ -478,7 +478,7 @@ onBeforeRouteLeave((_to, _from, next) => {
                 }}</span>
               </el-option>
             </el-select>
-            <el-button
+            <AnimalButton
               v-if="!debugConnected"
               type="primary"
               size="small"
@@ -487,16 +487,16 @@ onBeforeRouteLeave((_to, _from, next) => {
               @click="connectDebugDevice"
             >
               连接设备
-            </el-button>
-            <el-button
+            </AnimalButton>
+            <AnimalButton type="primary"
               v-else
-              type="danger"
+              
               size="small"
               plain
               @click="disconnectDebugDevice"
-            >
+             danger>
               断开
-            </el-button>
+            </AnimalButton>
             <AnimalButton
               type="primary"
               size="small"

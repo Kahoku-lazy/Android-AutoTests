@@ -16,6 +16,7 @@ import PageFlowVueFlow from './components/vueflow/PageFlowVueFlow.vue'
 import TestCaseBlockly from './components/blockly/TestCaseBlockly.vue'
 import WorkflowDirTree from './components/WorkflowDirTree.vue'
 import WorkflowFileBrowser from './components/WorkflowFileBrowser.vue'
+import ImportCasesDialog from './components/ImportCasesDialog.vue'
 import './styles/animal-theme.css'
 
 const store = useWorkflowStore()
@@ -29,6 +30,8 @@ const creatingKind = ref<'folder' | null>(null)
 const createParentId = ref<string | null>(null)
 const editDocName = ref('')
 const overwriteImport = ref(false)
+const showImportCases = ref(false)
+const importTargetFolderId = ref<string | null>(null)
 /** 右侧是否打开文件编辑器 */
 const editing = computed(() => {
   const n = lib.activeNode
@@ -220,6 +223,20 @@ async function askCreateCase(parentId?: string | null) {
   lib.status = `已创建测试用例（${tc.id}）`
 }
 
+async function openImportCases(parentId?: string | null) {
+  importTargetFolderId.value = await ensureParentFolder(parentId ?? selectedFolderId.value)
+  showImportCases.value = true
+}
+
+async function onCasesImported(ids: string[]) {
+  if (ids.length === 1) {
+    const n = lib.findNode(ids[0])
+    if (n) await openFile(n)
+  } else {
+    lib.status = `已从用例库导入 ${ids.length} 条`
+  }
+}
+
 async function exportCurrent() {
   const cur = lib.activeNode
   if (!cur || cur.type === 'folder') return
@@ -409,6 +426,7 @@ watch(
         @create-folder="askCreateFolder"
         @create-flow="askCreateFlow"
         @create-case="askCreateCase"
+        @import-cases="openImportCases"
         @export="exportFile"
       />
 
@@ -444,6 +462,12 @@ watch(
         />
       </main>
     </div>
+
+    <ImportCasesDialog
+      v-model="showImportCases"
+      :target-folder-id="importTargetFolderId"
+      @imported="onCasesImported"
+    />
   </div>
 </template>
 

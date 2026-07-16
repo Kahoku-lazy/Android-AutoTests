@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import client from '@/shared/api-client.js'
 import { ElMessage } from 'element-plus'
 import { Switch as AnimalSwitch, Divider as AnimalDivider } from 'animal-island-vue'
-import PageHeader from '@/shared/components/PageHeader.vue'
+import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import { IconArrowLeft, IconSave, IconPlus, IconTrash } from '@/shared/icons/index.js'
 
 const route = useRoute(); const router = useRouter()
@@ -18,7 +18,7 @@ const form = ref({
   system_prompt:'', temperature:0.7, max_tokens:4096, generate_kwargs:'{}',
   formatter:'dashscope', max_iters:10, parallel_tool_calls:false, print_hint_msg:false,
   memory_mode:'inmemory', long_term_memory_mode:'both', enable_meta_tool:false,
-  enable_rewrite_query:true, tools:[],
+  enable_rewrite_query:true, enable_knowledge_base:true, tools:[],
   compression_enabled:false, compression_threshold:10000, compression_keep_recent:3,
   compression_prompt:'', compression_template:'', tts_enabled:false,
 })
@@ -187,11 +187,11 @@ async function save() {
 </script>
 
 <template>
-  <div class="doc-page ai-animal-theme" v-loading="loading">
-    <PageHeader
+  <div class="doc-page wb-shell ai-workbench" v-loading="loading">
+    <WorkbenchHeader
       :title="isNew ? '新建智能体' : '编辑智能体'"
       :subtitle="isNew ? '配置一个全新的 AI 智能体，分 5 步完成设置' : (agent?.name ? `正在编辑「${agent.name}」的配置` : '修改智能体配置')"
-      color="app-blue"
+      mark="⚙️"
     />
 
     <div class="doc-body agent-body">
@@ -224,9 +224,9 @@ async function save() {
                 <span v-if="!form.avatar?.startsWith('/api/ai/avatars/')">{{ form.avatar || '🤖' }}</span>
               </div>
               <input ref="fileInput" type="file" accept="image/*" @change="handleAvatarUpload" style="display:none" />
-              <el-button :loading="uploading" size="default" @click="triggerUpload">
+              <AnimalButton :loading="uploading" size="default" @click="triggerUpload">
                 {{ uploading ? '上传中...' : '上传图片' }}
-              </el-button>
+              </AnimalButton>
               <span class="avatar-hint">或直接输入 Emoji 作为头像</span>
             </div>
           </el-form-item>
@@ -262,9 +262,9 @@ async function save() {
           </el-form-item>
           <el-form-item label="API Key">
             <el-input v-model="form.api_key" type="password" show-password placeholder="sk-..." />
-            <el-button :loading="detectingModels" @click="detectModels" style="margin-left:8px" size="default">
+            <AnimalButton :loading="detectingModels" @click="detectModels" style="margin-left:8px" size="default">
               {{ detectingModels ? '检测中...' : '🔍 检测模型' }}
-            </el-button>
+            </AnimalButton>
           </el-form-item>
           <el-form-item v-if="form.model_provider==='custom'" label="API 地址">
             <el-input v-model="form.base_url" placeholder="https://api.example.com/v1" />
@@ -338,6 +338,10 @@ async function save() {
           <el-form-item label="重写查询">
             <AnimalSwitch v-model="form.enable_rewrite_query" />
             <span class="form-hint">LLM 检索前重写用户查询</span>
+          </el-form-item>
+          <el-form-item label="知识库检索">
+            <AnimalSwitch v-model="form.enable_knowledge_base" />
+            <span class="form-hint">开启后对话将自动搜索项目文档（ChromaDB RAG）作为上下文</span>
           </el-form-item>
         </el-form>
 

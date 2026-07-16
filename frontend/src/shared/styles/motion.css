@@ -1,0 +1,105 @@
+/**
+ * anime.js 动效配套样式 — 与 workbench-theme 并用
+ */
+
+/* 选中描边闪一下 */
+.wb-select-ring {
+  outline: 2px solid rgba(25, 200, 185, 0.65) !important;
+  outline-offset: 3px;
+  transition: outline-color 0.25s ease;
+}
+
+/* 多彩按键变体（el-button.wb-btn 上叠加） */
+.wb-shell .wb-btn.wb-btn--teal.el-button--primary,
+.wb-shell .el-button.wb-btn.wb-btn--teal {
+  --el-button-bg-color: #19c8b9;
+  --el-button-border-color: #14b3a5;
+}
+.wb-shell .wb-btn.wb-btn--sunset.el-button,
+.wb-shell .el-button.wb-btn.wb-btn--sunset {
+  --el-button-bg-color: #f5a623;
+  --el-button-border-color: #e09415;
+  --el-button-text-color: #fff;
+  --el-button-hover-bg-color: #ffb83d;
+  --el-button-hover-text-color: #fff;
+}
+.wb-shell .wb-btn.wb-btn--berry.el-button,
+.wb-shell .el-button.wb-btn.wb-btn--berry {
+  --el-button-bg-color: #b39ef3;
+  --el-button-border-color: #9b85e0;
+  --el-button-text-color: #fff;
+  --el-button-hover-bg-color: #c4b2f8;
+  --el-button-hover-text-color: #fff;
+}
+.wb-shell .wb-btn.wb-btn--sky.el-button,
+.wb-shell .el-button.wb-btn.wb-btn--sky {
+  --el-button-bg-color: #889df0;
+  --el-button-border-color: #6f87e6;
+  --el-button-text-color: #fff;
+  --el-button-hover-bg-color: #9dadf5;
+  --el-button-hover-text-color: #fff;
+}
+
+/* 加载三点 */
+.wb-loader {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px;
+}
+.wb-loader .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ac-teal, #19c8b9);
+  display: block;
+}
+.wb-loader .dot:nth-child(2) { background: var(--ac-yellow, #f7cd67); }
+.wb-loader .dot:nth-child(3) { background: var(--ac-pink, #f8a6b2); }
+
+/* 旋转环 */
+.wb-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid rgba(139, 115, 85, 0.15);
+  border-top-color: var(--ac-teal, #19c8b9);
+  border-right-color: var(--ac-yellow, #f7cd67);
+  display: inline-block;
+}
+
+/* 路由切换淡入基线（与 anime leave/enter 叠加兜底） */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* 多彩卡片浮起 */
+.wb-shell .agent-card,
+.wb-shell .animal-card {
+  transition: transform 0.22s cubic-bezier(0.34, 1.4, 0.64, 1), box-shadow 0.22s ease;
+  will-change: transform;
+}
+.wb-shell .agent-card:hover,
+.wb-shell .animal-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(139, 115, 85, 0.14);
+}
+
+/* 顶栏 brand-mark 可点微动 cursor */
+.wb-header .brand-mark {
+  cursor: default;
+  transform-origin: center;
+  transition: box-shadow 0.2s ease;
+}
+.wb-header .brand-mark:hover {
+  box-shadow: 0 4px 12px rgba(247, 205, 103, 0.45);
+}

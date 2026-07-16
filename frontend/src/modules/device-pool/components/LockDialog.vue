@@ -3,6 +3,7 @@
 import { ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { Modal, Input, Button as AnimalButton } from "animal-island-vue";
+import { useRawStorage } from "@/shared/composables/useStorage.js";
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -12,6 +13,7 @@ const props = defineProps({
 
 const emit = defineEmits(["confirm", "cancel"]);
 
+const savedUserId = useRawStorage("dp_user_id", "");
 const userId = ref("");
 const timeout = ref(300);
 
@@ -19,9 +21,7 @@ watch(
   () => props.visible,
   (v) => {
     if (v) {
-      // Auto-populate from previous use (saved in parent index.vue localStorage)
-      const saved = localStorage.getItem("dp_user_id");
-      userId.value = saved || "";
+      userId.value = savedUserId.value || "";
       timeout.value = 300;
     }
   },

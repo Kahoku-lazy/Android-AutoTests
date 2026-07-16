@@ -2,8 +2,7 @@
 from agentscope.tool import ToolBase, ToolChunk
 from agentscope.permission import PermissionDecision, PermissionBehavior, PermissionContext
 from agentscope.message import TextBlock
-from apps.device_pool.api import get_online_devices, get_device_by_serial, acquire_device, release_device
-from apps.device_pool.models import Device
+from ..adapters import DeviceAdapter
 from .db_helper import run_sync
 
 
@@ -46,7 +45,7 @@ class GetOnlineDevicesTool(ToolBase):
 
     async def call(self, **kwargs):
         try:
-            devices = await run_sync(lambda: get_online_devices())
+            devices = await run_sync(lambda: DeviceAdapter.get_online_devices())
         except Exception as e:
             return ToolChunk(content=[TextBlock(
                 text=f"查询设备失败：{e}。请稍后重试。"
@@ -111,7 +110,7 @@ class AcquireDeviceTool(ToolBase):
     async def call(self, serial, timeout=300, **kwargs):
         try:
             result = await run_sync(
-                lambda: acquire_device(
+                lambda: DeviceAdapter.acquire_device(
                     serial,
                     user_id=getattr(getattr(self, "_ctx", None), "user_id", None) or "ai_agent",
                     timeout=timeout,
@@ -169,7 +168,7 @@ class ReleaseDeviceTool(ToolBase):
         return check_platform_permission(self)
 
     async def call(self, serial, reason="ai_release", **kwargs):
-        ok = await run_sync(lambda: release_device(serial, reason=reason))
+        ok = await run_sync(lambda: DeviceAdapter.release_device(serial, reason=reason))
         return ToolChunk(content=[TextBlock(
             text=f"设备 {serial} {'已释放（状态恢复为 ONLINE）' if ok else '释放失败（可能未被锁定或已离线）'}。"
             + ("其他测试现在可以使用该设备。" if ok else "")

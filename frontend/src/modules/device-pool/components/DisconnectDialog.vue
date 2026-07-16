@@ -79,7 +79,7 @@ function handleCancel() {
 
     <template #footer>
       <AnimalButton @click="handleCancel">取消</AnimalButton>
-      <AnimalButton type="danger" @click="handleConfirm">
+      <AnimalButton type="primary" danger @click="handleConfirm">
         {{ isBusyOthers ? '强制断开' : '确认断开' }}
       </AnimalButton>
     </template>

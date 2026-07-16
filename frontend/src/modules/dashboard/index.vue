@@ -4,8 +4,8 @@ import { useRouter } from "vue-router";
 import { animate } from "animejs";
 import { fetchDashboardStats, fetchRecentActivities } from "./api.js";
 
-import { Card, Button, Divider } from "animal-island-vue";
-import PageHeader from "@/shared/components/PageHeader.vue";
+import { Card, Divider } from "animal-island-vue";
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
 import {
   IconDevice,
   IconFileCode,
@@ -176,12 +176,18 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="doc-page">
-    <PageHeader
-      title="仪表盘 Dashboard"
+  <div class="doc-page wb-shell">
+    <WorkbenchHeader
+      title="仪表盘"
       subtitle="自动化测试平台 · 实时监控设备状态、用例执行、AI Agent 与测试报告"
-      color="app-yellow"
-    />
+      mark="📊"
+    >
+      <template #actions>
+        <AnimalButton class="wb-btn wb-btn--sunset" size="small" :loading="refreshing" @click="refreshData">
+          刷新
+        </AnimalButton>
+      </template>
+    </WorkbenchHeader>
 
     <!-- 内容区 -->
     <div class="doc-body">
@@ -192,13 +198,6 @@ onMounted(() => {
             统计概览
             <span class="doc-tag">Overview</span>
           </h3>
-          <Button
-            type="default"
-            size="small"
-            :loading="refreshing"
-            @click="refreshData"
-            >刷新</Button
-          >
         </div>
         <div class="doc-section__label">核心指标实时展示</div>
         <div class="dashboard__stats-grid">

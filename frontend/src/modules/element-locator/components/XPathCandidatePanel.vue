@@ -179,10 +179,10 @@ async function copyXPath(xpath) {
 
     <!-- Action bar (only when element selected) -->
     <div v-if="element" class="action-bar">
-      <el-button size="small" type="primary" @click="doClick">👆 点击</el-button>
-      <el-button size="small" type="warning" @click="openInput">⌨ 输入</el-button>
-      <el-button size="small" type="danger" @click="doLongClick">⏱ 长按</el-button>
-      <el-button size="small" type="success" @click="openSaveDialog" style="margin-left:auto">💾 保存到元素管理</el-button>
+      <AnimalButton size="small" type="primary" @click="doClick">👆 点击</AnimalButton>
+      <AnimalButton size="small" type="primary" @click="openInput">⌨ 输入</AnimalButton>
+      <AnimalButton type="primary" size="small"  @click="doLongClick" danger>⏱ 长按</AnimalButton>
+      <AnimalButton size="small" type="primary" @click="openSaveDialog" style="margin-left:auto">💾 保存到元素管理</AnimalButton>
     </div>
 
     <!-- Save to element-manager dialog -->
@@ -269,12 +269,12 @@ async function copyXPath(xpath) {
         <el-table-column prop="count" label="匹配数" width="60" align="center" />
         <el-table-column label="" width="50" align="center">
           <template #default="{ row }">
-            <el-button size="small" text title="复制" @click="copyXPath(row.xpath)">📋</el-button>
+            <AnimalButton size="small" type="text" title="复制" @click="copyXPath(row.xpath)">📋</AnimalButton>
           </template>
         </el-table-column>
         <el-table-column label="" width="50" align="center">
           <template #default="{ row }">
-            <el-button size="small" type="primary" plain @click="emit('add-step', row)">+</el-button>
+            <AnimalButton size="small" type="primary" plain @click="emit('add-step', row)">+</AnimalButton>
           </template>
         </el-table-column>
       </el-table>

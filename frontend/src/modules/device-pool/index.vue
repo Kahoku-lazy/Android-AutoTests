@@ -3,13 +3,16 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { animate, stagger } from "animejs";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { Button as AnimalButton, Card, Table, Tabs } from "animal-island-vue";
+import { Card, Table, Tabs } from "animal-island-vue";
+import { usePagination } from "@/shared/composables/usePagination.js";
+import { useRawStorage } from "@/shared/composables/useStorage.js";
+import EmptyState from "@/shared/components/patterns/EmptyState.vue";
 import { useDevicePoolStore } from "./store.js";
 import LockDialog from "./components/LockDialog.vue";
 import DisconnectDialog from "./components/DisconnectDialog.vue";
 import NetworkConnectDialog from "./components/NetworkConnectDialog.vue";
 import QueuePanel from "./components/QueuePanel.vue";
-import PageHeader from "@/shared/components/PageHeader.vue";
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
 
 const store = useDevicePoolStore();
 
@@ -56,37 +59,14 @@ const filteredDevices = computed(() => {
 });
 
 // ── Pagination ──
-const PAGE_SIZE_OPTIONS = [5, 10, 20];
-const pageSize = ref(10);
-const currentPage = ref(1);
+const {
+  PAGE_SIZE_OPTIONS, pageSize, currentPage, totalPages, pagedItems: pagedDevices, setPageSize, goPage
+} = usePagination(filteredDevices, { options: [5, 10, 20] })
 
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredDevices.value.length / pageSize.value)),
-);
-
-const pagedDevices = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  return filteredDevices.value.slice(start, start + pageSize.value);
-});
-
-watch([activeFilter, pageSize], () => {
-  currentPage.value = 1;
-});
-
+watch([activeFilter], () => { currentPage.value = 1 })
 watch(filteredDevices, () => {
-  if (currentPage.value > totalPages.value) {
-    currentPage.value = totalPages.value;
-  }
-});
-
-function setPageSize(size) {
-  pageSize.value = size;
-  currentPage.value = 1;
-}
-
-function goPage(page) {
-  currentPage.value = Math.min(Math.max(1, page), totalPages.value);
-}
+  if (currentPage.value > totalPages.value) currentPage.value = totalPages.value
+})
 
 // ── Table columns definition (animal-island Table API) ──
 const columns = [
@@ -101,10 +81,10 @@ const columns = [
 
 // ── Computed ──
 
-const userId = ref(localStorage.getItem("dp_user_id") || "");
+const userId = useRawStorage("dp_user_id", "");
+// saveUserId is now auto-persisted via useRawStorage's reactive watch
 function saveUserId(id) {
   userId.value = id;
-  localStorage.setItem("dp_user_id", id);
 }
 
 // ── Lifecycle ──
@@ -406,12 +386,27 @@ function connectionLabel(type) {
 </script>
 
 <template>
-  <div class="doc-page dp-animal-theme">
-    <PageHeader
-      title="设备管理 Device Pool"
+  <div class="doc-page wb-shell dp-animal-theme">
+    <WorkbenchHeader
+      title="设备管理"
       subtitle="扫描、连接、锁定 Android / iOS 设备，管理设备状态与使用队列"
-      color="app-yellow"
-    />
+      mark="📱"
+    >
+      <template #actions>
+        <QueuePanel
+          :entries="store.queueEntries"
+          :count="store.queueLength"
+          @cancel="handleCancelQueue"
+        />
+        <AnimalButton class="wb-btn" type="primary" @click="openNetworkDialog">局域网连接</AnimalButton>
+        <AnimalButton
+          class="wb-btn"
+          type="primary"
+          :loading="store.scanning || store.loading"
+          @click="handleRefresh"
+        >刷新设备</AnimalButton>
+      </template>
+    </WorkbenchHeader>
 
     <div class="doc-body">
       <section class="doc-section device-section">
@@ -420,23 +415,6 @@ function connectionLabel(type) {
             设备列表
             <span class="doc-tag">Devices</span>
           </h3>
-          <div class="header-actions">
-            <QueuePanel
-              :entries="store.queueEntries"
-              :count="store.queueLength"
-              @cancel="handleCancelQueue"
-            />
-            <AnimalButton type="primary" @click="openNetworkDialog">
-              局域网连接
-            </AnimalButton>
-            <AnimalButton
-              type="primary"
-              @click="handleRefresh"
-              :loading="store.scanning || store.loading"
-            >
-              刷新设备
-            </AnimalButton>
-          </div>
         </div>
 
         <!-- Tabs 筛选 + 设备表格 -->
@@ -469,8 +447,8 @@ function connectionLabel(type) {
                       第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ filteredDevices.length }} 台
                     </span>
                     <div v-if="totalPages > 1" class="page-nav">
-                      <AnimalButton size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</AnimalButton>
-                      <AnimalButton size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</AnimalButton>
+                      <AnimalButton class="wb-btn" size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</AnimalButton>
+                      <AnimalButton class="wb-btn" size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</AnimalButton>
                     </div>
                   </div>
                 </div>
@@ -569,7 +547,7 @@ function connectionLabel(type) {
                     <!-- Two independent pairs: user lock + process occupy -->
                     <template #cell-actions="{ record }">
                       <div class="action-btns">
-                        <AnimalButton
+                        <AnimalButton class="wb-btn"
                           size="small"
                           type="primary"
                           plain
@@ -580,9 +558,8 @@ function connectionLabel(type) {
                           @click="handleLockClick(record)"
                           >{{
                             record.locked_by ? "解除锁定" : "锁定用户"
-                          }}</AnimalButton
-                        >
-                        <AnimalButton
+                          }}</AnimalButton>
+                        <AnimalButton class="wb-btn"
                           size="small"
                           :type="record.occupied_by ? 'danger' : 'warning'"
                           plain
@@ -593,19 +570,14 @@ function connectionLabel(type) {
                           @click="handleOccupyClick(record)"
                           >{{
                             record.occupied_by ? "解除占用" : "占用设备"
-                          }}</AnimalButton
-                        >
+                          }}</AnimalButton>
                       </div>
                     </template>
 
-                    <!-- Empty state -->
                     <template #empty>
-                      <div class="empty-state">
-                        <span v-if="activeFilter === 'all'"
-                          >暂无设备，点击「扫描设备」发现设备</span
-                        >
-                        <span v-else>当前筛选条件下没有设备</span>
-                      </div>
+                      <EmptyState icon="📱"
+                        :text="activeFilter === 'all' ? '暂无设备' : '没有匹配的设备'"
+                        :hint="activeFilter === 'all' ? '点击「扫描设备」发现设备' : '尝试切换筛选条件'" />
                     </template>
                   </Table>
                   </div>

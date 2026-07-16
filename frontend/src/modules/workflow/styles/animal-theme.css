@@ -1,37 +1,7 @@
-/* Animal Crossing (动森) theme — scoped to workflow workbench */
-.workflow-workbench {
-  --ac-cream: #fdf8f0;
-  --ac-cream-deep: #f5ede0;
-  --ac-paper: #fffbf5;
-  --ac-wood: #8b7355;
-  --ac-wood-light: #a0896c;
-  --ac-wood-soft: #c4b5a0;
-  --ac-ink: #4a3a28;
-  --ac-ink-muted: #5c4a35;
-  --ac-ink-faint: #988b7a;
-  --ac-border: rgba(139, 115, 85, 0.16);
-  --ac-border-soft: rgba(139, 115, 85, 0.08);
-  --ac-teal: #19c8b9;
-  --ac-green: #6fba2c;
-  --ac-blue: #889df0;
-  --ac-yellow: #f7cd67;
-  --ac-purple: #b39ef3;
-  --ac-pink: #f8a6b2;
-  --ac-red: #e85f5f;
-  --ac-orange: #f5a623;
-  --ac-radius: 16px;
-  --ac-radius-sm: 10px;
-  --ac-shadow: 0 4px 16px rgba(139, 115, 85, 0.10);
-  --ac-shadow-lg: 0 12px 32px rgba(139, 115, 85, 0.14);
-  --ac-font: 'Nunito', 'Noto Sans SC', system-ui, sans-serif;
+/**
+ * 工作流主题入口 — token 统一定义在
+ * @/shared/styles/workbench-theme.css（main.js 全局引入）
+ * 此处仅保留模块内可能需要的补充钩子，避免色板分叉。
+ */
 
-  font-family: var(--ac-font);
-  color: var(--ac-ink);
-  box-sizing: border-box;
-}
-
-.workflow-workbench *,
-.workflow-workbench *::before,
-.workflow-workbench *::after {
-  box-sizing: border-box;
-}
+/* .workflow-workbench 的 --ac-* / font / box-sizing 已由 workbench-theme.css 提供 */

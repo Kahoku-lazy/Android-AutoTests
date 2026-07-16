@@ -1,6 +1,7 @@
 <script setup>
 import { Button as AnimalButton, Card } from "animal-island-vue";
 import { ElTag } from "element-plus";
+import ConfirmButton from "@/shared/components/patterns/ConfirmButton.vue";
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -68,8 +69,10 @@ function stepCount() {
       <AnimalButton size="small" type="primary" @click="$emit('edit', item)"
         >编辑</AnimalButton
       >
-      <AnimalButton size="small" danger plain @click="$emit('delete', item)"
-        >删除</AnimalButton
+      <ConfirmButton size="small" type="primary" danger plain
+        :message="`删除用例「${item.title}」？`" title="确认删除" confirm-text="删除"
+        @confirm="$emit('delete', item)"
+        >删除</ConfirmButton
       >
     </div>
   </Card>

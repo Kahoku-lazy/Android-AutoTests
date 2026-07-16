@@ -1,67 +1,98 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { animate, stagger } from 'animejs'
+import { selectPop, iconBounce } from '@/shared/animations.js'
+import { animate } from 'animejs'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import client from '@/shared/api-client.js'
-import { Button as AnimalButton, Card as AnimalCard, Tabs } from 'animal-island-vue'
-import PageHeader from '@/shared/components/PageHeader.vue'
+import { Tabs } from 'animal-island-vue'
+import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
+import WbLoader from './components/WbLoader.vue'
+import AgentStickyNote from './components/AgentStickyNote.vue'
+import TaskStickyNote from './components/TaskStickyNote.vue'
+import KnowledgeBase from './KnowledgeBase.vue'
 
 const router = useRouter()
+const viewMode = ref('agents')  // 'agents' | 'knowledge'
 const agents = ref([])
 const loading = ref(false)
 const testingId = ref(null)
 const confirmingId = ref(null)
 const healthTimer = ref(null)
+const taskTimer = ref(null)
 const healthResults = ref({})
 const pendingModels = ref({})
+const tasks = ref([])
+const tasksLoading = ref(false)
 
-// ── Tabs 筛选 ──
-const activeFilter = ref('all')
-const filterTabs = [
-  { key: 'all', label: '全部' },
-  { key: 'running', label: '运行中' },
-  { key: 'disconnected', label: '未连通' },
-  { key: 'paused', label: '已暂停' },
-]
+// 任务状态 Tabs（label 带数量）
+const activeTaskFilter = ref('all')
+const TASK_STATUS_MAP = {
+  pending: ['PENDING'],
+  running: ['RUNNING'],
+  completed: ['COMPLETED', 'SUCCESS'],
+  failed: ['FAILED', 'ERROR'],
+}
 
-const filteredAgents = computed(() => {
-  if (activeFilter.value === 'all') return agents.value
-  return agents.value.filter(a => {
-    const h = healthResults.value[a.id]
-    if (activeFilter.value === 'running') return a.status === 'active' && (!h || h.is_connected)
-    if (activeFilter.value === 'disconnected') return a.status === 'active' && h && !h.is_connected
-    if (activeFilter.value === 'paused') return a.status !== 'active'
-    return true
-  })
+function countTasksByFilter(key) {
+  const list = tasks.value || []
+  if (key === 'all') return list.length
+  const allow = TASK_STATUS_MAP[key] || []
+  return list.filter((t) => allow.includes(String(t.status || '').toUpperCase())).length
+}
+
+const taskFilterTabs = computed(() => [
+  { key: 'all', label: `全部 (${countTasksByFilter('all')})` },
+  { key: 'pending', label: `待执行 (${countTasksByFilter('pending')})` },
+  { key: 'running', label: `执行中 (${countTasksByFilter('running')})` },
+  { key: 'completed', label: `已完成 (${countTasksByFilter('completed')})` },
+  { key: 'failed', label: `失败 (${countTasksByFilter('failed')})` },
+])
+
+const filteredTasks = computed(() => {
+  if (activeTaskFilter.value === 'all') return tasks.value
+  const allow = TASK_STATUS_MAP[activeTaskFilter.value] || []
+  return tasks.value.filter((t) => allow.includes(String(t.status || '').toUpperCase()))
 })
 
-const CARD_COLORS = ['app-green', 'app-blue', 'app-yellow', 'app-pink', 'app-teal', 'purple', 'app-orange', 'brown']
-const CARD_PATTERNS = ['app-green', 'app-blue', 'app-yellow', 'app-pink', 'app-teal', 'purple', 'app-orange', 'brown']
+const TAPE_HUES = ['mint', 'peach', 'sky', 'lilac', 'honey']
+const NOTE_ROTATIONS = [-2.8, 1.6, -1.4, 2.2, -2.1, 1.2, -1.8, 2.5]
 
-function cardColor(agent) {
+function noteRotation(agent) {
   let hash = 0
   for (const c of String(agent.id)) hash = (hash * 31 + c.charCodeAt(0)) >>> 0
-  return CARD_COLORS[hash % CARD_COLORS.length]
+  return NOTE_ROTATIONS[hash % NOTE_ROTATIONS.length]
 }
-function cardPattern(agent) {
+function tapeHue(agent) {
   let hash = 0
   for (const c of String(agent.name || agent.id)) hash = (hash * 31 + c.charCodeAt(0)) >>> 0
-  return CARD_PATTERNS[hash % CARD_PATTERNS.length]
+  return TAPE_HUES[hash % TAPE_HUES.length]
 }
-function cardType(agent) {
-  // 未连通的用 dashed 边框提示
-  const h = healthResults.value[agent.id]
-  if (h && !h.is_connected) return 'dashed'
-  return 'default'
+function taskRotation(task) {
+  let hash = 0
+  for (const c of String(task.run_id || '')) hash = (hash * 31 + c.charCodeAt(0)) >>> 0
+  return NOTE_ROTATIONS[hash % NOTE_ROTATIONS.length]
+}
+function taskTapeHue(task) {
+  let hash = 0
+  for (const c of String(task.agent_name || task.run_id || '')) hash = (hash * 31 + c.charCodeAt(0)) >>> 0
+  return TAPE_HUES[hash % TAPE_HUES.length]
 }
 
 onMounted(() => {
   loadAgents()
   checkAllHealth()
+  loadTasks()
   healthTimer.value = setInterval(checkAllHealth, 30 * 60 * 1000)
+  taskTimer.value = setInterval(() => {
+    const hasRunning = tasks.value.some((t) => String(t.status).toUpperCase() === 'RUNNING')
+    if (hasRunning) loadTasks({ silent: true })
+  }, 15000)
 })
-onUnmounted(() => { clearInterval(healthTimer.value) })
+onUnmounted(() => {
+  clearInterval(healthTimer.value)
+  clearInterval(taskTimer.value)
+})
 
 async function loadAgents() {
   loading.value = true
@@ -73,7 +104,28 @@ async function loadAgents() {
     }
   } catch { ElMessage.error('加载智能体列表失败') }
   loading.value = false
-  nextTick(() => animateCards())
+  nextTick(() => animateStatusBubbles())
+}
+
+/** 接口为空时展示的预览便签（demo_ 前缀，不可进执行页） */
+async function loadTasks({ silent = false } = {}) {
+  if (!silent) tasksLoading.value = true
+  try {
+    const { data } = await client.get('/ai/tasks', { params: { status: 'all' } })
+    if (data.ok) tasks.value = data.tasks || []
+  } catch {
+    if (!silent) ElMessage.error('加载任务看板失败')
+  } finally {
+    tasksLoading.value = false
+  }
+}
+
+function openTask(task) {
+  if (!task?.run_id || task._demo || String(task.run_id).startsWith('demo-')) {
+    ElMessage.info('这是预览便签，真实任务创建后可进入执行页')
+    return
+  }
+  router.push(`/runner?run=${encodeURIComponent(task.run_id)}`)
 }
 
 function syncPendingModels() {
@@ -85,10 +137,19 @@ function syncPendingModels() {
 function hasPendingModelChange(agent) {
   return pendingModels.value[agent.id] !== agent.model_name
 }
-function animateCards() {
-  animate('.agent-card', {
-    opacity: [0, 1], translateY: [24, 0], scale: [0.96, 1],
-    delay: stagger(60), duration: 450, ease: 'outCubic',
+
+function animateStatusBubbles() {
+  const bubbles = document.querySelectorAll('.duty-roster .ac-status-bubble')
+  bubbles.forEach((el, i) => {
+    animate(el, {
+      opacity: [0, 1],
+      scale: [0.4, 1.14, 1],
+      translateY: [10, -3, 0],
+      translateX: [4, 0],
+      duration: 560,
+      delay: 90 + i * 80,
+      ease: 'outBack(1.8)',
+    })
   })
 }
 
@@ -100,6 +161,7 @@ async function checkAllHealth() {
       for (const h of data.agents) {
         healthResults.value[h.id] = { is_connected: h.is_connected, last_checked: h.last_checked }
       }
+      nextTick(() => animateStatusBubbles())
     }
   } catch (_) {}
 }
@@ -156,19 +218,8 @@ function agentStatusText(agent) {
   if (h && !h.is_connected) return '未连通'
   return '运行中'
 }
-function agentStatusEffect(agent) {
-  if (agent.status !== 'active') return 'plain'
-  const h = healthResults.value[agent.id]
-  if (h && !h.is_connected) return 'dark'
-  return 'dark'
-}
-
-// ── Tag type rotation ──
-// Element Plus <el-tag type="..."> requires one of: primary | success | info | warning | danger
-// Use `undefined` (omit) for the first slot to keep the default style.
-const TAG_TYPES = [undefined, 'success', 'info', 'warning']
-function tagType(index) {
-  return TAG_TYPES[index % TAG_TYPES.length]
+function agentStatusClass(agent) {
+  return `is-${agentStatusType(agent)}`
 }
 
 // ── Model selector ──
@@ -218,139 +269,136 @@ async function confirmModel(agent) {
 
 function openAgent(agent) {
   if (hasPendingModelChange(agent)) {
-    ElMessage.warning('请先点击「确认」保存模型选择')
+    ElMessage.warning('请先点击「上带保存」确认模型')
     return
   }
   router.push(`/ai-assistant/chat/${agent.id}`)
 }
+function onAgentCardClick(ev) {
+  const card = ev?.currentTarget
+  if (card) selectPop(card)
+  const mark = document.querySelector('.ai-workbench .brand-mark')
+  if (mark) iconBounce(mark)
+}
 function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
-
-watch(activeFilter, () => nextTick(() => animateCards()))
 </script>
 
 <template>
-  <div class="doc-page ai-animal-theme">
-    <PageHeader
-      title="AI 助手 AI Assistant"
-      subtitle="管理 AI Agent 智能体，配置模型、工具与自动化工作流"
-      color="app-yellow"
-    />
+  <div class="doc-page wb-shell ai-workbench">
+    <WorkbenchHeader
+      title="AI 助手"
+      subtitle="智能体看板贴便签，任务看板跟进度"
+      mark="🤖"
+    >
+      <template #actions>
+        <AnimalButton class="wb-btn wb-btn--sky" type="primary" @click="router.push('/ai-assistant/agent/new')">+ 新建智能体</AnimalButton>
+      </template>
+    </WorkbenchHeader>
 
     <div class="doc-body">
-      <section class="doc-section agent-section">
+      <!-- 视图切换 Tab -->
+      <div class="view-tabs">
+        <button
+          :class="['view-tab', { active: viewMode === 'agents' }]"
+          @click="viewMode = 'agents'"
+        >🤖 智能体看板</button>
+        <button
+          :class="['view-tab', { active: viewMode === 'knowledge' }]"
+          @click="viewMode = 'knowledge'"
+        >📚 知识库</button>
+      </div>
+
+      <!-- 智能体看板视图 -->
+      <template v-if="viewMode === 'agents'">
+      <!-- 上方：智能体看板 -->
+      <section class="doc-section duty-section">
         <div class="doc-section__header">
           <h3 class="doc-section__title">
-            智能体列表
+            智能体看板
             <span class="doc-tag">Agents</span>
           </h3>
-          <AnimalButton type="primary" @click="router.push('/ai-assistant/agent/new')">+ 新建智能体</AnimalButton>
+          <span class="filter-count">{{ agents.length }} 张便签</span>
         </div>
+        <div class="dot-board duty-roster" v-loading="loading">
+          <div v-if="loading && !agents.length" class="ai-loading-wrap">
+            <WbLoader />
+            <span>正在加载智能体…</span>
+          </div>
+          <AgentStickyNote
+            v-for="a in agents"
+            :key="a.id"
+            :agent="a"
+            :rotation="noteRotation(a)"
+            :tape-hue="tapeHue(a)"
+            :pending-model="pendingModels[a.id]"
+            :confirming="confirmingId === a.id"
+            :testing="testingId === a.id"
+            :status-class="agentStatusClass(a)"
+            :status-text="agentStatusText(a)"
+            :model-options="getModelOptions(a)"
+            @update:pending-model="pendingModels[a.id] = $event"
+            @confirm-model="confirmModel(a)"
+            @chat="openAgent(a)"
+            @edit="editAgent(a.id)"
+            @test="testConnection(a)"
+            @delete="deleteAgent(a)"
+            @select="onAgentCardClick"
+          />
+          <div v-if="!agents.length && !loading" class="empty">
+            点「+ 新建智能体」贴上第一张便签
+          </div>
+        </div>
+      </section>
 
-        <!-- Tabs 筛选 + 卡片内容 -->
+      <!-- 下方：任务看板 -->
+      <section class="doc-section task-section">
+        <div class="doc-section__header">
+          <h3 class="doc-section__title">
+            任务看板
+            <span class="doc-tag">Tasks</span>
+          </h3>
+          <span class="filter-count">{{ filteredTasks.length }} / {{ tasks.length }}</span>
+        </div>
         <div class="filter-bar">
           <Tabs
-            class="agent-tabs"
-            :items="filterTabs"
-            v-model="activeFilter"
+            class="task-tabs"
+            :items="taskFilterTabs"
+            v-model="activeTaskFilter"
             :leaf-animation="true"
             :shadow="true"
           >
-            <template v-for="tab in filterTabs" #[tab.key] :key="tab.key">
-              <div class="agent-grid" v-loading="loading">
-                <AnimalCard
-                  v-for="a in filteredAgents"
-                  :key="a.id"
-                  :type="cardType(a)"
-                  :color="cardColor(a)"
-                  :pattern="cardPattern(a)"
-                  class="agent-card"
-                >
-                  <!-- Avatar -->
-                  <div class="ac-avatar"
-                    :style="a.avatar?.startsWith('/api/ai/avatars/') ? { backgroundImage: `url(${a.avatar})` } : {}">
-                    <span v-if="!a.avatar?.startsWith('/api/ai/avatars/')">{{ a.avatar || '🤖' }}</span>
-                  </div>
-
-                  <!-- Name + status tag -->
-                  <div class="ac-header">
-                    <span class="ac-name">{{ a.name }}</span>
-                    <el-tag
-                      :type="agentStatusType(a)"
-                      :effect="agentStatusEffect(a)"
-                      size="small"
-                      round
-                    >{{ agentStatusText(a) }}</el-tag>
-                  </div>
-
-                  <!-- Custom tags -->
-                  <div class="ac-tags" v-if="a.tags">
-                    <el-tag
-                      v-for="(t, idx) in a.tags.split(',').filter(Boolean)"
-                      :key="t"
-                      :type="tagType(idx)"
-                      effect="plain"
-                      size="small"
-                      round
-                    >{{ t.trim() }}</el-tag>
-                  </div>
-
-                  <!-- Description -->
-                  <div class="ac-desc" v-if="a.description">{{ a.description }}</div>
-
-                  <!-- Model selector -->
-                  <div class="ac-model-row">
-                    <el-select
-                      v-model="pendingModels[a.id]"
-                      size="small"
-                      class="ac-model-select"
-                      @click.stop
-                      filterable
-                      placeholder="选择模型"
-                    >
-                      <el-option v-for="m in getModelOptions(a)" :key="m.value" :label="m.label" :value="m.value" />
-                    </el-select>
-                    <AnimalButton
-                      v-if="hasPendingModelChange(a)"
-                      size="small"
-                      type="primary"
-                      class="ac-model-confirm"
-                      :loading="confirmingId === a.id"
-                      @click.stop="confirmModel(a)"
-                    >确认</AnimalButton>
-                  </div>
-
-                  <!-- Tool count + model provider -->
-                  <div class="ac-meta">
-                    <el-tag effect="plain" type="info" size="small" round>{{ a.tool_count || 0 }} 个工具</el-tag>
-                    <span class="ac-provider">{{ a.model_provider }}</span>
-                  </div>
-
-                  <!-- Actions -->
-                  <div class="ac-actions">
-                    <AnimalButton size="small" type="primary" @click.stop="openAgent(a)">💬 对话</AnimalButton>
-                    <AnimalButton size="small" @click.stop="editAgent(a.id)">⚙ 配置</AnimalButton>
-                  </div>
-                  <div class="ac-actions-secondary">
-                    <AnimalButton size="small" :loading="testingId === a.id" @click.stop="testConnection(a)">🔌 测试</AnimalButton>
-                    <AnimalButton size="small" type="danger" plain @click.stop="deleteAgent(a)">🗑 删除</AnimalButton>
-                  </div>
-                </AnimalCard>
-
-                <div v-if="!filteredAgents.length && !loading" class="empty">
-                  {{ activeFilter === 'all' ? '点击「+ 新建智能体」创建第一个智能体' : '当前筛选条件下没有智能体' }}
+            <template v-for="tab in taskFilterTabs" #[tab.key] :key="tab.key">
+              <div class="dot-board task-board" v-loading="tasksLoading">
+                <div v-if="tasksLoading && !filteredTasks.length" class="ai-loading-wrap">
+                  <WbLoader />
+                  <span>正在加载任务…</span>
+                </div>
+                <TaskStickyNote
+                  v-for="t in filteredTasks"
+                  :key="t.run_id"
+                  :task="t"
+                  :rotation="taskRotation(t)"
+                  :tape-hue="taskTapeHue(t)"
+                  @open="openTask"
+                />
+                <div v-if="!filteredTasks.length && !tasksLoading" class="empty">
+                  {{ activeTaskFilter === 'all' ? '还没有 AI 任务，在对话里让智能体创建即可' : '当前状态下没有任务便签' }}
                 </div>
               </div>
             </template>
           </Tabs>
-          <span class="filter-count">{{ filteredAgents.length }} / {{ agents.length }} 个智能体</span>
         </div>
       </section>
+      </template>
+
+      <!-- 知识库视图 -->
+      <KnowledgeBase v-if="viewMode === 'knowledge'" />
     </div>
   </div>
 </template>
 
 <style scoped>
-.ai-animal-theme {
+.ai-workbench {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -362,152 +410,150 @@ watch(activeFilter, () => nextTick(() => animateCards()))
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  gap: 8px;
+  overflow: auto;
+  padding-bottom: 12px;
 }
 
-.agent-section {
-  flex: 1;
-  min-height: 0;
+.duty-section,
+.task-section {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  padding: 20px 24px 24px;
-}
-
-.agent-section .doc-section__header {
+  padding: 12px 24px 8px;
   flex-shrink: 0;
 }
+.duty-section {
+  min-height: 0;
+}
+.task-section {
+  flex: 1;
+  min-height: 320px;
+}
 
-/* Filter bar */
+.doc-section__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+
 .filter-bar {
   flex: 1;
   min-height: 0;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 0 4px;
+  flex-direction: column;
 }
-.agent-tabs {
+.task-tabs {
   flex: 1;
   min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
 }
-.agent-tabs :deep(.animal-tabs) {
+.task-tabs :deep(.animal-tabs) {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
-.agent-tabs :deep(.animal-tabs__content) {
+.task-tabs :deep(.animal-tabs__content) {
   flex: 1;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   display: block;
-  padding-top: 16px;
+  padding-top: 12px;
 }
-.agent-tabs :deep(.animal-tabs__inner) {
+.task-tabs :deep(.animal-tabs__inner) {
   min-height: min-content;
 }
+
 .filter-count {
   font-size: 13px;
   color: #9f927d;
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
-  padding-top: 10px;
 }
 
-/* Grid */
-.agent-grid {
+.dot-board {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 28px 32px;
   align-content: flex-start;
+  align-items: flex-start;
+  padding: 28px 22px 24px;
+  border-radius: 18px;
+  background-color: #f7efd8;
+  background-image: radial-gradient(rgba(139, 115, 85, 0.18) 1.1px, transparent 1.1px);
+  background-size: 18px 18px;
+  border: 1.5px solid rgba(196, 181, 160, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
-.agent-card {
-  width: 260px;
+.duty-roster {
+  min-height: 200px;
+  max-height: 340px;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+.task-board {
+  min-height: 240px;
+}
+
+.empty {
+  color: #988B7A;
+  padding: 48px 0;
+  text-align: center;
+  font-size: 15px;
+  width: 100%;
+  font-weight: 700;
+}
+.ai-loading-wrap {
+  width: 100%;
+  min-height: 140px;
   display: flex;
   flex-direction: column;
-  gap: 0;
-  transition: transform 0.25s ease;
-}
-.agent-card:hover {
-  transform: translateY(-2px);
-}
-.agent-card :deep(.animal-card__content) {
-  background: rgba(255, 248, 240, 0.85);
-  border-radius: 16px;
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-
-/* Avatar */
-.ac-avatar {
-  width: 56px; height: 56px; border-radius: 18px; margin: 0 auto;
-  background-size: cover; background-position: center; background-repeat: no-repeat;
-  background-color: rgba(139,115,85,0.06); display: flex; align-items: center;
-  justify-content: center; font-size: 28px;
-  box-shadow: 0 2px 8px rgba(61, 52, 40, 0.1);
-}
-
-/* Header — name + status */
-.ac-header {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.ac-name {
-  font-size: 15px; font-weight: 700; color: #4A3A28;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-
-/* Tags */
-.ac-tags {
-  display: flex; gap: 4px; flex-wrap: wrap; justify-content: center;
+  justify-content: center;
+  gap: 12px;
+  color: #988b7a;
+  font-size: 13px;
+  font-weight: 700;
 }
 
-/* Description */
-.ac-desc {
-  font-size: 12px; color: #988B7A; text-align: center;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-
-/* Model row */
-.ac-model-row {
+/* View tabs — prominent pill-style switcher */
+.view-tabs {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0 -4px;
+  gap: 4px;
+  padding: 6px;
+  margin: 0 24px;
+  background: rgba(121, 79, 39, 0.05);
+  border-radius: 14px;
+  flex-shrink: 0;
 }
-.ac-model-select { flex: 1; min-width: 0; }
-.ac-model-confirm { flex-shrink: 0; }
-.ac-model-select :deep(.el-input__wrapper) {
-  padding: 0 10px; font-size: 12px; border-radius: 8px;
+.view-tab {
+  flex: 1;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--animal-text-color-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
 }
-.ac-model-select :deep(.el-input__inner) { font-size: 12px; }
-
-/* Meta */
-.ac-meta {
-  display: flex; justify-content: space-between; align-items: center;
+.view-tab:hover {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--animal-text-color);
 }
-.ac-provider {
-  font-size: 11px; color: #a0936e; font-weight: 600; text-transform: uppercase;
+.view-tab.active {
+  background: #fff;
+  color: var(--animal-text-color);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
-
-/* Actions */
-.ac-actions { display: flex; gap: 6px; justify-content: center; }
-.ac-actions-secondary { display: flex; gap: 6px; justify-content: center; }
-
-/* Empty */
-.empty { color: #988B7A; padding: 60px 0; text-align: center; font-size: 15px; width: 100%; }
 </style>

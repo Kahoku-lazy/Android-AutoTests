@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>测试执行流程与步骤引擎</title>
+  <style>
+    :root {
+      --c-bg: #f8fafc;
+      --c-canvas: #ffffff;
+      --c-border: #cbd5e1;
+      --c-text-main: #0f172a;
+      --c-text-sub: #64748b;
+      --c-accent: #0f172a;
+      --c-red: #dc2626;
+      --c-green: #16a34a;
+      --font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      --font-mono: 'SF Mono', Monaco, Consolas, monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--c-bg);
+      font-family: var(--font-ui);
+      color: var(--c-text-main);
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+    }
+    .diagram-canvas {
+      background: var(--c-canvas);
+      border: 2px solid var(--c-border);
+      padding: 32px;
+      width: 1100px;
+    }
+    .diagram-header {
+      border-bottom: 1px solid var(--c-border);
+      padding-bottom: 16px;
+      margin-bottom: 32px;
+    }
+    .diagram-title { font-size: 22px; font-weight: 600; }
+    .diagram-subtitle { font-size: 12px; font-weight: 500; color: var(--c-text-sub); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+    /* Pipeline */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+    }
+    .stage {
+      border: 1px solid var(--c-border);
+      padding: 14px 18px;
+      text-align: center;
+      min-width: 130px;
+    }
+    .stage-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--c-text-sub);
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .stage-name {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .stage-detail {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--c-text-sub);
+      margin-top: 4px;
+    }
+    .arrow {
+      font-size: 16px;
+      color: var(--c-text-sub);
+      margin: 0 4px;
+    }
+
+    /* Step types grid */
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--c-text-sub);
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--c-border);
+    }
+    .step-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .step-card {
+      border: 1px solid var(--c-border);
+      padding: 10px;
+    }
+    .step-type {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--c-accent);
+      margin-bottom: 2px;
+    }
+    .step-desc {
+      font-size: 10px;
+      color: var(--c-text-sub);
+    }
+
+    /* WS flow */
+    .ws-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      font-family: var(--font-mono);
+    }
+    .ws-table th {
+      text-align: left;
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--c-border);
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--c-text-sub);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .ws-table td {
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--c-border);
+      vertical-align: top;
+    }
+    .ws-type {
+      font-weight: 700;
+    }
+
+    .loop-viz {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      border: 1px dashed var(--c-border);
+      margin-top: 16px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+    .loop-box {
+      border: 1px solid var(--c-border);
+      padding: 8px 14px;
+      font-weight: 600;
+    }
+
+    .note-box {
+      background: #f1f5f9;
+      border: 1px solid var(--c-border);
+      padding: 12px 16px;
+      margin-top: 16px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--c-text-sub);
+    }
+  </style>
+</head>
+<body>
+
+<div class="diagram-canvas">
+  <div class="diagram-header">
+    <h1 class="diagram-title">测试执行流程</h1>
+    <p class="diagram-subtitle">EXECUTION PIPELINE — 14 STEP TYPES · ASYNC RUNNER · WS PROGRESS</p>
+  </div>
+
+  <!-- Pipeline -->
+  <div class="pipeline">
+    <div class="stage">
+      <div class="stage-label">1 · Frontend</div>
+      <div class="stage-name">选择用例</div>
+      <div class="stage-detail">cases.html</div>
+      <div class="stage-detail">设置 loop_count</div>
+    </div>
+    <span class="arrow">→</span>
+    <div class="stage">
+      <div class="stage-label">2 · API</div>
+      <div class="stage-name">POST /api/tests/run</div>
+      <div class="stage-detail">case_ids[]</div>
+      <div class="stage-detail">loop_count</div>
+    </div>
+    <span class="arrow">→</span>
+    <div class="stage">
+      <div class="stage-label">3 · Runner</div>
+      <div class="stage-name">TestRunner.run()</div>
+      <div class="stage-detail">run_in_executor</div>
+      <div class="stage-detail">线程池隔离</div>
+    </div>
+    <span class="arrow">→</span>
+    <div class="stage">
+      <div class="stage-label">4 · Execute</div>
+      <div class="stage-name">StepExecutor</div>
+      <div class="stage-detail">handler dispatcher</div>
+      <div class="stage-detail">DeviceAdapter</div>
+    </div>
+    <span class="arrow">→</span>
+    <div class="stage">
+      <div class="stage-label">5 · Report</div>
+      <div class="stage-name">ReportGenerator</div>
+      <div class="stage-detail">CSV / MD / JSON</div>
+      <div class="stage-detail">logs/ exports/</div>
+    </div>
+  </div>
+
+  <!-- Loop visualization -->
+  <div class="loop-viz">
+    <span style="color: var(--c-text-sub);">循环控制:</span>
+    <span>for each</span>
+    <div class="loop-box">selected_case</div>
+    <span>×</span>
+    <div class="loop-box">loop_count 次</div>
+    <span>→ 执行 steps_data</span>
+    <span style="color: var(--c-text-sub);">→ 任意 step fail 则该轮 case 失败</span>
+  </div>
+
+  <!-- 14 Step Types -->
+  <div style="margin-top: 32px;">
+    <div class="section-title">14 种 TestStep 类型 — StepExecutor handler dispatcher</div>
+    <div class="step-grid">
+      <div class="step-card">
+        <div class="step-type">click</div>
+        <div class="step-desc">XPath 单击 · timeout 超时</div>
+      </div>
+      <div class="step-card">
+        <div class="step-type">click_indexed</div>
+        <div class="step-desc">按 index 选元素点击</div>
+      </div>
+      <div class="step-card">
+        <div class="step-type">retry_click</div>
+        <div class="step-desc">最多重试 index 次</div>
+      </div>
+      <div class="step-card">
+        <div class="step-type">wait</div>
+        <div class="step-desc">等待元素出现 · timeout</div>
+      </div>
+      <div class="step-card">
+        <div class="step-type">wait_disappear</div>
+        <div class="step-desc">等待元素消失</div>
+      </div>
+      <div class="step-card">
+        <div class="step-type">wait_either</div>
+        <div class="step-desc">二选一 · xpath + xpath2</div>
+      </div>
+      <div class="step-card">
+        <div class="step-type">wait_toast</div>
+        <div class="step-desc">等待 Toast 弹窗</div>
+      </div>
+      <div class="step-card">
+        <div class="step-type">verify_text</div>
+        <div class="step-desc">验证文本匹配</div>
+      </div>
+      <div class="step-card">
+        <div class="step-type">poll_text</div>
+        <div class="step-desc">轮询读取文本 · index 间隔</div>
+      </div>
+      <div class="step-card">
+        <div class="step-type">sleep</div>
+        <div class="step-desc">固定秒数等待</div>
+      </div>
+      <div class="step-card">
+        <div class="step-type">kill_app</div>
+        <div class="step-desc">强制停止目标 App</div>
+      </div>
+      <div class="step-card">
+        <div class="step-type">start_app</div>
+        <div class="step-desc">冷启动目标 App</div>
+      </div>
+      <div class="step-card">
+        <div class="step-type">restart_app</div>
+        <div class="step-desc">kill + 等待 + start</div>
+      </div>
+      <div class="step-card">
+        <div class="step-type">log</div>
+        <div class="step-desc">仅记录日志，不操作</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WS progress messages -->
+  <div style="margin-top: 16px;">
+    <div class="section-title">WebSocket 实时推送 — /ws/test-run/{run_id}</div>
+    <table class="ws-table">
+      <thead>
+        <tr>
+          <th>Message Type</th>
+          <th>触发时机</th>
+          <th>关键字段</th>
+          <th>前端处理</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="ws-type">log</td>
+          <td>每步执行日志</td>
+          <td>message</td>
+          <td>runLogs.push()</td>
+        </tr>
+        <tr>
+          <td class="ws-type">case_started</td>
+          <td>开始执行一个用例</td>
+          <td>case_id, case_title, loop_count</td>
+          <td>更新 currentCase</td>
+        </tr>
+        <tr>
+          <td class="ws-type">iteration_result</td>
+          <td>每轮迭代完成</td>
+          <td>iteration, result, duration_ms</td>
+          <td>进度条 + pass/fail 计数</td>
+        </tr>
+        <tr>
+          <td class="ws-type">case_finished</td>
+          <td>一个用例执行完毕</td>
+          <td>case_id, pass, fail, rate</td>
+          <td>追加 caseResults</td>
+        </tr>
+        <tr>
+          <td class="ws-type">run_finished</td>
+          <td>全部用例执行完毕</td>
+          <td>summary, csv_path, log_path</td>
+          <td>running=false · 加载报告</td>
+        </tr>
+        <tr>
+          <td class="ws-type">device_error</td>
+          <td>设备连接失败</td>
+          <td>error</td>
+          <td>running=false · toast</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note-box">
+    <span style="font-weight:600;">线程模型:</span> uiautomator2 调用是阻塞的 → TestRunner 通过 asyncio.run_in_executor(None, sync_run) 放入默认线程池 → 不阻塞 FastAPI 事件循环 → WS 回调在 async context 中安全写入
+  </div>
+</div>
+
+</body>
+</html>

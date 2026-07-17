@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>测试报告 · Android-AutoTests (Redesign)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --primary: #19c8b9;
+  --primary-hover: #3dd4c6;
+  --primary-active: #11a89b;
+  --primary-bg: #e6f9f6;
+  --text: #794f27;
+  --text-body: #725d42;
+  --text-secondary: #9f927d;
+  --text-muted: #8a7b66;
+  --text-disabled: #c4b89e;
+  --bg: #f8f8f0;
+  --bg-content: rgb(247,243,223);
+  --bg-disabled: #f0ece2;
+  --border: #c4b89e;
+  --border-hover: #a89878;
+  --border-strong: #9f927d;
+  --success: #6fba2c;
+  --success-active: #5a9e1e;
+  --warning: #f5c31c;
+  --warning-active: #dba90e;
+  --error: #e05a5a;
+  --error-active: #c94444;
+  --focus-yellow: #ffcc00;
+  --shadow-btn: #bdaea0;
+  --r-sm: 12px;
+  --r-base: 18px;
+  --r-lg: 24px;
+  --r-pill: 50px;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --d-fast: 0.15s;
+  --d-base: 0.25s;
+  --d-slow: 0.35s;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: Nunito, 'Noto Sans SC', -apple-system, 'PingFang SC', sans-serif;
+  font-weight: 500; letter-spacing: 0.01em;
+  background: var(--bg); color: var(--text-body); line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── Layout ── */
+.page { max-width: 1200px; margin: 0 auto; padding: 32px 40px; }
+
+/* ── Header ── */
+.page-header { margin-bottom: 28px; }
+.page-header .breadcrumb { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+.page-header .breadcrumb a { color: var(--primary-active); text-decoration: none; }
+.page-header .breadcrumb a:hover { text-decoration: underline; }
+.page-header h1 { font-size: 26px; font-weight: 800; color: var(--text); letter-spacing: 0.02em; margin-bottom: 6px; }
+.page-header .meta { font-size: 13px; color: var(--text-muted); display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
+.page-header .meta .sep { color: var(--text-disabled); }
+
+/* ── Status Badge ── */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 14px; border-radius: var(--r-pill);
+  font-size: 12px; font-weight: 700; letter-spacing: 0.02em; }
+.badge-pass { background: rgba(111,186,44,0.12); color: var(--success); border: 1.5px solid rgba(111,186,44,0.25); }
+.badge-fail { background: rgba(224,90,90,0.12); color: var(--error); border: 1.5px solid rgba(224,90,90,0.25); }
+.badge-running { background: rgba(245,195,28,0.12); color: var(--warning-active); border: 1.5px solid rgba(245,195,28,0.25); animation: pulse-badge 2s ease-in-out infinite; }
+.badge-stopped { background: rgba(138,123,102,0.10); color: var(--text-muted); border: 1.5px solid rgba(138,123,102,0.20); }
+@keyframes pulse-badge { 0%,100%{opacity:1} 50%{opacity:.65} }
+
+/* ── KPI Cards ── */
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+.kpi-card {
+  background: var(--bg-content); border-radius: var(--r-base); padding: 24px 28px;
+  border: 1.5px solid transparent; position: relative; overflow: hidden;
+  transition: transform var(--d-base) var(--ease), border-color var(--d-base) var(--ease);
+}
+.kpi-card:hover { transform: translateY(-2px); }
+.kpi-card .kpi-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; border-radius: 0 3px 3px 0; }
+.kpi-card .kpi-value { font-size: 36px; font-weight: 900; color: var(--text); line-height: 1.1; }
+.kpi-card .kpi-label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; font-weight: 600; }
+.kpi-card .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+/* color accents */
+.accent-teal { background: var(--primary); }
+.accent-green { background: var(--success); }
+.accent-red { background: var(--error); }
+.accent-yellow { background: var(--warning); }
+
+/* ── Section Header ── */
+.section { margin-bottom: 28px; }
+.section-title { font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: 0.02em;
+  padding-bottom: 10px; border-bottom: 2px solid var(--border); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+.section-title .icon { font-size: 20px; }
+.section-title .count { font-size: 13px; color: var(--text-secondary); font-weight: 500; margin-left: auto; }
+
+/* ── Panel / Card ── */
+.panel {
+  background: var(--bg-content); border-radius: var(--r-lg); padding: 20px 24px;
+  border: 1.5px solid var(--border); margin-bottom: 16px;
+}
+
+/* ── Table ── */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table thead th {
+  padding: 14px 16px; font-size: 12px; font-weight: 700; color: var(--text); letter-spacing: 0.02em;
+  text-align: left; background: rgba(139,115,85,0.04); border-bottom: 2px solid var(--border);
+  text-transform: uppercase; white-space: nowrap;
+}
+.data-table tbody td {
+  padding: 12px 16px; font-size: 14px; color: var(--text-body);
+  border-bottom: 1px dashed rgba(196,184,158,0.4);
+}
+.data-table tbody tr { transition: background var(--d-fast) var(--ease); cursor: pointer; }
+.data-table tbody tr:hover { background: rgba(25,200,185,0.04); }
+.data-table tbody tr.expanded { background: rgba(25,200,185,0.06); }
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table .mono { font-family: 'SF Mono','Fira Code','Cascadia Code',Consolas,monospace; font-size: 12px; font-weight: 600; }
+
+/* ── Progress Bar ── */
+.progress-bar { display: flex; height: 8px; border-radius: var(--r-pill); overflow: hidden; background: var(--bg-disabled); min-width: 80px; }
+.progress-bar .p-pass { background: var(--success); transition: width 0.5s var(--ease); }
+.progress-bar .p-fail { background: var(--error); transition: width 0.5s var(--ease); }
+
+/* ── Expand Row ── */
+.expand-row { background: rgba(25,200,185,0.03); }
+.expand-row td { padding: 0 !important; }
+.expand-inner { padding: 16px 24px 20px; border-top: 1px dashed var(--border); }
+.expand-inner .mini-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.expand-inner .mini-table th { padding: 8px 12px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; text-align: left; background: none; border-bottom: 1px solid var(--border); }
+.expand-inner .mini-table td { padding: 8px 12px; font-size: 13px; border-bottom: 1px dashed rgba(196,184,158,0.2); }
+.expand-inner .fail-detail { margin-top: 12px; padding: 14px 18px; background: rgba(224,90,90,0.04); border-radius: var(--r-sm); border: 1px solid rgba(224,90,90,0.12); }
+.expand-inner .fail-detail h5 { font-size: 13px; font-weight: 700; color: var(--error); margin-bottom: 8px; }
+.expand-inner .fail-detail .kv { display: grid; grid-template-columns: 100px 1fr; gap: 4px 12px; font-size: 12px; }
+.expand-inner .fail-detail .kv dt { color: var(--text-muted); font-weight: 600; }
+.expand-inner .fail-detail .kv dd { color: var(--text-body); word-break: break-all; font-family: 'SF Mono','Fira Code','Cascadia Code',Consolas,monospace; font-size: 11px; }
+
+/* ── Chart Container ── */
+.chart-row { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; margin-bottom: 28px; }
+.chart-box { background: var(--bg-content); border-radius: var(--r-lg); padding: 20px 24px; border: 1.5px solid var(--border); }
+.chart-box h4 { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
+.chart-canvas-wrap { position: relative; height: 240px; }
+.chart-canvas-wrap canvas { width: 100% !important; height: 100% !important; }
+
+/* ── Tabs ── */
+.tab-bar { display: flex; gap: 4px; background: var(--bg-content); border: 2px solid var(--border-strong); border-radius: var(--r-lg); padding: 4px; margin-bottom: 20px; }
+.tab-btn { padding: 10px 24px; border-radius: var(--r-pill); font-size: 14px; font-weight: 600; color: var(--text-body); cursor: pointer; border: none; background: transparent; transition: all var(--d-fast) var(--ease); font-family: inherit; letter-spacing: 0.02em; }
+.tab-btn:hover { background: rgba(25,200,185,0.08); color: var(--text); }
+.tab-btn.active { background: #0CC0B5; color: #FFF9E3; }
+
+/* ── Button ── */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: var(--r-pill);
+  font-size: 13px; font-weight: 600; letter-spacing: 0.02em; cursor: pointer; border: 2px solid var(--border-strong);
+  background: var(--bg); color: var(--text-body); transition: all var(--d-fast) var(--ease); font-family: inherit;
+  text-decoration: none; }
+.btn:hover { color: var(--primary-active); border-color: var(--primary); transform: translateY(-1px); box-shadow: 0 3px 10px 0 rgba(61,52,40,0.10); }
+.btn-primary { background: var(--bg); color: var(--text); border-color: var(--bg);
+  box-shadow: 0 5px 0 0 var(--shadow-btn); }
+.btn-primary:hover { box-shadow: 0 6px 0 0 var(--shadow-btn); transform: translateY(-1px); }
+.btn-primary:active { box-shadow: 0 1px 0 0 var(--shadow-btn); transform: translateY(2px); }
+.btn-sm { padding: 5px 12px; font-size: 11px; }
+
+/* ── Collapse ── */
+.collapse { background: var(--bg-content); border: 2px solid var(--border-strong); border-radius: var(--r-base); margin-bottom: 12px; overflow: hidden; }
+.collapse-header { padding: 14px 20px; font-size: 15px; font-weight: 600; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 10px; user-select: none; transition: background var(--d-fast) var(--ease); }
+.collapse-header:hover { background: rgba(25,200,185,0.04); }
+.collapse-header .toggle { width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; flex-shrink: 0; box-shadow: 0 2px 4px rgba(25,200,185,0.3); transition: transform var(--d-base) var(--ease); }
+.collapse.open .collapse-header .toggle { transform: rotate(45deg); }
+.collapse-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--d-base) var(--ease); }
+.collapse.open .collapse-body { grid-template-rows: 1fr; }
+.collapse-body-inner { overflow: hidden; padding: 0 20px; }
+.collapse.open .collapse-body-inner { padding: 0 20px 16px; }
+
+/* ── Failure Summary Card ── */
+.fail-card { border-left: 4px solid var(--error); }
+
+/* ── Tooltip ── */
+.tip { position: relative; cursor: help; border-bottom: 1px dotted var(--text-muted); }
+.tip:hover::after { content: attr(data-tip); position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%);
+  background: var(--bg-content); border: 2px solid var(--border); border-radius: var(--r-base);
+  padding: 6px 12px; font-size: 12px; color: var(--text-body); white-space: nowrap; z-index: 10;
+  box-shadow: 0 3px 10px rgba(61,52,40,0.10); pointer-events: none; }
+
+/* ── Empty State ── */
+.empty { text-align: center; padding: 48px 24px; color: var(--text-secondary); }
+.empty .emoji { font-size: 40px; margin-bottom: 12px; }
+.empty p { font-size: 14px; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .page { padding: 20px; }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .chart-row { grid-template-columns: 1fr; }
+  .page-header .meta { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .page-header .meta .sep { display: none; }
+}
+@media (max-width: 600px) {
+  .kpi-row { grid-template-columns: 1fr; }
+  .tab-bar { flex-wrap: wrap; }
+}
+
+/* ── Print ── */
+@media print {
+  body { background: #fff; }
+  .page { max-width: 100%; padding: 0; }
+  .tab-bar, .btn, .collapse-header { display: none; }
+  .collapse-body { grid-template-rows: 1fr !important; }
+  .collapse-body-inner { padding: 0 0 16px !important; }
+  .chart-box { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ═══ HEADER ═══ -->
+  <div class="page-header">
+    <div class="breadcrumb"><a href="#">测试报告</a> / 执行详情</div>
+    <h1>测试执行报告</h1>
+    <div class="meta">
+      <span>Run ID: <code style="font-family:monospace;font-size:12px;">run_RF8N21MSW7A_20260707_143025</code></span>
+      <span class="sep">|</span>
+      <span>📱 Samsung Galaxy S22 (RF8N21MSW7A)</span>
+      <span class="sep">|</span>
+      <span class="badge badge-pass">✅ PASSED</span>
+      <span class="sep">|</span>
+      <span>⏱ 2026-07-07 14:30:25 → 14:32:18</span>
+      <span class="sep">|</span>
+      <span>🕐 总耗时: 1m 53s</span>
+      <span class="sep">|</span>
+      <span>🔄 循环: 3 次</span>
+    </div>
+  </div>
+
+  <!-- ═══ KPI SUMMARY ═══ -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-accent accent-teal"></div>
+      <div class="kpi-value">8</div>
+      <div class="kpi-label">执行用例</div>
+      <div class="kpi-sub">3 轮 × 8 用例 = 24 次迭代</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-accent accent-green"></div>
+      <div class="kpi-value" style="color:var(--success);">22</div>
+      <div class="kpi-label">✅ 通过</div>
+      <div class="kpi-sub">91.7% 迭代通过率</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-accent accent-red"></div>
+      <div class="kpi-value" style="color:var(--error);">2</div>
+      <div class="kpi-label">❌ 失败</div>
+      <div class="kpi-sub">涉及 2 个用例</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-accent accent-yellow"></div>
+      <div class="kpi-value" style="color:var(--warning-active);">87.5%</div>
+      <div class="kpi-label">📊 用例通过率</div>
+      <div class="kpi-sub">7/8 用例全部迭代通过</div>
+    </div>
+  </div>
+
+  <!-- ═══ TABS ═══ -->
+  <div class="tab-bar" id="tabBar">
+    <button class="tab-btn active" data-tab="overview">📋 用例执行明细</button>
+    <button class="tab-btn" data-tab="failures">🔍 失败分析 <span style="opacity:0.7;">(2)</span></button>
+    <button class="tab-btn" data-tab="trend">📈 趋势与图表</button>
+  </div>
+
+  <!-- ═══════════════ TAB 1: 用例执行明细 ═══════════════ -->
+  <div class="tab-content" id="tab-overview">
+
+    <div class="section">
+      <div class="section-title">
+        <span class="icon">📋</span> 用例执行明细
+        <span class="count">点击行展开查看迭代详情</span>
+      </div>
+
+      <div class="panel" style="padding:0;overflow:hidden;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:30px;"></th>
+              <th>用例ID</th>
+              <th>用例名称</th>
+              <th style="width:60px;text-align:center;">计划</th>
+              <th style="width:60px;text-align:center;">执行</th>
+              <th style="width:60px;text-align:center;">✅</th>
+              <th style="width:60px;text-align:center;">❌</th>
+              <th style="width:140px;">成功率</th>
+              <th style="width:80px;text-align:center;">状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Row 1: login_test — all pass -->
+            <tr onclick="toggleExpand(this, 'exp-login')">
+              <td><span class="toggle-icon" id="icon-exp-login">▶</span></td>
+              <td><span class="mono">login_test</span></td>
+              <td>登录流程测试</td>
+              <td style="text-align:center;">3</td><td style="text-align:center;">3</td>
+              <td style="text-align:center;color:var(--success);font-weight:700;">3</td>
+              <td style="text-align:center;">0</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="progress-bar" style="flex:1;"><div class="p-pass" style="width:100%;"></div></div>
+                  <span style="font-weight:700;color:var(--success);font-size:13px;">100%</span>
+                </div>
+              </td>
+              <td style="text-align:center;"><span class="badge badge-pass">PASS</span></td>
+            </tr>
+            <tr class="expand-row" id="exp-login" style="display:none;">
+              <td colspan="9">
+                <div class="expand-inner">
+                  <table class="mini-table">
+                    <thead><tr><th>迭代</th><th>结果</th><th>耗时</th><th>步骤数</th><th>备注</th></tr></thead>
+                    <tbody>
+                      <tr><td>#1</td><td><span class="badge badge-pass">PASS</span></td><td>3.2s</td><td>4</td><td>—</td></tr>
+                      <tr><td>#2</td><td><span class="badge badge-pass">PASS</span></td><td>3.1s</td><td>4</td><td>—</td></tr>
+                      <tr><td>#3</td><td><span class="badge badge-pass">PASS</span></td><td>2.9s</td><td>4</td><td>—</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Row 2: home_navigation — all pass -->
+            <tr onclick="toggleExpand(this, 'exp-home')">
+              <td><span class="toggle-icon" id="icon-exp-home">▶</span></td>
+              <td><span class="mono">home_navigation</span></td>
+              <td>首页导航验证</td>
+              <td style="text-align:center;">3</td><td style="text-align:center;">3</td>
+              <td style="text-align:center;color:var(--success);font-weight:700;">3</td><td style="text-align:center;">0</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="progress-bar" style="flex:1;"><div class="p-pass" style="width:100%;"></div></div>
+                  <span style="font-weight:700;color:var(--success);font-size:13px;">100%</span>
+                </div>
+              </td>
+              <td style="text-align:center;"><span class="badge badge-pass">PASS</span></td>
+            </tr>
+            <tr class="expand-row" id="exp-home" style="display:none;">
+              <td colspan="9"><div class="expand-inner" style="color:var(--text-muted);font-size:13px;">全部 3 次迭代通过，平均耗时 2.1s</div></td>
+            </tr>
+
+            <!-- Row 3: bluetooth_scan — all pass -->
+            <tr onclick="toggleExpand(this, 'exp-bt')">
+              <td><span class="toggle-icon" id="icon-exp-bt">▶</span></td>
+              <td><span class="mono">bluetooth_scan</span></td>
+              <td>蓝牙扫描测试</td>
+              <td style="text-align:center;">3</td><td style="text-align:center;">3</td>
+              <td style="text-align:center;color:var(--success);font-weight:700;">3</td><td style="text-align:center;">0</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="progress-bar" style="flex:1;"><div class="p-pass" style="width:100%;"></div></div>
+                  <span style="font-weight:700;color:var(--success);font-size:13px;">100%</span>
+                </div>
+              </td>
+              <td style="text-align:center;"><span class="badge badge-pass">PASS</span></td>
+            </tr>
+            <tr class="expand-row" id="exp-bt" style="display:none;">
+              <td colspan="9"><div class="expand-inner" style="color:var(--text-muted);font-size:13px;">全部 3 次迭代通过，平均耗时 8.4s</div></td>
+            </tr>
+
+            <!-- Row 4: device_pair — all pass -->
+            <tr onclick="toggleExpand(this, 'exp-pair')">
+              <td><span class="toggle-icon" id="icon-exp-pair">▶</span></td>
+              <td><span class="mono">device_pair</span></td>
+              <td>设备配对流程</td>
+              <td style="text-align:center;">3</td><td style="text-align:center;">3</td>
+              <td style="text-align:center;color:var(--success);font-weight:700;">3</td><td style="text-align:center;">0</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="progress-bar" style="flex:1;"><div class="p-pass" style="width:100%;"></div></div>
+                  <span style="font-weight:700;color:var(--success);font-size:13px;">100%</span>
+                </div>
+              </td>
+              <td style="text-align:center;"><span class="badge badge-pass">PASS</span></td>
+            </tr>
+            <tr class="expand-row" id="exp-pair" style="display:none;">
+              <td colspan="9"><div class="expand-inner" style="color:var(--text-muted);font-size:13px;">全部 3 次迭代通过，平均耗时 12.1s</div></td>
+            </tr>
+
+            <!-- Row 5: wifi_toggle — 1 fail -->
+            <tr onclick="toggleExpand(this, 'exp-wifi')" style="background:rgba(224,90,90,0.03);">
+              <td><span class="toggle-icon" id="icon-exp-wifi">▶</span></td>
+              <td><span class="mono">wifi_toggle</span></td>
+              <td>WiFi 开关测试</td>
+              <td style="text-align:center;">3</td><td style="text-align:center;">3</td>
+              <td style="text-align:center;color:var(--success);font-weight:700;">2</td>
+              <td style="text-align:center;color:var(--error);font-weight:700;">1</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="progress-bar" style="flex:1;"><div class="p-pass" style="width:66.7%;"></div><div class="p-fail" style="width:33.3%;"></div></div>
+                  <span style="font-weight:700;color:var(--warning-active);font-size:13px;">66.7%</span>
+                </div>
+              </td>
+              <td style="text-align:center;"><span class="badge badge-fail">FAIL</span></td>
+            </tr>
+            <tr class="expand-row" id="exp-wifi" style="display:none;">
+              <td colspan="9">
+                <div class="expand-inner">
+                  <table class="mini-table">
+                    <thead><tr><th>迭代</th><th>结果</th><th>耗时</th><th>步骤数</th><th>备注</th></tr></thead>
+                    <tbody>
+                      <tr><td>#1</td><td><span class="badge badge-pass">PASS</span></td><td>5.0s</td><td>3</td><td>—</td></tr>
+                      <tr style="background:rgba(224,90,90,0.04);"><td>#2</td><td><span class="badge badge-fail">FAIL</span></td><td>12.3s</td><td>3</td><td>步骤2 verify_text 断言失败</td></tr>
+                      <tr><td>#3</td><td><span class="badge badge-pass">PASS</span></td><td>4.8s</td><td>3</td><td>—</td></tr>
+                    </tbody>
+                  </table>
+                  <div class="fail-detail">
+                    <h5>🔴 迭代 #2 失败详情</h5>
+                    <dl class="kv">
+                      <dt>失败步骤</dt><dd>步骤 2/3 — verify_text</dd>
+                      <dt>步骤描述</dt><dd>验证 WiFi 开关状态已切换</dd>
+                      <dt>XPath</dt><dd>//android.widget.Switch[@resource-id="com.android.settings:id/switch_widget" and @text="开启"]</dd>
+                      <dt>期望文本</dt><dd>WiFi 已开启</dd>
+                      <dt>实际文本</dt><dd style="color:var(--error);">WiFi 已关闭</dd>
+                      <dt>可能原因</dt><dd>开关切换后系统响应延迟 > wait 超时(5s)，UI 状态未刷新</dd>
+                      <dt>建议</dt><dd>增加 wait 步骤超时到 8s 或在 verify_text 前添加 retry_click</dd>
+                    </dl>
+                  </div>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Row 6: notification_test — all pass -->
+            <tr onclick="toggleExpand(this, 'exp-notif')">
+              <td><span class="toggle-icon" id="icon-exp-notif">▶</span></td>
+              <td><span class="mono">notification_test</span></td>
+              <td>通知栏消息验证</td>
+              <td style="text-align:center;">3</td><td style="text-align:center;">3</td>
+              <td style="text-align:center;color:var(--success);font-weight:700;">3</td><td style="text-align:center;">0</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="progress-bar" style="flex:1;"><div class="p-pass" style="width:100%;"></div></div>
+                  <span style="font-weight:700;color:var(--success);font-size:13px;">100%</span>
+                </div>
+              </td>
+              <td style="text-align:center;"><span class="badge badge-pass">PASS</span></td>
+            </tr>
+            <tr class="expand-row" id="exp-notif" style="display:none;">
+              <td colspan="9"><div class="expand-inner" style="color:var(--text-muted);font-size:13px;">全部 3 次迭代通过，平均耗时 3.2s</div></td>
+            </tr>
+
+            <!-- Row 7: settings_search — all pass -->
+            <tr onclick="toggleExpand(this, 'exp-settings')">
+              <td><span class="toggle-icon" id="icon-exp-settings">▶</span></td>
+              <td><span class="mono">settings_search</span></td>
+              <td>设置搜索功能</td>
+              <td style="text-align:center;">3</td><td style="text-align:center;">3</td>
+              <td style="text-align:center;color:var(--success);font-weight:700;">3</td><td style="text-align:center;">0</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="progress-bar" style="flex:1;"><div class="p-pass" style="width:100%;"></div></div>
+                  <span style="font-weight:700;color:var(--success);font-size:13px;">100%</span>
+                </div>
+              </td>
+              <td style="text-align:center;"><span class="badge badge-pass">PASS</span></td>
+            </tr>
+            <tr class="expand-row" id="exp-settings" style="display:none;">
+              <td colspan="9"><div class="expand-inner" style="color:var(--text-muted);font-size:13px;">全部 3 次迭代通过，平均耗时 6.7s</div></td>
+            </tr>
+
+            <!-- Row 8: firmware_update — 1 fail -->
+            <tr onclick="toggleExpand(this, 'exp-fw')" style="background:rgba(224,90,90,0.03);">
+              <td><span class="toggle-icon" id="icon-exp-fw">▶</span></td>
+              <td><span class="mono">firmware_update</span></td>
+              <td>固件更新冒烟测试</td>
+              <td style="text-align:center;">3</td><td style="text-align:center;">3</td>
+              <td style="text-align:center;color:var(--success);font-weight:700;">2</td>
+              <td style="text-align:center;color:var(--error);font-weight:700;">1</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="progress-bar" style="flex:1;"><div class="p-pass" style="width:66.7%;"></div><div class="p-fail" style="width:33.3%;"></div></div>
+                  <span style="font-weight:700;color:var(--warning-active);font-size:13px;">66.7%</span>
+                </div>
+              </td>
+              <td style="text-align:center;"><span class="badge badge-fail">FAIL</span></td>
+            </tr>
+            <tr class="expand-row" id="exp-fw" style="display:none;">
+              <td colspan="9">
+                <div class="expand-inner">
+                  <table class="mini-table">
+                    <thead><tr><th>迭代</th><th>结果</th><th>耗时</th><th>步骤数</th><th>备注</th></tr></thead>
+                    <tbody>
+                      <tr><td>#1</td><td><span class="badge badge-pass">PASS</span></td><td>15.2s</td><td>6</td><td>—</td></tr>
+                      <tr><td>#2</td><td><span class="badge badge-pass">PASS</span></td><td>14.8s</td><td>6</td><td>—</td></tr>
+                      <tr style="background:rgba(224,90,90,0.04);"><td>#3</td><td><span class="badge badge-fail">FAIL</span></td><td>45.6s</td><td>6</td><td>步骤5 click_indexed 元素未找到</td></tr>
+                    </tbody>
+                  </table>
+                  <div class="fail-detail">
+                    <h5>🔴 迭代 #3 失败详情</h5>
+                    <dl class="kv">
+                      <dt>失败步骤</dt><dd>步骤 5/6 — click_indexed</dd>
+                      <dt>步骤描述</dt><dd>点击"确认更新"按钮（第 2 个匹配）</dd>
+                      <dt>XPath</dt><dd>//android.widget.Button[@resource-id="com.android.settings:id/confirm_button"]</dd>
+                      <dt>索引</dt><dd>2 (共匹配 2 个元素)</dd>
+                      <dt>错误信息</dt><dd style="color:var(--error);">XPath matched 1 element(s), but index 2 is out of range</dd>
+                      <dt>可能原因</dt><dd>固件下载完成后页面刷新，确认按钮的 resource-id 发生变化（从 confirm_button → update_now_button）</dd>
+                      <dt>建议</dt><dd>1) 检查固件更新后的页面 UI 变化; 2) 改用 text 定位代替 resource-id; 3) 添加 wait 步骤等待页面稳定后再点击</dd>
+                    </dl>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ TAB 2: 失败分析 ═══════════════ -->
+  <div class="tab-content" id="tab-failures" style="display:none;">
+
+    <div class="section">
+      <div class="section-title">
+        <span class="icon">🔍</span> 失败用例汇总
+        <span class="count">2 个用例出现失败</span>
+      </div>
+
+      <!-- Failure 1 -->
+      <div class="collapse open fail-card">
+        <div class="collapse-header" onclick="this.parentElement.classList.toggle('open')">
+          <span class="toggle">+</span>
+          <span class="badge badge-fail">FAIL</span>
+          <span style="font-weight:700;">wifi_toggle — WiFi 开关测试</span>
+          <span style="margin-left:auto;font-size:13px;color:var(--text-secondary);">迭代 #2 失败 · verify_text 断言不匹配</span>
+        </div>
+        <div class="collapse-body" style="grid-template-rows:1fr;">
+          <div class="collapse-body-inner">
+            <div class="fail-detail" style="margin-top:0;">
+              <h5>📌 失败摘要</h5>
+              <dl class="kv">
+                <dt>用例ID</dt><dd>wifi_toggle</dd>
+                <dt>迭代</dt><dd>第 2/3 轮</dd>
+                <dt>失败步骤</dt><dd>步骤 2/3 — verify_text</dd>
+                <dt>XPath</dt><dd>//android.widget.Switch[@resource-id="com.android.settings:id/switch_widget" and @text="开启"]</dd>
+                <dt>期望</dt><dd>"WiFi 已开启"</dd>
+                <dt>实际</dt><dd style="color:var(--error);">"WiFi 已关闭"</dd>
+                <dt>耗时</dt><dd>12.3s (含 5s wait 超时)</dd>
+                <dt>根因分析</dt><dd>开关 UI 状态切换存在竞态条件：click 后系统需要 200-500ms 更新 Switch 状态，但 verify_text 的 wait 超时设为 5s 仍不够（可能在等待错误的元素出现）</dd>
+                <dt>修复建议</dt><dd>1) 在 click 和 verify_text 之间插入 sleep(1s); 2) 将 verify_text 改为 wait_either 同时检测"已开启"和"已关闭"两种状态; 3) 将 wait 超时增加到 8s</dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Failure 2 -->
+      <div class="collapse open fail-card">
+        <div class="collapse-header" onclick="this.parentElement.classList.toggle('open')">
+          <span class="toggle">+</span>
+          <span class="badge badge-fail">FAIL</span>
+          <span style="font-weight:700;">firmware_update — 固件更新冒烟测试</span>
+          <span style="margin-left:auto;font-size:13px;color:var(--text-secondary);">迭代 #3 失败 · click_indexed 索引越界</span>
+        </div>
+        <div class="collapse-body" style="grid-template-rows:1fr;">
+          <div class="collapse-body-inner">
+            <div class="fail-detail" style="margin-top:0;">
+              <h5>📌 失败摘要</h5>
+              <dl class="kv">
+                <dt>用例ID</dt><dd>firmware_update</dd>
+                <dt>迭代</dt><dd>第 3/3 轮</dd>
+                <dt>失败步骤</dt><dd>步骤 5/6 — click_indexed</dd>
+                <dt>XPath</dt><dd>//android.widget.Button[@resource-id="com.android.settings:id/confirm_button"]</dd>
+                <dt>索引</dt><dd>2 (期望匹配 ≥3 个元素，实际仅 1 个)</dd>
+                <dt>耗时</dt><dd>45.6s (含固件下载等待)</dd>
+                <dt>根因分析</dt><dd>固件下载完成后页面发生结构性变化（从下载页跳转到安装确认页），确认按钮的 resource-id 从 confirm_button 变为 update_now_button，导致 XPath 匹配数从 3 降到 1，索引 2 越界</dd>
+                <dt>修复建议</dt><dd>1) 在 click_indexed 前增加 wait 步骤确认页面加载完成; 2) 改用 text 属性定位（如 @text="立即更新"）代替 resource-id; 3) 考虑在固件更新场景中拆分用例为"下载"和"安装"两个独立步骤</dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Failure Distribution -->
+    <div class="section">
+      <div class="section-title"><span class="icon">📊</span> 失败类型分布</div>
+      <div class="chart-row">
+        <div class="chart-box">
+          <h4>失败步骤类型</h4>
+          <div class="chart-canvas-wrap"><canvas id="failureTypeChart"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <h4>失败根因分类</h4>
+          <div style="padding:12px 0;">
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border);">
+              <span>🔸 UI 状态竞态条件</span><span style="font-weight:700;color:var(--text);">1 次</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border);">
+              <span>🔸 页面结构变化/元素定位失效</span><span style="font-weight:700;color:var(--text);">1 次</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;">
+              <span>🔸 断言不匹配</span><span style="font-weight:700;color:var(--text);">1 次</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ TAB 3: 趋势与图表 ═══════════════ -->
+  <div class="tab-content" id="tab-trend" style="display:none;">
+
+    <div class="section">
+      <div class="section-title"><span class="icon">📈</span> 历史趋势（近 10 次执行）</div>
+      <div class="chart-row">
+        <div class="chart-box">
+          <h4>通过率趋势</h4>
+          <div class="chart-canvas-wrap"><canvas id="passRateTrendChart"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <h4>执行耗时分布（本次）</h4>
+          <div class="chart-canvas-wrap"><canvas id="durationChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon">📋</span> 近期执行记录</div>
+      <div class="panel" style="padding:0;overflow:hidden;">
+        <table class="data-table">
+          <thead>
+            <tr><th>Run ID</th><th>设备</th><th>用例数</th><th style="text-align:center;">✅</th><th style="text-align:center;">❌</th><th>通过率</th><th>耗时</th><th>时间</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr style="background:rgba(25,200,185,0.04);">
+              <td><span class="mono">run_RF8N...3025</span></td><td>Samsung S22</td><td>8</td>
+              <td style="text-align:center;color:var(--success);font-weight:700;">22</td>
+              <td style="text-align:center;color:var(--error);font-weight:700;">2</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div class="progress-bar" style="flex:1;"><div class="p-pass" style="width:91.7%;"></div><div class="p-fail" style="width:8.3%;"></div></div>
+                  <span style="font-weight:700;font-size:13px;">91.7%</span>
+                </div>
+              </td>
+              <td>1m53s</td><td style="white-space:nowrap;">07-07 14:32</td>
+              <td><span style="font-size:11px;color:var(--text-secondary);">👈 当前</span></td>
+            </tr>
+            <tr>
+              <td><span class="mono">run_RF8N...1502</span></td><td>Samsung S22</td><td>8</td>
+              <td style="text-align:center;color:var(--success);font-weight:700;">24</td>
+              <td style="text-align:center;">0</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div class="progress-bar" style="flex:1;"><div class="p-pass" style="width:100%;"></div></div>
+                  <span style="font-weight:700;color:var(--success);font-size:13px;">100%</span>
+                </div>
+              </td>
+              <td>1m41s</td><td style="white-space:nowrap;">07-07 10:15</td><td></td>
+            </tr>
+            <tr>
+              <td><span class="mono">run_XM14...0845</span></td><td>Xiaomi 14</td><td>6</td>
+              <td style="text-align:center;color:var(--success);font-weight:700;">17</td>
+              <td style="text-align:center;color:var(--error);font-weight:700;">1</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div class="progress-bar" style="flex:1;"><div class="p-pass" style="width:94.4%;"></div><div class="p-fail" style="width:5.6%;"></div></div>
+                  <span style="font-weight:700;font-size:13px;">94.4%</span>
+                </div>
+              </td>
+              <td>1m12s</td><td style="white-space:nowrap;">07-06 18:45</td><td></td>
+            </tr>
+            <tr>
+              <td><span class="mono">run_RF8N...1420</span></td><td>Samsung S22</td><td>8</td>
+              <td style="text-align:center;color:var(--success);font-weight:700;">24</td>
+              <td style="text-align:center;">0</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div class="progress-bar" style="flex:1;"><div class="p-pass" style="width:100%;"></div></div>
+                  <span style="font-weight:700;color:var(--success);font-size:13px;">100%</span>
+                </div>
+              </td>
+              <td>1m38s</td><td style="white-space:nowrap;">07-06 14:20</td><td></td>
+            </tr>
+            <tr>
+              <td><span class="mono">run_XM14...0920</span></td><td>Xiaomi 14</td><td>6</td>
+              <td style="text-align:center;color:var(--success);font-weight:700;">16</td>
+              <td style="text-align:center;color:var(--error);font-weight:700;">2</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div class="progress-bar" style="flex:1;"><div class="p-pass" style="width:88.9%;"></div><div class="p-fail" style="width:11.1%;"></div></div>
+                  <span style="font-weight:700;font-size:13px;">88.9%</span>
+                </div>
+              </td>
+              <td>1m25s</td><td style="white-space:nowrap;">07-05 09:20</td><td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ACTIONS ═══ -->
+  <div style="display:flex;gap:12px;margin-top:8px;padding-top:20px;border-top:1px dashed var(--border);">
+    <button class="btn btn-primary">📥 导出 HTML 报告</button>
+    <button class="btn">📄 导出 CSV</button>
+    <button class="btn">📋 复制 JSON</button>
+    <button class="btn" style="margin-left:auto;">🔄 重新执行</button>
+  </div>
+
+</div>
+
+<!-- ═══ Chart.js ═══ -->
+<script>
+// ── Tab switching ──
+document.getElementById('tabBar').addEventListener('click', function(e) {
+  if (!e.target.classList.contains('tab-btn')) return;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  const tab = e.target.dataset.tab;
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+  document.getElementById('tab-' + tab).style.display = 'block';
+});
+
+// ── Row expand ──
+function toggleExpand(row, expandId) {
+  const exp = document.getElementById(expandId);
+  const icon = document.getElementById('icon-' + expandId);
+  if (exp.style.display === 'none' || !exp.style.display) {
+    exp.style.display = '';
+    row.classList.add('expanded');
+    if (icon) icon.textContent = '▼';
+  } else {
+    exp.style.display = 'none';
+    row.classList.remove('expanded');
+    if (icon) icon.textContent = '▶';
+  }
+}
+
+// ── Pass Rate Trend Chart ──
+(function() {
+  const ctx = document.getElementById('passRateTrendChart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['07-01','07-02','07-03','07-04','07-05','07-05','07-06','07-06','07-07','07-07'],
+      datasets: [{
+        label: '通过率',
+        data: [100, 95.8, 100, 91.7, 88.9, 94.4, 100, 100, 94.4, 91.7],
+        borderColor: '#19c8b9',
+        backgroundColor: 'rgba(25,200,185,0.08)',
+        fill: true,
+        tension: 0.3,
+        pointBackgroundColor: '#19c8b9',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        borderWidth: 2.5,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: ctx => ctx.parsed.y + '%' }
+        }
+      },
+      scales: {
+        y: {
+          min: 80, max: 105,
+          ticks: { callback: v => v + '%', color: '#9f927d', font: { family: 'Nunito', size: 11 } },
+          grid: { color: 'rgba(196,184,158,0.2)' }
+        },
+        x: {
+          ticks: { color: '#9f927d', font: { family: 'Nunito', size: 10 } },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+})();
+
+// ── Duration Bar Chart ──
+(function() {
+  const ctx = document.getElementById('durationChart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['登录','首页','蓝牙','配对','WiFi','通知','设置','固件'],
+      datasets: [{
+        label: '平均耗时 (s)',
+        data: [3.1, 2.1, 8.4, 12.1, 7.4, 3.2, 6.7, 25.2],
+        backgroundColor: [
+          'rgba(25,200,185,0.7)','rgba(25,200,185,0.7)','rgba(25,200,185,0.7)',
+          'rgba(25,200,185,0.7)', 'rgba(224,90,90,0.5)', 'rgba(25,200,185,0.7)',
+          'rgba(25,200,185,0.7)', 'rgba(224,90,90,0.5)'
+        ],
+        borderColor: [
+          '#19c8b9','#19c8b9','#19c8b9','#19c8b9','#e05a5a','#19c8b9','#19c8b9','#e05a5a'
+        ],
+        borderWidth: 1.5,
+        borderRadius: 8,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.parsed.x + 's' } }
+      },
+      scales: {
+        x: {
+          ticks: { callback: v => v + 's', color: '#9f927d', font: { family: 'Nunito', size: 11 } },
+          grid: { color: 'rgba(196,184,158,0.2)' }
+        },
+        y: {
+          ticks: { color: '#725d42', font: { family: 'Nunito', size: 12, weight: '600' } },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+})();
+
+// ── Failure Type Doughnut ──
+(function() {
+  const ctx = document.getElementById('failureTypeChart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['verify_text 断言失败', 'click_indexed 索引越界'],
+      datasets: [{
+        data: [1, 1],
+        backgroundColor: ['rgba(224,90,90,0.7)', 'rgba(245,195,28,0.7)'],
+        borderColor: ['#e05a5a', '#f5c31c'],
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#725d42', font: { family: 'Nunito', size: 12 }, padding: 16 } }
+      }
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

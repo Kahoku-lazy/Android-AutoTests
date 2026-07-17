@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Android-AutoTests 模块化架构设计方案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green:  #6fba2c; --blue:   #889df0; --yellow: #f7cd67;
+    --pink:   #f8a6b2; --teal:   #19c8b9; --purple: #b39ef3;
+    --orange: #f7a8c4; --brown:  #8b7355; --red:    #e85f5f;
+    --bg:     #fdf8f0; --card:   #fffaf5;
+    --text:   #794f27; --text2:  #9f927d;
+    --radius-lg: 24px; --radius-md: 16px; --radius-sm: 10px;
+    --shadow: 0 2px 12px rgba(139,115,85,.08);
+    --font-display: 'Nunito', -apple-system, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: var(--font-body); background: var(--bg);
+    background-image: radial-gradient(ellipse at 20% 0%, rgba(136,157,240,.06) 0%, transparent 50%),
+                      radial-gradient(ellipse at 80% 100%, rgba(111,186,44,.04) 0%, transparent 50%);
+    color: var(--text); padding: 32px 24px; line-height: 1.6;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+  .header { text-align: center; margin-bottom: 32px; }
+  .header-icon { font-size: 40px; margin-bottom: 8px; }
+  h1 { font-family: var(--font-display); font-size: 28px; font-weight: 800; color: var(--brown); }
+  .meta { color: var(--text2); font-size: 13px; margin-top: 4px; }
+  .summary { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
+  .kpi {
+    background: var(--card); border-radius: var(--radius-lg); padding: 20px 24px;
+    box-shadow: var(--shadow); border: 1.5px solid rgba(139,115,85,.08);
+    position: relative; overflow: hidden;
+  }
+  .kpi::before {
+    content: ''; position: absolute; top: -12px; right: -12px;
+    width: 48px; height: 48px; border-radius: 50%; opacity: .12;
+  }
+  .kpi:nth-child(1)::before { background: var(--blue); }
+  .kpi:nth-child(2)::before { background: var(--green); }
+  .kpi:nth-child(3)::before { background: var(--red); }
+  .kpi:nth-child(4)::before { background: var(--yellow); }
+  .kpi-label { font-size: 11px; letter-spacing: .6px; color: var(--text2); font-weight: 700; }
+  .kpi-value { font-family: var(--font-display); font-size: 36px; font-weight: 800; margin-top: 4px; }
+  .kpi-green { color: var(--green); } .kpi-red { color: var(--red); }
+  .kpi-blue { color: var(--blue); } .kpi-yellow { color: var(--brown); }
+  .conclusion {
+    background: var(--card); border-radius: var(--radius-lg); padding: 20px 24px;
+    margin-bottom: 28px; border-left: 5px solid var(--teal); box-shadow: var(--shadow);
+  }
+  .conclusion-text { font-size: 15px; font-weight: 600; }
+  .conclusion-next { font-size: 13px; color: var(--text2); margin-top: 6px; }
+  h2 { font-family: var(--font-display); font-size: 18px; font-weight: 700;
+    color: var(--brown); margin: 32px 0 14px; padding-left: 4px; }
+  .table-wrap {
+    background: var(--card); border-radius: var(--radius-lg); overflow: hidden;
+    box-shadow: var(--shadow); margin-bottom: 20px;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    background: linear-gradient(180deg, #faf5ed 0%, #f3ede2 100%);
+    padding: 12px 14px; text-align: left; font-size: 10px;
+    letter-spacing: .6px; color: var(--text2); font-weight: 700;
+    border-bottom: 2px solid #e8dcc8;
+  }
+  td { padding: 10px 14px; font-size: 13px; border-bottom: 1px solid #f3ede2; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) { background: #fefbf7; }
+  .pass { color: var(--green); font-weight: 700; } .fail { color: var(--red); font-weight: 700; }
+  .warn { color: #c7840a; font-weight: 700; }
+
+  /* ===== Architecture Diagram Styles ===== */
+  .arch-layer {
+    background: var(--card); border-radius: var(--radius-lg); padding: 24px;
+    box-shadow: var(--shadow); margin-bottom: 20px;
+    border: 2px dashed #e8dcc8; position: relative;
+  }
+  .arch-layer-title {
+    font-family: var(--font-display); font-size: 14px; font-weight: 800;
+    margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
+  }
+  .layer-badge {
+    font-size: 11px; padding: 4px 12px; border-radius: 20px; color: #fff; font-weight: 700;
+  }
+  .layer-l1 { background: var(--purple); }
+  .layer-l2 { background: var(--blue); }
+  .layer-l3 { background: var(--teal); }
+  .layer-l4 { background: var(--brown); }
+
+  .module-grid {
+    display: grid; gap: 16px;
+  }
+  .module-grid.cols-7 { grid-template-columns: repeat(7, 1fr); }
+  .module-grid.cols-6 { grid-template-columns: repeat(6, 1fr); }
+  .module-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .module-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+  .module-card {
+    background: #fff; border-radius: var(--radius-md); padding: 16px;
+    text-align: center; border: 2px solid #e8dcc8;
+    transition: transform .15s;
+  }
+  .module-card:hover { transform: translateY(-2px); }
+  .module-card-icon { font-size: 24px; margin-bottom: 6px; }
+  .module-card-name { font-family: var(--font-display); font-weight: 700; font-size: 13px; }
+  .module-card-desc { font-size: 10px; color: var(--text2); margin-top: 4px; line-height: 1.4; }
+  .module-card-endpoints { font-size: 10px; color: var(--blue); font-weight: 600; margin-top: 6px; }
+
+  /* Module color accents */
+  .mod-dp { border-color: var(--green); }
+  .mod-el { border-color: var(--purple); }
+  .mod-cm { border-color: var(--teal); }
+  .mod-tr { border-color: var(--pink); }
+  .mod-rg { border-color: var(--brown); }
+  .mod-ai { border-color: var(--orange); }
+  .mod-dash { border-color: var(--yellow); }
+
+  .flow-arrow {
+    display: flex; align-items: center; justify-content: center;
+    margin: 8px 0; color: var(--text2); font-size: 20px;
+  }
+  .flow-arrow-label {
+    font-size: 9px; color: var(--text2); letter-spacing: .4px;
+    text-align: center; margin: 2px 0;
+  }
+
+  /* Dependency table */
+  .dep-row { display: flex; gap: 8px; align-items: center; padding: 4px 0; }
+  .dep-tag {
+    font-size: 10px; padding: 2px 8px; border-radius: 12px;
+    font-weight: 700; white-space: nowrap;
+  }
+  .dep-self { background: #e8f0fe; color: var(--blue); }
+  .dep-down { background: #e8f5e0; color: var(--green); }
+  .dep-up { background: #fef3cd; color: #8a6d14; }
+  .dep-cross { background: #fde8e8; color: var(--red); }
+
+  /* Sub-module grouping */
+  .sub-group {
+    border: 1.5px dashed #e0d6c4; border-radius: var(--radius-md);
+    padding: 16px; margin-bottom: 12px; position: relative;
+  }
+  .sub-group-label {
+    position: absolute; top: -10px; left: 16px;
+    background: var(--bg); padding: 2px 12px; font-size: 11px;
+    font-weight: 700; color: var(--brown); border-radius: 12px;
+  }
+
+  /* Gap indicators */
+  .gap-badge {
+    display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 12px;
+    font-weight: 700;
+  }
+  .gap-new { background: #e8f5e0; color: var(--green); }
+  .gap-fix { background: #fef3cd; color: #8a6d14; }
+  .gap-remove { background: #fde8e8; color: var(--red); }
+
+  .focus-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .focus-item { display: flex; gap: 14px; align-items: flex-start; padding: 12px 18px;
+    background: var(--card); border-radius: var(--radius-sm); box-shadow: var(--shadow); }
+  .focus-prio { font-family: var(--font-display); font-weight: 800; font-size: 12px;
+    padding: 4px 10px; border-radius: 20px; min-width: 36px; text-align: center; flex-shrink: 0; }
+  .prio-p0 { background: #fde8e8; color: var(--red); }
+  .prio-p1 { background: #fef3cd; color: #8a6d14; }
+  .prio-p2 { background: #e8f0fe; color: var(--blue); }
+  .focus-body { flex: 1; }
+  .focus-title { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+  .focus-desc { font-size: 12px; color: var(--text2); }
+
+  .footer { text-align: center; color: var(--text2); font-size: 11px; margin-top: 40px;
+    padding-top: 20px; border-top: 2px dashed #e8dcc8; }
+  .footer-leaf { display: inline-block; animation: sway 2s ease-in-out infinite; }
+  @keyframes sway { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+
+  @media (max-width: 900px) { .module-grid.cols-7, .module-grid.cols-6 { grid-template-columns: repeat(3,1fr); } }
+  @media (max-width: 600px) { .module-grid.cols-7, .module-grid.cols-6 { grid-template-columns: repeat(2,1fr); } .summary { grid-template-columns: repeat(2,1fr); } }
+  @media print { body { background: #fff; } }
+
+  /* Data flow lines */
+  .comm-line {
+    display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+    background: #faf7f0; border-radius: var(--radius-sm); font-size: 12px; margin: 4px 0;
+  }
+  .comm-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .comm-rest { background: var(--blue); }
+  .comm-ws { background: var(--purple); }
+  .comm-sse { background: var(--teal); }
+  .comm-orm { background: var(--brown); }
+  .comm-redis { background: var(--red); }
+
+  .code-block {
+    background: #faf7f0; border-radius: var(--radius-sm); padding: 12px 16px;
+    font-family: 'SF Mono', 'Cascadia Code', monospace; font-size: 12px;
+    margin: 8px 0; white-space: pre-wrap; line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ===== Header ===== -->
+<div class="header">
+  <div class="header-icon">🏗️</div>
+  <h1>Android-AutoTests 模块化架构设计</h1>
+  <div class="meta">2026-07-05 &middot; 理想架构 vs 实际架构 &middot; 差距分析与实施建议</div>
+</div>
+
+<!-- ===== KPI Summary ===== -->
+<div class="summary">
+  <div class="kpi"><div class="kpi-label">目标模块数</div><div class="kpi-value kpi-blue">7</div></div>
+  <div class="kpi"><div class="kpi-label">现有模块数</div><div class="kpi-value kpi-green">6</div></div>
+  <div class="kpi"><div class="kpi-label">架构问题</div><div class="kpi-value kpi-red">5</div></div>
+  <div class="kpi"><div class="kpi-label">实施周期</div><div class="kpi-value kpi-yellow">3</div></div>
+</div>
+
+<div class="conclusion">
+  <div class="conclusion-text">🏁 结论: 依赖方向正确（无循环），模块边界基本清晰。核心差距在 dashboard 错位、前端模块重叠、WebSocket 安全缺失三个方面。</div>
+  <div class="conclusion-next">下一步: 提取 dashboard 为独立 App → 合并 element-manager → 补齐 WebSocket JWT 认证</div>
+</div>
+
+<!-- ========================================== -->
+<!-- ===== PART 1: IDEAL ARCHITECTURE ===== -->
+<!-- ========================================== -->
+<h2>🍃 第一部分：理想架构图</h2>
+
+<!-- Layer 1: Frontend -->
+<div class="arch-layer">
+  <div class="arch-layer-title">
+    <span class="layer-badge layer-l1">L1</span> 前端展示层 — Vue 3 SPA :5173
+  </div>
+  <div class="module-grid cols-7">
+    <div class="module-card mod-dash">
+      <div class="module-card-icon">📊</div>
+      <div class="module-card-name">dashboard</div>
+      <div class="module-card-desc">跨模块统计<br/>活动时间线</div>
+      <div class="module-card-endpoints">GET ×4</div>
+    </div>
+    <div class="module-card mod-dp">
+      <div class="module-card-icon">📱</div>
+      <div class="module-card-name">device-pool</div>
+      <div class="module-card-desc">设备连接/锁定<br/>排队/心跳</div>
+      <div class="module-card-endpoints">12 端点</div>
+    </div>
+    <div class="module-card mod-el">
+      <div class="module-card-icon">🔍</div>
+      <div class="module-card-name">element-locator</div>
+      <div class="module-card-desc">UI Dump/XPath<br/>元素库管理</div>
+      <div class="module-card-endpoints">11 端点 + WS</div>
+    </div>
+    <div class="module-card mod-cm">
+      <div class="module-card-icon">📋</div>
+      <div class="module-card-name">case-manager</div>
+      <div class="module-card-desc">用例定义/编辑<br/>YAML 导出</div>
+      <div class="module-card-endpoints">5 端点</div>
+    </div>
+    <div class="module-card mod-tr">
+      <div class="module-card-icon">▶️</div>
+      <div class="module-card-name">test-runner</div>
+      <div class="module-card-desc">执行引擎/结果<br/>单步调试</div>
+      <div class="module-card-endpoints">6 端点 + WS</div>
+    </div>
+    <div class="module-card mod-rg">
+      <div class="module-card-icon">📄</div>
+      <div class="module-card-name">report-generator</div>
+      <div class="module-card-desc">报告生成/模板<br/>CSV 导出</div>
+      <div class="module-card-endpoints">3 端点</div>
+    </div>
+    <div class="module-card mod-ai">
+      <div class="module-card-icon">🤖</div>
+      <div class="module-card-name">ai-assistant</div>
+      <div class="module-card-desc">Agent/对话<br/>SOP 工作流</div>
+      <div class="module-card-endpoints">26 端点</div>
+    </div>
+  </div>
+  <div class="flow-arrow-label" style="margin-top:12px">↓ 每个模块通过自己的 api.js 封装 HTTP 调用 ↓</div>
+</div>
+
+<!-- Layer 2: Gateway -->
+<div class="arch-layer" style="border-style:solid;border-color:#c4d8f0">
+  <div class="arch-layer-title">
+    <span class="layer-badge layer-l2">L2</span> API 网关层 — Django :8765
+  </div>
+  <div class="module-grid cols-3">
+    <div class="module-card" style="border-color:var(--blue)">
+      <div class="module-card-name">JWTAuthentication</div>
+      <div class="module-card-desc">Bearer Token 验证<br/>HTTP + WebSocket 双通道</div>
+    </div>
+    <div class="module-card" style="border-color:var(--purple)">
+      <div class="module-card-name">URL Router</div>
+      <div class="module-card-desc">config/urls.py<br/>7 模块路由分发</div>
+    </div>
+    <div class="module-card" style="border-color:var(--teal)">
+      <div class="module-card-name">WebSocket Router</div>
+      <div class="module-card-desc">gateway/routing.py<br/>截图流 + 测试状态推送</div>
+    </div>
+  </div>
+  <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap">
+    <div class="comm-line"><span class="comm-dot comm-rest"></span> HTTP REST + JWT Bearer</div>
+    <div class="comm-line"><span class="comm-dot comm-ws"></span> WebSocket (2fps 截图, 事件推送)</div>
+    <div class="comm-line"><span class="comm-dot comm-sse"></span> SSE 流式对话 (AgentScope)</div>
+  </div>
+</div>
+
+<!-- Layer 3: Business Modules -->
+<div class="arch-layer">
+  <div class="arch-layer-title">
+    <span class="layer-badge layer-l3">L3</span> 业务模块层 — 7 Django Apps（单向依赖，无循环）
+  </div>
+
+  <!-- 底层 -->
+  <div class="sub-group" style="margin-top:20px">
+    <div class="sub-group-label">底层模块（零依赖）</div>
+    <div class="module-grid cols-3">
+      <div class="module-card mod-dp">
+        <div class="module-card-icon">📱</div>
+        <div class="module-card-name">device_pool</div>
+        <div class="module-card-desc">Device · DeviceLock · DeviceQueue<br/>3 表 / 12 端点</div>
+        <div class="module-card-endpoints">api.py: acquire/release/queue</div>
+      </div>
+      <div class="module-card mod-rg">
+        <div class="module-card-icon">📄</div>
+        <div class="module-card-name">report_generator</div>
+        <div class="module-card-desc">Report · ReportTemplate<br/>2 表 / 3 端点</div>
+        <div class="module-card-endpoints">api.py: save_report</div>
+      </div>
+      <div class="module-card mod-dash">
+        <div class="module-card-icon">📊</div>
+        <div class="module-card-name">dashboard 🆕</div>
+        <div class="module-card-desc">跨模块聚合统计<br/>只读查询，零写入</div>
+        <div class="module-card-endpoints">views.py: stats/activities</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 中层 -->
+  <div class="sub-group" style="margin-top:16px">
+    <div class="sub-group-label">中间模块（单向依赖底层）</div>
+    <div class="module-grid cols-3">
+      <div class="module-card" style="border-color:var(--purple)">
+        <div class="module-card-icon">🔍</div>
+        <div class="module-card-name">element_locator</div>
+        <div class="module-card-desc">Page · Element · PageFlow<br/>3 表 / 11 端点 + WS</div>
+        <div class="module-card-endpoints">→ device_pool (FK)</div>
+      </div>
+      <div class="module-card" style="border-color:var(--teal)">
+        <div class="module-card-icon">📋</div>
+        <div class="module-card-name">case_manager</div>
+        <div class="module-card-desc">TestDefinition · TestCaseCache<br/>2 表 / 5 端点</div>
+        <div class="module-card-endpoints">→ element_locator (FK)</div>
+      </div>
+      <div class="module-card" style="border-color:var(--pink)">
+        <div class="module-card-icon">▶️</div>
+        <div class="module-card-name">test_runner</div>
+        <div class="module-card-desc">TestRunRecord · TestResult<br/>TestSOP / 3 表 / 6 端点 + WS</div>
+        <div class="module-card-endpoints">→ device + case + report</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 聚合层 -->
+  <div class="sub-group" style="margin-top:16px">
+    <div class="sub-group-label">聚合模块（只读依赖所有下层）</div>
+    <div class="module-grid cols-3" style="grid-template-columns: 1fr;">
+      <div class="module-card" style="border-color:var(--orange);max-width:350px;margin:0 auto">
+        <div class="module-card-icon">🤖</div>
+        <div class="module-card-name">ai_assistant</div>
+        <div class="module-card-desc">AIAgent · AITool · AIConversation · AIMessage · AITask · AIExecutionLog<br/>6 表 / 26 端点 · AgentScope 同进程调用</div>
+        <div class="module-card-endpoints">→ 所有 5 个底层 App（聚合层）</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Layer 4: Infrastructure -->
+<div class="arch-layer">
+  <div class="arch-layer-title">
+    <span class="layer-badge layer-l4">L4</span> 基础设施层
+  </div>
+  <div class="module-grid cols-4">
+    <div class="module-card" style="border-color:var(--brown)">
+      <div class="module-card-icon">🗄️</div>
+      <div class="module-card-name">MySQL</div>
+      <div class="module-card-desc">android_autotests<br/>29 张表 / 6 组前缀</div>
+    </div>
+    <div class="module-card" style="border-color:var(--red)">
+      <div class="module-card-icon">🔴</div>
+      <div class="module-card-name">Redis :6379</div>
+      <div class="module-card-desc">Channels 消息总线<br/>AgentScope 状态存储</div>
+    </div>
+    <div class="module-card" style="border-color:var(--blue)">
+      <div class="module-card-icon">🧠</div>
+      <div class="module-card-name">AgentScope :8000</div>
+      <div class="module-card-desc">25 Tool / 5 团队模板<br/>ChromaDB 知识库</div>
+    </div>
+    <div class="module-card" style="border-color:var(--green)">
+      <div class="module-card-icon">📲</div>
+      <div class="module-card-name">uiautomator2</div>
+      <div class="module-card-desc">ADB 设备控制<br/>8 种 XPath 策略</div>
+    </div>
+  </div>
+  <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap">
+    <div class="comm-line"><span class="comm-dot comm-orm"></span> Django ORM (同进程)</div>
+    <div class="comm-line"><span class="comm-dot comm-redis"></span> channels_redis / redis-py</div>
+    <div class="comm-line"><span class="comm-dot comm-ws"></span> uiautomator2 TCP (阻塞调用)</div>
+  </div>
+</div>
+
+<!-- Cross-module communication rules -->
+<h2>📡 跨模块通信规范</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>通信场景</th><th>协议/方式</th><th>约束</th></tr></thead>
+<tbody>
+<tr><td><strong>前端 → 后端</strong></td><td>HTTP REST + JWT Bearer</td><td>必须通过模块自己的 api.js，禁止直接 import client</td></tr>
+<tr><td><strong>前端 → 后端（实时）</strong></td><td>WebSocket</td><td>connect() 必须验证 JWT token</td></tr>
+<tr><td><strong>前端 → AI</strong></td><td>SSE (Server-Sent Events)</td><td>AgentScope 独立鉴权（共享 SECRET_KEY）</td></tr>
+<tr><td><strong>后端跨模块读</strong></td><td>Django ORM 直接查询</td><td>防火墙 #2：读放开</td></tr>
+<tr><td><strong>后端跨模块写</strong></td><td>api.py __all__ 函数</td><td>防火墙 #2：写收敛，禁止直接 ORM 写</td></tr>
+<tr><td><strong>AgentScope → 后端</strong></td><td>同进程直接调用</td><td>Tool → Django ORM / api.py，不走 HTTP</td></tr>
+</tbody>
+</table></div>
+
+<!-- ========================================== -->
+<!-- ===== PART 2: GAP ANALYSIS ===== -->
+<!-- ========================================== -->
+<h2>🔍 第二部分：实际架构 vs 理想架构</h2>
+
+<div class="conclusion" style="border-left-color:var(--red)">
+  <div class="conclusion-text">⚠️ 发现 5 个架构差距，其中 2 个高优先级（dashboard 错位 + WebSocket 无认证）</div>
+  <div class="conclusion-next">差距主要集中在 L3 业务层模块边界和 L2 网关安全</div>
+</div>
+
+<!-- Gap detail table -->
+<h3>差距对照表</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>#</th><th>层级</th><th>差距</th><th>理想状态</th><th>实际状态</th><th>严重度</th><th>修复方案</th></tr></thead>
+<tbody>
+<tr>
+  <td>1</td><td>L3</td>
+  <td><strong>Dashboard 职责错位</strong></td>
+  <td>独立的 <code>apps/dashboard/</code> 负责聚合统计</td>
+  <td>散落在 <code>ai_assistant/dashboard_views.py</code>，导致 ai_assistant 横跨 6 个 App 的 Model</td>
+  <td class="fail">🔴 高</td>
+  <td style="font-size:12px">新建 apps/dashboard/ → 迁移 views + urls → 更新 config</td>
+</tr>
+<tr>
+  <td>2</td><td>L2</td>
+  <td><strong>WebSocket 无认证</strong></td>
+  <td>connect() 验证 JWT，拒绝未授权连接</td>
+  <td>ws/screenshot 和 ws/test-run 直接 accept()，任何人都可连接</td>
+  <td class="fail">🔴 高</td>
+  <td style="font-size:12px">在 consumers.py 的 connect() 中从 query_string 提取 token 并验证</td>
+</tr>
+<tr>
+  <td>3</td><td>L1</td>
+  <td><strong>element-manager 模块重叠</strong></td>
+  <td>element-locator 模块内的一个子视图</td>
+  <td>独立的前端模块 /element-mgr，操作同一批 element_locator 数据</td>
+  <td class="warn">🟠 中</td>
+  <td style="font-size:12px">合并到 element-locator → Tab 切换"设备发现 / 元素管理"</td>
+</tr>
+<tr>
+  <td>4</td><td>L3</td>
+  <td><strong>encrypt_key 重复实现</strong></td>
+  <td>仅 api.py 一份，views.py import 使用</td>
+  <td>ai_assistant/views.py 和 api.py 各自实现一份加密函数</td>
+  <td class="warn">🟠 中</td>
+  <td style="font-size:12px">views.py 删除重复代码 → from .api import encrypt_key, decrypt_key</td>
+</tr>
+<tr>
+  <td>5</td><td>L1</td>
+  <td><strong>WS URL 端口硬编码</strong></td>
+  <td>ws-url.js 统一构建，消除魔法数字</td>
+  <td>test-runner/index.vue 硬编码 :8765 端口</td>
+  <td class="warn">🟡 低</td>
+  <td style="font-size:12px">使用 shared/ws-url.js 替代硬编码字符串</td>
+</tr>
+</tbody>
+</table></div>
+
+<!-- Dependency diagram: ideal vs actual -->
+<h3>依赖关系对比</h3>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+  <!-- Ideal -->
+  <div style="background:var(--card);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);border-top:4px solid var(--green)">
+    <div style="font-family:var(--font-display);font-weight:700;font-size:14px;color:var(--green);margin-bottom:14px">✅ 理想：依赖方向清晰</div>
+
+    <div style="font-size:11px;color:var(--text2);margin-bottom:6px">底层（零依赖）</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      <span class="dep-tag dep-self">device_pool</span>
+      <span class="dep-tag dep-self">report_generator</span>
+      <span class="dep-tag dep-self" style="background:#e8f5e0;color:var(--green)">dashboard 🆕</span>
+    </div>
+
+    <div style="font-size:11px;color:var(--text2);margin-bottom:6px">中层（依赖底层）</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      <span class="dep-tag dep-down">element_locator → DP</span>
+      <span class="dep-tag dep-down">case_manager → EL</span>
+      <span class="dep-tag dep-down">test_runner → DP+CM+RG</span>
+    </div>
+
+    <div style="font-size:11px;color:var(--text2);margin-bottom:6px">聚合层（只读依赖所有下层）</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <span class="dep-tag dep-up">ai_assistant → 5 Apps</span>
+      <span class="dep-tag dep-up">dashboard → 5 Apps（只读）</span>
+    </div>
+  </div>
+
+  <!-- Actual -->
+  <div style="background:var(--card);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);border-top:4px solid var(--red)">
+    <div style="font-family:var(--font-display);font-weight:700;font-size:14px;color:var(--red);margin-bottom:14px">⚠️ 实际：存在 3 个问题</div>
+
+    <div class="dep-row" style="margin-bottom:8px">
+      <span class="dep-tag dep-cross">ai_assistant 导入 6 个外部 Model</span>
+      <span style="font-size:11px;color:var(--red)">dashboard 代码错位</span>
+    </div>
+    <div class="dep-row" style="margin-bottom:8px">
+      <span class="dep-tag dep-cross">encrypt_key 在 2 处重复</span>
+      <span style="font-size:11px;color:var(--red)">views.py + api.py</span>
+    </div>
+    <div class="dep-row" style="margin-bottom:8px">
+      <span class="dep-tag dep-cross">WS 无 JWT 验证</span>
+      <span style="font-size:11px;color:var(--red)">安全检查缺失</span>
+    </div>
+    <div class="dep-row" style="margin-bottom:8px">
+      <span class="dep-tag dep-cross">element-manager 重叠</span>
+      <span style="font-size:11px;color:#c7840a">前端 8 模块 vs 后端 6 App</span>
+    </div>
+    <div class="dep-row">
+      <span class="dep-tag dep-cross">WS URL 端口硬编码</span>
+      <span style="font-size:11px;color:#c7840a">:8765 散落在 .vue 中</span>
+    </div>
+  </div>
+</div>
+
+<!-- Implementation Roadmap -->
+<h2>🛠️ 实施路线</h2>
+
+<ul class="focus-list">
+  <li class="focus-item">
+    <span class="focus-prio prio-p0">P0</span>
+    <div class="focus-body">
+      <div class="focus-title">提取 Dashboard 为独立 App</div>
+      <div class="focus-desc">
+        新建 <code>apps/dashboard/</code>（views.py + urls.py + apps.py），从 <code>apps/ai_assistant/dashboard_views.py</code> 迁移 4 个统计视图。
+        更新 <code>config/urls.py</code> 和 <code>config/settings.py</code>。
+        影响: 仪表盘 API 路径不变，前端无感。
+      </div>
+    </div>
+  </li>
+  <li class="focus-item">
+    <span class="focus-prio prio-p0">P0</span>
+    <div class="focus-body">
+      <div class="focus-title">WebSocket 添加 JWT 认证</div>
+      <div class="focus-desc">
+        在 <code>ScreenshotConsumer.connect()</code> 和 <code>TestRunConsumer.connect()</code> 中从 query_string 提取 token，
+        调用 <code>verify_token()</code> 验证，拒绝无效连接。
+        前端 WS URL 改为 <code>ws-url.js</code> 统一构建，附加 token 参数。
+      </div>
+    </div>
+  </li>
+  <li class="focus-item">
+    <span class="focus-prio prio-p1">P1</span>
+    <div class="focus-body">
+      <div class="focus-title">合并 element-manager → element-locator</div>
+      <div class="focus-desc">
+        <code>element-locator/routes.js</code> 新增 <code>/element-mgr</code> 子路由，
+        将 element-manager/index.vue 迁移为 <code>element-locator/components/ElementManager.vue</code>。
+        删除 <code>frontend/src/modules/element-manager/</code> 目录。
+        更新 <code>router.js</code> 移除 element-manager 独立路由注册。
+      </div>
+    </div>
+  </li>
+  <li class="focus-item">
+    <span class="focus-prio prio-p1">P1</span>
+    <div class="focus-body">
+      <div class="focus-title">ai_assistant 去重 + 分离 CRUD</div>
+      <div class="focus-desc">
+        删除 <code>views.py</code> 中重复的 encrypt/decrypt/mask 实现，改为 <code>from .api import</code>。
+        将 views.py 中的纯 CRUD 函数（list_agents, create_agent 等）迁移到 api.py，
+        views.py 只保留 HTTP 入口（解析 request → 调用 api → 返回 JsonResponse）。
+      </div>
+    </div>
+  </li>
+  <li class="focus-item">
+    <span class="focus-prio prio-p2">P2</span>
+    <div class="focus-body">
+      <div class="focus-title">前端 .vue 迁移到 api.js 调用</div>
+      <div class="focus-desc">
+        将 <code>case-manager/CaseEditor.vue</code>、<code>test-runner/index.vue</code>、
+        <code>report-generator/index.vue</code> 中直接 <code>import client</code> 的调用替换为
+        <code>import { xxx } from './api.js'</code>。api.js 文件已在上一轮创建，只需切换引用。
+      </div>
+    </div>
+  </li>
+  <li class="focus-item">
+    <span class="focus-prio prio-p2">P2</span>
+    <div class="focus-body">
+      <div class="focus-title">状态值 Enum 全局替换</div>
+      <div class="focus-desc">
+        <code>models/constants.py</code> 已定义 14 个 Enum，逐步替换各 app models.py 中硬编码的
+        <code>"ONLINE"/"BUSY"</code> 等字符串为 <code>DeviceStatus.ONLINE</code> 等常量引用。
+        在 model 定义中添加 <code>choices=</code> 参数，增强 Django Admin 和 API 校验。
+      </div>
+    </div>
+  </li>
+</ul>
+
+<!-- Verification checklist -->
+<h2>✅ 验证清单</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>检查项</th><th>预期结果</th></tr></thead>
+<tbody>
+<tr><td><code>grep -r "dashboard_views" config/</code></td><td>引用路径指向 <code>apps.dashboard</code>，非 <code>apps.ai_assistant</code></td></tr>
+<tr><td><code>grep -r "import client" frontend/src/modules/</code></td><td>仅 api.js 文件中出现</td></tr>
+<tr><td><code>grep -r "element-manager" frontend/src/router.js</code></td><td>无匹配（已合并）</td></tr>
+<tr><td>消费者 <code>connect()</code> 方法</td><td>包含 token 验证，无效 token 返回 reject</td></tr>
+<tr><td><code>python manage.py check</code></td><td>0 issues</td></tr>
+<tr><td><code>npx vite build --mode development</code></td><td>✓ built 成功</td></tr>
+<tr><td><code>python run.py start</code></td><td>4 服务 ONLINE</td></tr>
+<tr><td>浏览器访问仪表盘 <code>/dashboard</code></td><td>数据正常，无 500 错误</td></tr>
+</tbody>
+</table></div>
+
+<div class="footer"><span class="footer-leaf">🍃</span> Android-AutoTests 模块化架构设计 &middot; 2026-07-05</div>
+</div>
+</body>
+</html>

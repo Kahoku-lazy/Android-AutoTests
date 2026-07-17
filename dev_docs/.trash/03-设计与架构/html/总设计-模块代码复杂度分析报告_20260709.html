@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>七个模块代码复杂度与规模分析报告</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #19c8b9;
+  --primary-hover: #3dd4c6;
+  --primary-active: #11a89b;
+  --primary-bg: #e6f9f6;
+  --text: #794f27;
+  --text-body: #725d42;
+  --text-secondary: #9f927d;
+  --text-muted: #8a7b66;
+  --bg: #f8f8f0;
+  --bg-content: rgb(247, 243, 223);
+  --bg-disabled: #f0ece2;
+  --border: #c4b89e;
+  --border-hover: #a89878;
+  --success: #6fba2c;
+  --warning: #f5c31c;
+  --error: #e05a5a;
+  --focus-yellow: #ffcc00;
+  --shadow-btn: #bdaea0;
+  --r-sm: 12px;
+  --r-base: 18px;
+  --r-lg: 24px;
+  --r-pill: 50px;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --d-base: 0.25s;
+  --blue: #889df0;
+  --purple: #b39ef3;
+  --teal: #19c8b9;
+  --pink: #f8a6b2;
+  --orange: #e8a04a;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: Nunito, 'Noto Sans SC', -apple-system, 'PingFang SC', sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 15% 0%, rgba(25,200,185,.07) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 100%, rgba(111,186,44,.05) 0%, transparent 50%);
+  color: var(--text-body);
+  padding: 32px 20px 48px;
+  line-height: 1.65;
+}
+
+.container { max-width: 1180px; margin: 0 auto; }
+
+/* ── Header ── */
+.header { text-align: center; margin-bottom: 36px; }
+.header-badge {
+  display: inline-block;
+  background: var(--primary-bg);
+  color: var(--primary-active);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 5px 16px;
+  border-radius: var(--r-pill);
+  border: 2px solid var(--primary);
+  margin-bottom: 14px;
+}
+h1 {
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+}
+.meta {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+/* ── KPI Cards ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.kpi {
+  background: var(--bg-content);
+  border-radius: var(--r-lg);
+  padding: 20px 22px;
+  border: 2px solid var(--border);
+  transition: transform var(--d-base) var(--ease);
+  position: relative;
+  overflow: hidden;
+}
+.kpi:hover { transform: translateY(-2px); }
+.kpi::after {
+  content: '';
+  position: absolute;
+  top: -16px; right: -16px;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  opacity: 0.12;
+}
+.kpi:nth-child(1)::after { background: var(--teal); }
+.kpi:nth-child(2)::after { background: var(--blue); }
+.kpi:nth-child(3)::after { background: var(--error); }
+.kpi:nth-child(4)::after { background: var(--warning); }
+.kpi-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+.kpi-value {
+  font-size: 34px;
+  font-weight: 900;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  margin: 4px 0 2px;
+  line-height: 1.1;
+}
+.kpi-sub { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+.kpi-teal .kpi-value { color: var(--primary-active); }
+.kpi-blue .kpi-value { color: #5a7ad4; }
+.kpi-red .kpi-value { color: var(--error); }
+.kpi-yellow .kpi-value { color: #c7840a; }
+
+/* ── Conclusion ── */
+.conclusion {
+  background: var(--bg-content);
+  border-radius: var(--r-lg);
+  padding: 20px 24px;
+  border-left: 5px solid var(--primary);
+  border: 2px solid var(--border);
+  border-left: 5px solid var(--primary);
+  margin-bottom: 32px;
+}
+.conclusion-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+}
+.conclusion p { font-size: 14px; font-weight: 500; }
+.conclusion strong { color: var(--text); font-weight: 700; }
+
+/* ── Section titles ── */
+h2 {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  margin: 36px 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+h2 .num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+h3 {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 20px 0 10px;
+  letter-spacing: 0.02em;
+}
+
+/* ── Tables ── */
+.table-wrap {
+  background: var(--bg-content);
+  border-radius: var(--r-lg);
+  border: 2px solid var(--border);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+table { width: 100%; border-collapse: collapse; }
+th {
+  background: linear-gradient(180deg, #faf5ed 0%, #f0ebe0 100%);
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  font-weight: 700;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+td {
+  padding: 10px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(196,184,158,.35);
+  font-weight: 500;
+}
+tr:last-child td { border-bottom: none; }
+tr:nth-child(even) td { background: rgba(255,255,255,.35); }
+tr.total-row td {
+  background: var(--primary-bg);
+  font-weight: 700;
+  color: var(--text);
+  border-top: 2px solid var(--border);
+}
+.num-cell { font-variant-numeric: tabular-nums; text-align: right; }
+.text-center { text-align: center; }
+
+/* ── Bar chart ── */
+.bar-chart { padding: 20px 24px; }
+.bar-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 60px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.bar-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: right;
+}
+.bar-track {
+  height: 22px;
+  background: var(--bg-disabled);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  border: 1.5px solid var(--border);
+}
+.bar-fill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  display: flex;
+  align-items: center;
+  padding-left: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  transition: width 1s var(--ease);
+  min-width: 2px;
+}
+.bar-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Stars rating ── */
+.stars { color: var(--warning); font-size: 13px; letter-spacing: 1px; }
+.stars-5 { color: var(--error); }
+
+/* ── Module cards ── */
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.module-card {
+  background: var(--bg-content);
+  border-radius: var(--r-base);
+  border: 2px solid var(--border);
+  padding: 18px 20px;
+  transition: transform var(--d-base) var(--ease);
+}
+.module-card:hover { transform: translateY(-2px); }
+.module-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.module-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+.module-rank {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: var(--bg-disabled);
+  color: var(--text-muted);
+}
+.rank-1 { background: #fde8e8; color: var(--error); }
+.rank-2 { background: #fef3cd; color: #8a6d14; }
+.rank-3 { background: #e8f0fe; color: #4a6eb8; }
+.module-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.stat-item {
+  background: rgba(255,255,255,.5);
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  border: 1.5px solid rgba(196,184,158,.4);
+}
+.stat-label { font-size: 10px; color: var(--text-secondary); font-weight: 700; letter-spacing: 0.04em; }
+.stat-value { font-size: 16px; font-weight: 800; color: var(--text); margin-top: 2px; }
+.module-desc { font-size: 12px; color: var(--text-muted); line-height: 1.55; }
+.module-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  border: 1.5px solid;
+}
+.tag-fe { background: #e8f0fe; color: #4a6eb8; border-color: #b8c8f0; }
+.tag-be { background: #e8f5e0; color: #4a8a1e; border-color: #b8d8a0; }
+.tag-risk { background: #fde8e8; color: var(--error); border-color: #f0b8b8; }
+.tag-ws { background: #ede8fe; color: #6a4ab8; border-color: #c8b8f0; }
+
+/* ── Risk table ── */
+.risk-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+}
+.r1 { background: var(--error); }
+.r2 { background: #e87840; }
+.r3 { background: var(--warning); color: var(--text); }
+.r4, .r5, .r6, .r7 { background: var(--text-muted); }
+.file-path {
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+.cc-high { color: var(--error); font-weight: 800; }
+.cc-mid { color: #c7840a; font-weight: 700; }
+
+/* ── Quadrant ── */
+.quadrant-wrap {
+  background: var(--bg-content);
+  border-radius: var(--r-lg);
+  border: 2px solid var(--border);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.quadrant {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  height: 360px;
+  margin: 0 auto;
+  border: 2px solid var(--border);
+  border-radius: var(--r-base);
+  background: linear-gradient(135deg, #faf7f0 0%, #f3ede2 100%);
+}
+.q-axis-x, .q-axis-y {
+  position: absolute;
+  background: var(--border);
+}
+.q-axis-x { left: 50%; top: 0; bottom: 0; width: 2px; transform: translateX(-50%); }
+.q-axis-y { top: 50%; left: 0; right: 0; height: 2px; transform: translateY(-50%); }
+.q-label {
+  position: absolute;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+}
+.q-label-t { top: 8px; left: 50%; transform: translateX(-50%); }
+.q-label-b { bottom: 8px; left: 50%; transform: translateX(-50%); }
+.q-label-l { left: 8px; top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: center; }
+.q-label-r { right: 8px; top: 50%; transform: translateY(-50%) rotate(90deg); transform-origin: center; }
+.q-quad-label {
+  position: absolute;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  opacity: 0.7;
+  max-width: 90px;
+  text-align: center;
+  line-height: 1.3;
+}
+.q-quad-1 { top: 12px; right: 12px; }
+.q-quad-2 { top: 12px; left: 12px; }
+.q-quad-3 { bottom: 12px; left: 12px; }
+.q-quad-4 { bottom: 12px; right: 12px; }
+.dot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 800;
+  color: #fff;
+  cursor: default;
+  transition: transform var(--d-base) var(--ease);
+  white-space: nowrap;
+}
+.dot:hover { transform: translate(-50%, -50%) scale(1.15); z-index: 10; }
+.dot-label {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* ── Recommendations ── */
+.reco-list { display: flex; flex-direction: column; gap: 10px; }
+.reco-item {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: var(--bg-content);
+  border-radius: var(--r-sm);
+  padding: 14px 18px;
+  border: 2px solid var(--border);
+  transition: transform var(--d-base) var(--ease);
+}
+.reco-item:hover { transform: translateX(3px); }
+.reco-prio {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  flex-shrink: 0;
+  min-width: 36px;
+  text-align: center;
+}
+.prio-p0 { background: #fde8e8; color: var(--error); }
+.prio-p1 { background: #fef3cd; color: #8a6d14; }
+.prio-p2 { background: #e8f0fe; color: #4a6eb8; }
+.reco-body { flex: 1; }
+.reco-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.reco-desc { font-size: 12px; color: var(--text-muted); line-height: 1.55; }
+
+/* ── Split bar (FE/BE ratio) ── */
+.split-bar {
+  display: flex;
+  height: 10px;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  border: 1.5px solid var(--border);
+  margin-top: 6px;
+}
+.split-fe { background: var(--blue); }
+.split-be { background: var(--success); }
+.split-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.legend-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+/* ── Footer ── */
+.footer {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 11px;
+  margin-top: 48px;
+  padding-top: 20px;
+  border-top: 2px dashed var(--border);
+  font-weight: 500;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .bar-row { grid-template-columns: 90px 1fr 50px; }
+}
+@media (max-width: 600px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  h1 { font-size: 22px; }
+  .module-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-badge">CODE METRICS REPORT</div>
+    <h1>七个模块代码复杂度与规模分析</h1>
+    <p class="meta">Android-AutoTests 平台 · 统计日期 2026-07-09 · 前端 frontend/src/modules/ + 后端 apps/</p>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-grid">
+    <div class="kpi kpi-teal">
+      <div class="kpi-label">总代码行数</div>
+      <div class="kpi-value">28,621</div>
+      <div class="kpi-sub">前端 19,150 + 后端 9,471</div>
+    </div>
+    <div class="kpi kpi-blue">
+      <div class="kpi-label">前端占比</div>
+      <div class="kpi-value">66.9%</div>
+      <div class="kpi-sub">54 个文件 · Vue/JS/CSS</div>
+    </div>
+    <div class="kpi kpi-red">
+      <div class="kpi-label">最高圈复杂度</div>
+      <div class="kpi-value">CC 49</div>
+      <div class="kpi-sub">test_runner/views.py::_execute_tests</div>
+    </div>
+    <div class="kpi kpi-yellow">
+      <div class="kpi-label">最大单文件</div>
+      <div class="kpi-value">3,334</div>
+      <div class="kpi-sub">ai-assistant/ChatView.vue</div>
+    </div>
+  </div>
+
+  <!-- Conclusion -->
+  <div class="conclusion">
+    <div class="conclusion-title">核心结论</div>
+    <p>
+      <strong>AI 助手</strong>（7,250 行）和<strong>执行引擎</strong>（5,612 行）是规模最大的两个模块；
+      <strong>执行引擎</strong>后端逻辑最密集（148 个函数、CC 最高 49），维护风险最高；
+      <strong>测试用例</strong>前端编辑器占 84%，<strong>测试报告</strong>（1,354 行）是最轻量模块。
+      前端偏重模块：测试用例、AI 助手、元素定位；后端偏重模块：执行引擎、设备管理。
+    </p>
+  </div>
+
+  <!-- Section 1: Overview table -->
+  <h2><span class="num">1</span>代码规模总览</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>模块</th>
+          <th class="num-cell">前端文件</th>
+          <th class="num-cell">前端行数</th>
+          <th class="num-cell">后端文件</th>
+          <th class="num-cell">后端行数</th>
+          <th class="num-cell">合计行数</th>
+          <th class="num-cell">占比</th>
+          <th>前后端比</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>AI 助手</strong></td>
+          <td class="num-cell">6</td><td class="num-cell">5,247</td>
+          <td class="num-cell">11</td><td class="num-cell">2,003</td>
+          <td class="num-cell"><strong>7,250</strong></td>
+          <td class="num-cell">25.3%</td>
+          <td><div class="split-bar"><div class="split-fe" style="width:72%"></div><div class="split-be" style="width:28%"></div></div></td>
+        </tr>
+        <tr>
+          <td><strong>执行引擎</strong></td>
+          <td class="num-cell">6</td><td class="num-cell">2,433</td>
+          <td class="num-cell">18</td><td class="num-cell">3,179</td>
+          <td class="num-cell"><strong>5,612</strong></td>
+          <td class="num-cell">19.6%</td>
+          <td><div class="split-bar"><div class="split-fe" style="width:43%"></div><div class="split-be" style="width:57%"></div></div></td>
+        </tr>
+        <tr>
+          <td><strong>测试用例</strong></td>
+          <td class="num-cell">9</td><td class="num-cell">4,566</td>
+          <td class="num-cell">9</td><td class="num-cell">848</td>
+          <td class="num-cell"><strong>5,414</strong></td>
+          <td class="num-cell">18.9%</td>
+          <td><div class="split-bar"><div class="split-fe" style="width:84%"></div><div class="split-be" style="width:16%"></div></div></td>
+        </tr>
+        <tr>
+          <td><strong>元素定位</strong></td>
+          <td class="num-cell">10</td><td class="num-cell">2,590</td>
+          <td class="num-cell">12</td><td class="num-cell">886</td>
+          <td class="num-cell"><strong>3,476</strong></td>
+          <td class="num-cell">12.1%</td>
+          <td><div class="split-bar"><div class="split-fe" style="width:75%"></div><div class="split-be" style="width:25%"></div></div></td>
+        </tr>
+        <tr>
+          <td><strong>设备管理</strong></td>
+          <td class="num-cell">8</td><td class="num-cell">1,637</td>
+          <td class="num-cell">10</td><td class="num-cell">1,796</td>
+          <td class="num-cell"><strong>3,433</strong></td>
+          <td class="num-cell">12.0%</td>
+          <td><div class="split-bar"><div class="split-fe" style="width:48%"></div><div class="split-be" style="width:52%"></div></div></td>
+        </tr>
+        <tr>
+          <td><strong>仪表盘</strong></td>
+          <td class="num-cell">11</td><td class="num-cell">1,725</td>
+          <td class="num-cell">4</td><td class="num-cell">357</td>
+          <td class="num-cell"><strong>2,082</strong></td>
+          <td class="num-cell">7.3%</td>
+          <td><div class="split-bar"><div class="split-fe" style="width:83%"></div><div class="split-be" style="width:17%"></div></div></td>
+        </tr>
+        <tr>
+          <td><strong>测试报告</strong></td>
+          <td class="num-cell">4</td><td class="num-cell">952</td>
+          <td class="num-cell">10</td><td class="num-cell">402</td>
+          <td class="num-cell"><strong>1,354</strong></td>
+          <td class="num-cell">4.7%</td>
+          <td><div class="split-bar"><div class="split-fe" style="width:70%"></div><div class="split-be" style="width:30%"></div></div></td>
+        </tr>
+        <tr class="total-row">
+          <td><strong>合计</strong></td>
+          <td class="num-cell">54</td><td class="num-cell">19,150</td>
+          <td class="num-cell">74</td><td class="num-cell">9,471</td>
+          <td class="num-cell">28,621</td>
+          <td class="num-cell">100%</td>
+          <td>
+            <div class="split-legend">
+              <span><span class="legend-dot" style="background:var(--blue)"></span>前端 66.9%</span>
+              <span><span class="legend-dot" style="background:var(--success)"></span>后端 33.1%</span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Bar chart -->
+  <div class="table-wrap">
+    <div class="bar-chart">
+      <div class="bar-row">
+        <div class="bar-label">AI 助手</div>
+        <div class="bar-track"><div class="bar-fill" style="width:100%;background:linear-gradient(90deg,#b39ef3,#889df0)">25.3%</div></div>
+        <div class="bar-val">7,250</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">执行引擎</div>
+        <div class="bar-track"><div class="bar-fill" style="width:77.4%;background:linear-gradient(90deg,#e05a5a,#e87840)">19.6%</div></div>
+        <div class="bar-val">5,612</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">测试用例</div>
+        <div class="bar-track"><div class="bar-fill" style="width:74.7%;background:linear-gradient(90deg,#f5c31c,#e8a04a)">18.9%</div></div>
+        <div class="bar-val">5,414</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">元素定位</div>
+        <div class="bar-track"><div class="bar-fill" style="width:47.9%;background:linear-gradient(90deg,#19c8b9,#3dd4c6)">12.1%</div></div>
+        <div class="bar-val">3,476</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">设备管理</div>
+        <div class="bar-track"><div class="bar-fill" style="width:47.4%;background:linear-gradient(90deg,#6fba2c,#8ed44a)">12.0%</div></div>
+        <div class="bar-val">3,433</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">仪表盘</div>
+        <div class="bar-track"><div class="bar-fill" style="width:28.7%;background:linear-gradient(90deg,#889df0,#a8b8f8)">7.3%</div></div>
+        <div class="bar-val">2,082</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">测试报告</div>
+        <div class="bar-track"><div class="bar-fill" style="width:18.7%;background:linear-gradient(90deg,#c4b89e,#a89878)">4.7%</div></div>
+        <div class="bar-val">1,354</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Complexity -->
+  <h2><span class="num">2</span>复杂度维度对比</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>模块</th>
+          <th class="text-center">Vue 组件</th>
+          <th class="text-center">REST 端点</th>
+          <th class="text-center">WebSocket</th>
+          <th class="text-center">Py 函数</th>
+          <th class="text-center">Py 类</th>
+          <th class="text-center">最大 CC</th>
+          <th class="text-center">平均 CC</th>
+          <th class="text-center">复杂度评级</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>AI 助手</strong></td>
+          <td class="text-center">3</td><td class="text-center">31</td><td class="text-center">0</td>
+          <td class="text-center">77</td><td class="text-center">19</td>
+          <td class="text-center cc-mid">18</td><td class="text-center">2.5</td>
+          <td class="text-center"><span class="stars">★★★★☆</span></td>
+        </tr>
+        <tr>
+          <td><strong>执行引擎</strong></td>
+          <td class="text-center">2</td><td class="text-center">10</td><td class="text-center">1</td>
+          <td class="text-center"><strong>148</strong></td><td class="text-center"><strong>22</strong></td>
+          <td class="text-center cc-high">49</td><td class="text-center">4.0</td>
+          <td class="text-center"><span class="stars stars-5">★★★★★</span></td>
+        </tr>
+        <tr>
+          <td><strong>测试用例</strong></td>
+          <td class="text-center">6</td><td class="text-center">10</td><td class="text-center">0</td>
+          <td class="text-center">24</td><td class="text-center">7</td>
+          <td class="text-center cc-mid">15</td><td class="text-center">3.5</td>
+          <td class="text-center"><span class="stars">★★★★☆</span></td>
+        </tr>
+        <tr>
+          <td><strong>元素定位</strong></td>
+          <td class="text-center">7</td><td class="text-center">13</td><td class="text-center">1</td>
+          <td class="text-center">34</td><td class="text-center">12</td>
+          <td class="text-center cc-mid">18</td><td class="text-center">4.5</td>
+          <td class="text-center"><span class="stars">★★★☆☆</span></td>
+        </tr>
+        <tr>
+          <td><strong>设备管理</strong></td>
+          <td class="text-center">5</td><td class="text-center">13</td><td class="text-center">0</td>
+          <td class="text-center">52</td><td class="text-center">11</td>
+          <td class="text-center cc-mid">21</td><td class="text-center">3.6</td>
+          <td class="text-center"><span class="stars">★★★☆☆</span></td>
+        </tr>
+        <tr>
+          <td><strong>仪表盘</strong></td>
+          <td class="text-center">9</td><td class="text-center">4</td><td class="text-center">0</td>
+          <td class="text-center">10</td><td class="text-center">1</td>
+          <td class="text-center">15</td><td class="text-center">3.9</td>
+          <td class="text-center"><span class="stars">★★☆☆☆</span></td>
+        </tr>
+        <tr>
+          <td><strong>测试报告</strong></td>
+          <td class="text-center">2</td><td class="text-center">4</td><td class="text-center">0</td>
+          <td class="text-center">14</td><td class="text-center">8</td>
+          <td class="text-center">14</td><td class="text-center">3.1</td>
+          <td class="text-center"><span class="stars">★★☆☆☆</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Section 3: Module profiles -->
+  <h2><span class="num">3</span>各模块详细画像</h2>
+  <div class="module-grid">
+
+    <div class="module-card">
+      <div class="module-card-header">
+        <span class="module-name">🤖 AI 助手</span>
+        <span class="module-rank rank-1">#1 规模最大</span>
+      </div>
+      <div class="module-stats">
+        <div class="stat-item"><div class="stat-label">合计行数</div><div class="stat-value">7,250</div></div>
+        <div class="stat-item"><div class="stat-label">REST 端点</div><div class="stat-value">31</div></div>
+        <div class="stat-item"><div class="stat-label">最大文件</div><div class="stat-value" style="font-size:13px">ChatView.vue 3,334行</div></div>
+        <div class="stat-item"><div class="stat-label">Vue 复杂度</div><div class="stat-value cc-high">≈341</div></div>
+      </div>
+      <p class="module-desc">单文件过大是主要风险；后端平均 CC 最低（2.5），逻辑相对分散。AgentDetail.vue（800 行）承担 5 步配置向导。</p>
+      <div class="module-tags">
+        <span class="tag tag-fe">前端 72%</span>
+        <span class="tag tag-risk">巨型 Vue 文件</span>
+      </div>
+    </div>
+
+    <div class="module-card">
+      <div class="module-card-header">
+        <span class="module-name">⚙️ 执行引擎</span>
+        <span class="module-rank rank-1">#1 最复杂</span>
+      </div>
+      <div class="module-stats">
+        <div class="stat-item"><div class="stat-label">合计行数</div><div class="stat-value">5,612</div></div>
+        <div class="stat-item"><div class="stat-label">Py 函数/类</div><div class="stat-value">148 / 22</div></div>
+        <div class="stat-item"><div class="stat-label">最大 CC</div><div class="stat-value cc-high">49</div></div>
+        <div class="stat-item"><div class="stat-label">后端文件</div><div class="stat-value">18 个</div></div>
+      </div>
+      <p class="module-desc">状态机 + 异步执行 + WebSocket 推送，技术复杂度最高。views.py（1,226 行）承担过多编排职责。</p>
+      <div class="module-tags">
+        <span class="tag tag-be">后端 57%</span>
+        <span class="tag tag-ws">WebSocket</span>
+        <span class="tag tag-risk">CC≥40 函数</span>
+      </div>
+    </div>
+
+    <div class="module-card">
+      <div class="module-card-header">
+        <span class="module-name">📋 测试用例</span>
+        <span class="module-rank rank-3">#3 规模</span>
+      </div>
+      <div class="module-stats">
+        <div class="stat-item"><div class="stat-label">合计行数</div><div class="stat-value">5,414</div></div>
+        <div class="stat-item"><div class="stat-label">前端占比</div><div class="stat-value">84%</div></div>
+        <div class="stat-item"><div class="stat-label">StepEditor</div><div class="stat-value">1,130 行</div></div>
+        <div class="stat-item"><div class="stat-label">Vue 复杂度</div><div class="stat-value cc-high">≈181</div></div>
+      </div>
+      <p class="module-desc">14 种步骤类型的编辑/展示逻辑集中在前端，后端仅 848 行。StepEditor 是首要拆分候选。</p>
+      <div class="module-tags">
+        <span class="tag tag-fe">前端 84%</span>
+        <span class="tag tag-risk">编辑器密集</span>
+      </div>
+    </div>
+
+    <div class="module-card">
+      <div class="module-card-header">
+        <span class="module-name">🎯 元素定位</span>
+        <span class="module-rank">#4 规模</span>
+      </div>
+      <div class="module-stats">
+        <div class="stat-item"><div class="stat-label">合计行数</div><div class="stat-value">3,476</div></div>
+        <div class="stat-item"><div class="stat-label">最大文件</div><div class="stat-value" style="font-size:13px">ElementManager 842行</div></div>
+        <div class="stat-item"><div class="stat-label">XPath 生成 CC</div><div class="stat-value cc-mid">18</div></div>
+        <div class="stat-item"><div class="stat-label">WebSocket</div><div class="stat-value">截图流 2fps</div></div>
+      </div>
+      <p class="module-desc">UI 交互（截图标注、XPath 候选）与设备通信耦合，前后端均衡，中等复杂度。</p>
+      <div class="module-tags">
+        <span class="tag tag-fe">前端 75%</span>
+        <span class="tag tag-ws">WebSocket</span>
+      </div>
+    </div>
+
+    <div class="module-card">
+      <div class="module-card-header">
+        <span class="module-name">📱 设备管理</span>
+        <span class="module-rank">#5 规模</span>
+      </div>
+      <div class="module-stats">
+        <div class="stat-item"><div class="stat-label">合计行数</div><div class="stat-value">3,433</div></div>
+        <div class="stat-item"><div class="stat-label">views.py</div><div class="stat-value">1,131 行</div></div>
+        <div class="stat-item"><div class="stat-label">最高 CC</div><div class="stat-value cc-mid">21</div></div>
+        <div class="stat-item"><div class="stat-label">REST 端点</div><div class="stat-value">13</div></div>
+      </div>
+      <p class="module-desc">设备扫描、连接、锁、队列等状态管理集中在 views.py 和 pool.py，后端比前端更重。</p>
+      <div class="module-tags">
+        <span class="tag tag-be">后端 52%</span>
+        <span class="tag tag-risk">views 过重</span>
+      </div>
+    </div>
+
+    <div class="module-card">
+      <div class="module-card-header">
+        <span class="module-name">📊 仪表盘</span>
+        <span class="module-rank">#6 规模</span>
+      </div>
+      <div class="module-stats">
+        <div class="stat-item"><div class="stat-label">合计行数</div><div class="stat-value">2,082</div></div>
+        <div class="stat-item"><div class="stat-label">Vue 组件</div><div class="stat-value">9 个</div></div>
+        <div class="stat-item"><div class="stat-label">REST 端点</div><div class="stat-value">4</div></div>
+        <div class="stat-item"><div class="stat-label">后端行数</div><div class="stat-value">357</div></div>
+      </div>
+      <p class="module-desc">轻量聚合层，9 个小组件但单个较小，以数据展示和导航为主，维护成本最低。</p>
+      <div class="module-tags">
+        <span class="tag tag-fe">前端 83%</span>
+      </div>
+    </div>
+
+    <div class="module-card">
+      <div class="module-card-header">
+        <span class="module-name">📄 测试报告</span>
+        <span class="module-rank">#7 最轻量</span>
+      </div>
+      <div class="module-stats">
+        <div class="stat-item"><div class="stat-label">合计行数</div><div class="stat-value">1,354</div></div>
+        <div class="stat-item"><div class="stat-label">Vue 组件</div><div class="stat-value">2</div></div>
+        <div class="stat-item"><div class="stat-label">REST 端点</div><div class="stat-value">4</div></div>
+        <div class="stat-item"><div class="stat-label">最大 CC</div><div class="stat-value">14</div></div>
+      </div>
+      <p class="module-desc">功能边界清晰，前后端都较轻。侧边栏仍标为「待完善」，后续增长需控制边界。</p>
+      <div class="module-tags">
+        <span class="tag tag-fe">前端 70%</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Section 4: Risk hotspots -->
+  <h2><span class="num">4</span>复杂度热力图 — Top 风险文件</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="text-center">排名</th>
+          <th>文件路径</th>
+          <th class="num-cell">行数</th>
+          <th class="text-center">复杂度</th>
+          <th>所属模块</th>
+          <th>风险说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="text-center"><span class="risk-rank r1">1</span></td>
+          <td><span class="file-path">ai-assistant/ChatView.vue</span></td>
+          <td class="num-cell">3,334</td>
+          <td class="text-center cc-high">≈341</td>
+          <td>AI 助手</td>
+          <td>单文件占模块前端 63%，SSE/消息流/输入全部耦合</td>
+        </tr>
+        <tr>
+          <td class="text-center"><span class="risk-rank r2">2</span></td>
+          <td><span class="file-path">test-runner/views.py</span></td>
+          <td class="num-cell">1,226</td>
+          <td class="text-center cc-high">CC 49</td>
+          <td>执行引擎</td>
+          <td>_execute_tests / start_test_run 圈复杂度极高</td>
+        </tr>
+        <tr>
+          <td class="text-center"><span class="risk-rank r3">3</span></td>
+          <td><span class="file-path">case-manager/StepEditor.vue</span></td>
+          <td class="num-cell">1,130</td>
+          <td class="text-center cc-high">≈181</td>
+          <td>测试用例</td>
+          <td>14 种步骤类型编辑器未拆分</td>
+        </tr>
+        <tr>
+          <td class="text-center"><span class="risk-rank r4">4</span></td>
+          <td><span class="file-path">test-runner/TaskDetail.vue</span></td>
+          <td class="num-cell">875</td>
+          <td class="text-center cc-high">≈209</td>
+          <td>执行引擎</td>
+          <td>任务详情 + WebSocket 状态同步集中</td>
+        </tr>
+        <tr>
+          <td class="text-center"><span class="risk-rank r5">5</span></td>
+          <td><span class="file-path">device-pool/views.py</span></td>
+          <td class="num-cell">1,131</td>
+          <td class="text-center cc-mid">CC 21</td>
+          <td>设备管理</td>
+          <td>扫描/连接/断开逻辑未下沉 service</td>
+        </tr>
+        <tr>
+          <td class="text-center"><span class="risk-rank r6">6</span></td>
+          <td><span class="file-path">element-locator/ElementManager.vue</span></td>
+          <td class="num-cell">842</td>
+          <td class="text-center cc-mid">≈91</td>
+          <td>元素定位</td>
+          <td>元素 CRUD + 页面管理混合</td>
+        </tr>
+        <tr>
+          <td class="text-center"><span class="risk-rank r7">7</span></td>
+          <td><span class="file-path">device-pool/index.vue</span></td>
+          <td class="num-cell">835</td>
+          <td class="text-center cc-mid">≈127</td>
+          <td>设备管理</td>
+          <td>设备列表 + 锁/队列/连接 UI 全在一页</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Section 5: Quadrant -->
+  <h2><span class="num">5</span>模块定位象限图</h2>
+  <div class="quadrant-wrap">
+    <div class="quadrant">
+      <div class="q-axis-x"></div>
+      <div class="q-axis-y"></div>
+      <div class="q-label q-label-t">复杂度高 ↑</div>
+      <div class="q-label q-label-b">复杂度低 ↓</div>
+      <div class="q-label q-label-l">代码量少 ←</div>
+      <div class="q-label q-label-r">代码量多 →</div>
+      <div class="q-quad-label q-quad-1">规模大且复杂<br>执行引擎 · AI助手 · 测试用例</div>
+      <div class="q-quad-label q-quad-2">规模小但复杂</div>
+      <div class="q-quad-label q-quad-3">规模小且简单<br>测试报告 · 仪表盘</div>
+      <div class="q-quad-label q-quad-4">体量大但简单</div>
+
+      <!-- dots: x=scale(0-100%), y=complexity(0-100%, inverted because top=high) -->
+      <div class="dot" style="left:85%;top:35%;width:52px;height:52px;background:#b39ef3" title="AI 助手">
+        AI
+        <span class="dot-label">AI 助手</span>
+      </div>
+      <div class="dot" style="left:70%;top:5%;width:48px;height:48px;background:#e05a5a" title="执行引擎">
+        执行
+        <span class="dot-label">执行引擎</span>
+      </div>
+      <div class="dot" style="left:68%;top:30%;width:44px;height:44px;background:#f5c31c;color:#794f27" title="测试用例">
+        用例
+        <span class="dot-label">测试用例</span>
+      </div>
+      <div class="dot" style="left:42%;top:45%;width:38px;height:38px;background:#19c8b9" title="元素定位">
+        元素
+        <span class="dot-label">元素定位</span>
+      </div>
+      <div class="dot" style="left:41%;top:50%;width:36px;height:36px;background:#6fba2c" title="设备管理">
+        设备
+        <span class="dot-label">设备管理</span>
+      </div>
+      <div class="dot" style="left:25%;top:70%;width:32px;height:32px;background:#889df0" title="仪表盘">
+        盘
+        <span class="dot-label">仪表盘</span>
+      </div>
+      <div class="dot" style="left:15%;top:75%;width:30px;height:30px;background:#c4b89e" title="测试报告">
+        报告
+        <span class="dot-label">测试报告</span>
+      </div>
+    </div>
+    <div class="split-legend" style="justify-content:center;margin-top:16px">
+      <span>横轴 = 代码规模（行数）</span>
+      <span>纵轴 = 技术复杂度（CC + 交互 + 端点）</span>
+    </div>
+  </div>
+
+  <!-- Section 6: High CC functions -->
+  <h2><span class="num">6</span>高复杂度函数清单（CC ≥ 10）</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>模块</th>
+          <th>函数</th>
+          <th class="text-center">CC</th>
+          <th>建议</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>执行引擎</td>
+          <td><span class="file-path">views.py::_execute_tests</span></td>
+          <td class="text-center cc-high">49</td>
+          <td>拆分为 runner 子流程 + 状态机驱动</td>
+        </tr>
+        <tr>
+          <td>执行引擎</td>
+          <td><span class="file-path">views.py::start_test_run</span></td>
+          <td class="text-center cc-high">42</td>
+          <td>参数校验 / 设备获取 / 任务创建分步提取</td>
+        </tr>
+        <tr>
+          <td>设备管理</td>
+          <td><span class="file-path">views.py::scan_device / connect_device</span></td>
+          <td class="text-center cc-mid">21</td>
+          <td>下沉到 api.py 或独立 service</td>
+        </tr>
+        <tr>
+          <td>设备管理</td>
+          <td><span class="file-path">pool.py::dump_hierarchy</span></td>
+          <td class="text-center cc-mid">18</td>
+          <td>容错分支合并，提取重试策略</td>
+        </tr>
+        <tr>
+          <td>元素定位</td>
+          <td><span class="file-path">service.py::gen_xpath_candidates</span></td>
+          <td class="text-center cc-mid">18</td>
+          <td>按 XPath 策略类型拆策略类</td>
+        </tr>
+        <tr>
+          <td>AI 助手</td>
+          <td><span class="file-path">views.py::test_agent_connection</span></td>
+          <td class="text-center cc-mid">18</td>
+          <td>连接测试与 AgentScope 注册解耦</td>
+        </tr>
+        <tr>
+          <td>测试用例</td>
+          <td><span class="file-path">views.py::definitions_handler</span></td>
+          <td class="text-center cc-mid">15</td>
+          <td>GET/POST/PUT/DELETE 分独立 handler</td>
+        </tr>
+        <tr>
+          <td>执行引擎</td>
+          <td><span class="file-path">device_connect.py::check_and_connect</span></td>
+          <td class="text-center cc-mid">19</td>
+          <td>连接检查与恢复逻辑分阶段</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Section 7: Recommendations -->
+  <h2><span class="num">7</span>改进建议（按优先级）</h2>
+  <div class="reco-list">
+    <div class="reco-item">
+      <span class="reco-prio prio-p0">P0</span>
+      <div class="reco-body">
+        <div class="reco-title">拆分巨型文件</div>
+        <div class="reco-desc">
+          ChatView.vue（3,334 行）→ 消息流、输入区、会话列表、SSE 处理拆 composable；
+          test_runner/views.py（1,226 行，CC 49）→ 执行编排下沉到 runner.py / service.py；
+          StepEditor.vue（1,130 行）→ 按步骤类型拆子编辑器组件。
+        </div>
+      </div>
+    </div>
+    <div class="reco-item">
+      <span class="reco-prio prio-p1">P1</span>
+      <div class="reco-body">
+        <div class="reco-title">降低圈复杂度</div>
+        <div class="reco-desc">
+          _execute_tests（CC=49）、start_test_run（CC=42）用状态机或策略模式重构；
+          device_pool/views.py 的连接/扫描逻辑抽到 api.py 或独立 service 层。
+        </div>
+      </div>
+    </div>
+    <div class="reco-item">
+      <span class="reco-prio prio-p2">P2</span>
+      <div class="reco-body">
+        <div class="reco-title">模块均衡与边界控制</div>
+        <div class="reco-desc">
+          测试报告仅 1,354 行，与侧边栏「待完善」一致，后续增长需控制边界；
+          仪表盘 9 个小组件可维持现状，不必过早抽象。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>统计口径：各模块目录内业务代码 · 不含 migrations · 不含 shared/ 和 agentscope_service/ 跨模块层</p>
+    <p>Python CC 基于 AST 分支计数 · Vue 复杂度为启发式估算 · 生成于 2026-07-09</p>
+    <p style="margin-top:6px">Android-AutoTests · animal-island-ui 设计规范</p>
+  </div>
+
+</div>
+</body>
+</html>

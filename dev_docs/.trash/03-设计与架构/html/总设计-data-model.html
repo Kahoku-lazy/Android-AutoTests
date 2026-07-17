@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>数据模型与数据库架构</title>
+  <style>
+    :root {
+      --c-bg: #f8fafc;
+      --c-canvas: #ffffff;
+      --c-border: #cbd5e1;
+      --c-text-main: #0f172a;
+      --c-text-sub: #64748b;
+      --c-accent: #0f172a;
+      --font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      --font-mono: 'SF Mono', Monaco, Consolas, monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--c-bg);
+      font-family: var(--font-ui);
+      color: var(--c-text-main);
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+    }
+    .diagram-canvas {
+      background: var(--c-canvas);
+      border: 2px solid var(--c-border);
+      padding: 32px;
+      width: 1100px;
+    }
+    .diagram-header {
+      border-bottom: 1px solid var(--c-border);
+      padding-bottom: 16px;
+      margin-bottom: 32px;
+    }
+    .diagram-title { font-size: 22px; font-weight: 600; }
+    .diagram-subtitle { font-size: 12px; font-weight: 500; color: var(--c-text-sub); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--c-text-sub);
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--c-border);
+    }
+
+    /* ER diagram */
+    .er-container {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 32px;
+    }
+    .entity {
+      border: 1px solid var(--c-border);
+      min-width: 180px;
+    }
+    .entity-header {
+      background: #f1f5f9;
+      padding: 8px 14px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      border-bottom: 1px solid var(--c-border);
+    }
+    .entity-body {
+      padding: 8px 0;
+    }
+    .field {
+      padding: 4px 14px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .field-name { font-weight: 500; }
+    .field-type { color: var(--c-text-sub); font-size: 10px; }
+    .field-pk { color: var(--c-accent); font-weight: 700; }
+    .field-fk { color: var(--c-text-sub); font-style: italic; }
+
+    /* Python models */
+    .model-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .model-card {
+      border: 1px solid var(--c-border);
+      padding: 16px;
+    }
+    .model-name {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .model-path {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--c-text-sub);
+      margin-bottom: 10px;
+    }
+    .model-attr {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 2px 0;
+    }
+    .model-attr .attr-name { font-weight: 500; }
+    .model-attr .attr-type { color: var(--c-text-sub); }
+
+    /* Migration source */
+    .migration-box {
+      border: 1px dashed var(--c-border);
+      padding: 16px;
+      margin-top: 24px;
+    }
+    .migration-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--c-text-sub);
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+    .mig-arrow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      margin-bottom: 4px;
+    }
+    .mig-from, .mig-to {
+      border: 1px solid var(--c-border);
+      padding: 4px 10px;
+      font-size: 10px;
+    }
+    .mig-arrow-sym { color: var(--c-text-sub); font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<div class="diagram-canvas">
+  <div class="diagram-header">
+    <h1 class="diagram-title">数据模型与存储架构</h1>
+    <p class="diagram-subtitle">DATA MODEL — SQLITE 7 TABLES + PYTHON DATACLASSES</p>
+  </div>
+
+  <!-- DB Tables -->
+  <div class="section-title">SQLite 数据库 — data/app.db · WAL 模式</div>
+  <div class="er-container">
+    <!-- devices -->
+    <div class="entity">
+      <div class="entity-header">devices</div>
+      <div class="entity-body">
+        <div class="field"><span class="field-name field-pk">serial</span><span class="field-type">TEXT PK</span></div>
+        <div class="field"><span class="field-name">name</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">created_at</span><span class="field-type">TEXT</span></div>
+      </div>
+    </div>
+
+    <!-- pages -->
+    <div class="entity">
+      <div class="entity-header">pages</div>
+      <div class="entity-body">
+        <div class="field"><span class="field-name field-pk">id</span><span class="field-type">INTEGER PK</span></div>
+        <div class="field"><span class="field-name">label</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">package</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">activity</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">element_count</span><span class="field-type">INTEGER</span></div>
+        <div class="field"><span class="field-name">created_at</span><span class="field-type">TEXT</span></div>
+      </div>
+    </div>
+
+    <!-- elements -->
+    <div class="entity">
+      <div class="entity-header">elements</div>
+      <div class="entity-body">
+        <div class="field"><span class="field-name field-pk">id</span><span class="field-type">INTEGER PK</span></div>
+        <div class="field"><span class="field-name field-fk">page_id</span><span class="field-type">INTEGER FK→pages</span></div>
+        <div class="field"><span class="field-name">class_name</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">text_val</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">resource_id</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">bounds</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">clickable</span><span class="field-type">INTEGER</span></div>
+        <div class="field"><span class="field-name">xpath_candidates</span><span class="field-type">TEXT (JSON)</span></div>
+        <div class="field"><span class="field-name">is_test_point</span><span class="field-type">INTEGER</span></div>
+        <div class="field"><span class="field-name">content_desc</span><span class="field-type">TEXT</span></div>
+      </div>
+    </div>
+
+    <!-- page_flows -->
+    <div class="entity">
+      <div class="entity-header">page_flows</div>
+      <div class="entity-body">
+        <div class="field"><span class="field-name field-pk">id</span><span class="field-type">INTEGER PK</span></div>
+        <div class="field"><span class="field-name field-fk">from_page_id</span><span class="field-type">INTEGER FK→pages</span></div>
+        <div class="field"><span class="field-name field-fk">to_page_id</span><span class="field-type">INTEGER FK→pages</span></div>
+        <div class="field"><span class="field-name">trigger_element_id</span><span class="field-type">INTEGER</span></div>
+        <div class="field"><span class="field-name">trigger_action</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">trigger_text</span><span class="field-type">TEXT</span></div>
+      </div>
+    </div>
+
+    <!-- test_cases -->
+    <div class="entity">
+      <div class="entity-header">test_cases</div>
+      <div class="entity-body">
+        <div class="field"><span class="field-name field-pk">id</span><span class="field-type">INTEGER PK</span></div>
+        <div class="field"><span class="field-name">name</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">yaml_content</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">created_at</span><span class="field-type">TEXT</span></div>
+      </div>
+    </div>
+
+    <!-- test_definitions -->
+    <div class="entity">
+      <div class="entity-header">test_definitions</div>
+      <div class="entity-body">
+        <div class="field"><span class="field-name field-pk">id</span><span class="field-type">TEXT PK (slug)</span></div>
+        <div class="field"><span class="field-name">title</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">category</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">description</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">steps</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">steps_json</span><span class="field-type">TEXT (JSON数组)</span></div>
+        <div class="field"><span class="field-name">enabled</span><span class="field-type">INTEGER</span></div>
+        <div class="field"><span class="field-name">package_name</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">created_at</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">updated_at</span><span class="field-type">TEXT</span></div>
+      </div>
+    </div>
+
+    <!-- test_results -->
+    <div class="entity">
+      <div class="entity-header">test_results</div>
+      <div class="entity-body">
+        <div class="field"><span class="field-name field-pk">id</span><span class="field-type">INTEGER PK</span></div>
+        <div class="field"><span class="field-name">run_id</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">case_id</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">status</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">duration_ms</span><span class="field-type">REAL</span></div>
+        <div class="field"><span class="field-name">detail</span><span class="field-type">TEXT</span></div>
+        <div class="field"><span class="field-name">created_at</span><span class="field-type">TEXT</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Python Data Models -->
+  <div class="section-title">Python Dataclass 模型 — models/</div>
+  <div class="model-row">
+    <div class="model-card">
+      <div class="model-name">TestStep</div>
+      <div class="model-path">models/step_types.py</div>
+      <div class="model-attr"><span class="attr-name">type:</span> <span class="attr-type">str</span></div>
+      <div class="model-attr"><span class="attr-name">xpath:</span> <span class="attr-type">str</span></div>
+      <div class="model-attr"><span class="attr-name">xpath2:</span> <span class="attr-type">str | None</span></div>
+      <div class="model-attr"><span class="attr-name">timeout:</span> <span class="attr-type">float</span></div>
+      <div class="model-attr"><span class="attr-name">expected_text:</span> <span class="attr-type">str</span></div>
+      <div class="model-attr"><span class="attr-name">index:</span> <span class="attr-type">int</span></div>
+      <div class="model-attr"><span class="attr-name">description:</span> <span class="attr-type">str</span></div>
+      <div style="margin-top:8px; font-size:10px; color:var(--c-text-sub); font-family:var(--font-mono);">
+        to_dict() · from_dict() · 序列化为 JSON
+      </div>
+    </div>
+
+    <div class="model-card">
+      <div class="model-name">TestCaseDef</div>
+      <div class="model-path">models/test_models.py</div>
+      <div class="model-attr"><span class="attr-name">id:</span> <span class="attr-type">str (slug)</span></div>
+      <div class="model-attr"><span class="attr-name">title:</span> <span class="attr-type">str</span></div>
+      <div class="model-attr"><span class="attr-name">category:</span> <span class="attr-type">str</span></div>
+      <div class="model-attr"><span class="attr-name">steps_data:</span> <span class="attr-type">list[TestStep]</span></div>
+      <div class="model-attr"><span class="attr-name">enabled:</span> <span class="attr-type">bool</span></div>
+      <div class="model-attr"><span class="attr-name">package_name:</span> <span class="attr-type">str</span></div>
+      <div style="margin-top:8px; font-size:10px; color:var(--c-text-sub); font-family:var(--font-mono);">
+        from_dict() · from_db_row() · to_dict() · __post_init__
+      </div>
+    </div>
+  </div>
+
+  <div class="model-row">
+    <div class="model-card">
+      <div class="model-name">TestResult</div>
+      <div class="model-path">models/test_models.py</div>
+      <div class="model-attr"><span class="attr-name">case_id:</span> <span class="attr-type">str</span></div>
+      <div class="model-attr"><span class="attr-name">case_title:</span> <span class="attr-type">str</span></div>
+      <div class="model-attr"><span class="attr-name">iteration:</span> <span class="attr-type">int</span></div>
+      <div class="model-attr"><span class="attr-name">result:</span> <span class="attr-type">'pass' | 'fail' | 'stopped'</span></div>
+      <div class="model-attr"><span class="attr-name">duration_ms:</span> <span class="attr-type">float</span></div>
+      <div class="model-attr"><span class="attr-name">detail:</span> <span class="attr-type">str</span></div>
+    </div>
+
+    <div class="model-card">
+      <div class="model-name">TestRun</div>
+      <div class="model-path">models/test_models.py</div>
+      <div class="model-attr"><span class="attr-name">run_id:</span> <span class="attr-type">str</span></div>
+      <div class="model-attr"><span class="attr-name">status:</span> <span class="attr-type">TestRunStatus (Enum: PENDING|RUNNING|STOPPED|COMPLETED)</span></div>
+      <div class="model-attr"><span class="attr-name">selected_cases:</span> <span class="attr-type">list[str]</span></div>
+      <div class="model-attr"><span class="attr-name">loop_count:</span> <span class="attr-type">int</span></div>
+      <div class="model-attr"><span class="attr-name">case_results:</span> <span class="attr-type">list[TestResult]</span></div>
+      <div class="model-attr"><span class="attr-name">csv_path / log_path:</span> <span class="attr-type">str</span></div>
+    </div>
+  </div>
+
+  <!-- Migration -->
+  <div class="migration-box">
+    <div class="migration-title">历史迁移 — 数据层演进</div>
+    <div class="mig-arrow">
+      <div class="mig-from">PySide6 · JSON 文件</div>
+      <span class="mig-arrow-sym">→</span>
+      <div class="mig-to">FastAPI · SQLite WAL</div>
+      <span style="color: var(--c-text-sub); font-size:10px;">sku_stress_test → Android-AutoTests</span>
+    </div>
+    <div class="mig-arrow">
+      <div class="mig-from">Qt Signal/Slot</div>
+      <span class="mig-arrow-sym">→</span>
+      <div class="mig-to">WebSocket 回调 + TestRunnerCallback</div>
+    </div>
+    <div class="mig-arrow">
+      <div class="mig-from">QThread</div>
+      <span class="mig-arrow-sym">→</span>
+      <div class="mig-to">asyncio + run_in_executor</div>
+    </div>
+    <div class="mig-arrow">
+      <div class="mig-from">硬编码 XPath · 单策略</div>
+      <span class="mig-arrow-sym">→</span>
+      <div class="mig-to">8 策略动态生成 · count=1 优先 · DB 缓存</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

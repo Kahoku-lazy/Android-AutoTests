@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code 运行机制 · Android-AutoTests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#19c8b9;--text:#794f27;--text-body:#725d42;--text-secondary:#9f927d;--text-muted:#8a7b66;--bg:#f8f8f0;--bg-content:rgb(247,243,223);--border:#c4b89e;--success:#6fba2c;--warning:#f5c31c;--error:#e05a5a;--claude:#f7cd67;--r-sm:12px;--r-base:18px;--r-lg:24px;--r-pill:50px;--ease:cubic-bezier(0.4,0,0.2,1)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Nunito,'Noto Sans SC',-apple-system,sans-serif;font-weight:500;letter-spacing:.01em;background:var(--bg);color:var(--text-body);line-height:1.7}
+.page{max-width:1120px;margin:0 auto;padding:48px 32px}
+.hero{text-align:center;padding:48px 28px;background:var(--bg-content);border-radius:var(--r-lg);margin-bottom:36px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50px;left:-50px;width:140px;height:140px;background:radial-gradient(circle,rgba(25,200,185,.12),transparent 70%);border-radius:50%}
+.hero h1{font-weight:800;font-size:30px;color:var(--text);position:relative;z-index:1}
+.hero .subtitle{margin-top:8px;font-size:14px;color:var(--text-secondary);position:relative;z-index:1}
+.section{margin-bottom:40px;scroll-margin-top:64px}
+.section-title{font-weight:700;font-size:20px;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.icon-dot{width:14px;height:14px;border-radius:4px;flex-shrink:0}
+.card{background:var(--bg-content);border-radius:var(--r-base);padding:24px 28px;margin-bottom:16px;transition:transform 0.25s var(--ease)}
+.card:hover{transform:translateY(-2px)}
+.card h3{font-weight:700;font-size:16px;color:var(--text);margin-bottom:10px}
+.card p,.card li{font-size:13px;line-height:1.75}
+.flow-row{display:flex;align-items:center;gap:0;flex-wrap:wrap;padding:8px 0}
+.flow-node{padding:10px 14px;border-radius:var(--r-sm);font-size:12px;font-weight:700;text-align:center;white-space:nowrap}
+.flow-arrow{color:var(--text-secondary);font-size:16px;margin:0 6px;flex-shrink:0;font-weight:800}
+.node-claude{background:#fef9e7;color:#8a6010;border:1.5px solid var(--claude)}
+.node-green{background:#edf7e7;color:#205020;border:1.5px solid var(--success)}
+.node-blue{background:#eef1fb;color:#2030a0;border:1.5px solid #889df0}
+.node-pink{background:#fef0f3;color:#a03060;border:1.5px solid #f8a6b2}
+.node-teal{background:#e6f9f6;color:#11a89b;border:1.5px solid var(--primary)}
+.node-warn{background:#fef9e7;color:#8a6010;border:1.5px solid var(--warning)}
+.node-err{background:#fef0f3;color:#e05a5a;border:1.5px solid var(--error)}
+.node-purple{background:#f3eefb;color:#5a1a9a;border:1.5px solid #b39ef3}
+table{width:100%;border-collapse:collapse}
+thead th{padding:14px 16px;font-size:13px;font-weight:700;color:var(--text);text-align:left;border-bottom:1.5px dashed rgb(240,232,216)}
+tbody td{padding:12px 16px;font-size:12px;line-height:1.55;border-bottom:1px dashed rgb(240,232,216)}
+tbody tr:nth-child(even){background:rgba(248,248,240,.55)}
+code{font-family:'SF Mono',Consolas,monospace;font-size:11px;font-weight:600;background:rgba(25,200,185,.12);padding:1px 6px;border-radius:6px;color:#11a89b}
+.badge{display:inline-block;padding:3px 10px;border-radius:var(--r-pill);font-size:11px;font-weight:700}
+.badge-yellow{background:#fef9e7;color:#8a6010}.badge-green{background:#edf7e7;color:#205020}
+.badge-blue{background:#eef1fb;color:#2030a0}.badge-pink{background:#fef0f3;color:#a03060}
+.badge-teal{background:#e6f9f6;color:#11a89b}.badge-purple{background:#f3eefb;color:#5a1a9a}
+.badge-red{background:#fef0f3;color:#e05a5a}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.layer-stack{display:flex;flex-direction:column;gap:10px}
+.layer{border-radius:var(--r-base);padding:16px 20px;border:2px solid var(--border);background:rgba(255,255,255,.45)}
+.layer h4{font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px}
+.layer p{font-size:12px;color:var(--text-secondary);margin:0}
+.process-card{background:var(--bg-content);border-radius:var(--r-base);padding:20px;border-left:4px solid var(--primary)}
+.process-card h4{font-weight:700;font-size:14px;color:var(--text);margin-bottom:8px}
+.process-card .step{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px dashed rgb(240,232,216);font-size:12px;color:var(--text-secondary);line-height:1.6}
+.process-card .step:last-child{border-bottom:none}
+.step-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#fff;flex-shrink:0}
+.step-rx{background:var(--claude);color:#725d42}.step-tx{background:var(--primary)}.step-dx{background:#889df0}.step-fx{background:#6fba2c}
+.reality-tag{display:inline-block;padding:2px 8px;border-radius:var(--r-pill);font-size:10px;font-weight:800;margin-left:6px}
+.tag-exists{background:#edf7e7;color:#205020}.tag-missing{background:#fef0f3;color:#e05a5a}.tag-partial{background:#fef9e7;color:#8a6010}
+.note{font-size:12px;color:var(--text-muted);font-style:italic;margin-top:8px}
+.footer{margin-top:40px;padding-top:20px;border-top:1.5px dashed var(--border);font-size:12px;color:var(--text-secondary);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+@media(max-width:768px){.grid2,.grid3,.grid4{grid-template-columns:1fr}.page{padding:24px 16px}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="hero">
+  <h1>Claude Code 运行机制</h1>
+  <p class="subtitle">v2 · 已补全 CLAUDE.md + 7 Agent + 14 Rules + 12 Skills · 全部 git 追踪</p>
+</div>
+
+<!-- ═══════════ 一：启动时我得到了什么 ═══════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon-dot" style="background:var(--claude)"></span>一、启动时我得到了什么</div>
+
+  <div class="card">
+    <h3>系统注入的上下文（每次对话自动获得）</h3>
+    <table>
+      <thead><tr><th>信息</th><th>来源</th><th>我拿它做什么</th></tr></thead>
+      <tbody>
+        <tr><td>Git 状态 + 最近 commits</td><td>系统自动注入</td><td>知道当前分支、有没有未提交改动、最近的变更方向</td></tr>
+        <tr><td>当前工作目录</td><td>系统自动注入</td><td>所有相对路径基于此解析</td></tr>
+        <tr><td>平台信息 (macOS + zsh)</td><td>系统自动注入</td><td>决定用哪种 shell 语法、路径分隔符</td></tr>
+        <tr><td>Memory 文件索引</td><td>MEMORY.md 加载到上下文</td><td>知道过去沉淀了哪些教训、用户偏好、项目约定</td></tr>
+        <tr><td>可用工具列表</td><td>系统自动注入</td><td>Bash/Read/Write/Edit/Agent/Skill/MCP 等所有工具</td></tr>
+        <tr><td>可用 Agent 类型</td><td>.claude/agents/*.md</td><td>知道可以派发什么子任务给什么 Agent</td></tr>
+        <tr><td>可用 Skill 列表</td><td>.claude/skills/</td><td>知道什么场景触发什么 Skill</td></tr>
+    </table>
+  </div>
+
+  <div class="card" style="border-left:4px solid var(--error)">
+    <h3>这个项目的实际情况（v2 · 2026-07-16 更新）</h3>
+    <table>
+      <thead><tr><th>配置项</th><th>设计预期</th><th>实际状态</th><th>对我的影响</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>CLAUDE.md</code></td>
+          <td>路由表 · 身份 · 铁律</td>
+          <td><span class="reality-tag tag-exists">已创建</span></td>
+          <td>每次会话加载：文档体系 → 4 条行为准则 → 变更级别判定 → 防火墙 → 工具 → 关键约定</td>
+        </tr>
+        <tr>
+          <td><code>.claude/agents/</code></td>
+          <td>子 Agent 定义</td>
+          <td><span class="reality-tag tag-exists">7 个</span></td>
+          <td>architect / developer / prd-writer / reviewer / tester / test-automator / frontend-evaluator</td>
+        </tr>
+        <tr>
+          <td><code>.claude/rules/</code></td>
+          <td>始终生效的硬约束</td>
+          <td><span class="reality-tag tag-exists">14 个</span></td>
+          <td>frontend / backend / architecture / module-boundaries / security / phone-control / conventions / database / agentscope-tools / ai-assistant / ai-engine / animal-island-ui / api-conventions / setup / troubleshooting</td>
+        </tr>
+        <tr>
+          <td><code>.claude/hooks/</code></td>
+          <td>生命周期钩子</td>
+          <td><span class="reality-tag tag-exists">6 个</span></td>
+          <td>check-boundary / check-doc-drift / auto-format / post-turn-build / protect-credentials / session-health</td>
+        </tr>
+        <tr>
+          <td><code>.claude/skills/</code></td>
+          <td>专项流程</td>
+          <td><span class="reality-tag tag-exists">12 个</span></td>
+          <td>auto-dev / prd-writer / architecture-review / quality-gate / code-health-check / feature-analysis / functional-testing / boundary-check / module-design / github-manager / html-report</td>
+        </tr>
+        <tr>
+          <td><code>.claude/memory/</code></td>
+          <td>教训沉淀</td>
+          <td><span class="reality-tag tag-exists">~55 个 + MEMORY.md</span></td>
+          <td>索引自动加载到上下文。覆盖：文档管理 / test-runner / CSS / 工作流 / 安全 / 编码习惯</td>
+        </tr>
+        <tr>
+          <td><code>.claude/settings.json</code></td>
+          <td>权限与配置</td>
+          <td><span class="reality-tag tag-exists">2 个</span></td>
+          <td>settings.json + settings.local.json（Bash/WebFetch 权限白名单）</td>
+        </tr>
+        <tr>
+          <td><code>dev_docs/</code></td>
+          <td>项目文档</td>
+          <td><span class="reality-tag tag-exists">已追踪</span></td>
+          <td>PRD(02) + ARCH(03) + CHECKLIST + 工作流报告 + 智能体设计 · 全部 git 版本控制</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="note">v1（旧版）时 CLAUDE.md、AGENTS.md、.claude/rules/ 均不存在，dev_docs/ 在 gitignore 中。v2 全部补齐并纳入 git 追踪。</p>
+  </div>
+</div>
+
+<!-- ═══════════ 二：我如何从项目中获取信息 ═══════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon-dot" style="background:#889df0"></span>二、我如何从项目中获取信息</div>
+
+  <div class="card">
+    <h3>信息获取的优先级（不是设计，是我的实际行为）</h3>
+    <div class="process-card" style="margin-bottom:12px">
+      <h4>第 1 层：上下文已有的</h4>
+      <div class="step"><span class="step-num step-rx">1</span><div>Memory 文件索引（MEMORY.md 加载时带入）。如果包含相关的教训/偏好，我会直接引用。</div></div>
+      <div class="step"><span class="step-num step-rx">2</span><div>System prompt 中的项目信息（git status、最近 commits、可用工具）。</div></div>
+    </div>
+    <div class="process-card" style="margin-bottom:12px">
+      <h4>第 2 层：按需读取的</h4>
+      <div class="step"><span class="step-num step-tx">3</span><div><strong>dev_docs/</strong> — 如果问题涉及功能设计 → Read PRD；涉及架构 → Read ARCH；都可疑 → 两个都读。</div></div>
+      <div class="step"><span class="step-num step-tx">4</span><div><strong>源代码</strong> — 用 Glob/Find 定位文件 → Read 打开 → LSP 跳转定义/引用 → 理解实际实现。</div></div>
+      <div class="step"><span class="step-num step-tx">5</span><div><strong>gen_arch_stats.py</strong> — 需要数字时运行它。表数、端点数、Tool数、步骤类型。</div></div>
+    </div>
+    <div class="process-card">
+      <h4>第 3 层：需要对比时才读的</h4>
+      <div class="step"><span class="step-num step-dx">6</span><div>PRD vs 代码 — 验证功能是否按需求实现。PRD 验收条件 vs 实际代码行为。</div></div>
+      <div class="step"><span class="step-num step-dx">7</span><div>ARCH vs 代码 — 验证结构是否偏离。gen_arch_stats.py --check-md 自动对比。</div></div>
+      <div class="step"><span class="step-num step-dx">8</span><div>DEVELOPMENT_CHECKLIST — 开发完成后逐项自检。6 组 28 条。</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>文档 → 代码的映射关系（我实际使用的）</h3>
+    <table>
+      <thead><tr><th>我需要知道</th><th>我去读哪个文档</th><th>我去看哪段代码</th></tr></thead>
+      <tbody>
+        <tr><td>这个功能有没有实现？</td><td>PRD 对应子模块的 §2 验收条件</td><td>前端 index.vue + 后端 views.py</td></tr>
+        <tr><td>API 端点是什么？</td><td>ARCH 对应子模块的 §4 API 设计</td><td>apps/{module}/urls.py</td></tr>
+        <tr><td>数据表有哪些字段？</td><td>ARCH 对应子模块的 §5 数据模型</td><td>apps/{module}/models.py</td></tr>
+        <tr><td>前端组件的层次？</td><td>ARCH 对应子模块的 §2 组件树</td><td>frontend/src/modules/{module}/</td></tr>
+        <tr><td>步骤类型有哪些？</td><td>架构大纲 §九 平台统一定义</td><td>models/step_types.py::StepType 枚举</td></tr>
+        <tr><td>错误时提示什么？</td><td>PRD 对应子模块的异常场景</td><td>前端组件中的 ElMessage / ElMessageBox</td></tr>
+        <tr><td>模块边界是否违规？</td><td>架构大纲 §六 功能边界与违规处理</td><td>gen_arch_stats.py --check-boundaries</td></tr>
+        <tr><td>功能开发完成了没有？</td><td>PRD 附录B 实施状态</td><td>git log + 功能对应的文件是否存在</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════ 三：我收到消息后的处理流程 ═══════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon-dot" style="background:var(--success)"></span>三、你提问后我的处理流程</div>
+
+  <div class="card">
+    <h3>完整处理链路（从收到消息到回复）</h3>
+    <div class="flow-row" style="justify-content:center;margin-bottom:20px">
+      <div class="flow-node node-claude">收到消息</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node node-blue">判断类型</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node node-green">确定范围</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node node-teal">获取信息</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node node-purple">推理/执行</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node node-warn">输出结果</div>
+    </div>
+
+    <div class="grid2">
+      <div class="process-card">
+        <h4>Step 1: 判断消息类型</h4>
+        <div class="step"><span class="step-num step-rx">A</span><div><strong>纯问答</strong>："这个模块做什么的？"→ 只读，不需要改代码。直接读文档回答。</div></div>
+        <div class="step"><span class="step-num step-rx">B</span><div><strong>代码修改</strong>："改一下这个功能"→ 需要评估影响面、改代码、验证。走完整流程。</div></div>
+        <div class="step"><span class="step-num step-rx">C</span><div><strong>文档维护</strong>："更新一下 PRD"→ 只改文档，不改代码。</div></div>
+        <div class="step"><span class="step-num step-rx">D</span><div><strong>运行验证</strong>："跑一下看看"→ 启动应用，操作验证，输出结果。</div></div>
+      </div>
+      <div class="process-card">
+        <h4>Step 2: 确定范围和级别</h4>
+        <div class="step"><span class="step-num step-tx">🔴</span><div><strong>大改</strong>：新增模块/改枚举/改架构。先读 PRD→ARCH→出方案→等你确认→执行。</div></div>
+        <div class="step"><span class="step-num step-tx">🟡</span><div><strong>增量</strong>：加功能/加 API。先读 PRD→加验收条件→改代码→跑 CHECKLIST。</div></div>
+        <div class="step"><span class="step-num step-tx">🟢</span><div><strong>修补</strong>：改文案/修 CSS。读 PRD 确认受影响项→改代码→检查。</div></div>
+        <div class="step"><span class="step-num step-tx">⚪</span><div><strong>重构</strong>：搬家/改名。改代码→更新 ARCH 路径→跑 gen_arch_stats.py。</div></div>
+      </div>
+    </div>
+
+    <div class="process-card" style="margin-top:12px">
+      <h4>Step 3-6 的具体行为（以代码修改为例）</h4>
+      <div class="step"><span class="step-num step-tx">3</span><div><strong>获取信息</strong>：读 PRD 对应功能块（知道要做成什么样）→ 读 ARCH 对应模块（知道文件在哪、组件树、API）→ 用 Grep/Glob 定位要改的文件 → Read 打开文件确认当前内容。</div></div>
+      <div class="step"><span class="step-num step-dx">4</span><div><strong>推理/执行</strong>：如果是🔴大改 → EnterPlanMode 出计划等你批。如果是🟡增量 → 直接编辑，编辑完跑 gen_arch_stats.py 确认数字没漂移。如果是🟢修补 → 一次性改完。</div></div>
+      <div class="step"><span class="step-num step-fx">5</span><div><strong>自检</strong>：对照 DEVELOPMENT_CHECKLIST 逐项确认。PRD 验收条件与改动的代码行为是否一致？ARCH 结构描述是否需要更新？gen_arch_stats.py 是否通过？有没有跨模块越界？</div></div>
+      <div class="step"><span class="step-num step-fx">6</span><div><strong>输出</strong>：说明改了什么 + 为什么这样改 + 对照了哪些 PRD 验收条件 + gen_arch_stats 结果。如果你需要操作验证，会告诉你如何验证。</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 四：文档维护逻辑 ═══════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon-dot" style="background:var(--claude)"></span>四、我是如何维护项目文档的</div>
+
+  <div class="card">
+    <h3>文档维护决策树</h3>
+    <table>
+      <thead><tr><th>代码变更</th><th>PRD 需要更新？</th><th>ARCH 需要更新？</th><th>CHECKLIST 需要更新？</th></tr></thead>
+      <tbody>
+        <tr><td>新增模块</td><td>✅ 新增子 PRD + 需求大纲索引</td><td>✅ 新增 ARCH + 架构大纲依赖图</td><td>✅ 新模块的跨模块边界规则</td></tr>
+        <tr><td>新增 API 端点</td><td>✅ 对应功能块的验收条件</td><td>✅ §4 API 表 +1 行</td><td>❌ 除非引入新类型问题</td></tr>
+        <tr><td>新增数据表/字段</td><td>✅ §3 数据表单约束</td><td>✅ §5 数据模型 ER 图</td><td>❌</td></tr>
+        <tr><td>新增前端组件</td><td>✅ §2 交互描述</td><td>✅ §2 组件树 +1 节点</td><td>❌</td></tr>
+        <tr><td>改 StepType 枚举</td><td>✅ 所有涉及步骤数的章节</td><td>✅ 架构大纲 §九</td><td>✅ gen_arch_stats 自动同步</td></tr>
+        <tr><td>改错误提示文案</td><td>✅ 对应异常场景的提示词</td><td>❌</td><td>❌</td></tr>
+        <tr><td>文件移动/重命名</td><td>❌</td><td>✅ 所有路径引用</td><td>❌</td></tr>
+        <tr><td>修 CSS/样式</td><td>❌</td><td>❌</td><td>❌</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>我什么时候会主动读文档（不是被动等你要求）</h3>
+    <div class="grid3">
+      <div class="process-card">
+        <h4>🔴 大改动时</h4>
+        <div class="step">先读 PRD（理解功能意图）→ 再读 ARCH（理解技术约束）→ 再读代码（看现有实现）。三个都读完了才动手。</div>
+      </div>
+      <div class="process-card">
+        <h4>🟡 增量时</h4>
+        <div class="step">先读 PRD 对应功能块（确认验收条件）→ 读 ARCH 对应模块（确认文件位置）→ 改代码。</div>
+      </div>
+      <div class="process-card">
+        <h4>🟢 修补时</h4>
+        <div class="step">直接读代码改。改完后对比 PRD 异常场景确认文案一致。ARCH 通常不需要动。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 五：编码时的思考逻辑 ═══════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon-dot" style="background:#6fba2c"></span>五、编写代码时我如何思考</div>
+
+  <div class="card">
+    <h3>思考链路（以"给元素表格加一个筛选条件"为例）</h3>
+    <div class="grid4" style="margin-bottom:16px">
+      <div class="process-card"><h4>① 定位</h4><div class="step" style="font-size:11px">前端在哪？<br>→ frontend/src/modules/element-locator/<br>→ ElementManager.vue<br><br>后端在哪？<br>→ apps/element_locator/<br>→ views.py</div></div>
+      <div class="process-card"><h4>② 参照</h4><div class="step" style="font-size:11px">已有的筛选 Tab 怎么写的？<br>→ Grep "filter" 或 "Tab"<br>→ 读已有代码的 DOM 结构和事件处理<br>→ 用同样的模式</div></div>
+      <div class="process-card"><h4>③ 模仿</h4><div class="step" style="font-size:11px">复制已有筛选 Tab 的结构<br>→ 改 label/筛选逻辑<br>→ 编码风格完全对齐<br>→ 不引入新的写法</div></div>
+      <div class="process-card"><h4>④ 验证</h4><div class="step" style="font-size:11px">改完后：<br>→ PRD 验收条件打勾<br>→ gen_arch_stats.py 通过<br>→ CHECKLIST 组 1/2/4 通过<br>→ 浏览器操作确认</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>我遵循的代码风格约束</h3>
+    <div class="grid2">
+      <div><div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:8px">我会做的</div>
+        <div style="font-size:12px;color:var(--text-secondary);line-height:2.2">
+          → 模仿已有代码的命名、注释密度、缩进风格<br>
+          → 新增 API 用 {ok, data|error} 统一格式<br>
+          → 前端组件用 PascalCase.vue，JS 变量 camelCase<br>
+          → 数据库表用正确前缀（el_/dp_/cm_...）<br>
+          → 读 PRD 异常场景确认错误提示文案<br>
+          → 改完跑 gen_arch_stats.py
+        </div>
+      </div>
+      <div><div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:8px">我不做的</div>
+        <div style="font-size:12px;color:var(--text-secondary);line-height:2.2">
+          → 前端直连数据库<br>
+          → 跨 App import 内部实现（service/runner/consumer）<br>
+          → 仪表盘中写 INSERT/UPDATE/DELETE<br>
+          → 错误提示暴露技术术语给用户<br>
+          → 硬编码 API Key 或密码<br>
+          → 静默吞异常（catch 必须 log 或报错）
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 六：问题排查的逻辑 ═══════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon-dot" style="background:var(--error)"></span>六、代码出问题时我如何思考和解决</div>
+
+  <div class="card">
+    <h3>四层下钻排查（从用户症状到根因）</h3>
+    <div class="flow-row" style="justify-content:center;margin-bottom:16px">
+      <div class="flow-node node-err">用户反馈</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node node-warn">L1 浏览器</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node node-green">L2 前端编译</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node node-blue">L3 API</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node node-teal">L4 数据库</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node node-claude">修复+规则</div>
+    </div>
+    <table>
+      <thead><tr><th>层级</th><th>症状</th><th>我查什么</th><th>工具</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-yellow">L1</span></td><td>页面白屏/报错/按钮没反应</td><td>DevTools Console/Network、Vue 组件渲染</td><td>Browser DevTools</td></tr>
+        <tr><td><span class="badge badge-green">L2</span></td><td>编译失败/组件不渲染</td><td><code>npx vite build</code>、Vue SFC 语法、import 路径</td><td>Bash + Read</td></tr>
+        <tr><td><span class="badge badge-blue">L3</span></td><td>API 500/404/数据不对</td><td>urls.py 路由、views.py 逻辑、curl 验证</td><td>Bash curl + Read</td></tr>
+        <tr><td><span class="badge badge-teal">L4</span></td><td>数据不一致/丢失</td><td>models.py 约束、migrations、ORM 查询</td><td>Bash python manage.py shell</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" style="border-left:4px solid var(--error)">
+    <h3>修复后的反思闭环</h3>
+    <div class="grid3">
+      <div class="process-card"><h4>第 1 次出现</h4><div class="step">记录到本次会话的问题清单。</div></div>
+      <div class="process-card"><h4>第 2 次出现</h4><div class="step" style="color:#dba90e">⚠ 提醒你"这个问题之前出现过，建议加规则"。</div></div>
+      <div class="process-card"><h4>第 3+ 次出现</h4><div class="step" style="color:var(--error)">🔴 写入 .claude/memory/ + 建议更新 CHECKLIST。同类错误不允许第 4 次。</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 七：上下文满了怎么办 ═══════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon-dot" style="background:#b39ef3"></span>七、上下文满了我会如何处理</div>
+
+  <div class="card">
+    <h3>Context 管理策略</h3>
+    <div class="grid3">
+      <div class="process-card">
+        <h4>📦 自动压缩</h4>
+        <div class="step">系统自动做上下文摘要。之前的对话被压缩成摘要 + 保留最近几轮的完整内容。Memory 文件不受影响。</div>
+      </div>
+      <div class="process-card">
+        <h4>📋 关键信息持久化</h4>
+        <div class="step">重要的结论写入 Memory（/memory 命令或我主动建议）。Memory 在新会话中自动加载，不受压缩影响。</div>
+      </div>
+      <div class="process-card">
+        <h4>📖 文档始终可读</h4>
+        <div class="step">PRD/ARCH/CHECKLIST 在文件系统中。我需要时用 Read 重新读取。不依赖"记得"——依赖"能找到"。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>我对"上下文丢失"的防御</h3>
+    <table>
+      <thead><tr><th>信息类型</th><th>防丢策略</th></tr></thead>
+      <tbody>
+        <tr><td>你的偏好/约定</td><td>写入 Memory → 新会话自动加载 MEMORY.md 索引</td></tr>
+        <tr><td>当前任务的中间状态</td><td>git stash / branch / commit 保存代码进度。文档改动直接写入文件</td></tr>
+        <tr><td>重要的讨论结论</td><td>写入 dev_docs/ 对应文档或 Memory</td></tr>
+        <tr><td>项目事实（表数/端点数）</td><td>gen_arch_stats.py 随时重新生成，不依赖记忆</td></tr>
+        <tr><td>PRD 验收条件</td><td>存在 MD 文件中。Read 即可恢复</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════ 八：我的能力与边界 ═══════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon-dot" style="background:var(--text-muted)"></span>八、我的能力与边界</div>
+
+  <div class="grid2">
+    <div class="card" style="border-top:3px solid var(--success)">
+      <h3 style="color:#205020">✅ 我能做的</h3>
+      <div style="font-size:12px;line-height:2.2;color:var(--text-secondary)">
+        <div>→ 读代码、改代码、写新代码</div>
+        <div>→ 读文档、改文档、写新文档</div>
+        <div>→ 运行脚本（gen_arch_stats.py、vite build、pip install）</div>
+        <div>→ 搜索代码（Grep/Glob/LSP）</div>
+        <div>→ 启动/停止应用（python run.py start/stop）</div>
+        <div>→ 浏览器操作（导航、点击、截图）</div>
+        <div>→ 对照 PRD 验收条件逐条检查</div>
+        <div>→ 对照 ARCH 结构描述验证一致性</div>
+        <div>→ 跨模块边界检测（gen_arch_stats.py --check-boundaries）</div>
+        <div>→ 派发子 Agent 并行探索/分析</div>
+        <div>→ 理解你的意图并提案（不只执行）</div>
+      </div>
+    </div>
+    <div class="card" style="border-top:3px solid var(--error)">
+      <h3 style="color:#e05a5a">❌ 我不能做的</h3>
+      <div style="font-size:12px;line-height:2.2;color:var(--text-secondary)">
+        <div>→ 在没有 Android 设备时验证截图流</div>
+        <div>→ 在没有 ADB 环境时真机操作</div>
+        <div>→ 替代你做最终决策（方案给你，你批）</div>
+        <div>→ 自动感知代码运行时 bug（需要你反馈症状）</div>
+        <div>→ 记住跨会话的细节（除非写入 Memory）</div>
+        <div>→ 访问外网受限页面/API（需权限）</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 九：协作模式 ═══════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon-dot" style="background:var(--claude)"></span>九、你 + 我的协作模式</div>
+
+  <div class="card">
+    <h3>完整协作闭环</h3>
+    <div class="flow-row" style="justify-content:center;margin-bottom:20px">
+      <div class="flow-node node-claude">👤 你说"要做什么"</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node node-blue">📖 我读 PRD/ARCH</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node node-purple">📐 我出方案</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node node-warn">⏸ 等你批</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node node-green">💻 我执行</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node node-teal">🔍 我自检</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node node-claude">📋 输出结果</div>
+    </div>
+    <p class="note">你负责"要做什么"和"审批方案"。我负责"怎么做"和"做完了没有"。PRD 是你的设计文档，CHECKLIST 是你的验收守门员。我用它们确保代码不偏离你的意图。</p>
+  </div>
+</div>
+
+<div class="footer">
+  <span>Claude Code 运行机制 · v2 · CLAUDE.md + 7 Agents + 14 Rules + 12 Skills + 55 Memories · 全部 git 追踪</span>
+  <span>2026-07-16 20:50</span>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Android-AutoTests · 项目开发工作流全景</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #19c8b9; --primary-bg: #e6f9f6;
+      --text: #794f27; --text-body: #725d42; --text-secondary: #9f927d; --text-muted: #8a7b66;
+      --bg: #f8f8f0; --bg-content: rgb(247, 243, 223);
+      --border: #c4b89e; --border-strong: #9f927d;
+      --success: #6fba2c; --warning: #f5c31c; --error: #e05a5a;
+      --phase-plan: #f7cd67; --phase-design: #889df0; --phase-dev: #6fba2c;
+      --phase-test: #b39ef3; --phase-release: #f8a6b2; --phase-deliver: #19c8b9;
+      --r-sm: 12px; --r-base: 18px; --r-lg: 24px; --r-pill: 50px;
+      --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Nunito, 'Noto Sans SC', -apple-system, 'PingFang SC', sans-serif;
+      font-weight: 500; letter-spacing: 0.01em;
+      background: var(--bg); color: var(--text-body); line-height: 1.7;
+    }
+    .page { max-width: 1120px; margin: 0 auto; padding: 48px 32px; }
+
+    .hero {
+      text-align: center; padding: 56px 32px;
+      background: var(--bg-content); border-radius: var(--r-lg); margin-bottom: 40px;
+      position: relative; overflow: hidden;
+    }
+    .hero::before { content:''; position:absolute; top:-60px; left:-60px; width:160px; height:160px; background:radial-gradient(circle, rgba(25,200,185,0.12) 0%, transparent 70%); border-radius:50%; }
+    .hero::after { content:''; position:absolute; bottom:-40px; right:-40px; width:120px; height:120px; background:radial-gradient(circle, rgba(247,205,103,0.12) 0%, transparent 70%); border-radius:50%; }
+    .hero h1 { font-weight:800; font-size:32px; color:var(--text); position:relative; z-index:1; }
+    .hero .subtitle { margin-top:8px; font-size:15px; color:var(--text-secondary); position:relative; z-index:1; }
+    .hero .meta-row { margin-top:20px; display:flex; justify-content:center; gap:24px; flex-wrap:wrap; position:relative; z-index:1; }
+    .meta-tag { display:inline-flex; align-items:center; gap:6px; padding:6px 16px; border-radius:var(--r-pill); font-size:12px; font-weight:600; color:var(--text-body); background:rgba(255,255,255,0.6); border:1.5px solid var(--border); }
+    .meta-tag .dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+
+    .kpi-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:16px; margin-bottom:40px; }
+    .kpi-card { background:var(--bg-content); border-radius:var(--r-base); padding:20px; text-align:center; transition:transform 0.25s var(--ease); }
+    .kpi-card:hover { transform:translateY(-2px); }
+    .kpi-card .kpi-number { font-weight:900; font-size:36px; color:var(--text); }
+    .kpi-card .kpi-label { font-size:13px; color:var(--text-secondary); margin-top:4px; }
+
+    .section { margin-bottom:44px; }
+    .section-title { font-weight:700; font-size:22px; color:var(--text); margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+    .section-title .icon-dot { width:14px; height:14px; border-radius:4px; flex-shrink:0; }
+
+    .card { background:var(--bg-content); border-radius:var(--r-base); padding:28px 32px; margin-bottom:20px; transition:transform 0.25s var(--ease); }
+    .card:hover { transform:translateY(-2px); }
+    .card h3 { font-weight:700; font-size:17px; color:var(--text); margin-bottom:12px; }
+    .card p { font-size:14px; line-height:1.8; }
+
+    .phase-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
+    .phase-item { background:var(--bg-content); border-radius:var(--r-base); padding:20px 24px; border-left:4px solid var(--primary); transition:transform 0.25s var(--ease); }
+    .phase-item:hover { transform:translateY(-2px); }
+    .phase-item .phase-num { font-weight:900; font-size:12px; letter-spacing:0.04em; text-transform:uppercase; margin-bottom:4px; }
+    .phase-item .phase-name { font-weight:700; font-size:15px; color:var(--text); margin-bottom:6px; }
+    .phase-item .phase-desc { font-size:12px; color:var(--text-secondary); line-height:1.6; }
+
+    .lifecycle-flow { display:flex; align-items:stretch; gap:0; overflow-x:auto; padding:8px 0; }
+    .lifecycle-node { flex:1; min-width:180px; padding:20px 16px; text-align:center; border-radius:var(--r-base); color:#fff; position:relative; }
+    .lifecycle-node .node-icon { font-size:28px; margin-bottom:8px; }
+    .lifecycle-node .node-title { font-weight:700; font-size:14px; }
+    .lifecycle-node .node-desc { font-size:11px; opacity:0.85; margin-top:6px; line-height:1.5; }
+    .lifecycle-arrow { display:flex; align-items:center; font-size:22px; color:var(--text-secondary); padding:0 4px; flex-shrink:0; }
+
+    table { width:100%; border-collapse:collapse; }
+    thead th { padding:14px 16px; font-size:14px; font-weight:700; color:var(--text); text-align:left; border-bottom:1.5px dashed rgb(240,232,216); }
+    tbody td { padding:12px 16px; font-size:13px; line-height:1.6; border-bottom:1px dashed rgb(240,232,216); }
+    tbody tr:nth-child(even) { background:rgba(248,248,240,0.6); }
+    tbody tr:hover { background:rgba(25,200,185,0.04); }
+
+    .badge { display:inline-block; padding:3px 10px; border-radius:var(--r-pill); font-size:11px; font-weight:600; }
+    .badge-plan { background:#fef9e7; color:#8a6010; }
+    .badge-design { background:#eef1fb; color:#2030a0; }
+    .badge-dev { background:#edf7e7; color:#205020; }
+    .badge-test { background:#f3eefb; color:#5a1a9a; }
+    .badge-release { background:#fef0f3; color:#a03060; }
+    .badge-deliver { background:#e6f9f6; color:#11a89b; }
+
+    .doc-card { padding:16px 20px; background:rgba(255,255,255,0.5); border-radius:var(--r-sm); border:1.5px solid var(--border); margin-bottom:10px; }
+    .doc-card .doc-name { font-weight:700; font-size:14px; color:var(--text); }
+    .doc-card .doc-role { font-size:11px; color:var(--text-muted); margin-top:2px; }
+
+    .flow-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:8px 0; }
+    .flow-node { padding:10px 18px; border-radius:var(--r-sm); font-size:13px; font-weight:600; text-align:center; white-space:nowrap; }
+    .flow-arrow-text { color:var(--text-secondary); font-size:18px; margin:0 6px; flex-shrink:0; font-weight:700; }
+
+    .check-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+    .check-item { padding:14px 18px; background:rgba(255,255,255,0.5); border-radius:var(--r-sm); border:1.5px solid var(--border); font-size:12px; }
+    .check-item .check-num { font-weight:900; font-size:20px; color:var(--primary); }
+
+    .commit-flow { display:flex; align-items:center; gap:0; flex-wrap:wrap; justify-content:center; padding:12px 0; }
+    .commit-step { padding:12px 20px; text-align:center; border-radius:var(--r-sm); font-weight:700; font-size:13px; min-width:130px; }
+
+    @media (max-width:768px) {
+      .page { padding:24px 16px; }
+      .kpi-grid { grid-template-columns:repeat(2,1fr); }
+      .phase-grid, .check-grid { grid-template-columns:1fr; }
+      .lifecycle-flow { flex-direction:column; }
+      .lifecycle-arrow { transform:rotate(90deg); }
+      .hero h1 { font-size:24px; }
+    }
+    @media print { body { background:#fff; } .card, .kpi-card, .hero { box-shadow:none; } }
+  </style>
+</head>
+<body>
+<div class="page">
+
+<!-- Hero -->
+<div class="hero">
+  <h1>项目开发工作流全景</h1>
+  <p class="subtitle">从立项到交付的完整生命周期 · PRD 驱动 · ARCH 约束 · CHECKLIST 验收</p>
+  <div class="meta-row">
+    <span class="meta-tag"><span class="dot" style="background:var(--phase-plan)"></span> 立项</span>
+    <span class="meta-tag"><span class="dot" style="background:var(--phase-design)"></span> 需求与设计</span>
+    <span class="meta-tag"><span class="dot" style="background:var(--phase-dev)"></span> 开发</span>
+    <span class="meta-tag"><span class="dot" style="background:var(--phase-release)"></span> 发布与评估</span>
+    <span class="meta-tag"><span class="dot" style="background:var(--phase-deliver)"></span> 交付</span>
+  </div>
+</div>
+
+<!-- KPI -->
+<div class="kpi-grid">
+  <div class="kpi-card"><div class="kpi-number">5</div><div class="kpi-label">项目阶段</div></div>
+  <div class="kpi-card"><div class="kpi-number">3</div><div class="kpi-label">文档体系</div></div>
+  <div class="kpi-card"><div class="kpi-number">267</div><div class="kpi-label">验收项 (PRD)</div></div>
+  <div class="kpi-card"><div class="kpi-number">28</div><div class="kpi-label">检查项 (CHECKLIST)</div></div>
+  <div class="kpi-card"><div class="kpi-number">4</div><div class="kpi-label">变更级别</div></div>
+</div>
+
+<!-- ═══════════ 第一部分：项目初识阶段 ═══════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon-dot" style="background:var(--phase-plan)"></span>一、项目初识阶段 — 从零开始</div>
+  <div class="card"><p style="font-size:13px;color:var(--text-secondary)">背景：此时没有任何文档与代码。以下为从零启动一个项目的完整工作流。</p></div>
+
+  <!-- 第一阶段：立项 -->
+  <div class="card" style="border-left:4px solid var(--phase-plan)">
+    <h3>第一阶段：立项</h3>
+    <div class="phase-grid">
+      <div class="phase-item" style="border-left-color:var(--phase-plan)">
+        <div class="phase-num" style="color:#d4a030">1.1 产品定位</div>
+        <div class="phase-name">明确产品定位与用户</div>
+        <div class="phase-desc">为什么要做这个产品？面向哪类用户？哪些客户有需求？哪些人会频繁使用？输出一句话定位 + 目标用户画像。</div>
+      </div>
+      <div class="phase-item" style="border-left-color:var(--phase-plan)">
+        <div class="phase-num" style="color:#d4a030">1.2 竞品分析</div>
+        <div class="phase-name">研究竞品技术、设计与思路</div>
+        <div class="phase-desc">研究同类项目：它们的技术栈是什么？架构怎么设计？有哪些做得好的？有哪些做得不好的？</div>
+      </div>
+      <div class="phase-item" style="border-left-color:var(--phase-plan)">
+        <div class="phase-num" style="color:#d4a030">1.3 灵感分析</div>
+        <div class="phase-name">从多项目寻找设计灵感</div>
+        <div class="phase-desc">分析多种同类型项目，找设计灵感。思考如何提升用户体验，改善产品交互与功能性。</div>
+      </div>
+      <div class="phase-item" style="border-left-color:var(--phase-plan)">
+        <div class="phase-num" style="color:#d4a030">1.4 价值评估</div>
+        <div class="phase-name">通过竞品市场与收益评估价值</div>
+        <div class="phase-desc">竞品有多少用户？盈利模式是什么？这个赛道是否值得投入？输出立项验证报告。</div>
+      </div>
+    </div>
+    <div style="margin-top:16px;font-size:12px;color:var(--text-muted)">📁 产出物存放在：<code>dev_docs/01-立项与设计/立项验证/</code></div>
+  </div>
+
+  <!-- 第二阶段：需求与设计 -->
+  <div class="card" style="margin-top:16px;border-left:4px solid var(--phase-design)">
+    <h3>第二阶段：需求与设计</h3>
+    <div class="phase-grid">
+      <div class="phase-item" style="border-left-color:var(--phase-design)">
+        <div class="phase-num" style="color:#4060c0">2.1 产品需求</div>
+        <div class="phase-name">输出完整的产品需求文档</div>
+        <div class="phase-desc">
+          → 需求大纲：项目定位 · 用户画像 · 业务逻辑架构 · 模块交互场景<br>
+          → 子模块 PRD：功能定位 · 页面交互 · 数据表单 · 异常场景 · 功能边界<br>
+          → 每个功能点附带验收条件 + 测试方案
+        </div>
+      </div>
+      <div class="phase-item" style="border-left-color:var(--phase-design)">
+        <div class="phase-num" style="color:#4060c0">2.2 架构设计</div>
+        <div class="phase-name">输出项目架构设计</div>
+        <div class="phase-desc">
+          → 架构大纲：三层分离 · 模块依赖 · 交互边界 · 部署 · 设计决策<br>
+          → 子模块 ARCH：组件树 · API 设计 · 数据模型 · 交互时序 · 跨模块通信<br>
+          → 技术选型、命名标准、UI 设计素材
+        </div>
+      </div>
+      <div class="phase-item" style="border-left-color:var(--phase-design)">
+        <div class="phase-num" style="color:#4060c0">2.3 需求评审</div>
+        <div class="phase-name">评审需求文档</div>
+        <div class="phase-desc">需求是否覆盖所有用户场景？验收条件是否可测试？功能边界是否明确？异常场景是否完整？</div>
+      </div>
+      <div class="phase-item" style="border-left-color:var(--phase-design)">
+        <div class="phase-num" style="color:#4060c0">2.4 架构评审</div>
+        <div class="phase-name">评审架构设计</div>
+        <div class="phase-desc">架构三层边界是否清晰？模块间交互是否合理？技术选型是否合适？数据模型是否完整？</div>
+      </div>
+    </div>
+    <div style="margin-top:16px;font-size:12px;color:var(--text-muted)">📁 产出物：<code>dev_docs/02-PRD需求/</code> + <code>dev_docs/03-设计与架构/</code></div>
+  </div>
+
+  <!-- 第三阶段：开发 -->
+  <div class="card" style="margin-top:16px;border-left:4px solid var(--phase-dev)">
+    <h3>第三阶段：项目开发</h3>
+
+    <div class="commit-flow" style="margin-bottom:16px">
+      <div class="commit-step" style="background:#fef9e7;border:2px solid #f7cd67">📋 任务拆分</div>
+      <span class="flow-arrow-text">→</span>
+      <div class="commit-step" style="background:#eef1fb;border:2px solid #889df0">📝 需求迭代</div>
+      <span class="flow-arrow-text">→</span>
+      <div class="commit-step" style="background:#edf7e7;border:2px solid #6fba2c">💻 功能开发</div>
+      <span class="flow-arrow-text">→</span>
+      <div class="commit-step" style="background:#f3eefb;border:2px solid #b39ef3">🧪 测试验证</div>
+      <span class="flow-arrow-text">→</span>
+      <div class="commit-step" style="background:#fef0f3;border:2px solid #f8a6b2">✅ 评审</div>
+      <span class="flow-arrow-text">→</span>
+      <div class="commit-step" style="background:#e6f9f6;border:2px solid #19c8b9">🔄 复盘</div>
+    </div>
+
+    <div class="phase-grid">
+      <div class="phase-item" style="border-left-color:#f7cd67">
+        <div class="phase-num" style="color:#d4a030">3.1 任务拆分</div>
+        <div class="phase-name">根据需求与架构拆分任务</div>
+        <div class="phase-desc">按模块拆分开发任务，明确每个任务的输入（PRD 功能块）、输出（代码 + 自测结果）、依赖关系。</div>
+      </div>
+      <div class="phase-item" style="border-left-color:#889df0">
+        <div class="phase-num" style="color:#4060c0">3.2 需求迭代</div>
+        <div class="phase-name">需求端负责需求与功能设计迭代</div>
+        <div class="phase-desc">开发过程中发现需求不明确 → 回 PRD 补充验收条件。发现功能边界冲突 → 回需求大纲调整边界定义。</div>
+      </div>
+      <div class="phase-item" style="border-left-color:#6fba2c">
+        <div class="phase-num" style="color:var(--success)">3.3 功能开发</div>
+        <div class="phase-name">开发端按需求实现功能</div>
+        <div class="phase-desc">代码不偏离架构设计 → 对照 ARCH 文档的文件结构。功能正确实现 → 对照 PRD 验收条件。写完自测 → 对照 DEVELOPMENT_CHECKLIST。</div>
+      </div>
+      <div class="phase-item" style="border-left-color:#b39ef3">
+        <div class="phase-num" style="color:#9050d0">3.4 测试验证</div>
+        <div class="phase-name">测试端根据需求制定方案并验证</div>
+        <div class="phase-desc">测试方案来源 = PRD 中的测试场景（前置→操作→期望）。输出：测试结果 + checklist 表单，确保功能与需求一致，核心业务链路没有问题。</div>
+      </div>
+      <div class="phase-item" style="border-left-color:#f8a6b2">
+        <div class="phase-num" style="color:#e06880">3.5 三方评审</div>
+        <div class="phase-name">需求 · 开发 · 测试 三方信息同步</div>
+        <div class="phase-desc">对照进度 → 确保文档与代码同步 → 测试结果与开发进度同步。三方中任何一方发现不一致 → 标记为阻塞项。</div>
+      </div>
+      <div class="phase-item" style="border-left-color:#19c8b9">
+        <div class="phase-num" style="color:var(--primary)">3.6 问题复盘</div>
+        <div class="phase-name">高频问题、验证问题复盘</div>
+        <div class="phase-desc">记录：现象 → 根因 → 解决方案 → 测试方案。同类问题≥3次 → 新增规则到 DEVELOPMENT_CHECKLIST 或 .claude/rules/。确保不重复漏到交付阶段。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 第四阶段：发布与风险评估 -->
+  <div class="card" style="margin-top:16px;border-left:4px solid var(--phase-release)">
+    <h3>第四阶段：发布与项目风险评估</h3>
+    <div class="phase-grid">
+      <div class="phase-item" style="border-left-color:var(--phase-release)">
+        <div class="phase-num" style="color:#e06880">4.1 全功能验收</div>
+        <div class="phase-name">交付前对照需求验收一遍</div>
+        <div class="phase-desc">以 PRD 验收条件为基准，逐功能走一遍完整的用户操作流程。核心链路（设备→元素→用例→执行→报告）必须全部通过。</div>
+      </div>
+      <div class="phase-item" style="border-left-color:var(--phase-release)">
+        <div class="phase-num" style="color:#e06880">4.2 风险评估</div>
+        <div class="phase-name">评估项目发布风险</div>
+        <div class="phase-desc">哪些功能是新增的（高风险）？哪些是修改的（中风险）？哪些未改动（低风险）？有没有跨模块改动（高风险）？</div>
+      </div>
+      <div class="phase-item" style="border-left-color:var(--phase-release)">
+        <div class="phase-num" style="color:#e06880">4.3 安全 · 性能 · 稳定性</div>
+        <div class="phase-name">非功能需求检查</div>
+        <div class="phase-desc">JWT 鉴权是否正常？API Key 是否正确加密？有没有 SQL 注入风险？大页面加载是否超过 3 秒？并发锁定是否安全？</div>
+      </div>
+      <div class="phase-item" style="border-left-color:var(--phase-release)">
+        <div class="phase-num" style="color:#e06880">4.4 易用性检查</div>
+        <div class="phase-name">考虑生产环境的易用性问题</div>
+        <div class="phase-desc">首次使用是否有引导？错误提示是否用户能看懂（无技术术语）？没有设备时是否有清晰的操作指引？</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 第五阶段：交付 -->
+  <div class="card" style="margin-top:16px;border-left:4px solid var(--phase-deliver)">
+    <h3>第五阶段：产品交付</h3>
+    <div class="phase-grid">
+      <div class="phase-item" style="border-left-color:var(--phase-deliver)">
+        <div class="phase-num" style="color:var(--primary)">5.1 部署文档</div>
+        <div class="phase-name">部署步骤与依赖清单</div>
+        <div class="phase-desc">环境要求（OS/Python/Node/ADB）、依赖安装（pip/npm）、数据库初始化、Redis 配置、一键启动脚本验证。</div>
+      </div>
+      <div class="phase-item" style="border-left-color:var(--phase-deliver)">
+        <div class="phase-num" style="color:var(--primary)">5.2 用户文档</div>
+        <div class="phase-name">快速上手指南</div>
+        <div class="phase-desc">从登录到完成第一次测试的完整操作指南。含截图和常见问题解答。</div>
+      </div>
+      <div class="phase-item" style="border-left-color:var(--phase-deliver)">
+        <div class="phase-num" style="color:var(--primary)">5.3 回滚预案</div>
+        <div class="phase-name">发布失败的回滚方案</div>
+        <div class="phase-desc">数据库 migration 回滚步骤、上一版本备份位置、回滚后验证清单。</div>
+      </div>
+      <div class="phase-item" style="border-left-color:var(--phase-deliver)">
+        <div class="phase-num" style="color:var(--primary)">5.4 监控与告警</div>
+        <div class="phase-name">上线后的监控指标</div>
+        <div class="phase-desc">关键 API 错误率、设备连接成功率、执行引擎队列积压、前端页面加载时间。异常时通知谁？</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 第二部分：项目迭代 ═══════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon-dot" style="background:var(--phase-dev)"></span>二、项目迭代 — 已有需求与架构后的执行</div>
+  <div class="card"><p style="font-size:13px;color:var(--text-secondary)">背景：这时已经有了需求文档（PRD）与架构设计（ARCH），项目已在运行。现在要考虑的是「怎么改」的问题。</p></div>
+
+  <!-- 变更需求 -->
+  <div class="card" style="border-left:4px solid #f7cd67">
+    <h3>变更需求</h3>
+    <div class="commit-flow">
+      <div class="commit-step" style="background:#fef9e7;border:2px solid #f7cd67">🔴/🟡/🟢<br>判定级别</div>
+      <span class="flow-arrow-text">→</span>
+      <div class="commit-step" style="background:#eef1fb;border:2px solid #889df0">先改 PRD<br>写验收条件</div>
+      <span class="flow-arrow-text">→</span>
+      <div class="commit-step" style="background:#f3eefb;border:2px solid #b39ef3">改 ARCH<br>(如需要)</div>
+      <span class="flow-arrow-text">→</span>
+      <div class="commit-step" style="background:#edf7e7;border:2px solid #6fba2c">写代码<br>对照验收</div>
+      <span class="flow-arrow-text">→</span>
+      <div class="commit-step" style="background:#e6f9f6;border:2px solid #19c8b9">跑 CHECKLIST<br>通过 → 合并</div>
+    </div>
+    <div style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center">
+      核心原则：<strong>先改文档，后写代码</strong>。PRD 是开发的输入来源，不是开发完的回忆录。
+    </div>
+  </div>
+
+  <!-- 代码实现 -->
+  <div class="card" style="margin-top:16px;border-left:4px solid var(--phase-dev)">
+    <h3>代码实现</h3>
+    <div class="phase-grid">
+      <div class="phase-item" style="border-left-color:var(--success)">
+        <div class="phase-num" style="color:var(--success)">需求变更 → 代码修改</div>
+        <div class="phase-name">按变更级别执行</div>
+        <div class="phase-desc">
+          🔴 大改：PRD→ARCH→代码 全走一遍<br>
+          🟡 增量：PRD加验收项→代码→跑CHECKLIST<br>
+          🟢 修补：改代码→检查PRD受影响项<br>
+          ⚪ 重构：改代码→更新ARCH文件路径
+        </div>
+      </div>
+      <div class="phase-item" style="border-left-color:var(--error)">
+        <div class="phase-num" style="color:var(--error)">发现 Bug</div>
+        <div class="phase-name">四层下钻定位</div>
+        <div class="phase-desc">
+          L1 浏览器 → L2 前端编译 → L3 API → L4 数据库。对照 PRD 确认「预期行为」vs「实际行为」的差异。对照 ARCH 检查是否架构边界被破坏。
+        </div>
+      </div>
+      <div class="phase-item" style="border-left-color:#b39ef3">
+        <div class="phase-num" style="color:#9050d0">Bug 修复后</div>
+        <div class="phase-name">回归测试 + 规则沉淀</div>
+        <div class="phase-desc">
+          跑受影响模块的 PRD 验收条件。跑 <code>gen_arch_stats.py --check-md</code> 确认没有破坏其他模块。<br>
+          同类型 Bug ≥3 次 → 新增规则到 CHECKLIST 或 .claude/rules/。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 测试 -->
+  <div class="card" style="margin-top:16px;border-left:4px solid #b39ef3">
+    <h3>测试保障</h3>
+    <div class="check-grid">
+      <div class="check-item">
+        <div class="check-num">①</div>
+        <strong>功能有没有问题？</strong>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">走 PRD 验收条件 → 逐条打勾 → 核心链路全走一遍</div>
+      </div>
+      <div class="check-item">
+        <div class="check-num">②</div>
+        <strong>是不是按需求做的？</strong>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">对比 PRD 功能描述 vs 代码行为 → 不一致 = 未通过</div>
+      </div>
+      <div class="check-item">
+        <div class="check-num">③</div>
+        <strong>架构有没有偏离？</strong>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">gen_arch_stats.py --check-md → 数字不一致 = 漂移告警</div>
+      </div>
+      <div class="check-item">
+        <div class="check-num">④</div>
+        <strong>改了A，B坏了没？</strong>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">gen_arch_stats.py --check-boundaries → 跨模块写违规告警</div>
+      </div>
+      <div class="check-item">
+        <div class="check-num">⑤</div>
+        <strong>核心链路通不通？</strong>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">设备→元素→用例→执行→报告 端到端走一遍</div>
+      </div>
+      <div class="check-item">
+        <div class="check-num">⑥</div>
+        <strong>改了文档没有？</strong>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">代码改了对应的 PRD/ARCH 更新了吗？CHECKLIST 需要加新项吗？</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 第三部分：AI 协作 ═══════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon-dot" style="background:#b39ef3"></span>三、AI 协作 — 我提需求，你执行，我验收</div>
+
+  <!-- AI 工作流 -->
+  <div class="card" style="border-left:4px solid var(--phase-design)">
+    <h3>你提需求 → AI 的工作流</h3>
+    <div class="commit-flow">
+      <div class="commit-step" style="background:#fef9e7;border:2px solid #f7cd67">👤 你<br>提出需求</div>
+      <span class="flow-arrow-text">→</span>
+      <div class="commit-step" style="background:#eef1fb;border:2px solid #889df0">📖 阅读 PRD<br>理解上下文</div>
+      <span class="flow-arrow-text">→</span>
+      <div class="commit-step" style="background:#f3eefb;border:2px solid #b39ef3">📐 对照 ARCH<br>设计方案</div>
+      <span class="flow-arrow-text">→</span>
+      <div class="commit-step" style="background:#edf7e7;border:2px solid #6fba2c">💻 执行<br>写代码</div>
+      <span class="flow-arrow-text">→</span>
+      <div class="commit-step" style="background:#fef0f3;border:2px solid #f8a6b2">🔍 自检<br>跑 CHECKLIST</div>
+      <span class="flow-arrow-text">→</span>
+      <div class="commit-step" style="background:#e6f9f6;border:2px solid #19c8b9">📋 输出结果<br>等你验收</div>
+    </div>
+    <div style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center">
+      不管你提的是「加一个功能」「改一个文案」「修一个 Bug」——都走 <strong>判定级别 → 改文档 → 写代码 → 跑 CHECKLIST → 输出结果</strong> 这个闭环。
+    </div>
+  </div>
+
+  <!-- 文档与工具体系 -->
+  <div class="card" style="margin-top:16px;border-left:4px solid var(--primary)">
+    <h3>AI 使用的项目文档与工具体系</h3>
+    <div class="check-grid">
+      <div class="doc-card">
+        <div class="doc-name">📋 PRD 需求文档</div>
+        <div class="doc-role">AI 理解「做什么」— 267 条验收条件 + 101 个测试场景</div>
+      </div>
+      <div class="doc-card">
+        <div class="doc-name">🏗️ ARCH 架构文档</div>
+        <div class="doc-role">AI 理解「怎么做」— 组件树、API、数据模型、交互时序</div>
+      </div>
+      <div class="doc-card">
+        <div class="doc-name">✅ DEVELOPMENT_CHECKLIST</div>
+        <div class="doc-role">AI 自检「做对没有」— 6 组 28 条检查项</div>
+      </div>
+      <div class="doc-card">
+        <div class="doc-name">🔧 gen_arch_stats.py</div>
+        <div class="doc-role">AI 自动检测漂移 — 表数、端点数、Tool数、步骤类型</div>
+      </div>
+      <div class="doc-card">
+        <div class="doc-name">📖 技术栈参考</div>
+        <div class="doc-role">命名统一标准、UI 设计素材、API 契约</div>
+      </div>
+      <div class="doc-card">
+        <div class="doc-name">🤖 .claude/rules/</div>
+        <div class="doc-role">行为准则、历史高频问题速查、模块边界防火墙</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Agent 维护 -->
+  <div class="card" style="margin-top:16px;border-left:4px solid var(--phase-dev)">
+    <h3>AI 如何维护这个项目</h3>
+    <table>
+      <thead><tr><th>维护动作</th><th>何时触发</th><th>具体操作</th></tr></thead>
+      <tbody>
+        <tr><td><strong>同步统计</strong></td><td>每次修改 models/urls 后</td><td>运行 gen_arch_stats.py，更新 ARCH 附录A</td></tr>
+        <tr><td><strong>更新 PRD</strong></td><td>新增/修改功能时</td><td>在对应子 PRD 新增 F-XX-XX，写验收条件 + 测试方案</td></tr>
+        <tr><td><strong>更新 ARCH</strong></td><td>文件结构变化时</td><td>更新组件树、API 表、数据模型 ER 图</td></tr>
+        <tr><td><strong>更新 CHECKLIST</strong></td><td>发现新类型问题时</td><td>新增检查项到对应组</td></tr>
+        <tr><td><strong>沉淀规则</strong></td><td>同类型错误 ≥3 次</td><td>新增规则到 .claude/rules/ 或 CHECKLIST</td></tr>
+        <tr><td><strong>验收报告</strong></td><td>每次功能开发完成</td><td>跑对应 PRD 验收条件，输出通过/失败清单</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 验收措施 -->
+  <div class="card" style="margin-top:16px;border-left:4px solid var(--phase-release)">
+    <h3>如何确保 AI 按你的想法执行 — 验收措施</h3>
+    <div class="check-grid">
+      <div class="check-item">
+        <div class="check-num">①</div>
+        <strong>文档先行</strong>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">PRD 写清楚了才动手。AI 不能在没有验收条件的情况下自由发挥。</div>
+      </div>
+      <div class="check-item">
+        <div class="check-num">②</div>
+        <strong>CHECKLIST 守门</strong>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">代码写完必须跑 CHECKLIST 自检。28 条全部通过才能提交给你验收。</div>
+      </div>
+      <div class="check-item">
+        <div class="check-num">③</div>
+        <strong>自动检测不漂移</strong>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">gen_arch_stats.py --check-md。数字不一致 → AI 自动检测到并修复。</div>
+      </div>
+      <div class="check-item">
+        <div class="check-num">④</div>
+        <strong>变更级别判定</strong>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">AI 必须先判断这次改动的级别（🔴🟡🟢⚪），再决定走什么流程。</div>
+      </div>
+      <div class="check-item">
+        <div class="check-num">⑤</div>
+        <strong>先方案后执行</strong>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">🔴大改必须先出方案等你审批。通过后才动手写代码。</div>
+      </div>
+      <div class="check-item">
+        <div class="check-num">⑥</div>
+        <strong>结果对照 PRD</strong>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">AI 输出验收结果时，逐条对照 PRD 验收条件，标注通过/失败/跳过。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 设计有效性 -->
+  <div class="card" style="margin-top:16px;border-left:4px solid var(--phase-deliver)">
+    <h3>如何测试你的设计是否帮助 AI 理解项目</h3>
+    <table>
+      <thead><tr><th>测试方法</th><th>目的</th><th>判定标准</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>盲测：只给 PRD，不给 ARCH</strong></td>
+          <td>PRD 是否足够清晰？</td>
+          <td>AI 能否仅凭 PRD 理解功能行为并写出正确的交互逻辑？如果 AI 反复问"这个按钮点完会怎样"→ PRD 不够细。</td>
+        </tr>
+        <tr>
+          <td><strong>盲测：只给 ARCH，不给 PRD</strong></td>
+          <td>ARCH 是否描述了结构？</td>
+          <td>AI 能否仅凭 ARCH 把新增文件放在正确的目录下？能否理解模块间的调用方式？</td>
+        </tr>
+        <tr>
+          <td><strong>越界测试</strong></td>
+          <td>CHECKLIST 是否有效？</td>
+          <td>故意让 AI 做一个跨模块越界的操作（如在仪表盘加写操作）。CHECKLIST 能否捕获到这个违规？</td>
+        </tr>
+        <tr>
+          <td><strong>变更测试</strong></td>
+          <td>文档体系是否防漂移？</td>
+          <td>改一个 API 端点但不更新 ARCH 文档。gen_arch_stats.py --check-md 是否检测到差异？</td>
+        </tr>
+        <tr>
+          <td><strong>干扰测试</strong></td>
+          <td>文档是否简洁有效？</td>
+          <td>给 AI 一个过时的旧版 PRD（含 14 种步骤）。AI 是否会注意到 StepType 枚举已更新为 17 种？是否会对照 gen_arch_stats.py 的输出？</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:12px;font-size:12px;color:var(--text-muted)">
+      <strong>设计好坏的核心指标</strong>：AI 在没有你额外解释的情况下，仅凭 PRD + ARCH + CHECKLIST + gen_arch_stats.py，能否独立完成一个功能并输出正确的验收结果？
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 第四部分：文档-代码-验收 铁三角 ═══════════ -->
+<div class="section">
+  <div class="section-title"><span class="icon-dot" style="background:var(--text-muted)"></span>四、文档 · 代码 · 验收 铁三角</div>
+
+  <div class="lifecycle-flow" style="margin-bottom:20px">
+    <div class="lifecycle-node" style="background:#f7cd67;color:#725d42">
+      <div class="node-icon">📋</div><div class="node-title">PRD 需求</div>
+      <div class="node-desc">267 验收项<br>功能定位与边界<br>异常场景与容错</div>
+    </div>
+    <div class="lifecycle-arrow">⇄</div>
+    <div class="lifecycle-node" style="background:#889df0">
+      <div class="node-icon">🏗️</div><div class="node-title">ARCH 架构</div>
+      <div class="node-desc">组件树 + API<br>数据模型 + 交互时序<br>自动统计附录</div>
+    </div>
+    <div class="lifecycle-arrow">⇄</div>
+    <div class="lifecycle-node" style="background:#6fba2c">
+      <div class="node-icon">✅</div><div class="node-title">CHECKLIST</div>
+      <div class="node-desc">6 组 28 条<br>4 级变更判定<br>快速自检 + 完整检查</div>
+    </div>
+    <div class="lifecycle-arrow">⇄</div>
+    <div class="lifecycle-node" style="background:#b39ef3">
+      <div class="node-icon">💻</div><div class="node-title">代码</div>
+      <div class="node-desc">apps/ 8 模块<br>frontend/ 8 模块<br>agentscope_service/</div>
+    </div>
+    <div class="lifecycle-arrow">→</div>
+    <div class="lifecycle-node" style="background:#19c8b9">
+      <div class="node-icon">🚀</div><div class="node-title">交付</div>
+      <div class="node-desc">验收通过<br>文档同步<br>可追溯</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>关键文件索引</h3>
+    <table>
+      <thead><tr><th>文件</th><th>作用</th><th>谁维护</th></tr></thead>
+      <tbody>
+        <tr><td><code>dev_docs/02-PRD需求/需求大纲.md</code></td><td>项目定位 · 用户画像 · 模块职责边界 · 功能边界规则</td><td>需求变更时更新</td></tr>
+        <tr><td><code>dev_docs/02-PRD需求/PRD-0X-*.md</code></td><td>8 模块功能需求 + 验收条件 + 测试方案</td><td>功能变更时更新</td></tr>
+        <tr><td><code>dev_docs/03-设计与架构/架构大纲.md</code></td><td>三层分离 · 模块依赖图 · 设计决策 · 自动统计附录</td><td>架构变更时更新</td></tr>
+        <tr><td><code>dev_docs/03-设计与架构/ARCH-0X-*.md</code></td><td>8 模块技术架构（组件树/API/数据模型/交互时序）</td><td>代码结构变更时更新</td></tr>
+        <tr><td><code>dev_docs/DEVELOPMENT_CHECKLIST.md</code></td><td>验收守门员 — 6 组 28 条 + 4 级变更判定</td><td>发现问题模式时更新</td></tr>
+        <tr><td><code>tools/gen_arch_stats.py</code></td><td>自动统计（表/端点/Tool/步骤类型/设备状态）</td><td>新增统计维度时更新</td></tr>
+        <tr><td><code>models/step_types.py</code></td><td>StepType 枚举 — 步骤类型唯一真相源</td><td>新增步骤类型时更新</td></tr>
+        <tr><td><code>dev_docs/01-立项与设计/智能体设计/agent-workflow-report.html</code></td><td>本文档 — 项目工作流全景</td><td>流程调整时更新</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="report-footer" style="margin-top:48px;padding-top:24px;border-top:1.5px dashed var(--border);font-size:12px;color:var(--text-secondary);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+  <span>Android-AutoTests · 项目开发工作流全景</span>
+  <span>🍃 生成于 2026-07-16 · v2.0</span>
+</div>
+
+</div>
+</body>
+</html>

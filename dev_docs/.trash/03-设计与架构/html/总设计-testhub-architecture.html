@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TestHub System Architecture</title>
+    <style>
+      :root {
+        --c-bg: #f8fafc;
+        --c-canvas: #ffffff;
+        --c-border: #cbd5e1;
+        --c-text-main: #0f172a;
+        --c-text-sub: #64748b;
+        --font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
+        --font-mono: 'SF Mono', Monaco, Consolas, monospace;
+      }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      body {
+        background: var(--c-bg);
+        font-family: var(--font-ui);
+        color: var(--c-text-main);
+        padding: 40px;
+      }
+
+      .diagram-canvas {
+        background: var(--c-canvas);
+        border: 2px solid var(--c-border);
+        padding: 32px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .diagram-header {
+        border-bottom: 1px solid var(--c-border);
+        padding-bottom: 16px;
+        margin-bottom: 24px;
+      }
+
+      .diagram-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: var(--c-text-main);
+      }
+
+      .diagram-subtitle {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--c-text-sub);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 4px;
+      }
+
+      /* Layers */
+      .layer { margin-bottom: 12px; }
+      .layer-label {
+        font-size: 10px;
+        font-family: var(--font-mono);
+        color: var(--c-text-sub);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+      }
+
+      .layer-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .node {
+        background: var(--c-canvas);
+        border: 1px solid var(--c-border);
+        padding: 8px 14px;
+        font-size: 13px;
+        font-family: var(--font-mono);
+        color: var(--c-text-main);
+        white-space: nowrap;
+      }
+
+      .node--fill {
+        background: var(--c-text-main);
+        color: var(--c-canvas);
+        border-color: var(--c-text-main);
+      }
+
+      .node--ai {
+        background: #f1f5f9;
+        border-color: #0f172a;
+        font-weight: 600;
+      }
+
+      .divider {
+        border-top: 1px dashed var(--c-border);
+        margin: 16px 0;
+      }
+
+      .legend {
+        display: flex;
+        gap: 24px;
+        font-size: 11px;
+        color: var(--c-text-sub);
+        margin-top: 24px;
+      }
+
+      .legend span { display: flex; align-items: center; gap: 6px; }
+      .legend-dot {
+        width: 8px; height: 8px;
+        border: 1px solid var(--c-text-main);
+        display: inline-block;
+      }
+      .legend-dot--ai { background: #f1f5f9; border-color: #0f172a; }
+    </style>
+  </head>
+  <body>
+    <div class="diagram-canvas">
+      <div class="diagram-header">
+        <h1 class="diagram-title">TestHub — 系统架构总览</h1>
+        <p class="diagram-subtitle">System Architecture / Full-Stack Test Management Platform</p>
+      </div>
+
+      <!-- Frontend Layer -->
+      <div class="layer">
+        <div class="layer-label">Presentation Layer — 前端展示层</div>
+        <div class="layer-row">
+          <div class="node node--fill">Vue 3 + Vite</div>
+          <div class="node">Element Plus</div>
+          <div class="node">ECharts 5</div>
+          <div class="node">Monaco Editor</div>
+          <div class="node">Pinia</div>
+          <div class="node">Vue Router</div>
+          <div class="node">Axios</div>
+        </div>
+      </div>
+
+      <!-- Security Layer -->
+      <div class="layer">
+        <div class="layer-label">Security Layer — 安全中间件层</div>
+        <div class="layer-row">
+          <div class="node">JWT 双 Token</div>
+          <div class="node">Token 黑名单</div>
+          <div class="node">请求队列</div>
+          <div class="node">自动刷新</div>
+          <div class="node">防循环机制</div>
+        </div>
+      </div>
+
+      <!-- API Gateway -->
+      <div class="layer">
+        <div class="layer-label">API Gateway — 接口网关层</div>
+        <div class="layer-row">
+          <div class="node node--fill">Django REST Framework</div>
+          <div class="node">Swagger / ReDoc</div>
+          <div class="node">drf-spectacular</div>
+        </div>
+      </div>
+
+      <!-- Business Modules -->
+      <div class="layer">
+        <div class="layer-label">Business Layer — 业务模块 (15 Django Apps)</div>
+        <div class="layer-row" style="gap: 6px;">
+          <div class="node">projects</div>
+          <div class="node">users</div>
+          <div class="node">versions</div>
+          <div class="node">testcases</div>
+          <div class="node">testsuites</div>
+          <div class="node">reviews</div>
+          <div class="node">executions</div>
+          <div class="node">reports</div>
+          <div class="node">core</div>
+        </div>
+        <div class="layer-row" style="margin-top:6px; gap:6px;">
+          <div class="node">api_testing</div>
+          <div class="node">ui_automation</div>
+          <div class="node">data_factory</div>
+          <div class="node node--ai">requirement_analysis</div>
+          <div class="node node--ai">assistant</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- AI Subsystem -->
+      <div class="layer">
+        <div class="layer-label">AI Subsystem — AI 智能子系统</div>
+        <div class="layer-row">
+          <div class="node node--ai">langchain-openai</div>
+          <div class="node node--ai">browser-use</div>
+          <div class="node node--ai">Dify API</div>
+          <div class="node">OpenAI / DeepSeek</div>
+          <div class="node">通义千问 / Gemini</div>
+          <div class="node">Anthropic Claude</div>
+          <div class="node">硅基流动</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Infrastructure -->
+      <div class="layer">
+        <div class="layer-label">Infrastructure — 基础设施层</div>
+        <div class="layer-row">
+          <div class="node">Django APScheduler</div>
+          <div class="node">Celery (Async)</div>
+          <div class="node">MySQL 8.0</div>
+          <div class="node">Redis 6.0</div>
+          <div class="node">Allure Reports</div>
+          <div class="node">Selenium</div>
+          <div class="node">Playwright</div>
+          <div class="node">Airtest</div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span><span class="legend-dot"></span> 标准业务模块</span>
+        <span><span class="legend-dot legend-dot--ai"></span> AI 相关模块</span>
+        <span style="font-family: var(--font-mono); margin-left: auto;">15 Apps &middot; 8 AI Providers &middot; 3 Automation Engines</span>
+      </div>
+    </div>
+  </body>
+</html>

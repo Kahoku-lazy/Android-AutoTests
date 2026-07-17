@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>执行引擎全链路诊断报告 — Android-AutoTests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #19c8b9; --primary-hover: #3dd4c6; --primary-active: #11a89b; --primary-bg: #e6f9f6;
+  --text: #794f27; --text-body: #725d42; --text-secondary: #9f927d; --text-muted: #8a7b66; --text-disabled: #c4b89e;
+  --bg: #f8f8f0; --bg-content: rgb(247,243,223); --bg-disabled: #f0ece2;
+  --border: #c4b89e; --border-hover: #a89878; --border-strong: #9f927d;
+  --success: #6fba2c; --success-active: #5a9e1e; --warning: #f5c31c; --warning-active: #dba90e;
+  --error: #e05a5a; --error-active: #c94444;
+  --focus-yellow: #ffcc00;
+  --r-sm: 12px; --r-base: 18px; --r-lg: 24px; --r-pill: 50px;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1); --d-fast: 0.15s; --d-base: 0.25s; --d-slow: 0.35s;
+  --shadow-btn: #bdaea0;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Nunito,'Noto Sans SC',-apple-system,'PingFang SC',sans-serif;font-weight:500;letter-spacing:0.01em;background:var(--bg);color:var(--text-body);line-height:1.6}
+.wrap{max-width:1200px;margin:0 auto;padding:48px 32px}
+hr{height:1px;border:none;border-top:1px dashed var(--border);margin:32px 0}
+/* Header */
+.hdr{text-align:center;padding:48px 0 40px}
+.hdr .badge{display:inline-block;background:var(--primary-bg);color:var(--primary-active);padding:6px 16px;border-radius:var(--r-pill);font-size:13px;font-weight:700;letter-spacing:0.02em;margin-bottom:16px}
+.hdr h1{font-family:Nunito,'Noto Sans SC',sans-serif;font-weight:900;font-size:2rem;color:var(--text);letter-spacing:0.02em;margin-bottom:8px}
+.hdr .sub{color:var(--text-secondary);font-size:14px}
+/* KPI row */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:40px}
+@media(max-width:768px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--bg-content);border-radius:var(--r-base);padding:20px;position:relative;overflow:hidden;border-left:4px solid var(--primary)}
+.kpi::before{content:'';position:absolute;top:-12px;right:-12px;width:40px;height:40px;background:var(--primary-bg);border-radius:50%;opacity:.6}
+.kpi.p0{border-left-color:var(--error)}
+.kpi.p1{border-left-color:var(--warning)}
+.kpi.ok{border-left-color:var(--success)}
+.kpi .n{font-size:2rem;font-weight:900;color:var(--text);line-height:1.2}
+.kpi .l{font-size:12px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.04em}
+/* Section */
+.sec{margin-bottom:36px}
+.sec h2{font-family:Nunito,'Noto Sans SC',sans-serif;font-weight:800;font-size:1.35rem;color:var(--text);margin-bottom:6px;letter-spacing:0.02em}
+.sec h3{font-weight:700;font-size:1.05rem;color:var(--text);margin:24px 0 12px}
+.sec .sdesc{color:var(--text-secondary);font-size:13px;margin-bottom:20px}
+/* Card */
+.card{background:var(--bg-content);border-radius:var(--r-lg);padding:24px;margin-bottom:20px}
+.card.sev-p0{border-left:5px solid var(--error)}
+.card.sev-p1{border-left:5px solid var(--warning)}
+.card.sev-p2{border-left:5px solid var(--primary)}
+.card h4{font-weight:700;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0}
+.tbl thead th{background:linear-gradient(180deg,rgb(247,243,223),#f0ece2);color:var(--text);font-weight:700;padding:10px 14px;text-align:left;border-bottom:2px solid var(--border);font-size:12px;letter-spacing:0.02em}
+.tbl tbody td{padding:10px 14px;border-bottom:1px dashed var(--border);vertical-align:top}
+.tbl tbody tr:nth-child(even){background:rgba(25,200,185,0.03)}
+.tbl tbody tr:hover{background:rgba(25,200,185,0.06)}
+/* Badge */
+.badge{display:inline-block;padding:2px 10px;border-radius:var(--r-pill);font-size:11px;font-weight:700;letter-spacing:0.02em}
+.badge-p0{background:#fde8e8;color:var(--error)}
+.badge-p1{background:#fef3cd;color:#8a6d14}
+.badge-p2{background:var(--primary-bg);color:var(--primary-active)}
+.badge-ok{background:#e8f5e0;color:var(--success)}
+.badge-warn{background:#fef3cd;color:var(--warning-active)}
+.badge-info{background:#e8f0fe;color:#5a7d9a}
+/* Code */
+code{font-family:'SF Mono','Fira Code','Cascadia Code',Consolas,monospace;font-size:12px;font-weight:600;background:rgba(0,0,0,0.04);padding:1px 6px;border-radius:4px}
+pre{background:#2b2520;color:#e8dcc8;padding:16px 20px;border-radius:var(--r-base);overflow-x:auto;font-size:12px;line-height:1.6;margin:10px 0}
+pre code{background:none;padding:0;color:inherit;font-weight:500}
+/* Footer */
+.ft{border-top:1px dashed var(--border);padding-top:20px;margin-top:40px;font-size:12px;color:var(--text-muted);text-align:center}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:768px){.summary-grid{grid-template-columns:1fr}}
+/* TOC */
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:32px}
+.toc a{display:inline-block;padding:6px 16px;border-radius:var(--r-pill);background:var(--bg-content);color:var(--text-body);text-decoration:none;font-size:13px;font-weight:600;border:1px solid var(--border);transition:all var(--d-fast) var(--ease)}
+.toc a:hover{background:var(--primary-bg);border-color:var(--primary);color:var(--primary-active);transform:translateY(-1px)}
+ul,ol{padding-left:20px;font-size:13px;line-height:2}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="badge">DIAGNOSIS REPORT v2.0 · 2026-07-08</div>
+  <h1>执行引擎 全链路诊断报告</h1>
+  <p class="sub">Android-AutoTests · test_runner 模块 · 覆盖 8 个维度 · 关联 5 个上下游模块</p>
+</div>
+
+<!-- KPI ROW -->
+<div class="kpi-grid">
+  <div class="kpi p0"><div class="n">3</div><div class="l">P0 致命缺陷</div></div>
+  <div class="kpi p1"><div class="n">3</div><div class="l">P1 严重缺陷</div></div>
+  <div class="kpi p0"><div class="n">7</div><div class="l">静默吞错位置</div></div>
+  <div class="kpi p1"><div class="n">14</div><div class="l">数据流断裂点</div></div>
+  <div class="kpi ok"><div class="n">0</div><div class="l">成功执行任务</div></div>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <a href="#s1">一、当前状态</a><a href="#s2">二、架构缺陷 P0×3</a><a href="#s3">三、数据流断裂点</a>
+  <a href="#s4">四、静默吞错清单</a><a href="#s5">五、服务重启数据命运</a><a href="#s6">六、前端风险</a>
+  <a href="#s7">七、跨模块关系全貌</a><a href="#s8">八、修复路线</a>
+</div>
+
+<!-- ═══════════ SECTION 1 ═══════════ -->
+<div class="sec" id="s1">
+<h2>一、当前状态 — 浏览器实地验证</h2>
+<p class="sdesc">2026-07-08 14:16 通过 Playwright 浏览器访问 http://localhost:5173/runner 验证</p>
+
+<div class="summary-grid">
+<div class="card sev-p0">
+<h4><span class="badge badge-p0">验证</span> 前端 Tab 分布</h4>
+<table class="tbl">
+<thead><tr><th>Tab</th><th>数量</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>📋 全部</td><td><strong>27</strong></td><td>TaskCard 总数</td></tr>
+<tr><td>⚡ 执行中</td><td><strong style="color:var(--error)">0</strong></td><td>没有活跃的运行</td></tr>
+<tr><td>⏳ 等待中</td><td><strong>3</strong></td><td>卡死在队列里</td></tr>
+<tr><td>✅ 已完成</td><td><strong style="color:var(--error)">0</strong></td><td>从未有过完整成功</td></tr>
+<tr><td>⏹ 未完成</td><td><strong style="color:var(--error)">0</strong></td><td>仅1条interrupted但tab未归类</td></tr>
+<tr><td>📝 未执行</td><td><strong>23</strong></td><td>创建但从未点"执行"</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="card sev-p0">
+<h4><span class="badge badge-p0">验证</span> 后端 API 实际返回值</h4>
+<table class="tbl">
+<thead><tr><th>API</th><th>返回值</th><th>诊断</th></tr></thead>
+<tbody>
+<tr><td><code>GET /api/runner/active</code></td><td><code>{"active": []}</code></td><td>无任何活跃运行 ✓</td></tr>
+<tr><td><code>GET /api/runner/runs</code></td><td>5条 <span class="badge badge-p0">RUNNING</span> + total:0</td><td>全部僵尸记录</td></tr>
+<tr><td><code>GET /api/runner/tasks</code></td><td>queued:3 / idle:23 / done:1</td><td>队列卡死 + 结果丢失</td></tr>
+<tr><td><code>TaskCard 分布</code></td><td>queued:3 / idle:23 / done/interrupted:1</td><td>无 completed/stopped/error</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<div class="card sev-p1">
+<h4><span class="badge badge-p1">P1</span> 僵尸 TestRunRecord 清单 — 永远 RUNNING，total=0，永不修复</h4>
+<table class="tbl">
+<thead><tr><th>run_id</th><th>设备</th><th>loop_count</th><th>启动时间</th><th>已过时间</th><th>状态</th></tr></thead>
+<tbody>
+<tr><td><code>run_RF8N21MSW7A_20260708_115026</code></td><td>RF8N21MSW7A</td><td>100</td><td>11:50</td><td>~2.5h</td><td><span class="badge badge-p0">僵尸</span></td></tr>
+<tr><td><code>run_RF8N21MSW7A_20260708_114432</code></td><td>RF8N21MSW7A</td><td>—</td><td>11:44</td><td>~2.5h</td><td><span class="badge badge-p0">僵尸</span></td></tr>
+<tr><td><code>run_RF8N21MSW7A_20260708_101251</code></td><td>RF8N21MSW7A</td><td>—</td><td>10:12</td><td>~4h</td><td><span class="badge badge-p0">僵尸</span></td></tr>
+<tr><td><code>run_R5CWC411DNK_20260707_230555</code></td><td>R5CWC411DNK</td><td>—</td><td>23:05 (昨天)</td><td>~15h</td><td><span class="badge badge-p0">僵尸</span></td></tr>
+<tr><td><code>run_R5CWC411DNK_20260707_225843</code></td><td>R5CWC411DNK</td><td>—</td><td>22:58 (昨天)</td><td>~15h</td><td><span class="badge badge-p0">僵尸</span></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- ═══════════ SECTION 2 ═══════════ -->
+<div class="sec" id="s2">
+<h2>二、架构缺陷 — P0 致命级 × 3</h2>
+
+<div class="card sev-p0">
+<h4><span class="badge badge-p0">P0-1</span> 七套独立状态系统，无统一状态机</h4>
+<p>"设备是否在执行任务"由 <strong>7 个互不通信的变量</strong>共同决定。每次状态变更需同步更新 3-4 个变量，<strong>没有任何事务保证</strong>。任何一个更新失败 → 状态永久分歧。</p>
+<table class="tbl" style="margin-top:12px">
+<thead><tr><th>变量</th><th>位置</th><th>生命周期</th><th>重启后</th><th>角色</th></tr></thead>
+<tbody>
+<tr><td><code>_device_busy</code></td><td>runner.py:104</td><td>进程级</td><td>清空</td><td>调度第一判定源</td></tr>
+<tr><td><code>_active_runs</code></td><td>runner.py:101</td><td>进程级</td><td>清空</td><td>运行状态缓存</td></tr>
+<tr><td><code>_device_queue</code></td><td>views.py:48</td><td>进程级</td><td>DB重建(部分丢失)</td><td>任务队列</td></tr>
+<tr><td><code>_run_client_task</code></td><td>views.py:51</td><td>进程级</td><td><span style="color:var(--error)">永久丢失</span></td><td>run_id→task_id 映射</td></tr>
+<tr><td><code>TaskCard</code></td><td>models.py</td><td>DB</td><td>保留</td><td>任务卡片真相</td></tr>
+<tr><td><code>TestRunRecord</code></td><td>models.py</td><td>DB</td><td>保留</td><td>执行记录真相</td></tr>
+<tr><td><code>Device</code></td><td>device_pool/models.py</td><td>DB</td><td>保留</td><td>设备状态真相</td></tr>
+</tbody>
+</table>
+<p style="margin-top:12px"><strong>正确设计应是一个统一状态机：</strong></p>
+<pre><code>IDLE → QUEUED → ACQUIRING → RUNNING → FINALIZING → IDLE
+ ↑                      ↓
+ └──────── ERROR ←──────┘
+
+每个状态转换由一个函数原子性地更新所有相关状态。</code></pre>
+<p style="font-size:13px;margin-top:8px;color:var(--text-secondary)"><strong>关键缺陷：</strong>调度决策先查内存 <code>_device_busy</code>（第一判定源），再查 DB <code>Device.status</code>（兜底），而 <code>_start_next_queued</code> 中更极端——<strong>只查内存不查 DB</strong>。内存优先的调度逻辑在重启和多进程场景下天然不可靠。</p>
+</div>
+
+<div class="card sev-p0">
+<h4><span class="badge badge-p0">P0-2</span> Fire-and-Forget 调度链 — 无监控、无恢复</h4>
+<p>整个异步调度链由 <strong>4 处 <code>asyncio.create_task</code></strong> 组成，全部 fire-and-forget，不保存返回值。任何一处静默异常 → <strong>调度链永久断裂，队列中剩余任务永远得不到执行</strong>，且无任何日志告警。</p>
+<pre><code>start_test_run (views.py)
+  └─→ asyncio.create_task(delayed_execute(...))     ← ① 无追踪
+        └─→ _execute_tests(...)
+              └─→ runner.run(...)
+                    └─→ finally: _schedule_next_queued(serial)
+                          └─→ asyncio.create_task(            ← ② 无追踪
+                                _start_next_queued(...))
+                                └─→ _execute_tests(...)
+                                      └─→ finally: ... 递归 → ③④ 继续 fire-and-forget</code></pre>
+<p style="margin-top:12px">当前 <strong>3 个 queued 任务（ID-1760/1762/1763/1764）正是因此卡死</strong>——它们被恢复进 <code>_device_queue</code> 但调度链从未成功启动消费。缺失的机制：</p>
+<ul>
+<li><strong>无 <code>task.add_done_callback</code></strong> — 异常被完全吞没</li>
+<li><strong>无 u2.connect 超时</strong> — 依赖系统 TCP 超时，可能阻塞数分钟</li>
+<li><strong>无 runner.run() 总超时</strong> — 理论上可无限运行</li>
+<li><strong>无心跳检测</strong> — runner.run() 卡在 u2 调用上无法被外部感知</li>
+<li><strong>无看门狗/死信队列</strong> — 失败的任务不会自动重试</li>
+</ul>
+</div>
+
+<div class="card sev-p0">
+<h4><span class="badge badge-p0">P0-3</span> 双重所有权 — test_runner 与 device_pool 各自控制设备</h4>
+<p>test_runner <strong>完全绕过</strong> device_pool 的连接管理和锁保护机制。两个系统互不知道对方在做什么：</p>
+<table class="tbl">
+<thead><tr><th>资源</th><th>test_runner (独立)</th><th>device_pool (全局)</th><th>协调？</th></tr></thead>
+<tbody>
+<tr><td>u2 连接</td><td><code>u2.connect(serial)</code> 独立创建</td><td><code>DevicePool.d</code> 单例缓存</td><td><span class="badge badge-p0">无锁</span></td></tr>
+<tr><td>忙标记</td><td><code>_device_busy</code> 内存 set</td><td><code>Device.status + occupied_by</code> DB</td><td><span class="badge badge-p0">手动双写</span></td></tr>
+<tr><td>任务队列</td><td><code>_device_queue</code> 内存 dict</td><td><code>DeviceQueue</code> DB 模型</td><td><span class="badge badge-p0">不通信</span></td></tr>
+<tr><td>u2 锁</td><td>无</td><td><code>DevicePool._u2_lock</code></td><td><span class="badge badge-p0">绕过</span></td></tr>
+</tbody>
+</table>
+<p style="margin-top:12px"><strong>后果：</strong>如果用户同时在元素定位页 dump UI + 执行引擎跑用例 → 两个 u2 连接并发操作同一设备 → 行为不可预测。此外 DevicePool 的 <code>_u2_lock</code> 确保截图流(2fps)与其他操作互不干扰，但 test_runner 完全绕过了这个保护。</p>
+</div>
+</div>
+
+<!-- ═══════════ SECTION 3 ═══════════ -->
+<div class="sec" id="s3">
+<h2>三、数据流断裂点 — 14 个标注</h2>
+<p class="sdesc">追踪"用户创建任务→执行→结果回写"全链路。✓正确 / ⚠️浪费但不破坏 / 🔴状态不一致或数据丢失</p>
+
+<div class="card sev-p1">
+<h4>阶段 ②: start_test_run — 设备检查与任务获取</h4>
+<table class="tbl">
+<thead><tr><th>#</th><th>环节</th><th>严重</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>②a</td><td>load_definitions() 失败</td><td><span class="badge badge-ok">✓</span></td><td>return error</td></tr>
+<tr><td>②b</td><td>Device 不在 DB</td><td><span class="badge badge-warn">⚠️</span></td><td>静默跳过，前端无反馈</td></tr>
+<tr><td>②c</td><td>Device OFFLINE/DISCONNECTED</td><td><span class="badge badge-warn">⚠️</span></td><td>静默跳过，前端无反馈</td></tr>
+<tr><td>②d</td><td>设备忙 → 入队</td><td><span class="badge badge-ok">✓</span></td><td>正确处理</td></tr>
+<tr><td>②g</td><td>asyncio.create_task(delayed_execute)</td><td><span class="badge badge-p0">🔴</span></td><td>fire-and-forget，无追踪</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="card sev-p1">
+<h4>阶段 ③: _execute_tests — 核心执行逻辑</h4>
+<table class="tbl">
+<thead><tr><th>#</th><th>环节</th><th>严重</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>③a</td><td>create_run_record() 失败</td><td><span class="badge badge-p0">🔴</span></td><td>TaskCard→error 但 TestRunRecord 不存在</td></tr>
+<tr><td>③b</td><td>runner.run() 二次 dp_acquire_device</td><td><span class="badge badge-warn">⚠️</span></td><td>重复获取，浪费一次 DB 写</td></tr>
+<tr><td>③c</td><td>runner.run() 二次 mark_device_busy</td><td><span class="badge badge-warn">⚠️</span></td><td>重复标记（idempotent，但丑陋）</td></tr>
+<tr><td>③d</td><td>runner.run().finally 释放设备</td><td><span class="badge badge-p1">🟠</span></td><td><strong>第一次释放 — 提前释放!</strong></td></tr>
+<tr><td>③e</td><td>_execute_tests.finally 再释放</td><td><span class="badge badge-p1">🟠</span></td><td>第二次释放 — ③d已释放，DB写还在进行中</td></tr>
+<tr><td>③f</td><td>persist(TestResult) 失败</td><td><span class="badge badge-p0">🔴</span></td><td><strong>结果永久丢失</strong>，只剩空壳 TestRunRecord</td></tr>
+<tr><td>③g</td><td>finalize_run() 失败 + mark_failed() 也失败</td><td><span class="badge badge-p0">🔴</span></td><td>TestRunRecord 永远 RUNNING</td></tr>
+<tr><td>③h</td><td>_mark_done() 失败</td><td><span class="badge badge-p0">🔴</span></td><td>TaskCard 永远 running</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="card sev-p1">
+<h4>阶段 ④: _schedule_next_queued — 队列消费调度</h4>
+<table class="tbl">
+<thead><tr><th>#</th><th>环节</th><th>严重</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>④a</td><td>asyncio.create_task(_start_next_queued)</td><td><span class="badge badge-p0">🔴</span></td><td>fire-and-forget，失败则整个队列卡死</td></tr>
+<tr><td>④b</td><td>load() 返回空列表（用例被禁用）</td><td><span class="badge badge-p0">🔴</span></td><td><strong>提前 return 不恢复 TaskCard 状态!</strong></td></tr>
+<tr><td>④c</td><td>u2.connect 失败</td><td><span class="badge badge-ok">✓</span></td><td>正确回滚释放，调度下一个</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- ═══════════ SECTION 4 ═══════════ -->
+<div class="sec" id="s4">
+<h2>四、静默吞错清单 — 7 处</h2>
+<p class="sdesc">所有关键路径上的 <code>except: pass</code> 或 <code>except Exception: pass</code>，任何一个触发都会导致不可检测的状态不一致</p>
+
+<table class="tbl">
+<thead><tr><th>#</th><th>文件:行号</th><th>代码模式</th><th>吞掉的错误</th><th>后果</th><th>严重</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>runner.py:217</td><td><code>except Exception: pass</code></td><td>dp_release_device 失败</td><td>设备永久 BUSY — 只能等 300s 超时</td><td><span class="badge badge-p0">P0</span></td></tr>
+<tr><td>2</td><td>runner.py:248</td><td><code>except Exception: pass</code></td><td>step_result WS 回调失败</td><td>前端收不到步骤结果通知</td><td><span class="badge badge-p1">P1</span></td></tr>
+<tr><td>3</td><td>runner.py:260</td><td><code>except Exception: pass</code></td><td>step_started WS 回调失败</td><td>前端步骤进度丢失</td><td><span class="badge badge-p1">P1</span></td></tr>
+<tr><td>4</td><td>views.py:395</td><td><code>except Exception: pass</code></td><td>mark_failed() 失败</td><td>TestRunRecord 永远 RUNNING</td><td><span class="badge badge-p0">P0</span></td></tr>
+<tr><td>5</td><td>views.py:407</td><td><code>except Exception: pass</code></td><td>_mark_error() 失败</td><td>TaskCard 永远 running，前端卡在"执行中"</td><td><span class="badge badge-p0">P0</span></td></tr>
+<tr><td>6</td><td>views.py:416</td><td><code>except Exception: pass</code></td><td>dp_release_device 失败</td><td>设备永久 BUSY</td><td><span class="badge badge-p0">P0</span></td></tr>
+<tr><td>7</td><td>views.py:514</td><td><code>except Exception: pass</code></td><td>dp_release_device 失败</td><td>设备永久 BUSY</td><td><span class="badge badge-p0">P0</span></td></tr>
+</tbody>
+</table>
+<p style="margin-top:12px;font-size:13px;color:var(--error)"><strong>统计：7 处吞错，5 处 P0 级。其中 3 处与设备释放相关 — 触发后设备永久 BUSY，仅能等 300 秒 DeviceLock 超时自动释放。另外 2 处导致数据库记录永远停留在中间状态（RUNNING/running），任何查询都无法区分它们是"正在执行"还是"已经死了"。</strong></p>
+</div>
+
+<!-- ═══════════ SECTION 5 ═══════════ -->
+<div class="sec" id="s5">
+<h2>五、服务重启 — 数据命运全表</h2>
+
+<table class="tbl">
+<thead><tr><th>数据</th><th>重启后状态</th><th>恢复机制</th><th>评级</th></tr></thead>
+<tbody>
+<tr><td><code>_device_busy</code></td><td>清空 (apps.py:17)</td><td>—</td><td><span class="badge badge-ok">正确</span> — 新进程无运行任务</td></tr>
+<tr><td><code>_active_runs</code></td><td>清空 (进程变量)</td><td>—</td><td><span class="badge badge-ok">正确</span></td></tr>
+<tr><td><code>_device_queue</code></td><td>从 DB 重建 (<code>TaskCard.status='queued'</code>)</td><td>apps.py + list_active 懒恢复</td><td><span class="badge badge-warn">部分</span> — interval_seconds 等参数丢失</td></tr>
+<tr><td><code>_run_client_task</code></td><td style="color:var(--error)"><strong>永久丢失</strong></td><td>无恢复机制</td><td><span class="badge badge-p0">致命</span> — run_id↔task_id 映射无法重建</td></tr>
+<tr><td><code>TaskCard(running)</code></td><td>标记为 done/interrupted</td><td>apps.py:22 + list_active 孤儿检测</td><td><span class="badge badge-ok">正确</span></td></tr>
+<tr><td><code>TestRunRecord(RUNNING)</code></td><td style="color:var(--error)"><strong>永不修复</strong></td><td>仅 mark_failed except 块偶尔触发</td><td><span class="badge badge-p0">致命</span></td></tr>
+<tr><td><code>Device(BUSY)</code></td><td>等 300s DeviceLock 超时</td><td>device_pool _update_device_status 心跳</td><td><span class="badge badge-p1">缓慢</span> — 最长 5 分钟不可用</td></tr>
+</tbody>
+</table>
+
+<div class="card sev-p0" style="margin-top:20px">
+<h4><span class="badge badge-p0">P0</span> 最关键问题：TestRunRecord 僵尸清理缺失</h4>
+<p><code>apps.py</code> 的启动恢复只处理了 <code>TaskCard</code>：</p>
+<pre><code># apps.py — 只修复 TaskCard，不修复 TestRunRecord
+orphans = TaskCard.objects.filter(status='running')
+orphans.update(status='done', running=False, outcome='interrupted')
+
+# ❌ 缺失 — 下面这行从未被执行:
+# TestRunRecord.objects.filter(status='RUNNING').update(status='FAILED')</code></pre>
+<p>当前需要手动 SQL 修复这些僵尸记录：</p>
+<pre><code>UPDATE tr_test_runs SET status='FAILED', finished_at=datetime('now')
+WHERE status='RUNNING' AND finished_at='';</code></pre>
+</div>
+</div>
+
+<!-- ═══════════ SECTION 6 ═══════════ -->
+<div class="sec" id="s6">
+<h2>六、前端风险分析</h2>
+
+<div class="card sev-p1">
+<h4><span class="badge badge-p1">P1</span> 假连接场景 A — 后端崩溃前端不知</h4>
+<p>后端重启 → <code>_active_runs</code> 清空 → 前端 WS 触发 <code>onclose</code> → 仅打印"日志断开" → <strong>不会自动将 running 改为 false</strong> → TaskCard 持续显示"执行中" → 用户刷新页面后孤儿恢复才生效。</p>
+</div>
+
+<div class="card sev-p1">
+<h4><span class="badge badge-p1">P1</span> 假连接场景 B — 过时 runId 静默失效</h4>
+<p>前端 <code>task.runId</code> 存在但后端无对应活跃运行 → WS 连接成功（consumer 不校验 runId 是否存在）→ <strong>注册成功后永远收不到消息</strong> → WS 不会触发 onclose → <strong>前端静默卡死，无任何提示</strong>。</p>
+</div>
+
+<div class="card sev-p1">
+<h4><span class="badge badge-p1">P1</span> 假连接场景 C — stale client_task_id</h4>
+<p><code>_run_client_task</code> 映射丢失 → <code>GET /api/runner/active</code> 返回的 <code>client_task_id</code> 为空 → TaskDetail 轮询 <code>active.client_task_id === task.value.id</code> 永远不匹配 → <strong>排队任务已被调度执行但前端检测不到</strong>。</p>
+</div>
+
+<div class="card sev-p1">
+<h4><span class="badge badge-p1">P1</span> 其他前端问题</h4>
+<ul>
+  <li><strong>WS 断开无重连机制</strong> — <code>ws.onclose</code> 只打印日志，TaskDetail 进入静默状态后进度不再更新</li>
+  <li><strong>后端 <code>_execute_tests</code> 异常后 WS 可能已断</strong> — 调用 <code>on_device_error</code> 时前端可能已收不到，只能靠下次 saveTask 轮询(3s)发现 outcome 变化</li>
+  <li><strong>interrupted 状态仅页面刷新后可见</strong> — 孤儿恢复在 API 调用时触发，不刷新则持续显示"执行中"</li>
+  <li><strong>status 和 outcome 语义重叠</strong> — <code>deriveTaskStatus</code> 中混合判断 <code>status</code>(idle/queued/running/done) 和 <code>outcome</code>(completed/stopped/interrupted/error)，边界场景不一致</li>
+  <li><strong>无超时检测</strong> — 前端不检测任务是否超时，不主动探测后端存活</li>
+  <li><strong>device_error 无结构化信息</strong> — WS 消息只带 <code>msg.error</code> 字符串，无错误码/堆栈</li>
+</ul>
+</div>
+</div>
+
+<!-- ═══════════ SECTION 7 ═══════════ -->
+<div class="sec" id="s7">
+<h2>七、跨模块关系全貌</h2>
+
+<table class="tbl">
+<thead><tr><th>关联模块</th><th>耦合方式</th><th>关键数据流</th><th>阻塞性</th></tr></thead>
+<tbody>
+<tr>
+  <td><strong>case_manager</strong><br><small>测试用例</small></td>
+  <td>API 读 + JSON 快照</td>
+  <td><code>TestDefinition.steps_json</code> → <code>TestCaseDef.steps_data</code> → <code>StepExecutor</code></td>
+  <td><span class="badge badge-ok">不阻塞</span></td>
+</tr>
+<tr>
+  <td><strong>report_generator</strong><br><small>测试报告</small></td>
+  <td>直接 import ReportGenerator</td>
+  <td><code>runner.run()</code> 调 <code>ReportGenerator.save_csv/save_log</code>；前端 report-generator 与 test-runner 通过 API 解耦</td>
+  <td><span class="badge badge-ok">不阻塞</span></td>
+</tr>
+<tr>
+  <td><strong>device_pool</strong><br><small>设备管理</small></td>
+  <td>api.py 函数 + 独立连接</td>
+  <td><code>acquire_device/release_device</code> (DB) + <code>u2.connect(serial)</code> (独立不走 DevicePool)</td>
+  <td><span class="badge badge-p0">阻塞</span></td>
+</tr>
+<tr>
+  <td><strong>element_locator</strong><br><small>元素定位</small></td>
+  <td>无直接耦合 — XPath 字符串</td>
+  <td>步骤中 XPath 来自元素定位，执行时直接使用字符串不查元素库</td>
+  <td><span class="badge badge-ok">不阻塞</span></td>
+</tr>
+<tr>
+  <td><strong>ai_assistant</strong><br><small>AI 助手</small></td>
+  <td>HTTP API + 命名约定</td>
+  <td>AI 触发执行走标准 REST API；<code>TestSOP.conv_id</code> 无 FK 到 <code>AIConversation</code></td>
+  <td><span class="badge badge-warn">潜在隐患</span></td>
+</tr>
+</tbody>
+</table>
+
+<div class="summary-grid" style="margin-top:20px">
+<div class="card sev-p2">
+<h4>与 case_manager：数据流细节</h4>
+<pre><code>CM cm_test_definitions.steps_json (DB: Text)
+    ↓ json.loads
+list[dict]
+    ↓ TestStep.from_dict()
+list[TestStep]  →  TestCaseDef.steps_data
+    ↓ executor.execute_all(steps_data)
+StepExecutor  →  DeviceAdapter  →  uiautomator2</code></pre>
+<p style="font-size:13px"><strong>隐患：</strong><code>steps</code>(文本) 与 <code>steps_json</code>(JSON) 冗余存储，前端需同步维护。若前端只更新 <code>steps</code> 忘了 <code>steps_json</code>，执行时步骤列表为空。另 <code>enabled=True</code> 在 SQL 级别过滤，如果用户禁用了 case 但 task card 中仍引用，执行时静默跳过。</p>
+</div>
+
+<div class="card sev-p2">
+<h4>与 report_generator：报告生成流</h4>
+<p style="font-size:13px"><strong>CSV 全局共享：</strong>不同 run 执行同一 case 追加到同一 CSV 文件。<code>_sanitize_filename(case_title)</code> 不含 run_id，查看时混淆。</p>
+<p style="font-size:13px;margin-top:8px"><strong>Log 文件：</strong><code>{project_root}/logs/{name}_{ts}.log</code>，name 为 case 标题，ts 为时间戳。</p>
+<p style="font-size:13px;margin-top:8px"><strong>JSON 报告：</strong>仅内存生成，未持久化到前端可访问的路径。前端 report-generator 通过 <code>GET /api/reports</code> + <code>GET /api/reports/run/{runId}</code> 访问，不依赖 CSV 文件。</p>
+</div>
+</div>
+
+<div class="card sev-p0" style="margin-top:20px">
+<h4><span class="badge badge-p0">P0</span> Device 状态双重翻转 — 竞态时间窗口</h4>
+<p>runner.run() 的 finally 提前释放设备，而此时 <code>_execute_tests</code> 还在写数据库：</p>
+<pre><code>T1: runner.run().finally → dp_release_device → Device.status=ONLINE  ← 提前释放!
+T2: 此时 _execute_tests 仍在执行 persist/finalize_run/_mark_done (写DB)
+T3: 另一个请求查询 Device → 看到 ONLINE → 尝试获取设备 → 成功
+T4: TaskCard 还是 running，结果还没写完
+T5: _execute_tests.finally → dp_release_device → ONLINE (已是 ONLINE，no-op)
+
+结果: 一个设备同时有两个"进行中"的任务关联</code></pre>
+</div>
+</div>
+
+<!-- ═══════════ SECTION 8 ═══════════ -->
+<div class="sec" id="s8">
+<h2>八、修复路线 — 三层递进</h2>
+
+<div class="card sev-p0">
+<h4><span class="badge badge-p0">短期止血</span> — 本周必须完成（3 项，预计 2 小时）</h4>
+<table class="tbl">
+<thead><tr><th>#</th><th>修复</th><th>文件</th><th>影响</th></tr></thead>
+<tbody>
+<tr><td>S1</td><td>7 处 <code>except: pass</code> → 至少 <code>print(traceback)</code></td><td>runner.py + views.py</td><td>让所有错误可观测</td></tr>
+<tr><td>S2</td><td><code>apps.py</code> 增加 <code>TestRunRecord.objects.filter(status='RUNNING').update(status='FAILED')</code></td><td>apps.py</td><td>清理僵尸记录，前端数据恢复准确</td></tr>
+<tr><td>S3</td><td>4 处 <code>asyncio.create_task</code> 返回值加 <code>add_done_callback</code> 记录异常</td><td>views.py</td><td>调度链断裂可检测</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="card sev-p1">
+<h4><span class="badge badge-p1">中期架构修复</span> — 下个迭代（4 项，预计 3 天）</h4>
+<table class="tbl">
+<thead><tr><th>#</th><th>修复</th><th>文件</th><th>影响</th></tr></thead>
+<tbody>
+<tr><td>M1</td><td>实现统一 <code>RunStateMachine</code> 类，所有状态变更原子化（IDLE→QUEUED→RUNNING→DONE/ERROR）</td><td>新建 state_machine.py</td><td>消除状态分歧根源</td></tr>
+<tr><td>M2</td><td>用 DB-backed 任务队列替代 <code>_device_queue</code> 内存队列</td><td>views.py + models.py</td><td>重启不丢队列，跨进程可靠</td></tr>
+<tr><td>M3</td><td>消除 runner.run() 和 _execute_tests 的双重设备释放 — 只在一处释放</td><td>runner.py + views.py</td><td>消除竞态窗口</td></tr>
+<tr><td>M4</td><td>添加执行超时：u2.connect 30s + runner.run 总超时可配置</td><td>runner.py + adapter.py</td><td>防止永久挂起</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="card sev-p2">
+<h4><span class="badge badge-p2">长期正确架构</span> — 规划中（3 项，预计 2 周）</h4>
+<table class="tbl">
+<thead><tr><th>#</th><th>修复</th><th>影响</th></tr></thead>
+<tbody>
+<tr><td>L1</td><td>test_runner 不创建独立 u2 连接，通过 device_pool 借用连接（device_pool 支持借用模式）</td><td>统一设备管理，消除双重所有权</td></tr>
+<tr><td>L2</td><td>所有设备状态由 device_pool 统一管理，test_runner 只是"借用方" — 单一真相来源</td><td>消除 <code>_device_busy</code> 内存变量</td></tr>
+<tr><td>L3</td><td>实现 DB-backed 持久化任务调度器 — 带看门狗、超时检测、死信重试</td><td>生产级可靠性</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- FOOTER -->
+<div class="ft">
+  <p>Android-AutoTests · test_runner 全链路诊断报告 · 生成于 2026-07-08 14:30 CST</p>
+  <p>数据来源：浏览器实地验证 (Playwright) + 源码静态分析 (127 文件) + API 探测 (4 endpoints) · 跨 6 个模块</p>
+</div>
+
+</div>
+</body>
+</html>

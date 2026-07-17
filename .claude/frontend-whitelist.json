@@ -1,0 +1,119 @@
+{
+  "_comment": "前端文件体积白名单 — CI 只拦截新增超标文件",
+  "whitelist": [
+    {
+      "file": "frontend/src/modules/case-manager/index.vue",
+      "lines": 1215,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/test-runner/index.vue",
+      "lines": 1156,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/ai-assistant/ChatView.vue",
+      "lines": 1133,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/report-generator/index.vue",
+      "lines": 1116,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/case-manager/components/StepEditor.vue",
+      "lines": 953,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/case-manager/components/DirectoryTree.vue",
+      "lines": 933,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/device-pool/index.vue",
+      "lines": 911,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/test-runner/components/TaskDetail.vue",
+      "lines": 885,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/ai-assistant/AgentDetail.vue",
+      "lines": 800,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/report-generator/ReportDetail.vue",
+      "lines": 793,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/workflow/components/vueflow/PageFlowVueFlow.vue",
+      "lines": 723,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/workflow/components/blockly/TestCaseBlockly.vue",
+      "lines": 697,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/workflow/components/WorkflowDirTree.vue",
+      "lines": 659,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/workflow/index.vue",
+      "lines": 653,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/report-generator/CaseBreakdown.vue",
+      "lines": 632,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/shared/components/AppSidebar.vue",
+      "lines": 593,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/ai-assistant/index.vue",
+      "lines": 577,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/case-manager/CaseEditor.vue",
+      "lines": 561,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/workflow/components/WorkflowFileBrowser.vue",
+      "lines": 518,
+      "plan": "待拆分",
+      "added": "2026-07-15"
+    }
+  ]
+}

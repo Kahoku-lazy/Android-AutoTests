@@ -1,7 +1,7 @@
 <script setup>
 import ThinkingBlock from "./ThinkingBlock.vue";
-import ToolCallCard from "./ToolCallCard.vue";
-import HintCard from "./HintCard.vue";
+import ToolCallAppCard from "./ToolCallCard.vue";
+import HintAppCard from "./HintCard.vue";
 import { renderMarkdown } from "../composables/useMarkdown.js";
 
 const props = defineProps({
@@ -58,12 +58,12 @@ function reasonLabel(reason) {
         @toggle="toggleThinking"
       />
 
-      <ToolCallCard
+      <ToolCallAppCard
         v-if="message.role === 'assistant' && message.toolFlow?.length"
         :tool-calls="message.toolFlow"
       />
 
-      <HintCard
+      <HintAppCard
         v-if="message.role === 'assistant' && message.hint"
         :hint="message.hint"
         :importing="importingPrd"

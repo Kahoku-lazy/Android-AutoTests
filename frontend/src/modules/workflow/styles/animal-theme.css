@@ -1,7 +1,0 @@
-/**
- * 工作流主题入口 — token 统一定义在
- * @/shared/styles/workbench-theme.css（main.js 全局引入）
- * 此处仅保留模块内可能需要的补充钩子，避免色板分叉。
- */
-
-/* .workflow-workbench 的 --ac-* / font / box-sizing 已由 workbench-theme.css 提供 */

@@ -3,7 +3,10 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, BarController, BarElement, Filler, Tooltip, Legend } from 'chart.js'
 import { animate, stagger } from 'animejs'
-import { Card, Table, Tabs } from 'animal-island-vue'
+// Card/Table/AppTabs → AppCard/AppTable/AppTabs
+import AppCard from "@/shared/components/AppCard.vue";
+import AppTable from "@/shared/components/AppTable.vue";
+import AppTabs from "@/shared/components/AppTabs.vue";
 import { usePagination } from '@/shared/composables/usePagination.js'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import { listRuns, statusLabel, statusBadgeClass, formatTime } from './api.js'
@@ -279,7 +282,7 @@ function renderDailyCountChart(metrics) {
 }
 
 // ── Filter tabs ──
-const statusTabs = computed(() => [
+const statusAppTabs = computed(() => [
   { key: 'all', label: `全部 (${runs.value.length})` },
   { key: 'COMPLETED', label: '已完成' },
   { key: 'FAILED', label: '失败' },
@@ -304,7 +307,7 @@ const tableAreaMinHeight = computed(() => (
   TABLE_TOOLBAR_HEIGHT + TABLE_HEADER_HEIGHT + displayRowCount.value * TABLE_ROW_HEIGHT
 ))
 
-// ── Table columns（百分比宽度，铺满容器）──
+// ── AppTable columns（百分比宽度，铺满容器）──
 const columns = [
   { title: 'Run ID', dataIndex: 'run_id', width: '13%' },
   { title: '设备', dataIndex: 'device_serial', width: '9%' },
@@ -415,11 +418,11 @@ function openCaseBreakdown(type, tab = 'detail') {
           />
         </div>
         <div class="filter-actions">
-          <AnimalButton class="wb-btn"
+          <el-button class="wb-btn"
             v-if="hasActiveFilters"
             size="small"
             @click="clearFilters"
-          >清空条件</AnimalButton>
+          >清空条件</el-button>
           <span v-if="summary" class="filter-summary">
             共 {{ summary.total_runs }} 次执行 · {{ summary.total_iterations }} 次迭代
           </span>
@@ -477,27 +480,27 @@ function openCaseBreakdown(type, tab = 'detail') {
           <span class="chart-hint">固定显示 {{ CHART_VISIBLE_DAYS }} 天 · 默认最近 {{ CHART_VISIBLE_DAYS }} 天 · 左滑查看更早（共 {{ trend.labels.length }} 天）</span>
         </div>
         <div class="chart-row">
-        <Card color="brown" pattern="brown" class="chart-card">
+        <AppCard color="brown" pattern="brown" class="chart-card">
           <h4 class="chart-title">通过率趋势</h4>
           <div id="chartScrollPass" class="chart-scroll" @scroll="syncChartScroll('pass')">
             <div id="chartInnerPass" class="chart-inner">
               <div class="chart-wrap"><canvas id="overviewPassRateCanvas"></canvas></div>
             </div>
           </div>
-        </Card>
-        <Card color="brown" pattern="brown" class="chart-card">
+        </AppCard>
+        <AppCard color="brown" pattern="brown" class="chart-card">
           <h4 class="chart-title">每日通过/失败</h4>
           <div id="chartScrollDaily" class="chart-scroll" @scroll="syncChartScroll('daily')">
             <div id="chartInnerDaily" class="chart-inner">
               <div class="chart-wrap"><canvas id="overviewDailyCountCanvas"></canvas></div>
             </div>
           </div>
-        </Card>
+        </AppCard>
         </div>
       </div>
 
-      <!-- Filter Tabs -->
-      <Tabs
+      <!-- Filter AppTabs -->
+      <AppTabs
         class="report-tabs"
         :style="{ minHeight: `${tableAreaMinHeight + 88}px` }"
         :items="statusTabs"
@@ -506,7 +509,7 @@ function openCaseBreakdown(type, tab = 'detail') {
         :shadow="true"
       >
         <template v-for="tab in statusTabs" #[tab.key] :key="tab.key">
-          <Card
+          <AppCard
             pattern="brown"
             class="table-card"
             :style="{ minHeight: `${tableAreaMinHeight}px` }"
@@ -530,12 +533,12 @@ function openCaseBreakdown(type, tab = 'detail') {
                   第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ filteredRuns.length }} 条
                 </span>
                 <div v-if="totalPages > 1" class="page-nav">
-                  <AnimalButton class="wb-btn" size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</AnimalButton>
-                  <AnimalButton class="wb-btn" size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</AnimalButton>
+                  <el-button class="wb-btn" size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</el-button>
+                  <el-button class="wb-btn" size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</el-button>
                 </div>
               </div>
             </div>
-            <Table
+            <AppTable
               :columns="columns"
               :data-source="pagedRuns"
               row-key="run_id"
@@ -611,10 +614,10 @@ function openCaseBreakdown(type, tab = 'detail') {
                   <p class="sub">请先在执行引擎中运行测试，完成后将自动生成报告</p>
                 </div>
               </template>
-            </Table>
-          </Card>
+            </AppTable>
+          </AppCard>
         </template>
-      </Tabs>
+      </AppTabs>
     </div>
   </div>
 </template>

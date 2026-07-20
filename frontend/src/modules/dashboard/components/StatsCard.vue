@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { countUpFormatted, elasticHover } from '@/shared/animations.js'
-import { Card } from 'animal-island-vue'
+// AppCard → el-card (Element Plus auto-import)
 
 const props = defineProps({
   label: { type: String, required: true },
@@ -44,10 +44,8 @@ function onCardEnter() {
 </script>
 
 <template>
-  <Card
+  <el-card
     ref="cardRef"
-    :color="color"
-    :pattern="pattern"
     class="stats-card"
     @mouseenter="onCardEnter"
   >
@@ -83,7 +81,7 @@ function onCardEnter() {
         </div>
       </div>
     </template>
-  </Card>
+  </el-card>
 </template>
 
 <style scoped>
@@ -91,7 +89,7 @@ function onCardEnter() {
   cursor: default;
 }
 
-.stats-card :deep(.animal-card-body) {
+.stats-card :deep(.el-card__body) {
   padding: 20px 22px;
 }
 
@@ -120,7 +118,7 @@ function onCardEnter() {
   width: 22px;
   height: 22px;
   border-radius: 6px;
-  background: var(--animal-primary-color);
+  background: var(--app-green-deep);
   opacity: 0.25;
 }
 
@@ -141,7 +139,7 @@ function onCardEnter() {
 
 .stats-card__label {
   font-size: 13px;
-  color: var(--animal-text-color-secondary, #9f927d);
+  color: var(--app-text-secondary, #9f927d);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -160,12 +158,12 @@ function onCardEnter() {
 
 .stats-card__trend.is-up {
   background: rgba(111, 186, 44, 0.12);
-  color: var(--animal-success-color, #6fba2c);
+  color: var(--app-green-deep, #6fba2c);
 }
 
 .stats-card__trend.is-down {
   background: rgba(224, 90, 90, 0.12);
-  color: var(--animal-error-color, #e05a5a);
+  color: var(#e8998a, #e05a5a);
 }
 
 .stats-card__trend-arrow {

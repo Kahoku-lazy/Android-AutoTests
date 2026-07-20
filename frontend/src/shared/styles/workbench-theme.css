@@ -1,33 +1,34 @@
 /**
- * 工作台共享设计 token
- * 挂在 .wb-shell / .workflow-workbench 上，业务主页与工作流共用色板
+ * 工作台共享设计令牌 — Soft Glass 绿色系
+ * 挂在 .wb-shell / .workflow-workbench 上
+ * 令牌来源: tokens.css
  */
 .wb-shell,
 .workflow-workbench {
-  --ac-cream: #fdf8f0;
-  --ac-cream-deep: #f5ede0;
-  --ac-paper: #fffbf5;
-  --ac-wood: #8b7355;
-  --ac-wood-light: #a0896c;
-  --ac-wood-soft: #c4b5a0;
-  --ac-ink: #4a3a28;
-  --ac-ink-muted: #5c4a35;
-  --ac-ink-faint: #988b7a;
-  --ac-border: rgba(139, 115, 85, 0.16);
-  --ac-border-soft: rgba(139, 115, 85, 0.08);
-  --ac-teal: #19c8b9;
-  --ac-green: #6fba2c;
-  --ac-blue: #889df0;
-  --ac-yellow: #f7cd67;
-  --ac-purple: #b39ef3;
-  --ac-pink: #f8a6b2;
-  --ac-red: #e85f5f;
-  --ac-orange: #f5a623;
-  --ac-radius: 16px;
-  --ac-radius-sm: 10px;
-  --ac-shadow: 0 4px 16px rgba(139, 115, 85, 0.1);
-  --ac-shadow-lg: 0 12px 32px rgba(139, 115, 85, 0.14);
-  --ac-font: 'Nunito', 'Noto Sans SC', system-ui, sans-serif;
+  --ac-cream:       var(--app-bg-warm);
+  --ac-cream-deep:  var(--app-bg);
+  --ac-paper:       var(--app-white);
+  --ac-wood:        var(--app-text);
+  --ac-wood-light:  var(--app-text-secondary);
+  --ac-wood-soft:   var(--app-text-muted);
+  --ac-ink:         var(--app-text);
+  --ac-ink-muted:   var(--app-text-secondary);
+  --ac-ink-faint:   var(--app-text-muted);
+  --ac-border:      var(--app-glass-border);
+  --ac-border-soft: rgba(142,200,160,0.08);
+  --ac-teal:        var(--app-green);
+  --ac-green:       var(--app-green-deep);
+  --ac-blue:        var(--app-blue);
+  --ac-yellow:      #f0d880;
+  --ac-purple:      #B0A8E0;
+  --ac-pink:        #F0B0B8;
+  --ac-red:         #e8998a;
+  --ac-orange:      #F0C090;
+  --ac-radius:      var(--app-radius-md);
+  --ac-radius-sm:   var(--app-radius-sm);
+  --ac-shadow:      var(--app-shadow-sm);
+  --ac-shadow-lg:   var(--app-shadow-lg);
+  --ac-font:        var(--app-font);
 
   font-family: var(--ac-font);
   color: var(--ac-ink);
@@ -43,75 +44,70 @@
   box-sizing: border-box;
 }
 
-/* Element Plus 按钮 → 工作台 pill 皮肤（非 animal Button 组件） */
+/* Element Plus 按钮 → 工作台 pill 皮肤 */
 .wb-shell .wb-btn.el-button,
 .wb-shell .el-button.wb-btn {
   --el-button-border-color: var(--ac-border);
-  --el-button-bg-color: var(--ac-paper);
+  --el-button-bg-color: var(--app-glass-card);
   --el-button-text-color: var(--ac-ink-muted);
-  --el-button-hover-border-color: var(--ac-teal);
-  --el-button-hover-bg-color: rgba(25, 200, 185, 0.1);
-  --el-button-hover-text-color: #0d7a70;
-  border-radius: 999px;
+  --el-button-hover-border-color: var(--app-green);
+  --el-button-hover-bg-color: rgba(142,200,160,0.12);
+  --el-button-hover-text-color: var(--app-green-deep);
+  border-radius: var(--app-radius-pill);
   font-weight: 700;
   font-family: inherit;
-  border-width: 2px;
-  box-shadow: 0 2px 0 rgba(139, 115, 85, 0.06);
+  border-width: 1.5px;
+  box-shadow: var(--app-shadow-sm);
 }
 
 .wb-shell .wb-btn.el-button--primary,
 .wb-shell .el-button.wb-btn.el-button--primary {
-  --el-button-bg-color: var(--ac-teal);
-  --el-button-border-color: #14b3a5;
+  --el-button-bg-color: linear-gradient(135deg, var(--app-green), var(--app-green-deep));
+  --el-button-border-color: var(--app-green-deep);
   --el-button-text-color: #fff;
-  --el-button-hover-bg-color: #16d4c4;
-  --el-button-hover-border-color: #14b3a5;
+  --el-button-hover-bg-color: var(--app-green-deep);
+  --el-button-hover-border-color: var(--app-green-deep);
   --el-button-hover-text-color: #fff;
 }
 
 .wb-shell .wb-btn.el-button--danger,
 .wb-shell .el-button.wb-btn.el-button--danger {
-  --el-button-bg-color: #fffbf5;
-  --el-button-border-color: rgba(232, 95, 95, 0.4);
+  --el-button-bg-color: var(--app-white);
+  --el-button-border-color: rgba(232,153,138,0.4);
   --el-button-text-color: var(--ac-red);
-  --el-button-hover-bg-color: rgba(232, 95, 95, 0.1);
+  --el-button-hover-bg-color: rgba(232,153,138,0.1);
   --el-button-hover-border-color: var(--ac-red);
   --el-button-hover-text-color: var(--ac-red);
 }
 
 .wb-shell .wb-btn.el-button--success {
-  --el-button-bg-color: var(--ac-green);
-  --el-button-border-color: #5a9a20;
+  --el-button-bg-color: var(--app-green-deep);
+  --el-button-border-color: var(--app-green-deep);
   --el-button-text-color: #fff;
 }
 
-/* 筛选 chip（可用 button[type=button].wb-chip） */
+/* 筛选 chip */
 .wb-shell .wb-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 12px;
-  border-radius: 999px;
+  display: inline-flex; align-items: center;
+  padding: 5px 12px; border-radius: var(--app-radius-pill);
   border: 1.5px solid var(--ac-border);
-  background: var(--ac-paper);
-  font-size: 11px;
-  font-weight: 800;
-  font-family: inherit;
-  cursor: pointer;
+  background: var(--app-glass-card);
+  font-size: 11px; font-weight: 700;
+  font-family: inherit; cursor: pointer;
   color: var(--ac-ink-muted);
 }
 
 .wb-shell .wb-chip.is-active,
 .wb-shell .wb-chip.on {
-  background: rgba(25, 200, 185, 0.16);
-  border-color: rgba(25, 200, 185, 0.4);
-  color: #0d7a70;
+  background: rgba(142,200,160,0.18);
+  border-color: rgba(142,200,160,0.5);
+  color: var(--app-green-deep);
 }
 
 .wb-shell .wb-status-pill {
-  font-size: 11px;
-  font-weight: 700;
-  color: #0d7a70;
+  font-size: 11px; font-weight: 700;
+  color: var(--app-green-deep);
   padding: 4px 10px;
-  background: rgba(25, 200, 185, 0.12);
-  border-radius: 999px;
+  background: rgba(142,200,160,0.14);
+  border-radius: var(--app-radius-pill);
 }

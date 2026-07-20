@@ -1,8 +1,11 @@
 <script setup>
+
+import AppCard from "@/shared/components/AppCard.vue";
+import AppTabs from "@/shared/components/AppTabs.vue";
+import AppTable from "@/shared/components/AppTable.vue";
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { animate, stagger } from 'animejs'
-import { Button as AnimalButton, Card, Table, Tabs } from 'animal-island-vue'
 import PageHeader from '@/shared/components/PageHeader.vue'
 import { getTaskReport, formatTime } from './api.js'
 
@@ -116,8 +119,8 @@ function goRunner() { router.push('/runner') }
     <div class="doc-body">
       <!-- Top bar -->
       <div class="top-bar">
-        <AnimalButton size="small" @click="goBack">← 报告列表</AnimalButton>
-        <AnimalButton size="small" @click="goRunner">← 执行引擎</AnimalButton>
+        <el-button size="small" @click="goBack">← 报告列表</el-button>
+        <el-button size="small" @click="goRunner">← 执行引擎</el-button>
         <span class="badge" :class="outcomeBadgeClass(taskMeta.outcome)" style="margin-left:auto;">
           {{ outcomeLabel(taskMeta.outcome) }}
         </span>
@@ -162,8 +165,8 @@ function goRunner() { router.push('/runner') }
         </div>
       </div>
 
-      <!-- Tabs -->
-      <Tabs class="detail-tabs" :items="tabs" v-model="activeTab" :leaf-animation="true" :shadow="true">
+      <!-- AppTabs -->
+      <AppTabs class="detail-tabs" :items="tabs" v-model="activeTab" :leaf-animation="true" :shadow="true">
         <!-- ═══ TAB: 用例明细 ═══ -->
         <template #cases>
           <div v-if="caseItems.length" class="case-list">
@@ -233,8 +236,8 @@ function goRunner() { router.push('/runner') }
 
         <!-- ═══ TAB: 执行历史 ═══ -->
         <template v-if="(taskMeta.linked_runs || []).length > 0" #history>
-          <Card color="brown" pattern="brown" class="table-card">
-            <Table
+          <AppCard color="brown" pattern="brown" class="table-card">
+            <AppTable
               :columns="[
                 { title: 'Run ID', dataIndex: 'run_id', width: '220px' },
                 { title: '设备', dataIndex: 'device_serial', width: '130px' },
@@ -272,15 +275,15 @@ function goRunner() { router.push('/runner') }
               <template #cell-started_at="{ record }">
                 <span class="time-text">{{ formatTime(record.started_at) }}</span>
               </template>
-            </Table>
-          </Card>
+            </AppTable>
+          </AppCard>
         </template>
-      </Tabs>
+      </AppTabs>
     </div>
   </div>
   <div v-else class="not-found">
     <p>任务未找到</p>
-    <AnimalButton @click="router.push('/reports')">← 返回报告列表</AnimalButton>
+    <el-button @click="router.push('/reports')">← 返回报告列表</el-button>
   </div>
 </template>
 
@@ -325,11 +328,11 @@ function goRunner() { router.push('/runner') }
 .meta-value { color: #4a3a28; font-weight: 600; }
 .conclusion-text { line-height: 1.5; font-style: italic; }
 
-/* ── Tabs ── */
+/* ── AppTabs ── */
 .detail-tabs { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.detail-tabs :deep(.animal-tabs) { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-.detail-tabs :deep(.animal-tabs__content) { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; display: block; padding-top: 14px; }
-.detail-tabs :deep(.animal-tabs__inner) { min-height: min-content; }
+.detail-tabs :deep(.el-tabs) { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.detail-tabs :deep(.el-tabs__content) { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; display: block; padding-top: 14px; }
+.detail-tabs :deep(.el-tabs__inner) { min-height: min-content; }
 
 /* ── Case cards ── */
 .case-list { display: flex; flex-direction: column; gap: 10px; }
@@ -409,9 +412,9 @@ function goRunner() { router.push('/runner') }
   border-left: 3px solid #e85f5f; line-height: 1.5;
 }
 
-/* ── Table card ── */
+/* ── AppTable card ── */
 .table-card { overflow: hidden; }
-.table-card :deep(.animal-card__content) { padding: 0; border-radius: 14px; overflow: hidden; }
+.table-card :deep(.el-card__body) { padding: 0; border-radius: 14px; overflow: hidden; }
 
 .task-report-table :deep(th) {
   font-size: 12px; font-weight: 700; color: #6b5b48; padding: 12px 14px;

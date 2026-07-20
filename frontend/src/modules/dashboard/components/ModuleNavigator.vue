@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { staggerReveal } from '@/shared/animations.js'
-import { Card } from 'animal-island-vue'
+// AppCard → el-card (Element Plus auto-import)
 
 const props = defineProps({
   stats: { type: Object, default: () => ({}) },
@@ -102,10 +102,8 @@ function setCardRef(el, idx) {
         :key="mod.id"
         :class="'module-cell module-cell--' + mod.size"
       >
-        <Card
+        <el-card
           :ref="(el) => setCardRef(el, idx)"
-          :color="mod.cardColor"
-          :pattern="mod.pattern"
           class="module-card"
           @click="navigate(mod.path)"
         >
@@ -132,7 +130,7 @@ function setCardRef(el, idx) {
               </svg>
             </div>
           </div>
-        </Card>
+        </el-card>
       </div>
     </div>
   </div>
@@ -149,7 +147,7 @@ function setCardRef(el, idx) {
   color: var(--animal-text-color, #794f27); margin: 0;
 }
 .module-nav__subtitle {
-  font-size: 13px; color: var(--animal-text-color-secondary, #9f927d); font-weight: 500;
+  font-size: 13px; color: var(--app-text-secondary, #9f927d); font-weight: 500;
 }
 
 /* Bento Grid */
@@ -166,7 +164,7 @@ function setCardRef(el, idx) {
 .module-cell--tall { grid-row: span 2; }
 .module-cell--wide { grid-column: span 2; }
 
-/* Card within cell */
+/* AppCard within cell */
 .module-card {
   height: 100%;
   cursor: pointer;
@@ -175,7 +173,7 @@ function setCardRef(el, idx) {
 .module-card:hover {
   transform: translateY(-3px);
 }
-.module-card :deep(.animal-card-body) {
+.module-card :deep(.el-card__body) {
   height: 100%;
   padding: 18px 20px;
 }

@@ -31,7 +31,7 @@ async def _execute_tests(
     effective_serial = serial or (getattr(runner.device, "serial", None) or "")
     try:
         client_tid = _run_client_task.get(run_id, "")
-        dev_serial = serial or (runner.device.serial if hasattr(runner.device, "serial") else "")
+        dev_serial = serial or (runner.device_conn.serial if hasattr(runner, "device_conn") and hasattr(runner.device_conn, "serial") else "")
         _log.info(f"_execute_tests 开始: {run_id} client_tid={client_tid} serial={dev_serial}")
 
         # Persist run record with case snapshot before execution. The snapshot
@@ -101,7 +101,7 @@ async def _execute_tests(
         _log.info(f"_execute_tests run_record={run_record.id if run_record else 'None'} status={run_record.status if run_record else 'N/A'}")
 
         # 设备检查已在 delayed_execute 完成；此处输出执行计划
-        dev_serial = serial or (runner.device.serial if hasattr(runner.device, "serial") else "?")
+        dev_serial = serial or (runner.device_conn.serial if hasattr(runner, "device_conn") and hasattr(runner.device_conn, "serial") else "?")
         await test_callbacks.on_log(run_id, f"📱 当前设备 ID: {dev_serial}")
         await test_callbacks.on_log(run_id, f"循环 {loop_count} 轮 · 共 {len(test_cases)} 个用例")
         for tc in test_cases:

@@ -3,7 +3,6 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import client from '@/shared/api-client.js'
 import { ElMessage } from 'element-plus'
-import { Switch as AnimalSwitch, Divider as AnimalDivider } from 'animal-island-vue'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import { IconArrowLeft, IconSave, IconPlus, IconTrash } from '@/shared/icons/index.js'
 
@@ -224,9 +223,9 @@ async function save() {
                 <span v-if="!form.avatar?.startsWith('/api/ai/avatars/')">{{ form.avatar || '🤖' }}</span>
               </div>
               <input ref="fileInput" type="file" accept="image/*" @change="handleAvatarUpload" style="display:none" />
-              <AnimalButton :loading="uploading" size="default" @click="triggerUpload">
+              <el-button :loading="uploading" size="default" @click="triggerUpload">
                 {{ uploading ? '上传中...' : '上传图片' }}
-              </AnimalButton>
+              </el-button>
               <span class="avatar-hint">或直接输入 Emoji 作为头像</span>
             </div>
           </el-form-item>
@@ -262,9 +261,9 @@ async function save() {
           </el-form-item>
           <el-form-item label="API Key">
             <el-input v-model="form.api_key" type="password" show-password placeholder="sk-..." />
-            <AnimalButton :loading="detectingModels" @click="detectModels" style="margin-left:8px" size="default">
+            <el-button :loading="detectingModels" @click="detectModels" style="margin-left:8px" size="default">
               {{ detectingModels ? '检测中...' : '🔍 检测模型' }}
-            </AnimalButton>
+            </el-button>
           </el-form-item>
           <el-form-item v-if="form.model_provider==='custom'" label="API 地址">
             <el-input v-model="form.base_url" placeholder="https://api.example.com/v1" />
@@ -302,11 +301,11 @@ async function save() {
             <el-input-number v-model="form.max_iters" :min="1" :max="100" />
           </el-form-item>
           <el-form-item label="并行工具调用">
-            <AnimalSwitch v-model="form.parallel_tool_calls" />
+            <el-switch v-model="form.parallel_tool_calls" />
             <span class="form-hint">允许智能体同时调用多个工具</span>
           </el-form-item>
           <el-form-item label="打印提示消息">
-            <AnimalSwitch v-model="form.print_hint_msg" />
+            <el-switch v-model="form.print_hint_msg" />
             <span class="form-hint">在控制台输出运行时提示</span>
           </el-form-item>
         </el-form>
@@ -332,20 +331,20 @@ async function save() {
             </el-form-item>
           </template>
           <el-form-item label="元工具">
-            <AnimalSwitch v-model="form.enable_meta_tool" />
+            <el-switch v-model="form.enable_meta_tool" />
             <span class="form-hint">允许智能体动态管理自己的工具集</span>
           </el-form-item>
           <el-form-item label="重写查询">
-            <AnimalSwitch v-model="form.enable_rewrite_query" />
+            <el-switch v-model="form.enable_rewrite_query" />
             <span class="form-hint">LLM 检索前重写用户查询</span>
           </el-form-item>
           <el-form-item label="知识库检索">
-            <AnimalSwitch v-model="form.enable_knowledge_base" />
+            <el-switch v-model="form.enable_knowledge_base" />
             <span class="form-hint">开启后对话将自动搜索项目文档（ChromaDB RAG）作为上下文</span>
           </el-form-item>
         </el-form>
 
-        <AnimalDivider>MCP 服务器 ({{ form.tools.length }})</AnimalDivider>
+        <el-divider>MCP 服务器 ({{ form.tools.length }})</el-divider>
         <button class="add-tool-btn" @click="addTool">
           <IconPlus :size="16" />
           <span>添加 MCP 服务器</span>
@@ -361,7 +360,7 @@ async function save() {
             <el-tag :type="t.enabled ? 'success' : 'info'" effect="light" size="small">
               {{ t.enabled ? '已启用' : '已禁用' }}
             </el-tag>
-            <AnimalSwitch v-model="t.enabled" size="small" />
+            <el-switch v-model="t.enabled" size="small" />
             <button class="tool-del-btn" @click="removeTool(i)" title="删除">
               <IconTrash :size="16" />
             </button>
@@ -414,15 +413,15 @@ async function save() {
         </div>
         <el-form label-width="120px" class="agent-form">
           <el-form-item label="TTS 语音">
-            <AnimalSwitch v-model="form.tts_enabled" />
+            <el-switch v-model="form.tts_enabled" />
             <span class="form-hint">启用文本转语音输出</span>
           </el-form-item>
         </el-form>
 
-        <AnimalDivider>内存压缩 (CompressionConfig)</AnimalDivider>
+        <el-divider>内存压缩 (CompressionConfig)</el-divider>
         <el-form label-width="120px" class="agent-form">
           <el-form-item label="启用压缩">
-            <AnimalSwitch v-model="form.compression_enabled" />
+            <el-switch v-model="form.compression_enabled" />
             <span class="form-hint">对话过长时自动压缩历史</span>
           </el-form-item>
           <template v-if="form.compression_enabled">

@@ -290,7 +290,7 @@
   padding: 0;
   cursor: default;
 }
-.table-card :deep(.animal-card__content) {
+.table-card :deep(.el-card__body) {
   padding: 0;
   width: 100%;
 }
@@ -301,7 +301,7 @@
   display: flex;
   flex-direction: column;
 }
-.case-table :deep(.animal-table-wrapper) {
+.case-table :deep(.el-table__body-wrapper) {
   width: 100%;
   overflow: visible !important;
   max-height: none !important;

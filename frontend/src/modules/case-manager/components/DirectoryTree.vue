@@ -2,7 +2,7 @@
 import { ref, watch, nextTick, computed, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { Button as AnimalButton } from "animal-island-vue";
+// Button → el-button (Element Plus auto-import);
 import EmptyState from "@/shared/components/patterns/EmptyState.vue";
 import { formatApiError } from "@/shared/api-client.js";
 import {
@@ -494,15 +494,15 @@ onUnmounted(() => {
     <div v-if="!selectMode" class="tree-header">
       <span class="tree-header__title">📁 目录结构</span>
       <div class="tree-header__actions">
-        <AnimalButton
+        <el-button
           size="small"
           type="primary"
           @click="toggleSelectMode"
           title="批量选择"
-          >☑ 选择</AnimalButton
+          >☑ 选择</el-button
         >
-        <AnimalButton size="small" @click="openCreateRoot" title="新建一级目录"
-          >+</AnimalButton
+        <el-button size="small" @click="openCreateRoot" title="新建一级目录"
+          >+</el-button
         >
       </div>
     </div>
@@ -511,18 +511,18 @@ onUnmounted(() => {
     <div v-else class="tree-header tree-header--select">
       <span class="tree-header__title">已选 {{ checkedCount }} 项</span>
       <div class="tree-header__actions">
-        <AnimalButton size="small" @click="handleSelectAll">
+        <el-button size="small" @click="handleSelectAll">
           {{ selectAll ? "☐ 取消全选" : "☑ 全选" }}
-        </AnimalButton>
-        <AnimalButton
+        </el-button>
+        <el-button
           size="small"
           type="primary"
           :disabled="checkedCount === 0"
           @click="openBatchMoveDialog"
-          >📂 移动到...</AnimalButton
+          >📂 移动到...</el-button
         >
-        <AnimalButton size="small" @click="toggleSelectMode"
-          >✕ 退出选择</AnimalButton
+        <el-button size="small" @click="toggleSelectMode"
+          >✕ 退出选择</el-button
         >
       </div>
     </div>
@@ -636,8 +636,8 @@ onUnmounted(() => {
         @keyup.enter="handleDialogConfirm"
       />
       <template #footer>
-        <AnimalButton @click="dialogVisible = false">取消</AnimalButton>
-        <AnimalButton type="primary" @click="handleDialogConfirm">确定</AnimalButton>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleDialogConfirm">确定</el-button>
       </template>
     </el-dialog>
 
@@ -661,12 +661,12 @@ onUnmounted(() => {
         />
       </el-select>
       <template #footer>
-        <AnimalButton @click="moveDialogVisible = false">取消</AnimalButton>
-        <AnimalButton
+        <el-button @click="moveDialogVisible = false">取消</el-button>
+        <el-button
           type="primary"
           :disabled="!moveTargetDirId"
           @click="confirmBatchMove"
-          >确认移动</AnimalButton>
+          >确认移动</el-button>
       </template>
     </el-dialog>
   </div>

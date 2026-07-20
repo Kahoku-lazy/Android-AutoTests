@@ -14,52 +14,13 @@
 | Model 类 | `PascalCase` | `Device`, `TestCase`, `TestRun` |
 | CSS class | `kebab-case` | `.device-card`, `.test-result` |
 
-## 设备端测试步骤 (14 种)
+## 设备端测试步骤
 
-命名采用 `snake_case`，动词在前，语义直观。
-
-### 点击操作
-
-| 步骤 | 功能 |
-|------|------|
-| `click` | 点击匹配的单个 UI 元素 |
-| `click_indexed` | 点击 XPath 匹配列表中的第 N 个元素（索引从 0 开始） |
-| `retry_click` | 带重试的点击，元素未出现时自动等待并重试，适用于加载延迟场景 |
-
-### 等待操作
-
-| 步骤 | 功能 |
-|------|------|
-| `wait` | 等待指定元素出现，超时可配，常用于页面跳转后确认加载完成 |
-| `wait_disappear` | 等待指定元素从屏幕上消失，用于 loading 遮罩、过渡动画等 |
-| `wait_either` | 等待两个候选元素之一出现，用于不确定跳转结果的分支场景 |
-| `wait_toast` | 等待 Toast 弹出并提取消息文本，用于校验操作反馈 |
-
-### 验证操作
-
-| 步骤 | 功能 |
-|------|------|
-| `verify_text` | 校验指定元素的 text 内容是否匹配期望值，用于断言页面状态 |
-| `poll_text` | 轮询元素文本并在变化时返回，用于监控动态更新的 UI 文本 |
-
-### 应用控制
-
-| 步骤 | 功能 |
-|------|------|
-| `start_app` | 启动目标 App（通过 package name） |
-| `kill_app` | 强制停止目标 App |
-| `restart_app` | 先 kill 再 start，用于恢复 App 初始状态 |
-
-### 工具步骤
-
-| 步骤 | 功能 |
-|------|------|
-| `sleep` | 固定时长暂停（秒），用于等待非 UI 操作的完成 |
-| `log` | 在测试报告中插入一条文本日志，不执行任何设备操作 |
+> **获取完整步骤类型列表**：Read `models/step_types.py` → `class StepType(Enum)`。这是唯一真相源。步骤分发映射在 `apps/test_runner/executor.py` → `StepExecutor.execute()`。
 
 ## XPath 策略
 
-`gen_xpath_candidates()` 生成 8 种 XPath，按匹配数升序排列，优先选 count=1。
+> **获取 XPath 生成策略**：Read `apps/element_locator/service.py` → `gen_xpath_candidates()`。生成 8 种 XPath，按匹配数升序排列，优先选 count=1。
 
 ## 前端主题隔离
 

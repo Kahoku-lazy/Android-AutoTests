@@ -15,7 +15,7 @@ from .helpers import (
 
 from ..runner import (
     stop_run, get_active_run, is_device_busy,
-    list_active_runs,
+    list_active_runs, _active_runs,
 )
 from ..models import TestResult, TestRunRecord, TaskCard
 from .. import state_machine as sm
@@ -147,7 +147,7 @@ def list_active(request):
                     pass
 
     active = []
-    for run_id, state in list_active_runs.items():
+    for run_id, state in _active_runs.items():
         if state.is_running:
             active.append(
                 {

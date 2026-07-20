@@ -3,7 +3,6 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { pageEnter, pageLeave, staggerIn, iconBounce } from '@/shared/animations.js'
 import AppSidebar from '@/shared/components/AppSidebar.vue'
-import { Cursor } from 'animal-island-vue'
 
 const route = useRoute()
 const transitionName = ref('fade-slide')
@@ -17,7 +16,7 @@ function onBeforeEnter(el) {
 function onEnter(el, done) {
   pageEnter(el, () => {
     const sections = el.querySelectorAll(
-      '.doc-section, .animal-card, .agent-card, .kpi-card, .task-card, .wb-header'
+      '.doc-section, .el-card, .agent-card, .kpi-card, .task-card, .wb-header'
     )
     if (sections.length) staggerIn(sections, 45)
     const mark = el.querySelector('.brand-mark')
@@ -32,7 +31,7 @@ function onLeave(el, done) {
 </script>
 
 <template>
-  <Cursor :force-all="false">
+  <div class="ac-cursor" :force-all="false">
     <div class="app-shell">
       <AppSidebar v-if="showSidebar" />
       <main class="main-content">
@@ -58,7 +57,7 @@ function onLeave(el, done) {
         />
       </main>
     </div>
-  </Cursor>
+  </div>
 </template>
 
 <style scoped>

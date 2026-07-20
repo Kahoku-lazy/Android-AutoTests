@@ -43,6 +43,34 @@ export function deleteDefinition(id) {
   return client.delete(`/cases/definitions/${id}`);
 }
 
+// ── 编辑锁 ──
+
+export function acquireEditLock(caseId) {
+  return client.post(`/cases/definitions/${caseId}/lock`);
+}
+
+export function releaseEditLock(caseId, force = false) {
+  return client.post(`/cases/definitions/${caseId}/unlock`, { force });
+}
+
+// ── 用例持久锁（创建者控制）──
+
+export function caseLock(caseId) {
+  return client.post(`/cases/definitions/${caseId}/case-lock`);
+}
+
+export function caseUnlock(caseId) {
+  return client.post(`/cases/definitions/${caseId}/case-unlock`);
+}
+
+export function setVisibility(caseId, visibility, permittedUsers = []) {
+  return client.post(`/cases/definitions/${caseId}/visibility`, { visibility, permitted_users: permittedUsers });
+}
+
+export function setDirectoryPermission(dirId, allowCreate, allowDelete) {
+  return client.post(`/cases/directories/${dirId}/permission`, { allow_create: allowCreate, allow_delete: allowDelete });
+}
+
 // ── YAML 导出 ──
 
 export function exportYaml(testCaseName) {

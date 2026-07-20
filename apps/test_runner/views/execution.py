@@ -10,7 +10,7 @@ from models.step_types import TestStep
 from models.test_models import TestCaseDef
 from ..runner import (
     TestRunner, stop_run, is_device_busy, mark_device_busy, mark_device_idle,
-    _u2_executor,
+    _device_executor as _u2_executor,
 )
 from ..device_connect import DeviceCheckError, check_and_connect_async
 from ..callbacks import test_callbacks

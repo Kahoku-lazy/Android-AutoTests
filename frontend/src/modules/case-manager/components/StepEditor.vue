@@ -3,7 +3,6 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import { bus } from "@/shared/event-bus.js";
 import client from "@/shared/api-client.js";
 import { ElMessageBox, ElMessage } from "element-plus";
-import { Modal, Button as AnimalButton } from "animal-island-vue";
 import {
   IconPlus,
   IconRefresh,
@@ -450,25 +449,25 @@ function runFromCurrent(idx) {
       <span class="step-header__title">步骤列表 ({{ steps.length }})</span>
       <div class="step-header__actions">
         <template v-if="steps.length">
-          <AnimalButton
+          <el-button
             size="small"
             type="primary"
             plain
             :loading="runningBatch && runningFromIdx === 0"
             @click="runAllSteps"
             :disabled="runningBatch"
-            >▶▶ 从头执行</AnimalButton>
-          <AnimalButton
+            >▶▶ 从头执行</el-button>
+          <el-button
             size="small"
             @click="loadElementLibrary"
             text
             title="刷新元素库"
             ><IconRefresh :size="14"
-          /></AnimalButton>
+          /></el-button>
         </template>
-        <AnimalButton size="small" type="primary" @click="addStep">
+        <el-button size="small" type="primary" @click="addStep">
           <IconPlus :size="14" style="margin-right: 4px" />添加步骤
-        </AnimalButton>
+        </el-button>
       </div>
     </div>
 
@@ -512,15 +511,15 @@ function runFromCurrent(idx) {
           >
         </span>
         <span class="step-actions" @click.stop>
-          <AnimalButton
+          <el-button
             size="small"
             type="primary"
             plain
             :loading="runningStep === idx"
             @click="runStep(idx, step)"
             title="单步执行"
-            >▶</AnimalButton>
-          <AnimalButton
+            >▶</el-button>
+          <el-button
             size="small"
             type="primary"
             plain
@@ -528,21 +527,21 @@ function runFromCurrent(idx) {
             @click="runFromCurrent(idx)"
             title="从这步开始执行到结束"
             :disabled="runningBatch && runningFromIdx !== idx"
-            >▶▶ ▸</AnimalButton>
-          <AnimalButton
+            >▶▶ ▸</el-button>
+          <el-button
             size="small"
             plain
             @click="duplicateStep(idx)"
             title="复制步骤"
-            >📋</AnimalButton>
-          <AnimalButton type="primary"
+            >📋</el-button>
+          <el-button type="primary"
             size="small"
             
             plain
             @click="requestRemoveStep(idx)"
            danger>
             <IconTrash :size="14" style="margin-right: 4px" />删除
-          </AnimalButton>
+          </el-button>
         </span>
       </div>
 
@@ -711,13 +710,13 @@ function runFromCurrent(idx) {
     </div>
 
     <div v-if="steps.length > 0" class="add-bottom">
-      <AnimalButton size="small" type="primary" @click="addStep">
+      <el-button size="small" type="primary" @click="addStep">
         <IconPlus :size="14" style="margin-right: 4px" />添加步骤
-      </AnimalButton>
+      </el-button>
     </div>
 
     <!-- Delete confirmation -->
-    <Modal
+    <el-dialog
       v-model:open="deleteDialog.visible"
       title="删除步骤"
       width="360px"
@@ -726,12 +725,12 @@ function runFromCurrent(idx) {
       <p>确定要删除第 {{ deleteDialog.idx + 1 }} 个步骤吗？</p>
       <el-checkbox v-model="deleteDialog.skip">本次编辑不再询问</el-checkbox>
       <template #footer>
-        <AnimalButton @click="deleteDialog.visible = false">取消</AnimalButton>
-        <AnimalButton type="primary" danger @click="confirmRemove"
-          >确定删除</AnimalButton
+        <el-button @click="deleteDialog.visible = false">取消</el-button>
+        <el-button type="primary" danger @click="confirmRemove"
+          >确定删除</el-button
         >
       </template>
-    </Modal>
+    </el-dialog>
   </div>
 </template>
 
@@ -841,7 +840,7 @@ function runFromCurrent(idx) {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--animal-primary-color, #19c8b9);
+  background: var(--app-green-deep, #19c8b9);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -940,7 +939,7 @@ function runFromCurrent(idx) {
 .el-opt-page {
   font-size: 10px;
   color: #fff;
-  background: var(--animal-primary-color, #19c8b9);
+  background: var(--app-green-deep, #19c8b9);
   padding: 1px 6px;
   border-radius: 10px;
   flex-shrink: 0;

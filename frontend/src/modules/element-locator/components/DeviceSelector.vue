@@ -77,7 +77,7 @@ async function refreshDevices() {
     </el-select>
 
     <!-- Connect / Disconnect buttons -->
-    <AnimalButton
+    <el-button
       v-if="!store.isConnected"
       type="primary"
       size="small"
@@ -85,8 +85,8 @@ async function refreshDevices() {
       @click="handleConnect"
     >
       连接
-    </AnimalButton>
-    <AnimalButton type="primary"
+    </el-button>
+    <el-button type="primary"
       v-else
       
       size="small"
@@ -94,7 +94,7 @@ async function refreshDevices() {
       @click="handleDisconnect"
      danger>
       断开
-    </AnimalButton>
+    </el-button>
 
     <!-- Current device indicator -->
     <div v-if="store.isConnected && store.currentDevice" class="current-info">

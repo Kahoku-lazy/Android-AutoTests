@@ -2,7 +2,7 @@
 
 > 关联模块：`apps/case_manager/` · 前端：`frontend/src/modules/case-manager/`
 > 关联需求：[`PRD-03-用例管理`](../02-PRD需求/PRD-03-用例管理.md) · 关联架构：[`架构大纲`](./架构大纲.md) §4.3
-> 版本：v1.0 · 日期：2026-07-16
+> 版本：v1.2 · 日期：2026-07-17
 
 ---
 
@@ -69,8 +69,9 @@ frontend/src/modules/case-manager/
 │   │       └── 批量操作                 勾选 + 批量移动/删除
 │   └── 右侧: 用例区
 │       ├── 用例列表/卡片视图           搜索/筛选/排序
+│       │   └── CaseCard.vue            卡片显示：创建人/修改人/🔒图标
 │       ├── 用例详情面板 (内联)         点击查看步骤，不跳转
-│       ├── CaseEditor.vue              新建/编辑用例对话框
+│       ├── CaseEditor.vue              编辑锁获取/释放 · 只读横幅 · 强制编辑
 │       │   └── StepEditor.vue (~949行)
 │       │       ├── 步骤类型选择器       17 种原子步骤
 │       │       ├── 步骤参数配置         根据类型动态显示字段
@@ -124,7 +125,7 @@ apps/case_manager/
 
 ## 4. API 设计
 
-### 4.1 REST 端点 (10 个)
+### 4.1 REST 端点 (14 个)
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
@@ -138,6 +139,12 @@ apps/case_manager/
 | `POST` | `/api/cases/definitions` | 创建/更新用例 |
 | `POST` | `/api/cases/definitions/batch` | 批量操作（移动/删除/启禁） |
 | `GET` | `/api/cases/definitions/{id}` | 单个用例详情 + 步骤 |
+| | **编辑锁** | |
+| `POST` | `/api/cases/definitions/{id}/lock` | 获取编辑锁（30min 超时，423 冲突） |
+| `POST` | `/api/cases/definitions/{id}/unlock` | 释放编辑锁（支持 force 强制） |
+| | **持久锁** | |
+| `POST` | `/api/cases/definitions/{id}/case-lock` | 创建者锁定用例（仅创建者） |
+| `POST` | `/api/cases/definitions/{id}/case-unlock` | 创建者解除锁定（仅创建者） |
 | | **导入导出** | |
 | `POST` | `/api/cases/export/yaml` | 导出为 YAML |
 | `GET` | `/api/cases/exports/{filename}` | 下载 YAML 文件 |
@@ -201,6 +208,11 @@ erDiagram
         text precondition "前置条件"
         text expected_result "预期结果"
         text metrics "量化指标"
+        string created_by "创建者用户ID"
+        string updated_by "最后修改者用户ID"
+        string editing_by "当前编辑锁持有者"
+        datetime editing_since "编辑锁获取时间"
+        bool locked "持久锁（创建者控制）"
         datetime created_at
         datetime updated_at
     }
@@ -233,6 +245,11 @@ erDiagram
 | `precondition` | TEXT | 前置条件 |
 | `expected_result` | TEXT | 预期结果 |
 | `metrics` | TEXT | 量化指标 |
+| `created_by` | VARCHAR(200) | 创建者用户 ID |
+| `updated_by` | VARCHAR(200) | 最后修改者用户 ID |
+| `editing_by` | VARCHAR(200) | 当前编辑锁持有者（空=无人编辑） |
+| `editing_since` | DateTime | 编辑锁获取时间（30min 超时自动释放） |
+| `locked` | BOOL | 持久锁：创建者控制，锁定后他人只读 |
 | `created_at` | DateTime | 创建时间 |
 | `updated_at` | DateTime | 更新时间 |
 
@@ -289,3 +306,4 @@ def get_test_points_for_export() -> QuerySet  # 从 element_locator 获取
 |------|------|----------|
 | v1.0 | 2026-07-16 | 初始版本：基于 `项目架构.md` 和 `PRD-03-用例管理.md` 重构 |
 | v1.1 | 2026-07-16 | **代码对照审计**：TestDefinition.id 修正为 CharField PK；补全 IoT PRD 字段（priority/design_method/precondition/expected_result/metrics）；新增 legacy `steps` 字段说明 |
+| v1.2 | 2026-07-17 | **协作功能**：+5 字段（created_by/updated_by/editing_by/editing_since/locked）；+4 端点（lock/unlock/case-lock/case-unlock）；编辑锁 + 持久锁 + 强制编辑机制 |

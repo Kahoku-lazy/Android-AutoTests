@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import client from "@/shared/api-client.js";
+import client, { getToken } from "@/shared/api-client.js";
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
 import { pressFeedback, iconBounce } from "@/shared/animations.js";
 import AnimatedMascot from "@/shared/components/AnimatedMascot.vue";
@@ -233,7 +233,7 @@ async function handleFileUpload(e) {
   const formData = new FormData();
   formData.append("file", file);
   try {
-    const token = localStorage.getItem("access_token");
+    const token = getToken();
     const resp = await fetch("/api/ai/upload-file", {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },

@@ -391,7 +391,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:5173/src/modules/ai-assi
 # 2. 检查对应的 API 是否返回数据（期望 ok:true + 有数据）
 TOKEN=$(curl -s -X POST http://localhost:8765/api/ai/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}' | python -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+  -d '{"username":"<user>","password":"<pass>"}' | python -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 curl -s http://localhost:8765/api/ai/agents -H "Authorization: Bearer $TOKEN" | python -m json.tool | head -20
 ```
 

@@ -9,7 +9,23 @@ from django.conf import settings
 from apps.element_locator.api import simple_yaml_dump
 from apps.element_locator.models import Element, PageFlow
 from .models import TestDefinition, CaseDirectory
-from .api import get_directory_tree, create_directory, update_directory, delete_directory, batch_move_items
+from .api import get_directory_tree, create_directory, update_directory, delete_directory, batch_move_items, _parse_datetime
+
+
+def _resolve_username(user_id):
+    """Convert Django user ID to username string. Already-usernames pass through."""
+    if not user_id:
+        return ""
+    s = str(user_id)
+    # Already a non-numeric username → return as-is
+    if not s.isdigit():
+        return s
+    # Numeric ID → resolve to username from User model
+    try:
+        from django.contrib.auth.models import User
+        return User.objects.get(id=int(s)).username
+    except Exception:
+        return s
 
 
 # ── Directory Management ──
@@ -33,6 +49,7 @@ def directory_create(request):
         name=data.get("name", ""),
         parent_id=data.get("parent_id"),
         sort_order=data.get("sort_order", 0),
+        created_by=_resolve_username(getattr(request, 'user_id', None)),
     )
     if ok:
         return JsonResponse({"ok": True, "directory": result})
@@ -46,7 +63,7 @@ def directory_detail(request, dir_id):
         data = json.loads(request.body)
         action = data.get("action", "update")
         if action == "delete":
-            ok, result = delete_directory(dir_id)
+            ok, result = delete_directory(dir_id, deleted_by=_resolve_username(getattr(request, 'user_id', None)))
         else:
             ok, result = update_directory(
                 dir_id,
@@ -92,6 +109,16 @@ def definitions_handler(request):
     if request.method == "GET":
         directory_id = request.GET.get("directory_id")
         qs = TestDefinition.objects.order_by("category", "title")
+
+        # Visibility filter: hide non-public cases from unauthorized users
+        current_user = _resolve_username(getattr(request, 'user_id', None))
+        from django.db.models import Q
+        # Build permitted_users filter with exact JSON match (not icontains)
+        restricted_q = Q(visibility="public") | Q(created_by=current_user)
+        if current_user:
+            # Exact username match inside JSON array: "[\"user1\",\"user2\"]" contains "\"username\""
+            restricted_q |= Q(visibility="restricted") & Q(permitted_users__icontains=f'"{current_user}"')
+        qs = qs.filter(restricted_q)
 
         if directory_id and directory_id.isdigit():
             # Include cases in this directory AND its subdirectories
@@ -140,6 +167,10 @@ def definitions_handler(request):
             except CaseDirectory.DoesNotExist:
                 pass
 
+        # ── User tracking ──
+        current_user = _resolve_username(getattr(request, 'user_id', None))
+        is_new_case = not TestDefinition.objects.filter(id=case_id).exists()
+
         defaults = {
             "title": data.get("title", ""),
             "category": data.get("category", ""),
@@ -154,9 +185,20 @@ def definitions_handler(request):
             "precondition": data.get("precondition", ""),
             "expected_result": data.get("expected_result", ""),
             "metrics": data.get("metrics", ""),
+            "visibility": data.get("visibility", "public"),
+            "permitted_users": json.dumps(data.get("permitted_users", []), ensure_ascii=False),
+            "permission": data.get("permission", "edit"),
+            "permitted_editors": json.dumps(data.get("permitted_editors", []), ensure_ascii=False),
         }
 
+        # Track user: set created_by on first save, always set updated_by
+        if is_new_case and current_user:
+            defaults["created_by"] = current_user
+        if current_user:
+            defaults["updated_by"] = current_user
+
         # Check for duplicate title in the same directory
+        title = defaults["title"]
         title = defaults["title"]
         existing = TestDefinition.objects.filter(
             directory=directory, title=title
@@ -167,6 +209,19 @@ def definitions_handler(request):
                 "ok": False,
                 "error": f"目录「{dir_name}」下已存在同名用例「{title}」（ID: {existing.id}）",
             }, status=409)
+
+        # Optimistic lock: prevent lost updates
+        client_updated_at = data.get("updated_at")
+        if case_id and client_updated_at:
+            current = TestDefinition.objects.filter(id=case_id).only("id", "updated_at").first()
+            if current and current.updated_at:
+                client_ts = _parse_datetime(client_updated_at)
+                db_ts = current.updated_at.replace(microsecond=0)
+                if client_ts and client_ts != db_ts:
+                    return JsonResponse({
+                        "ok": False,
+                        "error": f"用例「{title or case_id}」已被他人修改，请刷新后重试",
+                    }, status=409)
 
         TestDefinition.objects.update_or_create(id=case_id, defaults=defaults)
         return JsonResponse({"ok": True, "id": case_id})
@@ -181,6 +236,16 @@ def definition_detail(request, case_id):
             row = TestDefinition.objects.get(id=case_id)
         except TestDefinition.DoesNotExist:
             return JsonResponse({"ok": False, "error": "not found"}, status=404)
+
+        # Visibility check: hide non-public cases from unauthorized users
+        current_user = _resolve_username(getattr(request, 'user_id', None))
+        if row.visibility == "hidden" and row.created_by != current_user:
+            return JsonResponse({"ok": False, "error": "not found"}, status=404)
+        if row.visibility == "restricted":
+            permitted = json.loads(row.permitted_users or "[]")
+            if row.created_by != current_user and current_user not in permitted:
+                return JsonResponse({"ok": False, "error": "not found"}, status=404)
+
         return JsonResponse({"ok": True, "definition": _serialize_definition(row)})
 
     elif request.method == "DELETE":
@@ -266,6 +331,15 @@ def _serialize_definition(row):
         "package_name": row.package_name,
         "created_at": str(row.created_at),
         "updated_at": str(row.updated_at),
+        "created_by": _resolve_username(row.created_by) if row.created_by else "",
+        "updated_by": _resolve_username(row.updated_by) if row.updated_by else "",
+        "editing_by": _resolve_username(row.editing_by) if row.editing_by else "",
+        "editing_since": str(row.editing_since) if row.editing_since else "",
+        "locked": row.locked,
+        "visibility": row.visibility,
+        "permitted_users": json.loads(row.permitted_users or "[]"),
+        "permission": row.permission,
+        "permitted_editors": json.loads(row.permitted_editors or "[]"),
         "directory_id": row.directory_id,
         "directory_name": row.directory.name if row.directory else None,
         # IoT PRD fields
@@ -365,6 +439,244 @@ def list_exports(request):
             )
     files.sort(key=lambda x: x["time"], reverse=True)
     return JsonResponse({"ok": True, "files": files})
+
+
+# ═══════════════════════════════════════════════
+# 编辑锁（per-case edit locking）
+# ═══════════════════════════════════════════════
+
+EDIT_LOCK_TIMEOUT_SECONDS = 1800  # 30 min — release if user is idle
+
+
+@csrf_exempt
+def acquire_edit_lock(request, case_id):
+    """POST /api/cases/definitions/{case_id}/lock — 获取用例编辑锁。
+
+    成功 → 200 {ok, editing_by, editing_since}
+    已被他人锁定 → 423 Locked {ok, error, editing_by, editing_since}
+    用例不存在 → 404
+    """
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+
+    current_user = _resolve_username(getattr(request, 'user_id', None))
+    if not current_user:
+        return JsonResponse({"ok": False, "error": "未登录"}, status=401)
+
+    try:
+        case = TestDefinition.objects.only("id", "created_by", "editing_by", "editing_since", "permission", "permitted_editors").get(id=case_id)
+    except TestDefinition.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "用例不存在"}, status=404)
+
+    now = datetime.now()
+
+    # Permission check: deny non-authorized users
+    if case.created_by != current_user:
+        if case.permission == "readonly":
+            return JsonResponse({"ok": False, "error": "此用例为只读模式，仅创建者可编辑"}, status=423)
+        if case.permission == "restricted":
+            editors = json.loads(case.permitted_editors or "[]")
+            if current_user not in editors:
+                return JsonResponse({"ok": False, "error": f"此用例仅限指定用户编辑"}, status=423)
+
+    # Already locked by someone else?
+    if case.editing_by and case.editing_by != current_user:
+        if case.editing_since:
+            elapsed = (now - case.editing_since).total_seconds()
+            if elapsed < EDIT_LOCK_TIMEOUT_SECONDS:
+                return JsonResponse({
+                    "ok": False,
+                    "error": f"用例正被 {case.editing_by} 编辑中",
+                    "editing_by": case.editing_by,
+                    "editing_since": str(case.editing_since),
+                }, status=423)
+            # Lock expired → fall through and take over
+        # Lock expired or no timestamp → take over
+
+    # Acquire or refresh lock
+    case.editing_by = current_user
+    case.editing_since = now
+    case.save(update_fields=["editing_by", "editing_since"])
+
+    return JsonResponse({
+        "ok": True,
+        "editing_by": current_user,
+        "editing_since": now.isoformat(),
+        "created_by": case.created_by,
+    })
+
+
+@csrf_exempt
+def release_edit_lock(request, case_id):
+    """POST /api/cases/definitions/{case_id}/unlock — 释放编辑锁。
+
+    force=true 时：创建者可以强制踢出其他编辑者。
+    """
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+
+    current_user = _resolve_username(getattr(request, 'user_id', None))
+    if not current_user:
+        return JsonResponse({"ok": False, "error": "未登录"}, status=401)
+
+    try:
+        case = TestDefinition.objects.only("id", "editing_by", "editing_since", "created_by").get(id=case_id)
+    except TestDefinition.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "用例不存在"}, status=404)
+
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError:
+        body = {}
+
+    force = body.get("force", False)
+
+    # Force unlock: only creator can do it
+    if force:
+        if case.created_by and case.created_by != current_user:
+            return JsonResponse({
+                "ok": False,
+                "error": "只有用例创建者可以强制解除编辑锁",
+            }, status=403)
+        # Creator force-unlock: clear the lock
+        case.editing_by = ""
+        case.editing_since = None
+        case.save(update_fields=["editing_by", "editing_since"])
+        return JsonResponse({"ok": True, "force_unlocked": True})
+
+    # Normal unlock: only the lock holder or creator can release
+    if case.editing_by and case.editing_by != current_user and case.created_by != current_user:
+        return JsonResponse({
+            "ok": False,
+            "error": "只有编辑者或创建者可以释放编辑锁",
+        }, status=403)
+
+    if not case.editing_by:
+        return JsonResponse({"ok": True, "already_unlocked": True})
+
+    case.editing_by = ""
+    case.editing_since = None
+    case.save(update_fields=["editing_by", "editing_since"])
+    return JsonResponse({"ok": True, "released": True})
+
+
+# ═══════════════════════════════════════════════
+# 用例持久锁（创建者控制，锁定后他人只读）
+# ═══════════════════════════════════════════════
+
+@csrf_exempt
+def case_lock(request, case_id):
+    """POST /api/cases/definitions/{case_id}/case-lock — 创建者锁定用例（他人只读）。"""
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+
+    current_user = _resolve_username(getattr(request, 'user_id', None))
+    if not current_user:
+        return JsonResponse({"ok": False, "error": "未登录"}, status=401)
+
+    try:
+        case = TestDefinition.objects.only("id", "created_by", "locked").get(id=case_id)
+    except TestDefinition.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "用例不存在"}, status=404)
+
+    if case.created_by and case.created_by != current_user:
+        return JsonResponse({"ok": False, "error": "只有创建者可以锁定用例"}, status=403)
+
+    case.locked = True
+    case.save(update_fields=["locked"])
+    return JsonResponse({"ok": True, "locked": True})
+
+
+@csrf_exempt
+def case_unlock(request, case_id):
+    """POST /api/cases/definitions/{case_id}/case-unlock — 创建者解除用例锁。"""
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+
+    current_user = _resolve_username(getattr(request, 'user_id', None))
+    if not current_user:
+        return JsonResponse({"ok": False, "error": "未登录"}, status=401)
+
+    try:
+        case = TestDefinition.objects.only("id", "created_by", "locked").get(id=case_id)
+    except TestDefinition.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "用例不存在"}, status=404)
+
+    if case.created_by and case.created_by != current_user:
+        return JsonResponse({"ok": False, "error": "只有创建者可以解除锁定"}, status=403)
+
+    if not case.locked:
+        return JsonResponse({"ok": True, "already_unlocked": True})
+
+    case.locked = False
+    case.save(update_fields=["locked"])
+    return JsonResponse({"ok": True, "unlocked": True})
+
+
+# ═══════════════════════════════════════════════
+# 用例可见性
+# ═══════════════════════════════════════════════
+
+@csrf_exempt
+def set_visibility(request, case_id):
+    """POST /api/cases/definitions/{case_id}/visibility — 更新可见性（仅创建者）。"""
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+
+    current_user = _resolve_username(getattr(request, 'user_id', None))
+    if not current_user:
+        return JsonResponse({"ok": False, "error": "未登录"}, status=401)
+
+    try:
+        case = TestDefinition.objects.only("id", "created_by", "visibility", "permitted_users").get(id=case_id)
+    except TestDefinition.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "用例不存在"}, status=404)
+
+    if case.created_by and case.created_by != current_user:
+        return JsonResponse({"ok": False, "error": "只有创建者可以修改可见性"}, status=403)
+
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError:
+        body = {}
+
+    case.visibility = body.get("visibility", "public")
+    case.permitted_users = json.dumps(body.get("permitted_users", []), ensure_ascii=False)
+    case.save(update_fields=["visibility", "permitted_users"])
+    return JsonResponse({"ok": True, "visibility": case.visibility})
+
+
+# ═══════════════════════════════════════════════
+# 目录权限
+# ═══════════════════════════════════════════════
+
+@csrf_exempt
+def directory_permission(request, dir_id):
+    """POST /api/cases/directories/{dir_id}/permission — 更新目录权限（仅创建者）。"""
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+
+    current_user = _resolve_username(getattr(request, 'user_id', None))
+    if not current_user:
+        return JsonResponse({"ok": False, "error": "未登录"}, status=401)
+
+    try:
+        d = CaseDirectory.objects.only("id", "created_by").get(id=dir_id)
+    except CaseDirectory.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "目录不存在"}, status=404)
+
+    if d.created_by and d.created_by != current_user:
+        return JsonResponse({"ok": False, "error": "只有目录创建者可以修改权限"}, status=403)
+
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError:
+        body = {}
+
+    d.allow_create = body.get("allow_create", True)
+    d.allow_delete = body.get("allow_delete", False)
+    d.save(update_fields=["allow_create", "allow_delete"])
+    return JsonResponse({"ok": True})
 
 
 def download_export(request, filename):

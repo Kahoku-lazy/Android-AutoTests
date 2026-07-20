@@ -2,7 +2,7 @@
 /** LockDialog — 锁定设备弹窗 per PRD §7.2 */
 import { ref, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { Modal, Input, Button as AnimalButton } from "animal-island-vue";
+// el-dialog → el-dialog, Input → el-input, Button → el-button (Element Plus auto-import)
 import { useRawStorage } from "@/shared/composables/useStorage.js";
 
 const props = defineProps({
@@ -44,22 +44,20 @@ function handleCancel() {
 </script>
 
 <template>
-  <Modal
-    :open="visible"
+  <el-dialog
+    :model-value="visible"
     :title="`锁定设备 ${serial}`"
     width="420px"
-    :mask-closable="false"
+    :close-on-click-modal="false"
     @close="handleCancel"
   >
     <div class="lock-form">
       <div class="lock-form-item">
         <label class="lock-label">锁定用户 ID *</label>
-        <Input
+        <el-input
           v-model="userId"
           placeholder="输入用户标识（如 admin、张三）"
           :maxlength="100"
-          :shadow="true"
-          size="middle"
         />
         <p class="lock-hint">
           此 ID 用于标识设备当前被谁占用，其他用户将看到占用信息
@@ -86,12 +84,12 @@ function handleCancel() {
     </div>
 
     <template #footer>
-      <AnimalButton @click="handleCancel">取消</AnimalButton>
-      <AnimalButton type="primary" @click="handleConfirm"
-        >确认锁定</AnimalButton
+      <el-button @click="handleCancel">取消</el-button>
+      <el-button type="primary" @click="handleConfirm"
+        >确认锁定</el-button
       >
     </template>
-  </Modal>
+  </el-dialog>
 </template>
 
 <style scoped>

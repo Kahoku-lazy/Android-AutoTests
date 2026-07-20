@@ -50,9 +50,9 @@ defineProps({
   display: grid;
   place-items: center;
   font-size: 22px;
-  background: linear-gradient(145deg, #f7cd67, #f5c6a3);
+  background: linear-gradient(145deg, var(--app-green), var(--app-green-deep));
   border-radius: 14px;
-  border: 2px solid rgba(139, 115, 85, 0.18);
+  border: 1.5px solid rgba(142,200,160,0.25);
   flex-shrink: 0;
 }
 .brand-text { min-width: 0; }

@@ -1,66 +1,64 @@
 /* ================================================================
-   Animal Crossing theme for AI Assistant module
-   Overrides Element Plus CSS variables with warm, nature-inspired tones.
-   Also adjusts the glass-morphism framework variables used by all pages.
+   Soft Glass theme for AI Assistant module
+   Green-toned Element Plus overrides — replaces warm wood palette
    ================================================================ */
 
-/* ── Element Plus primary color → warm wood ── */
 .ai-animal-theme {
-  --el-color-primary: #8B7355;
-  --el-color-primary-light-3: #A0896C;
-  --el-color-primary-light-5: #C4B5A0;
-  --el-color-primary-light-7: #DFD5C7;
-  --el-color-primary-light-8: #EDE7DE;
-  --el-color-primary-light-9: #F5F1EB;
-  --el-color-primary-dark-2: #6B5A3E;
+  --el-color-primary: #7AB88D;
+  --el-color-primary-light-3: #9CCEA8;
+  --el-color-primary-light-5: #BDE0C4;
+  --el-color-primary-light-7: #D6EDDB;
+  --el-color-primary-light-8: #E5F4E8;
+  --el-color-primary-light-9: #F0F8F2;
+  --el-color-primary-dark-2: #5D9A6E;
 
-  --el-color-success: #6B9E6B;
+  --el-color-success: #5D9A6E;
   --el-color-warning: #D4A853;
   --el-color-danger: #C47373;
 
-  --el-border-radius-base: 12px;
-  --el-border-radius-small: 8px;
-  --el-border-radius-round: 20px;
+  --el-border-radius-base: var(--app-radius-md, 20px);
+  --el-border-radius-small: var(--app-radius-sm, 14px);
+  --el-border-radius-round: var(--app-radius-pill, 50px);
 
-  --el-bg-color: #FDF8F0;
-  --el-bg-color-overlay: #FFFBF5;
-  --el-bg-color-page: #F5EDE0;
-  --el-fill-color-blank: #FFFBF5;
-  --el-fill-color-light: rgba(139,115,85,0.06);
+  --el-bg-color: var(--app-white, #fdfbfb);
+  --el-bg-color-overlay: var(--app-white, #fdfbfb);
+  --el-bg-color-page: var(--app-bg-warm, #f5f8f4);
+  --el-fill-color-blank: var(--app-glass-card, rgba(255,255,255,0.55));
+  --el-fill-color-light: rgba(142,200,160,0.08);
 
-  --el-text-color-primary: #4A3A28;
-  --el-text-color-regular: #5C4A35;
-  --el-text-color-secondary: #988B7A;
+  --el-text-color-primary: var(--app-text, #3D4A3B);
+  --el-text-color-regular: var(--app-text, #3D4A3B);
+  --el-text-color-secondary: var(--app-text-secondary, #7A8B73);
 
-  --el-box-shadow-light: 0 2px 12px rgba(139, 115, 85, 0.08);
-  --el-box-shadow: 0 4px 16px rgba(139, 115, 85, 0.10);
-  --el-box-shadow-dark: 0 8px 24px rgba(139, 115, 85, 0.14);
+  --el-box-shadow-light: var(--app-shadow-sm, 0 4px 15px rgba(31,38,135,0.04));
+  --el-box-shadow: var(--app-shadow-md, 0 8px 32px rgba(31,38,135,0.07));
+  --el-box-shadow-dark: var(--app-shadow-lg, 0 16px 48px rgba(31,38,135,0.10));
 
   --el-color-info: #909399;
-  --el-border-color: rgba(139, 115, 85, 0.12);
-  --el-border-color-light: rgba(139, 115, 85, 0.06);
+  --el-border-color: rgba(142,200,160,0.16);
+  --el-border-color-light: rgba(142,200,160,0.08);
 
-  font-family: 'Nunito', 'Noto Sans SC', system-ui, sans-serif;
+  font-family: var(--app-font, 'Quicksand', system-ui, sans-serif);
 }
 
-/* ── Glass-morphism variables (shared by all pages) ── */
+/* Glass-morphism variables */
 .ai-animal-theme {
-  --glass-bg: rgba(139, 115, 85, 0.04);
-  --glass-border: rgba(139, 115, 85, 0.12);
-  --accent-blue: #8B7355;
-  --accent-green: #6B9E6B;
+  --glass-bg: rgba(142,200,160,0.06);
+  --glass-border: rgba(142,200,160,0.14);
+  --accent-blue: var(--app-green);
+  --accent-green: var(--app-green-deep);
   --accent-pink: #D4A853;
-  --text-primary: #4A3A28;
-  --text-secondary: #988B7A;
-  --shadow: 0 2px 12px rgba(139, 115, 85, 0.06);
+  --text-primary: var(--app-text, #3D4A3B);
+  --text-secondary: var(--app-text-secondary, #7A8B73);
+  --shadow: var(--app-shadow-sm, 0 4px 15px rgba(31,38,135,0.04));
 }
 
-/* ── Blob colors → earthy tones ── */
-.ai-animal-theme .blob-1 { background: rgba(212, 168, 83, 0.6) !important; }  /* warm gold */
-.ai-animal-theme .blob-2 { background: rgba(139, 115, 85, 0.5) !important; }  /* wood */
-.ai-animal-theme .blob-3 { background: rgba(107, 158, 107, 0.5) !important; }  /* leaf */
+/* Blob colors → green tones */
+.ai-animal-theme .blob-1 { background: rgba(142,200,160,0.6) !important; }
+.ai-animal-theme .blob-2 { background: rgba(162,210,255,0.5) !important; }
+.ai-animal-theme .blob-3 { background: rgba(184,232,198,0.5) !important; }
 
-/* ── Element Plus component overrides ── */
+/* Component overrides */
 .ai-animal-theme .el-button--primary {
   --el-button-bg-color: var(--el-color-primary);
   --el-button-border-color: var(--el-color-primary);
@@ -70,15 +68,15 @@
 
 .ai-animal-theme .el-input__wrapper,
 .ai-animal-theme .el-textarea__inner {
-  border-radius: 10px;
+  border-radius: var(--app-radius-sm, 14px);
 }
 
 .ai-animal-theme .el-select .el-input__wrapper {
-  border-radius: 10px;
+  border-radius: var(--app-radius-sm, 14px);
 }
 
 .ai-animal-theme .el-tag {
-  border-radius: 8px;
+  border-radius: var(--app-radius-sm, 14px);
 }
 
 .ai-animal-theme .el-step__head.is-finish .el-step__icon {

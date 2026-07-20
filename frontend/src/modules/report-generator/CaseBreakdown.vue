@@ -1,7 +1,9 @@
 <script setup>
+
+import AppCard from "@/shared/components/AppCard.vue";
+import AppTabs from "@/shared/components/AppTabs.vue";
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Button as AnimalButton, Card, Tabs } from 'animal-island-vue'
 import PageHeader from '@/shared/components/PageHeader.vue'
 import { getCaseBreakdown } from './api.js'
 
@@ -31,7 +33,7 @@ const pageSubtitle = computed(() => {
     : '按用例名称 → 任务 ID → 步骤失败详情查看'
 })
 
-const viewTabs = computed(() => {
+const viewAppTabs = computed(() => {
   if (isPass.value) return []
   const bugs = bugSummary.value?.unique_issues || 0
   return [
@@ -132,7 +134,7 @@ function stepTypeLabel(type) {
 
     <div class="doc-body">
       <div class="top-bar">
-        <AnimalButton size="small" @click="goBack">← 报告列表</AnimalButton>
+        <el-button size="small" @click="goBack">← 报告列表</el-button>
         <div v-if="data" class="summary-pill">
           <span :class="isPass ? 'num-pass' : 'num-fail'">{{ totalCount }}</span>
           次{{ isPass ? '通过' : '失败' }}
@@ -155,7 +157,7 @@ function stepTypeLabel(type) {
         </div>
       </div>
 
-      <Tabs
+      <AppTabs
         v-if="viewTabs.length"
         class="view-tabs"
         :items="viewTabs"
@@ -171,7 +173,7 @@ function stepTypeLabel(type) {
           </div>
           <div v-else class="bug-list">
             <div v-for="(bc, idx) in bugCases" :key="'bug-' + idx" class="bug-case-group">
-              <Card color="red" pattern="red">
+              <AppCard color="red" pattern="red">
                 <div
                   class="case-header"
                   role="button"
@@ -212,7 +214,7 @@ function stepTypeLabel(type) {
                     </div>
                   </div>
                 </div>
-              </Card>
+              </AppCard>
             </div>
           </div>
         </template>
@@ -221,11 +223,11 @@ function stepTypeLabel(type) {
           <div v-else-if="groups.length === 0" class="empty-state">
             <span>❌</span>
             <p>当前筛选条件下暂无失败记录</p>
-            <AnimalButton size="small" @click="goBack">返回报告列表</AnimalButton>
+            <el-button size="small" @click="goBack">返回报告列表</el-button>
           </div>
           <div v-else class="case-list">
             <div v-for="(group, idx) in groups" :key="group.case_id + '-' + idx" class="case-group">
-              <Card color="red" pattern="red">
+              <AppCard color="red" pattern="red">
                 <div
                   class="case-header"
                   role="button"
@@ -303,11 +305,11 @@ function stepTypeLabel(type) {
                     </div>
                   </div>
                 </div>
-              </Card>
+              </AppCard>
             </div>
           </div>
         </template>
-      </Tabs>
+      </AppTabs>
 
       <template v-else>
       <div v-if="loading" class="loading-state">加载中…</div>
@@ -315,12 +317,12 @@ function stepTypeLabel(type) {
       <div v-else-if="groups.length === 0" class="empty-state">
         <span>{{ isPass ? '✅' : '❌' }}</span>
         <p>当前筛选条件下暂无{{ isPass ? '通过' : '失败' }}记录</p>
-        <AnimalButton size="small" @click="goBack">返回报告列表</AnimalButton>
+        <el-button size="small" @click="goBack">返回报告列表</el-button>
       </div>
 
       <div v-else class="case-list">
         <div v-for="(group, idx) in groups" :key="group.case_id + '-' + idx" class="case-group">
-          <Card :color="isPass ? 'green' : 'red'" :pattern="isPass ? 'green' : 'red'">
+          <AppCard :color="isPass ? 'green' : 'red'" :pattern="isPass ? 'green' : 'red'">
             <div
               class="case-header"
               role="button"
@@ -398,7 +400,7 @@ function stepTypeLabel(type) {
                 </div>
               </div>
             </div>
-          </Card>
+          </AppCard>
         </div>
       </div>
       </template>
@@ -477,27 +479,27 @@ function stepTypeLabel(type) {
   flex-direction: column;
   width: 100%;
 }
-.view-tabs :deep(.animal-tabs) {
+.view-tabs :deep(.el-tabs) {
   display: flex;
   flex-direction: column;
   overflow: visible;
 }
-.view-tabs :deep(.animal-tabs__list) {
+.view-tabs :deep(.el-tabs__list) {
   flex-shrink: 0;
 }
-.view-tabs :deep(.animal-tabs__content) {
+.view-tabs :deep(.el-tabs__content) {
   overflow: visible;
   display: block;
   padding-top: 12px;
 }
-.view-tabs :deep(.animal-tabs__inner) {
+.view-tabs :deep(.el-tabs__inner) {
   min-height: min-content;
   overflow: visible;
 }
 
 .bug-list, .case-list { display: flex; flex-direction: column; gap: 12px; }
-.bug-case-group :deep(.animal-card__content),
-.case-group :deep(.animal-card__content) { padding: 0; }
+.bug-case-group :deep(.el-card__body),
+.case-group :deep(.el-card__body) { padding: 0; }
 
 .issue-list {
   border-top: 1px solid rgba(139, 115, 85, 0.1);

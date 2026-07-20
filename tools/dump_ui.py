@@ -1,5 +1,5 @@
 """
-UI 提取脚本 — 用 uiautomator2 从手机提取层级和截图
+UI 提取脚本 — Airtest (截图) + uiautomator2 (UI 层级 dump)
 输出: ui_data.json (结构化层级数据), screenshot.png (截图)
 """
 import json
@@ -8,6 +8,7 @@ import sys
 import time
 import uiautomator2 as u2
 import xml.etree.ElementTree as ET
+from airtest.core.android.android import Android
 
 # 修复 Windows 控制台编码
 if sys.platform == "win32":
@@ -63,6 +64,7 @@ def main():
         sys.exit(1)
     print(f"[1/4] 连接手机 {serial} ...")
     d = u2.connect(serial)
+    ad = Android(serialno=serial)
 
     info = d.info
     print(f"      屏幕: {info['displayWidth']}×{info['displayHeight']}")
@@ -94,9 +96,9 @@ def main():
         json.dump(hierarchy, f, ensure_ascii=False, indent=2)
     print(f"      [OK] 已保存: {json_path}")
 
-    print("[4/4] 截屏 ...")
+    print("[4/4] 截屏 (Airtest) ...")
     screenshot_path = os.path.join(OUT_DIR, "screenshot.png")
-    d.screenshot(screenshot_path)
+    ad.snapshot().save(screenshot_path)
     print(f"      [OK] 已保存: {screenshot_path}")
 
     print("\n[OK] 完成。运行 generate_html.py 生成 HTML 页面。")

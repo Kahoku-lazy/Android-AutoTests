@@ -2,7 +2,7 @@
 /** DisconnectDialog — 强制断开确认弹窗 per PRD §7.2 */
 import { ref, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Modal, Button as AnimalButton } from 'animal-island-vue'
+// el-dialog → el-dialog, Button → el-button (Element Plus auto-import)
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -40,11 +40,11 @@ function handleCancel() {
 </script>
 
 <template>
-  <Modal
-    :open="visible"
+  <el-dialog
+    :model-value="visible"
     :title="title"
     width="460px"
-    :mask-closable="false"
+    :close-on-click-modal="false"
     @close="handleCancel"
   >
     <div style="margin-bottom:16px">
@@ -78,10 +78,10 @@ function handleCancel() {
     </el-form>
 
     <template #footer>
-      <AnimalButton @click="handleCancel">取消</AnimalButton>
-      <AnimalButton type="primary" danger @click="handleConfirm">
+      <el-button @click="handleCancel">取消</el-button>
+      <el-button type="danger" @click="handleConfirm">
         {{ isBusyOthers ? '强制断开' : '确认断开' }}
-      </AnimalButton>
+      </el-button>
     </template>
-  </Modal>
+  </el-dialog>
 </template>

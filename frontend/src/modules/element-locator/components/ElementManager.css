@@ -272,10 +272,10 @@
   flex-direction: column;
   overflow: hidden;
 }
-.element-tabs :deep(.animal-tabs__list) {
+.element-tabs :deep(.el-tabs__list) {
   flex-shrink: 0;
 }
-.element-tabs :deep(.animal-tabs__content) {
+.element-tabs :deep(.el-tabs__content) {
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -284,7 +284,7 @@
   padding: 12px 0 0;
   width: 100%;
 }
-.element-tabs :deep(.animal-tabs__inner) {
+.element-tabs :deep(.el-tabs__inner) {
   flex: 1;
   min-height: 0;
   width: 100%;
@@ -385,7 +385,7 @@
 .elements-table {
   width: 100%;
 }
-.elements-table :deep(.animal-table-wrapper) {
+.elements-table :deep(.el-table__body-wrapper) {
   width: 100%;
 }
 .elements-table :deep(table) {
@@ -629,6 +629,6 @@
 
 .form-label.required::before {
   content: '*';
-  color: var(--animal-error-color, #e05a5a);
+  color: var(#e8998a, #e05a5a);
   margin-right: 3px;
 }

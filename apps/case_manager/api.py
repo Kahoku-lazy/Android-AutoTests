@@ -4,7 +4,38 @@ Semi-shared: models (cross-app read), api functions (cross-app write).
 """
 
 import json
+from datetime import datetime, date
 from .models import TestDefinition, CaseDirectory
+
+
+class ConflictError(ValueError):
+    """Raised when optimistic lock check fails — caller should return HTTP 409."""
+
+
+def _parse_datetime(val):
+    """Parse a datetime value from ISO string, datetime object, or date object.
+    Returns a datetime or None. Microseconds are stripped for cross-DB consistency.
+    """
+    if val is None:
+        return None
+    if isinstance(val, datetime):
+        return val.replace(microsecond=0)
+    if isinstance(val, date):
+        return datetime(val.year, val.month, val.day)
+    if not isinstance(val, str):
+        return None
+    for fmt in (
+        "%Y-%m-%dT%H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d %H:%M:%S.%f",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d",
+    ):
+        try:
+            return datetime.strptime(val, fmt)
+        except ValueError:
+            continue
+    return None
 
 
 # ── Directory helpers ──
@@ -45,6 +76,9 @@ def get_directory_tree():
             "sort_order": dir_obj.sort_order,
             "node_type": "directory",
             "case_count": case_count + sum(c["case_count"] for c in children),
+            "created_by": dir_obj.created_by or "",
+            "allow_create": dir_obj.allow_create,
+            "allow_delete": dir_obj.allow_delete,
             "children": children + case_nodes,
         }
 
@@ -75,7 +109,7 @@ def get_directory_tree():
     return tree
 
 
-def create_directory(name, parent_id=None, sort_order=0):
+def create_directory(name, parent_id=None, sort_order=0, created_by=""):
     """Create a new directory. Returns (ok, data_or_error)."""
     if not name or not name.strip():
         return False, "目录名称不能为空"
@@ -98,6 +132,7 @@ def create_directory(name, parent_id=None, sort_order=0):
         name=name.strip(),
         parent=parent,
         sort_order=sort_order,
+        created_by=created_by or "",
     )
     return True, {
         "id": obj.id,
@@ -139,12 +174,16 @@ def update_directory(dir_id, name=None, parent_id=None, sort_order=None):
     }
 
 
-def delete_directory(dir_id):
-    """Delete a directory. Returns (ok, data_or_error)."""
+def delete_directory(dir_id, deleted_by=""):
+    """Delete a directory. Only creator or allow_delete users can delete. Returns (ok, data_or_error)."""
     try:
         obj = CaseDirectory.objects.get(id=dir_id)
     except CaseDirectory.DoesNotExist:
         return False, f"目录不存在: {dir_id}"
+
+    # Permission: only creator or allow_delete users can delete
+    if obj.created_by and deleted_by and obj.created_by != deleted_by and not obj.allow_delete:
+        return False, f"只有目录创建者（{obj.created_by}）可以删除此目录"
 
     child_count = obj.children.count()
     case_count = obj.test_definitions.count()
@@ -180,7 +219,14 @@ def get_definition(case_id):
 
 
 def save_definition(case_id, **fields):
-    """Create or update a test definition. Raises ValueError on duplicate title."""
+    """Create or update a test definition. Raises ValueError on duplicate title or conflict.
+
+    Optimistic locking: if client_updated_at is provided and doesn't match the
+    current record's updated_at, raises ConflictError (409) to prevent lost updates.
+    """
+    from datetime import datetime
+
+    client_updated_at = fields.pop("client_updated_at", None)
     directory_id = fields.get("directory_id")
     directory = None
     if directory_id is not None:
@@ -191,11 +237,24 @@ def save_definition(case_id, **fields):
 
     title = fields.get("title", "")
 
+    # Optimistic lock: check updated_at before overwriting
+    existing = TestDefinition.objects.filter(id=case_id).only("id", "updated_at").first()
+    if existing and client_updated_at:
+        # Parse client_updated_at (ISO or "YYYY-MM-DD HH:MM:SS" from serialization)
+        client_ts = _parse_datetime(client_updated_at)
+        if client_ts and existing.updated_at:
+            # Normalize both to second precision for comparison (MySQL truncates microseconds)
+            db_ts = existing.updated_at.replace(microsecond=0)
+            if client_ts != db_ts:
+                raise ConflictError(
+                    f"用例「{title or case_id}」已被他人修改，请刷新后重试"
+                )
+
     # Check for duplicate title in the same directory
-    existing = TestDefinition.objects.filter(
+    dup = TestDefinition.objects.filter(
         directory=directory, title=title
     ).exclude(id=case_id).first()
-    if existing:
+    if dup:
         dir_label = directory.name if directory else "根级（未分类）"
         raise ValueError(f"目录「{dir_label}」下已存在同名用例「{title}」")
 
@@ -214,6 +273,10 @@ def save_definition(case_id, **fields):
         "precondition": fields.get("precondition", ""),
         "expected_result": fields.get("expected_result", ""),
         "metrics": fields.get("metrics", ""),
+        "visibility": fields.get("visibility", "public"),
+        "permitted_users": json.dumps(fields.get("permitted_users", []), ensure_ascii=False),
+        "permission": fields.get("permission", "edit"),
+        "permitted_editors": json.dumps(fields.get("permitted_editors", []), ensure_ascii=False),
     }
     obj, _ = TestDefinition.objects.update_or_create(id=case_id, defaults=defaults)
     return obj

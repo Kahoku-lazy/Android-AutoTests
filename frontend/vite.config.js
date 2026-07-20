@@ -5,25 +5,6 @@ import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
-// ── 性能优化插件：构建时剔除 animal-island-vue 自带的
-//    Noto Sans SC 中文子集字体（3 个文件共 3.4MB）。
-//    运行时由 style.css 中的 @font-face local() 覆盖兜底
-//    为系统字体（Microsoft YaHei / PingFang SC），不发起网络请求。
-function stripChineseFonts() {
-  return {
-    name: 'strip-chinese-fonts',
-    apply: 'build',
-    generateBundle(_opts, bundle) {
-      // bundle 是 { [fileName]: OutputAsset | OutputChunk }
-      for (const fileName of Object.keys(bundle)) {
-        if (/noto-sans-sc-chinese-simplified-.*\.woff2$/.test(fileName)) {
-          delete bundle[fileName]
-        }
-      }
-    },
-  }
-}
-
 export default defineConfig({
   plugins: [
     vue(),
@@ -37,8 +18,6 @@ export default defineConfig({
       resolvers: [ElementPlusResolver()],
       dts: 'src/components.d.ts',
     }),
-    // 剔除中文字体（3.4MB → 0）
-    stripChineseFonts(),
   ],
   resolve: {
     alias: {
@@ -46,6 +25,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0',
     port: 5173,
     proxy: {
       '/api': 'http://localhost:8765',
@@ -71,7 +51,6 @@ export default defineConfig({
         // ── vendor 分包：让浏览器并行下载，登录页不被全量库拖累 ──
         manualChunks: {
           'element-plus': ['element-plus'],
-          'animal-island': ['animal-island-vue'],
           'vendor': ['vue', 'vue-router', 'pinia', 'axios', 'animejs'],
           'vue-flow': [
             '@vue-flow/core',

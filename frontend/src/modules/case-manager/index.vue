@@ -3,10 +3,12 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElTag } from 'element-plus'
 import ConfirmButton from '@/shared/components/patterns/ConfirmButton.vue'
-import { Card, Table } from "animal-island-vue";
+// Card/AppTable → AppCard/AppTable
+import AppCard from "@/shared/components/AppCard.vue";
+import AppTable from "@/shared/components/AppTable.vue";
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
 import DirectoryTree from "./components/DirectoryTree.vue";
-import CaseCard from "./components/CaseCard.vue";
+import CaseAppCard from "./components/CaseCard.vue";
 import StepViewer from "./components/StepViewer.vue";
 import {
   fetchDirectories,
@@ -88,14 +90,19 @@ function setViewMode(mode) {
 }
 
 // ── Data loading ──
+// ── Auto-refresh timer for data sync
+let refreshTimer = null;
+
 onMounted(async () => {
   window.addEventListener("mousemove", onSidebarResizeMove);
   window.addEventListener("mouseup", onSidebarResizeEnd);
   await loadDirectories();
   await loadDefs();
+  refreshTimer = setInterval(loadDefs, 30000);  // 30s auto-refresh
 });
 
 onUnmounted(() => {
+  clearInterval(refreshTimer);
   window.removeEventListener("mousemove", onSidebarResizeMove);
   window.removeEventListener("mouseup", onSidebarResizeEnd);
   document.body.style.cursor = "";
@@ -223,7 +230,7 @@ const breadcrumbPath = computed(() => {
   return parts;
 });
 
-// ── Table columns ──
+// ── AppTable columns ──
 const columns = [
   { title: "ID", dataIndex: "id", width: "18%" },
   { title: "标题", dataIndex: "title", width: "28%" },
@@ -348,29 +355,29 @@ async function doRemove(row) {
                 🃏
               </button>
             </div>
-            <AnimalButton class="wb-btn"
+            <el-button class="wb-btn"
               type="primary"
               :loading="exportLoading"
               @click="doExportYaml"
-              >📤 导出 YAML</AnimalButton>
-            <AnimalButton class="wb-btn" type="primary" @click="create"
-              >+ 新建用例</AnimalButton>
+              >📤 导出 YAML</el-button>
+            <el-button class="wb-btn" type="primary" @click="create"
+              >+ 新建用例</el-button>
           </div>
         </div>
 
         <!-- === Detail View === -->
         <div v-if="selectedCase" class="case-detail">
           <div class="case-detail__toolbar">
-            <AnimalButton class="wb-btn" size="small" @click="handleBackToList"
-              >↩ 返回列表</AnimalButton>
-            <AnimalButton class="wb-btn"
+            <el-button class="wb-btn" size="small" @click="handleBackToList"
+              >↩ 返回列表</el-button>
+            <el-button class="wb-btn"
               size="small"
               type="primary"
               @click="edit(selectedCase)"
-              >📝 编辑用例</AnimalButton>
+              >📝 编辑用例</el-button>
           </div>
 
-          <Card color="app-teal" pattern="app-teal" class="case-detail__header">
+          <AppCard color="app-teal" pattern="app-teal" class="case-detail__header">
             <div class="case-detail__head-row">
               <span class="case-detail__id">{{ selectedCase.id }}</span>
               <el-tag
@@ -415,42 +422,43 @@ async function doRemove(row) {
             <div v-if="selectedCase.description" class="case-detail__desc">
               {{ selectedCase.description }}
             </div>
-          </Card>
+          </AppCard>
 
           <div class="case-detail__steps">
             <h3 class="case-detail__steps-title">
               📋 测试步骤 ({{ (selectedCase.steps_data || []).length }})
             </h3>
-            <Card color="brown" pattern="brown">
+            <AppCard color="brown" pattern="brown">
               <StepViewer :steps="selectedCase.steps_data || []" />
-            </Card>
+            </AppCard>
           </div>
         </div>
 
         <!-- === List View === -->
         <div v-else class="case-content">
-          <!-- Card Grid -->
+          <!-- AppCard Grid -->
           <div v-if="viewMode === 'card'" class="card-grid">
             <template v-if="definitions.length > 0">
-              <CaseCard
+              <CaseAppCard
                 v-for="item in definitions"
                 :key="item.id"
                 :item="item"
                 @edit="edit"
                 @delete="(item) => doRemove(item)"
                 @select="loadCaseDetail(item.id)"
+                @refresh="loadDefinitions"
               />
             </template>
             <div v-else class="card-grid-empty">
               <span>📋</span>
               <p>{{ allActive ? "暂无用例定义" : "此目录下暂无用例" }}</p>
-              <AnimalButton class="wb-btn" size="small" type="primary" @click="create">创建第一个用例</AnimalButton>
+              <el-button class="wb-btn" size="small" type="primary" @click="create">创建第一个用例</el-button>
             </div>
           </div>
 
-          <!-- Table -->
-          <Card v-else color="brown" pattern="brown" class="table-card">
-            <Table
+          <!-- AppTable -->
+          <AppCard v-else color="brown" pattern="brown" class="table-card">
+            <AppTable
               :columns="columns"
               :data-source="definitions"
               row-key="id"
@@ -509,22 +517,22 @@ async function doRemove(row) {
                 <div class="table-empty">
                   <span>📋</span>
                   <p>{{ allActive ? "暂无用例定义" : "此目录下暂无用例" }}</p>
-                  <AnimalButton class="wb-btn" size="small" type="primary" @click="create"
-                    >创建第一个用例</AnimalButton>
+                  <el-button class="wb-btn" size="small" type="primary" @click="create"
+                    >创建第一个用例</el-button>
                 </div>
               </template>
-            </Table>
-          </Card>
+            </AppTable>
+          </AppCard>
         </div>
 
         <!-- YAML Export file list -->
         <div v-if="showExports" class="case-exports">
           <div class="case-exports__header">
             <h3 class="case-exports__title">📤 导出文件</h3>
-            <AnimalButton class="wb-btn" size="small" @click="showExports = false"
-              >✕ 收起</AnimalButton>
+            <el-button class="wb-btn" size="small" @click="showExports = false"
+              >✕ 收起</el-button>
           </div>
-          <Card color="brown" pattern="brown" class="case-exports__table">
+          <AppCard color="brown" pattern="brown" class="case-exports__table">
             <div v-if="exportFiles.length === 0" class="case-exports__empty">
               暂无导出文件
             </div>
@@ -543,16 +551,16 @@ async function doRemove(row) {
                   <td>{{ (file.size / 1024).toFixed(1) }} KB</td>
                   <td>{{ file.time }}</td>
                   <td>
-                    <AnimalButton class="wb-btn"
+                    <el-button class="wb-btn"
                       size="small"
                       type="primary"
                       @click="downloadExportFile(file.name)"
-                      >⬇ 下载</AnimalButton>
+                      >⬇ 下载</el-button>
                   </td>
                 </tr>
               </tbody>
             </table>
-          </Card>
+          </AppCard>
         </div>
       </main>
     </div>

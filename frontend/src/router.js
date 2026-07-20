@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { getToken, getActiveUsername } from '@/shared/api-client'
 import dbRoutes  from '@/modules/dashboard/routes.js'
 import elRoutes   from '@/modules/element-locator/routes.js'
 import dpRoutes   from '@/modules/device-pool/routes.js'
@@ -27,7 +28,7 @@ router.afterEach((to) => {
 
 // ── Auth guard — all pages require login except /login itself ──
 router.beforeEach((to) => {
-  const token = localStorage.getItem('access_token')
+  const token = getToken()
   // 登录路由下禁用 body 背景动画（性能优化：避免空转）
   if (to.path === '/login') {
     document.body?.classList.add('no-bg-anim')
@@ -37,7 +38,7 @@ router.beforeEach((to) => {
   if (!token && to.path !== '/login') {
     return '/login'
   }
-  if (token && to.path === '/login') {
+  if (token && to.path === '/login' && !to.query.add) {
     return '/dashboard'
   }
 })

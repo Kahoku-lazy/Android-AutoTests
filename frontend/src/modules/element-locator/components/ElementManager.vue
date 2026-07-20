@@ -1,9 +1,12 @@
 <script setup>
+
+import AppCard from "@/shared/components/AppCard.vue";
+import AppTabs from "@/shared/components/AppTabs.vue";
+import AppTable from "@/shared/components/AppTable.vue";
 import { ref, computed, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { animate, stagger } from 'animejs'
 import { apiAddElementToPage, apiUpdateElement } from '../api.js'
-import { Modal, Button as AnimalButton, Card, Table, Tabs, Input, Switch } from 'animal-island-vue'
 import { useElementTree } from '../composables/useElementTree.js'
 import { usePagination } from '@/shared/composables/usePagination.js'
 
@@ -44,7 +47,7 @@ async function doAddElement() {
 }
 
 const filterMode = ref('all')
-const filterTabs = [
+const filterAppTabs = [
   { key: 'all', label: '全部' },
   { key: 'test_point', label: '测试点' },
 ]
@@ -80,28 +83,28 @@ async function updateEl(record, field, value) {
           <div v-if="!selectMode" class="tree-header">
             <span class="tree-header__title">页面目录</span>
             <div class="tree-header__actions">
-              <AnimalButton size="small" type="text" title="批量选择" @click="toggleSelectMode">☑ 选择</AnimalButton>
-              <AnimalButton size="small" type="text" title="新建目录" @click="openCreateFolder()">+ 目录</AnimalButton>
-              <AnimalButton size="small" type="text" title="新建页面" @click="openCreatePage()">+ 页面</AnimalButton>
-              <AnimalButton size="small" type="text" danger @click="openClearDialog">清空</AnimalButton>
+              <el-button size="small" type="text" title="批量选择" @click="toggleSelectMode">☑ 选择</el-button>
+              <el-button size="small" type="text" title="新建目录" @click="openCreateFolder()">+ 目录</el-button>
+              <el-button size="small" type="text" title="新建页面" @click="openCreatePage()">+ 页面</el-button>
+              <el-button size="small" type="text" danger @click="openClearDialog">清空</el-button>
             </div>
           </div>
           <div v-else class="tree-header tree-header--select">
             <span class="tree-header__title">已选 {{ checkedCount }} 项</span>
             <div class="tree-header__actions">
-              <AnimalButton size="small" type="text" @click="handleSelectAll">
+              <el-button size="small" type="text" @click="handleSelectAll">
                 {{ selectAll ? '☐ 取消全选' : '☑ 全选' }}
-              </AnimalButton>
-              <AnimalButton
+              </el-button>
+              <el-button
                 size="small"
                 type="text"
                 :disabled="checkedCount === 0"
                 @click="openBatchMoveDialog"
-              >📂 移动到...</AnimalButton>
-              <AnimalButton size="small" type="text" danger :disabled="checkedCount === 0" @click="openClearDialog">
+              >📂 移动到...</el-button>
+              <el-button size="small" type="text" danger :disabled="checkedCount === 0" @click="openClearDialog">
                 删除选中
-              </AnimalButton>
-              <AnimalButton size="small" type="text" @click="toggleSelectMode">✕ 退出</AnimalButton>
+              </el-button>
+              <el-button size="small" type="text" @click="toggleSelectMode">✕ 退出</el-button>
             </div>
           </div>
           <div class="tree-body" :class="{ 'drag-mode-active': dragEnabled }">
@@ -178,10 +181,10 @@ async function updateEl(record, field, value) {
                 {{ pageLabel(selectedPage) }}
                 <span class="doc-tag">Elements</span>
               </h3>
-              <AnimalButton size="small" type="primary" @click="openAddElement">+ 添加元素</AnimalButton>
+              <el-button size="small" type="primary" @click="openAddElement">+ 添加元素</el-button>
             </div>
             <div class="elements-subheader">
-              <Tabs
+              <AppTabs
                 class="element-tabs"
                 :items="filterTabs"
                 v-model="filterMode"
@@ -209,14 +212,14 @@ async function updateEl(record, field, value) {
                           第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ filteredElements.length }} 条
                         </span>
                         <div v-if="totalPages > 1" class="page-nav">
-                          <AnimalButton size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</AnimalButton>
-                          <AnimalButton size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</AnimalButton>
+                          <el-button size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</el-button>
+                          <el-button size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</el-button>
                         </div>
                       </div>
                     </div>
-                    <Card color="brown" pattern="brown" class="table-card">
+                    <AppCard color="brown" pattern="brown" class="table-card">
                       <div class="table-scroll">
-                        <Table
+                        <AppTable
                         :columns="columns"
                         :data-source="pagedElements"
                         row-key="id"
@@ -266,7 +269,7 @@ async function updateEl(record, field, value) {
 
                       <!-- Custom cell: is_test_point -->
                       <template #cell-is_test_point="{ record }">
-                        <Switch
+                        <el-switch
                           size="small"
                           :model-value="record.is_test_point"
                           @update:model-value="(val) => updateEl(record, 'is_test_point', val)"
@@ -278,26 +281,26 @@ async function updateEl(record, field, value) {
                         <div class="table-empty">
                           <span>📋</span>
                           <p>暂无元素</p>
-                          <AnimalButton size="small" type="primary" @click="openAddElement">添加第一个元素</AnimalButton>
+                          <el-button size="small" type="primary" @click="openAddElement">添加第一个元素</el-button>
                         </div>
                       </template>
-                    </Table>
+                    </AppTable>
                       </div>
-                    </Card>
+                    </AppCard>
                   </div>
                 </template>
-              </Tabs>
+              </AppTabs>
               <span class="element-count">共 {{ elements.length }} 个元素</span>
             </div>
           </div>
         </template>
-        <Card v-else color="brown" pattern="brown" class="empty-card">
+        <AppCard v-else color="brown" pattern="brown" class="empty-card">
           <div class="empty-state">← 选择页面查看元素（目录仅用于分组）</div>
-        </Card>
+        </AppCard>
     </div>
 
     <!-- Batch move dialog -->
-    <Modal
+    <el-dialog
       v-model:open="moveDialogVisible"
       title="选择目标目录"
       width="420px"
@@ -319,13 +322,13 @@ async function updateEl(record, field, value) {
         />
       </el-select>
       <template #footer>
-        <AnimalButton @click="moveDialogVisible = false">取消</AnimalButton>
-        <AnimalButton type="primary" :disabled="!moveTargetDirId" @click="confirmBatchMove">确认移动</AnimalButton>
+        <el-button @click="moveDialogVisible = false">取消</el-button>
+        <el-button type="primary" :disabled="!moveTargetDirId" @click="confirmBatchMove">确认移动</el-button>
       </template>
-    </Modal>
+    </el-dialog>
 
     <!-- Create Page Dialog -->
-    <Modal
+    <el-dialog
       v-model:open="showCreatePage"
       :title="createDialogTitle"
       width="360px"
@@ -335,7 +338,7 @@ async function updateEl(record, field, value) {
     >
       <div class="form-grid">
         <label class="form-label required">{{ createIsFolder ? '目录名称' : '页面名称' }}</label>
-        <Input
+        <el-input
           v-model="newPageForm.label"
           :placeholder="createIsFolder ? '如：电商模块、登录流程' : '如：登录页、首页'"
           size="middle"
@@ -343,13 +346,13 @@ async function updateEl(record, field, value) {
         />
       </div>
       <template #footer>
-        <AnimalButton @click="showCreatePage = false">取消</AnimalButton>
-        <AnimalButton type="primary" @click="doCreatePage">创建</AnimalButton>
+        <el-button @click="showCreatePage = false">取消</el-button>
+        <el-button type="primary" @click="doCreatePage">创建</el-button>
       </template>
-    </Modal>
+    </el-dialog>
 
     <!-- Rename Dialog -->
-    <Modal
+    <el-dialog
       v-model:open="showRenameDialog"
       :title="renameTarget?.is_folder ? '重命名目录' : '重命名页面'"
       width="360px"
@@ -359,7 +362,7 @@ async function updateEl(record, field, value) {
     >
       <div class="form-grid">
         <label class="form-label required">名称</label>
-        <Input
+        <el-input
           v-model="renameLabel"
           placeholder="输入新名称"
           size="middle"
@@ -367,13 +370,13 @@ async function updateEl(record, field, value) {
         />
       </div>
       <template #footer>
-        <AnimalButton @click="showRenameDialog = false">取消</AnimalButton>
-        <AnimalButton type="primary" @click="doRename">确定</AnimalButton>
+        <el-button @click="showRenameDialog = false">取消</el-button>
+        <el-button type="primary" @click="doRename">确定</el-button>
       </template>
-    </Modal>
+    </el-dialog>
 
     <!-- Clear Pages Confirm Dialog -->
-    <Modal v-model:open="showClearDialog" title="清空页面" width="440px" :typewriter="false" :mask-closable="false">
+    <el-dialog v-model:open="showClearDialog" title="清空页面" width="440px" :typewriter="false" :mask-closable="false">
       <div class="clear-confirm">
         <p class="clear-warning">⚠️ 此操作将永久删除页面及关联元素，不可恢复。</p>
         <p class="clear-question">
@@ -385,13 +388,13 @@ async function updateEl(record, field, value) {
         </label>
       </div>
       <template #footer>
-        <AnimalButton @click="showClearDialog = false">取消</AnimalButton>
-        <AnimalButton type="primary" danger @click="doClearPages">确定清空</AnimalButton>
+        <el-button @click="showClearDialog = false">取消</el-button>
+        <el-button type="primary" danger @click="doClearPages">确定清空</el-button>
       </template>
-    </Modal>
+    </el-dialog>
 
     <!-- Add Element Dialog -->
-    <Modal
+    <el-dialog
       v-model:open="showAddElement"
       title="添加元素"
       width="500px"
@@ -401,23 +404,23 @@ async function updateEl(record, field, value) {
     >
       <div class="form-grid">
         <label class="form-label required">元素名称</label>
-        <Input v-model="newElForm.alias" placeholder="如：登录按钮、用户名输入框" size="middle" />
+        <el-input v-model="newElForm.alias" placeholder="如：登录按钮、用户名输入框" size="middle" />
         <label class="form-label">XPath</label>
-        <Input v-model="newElForm.xpath" placeholder="元素定位 XPath" size="middle" />
+        <el-input v-model="newElForm.xpath" placeholder="元素定位 XPath" size="middle" />
         <label class="form-label">类名</label>
-        <Input v-model="newElForm.class_name" placeholder="android.widget.Button" size="middle" />
+        <el-input v-model="newElForm.class_name" placeholder="android.widget.Button" size="middle" />
         <label class="form-label">文本</label>
-        <Input v-model="newElForm.text_val" placeholder="元素文本内容" size="middle" />
+        <el-input v-model="newElForm.text_val" placeholder="元素文本内容" size="middle" />
         <label class="form-label">Resource ID</label>
-        <Input v-model="newElForm.resource_id" placeholder="com.example:id/btn" size="middle" />
+        <el-input v-model="newElForm.resource_id" placeholder="com.example:id/btn" size="middle" />
         <label class="form-label">可点击</label>
-        <Switch v-model="newElForm.clickable" size="medium" />
+        <el-switch v-model="newElForm.clickable" size="medium" />
       </div>
       <template #footer>
-        <AnimalButton @click="showAddElement = false">取消</AnimalButton>
-        <AnimalButton type="primary" @click="doAddElement">添加</AnimalButton>
+        <el-button @click="showAddElement = false">取消</el-button>
+        <el-button type="primary" @click="doAddElement">添加</el-button>
       </template>
-    </Modal>
+    </el-dialog>
   </div>
 </template>
 

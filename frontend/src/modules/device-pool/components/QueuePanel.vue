@@ -43,12 +43,11 @@ function formatTime(seconds) {
         </el-table-column>
         <el-table-column label="操作" width="70">
           <template #default="{ row }">
-            <AnimalButton type="primary"
+            <el-button type="danger"
               size="small"
-              
               text
               @click="emit('cancel', row.serial, row.user_id)"
-             danger>取消</AnimalButton>
+             >取消</el-button>
           </template>
         </el-table-column>
       </el-table>

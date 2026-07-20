@@ -3,12 +3,14 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { animate, stagger } from "animejs";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { Card, Table, Tabs } from "animal-island-vue";
+// Card/Table/AppTabs → el-* (Element Plus auto-import)
+import AppCard from "@/shared/components/AppCard.vue";
+import AppTabs from "@/shared/components/AppTabs.vue";
+import AppTable from "@/shared/components/AppTable.vue";
 import { usePagination } from "@/shared/composables/usePagination.js";
-import { useRawStorage } from "@/shared/composables/useStorage.js";
+import { IconWifi, IconRefresh } from "@/shared/icons/index.js";
 import EmptyState from "@/shared/components/patterns/EmptyState.vue";
 import { useDevicePoolStore } from "./store.js";
-import LockDialog from "./components/LockDialog.vue";
 import DisconnectDialog from "./components/DisconnectDialog.vue";
 import NetworkConnectDialog from "./components/NetworkConnectDialog.vue";
 import QueuePanel from "./components/QueuePanel.vue";
@@ -20,8 +22,17 @@ const store = useDevicePoolStore();
 let heartbeatTimer = null;
 let prevDevicesJson = "";
 
-// Lock dialog
-const lockDialog = ref({ visible: false, serial: "", model: "" });
+// JWT current user — from per-tab sessionStorage
+function getCurrentUser() {
+  const active = sessionStorage.getItem("auth_active") || ""
+  if (active) return active
+  // fallback: first from pool
+  try {
+    const pool = JSON.parse(localStorage.getItem("auth_accounts") || "{}")
+    return Object.keys(pool)[0] || ""
+  } catch { return "" }
+}
+const currentUser = getCurrentUser();
 
 // Disconnect dialog
 const disconnectDialog = ref({
@@ -36,9 +47,9 @@ const disconnectDialog = ref({
 // Network (LAN) connect dialog — PRD §3.7 F-07
 const networkDialog = ref({ visible: false, loading: false });
 
-// ── Tabs filtering ──
+// ── AppTabs filtering ──
 const activeFilter = ref("all");
-const filterTabs = [
+const filterAppTabs = [
   { key: "all", label: "在线设备" },
   { key: "busy", label: "使用中" },
 ];
@@ -68,24 +79,19 @@ watch(filteredDevices, () => {
   if (currentPage.value > totalPages.value) currentPage.value = totalPages.value
 })
 
-// ── Table columns definition (animal-island Table API) ──
+// ── AppTable columns definition (animal-island AppTable API) ──
 const columns = [
   { dataIndex: "serial", title: "序列号", width: 220 },
   { dataIndex: "model", title: "型号", width: 180 },
   { dataIndex: "screen", title: "分辨率", width: 130, align: "center" },
   { dataIndex: "status", title: "状态", width: 100, align: "center" },
   { dataIndex: "connection_type", title: "连接", width: 88, align: "center" },
+  { dataIndex: "lock_status", title: "锁定状态", width: 130, align: "center" },
   { dataIndex: "last_seen", title: "最后在线", width: 120 },
   { dataIndex: "actions", title: "操作", width: 360, fixed: "right" },
 ];
 
 // ── Computed ──
-
-const userId = useRawStorage("dp_user_id", "");
-// saveUserId is now auto-persisted via useRawStorage's reactive watch
-function saveUserId(id) {
-  userId.value = id;
-}
 
 // ── Lifecycle ──
 
@@ -120,7 +126,7 @@ async function loadDevices() {
 
 function animateDeviceRows() {
   animate(
-    ".device-table-wrapper .animal-table tbody tr, .device-table-wrapper table tbody tr",
+    ".device-table-wrapper .el-table tbody tr, .device-table-wrapper table tbody tr",
     {
       opacity: [0, 1],
       translateY: [16, 0],
@@ -179,61 +185,18 @@ function handleRowClick(record) {
   store.selectDevice(record.serial);
 }
 
-// Lock flow
-function openLockDialog(serial) {
-  const dev = store.devices.find((d) => d.serial === serial);
-  lockDialog.value = {
-    visible: true,
-    serial,
-    model: dev ? `${dev.brand} ${dev.model}`.trim() : "",
-  };
-}
-
-async function handleLockConfirm({ userId: uid, timeout }) {
-  const serial = lockDialog.value.serial;
-  saveUserId(uid);
-  const result = await store.doLock(serial, uid, timeout);
-  if (result.ok) {
-    ElMessage.success(`已锁定 ${serial}`);
-    lockDialog.value.visible = false;
-  } else if (result.remaining !== undefined) {
-    ElMessage.warning(
-      result.error ||
-        `设备已被 ${result.locked_by} 锁定，剩余 ${result.remaining} 秒`,
-    );
-    lockDialog.value.visible = false;
-  } else {
-    ElMessage.error(result.error || "锁定失败");
-  }
-}
-
-function cancelLockDialog() {
-  lockDialog.value.visible = false;
-}
-
-// Lock toggle — user binding
+// Lock toggle — JWT user direct lock/unlock (no dialog)
 async function handleLockClick(device) {
   if (device.locked_by) {
-    // Already locked → unlock (clear user binding)
-    if (device.occupied_by) {
-      const confirmed = await new Promise((resolve) => {
-        ElMessageBox.confirm(
-          `设备当前被「${device.occupied_by}」占用中，确定要解除用户绑定吗？`,
-          "确认解除锁定",
-          {
-            confirmButtonText: "确定解除",
-            cancelButtonText: "取消",
-            type: "warning",
-          },
-        )
-          .then(() => resolve(true))
-          .catch(() => resolve(false));
-      });
-      if (!confirmed) return;
+    // Already locked → only the same user can unlock
+    if (device.locked_by !== currentUser) {
+      ElMessage.warning(`设备已被 ${device.locked_by} 锁定，只有锁定者可以解除`);
+      return;
     }
     const result = await store.doRelease(device.serial, {
       unlock: true,
       reason: "manual",
+      userId: currentUser,
     });
     if (result.ok) {
       ElMessage.success(`${device.serial} 已解除锁定`);
@@ -242,39 +205,24 @@ async function handleLockClick(device) {
     }
     return;
   }
-  if (device.occupied_by) {
-    ElMessage.warning(`设备正被 ${device.occupied_by} 占用中，仍可绑定用户`);
+  // Not locked → lock to current user
+  if (!currentUser) {
+    ElMessage.warning("无法获取当前用户信息，请重新登录");
+    return;
   }
-  openLockDialog(device.serial);
+  const result = await store.doLock(device.serial, currentUser, 3600, "user");
+  if (result.ok) {
+    ElMessage.success(`已锁定 ${device.serial}`);
+  } else {
+    ElMessage.error(result.error || "锁定失败");
+  }
 }
 
-// Occupy toggle — process occupation
+// Occupy toggle — release only (occupation is done by runner/ai engine)
 function handleOccupyClick(device) {
   if (device.occupied_by) {
     handleRelease(device.serial);
-    return;
   }
-  // Occupy: prompt for process name, then call lock with that process ID
-  ElMessageBox.prompt("请输入占用此设备的进程名称", "占用设备", {
-    confirmButtonText: "确认占用",
-    cancelButtonText: "取消",
-    inputValue: "runner-task-" + Date.now().toString(36),
-    inputPlaceholder: "如：runner-task-001、ai_agent",
-  })
-    .then(({ value }) => {
-      if (value && value.trim()) {
-        store
-          .doLock(device.serial, value.trim(), 3600, "occupy")
-          .then((result) => {
-            if (result.ok) {
-              ElMessage.success(`${device.serial} 已被 ${value.trim()} 占用`);
-            } else {
-              ElMessage.error(result.error || "占用失败");
-            }
-          });
-      }
-    })
-    .catch(() => {});
 }
 
 // Release — process occupation
@@ -295,7 +243,7 @@ async function handleRelease(serial) {
   }
 
   const result = await store.doRelease(serial, {
-    userId: userId.value,
+    userId: currentUser,
     reason: "manual",
   });
   if (result.ok) {
@@ -310,7 +258,7 @@ function openDisconnectDialog(serial) {
   const dev = store.devices.find((d) => d.serial === serial);
   if (!dev) return;
   const isBusyOthers =
-    dev.status === "BUSY" && dev.locked_by && dev.locked_by !== userId.value;
+    dev.status === "BUSY" && dev.locked_by && dev.locked_by !== currentUser;
   disconnectDialog.value = {
     visible: true,
     serial,
@@ -326,7 +274,7 @@ async function handleDisconnectConfirm({ reason }) {
   const result = await store.doDisconnect(serial, {
     force: isBusyOthers,
     reason,
-    userId: userId.value,
+    userId: currentUser,
     isAdmin: isBusyOthers,
   });
   if (result.ok) {
@@ -398,13 +346,6 @@ function connectionLabel(type) {
           :count="store.queueLength"
           @cancel="handleCancelQueue"
         />
-        <AnimalButton class="wb-btn" type="primary" @click="openNetworkDialog">局域网连接</AnimalButton>
-        <AnimalButton
-          class="wb-btn"
-          type="primary"
-          :loading="store.scanning || store.loading"
-          @click="handleRefresh"
-        >刷新设备</AnimalButton>
       </template>
     </WorkbenchHeader>
 
@@ -417,9 +358,9 @@ function connectionLabel(type) {
           </h3>
         </div>
 
-        <!-- Tabs 筛选 + 设备表格 -->
+        <!-- AppTabs 筛选 + 设备表格 -->
         <div class="filter-bar">
-          <Tabs
+          <AppTabs
             class="device-tabs"
             :items="filterTabs"
             v-model="activeFilter"
@@ -429,17 +370,34 @@ function connectionLabel(type) {
             <template v-for="tab in filterTabs" #[tab.key] :key="tab.key">
               <div class="tab-panel">
                 <div class="table-toolbar">
-                  <div class="page-size-control">
-                    <span class="toolbar-label">显示行数</span>
-                    <div class="page-size-btns">
-                      <button
-                        v-for="n in PAGE_SIZE_OPTIONS"
-                        :key="n"
-                        type="button"
-                        class="page-size-btn"
-                        :class="{ active: pageSize === n }"
-                        @click="setPageSize(n)"
-                      >{{ n }}</button>
+                  <div class="table-toolbar-left">
+                    <div class="toolbar-actions">
+                      <el-button class="wb-btn toolbar-icon-btn lan-btn" size="small" @click="openNetworkDialog">
+                        <IconWifi :size="14" />
+                        <span>局域网连接</span>
+                      </el-button>
+                      <el-button
+                        class="wb-btn toolbar-icon-btn refresh-btn"
+                        size="small"
+                        :loading="store.scanning || store.loading"
+                        @click="handleRefresh"
+                      >
+                        <IconRefresh :size="14" />
+                        <span>刷新设备</span>
+                      </el-button>
+                    </div>
+                    <div class="page-size-control">
+                      <span class="toolbar-label">显示行数</span>
+                      <div class="page-size-btns">
+                        <button
+                          v-for="n in PAGE_SIZE_OPTIONS"
+                          :key="n"
+                          type="button"
+                          class="page-size-btn"
+                          :class="{ active: pageSize === n }"
+                          @click="setPageSize(n)"
+                        >{{ n }}</button>
+                      </div>
                     </div>
                   </div>
                   <div v-if="filteredDevices.length > 0" class="table-toolbar-right">
@@ -447,14 +405,14 @@ function connectionLabel(type) {
                       第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ filteredDevices.length }} 台
                     </span>
                     <div v-if="totalPages > 1" class="page-nav">
-                      <AnimalButton class="wb-btn" size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</AnimalButton>
-                      <AnimalButton class="wb-btn" size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</AnimalButton>
+                      <el-button class="wb-btn" size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</el-button>
+                      <el-button class="wb-btn" size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</el-button>
                     </div>
                   </div>
                 </div>
-                <Card color="app-yellow" pattern="app-yellow" type="default" class="table-card">
+                <AppCard color="app-yellow" pattern="app-yellow" type="default" class="table-card">
                   <div class="device-table-wrapper">
-                    <Table
+                    <AppTable
                       :columns="columns"
                       :data-source="pagedDevices"
                     row-key="serial"
@@ -537,6 +495,16 @@ function connectionLabel(type) {
                       }}</span>
                     </template>
 
+                    <!-- Lock status -->
+                    <template #cell-lock_status="{ record }">
+                      <span
+                        v-if="record.locked_by"
+                        class="lock-badge lock-badge--locked"
+                        :title="`锁定者: ${record.locked_by}`"
+                      >{{ record.locked_by }}</span>
+                      <span v-else class="lock-badge lock-badge--shared">共用</span>
+                    </template>
+
                     <!-- Last seen -->
                     <template #cell-last_seen="{ record }">
                       <span class="last-seen-text">
@@ -544,33 +512,38 @@ function connectionLabel(type) {
                       </span>
                     </template>
 
-                    <!-- Two independent pairs: user lock + process occupy -->
+                    <!-- Actions: user lock + process occupy -->
                     <template #cell-actions="{ record }">
                       <div class="action-btns">
-                        <AnimalButton class="wb-btn"
+                        <!-- Lock button: purple unlocked → red locked (auto-switch) -->
+                        <el-button class="wb-btn lock-btn"
                           size="small"
                           type="primary"
-                          plain
+                          :class="{ 'lock-btn--locked': record.locked_by }"
+                          :danger="!!record.locked_by"
+                          :plain="!record.locked_by"
                           :disabled="
                             record.status === 'OFFLINE' ||
-                            record.status === 'DISCONNECTED'
+                            record.status === 'DISCONNECTED' ||
+                            (!!record.locked_by && record.locked_by !== currentUser)
                           "
                           @click="handleLockClick(record)"
                           >{{
-                            record.locked_by ? "解除锁定" : "锁定用户"
-                          }}</AnimalButton>
-                        <AnimalButton class="wb-btn"
+                            record.locked_by
+                              ? (record.locked_by === currentUser ? "解除锁定" : "已锁定")
+                              : "锁定"
+                          }}</el-button>
+                        <!-- Occupy button: yellow, always labeled "解除占用" -->
+                        <el-button class="wb-btn occupy-btn"
                           size="small"
-                          :type="record.occupied_by ? 'danger' : 'warning'"
-                          plain
+                          type="primary"
                           :disabled="
                             record.status === 'OFFLINE' ||
-                            record.status === 'DISCONNECTED'
+                            record.status === 'DISCONNECTED' ||
+                            !record.occupied_by
                           "
                           @click="handleOccupyClick(record)"
-                          >{{
-                            record.occupied_by ? "解除占用" : "占用设备"
-                          }}</AnimalButton>
+                          >解除占用</el-button>
                       </div>
                     </template>
 
@@ -579,23 +552,18 @@ function connectionLabel(type) {
                         :text="activeFilter === 'all' ? '暂无设备' : '没有匹配的设备'"
                         :hint="activeFilter === 'all' ? '点击「扫描设备」发现设备' : '尝试切换筛选条件'" />
                     </template>
-                  </Table>
+                  </AppTable>
                   </div>
-                </Card>
+                </AppCard>
               </div>
             </template>
-          </Tabs>
+          </AppTabs>
           <span class="filter-count">{{ filteredDevices.length }} 台设备</span>
         </div>
       </section>
     </div>
 
     <!-- Dialogs -->
-    <LockDialog
-      v-bind="lockDialog"
-      @confirm="handleLockConfirm"
-      @cancel="cancelLockDialog"
-    />
     <DisconnectDialog
       v-bind="disconnectDialog"
       @confirm="handleDisconnectConfirm"
@@ -664,17 +632,17 @@ function connectionLabel(type) {
   flex-direction: column;
   overflow: hidden;
 }
-.device-tabs :deep(.animal-tabs) {
+.device-tabs :deep(.el-tabs) {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
-.device-tabs :deep(.animal-tabs__list) {
+.device-tabs :deep(.el-tabs__list) {
   flex-shrink: 0;
 }
-.device-tabs :deep(.animal-tabs__content) {
+.device-tabs :deep(.el-tabs__content) {
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -682,7 +650,7 @@ function connectionLabel(type) {
   flex-direction: column;
   padding-top: 16px;
 }
-.device-tabs :deep(.animal-tabs__inner) {
+.device-tabs :deep(.el-tabs__inner) {
   flex: 1;
   min-height: 0;
   display: flex;
@@ -706,7 +674,7 @@ function connectionLabel(type) {
   align-self: flex-start;
 }
 
-/* ── Table toolbar ── */
+/* ── AppTable toolbar ── */
 .table-toolbar {
   display: flex;
   align-items: center;
@@ -715,6 +683,37 @@ function connectionLabel(type) {
   flex-wrap: wrap;
   padding: 0 0 10px;
   flex-shrink: 0;
+}
+.table-toolbar-left { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.toolbar-actions { display: flex; align-items: center; gap: 8px; }
+
+/* ── Toolbar icon buttons — AnimalButton root gets parent classes merged ── */
+.toolbar-icon-btn {
+  gap: 5px !important;
+  padding: 5px 14px !important;
+  border-radius: 10px !important;
+}
+
+/* 局域网连接 — 淡蓝 */
+.lan-btn {
+  background: rgba(136, 157, 240, 0.12) !important;
+  border-color: rgba(136, 157, 240, 0.25) !important;
+  color: #6b7fd4 !important;
+}
+.lan-btn:hover {
+  background: rgba(136, 157, 240, 0.24) !important;
+  border-color: rgba(136, 157, 240, 0.48) !important;
+}
+
+/* 刷新设备 — 淡绿 */
+.refresh-btn {
+  background: rgba(111, 186, 44, 0.10) !important;
+  border-color: rgba(111, 186, 44, 0.22) !important;
+  color: #5a9e1e !important;
+}
+.refresh-btn:hover {
+  background: rgba(111, 186, 44, 0.20) !important;
+  border-color: rgba(111, 186, 44, 0.42) !important;
 }
 .page-size-control { display: flex; align-items: center; gap: 10px; }
 .toolbar-label { font-size: 12px; font-weight: 700; color: #8a7b66; white-space: nowrap; }
@@ -741,7 +740,7 @@ function connectionLabel(type) {
 .page-info { font-size: 12px; color: #8a7b66; font-weight: 600; white-space: nowrap; }
 .page-nav { display: flex; gap: 8px; }
 
-/* ── Table card ── */
+/* ── AppTable card ── */
 .table-card {
   flex: 1;
   min-height: 0;
@@ -749,7 +748,7 @@ function connectionLabel(type) {
   flex-direction: column;
   overflow: hidden;
 }
-.table-card :deep(.animal-card__content) {
+.table-card :deep(.el-card__body) {
   flex: 1;
   min-height: 0;
   display: flex;
@@ -762,7 +761,7 @@ function connectionLabel(type) {
   -webkit-backdrop-filter: blur(6px);
 }
 
-/* ── Table wrapper inside Card ── */
+/* ── AppTable wrapper inside AppCard ── */
 .device-table-wrapper {
   flex: 1;
   min-height: 0;
@@ -781,8 +780,8 @@ function connectionLabel(type) {
   background: rgba(139, 115, 85, 0.25);
   border-radius: 3px;
 }
-.device-table-wrapper :deep(.animal-table-wrapper),
-.device-table-wrapper :deep(.animal-table__body) {
+.device-table-wrapper :deep(.el-table),
+.device-table-wrapper :deep(.el-table__body-wrapper) {
   overflow: visible !important;
   max-height: none !important;
 }
@@ -867,6 +866,38 @@ function connectionLabel(type) {
   flex-wrap: wrap;
 }
 
+/* ── Action button colors ── */
+/* Lock: purple (unlocked) → red (locked, via danger prop) */
+.lock-btn:not(.lock-btn--locked) {
+  background: rgba(179, 158, 243, 0.15) !important;
+  border-color: rgba(179, 158, 243, 0.35) !important;
+  color: #8b7cf0 !important;
+}
+.lock-btn:not(.lock-btn--locked):hover {
+  background: rgba(179, 158, 243, 0.28) !important;
+  border-color: rgba(179, 158, 243, 0.55) !important;
+}
+
+/* ── Lock status badge ── */
+.lock-badge {
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  display: inline-block;
+}
+.lock-badge--locked {
+  background: rgba(136, 157, 240, 0.15);
+  color: #6b7fd4;
+  border: 1px solid rgba(136, 157, 240, 0.3);
+}
+.lock-badge--shared {
+  background: rgba(111, 186, 44, 0.12);
+  color: #5a9e1e;
+  border: 1px solid rgba(111, 186, 44, 0.25);
+}
+
 /* ── Empty state ── */
 .empty-state {
   color: #9f927d;
@@ -876,9 +907,9 @@ function connectionLabel(type) {
 }
 
 /* ── Row status styles (deep targeting animal-island table rows) ── */
-:deep(.device-table-wrapper .animal-table tbody tr[data-row-status="OFFLINE"]),
+:deep(.device-table-wrapper .el-table tbody tr[data-row-status="OFFLINE"]),
 :deep(
-  .device-table-wrapper .animal-table tbody tr[data-row-status="DISCONNECTED"]
+  .device-table-wrapper .el-table tbody tr[data-row-status="DISCONNECTED"]
 ) {
   opacity: 0.5;
 }

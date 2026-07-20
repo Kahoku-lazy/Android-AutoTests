@@ -95,7 +95,7 @@ export const INPUT_DEFAULTS = {
 // ── 列表动画配置 ──
 export const LIST_ANIMATION = {
   selector:
-    '.device-table-wrapper .animal-table tbody tr, .device-table-wrapper table tbody tr',
+    '.device-table-wrapper .el-table tbody tr, .device-table-wrapper table tbody tr',
   opacity: [0, 1],
   translateY: [16, 0],
   staggerDelay: 50,

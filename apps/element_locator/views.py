@@ -61,7 +61,7 @@ def dump_page(request):
     shot_dir = settings.SCREENSHOT_DIR
     shot_dir.mkdir(parents=True, exist_ok=True)
     shot_file = shot_dir / f"page_{ts}.png"
-    device.d.screenshot(str(shot_file))
+    device.screenshot_file(str(shot_file))
     pngs = sorted(shot_dir.glob("page_*.png"), key=lambda p: p.stat().st_mtime, reverse=True)
     for old in pngs[3:]:
         try: old.unlink()
@@ -69,7 +69,7 @@ def dump_page(request):
 
     info = device.info()
     package = info.get("currentPackageName", "")
-    cur = device.d.app_current()
+    cur = device.app_current()
     activity = cur.get("activity", "")
 
     # Generate XPath candidates for actionable elements

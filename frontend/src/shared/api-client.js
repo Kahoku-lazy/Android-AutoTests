@@ -14,22 +14,74 @@ const agentscopeClient = axios.create({
   timeout: 120000,
 })
 
-// ── JWT helpers ──
+// ── JWT helpers — multi-account aware ──
+// accounts pool: localStorage.auth_accounts (shared across tabs)
+// active account: sessionStorage.auth_active  (per-tab, isolated)
+const POOL_KEY = 'auth_accounts'
+const ACTIVE_KEY = 'auth_active'
+
+function readAuthStore() {
+  let pool = {}
+  // Migration: old single-token format → multi-account pool
+  const oldToken = localStorage.getItem('access_token')
+  if (oldToken) {
+    const oldRefresh = localStorage.getItem('refresh_token')
+    const oldUser = localStorage.getItem('username') || 'admin'
+    pool = { [oldUser]: { access_token: oldToken, refresh_token: oldRefresh || '' } }
+    localStorage.setItem(POOL_KEY, JSON.stringify(pool))
+    sessionStorage.setItem(ACTIVE_KEY, oldUser)
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
+    localStorage.removeItem('username')
+  } else {
+    try {
+      pool = JSON.parse(localStorage.getItem(POOL_KEY) || '{}')
+    } catch { pool = {} }
+  }
+  const active = sessionStorage.getItem(ACTIVE_KEY) || Object.keys(pool)[0] || ''
+  // Ensure active account exists in pool
+  if (active && !pool[active]) {
+    const first = Object.keys(pool)[0] || ''
+    sessionStorage.setItem(ACTIVE_KEY, first)
+    return { pool, active: first }
+  }
+  return { pool, active }
+}
+
+function writePool(pool) {
+  localStorage.setItem(POOL_KEY, JSON.stringify(pool))
+}
+
 function getToken() {
-  return localStorage.getItem('access_token')
+  const { pool, active } = readAuthStore()
+  return pool[active]?.access_token || ''
 }
 
 function setToken(token) {
-  localStorage.setItem('access_token', token)
+  const { pool, active } = readAuthStore()
+  if (active && pool[active]) {
+    pool[active].access_token = token
+    writePool(pool)
+  }
 }
 
 function clearToken() {
-  localStorage.removeItem('access_token')
-  localStorage.removeItem('refresh_token')
+  const { pool, active } = readAuthStore()
+  if (active) {
+    delete pool[active]
+    writePool(pool)
+    const remaining = Object.keys(pool)
+    sessionStorage.setItem(ACTIVE_KEY, remaining.length > 0 ? remaining[0] : '')
+  }
 }
 
 function getRefreshToken() {
-  return localStorage.getItem('refresh_token')
+  const { pool, active } = readAuthStore()
+  return pool[active]?.refresh_token || ''
+}
+
+function getActiveUsername() {
+  return sessionStorage.getItem(ACTIVE_KEY) || ''
 }
 
 // ── Request interceptor — inject JWT ──
@@ -61,9 +113,12 @@ async function authErrorInterceptor(err) {
           return axios(originalRequest)
         }
       } catch (e) {
-        // refresh failed — redirect to login
+        // refresh failed — remove account; redirect to login only if no accounts left
         clearToken()
-        window.location.href = '/login'
+        const { active } = readAuthStore()
+        if (!active) {
+          window.location.href = '/login'
+        }
       }
     }
   }
@@ -101,4 +156,4 @@ function formatApiError(err, fallback = '操作失败，请稍后重试') {
 }
 
 export default client
-export { agentscopeClient, getToken, setToken, clearToken, getRefreshToken, formatApiError }
+export { agentscopeClient, getToken, setToken, clearToken, getRefreshToken, getActiveUsername, formatApiError }

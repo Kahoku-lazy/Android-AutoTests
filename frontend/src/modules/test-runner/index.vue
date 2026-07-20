@@ -2,9 +2,11 @@
 import { ref, computed, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
-import client from "@/shared/api-client.js";
+import client, { getToken } from "@/shared/api-client.js";
 import ConfirmButton from "@/shared/components/patterns/ConfirmButton.vue";
-import { Card, Tabs } from "animal-island-vue";
+// Card/AppTabs → AppCard/AppTabs
+import AppCard from "@/shared/components/AppCard.vue";
+import AppTabs from "@/shared/components/AppTabs.vue";
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
 import {
   generateTaskId,
@@ -37,7 +39,7 @@ const tasks = ref([]);
 // ── JWT decode for creator ──
 function getCurrentUsername() {
   try {
-    const token = localStorage.getItem("access_token");
+    const token = getToken();
     if (!token) return "未知";
     const payload = JSON.parse(atob(token.split(".")[1]));
     return payload.username || payload.sub || "未知";
@@ -117,7 +119,7 @@ const completedTasks = computed(() =>
 const incompleteTasks = computed(() =>
   tasks.value.filter((t) => taskBucket(t) === "incomplete"),
 );
-const filterTabs = computed(() => [
+const filterAppTabs = computed(() => [
   { key: "all", label: `📋 全部 (${tasks.value.length})` },
   { key: "running", label: `⚡ 执行中 (${runningTasks.value.length})` },
   { key: "waiting", label: `⏳ 等待中 (${waitingTasks.value.length})` },
@@ -574,12 +576,12 @@ async function loadDevices() {
           <h3 class="doc-section__title">
             任务列表<span class="doc-tag">Tasks</span>
           </h3>
-          <AnimalButton class="wb-btn" type="primary" @click="openNewTask">+ 新建任务</AnimalButton>
+          <el-button class="wb-btn" type="primary" @click="openNewTask">+ 新建任务</el-button>
         </div>
 
-        <!-- Tabs panel: cards render inside animal-tabs content slots -->
+        <!-- AppTabs panel: cards render inside animal-tabs content slots -->
         <div class="tabs-panel">
-          <Tabs
+          <AppTabs
             class="runner-tabs"
             :items="filterTabs"
             v-model="activeTab"
@@ -697,26 +699,26 @@ async function loadDevices() {
                         ].includes(task.outcome)
                       "
                     >
-                      <AnimalButton
+                      <el-button
                         size="small"
                         type="primary"
                         @click="restartTask(task)"
-                        >↻ 重新执行</AnimalButton>
-                      <AnimalButton
+                        >↻ 重新执行</el-button>
+                      <el-button
                         size="small"
                         type="info"
                         @click="router.push(`/reports/task/${encodeURIComponent(task.id)}`)"
-                        >📊 查看报告</AnimalButton>
+                        >📊 查看报告</el-button>
                     </template>
                     <template v-else-if="!task.caseIds?.length">
-                      <AnimalButton size="small" disabled>⚠ 无用例</AnimalButton>
+                      <el-button size="small" disabled>⚠ 无用例</el-button>
                     </template>
                     <template v-else>
-                      <AnimalButton
+                      <el-button
                         size="small"
                         type="primary"
                         @click="doStartTask(task)"
-                        >▶ 执行</AnimalButton>
+                        >▶ 执行</el-button>
                     </template>
                     <ConfirmButton size="small" type="primary" danger plain
                       :message="`删除任务「${task.name || task.id}」？`" title="确认删除" confirm-text="删除"
@@ -731,7 +733,7 @@ async function loadDevices() {
                 }}
               </div>
             </template>
-          </Tabs>
+          </AppTabs>
         </div>
       </section>
     </div>
@@ -839,13 +841,13 @@ async function loadDevices() {
         </el-form>
       </div>
       <template #footer>
-        <AnimalButton class="wb-btn" @click="showNewTask = false">取消</AnimalButton>
-        <AnimalButton
+        <el-button class="wb-btn" @click="showNewTask = false">取消</el-button>
+        <el-button
           class="wb-btn"
           type="primary"
           :disabled="!newForm.caseIds.length || !newForm.deviceSerial"
           @click="createAndStart"
-        >创建并执行</AnimalButton>
+        >创建并执行</el-button>
       </template>
     </el-dialog>
   </div>
@@ -874,7 +876,7 @@ async function loadDevices() {
   flex-shrink: 0;
 }
 
-/* Tabs panel — unified container for tabs + content */
+/* AppTabs panel — unified container for tabs + content */
 .tabs-panel {
   flex: 1;
   display: flex;
@@ -887,14 +889,14 @@ async function loadDevices() {
   overflow: hidden;
   box-shadow: var(--ac-shadow, 0 4px 16px rgba(139, 115, 85, 0.1));
 }
-.tabs-panel :deep(.animal-tabs) {
+.tabs-panel :deep(.el-tabs) {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
   padding: 8px 16px 0;
 }
-.runner-tabs :deep(.animal-tabs__content) {
+.runner-tabs :deep(.el-tabs__content) {
   flex: 1;
   min-height: 0;
   overflow-x: hidden;
@@ -902,11 +904,11 @@ async function loadDevices() {
   display: block;
   padding-top: 12px;
 }
-.runner-tabs :deep(.animal-tabs__inner) {
+.runner-tabs :deep(.el-tabs__inner) {
   min-height: min-content;
 }
 
-/* Card grid */
+/* AppCard grid */
 .card-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

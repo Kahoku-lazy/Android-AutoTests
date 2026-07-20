@@ -1,8 +1,8 @@
 """
 Async test runner — executes selected test cases sequentially with loop_count iterations.
 
-TREP v1.0: 纯执行单元。设备锁定由调度器在调用 run() 前完成，执行器不负责
-设备生命周期管理。通过 TestRunnerCallback 上报进度，每 5s 发送心跳。
+TREP v1.0: Pure execution unit. Device locking is done by the scheduler before run().
+DeviceConnection provides both Airtest (device ops) and u2 (XPath element location).
 """
 import time
 import asyncio
@@ -14,12 +14,13 @@ from typing import Optional
 from models.test_models import TestCaseDef, TestResult as CaseIterationResult, TestRun, TestRunStatus
 from .adapter import DeviceAdapter
 from .executor import StepExecutor
+from .device_connect import DeviceConnection
 from .u2_recovery import (
     U2_CASE_RETRY_MAX,
     U2_RECONNECT_INTERVAL,
-    check_u2_alive,
-    is_u2_crash,
-    wait_and_reconnect,
+    check_device_alive,
+    is_device_crash,
+    wait_and_reconnect_device,
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -27,38 +28,38 @@ LOG_DIR = BASE_DIR / "logs"
 EXPORT_DIR = BASE_DIR / "exports"
 
 
-# Dedicated thread pool for uiautomator2 operations — isolated from Django's
-# sync_to_async pool to prevent CurrentThreadExecutor corruption from breaking
-# all ORM operations.
+# Dedicated thread pool for device operations (Airtest + u2) — isolated from
+# Django's sync_to_async pool to prevent CurrentThreadExecutor corruption from
+# breaking all ORM operations.
 import concurrent.futures
-_u2_executor = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix='u2')
+_device_executor = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix='device')
 
 
 async def _safe_run_in_executor(loop, func, *args, error_msg="executor failed"):
     """Run a sync function in executor with protection against CurrentThreadExecutor quit.
 
-    Uses a dedicated thread pool (_u2_executor) instead of the default (None)
-    to prevent uiautomator2's CurrentThreadExecutor from corrupting the shared
+    Uses a dedicated thread pool (_device_executor) instead of the default (None)
+    to prevent uiautomator2/Airtest executors from corrupting the shared
     thread pool used by Django's sync_to_async.
     """
     try:
-        return await loop.run_in_executor(_u2_executor, func, *args)
+        return await loop.run_in_executor(_device_executor, func, *args)
     except RuntimeError as e:
         msg = str(e)
         if 'quit' in msg.lower() or 'broken' in msg.lower():
             raise ConnectionError(
-                f"设备连接已断开 (executor quit): {error_msg}"
+                f"Device disconnected (executor quit): {error_msg}"
             ) from e
         raise
     except BrokenPipeError as e:
         raise ConnectionError(
-            f"设备连接中断 (broken pipe): {error_msg}"
+            f"Device connection broken (broken pipe): {error_msg}"
         ) from e
     except OSError as e:
         if getattr(e, 'errno', None) == 22:
             raise  # Invalid argument (e.g. bad filename) — don't wrap
         raise ConnectionError(
-            f"设备 IO 错误: {error_msg}: {e}"
+            f"Device IO error: {error_msg}: {e}"
         ) from e
 
 
@@ -140,9 +141,9 @@ def mark_device_idle(serial: str):
 class TestRunner:
     """Executes test cases asynchronously against a connected device."""
 
-    def __init__(self, device, package_name: str = "",
+    def __init__(self, device_conn: DeviceConnection, package_name: str = "",
                  callback: TestRunnerCallback = None):
-        self.device = device
+        self.device_conn = device_conn
         self.package_name = package_name
         self.callback = callback or TestRunnerCallback()
 
@@ -151,7 +152,7 @@ class TestRunner:
         """Run all test cases sequentially."""
         run_model = TestRun(
             run_id=run_id,
-            device_serial=self.device.serial,
+            device_serial=self.device_conn.serial,
             status=TestRunStatus.RUNNING,
             selected_cases=[tc.id for tc in test_cases],
             loop_count=loop_count,
@@ -168,7 +169,7 @@ class TestRunner:
 
         def create_adapter():
             return DeviceAdapter(
-                self.device, package_name=self.package_name,
+                self.device_conn, package_name=self.package_name,
                 logger=lambda msg, l=loop: self._sync_log(state, msg, l),
                 should_stop=lambda: not state.is_running,
             )
@@ -274,10 +275,10 @@ class TestRunner:
         state.adapter._step_started_callback = _make_step_started_cb(iteration)
 
     async def _recreate_adapter_executor(self, state: _RunState, loop) -> StepExecutor:
-        """u2 重连后重建 adapter 与 executor。"""
+        """Rebuild adapter + executor after device reconnection."""
         def create_adapter():
             return DeviceAdapter(
-                self.device, package_name=self.package_name,
+                self.device_conn, package_name=self.package_name,
                 logger=lambda msg, l=loop: self._sync_log(state, msg, l),
                 should_stop=lambda: not state.is_running,
             )
@@ -295,14 +296,14 @@ class TestRunner:
         iteration: int,
         loop,
     ) -> tuple[str, StepExecutor, bool]:
-        """执行单轮步骤，u2 崩溃时最多重试 U2_CASE_RETRY_MAX 次。
+        """Execute one iteration of steps, retrying on device crash up to U2_CASE_RETRY_MAX times.
 
         Returns:
-            (result, executor, fatal_u2)
-            - fatal_u2=True: u2 服务无法恢复，停止整个任务
+            (result, executor, fatal_device)
+            - fatal_device=True: device unrecoverable, stop entire task
         """
         if not case.steps_data:
-            state.adapter.log(f'用例 "{case.title}" 无步骤，直接通过')
+            state.adapter.log(f'Case "{case.title}" has no steps, pass')
             return "pass", executor, False
 
         last_error = ""
@@ -313,60 +314,60 @@ class TestRunner:
             self._wire_step_callbacks(state, case, iteration, loop)
 
             try:
-                if not check_u2_alive(self.device):
+                if not check_device_alive(self.device_conn):
                     state.adapter.log(
-                        f"⚠️ u2 连接不可用，尝试重连 ({attempt}/{U2_CASE_RETRY_MAX})..."
+                        f"⚠️ Device unresponsive, attempting reconnect ({attempt}/{U2_CASE_RETRY_MAX})..."
                     )
-                    self.device = await _safe_run_in_executor(
+                    self.device_conn = await _safe_run_in_executor(
                         loop,
-                        wait_and_reconnect,
-                        self.device.serial,
+                        wait_and_reconnect_device,
+                        self.device_conn.serial,
                         U2_RECONNECT_INTERVAL,
-                        error_msg="u2 重连失败",
+                        error_msg="Device reconnect failed",
                     )
                     executor = await self._recreate_adapter_executor(state, loop)
                     self._wire_step_callbacks(state, case, iteration, loop)
 
                 result = await _safe_run_in_executor(
                     loop, executor.execute_all, case.steps_data,
-                    error_msg=f"执行用例 '{case.title}' 步骤时设备断连",
+                    error_msg=f"Device disconnected while executing case '{case.title}'",
                 )
                 return result, executor, False
 
             except Exception as e:
-                if not is_u2_crash(e):
+                if not is_device_crash(e):
                     raise
                 last_error = str(e)
                 state.adapter.log(
-                    f"⚠️ u2 崩溃 ({attempt}/{U2_CASE_RETRY_MAX}): {last_error}"
+                    f"⚠️ Device crash ({attempt}/{U2_CASE_RETRY_MAX}): {last_error}"
                 )
                 if attempt >= U2_CASE_RETRY_MAX:
                     break
                 try:
-                    self.device = await _safe_run_in_executor(
+                    self.device_conn = await _safe_run_in_executor(
                         loop,
-                        wait_and_reconnect,
-                        self.device.serial,
+                        wait_and_reconnect_device,
+                        self.device_conn.serial,
                         U2_RECONNECT_INTERVAL,
-                        error_msg="u2 重连失败",
+                        error_msg="Device reconnect failed",
                     )
                     executor = await self._recreate_adapter_executor(state, loop)
                 except Exception as reconnect_err:
-                    state.adapter.log(f"  重连失败: {reconnect_err}")
+                    state.adapter.log(f"  Reconnect failed: {reconnect_err}")
 
-        if not check_u2_alive(self.device):
+        if not check_device_alive(self.device_conn):
             state.adapter.log(
-                f"💥 u2 服务 {U2_CASE_RETRY_MAX} 次重试后仍无法恢复，停止当前任务"
+                f"💥 Device unrecoverable after {U2_CASE_RETRY_MAX} retries, stopping task"
             )
             await self.callback.on_device_error(
                 state.run_model.run_id,
-                f"u2 服务无法恢复: {last_error}",
+                f"Device unrecoverable: {last_error}",
             )
             return "fail", executor, True
 
         state.adapter.log(
-            f"✘ 用例「{case.title}」第 {iteration} 轮："
-            f"u2 崩溃 {U2_CASE_RETRY_MAX} 次后仍未完成，标记失败，继续下一条用例"
+            f"✘ Case '{case.title}' iteration {iteration}: "
+            f"device crash after {U2_CASE_RETRY_MAX} retries, marking failed"
         )
         return "fail", executor, False
 

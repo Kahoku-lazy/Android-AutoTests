@@ -1,13 +1,29 @@
 <script setup>
-import { Button as AnimalButton, Card } from "animal-island-vue";
+import { ref } from "vue";
+// Button → el-button, AppCard → AppCard
+import AppCard from "@/shared/components/AppCard.vue";
 import { ElTag } from "element-plus";
 import ConfirmButton from "@/shared/components/patterns/ConfirmButton.vue";
+import { caseLock, caseUnlock } from "../api.js";
 
 const props = defineProps({
   item: { type: Object, required: true },
 });
 
-const emit = defineEmits(["edit", "delete", "select"]);
+const emit = defineEmits(["edit", "delete", "select", "refresh"]);
+
+function resolveCurrentUser() {
+  const active = sessionStorage.getItem("auth_active") || ""
+  if (active) return active
+  try {
+    const pool = JSON.parse(localStorage.getItem("auth_accounts") || "{}")
+    return Object.keys(pool)[0] || ""
+  } catch { return "" }
+}
+const currentUser = resolveCurrentUser();
+const isCreator = currentUser && props.item.created_by === currentUser;
+const isEditing = props.item.editing_by && props.item.editing_by !== currentUser;
+const locking = ref(false);
 
 function cardColor() {
   if (props.item.enabled) return "app-teal";
@@ -26,10 +42,37 @@ function stepCount() {
   } catch (_) {}
   return 0;
 }
+
+function formatDate(val) {
+  if (!val) return "";
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return val.slice(0, 10);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${mm}-${dd} ${hh}:${mi}`;
+}
+
+async function toggleLock() {
+  locking.value = true;
+  try {
+    if (props.item.locked) {
+      await caseUnlock(props.item.id);
+    } else {
+      await caseLock(props.item.id);
+    }
+    emit("refresh");
+  } catch (e) {
+    // silently fail, parent refreshes
+  } finally {
+    locking.value = false;
+  }
+}
 </script>
 
 <template>
-  <Card
+  <AppCard
     :color="cardColor()"
     :pattern="cardPattern()"
     class="case-card"
@@ -46,6 +89,8 @@ function stepCount() {
             "
             >{{ item.priority }}</span
           >
+          <span v-if="item.locked" class="case-card__lock-icon" title="已锁定">🔒</span>
+          <span v-if="item.visibility !== 'public'" class="case-card__vis-icon" :title="'可见性: ' + item.visibility">👁️‍🗨️</span>
         </div>
         <el-tag
           :type="item.enabled ? 'success' : 'info'"
@@ -57,25 +102,55 @@ function stepCount() {
         </el-tag>
       </div>
       <h4 class="case-card__title">{{ item.title || "未命名用例" }}</h4>
+      <!-- Editing status -->
+      <div v-if="isEditing" class="case-card__editing-badge">
+        ✏️ {{ props.item.editing_by }} 正在编辑
+      </div>
       <div class="case-card__meta">
         <span v-if="item.category" class="meta-tag">{{ item.category }}</span>
         <span v-if="item.directory_name" class="meta-tag meta-tag--dir">{{
           item.directory_name
         }}</span>
         <span class="meta-tag meta-tag--steps">{{ stepCount() }} 步骤</span>
+        <span v-if="item.created_by" class="meta-tag meta-tag--user"
+          >创建: {{ item.created_by }} · {{ formatDate(item.created_at) }}</span
+        >
+        <span v-if="item.updated_by" class="meta-tag meta-tag--user"
+          >修改: {{ item.updated_by }} · {{ formatDate(item.updated_at) }}</span
+        >
       </div>
     </div>
     <div class="case-card__actions" @click.stop>
-      <AnimalButton size="small" type="primary" @click="$emit('edit', item)"
-        >编辑</AnimalButton
+      <el-button
+        size="small"
+        type="primary"
+        :disabled="isEditing"
+        @click="$emit('edit', item)"
+        >编辑</el-button
       >
-      <ConfirmButton size="small" type="primary" danger plain
-        :message="`删除用例「${item.title}」？`" title="确认删除" confirm-text="删除"
+      <!-- Lock toggle (creator only) -->
+      <el-button
+        v-if="isCreator"
+        size="small"
+        :type="item.locked ? 'primary' : 'default'"
+        :danger="item.locked"
+        :loading="locking"
+        @click="toggleLock"
+        >{{ item.locked ? '🔒' : '🔓' }}</el-button
+      >
+      <ConfirmButton
+        size="small"
+        type="primary"
+        danger
+        plain
+        :message="`删除用例「${item.title}」？`"
+        title="确认删除"
+        confirm-text="删除"
         @confirm="$emit('delete', item)"
         >删除</ConfirmButton
       >
     </div>
-  </Card>
+  </AppCard>
 </template>
 
 <style scoped>
@@ -173,6 +248,21 @@ function stepCount() {
 
 .meta-tag--steps {
   color: #9f927d;
+}
+
+.meta-tag--user {
+  color: #889df0;
+  background: rgba(136, 157, 240, 0.08);
+}
+
+/* Editing status badge */
+.case-card__editing-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8a6d14;
+  background: rgba(247, 205, 103, 0.25);
+  padding: 4px 10px;
+  border-radius: 8px;
 }
 
 .case-card__actions {

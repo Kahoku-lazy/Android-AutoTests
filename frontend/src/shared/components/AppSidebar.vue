@@ -3,13 +3,62 @@ import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { animate } from 'animejs'
 import { sidebarNavEnter, selectPop } from '../animations.js'
-import { Icon, Button, Title, Divider, Card } from 'animal-island-vue'
 import AnimatedMascot from './AnimatedMascot.vue'
 import AnimatedMenuIcon from './AnimatedMenuIcon.vue'
 
 const router = useRouter()
 const route = useRoute()
-const username = ref(localStorage.getItem('username') || 'admin')
+
+// ── Multi-account auth ──
+const POOL_KEY = 'auth_accounts'
+const ACTIVE_KEY = 'auth_active'
+
+function readPool() {
+  try { return JSON.parse(localStorage.getItem(POOL_KEY) || '{}') } catch { return {} }
+}
+function getActive() {
+  return sessionStorage.getItem(ACTIVE_KEY) || Object.keys(readPool())[0] || ''
+}
+
+const username = ref(getActive())
+const allAccounts = ref(Object.keys(readPool()))
+const showAccountMenu = ref(false)
+
+function refreshAccountState() {
+  username.value = getActive()
+  allAccounts.value = Object.keys(readPool())
+}
+
+// Listen for pool changes from other tabs (new accounts added/removed)
+window.addEventListener('storage', (e) => {
+  if (e.key === POOL_KEY) refreshAccountState()
+})
+
+function switchToAccount(name) {
+  if (readPool()[name]) {
+    sessionStorage.setItem(ACTIVE_KEY, name)
+    showAccountMenu.value = false
+    window.location.reload()
+  }
+}
+
+function logout() {
+  const active = getActive()
+  if (active) {
+    const pool = readPool()
+    delete pool[active]
+    localStorage.setItem(POOL_KEY, JSON.stringify(pool))
+    const remaining = Object.keys(pool)
+    if (remaining.length > 0) {
+      sessionStorage.setItem(ACTIVE_KEY, remaining[0])
+      window.location.reload()
+    } else {
+      localStorage.removeItem(POOL_KEY)
+      sessionStorage.removeItem(ACTIVE_KEY)
+      router.push('/login')
+    }
+  }
+}
 
 const SIDEBAR_WIDTH_KEY = 'app-sidebar-width'
 const SIDEBAR_COLLAPSED_KEY = 'app-sidebar-collapsed'
@@ -66,13 +115,6 @@ function onSidebarResizeEnd() {
 function resetSidebarWidth() {
   applySidebarWidth(SIDEBAR_DEFAULT)
   localStorage.setItem(SIDEBAR_WIDTH_KEY, String(SIDEBAR_DEFAULT))
-}
-
-function logout() {
-  localStorage.removeItem('access_token')
-  localStorage.removeItem('refresh_token')
-  localStorage.removeItem('username')
-  router.push('/login')
 }
 
 const categories = [
@@ -205,13 +247,38 @@ onUnmounted(() => {
       </div>
     </nav>
 
-    <!-- 底部用户区 -->
+    <!-- 底部用户区 / 账号切换器 -->
     <div class="sidebar__footer">
-      <div class="sidebar__user" :title="collapsed ? username : ''">
+      <div
+        class="sidebar__user"
+        :class="{ 'has-menu': allAccounts.length > 1 }"
+        :title="collapsed ? username : ''"
+        @click="allAccounts.length > 1 ? (showAccountMenu = !showAccountMenu) : null"
+      >
         <AnimatedMascot :size="20" />
         <span v-show="!collapsed" class="sidebar__user-name">{{ username }}</span>
+        <span v-if="!collapsed && allAccounts.length > 1" class="sidebar__user-arrow">▾</span>
       </div>
-      <Button
+
+      <!-- Account dropdown -->
+      <div v-if="showAccountMenu && !collapsed" class="account-menu">
+        <div
+          v-for="name in allAccounts"
+          :key="name"
+          class="account-menu__item"
+          :class="{ active: name === username }"
+          @click="switchToAccount(name)"
+        >
+          <span>{{ name }}</span>
+          <span v-if="name === username" class="account-menu__check">✓</span>
+        </div>
+        <div class="account-menu__divider"></div>
+        <div class="account-menu__item account-menu__item--add" @click="showAccountMenu = false; router.push('/login?add=1')">
+          添加账号
+        </div>
+      </div>
+
+      <el-button
         v-show="!collapsed"
         type="text"
         size="small"
@@ -220,7 +287,7 @@ onUnmounted(() => {
         @click.stop="logout"
       >
         退出
-      </Button>
+      </el-button>
       <button
         v-show="collapsed"
         type="button"
@@ -250,14 +317,17 @@ onUnmounted(() => {
   min-width: var(--side-w, 220px);
   max-width: var(--side-w, 220px);
   height: 100%;
-  background: url('/animal-assets/menu_bg.svg') center/cover no-repeat;
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   position: relative;
   z-index: 2;
-  color: var(--animal-text-color, #794f27);
-  font-family: var(--animal-font-family, Nunito, 'Noto Sans SC', sans-serif);
+  border-right: 1px solid rgba(255,255,255,0.55);
+  color: var(--app-text, #3D4A3B);
+  font-family: var(--app-font, Quicksand, 'Noto Sans SC', sans-serif);
   transition: width 0.2s ease, min-width 0.2s ease, max-width 0.2s ease, flex-basis 0.2s ease;
 }
 
@@ -400,15 +470,15 @@ onUnmounted(() => {
 }
 
 .brand-ai {
-  background-image: linear-gradient(90deg, #19c8b9, #4facfe, #19c8b9);
+  background-image: linear-gradient(90deg, var(--app-green), var(--app-blue), var(--app-green));
 }
 
 .brand-name {
-  background-image: linear-gradient(90deg, #f6a85f, #f78fb3, #f6a85f);
+  background-image: linear-gradient(90deg, var(--app-green-deep), var(--app-green), var(--app-green-deep));
 }
 
 .sidebar__user-name {
-  background-image: linear-gradient(90deg, #a18cd1, #fbc2eb, #a18cd1);
+  background-image: linear-gradient(90deg, var(--app-blue), var(--app-green-light), var(--app-blue));
   font-size: 13px;
 }
 
@@ -417,7 +487,7 @@ onUnmounted(() => {
   filter: brightness(1.1);
 }
 
-.sidebar__header:hover { color: var(--animal-primary-color, #19c8b9); }
+.sidebar__header:hover { color: var(--app-green-deep, #19c8b9); }
 
 /* Nav */
 .sidebar__nav {
@@ -458,13 +528,13 @@ onUnmounted(() => {
   width: 4px;
   height: 0;
   border-radius: 0 4px 4px 0;
-  background: var(--animal-primary-color, #19c8b9);
+  background: var(--app-green, #8EC8A0);
   transition: height 0.25s ease;
 }
 
 .sidebar-menu__item:hover {
-  background: #e9f4ef;
-  color: #5c4b38;
+  background: rgba(142,200,160,0.12);
+  color: var(--app-text, #3D4A3B);
 }
 
 .sidebar-menu__item:hover::before {
@@ -472,13 +542,13 @@ onUnmounted(() => {
 }
 
 .sidebar-menu__item.active {
-  background: #b7c6e5;
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(119, 141, 190, 0.35);
+  background: rgba(142,200,160,0.22);
+  color: var(--app-green-deep, #5DA870);
+  box-shadow: 0 2px 12px rgba(142,200,160,0.18);
 }
 
 .sidebar-menu__item.active::before {
-  height: 0;
+  height: 32px;
 }
 
 .sidebar-menu__label {
@@ -488,27 +558,18 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: linear-gradient(90deg, #7a6b58 0%, #9a8568 50%, #c4a06a 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  color: transparent;
+  color: var(--app-text, #3D4A3B);
   font-size: 15px;
   font-weight: 700;
 }
 
 .sidebar-menu__item.active .sidebar-menu__label {
-  background: linear-gradient(90deg, #ffffff 0%, #e6f9f6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--app-green-deep, #5DA870);
+  font-weight: 800;
 }
 
 .sidebar-menu__item:hover .sidebar-menu__label {
-  background: linear-gradient(90deg, #5c4b38 0%, #8a7355 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--app-text, #3D4A3B);
 }
 
 .sidebar-menu__badge {
@@ -543,12 +604,13 @@ onUnmounted(() => {
 
 /* Footer */
 .sidebar__footer {
+  position: relative;
   padding: 12px 16px;
-  border-top: 1px solid #e8e2d6;
+  border-top: 1px solid var(--app-glass-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #19c8b9;
+  background: linear-gradient(135deg, var(--app-green), var(--app-green-deep));
 }
 
 .sidebar__user {
@@ -572,22 +634,74 @@ onUnmounted(() => {
 }
 
 .logout-btn {
-  background: #fc736d !important;
-  border: none !important;
+  background: rgba(255,255,255,0.25) !important;
+  border: 1px solid rgba(255,255,255,0.4) !important;
   border-radius: 20px !important;
   color: #fff !important;
   font-weight: 700 !important;
   padding: 5px 14px !important;
-  box-shadow: 0 4px 0 #e85a54 !important;
-  transition: transform 0.1s ease, box-shadow 0.1s ease !important;
+  transition: transform 0.1s ease, background 0.1s ease !important;
 }
 .logout-btn:hover {
-  background: #ff8781 !important;
+  background: rgba(255,255,255,0.4) !important;
   transform: translateY(-2px) !important;
-  box-shadow: 0 6px 0 #e85a54 !important;
 }
 .logout-btn:active {
-  transform: translateY(2px) !important;
-  box-shadow: 0 2px 0 #e85a54 !important;
+  transform: translateY(0px) !important;
+}
+
+.sidebar__user-arrow {
+  font-size: 10px;
+  margin-left: 2px;
+  opacity: 0.6;
+}
+.sidebar__user.has-menu {
+  cursor: pointer;
+}
+
+/* Account dropdown */
+.account-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 8px;
+  right: 8px;
+  margin-bottom: 4px;
+  background: #fffef9;
+  border: 1.5px solid rgba(121, 79, 39, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  overflow: hidden;
+  z-index: 100;
+}
+.account-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #794f27;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.account-menu__item:hover {
+  background: #f5f0e6;
+}
+.account-menu__item.active {
+  color: #19c8b9;
+}
+.account-menu__check {
+  font-size: 14px;
+  color: #19c8b9;
+}
+.account-menu__item--add {
+  color: #9f927d;
+  font-size: 12px;
+  justify-content: center;
+}
+.account-menu__divider {
+  height: 1px;
+  background: rgba(121, 79, 39, 0.08);
+  margin: 0 12px;
 }
 </style>

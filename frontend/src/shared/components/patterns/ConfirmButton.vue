@@ -1,12 +1,11 @@
 <template>
-  <AnimalButton v-bind="$attrs" @click="handleClick">
+  <el-button v-bind="$attrs" @click="handleClick">
     <slot />
-  </AnimalButton>
+  </el-button>
 </template>
 
 <script setup>
 import { ElMessageBox } from 'element-plus'
-import { Button as AnimalButton } from 'animal-island-vue'
 
 const props = defineProps({
   /** Confirmation message shown in the dialog */

@@ -1,40 +1,55 @@
-"""执行前设备在线/连接检查 — 对齐设备池连接逻辑（含 WiFi adb connect）。"""
+"""Execution pre-flight device check — dual Airtest + uiautomator2 connection.
+
+Creates independent connections (not via DevicePool singleton) for test execution
+isolation. Airtest for device operations, u2 kept for XPath element location.
+"""
 
 from __future__ import annotations
 
 import asyncio
 import subprocess
+from dataclasses import dataclass, field
 from typing import Callable, Optional
 
 import uiautomator2 as u2
+from airtest.core.android.android import Android
 
-# adb connect(10s) + u2.connect(15s) + device.info 余量
-DEVICE_CHECK_TIMEOUT = 30
 
-# 单次 u2 HTTP 操作超时上界(秒)。u2 默认 HTTP_TIMEOUT=300,设备卡死时单次
-# 操作会阻塞 5 分钟,导致执行线程无法到达 adapter.stopped() 检查点、停止按钮失效。
-# 降到 20s 使卡死操作快速失败 → 触发已有的 u2 崩溃重连/停止检查。
+# adb connect(10s) + Android init(5s) + u2.connect(15s) + display_info + margin
+DEVICE_CHECK_TIMEOUT = 45
+
+# Single u2 HTTP operation timeout ceiling (seconds). u2 default HTTP_TIMEOUT=300,
+# device freeze causes permanent blocking. Lowered to 20s for quick failure.
 U2_OP_TIMEOUT = 20
 
 
+@dataclass
+class DeviceConnection:
+    """Holds both Airtest and uiautomator2 device references for a single serial."""
+    serial: str
+    airtest: Android
+    u2: u2.Device
+    info: dict = field(default_factory=dict)
+
+
 class DeviceCheckError(Exception):
-    """设备检查未通过。"""
+    """Device check failed."""
 
 
-def check_and_connect(serial: str, on_log: Optional[Callable[[str], None]] = None) -> u2.Device:
-    """同步：检查设备池状态 → ADB（WiFi）→ u2 → device.info。
+def check_and_connect(serial: str, on_log: Optional[Callable[[str], None]] = None) -> DeviceConnection:
+    """Synchronous dual-connection: Airtest (device ops) + u2 (XPath only).
 
-    注意：此函数在线程池中运行，on_log 不得阻塞事件循环（仅收集字符串）。
+    Runs in thread pool. on_log must not block the event loop (string collection only).
 
     Args:
-        serial: 设备 serial（USB 或 host:port）
-        on_log: 可选日志回调，用于记录检查过程
+        serial: Device serial (USB or host:port for WiFi)
+        on_log: Optional log callback for progress messages
 
     Returns:
-        已验证的 uiautomator2 Device
+        DeviceConnection with both airtest and u2 references
 
     Raises:
-        DeviceCheckError: 任一步骤失败
+        DeviceCheckError: Any step fails
     """
     from apps.device_pool.models import Device as PoolDevice
 
@@ -42,25 +57,27 @@ def check_and_connect(serial: str, on_log: Optional[Callable[[str], None]] = Non
         if on_log:
             on_log(msg)
 
-    log(f"🔍 执行前检查设备: {serial}")
+    log(f"🔍 Pre-flight device check: {serial}")
 
-    log("  ① 查询设备池状态…")
+    # ① Query device pool status
+    log("  ① Query device pool status…")
     try:
         dev = PoolDevice.objects.get(serial=serial)
     except PoolDevice.DoesNotExist:
-        raise DeviceCheckError(f"设备 {serial} 未在设备池中注册，请先在设备管理中添加") from None
+        raise DeviceCheckError(f"Device {serial} not registered in pool. Add it in Device Management first.") from None
 
     if dev.status in ("OFFLINE", "DISCONNECTED"):
         raise DeviceCheckError(
-            f"设备状态为 {dev.status}，请先在设备管理中连接并确认在线"
+            f"Device status is {dev.status}. Connect and confirm online first."
         )
 
     conn = dev.connection_type or ("WIFI" if ":" in serial else "USB")
     name = dev.name or dev.model or serial
-    log(f"  ✓ 设备池: {dev.status} · {conn} · {name}")
+    log(f"  ✓ Pool: {dev.status} · {conn} · {name}")
 
+    # ② ADB connect for WiFi devices
     if ":" in serial:
-        log(f"  ② 无线 ADB 连接: adb connect {serial}")
+        log(f"  ② Wireless ADB: adb connect {serial}")
         try:
             result = subprocess.run(
                 ["adb", "connect", serial],
@@ -72,22 +89,30 @@ def check_and_connect(serial: str, on_log: Optional[Callable[[str], None]] = Non
             if output:
                 log(f"  → {output}")
             if "connected" not in output.lower() and "already" not in output.lower():
-                raise DeviceCheckError("ADB 连接失败，请检查 WiFi 网络与设备端口")
+                raise DeviceCheckError("ADB connect failed. Check WiFi network and device port.")
         except subprocess.TimeoutExpired:
-            raise DeviceCheckError("ADB connect 超时 (10s)，请检查网络") from None
-        log("  ✓ ADB 已就绪")
+            raise DeviceCheckError("ADB connect timed out (10s). Check network.") from None
+        log("  ✓ ADB ready")
     else:
-        log("  ② USB 设备，跳过 adb connect")
+        log("  ② USB device, skip adb connect")
 
-    log("  ③ 建立 uiautomator2 连接…")
+    # ③ Connect Airtest
+    log("  ③ Establish Airtest connection…")
     try:
-        device = u2.connect(serial)
+        air_dev = Android(serialno=serial)
     except Exception as e:
-        raise DeviceCheckError(f"u2.connect 失败: {e}") from e
-    log("  ✓ u2 会话已建立")
+        raise DeviceCheckError(f"Airtest connection failed: {e}") from e
+    log("  ✓ Airtest session established")
 
-    # 限制单次 u2 操作超时,避免设备卡死时永久阻塞(默认 HTTP_TIMEOUT=300s)。
-    # base.py 的 jsonrpc 包装器每次调用读取该模块全局,降它即对后续所有操作生效。
+    # ④ Connect u2 (XPath only)
+    log("  ④ Establish uiautomator2 connection (XPath)…")
+    try:
+        u2_dev = u2.connect(serial)
+    except Exception as e:
+        raise DeviceCheckError(f"u2.connect failed: {e}") from e
+    log("  ✓ u2 session established")
+
+    # Tune u2 HTTP timeout to prevent permanent blocking on device freeze
     try:
         import uiautomator2.base as _u2base
 
@@ -95,32 +120,40 @@ def check_and_connect(serial: str, on_log: Optional[Callable[[str], None]] = Non
     except Exception:
         pass
     try:
-        device.settings["wait_timeout"] = U2_OP_TIMEOUT
+        u2_dev.settings["wait_timeout"] = U2_OP_TIMEOUT
     except Exception:
         pass
 
-    log("  ④ 验证 ATX 服务 (device.info)…")
+    # ⑤ Verify via Airtest display_info
+    log("  ⑤ Verify Airtest connection (display_info)…")
     try:
-        info = device.info
+        info = dict(air_dev.display_info)
         w = info.get("displayWidth", "?")
         h = info.get("displayHeight", "?")
-        product = info.get("productName") or info.get("model", "")
-        extra = f" · {product}" if product else ""
-        log(f"  ✓ 连接验证通过 · 分辨率 {w}x{h}{extra}")
+        # display_info may not have productName/brand — enrich from u2 if needed
+        try:
+            u2_info = u2_dev.info
+            for k in ("productName", "brand", "sdkInt"):
+                if k not in info and k in u2_info:
+                    info[k] = u2_info[k]
+        except Exception:
+            pass
+        extra = f" · {info.get('productName', '')}" if info.get("productName") else ""
+        log(f"  ✓ Connection verified · {w}x{h}{extra}")
     except Exception as e:
         msg = str(e)
         if "atx-agent" in msg.lower() or "offline" in msg.lower():
             raise DeviceCheckError(
-                "ATX Agent 未运行，请在设备端启动 uiautomator2 服务"
+                "ATX Agent not running. Start uiautomator2 service on device."
             ) from e
-        raise DeviceCheckError(f"device.info 验证失败: {e}") from e
+        raise DeviceCheckError(f"Device verification failed: {e}") from e
 
-    log("✅ 设备检查通过，开始执行测试")
-    return device
+    log("✅ Pre-flight check passed, starting test execution")
+    return DeviceConnection(serial=serial, airtest=air_dev, u2=u2_dev, info=info)
 
 
 async def _flush_check_logs(run_id: str, callbacks, messages: list[str]):
-    """检查完成后批量推送日志，避免线程池内同步 await 导致事件循环死锁。"""
+    """Batch-push collected check logs to WebSocket after thread-pool work completes."""
     for msg in messages:
         await callbacks.on_log(run_id, msg)
 
@@ -131,8 +164,8 @@ async def check_and_connect_async(
     callbacks,
     executor,
     timeout: float = DEVICE_CHECK_TIMEOUT,
-) -> u2.Device:
-    """异步包装：在线程池中执行检查，完成后将日志批量推送到 WebSocket。"""
+) -> DeviceConnection:
+    """Async wrapper: run dual-connection check in thread pool, push logs via WebSocket."""
     loop = asyncio.get_event_loop()
     collected: list[str] = []
 
@@ -140,14 +173,14 @@ async def check_and_connect_async(
         return check_and_connect(serial, on_log=collected.append)
 
     err: Optional[BaseException] = None
-    device = None
+    device_conn = None
     try:
-        device = await asyncio.wait_for(
+        device_conn = await asyncio.wait_for(
             loop.run_in_executor(executor, do_check),
             timeout=timeout,
         )
     except asyncio.TimeoutError:
-        err = DeviceCheckError(f"设备检查超时 ({int(timeout)}s)，请确认 ADB/u2 可用")
+        err = DeviceCheckError(f"Device check timed out ({int(timeout)}s). Verify ADB/Airtest/u2.")
     except DeviceCheckError as e:
         err = e
     except Exception as e:
@@ -157,4 +190,4 @@ async def check_and_connect_async(
 
     if err is not None:
         raise err
-    return device
+    return device_conn

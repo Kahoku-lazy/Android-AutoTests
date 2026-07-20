@@ -26,6 +26,7 @@ data/avatars/
 data/chromadb/
 data/uploads/
 data/sop_*.json
+data
 
 # ── AgentScope Runtime ──
 data/agentscope_workspaces/

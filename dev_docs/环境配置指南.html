@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Android-AutoTests 环境配置指南</title>
+<style>
+  :root {
+    --bg: #fef9ed;
+    --card-bg: #fffdf7;
+    --text: #4a3728;
+    --text-secondary: #8b7355;
+    --accent: #6fba2c;
+    --accent-blue: #889df0;
+    --accent-yellow: #f7cd67;
+    --accent-pink: #f8a6b2;
+    --accent-teal: #19c8b9;
+    --border: #e8dcc8;
+    --code-bg: #2d2a26;
+    --code-text: #f5e6d0;
+    --radius: 16px;
+    --shadow: 0 2px 8px rgba(139,115,85,0.08);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 40px 20px 80px;
+  }
+
+  .container { max-width:860px; margin:0 auto; }
+
+  /* ── Header ── */
+  .hero {
+    text-align: center;
+    padding: 48px 24px 36px;
+    margin-bottom: 36px;
+    background: linear-gradient(135deg, #fef5e0 0%, #fef9ed 40%, #f0f4e8 100%);
+    border-radius: var(--radius);
+    border: 2px dashed var(--border);
+  }
+  .hero h1 {
+    font-size: 2.2em;
+    font-weight: 800;
+    color: #5c3d2e;
+    margin-bottom: 8px;
+  }
+  .hero .subtitle {
+    font-size: 1.05em;
+    color: var(--text-secondary);
+  }
+  .hero .badge-row {
+    margin-top: 18px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 600;
+    border: 1.5px solid;
+  }
+  .badge-py  { background:#eef2fb; color:#5a6fc0; border-color:#c4cff0; }
+  .badge-node{ background:#e8f5e9; color:#4c8c4a; border-color:#a5d6a7; }
+  .badge-db  { background:#fff3e0; color:#c77800; border-color:#ffcc80; }
+  .badge-redis{ background:#fce4ec; color:#c62828; border-color:#ef9a9a; }
+
+  /* ── Architecture overview ── */
+  .arch-box {
+    background: var(--card-bg);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow);
+  }
+  .arch-box h3 { margin-bottom: 14px; color: #5c3d2e; }
+  .arch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .arch-card {
+    background: #fefdf8;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.95em;
+  }
+  .arch-card .port { color: var(--text-secondary); font-weight: 400; font-size: 0.85em; }
+
+  /* ── Section ── */
+  .section { margin-bottom: 36px; }
+  .section h2 {
+    font-size: 1.45em;
+    font-weight: 700;
+    padding-bottom: 8px;
+    border-bottom: 3px solid var(--accent);
+    margin-bottom: 18px;
+  }
+  .section h2 .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px; height: 36px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 0.8em;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+  .section h3 {
+    font-size: 1.1em;
+    margin: 22px 0 10px;
+    color: #5c3d2e;
+  }
+
+  /* ── Card ── */
+  .card {
+    background: var(--card-bg);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+
+  /* ── Code block ── */
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    border-radius: 10px;
+    padding: 16px 20px;
+    overflow-x: auto;
+    font-size: 0.9em;
+    line-height: 1.6;
+    margin: 10px 0;
+  }
+  code {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.93em;
+  }
+  :not(pre) > code {
+    background: #f3efe4;
+    color: #8b5e3c;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 0.88em;
+  }
+  .cmd::before {
+    content: "$ ";
+    color: #6fba2c;
+    font-weight: 700;
+  }
+
+  /* ── Table ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 18px;
+    font-size: 0.93em;
+  }
+  th, td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    background: #faf6eb;
+    font-weight: 700;
+    color: #5c3d2e;
+    position: sticky;
+    top: 0;
+  }
+  tr:hover td { background: #fdf9f0; }
+
+  /* ── Alert / note ── */
+  .note {
+    border-left: 4px solid var(--accent-yellow);
+    background: #fffdf4;
+    padding: 14px 18px;
+    border-radius: 0 10px 10px 0;
+    margin: 14px 0;
+    font-size: 0.95em;
+  }
+  .note strong { color: #b8860b; }
+  .warn {
+    border-left-color: #e85f5f;
+    background: #fff5f5;
+  }
+  .warn strong { color: #c62828; }
+  .info {
+    border-left-color: var(--accent-blue);
+    background: #f5f7fd;
+  }
+  .info strong { color: #4a5fc0; }
+
+  /* ── Check list ── */
+  .checklist { list-style: none; padding: 0; }
+  .checklist li {
+    padding: 8px 0 8px 28px;
+    position: relative;
+    border-bottom: 1px dashed var(--border);
+  }
+  .checklist li::before {
+    content: "☐";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* ── Two column ── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.85em;
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 2px dashed var(--border);
+  }
+
+  /* ── Timeline ── */
+  .timeline {
+    counter-reset: step;
+    list-style: none;
+    padding: 0;
+  }
+  .timeline li {
+    counter-increment: step;
+    padding: 16px 0 16px 44px;
+    position: relative;
+    border-left: 2px solid var(--accent);
+    margin-left: 16px;
+  }
+  .timeline li::before {
+    content: counter(step);
+    position: absolute;
+    left: -18px;
+    top: 12px;
+    width: 32px; height: 32px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85em;
+  }
+  .timeline li:last-child { border-left-color: transparent; }
+
+  .svc-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: 700;
+    margin-right: 6px;
+  }
+  .svc-redis   { background:#fce4ec; color:#c62828; }
+  .svc-django  { background:#e8f5e9; color:#2e7d32; }
+  .svc-agent   { background:#e3f2fd; color:#1565c0; }
+  .svc-vite    { background:#fff3e0; color:#e65100; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ═══════════════════════ HERO ═══════════════════════ -->
+<div class="hero">
+  <h1>🛠️ Android-AutoTests 环境配置指南</h1>
+  <p class="subtitle">AI 驱动的 Android UI 自动化测试平台 — 从零到运行的完整配置流程</p>
+  <div class="badge-row">
+    <span class="badge badge-py">Python 3.10+</span>
+    <span class="badge badge-node">Node.js 18+</span>
+    <span class="badge badge-db">MySQL 8.0+</span>
+    <span class="badge badge-redis">Redis</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════ 架构 ═══════════════════════ -->
+<div class="arch-box">
+  <h3>📐 服务架构（4 个必须全部启动）</h3>
+  <div class="arch-grid">
+    <div class="arch-card">
+      <span class="svc-tag svc-redis">Redis</span><br>
+      <span class="port">:6379</span><br>
+      <small>消息总线 + 状态存储</small>
+    </div>
+    <div class="arch-card">
+      <span class="svc-tag svc-django">Django</span><br>
+      <span class="port">:8765</span><br>
+      <small>后端 API + WebSocket</small>
+    </div>
+    <div class="arch-card">
+      <span class="svc-tag svc-agent">AgentScope</span><br>
+      <span class="port">:8000</span><br>
+      <small>AI 对话引擎 FastAPI</small>
+    </div>
+    <div class="arch-card">
+      <span class="svc-tag svc-vite">Vite</span><br>
+      <span class="port">:5173</span><br>
+      <small>Vue 前端开发服务器</small>
+    </div>
+  </div>
+  <p style="margin-top:16px; font-size:0.9em; color:var(--text-secondary);">
+    外部依赖：<strong>MySQL :3306</strong>（默认，也可切换 SQLite）
+    &nbsp;|&nbsp; 可选：<strong>ADB</strong>（仅设备自动化测试需要）
+  </p>
+</div>
+
+<!-- ═══════════════════════ 第一步 ═══════════════════════ -->
+<div class="section">
+  <h2><span class="step-num">1</span>基础环境安装</h2>
+
+  <div class="two-col">
+    <div class="card">
+      <h3>🐍 Python 3.10+</h3>
+      <pre class="cmd">python --version</pre>
+      <p>确认 ≥ 3.10。建议使用 <code>pyenv</code> 或系统包管理器安装。</p>
+    </div>
+    <div class="card">
+      <h3>🟩 Node.js 18+</h3>
+      <pre class="cmd">node --version
+npm --version</pre>
+      <p>建议使用 <code>nvm-windows</code> 或 <code>fnm</code> 管理版本。</p>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <h3>🗄️ MySQL 8.0+</h3>
+      <pre class="cmd">mysql -u root -p</pre>
+      <p>创建数据库：</p>
+      <pre>CREATE DATABASE android_autotests
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;</pre>
+    </div>
+    <div class="card">
+      <h3>📡 Redis</h3>
+      <pre class="cmd">redis-cli ping</pre>
+      <p>期望返回 <code>PONG</code>。</p>
+      <p>Windows 可从 <a href="https://github.com/tporadowski/redis/releases" target="_blank">tporadowski/redis</a> 下载。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📱 ADB（可选）</h3>
+    <p>仅当需要连接真实 Android 设备做自动化测试时才需要。<br>
+    下载 <a href="https://developer.android.com/studio/releases/platform-tools" target="_blank">Android Platform Tools</a>，将 <code>adb</code> 加入 PATH。</p>
+    <pre class="cmd">adb devices
+# 期望: List of devices attached
+# (无设备也可以，服务器正常运行)</pre>
+  </div>
+</div>
+
+<!-- ═══════════════════════ 第二步 ═══════════════════════ -->
+<div class="section">
+  <h2><span class="step-num">2</span>项目依赖安装</h2>
+
+  <div class="card">
+    <h3>2.1 克隆项目 &amp; 创建 .env</h3>
+    <pre class="cmd">cd D:\Github\Android-AutoTests
+cp .env.example .env</pre>
+
+    <p>编辑 <code>.env</code>，<strong>必须修改</strong>以下字段：</p>
+    <table>
+      <tr><th>变量</th><th>说明</th><th>示例值</th></tr>
+      <tr>
+        <td><code>DJANGO_SECRET_KEY</code></td>
+        <td>Django 密钥，加密 API Key 的根密钥</td>
+        <td><code>django-insecure-随机50字符</code></td>
+      </tr>
+      <tr>
+        <td><code>DB_PASSWORD</code></td>
+        <td>MySQL 密码</td>
+        <td>你的实际密码</td>
+      </tr>
+      <tr>
+        <td><code>DEVICE_SERIAL</code></td>
+        <td>Android 设备序列号（无设备可留空）</td>
+        <td><code>RF8N21MSW7A</code></td>
+      </tr>
+    </table>
+
+    <div class="note warn">
+      <strong>⚠️ 关键：</strong><code>DJANGO_SECRET_KEY</code> <strong>不能为空字符串</strong>。
+      它是 API Key 加密存储的密钥 —— 为空会导致所有已加密的 Key 无法解密，
+      且 <code>decrypt_key()</code> 会因无密钥而 fallback 返回原文（安全风险）。
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <h3>2.2 Python 依赖</h3>
+      <pre class="cmd">pip install -r requirements.txt</pre>
+      <p>核心依赖：</p>
+      <ul style="padding-left:20px; font-size:0.9em;">
+        <li><code>Django>=4.2</code> + <code>daphne>=4.0</code></li>
+        <li><code>agentscope>=2.0.0</code>（AI 引擎）</li>
+        <li><code>uiautomator2>=3.0</code>（设备控制）</li>
+        <li><code>chromadb>=0.4.0</code>（RAG 知识库）</li>
+        <li><code>mysqlclient>=2.2</code>（MySQL 驱动）</li>
+      </ul>
+      <div class="note info" style="margin-top:10px;">
+        <strong>💡 Windows 提示：</strong><code>mysqlclient</code> 需要 Visual C++ Build Tools。
+        如果装不上，可切换到 SQLite（见下方"数据库引擎切换"）。
+      </div>
+    </div>
+    <div class="card">
+      <h3>2.3 前端依赖</h3>
+      <pre class="cmd">cd frontend
+npm install
+cd ..</pre>
+      <p>核心依赖：</p>
+      <ul style="padding-left:20px; font-size:0.9em;">
+        <li><code>vue@^3.4</code> + <code>vite@^5.4</code></li>
+        <li><code>element-plus@^2.7</code></li>
+        <li><code>animal-island-vue@^0.2</code>（动森主题）</li>
+        <li><code>animejs@^4.5</code>（动画引擎）</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ 第三步 ═══════════════════════ -->
+<div class="section">
+  <h2><span class="step-num">3</span>数据库初始化</h2>
+
+  <div class="card">
+    <h3>3.1 运行数据库迁移</h3>
+    <pre class="cmd">python manage.py makemigrations
+python manage.py migrate</pre>
+    <p>这会创建 20+ 张业务表（6 组前缀：<code>dp_</code> <code>el_</code> <code>cm_</code> <code>tr_</code> <code>rg_</code> <code>ai_</code>）。</p>
+  </div>
+
+  <div class="card">
+    <h3>3.2 创建超级用户</h3>
+    <pre class="cmd">python manage.py shell -c ^
+"from django.contrib.auth.models import User; ^
+ User.objects.create_superuser('admin','admin@local','admin123') ^
+ if not User.objects.filter(username='admin').exists() else None"</pre>
+    <p>登录凭据：用户名 <code>admin</code> / 密码 <code>admin123</code>。</p>
+  </div>
+
+  <div class="card">
+    <h3>3.3 收集静态文件（可选）</h3>
+    <pre class="cmd">python manage.py collectstatic --noinput</pre>
+    <p>为 Django Admin 和 jazzmin 主题准备静态文件。</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════ 第四步 ═══════════════════════ -->
+<div class="section">
+  <h2><span class="step-num">4</span>知识库初始化（AI 助手 RAG）</h2>
+
+  <div class="card">
+    <pre class="cmd">python agentscope_service/rag/init_kb.py</pre>
+    <p>从 <code>dev_docs/</code> 加载 32 篇 Markdown 文档到 ChromaDB 向量数据库（<code>data/chromadb/</code>）。<br>
+    这是 AI 助手做知识检索的基础，<strong>首次运行必须执行</strong>，否则 AI 对话缺少上下文。</p>
+
+    <div class="note">
+      <strong>📝 注意：</strong>初始化过程会调用 Embedding API 将文档转为向量，
+      需要配置好的模型 API Key 才能正常工作。如果只想先跑通基础服务，此步骤可跳过，
+      后续在 AI 助手中配置好 Agent 后再执行。
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ 第五步 ═══════════════════════ -->
+<div class="section">
+  <h2><span class="step-num">5</span>启动服务</h2>
+
+  <div class="card">
+    <h3>5.1 一键启动（推荐）</h3>
+    <pre class="cmd">python run.py start</pre>
+    <p>启动顺序（自动按依赖排列）：</p>
+    <ol class="timeline">
+      <li><span class="svc-tag svc-redis">Redis</span> <code>:6379</code> — 消息总线 + 状态存储</li>
+      <li><span class="svc-tag svc-django">Django</span> <code>:8765</code> — 后端 API + WebSocket</li>
+      <li><span class="svc-tag svc-agent">AgentScope</span> <code>:8000</code> — AI 对话引擎</li>
+      <li><span class="svc-tag svc-vite">Vite</span> <code>:5173</code> — Vue 前端</li>
+    </ol>
+
+    <h3>5.2 按需启动</h3>
+    <pre class="cmd">python run.py start redis backend          # 只要后端 + Redis
+python run.py start agentscope frontend    # 只要 AI + 前端</pre>
+  </div>
+
+  <div class="card">
+    <h3>5.3 验证启动状态</h3>
+    <pre class="cmd">python run.py status</pre>
+    <p>期望输出：</p>
+    <pre>  Redis            (:6379)  ONLINE
+  Django backend   (:8765)  ONLINE
+  AgentScope AI    (:8000)  ONLINE
+  Vue frontend     (:5173)  ONLINE</pre>
+
+    <h3>5.4 各服务手动验证</h3>
+    <pre class="cmd"><span style="color:#888;"># Redis — 期望 PONG</span>
+redis-cli ping
+
+<span style="color:#888;"># Django — 期望 JSON 响应</span>
+curl -s http://localhost:8765/api/ | python -m json.tool
+
+<span style="color:#888;"># AgentScope — 期望 HTTP 200</span>
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/docs
+
+<span style="color:#888;"># Vite 前端 — 期望 HTTP 200</span>
+curl -s -o /dev/null -w "%{http_code}" http://localhost:5173</pre>
+  </div>
+</div>
+
+<!-- ═══════════════════════ 第六步 ═══════════════════════ -->
+<div class="section">
+  <h2><span class="step-num">6</span>登录使用</h2>
+
+  <div class="card">
+    <ol style="font-size:1.05em; padding-left:24px;">
+      <li>浏览器打开 <a href="http://localhost:5173" target="_blank"><code>http://localhost:5173</code></a></li>
+      <li>用户名 <code>admin</code>，密码 <code>admin123</code></li>
+      <li>登录后默认跳转到仪表盘</li>
+    </ol>
+    <p style="margin-top:12px; color:var(--text-secondary);">
+      其他入口：Django Admin → <code>:8765/admin/</code> &nbsp;|&nbsp;
+      AgentScope API 文档 → <code>:8000/docs</code>
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════════════════ 切换数据库 ═══════════════════════ -->
+<div class="section">
+  <h2>🔄 数据库引擎切换</h2>
+
+  <div class="two-col">
+    <div class="card">
+      <h3>使用 SQLite（不依赖 MySQL）</h3>
+      <p>修改 <code>.env</code>：</p>
+      <pre>DB_ENGINE=sqlite</pre>
+      <p>然后重新迁移：</p>
+      <pre class="cmd">python manage.py migrate</pre>
+      <p>数据库文件：<code>data/app.db</code></p>
+    </div>
+    <div class="card">
+      <h3>使用 MySQL</h3>
+      <p><code>.env</code> 中保持：</p>
+      <pre>DB_ENGINE=mysql
+DB_NAME=android_autotests
+DB_USER=root
+DB_PASSWORD=你的密码
+DB_HOST=127.0.0.1
+DB_PORT=3306</pre>
+      <p>确保 MySQL 服务已启动且数据库已创建。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ 常见问题 ═══════════════════════ -->
+<div class="section">
+  <h2>🩺 常见启动问题</h2>
+
+  <table>
+    <tr><th style="width:30%;">现象</th><th style="width:25%;">原因</th><th>解决</th></tr>
+    <tr>
+      <td>AgentScope 启动失败</td>
+      <td>Redis 未运行</td>
+      <td><code>redis-server --port 6379</code></td>
+    </tr>
+    <tr>
+      <td>Django 启动失败 / 端口冲突</td>
+      <td>端口 8765 被占用</td>
+      <td><code>netstat -ano | findstr 8765</code> → <code>taskkill /PID xxx /F</code></td>
+    </tr>
+    <tr>
+      <td>前端白屏</td>
+      <td>Vite 编译未完成</td>
+      <td>等待 3-5 秒刷新页面</td>
+    </tr>
+    <tr>
+      <td><code>ModuleNotFoundError: No module named 'xxx'</code></td>
+      <td>Python 依赖缺失</td>
+      <td><code>pip install -r requirements.txt</code></td>
+    </tr>
+    <tr>
+      <td><code>no such table</code></td>
+      <td>未执行数据库迁移</td>
+      <td><code>python manage.py migrate</code></td>
+    </tr>
+    <tr>
+      <td><code>mysqlclient</code> 装不上 (Windows)</td>
+      <td>缺少 VC++ Build Tools</td>
+      <td>改用 <code>DB_ENGINE=sqlite</code></td>
+    </tr>
+    <tr>
+      <td><code>database is locked</code></td>
+      <td>SQLite 并发写冲突</td>
+      <td>重启 Django，或迁移到 MySQL</td>
+    </tr>
+    <tr>
+      <td>AI 对话无响应</td>
+      <td>Redis 不可用 / AgentScope 挂了</td>
+      <td>AI 对话降级到 Django 阻塞模式；检查 <code>logs/agentscope.log</code></td>
+    </tr>
+    <tr>
+      <td>截图流断开 / 空白</td>
+      <td>设备 ADB 断开</td>
+      <td><code>adb devices</code> 确认设备在线；检查截图流 WebSocket 握手</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ 管理命令 ═══════════════════════ -->
+<div class="section">
+  <h2>📋 管理命令速查</h2>
+
+  <table>
+    <tr><th>命令</th><th>用途</th></tr>
+    <tr><td><code>python run.py start</code></td><td>启动全部 4 个服务</td></tr>
+    <tr><td><code>python run.py stop</code></td><td>停止全部服务（Redis 除外）</td></tr>
+    <tr><td><code>python run.py restart</code></td><td>重启全部服务</td></tr>
+    <tr><td><code>python run.py status</code></td><td>查看各服务在线状态</td></tr>
+    <tr><td><code>python run.py logs backend</code></td><td>查看后端最近 20 行日志</td></tr>
+    <tr><td><code>python run.py logs agentscope</code></td><td>查看 AgentScope 日志</td></tr>
+    <tr><td><code>python manage.py createsuperuser</code></td><td>创建新的管理员账号</td></tr>
+    <tr><td><code>python manage.py makemigrations &amp;&amp; python manage.py migrate</code></td><td>数据库结构变更后执行</td></tr>
+    <tr><td><code>python tools/gen_arch_stats.py</code></td><td>统计表/端点/Tool/步骤类型数量</td></tr>
+    <tr><td><code>python tools/gen_arch_stats.py --check-md</code></td><td>检测文档是否落后代码</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════ 日志 ═══════════════════════ -->
+<div class="section">
+  <h2>📝 日志文件</h2>
+
+  <p>所有服务日志写入 <code>logs/</code> 目录：</p>
+  <table>
+    <tr><th>文件</th><th>对应服务</th></tr>
+    <tr><td><code>logs/redis.log</code></td><td>Redis 启动日志</td></tr>
+    <tr><td><code>logs/backend.log</code></td><td>Django (Daphne) 运行日志</td></tr>
+    <tr><td><code>logs/agentscope.log</code></td><td>AgentScope (Uvicorn) 运行日志</td></tr>
+    <tr><td><code>logs/frontend.log</code></td><td>Vite 前端构建日志</td></tr>
+  </table>
+  <pre class="cmd">python run.py logs              # 查看全部日志（各 20 行）
+python run.py logs backend      # 只看后端日志</pre>
+</div>
+
+<div class="footer">
+  Android-AutoTests v2.0.0 &nbsp;|&nbsp; 环境配置指南 &nbsp;|&nbsp; 2026-07-17
+</div>
+
+</div>
+</body>
+</html>

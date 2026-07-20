@@ -37,7 +37,6 @@ SERVICES = {
 BASE_ENV = {
     "DB_ENGINE": "mysql",
     "DB_NAME": "android_autotests",
-    "DB_USER": "root",
     "DB_HOST": "127.0.0.1",
     "DB_PORT": "3306",
     "PYTHONUTF8": "1",
@@ -180,6 +179,7 @@ def start_agentscope():
     launcher = LOG_DIR / "_agentscope_launcher.py"
     LOG_DIR.mkdir(exist_ok=True)
     launcher.write_text(f'''
+import sys; sys.path.insert(0, r"D:/Github/Android-AutoTests")
 import os; os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 import django; django.setup()
 import uvicorn

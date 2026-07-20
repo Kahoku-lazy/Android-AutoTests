@@ -1,11 +1,12 @@
 <script setup>
+
+import AppTabs from "@/shared/components/AppTabs.vue";
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { animate } from 'animejs'
 import { bus } from '@/shared/event-bus.js'
 import client from '@/shared/api-client.js'
 import { useElementStore } from './store.js'
-import { Tabs, Select as AnimalSelect, Input } from 'animal-island-vue'
 import DeviceSelector from './components/DeviceSelector.vue'
 import ScreenshotView from './components/ScreenshotView.vue'
 import XPathCandidatePanel from './components/XPathCandidatePanel.vue'
@@ -188,7 +189,7 @@ function onDeviceChanged(msg) {
       mark="🎯"
     />
 
-    <Tabs :items="tabs" v-model="activeTab" :leaf-animation="true" :shadow="true" class="locator-tabs">
+    <AppTabs :items="tabs" v-model="activeTab" :leaf-animation="true" :shadow="true" class="locator-tabs">
       <template #discovery>
         <div class="doc-body">
           <section class="doc-section locator-section">
@@ -196,22 +197,22 @@ function onDeviceChanged(msg) {
             <div class="toolbar">
               <DeviceSelector />
               <el-divider direction="vertical" />
-              <AnimalButton class="wb-btn"
+              <el-button class="wb-btn"
                 :icon="'Refresh'"
                 :loading="screenRefreshing"
                 :disabled="!store.isConnected || !store.isDeviceOnline"
                 @click="refreshScreen"
               >
                 刷新屏幕
-              </AnimalButton>
-              <AnimalButton class="wb-btn"
+              </el-button>
+              <el-button class="wb-btn"
                 type="primary"
                 :loading="store.loading"
                 :disabled="!store.isConnected || !store.isDeviceOnline"
                 @click="doDump"
               >
                 {{ store.loading ? 'Dumping...' : 'Dump UI' }}
-              </AnimalButton>
+              </el-button>
               <span v-if="store.pageId" class="info">
                 {{ filteredElements.length }}/{{ store.elements.length }} 元素
               </span>
@@ -225,7 +226,7 @@ function onDeviceChanged(msg) {
                   {{ f.label }}
                 </el-radio-button>
               </el-radio-group>
-              <Input
+              <el-input
                 v-model="searchText"
                 size="small"
                 placeholder="搜索 text / resource-id / class..."
@@ -266,7 +267,7 @@ function onDeviceChanged(msg) {
       <template #manage>
         <ElementManager />
       </template>
-    </Tabs>
+    </AppTabs>
   </div>
 </template>
 
@@ -286,7 +287,7 @@ function onDeviceChanged(msg) {
   overflow: hidden;
 }
 
-.doc-page :deep(.locator-tabs.animal-tabs) {
+.doc-page :deep(.locator-tabs.el-tabs) {
   flex: 1;
   min-height: 0;
   display: flex;
@@ -294,7 +295,7 @@ function onDeviceChanged(msg) {
   overflow: hidden;
 }
 
-.doc-page :deep(.locator-tabs.animal-tabs > .animal-tabs__content) {
+.doc-page :deep(.locator-tabs.el-tabs > .el-tabs__content) {
   flex: 1;
   min-height: 0;
   width: 100%;
@@ -303,7 +304,7 @@ function onDeviceChanged(msg) {
   flex-direction: column;
 }
 
-.doc-page :deep(.locator-tabs.animal-tabs > .animal-tabs__content > .animal-tabs__inner) {
+.doc-page :deep(.locator-tabs.el-tabs > .el-tabs__content > .el-tabs__inner) {
   flex: 1;
   min-height: 0;
   width: 100%;

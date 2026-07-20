@@ -31,7 +31,7 @@ from ..runner import (
     mark_device_idle,
 )
 from ..runner import _active_runs as list_active_runs
-from ..runner import _u2_executor
+from ..runner import _device_executor as _u2_executor
 from ..device_connect import DeviceCheckError, check_and_connect_async
 from ..callbacks import test_callbacks
 from ..models import TestResult, TestRunRecord, TaskCard
@@ -114,7 +114,7 @@ def _spawn_bg(coro, label: str = "bg"):
     return t
 
 # u2.connect() 超时上限（秒）—— USB 松动 / ATX agent 卡死时快速失败，
-# 避免阻塞占用 _u2_executor 线程 / Daphne 事件循环。
+# 避免阻塞占用 _device_executor 线程 / Daphne 事件循环。
 U2_CONNECT_TIMEOUT = 15
 
 

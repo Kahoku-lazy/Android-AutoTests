@@ -80,7 +80,7 @@ warm-peach-pink  #f5c6a3  ████████  暖桃粉 → 辅助点缀
 
 **Collapse** — 折叠分组（替代手风琴或手写 expand）
 ```vue
-<Collapse question="设备 RF8N21MSW7A · 2 个任务" :default-expanded="true">
+<Collapse question="设备 YOUR-DEVICE-SERIAL · 2 个任务" :default-expanded="true">
   <Card>内容...</Card>
 </Collapse>
 ```

@@ -2,6 +2,7 @@
  * WebSocket 连接 + 消息分发（handler 注册表模式，解决列表页→详情页跨页闭包陈旧问题）
  */
 import { wsUrl } from "@/shared/ws-url.js";
+import { getToken } from "@/shared/api-client.js";
 
 const WS_MAP_KEY = "_task_ws_map";
 const HANDLER_KEY = "_task_ws_handlers";
@@ -216,7 +217,7 @@ export function connectTaskWebSocket(taskId, runId, createHandler) {
     } catch (_) {}
   }
 
-  const url = `${wsUrl("/ws/test-run/" + runId)}?token=${encodeURIComponent(localStorage.getItem("access_token") || "")}`;
+  const url = `${wsUrl("/ws/test-run/" + runId)}?token=${encodeURIComponent(getToken())}`;
   const ws = new WebSocket(url);
   ws._runId = runId;
 

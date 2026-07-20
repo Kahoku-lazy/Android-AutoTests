@@ -175,6 +175,9 @@ JWT_REFRESH_TTL = int(os.environ.get('JWT_REFRESH_TTL', '604800'))  # 7 days
 # Chat upload temp files — cleanup_uploads management command
 UPLOAD_CLEANUP_MAX_AGE_DAYS = int(os.environ.get('UPLOAD_CLEANUP_MAX_AGE_DAYS', '7'))
 
+# ── Airtest migration feature flags (toggle per environment) ──
+AIRTEST_ENABLED = os.environ.get('AIRTEST_ENABLED', 'True').lower() in ('true', '1', 'yes')
+
 # ── Project-specific configuration ──
 DEVICE_SERIAL = os.environ.get('DEVICE_SERIAL', '')
 SCREENSHOT_INTERVAL = float(os.environ.get('SCREENSHOT_INTERVAL', '0.5'))

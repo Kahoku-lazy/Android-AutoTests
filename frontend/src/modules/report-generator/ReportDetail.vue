@@ -1,8 +1,11 @@
 <script setup>
+
+import AppCard from "@/shared/components/AppCard.vue";
+import AppTabs from "@/shared/components/AppTabs.vue";
+import AppTable from "@/shared/components/AppTable.vue";
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { animate, stagger } from 'animejs'
-import { Button as AnimalButton, Card, Table, Tabs } from 'animal-island-vue'
 import PageHeader from '@/shared/components/PageHeader.vue'
 import { getRunReport, statusLabel, statusBadgeClass, iterBadgeClass, formatTime } from './api.js'
 
@@ -41,7 +44,7 @@ async function loadReport() {
   animate('.detail-table tbody tr', { opacity: [0, 1], translateY: [12, 0], delay: stagger(30), duration: 350, ease: 'outCubic' })
 }
 
-// ── Tabs ──
+// ── AppTabs ──
 const tabs = computed(() => {
   const items = [{ key: 'cases', label: '用例执行明细' }]
   const failCount = failedSteps.value.length || failedCases.value.length
@@ -68,7 +71,7 @@ const tableScrollY = computed(() => TABLE_HEADER_HEIGHT + pageSize.value * TABLE
 
 const failedCases = computed(() => allCases.value.filter(c => c.fail > 0))
 
-// TaskCard failed_steps — detailed step-level failure records
+// TaskAppCard failed_steps — detailed step-level failure records
 const failedSteps = computed(() => {
   if (!report.value) return []
   return report.value.task_failed_steps || []
@@ -151,7 +154,7 @@ function failStepsForCase(c) {
   return group?.steps || []
 }
 
-// ── TaskCard outcome helpers ──
+// ── TaskAppCard outcome helpers ──
 function outcomeLabel(outcome) {
   const map = { completed: '已完成', stopped: '已停止', interrupted: '运行中断', error: '异常终止' }
   return map[outcome] || outcome || '—'
@@ -177,7 +180,7 @@ function outcomeBadgeClass(outcome) {
     <div class="doc-body">
       <!-- Back button + Run meta -->
       <div class="top-bar">
-        <AnimalButton size="small" @click="goBack">← 返回列表</AnimalButton>
+        <el-button size="small" @click="goBack">← 返回列表</el-button>
         <div class="run-meta">
           <span v-if="runMeta.device_serial">📱 {{ runMeta.device_serial }}</span>
           <span v-if="runMeta.loop_count">🔄 {{ runMeta.loop_count }} 轮</span>
@@ -211,7 +214,7 @@ function outcomeBadgeClass(outcome) {
         </div>
       </div>
 
-      <!-- TaskCard Metadata (conditional) -->
+      <!-- TaskAppCard Metadata (conditional) -->
       <div v-if="runMeta.client_task_id" class="task-meta-bar">
         <div class="task-meta-item">
           <span class="meta-label">📋 任务名称</span>
@@ -233,8 +236,8 @@ function outcomeBadgeClass(outcome) {
         </div>
       </div>
 
-      <!-- Tabs -->
-      <Tabs
+      <!-- AppTabs -->
+      <AppTabs
         class="detail-tabs"
         :items="tabs"
         v-model="activeTab"
@@ -243,7 +246,7 @@ function outcomeBadgeClass(outcome) {
       >
         <!-- ═══ TAB: 用例执行明细 ═══ -->
         <template #cases>
-          <Card color="brown" pattern="brown" class="table-card">
+          <AppCard color="brown" pattern="brown" class="table-card">
             <div class="table-toolbar">
               <div class="page-size-control">
                 <span class="toolbar-label">显示行数</span>
@@ -263,12 +266,12 @@ function outcomeBadgeClass(outcome) {
                   第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ allCases.length }} 条
                 </span>
                 <div v-if="totalPages > 1" class="page-nav">
-                  <AnimalButton size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</AnimalButton>
-                  <AnimalButton size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</AnimalButton>
+                  <el-button size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</el-button>
+                  <el-button size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</el-button>
                 </div>
               </div>
             </div>
-            <Table
+            <AppTable
               :columns="[
                 { title: '用例ID', dataIndex: 'case_id', width: '160px' },
                 { title: '用例名称', dataIndex: 'case_title' },
@@ -320,8 +323,8 @@ function outcomeBadgeClass(outcome) {
                   {{ record.fail > 0 ? 'FAIL' : 'PASS' }}
                 </span>
               </template>
-            </Table>
-          </Card>
+            </AppTable>
+          </AppCard>
         </template>
 
         <!-- ═══ TAB: 失败分析 ═══ -->
@@ -335,7 +338,7 @@ function outcomeBadgeClass(outcome) {
             </h3>
             <p class="sec-sub">按用例标题分类，点击展开查看具体失败步骤</p>
             <div v-for="(group, idx) in failedStepsByCase" :key="'fsg-' + group.key" class="fail-card">
-              <Card :color="failCardColor(idx)" :pattern="failCardColor(idx)">
+              <AppCard :color="failCardColor(idx)" :pattern="failCardColor(idx)">
                 <div
                   class="fail-card-header fail-card-header--clickable"
                   role="button"
@@ -380,7 +383,7 @@ function outcomeBadgeClass(outcome) {
                     </div>
                   </div>
                 </div>
-              </Card>
+              </AppCard>
             </div>
           </div>
 
@@ -392,7 +395,7 @@ function outcomeBadgeClass(outcome) {
             </h3>
             <p class="sec-sub">点击用例展开查看迭代失败详情</p>
             <div v-for="(c, idx) in failedCases" :key="'fail-' + c.case_id" class="fail-card">
-              <Card :color="failCardColor(idx)" :pattern="failCardColor(idx)">
+              <AppCard :color="failCardColor(idx)" :pattern="failCardColor(idx)">
                 <div
                   class="fail-card-header fail-card-header--clickable"
                   role="button"
@@ -439,12 +442,12 @@ function outcomeBadgeClass(outcome) {
                     迭代详情暂不可用（TestResult 未持久化），请查看上方步骤级失败详情
                   </div>
                 </div>
-              </Card>
+              </AppCard>
             </div>
           </div>
         </template>
 
-      </Tabs>
+      </AppTabs>
     </div>
   </div>
 </template>
@@ -478,7 +481,7 @@ function outcomeBadgeClass(outcome) {
   flex-direction: column;
 }
 
-.detail-tabs :deep(.animal-tabs) {
+.detail-tabs :deep(.el-tabs) {
   display: flex;
   flex-direction: column;
   overflow: visible;
@@ -508,7 +511,7 @@ function outcomeBadgeClass(outcome) {
 .num-fail { color: #e05a5a; }
 .num-warn { color: #dba90e; }
 
-/* ── TaskCard metadata bar ── */
+/* ── TaskAppCard metadata bar ── */
 .task-meta-bar {
   display: flex;
   flex-wrap: wrap;
@@ -543,20 +546,20 @@ function outcomeBadgeClass(outcome) {
   font-style: italic;
 }
 
-/* ── Tabs ── */
-.detail-tabs :deep(.animal-tabs__content) {
+/* ── AppTabs ── */
+.detail-tabs :deep(.el-tabs__content) {
   overflow: visible;
   display: block;
   padding-top: 16px;
 }
 
-.detail-tabs :deep(.animal-tabs__inner) {
+.detail-tabs :deep(.el-tabs__inner) {
   min-height: min-content;
 }
 
-/* ── Table card ── */
+/* ── AppTable card ── */
 .table-card { overflow: hidden; }
-.table-card :deep(.animal-card__content) { padding: 0; border-radius: 14px; overflow: hidden; }
+.table-card :deep(.el-card__body) { padding: 0; border-radius: 14px; overflow: hidden; }
 
 .table-toolbar {
   display: flex;
@@ -593,7 +596,7 @@ function outcomeBadgeClass(outcome) {
 .page-info { font-size: 12px; color: #8a7b66; font-weight: 600; white-space: nowrap; }
 .page-nav { display: flex; gap: 8px; }
 
-/* ── Table styles ── */
+/* ── AppTable styles ── */
 .detail-table { width: 100%; }
 .detail-table :deep(table) { width: 100%; border-collapse: collapse; }
 .detail-table :deep(th) {

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>接口测试用例 — 编写与校验实录</title>
+<style>
+  :root {
+    --ink: #4a3a28; --muted: #9f927d; --bg: #fffef9; --card: #fffaf5;
+    --green: #6fba2c; --blue: #889df0; --yellow: #f7cd67; --red: #e85f5f;
+    --teal: #19c8b9; --purple: #b39ef3; --orange: #f7a8c4;
+    --radius: 14px; --font: 'Segoe UI', system-ui, sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box }
+  body { font-family:var(--font); background:var(--bg); color:var(--ink); line-height:1.7; padding:40px 20px }
+  .container { max-width:960px; margin:0 auto }
+  h1 { font-size:28px; text-align:center; margin-bottom:8px }
+  h1 span { background:linear-gradient(135deg,var(--purple),var(--blue)); -webkit-background-clip:text; -webkit-text-fill-color:transparent }
+  .subtitle { text-align:center; color:var(--muted); margin-bottom:40px; font-size:14px }
+  h2 { font-size:20px; margin:40px 0 16px; padding-left:12px; border-left:4px solid var(--purple) }
+  h2.m1 { border-left-color:var(--teal) }
+  h2.m2 { border-left-color:var(--blue) }
+  h2.m3 { border-left-color:var(--red) }
+
+  .flow { display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap;
+    padding:20px; background:var(--card); border-radius:var(--radius); margin:20px 0;
+    font-weight:700; font-size:14px }
+  .flow-step { background:var(--purple); color:#fff; padding:8px 16px; border-radius:10px; white-space:nowrap }
+  .flow-arrow { color:var(--muted); font-size:18px }
+
+  .phase { background:var(--card); border-radius:var(--radius); padding:24px; margin-bottom:20px;
+    border:1.5px solid rgba(139,115,85,0.1); position:relative }
+  .phase__num { position:absolute; top:-14px; left:20px; color:#fff;
+    font-size:12px; font-weight:700; padding:4px 14px; border-radius:10px }
+  .p1 .phase__num { background:var(--teal) }
+  .p2 .phase__num { background:var(--blue) }
+  .p3 .phase__num { background:var(--red) }
+  .phase__title { font-size:18px; font-weight:700; margin:8px 0 4px }
+  .phase__meta { font-size:12px; color:var(--muted); margin-bottom:12px }
+
+  .dialog { margin:16px 0 }
+  .dialog__turn { margin-bottom:16px }
+  .dialog__user, .dialog__ai { padding:12px 16px; border-radius:12px; font-size:14px; line-height:1.6 }
+  .dialog__user { background:rgba(136,157,240,0.08); border-left:3px solid var(--blue); margin-bottom:6px }
+  .dialog__user::before { content:"🧑 你："; font-weight:700; color:var(--blue); font-size:12px; display:block; margin-bottom:4px }
+  .dialog__ai { background:rgba(111,186,44,0.06); border-left:3px solid var(--green) }
+  .dialog__ai::before { content:"🤖 Claude："; font-weight:700; color:var(--green); font-size:12px; display:block; margin-bottom:4px }
+
+  .outputs { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 }
+  .output-tag { font-size:11px; font-weight:700; padding:4px 12px; border-radius:8px; white-space:nowrap }
+  .tag-method { background:rgba(179,158,243,0.15); color:#6b3fa0 }
+  .tag-doc { background:rgba(136,157,240,0.12); color:#4a60c0 }
+  .tag-audit { background:rgba(232,95,95,0.1); color:#a03030 }
+  .tag-fix { background:rgba(111,186,44,0.12); color:#3a7a10 }
+
+  .model-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:16px 0 }
+  .model-item { background:var(--card); border-radius:12px; padding:16px; text-align:center;
+    border:1.5px solid rgba(139,115,85,0.08) }
+  .model-item__icon { font-size:24px }
+  .model-item__title { font-weight:700; font-size:13px; margin:6px 0 2px }
+  .model-item__desc { font-size:11px; color:var(--muted) }
+
+  table { width:100%; border-collapse:collapse; margin:12px 0; font-size:13px }
+  th { background:rgba(139,115,85,0.06); padding:8px 12px; text-align:left; font-weight:700; font-size:12px }
+  td { padding:8px 12px; border-bottom:1px solid rgba(139,115,85,0.06) }
+  tr:hover td { background:rgba(25,200,185,0.03) }
+
+  .stat-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:16px 0 }
+  .stat-item { background:var(--card); border-radius:var(--radius); padding:20px; text-align:center;
+    border:1.5px solid rgba(139,115,85,0.08) }
+  .stat-item__num { font-size:32px; font-weight:800 }
+  .stat-item__label { font-size:12px; color:var(--muted); margin-top:4px }
+  .c-teal { color:var(--teal) }
+  .c-red { color:var(--red) }
+  .c-blue { color:var(--blue) }
+
+  .gap-box { border-left:4px solid var(--red); background:rgba(232,95,95,0.04); padding:16px; border-radius:0 12px 12px 0; margin:12px 0 }
+  .gap-box h4 { color:var(--red); margin-bottom:8px }
+
+  code { background:rgba(139,115,85,0.06); padding:2px 6px; border-radius:4px; font-size:13px }
+  ul { margin:8px 0; padding-left:20px }
+  li { margin:4px 0 }
+
+  @media (max-width:700px) { .model-grid { grid-template-columns:1fr } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>接口测试用例 <span>编写与校验实录</span></h1>
+<p class="subtitle">测试设计方法论 → 用例编写 → 专业审计 → 查漏补缺 · 2026-07-17</p>
+
+<!-- ═══════════════ FLOW ═══════════════ -->
+<div class="flow">
+  <div class="flow-step">📐 方法论设计</div><div class="flow-arrow">→</div>
+  <div class="flow-step">📝 用例编写</div><div class="flow-arrow">→</div>
+  <div class="flow-step">🔍 专业审计</div><div class="flow-arrow">→</div>
+  <div class="flow-step">📋 遗漏清单</div><div class="flow-arrow">→</div>
+  <div class="flow-step">✅ 补充完善</div>
+</div>
+
+<!-- ═══════════════ STATS ═══════════════ -->
+<div class="stat-row">
+  <div class="stat-item"><div class="stat-item__num c-teal">43</div><div class="stat-item__label">单接口用例</div></div>
+  <div class="stat-item"><div class="stat-item__num c-blue">7</div><div class="stat-item__label">业务交互流</div></div>
+  <div class="stat-item"><div class="stat-item__num c-red">25</div><div class="stat-item__label">审计后补充</div></div>
+  <div class="stat-item"><div class="stat-item__num c-teal">75</div><div class="stat-item__label">最终总计</div></div>
+  <div class="stat-item"><div class="stat-item__num c-blue">68%→95%+</div><div class="stat-item__label">覆盖率提升</div></div>
+</div>
+
+<!-- ═══════════════ PHASE 1 ═══════════════ -->
+<div class="phase p1">
+  <div class="phase__num">第 1 步</div>
+  <div class="phase__title">测试方法论设计</div>
+  <div class="phase__meta">⏱ 约 10 分钟 · 建立覆盖模型</div>
+
+  <div class="dialog">
+    <div class="dialog__turn">
+      <div class="dialog__user">从专业的接口测试工程师角度，先设计提示词覆盖测试内容，编辑与设计方法。再去验收这个接口用例，检查是否有遗漏</div>
+      <div class="dialog__ai">设计「六维覆盖模型」作为审计框架，包含 6 个维度、每个维度下设子检查点。然后逐端点、逐维度对照现有用例打分。</div>
+    </div>
+  </div>
+
+  <h3>六维覆盖模型</h3>
+  <div class="model-grid">
+    <div class="model-item">
+      <div class="model-item__icon">①</div>
+      <div class="model-item__title">单接口维度</div>
+      <div class="model-item__desc">正常/参数校验/权限/异常/幂等<br>每端点 ≥5 条</div>
+    </div>
+    <div class="model-item">
+      <div class="model-item__icon">②</div>
+      <div class="model-item__title">业务流维度</div>
+      <div class="model-item__desc">正向全流程/中断流<br>并发流/权限边界流</div>
+    </div>
+    <div class="model-item">
+      <div class="model-item__icon">③</div>
+      <div class="model-item__title">数据维度</div>
+      <div class="model-item__desc">参数溯源/默认值<br>边界值/类型转换</div>
+    </div>
+    <div class="model-item">
+      <div class="model-item__icon">④</div>
+      <div class="model-item__title">状态机维度</div>
+      <div class="model-item__desc">正常转换/非法转换拒绝<br>超时自动转换</div>
+    </div>
+    <div class="model-item">
+      <div class="model-item__icon">⑤</div>
+      <div class="model-item__title">安全维度</div>
+      <div class="model-item__desc">认证/授权/数据隔离<br>信息泄露防护</div>
+    </div>
+    <div class="model-item">
+      <div class="model-item__icon">⑥</div>
+      <div class="model-item__title">非功能维度</div>
+      <div class="model-item__desc">Content-Type/空body<br>JSON格式/大请求体/并发</div>
+    </div>
+  </div>
+
+  <div class="outputs">
+    <span class="output-tag tag-method">📐 六维覆盖模型</span>
+    <span class="output-tag tag-doc">📄 审计报告.md</span>
+  </div>
+</div>
+
+<!-- ═══════════════ PHASE 2 ═══════════════ -->
+<div class="phase p2">
+  <div class="phase__num">第 2 步</div>
+  <div class="phase__title">逐端点覆盖审计</div>
+  <div class="phase__meta">⏱ 约 15 分钟 · 18 端点 × 6 维度</div>
+
+  <p>以每个端点为单位，按六维模型逐项检查已有用例，打出 ✅⚠️❌ 三级评分。</p>
+
+  <table>
+    <tr><th>端点</th><th>正常</th><th>参数</th><th>权限</th><th>异常</th><th>幂等</th><th>评估</th></tr>
+    <tr><td>/directories GET</td><td>✅</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✅ 充分</td></tr>
+    <tr><td>/directories/create POST</td><td>✅</td><td>✅</td><td>—</td><td>✅</td><td>—</td><td>⚠️ 缺超长/特殊字符</td></tr>
+    <tr><td>/directories/{id} POST</td><td>✅</td><td>—</td><td>✅</td><td>✅</td><td>—</td><td>✅ 充分</td></tr>
+    <tr><td>/directories/{id}/permission POST</td><td>✅</td><td>—</td><td>✅</td><td>—</td><td>—</td><td>⚠️ 缺参数校验</td></tr>
+    <tr><td>/directories/batch-move POST</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>❌ 无覆盖</td></tr>
+    <tr><td>/definitions GET</td><td>✅</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⚠️ 缺筛选验证</td></tr>
+    <tr><td>/definitions POST</td><td>✅</td><td>✅</td><td>—</td><td>✅</td><td>—</td><td>⚠️ 缺边界值</td></tr>
+    <tr><td>/definitions/{id} GET</td><td>✅</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⚠️ 缺 404 独立验证</td></tr>
+    <tr><td>/definitions/{id} DELETE</td><td>✅</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⚠️ 缺不存在用例删除</td></tr>
+    <tr><td>/definitions/batch POST</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>❌ 无覆盖</td></tr>
+    <tr><td>/definitions/{id}/lock POST</td><td>✅</td><td>—</td><td>✅</td><td>✅</td><td>✅</td><td>✅ 充分</td></tr>
+    <tr><td>/definitions/{id}/unlock POST</td><td>✅</td><td>—</td><td>✅</td><td>—</td><td>✅</td><td>✅ 充分</td></tr>
+    <tr><td>/definitions/{id}/case-lock POST</td><td>✅</td><td>—</td><td>✅</td><td>—</td><td>—</td><td>⚠️ 缺幂等</td></tr>
+    <tr><td>/definitions/{id}/case-unlock POST</td><td>✅</td><td>—</td><td>—</td><td>—</td><td>✅</td><td>✅ 充分</td></tr>
+    <tr><td>/definitions/{id}/visibility POST</td><td>✅</td><td>—</td><td>✅</td><td>—</td><td>—</td><td>⚠️ 缺非法值</td></tr>
+    <tr style="background:rgba(232,95,95,0.05)"><td>/export/yaml POST</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>❌ 无覆盖</td></tr>
+    <tr style="background:rgba(232,95,95,0.05)"><td>/exports GET</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>❌ 无覆盖</td></tr>
+    <tr style="background:rgba(232,95,95,0.05)"><td>/exports/{filename} GET</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>❌ 无覆盖</td></tr>
+  </table>
+
+  <div class="stat-row" style="margin-top:16px">
+    <div class="stat-item"><div class="stat-item__num c-teal">8</div><div class="stat-item__label">✅ 充分</div></div>
+    <div class="stat-item"><div class="stat-item__num c-blue">8</div><div class="stat-item__label">⚠️ 有缺口</div></div>
+    <div class="stat-item"><div class="stat-item__num c-red">5</div><div class="stat-item__label">❌ 无覆盖（端点）</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════ PHASE 3 ═══════════════ -->
+<div class="phase p3">
+  <div class="phase__num">第 3 步</div>
+  <div class="phase__title">遗漏清单 + 补充</div>
+  <div class="phase__meta">⏱ 约 15 分钟 · 6 类 25 条</div>
+
+  <div class="gap-box">
+    <h4>🔴 遗漏 1：单接口用例缺失（8 条）</h4>
+    <p>覆盖参数边界值：目录名超长 201 字符 → 500、title 传 501 字符、priority 传 "P99" 静默降级、visibility 传非法值、case_id 不存在 404</p>
+  </div>
+
+  <div class="gap-box">
+    <h4>🔴 遗漏 2：端点完整覆盖（6 条）</h4>
+    <p>5 个端点此前完全无单独用例：batch-move、definitions/batch、export/yaml、exports GET、exports/{filename} GET；加上 delete 不存在的幂等验证</p>
+  </div>
+
+  <div class="gap-box">
+    <h4>🟠 遗漏 3：幂等性验证（3 条）</h4>
+    <p>重复 case-lock、重复 delete 已删除用例、重复设相同目录权限 → 均期望 200</p>
+  </div>
+
+  <div class="gap-box">
+    <h4>🟠 遗漏 4：业务中断流（3 条）</h4>
+    <p>编辑冲突完整交互（lock→423→unlock→lock）、权限变更中断恢复（readonly 拒绝→改回 edit→允许）、可见性中途变更（列表实时消失）</p>
+  </div>
+
+  <div class="gap-box">
+    <h4>🟡 遗漏 5：并发冲突（2 条）</h4>
+    <p>两个用户同时创建同名用例（200+409）、两个用户同时 lock 同一用例（200+423）</p>
+  </div>
+
+  <div class="gap-box">
+    <h4>🟡 遗漏 6：非功能（3 条）</h4>
+    <p>缺 Content-Type → 400、POST 空 body `{}` → title 为空、响应 Content-Type: application/json 验证</p>
+  </div>
+
+  <div class="outputs">
+    <span class="output-tag tag-audit">📊 审计结论：覆盖率 68% → 补充 25 条 → 95%+</span>
+    <span class="output-tag tag-fix">📝 测试用例文档已追加附录A（25条）</span>
+  </div>
+</div>
+
+<!-- ═══════════════ METHOD ═══════════════ -->
+<h2 class="m1">测试设计方法论总结</h2>
+
+<h3>用例编号规范</h3>
+<table>
+  <tr><th>前缀</th><th>含义</th><th>示例</th></tr>
+  <tr><td>CM-DIR</td><td>目录管理单接口</td><td>CM-DIR-01：列出目录树</td></tr>
+  <tr><td>CM-LOCK</td><td>协作锁单接口</td><td>CM-LOCK-03：编辑锁冲突</td></tr>
+  <tr><td>CM-PLOCK</td><td>持久锁单接口</td><td>CM-PLOCK-01：创建者锁定</td></tr>
+  <tr><td>CM-VIS</td><td>可见性单接口</td><td>CM-VIS-02：hidden 列表不可见</td></tr>
+  <tr><td>CM-PERM</td><td>编辑权限单接口</td><td>CM-PERM-02：只读拒绝 lock</td></tr>
+  <tr><td>CM-TRACK</td><td>协作追踪单接口</td><td>CM-TRACK-01：创建人自动记录</td></tr>
+  <tr><td>CM-SYNC</td><td>数据同步单接口</td><td>CM-SYNC-03：乐观锁冲突</td></tr>
+  <tr><td>CM-API</td><td>用例 CRUD 单接口</td><td>CM-API-01：自动生成 ID</td></tr>
+  <tr><td>CM-SEC</td><td>安全测试</td><td>CM-SEC-01：无鉴权拒绝</td></tr>
+  <tr><td>CM-FLOW</td><td>业务交互流（多接口串联）</td><td>CM-FLOW-01：全生命周期</td></tr>
+  <tr><td>CM-ARG</td><td>参数校验（审计补充）</td><td>CM-ARG-01：目录名超长</td></tr>
+  <tr><td>CM-END</td><td>端点补全（审计补充）</td><td>CM-END-02：批量导入</td></tr>
+  <tr><td>CM-IDEM</td><td>幂等性（审计补充）</td><td>CM-IDEM-01：重复锁定</td></tr>
+  <tr><td>CM-CONC</td><td>并发冲突（审计补充）</td><td>CM-CONC-01：同时创建同名</td></tr>
+  <tr><td>CM-NF</td><td>非功能（审计补充）</td><td>CM-NF-01：缺 Content-Type</td></tr>
+</table>
+
+<h3>每条用例的标准字段</h3>
+<table>
+  <tr><th>字段</th><th>说明</th><th>必填</th></tr>
+  <tr><td>方法</td><td>GET / POST / DELETE</td><td>✅</td></tr>
+  <tr><td>路径</td><td>含路径参数占位符 <code>{id}</code></td><td>✅</td></tr>
+  <tr><td>请求头</td><td>Authorization + Content-Type（分开写）</td><td>✅</td></tr>
+  <tr><td>请求体</td><td>完整 JSON（无请求体标"无"）</td><td>✅</td></tr>
+  <tr><td>前置</td><td>依赖数据 / 账号角色 / 状态</td><td>⚠️</td></tr>
+  <tr><td>期望状态码</td><td>200/400/401/403/404/409/423/500</td><td>✅</td></tr>
+  <tr><td>期望响应</td><td>关键字段断言（ok/error/id/editing_by 等）</td><td>✅</td></tr>
+  <tr><td>后置验证</td><td>如：再次 GET 验证删除（可选）</td><td>—</td></tr>
+</table>
+
+<h2 class="m2">产出物清单</h2>
+
+<table>
+  <tr><th>#</th><th>文件</th><th>路径</th><th>内容</th></tr>
+  <tr><td>1</td><td>测试方案-04-用例管理-接口测试.md</td><td><code>dev_docs/04-任务拆分/测试/</code></td><td>75 条用例（43 单接口 + 7 流程 + 25 补充）</td></tr>
+  <tr><td>2</td><td>测试方案-04-用例管理-接口测试-审计报告.md</td><td><code>dev_docs/04-任务拆分/测试/</code></td><td>六维模型 + 端点审计 + 遗漏清单</td></tr>
+  <tr><td>3</td><td>接口测试用例编写与校验实录.html</td><td><code>dev_docs/项目笔记/</code></td><td>本文档（流程实录）</td></tr>
+  <tr><td>4</td><td>test_case_manager_api.py</td><td><code>tests/</code></td><td>Python 自动化测试脚本</td></tr>
+</table>
+
+<h2 class="m3">关键经验</h2>
+
+<ul>
+  <li><strong>先建模，后验收</strong>：六维模型提供了客观的审计框架，避免凭感觉判断"够不够"</li>
+  <li><strong>端点级审计不可跳过</strong>：18 个端点逐一打分，精确到每个端点的每个维度，5 个端点此前完全无覆盖</li>
+  <li><strong>参数边界值最易遗漏</strong>：正常路径容易覆盖，但超长字符串、特殊字符、非法枚举值的降级行为常常被忽略</li>
+  <li><strong>幂等性是生产环境刚需</strong>：网络重试、用户双击都可能导致重复请求，每个写端点都应验证幂等性</li>
+  <li><strong>业务流验证参数传递</strong>：单接口测试不能保证参数在接口间正确传递，必须有串联测试</li>
+</ul>
+
+</div>
+</body>
+</html>

@@ -2,7 +2,7 @@
 
 > 关联模块：`apps/test_runner/` · 前端：`frontend/src/modules/test-runner/`
 > 关联需求：[`PRD-04-执行引擎`](../02-PRD需求/PRD-04-执行引擎.md) · 关联架构：[`架构大纲`](./架构大纲.md) §4.4
-> 版本：v1.0 · 日期：2026-07-16
+> 版本：v1.2 · 日期：2026-07-17
 
 ---
 
@@ -36,8 +36,8 @@ flowchart TB
             SM["① state_machine.py<br/>任务状态机<br/>idle → queued → running → done"]
             Runner["② runner.py<br/>TestRunner 异步执行器<br/>TREP v1.0"]
             Executor["③ executor.py<br/>StepExecutor 步骤分发器<br/>17 种步骤类型路由"]
-            Adapter["④ adapter.py<br/>DeviceAdapter 包装器<br/>uiautomator2 操作封装"]
-            DC["⑤ device_connect.py<br/>独立 u2 连接<br/>执行隔离"]
+            Adapter["④ adapter.py<br/>DeviceAdapter 双设备包装器<br/>Airtest 动作 + u2 XPath"]
+            DC["⑤ device_connect.py<br/>DeviceConnection 双连接<br/>Airtest + u2 执行隔离"]
             
             SM --> Runner --> Executor --> Adapter --> DC
         end
@@ -132,12 +132,12 @@ apps/test_runner/
 ├── state_machine.py     任务状态机
 ├── runner.py            TestRunner 异步执行器 (TREP v1.0)
 ├── executor.py          StepExecutor 步骤分发器 (14 种类型)
-├── adapter.py           DeviceAdapter uiautomator2 包装器
-├── device_connect.py    独立 u2 连接管理
+├── adapter.py           DeviceAdapter 双设备包装器（Airtest 动作 + u2 XPath）
+├── device_connect.py    DeviceConnection 双连接管理（Airtest + u2）
 ├── callbacks.py          WebSocket 回调广播（17 种事件类型）
 ├── consumers.py         WebSocket Consumer (TestRunConsumer)
 ├── recovery_helpers.py  任务卡片恢复（stale 检测）
-├── u2_recovery.py        u2 崩溃检测与重连
+├── u2_recovery.py        Airtest + u2 崩溃检测与重连
 ├── apps.py              verbose_name='执行引擎'
 ├── permissions.py       占位
 └── serializers.py       占位
@@ -197,14 +197,17 @@ StepExecutor (executor.py)
 
 DeviceAdapter (adapter.py)
   │
-  │  包装 uiautomator2，提供统一的异常处理和日志
+  │  接收 DeviceConnection，双设备路由：
+  │    self.d  → u2 Device（XPath 查询：exists/click/get_text/wait/toast）
+  │    self.ad → Airtest Android（动作：swipe/drag/app_start/app_stop/shell）
   │
-  │  ├── click(xpath)              → d.xpath(xpath).click()
-  │  ├── get_text(xpath)           → d.xpath(xpath).get_text()
-  │  ├── wait_for_element(xpath,t) → d.xpath(xpath).wait(timeout=t)
-  │  ├── start_app(pkg)            → d.app_start(pkg)
-  │  ├── kill_app(pkg)             → d.app_stop(pkg)
-  │  └── screenshot()              → d.screenshot()
+  │  ├── click(xpath)              → d.xpath(xpath).click()        [u2]
+  │  ├── get_text(xpath)           → d.xpath(xpath).get_text()     [u2]
+  │  ├── wait_for_element(xpath,t) → d.xpath(xpath).wait(timeout=t)[u2]
+  │  ├── swipe(direction,dist)     → ad.swipe((x1,y1),(x2,y2))    [Airtest]
+  │  ├── start_app(pkg)            → ad.start_app(pkg)             [Airtest]
+  │  ├── kill_app(pkg)             → ad.stop_app(pkg)              [Airtest]
+  │  └── drag(xpath,dir,dist)     → u2 获取坐标 + Airtest swipe    [混合]
 ```
 
 ### 3.3 任务状态机
@@ -428,3 +431,4 @@ erDiagram
 |------|------|----------|
 | v1.0 | 2026-07-16 | 初始版本：基于 `项目架构.md` 和 `PRD-04-执行引擎.md` 重构 |
 | v1.1 | 2026-07-16 | **代码对照审计**：views 修正为目录结构（6 文件）；TaskCard 模型从 6 字段补全至 22 字段；新增 callbacks.py / consumers.py / recovery_helpers.py / u2_recovery.py |
+| v1.2 | 2026-07-17 | **Airtest 迁移**：DeviceConnection 双连接数据类；DeviceAdapter 拆分为 Airtest 动作 + u2 XPath；u2_recovery 扩展 Airtest 崩溃检测；_u2_executor → _device_executor |

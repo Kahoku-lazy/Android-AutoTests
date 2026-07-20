@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import client from '@/shared/api-client.js'
-import { Button as AnimalButton } from 'animal-island-vue'
+// Button → el-button (Element Plus auto-import)
 import ConfirmButton from '@/shared/components/patterns/ConfirmButton.vue'
 import PageHeader from '@/shared/components/PageHeader.vue'
 import {
@@ -540,15 +540,15 @@ async function removeTask() {
           class="info-progress"
         />
         <div class="info-actions">
-          <AnimalButton @click="router.push('/runner')">← 返回列表</AnimalButton>
+          <el-button @click="router.push('/runner')">← 返回列表</el-button>
           <ConfirmButton v-if="task.running" type="primary" danger message="确定停止该任务？" title="停止任务" confirm-text="停止" @confirm="doStopTask">⏹ 停止</ConfirmButton>
-          <AnimalButton v-else-if="!task.caseItems?.length" type="primary" @click="restartTask">▶ 执行</AnimalButton>
+          <el-button v-else-if="!task.caseItems?.length" type="primary" @click="restartTask">▶ 执行</el-button>
           <ConfirmButton v-else-if="isTaskQueued(task)" type="primary" message="确定移除该排队任务？" title="移除排队任务" confirm-text="移除" @confirm="doCancelQueue">⏸ 取消排队</ConfirmButton>
-          <AnimalButton v-else type="primary" @click="restartTask">↻ 重新执行</AnimalButton>
-          <AnimalButton
+          <el-button v-else type="primary" @click="restartTask">↻ 重新执行</el-button>
+          <el-button
             v-if="task.outcome && ['completed', 'stopped', 'interrupted', 'error'].includes(task.outcome)"
             @click="router.push(`/reports/task/${encodeURIComponent(task.id)}`)"
-          >📊 查看报告</AnimalButton>
+          >📊 查看报告</el-button>
           <ConfirmButton type="primary" danger plain :message="`删除任务「${task.name || task.id}」？`" title="确认删除" confirm-text="删除" @confirm="doRemoveTask">🗑 删除</ConfirmButton>
         </div>
       </section>
@@ -674,7 +674,7 @@ async function removeTask() {
       <section class="log-section">
         <div class="doc-section__header">
           <h3 class="doc-section__title log-title">执行日志 <span class="doc-tag">Logs</span></h3>
-          <AnimalButton size="small" type="text" @click="task.logs = []" style="color:#999;">清空</AnimalButton>
+          <el-button size="small" type="text" @click="task.logs = []" style="color:#999;">清空</el-button>
         </div>
         <div class="doc-section__label log-sub">实时 WebSocket 日志输出 ({{ task.logs?.length || 0 }} 条)</div>
         <div ref="logPanel" class="log-card-body">
@@ -688,7 +688,7 @@ async function removeTask() {
   </div>
   <div v-else class="not-found">
     <p>任务未找到</p>
-    <AnimalButton @click="router.push('/runner')">← 返回任务列表</AnimalButton>
+    <el-button @click="router.push('/runner')">← 返回任务列表</el-button>
   </div>
 </template>
 

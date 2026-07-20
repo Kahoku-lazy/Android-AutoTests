@@ -1,5 +1,5 @@
 <script setup>
-import { Button } from 'animal-island-vue'
+// Button → el-button (Element Plus auto-import)
 
 defineProps({
   actions: { type: Array, default: () => [] },
@@ -10,17 +10,16 @@ defineEmits(['action'])
 
 <template>
   <div class="quick-actions">
-    <Button
+    <el-button
       v-for="(action, i) in actions"
       :key="i"
-      type="default"
-      size="middle"
+      size="default"
       class="quick-action-btn"
       :style="{ '--action-delay': (i * 70) + 'ms' }"
       @click="$emit('action', action)"
     >
       <span class="quick-action-btn__label">{{ action.label }}</span>
-    </Button>
+    </el-button>
   </div>
 </template>
 
@@ -37,7 +36,7 @@ defineEmits(['action'])
 }
 
 /* Override default button pill radius to match */
-.quick-action-btn:deep(.animal-btn) {
+.quick-action-btn:deep(.el-button) {
   border-radius: var(--animal-border-radius-base, 18px);
 }
 

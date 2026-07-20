@@ -1,11 +1,12 @@
 <script setup>
+
+import AppTabs from "@/shared/components/AppTabs.vue";
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { selectPop, iconBounce } from '@/shared/animations.js'
 import { animate } from 'animejs'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import client from '@/shared/api-client.js'
-import { Tabs } from 'animal-island-vue'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import WbLoader from './components/WbLoader.vue'
 import AgentStickyNote from './components/AgentStickyNote.vue'
@@ -41,7 +42,7 @@ function countTasksByFilter(key) {
   return list.filter((t) => allow.includes(String(t.status || '').toUpperCase())).length
 }
 
-const taskFilterTabs = computed(() => [
+const taskFilterAppTabs = computed(() => [
   { key: 'all', label: `全部 (${countTasksByFilter('all')})` },
   { key: 'pending', label: `待执行 (${countTasksByFilter('pending')})` },
   { key: 'running', label: `执行中 (${countTasksByFilter('running')})` },
@@ -291,7 +292,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
       mark="🤖"
     >
       <template #actions>
-        <AnimalButton class="wb-btn wb-btn--sky" type="primary" @click="router.push('/ai-assistant/agent/new')">+ 新建智能体</AnimalButton>
+        <el-button class="wb-btn wb-btn--sky" type="primary" @click="router.push('/ai-assistant/agent/new')">+ 新建智能体</el-button>
       </template>
     </WorkbenchHeader>
 
@@ -360,7 +361,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
           <span class="filter-count">{{ filteredTasks.length }} / {{ tasks.length }}</span>
         </div>
         <div class="filter-bar">
-          <Tabs
+          <AppTabs
             class="task-tabs"
             :items="taskFilterTabs"
             v-model="activeTaskFilter"
@@ -386,7 +387,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
                 </div>
               </div>
             </template>
-          </Tabs>
+          </AppTabs>
         </div>
       </section>
       </template>
@@ -452,14 +453,14 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
   display: flex;
   flex-direction: column;
 }
-.task-tabs :deep(.animal-tabs) {
+.task-tabs :deep(.el-tabs) {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
-.task-tabs :deep(.animal-tabs__content) {
+.task-tabs :deep(.el-tabs__content) {
   flex: 1;
   min-height: 0;
   overflow-x: hidden;
@@ -467,7 +468,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
   display: block;
   padding-top: 12px;
 }
-.task-tabs :deep(.animal-tabs__inner) {
+.task-tabs :deep(.el-tabs__inner) {
   min-height: min-content;
 }
 
@@ -542,7 +543,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
   background: transparent;
   font-size: 15px;
   font-weight: 700;
-  color: var(--animal-text-color-secondary);
+  color: var(--app-text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: inherit;

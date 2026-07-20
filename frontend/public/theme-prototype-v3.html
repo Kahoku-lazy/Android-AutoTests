@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Soft Glass · 测试平台原型 v3</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════
+   Soft Glass 设计令牌 — 来自 demo_11
+   ═══════════════════════════════════════ */
+:root {
+  /* 色板 — 自然绿 + 蓝白渐变 */
+  --green:        #8EC8A0;
+  --green-light:  #C5E8CF;
+  --green-deep:   #5DA870;
+  --green-mint:   #D8F0DF;
+  --blue:         #a2d2ff;
+  --blue-light:   #bde0fe;
+  --blue-sky:     #d4eaff;
+  --white:        #fdfbfb;
+
+  /* 自然点缀 */
+  --moss:         #B8C9A8;
+  --leaf:         #9DC88D;
+  --bark:         #8B7D6B;
+
+  /* 玻璃 */
+  --glass:      rgba(255,255,255,0.45);
+  --glass-heavy:rgba(255,255,255,0.65);
+  --glass-card: rgba(255,255,255,0.55);
+  --glass-card-h: rgba(255,255,255,0.82);
+  --glass-border: rgba(255,255,255,0.55);
+  --glass-blur: 18px;
+
+  /* 文字 */
+  --text-primary:   #3D4A3B;
+  --text-secondary: #7A8B73;
+  --text-muted:     #A0B09A;
+
+  /* 状态色 */
+  --pass:    rgba(184,232,198,0.60);
+  --pass-text: #1a5c2a;
+  --pass-border: rgba(184,232,198,0.80);
+  --fail:    rgba(255,192,203,0.60);
+  --fail-text: #7a1c2b;
+  --fail-border: rgba(255,192,203,0.80);
+  --pending: rgba(162,210,255,0.60);
+  --pending-text: #1c4a7a;
+  --pending-border: rgba(162,210,255,0.80);
+
+  /* 圆角 */
+  --r-sm: 14px;
+  --r-md: 20px;
+  --r-lg: 28px;
+  --r-xl: 34px;
+  --r-pill: 50px;
+
+  /* 阴影 */
+  --shadow-sm: 0 4px 15px rgba(31,38,135,0.04);
+  --shadow-md: 0 8px 32px rgba(31,38,135,0.07);
+  --shadow-lg: 0 16px 48px rgba(31,38,135,0.10);
+
+  /* 字体 */
+  --font: 'Quicksand', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+
+  /* 侧边栏 */
+  --side-w: 230px;
+  --side-collapsed: 64px;
+
+  /* 动效 */
+  --ease: cubic-bezier(0.25,0.1,0.25,1);
+  --spring: cubic-bezier(0.34,1.56,0.64,1);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  height: 100%; overflow: hidden;
+  font-family: var(--font);
+  font-size: 14px; font-weight: 500;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══════════════════════════════════════
+   背景 — 粉蓝渐变 + 模糊装饰球
+   ═══════════════════════════════════════ */
+body {
+  background: linear-gradient(45deg, #d4eaff, #e8f4f8, #d8f0df, #e8f4f8);
+  background-size: 300% 300%;
+  animation: gradientBG 18s ease infinite;
+}
+
+@keyframes gradientBG {
+  0%   { background-position: 0% 50%; }
+  25%  { background-position: 50% 30%; }
+  50%  { background-position: 100% 50%; }
+  75%  { background-position: 50% 70%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* 背景装饰球 */
+.bg-blobs { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.blob {
+  position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.75;
+}
+.blob-1 { top: -8%;  left: -6%;  width: 380px; height: 380px; background: var(--green-light);  animation: float1 12s ease-in-out infinite; }
+.blob-2 { bottom: -10%; right: -8%; width: 320px; height: 320px; background: var(--blue);        animation: float2 14s ease-in-out infinite; }
+.blob-3 { top: 40%;  left: 55%;  width: 260px; height: 260px; background: var(--green-mint);   animation: float3 16s ease-in-out infinite; }
+.blob-4 { top: 15%;  right: 20%; width: 200px; height: 200px; background: var(--blue-light);   animation: float2 11s ease-in-out infinite; }
+
+@keyframes float1 { 0%,100%{ transform:translate(0,0) scale(1); } 33%{ transform:translate(30px,-25px) scale(1.08); } 66%{ transform:translate(-15px,20px) scale(0.94); } }
+@keyframes float2 { 0%,100%{ transform:translate(0,0) scale(1); } 50%{ transform:translate(-25px,-15px) scale(1.06); } }
+@keyframes float3 { 0%,100%{ transform:translate(0,0) scale(1); } 33%{ transform:translate(-20px,18px) scale(1.05); } 66%{ transform:translate(15px,-22px) scale(0.96); } }
+
+/* ═══════════════════════════════════════
+   壳层
+   ═══════════════════════════════════════ */
+.app-shell { display: flex; height: 100vh; position: relative; z-index: 1; }
+
+/* ═══════════════════════════════════════
+   侧边栏 — 柔软玻璃
+   ═══════════════════════════════════════ */
+.sidebar {
+  width: var(--side-w); min-width: var(--side-w);
+  height: calc(100% - 24px); margin: 12px 0 12px 12px;
+  background: var(--glass-heavy);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-radius: var(--r-lg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-md);
+  display: flex; flex-direction: column;
+  position: relative; z-index: 10;
+  transition: all 0.3s var(--ease);
+}
+.sidebar.collapsed { width: var(--side-collapsed); min-width: var(--side-collapsed); }
+
+/* 品牌 */
+.sidebar-brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 22px 18px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.5);
+}
+.sidebar.collapsed .sidebar-brand { justify-content: center; padding: 22px 8px 16px; }
+
+.brand-mark {
+  width: 40px; height: 40px; border-radius: var(--r-sm);
+  background: linear-gradient(135deg, var(--green), var(--green-deep));
+  display: grid; place-items: center; flex-shrink: 0;
+  font-size: 18px; color: #fff; font-weight: 700;
+  box-shadow: 0 4px 16px rgba(142,200,160,0.35);
+}
+.brand-text { overflow: hidden; }
+.brand-name {
+  font-size: 17px; font-weight: 700; letter-spacing: -0.3px;
+  color: var(--text-primary);
+}
+.brand-sub { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+
+.toggle-btn {
+  position: absolute; top: 26px; right: -14px;
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1.5px solid var(--glass-border); background: #fff;
+  color: var(--text-secondary); cursor: pointer;
+  font-size: 13px; font-weight: 700; display: grid; place-items: center;
+  z-index: 20; box-shadow: var(--shadow-sm);
+  transition: all 0.2s var(--ease);
+}
+.toggle-btn:hover { background: var(--green); color: #fff; border-color: var(--green); }
+
+/* 导航 */
+.sidebar-nav {
+  flex: 1; overflow-y: auto; padding: 14px 10px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  height: 45px; padding: 0 16px; border-radius: var(--r-md);
+  font-size: 14px; font-weight: 600; color: var(--text-secondary);
+  cursor: pointer; text-decoration: none;
+  transition: all 0.25s var(--spring); position: relative;
+}
+.sidebar.collapsed .nav-item { justify-content: center; padding: 0; }
+
+/* 选中态 — 浅绿背景 + 光点 */
+.nav-item.active {
+  background: rgba(142,200,160,0.22);
+  color: #2D4A33;
+  box-shadow: 0 2px 12px rgba(142,200,160,0.15);
+  font-weight: 700;
+}
+.nav-item.active::after {
+  content: '';
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green-deep);
+  box-shadow: 0 0 10px rgba(93,168,112,0.6);
+  animation: dotGlow 2s ease-in-out infinite;
+}
+@keyframes dotGlow {
+  0%,100% { box-shadow: 0 0 6px rgba(93,168,112,0.4); }
+  50%     { box-shadow: 0 0 16px rgba(93,168,112,0.8); }
+}
+
+.nav-icon { width: 20px; height: 20px; display: grid; place-items: center; flex-shrink: 0; }
+.nav-icon svg { width: 20px; height: 20px; }
+.nav-item:hover .nav-icon { transform: scale(1.12); }
+.nav-label { flex: 1; transition: opacity 0.2s var(--ease); white-space: nowrap; }
+.sidebar.collapsed .nav-label { opacity: 0; }
+
+/* 底部 */
+.sidebar-footer {
+  padding: 14px 16px; border-top: 1px solid rgba(255,255,255,0.5);
+  display: flex; align-items: center; gap: 10px;
+}
+.sidebar.collapsed .sidebar-footer { justify-content: center; padding: 14px 8px; }
+.user-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--green), var(--blue));
+  display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 700;
+  flex-shrink: 0;
+}
+.user-name { font-size: 13px; font-weight: 700; }
+.user-role { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+
+/* ═══════════════════════════════════════
+   主内容
+   ═══════════════════════════════════════ */
+.main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* 顶栏 */
+.top-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 12px 12px 0 8px; padding: 10px 20px;
+  background: var(--glass); backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-radius: var(--r-md); border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-sm); flex-shrink: 0;
+}
+.breadcrumb { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+.breadcrumb span { color: var(--text-primary); font-weight: 700; }
+.top-right { display: flex; align-items: center; gap: 10px; }
+
+/* ═══════════════════════════════════════
+   内容区
+   ═══════════════════════════════════════ */
+.content-area {
+  flex: 1; overflow-y: auto; padding: 20px 16px 24px 8px;
+}
+.content-stage { transition: opacity 0.2s ease, transform 0.25s var(--ease); }
+.content-stage.leaving { opacity: 0; transform: translateY(10px); }
+
+/* ═══════════════════════════════════════
+   组件
+   ═══════════════════════════════════════ */
+
+/* 毛玻璃卡片 */
+.card {
+  background: var(--glass-card); backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: var(--r-md); border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-sm); padding: 22px 24px;
+  transition: all 0.3s var(--ease);
+}
+.card:hover { box-shadow: var(--shadow-md); }
+.card--hover:hover { background: var(--glass-card-h); transform: translateY(-2px); }
+
+.card__header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.card__title { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+
+/* 统计卡 */
+.stat-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px; margin-bottom: 20px;
+}
+.stat-card {
+  background: var(--glass-card); backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: var(--r-md); border: 1px solid var(--glass-border);
+  padding: 18px 20px; display: flex; align-items: center; gap: 14px;
+  transition: all 0.3s var(--ease); cursor: pointer;
+}
+.stat-card:hover { background: var(--glass-card-h); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.stat-card__icon {
+  width: 46px; height: 46px; border-radius: var(--r-sm);
+  display: grid; place-items: center; font-size: 20px; flex-shrink: 0;
+}
+.stat-card__icon--green { background: rgba(142,200,160,0.25); }
+.stat-card__icon--blue  { background: rgba(162,210,255,0.25); }
+.stat-card__icon--mint  { background: rgba(216,240,223,0.45); }
+.stat-card__value { font-size: 24px; font-weight: 700; line-height: 1.1; letter-spacing: -0.5px; }
+.stat-card__label { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+
+/* Hero */
+.page-hero {
+  border-radius: var(--r-lg); padding: 28px 30px; margin-bottom: 20px;
+  background: var(--glass); backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border); box-shadow: var(--shadow-sm);
+  position: relative; overflow: hidden;
+}
+.page-hero::after {
+  content: ''; position: absolute; top: -30px; right: -30px;
+  width: 140px; height: 140px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(142,200,160,0.3), transparent);
+  pointer-events: none;
+}
+.page-hero > * { position: relative; z-index: 1; }
+.page-hero__title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+.page-hero__subtitle { font-size: 13px; color: var(--text-muted); font-weight: 600; margin-top: 6px; }
+
+/* 按钮 */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 20px; border-radius: var(--r-pill);
+  font-family: var(--font); font-size: 13px; font-weight: 700;
+  cursor: pointer; border: 1.5px solid transparent;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  transition: all 0.2s var(--ease); white-space: nowrap; outline: none;
+}
+.btn:active { transform: scale(0.96); }
+
+.btn--primary {
+  background: linear-gradient(135deg, var(--green), var(--green-deep));
+  color: #fff; border-color: transparent;
+  box-shadow: 0 4px 14px rgba(142,200,160,0.35);
+}
+.btn--primary:hover { box-shadow: 0 6px 20px rgba(142,200,160,0.5); transform: translateY(-1px); }
+
+.btn--glass {
+  background: var(--glass-card); border-color: var(--glass-border); color: var(--text-primary);
+}
+.btn--glass:hover { background: var(--glass-card-h); }
+
+.btn--danger {
+  background: var(--fail); border-color: var(--fail-border); color: var(--fail-text);
+}
+.btn--danger:hover { background: rgba(255,192,203,0.7); }
+
+.btn--sm { padding: 5px 14px; font-size: 11px; }
+.btn--lg { padding: 12px 28px; font-size: 15px; }
+
+/* 标签 */
+.tag {
+  display: inline-flex; align-items: center; padding: 6px 14px;
+  border-radius: var(--r-pill); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.3px; backdrop-filter: blur(4px);
+}
+.tag--pass    { background: var(--pass);    color: var(--pass-text);    border: 1px solid var(--pass-border); }
+.tag--fail    { background: var(--fail);    color: var(--fail-text);    border: 1px solid var(--fail-border); }
+.tag--pending { background: var(--pending); color: var(--pending-text); border: 1px solid var(--pending-border); }
+
+/* 表格 */
+.data-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+.data-table th {
+  text-align: left; padding: 12px 16px; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted);
+  border-bottom: 1.5px solid var(--glass-border);
+  background: rgba(255,255,255,0.3);
+}
+.data-table th:first-child { border-radius: var(--r-sm) 0 0 0; }
+.data-table th:last-child  { border-radius: 0 var(--r-sm) 0 0; }
+.data-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.35); }
+.data-table tbody tr { transition: background 0.15s var(--ease); }
+.data-table tbody tr:hover td { background: rgba(142,200,160,0.08); }
+
+/* 输入 */
+.glass-input {
+  width: 100%; padding: 10px 16px; border-radius: var(--r-pill);
+  border: 1.5px solid var(--glass-border); background: var(--glass-card);
+  backdrop-filter: blur(8px); font-family: var(--font); font-size: 14px;
+  color: var(--text-primary); transition: all 0.2s var(--ease); outline: none;
+}
+.glass-input:focus {
+  border-color: var(--green); background: rgba(255,255,255,0.75);
+  box-shadow: 0 0 0 3px rgba(142,200,160,0.14);
+}
+.glass-input::placeholder { color: var(--text-muted); }
+
+/* 胶囊切换 */
+.pill-tabs {
+  display: flex; gap: 3px; padding: 3px;
+  background: var(--glass-card); backdrop-filter: blur(8px);
+  border-radius: var(--r-pill); border: 1px solid var(--glass-border);
+}
+.pill-tab {
+  padding: 5px 16px; border-radius: var(--r-pill); font-size: 12px; font-weight: 700;
+  color: var(--text-muted); cursor: pointer; border: none;
+  background: transparent; transition: all 0.2s var(--ease);
+}
+.pill-tab.active { background: var(--green); color: #fff; box-shadow: 0 2px 8px rgba(142,200,160,0.35); }
+
+/* 进度条 */
+.progress-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.4); overflow: hidden; }
+.progress-bar__fill {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--green), var(--green-deep));
+  transition: width 0.6s var(--ease);
+}
+
+/* 弹窗 */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(74,78,105,0.15); backdrop-filter: blur(6px);
+  display: grid; place-items: center;
+}
+.modal-box {
+  background: rgba(255,255,255,0.72); backdrop-filter: blur(24px);
+  border-radius: var(--r-lg); border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lg); min-width: 400px; max-width: 480px;
+  animation: modalIn 0.35s var(--spring);
+}
+@keyframes modalIn {
+  0%   { transform: scale(0.92) translateY(20px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.modal-box__header { padding: 22px 24px 14px; font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+.modal-box__body   { padding: 0 24px 16px; color: var(--text-secondary); }
+.modal-box__footer { padding: 10px 24px 22px; display: flex; justify-content: flex-end; gap: 10px; }
+
+/* 代码块 */
+.code-block {
+  background: rgba(255,255,255,0.4); border-radius: var(--r-sm);
+  border: 1px solid var(--glass-border); padding: 14px 18px;
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 12px; line-height: 1.7; color: var(--text-primary);
+  overflow-x: auto;
+}
+
+/* 工具类 */
+.flex { display:flex; align-items:center; }
+.flex-between { display:flex; align-items:center; justify-content:space-between; }
+.gap-2{ gap:8px; } .gap-3{ gap:12px; } .gap-4{ gap:16px; }
+.mt-4{ margin-top:16px; } .mb-4{ margin-bottom:16px; }
+.text-muted { color:var(--text-muted); } .text-sm { font-size:12px; }
+
+@media (max-width: 800px) {
+  .sidebar:not(.collapsed) { width: 190px; min-width: 190px; }
+  .stat-grid { grid-template-columns: repeat(2,1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- 背景装饰球 -->
+<div class="bg-blobs">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+  <div class="blob blob-4"></div>
+</div>
+
+<div class="app-shell">
+  <!-- ═══════════════ 侧边栏 ═══════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-mark">✦</div>
+      <div class="brand-text">
+        <div class="brand-name">TestFlow</div>
+        <div class="brand-sub">Soft Glass Edition</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="nav-item active" data-page="dashboard" onclick="nav(this,'dashboard')">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>
+        <span class="nav-label">仪表盘</span>
+      </a>
+      <a class="nav-item" data-page="devices" onclick="nav(this,'devices')">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><line x1="12" y1="18" x2="12" y2="18.01" stroke-width="2.5"/></svg></span>
+        <span class="nav-label">设备管理</span>
+      </a>
+      <a class="nav-item" data-page="runner" onclick="nav(this,'runner')">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg></span>
+        <span class="nav-label">执行引擎</span>
+      </a>
+      <a class="nav-item" data-page="reports" onclick="nav(this,'reports')">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+        <span class="nav-label">测试用例</span>
+      </a>
+      <a class="nav-item" data-page="ai" onclick="nav(this,'ai')">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>
+        <span class="nav-label">AI 助手</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-avatar">W</div>
+      <div style="min-width:0"><div class="user-name">wenle</div><div class="user-role">QA Lead</div></div>
+    </div>
+
+    <button class="toggle-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')">◀</button>
+  </aside>
+
+  <!-- ═══════════════ 主内容 ═══════════════ -->
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="breadcrumb">TestFlow / <span id="crumb">仪表盘</span></div>
+      <div class="top-right">
+        <div class="pill-tabs">
+          <button class="pill-tab active">今天</button>
+          <button class="pill-tab">本周</button>
+          <button class="pill-tab">本月</button>
+        </div>
+        <button class="btn btn--glass btn--sm">⟳ 刷新</button>
+      </div>
+    </div>
+
+    <div class="content-area" id="content"></div>
+  </main>
+</div>
+
+<!-- 弹窗 -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal-box">
+    <div class="modal-box__header">连接设备</div>
+    <div class="modal-box__body">
+      <p style="margin-bottom:12px">输入设备序列号以建立 ADB 连接</p>
+      <input class="glass-input" style="border-radius:var(--r-sm)" placeholder="例如: 192.168.1.100:5555">
+    </div>
+    <div class="modal-box__footer">
+      <button class="btn btn--glass" onclick="document.getElementById('modal').style.display='none'">取消</button>
+      <button class="btn btn--primary" onclick="document.getElementById('modal').style.display='none'">连接设备</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const P = {
+  dashboard: `
+    <div class="page-hero"><div class="page-hero__title">仪表盘</div><div class="page-hero__subtitle">AI 驱动的 Android UI 自动化测试平台 · 实时概览</div></div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-card__icon stat-card__icon--green">📱</div><div class="stat-card__info"><div class="stat-card__value">12</div><div class="stat-card__label">在线设备</div></div></div>
+      <div class="stat-card"><div class="stat-card__icon stat-card__icon--blue">📋</div><div class="stat-card__info"><div class="stat-card__value">347</div><div class="stat-card__label">测试用例</div></div></div>
+      <div class="stat-card"><div class="stat-card__icon stat-card__icon--green">✓</div><div class="stat-card__info"><div class="stat-card__value">96.2%</div><div class="stat-card__label">通过率</div></div></div>
+      <div class="stat-card"><div class="stat-card__icon stat-card__icon--green">⚡</div><div class="stat-card__info"><div class="stat-card__value">1,247</div><div class="stat-card__label">今日执行</div></div></div>
+    </div>
+    <div class="card">
+      <div class="card__header"><div class="card__title">最近执行</div><div class="flex gap-2"><span class="tag tag--pending">运行中 3</span><span class="tag tag--pass">通过 28</span></div></div>
+      <table class="data-table">
+        <thead><tr><th>任务</th><th>设备</th><th>状态</th><th>耗时</th><th style="width:120px">进度</th><th></th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:600">登录模块回归测试</td><td>Pixel 7 Pro</td><td><span class="tag tag--pass">PASS</span></td><td>2m 34s</td><td><div class="progress-bar"><div class="progress-bar__fill" style="width:100%"></div></div></td><td><button class="btn btn--glass btn--sm">详情</button></td></tr>
+          <tr><td style="font-weight:600">支付流程完整验证</td><td>Galaxy S24</td><td><span class="tag tag--pending">RUNNING</span></td><td>1m 12s</td><td><div class="progress-bar"><div class="progress-bar__fill" style="width:42%"></div></div></td><td><button class="btn btn--glass btn--sm">查看</button></td></tr>
+          <tr><td style="font-weight:600">首页 UI 断言检查</td><td>Xiaomi 14</td><td><span class="tag tag--pass">PASS</span></td><td>0m 48s</td><td><div class="progress-bar"><div class="progress-bar__fill" style="width:100%"></div></div></td><td><button class="btn btn--glass btn--sm">查看</button></td></tr>
+          <tr><td style="font-weight:600">设置页导航验证</td><td>OnePlus 12</td><td><span class="tag tag--fail">FAIL</span></td><td>1m 05s</td><td><div class="progress-bar"><div class="progress-bar__fill" style="width:100%;background:linear-gradient(90deg,#e8998a,#f0c8be)"></div></div></td><td><button class="btn btn--danger btn--sm">调试</button></td></tr>
+        </tbody>
+      </table>
+    </div>`,
+
+  devices: `
+    <div class="page-hero"><div class="page-hero__title">设备管理</div><div class="page-hero__subtitle">管理 Android 设备连接、锁定与状态监控</div></div>
+    <div class="flex-between mb-4"><div class="flex gap-2"><span class="tag tag--pass">在线 12</span><span class="tag tag--pending">繁忙 3</span></div><button class="btn btn--primary btn--sm" onclick="document.getElementById('modal').style.display='grid'">+ 连接设备</button></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px">
+      ${['Pixel 7 Pro|Android 14 · 1080×2400|在线|pass','Galaxy S24|Android 15 · 1080×2340|繁忙|pending','Xiaomi 14|Android 14 · 1200×2670|在线|pass','OnePlus 12|Android 15 · 1440×3168|在线|pass','Pixel 8a|Android 15 · 1080×2400|在线|pass','OPPO Find X7|Android 14 · 1240×2772|离线|fail'].map(d=>{const[n,i,s,c]=d.split('|');return `<div class="card card--hover"><div class="flex-between"><div><strong>${n}</strong><div class="text-muted text-sm mt-4">${i}</div></div><span class="tag tag--${c}">${s}</span></div></div>`}).join('')}
+    </div>`,
+
+  runner: `
+    <div class="page-hero"><div class="page-hero__title">执行引擎</div><div class="page-hero__subtitle">测试任务编排、执行监控与实时日志</div></div>
+    <div class="card mb-4"><div class="card__header"><div class="card__title">活跃任务</div><span class="tag tag--pending">运行中 2</span></div>
+    <table class="data-table">
+      <thead><tr><th>Run ID</th><th>用例</th><th>设备</th><th>开始</th><th style="width:120px">进度</th><th>状态</th></tr></thead>
+      <tbody>
+        <tr><td style="font-family:monospace;font-size:12px">#R-1024</td><td style="font-weight:600">登录模块回归</td><td>Pixel 7 Pro</td><td>14:32:08</td><td><div class="progress-bar"><div class="progress-bar__fill" style="width:72%"></div></div></td><td><span class="tag tag--pending">RUNNING</span></td></tr>
+        <tr><td style="font-family:monospace;font-size:12px">#R-1023</td><td style="font-weight:600">支付完整验证</td><td>Galaxy S24</td><td>14:28:55</td><td><div class="progress-bar"><div class="progress-bar__fill" style="width:100%"></div></div></td><td><span class="tag tag--pass">PASS</span></td></tr>
+      </tbody>
+    </table></div>
+    <div class="card"><div class="card__header"><div class="card__title">执行日志</div></div>
+    <div class="code-block">
+<span style="color:var(--text-muted)">14:32:08</span>  [<span style="color:#5da87a">INFO</span>]  Runner initialized — Pixel 7 Pro<br>
+<span style="color:var(--text-muted)">14:32:09</span>  [<span style="color:#5da87a">INFO</span>]  Step 1/8: CLICK — //Button[@text="登录"]<br>
+<span style="color:var(--text-muted)">14:32:10</span>  [<span style="color:#5da87a">OK</span>]    Element at (540, 1860) — tapped<br>
+<span style="color:var(--text-muted)">14:32:13</span>  [<span style="color:#b85a6c">FAIL</span>]  Text mismatch — expected "首页", got "推荐"<br>
+<span style="color:var(--text-muted)">14:32:14</span>  [<span style="color:#5da87a">INFO</span>]  Screenshot saved — R-1024_step3_fail.png</div></div>`,
+
+  reports: `
+    <div class="page-hero"><div class="page-hero__title">测试报告</div><div class="page-hero__subtitle">结果汇总、趋势分析与报告导出</div></div>
+    <div class="card"><table class="data-table">
+      <thead><tr><th>报告</th><th>日期</th><th>用例数</th><th>通过率</th><th>耗时</th><th></th></tr></thead>
+      <tbody>
+        <tr><td style="font-weight:600">每日回归</td><td>2026-07-20</td><td>120</td><td style="color:#5da87a;font-weight:700">97.5%</td><td>8m 42s</td><td><button class="btn btn--glass btn--sm">导出</button></td></tr>
+        <tr><td style="font-weight:600">发版全量验证</td><td>2026-07-19</td><td>347</td><td style="color:#5da87a;font-weight:700">94.8%</td><td>22m 15s</td><td><button class="btn btn--glass btn--sm">导出</button></td></tr>
+        <tr><td style="font-weight:600">冒烟测试</td><td>2026-07-19</td><td>45</td><td style="color:#5da87a;font-weight:700">100%</td><td>3m 08s</td><td><button class="btn btn--glass btn--sm">导出</button></td></tr>
+      </tbody>
+    </table></div>`,
+  ai: `<div class="card" style="text-align:center;padding:60px 24px"><div style="font-size:40px;margin-bottom:12px">🤖</div><div class="card__title" style="font-size:18px">AI 助手</div><div class="text-muted" style="margin-top:8px">智能体对话、用例生成、测试执行 — 完整原型在实施阶段展开</div></div>`,
+};
+
+const LABELS = {dashboard:'仪表盘',devices:'设备管理',runner:'执行引擎',reports:'测试报告',ai:'AI 助手'};
+
+function nav(el, page) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('crumb').textContent = LABELS[page];
+  const area = document.getElementById('content');
+  area.classList.add('leaving');
+  setTimeout(() => {
+    area.innerHTML = P[page];
+    requestAnimationFrame(() => { area.classList.remove('leaving'); });
+    area.querySelectorAll('.stat-card, .card').forEach((c,i) => {
+      c.style.opacity='0';c.style.transform='translateY(14px)';c.style.transition='none';
+      requestAnimationFrame(()=>{c.style.transition='all 0.4s cubic-bezier(0.34,1.56,0.64,1)';c.style.opacity='1';c.style.transform='translateY(0)';c.style.transitionDelay=(i*0.06)+'s'});
+    });
+  }, 160);
+}
+
+document.getElementById('content').innerHTML = P.dashboard;
+</script>
+</body>
+</html>

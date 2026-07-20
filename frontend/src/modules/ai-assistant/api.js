@@ -37,11 +37,11 @@
  *   2. Subscribe SSE:     GET  /sessions/{session_id}/stream?agent_id=xxx
  *   3. Trigger chat:      POST /chat/                        → fire-and-forget
  */
-import { agentscopeClient } from '@/shared/api-client'
+import { agentscopeClient, getToken } from '@/shared/api-client'
 
 // ── JWT helpers ──
 function getUserId() {
-  const token = localStorage.getItem('access_token')
+  const token = getToken()
   if (!token) return ''
   try {
     const payload = JSON.parse(atob(token.split('.')[1]))
@@ -50,7 +50,7 @@ function getUserId() {
 }
 
 function getAuthHeaders() {
-  const token = localStorage.getItem('access_token')
+  const token = getToken()
   return {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`,

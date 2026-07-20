@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 import { animate } from "animejs";
 import { fetchDashboardStats, fetchRecentActivities } from "./api.js";
 
-import { Card, Divider } from "animal-island-vue";
+// Card, Divider → el-card, el-divider (Element Plus auto-import)
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
 import {
   IconDevice,
@@ -15,7 +15,7 @@ import {
   IconAlertCircle,
 } from "@/shared/icons/index.js";
 
-import StatsCard from "./components/StatsCard.vue";
+import StatsAppCard from "./components/StatsCard.vue";
 import TrendBarChart from "./components/TrendBarChart.vue";
 import TaskResultPanel from "./components/TaskResultPanel.vue";
 import QuickActions from "./components/QuickActions.vue";
@@ -183,9 +183,9 @@ onMounted(() => {
       mark="📊"
     >
       <template #actions>
-        <AnimalButton class="wb-btn wb-btn--sunset" size="small" :loading="refreshing" @click="refreshData">
+        <el-button class="wb-btn wb-btn--sunset" size="small" :loading="refreshing" @click="refreshData">
           刷新
-        </AnimalButton>
+        </el-button>
       </template>
     </WorkbenchHeader>
 
@@ -201,7 +201,7 @@ onMounted(() => {
         </div>
         <div class="doc-section__label">核心指标实时展示</div>
         <div class="dashboard__stats-grid">
-          <StatsCard
+          <StatsAppCard
             label="在线设备"
             :value="stats.devices.online"
             :suffix="` / ${stats.devices.total}`"
@@ -214,8 +214,8 @@ onMounted(() => {
             <template #icon>
               <IconDevice :size="22" color="#6fba2c" />
             </template>
-          </StatsCard>
-          <StatsCard
+          </StatsAppCard>
+          <StatsAppCard
             label="测试用例"
             :value="stats.cases.total"
             color="app-blue"
@@ -227,8 +227,8 @@ onMounted(() => {
             <template #icon>
               <IconFileCode :size="22" color="#889df0" />
             </template>
-          </StatsCard>
-          <StatsCard
+          </StatsAppCard>
+          <StatsAppCard
             label="活跃智能体"
             :value="stats.agents.active"
             suffix=""
@@ -240,8 +240,8 @@ onMounted(() => {
             <template #icon>
               <IconBrain :size="22" color="#f7cd67" />
             </template>
-          </StatsCard>
-          <StatsCard
+          </StatsAppCard>
+          <StatsAppCard
             label="运行中任务"
             :value="stats.runs.active"
             suffix=""
@@ -257,7 +257,7 @@ onMounted(() => {
                 v-if="stats.runs.active > 0"
               ></span>
             </template>
-          </StatsCard>
+          </StatsAppCard>
         </div>
       </section>
 
@@ -271,13 +271,13 @@ onMounted(() => {
           近 12 期执行成功、失败与新建用例统计
         </div>
         <div class="dashboard__trends">
-          <Card color="app-green" pattern="app-green" class="trends-chart-card">
+          <el-card class="trends-chart-card">
             <TrendBarChart :chart="executionChart" />
-          </Card>
-          <Card color="app-blue" pattern="app-blue" class="trends-tasks-card">
+          </el-card>
+          <el-card class="trends-tasks-card">
             <div class="trends-tasks-card__title">任务执行结果</div>
             <TaskResultPanel :tasks="recentTasks" :summary="executionSummary" />
-          </Card>
+          </el-card>
         </div>
       </section>
 
@@ -379,8 +379,8 @@ onMounted(() => {
   flex-direction: column;
 }
 
-.trends-chart-card :deep(.animal-card__content),
-.trends-tasks-card :deep(.animal-card__content) {
+.trends-chart-card :deep(.el-card__body),
+.trends-tasks-card :deep(.el-card__body) {
   padding: 18px;
   border-radius: 16px;
   background: rgba(255, 248, 240, 0.85);

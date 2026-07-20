@@ -90,7 +90,7 @@
   max-width: 100%;
   overflow: hidden;
 }
-.chart-card :deep(.animal-card__content) {
+.chart-card :deep(.el-card__body) {
   padding: 14px 18px;
   overflow: hidden;
   min-width: 0;
@@ -210,21 +210,21 @@
   width: 100%;
 }
 
-.report-tabs :deep(.animal-tabs) {
+.report-tabs :deep(.el-tabs) {
   display: flex;
   flex-direction: column;
   overflow: visible;
   width: 100%;
 }
 
-.report-tabs :deep(.animal-tabs__content) {
+.report-tabs :deep(.el-tabs__content) {
   overflow: visible;
   display: block;
   padding-top: 16px;
   width: 100%;
 }
 
-.report-tabs :deep(.animal-tabs__inner) {
+.report-tabs :deep(.el-tabs__inner) {
   min-height: min-content;
   width: 100%;
 }
@@ -237,7 +237,7 @@
   flex-direction: column;
   width: 100%;
 }
-.table-card :deep(.animal-card__content) {
+.table-card :deep(.el-card__body) {
   padding: 0;
   border-radius: 16px;
   overflow: visible;
@@ -283,11 +283,11 @@
 
 /* Rainbow gradient table — 11 columns */
 .report-table { width: 100%; flex: 1; }
-.report-table :deep(.animal-table-wrapper) {
+.report-table :deep(.el-table__body-wrapper) {
   width: 100%;
 }
-.report-table :deep(.animal-table-wrapper),
-.report-table :deep(.animal-table__body) {
+.report-table :deep(.el-table__body-wrapper),
+.report-table :deep(.el-table__body-wrapper) {
   overflow: visible !important;
   max-height: none !important;
 }

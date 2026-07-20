@@ -17,6 +17,10 @@ class CaseDirectory(models.Model):
     sort_order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # ── 权限控制 ──
+    created_by = models.CharField(max_length=200, default="", blank=True)
+    allow_create = models.BooleanField(default=True)
+    allow_delete = models.BooleanField(default=False)
 
     class Meta:
         db_table = "cm_case_directories"
@@ -64,6 +68,26 @@ class TestDefinition(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # ── 协作追踪 ──
+    created_by = models.CharField(max_length=200, default="", blank=True)
+    updated_by = models.CharField(max_length=200, default="", blank=True)
+    # ── 编辑锁 ──
+    editing_by = models.CharField(max_length=200, default="", blank=True)
+    editing_since = models.DateTimeField(null=True, blank=True)
+    # ── 持久锁（创建者控制）──
+    locked = models.BooleanField(default=False)
+    # ── 可见性控制 ──
+    visibility = models.CharField(
+        max_length=20, default="public",
+        choices=[("public", "所有人可见"), ("hidden", "仅创建者"), ("restricted", "指定用户")],
+    )
+    permitted_users = models.TextField(default="[]", blank=True)  # JSON: ["user1","user2"]
+    # ── 编辑权限 ──
+    permission = models.CharField(
+        max_length=20, default="edit",
+        choices=[("edit", "所有人可编辑"), ("readonly", "所有人只读"), ("restricted", "指定用户可编辑")],
+    )
+    permitted_editors = models.TextField(default="[]", blank=True)  # JSON: ["user1","user2"]
 
     class Meta:
         db_table = "cm_test_definitions"

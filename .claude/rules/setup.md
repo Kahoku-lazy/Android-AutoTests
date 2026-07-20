@@ -11,7 +11,8 @@ cd frontend && npm install && cd ..
 
 # 数据库初始化（首次运行）
 python manage.py migrate
-python manage.py shell -c "from django.contrib.auth.models import User; User.objects.create_superuser('admin','admin@local','admin123') if not User.objects.filter(username='admin').exists() else None"
+# 创建管理员（替换为实际用户名/邮箱/密码）
+# python manage.py createsuperuser
 
 # 知识库初始化（AI 助手 RAG，首次运行）
 python agentscope_service/rag/init_kb.py
@@ -80,15 +81,14 @@ python tools/generate_html.py    # 生成自包含 phone_ui.html 检查器
 
 ## 配置参数
 
-| 参数 | 默认值 | 环境变量 |
-|------|--------|---------|
-| `DEVICE_SERIAL` | `RF8N21MSW7A` | `DEVICE_SERIAL` |
-| `SCREENSHOT_INTERVAL` | `0.5`s | `SCREENSHOT_INTERVAL` |
-| `DB_ENGINE` | `sqlite` | `DB_ENGINE` (mysql 切换) |
-| `REDIS_URL` | `redis://localhost:6379/0` | `REDIS_URL` |
-| `AGENTSCOPE_PORT` | `8000` | `AGENTSCOPE_PORT` |
-| `JWT_ACCESS_TTL` | `3600` (1h) | `JWT_ACCESS_TTL` |
-| Django Admin | `/admin/` | admin / admin123 |
+| 参数 | 环境变量 | 获取方式 |
+|------|---------|---------|
+| `DEVICE_SERIAL` | `DEVICE_SERIAL` | `adb devices` 或 `.env` 文件 |
+| `SCREENSHOT_INTERVAL` | `SCREENSHOT_INTERVAL` | `.env` 文件，默认 0.5s |
+| `DB_ENGINE` | `DB_ENGINE` | `config/settings.py:95`，默认 `mysql` |
+| `REDIS_URL` | `REDIS_URL` | `.env` 文件，默认 `redis://localhost:6379/0` |
+| 服务端口 | — | `run.py` 顶部 `PORTS` 字典 |
+| Django Admin | — | 通过 `manage.py createsuperuser` 创建，凭据存入 `auth_user` 表 |
 
 ## 代码格式化
 

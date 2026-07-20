@@ -71,11 +71,11 @@ API Key（如 DashScope/DeepSeek/OpenAI 密钥）是用户自行配置的第三�
 ### 凭据类（禁止硬编码）
 
 ```
-[ ] 代码中无密码字符串（grep: admin123|autotests2026|password\s*=\s*'）
+[ ] 代码中无密码字符串（grep 搜索已知凭据模式）
 [ ] 代码中无 API Key 明文（grep: api_key\s*=\s*'[A-Za-z0-9]）
 [ ] 代码中无数据库密码（grep: DB_PASSWORD|MYSQL_PASSWORD\s*=\s*'）
 [ ] SECRET_KEY 从环境变量读取，不提供默认值
-[ ] 前端表单不预填密码（禁止 ref('admin123')）
+[ ] 前端表单不预填密码
 ```
 
 **遇到硬编码凭据时**：替换为 `os.environ.get('KEY_NAME', '')`，开发环境用空字符串，生产环境通过 .env 注入。
@@ -88,7 +88,7 @@ API Key（如 DashScope/DeepSeek/OpenAI 密钥）是用户自行配置的第三�
 [ ] API 视图通过 request.user_id 识别用户（非忽略或硬编码）
 [ ] logout 时 token 必须加入黑名单（确保 jti claim 已生成）
 [ ] JWT 黑名单使用 Redis（非内存 set，避免重启丢失）
-[ ] 自动化脚本从环境变量获取凭据（非硬编码 admin/admin123）
+[ ] 自动化脚本从环境变量获取凭据（禁止硬编码）
 ```
 
 **遇到认证绕过时**：添加 JWT 验证，未认证请求返回 401；WebSocket 从 query string 提取 token 并 `verify_token()`。

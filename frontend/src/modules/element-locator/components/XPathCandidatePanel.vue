@@ -1,6 +1,5 @@
 <script setup>
 import { ref } from 'vue'
-import { Modal, Button as AnimalButton, Input } from 'animal-island-vue'
 import { ElMessage } from 'element-plus'
 import client, { formatApiError } from '@/shared/api-client.js'
 import { useElementStore } from '../store.js'
@@ -179,14 +178,14 @@ async function copyXPath(xpath) {
 
     <!-- Action bar (only when element selected) -->
     <div v-if="element" class="action-bar">
-      <AnimalButton size="small" type="primary" @click="doClick">👆 点击</AnimalButton>
-      <AnimalButton size="small" type="primary" @click="openInput">⌨ 输入</AnimalButton>
-      <AnimalButton type="primary" size="small"  @click="doLongClick" danger>⏱ 长按</AnimalButton>
-      <AnimalButton size="small" type="primary" @click="openSaveDialog" style="margin-left:auto">💾 保存到元素管理</AnimalButton>
+      <el-button size="small" type="primary" @click="doClick">👆 点击</el-button>
+      <el-button size="small" type="primary" @click="openInput">⌨ 输入</el-button>
+      <el-button type="primary" size="small"  @click="doLongClick" danger>⏱ 长按</el-button>
+      <el-button size="small" type="primary" @click="openSaveDialog" style="margin-left:auto">💾 保存到元素管理</el-button>
     </div>
 
     <!-- Save to element-manager dialog -->
-    <Modal
+    <el-dialog
       v-model:open="saveVisible"
       title="保存到元素管理"
       width="420px"
@@ -212,7 +211,7 @@ async function copyXPath(xpath) {
           />
         </el-select>
         <label class="form-label required">元素名称</label>
-        <Input v-model="saveForm.alias" placeholder="如：登录按钮" size="medium" />
+        <el-input v-model="saveForm.alias" placeholder="如：登录按钮" size="medium" />
         <label class="form-label required">定位策略</label>
         <el-select
           v-model="saveForm.selectedXpath"
@@ -234,13 +233,13 @@ async function copyXPath(xpath) {
         </el-select>
       </div>
       <template #footer>
-        <AnimalButton @click="saveVisible = false">取消</AnimalButton>
-        <AnimalButton type="primary" :disabled="saving || pagesLoading" @click="doSave">保存</AnimalButton>
+        <el-button @click="saveVisible = false">取消</el-button>
+        <el-button type="primary" :disabled="saving || pagesLoading" @click="doSave">保存</el-button>
       </template>
-    </Modal>
+    </el-dialog>
 
     <!-- Input dialog -->
-    <Modal
+    <el-dialog
       v-model:open="inputVisible"
       title="输入文本"
       width="340px"
@@ -249,12 +248,12 @@ async function copyXPath(xpath) {
       @close="inputVisible = false"
       @ok="doInput"
     >
-      <Input v-model="inputText" placeholder="输入要发送的文本" size="medium" />
+      <el-input v-model="inputText" placeholder="输入要发送的文本" size="medium" />
       <template #footer>
-        <AnimalButton @click="inputVisible = false">取消</AnimalButton>
-        <AnimalButton type="primary" @click="doInput">发送</AnimalButton>
+        <el-button @click="inputVisible = false">取消</el-button>
+        <el-button type="primary" @click="doInput">发送</el-button>
       </template>
-    </Modal>
+    </el-dialog>
 
     <!-- XPath table -->
     <div v-if="!element" class="empty">点击截图中元素查看 XPath</div>
@@ -269,12 +268,12 @@ async function copyXPath(xpath) {
         <el-table-column prop="count" label="匹配数" width="60" align="center" />
         <el-table-column label="" width="50" align="center">
           <template #default="{ row }">
-            <AnimalButton size="small" type="text" title="复制" @click="copyXPath(row.xpath)">📋</AnimalButton>
+            <el-button size="small" type="text" title="复制" @click="copyXPath(row.xpath)">📋</el-button>
           </template>
         </el-table-column>
         <el-table-column label="" width="50" align="center">
           <template #default="{ row }">
-            <AnimalButton size="small" type="primary" plain @click="emit('add-step', row)">+</AnimalButton>
+            <el-button size="small" type="primary" plain @click="emit('add-step', row)">+</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -336,7 +335,7 @@ h3 {
 }
 .form-label.required::before {
   content: '*';
-  color: var(--animal-error-color, #e05a5a);
+  color: var(#e8998a, #e05a5a);
   margin-right: 3px;
 }
 .xpath-opt {

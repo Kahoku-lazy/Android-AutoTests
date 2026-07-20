@@ -2,7 +2,7 @@
 
 > 关联模块：`apps/device_pool/` · 前端：`frontend/src/modules/device-pool/`
 > 关联需求：[`PRD-02-设备管理`](../02-PRD需求/PRD-02-设备管理.md) · 关联架构：[`架构大纲`](./架构大纲.md) §4.1
-> 版本：v1.0 · 日期：2026-07-16
+> 版本：v1.3 · 日期：2026-07-17
 
 ---
 
@@ -45,14 +45,17 @@ flowchart TB
 
     subgraph Device_DP["📱 Android 设备"]
         ADB["ADB Server<br/>USB / WiFi 局域网"]
-        U2["uiautomator2<br/>connect() · screenshot()<br/>dump_hierarchy() · 手势"]
+        Airtest["Airtest Android<br/>snapshot() · touch() · swipe()<br/>start_app() · stop_app() · shell()"]
+        U2["uiautomator2<br/>dump_hierarchy()<br/>xpath() · toast"]
     end
 
     Frontend_DP -->|"HTTP REST + JWT"| Views
     DevTools -->|"同进程 import"| Views
-    Views -->|"pool.get_device()"| Pool
-    Pool -->|"u2.connect()"| ADB
-    ADB --> U2
+    Views -->|"pool.ad / pool.u2d"| Pool
+    Pool -->|"Android(serialno=)"| Airtest
+    Pool -->|"u2.connect()"| U2
+    Airtest --> ADB
+    U2 --> ADB
 
     style Frontend_DP fill:#667eea,color:#fff
     style Django_DP fill:#6fba2c,color:#fff
@@ -69,20 +72,26 @@ flowchart TB
 ```
 frontend/src/modules/device-pool/
 │
-├── index.vue                     页面入口 · 设备卡片网格布局
-│   ├── 设备卡片区
-│   │   └── DeviceCard.vue (×N)   单设备卡片
-│   │       ├── 设备状态标签        ONLINE(绿) / BUSY(黄) / OFFLINE(红)
-│   │       ├── 设备信息            型号 · 序列号 · 分辨率 · Android 版本
-│   │       ├── 锁状态与用户        当前锁定用户 + 倒计时
-│   │       └── 操作按钮            锁定/释放/断开/连接/加入排队
-│   ├── 顶部操作栏
-│   │   ├── 扫描按钮               POST /api/devices/scan
-│   │   └── 当前锁定设备面板        GET /api/devices/current
-│   └── 排队面板
-│       └── QueuePanel.vue         排队列表 · 取消排队
+├── index.vue                     页面入口 · 表格布局 + 动森主题
+│   ├── WorkbenchHeader            页面标题 + 排队面板
+│   ├── 设备表格 (animal-island Table)
+│   │   ├── 序列号列                monospace 字体
+│   │   ├── 型号列                  brand + model
+│   │   ├── 分辨率列                screen_w × screen_h
+│   │   ├── 状态列                  ONLINE/BUSY/OFFLINE 标签
+│   │   ├── 连接列                  USB/WiFi
+│   │   ├── 锁定状态列              蓝底标签(已锁定) / 绿底标签(共用)
+│   │   ├── 最后在线列              相对时间
+│   │   └── 操作列                  锁定(紫→红) / 解除占用(黄)
+│   ├── 工具栏按钮
+│   │   ├── 局域网连接 (淡蓝 IconWifi)
+│   │   └── 刷新设备 (淡绿 IconRefresh)
+│   └── 弹窗组件
+│       ├── NetworkConnectDialog    WiFi 连接对话框
+│       └── DisconnectDialog        断开确认对话框
 │
 ├── api.js                        axios 请求封装
+├── store.js                      Pinia 设备状态管理
 └── routes.js                     路由定义
 ```
 
@@ -111,25 +120,32 @@ apps/device_pool/
 └── apps.py             verbose_name='设备管理'
 ```
 
-### 3.2 DevicePool 单例设计
+### 3.2 DevicePool 单例设计（Airtest + u2 双连接）
 
 ```
 DevicePool (线程安全单例)
   │
-  ├── _devices: dict[str, DeviceWrapper]     serial → wrapper
-  │   └── DeviceWrapper
-  │       ├── serial: str
-  │       ├── _device: u2.Device | None      ← 延迟初始化
-  │       ├── .d (property)                   ← 首次访问时才 u2.connect()
-  │       └── last_heartbeat: datetime
+  ├── _airtest_instances: dict[str, Android]    serial → Airtest Android (设备操作)
+  ├── _u2_instances: dict[str, u2.Device]       serial → uiautomator2 (XPath/层级)
   │
-  ├── get_device(serial) → DeviceWrapper     获取或创建 wrapper
-  ├── remove_device(serial)                  断开并移除
-  ├── scan() → list[str]                     adb devices 扫描
-  └── connect(serial, addr?) → DeviceWrapper  USB 或 WiFi 连接
+  ├── .ad (property) → Android(serialno=serial)   Airtest 连接（截图/点击/滑动/App/Shell）
+  ├── .u2d (property) → u2.connect(serial)       u2 连接（dump_hierarchy/xpath）
+  ├── .d (property) → u2.connect(serial)         向后兼容，等同于 .u2d
+  │
+  ├── info() → dict                               Airtest display_info
+  ├── screenshot_b64() → str                      Airtest snapshot() → PIL → base64
+  ├── screenshot_file(path)                       保存截图到文件
+  ├── dump_hierarchy() → list[dict]               u2 dump_hierarchy XML → 结构化节点
+  ├── app_current() → dict                        u2 获取当前 App
+  │
+  ├── action_click / longclick / swipe / drag / input   Airtest touch/swipe/text
+  ├── switch_to(serial)                           切换当前设备
+  └── remove_device(serial)                       清理双连接缓存
 ```
 
-**延迟初始化机制**：`DeviceWrapper.d` 是 property，首次访问时才调用 `u2.connect()`。这样设备注册后不会立即连接，只有真正需要截屏/Dump 时才建立连接，避免浪费 ADB 资源。
+**双连接架构**（v1.3）：Airtest 负责所有设备级操作（截图、点击、滑动、App 生命周期、Shell、文本输入），uiautomator2 仅保留 UI 层级 dump 和 XPath 查询。两者通过各自协议（ADB Minicap/Minitouch vs ATX Agent HTTP）独立工作，互不冲突。
+
+**向后兼容**：`.d` 属性仍返回 u2 Device，所有通过 `device.d` 访问 u2 的旧代码无需修改。
 
 ---
 
@@ -319,11 +335,14 @@ sequenceDiagram
 
 ```python
 def get_online_devices() -> QuerySet[Device]
-def acquire_device(serial: str, user_id: int) -> dict
-def release_device(serial: str, user_id: int) -> bool
-def get_current_device(user_id: int) -> Device | None
-def is_device_locked_by_user(serial: str, user_id: int) -> bool
+@transaction.atomic
+def acquire_device(serial: str, user_id: int, timeout: int = 300) -> dict
+def release_device(serial: str, reason: str = "manual") -> bool
+def get_device_info(serial: str) -> dict
+def ensure_device(serial: str, name: str = "") -> Device
 ```
+
+> `acquire_device` 使用 `@transaction.atomic` + `select_for_update()` 保证多进程并发安全（MySQL 必需）。
 
 ### 7.3 跨模块消费者
 
@@ -354,3 +373,5 @@ def is_device_locked_by_user(serial: str, user_id: int) -> bool
 |------|------|----------|
 | v1.0 | 2026-07-16 | 初始版本：基于 `项目架构.md` 和 `PRD-02-设备管理.md` 重构 |
 | v1.1 | 2026-07-16 | **代码对照审计**：dp_devices 补全 name/brand/screen_w/h/locked_by/occupied_by 等字段；dp_device_locks 补全 lock_type/timeout_seconds/release_reason |
+| v1.2 | 2026-07-17 | **UI 重构**：卡片网格 → 表格布局；JWT 一键锁定（无需弹窗）；新增锁定状态列；动森主题按钮（紫色锁定/红色已锁/黄色占用）；工具栏 Icon 按钮 |
+| v1.3 | 2026-07-17 | **Airtest 迁移**：DevicePool 双连接架构（Airtest Android 负责截图/手势/App生命周期/Shell，u2 仅保留 dump_hierarchy/XPath）；acquire_device 添加 @transaction.atomic（MySQL 兼容） |

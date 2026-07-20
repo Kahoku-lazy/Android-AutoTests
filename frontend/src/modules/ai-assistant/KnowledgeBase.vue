@@ -1,7 +1,9 @@
 <script setup>
+
+import AppCard from "@/shared/components/AppCard.vue";
+import AppTable from "@/shared/components/AppTable.vue";
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Card, Button, Table } from 'animal-island-vue'
 import client from '@/shared/api-client.js'
 
 const status = ref({})
@@ -80,7 +82,7 @@ onMounted(() => {
 <template>
   <div class="kb-view">
     <!-- 状态卡片 -->
-    <Card color="app-blue" pattern="app-blue">
+    <AppCard color="app-blue" pattern="app-blue">
       <div class="kb-stats">
         <div class="kb-stat">
           <span class="kb-stat__num">{{ status.doc_count ?? '—' }}</span>
@@ -102,15 +104,15 @@ onMounted(() => {
         </div>
       </div>
       <div class="kb-actions">
-        <Button type="primary" :loading="reindexing" @click="reindex">
+        <el-button type="primary" :loading="reindexing" @click="reindex">
           {{ reindexing ? '重建中…' : '🔄 重建索引' }}
-        </Button>
+        </el-button>
         <span class="kb-hint">扫描 dev_docs/ 下所有 .md 文件并向量化索引</span>
       </div>
-    </Card>
+    </AppCard>
 
     <!-- 文档列表 -->
-    <Card color="brown" pattern="brown" style="margin-top: 16px; padding: 20px 24px;">
+    <AppCard color="brown" pattern="brown" style="margin-top: 16px; padding: 20px 24px;">
       <div class="kb-filters">
         <button
           v-for="tab in filters"
@@ -119,7 +121,7 @@ onMounted(() => {
           @click="activeFilter = tab.key"
         >{{ tab.label }}</button>
       </div>
-      <Table
+      <AppTable
         :columns="columns"
         :data-source="filteredDocs"
         row-key="id"
@@ -135,8 +137,8 @@ onMounted(() => {
         <template #cell-size="{ record }">
           <span>{{ formatSize(record.size) }}</span>
         </template>
-      </Table>
-    </Card>
+      </AppTable>
+    </AppCard>
   </div>
 </template>
 
@@ -163,7 +165,7 @@ onMounted(() => {
 .kb-stat__label {
   display: block;
   font-size: 12px;
-  color: var(--animal-text-color-secondary);
+  color: var(--app-text-secondary);
   margin-top: 4px;
 }
 .kb-actions {
@@ -173,7 +175,7 @@ onMounted(() => {
 }
 .kb-hint {
   font-size: 13px;
-  color: var(--animal-text-color-secondary);
+  color: var(--app-text-secondary);
 }
 .kb-doc-source {
   font-family: monospace;
@@ -192,7 +194,7 @@ onMounted(() => {
   background: rgba(121, 79, 39, 0.05);
   font-size: 13px;
   font-weight: 700;
-  color: var(--animal-text-color-secondary);
+  color: var(--app-text-secondary);
   cursor: pointer;
   font-family: inherit;
 }

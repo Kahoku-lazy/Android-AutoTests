@@ -4,7 +4,7 @@
  * 父组件负责调用 store.doScan(target) 并回填 loading。
  */
 import { ref, watch } from "vue";
-import { Modal, Input, Button as AnimalButton } from "animal-island-vue";
+// el-dialog → el-dialog, Input → el-input, Button → el-button (Element Plus auto-import)
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -102,11 +102,11 @@ function handleCancel() {
 </script>
 
 <template>
-  <Modal
-    :open="visible"
+  <el-dialog
+    :model-value="visible"
     title="局域网连接设备"
     width="440px"
-    :mask-closable="false"
+    :close-on-click-modal="false"
     @close="handleCancel"
   >
     <div class="net-form">
@@ -118,12 +118,10 @@ function handleCancel() {
           :class="{ 'has-error': ipError }"
           @focusout="validateIp"
         >
-          <Input
+          <el-input
             v-model="ip"
             placeholder="如 192.168.1.100"
             :maxlength="15"
-            :shadow="true"
-            size="middle"
             @keyup.enter="handleConfirm"
           />
         </div>
@@ -138,12 +136,10 @@ function handleCancel() {
           :class="{ 'has-error': portError }"
           @focusout="validatePort"
         >
-          <Input
+          <el-input
             v-model="port"
             placeholder="默认 5555"
             :maxlength="5"
-            :shadow="true"
-            size="middle"
             @keyup.enter="handleConfirm"
           />
         </div>
@@ -154,14 +150,14 @@ function handleCancel() {
     </div>
 
     <template #footer>
-      <AnimalButton :disabled="loading" @click="handleCancel"
-        >取消</AnimalButton
+      <el-button :disabled="loading" @click="handleCancel"
+        >取消</el-button
       >
-      <AnimalButton type="primary" :loading="loading" @click="handleConfirm"
-        >连接</AnimalButton
+      <el-button type="primary" :loading="loading" @click="handleConfirm"
+        >连接</el-button
       >
     </template>
-  </Modal>
+  </el-dialog>
 </template>
 
 <style scoped>

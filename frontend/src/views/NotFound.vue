@@ -5,17 +5,16 @@
       <h1 class="not-found__title">页面未找到</h1>
       <p class="not-found__desc">您访问的页面不存在或已被移除</p>
       <div class="not-found__actions">
-        <Button type="primary" @click="goHome">返回首页</Button>
-        <Button @click="goBack">返回上一页</Button>
+        <el-button type="primary" @click="goHome">返回首页</el-button>
+        <el-button @click="goBack">返回上一页</el-button>
       </div>
     </div>
-    <Footer type="tree" />
+    <div class="ac-footer" type="tree" />
   </div>
 </template>
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { Button, Footer } from 'animal-island-vue'
 
 const router = useRouter()
 
@@ -70,7 +69,7 @@ function goBack() {
 
 .not-found__desc {
   font-size: 14px;
-  color: var(--animal-text-color-secondary, #988b7a);
+  color: var(--app-text-secondary, #988b7a);
   margin: 0 0 32px;
 }
 

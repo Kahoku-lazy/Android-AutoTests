@@ -5,6 +5,7 @@
 """
 
 from datetime import datetime
+from django.db import transaction
 from .models import Device, DeviceLock, DeviceQueue
 from .pool import DevicePool, device
 
@@ -95,6 +96,7 @@ def ensure_device(serial, name=""):
     return obj
 
 
+@transaction.atomic
 def acquire_device(serial, user_id, timeout=300):
     """Lock a device for a user (v2 — creates audit trail).
 

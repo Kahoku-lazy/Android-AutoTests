@@ -55,6 +55,7 @@ def run_single_step(request):
 
     try:
         from ..adapter import DeviceAdapter
+        from ..device_connect import DeviceConnection
         from ..executor import StepExecutor
         from apps.device_pool.api import device
 
@@ -77,8 +78,14 @@ def run_single_step(request):
         )
 
         logs: list[str] = []
+        conn = DeviceConnection(
+            serial=device.current_serial,
+            airtest=device.ad,
+            u2=device.u2d,
+            info=device.info(),
+        )
         adapter = DeviceAdapter(
-            device.d,
+            conn,
             package_name=xpath if step_type in ("start_app", "kill_app", "restart_app") else "",
             logger=logs.append,
         )

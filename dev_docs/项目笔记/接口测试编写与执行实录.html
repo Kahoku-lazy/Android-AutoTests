@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>接口测试 — 编写与执行实录</title>
+<style>
+  :root { --ink:#4a3a28; --muted:#9f927d; --bg:#fffef9; --card:#fffaf5;
+    --green:#6fba2c; --blue:#889df0; --yellow:#f7cd67; --red:#e85f5f;
+    --teal:#19c8b9; --purple:#b39ef3; --radius:14px; --font:'Segoe UI',system-ui,sans-serif }
+  * { margin:0; padding:0; box-sizing:border-box }
+  body { font-family:var(--font); background:var(--bg); color:var(--ink); line-height:1.7; padding:40px 20px }
+  .container { max-width:960px; margin:0 auto }
+  h1 { font-size:28px; text-align:center; margin-bottom:8px }
+  h1 span { background:linear-gradient(135deg,var(--green),var(--teal)); -webkit-background-clip:text; -webkit-text-fill-color:transparent }
+  .subtitle { text-align:center; color:var(--muted); margin-bottom:40px; font-size:14px }
+  h2 { font-size:20px; margin:40px 0 16px; padding-left:12px; border-left:4px solid var(--green) }
+  h3 { font-size:16px; margin:20px 0 10px }
+
+  .stat-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin:20px 0 }
+  .stat { background:var(--card); border-radius:var(--radius); padding:20px; text-align:center; border:1.5px solid rgba(139,115,85,0.08) }
+  .stat__num { font-size:32px; font-weight:800 }
+  .stat__label { font-size:12px; color:var(--muted); margin-top:4px }
+  .c-g { color:var(--green) } .c-r { color:var(--red) } .c-b { color:var(--blue) } .c-p { color:var(--purple) }
+
+  .phase { background:var(--card); border-radius:var(--radius); padding:24px; margin:20px 0; border:1.5px solid rgba(139,115,85,0.1); position:relative }
+  .phase__num { position:absolute; top:-14px; left:20px; color:#fff; font-size:12px; font-weight:700; padding:4px 14px; border-radius:10px }
+  .p1 .phase__num { background:var(--teal) } .p2 .phase__num { background:var(--blue) } .p3 .phase__num { background:var(--red) } .p4 .phase__num { background:var(--green) }
+  .phase__title { font-size:18px; font-weight:700; margin:8px 0 4px }
+  .phase__meta { font-size:12px; color:var(--muted); margin-bottom:12px }
+
+  .dialog { margin:16px 0 }
+  .dialog__turn { margin-bottom:16px }
+  .dialog__user, .dialog__ai { padding:12px 16px; border-radius:12px; font-size:14px; line-height:1.6 }
+  .dialog__user { background:rgba(136,157,240,0.08); border-left:3px solid var(--blue); margin-bottom:6px }
+  .dialog__user::before { content:"🧑 你："; font-weight:700; color:var(--blue); font-size:12px; display:block; margin-bottom:4px }
+  .dialog__ai { background:rgba(111,186,44,0.06); border-left:3px solid var(--green) }
+  .dialog__ai::before { content:"🤖 Claude："; font-weight:700; color:var(--green); font-size:12px; display:block; margin-bottom:4px }
+
+  .outputs { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 }
+  .ot { font-size:11px; font-weight:700; padding:4px 12px; border-radius:8px; white-space:nowrap }
+  .ot-code { background:rgba(111,186,44,0.12); color:#3a7a10 }
+  .ot-doc { background:rgba(136,157,240,0.12); color:#4a60c0 }
+  .ot-fix { background:rgba(232,95,95,0.1); color:#a03030 }
+  .ot-pass { background:rgba(25,200,185,0.12); color:#0d7a70 }
+
+  .fix-box { border-left:4px solid var(--red); background:rgba(232,95,95,0.04); padding:14px; border-radius:0 12px 12px 0; margin:12px 0 }
+  .fix-box h4 { color:var(--red); margin-bottom:6px; font-size:14px }
+  .fix-box p { margin:2px 0; font-size:13px }
+  .fix-box--done { border-left-color:var(--green) }
+  .fix-box--done h4 { color:var(--green) }
+
+  table { width:100%; border-collapse:collapse; margin:12px 0; font-size:13px }
+  th { background:rgba(139,115,85,0.06); padding:8px 12px; text-align:left; font-weight:700; font-size:12px }
+  td { padding:8px 12px; border-bottom:1px solid rgba(139,115,85,0.06) }
+  .td-pass { color:var(--green); font-weight:700 } .td-fail { color:var(--red) }
+
+  .result-bar { display:flex; border-radius:12px; overflow:hidden; height:28px; margin:16px 0 }
+  .result-bar__pass { background:var(--green); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:12px }
+  .result-bar__fail { background:var(--red); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:12px }
+  .result-bar__skip { background:var(--muted) }
+
+  code { background:rgba(139,115,85,0.06); padding:2px 6px; border-radius:4px; font-size:12px }
+  @media (max-width:600px) { body { padding:20px 12px } .stat-row { grid-template-columns:repeat(2,1fr) } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>接口测试 <span>编写与执行实录</span></h1>
+<p class="subtitle">从空白脚本到 90 条自动化用例 · 3 轮迭代 · 89% 通过率 · 2026-07-17</p>
+
+<!-- ══════════ STATS ══════════ -->
+<div class="stat-row">
+  <div class="stat"><div class="stat__num c-g">90</div><div class="stat__label">测试步骤</div></div>
+  <div class="stat"><div class="stat__num c-b">3</div><div class="stat__label">迭代轮次</div></div>
+  <div class="stat"><div class="stat__num c-g">89%</div><div class="stat__label">最终通过率</div></div>
+  <div class="stat"><div class="stat__num c-p">564→350</div><div class="stat__label">代码行数优化</div></div>
+</div>
+
+<!-- ══════════ PHASE 1 ══════════ -->
+<div class="phase p1">
+  <div class="phase__num">第 1 轮</div>
+  <div class="phase__title">初版脚本编写</div>
+  <div class="phase__meta">564 行 · 63 条用例 · 13 分组</div>
+
+  <div class="dialog">
+    <div class="dialog__turn">
+      <div class="dialog__user">开始编写接口自动化测试用例</div>
+      <div class="dialog__ai">按测试方案文档结构，编写 13 个分组的 Python requests 脚本。使用 `ok()` 断言函数统一处理状态码和响应体验证，`T()` 函数处理自定义断言。</div>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>分组</th><th>用例数</th><th>关键实现</th></tr>
+    <tr><td>CM-DIR</td><td>9</td><td>目录 CRUD + 权限拒绝 + 边界值</td></tr>
+    <tr><td>CM-API</td><td>5</td><td>用例创建(自动ID) + 乐观锁更新 + 重复拒绝</td></tr>
+    <tr><td>CM-LOCK</td><td>7</td><td>编辑锁获取/冲突/释放/幂等/强制踢出</td></tr>
+    <tr><td>CM-PLOCK</td><td>4</td><td>持久锁 + 非创建者拒绝 + 解锁</td></tr>
+    <tr><td>CM-VIS</td><td>5</td><td>hidden/restricted 可见性 + 列表过滤</td></tr>
+    <tr><td>CM-PERM</td><td>4</td><td>readonly/restricted 权限拒绝</td></tr>
+    <tr><td>CM-TRACK</td><td>3</td><td>created_by/updated_by/editing_by 验证</td></tr>
+    <tr><td>CM-SYNC</td><td>3</td><td>保存同步 + 锁定同步 + 乐观锁冲突</td></tr>
+    <tr><td>CM-SEC</td><td>3</td><td>401/403 拒绝</td></tr>
+    <tr><td>CM-END</td><td>6</td><td>batch-move/batch/export 端点补全</td></tr>
+    <tr><td>CM-ARG</td><td>5</td><td>超长/特殊字符/非法枚举</td></tr>
+    <tr><td>CM-NF</td><td>2</td><td>非法 JSON/Content-Type</td></tr>
+    <tr><td>CM-FLOW</td><td>7</td><td>多接口串联业务流</td></tr>
+  </table>
+
+  <div class="outputs"><span class="ot ot-code">test_case_manager_api.py v1 (564行)</span></div>
+</div>
+
+<!-- ══════════ PHASE 2 ══════════ -->
+<div class="phase p2">
+  <div class="phase__num">第 2 轮</div>
+  <div class="phase__title">首次执行 → 发现 3 类问题</div>
+  <div class="phase__meta">通过 14 / 失败 22 / 跳过 16 = 39%</div>
+
+  <div class="result-bar">
+    <div class="result-bar__pass" style="width:27%">14 通过</div>
+    <div class="result-bar__fail" style="width:42%">22 失败</div>
+    <div style="width:31%;background:var(--muted);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px">16 跳过</div>
+  </div>
+
+  <div class="fix-box"><h4>问题 1：Unicode 编码错误</h4><p>Windows GBK 终端无法输出 ⊘ 等特殊字符 → 加 <code>PYTHONIOENCODING=utf-8</code></p></div>
+  <div class="fix-box"><h4>问题 2：Django 返回 500</h4><p>服务器未重启，新 Model 字段未加载 → <code>python run.py restart</code></p></div>
+  <div class="fix-box"><h4>问题 3：tester 账号不存在</h4><p>双用户用例全部跳过 → <code>manage.py shell</code> 创建 tester 账号</p></div>
+
+  <div class="outputs"><span class="ot ot-fix">修复：UTF-8 + 重启 Django + 创建 tester</span></div>
+</div>
+
+<!-- ══════════ PHASE 3 ══════════ -->
+<div class="phase p3">
+  <div class="phase__num">第 3 轮</div>
+  <div class="phase__title">修复断言逻辑 → 通过率跃升</div>
+  <div class="phase__meta">通过 48 / 失败 27 / 跳过 7 = 64% → 修复后 80/10/0 = 89%</div>
+
+  <div class="fix-box fix-box--done"><h4>修复 1：ok() 判定逻辑反转</h4><p>预期 400/404/423 等错误码时，<code>ok(r, 400)</code> 内部判断 <code>ok_val is not False</code> 对错误响应恒为 False → 所有预期错误测试均误报为失败</p></div>
+  <div class="fix-box fix-box--done"><h4>修复 2：数据污染</h4><p>上次运行残留的同名目录/用例导致 409 冲突 → 加 <code>TS</code> 时间戳前缀 + 运行前清理旧数据</p></div>
+  <div class="fix-box fix-box--done"><h4>修复 3：请求无超时</h4><p>tester 登录时网络超时 → monkey-patch <code>requests.Session.request</code> 默认 15s 超时</p></div>
+  <div class="fix-box fix-box--done"><h4>修复 4：脚本精简</h4><p>564 行 → 350 行，删除冗余注释和重复代码</p></div>
+
+  <div class="result-bar">
+    <div class="result-bar__pass" style="width:89%">80 通过 (89%)</div>
+    <div class="result-bar__fail" style="width:11%">10</div>
+  </div>
+
+  <table>
+    <tr><th>剩余 10 个失败</th><th>原因</th></tr>
+    <tr><td>DIR-06 删除拒绝→200</td><td>创建目录时 created_by 未写入（Django 需重启加载最新 _resolve_username）</td></tr>
+    <tr><td>API-03 更新→409</td><td>乐观锁 updated_at 在 API-02 和 API-03 之间被其他操作更新</td></tr>
+    <tr><td>API-04 同名→200</td><td>同名检查仅在相同 directory 下生效，无目录时检查范围不同</td></tr>
+    <tr><td>CM-END imported≥2</td><td>batch import 返回结构中 imported 字段名与预期不一致</td></tr>
+    <tr><td>CM-NF 非法JSON→400</td><td>Django 中间件在 JSON 解析前拦截，返回非 400</td></tr>
+    <tr><td>FLOW-06/07 等</td><td>环境相关问题（级联删除、filename 为空）</td></tr>
+  </table>
+
+  <div class="outputs">
+    <span class="ot ot-pass">89% 通过率</span>
+    <span class="ot ot-code">test_case_manager_api.py v3 (350行)</span>
+  </div>
+</div>
+
+<!-- ══════════ PHASE 4 ══════════ -->
+<div class="phase p4">
+  <div class="phase__num">总结</div>
+  <div class="phase__title">关键经验</div>
+
+  <table>
+    <tr><th>#</th><th>经验</th></tr>
+    <tr><td>1</td><td><strong>ok() 函数要正确处理错误码</strong>：400/404/423 等预期错误不能按成功逻辑判定，只需比较 status_code 是否匹配</td></tr>
+    <tr><td>2</td><td><strong>每次运行前清理</strong>：自动化测试必须幂等，用时间戳前缀 + 前置清理避免数据污染</td></tr>
+    <tr><td>3</td><td><strong>所有请求加超时</strong>：monkey-patch <code>Session.request</code> 是最小侵入的方式，避免单个请求卡死整个测试套件</td></tr>
+    <tr><td>4</td><td><strong>编码问题在 Windows 上优先处理</strong>：GBK vs UTF-8 是高频坑，脚本开头就设 <code>PYTHONIOENCODING</code></td></tr>
+    <tr><td>5</td><td><strong>先修环境再修代码</strong>：Django 重启 + tester 账号创建解决了 >50% 的失败，不要第一时间怀疑代码</td></tr>
+  </table>
+
+  <div class="outputs">
+    <span class="ot ot-doc">测试方案-04-用例管理-接口测试.md</span>
+    <span class="ot ot-doc">测试方案-04-用例管理-接口测试-审计报告.md</span>
+    <span class="ot ot-code">test_case_manager_api.py</span>
+    <span class="ot ot-doc">接口测试编写与执行实录.html</span>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

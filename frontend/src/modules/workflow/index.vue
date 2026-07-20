@@ -17,7 +17,7 @@ import TestCaseBlockly from './components/blockly/TestCaseBlockly.vue'
 import WorkflowDirTree from './components/WorkflowDirTree.vue'
 import WorkflowFileBrowser from './components/WorkflowFileBrowser.vue'
 import ImportCasesDialog from './components/ImportCasesDialog.vue'
-import './styles/animal-theme.css'
+// animal-theme.css removed — tokens now in shared/styles/tokens.css
 
 const store = useWorkflowStore()
 const tcStore = useTestCaseStore()

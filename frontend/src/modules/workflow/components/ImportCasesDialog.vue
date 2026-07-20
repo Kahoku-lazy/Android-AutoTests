@@ -172,13 +172,13 @@ async function confirmImport() {
         placeholder="搜索标题 / ID / 包名"
         class="search"
       />
-      <AnimalButton size="small" @click="toggleAllVisible">
+      <el-button size="small" @click="toggleAllVisible">
         {{
           filtered.length && filtered.every((r) => selected.has(r.id))
             ? '取消全选'
             : '全选当前'
         }}
-      </AnimalButton>
+      </el-button>
       <span class="count">已选 {{ selectedCount }} / 共 {{ rows.length }}</span>
     </div>
 
@@ -211,15 +211,15 @@ async function confirmImport() {
     </div>
 
     <template #footer>
-      <AnimalButton @click="close">取消</AnimalButton>
-      <AnimalButton
+      <el-button @click="close">取消</el-button>
+      <el-button
         type="primary"
         :loading="importing"
         :disabled="!selectedCount"
         @click="confirmImport"
       >
         导入 {{ selectedCount ? `(${selectedCount})` : '' }}
-      </AnimalButton>
+      </el-button>
     </template>
   </el-dialog>
 </template>

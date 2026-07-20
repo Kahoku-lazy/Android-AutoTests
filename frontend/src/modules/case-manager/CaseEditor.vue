@@ -6,8 +6,7 @@ import { ElMessage, ElMessageBox, ElCascader } from "element-plus";
 import client from "@/shared/api-client.js";
 import StepEditor from "./components/StepEditor.vue";
 import PageHeader from "@/shared/components/PageHeader.vue";
-import { Button as AnimalButton, Icon } from "animal-island-vue";
-import { fetchDirectories } from "./api.js";
+import { fetchDirectories, acquireEditLock, releaseEditLock } from "./api.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -32,6 +31,12 @@ const form = ref({
   precondition: "",
   expected_result: "",
   metrics: "",
+  // Visibility
+  visibility: "public",
+  permitted_users: [],
+  // Permission
+  permission: "edit",
+  permitted_editors: [],
 });
 
 // ── Directory cascader options ──
@@ -56,6 +61,37 @@ async function loadDirOptions() {
     }
   } catch (_) {}
 }
+
+// ── Current user (with fallback for new tabs) ──
+function resolveCurrentUser() {
+  const active = sessionStorage.getItem("auth_active") || ""
+  if (active) return active
+  try {
+    const pool = JSON.parse(localStorage.getItem("auth_accounts") || "{}")
+    return Object.keys(pool)[0] || ""
+  } catch { return "" }
+}
+
+// ── Visibility ──
+const permittedUsersStr = computed({
+  get: () => (form.value.permitted_users || []).join(", "),
+  set: (val) => {
+    form.value.permitted_users = val.split(",").map(s => s.trim()).filter(Boolean);
+  },
+});
+const permittedEditorsStr = computed({
+  get: () => (form.value.permitted_editors || []).join(", "),
+  set: (val) => {
+    form.value.permitted_editors = val.split(",").map(s => s.trim()).filter(Boolean);
+  },
+});
+
+// ── Edit lock ──
+const currentUser = resolveCurrentUser()
+const isReadOnly = ref(false)           // locked by someone else
+const editingBy = ref("")               // who is currently editing
+const caseCreatedBy = ref("")           // original creator (for force edit)
+const hasEditLock = ref(false)          // current user holds the lock
 
 // ── Dirty tracking (unsaved changes detection) ──
 const initialForm = ref(null);
@@ -146,7 +182,43 @@ onMounted(async () => {
           precondition: d.precondition || "",
           expected_result: d.expected_result || "",
           metrics: d.metrics || "",
+          updated_at: d.updated_at || "",
+          visibility: d.visibility || "public",
+          permitted_users: d.permitted_users || [],
+          permission: d.permission || "edit",
+          permitted_editors: d.permitted_editors || [],
         };
+        caseCreatedBy.value = d.created_by || "";
+
+        // ── Persistent lock (creator-locked) ──
+        if (d.locked && d.created_by !== currentUser) {
+          isReadOnly.value = true;
+          editingBy.value = "创建者（已锁定用例）";
+        }
+
+        // ── Acquire edit lock ──
+        if (d.editing_by && d.editing_by === currentUser) {
+          // Already holding the lock (e.g. page refresh) — refresh it
+          hasEditLock.value = true;
+          acquireEditLock(caseId.value).catch(() => {});
+        } else if (d.editing_by && d.editing_by !== currentUser) {
+          // Locked by someone else → read-only
+          isReadOnly.value = true;
+          editingBy.value = d.editing_by;
+        } else if (currentUser) {
+          // No lock — try to acquire
+          try {
+            const lockResp = await acquireEditLock(caseId.value);
+            if (lockResp.data.ok) {
+              hasEditLock.value = true;
+            }
+          } catch (e) {
+            if (e.response?.status === 423) {
+              isReadOnly.value = true;
+              editingBy.value = e.response.data?.editing_by || "";
+            }
+          }
+        }
       }
     } catch (_) {}
     loading.value = false;
@@ -160,6 +232,22 @@ onMounted(async () => {
   // Capture initial state for dirty tracking
   initialForm.value = JSON.parse(JSON.stringify(form.value));
 });
+
+// Force edit — creator kicks out current editor
+async function forceEdit() {
+  try {
+    await releaseEditLock(caseId.value, true);
+    const lockResp = await acquireEditLock(caseId.value);
+    if (lockResp.data.ok) {
+      isReadOnly.value = false;
+      editingBy.value = "";
+      hasEditLock.value = true;
+      ElMessage.success("已强制获取编辑权限");
+    }
+  } catch (e) {
+    ElMessage.error(e.response?.data?.error || "强制编辑失败");
+  }
+}
 
 function generateId() {
   const now = new Date();
@@ -197,7 +285,17 @@ async function save() {
       return false;
     }
   } catch (e) {
-    ElMessage.error("保存失败: " + (e.message || "网络错误"));
+    const status = e.response?.status;
+    const errMsg = e.response?.data?.error || "";
+    if (status === 409 && errMsg.includes("已被他人修改")) {
+      ElMessageBox.alert(
+        errMsg,
+        "保存冲突",
+        { confirmButtonText: "知道了", type: "warning" }
+      );
+    } else {
+      ElMessage.error("保存失败: " + (errMsg || e.message || "网络错误"));
+    }
     return false;
   } finally {
     saving.value = false;
@@ -260,6 +358,10 @@ onUnmounted(() => {
   window.removeEventListener("beforeunload", onBeforeUnload);
   // Auto-disconnect debug device on page leave
   disconnectDebugDevice();
+  // Release edit lock
+  if (hasEditLock.value && caseId.value) {
+    releaseEditLock(caseId.value).catch(() => {});
+  }
 });
 
 // Browser back / router navigation guard
@@ -287,6 +389,18 @@ onBeforeRouteLeave((_to, _from, next) => {
       color="app-yellow"
     />
 
+    <!-- Read-only banner -->
+    <div v-if="isReadOnly" class="edit-lock-banner">
+      <span>🔒 用例正被 <strong>{{ editingBy }}</strong> 编辑中，当前为只读模式</span>
+      <el-button
+        v-if="currentUser && currentUser === caseCreatedBy"
+        size="small"
+        type="primary"
+        danger
+        @click="forceEdit"
+      >强制编辑</el-button>
+    </div>
+
     <div class="doc-body">
       <!-- 基本信息 -->
       <section class="doc-section form-section">
@@ -296,20 +410,20 @@ onBeforeRouteLeave((_to, _from, next) => {
             <span class="doc-tag">Basic</span>
           </h3>
           <div class="actions">
-            <AnimalButton type="primary"  @click="exitPage" danger>
+            <el-button type="primary"  @click="exitPage" danger>
               <Icon
                 name="icon-close"
                 :size="14"
                 style="margin-right: 4px"
               />退出
-            </AnimalButton>
-            <AnimalButton type="primary" :loading="saving" @click="save">
+            </el-button>
+            <el-button type="primary" :loading="saving" :disabled="isReadOnly" @click="save">
               <Icon
                 name="icon-check"
                 :size="14"
                 style="margin-right: 4px"
               />保存
-            </AnimalButton>
+            </el-button>
           </div>
         </div>
         <div class="doc-section__label">用例元数据与启动配置</div>
@@ -324,9 +438,9 @@ onBeforeRouteLeave((_to, _from, next) => {
                   placeholder="留空则自动生成 TC-日期-时间-随机码"
                 >
                   <template #append v-if="isNew">
-                    <AnimalButton @click="generateId">
+                    <el-button @click="generateId">
                       <Icon name="icon-refresh" :size="14" /> 重新生成
-                    </AnimalButton>
+                    </el-button>
                   </template>
                 </el-input>
               </el-form-item>
@@ -406,6 +520,53 @@ onBeforeRouteLeave((_to, _from, next) => {
             </el-col>
           </el-row>
 
+          <!-- 权限与可见性（仅创建者） -->
+          <template v-if="currentUser && caseCreatedBy === currentUser">
+            <el-divider content-position="left">权限与可见性</el-divider>
+            <!-- 编辑权限 -->
+            <el-row :gutter="16">
+              <el-col :span="12">
+                <el-form-item label="编辑权限">
+                  <el-select v-model="form.permission" style="width: 100%" :disabled="isReadOnly">
+                    <el-option label="所有人可编辑" value="edit" />
+                    <el-option label="所有人只读" value="readonly" />
+                    <el-option label="指定用户可编辑" value="restricted" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col v-if="form.permission === 'restricted'" :span="12">
+                <el-form-item label="允许编辑的用户">
+                  <el-input
+                    v-model="permittedEditorsStr"
+                    :disabled="isReadOnly"
+                    placeholder="用户名，逗号分隔"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <!-- 可见范围 -->
+            <el-row :gutter="16">
+              <el-col :span="12">
+                <el-form-item label="可见范围">
+                  <el-select v-model="form.visibility" style="width: 100%" :disabled="isReadOnly">
+                    <el-option label="所有人可见" value="public" />
+                    <el-option label="仅创建者" value="hidden" />
+                    <el-option label="指定用户" value="restricted" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col v-if="form.visibility === 'restricted'" :span="12">
+                <el-form-item label="允许查看的用户">
+                  <el-input
+                    v-model="permittedUsersStr"
+                    :disabled="isReadOnly"
+                    placeholder="用户名，逗号分隔"
+                  />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </template>
+
           <!-- IoT PRD 字段（从 PRD 文档生成时自动填充） -->
           <template
             v-if="
@@ -478,7 +639,7 @@ onBeforeRouteLeave((_to, _from, next) => {
                 }}</span>
               </el-option>
             </el-select>
-            <AnimalButton
+            <el-button
               v-if="!debugConnected"
               type="primary"
               size="small"
@@ -487,8 +648,8 @@ onBeforeRouteLeave((_to, _from, next) => {
               @click="connectDebugDevice"
             >
               连接设备
-            </AnimalButton>
-            <AnimalButton type="primary"
+            </el-button>
+            <el-button type="primary"
               v-else
               
               size="small"
@@ -496,8 +657,8 @@ onBeforeRouteLeave((_to, _from, next) => {
               @click="disconnectDebugDevice"
              danger>
               断开
-            </AnimalButton>
-            <AnimalButton
+            </el-button>
+            <el-button
               type="primary"
               size="small"
               @click="goToElementLocator"
@@ -507,7 +668,7 @@ onBeforeRouteLeave((_to, _from, next) => {
                 :size="14"
                 style="margin-right: 4px"
               />去元素定位
-            </AnimalButton>
+            </el-button>
           </div>
         </div>
         <div class="doc-section__label">
@@ -517,6 +678,7 @@ onBeforeRouteLeave((_to, _from, next) => {
           v-model="form.steps_data"
           :debug-device="debugDevice"
           :package-name="form.package_name"
+          :readonly="isReadOnly"
         />
       </section>
     </div>
@@ -524,6 +686,24 @@ onBeforeRouteLeave((_to, _from, next) => {
 </template>
 
 <style scoped>
+/* Edit lock banner */
+.edit-lock-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  margin: 0;
+  background: rgba(247, 205, 103, 0.18);
+  border-bottom: 1.5px solid rgba(247, 170, 60, 0.3);
+  color: #8a6d14;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.edit-lock-banner strong {
+  color: #6b4c00;
+}
+
 .case-editor-page {
   display: flex;
   flex-direction: column;
@@ -556,6 +736,6 @@ onBeforeRouteLeave((_to, _from, next) => {
 }
 
 :deep(.el-input__append) {
-  background: var(--animal-bg-color-secondary, #f0e8d8) !important;
+  background: var(--app-bg-warm, #f0e8d8) !important;
 }
 </style>

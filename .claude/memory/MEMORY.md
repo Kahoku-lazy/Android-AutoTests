@@ -33,3 +33,8 @@
 - [doc-mgmt-consolidate-root-docs](doc-mgmt-consolidate-root-docs.md) — 散落文档统一迁入 dev_docs；根目录仅软链兼容
 - [port-defaults-doc-demo](port-defaults-doc-demo.md) — 文档门户(9999)和工作流Demo(9998)端口约定及file://约束
 - [no-retry-loop-on-blocked-commands](no-retry-loop-on-blocked-commands.md) — 安全分类器持续拦截时禁止重试，必须立即告知用户手动执行
+- [code-read-db-schema](code-read-db-schema.md) — 数据库表结构从 apps/*/models.py 读取，不要依赖 database.md 手工副本
+- [code-read-api-endpoints](code-read-api-endpoints.md) — API 端点从 apps/*/urls.py 读取，不要依赖 api-conventions.md 手工清单
+- [code-read-step-types](code-read-step-types.md) — 测试步骤类型从 models/step_types.py StepType 枚举读取，不要依赖 conventions.md
+- [code-read-tool-list](code-read-tool-list.md) — AgentScope Tool 清单从 factory.py 读取，不要依赖 agentscope-tools.md
+- [env-credentials-and-config](env-credentials-and-config.md) — 管理员密码/设备序列号/端口/DB密码等非代码信息的获取方式

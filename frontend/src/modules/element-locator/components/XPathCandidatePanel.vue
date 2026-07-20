@@ -1,12 +1,57 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch, nextTick, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { animate } from 'animejs'
 import client, { formatApiError } from '@/shared/api-client.js'
 import { useElementStore } from '../store.js'
 
 const props = defineProps({ element: { type: Object, default: null } })
 const emit = defineEmits(['add-step', 'do-action'])
 const store = useElementStore()
+
+// ── Idle animation ──
+const emptyIconRef = ref(null)
+const emptyTitleRef = ref(null)
+let emptyAnimeInstances = []
+
+function startEmptyAnimation() {
+  stopEmptyAnimation()
+  nextTick(() => {
+    if (emptyIconRef.value) {
+      emptyAnimeInstances.push(animate(emptyIconRef.value, {
+        translateY: [-6, 6],
+        duration: 2800,
+        loop: true,
+        ease: 'inOutSine',
+        direction: 'alternate',
+      }))
+    }
+    if (emptyTitleRef.value) {
+      emptyAnimeInstances.push(animate(emptyTitleRef.value, {
+        opacity: [0.5, 1],
+        duration: 2800,
+        loop: true,
+        ease: 'inOutSine',
+        direction: 'alternate',
+      }))
+    }
+  })
+}
+
+function stopEmptyAnimation() {
+  emptyAnimeInstances.forEach(inst => { try { inst.pause() } catch (_) {} })
+  emptyAnimeInstances = []
+}
+
+watch(() => props.element, (el) => {
+  if (el) {
+    stopEmptyAnimation()
+  } else {
+    nextTick(() => startEmptyAnimation())
+  }
+}, { immediate: true })
+
+onUnmounted(() => stopEmptyAnimation())
 
 const inputVisible = ref(false)
 const inputText = ref('')
@@ -186,7 +231,7 @@ async function copyXPath(xpath) {
 
     <!-- Save to element-manager dialog -->
     <el-dialog
-      v-model:open="saveVisible"
+      v-model="saveVisible"
       title="保存到元素管理"
       width="420px"
       :close-on-click-modal="false"
@@ -240,7 +285,7 @@ async function copyXPath(xpath) {
 
     <!-- Input dialog -->
     <el-dialog
-      v-model:open="inputVisible"
+      v-model="inputVisible"
       title="输入文本"
       width="340px"
       :close-on-click-modal="false"
@@ -256,7 +301,10 @@ async function copyXPath(xpath) {
     </el-dialog>
 
     <!-- XPath table -->
-    <div v-if="!element" class="empty">点击截图中元素查看 XPath</div>
+    <div v-if="!element" class="empty">
+        <span ref="emptyIconRef" class="empty-icon">🔍</span>
+        <p ref="emptyTitleRef" class="empty-text">点击截图中元素查看 XPath</p>
+      </div>
     <div v-else class="table-wrap">
       <el-table
         :data="element.xpaths || []"
@@ -310,10 +358,22 @@ h3 {
 .empty {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   color: var(--app-text-secondary, #7A8B73);
   font-size: 13px;
+}
+.empty-icon {
+  font-size: 32px;
+  opacity: 0.55;
+}
+.empty-text {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #725d42;
 }
 .table-wrap {
   flex: 1;

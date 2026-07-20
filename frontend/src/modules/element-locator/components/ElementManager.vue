@@ -3,7 +3,7 @@
 import AppCard from "@/shared/components/AppCard.vue";
 import AppTabs from "@/shared/components/AppTabs.vue";
 import AppTable from "@/shared/components/AppTable.vue";
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { animate, stagger } from 'animejs'
 import { apiAddElementToPage, apiUpdateElement } from '../api.js'
@@ -30,6 +30,30 @@ const {
   handleTreeNodeClick, handleTreeCheck, nodeClass, nodeIcon, pageLabel,
 } = useElementTree()
 
+// ── "+" button animation ──
+const plusFolderRef = ref(null)
+const plusPageRef = ref(null)
+let plusAnimeInstances = []
+
+function startPlusAnimation() {
+  stopPlusAnimation()
+  ;[plusFolderRef.value, plusPageRef.value].forEach((el) => {
+    if (!el) return
+    plusAnimeInstances.push(animate(el, {
+      scale: [1, 1.25, 1],
+      duration: 1800,
+      loop: true,
+      ease: 'inOutSine',
+    }))
+  })
+}
+function stopPlusAnimation() {
+  plusAnimeInstances.forEach(inst => { try { inst.pause() } catch (_) {} })
+  plusAnimeInstances = []
+}
+onMounted(() => { nextTick(() => startPlusAnimation()) })
+onUnmounted(() => stopPlusAnimation())
+
 const showAddElement = ref(false)
 const newElForm = ref({ alias: '', xpath: '', class_name: '', text_val: '', resource_id: '', bounds: '', clickable: false })
 
@@ -47,7 +71,7 @@ async function doAddElement() {
 }
 
 const filterMode = ref('all')
-const filterAppTabs = [
+const filterTabs = [
   { key: 'all', label: '全部' },
   { key: 'test_point', label: '测试点' },
 ]
@@ -59,13 +83,13 @@ const {
 } = usePagination(filteredElements)
 
 const columns = [
-  { title: '别名', dataIndex: 'alias', key: 'alias', width: '12%' },
-  { title: 'XPath', dataIndex: 'xpath', key: 'xpath', width: '28%' },
-  { title: '类名', dataIndex: 'class_name', key: 'class_name', width: '15%' },
-  { title: '文本', dataIndex: 'text_val', key: 'text_val', width: '12%' },
-  { title: 'Resource ID', dataIndex: 'resource_id', key: 'resource_id', width: '18%' },
-  { title: '可点击', dataIndex: 'clickable', key: 'clickable', width: '7%', align: 'center' },
-  { title: '测试点', dataIndex: 'is_test_point', key: 'is_test_point', width: '8%', align: 'center' },
+  { title: '别名', dataIndex: 'alias', key: 'alias', minWidth: 160 },
+  { title: 'XPath', dataIndex: 'xpath', key: 'xpath', minWidth: 320 },
+  { title: '类名', dataIndex: 'class_name', key: 'class_name', minWidth: 160 },
+  { title: '文本', dataIndex: 'text_val', key: 'text_val', minWidth: 160 },
+  { title: 'Resource ID', dataIndex: 'resource_id', key: 'resource_id', minWidth: 220 },
+  { title: '可点击', dataIndex: 'clickable', key: 'clickable', minWidth: 100, align: 'center' },
+  { title: '测试点', dataIndex: 'is_test_point', key: 'is_test_point', minWidth: 100, align: 'center' },
 ]
 
 async function updateEl(record, field, value) {
@@ -83,28 +107,32 @@ async function updateEl(record, field, value) {
           <div v-if="!selectMode" class="tree-header">
             <span class="tree-header__title">页面目录</span>
             <div class="tree-header__actions">
-              <el-button size="small" type="text" title="批量选择" @click="toggleSelectMode">☑ 选择</el-button>
-              <el-button size="small" type="text" title="新建目录" @click="openCreateFolder()">+ 目录</el-button>
-              <el-button size="small" type="text" title="新建页面" @click="openCreatePage()">+ 页面</el-button>
-              <el-button size="small" type="text" danger @click="openClearDialog">清空</el-button>
+              <el-button size="small" plain @click="openCreateFolder()">
+                📁 <span ref="plusFolderRef" class="plus-sign">+</span> 目录
+              </el-button>
+              <el-button size="small" type="primary" @click="openCreatePage()">
+                📄 <span ref="plusPageRef" class="plus-sign">+</span> 页面
+              </el-button>
+              <el-button size="small" plain @click="toggleSelectMode">☑ 选择</el-button>
+              <el-button size="small" type="danger" plain @click="openClearDialog">🗑 清空</el-button>
             </div>
           </div>
           <div v-else class="tree-header tree-header--select">
             <span class="tree-header__title">已选 {{ checkedCount }} 项</span>
             <div class="tree-header__actions">
-              <el-button size="small" type="text" @click="handleSelectAll">
+              <el-button size="small" plain @click="handleSelectAll">
                 {{ selectAll ? '☐ 取消全选' : '☑ 全选' }}
               </el-button>
               <el-button
                 size="small"
-                type="text"
+                type="primary"
                 :disabled="checkedCount === 0"
                 @click="openBatchMoveDialog"
-              >📂 移动到...</el-button>
-              <el-button size="small" type="text" danger :disabled="checkedCount === 0" @click="openClearDialog">
-                删除选中
+              >📂 移动</el-button>
+              <el-button size="small" type="danger" plain :disabled="checkedCount === 0" @click="openClearDialog">
+                🗑 删除
               </el-button>
-              <el-button size="small" type="text" @click="toggleSelectMode">✕ 退出</el-button>
+              <el-button size="small" plain @click="toggleSelectMode">✕ 退出</el-button>
             </div>
           </div>
           <div class="tree-body" :class="{ 'drag-mode-active': dragEnabled }">
@@ -217,7 +245,7 @@ async function updateEl(record, field, value) {
                         </div>
                       </div>
                     </div>
-                    <AppCard color="brown" pattern="brown" class="table-card">
+                    <AppCard class="table-card">
                       <div class="table-scroll">
                         <AppTable
                         :columns="columns"
@@ -294,14 +322,14 @@ async function updateEl(record, field, value) {
             </div>
           </div>
         </template>
-        <AppCard v-else color="brown" pattern="brown" class="empty-card">
+        <AppCard v-else class="empty-card">
           <div class="empty-state">← 选择页面查看元素（目录仅用于分组）</div>
         </AppCard>
     </div>
 
     <!-- Batch move dialog -->
     <el-dialog
-      v-model:open="moveDialogVisible"
+      v-model="moveDialogVisible"
       title="选择目标目录"
       width="420px"
       
@@ -329,10 +357,10 @@ async function updateEl(record, field, value) {
 
     <!-- Create Page Dialog -->
     <el-dialog
-      v-model:open="showCreatePage"
+      v-model="showCreatePage"
       :title="createDialogTitle"
       width="360px"
-      
+
       :close-on-click-modal="false"
       @close="showCreatePage = false"
     >
@@ -353,10 +381,10 @@ async function updateEl(record, field, value) {
 
     <!-- Rename Dialog -->
     <el-dialog
-      v-model:open="showRenameDialog"
+      v-model="showRenameDialog"
       :title="renameTarget?.is_folder ? '重命名目录' : '重命名页面'"
       width="360px"
-      
+
       :close-on-click-modal="false"
       @close="showRenameDialog = false"
     >
@@ -376,7 +404,7 @@ async function updateEl(record, field, value) {
     </el-dialog>
 
     <!-- Clear Pages Confirm Dialog -->
-    <el-dialog v-model:open="showClearDialog" title="清空页面" width="440px"  :close-on-click-modal="false">
+    <el-dialog v-model="showClearDialog" title="清空页面" width="440px"  :close-on-click-modal="false">
       <div class="clear-confirm">
         <p class="clear-warning">⚠️ 此操作将永久删除页面及关联元素，不可恢复。</p>
         <p class="clear-question">
@@ -395,7 +423,7 @@ async function updateEl(record, field, value) {
 
     <!-- Add Element Dialog -->
     <el-dialog
-      v-model:open="showAddElement"
+      v-model="showAddElement"
       title="添加元素"
       width="500px"
       

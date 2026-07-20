@@ -12,7 +12,7 @@
 
 .main-layout {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-columns: 300px minmax(0, 1fr);
   gap: 16px;
   align-items: stretch;
   width: 100%;
@@ -36,8 +36,7 @@
 
 .tree-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
   border-bottom: 1px solid rgba(139, 115, 85, 0.12);
@@ -59,9 +58,14 @@
 
 .tree-header__actions {
   display: flex;
-  gap: 2px;
+  gap: 4px;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  align-items: center;
+}
+
+.plus-sign {
+  display: inline-block;
+  font-weight: 700;
 }
 
 .tree-body {
@@ -384,12 +388,15 @@
 /* ── Elements table ── */
 .elements-table {
   width: 100%;
+  min-width: 0;
 }
 .elements-table :deep(.el-table__body-wrapper) {
   width: 100%;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
 }
 .elements-table :deep(table) {
-  width: 100%;
+  min-width: 1220px;
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
@@ -554,8 +561,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  min-height: 0;
+  min-height: 220px;
+  width: 100%;
 }
 .table-empty {
   display: flex;

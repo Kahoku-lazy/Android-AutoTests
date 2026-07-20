@@ -1,5 +1,52 @@
 <script setup>
-defineProps({ element: { type: Object, default: null } })
+import { ref, watch, nextTick, onUnmounted } from 'vue'
+import { animate } from 'animejs'
+
+const props = defineProps({ element: { type: Object, default: null } })
+
+// ── Idle animation ──
+const detailIconRef = ref(null)
+const detailTitleRef = ref(null)
+let detailAnimeInstances = []
+
+function startDetailAnimation() {
+  stopDetailAnimation()
+  nextTick(() => {
+    if (detailIconRef.value) {
+      detailAnimeInstances.push(animate(detailIconRef.value, {
+        translateY: [-6, 6],
+        duration: 3000,
+        loop: true,
+        ease: 'inOutSine',
+        direction: 'alternate',
+      }))
+    }
+    if (detailTitleRef.value) {
+      detailAnimeInstances.push(animate(detailTitleRef.value, {
+        opacity: [0.45, 1],
+        duration: 3000,
+        loop: true,
+        ease: 'inOutSine',
+        direction: 'alternate',
+      }))
+    }
+  })
+}
+
+function stopDetailAnimation() {
+  detailAnimeInstances.forEach(inst => { try { inst.pause() } catch (_) {} })
+  detailAnimeInstances = []
+}
+
+watch(() => props.element, (el) => {
+  if (el) {
+    stopDetailAnimation()
+  } else {
+    nextTick(() => startDetailAnimation())
+  }
+}, { immediate: true })
+
+onUnmounted(() => stopDetailAnimation())
 </script>
 
 <template>
@@ -20,7 +67,8 @@ defineProps({ element: { type: Object, default: null } })
     <template v-else>
       <h3>待定页面</h3>
       <div class="placeholder">
-        <span class="placeholder-label">待定页面</span>
+        <span ref="detailIconRef" class="placeholder-icon">📋</span>
+        <span ref="detailTitleRef" class="placeholder-label">待定页面</span>
         <p class="hint">选中元素后，此处显示 XPath 筛选信息</p>
       </div>
     </template>
@@ -66,15 +114,20 @@ h3 {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   min-height: 200px;
+}
+.placeholder-icon {
+  font-size: 32px;
+  opacity: 0.5;
 }
 .placeholder-label {
   font-size: 15px;
-  color: var(--app-text-secondary, #7A8B73);
-  opacity: 0.6;
+  font-weight: 500;
+  color: #725d42;
 }
 .hint {
-  margin-top: 8px;
+  margin: 0;
   font-size: 12px;
   color: var(--app-text-secondary, #7A8B73);
   opacity: 0.5;

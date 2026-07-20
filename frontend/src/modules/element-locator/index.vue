@@ -240,6 +240,7 @@ function onDeviceChanged(msg) {
               <section class="col col-phone">
                 <ScreenshotView
                   ref="screenshotRef"
+                  :active="store.isConnected"
                   :screen-w="store.screenW"
                   :screen-h="store.screenH"
                   :elements="filteredElements"
@@ -285,6 +286,7 @@ function onDeviceChanged(msg) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  margin-top: 12px;
 }
 
 .doc-page :deep(.locator-tabs.el-tabs) {
@@ -302,17 +304,23 @@ function onDeviceChanged(msg) {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  padding-top: 8px;
 }
 
-.doc-page :deep(.locator-tabs.el-tabs > .el-tabs__content > .el-tabs__inner) {
+.doc-page :deep(.locator-tabs.el-tabs > .el-tabs__header) {
+  margin-bottom: 8px;
+}
+
+.doc-page :deep(.locator-tabs.el-tabs > .el-tabs__content > .el-tab-pane) {
   flex: 1;
   min-height: 0;
   width: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
-.doc-page :deep(.doc-body) {
+.doc-page :deep(.locator-tabs.el-tabs > .el-tabs__content > .el-tab-pane > .doc-body) {
   flex: 1;
   min-height: 0;
   width: 100%;
@@ -332,15 +340,15 @@ function onDeviceChanged(msg) {
   min-height: 0;
   width: 100%;
   box-sizing: border-box;
-  padding: 16px 20px 20px;
+  padding: 24px 28px 28px;
   overflow: hidden;
 }
 
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 10px;
+  gap: 16px;
+  margin-bottom: 16px;
   flex-shrink: 0;
   flex-wrap: wrap;
 }
@@ -348,11 +356,11 @@ function onDeviceChanged(msg) {
 .filter-bar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 16px;
+  margin-bottom: 20px;
   flex-shrink: 0;
   flex-wrap: wrap;
-  padding: 10px 14px;
+  padding: 14px 18px;
   background: var(--ac-cream-deep, #f5ede0);
   border: 1px solid var(--ac-border, rgba(139, 115, 85, 0.16));
   border-radius: var(--ac-radius-sm, 10px);
@@ -363,11 +371,11 @@ function onDeviceChanged(msg) {
 
 .workspace {
   flex: 1;
-  min-height: 0;
+  min-height: 420px;
   width: 100%;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
-  gap: 16px;
+  gap: 24px;
   overflow: hidden;
 }
 

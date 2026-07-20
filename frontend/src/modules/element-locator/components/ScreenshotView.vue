@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
+import { animate } from 'animejs'
 import { wsUrl } from '@/shared/ws-url.js'
 import { apiGetScreenshot } from '../api.js'
 
@@ -9,17 +10,24 @@ const props = defineProps({
   screenH: { type: Number, default: 3040 },
   elements: { type: Array, default: () => [] },
   selected: { type: Object, default: null },
+  active: { type: Boolean, default: false },
 })
 const emit = defineEmits(['click-element', 'do-action', 'device-changed'])
 
 const screenshotUrl = ref('')
 const ws = ref(null)
-const wsState = ref('connecting') // connecting | connected | no_device | error
+const wsState = ref('connecting')
 const statusMessage = ref('正在连接截图流…')
 const imgRef = ref(null)
 const overlayRef = ref(null)
 const screenInnerRef = ref(null)
 const hovered = ref(null)
+
+// ── No-device animation refs ──
+const ringOuterRef = ref(null)
+const ringInnerRef = ref(null)
+const noDeviceIconRef = ref(null)
+const noDeviceTitleRef = ref(null)
 
 let blobUrl = null
 let resizeObserver = null
@@ -27,7 +35,66 @@ let frameTimer = null
 let pendingFrame = null
 let reconnectTimer = null
 let snapshotTimer = null
-const FRAME_INTERVAL_MS = 200
+let pollTimer = null
+const FRAME_INTERVAL_MS = 250
+const POLL_INTERVAL_MS = 250
+
+let noDeviceAnimeInstances = []
+
+function startNoDeviceAnimation() {
+  stopNoDeviceAnimation()
+  nextTick(() => {
+    const targets = [
+      { el: noDeviceIconRef.value, key: 'icon' },
+      { el: noDeviceTitleRef.value, key: 'title' },
+      { el: ringOuterRef.value, key: 'ringOuter' },
+      { el: ringInnerRef.value, key: 'ringInner' },
+    ]
+    for (const { el, key } of targets) {
+      if (!el) continue
+      if (key === 'icon') {
+        noDeviceAnimeInstances.push(animate(el, {
+          translateY: [-8, 8],
+          duration: 2500,
+          loop: true,
+          ease: 'inOutSine',
+          direction: 'alternate',
+        }))
+      } else if (key === 'title') {
+        noDeviceAnimeInstances.push(animate(el, {
+          opacity: [0.55, 1],
+          duration: 2500,
+          loop: true,
+          ease: 'inOutSine',
+          direction: 'alternate',
+        }))
+      } else if (key === 'ringOuter') {
+        noDeviceAnimeInstances.push(animate(el, {
+          scale: [0.85, 1.2],
+          opacity: [0.28, 0.04],
+          duration: 3000,
+          loop: true,
+          ease: 'inOutSine',
+          direction: 'alternate',
+        }))
+      } else if (key === 'ringInner') {
+        noDeviceAnimeInstances.push(animate(el, {
+          scale: [0.9, 1.3],
+          opacity: [0.22, 0.04],
+          duration: 2200,
+          loop: true,
+          ease: 'inOutSine',
+          direction: 'alternate',
+        }))
+      }
+    }
+  })
+}
+
+function stopNoDeviceAnimation() {
+  noDeviceAnimeInstances.forEach(inst => { try { inst.pause() } catch (_) {} })
+  noDeviceAnimeInstances = []
+}
 
 const placeholderText = computed(() => {
   if (wsState.value === 'connecting') return '正在连接截图流…'
@@ -46,9 +113,15 @@ const aspectStyle = computed(() => {
   }
 })
 
+// ── Lifecycle ──
+
 onMounted(() => {
-  fetchSnapshot({ silent: true })
-  connectWS()
+  if (props.active) {
+    startPolling()
+    connectWS()
+  } else {
+    startNoDeviceAnimation()
+  }
   resizeObserver = new ResizeObserver(() => scheduleDrawOverlay())
 })
 
@@ -59,13 +132,50 @@ watch(screenInnerRef, (el, prev) => {
 })
 
 onUnmounted(() => {
-  ws.value?.close()
-  if (reconnectTimer) clearTimeout(reconnectTimer)
-  if (snapshotTimer) clearTimeout(snapshotTimer)
-  if (frameTimer) clearTimeout(frameTimer)
-  resizeObserver?.disconnect()
-  revokeBlobUrl()
+  teardown()
 })
+
+// ── active gate: when parent connects/disconnects ──
+
+watch(() => props.active, (val) => {
+  if (val) {
+    stopNoDeviceAnimation()
+    startPolling()
+    connectWS()
+  } else {
+    teardown()
+    // Clear screenshot immediately
+    revokeBlobUrl()
+    screenshotUrl.value = ''
+    startNoDeviceAnimation()
+  }
+})
+
+function teardown() {
+  ws.value?.close()
+  ws.value = null
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null }
+  if (snapshotTimer) { clearTimeout(snapshotTimer); snapshotTimer = null }
+  if (frameTimer) { clearTimeout(frameTimer); frameTimer = null }
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+  stopNoDeviceAnimation()
+}
+
+// ── Screenshot polling (250 ms) ──
+
+function startPolling() {
+  stopPolling()
+  fetchSnapshot({ silent: true })
+  pollTimer = setInterval(() => {
+    fetchSnapshot({ silent: true })
+  }, POLL_INTERVAL_MS)
+}
+
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+}
+
+// ── REST screenshot ──
 
 async function fetchSnapshot({ silent = false } = {}) {
   try {
@@ -95,12 +205,16 @@ async function refresh() {
 
 defineExpose({ refresh })
 
+// ── Blob URL management (single-image guarantee) ──
+
 function revokeBlobUrl() {
   if (blobUrl) {
     URL.revokeObjectURL(blobUrl)
     blobUrl = null
   }
 }
+
+// ── WebSocket ──
 
 function connectWS() {
   wsState.value = 'connecting'
@@ -139,6 +253,7 @@ function connectWS() {
     statusMessage.value = '截图流连接失败，3 秒后重试'
   }
   ws.value.onclose = () => {
+    if (!props.active) return  // don't reconnect if parent disconnected
     wsState.value = 'connecting'
     statusMessage.value = '连接已断开，正在重连…'
     reconnectTimer = setTimeout(connectWS, 3000)
@@ -282,7 +397,8 @@ function onMouseLeave() {
 <template>
   <div class="screenshot-panel">
     <div class="phone-frame">
-      <div v-if="screenshotUrl" class="screen-wrap">
+      <!-- Active + screenshot → phone screen -->
+      <div v-if="active && screenshotUrl" class="screen-wrap">
         <div ref="screenInnerRef" class="screen-inner" :style="aspectStyle">
           <img
             ref="imgRef"
@@ -301,11 +417,25 @@ function onMouseLeave() {
           />
         </div>
       </div>
-      <div v-else class="no-signal" :class="`no-signal--${wsState}`">
+
+      <!-- Active but no screenshot yet → WS state placeholder -->
+      <div v-else-if="active && !screenshotUrl" class="no-signal" :class="`no-signal--${wsState}`">
         <span class="no-signal__icon">📱</span>
         <p class="no-signal__title">{{ placeholderText }}</p>
-        <p v-if="wsState === 'no_device'" class="no-signal__hint">在设备管理连接设备后，于上方下拉框选择</p>
-        <p v-else-if="wsState === 'error'" class="no-signal__hint">请确认后端服务与 ADB 设备已就绪</p>
+        <p v-if="wsState === 'error'" class="no-signal__hint">请确认后端服务与 ADB 设备已就绪</p>
+      </div>
+
+      <!-- Not active → idle animation -->
+      <div v-else class="no-signal no-signal--idle">
+        <div class="no-device-animation">
+          <div class="no-device-rings">
+            <div ref="ringOuterRef" class="no-device-ring no-device-ring--outer"></div>
+            <div ref="ringInnerRef" class="no-device-ring no-device-ring--inner"></div>
+          </div>
+          <span ref="noDeviceIconRef" class="no-signal__icon">📱</span>
+          <p ref="noDeviceTitleRef" class="no-signal__title">设备未连接~</p>
+          <p class="no-signal__hint">在上方下拉框选择设备并点击「连接」后开始</p>
+        </div>
       </div>
     </div>
   </div>
@@ -392,4 +522,38 @@ function onMouseLeave() {
   line-height: 1.5;
 }
 .no-signal--error .no-signal__title { color: #b33a3a; }
+
+/* ── No-device idle animation ── */
+.no-device-animation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+}
+.no-device-rings {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.no-device-ring {
+  position: absolute;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.no-device-ring--outer {
+  width: 110px;
+  height: 110px;
+  border: 2px solid rgba(139, 115, 85, 0.14);
+}
+.no-device-ring--inner {
+  width: 78px;
+  height: 78px;
+  border: 2px solid rgba(139, 115, 85, 0.18);
+}
 </style>

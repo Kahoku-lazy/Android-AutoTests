@@ -41,6 +41,15 @@
   --app-text-muted:     #A0B09A;
   --app-text-inverse:   #ffffff;
 
+  /* 兼容别名（旧令牌） */
+  --text-primary:       var(--app-text);
+  --text-secondary:     var(--app-text-secondary);
+  --font-display:       var(--app-font-display);
+  --side-w:             220px;
+  --accent-blue:        var(--app-blue);
+  --accent-pink:        #F0B0B8;
+  --accent-green:       var(--app-green-deep);
+
   /* ── 毛玻璃 ── */
   --app-glass:         rgba(255,255,255,0.45);
   --app-glass-heavy:   rgba(255,255,255,0.65);

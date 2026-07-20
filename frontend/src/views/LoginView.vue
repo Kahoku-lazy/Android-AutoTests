@@ -159,7 +159,7 @@ function switchMode(m) {
         <!-- 左侧文案 -->
         <div class="hero__text">
           <div class="hero__title-row">
-            <h1 class="ac-title" size="large" color="warm-peach-pink">AI 自动化测试平台</h1>
+            <h1 class="hero-title">AI 自动化测试平台</h1>
             <span class="hero__version">v2.1</span>
           </div>
 
@@ -194,7 +194,7 @@ function switchMode(m) {
                   v-model="loginUsername"
                   placeholder="账号"
                   size="large"
-                  :shadow="false"
+                  
                   class="form-input"
                 />
               </div>
@@ -205,7 +205,7 @@ function switchMode(m) {
                   type="password"
                   placeholder="密码"
                   size="large"
-                  :shadow="false"
+                  
                   class="form-input"
                 />
               </div>
@@ -239,7 +239,7 @@ function switchMode(m) {
                   v-model="regUsername"
                   placeholder="设置账号（3-20 字符）"
                   size="large"
-                  :shadow="false"
+                  
                   class="form-input"
                 />
               </div>
@@ -250,7 +250,7 @@ function switchMode(m) {
                   type="password"
                   placeholder="设置密码（至少 6 位）"
                   size="large"
-                  :shadow="false"
+                  
                   class="form-input"
                 />
               </div>
@@ -261,7 +261,7 @@ function switchMode(m) {
                   type="password"
                   placeholder="确认密码"
                   size="large"
-                  :shadow="false"
+                  
                   class="form-input"
                 />
               </div>
@@ -488,7 +488,7 @@ function switchMode(m) {
 
 .login-error {
   text-align: center;
-  color: var(#e8998a, #e05a5a);
+  color: #e8998a;
   margin-top: 8px;
   font-size: 13px;
 }

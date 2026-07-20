@@ -31,7 +31,7 @@ function onLeave(el, done) {
 </script>
 
 <template>
-  <div class="ac-cursor" :force-all="false">
+  <div class="ac-cursor">
     <div class="app-shell">
       <AppSidebar v-if="showSidebar" />
       <main class="main-content">

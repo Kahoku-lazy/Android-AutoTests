@@ -44,7 +44,7 @@ defineProps({ element: { type: Object, default: null } })
 }
 h3 {
   font-size: 14px;
-  color: var(--text-primary);
+  color: var(--app-text, #3D4A3B);
   margin-bottom: 12px;
   flex-shrink: 0;
 }
@@ -54,11 +54,11 @@ h3 {
 }
 .meta p {
   margin-bottom: 6px;
-  color: var(--text-secondary);
+  color: var(--app-text-secondary, #7A8B73);
   word-break: break-all;
 }
 .meta strong {
-  color: var(--text-primary);
+  color: var(--app-text, #3D4A3B);
 }
 .placeholder {
   flex: 1;
@@ -70,13 +70,13 @@ h3 {
 }
 .placeholder-label {
   font-size: 15px;
-  color: var(--text-secondary);
+  color: var(--app-text-secondary, #7A8B73);
   opacity: 0.6;
 }
 .hint {
   margin-top: 8px;
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--app-text-secondary, #7A8B73);
   opacity: 0.5;
 }
 </style>

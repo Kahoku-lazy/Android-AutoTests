@@ -9,7 +9,7 @@
         <el-button @click="goBack">返回上一页</el-button>
       </div>
     </div>
-    <div class="ac-footer" type="tree" />
+    <div class="ac-footer" />
   </div>
 </template>
 

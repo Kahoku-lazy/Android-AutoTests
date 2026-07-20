@@ -189,10 +189,10 @@ async function copyXPath(xpath) {
       v-model:open="saveVisible"
       title="保存到元素管理"
       width="420px"
-      :mask-closable="false"
-      :typewriter="false"
+      :close-on-click-modal="false"
+      
       @close="saveVisible = false"
-      @ok="doSave"
+      
     >
       <div class="form-grid">
         <label class="form-label required">目标页面</label>
@@ -243,10 +243,10 @@ async function copyXPath(xpath) {
       v-model:open="inputVisible"
       title="输入文本"
       width="340px"
-      :mask-closable="false"
-      :typewriter="false"
+      :close-on-click-modal="false"
+      
       @close="inputVisible = false"
-      @ok="doInput"
+      
     >
       <el-input v-model="inputText" placeholder="输入要发送的文本" size="medium" />
       <template #footer>
@@ -298,7 +298,7 @@ async function copyXPath(xpath) {
 }
 h3 {
   font-size: 14px;
-  color: var(--text-primary);
+  color: var(--app-text, #3D4A3B);
   margin-bottom: 12px;
   flex-shrink: 0;
 }
@@ -312,7 +312,7 @@ h3 {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-secondary);
+  color: var(--app-text-secondary, #7A8B73);
   font-size: 13px;
 }
 .table-wrap {
@@ -335,7 +335,7 @@ h3 {
 }
 .form-label.required::before {
   content: '*';
-  color: var(#e8998a, #e05a5a);
+  color: #e8998a;
   margin-right: 3px;
 }
 .xpath-opt {

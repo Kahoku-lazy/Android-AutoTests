@@ -163,7 +163,7 @@ function onCardEnter() {
 
 .stats-card__trend.is-down {
   background: rgba(224, 90, 90, 0.12);
-  color: var(#e8998a, #e05a5a);
+  color: #e8998a;
 }
 
 .stats-card__trend-arrow {

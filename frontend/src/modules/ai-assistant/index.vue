@@ -550,11 +550,11 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
 }
 .view-tab:hover {
   background: rgba(255, 255, 255, 0.6);
-  color: var(--animal-text-color);
+  color: var(--app-text, #3D4A3B);
 }
 .view-tab.active {
   background: #fff;
-  color: var(--animal-text-color);
+  color: var(--app-text, #3D4A3B);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 </style>

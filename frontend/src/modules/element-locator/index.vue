@@ -358,7 +358,7 @@ function onDeviceChanged(msg) {
   border-radius: var(--ac-radius-sm, 10px);
 }
 
-.info { font-size: 14px; color: var(--text-secondary); white-space: nowrap; }
+.info { font-size: 14px; color: var(--app-text-secondary, #7A8B73); white-space: nowrap; }
 .error { font-size: 14px; color: #e74c3c; white-space: nowrap; }
 
 .workspace {

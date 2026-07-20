@@ -160,7 +160,7 @@ onMounted(() => {
   display: block;
   font-size: 22px;
   font-weight: 800;
-  color: var(--animal-text-color);
+  color: var(--app-text, #3D4A3B);
 }
 .kb-stat__label {
   display: block;
@@ -180,7 +180,7 @@ onMounted(() => {
 .kb-doc-source {
   font-family: monospace;
   font-size: 12px;
-  color: var(--animal-text-color);
+  color: var(--app-text, #3D4A3B);
 }
 .kb-filters {
   display: flex;
@@ -198,9 +198,9 @@ onMounted(() => {
   cursor: pointer;
   font-family: inherit;
 }
-.kb-filter-btn:hover { color: var(--animal-text-color); }
+.kb-filter-btn:hover { color: var(--app-text, #3D4A3B); }
 .kb-filter-btn.active {
-  background: var(--animal-text-color);
+  background: var(--app-text, #3D4A3B);
   color: #fff;
 }
 @media (max-width: 700px) {

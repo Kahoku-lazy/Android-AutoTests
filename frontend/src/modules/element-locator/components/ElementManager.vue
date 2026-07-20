@@ -304,8 +304,8 @@ async function updateEl(record, field, value) {
       v-model:open="moveDialogVisible"
       title="选择目标目录"
       width="420px"
-      :typewriter="false"
-      :mask-closable="false"
+      
+      :close-on-click-modal="false"
       @close="moveDialogVisible = false"
     >
       <el-select
@@ -332,8 +332,8 @@ async function updateEl(record, field, value) {
       v-model:open="showCreatePage"
       :title="createDialogTitle"
       width="360px"
-      :typewriter="false"
-      :mask-closable="false"
+      
+      :close-on-click-modal="false"
       @close="showCreatePage = false"
     >
       <div class="form-grid">
@@ -356,8 +356,8 @@ async function updateEl(record, field, value) {
       v-model:open="showRenameDialog"
       :title="renameTarget?.is_folder ? '重命名目录' : '重命名页面'"
       width="360px"
-      :typewriter="false"
-      :mask-closable="false"
+      
+      :close-on-click-modal="false"
       @close="showRenameDialog = false"
     >
       <div class="form-grid">
@@ -376,7 +376,7 @@ async function updateEl(record, field, value) {
     </el-dialog>
 
     <!-- Clear Pages Confirm Dialog -->
-    <el-dialog v-model:open="showClearDialog" title="清空页面" width="440px" :typewriter="false" :mask-closable="false">
+    <el-dialog v-model:open="showClearDialog" title="清空页面" width="440px"  :close-on-click-modal="false">
       <div class="clear-confirm">
         <p class="clear-warning">⚠️ 此操作将永久删除页面及关联元素，不可恢复。</p>
         <p class="clear-question">
@@ -398,8 +398,8 @@ async function updateEl(record, field, value) {
       v-model:open="showAddElement"
       title="添加元素"
       width="500px"
-      :typewriter="false"
-      :mask-closable="false"
+      
+      :close-on-click-modal="false"
       @close="showAddElement = false"
     >
       <div class="form-grid">

@@ -294,7 +294,7 @@
 }
 .element-count {
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--app-text-secondary, #7A8B73);
   white-space: nowrap;
   align-self: flex-end;
   padding-top: 0;
@@ -546,7 +546,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-secondary);
+  color: var(--app-text-secondary, #7A8B73);
   font-size: 14px;
   padding: 60px 0;
 }
@@ -629,6 +629,6 @@
 
 .form-label.required::before {
   content: '*';
-  color: var(#e8998a, #e05a5a);
+  color: #e8998a;
   margin-right: 3px;
 }

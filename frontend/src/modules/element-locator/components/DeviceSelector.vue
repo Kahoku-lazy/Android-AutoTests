@@ -128,14 +128,14 @@ async function refreshDevices() {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--app-text-secondary, #7A8B73);
 }
 .current-info.no-device {
   color: var(--el-color-warning);
 }
 .dev-label {
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--app-text, #3D4A3B);
 }
 .dev-res {
   font-family: monospace;
@@ -156,7 +156,7 @@ async function refreshDevices() {
   display: flex;
   gap: 8px;
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--app-text-secondary, #7A8B73);
   margin-top: 2px;
 }
 .opt-serial {
@@ -169,6 +169,6 @@ async function refreshDevices() {
 }
 .no-devices-empty .hint {
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--app-text-secondary, #7A8B73);
 }
 </style>

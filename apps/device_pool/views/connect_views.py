@@ -2,14 +2,17 @@
 import json
 import re
 import time
+import subprocess
+from datetime import datetime
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import uiautomator2 as u2
 from .helpers import (
     _adb_device_serials, _update_device_status, _delete_device_record,
     _collect_device_info, _auto_assign_from_queue, _device_to_dict,
+    _release_internal,
 )
-from ..models import Device
+from ..models import Device, DeviceLock
 from ..pool import device as device_pool
 @csrf_exempt
 def scan_device(request):

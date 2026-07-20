@@ -477,7 +477,7 @@ watch(
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  background: var(--ac-cream, #fdf8f0);
+  background: transparent;
   overflow: hidden;
 }
 .wb-header {
@@ -485,8 +485,10 @@ watch(
   align-items: center;
   gap: 16px;
   padding: 12px 18px;
-  background: rgba(255, 251, 245, 0.95);
-  border-bottom: 2px solid var(--ac-border, rgba(139, 115, 85, 0.16));
+  background: rgba(255,255,255,0.52);
+  border-bottom: 1px solid var(--app-glass-border);
+  backdrop-filter: blur(var(--app-glass-blur));
+  -webkit-backdrop-filter: blur(var(--app-glass-blur));
   flex-shrink: 0;
   z-index: 10;
 }
@@ -501,21 +503,22 @@ watch(
   display: grid;
   place-items: center;
   font-size: 22px;
-  background: linear-gradient(145deg, #f7cd67, #f5c6a3);
+  background: linear-gradient(145deg, rgba(189,224,254,0.88), rgba(162,210,255,0.68));
   border-radius: 14px;
-  border: 2px solid rgba(139, 115, 85, 0.18);
+  border: 1px solid var(--app-icon-border);
+  box-shadow: var(--app-icon-shadow);
 }
 .brand-title {
   margin: 0;
   font-size: 16px;
   font-weight: 800;
-  color: var(--ac-ink, #4a3a28);
+  color: var(--app-text);
 }
 .brand-sub {
   margin: 2px 0 0;
   font-size: 12px;
   font-weight: 700;
-  color: var(--ac-ink-faint, #988b7a);
+  color: var(--app-text-muted);
 }
 .header-actions {
   margin-left: auto;
@@ -526,9 +529,9 @@ watch(
 }
 .hdr-btn {
   padding: 7px 14px;
-  border: 2px solid var(--ac-border);
+  border: 1.5px solid var(--app-glass-border);
   border-radius: 999px;
-  background: #fffbf5;
+  background: var(--app-glass-card);
   font-size: 12px;
   font-weight: 800;
   font-family: inherit;
@@ -546,17 +549,17 @@ watch(
   cursor: pointer;
 }
 .hdr-btn.primary {
-  background: var(--ac-teal, #19c8b9);
+  background: linear-gradient(135deg, var(--app-green-deep), var(--app-blue));
   color: #fff;
-  border-color: #14b3a5;
+  border-color: var(--app-green-deep);
 }
 .hdr-btn:hover { filter: brightness(1.03); }
 .status-pill {
   font-size: 11px;
   font-weight: 700;
-  color: #0d7a70;
+  color: var(--app-green-deep);
   padding: 4px 10px;
-  background: rgba(25, 200, 185, 0.12);
+  background: rgba(162,210,255,0.16);
   border-radius: 999px;
 }
 .wb-body {
@@ -583,17 +586,19 @@ watch(
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: rgba(74, 58, 40, 0.4);
+  background: rgba(74,78,105,0.26);
 }
 .wf-modal {
   width: min(400px, 100%);
   padding: 22px 22px 18px;
-  background: #fffbf5;
-  border: 2px solid rgba(139, 115, 85, 0.28);
+  background: var(--app-glass-heavy);
+  border: 1px solid var(--app-glass-border);
   border-radius: 18px;
-  box-shadow: 0 18px 48px rgba(74, 58, 40, 0.28);
+  box-shadow: var(--app-shadow-lg);
   font-family: 'Nunito', 'Noto Sans SC', system-ui, sans-serif;
-  color: #4a3a28;
+  color: var(--app-text);
+  backdrop-filter: blur(var(--app-glass-blur));
+  -webkit-backdrop-filter: blur(var(--app-glass-blur));
 }
 .wf-modal-title {
   margin: 0;
@@ -604,29 +609,29 @@ watch(
   margin: 6px 0 16px;
   font-size: 12px;
   font-weight: 600;
-  color: #988b7a;
+  color: var(--app-text-secondary);
 }
 .wf-modal-label {
   display: block;
   font-size: 12px;
   font-weight: 800;
-  color: #5c4a35;
+  color: var(--app-text);
   margin-bottom: 6px;
 }
 .wf-modal-inp {
   width: 100%;
   box-sizing: border-box;
   padding: 10px 12px;
-  border: 2px solid rgba(139, 115, 85, 0.22);
+  border: 1.5px solid var(--app-glass-border);
   border-radius: 12px;
   background: #ffffff;
-  color: #4a3a28;
+  color: var(--app-text);
   font-size: 14px;
   font-weight: 700;
   font-family: inherit;
   outline: none;
 }
-.wf-modal-inp:focus { border-color: #19c8b9; }
+.wf-modal-inp:focus { border-color: var(--app-blue); }
 .wf-modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -635,19 +640,19 @@ watch(
 }
 .wf-modal .hdr-btn {
   padding: 8px 16px;
-  border: 2px solid rgba(139, 115, 85, 0.2);
+  border: 1.5px solid var(--app-glass-border);
   border-radius: 999px;
-  background: #fffbf5;
+  background: var(--app-glass-card);
   font-size: 13px;
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
-  color: #5c4a35;
+  color: var(--app-text-secondary);
 }
 .wf-modal .hdr-btn.primary {
-  background: #19c8b9;
+  background: linear-gradient(135deg, var(--app-green-deep), var(--app-blue));
   color: #fff;
-  border-color: #14b3a5;
+  border-color: var(--app-green-deep);
 }
 .wf-modal .hdr-btn:hover { filter: brightness(1.03); }
 </style>

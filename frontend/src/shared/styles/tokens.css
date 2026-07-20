@@ -1,44 +1,52 @@
 /* ═══════════════════════════════════════════
-   Soft Glass 设计令牌 — 自然绿色系
-   主题原型: theme-prototype-v3.html
+   Soft Glass 设计令牌 — 蓝白玻璃系
+   主题原型: demo_11_soft_glass.html
    ═══════════════════════════════════════════ */
 
 :root {
   /* ── 主色板 ── */
-  --app-green:        #8EC8A0;   /* 自然叶绿 — 主强调色 */
-  --app-green-light:  #C5E8CF;   /* 淡绿 */
-  --app-green-deep:   #5DA870;   /* 深绿 — 激活态/按钮 */
-  --app-green-mint:   #D8F0DF;   /* 薄荷绿 */
+  --app-green:        #bde0fe;   /* 浅青蓝 — 主强调色 */
+  --app-green-light:  #d4eaff;   /* 冰蓝 */
+  --app-green-deep:   #6f9fd8;   /* 玻璃蓝 — 激活态/按钮 */
+  --app-green-mint:   #eef7ff;   /* 蓝白 */
   --app-blue:         #a2d2ff;   /* 天蓝 */
   --app-blue-light:   #bde0fe;   /* 浅天蓝 */
   --app-blue-sky:     #d4eaff;   /* 天空白 */
   --app-white:        #fdfbfb;   /* 暖白 */
 
+  /* ── 自然背景三元素：天空 / 海洋 / 森林 ── */
+  --app-sky:           #dff5ff;
+  --app-sky-cloud:     rgba(255,255,255,0.82);
+  --app-ocean:         #3f9ed8;
+  --app-ocean-soft:    #a7d8ee;
+  --app-forest:        #6fb98d;
+  --app-forest-soft:   #d6f2da;
+
   /* ── 自然点缀 ── */
-  --app-moss:         #B8C9A8;
-  --app-leaf:         #9DC88D;
-  --app-bark:         #8B7D6B;
+  --app-moss:         #e2ece9;
+  --app-leaf:         #bde0fe;
+  --app-bark:         #9a8c98;
 
   /* ── 模块强调色 ── */
-  --app-module-green:   #8EC8A0;   /* device-pool */
-  --app-module-teal:    #7EC8B8;   /* case-manager */
+  --app-module-green:   #bde0fe;   /* device-pool */
+  --app-module-teal:    #a2d2ff;   /* case-manager */
   --app-module-purple:  #B0A8E0;   /* element-locator */
-  --app-module-pink:    #F0B0B8;   /* test-runner */
-  --app-module-brown:   #B0A898;   /* report-generator */
-  --app-module-orange:  #F0C090;   /* ai-assistant */
-  --app-module-yellow:  #F0D880;   /* dashboard */
+  --app-module-pink:    #8ecae6;   /* test-runner */
+  --app-module-brown:   #c8b6ff;   /* report-generator */
+  --app-module-orange:  #ffd6a5;   /* ai-assistant */
+  --app-module-yellow:  #fdffb6;   /* dashboard */
   --app-module-blue:    #a2d2ff;   /* misc */
 
   /* ── 表面/背景 ── */
-  --app-bg:           #e8f4f8;
-  --app-bg-warm:      #f5f8f4;
+  --app-bg:           #ebedee;
+  --app-bg-warm:      #fdfbfb;
   --app-bg-card:      rgba(255,255,255,0.55);
   --app-bg-input:     rgba(255,255,255,0.55);
 
   /* ── 文字 ── */
-  --app-text:           #3D4A3B;
-  --app-text-secondary: #7A8B73;
-  --app-text-muted:     #A0B09A;
+  --app-text:           #4a4e69;
+  --app-text-secondary: #9a8c98;
+  --app-text-muted:     #a8b5c4;
   --app-text-inverse:   #ffffff;
 
   /* 兼容别名（旧令牌） */
@@ -47,15 +55,15 @@
   --font-display:       var(--app-font-display);
   --side-w:             220px;
   --accent-blue:        var(--app-blue);
-  --accent-pink:        #F0B0B8;
+  --accent-pink:        #8ecae6;
   --accent-green:       var(--app-green-deep);
 
   /* ── 毛玻璃 ── */
   --app-glass:         rgba(255,255,255,0.45);
-  --app-glass-heavy:   rgba(255,255,255,0.65);
-  --app-glass-card:    rgba(255,255,255,0.55);
-  --app-glass-border:  rgba(255,255,255,0.55);
-  --app-glass-blur:    18px;
+  --app-glass-heavy:   rgba(255,255,255,0.72);
+  --app-glass-card:    rgba(255,255,255,0.60);
+  --app-glass-border:  rgba(255,255,255,0.68);
+  --app-glass-blur:    20px;
 
   /* ── 圆角 ── */
   --app-radius-sm:     14px;
@@ -67,13 +75,15 @@
   /* ── 阴影 ── */
   --app-shadow-sm:     0 4px 15px rgba(31,38,135,0.04);
   --app-shadow-md:     0 8px 32px rgba(31,38,135,0.07);
-  --app-shadow-lg:     0 16px 48px rgba(31,38,135,0.10);
+  --app-shadow-lg:     0 18px 48px rgba(74,78,105,0.12);
+  --app-icon-shadow:   0 10px 24px rgba(74,78,105,0.12), inset 0 1px 0 rgba(255,255,255,0.75);
+  --app-icon-border:   rgba(255,255,255,0.82);
 
   /* ── 状态色 ── */
   --app-pass:          rgba(184,232,198,0.60);
   --app-pass-text:     #1a5c2a;
-  --app-fail:          rgba(255,192,203,0.60);
-  --app-fail-text:     #7a1c2b;
+  --app-fail:          rgba(255,214,165,0.60);
+  --app-fail-text:     #7a3b1c;
   --app-pending:       rgba(162,210,255,0.60);
   --app-pending-text:  #1c4a7a;
 
@@ -88,8 +98,8 @@
   /* ── 侧边栏 ── */
   --app-sidebar-w:        230px;
   --app-sidebar-collapsed:64px;
-  --app-sidebar-bg:       rgba(255,255,255,0.65);
-  --app-sidebar-active:   rgba(142,200,160,0.22);
+  --app-sidebar-bg:       rgba(255,255,255,0.58);
+  --app-sidebar-active:   rgba(162,210,255,0.28);
 
   /* ── 动效 ── */
   --app-ease:          cubic-bezier(0.25,0.1,0.25,1);
@@ -104,21 +114,21 @@
   --el-color-primary:           var(--app-green-deep);
   --el-color-primary-light-3:   var(--app-green);
   --el-color-primary-light-5:   var(--app-green-light);
-  --el-color-primary-light-7:   #D8F0DF;
-  --el-color-primary-light-8:   #E8F6EC;
-  --el-color-primary-light-9:   #F2FAF4;
-  --el-color-primary-dark-2:    #4A8A5E;
+  --el-color-primary-light-7:   #d4eaff;
+  --el-color-primary-light-8:   #e7f3ff;
+  --el-color-primary-light-9:   #f4faff;
+  --el-color-primary-dark-2:    #5e8fca;
 
   --el-color-success:           var(--app-green-deep);
   --el-color-warning:           #f0c06a;
-  --el-color-danger:            #e8998a;
+  --el-color-danger:            #e39b55;
   --el-color-info:              var(--app-blue);
 
   --el-bg-color:                var(--app-white);
   --el-bg-color-overlay:        var(--app-white);
   --el-bg-color-page:           var(--app-bg);
   --el-fill-color-blank:        var(--app-glass-card);
-  --el-fill-color-light:        rgba(142,200,160,0.08);
+  --el-fill-color-light:        rgba(162,210,255,0.12);
 
   --el-text-color-primary:      var(--app-text);
   --el-text-color-regular:      var(--app-text);
@@ -145,13 +155,13 @@
   --animal-primary-color-hover:   var(--app-green);
   --animal-primary-color-bg:      var(--app-green-mint);
   --animal-success-color:         var(--app-green-deep);
-  --animal-error-color:           #e8998a;
+  --animal-error-color:           #e39b55;
   --animal-text-color:            var(--app-text);
   --animal-text-color-secondary:  var(--app-text-secondary);
   --animal-bg-color:              var(--app-bg);
   --animal-bg-color-secondary:    var(--app-bg-warm);
   --animal-bg-color-input:        var(--app-bg-input);
-  --animal-border-color:          #aaa69d;
+  --animal-border-color:          rgba(255,255,255,0.68);
   --animal-border-color-hover:    var(--app-green);
   --animal-border-width:          var(--app-border-width);
   --animal-border-radius-base:    var(--app-radius-md);

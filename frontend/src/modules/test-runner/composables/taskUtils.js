@@ -81,7 +81,7 @@ export function taskStatusInfo(task) {
     return { label: "运行中断", color: "#f7a8c4", icon: "⚠️" };
   if (task.outcome === "error")
     return { label: "异常终止", color: "#e85f5f", icon: "💥" };
-  return { label: "未执行", color: "#8b7355", icon: "📝" };
+  return { label: "未执行", color: "#a8b5c4", icon: "📝" };
 }
 
 export function taskCompletedCount(task) {

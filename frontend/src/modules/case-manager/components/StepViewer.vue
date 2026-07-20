@@ -86,7 +86,7 @@ const DETAIL_FIELDS = [
   align-items: center;
   gap: 10px;
   padding: 48px 24px;
-  color: #988b7a;
+  color: var(--app-text-secondary);
 }
 
 .step-viewer-empty__icon {
@@ -101,14 +101,14 @@ const DETAIL_FIELDS = [
 .step-viewer__item {
   border-radius: 14px;
   overflow: hidden;
-  border: 1px solid rgba(196, 184, 158, 0.3);
-  background: rgba(247, 243, 223, 0.5);
+  border: 1px solid var(--app-glass-border);
+  background: rgba(255,255,255,0.38);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .step-viewer__item:hover {
-  border-color: rgba(25, 200, 185, 0.3);
-  background: rgba(25, 200, 185, 0.04);
+  border-color: rgba(162,210,255,0.58);
+  background: rgba(162,210,255,0.12);
 }
 
 .step-viewer__bar {
@@ -124,8 +124,8 @@ const DETAIL_FIELDS = [
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: rgba(25, 200, 185, 0.12);
-  color: #11a89b;
+  background: rgba(162,210,255,0.18);
+  color: var(--app-green-deep);
   font-size: 13px;
   font-weight: 700;
   display: flex;
@@ -138,12 +138,12 @@ const DETAIL_FIELDS = [
   flex: 1;
   font-size: 14px;
   font-weight: 600;
-  color: #4a3a28;
+  color: var(--app-text);
 }
 
 .step-viewer__toggle {
   font-size: 12px;
-  color: #9f927d;
+  color: var(--app-text-secondary);
   flex-shrink: 0;
 }
 
@@ -169,7 +169,7 @@ const DETAIL_FIELDS = [
 }
 
 .step-viewer__field-label {
-  color: #9f927d;
+  color: var(--app-text-secondary);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -179,7 +179,7 @@ const DETAIL_FIELDS = [
 }
 
 .step-viewer__field-value {
-  color: #725d42;
+  color: var(--app-text);
   font-weight: 600;
   font-family: "SF Mono", "Fira Code", Consolas, monospace;
   word-break: break-all;

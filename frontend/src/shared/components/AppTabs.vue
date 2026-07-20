@@ -10,7 +10,11 @@ const emit = defineEmits(['update:modelValue'])
 <template>
   <el-tabs
     :model-value="modelValue"
-    class="ac-tabs"
+    :class="[
+      'ac-tabs',
+      leafAnimation ? 'ac-tabs--leaf' : '',
+      shadow ? 'ac-tabs--shadow' : '',
+    ]"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <el-tab-pane

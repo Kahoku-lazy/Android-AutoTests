@@ -1,5 +1,5 @@
 /**
- * 工作台共享设计令牌 — Soft Glass 绿色系
+ * 工作台共享设计令牌 — Soft Glass 蓝白系
  * 挂在 .wb-shell / .workflow-workbench 上
  * 令牌来源: tokens.css
  */
@@ -15,13 +15,13 @@
   --ac-ink-muted:   var(--app-text-secondary);
   --ac-ink-faint:   var(--app-text-muted);
   --ac-border:      var(--app-glass-border);
-  --ac-border-soft: rgba(142,200,160,0.08);
+  --ac-border-soft: rgba(162,210,255,0.12);
   --ac-teal:        var(--app-green);
   --ac-green:       var(--app-green-deep);
   --ac-blue:        var(--app-blue);
   --ac-yellow:      #f0d880;
   --ac-purple:      #B0A8E0;
-  --ac-pink:        #F0B0B8;
+  --ac-pink:        #8ecae6;
   --ac-red:         #e8998a;
   --ac-orange:      #F0C090;
   --ac-radius:      var(--app-radius-md);
@@ -51,7 +51,7 @@
   --el-button-bg-color: var(--app-glass-card);
   --el-button-text-color: var(--ac-ink-muted);
   --el-button-hover-border-color: var(--app-green);
-  --el-button-hover-bg-color: rgba(142,200,160,0.12);
+  --el-button-hover-bg-color: rgba(162,210,255,0.16);
   --el-button-hover-text-color: var(--app-green-deep);
   border-radius: var(--app-radius-pill);
   font-weight: 700;
@@ -62,7 +62,7 @@
 
 .wb-shell .wb-btn.el-button--primary,
 .wb-shell .el-button.wb-btn.el-button--primary {
-  --el-button-bg-color: linear-gradient(135deg, var(--app-green), var(--app-green-deep));
+  --el-button-bg-color: linear-gradient(135deg, var(--app-green-deep), var(--app-blue));
   --el-button-border-color: var(--app-green-deep);
   --el-button-text-color: #fff;
   --el-button-hover-bg-color: var(--app-green-deep);
@@ -99,8 +99,8 @@
 
 .wb-shell .wb-chip.is-active,
 .wb-shell .wb-chip.on {
-  background: rgba(142,200,160,0.18);
-  border-color: rgba(142,200,160,0.5);
+  background: rgba(162,210,255,0.18);
+  border-color: rgba(162,210,255,0.55);
   color: var(--app-green-deep);
 }
 
@@ -108,6 +108,146 @@
   font-size: 11px; font-weight: 700;
   color: var(--app-green-deep);
   padding: 4px 10px;
-  background: rgba(142,200,160,0.14);
+  background: rgba(162,210,255,0.16);
   border-radius: var(--app-radius-pill);
+}
+
+/* AppCard / AppTabs / AppTable 兼容层 */
+.wb-shell .ac-card,
+.workflow-workbench .ac-card {
+  background: var(--app-glass-card) !important;
+  border: 1px solid var(--app-glass-border) !important;
+  border-radius: var(--app-radius-lg) !important;
+  box-shadow: var(--app-shadow-md) !important;
+  backdrop-filter: blur(var(--app-glass-blur));
+  -webkit-backdrop-filter: blur(var(--app-glass-blur));
+  transition:
+    transform var(--app-duration-slow) var(--app-ease),
+    box-shadow var(--app-duration-slow) var(--app-ease),
+    border-color var(--app-duration) var(--app-ease);
+}
+
+.wb-shell .ac-card:hover,
+.workflow-workbench .ac-card:hover {
+  border-color: rgba(162,210,255,0.72) !important;
+  box-shadow: var(--app-shadow-lg) !important;
+}
+
+.wb-shell .ac-card--dashed,
+.workflow-workbench .ac-card--dashed {
+  border-style: dashed !important;
+}
+
+.wb-shell .ac-card--yellow,
+.wb-shell .ac-card--brown,
+.wb-shell .ac-card--blue,
+.wb-shell .ac-card--green,
+.wb-shell .ac-card--teal,
+.workflow-workbench .ac-card--yellow,
+.workflow-workbench .ac-card--brown,
+.workflow-workbench .ac-card--blue,
+.workflow-workbench .ac-card--green,
+.workflow-workbench .ac-card--teal {
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.68), rgba(212,234,255,0.52)) !important;
+}
+
+.wb-shell .ac-card--purple,
+.wb-shell .ac-card--pink,
+.workflow-workbench .ac-card--purple,
+.workflow-workbench .ac-card--pink {
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.66), rgba(200,182,255,0.24)) !important;
+}
+
+.wb-shell .ac-tabs,
+.workflow-workbench .ac-tabs {
+  --el-color-primary: var(--app-green-deep);
+  color: var(--ac-ink);
+}
+
+.wb-shell .ac-tabs .el-tabs__header,
+.workflow-workbench .ac-tabs .el-tabs__header {
+  margin: 0;
+}
+
+.wb-shell .ac-tabs .el-tabs__nav-wrap::after,
+.workflow-workbench .ac-tabs .el-tabs__nav-wrap::after {
+  height: 0;
+}
+
+.wb-shell .ac-tabs .el-tabs__nav,
+.workflow-workbench .ac-tabs .el-tabs__nav {
+  gap: 6px;
+  padding: 4px;
+  border-radius: var(--app-radius-pill);
+  background: rgba(255,255,255,0.34);
+  border: 1px solid var(--app-glass-border);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.wb-shell .ac-tabs .el-tabs__item,
+.workflow-workbench .ac-tabs .el-tabs__item {
+  height: 32px;
+  padding: 0 16px;
+  border-radius: var(--app-radius-pill);
+  color: var(--ac-ink-muted);
+  font-weight: 800;
+  transition:
+    color var(--app-duration) var(--app-ease),
+    background var(--app-duration) var(--app-ease);
+}
+
+.wb-shell .ac-tabs .el-tabs__item:hover,
+.workflow-workbench .ac-tabs .el-tabs__item:hover {
+  color: var(--app-green-deep);
+}
+
+.wb-shell .ac-tabs .el-tabs__item.is-active,
+.workflow-workbench .ac-tabs .el-tabs__item.is-active {
+  color: var(--app-green-deep);
+  background: rgba(162,210,255,0.20);
+}
+
+.wb-shell .ac-tabs .el-tabs__active-bar,
+.workflow-workbench .ac-tabs .el-tabs__active-bar {
+  display: none;
+}
+
+.wb-shell .ac-tabs--shadow .el-tabs__nav,
+.workflow-workbench .ac-tabs--shadow .el-tabs__nav {
+  box-shadow: 0 8px 24px rgba(31,38,135,0.08);
+}
+
+.wb-shell .ac-tabs--leaf .el-tabs__item.is-active::before,
+.workflow-workbench .ac-tabs--leaf .el-tabs__item.is-active::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 999px;
+  display: inline-block;
+  background: var(--app-green-deep);
+  box-shadow: 0 0 0 4px rgba(162,210,255,0.24);
+  vertical-align: middle;
+}
+
+.wb-shell .ac-table,
+.workflow-workbench .ac-table {
+  width: 100%;
+  border-radius: var(--app-radius-md) !important;
+  background: rgba(255,255,255,0.30) !important;
+  overflow: hidden;
+}
+
+.wb-shell .ac-table th.el-table__cell,
+.workflow-workbench .ac-table th.el-table__cell {
+  background: rgba(255,255,255,0.50) !important;
+  color: var(--ac-ink) !important;
+  font-weight: 800 !important;
+}
+
+.wb-shell .ac-table td.el-table__cell,
+.workflow-workbench .ac-table td.el-table__cell {
+  color: var(--ac-ink);
 }

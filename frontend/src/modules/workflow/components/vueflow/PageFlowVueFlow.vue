@@ -333,14 +333,14 @@ watch(
         @edge-click="onEdgeClick"
         @node-context-menu="onNodeContextMenu"
       >
-        <Background pattern-color="#c4b5a0" :gap="18" :size="1.2" bg-color="#fdf8f0" />
+        <Background pattern-color="#a2d2ff" :gap="18" :size="1.2" bg-color="rgba(255,255,255,0.28)" />
         <Controls position="bottom-left" />
         <MiniMap
           position="bottom-right"
           :pannable="true"
           :zoomable="true"
-          node-color="#19c8b9"
-          mask-color="rgba(139,115,85,0.18)"
+          node-color="#6f9fd8"
+          mask-color="rgba(162,210,255,0.22)"
         />
       </VueFlow>
     </div>
@@ -424,8 +424,8 @@ watch(
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
-  background: linear-gradient(180deg, #fffbf5, #f5ede0);
-  border-bottom: 2px solid var(--ac-border);
+  background: rgba(255,255,255,0.46);
+  border-bottom: 1px solid var(--app-glass-border);
   flex-shrink: 0;
 }
 .vf-docbar {
@@ -448,41 +448,41 @@ watch(
   padding: 6px 10px;
   border: 2px solid var(--ac-border);
   border-radius: 10px;
-  background: #fff;
+  background: rgba(255,255,255,0.58);
   font-size: 13px;
   font-weight: 800;
   font-family: inherit;
   color: var(--ac-ink);
   outline: none;
 }
-.doc-name:focus { border-color: var(--ac-teal); }
+.doc-name:focus { border-color: var(--app-blue); }
 .kind-chip {
   font-size: 11px;
   font-weight: 800;
   padding: 3px 8px;
   border-radius: 999px;
-  background: rgba(25, 200, 185, 0.16);
-  color: #0d7a70;
+  background: rgba(162,210,255,0.16);
+  color: var(--app-green-deep);
   flex-shrink: 0;
 }
 .id-chip {
   font-size: 10px;
   font-weight: 700;
-  color: #0d7a70;
+  color: var(--app-green-deep);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: rgba(25, 200, 185, 0.1);
+  background: rgba(162,210,255,0.12);
   padding: 3px 8px;
   border-radius: 8px;
 }
 .btn.back {
   flex-shrink: 0;
   background: #fff;
-  color: #0d7a70;
-  border-color: rgba(25, 200, 185, 0.35);
+  color: var(--app-green-deep);
+  border-color: rgba(162,210,255,0.42);
 }
 .btn {
   padding: 7px 12px;
@@ -494,18 +494,18 @@ watch(
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 2px 0 rgba(139, 115, 85, 0.08);
+  box-shadow: var(--app-shadow-sm);
   transition: all 0.15s ease;
 }
 .btn:hover {
   border-color: var(--ac-teal);
-  color: #0d7a70;
+  color: var(--app-green-deep);
   transform: translateY(-1px);
 }
 .btn.primary {
-  background: var(--ac-teal);
+  background: linear-gradient(135deg, var(--app-green-deep), var(--app-blue));
   color: #fff;
-  border-color: #14b3a5;
+  border-color: var(--app-green-deep);
 }
 .btn.primary:hover { filter: brightness(1.05); color: #fff; }
 .btn.start {
@@ -526,7 +526,7 @@ watch(
 }
 .hint {
   font-size: 12px;
-  color: #0d7a70;
+  color: var(--app-green-deep);
   font-weight: 600;
   margin-left: 4px;
 }
@@ -581,7 +581,7 @@ watch(
   position: fixed;
   inset: 0;
   z-index: 9990;
-  background: rgba(74, 58, 40, 0.35);
+  background: rgba(74,78,105,0.26);
 }
 .el-picker {
   position: fixed;
@@ -590,21 +590,23 @@ watch(
   max-height: 420px;
   display: flex;
   flex-direction: column;
-  background: #fffbf5;
-  border: 2px solid rgba(139, 115, 85, 0.28);
+  background: rgba(255,255,255,0.78);
+  border: 1px solid rgba(255,255,255,0.68);
   border-radius: 14px;
-  box-shadow: 0 16px 40px rgba(74, 58, 40, 0.28);
+  box-shadow: 0 18px 48px rgba(74,78,105,0.12);
   overflow: hidden;
   font-family: 'Nunito', 'Noto Sans SC', system-ui, sans-serif;
-  color: #4a3a28;
+  color: #4a4e69;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 .el-picker-head {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 12px 14px;
-  background: linear-gradient(180deg, #fff9ef, #f3eadc);
-  border-bottom: 2px solid rgba(139, 115, 85, 0.16);
+  background: rgba(255,255,255,0.46);
+  border-bottom: 1px solid rgba(162,210,255,0.24);
 }
 .el-picker-head strong {
   font-size: 14px;
@@ -613,8 +615,8 @@ watch(
 .el-picker-count {
   font-size: 11px;
   font-weight: 700;
-  color: #0d7a70;
-  background: rgba(25, 200, 185, 0.16);
+  color: #6f9fd8;
+  background: rgba(162,210,255,0.16);
   padding: 2px 8px;
   border-radius: 999px;
 }
@@ -624,31 +626,31 @@ watch(
   background: transparent;
   font-size: 18px;
   cursor: pointer;
-  color: #988b7a;
+  color: #9a8c98;
   line-height: 1;
   padding: 2px 6px;
   border-radius: 8px;
 }
-.el-picker-close:hover { background: rgba(139, 115, 85, 0.12); color: #4a3a28; }
+.el-picker-close:hover { background: rgba(162,210,255,0.14); color: #4a4e69; }
 .el-picker-search {
   margin: 10px 12px 6px;
   padding: 9px 12px;
-  border: 2px solid rgba(139, 115, 85, 0.22);
+  border: 1.5px solid rgba(255,255,255,0.68);
   border-radius: 10px;
   background: #ffffff;
-  color: #4a3a28;
+  color: #4a4e69;
   font-size: 13px;
   font-weight: 600;
   font-family: inherit;
   outline: none;
 }
-.el-picker-search:focus { border-color: #19c8b9; }
+.el-picker-search:focus { border-color: #a2d2ff; }
 .el-picker-list {
   flex: 1;
   overflow: auto;
   padding: 6px 8px 12px;
   max-height: 300px;
-  background: #fffbf5;
+  background: rgba(255,255,255,0.40);
 }
 .el-picker-item {
   width: 100%;
@@ -657,21 +659,21 @@ watch(
   gap: 10px;
   padding: 10px 10px;
   margin-bottom: 4px;
-  border: 1.5px solid rgba(139, 115, 85, 0.14);
+  border: 1.5px solid rgba(162,210,255,0.22);
   border-radius: 12px;
   background: #ffffff;
   text-align: left;
   cursor: pointer;
   font-family: inherit;
-  color: #4a3a28;
+  color: #4a4e69;
 }
 .el-picker-item:hover:not(:disabled) {
-  border-color: #19c8b9;
-  background: rgba(25, 200, 185, 0.1);
+  border-color: #a2d2ff;
+  background: rgba(162,210,255,0.12);
 }
 .el-picker-item.used {
   opacity: 0.55;
-  background: #f5ede0;
+  background: rgba(235,237,238,0.58);
   cursor: not-allowed;
 }
 .el-ico {
@@ -689,7 +691,7 @@ watch(
 .el-label {
   font-size: 13px;
   font-weight: 800;
-  color: #4a3a28;
+  color: #4a4e69;
 }
 .el-xpath {
   font-size: 10px;
@@ -705,19 +707,19 @@ watch(
   font-weight: 800;
   padding: 3px 8px;
   border-radius: 999px;
-  background: rgba(139, 115, 85, 0.12);
-  color: #988b7a;
+  background: rgba(162,210,255,0.14);
+  color: #9a8c98;
   align-self: center;
 }
 .el-tag.add {
-  background: rgba(25, 200, 185, 0.18);
-  color: #0d7a70;
+  background: rgba(162,210,255,0.18);
+  color: #6f9fd8;
 }
 .el-picker-empty {
   padding: 24px 12px;
   text-align: center;
   font-size: 12px;
   font-weight: 700;
-  color: #988b7a;
+  color: #9a8c98;
 }
 </style>

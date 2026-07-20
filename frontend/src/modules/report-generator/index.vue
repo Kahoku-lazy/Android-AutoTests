@@ -307,19 +307,19 @@ const tableAreaMinHeight = computed(() => (
   TABLE_TOOLBAR_HEIGHT + TABLE_HEADER_HEIGHT + displayRowCount.value * TABLE_ROW_HEIGHT
 ))
 
-// ── AppTable columns（百分比宽度，铺满容器）──
+// ── AppTable columns（报告表 11 列，使用最小宽度避免数据挤压）──
 const columns = [
-  { title: 'Run ID', dataIndex: 'run_id', width: '13%' },
-  { title: '设备', dataIndex: 'device_serial', width: '9%' },
-  { title: '任务名称', dataIndex: 'task_name', width: '20%' },
-  { title: '创建人', dataIndex: 'creator', width: '7%' },
-  { title: '用例数', dataIndex: 'case_count', width: '5%', align: 'center' },
-  { title: '通过', dataIndex: 'passed', width: '5%', align: 'center' },
-  { title: '失败', dataIndex: 'failed', width: '5%', align: 'center' },
-  { title: '通过率', dataIndex: 'rate', width: '11%' },
-  { title: '状态', dataIndex: 'status', width: '7%', align: 'center' },
-  { title: '耗时', dataIndex: 'duration', width: '6%', align: 'center' },
-  { title: '时间', dataIndex: 'started_at', width: '12%' },
+  { title: 'Run ID', dataIndex: 'run_id', minWidth: 220 },
+  { title: '设备', dataIndex: 'device_serial', minWidth: 140 },
+  { title: '任务名称', dataIndex: 'task_name', minWidth: 220 },
+  { title: '创建人', dataIndex: 'creator', minWidth: 100 },
+  { title: '用例数', dataIndex: 'case_count', minWidth: 78, align: 'center' },
+  { title: '通过', dataIndex: 'passed', minWidth: 70, align: 'center' },
+  { title: '失败', dataIndex: 'failed', minWidth: 70, align: 'center' },
+  { title: '通过率', dataIndex: 'rate', minWidth: 160 },
+  { title: '状态', dataIndex: 'status', minWidth: 100, align: 'center' },
+  { title: '耗时', dataIndex: 'duration', minWidth: 90, align: 'center' },
+  { title: '时间', dataIndex: 'started_at', minWidth: 150 },
 ]
 
 function openReport(run) {
@@ -503,12 +503,12 @@ function openCaseBreakdown(type, tab = 'detail') {
       <AppTabs
         class="report-tabs"
         :style="{ minHeight: `${tableAreaMinHeight + 88}px` }"
-        :items="statusTabs"
+        :items="statusAppTabs"
         v-model="activeFilter"
         :leaf-animation="true"
         :shadow="true"
       >
-        <template v-for="tab in statusTabs" #[tab.key] :key="tab.key">
+        <template v-for="tab in statusAppTabs" #[tab.key] :key="tab.key">
           <AppCard
             pattern="brown"
             class="table-card"

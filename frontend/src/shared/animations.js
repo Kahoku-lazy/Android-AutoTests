@@ -165,7 +165,7 @@ export function rippleEffect(event, color = 'rgba(255,255,255,0.35)') {
 }
 
 // ── Glow pulse (subtle breathing glow) ──
-export function glowPulse(targets, color = '#ffafcc') {
+export function glowPulse(targets, color = '#a2d2ff') {
   return animate(targets, {
     boxShadow: [
       `0 0 0 0 ${color}00`,
@@ -273,7 +273,7 @@ export function bannerSlideIn(el) {
 
 // ── Particle burst on action ──
 export function particleBurst(x, y, container, count = 12) {
-  const colors = ['#ffafcc', '#a2d2ff', '#bde0fe', '#cdb4db', '#ffc8dd']
+  const colors = ['#a2d2ff', '#bde0fe', '#d4eaff', '#e2ece9', '#eef7ff']
   for (let i = 0; i < count; i++) {
     const dot = document.createElement('div')
     const angle = (Math.PI * 2 * i) / count

@@ -25,16 +25,6 @@ const isCreator = currentUser && props.item.created_by === currentUser;
 const isEditing = props.item.editing_by && props.item.editing_by !== currentUser;
 const locking = ref(false);
 
-function cardColor() {
-  if (props.item.enabled) return "app-teal";
-  return "brown";
-}
-
-function cardPattern() {
-  if (props.item.enabled) return "app-teal";
-  return "brown";
-}
-
 function stepCount() {
   try {
     const data = props.item.steps_data;
@@ -73,8 +63,6 @@ async function toggleLock() {
 
 <template>
   <AppCard
-    :color="cardColor()"
-    :pattern="cardPattern()"
     class="case-card"
     @click="$emit('select', item)"
   >
@@ -185,8 +173,8 @@ async function toggleLock() {
   font-family: "SF Mono", "Fira Code", Consolas, monospace;
   font-size: 11px;
   font-weight: 600;
-  color: #9f927d;
-  background: rgba(139, 115, 85, 0.06);
+  color: var(--app-text-secondary);
+  background: rgba(162,210,255,0.14);
   padding: 2px 8px;
   border-radius: 6px;
 }
@@ -210,15 +198,15 @@ async function toggleLock() {
 }
 
 .case-card__priority--p2 {
-  background: rgba(139, 115, 85, 0.08);
-  color: #9f927d;
+  background: rgba(162,210,255,0.14);
+  color: var(--app-text-secondary);
 }
 
 .case-card__title {
   font-family: Nunito, "Noto Sans SC", sans-serif;
   font-weight: 700;
   font-size: 15px;
-  color: #4a3a28;
+  color: var(--app-text);
   margin: 0;
   line-height: 1.4;
   overflow: hidden;
@@ -235,19 +223,19 @@ async function toggleLock() {
 .meta-tag {
   font-size: 11px;
   font-weight: 600;
-  color: #8a7b66;
-  background: rgba(139, 115, 85, 0.06);
+  color: var(--app-text-secondary);
+  background: rgba(162,210,255,0.12);
   padding: 2px 8px;
   border-radius: 8px;
 }
 
 .meta-tag--dir {
-  color: #11a89b;
-  background: rgba(25, 200, 185, 0.08);
+  color: var(--app-green-deep);
+  background: rgba(162,210,255,0.16);
 }
 
 .meta-tag--steps {
-  color: #9f927d;
+  color: var(--app-text-secondary);
 }
 
 .meta-tag--user {
@@ -259,8 +247,8 @@ async function toggleLock() {
 .case-card__editing-badge {
   font-size: 11px;
   font-weight: 700;
-  color: #8a6d14;
-  background: rgba(247, 205, 103, 0.25);
+  color: #9a6a1f;
+  background: rgba(255,214,165,0.28);
   padding: 4px 10px;
   border-radius: 8px;
 }
@@ -270,6 +258,6 @@ async function toggleLock() {
   gap: 8px;
   margin-top: 8px;
   padding-top: 12px;
-  border-top: 1px dashed rgba(196, 184, 158, 0.4);
+  border-top: 1px dashed rgba(162,210,255,0.38);
 }
 </style>

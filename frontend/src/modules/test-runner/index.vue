@@ -583,12 +583,12 @@ async function loadDevices() {
         <div class="tabs-panel">
           <AppTabs
             class="runner-tabs"
-            :items="filterTabs"
+            :items="filterAppTabs"
             v-model="activeTab"
             :leaf-animation="true"
             :shadow="true"
           >
-            <template v-for="tab in filterTabs" #[tab.key] :key="tab.key">
+            <template v-for="tab in filterAppTabs" #[tab.key] :key="tab.key">
               <div v-if="tasksForTab(tab.key).length" class="card-grid">
                 <div
                   v-for="(task, idx) in tasksForTab(tab.key)"
@@ -810,7 +810,7 @@ async function loadDevices() {
               :max="300"
               style="width: 160px"
             />
-            <span style="margin-left: 8px; font-size: 12px; color: #9f927d"
+            <span style="margin-left: 8px; font-size: 12px; color: var(--app-text-secondary)"
               >秒（最小 5s）</span
             >
           </el-form-item>
@@ -883,11 +883,13 @@ async function loadDevices() {
   flex-direction: column;
   min-height: 0;
   margin-top: 12px;
-  border: 1px solid var(--ac-border, rgba(139, 115, 85, 0.16));
+  border: 1px solid var(--app-glass-border);
   border-radius: var(--ac-radius, 16px);
-  background: var(--ac-paper, #fffbf5);
+  background: var(--app-glass-card);
   overflow: hidden;
-  box-shadow: var(--ac-shadow, 0 4px 16px rgba(139, 115, 85, 0.1));
+  box-shadow: var(--app-shadow-sm);
+  backdrop-filter: blur(var(--app-glass-blur));
+  -webkit-backdrop-filter: blur(var(--app-glass-blur));
 }
 .tabs-panel :deep(.el-tabs) {
   flex: 1;
@@ -921,15 +923,15 @@ async function loadDevices() {
 .task-card {
   cursor: pointer;
   border-radius: var(--ac-radius, 16px);
-  border: 1px solid var(--ac-border, rgba(139, 115, 85, 0.16));
+  border: 1px solid var(--app-glass-border);
   border-left-width: 4px;
   padding: 16px 18px 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   transition: all 0.2s;
-  background: var(--ac-paper, #fffbf5);
-  box-shadow: 0 2px 8px rgba(139, 115, 85, 0.06);
+  background: rgba(255,255,255,0.48);
+  box-shadow: var(--app-shadow-sm);
 }
 .task-card--running {
   background: linear-gradient(135deg, #e8edff 0%, #f3f6ff 100%);
@@ -952,13 +954,13 @@ async function loadDevices() {
   border-left-color: #e85f5f;
 }
 .task-card--idle {
-  background: rgb(247, 243, 223);
-  border-color: rgba(139, 115, 85, 0.12);
-  border-left-color: #b8a898;
+  background: rgba(255,255,255,0.48);
+  border-color: rgba(162,210,255,0.30);
+  border-left-color: var(--app-text-muted);
 }
 .task-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 18px rgba(61, 52, 40, 0.1);
+  box-shadow: var(--app-shadow-md);
 }
 
 /* Row 1: device + status */
@@ -976,7 +978,7 @@ async function loadDevices() {
 .tc-name {
   font-size: 15px;
   font-weight: 700;
-  color: #4a3a28;
+  color: var(--app-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -995,14 +997,14 @@ async function loadDevices() {
 }
 .tc-id {
   font-size: 11px;
-  color: #988b7a;
+  color: var(--app-text-muted);
   font-family: "Cascadia Code", Consolas, monospace;
   opacity: 0.7;
 }
 .tc-device {
   font-size: 12px;
   font-weight: 600;
-  color: #6b5e4e;
+  color: var(--app-text-secondary);
   font-family: "Cascadia Code", Consolas, monospace;
 }
 .tc-status-badge {
@@ -1021,7 +1023,7 @@ async function loadDevices() {
   align-items: center;
   gap: 4px 12px;
   font-size: 12px;
-  color: #6b5b48;
+  color: var(--app-text-secondary);
 }
 .tc-creator-tag {
   font-size: 11px;
@@ -1033,7 +1035,7 @@ async function loadDevices() {
 }
 .tc-time {
   font-size: 11px;
-  color: #9f927d;
+  color: var(--app-text-secondary);
 }
 
 /* Row 3: current case + progress */
@@ -1048,14 +1050,14 @@ async function loadDevices() {
   font-weight: 600;
 }
 .tc-current-name {
-  color: #4a3a28;
+  color: var(--app-text);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .tc-progress-text {
-  color: #6b5b48;
+  color: var(--app-text-secondary);
   font-weight: 600;
 }
 
@@ -1064,11 +1066,11 @@ async function loadDevices() {
   display: flex;
   gap: 6px;
   padding-top: 2px;
-  border-top: 1px solid rgba(139, 115, 85, 0.08);
+  border-top: 1px solid rgba(162,210,255,0.18);
 }
 
 .empty-hint {
-  color: #988b7a;
+  color: var(--app-text-secondary);
   padding: 60px 0;
   text-align: center;
   font-size: 15px;

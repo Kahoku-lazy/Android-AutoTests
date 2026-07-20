@@ -15,6 +15,7 @@ const modules = computed(() => {
   return [
     {
       id: 'device-pool', title: '设备管理',
+      icon: '▣',
       subtitle: '设备池 · 连接 · 锁管理',
       path: '/devices', cardColor: 'app-blue', pattern: 'app-blue',
       stats: { label: '在线设备', value: String(s.devices?.online ?? 0), total: String(s.devices?.total ?? 0) },
@@ -22,6 +23,7 @@ const modules = computed(() => {
     },
     {
       id: 'element-locator', title: '元素定位',
+      icon: '⌖',
       subtitle: '截图 · XPath · 验证',
       path: '/elements', cardColor: 'purple', pattern: 'purple',
       stats: { label: '已定位', value: String(s.elements?.total ?? 0), total: '' },
@@ -29,6 +31,7 @@ const modules = computed(() => {
     },
     {
       id: 'test-runner', title: '执行引擎',
+      icon: '▥',
       subtitle: '任务调度 · WebSocket 日志',
       path: '/runner', cardColor: 'app-pink', pattern: 'app-pink',
       stats: { label: '运行中', value: String(s.runs?.active ?? 0), total: String(s.runs?.total ?? 0) },
@@ -36,6 +39,7 @@ const modules = computed(() => {
     },
     {
       id: 'case-manager', title: '测试用例',
+      icon: '▤',
       subtitle: 'YAML DSL · 步骤编排',
       path: '/cases', cardColor: 'app-teal', pattern: 'app-teal',
       stats: { label: '用例数', value: String(s.cases?.total ?? 0), total: '' },
@@ -43,6 +47,7 @@ const modules = computed(() => {
     },
     {
       id: 'workflow', title: '工作流',
+      icon: '⇄',
       subtitle: '页面关系图 · Scratch 积木',
       path: '/workflow', cardColor: 'app-orange', pattern: 'app-orange',
       stats: { label: '工作台', value: 'Demo', total: '' },
@@ -50,6 +55,7 @@ const modules = computed(() => {
     },
     {
       id: 'report-generator', title: '测试报告',
+      icon: '▧',
       subtitle: 'Allure · 趋势分析',
       path: '/reports', cardColor: 'app-green', pattern: 'app-green',
       stats: { label: '报告数', value: String(s.reports?.total ?? 0), total: '' },
@@ -57,6 +63,7 @@ const modules = computed(() => {
     },
     {
       id: 'ai-assistant', title: 'AI 助手',
+      icon: '✦',
       subtitle: 'Agent · 对话 · 编排',
       path: '/ai-assistant', cardColor: 'app-orange', pattern: 'app-orange',
       stats: { label: '智能体', value: String(s.agents?.total ?? 0), total: '' },
@@ -64,6 +71,7 @@ const modules = computed(() => {
     },
     {
       id: 'element-manager', title: '元素管理',
+      icon: '□',
       subtitle: '页面 · 元素库 · 复用',
       path: '/element-mgr', cardColor: 'brown', pattern: 'brown',
       stats: { label: '页面数', value: String(s.elements?.pages ?? 0), total: '' },
@@ -109,6 +117,7 @@ function setCardRef(el, idx) {
         >
           <div class="module-card__inner">
             <div class="module-card__top">
+              <span class="module-card__icon soft-icon soft-icon--blue">{{ mod.icon }}</span>
               <div class="module-card__stats" v-if="mod.stats.value">
                 <span class="module-card__stats-value">{{ mod.stats.value }}</span>
                 <span v-if="mod.stats.total" class="module-card__stats-sep">/</span>
@@ -188,7 +197,16 @@ function setCardRef(el, idx) {
 
 .module-card__top {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.module-card__icon {
+  width: 38px;
+  height: 38px;
+  font-size: 17px;
+  flex-shrink: 0;
 }
 
 .module-card__stats {

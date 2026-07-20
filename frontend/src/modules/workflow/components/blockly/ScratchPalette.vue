@@ -88,39 +88,39 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #fff9ef 0%, #f3eadc 100%);
-  border-right: 2px solid var(--ac-border, rgba(139, 115, 85, 0.16));
+  background: var(--app-glass-card);
+  border-right: 1px solid var(--app-glass-border);
   min-height: 0;
 }
 .palette-head {
   padding: 14px 12px 10px;
-  border-bottom: 2px solid var(--ac-border-soft, rgba(139, 115, 85, 0.08));
+  border-bottom: 1px solid rgba(162,210,255,0.18);
 }
 .palette-title {
   font-size: 15px;
   font-weight: 800;
-  color: var(--ac-ink, #4a3a28);
+  color: var(--app-text);
 }
 .palette-desc {
   margin: 2px 0 10px;
   font-size: 11px;
-  color: var(--ac-ink-faint, #988b7a);
+  color: var(--app-text-secondary);
   font-weight: 600;
 }
 .palette-search {
   width: 100%;
   padding: 8px 10px;
-  border: 2px solid var(--ac-border, rgba(139, 115, 85, 0.16));
+  border: 1.5px solid var(--app-glass-border);
   border-radius: 12px;
-  background: #fffbf5;
-  color: var(--ac-ink, #4a3a28);
+  background: rgba(255,255,255,0.48);
+  color: var(--app-text);
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
   outline: none;
 }
 .palette-search:focus {
-  border-color: var(--ac-teal, #19c8b9);
+  border-color: var(--app-blue);
 }
 .palette-scroll {
   flex: 1;

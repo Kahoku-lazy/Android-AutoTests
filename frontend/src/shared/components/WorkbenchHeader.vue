@@ -13,7 +13,7 @@ defineProps({
 <template>
   <header class="wb-header">
     <div class="brand">
-      <span class="brand-mark">{{ mark }}</span>
+      <span class="brand-mark soft-icon soft-icon--blue">{{ mark }}</span>
       <div class="brand-text">
         <h1 class="brand-title">{{ title }}</h1>
         <p v-if="subtitle || $slots.subtitle" class="brand-sub">
@@ -33,8 +33,10 @@ defineProps({
   align-items: center;
   gap: 16px;
   padding: 12px 18px;
-  background: rgba(255, 251, 245, 0.95);
-  border-bottom: 2px solid var(--ac-border, rgba(139, 115, 85, 0.16));
+  background: rgba(255,255,255,0.52);
+  border-bottom: 1px solid var(--ac-border, rgba(255,255,255,0.68));
+  backdrop-filter: blur(var(--app-glass-blur, 20px));
+  -webkit-backdrop-filter: blur(var(--app-glass-blur, 20px));
   flex-shrink: 0;
   z-index: 10;
 }
@@ -50,9 +52,7 @@ defineProps({
   display: grid;
   place-items: center;
   font-size: 22px;
-  background: linear-gradient(145deg, var(--app-green), var(--app-green-deep));
   border-radius: 14px;
-  border: 1.5px solid rgba(142,200,160,0.25);
   flex-shrink: 0;
 }
 .brand-text { min-width: 0; }
@@ -60,14 +60,14 @@ defineProps({
   margin: 0;
   font-size: 16px;
   font-weight: 800;
-  color: var(--ac-ink, #4a3a28);
+  color: var(--ac-ink, #4a4e69);
   line-height: 1.25;
 }
 .brand-sub {
   margin: 2px 0 0;
   font-size: 12px;
   font-weight: 700;
-  color: var(--ac-ink-faint, #988b7a);
+  color: var(--ac-ink-faint, #a8b5c4);
   line-height: 1.35;
 }
 .header-actions {

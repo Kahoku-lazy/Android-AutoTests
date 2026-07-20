@@ -28,7 +28,7 @@ const accent = computed(() => {
   if (isStart.value) return '#6fba2c'
   if (isEnd.value) return '#8a8a96'
   if (isPopup.value) return '#e85f5f'
-  return '#19c8b9'
+  return '#6f9fd8'
 })
 
 const icon = computed(() => {
@@ -226,18 +226,20 @@ watch(
 <style scoped>
 .pf-node {
   min-width: 228px;
-  background: var(--ac-paper, #fffbf5);
-  border: 2px solid var(--ac-border, rgba(139, 115, 85, 0.16));
+  background: rgba(255,255,255,0.58);
+  border: 1px solid var(--app-glass-border);
   border-left: 5px solid var(--accent);
   border-radius: 16px;
   padding: 10px 12px 12px;
   font-family: var(--ac-font, inherit);
-  color: var(--ac-ink, #4a3a28);
-  box-shadow: 0 4px 14px rgba(139, 115, 85, 0.12);
+  color: var(--app-text);
+  box-shadow: var(--app-shadow-sm);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 .pf-node.selected {
-  border-color: var(--ac-teal, #19c8b9);
-  box-shadow: 0 0 0 3px rgba(25, 200, 185, 0.22), 0 6px 18px rgba(139, 115, 85, 0.12);
+  border-color: var(--app-blue);
+  box-shadow: 0 0 0 3px rgba(162,210,255,0.24), var(--app-shadow-md);
 }
 .pf-node.popup {
   border-style: dashed;
@@ -279,7 +281,7 @@ watch(
   background: transparent;
   border: 2px solid transparent;
   border-radius: 8px;
-  color: var(--ac-ink, #4a3a28);
+  color: var(--app-text);
   font-size: 13px;
   font-weight: 800;
   padding: 2px 6px;
@@ -287,17 +289,17 @@ watch(
   font-family: inherit;
 }
 .pf-title:focus {
-  border-color: var(--ac-teal, #19c8b9);
-  background: var(--ac-cream, #fdf8f0);
+  border-color: var(--app-blue);
+  background: rgba(162,210,255,0.10);
 }
 .pf-kind {
   display: flex;
   gap: 4px;
   margin: 6px 0 4px;
   padding: 3px;
-  background: var(--ac-cream-deep, #f3eadc);
+  background: rgba(162,210,255,0.10);
   border-radius: 999px;
-  border: 1px solid var(--ac-border-soft, rgba(139, 115, 85, 0.1));
+  border: 1px solid rgba(162,210,255,0.20);
 }
 .kind-btn {
   flex: 1;
@@ -308,13 +310,13 @@ watch(
   font-weight: 800;
   font-family: inherit;
   background: transparent;
-  color: var(--ac-ink-faint, #988b7a);
+  color: var(--app-text-secondary);
   cursor: pointer;
 }
 .kind-btn.active {
   background: #fff;
   color: #3d7a12;
-  box-shadow: 0 1px 4px rgba(74, 58, 40, 0.12);
+  box-shadow: var(--app-shadow-sm);
 }
 .pf-pkg {
   display: flex;
@@ -326,17 +328,17 @@ watch(
 .pf-pkg label {
   font-size: 10px;
   font-weight: 800;
-  color: var(--ac-ink-faint, #988b7a);
+  color: var(--app-text-secondary);
   flex-shrink: 0;
 }
 .pkg-input {
   flex: 1;
   min-width: 0;
   padding: 4px 8px;
-  border: 1px solid var(--ac-border, rgba(139, 115, 85, 0.16));
+  border: 1px solid var(--app-glass-border);
   border-radius: 8px;
-  background: var(--ac-cream, #fdf8f0);
-  color: var(--ac-ink, #4a3a28);
+  background: rgba(255,255,255,0.50);
+  color: var(--app-text);
   font-size: 10px;
   font-family: ui-monospace, monospace;
   outline: none;
@@ -346,7 +348,7 @@ watch(
 }
 .pf-sub {
   font-size: 10px;
-  color: var(--ac-ink-faint, #988b7a);
+  color: var(--app-text-secondary);
   margin-bottom: 8px;
   padding-left: 4px;
   line-height: 1.4;
@@ -366,13 +368,13 @@ watch(
 .pf-port-name { color: var(--ac-ink-muted, #5c4a35); font-weight: 600; }
 .pf-port-type {
   font-size: 9px;
-  color: var(--ac-ink-faint, #988b7a);
-  border: 1px solid var(--ac-border, rgba(139,115,85,0.16));
+  color: var(--app-text-secondary);
+  border: 1px solid var(--app-glass-border);
   border-radius: 6px;
   padding: 0 5px;
   cursor: help;
   user-select: none;
-  background: var(--ac-cream, #fdf8f0);
+  background: rgba(255,255,255,0.42);
 }
 .pf-in-count {
   font-size: 10px;
@@ -389,8 +391,8 @@ watch(
   flex-shrink: 0;
 }
 .pf-actions button {
-  background: var(--ac-cream, #fdf8f0);
-  border: 1px solid var(--ac-border, rgba(139,115,85,0.16));
+  background: rgba(255,255,255,0.42);
+  border: 1px solid var(--app-glass-border);
   border-radius: 8px;
   color: var(--ac-ink-muted, #5c4a35);
   font-size: 11px;
@@ -399,8 +401,8 @@ watch(
   line-height: 18px;
 }
 .pf-actions button:hover {
-  border-color: var(--ac-teal, #19c8b9);
-  color: #0d7a70;
+  border-color: var(--app-blue);
+  color: var(--app-green-deep);
 }
 
 .pf-handle {
@@ -414,12 +416,12 @@ watch(
   right: auto !important;
   transform: none !important;
   flex-shrink: 0;
-  box-shadow: 0 0 0 1px rgba(139, 115, 85, 0.2);
+  box-shadow: 0 0 0 1px rgba(162,210,255,0.30);
 }
 .pf-handle.target { margin-right: 2px; order: -1; }
 .pf-handle.source { margin-left: 2px; }
 .pf-handle:hover {
-  box-shadow: 0 0 0 4px rgba(25, 200, 185, 0.28);
+  box-shadow: 0 0 0 4px rgba(162,210,255,0.30);
 }
 
 .pf-empty-end {
@@ -434,9 +436,9 @@ watch(
   width: 100%;
   margin-top: 8px;
   padding: 7px;
-  border: 2px dashed var(--ac-border, rgba(139,115,85,0.2));
+  border: 2px dashed var(--app-glass-border);
   border-radius: 12px;
-  background: rgba(25, 200, 185, 0.06);
+  background: rgba(162,210,255,0.10);
   color: var(--ac-ink-muted, #5c4a35);
   font-size: 11px;
   font-weight: 700;
@@ -444,8 +446,8 @@ watch(
   font-family: inherit;
 }
 .pf-add:hover {
-  border-color: var(--ac-teal, #19c8b9);
-  color: #0d7a70;
-  background: rgba(25, 200, 185, 0.12);
+  border-color: var(--app-blue);
+  color: var(--app-green-deep);
+  background: rgba(162,210,255,0.16);
 }
 </style>

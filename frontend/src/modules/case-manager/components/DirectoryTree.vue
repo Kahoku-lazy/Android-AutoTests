@@ -685,18 +685,18 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 8px;
   padding: 12px 10px;
-  border-bottom: 2px solid rgba(139, 115, 85, 0.12);
+  border-bottom: 2px solid rgba(162,210,255,0.18);
   flex-shrink: 0;
 }
 
 .tree-header--select {
-  background: rgba(25, 200, 185, 0.06);
+  background: rgba(162,210,255,0.12);
 }
 
 .tree-header__title {
   font-weight: 700;
   font-size: 13px;
-  color: #6b5b48;
+  color: var(--app-text);
   letter-spacing: 0.02em;
   white-space: nowrap;
   flex-shrink: 0;
@@ -736,11 +736,11 @@ onUnmounted(() => {
 }
 
 .tree-body :deep(.el-tree-node__content:hover) {
-  background: rgba(25, 200, 185, 0.08);
+  background: rgba(162,210,255,0.14);
 }
 
 .tree-body :deep(.el-tree-node.is-current > .el-tree-node__content) {
-  background: rgba(25, 200, 185, 0.14);
+  background: rgba(162,210,255,0.20);
 }
 
 /* Drag mode visual feedback */
@@ -755,13 +755,13 @@ onUnmounted(() => {
 /* Drop indicator style */
 .tree-body :deep(.el-tree__drop-indicator) {
   height: 2px;
-  background-color: #19c8b9;
+  background-color: var(--app-green-deep);
   border-radius: 1px;
 }
 
 .tree-body :deep(.el-tree-node.is-drop-inner > .el-tree-node__content) {
-  background: rgba(25, 200, 185, 0.18) !important;
-  box-shadow: inset 0 0 0 2px #19c8b9;
+  background: rgba(162,210,255,0.22) !important;
+  box-shadow: inset 0 0 0 2px var(--app-green-deep);
 }
 
 .tree-node {
@@ -786,7 +786,7 @@ onUnmounted(() => {
 .tree-node__name {
   flex: 1;
   min-width: 0;
-  color: #725d42;
+  color: var(--app-text);
   font-weight: 500;
 }
 
@@ -805,8 +805,8 @@ onUnmounted(() => {
 
 .tree-node__count {
   font-size: 10px;
-  color: #9f927d;
-  background: rgba(139, 115, 85, 0.08);
+  color: var(--app-text-secondary);
+  background: rgba(162,210,255,0.14);
   padding: 0 6px;
   border-radius: 10px;
   font-weight: 600;
@@ -817,7 +817,7 @@ onUnmounted(() => {
 
 .tree-node--l1 .tree-node__name {
   font-weight: 700;
-  color: #6b5b48;
+  color: var(--app-text);
 }
 
 .tree-node--l2 {
@@ -831,11 +831,11 @@ onUnmounted(() => {
 .tree-node--case .tree-node__name {
   font-style: italic;
   font-weight: 500;
-  color: #725d42;
+  color: var(--app-text-secondary);
 }
 
 .tree-node--case-disabled .tree-node__name {
-  color: #c4b89e;
+  color: var(--app-text-muted);
   text-decoration: line-through;
 }
 
@@ -859,33 +859,35 @@ onUnmounted(() => {
   color: #8b6914;
 }
 .tree-node__priority--p2 {
-  background: rgba(139, 115, 85, 0.08);
-  color: #9f927d;
+  background: rgba(162,210,255,0.14);
+  color: var(--app-text-secondary);
 }
 
 /* Context menu */
 .context-menu {
   position: fixed;
   z-index: 1000;
-  background: rgb(247, 243, 223);
-  border: 2px solid #c4b89e;
+  background: var(--app-glass-heavy);
+  border: 1px solid var(--app-glass-border);
   border-radius: 14px;
   padding: 6px 0;
   min-width: 160px;
-  box-shadow: 0 4px 16px rgba(61, 52, 40, 0.12);
+  box-shadow: var(--app-shadow-md);
+  backdrop-filter: blur(var(--app-glass-blur));
+  -webkit-backdrop-filter: blur(var(--app-glass-blur));
 }
 
 .context-menu__item {
   padding: 8px 16px;
   font-size: 13px;
-  color: #725d42;
+  color: var(--app-text);
   cursor: pointer;
   transition: background 0.15s ease;
 }
 
 .context-menu__item:hover {
-  background: rgba(25, 200, 185, 0.1);
-  color: #19c8b9;
+  background: rgba(162,210,255,0.16);
+  color: var(--app-green-deep);
 }
 
 .context-menu__item--danger:hover {
@@ -895,7 +897,7 @@ onUnmounted(() => {
 
 .context-menu__divider {
   height: 1px;
-  background: rgba(196, 184, 158, 0.4);
+  background: rgba(162,210,255,0.24);
   margin: 4px 8px;
 }
 
@@ -917,13 +919,13 @@ onUnmounted(() => {
 .tree-empty__text {
   font-size: 14px;
   font-weight: 600;
-  color: #988b7a;
+  color: var(--app-text-secondary);
   margin: 0 0 6px;
 }
 
 .tree-empty__hint {
   font-size: 12px;
-  color: #c4b89e;
+  color: var(--app-text-muted);
   margin: 0;
 }
 </style>

@@ -35,7 +35,7 @@ defineProps({
   top: -30px; right: -30px;
   width: 140px; height: 140px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(142,200,160,0.3), transparent);
+  background: radial-gradient(circle, rgba(162,210,255,0.32), transparent);
   pointer-events: none;
 }
 
@@ -48,14 +48,14 @@ defineProps({
   font-family: var(--app-font-display, Quicksand, sans-serif);
   font-size: 22px;
   font-weight: 700;
-  color: var(--app-text, #3D4A3B);
+  color: var(--app-text, #4a4e69);
   margin-bottom: 6px;
   letter-spacing: -0.5px;
 }
 
 .doc-hero__desc {
   font-size: 14px;
-  color: var(--app-text-secondary, #7A8B73);
+  color: var(--app-text-secondary, #9a8c98);
   margin: 0;
   max-width: 600px;
   font-weight: 600;

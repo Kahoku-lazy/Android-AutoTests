@@ -59,13 +59,13 @@ const ANIMAL_THEME = Blockly.Theme.defineTheme('autotest-scratch', {
   base: Blockly.Themes.Zelos,
   componentStyles: {
     workspaceBackgroundColour: '#f7f0e4',
-    toolboxBackgroundColour: '#f5ede0',
-    toolboxForegroundColour: '#4a3a28',
-    flyoutBackgroundColour: '#fffbf5',
-    flyoutForegroundColour: '#4a3a28',
+    toolboxBackgroundColour: '#eef7ff',
+    toolboxForegroundColour: '#4a4e69',
+    flyoutBackgroundColour: '#ffffff',
+    flyoutForegroundColour: '#4a4e69',
     flyoutOpacity: 1,
     scrollbarColour: '#c4b5a0',
-    insertionMarkerColour: '#19c8b9',
+    insertionMarkerColour: '#6f9fd8',
     insertionMarkerOpacity: 0.5,
     scrollbarOpacity: 0.5,
     cursorColour: '#8b7355',
@@ -463,8 +463,8 @@ watch(
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  background: linear-gradient(180deg, #fffbf5, #f5ede0);
-  border-bottom: 2px solid var(--ac-border);
+  background: rgba(255,255,255,0.46);
+  border-bottom: 1px solid var(--app-glass-border);
   flex-shrink: 0;
 }
 .toolbar-left,
@@ -493,9 +493,9 @@ watch(
   border-radius: 999px;
   font-size: 11px;
   font-weight: 800;
-  color: #0d7a70;
-  background: rgba(25, 200, 185, 0.16);
-  border: 1px solid rgba(25, 200, 185, 0.28);
+  color: var(--app-green-deep);
+  background: rgba(162,210,255,0.16);
+  border: 1px solid rgba(162,210,255,0.28);
 }
 .kind-chip {
   font-size: 11px;
@@ -508,27 +508,27 @@ watch(
 .id-chip {
   font-size: 10px;
   font-weight: 700;
-  color: #0d7a70;
+  color: var(--app-green-deep);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: rgba(25, 200, 185, 0.1);
+  background: rgba(162,210,255,0.12);
   padding: 3px 8px;
   border-radius: 8px;
 }
 .btn.back {
   background: #fff;
-  color: #0d7a70;
-  border-color: rgba(25, 200, 185, 0.35);
+  color: var(--app-green-deep);
+  border-color: rgba(162,210,255,0.42);
 }
 .case-picker-panel {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 10px 14px;
-  background: rgba(25, 200, 185, 0.08);
+  background: rgba(162,210,255,0.10);
   border-bottom: 2px solid var(--ac-border-soft);
   max-height: 220px;
   overflow: auto;
@@ -568,9 +568,9 @@ watch(
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: 0 2px 0 rgba(139, 115, 85, 0.08);
+  box-shadow: var(--app-shadow-sm);
 }
-.btn:hover { border-color: var(--ac-teal); color: #0d7a70; }
+.btn:hover { border-color: var(--app-blue); color: var(--app-green-deep); }
 .btn.primary {
   background: var(--ac-yellow);
   color: var(--ac-ink);
@@ -580,7 +580,7 @@ watch(
 .status {
   margin-left: auto;
   font-size: 12px;
-  color: #0d7a70;
+  color: var(--app-green-deep);
   font-weight: 800;
 }
 .bridge-panel {
@@ -627,9 +627,9 @@ watch(
   flex-direction: column;
   position: relative;
   background:
-    radial-gradient(circle at 20% 10%, rgba(247, 205, 103, 0.22), transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(25, 200, 185, 0.12), transparent 35%),
-    #f7f0e4;
+    radial-gradient(circle at 20% 10%, rgba(162,210,255,0.22), transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(111,185,141,0.12), transparent 35%),
+    rgba(255,255,255,0.28);
 }
 .stage-hint {
   display: flex;
@@ -645,8 +645,8 @@ watch(
 .hint-pill {
   padding: 3px 10px;
   border-radius: 999px;
-  background: rgba(25, 200, 185, 0.16);
-  color: #0d7a70;
+  background: rgba(162,210,255,0.16);
+  color: var(--app-green-deep);
   font-size: 11px;
   font-weight: 800;
 }

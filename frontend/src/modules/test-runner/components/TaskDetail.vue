@@ -481,7 +481,6 @@ async function removeTask() {
     <PageHeader
       title="任务详情 Task Detail"
       :subtitle="`设备 ${task.deviceSerial} · ${task.caseIds?.length || 0} 个用例 · ${task.loopCount} 轮`"
-      color="app-yellow"
     />
 
     <div class="doc-body">
@@ -557,7 +556,7 @@ async function removeTask() {
       <section v-if="task.caseItems?.length" class="section-block">
         <h3 class="sec-title">
           📋 用例执行列表
-          <span class="sec-badge" style="background:#19c8b9;">{{ task.caseItems.length }}</span>
+          <span class="sec-badge sec-badge--cases">{{ task.caseItems.length }}</span>
         </h3>
         <p class="sec-sub">点击用例展开查看步骤实时执行状态。当前执行中的用例自动展开。</p>
 
@@ -566,7 +565,7 @@ async function removeTask() {
           <div class="case-header" @click="toggleCase(ci.id)">
             <span class="case-expand-icon">▶</span>
             <span class="case-id-badge" :style="{
-              background: task.running && task.currentCaseTitle === ci.title ? '#889df0' : '#19c8b9'
+              background: task.running && task.currentCaseTitle === ci.title ? '#889df0' : 'var(--app-green-deep)'
             }">{{ ci.id }}</span>
             <div class="case-title-area">
               <span class="case-title-text">{{ ci.title }}</span>
@@ -703,44 +702,48 @@ async function removeTask() {
 
 /* ── Info card ── */
 .info-card {
-  background: linear-gradient(135deg, #fef9ef 0%, #fdf0d5 100%);
-  border-radius: 14px; border: 1px solid rgba(139,115,85,0.1);
+  background: var(--app-glass-card);
+  border-radius: 14px; border: 1px solid var(--app-glass-border);
   padding: 20px 24px; display: flex; flex-direction: column; gap: 14px;
+  box-shadow: var(--app-shadow-sm);
+  backdrop-filter: blur(var(--app-glass-blur));
+  -webkit-backdrop-filter: blur(var(--app-glass-blur));
 }
 .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 20px; }
 .info-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .info-item.full-width { grid-column: 1 / -1; }
-.info-item--name { padding-bottom: 4px; border-bottom: 1px dashed rgba(139,115,85,0.12); margin-bottom: 2px; }
+.info-item--name { padding-bottom: 4px; border-bottom: 1px dashed rgba(162,210,255,0.24); margin-bottom: 2px; }
 .info-value.task-name { font-size: 15px; line-height: 1.4; word-break: break-word; }
-.info-label { color: #9f927d; font-weight: 500; white-space: nowrap; }
-.info-value { color: #4A3A28; font-weight: 600; }
+.info-label { color: var(--app-text-secondary); font-weight: 500; white-space: nowrap; }
+.info-value { color: var(--app-text); font-weight: 600; }
 .info-value.current-case { color: #409eff; }
 .info-tag { font-size: 11px; font-weight: 700; color: #fff; padding: 2px 10px; border-radius: 12px; white-space: nowrap; }
 .info-tag.creator { background: #b39ef3; }
 .info-progress { margin-top: 2px; }
-.info-actions { display: flex; gap: 8px; padding-top: 4px; border-top: 1px solid rgba(139,115,85,0.08); }
+.info-actions { display: flex; gap: 8px; padding-top: 4px; border-top: 1px solid rgba(162,210,255,0.18); }
 
 /* ── Section titles ── */
 .section-block { margin-top: 4px; }
 .sec-title {
-  font-weight: 800; font-size: 16px; color: #4A3A28;
+  font-weight: 800; font-size: 16px; color: var(--app-text);
   display: flex; align-items: center; gap: 8px; margin-bottom: 2px;
 }
 .sec-badge {
   font-size: 11px; font-weight: 800; color: #fff;
   padding: 2px 10px; border-radius: 50px;
 }
-.sec-sub { font-size: 12px; color: #9f927d; margin-bottom: 14px; }
+.sec-badge--cases { background: var(--app-green-deep); }
+.sec-sub { font-size: 12px; color: var(--app-text-secondary); margin-bottom: 14px; }
 
 /* ── Case card ── */
 .case-card {
-  background: rgb(247,243,223); border: 1px solid #e8e2d6;
+  background: rgba(255,255,255,0.48); border: 1px solid var(--app-glass-border);
   border-radius: 18px; margin-bottom: 14px; overflow: hidden;
   transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
-  box-shadow: 0 1px 3px rgba(61,52,40,0.05);
+  box-shadow: var(--app-shadow-sm);
 }
-.case-card:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(61,52,40,0.08); }
-.case-card.expanded { border-color: #c4b89e; }
+.case-card:hover { transform: translateY(-1px); box-shadow: var(--app-shadow-md); }
+.case-card.expanded { border-color: rgba(162,210,255,0.62); }
 .case-card.bug-card { border-left: 4px solid #e85f5f; }
 
 .case-header {
@@ -748,9 +751,9 @@ async function removeTask() {
   padding: 16px 22px; cursor: pointer; user-select: none;
   transition: background 0.15s;
 }
-.case-header:hover { background: rgba(245,240,215,0.8); }
+.case-header:hover { background: rgba(162,210,255,0.12); }
 .case-expand-icon {
-  font-size: 11px; color: #9f927d; width: 16px; flex-shrink: 0;
+  font-size: 11px; color: var(--app-text-secondary); width: 16px; flex-shrink: 0;
   transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
 }
 .case-card.expanded .case-expand-icon { transform: rotate(90deg); }
@@ -761,14 +764,14 @@ async function removeTask() {
 }
 .case-title-area { flex: 1; min-width: 0; }
 .case-title-text {
-  font-size: 15px; font-weight: 700; color: #4A3A28;
+  font-size: 15px; font-weight: 700; color: var(--app-text);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.bug-header-sub { font-size: 11px; color: #9f927d; margin-top: 2px; }
+.bug-header-sub { font-size: 11px; color: var(--app-text-secondary); margin-top: 2px; }
 .case-status-text { font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 50px; flex-shrink: 0; }
-.case-stats { display: flex; gap: 16px; font-size: 12px; font-weight: 600; color: #725d42; flex-shrink: 0; }
+.case-stats { display: flex; gap: 16px; font-size: 12px; font-weight: 600; color: var(--app-text-secondary); flex-shrink: 0; }
 .case-stats span { white-space: nowrap; }
-.stat-total { color: #9f927d; }
+.stat-total { color: var(--app-text-secondary); }
 .stat-pass { color: #6fba2c; }
 .stat-fail { color: #e85f5f; }
 
@@ -795,32 +798,32 @@ async function removeTask() {
   margin: 0 22px 12px; padding: 10px 14px;
   background: rgba(232,95,95,0.04); border-radius: 10px;
   border: 1px dashed rgba(232,95,95,0.2);
-  font-size: 12px; font-weight: 600; color: #725d42;
+  font-size: 12px; font-weight: 600; color: var(--app-text-secondary);
 }
-.bug-meta-label { color: #9f927d; }
+.bug-meta-label { color: var(--app-text-secondary); }
 .bug-meta-value { color: #e85f5f; font-weight: 700; }
 
 /* ── Step list ── */
 .step-list { padding: 0 22px 18px 38px; display: flex; flex-direction: column; gap: 8px; }
-.step-empty { padding: 24px 22px 18px 38px; color: #9f927d; font-size: 13px; text-align: center; }
+.step-empty { padding: 24px 22px 18px 38px; color: var(--app-text-secondary); font-size: 13px; text-align: center; }
 
 .step-card {
   display: flex; align-items: stretch; border-radius: 12px;
   overflow: hidden; transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
-  box-shadow: 0 2px 4px 0 rgba(61,52,40,0.06);
-  border: 1px solid #e8e2d6;
+  box-shadow: var(--app-shadow-sm);
+  border: 1px solid var(--app-glass-border);
 }
 .step-strip { width: 5px; flex-shrink: 0; border-radius: 5px 0 0 5px; }
-.step-body { flex: 1; padding: 12px 16px; background: #fff; display: flex; flex-direction: column; gap: 4px; }
+.step-body { flex: 1; padding: 12px 16px; background: rgba(255,255,255,0.52); display: flex; flex-direction: column; gap: 4px; }
 .step-header-row { display: flex; align-items: center; gap: 8px; }
-.step-index { font-size: 12px; font-weight: 800; color: #9f927d; font-family: 'Cascadia Code', Consolas, monospace; }
+.step-index { font-size: 12px; font-weight: 800; color: var(--app-text-secondary); font-family: 'Cascadia Code', Consolas, monospace; }
 .step-type-tag {
   font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px;
-  background: rgba(139,115,85,0.08); color: #8b7355; text-transform: uppercase;
+  background: rgba(162,210,255,0.14); color: var(--app-text-secondary); text-transform: uppercase;
 }
 .step-status-tag { font-size: 11px; font-weight: 700; padding: 2px 12px; border-radius: 50px; margin-left: auto; }
-.step-desc { font-size: 13px; font-weight: 600; color: #725d42; line-height: 1.4; }
-.step-xpath { font-size: 11px; color: #9f927d; font-family: 'Cascadia Code', Consolas, monospace; margin-top: 2px; }
+.step-desc { font-size: 13px; font-weight: 600; color: var(--app-text); line-height: 1.4; }
+.step-xpath { font-size: 11px; color: var(--app-text-secondary); font-family: 'Cascadia Code', Consolas, monospace; margin-top: 2px; }
 .step-fail-reason {
   font-size: 12px; font-weight: 600; color: #e85f5f;
   background: rgba(232,95,95,0.05); padding: 8px 12px; border-radius: 8px;
@@ -828,11 +831,11 @@ async function removeTask() {
 }
 
 /* ── Step states ── */
-.step-pending .step-strip { background: #d5cfc4; }
-.step-pending .step-body { background: #fafaf7; }
-.step-pending .step-index, .step-pending .step-desc, .step-pending .step-xpath { color: #bfb8a8; }
-.step-pending .step-status-tag { background: #e8e4da; color: #a09784; }
-.step-pending .step-type-tag { background: rgba(139,115,85,0.04); color: #bfb8a8; }
+.step-pending .step-strip { background: var(--app-text-muted); }
+.step-pending .step-body { background: rgba(255,255,255,0.34); }
+.step-pending .step-index, .step-pending .step-desc, .step-pending .step-xpath { color: var(--app-text-muted); }
+.step-pending .step-status-tag { background: rgba(162,210,255,0.12); color: var(--app-text-secondary); }
+.step-pending .step-type-tag { background: rgba(162,210,255,0.08); color: var(--app-text-muted); }
 
 .step-running { animation: stepPulse 1.8s cubic-bezier(0.4,0,0.2,1) infinite; }
 .step-running .step-strip { background: #889df0; }
@@ -858,7 +861,7 @@ async function removeTask() {
   border-radius: 12px; overflow: hidden;
   min-height: 420px;
 }
-.log-title { color: #e8e2d6; }
+.log-title { color: #e6eef7; }
 .log-sub { color: #8f8a7d; flex-shrink: 0; }
 .log-card-body {
   flex: 1; min-height: 300px; overflow-y: auto; margin-top: 10px;
@@ -874,7 +877,7 @@ async function removeTask() {
 .log-warn { color: #e6a23c; }
 .log-empty { text-align: center; color: #666; padding: 40px; font-size: 13px; }
 
-.not-found { text-align: center; color: #9f927d; padding: 80px 0; font-size: 15px; }
+.not-found { text-align: center; color: var(--app-text-secondary); padding: 80px 0; font-size: 15px; }
 .not-found p { margin-bottom: 16px; }
 
 @media (max-width: 768px) {

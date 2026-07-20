@@ -386,7 +386,6 @@ onBeforeRouteLeave((_to, _from, next) => {
     <PageHeader
       :title="isNew ? '新建用例 New Case' : '编辑用例 Edit Case'"
       subtitle="定义用例基本信息、编排执行步骤，支持从元素库快速选取 XPath"
-      color="app-yellow"
     />
 
     <!-- Read-only banner -->
@@ -634,7 +633,7 @@ onBeforeRouteLeave((_to, _from, next) => {
                 :value="d.serial"
               >
                 <span>{{ d.model || d.serial }}</span>
-                <span style="float: right; color: #9f927d; font-size: 12px">{{
+                <span class="device-option-serial">{{
                   d.serial
                 }}</span>
               </el-option>
@@ -736,6 +735,12 @@ onBeforeRouteLeave((_to, _from, next) => {
 }
 
 :deep(.el-input__append) {
-  background: var(--app-bg-warm, #f0e8d8) !important;
+  background: rgba(162,210,255,0.12) !important;
+}
+
+.device-option-serial {
+  float: right;
+  color: var(--app-text-secondary);
+  font-size: 12px;
 }
 </style>

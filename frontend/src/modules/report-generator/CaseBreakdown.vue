@@ -158,9 +158,9 @@ function stepTypeLabel(type) {
       </div>
 
       <AppTabs
-        v-if="viewTabs.length"
+        v-if="viewAppTabs.length"
         class="view-tabs"
-        :items="viewTabs"
+        :items="viewAppTabs"
         v-model="activeTab"
         :leaf-animation="true"
         :shadow="true"

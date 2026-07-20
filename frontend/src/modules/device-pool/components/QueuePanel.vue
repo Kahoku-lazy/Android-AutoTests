@@ -57,16 +57,18 @@ function formatTime(seconds) {
 
 <style scoped>
 .queue-badge {
-  background: var(--accent-pink, #f56c6c);
+  background: linear-gradient(135deg, var(--app-green-deep), var(--app-blue));
   color: #fff;
   padding: 4px 12px;
-  border-radius: 50px;
+  border-radius: var(--app-radius-pill);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
+  border: 1px solid rgba(255,255,255,0.68);
+  box-shadow: var(--app-shadow-sm);
   cursor: pointer;
   user-select: none;
 }
 .queue-badge:hover {
-  opacity: 0.85;
+  opacity: 0.9;
 }
 </style>

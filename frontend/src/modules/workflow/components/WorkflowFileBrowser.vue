@@ -276,8 +276,8 @@ function fmtTime(iso: string) {
   padding: 16px 18px 20px;
   overflow: auto;
   background:
-    radial-gradient(circle at 10% 0%, rgba(247, 205, 103, 0.18), transparent 40%),
-    #fdf8f0;
+    radial-gradient(circle at 10% 0%, rgba(162,210,255,0.22), transparent 40%),
+    transparent;
 }
 .board-head {
   display: flex;
@@ -291,7 +291,7 @@ function fmtTime(iso: string) {
   margin: 0;
   font-size: 20px;
   font-weight: 800;
-  color: var(--ac-ink, #4a3a28);
+  color: var(--app-text);
 }
 .board-sub {
   margin: 4px 0 0;
@@ -313,9 +313,9 @@ function fmtTime(iso: string) {
 }
 .btn.ghost:hover,
 .btn.flow:hover {
-  border-color: var(--ac-teal, #19c8b9);
-  color: #0d7a70;
-  background: rgba(25, 200, 185, 0.08);
+  border-color: var(--app-blue);
+  color: var(--app-green-deep);
+  background: rgba(162,210,255,0.14);
 }
 .btn.case:hover {
   border-color: #e0b52e;
@@ -323,13 +323,13 @@ function fmtTime(iso: string) {
   background: rgba(247, 205, 103, 0.2);
 }
 .btn.solid.flow {
-  background: var(--ac-teal, #19c8b9);
+  background: linear-gradient(135deg, var(--app-green-deep), var(--app-blue));
   color: #fff;
-  border: 2px solid #14b3a5;
+  border: 2px solid var(--app-green-deep);
   border-style: solid;
 }
 .btn.solid.case {
-  background: var(--ac-yellow, #f7cd67);
+  background: rgba(255,214,165,0.72);
   color: var(--ac-ink);
   border: 2px solid #e0b52e;
   border-style: solid;
@@ -339,7 +339,7 @@ function fmtTime(iso: string) {
   padding: 5px 12px;
   border-radius: 999px;
   border: 1.5px solid var(--ac-border);
-  background: #fffbf5;
+  background: var(--app-glass-card);
   font-size: 11px;
   font-weight: 800;
   font-family: inherit;
@@ -347,9 +347,9 @@ function fmtTime(iso: string) {
   color: var(--ac-ink-muted);
 }
 .chip.on {
-  background: rgba(25, 200, 185, 0.16);
-  border-color: rgba(25, 200, 185, 0.4);
-  color: #0d7a70;
+  background: rgba(162,210,255,0.18);
+  border-color: rgba(162,210,255,0.55);
+  color: var(--app-green-deep);
 }
 .empty {
   flex: 1;
@@ -379,9 +379,9 @@ function fmtTime(iso: string) {
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  border: 2px solid rgba(139, 115, 85, 0.16);
+  border: 1px solid var(--app-glass-border);
   border-radius: 12px;
-  background: linear-gradient(180deg, #fff9ef, #f3eadc);
+  background: rgba(255,255,255,0.42);
   font-family: inherit;
   font-size: 13px;
   font-weight: 800;
@@ -391,7 +391,7 @@ function fmtTime(iso: string) {
 }
 .section-title.static { cursor: default; }
 .section-title:not(.static):hover { border-color: var(--ac-teal); }
-.chev { width: 14px; color: #988b7a; }
+.chev { width: 14px; color: var(--app-text-secondary); }
 .sec-ico { font-size: 15px; }
 .sec-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sec-count {
@@ -399,16 +399,16 @@ function fmtTime(iso: string) {
   font-weight: 800;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(139, 115, 85, 0.12);
+  background: rgba(162,210,255,0.14);
   color: var(--ac-ink-muted);
 }
 .enter {
   font-size: 11px;
-  color: #0d7a70;
+  color: var(--app-green-deep);
   padding: 2px 8px;
   border-radius: 8px;
 }
-.enter:hover { background: rgba(25, 200, 185, 0.16); }
+.enter:hover { background: rgba(162,210,255,0.16); }
 .section-body { padding: 10px 2px 0 8px; }
 .sec-empty {
   padding: 12px 14px;
@@ -422,7 +422,7 @@ function fmtTime(iso: string) {
 .linkish {
   border: none;
   background: transparent;
-  color: #0d7a70;
+  color: var(--app-green-deep);
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
@@ -438,18 +438,18 @@ function fmtTime(iso: string) {
   padding: 14px;
   border: 2px solid var(--ac-border);
   border-radius: 16px;
-  background: #fffbf5;
+  background: rgba(255,255,255,0.48);
   cursor: pointer;
   font-family: inherit;
-  box-shadow: 0 3px 10px rgba(139, 115, 85, 0.08);
+  box-shadow: var(--app-shadow-sm);
   transition: transform 0.12s ease, border-color 0.12s ease;
 }
 .file-card:hover {
   transform: translateY(-2px);
   border-color: var(--ac-teal);
 }
-.file-card.page_flow { border-left: 5px solid #19c8b9; }
-.file-card.test_case { border-left: 5px solid #f7cd67; }
+.file-card.page_flow { border-left: 5px solid var(--app-green-deep); }
+.file-card.test_case { border-left: 5px solid #ffd6a5; }
 .file-top {
   display: flex;
   align-items: center;
@@ -472,11 +472,11 @@ function fmtTime(iso: string) {
   border: none;
   background: transparent;
   cursor: pointer;
-  color: #988b7a;
+  color: var(--app-text-secondary);
   padding: 2px 5px;
   border-radius: 6px;
 }
-.file-ops button:hover { background: rgba(139,115,85,0.12); }
+.file-ops button:hover { background: rgba(162,210,255,0.14); }
 .file-ops button.danger:hover { color: #e85f5f; }
 .file-name {
   font-size: 14px;
@@ -488,7 +488,7 @@ function fmtTime(iso: string) {
 .file-id {
   font-size: 9px;
   font-weight: 700;
-  color: #0d7a70;
+  color: var(--app-green-deep);
   margin-bottom: 6px;
   word-break: break-all;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -503,13 +503,13 @@ function fmtTime(iso: string) {
   margin-top: 10px;
   font-size: 11px;
   font-weight: 800;
-  color: #0d7a70;
+  color: var(--app-green-deep);
 }
 .rename-inp {
   width: 100%;
   margin-bottom: 6px;
   padding: 4px 8px;
-  border: 2px solid #19c8b9;
+  border: 2px solid var(--app-green-deep);
   border-radius: 8px;
   font-size: 13px;
   font-weight: 800;

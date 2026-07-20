@@ -1,5 +1,5 @@
 /**
- * anime.js 动效配套样式 — Soft Glass 绿色系
+ * anime.js 动效配套样式 — Soft Glass 蓝白系
  */
 /* 按钮颜色变体 */
 .wb-shell .wb-btn.wb-btn--teal.el-button--primary,
@@ -43,12 +43,12 @@
 }
 .wb-loader .dot:nth-child(1) { background: var(--app-green); }
 .wb-loader .dot:nth-child(2) { background: var(--app-blue); }
-.wb-loader .dot:nth-child(3) { background: #F0B0B8; }
+.wb-loader .dot:nth-child(3) { background: #e2ece9; }
 
 /* 旋转环 */
 .wb-spinner {
   width: 28px; height: 28px; border-radius: 50%;
-  border: 3px solid rgba(142,200,160,0.15);
+  border: 3px solid rgba(162,210,255,0.18);
   border-top-color: var(--app-green);
   border-right-color: var(--app-blue);
   display: inline-block;
@@ -56,7 +56,7 @@
 
 /* 选中描边 */
 .wb-select-ring {
-  outline: 2px solid rgba(142,200,160,0.65) !important;
+  outline: 2px solid rgba(162,210,255,0.72) !important;
   outline-offset: 3px;
   transition: outline-color var(--app-duration) ease;
 }
@@ -87,5 +87,5 @@
   transition: box-shadow 0.2s ease;
 }
 .wb-header .brand-mark:hover {
-  box-shadow: 0 4px 12px rgba(142,200,160,0.45);
+  box-shadow: 0 4px 12px rgba(162,210,255,0.45);
 }

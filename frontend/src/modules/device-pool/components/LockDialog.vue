@@ -109,12 +109,12 @@ function handleCancel() {
 .lock-label {
   font-size: 14px;
   font-weight: 700;
-  color: #794f27;
+  color: var(--app-text);
 }
 
 .lock-hint {
   font-size: 12px;
-  color: #9f927d;
+  color: var(--app-text-secondary);
   margin: 0;
   line-height: 1.4;
 }
@@ -123,23 +123,24 @@ function handleCancel() {
   width: 100%;
   padding: 10px 14px;
   font-size: 14px;
-  border: 1.5px solid #e8dcc8;
-  border-radius: 10px;
-  background: #fffaf5;
-  color: #794f27;
+  border: 1.5px solid var(--app-glass-border);
+  border-radius: var(--app-radius-pill);
+  background: var(--app-glass-card);
+  color: var(--app-text);
   font-family: inherit;
   cursor: pointer;
   appearance: auto;
+  box-shadow: var(--app-shadow-sm);
 }
 
 .lock-select:focus {
   outline: none;
-  border-color: #889df0;
-  box-shadow: 0 0 0 3px rgba(136, 157, 240, 0.12);
+  border-color: var(--app-blue);
+  box-shadow: 0 0 0 3px rgba(162,210,255,0.18);
 }
 
 .lock-model-text {
   font-size: 13px;
-  color: #9f927d;
+  color: var(--app-text-secondary);
 }
 </style>

@@ -62,6 +62,8 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 const mode = ref('login') // 'login' | 'register'
+const heroImageSrc = '/animal-assets/login-hero.jpg'
+const heroImageVisible = ref(true)
 
 // ── 注册表单校验 ──
 const regErrors = computed(() => {
@@ -170,7 +172,7 @@ function switchMode(m) {
           </p>
 
           <!-- ── 切换提示 ── -->
-          <AppCard v-if="showSwitchPrompt" color="warm-peach-pink" pattern="warm-peach-pink" class="login-card">
+          <AppCard v-if="showSwitchPrompt" color="app-blue" pattern="app-blue" class="login-card">
             <div class="switch-prompt">
               <p class="switch-prompt__title">检测到已登录账号</p>
               <p class="switch-prompt__user">{{ existingActive }}</p>
@@ -186,7 +188,7 @@ function switchMode(m) {
           </AppCard>
 
           <!-- ── 登录卡片 ── -->
-          <AppCard v-if="mode === 'login' && !showSwitchPrompt" color="warm-peach-pink" pattern="warm-peach-pink" class="login-card">
+          <AppCard v-if="mode === 'login' && !showSwitchPrompt" color="app-blue" pattern="app-blue" class="login-card">
             <form class="login-form" @submit.prevent="handleLogin">
               <div class="form-field">
                 <IconUser :size="18" class="form-icon" />
@@ -284,12 +286,14 @@ function switchMode(m) {
           </AppCard>
         </div>
 
-        <!-- 右侧 Nook 图标 -->
+        <!-- 右侧登录视觉图 -->
         <div class="hero__visual">
           <img
-            src="/animal-assets/animal_icon.png"
-            alt="Animal Island"
+            v-if="heroImageVisible"
+            :src="heroImageSrc"
+            alt="AI 自动化测试平台视觉图"
             class="hero__animal"
+            @error="heroImageVisible = false"
           />
         </div>
       </div>
@@ -307,25 +311,73 @@ function switchMode(m) {
   width: 100%;
   min-height: 100vh;
   overflow: hidden;
-  background: #7dc395;
+  background:
+    radial-gradient(circle at 16% 10%, var(--app-sky-cloud, rgba(255,255,255,0.82)), transparent 28%),
+    radial-gradient(circle at 84% 18%, rgba(162,210,255,0.5), transparent 32%),
+    radial-gradient(circle at 78% 90%, rgba(63,158,216,0.42), transparent 36%),
+    radial-gradient(circle at 14% 88%, rgba(111,185,141,0.42), transparent 34%),
+    linear-gradient(135deg, var(--app-sky, #dff5ff) 0%, var(--app-blue-light, #bde0fe) 38%, var(--app-ocean-soft, #a7d8ee) 68%, var(--app-forest-soft, #d6f2da) 100%);
+  background-size: 180% 180%;
+  animation: gradientBG 15s ease infinite;
   display: flex;
   flex-direction: column;
   position: relative;
+  font-family: 'Quicksand', 'Inter', 'Microsoft YaHei', sans-serif;
 }
 
-/* GPU 合成层背景 */
+/* Soft glass 背景光斑 */
 .login-page__bg {
   position: absolute;
   inset: 0;
-  background: url('/animal-assets/home_bg.webp') 0 0 / 400px auto repeat;
-  will-change: transform;
-  animation: bgScroll 80s linear infinite;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.login-page__bg::before,
+.login-page__bg::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.75;
   z-index: 0;
 }
 
-@keyframes bgScroll {
-  0%   { transform: translate3d(0, 0, 0); }
-  100% { transform: translate3d(-400px, -400px, 0); }
+.login-page__bg::before {
+  top: -120px;
+  left: -100px;
+  width: 400px;
+  height: 400px;
+  background: var(--app-sky-cloud, rgba(255,255,255,0.82));
+}
+
+.login-page__bg::after {
+  right: -80px;
+  bottom: -120px;
+  width: 320px;
+  height: 320px;
+  background: var(--app-ocean, #3f9ed8);
+}
+
+.login-page::before {
+  content: '';
+  position: absolute;
+  left: 10%;
+  bottom: -110px;
+  width: 360px;
+  height: 300px;
+  border-radius: 50%;
+  background: var(--app-forest, #6fb98d);
+  filter: blur(80px);
+  opacity: 0.48;
+  z-index: 0;
+  pointer-events: none;
+}
+
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .login-page > .hero,
@@ -345,10 +397,17 @@ function switchMode(m) {
 .hero__content {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 100px;
+  gap: 72px;
   align-items: center;
-  max-width: 960px;
+  max-width: 1020px;
   width: 100%;
+  padding: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .hero__text {
@@ -367,37 +426,47 @@ function switchMode(m) {
   display: inline-block;
   font-size: 12px;
   font-weight: 600;
-  padding: 2px 10px;
-  border-radius: 10px;
-  background: #e6f9f6;
-  color: #19c8b9;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  color: #4a4e69;
   text-shadow: none;
   margin-top: 6px;
 }
 
 .hero__desc {
   font-size: 17px;
-  color: #7c5734;
+  color: #6b6070;
   line-height: 1.7;
   margin: 0 0 28px;
   max-width: 520px;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.15);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.4);
 }
 
 .hero__visual {
-  text-align: center;
+  display: flex;
+  justify-content: center;
 }
 
 .hero__animal {
   width: 320px;
   height: 200px;
-  object-fit: contain;
-  filter: drop-shadow(0 8px 20px rgba(0,0,0,0.15));
+  object-fit: cover;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow: 0 18px 45px rgba(74, 78, 105, 0.18);
 }
 
 /* Login/Register card */
 .login-card {
   width: 380px;
+  background: rgba(255, 255, 255, 0.52) !important;
+  border: 1px solid rgba(255, 255, 255, 0.76) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.08) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 /* Switch prompt */
@@ -411,13 +480,13 @@ function switchMode(m) {
 }
 .switch-prompt__title {
   font-size: 14px;
-  color: #9f927d;
+  color: #9a8c98;
   font-weight: 600;
   margin: 0;
 }
 .switch-prompt__user {
   font-size: 22px;
-  color: #794f27;
+  color: #4a4e69;
   font-weight: 800;
   margin: 0;
 }
@@ -446,7 +515,7 @@ function switchMode(m) {
 }
 
 .form-icon {
-  color: var(--app-text-secondary, #9f927d);
+  color: #9a8c98;
   flex-shrink: 0;
 }
 
@@ -463,14 +532,14 @@ function switchMode(m) {
 
 .remember-label {
   font-size: 13px;
-  color: var(--app-text-secondary, #9f927d);
+  color: #9a8c98;
   font-weight: 500;
   user-select: none;
 }
 
 .login-toggle {
   text-align: center;
-  color: var(--app-text-secondary, #9f927d);
+  color: #9a8c98;
   cursor: pointer;
   font-size: 13px;
   margin: 16px 0 0;
@@ -482,7 +551,7 @@ function switchMode(m) {
 }
 
 .link {
-  color: var(--app-green-deep, #19c8b9);
+  color: #5e9ed6;
   font-weight: 600;
 }
 
@@ -505,15 +574,16 @@ function switchMode(m) {
   padding: 24px 40px;
   text-align: center;
   font-size: 12px;
-  color: #fff9e6;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-  opacity: 0.85;
+  color: rgba(74, 78, 105, 0.72);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.45);
+  opacity: 0.95;
 }
 
 @media (max-width: 768px) {
   .hero__content {
     grid-template-columns: 1fr;
     gap: 32px;
+    padding: 28px 20px;
   }
   .hero__text { text-align: center; }
   .hero__title-row { justify-content: center; }

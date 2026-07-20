@@ -1,6 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
-import { useRouter } from "vue-router";
+import { ref, onMounted } from "vue";
 import { animate } from "animejs";
 import { fetchDashboardStats, fetchRecentActivities } from "./api.js";
 
@@ -18,11 +17,9 @@ import {
 import StatsAppCard from "./components/StatsCard.vue";
 import TrendBarChart from "./components/TrendBarChart.vue";
 import TaskResultPanel from "./components/TaskResultPanel.vue";
-import QuickActions from "./components/QuickActions.vue";
 import ModuleNavigator from "./components/ModuleNavigator.vue";
 import ActivityTimeline from "./components/ActivityTimeline.vue";
 
-const router = useRouter();
 const loading = ref(true);
 const refreshing = ref(false);
 
@@ -47,14 +44,6 @@ const recentTasks = ref([]);
 const lastUpdated = ref("");
 const systemStatus = ref("normal");
 const activities = ref([]);
-
-const quickActions = computed(() => [
-  { label: "新建用例", action: () => router.push("/cases/new") },
-  { label: "执行测试", action: () => router.push("/runner") },
-  { label: "元素截图", action: () => router.push("/elements") },
-  { label: "AI 对话", action: () => router.push("/ai-assistant") },
-  { label: "查看报告", action: () => router.push("/reports") },
-]);
 
 async function loadData() {
   loading.value = true;
@@ -119,9 +108,12 @@ async function loadData() {
 async function refreshData() {
   refreshing.value = true;
   try {
-    const { data } = await fetchDashboardStats();
-    if (data.ok) {
-      const d = data.data;
+    const [statsRes, activitiesRes] = await Promise.allSettled([
+      fetchDashboardStats(),
+      fetchRecentActivities(),
+    ]);
+    if (statsRes.status === "fulfilled" && statsRes.value.data?.ok) {
+      const d = statsRes.value.data.data;
       stats.value = {
         devices: {
           online: d.devices?.online ?? 0,
@@ -165,6 +157,9 @@ async function refreshData() {
       recentTasks.value = d.recent_tasks ?? [];
       lastUpdated.value = d.last_updated ?? "";
       systemStatus.value = d.system_status ?? "normal";
+    }
+    if (activitiesRes.status === "fulfilled" && activitiesRes.value.data?.ok) {
+      activities.value = activitiesRes.value.data.data || [];
     }
   } catch {}
   refreshing.value = false;
@@ -279,19 +274,6 @@ onMounted(() => {
             <TaskResultPanel :tasks="recentTasks" :summary="executionSummary" />
           </el-card>
         </div>
-      </section>
-
-      <!-- 快捷操作 -->
-      <section class="doc-section">
-        <h3 class="doc-section__title">
-          快捷操作
-          <span class="doc-tag">Actions</span>
-        </h3>
-        <div class="doc-section__label">常用入口一键直达</div>
-        <QuickActions
-          :actions="quickActions"
-          @action="(act) => act.action?.()"
-        />
       </section>
 
       <!-- 功能模块 -->

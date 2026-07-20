@@ -1,5 +1,5 @@
 <script setup>
-/** Device Pool v2 — 设备管理主页面 per PRD §7 (animal-island-vue redesign) */
+/** Device Pool v2 — 设备管理主页面 per PRD-02 */
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { animate, stagger } from "animejs";
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -50,21 +50,18 @@ const networkDialog = ref({ visible: false, loading: false });
 // ── AppTabs filtering ──
 const activeFilter = ref("all");
 const filterAppTabs = [
-  { key: "all", label: "在线设备" },
+  { key: "all", label: "全部设备" },
+  { key: "online", label: "在线" },
   { key: "busy", label: "使用中" },
+  { key: "offline", label: "离线" },
 ];
 
-// 全局过滤掉离线设备
-const onlineDevices = computed(() =>
-  store.devices.filter(
-    (d) => d.status !== "OFFLINE" && d.status !== "DISCONNECTED",
-  ),
-);
-
 const filteredDevices = computed(() => {
-  if (activeFilter.value === "all") return onlineDevices.value;
-  if (activeFilter.value === "offline") return [];
-  return onlineDevices.value.filter(
+  if (activeFilter.value === "all") return store.devices;
+  if (activeFilter.value === "offline") return store.devices.filter(
+    (d) => d.status === "OFFLINE" || d.status === "DISCONNECTED",
+  );
+  return store.devices.filter(
     (d) => d.status === activeFilter.value.toUpperCase(),
   );
 });
@@ -79,16 +76,16 @@ watch(filteredDevices, () => {
   if (currentPage.value > totalPages.value) currentPage.value = totalPages.value
 })
 
-// ── AppTable columns definition (animal-island AppTable API) ──
+// ── AppTable columns definition — minWidth 保证内容完整，溢出时横向滚动 ──
 const columns = [
-  { dataIndex: "serial", title: "序列号", width: 220 },
-  { dataIndex: "model", title: "型号", width: 180 },
-  { dataIndex: "screen", title: "分辨率", width: 130, align: "center" },
-  { dataIndex: "status", title: "状态", width: 100, align: "center" },
-  { dataIndex: "connection_type", title: "连接", width: 88, align: "center" },
-  { dataIndex: "lock_status", title: "锁定状态", width: 130, align: "center" },
-  { dataIndex: "last_seen", title: "最后在线", width: 120 },
-  { dataIndex: "actions", title: "操作", width: 360, fixed: "right" },
+  { dataIndex: "serial", title: "序列号", minWidth: 200 },
+  { dataIndex: "model", title: "型号", minWidth: 120 },
+  { dataIndex: "screen", title: "分辨率", minWidth: 110, align: "center" },
+  { dataIndex: "status", title: "状态", minWidth: 160, align: "center" },
+  { dataIndex: "connection_type", title: "连接", minWidth: 90, align: "center" },
+  { dataIndex: "lock_status", title: "锁定", minWidth: 100, align: "center" },
+  { dataIndex: "last_seen", title: "最后在线", minWidth: 110 },
+  { dataIndex: "actions", title: "操作", width: 220, fixed: "right" },
 ];
 
 // ── Computed ──
@@ -301,8 +298,8 @@ function statusTag(status) {
   const map = {
     ONLINE: { type: "success", text: "在线" },
     BUSY: { type: "warning", text: "使用中" },
-    OFFLINE: { type: "info", text: "离线" },
-    DISCONNECTED: { type: "danger", text: "已断开" },
+    OFFLINE: { type: "info", text: "离线 · 不可用" },
+    DISCONNECTED: { type: "danger", text: "已断开 · 不可用" },
   };
   return map[status] || { type: "info", text: status };
 }
@@ -334,10 +331,10 @@ function connectionLabel(type) {
 </script>
 
 <template>
-  <div class="doc-page wb-shell dp-animal-theme">
+  <div class="doc-page wb-shell device-workbench">
     <WorkbenchHeader
       title="设备管理"
-      subtitle="扫描、连接、锁定 Android / iOS 设备，管理设备状态与使用队列"
+      subtitle="扫描、连接、锁定 Android 设备，管理设备状态与使用队列"
       mark="📱"
     >
       <template #actions>
@@ -362,12 +359,12 @@ function connectionLabel(type) {
         <div class="filter-bar">
           <AppTabs
             class="device-tabs"
-            :items="filterTabs"
+            :items="filterAppTabs"
             v-model="activeFilter"
             :leaf-animation="true"
             :shadow="true"
           >
-            <template v-for="tab in filterTabs" #[tab.key] :key="tab.key">
+            <template v-for="tab in filterAppTabs" #[tab.key] :key="tab.key">
               <div class="tab-panel">
                 <div class="table-toolbar">
                   <div class="table-toolbar-left">
@@ -410,7 +407,7 @@ function connectionLabel(type) {
                     </div>
                   </div>
                 </div>
-                <AppCard color="app-yellow" pattern="app-yellow" type="default" class="table-card">
+                <AppCard type="default" class="table-card">
                   <div class="device-table-wrapper">
                     <AppTable
                       :columns="columns"
@@ -544,6 +541,15 @@ function connectionLabel(type) {
                           "
                           @click="handleOccupyClick(record)"
                           >解除占用</el-button>
+                        <!-- Disconnect button: only for WIFI devices -->
+                        <el-button
+                          v-if="record.connection_type === 'WIFI'"
+                          class="wb-btn disconnect-btn"
+                          size="small"
+                          type="danger"
+                          plain
+                          @click="openDisconnectDialog(record.serial)"
+                          >断开</el-button>
                       </div>
                     </template>
 
@@ -579,7 +585,7 @@ function connectionLabel(type) {
 </template>
 
 <style scoped>
-.dp-animal-theme {
+.device-workbench {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -606,11 +612,13 @@ function connectionLabel(type) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 20px 24px 24px;
+  padding: 24px 28px 28px;
+  gap: 18px;
 }
 
 .device-section .doc-section__header {
   flex-shrink: 0;
+  padding-bottom: 2px;
 }
 
 /* ── Filter bar ── */
@@ -620,8 +628,8 @@ function connectionLabel(type) {
   display: flex;
   align-items: stretch;
   justify-content: space-between;
-  gap: 16px;
-  padding: 0 4px;
+  gap: 20px;
+  padding: 0;
   overflow: hidden;
 }
 .device-tabs {
@@ -648,7 +656,10 @@ function connectionLabel(type) {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding-top: 16px;
+  padding-top: 22px;
+}
+.device-tabs :deep(.el-tabs__header) {
+  margin-bottom: 0;
 }
 .device-tabs :deep(.el-tabs__inner) {
   flex: 1;
@@ -666,11 +677,11 @@ function connectionLabel(type) {
 }
 .filter-count {
   font-size: 13px;
-  color: #9f927d;
+  color: var(--app-text-secondary);
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
-  padding-top: 10px;
+  padding-top: 14px;
   align-self: flex-start;
 }
 
@@ -679,71 +690,71 @@ function connectionLabel(type) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
-  padding: 0 0 10px;
+  padding: 0 0 14px;
   flex-shrink: 0;
 }
-.table-toolbar-left { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.toolbar-actions { display: flex; align-items: center; gap: 8px; }
+.table-toolbar-left { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.toolbar-actions { display: flex; align-items: center; gap: 10px; }
 
 /* ── Toolbar icon buttons — AnimalButton root gets parent classes merged ── */
 .toolbar-icon-btn {
   gap: 5px !important;
   padding: 5px 14px !important;
-  border-radius: 10px !important;
+  border-radius: var(--app-radius-pill) !important;
 }
 
-/* 局域网连接 — 淡蓝 */
 .lan-btn {
-  background: rgba(136, 157, 240, 0.12) !important;
-  border-color: rgba(136, 157, 240, 0.25) !important;
-  color: #6b7fd4 !important;
+  background: rgba(162,210,255,0.16) !important;
+  border-color: rgba(162,210,255,0.38) !important;
+  color: var(--app-green-deep) !important;
 }
 .lan-btn:hover {
-  background: rgba(136, 157, 240, 0.24) !important;
-  border-color: rgba(136, 157, 240, 0.48) !important;
+  background: rgba(162,210,255,0.26) !important;
+  border-color: rgba(162,210,255,0.62) !important;
 }
 
-/* 刷新设备 — 淡绿 */
 .refresh-btn {
-  background: rgba(111, 186, 44, 0.10) !important;
-  border-color: rgba(111, 186, 44, 0.22) !important;
-  color: #5a9e1e !important;
+  background: rgba(111,185,141,0.14) !important;
+  border-color: rgba(111,185,141,0.34) !important;
+  color: #4c9a69 !important;
 }
 .refresh-btn:hover {
-  background: rgba(111, 186, 44, 0.20) !important;
-  border-color: rgba(111, 186, 44, 0.42) !important;
+  background: rgba(111,185,141,0.24) !important;
+  border-color: rgba(111,185,141,0.58) !important;
 }
 .page-size-control { display: flex; align-items: center; gap: 10px; }
-.toolbar-label { font-size: 12px; font-weight: 700; color: #8a7b66; white-space: nowrap; }
+.toolbar-label { font-size: 12px; font-weight: 700; color: var(--app-text-secondary); white-space: nowrap; }
 .page-size-btns { display: flex; gap: 6px; }
 .page-size-btn {
   min-width: 40px;
   padding: 5px 10px;
-  border-radius: 8px;
-  border: 1.5px solid rgba(139, 115, 85, 0.2);
-  background: #f7f3df;
-  color: #6b5b48;
+  border-radius: var(--app-radius-pill);
+  border: 1.5px solid var(--app-glass-border);
+  background: var(--app-glass-card);
+  color: var(--app-text-secondary);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  box-shadow: var(--app-shadow-sm);
+  transition: all var(--app-duration) var(--app-ease);
 }
-.page-size-btn:hover { border-color: #19c8b9; color: #19c8b9; }
+.page-size-btn:hover { border-color: var(--app-blue); color: var(--app-green-deep); }
 .page-size-btn.active {
-  background: rgba(25, 200, 185, 0.12);
-  border-color: #19c8b9;
-  color: #0f9a8e;
+  background: rgba(162,210,255,0.20);
+  border-color: rgba(162,210,255,0.62);
+  color: var(--app-green-deep);
 }
 .table-toolbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
-.page-info { font-size: 12px; color: #8a7b66; font-weight: 600; white-space: nowrap; }
+.page-info { font-size: 12px; color: var(--app-text-secondary); font-weight: 600; white-space: nowrap; }
 .page-nav { display: flex; gap: 8px; }
 
 /* ── AppTable card ── */
 .table-card {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -755,35 +766,62 @@ function connectionLabel(type) {
   flex-direction: column;
   overflow: hidden;
   padding: 0;
-  border-radius: 16px;
-  background: rgba(255, 248, 240, 0.85);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  border-radius: var(--app-radius-lg);
+  background: rgba(255,255,255,0.38);
+  backdrop-filter: blur(var(--app-glass-blur));
+  -webkit-backdrop-filter: blur(var(--app-glass-blur));
 }
 
 /* ── AppTable wrapper inside AppCard ── */
 .device-table-wrapper {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   padding: 0;
   overflow-y: auto;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
-  scrollbar-color: rgba(139, 115, 85, 0.25) transparent;
+  scrollbar-color: rgba(162,210,255,0.55) transparent;
 }
 .device-table-wrapper::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 .device-table-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(139, 115, 85, 0.25);
+  background: rgba(162,210,255,0.55);
   border-radius: 3px;
 }
 .device-table-wrapper :deep(.el-table),
 .device-table-wrapper :deep(.el-table__body-wrapper) {
   overflow: visible !important;
   max-height: none !important;
+}
+
+/* ── 表头与正文颜色区分 + 行列线条 ── */
+.device-table-wrapper :deep(.el-table th) {
+  background: rgba(162,210,255,0.13) !important;
+  color: var(--app-text-muted, #a8b5c4) !important;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  border-right: 1px solid rgba(162,210,255,0.22) !important;
+  border-bottom: 2px solid rgba(162,210,255,0.30) !important;
+}
+.device-table-wrapper :deep(.el-table td) {
+  color: var(--app-text, #4a4e69);
+  font-size: 13px;
+  border-right: 1px solid rgba(162,210,255,0.12) !important;
+  border-bottom: 1px solid rgba(162,210,255,0.10) !important;
+}
+.device-table-wrapper :deep(.el-table th:last-child),
+.device-table-wrapper :deep(.el-table td:last-child) {
+  border-right: none !important;
+}
+
+/* ── 操作列垂直居中 ── */
+.device-table-wrapper :deep(.el-table td:last-child) {
+  vertical-align: middle;
 }
 
 /* ── Row dot indicator ── */
@@ -798,8 +836,10 @@ function connectionLabel(type) {
 /* ── Status + occupancy badge ── */
 .status-cell {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  justify-content: center;
 }
 .occupied-badge {
   font-size: 11px;
@@ -812,33 +852,32 @@ function connectionLabel(type) {
   white-space: nowrap;
 }
 .executing-badge {
-  background: #fde8e8;
-  color: #e85f5f;
+  background: rgba(232,153,138,0.16);
+  color: var(--ac-red);
+  border: 1px solid rgba(232,153,138,0.30);
 }
 .process-badge {
-  background: #fef3cd;
-  color: #8a6d14;
+  background: rgba(255,214,165,0.26);
+  color: #9a6a1f;
+  border: 1px solid rgba(255,214,165,0.48);
 }
 .locked-badge {
-  background: #e8f0fe;
-  color: #5a7d9a;
+  background: rgba(162,210,255,0.18);
+  color: var(--app-green-deep);
+  border: 1px solid rgba(162,210,255,0.42);
 }
 
 /* ── Monospace serial text ── */
 .mono-text {
   font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
   font-size: 13px;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 180px;
-  display: inline-block;
   vertical-align: middle;
 }
 
 /* ── Text helpers ── */
 .text-muted {
-  color: #ccc;
+  color: var(--app-text-muted);
   font-size: 13px;
 }
 
@@ -854,7 +893,7 @@ function connectionLabel(type) {
 
 .connection-text {
   font-size: 13px;
-  color: #725d42;
+  color: var(--app-text);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -862,20 +901,45 @@ function connectionLabel(type) {
 /* ── Action buttons row ── */
 .action-btns {
   display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 3px;
+  align-items: stretch;
+}
+.action-btns .wb-btn {
+  width: 100%;
+  min-width: 0;
+  font-size: 11px;
+  padding: 3px 10px;
 }
 
 /* ── Action button colors ── */
 /* Lock: purple (unlocked) → red (locked, via danger prop) */
 .lock-btn:not(.lock-btn--locked) {
-  background: rgba(179, 158, 243, 0.15) !important;
-  border-color: rgba(179, 158, 243, 0.35) !important;
-  color: #8b7cf0 !important;
+  background: rgba(200,182,255,0.20) !important;
+  border-color: rgba(200,182,255,0.46) !important;
+  color: #7059bd !important;
 }
 .lock-btn:not(.lock-btn--locked):hover {
-  background: rgba(179, 158, 243, 0.28) !important;
-  border-color: rgba(179, 158, 243, 0.55) !important;
+  background: rgba(200,182,255,0.32) !important;
+  border-color: rgba(200,182,255,0.68) !important;
+}
+.occupy-btn {
+  background: rgba(255,214,165,0.24) !important;
+  border-color: rgba(255,214,165,0.52) !important;
+  color: #9a6a1f !important;
+}
+.occupy-btn:hover:not(.is-disabled) {
+  background: rgba(255,214,165,0.36) !important;
+  border-color: rgba(255,214,165,0.72) !important;
+}
+.disconnect-btn {
+  background: rgba(232,95,95,0.10) !important;
+  border-color: rgba(232,95,95,0.32) !important;
+  color: #d45656 !important;
+}
+.disconnect-btn:hover:not(.is-disabled) {
+  background: rgba(232,95,95,0.20) !important;
+  border-color: rgba(232,95,95,0.52) !important;
 }
 
 /* ── Lock status badge ── */
@@ -888,19 +952,19 @@ function connectionLabel(type) {
   display: inline-block;
 }
 .lock-badge--locked {
-  background: rgba(136, 157, 240, 0.15);
-  color: #6b7fd4;
-  border: 1px solid rgba(136, 157, 240, 0.3);
+  background: rgba(162,210,255,0.18);
+  color: var(--app-green-deep);
+  border: 1px solid rgba(162,210,255,0.42);
 }
 .lock-badge--shared {
-  background: rgba(111, 186, 44, 0.12);
-  color: #5a9e1e;
-  border: 1px solid rgba(111, 186, 44, 0.25);
+  background: rgba(111,185,141,0.16);
+  color: #4c9a69;
+  border: 1px solid rgba(111,185,141,0.36);
 }
 
 /* ── Empty state ── */
 .empty-state {
-  color: #9f927d;
+  color: var(--app-text-secondary);
   padding: 40px 0;
   text-align: center;
   font-size: 14px;

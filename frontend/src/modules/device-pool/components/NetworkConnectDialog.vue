@@ -177,24 +177,24 @@ function handleCancel() {
 .net-label {
   font-size: 14px;
   font-weight: 700;
-  color: #794f27;
+  color: var(--app-text);
 }
 
 .net-field.has-error :deep(input) {
-  border-color: #e05a5a;
-  box-shadow: 0 0 0 3px rgba(224, 90, 90, 0.12);
+  border-color: var(--ac-red, #e8998a);
+  box-shadow: 0 0 0 3px rgba(232,153,138,0.14);
 }
 
 .net-error {
   font-size: 12px;
-  color: #e05a5a;
+  color: var(--ac-red, #e8998a);
   margin: 0;
   line-height: 1.4;
 }
 
 .net-hint {
   font-size: 12px;
-  color: #9f927d;
+  color: var(--app-text-secondary);
   margin: 4px 0 0;
   line-height: 1.5;
 }

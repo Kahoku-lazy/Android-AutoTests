@@ -9,7 +9,10 @@ const props = defineProps({
   emptyText: { type: String, default: '暂无数据' },
 })
 const elColumns = computed(() =>
-  props.columns.map(col => ({ ...col, prop: col.dataIndex || col.prop }))
+  props.columns.map(col => {
+    const prop = col.dataIndex || col.prop
+    return { ...col, prop, label: col.label || col.title }
+  })
 )
 </script>
 <template>
@@ -25,9 +28,22 @@ const elColumns = computed(() =>
       v-for="col in elColumns"
       :key="col.dataIndex || col.prop"
       v-bind="col"
-    />
-    <template v-for="(_, slot) in $slots" :key="slot" #[slot]="scope">
-      <slot :name="slot" v-bind="scope" />
+    >
+      <template #default="scope">
+        <slot
+          v-if="$slots[`cell-${col.prop}`]"
+          :name="`cell-${col.prop}`"
+          :record="scope.row"
+          :row="scope.row"
+          :value="scope.row?.[col.prop]"
+          :column="scope.column"
+          :index="scope.$index"
+        />
+        <span v-else>{{ scope.row?.[col.prop] ?? '' }}</span>
+      </template>
+    </el-table-column>
+    <template v-if="$slots.empty" #empty>
+      <slot name="empty" />
     </template>
   </el-table>
 </template>

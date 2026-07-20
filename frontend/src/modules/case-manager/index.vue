@@ -232,12 +232,12 @@ const breadcrumbPath = computed(() => {
 
 // ── AppTable columns ──
 const columns = [
-  { title: "ID", dataIndex: "id", width: "18%" },
-  { title: "标题", dataIndex: "title", width: "28%" },
-  { title: "目录", dataIndex: "directory_name", width: "12%" },
-  { title: "分类", dataIndex: "category", width: "12%" },
-  { title: "启用", dataIndex: "enabled", width: "8%", align: "center" },
-  { title: "操作", dataIndex: "actions", width: "22%", align: "center" },
+  { title: "ID", dataIndex: "id", minWidth: 220 },
+  { title: "标题", dataIndex: "title", minWidth: 220 },
+  { title: "目录", dataIndex: "directory_name", minWidth: 160 },
+  { title: "分类", dataIndex: "category", minWidth: 120 },
+  { title: "启用", dataIndex: "enabled", minWidth: 86, align: "center" },
+  { title: "操作", dataIndex: "actions", minWidth: 180, align: "center" },
 ];
 
 // ── Actions ──
@@ -377,7 +377,7 @@ async function doRemove(row) {
               >📝 编辑用例</el-button>
           </div>
 
-          <AppCard color="app-teal" pattern="app-teal" class="case-detail__header">
+          <AppCard class="case-detail__header">
             <div class="case-detail__head-row">
               <span class="case-detail__id">{{ selectedCase.id }}</span>
               <el-tag
@@ -428,7 +428,7 @@ async function doRemove(row) {
             <h3 class="case-detail__steps-title">
               📋 测试步骤 ({{ (selectedCase.steps_data || []).length }})
             </h3>
-            <AppCard color="brown" pattern="brown">
+            <AppCard>
               <StepViewer :steps="selectedCase.steps_data || []" />
             </AppCard>
           </div>
@@ -457,7 +457,7 @@ async function doRemove(row) {
           </div>
 
           <!-- AppTable -->
-          <AppCard v-else color="brown" pattern="brown" class="table-card">
+          <AppCard v-else class="table-card">
             <AppTable
               :columns="columns"
               :data-source="definitions"
@@ -532,7 +532,7 @@ async function doRemove(row) {
             <el-button class="wb-btn" size="small" @click="showExports = false"
               >✕ 收起</el-button>
           </div>
-          <AppCard color="brown" pattern="brown" class="case-exports__table">
+          <AppCard class="case-exports__table">
             <div v-if="exportFiles.length === 0" class="case-exports__empty">
               暂无导出文件
             </div>

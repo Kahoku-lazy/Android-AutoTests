@@ -1,19 +1,22 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 import { staggerReveal } from '@/shared/animations.js'
 
-defineProps({
+const props = defineProps({
   items: { type: Array, default: () => [] },
 })
 
 const listRef = ref(null)
 
-onMounted(() => {
-  if (listRef.value) {
-    const children = listRef.value.querySelectorAll('.timeline-item')
-    staggerReveal(children, 100, 0.95)
-  }
-})
+async function revealItems() {
+  await nextTick()
+  if (!listRef.value) return
+  const children = listRef.value.querySelectorAll('.timeline-item')
+  if (children.length) staggerReveal(children, 100, 0.95)
+}
+
+onMounted(revealItems)
+watch(() => props.items.length, revealItems)
 </script>
 
 <template>

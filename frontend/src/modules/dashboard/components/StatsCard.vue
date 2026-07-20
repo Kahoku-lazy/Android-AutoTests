@@ -59,7 +59,7 @@ function onCardEnter() {
     <template v-else>
       <div class="stats-card__inner">
         <!-- Icon area -->
-        <div class="stats-card__icon-wrap">
+        <div class="stats-card__icon-wrap soft-icon soft-icon--blue">
           <slot name="icon">
             <div class="stats-card__icon-placeholder"></div>
           </slot>
@@ -107,6 +107,7 @@ function onCardEnter() {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  font-size: 20px;
 }
 
 .stats-card__icon-wrap :deep(svg) {

@@ -747,7 +747,7 @@ function runFromCurrent(idx) {
 .step-header__title {
   font-size: 14px;
   font-weight: 600;
-  color: #725d42;
+  color: var(--app-text);
 }
 .step-header__actions {
   display: flex;
@@ -756,27 +756,27 @@ function runFromCurrent(idx) {
 
 .empty-hint {
   text-align: center;
-  color: #a0936e;
+  color: var(--app-text-secondary);
   font-size: 14px;
   padding: 32px;
-  border: 1px dashed #dcd4c4;
+  border: 1px dashed rgba(162,210,255,0.38);
   border-radius: 12px;
-  background: #faf9f4;
+  background: rgba(255,255,255,0.36);
 }
 
 .step-item {
   position: relative;
   margin-bottom: 10px;
   border-radius: 12px;
-  border: 1px solid #e8e2d6;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(61, 52, 40, 0.04);
+  border: 1px solid var(--app-glass-border);
+  background: rgba(255,255,255,0.48);
+  box-shadow: var(--app-shadow-sm);
   transition: all 0.2s;
   overflow: hidden;
 }
 .step-item:hover {
-  border-color: #d0c8b8;
-  box-shadow: 0 2px 8px rgba(61, 52, 40, 0.08);
+  border-color: rgba(162,210,255,0.62);
+  box-shadow: var(--app-shadow-md);
 }
 .step-item.expanded {
   border-color: var(--accent-blue);
@@ -785,16 +785,16 @@ function runFromCurrent(idx) {
 .step-item.dragging {
   opacity: 0.4;
   transform: scale(0.97);
-  box-shadow: 0 0 0 2px #19c8b9;
+  box-shadow: 0 0 0 2px var(--app-green-deep);
 }
 .step-item.drop-target {
-  border-color: #19c8b9 !important;
+  border-color: var(--app-green-deep) !important;
   box-shadow:
-    0 0 0 2px #19c8b9,
-    0 4px 16px rgba(25, 200, 185, 0.25) !important;
+    0 0 0 2px var(--app-green-deep),
+    0 4px 16px rgba(162,210,255,0.28) !important;
 }
 .step-item.drop-target .step-bar {
-  background: #e6f9f6;
+  background: rgba(162,210,255,0.16);
 }
 .step-item.drop-target::before {
   content: "";
@@ -803,7 +803,7 @@ function runFromCurrent(idx) {
   top: 0;
   bottom: 0;
   width: 4px;
-  background: #19c8b9;
+  background: var(--app-green-deep);
   border-radius: 0 4px 4px 0;
   z-index: 2;
 }
@@ -815,10 +815,10 @@ function runFromCurrent(idx) {
   padding: 10px 14px;
   cursor: pointer;
   user-select: none;
-  background: #faf9f4;
+  background: rgba(255,255,255,0.36);
 }
 .drag-handle {
-  color: #c4b8a4;
+  color: var(--app-text-muted);
   cursor: grab;
   display: flex;
   align-items: center;
@@ -827,20 +827,20 @@ function runFromCurrent(idx) {
   transition: all 0.15s;
 }
 .drag-handle:hover {
-  color: #19c8b9;
-  background: rgba(25, 200, 185, 0.08);
+  color: var(--app-green-deep);
+  background: rgba(162,210,255,0.16);
 }
 .drag-handle:active {
   cursor: grabbing;
 }
 .step-item.dragging .drag-handle {
-  color: #19c8b9;
+  color: var(--app-green-deep);
 }
 .step-idx {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--app-green-deep, #19c8b9);
+  background: var(--app-green-deep);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -852,7 +852,7 @@ function runFromCurrent(idx) {
 .step-summary {
   flex: 1;
   font-size: 14px;
-  color: #5c4b38;
+  color: var(--app-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -879,16 +879,16 @@ function runFromCurrent(idx) {
 
 .step-desc {
   font-size: 13px;
-  color: #8a7b66;
+  color: var(--app-text-secondary);
   margin-bottom: 12px;
   padding: 8px 12px;
-  background: #f5f3ed;
+  background: rgba(162,210,255,0.10);
   border-radius: 8px;
 }
 .step-form {
   padding: 14px 18px 18px 48px;
-  border-top: 1px solid #f0ebe0;
-  background: #fff;
+  border-top: 1px solid rgba(162,210,255,0.20);
+  background: rgba(255,255,255,0.38);
 }
 .add-bottom {
   margin-top: 14px;
@@ -896,7 +896,7 @@ function runFromCurrent(idx) {
 }
 .field-hint {
   font-size: 12px;
-  color: #a0936e;
+  color: var(--app-text-secondary);
   margin-left: 10px;
 }
 .current-xpath {
@@ -904,12 +904,12 @@ function runFromCurrent(idx) {
   font-size: 12px;
 }
 .current-xpath code {
-  background: #f5f3ed;
+  background: rgba(162,210,255,0.12);
   padding: 3px 8px;
   border-radius: 4px;
   font-family: monospace;
   word-break: break-all;
-  color: #6b5b48;
+  color: var(--app-text);
 }
 
 /* Element picker — override el-select-dropdown item height */
@@ -930,7 +930,7 @@ function runFromCurrent(idx) {
 .el-opt-name {
   font-weight: 600;
   font-size: 13px;
-  color: #5c4b38;
+  color: var(--app-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -939,7 +939,7 @@ function runFromCurrent(idx) {
 .el-opt-page {
   font-size: 10px;
   color: #fff;
-  background: var(--app-green-deep, #19c8b9);
+  background: var(--app-green-deep);
   padding: 1px 6px;
   border-radius: 10px;
   flex-shrink: 0;

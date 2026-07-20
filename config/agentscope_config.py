@@ -41,7 +41,7 @@ def check_redis_connection(host=None, port=None, db=None):
 
 # ── Service ──
 HOST = os.environ.get('AGENTSCOPE_HOST', '127.0.0.1')
-PORT = getattr(settings, 'AGENTSCOPE_SERVICE_PORT', 8000)
+PORT = getattr(settings, 'AGENTSCOPE_SERVICE_PORT', 8088)
 TITLE = getattr(settings, 'AGENTSCOPE_SERVICE_TITLE', 'Android-AutoTests Agent Service')
 VERSION = getattr(settings, 'AGENTSCOPE_SERVICE_VERSION', '2.0.0')
 

@@ -159,7 +159,7 @@ def _channel_layers_config():
 CHANNEL_LAYERS = _channel_layers_config()
 
 # ── AgentScope ──
-AGENTSCOPE_SERVICE_PORT = int(os.environ.get('AGENTSCOPE_PORT', '8000'))
+AGENTSCOPE_SERVICE_PORT = int(os.environ.get('AGENTSCOPE_PORT', '8088'))
 AGENTSCOPE_SERVICE_URL = os.environ.get(
     'AGENTSCOPE_URL',
     f'http://127.0.0.1:{AGENTSCOPE_SERVICE_PORT}',
@@ -181,7 +181,7 @@ AIRTEST_ENABLED = os.environ.get('AIRTEST_ENABLED', 'True').lower() in ('true', 
 # ── Project-specific configuration ──
 DEVICE_SERIAL = os.environ.get('DEVICE_SERIAL', '')
 SCREENSHOT_INTERVAL = float(os.environ.get('SCREENSHOT_INTERVAL', '0.5'))
-SERVER_PORT = int(os.environ.get('SERVER_PORT', '8765'))
+SERVER_PORT = int(os.environ.get('SERVER_PORT', '8766'))
 
 # Paths
 DATA_DIR = BASE_DIR / 'data'

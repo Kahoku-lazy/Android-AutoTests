@@ -122,7 +122,7 @@ def api_docs_json(request):
         "ok": True,
         "service": "Android-AutoTests API",
         "version": "v2.0",
-        "base_url": "http://localhost:8765",
+        "base_url": "http://localhost:8766",
         "modules": 5,
         "endpoints": 35,
         "websockets": 2,
@@ -223,7 +223,7 @@ function formatJSON(obj){{
 }}
 
 function curlCmd(method,path,body){{
-  var base='http://localhost:8765';
+  var base='http://localhost:8766';
   var cmd='curl -X '+method+' '+base+path;
   if(method==='POST'||method==='PUT') cmd+=" -H 'Content-Type: application/json'";
   if(body) cmd+=" -d '"+JSON.stringify(body)+"'";

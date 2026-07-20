@@ -989,7 +989,7 @@ function clearSelection() {{
 }}
 
 // ===== 手机操作 =====
-const ACTION_URL = 'http://localhost:8765/action';
+const ACTION_URL = 'http://localhost:8766/action';
 
 function getActionCoords() {{
     if (selectedNid === null) return null;
@@ -1040,7 +1040,7 @@ async function doAction(action) {{
             statusEl.textContent = '✗';
         }}
     }} catch (e) {{
-        toast('⚠️ 无法连接到 action_server (localhost:8765)', 'error');
+        toast('⚠️ 无法连接到 action_server (localhost:8766)', 'error');
         statusEl.textContent = 'offline';
     }}
 }}
@@ -1080,7 +1080,7 @@ async function doInput() {{
             statusEl.textContent = '✗';
         }}
     }} catch (e) {{
-        toast('⚠️ 无法连接到 action_server (localhost:8765)', 'error');
+        toast('⚠️ 无法连接到 action_server (localhost:8766)', 'error');
         statusEl.textContent = 'offline';
     }}
 }}

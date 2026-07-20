@@ -8,7 +8,7 @@ from apps.ai_assistant.models import AIAgent
 from apps.ai_assistant.api import decrypt_key
 from agentscope_service.provider_registry import get_provider_config
 
-AGENTSCOPE_URL = "http://127.0.0.1:8000"
+AGENTSCOPE_URL = "http://127.0.0.1:8088"
 
 for a in AIAgent.objects.filter(status="active"):
     api_key = decrypt_key(a.api_key) if a.api_key else ""
@@ -34,7 +34,7 @@ for a in AIAgent.objects.filter(status="active"):
     try:
         # Get JWT token from Django
         login_resp = requests.post(
-            f"http://127.0.0.1:8765/api/ai/auth/login",
+            f"http://127.0.0.1:8766/api/ai/auth/login",
             json={"username": os.environ.get("ADMIN_USER", "admin"), "password": os.environ.get("ADMIN_PASSWORD", "")},
             timeout=5,
         )

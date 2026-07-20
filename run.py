@@ -28,9 +28,9 @@ LOG_DIR = ROOT / "logs"
 
 SERVICES = {
     "redis":      6379,
-    "backend":    8765,
-    "agentscope": 8000,
-    "frontend":   5173,
+    "backend":    8766,
+    "agentscope": 8088,
+    "frontend":   5174,
 }
 
 # ── 基础环境变量 ──
@@ -277,7 +277,7 @@ def cmd_start(services):
         print(f"  AI (AgentS) : http://localhost:{SERVICES['agentscope']}/docs")
     if "redis" in order:
         print(f"  Redis       : redis://localhost:{SERVICES['redis']}")
-    print("  Admin       : http://localhost:8765/admin/  (admin/admin123)")
+    print("  Admin       : http://localhost:8766/admin/  (admin/admin123)")
     print("=" * 54)
 
 
@@ -307,13 +307,13 @@ def cmd_status():
             return "OFFLINE"
 
     redis_ok = "ONLINE" if port_in_use(6379) else "OFFLINE"
-    be_ok = check("http://127.0.0.1:8765/")
-    as_ok = check("http://127.0.0.1:8000/docs")
-    fe_ok = check("http://127.0.0.1:5173/")
+    be_ok = check("http://127.0.0.1:8766/")
+    as_ok = check("http://127.0.0.1:8088/docs")
+    fe_ok = check("http://127.0.0.1:5174/")
     print(f"  Redis            (:6379)  {redis_ok}")
-    print(f"  Django backend   (:8765)  {be_ok}")
-    print(f"  AgentScope AI    (:8000)  {as_ok}")
-    print(f"  Vue frontend     (:5173)  {fe_ok}")
+    print(f"  Django backend   (:8766)  {be_ok}")
+    print(f"  AgentScope AI    (:8088)  {as_ok}")
+    print(f"  Vue frontend     (:5174)  {fe_ok}")
 
 
 def cmd_logs(services):

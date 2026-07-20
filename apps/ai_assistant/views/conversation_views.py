@@ -33,7 +33,7 @@ def _check_agentscope_available():
     """
     import urllib.request
     try:
-        req = urllib.request.Request('http://127.0.0.1:8000/docs', method='HEAD')
+        req = urllib.request.Request('http://127.0.0.1:8088/docs', method='HEAD')
         urllib.request.urlopen(req, timeout=2)
         return True, None
     except Exception as e:

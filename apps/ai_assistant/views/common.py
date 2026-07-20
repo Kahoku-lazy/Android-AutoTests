@@ -14,7 +14,7 @@ def validation_error(errors: dict, status: int = 400):
 
 
 def agentscope_base_url() -> str:
-    return getattr(settings, 'AGENTSCOPE_SERVICE_URL', 'http://127.0.0.1:8000').rstrip('/')
+    return getattr(settings, 'AGENTSCOPE_SERVICE_URL', 'http://127.0.0.1:8088').rstrip('/')
 
 
 def get_agentscope_token(request):

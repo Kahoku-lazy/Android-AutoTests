@@ -257,3 +257,10 @@ export function closeTaskWebSocket(taskId) {
   }
   unregisterHandler(taskId);
 }
+
+export function closeAllTaskWebSockets() {
+  const wm = getWsMap();
+  for (const taskId of Object.keys(wm)) {
+    closeTaskWebSocket(taskId);
+  }
+}

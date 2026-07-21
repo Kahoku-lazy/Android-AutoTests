@@ -49,7 +49,7 @@ function blocklyBlockToTree(b: Blockly.Block, counter: { n: number }): Block | n
   }
   if (type.startsWith('at_')) {
     const stepType = type.slice(3) as StepTypeValue
-    if (!STEP_TYPE_META[stepType]) return null
+    if (!STEP_TYPE_META[stepType]) { console.warn(`[blocklySerializer] Unknown step type "${stepType}" — skipping`); return null }
     const label = b.getFieldValue('LABEL') || STEP_TYPE_META[stepType].label
     const step: StepBlock = {
       id: genId('s', counter),

@@ -2,18 +2,32 @@
 // TEST CASE TYPES — Scratch 风格树形 Block 模型
 // ═══════════════════════════════════════════
 
-// ── 10 Step Types ──
+// ── 16 Step Types (aligned with models/step_types.py StepType enum) ──
 export const STEP_TYPE_META: Record<string, { icon: string; label: string; color: string; category: string; notchColor: string }> = {
+  // 点击操作
   click:          { icon: '👆', label: '点击元素',     color: '#5b9cf5', category: '点击操作', notchColor: '#4a8adf' },
   long_click:     { icon: '👇', label: '长按元素',     color: '#5b9cf5', category: '点击操作', notchColor: '#4a8adf' },
+  // 滑动操作
   swipe:          { icon: '👈', label: '滑动屏幕',     color: '#a78bfa', category: '滑动操作', notchColor: '#8b6ee0' },
+  // 等待操作
   wait:           { icon: '⏳', label: '等待出现',     color: '#f7cd67', category: '等待操作', notchColor: '#e6b830' },
   wait_disappear: { icon: '👻', label: '等待消失',     color: '#f7cd67', category: '等待操作', notchColor: '#e6b830' },
   sleep:          { icon: '💤', label: '固定等待',     color: '#8a8a96', category: '等待操作', notchColor: '#6a6a76' },
+  // 断言操作
   verify_text:    { icon: '✓', label: '验证文本',     color: '#6fba2c', category: '断言操作', notchColor: '#5a9a20' },
   poll_text:      { icon: '🔍', label: '轮询文本',     color: '#6fba2c', category: '断言操作', notchColor: '#5a9a20' },
+  // 应用控制
   start_app:      { icon: '📱', label: '启动App',      color: '#19c8b9', category: '应用控制', notchColor: '#14a398' },
   kill_app:       { icon: '💀', label: '杀掉App',      color: '#f87171', category: '应用控制', notchColor: '#e55a5a' },
+  // APP性能
+  perf_element_time: { icon: '⏱️', label: '等待元素出现耗时', color: '#f5a623', category: 'APP性能', notchColor: '#e09515' },
+  // 弹窗检测
+  wait_toast:     { icon: '💬', label: '等待Toast',    color: '#f5a623', category: '弹窗检测', notchColor: '#e09515' },
+  // 流程控制
+  if_element_appear:    { icon: '🔀', label: '如果元素出现',   color: '#f5a623', category: '流程控制', notchColor: '#e09515' },
+  if_element_disappear: { icon: '🔀', label: '如果元素消失',   color: '#f5a623', category: '流程控制', notchColor: '#e09515' },
+  loop_n:               { icon: '🔁', label: '循环N次',        color: '#a78bfa', category: '流程控制', notchColor: '#8b6ee0' },
+  loop_elements:        { icon: '📋', label: '遍历元素列表',   color: '#a78bfa', category: '流程控制', notchColor: '#8b6ee0' },
 }
 
 export type StepTypeValue = keyof typeof STEP_TYPE_META
@@ -23,6 +37,9 @@ export const STEPS_NEED_XPATH = new Set([
   'click', 'long_click',
   'wait', 'wait_disappear',
   'verify_text', 'poll_text',
+  'perf_element_time',
+  'if_element_appear', 'if_element_disappear',
+  'loop_elements',
 ])
 
 /** Steps that need package_name (use xpath field as package name) */
@@ -33,6 +50,8 @@ export const STEPS_NEED_TIMEOUT = new Set([
   'click', 'long_click',
   'wait', 'wait_disappear',
   'verify_text', 'poll_text', 'sleep',
+  'perf_element_time', 'wait_toast',
+  'if_element_appear', 'if_element_disappear',
 ])
 
 // ── Flow Control Meta ──
@@ -108,7 +127,11 @@ export function isContainer(b: Block): b is BranchBlock | LoopBlock {
 }
 
 export function blockDisplay(b: Block): { icon: string; label: string; color: string; notchColor: string } {
-  if (b.kind === 'step') return STEP_TYPE_META[b.stepType]
+  if (b.kind === 'step') {
+    const meta = STEP_TYPE_META[b.stepType]
+    if (!meta) return { icon: '❓', label: b.stepType || '未知步骤', color: '#999', notchColor: '#777' }
+    return meta
+  }
   if (b.kind === 'branch') return { ...FLOW_META.branch, label: `IF: ${b.condition || '条件'}` }
   return { ...FLOW_META.loop, label: `REPEAT ${b.count} 次` }
 }

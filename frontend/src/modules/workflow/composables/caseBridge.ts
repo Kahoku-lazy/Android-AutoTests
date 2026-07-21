@@ -66,7 +66,7 @@ export function fromCaseManagerSteps(steps: unknown[]): StepBlock[] {
     const s = raw as Record<string, any>
     if (!s || typeof s !== 'object') continue
     const stepType = String(s.type || '')
-    if (!STEP_TYPE_META[stepType]) continue
+    if (!STEP_TYPE_META[stepType]) { console.warn(`[caseBridge] Unknown step type "${stepType}" — skipping`); continue }
     const isApp = APP_TYPES.has(stepType)
     const label =
       s.description ||

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted, onDeactivated, onActivated } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import client, { getToken } from "@/shared/api-client.js";
@@ -26,6 +26,7 @@ import {
 import {
   connectTaskWebSocket,
   closeTaskWebSocket,
+  closeAllTaskWebSockets,
   applyWsMessage,
 } from "./composables/useTaskWebSocket.js";
 import { startRun, listDefinitions, listDevices } from "./api.js";
@@ -564,6 +565,25 @@ onMounted(async () => {
     if (t.running && t.runId) bindListTaskWS(t, t.runId);
   });
   if (hasQueuedTasks()) startQueuePolling();
+});
+
+// keep-alive: pause timers when leaving page
+onDeactivated(() => {
+  stopQueuePolling();
+  if (_saveTimer) { clearTimeout(_saveTimer); _saveTimer = null; }
+});
+
+// keep-alive: resume on return (WS stays connected, messages accumulate)
+onActivated(() => {
+  if (hasQueuedTasks()) startQueuePolling();
+});
+
+// Final cleanup when evicted from cache
+onUnmounted(() => {
+  stopQueuePolling();
+  if (_saveTimer) { clearTimeout(_saveTimer); _saveTimer = null; }
+  closeAllTaskWebSockets();
+  _dirtyTaskIds.clear();
 });
 
 watch(

@@ -33,6 +33,8 @@ const CATEGORY_META: Record<string, { color: string; accent: string; icon: strin
   断言操作: { color: '#6fba2c', accent: '#52991c', icon: '✓' },
   应用控制: { color: '#19c8b9', accent: '#12a396', icon: '📱' },
   流程控制: { color: '#f5a623', accent: '#d98a0f', icon: '◈' },
+  APP性能:  { color: '#f5a623', accent: '#e09515', icon: '⏱️' },
+  弹窗检测: { color: '#f5a623', accent: '#e09515', icon: '💬' },
 }
 
 let registered = false
@@ -132,19 +134,20 @@ export function getPaletteCategories(): PaletteCategory[] {
     })
   }
 
-  const order = ['点击操作', '滑动操作', '等待操作', '断言操作', '应用控制', '流程控制']
+  const order = ['点击操作', '滑动操作', '等待操作', '断言操作', '应用控制', '流程控制', 'APP性能', '弹窗检测']
   const cats: PaletteCategory[] = []
 
   for (const name of order) {
     const meta = CATEGORY_META[name]
     if (!meta) continue
-    const items =
-      name === '流程控制'
-        ? [
-            { type: 'at_branch', icon: '◈', label: '条件分支', color: meta.color, hint: 'IF / ELSE' },
-            { type: 'at_loop', icon: '↻', label: '循环', color: '#a78bfa', hint: 'REPEAT' },
-          ]
-        : byCat[name] || []
+    const flowBuiltins = name === '流程控制'
+      ? [
+          { type: 'at_branch', icon: '◈', label: '条件分支', color: meta.color, hint: 'IF / ELSE' },
+          { type: 'at_loop', icon: '↻', label: '循环', color: '#a78bfa', hint: 'REPEAT' },
+        ]
+      : []
+    const stepItems = byCat[name] || []
+    const items = [...flowBuiltins, ...stepItems]
     if (!items.length) continue
     cats.push({
       key: name,

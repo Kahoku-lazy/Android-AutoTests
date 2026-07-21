@@ -374,6 +374,7 @@ onMounted(() => {
 onUnmounted(() => {
   if (saveTimer) clearInterval(saveTimer)
   stopDetailQueuePolling()
+  if (task.value?.id) closeTaskWebSocket(task.value.id)
 })
 
 // ── Actions ──

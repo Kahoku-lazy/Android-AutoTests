@@ -6,6 +6,7 @@ const props = defineProps({
   dataSource: { type: Array, required: true },
   rowKey: { type: String, default: 'id' },
   striped: { type: Boolean, default: false },
+  border: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
   emptyText: { type: String, default: '暂无数据' },
   /** fixed 时弹性列会吃掉剩余宽度，适合需要铺满容器的列表 */
@@ -46,6 +47,7 @@ const elColumns = computed(() =>
     :data="dataSource"
     :row-key="rowKey"
     :stripe="striped"
+    :border="border"
     v-loading="loading"
     class="ac-table"
     style="width: 100%"

@@ -37,7 +37,7 @@ defineEmits(['action'])
 
 /* Override default button pill radius to match */
 .quick-action-btn:deep(.el-button) {
-  border-radius: var(--animal-border-radius-base, 18px);
+  border-radius: var(--app-radius-sm, 16px);
 }
 
 .quick-action-btn__label {

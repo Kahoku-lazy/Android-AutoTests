@@ -618,7 +618,8 @@ async function loadDevices() {
     <WorkbenchHeader
       title="执行引擎"
       subtitle="创建并监控测试任务，查看实时执行进度与历史结果"
-      mark="▶️"
+      icon="play-circle"
+      icon-gradient="linear-gradient(135deg,#FFB5A7,#f87171)"
     />
     <div class="doc-body">
       <section class="doc-section runner-section">
@@ -1009,7 +1010,7 @@ async function loadDevices() {
 .task-card--completed {
   background: linear-gradient(135deg, #e8f5e0 0%, #f3faf0 100%);
   border-color: rgba(111, 186, 44, 0.3);
-  border-left-color: #6fba2c;
+  border-left-color: #89CFF0;
 }
 .task-card--incomplete {
   background: linear-gradient(135deg, #ffe8ec 0%, #fff5f7 100%);

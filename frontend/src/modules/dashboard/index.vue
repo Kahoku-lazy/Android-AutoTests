@@ -175,7 +175,8 @@ onMounted(() => {
     <WorkbenchHeader
       title="仪表盘"
       subtitle="自动化测试平台 · 实时监控设备状态、用例执行、AI Agent 与测试报告"
-      mark="📊"
+      icon="layout-dashboard"
+      icon-gradient="linear-gradient(135deg,#F4D35E,#f0c06a)"
     >
       <template #actions>
         <el-button class="wb-btn wb-btn--sunset" size="small" :loading="refreshing" @click="refreshData">
@@ -198,55 +199,59 @@ onMounted(() => {
         <div class="dashboard__stats-grid">
           <StatsAppCard
             label="在线设备"
+            desc="ADB 扫描 · 连接锁定 · 排队调度"
             :value="stats.devices.online"
             :suffix="` / ${stats.devices.total}`"
             color="app-green"
-            pattern="app-green"
             :trend="stats.devices.trend"
             trend-label="近期活跃"
+            path="/devices"
             :loading="loading"
           >
             <template #icon>
-              <IconDevice :size="22" color="#6fba2c" />
+              <IconDevice :size="22" color="#fff" />
             </template>
           </StatsAppCard>
           <StatsAppCard
             label="测试用例"
+            desc="步骤编排 · 目录树 · YAML 导入导出"
             :value="stats.cases.total"
-            color="app-blue"
-            pattern="app-blue"
+            color="app-teal"
             :trend="stats.cases.trend"
             trend-label="本周新增"
+            path="/cases"
             :loading="loading"
           >
             <template #icon>
-              <IconFileCode :size="22" color="#889df0" />
+              <IconFileCode :size="22" color="#fff" />
             </template>
           </StatsAppCard>
           <StatsAppCard
             label="活跃智能体"
+            desc="自然语言驱动 · SSE 流式 · 知识库"
             :value="stats.agents.active"
-            suffix=""
-            color="app-yellow"
-            pattern="app-yellow"
+            color="app-blue"
             :trend="stats.agents.trend"
+            trend-label="智能体"
+            path="/ai-assistant"
             :loading="loading"
           >
             <template #icon>
-              <IconBrain :size="22" color="#f7cd67" />
+              <IconBrain :size="22" color="#fff" />
             </template>
           </StatsAppCard>
           <StatsAppCard
             label="运行中任务"
+            desc="任务调度 · 实时进度 · WebSocket 日志"
             :value="stats.runs.active"
-            suffix=""
             color="app-pink"
-            pattern="app-pink"
             :trend="stats.runs.trend"
+            trend-label="执行中"
+            path="/runner"
             :loading="loading"
           >
             <template #icon>
-              <IconPlay :size="22" color="#f8a6b2" />
+              <IconPlay :size="22" color="#fff" />
               <span
                 class="dashboard__live-dot"
                 v-if="stats.runs.active > 0"
@@ -323,19 +328,19 @@ onMounted(() => {
   overflow-y: auto;
 }
 
-/* Stats grid */
+/* Stats grid — 对齐参考图模块卡片风格 */
 .dashboard__stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
+  gap: 16px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .dashboard__stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
-@media (max-width: 480px) {
+@media (max-width: 520px) {
   .dashboard__stats-grid {
     grid-template-columns: 1fr;
   }
@@ -365,7 +370,7 @@ onMounted(() => {
 .trends-tasks-card :deep(.el-card__body) {
   padding: 18px;
   border-radius: 16px;
-  background: rgba(255, 248, 240, 0.85);
+  background: var(--app-glass-card, rgba(255,255,255,0.65));
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -375,7 +380,7 @@ onMounted(() => {
 .trends-tasks-card__title {
   font-size: 13px;
   font-weight: 700;
-  color: #725d42;
+  color: var(--app-text, #4a4e69);
   margin-bottom: 12px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -387,7 +392,8 @@ onMounted(() => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ef4444;
+  background: #fff;
+  border: 2px solid #f87171;
   top: -2px;
   right: -2px;
   animation: livePulse 1.5s ease-in-out infinite;

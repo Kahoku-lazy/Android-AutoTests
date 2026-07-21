@@ -67,7 +67,7 @@ def get_or_create_conversation(agent: AIAgent, title: str = "新对话"):
 
 def save_message(conversation_id: int, role: str, content: str, blocks: str = "",
                  reason: str = "normal", tokens: int = 0, input_tokens: int = 0,
-                 model_name: str = "") -> AIMessage:
+                 model_name: str = "", flow: str = "") -> AIMessage:
     """保存一条对话消息到数据库。"""
     return AIMessage.objects.create(
         conversation_id=conversation_id,
@@ -78,6 +78,7 @@ def save_message(conversation_id: int, role: str, content: str, blocks: str = ""
         tokens=tokens,
         input_tokens=input_tokens,
         model_name=model_name,
+        flow=flow if flow in ("sse", "fallback") else "",
     )
 
 

@@ -62,7 +62,7 @@
 
 .wb-shell .wb-btn.el-button--primary,
 .wb-shell .el-button.wb-btn.el-button--primary {
-  --el-button-bg-color: linear-gradient(135deg, var(--app-green-deep), var(--app-blue));
+  --el-button-bg-color: linear-gradient(135deg, #89CFF0, #C9B6F2);
   --el-button-border-color: var(--app-green-deep);
   --el-button-text-color: #fff;
   --el-button-hover-bg-color: var(--app-green-deep);
@@ -106,7 +106,7 @@
 
 .wb-shell .wb-status-pill {
   font-size: 11px; font-weight: 700;
-  color: var(--app-green-deep);
+  color: #89CFF0;
   padding: 4px 10px;
   background: rgba(162,210,255,0.16);
   border-radius: var(--app-radius-pill);
@@ -138,26 +138,42 @@
   border-style: dashed !important;
 }
 
-.wb-shell .ac-card--yellow,
-.wb-shell .ac-card--brown,
 .wb-shell .ac-card--blue,
-.wb-shell .ac-card--green,
 .wb-shell .ac-card--teal,
-.workflow-workbench .ac-card--yellow,
-.workflow-workbench .ac-card--brown,
 .workflow-workbench .ac-card--blue,
-.workflow-workbench .ac-card--green,
 .workflow-workbench .ac-card--teal {
   background:
-    linear-gradient(145deg, rgba(255,255,255,0.68), rgba(212,234,255,0.52)) !important;
+    linear-gradient(145deg, rgba(255,255,255,0.68), rgba(189,224,254,0.52)) !important;
+}
+
+.wb-shell .ac-card--green,
+.workflow-workbench .ac-card--green {
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.68), rgba(149,213,178,0.38)) !important;
+}
+
+.wb-shell .ac-card--yellow,
+.workflow-workbench .ac-card--yellow {
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.68), rgba(244,211,94,0.38)) !important;
+}
+
+.wb-shell .ac-card--brown,
+.workflow-workbench .ac-card--brown {
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.68), rgba(154,140,152,0.28)) !important;
 }
 
 .wb-shell .ac-card--purple,
+.workflow-workbench .ac-card--purple {
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.66), rgba(201,182,242,0.32)) !important;
+}
+
 .wb-shell .ac-card--pink,
-.workflow-workbench .ac-card--purple,
 .workflow-workbench .ac-card--pink {
   background:
-    linear-gradient(145deg, rgba(255,255,255,0.66), rgba(200,182,255,0.24)) !important;
+    linear-gradient(145deg, rgba(255,255,255,0.66), rgba(255,181,167,0.32)) !important;
 }
 
 .wb-shell .ac-tabs,

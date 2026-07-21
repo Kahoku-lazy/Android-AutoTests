@@ -496,13 +496,13 @@ onUnmounted(() => stopEmptyAnim())
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--glass-bg);
+  background: var(--app-glass-card, rgba(255,255,255,0.65));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-radius: 20px;
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
   padding: 16px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--app-shadow-sm, 0 4px 15px rgba(0,0,0,0.02));
   overflow: hidden;
 }
 .pe-header {
@@ -520,7 +520,7 @@ onUnmounted(() => stopEmptyAnim())
 .pe-count {
   font-size: 12px;
   color: var(--app-text-secondary, #7A8B73);
-  background: rgba(139,115,85,0.08);
+  background: rgba(137,207,240,0.06);
   padding: 1px 8px;
   border-radius: 10px;
 }
@@ -533,15 +533,15 @@ onUnmounted(() => stopEmptyAnim())
   margin-bottom: 8px;
   flex-shrink: 0;
   padding: 6px 10px;
-  background: rgba(139,115,85,0.05);
+  background: rgba(137,207,240,0.04);
   border-radius: 8px;
 }
 .pe-refresh-btn {
   padding: 4px 10px;
   font-size: 12px;
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
   border-radius: 6px;
-  background: var(--glass-bg);
+  background: var(--app-glass-card, rgba(255,255,255,0.65));
   color: var(--app-text, #3D4A3B);
   cursor: pointer;
   transition: all 0.2s;
@@ -572,9 +572,9 @@ onUnmounted(() => stopEmptyAnim())
   margin-left: auto;
   padding: 4px 12px;
   font-size: 12px;
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
   border-radius: 6px;
-  background: var(--glass-bg);
+  background: var(--app-glass-card, rgba(255,255,255,0.65));
   color: var(--app-text, #3D4A3B);
   cursor: pointer;
   transition: all 0.2s;
@@ -600,7 +600,7 @@ onUnmounted(() => stopEmptyAnim())
   font-size: 13px;
 }
 .empty-icon { font-size: 32px; opacity: 0.55; }
-.empty-text { margin: 0; font-size: 13px; font-weight: 500; color: #725d42; }
+.empty-text { margin: 0; font-size: 13px; font-weight: 500; color: var(--app-text, #4a4e69); }
 
 /* Element list */
 .pe-list {
@@ -620,14 +620,14 @@ onUnmounted(() => stopEmptyAnim())
   border: 1px solid transparent;
 }
 .pe-row:hover {
-  background: rgba(139,115,85,0.06);
+  background: rgba(137,207,240,0.04);
 }
 .pe-row--selected {
-  background: rgba(25,200,185,0.1);
+  background: rgba(137,207,240,0.08);
   border-color: var(--app-teal, #19c8b9);
 }
 .pe-row--checked {
-  background: rgba(139,115,85,0.04);
+  background: rgba(137,207,240,0.04);
 }
 
 .pe-checkbox {
@@ -649,7 +649,7 @@ onUnmounted(() => stopEmptyAnim())
 }
 .pe-thumb {
   border-radius: 4px;
-  border: 1px solid rgba(139,115,85,0.18);
+  border: 1px solid rgba(137,207,240,0.12);
   background-repeat: no-repeat;
   flex-shrink: 0;
   cursor: zoom-in;
@@ -688,7 +688,7 @@ onUnmounted(() => stopEmptyAnim())
 .pe-code {
   font-size: 10px;
   color: var(--app-text-secondary, #7A8B73);
-  background: rgba(139,115,85,0.06);
+  background: rgba(137,207,240,0.04);
   padding: 1px 5px;
   border-radius: 3px;
   white-space: nowrap;
@@ -707,8 +707,8 @@ onUnmounted(() => stopEmptyAnim())
   border-radius: 4px;
 }
 .pe-badge--yes {
-  color: #6fba2c;
-  background: rgba(111,186,44,0.12);
+  color: #89CFF0;
+  background: rgba(137,207,240,0.1);
 }
 .pe-badge--no {
   color: #ccc;
@@ -728,13 +728,13 @@ onUnmounted(() => stopEmptyAnim())
 }
 .form-label.required::before {
   content: '* ';
-  color: #e8998a;
+  color: var(--el-color-danger, #FFB5A7);
 }
 .form-hint {
   font-size: 12px;
   color: var(--app-text-secondary, #7A8B73);
   line-height: 1.5;
-  background: rgba(139,115,85,0.05);
+  background: rgba(137,207,240,0.04);
   padding: 8px 10px;
   border-radius: 6px;
 }
@@ -764,7 +764,7 @@ onUnmounted(() => stopEmptyAnim())
 }
 .enlarge-img {
   border-radius: 8px;
-  border: 2px solid rgba(139,115,85,0.2);
+  border: 2px solid rgba(137,207,240,0.15);
   background-repeat: no-repeat;
   flex-shrink: 0;
 }
@@ -783,9 +783,9 @@ onUnmounted(() => stopEmptyAnim())
 }
 .enlarge-close {
   padding: 6px 24px;
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
   border-radius: 8px;
-  background: var(--glass-bg);
+  background: var(--app-glass-card, rgba(255,255,255,0.65));
   color: var(--app-text, #3D4A3B);
   cursor: pointer;
   font-size: 14px;

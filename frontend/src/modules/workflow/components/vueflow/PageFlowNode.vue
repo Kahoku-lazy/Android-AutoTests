@@ -25,7 +25,7 @@ const isEnd = computed(() => props.data.nodeType === 'EndNode')
 const startKind = computed<StartKind>(() => props.data.startKind || 'app')
 
 const accent = computed(() => {
-  if (isStart.value) return '#6fba2c'
+  if (isStart.value) return '#89CFF0'
   if (isEnd.value) return '#8a8a96'
   if (isPopup.value) return '#e85f5f'
   return '#6f9fd8'
@@ -344,7 +344,7 @@ watch(
   outline: none;
 }
 .pkg-input:focus {
-  border-color: #6fba2c;
+  border-color: #89CFF0;
 }
 .pf-sub {
   font-size: 10px;

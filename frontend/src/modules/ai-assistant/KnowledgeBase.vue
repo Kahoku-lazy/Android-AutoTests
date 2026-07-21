@@ -83,7 +83,7 @@ onMounted(() => {
 <template>
   <div class="kb-view">
     <!-- 状态卡片 -->
-    <AppCard color="app-blue" pattern="app-blue">
+    <AppCard color="app-blue">
       <div class="kb-stats">
         <div class="kb-stat">
           <span class="kb-stat__num">{{ status.doc_count ?? '—' }}</span>
@@ -98,7 +98,7 @@ onMounted(() => {
           <span class="kb-stat__label">最后索引时间</span>
         </div>
         <div class="kb-stat">
-          <span class="kb-stat__num" :style="{ color: status.reindex?.running ? '#f8a6b2' : '#6fba2c' }">
+          <span class="kb-stat__num" :style="{ color: status.reindex?.running ? '#f8a6b2' : '#89CFF0' }">
             {{ status.reindex?.running ? '⏳ 重建中' : '✅ 就绪' }}
           </span>
           <span class="kb-stat__label">状态</span>
@@ -113,7 +113,7 @@ onMounted(() => {
     </AppCard>
 
     <!-- 文档列表 -->
-    <AppCard color="brown" pattern="brown" class="kb-table-card">
+    <AppCard color="brown" class="kb-table-card">
       <div class="kb-filters">
         <button
           v-for="tab in filters"

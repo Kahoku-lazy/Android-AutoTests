@@ -283,7 +283,7 @@ function onLeave() {
   border-color: currentColor transparent transparent transparent;
   filter: brightness(0.92);
 }
-.ac-status-bubble.is-success { background: linear-gradient(135deg, #6fba2c, #5aa31f); }
+.ac-status-bubble.is-success { background: linear-gradient(135deg, #89CFF0, #5aa31f); }
 .ac-status-bubble.is-success::after { border-top-color: #5aa31f; }
 .ac-status-bubble.is-danger { background: linear-gradient(135deg, #f07878, #e85f5f); }
 .ac-status-bubble.is-danger::after { border-top-color: #e85f5f; }

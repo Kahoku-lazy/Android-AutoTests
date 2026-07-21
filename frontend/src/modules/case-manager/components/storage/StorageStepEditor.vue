@@ -89,7 +89,7 @@ function moveDown(index) {
 .step-hint { font-size: 13px; color: #999; }
 .step-item { border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; }
 .step-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f8f8f8; }
-.step-number { width: 24px; height: 24px; border-radius: 50%; background: var(--animal-primary-color, #6fba2c); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+.step-number { width: 24px; height: 24px; border-radius: 50%; background: var(--animal-primary-color, #89CFF0); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
 .step-select { padding: 4px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
 .step-body { padding: 12px; }
 .step-fields { display: flex; flex-direction: column; gap: 8px; }

@@ -509,7 +509,7 @@ watch(
 }
 .btn.primary:hover { filter: brightness(1.05); color: #fff; }
 .btn.start {
-  background: #6fba2c;
+  background: #89CFF0;
   color: #fff;
   border-color: #5a9a20;
 }

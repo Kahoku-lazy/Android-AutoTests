@@ -59,7 +59,7 @@ export function useConversation(agentIdRef, messageStore) {
           // when the stream completes.
         } else {
           messageStore.backgroundStreamConvId.value = null;
-          messageStore.hydrateMessages(data.messages, conv);
+          messageStore.hydrateMessages(data.messages);
         }
       }
     } catch (_) {

@@ -273,8 +273,6 @@ def start_backend():
             sys.executable,
             "-m",
             "daphne",
-            "-w",
-            "2",
             "-p",
             str(port),
             "-b",
@@ -300,7 +298,7 @@ def start_agentscope():
     LOG_DIR.mkdir(exist_ok=True)
     launcher.write_text(
         f"""
-import sys; sys.path.insert(0, r"D:/Github/Android-AutoTests")
+import sys; sys.path.insert(0, r"{ROOT}")
 import os; os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 import django; django.setup()
 import uvicorn

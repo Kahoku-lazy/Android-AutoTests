@@ -201,7 +201,7 @@ function caseStatusLabel(ci) {
   if (isCurrent)
     return { text: '◆ 执行中', color: '#889df0', bg: 'rgba(136,157,240,0.1)' }
   if (ci.status === 'done')
-    return { text: '完成', color: '#6fba2c', bg: 'rgba(111,186,44,0.1)' }
+    return { text: '完成', color: '#89CFF0', bg: 'rgba(111,186,44,0.1)' }
   return { text: '等待中', color: '#f7cd67', bg: 'rgba(247,205,103,0.15)' }
 }
 
@@ -816,7 +816,7 @@ async function removeTask() {
 .case-stats { display: flex; gap: 16px; font-size: 12px; font-weight: 600; color: var(--app-text-secondary); flex-shrink: 0; }
 .case-stats span { white-space: nowrap; }
 .stat-total { color: var(--app-text-secondary); }
-.stat-pass { color: #6fba2c; }
+.stat-pass { color: #89CFF0; }
 .stat-fail { color: #e85f5f; }
 
 /* ── Case body ── */
@@ -890,7 +890,7 @@ async function removeTask() {
   50% { box-shadow: 0 0 0 6px rgba(136,157,240,0.06); }
 }
 
-.step-pass .step-strip { background: #6fba2c; }
+.step-pass .step-strip { background: #89CFF0; }
 .step-pass .step-body { background: rgba(111,186,44,0.03); }
 .step-pass .step-status-tag { background: rgba(111,186,44,0.15); color: #529b2a; }
 

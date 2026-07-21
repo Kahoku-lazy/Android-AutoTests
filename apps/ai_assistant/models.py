@@ -140,6 +140,8 @@ class AIMessage(models.Model):
     tokens = models.IntegerField(default=0)
     input_tokens = models.IntegerField(default=0)
     model_name = models.CharField(max_length=100, default="", blank=True)
+    # Transport used for this reply: 'sse' | 'fallback' | '' (legacy/unknown)
+    flow = models.CharField(max_length=20, default="", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

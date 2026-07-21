@@ -137,12 +137,12 @@ async function doSave() {
 .col-num { width: 40px; text-align: center; color: #999; font-size: 12px; }
 .row-selected { background: #f0f7ff; } .row-selected td { border-color: #c8e0ff; }
 .cell-input { width: 100%; padding: 4px 6px; border: 1px solid transparent; border-radius: 4px; font-size: 13px; background: transparent; }
-.cell-input:focus { border-color: #6fba2c; background: #fff; outline: none; }
+.cell-input:focus { border-color: var(--animal-primary-color, #89CFF0); background: #fff; outline: none; }
 .cell-input:hover { border-color: #ddd; }
 .cell-text { padding: 4px 6px; display: block; }
 .btn-col-remove { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); border: none; background: #fee; color: #e85f5f; border-radius: 3px; cursor: pointer; font-size: 10px; padding: 1px 4px; }
 .btn-primary, .btn-minor, .btn-text { padding: 6px 16px; border-radius: 8px; border: 1px solid #e0e0e0; background: #fff; cursor: pointer; font-size: 13px; }
-.btn-primary { background: #6fba2c; color: #fff; border-color: #6fba2c; }
+.btn-primary { background: var(--animal-primary-color, #89CFF0); color: #fff; border-color: var(--animal-primary-color, #89CFF0); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-danger-outline { color: #e85f5f; border-color: #fcc; }
 .lock-banner { padding: 12px 16px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }

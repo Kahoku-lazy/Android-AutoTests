@@ -3,27 +3,23 @@
    令牌来源: shared/styles/tokens.css
    ═══════════════════════════════════════════════ */
 
-/* ═══════════════════════════════════════════════
-   ️ 性能优化：拦截 Noto Sans SC 字体下载
-   原因：animal-island-vue 自带 3 个中文字重共 3.4MB，
-   用系统字体兜底（Microsoft YaHei / PingFang SC）
-   ═══════════════════════════════════════════════ */
+/* ── 性能优化：拦截 Noto Sans SC 字体下载 ── */
 @font-face {
   font-family: "Noto Sans SC";
   font-weight: 400; font-display: swap;
-  src: local("Microsoft YaHei"), local("PingFang SC"),
+  src: local("PingFang SC"), local("Microsoft YaHei"),
        local("Hiragino Sans GB"), local("Heiti SC");
 }
 @font-face {
   font-family: "Noto Sans SC";
   font-weight: 500; font-display: swap;
-  src: local("Microsoft YaHei"), local("PingFang SC"),
+  src: local("PingFang SC"), local("Microsoft YaHei"),
        local("Hiragino Sans GB"), local("Heiti SC");
 }
 @font-face {
   font-family: "Noto Sans SC";
   font-weight: 700; font-display: swap;
-  src: local("Microsoft YaHei Bold"), local("PingFang SC Semibold"),
+  src: local("PingFang SC Semibold"), local("Microsoft YaHei Bold"),
        local("Hiragino Sans GB W6"), local("Heiti SC Medium");
 }
 
@@ -38,9 +34,9 @@ body {
   background:
     radial-gradient(circle at 14% 12%, var(--app-sky-cloud), transparent 28%),
     radial-gradient(circle at 82% 18%, rgba(162,210,255,0.52), transparent 32%),
-    radial-gradient(circle at 78% 92%, rgba(63,158,216,0.42), transparent 36%),
-    radial-gradient(circle at 12% 88%, rgba(111,185,141,0.42), transparent 34%),
-    linear-gradient(135deg, var(--app-sky) 0%, var(--app-blue-light) 38%, var(--app-ocean-soft) 68%, var(--app-forest-soft) 100%);
+    radial-gradient(circle at 78% 92%, rgba(201,182,242,0.35), transparent 36%),
+    radial-gradient(circle at 12% 88%, rgba(149,213,178,0.42), transparent 34%),
+    linear-gradient(135deg, #e0f7fa 0%, #f3e5f5 50%, #e8f5e9 100%);
   background-size: 180% 180%;
   animation: gradientBG 15s ease infinite;
   -webkit-font-smoothing: antialiased;
@@ -55,31 +51,6 @@ body {
 }
 
 body.no-bg-anim { animation: none !important; }
-
-/* ── 毛玻璃面板 ── */
-.glass-panel {
-  background: var(--app-glass);
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
-  border-radius: var(--app-radius-lg);
-  border: 1px solid var(--app-glass-border);
-  box-shadow: var(--app-shadow-md);
-  padding: 24px;
-}
-
-.glass-stat {
-  background: var(--app-glass);
-  backdrop-filter: blur(var(--app-glass-blur));
-  border-radius: var(--app-radius-lg);
-  border: 1px solid var(--app-glass-border);
-  padding: 24px;
-  box-shadow: var(--app-shadow-md);
-  transition: all var(--app-duration-slow) var(--app-ease);
-}
-.glass-stat:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--app-shadow-lg);
-}
 
 /* ── Soft Glass 图标容器 ── */
 .soft-icon {
@@ -142,6 +113,33 @@ body.no-bg-anim { animation: none !important; }
   -webkit-backdrop-filter: blur(var(--app-glass-blur));
 }
 
+/* ── V6 玻璃卡片彩色顶条 ── */
+.ac-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.ac-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: var(--app-radius-lg) var(--app-radius-lg) 0 0;
+  z-index: 1;
+}
+
+.ac-card--blue::before { background: var(--app-module-blue, #BDE0FE); }
+.ac-card--green::before { background: var(--app-module-green, #95D5B2); }
+.ac-card--teal::before { background: var(--app-module-teal, #89CFF0); }
+.ac-card--purple::before { background: var(--app-module-purple, #C9B6F2); }
+.ac-card--pink::before { background: var(--app-module-pink, #FFB5A7); }
+.ac-card--yellow::before { background: var(--app-module-yellow, #F4D35E); }
+.ac-card--brown::before { background: var(--app-module-brown, #9a8c98); }
+.ac-card--red::before { background: var(--app-module-pink, #FFB5A7); }
+.ac-card--orange::before { background: var(--app-module-orange, #C9B6F2); }
+
 .el-dialog {
   border-radius: var(--app-radius-lg) !important;
   overflow: hidden;
@@ -149,13 +147,13 @@ body.no-bg-anim { animation: none !important; }
 
 .el-button {
   font-family: var(--app-font) !important;
-  border-radius: var(--app-radius-pill) !important;
+  border-radius: var(--app-radius-sm) !important;
 }
 .el-button--primary {
-  background: linear-gradient(135deg, var(--app-green-deep), var(--app-blue)) !important;
+  background: linear-gradient(135deg, #89CFF0, #C9B6F2) !important;
   border-color: transparent !important;
   color: #fff !important;
-  box-shadow: 0 8px 20px rgba(162, 210, 255, 0.28);
+  box-shadow: 0 4px 15px rgba(137,207,240,0.3);
 }
 .el-button--primary:hover {
   opacity: 0.9;
@@ -183,14 +181,14 @@ body.no-bg-anim { animation: none !important; }
 .el-input__wrapper,
 .el-select .el-input__wrapper {
   background: var(--app-glass-card) !important;
-  border-radius: var(--app-radius-pill) !important;
+  border-radius: var(--app-radius-sm) !important;
   border: 1.5px solid var(--app-glass-border) !important;
   box-shadow: var(--app-shadow-sm) !important;
   transition: border-color var(--app-duration-fast) var(--app-ease);
 }
 .el-input__wrapper:hover,
 .el-select .el-input__wrapper:hover {
-  border-color: var(--app-blue) !important;
+  border-color: #89CFF0 !important;
 }
 
 /* ── 代码字体 ── */

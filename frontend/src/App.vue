@@ -1,53 +1,22 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { pageEnter, pageLeave, staggerIn, iconBounce } from '@/shared/animations.js'
 import AppSidebar from '@/shared/components/AppSidebar.vue'
 
 const route = useRoute()
-const transitionName = ref('fade-slide')
 const showSidebar = computed(() => route.path !== '/login')
-
-function onBeforeEnter(el) {
-  el.style.opacity = '0'
-  el.style.transform = 'translateY(20px)'
-}
-
-function onEnter(el, done) {
-  pageEnter(el, () => {
-    const sections = el.querySelectorAll(
-      '.doc-section, .el-card, .agent-card, .kpi-card, .task-card, .wb-header'
-    )
-    if (sections.length) staggerIn(sections, 45)
-    const mark = el.querySelector('.brand-mark')
-    if (mark) iconBounce(mark)
-    done()
-  })
-}
-
-function onLeave(el, done) {
-  pageLeave(el, done)
-}
 </script>
 
 <template>
-  <div class="ac-cursor">
-    <div class="app-shell">
-      <AppSidebar v-if="showSidebar" />
-      <main class="main-content">
-        <router-view v-slot="{ Component }">
-          <transition
-            :name="transitionName"
-            mode="out-in"
-            @before-enter="onBeforeEnter"
-            @enter="onEnter"
-            @leave="onLeave"
-          >
-            <component :is="Component" :key="route.path" />
-          </transition>
-        </router-view>
-      </main>
-    </div>
+  <div class="app-shell">
+    <AppSidebar v-if="showSidebar" />
+    <main class="main-content">
+      <router-view v-slot="{ Component }">
+        <keep-alive :max="5">
+          <component :is="Component" :key="route.path" />
+        </keep-alive>
+      </router-view>
+    </main>
   </div>
 </template>
 

@@ -335,7 +335,8 @@ function connectionLabel(type) {
     <WorkbenchHeader
       title="设备管理"
       subtitle="扫描、连接、锁定 Android 设备，管理设备状态与使用队列"
-      mark="📱"
+      icon="smartphone"
+      icon-gradient="linear-gradient(135deg,#95D5B2,#52b788)"
     >
       <template #actions>
         <QueuePanel
@@ -823,6 +824,13 @@ function connectionLabel(type) {
 .device-table-wrapper :deep(.el-table td:last-child) {
   vertical-align: middle;
 }
+.device-table-wrapper :deep(.el-table td:last-child .cell) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
 
 /* ── Row dot indicator ── */
 .row-dot {
@@ -902,14 +910,32 @@ function connectionLabel(type) {
 .action-btns {
   display: flex;
   flex-direction: column;
-  gap: 3px;
   align-items: stretch;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 100%;
 }
-.action-btns .wb-btn {
+.action-btns .wb-btn.el-button {
   width: 100%;
   min-width: 0;
-  font-size: 11px;
-  padding: 3px 10px;
+  margin: 0 !important; /* 覆盖 .el-button+.el-button 的 margin-left，保证纵向对齐 */
+  height: auto;
+  min-height: 28px;
+  padding: 5px 12px;
+  font-size: 12px;
+  line-height: 1.25;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+.action-btns .wb-btn.el-button > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.25;
 }
 
 /* ── Action button colors ── */

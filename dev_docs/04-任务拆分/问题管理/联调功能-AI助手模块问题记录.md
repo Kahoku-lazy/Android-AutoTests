@@ -174,3 +174,19 @@ Cancel 按钮只清 `pendingConfirm`，不通知后端。流永久挂起。
 | P1 | #14 base_url 校验 | 低 — 白名单 |
 | P1 | #10 decrypt_key 明文回退 | 低 — 删除回退 |
 | P1 | #16 HITL 取消不发拒绝 | 低 — 发送 DENY |
+
+---
+
+## ✅ 已修复（2026-07-21）
+
+### 保存智能体 500 — 数据库缺列
+**现象**：点击「保存智能体」报保存失败；后端 `Unknown column 'ai_agents.skills_config'`。
+
+**根因**：`ai_assistant` 迁移 `0010`–`0013` 未执行（`skills_config` / `knowledge_sources` / `phase_tool_config` / `parallel_tool_calls`）。
+
+**修复**：`python manage.py migrate ai_assistant`
+
+### 新建页误请求 `/ai/agents/new/tools`
+**根因**：`isNew` 为布尔值却多处写 `isNew.value`（恒为 `undefined`），`loadAgentTools` 未跳过新建模式。
+
+**修复**：`agentId` / `isNew` 改为 `computed`，脚本统一用 `.value`。

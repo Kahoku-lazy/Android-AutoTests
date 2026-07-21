@@ -16,6 +16,10 @@ let resizeObserver = null
 function buildOption() {
   const c = props.chart
   return {
+    animation: true,
+    animationDuration: 800,
+    animationEasing: 'cubicOut',
+    animationDurationUpdate: 450,
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
@@ -26,29 +30,33 @@ function buildOption() {
       itemWidth: 10,
       itemHeight: 10,
       itemGap: 20,
-      textStyle: { fontSize: 12, color: '#725d42', fontWeight: 600 },
+      textStyle: { fontSize: 12, color: '#4a4e69', fontWeight: 600 },
     },
     grid: { top: 12, right: 8, bottom: 36, left: 8 },
     xAxis: {
       type: 'category',
       data: c.labels || [],
-      axisLine: { lineStyle: { color: 'rgba(121,79,39,0.15)' } },
+      axisLine: { lineStyle: { color: 'rgba(137,207,240,0.12)' } },
       axisTick: { show: false },
-      axisLabel: { fontSize: 10, color: '#9f927d', fontWeight: 600 },
+      axisLabel: { fontSize: 10, color: '#9a8c98', fontWeight: 600 },
     },
     yAxis: {
       type: 'value',
-      splitLine: { lineStyle: { color: 'rgba(121,79,39,0.08)' } },
-      axisLabel: { fontSize: 10, color: '#9f927d' },
+      splitLine: { lineStyle: { color: 'rgba(137,207,240,0.06)' } },
+      axisLabel: { fontSize: 10, color: '#9a8c98' },
     },
     series: [
-      { name: '执行成功', type: 'bar', data: c.success || [], color: '#6fba2c',
-        barMaxWidth: 14, itemStyle: { borderRadius: [3, 3, 0, 0] } },
+      { name: '执行成功', type: 'bar', data: c.success || [], color: '#89CFF0',
+        barMaxWidth: 14, itemStyle: { borderRadius: [3, 3, 0, 0] },
+        animationDelay: (idx) => idx * 40 },
       { name: '执行失败', type: 'bar', data: c.failed || [], color: '#e05a5a',
-        barMaxWidth: 14, itemStyle: { borderRadius: [3, 3, 0, 0] } },
+        barMaxWidth: 14, itemStyle: { borderRadius: [3, 3, 0, 0] },
+        animationDelay: (idx) => idx * 40 + 60 },
       { name: '新建用例', type: 'bar', data: c.new_cases || [], color: '#889df0',
-        barMaxWidth: 14, itemStyle: { borderRadius: [3, 3, 0, 0] } },
+        barMaxWidth: 14, itemStyle: { borderRadius: [3, 3, 0, 0] },
+        animationDelay: (idx) => idx * 40 + 120 },
     ],
+    animationDelayUpdate: (idx) => idx * 30,
   }
 }
 

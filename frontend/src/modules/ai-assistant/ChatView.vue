@@ -357,7 +357,8 @@ async function handleImportPRD({ sessionId }) {
         agent?.description ||
         '与智能体进行多轮对话，支持 Markdown、Mermaid 图表与文件上传'
       "
-      mark="💬"
+      icon="message-circle"
+      icon-gradient="linear-gradient(135deg,#5EEAD4,#14b8a6)"
     />
 
     <div class="doc-body">

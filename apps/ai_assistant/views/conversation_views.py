@@ -162,6 +162,7 @@ def list_messages(request, conv_id):
          "tokens": m.tokens,
          "input_tokens": m.input_tokens or 0,
          "model_name": m.model_name or '',
+         "flow": m.flow or '',
          "created_at": str(m.created_at)} for m in msgs]})
 
 
@@ -193,14 +194,16 @@ def send_message(request, conv_id):
         response_text = f"抱歉，智能体运行出错：{str(e)}"
         role = "assistant"
 
-    AIMessage.objects.create(conversation=conv, role=role, content=response_text, tokens=tokens)
+    AIMessage.objects.create(
+        conversation=conv, role=role, content=response_text, tokens=tokens, flow="fallback",
+    )
     conv.title = user_text[:30] if conv.title == "新对话" else conv.title
     conv.save(update_fields=["title", "updated_at"])
 
     agentscope_ok, _ = _check_agentscope_available()
     return JsonResponse({
         "ok": True,
-        "message": {"role": role, "content": response_text, "tokens": tokens},
+        "message": {"role": role, "content": response_text, "tokens": tokens, "flow": "fallback"},
         "degraded": not agentscope_ok,
     })
 
@@ -279,6 +282,9 @@ def save_message(request, conv_id):
     reason = data.get('reason', 'normal')
     input_tokens = data.get('input_tokens', 0)
     model_name = data.get('model_name', '')
+    flow = data.get('flow', '') or ''
+    if flow not in ('', 'sse', 'fallback'):
+        flow = ''
     msg = AIMessage.objects.create(
         conversation_id=conv_id,
         role=role,
@@ -288,6 +294,7 @@ def save_message(request, conv_id):
         reason=reason,
         input_tokens=input_tokens,
         model_name=model_name,
+        flow=flow,
     )
     return JsonResponse({"ok": True, "id": msg.id})
 
@@ -383,7 +390,7 @@ def stream_chat(request, conv_id):
         if final.strip():
             AIMessage.objects.create(
                 conversation=conv, role="assistant", content=final,
-                tokens=len(final), model_name=model_name,
+                tokens=len(final), model_name=model_name, flow="sse",
             )
 
     response = StreamingHttpResponse(

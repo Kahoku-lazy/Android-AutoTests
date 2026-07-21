@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
+import { getToken } from '@/shared/api-client.js'
 
 import {
   listBanks, createBank, updateBank, deleteBank, seedDefaultBank,
@@ -179,7 +180,7 @@ async function doKbQuery() {
     // Actually, use a dedicated search: POST /api/evaluator/kb-search
     const resp = await fetch('/api/evaluator/kb-search', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
       body: JSON.stringify({ query: q, top_k: 5 }),
     })
     const d = await resp.json()
@@ -195,7 +196,7 @@ async function doKbQuery() {
 onMounted(async () => { await Promise.all([loadAgents(), loadBanks(), loadRuns(), loadFrameworks()]) })
 
 // Helpers
-function scoreColor(s) { const v = parseFloat(s) || 0; if (v >= 4) return '#6fba2c'; if (v >= 3) return '#f7cd67'; if (v >= 2) return '#f7a8c4'; return '#e85f5f' }
+function scoreColor(s) { const v = parseFloat(s) || 0; if (v >= 4) return '#89CFF0'; if (v >= 3) return '#f7cd67'; if (v >= 2) return '#f7a8c4'; return '#e85f5f' }
 function fwLabel(run) { const fw = SUB_TABS.find(f => f.key === (run.framework || 'self')); return fw ? fw.label : (run.framework || 'self') }
 function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2) } catch { return raw } }
 </script>
@@ -435,7 +436,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
         <span style="font-weight:600;min-width:100px">{{ r.agent_name }}</span>
         <el-tag size="small" type="info">{{ fwLabel(r) }}</el-tag>
         <span style="color:#8a7b66;font-size:13px">{{ r.bank_name }} · {{ r.total_questions }}题</span>
-        <span v-if="r.total_score>0" style="font-weight:700;color:#6fba2c;font-size:13px">总分 {{ r.total_score }}</span>
+        <span v-if="r.total_score>0" style="font-weight:700;color:#89CFF0;font-size:13px">总分 {{ r.total_score }}</span>
         <span v-if="r.status==='running'" style="color:#f7a8c4;font-size:13px">{{ r.completed_questions }}/{{ r.total_questions }}</span>
         <div style="margin-left:auto;display:flex;gap:8px">
           <el-button size="small" @click="viewRun(r.id)" :disabled="r.status==='running'">详情</el-button>

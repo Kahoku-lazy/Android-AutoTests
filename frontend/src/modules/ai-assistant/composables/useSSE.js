@@ -69,6 +69,11 @@ export function useSSE({
         tokens: prev.tokens || 0,
         ...extras,
         content: finalContent,
+        // Keep existing flow if settle call omitted it
+        flow:
+          extras.flow === "sse" || extras.flow === "fallback"
+            ? extras.flow
+            : prev.flow || null,
         reason: disconnected
           ? "error"
           : extras.reason || prev.reason || "normal",
@@ -110,6 +115,7 @@ export function useSSE({
         tokens: msg.tokens || 0,
         input_tokens: msg.inputTokens || 0,
         model_name: msg.modelName || "",
+        flow: msg.flow || "",
       });
     } catch (e) {
       console.warn("Failed to save partial message before detach:", e);
@@ -464,6 +470,7 @@ export function useSSE({
                   tokens: builder.getTokenUsage().total || 0,
                   input_tokens: builder.getTokenUsage().input || 0,
                   model_name: builder.modelName || "",
+                  flow: "sse",
                 },
               );
               // Only update UI if component is still mounted
@@ -573,6 +580,7 @@ export function useSSE({
               tokens: 0,
               reason: "stopped",
               blocks: sseBuilder.value ? sseBuilder.value.getBlocks() : [],
+              flow: "sse",
             },
           )
           .catch((e) => console.error("Failed to save partial stream:", e));

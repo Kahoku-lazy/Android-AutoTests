@@ -1,8 +1,7 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { staggerReveal } from '@/shared/animations.js'
-// AppCard → el-card (Element Plus auto-import)
 
 const props = defineProps({
   stats: { type: Object, default: () => ({}) },
@@ -10,79 +9,82 @@ const props = defineProps({
 
 const router = useRouter()
 
+// ── PRD 8 模块 → V6 配色 + Lucide 图标 ──
 const modules = computed(() => {
   const s = props.stats
   return [
     {
+      id: 'dashboard', title: '仪表盘',
+      desc: '平台首页 · KPI 概览 · 全局导航',
+      path: '/dashboard',
+      color: 'app-yellow', gradient: 'linear-gradient(135deg,#F4D35E,#f0c06a)',
+      icon: 'layout-dashboard',
+      stats: { label: '快捷入口', value: '8', total: '' },
+    },
+    {
       id: 'device-pool', title: '设备管理',
-      icon: '▣',
-      subtitle: '设备池 · 连接 · 锁管理',
-      path: '/devices', cardColor: 'app-blue', pattern: 'app-blue',
+      desc: 'ADB 扫描 · 连接锁定 · 排队调度',
+      path: '/devices',
+      color: 'app-green', gradient: 'linear-gradient(135deg,#95D5B2,#52b788)',
+      icon: 'smartphone',
       stats: { label: '在线设备', value: String(s.devices?.online ?? 0), total: String(s.devices?.total ?? 0) },
-      features: ['USB + Wi-Fi', '队列管理', '批量操作'], size: 'tall',
     },
     {
       id: 'element-locator', title: '元素定位',
-      icon: '⌖',
-      subtitle: '截图 · XPath · 验证',
-      path: '/elements', cardColor: 'purple', pattern: 'purple',
-      stats: { label: '已定位', value: String(s.elements?.total ?? 0), total: '' },
-      features: ['实时截图', '智能选择器', '多候选列表'], size: 'wide',
+      desc: '实时截图 · Dump UI · XPath 生成',
+      path: '/elements',
+      color: 'purple', gradient: 'linear-gradient(135deg,#C9B6F2,#a78bfa)',
+      icon: 'crosshair',
+      stats: { label: '元素数', value: String(s.elements?.total ?? 0), total: '' },
+    },
+    {
+      id: 'case-manager', title: '用例管理',
+      desc: '步骤编排 · 目录树 · YAML 导入导出',
+      path: '/cases',
+      color: 'app-teal', gradient: 'linear-gradient(135deg,#89CFF0,#60a5fa)',
+      icon: 'layers',
+      stats: { label: '用例数', value: String(s.cases?.total ?? 0), total: '' },
     },
     {
       id: 'test-runner', title: '执行引擎',
-      icon: '▥',
-      subtitle: '任务调度 · WebSocket 日志',
-      path: '/runner', cardColor: 'app-pink', pattern: 'app-pink',
+      desc: '任务调度 · 实时进度 · WebSocket 日志',
+      path: '/runner',
+      color: 'app-pink', gradient: 'linear-gradient(135deg,#FFB5A7,#f87171)',
+      icon: 'play-circle',
       stats: { label: '运行中', value: String(s.runs?.active ?? 0), total: String(s.runs?.total ?? 0) },
-      features: ['并发执行', '实时日志', '状态追踪'], size: 'normal',
-    },
-    {
-      id: 'case-manager', title: '测试用例',
-      icon: '▤',
-      subtitle: 'YAML DSL · 步骤编排',
-      path: '/cases', cardColor: 'app-teal', pattern: 'app-teal',
-      stats: { label: '用例数', value: String(s.cases?.total ?? 0), total: '' },
-      features: ['可视化编辑', '参数化', '分组管理'], size: 'normal',
-    },
-    {
-      id: 'workflow', title: '工作流',
-      icon: '⇄',
-      subtitle: '页面关系图 · Scratch 积木',
-      path: '/workflow', cardColor: 'app-orange', pattern: 'app-orange',
-      stats: { label: '工作台', value: 'Demo', total: '' },
-      features: ['起点/终点', 'Vue Flow', 'Blockly'], size: 'normal',
     },
     {
       id: 'report-generator', title: '测试报告',
-      icon: '▧',
-      subtitle: 'Allure · 趋势分析',
-      path: '/reports', cardColor: 'app-green', pattern: 'app-green',
+      desc: 'KPI 摘要 · 失败定位 · 趋势图表',
+      path: '/reports',
+      color: 'brown', gradient: 'linear-gradient(135deg,#9a8c98,#8b7f8f)',
+      icon: 'file-bar-chart',
       stats: { label: '报告数', value: String(s.reports?.total ?? 0), total: '' },
-      features: ['图表分析', '失败溯源', '导出 PDF'], size: 'normal',
     },
     {
       id: 'ai-assistant', title: 'AI 助手',
-      icon: '✦',
-      subtitle: 'Agent · 对话 · 编排',
-      path: '/ai-assistant', cardColor: 'app-orange', pattern: 'app-orange',
+      desc: '自然语言驱动 · SSE 流式 · 知识库',
+      path: '/ai-assistant',
+      color: 'app-orange', gradient: 'linear-gradient(135deg,#5EEAD4,#14b8a6)',
+      icon: 'bot',
       stats: { label: '智能体', value: String(s.agents?.total ?? 0), total: '' },
-      features: ['SSE 流式', '多 Agent', '知识库'], size: 'tall',
     },
     {
-      id: 'element-manager', title: '元素管理',
-      icon: '□',
-      subtitle: '页面 · 元素库 · 复用',
-      path: '/element-mgr', cardColor: 'brown', pattern: 'brown',
-      stats: { label: '页面数', value: String(s.elements?.pages ?? 0), total: '' },
-      features: ['分类标签', '快速检索', '用例关联'], size: 'normal',
+      id: 'workflow', title: '工作流工作台',
+      desc: 'Blockly 积木 · VueFlow 画图 · 同步用例库',
+      path: '/workflow',
+      color: 'app-blue', gradient: 'linear-gradient(135deg,#BDE0FE,#93c5fd)',
+      icon: 'git-branch',
+      stats: { label: 'Demo', value: '', total: '' },
     },
   ]
 })
 
 const cardRefs = ref([])
 
-onMounted(() => {
+onMounted(async () => {
+  await nextTick()
+  if (window.lucide) window.lucide.createIcons()
   if (cardRefs.value.length) {
     staggerReveal(cardRefs.value, 70, 0.9)
   }
@@ -99,47 +101,36 @@ function setCardRef(el, idx) {
 
 <template>
   <div class="module-nav">
-    <div class="module-nav__header">
-      <h2 class="module-nav__title">功能模块</h2>
-      <span class="module-nav__subtitle">{{ modules.length }} 个核心模块</span>
+    <div class="page-header">
+      <h1 class="page-title">欢迎使用 AI 自动化测试平台</h1>
+      <p class="page-subtitle">V6 · 8 模块全栈平台 · AI 驱动的 Android UI 自动化测试</p>
     </div>
 
-    <div class="module-nav__grid">
+    <div class="modules-grid">
       <div
         v-for="(mod, idx) in modules"
         :key="mod.id"
-        :class="'module-cell module-cell--' + mod.size"
+        :ref="(el) => setCardRef(el, idx)"
+        :class="['module-card', 'module-card--' + mod.color.replace('app-','')]"
+        @click="navigate(mod.path)"
       >
-        <el-card
-          :ref="(el) => setCardRef(el, idx)"
-          class="module-card"
-          @click="navigate(mod.path)"
-        >
-          <div class="module-card__inner">
-            <div class="module-card__top">
-              <span class="module-card__icon soft-icon soft-icon--blue">{{ mod.icon }}</span>
-              <div class="module-card__stats" v-if="mod.stats.value">
-                <span class="module-card__stats-value">{{ mod.stats.value }}</span>
-                <span v-if="mod.stats.total" class="module-card__stats-sep">/</span>
-                <span v-if="mod.stats.total" class="module-card__stats-total">{{ mod.stats.total }}</span>
-                <span class="module-card__stats-label">{{ mod.stats.label }}</span>
-              </div>
-            </div>
-            <div class="module-card__info">
-              <h3 class="module-card__title">{{ mod.title }}</h3>
-              <p class="module-card__subtitle">{{ mod.subtitle }}</p>
-            </div>
-            <div class="module-card__features">
-              <span v-for="(feat, fi) in mod.features" :key="fi" class="module-card__tag">{{ feat }}</span>
-            </div>
-            <div class="module-card__arrow">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="5" y1="12" x2="19" y2="12"/>
-                <polyline points="12 5 19 12 12 19"/>
-              </svg>
-            </div>
+        <div class="module-icon" :style="{ background: mod.gradient }">
+          <i :data-lucide="mod.icon"></i>
+        </div>
+        <div class="module-body">
+          <div class="module-name">{{ mod.title }}</div>
+          <div class="module-desc">{{ mod.desc }}</div>
+          <div class="module-meta">
+            <span v-if="mod.stats.value" class="module-stat">
+              <strong>{{ mod.stats.value }}</strong><template v-if="mod.stats.total">/{{ mod.stats.total }}</template>
+              <small>{{ mod.stats.label }}</small>
+            </span>
+            <span v-else class="module-stat">
+              <small>{{ mod.stats.label }}</small>
+            </span>
+            <button class="module-enter" :style="{ background: mod.gradient }">进入 →</button>
           </div>
-        </el-card>
+        </div>
       </div>
     </div>
   </div>
@@ -147,106 +138,116 @@ function setCardRef(el, idx) {
 
 <style scoped>
 .module-nav { width: 100%; }
-.module-nav__header {
-  display: flex; align-items: baseline; gap: 12px; margin-bottom: 20px;
+
+/* ── V6 页面标题 ── */
+.page-header { margin-bottom: 28px; }
+.page-title {
+  font-size: 1.8rem; font-weight: 700;
+  color: var(--app-text, #4a4e69); margin: 0;
 }
-.module-nav__title {
-  font-family: var(--font-display, Nunito, sans-serif);
-  font-size: 20px; font-weight: 700;
-  color: var(--animal-text-color, #794f27); margin: 0;
-}
-.module-nav__subtitle {
-  font-size: 13px; color: var(--app-text-secondary, #9f927d); font-weight: 500;
+.page-subtitle {
+  font-size: .9rem; color: var(--app-text-secondary, #9a8c98); margin-top: 4px;
 }
 
-/* Bento Grid */
-.module-nav__grid {
+/* ── V6 3 列模块卡片网格 ── */
+.modules-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: 160px;
-  gap: 14px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
 }
-@media (max-width: 1200px) { .module-nav__grid { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 768px) { .module-nav__grid { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 140px; } }
-@media (max-width: 480px) { .module-nav__grid { grid-template-columns: 1fr; grid-auto-rows: 130px; } }
+@media (max-width: 1200px) { .modules-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px) { .modules-grid { grid-template-columns: 1fr; } }
 
-.module-cell--tall { grid-row: span 2; }
-.module-cell--wide { grid-column: span 2; }
-
-/* AppCard within cell */
+/* ── V6 模块卡片 ── */
 .module-card {
-  height: 100%;
+  background: var(--app-glass-card, rgba(255,255,255,0.65));
+  backdrop-filter: blur(var(--app-glass-blur, 20px));
+  -webkit-backdrop-filter: blur(var(--app-glass-blur, 20px));
+  border-radius: var(--app-radius-md, 20px);
+  padding: 24px;
+  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
+  box-shadow: var(--app-shadow-sm, 0 4px 15px rgba(0,0,0,.02));
+  transition: all .3s;
+  position: relative;
+  overflow: hidden;
   cursor: pointer;
-  transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
-}
-.module-card:hover {
-  transform: translateY(-3px);
-}
-.module-card :deep(.el-card__body) {
-  height: 100%;
-  padding: 18px 20px;
-}
-
-.module-card__inner {
-  height: 100%;
   display: flex;
   flex-direction: column;
+  gap: 0;
+}
+
+.module-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  border-radius: 20px 20px 0 0;
+}
+
+.module-card:hover {
+  box-shadow: var(--app-shadow-md, 0 8px 25px rgba(0,0,0,.05));
+  transform: translateY(-3px);
+}
+
+/* 彩色顶条 */
+.module-card--yellow::before { background: #F4D35E; }
+.module-card--green::before { background: #95D5B2; }
+.module-card--purple::before { background: #C9B6F2; }
+.module-card--teal::before { background: #89CFF0; }
+.module-card--pink::before { background: #FFB5A7; }
+.module-card--brown::before { background: #9a8c98; }
+.module-card--orange::before { background: #5EEAD4; }
+.module-card--blue::before { background: #BDE0FE; }
+
+/* ── 模块图标 ── */
+.module-icon {
+  width: 48px; height: 48px;
+  border-radius: var(--app-radius-sm, 16px);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 14px;
+}
+.module-icon i {
+  width: 24px; height: 24px;
+  color: #fff;
+}
+
+/* ── 模块内容 ── */
+.module-body { flex: 1; display: flex; flex-direction: column; }
+.module-name {
+  font-size: 1.05rem; font-weight: 700;
+  color: var(--app-text, #4a4e69); margin-bottom: 6px;
+}
+.module-desc {
+  font-size: .82rem; color: var(--app-text-secondary, #9a8c98);
+  margin-bottom: 12px; line-height: 1.5;
+  flex: 1;
+}
+.module-meta {
+  display: flex; align-items: center; justify-content: space-between;
   gap: 8px;
-  position: relative;
+}
+.module-stat {
+  font-size: .75rem; color: var(--app-text-secondary, #9a8c98);
+}
+.module-stat strong {
+  font-family: var(--app-font-display, Quicksand, sans-serif);
+  font-size: 1.2rem; font-weight: 800; color: var(--app-text, #4a4e69);
+  margin-right: 2px;
+}
+.module-stat small {
+  display: block; font-size: .65rem; text-transform: uppercase;
+  letter-spacing: 0.4px; opacity: 0.7;
 }
 
-.module-card__top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.module-card__icon {
-  width: 38px;
-  height: 38px;
-  font-size: 17px;
+/* ── 进入按钮 ── */
+.module-enter {
+  font-size: .78rem; font-weight: 600; color: #fff;
+  padding: 6px 14px; border-radius: var(--app-radius-sm, 16px);
+  border: none; cursor: pointer;
+  transition: all .2s; font-family: inherit;
   flex-shrink: 0;
 }
-
-.module-card__stats {
-  display: flex; align-items: baseline; gap: 2px; flex-wrap: wrap; justify-content: flex-end;
+.module-enter:hover {
+  transform: translateY(-1px); filter: brightness(1.1);
 }
-.module-card__stats-value {
-  font-family: Nunito, sans-serif;
-  font-size: 26px; font-weight: 800; line-height: 1;
-}
-.module-card__stats-sep,
-.module-card__stats-total {
-  font-size: 14px; opacity: 0.6;
-}
-.module-card__stats-label {
-  font-size: 10px; opacity: 0.6;
-  text-transform: uppercase; letter-spacing: 0.5px; width: 100%; text-align: right;
-}
-
-.module-card__info { flex: 1; }
-.module-card__title {
-  font-family: var(--font-display, Nunito, sans-serif);
-  font-size: 16px; font-weight: 700;
-  margin: 0 0 2px;
-}
-.module-card__subtitle {
-  font-size: 12px; opacity: 0.65; margin: 0; line-height: 1.4;
-}
-
-.module-card__features {
-  display: flex; flex-wrap: wrap; gap: 6px;
-}
-.module-card__tag {
-  font-size: 10px; padding: 3px 8px; border-radius: 20px;
-  background: rgba(255,255,255,0.5); font-weight: 500;
-  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-}
-
-.module-card__arrow {
-  position: absolute; right: 4px; bottom: 4px;
-  opacity: 0.4; transition: all 0.3s ease;
-}
-.module-card:hover .module-card__arrow { opacity: 0.8; }
 </style>

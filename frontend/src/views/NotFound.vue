@@ -44,9 +44,9 @@ function goBack() {
 .not-found__card {
   text-align: center;
   padding: 60px 40px;
-  background: var(--animal-bg-color, #fffbf5);
+  background: var(--app-bg-warm, #fdfbfb);
   border: 2px solid rgba(139, 115, 85, 0.12);
-  border-radius: var(--animal-border-radius-lg, 24px);
+  border-radius: var(--app-radius-lg, 24px);
   max-width: 480px;
   width: 100%;
 }
@@ -63,7 +63,7 @@ function goBack() {
 .not-found__title {
   font-size: 22px;
   font-weight: 700;
-  color: var(--animal-text-color, #4a3a28);
+  color: var(--app-text, #4a4e69);
   margin: 0 0 8px;
 }
 

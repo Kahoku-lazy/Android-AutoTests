@@ -290,7 +290,8 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
     <WorkbenchHeader
       title="AI 助手"
       subtitle="智能体看板贴便签，任务看板跟进度"
-      mark="🤖"
+      icon="bot"
+      icon-gradient="linear-gradient(135deg,#5EEAD4,#14b8a6)"
     >
       <template #actions>
         <el-button class="wb-btn wb-btn--sky" type="primary" @click="router.push('/ai-assistant/agent/new')">+ 新建智能体</el-button>
@@ -487,7 +488,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
 
 .filter-count {
   font-size: 13px;
-  color: #9f927d;
+  color: var(--app-text-secondary, #9a8c98);
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
@@ -501,10 +502,10 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
   align-items: flex-start;
   padding: 28px 22px 24px;
   border-radius: 18px;
-  background-color: #f7efd8;
-  background-image: radial-gradient(rgba(139, 115, 85, 0.18) 1.1px, transparent 1.1px);
+  background-color: var(--app-glass-card, rgba(255,255,255,0.65));
+  background-image: radial-gradient(rgba(137,207,240,0.12) 1.1px, transparent 1.1px);
   background-size: 18px 18px;
-  border: 1.5px solid rgba(196, 181, 160, 0.45);
+  border: 1.5px solid var(--app-glass-border, rgba(255,255,255,0.85));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 .duty-roster {
@@ -518,7 +519,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
 }
 
 .empty {
-  color: #988B7A;
+  color: var(--app-text-secondary, #9a8c98);
   padding: 48px 0;
   text-align: center;
   font-size: 15px;
@@ -533,7 +534,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: #988b7a;
+  color: var(--app-text-secondary, #9a8c98);
   font-size: 13px;
   font-weight: 700;
 }
@@ -544,7 +545,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
   gap: 4px;
   padding: 6px;
   margin: 0 24px;
-  background: rgba(121, 79, 39, 0.05);
+  background: rgba(137,207,240,0.06);
   border-radius: 14px;
   flex-shrink: 0;
 }
@@ -563,11 +564,11 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
 }
 .view-tab:hover {
   background: rgba(255, 255, 255, 0.6);
-  color: var(--app-text, #3D4A3B);
+  color: var(--app-text, #4a4e69);
 }
 .view-tab.active {
   background: #fff;
-  color: var(--app-text, #3D4A3B);
+  color: var(--app-text, #4a4e69);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 </style>

@@ -179,7 +179,7 @@ function stepTypeLabel(type) {
           </div>
           <div v-else class="bug-list">
             <div v-for="(bc, idx) in bugCases" :key="'bug-' + idx" class="bug-case-group">
-              <AppCard color="red" pattern="red">
+              <AppCard color="red">
                 <div
                   class="case-header"
                   role="button"
@@ -233,7 +233,7 @@ function stepTypeLabel(type) {
           </div>
           <div v-else class="case-list">
             <div v-for="(group, idx) in groups" :key="group.case_id + '-' + idx" class="case-group">
-              <AppCard color="red" pattern="red">
+              <AppCard color="red">
                 <div
                   class="case-header"
                   role="button"
@@ -328,7 +328,7 @@ function stepTypeLabel(type) {
 
       <div v-else class="case-list">
         <div v-for="(group, idx) in groups" :key="group.case_id + '-' + idx" class="case-group">
-          <AppCard :color="isPass ? 'green' : 'red'" :pattern="isPass ? 'green' : 'red'">
+          <AppCard :color="isPass ? 'green' : 'red'">
             <div
               class="case-header"
               role="button"
@@ -450,7 +450,7 @@ function stepTypeLabel(type) {
   color: #8a7b66;
   font-weight: 600;
 }
-.num-pass { color: #6fba2c; font-weight: 800; }
+.num-pass { color: #89CFF0; font-weight: 800; }
 .num-fail { color: #e05a5a; font-weight: 800; }
 
 .bug-kpi-row {

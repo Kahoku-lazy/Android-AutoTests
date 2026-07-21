@@ -131,8 +131,8 @@ function meta(status) {
   gap: 12px;
   padding: 12px 14px;
   border-radius: 14px;
-  background: rgba(255, 248, 240, 0.75);
-  border: 1px solid rgba(139, 115, 85, 0.1);
+  background: var(--app-glass-card, rgba(255,255,255,0.65));
+  border: 1px solid rgba(137,207,240,0.08);
 }
 
 .task-row__status {
@@ -147,11 +147,11 @@ function meta(status) {
   flex-shrink: 0;
 }
 
-.task-row__status.is-success { background: #6fba2c; color: #fff; }
+.task-row__status.is-success { background: #89CFF0; color: #fff; }
 .task-row__status.is-failed { background: #e05a5a; color: #fff; }
 .task-row__status.is-partial { background: #f5c31c; color: #5a4a20; }
 .task-row__status.is-running { background: #889df0; color: #fff; animation: pulse 1.5s ease-in-out infinite; }
-.task-row__status.is-idle { background: rgba(139, 115, 85, 0.12); color: #988B7A; }
+.task-row__status.is-idle { background: rgba(137,207,240,0.08); color: var(--app-text-secondary, #9a8c98); }
 
 .task-row__body {
   flex: 1;
@@ -161,7 +161,7 @@ function meta(status) {
 .task-row__title {
   font-size: 14px;
   font-weight: 700;
-  color: #4A3A28;
+  color: var(--app-text, #4a4e69);
   margin-bottom: 4px;
 }
 
@@ -190,12 +190,12 @@ function meta(status) {
 
 .task-row__stats {
   font-size: 11px;
-  color: #988B7A;
+  color: var(--app-text-secondary, #9a8c98);
 }
 
 .task-row__time {
   font-size: 11px;
-  color: #9f927d;
+  color: var(--app-text-secondary, #9a8c98);
   white-space: nowrap;
   flex-shrink: 0;
   padding-top: 2px;
@@ -203,7 +203,7 @@ function meta(status) {
 
 .task-result-panel__empty {
   text-align: center;
-  color: #988B7A;
+  color: var(--app-text-secondary, #9a8c98);
   font-size: 13px;
   padding: 24px 0;
 }

@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, BarController, BarElement, Filler, Tooltip, Legend } from 'chart.js'
 import { animate, stagger } from 'animejs'
 // Card/Table/AppTabs → AppCard/AppTable/AppTabs
 import AppCard from "@/shared/components/AppCard.vue";
@@ -10,8 +9,12 @@ import AppTabs from "@/shared/components/AppTabs.vue";
 import { usePagination } from '@/shared/composables/usePagination.js'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import { listRuns, statusLabel, statusBadgeClass, formatTime } from './api.js'
-
-Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, BarController, BarElement, Filler, Tooltip, Legend)
+import PassRateTrendChart from './components/PassRateTrendChart.vue'
+import DailyPassFailChart from './components/DailyPassFailChart.vue'
+import {
+  CHART_RANGE_OPTIONS,
+  CHART_VISIBLE_DAYS,
+} from './constants.js'
 
 const router = useRouter()
 
@@ -34,26 +37,10 @@ const TABLE_ROW_HEIGHT = 50
 
 const trend = ref(null)
 
-const CHART_RANGE_OPTIONS = [
-  { key: 7, label: '一周' },
-  { key: 30, label: '一月' },
-  { key: 90, label: '一季度' },
-]
 const chartRange = ref(30)
-const CHART_VISIBLE_DAYS = 5
-
-const chartRangeLabel = computed(() => {
-  const opt = CHART_RANGE_OPTIONS.find(o => o.key === chartRange.value)
-  return opt ? opt.label : '一月'
-})
-
-// Chart.js instances
-let passRateChart = null
-let dailyCountChart = null
 
 onMounted(() => {
   fetchReports()
-  window.addEventListener('resize', onChartResize)
 })
 watch(dateRange, () => { currentPage.value = 1; fetchReports() }, { deep: true })
 watch([filterRunId, filterTaskName, filterDevice, filterCreator], () => {
@@ -66,81 +53,11 @@ watch(chartRange, () => { fetchReports() })
 
 onUnmounted(() => {
   clearTimeout(filterDebounceTimer)
-  clearTimeout(chartResizeTimer)
-  window.removeEventListener('resize', onChartResize)
-  if (passRateChart) passRateChart.destroy()
-  if (dailyCountChart) dailyCountChart.destroy()
 })
 
-let chartResizeTimer = null
-let syncingChartScroll = false
-
-function onChartResize() {
-  clearTimeout(chartResizeTimer)
-  chartResizeTimer = setTimeout(renderTrendCharts, 150)
+function setChartRange(days) {
+  chartRange.value = days
 }
-
-function getChartDayWidth(scrollEl) {
-  if (!scrollEl || scrollEl.clientWidth <= 0) return 72
-  return scrollEl.clientWidth / CHART_VISIBLE_DAYS
-}
-
-function getChartMetrics() {
-  const n = trend.value?.labels?.length || 0
-  const passScroll = document.getElementById('chartScrollPass')
-  const dayW = getChartDayWidth(passScroll)
-  const totalW = Math.max(Math.round(n * dayW), passScroll?.clientWidth || 360)
-  return { n, dayW, totalW, height: 200 }
-}
-
-function applyChartInnerWidths(metrics) {
-  const innerW = `${metrics.totalW}px`
-  for (const id of ['chartInnerPass', 'chartInnerDaily']) {
-    const el = document.getElementById(id)
-    if (!el) continue
-    el.style.width = innerW
-    el.style.minWidth = innerW
-    el.style.maxWidth = innerW
-    const wrap = el.querySelector('.chart-wrap')
-    if (wrap) {
-      wrap.style.width = innerW
-      wrap.style.minWidth = innerW
-    }
-  }
-}
-
-function prepareChartCanvas(canvas, metrics) {
-  const dpr = window.devicePixelRatio || 1
-  canvas.style.width = `${metrics.totalW}px`
-  canvas.style.height = `${metrics.height}px`
-  canvas.width = Math.round(metrics.totalW * dpr)
-  canvas.height = Math.round(metrics.height * dpr)
-  const ctx = canvas.getContext('2d')
-  if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-}
-
-function scrollChartsToEnd() {
-  const passScroll = document.getElementById('chartScrollPass')
-  const dailyScroll = document.getElementById('chartScrollDaily')
-  if (!passScroll) return
-  const left = Math.max(0, passScroll.scrollWidth - passScroll.clientWidth)
-  passScroll.scrollLeft = left
-  if (dailyScroll) dailyScroll.scrollLeft = left
-}
-
-function syncChartScroll(source) {
-  if (syncingChartScroll) return
-  syncingChartScroll = true
-  const passScroll = document.getElementById('chartScrollPass')
-  const dailyScroll = document.getElementById('chartScrollDaily')
-  const src = source === 'pass' ? passScroll : dailyScroll
-  const dst = source === 'pass' ? dailyScroll : passScroll
-  if (src && dst) dst.scrollLeft = src.scrollLeft
-  syncingChartScroll = false
-}
-
-// Watch trend data to re-render charts
-watch(trend, async () => { await nextTick(); setTimeout(renderTrendCharts, 100) })
 
 async function fetchReports() {
   loading.value = true
@@ -170,115 +87,6 @@ async function fetchReports() {
   loading.value = false
   await nextTick()
   animate('.report-table tbody tr', { opacity: [0, 1], translateY: [16, 0], delay: stagger(40), duration: 380, ease: 'outCubic' })
-}
-
-async function renderTrendCharts() {
-  if (!trend.value || !trend.value.labels?.length) return
-  await nextTick()
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      const metrics = getChartMetrics()
-      if (!metrics.n) return
-      applyChartInnerWidths(metrics)
-      renderPassRateChart(metrics)
-      renderDailyCountChart(metrics)
-      requestAnimationFrame(() => scrollChartsToEnd())
-    })
-  })
-}
-
-function setChartRange(days) {
-  chartRange.value = days
-}
-
-function renderPassRateChart(metrics) {
-  const canvas = document.getElementById('overviewPassRateCanvas')
-  if (!canvas) return
-  if (passRateChart) passRateChart.destroy()
-  prepareChartCanvas(canvas, metrics)
-  passRateChart = new Chart(canvas, {
-    type: 'line',
-    data: {
-      labels: trend.value.labels,
-      datasets: [{
-        label: '通过率',
-        data: trend.value.rate,
-        borderColor: '#19c8b9',
-        backgroundColor: 'rgba(25,200,185,0.08)',
-        fill: true, tension: 0.3,
-        pointBackgroundColor: '#19c8b9', pointBorderColor: '#fff',
-        pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2.5,
-      }]
-    },
-    options: {
-      responsive: false,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 0 } },
-        y: { min: 0, max: 105, ticks: { callback: v => v + '%' } },
-      }
-    }
-  })
-}
-
-function renderDailyCountChart(metrics) {
-  const canvas = document.getElementById('overviewDailyCountCanvas')
-  if (!canvas) return
-  if (dailyCountChart) dailyCountChart.destroy()
-  prepareChartCanvas(canvas, metrics)
-  dailyCountChart = new Chart(canvas, {
-    type: 'bar',
-    data: {
-      labels: trend.value.labels,
-      datasets: [
-        {
-          label: '通过',
-          data: trend.value.pass,
-          backgroundColor: 'rgba(111,186,44,0.75)',
-          borderColor: '#6fba2c',
-          borderWidth: 1.5,
-          borderRadius: 6,
-          borderSkipped: false,
-          barPercentage: 0.9,
-          categoryPercentage: 0.7,
-        },
-        {
-          label: '失败',
-          data: trend.value.fail,
-          backgroundColor: 'rgba(224,90,90,0.75)',
-          borderColor: '#e05a5a',
-          borderWidth: 1.5,
-          borderRadius: 6,
-          borderSkipped: false,
-          barPercentage: 0.9,
-          categoryPercentage: 0.7,
-        },
-      ]
-    },
-    options: {
-      responsive: false,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } },
-        tooltip: {
-          mode: 'index',
-          intersect: false,
-        },
-      },
-      scales: {
-        x: {
-          stacked: false,
-          grid: { display: false },
-        },
-        y: {
-          stacked: false,
-          beginAtZero: true,
-          ticks: { stepSize: 1, precision: 0 },
-        },
-      },
-    }
-  })
 }
 
 // ── Filter tabs ──
@@ -374,7 +182,8 @@ function openCaseBreakdown(type, tab = 'detail') {
     <WorkbenchHeader
       title="测试报告"
       subtitle="查看历史测试执行记录，点击 Run ID 进入详细报告"
-      mark="📊"
+      icon="file-bar-chart"
+      icon-gradient="linear-gradient(135deg,#9a8c98,#8b7f8f)"
     />
 
     <div class="doc-body">
@@ -463,7 +272,7 @@ function openCaseBreakdown(type, tab = 'detail') {
         </div>
       </div>
 
-      <!-- Trend Charts -->
+      <!-- Trend Charts (Apache ECharts) -->
       <div v-if="trend && trend.labels?.length" class="chart-section">
         <div class="chart-toolbar">
           <span class="toolbar-label">图表范围</span>
@@ -477,25 +286,26 @@ function openCaseBreakdown(type, tab = 'detail') {
               @click="setChartRange(opt.key)"
             >{{ opt.label }}</button>
           </div>
-          <span class="chart-hint">固定显示 {{ CHART_VISIBLE_DAYS }} 天 · 默认最近 {{ CHART_VISIBLE_DAYS }} 天 · 左滑查看更早（共 {{ trend.labels.length }} 天）</span>
+          <span class="chart-hint">默认展示最近 {{ CHART_VISIBLE_DAYS }} 天 · 拖动滑块或图内滑动查看更早（共 {{ trend.labels.length }} 天）</span>
         </div>
         <div class="chart-row">
-        <AppCard color="brown" pattern="brown" class="chart-card">
-          <h4 class="chart-title">通过率趋势</h4>
-          <div id="chartScrollPass" class="chart-scroll" @scroll="syncChartScroll('pass')">
-            <div id="chartInnerPass" class="chart-inner">
-              <div class="chart-wrap"><canvas id="overviewPassRateCanvas"></canvas></div>
-            </div>
-          </div>
-        </AppCard>
-        <AppCard color="brown" pattern="brown" class="chart-card">
-          <h4 class="chart-title">每日通过/失败</h4>
-          <div id="chartScrollDaily" class="chart-scroll" @scroll="syncChartScroll('daily')">
-            <div id="chartInnerDaily" class="chart-inner">
-              <div class="chart-wrap"><canvas id="overviewDailyCountCanvas"></canvas></div>
-            </div>
-          </div>
-        </AppCard>
+          <AppCard class="chart-card">
+            <h4 class="chart-title">通过率趋势</h4>
+            <PassRateTrendChart
+              :labels="trend.labels"
+              :rate="trend.rate"
+              :visible-days="CHART_VISIBLE_DAYS"
+            />
+          </AppCard>
+          <AppCard class="chart-card">
+            <h4 class="chart-title">每日通过/失败</h4>
+            <DailyPassFailChart
+              :labels="trend.labels"
+              :pass="trend.pass"
+              :fail="trend.fail"
+              :visible-days="CHART_VISIBLE_DAYS"
+            />
+          </AppCard>
         </div>
       </div>
 
@@ -510,7 +320,7 @@ function openCaseBreakdown(type, tab = 'detail') {
       >
         <template v-for="tab in statusAppTabs" #[tab.key] :key="tab.key">
           <AppCard
-            pattern="brown"
+           
             class="table-card"
             :style="{ minHeight: `${tableAreaMinHeight}px` }"
           >
@@ -543,9 +353,10 @@ function openCaseBreakdown(type, tab = 'detail') {
               :data-source="pagedRuns"
               row-key="run_id"
               :striped="false"
+              :border="true"
               :loading="loading"
               empty-text="暂无执行记录，请先执行测试"
-              class="report-table report-table--rainbow"
+              class="report-table report-table--flow"
             >
               <!-- Run ID — clickable link -->
               <template #cell-run_id="{ record }">

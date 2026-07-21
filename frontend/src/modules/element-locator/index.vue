@@ -106,10 +106,6 @@ async function doDump() {
     store.error = '请先选择设备并点击"连接"'
     return
   }
-  if (!store.isConnected) {
-    store.error = '请先选择设备并点击"连接"'
-    return
-  }
   if (!store.isDeviceOnline) {
     store.error = `设备 ${store.currentSerial} 已离线`
     return
@@ -200,7 +196,8 @@ watch(activeTab, async (tab) => {
     <WorkbenchHeader
       :title="pageMeta.title"
       :subtitle="pageMeta.subtitle"
-      mark="🎯"
+      icon="crosshair"
+      icon-gradient="linear-gradient(135deg,#C9B6F2,#a78bfa)"
     />
 
     <AppTabs :items="tabs" v-model="activeTab" :leaf-animation="true" :shadow="true" class="locator-tabs">
@@ -405,7 +402,7 @@ watch(activeTab, async (tab) => {
 }
 
 .info { font-size: 14px; color: var(--app-text-secondary, #7A8B73); white-space: nowrap; }
-.error { font-size: 14px; color: #e74c3c; white-space: nowrap; }
+.error { font-size: 14px; color: var(--el-color-danger, #FFB5A7); white-space: nowrap; }
 
 .workspace {
   flex: 1;

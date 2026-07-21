@@ -360,13 +360,13 @@ async function copyXPath(xpath) {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--glass-bg);
+  background: var(--app-glass-card, rgba(255,255,255,0.65));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-radius: 20px;
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
   padding: 16px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--app-shadow-sm, 0 4px 15px rgba(0,0,0,0.02));
   overflow: hidden;
 }
 h3 {
@@ -378,7 +378,7 @@ h3 {
 .action-bar {
   display: flex; gap: 6px; margin-bottom: 10px; flex-shrink: 0;
   padding: 8px; background: rgba(255,255,255,0.03);
-  border-radius: 8px; border: 1px solid var(--glass-border);
+  border-radius: 8px; border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
 }
 .empty {
   flex: 1;
@@ -398,7 +398,7 @@ h3 {
   margin: 0;
   font-size: 13px;
   font-weight: 500;
-  color: #725d42;
+  color: var(--app-text, #4a4e69);
 }
 .table-wrap {
   flex: 1;
@@ -411,7 +411,7 @@ h3 {
   gap: 4px;
   margin-bottom: 4px;
   padding: 8px 10px;
-  background: rgba(139,115,85,0.06);
+  background: rgba(137,207,240,0.04);
   border-radius: 8px;
 }
 .el-info__row {
@@ -432,7 +432,7 @@ h3 {
   line-height: 1.4;
 }
 .clickable-yes {
-  color: #6fba2c;
+  color: #89CFF0;
   font-weight: 600;
 }
 .form-grid {
@@ -450,7 +450,7 @@ h3 {
 }
 .form-label.required::before {
   content: '*';
-  color: #e8998a;
+  color: var(--el-color-danger, #FFB5A7);
   margin-right: 3px;
 }
 .xpath-opt {

@@ -1,37 +1,5 @@
 import { animate, stagger, createTimeline } from 'animejs'
 
-// ── Page transitions ──
-export function pageEnter(el, done) {
-  animate(el, {
-    opacity: [0, 1],
-    translateY: [20, 0],
-    duration: 400,
-    ease: 'outCubic',
-    onComplete: done,
-  })
-}
-
-export function pageLeave(el, done) {
-  animate(el, {
-    opacity: [1, 0],
-    translateY: [0, -15],
-    duration: 250,
-    ease: 'inCubic',
-    onComplete: done,
-  })
-}
-
-// ── Stagger entrance (for cards, list items) ──
-export function staggerIn(targets, delay = 60) {
-  return animate(targets, {
-    opacity: [0, 1],
-    translateY: [30, 0],
-    delay: stagger(delay),
-    duration: 500,
-    ease: 'outCubic',
-  })
-}
-
 // ── Number count-up ──
 export function countUp(el, from, to, duration = 1000) {
   const obj = { val: from }
@@ -336,15 +304,6 @@ export function skeletonShimmer(targets) {
 }
 
 // ── Elastic scale on hover ──
-export function elasticHover(el) {
-  el.addEventListener('mouseenter', () => {
-    animate(el, { scale: 1.04, duration: 300, ease: 'outBack(1.7)' })
-  })
-  el.addEventListener('mouseleave', () => {
-    animate(el, { scale: 1, duration: 300, ease: 'outBack(1.7)' })
-  })
-}
-
 // ── SVG path draw animation ──
 export function svgDraw(targets, duration = 1200) {
   // Get total length of each target

@@ -1,7 +1,6 @@
 <script setup>
 defineProps({
   color: { type: String, default: '' },
-  pattern: { type: String, default: '' },
   type: { type: String, default: 'default' },
 })
 </script>

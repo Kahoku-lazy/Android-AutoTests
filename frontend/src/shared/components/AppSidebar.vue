@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { animate } from 'animejs'
-import { sidebarNavEnter, selectPop } from '../animations.js'
+import { sidebarNavEnter } from '../animations.js'
 import AnimatedMascot from './AnimatedMascot.vue'
 import AnimatedMenuIcon from './AnimatedMenuIcon.vue'
 
@@ -30,9 +30,9 @@ function refreshAccountState() {
 }
 
 // Listen for pool changes from other tabs (new accounts added/removed)
-window.addEventListener('storage', (e) => {
+function onStorageChange(e) {
   if (e.key === POOL_KEY) refreshAccountState()
-})
+}
 
 function switchToAccount(name) {
   if (readPool()[name]) {
@@ -64,7 +64,7 @@ const SIDEBAR_WIDTH_KEY = 'app-sidebar-width'
 const SIDEBAR_COLLAPSED_KEY = 'app-sidebar-collapsed'
 const SIDEBAR_MIN = 180
 const SIDEBAR_MAX = 360
-const SIDEBAR_DEFAULT = 220
+const SIDEBAR_DEFAULT = 260
 const SIDEBAR_COLLAPSED_W = 64
 
 function clampSidebarWidth(width) {
@@ -117,19 +117,41 @@ function resetSidebarWidth() {
   localStorage.setItem(SIDEBAR_WIDTH_KEY, String(SIDEBAR_DEFAULT))
 }
 
+// ── 导航分组（V6 原型结构）──
+const expandedSections = ref({})
+
+function toggleSection(key) {
+  expandedSections.value[key] = !expandedSections.value[key]
+}
+
+// ── 导航分组（对齐 PRD §5 八模块体系）──
+// 平台 8 大模块：仪表盘 / 设备管理 / 元素定位 / 用例管理 / 执行引擎 / 测试报告 / AI 助手 / 工作流工作台
+// 三条操作通道：A.手动测试流程  B.AI 对话  C.可视化编排
 const categories = [
   {
-    key: 'cat-basic',
+    key: 'main',
     label: '',
     items: [
-      { path: '/dashboard',   icon: 'dashboard',        label: '仪表盘' },
-      { path: '/devices',     icon: 'devices',          label: '设备管理' },
-      { path: '/elements',    icon: 'elements',         label: '元素定位' },
-      { path: '/cases',       icon: 'cases',            label: '测试用例' },
-      { path: '/workflow',    icon: 'workflow',         label: '工作流', isDev: true },
-      { path: '/runner',      icon: 'runner',           label: '执行引擎' },
-      { path: '/reports',     icon: 'reports',          label: '测试报告' },
-      { path: '/ai-assistant', icon: 'ai-assistant',    label: 'AI 助手', isDev: true },
+      { path: '/dashboard', icon: 'layout-dashboard', label: '仪表盘' },
+    ],
+  },
+  {
+    key: 'test-flow',
+    label: '测试全流程',
+    items: [
+      { path: '/devices', icon: 'smartphone', label: '设备管理' },
+      { path: '/elements', icon: 'crosshair', label: '元素定位' },
+      { path: '/cases', icon: 'layers', label: '用例管理' },
+      { path: '/runner', icon: 'play-circle', label: '执行引擎' },
+      { path: '/reports', icon: 'file-bar-chart', label: '测试报告' },
+    ],
+  },
+  {
+    key: 'ai-tools',
+    label: 'AI 与编排',
+    items: [
+      { path: '/ai-assistant', icon: 'bot', label: 'AI 助手', isDev: true },
+      { path: '/workflow', icon: 'git-branch', label: '工作流工作台', isDev: true },
     ],
   },
 ]
@@ -139,8 +161,6 @@ function isActive(path) {
 }
 
 function onNavClick(path, ev) {
-  const item = ev?.currentTarget
-  if (item) selectPop(item)
   router.push(path)
 }
 
@@ -148,8 +168,13 @@ onMounted(async () => {
   applySidebarWidth(Number(localStorage.getItem(SIDEBAR_WIDTH_KEY)) || SIDEBAR_DEFAULT)
   window.addEventListener('mousemove', onSidebarResizeMove)
   window.addEventListener('mouseup', onSidebarResizeEnd)
+  window.addEventListener('storage', onStorageChange)
 
   await nextTick()
+  // Lucide icons render
+  if (window.lucide) window.lucide.createIcons()
+  // Default expand first visible section
+  categories.forEach(c => { if (c.label) expandedSections.value[c.key] = true })
   sidebarNavEnter('.sidebar-menu__item')
 
   // Brand entrance
@@ -183,6 +208,7 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('mousemove', onSidebarResizeMove)
   window.removeEventListener('mouseup', onSidebarResizeEnd)
+  window.removeEventListener('storage', onStorageChange)
   document.body.style.cursor = ''
   document.body.style.userSelect = ''
 })
@@ -195,10 +221,10 @@ onUnmounted(() => {
   >
     <!-- 头部品牌 + 折叠 -->
     <div class="sidebar__header-row">
-      <div class="sidebar__header" @click="router.push('/dashboard')" :title="collapsed ? 'AI 测试平台' : ''">
+      <div class="sidebar__header" @click="router.push('/dashboard')" :title="collapsed ? '自动化测试平台' : ''">
         <AnimatedMascot :size="26" />
         <div v-show="!collapsed" class="sidebar__brand">
-          <span class="brand-title">AI 测试平台</span>
+          <span class="brand-title">自动化测试平台</span>
         </div>
       </div>
       <button
@@ -214,35 +240,49 @@ onUnmounted(() => {
     <!-- 导航菜单 -->
     <nav class="sidebar__nav">
       <div v-for="cat in categories" :key="cat.key" class="sidebar__group">
-        <div v-if="cat.label && !collapsed" class="sidebar__group-title">{{ cat.label }}</div>
         <div
-          v-for="item in cat.items"
-          :key="item.path"
-          :class="['sidebar-menu__item', { active: isActive(item.path) }]"
-          :title="collapsed ? item.label : ''"
-          @click="onNavClick(item.path, $event)"
+          v-if="cat.label && !collapsed"
+          class="sidebar__group-title"
+          :class="{ collapsed: !expandedSections[cat.key] }"
+          @click="toggleSection(cat.key)"
         >
-          <AnimatedMenuIcon :name="item.icon" :size="20" :active="isActive(item.path)" />
-          <span v-show="!collapsed" class="sidebar-menu__label">{{ item.label }}</span>
-          <span
-            v-if="item.isDev && !collapsed"
-            class="sidebar-menu__badge sidebar-menu__badge--dev"
-          >开发中</span>
+          {{ cat.label }}
+          <span class="collapse-icon">▼</span>
+        </div>
+        <div
+          class="nav-section-items"
+          :class="{ collapsed: cat.label && !expandedSections[cat.key] }"
+        >
+          <div
+            v-for="item in cat.items"
+            :key="item.path"
+            :class="['sidebar-menu__item', { active: isActive(item.path) }]"
+            :title="collapsed ? item.label : ''"
+            @click="onNavClick(item.path, $event)"
+          >
+            <i :data-lucide="item.icon" class="nav-lucide-icon"></i>
+            <span v-show="!collapsed" class="sidebar-menu__label">{{ item.label }}</span>
+            <span
+              v-if="item.isDev && !collapsed"
+              class="sidebar-menu__badge sidebar-menu__badge--dev"
+            >开发中</span>
+          </div>
         </div>
       </div>
     </nav>
 
     <!-- 底部用户区 / 账号切换器 -->
     <div class="sidebar__footer">
-      <div
-        class="sidebar__user"
-        :class="{ 'has-menu': allAccounts.length > 1 }"
-        :title="collapsed ? username : ''"
-        @click="allAccounts.length > 1 ? (showAccountMenu = !showAccountMenu) : null"
-      >
-        <AnimatedMascot :size="20" />
-        <span v-show="!collapsed" class="sidebar__user-name">{{ username }}</span>
-        <span v-if="!collapsed && allAccounts.length > 1" class="sidebar__user-arrow">▾</span>
+      <div class="sidebar__user-card">
+        <div class="sidebar__user-label">Digital Human</div>
+        <div class="sidebar__user-display" :class="{ 'has-menu': allAccounts.length > 1 }"
+          :title="collapsed ? username : ''"
+          @click="allAccounts.length > 1 ? (showAccountMenu = !showAccountMenu) : null">
+          <AnimatedMascot :size="18" />
+          <span v-show="!collapsed" class="sidebar__user-name">{{ username }}</span>
+          <span v-if="!collapsed && allAccounts.length > 1" class="sidebar__user-arrow">▾</span>
+        </div>
+        <div v-show="!collapsed" class="sidebar__user-status">● 在线</div>
       </div>
 
       <!-- Account dropdown -->
@@ -302,9 +342,9 @@ onUnmounted(() => {
   min-width: var(--side-w, 220px);
   max-width: var(--side-w, 220px);
   height: 100%;
-  background: var(--app-sidebar-bg, rgba(255,255,255,0.58));
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
+  background: rgba(255,255,255,0.45);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -441,22 +481,23 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   min-width: 0;
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1.2;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.02em;
 }
 
 .brand-title {
   display: inline-block;
   font-weight: 800;
+  white-space: nowrap;
   background-image: linear-gradient(
     105deg,
-    #3f9ed8 0%,
-    #6fb98d 25%,
-    #6f9fd8 48%,
-    #e39b55 72%,
-    #8ecae6 88%,
-    #3f9ed8 100%
+    #89CFF0 0%,
+    #C9B6F2 22%,
+    #95D5B2 42%,
+    #F4D35E 62%,
+    #FFB5A7 82%,
+    #89CFF0 100%
   );
   background-size: 240% 100%;
   -webkit-background-clip: text;
@@ -510,29 +551,23 @@ onUnmounted(() => {
   align-items: center;
   justify-content: flex-start;
   gap: 12px;
-  height: 50px;
-  padding: 0 18px;
-  font-size: 15px;
-  font-weight: 700;
+  height: 46px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--app-text-secondary, #9a8c98);
   background: transparent;
-  border-radius: 16px;
+  border-radius: var(--app-radius-sm, 16px);
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
 }
 
-.sidebar-menu__item :deep(.menu-icon) {
-  width: 34px !important;
-  height: 34px !important;
-  padding: 7px;
-  border-radius: 12px;
-  color: var(--app-green-deep, #6f9fd8);
-  background: linear-gradient(145deg, rgba(255,255,255,0.72), rgba(212,234,255,0.58));
-  border: 1px solid var(--app-icon-border, rgba(255,255,255,0.82));
-  box-shadow: var(--app-icon-shadow, 0 10px 24px rgba(74,78,105,0.12));
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+.nav-lucide-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--app-text-secondary, #9a8c98);
+  flex-shrink: 0;
 }
 
 .sidebar-menu__item::before {
@@ -549,23 +584,22 @@ onUnmounted(() => {
 }
 
 .sidebar-menu__item:hover {
-  background: rgba(255,255,255,0.46);
+  background: rgba(255,255,255,0.8);
   color: var(--app-text, #4a4e69);
 }
 
 .sidebar-menu__item:hover::before {
-  height: 24px;
+  height: 20px;
 }
 
 .sidebar-menu__item.active {
-  background: var(--app-sidebar-active, rgba(162,210,255,0.28));
-  color: var(--app-green-deep, #6f9fd8);
-  box-shadow: 0 8px 22px rgba(162,210,255,0.22);
+  background: rgba(255,255,255,0.8);
+  color: var(--app-green, #89CFF0);
+  box-shadow: var(--app-shadow-sm);
 }
 
-.sidebar-menu__item.active :deep(.menu-icon) {
-  background: linear-gradient(145deg, rgba(189,224,254,0.92), rgba(162,210,255,0.72));
-  color: #3f7fbd;
+.sidebar-menu__item.active .nav-lucide-icon {
+  color: var(--app-green, #89CFF0);
 }
 
 .sidebar-menu__item.active::before {
@@ -585,8 +619,8 @@ onUnmounted(() => {
 }
 
 .sidebar-menu__item.active .sidebar-menu__label {
-  color: var(--app-green-deep, #6f9fd8);
-  font-weight: 800;
+  color: #89CFF0;
+  font-weight: 700;
 }
 
 .sidebar-menu__item:hover .sidebar-menu__label {
@@ -623,24 +657,79 @@ onUnmounted(() => {
   50% { transform: scale(1.08); }
 }
 
-/* Footer */
-.sidebar__footer {
-  position: relative;
-  padding: 12px 16px;
-  border-top: 1px solid var(--app-glass-border);
+/* V6 section title & collapse */
+.sidebar__group-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--app-text-secondary, #9a8c98);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 12px 0 4px 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  user-select: none;
 }
 
-.sidebar__user {
+.collapse-icon {
+  font-size: 9px;
+  transition: transform 0.2s ease;
+  margin-right: 8px;
+}
+
+.sidebar__group-title.collapsed .collapse-icon {
+  transform: rotate(-90deg);
+}
+
+.nav-section-items {
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.2s ease;
+}
+
+.nav-section-items.collapsed {
+  max-height: 0 !important;
+  opacity: 0;
+}
+
+/* Footer — V6 user card */
+.sidebar__footer {
+  position: relative;
+  padding: 0;
+  border-top: none;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+}
+
+.sidebar__user-card {
+  margin: 12px;
+  padding: 14px;
+  background: rgba(255,255,255,0.4);
+  border-radius: var(--app-radius-sm, 16px);
+  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
+}
+
+.sidebar__user-label {
+  font-size: 11px;
+  color: var(--app-text-secondary, #9a8c98);
+  font-weight: 600;
+}
+
+.sidebar__user-display {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-size: 14px;
-  color: var(--app-text, #4a4e69);
   font-weight: 700;
+  color: var(--app-text, #4a4e69);
+  margin: 4px 0;
+}
+
+.sidebar__user-status {
+  font-size: 11px;
+  color: #95D5B2;
+  font-weight: 600;
 }
 
 .sidebar__user-name {
@@ -674,11 +763,10 @@ onUnmounted(() => {
 
 .sidebar__user-arrow {
   font-size: 10px;
-  margin-left: 2px;
+  margin-left: auto;
   color: var(--app-text-secondary, #9a8c98);
-  opacity: 0.9;
 }
-.sidebar__user.has-menu {
+.sidebar__user-display.has-menu {
   cursor: pointer;
 }
 

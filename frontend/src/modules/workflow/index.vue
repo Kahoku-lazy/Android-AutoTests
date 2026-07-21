@@ -4,7 +4,7 @@
  * 左：目录+文件树（右键/长按移动）
  * 右：点击文件后直接编辑内容（不再显示文件网格）
  */
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useWorkflowStore } from '@/modules/workflow/stores/workflowStore'
 import { useTestCaseStore } from '@/modules/workflow/stores/testCaseStore'
@@ -315,6 +315,8 @@ function addBridgedStep(
 }
 
 onMounted(async () => {
+  await nextTick()
+  if ((window as any).lucide) (window as any).lucide.createIcons()
   try {
     const boot = await lib.bootstrapIfEmpty()
     if (boot) {
@@ -359,7 +361,12 @@ watch(
   <div class="doc-page workflow-workbench">
     <header class="wb-header">
       <div class="brand">
-        <span class="brand-mark">🏝️</span>
+        <span
+          class="brand-mark brand-mark--lucide"
+          style="background: linear-gradient(135deg,#BDE0FE,#93c5fd)"
+        >
+          <i data-lucide="git-branch"></i>
+        </span>
         <div>
           <h1 class="brand-title">工作流工作台</h1>
           <p class="brand-sub">{{ breadcrumb }}</p>
@@ -503,10 +510,14 @@ watch(
   display: grid;
   place-items: center;
   font-size: 22px;
-  background: linear-gradient(145deg, rgba(189,224,254,0.88), rgba(162,210,255,0.68));
   border-radius: 14px;
-  border: 1px solid var(--app-icon-border);
   box-shadow: var(--app-icon-shadow);
+}
+.brand-mark--lucide :deep(svg) {
+  width: 20px;
+  height: 20px;
+  color: #fff;
+  stroke: #fff;
 }
 .brand-title {
   margin: 0;

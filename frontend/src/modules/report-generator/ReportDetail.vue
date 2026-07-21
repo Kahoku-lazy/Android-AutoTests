@@ -246,7 +246,7 @@ function outcomeBadgeClass(outcome) {
       >
         <!-- ═══ TAB: 用例执行明细 ═══ -->
         <template #cases>
-          <AppCard color="brown" pattern="brown" class="table-card">
+          <AppCard color="brown" class="table-card">
             <div class="table-toolbar">
               <div class="page-size-control">
                 <span class="toolbar-label">显示行数</span>
@@ -338,7 +338,7 @@ function outcomeBadgeClass(outcome) {
             </h3>
             <p class="sec-sub">按用例标题分类，点击展开查看具体失败步骤</p>
             <div v-for="(group, idx) in failedStepsByCase" :key="'fsg-' + group.key" class="fail-card">
-              <AppCard :color="failCardColor(idx)" :pattern="failCardColor(idx)">
+              <AppCard :color="failCardColor(idx)">
                 <div
                   class="fail-card-header fail-card-header--clickable"
                   role="button"
@@ -395,7 +395,7 @@ function outcomeBadgeClass(outcome) {
             </h3>
             <p class="sec-sub">点击用例展开查看迭代失败详情</p>
             <div v-for="(c, idx) in failedCases" :key="'fail-' + c.case_id" class="fail-card">
-              <AppCard :color="failCardColor(idx)" :pattern="failCardColor(idx)">
+              <AppCard :color="failCardColor(idx)">
                 <div
                   class="fail-card-header fail-card-header--clickable"
                   role="button"
@@ -501,13 +501,13 @@ function outcomeBadgeClass(outcome) {
 .kpi-card:hover { transform: translateY(-2px); }
 .kpi-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; border-radius: 0 3px 3px 0; }
 .accent-teal { background: #19c8b9; }
-.accent-green { background: #6fba2c; }
+.accent-green { background: #89CFF0; }
 .accent-red { background: #e05a5a; }
 .accent-yellow { background: #f5c31c; }
 .kpi-value { font-size: 32px; font-weight: 900; color: #794f27; line-height: 1.1; }
 .kpi-label { font-size: 12px; color: #9f927d; margin-top: 4px; font-weight: 600; }
 .kpi-sub { font-size: 11px; color: #8a7b66; margin-top: 2px; }
-.num-pass { color: #6fba2c; }
+.num-pass { color: #89CFF0; }
 .num-fail { color: #e05a5a; }
 .num-warn { color: #dba90e; }
 
@@ -618,16 +618,16 @@ function outcomeBadgeClass(outcome) {
 /* ── Rate cell ── */
 .rate-cell { display: flex; align-items: center; gap: 8px; }
 .progress-bar { display: flex; height: 7px; border-radius: 50px; overflow: hidden; background: #f0ece2; flex: 1; max-width: 90px; }
-.p-pass { background: #6fba2c; transition: width 0.5s ease; border-radius: 50px; }
+.p-pass { background: #89CFF0; transition: width 0.5s ease; border-radius: 50px; }
 .p-fail { background: #e05a5a; transition: width 0.5s ease; border-radius: 50px; }
 .rate-text { font-weight: 700; font-size: 12px; min-width: 38px; text-align: right; }
-.rate-ok { color: #6fba2c; }
+.rate-ok { color: #89CFF0; }
 .rate-warn { color: #dba90e; }
 .rate-bad { color: #e05a5a; }
 
 /* ── Badges ── */
 .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 50px; font-size: 10px; font-weight: 700; letter-spacing: 0.02em; }
-.badge-pass { background: rgba(111,186,44,0.12); color: #6fba2c; border: 1.5px solid rgba(111,186,44,0.25); }
+.badge-pass { background: rgba(111,186,44,0.12); color: #89CFF0; border: 1.5px solid rgba(111,186,44,0.25); }
 .badge-fail { background: rgba(224,90,90,0.12); color: #e05a5a; border: 1.5px solid rgba(224,90,90,0.25); }
 .badge-running { background: rgba(245,195,28,0.12); color: #dba90e; border: 1.5px solid rgba(245,195,28,0.25); }
 .badge-stopped { background: rgba(138,123,102,0.10); color: #8a7b66; border: 1.5px solid rgba(138,123,102,0.20); }

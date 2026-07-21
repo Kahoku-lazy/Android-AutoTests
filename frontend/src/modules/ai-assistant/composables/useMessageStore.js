@@ -49,12 +49,13 @@ export function useMessageStore() {
   /** Conversation ID that has an active background SSE stream. */
   const backgroundStreamConvId = ref(null);
 
-  function normalizeLoadedMessage(m, conv) {
+  function normalizeLoadedMessage(m) {
+    // Prefer per-message flow (saved with the reply); legacy rows have no tag
     const flow =
       m.role === "assistant"
-        ? conv?.agent_scope_session_id
-          ? "sse"
-          : "fallback"
+        ? m.flow === "sse" || m.flow === "fallback"
+          ? m.flow
+          : null
         : null;
     const blocks = m.blocks || [];
     const textBlock = blocks.find((b) => b.type === "text");
@@ -78,8 +79,8 @@ export function useMessageStore() {
     };
   }
 
-  function hydrateMessages(dataMessages, conv) {
-    messages.value = dataMessages.map((m) => normalizeLoadedMessage(m, conv));
+  function hydrateMessages(dataMessages) {
+    messages.value = dataMessages.map((m) => normalizeLoadedMessage(m));
   }
 
   function appendUserAndAssistantPlaceholder(displayText) {

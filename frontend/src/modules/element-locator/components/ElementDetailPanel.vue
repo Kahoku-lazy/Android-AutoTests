@@ -81,13 +81,13 @@ onUnmounted(() => stopDetailAnimation())
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--glass-bg);
+  background: var(--app-glass-card, rgba(255,255,255,0.65));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-radius: 20px;
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
   padding: 16px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--app-shadow-sm, 0 4px 15px rgba(0,0,0,0.02));
   overflow-y: auto;
 }
 h3 {

@@ -464,13 +464,13 @@ function onMouseLeave() {
   height: 100%;
   min-height: 0;
   width: 100%;
-  background: var(--glass-bg);
+  background: var(--app-glass-card, rgba(255,255,255,0.65));
   backdrop-filter: blur(16px);
   border-radius: 20px;
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
   display: flex;
   overflow: hidden;
-  box-shadow: var(--shadow);
+  box-shadow: var(--app-shadow-sm, 0 4px 15px rgba(0,0,0,0.02));
 }
 .phone-frame {
   container-type: size;

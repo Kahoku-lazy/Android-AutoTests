@@ -80,11 +80,16 @@ data_migration.json
 # ── Test exports ──
 demo_test_*.yaml
 
-# ── Dev docs debug/design HTML reports ──
+# ── Dev docs debug/design reports (HTML/PPT/生成的脚本等) ──
 dev_docs/**/*.html
+dev_docs/**/*.pptx
+dev_docs/**/gen_ppt*.py
+dev_docs/**/问题记录.md
+dev_docs/**/前端笔记.md
 
 # ── Debug snapshots & design reports (root-level) ──
 /device-page-snapshot.md
+/CODE_DEBT_REPORT.md
 /*.html
 
 # ── Third-party project (not part of this repo) ──

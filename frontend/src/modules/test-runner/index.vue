@@ -18,6 +18,8 @@ import {
   taskStatusInfo,
   taskCompletedCount,
   taskTotalCount,
+  taskPassRate,
+  taskCardRateBg,
   taskProgress,
   buildTaskSavePayload,
 } from "./composables/taskUtils.js";
@@ -27,12 +29,15 @@ import {
   applyWsMessage,
 } from "./composables/useTaskWebSocket.js";
 import { startRun, listDefinitions, listDevices } from "./api.js";
+import { listApiDefinitions } from "@/modules/case-manager/api/apiTesting.js";
+import { listWebDefinitions } from "@/modules/case-manager/api/webAutomation.js";
 
 const router = useRouter();
 
 const cases = ref([]);
 const devices = ref([]);
 const showNewTask = ref(false);
+
 const activeTab = ref("running");
 const tasks = ref([]);
 
@@ -176,6 +181,7 @@ function openTaskDetail(task) {
 // ── New task form ──
 const newForm = ref({
   name: "",
+  taskType: "ui_automation",
   deviceSerial: "",
   caseIds: [],
   loopCount: 3,
@@ -187,6 +193,7 @@ const newForm = ref({
 function resetNewForm() {
   newForm.value = {
     name: "",
+    taskType: "ui_automation",
     deviceSerial: devices.value[0]?.serial || "",
     caseIds: [],
     loopCount: 3,
@@ -197,13 +204,32 @@ function resetNewForm() {
   };
 }
 
+const availableCases = ref([]);
+
+// Watch task type to reload appropriate cases
+watch(() => newForm.value.taskType, async (newType) => {
+  if (newType === "api_testing") {
+    await loadApiCases();
+  } else if (newType === "web_automation") {
+    await loadWebCases();
+  } else {
+    availableCases.value = cases.value.filter(c => c.case_type === "ui_automation" || !c.case_type);
+  }
+});
+
 async function openNewTask() {
   resetNewForm();
-  await Promise.all([loadDevices(), loadCases()]);
-  if (!devices.value.length)
+  if (newForm.value.taskType === "api_testing") {
+    await loadApiCases();
+  } else if (newForm.value.taskType === "web_automation") {
+    await loadWebCases();
+  } else {
+    await Promise.all([loadDevices(), loadCases()]);
+  }
+  if (newForm.value.taskType !== "api_testing" && !devices.value.length)
     ElMessage.warning("暂无在线设备，请先在设备管理中连接设备");
-  if (!cases.value.length)
-    ElMessage.warning("暂无可用用例，请先在测试用例中创建用例");
+  if (!availableCases.value.length)
+    ElMessage.warning("暂无可选用例，请先在用例管理中创建用例");
   showNewTask.value = true;
 }
 
@@ -216,8 +242,8 @@ async function createAndStart() {
     ElMessage.warning("请输入任务名称");
     return;
   }
-  if (!newForm.value.deviceSerial) {
-    ElMessage.warning("请选择执行设备");
+  if (newForm.value.taskType === "ui_automation" && !newForm.value.deviceSerial) {
+    ElMessage.warning("Android UI 自动化任务需要选择执行设备");
     return;
   }
   if (!newForm.value.caseIds.length) {
@@ -232,6 +258,7 @@ async function createAndStart() {
   const task = {
     id: tid,
     name: newForm.value.name.trim(),
+    taskType: newForm.value.taskType,
     mode: newForm.value.mode,
     startAt: newForm.value.startAt,
     endAt: newForm.value.endAt,
@@ -268,7 +295,8 @@ async function createAndStart() {
 
 function initTaskProgress(task) {
   const idSet = new Set(normalizeCaseIds(task.caseIds));
-  task.caseItems = cases.value
+  const sourceCases = task.taskType === "api_testing" ? availableCases.value : cases.value;
+  task.caseItems = sourceCases
     .filter((c) => idSet.has(String(c.id)))
     .map((c, i) => {
       // 解析步骤定义（steps_data 为 API 已解析的数组，优先使用）
@@ -301,14 +329,12 @@ function initTaskProgress(task) {
 }
 
 async function doStartTask(task) {
-  if (!cases.value.length) await loadCases();
+  const isApi = task.taskType === "api_testing";
+  if (!isApi && !cases.value.length) await loadCases();
+  if (isApi && !availableCases.value.length) await loadApiCases();
   initTaskProgress(task);
   if (!task.caseItems.length) {
-    taskAddLog(
-      task,
-      "❌ 未匹配到用例，请确认用例列表已加载且用例ID有效",
-      "error",
-    );
+    taskAddLog(task, "❌ 未匹配到用例，请确认用例列表已加载且用例ID有效", "error");
     ElMessage.warning("用例数据未加载或ID不匹配，请刷新页面后重试");
     return;
   }
@@ -318,6 +344,7 @@ async function doStartTask(task) {
     interval_seconds: task.intervalSeconds,
     device_serial: task.deviceSerial,
     client_task_id: task.id,
+    task_type: task.taskType || "ui_automation",
   };
   if (task.mode === "scheduled") {
     if (task.startAt) body.start_at = new Date(task.startAt).toISOString();
@@ -550,6 +577,29 @@ async function loadCases() {
   try {
     const { data } = await listDefinitions();
     if (data.ok) cases.value = data.definitions;
+    availableCases.value = (data.definitions || []).filter(
+      c => c.case_type === "ui_automation" || !c.case_type
+    );
+  } catch (_) {}
+}
+async function loadApiCases() {
+  try {
+    const { data } = await listApiDefinitions();
+    if (data.ok) {
+      availableCases.value = (data.definitions || []).filter(
+        c => c.case_type === "api_testing"
+      );
+    }
+  } catch (_) {}
+}
+async function loadWebCases() {
+  try {
+    const { data } = await listWebDefinitions();
+    if (data.ok) {
+      availableCases.value = (data.definitions || []).filter(
+        c => c.case_type === "web_automation"
+      );
+    }
   } catch (_) {}
 }
 async function loadDevices() {
@@ -595,6 +645,7 @@ async function loadDevices() {
                   :key="task.id"
                   class="task-card"
                   :class="taskCardClass(task)"
+                  :style="taskCardRateBg(task)"
                   @click="openTaskDetail(task)"
                 >
                   <!-- Row 1: task name + round badge + status badge -->
@@ -611,12 +662,17 @@ async function loadDevices() {
                     >
                       {{ taskStatusInfo(task).icon }}
                       {{ taskStatusInfo(task).label }}
+                      <span
+                        v-if="taskStatusInfo(task).rateTag"
+                        class="tc-rate-tag"
+                        :style="{ background: taskStatusInfo(task).rateColor }"
+                      >{{ taskStatusInfo(task).rateTag }}</span>
                     </span>
                   </div>
                   <!-- Row 1b: device + task ID -->
                   <div class="tc-row1b">
                     <span class="tc-device">📱 {{ task.deviceSerial }}</span>
-                    <span class="tc-id">{{ task.id }}</span>
+                    <span class="tc-id-badge">{{ task.id }}</span>
                   </div>
 
                   <!-- Row 2: meta -->
@@ -657,12 +713,12 @@ async function loadDevices() {
                         <template v-if="task.running && task.currentIteration"
                           >（第 {{ task.currentIteration }} 轮循环）</template
                         >
-                        <template v-if="task.outcome === 'completed'">
-                          · ✅ 全部通过</template
-                        >
-                        <template v-if="task.outcome === 'stopped'">
-                          · ⏹ 已中止</template
-                        >
+                        <template v-if="task.outcome">
+                          · ✅ {{ task.overallPass || 0 }} ❌ {{ task.overallFail || 0 }}
+                          <span v-if="taskPassRate(task) < 90" class="tc-rate-warn">
+                            ({{ taskPassRate(task) }}%)
+                          </span>
+                        </template>
                       </template>
                     </span>
                   </div>
@@ -756,7 +812,14 @@ async function loadDevices() {
               clearable
             />
           </el-form-item>
-          <el-form-item label="设备" required>
+          <el-form-item label="任务类型" required>
+            <el-select v-model="newForm.taskType" style="width: 100%">
+              <el-option label="📱 Android UI 自动化测试" value="ui_automation" />
+              <el-option label="🌍 Web 自动化测试" value="web_automation" />
+              <el-option label="🌐 API 测试" value="api_testing" />
+            </el-select>
+          </el-form-item>
+          <el-form-item v-if="newForm.taskType === 'ui_automation'" label="设备" required>
             <el-select
               v-model="newForm.deviceSerial"
               placeholder="选择在线设备"
@@ -780,19 +843,19 @@ async function loadDevices() {
               multiple
               collapse-tags
               collapse-tags-tooltip
-              placeholder="选择用例（可多选）"
+              :placeholder="newForm.taskType === 'api_testing' ? '选择 API 用例（可多选）' : '选择 UI 用例（可多选）'"
               style="width: 100%"
-              :disabled="!cases.length"
+              :disabled="!availableCases.length"
             >
               <el-option
-                v-for="c in cases"
+                v-for="c in availableCases"
                 :key="c.id"
                 :label="c.title"
                 :value="c.id"
               />
             </el-select>
-            <p v-if="!cases.length" class="field-hint">
-              暂无可用用例，请先在「测试用例」中创建
+            <p v-if="!availableCases.length" class="field-hint">
+              {{ newForm.taskType === 'api_testing' ? '暂无 API 用例，请先在「测试用例 > API 接口用例」中创建' : '暂无 UI 用例，请先在「测试用例 > UI 自动化用例」中创建' }}
             </p>
           </el-form-item>
           <el-form-item label="循环次数">
@@ -995,11 +1058,21 @@ async function loadDevices() {
   margin-left: 6px;
   vertical-align: middle;
 }
-.tc-id {
-  font-size: 11px;
-  color: var(--app-text-muted);
+.tc-id-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--app-text-secondary);
+  background: rgba(162,210,255,0.18);
+  padding: 2px 10px;
+  border-radius: 10px;
   font-family: "Cascadia Code", Consolas, monospace;
-  opacity: 0.7;
+  letter-spacing: 0.3px;
+}
+.tc-rate-warn {
+  font-size: 11px;
+  font-weight: 700;
+  color: #e85f5f;
 }
 .tc-device {
   font-size: 12px;
@@ -1011,9 +1084,20 @@ async function loadDevices() {
   font-size: 11px;
   font-weight: 700;
   color: #fff;
-  padding: 2px 10px;
+  padding: 2px 6px 2px 10px;
   border-radius: 12px;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tc-rate-tag {
+  font-size: 9px;
+  font-weight: 800;
+  color: #fff;
+  padding: 1px 7px;
+  border-radius: 8px;
+  letter-spacing: 0.2px;
 }
 
 /* Row 2: meta */

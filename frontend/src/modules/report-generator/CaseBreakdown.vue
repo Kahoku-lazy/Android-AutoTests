@@ -117,8 +117,14 @@ function toggleBugCase(key) {
 
 function stepTypeLabel(type) {
   const map = {
-    click: '点击', wait: '等待出现', verify_text: '校验文字',
-    iteration: '迭代失败', sleep: '暂停', start_app: '启动应用',
+    click: '点击', long_click: '长按', swipe: '滑动',
+    wait: '等待出现', wait_disappear: '等待消失',
+    verify_text: '校验文字', poll_text: '轮询文本',
+    start_app: '启动应用', kill_app: '关闭应用', sleep: '暂停',
+    perf_element_time: '等待元素出现耗时',
+    wait_toast: '等待Toast', if_element_appear: '如果出现', if_element_disappear: '如果消失',
+    loop_n: '循环N次', loop_elements: '遍历元素',
+    iteration: '迭代失败',
   }
   return map[type] || type || '—'
 }

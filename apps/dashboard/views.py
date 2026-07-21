@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from apps.device_pool.models import Device
-from apps.case_manager.models import TestDefinition
+from apps.case_manager.models import TestDefinition, StorageTestCase, ApiTestCase
 from apps.test_runner.models import TestRunRecord, TestResult
 from apps.ai_assistant.models import AIAgent
 from apps.report_generator.models import Report
@@ -172,8 +172,10 @@ def _recent_tasks(limit=8):
 def dashboard_stats(request):
     """GET /api/dashboard/stats/ — platform-level statistics."""
     device_online, device_total = _device_dashboard_stats()
-    case_total = TestDefinition.objects.count()
-    case_enabled = TestDefinition.objects.filter(enabled=True).count()
+    case_total = TestDefinition.objects.count() + StorageTestCase.objects.count() + ApiTestCase.objects.count()
+    case_enabled = (TestDefinition.objects.filter(enabled=True).count()
+                    + StorageTestCase.objects.filter(enabled=True).count()
+                    + ApiTestCase.objects.filter(enabled=True).count())
     run_total = TestRunRecord.objects.count()
     run_active = TestRunRecord.objects.filter(status="RUNNING").count()
     agent_total = AIAgent.objects.count()
@@ -207,7 +209,9 @@ def dashboard_stats(request):
 
     # Trends — this week's new items
     week_ago = timezone.now() - timedelta(days=7)
-    case_trend_num = TestDefinition.objects.filter(created_at__gte=week_ago).count()
+    case_trend_num = (TestDefinition.objects.filter(created_at__gte=week_ago).count()
+                      + StorageTestCase.objects.filter(created_at__gte=week_ago).count()
+                      + ApiTestCase.objects.filter(created_at__gte=week_ago).count())
     # Device activity = runs this week
     device_trend_num = TestResult.objects.filter(created_at__gte=week_ago).count()
 
@@ -331,9 +335,13 @@ def case_stats(request):
         {
             "ok": True,
             "data": {
-                "total": TestDefinition.objects.count(),
-                "enabled": TestDefinition.objects.filter(enabled=True).count(),
-                "disabled": TestDefinition.objects.filter(enabled=False).count(),
+                "total": TestDefinition.objects.count() + StorageTestCase.objects.count() + ApiTestCase.objects.count(),
+                "enabled": (TestDefinition.objects.filter(enabled=True).count()
+                            + StorageTestCase.objects.filter(enabled=True).count()
+                            + ApiTestCase.objects.filter(enabled=True).count()),
+                "disabled": (TestDefinition.objects.filter(enabled=False).count()
+                             + StorageTestCase.objects.filter(enabled=False).count()
+                             + ApiTestCase.objects.filter(enabled=False).count()),
             },
         }
     )

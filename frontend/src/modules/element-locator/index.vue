@@ -10,7 +10,7 @@ import { useElementStore } from './store.js'
 import DeviceSelector from './components/DeviceSelector.vue'
 import ScreenshotView from './components/ScreenshotView.vue'
 import XPathCandidatePanel from './components/XPathCandidatePanel.vue'
-import ElementDetailPanel from './components/ElementDetailPanel.vue'
+import PageElementsPanel from './components/PageElementsPanel.vue'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import ElementManager from './components/ElementManager.vue'
 
@@ -179,6 +179,10 @@ function onDeviceChanged(msg) {
   if (msg.screen_w) store.screenW = msg.screen_w
   if (msg.screen_h) store.screenH = msg.screen_h
 }
+
+function onScreenshotUpdate({ url }) {
+  store.screenshotUrl = url
+}
 </script>
 
 <template>
@@ -248,6 +252,7 @@ function onDeviceChanged(msg) {
                   @click-element="onElementClick"
                   @do-action="doAction"
                   @device-changed="onDeviceChanged"
+                  @screenshot-update="onScreenshotUpdate"
                 />
               </section>
               <section class="col col-xpath">
@@ -257,8 +262,8 @@ function onDeviceChanged(msg) {
                   @do-action="doAction"
                 />
               </section>
-              <section class="col col-detail">
-                <ElementDetailPanel :element="store.selected" />
+              <section class="col col-elements">
+                <PageElementsPanel />
               </section>
             </div>
           </section>
@@ -308,7 +313,28 @@ function onDeviceChanged(msg) {
 }
 
 .doc-page :deep(.locator-tabs.el-tabs > .el-tabs__header) {
-  margin-bottom: 8px;
+  margin: 0 0 8px;
+  width: 100%;
+}
+.doc-page :deep(.locator-tabs .el-tabs__nav-wrap),
+.doc-page :deep(.locator-tabs .el-tabs__nav-scroll) {
+  width: 100%;
+}
+.doc-page :deep(.locator-tabs .el-tabs__nav) {
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: var(--app-radius-md);
+}
+.doc-page :deep(.locator-tabs .el-tabs__item) {
+  flex: 1;
+  width: auto;
+  max-width: none;
+  justify-content: center;
+  text-align: center;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--app-radius-sm);
 }
 
 .doc-page :deep(.locator-tabs.el-tabs > .el-tabs__content > .el-tab-pane) {
@@ -374,7 +400,7 @@ function onDeviceChanged(msg) {
   min-height: 420px;
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1.35fr);
   gap: 24px;
   overflow: hidden;
 }

@@ -101,6 +101,16 @@ class TaskCard(models.Model):
     task_id = models.CharField(max_length=50, primary_key=True)
     name = models.CharField(max_length=200, default='')
     creator = models.CharField(max_length=200, default='')
+    task_type = models.CharField(
+        max_length=32,
+        default="ui_automation",
+        choices=[
+            ("ui_automation", "Android UI 自动化测试"),
+            ("api_testing", "API 测试"),
+            ("web_automation", "Web 自动化测试"),
+        ],
+        help_text="Determines which executor and which case types are selectable",
+    )
     mode = models.CharField(max_length=20, default='immediate')  # immediate | scheduled
     device_serial = models.CharField(max_length=200, default='')
     case_ids = models.JSONField(default=list)

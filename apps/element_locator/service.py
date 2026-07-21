@@ -7,6 +7,9 @@ def gen_xpath_candidates(el: dict, all_els: list[dict]) -> list[dict]:
 
     Produces up to 8 locator types: resource-id, text, content-desc, class,
     index, combined (resource-id+text), wildcard resource-id, wildcard text.
+
+    Pre-indexes all_els into dicts keyed by class_name, resource_id, text,
+    and (class, rid) pairs for O(1) count lookups instead of O(n) scans.
     """
     cls = el["class_name"]
     rid = el["resource_id"]
@@ -14,36 +17,52 @@ def gen_xpath_candidates(el: dict, all_els: list[dict]) -> list[dict]:
     desc = el["content_desc"]
     idx = el.get("index", "")
 
-    locators = []
+    # ── Build indexes once per call (shared across all locate types) ──
+    by_class = {}
+    by_rid = {}
+    by_text = {}
+    by_class_rid = {}
+    for e in all_els:
+        c = e["class_name"]
+        by_class[c] = by_class.get(c, 0) + 1
+        r = e["resource_id"]
+        if r:
+            by_rid[r] = by_rid.get(r, 0) + 1
+            k = (c, r)
+            by_class_rid[k] = by_class_rid.get(k, 0) + 1
+        t = e["text"]
+        if t:
+            by_text[t] = by_text.get(t, 0) + 1
 
-    def count(pred) -> int:
-        return sum(1 for e in all_els if pred(e))
+    locators = []
 
     if rid:
         xp = f'//{cls}[@resource-id=\'{rid}\']'
         locators.append({
             "type": "resource-id", "xpath": xp,
-            "count": count(lambda e: e["resource_id"] == rid and e["class_name"] == cls),
+            "count": by_class_rid.get((cls, rid), 0),
         })
 
     if txt:
         xp = f'//{cls}[@text=\'{txt}\']'
-        locators.append({
-            "type": "text", "xpath": xp,
-            "count": count(lambda e: e["text"] == txt and e["class_name"] == cls),
-        })
+        count = 0
+        for e in all_els:
+            if e["text"] == txt and e["class_name"] == cls:
+                count += 1
+        locators.append({"type": "text", "xpath": xp, "count": count})
 
     if desc:
         xp = f'//{cls}[@content-desc=\'{desc}\']'
-        locators.append({
-            "type": "content-desc", "xpath": xp,
-            "count": count(lambda e: e["content_desc"] == desc and e["class_name"] == cls),
-        })
+        count = 0
+        for e in all_els:
+            if e["content_desc"] == desc and e["class_name"] == cls:
+                count += 1
+        locators.append({"type": "content-desc", "xpath": xp, "count": count})
 
     xp = f'//{cls}'
     locators.append({
         "type": "class", "xpath": xp,
-        "count": count(lambda e: e["class_name"] == cls),
+        "count": by_class.get(cls, 0),
     })
 
     if idx:
@@ -58,21 +77,22 @@ def gen_xpath_candidates(el: dict, all_els: list[dict]) -> list[dict]:
 
     if rid and txt:
         xp = f'//{cls}[@resource-id=\'{rid}\' and @text=\'{txt}\']'
-        locators.append({
-            "type": "combined", "xpath": xp,
-            "count": count(lambda e: e["resource_id"] == rid and e["text"] == txt and e["class_name"] == cls),
-        })
+        count = 0
+        for e in all_els:
+            if e["resource_id"] == rid and e["text"] == txt and e["class_name"] == cls:
+                count += 1
+        locators.append({"type": "combined", "xpath": xp, "count": count})
 
     if rid:
         locators.append({
             "type": "resource-id (any)", "xpath": f'//*[@resource-id=\'{rid}\']',
-            "count": count(lambda e: e["resource_id"] == rid),
+            "count": by_rid.get(rid, 0),
         })
 
     if txt:
         locators.append({
             "type": "text (any)", "xpath": f'//*[@text=\'{txt}\']',
-            "count": count(lambda e: e["text"] == txt),
+            "count": by_text.get(txt, 0),
         })
 
     # Deduplicate + sort

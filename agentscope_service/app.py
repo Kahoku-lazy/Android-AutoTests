@@ -25,6 +25,7 @@ from config.agentscope_config import (
 from .auth import get_current_user_id
 from .tools.factory import build_business_tools
 from .teams.templates import SUB_AGENT_TEMPLATES
+from .workspace_manager import install_filterable_workspace_manager
 
 logger = logging.getLogger('agentscope')
 
@@ -82,6 +83,9 @@ def create_agentscope_app():
         skill_paths=SKILL_PATHS,
         ttl=WORKSPACE_TTL,
     )
+
+    # ── Install filterable workspace manager (before any workspace is created) ──
+    install_filterable_workspace_manager()
 
     # ── Build the app ──
     app = create_app(

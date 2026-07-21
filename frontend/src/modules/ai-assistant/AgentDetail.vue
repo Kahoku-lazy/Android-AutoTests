@@ -181,6 +181,22 @@ async function loadAgentTools() {
   } catch (_) {}
 }
 
+function highlightJson(raw) {
+  try {
+    const obj = JSON.parse(raw)
+    const formatted = JSON.stringify(obj, null, 2)
+    return formatted
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/("(?:[^"\\]|\\.)*")\s*:/g, '<span style="color:#9cdcfe">$1</span>:')
+      .replace(/:\s*("(?:[^"\\]|\\.)*")/g, ': <span style="color:#ce9178">$1</span>')
+      .replace(/:\s*(\d+\.?\d*)/g, ': <span style="color:#b5cea8">$1</span>')
+      .replace(/:\s*(true|false)/g, ': <span style="color:#569cd6">$1</span>')
+      .replace(/:\s*(null)/g, ': <span style="color:#569cd6">$1</span>')
+  } catch {
+    return `<span style="color:#f44747">${raw.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span>`
+  }
+}
+
 function openMcpDialog(mode = 'add', index = -1) {
   mcpDialogMode.value = mode
   mcpEditingIndex.value = index
@@ -196,23 +212,45 @@ function openMcpDialog(mode = 'add', index = -1) {
   mcpDialogVisible.value = true
 }
 
-async function saveMcpTool() {
-  if (!mcpForm.value.name.trim()) { ElMessage.warning('请输入 MCP 名称'); return }
-  try {
-    JSON.parse(mcpForm.value.config_json)
-  } catch {
-    mcpJsonError.value = 'JSON 格式无效'; return
+function normalizeMcpJson(raw) {
+  let parsed
+  try { parsed = JSON.parse(raw) } catch { return null }
+  // Auto-detect mcpServers wrapper: {"mcpServers": {"name": {...}}}
+  if (parsed.mcpServers && typeof parsed.mcpServers === 'object') {
+    const servers = parsed.mcpServers
+    const names = Object.keys(servers)
+    if (names.length === 0) return null
+    const name = names[0]
+    const inner = servers[name]
+    return { name, config: inner }
   }
+  // Plain inner config — no wrapper
+  return { name: null, config: parsed }
+}
+
+async function saveMcpTool() {
+  const raw = mcpForm.value.config_json.trim()
+  if (!raw) { mcpJsonError.value = 'JSON 配置不能为空'; return }
+
+  const normalized = normalizeMcpJson(raw)
+  if (!normalized) { mcpJsonError.value = 'JSON 格式无效，请检查语法'; return }
+
+  // Use auto-detected name from mcpServers key, or fall back to form name
+  const finalName = normalized.name || mcpForm.value.name.trim()
+  if (!finalName) { ElMessage.warning('请输入 MCP 名称'); return }
+
   mcpJsonError.value = ''
+  // Update the form config to use cleaned JSON (no mcpServers wrapper)
+  mcpForm.value.config_json = cleanJson
 
   if (isNew.value) {
     if (mcpDialogMode.value === 'add') {
-      form.value.tools.push({ name: mcpForm.value.name.trim(), tool_type: 'mcp', enabled: true, config_json: mcpForm.value.config_json })
+      form.value.tools.push({ name: finalName, tool_type: 'mcp', enabled: true, config_json: cleanJson })
     } else if (mcpEditingIndex.value >= 0) {
-      form.value.tools[mcpEditingIndex.value] = { ...form.value.tools[mcpEditingIndex.value], name: mcpForm.value.name.trim(), config_json: mcpForm.value.config_json }
+      form.value.tools[mcpEditingIndex.value] = { ...form.value.tools[mcpEditingIndex.value], name: finalName, config_json: cleanJson }
     }
   } else {
-    const data = await saveMcpApi(agentId, mcpForm.value.name.trim(), mcpForm.value.config_json)
+    const data = await saveMcpApi(agentId, finalName, cleanJson)
     if (data.ok) { await loadAgentTools() } else { ElMessage.error(data.error || '保存失败'); return }
   }
   mcpDialogVisible.value = false
@@ -673,16 +711,21 @@ async function save() {
         <!-- MCP JSON editor dialog -->
         <el-dialog v-model="mcpDialogVisible"
                    :title="mcpDialogMode === 'add' ? '添加 MCP 服务器' : '编辑 MCP 服务器'"
-                   width="560px" destroy-on-close>
+                   width="560px" destroy-on-close append-to-body>
           <el-form label-width="80px">
             <el-form-item label="名称" required>
               <el-input v-model="mcpForm.name" placeholder="如: github" />
             </el-form-item>
             <el-form-item label="JSON 配置" required>
-              <el-input v-model="mcpForm.config_json" type="textarea" :rows="12"
-                        placeholder='{"transport":"stdio","command":"npx",...}'
-                        style="font-family: var(--font-mono, monospace); font-size: 13px;" />
-              <div v-if="mcpJsonError" style="color:#e85f5f;font-size:12px;margin-top:4px">{{ mcpJsonError }}</div>
+              <div style="width:100%">
+                <el-input v-model="mcpForm.config_json" type="textarea" :rows="10"
+                          placeholder='支持两种格式：&#10;1. 直接粘贴 MCP 配置：{"transport":"stdio","command":"npx",...}&#10;2. 粘贴完整 mcpServers 配置（自动提取）'
+                          style="font-family: var(--font-mono, monospace); font-size: 13px;" />
+                <div v-if="mcpJsonError" style="color:#e85f5f;font-size:12px;margin-top:4px">{{ mcpJsonError }}</div>
+                <div v-if="mcpForm.config_json.trim()" class="json-preview-live" style="margin-top:8px;max-height:200px;overflow:auto;background:#1e1e1e;border-radius:8px;padding:10px;font-size:12px;font-family:Consolas,Monaco,'Courier New',monospace;line-height:1.5">
+                  <pre v-html="highlightJson(mcpForm.config_json)" style="margin:0;white-space:pre-wrap;word-break:break-all"></pre>
+                </div>
+              </div>
             </el-form-item>
           </el-form>
           <template #footer>

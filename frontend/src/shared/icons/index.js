@@ -83,6 +83,9 @@ export const IconBrain = makeIcon('IconBrain',
 export const IconMessageCircle = makeIcon('IconMessageCircle',
   '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>')
 
+export const IconPaperclip = makeIcon('IconPaperclip',
+  '<path d="M21.4 11.6 12 21a5.2 5.2 0 0 1-7.4-7.4l10.1-10.1a3.5 3.5 0 0 1 4.9 4.9L9.5 18.5a1.8 1.8 0 0 1-2.6-2.6l9.4-9.4"/>')
+
 // ─── 报告 ───
 export const IconBarChart = makeIcon('IconBarChart',
   '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>')

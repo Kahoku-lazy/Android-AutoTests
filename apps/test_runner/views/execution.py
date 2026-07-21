@@ -43,6 +43,7 @@ async def start_test_run(request):
     start_at = data.get("start_at")  # ISO str or None
     end_at = data.get("end_at")  # ISO str or None
     client_task_id = data.get("client_task_id", "")  # frontend localStorage task id
+    task_type = data.get("task_type", "ui_automation")
 
     # Normalize device list
     serials = data.get("device_serials", [])
@@ -53,16 +54,39 @@ async def start_test_run(request):
 
     if not case_ids:
         return JsonResponse({"ok": False, "error": "case_ids required"})
+    if task_type == "ui_automation" and not serials:
+        return JsonResponse({"ok": False, "error": "device_serial is required for UI automation tasks"}, status=400)
 
     @_bg_sync
     def load_definitions():
-        rows = TestDefinition.objects.filter(id__in=case_ids, enabled=True)
+        if task_type == "api_testing":
+            from apps.case_manager.models_api import ApiTestCase
+            rows = ApiTestCase.objects.filter(id__in=case_ids, enabled=True)
+        elif task_type == "web_automation":
+            from apps.case_manager.models_web import WebTestCase
+            rows = WebTestCase.objects.filter(id__in=case_ids, enabled=True)
+        else:
+            rows = TestDefinition.objects.filter(id__in=case_ids, enabled=True)
         test_cases = []
         for r in rows:
-            try:
-                steps_raw = json.loads(r.steps_json or "[]")
-            except Exception:
-                steps_raw = []
+            steps_raw = []
+            if task_type == "api_testing":
+                # Build a simple step list from API case fields
+                steps_raw = [{
+                    "type": "api_request",
+                    "http_method": getattr(r, "http_method", "GET") if hasattr(r, "http_method") else "GET",
+                    "url": getattr(r, "url", "") if hasattr(r, "url") else "",
+                    "headers": getattr(r, "headers", {}) if hasattr(r, "headers") else {},
+                    "request_body": getattr(r, "body", {}) if hasattr(r, "body") else {},
+                    "expected_status": getattr(r, "expected_status", 200) if hasattr(r, "expected_status") else 200,
+                    "expected_response": getattr(r, "expected_response", {}) if hasattr(r, "expected_response") else {},
+                    "assertions": getattr(r, "assertions", []) if hasattr(r, "assertions") else [],
+                }]
+            else:
+                try:
+                    steps_raw = json.loads(r.steps_json or "[]")
+                except Exception:
+                    steps_raw = []
             steps_data = [TestStep.from_dict(s) for s in steps_raw]
             tc = TestCaseDef(
                 id=r.id,
@@ -87,6 +111,19 @@ async def start_test_run(request):
     effective_pkg = package_name
     if not effective_pkg and test_cases:
         effective_pkg = test_cases[0].package_name or ""
+
+    # ── API / Web task execution path (no device required) ──
+    if task_type in ("api_testing", "web_automation"):
+        prefix = "WEB" if task_type == "web_automation" else "API"
+        run_id = f"{prefix}-RUN-{datetime.now().strftime('%Y%m%d%H%M%S')}-{client_task_id[:8] if client_task_id else 'direct'}"
+        _spawn_bg(_execute_remote_tests(run_id, test_cases, loop_count, interval_seconds, client_task_id, task_type), f"{task_type}_exec")
+        return JsonResponse({
+            "ok": True,
+            "runs": [{"run_id": run_id, "test_cases": len(test_cases)}],
+            "queued": [],
+            "case_count": len(test_cases),
+            "loop_count": loop_count,
+        })
 
     queued_serials = []
     run_ids = []
@@ -354,6 +391,17 @@ async def _start_next_queued(serial: str):
 
         test_cases = await load()
         if not test_cases:
+            # TaskCard stays "queued" in DB but payload was already popped from
+            # in-memory queue. Cancel the TaskCard so it doesn't become a zombie.
+            if client_task_id := next_req.get("client_task_id", ""):
+                try:
+                    @_bg_sync
+                    def _cancel_empty():
+                        tc = TaskCard.objects.get(task_id=client_task_id)
+                        sm.cancel(tc)
+                    await _cancel_empty()
+                except Exception:
+                    _bg_log.exception("cancel empty-queue task %s", client_task_id)
             mark_device_idle(serial)
             try:
                 await sync_to_async(dp_release_device)(serial, reason="error")
@@ -398,4 +446,104 @@ async def _start_next_queued(serial: str):
             # Exception happened before _execute_tests was reached
             # (e.g. load() or u2.connect() failed). Retry next queued task.
             _schedule_next_queued(serial)
+
+
+# ── API test execution (no device required) ──
+
+async def _execute_remote_tests(run_id, test_cases, loop_count, interval_seconds, client_task_id="", task_type="api_testing"):
+    """Execute API or Web test cases (no device connection needed)."""
+    from ..api_adapter import ApiAdapter
+    from ..web_adapter import WebAdapter
+    from ..models import TaskCard
+
+    is_web = task_type == "web_automation"
+    label = "Web" if is_web else "API"
+    device_label = "web" if is_web else "api"
+    adapter = None
+
+    try:
+        if is_web:
+            adapter = WebAdapter(logger=lambda msg: None, should_stop=lambda: False)
+        else:
+            adapter = ApiAdapter(logger=lambda msg: None, should_stop=lambda: False)
+
+        run_record = TestRunRecord.objects.create(
+            run_id=run_id, client_task_id=client_task_id, status="RUNNING",
+            device_serial=device_label,
+            selected_cases=[{"case_id": tc.id, "title": tc.title} for tc in test_cases],
+            loop_count=loop_count,
+            started_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        )
+
+        try:
+            task = TaskCard.objects.get(task_id=client_task_id)
+            task.run = run_record; task.status = "running"; task.running = True; task.save()
+        except TaskCard.DoesNotExist:
+            pass
+
+        all_results = []
+        for tc in test_cases:
+            if is_web:
+                case_dict = {"id": tc.id, "title": tc.title,
+                    "url": getattr(tc, "url", ""),
+                    "steps": getattr(tc, "steps", ""),
+                    "expected_result": getattr(tc, "expected_result", "")}
+            else:
+                case_dict = {"id": tc.id, "title": tc.title,
+                    "http_method": getattr(tc, "http_method", "GET") if hasattr(tc, "http_method") else "GET",
+                    "url": getattr(tc, "url", ""),
+                    "headers": getattr(tc, "headers", {}) if hasattr(tc, "headers") else {},
+                    "request_body": getattr(tc, "request_body", {}) if hasattr(tc, "request_body") else {},
+                    "expected_status": getattr(tc, "expected_status", 200) if hasattr(tc, "expected_status") else 200,
+                    "expected_response": getattr(tc, "expected_response", {}) if hasattr(tc, "expected_response") else {},
+                    "assertions": getattr(tc, "assertions", []) if hasattr(tc, "assertions") else []}
+            for iteration in range(loop_count):
+                if adapter.stopped():
+                    break
+                adapter.log(f"[{label}] {tc.title} #{iteration + 1}/{loop_count}")
+                result = adapter.execute_case(case_dict)
+                all_results.append(result)
+                TestResult.objects.create(run=run_record, case_id=tc.id,
+                    iteration=iteration + 1, result=result["result"],
+                    duration_ms=result.get("duration_ms", 0), detail=result.get("detail", ""))
+                if interval_seconds > 0 and iteration < loop_count - 1:
+                    await asyncio.sleep(interval_seconds)
+
+        # Cleanup WebAdapter browser
+        if is_web and adapter:
+            await adapter.close()
+
+        passed = sum(1 for r in all_results if r["result"] == "pass")
+        failed = sum(1 for r in all_results if r["result"] == "fail")
+        run_record.status = "COMPLETED"
+        run_record.summary = {"pass": passed, "fail": failed, "total": len(all_results)}
+        run_record.finished_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        run_record.save()
+
+        try:
+            task = TaskCard.objects.get(task_id=client_task_id)
+            task.status = "done"; task.running = False; task.outcome = "completed"
+            task.overall_pass = passed; task.overall_fail = failed
+            task.conclusion = f"{label} 测试完成：{passed} 通过，{failed} 失败"
+            task.end_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            task.save()
+        except TaskCard.DoesNotExist:
+            pass
+
+    except Exception as e:
+        _bg_log.exception("%s test execution failed for run %s", label, run_id)
+        if is_web and adapter:
+            try: await adapter.close()
+            except Exception: pass
+        try:
+            run_record = TestRunRecord.objects.get(run_id=run_id)
+            run_record.status = "COMPLETED"; run_record.summary = {"error": str(e)}
+            run_record.finished_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S"); run_record.save()
+        except Exception: pass
+        try:
+            task = TaskCard.objects.get(task_id=client_task_id)
+            task.status = "done"; task.running = False; task.outcome = "error"
+            task.conclusion = f"{label} 测试异常：{str(e)[:200]}"
+            task.end_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S"); task.save()
+        except TaskCard.DoesNotExist: pass
         # else: _execute_tests.finally handles cleanup + schedules next dequeue

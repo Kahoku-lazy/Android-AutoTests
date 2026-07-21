@@ -12,7 +12,7 @@ const props = defineProps({
   selected: { type: Object, default: null },
   active: { type: Boolean, default: false },
 })
-const emit = defineEmits(['click-element', 'do-action', 'device-changed'])
+const emit = defineEmits(['click-element', 'do-action', 'device-changed', 'screenshot-update'])
 
 const screenshotUrl = ref('')
 const ws = ref(null)
@@ -281,6 +281,7 @@ function applyScreenshot(b64, format) {
   revokeBlobUrl()
   blobUrl = URL.createObjectURL(new Blob([bytes], { type: `image/${format}` }))
   screenshotUrl.value = blobUrl
+  emit('screenshot-update', { url: blobUrl })
 }
 
 function displayScale() {
@@ -321,9 +322,20 @@ function drawOverlay() {
     const isSelected = props.selected && el._idx === props.selected._idx
 
     if (isSelected) {
+      // Fill with semi-transparent color for readability
+      ctx.fillStyle = 'rgba(231,76,60,0.15)'
+      ctx.fillRect(
+        Math.round(el.x * s), Math.round(el.y * s),
+        Math.round(el.width * s), Math.round(el.height * s),
+      )
       ctx.strokeStyle = '#e74c3c'
-      ctx.lineWidth = 2
+      ctx.lineWidth = 2.5
     } else if (isHovered) {
+      ctx.fillStyle = 'rgba(255,152,0,0.10)'
+      ctx.fillRect(
+        Math.round(el.x * s), Math.round(el.y * s),
+        Math.round(el.width * s), Math.round(el.height * s),
+      )
       ctx.strokeStyle = '#ff9800'
       ctx.lineWidth = 2
     } else {

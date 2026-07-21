@@ -189,7 +189,7 @@ export function useElementTree() {
       return
     }
     try {
-      const { data } = await apiUpdatePage(page.id, { label })
+      const { data } = await apiUpdatePage(page.id, label)
       if (data.ok) {
         showRenameDialog.value = false
         await loadPages()

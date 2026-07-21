@@ -5,6 +5,7 @@ import { animate } from "animejs";
 import { ElMessage, ElMessageBox, ElCascader } from "element-plus";
 import client from "@/shared/api-client.js";
 import StepEditor from "./components/StepEditor.vue";
+import WatcherPanel from "./components/WatcherPanel.vue";
 import PageHeader from "@/shared/components/PageHeader.vue";
 import { fetchDirectories, acquireEditLock, releaseEditLock } from "./api.js";
 
@@ -37,6 +38,7 @@ const form = ref({
   // Permission
   permission: "edit",
   permitted_editors: [],
+  watchers: [],
 });
 
 // ── Directory cascader options ──
@@ -187,6 +189,7 @@ onMounted(async () => {
           permitted_users: d.permitted_users || [],
           permission: d.permission || "edit",
           permitted_editors: d.permitted_editors || [],
+          watchers: d.watchers || [],
         };
         caseCreatedBy.value = d.created_by || "";
 
@@ -273,10 +276,12 @@ async function save() {
     const { data } = await client.post("/cases/definitions", form.value);
     if (data.ok) {
       ElMessage.success("保存成功");
+      // Update id and updated_at from server response (for next save's optimistic lock)
+      if (data.id) form.value.id = data.id;
+      if (data.updated_at) form.value.updated_at = data.updated_at;
       // Reset dirty tracker BEFORE router.replace — 否则 onBeforeRouteLeave 看到 isDirty=true
       initialForm.value = JSON.parse(JSON.stringify(form.value));
       if (isNew.value && data.id) {
-        form.value.id = data.id;
         await router.replace(`/cases/${data.id}/edit`);
       }
       return true;
@@ -670,6 +675,13 @@ onBeforeRouteLeave((_to, _from, next) => {
             </el-button>
           </div>
         </div>
+        <div class="doc-section__label">
+          全局弹窗监视器 — 在步骤执行过程中自动检测并关闭意外弹出的弹窗
+        </div>
+        <WatcherPanel v-model="form.watchers" />
+      </section>
+
+      <section class="doc-section">
         <div class="doc-section__label">
           点击、滑动、等待、校验等操作步骤，选择设备后可单步或批量调试执行
         </div>

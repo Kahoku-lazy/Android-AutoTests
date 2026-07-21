@@ -58,6 +58,31 @@ export function taskBucket(task) {
   return "incomplete";
 }
 
+/** 计算通过率 0-100 */
+export function taskPassRate(task) {
+  const total = taskCompletedCount(task);
+  if (!total) return 100;
+  const pass = task.overallPass || 0;
+  return Math.round((pass / total) * 100);
+}
+
+/** 根据通过率返回卡片背景色的 style 对象 */
+export function taskCardRateBg(task) {
+  if (task.running || isTaskQueued(task)) return {};
+  const rate = taskPassRate(task);
+  if (task.outcome !== "completed") {
+    // 未完成（停止/中断/异常）— 保持红色系
+    return { background: "linear-gradient(135deg, #ffe8ec 0%, #fff5f7 100%)" };
+  }
+  // 已完成 — 根据失败率分色
+  const failRate = 100 - rate;
+  if (failRate <= 5)
+    return { background: "linear-gradient(135deg, #fff8e0 0%, #fffef8 100%)" };        // 淡黄色：失败率<5%
+  if (failRate <= 15)
+    return { background: "linear-gradient(135deg, #ffe8e0 0%, #fff8f5 100%)" };        // 淡红色：失败率5%-15%
+  return { background: "linear-gradient(135deg, #e8e8e8 0%, #f5f5f5 100%)" };          // 灰色：失败率>15%
+}
+
 export function taskCardClass(task) {
   const map = {
     running: "task-card--running",
@@ -73,8 +98,14 @@ export function taskStatusInfo(task) {
   if (task.running) return { label: "执行中", color: "#889df0", icon: "⚡" };
   if (isTaskQueued(task))
     return { label: "等待中", color: "#f7cd67", icon: "⏳" };
-  if (task.outcome === "completed")
-    return { label: "已完成", color: "#6fba2c", icon: "✅" };
+  if (task.outcome === "completed") {
+    const failRate = 100 - taskPassRate(task);
+    if (failRate <= 5)
+      return { label: "已完成", color: "#f7cd67", icon: "✅", rateTag: "<5%", rateColor: "#b8860b" };
+    if (failRate <= 15)
+      return { label: "已完成", color: "#e85f5f", icon: "✅", rateTag: "5%~15%", rateColor: "#c0392b" };
+    return { label: "已完成", color: "#a8b5c4", icon: "✅", rateTag: ">15%", rateColor: "#7f8c8d" };
+  }
   if (task.outcome === "stopped")
     return { label: "已停止", color: "#f7a8c4", icon: "⏹" };
   if (task.outcome === "interrupted")
@@ -108,6 +139,7 @@ export function buildTaskSavePayload(task) {
     id: task.id,
     name: task.name,
     mode: task.mode,
+    taskType: task.taskType || "ui_automation",
     deviceSerial: task.deviceSerial,
     caseIds: task.caseIds,
     loopCount: task.loopCount,

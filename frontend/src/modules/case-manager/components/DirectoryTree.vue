@@ -11,6 +11,9 @@ import {
   deleteDirectory,
   deleteDefinition,
   batchMoveItems,
+  deleteStorageDefinition,
+  deleteApiDefinition,
+  deleteWebDefinition,
 } from "../api.js";
 
 const router = useRouter();
@@ -18,7 +21,28 @@ const router = useRouter();
 const props = defineProps({
   treeData: { type: Array, default: () => [] },
   activeId: { type: Number, default: null },
+  caseType: { type: String, default: "ui_automation" },
 });
+
+// ── Route & API mapping per case type ──
+const ROUTE_CREATE = {
+  ui_automation: "/cases/new",
+  web_automation: "/cases/web/new",
+  storage: "/cases/storage/new",
+  api_testing: "/cases/api/new",
+};
+const ROUTE_EDIT_PREFIX = {
+  ui_automation: "/cases",
+  web_automation: "/cases/web",
+  storage: "/cases/storage",
+  api_testing: "/cases/api",
+};
+const DELETE_API = {
+  ui_automation: deleteDefinition,
+  web_automation: deleteWebDefinition,
+  storage: deleteStorageDefinition,
+  api_testing: deleteApiDefinition,
+};
 
 const emit = defineEmits(["select", "refresh"]);
 
@@ -388,14 +412,16 @@ function goCreateCase() {
   if (!menuNode.value) return;
   const dirId = menuNode.value.id;
   closeMenu();
-  router.push({ path: "/cases/new", query: { directory_id: dirId } });
+  const path = ROUTE_CREATE[props.caseType] || "/cases/new";
+  router.push({ path, query: { directory_id: dirId } });
 }
 
 function goEditCase() {
   if (!menuNode.value) return;
   const caseId = menuNode.value.case_id;
   closeMenu();
-  router.push(`/cases/${caseId}/edit`);
+  const prefix = ROUTE_EDIT_PREFIX[props.caseType] || "/cases";
+  router.push(`${prefix}/${caseId}/edit`);
 }
 
 async function handleDeleteCase() {
@@ -408,7 +434,8 @@ async function handleDeleteCase() {
       cancelButtonText: "取消",
       type: "warning",
     });
-    const { data } = await deleteDefinition(node.case_id);
+    const deleteFn = DELETE_API[props.caseType] || deleteDefinition;
+    const { data } = await deleteFn(node.case_id);
     if (data.ok) {
       ElMessage.success("已删除");
       emit("refresh");
@@ -432,6 +459,7 @@ async function handleDialogConfirm() {
       const { data } = await createDirectory(
         dialogName.value.trim(),
         dialogParentId.value,
+        props.caseType,
       );
       if (data.ok) {
         ElMessage.success("目录已创建");

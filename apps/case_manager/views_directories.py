@@ -1,0 +1,118 @@
+"""case-manager directory endpoints — tree, CRUD, batch-move, permissions."""
+
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+from .models import CaseDirectory
+from .api_directories import (
+    get_directory_tree,
+    create_directory,
+    update_directory,
+    delete_directory,
+    batch_move_items,
+)
+from .views_helpers import resolve_username as _resolve_username
+
+
+def directory_list(request):
+    """GET /api/cases/directories — Return full directory tree."""
+    if request.method == "GET":
+        case_type = request.GET.get("case_type")
+        tree = get_directory_tree(case_type=case_type or None)
+        return JsonResponse({"ok": True, "tree": tree})
+    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+
+
+@csrf_exempt
+def directory_create(request):
+    """POST /api/cases/directories/create — Create a directory."""
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+    data = json.loads(request.body)
+    ok, result = create_directory(
+        name=data.get("name", ""),
+        parent_id=data.get("parent_id"),
+        sort_order=data.get("sort_order", 0),
+        created_by=_resolve_username(getattr(request, 'user_id', None)),
+        case_type=data.get("case_type", "ui_automation"),
+    )
+    if ok:
+        return JsonResponse({"ok": True, "directory": result})
+    return JsonResponse({"ok": False, "error": result}, status=400)
+
+
+@csrf_exempt
+def directory_detail(request, dir_id):
+    """POST /api/cases/directories/{id} — update or delete."""
+    if request.method == "POST":
+        data = json.loads(request.body)
+        action = data.get("action", "update")
+        if action == "delete":
+            ok, result = delete_directory(
+                dir_id,
+                deleted_by=_resolve_username(getattr(request, 'user_id', None)),
+            )
+        else:
+            ok, result = update_directory(
+                dir_id,
+                name=data.get("name"),
+                parent_id=data.get("parent_id"),
+                sort_order=data.get("sort_order"),
+            )
+        if ok:
+            return JsonResponse({"ok": True, "result": result})
+        status = 409 if isinstance(result, dict) else 400
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": result if isinstance(result, str) else result.get("message", str(result)),
+            },
+            status=status,
+        )
+    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+
+
+@csrf_exempt
+def directory_batch_move(request):
+    """POST /api/cases/directories/batch-move — Batch move cases/directories."""
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+    data = json.loads(request.body)
+    items = data.get("items", [])
+    target_id = data.get("target_directory_id")
+    if not isinstance(items, list) or not items:
+        return JsonResponse({"ok": False, "error": "items 必须是非空数组"}, status=400)
+    if target_id is None:
+        return JsonResponse({"ok": False, "error": "target_directory_id 是必填项"}, status=400)
+    result = batch_move_items(items, target_id)
+    return JsonResponse({"ok": True, **result})
+
+
+@csrf_exempt
+def directory_permission(request, dir_id):
+    """POST /api/cases/directories/{dir_id}/permission — 更新目录权限（仅创建者）。"""
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+
+    current_user = _resolve_username(getattr(request, 'user_id', None))
+    if not current_user:
+        return JsonResponse({"ok": False, "error": "未登录"}, status=401)
+
+    try:
+        d = CaseDirectory.objects.only("id", "created_by").get(id=dir_id)
+    except CaseDirectory.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "目录不存在"}, status=404)
+
+    if d.created_by and d.created_by != current_user:
+        return JsonResponse({"ok": False, "error": "只有目录创建者可以修改权限"}, status=403)
+
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError:
+        body = {}
+
+    d.allow_create = body.get("allow_create", True)
+    d.allow_delete = body.get("allow_delete", False)
+    d.save(update_fields=["allow_create", "allow_delete"])
+    return JsonResponse({"ok": True})

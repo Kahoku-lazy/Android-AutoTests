@@ -2,9 +2,8 @@
 /**
  * 智能体便签 — 和纸胶带 + 轻微倾斜，贴在点阵看板上
  */
-import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { animate } from 'animejs'
-import ModelCassetteDeck from './ModelCassetteDeck.vue'
 
 const props = defineProps({
   agent: { type: Object, required: true },
@@ -37,6 +36,9 @@ const avatarStyle = computed(() => {
   return {}
 })
 const showEmoji = computed(() => !props.agent.avatar?.startsWith('/api/ai/avatars/'))
+const modelDirty = computed(
+  () => !!props.pendingModel && props.pendingModel !== props.agent.model_name,
+)
 
 onMounted(() => {
   const note = noteRef.value
@@ -82,8 +84,6 @@ function onLeave() {
     ease: 'outElastic(1, 0.6)',
   })
 }
-
-onBeforeUnmount(() => {})
 </script>
 
 <template>
@@ -128,16 +128,37 @@ onBeforeUnmount(() => {})
         </div>
       </div>
 
-      <ModelCassetteDeck
-        :agent-id="agent.id"
-        :provider="agent.model_provider"
-        :options="modelOptions"
-        :model-value="pendingModel"
-        :saved-model="agent.model_name"
-        :confirming="confirming"
-        @update:model-value="emit('update:pendingModel', $event)"
-        @confirm="emit('confirm-model')"
-      />
+      <div class="model-row" @click.stop>
+        <div class="model-row-head">
+          <span class="model-provider">{{ agent.model_provider || '模型' }}</span>
+          <button
+            v-if="modelDirty"
+            type="button"
+            class="model-save"
+            :disabled="confirming"
+            @click="emit('confirm-model')"
+          >
+            {{ confirming ? '保存中…' : '保存模型' }}
+          </button>
+        </div>
+        <el-select
+          :model-value="pendingModel || agent.model_name"
+          size="small"
+          filterable
+          allow-create
+          default-first-option
+          placeholder="选择模型"
+          class="model-select"
+          @update:model-value="emit('update:pendingModel', $event)"
+        >
+          <el-option
+            v-for="opt in modelOptions"
+            :key="opt.value"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </el-select>
+      </div>
 
       <div class="note-footer" @click.stop>
         <button type="button" class="note-chat" @click.stop="emit('chat')">对话</button>
@@ -310,6 +331,52 @@ onBeforeUnmount(() => {})
   font-size: 11px;
   font-weight: 700;
   color: #a0936e;
+}
+
+.model-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(139, 115, 85, 0.05);
+  border: 1px solid rgba(196, 181, 160, 0.28);
+}
+.model-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.model-provider {
+  font-size: 11px;
+  font-weight: 800;
+  color: #8a7b68;
+  letter-spacing: 0.02em;
+}
+.model-save {
+  border: none;
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #6f9fd8, #5e8fca);
+}
+.model-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.model-select {
+  width: 100%;
+}
+.model-select :deep(.el-select__wrapper) {
+  border-radius: 10px !important;
+  min-height: 30px;
+  box-shadow: none !important;
+  background: rgba(255, 255, 255, 0.85) !important;
 }
 
 .note-footer {

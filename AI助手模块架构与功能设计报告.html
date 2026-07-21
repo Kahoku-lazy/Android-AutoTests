@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 助手模块 — 架构与功能设计全面报告</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #f7a8c4;
+    --accent2: #6fba2c;
+    --accent3: #889df0;
+    --accent4: #b39ef3;
+    --accent5: #19c8b9;
+    --accent6: #f8a6b2;
+    --danger: #e85f5f;
+    --warn: #f7cd67;
+    --font: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --mono: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', monospace;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:var(--font); line-height:1.7; }
+  .container { max-width:1200px; margin:0 auto; padding:2rem; }
+
+  /* Header */
+  .hero { text-align:center; padding:4rem 0 3rem; border-bottom:2px solid var(--border); margin-bottom:3rem; }
+  .hero h1 { font-size:2.8rem; font-weight:800; background:linear-gradient(135deg, var(--accent), var(--accent5)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .hero .sub { color:var(--muted); font-size:1.15rem; margin-top:0.6rem; }
+  .hero .meta { display:flex; gap:1.5rem; justify-content:center; margin-top:1.5rem; flex-wrap:wrap; }
+  .hero .meta span { background:var(--card); border:1px solid var(--border); padding:0.35rem 1rem; border-radius:20px; font-size:0.85rem; color:var(--muted); }
+
+  /* Sections */
+  section { margin:3.5rem 0; }
+  h2 { font-size:1.75rem; font-weight:700; color:var(--accent); border-left:4px solid var(--accent); padding-left:1rem; margin-bottom:1.5rem; }
+  h3 { font-size:1.25rem; font-weight:600; color:var(--accent5); margin:1.5rem 0 0.8rem; }
+  h4 { font-size:1.05rem; font-weight:600; color:var(--warn); margin:1.2rem 0 0.5rem; }
+
+  /* Cards */
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; margin-bottom:1.5rem; }
+  .card-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1.25rem; }
+  .card-grid-3 { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem; }
+
+  /* Tables */
+  table { width:100%; border-collapse:collapse; margin:1rem 0; font-size:0.9rem; }
+  th { background:var(--border); padding:0.6rem 0.8rem; text-align:left; font-weight:600; color:var(--warn); }
+  td { padding:0.55rem 0.8rem; border-bottom:1px solid var(--border); }
+  tr:hover td { background:rgba(255,255,255,0.03); }
+
+  /* Tags */
+  .tag { display:inline-block; padding:0.15rem 0.55rem; border-radius:4px; font-size:0.78rem; font-weight:600; }
+  .tag-accent { background:rgba(247,168,196,0.2); color:var(--accent); }
+  .tag-green { background:rgba(111,186,44,0.2); color:var(--accent2); }
+  .tag-blue { background:rgba(136,157,240,0.2); color:var(--accent3); }
+  .tag-purple { background:rgba(179,158,243,0.2); color:var(--accent4); }
+  .tag-red { background:rgba(232,95,95,0.2); color:var(--danger); }
+  .tag-yellow { background:rgba(247,205,103,0.2); color:var(--warn); }
+
+  /* Code blocks */
+  code { font-family:var(--mono); font-size:0.82rem; background:rgba(0,0,0,0.3); padding:0.15rem 0.4rem; border-radius:4px; }
+  pre { font-family:var(--mono); font-size:0.8rem; background:#0a0f1a; border:1px solid var(--border); border-radius:8px; padding:1rem; overflow-x:auto; line-height:1.6; white-space:pre; }
+  .path { color:var(--accent3); }
+
+  /* Flow diagram */
+  .flow { display:flex; flex-wrap:wrap; gap:0.8rem; align-items:center; justify-content:center; padding:1rem 0; }
+  .flow .box { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:0.6rem 1rem; text-align:center; }
+  .flow .arrow { color:var(--muted); font-size:1.2rem; }
+  .flow .box.b1 { border-color:var(--accent); }
+  .flow .box.b2 { border-color:var(--accent2); }
+  .flow .box.b3 { border-color:var(--accent3); }
+  .flow .box.b4 { border-color:var(--accent5); }
+  .flow .box.b5 { border-color:var(--accent6); }
+  .flow .box.b6 { border-color:var(--accent4); }
+
+  /* Mermaid fallback */
+  .diagram-box { background:var(--card); border:1px dashed var(--border); border-radius:12px; padding:2rem; text-align:center; margin:1rem 0; }
+  .diagram-box pre { text-align:left; display:inline-block; }
+
+  /* Badge */
+  .badge { font-size:0.75rem; font-weight:700; padding:0.2rem 0.65rem; border-radius:10px; margin-left:0.4rem; vertical-align:middle; }
+  .badge-get { background:rgba(136,157,240,0.2); color:var(--accent3); }
+  .badge-post { background:rgba(111,186,44,0.2); color:var(--accent2); }
+
+  /* List */
+  ul, ol { padding-left:1.5rem; margin:0.5rem 0; }
+  li { margin:0.3rem 0; }
+
+  /* Footer */
+  footer { text-align:center; padding:2rem; color:var(--muted); font-size:0.85rem; border-top:1px solid var(--border); margin-top:4rem; }
+
+  /* Print */
+  @media print {
+    body { background:#fff; color:#111; }
+    .card { background:#f8f8f8; border:1px solid #ccc; }
+    .hero h1 { -webkit-text-fill-color:#d4607e; }
+    h2 { color:#d4607e; }
+    h3 { color:#0fa89a; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ========== HERO ========== -->
+<header class="hero">
+  <h1>🤖 AI 助手模块 — 架构与功能设计报告</h1>
+  <p class="sub">Android-AutoTests 平台 · 自然语言交互中枢 · 基于 AgentScope 2.0 ReAct 推理引擎</p>
+  <div class="meta">
+    <span>📅 2026-07-21</span>
+    <span>📦 模块: ai-assistant</span>
+    <span>🏷️ 版本: v1.1</span>
+    <span>👤 报告生成: AI 开发工程师</span>
+  </div>
+</header>
+
+<!-- ========== TOC ========== -->
+<section>
+  <h2>📑 目录</h2>
+  <ol style="columns:2; column-gap:2rem;">
+    <li><a href="#s1" style="color:var(--accent3)">架构定位与三层分离</a></li>
+    <li><a href="#s2" style="color:var(--accent3)">全栈架构图</a></li>
+    <li><a href="#s3" style="color:var(--accent3)">前端架构与组件树</a></li>
+    <li><a href="#s4" style="color:var(--accent3)">SSE 流式对话事件系统</a></li>
+    <li><a href="#s5" style="color:var(--accent3)">Django 后端架构</a></li>
+    <li><a href="#s6" style="color:var(--accent3)">AgentScope AI 引擎</a></li>
+    <li><a href="#s7" style="color:var(--accent3)">Agent 创建与生命周期</a></li>
+    <li><a href="#s8" style="color:var(--accent3)">24 个 Tool 体系</a></li>
+    <li><a href="#s9" style="color:var(--accent3)">Agent Team 协作架构</a></li>
+    <li><a href="#s10" style="color:var(--accent3)">SOP 四阶段工作流</a></li>
+    <li><a href="#s11" style="color:var(--accent3)">数据模型 (6 张表)</a></li>
+    <li><a href="#s12" style="color:var(--accent3)">37 个 REST API 端点</a></li>
+    <li><a href="#s13" style="color:var(--accent3)">知识库 RAG 系统</a></li>
+    <li><a href="#s14" style="color:var(--accent3)">安全设计</a></li>
+    <li><a href="#s15" style="color:var(--accent3)">关键设计决策</a></li>
+  </ol>
+</section>
+
+<!-- ========== 1. 架构定位 ========== -->
+<section id="s1">
+  <h2>一、架构定位与三层分离</h2>
+
+  <div class="card">
+    <h3>1.1 AI 助手的平台角色</h3>
+    <p>AI 助手是平台的 <strong style="color:var(--accent)">自然语言交互中枢</strong>，是三条操作通道之一（通道 B）：</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <h4>🖐️ 通道 A：手动操作</h4>
+        <p>各模块页面点击按钮、填表单 → 精细化控制每一步，逐条执行。</p>
+      </div>
+      <div class="card" style="border-color:var(--accent)">
+        <h4>🤖 通道 B：AI 对话 <span class="tag tag-accent">本模块</span></h4>
+        <p>ChatView 输入自然语言 → AI 自动搜索元素、编排步骤、锁定设备、执行测试、返回结果。</p>
+      </div>
+      <div class="card">
+        <h4>🧩 通道 C：可视化编排</h4>
+        <p>Blockly 拖拽积木 + VueFlow 画图 → 图形化编排后同步到用例库执行。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>1.2 三层架构中的位置</h3>
+    <p>AI 助手跨 <strong>后端层 (Django)</strong> 和 <strong>AI 引擎层 (AgentScope)</strong> 两层，是唯一跨越两个后端子系统的模块：</p>
+
+    <table>
+      <tr><th>层</th><th>AI 助手模块的职责</th></tr>
+      <tr><td>🖥️ <strong>前端层</strong> (:5173)</td><td>Vue 3 组件：智能体列表、5 步配置向导、SSE 流式对话界面、HITL 确认弹窗</td></tr>
+      <tr><td>⚙️ <strong>后端层 — Django</strong> (:8765)</td><td>管理智能体配置（加密存储 API Key）、对话记录持久化、37 REST 端点</td></tr>
+      <tr><td>🤖 <strong>AI 引擎层 — AgentScope</strong> (:8000)</td><td>ReAct 推理循环、24 Tool 编排调用、SSE 流式输出、Agent Team 并行协作、ChromaDB 知识库检索</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>1.3 核心交互链路</h3>
+    <pre>用户自然语言 → ChatView (SSE Client) → AgentScope ReAct 推理
+    → 24 个 Tool → 同进程 import Django ORM/API → 6 个业务模块
+    → 结果返回 → SSE 流式逐 token 输出 → 前端渲染</pre>
+  </div>
+</section>
+
+<!-- ========== 2. 全栈架构图 ========== -->
+<section id="s2">
+  <h2>二、全栈架构图</h2>
+
+  <div class="diagram-box">
+<pre style="text-align:left; font-size:0.78rem; line-height:1.4;">
+┌──────────────────────────────────────────────────────────────────────────┐
+│                     🖥️ 前端层 (Vue 3 :5173)                                │
+│  ┌────────────────────┐ ┌────────────────────┐ ┌────────────────────────┐ │
+│  │ index.vue (459行)   │ │ AgentDetail (800行) │ │ ChatView.vue (1325行)  │ │
+│  │ 智能体卡片网格       │ │ 5步配置向导          │ │ SSE流式对话 + HITL     │ │
+│  │ Tabs筛选+健康巡检    │ │ 模型选择+Key管理     │ │ 打字机效果+Tool可视化   │ │
+│  └────────┬───────────┘ └────────┬───────────┘ └───────────┬────────────┘ │
+│           │                      │                         │              │
+│           │   HTTP REST + JWT    │    SSE Stream + JWT     │              │
+└───────────┼──────────────────────┼─────────────────────────┼──────────────┘
+            │                      │                         │
+┌───────────┼──────────────────────┼─────────────────────────┼──────────────┐
+│           ▼                      ▼                         ▼              │
+│  ┌─────────────────────────────────────────────────────────────────────┐ │
+│  │              ⚙️ Django (:8765) — apps/ai_assistant/                  │ │
+│  │  ┌──────────┐ ┌──────────┐ ┌───────────┐ ┌────────┐ ┌───────────┐  │ │
+│  │  │auth_views│ │agent_views│ │conv_views │ │task_   │ │file/know- │  │ │
+│  │  │ (5端点)   │ │ (12端点)  │ │ (8端点)    │ │views   │ │ledge_views│  │ │
+│  │  │JWT签发/验│ │CRUD+注册  │ │SSE+消息+HITL│ │(2端点) │ │(7端点)    │  │ │
+│  │  └──────────┘ └──────────┘ └───────────┘ └────────┘ └───────────┘  │ │
+│  │  ┌──────────────────────────────────────────────────────────────┐   │ │
+│  │  │ models.py: ai_agents · ai_tools · ai_conversations           │   │ │
+│  │  │            ai_messages · ai_tasks · ai_execution_logs         │   │ │
+│  │  └──────────────────────────────────────────────────────────────┘   │ │
+│  └──────────────────────────────┬──────────────────────────────────────┘ │
+│                                 │ 同进程 import                           │
+│  ┌──────────────────────────────┴──────────────────────────────────────┐ │
+│  │              🤖 AgentScope (:8000) — agentscope_service/            │ │
+│  │  ┌────────────┐ ┌──────────────┐ ┌──────────┐ ┌──────────────────┐ │ │
+│  │  │ app.py     │ │agent_factory │ │tools/    │ │teams/ (5 Worker) │ │ │
+│  │  │FastAPI入口 │ │Django Agent→ │ │24个Tool  │ │element-inspector │ │ │
+│  │  │+ Redis存储 │ │AgentScope    │ │8个文件   │ │case-writer       │ │ │
+│  │  │+ 消息总线  │ │Agent         │ │          │ │device-operator   │ │ │
+│  │  └────────────┘ └──────────────┘ └──────────┘ │test-executor     │ │ │
+│  │  ┌────────────┐                               │report-writer     │ │ │
+│  │  │rag/        │                               └──────────────────┘ │ │
+│  │  │ChromaDB    │                                                     │ │
+│  │  │32篇文档    │                                                     │ │
+│  │  └────────────┘                                                     │ │
+│  └─────────────────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────────────┘
+</pre>
+  </div>
+</section>
+
+<!-- ========== 3. 前端架构 ========== -->
+<section id="s3">
+  <h2>三、前端架构与组件树</h2>
+
+  <div class="card">
+    <h3>3.1 文件结构</h3>
+    <pre>frontend/src/modules/ai-assistant/
+├── <span class="path">index.vue</span>                 智能体列表页 (~459行)
+│   功能：卡片网格、Tabs 状态筛选、健康巡检
+├── <span class="path">AgentDetail.vue</span>          智能体配置页 (~800行)
+│   功能：5 步配置向导（基本信息→模型→工具→提示词→预览测试）
+├── <span class="path">ChatView.vue</span>             对话页 (~1325行)
+│   功能：对话列表、SSE 流式渲染、消息输入、HITL 确认
+├── <span class="path">api.js</span>                   axios + SSE 客户端封装
+├── <span class="path">routes.js</span>                路由定义
+├── <span class="path">composables/</span>             业务逻辑 composables
+└── <span class="path">components/</span>              子组件（AgentCard 等）</pre>
+  </div>
+
+  <div class="card">
+    <h3>3.2 核心页面组件</h3>
+
+    <div class="card-grid-3">
+      <div class="card" style="border-top:3px solid var(--accent)">
+        <h4>📋 index.vue — 智能体列表</h4>
+        <ul>
+          <li><strong>筛选 Tabs</strong>：全部 | 运行中(🟢) | 未连通(🔴) | 已暂停(🟡)</li>
+          <li><strong>卡片网格</strong>：每张卡片显示名称、头像(上传/Emoji)、模型、健康状态灯</li>
+          <li><strong>模型选择器</strong>：内置模型 + API 检测 + 自定义，合并去重</li>
+          <li><strong>连接测试</strong>：<code>POST /test</code> 显示延迟和连通状态</li>
+          <li><strong>定时巡检</strong>：<code>setInterval(30min)</code> → GET /health 批量检查</li>
+        </ul>
+      </div>
+
+      <div class="card" style="border-top:3px solid var(--accent5)">
+        <h4>⚙️ AgentDetail.vue — 5 步向导</h4>
+        <ol>
+          <li><strong>基本信息</strong>：名称 · 头像(上传/Emoji) · 标签 · 描述</li>
+          <li><strong>模型配置</strong>：提供商(DashScope/OpenAI/Anthropic/DeepSeek/Custom)、🔍检测模型按钮、API Key、Temperature(0-2)、Max Tokens</li>
+          <li><strong>工具与 Skill</strong>：勾选可用 Tool · MCP 服务器配置</li>
+          <li><strong>提示词</strong>：自定义 system_prompt · 最大迭代次数</li>
+          <li><strong>预览与测试</strong>：配置摘要预览 · 连接测试</li>
+        </ol>
+        <p><span class="tag tag-accent">安全</span> API Key 加密存储，前端脱敏展示 <code>sk-***xxxx</code>，查看仅 5 秒</p>
+      </div>
+
+      <div class="card" style="border-top:3px solid var(--accent3)">
+        <h4>💬 ChatView.vue — 对话界面</h4>
+        <ul>
+          <li><strong>左栏</strong>：历史对话列表 · 新建对话按钮</li>
+          <li><strong>中栏</strong>：消息区 — SSE 流式渲染各类 Event</li>
+          <li><strong>下栏</strong>：消息输入框 · 发送 · 停止生成 · 文件上传 📎</li>
+          <li><strong>打字机效果</strong>：<code>TEXT_BLOCK_DELTA</code> 逐 token 追加</li>
+          <li><strong>思考折叠</strong>：<code>THINKING_BLOCK</code> 默认折叠</li>
+          <li><strong>工具可视化</strong>：<code>TOOL_CALL_START/DELTA</code> + <code>TOOL_RESULT</code></li>
+          <li><strong>HITL 弹窗</strong>：<code>REQUIRE_USER_CONFIRM</code> → ElMessageBox</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>3.3 主题规范</h3>
+    <p>AI 助手模块是平台中 <strong>唯一使用 animal-island-vue 动森主题</strong> 的模块（任天堂动物森友会风格）：</p>
+    <table>
+      <tr><th>设计元素</th><th>规格</th></tr>
+      <tr><td>主色调</td><td><code>app-orange #f7a8c4</code> — AI 助手卡片、功能入口</td></tr>
+      <tr><td>圆角</td><td>大圆角 24px / 中圆角 16px / 小圆角 10px</td></tr>
+      <tr><td>背景</td><td>暖米色 <code>--animal-bg-color</code></td></tr>
+      <tr><td>文本</td><td>暖棕色 <code>#794f27</code></td></tr>
+      <tr><td>字体</td><td>标题 Nunito / 正文系统字体</td></tr>
+      <tr><td>组件库</td><td>Card · Modal · Tabs · Button · Input · Switch · Tooltip 等</td></tr>
+      <tr><td>动画</td><td>animejs 预设 30 种动效</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ========== 4. SSE 事件系统 ========== -->
+<section id="s4">
+  <h2>四、SSE 流式对话事件系统</h2>
+
+  <div class="card">
+    <h3>4.1 事件类型与前端渲染映射</h3>
+    <table>
+      <tr><th>SSE 事件</th><th>前端渲染</th><th>说明</th></tr>
+      <tr><td><code>REPLY_START</code></td><td>消息气泡出现</td><td>开始新回复</td></tr>
+      <tr><td><code>TEXT_BLOCK_DELTA</code></td><td><span class="tag tag-green">打字机效果</span> 逐 token 追加文本</td><td>AI 正文输出</td></tr>
+      <tr><td><code>THINKING_BLOCK_START/DELTA/END</code></td><td><span class="tag tag-purple">折叠面板</span> (默认折叠)</td><td>ReAct 推理过程</td></tr>
+      <tr><td><code>TOOL_CALL_START</code></td><td><span class="tag tag-accent">工具调用卡片</span> (loading 状态)</td><td>工具名 + 参数</td></tr>
+      <tr><td><code>TOOL_CALL_DELTA</code></td><td>追加工具参数 JSON</td><td>JSON 增量流</td></tr>
+      <tr><td><code>TOOL_RESULT_START/DELTA/END</code></td><td><span class="tag tag-blue">结果面板</span> (折叠)</td><td>成功/失败状态</td></tr>
+      <tr><td><code>HINT_BLOCK</code></td><td><span class="tag tag-yellow">SOP 状态卡片</span> / 任务卡片</td><td>UI 结构化提示</td></tr>
+      <tr><td><code>REQUIRE_USER_CONFIRM</code></td><td><span class="tag tag-red">ElMessageBox 确认弹窗</span></td><td>HITL 人机协同</td></tr>
+      <tr><td><code>REPLY_END</code></td><td>触发 <code>save-message</code> API</td><td>持久化到 ai_messages 表</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>4.2 消息持久化流程</h3>
+    <pre>SSE 流结束 (REPLY_END)
+  → 前端调用 POST /api/ai/conversations/{id}/save-message
+  → 请求体: { role:"assistant", blocks:"[{type:'text',...},...]",
+              reason:"normal", tokens:1234, input_tokens:567,
+              model_name:"qwen-max" }
+  → Django INSERT ai_messages (blocks 存储完整 ContentBlock JSON)
+  → 对话恢复时可从 DB 重建完整消息历史</pre>
+  </div>
+</section>
+
+<!-- ========== 5. Django 后端 ========== -->
+<section id="s5">
+  <h2>五、Django 后端架构</h2>
+
+  <div class="card">
+    <h3>5.1 文件结构（9 个视图文件）</h3>
+    <table>
+      <tr><th>文件</th><th>端点</th><th>职责</th></tr>
+      <tr><td><code>views/auth_views.py</code></td><td>5</td><td>JWT 签发/验证/刷新/登出/用户信息</td></tr>
+      <tr><td><code>views/agent_views.py</code></td><td>12</td><td>智能体 CRUD、注册 AgentScope、连接测试、模型检测</td></tr>
+      <tr><td><code>views/conversation_views.py</code></td><td>8</td><td>SSE 流式对话、消息保存、会话管理、HITL 确认</td></tr>
+      <tr><td><code>views/task_views.py</code></td><td>2</td><td>AI 任务列表、任务详情</td></tr>
+      <tr><td><code>views/file_views.py</code></td><td>3</td><td>头像上传、文件解析上传</td></tr>
+      <tr><td><code>views/knowledge_views.py</code></td><td>4</td><td>知识库状态、文档列表、重建索引、添加文档</td></tr>
+      <tr><td><code>views/model_views.py</code></td><td>1</td><td>检测所有模型连接</td></tr>
+      <tr><td><code>views/hitl_views.py</code></td><td>1</td><td>用户确认结果回传</td></tr>
+      <tr><td><code>views/common.py</code></td><td>—</td><td>公共工具函数</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>5.2 三层鉴权架构</h3>
+    <pre>┌──────────────────────────────────────────────────────┐
+│ JWT 签发 (Django)                                      │
+│   shared/auth/jwt_auth.py                              │
+│   · 用户登录 → 签发 JWT (含 user_id, jti, exp)         │
+│   · SECRET_KEY 与 AgentScope 共享                       │
+│                                                        │
+│ JWT 验证 (Django 中间件)                                │
+│   gateway/middleware.py                                │
+│   · 从 Authorization header 提取 Bearer token          │
+│   · 验证 → 注入 request.user_id                         │
+│   · 公开路径白名单：auth/admin/static/avatars           │
+│                                                        │
+│ JWT 验证 (AgentScope 依赖注入)                          │
+│   agentscope_service/auth.py                           │
+│   · FastAPI Depends(get_current_user_id)                │
+│   · 从 Authorization header 验证 JWT                    │
+│   · 共享 SECRET_KEY 确保与 Django 一致                   │
+└──────────────────────────────────────────────────────┘</pre>
+  </div>
+</section>
+
+<!-- ========== 6. AgentScope AI 引擎 ========== -->
+<section id="s6">
+  <h2>六、AgentScope AI 引擎</h2>
+
+  <div class="card">
+    <h3>6.1 核心组件</h3>
+    <table>
+      <tr><th>文件</th><th>职责</th><th>关键方法/属性</th></tr>
+      <tr>
+        <td><code>app.py</code></td>
+        <td>FastAPI 应用入口</td>
+        <td><code>create_agentscope_app()</code> — 配置 Redis 存储/消息总线、注入 24 Tool、JWT 鉴权依赖覆盖</td>
+      </tr>
+      <tr>
+        <td><code>auth.py</code></td>
+        <td>JWT 依赖注入</td>
+        <td><code>get_current_user_id()</code> — 从 Bearer token 解析 user_id，共享 Django SECRET_KEY</td>
+      </tr>
+      <tr>
+        <td><code>agent_factory.py</code></td>
+        <td>Django Agent → AgentScope Agent</td>
+        <td><code>build_agent_from_db(agent_config)</code> — 解密 API Key、选择 Model Provider、构建 system_prompt、注入 toolkit</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>6.2 Model Provider 映射</h3>
+    <table>
+      <tr><th>Provider</th><th>Model 类</th><th>Credential 类</th><th>默认模型</th><th>协议</th></tr>
+      <tr><td><code>dashscope</code></td><td><code>DashScopeChatModel</code></td><td><code>DashScopeCredential</code></td><td><code>qwen-max</code></td><td>阿里百炼原生</td></tr>
+      <tr><td><code>openai</code></td><td><code>OpenAIChatModel</code></td><td><code>OpenAICredential</code></td><td><code>gpt-4o</code></td><td>OpenAI 原生</td></tr>
+      <tr><td><code>anthropic</code></td><td><code>OpenAIChatModel</code></td><td><code>OpenAICredential</code></td><td>—</td><td>OpenAI-compatible (base_url)</td></tr>
+      <tr><td><code>deepseek</code></td><td><code>OpenAIChatModel</code></td><td><code>OpenAICredential</code></td><td>—</td><td>OpenAI-compatible (base_url)</td></tr>
+      <tr><td><code>custom</code></td><td><code>OpenAIChatModel</code></td><td><code>OpenAICredential</code></td><td>—</td><td>OpenAI-compatible (自定义 base_url)</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>6.3 System Prompt 构建架构</h3>
+    <pre>agent_factory.py 构建的 system_prompt:
+═══════════════════════════════════════════════════════
+
+┌──────────────────────────────────────────────────┐
+│ [平台上下文 _PLATFORM_CONTEXT]                     │
+│ · 你是 Android-AutoTests 平台的 AI 助手            │
+│ · 所有数据必须通过 Tool 获取，不可臆造               │
+│ · 工具选择策略表：用户意图 → 必须调用的 Tool         │
+├──────────────────────────────────────────────────┤
+│ [SOP 四阶段工作流 _SOP_WORKFLOW_HINT]              │
+│ · 两层工具体系：Plan Tool(子任务追踪) + SOP Tool(阶段推进)│
+│ · 每个阶段的详细 SOP：                              │
+│   阶段1: 需求分析→用例设计→用户确认→TaskCreate       │
+│   阶段2: 搜索元素→记录映射→告知缺口→用户确认          │
+│   阶段3: 保存用例→调试→全部PASS→用户确认             │
+│   阶段4: 锁定设备→创建任务→执行→释放→返回结果         │
+│ · 状态输出规范：&lt;system-hint&gt; 标签                  │
+│ · 用户取消处理                                      │
+├──────────────────────────────────────────────────┤
+│ [用户自定义提示词] (可选)                            │
+│ · 从 ai_agents.system_prompt 字段读取              │
+│ · 可覆盖/追加平台约束                                │
+└──────────────────────────────────────────────────┘</pre>
+  </div>
+</section>
+
+<!-- ========== 7. Agent 创建流程 ========== -->
+<section id="s7">
+  <h2>七、Agent 创建与生命周期</h2>
+
+  <div class="diagram-box">
+<pre style="text-align:left; font-size:0.82rem; line-height:1.5;">
+ 用户 → Vue AgentDetail (5步向导填配置)
+   │
+   ▼
+ POST /api/ai/agents/create
+   │ Django agent_views 接收 → Fernet 加密 api_key → INSERT ai_agents
+   │
+   ▼
+ 用户点击「注册到 AgentScope」
+   │ POST /api/ai/agents/{id}/register-scope
+   │
+   ▼
+ agent_factory.build_agent_from_db():
+   ├── 1. 从 DB 读取 agent 配置
+   ├── 2. Fernet 解密 api_key
+   ├── 3. 根据 provider 选择 Model 类 (DashScopeChatModel/OpenAIChatModel)
+   ├── 4. 创建 Credential 对象 (DashScopeCredential/OpenAICredential)
+   ├── 5. 构建 system_prompt (平台上下文 + SOP 工作流 + 用户自定义)
+   ├── 6. extra_agent_tools 工厂注入 24 个业务 Tool + 4 个 Plan Tool
+   └── 7. 返回 Agent(name, system_prompt, model, toolkit)
+   │
+   ▼
+ Agent 就绪 → 存入 Redis (agent_scope_id)
+   │
+   ▼
+ 用户点击「测试连接」
+   │ POST /api/ai/agents/{id}/test
+   │ Agent.test("ping") → "pong"
+   │ UPDATE ai_agents.is_connected = True
+</pre>
+  </div>
+</section>
+
+<!-- ========== 8. Tool 体系 ========== -->
+<section id="s8">
+  <h2>八、24 个 Tool 体系 — LLM Function Calling 工具层</h2>
+
+  <div class="card">
+    <h3>8.1 两层工具体系</h3>
+    <table>
+      <tr><th>层级</th><th>工具</th><th>存储</th><th>用途</th></tr>
+      <tr>
+        <td><strong>Plan 工具</strong><br><span class="tag tag-purple">框架内置</span></td>
+        <td><code>TaskCreate</code> <code>TaskGet</code> <code>TaskList</code> <code>TaskUpdate</code></td>
+        <td><code>agent.state.tasks_context</code> (内存态)</td>
+        <td>阶段内子任务拆解和进度追踪</td>
+      </tr>
+      <tr>
+        <td><strong>SOP 工具</strong><br><span class="tag tag-accent">业务 Tool</span></td>
+        <td><code>create_test_sop</code> <code>update_test_sop</code></td>
+        <td>Django DB <code>tr_test_sop</code> (持久化)</td>
+        <td>跨阶段状态机，记录产出和推进阶段</td>
+      </tr>
+    </table>
+    <p style="margin-top:1rem">Plan 工具管理「怎么做这个阶段」，SOP 工具管理「做到哪个阶段了」。两者协作：阶段内 Plan 所有子任务完成 → SOP 推进阶段。</p>
+  </div>
+
+  <div class="card">
+    <h3>8.2 24 个业务 Tool 清单</h3>
+    <table>
+      <tr><th>Tool 名称</th><th>类名</th><th>文件</th><th>归属模块</th><th>只读</th></tr>
+      <tr><td><code>save_test_case</code></td><td><code>SaveTestCaseTool</code></td><td rowspan="4"><code>case_tools.py</code></td><td rowspan="4">用例管理</td><td>❌</td></tr>
+      <tr><td><code>get_test_case</code></td><td><code>GetTestCaseTool</code></td><td>✅</td></tr>
+      <tr><td><code>debug_test_case</code></td><td><code>DebugTestCaseTool</code></td><td>✅</td></tr>
+      <tr><td><code>list_test_cases</code></td><td><code>ListTestCasesTool</code></td><td>✅</td></tr>
+      <tr style="background:rgba(255,255,255,0.02)"><td colspan="6"></td></tr>
+      <tr><td><code>get_online_devices</code></td><td><code>GetOnlineDevicesTool</code></td><td rowspan="3"><code>device_tools.py</code></td><td rowspan="3">设备管理</td><td>✅</td></tr>
+      <tr><td><code>acquire_device</code></td><td><code>AcquireDeviceTool</code></td><td>❌</td></tr>
+      <tr><td><code>release_device</code></td><td><code>ReleaseDeviceTool</code></td><td>❌</td></tr>
+      <tr style="background:rgba(255,255,255,0.02)"><td colspan="6"></td></tr>
+      <tr><td><code>get_test_points</code></td><td><code>GetTestPointsTool</code></td><td rowspan="2"><code>element_tools.py</code></td><td rowspan="2">元素定位</td><td>✅</td></tr>
+      <tr><td><code>search_elements</code></td><td><code>SearchElementsTool</code></td><td>❌</td></tr>
+      <tr style="background:rgba(255,255,255,0.02)"><td colspan="6"></td></tr>
+      <tr><td><code>run_test</code></td><td><code>RunTestTool</code></td><td rowspan="3"><code>runner_tools.py</code></td><td rowspan="3">执行引擎</td><td>❌</td></tr>
+      <tr><td><code>get_run_results</code></td><td><code>GetRunResultsTool</code></td><td>✅</td></tr>
+      <tr><td><code>stop_run</code></td><td><code>StopRunTool</code></td><td>❌</td></tr>
+      <tr style="background:rgba(255,255,255,0.02)"><td colspan="6"></td></tr>
+      <tr><td><code>fetch_page_elements</code></td><td><code>FetchPageElementsTool</code></td><td rowspan="6"><code>task_tools.py</code></td><td rowspan="6">任务/SOP</td><td>✅</td></tr>
+      <tr><td><code>create_test_sop</code></td><td><code>CreateTestSOPTool</code></td><td>❌</td></tr>
+      <tr><td><code>update_test_sop</code></td><td><code>UpdateTestSOPTool</code></td><td>❌</td></tr>
+      <tr><td><code>create_runner_task</code></td><td><code>CreateRunnerTaskTool</code></td><td>❌</td></tr>
+      <tr><td><code>list_ai_tasks</code></td><td><code>ListAITasksTool</code></td><td>✅</td></tr>
+      <tr><td><code>update_ai_task</code></td><td><code>UpdateAITaskTool</code></td><td>❌</td></tr>
+      <tr style="background:rgba(255,255,255,0.02)"><td colspan="6"></td></tr>
+      <tr><td><code>save_report</code></td><td><code>SaveReportTool</code></td><td rowspan="2"><code>report_tools.py</code></td><td rowspan="2">测试报告</td><td>❌</td></tr>
+      <tr><td><code>list_reports</code></td><td><code>ListReportsTool</code></td><td>✅</td></tr>
+      <tr style="background:rgba(255,255,255,0.02)"><td colspan="6"></td></tr>
+      <tr><td><code>parse_prd</code></td><td><code>ParsePRDTool</code></td><td rowspan="3"><code>prd_tools.py</code></td><td rowspan="3">PRD 解析</td><td>✅</td></tr>
+      <tr><td><code>design_test_cases_from_prd</code></td><td><code>DesignTestCasesFromPRDTool</code></td><td>❌</td></tr>
+      <tr><td><code>import_designed_cases</code></td><td><code>ImportDesignedCasesTool</code></td><td>❌</td></tr>
+      <tr style="background:rgba(255,255,255,0.02)"><td colspan="6"></td></tr>
+      <tr><td><code>search_knowledge_base</code></td><td><code>KnowledgeBaseSearchTool</code></td><td><code>rag_tool.py</code></td><td>知识库 RAG</td><td>✅</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>8.3 Tool 基类设计模板</h3>
+    <pre>class MyNewTool(ToolBase):
+    name = "my_new_tool"              # LLM Function Calling 三要素
+    description = "工具功能描述"        # LLM 据此选择工具
+    input_schema = {                  # JSON Schema 参数定义
+        "type": "object",
+        "properties": {
+            "param1": {"type": "string", "description": "..."},
+        },
+        "required": ["param1"],
+    }
+    is_concurrency_safe = False       # 写操作设为 False
+    is_read_only = False              # 有副作用设为 False
+
+    async def check_permissions(self, tool_input, context):
+        # 权限决策：ALLOW / DENY / REQUIRE_USER_CONFIRM
+        return PermissionDecision(
+            behavior=PermissionBehavior.ALLOW,
+            reason="所有用户可调用"
+        )
+
+    async def call(self, params: dict) -> ToolChunk:
+        # 核心：调用 Django API → 返回 ToolChunk
+        result = await run_sync(some_django_operation, params)
+        return ToolChunk(
+            content=[TextBlock(type="text", text=json.dumps(result))]
+        )
+
+# Tool 开发七大约束
+# 1. 必须继承 ToolBase
+# 2. 必须有 name/description/input_schema
+# 3. 读 Tool 设 is_read_only=True
+# 4. 写 Tool 必须走 Django api.py（禁止 Tool 内直接 ORM 写入）
+# 5. 返回值用 ToolChunk 包装 TextBlock 或 HintBlock
+# 6. 异步桥接 run_sync() — 封装 sync_to_async，8s 超时
+# 7. 新增后在 factory.py 的 _ALL_BUSINESS_TOOLS 注册</pre>
+  </div>
+</section>
+
+<!-- ========== 9. Agent Team ========== -->
+<section id="s9">
+  <h2>九、Agent Team 协作架构</h2>
+
+  <div class="card">
+    <h3>9.1 5 个 SubAgent Worker</h3>
+    <div class="diagram-box">
+<pre style="text-align:left; font-size:0.82rem; line-height:1.5;">
+  Leader Agent (AI 助手主智能体)
+    │ 根据任务类型派发到对应 Worker
+    │
+    ├── 🔍 element-inspector (元素检查员)
+    │     Tools: search_elements · get_test_points · fetch_page_elements
+    │     职责: 当前页面 Dump UI 层级 → 提取所有可交互元素 → 生成 8 种 XPath
+    │
+    ├── ✍️ case-writer (用例编写员)
+    │     Tools: save_test_case · get_test_case · list_test_cases
+    │     职责: 根据需求和已定位元素 → 编排 17 种测试步骤 → 保存用例
+    │
+    ├── 📱 device-operator (设备操作员)
+    │     Tools: get_online_devices · acquire_device · release_device
+    │     职责: 发现在线设备 → 锁定设备(防抢占) → 执行完释放设备
+    │
+    ├── ⚡ test-executor (测试执行员)
+    │     Tools: run_test · get_run_results · stop_run · create_runner_task
+    │     职责: 创建任务卡片 → 执行步骤序列 → 实时监控进度 → 收集结果
+    │
+    └── 📊 report-writer (报告撰写员)
+          Tools: save_report · list_reports
+          职责: 汇总执行结果 → 生成 CSV/MD/LOG/JSON 报告 → 保存归档</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>9.2 SubAgentTemplate 结构</h3>
+    <pre>SubAgentTemplate(
+    type="element-inspector",     # 唯一标识，Leader 据此派发
+    description="查找当前页面的所有UI元素...",  # Leader 分配任务时的参考
+    system_prompt_template="你是一个专业的UI元素检查员..."  # 角色系统提示词
+)</pre>
+  </div>
+</section>
+
+<!-- ========== 10. SOP 工作流 ========== -->
+<section id="s10">
+  <h2>十、SOP 四阶段工作流 — AI 驱动的标准测试流程</h2>
+
+  <div class="card">
+    <h3>10.1 状态机</h3>
+    <div class="flow">
+      <div class="box b1"><strong>Phase 1</strong><br>需求分析与用例设计<br><span class="tag tag-accent">create_test_sop</span><br>产出: case_design</div>
+      <div class="arrow">→</div>
+      <div class="box b2"><strong>Phase 2</strong><br>元素准备<br><span class="tag tag-purple">update_test_sop</span><br>产出: element_mapping</div>
+      <div class="arrow">→</div>
+      <div class="box b3"><strong>Phase 3</strong><br>用例创建与调试<br><span class="tag tag-accent">save_test_case</span><br>产出: case_ids</div>
+      <div class="arrow">→</div>
+      <div class="box b4"><strong>Phase 4</strong><br>任务执行<br><span class="tag tag-green">run_test</span><br>产出: run_results</div>
+    </div>
+  </div>
+
+  <div class="card-grid">
+    <div class="card" style="border-left:3px solid var(--accent)">
+      <h4>📋 阶段 1：需求分析与用例设计</h4>
+      <p><strong>目标</strong>：理解用户需求 → 设计用例方案 → 用户确认</p>
+      <p><strong>Tool</strong>：<code>TaskCreate</code> → <code>TaskUpdate</code> → <code>create_test_sop</code></p>
+      <p><strong>产出</strong>：<code>case_design</code> JSON（用例名/描述/步骤）</p>
+      <p><strong>规则</strong>：需求不明确时必须逐项询问；设计方案必须等用户确认后才进入下一阶段</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--accent4)">
+      <h4>🔍 阶段 2：元素准备</h4>
+      <p><strong>目标</strong>：确保用例所需页面元素已存在</p>
+      <p><strong>Tool</strong>：<code>fetch_page_elements</code> → <code>search_elements</code> → <code>update_test_sop</code></p>
+      <p><strong>产出</strong>：<code>element_mapping</code> + <code>element_gaps</code></p>
+      <p><strong>规则</strong>：缺失元素告知用户具体缺少什么；记录 gaps 到 sop_context</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--accent5)">
+      <h4>✍️ 阶段 3：用例创建与调试</h4>
+      <p><strong>目标</strong>：创建测试用例 → 调试到全部 PASS</p>
+      <p><strong>Tool</strong>：<code>save_test_case</code> → <code>debug_test_case</code> → <code>update_test_sop</code></p>
+      <p><strong>产出</strong>：<code>case_ids</code>（通过验证的用例 ID 列表）</p>
+      <p><strong>规则</strong>：步骤中使用阶段 2 获取的 XPath；调试失败→分析→调整→重新 save+debug；必须全部 PASS 才进入执行</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--accent2)">
+      <h4>⚡ 阶段 4：任务执行</h4>
+      <p><strong>目标</strong>：锁定设备 → 创建任务 → 执行 → 释放</p>
+      <p><strong>Tool</strong>：<code>get_online_devices</code> → <code>acquire_device</code> → <code>create_runner_task</code> → <code>run_test</code> → <code>get_run_results</code> → <code>release_device</code> → <code>update_test_sop</code></p>
+      <p><strong>产出</strong>：<code>run_id</code> + <code>run_results</code></p>
+      <p><strong>规则</strong>：loop_count 默认为 3；执行完毕必须释放设备</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>10.2 sop_context 字段渐进填充</h3>
+    <table>
+      <tr><th>阶段</th><th>填充字段</th><th>内容示例</th></tr>
+      <tr><td>Phase 1</td><td><code>requirement</code>, <code>case_design</code></td><td>用户需求描述 + 设计的用例结构</td></tr>
+      <tr><td>Phase 2</td><td><code>element_mapping</code>, <code>element_gaps</code></td><td>元素→XPath 映射表 + 缺失元素列表</td></tr>
+      <tr><td>Phase 3</td><td><code>case_ids</code>, <code>debug_notes</code></td><td>创建的用例 ID 列表 + 调试记录</td></tr>
+      <tr><td>Phase 4</td><td><code>run_id</code>, <code>run_results</code></td><td>执行 Run ID + 通过/失败统计</td></tr>
+    </table>
+    <p style="margin-top:0.8rem"><span class="tag tag-yellow">跨会话恢复</span> SOP 上下文持久化在 <code>tr_test_sop</code> 表，支持跨会话/跨服务恢复：对话中断 → 下次打开同一 Conversation → 读取 sop_context → 从上次阶段继续。</p>
+  </div>
+</section>
+
+<!-- ========== 11. 数据模型 ========== -->
+<section id="s11">
+  <h2>十一、数据模型 — 6 张表</h2>
+
+  <div class="card">
+    <h3>11.1 ER 图</h3>
+    <div class="diagram-box">
+<pre style="text-align:left; font-size:0.82rem; line-height:1.5;">
+ai_agents (智能体)                 ai_conversations (对话)
+┌──────────────────────┐         ┌──────────────────────────┐
+│ id PK                │ 1     N │ id PK                    │
+│ user_id              │────────→│ agent_id FK ─────────────│
+│ name                 │         │ user_id                  │
+│ model_provider       │         │ title                    │
+│ model_name           │         │ agent_scope_session_id   │
+│ api_key (加密存储)     │         │ status (active/archived) │
+│ system_prompt        │         │ created_at               │
+│ temperature          │         └───────────┬──────────────┘
+│ max_tokens           │                     │ 1
+│ max_iters            │                     │
+│ avatar               │         ┌───────────┼──────────────┐
+│ tags                 │         │           │ N            │
+│ is_connected         │     ┌───┴─────┐ ┌───┴──────────┐  │
+│ health_status        │     │ ai_msgs │ │ ai_tasks     │  │
+│ agent_scope_id       │     ├─────────┤ ├──────────────┤  │
+│ created_at           │     │ id PK   │ │ id PK        │  │
+└───────────┬──────────┘     │ conv FK │ │ conv_id FK   │  │
+            │ 1              │ role    │ │ task_type    │  │
+            │                │ content │ │ run_id       │  │
+            │ N              │ metadata│ │ status       │  │
+┌───────────┴──────────┐     │ created │ │ result       │  │
+│ ai_tools             │     └─────────┘ └──────┬───────┘  │
+│ id PK                │                        │ 1        │
+│ agent_id FK          │                        │          │
+│ tool_type (builtin/  │              ┌─────────┴────────┐ │
+│   MCP/Skill)         │              │ ai_execution_logs│ │
+│ tool_name            │              │ id PK            │ │
+│ config (JSON)        │              │ task_id FK       │ │
+│ enabled              │              │ level (info/warn/ │ │
+└──────────────────────┘              │   error)         │ │
+                                      │ message          │ │
+                                      │ created_at       │ │
+                                      └──────────────────┘ │
+</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>11.2 表说明</h3>
+    <table>
+      <tr><th>表名</th><th>用途</th><th>关键字段</th></tr>
+      <tr><td><code>ai_agents</code></td><td>智能体配置</td><td>model_provider · api_key(加密) · system_prompt · agent_scope_id</td></tr>
+      <tr><td><code>ai_tools</code></td><td>智能体工具配置</td><td>tool_type(builtin/MCP/Skill) · tool_name · config(JSON)</td></tr>
+      <tr><td><code>ai_conversations</code></td><td>对话会话</td><td>agent_id · agent_scope_session_id · status(active/archived)</td></tr>
+      <tr><td><code>ai_messages</code></td><td>对话消息</td><td>role(user/assistant/system/tool) · content(完整 ContentBlock JSON) · metadata(token/延迟/工具调用)</td></tr>
+      <tr><td><code>ai_tasks</code></td><td>AI 任务追踪</td><td>task_type · run_id · status · result</td></tr>
+      <tr><td><code>ai_execution_logs</code></td><td>AI 执行日志</td><td>level(info/warn/error) · message</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ========== 12. API 端点 ========== -->
+<section id="s12">
+  <h2>十二、37 个 REST API 端点</h2>
+
+  <div class="card">
+    <h3>12.1 认证端点 (5)</h3>
+    <table>
+      <tr><th>方法</th><th>路径</th><th>鉴权</th><th>说明</th></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/auth/login</code></td><td>❌</td><td>JWT 签发</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/auth/register</code></td><td>❌</td><td>用户注册</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/auth/refresh</code></td><td>✅</td><td>刷新 token</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/auth/logout</code></td><td>✅</td><td>登出（token 加黑名单）</td></tr>
+      <tr><td><span class="badge badge-get">GET</span></td><td><code>/api/ai/auth/me</code></td><td>✅</td><td>当前用户信息</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>12.2 Agent 管理端点 (12)</h3>
+    <table>
+      <tr><th>方法</th><th>路径</th><th>说明</th></tr>
+      <tr><td><span class="badge badge-get">GET</span></td><td><code>/api/ai/agents</code></td><td>列出智能体（不含 api_key）</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/agents/create</code></td><td>创建智能体（加密 api_key）</td></tr>
+      <tr><td><span class="badge badge-get">GET</span></td><td><code>/api/ai/agents/{id}</code></td><td>详情（api_key 脱敏）</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/agents/{id}/update</code></td><td>更新配置（"***" 掩码跳过更新）</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/agents/{id}/delete</code></td><td>删除智能体</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/agents/{id}/reveal-key</code></td><td>查看完整 Key（5s 有效）</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/agents/{id}/register-scope</code></td><td>注册到 AgentScope</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/agents/{id}/test</code></td><td>测试连接</td></tr>
+      <tr><td><span class="badge badge-get">GET</span></td><td><code>/api/ai/agents/{id}/models</code></td><td>可用模型列表</td></tr>
+      <tr><td><span class="badge badge-get">GET</span></td><td><code>/api/ai/agents/{id}/conversations</code></td><td>智能体的对话列表</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/agents/{id}/conversations/create</code></td><td>创建新对话</td></tr>
+      <tr><td><span class="badge badge-get">GET</span></td><td><code>/api/ai/agents/health</code></td><td>全部智能体健康检查</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>12.3 对话与消息端点 (8)</h3>
+    <table>
+      <tr><th>方法</th><th>路径</th><th>说明</th></tr>
+      <tr><td><span class="badge badge-get">GET</span></td><td><code>/api/ai/conversations/{id}/messages</code></td><td>获取消息列表</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/conversations/{id}/send</code></td><td>发送消息（阻塞模式兜底）</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/conversations/{id}/stream</code></td><td>启动 SSE 流式对话</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/conversations/{id}/save-message</code></td><td>保存消息到数据库（REPLY_END 触发）</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/conversations/{id}/confirm-result</code></td><td>用户确认结果 (HITL)</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/conversations/{id}/create-scope-session</code></td><td>创建 AgentScope 会话</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/conversations/{id}/rename</code></td><td>重命名对话</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td><code>/api/ai/conversations/{id}/delete</code></td><td>删除对话</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ========== 13. RAG ========== -->
+<section id="s13">
+  <h2>十三、知识库 RAG 系统</h2>
+
+  <div class="card">
+    <h3>13.1 技术栈</h3>
+    <table>
+      <tr><th>组件</th><th>技术</th><th>位置</th></tr>
+      <tr><td>向量存储</td><td>ChromaDB PersistentClient</td><td><code>data/chromadb/</code></td></tr>
+      <tr><td>Collection</td><td><code>project_knowledge</code></td><td>32 篇文档</td></tr>
+      <tr><td>文档来源</td><td><code>dev_docs/</code> 下 .md 文件 + 步骤类型参考</td><td>自动扫描加载</td></tr>
+      <tr><td>检索接口</td><td><code>KnowledgeBaseSearchTool</code> → <code>document_store.search()</code></td><td><code>tools/rag_tool.py</code></td></tr>
+      <tr><td>初始化</td><td><code>python agentscope_service/rag/init_kb.py</code></td><td>首次运行或重建索引</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>13.2 RAG 工作流程</h3>
+    <pre>用户提问 → AI 推理判断需要知识库辅助
+  → 调用 search_knowledge_base Tool
+    → ChromaDB 向量相似度检索 (Top-K)
+    → 返回相关文档片段
+  → AI 将知识库内容注入推理上下文
+  → 生成更准确的回复（基于项目文档、技术约定、步骤类型等）</pre>
+  </div>
+</section>
+
+<!-- ========== 14. 安全 ========== -->
+<section id="s14">
+  <h2>十四、安全设计</h2>
+
+  <div class="card">
+    <h3>14.1 API Key 全生命周期保护</h3>
+    <table>
+      <tr><th>阶段</th><th>安全措施</th></tr>
+      <tr><td>🔐 <strong>写入</strong></td><td>用户输入 → <code>encrypt_key()</code> Fernet 对称加密 → 写入 DB（不以 sk- 开头）</td></tr>
+      <tr><td>👁️ <strong>展示</strong></td><td>列表接口不返回 api_key；详情接口返回 <code>mask_key()</code> 脱敏值 <code>sk-***xxxx</code></td></tr>
+      <tr><td>🔓 <strong>查看</strong></td><td>独立 <code>reveal-key</code> 端点，完整 Key 仅返回一次，5 秒后不可再获取</td></tr>
+      <tr><td>🔄 <strong>更新</strong></td><td>检测 "***" 掩码 → 跳过更新，保留原值</td></tr>
+      <tr><td>🔧 <strong>使用</strong></td><td><code>decrypt_key()</code> 仅在后端 <code>agent_factory.py</code> 调用；解密后不写入日志、不返回前端、不出现在错误消息中</td></tr>
+      <tr><td>🚫 <strong>导出</strong></td><td>禁止任何 API 返回解密后的完整 api_key；数据迁移/备份只导出加密值</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>14.2 HITL 人机协同安全</h3>
+    <p>高风险操作（如执行测试）需要用户确认后才执行：</p>
+    <pre>Agent → REQUIRE_USER_CONFIRM 事件 (tool_call_id, tool_call_name, tool_call_input)
+前端 → 显示确认弹窗（设备、用例列表、循环次数）
+用户 → 点击「确认」或「取消」
+前端 → POST /confirm-result {tool_call_id, decision: "ALLOW/DENY"}
+AgentScope → 收到确认结果 → 继续或跳过工具调用</pre>
+  </div>
+</section>
+
+<!-- ========== 15. 设计决策 ========== -->
+<section id="s15">
+  <h2>十五、关键设计决策</h2>
+
+  <table>
+    <tr><th>决策</th><th>理由</th></tr>
+    <tr><td><strong>AgentScope 同进程调用 Django</strong></td><td>Tool 直接 import ORM/API，不走 HTTP，零网络开销，零序列化损耗</td></tr>
+    <tr><td><strong>Django + AgentScope 共享 JWT 密钥</strong></td><td>统一认证体系，避免双系统 Token 同步复杂度</td></tr>
+    <tr><td><strong>24 Tool 全部继承 ToolBase</strong></td><td>框架通过基类发现和注册；统一的输入校验、权限检查、异步桥接</td></tr>
+    <tr><td><strong>SSE + 阻塞 POST 双模式</strong></td><td>AgentScope 不可用时自动降级为同步模式，保证可用性</td></tr>
+    <tr><td><strong>两层工具体系 (Plan + SOP)</strong></td><td>Plan 工具管理阶段内子任务（内存态），SOP 工具管理跨阶段状态（持久化），职责清晰</td></tr>
+    <tr><td><strong>裸 Django View 而非 DRF</strong></td><td>37 端点稳定运行，JSON 格式统一 {ok, data|error}，AI Tool 同进程调用无帮助</td></tr>
+    <tr><td><strong>Fernet 对称加密 API Key</strong></td><td>SECRET_KEY 为密钥，DB 泄露不会直接暴露 Key；前端脱敏 + 5 秒限时查看</td></tr>
+    <tr><td><strong>ChromaDB 本地持久化</strong></td><td>32 篇文档向量化存储在本地，无需外部向量数据库，查询延迟低</td></tr>
+    <tr><td><strong>animal-island-vue 独立主题</strong></td><td>AI 助手模块使用动森暖木色主题，与其他业务模块的 Element Plus 蓝白风格隔离，提升 AI 对话的亲和力</td></tr>
+    <tr><td><strong>消息完整持久化为 ContentBlock JSON</strong></td><td>blocks 字段存储 AgentScope 完整事件结构，对话恢复可重建完整消息历史</td></tr>
+  </table>
+</section>
+
+<!-- ========== FOOTER ========== -->
+<footer>
+  <p>AI 助手模块架构与功能设计报告 · 基于项目代码、ARCH-06、PRD-06 及 .claude/rules/ 生成</p>
+  <p>Android-AutoTests 平台 · 2026-07-21 · 前端 4290 行 · 后端 2232 行 · 24 Tool · 5 Worker · 37 API</p>
+</footer>
+
+</div>
+</body>
+</html>

@@ -421,6 +421,98 @@ def add_element_to_page(request, page_id):
 
 
 @csrf_exempt
+def batch_add_elements(request, page_id):
+    """POST /api/elements/pages/{page_id}/elements/batch — Batch save elements.
+
+    Body: { elements: [{ alias, xpath, xpath_candidates, class_name, text_val,
+            resource_id, bounds, clickable, content_desc }], strategy: "resource-id" }
+
+    Each element already has its pre-selected XPath. Same per-element upsert logic.
+    """
+    try:
+        page = Page.objects.get(id=page_id)
+    except Page.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "页面不存在"}, status=400)
+    if page.is_folder:
+        return JsonResponse({"ok": False, "error": "目录节点不能添加元素"}, status=400)
+
+    data = json.loads(request.body)
+    items = data.get("elements", [])
+    if not items:
+        return JsonResponse({"ok": False, "error": "elements 不能为空"}, status=400)
+
+    saved = 0
+    updated = 0
+    skipped = 0
+    errors = []
+
+    for item in items:
+        alias = item.get("alias", "").strip()
+        if not alias:
+            skipped += 1
+            continue
+
+        xpath_candidates_data = item.get("xpath_candidates")
+        if xpath_candidates_data:
+            xpaths = json.dumps(xpath_candidates_data)
+        else:
+            xpath = item.get("xpath", "")
+            if xpath:
+                xpaths = json.dumps([{
+                    "type": item.get("xpath_type", "manual"),
+                    "xpath": xpath,
+                    "count": item.get("xpath_count", 1),
+                }])
+            else:
+                xpaths = "[]"
+
+        fields = {
+            "alias": alias,
+            "class_name": item.get("class_name", ""),
+            "text_val": item.get("text_val", ""),
+            "content_desc": item.get("content_desc", ""),
+            "resource_id": item.get("resource_id", ""),
+            "bounds": item.get("bounds", ""),
+            "xpath_candidates": xpaths,
+            "clickable": bool(item.get("clickable", False)),
+            "enabled": bool(item.get("enabled", True)),
+            "notes": item.get("notes", ""),
+        }
+
+        try:
+            existing = Element.objects.filter(
+                page=page,
+                resource_id=fields["resource_id"],
+                bounds=fields["bounds"],
+            ).first()
+            if existing:
+                for k, v in fields.items():
+                    setattr(existing, k, v)
+                existing.save()
+                updated += 1
+            else:
+                try:
+                    Element.objects.create(page=page, **fields)
+                    saved += 1
+                except IntegrityError:
+                    skipped += 1
+                    continue
+        except Exception as e:
+            errors.append(f"{alias}: {e}")
+            skipped += 1
+            continue
+
+    # Update page element count
+    page.element_count = Element.objects.filter(page=page).count()
+    page.save(update_fields=["element_count"])
+
+    result = {"ok": True, "saved": saved, "updated": updated, "skipped": skipped}
+    if errors:
+        result["errors"] = errors[:5]
+    return JsonResponse(result)
+
+
+@csrf_exempt
 def clear_pages(request):
     """POST /api/elements/pages/clear — Clear all pages/elements/flows."""
     Element.objects.all().delete()

@@ -44,10 +44,10 @@ def load_step_type_reference() -> list[dict]:
     lines.append("## 步骤结构字段")
     lines.append("- `type`: 步骤类型（必填）")
     lines.append("- `xpath`: 主要 XPath 定位表达式（必填）")
-    lines.append("- `xpath2`: 次要 XPath（仅 wait_either 使用）")
+    lines.append("- `xpath2`: 备用 XPath（保留字段）")
     lines.append("- `timeout`: 超时时间，秒（默认 10）")
-    lines.append("- `expected_text`: 期望文本（verify_text / poll_text / wait_toast）")
-    lines.append("- `index`: 多功能序号 — click_indexed 选择第N个 / retry_click 重试次数 / poll 轮询间隔")
+    lines.append("- `expected_text`: 期望文本（verify_text / poll_text）")
+    lines.append("- `index`: wait / poll_text 的轮询间隔秒数")
     lines.append("- `description`: 步骤描述（必填）")
 
     content = "\n".join(lines)

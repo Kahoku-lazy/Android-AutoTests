@@ -147,6 +147,10 @@ function isFieldRequired(step, field) {
   return (STEP_FIELDS[step.type]?.required || []).includes(field);
 }
 
+function isContainer(type) {
+  return ["if_element_appear", "if_element_disappear", "loop_n", "loop_elements"].includes(type);
+}
+
 function addStep() {
   if (steps.value.length >= 100) {
     ElMessage.warning("单用例最多 100 个步骤");
@@ -155,6 +159,21 @@ function addStep() {
   const newSteps = [...steps.value, defaultStep()];
   steps.value = newSteps;
   expanded.value[newSteps.length - 1] = true;
+}
+
+function addChildStep(parentStep) {
+  if (!parentStep.children) parentStep.children = [];
+  if (parentStep.children.length >= 50) {
+    ElMessage.warning("单个容器最多 50 个子步骤");
+    return;
+  }
+  parentStep.children.push(defaultStep("click"));
+  steps.value = [...steps.value]; // trigger reactivity
+}
+
+function removeChildStep(parentStep, childIdx) {
+  parentStep.children = parentStep.children.filter((_, i) => i !== childIdx);
+  steps.value = [...steps.value]; // trigger reactivity
 }
 
 function removeStep(idx) {
@@ -277,20 +296,12 @@ function stepSummary(step) {
       return `${icon} 点击「${elName}」`;
     case "long_click":
       return `${icon} 长按「${elName}」${step.timeout || 0.8}s`;
-    case "click_indexed":
-      return `${icon} 点击第${step.index + 1}个「${elName}」`;
     case "swipe":
       return `${icon} 向${DIRECTION_OPTIONS.find((d) => d.value === step.direction)?.label || step.direction}滑动 ${step.distance || 500}px`;
-    case "drag":
-      return `${icon} 拖动「${elName}」向${DIRECTION_OPTIONS.find((d) => d.value === step.direction)?.label || step.direction} ${step.distance || 500}px`;
     case "wait":
       return `${icon} 等待「${elName}」出现（${step.timeout || 10}s）`;
     case "wait_disappear":
       return `${icon} 等待「${elName}」消失`;
-    case "wait_any":
-      return `${icon} 等待任意一个出现（${step.timeout || 10}s）`;
-    case "wait_toast":
-      return `${icon} 等待Toast「${step.expected_text || "?"}」`;
     case "sleep":
       return `${icon} 暂停 ${step.timeout || 0}s`;
     case "verify_text":
@@ -301,12 +312,18 @@ function stepSummary(step) {
       return `${icon} 打开应用 ${step.xpath || ""}`;
     case "kill_app":
       return `${icon} 关闭应用 ${step.xpath || ""}`;
-    case "restart_app":
-      return `${icon} 重启应用 ${step.xpath || ""}`;
-    case "retry_click":
-      return `${icon} 点击「${elName}」→ 等待结果（最多${step.index || 5}次）`;
-    case "log":
-      return `${icon} ${step.description || "记录信息"}`;
+    case "perf_element_time":
+      return `${icon} 等待「${elName}」出现耗时（超时${step.timeout || 10}s）`;
+    case "wait_toast":
+      return `${icon} 等待Toast「${step.expected_text || "?"}」`;
+    case "if_element_appear":
+      return `${icon} 如果「${elName}」出现 (${(step.children || []).length} 子步骤)`;
+    case "if_element_disappear":
+      return `${icon} 如果「${elName}」消失 (${(step.children || []).length} 子步骤)`;
+    case "loop_n":
+      return `${icon} 循环 ${step.index || 1} 次 (${(step.children || []).length} 子步骤)`;
+    case "loop_elements":
+      return `${icon} 遍历 ${(step.xpath || '').split('|').filter(Boolean).length || 0} 个元素 (${(step.children || []).length} 子步骤)`;
     default:
       return `${icon} ${def?.label || step.type}`;
   }
@@ -315,36 +332,23 @@ function stepSummary(step) {
 function fieldLabel(step, field) {
   if (
     field === "xpath" &&
-    ["start_app", "kill_app", "restart_app"].includes(step.type)
+    ["start_app", "kill_app"].includes(step.type)
   )
     return "包名";
-  if (field === "xpath" && step.type === "wait_any") return "元素列表";
   if (field === "timeout" && step.type === "long_click") return "长按秒数";
   if (field === "timeout" && step.type === "sleep") return "等待秒数";
-  if (field === "timeout" && step.type === "restart_app") return "启动后等待";
-  if (field === "index" && step.type === "restart_app") return "停止后等待";
-  if (field === "index" && step.type === "retry_click") return "最多重试";
-  if (field === "index" && step.type === "click_indexed") return "第N个(0起)";
   return FIELD_LABELS[field] || field;
 }
 
 function fieldHint(step, field) {
-  if (field === "xpath" && step.type === "wait_any")
-    return "多个XPath用 | 分隔，任意一个出现即通过";
-  if (field === "xpath" && step.type === "long_click")
-    return "选择要长按的元素";
-  if (field === "timeout" && step.type === "long_click")
-    return "按住不放的秒数";
-  if (field === "direction") return "滑动或拖动的方向";
-  if (field === "distance") return "滑动或拖动的像素距离";
+  if (field === "direction") return "滑动方向";
+  if (field === "distance") return "滑动的像素距离";
   return "";
 }
 
 // Whether to use element picker vs free-text input for a field
 function useElementPicker(step) {
-  return !["start_app", "kill_app", "restart_app", "log", "swipe"].includes(
-    step.type,
-  );
+  return !["start_app", "kill_app", "swipe"].includes(step.type);
 }
 
 // ── Run single step on device ──
@@ -706,6 +710,31 @@ function runFromCurrent(idx) {
             <el-input v-model="step.description" placeholder="步骤描述" />
           </el-form-item>
         </el-form>
+
+        <!-- Child steps for container types -->
+        <div v-if="isContainer(step.type)" class="child-steps">
+          <div class="child-steps__header">
+            <span>📎 子步骤 ({{ (step.children || []).length }})</span>
+            <el-button size="small" type="primary" plain @click="addChildStep(step)">
+              <IconPlus :size="12" style="margin-right: 2px" />添加子步骤
+            </el-button>
+          </div>
+          <div v-if="(step.children || []).length" class="child-steps__list">
+            <div
+              v-for="(child, ci) in step.children"
+              :key="ci"
+              class="child-step-item"
+            >
+              <span class="child-step-idx">{{ idx + 1 }}.{{ ci + 1 }}</span>
+              <span class="child-step-type">{{ STEP_TYPES.find(t => t.value === child.type)?.label || child.type }}</span>
+              <span class="child-step-desc">{{ child.description || child.xpath || '(未设置)' }}</span>
+              <el-button size="small" @click="removeChildStep(step, ci)" type="danger" plain class="child-step-del">
+                <IconTrash :size="12" />
+              </el-button>
+            </div>
+          </div>
+          <div v-else class="child-steps__empty">暂无子步骤，点击上方按钮添加</div>
+        </div>
       </div>
     </div>
 
@@ -944,5 +973,69 @@ function runFromCurrent(idx) {
   border-radius: 10px;
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+/* ── Child steps (nested) ── */
+.child-steps {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(162,210,255,0.06);
+  border: 1px dashed rgba(162,210,255,0.3);
+  border-radius: 10px;
+}
+.child-steps__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--app-green-deep);
+  margin-bottom: 8px;
+}
+.child-steps__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.child-step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.6);
+  border-radius: 8px;
+  border-left: 3px solid var(--app-green-deep);
+}
+.child-step-idx {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--app-green-deep);
+  min-width: 28px;
+}
+.child-step-type {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--app-text-secondary);
+  background: rgba(162,210,255,0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.child-step-desc {
+  flex: 1;
+  font-size: 12px;
+  color: var(--app-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.child-step-del {
+  flex-shrink: 0;
+}
+.child-steps__empty {
+  text-align: center;
+  font-size: 12px;
+  color: var(--app-text-muted);
+  padding: 12px;
 }
 </style>

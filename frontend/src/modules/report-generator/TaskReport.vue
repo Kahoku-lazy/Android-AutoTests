@@ -53,6 +53,11 @@ const kpiFail = computed(() => task.value?.overall_fail || 0)
 const kpiTotal = computed(() => kpiPass.value + kpiFail.value)
 const kpiRate = computed(() => task.value?.pass_rate || 0)
 
+// APP性能统计
+const perfStats = computed(() => {
+  return task.value?.run?.summary?._perf || null
+})
+
 function outcomeLabel(outcome) {
   const map = { completed: '已完成', stopped: '已停止', interrupted: '运行中断', error: '异常终止' }
   return map[outcome] || outcome || '—'
@@ -65,11 +70,13 @@ function outcomeBadgeClass(outcome) {
 }
 
 function stepTypeLabel(type) {
-  const map = { click: '点击', long_click: '长按', click_indexed: '点击第N个', swipe: '滑动',
-    drag: '拖动', wait: '等待出现', wait_disappear: '等待消失', wait_any: '等待任一',
-    wait_toast: '等待Toast', verify_text: '校验文字', poll_text: '等待文字',
-    start_app: '启动应用', kill_app: '关闭应用', restart_app: '重启应用',
-    retry_click: '点击后等待', sleep: '暂停', log: '记录' }
+  const map = { click: '点击', long_click: '长按', swipe: '滑动',
+    wait: '等待出现', wait_disappear: '等待消失',
+    verify_text: '校验文字', poll_text: '轮询文本',
+    start_app: '启动应用', kill_app: '关闭应用', sleep: '暂停',
+    perf_element_time: '等待元素出现耗时',
+    wait_toast: '等待Toast', if_element_appear: '如果出现', if_element_disappear: '如果消失',
+    loop_n: '循环N次', loop_elements: '遍历元素' }
   return map[type] || type
 }
 
@@ -148,6 +155,38 @@ function goRunner() { router.push('/runner') }
           <div class="kpi-accent accent-yellow"></div>
           <div class="kpi-value" :class="kpiRate >= 95 ? 'num-pass' : kpiRate >= 80 ? 'num-warn' : 'num-fail'">{{ kpiRate }}%</div>
           <div class="kpi-label">📊 通过率</div>
+        </div>
+      </div>
+
+      <!-- APP性能统计 -->
+      <div v-if="perfStats" class="perf-stats-section">
+        <div class="perf-stats-title">⏱️ APP性能 — 等待元素出现耗时</div>
+        <div class="perf-stats-grid">
+          <div class="kpi-card perf-stat-item">
+            <div class="kpi-accent accent-teal"></div>
+            <div class="kpi-value">{{ perfStats.count }}</div>
+            <div class="kpi-label">🔢 测量次数</div>
+          </div>
+          <div class="kpi-card perf-stat-item">
+            <div class="kpi-accent accent-red"></div>
+            <div class="kpi-value num-fail">{{ perfStats.max }}s</div>
+            <div class="kpi-label">⬆ 最大耗时</div>
+          </div>
+          <div class="kpi-card perf-stat-item">
+            <div class="kpi-accent accent-green"></div>
+            <div class="kpi-value num-pass">{{ perfStats.min }}s</div>
+            <div class="kpi-label">⬇ 最小耗时</div>
+          </div>
+          <div class="kpi-card perf-stat-item">
+            <div class="kpi-accent accent-yellow"></div>
+            <div class="kpi-value">{{ perfStats.avg }}s</div>
+            <div class="kpi-label">📊 平均耗时</div>
+          </div>
+          <div class="kpi-card perf-stat-item">
+            <div class="kpi-accent accent-blue"></div>
+            <div class="kpi-value">{{ perfStats.median }}s</div>
+            <div class="kpi-label">🎯 中位数</div>
+          </div>
         </div>
       </div>
 

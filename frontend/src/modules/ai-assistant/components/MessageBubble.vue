@@ -11,6 +11,8 @@ const props = defineProps({
   avatarStyleFn: { type: Function, default: () => ({}) },
   avatarTextFn: { type: Function, default: () => "" },
   importingPrd: { type: Boolean, default: false },
+  /** 流式等待中：在气泡内显示打字点，避免外层再叠一层 typing-row */
+  typing: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["toggle-thinking", "import-prd"]);
@@ -71,6 +73,16 @@ function reasonLabel(reason) {
       />
 
       <div
+        v-if="typing && message.role === 'assistant' && !message.content"
+        class="msg-text typing"
+      >
+        <span class="typing-label">AI正在思考中</span>
+        <span class="typing-dots" aria-hidden="true">
+          <i></i><i></i><i></i>
+        </span>
+      </div>
+      <div
+        v-else-if="message.role === 'user' || message.content"
         class="msg-text"
         v-html="
           message.role === 'user'
@@ -313,5 +325,67 @@ function reasonLabel(reason) {
 .msg-text :deep(.mermaid-diagram svg) {
   max-width: 100%;
   height: auto;
+}
+
+.typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 22px;
+}
+.typing-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--app-text-secondary, #9a8c98);
+  background: linear-gradient(
+    90deg,
+    var(--app-text-secondary, #9a8c98) 0%,
+    var(--el-color-primary, #7ab88d) 40%,
+    var(--app-text-secondary, #9a8c98) 80%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: typing-shimmer 1.8s ease-in-out infinite;
+}
+.typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.typing-dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--el-color-primary, #7ab88d);
+  animation: msg-bounce 1.4s ease-in-out infinite;
+}
+.typing-dots i:nth-child(1) {
+  animation-delay: 0s;
+}
+.typing-dots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.typing-dots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes typing-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+@keyframes msg-bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-6px);
+  }
 }
 </style>

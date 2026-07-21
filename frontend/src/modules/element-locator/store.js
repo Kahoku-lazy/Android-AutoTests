@@ -41,6 +41,7 @@ export const useElementStore = defineStore('element-locator', () => {
   const loading = ref(false)
   const error = ref('')
   const lastDump = ref(null)
+  const screenshotUrl = ref('')   // shared screenshot for thumbnail cropping
 
   // ── Computed ──
   const onlineDevices = computed(() =>
@@ -175,9 +176,20 @@ export const useElementStore = defineStore('element-locator', () => {
         lastDump.value = data
         // Update device serial from response
         if (data.serial) currentSerial.value = data.serial
-        if (actionable.value.length) {
-          actionable.value.forEach((e, i) => {
+        if (elements.value.length) {
+          elements.value.forEach((e, i) => {
             e._idx = i
+          })
+        }
+        if (actionable.value.length) {
+          // Sync _idx with elements so selection works across both arrays
+          const idxMap = new Map()
+          elements.value.forEach(e => {
+            idxMap.set((e.bounds || '') + '|' + (e.class_name || ''), e._idx)
+          })
+          actionable.value.forEach((e) => {
+            const key = (e.bounds || '') + '|' + (e.class_name || '')
+            e._idx = idxMap.has(key) ? idxMap.get(key) : e._idx
           })
         }
         return data
@@ -219,7 +231,7 @@ export const useElementStore = defineStore('element-locator', () => {
     devices, currentSerial, connectedSerial, currentDevice, screenW, screenH, wsConnected,
     onlineDevices, availableDevices, hasDevices, isConnected, isDeviceOnline,
     // element state
-    elements, actionable, selected, pageId, loading, error, lastDump,
+    elements, actionable, selected, pageId, loading, error, lastDump, screenshotUrl,
     // device actions
     fetchDevices, connectDevice, disconnectDevice, activateDevice, fetchCurrentDevice,
     // element actions

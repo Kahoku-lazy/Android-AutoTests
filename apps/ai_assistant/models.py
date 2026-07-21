@@ -26,7 +26,7 @@ class AIAgent(models.Model):
     # AgentScope 2.0 fields
     formatter = models.CharField(max_length=50, default='dashscope')
     max_iters = models.IntegerField(default=10)
-    parallel_tool_calls = models.BooleanField(default=False)
+    parallel_tool_calls = models.BooleanField(default=True)
     print_hint_msg = models.BooleanField(default=False)
     memory_mode = models.CharField(max_length=20, default='inmemory')  # inmemory | longterm
     long_term_memory_mode = models.CharField(max_length=20, default='both')
@@ -40,6 +40,14 @@ class AIAgent(models.Model):
     compression_template = models.TextField(default='', blank=True)
     tts_enabled = models.BooleanField(default=False)
     enable_knowledge_base = models.BooleanField(default=True)
+    # Per-agent workspace skill toggles.
+    # JSON object: {"Bash": true, "Read": true, "Write": false, ...}
+    # Missing keys default to true (enabled).
+    skills_config = models.JSONField(default=dict, blank=True)
+    # Per-agent knowledge base document filter.
+    # JSON list of enabled document IDs: ["doc:02-PRD/xxx.md", "ref:step_types", ...]
+    # Empty list or null = all documents enabled.
+    knowledge_sources = models.JSONField(default=list, blank=True)
     status = models.CharField(max_length=20, default='active')
     # Health check fields
     last_checked_at = models.DateTimeField(null=True, blank=True)

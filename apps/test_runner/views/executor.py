@@ -16,6 +16,65 @@ from .. import state_machine as sm
 from apps.device_pool.api import release_device as dp_release_device
 
 
+def _compute_perf_stats(perf_results: list) -> dict | None:
+    """Compute max, min, avg, median from perf_element_time measurements.
+
+    Returns overall stats + per-case breakdown for frontend display.
+    """
+    if not perf_results:
+        return None
+    durations = [r["duration"] for r in perf_results]
+    durations.sort()
+    n = len(durations)
+    if n % 2 == 1:
+        median = durations[n // 2]
+    else:
+        median = (durations[n // 2 - 1] + durations[n // 2]) / 2
+
+    # Per-case grouping
+    by_case: dict[str, dict] = {}
+    for r in perf_results:
+        cid = r.get("case_id", "")
+        if cid not in by_case:
+            by_case[cid] = {
+                "case_id": cid,
+                "case_title": r.get("case_title", ""),
+                "items": [],
+                "durations": [],
+            }
+        by_case[cid]["items"].append(r)
+        by_case[cid]["durations"].append(r["duration"])
+
+    per_case = []
+    for cid, cdata in by_case.items():
+        cd = cdata["durations"]
+        cd.sort()
+        cn = len(cd)
+        if cn % 2 == 1:
+            cmedian = cd[cn // 2]
+        else:
+            cmedian = (cd[cn // 2 - 1] + cd[cn // 2]) / 2
+        per_case.append({
+            "case_id": cid,
+            "case_title": cdata["case_title"],
+            "count": cn,
+            "max": round(max(cd), 3),
+            "min": round(min(cd), 3),
+            "avg": round(sum(cd) / cn, 3),
+            "median": round(cmedian, 3),
+            "items": cdata["items"],  # raw measurements per iteration
+        })
+
+    return {
+        "count": n,
+        "max": round(max(durations), 3),
+        "min": round(min(durations), 3),
+        "avg": round(sum(durations) / n, 3),
+        "median": round(median, 3),
+        "per_case": per_case,  # per-case breakdown for TaskDetail
+    }
+
+
 async def _execute_tests(
     run_id: str,
     runner,
@@ -185,6 +244,12 @@ async def _execute_tests(
                     item["steps"] = steps
                 case_items.append(item)
 
+            # Compute perf stats BEFORE branching — always computed if data exists
+            perf_stats = _compute_perf_stats(run_model.perf_results)
+            summary = dict(run_model.summary)
+            if perf_stats:
+                summary["_perf"] = perf_stats
+
             if tc_card is not None:
                 try:
                     # 尊重用户手动停止 / 已记录的终态，不被 completed 覆盖
@@ -196,13 +261,13 @@ async def _execute_tests(
                             overall_pass=overall_pass,
                             overall_fail=overall_fail,
                             case_items=case_items,
-                            summary=run_model.summary,
+                            summary=summary,
                         )
                     elif run_model.status.value == "completed":
                         sm.complete(
                             tc_card,
                             run_record,
-                            run_model.summary,
+                            summary,
                             case_items,
                             overall_pass=overall_pass,
                             overall_fail=overall_fail,
@@ -215,7 +280,7 @@ async def _execute_tests(
                             overall_pass=overall_pass,
                             overall_fail=overall_fail,
                             case_items=case_items,
-                            summary=run_model.summary,
+                            summary=summary,
                         )
                 except sm.InvalidTransition as e:
                     _bg_log.warning("finalize transition %s: %s", client_tid, e)
@@ -224,7 +289,7 @@ async def _execute_tests(
             else:
                 # No TaskCard — finalize the run record standalone.
                 run_record.status = run_model.status.value
-                run_record.summary = run_model.summary
+                run_record.summary = summary
                 run_record.finished_at = datetime.now().isoformat()
                 run_record.save(update_fields=["status", "summary", "finished_at"])
 
@@ -240,6 +305,11 @@ async def _execute_tests(
 
         @_bg_sync
         def mark_failed():
+            # Compute perf stats from run_model — always if data exists
+            perf_stats = None
+            if run_model and run_model.perf_results:
+                perf_stats = _compute_perf_stats(run_model.perf_results)
+
             tc_card = None
             if client_tid:
                 try:
@@ -253,7 +323,10 @@ async def _execute_tests(
                 "error",
             ):
                 try:
-                    sm.fail(tc_card, run_record, outcome="error")
+                    summary = dict(getattr(run_model, 'summary', {}) or {})
+                    if perf_stats:
+                        summary["_perf"] = perf_stats
+                    sm.fail(tc_card, run_record, outcome="error", summary=summary)
                     return  # fail() also finalized run_record
                 except sm.InvalidTransition as e:
                     _bg_log.warning("mark_failed transition %s: %s", client_tid, e)
@@ -263,7 +336,11 @@ async def _execute_tests(
             if run_record:
                 run_record.status = "FAILED"
                 run_record.finished_at = datetime.now().isoformat()
-                run_record.save(update_fields=["status", "finished_at"])
+                if perf_stats:
+                    run_record.summary = {**(run_record.summary or {}), "_perf": perf_stats}
+                    run_record.save(update_fields=["status", "finished_at", "summary"])
+                else:
+                    run_record.save(update_fields=["status", "finished_at"])
 
         try:
             await mark_failed()

@@ -12,6 +12,9 @@ defineProps({
       <h1 class="doc-hero__title">{{ title }}</h1>
       <p v-if="subtitle" class="doc-hero__desc">{{ subtitle }}</p>
     </div>
+    <div v-if="$slots.actions" class="doc-hero__actions">
+      <slot name="actions" />
+    </div>
   </header>
 </template>
 
@@ -59,6 +62,14 @@ defineProps({
   margin: 0;
   max-width: 600px;
   font-weight: 600;
+}
+
+.doc-hero__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
 }
 
 @media (max-width: 768px) {

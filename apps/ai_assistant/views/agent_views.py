@@ -20,6 +20,26 @@ from ..serializers import validate_agent_input
 from .common import call_agentscope, get_agentscope_token, validation_error
 
 
+def get_default_system_prompt(request):
+    """GET /api/ai/default-system-prompt — return the default system prompt template."""
+    from agentscope_service.agent_factory import DEFAULT_SYSTEM_PROMPT_TEMPLATE
+    return JsonResponse({"ok": True, "template": DEFAULT_SYSTEM_PROMPT_TEMPLATE})
+
+
+def list_available_skills(request):
+    """GET /api/ai/available-skills — return workspace skills that can be toggled."""
+    from agentscope_service.filterable_workspace import ALL_SKILL_NAMES, _SKILL_CLASS_MAP
+
+    skills = []
+    for name in ALL_SKILL_NAMES:
+        cls = _SKILL_CLASS_MAP.get(name)
+        skills.append({
+            "name": name,
+            "description": (cls.description or "").strip() if cls else "",
+        })
+    return JsonResponse({"ok": True, "skills": skills})
+
+
 def list_agents(request):
     qs = filter_agents_for_user(AIAgent.objects.all(), getattr(request, 'user_id', None))
     agents = []
@@ -58,6 +78,8 @@ def agent_detail(request, agent_id):
         "enable_meta_tool": a.enable_meta_tool,
         "enable_rewrite_query": a.enable_rewrite_query,
         "generate_kwargs": a.generate_kwargs,
+        "skills_config": a.skills_config or {},
+        "knowledge_sources": a.knowledge_sources or [],
         "compression_enabled": a.compression_enabled,
         "compression_threshold": a.compression_threshold,
         "compression_keep_recent": a.compression_keep_recent,
@@ -82,6 +104,10 @@ def create_agent(request):
     if not ok:
         return validation_error(errors)
     data = cleaned
+    # Auto-fill default system prompt template when empty
+    if not (data.get("system_prompt") or "").strip():
+        from agentscope_service.agent_factory import DEFAULT_SYSTEM_PROMPT_TEMPLATE
+        data["system_prompt"] = DEFAULT_SYSTEM_PROMPT_TEMPLATE
     a = AIAgent.objects.create(
         owner_id=int(request.user_id),
         name=data.get("name", ""), avatar=data.get("avatar", "🤖"),
@@ -107,6 +133,8 @@ def create_agent(request):
         compression_prompt=data.get("compression_prompt", ""),
         compression_template=data.get("compression_template", ""),
         tts_enabled=data.get("tts_enabled", False),
+        skills_config=data.get("skills_config", {}),
+        knowledge_sources=data.get("knowledge_sources", []),
         key_revealed=False)
     for t in data.get("tools", []):
         AITool.objects.create(agent=a, name=t.get("name", ""),
@@ -142,7 +170,8 @@ def update_agent(request, agent_id):
               'memory_mode', 'long_term_memory_mode', 'enable_meta_tool',
               'enable_rewrite_query', 'generate_kwargs',
               'compression_enabled', 'compression_threshold', 'compression_keep_recent',
-              'compression_prompt', 'compression_template', 'tts_enabled', 'status']:
+              'compression_prompt', 'compression_template', 'tts_enabled', 'status',
+              'skills_config', 'knowledge_sources']:
         if f in data:
             setattr(a, f, data[f])
     if key_changed:

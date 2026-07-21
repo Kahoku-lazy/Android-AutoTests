@@ -33,6 +33,7 @@ urlpatterns = [
     path('api/runner/',   include('apps.test_runner.urls')),
     path('api/reports/',  include('apps.report_generator.urls')),
     path('api/ai/',       include('apps.ai_assistant.urls')),
+    path('api/evaluator/', include('apps.evaluator.urls')),
 ]
 
 # DEBUG 模式下由 Django 直接提供静态文件服务（Daphne/ASGI 不像 runserver 自动提供）

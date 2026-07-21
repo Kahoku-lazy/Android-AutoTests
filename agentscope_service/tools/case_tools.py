@@ -91,16 +91,16 @@ class SaveTestCaseTool(ToolBase):
                         "xpath": {"type": "string", "description": "目标元素的 XPath 定位器"},
                         "xpath2": {
                             "type": "string",
-                            "description": "备用 XPath（用于 wait_either）",
+                            "description": "备用 XPath（保留字段）",
                         },
                         "timeout": {"type": "number", "description": "超时秒数（默认 10）"},
                         "expected_text": {
                             "type": "string",
-                            "description": "预期文本（用于 verify_text / poll_text / wait_toast）",
+                            "description": "预期文本（用于 verify_text / poll_text）",
                         },
                         "index": {
                             "type": "integer",
-                            "description": "索引（用于 click_indexed 等）",
+                            "description": "索引（用于 wait / poll_text 的轮询间隔秒数）",
                         },
                         "description": {"type": "string", "description": "步骤描述"},
                     },
@@ -321,14 +321,9 @@ class DebugTestCaseTool(ToolBase):
 
             # For steps that need XPath, check element exists
             xpath_steps = {
-                "click",
-                "click_indexed",
-                "wait",
-                "wait_disappear",
-                "wait_either",
-                "verify_text",
-                "poll_text",
-                "retry_click",
+                "click", "long_click",
+                "wait", "wait_disappear",
+                "verify_text", "poll_text",
             }
             if stype in xpath_steps and xpath:
                 try:

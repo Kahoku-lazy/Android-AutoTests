@@ -49,8 +49,14 @@ def add_documents(docs: list[dict]) -> int:
     return len(docs)
 
 
-def search(query: str, top_k: int = 5) -> list[dict]:
+def search(query: str, top_k: int = 5, sources: list[str] | None = None) -> list[dict]:
     """Search the knowledge base by natural language query.
+
+    Args:
+        query: Natural language search query.
+        top_k: Number of results to return.
+        sources: Optional list of document IDs to restrict search to.
+                 When empty/None, searches all documents.
 
     Returns list of {"content": str, "metadata": dict, "score": float}.
     Returns empty list quickly if ChromaDB or its embedding model is unavailable.
@@ -61,17 +67,52 @@ def search(query: str, top_k: int = 5) -> list[dict]:
     if col.count() == 0:
         logger.info('Knowledge base is empty, skipping search')
         return []
+
+    # Build ChromaDB where filter for specific document sources
+    where_filter = None
+    if sources:
+        if len(sources) == 1:
+            where_filter = {"source": sources[0]}
+        else:
+            where_filter = {"source": {"$in": list(sources)}}
+
     try:
-        results = col.query(query_texts=[query], n_results=top_k)
+        kwargs = {"query_texts": [query], "n_results": top_k}
+        if where_filter:
+            kwargs["where"] = where_filter
+        results = col.query(**kwargs)
     except Exception as e:
-        logger.warning(f'Knowledge base query failed: {e}')
-        return []
+        # ChromaDB may reject complex where filters — fall back to post-filter
+        if where_filter and sources:
+            logger.debug(
+                'ChromaDB where-filter failed (%s), falling back to post-filter', e,
+            )
+            try:
+                # Fetch more results and filter in Python
+                results = col.query(query_texts=[query], n_results=top_k * 3)
+            except Exception as e2:
+                logger.warning(f'Knowledge base query failed: {e2}')
+                return []
+        else:
+            logger.warning(f'Knowledge base query failed: {e}')
+            return []
+
     items = []
     if results and results.get('documents') and results['documents'][0]:
         for i, doc in enumerate(results['documents'][0]):
             meta = results['metadatas'][0][i] if results.get('metadatas') and results['metadatas'][0] else {}
             dist = results['distances'][0][i] if results.get('distances') and results['distances'][0] else 0
+
+            # Post-filter by source when ChromaDB where-filter isn't used
+            if sources and where_filter is None:
+                doc_source = meta.get('source', '')
+                if doc_source not in sources:
+                    continue
+
             items.append({"content": doc, "metadata": meta, "score": float(dist)})
+            if len(items) >= top_k:
+                break
+
     return items
 
 

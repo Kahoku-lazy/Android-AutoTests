@@ -14,53 +14,52 @@ class StepType(Enum):
     """
     # 点击类
     CLICK = "click"                       # 点击元素
-    LONG_CLICK = "long_click"             # 长按元素（1秒）
-    CLICK_INDEXED = "click_indexed"       # 点击第N个元素
-    RETRY_CLICK = "retry_click"           # 点击+等待重试
-    # 手势类
+    LONG_CLICK = "long_click"             # 长按元素
+    # 滑动类
     SWIPE = "swipe"                       # 滑动屏幕（direction + distance）
-    DRAG = "drag"                         # 拖动元素（start → end 坐标）
     # 等待类
     WAIT = "wait"                         # 等待元素出现
     WAIT_DISAPPEAR = "wait_disappear"     # 等待元素出现后消失
-    WAIT_ANY = "wait_any"                 # 等待两个元素之一出现
-    WAIT_TOAST = "wait_toast"             # 等待Toast消息
-    # 验证类
+    SLEEP = "sleep"                       # 固定等待（秒）
+    # 断言类
     VERIFY_TEXT = "verify_text"           # 验证元素文本
     POLL_TEXT = "poll_text"               # 轮询等待文本变为期望值
     # 应用控制类
     START_APP = "start_app"               # 启动APP
     KILL_APP = "kill_app"                 # 杀掉APP
-    RESTART_APP = "restart_app"           # 重启APP
-    # 工具类
-    SLEEP = "sleep"                       # 固定等待
-    LOG = "log"                           # 打印日志
+    # 性能测试类
+    PERF_ELEMENT_TIME = "perf_element_time"  # APP性能: 等待元素出现耗时
+    # 弹窗检测类
+    WAIT_TOAST = "wait_toast"               # 等待Toast消息
+    # 流程控制类 — 判断分支
+    IF_ELEMENT_APPEAR = "if_element_appear"     # 如果元素出现，执行子步骤
+    IF_ELEMENT_DISAPPEAR = "if_element_disappear"  # 如果元素消失，执行子步骤
+    # 流程控制类 — 循环
+    LOOP_N = "loop_n"                       # 重复执行子步骤N次
+    LOOP_ELEMENTS = "loop_elements"         # 遍历元素列表依次执行
 
 
 UI_LABELS = {
     StepType.CLICK: "点击元素",
     StepType.LONG_CLICK: "长按元素",
-    StepType.CLICK_INDEXED: "点击第N个元素",
-    StepType.RETRY_CLICK: "点击重试",
     StepType.SWIPE: "滑动屏幕",
-    StepType.DRAG: "拖动元素",
     StepType.WAIT: "等待元素出现",
     StepType.WAIT_DISAPPEAR: "等待元素消失",
-    StepType.WAIT_ANY: "等待任意一个出现",
-    StepType.WAIT_TOAST: "等待Toast",
+    StepType.SLEEP: "固定等待",
     StepType.VERIFY_TEXT: "验证文本",
     StepType.POLL_TEXT: "轮询文本",
     StepType.START_APP: "启动应用",
     StepType.KILL_APP: "关闭应用",
-    StepType.RESTART_APP: "重启应用",
-    StepType.SLEEP: "固定等待",
-    StepType.LOG: "记录信息",
+    StepType.PERF_ELEMENT_TIME: "等待元素出现耗时",
+    StepType.WAIT_TOAST: "等待Toast消息",
+    StepType.IF_ELEMENT_APPEAR: "如果元素出现",
+    StepType.IF_ELEMENT_DISAPPEAR: "如果元素消失",
+    StepType.LOOP_N: "循环N次",
+    StepType.LOOP_ELEMENTS: "遍历元素列表",
 }
 
 # Reverse mapping: step type value string → StepType enum
 STEP_TYPE_MAP: dict[str, StepType] = {st.value: st for st in StepType}
-# Backward compat — "wait_either" was renamed to "wait_any" in v2
-STEP_TYPE_MAP["wait_either"] = StepType.WAIT_ANY
 
 
 @dataclass
@@ -69,29 +68,26 @@ class TestStep:
 
     Fields:
         type:       StepType value string (e.g. "click", "wait", "verify_text")
-        xpath:      Primary XPath locator
-        xpath2:     Secondary XPath (for wait_any: second element)
+        xpath:      Primary XPath locator; also used as package name for start_app/kill_app
+        xpath2:     Secondary XPath (reserved for future use)
         timeout:    Timeout in seconds
-        expected_text: Expected text content (verify_text / poll_text / wait_toast)
+        expected_text: Expected text content (verify_text / poll_text)
         index:      Multi-purpose index —
-                    - click_indexed: which element to click (0-based)
-                    - retry_click: max retry attempts
-                    - wait/poll_text: polling interval in seconds
-                    - wait_any: 0=normal element, >0=indexed element
-                    - restart_app: kill_wait seconds
-        direction:  Swipe/drag direction (up/down/left/right)
-        distance:   Swipe/drag distance in pixels
+                    - wait / poll_text: polling interval in seconds
+        direction:  Swipe direction (up/down/left/right)
+        distance:   Swipe distance in pixels
         description: Human-readable description for the step
     """
     type: str = "click"          # StepType value
     xpath: str = ""              # Primary XPath
-    xpath2: str = ""             # Secondary XPath (wait_any)
+    xpath2: str = ""             # Secondary XPath (reserved)
     timeout: float = 10          # Timeout in seconds
     expected_text: str = ""      # Expected text (verify_text / poll_text)
     index: int = 0               # Multi-purpose index
-    direction: str = ""          # Swipe/drag direction (up/down/left/right)
-    distance: int = 500          # Swipe/drag distance in pixels
+    direction: str = ""          # Swipe direction (up/down/left/right)
+    distance: int = 500          # Swipe distance in pixels
     description: str = ""        # Human-readable step description
+    children: list = field(default_factory=list)  # Nested sub-steps (for if/loop containers)
 
     def to_dict(self) -> dict:
         return {
@@ -104,10 +100,13 @@ class TestStep:
             "direction": self.direction,
             "distance": self.distance,
             "description": self.description,
+            "children": [c.to_dict() for c in self.children] if self.children else [],
         }
 
     @classmethod
     def from_dict(cls, d: dict) -> "TestStep":
+        children_raw = d.get("children", [])
+        children = [cls.from_dict(c) for c in children_raw] if children_raw else []
         return cls(
             type=d.get("type", "click"),
             xpath=d.get("xpath", ""),
@@ -118,4 +117,5 @@ class TestStep:
             direction=d.get("direction", ""),
             distance=d.get("distance", 500),
             description=d.get("description", ""),
+            children=children,
         )

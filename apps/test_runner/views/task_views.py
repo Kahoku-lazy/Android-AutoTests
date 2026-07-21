@@ -34,22 +34,15 @@ def run_single_step(request):
     description = data.get("description", step_type)
 
     if step_type not in (
-        "click",
-        "long_click",
-        "click_indexed",
+        "click", "long_click",
         "swipe",
-        "wait",
-        "wait_disappear",
-        "wait_any",
+        "wait", "wait_disappear", "sleep",
+        "verify_text", "poll_text",
+        "start_app", "kill_app",
+        "perf_element_time",
         "wait_toast",
-        "sleep",
-        "verify_text",
-        "poll_text",
-        "start_app",
-        "kill_app",
-        "restart_app",
-        "retry_click",
-        "log",
+        "if_element_appear", "if_element_disappear",
+        "loop_n", "loop_elements",
     ):
         return JsonResponse({"ok": False, "error": f"Unknown step type: {step_type}"})
 
@@ -86,7 +79,7 @@ def run_single_step(request):
         )
         adapter = DeviceAdapter(
             conn,
-            package_name=xpath if step_type in ("start_app", "kill_app", "restart_app") else "",
+            package_name=xpath if step_type in ("start_app", "kill_app") else "",
             logger=logs.append,
         )
         executor = StepExecutor(adapter)
@@ -118,6 +111,16 @@ def run_single_step(request):
 # ═══════════════════════════════════════════════════════
 
 
+def _safe_perf_stats(tc):
+    """Safely extract perf stats from a TaskCard's linked run summary."""
+    try:
+        if tc.run_id and tc.run:
+            return tc.run.summary.get("_perf") if tc.run.summary else None
+    except Exception:
+        pass
+    return None
+
+
 @require_auth
 def task_card_list(request):
     """GET /api/runner/tasks — List all task cards."""
@@ -134,6 +137,7 @@ def task_card_list(request):
                 "id": tc.task_id,
                 "name": tc.name,
                 "mode": tc.mode,
+                "taskType": tc.task_type or "ui_automation",
                 "deviceSerial": tc.device_serial,
                 "caseIds": tc.case_ids,
                 "loopCount": tc.loop_count,
@@ -158,6 +162,7 @@ def task_card_list(request):
                 "bugTicket": tc.bug_ticket,
                 "startAt": tc.start_at or "",
                 "endAt": tc.end_at or "",
+                "perfStats": _safe_perf_stats(tc),
             }
         )
     return JsonResponse({"ok": True, "tasks": cards})
@@ -176,6 +181,7 @@ def task_card_save(request):
         "name": data.get("name", ""),
         "creator": data.get("creator", ""),
         "mode": data.get("mode", "immediate"),
+        "task_type": data.get("taskType", "ui_automation"),
         "device_serial": data.get("deviceSerial", ""),
         "case_ids": data.get("caseIds", []),
         "loop_count": data.get("loopCount", 1),
@@ -210,6 +216,7 @@ def task_card_save(request):
             name=data.get("name", ""),
             creator=data.get("creator", ""),
             mode=data.get("mode", "immediate"),
+            task_type=data.get("taskType", "ui_automation"),
             device_serial=data.get("deviceSerial", ""),
             case_ids=data.get("caseIds", []),
             loop_count=data.get("loopCount", 1),

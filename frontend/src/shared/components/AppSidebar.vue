@@ -160,20 +160,6 @@ onMounted(async () => {
     duration: 600,
     ease: 'outCubic',
   })
-  animate('.brand-ai', {
-    backgroundPosition: ['0% 50%', '100% 50%'],
-    duration: 3000,
-    loop: true,
-    direction: 'alternate',
-    ease: 'linear',
-  })
-  animate('.brand-name', {
-    backgroundPosition: ['100% 50%', '0% 50%'],
-    duration: 3000,
-    loop: true,
-    direction: 'alternate',
-    ease: 'linear',
-  })
   // Admin shimmer
   animate('.sidebar__user-name', {
     opacity: [0.75, 1],
@@ -212,8 +198,7 @@ onUnmounted(() => {
       <div class="sidebar__header" @click="router.push('/dashboard')" :title="collapsed ? 'AI 测试平台' : ''">
         <AnimatedMascot :size="26" />
         <div v-show="!collapsed" class="sidebar__brand">
-          <span class="brand-ai">AI</span>
-          <span class="brand-name">测试平台</span>
+          <span class="brand-title">AI 测试平台</span>
         </div>
       </div>
       <button
@@ -455,40 +440,57 @@ onUnmounted(() => {
 .sidebar__brand {
   display: flex;
   align-items: center;
-  gap: 4px;
+  min-width: 0;
   font-size: 18px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
-.brand-ai,
-.brand-name,
-.sidebar__user-name {
+.brand-title {
   display: inline-block;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  background-size: 200% auto;
   font-weight: 800;
+  background-image: linear-gradient(
+    105deg,
+    #3f9ed8 0%,
+    #6fb98d 25%,
+    #6f9fd8 48%,
+    #e39b55 72%,
+    #8ecae6 88%,
+    #3f9ed8 100%
+  );
+  background-size: 240% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: brand-chroma-flow 7s ease-in-out infinite;
 }
 
-.brand-ai {
-  background-image: linear-gradient(90deg, var(--app-green), var(--app-blue), var(--app-green));
+.sidebar__header:hover .brand-title {
+  animation-duration: 3.5s;
+  filter: saturate(1.15) brightness(1.05);
 }
 
-.brand-name {
-  background-image: linear-gradient(90deg, var(--app-green-deep), var(--app-green), var(--app-blue));
+.sidebar__header:hover {
+  color: var(--app-green-deep, #6f9fd8);
 }
 
-.sidebar__user-name {
-  background-image: linear-gradient(90deg, var(--app-blue), var(--app-green-light), var(--app-blue));
-  font-size: 13px;
+@keyframes brand-chroma-flow {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
-.sidebar__header:hover .brand-ai,
-.sidebar__header:hover .brand-name {
-  filter: brightness(1.1);
+@media (prefers-reduced-motion: reduce) {
+  .brand-title {
+    animation: none;
+    background-position: 30% 50%;
+  }
 }
-
-.sidebar__header:hover { color: var(--app-green-deep, #6f9fd8); }
 
 /* Nav */
 .sidebar__nav {
@@ -629,7 +631,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, rgba(189,224,254,0.78), rgba(162,210,255,0.82));
+  background: rgba(255, 255, 255, 0.55);
 }
 
 .sidebar__user {
@@ -637,42 +639,44 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #fff;
+  color: var(--app-text, #4a4e69);
   font-weight: 700;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 
 .sidebar__user-name {
-  background: linear-gradient(90deg, #ffffff 0%, #e6f9f6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  color: transparent;
+  display: inline-block;
+  color: var(--app-text, #4a4e69);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 800;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  background-clip: border-box;
 }
 
 .logout-btn {
-  background: rgba(255,255,255,0.25) !important;
-  border: 1px solid rgba(255,255,255,0.4) !important;
+  background: rgba(227, 155, 85, 0.14) !important;
+  border: 1.5px solid rgba(227, 155, 85, 0.45) !important;
   border-radius: 20px !important;
-  color: #fff !important;
-  font-weight: 700 !important;
+  color: #9a4e2e !important;
+  font-weight: 800 !important;
   padding: 5px 14px !important;
-  transition: transform 0.1s ease, background 0.1s ease !important;
+  transition: transform 0.1s ease, background 0.1s ease, border-color 0.1s ease !important;
 }
 .logout-btn:hover {
-  background: rgba(255,255,255,0.4) !important;
-  transform: translateY(-2px) !important;
+  background: rgba(227, 155, 85, 0.24) !important;
+  border-color: rgba(227, 155, 85, 0.7) !important;
+  color: #7a3b1c !important;
+  transform: translateY(-1px) !important;
 }
 .logout-btn:active {
-  transform: translateY(0px) !important;
+  transform: translateY(0) !important;
 }
 
 .sidebar__user-arrow {
   font-size: 10px;
   margin-left: 2px;
-  opacity: 0.6;
+  color: var(--app-text-secondary, #9a8c98);
+  opacity: 0.9;
 }
 .sidebar__user.has-menu {
   cursor: pointer;

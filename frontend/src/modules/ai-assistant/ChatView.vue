@@ -275,6 +275,8 @@ async function selectChat(id) {
 async function sendMessage() {
   const text = inputText.value.trim();
   if ((!text && !uploadedFile.value) || !activeConv.value || sending.value) return;
+  // 同步占位，防止 Enter 连触 / 重复事件在 await 前再次进入
+  sending.value = true;
   inputText.value = "";
 
   let msgText = text;
@@ -294,6 +296,8 @@ async function sendMessage() {
 
 function handleKey(e) {
   if (e.key === "Enter" && !e.shiftKey) {
+    // 中文输入法确认选词时不发送
+    if (e.isComposing || e.keyCode === 229) return;
     e.preventDefault();
     sendMessage();
   }
@@ -488,25 +492,15 @@ async function handleImportPRD({ sessionId }) {
                 :avatar-style-fn="avatarStyle"
                 :avatar-text-fn="avatarText"
                 :importing-prd="importingPRD"
+                :typing="
+                  sending &&
+                  i === messages.length - 1 &&
+                  m.role === 'assistant' &&
+                  !m.content
+                "
                 @toggle-thinking="toggleThinking"
                 @import-prd="handleImportPRD"
               />
-              <div
-                v-if="sending && !messages[messages.length - 1]?.content"
-                class="msg assistant typing-row"
-              >
-                <div class="msg-avatar">
-                  <span v-if="avatarText(agent?.avatar)">{{
-                    avatarText(agent?.avatar)
-                  }}</span>
-                </div>
-                <div class="msg-content">
-                  <div class="msg-author">{{ agent?.name || "AI" }}</div>
-                  <div class="msg-text typing">
-                    <span></span><span></span><span></span>
-                  </div>
-                </div>
-              </div>
             </div>
 
             <ConfirmDialog

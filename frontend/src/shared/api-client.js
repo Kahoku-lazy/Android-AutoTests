@@ -147,7 +147,7 @@ function formatApiError(err, fallback = '操作失败，请稍后重试') {
   if (status === 409) {
     return '该元素已在当前页面中，请到「元素管理」查看或更换目标页面'
   }
-  if (status === 404) return '目标不存在，请刷新页面后重试'
+  if (status === 404) return data?.error || '目标不存在，请刷新页面后重试'
   if (status === 401) return '登录已过期，请重新登录'
   if (status >= 500) return '服务暂时异常，请稍后重试'
   if (!err?.response) return '网络连接失败，请确认后端服务已启动'

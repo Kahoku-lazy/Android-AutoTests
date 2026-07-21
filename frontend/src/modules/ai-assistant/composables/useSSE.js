@@ -3,6 +3,18 @@ import client from "@/shared/api-client.js";
 import { ElMessage } from "element-plus";
 import { streamChat } from "../api.js";
 
+/** 无有效回复时的统一文案；断线仍允许发送，但一律回这条 */
+export const AI_DISCONNECT_MSG = "AI助手已断线……";
+
+/** 无内容 / 鉴权失败 / 通道错误 → 视为断线 */
+function isDisconnectContent(content) {
+  const text = String(content || "").trim();
+  if (!text || text === AI_DISCONNECT_MSG) return true;
+  return /API\s*错误\s*\(\s*401\s*\)|authentication_error|api key.*invalid|Authentication Fails|invalid_request_error|请求超时|服务器错误|SSE\s*(subscribe|stream)\s*(failed|error|closed)/i.test(
+    text,
+  );
+}
+
 /**
  * SSE streaming, fallback send, stop, and HITL confirm handling.
  */
@@ -27,6 +39,62 @@ export function useSSE({
   const pendingConfirm = ref(null);
   const pendingConfirmMsgIdx = ref(-1);
   const degradedMode = ref(false);
+  /** 最近一次交互是否处于断线态（不禁用发送，仅影响展示） */
+  const aiDisconnected = ref(false);
+  let replyWatchdog = null;
+
+  function clearReplyWatchdog() {
+    if (replyWatchdog) {
+      clearTimeout(replyWatchdog);
+      replyWatchdog = null;
+    }
+  }
+
+  function settleAssistant(content, extras = {}) {
+    const disconnected = isDisconnectContent(content);
+    aiDisconnected.value = disconnected;
+    const finalContent = disconnected ? AI_DISCONNECT_MSG : content;
+    if (assistIdx.value < messages.value.length) {
+      const prev = messages.value[assistIdx.value] || {};
+      messages.value[assistIdx.value] = {
+        ...prev,
+        role: "assistant",
+        tokens: prev.tokens || 0,
+        ...extras,
+        content: finalContent,
+        reason: disconnected
+          ? "error"
+          : extras.reason || prev.reason || "normal",
+      };
+    }
+    return !disconnected;
+  }
+
+  function finishSending() {
+    clearReplyWatchdog();
+    sending.value = false;
+    streamMode.value = null;
+    abortController.value = null;
+    modelStatus.value = "idle";
+    scrollBottom();
+  }
+
+  function armReplyWatchdog() {
+    clearReplyWatchdog();
+    replyWatchdog = setTimeout(() => {
+      if (!sending.value) return;
+      const cur = messages.value[assistIdx.value];
+      if (cur?.role === "assistant" && !String(cur.content || "").trim()) {
+        settleAssistant("");
+        if (abortController.value) {
+          try {
+            abortController.value.abort();
+          } catch (_) {}
+        }
+        finishSending();
+      }
+    }, 45000);
+  }
 
   /** Check platform health; update degradedMode if AgentScope is unavailable. */
   async function checkHealth() {
@@ -63,44 +131,23 @@ export function useSSE({
       );
       if (data.ok) {
         if (data.degraded) degradedMode.value = true;
-        if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value] = {
-            ...data.message,
-            flow: "fallback",
-          };
-        }
-        loadConversations();
-        await nextTick();
-        renderMermaidBlocks();
-      } else if (assistIdx.value < messages.value.length) {
-        messages.value[assistIdx.value] = {
-          role: "assistant",
-          content: data.error || "发送失败",
-          tokens: 0,
+        const ok = settleAssistant(data.message?.content || "", {
+          ...data.message,
           flow: "fallback",
-        };
+        });
+        if (ok) {
+          loadConversations();
+          await nextTick();
+          renderMermaidBlocks();
+        }
+      } else {
+        settleAssistant(data.error || "", { flow: "fallback" });
       }
     } catch (e) {
       console.error("Fallback send failed:", e);
-      const errMsg =
-        e.code === "ECONNABORTED"
-          ? "请求超时，请重试"
-          : e.response?.status === 500
-            ? "服务器错误"
-            : "发送失败，请检查服务状态。";
-      if (assistIdx.value < messages.value.length) {
-        messages.value[assistIdx.value] = {
-          role: "assistant",
-          content: errMsg,
-          tokens: 0,
-          flow: "fallback",
-        };
-      }
+      settleAssistant("", { flow: "fallback" });
     }
-    sending.value = false;
-    streamMode.value = null;
-    abortController.value = null;
-    scrollBottom();
+    finishSending();
   }
 
   async function trySSEStream(msgText) {
@@ -169,7 +216,12 @@ export function useSSE({
       onTextDelta: (delta, full) => {
         fullContent = full != null ? full : fullContent + delta;
         if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value].content = fullContent;
+          // 鉴权/通道失败时立刻换成统一断线文案（发送仍保持可用）
+          messages.value[assistIdx.value].content = isDisconnectContent(
+            fullContent,
+          )
+            ? AI_DISCONNECT_MSG
+            : fullContent;
           scrollBottom();
         }
       },
@@ -304,36 +356,45 @@ export function useSSE({
       onDone: async () => {
         if (streamDone) return;
         streamDone = true;
+        clearReplyWatchdog();
         const finalContent = builder.getFullText() || fullContent;
         const blocks = builder.getBlocks();
         const reason = builder.getReason();
-        try {
-          await client.post(
-            `/ai/conversations/${activeConv.value}/save-message`,
-            {
-              role: "assistant",
-              content: finalContent,
-              blocks,
-              reason,
-              tokens: builder.getTokenUsage().total || 0,
-              input_tokens: builder.getTokenUsage().input || 0,
-              model_name: builder.modelName || "",
-            },
-          );
-          loadConversations();
-          await nextTick();
-          renderMermaidBlocks();
-        } catch (e) {
-          console.error("Failed to save streamed message:", e);
+        const ok = settleAssistant(finalContent, {
+          blocks,
+          reason: isDisconnectContent(finalContent) ? "error" : reason || "normal",
+          tokens: builder.getTokenUsage().total || 0,
+          inputTokens: builder.getTokenUsage().input || 0,
+          model_name: builder.modelName || "",
+          flow: "sse",
+        });
+        if (ok) {
+          try {
+            await client.post(
+              `/ai/conversations/${activeConv.value}/save-message`,
+              {
+                role: "assistant",
+                content: finalContent,
+                blocks,
+                reason,
+                tokens: builder.getTokenUsage().total || 0,
+                input_tokens: builder.getTokenUsage().input || 0,
+                model_name: builder.modelName || "",
+              },
+            );
+            loadConversations();
+            await nextTick();
+            renderMermaidBlocks();
+          } catch (e) {
+            console.error("Failed to save streamed message:", e);
+          }
         }
-        sending.value = false;
-        streamMode.value = null;
-        abortController.value = null;
-        scrollBottom();
+        finishSending();
       },
       onError: async (err) => {
         if (streamDone) return;
         streamDone = true;
+        clearReplyWatchdog();
         console.warn("SSE stream error, falling back:", err);
         streamMode.value = "fallback";
         connectionMode.value = "fallback";
@@ -373,11 +434,16 @@ export function useSSE({
   }
 
   async function sendStreamMessage(msgText, displayText) {
-    if (!activeConv.value || sending.value) return;
+    // 防重入由调用方（ChatView.sendMessage）在置 sending=true 后保证；
+    // 此处不再用 sending 短路，避免「先锁再调」时直接 return。
+    // 断线时仍允许发送：尝试通道 → 无有效回复则统一「AI助手已断线……」
+    if (!activeConv.value) return;
     sending.value = true;
+    aiDisconnected.value = false;
     toolCalls.value = [];
     modelStatus.value = "calling_model";
     appendUserAndAssistantPlaceholder(displayText);
+    armReplyWatchdog();
 
     try {
       await trySSEStream(msgText);
@@ -393,6 +459,7 @@ export function useSSE({
   }
 
   function stopStream() {
+    clearReplyWatchdog();
     if (abortController.value) {
       abortController.value.abort();
       if (
@@ -400,21 +467,24 @@ export function useSSE({
         messages.value[assistIdx.value].flow === "sse"
       ) {
         const partial = messages.value[assistIdx.value].content;
+        const content = String(partial || "").trim()
+          ? partial
+          : "（用户主动停止）";
+        if (assistIdx.value < messages.value.length) {
+          messages.value[assistIdx.value].content = content;
+          messages.value[assistIdx.value].reason = "stopped";
+        }
         client
           .post(`/ai/conversations/${activeConv.value}/save-message`, {
             role: "assistant",
-            content: partial || "（用户主动停止）",
+            content,
             tokens: 0,
             reason: "stopped",
             blocks: sseBuilder.value ? sseBuilder.value.getBlocks() : [],
           })
           .catch((e) => console.error("Failed to save partial stream:", e));
       }
-      sending.value = false;
-      abortController.value = null;
-      streamMode.value = null;
-      modelStatus.value = "idle";
-      scrollBottom();
+      finishSending();
     }
     pendingConfirm.value = null;
   }
@@ -491,6 +561,7 @@ export function useSSE({
     pendingConfirm,
     pendingConfirmMsgIdx,
     degradedMode,
+    aiDisconnected,
     checkHealth,
     trySSEStream,
     fallbackSend,

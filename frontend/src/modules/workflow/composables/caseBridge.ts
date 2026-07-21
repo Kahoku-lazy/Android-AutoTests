@@ -4,18 +4,7 @@
 import type { Block, FlatTestStep, StepBlock, StepTypeValue } from '@/modules/workflow/types/testCase'
 import { STEP_TYPE_META } from '@/modules/workflow/types/testCase'
 
-const APP_TYPES = new Set(['start_app', 'kill_app', 'restart_app'])
-
-/** 平台 CaseEditor 用 wait_any；工作流积木用 wait_either */
-function toPlatformType(t: string): string {
-  return t === 'wait_either' ? 'wait_any' : t
-}
-
-function fromPlatformType(t: string): string {
-  if (t === 'wait_any') return 'wait_either'
-  if (t === 'long_click') return 'click'
-  return t
-}
+const APP_TYPES = new Set(['start_app', 'kill_app'])
 
 export function flattenBlocksToSteps(blocks: Block[]): FlatTestStep[] {
   const result: FlatTestStep[] = []
@@ -32,7 +21,6 @@ export function flattenBlocksToSteps(blocks: Block[]): FlatTestStep[] {
           direction: b.direction || '',
           distance: b.distance ?? 500,
           description: b.description || b.label,
-          package_name: b.package_name || undefined,
         })
       } else if (b.kind === 'branch') {
         walk(b.passChildren)
@@ -52,12 +40,11 @@ export function toCaseManagerSteps(
   defaultPackage = ''
 ): Record<string, unknown>[] {
   return steps.map((s) => {
-    const type = toPlatformType(s.type)
     const isApp = APP_TYPES.has(s.type)
     return {
-      type,
+      type: s.type,
       xpath: isApp
-        ? (s.package_name || s.xpath || defaultPackage || '')
+        ? (s.xpath || defaultPackage || '')
         : (s.xpath || ''),
       xpath2: s.xpath2 || '',
       timeout: s.timeout ?? 10,
@@ -78,7 +65,7 @@ export function fromCaseManagerSteps(steps: unknown[]): StepBlock[] {
   for (const raw of steps) {
     const s = raw as Record<string, any>
     if (!s || typeof s !== 'object') continue
-    let stepType = fromPlatformType(String(s.type || ''))
+    const stepType = String(s.type || '')
     if (!STEP_TYPE_META[stepType]) continue
     const isApp = APP_TYPES.has(stepType)
     const label =
@@ -96,7 +83,6 @@ export function fromCaseManagerSteps(steps: unknown[]): StepBlock[] {
       timeout: Number(s.timeout) || 10,
       expected_text: String(s.expected_text || ''),
       index: Number(s.index) || 0,
-      package_name: isApp ? String(s.xpath || '') : '',
       direction: String(s.direction || ''),
       distance: Number(s.distance) || 500,
       status: 'pending',

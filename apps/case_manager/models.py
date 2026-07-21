@@ -7,6 +7,11 @@ class CaseDirectory(models.Model):
     """Two-level directory tree for organising test cases → cm_case_directories."""
 
     name = models.CharField(max_length=200)
+    case_type = models.CharField(
+        max_length=32,
+        default="ui_automation",
+        help_text="ui_automation / storage / api_testing — each module has independent tree",
+    )
     parent = models.ForeignKey(
         "self",
         on_delete=models.CASCADE,
@@ -24,7 +29,12 @@ class CaseDirectory(models.Model):
 
     class Meta:
         db_table = "cm_case_directories"
-        unique_together = ("parent", "name")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["parent", "name", "case_type"],
+                name="unique_directory_parent_name_type",
+            ),
+        ]
         verbose_name = '用例目录'
         verbose_name_plural = '用例目录'
 
@@ -37,11 +47,17 @@ class TestDefinition(models.Model):
     """Executable test case definition → cm_test_definitions."""
 
     id = models.CharField(max_length=200, primary_key=True)
+    case_type = models.CharField(
+        max_length=32,
+        default="ui_automation",
+        help_text="ui_automation / storage / api_testing",
+    )
     title = models.CharField(max_length=500)
     category = models.CharField(max_length=200, default="", blank=True)
     description = models.TextField(default="", blank=True)
     steps = models.TextField(default="", blank=True)
     steps_json = models.TextField(default="[]")
+    watchers = models.JSONField(default=list, blank=True)  # [{xpath, action}] popup handling
     enabled = models.BooleanField(default=True)
     package_name = models.CharField(max_length=200, default="", blank=True)
     # ── IoT PRD → test-case fields (from iot-test-case-agent) ──
@@ -102,3 +118,9 @@ class TestDefinition(models.Model):
 
     def __str__(self):
         return self.title
+
+
+# Re-export for backward-compatible imports
+from .models_storage import StorageTestCase  # noqa: E402, F401
+from .models_api import ApiTestCase  # noqa: E402, F401
+from .models_web import WebTestCase  # noqa: E402, F401

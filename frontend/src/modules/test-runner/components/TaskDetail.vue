@@ -172,6 +172,25 @@ function formatTime(isoStr) {
   } catch (_) { return isoStr }
 }
 
+// ── APP性能统计 ──
+const perfStats = computed(() => {
+  return task.value?.perfStats || null
+})
+
+/** 获取某个 case 的性能明细 */
+function getCasePerf(caseTitle) {
+  if (!perfStats.value?.per_case) return null
+  return perfStats.value.per_case.find(
+    (c) => c.case_title === caseTitle
+  ) || null
+}
+
+/** 格式化性能耗时 */
+function fmtDuration(d) {
+  if (d == null) return '—'
+  return (Number(d) * 1000).toFixed(0) + 'ms'
+}
+
 // ── Case status helpers ──
 function caseStatusLabel(ci) {
   if (!task.value) return { text: '等待中', color: '#f7cd67', bg: 'rgba(247,205,103,0.15)' }
@@ -244,11 +263,13 @@ const bugEntries = computed(() => {
 })
 
 function stepTypeLabel(type) {
-  const map = { click: '点击', long_click: '长按', click_indexed: '点击第N个', swipe: '滑动',
-    drag: '拖动', wait: '等待出现', wait_disappear: '等待消失', wait_any: '等待任一',
-    wait_toast: '等待Toast', verify_text: '校验文字', poll_text: '等待文字',
-    start_app: '启动应用', kill_app: '关闭应用', restart_app: '重启应用',
-    retry_click: '点击后等待', sleep: '暂停', log: '记录' }
+  const map = { click: '点击', long_click: '长按', swipe: '滑动',
+    wait: '等待出现', wait_disappear: '等待消失',
+    verify_text: '校验文字', poll_text: '轮询文本',
+    start_app: '启动应用', kill_app: '关闭应用', sleep: '暂停',
+    perf_element_time: '等待元素出现耗时',
+    wait_toast: '等待Toast', if_element_appear: '如果出现', if_element_disappear: '如果消失',
+    loop_n: '循环N次', loop_elements: '遍历元素' }
   return map[type] || type
 }
 
@@ -607,6 +628,29 @@ async function removeTask() {
               </div>
             </div>
             <div v-if="!ci.steps?.length" class="step-empty">暂无可展示的步骤</div>
+
+            <!-- APP性能数据 -->
+            <div v-if="getCasePerf(ci.title)" class="perf-case-section">
+              <div class="perf-case-title">⏱️ 性能测量 — 等待元素出现耗时</div>
+              <div class="perf-case-grid">
+                <span class="perf-case-stat"><b>次数</b> {{ getCasePerf(ci.title).count }}</span>
+                <span class="perf-case-stat"><b>平均</b> {{ fmtDuration(getCasePerf(ci.title).avg) }}</span>
+                <span class="perf-case-stat"><b>最快</b> {{ fmtDuration(getCasePerf(ci.title).min) }}</span>
+                <span class="perf-case-stat"><b>最慢</b> {{ fmtDuration(getCasePerf(ci.title).max) }}</span>
+                <span class="perf-case-stat"><b>中位</b> {{ fmtDuration(getCasePerf(ci.title).median) }}</span>
+              </div>
+              <div class="perf-items">
+                <div
+                  v-for="(pr, pri) in getCasePerf(ci.title).items"
+                  :key="pri"
+                  class="perf-item"
+                >
+                  <span class="perf-iter">第{{ pr.iteration }}轮</span>
+                  <span class="perf-desc">{{ pr.description }}</span>
+                  <span class="perf-dur">{{ fmtDuration(pr.duration) }}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -879,6 +923,67 @@ async function removeTask() {
 
 .not-found { text-align: center; color: var(--app-text-secondary); padding: 80px 0; font-size: 15px; }
 .not-found p { margin-bottom: 16px; }
+
+/* ── 性能测量 ── */
+.perf-case-section {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: rgba(247,205,103,0.08);
+  border: 1px solid rgba(247,205,103,0.25);
+  border-radius: 12px;
+}
+.perf-case-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #b8860b;
+  margin-bottom: 10px;
+}
+.perf-case-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 10px;
+}
+.perf-case-stat {
+  font-size: 12px;
+  color: var(--app-text-secondary);
+}
+.perf-case-stat b {
+  color: var(--app-text);
+  font-weight: 600;
+}
+.perf-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.perf-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 10px;
+  background: rgba(255,255,255,0.6);
+  border-radius: 8px;
+  font-size: 12px;
+}
+.perf-iter {
+  font-weight: 600;
+  color: var(--app-text-secondary);
+  min-width: 40px;
+}
+.perf-desc {
+  flex: 1;
+  color: var(--app-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.perf-dur {
+  font-weight: 700;
+  color: #889df0;
+  font-family: "Cascadia Code", Consolas, monospace;
+  white-space: nowrap;
+}
 
 @media (max-width: 768px) {
   .info-grid { grid-template-columns: 1fr 1fr; }

@@ -177,6 +177,14 @@ class TestRunner:
         adapter = await _safe_run_in_executor(loop, create_adapter,
                                                error_msg="创建设备适配器失败")
         state.adapter = adapter
+        # Register watchers from test case definitions (global popup handling)
+        all_watchers = []
+        for tc in test_cases:
+            if tc.watchers:
+                all_watchers.extend(tc.watchers)
+        if all_watchers:
+            adapter.register_watchers(all_watchers)
+            adapter.log(f'已注册 {len(all_watchers)} 个弹窗监视器')
         executor = StepExecutor(adapter)
 
         # TREP v1.0: 每 5s 心跳，前端据此检测 WS 连接存活
@@ -400,6 +408,7 @@ class TestRunner:
                 break
 
             state.adapter.clear_log_buffer()
+            state.adapter.clear_perf_results()
             start = time.time()
 
             step_count = len(case.steps_data) if case.steps_data else 0
@@ -449,6 +458,18 @@ class TestRunner:
             await self.callback.on_iteration_result(
                 state.run_model.run_id, case.id, i, result, elapsed)
             self._record_case_result(state, case, i, result, elapsed)
+
+            # Collect APP性能 measurements from this iteration
+            adapter_perf = state.adapter.get_perf_results()
+            if adapter_perf:
+                for pr in adapter_perf:
+                    state.run_model.perf_results.append({
+                        "case_id": case.id,
+                        "case_title": case.title,
+                        "iteration": i,
+                        "description": pr["description"],
+                        "duration": pr["duration"],
+                    })
 
             if i < loop_count and state.is_running:
                 await asyncio.sleep(interval_seconds)

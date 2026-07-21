@@ -53,12 +53,14 @@ INSTALLED_APPS = [
     'apps.test_runner',
     'apps.report_generator',
     'apps.ai_assistant',
+    'apps.evaluator',
     'apps.dashboard',
 ]
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'gateway.middleware.JWTAuthenticationMiddleware',

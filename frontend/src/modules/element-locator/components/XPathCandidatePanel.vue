@@ -306,6 +306,32 @@ async function copyXPath(xpath) {
         <p ref="emptyTitleRef" class="empty-text">点击截图中元素查看 XPath</p>
       </div>
     <div v-else class="table-wrap">
+      <!-- Element info section -->
+      <div class="el-info">
+        <div class="el-info__row">
+          <span class="el-info__label">Class</span>
+          <span class="el-info__value">{{ element.class_name || '—' }}</span>
+        </div>
+        <div class="el-info__row">
+          <span class="el-info__label">Text</span>
+          <span class="el-info__value">{{ element.text || '—' }}</span>
+        </div>
+        <div class="el-info__row">
+          <span class="el-info__label">ID</span>
+          <span class="el-info__value">{{ element.resource_id || '—' }}</span>
+        </div>
+        <div class="el-info__row">
+          <span class="el-info__label">Bounds</span>
+          <span class="el-info__value">{{ element.bounds || '—' }}</span>
+        </div>
+        <div class="el-info__row">
+          <span class="el-info__label">Clickable</span>
+          <span class="el-info__value" :class="{ 'clickable-yes': element.clickable }">
+            {{ element.clickable ? '✓ 是' : '✗ 否' }}
+          </span>
+        </div>
+      </div>
+      <el-divider style="margin: 8px 0" />
       <el-table
         :data="element.xpaths || []"
         size="small"
@@ -379,6 +405,36 @@ h3 {
   flex: 1;
   min-height: 0;
   overflow: auto;
+}
+.el-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 4px;
+  padding: 8px 10px;
+  background: rgba(139,115,85,0.06);
+  border-radius: 8px;
+}
+.el-info__row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+}
+.el-info__label {
+  min-width: 56px;
+  font-weight: 600;
+  color: var(--app-text, #3D4A3B);
+  flex-shrink: 0;
+}
+.el-info__value {
+  color: var(--app-text-secondary, #7A8B73);
+  word-break: break-all;
+  line-height: 1.4;
+}
+.clickable-yes {
+  color: #6fba2c;
+  font-weight: 600;
 }
 .form-grid {
   display: grid;

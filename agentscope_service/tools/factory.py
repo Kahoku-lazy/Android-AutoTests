@@ -1,7 +1,7 @@
 """Tool factory — builds the tool list for AgentScope agents from Django config."""
 from __future__ import annotations
 
-from agentscope.tool import TaskCreate, TaskGet, TaskList, TaskUpdate, ToolBase
+from agentscope.tool import ToolBase
 
 from apps.ai_assistant.models import AIAgent
 
@@ -73,14 +73,11 @@ _READ_ONLY_TOOL_NAMES = {
 }
 
 
-def _build_plan_tools() -> list:
-    return [TaskCreate(), TaskGet(), TaskList(), TaskUpdate()]
-
-
 def _resolve_enabled_names(agent_id: str) -> set[str]:
     """Return enabled platform tool names for an agent.
 
-    - No matching AITool rows → all registry tools (legacy default).
+    - Agent not found / DB error → all registry tools (safety fallback).
+    - No matching AITool rows → empty set (no tools loaded).
     - Matching rows but all disabled → read-only subset.
     - Otherwise → enabled matching names only.
     """
@@ -91,7 +88,7 @@ def _resolve_enabled_names(agent_id: str) -> set[str]:
 
     platform_tools = [t for t in agent.tools.all() if t.name in _REGISTRY_NAMES]
     if not platform_tools:
-        return set(_REGISTRY_NAMES)
+        return set()  # No configuration → no platform tools loaded
 
     enabled = {t.name for t in platform_tools if t.enabled}
     if enabled:
@@ -111,11 +108,15 @@ def _instantiate_tools(enabled_names: set[str], ctx: ToolContext) -> list:
 
 
 async def build_business_tools(user_id: str, agent_id: str, session_id: str) -> list:
-    """Build Plan tools + agent-filtered business tools with per-call context."""
+    """Build agent-filtered business tools with per-call context.
+
+    Plan tools (TaskCreate/Get/List/Update) are provided natively by
+    the AgentScope framework — we only supply platform business tools here.
+    """
     ctx = ToolContext(
         user_id=str(user_id or ""),
         agent_id=str(agent_id or ""),
         session_id=str(session_id or ""),
     )
     enabled_names = await run_sync(lambda: _resolve_enabled_names(agent_id))
-    return _build_plan_tools() + _instantiate_tools(enabled_names, ctx)
+    return _instantiate_tools(enabled_names, ctx)

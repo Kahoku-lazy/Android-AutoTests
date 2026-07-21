@@ -35,6 +35,34 @@ class KnowledgeBaseSearchTool(ToolBase):
         from .tool_context import check_platform_permission
         return check_platform_permission(self)
 
+    async def _get_allowed_sources(self) -> list[str] | None:
+        """Read the agent's knowledge_sources config from the database.
+
+        Returns:
+            List of allowed document IDs, or None if all documents are allowed
+            (empty list = all enabled, or config unavailable).
+        """
+        ctx = getattr(self, '_ctx', None)
+        if ctx is None:
+            return None
+        agent_django_id = str(getattr(ctx, 'agent_id', ''))
+        if not agent_django_id or not agent_django_id.isdigit():
+            return None
+        try:
+            from apps.ai_assistant.models import AIAgent
+            agent = await run_sync(
+                lambda: AIAgent.objects.filter(id=int(agent_django_id)).first(),
+                timeout=3,
+            )
+        except Exception:
+            return None
+        if agent is None:
+            return None
+        sources = agent.knowledge_sources or []
+        if not sources:  # empty list = all documents allowed
+            return None
+        return sources
+
     async def call(self, query, top_k=5, **kwargs):
         # Quick check: if collection is empty or unavailable, return immediately
         # instead of blocking for 10+ seconds downloading ONNX models
@@ -60,8 +88,14 @@ class KnowledgeBaseSearchTool(ToolBase):
                 text="知识库为空，暂无可检索的文档。请直接使用平台工具（save_test_case, fetch_page_elements 等）操作。"
             )])
 
+        # Read per-agent knowledge source filter
+        sources = await self._get_allowed_sources()
+
         try:
-            results = await run_sync(lambda: kb_search(query, top_k=top_k), timeout=8)
+            results = await run_sync(
+                lambda: kb_search(query, top_k=top_k, sources=sources),
+                timeout=8,
+            )
         except Exception:
             return ToolChunk(content=[TextBlock(
                 text=f"知识库搜索 '{query}' 超时，请直接使用平台工具操作。"

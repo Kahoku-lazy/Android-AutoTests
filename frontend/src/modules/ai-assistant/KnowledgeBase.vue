@@ -25,9 +25,10 @@ const filteredDocs = computed(() => {
 })
 
 const columns = [
-  { title: '来源', dataIndex: 'source', width: '50%' },
-  { title: '类型', dataIndex: 'type', width: '20%' },
-  { title: '大小', dataIndex: 'size', width: '15%' },
+  // 来源列只设 minWidth，其余空间由它吃掉，表格才能铺满
+  { title: '来源', dataIndex: 'source', minWidth: 280, showOverflowTooltip: true },
+  { title: '类型', dataIndex: 'type', width: 160 },
+  { title: '大小', dataIndex: 'size', width: 120, align: 'right' },
 ]
 
 function formatType(type) {
@@ -112,7 +113,7 @@ onMounted(() => {
     </AppCard>
 
     <!-- 文档列表 -->
-    <AppCard color="brown" pattern="brown" style="margin-top: 16px; padding: 20px 24px;">
+    <AppCard color="brown" pattern="brown" class="kb-table-card">
       <div class="kb-filters">
         <button
           v-for="tab in filters"
@@ -121,29 +122,44 @@ onMounted(() => {
           @click="activeFilter = tab.key"
         >{{ tab.label }}</button>
       </div>
-      <AppTable
-        :columns="columns"
-        :data-source="filteredDocs"
-        row-key="id"
-        :loading="loading"
-        empty-text="暂无文档，请先点击「重建索引」"
-      >
-        <template #cell-source="{ record }">
-          <span class="kb-doc-source">{{ record.source }}</span>
-        </template>
-        <template #cell-type="{ record }">
-          <span>{{ formatType(record.type) }}</span>
-        </template>
-        <template #cell-size="{ record }">
-          <span>{{ formatSize(record.size) }}</span>
-        </template>
-      </AppTable>
+      <div class="kb-table-wrap">
+        <AppTable
+          :columns="columns"
+          :data-source="filteredDocs"
+          row-key="id"
+          :loading="loading"
+          table-layout="fixed"
+          empty-text="暂无文档，请先点击「重建索引」"
+        >
+          <template #cell-source="{ record }">
+            <span class="kb-doc-source">{{ record.source }}</span>
+          </template>
+          <template #cell-type="{ record }">
+            <span>{{ formatType(record.type) }}</span>
+          </template>
+          <template #cell-size="{ record }">
+            <span>{{ formatSize(record.size) }}</span>
+          </template>
+        </AppTable>
+      </div>
     </AppCard>
   </div>
 </template>
 
 <style scoped>
-.kb-view { padding: 0; }
+.kb-view {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0;
+}
+.kb-view > :first-child {
+  flex-shrink: 0;
+}
 .kb-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -177,13 +193,56 @@ onMounted(() => {
   font-size: 13px;
   color: var(--app-text-secondary);
 }
+.kb-table-card {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-top: 0;
+}
+.kb-table-card :deep(.el-card__body) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 24px;
+  overflow: hidden;
+}
+.kb-table-wrap {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  overflow: auto;
+}
+.kb-table-wrap :deep(.ac-table),
+.kb-table-wrap :deep(.el-table),
+.kb-table-wrap :deep(.el-table__inner-wrapper),
+.kb-table-wrap :deep(.el-table__header-wrapper),
+.kb-table-wrap :deep(.el-table__body-wrapper),
+.kb-table-wrap :deep(.el-table__header),
+.kb-table-wrap :deep(.el-table__body) {
+  width: 100% !important;
+}
+.kb-table-wrap :deep(.el-table .cell) {
+  line-height: 1.45;
+  padding: 8px 12px;
+}
 .kb-doc-source {
-  font-family: monospace;
+  font-family: var(--app-font-mono, monospace);
   font-size: 12px;
   color: var(--app-text, #3D4A3B);
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .kb-filters {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 14px;
 }

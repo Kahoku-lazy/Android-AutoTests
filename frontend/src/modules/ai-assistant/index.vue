@@ -12,9 +12,10 @@ import WbLoader from './components/WbLoader.vue'
 import AgentStickyNote from './components/AgentStickyNote.vue'
 import TaskStickyNote from './components/TaskStickyNote.vue'
 import KnowledgeBase from './KnowledgeBase.vue'
+import EvaluatorTab from './EvaluatorTab.vue'
 
 const router = useRouter()
-const viewMode = ref('agents')  // 'agents' | 'knowledge'
+const viewMode = ref('agents')  // 'agents' | 'knowledge' | 'evaluator'
 const agents = ref([])
 const loading = ref(false)
 const testingId = ref(null)
@@ -270,7 +271,7 @@ async function confirmModel(agent) {
 
 function openAgent(agent) {
   if (hasPendingModelChange(agent)) {
-    ElMessage.warning('请先点击「上带保存」确认模型')
+    ElMessage.warning('请先点击「保存模型」确认模型')
     return
   }
   router.push(`/ai-assistant/chat/${agent.id}`)
@@ -307,6 +308,10 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
           :class="['view-tab', { active: viewMode === 'knowledge' }]"
           @click="viewMode = 'knowledge'"
         >📚 知识库</button>
+        <button
+          :class="['view-tab', { active: viewMode === 'evaluator' }]"
+          @click="viewMode = 'evaluator'"
+        >📊 评测中心</button>
       </div>
 
       <!-- 智能体看板视图 -->
@@ -392,8 +397,10 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
       </section>
       </template>
 
-      <!-- 知识库视图 -->
-      <KnowledgeBase v-if="viewMode === 'knowledge'" />
+      <!-- 知识库视图：占满 doc-body 剩余区域 -->
+      <KnowledgeBase v-if="viewMode === 'knowledge'" class="kb-host" />
+      <!-- 评测中心视图 -->
+      <EvaluatorTab v-if="viewMode === 'evaluator'" class="eval-host" />
     </div>
   </div>
 </template>
@@ -414,6 +421,12 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
   gap: 8px;
   overflow: auto;
   padding-bottom: 12px;
+}
+.kb-host {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
 }
 
 .duty-section,

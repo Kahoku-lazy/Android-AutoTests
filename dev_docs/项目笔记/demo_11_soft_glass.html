@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soft Glassmorphism</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap');
+        
+        :root {
+            --bg-gradient: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            --glass-bg: rgba(255, 255, 255, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --text-primary: #4a4e69;
+            --text-secondary: #9a8c98;
+            --accent-pink: #ffafcc;
+            --accent-blue: #a2d2ff;
+            --accent-green: #bde0fe;
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+
+        body {
+            font-family: 'Quicksand', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(45deg, #ffc8dd, #bde0fe, #a2d2ff);
+            background-size: 200% 200%;
+            animation: gradientBG 15s ease infinite;
+            overflow: hidden;
+        }
+
+        /* 动态背景装饰球 */
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            z-index: 0;
+            opacity: 0.8;
+        }
+        .blob-1 { top: -10%; left: -10%; width: 400px; height: 400px; background: #ffafcc; }
+        .blob-2 { bottom: -10%; right: -10%; width: 300px; height: 300px; background: #a2d2ff; }
+        .blob-3 { top: 40%; left: 60%; width: 250px; height: 250px; background: #e2ece9; }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 80%;
+            max-width: 700px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 30px;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card-item {
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 20px;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+        }
+
+        .card-item:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        .item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .item-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .item-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .badge {
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            backdrop-filter: blur(4px);
+        }
+
+        .badge.pass {
+            background: rgba(184, 232, 198, 0.6);
+            color: #1a5c2a;
+            border: 1px solid rgba(184, 232, 198, 0.8);
+        }
+
+        .badge.fail {
+            background: rgba(255, 192, 203, 0.6);
+            color: #7a1c2b;
+            border: 1px solid rgba(255, 192, 203, 0.8);
+        }
+
+        .badge.pending {
+            background: rgba(162, 210, 255, 0.6);
+            color: #1c4a7a;
+            border: 1px solid rgba(162, 210, 255, 0.8);
+        }
+
+        /* 侧边栏模拟 */
+        .nav-dots {
+            position: absolute;
+            left: -60px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+        }
+        .dot.active {
+            background: var(--accent-pink);
+            border-color: #fff;
+            box-shadow: 0 0 10px rgba(255, 175, 204, 0.5);
+        }
+
+    </style>
+</head>
+<body>
+    <!-- 背景装饰 -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+
+    <div class="nav-dots">
+        <div class="dot"></div>
+        <div class="dot active"></div>
+        <div class="dot"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <div>
+                <h1>Case Analysis</h1>
+                <div class="subtitle">Soft Glass Edition</div>
+            </div>
+            <div class="badge pending" style="cursor: pointer;">EXPORT</div>
+        </header>
+
+        <div class="card-list">
+            <div class="card-item">
+                <div class="item-info">
+                    <span class="item-title">Button Interaction</span>
+                    <span class="item-desc">Mechanical click test passed</span>
+                </div>
+                <span class="badge pass">PASS</span>
+            </div>
+
+            <div class="card-item">
+                <div class="item-info">
+                    <span class="item-title">Power Cycle</span>
+                    <span class="item-desc">Unexpected reboot at 85%</span>
+                </div>
+                <span class="badge fail">FAIL</span>
+            </div>
+
+            <div class="card-item">
+                <div class="item-info">
+                    <span class="item-title">Network Sync</span>
+                    <span class="item-desc">Waiting for server response</span>
+                </div>
+                <span class="badge pending">PENDING</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

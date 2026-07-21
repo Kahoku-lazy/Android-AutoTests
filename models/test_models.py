@@ -28,6 +28,7 @@ class TestCaseDef:
     steps_data: list = field(default_factory=list)  # list[TestStep]
     is_json: bool = False                # True if loaded from JSON definition
     package_name: str = ""               # Target app package (empty = use default)
+    watchers: list = field(default_factory=list)  # [{xpath, action}] for popup handling
     created_at: str = ""                 # ISO timestamp
     updated_at: str = ""                 # ISO timestamp
 
@@ -125,6 +126,7 @@ class TestRun:
     selected_cases: list = field(default_factory=list)  # list of case IDs
     loop_count: int = 1            # Iterations per case
     case_results: list = field(default_factory=list)    # list[TestResult]
+    perf_results: list = field(default_factory=list)    # [{case_id, case_title, iteration, description, duration}]
     summary: dict = field(default_factory=dict)         # {case_id: {pass, fail, rate}}
     started_at: str = ""
     finished_at: str = ""
@@ -139,6 +141,7 @@ class TestRun:
             "selected_cases": self.selected_cases,
             "loop_count": self.loop_count,
             "case_results": [r.to_dict() for r in self.case_results],
+            "perf_results": self.perf_results,
             "summary": self.summary,
             "started_at": self.started_at,
             "finished_at": self.finished_at,

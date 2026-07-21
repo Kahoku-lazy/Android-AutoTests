@@ -1,5 +1,5 @@
 <script setup>
-import { IconSend } from "@/shared/icons/index.js";
+import { IconSend, IconPaperclip } from "@/shared/icons/index.js";
 
 defineProps({
   modelValue: { type: String, default: "" },
@@ -23,7 +23,9 @@ function onInput(val) {
 
 <template>
   <div v-if="uploadedFile" class="file-preview">
-    <span class="file-preview-icon">📎</span>
+    <span class="file-preview-icon">
+      <IconPaperclip :size="14" />
+    </span>
     <span class="file-preview-name">{{ uploadedFile.filename }}</span>
     <span class="file-preview-size">
       ({{ (uploadedFile.size / 1024).toFixed(1) }} KB)
@@ -45,13 +47,13 @@ function onInput(val) {
       title="上传文件 (txt/log/md/docx/xlsx/pdf 等)"
       @click="$refs.fileInputRef?.click()"
     >
-      📎
+      <IconPaperclip :size="18" />
     </button>
     <div class="input-box">
       <el-input
         :model-value="modelValue"
         type="textarea"
-        :rows="3"
+        :rows="2"
         placeholder="输入消息，Enter 发送，Shift+Enter 换行..."
         :disabled="sending"
         resize="none"
@@ -64,7 +66,7 @@ function onInput(val) {
       :disabled="(!modelValue.trim() && !uploadedFile) || sending"
       @click="emit('send')"
     >
-      <IconSend :size="20" />
+      <IconSend :size="16" />
       <span>{{ sending ? "发送中" : "发送" }}</span>
     </button>
   </div>
@@ -75,30 +77,32 @@ function onInput(val) {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
-  background: #f5f3ed;
-  border-top: 1px solid #e8e2d6;
+  padding: 8px 16px;
+  background: var(--app-glass-card);
+  border-top: 1px solid var(--app-glass-border);
   font-size: 13px;
+  backdrop-filter: blur(var(--app-glass-blur));
 }
 .file-preview-icon {
-  font-size: 16px;
+  display: inline-flex;
+  color: var(--el-color-primary);
 }
 .file-preview-name {
   font-weight: 600;
-  color: #4a3a28;
+  color: var(--app-text);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .file-preview-size {
-  color: #8a7b66;
+  color: var(--app-text-secondary);
   font-size: 12px;
 }
 .file-preview-remove {
   background: none;
   border: none;
-  color: #8a7b66;
+  color: var(--app-text-secondary);
   cursor: pointer;
   font-size: 14px;
   padding: 4px 8px;
@@ -111,41 +115,47 @@ function onInput(val) {
 .chat-input {
   display: flex;
   align-items: flex-end;
-  gap: 12px;
-  padding: 16px 20px;
-  background: #fff;
-  border-top: 2px solid #e8e2d6;
+  gap: 10px;
+  padding: 10px 16px 12px;
+  background: var(--app-glass-heavy);
+  border-top: 1px solid var(--app-glass-border);
   flex-shrink: 0;
+  backdrop-filter: blur(var(--app-glass-blur));
 }
 .chat-input :deep(.el-textarea__inner) {
-  border-radius: 14px !important;
-  border: 2px solid #e8e2d6 !important;
-  padding: 12px 16px !important;
-  font-size: 15px !important;
-  line-height: 1.6 !important;
-  background: #faf9f4 !important;
+  border-radius: var(--app-radius-sm) !important;
+  border: 1.5px solid var(--app-glass-border) !important;
+  padding: 8px 12px !important;
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+  min-height: 44px !important;
+  background: var(--app-bg-input) !important;
   box-shadow: none !important;
   font-family: inherit !important;
-  color: #4a3a28 !important;
+  color: var(--app-text) !important;
 }
 .chat-input :deep(.el-textarea__inner:focus) {
-  border-color: #19c8b9 !important;
-  background: #fff !important;
+  border-color: var(--el-color-primary) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
 }
 .upload-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  border: 2px solid #e8e2d6;
-  background: #faf9f4;
-  font-size: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--app-radius-sm);
+  border: 1.5px solid var(--app-glass-border);
+  background: var(--app-glass-card);
+  color: var(--app-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: all 0.15s;
+  transition: all var(--app-duration-fast) var(--app-ease);
 }
 .upload-btn:hover:not(:disabled) {
-  border-color: #19c8b9;
-  background: #e6f9f6;
+  border-color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
 }
 .upload-btn:disabled {
   opacity: 0.5;
@@ -158,23 +168,28 @@ function onInput(val) {
 .send-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  border-radius: 14px;
+  gap: 6px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: var(--app-radius-sm);
   border: none;
-  background: linear-gradient(135deg, #19c8b9, #15a89c);
+  background: linear-gradient(
+    135deg,
+    var(--el-color-primary),
+    var(--el-color-primary-dark-2)
+  );
   color: #fff;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
   flex-shrink: 0;
-  transition: all 0.15s;
-  box-shadow: 0 4px 14px rgba(25, 200, 185, 0.35);
+  transition: all var(--app-duration-fast) var(--app-ease);
+  box-shadow: var(--app-shadow-sm);
 }
 .send-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(25, 200, 185, 0.45);
+  box-shadow: var(--app-shadow-md);
 }
 .send-btn:disabled {
   opacity: 0.5;

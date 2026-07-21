@@ -118,7 +118,6 @@ export const useTestCaseStore = defineStore('wf-testCase', () => {
   // ── Block Factory ──
   function createStepBlock(stepType: StepTypeValue): StepBlock {
     const meta = STEP_TYPE_META[stepType]
-    const needsPackage = stepType === 'start_app' || stepType === 'kill_app' || stepType === 'restart_app'
     return {
       id: genId('s'),
       kind: 'step',
@@ -130,7 +129,6 @@ export const useTestCaseStore = defineStore('wf-testCase', () => {
       timeout: stepType === 'sleep' ? 2 : 10,
       expected_text: '',
       index: 0,
-      package_name: needsPackage ? packageName.value : '',
       direction: '',
       distance: 500,
       status: 'pending',
@@ -265,7 +263,7 @@ export const useTestCaseStore = defineStore('wf-testCase', () => {
   // ── Step Data Update ──
   function updateStepData(
     id: string,
-    data: Partial<Pick<StepBlock, 'label' | 'description' | 'xpath' | 'xpath2' | 'timeout' | 'expected_text' | 'index' | 'package_name' | 'direction' | 'distance' | 'element_id' | 'element_label'>>
+    data: Partial<Pick<StepBlock, 'label' | 'description' | 'xpath' | 'xpath2' | 'timeout' | 'expected_text' | 'index' | 'direction' | 'distance' | 'element_id' | 'element_label'>>
   ): void {
     const block = findInList(id, rootBlocks.value)
     if (block && block.kind === 'step') {

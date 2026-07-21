@@ -4,6 +4,7 @@ import {
   apiGetPages, apiCreatePage, apiUpdatePage, apiDeletePage,
   apiGetPageElements, apiBatchMovePages, apiClearAll,
 } from '../api.js'
+import { bus } from '@/shared/event-bus.js'
 /**
  * Page tree state and operations — extracted from ElementManager.vue.
  */
@@ -70,6 +71,13 @@ export function useElementTree() {
   const allCheckableIds = computed(() =>
     collectTreeNodes(pageTree.value).filter((n) => !n.is_folder).map((n) => n.id),
   )
+
+  // O(1) page lookup via id → page Map
+  const pageMap = computed(() => {
+    const m = new Map()
+    for (const p of pages.value) m.set(p.id, p)
+    return m
+  })
 
   const checkedCount = computed(() => selectedPageIds.size)
 
@@ -169,7 +177,20 @@ export function useElementTree() {
     if (!page) return
     try {
       const { data } = await apiGetPageElements(page.id)
-      if (data.ok) elements.value = data.elements || []
+      if (data.ok) {
+        // Pre-parse xpath_candidates JSON once to avoid template-level JSON.parse
+        elements.value = (data.elements || []).map(e => ({
+          ...e,
+          _xpaths: (() => {
+            try { return JSON.parse(e.xpath_candidates || '[]') }
+            catch { return [] }
+          })(),
+          _first_xpath: (() => {
+            try { return (JSON.parse(e.xpath_candidates || '[]')[0] || {}).xpath || '' }
+            catch { return '' }
+          })(),
+        }))
+      }
     } catch (_) { /* 加载元素失败时保持空列表 */ }
   }
 
@@ -191,11 +212,19 @@ export function useElementTree() {
     try {
       const { data } = await apiUpdatePage(page.id, label)
       if (data.ok) {
+        // Close dialog immediately — don't wait for full page reload
         showRenameDialog.value = false
-        await loadPages()
+        // Update local page object immediately for instant UI feedback
+        page.label = label
         if (selectedPage.value?.id === page.id) {
-          selectedPage.value = pages.value.find((p) => p.id === page.id) || null
+          selectedPage.value = { ...selectedPage.value, label }
         }
+        // Background async refresh to sync server-side changes (depth, etc.)
+        loadPages().then(() => {
+          if (selectedPage.value?.id === page.id) {
+            selectedPage.value = pages.value.find((p) => p.id === page.id) || null
+          }
+        })
       } else {
         ElMessage.error(data.error || '重命名失败')
       }
@@ -218,9 +247,12 @@ export function useElementTree() {
       if (data.ok) {
         showCreatePage.value = false
         newPageForm.value = { label: '', package: '', activity: '' }
+        // Add new page to local array immediately for instant feedback
+        if (data.page) pages.value.push(data.page)
         createParentId.value = null
         createIsFolder.value = false
-        await loadPages()
+        // Background sync for server-side computed fields (depth, flows, etc.)
+        loadPages()
       } else {
         ElMessage.error(data.error || '创建失败')
       }
@@ -246,7 +278,9 @@ export function useElementTree() {
       const { data } = await apiDeletePage(page.id)
       if (data.ok) {
         if (selectedPage.value?.id === page.id) selectedPage.value = null
-        await loadPages()
+        // Remove from local array immediately, background sync for consistency
+        pages.value = pages.value.filter(p => p.id !== page.id)
+        loadPages()
       } else {
         ElMessage.error(data.error || '删除失败')
       }
@@ -268,7 +302,8 @@ export function useElementTree() {
         showClearDialog.value = false
         selectedPage.value = null
         elements.value = []
-        await loadPages()
+        pages.value = []
+        loadPages()
       } else {
         ElMessage.error(data.error || '清空失败')
       }
@@ -327,7 +362,12 @@ export function useElementTree() {
           selectedPageIds.clear()
           selectAll.value = false
           selectMode.value = false
-          await loadPages()
+          // Update parent_id locally, background sync for full refresh
+          for (const pid of pageIds) {
+            const p = pages.value.find(x => x.id === pid)
+            if (p) p.parent_id = parentId
+          }
+          loadPages()
         }
       } else {
         ElMessage.error(data.error || '移动失败')
@@ -448,23 +488,33 @@ export function useElementTree() {
     if (!page) return ''
     const parts = []
     let current = page
+    const map = pageMap.value
     while (current) {
       parts.unshift(current.label || `Page #${current.id}`)
       const pid = current.parent_id || null
-      current = pid ? pages.value.find((p) => p.id === pid) : null
+      current = pid ? map.get(pid) : null
     }
     return parts.join(' / ')
   }
 
   // ── Lifecycle ──
 
+  // Auto-refresh elements when saved from discovery tab
+  function onElementsSaved({ pageId }) {
+    if (selectedPage.value && selectedPage.value.id === pageId) {
+      selectPage(selectedPage.value)
+    }
+  }
+
   onMounted(() => {
     window.addEventListener('click', onDocumentClick)
+    bus.on('elements-saved', onElementsSaved)
     loadPages()
   })
 
   onUnmounted(() => {
     window.removeEventListener('click', onDocumentClick)
+    bus.off('elements-saved', onElementsSaved)
     resetDragState()
   })
 
@@ -477,7 +527,7 @@ export function useElementTree() {
     selectedPageIds, showClearDialog, clearSelectedOnly,
     dragEnabled, selectMode, selectAll, moveDialogVisible, moveTargetDirId,
     // Computed
-    pageTree, allCheckableIds, checkedCount, folderList,
+    pageTree, pageMap, allCheckableIds, checkedCount, folderList,
     // Tree ops
     canCreateSubFolder,
     openCreatePage, openCreateFolder, doCreatePage,

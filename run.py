@@ -27,10 +27,10 @@ ROOT = Path(__file__).parent
 LOG_DIR = ROOT / "logs"
 
 SERVICES = {
-    "redis":      6379,
-    "backend":    8765,
+    "redis": 6379,
+    "backend": 8765,
     "agentscope": 8000,
-    "frontend":   5173,
+    "frontend": 5173,
 }
 
 # ── 基础环境变量 ──
@@ -48,6 +48,7 @@ BASE_ENV = {
 # 工具函数
 # ═══════════════════════════════════════════════════════════════
 
+
 def port_in_use(port):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(0.5)
@@ -59,33 +60,139 @@ def port_in_use(port):
         return False
 
 
-def kill_port(port):
-    killed = False
+def find_listening_pid(port):
+    """Find PID of the process listening on the given port. Returns None if not found."""
     try:
         if sys.platform == "win32":
             result = subprocess.run(["netstat", "-ano"], capture_output=True, text=True, timeout=5)
             for line in result.stdout.split("\n"):
                 if f":{port}" in line and "LISTENING" in line:
-                    pid = line.strip().split()[-1]
-                    subprocess.run(["taskkill", "/PID", pid, "/F"], capture_output=True, timeout=5)
-                    print(f"  Killed PID {pid} (port {port})")
-                    killed = True
+                    return line.strip().split()[-1]
         else:
             result = subprocess.run(
                 ["lsof", "-ti", f"tcp:{port}", "-sTCP:LISTEN"],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
-            for pid in result.stdout.split():
-                subprocess.run(["kill", "-9", pid], capture_output=True, timeout=5)
-                print(f"  Killed PID {pid} (port {port})")
-                killed = True
-    except Exception as e:
-        print(f"  Error killing port {port}: {e}")
-    return killed
+            pids = result.stdout.strip().split()
+            if pids:
+                return pids[0]
+    except Exception:
+        pass
+    return None
+
+
+def graceful_kill(pid):
+    """Send graceful termination signal (SIGTERM / WM_CLOSE). Returns True if process exited."""
+    try:
+        if sys.platform == "win32":
+            # taskkill without /F sends WM_CLOSE — allows cleanup handlers to run
+            subprocess.run(["taskkill", "/PID", pid], capture_output=True, timeout=5)
+        else:
+            subprocess.run(["kill", pid], capture_output=True, timeout=5)
+        # Wait for process to exit
+        for _ in range(6):
+            time.sleep(0.5)
+            if not _pid_alive(pid):
+                return True
+        return False
+    except Exception:
+        return False
+
+
+def force_kill(pid):
+    """Force kill a process (SIGKILL / taskkill /F)."""
+    try:
+        if sys.platform == "win32":
+            subprocess.run(["taskkill", "/PID", pid, "/F"], capture_output=True, timeout=5)
+        else:
+            subprocess.run(["kill", "-9", pid], capture_output=True, timeout=5)
+    except Exception:
+        pass
+
+
+def _pid_alive(pid):
+    """Check if a process with the given PID is still running."""
+    try:
+        if sys.platform == "win32":
+            result = subprocess.run(
+                ["tasklist", "/FI", f"PID eq {pid}", "/NH"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            return pid in result.stdout
+        else:
+            os.kill(int(pid), 0)
+            return True
+    except (OSError, ProcessLookupError):
+        return False
+
+
+def kill_port(port):
+    """Gracefully shut down process on port, then force-kill if unresponsive.
+
+    Two-phase shutdown:
+      1. SIGTERM / WM_CLOSE → wait 3s for graceful cleanup (DB connections, etc.)
+      2. SIGKILL / taskkill /F → only if process didn't exit
+    """
+    pid = find_listening_pid(port)
+    if not pid:
+        return False
+
+    # Phase 1: graceful shutdown
+    if graceful_kill(pid):
+        print(f"  Killed PID {pid} (port {port}) — graceful")
+        return True
+
+    # Phase 2: force kill
+    force_kill(pid)
+    time.sleep(0.5)
+    print(f"  Killed PID {pid} (port {port}) — forced")
+    return True
+
+
+def cleanup_mysql_connections():
+    """Kill idle MySQL connections for the application user before restart.
+
+    When Daphne is force-killed on Windows, its DB connections become orphaned
+    Sleep rows on MySQL.  This pre-emptively cleans them so we never hit
+    ``max_connections`` during dev restarts.
+    """
+    try:
+        import MySQLdb
+
+        db_name = BASE_ENV.get("DB_NAME", "android_autotests")
+        db_user = BASE_ENV.get("DB_USER", "root")
+        db_host = BASE_ENV.get("DB_HOST", "127.0.0.1")
+        db_port = int(BASE_ENV.get("DB_PORT", "3306"))
+        conn = MySQLdb.connect(
+            host=db_host, port=db_port, user=db_user, db=db_name, connect_timeout=3
+        )
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT ID FROM information_schema.PROCESSLIST "
+            "WHERE USER = %s AND DB = %s AND COMMAND = 'Sleep' AND TIME > 5",
+            (db_user, db_name),
+        )
+        ids = [row[0] for row in cur.fetchall()]
+        for pid in ids:
+            try:
+                cur.execute(f"KILL {pid}")
+            except Exception:
+                pass
+        if ids:
+            print(f"  MySQL cleanup: closed {len(ids)} idle connection(s)")
+        cur.close()
+        conn.close()
+    except Exception:
+        pass  # MySQL may not be available — ignore
 
 
 def wait_http(url, timeout=20):
     import urllib.request
+
     for _ in range(timeout):
         try:
             urllib.request.urlopen(url, timeout=1)
@@ -135,6 +242,7 @@ def resolve_services(names):
 # 各服务启停
 # ═══════════════════════════════════════════════════════════════
 
+
 def start_redis():
     port = SERVICES["redis"]
     if port_in_use(port):
@@ -161,8 +269,20 @@ def start_backend():
     print(f"[Backend] Starting Django on port {port}...")
     env = make_env({"DJANGO_ASGI_SERVER": "1"})
     spawn(
-        [sys.executable, "-m", "daphne", "-p", str(port), "-b", "0.0.0.0", "config.asgi:application"],
-        "backend.log", env=env,
+        [
+            sys.executable,
+            "-m",
+            "daphne",
+            "-w",
+            "2",
+            "-p",
+            str(port),
+            "-b",
+            "0.0.0.0",
+            "config.asgi:application",
+        ],
+        "backend.log",
+        env=env,
     )
     if wait_http(f"http://127.0.0.1:{port}/", 20):
         print(f"  Backend          ready http://localhost:{port}")
@@ -178,7 +298,8 @@ def start_agentscope():
     # Write inline launch script to temp file (avoids shell escaping issues)
     launcher = LOG_DIR / "_agentscope_launcher.py"
     LOG_DIR.mkdir(exist_ok=True)
-    launcher.write_text(f'''
+    launcher.write_text(
+        f"""
 import sys; sys.path.insert(0, r"D:/Github/Android-AutoTests")
 import os; os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 import django; django.setup()
@@ -192,7 +313,8 @@ except RedisUnavailableError:
     import sys; sys.exit(1)
 print(f"  {{TITLE}} v{{VERSION}}")
 uvicorn.run(app, host="0.0.0.0", port={port}, log_level="info")
-'''.strip())
+""".strip()
+    )
 
     spawn(
         [sys.executable, str(launcher)],
@@ -211,7 +333,8 @@ def start_frontend():
     npx_cmd = "npx.cmd" if sys.platform == "win32" else "npx"
     spawn(
         [npx_cmd, "vite", "--host"],
-        "frontend.log", cwd=ROOT / "frontend",
+        "frontend.log",
+        cwd=ROOT / "frontend",
     )
     if wait_http(f"http://127.0.0.1:{port}/", 30):
         print(f"  Frontend         ready http://localhost:{port}")
@@ -223,15 +346,18 @@ def start_frontend():
 def stop_redis():
     print("[Redis] Skipped (keep running for other services)")
 
+
 def stop_backend():
     port = SERVICES["backend"]
     print(f"[Backend] Stopping port {port}...")
     kill_port(port)
 
+
 def stop_agentscope():
     port = SERVICES["agentscope"]
     print(f"[AgentScope] Stopping port {port}...")
     kill_port(port)
+
 
 def stop_frontend():
     port = SERVICES["frontend"]
@@ -239,13 +365,24 @@ def stop_frontend():
     kill_port(port)
 
 
-_START = {"redis": start_redis, "backend": start_backend, "agentscope": start_agentscope, "frontend": start_frontend}
-_STOP  = {"redis": stop_redis,  "backend": stop_backend,  "agentscope": stop_agentscope,  "frontend": stop_frontend}
+_START = {
+    "redis": start_redis,
+    "backend": start_backend,
+    "agentscope": start_agentscope,
+    "frontend": start_frontend,
+}
+_STOP = {
+    "redis": stop_redis,
+    "backend": stop_backend,
+    "agentscope": stop_agentscope,
+    "frontend": stop_frontend,
+}
 
 
 # ═══════════════════════════════════════════════════════════════
 # 命令实现
 # ═══════════════════════════════════════════════════════════════
+
 
 def cmd_start(services):
     names = resolve_services(services)
@@ -283,6 +420,8 @@ def cmd_start(services):
 
 def cmd_stop(services):
     names = resolve_services(services)
+    if "backend" in names or "agentscope" in names or "all" in names:
+        cleanup_mysql_connections()
     for s in names:
         _STOP[s]()
     print("Done.")
@@ -290,6 +429,8 @@ def cmd_stop(services):
 
 def cmd_restart(services):
     names = resolve_services(services)
+    if "backend" in names or "agentscope" in names or "all" in names:
+        cleanup_mysql_connections()
     for s in names:
         if s != "redis":
             _STOP[s]()
@@ -299,6 +440,7 @@ def cmd_restart(services):
 
 def cmd_status():
     import urllib.request
+
     def check(url):
         try:
             urllib.request.urlopen(url, timeout=2)
@@ -318,10 +460,10 @@ def cmd_status():
 
 def cmd_logs(services):
     log_map = {
-        "redis":      "redis.log",
-        "backend":    "backend.log",
+        "redis": "redis.log",
+        "backend": "backend.log",
         "agentscope": "agentscope.log",
-        "frontend":   "frontend.log",
+        "frontend": "frontend.log",
     }
     names = resolve_services(services)
     for s in names:
@@ -341,10 +483,15 @@ def cmd_logs(services):
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Android-AutoTests platform manager")
-    p.add_argument("cmd", choices=["start", "stop", "restart", "status", "logs"],
-                   help="Action to perform")
-    p.add_argument("services", nargs="*", default=[],
-                   help="Services: redis backend agentscope frontend (default: all)")
+    p.add_argument(
+        "cmd", choices=["start", "stop", "restart", "status", "logs"], help="Action to perform"
+    )
+    p.add_argument(
+        "services",
+        nargs="*",
+        default=[],
+        help="Services: redis backend agentscope frontend (default: all)",
+    )
     args = p.parse_args()
 
     if args.cmd == "start":

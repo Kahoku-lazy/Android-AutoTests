@@ -266,12 +266,12 @@ async function updateEl(record, field, value) {
                         />
                       </template>
 
-                      <!-- Custom cell: xpath -->
+                      <!-- Custom cell: xpath — pre-parsed in selectPage() for performance -->
                       <template #cell-xpath="{ record }">
-                        <span v-if="record.xpath_candidates"
+                        <span v-if="record._first_xpath"
                           class="cell-code"
-                          :title="(JSON.parse(record.xpath_candidates)[0] || {}).xpath || ''">
-                          {{ (JSON.parse(record.xpath_candidates)[0] || {}).xpath || '—' }}
+                          :title="record._first_xpath">
+                          {{ record._first_xpath }}
                         </span>
                         <span v-else class="text-muted">—</span>
                       </template>

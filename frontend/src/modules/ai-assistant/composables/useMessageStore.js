@@ -46,6 +46,8 @@ export function rebuildToolFlow(blocks) {
 export function useMessageStore() {
   const messages = ref([]);
   const assistIdx = ref(-1);
+  /** Conversation ID that has an active background SSE stream. */
+  const backgroundStreamConvId = ref(null);
 
   function normalizeLoadedMessage(m, conv) {
     const flow =
@@ -100,6 +102,7 @@ export function useMessageStore() {
   return {
     messages,
     assistIdx,
+    backgroundStreamConvId,
     hydrateMessages,
     appendUserAndAssistantPlaceholder,
     clearMessages,

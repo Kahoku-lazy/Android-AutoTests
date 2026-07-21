@@ -12,6 +12,8 @@ from apps.device_pool.api import ensure_device
 from .models import Page, Element, PageFlow
 from .page_tree import (
     MAX_PAGE_TREE_DEPTH,
+    build_page_maps,
+    compute_depth,
     page_depth,
     validate_parent_and_depth,
     sibling_label_exists,
@@ -134,19 +136,10 @@ def device_info_view(request):
     """
     info = device.info()
     serial = device.current_serial
-    # Check occupation status from DB
-    occupied_by = ""
-    is_occupied = False
-    try:
-        dev = Device.objects.get(serial=serial)
-        if dev.status == 'BUSY' and dev.occupied_by:
-            occupied_by = dev.occupied_by
-            is_occupied = True
-    except Device.DoesNotExist:
-        pass
 
     try:
         dev = Device.objects.get(serial=serial)
+        is_occupied = dev.status == 'BUSY' and bool(dev.occupied_by)
         return JsonResponse({
             "ok": True,
             "serial": serial,
@@ -157,7 +150,7 @@ def device_info_view(request):
             "connection_type": device.get_connection_type(serial),
             "package": info.get("currentPackageName", ""),
             "occupied": is_occupied,
-            "occupied_by": occupied_by,
+            "occupied_by": dev.occupied_by if is_occupied else "",
         })
     except Device.DoesNotExist:
         return JsonResponse({
@@ -196,32 +189,39 @@ def screenshot_snapshot(request):
 
 # ── Page CRUD ──
 
-def _page_payload(p):
-  return {
-      "id": p.id,
-      "device_id": p.device_id,
-      "parent_id": p.parent_id,
-      "is_folder": p.is_folder,
-      "depth": page_depth(p),
-      "label": p.label,
-      "package": p.package,
-      "activity": p.activity,
-      "screenshot_path": p.screenshot_path,
-      "element_count": p.element_count,
-      "created_at": str(p.created_at),
-      "flow_out": getattr(p, "flow_out", 0),
-      "flow_in": getattr(p, "flow_in", 0),
-  }
+def _page_payload(p, parent_map=None):
+    depth = compute_depth(p.id, parent_map) if parent_map is not None else page_depth(p)
+    return {
+        "id": p.id,
+        "device_id": p.device_id,
+        "parent_id": p.parent_id,
+        "is_folder": p.is_folder,
+        "depth": depth,
+        "label": p.label,
+        "package": p.package,
+        "activity": p.activity,
+        "screenshot_path": p.screenshot_path,
+        "element_count": p.element_count,
+        "created_at": str(p.created_at),
+        "flow_out": getattr(p, "flow_out", 0),
+        "flow_in": getattr(p, "flow_in", 0),
+    }
 
 
 def list_pages(request):
-    """GET /api/elements/pages — List recorded pages (flat, with parent_id)."""
+    """GET /api/elements/pages — List recorded pages (flat, with parent_id).
+
+    Uses a single-query parent_map to compute depths without N+1 DB round-trips.
+    Supports ?offset=N&limit=N for pagination.
+    """
     pages = Page.objects.select_related("parent").annotate(
         flow_out=dm.Count('outgoing_flows', distinct=True),
         flow_in=dm.Count('incoming_flows', distinct=True),
     ).order_by('is_folder', 'label', '-created_at')
 
-    result = [_page_payload(p) for p in pages]
+    # Build in-memory parent map once to avoid N+1 in _page_payload → page_depth
+    parent_map, _ = build_page_maps()
+    result = [_page_payload(p, parent_map) for p in pages]
     return JsonResponse({"ok": True, "pages": result, "max_depth": MAX_PAGE_TREE_DEPTH})
 
 
@@ -233,11 +233,12 @@ def page_detail(request, page_id):
         new_label = data.get("label", "").strip()
         if not new_label:
             return JsonResponse({"ok": False, "error": "页面名称不能为空"}, status=400)
-        try:
-            page = Page.objects.get(id=page_id)
-        except Page.DoesNotExist:
+        # Fetch once for validation, then update in one query
+        page = Page.objects.filter(id=page_id).values('parent_id').first()
+        if page is None:
             return JsonResponse({"ok": False, "error": "页面不存在"}, status=404)
-        if sibling_label_exists(new_label, page.parent_id, exclude_id=page_id):
+        parent_id = page['parent_id']
+        if sibling_label_exists(new_label, parent_id, exclude_id=page_id):
             return JsonResponse({"ok": False, "error": f"同级名称「{new_label}」已存在"}, status=409)
         Page.objects.filter(id=page_id).update(label=new_label)
         return JsonResponse({"ok": True})
@@ -446,6 +447,8 @@ def batch_add_elements(request, page_id):
     skipped = 0
     errors = []
 
+    # Pre-process items and prepare fields
+    prepared = []
     for item in items:
         alias = item.get("alias", "").strip()
         if not alias:
@@ -466,39 +469,62 @@ def batch_add_elements(request, page_id):
             else:
                 xpaths = "[]"
 
-        fields = {
+        rid = item.get("resource_id", "")
+        bounds = item.get("bounds", "")
+        prepared.append({
             "alias": alias,
-            "class_name": item.get("class_name", ""),
-            "text_val": item.get("text_val", ""),
-            "content_desc": item.get("content_desc", ""),
-            "resource_id": item.get("resource_id", ""),
-            "bounds": item.get("bounds", ""),
-            "xpath_candidates": xpaths,
-            "clickable": bool(item.get("clickable", False)),
-            "enabled": bool(item.get("enabled", True)),
-            "notes": item.get("notes", ""),
-        }
+            "resource_id": rid,
+            "bounds": bounds,
+            "fields": {
+                "alias": alias,
+                "class_name": item.get("class_name", ""),
+                "text_val": item.get("text_val", ""),
+                "content_desc": item.get("content_desc", ""),
+                "resource_id": rid,
+                "bounds": bounds,
+                "xpath_candidates": xpaths,
+                "clickable": bool(item.get("clickable", False)),
+                "enabled": bool(item.get("enabled", True)),
+                "notes": item.get("notes", ""),
+            },
+        })
 
+    if not prepared:
+        return JsonResponse({"ok": True, "saved": 0, "updated": 0, "skipped": skipped,
+                             "errors": errors[:5] if errors else []})
+
+    # Batch query existing elements in ONE query: collect all (resource_id, bounds) pairs
+    lookup_keys = [(p["resource_id"], p["bounds"]) for p in prepared if p["resource_id"] and p["bounds"]]
+    existing_map = {}  # (resource_id, bounds) → Element
+    if lookup_keys:
+        # Query in batches to avoid too-large IN clauses, though this is rare
+        from django.db.models import Q
+        q_filter = Q()
+        for rid, bnd in lookup_keys:
+            q_filter |= Q(resource_id=rid, bounds=bnd)
+        existing_qs = Element.objects.filter(page=page).filter(q_filter)
+        for el in existing_qs:
+            existing_map[(el.resource_id, el.bounds)] = el
+
+    # Process each element — O(1) lookup instead of per-item DB query
+    for p in prepared:
         try:
-            existing = Element.objects.filter(
-                page=page,
-                resource_id=fields["resource_id"],
-                bounds=fields["bounds"],
-            ).first()
+            key = (p["resource_id"], p["bounds"])
+            existing = existing_map.get(key) if key[0] and key[1] else None
             if existing:
-                for k, v in fields.items():
+                for k, v in p["fields"].items():
                     setattr(existing, k, v)
                 existing.save()
                 updated += 1
             else:
                 try:
-                    Element.objects.create(page=page, **fields)
+                    Element.objects.create(page=page, **p["fields"])
                     saved += 1
                 except IntegrityError:
                     skipped += 1
                     continue
         except Exception as e:
-            errors.append(f"{alias}: {e}")
+            errors.append(f"{p['alias']}: {e}")
             skipped += 1
             continue
 
@@ -522,8 +548,19 @@ def clear_pages(request):
 
 
 def page_elements(request, page_id):
-    """GET /api/elements/pages/{page_id}/items — Page elements with filter."""
+    """GET /api/elements/pages/{page_id}/items — Page elements with filter + pagination.
+
+    Query params: ?filter=all|clickable|text|testpoint&offset=0&limit=50
+    """
     filter_type = request.GET.get("filter", "all")
+    try:
+        offset = int(request.GET.get("offset", 0))
+        limit = int(request.GET.get("limit", 100))
+    except (ValueError, TypeError):
+        offset, limit = 0, 100
+    offset = max(0, offset)
+    limit = max(1, min(limit, 500))  # cap at 500 to prevent oversized responses
+
     qs = Element.objects.filter(page_id=page_id)
     if filter_type == "clickable":
         qs = qs.filter(clickable=True)
@@ -531,7 +568,9 @@ def page_elements(request, page_id):
         qs = qs.exclude(text_val='')
     elif filter_type == "testpoint":
         qs = qs.filter(is_test_point=True)
-    qs = qs.order_by('id')
+
+    total = qs.count()
+    qs = qs.order_by('id')[offset:offset + limit]
 
     result = [{
         "id": e.id, "page_id": e.page_id, "class_name": e.class_name,
@@ -542,7 +581,7 @@ def page_elements(request, page_id):
         "is_test_point": e.is_test_point, "notes": e.notes,
         "created_at": str(e.created_at),
     } for e in qs]
-    return JsonResponse({"ok": True, "elements": result})
+    return JsonResponse({"ok": True, "elements": result, "total": total})
 
 
 @csrf_exempt

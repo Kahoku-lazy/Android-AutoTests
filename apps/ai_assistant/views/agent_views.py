@@ -1,4 +1,5 @@
 """Agent CRUD, reveal-key, health check, AgentScope registration."""
+
 import json
 
 from django.http import JsonResponse
@@ -23,6 +24,7 @@ from .common import call_agentscope, get_agentscope_token, validation_error
 def get_default_system_prompt(request):
     """GET /api/ai/default-system-prompt — return the default system prompt template."""
     from agentscope_service.agent_factory import DEFAULT_SYSTEM_PROMPT_TEMPLATE
+
     return JsonResponse({"ok": True, "template": DEFAULT_SYSTEM_PROMPT_TEMPLATE})
 
 
@@ -33,25 +35,34 @@ def list_available_skills(request):
     skills = []
     for name in ALL_SKILL_NAMES:
         cls = _SKILL_CLASS_MAP.get(name)
-        skills.append({
-            "name": name,
-            "description": (cls.description or "").strip() if cls else "",
-        })
+        skills.append(
+            {
+                "name": name,
+                "description": (cls.description or "").strip() if cls else "",
+            }
+        )
     return JsonResponse({"ok": True, "skills": skills})
 
 
 def list_agents(request):
-    qs = filter_agents_for_user(AIAgent.objects.all(), getattr(request, 'user_id', None))
+    qs = filter_agents_for_user(AIAgent.objects.all(), getattr(request, "user_id", None))
     agents = []
-    for a in qs.prefetch_related('tools'):
+    for a in qs.prefetch_related("tools"):
         tool_count = sum(1 for t in a.tools.all() if t.enabled)
-        agents.append({
-            "id": a.id, "name": a.name, "avatar": a.avatar, "tags": a.tags,
-            "description": a.description, "model_provider": a.model_provider,
-            "model_name": a.model_name, "status": a.status,
-            "tool_count": tool_count,
-            "created_at": str(a.created_at),
-        })
+        agents.append(
+            {
+                "id": a.id,
+                "name": a.name,
+                "avatar": a.avatar,
+                "tags": a.tags,
+                "description": a.description,
+                "model_provider": a.model_provider,
+                "model_name": a.model_name,
+                "status": a.status,
+                "tool_count": tool_count,
+                "created_at": str(a.created_at),
+            }
+        )
     return JsonResponse({"ok": True, "agents": agents})
 
 
@@ -59,39 +70,62 @@ def agent_detail(request, agent_id):
     if not check_agent_owner(request.user_id, agent_id):
         return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
     try:
-        a = AIAgent.objects.prefetch_related('tools').get(id=agent_id)
+        a = AIAgent.objects.prefetch_related("tools").get(id=agent_id)
     except AIAgent.DoesNotExist:
         return JsonResponse({"ok": False, "error": "not found"}, status=404)
-    tools = [{"id": t.id, "name": t.name, "tool_type": t.tool_type,
-              "config_json": t.config_json, "enabled": t.enabled} for t in a.tools.all()]
-    return JsonResponse({"ok": True, "agent": {
-        "id": a.id, "name": a.name, "avatar": a.avatar, "tags": a.tags,
-        "description": a.description, "model_provider": a.model_provider,
-        "model_name": a.model_name,
-        "api_key": mask_key(decrypt_key(a.api_key) if a.api_key else ''),
-        "base_url": a.base_url,
-        "system_prompt": a.system_prompt, "temperature": a.temperature,
-        "max_tokens": a.max_tokens, "formatter": a.formatter,
-        "max_iters": a.max_iters, "parallel_tool_calls": a.parallel_tool_calls,
-        "print_hint_msg": a.print_hint_msg, "memory_mode": a.memory_mode,
-        "long_term_memory_mode": a.long_term_memory_mode,
-        "enable_meta_tool": a.enable_meta_tool,
-        "enable_rewrite_query": a.enable_rewrite_query,
-        "generate_kwargs": a.generate_kwargs,
-        "skills_config": a.skills_config or {},
-        "knowledge_sources": a.knowledge_sources or [],
-        "compression_enabled": a.compression_enabled,
-        "compression_threshold": a.compression_threshold,
-        "compression_keep_recent": a.compression_keep_recent,
-        "compression_prompt": a.compression_prompt,
-        "compression_template": a.compression_template,
-        "tts_enabled": a.tts_enabled, "status": a.status,
-        "tools": tools,
-        "is_connected": a.is_connected,
-        "last_checked_at": str(a.last_checked_at) if a.last_checked_at else None,
-        "available_models": json.loads(a.available_models) if a.available_models else [],
-        "created_at": str(a.created_at),
-    }})
+    tools = [
+        {
+            "id": t.id,
+            "name": t.name,
+            "tool_type": t.tool_type,
+            "config_json": t.config_json,
+            "enabled": t.enabled,
+        }
+        for t in a.tools.all()
+    ]
+    return JsonResponse(
+        {
+            "ok": True,
+            "agent": {
+                "id": a.id,
+                "name": a.name,
+                "avatar": a.avatar,
+                "tags": a.tags,
+                "description": a.description,
+                "model_provider": a.model_provider,
+                "model_name": a.model_name,
+                "api_key": mask_key(decrypt_key(a.api_key) if a.api_key else ""),
+                "base_url": a.base_url,
+                "system_prompt": a.system_prompt,
+                "temperature": a.temperature,
+                "max_tokens": a.max_tokens,
+                "formatter": a.formatter,
+                "max_iters": a.max_iters,
+                "parallel_tool_calls": a.parallel_tool_calls,
+                "print_hint_msg": a.print_hint_msg,
+                "memory_mode": a.memory_mode,
+                "long_term_memory_mode": a.long_term_memory_mode,
+                "enable_meta_tool": a.enable_meta_tool,
+                "enable_rewrite_query": a.enable_rewrite_query,
+                "generate_kwargs": a.generate_kwargs,
+                "skills_config": a.skills_config or {},
+                "phase_tool_config": a.phase_tool_config or {},
+                "knowledge_sources": a.knowledge_sources or [],
+                "compression_enabled": a.compression_enabled,
+                "compression_threshold": a.compression_threshold,
+                "compression_keep_recent": a.compression_keep_recent,
+                "compression_prompt": a.compression_prompt,
+                "compression_template": a.compression_template,
+                "tts_enabled": a.tts_enabled,
+                "status": a.status,
+                "tools": tools,
+                "is_connected": a.is_connected,
+                "last_checked_at": str(a.last_checked_at) if a.last_checked_at else None,
+                "available_models": json.loads(a.available_models) if a.available_models else [],
+                "created_at": str(a.created_at),
+            },
+        }
+    )
 
 
 @csrf_exempt
@@ -107,14 +141,18 @@ def create_agent(request):
     # Auto-fill default system prompt template when empty
     if not (data.get("system_prompt") or "").strip():
         from agentscope_service.agent_factory import DEFAULT_SYSTEM_PROMPT_TEMPLATE
+
         data["system_prompt"] = DEFAULT_SYSTEM_PROMPT_TEMPLATE
     a = AIAgent.objects.create(
         owner_id=int(request.user_id),
-        name=data.get("name", ""), avatar=data.get("avatar", "🤖"),
-        tags=data.get("tags", ""), description=data.get("description", ""),
+        name=data.get("name", ""),
+        avatar=data.get("avatar", "🤖"),
+        tags=data.get("tags", ""),
+        description=data.get("description", ""),
         model_provider=data.get("model_provider", "dashscope"),
         model_name=data.get("model_name", "qwen-max"),
-        api_key=encrypt_key(data.get("api_key", "")), base_url=data.get("base_url", ""),
+        api_key=encrypt_key(data.get("api_key", "")),
+        base_url=data.get("base_url", ""),
         system_prompt=data.get("system_prompt", ""),
         temperature=data.get("temperature", 0.7),
         max_tokens=data.get("max_tokens", 4096),
@@ -134,12 +172,18 @@ def create_agent(request):
         compression_template=data.get("compression_template", ""),
         tts_enabled=data.get("tts_enabled", False),
         skills_config=data.get("skills_config", {}),
+        phase_tool_config=data.get("phase_tool_config", {}),
         knowledge_sources=data.get("knowledge_sources", []),
-        key_revealed=False)
+        key_revealed=False,
+    )
     for t in data.get("tools", []):
-        AITool.objects.create(agent=a, name=t.get("name", ""),
+        AITool.objects.create(
+            agent=a,
+            name=t.get("name", ""),
             tool_type=t.get("tool_type", "mcp"),
-            config_json=t.get("config_json", "{}"), enabled=t.get("enabled", True))
+            config_json=t.get("config_json", "{}"),
+            enabled=t.get("enabled", True),
+        )
     return JsonResponse({"ok": True, "id": a.id})
 
 
@@ -158,31 +202,82 @@ def update_agent(request, agent_id):
         return validation_error(errors)
     data = cleaned
     key_changed = False
-    if 'api_key' in data and data['api_key']:
-        if '***' in data['api_key']:
-            del data['api_key']
+    if "api_key" in data and data["api_key"]:
+        if "***" in data["api_key"]:
+            del data["api_key"]
         else:
-            data['api_key'] = encrypt_key(data['api_key'])
+            data["api_key"] = encrypt_key(data["api_key"])
             key_changed = True
-    for f in ['name', 'avatar', 'tags', 'description', 'model_provider', 'model_name',
-              'api_key', 'base_url', 'system_prompt', 'temperature', 'max_tokens',
-              'formatter', 'max_iters', 'parallel_tool_calls', 'print_hint_msg',
-              'memory_mode', 'long_term_memory_mode', 'enable_meta_tool',
-              'enable_rewrite_query', 'generate_kwargs',
-              'compression_enabled', 'compression_threshold', 'compression_keep_recent',
-              'compression_prompt', 'compression_template', 'tts_enabled', 'status',
-              'skills_config', 'knowledge_sources']:
+    for f in [
+        "name",
+        "avatar",
+        "tags",
+        "description",
+        "model_provider",
+        "model_name",
+        "api_key",
+        "base_url",
+        "system_prompt",
+        "temperature",
+        "max_tokens",
+        "formatter",
+        "max_iters",
+        "parallel_tool_calls",
+        "print_hint_msg",
+        "memory_mode",
+        "long_term_memory_mode",
+        "enable_meta_tool",
+        "enable_rewrite_query",
+        "generate_kwargs",
+        "compression_enabled",
+        "compression_threshold",
+        "compression_keep_recent",
+        "compression_prompt",
+        "compression_template",
+        "tts_enabled",
+        "status",
+        "skills_config",
+        "phase_tool_config",
+        "knowledge_sources",
+    ]:
         if f in data:
             setattr(a, f, data[f])
     if key_changed:
         a.key_revealed = False
     a.save()
-    if 'tools' in data:
+    if "tools" in data:
         a.tools.all().delete()
-        for t in data['tools']:
-            AITool.objects.create(agent=a, name=t.get("name", ""),
+        for t in data["tools"]:
+            AITool.objects.create(
+                agent=a,
+                name=t.get("name", ""),
                 tool_type=t.get("tool_type", "mcp"),
-                config_json=t.get("config_json", "{}"), enabled=t.get("enabled", True))
+                config_json=t.get("config_json", "{}"),
+                enabled=t.get("enabled", True),
+            )
+
+    # Sync API key to AgentScope credential if agent is registered and key changed
+    if key_changed and a.agent_scope_id:
+        try:
+            provider_cfg = get_provider_config(a.model_provider, a.base_url)
+            token = get_agentscope_token(request)
+            call_agentscope(
+                "/credential/",
+                "POST",
+                {
+                    "data": {
+                        "type": provider_cfg["credential_type"],
+                        "api_key": decrypt_key(a.api_key),
+                        "base_url": provider_cfg["base_url"],
+                        "agent_django_id": str(a.id),
+                    },
+                },
+                token,
+                timeout=5,
+            )
+        except Exception:
+            pass  # Don't fail the update if AgentScope is unreachable
+
     return JsonResponse({"ok": True})
 
 
@@ -202,23 +297,27 @@ def reveal_api_key(request, agent_id):
 
     if a.key_revealed:
         decrypted = decrypt_key(a.api_key)
-        return JsonResponse({
-            "ok": True,
-            "api_key": mask_key(decrypted),
-            "revealed": False,
-            "hint": "API Key 仅支持一次性查看，已过期",
-        })
+        return JsonResponse(
+            {
+                "ok": True,
+                "api_key": mask_key(decrypted),
+                "revealed": False,
+                "hint": "API Key 仅支持一次性查看，已过期",
+            }
+        )
 
     decrypted = decrypt_key(a.api_key)
     a.key_revealed = True
-    a.save(update_fields=['key_revealed', 'updated_at'])
+    a.save(update_fields=["key_revealed", "updated_at"])
 
-    return JsonResponse({
-        "ok": True,
-        "api_key": decrypted,
-        "revealed": True,
-        "hint": "请立即复制保存，此 Key 仅显示一次",
-    })
+    return JsonResponse(
+        {
+            "ok": True,
+            "api_key": decrypted,
+            "revealed": True,
+            "hint": "请立即复制保存，此 Key 仅显示一次",
+        }
+    )
 
 
 @csrf_exempt
@@ -239,10 +338,9 @@ def health_check_all_agents(request):
     for a in AIAgent.objects.filter(status="active"):
         connected = a.is_connected
         if a.api_key:
-            needs_check = (
-                not a.last_checked_at
-                or (datetime.now() - a.last_checked_at.replace(tzinfo=None)) > timedelta(minutes=30)
-            )
+            needs_check = not a.last_checked_at or (
+                datetime.now() - a.last_checked_at.replace(tzinfo=None)
+            ) > timedelta(minutes=30)
             if needs_check:
                 chat_body = {
                     "model": a.model_name,
@@ -255,12 +353,14 @@ def health_check_all_agents(request):
                 a.last_checked_at = datetime.now()
                 a.save()
 
-        results.append({
-            "id": a.id,
-            "name": a.name,
-            "is_connected": connected,
-            "last_checked": str(a.last_checked_at) if a.last_checked_at else None,
-        })
+        results.append(
+            {
+                "id": a.id,
+                "name": a.name,
+                "is_connected": connected,
+                "last_checked": str(a.last_checked_at) if a.last_checked_at else None,
+            }
+        )
     return JsonResponse({"ok": True, "agents": results})
 
 
@@ -275,9 +375,11 @@ def register_agent_in_agentscope(request, agent_id):
     except AIAgent.DoesNotExist:
         return JsonResponse({"ok": False, "error": "agent not found"}, status=404)
 
-    api_key = decrypt_key(agent_cfg.api_key) if agent_cfg.api_key else ''
+    api_key = decrypt_key(agent_cfg.api_key) if agent_cfg.api_key else ""
     if not api_key:
-        return JsonResponse({"ok": False, "error": "API key required for AgentScope registration"}, status=400)
+        return JsonResponse(
+            {"ok": False, "error": "API key required for AgentScope registration"}, status=400
+        )
 
     token = get_agentscope_token(request)
     provider_cfg = get_provider_config(agent_cfg.model_provider, agent_cfg.base_url)
@@ -291,13 +393,21 @@ def register_agent_in_agentscope(request, agent_id):
         },
     }
 
-    resp, err = call_agentscope('/credential/', 'POST', credential_body, token)
+    resp, err = call_agentscope("/credential/", "POST", credential_body, token)
     if err:
-        return JsonResponse({"ok": False, "error": f"credential creation failed: {err}"}, status=503)
+        return JsonResponse(
+            {"ok": False, "error": f"credential creation failed: {err}"}, status=503
+        )
     if resp.status_code not in (200, 201):
-        return JsonResponse({"ok": False, "error": f"credential creation failed: HTTP {resp.status_code} — {resp.text[:200]}"}, status=503)
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": f"credential creation failed: HTTP {resp.status_code} — {resp.text[:200]}",
+            },
+            status=503,
+        )
 
-    credential_id = resp.json().get('credential_id', '')
+    credential_id = resp.json().get("credential_id", "")
 
     agent_body = {
         "name": agent_cfg.name,
@@ -307,21 +417,31 @@ def register_agent_in_agentscope(request, agent_id):
             "parallel_tool_calls": agent_cfg.parallel_tool_calls,
         },
     }
-    resp, err = call_agentscope('/agent/', 'POST', agent_body, token)
+    resp, err = call_agentscope("/agent/", "POST", agent_body, token)
     if err:
         return JsonResponse({"ok": False, "error": f"agent creation failed: {err}"}, status=503)
     if resp.status_code not in (200, 201):
-        return JsonResponse({"ok": False, "error": f"agent creation failed: HTTP {resp.status_code} — {resp.text[:200]}"}, status=503)
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": f"agent creation failed: HTTP {resp.status_code} — {resp.text[:200]}",
+            },
+            status=503,
+        )
 
-    agent_scope_id = resp.json().get('agent_id', '')
+    agent_scope_id = resp.json().get("agent_id", "")
     if not agent_scope_id:
-        return JsonResponse({"ok": False, "error": "AgentScope did not return agent_id"}, status=503)
+        return JsonResponse(
+            {"ok": False, "error": "AgentScope did not return agent_id"}, status=503
+        )
 
     agent_cfg.agent_scope_id = agent_scope_id
-    agent_cfg.save(update_fields=['agent_scope_id', 'updated_at'])
+    agent_cfg.save(update_fields=["agent_scope_id", "updated_at"])
 
-    return JsonResponse({
-        "ok": True,
-        "agent_scope_id": agent_scope_id,
-        "credential_id": credential_id,
-    })
+    return JsonResponse(
+        {
+            "ok": True,
+            "agent_scope_id": agent_scope_id,
+            "credential_id": credential_id,
+        }
+    )

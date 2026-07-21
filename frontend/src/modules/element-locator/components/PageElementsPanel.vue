@@ -4,6 +4,7 @@ import { ElMessage } from 'element-plus'
 import { animate } from 'animejs'
 import client, { formatApiError } from '@/shared/api-client.js'
 import { useElementStore } from '../store.js'
+import { bus } from '@/shared/event-bus.js'
 
 const store = useElementStore()
 
@@ -28,12 +29,8 @@ async function captureThumbnailScreenshot() {
   try {
     const { data } = await client.get('/elements/screenshot')
     if (data.ok && data.image) {
-      const binary = atob(data.image)
-      const bytes = new Uint8Array(binary.length)
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-      const blob = new Blob([bytes], { type: `image/${data.format || 'jpeg'}` })
-      const url = URL.createObjectURL(blob)
-      if (thumbnailUrl.value) URL.revokeObjectURL(thumbnailUrl.value)
+      // Use data URL directly — browser decodes natively
+      const url = `data:image/${data.format || 'jpeg'};base64,${data.image}`
       thumbnailUrl.value = url
       loadImageDims(url)
       return true
@@ -68,7 +65,7 @@ async function refreshElements() {
 }
 
 onUnmounted(() => {
-  if (thumbnailUrl.value) URL.revokeObjectURL(thumbnailUrl.value)
+  thumbnailUrl.value = ''
 })
 
 // ── Selection state ──
@@ -189,7 +186,17 @@ function pageLabel(p) {
   return p.label || `Page #${p.id}`
 }
 
-async function loadPages() {
+async function openBatchSave() {
+  if (checkedIds.value.size === 0) {
+    ElMessage.warning('请先勾选要保存的元素')
+    return
+  }
+  // Show dialog immediately, then load pages asynchronously
+  batchSaveVisible.value = true
+  batchSaveForm.value = {
+    pageId: null,
+    strategy: 'resource-id',
+  }
   pagesLoading.value = true
   try {
     const { data } = await client.get('/elements/pages')
@@ -199,18 +206,8 @@ async function loadPages() {
   } finally {
     pagesLoading.value = false
   }
-}
-
-async function openBatchSave() {
-  if (checkedIds.value.size === 0) {
-    ElMessage.warning('请先勾选要保存的元素')
-    return
-  }
-  await loadPages()
-  batchSaveForm.value = {
-    pageId: pages.value.find(p => !p.is_folder)?.id || null,
-    strategy: 'resource-id',
-  }
+  // Set default page after loading
+  batchSaveForm.value.pageId = pages.value.find(p => !p.is_folder)?.id || null
   if (!batchSaveForm.value.pageId) {
     try {
       const pkg = store.lastDump?.package || store.currentDevice?.package || ''
@@ -226,14 +223,11 @@ async function openBatchSave() {
         pages.value.push({ id: page.id, label: page.label || data.label })
       } else {
         ElMessage.error(data.error || '自动创建页面失败')
-        return
       }
     } catch (e) {
       ElMessage.error({ message: formatApiError(e, '自动创建页面失败'), duration: 4000, showClose: true })
-      return
     }
   }
-  batchSaveVisible.value = true
 }
 
 function getCheckedElements() {
@@ -300,6 +294,8 @@ async function doBatchSave() {
       ElMessage.success({ message: msg, duration: 4000 })
       batchSaveVisible.value = false
       checkedIds.value = new Set()
+      // Notify element manager to refresh its table
+      bus.emit('elements-saved', { pageId: batchSaveForm.value.pageId })
     } else {
       ElMessage.error(data.error || '批量保存失败')
     }

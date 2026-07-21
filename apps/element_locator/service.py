@@ -9,7 +9,7 @@ def gen_xpath_candidates(el: dict, all_els: list[dict]) -> list[dict]:
     index, combined (resource-id+text), wildcard resource-id, wildcard text.
 
     Pre-indexes all_els into dicts keyed by class_name, resource_id, text,
-    and (class, rid) pairs for O(1) count lookups instead of O(n) scans.
+    and compound keys for O(1) count lookups instead of O(n) scans.
     """
     cls = el["class_name"]
     rid = el["resource_id"]
@@ -22,6 +22,9 @@ def gen_xpath_candidates(el: dict, all_els: list[dict]) -> list[dict]:
     by_rid = {}
     by_text = {}
     by_class_rid = {}
+    by_text_and_class = {}       # (class_name, text) → count  — O(1) for text lookup
+    by_desc_and_class = {}       # (class_name, content_desc) → count  — O(1) for desc lookup
+    by_rid_text_class = {}       # (class_name, resource_id, text) → count  — O(1) for combined
     for e in all_els:
         c = e["class_name"]
         by_class[c] = by_class.get(c, 0) + 1
@@ -33,6 +36,12 @@ def gen_xpath_candidates(el: dict, all_els: list[dict]) -> list[dict]:
         t = e["text"]
         if t:
             by_text[t] = by_text.get(t, 0) + 1
+            by_text_and_class[(c, t)] = by_text_and_class.get((c, t), 0) + 1
+            if r:
+                by_rid_text_class[(c, r, t)] = by_rid_text_class.get((c, r, t), 0) + 1
+        d = e["content_desc"]
+        if d:
+            by_desc_and_class[(c, d)] = by_desc_and_class.get((c, d), 0) + 1
 
     locators = []
 
@@ -45,19 +54,17 @@ def gen_xpath_candidates(el: dict, all_els: list[dict]) -> list[dict]:
 
     if txt:
         xp = f'//{cls}[@text=\'{txt}\']'
-        count = 0
-        for e in all_els:
-            if e["text"] == txt and e["class_name"] == cls:
-                count += 1
-        locators.append({"type": "text", "xpath": xp, "count": count})
+        locators.append({
+            "type": "text", "xpath": xp,
+            "count": by_text_and_class.get((cls, txt), 0),
+        })
 
     if desc:
         xp = f'//{cls}[@content-desc=\'{desc}\']'
-        count = 0
-        for e in all_els:
-            if e["content_desc"] == desc and e["class_name"] == cls:
-                count += 1
-        locators.append({"type": "content-desc", "xpath": xp, "count": count})
+        locators.append({
+            "type": "content-desc", "xpath": xp,
+            "count": by_desc_and_class.get((cls, desc), 0),
+        })
 
     xp = f'//{cls}'
     locators.append({
@@ -77,11 +84,10 @@ def gen_xpath_candidates(el: dict, all_els: list[dict]) -> list[dict]:
 
     if rid and txt:
         xp = f'//{cls}[@resource-id=\'{rid}\' and @text=\'{txt}\']'
-        count = 0
-        for e in all_els:
-            if e["resource_id"] == rid and e["text"] == txt and e["class_name"] == cls:
-                count += 1
-        locators.append({"type": "combined", "xpath": xp, "count": count})
+        locators.append({
+            "type": "combined", "xpath": xp,
+            "count": by_rid_text_class.get((cls, rid, txt), 0),
+        })
 
     if rid:
         locators.append({

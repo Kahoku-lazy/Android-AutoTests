@@ -29,7 +29,7 @@ const inputText = ref("");
 const chatBody = ref(null);
 
 const messageStore = useMessageStore();
-const { messages, assistIdx } = messageStore;
+const { messages, assistIdx, backgroundStreamConvId } = messageStore;
 
 const { toolCalls, resetToolCalls } = useToolCalls();
 
@@ -128,6 +128,7 @@ const {
   checkHealth,
   sendStreamMessage,
   stopStream,
+  detachStream,
   resolveConfirm,
   approveAll,
   denyAll,
@@ -143,6 +144,7 @@ const {
   renderMermaidBlocks,
   loadConversations,
   updateTaskCardProgress: _updateTaskCardProgress,
+  backgroundStreamConvId,
 });
 
 onMounted(() => {
@@ -150,7 +152,9 @@ onMounted(() => {
   checkHealth();
 });
 onUnmounted(() => {
-  if (abortController.value) abortController.value.abort();
+  // Save partial content and detach — let the SSE stream finish in background.
+  // When the user returns, completed messages will be loaded from the backend.
+  detachStream();
 });
 
 const activeConvTitle = computed(() => {
@@ -265,6 +269,11 @@ async function newChat(ev) {
 }
 
 async function selectChat(id) {
+  // Save partial content of current conversation before switching.
+  // Use stopStream (not detachStream) here because switching conversations
+  // replaces messages.value — the old stream's callbacks would write to
+  // the wrong array otherwise.
+  stopStream();
   await switchChat(id, {
     onAfterSelect: async () => {
       scrollBottom();
@@ -274,7 +283,8 @@ async function selectChat(id) {
 
 async function sendMessage() {
   const text = inputText.value.trim();
-  if ((!text && !uploadedFile.value) || !activeConv.value || sending.value) return;
+  if ((!text && !uploadedFile.value) || !activeConv.value || sending.value)
+    return;
   // 同步占位，防止 Enter 连触 / 重复事件在 await 前再次进入
   sending.value = true;
   inputText.value = "";
@@ -318,7 +328,13 @@ function avatarText(avatar) {
 }
 
 function toggleThinking(m) {
-  m.thinkingExpanded = !m.thinkingExpanded;
+  // Replace the object in the array to trigger Vue reactivity.
+  // Direct property mutation (m.thinkingExpanded = ...) on a plain object
+  // inside a ref array is not tracked by Vue.
+  const idx = messages.value.findIndex((msg) => msg === m);
+  if (idx >= 0) {
+    messages.value[idx] = { ...m, thinkingExpanded: !m.thinkingExpanded };
+  }
 }
 
 async function handleImportPRD({ sessionId }) {
@@ -474,10 +490,7 @@ async function handleImportPRD({ sessionId }) {
               </div>
             </div>
 
-            <div
-              v-if="degradedMode"
-              class="degraded-banner"
-            >
+            <div v-if="degradedMode" class="degraded-banner">
               ⚠️ AgentScope 服务不可用，当前为
               <strong>Django 降级模式</strong>
               — AI 对话直接调用模型 API，SSE 流式输出和工具调用暂不可用

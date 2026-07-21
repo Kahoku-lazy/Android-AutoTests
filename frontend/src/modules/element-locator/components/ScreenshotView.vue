@@ -29,7 +29,6 @@ const ringInnerRef = ref(null)
 const noDeviceIconRef = ref(null)
 const noDeviceTitleRef = ref(null)
 
-let blobUrl = null
 let resizeObserver = null
 let frameTimer = null
 let pendingFrame = null
@@ -203,16 +202,7 @@ async function refresh() {
   return fetchSnapshot()
 }
 
-defineExpose({ refresh })
-
-// ── Blob URL management (single-image guarantee) ──
-
-function revokeBlobUrl() {
-  if (blobUrl) {
-    URL.revokeObjectURL(blobUrl)
-    blobUrl = null
-  }
-}
+defineExpose({ refresh, redraw: scheduleDrawOverlay })
 
 // ── WebSocket ──
 
@@ -247,6 +237,8 @@ function connectWS() {
     statusMessage.value = screenshotUrl.value ? '' : '已连接，正在获取画面…'
     emit('device-changed', { type: 'connected' })
     if (!screenshotUrl.value) fetchSnapshot({ silent: true })
+    // WebSocket connected — stop redundant HTTP polling
+    stopPolling()
   }
   ws.value.onerror = () => {
     wsState.value = 'error'
@@ -256,6 +248,8 @@ function connectWS() {
     if (!props.active) return  // don't reconnect if parent disconnected
     wsState.value = 'connecting'
     statusMessage.value = '连接已断开，正在重连…'
+    // Restart HTTP polling as fallback while WS reconnects
+    startPolling()
     reconnectTimer = setTimeout(connectWS, 3000)
   }
 }
@@ -275,13 +269,9 @@ function flushScreenshot() {
 }
 
 function applyScreenshot(b64, format) {
-  const binary = atob(b64)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-  revokeBlobUrl()
-  blobUrl = URL.createObjectURL(new Blob([bytes], { type: `image/${format}` }))
-  screenshotUrl.value = blobUrl
-  emit('screenshot-update', { url: blobUrl })
+  // Use data URL directly — browser decodes natively (much faster than atob + byte loop)
+  screenshotUrl.value = `data:image/${format};base64,${b64}`
+  emit('screenshot-update', { url: screenshotUrl.value })
 }
 
 function displayScale() {
@@ -290,8 +280,17 @@ function displayScale() {
   return img.clientWidth / props.screenW
 }
 
+let overlayDrawPending = false
+
 function scheduleDrawOverlay() {
-  nextTick(() => requestAnimationFrame(drawOverlay))
+  if (overlayDrawPending) return
+  overlayDrawPending = true
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      overlayDrawPending = false
+      drawOverlay()
+    })
+  })
 }
 
 function drawOverlay() {
@@ -354,7 +353,8 @@ function onImgLoad() {
 }
 
 watch(() => props.selected, () => scheduleDrawOverlay())
-watch(() => props.elements, () => scheduleDrawOverlay(), { deep: true })
+// Shallow watch — parent passes new array reference when elements change
+watch(() => props.elements, () => scheduleDrawOverlay())
 watch([() => props.screenW, () => props.screenH], () => scheduleDrawOverlay())
 
 function hitTest(clientX, clientY) {
@@ -386,15 +386,21 @@ function onScreenClick(e) {
 
 function onScreenContextMenu(e) { e.preventDefault(); onScreenClick(e) }
 
+let mousemoveRaf = null
+
 function onMouseMove(e) {
-  const hit = hitTest(e.clientX, e.clientY)
-  if (hit !== hovered.value) {
-    hovered.value = hit
-    scheduleDrawOverlay()
-  }
-  if (overlayRef.value) {
-    overlayRef.value.style.cursor = hit ? 'pointer' : 'crosshair'
-  }
+  if (mousemoveRaf) return // throttle to one hit-test per animation frame
+  mousemoveRaf = requestAnimationFrame(() => {
+    mousemoveRaf = null
+    const hit = hitTest(e.clientX, e.clientY)
+    if (hit !== hovered.value) {
+      hovered.value = hit
+      scheduleDrawOverlay()
+    }
+    if (overlayRef.value) {
+      overlayRef.value.style.cursor = hit ? 'pointer' : 'crosshair'
+    }
+  })
 }
 
 function onMouseLeave() {

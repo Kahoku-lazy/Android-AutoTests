@@ -30,6 +30,7 @@ export function useSSE({
   renderMermaidBlocks,
   loadConversations,
   updateTaskCardProgress,
+  backgroundStreamConvId,
 }) {
   const streamMode = ref(null);
   const abortController = ref(null);
@@ -42,6 +43,12 @@ export function useSSE({
   /** 最近一次交互是否处于断线态（不禁用发送，仅影响展示） */
   const aiDisconnected = ref(false);
   let replyWatchdog = null;
+
+  // Background streaming support: when the component unmounts we keep the
+  // SSE stream alive so the AI can finish, and save partial state so the
+  // user sees content when they return.
+  let _detached = false;
+  let _streamConvId = null; // captured at stream start, safe to use after unmount
 
   function clearReplyWatchdog() {
     if (replyWatchdog) {
@@ -70,13 +77,72 @@ export function useSSE({
     return !disconnected;
   }
 
+  /** Save current partial assistant content to backend before navigating away. */
+  async function _savePartialToBackend(reason = "detached") {
+    if (assistIdx.value >= messages.value.length) return;
+    const msg = messages.value[assistIdx.value];
+    if (!msg || msg.role !== "assistant") return;
+    const content = msg.content || "";
+    const thinking = msg.thinking || "";
+    // Nothing to save — skip
+    if (!content && !thinking) return;
+    const convId = _streamConvId || activeConv.value;
+    if (!convId) return;
+    try {
+      // Build blocks array with current thinking state so it can be
+      // reconstructed when the message is loaded back.
+      const blocks = [];
+      if (thinking) {
+        blocks.push({
+          type: "thinking",
+          thinking,
+          done: !!msg.thinkingDone,
+        });
+      }
+      if (content) {
+        blocks.push({ type: "text", text: content });
+      }
+      await client.post(`/ai/conversations/${convId}/save-message`, {
+        role: "assistant",
+        content,
+        blocks,
+        reason,
+        tokens: msg.tokens || 0,
+        input_tokens: msg.inputTokens || 0,
+        model_name: msg.modelName || "",
+      });
+    } catch (e) {
+      console.warn("Failed to save partial message before detach:", e);
+    }
+  }
+
+  /** Detach the stream when navigating away from the chat page.
+   *  Saves partial content and keeps the SSE stream alive in the
+   *  background.  When the user returns, in-memory messages are
+   *  preserved via backgroundStreamConvId.
+   *  For in-component conversation switching use stopStream() instead
+   *  (which also saves partial content but aborts the old stream). */
+  async function detachStream() {
+    if (!sending.value) return;
+    await _savePartialToBackend("detached");
+    _detached = true;
+    // Keep backgroundStreamConvId set so returning to this conversation
+    // preserves in-memory messages.  It will be cleared by finishSending
+    // when the background stream completes.
+    // Don't abort — let the SSE stream finish in background.
+    // When onDone fires it will persist the full response.
+  }
+
   function finishSending() {
     clearReplyWatchdog();
     sending.value = false;
     streamMode.value = null;
     abortController.value = null;
     modelStatus.value = "idle";
-    scrollBottom();
+    if (!_detached) scrollBottom();
+    _detached = false;
+    if (backgroundStreamConvId) backgroundStreamConvId.value = null;
+    _streamConvId = null;
   }
 
   function armReplyWatchdog() {
@@ -124,11 +190,11 @@ export function useSSE({
   }
 
   async function fallbackSend(msgText) {
+    const convId = _streamConvId || activeConv.value;
     try {
-      const { data } = await client.post(
-        `/ai/conversations/${activeConv.value}/send`,
-        { message: msgText },
-      );
+      const { data } = await client.post(`/ai/conversations/${convId}/send`, {
+        message: msgText,
+      });
       if (data.ok) {
         if (data.degraded) degradedMode.value = true;
         const ok = settleAssistant(data.message?.content || "", {
@@ -136,9 +202,11 @@ export function useSSE({
           flow: "fallback",
         });
         if (ok) {
-          loadConversations();
-          await nextTick();
-          renderMermaidBlocks();
+          if (!_detached) {
+            loadConversations();
+            await nextTick();
+            renderMermaidBlocks();
+          }
         }
       } else {
         settleAssistant(data.error || "", { flow: "fallback" });
@@ -151,20 +219,28 @@ export function useSSE({
   }
 
   async function trySSEStream(msgText) {
+    // Capture conversation ID at stream start so background completion
+    // saves to the correct conversation even after component unmount.
+    _streamConvId = activeConv.value;
+    _detached = false;
+    if (backgroundStreamConvId) backgroundStreamConvId.value = _streamConvId;
+
     const { data: sessionData } = await client.post(
-      `/ai/conversations/${activeConv.value}/create-scope-session`,
+      `/ai/conversations/${_streamConvId}/create-scope-session`,
     );
     if (!sessionData.ok) {
-      throw new Error(sessionData.error || "AgentScope session creation failed");
+      throw new Error(
+        sessionData.error || "AgentScope session creation failed",
+      );
     }
 
     const sessionId = sessionData.session_id;
     const agentScopeId = sessionData.agent_scope_id;
 
-    const conv = conversations.value.find((c) => c.id === activeConv.value);
+    const conv = conversations.value.find((c) => c.id === _streamConvId);
     if (conv) conv.agent_scope_session_id = sessionId;
 
-    await client.post(`/ai/conversations/${activeConv.value}/save-message`, {
+    await client.post(`/ai/conversations/${_streamConvId}/save-message`, {
       role: "user",
       content: msgText,
     });
@@ -180,237 +256,251 @@ export function useSSE({
     let thinkingContent = "";
     let currentToolArgsJson = "";
 
-    const { controller, builder } = streamChat(sessionId, agentScopeId, msgText, {
-      onStatus: (status) => {
-        modelStatus.value = status;
-        if (status === "done") {
-          setTimeout(() => {
-            if (modelStatus.value === "done") modelStatus.value = "idle";
-          }, 3000);
-        }
-      },
-      onThinkingStart: () => {
-        thinkingContent = "";
-        if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value].thinking = "";
-          messages.value[assistIdx.value].content = fullContent;
-          scrollBottom();
-        }
-      },
-      onThinkingDelta: (delta, full) => {
-        thinkingContent = full || thinkingContent + delta;
-        if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value].thinking = thinkingContent;
-          scrollBottom();
-        }
-      },
-      onThinkingEnd: (evt) => {
-        if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value].thinkingDone = true;
-          if (evt?.block?.thinking) {
-            messages.value[assistIdx.value].thinking = evt.block.thinking;
+    const { controller, builder } = streamChat(
+      sessionId,
+      agentScopeId,
+      msgText,
+      {
+        onStatus: (status) => {
+          modelStatus.value = status;
+          if (status === "done") {
+            setTimeout(() => {
+              if (modelStatus.value === "done") modelStatus.value = "idle";
+            }, 3000);
           }
-          scrollBottom();
-        }
-      },
-      onTextDelta: (delta, full) => {
-        fullContent = full != null ? full : fullContent + delta;
-        if (assistIdx.value < messages.value.length) {
-          // 鉴权/通道失败时立刻换成统一断线文案（发送仍保持可用）
-          messages.value[assistIdx.value].content = isDisconnectContent(
-            fullContent,
-          )
-            ? AI_DISCONNECT_MSG
-            : fullContent;
-          scrollBottom();
-        }
-      },
-      onTextEnd: (evt) => {
-        if (evt?.text != null) {
-          fullContent = evt.text;
+        },
+        onThinkingStart: () => {
+          thinkingContent = "";
           if (assistIdx.value < messages.value.length) {
+            messages.value[assistIdx.value].thinking = "";
             messages.value[assistIdx.value].content = fullContent;
+            if (!_detached) scrollBottom();
           }
-        }
-      },
-      onToolCallStart: (evt) => {
-        currentToolArgsJson = "";
-        toolCalls.value.push({
-          id: evt.toolCallId,
-          name: evt.name,
-          state: "calling",
-        });
-        if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value].toolFlow = [...toolCalls.value];
-          scrollBottom();
-        }
-      },
-      onToolCallDelta: (evt) => {
-        currentToolArgsJson =
-          evt.argsJson != null
-            ? evt.argsJson
-            : currentToolArgsJson + (evt.delta || "");
-      },
-      onToolCallEnd: (evt) => {
-        const tc = evt.toolCall;
-        if (tc) {
-          const idx = toolCalls.value.findIndex((t) => t.id === tc.id);
-          const displayArgs = tc.inputRaw || currentToolArgsJson;
-          if (idx >= 0) {
-            toolCalls.value[idx] = { ...tc, state: "submitted", displayArgs };
-          }
-        }
-        if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value].toolFlow = [...toolCalls.value];
-          scrollBottom();
-        }
-      },
-      onToolResultStart: (evt) => {
-        const idx = toolCalls.value.findIndex((t) => t.id === evt.toolCallId);
-        if (idx >= 0) toolCalls.value[idx].state = "running";
-        if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value].toolFlow = [...toolCalls.value];
-          scrollBottom();
-        }
-      },
-      onToolResultDelta: (evt) => {
-        const idx = toolCalls.value.findIndex((t) => t.id === evt.toolCallId);
-        if (idx >= 0) {
-          toolCalls.value[idx].partialOutput =
-            evt.output != null
-              ? evt.output
-              : (toolCalls.value[idx].partialOutput || "") + (evt.delta || "");
-        }
-        if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value].toolFlow = [...toolCalls.value];
-          scrollBottom();
-        }
-      },
-      onToolResultEnd: (evt) => {
-        const tr = evt.toolResult;
-        if (tr) {
-          const idx = toolCalls.value.findIndex((t) => t.id === tr.id);
-          if (idx >= 0) {
-            toolCalls.value[idx].state = tr.state || "success";
-            toolCalls.value[idx].output = tr.output;
-            toolCalls.value[idx].partialOutput = null;
-          }
-          updateTaskCardProgress(tr);
-        }
-        if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value].toolFlow = [...toolCalls.value];
-          scrollBottom();
-        }
-      },
-      onModelCallStart: (evt) => {
-        if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value].modelName = evt.modelName;
-        }
-      },
-      onModelCallEnd: (evt) => {
-        if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value].tokens = evt.outputTokens || 0;
-          messages.value[assistIdx.value].inputTokens = evt.inputTokens || 0;
-        }
-      },
-      onHint: (evt) => {
-        let hintData = evt.hint;
-        if (typeof hintData === "string") {
-          try {
-            hintData = JSON.parse(hintData);
-          } catch {}
-        }
-        if (hintData?.type === "task_card" && hintData?.run_id) {
-          const existing = taskCards.value[hintData.run_id] || {};
-          taskCards.value[hintData.run_id] = {
-            ...existing,
-            ...hintData,
-            updatedAt: Date.now(),
-          };
+        },
+        onThinkingDelta: (delta, full) => {
+          thinkingContent = full || thinkingContent + delta;
           if (assistIdx.value < messages.value.length) {
+            messages.value[assistIdx.value].thinking = thinkingContent;
+            if (!_detached) scrollBottom();
+          }
+        },
+        onThinkingEnd: (evt) => {
+          if (assistIdx.value < messages.value.length) {
+            messages.value[assistIdx.value].thinkingDone = true;
+            if (evt?.block?.thinking) {
+              messages.value[assistIdx.value].thinking = evt.block.thinking;
+            }
+            if (!_detached) scrollBottom();
+          }
+        },
+        onTextDelta: (delta, full) => {
+          fullContent = full != null ? full : fullContent + delta;
+          if (assistIdx.value < messages.value.length) {
+            // 鉴权/通道失败时立刻换成统一断线文案（发送仍保持可用）
+            messages.value[assistIdx.value].content = isDisconnectContent(
+              fullContent,
+            )
+              ? AI_DISCONNECT_MSG
+              : fullContent;
+            if (!_detached) scrollBottom();
+          }
+        },
+        onTextEnd: (evt) => {
+          if (evt?.text != null) {
+            fullContent = evt.text;
+            if (assistIdx.value < messages.value.length) {
+              messages.value[assistIdx.value].content = fullContent;
+            }
+          }
+        },
+        onToolCallStart: (evt) => {
+          currentToolArgsJson = "";
+          toolCalls.value.push({
+            id: evt.toolCallId,
+            name: evt.name,
+            state: "calling",
+          });
+          if (assistIdx.value < messages.value.length) {
+            messages.value[assistIdx.value].toolFlow = [...toolCalls.value];
+            if (!_detached) scrollBottom();
+          }
+        },
+        onToolCallDelta: (evt) => {
+          currentToolArgsJson =
+            evt.argsJson != null
+              ? evt.argsJson
+              : currentToolArgsJson + (evt.delta || "");
+        },
+        onToolCallEnd: (evt) => {
+          const tc = evt.toolCall;
+          if (tc) {
+            const idx = toolCalls.value.findIndex((t) => t.id === tc.id);
+            const displayArgs = tc.inputRaw || currentToolArgsJson;
+            if (idx >= 0) {
+              toolCalls.value[idx] = { ...tc, state: "submitted", displayArgs };
+            }
+          }
+          if (assistIdx.value < messages.value.length) {
+            messages.value[assistIdx.value].toolFlow = [...toolCalls.value];
+            if (!_detached) scrollBottom();
+          }
+        },
+        onToolResultStart: (evt) => {
+          const idx = toolCalls.value.findIndex((t) => t.id === evt.toolCallId);
+          if (idx >= 0) toolCalls.value[idx].state = "running";
+          if (assistIdx.value < messages.value.length) {
+            messages.value[assistIdx.value].toolFlow = [...toolCalls.value];
+            if (!_detached) scrollBottom();
+          }
+        },
+        onToolResultDelta: (evt) => {
+          const idx = toolCalls.value.findIndex((t) => t.id === evt.toolCallId);
+          if (idx >= 0) {
+            toolCalls.value[idx].partialOutput =
+              evt.output != null
+                ? evt.output
+                : (toolCalls.value[idx].partialOutput || "") +
+                  (evt.delta || "");
+          }
+          if (assistIdx.value < messages.value.length) {
+            messages.value[assistIdx.value].toolFlow = [...toolCalls.value];
+            if (!_detached) scrollBottom();
+          }
+        },
+        onToolResultEnd: (evt) => {
+          const tr = evt.toolResult;
+          if (tr) {
+            const idx = toolCalls.value.findIndex((t) => t.id === tr.id);
+            if (idx >= 0) {
+              toolCalls.value[idx].state = tr.state || "success";
+              toolCalls.value[idx].output = tr.output;
+              toolCalls.value[idx].partialOutput = null;
+            }
+            updateTaskCardProgress(tr);
+          }
+          if (assistIdx.value < messages.value.length) {
+            messages.value[assistIdx.value].toolFlow = [...toolCalls.value];
+            if (!_detached) scrollBottom();
+          }
+        },
+        onModelCallStart: (evt) => {
+          if (assistIdx.value < messages.value.length) {
+            messages.value[assistIdx.value].modelName = evt.modelName;
+          }
+        },
+        onModelCallEnd: (evt) => {
+          if (assistIdx.value < messages.value.length) {
+            messages.value[assistIdx.value].tokens = evt.outputTokens || 0;
+            messages.value[assistIdx.value].inputTokens = evt.inputTokens || 0;
+          }
+        },
+        onHint: (evt) => {
+          let hintData = evt.hint;
+          if (typeof hintData === "string") {
+            try {
+              hintData = JSON.parse(hintData);
+            } catch {}
+          }
+          if (hintData?.type === "task_card" && hintData?.run_id) {
+            const existing = taskCards.value[hintData.run_id] || {};
+            taskCards.value[hintData.run_id] = {
+              ...existing,
+              ...hintData,
+              updatedAt: Date.now(),
+            };
+            if (assistIdx.value < messages.value.length) {
+              messages.value[assistIdx.value].hint = hintData;
+            }
+            if (!_detached) scrollBottom();
+          } else if (assistIdx.value < messages.value.length) {
             messages.value[assistIdx.value].hint = hintData;
+            if (!_detached) scrollBottom();
           }
-          scrollBottom();
-        } else if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value].hint = hintData;
-          scrollBottom();
-        }
-      },
-      onRequireConfirm: (evt) => {
-        modelStatus.value = "idle";
-        pendingConfirm.value = evt;
-        pendingConfirmMsgIdx.value = assistIdx.value;
-      },
-      onExceedMaxIters: () => {
-        if (assistIdx.value < messages.value.length) {
-          const block = builder.getFullThinking();
-          messages.value[assistIdx.value].thinking = block;
-          messages.value[assistIdx.value].thinkingDone = true;
-          messages.value[assistIdx.value].reason = "exceed_max_iters";
-          messages.value[assistIdx.value].content =
-            (messages.value[assistIdx.value].content || "") +
-            "\n\n⚠️ **[智能体已达最大推理次数]** 响应可能被截断，建议简化问题或分步提问。";
-          scrollBottom();
-        }
-      },
-      onDone: async () => {
-        if (streamDone) return;
-        streamDone = true;
-        clearReplyWatchdog();
-        const finalContent = builder.getFullText() || fullContent;
-        const blocks = builder.getBlocks();
-        const reason = builder.getReason();
-        const ok = settleAssistant(finalContent, {
-          blocks,
-          reason: isDisconnectContent(finalContent) ? "error" : reason || "normal",
-          tokens: builder.getTokenUsage().total || 0,
-          inputTokens: builder.getTokenUsage().input || 0,
-          model_name: builder.modelName || "",
-          flow: "sse",
-        });
-        if (ok) {
-          try {
-            await client.post(
-              `/ai/conversations/${activeConv.value}/save-message`,
-              {
-                role: "assistant",
-                content: finalContent,
-                blocks,
-                reason,
-                tokens: builder.getTokenUsage().total || 0,
-                input_tokens: builder.getTokenUsage().input || 0,
-                model_name: builder.modelName || "",
-              },
-            );
-            loadConversations();
-            await nextTick();
-            renderMermaidBlocks();
-          } catch (e) {
-            console.error("Failed to save streamed message:", e);
+        },
+        onRequireConfirm: (evt) => {
+          modelStatus.value = "idle";
+          pendingConfirm.value = evt;
+          pendingConfirmMsgIdx.value = assistIdx.value;
+        },
+        onExceedMaxIters: () => {
+          if (assistIdx.value < messages.value.length) {
+            const block = builder.getFullThinking();
+            messages.value[assistIdx.value].thinking = block;
+            messages.value[assistIdx.value].thinkingDone = true;
+            messages.value[assistIdx.value].reason = "exceed_max_iters";
+            messages.value[assistIdx.value].content =
+              (messages.value[assistIdx.value].content || "") +
+              "\n\n⚠️ **[智能体已达最大推理次数]** 响应可能被截断，建议简化问题或分步提问。";
+            if (!_detached) scrollBottom();
           }
-        }
-        finishSending();
+        },
+        onDone: async () => {
+          if (streamDone) return;
+          streamDone = true;
+          clearReplyWatchdog();
+          const finalContent = builder.getFullText() || fullContent;
+          const blocks = builder.getBlocks();
+          const reason = builder.getReason();
+          const ok = settleAssistant(finalContent, {
+            blocks,
+            reason: isDisconnectContent(finalContent)
+              ? "error"
+              : reason || "normal",
+            tokens: builder.getTokenUsage().total || 0,
+            inputTokens: builder.getTokenUsage().input || 0,
+            model_name: builder.modelName || "",
+            flow: "sse",
+          });
+          if (ok) {
+            try {
+              const saveConvId = _streamConvId || activeConv.value;
+              await client.post(
+                `/ai/conversations/${saveConvId}/save-message`,
+                {
+                  role: "assistant",
+                  content: finalContent,
+                  blocks,
+                  reason,
+                  tokens: builder.getTokenUsage().total || 0,
+                  input_tokens: builder.getTokenUsage().input || 0,
+                  model_name: builder.modelName || "",
+                },
+              );
+              // Only update UI if component is still mounted
+              if (!_detached) {
+                loadConversations();
+                await nextTick();
+                renderMermaidBlocks();
+              }
+            } catch (e) {
+              console.error("Failed to save streamed message:", e);
+            }
+          }
+          finishSending();
+        },
+        onError: async (err) => {
+          if (streamDone) return;
+          streamDone = true;
+          clearReplyWatchdog();
+          console.warn("SSE stream error, falling back:", err);
+          streamMode.value = "fallback";
+          connectionMode.value = "fallback";
+          modelStatus.value = "idle";
+          if (assistIdx.value < messages.value.length) {
+            messages.value[assistIdx.value].flow = "fallback";
+          }
+          await fallbackSend(msgText);
+        },
       },
-      onError: async (err) => {
-        if (streamDone) return;
-        streamDone = true;
-        clearReplyWatchdog();
-        console.warn("SSE stream error, falling back:", err);
-        streamMode.value = "fallback";
-        connectionMode.value = "fallback";
-        modelStatus.value = "idle";
-        if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value].flow = "fallback";
-        }
-        await fallbackSend(msgText);
-      },
-    });
+    );
 
     abortController.value = controller;
     sseBuilder.value = builder;
 
     try {
-      const convItem = conversations.value.find((c) => c.id === activeConv.value);
+      const convItem = conversations.value.find(
+        (c) => c.id === activeConv.value,
+      );
       if (convItem && convItem.title === "新对话") {
         const { data } = await client.post(
           `/ai/conversations/${activeConv.value}/rename`,
@@ -475,13 +565,16 @@ export function useSSE({
           messages.value[assistIdx.value].reason = "stopped";
         }
         client
-          .post(`/ai/conversations/${activeConv.value}/save-message`, {
-            role: "assistant",
-            content,
-            tokens: 0,
-            reason: "stopped",
-            blocks: sseBuilder.value ? sseBuilder.value.getBlocks() : [],
-          })
+          .post(
+            `/ai/conversations/${_streamConvId || activeConv.value}/save-message`,
+            {
+              role: "assistant",
+              content,
+              tokens: 0,
+              reason: "stopped",
+              blocks: sseBuilder.value ? sseBuilder.value.getBlocks() : [],
+            },
+          )
           .catch((e) => console.error("Failed to save partial stream:", e));
       }
       finishSending();
@@ -567,6 +660,7 @@ export function useSSE({
     fallbackSend,
     sendStreamMessage,
     stopStream,
+    detachStream,
     resolveConfirm,
     approveAll,
     denyAll,

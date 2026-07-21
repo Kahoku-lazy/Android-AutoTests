@@ -4,6 +4,7 @@ import { ElMessage } from 'element-plus'
 import { animate } from 'animejs'
 import client, { formatApiError } from '@/shared/api-client.js'
 import { useElementStore } from '../store.js'
+import { bus } from '@/shared/event-bus.js'
 
 const props = defineProps({ element: { type: Object, default: null } })
 const emit = defineEmits(['add-step', 'do-action'])
@@ -68,18 +69,6 @@ function pageLabel(p) {
   return p.label || `Page #${p.id}`
 }
 
-async function loadPages() {
-  pagesLoading.value = true
-  try {
-    const { data } = await client.get('/elements/pages')
-    if (data.ok) pages.value = data.pages || []
-  } catch (e) {
-    ElMessage.error({ message: formatApiError(e, '加载页面列表失败'), duration: 4000, showClose: true })
-  } finally {
-    pagesLoading.value = false
-  }
-}
-
 async function openSaveDialog() {
   if (!props.element) return
   const rank = ['resource-id','text','content-desc','class','index','combined','resource-id (any)','text (any)']
@@ -91,14 +80,25 @@ async function openSaveDialog() {
     ElMessage.warning('当前元素没有唯一定位策略（匹配数=1），无法保存')
     return
   }
-  await loadPages()
+  // Show dialog immediately, then load pages asynchronously
   const autoName = props.element.text || props.element.resource_id?.split('/').pop() || ''
   saveCandidates.value = candidates
   saveForm.value = {
-    pageId: pages.value[0]?.id || null,
+    pageId: null,
     alias: autoName,
     selectedXpath: candidates[0].xpath,
   }
+  saveVisible.value = true
+  pagesLoading.value = true
+  try {
+    const { data } = await client.get('/elements/pages')
+    if (data.ok) pages.value = data.pages || []
+  } catch (e) {
+    ElMessage.error({ message: formatApiError(e, '加载页面列表失败'), duration: 4000, showClose: true })
+  } finally {
+    pagesLoading.value = false
+  }
+  saveForm.value.pageId = pages.value[0]?.id || null
   if (!saveForm.value.pageId) {
     const pkg = store.lastDump?.package || store.currentDevice?.package || ''
     const activity = store.lastDump?.activity || ''
@@ -117,14 +117,11 @@ async function openSaveDialog() {
         })
       } else {
         ElMessage.error(data.error || '自动创建页面失败')
-        return
       }
     } catch (e) {
       ElMessage.error({ message: formatApiError(e, '自动创建页面失败'), duration: 4000, showClose: true })
-      return
     }
   }
-  saveVisible.value = true
 }
 
 async function doSave() {
@@ -153,6 +150,8 @@ async function doSave() {
         duration: 2500,
       })
       saveVisible.value = false
+      // Notify element manager to refresh its table
+      bus.emit('elements-saved', { pageId: saveForm.value.pageId })
     } else {
       ElMessage.warning({ message: data.error || '保存未完成，请检查填写内容', duration: 4000, showClose: true })
     }

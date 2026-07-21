@@ -82,14 +82,21 @@ class DevicePool:
     # ── Info ──
 
     def info(self) -> dict:
-        """Get device display info via Airtest."""
+        """Get device display info via Airtest (cached 2s to avoid redundant ADB calls)."""
+        now = time.monotonic()
+        cache = getattr(self, '_info_cache', None)
+        if cache and (now - cache['ts']) < 2.0:
+            return cache['data']
         with DevicePool._op_lock:
             try:
                 result = dict(self.ad.display_info)
                 result["connection_type"] = self.get_connection_type()
+                self._info_cache = {'ts': now, 'data': result}
                 return result
             except Exception:
-                return {"connection_type": self.get_connection_type()}
+                fallback = {"connection_type": self.get_connection_type()}
+                self._info_cache = {'ts': now, 'data': fallback}
+                return fallback
 
     # ── Screenshot ──
 

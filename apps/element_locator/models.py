@@ -12,8 +12,8 @@ class Page(models.Model):
         'self', on_delete=models.CASCADE, null=True, blank=True,
         related_name='children',
     )
-    is_folder = models.BooleanField(default=False)
-    label = models.CharField(max_length=500, default='', blank=True)
+    is_folder = models.BooleanField(default=False, db_index=True)
+    label = models.CharField(max_length=500, default='', blank=True, db_index=True)
     package = models.CharField(max_length=500, default='', blank=True)
     activity = models.CharField(max_length=500, default='', blank=True)
     screenshot_path = models.CharField(max_length=1000, default='', blank=True)
@@ -24,6 +24,9 @@ class Page(models.Model):
         db_table = 'el_pages'
         verbose_name = '页面'
         verbose_name_plural = '页面'
+        indexes = [
+            models.Index(fields=['parent_id', 'label'], name='idx_el_pages_parent_label'),
+        ]
 
     def __str__(self):
         return self.label or f"Page #{self.id}"
@@ -44,7 +47,7 @@ class Element(models.Model):
     enabled = models.BooleanField(default=False)
     alias = models.CharField(max_length=500, default='', blank=True)
     tags = models.CharField(max_length=500, default='', blank=True)
-    is_test_point = models.BooleanField(default=False)
+    is_test_point = models.BooleanField(default=False, db_index=True)
     notes = models.TextField(default='', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

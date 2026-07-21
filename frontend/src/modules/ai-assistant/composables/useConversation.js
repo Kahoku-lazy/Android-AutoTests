@@ -50,7 +50,17 @@ export function useConversation(agentIdRef, messageStore) {
         } else {
           connectionMode.value = "connecting";
         }
-        messageStore.hydrateMessages(data.messages, conv);
+        // If there is an active background stream for this conversation,
+        // keep the in-memory messages (which have live partial content)
+        // instead of overwriting with stale backend data.
+        if (messageStore.backgroundStreamConvId?.value === id) {
+          // Don't hydrate — in-memory messages are being updated by the
+          // background SSE stream.  The backend will get the final content
+          // when the stream completes.
+        } else {
+          messageStore.backgroundStreamConvId.value = null;
+          messageStore.hydrateMessages(data.messages, conv);
+        }
       }
     } catch (_) {
       connectionMode.value = "unknown";

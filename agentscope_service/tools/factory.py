@@ -1,9 +1,11 @@
 """Tool factory — builds the tool list for AgentScope agents from Django config."""
+
 from __future__ import annotations
 
 from agentscope.tool import ToolBase
 
 from apps.ai_assistant.models import AIAgent
+from apps.test_runner.models import TestSOP
 
 from .case_tools import (
     DebugTestCaseTool,
@@ -107,8 +109,60 @@ def _instantiate_tools(enabled_names: set[str], ctx: ToolContext) -> list:
     return tools
 
 
+def _get_current_sop_phase(session_id: str) -> int | None:
+    """Resolve the current SOP phase for a given AgentScope session.
+
+    Looks up AIConversation by agent_scope_session_id, then TestSOP by conv_id.
+    Returns the phase number (1-4) or None if no SOP exists yet.
+    """
+    from apps.ai_assistant.models import AIConversation
+
+    try:
+        conv = AIConversation.objects.filter(agent_scope_session_id=session_id).first()
+        if conv is None:
+            return None
+        sop = TestSOP.objects.filter(conv_id=conv.id).order_by("-updated_at").first()
+        if sop is None:
+            return None
+        return sop.phase
+    except Exception:
+        return None
+
+
+def _apply_phase_filter(enabled_names: set[str], agent_id: str, session_id: str) -> set[str]:
+    """Filter tool names by the agent's phase_tool_config for the current SOP phase.
+
+    Returns the filtered set (may be unchanged if no config or no phase found).
+    """
+    try:
+        agent = AIAgent.objects.get(id=int(agent_id))
+    except (AIAgent.DoesNotExist, ValueError, TypeError):
+        return enabled_names
+
+    config = agent.phase_tool_config or {}
+    if not config:
+        return enabled_names  # No phase config → all tools allowed
+
+    phase = _get_current_sop_phase(session_id)
+    if phase is None:
+        return enabled_names  # No SOP yet → don't filter
+
+    phase_key = str(phase)
+    phase_tool_names = config.get(phase_key)
+    if not phase_tool_names:
+        return enabled_names  # Phase not configured → all tools allowed
+
+    # Intersection: only keep tools that are both enabled AND in the phase list
+    phase_set = set(phase_tool_names)
+    return enabled_names & phase_set
+
+
 async def build_business_tools(user_id: str, agent_id: str, session_id: str) -> list:
     """Build agent-filtered business tools with per-call context.
+
+    Applies two layers of filtering:
+      1. ai_tools table — per-agent enable/disable (via _resolve_enabled_names).
+      2. phase_tool_config — per-SOP-phase tool subsets (optional, configurable in UI).
 
     Plan tools (TaskCreate/Get/List/Update) are provided natively by
     the AgentScope framework — we only supply platform business tools here.
@@ -119,4 +173,9 @@ async def build_business_tools(user_id: str, agent_id: str, session_id: str) -> 
         session_id=str(session_id or ""),
     )
     enabled_names = await run_sync(lambda: _resolve_enabled_names(agent_id))
+    # Apply SOP phase filter if configured
+    if enabled_names:
+        enabled_names = await run_sync(
+            lambda: _apply_phase_filter(enabled_names, agent_id, session_id)
+        )
     return _instantiate_tools(enabled_names, ctx)

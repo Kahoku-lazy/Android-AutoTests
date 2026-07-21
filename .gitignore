@@ -80,6 +80,13 @@ data_migration.json
 # ── Test exports ──
 demo_test_*.yaml
 
+# ── Dev docs debug/design HTML reports ──
+dev_docs/**/*.html
+
+# ── Debug snapshots & design reports (root-level) ──
+/device-page-snapshot.md
+/*.html
+
 # ── Third-party project (not part of this repo) ──
 PM-Project-main/
 
@@ -87,6 +94,19 @@ PM-Project-main/
 *.tmp.*
 skills-lock.json
 agent_scope_map.html
+
+# ── Runtime artifacts ──
+dump.rdb
+token.json
+
+# ── Accidentally committed Claude internal files ──
+/C*Users*claude*stoken*
+
+# ── Screenshots & demo images (root-level) ──
+/aurora-*.png
+/perf-stats-visible.png
+/taskdetail-*.png
+/tests/screenshots/
 
 # Test reports
 tests/functional/*/reports/

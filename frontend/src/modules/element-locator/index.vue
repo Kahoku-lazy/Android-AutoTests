@@ -183,6 +183,16 @@ function onDeviceChanged(msg) {
 function onScreenshotUpdate({ url }) {
   store.screenshotUrl = url
 }
+
+// Keep tab state alive: force overlay redraw when switching back to discovery
+watch(activeTab, async (tab) => {
+  if (tab === 'discovery') {
+    await nextTick()
+    requestAnimationFrame(() => {
+      screenshotRef.value?.redraw()
+    })
+  }
+})
 </script>
 
 <template>
@@ -195,7 +205,7 @@ function onScreenshotUpdate({ url }) {
 
     <AppTabs :items="tabs" v-model="activeTab" :leaf-animation="true" :shadow="true" class="locator-tabs">
       <template #discovery>
-        <div class="doc-body">
+        <div v-show="activeTab === 'discovery'" class="doc-body">
           <section class="doc-section locator-section">
             <!-- Toolbar -->
             <div class="toolbar">
@@ -244,7 +254,7 @@ function onScreenshotUpdate({ url }) {
               <section class="col col-phone">
                 <ScreenshotView
                   ref="screenshotRef"
-                  :active="store.isConnected"
+                  :active="store.isConnected && activeTab === 'discovery'"
                   :screen-w="store.screenW"
                   :screen-h="store.screenH"
                   :elements="filteredElements"
@@ -271,7 +281,9 @@ function onScreenshotUpdate({ url }) {
       </template>
 
       <template #manage>
-        <ElementManager />
+        <div v-show="activeTab === 'manage'">
+          <ElementManager />
+        </div>
       </template>
     </AppTabs>
   </div>

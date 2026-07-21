@@ -37,7 +37,7 @@
  *   2. Subscribe SSE:     GET  /sessions/{session_id}/stream?agent_id=xxx
  *   3. Trigger chat:      POST /chat/                        → fire-and-forget
  */
-import { agentscopeClient, getToken } from '@/shared/api-client'
+import djangoClient, { agentscopeClient, getToken } from '@/shared/api-client'
 
 // ── JWT helpers ──
 function getUserId() {
@@ -498,4 +498,80 @@ export function streamChat(sessionId, agentScopeId, message, callbacks = {}) {
     }
   })
   return { controller, builder }
+}
+
+
+// ── Agent configuration helpers ──
+
+/** Fetch the default system prompt template. */
+export async function fetchDefaultPrompt() {
+  const { data } = await djangoClient.get('/ai/default-system-prompt')
+  return data
+}
+
+/** Fetch the list of available platform business tools. */
+export async function fetchPlatformTools() {
+  const { data } = await djangoClient.get('/ai/available-tools')
+  return data
+}
+
+/** Fetch the list of available workspace skills. */
+export async function fetchAvailableSkills() {
+  const { data } = await djangoClient.get('/ai/available-skills')
+  return data
+}
+
+/** Fetch the list of knowledge base documents. */
+export async function fetchKnowledgeDocuments() {
+  const { data } = await djangoClient.get('/ai/knowledge/documents')
+  return data
+}
+
+
+// ── MCP & Skill management ──
+
+/** Fetch an agent's MCP servers and skills. */
+export async function fetchAgentTools(agentId) {
+  const { data } = await djangoClient.get(`/ai/agents/${agentId}/tools`)
+  return data
+}
+
+/** Save (create or update) an MCP server config. */
+export async function saveMcp(agentId, name, configJson) {
+  const { data } = await djangoClient.post(`/ai/agents/${agentId}/tools/mcp/save`, {
+    name,
+    config_json: configJson,
+  })
+  return data
+}
+
+/** Test MCP server connectivity. Returns {ok, connected, detail}. */
+export async function testMcpConnection(agentId, configObj) {
+  const { data } = await djangoClient.post(`/ai/agents/${agentId}/tools/mcp/test`, configObj)
+  return data
+}
+
+/** Upload a skill folder. files: File[], name: string */
+export async function uploadSkill(agentId, files, name) {
+  const formData = new FormData()
+  formData.append('name', name)
+  for (const file of files) {
+    formData.append('files', file, file.webkitRelativePath || file.name)
+  }
+  const { data } = await djangoClient.post(`/ai/agents/${agentId}/tools/skill/upload`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
+/** Toggle a tool enabled/disabled. */
+export async function toggleToolEnabled(agentId, toolId, enabled) {
+  const { data } = await djangoClient.post(`/ai/agents/${agentId}/tools/${toolId}/toggle`, { enabled })
+  return data
+}
+
+/** Delete an MCP or Skill tool. */
+export async function deleteToolById(agentId, toolId) {
+  const { data } = await djangoClient.post(`/ai/agents/${agentId}/tools/${toolId}/delete`)
+  return data
 }

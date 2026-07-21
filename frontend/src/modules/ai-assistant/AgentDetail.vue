@@ -2,9 +2,10 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import client from '@/shared/api-client.js'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import { IconArrowLeft, IconSave, IconPlus, IconTrash } from '@/shared/icons/index.js'
+import { fetchDefaultPrompt, fetchPlatformTools, fetchAvailableSkills, fetchKnowledgeDocuments, fetchAgentTools, saveMcp as saveMcpApi, testMcpConnection, uploadSkill as uploadSkillApi, toggleToolEnabled, deleteToolById } from './api.js'
 
 const route = useRoute(); const router = useRouter()
 const agentId = route.params.agentId; const isNew = agentId === 'new'
@@ -15,25 +16,42 @@ const form = ref({
   name:'', avatar:'🤖', tags:'', description:'',
   model_provider:'dashscope', model_name:'qwen-max', api_key:'', base_url:'',
   system_prompt:'', temperature:0.7, max_tokens:4096, generate_kwargs:'{}',
-  formatter:'dashscope', max_iters:10, parallel_tool_calls:false, print_hint_msg:false,
+  formatter:'dashscope', max_iters:10, parallel_tool_calls:true, print_hint_msg:false,
   memory_mode:'inmemory', long_term_memory_mode:'both', enable_meta_tool:false,
   enable_rewrite_query:true, enable_knowledge_base:true, tools:[],
   compression_enabled:false, compression_threshold:10000, compression_keep_recent:3,
   compression_prompt:'', compression_template:'', tts_enabled:false,
+  skills_config: {},
+  knowledge_sources: [],
 })
 
 onMounted(async () => {
+  // Always load available platform tools list, skills, and knowledge docs
+  await loadPlatformTools()
+  await loadAvailableSkills()
+  await loadKnowledgeDocs()
+  await loadAgentTools()
+
   if (!isNew) { loading.value = true
     try {
       const { data } = await client.get(`/ai/agents/${agentId}`)
       if (data.ok) {
-        // 将 API tools 的 config_json 解析为编辑表单字段
-        const tools = (data.agent.tools || []).map(parseToolFromApi)
-        form.value = { ...form.value, ...data.agent, tools }
+        // Restore selected platform tools from agent detail
+        const allTools = data.agent.tools || []
+        const platformNames = allTools
+          .filter(t => t.tool_type === 'platform' && t.enabled)
+          .map(t => t.name)
+        selectedPlatformTools.value = new Set(platformNames)
+        // Don't populate form.tools from API — MCP tools loaded via loadAgentTools()
+        form.value = { ...form.value, ...data.agent, tools: [] }
         agent.value = data.agent
       }
     } catch(_){}
     loading.value = false }
+  else {
+    // New agent: pre-fill default system prompt template
+    await loadDefaultPrompt()
+  }
 })
 
 const providers = [
@@ -46,6 +64,239 @@ const providers = [
 
 const detectingModels = ref(false)
 const detectedModels = ref([])
+
+// Platform tool selection
+const availablePlatformTools = ref([])       // [{name, description}]
+const selectedPlatformTools = ref(new Set())  // Set of enabled tool names
+const loadingPlatformTools = ref(false)
+
+async function loadPlatformTools() {
+  loadingPlatformTools.value = true
+  try {
+    const data = await fetchPlatformTools()
+    if (data.ok) availablePlatformTools.value = data.tools || []
+  } catch (_) {}
+  loadingPlatformTools.value = false
+}
+
+function togglePlatformTool(name) {
+  const s = new Set(selectedPlatformTools.value)
+  if (s.has(name)) s.delete(name)
+  else s.add(name)
+  selectedPlatformTools.value = s
+}
+
+function isPlatformToolSelected(name) {
+  return selectedPlatformTools.value.has(name)
+}
+
+// Workspace skill toggles
+const availableSkills = ref([])       // [{name, description}]
+const loadingSkills = ref(false)
+
+async function loadAvailableSkills() {
+  loadingSkills.value = true
+  try {
+    const data = await fetchAvailableSkills()
+    if (data.ok) availableSkills.value = data.skills || []
+  } catch (_) {}
+  loadingSkills.value = false
+}
+
+function isSkillEnabled(name) {
+  const cfg = form.value.skills_config || {}
+  return cfg[name] !== false  // default: enabled
+}
+
+function toggleSkill(name) {
+  const cfg = { ...(form.value.skills_config || {}) }
+  cfg[name] = !isSkillEnabled(name)
+  form.value.skills_config = cfg
+}
+
+// Knowledge base document selection
+const knowledgeDocs = ref([])     // [{id, source, type, size}]
+const loadingDocs = ref(false)
+
+async function loadKnowledgeDocs() {
+  loadingDocs.value = true
+  try {
+    const data = await fetchKnowledgeDocuments()
+    if (data.ok) knowledgeDocs.value = data.data?.documents || []
+  } catch (_) {}
+  loadingDocs.value = false
+}
+
+function isDocEnabled(docId) {
+  const sources = form.value.knowledge_sources || []
+  if (!sources.length) return true  // empty = all enabled
+  return sources.includes(docId)
+}
+
+function toggleDoc(docId) {
+  let sources = [...(form.value.knowledge_sources || [])]
+  if (sources.length === 0) {
+    // Currently "all enabled" — switch to explicit list with all docs minus this one
+    sources = knowledgeDocs.value.map(d => d.id)
+  }
+  if (sources.includes(docId)) {
+    sources = sources.filter(s => s !== docId)
+  } else {
+    sources.push(docId)
+  }
+  // If all docs are enabled, clear to "all" state
+  const allIds = new Set(knowledgeDocs.value.map(d => d.id))
+  const selectedIds = new Set(sources)
+  if (allIds.size === selectedIds.size && [...allIds].every(id => selectedIds.has(id))) {
+    form.value.knowledge_sources = []
+  } else {
+    form.value.knowledge_sources = sources
+  }
+}
+
+// MCP management (edit mode uses API directly; create mode stashes in form.tools)
+const mcpTools = ref([])
+const mcpDialogVisible = ref(false)
+const mcpDialogMode = ref('add')
+const mcpEditingIndex = ref(-1)
+const mcpForm = ref({ name: '', config_json: '{\n  "transport": "stdio",\n  "command": "",\n  "args": []\n}' })
+const mcpJsonError = ref('')
+const mcpTestingId = ref(null)
+const mcpTestResults = ref({})
+
+// Skill management (only available in edit mode)
+const skills = ref([])
+const skillUploading = ref(false)
+const skillFolderInput = ref(null)
+
+// ── MCP functions ──
+async function loadAgentTools() {
+  if (isNew.value) return
+  try {
+    const data = await fetchAgentTools(agentId)
+    if (data.ok) {
+      mcpTools.value = data.data?.mcp || []
+      skills.value = data.data?.skills || []
+    }
+  } catch (_) {}
+}
+
+function openMcpDialog(mode = 'add', index = -1) {
+  mcpDialogMode.value = mode
+  mcpEditingIndex.value = index
+  mcpJsonError.value = ''
+  if (mode === 'edit' && index >= 0) {
+    const list = isNew.value ? form.value.tools : mcpTools.value
+    const t = list[index]
+    const cfgStr = typeof t.config_json === 'string' ? t.config_json : JSON.stringify(t.config || t.config_json || {}, null, 2)
+    mcpForm.value = { name: t.name || '', config_json: cfgStr }
+  } else {
+    mcpForm.value = { name: '', config_json: '{\n  "transport": "stdio",\n  "command": "",\n  "args": []\n}' }
+  }
+  mcpDialogVisible.value = true
+}
+
+async function saveMcpTool() {
+  if (!mcpForm.value.name.trim()) { ElMessage.warning('请输入 MCP 名称'); return }
+  try {
+    JSON.parse(mcpForm.value.config_json)
+  } catch {
+    mcpJsonError.value = 'JSON 格式无效'; return
+  }
+  mcpJsonError.value = ''
+
+  if (isNew.value) {
+    if (mcpDialogMode.value === 'add') {
+      form.value.tools.push({ name: mcpForm.value.name.trim(), tool_type: 'mcp', enabled: true, config_json: mcpForm.value.config_json })
+    } else if (mcpEditingIndex.value >= 0) {
+      form.value.tools[mcpEditingIndex.value] = { ...form.value.tools[mcpEditingIndex.value], name: mcpForm.value.name.trim(), config_json: mcpForm.value.config_json }
+    }
+  } else {
+    const data = await saveMcpApi(agentId, mcpForm.value.name.trim(), mcpForm.value.config_json)
+    if (data.ok) { await loadAgentTools() } else { ElMessage.error(data.error || '保存失败'); return }
+  }
+  mcpDialogVisible.value = false
+}
+
+function removeMcpLocal(index) { form.value.tools.splice(index, 1) }
+
+async function removeMcpApi(index) {
+  const tool = mcpTools.value[index]
+  if (!tool) return
+  try { await ElMessageBox.confirm(`确定删除 MCP「${tool.name}」？`, '确认删除', { type: 'warning' }) } catch { return }
+  const data = await deleteToolById(agentId, tool.id)
+  if (data.ok) { mcpTools.value.splice(index, 1) } else { ElMessage.error(data.error || '删除失败') }
+}
+
+async function testMcp(index) {
+  const tool = isNew.value ? form.value.tools[index] : mcpTools.value[index]
+  if (!tool) return
+  let cfgStr = tool.config_json || '{}'
+  if (isNew.value && typeof cfgStr !== 'string') cfgStr = JSON.stringify(cfgStr)
+  let cfgObj; try { cfgObj = JSON.parse(cfgStr) } catch { cfgObj = {} }
+  const name = tool.name || ''
+  mcpTestingId.value = name
+  try {
+    const data = await testMcpConnection(agentId, cfgObj)
+    mcpTestResults.value[name] = { connected: data.connected, detail: data.detail }
+    if (data.connected) ElMessage.success(`MCP「${name}」连通成功`)
+    else ElMessage.warning(`MCP「${name}」连通失败: ${data.detail}`)
+  } catch { mcpTestResults.value[name] = { connected: false, detail: '请求失败' }; ElMessage.error('连通性测试请求失败') }
+  mcpTestingId.value = null
+}
+
+async function toggleMcp(i) {
+  if (isNew.value) { form.value.tools[i].enabled = !form.value.tools[i].enabled; return }
+  const tool = mcpTools.value[i]
+  const data = await toggleToolEnabled(agentId, tool.id, !tool.enabled)
+  if (data.ok) mcpTools.value[i].enabled = data.enabled
+}
+
+// ── Skill functions ──
+function triggerSkillUpload() { skillFolderInput.value?.click() }
+
+async function handleSkillFolderChange(e) {
+  const files = e.target.files
+  if (!files || !files.length) return
+  const firstPath = files[0].webkitRelativePath || files[0].name
+  const folderName = firstPath.split('/')[0] || 'skill'
+  skillUploading.value = true
+  try {
+    const data = await uploadSkillApi(agentId, [...files], folderName)
+    if (data.ok) {
+      skills.value.push(data.data)
+      ElMessage.success(`Skill「${folderName}」上传成功 (${data.data.config?.file_count || 0} 个文件)`)
+    } else { ElMessage.error(data.error || '上传失败') }
+  } catch (err) { ElMessage.error('上传失败: ' + (err.message || '未知错误')) }
+  skillUploading.value = false
+  e.target.value = ''
+}
+
+async function removeSkill(index) {
+  const skill = skills.value[index]
+  if (!skill) return
+  try { await ElMessageBox.confirm(`确定删除 Skill「${skill.name}」？相关文件将被清除。`, '确认删除', { type: 'warning' }) } catch { return }
+  const data = await deleteToolById(agentId, skill.id)
+  if (data.ok) { skills.value.splice(index, 1); ElMessage.success('Skill 已删除') } else { ElMessage.error(data.error || '删除失败') }
+}
+
+function formatSkillSize(bytes) {
+  if (!bytes) return '0 B'
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+// Load default system prompt template
+const loadingDefaultPrompt = ref(false)
+async function loadDefaultPrompt() {
+  loadingDefaultPrompt.value = true
+  try {
+    const data = await fetchDefaultPrompt()
+    if (data.ok && data.template) form.value.system_prompt = data.template
+  } catch (_) {}
+  loadingDefaultPrompt.value = false
+}
 
 // 合并内置模型 + API 检测到的模型，去重
 const availableModels = computed(() => {
@@ -116,64 +367,24 @@ async function handleAvatarUpload(e) {
   reader.readAsDataURL(file)
 }
 
-/** 将 API 返回的 tool → 前端表单 tool（config_json JSON 解析为编辑字段） */
-function parseToolFromApi(t) {
-  let cfg = {}
-  try { cfg = JSON.parse(t.config_json || '{}') } catch (_) {}
-  return {
-    name: t.name || '',
-    tool_type: t.tool_type || 'mcp',
-    enabled: t.enabled !== false,
-    transport: cfg.transport || 'stdio',
-    command: cfg.command || '',
-    args: Array.isArray(cfg.args) ? cfg.args.join(' ') : (cfg.args || ''),
-    cwd: cfg.cwd || '',
-    url: cfg.url || '',
-    client_type: cfg.client_type || 'stateful',
-    env: cfg.env ? Object.entries(cfg.env).map(([k, v]) => ({ key: k, value: v })) : [],
-    headers: cfg.headers ? Object.entries(cfg.headers).map(([k, v]) => ({ key: k, value: v })) : [],
-    config_json: t.config_json || '{}',
-  }
-}
-
-function addTool() {
-  form.value.tools.push({
-    name:'', tool_type:'mcp', enabled:true,
-    transport:'stdio', command:'', args:'', cwd:'',
-    url:'', env: [], headers: [],
-    client_type:'stateful',
-  })
-}
-function removeTool(i) { form.value.tools.splice(i,1) }
-function addKV(list) { list.push({ key:'', value:'' }) }
-function removeKV(list, i) { list.splice(i,1) }
-function toConfigJSON(t) {
-  const cfg = { transport: t.transport || 'stdio' }
-  if (t.transport === 'stdio') {
-    cfg.command = t.command || ''
-    if (t.args) cfg.args = t.args.split(/\s+/).filter(Boolean)
-    if (t.cwd) cfg.cwd = t.cwd
-  } else {
-    cfg.url = t.url || ''
-    cfg.client_type = t.client_type || 'stateful'
-  }
-  const envList = t.env || []
-  const env = {}
-  envList.forEach(e => { if (e.key) env[e.key] = e.value })
-  if (Object.keys(env).length) cfg.env = env
-  const hdrList = t.headers || []
-  const headers = {}
-  hdrList.forEach(h => { if (h.key) headers[h.key] = h.value })
-  if (Object.keys(headers).length) cfg.headers = headers
-  return JSON.stringify(cfg, null, 2)
-}
-function syncToolConfig(t) { t.config_json = toConfigJSON(t) }
-
 async function save() {
-  form.value.tools.forEach(t => syncToolConfig(t))
+  // In create mode, include MCP tools in payload. In edit mode, tools are managed via API.
+  let allTools = []
+  if (isNew.value) {
+    const platformToolRecords = [...selectedPlatformTools.value].map(name => ({
+      name, tool_type: 'platform', enabled: true, config_json: '{}',
+    }))
+    allTools = [...form.value.tools.map(t => ({
+      name: t.name || '',
+      tool_type: t.tool_type || 'mcp',
+      enabled: t.enabled !== false,
+      config_json: typeof t.config_json === 'string' ? t.config_json : JSON.stringify(t.config_json || {}),
+    })), ...platformToolRecords]
+  }
+  const payload = { ...form.value, tools: allTools }
   const url = isNew ? '/ai/agents/create' : `/ai/agents/${agentId}/update`
   try {
-    const { data } = await client.post(url, form.value)
+    const { data } = await client.post(url, payload)
     if (data.ok) {
       router.push('/ai-assistant')
     } else {
@@ -189,7 +400,7 @@ async function save() {
   <div class="doc-page wb-shell ai-workbench" v-loading="loading">
     <WorkbenchHeader
       :title="isNew ? '新建智能体' : '编辑智能体'"
-      :subtitle="isNew ? '配置一个全新的 AI 智能体，分 5 步完成设置' : (agent?.name ? `正在编辑「${agent.name}」的配置` : '修改智能体配置')"
+      :subtitle="isNew ? '配置一个全新的 AI 智能体，分 5 步完成设置' : (agent?.name ? `编辑「${agent.name}」— 所有配置项已展开，修改后直接保存` : '所有配置项已展开，修改后直接保存')"
       mark="⚙️"
     />
 
@@ -200,15 +411,15 @@ async function save() {
         <span>返回智能体列表</span>
       </button>
 
-      <!-- Steps bar -->
-      <div class="doc-section steps-section">
+      <!-- Steps bar — only in wizard mode (new agent) -->
+      <div v-if="isNew" class="doc-section steps-section">
         <el-steps :active="step - 1" finish-status="success" align-center>
           <el-step v-for="(label, i) in stepLabels" :key="i" :title="label" />
         </el-steps>
       </div>
 
       <!-- Step 1: Basic Info -->
-      <div v-if="step===1" class="doc-section step-panel">
+      <div v-if="!isNew || step===1" class="doc-section step-panel">
         <div class="section-title">
           <span class="section-num">1</span>
           <span>基本信息</span>
@@ -239,7 +450,7 @@ async function save() {
       </div>
 
       <!-- Step 2: Model Config -->
-      <div v-if="step===2" class="doc-section step-panel">
+      <div v-if="!isNew || step===2" class="doc-section step-panel">
         <div class="section-title">
           <span class="section-num">2</span>
           <span>模型配置</span>
@@ -288,14 +499,19 @@ async function save() {
       </div>
 
       <!-- Step 3: Prompt -->
-      <div v-if="step===3" class="doc-section step-panel">
+      <div v-if="!isNew || step===3" class="doc-section step-panel">
         <div class="section-title">
           <span class="section-num">3</span>
           <span>提示词</span>
         </div>
         <el-form label-width="120px" class="agent-form">
           <el-form-item label="系统提示词">
-            <el-input v-model="form.system_prompt" type="textarea" :rows="10" placeholder="你是一个专业的测试用例编写助手，擅长..." />
+            <div style="display:flex;flex-direction:column;gap:8px;width:100%">
+              <el-button :loading="loadingDefaultPrompt" size="small" @click="loadDefaultPrompt" style="align-self:flex-start">
+                📋 加载默认模板
+              </el-button>
+              <el-input v-model="form.system_prompt" type="textarea" :rows="10" placeholder="你是一个专业的测试用例编写助手，擅长..." />
+            </div>
           </el-form-item>
           <el-form-item label="最大迭代次数">
             <el-input-number v-model="form.max_iters" :min="1" :max="100" />
@@ -312,7 +528,7 @@ async function save() {
       </div>
 
       <!-- Step 4: Memory & Tools -->
-      <div v-if="step===4" class="doc-section step-panel">
+      <div v-if="!isNew || step===4" class="doc-section step-panel">
         <div class="section-title">
           <span class="section-num">4</span>
           <span>记忆与工具</span>
@@ -344,69 +560,181 @@ async function save() {
           </el-form-item>
         </el-form>
 
-        <el-divider>MCP 服务器 ({{ form.tools.length }})</el-divider>
-        <button class="add-tool-btn" @click="addTool">
+        <el-divider>平台业务工具</el-divider>
+        <div v-if="loadingPlatformTools" style="padding:12px;color:#a0936e;text-align:center">加载工具列表中...</div>
+        <div v-else-if="!availablePlatformTools.length" style="padding:12px;color:#a0936e;text-align:center">暂无可用工具</div>
+        <div v-else class="platform-tools-grid">
+          <div v-for="tool in availablePlatformTools" :key="tool.name" class="platform-tool-item"
+               :class="{ selected: isPlatformToolSelected(tool.name) }"
+               @click="togglePlatformTool(tool.name)">
+            <el-checkbox :model-value="isPlatformToolSelected(tool.name)" />
+            <div class="platform-tool-info">
+              <span class="platform-tool-name">{{ tool.name }}</span>
+              <span class="platform-tool-desc">{{ tool.description?.slice(0, 80) }}{{ (tool.description?.length || 0) > 80 ? '...' : '' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <el-divider>工作区 Skills</el-divider>
+        <div v-if="loadingSkills" style="padding:12px;color:#a0936e;text-align:center">加载 Skills 列表中...</div>
+        <div v-else-if="!availableSkills.length" style="padding:12px;color:#a0936e;text-align:center">暂无可用 Skills</div>
+        <div v-else class="platform-tools-grid">
+          <div v-for="skill in availableSkills" :key="skill.name" class="platform-tool-item"
+               :class="{ selected: isSkillEnabled(skill.name) }"
+               @click="toggleSkill(skill.name)">
+            <el-checkbox :model-value="isSkillEnabled(skill.name)" />
+            <div class="platform-tool-info">
+              <span class="platform-tool-name">{{ skill.name }}</span>
+              <span class="platform-tool-desc">{{ skill.description?.slice(0, 80) }}{{ (skill.description?.length || 0) > 80 ? '...' : '' }}</span>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:#a0936e;margin-top:4px">
+          工作区 Skills（Bash/Read/Write 等）默认全部启用。关闭的 Skill 将不会出现在工具列表中。
+        </div>
+
+        <el-divider>知识库文档范围</el-divider>
+        <div v-if="loadingDocs" style="padding:12px;color:#a0936e;text-align:center">加载文档列表中...</div>
+        <div v-else-if="!knowledgeDocs.length" style="padding:12px;color:#a0936e;text-align:center">知识库暂无文档</div>
+        <div v-else>
+          <div style="font-size:12px;color:#a0936e;margin-bottom:8px">
+            AI 调用 <code>search_knowledge_base</code> 时只检索勾选的文档。不勾选任何文档 = 检索全部。
+          </div>
+          <div class="platform-tools-grid">
+            <div v-for="doc in knowledgeDocs" :key="doc.id" class="platform-tool-item"
+                 :class="{ selected: isDocEnabled(doc.id) }"
+                 @click="toggleDoc(doc.id)">
+              <el-checkbox :model-value="isDocEnabled(doc.id)" />
+              <div class="platform-tool-info">
+                <span class="platform-tool-name">{{ doc.source }}</span>
+                <span class="platform-tool-desc">{{ doc.type }} · {{ (doc.size / 1024).toFixed(1) }} KB</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <el-divider>MCP 服务器 ({{ isNew ? form.tools.length : mcpTools.length }})</el-divider>
+        <button class="add-tool-btn" @click="openMcpDialog('add')">
           <IconPlus :size="16" />
           <span>添加 MCP 服务器</span>
         </button>
-        <div v-for="(t,i) in form.tools" :key="i" class="tool-card">
-          <div class="tool-card-head">
-            <el-input v-model="t.name" placeholder="名称 (如 github)" size="default" style="width:160px" />
-            <el-select v-model="t.transport" size="default" style="width:140px">
-              <el-option value="stdio" label="stdio 本地" />
-              <el-option value="sse" label="SSE 远程" />
-              <el-option value="streamable_http" label="HTTP 远程" />
-            </el-select>
-            <el-tag :type="t.enabled ? 'success' : 'info'" effect="light" size="small">
-              {{ t.enabled ? '已启用' : '已禁用' }}
-            </el-tag>
-            <el-switch v-model="t.enabled" size="small" />
-            <button class="tool-del-btn" @click="removeTool(i)" title="删除">
-              <IconTrash :size="16" />
-            </button>
-          </div>
 
-          <template v-if="t.transport==='stdio'">
-            <el-input v-model="t.command" placeholder="命令 如: npx" size="default" />
-            <el-input v-model="t.args" placeholder="参数 如: -y @mcp/server-github" size="default" />
-            <el-input v-model="t.cwd" placeholder="工作目录 (可选)" size="default" />
-          </template>
-          <template v-else>
-            <el-input v-model="t.url" placeholder="URL 如: https://mcp.example.com/sse" size="default" />
-            <el-select v-model="t.client_type" size="default" style="width:180px">
-              <el-option value="stateful" label="有状态 (Stateful)" />
-              <el-option value="stateless" label="无状态 (Stateless)" />
-            </el-select>
-          </template>
-
-          <div class="kv-section">
-            <div class="kv-head">
-              <span>{{ t.transport==='stdio' ? '环境变量' : '请求头' }}</span>
-              <button class="kv-add-btn" @click="addKV(t.transport==='stdio'?t.env:t.headers)">
-                <IconPlus :size="14" /> 添加
-              </button>
+        <!-- Edit mode: MCP cards loaded from API -->
+        <template v-if="!isNew">
+          <div v-for="(t, i) in mcpTools" :key="t.id" class="mcp-card">
+            <div class="mcp-card-head">
+              <span class="mcp-card-name">{{ t.name }}</span>
+              <span class="mcp-card-transport">{{ t.config?.transport || 'stdio' }}</span>
+              <span v-if="mcpTestResults[t.name]" class="mcp-card-status"
+                    :class="mcpTestResults[t.name].connected ? 'connected' : 'failed'">
+                {{ mcpTestResults[t.name].connected ? '已连通' : '未连通' }}
+              </span>
+              <el-switch v-model="t.enabled" size="small" @change="toggleMcp(i)" />
             </div>
-            <div v-for="(kv, ki) in (t.transport==='stdio'?t.env:t.headers)" :key="ki" class="kv-row">
-              <el-input v-model="kv.key" placeholder="KEY" size="small" style="width:120px" />
-              <el-input v-model="kv.value" placeholder="VALUE" size="small" style="flex:1" />
-              <button class="kv-del-btn" @click="removeKV(t.transport==='stdio'?t.env:t.headers, ki)">
-                <IconTrash :size="14" />
-              </button>
+            <div class="mcp-card-body">
+              <code>{{ t.config?.command || t.config?.url || '(未配置)' }}</code>
+            </div>
+            <div class="mcp-card-actions">
+              <el-button size="small" :loading="mcpTestingId === t.name"
+                         @click="testMcp(i)">测试连通</el-button>
+              <el-button size="small" @click="openMcpDialog('edit', i)">编辑</el-button>
+              <el-button size="small" type="danger" plain @click="removeMcpApi(i)">删除</el-button>
             </div>
           </div>
+        </template>
 
-          <details class="json-preview">
-            <summary>预览 JSON 配置</summary>
-            <pre>{{ toConfigJSON(t) }}</pre>
-          </details>
-        </div>
-        <div v-if="!form.tools.length" class="tool-empty">
+        <!-- Create mode: MCP cards stashed in form.tools -->
+        <template v-if="isNew">
+          <div v-for="(t, i) in form.tools" :key="i" class="mcp-card">
+            <div class="mcp-card-head">
+              <span class="mcp-card-name">{{ t.name || '(未命名)' }}</span>
+              <span v-if="mcpTestResults[t.name]" class="mcp-card-status"
+                    :class="mcpTestResults[t.name].connected ? 'connected' : 'failed'">
+                {{ mcpTestResults[t.name].connected ? '已连通' : '未连通' }}
+              </span>
+              <el-switch v-model="t.enabled" size="small" />
+            </div>
+            <div class="mcp-card-body">
+              <code>{{ (typeof t.config_json === 'string' ? JSON.parse(t.config_json) : t.config_json)?.command || '(未配置)' }}</code>
+            </div>
+            <div class="mcp-card-actions">
+              <el-button size="small" :loading="mcpTestingId === t.name"
+                         @click="testMcp(i)">测试连通</el-button>
+              <el-button size="small" @click="openMcpDialog('edit', i)">编辑</el-button>
+              <el-button size="small" type="danger" plain @click="removeMcpLocal(i)">删除</el-button>
+            </div>
+          </div>
+        </template>
+
+        <div v-if="(isNew ? form.tools.length : mcpTools.length) === 0" class="tool-empty">
           暂未添加 MCP 服务器，点击上方按钮添加
+        </div>
+
+        <!-- MCP JSON editor dialog -->
+        <el-dialog v-model="mcpDialogVisible"
+                   :title="mcpDialogMode === 'add' ? '添加 MCP 服务器' : '编辑 MCP 服务器'"
+                   width="560px" destroy-on-close>
+          <el-form label-width="80px">
+            <el-form-item label="名称" required>
+              <el-input v-model="mcpForm.name" placeholder="如: github" />
+            </el-form-item>
+            <el-form-item label="JSON 配置" required>
+              <el-input v-model="mcpForm.config_json" type="textarea" :rows="12"
+                        placeholder='{"transport":"stdio","command":"npx",...}'
+                        style="font-family: var(--font-mono, monospace); font-size: 13px;" />
+              <div v-if="mcpJsonError" style="color:#e85f5f;font-size:12px;margin-top:4px">{{ mcpJsonError }}</div>
+            </el-form-item>
+          </el-form>
+          <template #footer>
+            <el-button @click="mcpDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="saveMcpTool">保存</el-button>
+          </template>
+        </el-dialog>
+
+        <el-divider>Skills ({{ skills.length }})</el-divider>
+
+        <template v-if="!isNew">
+          <button class="add-tool-btn add-skill-btn" @click="triggerSkillUpload" :disabled="skillUploading">
+            <IconPlus :size="16" />
+            <span>{{ skillUploading ? '上传中...' : '上传 Skill 文件夹' }}</span>
+          </button>
+          <input ref="skillFolderInput" type="file" webkitdirectory multiple
+                 style="display:none" @change="handleSkillFolderChange" />
+
+          <div v-if="skillUploading" style="padding:12px 0">
+            <el-progress :percentage="100" :indeterminate="true" :duration="2" />
+          </div>
+
+          <div v-for="(s, i) in skills" :key="s.id" class="skill-card">
+            <div class="skill-card-head">
+              <span class="skill-card-name">{{ s.name }}</span>
+              <span class="skill-card-count">{{ s.config?.file_count || 0 }} 个文件</span>
+            </div>
+            <div class="skill-card-body">
+              <div class="skill-card-features">{{ s.config?.features || '无功能描述' }}</div>
+              <div class="skill-card-meta">
+                <span>{{ formatSkillSize(s.config?.size_bytes) }}</span>
+                <span>·</span>
+                <span>{{ s.config?.uploaded_at || s.created_at }}</span>
+              </div>
+            </div>
+            <div class="skill-card-actions">
+              <el-button size="small" type="danger" plain @click="removeSkill(i)">删除</el-button>
+            </div>
+          </div>
+
+          <div v-if="!skills.length && !skillUploading" class="tool-empty">
+            暂未上传 Skill，点击上方按钮选择文件夹上传
+          </div>
+        </template>
+
+        <div v-else class="tool-empty">
+          Skills 管理在创建智能体后可用。请先保存智能体，再进入编辑模式上传 Skill。
         </div>
       </div>
 
       <!-- Step 5: Advanced -->
-      <div v-if="step===5" class="doc-section step-panel">
+      <div v-if="!isNew || step===5" class="doc-section step-panel">
         <div class="section-title">
           <span class="section-num">5</span>
           <span>高级设置</span>
@@ -444,7 +772,8 @@ async function save() {
       </div>
 
       <!-- Navigation -->
-      <div class="step-nav">
+      <!-- Wizard mode (new agent): step-by-step with prev/next -->
+      <div v-if="isNew" class="step-nav">
         <button v-if="step>1" class="nav-btn nav-prev" @click="step--">
           <IconArrowLeft :size="18" />
           <span>上一步</span>
@@ -456,6 +785,14 @@ async function save() {
         <button v-if="step===5" class="nav-btn nav-save" @click="save">
           <IconSave :size="18" />
           <span>保存智能体</span>
+        </button>
+      </div>
+
+      <!-- Edit mode (existing agent): all sections expanded, single save button -->
+      <div v-else class="step-nav">
+        <button class="nav-btn nav-save" @click="save">
+          <IconSave :size="18" />
+          <span>保存修改</span>
         </button>
       </div>
     </div>
@@ -799,5 +1136,185 @@ async function save() {
 .nav-save:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(111, 186, 44, 0.5);
+}
+
+/* Platform tools grid */
+.platform-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.platform-tool-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1.5px solid #e8e2d6;
+  border-radius: 10px;
+  background: #faf9f4;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.platform-tool-item:hover {
+  border-color: #19c8b9;
+  background: #e6f9f6;
+}
+
+.platform-tool-item.selected {
+  border-color: #19c8b9;
+  background: #e6f9f6;
+  box-shadow: 0 2px 8px rgba(25, 200, 185, 0.15);
+}
+
+.platform-tool-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.platform-tool-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #4a3a28;
+}
+
+.platform-tool-desc {
+  font-size: 11px;
+  color: #a0936e;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── MCP card ── */
+.mcp-card {
+  background: #faf9f4;
+  border: 1.5px solid #e8e2d6;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: border-color 0.2s ease;
+}
+.mcp-card:hover { border-color: #19c8b9; }
+
+.mcp-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.mcp-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #4a3a28;
+}
+
+.mcp-card-transport {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #e6f9f6;
+  color: #158a80;
+  font-weight: 600;
+}
+
+.mcp-card-status {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.mcp-card-status.connected { background: #e8f5e0; color: #4a8233; }
+.mcp-card-status.failed { background: #fde8e8; color: #c0392b; }
+
+.mcp-card-body code {
+  display: block;
+  font-size: 13px;
+  color: #6b5c44;
+  background: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #f0ebe0;
+  margin-bottom: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mcp-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ── Skill card ── */
+.add-skill-btn {
+  border-color: #b39ef3;
+  color: #7c6ab2;
+}
+.add-skill-btn:hover {
+  border-color: #b39ef3;
+  background: #f5f2ff;
+  color: #5c4a9e;
+}
+
+.skill-card {
+  background: #faf9fb;
+  border: 1.5px solid #e6e0f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: border-color 0.2s ease;
+}
+.skill-card:hover { border-color: #b39ef3; }
+
+.skill-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.skill-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #4a3a28;
+}
+
+.skill-card-count {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #f5f2ff;
+  color: #5c4a9e;
+  font-weight: 600;
+}
+
+.skill-card-body { margin-bottom: 10px; }
+
+.skill-card-features {
+  font-size: 13px;
+  color: #6b5c44;
+  line-height: 1.5;
+}
+
+.skill-card-meta {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  color: #a0936e;
+  margin-top: 4px;
+  align-items: center;
+}
+
+.skill-card-actions {
+  display: flex;
+  gap: 6px;
 }
 </style>

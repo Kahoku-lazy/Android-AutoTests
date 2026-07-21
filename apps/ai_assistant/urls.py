@@ -2,7 +2,7 @@
 from django.urls import path
 from .views import (
     list_agents, agent_detail, create_agent, update_agent, delete_agent,
-    reveal_api_key,
+    reveal_api_key, get_default_system_prompt, list_available_skills,
     list_conversations, create_conversation, rename_conversation, delete_conversation,
     list_messages, send_message,
     upload_avatar, serve_avatar,
@@ -13,6 +13,15 @@ from .views import (
     register_agent_in_agentscope, create_scope_session,
     list_conv_tasks, get_conv_task, list_ai_tasks,
     kb_status, kb_documents, kb_reindex, kb_add_document,
+)
+from .views.tool_views import (
+    list_available_platform_tools,
+    list_agent_tools,
+    save_mcp,
+    test_mcp,
+    upload_skill,
+    toggle_tool,
+    delete_tool,
 )
 
 app_name = 'ai'
@@ -47,6 +56,17 @@ urlpatterns = [
     path('agents/<int:agent_id>/models', list_available_models, name='agent_models'),
     path('agents/<int:agent_id>/register-scope', register_agent_in_agentscope, name='agent_register_scope'),
     path('agents/health', health_check_all_agents, name='agent_health'),
+    # Default prompt template & available platform tools
+    path('default-system-prompt', get_default_system_prompt, name='default_system_prompt'),
+    path('available-tools', list_available_platform_tools, name='available_tools'),
+    path('available-skills', list_available_skills, name='available_skills'),
+    # MCP & Skill management (per-agent)
+    path('agents/<int:agent_id>/tools', list_agent_tools, name='agent_tools_list'),
+    path('agents/<int:agent_id>/tools/mcp/save', save_mcp, name='agent_mcp_save'),
+    path('agents/<int:agent_id>/tools/mcp/test', test_mcp, name='agent_mcp_test'),
+    path('agents/<int:agent_id>/tools/skill/upload', upload_skill, name='agent_skill_upload'),
+    path('agents/<int:agent_id>/tools/<int:tool_id>/toggle', toggle_tool, name='agent_tool_toggle'),
+    path('agents/<int:agent_id>/tools/<int:tool_id>/delete', delete_tool, name='agent_tool_delete'),
     # AgentScope SSE session management
     path('conversations/<int:conv_id>/create-scope-session', create_scope_session, name='conv_scope_session'),
     # Conversation-level task history

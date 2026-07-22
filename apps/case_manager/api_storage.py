@@ -19,9 +19,10 @@ def get_storage_definition(case_id):
         return None
 
 
-def save_storage_definition(case_id, **fields):
+def save_storage_definition(case_id, merge=False, **fields):
     """Create or update a storage test case.
 
+    When merge=True, new rows are appended to existing rows (deduplicated by title).
     Raises ValueError on duplicate title, ConflictError on optimistic lock failure.
     """
     client_updated_at = fields.pop("client_updated_at", None)
@@ -44,15 +45,30 @@ def save_storage_definition(case_id, **fields):
             if client_ts != db_ts:
                 raise ConflictError(f"存储用例「{title or case_id}」已被他人修改，请刷新后重试")
 
-    # Check duplicate title
-    dup = (StorageTestCase.objects.filter(directory=directory, title=title)
-           .exclude(id=case_id).first())
-    if dup:
-        dir_label = directory.name if directory else "根级（未分类）"
-        raise ValueError(f"目录「{dir_label}」下已存在同名存储用例「{title}」")
+    # Check duplicate title (skip when merging into existing case)
+    if not merge or not existing:
+        dup = (StorageTestCase.objects.filter(directory=directory, title=title)
+               .exclude(id=case_id).first())
+        if dup:
+            dir_label = directory.name if directory else "根级（未分类）"
+            raise ValueError(f"目录「{dir_label}」下已存在同名存储用例「{title}」")
+
+    new_rows = fields.get("rows", [])
+    if merge and existing and new_rows:
+        existing_rows = existing.rows if isinstance(existing.rows, list) else []
+        existing_titles = {r.get("title", "") for r in existing_rows}
+        merged = list(existing_rows)
+        for row in new_rows:
+            if row.get("title", "") not in existing_titles:
+                merged.append(row)
+                existing_titles.add(row.get("title", ""))
+        # Re-index ids
+        for i, row in enumerate(merged):
+            row["id"] = i + 1
+        fields["rows"] = merged
 
     defaults = {
-        "title": title,
+        "title": fields.get("title", title),
         "category": fields.get("category", ""),
         "description": fields.get("description", ""),
         "enabled": fields.get("enabled", True),

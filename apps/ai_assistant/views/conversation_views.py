@@ -408,10 +408,27 @@ def list_conv_tasks(request, conv_id):
         return JsonResponse({"ok": False, "error": "conversation not found"}, status=404)
 
     try:
-        from apps.test_runner.models import TestRunRecord
-        tasks = TestRunRecord.objects.filter(
-            run_id__startswith="ai-task-"
-        ).order_by("-started_at")[:50]
+        from django.db.models import Q
+        from apps.test_runner.models import TestRunRecord, TestSOP
+        # Resolve run_ids linked to this conversation via TestSOP
+        sop_run_ids = list(
+            TestSOP.objects.filter(conv_id=conv_id)
+            .exclude(run_id="")
+            .values_list("run_id", flat=True)
+        )
+        # ai-task-* records are scoped to conversation via TestSOP.
+        # case-gen-* records (from CreateCaseGenTaskTool) are not linked
+        # through TestSOP — include them unconditionally for this conversation.
+        if sop_run_ids:
+            qs = TestRunRecord.objects.filter(
+                Q(run_id__startswith="ai-task-", run_id__in=sop_run_ids)
+                | Q(run_id__startswith="case-gen-")
+            )
+        else:
+            qs = TestRunRecord.objects.filter(
+                Q(run_id__startswith="ai-task-") | Q(run_id__startswith="case-gen-")
+            )
+        tasks = qs.order_by("-id")[:50]
 
         return JsonResponse({"ok": True, "tasks": [
             _serialize_ai_task(t) for t in tasks
@@ -443,16 +460,24 @@ def _serialize_ai_task(t, total=0, passed=0):
     prog_total = int(progress.get("total") or 0) or max(1, (len(cases) if isinstance(cases, list) else 0) * loop)
     prog_current = int(total) if total else int(progress.get("current") or 0)
     status = (t.status or "PENDING").upper()
+    # Detect task type: case-gen-* = case_generation, ai-task-* = execution
+    task_type = meta.get("task_type") or (
+        "case_generation" if str(t.run_id).startswith("case-gen-") else "execution"
+    )
     return {
         "run_id": t.run_id,
         "title": meta.get("title") or t.run_id,
         "status": status,
+        "task_type": task_type,
+        "case_type": meta.get("case_type") or "",
+        "case_type_label": meta.get("case_type_label") or "",
         "agent_id": str(meta.get("agent_id") or ""),
         "agent_name": meta.get("agent_name") or "未知智能体",
         "device_serial": t.device_serial or "",
         "device_model": meta.get("device_model") or "",
         "cases": cases if isinstance(cases, list) else [],
         "case_titles": meta.get("case_titles") or [],
+        "case_ids": meta.get("case_ids") or [],
         "loop_count": loop,
         "progress": {"current": prog_current, "total": prog_total},
         "started_at": str(t.started_at) if t.started_at else None,
@@ -463,7 +488,7 @@ def _serialize_ai_task(t, total=0, passed=0):
 @csrf_exempt
 @require_auth
 def list_ai_tasks(request):
-    """GET /api/ai/tasks — 工作台任务便签看板（全部 ai-task-*）。
+    """GET /api/ai/tasks — 工作台任务便签看板（ai-task-* + case-gen-*）。
 
     Query: status=all|pending|running|completed|failed|stopped
     """
@@ -472,9 +497,10 @@ def list_ai_tasks(request):
         from apps.test_runner.models import TestRunRecord
 
         status_q = (request.GET.get("status") or "all").strip().lower()
-        qs = TestRunRecord.objects.filter(run_id__startswith="ai-task-").annotate(
+        qs = TestRunRecord.objects.filter(
+            Q(run_id__startswith="ai-task-") | Q(run_id__startswith="case-gen-")
+        ).annotate(
             total=Count("results"),
-            passed=Count("results", filter=Q(results__result="pass")),
         ).order_by("-id")
 
         status_map = {
@@ -487,7 +513,7 @@ def list_ai_tasks(request):
         if status_q in status_map:
             qs = qs.filter(status__in=status_map[status_q])
 
-        tasks = [_serialize_ai_task(t, total=t.total, passed=t.passed) for t in qs[:80]]
+        tasks = [_serialize_ai_task(t, total=t.total) for t in qs[:80]]
         return JsonResponse({"ok": True, "tasks": tasks})
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)}, status=500)

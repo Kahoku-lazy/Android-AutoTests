@@ -59,6 +59,8 @@ def save_api_definition(case_id, **fields):
         "directory": directory,
         "priority": fields.get("priority", "P1"),
         "precondition": fields.get("precondition", ""),
+        "method": fields.get("method", "GET"),
+        "url": fields.get("url", ""),
         "headers": fields.get("headers", ""),
         "body": fields.get("body", ""),
         "expected_response": fields.get("expected_response", ""),

@@ -26,6 +26,8 @@ def _serialize_api(row):
         "enabled": row.enabled,
         "priority": row.priority,
         "precondition": row.precondition,
+        "method": row.method,
+        "url": row.url,
         "headers": row.headers,
         "body": row.body,
         "expected_response": row.expected_response,

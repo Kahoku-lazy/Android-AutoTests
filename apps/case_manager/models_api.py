@@ -21,6 +21,8 @@ class ApiTestCase(models.Model):
         verbose_name="优先级",
     )
     precondition = models.TextField(default="", blank=True, verbose_name="前置条件")
+    method = models.CharField(max_length=10, default="GET", blank=True, verbose_name="HTTP 方法")
+    url = models.TextField(default="", blank=True, verbose_name="请求 URL")
     headers = models.TextField(default="", blank=True, verbose_name="请求头")
     body = models.TextField(default="", blank=True, verbose_name="请求体")
     expected_response = models.TextField(default="", blank=True, verbose_name="预期响应文本")

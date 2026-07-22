@@ -372,7 +372,7 @@ function fmtTime(iso: string) {
   margin: 8px 0 16px;
 }
 .empty-btns { display: flex; gap: 10px; }
-.section { margin-bottom: 16px; }
+.section { margin-bottom: 20px; }
 .section-title {
   width: 100%;
   display: flex;
@@ -409,7 +409,7 @@ function fmtTime(iso: string) {
   border-radius: 8px;
 }
 .enter:hover { background: rgba(162,210,255,0.16); }
-.section-body { padding: 10px 2px 0 8px; }
+.section-body { padding: 14px 2px 0 8px; }
 .sec-empty {
   padding: 12px 14px;
   font-size: 12px;
@@ -428,10 +428,15 @@ function fmtTime(iso: string) {
   cursor: pointer;
   font-size: 12px;
 }
+/* 本目录文件：标题与卡片之间留白（对齐子目录 section-body） */
+.section > .file-grid {
+  margin-top: 14px;
+  padding-left: 8px;
+}
 .file-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
 }
 .file-card {
   text-align: left;

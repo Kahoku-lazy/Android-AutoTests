@@ -127,7 +127,11 @@ function openTask(task) {
     ElMessage.info('这是预览便签，真实任务创建后可进入执行页')
     return
   }
-  router.push(`/runner?run=${encodeURIComponent(task.run_id)}`)
+  if (task.task_type === 'case_generation') {
+    router.push('/case-manager')
+  } else {
+    router.push(`/runner?run=${encodeURIComponent(task.run_id)}`)
+  }
 }
 
 function syncPendingModels() {
@@ -369,12 +373,12 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
         <div class="filter-bar">
           <AppTabs
             class="task-tabs"
-            :items="taskFilterTabs"
+            :items="taskFilterAppTabs"
             v-model="activeTaskFilter"
             :leaf-animation="true"
             :shadow="true"
           >
-            <template v-for="tab in taskFilterTabs" #[tab.key] :key="tab.key">
+            <template v-for="tab in taskFilterAppTabs" #[tab.key] :key="tab.key">
               <div class="dot-board task-board" v-loading="tasksLoading">
                 <div v-if="tasksLoading && !filteredTasks.length" class="ai-loading-wrap">
                   <WbLoader />

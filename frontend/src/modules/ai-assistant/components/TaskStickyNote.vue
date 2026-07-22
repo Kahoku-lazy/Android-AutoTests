@@ -27,7 +27,20 @@ const statusClass = computed(() => {
   if (s === 'STOPPED' || s === 'CANCELLED') return 'is-stop'
   return 'is-pending'
 })
+const isCaseGen = computed(() => props.task.task_type === 'case_generation')
+
 const statusLabel = computed(() => {
+  if (isCaseGen.value) {
+    const map = {
+      PENDING: '等待中',
+      RUNNING: '进行中',
+      COMPLETED: '已完成',
+      SUCCESS: '已完成',
+      FAILED: '失败',
+      ERROR: '失败',
+    }
+    return map[status.value] || status.value
+  }
   const map = {
     PENDING: '待执行',
     RUNNING: '执行中',
@@ -47,6 +60,11 @@ const progress = computed(() => {
   return { current, total, pct: Math.round((current / total) * 100) }
 })
 const metaLine = computed(() => {
+  if (isCaseGen.value) {
+    const typeLabel = props.task.case_type_label || props.task.case_type || '用例'
+    const n = (props.task.case_titles || props.task.cases || []).length
+    return `${typeLabel} · ${n} 个`
+  }
   const device = props.task.device_serial || props.task.device_model || ''
   const n = (props.task.case_titles || props.task.cases || []).length
   const parts = []

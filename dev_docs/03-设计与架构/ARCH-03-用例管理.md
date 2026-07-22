@@ -2,7 +2,7 @@
 
 > 关联模块：`apps/case_manager/` · 前端：`frontend/src/modules/case-manager/`
 > 关联需求：[`PRD-03-用例管理`](../02-PRD需求/PRD-03-用例管理.md) · 关联架构：[`架构大纲`](./架构大纲.md) §4.3
-> 版本：v1.2 · 日期：2026-07-17
+> 版本：v1.3 · 日期：2026-07-22
 
 ---
 
@@ -271,10 +271,22 @@ erDiagram
 ### 6.2 对外接口 (api.py)
 
 ```python
-def get_test_case(case_id: int) -> dict
-def list_enabled_cases(directory_id: int = None) -> QuerySet
-def save_test_case(data: dict) -> TestDefinition
-def get_test_points_for_export() -> QuerySet  # 从 element_locator 获取
+# UI 自动化
+def get_definition(case_id: str) -> TestDefinition
+def save_definition(case_id: str, **fields) -> TestDefinition
+def get_enabled_definitions(case_ids: list[str]) -> list[TestDefinition]
+
+# Storage 业务功能
+def save_storage_definition(case_id: str, **fields) -> StorageTestCase
+
+# API 接口
+def save_api_definition(case_id: str, **fields) -> ApiTestCase
+
+# Web 自动化
+def save_web_definition(case_id: str, **fields) -> WebTestCase
+
+# 目录
+def get_directory_tree(case_type: str = "ui_automation") -> list[dict]
 ```
 
 ### 6.3 跨模块交互
@@ -284,7 +296,7 @@ def get_test_points_for_export() -> QuerySet  # 从 element_locator 获取
 | ← 上游 | element-locator | EventBus 接收 XPath / `is_test_point` 查询 |
 | ← 上游 | workflow | Blockly → JSON → `save_test_case()` |
 | → 下游 | test-runner | `steps_json` 作为执行输入 |
-| ←→ | AI 助手 | 4 个 Tool（创建/查询/列表/调试） |
+| ←→ | AI 助手 | 7 个 Tool（UI 创建/查询/列表/调试 + Storage/API/Web 专用创建） |
 
 ---
 
@@ -307,3 +319,4 @@ def get_test_points_for_export() -> QuerySet  # 从 element_locator 获取
 | v1.0 | 2026-07-16 | 初始版本：基于 `项目架构.md` 和 `PRD-03-用例管理.md` 重构 |
 | v1.1 | 2026-07-16 | **代码对照审计**：TestDefinition.id 修正为 CharField PK；补全 IoT PRD 字段（priority/design_method/precondition/expected_result/metrics）；新增 legacy `steps` 字段说明 |
 | v1.2 | 2026-07-17 | **协作功能**：+5 字段（created_by/updated_by/editing_by/editing_since/locked）；+4 端点（lock/unlock/case-lock/case-unlock）；编辑锁 + 持久锁 + 强制编辑机制 |
+| v1.3 | 2026-07-22 | **多类型用例**：补全 3 张分表文档（cm_storage_testcases / cm_api_testcases / cm_web_testcases）；AI 助手 Tool 4→7（新增 storage/api/web 专用创建）；api.py 接口清单更新 |

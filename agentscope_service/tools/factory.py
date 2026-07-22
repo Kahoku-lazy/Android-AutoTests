@@ -8,24 +8,39 @@ from apps.ai_assistant.models import AIAgent
 from apps.test_runner.models import TestSOP
 
 from .case_tools import (
+    CreateDirectoryTool,
     DebugTestCaseTool,
+    GetCaseDetailTool,
+    GetDirectoryTreeTool,
     GetTestCaseTool,
+    ListAllCasesTool,
     ListTestCasesTool,
+    SaveApiCaseTool,
+    SaveStorageCaseTool,
     SaveTestCaseTool,
+    SaveWebCaseTool,
 )
 from .db_helper import run_sync
 from .device_tools import AcquireDeviceTool, GetOnlineDevicesTool, ReleaseDeviceTool
-from .element_tools import GetTestPointsTool, SearchElementsTool
+from .element_tools import (
+    FetchPageFlowsTool,
+    GetTestPointsTool,
+    ListPagesTool,
+    SearchElementsTool,
+)
 from .prd_tools import DesignTestCasesFromPRDTool, ImportDesignedCasesTool, ParsePRDTool
 from .rag_tool import KnowledgeBaseSearchTool
 from .report_tools import ListReportsTool, SaveReportTool
 from .runner_tools import GetRunResultsTool, RunTestTool, StopRunTool
 from .task_tools import (
+    CreateCaseGenTaskTool,
     CreateRunnerTaskTool,
     CreateTestSOPTool,
     FetchPageElementsTool,
     ListAITasksTool,
+    ListWorkflowDocumentsTool,
     UpdateAITaskTool,
+    UpdateCaseGenTaskTool,
     UpdateTestSOPTool,
 )
 from .tool_context import ToolContext
@@ -33,14 +48,26 @@ from .tool_context import ToolContext
 _TOOL_REGISTRY: list[type[ToolBase]] = [
     GetTestPointsTool,
     SearchElementsTool,
+    ListPagesTool,
+    FetchPageFlowsTool,
     FetchPageElementsTool,
+    GetDirectoryTreeTool,
+    CreateDirectoryTool,
+    ListAllCasesTool,
+    GetCaseDetailTool,
     SaveTestCaseTool,
+    SaveStorageCaseTool,
+    SaveApiCaseTool,
+    SaveWebCaseTool,
     GetTestCaseTool,
     ListTestCasesTool,
     DebugTestCaseTool,
     CreateTestSOPTool,
     UpdateTestSOPTool,
     CreateRunnerTaskTool,
+    CreateCaseGenTaskTool,
+    UpdateCaseGenTaskTool,
+    ListWorkflowDocumentsTool,
     ListAITasksTool,
     UpdateAITaskTool,
     GetOnlineDevicesTool,
@@ -63,9 +90,15 @@ _REGISTRY_NAMES = {cls.name for cls in _TOOL_REGISTRY}
 _READ_ONLY_TOOL_NAMES = {
     GetTestPointsTool.name,
     SearchElementsTool.name,
+    ListPagesTool.name,
+    FetchPageFlowsTool.name,
     FetchPageElementsTool.name,
+    GetDirectoryTreeTool.name,
+    ListAllCasesTool.name,
+    GetCaseDetailTool.name,
     GetTestCaseTool.name,
     ListTestCasesTool.name,
+    ListWorkflowDocumentsTool.name,
     ListAITasksTool.name,
     GetOnlineDevicesTool.name,
     GetRunResultsTool.name,

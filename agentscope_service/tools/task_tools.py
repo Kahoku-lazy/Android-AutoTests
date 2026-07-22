@@ -2,9 +2,24 @@
 import json
 import uuid
 from agentscope.tool import ToolBase, ToolChunk
-from agentscope.permission import PermissionDecision, PermissionBehavior, PermissionContext
 from agentscope.message import TextBlock, HintBlock
 from .db_helper import run_sync
+
+
+async def _resolve_agent_from_context(tool_ctx) -> tuple[str, str]:
+    """Resolve agent_id and agent_name from a ToolBase._ctx."""
+    agent_id = ""
+    agent_name = ""
+    if tool_ctx and getattr(tool_ctx, "agent_id", None):
+        agent_id = str(tool_ctx.agent_id)
+        try:
+            from apps.ai_assistant.models import AIAgent
+            ag = await run_sync(lambda: AIAgent.objects.filter(id=int(agent_id)).first())
+            if ag:
+                agent_name = ag.name or ""
+        except Exception:
+            pass
+    return agent_id, agent_name
 
 
 class FetchPageElementsTool(ToolBase):
@@ -75,6 +90,81 @@ class FetchPageElementsTool(ToolBase):
                  + "\n".join(lines)
                  + "\n\nUse the xpath values as locators in save_test_case steps."
         )])
+
+
+class ListWorkflowDocumentsTool(ToolBase):
+    """Query workflow page_flow design documents."""
+
+    name = "list_workflow_documents"
+    description = """查询工作流工作台中的页面流转设计文档。
+
+【触发条件】
+- Android UI 自动化探索阶段（Step 3）
+- 查看设计阶段创建的页面流转图
+- 了解应用的页面导航设计
+
+【返回】
+- 所有 page_flow / test_case 类型文档列表
+- 默认精简（不含 config_json），可选 include_config=true 查看 nodes/links
+- 按最近更新排序
+
+【与 fetch_page_flows 的区别】
+- fetch_page_flows: 设备运行时录制的单条跳转边
+- list_workflow_documents: 设计阶段的完整页面流转有向图"""
+    input_schema = {
+        "type": "object",
+        "properties": {
+            "doc_type": {
+                "type": "string",
+                "enum": ["page_flow", "test_case"],
+                "description": "文档类型，默认 page_flow",
+            },
+            "include_config": {
+                "type": "boolean",
+                "description": "是否返回 config_json 中的 nodes/links 摘要（默认 false）",
+            },
+            "limit": {"type": "integer", "description": "最多返回条数（默认 10）"},
+        },
+    }
+    is_concurrency_safe = True
+    is_read_only = True
+
+    async def check_permissions(self, tool_input, context):
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
+
+    async def call(self, doc_type="page_flow", include_config=False, limit=10, **kwargs):
+        from apps.workflow.models import WorkflowDocument
+
+        def _fetch():
+            return list(WorkflowDocument.objects.filter(
+                doc_type=doc_type
+            ).order_by("-updated_at")[:limit])
+
+        docs = await run_sync(_fetch)
+        if not docs:
+            return ToolChunk(content=[TextBlock(
+                text=f"没有找到类型为 '{doc_type}' 的工作流文档。"
+                     + " 可在「工作流工作台」模块创建页面流转图。"
+            )])
+
+        lines = [f"工作流文档 ({len(docs)} 条, type={doc_type}):"]
+        for i, d in enumerate(docs):
+            dir_name = d.directory.name if d.directory else "—"
+            lines.append(f"[{d.doc_id}] {d.title} | 目录={dir_name}")
+            if d.description:
+                lines.append(f"  描述: {d.description[:150]}")
+
+            if include_config:
+                try:
+                    config = json.loads(d.config_json) if d.config_json else {}
+                    nodes = config.get("nodes", [])
+                    links = config.get("links", [])
+                    lines.append(f"  节点: {len(nodes)} | 连线: {len(links)}")
+                except Exception:
+                    pass
+
+        return ToolChunk(content=[TextBlock(text="\n".join(lines))])
 
 
 class CreateTestSOPTool(ToolBase):
@@ -387,17 +477,7 @@ class CreateRunnerTaskTool(ToolBase):
 
         # Resolve agent from tool context for workbench sticky notes
         ctx = getattr(self, "_ctx", None)
-        agent_id = ""
-        agent_name = ""
-        if ctx and getattr(ctx, "agent_id", None):
-            agent_id = str(ctx.agent_id)
-            try:
-                from apps.ai_assistant.models import AIAgent
-                ag = await run_sync(lambda: AIAgent.objects.filter(id=int(agent_id)).first())
-                if ag:
-                    agent_name = ag.name or ""
-            except Exception:
-                pass
+        agent_id, agent_name = await _resolve_agent_from_context(ctx)
 
         # Build case titles first (needed in summary)
         case_summaries = []
@@ -514,7 +594,10 @@ class ListAITasksTool(ToolBase):
         from apps.test_runner.models import TestRunRecord
 
         def _fetch_tasks():
-            qs = TestRunRecord.objects.filter(run_id__startswith="ai-task-").order_by("-started_at")
+            from django.db.models import Q
+            qs = TestRunRecord.objects.filter(
+                Q(run_id__startswith="ai-task-") | Q(run_id__startswith="case-gen-")
+            ).order_by("-started_at")
             if status != "all" and status:
                 qs = qs.filter(status__iexact=status)
             return list(qs[:limit])
@@ -590,3 +673,208 @@ class UpdateAITaskTool(ToolBase):
         await run_sync(lambda: record.save())
 
         return ToolChunk(content=[TextBlock(text=f"任务 {run_id} 已更新为状态：{status}")])
+
+
+# ═══════════════════════════════════════════════════════════════
+# Case generation task card tools
+# ═══════════════════════════════════════════════════════════════
+
+CASE_TYPE_LABELS = {
+    "ui_automation": "Android UI 自动化",
+    "web_automation": "Web 自动化",
+    "storage": "业务功能",
+    "api_testing": "API 接口",
+}
+
+
+class CreateCaseGenTaskTool(ToolBase):
+    """Create a case generation task card visible in conversation and task board."""
+
+    name = "create_case_gen_task"
+    description = """创建用例生成任务卡片（对话内嵌 + 任务看板同步显示）。
+
+【何时调用】
+  - AI 确认用户要生成的用例类型和数量后，**必须**先调用此工具创建任务卡片
+  - 然后再逐个调用 save_test_case / save_storage_case / save_api_case / save_web_case 生成用例
+
+【任务卡片状态流转】
+  PENDING(等待中) → RUNNING(进行中) → COMPLETED(已完成)
+
+【参数说明】
+  - title: 任务标题（如"生成登录模块业务功能用例"）
+  - case_type: 用例类型（ui_automation / web_automation / storage / api_testing）
+  - total_count: 计划生成的用例总数
+
+【返回】
+  - 写入 TestRunRecord，任务看板自动可见
+  - AI 助手首页任务看板可查看卡片状态和进度"""
+    input_schema = {
+        "type": "object",
+        "properties": {
+            "title": {
+                "type": "string",
+                "description": "任务标题（如'生成登录模块 API 接口用例'）",
+            },
+            "case_type": {
+                "type": "string",
+                "enum": ["ui_automation", "web_automation", "storage", "api_testing"],
+                "description": "用例类型",
+            },
+            "total_count": {
+                "type": "integer",
+                "description": "计划生成的用例总数",
+            },
+        },
+        "required": ["title", "case_type", "total_count"],
+    }
+    is_concurrency_safe = True
+    is_read_only = False
+
+    async def check_permissions(self, tool_input, context):
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
+
+    async def call(self, title, case_type, total_count, **kwargs):
+        from apps.test_runner.models import TestRunRecord
+
+        run_id = f"case-gen-{uuid.uuid4().hex[:8]}"
+        case_type_label = CASE_TYPE_LABELS.get(case_type, case_type)
+
+        # Resolve agent from tool context
+        ctx = getattr(self, "_ctx", None)
+        agent_id, agent_name = await _resolve_agent_from_context(ctx)
+
+        progress = {"current": 0, "total": max(1, total_count)}
+        summary_meta = {
+            "title": title,
+            "task_type": "case_generation",
+            "case_type": case_type,
+            "case_type_label": case_type_label,
+            "agent_id": agent_id,
+            "agent_name": agent_name,
+            "case_titles": [],
+            "case_ids": [],
+            "progress": progress,
+        }
+
+        record = await run_sync(lambda: TestRunRecord.objects.create(
+            run_id=run_id,
+            status="PENDING",
+            device_serial="",
+            selected_cases=[],
+            loop_count=1,
+            summary=summary_meta,
+        ))
+
+        result = (
+            f"✅ 用例生成任务卡片已创建\n"
+            f"任务: {title}\n"
+            f"Run ID: {run_id}\n"
+            f"用例类型: {case_type_label}\n"
+            f"计划生成: {total_count} 个用例\n\n"
+            f"卡片状态: 等待中\n"
+            f"任务卡片已同步到 AI 助手首页任务看板。\n"
+            f"接下来逐个生成用例，完成后将状态更新为「已完成」。"
+        )
+
+        return ToolChunk(content=[TextBlock(text=result)])
+
+
+class UpdateCaseGenTaskTool(ToolBase):
+    """Update case generation task card status and progress."""
+
+    name = "update_case_gen_task"
+    description = """更新用例生成任务卡片的状态和进度。
+
+【何时调用】
+  - 开始生成用例时 → status=RUNNING
+  - 每生成完一个用例 → 更新 progress 和 case_ids
+  - 全部生成完成 → status=COMPLETED
+  - 生成过程出错 → status=FAILED
+
+【参数说明】
+  - run_id: 任务 run_id（格式 case-gen-xxxxxxxx）
+  - status: 新状态（PENDING / RUNNING / COMPLETED / FAILED）
+  - case_id: 刚生成的用例 ID（可选，追加到 case_ids 列表）
+  - case_title: 刚生成的用例标题（可选，追加到 case_titles 列表）
+  - progress_current: 当前已完成数（可选）
+  - progress_total: 总数量（可选）"""
+    input_schema = {
+        "type": "object",
+        "properties": {
+            "run_id": {
+                "type": "string",
+                "description": "任务 run_id（格式 case-gen-xxxxxxxx）",
+            },
+            "status": {
+                "type": "string",
+                "enum": ["PENDING", "RUNNING", "COMPLETED", "FAILED"],
+                "description": "新状态",
+            },
+            "case_id": {
+                "type": "string",
+                "description": "刚生成的用例 ID（追加到列表）",
+            },
+            "case_title": {
+                "type": "string",
+                "description": "刚生成的用例标题（追加到列表）",
+            },
+            "progress_current": {
+                "type": "integer",
+                "description": "当前已完成数",
+            },
+            "progress_total": {
+                "type": "integer",
+                "description": "总数量",
+            },
+        },
+        "required": ["run_id", "status"],
+    }
+    is_concurrency_safe = True
+    is_read_only = False
+
+    async def check_permissions(self, tool_input, context):
+        from .tool_context import check_platform_permission
+        return check_platform_permission(self)
+
+    async def call(self, run_id, status, case_id=None, case_title=None,
+                   progress_current=None, progress_total=None, **kwargs):
+        from apps.test_runner.models import TestRunRecord
+
+        record = await run_sync(lambda: TestRunRecord.objects.filter(run_id=run_id).first())
+        if not record:
+            return ToolChunk(content=[TextBlock(text=f"任务 '{run_id}' 不存在。请先用 create_case_gen_task 创建。")])
+
+        summary = record.summary or {}
+        if case_id:
+            ids = list(summary.get("case_ids", []))
+            if case_id not in ids:
+                ids.append(case_id)
+                summary["case_ids"] = ids
+        if case_title:
+            titles = list(summary.get("case_titles", []))
+            if case_title not in titles:
+                titles.append(case_title)
+                summary["case_titles"] = titles
+        if progress_current is not None or progress_total is not None:
+            current = progress_current if progress_current is not None else summary.get("progress", {}).get("current", 0)
+            total = progress_total if progress_total is not None else summary.get("progress", {}).get("total", 1)
+            summary["progress"] = {"current": current, "total": max(1, total)}
+
+        record.status = status
+        record.summary = summary
+        await run_sync(lambda: record.save())
+
+        status_labels = {
+            "PENDING": "等待中", "RUNNING": "进行中",
+            "COMPLETED": "已完成", "FAILED": "失败",
+        }
+        label = status_labels.get(status, status)
+        lines = [f"任务 {run_id} 已更新 → {label}"]
+        p = summary.get("progress", {})
+        if p:
+            lines.append(f"进度: {p.get('current', 0)} / {p.get('total', 0)}")
+        if case_id:
+            lines.append(f"新增用例: {case_id}")
+
+        return ToolChunk(content=[TextBlock(text="\n".join(lines))])

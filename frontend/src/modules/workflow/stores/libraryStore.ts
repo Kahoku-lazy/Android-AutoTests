@@ -93,6 +93,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
     try {
       localStorage.setItem(EXPANDED_KEY, JSON.stringify(expanded.value))
       if (activeId.value) localStorage.setItem(ACTIVE_KEY, activeId.value)
+      else localStorage.removeItem(ACTIVE_KEY)
     } catch { /* ignore */ }
   }
 
@@ -282,18 +283,18 @@ export const useLibraryStore = defineStore('wf-library', () => {
         const res = await updateWorkflowDirectory(dbId, { name: title })
         if (!res.data?.ok) throw new Error(res.data?.error || '重命名失败')
       } else {
-        const cached = configCache.value[id]
+        // 只改标题，禁止附带 config：configCache 可能是创建时的空图或过期快照，
+        // 一旦 PUT 会把未落库的画布数据洗成空（多端/改名失焦时尤其易发）。
         const res = await updateWorkflowDocument(id, {
           title,
           doc_type: n.type === 'test_case' ? 'test_case' : 'page_flow',
           directory_id: parentToDirectoryId(n.parentId),
-          ...(cached !== undefined ? { config: cached } : {}),
         })
         if (!res.data?.ok) throw new Error(res.data?.error || '重命名失败')
-        if (res.data.document?.config) configCache.value[id] = res.data.document.config
+        if (res.data.document?.updated_at) n.updatedAt = res.data.document.updated_at
       }
       n.name = title
-      n.updatedAt = nowIso()
+      if (!n.updatedAt) n.updatedAt = nowIso()
     } catch (e: any) {
       const msg = e?.response?.data?.error || e?.message || '重命名失败'
       ElMessage.error(msg)
@@ -381,11 +382,39 @@ export const useLibraryStore = defineStore('wf-library', () => {
     persistUi()
   }
 
-  async function savePageFlowPayload(id: string, data: WorkflowSaveData): Promise<void> {
+  async function savePageFlowPayload(
+    id: string,
+    data: WorkflowSaveData,
+    opts?: { confirmEmptyOverwrite?: boolean; skipEmptyOverwrite?: boolean }
+  ): Promise<void> {
     const n = findNode(id)
     if (!n || n.type !== 'page_flow') return
     data.name = n.name
     data.savedAt = nowIso()
+    const incomingEmpty = !((data.nodes && data.nodes.length) || (data.links && data.links.length))
+    if (incomingEmpty) {
+      const remote = await fetchDocumentConfig(id, { force: true })
+      const remoteNodes = Array.isArray((remote as any)?.nodes) ? (remote as any).nodes.length : 0
+      if (remoteNodes > 0) {
+        if (opts?.skipEmptyOverwrite) {
+          // 自动保存/切页：拒绝空覆盖，保留服务器数据
+          return
+        }
+        if (opts?.confirmEmptyOverwrite) {
+          const ok = window.confirm(
+            `服务器上已有 ${remoteNodes} 个节点，当前画布为空。确定要用空图覆盖吗？`
+          )
+          if (!ok) {
+            ElMessage.info('已取消保存，未覆盖服务器数据')
+            return
+          }
+        } else {
+          // 默认保护：不覆盖
+          ElMessage.warning('画布为空，已跳过保存以免覆盖服务器上的流程图')
+          return
+        }
+      }
+    }
     try {
       const res = await updateWorkflowDocument(id, {
         title: n.name,
@@ -394,8 +423,10 @@ export const useLibraryStore = defineStore('wf-library', () => {
         config: data,
       })
       if (!res.data?.ok) throw new Error(res.data?.error || '保存失败')
-      configCache.value[id] = data
-      n.updatedAt = nowIso()
+      // 以服务端回写为准，保证缓存与库一致
+      const saved = res.data.document?.config ?? data
+      configCache.value[id] = saved
+      n.updatedAt = res.data.document?.updated_at || nowIso()
     } catch (e: any) {
       const msg = e?.response?.data?.error || e?.message || '保存页面流失败'
       ElMessage.error(msg)
@@ -403,8 +434,16 @@ export const useLibraryStore = defineStore('wf-library', () => {
     }
   }
 
-  async function fetchDocumentConfig(docId: string): Promise<any | null> {
-    if (configCache.value[docId] !== undefined) return configCache.value[docId]
+  /**
+   * @param force 为 true 时忽略内存缓存，强制 GET（打开文档/多端同步时必须）
+   */
+  async function fetchDocumentConfig(
+    docId: string,
+    opts?: { force?: boolean }
+  ): Promise<any | null> {
+    if (!opts?.force && configCache.value[docId] !== undefined) {
+      return configCache.value[docId]
+    }
     try {
       const res = await getWorkflowDocument(docId)
       if (!res.data?.ok) return null
@@ -412,6 +451,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       configCache.value[docId] = cfg
       const n = findNode(docId)
       if (n && res.data.document?.title) n.name = res.data.document.title
+      if (n && res.data.document?.updated_at) n.updatedAt = res.data.document.updated_at
       if (n && cfg?.linkedCaseId) n.caseId = cfg.linkedCaseId
       return cfg
     } catch (e: any) {
@@ -420,8 +460,9 @@ export const useLibraryStore = defineStore('wf-library', () => {
     }
   }
 
+  /** 打开页面流：始终拉服务端最新，避免多端/多标签读到过期空缓存 */
   async function loadPageFlowPayload(id: string): Promise<WorkflowSaveData | null> {
-    const cfg = await fetchDocumentConfig(id)
+    const cfg = await fetchDocumentConfig(id, { force: true })
     if (!cfg) return null
     return cfg as WorkflowSaveData
   }
@@ -449,10 +490,10 @@ export const useLibraryStore = defineStore('wf-library', () => {
         config,
       })
       if (!res.data?.ok) throw new Error(res.data?.error || '保存失败')
-      configCache.value[id] = config
+      configCache.value[id] = res.data.document?.config ?? config
       if (draft.linkedCaseId) n.caseId = draft.linkedCaseId
       n.name = config.name
-      n.updatedAt = nowIso()
+      n.updatedAt = res.data.document?.updated_at || nowIso()
     } catch (e: any) {
       const msg = e?.response?.data?.error || e?.message || '保存用例失败'
       ElMessage.error(msg)
@@ -460,13 +501,14 @@ export const useLibraryStore = defineStore('wf-library', () => {
     }
   }
 
+  /** 打开用例：始终拉服务端最新 */
   async function loadCaseDraft(id: string): Promise<{
     name: string
     package_name: string
     blocks: unknown[]
     linkedCaseId?: string
   } | null> {
-    const cfg = await fetchDocumentConfig(id)
+    const cfg = await fetchDocumentConfig(id, { force: true })
     if (!cfg || typeof cfg !== 'object') return null
     const c = cfg as Record<string, unknown>
     return {

@@ -2,7 +2,7 @@
 
 > 关联模块：`apps/ai_assistant/` · 前端：`frontend/src/modules/ai-assistant/`
 > 关联需求：[`PRD-06-AI助手`](../02-PRD需求/PRD-06-AI助手.md) · 关联架构：[`架构大纲`](./架构大纲.md) §4.6
-> 版本：v1.1 · 日期：2026-07-16
+> 版本：v1.2 · 日期：2026-07-22
 
 ---
 
@@ -12,8 +12,10 @@
 
 AI 助手是平台的 **自然语言交互中枢**，通过 AgentScope ReAct 推理引擎，让用户以对话方式驱动全流程测试。在三层架构中横跨后端层和 AI 引擎层——Django 管理智能体配置和对话记录，AgentScope 执行推理和 Tool 编排。
 
+支持 4 种用例类型的智能生成：Android UI 自动化 / Web 自动化 / 业务功能 / API 接口。AI 通过语义识别或主动询问确定类型后，按对应模板生成用例并写入用例管理模块。生成任务以卡片形式嵌入对话流，并同步到 AI 助手首页任务看板。
+
 ```
-用户自然语言 → AI 助手 (本模块) → 24 个 Tool → 6 个业务模块
+用户自然语言 → AI 助手 (本模块) → 28 个 Tool → 6 个业务模块
 ```
 
 ### 1.2 全栈架构图
@@ -150,14 +152,14 @@ agentscope_service/
 │   ├── 解密 api_key (Fernet)
 │   ├── 选择 Model (DashScope/OpenAI/Anthropic/DeepSeek/Custom)
 │   ├── 构建 system_prompt: 平台约束 + SOP 四阶段 + 用户自定义
-│   └── 注入 toolkit (24 Tool + 4 Plan Tool)
+│   └── 注入 toolkit (28 Tool + 4 Plan Tool)
 │
-├── tools/                            24 个自定义 Tool
+├── tools/                            28 个自定义 Tool
 │   ├── element_tools.py             (2)  get_test_points · search_elements
-│   ├── case_tools.py                (4)  save/get/list/debug_test_case
+│   ├── case_tools.py                (7)  UI save/get/list/debug + save_storage/save_api/save_web
 │   ├── device_tools.py              (3)  get_online/acquire/release_device
 │   ├── runner_tools.py              (3)  run_test · get_run_results · stop_run
-│   ├── task_tools.py                (6)  SOP · task_card · page_elements
+│   ├── task_tools.py                (8)  SOP · task_card · page_elements · case_gen_task · update_case_gen_task
 │   ├── report_tools.py              (2)  save_report · list_reports
 │   ├── prd_tools.py                 (3)  parse_prd · design_cases · import_cases
 │   ├── rag_tool.py                  (1)  search_knowledge_base
@@ -418,17 +420,41 @@ agent_factory.py 构建的 system_prompt 结构:
   你是 Android-AutoTests 平台的 AI 助手。
   你可以通过 Tool 调用以下模块：设备管理、元素定位、用例管理、执行引擎、测试报告。
 
+[用例类型识别与分发]
+  当用户要求创建测试用例时，先识别用例类型：
+  - UI/Android/App → ui_automation（可执行，17 种步骤类型，需 XPath 定位）
+  - Web/网页/浏览器 → web_automation（Playwright 风格，URL + 操作步骤 + 预期结果）
+  - 功能/业务/流程 → storage（步骤描述 + 预期结果，不需要自动化执行）
+  - API/接口/HTTP → api_testing（请求头 + 请求体 + 预期响应）
+  
+  若无法从输入中识别类型，主动询问：
+  「您需要哪种类型的用例？Android UI / Web 自动化 / 业务功能 / API 接口」
+
 [SOP 四阶段工作流]
   当用户要求创建和执行测试时，遵循四阶段流程：
-  1. 需求分析与用例设计 (phase=1)
-  2. 元素准备 (phase=2)
-  3. 用例创建与调试 (phase=3)
-  4. 任务执行 (phase=4)
+  1. 需求分析与用例设计 (phase=1) → 确认类型 + 用例数 → 创建任务卡片
+  2. 元素准备 (phase=2)（仅 ui_automation）
+  3. 用例创建与调试 (phase=3) → 按类型调用对应 save 工具
+  4. 任务执行 (phase=4)（仅 ui_automation 可执行）
+
+[用例生成任务卡片]
+  创建用例生成任务的标准流程：
+  1. 调用 create_case_gen_task 创建任务卡片（status=PENDING）
+     - task_type: case_generation
+     - case_type: 用户选择的类型
+     - total_count: 计划生成的用例数量
+  2. 任务卡片同步出现在 AI 助手首页任务看板
+  3. 开始生成用例 → 调用 update_case_gen_task 更新 status=RUNNING
+  4. 每完成一个用例 → 更新 progress
+  5. 全部完成 → 调用 update_case_gen_task 更新 status=COMPLETED
 
 [约束]
-  - 创建用例前必须搜索/确认元素存在
+  - 创建 UI 自动化用例前必须搜索/确认元素存在
   - 执行测试前必须锁定设备
   - 执行完成后必须释放设备
+  - Android UI 和 Web 自动化用例写入 cm_test_definitions / cm_web_testcases
+  - 业务功能用例写入 cm_storage_testcases（步骤 + 预期结果）
+  - API 用例写入 cm_api_testcases（请求头 + 请求体 + 预期响应）
 
 [用户自定义]
   {user's custom system_prompt}
@@ -440,11 +466,43 @@ agent_factory.py 构建的 system_prompt 结构:
 |------|------|:--:|------|
 | → | device-pool | 3 | get_online · acquire · release |
 | → | element-locator | 2 | get_test_points · search_elements |
-| → | case-manager | 4 | save · get · list · debug |
-| → | test-runner | 9 | run · results · stop · SOP · task |
+| → | case-manager | 7 | UI: save/get/list/debug + Storage/API/Web 专用 save |
+| → | test-runner | 10 | run · results · stop · SOP · task · case_gen_task |
 | → | report-generator | 2 | save · list |
 | → | RAG (ChromaDB) | 1 | search_knowledge_base |
 | → | PRD | 3 | parse · design · import |
+
+---
+
+### 6.4 用例生成任务卡片架构
+
+任务卡片存在于两个位置，共享同一个后端记录（`TestRunRecord`，`run_id` 以 `case-gen-` 开头）：
+
+```
+CreateCaseGenTaskTool (AgentScope)
+    │
+    ├──→ TestRunRecord (tr_test_runs)
+    │      run_id: case-gen-xxxxxxxx
+    │      status: PENDING → RUNNING → COMPLETED
+    │      summary: { task_type, case_type, case_titles, progress, ... }
+    │
+    ├──→ HintBlock (type: task_card) → 对话内嵌卡片
+    │      ChatView 解析 SSE 流，渲染 TaskCard 组件
+    │
+    └──→ GET /api/ai/tasks → 任务看板
+           list_ai_tasks() 同时查询 ai-task-* 和 case-gen-*
+           TaskStickyNote 渲染便签卡片
+```
+
+**任务卡片状态流转：**
+```
+PENDING (等待中) → RUNNING (进行中) → COMPLETED (已完成)
+                                      → FAILED (失败)
+```
+
+**TaskStickyNote 适配：**
+- 用例生成任务：显示用例类型标签 + 用例数量，无设备信息
+- 执行任务：显示设备序列号 + 用例数量（现有行为）
 
 ---
 
@@ -491,3 +549,4 @@ Leader Agent (AI 助手主智能体)
 |------|------|----------|
 | v1.0 | 2026-07-16 | 初始版本：基于 `项目架构.md`、`模块-AI助手-技术架构与功能设计.md` 和 `PRD-06-AI助手.md` 重构 |
 | v1.1 | 2026-07-16 | **代码对照审计**：API 端点 32→37（补齐 knowledge/health/tasks 端点），views 文件 5→9（补齐 common/hitl/knowledge/model_views） |
+| v1.2 | 2026-07-22 | **多类型用例生成**：Tool 24→28（新增 save_storage/save_api/save_web + case_gen_task/update_case_gen_task）；system_prompt 增加用例类型识别分发 + 任务卡片工作流；任务卡片双位置同步架构（对话内嵌 + 任务看板） |

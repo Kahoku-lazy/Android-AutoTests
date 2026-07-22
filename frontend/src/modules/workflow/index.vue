@@ -4,7 +4,7 @@
  * 左：目录+文件树（右键/长按移动）
  * 右：点击文件后直接编辑内容（不再显示文件网格）
  */
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useWorkflowStore } from '@/modules/workflow/stores/workflowStore'
 import { useTestCaseStore } from '@/modules/workflow/stores/testCaseStore'
@@ -32,6 +32,16 @@ const editDocName = ref('')
 const overwriteImport = ref(false)
 const showImportCases = ref(false)
 const importTargetFolderId = ref<string | null>(null)
+/**
+ * 当前画布已从服务端 hydrate 的页面流 doc_id。
+ * 未 hydrate 时禁止 persist（刷新后 localStorage 恢复 activeId 但 store 仍空，
+ * 否则一点「保存/切文件」就会把空图写进库）。
+ */
+const hydratedFlowId = ref<string | null>(null)
+/** 自动保存防抖 */
+let autosaveTimer: ReturnType<typeof setTimeout> | null = null
+let autosaveInFlight = false
+
 /** 右侧是否打开文件编辑器 */
 const editing = computed(() => {
   const n = lib.activeNode
@@ -59,12 +69,30 @@ const breadcrumb = computed(() => {
     : `${kind}「${title}」`
 })
 
+function clearAutosaveTimer() {
+  if (autosaveTimer) {
+    clearTimeout(autosaveTimer)
+    autosaveTimer = null
+  }
+}
+
+async function persistPageFlow(opts?: { confirmEmptyOverwrite?: boolean }) {
+  const cur = lib.activeNode
+  if (!cur || cur.type !== 'page_flow') return
+  if (hydratedFlowId.value !== cur.id) return
+  await lib.savePageFlowPayload(cur.id, store.snapshotGraph(cur.name), {
+    confirmEmptyOverwrite: opts?.confirmEmptyOverwrite,
+    // 自动/切页保存：绝不用空图静默覆盖服务器已有数据
+    skipEmptyOverwrite: !opts?.confirmEmptyOverwrite,
+  })
+}
+
 async function persistActive() {
   await applyDocRename()
   const cur = lib.activeNode
   if (!cur || cur.type === 'folder') return
   if (cur.type === 'page_flow') {
-    await lib.savePageFlowPayload(cur.id, store.snapshotGraph(cur.name))
+    await persistPageFlow()
   } else if (cur.type === 'test_case') {
     await lib.saveCaseDraft(cur.id, {
       name: tcStore.caseName || editDocName.value || cur.name,
@@ -75,16 +103,40 @@ async function persistActive() {
   }
 }
 
+function schedulePageFlowAutosave() {
+  const cur = lib.activeNode
+  if (!cur || cur.type !== 'page_flow') return
+  if (hydratedFlowId.value !== cur.id) return
+  clearAutosaveTimer()
+  autosaveTimer = setTimeout(async () => {
+    if (autosaveInFlight) return
+    if (hydratedFlowId.value !== lib.activeNode?.id) return
+    autosaveInFlight = true
+    try {
+      await persistPageFlow()
+      lib.status = `已自动保存 ${new Date().toLocaleTimeString()}`
+    } catch {
+      /* libraryStore 已提示 */
+    } finally {
+      autosaveInFlight = false
+    }
+  }, 500)
+}
+
 async function closeEditor() {
+  clearAutosaveTimer()
   await persistActive()
   lib.setActive(null)
+  hydratedFlowId.value = null
   lib.status = '已关闭编辑'
 }
 
 /** 点左侧目录 → 回到看板（保存并关闭编辑） */
 async function browseFolder() {
+  clearAutosaveTimer()
   if (editing.value) await persistActive()
   lib.setActive(null)
+  hydratedFlowId.value = null
 }
 
 function enterFolder(folderId: string) {
@@ -95,13 +147,20 @@ function enterFolder(folderId: string) {
 }
 
 async function saveCurrent() {
-  await persistActive()
+  clearAutosaveTimer()
+  await applyDocRename()
   const cur = lib.activeNode
   if (!cur) return
+  if (cur.type === 'page_flow') {
+    await persistPageFlow({ confirmEmptyOverwrite: true })
+  } else {
+    await persistActive()
+  }
   const parentName = cur.parentId
     ? lib.findNode(cur.parentId)?.name || '…'
     : folderName.value
   lib.status = `已保存「${editDocName.value || cur.name}」→ ${parentName} · ${cur.id}`
+  ElMessage.success('已保存到服务器')
 }
 
 async function ensureParentFolder(preferred?: string | null): Promise<string> {
@@ -117,17 +176,24 @@ async function ensureParentFolder(preferred?: string | null): Promise<string> {
 
 async function openFile(node: LibNode) {
   if (node.type === 'folder') return
-  if (lib.activeNode?.id === node.id && editing.value) return
+  if (lib.activeNode?.id === node.id && editing.value && hydratedFlowId.value === node.id) return
+  clearAutosaveTimer()
   await persistActive()
-  lib.setActive(node.id)
+
+  // 先暂停 hydrate，避免加载过程中误触发自动保存
+  hydratedFlowId.value = null
   editDocName.value = node.name
   if (node.parentId) selectedFolderId.value = node.parentId
 
   if (node.type === 'page_flow') {
+    // 关键：先把 config 灌进 store，再 setActive 挂载 VueFlow，避免空画布闪现/竞态写回
     const data = await lib.loadPageFlowPayload(node.id)
     if (data) store.applySnapshot({ ...data, name: node.name })
     else store.clearGraph()
+    hydratedFlowId.value = node.id
+    lib.setActive(node.id)
   } else if (node.type === 'test_case') {
+    lib.setActive(node.id)
     const draft = await lib.loadCaseDraft(node.id)
     if (draft?.linkedCaseId || node.caseId) {
       const cid = draft?.linkedCaseId || node.caseId
@@ -319,25 +385,60 @@ onMounted(async () => {
   if ((window as any).lucide) (window as any).lucide.createIcons()
   try {
     const boot = await lib.bootstrapIfEmpty()
+    // bootstrap 内 loadUi 会恢复上次 activeId；只用来定位目录，绝不带着空 store 进入编辑
+    const remembered = lib.activeId ? lib.findNode(lib.activeId) : null
     if (boot) {
       selectedFolderId.value = boot.folder.id
     } else {
       const folders = lib.nodes.filter(n => n.type === 'folder')
       selectedFolderId.value =
-        (lib.activeNode?.type === 'folder' && lib.activeNode.id) ||
-        lib.activeNode?.parentId ||
+        (remembered?.type === 'folder' && remembered.id) ||
+        remembered?.parentId ||
         folders[0]?.id ||
         null
     }
   } catch {
     selectedFolderId.value = null
   }
-  // 进入时不自动打开编辑器
-  if (lib.activeNode?.type === 'folder' || !lib.activeNode) {
-    lib.setActive(null)
-  }
+  lib.setActive(null)
+  hydratedFlowId.value = null
   ready.value = true
+  document.addEventListener('visibilitychange', onVisibilitySave)
+  window.addEventListener('pagehide', onVisibilitySave)
 })
+
+function onVisibilitySave() {
+  if (document.visibilityState === 'hidden' || document.visibilityState === undefined) {
+    clearAutosaveTimer()
+    // fire-and-forget：切走/刷新前尽量落盘
+    void persistActive()
+  }
+}
+
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', onVisibilitySave)
+  window.removeEventListener('pagehide', onVisibilitySave)
+  clearAutosaveTimer()
+  void persistActive()
+})
+
+// 画布变更 → 防抖自动保存（刷新前通常已落库）
+watch(
+  () => ({
+    n: store.nodes.length,
+    l: store.links.length,
+    hid: hydratedFlowId.value,
+    aid: lib.activeId,
+  }),
+  () => schedulePageFlowAutosave()
+)
+
+// 深监听节点内容（改名、端口、属性）
+watch(
+  () => store.nodes,
+  () => schedulePageFlowAutosave(),
+  { deep: true }
+)
 
 watch(
   () => [tcStore.caseName, tcStore.linkedCaseId] as const,

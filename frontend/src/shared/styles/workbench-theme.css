@@ -1,37 +1,36 @@
 /**
- * 工作台共享设计令牌 — Soft Glass 蓝白系
+ * Crayon Doodle — 工作台共享设计令牌
  * 挂在 .wb-shell / .workflow-workbench 上
- * 令牌来源: tokens.css
+ * 涂鸦手绘风格：粗线条 + 角标 + 纹理 + 卡通字体
  */
 .wb-shell,
 .workflow-workbench {
-  --ac-cream:       var(--app-bg-warm);
-  --ac-cream-deep:  var(--app-bg);
-  --ac-paper:       var(--app-white);
-  --ac-wood:        var(--app-text);
-  --ac-wood-light:  var(--app-text-secondary);
-  --ac-wood-soft:   var(--app-text-muted);
-  --ac-ink:         var(--app-text);
-  --ac-ink-muted:   var(--app-text-secondary);
-  --ac-ink-faint:   var(--app-text-muted);
-  --ac-border:      var(--app-glass-border);
-  --ac-border-soft: rgba(162,210,255,0.12);
-  --ac-teal:        var(--app-green);
-  --ac-green:       var(--app-green-deep);
-  --ac-blue:        var(--app-blue);
-  --ac-yellow:      #f0d880;
-  --ac-purple:      #B0A8E0;
-  --ac-pink:        #8ecae6;
-  --ac-red:         #e8998a;
-  --ac-orange:      #F0C090;
-  --ac-radius:      var(--app-radius-md);
-  --ac-radius-sm:   var(--app-radius-sm);
-  --ac-shadow:      var(--app-shadow-sm);
-  --ac-shadow-lg:   var(--app-shadow-lg);
-  --ac-font:        var(--app-font);
+  --ac-cream:       var(--doodle-card);
+  --ac-cream-deep:  var(--doodle-bg);
+  --ac-paper:       var(--doodle-card);
+  --ac-wood:        var(--doodle-ink);
+  --ac-wood-light:  var(--app-ink-muted);
+  --ac-wood-soft:   var(--app-ink-muted);
+  --ac-ink:         var(--doodle-ink);
+  --ac-ink-muted:   var(--app-ink-muted);
+  --ac-ink-faint:   var(--app-ink-muted);
+  --ac-border:      var(--doodle-ink);
+  --ac-border-soft: var(--app-border-light);
+  --ac-teal:        var(--app-accent-purple);
+  --ac-green:       var(--app-status-success);
+  --ac-blue:        var(--app-accent-blue);
+  --ac-yellow:      var(--app-highlight);
+  --ac-purple:      var(--app-accent-purple);
+  --ac-pink:        var(--app-status-danger);
+  --ac-red:         var(--app-status-danger-text);
+  --ac-orange:      #f4a460;
+  --ac-radius:      var(--doodle-radius);
+  --ac-radius-sm:   var(--doodle-radius-sm);
+  --ac-shadow:      var(--doodle-shadow);
+  --ac-shadow-lg:   var(--doodle-shadow);
 
-  font-family: var(--ac-font);
-  color: var(--ac-ink);
+  font-family: var(--doodle-font-ui);
+  color: var(--doodle-ink);
   box-sizing: border-box;
 }
 
@@ -44,226 +43,141 @@
   box-sizing: border-box;
 }
 
-/* Element Plus 按钮 → 工作台 pill 皮肤 */
+/* ══════ Doodle Button ══════ */
 .wb-shell .wb-btn.el-button,
 .wb-shell .el-button.wb-btn {
-  --el-button-border-color: var(--ac-border);
-  --el-button-bg-color: var(--app-glass-card);
-  --el-button-text-color: var(--ac-ink-muted);
-  --el-button-hover-border-color: var(--app-green);
-  --el-button-hover-bg-color: rgba(162,210,255,0.16);
-  --el-button-hover-text-color: var(--app-green-deep);
-  border-radius: var(--app-radius-pill);
+  --el-button-border-color: var(--doodle-ink);
+  --el-button-bg-color: #fff;
+  --el-button-text-color: var(--doodle-ink);
+  --el-button-hover-border-color: var(--doodle-ink);
+  --el-button-hover-bg-color: var(--app-highlight);
+  --el-button-hover-text-color: var(--doodle-ink);
+  border-radius: var(--doodle-radius-sm);
+  font-family: var(--doodle-font-ui);
   font-weight: 700;
-  font-family: inherit;
-  border-width: 1.5px;
-  box-shadow: var(--app-shadow-sm);
+  border-width: 2.5px;
+  box-shadow: var(--doodle-shadow);
+  transition: all 0.12s;
+}
+.wb-shell .wb-btn.el-button:hover,
+.wb-shell .el-button.wb-btn:hover {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 rgba(0,0,0,0.04);
+}
+.wb-shell .el-button--primary {
+  background: var(--doodle-ink);
+  color: #fff;
+  border-color: var(--doodle-ink);
+}
+.wb-shell .el-button--primary:hover {
+  opacity: 0.85;
+  color: #fff;
+}
+.wb-shell .wb-btn--sunset.el-button {
+  background: linear-gradient(135deg, #f4a460, #f0c06a);
+  color: #fff;
+  border-color: var(--doodle-ink);
 }
 
-.wb-shell .wb-btn.el-button--primary,
-.wb-shell .el-button.wb-btn.el-button--primary {
-  --el-button-bg-color: linear-gradient(135deg, #89CFF0, #C9B6F2);
-  --el-button-border-color: var(--app-green-deep);
-  --el-button-text-color: #fff;
-  --el-button-hover-bg-color: var(--app-green-deep);
-  --el-button-hover-border-color: var(--app-green-deep);
-  --el-button-hover-text-color: #fff;
+/* ══════ Doodle Chip ══════ */
+.wb-shell .wb-chip.el-tag {
+  border-radius: 20px;
+  border: 2px solid var(--doodle-ink);
+  font-family: var(--doodle-font-ui);
+  font-weight: 700;
+  background: #fff;
+  color: var(--doodle-ink);
 }
 
-.wb-shell .wb-btn.el-button--danger,
-.wb-shell .el-button.wb-btn.el-button--danger {
-  --el-button-bg-color: var(--app-white);
-  --el-button-border-color: rgba(232,153,138,0.4);
-  --el-button-text-color: var(--ac-red);
-  --el-button-hover-bg-color: rgba(232,153,138,0.1);
-  --el-button-hover-border-color: var(--ac-red);
-  --el-button-hover-text-color: var(--ac-red);
+/* ══════ Doodle Card ══════ */
+.wb-shell .ac-card.el-card {
+  background: #fff;
+  border: var(--doodle-border) solid var(--doodle-ink);
+  border-radius: var(--doodle-radius);
+  box-shadow: var(--doodle-shadow);
+}
+.wb-shell .ac-card.el-card:hover {
+  transform: translate(-1px, -2px);
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.06);
 }
 
-.wb-shell .wb-btn.el-button--success {
-  --el-button-bg-color: var(--app-green-deep);
-  --el-button-border-color: var(--app-green-deep);
-  --el-button-text-color: #fff;
-}
-
-/* 筛选 chip */
-.wb-shell .wb-chip {
-  display: inline-flex; align-items: center;
-  padding: 5px 12px; border-radius: var(--app-radius-pill);
-  border: 1.5px solid var(--ac-border);
-  background: var(--app-glass-card);
-  font-size: 11px; font-weight: 700;
-  font-family: inherit; cursor: pointer;
-  color: var(--ac-ink-muted);
-}
-
-.wb-shell .wb-chip.is-active,
-.wb-shell .wb-chip.on {
-  background: rgba(162,210,255,0.18);
-  border-color: rgba(162,210,255,0.55);
-  color: var(--app-green-deep);
-}
-
-.wb-shell .wb-status-pill {
-  font-size: 11px; font-weight: 700;
-  color: #89CFF0;
-  padding: 4px 10px;
-  background: rgba(162,210,255,0.16);
-  border-radius: var(--app-radius-pill);
-}
-
-/* AppCard / AppTabs / AppTable 兼容层 */
-.wb-shell .ac-card,
-.workflow-workbench .ac-card {
-  background: var(--app-glass-card) !important;
-  border: 1px solid var(--app-glass-border) !important;
-  border-radius: var(--app-radius-lg) !important;
-  box-shadow: var(--app-shadow-md) !important;
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
-  transition:
-    transform var(--app-duration-slow) var(--app-ease),
-    box-shadow var(--app-duration-slow) var(--app-ease),
-    border-color var(--app-duration) var(--app-ease);
-}
-
-.wb-shell .ac-card:hover,
-.workflow-workbench .ac-card:hover {
-  border-color: rgba(162,210,255,0.72) !important;
-  box-shadow: var(--app-shadow-lg) !important;
-}
-
-.wb-shell .ac-card--dashed,
-.workflow-workbench .ac-card--dashed {
-  border-style: dashed !important;
-}
-
-.wb-shell .ac-card--blue,
-.wb-shell .ac-card--teal,
-.workflow-workbench .ac-card--blue,
-.workflow-workbench .ac-card--teal {
-  background:
-    linear-gradient(145deg, rgba(255,255,255,0.68), rgba(189,224,254,0.52)) !important;
-}
-
-.wb-shell .ac-card--green,
-.workflow-workbench .ac-card--green {
-  background:
-    linear-gradient(145deg, rgba(255,255,255,0.68), rgba(149,213,178,0.38)) !important;
-}
-
-.wb-shell .ac-card--yellow,
-.workflow-workbench .ac-card--yellow {
-  background:
-    linear-gradient(145deg, rgba(255,255,255,0.68), rgba(244,211,94,0.38)) !important;
-}
-
-.wb-shell .ac-card--brown,
-.workflow-workbench .ac-card--brown {
-  background:
-    linear-gradient(145deg, rgba(255,255,255,0.68), rgba(154,140,152,0.28)) !important;
-}
-
-.wb-shell .ac-card--purple,
-.workflow-workbench .ac-card--purple {
-  background:
-    linear-gradient(145deg, rgba(255,255,255,0.66), rgba(201,182,242,0.32)) !important;
-}
-
-.wb-shell .ac-card--pink,
-.workflow-workbench .ac-card--pink {
-  background:
-    linear-gradient(145deg, rgba(255,255,255,0.66), rgba(255,181,167,0.32)) !important;
-}
-
-.wb-shell .ac-tabs,
-.workflow-workbench .ac-tabs {
-  --el-color-primary: var(--app-green-deep);
-  color: var(--ac-ink);
-}
-
+/* ══════ Doodle Tabs ══════ */
 .wb-shell .ac-tabs .el-tabs__header,
 .workflow-workbench .ac-tabs .el-tabs__header {
   margin: 0;
 }
-
 .wb-shell .ac-tabs .el-tabs__nav-wrap::after,
 .workflow-workbench .ac-tabs .el-tabs__nav-wrap::after {
   height: 0;
 }
-
 .wb-shell .ac-tabs .el-tabs__nav,
 .workflow-workbench .ac-tabs .el-tabs__nav {
-  gap: 6px;
-  padding: 4px;
-  border-radius: var(--app-radius-pill);
-  background: rgba(255,255,255,0.34);
-  border: 1px solid var(--app-glass-border);
-  box-shadow: var(--app-shadow-sm);
+  gap: 4px;
+  padding: 2px;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
-
 .wb-shell .ac-tabs .el-tabs__item,
 .workflow-workbench .ac-tabs .el-tabs__item {
   height: 32px;
   padding: 0 16px;
-  border-radius: var(--app-radius-pill);
-  color: var(--ac-ink-muted);
+  border-radius: var(--doodle-radius-sm);
+  color: var(--app-ink-muted);
+  font-family: var(--doodle-font-ui);
   font-weight: 800;
-  transition:
-    color var(--app-duration) var(--app-ease),
-    background var(--app-duration) var(--app-ease);
+  border: 2px solid transparent;
+  background: transparent;
+  transition: all 0.12s;
 }
-
 .wb-shell .ac-tabs .el-tabs__item:hover,
 .workflow-workbench .ac-tabs .el-tabs__item:hover {
-  color: var(--app-green-deep);
+  color: var(--doodle-ink);
+  border-color: var(--app-border-light);
 }
-
 .wb-shell .ac-tabs .el-tabs__item.is-active,
 .workflow-workbench .ac-tabs .el-tabs__item.is-active {
-  color: var(--app-green-deep);
-  background: rgba(162,210,255,0.20);
+  color: var(--doodle-ink);
+  background: #fff;
+  border-color: var(--doodle-ink);
 }
-
 .wb-shell .ac-tabs .el-tabs__active-bar,
 .workflow-workbench .ac-tabs .el-tabs__active-bar {
   display: none;
 }
-
-.wb-shell .ac-tabs--shadow .el-tabs__nav,
-.workflow-workbench .ac-tabs--shadow .el-tabs__nav {
-  box-shadow: 0 8px 24px rgba(31,38,135,0.08);
+.wb-shell .ac-tabs--shadow .el-tabs__nav {
+  box-shadow: var(--doodle-shadow);
 }
-
 .wb-shell .ac-tabs--leaf .el-tabs__item.is-active::before,
 .workflow-workbench .ac-tabs--leaf .el-tabs__item.is-active::before {
   content: "";
   width: 7px;
   height: 7px;
   margin-right: 6px;
-  border-radius: 999px;
-  display: inline-block;
-  background: var(--app-green-deep);
-  box-shadow: 0 0 0 4px rgba(162,210,255,0.24);
-  vertical-align: middle;
+  border-radius: 2px;
+  background: var(--app-highlight);
 }
 
-.wb-shell .ac-table,
-.workflow-workbench .ac-table {
-  width: 100%;
-  border-radius: var(--app-radius-md) !important;
-  background: rgba(255,255,255,0.30) !important;
+/* ══════ Doodle Table ══════ */
+.wb-shell .ac-table.el-table {
+  background: #fff;
+  border: var(--doodle-border) solid var(--doodle-ink);
+  border-radius: var(--doodle-radius);
   overflow: hidden;
 }
-
-.wb-shell .ac-table th.el-table__cell,
-.workflow-workbench .ac-table th.el-table__cell {
-  background: rgba(255,255,255,0.50) !important;
-  color: var(--ac-ink) !important;
-  font-weight: 800 !important;
+.wb-shell .ac-table .el-table__header th {
+  background: var(--doodle-ink) !important;
+  color: #fff !important;
+  font-family: var(--doodle-font-title);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  border-bottom: 2px solid var(--doodle-ink) !important;
+  font-weight: 700;
 }
-
-.wb-shell .ac-table td.el-table__cell,
-.workflow-workbench .ac-table td.el-table__cell {
-  color: var(--ac-ink);
+.wb-shell .ac-table .el-table__body td {
+  border-bottom: 1.5px dashed rgba(0,0,0,0.08);
+}
+.wb-shell .ac-table .el-table__body tr:hover td {
+  background: rgba(0,0,0,0.015);
 }

@@ -221,46 +221,19 @@ watch(activeTab, async (tab) => {
       <template #discovery>
         <div v-show="activeTab === 'discovery'" class="doc-body">
           <section class="doc-section locator-section">
-            <!-- Toolbar -->
+            <!-- Device bar + action buttons -->
             <div class="toolbar">
               <DeviceSelector />
-              <el-divider direction="vertical" />
-              <el-button class="wb-btn"
-                :icon="'Refresh'"
-                :loading="screenRefreshing"
-                :disabled="!store.isConnected || !store.isDeviceOnline"
-                @click="refreshScreen"
-              >
-                刷新屏幕
-              </el-button>
-              <el-button class="wb-btn"
-                type="primary"
-                :loading="store.loading"
-                :disabled="!store.isConnected || !store.isDeviceOnline"
-                @click="doDump"
-              >
-                {{ store.loading ? 'Dumping...' : 'Dump UI' }}
-              </el-button>
-              <span v-if="store.pageId" class="info">
-                {{ filteredElements.length }}/{{ store.elements.length }} 元素
-              </span>
+              <button class="locator-action-btn" :disabled="!store.isConnected || !store.isDeviceOnline" @click="refreshScreen">↻ 刷新屏幕</button>
+              <button class="locator-action-btn locator-action-btn--primary" :disabled="!store.isConnected || !store.isDeviceOnline" @click="doDump">{{ store.loading ? 'Dumping...' : '⚡ Dump UI' }}</button>
+              <span v-if="store.pageId" class="info">{{ filteredElements.length }}/{{ store.elements.length }} 元素</span>
               <span v-if="store.error" class="error">{{ store.error }}</span>
             </div>
 
-            <!-- Filter bar (visible after dump) -->
+            <!-- Filter bar: custom Paper-style tabs -->
             <div v-if="store.pageId" class="filter-bar">
-              <el-radio-group v-model="filterMode" size="small">
-                <el-radio-button v-for="f in FILTER_OPTIONS" :key="f.value" :value="f.value">
-                  {{ f.label }}
-                </el-radio-button>
-              </el-radio-group>
-              <el-input
-                v-model="searchText"
-                size="small"
-                placeholder="搜索 text / resource-id / class..."
-                :allow-clear="true"
-                style="width:260px"
-              />
+              <button v-for="f in FILTER_OPTIONS" :key="f.value" class="filter-tab" :class="{ active: filterMode === f.value }" @click="filterMode = f.value">{{ f.label }}</button>
+              <el-input v-model="searchText" size="small" placeholder="搜索 text / resource-id / class..." :allow-clear="true" class="filter-search" />
             </div>
 
             <!-- Workspace: 三栏 1:2:1 — 手机屏幕 | XPath 候选 | 详情 -->
@@ -312,15 +285,20 @@ watch(activeTab, async (tab) => {
         </div>
       </template>
     </AppTabs>
+    <footer class="locator-footer">
+      <span>🕐 就绪</span>
+      <span>📡 {{ store.isConnected ? '已连接 '+store.connectedSerial : '未连接设备' }}</span>
+      <span>📋 {{ store.actionable?.length || 0 }} 个元素</span>
+    </footer>
   </div>
 </template>
 
 <style scoped>
 .doc-page {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+  display: flex;flex-direction: column;height: 100%;overflow: hidden;
+  background: radial-gradient(circle, var(--app-paper-dot, #d4cdc0) 0.8px, transparent 0.8px);
+  background-size: 14px 14px;
+  background-color: var(--doodle-bg, #faf5ee);
 }
 
 .locator-tabs {
@@ -411,7 +389,7 @@ watch(activeTab, async (tab) => {
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   margin-bottom: 16px;
   flex-shrink: 0;
   flex-wrap: wrap;
@@ -420,14 +398,14 @@ watch(activeTab, async (tab) => {
 .filter-bar {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 16px;
   flex-shrink: 0;
   flex-wrap: wrap;
-  padding: 14px 18px;
-  background: var(--ac-cream-deep, #f5ede0);
-  border: 1px solid var(--ac-border, rgba(139, 115, 85, 0.16));
-  border-radius: var(--ac-radius-sm, 10px);
+  padding: 10px 14px;
+  background: #fff;
+  border: 3px solid var(--doodle-ink, #2d2d2d);
+  border-radius: 6px 10px 6px 10px; box-shadow: 2px 2px 0 rgba(0,0,0,0.04);
 }
 
 .info { font-size: 14px; color: var(--app-text-secondary, #7A8B73); white-space: nowrap; }
@@ -457,5 +435,42 @@ watch(activeTab, async (tab) => {
     grid-template-rows: minmax(280px, 1fr) minmax(200px, auto) minmax(160px, auto);
     overflow-y: auto;
   }
+}
+
+.locator-footer { display:flex;align-items:center;justify-content:center;gap:24px;padding:10px 20px;background:var(--app-highlight,#FFE066);border-top:2.5px solid var(--app-ink,#2d2d2d);font-size:12px;font-weight:700;color:#5a4e20;font-family:'Caveat',cursive;flex-shrink:0; }
+.locator-footer span{display:flex;align-items:center;gap:4px;font-size:13px;}
+
+/* Paper × Polaroid — 覆盖 AppTabs 玻璃态 */
+.locator-tabs :deep(.el-tabs__nav) {
+  gap: 0 !important; padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.locator-tabs :deep(.el-tabs__item) {
+  height: 36px !important; padding: 0 20px !important;
+  border-radius: 4px 8px 0 0 !important;
+  color: var(--app-ink-muted, #999) !important;
+  font-weight: 700 !important; font-size: 12px !important;
+  border: 2px solid transparent !important;
+  background: transparent !important;
+}
+.locator-tabs :deep(.el-tabs__item:hover) {
+  color: var(--app-ink, #2d2d2d) !important;
+  background: rgba(0,0,0,0.03) !important;
+}
+.locator-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--app-ink, #2d2d2d) !important;
+  background: #fff !important;
+  border-color: var(--app-ink, #2d2d2d) !important;
+  border-bottom-color: #fff !important;
+}
+.locator-tabs :deep(.el-tabs__active-bar) {
+  display: none !important;
+}
+.locator-tabs :deep(.el-tabs__header) {
+  border-bottom: 2px solid var(--app-ink, #2d2d2d) !important;
+  margin-bottom: 0 !important;
 }
 </style>

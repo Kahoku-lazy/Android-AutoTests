@@ -972,13 +972,11 @@ async function loadDevices() {
   flex-direction: column;
   min-height: 0;
   margin-top: 12px;
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--doodle-ink, #2d2d2d);
   border-radius: var(--ac-radius, 16px);
-  background: var(--app-glass-card);
+  background: #fff;
   overflow: hidden;
   box-shadow: var(--app-shadow-sm);
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
 }
 .tabs-panel :deep(.el-tabs) {
   flex: 1;
@@ -1012,7 +1010,7 @@ async function loadDevices() {
 .task-card {
   cursor: pointer;
   border-radius: var(--ac-radius, 16px);
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--doodle-ink, #2d2d2d);
   border-left-width: 4px;
   padding: 16px 18px 14px;
   display: flex;

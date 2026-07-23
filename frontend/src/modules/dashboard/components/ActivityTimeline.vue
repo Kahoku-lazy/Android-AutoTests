@@ -64,7 +64,7 @@ watch(() => props.items.length, revealItems)
   font-family: var(--font-display, 'Quicksand', sans-serif);
   font-size: 16px;
   font-weight: 700;
-  color: var(--text-primary, #4a4e69);
+  color: var(--text-primary, var(--app-text));
   margin: 0 0 16px;
 }
 
@@ -79,7 +79,7 @@ watch(() => props.items.length, revealItems)
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-secondary, #9a8c98);
+  color: var(--text-secondary, var(--app-text-secondary));
   font-size: 13px;
 }
 
@@ -100,7 +100,7 @@ watch(() => props.items.length, revealItems)
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border: 2px solid var(--text-secondary, #9a8c98);
+  border: 2px solid var(--text-secondary, var(--app-text-secondary));
   background: white;
   display: flex;
   align-items: center;
@@ -116,11 +116,11 @@ watch(() => props.items.length, revealItems)
   width: 6px;
   height: 6px;
   border-radius: 1px;
-  background: #999;
+  background: var(--app-ink-muted);
 }
-.timeline-item--success .timeline-item__dot-inner { background: #6BCB77; }
+.timeline-item--success .timeline-item__dot-inner { background: var(--app-status-success); }
 .timeline-item--warning .timeline-item__dot-inner { background: #F7C948; }
-.timeline-item--error .timeline-item__dot-inner   { background: #FFB5A7; }
+.timeline-item--error .timeline-item__dot-inner   { background: var(--app-status-danger); }
 
 .timeline-item__line {
   position: absolute;
@@ -128,7 +128,7 @@ watch(() => props.items.length, revealItems)
   top: 22px;
   bottom: 0;
   width: 1.5px;
-  background: repeating-linear-gradient(0deg, #d4cdc0 0px, #d4cdc0 3px, transparent 3px, transparent 6px);
+  background: repeating-linear-gradient(0deg, var(--app-paper-dot) 0px, var(--app-paper-dot) 3px, transparent 3px, transparent 6px);
 }
 
 .timeline-item__content {
@@ -147,18 +147,18 @@ watch(() => props.items.length, revealItems)
 .timeline-item__action {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary, #4a4e69);
+  color: var(--text-primary, var(--app-text));
 }
 
 .timeline-item__time {
   font-size: 11px;
-  color: var(--text-secondary, #9a8c98);
+  color: var(--text-secondary, var(--app-text-secondary));
   flex-shrink: 0;
 }
 
 .timeline-item__detail {
   font-size: 12px;
-  color: var(--text-secondary, #9a8c98);
+  color: var(--text-secondary, var(--app-text-secondary));
   margin: 0;
   line-height: 1.5;
 }
@@ -173,9 +173,9 @@ watch(() => props.items.length, revealItems)
   font-size: 9px;
   padding: 2px 7px;
   border-radius: 3px 6px 3px 6px;
-  background: #f8f6f2;
-  border: 1px solid #e8ecf1;
-  color: #999;
+  background: var(--app-bg-subtle);
+  border: 1px solid var(--app-border-light);
+  color: var(--app-ink-muted);
   font-weight: 600;
 }
 </style>

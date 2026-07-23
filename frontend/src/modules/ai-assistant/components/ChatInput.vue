@@ -78,10 +78,9 @@ function onInput(val) {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: var(--app-glass-card);
-  border-top: 1px solid var(--app-glass-border);
+  background: #fff;
+  border-top: 1px solid var(--doodle-ink, #2d2d2d);
   font-size: 13px;
-  backdrop-filter: blur(var(--app-glass-blur));
 }
 .file-preview-icon {
   display: inline-flex;
@@ -117,14 +116,13 @@ function onInput(val) {
   align-items: flex-end;
   gap: 10px;
   padding: 10px 16px 12px;
-  background: var(--app-glass-heavy);
-  border-top: 1px solid var(--app-glass-border);
+  background: #fff;
+  border-top: 1px solid var(--doodle-ink, #2d2d2d);
   flex-shrink: 0;
-  backdrop-filter: blur(var(--app-glass-blur));
 }
 .chat-input :deep(.el-textarea__inner) {
   border-radius: var(--app-radius-sm) !important;
-  border: 1.5px solid var(--app-glass-border) !important;
+  border: 1.5px solid var(--doodle-ink, #2d2d2d) !important;
   padding: 8px 12px !important;
   font-size: 14px !important;
   line-height: 1.45 !important;
@@ -142,8 +140,8 @@ function onInput(val) {
   width: 40px;
   height: 40px;
   border-radius: var(--app-radius-sm);
-  border: 1.5px solid var(--app-glass-border);
-  background: var(--app-glass-card);
+  border: 1.5px solid var(--doodle-ink, #2d2d2d);
+  background: #fff;
   color: var(--app-text-secondary);
   display: inline-flex;
   align-items: center;

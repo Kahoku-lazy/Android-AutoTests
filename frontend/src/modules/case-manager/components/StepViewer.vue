@@ -101,7 +101,7 @@ const DETAIL_FIELDS = [
 .step-viewer__item {
   border-radius: 14px;
   overflow: hidden;
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--doodle-ink, #2d2d2d);
   background: rgba(255,255,255,0.38);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }

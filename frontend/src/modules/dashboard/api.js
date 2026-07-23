@@ -9,13 +9,3 @@ export function fetchDashboardStats() {
 export function fetchRecentActivities() {
   return client.get('/dashboard/activities/')
 }
-
-/** 获取设备统计 */
-export function fetchDeviceStats() {
-  return client.get('/devices/stats/')
-}
-
-/** 获取用例统计 */
-export function fetchCaseStats() {
-  return client.get('/cases/stats/')
-}

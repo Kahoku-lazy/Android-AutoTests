@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全平台 8 模块 Paper×Polaroid 统一主题 — Android-AutoTests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Quicksand:wght@600;700;800&family=Caveat:wght@600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   Platform Unified: Paper × Polaroid
+   ═══════════════════════════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --ink:#2d2d2d;--muted:#999;--paper:#fefcf6;--dot:#d4cdc0;
+  --border-light:#e8ecf1;--border-lighter:#f0ede8;--bg-subtle:#f8f6f2;
+  --highlight:#FFE066;
+  --green:#6BCB77;--green-bg:#C8F5D0;--green-text:#2d7a2d;
+  --pink:#FFB5A7;--pink-bg:#FFE0DB;--pink-text:#a03030;
+  --purple:#b39ef3;--purple-bg:#E8DDF8;--purple-text:#5a3fa0;
+  --yellow-bg:#FFF9E0;
+  --blue:#89CFF0;--blue-light:#BDE0FE;
+  --teal:#19c8b9;
+  --orange:#f7a8c4;
+  --brown:#8b7355;
+}
+body{font-family:'Inter','PingFang SC',sans-serif;background:#d5dbe0;padding:20px 16px;}
+h1{text-align:center;font-size:16px;font-weight:800;color:var(--ink);margin-bottom:4px;}
+h1+p{text-align:center;font-size:11px;color:var(--muted);margin-bottom:18px;}
+
+/* Module row */
+.mod-row{max-width:680px;margin:0 auto 20px;}
+.mod-label{
+  font-size:9px;font-weight:700;color:var(--ink);letter-spacing:0.06em;text-transform:uppercase;
+  background:#fff;padding:4px 12px;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;
+  display:inline-flex;align-items:center;gap:5px;margin-bottom:8px;
+}
+.mod-label .dot{width:6px;height:6px;flex-shrink:0;border-radius:1px;}
+
+/* Page shell */
+.shell{
+  background:radial-gradient(circle,var(--dot) 0.8px,transparent 0.8px);
+  background-size:12px 12px;background-color:var(--paper);
+  border:2.5px solid var(--ink);border-radius:4px;overflow:hidden;
+  box-shadow:3px 3px 0 rgba(0,0,0,0.05);
+}
+
+/* Shared header */
+.hdr{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#fff;border-bottom:2.5px solid var(--ink)}
+.hdr-icon{width:34px;height:34px;display:grid;place-items:center;color:#fff;font-size:14px;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;box-shadow:2px 2px 0 rgba(0,0,0,0.06)}
+.hdr h3{font-family:'Caveat',cursive;font-size:18px;font-weight:700;color:var(--ink);margin:0}
+.hdr .sub{font-size:9px;color:var(--muted);font-weight:600;margin:1px 0 0}
+.hdr .acts{margin-left:auto;display:flex;gap:5px}
+
+/* Buttons */
+.btn{font-size:9px;font-weight:700;padding:3px 10px;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;background:#fff;color:var(--ink);cursor:pointer;font-family:inherit;white-space:nowrap}
+.btn:hover{background:var(--highlight)}
+.btn-p{background:var(--ink);color:#fff}
+.btn-p:hover{opacity:0.85;color:#fff}
+.btn-sm{font-size:8px;padding:2px 6px}
+.badge{font-size:8px;font-weight:700;padding:1px 6px;border:1.5px solid var(--ink);border-radius:3px 6px 3px 6px;display:inline-block}
+.badge-g{background:var(--green-bg);color:var(--green-text)}
+.badge-p{background:var(--pink-bg);color:var(--pink-text)}
+.badge-v{background:var(--purple-bg);color:var(--purple-text)}
+.badge-y{background:var(--yellow-bg);color:#7a5a10}
+
+/* Card */
+.card{background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;box-shadow:2px 3px 0 rgba(0,0,0,0.05);padding:10px 10px 26px 10px;position:relative}
+.card::before{content:'';position:absolute;top:3px;left:50%;transform:translateX(-50%);width:7px;height:7px;background:radial-gradient(circle,#e8e0d5,#a09080);border-radius:50%;z-index:2}
+
+/* Grid helpers */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}
+.grid13{display:grid;grid-template-columns:1fr 2fr;gap:8px}
+.grid21{display:grid;grid-template-columns:2fr 1fr;gap:8px}
+
+/* Number stat */
+.stat-val{font-family:'Caveat','Quicksand',cursive;font-size:22px;font-weight:700;color:var(--ink);line-height:1}
+.stat-lbl{font-size:8px;font-weight:700;color:var(--muted);margin-top:2px;text-transform:uppercase}
+
+/* Panel header */
+.pnl-hdr{font-size:10px;font-weight:700;color:var(--ink);margin-bottom:6px;padding-bottom:6px;border-bottom:2px solid var(--border-light)}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:9px}
+.tbl th{background:var(--ink);color:#fff;padding:4px 8px;text-align:left;font-size:9px;font-weight:700;border-right:1px solid rgba(255,255,255,0.2)}
+.tbl th:last-child{border-right:none}
+.tbl th:first-child{border-radius:3px 0 0 0}
+.tbl th:last-child{border-radius:0 3px 0 0}
+.tbl td{padding:4px 8px;border-bottom:1px solid var(--border-lighter);font-size:9px;color:var(--ink)}
+.tbl tr:hover{background:rgba(0,0,0,0.02)}
+
+/* Tree */
+.tree-item{font-size:10px;font-weight:600;padding:4px 8px;border-radius:3px 6px 3px 6px;cursor:pointer;display:flex;align-items:center;gap:4px}
+.tree-item:hover{background:var(--purple-bg)}
+.tree-item.sel{background:var(--purple-bg);color:var(--purple-text);border:1.5px solid var(--purple-border)}
+.tree-item .cnt{margin-left:auto;font-size:8px;font-weight:700;background:var(--bg-subtle);padding:1px 5px;border-radius:3px;color:var(--muted)}
+
+/* Footer */
+.ftr{display:flex;align-items:center;justify-content:center;gap:16px;padding:8px 16px;background:var(--highlight);border-top:2.5px solid var(--ink);font-family:'Caveat',cursive;font-size:10px;font-weight:700;color:#5a4e20}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:2px solid var(--ink);padding:0 14px;background:#fff;gap:0}
+.tab{padding:6px 14px;font-size:10px;font-weight:700;color:var(--muted);cursor:pointer;border:2px solid transparent;border-bottom:none;border-radius:4px 4px 0 0;margin-bottom:-2px;background:transparent}
+.tab:hover{color:var(--ink);background:var(--bg-subtle)}
+.tab.act{color:var(--ink);background:#fff;border-color:var(--ink);border-bottom-color:#fff}
+
+/* Body */
+.body{padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* Device bar */
+.dev-bar{display:flex;align-items:center;gap:8px;padding:7px 12px;background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;box-shadow:2px 2px 0 rgba(0,0,0,0.04)}
+.dev-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+.dev-name{font-size:10px;font-weight:700;color:var(--ink)}
+.dev-meta{font-size:9px;color:var(--muted);font-weight:600}
+.dev-tag{font-size:8px;font-weight:700;padding:1px 6px;background:var(--green-bg);color:var(--green-text);border:1.5px solid var(--green);border-radius:3px 6px 3px 6px;margin-left:auto}
+
+/* XPath */
+.xp{font-family:'JetBrains Mono',monospace;font-size:8px;padding:3px 6px;border-radius:3px 6px 3px 6px;cursor:pointer;border:1.5px solid transparent;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xp:hover{border-color:var(--purple);background:var(--purple-bg)}
+.xp.best{background:var(--purple-bg);border-color:var(--purple);color:var(--purple-text)}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);border:2.5px solid var(--ink);border-radius:4px 8px 4px 8px;overflow:hidden;background:#fff;margin-bottom:8px}
+.kpi-item{padding:10px 12px;text-align:center;border-right:2px solid var(--border-light)}
+.kpi-item:last-child{border-right:none}
+</style>
+</head>
+<body>
+
+<h1>全平台 8 模块 · Paper × Polaroid 统一主题</h1>
+<p>所有模块统一：纸纹底 + 墨色 #2d2d2d + 2.5px 实色边框 + 不对称圆角 + Caveat 标题 + 模块色强调</p>
+
+<!-- ═══════════ 1. 仪表盘 ═══════════ -->
+<div class="mod-row">
+  <div class="mod-label"><span class="dot" style="background:#F4D35E"></span> 1. 仪表盘 · dashboard — 模块色 app-yellow #F4D35E</div>
+  <div class="shell">
+    <div class="hdr">
+      <div class="hdr-icon" style="background:linear-gradient(135deg,#F4D35E,#f0c06a)">◈</div>
+      <div><h3>仪表盘</h3><div class="sub">自动化测试平台 · 实时监控设备状态、用例执行、AI Agent 与测试报告</div></div>
+      <div class="acts"><button class="btn">刷新</button></div>
+    </div>
+    <div class="tabs"><div class="tab act">📊 统计概览</div><div class="tab">📈 趋势</div></div>
+    <div class="body">
+      <div class="grid4">
+        <div class="card" style="min-height:70px">
+          <div style="font-size:9px;font-weight:700;color:var(--ink);margin-bottom:4px">在线设备</div>
+          <div class="stat-val">3 <span style="font-size:11px;color:var(--muted)">/ 5</span></div>
+          <div class="stat-lbl">↑2% 近期活跃</div>
+        </div>
+        <div class="card" style="min-height:70px">
+          <div style="font-size:9px;font-weight:700;color:var(--ink);margin-bottom:4px">测试用例</div>
+          <div class="stat-val">128</div>
+          <div class="stat-lbl">↑5 本周新增</div>
+        </div>
+        <div class="card" style="min-height:70px">
+          <div style="font-size:9px;font-weight:700;color:var(--ink);margin-bottom:4px">活跃智能体</div>
+          <div class="stat-val">4 <span style="font-size:11px;color:var(--muted)">/ 8</span></div>
+          <div class="stat-lbl">智能体</div>
+        </div>
+        <div class="card" style="min-height:70px">
+          <div style="font-size:9px;font-weight:700;color:var(--ink);margin-bottom:4px">运行中任务</div>
+          <div class="stat-val">2</div>
+          <div class="stat-lbl">执行中</div>
+        </div>
+      </div>
+      <div class="grid21">
+        <div class="card" style="min-height:80px"><div class="pnl-hdr">📈 近12期执行趋势</div><div style="display:flex;align-items:flex-end;gap:2px;height:50px;padding-top:8px"><div style="flex:1;background:var(--green);height:70%;border-radius:2px 2px 0 0"></div><div style="flex:1;background:var(--green);height:45%;border-radius:2px 2px 0 0"></div><div style="flex:1;background:var(--pink);height:30%;border-radius:2px 2px 0 0"></div><div style="flex:1;background:var(--green);height:85%;border-radius:2px 2px 0 0"></div><div style="flex:1;background:var(--green);height:55%;border-radius:2px 2px 0 0"></div><div style="flex:1;background:var(--pink);height:40%;border-radius:2px 2px 0 0"></div></div></div>
+        <div class="card" style="min-height:80px"><div class="pnl-hdr">📋 最近执行</div><div style="font-size:9px;color:var(--ink);padding-top:4px"><span class="badge badge-g" style="margin-right:4px">✓ 12</span> <span class="badge badge-p" style="margin-right:4px">✗ 3</span> <span class="badge badge-v">+5 新建</span><div style="margin-top:6px;font-size:10px">任务: 回归测试 · <span style="color:var(--green)">全部通过</span></div></div></div>
+      </div>
+    </div>
+    <div class="ftr"><span>🕐 最近更新: 2026-07-23 14:30</span><span>📡 系统正常</span></div>
+  </div>
+</div>
+
+<!-- ═══════════ 2. 设备管理 ═══════════ -->
+<div class="mod-row">
+  <div class="mod-label"><span class="dot" style="background:var(--green)"></span> 2. 设备管理 · device-pool — 模块色 app-green #6BCB77</div>
+  <div class="shell">
+    <div class="hdr">
+      <div class="hdr-icon" style="background:linear-gradient(135deg,#95D5B2,#52b788)">📱</div>
+      <div><h3>设备管理</h3><div class="sub">扫描、连接、锁定 Android 设备，管理设备状态与使用队列</div></div>
+      <div class="acts"><button class="btn">📶 局域网</button><button class="btn btn-p">🔄 刷新</button></div>
+    </div>
+    <div class="kpi-row" style="margin:12px 16px">
+      <div class="kpi-item"><div class="stat-val" style="font-size:18px">3</div><div class="stat-lbl">在线</div></div>
+      <div class="kpi-item"><div class="stat-val" style="font-size:18px">1</div><div class="stat-lbl">使用中</div></div>
+      <div class="kpi-item"><div class="stat-val" style="font-size:18px">1</div><div class="stat-lbl">离线</div></div>
+      <div class="kpi-item"><div class="stat-val" style="font-size:18px">5</div><div class="stat-lbl">总计</div></div>
+    </div>
+    <div class="body">
+      <div class="row">
+        <div class="tab act" style="border-radius:4px 8px 4px 8px;border:2px solid var(--ink);background:#fff">全部设备</div>
+        <div class="tab" style="border-radius:4px 8px 4px 8px">在线</div>
+        <div class="tab" style="border-radius:4px 8px 4px 8px">使用中</div>
+        <span style="font-size:9px;color:var(--muted);margin-left:auto">5 台设备</span>
+      </div>
+      <table class="tbl">
+        <thead><tr><th>序列号</th><th>型号</th><th>分辨率</th><th>状态</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr><td style="font-family:'JetBrains Mono',monospace;font-size:9px">10.162.92.83:40449</td><td>Samsung S21</td><td>1080×2400</td><td><span class="badge badge-g">在线</span></td><td><button class="btn btn-sm">锁定</button> <button class="btn btn-sm">断开</button></td></tr>
+          <tr><td style="font-family:'JetBrains Mono',monospace;font-size:9px">emulator-5554</td><td>Pixel 6</td><td>1080×2280</td><td><span class="badge badge-p">使用中</span></td><td><button class="btn btn-sm">详情</button></td></tr>
+          <tr><td style="font-family:'JetBrains Mono',monospace;font-size:9px">192.168.1.100:5555</td><td>Xiaomi 12</td><td>1080×2400</td><td><span class="badge badge-g">在线</span></td><td><button class="btn btn-sm">锁定</button> <button class="btn btn-sm">断开</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="ftr"><span>📱 5 台设备 · 3 在线 · 1 使用中</span></div>
+  </div>
+</div>
+
+<!-- ═══════════ 3. 元素定位 ═══════════ -->
+<div class="mod-row">
+  <div class="mod-label"><span class="dot" style="background:var(--purple)"></span> 3. 元素定位 · element-locator — 模块色 purple #b39ef3</div>
+  <div class="shell">
+    <div class="hdr">
+      <div class="hdr-icon" style="background:linear-gradient(135deg,#C9B6F2,#a78bfa)">⊕</div>
+      <div><h3>元素定位</h3><div class="sub">连接设备 · Dump UI · 生成 XPath 候选 · 保存到元素管理</div></div>
+      <div class="acts"><button class="btn">📋 管理</button><button class="btn btn-p">🔍 获取元素</button></div>
+    </div>
+    <div class="tabs"><div class="tab act">🔍 设备元素获取</div><div class="tab">📋 管理</div><div class="tab">🌐 Web</div><div class="tab">📡 API</div></div>
+    <div class="body">
+      <div class="dev-bar">
+        <div class="dev-dot"></div><span class="dev-name">10.162.92.83:40449</span><span class="dev-meta">· Samsung S21 · 1080×2400</span><span class="dev-tag">在线</span>
+      </div>
+      <div class="row">
+        <button class="btn btn-sm">↻ 刷新</button><button class="btn btn-sm btn-p">⚡ Dump</button>
+        <span style="font-size:9px;color:var(--muted)">32 元素</span>
+      </div>
+      <div class="row">
+        <div class="tab act" style="border-radius:4px 8px 4px 8px;font-size:9px;padding:3px 8px">全部</div>
+        <div class="tab" style="border-radius:4px 8px 4px 8px;font-size:9px;padding:3px 8px">可点击</div>
+        <div class="tab" style="border-radius:4px 8px 4px 8px;font-size:9px;padding:3px 8px">有文本</div>
+      </div>
+      <div class="grid3" style="min-height:160px">
+        <div class="card">
+          <div class="pnl-hdr" style="border-color:var(--purple-border)">📱 APP设备列表页 · 20</div>
+          <div class="tree-item">📱 FrameLayout <span class="cnt">4</span></div>
+          <div class="tree-item" style="padding-left:16px">📄 RecyclerView <span class="cnt">12</span></div>
+          <div class="tree-item sel">🎯 TextView "设备列表" <span class="cnt">1</span></div>
+          <div class="tree-item" style="padding-left:16px">📌 Button "连接"</div>
+        </div>
+        <div class="card" style="display:flex;align-items:center;justify-content:center;background:#1a1a2e">
+          <div style="width:100px;height:170px;background:linear-gradient(180deg,#1a1a2e,#16213e);border-radius:10px;border:2px solid #333;display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-size:9px;opacity:0.5">📱 Screen</span></div>
+        </div>
+        <div class="card">
+          <div class="pnl-hdr" style="border-color:var(--purple-border)">🎯 XPath 候选 · 8</div>
+          <div class="xp best">//TextView[@text="设备列表"]</div>
+          <div class="xp">//*[@text="设备列表"]</div>
+          <div class="xp">//android.widget.TextView[3]</div>
+          <div style="margin-top:8px"><div class="pnl-hdr">📊 已保存元素</div>
+          <table class="tbl"><thead><tr><th>名称</th><th>XPath</th><th>测试点</th></tr></thead>
+          <tbody><tr><td>设备列表</td><td style="font-size:8px">//TextView[...</td><td><span class="badge badge-g">✅</span></td></tr>
+          <tr><td>连接按钮</td><td style="font-size:8px">//Button[@...</td><td><span class="badge badge-g">✅</span></td></tr></tbody></table></div>
+        </div>
+      </div>
+    </div>
+    <div class="ftr"><span>🕐 已连接 · 12 元素</span></div>
+  </div>
+</div>
+
+<!-- ═══════════ 4. 用例管理 ═══════════ -->
+<div class="mod-row">
+  <div class="mod-label"><span class="dot" style="background:var(--teal)"></span> 4. 用例管理 · case-manager — 模块色 app-teal #19c8b9</div>
+  <div class="shell">
+    <div class="hdr">
+      <div class="hdr-icon" style="background:linear-gradient(135deg,#89CFF0,#60a5fa)">📋</div>
+      <div><h3>用例管理</h3><div class="sub">步骤编排 · 目录树 · YAML 导入导出 · 测试用例全生命周期</div></div>
+      <div class="acts"><button class="btn">➕ 新建</button><button class="btn">📥 导入</button></div>
+    </div>
+    <div class="tabs"><div class="tab act">📋 UI自动化</div><div class="tab">💾 存储</div><div class="tab">🌐 API</div></div>
+    <div class="body">
+      <div class="row">
+        <div class="tab act" style="border-radius:4px 8px 4px 8px;font-size:9px;padding:3px 8px">全部</div>
+        <div class="tab" style="border-radius:4px 8px 4px 8px;font-size:9px;padding:3px 8px">已启用</div>
+        <span style="font-size:9px;color:var(--muted);margin-left:auto">128 用例</span>
+      </div>
+      <div class="grid13" style="min-height:120px">
+        <div class="card">
+          <div class="pnl-hdr" style="border-color:#89CFF0">📁 目录</div>
+          <div class="tree-item sel">📄 登录模块 <span class="cnt">12</span></div>
+          <div class="tree-item" style="padding-left:16px">📝 正常登录</div>
+          <div class="tree-item" style="padding-left:16px">📝 异常登录</div>
+          <div class="tree-item">📄 设备控制 <span class="cnt">8</span></div>
+          <div class="tree-item">📄 设置页面 <span class="cnt">5</span></div>
+        </div>
+        <div class="card">
+          <table class="tbl">
+            <thead><tr><th>名称</th><th>步骤</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr><td>登录流程验证</td><td>5 步</td><td><span class="badge badge-g">启用</span></td><td><button class="btn btn-sm">编辑</button></td></tr>
+              <tr><td>设备列表展示</td><td>3 步</td><td><span class="badge badge-g">启用</span></td><td><button class="btn btn-sm">编辑</button></td></tr>
+              <tr><td>异常断连处理</td><td>4 步</td><td><span class="badge badge-y">禁用</span></td><td><button class="btn btn-sm">编辑</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="ftr"><span>📋 3 目录 · 128 用例 · 96 已启用</span></div>
+  </div>
+</div>
+
+<!-- ═══════════ 5. 执行引擎 ═══════════ -->
+<div class="mod-row">
+  <div class="mod-label"><span class="dot" style="background:var(--pink)"></span> 5. 执行引擎 · test-runner — 模块色 app-pink #FFB5A7</div>
+  <div class="shell">
+    <div class="hdr">
+      <div class="hdr-icon" style="background:linear-gradient(135deg,#FFB5A7,#f87171)">▶</div>
+      <div><h3>执行引擎</h3><div class="sub">任务调度 · 实时进度 · WebSocket 日志 · 批量执行</div></div>
+      <div class="acts"><button class="btn btn-p">▶ 新建运行</button></div>
+    </div>
+    <div class="tabs"><div class="tab act">📊 运行中</div><div class="tab">📋 历史</div></div>
+    <div class="body">
+      <div class="kpi-row">
+        <div class="kpi-item"><div class="stat-val" style="font-size:18px;color:var(--pink-text)">2</div><div class="stat-lbl">运行中</div></div>
+        <div class="kpi-item"><div class="stat-val" style="font-size:18px;color:var(--green-text)">47</div><div class="stat-lbl">已完成</div></div>
+        <div class="kpi-item"><div class="stat-val" style="font-size:18px;color:var(--pink-text)">3</div><div class="stat-lbl">失败</div></div>
+        <div class="kpi-item"><div class="stat-val" style="font-size:18px">94%</div><div class="stat-lbl">通过率</div></div>
+      </div>
+      <table class="tbl">
+        <thead><tr><th>Run ID</th><th>设备</th><th>用例</th><th>状态</th><th>时间</th></tr></thead>
+        <tbody>
+          <tr><td style="font-family:'JetBrains Mono',monospace;font-size:8px">run_20260723_001</td><td>Samsung S21</td><td>登录流程 · 8/12</td><td><span class="badge badge-p">执行中</span></td><td>14:30</td></tr>
+          <tr><td style="font-family:'JetBrains Mono',monospace;font-size:8px">run_20260723_002</td><td>Pixel 6</td><td>设备列表 · 完成</td><td><span class="badge badge-g">成功</span></td><td>13:15</td></tr>
+          <tr><td style="font-family:'JetBrains Mono',monospace;font-size:8px">run_20260722_015</td><td>Xiaomi 12</td><td>异常断连 · 3/5 失败</td><td><span class="badge badge-p">失败</span></td><td>昨日</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="ftr"><span>📊 52 次运行 · 94% 通过率</span></div>
+  </div>
+</div>
+
+<!-- ═══════════ 6. 测试报告 ═══════════ -->
+<div class="mod-row">
+  <div class="mod-label"><span class="dot" style="background:var(--brown)"></span> 6. 测试报告 · report-generator — 模块色 brown #8b7355</div>
+  <div class="shell">
+    <div class="hdr">
+      <div class="hdr-icon" style="background:linear-gradient(135deg,#9a8c98,#8b7f8f)">📊</div>
+      <div><h3>测试报告</h3><div class="sub">KPI 摘要 · 失败定位 · 趋势图表 · 报告导出</div></div>
+      <div class="acts"><button class="btn">📥 导出</button></div>
+    </div>
+    <div class="body">
+      <div class="grid3">
+        <div class="card" style="text-align:center"><div style="font-size:32px;font-weight:700;color:var(--green-text)">94%</div><div class="stat-lbl">通过率</div></div>
+        <div class="card" style="text-align:center"><div style="font-size:32px;font-weight:700;color:var(--ink)">52</div><div class="stat-lbl">总运行次数</div></div>
+        <div class="card" style="text-align:center"><div style="font-size:32px;font-weight:700;color:var(--pink-text)">3</div><div class="stat-lbl">失败任务</div></div>
+      </div>
+      <table class="tbl">
+        <thead><tr><th>报告名称</th><th>通过率</th><th>用时</th><th>日期</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr><td>回归测试_20260723</td><td>96%</td><td>12min</td><td>07-23</td><td><button class="btn btn-sm">查看</button></td></tr>
+          <tr><td>冒烟测试_20260722</td><td>100%</td><td>3min</td><td>07-22</td><td><button class="btn btn-sm">查看</button></td></tr>
+          <tr><td>全量测试_20260721</td><td>88%</td><td>45min</td><td>07-21</td><td><button class="btn btn-sm">查看</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="ftr"><span>📊 3 份报告 · 平均通过率 94%</span></div>
+  </div>
+</div>
+
+<!-- ═══════════ 7. AI 助手 ═══════════ -->
+<div class="mod-row">
+  <div class="mod-label"><span class="dot" style="background:var(--orange)"></span> 7. AI 助手 · ai-assistant — 模块色 app-orange #f7a8c4（独立主题）</div>
+  <div class="shell">
+    <div class="hdr">
+      <div class="hdr-icon" style="background:linear-gradient(135deg,#5EEAD4,#14b8a6)">🤖</div>
+      <div><h3>AI 助手</h3><div class="sub">自然语言驱动 · SSE 流式 · 知识库 RAG · Agent 协作</div></div>
+      <div class="acts"><button class="btn">➕ 新建对话</button></div>
+    </div>
+    <div class="body">
+      <div class="grid2" style="min-height:160px">
+        <div class="card">
+          <div class="pnl-hdr">💬 对话</div>
+          <div style="font-size:9px;color:var(--muted);margin-bottom:6px">Agent: 测试助手 · 模型: qwen-max</div>
+          <div style="background:var(--bg-subtle);padding:8px;border-radius:4px 8px 4px 8px;font-size:10px;margin-bottom:6px">👤 帮我测试登录页面的正常流程</div>
+          <div style="background:rgba(94,234,212,0.1);padding:8px;border-radius:4px 8px 4px 8px;font-size:10px;border:1.5px solid rgba(94,234,212,0.3)">🤖 好的，我将为你设计登录页面的测试用例。首先让我检查页面元素...</div>
+          <div style="margin-top:6px;display:flex;gap:4px"><input style="flex:1;padding:4px 8px;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;font-size:10px;font-family:inherit" placeholder="输入消息..."><button class="btn btn-p btn-sm">发送</button></div>
+        </div>
+        <div class="card">
+          <div class="pnl-hdr">📋 智能体</div>
+          <div class="tree-item sel" style="border-color:rgba(94,234,212,0.3)">🤖 测试助手 <span class="cnt">active</span></div>
+          <div class="tree-item">📋 用例生成器</div>
+          <div class="tree-item">🔍 元素检查器</div>
+          <div style="margin-top:8px"><div class="pnl-hdr">⚙️ 工具调用</div>
+          <div style="font-size:9px;color:var(--muted);display:flex;flex-wrap:wrap;gap:3px"><span style="background:var(--bg-subtle);padding:2px 6px;border-radius:3px;border:1px solid var(--border-light)">fetch_elements</span><span style="background:var(--bg-subtle);padding:2px 6px;border-radius:3px;border:1px solid var(--border-light)">create_case</span><span style="background:var(--bg-subtle);padding:2px 6px;border-radius:3px;border:1px solid var(--border-light)">run_test</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="ftr"><span>🤖 4 个智能体 · 会话进行中</span></div>
+  </div>
+</div>
+
+<!-- ═══════════ 8. 工作流 ═══════════ -->
+<div class="mod-row">
+  <div class="mod-label"><span class="dot" style="background:var(--blue)"></span> 8. 工作流工作台 · workflow — 模块色 app-blue #889df0</div>
+  <div class="shell">
+    <div class="hdr">
+      <div class="hdr-icon" style="background:linear-gradient(135deg,#BDE0FE,#93c5fd)">🔀</div>
+      <div><h3>工作流工作台</h3><div class="sub">Blockly 积木 · VueFlow 画布 · 可视化编排 · 同步用例库</div></div>
+      <div class="acts"><button class="btn">📂 打开</button><button class="btn btn-p">➕ 新建</button></div>
+    </div>
+    <div class="body" style="min-height:140px">
+      <div class="row">
+        <div class="tab act" style="border-radius:4px 8px 4px 8px;font-size:9px;padding:3px 8px">全部</div>
+        <div class="tab" style="border-radius:4px 8px 4px 8px;font-size:9px;padding:3px 8px">草稿</div>
+        <div class="tab" style="border-radius:4px 8px 4px 8px;font-size:9px;padding:3px 8px">已发布</div>
+        <span style="font-size:9px;color:var(--muted);margin-left:auto">8 工作流</span>
+      </div>
+      <table class="tbl">
+        <thead><tr><th>名称</th><th>节点</th><th>状态</th><th>更新</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr><td>登录流程自动化</td><td>12 节点</td><td><span class="badge badge-g">已发布</span></td><td>07-23</td><td><button class="btn btn-sm">编辑</button></td></tr>
+          <tr><td>设备巡检工作流</td><td>8 节点</td><td><span class="badge badge-y">草稿</span></td><td>07-22</td><td><button class="btn btn-sm">编辑</button></td></tr>
+          <tr><td>报告生成流程</td><td>5 节点</td><td><span class="badge badge-g">已发布</span></td><td>07-20</td><td><button class="btn btn-sm">编辑</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="ftr"><span>🔀 8 工作流 · 3 已发布</span></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ 色板速查 ═══════════════════════ -->
+<div class="mod-row">
+  <div class="mod-label"><span class="dot" style="background:var(--ink)"></span> 8 模块色板 + 全局 Token 对照</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+    <div class="card" style="text-align:center;padding:12px">
+      <div style="width:28px;height:28px;background:#F4D35E;border:2px solid var(--ink);border-radius:6px 10px 6px 10px;margin:0 auto 6px"></div>
+      <div style="font-size:10px;font-weight:700">仪表盘</div><div style="font-size:8px;color:var(--muted)">app-yellow</div>
+    </div>
+    <div class="card" style="text-align:center;padding:12px">
+      <div style="width:28px;height:28px;background:var(--green);border:2px solid var(--ink);border-radius:6px 10px 6px 10px;margin:0 auto 6px"></div>
+      <div style="font-size:10px;font-weight:700">设备管理</div><div style="font-size:8px;color:var(--muted)">app-green</div>
+    </div>
+    <div class="card" style="text-align:center;padding:12px">
+      <div style="width:28px;height:28px;background:var(--purple);border:2px solid var(--ink);border-radius:6px 10px 6px 10px;margin:0 auto 6px"></div>
+      <div style="font-size:10px;font-weight:700">元素定位</div><div style="font-size:8px;color:var(--muted)">purple</div>
+    </div>
+    <div class="card" style="text-align:center;padding:12px">
+      <div style="width:28px;height:28px;background:var(--teal);border:2px solid var(--ink);border-radius:6px 10px 6px 10px;margin:0 auto 6px"></div>
+      <div style="font-size:10px;font-weight:700">用例管理</div><div style="font-size:8px;color:var(--muted)">app-teal</div>
+    </div>
+    <div class="card" style="text-align:center;padding:12px">
+      <div style="width:28px;height:28px;background:var(--pink);border:2px solid var(--ink);border-radius:6px 10px 6px 10px;margin:0 auto 6px"></div>
+      <div style="font-size:10px;font-weight:700">执行引擎</div><div style="font-size:8px;color:var(--muted)">app-pink</div>
+    </div>
+    <div class="card" style="text-align:center;padding:12px">
+      <div style="width:28px;height:28px;background:var(--brown);border:2px solid var(--ink);border-radius:6px 10px 6px 10px;margin:0 auto 6px"></div>
+      <div style="font-size:10px;font-weight:700">测试报告</div><div style="font-size:8px;color:var(--muted)">brown</div>
+    </div>
+    <div class="card" style="text-align:center;padding:12px">
+      <div style="width:28px;height:28px;background:var(--orange);border:2px solid var(--ink);border-radius:6px 10px 6px 10px;margin:0 auto 6px"></div>
+      <div style="font-size:10px;font-weight:700">AI 助手</div><div style="font-size:8px;color:var(--muted)">app-orange</div>
+    </div>
+    <div class="card" style="text-align:center;padding:12px">
+      <div style="width:28px;height:28px;background:var(--blue);border:2px solid var(--ink);border-radius:6px 10px 6px 10px;margin:0 auto 6px"></div>
+      <div style="font-size:10px;font-weight:700">工作流工作台</div><div style="font-size:8px;color:var(--muted)">app-blue</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

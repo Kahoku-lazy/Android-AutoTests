@@ -436,8 +436,8 @@ function onCreateRoot() {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--app-glass-card);
-  border-right: 1px solid var(--app-glass-border);
+  background: #fff;
+  border-right: 1px solid var(--doodle-ink, #2d2d2d);
   position: relative;
   user-select: none;
   transition: width 0.2s ease;
@@ -481,7 +481,7 @@ function onCreateRoot() {
   height: 26px;
   border: 1.5px solid var(--ac-border);
   border-radius: 8px;
-  background: var(--app-glass-card);
+  background: #fff;
   font-size: 14px;
   font-weight: 800;
   cursor: pointer;
@@ -507,7 +507,7 @@ function onCreateRoot() {
   padding: 5px 10px;
   border: 1.5px solid var(--ac-border);
   border-radius: 999px;
-  background: var(--app-glass-card);
+  background: #fff;
   font-size: 11px;
   font-weight: 800;
   font-family: inherit;
@@ -628,12 +628,10 @@ function onCreateRoot() {
   z-index: 9999;
   min-width: 160px;
   padding: 6px;
-  background: var(--app-glass-heavy);
-  border: 1px solid var(--app-glass-border);
+  background: #fff;
+  border: 1px solid var(--doodle-ink, #2d2d2d);
   border-radius: 12px;
   box-shadow: var(--app-shadow-md);
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
   display: flex;
   flex-direction: column;
   gap: 2px;

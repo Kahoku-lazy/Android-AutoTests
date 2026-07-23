@@ -31,8 +31,8 @@
   align-self: stretch;
   min-height: 0;
   min-width: 0;
-  background: var(--app-glass-card);
-  border-right: 1px solid var(--app-glass-border);
+  background: #fff;
+  border-right: 1px solid var(--doodle-ink, #2d2d2d);
   border-radius: var(--ac-radius, 16px) 0 0 var(--ac-radius, 16px);
   overflow: hidden;
   display: flex;
@@ -94,8 +94,8 @@
   margin-bottom: 20px;
   flex-wrap: wrap;
   gap: 12px;
-  background: var(--app-glass-card);
-  border: 1px solid var(--app-glass-border);
+  background: #fff;
+  border: 1px solid var(--doodle-ink, #2d2d2d);
   border-radius: 16px;
   box-shadow: var(--app-shadow-sm);
   flex-shrink: 0;
@@ -144,7 +144,7 @@
 
 .crumb--root {
   cursor: pointer;
-  font-family: var(--app-font-display, 'Quicksand', sans-serif);
+  font-family: var(--doodle-font-title);
 }
 
 .crumb--root:not(.crumb--active):hover {
@@ -203,7 +203,7 @@
   font-size: 15px;
   font-weight: 800;
   color: var(--app-green-deep);
-  font-family: var(--app-font-display, 'Quicksand', sans-serif);
+  font-family: var(--doodle-font-title);
   line-height: 1;
 }
 
@@ -217,7 +217,7 @@
 .view-toggle {
   display: flex;
   background: rgba(255, 255, 255, 0.55);
-  border: 1.5px solid var(--app-glass-border);
+  border: 1.5px solid var(--doodle-ink, #2d2d2d);
   border-radius: 12px;
   padding: 3px;
 }
@@ -430,7 +430,7 @@
   color: #fff;
 }
 .cell-id {
-  font-family: "SF Mono", "Fira Code", Consolas, monospace;
+  font-family: var(--doodle-font-mono);
   font-size: 14px;
   font-weight: 600;
   color: #c0392b;
@@ -505,7 +505,7 @@
 }
 
 .case-detail__id {
-  font-family: "SF Mono", "Fira Code", Consolas, monospace;
+  font-family: var(--doodle-font-mono);
   font-size: 12px;
   font-weight: 600;
   color: var(--app-text-secondary);
@@ -635,7 +635,7 @@
   background: rgba(162,210,255,0.10);
 }
 .exports-table__name {
-  font-family: "SF Mono", "Fira Code", Consolas, monospace;
+  font-family: var(--doodle-font-mono);
   font-size: 13px;
   color: var(--app-green-deep);
   font-weight: 600;

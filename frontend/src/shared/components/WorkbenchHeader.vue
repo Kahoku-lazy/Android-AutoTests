@@ -102,7 +102,7 @@ watch(() => props.icon, async () => {
 .brand-text { min-width: 0; }
 .brand-title {
   margin: 0;
-  font-family: 'Caveat', cursive;
+  font-family: var(--doodle-font-title);
   font-size: 24px;
   font-weight: 700;
   color: #2d2d2d;

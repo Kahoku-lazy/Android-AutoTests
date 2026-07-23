@@ -113,7 +113,7 @@ onUnmounted(() => {
       title="测试用例"
       subtitle="按类型管理测试用例：UI 自动化 · 存储业务功能 · API 接口"
       icon="layers"
-      icon-gradient="linear-gradient(135deg,#89CFF0,#60a5fa)"
+      icon-gradient="linear-gradient(135deg,var(--app-accent-blue, #89CFF0),#60a5fa)"
     />
 
     <AppTabs
@@ -296,7 +296,7 @@ onUnmounted(() => {
 }
 .case-sidebar-resizer:hover,
 .case-sidebar-resizer.is-dragging {
-  background: var(--app-green, #89CFF0);
+  background: var(--app-green, var(--app-accent-blue, #89CFF0));
 }
 .case-main {
   flex: 1;

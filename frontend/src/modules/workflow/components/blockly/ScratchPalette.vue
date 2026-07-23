@@ -88,8 +88,8 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: var(--app-glass-card);
-  border-right: 1px solid var(--app-glass-border);
+  background: #fff;
+  border-right: 1px solid var(--doodle-ink, #2d2d2d);
   min-height: 0;
 }
 .palette-head {
@@ -110,7 +110,7 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
 .palette-search {
   width: 100%;
   padding: 8px 10px;
-  border: 1.5px solid var(--app-glass-border);
+  border: 1.5px solid var(--doodle-ink, #2d2d2d);
   border-radius: 12px;
   background: rgba(255,255,255,0.48);
   color: var(--app-text);

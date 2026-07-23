@@ -72,7 +72,7 @@ const emit = defineEmits(["toggle"]);
   overflow-y: auto;
 }
 .thinking-block:not(.thinking-done) .thinking-header {
-  color: #19c8b9;
+  color: var(--app-accent-purple, #b39ef3);
 }
 .thinking-block:not(.thinking-done) .thinking-icon {
   animation: pulse 1.2s infinite;

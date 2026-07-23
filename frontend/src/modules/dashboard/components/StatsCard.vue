@@ -115,7 +115,7 @@ function navigate() {
   background: #fff;
   border-radius: 6px 10px 6px 10px;
   padding: 8px 8px 36px 8px;
-  border: 2.5px solid #2d2d2d;
+  border: 3px solid var(--app-ink);
   box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.25s, transform 0.25s;
   position: relative;
@@ -157,15 +157,15 @@ function navigate() {
   flex-shrink: 0;
   margin-bottom: 8px;
   position: relative;
-  border: 2px solid #2d2d2d;
+  border: 2px solid var(--app-ink);
   box-shadow: none;
   width: auto;
 }
 /* 模块色映射为照片底色 */
-.stats-card--green .stats-card__icon { background: #C8F5D0; }
-.stats-card--blue .stats-card__icon  { background: #E8DDF8; }
-.stats-card--yellow .stats-card__icon{ background: #FFF9E0; }
-.stats-card--pink .stats-card__icon  { background: #FFE0DB; }
+.stats-card--green .stats-card__icon { background: var(--app-status-success-bg); }
+.stats-card--blue .stats-card__icon  { background: var(--app-status-purple-bg); }
+.stats-card--yellow .stats-card__icon{ background: var(--app-status-warning-bg); }
+.stats-card--pink .stats-card__icon  { background: var(--app-status-danger-bg); }
 .stats-card--teal .stats-card__icon  { background: #D4F5F0; }
 .stats-card--purple .stats-card__icon{ background: #F0E8FF; }
 .stats-card--orange .stats-card__icon{ background: #FFE8D0; }
@@ -173,8 +173,8 @@ function navigate() {
 .stats-card__icon :deep(svg) {
   width: 22px;
   height: 22px;
-  color: #2d2d2d;
-  stroke: #2d2d2d;
+  color: var(--app-ink);
+  stroke: var(--app-ink);
 }
 
 .stats-card__icon-placeholder {
@@ -187,14 +187,14 @@ function navigate() {
 .stats-card__title {
   font-size: 11px;
   font-weight: 700;
-  color: #2d2d2d;
+  color: var(--app-ink);
   text-align: center;
   line-height: 1.3;
 }
 
 .stats-card__desc {
   font-size: 9px;
-  color: #999;
+  color: var(--app-ink-muted);
   text-align: center;
   line-height: 1.4;
   margin-bottom: 8px;
@@ -216,10 +216,10 @@ function navigate() {
 
 .stats-card__stat strong {
   display: block;
-  font-family: 'Caveat', 'Quicksand', cursive;
+  font-family: var(--doodle-font-title);
   font-size: 24px;
   font-weight: 700;
-  color: #2d2d2d;
+  color: var(--app-ink);
   line-height: 1;
 }
 
@@ -228,7 +228,7 @@ function navigate() {
   margin-top: 2px;
   font-size: 9px;
   font-weight: 700;
-  color: #999;
+  color: var(--app-ink-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -238,10 +238,10 @@ function navigate() {
   flex-shrink: 0;
   font-size: 10px;
   font-weight: 800;
-  color: #2d2d2d;
+  color: var(--app-ink);
   padding: 4px 10px;
   border-radius: 4px 8px 4px 8px;
-  border: 2px solid #2d2d2d;
+  border: 2px solid var(--app-ink);
   cursor: pointer;
   transition: all 0.12s;
   font-family: inherit;
@@ -249,7 +249,7 @@ function navigate() {
   background: #fff;
 }
 .stats-card__enter:hover {
-  background: #FFE066;
+  background: var(--app-highlight);
 }
 
 /* Skeleton */

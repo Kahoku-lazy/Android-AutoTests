@@ -24,12 +24,12 @@ const emit = defineEmits(['update:modelValue'])
 .filter-tabs { display: flex; gap: 4px; }
 .filter-tab {
   padding: 5px 14px; font-size: 11px; font-weight: 700;
-  color: #999; background: transparent;
+  color: var(--app-ink-muted); background: transparent;
   border: 2px solid transparent; border-radius: 4px 8px 4px 8px;
   cursor: pointer; font-family: inherit; transition: all 0.15s;
 }
-.filter-tab:hover { color: #2d2d2d; border-color: #e8ecf1; }
+.filter-tab:hover { color: var(--app-ink); border-color: var(--app-border-light); }
 .filter-tab.active {
-  color: #2d2d2d; background: #FFE066; border-color: #2d2d2d;
+  color: var(--app-ink); background: var(--app-highlight); border-color: var(--app-ink);
 }
 </style>

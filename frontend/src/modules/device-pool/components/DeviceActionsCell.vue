@@ -44,17 +44,17 @@ const emit = defineEmits(['lock', 'joinQueue', 'occupy', 'disconnect'])
   border-radius: 4px 8px 4px 8px !important; border-width: 2px !important;
 }
 .action-btns :deep(.el-button--primary.is-plain) {
-  background: #E8DDF8 !important; border-color: #A78BFA !important; color: #5a3fa0 !important;
+  background: var(--app-status-purple-bg) !important; border-color: var(--app-status-purple-border) !important; color: var(--app-status-purple-text) !important;
 }
 .action-btns :deep(.el-button--primary.is-plain:hover) { background: #D4C8F0 !important; }
 .action-btns :deep(.el-button--danger.is-plain) {
-  background: #FFE0DB !important; border-color: #FFB5A7 !important; color: #a03030 !important;
+  background: var(--app-status-danger-bg) !important; border-color: var(--app-status-danger) !important; color: var(--app-status-danger-text) !important;
 }
 .action-btns :deep(.el-button--danger.is-plain:hover) { background: #FFD0C8 !important; }
 .action-btns :deep(.el-button--warning.is-plain) {
-  background: #FFF9E0 !important; border-color: #F7C948 !important; color: #7a5a10 !important;
+  background: var(--app-status-warning-bg) !important; border-color: #F7C948 !important; color: #7a5a10 !important;
 }
 .action-btns :deep(.el-button--primary.is-disabled), .action-btns :deep(.el-button.is-disabled) {
-  background: #f8f6f2 !important; border-color: #e8ecf1 !important; color: #ccc !important;
+  background: var(--app-bg-subtle) !important; border-color: var(--app-border-light) !important; color: #ccc !important;
 }
 </style>

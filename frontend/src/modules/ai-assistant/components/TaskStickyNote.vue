@@ -212,7 +212,7 @@ function onLeave() {
   margin: 0;
   font-size: 14px;
   font-weight: 800;
-  color: #4a3a28;
+  color: var(--doodle-ink, #2d2d2d);
   line-height: 1.3;
   flex: 1;
   min-width: 0;
@@ -260,7 +260,7 @@ function onLeave() {
 .progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: #19c8b9;
+  background: var(--app-accent-purple, #b39ef3);
   transition: width 0.35s ease;
 }
 .progress-fill.is-running { background: #889df0; }

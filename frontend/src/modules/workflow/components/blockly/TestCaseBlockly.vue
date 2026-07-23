@@ -464,7 +464,7 @@ watch(
   gap: 10px;
   padding: 10px 14px;
   background: rgba(255,255,255,0.46);
-  border-bottom: 1px solid var(--app-glass-border);
+  border-bottom: 1px solid var(--doodle-ink, #2d2d2d);
   flex-shrink: 0;
 }
 .toolbar-left,

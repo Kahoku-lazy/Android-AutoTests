@@ -773,12 +773,10 @@ async function removeTask() {
 
 /* ── Info card ── */
 .info-card {
-  background: var(--app-glass-card);
-  border-radius: 14px; border: 1px solid var(--app-glass-border);
+  background: #fff;
+  border-radius: 14px; border: 1px solid var(--doodle-ink, #2d2d2d);
   padding: 20px 24px; display: flex; flex-direction: column; gap: 14px;
   box-shadow: var(--app-shadow-sm);
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
 }
 .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 20px; }
 .info-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
@@ -808,7 +806,7 @@ async function removeTask() {
 
 /* ── Case card ── */
 .case-card {
-  background: rgba(255,255,255,0.48); border: 1px solid var(--app-glass-border);
+  background: rgba(255,255,255,0.48); border: 1px solid var(--doodle-ink, #2d2d2d);
   border-radius: 18px; margin-bottom: 14px; overflow: hidden;
   transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
   box-shadow: var(--app-shadow-sm);
@@ -882,7 +880,7 @@ async function removeTask() {
   display: flex; align-items: stretch; border-radius: 12px;
   overflow: hidden; transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
   box-shadow: var(--app-shadow-sm);
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--doodle-ink, #2d2d2d);
 }
 .step-strip { width: 5px; flex-shrink: 0; border-radius: 5px 0 0 5px; }
 .step-body { flex: 1; padding: 12px 16px; background: rgba(255,255,255,0.52); display: flex; flex-direction: column; gap: 4px; }

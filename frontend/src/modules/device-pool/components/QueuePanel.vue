@@ -30,7 +30,7 @@ function formatTime(seconds) {
     </template>
 
     <template #default>
-      <div v-if="isEmpty" style="text-align:center;color:#999;padding:20px 0">
+      <div v-if="isEmpty" style="text-align:center;color:var(--app-ink-muted);padding:20px 0">
         当前无排队
       </div>
       <el-table v-else :data="entries" size="small" max-height="300">
@@ -57,13 +57,13 @@ function formatTime(seconds) {
 
 <style scoped>
 .queue-badge {
-  background: #FFB5A7;
-  color: #2d2d2d;
+  background: var(--app-status-danger);
+  color: var(--app-ink);
   padding: 4px 12px;
   border-radius: 4px 8px 4px 8px;
   font-size: 11px;
   font-weight: 700;
-  border: 2px solid #2d2d2d;
+  border: 2px solid var(--app-ink);
   box-shadow: 2px 2px 0 rgba(0,0,0,0.05);
   cursor: pointer;
   user-select: none;

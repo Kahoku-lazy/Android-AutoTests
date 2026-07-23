@@ -895,14 +895,12 @@ onUnmounted(() => {
 .context-menu {
   position: fixed;
   z-index: 1000;
-  background: var(--app-glass-heavy);
-  border: 1px solid var(--app-glass-border);
+  background: #fff;
+  border: 1px solid var(--doodle-ink, #2d2d2d);
   border-radius: 14px;
   padding: 6px 0;
   min-width: 160px;
   box-shadow: var(--app-shadow-md);
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
 }
 
 .context-menu__item {

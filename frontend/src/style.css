@@ -105,9 +105,9 @@ body.no-bg-anim { animation: none !important; }
 
 /* ── Element Plus 组件毛玻璃样式 ── */
 .el-card {
-  background: var(--app-glass-card) !important;
+  background: #fff !important;
   border-radius: var(--app-radius-lg) !important;
-  border: 1px solid var(--app-glass-border) !important;
+  border: 2px solid var(--doodle-ink, #2d2d2d) !important;
   box-shadow: var(--app-shadow-md) !important;
   backdrop-filter: blur(var(--app-glass-blur));
   -webkit-backdrop-filter: blur(var(--app-glass-blur));
@@ -180,7 +180,7 @@ body.no-bg-anim { animation: none !important; }
 
 .el-input__wrapper,
 .el-select .el-input__wrapper {
-  background: var(--app-glass-card) !important;
+  background: #fff !important;
   border-radius: var(--app-radius-sm) !important;
   border: 1.5px solid var(--app-glass-border) !important;
   box-shadow: var(--app-shadow-sm) !important;
@@ -215,9 +215,9 @@ h4 { font-size: 15px; font-weight: 700; color: var(--app-text); font-family: var
 .el-message {
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
-  background: var(--app-glass-heavy) !important;
+  background: #fff !important;
   border-radius: var(--app-radius-pill) !important;
-  border: 1px solid var(--app-glass-border) !important;
+  border: 2px solid var(--doodle-ink, #2d2d2d) !important;
   box-shadow: var(--app-shadow-lg) !important;
 }
 
@@ -246,11 +246,11 @@ h4 { font-size: 15px; font-weight: 700; color: var(--app-text); font-family: var
 }
 
 .doc-section {
-  background: var(--app-glass-card);
+  background: #fff;
   backdrop-filter: blur(var(--app-glass-blur));
   -webkit-backdrop-filter: blur(var(--app-glass-blur));
   border-radius: var(--app-radius-md);
-  border: 1px solid var(--app-glass-border);
+  border: 2px solid var(--doodle-ink, #2d2d2d);
   padding: 24px; position: relative; z-index: 1;
   box-shadow: var(--app-shadow-sm);
 }
@@ -290,7 +290,7 @@ h4 { font-size: 15px; font-weight: 700; color: var(--app-text); font-family: var
 }
 
 .doc-page.wb-shell .doc-section {
-  background: var(--app-glass-card);
+  background: #fff;
   backdrop-filter: blur(var(--app-glass-blur));
   -webkit-backdrop-filter: blur(var(--app-glass-blur));
   border: 1.5px solid var(--app-glass-border);

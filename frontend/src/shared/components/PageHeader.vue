@@ -20,11 +20,10 @@ defineProps({
 
 <style scoped>
 .doc-hero {
-  background: var(--app-glass-heavy, rgba(255,255,255,0.65));
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background: #fff);
+  
   border-radius: var(--app-radius-lg, 28px);
-  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.55));
+  border: 3px solid var(--doodle-ink, #2d2d2d));
   box-shadow: var(--app-shadow-sm, 0 4px 15px rgba(31,38,135,0.04));
   padding: 28px 30px;
   position: relative;

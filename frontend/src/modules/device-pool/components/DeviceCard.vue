@@ -1,13 +1,10 @@
 <script setup>
 /** 拍立得设备卡片 — 彩色边框 + 照片区 + 图钉 + 微旋转 */
 import { computed } from 'vue'
+import { statusTag, displayModel, connectionLabel, formatRelativeTime } from '../constants.js'
 
 const props = defineProps({
   device: { type: Object, required: true },
-  statusTag: { type: Function, required: true },
-  displayModel: { type: Function, required: true },
-  connectionLabel: { type: Function, required: true },
-  formatRelativeTime: { type: Function, required: true },
   currentUser: { type: String, default: '' },
 })
 
@@ -20,7 +17,7 @@ const status = computed(() => {
   return 'offline'
 })
 
-const statusText = computed(() => props.statusTag(props.device.status).text)
+const statusText = computed(() => statusTag(props.device.status).text)
 
 function go() { emit('click', props.device) }
 </script>
@@ -60,9 +57,9 @@ function go() { emit('click', props.device) }
   box-shadow: 2px 3px 0 rgba(0,0,0,0.05); transition: all 0.2s;
 }
 /* 边框按状态着色 */
-.device-card.online { border: 2.5px solid #6BCB77; }
-.device-card.busy   { border: 2.5px solid #FFB5A7; }
-.device-card.offline{ border: 2.5px solid #d4d8dc; }
+.device-card.online { border: 3px solid var(--app-status-success); }
+.device-card.busy   { border: 3px solid var(--app-status-danger); }
+.device-card.offline{ border: 3px solid var(--app-offline); }
 
 .device-card:nth-child(3n+1) { transform: rotate(-0.8deg); }
 .device-card:nth-child(3n+2) { transform: rotate(0.5deg); }
@@ -86,38 +83,38 @@ function go() { emit('click', props.device) }
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 10px; margin-bottom: 8px; border: 2px solid;
 }
-.card-photo.online { background: #C8F5D0; border-color: #6BCB77; }
-.card-photo.busy   { background: #FFE0DB; border-color: #FFB5A7; }
-.card-photo.offline{ background: #f0ede8; border-color: #d4d8dc; }
+.card-photo.online { background: var(--app-status-success-bg); border-color: var(--app-status-success); }
+.card-photo.busy   { background: var(--app-status-danger-bg); border-color: var(--app-status-danger); }
+.card-photo.offline{ background: var(--app-border-lighter); border-color: var(--app-offline); }
 
 .card-photo-serial {
-  font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #2d2d2d;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: var(--app-ink);
 }
 .card-photo-badge {
   font-size: 9px; font-weight: 700; padding: 1px 7px;
-  border-radius: 3px 6px 3px 6px; border: 1.5px solid #2d2d2d;
-  background: rgba(255,255,255,0.7); color: #2d2d2d;
+  border-radius: 3px 6px 3px 6px; border: 1.5px solid var(--app-ink);
+  background: rgba(255,255,255,0.7); color: var(--app-ink);
 }
 
 .card-name {
-  font-size: 12px; font-weight: 700; color: #2d2d2d; text-align: center; margin-bottom: 2px;
+  font-size: 12px; font-weight: 700; color: var(--app-ink); text-align: center; margin-bottom: 2px;
 }
 .card-info {
-  font-size: 9px; color: #999; text-align: center; margin-bottom: 6px;
+  font-size: 9px; color: var(--app-ink-muted); text-align: center; margin-bottom: 6px;
 }
 
 /* 操作按钮 */
 .card-actions { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
 .card-btn {
   font-size: 9px; font-weight: 700; padding: 3px 8px;
-  border-radius: 3px 6px 3px 6px; border: 1.5px solid #2d2d2d;
-  background: #fff; color: #2d2d2d;
+  border-radius: 3px 6px 3px 6px; border: 1.5px solid var(--app-ink);
+  background: #fff; color: var(--app-ink);
   cursor: pointer; font-family: inherit; transition: all 0.12s;
 }
-.card-btn:hover { background: #FFE066; }
-.card-btn.unlock:hover { background: #E8DDF8; border-color: #A78BFA; }
+.card-btn:hover { background: var(--app-highlight); }
+.card-btn.unlock:hover { background: var(--app-status-purple-bg); border-color: var(--app-status-purple-border); }
 .card-btn.queue { color: #b08800; border-color: #b08800; }
-.card-btn.queue:hover { background: #FFF9E0; }
+.card-btn.queue:hover { background: var(--app-status-warning-bg); }
 .card-btn.disconnect { color: #c53030; border-color: #c53030; }
-.card-btn.disconnect:hover { background: #FFE0DB; }
+.card-btn.disconnect:hover { background: var(--app-status-danger-bg); }
 </style>

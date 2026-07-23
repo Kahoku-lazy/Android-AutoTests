@@ -464,13 +464,24 @@ function onMouseLeave() {
   height: 100%;
   min-height: 0;
   width: 100%;
-  background: var(--app-glass-card, rgba(255,255,255,0.65));
-  backdrop-filter: blur(16px);
-  border-radius: 20px;
-  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
+  background: #fff;
+  border-radius: 6px 10px 6px 10px;
+  border: 3px solid var(--app-ink, #2d2d2d);
   display: flex;
   overflow: hidden;
-  box-shadow: var(--app-shadow-sm, 0 4px 15px rgba(0,0,0,0.02));
+  box-shadow: 2px 3px 0 rgba(0,0,0,0.05);
+  position: relative;
+  padding-top: 6px;
+}
+.screenshot-panel::before {
+  content: '';
+  position: absolute;
+  top: 4px; left: 50%; transform: translateX(-50%);
+  width: 9px; height: 9px;
+  background: radial-gradient(circle, #e8e0d5 30%, #c0b8a8 60%, #a09080 100%);
+  border-radius: 50%;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.08);
+  z-index: 10;
 }
 .phone-frame {
   container-type: size;
@@ -502,7 +513,7 @@ function onMouseLeave() {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border-radius: 12px;
+  border-radius: 6px 10px 6px 10px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
 }
 .overlay {
@@ -520,7 +531,7 @@ function onMouseLeave() {
   gap: 8px;
   text-align: center;
   padding: 24px;
-  color: #988B7A;
+  color: var(--app-ink-muted);
 }
 .no-signal__icon {
   font-size: 36px;
@@ -530,16 +541,16 @@ function onMouseLeave() {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: #725d42;
+  color: var(--app-ink);
 }
 .no-signal__hint {
   margin: 0;
   font-size: 12px;
-  color: #9f927d;
+  color: var(--app-ink-muted);
   max-width: 220px;
   line-height: 1.5;
 }
-.no-signal--error .no-signal__title { color: #b33a3a; }
+.no-signal--error .no-signal__title { color: var(--app-status-danger-text); }
 
 /* ── No-device idle animation ── */
 .no-device-animation {
@@ -567,11 +578,11 @@ function onMouseLeave() {
 .no-device-ring--outer {
   width: 110px;
   height: 110px;
-  border: 2px solid rgba(139, 115, 85, 0.14);
+  border: 3px solid var(--app-ink, #2d2d2d);
 }
 .no-device-ring--inner {
   width: 78px;
   height: 78px;
-  border: 2px solid rgba(139, 115, 85, 0.18);
+  border: 3px solid var(--app-ink, #2d2d2d);
 }
 </style>

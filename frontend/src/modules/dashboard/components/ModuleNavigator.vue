@@ -33,7 +33,7 @@ const modules = computed(() => {
       id: 'element-locator', title: '元素定位',
       desc: '实时截图 · Dump UI · XPath 生成',
       path: '/elements',
-      color: 'purple', gradient: 'linear-gradient(135deg,#C9B6F2,#a78bfa)',
+      color: 'purple', gradient: 'linear-gradient(135deg,var(--app-status-purple),#a78bfa)',
       icon: 'crosshair',
       stats: { label: '元素数', value: String(s.elements?.total ?? 0), total: '' },
     },
@@ -49,7 +49,7 @@ const modules = computed(() => {
       id: 'test-runner', title: '执行引擎',
       desc: '任务调度 · 实时进度 · WebSocket 日志',
       path: '/runner',
-      color: 'app-pink', gradient: 'linear-gradient(135deg,#FFB5A7,#f87171)',
+      color: 'app-pink', gradient: 'linear-gradient(135deg,var(--app-status-danger),var(--app-live))',
       icon: 'play-circle',
       stats: { label: '运行中', value: String(s.runs?.active ?? 0), total: String(s.runs?.total ?? 0) },
     },
@@ -57,7 +57,7 @@ const modules = computed(() => {
       id: 'report-generator', title: '测试报告',
       desc: 'KPI 摘要 · 失败定位 · 趋势图表',
       path: '/reports',
-      color: 'brown', gradient: 'linear-gradient(135deg,#9a8c98,#8b7f8f)',
+      color: 'brown', gradient: 'linear-gradient(135deg,var(--app-text-secondary),#8b7f8f)',
       icon: 'file-bar-chart',
       stats: { label: '报告数', value: String(s.reports?.total ?? 0), total: '' },
     },
@@ -145,12 +145,12 @@ function setCardRef(el, idx) {
 /* ── 页面标题 ── */
 .page-header { margin-bottom: 22px; }
 .page-title {
-  font-family: 'Caveat', cursive;
+  font-family: var(--doodle-font-title);
   font-size: 24px; font-weight: 700;
-  color: #2d2d2d; margin: 0;
+  color: var(--app-ink); margin: 0;
 }
 .page-subtitle {
-  font-size: 10px; color: #999; margin-top: 2px; font-weight: 600;
+  font-size: 10px; color: var(--app-ink-muted); margin-top: 2px; font-weight: 600;
 }
 
 /* ── 网格 ── */
@@ -167,7 +167,7 @@ function setCardRef(el, idx) {
   background: #fff;
   border-radius: 6px 10px 6px 10px;
   padding: 18px 16px;
-  border: 2.5px solid #2d2d2d;
+  border: 3px solid var(--app-ink);
   box-shadow: 2px 2px 0 rgba(0,0,0,0.04);
   transition: all .15s;
   position: relative;
@@ -189,7 +189,7 @@ function setCardRef(el, idx) {
   border-radius: 4px 8px 4px 8px;
   display: flex; align-items: center; justify-content: center;
   margin-bottom: 12px;
-  border: 2px solid #2d2d2d;
+  border: 2px solid var(--app-ink);
 }
 .module-icon i {
   width: 20px; height: 20px;
@@ -200,10 +200,10 @@ function setCardRef(el, idx) {
 .module-body { flex: 1; display: flex; flex-direction: column; }
 .module-name {
   font-size: 13px; font-weight: 800;
-  color: #2d2d2d; margin-bottom: 4px;
+  color: var(--app-ink); margin-bottom: 4px;
 }
 .module-desc {
-  font-size: 10px; color: #999;
+  font-size: 10px; color: var(--app-ink-muted);
   margin-bottom: 10px; line-height: 1.4;
   flex: 1;
 }
@@ -212,11 +212,11 @@ function setCardRef(el, idx) {
   gap: 8px;
 }
 .module-stat {
-  font-size: 10px; color: #999; font-weight: 600;
+  font-size: 10px; color: var(--app-ink-muted); font-weight: 600;
 }
 .module-stat strong {
   font-family: 'Quicksand', sans-serif;
-  font-size: 18px; font-weight: 800; color: #2d2d2d;
+  font-size: 18px; font-weight: 800; color: var(--app-ink);
   margin-right: 2px;
 }
 .module-stat small {

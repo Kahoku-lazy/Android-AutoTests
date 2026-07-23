@@ -797,7 +797,7 @@ function runFromCurrent(idx) {
   position: relative;
   margin-bottom: 10px;
   border-radius: 12px;
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--doodle-ink, #2d2d2d);
   background: rgba(255,255,255,0.48);
   box-shadow: var(--app-shadow-sm);
   transition: all 0.2s;
@@ -900,7 +900,7 @@ function runFromCurrent(idx) {
   font-weight: 600;
 }
 .step-result-msg.ok {
-  color: var(--app-green, #89CFF0);
+  color: var(--app-green, var(--app-accent-blue, #89CFF0));
 }
 .step-result-msg.fail {
   color: #e85f5f;

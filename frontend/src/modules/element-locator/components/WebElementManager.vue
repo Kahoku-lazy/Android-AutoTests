@@ -539,7 +539,7 @@ async function doBatchImport() {
 
 <style scoped>
 /* ── Root ── */
-.web-element-manager {
+.web-element-manager { background: radial-gradient(circle, var(--app-paper-dot, #d4cdc0) 0.8px, transparent 0.8px); background-size: 14px 14px; background-color: var(--app-paper, #fefcf6);
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -558,12 +558,12 @@ async function doBatchImport() {
 }
 
 /* ── Tree Panel ── */
-.tree-panel {
+.tree-panel { background: radial-gradient(circle, var(--app-paper-dot, #d4cdc0) 0.8px, transparent 0.8px); background-size: 14px 14px; background-color: var(--app-paper, #fefcf6);
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(139, 115, 85, 0.16);
-  border-radius: 12px;
+  background: #fff;
+  border: 3px solid var(--app-ink, #2d2d2d);
+  border-radius: 6px 10px 6px 10px;
   overflow: hidden;
   min-height: 0;
 }
@@ -573,19 +573,19 @@ async function doBatchImport() {
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(139, 115, 85, 0.1);
-  background: rgba(139, 115, 85, 0.04);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.04);
   flex-shrink: 0;
 }
 
 .tree-header--select {
-  background: rgba(25, 200, 185, 0.08);
+  background: rgba(179, 158, 243, 0.08);
 }
 
 .tree-header__title {
   font-size: 13px;
   font-weight: 700;
-  color: #6b5b48;
+  color: var(--app-ink);
 }
 
 .tree-header__actions {
@@ -609,7 +609,7 @@ async function doBatchImport() {
 .tree-empty {
   text-align: center;
   padding: 32px 16px;
-  color: #9f927d;
+  color: var(--app-ink-muted);
   font-size: 13px;
 }
 
@@ -621,13 +621,13 @@ async function doBatchImport() {
 
 .tree-empty__text {
   font-weight: 600;
-  color: #6b5b48;
+  color: var(--app-ink);
   margin: 0 0 4px;
 }
 
 .tree-empty__hint {
   font-size: 12px;
-  color: #9f927d;
+  color: var(--app-ink-muted);
   margin: 0;
 }
 
@@ -651,42 +651,42 @@ async function doBatchImport() {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
-  color: #4a3a28;
+  color: var(--app-ink);
 }
 
 .tree-node--folder .tree-node__name {
   font-weight: 600;
-  color: #6b5b48;
+  color: var(--app-ink);
 }
 
 .tree-node--active .tree-node__name {
-  color: #0f8b7e;
+  color: var(--app-accent-purple-dark);
   font-weight: 700;
 }
 
 .tree-node__meta {
   font-size: 11px;
-  color: #9f927d;
-  background: rgba(139, 115, 85, 0.06);
+  color: var(--app-ink-muted);
+  background: rgba(0, 0, 0, 0.06);
   padding: 1px 6px;
-  border-radius: 8px;
+  border-radius: 4px 8px 4px 8px;
   flex-shrink: 0;
 }
 
 .ungrouped-node {
   padding: 6px 14px;
   margin-top: 4px;
-  border-top: 1px dashed rgba(139, 115, 85, 0.12);
+  border-top: 1px dashed rgba(0, 0, 0, 0.12);
   cursor: pointer;
   border-radius: 6px;
 }
 
 .ungrouped-node:hover {
-  background: rgba(139, 115, 85, 0.06);
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .ungrouped-node.tree-node--active {
-  background: rgba(25, 200, 185, 0.12);
+  background: rgba(179, 158, 243, 0.12);
 }
 
 /* ── Context Menu ── */
@@ -694,8 +694,8 @@ async function doBatchImport() {
   position: fixed;
   z-index: 3000;
   background: #fff;
-  border: 1px solid rgba(139, 115, 85, 0.16);
-  border-radius: 10px;
+  border: 3px solid var(--app-ink, #2d2d2d);
+  border-radius: 6px 10px 6px 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
   min-width: 140px;
   padding: 4px 0;
@@ -705,20 +705,20 @@ async function doBatchImport() {
   padding: 8px 14px;
   font-size: 13px;
   cursor: pointer;
-  color: #4a3a28;
+  color: var(--app-ink);
 }
 
 .context-menu__item:hover {
-  background: rgba(139, 115, 85, 0.06);
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .context-menu__item--danger {
-  color: #e05a5a;
+  color: var(--app-status-danger-text);
 }
 
 .context-menu__divider {
   height: 1px;
-  background: rgba(139, 115, 85, 0.1);
+  background: rgba(0, 0, 0, 0.1);
   margin: 4px 8px;
 }
 
@@ -745,10 +745,10 @@ async function doBatchImport() {
   gap: 8px;
 }
 
-.panel-title {
+.panel-title { font-family: "Caveat", cursive;
   font-size: 15px;
   font-weight: 700;
-  color: #4A3A28;
+  color: var(--app-ink);
   margin: 0;
 }
 
@@ -757,10 +757,10 @@ async function doBatchImport() {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  background: rgba(139, 115, 85, 0.1);
-  color: #8b7355;
+  background: rgba(0, 0, 0, 0.1);
+  color: var(--app-ink);
   padding: 2px 8px;
-  border-radius: 10px;
+  border-radius: 6px 10px 6px 10px;
   margin-left: 8px;
   vertical-align: middle;
 }
@@ -783,7 +783,7 @@ async function doBatchImport() {
 
 .element-count {
   font-size: 12px;
-  color: #8a7b66;
+  color: var(--app-ink-muted);
   text-align: right;
   flex-shrink: 0;
 }
@@ -797,7 +797,7 @@ async function doBatchImport() {
 
 .empty-state {
   font-size: 14px;
-  color: #9f927d;
+  color: var(--app-ink-muted);
 }
 
 /* ── Table Area ── */
@@ -827,7 +827,7 @@ async function doBatchImport() {
 .toolbar-label {
   font-size: 12px;
   font-weight: 600;
-  color: #8a7b66;
+  color: var(--app-ink-muted);
 }
 
 .page-size-btns {
@@ -838,25 +838,25 @@ async function doBatchImport() {
 .page-size-btn {
   min-width: 40px;
   padding: 4px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(139, 115, 85, 0.2);
-  background: #f7f3df;
+  border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px 8px 4px 8px;
+  border: 3px solid var(--app-ink, #2d2d2d);
+  background: #fff;
   font-size: 12px;
   font-weight: 600;
-  color: #6b5b48;
+  color: var(--app-ink);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .page-size-btn:hover {
-  border-color: #19c8b9;
-  color: #19c8b9;
+  border-color: var(--app-accent-purple);
+  color: var(--app-accent-purple);
 }
 
 .page-size-btn.active {
-  background: rgba(25, 200, 185, 0.12);
-  border-color: #19c8b9;
-  color: #19c8b9;
+  background: rgba(179, 158, 243, 0.12);
+  border-color: var(--app-accent-purple);
+  color: var(--app-accent-purple);
 }
 
 .table-toolbar-right {
@@ -868,7 +868,7 @@ async function doBatchImport() {
 
 .page-info {
   font-size: 12px;
-  color: #8a7b66;
+  color: var(--app-ink-muted);
 }
 
 .page-nav {
@@ -894,7 +894,7 @@ async function doBatchImport() {
 .locator-tag {
   display: inline-block;
   padding: 2px 10px;
-  border-radius: 12px;
+  border-radius: 6px 10px 6px 10px;
   font-size: 11px;
   font-weight: 700;
   color: #fff;
@@ -904,9 +904,9 @@ async function doBatchImport() {
 .locator-tag--css_selector { background: #889df0; }
 .locator-tag--xpath { background: #b39ef3; }
 .locator-tag--id { background: #6fba2c; }
-.locator-tag--class_name { background: #19c8b9; }
+.locator-tag--class_name { background: var(--app-accent-purple); }
 .locator-tag--name { background: #f7cd67; color: #5a4a20; }
-.locator-tag--tag_name { background: #8b7355; }
+.locator-tag--tag_name { background: var(--app-ink); }
 .locator-tag--link_text { background: #e85f5f; }
 .locator-tag--partial_link_text { background: #f8a6b2; color: #5a4a20; }
 .locator-tag--text { background: #f7a8c4; }
@@ -920,7 +920,7 @@ async function doBatchImport() {
   border: none;
   background: transparent;
   font-size: 13px;
-  color: #19c8b9;
+  color: var(--app-accent-purple);
   font-weight: 600;
   padding: 4px 6px;
   border-radius: 4px;
@@ -930,17 +930,17 @@ async function doBatchImport() {
 
 .cell-input:hover,
 .cell-input:focus {
-  background: rgba(25, 200, 185, 0.06);
+  background: rgba(179, 158, 243, 0.06);
 }
 
 .cell-input--desc {
-  color: #4a3a28;
+  color: var(--app-ink);
   font-weight: 400;
   font-size: 12px;
 }
 
 .cell-code {
-  font-family: "SF Mono", "Fira Code", monospace;
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
   font-size: 12px;
   color: #8275c2;
   overflow: hidden;
@@ -952,7 +952,7 @@ async function doBatchImport() {
 
 .cell-url {
   font-size: 12px;
-  color: #6b5b48;
+  color: var(--app-ink);
   opacity: 0.7;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -962,7 +962,7 @@ async function doBatchImport() {
 }
 
 .text-muted {
-  color: #ccc;
+  color: var(--app-ink-muted);
   font-size: 11px;
   font-style: italic;
 }
@@ -988,7 +988,7 @@ async function doBatchImport() {
 
 .table-empty p {
   font-size: 15px;
-  color: #9f927d;
+  color: var(--app-ink-muted);
   margin: 0;
 }
 
@@ -1002,19 +1002,19 @@ async function doBatchImport() {
 
 .form-label {
   font-size: 13px;
-  color: #988b7a;
+  color: var(--app-ink-muted);
   text-align: right;
 }
 
 .form-label.required::before {
   content: "*";
-  color: #e8998a;
+  color: var(--app-status-danger-text);
   margin-right: 2px;
 }
 
 /* ── Flows Section ── */
 .flows-section {
-  border-top: 1px dashed rgba(139,115,85,0.12);
+  border-top: 1px dashed rgba(0,0,0,0.12);
   padding-top: 12px;
   margin-top: 8px;
   flex-shrink: 0;
@@ -1028,7 +1028,7 @@ async function doBatchImport() {
 .flows-title {
   font-size: 13px;
   font-weight: 700;
-  color: #6b5b48;
+  color: var(--app-ink);
 }
 .flows-list {
   display: flex;
@@ -1041,12 +1041,12 @@ async function doBatchImport() {
   justify-content: space-between;
   gap: 8px;
   padding: 8px 12px;
-  background: rgba(255,255,255,0.6);
-  border-radius: 10px;
-  border: 1px solid rgba(139,115,85,0.08);
+  background: #fff;
+  border-radius: 6px 10px 6px 10px;
+  border: 2px solid var(--app-border-light, #e8ecf1);
   font-size: 13px;
 }
-.flow-item.flow-outgoing { border-left: 3px solid #19c8b9; }
+.flow-item.flow-outgoing { border-left: 3px solid var(--app-accent-purple); }
 .flow-item.flow-incoming { border-left: 3px solid #889df0; }
 .flow-dir-tag {
   font-size: 10px;
@@ -1055,7 +1055,7 @@ async function doBatchImport() {
   border-radius: 6px;
   flex-shrink: 0;
 }
-.flow-outgoing .flow-dir-tag { background: rgba(25,200,185,0.12); color: #19c8b9; }
+.flow-outgoing .flow-dir-tag { background: rgba(179,158,243,0.12); color: var(--app-accent-purple); }
 .flow-incoming .flow-dir-tag { background: rgba(136,157,240,0.12); color: #889df0; }
 .flow-arrow {
   display: flex;
@@ -1065,24 +1065,24 @@ async function doBatchImport() {
   min-width: 0;
 }
 .flow-arrow-icon {
-  color: #19c8b9;
+  color: var(--app-accent-purple);
   font-weight: 700;
 }
 .flow-label {
   font-weight: 600;
-  color: #4a3a28;
+  color: var(--app-ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.flow-label.flow-from { color: #19c8b9; }
+.flow-label.flow-from { color: var(--app-accent-purple); }
 .flow-label.flow-to { color: #889df0; }
 .flow-meta {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: #9f927d;
+  color: var(--app-ink-muted);
 }
 .flow-meta code {
   background: #f0ebe0;
@@ -1096,8 +1096,17 @@ async function doBatchImport() {
 }
 .flows-empty {
   text-align: center;
-  color: #9f927d;
+  color: var(--app-ink-muted);
   font-size: 12px;
   padding: 12px 0;
 }
+
+/* Paper table headers */
+.web-elements-table :deep(.el-table__header th) {
+  background: var(--app-accent-purple) !important; color: #fff !important;
+  font-size: 10px; font-weight: 700; padding: 6px 10px;
+  border-right: 1px solid rgba(255,255,255,0.3);
+}
+.web-elements-table :deep(.el-table__header th:first-child) { border-radius: 3px 0 0 0; }
+.web-elements-table :deep(.el-table__header th:last-child) { border-radius: 0 3px 0 0; border-right: none; }
 </style>

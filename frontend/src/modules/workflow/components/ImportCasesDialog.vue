@@ -248,7 +248,7 @@ async function confirmImport() {
 .list {
   max-height: 360px;
   overflow: auto;
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--doodle-ink, #2d2d2d);
   border-radius: 12px;
   background: rgba(255,255,255,0.48);
 }

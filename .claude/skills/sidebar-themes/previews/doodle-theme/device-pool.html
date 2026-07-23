@@ -1,0 +1,67 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>设备管理 · Crayon Doodle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Bangers&family=Comic+Neue:wght@400;700&family=Gloria+Hallelujah&family=JetBrains+Mono:wght@500;600&family=Fredoka+One&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter','PingFang SC',sans-serif;background:#faf5ee;min-height:100vh;--ink:#2d2d2d;--ac:#6BCB77;--ac2:#52b788;--green:#6BCB77;--green-bg:#C8F5D0;--pink:#FFB5A7;--pink-bg:#FFE0DB;--purple-bg:#E8DDF8}
+.page{max-width:1024px;margin:0 auto;padding:20px 16px}
+a.back{font-family:'Bangers',cursive;font-size:13px;color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:16px}
+.hdr{display:flex;align-items:center;gap:12px;padding:14px 20px;background:#fff;border:3px solid var(--ink);position:relative;box-shadow:2px 2px 0 rgba(0,0,0,0.04)}
+.hdr::before{content:'+';position:absolute;top:-7px;left:20px;font-size:14px;font-weight:900;color:var(--ac);z-index:2}
+.hdr .ico{width:40px;height:40px;display:grid;place-items:center;font-size:20px;background:linear-gradient(135deg,#95D5B2,var(--ac2));color:#fff;border:3px solid var(--ink);border-radius:6px 12px 6px 12px;transform:rotate(-2deg);box-shadow:2px 2px 0 rgba(0,0,0,0.1);flex-shrink:0}
+.hdr h2{font-family:'Bangers',cursive;font-size:22px;color:var(--ink);letter-spacing:0.02em;margin:0}
+.hdr p{font-size:10px;color:#999;font-weight:600;margin:1px 0 0}
+.bdy{background:#fffbf5;border:3px solid var(--ink);border-top:none;padding:20px;display:flex;flex-direction:column;gap:14px;position:relative}
+.bdy::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(45deg,rgba(107,203,119,0.03) 25%,transparent 25%,transparent 75%,rgba(107,203,119,0.03) 75%);background-size:8px 8px;pointer-events:none;z-index:0}
+.bdy>*{z-index:1;position:relative}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:3px solid var(--ink);border-radius:4px;overflow:hidden;background:#fff}
+.ki{padding:14px 12px;text-align:center;border-right:2.5px solid var(--ink)}.ki:last-child{border-right:none}
+.ki .kv{font-family:'Bangers',cursive;font-size:26px;color:var(--ink)}.ki .kl{font-size:8px;font-weight:700;color:#999;text-transform:uppercase}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ftab{padding:5px 12px;font-size:9px;font-weight:700;color:#999;cursor:pointer;border:2.5px solid transparent;border-radius:15px;background:transparent;font-family:'Comic Neue',cursive;transition:all 0.12s}
+.ftab:hover{color:var(--ink);border-color:rgba(0,0,0,0.15)}
+.ftab.act{color:var(--ink);background:#fff;border-color:var(--ink)}
+.tbl{width:100%;border-collapse:collapse;font-size:10px}
+.tbl th{background:var(--ac);color:#fff;padding:7px 10px;text-align:left;font-family:'Bangers',cursive;font-size:10px;letter-spacing:0.02em;border-bottom:3px solid var(--ink)}.tbl th:first-child{border-radius:3px 0 0 0}.tbl th:last-child{border-radius:0 3px 0 0}
+.tbl td{padding:7px 10px;border-bottom:1.5px dashed rgba(0,0,0,0.08);background:#fff}.tbl tr:hover td{background:rgba(107,203,119,0.04)}
+.mono{font-family:'JetBrains Mono',monospace;font-size:10px}
+.badge{font-size:7px;font-weight:700;padding:2px 6px;border:1.5px solid var(--ink);display:inline-block;border-radius:3px}.badge-g{background:var(--green-bg);color:#2d7a2d}.badge-p{background:var(--pink-bg);color:#a03030}.badge-v{background:var(--purple-bg);color:#5a3fa0}.badge-y{background:#FFF9E0;color:#7a5a10}
+.btn{font-size:8px;font-weight:700;padding:3px 8px;border:2px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;font-family:'Comic Neue',cursive;box-shadow:2px 2px 0 rgba(0,0,0,0.06);transition:all 0.12s;white-space:nowrap}.btn:hover{transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(0,0,0,0.06)}.btn-pri{background:var(--ink);color:#fff}
+.ftr{display:flex;align-items:center;justify-content:center;gap:20px;padding:10px 16px;border:3px solid var(--ink);border-top:none;background:repeating-linear-gradient(-45deg,var(--green-bg),var(--green-bg) 4px,#a8e0b0 4px,#a8e0b0 8px);font-family:'Gloria Hallelujah',cursive;font-size:11px;font-weight:700;color:#1a5c2a}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.dc{background:#fff;border:2.5px solid var(--ink);padding:8px 8px 24px 8px;position:relative;transform:rotate(var(--r,0deg));box-shadow:2px 2px 0 rgba(0,0,0,0.04);transition:all 0.15s}.dc:nth-child(3n+1){--r:-0.8deg}.dc:nth-child(3n+2){--r:0.5deg}.dc:nth-child(3n+3){--r:-0.4deg}
+.dc::before{content:'+';position:absolute;top:-5px;right:6px;font-size:10px;font-weight:900;color:var(--ac);z-index:2}
+.dc:hover{transform:rotate(0deg) scale(1.03);z-index:3}
+.dc .dp{height:40px;background:var(--ac);border-radius:3px 6px 3px 6px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;margin-bottom:6px;border:2px solid var(--ink)}
+.dc .dp .ser{font-family:'JetBrains Mono',monospace;font-size:8px;color:#fff;font-weight:600}
+.dc .dn{font-size:10px;font-weight:700;color:var(--ink);text-align:center}
+.dc .di{font-size:7px;color:#999;text-align:center;margin:2px 0 4px}
+</style></head><body>
+<div class="page">
+<a href="index.html" class="back">← 返回首页</a>
+<div class="hdr"><div class="ico">📱</div><div><h2>设备管理 Device Pool</h2><p>扫描、连接、锁定 Android 设备，管理设备状态与使用队列</p></div><div class="row" style="gap:6px;margin-left:auto"><button class="btn">📶 局域网</button><button class="btn btn-pri">🔄 刷新设备</button></div></div>
+<div class="bdy">
+  <div class="kpi">
+    <div class="ki"><div class="kv" style="color:#2d7a2d">3</div><div class="kl">在线 Online</div></div>
+    <div class="ki"><div class="kv" style="color:#a03030">1</div><div class="kl">使用中 Busy</div></div>
+    <div class="ki"><div class="kv">1</div><div class="kl">离线 Offline</div></div>
+    <div class="ki"><div class="kv">5</div><div class="kl">总计 Total</div></div>
+  </div>
+  <div class="row"><span class="ftab act">全部设备</span><span class="ftab">在线</span><span class="ftab">使用中</span><span class="ftab">离线</span><span style="font-size:9px;color:#999;margin-left:auto;font-weight:700">📋 表格视图</span></div>
+  <table class="tbl"><thead><tr><th>序列号</th><th>型号</th><th>分辨率</th><th>状态</th><th>连接</th><th>锁定</th><th>最后在线</th><th>操作</th></tr></thead><tbody>
+  <tr><td class="mono">10.162.92.83:40449</td><td>Samsung Galaxy S21</td><td>1080×2400</td><td><span class="badge badge-g">在线</span></td><td>USB</td><td><span class="badge badge-v">admin</span></td><td>刚刚</td><td><button class="btn">锁定</button> <button class="btn">断开</button></td></tr>
+  <tr><td class="mono">emulator-5554</td><td>Google Pixel 6</td><td>1080×2280</td><td><span class="badge badge-p">使用中</span></td><td>WiFi</td><td>—</td><td>2 分钟前</td><td><button class="btn">详情</button></td></tr>
+  <tr><td class="mono">192.168.1.100:5555</td><td>Xiaomi 12 Pro</td><td>1440×3200</td><td><span class="badge badge-g">在线</span></td><td>WiFi</td><td>—</td><td>5 分钟前</td><td><button class="btn">锁定</button> <button class="btn">断开</button></td></tr>
+  <tr><td class="mono">R5CT1234ABCD</td><td>Samsung Tab S8</td><td>1600×2560</td><td><span class="badge badge-g">在线</span></td><td>USB</td><td>—</td><td>10 分钟前</td><td><button class="btn">锁定</button></td></tr>
+  <tr><td class="mono">emulator-5556</td><td>OnePlus 9</td><td>1080×2400</td><td><span style="font-size:7px;font-weight:700;padding:2px 6px;border:1.5px solid var(--ink);display:inline-block;background:#d4d8dc;color:#999;border-radius:3px">已断开</span></td><td>—</td><td>—</td><td>1 小时前</td><td><button class="btn">重新连接</button></td></tr>
+  </tbody></table>
+  <div class="row"><span style="font-size:9px;color:#999;font-weight:700">📷 卡片视图</span></div>
+  <div class="cards">
+    <div class="dc"><div class="dp"><span class="ser">10.162.92.83:40449</span><span class="badge badge-g">在线</span></div><div class="dn">Samsung Galaxy S21</div><div class="di">1080×2400 · USB · 刚刚</div><div class="row" style="justify-content:center;gap:4px"><button class="btn">锁定</button><button class="btn">断开</button></div></div>
+    <div class="dc"><div class="dp" style="background:var(--pink)"><span class="ser">emulator-5554</span><span class="badge badge-p">使用中</span></div><div class="dn">Google Pixel 6</div><div class="di">1080×2280 · WiFi · 2分钟前</div></div>
+    <div class="dc"><div class="dp"><span class="ser">192.168.1.100:5555</span><span class="badge badge-g">在线</span></div><div class="dn">Xiaomi 12 Pro</div><div class="di">1440×3200 · WiFi · 5分钟前</div></div>
+  </div>
+</div>
+<div class="ftr">📱 5 台设备 · 3 在线 · 1 使用中 · 1 离线 &nbsp;|&nbsp; 🎨 Crayon Doodle Theme</div>
+</div></body></html>

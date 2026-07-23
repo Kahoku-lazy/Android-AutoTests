@@ -496,7 +496,7 @@ watch(
   gap: 8px;
   padding: 10px 12px;
   background: rgba(255,255,255,0.46);
-  border-bottom: 1px solid var(--app-glass-border);
+  border-bottom: 1px solid var(--doodle-ink, #2d2d2d);
   flex-shrink: 0;
 }
 .vf-docbar {
@@ -670,8 +670,6 @@ watch(
   overflow: hidden;
   font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif);
   color: #4a4e69;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
 }
 .el-picker-head {
   display: flex;

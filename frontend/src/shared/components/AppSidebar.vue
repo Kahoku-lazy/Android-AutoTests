@@ -650,7 +650,7 @@ onUnmounted(() => {
   line-height: 15px;
   margin-left: auto;
   animation: none;
-  border: 1px solid #e8ecf1;
+  border: 3px solid var(--doodle-ink, #2d2d2d);
 }
 .sidebar-menu__badge--dev {
   background: #f7fafc;
@@ -687,7 +687,7 @@ onUnmounted(() => {
   padding: 12px;
   background: #fff;
   border-radius: 4px;
-  border: 1px solid #e8ecf1;
+  border: 3px solid var(--doodle-ink, #2d2d2d);
 }
 .sidebar__user-label {
   font-size: 10px;

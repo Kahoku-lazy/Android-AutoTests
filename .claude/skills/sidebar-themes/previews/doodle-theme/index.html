@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crayon Doodle · 全平台手绘主题原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Bangers&family=Comic+Neue:wght@400;700&family=Gloria+Hallelujah&family=JetBrains+Mono:wght@500;600&family=Fredoka+One&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════ Crayon Doodle Design System ═══════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --ink:#2d2d2d;
+  --yellow:#f4a460;--green:#6BCB77;--purple:#b39ef3;--teal:#19c8b9;
+  --pink:#FFB5A7;--brown:#8b7355;--orange:#f7a8c4;--blue:#889df0;
+  --bg:#faf5ee;--card:#fffbf5;
+}
+body{font-family:'Inter','PingFang SC',sans-serif;background:var(--bg);min-height:100vh}
+.page{max-width:1100px;margin:0 auto;padding:24px 16px}
+
+/* ══════ Hero ══════ */
+.hero{text-align:center;padding:40px 20px 30px}
+.hero h1{font-family:'Bangers',cursive;font-size:48px;color:var(--ink);letter-spacing:0.03em;line-height:1.1}
+.hero h1 span{display:inline-block;transform:rotate(-2deg)}
+.hero h1 span:nth-child(2){transform:rotate(1deg);color:#ff6b6b}
+.hero h1 span:nth-child(3){transform:rotate(-1deg);color:#ffd93d}
+.hero p{font-family:'Comic Neue',cursive;font-size:16px;color:#666;margin-top:8px;font-weight:700}
+.hero .doodle-divider{display:flex;align-items:center;justify-content:center;gap:8px;margin:16px 0}
+.hero .doodle-divider span{font-size:20px;transform:rotate(45deg);color:#ff6b6b}
+.hero .doodle-divider span:nth-child(odd){color:#ffd93d;transform:rotate(-30deg)}
+
+/* ══════ Module Grid ══════ */
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:20px}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+.card{
+  background:var(--card);border:3px solid var(--ink);
+  border-radius:2px;padding:20px 16px 28px;
+  position:relative;cursor:pointer;transition:all 0.15s;
+  text-decoration:none;display:block;color:inherit;
+  box-shadow:2px 2px 0 rgba(0,0,0,0.06);
+}
+.card::before{content:'+';position:absolute;top:-8px;left:-8px;font-size:16px;font-weight:900;color:var(--c);z-index:2;line-height:1}
+.card::after{content:'+';position:absolute;bottom:-8px;right:-8px;font-size:16px;font-weight:900;color:var(--c);z-index:2;line-height:1}
+.card:hover{transform:translate(-1px,-2px);box-shadow:4px 4px 0 rgba(0,0,0,0.08)}
+.card .hd{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.card .ico{width:36px;height:36px;display:grid;place-items:center;font-size:18px;background:var(--c);color:#fff;border:3px solid var(--ink);border-radius:4px 10px 4px 10px;transform:rotate(-3deg);box-shadow:2px 2px 0 rgba(0,0,0,0.1);flex-shrink:0}
+.card h3{font-family:'Bangers',cursive;font-size:17px;color:var(--ink);letter-spacing:0.02em;margin:0}
+.card .desc{font-size:11px;color:#888;margin-top:2px;font-weight:600;line-height:1.4}
+.card .tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px}
+.card .t{font-size:8px;font-weight:700;padding:2px 7px;border:2px solid var(--ink);border-radius:10px;background:#fff;transform:rotate(-1deg);font-family:'Comic Neue',cursive}
+.card .arr{
+  position:absolute;bottom:10px;right:12px;font-size:14px;font-weight:900;color:var(--c);
+  font-family:'Bangers',cursive;
+}
+
+/* ══════ Footer ══════ */
+.footer{text-align:center;padding:20px;margin-top:20px;font-family:'Gloria Hallelujah',cursive;font-size:12px;color:#888}
+.footer::before{content:'~ ~ ~';display:block;font-size:20px;margin-bottom:8px;color:#ddd;letter-spacing:8px}
+
+/* ══════ Color bar ══════ */
+.color-bar{display:flex;gap:4px;margin-top:30px;justify-content:center;flex-wrap:wrap}
+.color-bar span{width:24px;height:24px;border:2px solid var(--ink);border-radius:3px;transform:rotate(2deg)}
+.color-bar span:nth-child(1){background:var(--yellow);transform:rotate(-2deg)}
+.color-bar span:nth-child(2){background:var(--green);transform:rotate(1deg)}
+.color-bar span:nth-child(3){background:var(--purple);transform:rotate(-1deg)}
+.color-bar span:nth-child(4){background:var(--teal);transform:rotate(2deg)}
+.color-bar span:nth-child(5){background:var(--pink);transform:rotate(-2deg)}
+.color-bar span:nth-child(6){background:var(--brown);transform:rotate(1deg)}
+.color-bar span:nth-child(7){background:var(--orange);transform:rotate(-1deg)}
+.color-bar span:nth-child(8){background:var(--blue);transform:rotate(2deg)}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hero">
+    <h1><span>Android</span> <span>Auto</span><span>Tests</span></h1>
+    <div class="doodle-divider"><span>+</span><span>◆</span><span>+</span><span>◆</span><span>+</span></div>
+    <p>🎨 Crayon Doodle · 手绘涂鸦主题 · 全平台 8 模块高保真原型</p>
+  </div>
+
+  <div class="grid">
+    <a href="dashboard.html" class="card" style="--c:var(--yellow)">
+      <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#f4a460,#f0c06a)">◈</div><div><h3>仪表盘</h3><div class="desc">Dashboard · 平台总览 KPI 监控</div></div></div>
+      <div class="tags"><span class="t">统计卡片</span><span class="t">趋势图</span><span class="t">模块导航</span></div>
+      <div class="arr">→</div>
+    </a>
+    <a href="device-pool.html" class="card" style="--c:var(--green)">
+      <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#95D5B2,#52b788)">📱</div><div><h3>设备管理</h3><div class="desc">Device Pool · 扫描连接锁定</div></div></div>
+      <div class="tags"><span class="t">KPI 条</span><span class="t">表格</span><span class="t">卡片视图</span></div>
+      <div class="arr">→</div>
+    </a>
+    <a href="element-locator.html" class="card" style="--c:var(--purple)">
+      <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#C9B6F2,#a78bfa)">⊕</div><div><h3>元素定位</h3><div class="desc">Element Locator · Dump XPath</div></div></div>
+      <div class="tags"><span class="t">截图</span><span class="t">树</span><span class="t">XPath</span></div>
+      <div class="arr">→</div>
+    </a>
+    <a href="case-manager.html" class="card" style="--c:var(--teal)">
+      <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#89CFF0,#60a5fa)">📋</div><div><h3>用例管理</h3><div class="desc">Case Manager · 步骤编排</div></div></div>
+      <div class="tags"><span class="t">目录树</span><span class="t">表格</span><span class="t">导入导出</span></div>
+      <div class="arr">→</div>
+    </a>
+    <a href="test-runner.html" class="card" style="--c:var(--pink)">
+      <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#FFB5A7,#f87171)">▶</div><div><h3>执行引擎</h3><div class="desc">Test Runner · 任务调度</div></div></div>
+      <div class="tags"><span class="t">KPI</span><span class="t">进度</span><span class="t">日志</span></div>
+      <div class="arr">→</div>
+    </a>
+    <a href="report-generator.html" class="card" style="--c:var(--brown)">
+      <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#9a8c98,#8b7f8f)">📊</div><div><h3>测试报告</h3><div class="desc">Report · KPI 趋势导出</div></div></div>
+      <div class="tags"><span class="t">摘要</span><span class="t">表格</span><span class="t">导出</span></div>
+      <div class="arr">→</div>
+    </a>
+    <a href="ai-assistant.html" class="card" style="--c:var(--orange)">
+      <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#5EEAD4,#14b8a6)">🤖</div><div><h3>AI 助手</h3><div class="desc">AI Assistant · 对话智能体</div></div></div>
+      <div class="tags"><span class="t">对话</span><span class="t">SSE</span><span class="t">工具</span></div>
+      <div class="arr">→</div>
+    </a>
+    <a href="workflow.html" class="card" style="--c:var(--blue)">
+      <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#BDE0FE,#93c5fd)">🔀</div><div><h3>工作流工作台</h3><div class="desc">Workflow · 可视化编排</div></div></div>
+      <div class="tags"><span class="t">画布</span><span class="t">Blockly</span><span class="t">同步</span></div>
+      <div class="arr">→</div>
+    </a>
+  </div>
+
+  <div class="color-bar"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="footer">8 Modules · 1 Design System · Infinite Doodles</div>
+</div>
+</body>
+</html>

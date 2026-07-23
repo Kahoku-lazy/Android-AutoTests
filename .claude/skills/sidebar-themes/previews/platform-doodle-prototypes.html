@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>手绘涂鸦风格 · 全平台三方案 — Android-AutoTests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Caveat:wght@600;700&family=Fredoka+One&family=Bangers&family=Comic+Neue:wght@400;700&family=JetBrains+Mono:wght@500;600&family=Gloria+Hallelujah&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════ 共享底座 ═══════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter','PingFang SC',sans-serif;background:#e8e0d8;padding:16px 10px}
+.sec-title{text-align:center;font-size:18px;font-weight:900;margin:20px 0 4px;letter-spacing:-0.02em}
+.sec-title+p{text-align:center;font-size:11px;margin-bottom:16px;opacity:0.6}
+.cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;max-width:1400px;margin:0 auto 24px}
+.col{display:flex;flex-direction:column;gap:8px}
+.col-tag{text-align:center;font-size:9px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;padding:4px 10px;border-radius:20px;margin-bottom:2px}
+
+/* Shared module elements */
+.mc{overflow:visible;position:relative}
+.mc .hd{display:flex;align-items:center;gap:8px;padding:10px 14px;}
+.mc .hd .ico{width:30px;height:30px;display:grid;place-items:center;font-size:14px;flex-shrink:0}
+.mc .hd h4{font-size:11px;font-weight:800;margin:0}
+.mc .hd .sub{font-size:7px;opacity:0.6;margin:1px 0 0}
+.mc .bd{padding:8px 12px;display:flex;flex-direction:column;gap:6px}
+.mc .ft{display:flex;justify-content:center;gap:10px;padding:7px 12px;font-size:8px;font-weight:700}
+.tag{font-size:7px;font-weight:700;padding:1px 6px;display:inline-block}
+.btn{font-size:7px;font-weight:700;padding:3px 8px;cursor:pointer;font-family:inherit;border:none}
+.sr{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.si{text-align:center;padding:5px 3px}
+.sn{font-size:18px;font-weight:900;line-height:1}
+.sl{font-size:6px;font-weight:700;text-transform:uppercase;opacity:0.5}
+.mono{font-family:'JetBrains Mono',monospace}
+.tb{width:100%;border-collapse:collapse;font-size:7px}
+.tb th{padding:3px 5px;text-align:left;font-size:7px;font-weight:700}
+.tb td{padding:2px 5px}
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.rw{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.br{font-size:6px;font-weight:700;padding:2px 6px;cursor:pointer}
+
+/* ═══════════════════════ A: Crayon Doodle 涂鸦蜡笔 ═══════════════════════ */
+.a .col-tag{background:#fff;color:#2d2d2d;font-family:'Gloria Hallelujah',cursive;border:3px solid #2d2d2d;box-shadow:2px 2px 0 #f4a460}
+.a .mc{background:#fffbf0;border:3px solid #2d2d2d;border-radius:0;position:relative}
+/* + corners */
+.a .mc::before{content:'+';position:absolute;top:-8px;left:-8px;font-size:14px;font-weight:900;color:var(--ac,#FF6B6B);z-index:5;line-height:1}
+.a .mc::after{content:'+';position:absolute;bottom:-8px;right:-8px;font-size:14px;font-weight:900;color:var(--ac,#FF6B6B);z-index:5;line-height:1}
+/* doodle texture */
+.a .mc .hd{background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.015) 3px,rgba(0,0,0,0.015) 4px);border-bottom:3px dashed #2d2d2d}
+.a .mc .bd{background:linear-gradient(45deg,var(--ac-bg,rgba(255,107,107,0.04)) 25%,transparent 25%,transparent 75%,var(--ac-bg,rgba(255,107,107,0.04)) 75%);background-size:8px 8px}
+.a .hd .ico{background:var(--ac,#FF6B6B);color:#fff;border:3px solid #2d2d2d;transform:rotate(-3deg);box-shadow:2px 2px 0 rgba(0,0,0,0.15)}
+.a .hd h4{font-family:'Bangers',cursive;color:#2d2d2d;letter-spacing:0.03em;font-size:14px}
+.a .ft{background:repeating-linear-gradient(-45deg,#FFE066,#FFE066 4px,#FFD54F 4px,#FFD54F 8px);border-top:3px dashed #2d2d2d;color:#5a3e00;font-family:'Gloria Hallelujah',cursive}
+.a .tag{border:2px solid #2d2d2d;transform:rotate(-1deg)}
+.a .btn{background:#fff;color:#2d2d2d;border:2.5px solid #2d2d2d;box-shadow:2px 2px 0 rgba(0,0,0,0.1);font-family:'Comic Neue',cursive;font-weight:700}
+.a .btn:hover{transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(0,0,0,0.1)}
+.a .btn-p{color:#fff;font-weight:900}
+.a .si{border:2px dashed #2d2d2d;background:#fff;transform:rotate(0.5deg)}
+.a .sn{font-family:'Bangers',cursive}
+.a .tb th{background:var(--ac,#FF6B6B);color:#fff;border-bottom:3px solid #2d2d2d;font-family:'Bangers',cursive;font-size:8px}
+.a .tb td{border-bottom:1.5px dashed rgba(0,0,0,0.1)}
+.a .br{border:2px solid #2d2d2d;background:#fff;transform:rotate(-0.5deg)}
+.a .br.act{background:#2d2d2d;color:#fff;transform:rotate(0deg)}
+
+/* ═══════════════════════ B: Geo Collage 几何拼贴 ═══════════════════════ */
+.b .col-tag{background:var(--c,#6C5CE7);color:#fff;font-family:'Fredoka One',cursive;border:none;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+.b .mc{background:#fff;clip-path:polygon(0 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);position:relative;box-shadow:3px 3px 0 rgba(0,0,0,0.06)}
+/* + corners */
+.b .mc::before{content:'+';position:absolute;top:0;right:0;font-size:12px;font-weight:900;color:var(--ac,#6C5CE7);z-index:5;line-height:1;transform:rotate(0deg)}
+.b .mc::after{content:'';position:absolute;bottom:0;left:0;width:16px;height:16px;background:var(--ac,#6C5CE7);clip-path:polygon(0 100%,100% 0,100% 100%);z-index:5}
+.b .mc .hd{border-bottom:3px solid #2d2d2d;background:linear-gradient(90deg,#fff 60%,var(--ac-bg,rgba(108,92,231,0.06)) 100%)}
+.b .mc .bd{background:linear-gradient(45deg,rgba(0,0,0,0.01) 25%,transparent 25%),linear-gradient(-45deg,rgba(0,0,0,0.01) 25%,transparent 25%);background-size:6px 6px}
+.b .hd .ico{background:var(--ac,#6C5CE7);color:#fff;clip-path:polygon(20% 0,100% 0,100% 80%,80% 100%,0 100%,0 20%);box-shadow:2px 2px 0 rgba(0,0,0,0.1)}
+.b .hd h4{font-family:'Fredoka One',cursive;color:#2d2d2d;font-size:13px}
+.b .ft{background:var(--ac,#6C5CE7);color:#fff;border-top:3px solid #2d2d2d;font-family:'Fredoka One',cursive;clip-path:polygon(0 0,100% 4px,100% 100%,0 100%)}
+.b .tag{clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%);font-weight:700}
+.b .btn{background:#fff;border:2px solid #2d2d2d;clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%);font-family:'Fredoka One',cursive;font-weight:600}
+.b .btn-p{color:#fff}
+.b .si{border:2px solid #2d2d2d;background:#fff;clip-path:polygon(3px 0,100% 0,100% calc(100% - 3px),calc(100% - 3px) 100%,0 100%,0 3px)}
+.b .sn{font-family:'Fredoka One',cursive}
+.b .tb th{background:var(--ac,#6C5CE7);color:#fff;font-family:'Fredoka One',cursive;font-size:8px;border-bottom:2px solid #2d2d2d}
+.b .tb td{border-bottom:1px dashed rgba(0,0,0,0.08)}
+.b .br{border:2px solid #2d2d2d;background:#fff;font-family:'Fredoka One',cursive;font-size:7px}
+.b .br.act{background:#2d2d2d;color:#fff}
+
+/* ═══════════════════════ C: Comic Grid 漫画格子 ═══════════════════════ */
+.c .col-tag{background:#ff6b6b;color:#fff;font-family:'Bangers',cursive;border:2px solid #2d2d2d;letter-spacing:0.05em}
+.c .mc{background:#fff;border:3px solid #2d2d2d;position:relative;box-shadow:4px 4px 0 rgba(0,0,0,0.08)}
+/* + corners */
+.c .mc::before{content:'+';position:absolute;top:-6px;right:12px;font-size:16px;font-weight:900;color:#ff6b6b;z-index:5;line-height:1;transform:rotate(15deg);text-shadow:2px 2px 0 rgba(0,0,0,0.1)}
+.c .mc::after{content:'+';position:absolute;bottom:-6px;left:12px;font-size:16px;font-weight:900;color:#ffd93d;z-index:5;line-height:1;transform:rotate(-15deg);text-shadow:2px 2px 0 rgba(0,0,0,0.1)}
+/* halftone dots */
+.c .mc .bd{background:radial-gradient(circle,rgba(0,0,0,0.03) 1px,transparent 1px);background-size:6px 6px}
+.c .hd{background:#fff;border-bottom:3px solid #2d2d2d}
+.c .hd .ico{background:var(--ac,#ffd93d);color:#2d2d2d;border:3px solid #2d2d2d;transform:rotate(2deg);box-shadow:3px 3px 0 rgba(0,0,0,0.15)}
+.c .hd h4{font-family:'Bangers',cursive;color:#2d2d2d;font-size:15px;letter-spacing:0.04em}
+.c .ft{background:#ffd93d;color:#2d2d2d;border-top:3px solid #2d2d2d;font-family:'Bangers',cursive;font-size:9px}
+.c .tag{border:2px solid #2d2d2d;font-family:'Bangers',cursive;font-size:7px}
+.c .btn{background:#fff;color:#2d2d2d;border:2.5px solid #2d2d2d;box-shadow:3px 3px 0 rgba(0,0,0,0.1);font-family:'Bangers',cursive;font-weight:700;letter-spacing:0.02em}
+.c .btn:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 rgba(0,0,0,0.1)}
+.c .btn-p{color:#fff;box-shadow:3px 3px 0 rgba(0,0,0,0.2)}
+.c .si{border:2px solid #2d2d2d;background:#fff;box-shadow:2px 2px 0 rgba(0,0,0,0.05)}
+.c .sn{font-family:'Bangers',cursive}
+.c .tb th{font-family:'Bangers',cursive;font-size:8px;color:#fff;text-shadow:1px 1px 0 rgba(0,0,0,0.2);border-bottom:2px solid #2d2d2d}
+.c .tb td{border-bottom:1px dotted rgba(0,0,0,0.15)}
+.c .br{border:2px solid #2d2d2d;background:#fff;font-family:'Bangers',cursive;font-size:7px}
+.c .br.act{background:#2d2d2d;color:#fff;box-shadow:2px 2px 0 rgba(0,0,0,0.1)}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ MODULE MACRO ═══════════ -->
+<!-- Each module rendered in 3 columns (A/B/C) with 3 variants -->
+
+<!-- ===== 1. 仪表盘 yellow ===== -->
+<div class="sec-title">1. 仪表盘 Dashboard</div><p>4 统计卡片 + 趋势图 + 最新执行 · 模块色 yellow</p>
+<div class="cols">
+<div class="col a"><div class="mc" style="--ac:#f4a460;--ac-bg:rgba(244,164,96,0.06)">
+  <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#f4a460,#f0c06a)">◈</div><div><h4>仪表盘</h4><div class="sub">平台总览 · KPI 监控</div></div><button class="btn btn-p" style="margin-left:auto;background:linear-gradient(135deg,#f4a460,#f0c06a)">刷新</button></div>
+  <div class="bd">
+    <div class="sr">
+      <div class="si"><div class="sn" style="color:#f4a460">3<span style="font-size:9px;opacity:0.5">/5</span></div><div class="sl">在线设备</div></div>
+      <div class="si"><div class="sn" style="color:#6BCB77">128</div><div class="sl">测试用例</div></div>
+      <div class="si"><div class="sn" style="color:#889df0">4</div><div class="sl">智能体</div></div>
+      <div class="si"><div class="sn" style="color:#FFB5A7">2</div><div class="sl">运行中</div></div>
+    </div>
+    <div class="cg">
+      <div class="si" style="grid-column:span 2;text-align:left"><span style="font-weight:800;font-size:7px">📈 趋势</span><div style="display:flex;align-items:flex-end;gap:2px;height:20px;margin-top:3px"><span style="flex:1;background:#f4a460;height:70%"></span><span style="flex:1;background:#f4a460;height:45%"></span><span style="flex:1;background:#FFB5A7;height:30%"></span><span style="flex:1;background:#f4a460;height:85%"></span></div></div>
+      <div class="si"><span class="tag" style="background:#C8F5D0;color:#2d7a2d;margin-right:3px">✓ 12</span><span class="tag" style="background:#FFE0DB;color:#a03030">✗ 3</span></div>
+    </div>
+  </div>
+  <div class="ft">🕐 14:30 · 系统正常</div>
+</div></div>
+<div class="col b"><div class="mc" style="--ac:#f4a460;--ac-bg:rgba(244,164,96,0.06)">
+  <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#f4a460,#f0c06a)">◈</div><div><h4>仪表盘</h4><div class="sub">平台总览 · KPI 监控</div></div><button class="btn btn-p" style="margin-left:auto;background:linear-gradient(135deg,#f4a460,#f0c06a)">刷新</button></div>
+  <div class="bd">
+    <div class="sr">
+      <div class="si"><div class="sn" style="color:#f4a460">3</div><div class="sl">在线</div></div>
+      <div class="si"><div class="sn" style="color:#6BCB77">128</div><div class="sl">用例</div></div>
+      <div class="si"><div class="sn" style="color:#889df0">4</div><div class="sl">智能体</div></div>
+      <div class="si"><div class="sn" style="color:#FFB5A7">2</div><div class="sl">运行中</div></div>
+    </div>
+  </div>
+  <div class="ft" style="background:linear-gradient(90deg,#f4a460,#f0c06a)">🕐 14:30 · 系统正常</div>
+</div></div>
+<div class="col c"><div class="mc" style="--ac:#f4a460">
+  <div class="hd"><div class="ico" style="background:#f4a460">◈</div><div><h4>仪表盘</h4><div class="sub">平台总览 · KPI 监控</div></div><button class="btn btn-p" style="margin-left:auto;background:#f4a460">刷新</button></div>
+  <div class="bd">
+    <div class="sr">
+      <div class="si"><div class="sn" style="color:#f4a460">3</div><div class="sl">在线设备</div></div>
+      <div class="si"><div class="sn" style="color:#6BCB77">128</div><div class="sl">测试用例</div></div>
+      <div class="si"><div class="sn" style="color:#889df0">4</div><div class="sl">智能体</div></div>
+      <div class="si"><div class="sn" style="color:#FFB5A7">2</div><div class="sl">运行中</div></div>
+    </div>
+  </div>
+  <div class="ft">🕐 14:30 · 系统正常</div>
+</div></div>
+</div>
+
+<!-- ===== 2. 设备管理 green ===== -->
+<div class="sec-title">2. 设备管理 Device-Pool</div><p>KPI 条 + 筛选标签 + 设备表格 · 模块色 green</p>
+<div class="cols">
+<div class="col a"><div class="mc" style="--ac:#6BCB77;--ac-bg:rgba(107,203,119,0.06)">
+  <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#6BCB77,#52b788)">📱</div><div><h4>设备管理</h4><div class="sub">扫描 · 连接 · 锁定</div></div><button class="btn btn-p" style="margin-left:auto;background:linear-gradient(135deg,#6BCB77,#52b788)">🔄 刷新</button></div>
+  <div class="bd">
+    <div class="sr">
+      <div class="si" style="border-color:#6BCB77"><div class="sn" style="color:#2d7a2d">3</div><div class="sl">在线</div></div>
+      <div class="si" style="border-color:#FFB5A7"><div class="sn" style="color:#a03030">1</div><div class="sl">使用中</div></div>
+      <div class="si"><div class="sn">1</div><div class="sl">离线</div></div>
+      <div class="si"><div class="sn">5</div><div class="sl">总计</div></div>
+    </div>
+    <div class="rw"><span class="br act">全部</span><span class="br">在线</span><span class="br">使用中</span><span style="font-size:7px;opacity:0.5;margin-left:auto">5 台</span></div>
+    <table class="tb"><thead><tr><th>序列号</th><th>型号</th><th>状态</th><th>操作</th></tr></thead>
+    <tbody><tr><td class="mono">10.162.92.83:40449</td><td>Samsung S21</td><td><span class="tag" style="background:#C8F5D0;color:#2d7a2d">在线</span></td><td><button class="btn">锁定</button></td></tr>
+    <tr><td class="mono">emulator-5554</td><td>Pixel 6</td><td><span class="tag" style="background:#FFE0DB;color:#a03030">使用中</span></td><td><button class="btn">详情</button></td></tr></tbody></table>
+  </div>
+  <div class="ft" style="background:repeating-linear-gradient(-45deg,#C8F5D0,#C8F5D0 3px,#a8e0b0 3px,#a8e0b0 6px);color:#1a5c2a">📱 5 台 · 3 在线 · 1 使用中</div>
+</div></div>
+<div class="col b"><div class="mc" style="--ac:#6BCB77">
+  <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#6BCB77,#52b788)">📱</div><div><h4>设备管理</h4><div class="sub">扫描 · 连接 · 锁定</div></div><button class="btn btn-p" style="margin-left:auto;background:linear-gradient(135deg,#6BCB77,#52b788)">🔄</button></div>
+  <div class="bd">
+    <div class="sr">
+      <div class="si"><div class="sn" style="color:var(--c,#6BCB77)">3</div><div class="sl">在线</div></div>
+      <div class="si"><div class="sn" style="color:#FFB5A7">1</div><div class="sl">使用中</div></div>
+      <div class="si"><div class="sn">1</div><div class="sl">离线</div></div>
+      <div class="si"><div class="sn">5</div><div class="sl">总计</div></div>
+    </div>
+    <div class="rw"><span class="br act">全部</span><span class="br">在线</span></div>
+    <table class="tb"><thead><tr><th>序列号</th><th>状态</th></tr></thead>
+    <tbody><tr><td class="mono">10.162.92.83:40449</td><td><span class="tag" style="background:#C8F5D0;color:#2d7a2d">在线</span></td></tr></tbody></table>
+  </div>
+  <div class="ft" style="background:linear-gradient(90deg,#6BCB77,#52b788)">📱 5 台 · 3 在线</div>
+</div></div>
+<div class="col c"><div class="mc" style="--ac:#6BCB77">
+  <div class="hd"><div class="ico" style="background:#6BCB77">📱</div><div><h4>设备管理</h4><div class="sub">扫描 · 连接 · 锁定</div></div><button class="btn btn-p" style="margin-left:auto;background:#6BCB77">🔄</button></div>
+  <div class="bd">
+    <div class="sr">
+      <div class="si"><div class="sn" style="color:#6BCB77">3</div><div class="sl">在线</div></div>
+      <div class="si"><div class="sn" style="color:#FFB5A7">1</div><div class="sl">使用中</div></div>
+      <div class="si"><div class="sn">5</div><div class="sl">总计</div></div>
+    </div>
+    <table class="tb"><thead><tr><th>序列号</th><th>状态</th></tr></thead>
+    <tbody><tr><td class="mono">10.162.92.83:40449</td><td><span class="tag" style="background:#C8F5D0;color:#2d7a2d">在线</span></td></tr></tbody></table>
+  </div>
+  <div class="ft">📱 5 台 · 3 在线</div>
+</div></div>
+</div>
+
+<!-- ===== 3. 元素定位 purple ===== -->
+<div class="sec-title">3. 元素定位 Element-Locator</div><p>设备栏 + 树 + 截图 + XPath 面板 · 模块色 purple</p>
+<div class="cols">
+<div class="col a"><div class="mc" style="--ac:#b39ef3;--ac-bg:rgba(179,158,243,0.06)">
+  <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#b39ef3,#a78bfa)">⊕</div><div><h4>元素定位</h4><div class="sub">Dump UI · XPath · 管理</div></div><button class="btn btn-p" style="margin-left:auto;background:linear-gradient(135deg,#b39ef3,#a78bfa)">Dump</button></div>
+  <div class="bd">
+    <div class="si" style="text-align:left;padding:4px 8px;display:flex;align-items:center;gap:6px;border:2px dashed #b39ef3">
+      <span style="width:5px;height:5px;background:#6BCB77;border-radius:50%"></span><span style="font-weight:700">10.162.92.83:40449</span><span style="font-size:7px;opacity:0.5">· S21</span><span class="tag" style="background:#C8F5D0;color:#2d7a2d;margin-left:auto">在线</span>
+    </div>
+    <div class="cg" style="min-height:70px">
+      <div class="si" style="text-align:left"><span style="font-weight:800;font-size:7px">📱 树</span><div style="font-size:7px;margin:3px 0;background:rgba(179,158,243,0.12);padding:2px 4px;border:1.5px dashed #b39ef3">🎯 TextView "设备列表"</div></div>
+      <div class="si" style="text-align:left"><span style="font-weight:800;font-size:7px">🎯 XPath</span><div class="mono" style="font-size:6px;background:rgba(179,158,243,0.1);padding:2px 4px;margin:1px 0;border:1px dashed #b39ef3">//TextView[@text="设备列表"]</div></div>
+    </div>
+  </div>
+  <div class="ft" style="background:repeating-linear-gradient(-45deg,#E8DDF8,#E8DDF8 3px,#d8cdf0 3px,#d8cdf0 6px);color:#5a3fa0">📡 已连接 · 12 元素</div>
+</div></div>
+<div class="col b"><div class="mc" style="--ac:#b39ef3">
+  <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#b39ef3,#a78bfa)">⊕</div><div><h4>元素定位</h4><div class="sub">Dump UI · XPath</div></div><button class="btn btn-p" style="margin-left:auto;background:linear-gradient(135deg,#b39ef3,#a78bfa)">Dump</button></div>
+  <div class="bd">
+    <div class="si" style="text-align:left;padding:4px 8px;display:flex;align-items:center;gap:6px;clip-path:polygon(6px 0,100% 0,100% 100%,0 100%,0 6px)">
+      <span style="width:5px;height:5px;background:#6BCB77"></span><span style="font-weight:700">10.162.92.83:40449</span><span class="tag" style="background:#C8F5D0;color:#2d7a2d;margin-left:auto">在线</span>
+    </div>
+    <div class="cg" style="min-height:70px">
+      <div class="si" style="text-align:left"><span style="font-weight:800;font-size:7px">📱 树</span><div style="font-size:7px;margin:3px 0">🎯 TextView</div></div>
+      <div class="si" style="text-align:left"><span style="font-weight:800;font-size:7px">🎯 XPath</span><div class="mono" style="font-size:6px;margin:1px 0">//TextView[...</div></div>
+    </div>
+  </div>
+  <div class="ft" style="background:linear-gradient(90deg,#b39ef3,#a78bfa)">📡 已连接</div>
+</div></div>
+<div class="col c"><div class="mc" style="--ac:#b39ef3">
+  <div class="hd"><div class="ico" style="background:#b39ef3">⊕</div><div><h4>元素定位</h4><div class="sub">Dump UI · XPath</div></div><button class="btn btn-p" style="margin-left:auto;background:#b39ef3">Dump</button></div>
+  <div class="bd">
+    <div class="si" style="text-align:left;padding:4px 8px;display:flex;align-items:center;gap:6px">
+      <span style="width:5px;height:5px;background:#6BCB77;border-radius:50%"></span><span style="font-weight:700">10.162.92.83:40449</span><span class="tag" style="background:#C8F5D0;color:#2d7a2d;margin-left:auto">在线</span>
+    </div>
+    <div class="cg" style="min-height:70px">
+      <div class="si" style="text-align:left"><span style="font-weight:800;font-size:7px">📱 树</span><div style="font-size:7px;margin:3px 0">🎯 TextView</div></div>
+      <div class="si" style="text-align:left"><span style="font-weight:800;font-size:7px">🎯 XPath</span><div class="mono" style="font-size:6px;margin:1px 0">//TextView[...</div></div>
+    </div>
+  </div>
+  <div class="ft">📡 已连接</div>
+</div></div>
+</div>
+
+<!-- ===== 4. 用例管理 teal ===== -->
+<div class="sec-title">4. 用例管理 Case-Manager</div><p>目录树 + 用例表格 · 模块色 teal</p>
+<div class="cols">
+<div class="col a"><div class="mc" style="--ac:#19c8b9;--ac-bg:rgba(25,200,185,0.06)">
+  <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#19c8b9,#15b0a3)">📋</div><div><h4>用例管理</h4><div class="sub">步骤编排 · 目录树</div></div><button class="btn" style="margin-left:auto">➕ 新建</button></div>
+  <div class="bd">
+    <div class="cg" style="min-height:80px">
+      <div class="si" style="text-align:left"><span style="font-weight:800;font-size:7px">📁 目录</span><div style="font-size:7px;margin:3px 0;font-weight:700;color:#19c8b9">📄 登录模块</div></div>
+      <div class="si" style="text-align:left"><table class="tb"><thead><tr><th>名称</th><th>状态</th></tr></thead><tbody><tr><td>登录流程</td><td><span class="tag" style="background:#C8F5D0;color:#2d7a2d">启用</span></td></tr></tbody></table></div>
+    </div>
+  </div>
+  <div class="ft" style="background:repeating-linear-gradient(-45deg,rgba(25,200,185,0.15),rgba(25,200,185,0.15) 3px,rgba(21,176,163,0.15) 3px,rgba(21,176,163,0.15) 6px);color:#0f8b7e">📋 3 目录 · 128 用例</div>
+</div></div>
+<div class="col b"><div class="mc" style="--ac:#19c8b9">
+  <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#19c8b9,#15b0a3)">📋</div><div><h4>用例管理</h4><div class="sub">步骤编排</div></div><button class="btn" style="margin-left:auto">➕</button></div>
+  <div class="bd"><div class="si" style="text-align:left"><span style="font-weight:800;font-size:7px">📁 目录</span><div style="font-size:7px;color:#19c8b9;font-weight:700">📄 登录模块</div></div></div>
+  <div class="ft" style="background:linear-gradient(90deg,#19c8b9,#15b0a3)">📋 128 用例</div>
+</div></div>
+<div class="col c"><div class="mc" style="--ac:#19c8b9">
+  <div class="hd"><div class="ico" style="background:#19c8b9">📋</div><div><h4>用例管理</h4><div class="sub">步骤编排</div></div><button class="btn" style="margin-left:auto">➕</button></div>
+  <div class="bd"><div class="si" style="text-align:left"><span style="font-weight:800;font-size:7px">📁 目录</span><div style="font-size:7px;color:#19c8b9;font-weight:700">📄 登录模块</div></div></div>
+  <div class="ft">📋 128 用例</div>
+</div></div>
+</div>
+
+<!-- ===== 5. 执行引擎 pink ===== -->
+<div class="sec-title">5. 执行引擎 Test-Runner</div><p>KPI 统计 + 任务列表 · 模块色 pink</p>
+<div class="cols">
+<div class="col a"><div class="mc" style="--ac:#FFB5A7;--ac-bg:rgba(255,181,167,0.06)">
+  <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#FFB5A7,#f87171)">▶</div><div><h4>执行引擎</h4><div class="sub">任务调度 · 日志</div></div><button class="btn btn-p" style="margin-left:auto;background:linear-gradient(135deg,#FFB5A7,#f87171)">▶ 新建</button></div>
+  <div class="bd">
+    <div class="sr">
+      <div class="si" style="border-color:#FFB5A7"><div class="sn" style="color:#a03030">2</div><div class="sl">运行中</div></div>
+      <div class="si"><div class="sn" style="color:#2d7a2d">47</div><div class="sl">完成</div></div>
+      <div class="si"><div class="sn" style="color:#a03030">3</div><div class="sl">失败</div></div>
+      <div class="si"><div class="sn">94%</div><div class="sl">通过率</div></div>
+    </div>
+    <table class="tb"><thead><tr><th>Run ID</th><th>设备</th><th>状态</th></tr></thead>
+    <tbody><tr><td class="mono">run_001</td><td>S21</td><td><span class="tag" style="background:#FFE0DB;color:#a03030">执行中</span></td></tr>
+    <tr><td class="mono">run_002</td><td>Pixel 6</td><td><span class="tag" style="background:#C8F5D0;color:#2d7a2d">成功</span></td></tr></tbody></table>
+  </div>
+  <div class="ft" style="background:repeating-linear-gradient(-45deg,#FFE0DB,#FFE0DB 3px,#ffd0cb 3px,#ffd0cb 6px);color:#a03030">📊 52 次 · 94% 通过</div>
+</div></div>
+<div class="col b"><div class="mc" style="--ac:#FFB5A7">
+  <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#FFB5A7,#f87171)">▶</div><div><h4>执行引擎</h4><div class="sub">任务调度</div></div><button class="btn btn-p" style="margin-left:auto;background:linear-gradient(135deg,#FFB5A7,#f87171)">▶</button></div>
+  <div class="bd">
+    <div class="sr">
+      <div class="si"><div class="sn" style="color:#FFB5A7">2</div><div class="sl">运行中</div></div>
+      <div class="si"><div class="sn" style="color:#6BCB77">47</div><div class="sl">完成</div></div>
+      <div class="si"><div class="sn">94%</div><div class="sl">通过率</div></div>
+    </div>
+  </div>
+  <div class="ft" style="background:linear-gradient(90deg,#FFB5A7,#f87171)">📊 52 次</div>
+</div></div>
+<div class="col c"><div class="mc" style="--ac:#FFB5A7">
+  <div class="hd"><div class="ico" style="background:#FFB5A7">▶</div><div><h4>执行引擎</h4><div class="sub">任务调度</div></div><button class="btn btn-p" style="margin-left:auto;background:#FFB5A7">▶</button></div>
+  <div class="bd">
+    <div class="sr">
+      <div class="si"><div class="sn" style="color:#FFB5A7">2</div><div class="sl">运行中</div></div>
+      <div class="si"><div class="sn" style="color:#6BCB77">47</div><div class="sl">完成</div></div>
+      <div class="si"><div class="sn">94%</div><div class="sl">通过率</div></div>
+    </div>
+  </div>
+  <div class="ft">📊 52 次</div>
+</div></div>
+</div>
+
+<!-- ===== 6. 测试报告 brown ===== -->
+<div class="sec-title">6. 测试报告 Report-Generator</div><p>KPI 摘要 + 报告列表 · 模块色 brown</p>
+<div class="cols">
+<div class="col a"><div class="mc" style="--ac:#8b7355;--ac-bg:rgba(139,115,85,0.04)">
+  <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#9a8c98,#8b7f8f)">📊</div><div><h4>测试报告</h4><div class="sub">KPI · 趋势 · 导出</div></div><button class="btn" style="margin-left:auto">📥 导出</button></div>
+  <div class="bd">
+    <div class="sr">
+      <div class="si"><div class="sn" style="color:#2d7a2d">94%</div><div class="sl">通过率</div></div>
+      <div class="si"><div class="sn">52</div><div class="sl">总运行</div></div>
+      <div class="si"><div class="sn" style="color:#a03030">3</div><div class="sl">失败</div></div>
+    </div>
+  </div>
+  <div class="ft" style="background:repeating-linear-gradient(-45deg,rgba(139,115,85,0.1),rgba(139,115,85,0.1) 3px,rgba(139,115,85,0.05) 3px,rgba(139,115,85,0.05) 6px);color:#5a4e20">📊 3 份报告</div>
+</div></div>
+<div class="col b"><div class="mc" style="--ac:#8b7355">
+  <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#9a8c98,#8b7f8f)">📊</div><div><h4>测试报告</h4><div class="sub">KPI · 导出</div></div><button class="btn" style="margin-left:auto">📥</button></div>
+  <div class="bd"><div class="sr"><div class="si"><div class="sn" style="color:#2d7a2d">94%</div><div class="sl">通过率</div></div><div class="si"><div class="sn">52</div><div class="sl">总运行</div></div></div></div>
+  <div class="ft" style="background:linear-gradient(90deg,#9a8c98,#8b7f8f)">📊 3 份报告</div>
+</div></div>
+<div class="col c"><div class="mc" style="--ac:#8b7355">
+  <div class="hd"><div class="ico" style="background:#8b7355">📊</div><div><h4>测试报告</h4><div class="sub">KPI · 导出</div></div><button class="btn" style="margin-left:auto">📥</button></div>
+  <div class="bd"><div class="sr"><div class="si"><div class="sn" style="color:#6BCB77">94%</div><div class="sl">通过率</div></div></div></div>
+  <div class="ft">📊 3 份报告</div>
+</div></div>
+</div>
+
+<!-- ===== 7. AI 助手 orange ===== -->
+<div class="sec-title">7. AI 助手 AI-Assistant</div><p>对话 + 智能体列表 · 模块色 orange</p>
+<div class="cols">
+<div class="col a"><div class="mc" style="--ac:#f7a8c4;--ac-bg:rgba(247,168,196,0.04)">
+  <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#5EEAD4,#14b8a6)">🤖</div><div><h4>AI 助手</h4><div class="sub">自然语言 · SSE · 知识库</div></div><button class="btn btn-p" style="margin-left:auto;background:linear-gradient(135deg,#5EEAD4,#14b8a6)">➕ 对话</button></div>
+  <div class="bd" style="min-height:90px">
+    <div class="cg">
+      <div class="si" style="text-align:left">
+        <div style="font-size:7px;font-weight:800;margin-bottom:3px">💬 Agent: 测试助手</div>
+        <div style="background:rgba(0,0,0,0.02);padding:3px 5px;border:1.5px dashed #ddd;margin-bottom:3px;font-size:7px">👤 测试登录页面</div>
+        <div style="background:rgba(94,234,212,0.1);padding:3px 5px;border:1.5px dashed rgba(94,234,212,0.3);font-size:7px">🤖 好的，我将...</div>
+      </div>
+      <div class="si" style="text-align:left"><div style="font-weight:800;font-size:7px;margin-bottom:3px">🤖 智能体</div><div style="font-size:7px;background:rgba(247,168,196,0.15);padding:2px 4px;margin:2px 0;border:1px dashed #f7a8c4">🤖 测试助手</div></div>
+    </div>
+  </div>
+  <div class="ft" style="background:repeating-linear-gradient(-45deg,rgba(94,234,212,0.12),rgba(94,234,212,0.12) 3px,rgba(20,184,166,0.12) 3px,rgba(20,184,166,0.12) 6px);color:#0f8b7e">🤖 4 智能体</div>
+</div></div>
+<div class="col b"><div class="mc" style="--ac:#f7a8c4">
+  <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#5EEAD4,#14b8a6)">🤖</div><div><h4>AI 助手</h4><div class="sub">自然语言 · SSE</div></div><button class="btn btn-p" style="margin-left:auto;background:linear-gradient(135deg,#5EEAD4,#14b8a6)">➕</button></div>
+  <div class="bd" style="min-height:90px">
+    <div class="cg">
+      <div class="si" style="text-align:left"><div style="font-size:7px;font-weight:800">💬 Agent</div><div style="font-size:7px;margin:2px 0">👤 测试登录</div><div style="font-size:7px;background:rgba(94,234,212,0.08);padding:2px 4px;margin:2px 0">🤖 好的</div></div>
+      <div class="si" style="text-align:left"><div style="font-weight:800;font-size:7px">🤖 智能体</div><div style="font-size:7px;margin:2px 0">🤖 测试助手</div></div>
+    </div>
+  </div>
+  <div class="ft" style="background:linear-gradient(90deg,#5EEAD4,#14b8a6)">🤖 4 智能体</div>
+</div></div>
+<div class="col c"><div class="mc" style="--ac:#f7a8c4">
+  <div class="hd"><div class="ico" style="background:#5EEAD4">🤖</div><div><h4>AI 助手</h4><div class="sub">自然语言 · SSE</div></div><button class="btn btn-p" style="margin-left:auto;background:#5EEAD4">➕</button></div>
+  <div class="bd" style="min-height:90px">
+    <div class="cg">
+      <div class="si" style="text-align:left"><div style="font-size:7px;font-weight:800">💬 Agent</div><div style="font-size:7px;margin:2px 0">👤 测试登录</div><div style="font-size:7px;background:rgba(94,234,212,0.1);padding:2px 4px">🤖 好的</div></div>
+      <div class="si" style="text-align:left"><div style="font-weight:800;font-size:7px">🤖 智能体</div><div style="font-size:7px;margin:2px 0">🤖 测试助手</div></div>
+    </div>
+  </div>
+  <div class="ft">🤖 4 智能体</div>
+</div></div>
+</div>
+
+<!-- ===== 8. 工作流 blue ===== -->
+<div class="sec-title">8. 工作流 Workflow</div><p>工作流列表 + 状态 · 模块色 blue</p>
+<div class="cols">
+<div class="col a"><div class="mc" style="--ac:#889df0;--ac-bg:rgba(136,157,240,0.04)">
+  <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#BDE0FE,#93c5fd)">🔀</div><div><h4>工作流工作台</h4><div class="sub">Blockly · VueFlow</div></div><button class="btn btn-p" style="margin-left:auto;background:linear-gradient(135deg,#BDE0FE,#93c5fd)">➕</button></div>
+  <div class="bd">
+    <div class="rw"><span class="br act">全部</span><span class="br">草稿</span><span class="br">已发布</span><span style="font-size:7px;opacity:0.5;margin-left:auto">8</span></div>
+    <table class="tb"><thead><tr><th>名称</th><th>节点</th><th>状态</th></tr></thead>
+    <tbody><tr><td>登录流程</td><td>12</td><td><span class="tag" style="background:#C8F5D0;color:#2d7a2d">已发布</span></td></tr>
+    <tr><td>设备巡检</td><td>8</td><td><span class="tag" style="background:#FFF9E0;color:#7a5a10">草稿</span></td></tr></tbody></table>
+  </div>
+  <div class="ft" style="background:repeating-linear-gradient(-45deg,rgba(136,157,240,0.1),rgba(136,157,240,0.1) 3px,rgba(147,197,253,0.1) 3px,rgba(147,197,253,0.1) 6px);color:#4a6aae">🔀 8 工作流</div>
+</div></div>
+<div class="col b"><div class="mc" style="--ac:#889df0">
+  <div class="hd"><div class="ico" style="background:linear-gradient(135deg,#BDE0FE,#93c5fd)">🔀</div><div><h4>工作流工作台</h4><div class="sub">Blockly</div></div><button class="btn btn-p" style="margin-left:auto;background:linear-gradient(135deg,#BDE0FE,#93c5fd)">➕</button></div>
+  <div class="bd"><div class="rw"><span class="br act">全部</span><span class="br">草稿</span></div></div>
+  <div class="ft" style="background:linear-gradient(90deg,#BDE0FE,#93c5fd)">🔀 8 工作流</div>
+</div></div>
+<div class="col c"><div class="mc" style="--ac:#889df0">
+  <div class="hd"><div class="ico" style="background:#889df0">🔀</div><div><h4>工作流工作台</h4><div class="sub">Blockly</div></div><button class="btn btn-p" style="margin-left:auto;background:#889df0">➕</button></div>
+  <div class="bd"><div class="rw"><span class="br act">全部</span><span class="br">草稿</span></div></div>
+  <div class="ft">🔀 8 工作流</div>
+</div></div>
+</div>
+
+<!-- ===== 对比总结 ===== -->
+<div class="sec-title" style="margin-top:30px">三方案核心差异</div>
+<div class="cols" style="max-width:1000px">
+<div style="padding:14px;border:3px solid #2d2d2d;background:#fffbf0;position:relative">
+  <div style="position:absolute;top:-8px;left:-8px;font-size:14px;font-weight:900;color:#f4a460">+</div>
+  <div style="font-size:13px;font-weight:900;margin-bottom:8px;font-family:'Bangers',cursive">A · Crayon Doodle 涂鸦蜡笔</div>
+  <table style="font-size:9px;width:100%">
+    <tr><td style="padding:2px 0;font-weight:700">字体</td><td>Bangers + Comic Neue + Gloria Hallelujah 手写体</td></tr>
+    <tr><td style="padding:2px 0;font-weight:700">边框</td><td>3px 实线 + 2px 虚线混用</td></tr>
+    <tr><td style="padding:2px 0;font-weight:700">填充</td><td>斜纹 + 点阵 + 横纹 涂鸦 texture</td></tr>
+    <tr><td style="padding:2px 0;font-weight:700">装饰</td><td>+ 四角标记、倾斜元素</td></tr>
+    <tr><td style="padding:2px 0;font-weight:700">颜色</td><td>明亮蜡笔色 · 高饱和度</td></tr>
+    <tr><td style="padding:2px 0;font-weight:700">页脚</td><td>条纹/斜纹 涂鸦 band</td></tr>
+  </table>
+</div>
+<div style="padding:14px;border:2px solid #2d2d2d;background:#fff;clip-path:polygon(0 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)">
+  <div style="font-size:13px;font-weight:900;margin-bottom:8px;font-family:'Fredoka One',cursive">B · Geo Collage 几何拼贴</div>
+  <table style="font-size:9px;width:100%">
+    <tr><td style="padding:2px 0;font-weight:700">字体</td><td>Fredoka One 圆胖体</td></tr>
+    <tr><td style="padding:2px 0;font-weight:700">边框</td><td>2px 实线 + clip-path 切角</td></tr>
+    <tr><td style="padding:2px 0;font-weight:700">填充</td><td>对角线网格 + 纯色块</td></tr>
+    <tr><td style="padding:2px 0;font-weight:700">装饰</td><td>+ 标记 + 三角底角</td></tr>
+    <tr><td style="padding:2px 0;font-weight:700">颜色</td><td>纯色块 · 大面积色彩</td></tr>
+    <tr><td style="padding:2px 0;font-weight:700">页脚</td><td>渐变实色 bar</td></tr>
+  </table>
+</div>
+<div style="padding:14px;border:3px solid #2d2d2d;background:#fff;box-shadow:4px 4px 0 rgba(0,0,0,0.08);position:relative">
+  <div style="position:absolute;top:-6px;right:12px;font-size:16px;font-weight:900;color:#ff6b6b;transform:rotate(15deg)">+</div>
+  <div style="font-size:13px;font-weight:900;margin-bottom:8px;font-family:'Bangers',cursive">C · Comic Grid 漫画格子</div>
+  <table style="font-size:9px;width:100%">
+    <tr><td style="padding:2px 0;font-weight:700">字体</td><td>Bangers 漫画体</td></tr>
+    <tr><td style="padding:2px 0;font-weight:700">边框</td><td>3px 实线 + 粗 box-shadow</td></tr>
+    <tr><td style="padding:2px 0;font-weight:700">填充</td><td>Halftone 网点 + dotted 虚线</td></tr>
+    <tr><td style="padding:2px 0;font-weight:700">装饰</td><td>+ 旋转标记、粗阴影</td></tr>
+    <tr><td style="padding:2px 0;font-weight:700">颜色</td><td>Pop Art 红黄蓝 · 高对比</td></tr>
+    <tr><td style="padding:2px 0;font-weight:700">页脚</td><td>纯色黄 #ffd93d</td></tr>
+  </table>
+</div>
+</div>
+</body>
+</html>

@@ -214,11 +214,9 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   background: rgba(255,255,255,0.78);
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--doodle-ink, #2d2d2d);
   border-radius: 16px;
   box-shadow: var(--app-shadow-lg);
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
   padding: 8px;
   font-family: var(--ac-font, system-ui, sans-serif);
 }
@@ -268,7 +266,7 @@ onMounted(() => {
   color: var(--app-text);
 }
 .back {
-  border: 1.5px solid var(--app-glass-border);
+  border: 1.5px solid var(--doodle-ink, #2d2d2d);
   background: rgba(255,255,255,0.44);
   color: var(--ac-ink-muted, #5c4a35);
   border-radius: 10px;
@@ -280,7 +278,7 @@ onMounted(() => {
 .search {
   margin: 0 4px 6px;
   padding: 8px 10px;
-  border: 1.5px solid var(--app-glass-border);
+  border: 1.5px solid var(--doodle-ink, #2d2d2d);
   border-radius: 12px;
   background: rgba(255,255,255,0.44);
   color: var(--app-text);

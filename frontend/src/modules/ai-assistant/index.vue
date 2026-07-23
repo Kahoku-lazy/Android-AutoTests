@@ -505,10 +505,10 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
   align-items: flex-start;
   padding: 28px 22px 24px;
   border-radius: 18px;
-  background-color: var(--app-glass-card, rgba(255,255,255,0.65));
+  background-color: #fff);
   background-image: radial-gradient(rgba(137,207,240,0.12) 1.1px, transparent 1.1px);
   background-size: 18px 18px;
-  border: 1.5px solid var(--app-glass-border, rgba(255,255,255,0.85));
+  border: 1.5px solid var(--doodle-ink, #2d2d2d));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 .duty-roster {

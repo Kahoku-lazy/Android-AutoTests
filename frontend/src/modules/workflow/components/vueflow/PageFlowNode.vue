@@ -241,15 +241,13 @@ watch(
 .pf-node {
   min-width: 228px;
   background: rgba(255,255,255,0.58);
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--doodle-ink, #2d2d2d);
   border-left: 5px solid var(--accent);
   border-radius: 16px;
   padding: 10px 12px 12px;
   font-family: var(--ac-font, inherit);
   color: var(--app-text);
   box-shadow: var(--app-shadow-sm);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
 }
 .pf-node.selected {
   border-color: var(--app-blue);
@@ -379,7 +377,7 @@ watch(
   flex: 1;
   min-width: 0;
   padding: 4px 8px;
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--doodle-ink, #2d2d2d);
   border-radius: 8px;
   background: rgba(255,255,255,0.50);
   color: var(--app-text);
@@ -413,7 +411,7 @@ watch(
 .pf-port-type {
   font-size: 9px;
   color: var(--app-text-secondary);
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--doodle-ink, #2d2d2d);
   border-radius: 6px;
   padding: 0 5px;
   cursor: help;
@@ -436,7 +434,7 @@ watch(
 }
 .pf-actions button {
   background: rgba(255,255,255,0.42);
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--doodle-ink, #2d2d2d);
   border-radius: 8px;
   color: var(--ac-ink-muted, #5c4a35);
   font-size: 11px;
@@ -480,7 +478,7 @@ watch(
   width: 100%;
   margin-top: 8px;
   padding: 7px;
-  border: 2px dashed var(--app-glass-border);
+  border: 2px dashed var(--doodle-ink, #2d2d2d);
   border-radius: 12px;
   background: rgba(162,210,255,0.10);
   color: var(--ac-ink-muted, #5c4a35);

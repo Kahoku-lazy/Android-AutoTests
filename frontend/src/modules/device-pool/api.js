@@ -17,10 +17,6 @@ export function apiConnectDevice(serial, { activate = true, userId, timeout } = 
   })
 }
 
-export function apiGetCurrent() {
-  return client.get('/devices/current')
-}
-
 export function apiActivate(serial) {
   return client.post(`/devices/${serial}/activate`)
 }

@@ -6,8 +6,11 @@ v2 per PRD §6.2:
 """
 
 import json
+import logging
 import re
 import subprocess
+
+logger = logging.getLogger(__name__)
 import time
 from datetime import datetime, timedelta
 from django.http import JsonResponse
@@ -144,12 +147,12 @@ def _release_internal(dev, reason="manual", clear_lock=False):
         update_fields.extend(["locked_by", "locked_at"])
     dev.save(update_fields=update_fields)
 
-    print(f"[INFO] 设备 {dev.serial} 已释放占用 (reason={reason})")
+    logger.info("设备 %s 已释放占用 (reason=%s)", dev.serial, reason)
 
     # 触发队列分配
     assigned = _auto_assign_from_queue(dev)
     if assigned:
-        print(f"[INFO] 设备 {dev.serial} 已从队列分配给 {assigned}")
+        logger.info("设备 %s 已从队列分配给 %s", dev.serial, assigned)
 
 
 def _purge_disconnected_devices():
@@ -185,12 +188,13 @@ def _collect_device_info(dev, serial):
                 "last_seen",
             ]
         )
-        print(
-            f"[INFO] 设备信息已采集: {dev.serial} → {dev.brand} {dev.model} "
-            f"{dev.screen_w}x{dev.screen_h} SDK={dev.android_version}"
+        logger.info(
+            "设备信息已采集: %s → %s %s %sx%s SDK=%s",
+            dev.serial, dev.brand, dev.model,
+            dev.screen_w, dev.screen_h, dev.android_version,
         )
     except Exception as e:
-        print(f"[WARN] 采集设备信息失败 {serial}: {e}")
+        logger.warning("采集设备信息失败 %s: %s", serial, e)
 
 
 def _auto_assign_from_queue(dev):
@@ -226,13 +230,13 @@ def _auto_assign_from_queue(dev):
 
 
 def _check_timeout_queue():
-    """清理超过 600 秒未响应的排队记录。"""
-    cutoff = datetime.now() - timedelta(seconds=600)
+    """清理超过 1800 秒（30 分钟）未响应的排队记录。"""
+    cutoff = datetime.now() - timedelta(seconds=1800)
     expired = DeviceQueue.objects.filter(status="waiting", requested_at__lt=cutoff).update(
         status="timeout"
     )
     if expired:
-        print(f"[INFO] {expired} 条排队记录超时自动取消")
+        logger.info("%s 条排队记录超时自动取消", expired)
 
 
 def _device_to_dict(dev, current_serial):

@@ -1,6 +1,6 @@
 """test-runner public API."""
 from .models import TestRunRecord, TestResult
-from .runner import TestRunner, TestRunnerCallback, get_active_run, stop_run, list_active_runs
+from .runner import TestRunner, TestRunnerCallback, get_active_run, stop_run, list_active_runs, get_active_runs_info
 
 
 # ── Query helpers ──
@@ -18,6 +18,7 @@ def persist_results(run_record, case_results):
         TestResult(
             run=run_record,
             case_id=r.case_id,
+            case_type=getattr(r, "case_type", "ui_automation"),
             iteration=r.iteration,
             result=r.result,
             duration_ms=r.duration_ms,
@@ -31,6 +32,6 @@ def persist_results(run_record, case_results):
 __all__ = [
     'TestRunRecord', 'TestResult',
     'TestRunner', 'TestRunnerCallback',
-    'get_active_run', 'stop_run', 'list_active_runs',
+    'get_active_run', 'stop_run', 'list_active_runs', 'get_active_runs_info',
     'get_run_results', 'persist_results',
 ]

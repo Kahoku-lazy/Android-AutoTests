@@ -190,6 +190,21 @@ export function applyWsMessage(task, msg, hooks = {}) {
       save();
       onPollQueue();
       break;
+    case "_ws_disconnected":
+      // WebSocket 自动重连通知
+      if (task.running) {
+        task._connectionHealthy = false;
+        addLog("⚠️ 连接断开，正在重连…", "warning");
+        save();
+      }
+      break;
+    case "_ws_reconnected":
+      task._connectionHealthy = true;
+      task._wsJustReconnected = true;
+      if (task.running) {
+        addLog("🔗 已重新连接", "success");
+      }
+      break;
     default:
       break;
   }
@@ -221,6 +236,16 @@ export function connectTaskWebSocket(taskId, runId, createHandler) {
   const ws = new WebSocket(url);
   ws._runId = runId;
 
+  ws.onopen = () => {
+    if (ws._seqGapDetected) {
+      // 重连成功后通知 handler
+      const handler = window[HANDLER_KEY]?.[taskId];
+      if (handler) {
+        try { handler({ type: "_ws_reconnected" }) } catch (_) {}
+      }
+    }
+  };
+
   ws.onmessage = (e) => {
     const handler = window[HANDLER_KEY]?.[taskId];
     if (!handler) return;
@@ -239,6 +264,34 @@ export function connectTaskWebSocket(taskId, runId, createHandler) {
       }
       handler(msg);
     } catch (_) {}
+  };
+
+  ws.onclose = () => {
+    const handler = window[HANDLER_KEY]?.[taskId];
+    if (handler) {
+      // Notify the handler about disconnection so UI can show reconnect status
+      try {
+        handler({ type: "_ws_disconnected" });
+      } catch (_) {}
+    }
+    // Auto-reconnect with exponential backoff (max 30s)
+    if (ws._reconnectAttempts === undefined) ws._reconnectAttempts = 0;
+    if (ws._reconnectAttempts < 5) {
+      const delay = Math.min(1000 * Math.pow(2, ws._reconnectAttempts), 30000);
+      ws._reconnectAttempts++;
+      console.warn(
+        `[WS] Disconnected for ${taskId}, reconnecting in ${delay / 1000}s (attempt ${ws._reconnectAttempts}/5)`,
+      );
+      setTimeout(() => {
+        const newWs = connectTaskWebSocket(taskId, runId, createHandler);
+        if (newWs) {
+          newWs._reconnectAttempts = ws._reconnectAttempts;
+          newWs._seqGapDetected = true;
+        }
+      }, delay);
+    } else {
+      console.error(`[WS] Max reconnect attempts reached for ${taskId}`);
+    }
   };
 
   wm[taskId] = ws;

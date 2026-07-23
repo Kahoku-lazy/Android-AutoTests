@@ -296,7 +296,7 @@ onUnmounted(() => {
 }
 .case-sidebar-resizer:hover,
 .case-sidebar-resizer.is-dragging {
-  background: var(--animal-primary-color, #89CFF0);
+  background: var(--app-green, #89CFF0);
 }
 .case-main {
   flex: 1;

@@ -154,7 +154,7 @@ onMounted(async () => {
         const ptc = data.agent.phase_tool_config || {};
         if (Object.keys(ptc).length > 0) phaseToolConfigEnabled.value = true;
       }
-    } catch (_) {}
+    } catch (err) { console.error('Failed to load agent detail:', err) }
     loading.value = false;
   } else {
     // New agent: pre-fill default system prompt template
@@ -213,7 +213,7 @@ async function loadPlatformTools() {
   try {
     const data = await fetchPlatformTools();
     if (data.ok) availablePlatformTools.value = data.tools || [];
-  } catch (_) {}
+  } catch (err) { console.error('Failed to load platform tools:', err) }
   loadingPlatformTools.value = false;
 }
 
@@ -237,7 +237,7 @@ async function loadAvailableSkills() {
   try {
     const data = await fetchAvailableSkills();
     if (data.ok) availableSkills.value = data.skills || [];
-  } catch (_) {}
+  } catch (err) { console.error('Failed to load skills:', err) }
   loadingSkills.value = false;
 }
 
@@ -273,7 +273,7 @@ async function loadKnowledgeDocs() {
   try {
     const data = await fetchKnowledgeDocuments();
     if (data.ok) knowledgeDocs.value = data.data?.documents || [];
-  } catch (_) {}
+  } catch (err) { console.error('Failed to load knowledge docs:', err) }
   loadingDocs.value = false;
 }
 
@@ -374,7 +374,7 @@ async function loadAgentTools() {
       mcpTools.value = data.data?.mcp || [];
       skills.value = data.data?.skills || [];
     }
-  } catch (_) {}
+  } catch (err) { console.error('Failed to load MCP/skills:', err) }
 }
 
 function highlightJson(raw) {
@@ -619,7 +619,7 @@ async function loadDefaultPrompt() {
   try {
     const data = await fetchDefaultPrompt();
     if (data.ok && data.template) form.value.system_prompt = data.template;
-  } catch (_) {}
+  } catch (err) { console.error('Failed to load default prompt:', err) }
   loadingDefaultPrompt.value = false;
 }
 
@@ -707,7 +707,7 @@ async function handleAvatarUpload(e) {
         image: reader.result,
       });
       if (data.ok) form.value.avatar = data.url;
-    } catch (_) {}
+    } catch (err) { console.error('Failed to upload avatar:', err) }
     uploading.value = false;
   };
   reader.readAsDataURL(file);

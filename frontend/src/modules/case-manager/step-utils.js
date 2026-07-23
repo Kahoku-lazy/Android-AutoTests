@@ -20,6 +20,20 @@ export const STEP_TYPES = [
   { value: "if_element_disappear", label: "如果元素消失", icon: "🔀", desc: "如果目标元素消失则执行子步骤，否则跳过", group: "流程控制", container: true },
   { value: "loop_n", label: "循环N次", icon: "🔁", desc: "重复执行子步骤N次", group: "流程控制", container: true },
   { value: "loop_elements", label: "遍历元素列表", icon: "📋", desc: "依次点击XPath列表中的每个元素（多个用|分隔）", group: "流程控制", container: true },
+  // ── API 请求类 ──
+  { value: "api_request", label: "API 请求", icon: "🌐", desc: "发送 HTTP 请求并记录响应", group: "API 请求" },
+  { value: "api_assert", label: "断言验证", icon: "✅", desc: "验证 API 响应内容是否符合预期", group: "API 请求" },
+  { value: "api_sleep", label: "暂停等待", icon: "😴", desc: "暂停等待一段时间", group: "API 请求" },
+  { value: "api_log", label: "输出日志", icon: "📝", desc: "输出自定义日志信息", group: "API 请求" },
+  // ── Web 自动化类 ──
+  { value: "web_navigate", label: "页面跳转", icon: "🔗", desc: "浏览器导航到指定 URL", group: "Web 自动化" },
+  { value: "web_click", label: "点击元素", icon: "👆", desc: "点击页面上的 CSS 选择器元素", group: "Web 自动化" },
+  { value: "web_fill", label: "填充输入", icon: "⌨️", desc: "向输入框填充文本", group: "Web 自动化" },
+  { value: "web_type", label: "逐字输入", icon: "⌨️", desc: "逐字符输入文本（模拟真实打字）", group: "Web 自动化" },
+  { value: "web_wait", label: "等待", icon: "⏳", desc: "等待元素出现或固定时间", group: "Web 自动化" },
+  { value: "web_assert", label: "验证文本", icon: "✅", desc: "验证页面上存在指定文本", group: "Web 自动化" },
+  { value: "web_screenshot", label: "截图", icon: "📸", desc: "截取当前页面截图", group: "Web 自动化" },
+  { value: "web_step", label: "Web 步骤", icon: "⚙️", desc: "通用 Web 操作步骤", group: "Web 自动化" },
 ];
 
 // ── Field labels ──
@@ -32,6 +46,14 @@ export const FIELD_LABELS = {
   description: "描述",
   direction: "方向",
   distance: "距离(像素)",
+  // Web / API
+  selector: "CSS 选择器",
+  value: "输入值",
+  url: "请求 URL",
+  method: "HTTP 方法",
+  assertions: "断言规则",
+  headers: "请求头",
+  body: "请求体",
 };
 
 // ── Direction options ──
@@ -97,6 +119,32 @@ export function stepSummary(step) {
       return `${icon} 循环 ${step.index || 1} 次 (${(step.children || []).length} 子步骤)`;
     case "loop_elements":
       return `${icon} 遍历 ${(step.xpath || '').split('|').filter(Boolean).length || 0} 个元素 (${(step.children || []).length} 子步骤)`;
+    // ── API ──
+    case "api_request":
+      return `${icon} ${step.method || 'GET'} ${step.url || step.xpath || ''}`;
+    case "api_assert":
+      return `${icon} 断言: ${step.description || JSON.stringify(step.assertions || []).slice(0, 80)}`;
+    case "api_sleep":
+      return `${icon} 暂停 ${step.timeout || 0}s`;
+    case "api_log":
+      return `${icon} 日志: ${step.description || step.value || ''}`;
+    // ── Web ──
+    case "web_navigate":
+      return `${icon} 跳转 ${step.url || ''}`;
+    case "web_click":
+      return `${icon} 点击「${step.selector || step.description || '元素'}」`;
+    case "web_fill":
+      return `${icon} 填充「${step.selector || ''}」= "${step.value || ''}"`;
+    case "web_type":
+      return `${icon} 逐字输入「${step.selector || ''}」= "${step.value || ''}"`;
+    case "web_wait":
+      return `${icon} 等待 ${step.timeout || 0}s${step.selector ? ` (${step.selector})` : ''}`;
+    case "web_assert":
+      return `${icon} 验证「${step.expected_text || step.description || ''}」`;
+    case "web_screenshot":
+      return `${icon} 截图: ${step.description || step.value || 'page'}`;
+    case "web_step":
+      return `${icon} ${step.description || 'Web 步骤'}`;
     default:
       return `${icon} ${def?.label || step.type}`;
   }

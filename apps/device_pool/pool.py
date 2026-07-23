@@ -7,12 +7,15 @@ uiautomator2 (u2.Device) is kept ONLY for dump_hierarchy() and XPath queries.
 """
 
 import io
+import logging
 import time
 import base64
 import threading
 import uiautomator2 as u2
 from airtest.core.android.android import Android
 from PIL import Image
+
+logger = logging.getLogger(__name__)
 from django.conf import settings
 
 
@@ -159,25 +162,25 @@ class DevicePool:
             raw = raw.decode("utf-8", errors="replace")
 
         raw_len = len(raw)
-        print(f"[dump] XML length: {raw_len} chars")
+        logger.debug("[dump] XML length: %s chars", raw_len)
 
         if not raw.lstrip().startswith("<?"):
             raw = '<?xml version="1.0" encoding="UTF-8"?>\n' + raw
 
         stripped = raw.rstrip()
         if not stripped.endswith(">") or stripped.endswith("/>"):
-            print(f"[dump] ⚠ XML may be truncated, last 100 chars: ...{stripped[-100:]}")
+            logger.warning("[dump] XML may be truncated, last 100 chars: ...%s", stripped[-100:])
 
         try:
             root = ET.fromstring(raw.encode("utf-8") if isinstance(raw, str) else raw)
         except ET.ParseError as pe:
-            print(f"[dump] XML parse failed: {pe}, trying truncation repair...")
+            logger.warning("[dump] XML parse failed: %s, trying truncation repair...", pe)
             last_complete = raw.rfind(">")
             if last_complete > 0:
                 fixed = raw[: last_complete + 1]
                 try:
                     root = ET.fromstring(fixed.encode("utf-8"))
-                    print(f"[dump] Repair succeeded, truncated {raw_len - len(fixed)} chars")
+                    logger.info("[dump] Repair succeeded, truncated %s chars", raw_len - len(fixed))
                 except ET.ParseError:
                     raise RuntimeError(f"XML parse failed and cannot repair: {pe}")
             else:

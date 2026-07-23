@@ -21,6 +21,8 @@ import {
   applyWsMessage,
 } from '../composables/useTaskWebSocket.js'
 import { getActiveRuns, listDefinitions } from '../api.js'
+import { listApiDefinitions } from '@/modules/case-manager/api/apiTesting.js'
+import { listWebDefinitions } from '@/modules/case-manager/api/webAutomation.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -80,11 +82,22 @@ async function ensureStepDefs() {
   if (!hasCaseIds) return
   if (hasCaseItems && !missingSteps) return  // already have steps
 
-  // Load case definitions once
+  // Load case definitions once, using the right API per task type
+  const taskType = t.taskType || 'ui_automation'
   if (!casesDefs.value.length) {
     try {
-      const { data } = await listDefinitions()
-      if (data.ok) casesDefs.value = data.definitions || []
+      let data
+      if (taskType === 'api_testing') {
+        const res = await listApiDefinitions()
+        data = res.data
+      } else if (taskType === 'web_automation') {
+        const res = await listWebDefinitions()
+        data = res.data
+      } else {
+        const res = await listDefinitions()
+        data = res.data
+      }
+      if (data?.ok) casesDefs.value = data.definitions || []
     } catch (_) {}
   }
 
@@ -263,15 +276,28 @@ const bugEntries = computed(() => {
 })
 
 function stepTypeLabel(type) {
-  const map = { click: '点击', long_click: '长按', swipe: '滑动',
+  const map = {
+    // UI
+    click: '点击', long_click: '长按', swipe: '滑动',
     wait: '等待出现', wait_disappear: '等待消失',
     verify_text: '校验文字', poll_text: '轮询文本',
     start_app: '启动应用', kill_app: '关闭应用', sleep: '暂停',
     perf_element_time: '等待元素出现耗时',
     wait_toast: '等待Toast', if_element_appear: '如果出现', if_element_disappear: '如果消失',
-    loop_n: '循环N次', loop_elements: '遍历元素' }
+    loop_n: '循环N次', loop_elements: '遍历元素',
+    // API
+    api_request: 'API 请求', api_assert: '断言验证',
+    api_sleep: '暂停', api_log: '日志',
+    // Web
+    web_navigate: '页面跳转', web_click: '点击元素', web_fill: '填充输入',
+    web_type: '逐字输入', web_wait: '等待', web_assert: '验证文本',
+    web_screenshot: '截图', web_step: 'Web 步骤',
+  }
   return map[type] || type
 }
+
+const isApiTask = computed(() => task.value?.taskType === 'api_testing')
+const isWebTask = computed(() => task.value?.taskType === 'web_automation')
 
 function failReason(failedResult) {
   const reasons = {
@@ -502,7 +528,7 @@ async function removeTask() {
   <div v-if="task" class="doc-page detail-page">
     <PageHeader
       title="任务详情 Task Detail"
-      :subtitle="`设备 ${task.deviceSerial} · ${task.caseIds?.length || 0} 个用例 · ${task.loopCount} 轮`"
+      :subtitle="isApiTask ? `API 测试 · ${task.caseIds?.length || 0} 个用例 · ${task.loopCount} 轮` : isWebTask ? `Web 自动化 · ${task.caseIds?.length || 0} 个用例 · ${task.loopCount} 轮` : `设备 ${task.deviceSerial} · ${task.caseIds?.length || 0} 个用例 · ${task.loopCount} 轮`"
     />
 
     <div class="doc-body">
@@ -514,8 +540,8 @@ async function removeTask() {
             <span class="info-value task-name">{{ task.name || task.id }}</span>
           </div>
           <div class="info-item">
-            <span class="info-label">📱 设备</span>
-            <span class="info-value">{{ task.deviceSerial }}</span>
+            <span class="info-label">{{ isApiTask ? '🌐 端点' : isWebTask ? '🌍 目标' : '📱 设备' }}</span>
+            <span class="info-value">{{ task.deviceSerial || (isApiTask ? 'API' : isWebTask ? 'Web' : '—') }}</span>
           </div>
           <div class="info-item">
             <span class="info-label">📋 用例数</span>

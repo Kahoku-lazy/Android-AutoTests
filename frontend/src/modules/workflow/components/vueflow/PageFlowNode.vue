@@ -22,21 +22,29 @@ const addToCase = inject<(nodeId: string, slot: number, step: 'click' | 'wait') 
 const isPopup = computed(() => props.data.nodeType === 'PopupNode')
 const isStart = computed(() => props.data.nodeType === 'StartNode')
 const isEnd = computed(() => props.data.nodeType === 'EndNode')
+const isApi = computed(() => props.data.nodeType === 'ApiNode')
 const startKind = computed<StartKind>(() => props.data.startKind || 'app')
 
 const accent = computed(() => {
   if (isStart.value) return '#89CFF0'
   if (isEnd.value) return '#8a8a96'
   if (isPopup.value) return '#e85f5f'
+  if (isApi.value) return '#f5a623'
   return '#6f9fd8'
 })
 
 const icon = computed(() => {
+  if (isApi.value) return '📡'
   if (isStart.value) return '▶'
   if (isEnd.value) return '⏹'
   if (isPopup.value) return '⚠️'
   return '📱'
 })
+
+function methodColor(m?: string): string {
+  const map: Record<string, string> = { GET: '#6fba2c', POST: '#889df0', PUT: '#f7cd67', DELETE: '#e85f5f', PATCH: '#b39ef3' }
+  return map[m || 'GET'] || '#8b7355'
+}
 
 function onRename(e: Event) {
   const v = (e.target as HTMLInputElement).value.trim()
@@ -94,6 +102,7 @@ watch(
       popup: isPopup,
       start: isStart,
       end: isEnd,
+      api: isApi,
     }"
     :style="{ '--accent': accent }"
   >
@@ -107,43 +116,48 @@ watch(
       />
     </div>
 
-    <!-- Start: app vs page -->
+    <!-- Start: app / page / url / api -->
     <div v-if="isStart" class="pf-kind nodrag" @mousedown.stop>
-      <button
-        type="button"
-        class="kind-btn"
-        :class="{ active: startKind === 'app' }"
-        @click.stop="onStartKind('app')"
-      >
-        启动 App
-      </button>
-      <button
-        type="button"
-        class="kind-btn"
-        :class="{ active: startKind === 'page' }"
-        @click.stop="onStartKind('page')"
-      >
-        页面
-      </button>
+      <button type="button" class="kind-btn" :class="{ active: startKind === 'app' }"
+        @click.stop="onStartKind('app')">启动 App</button>
+      <button type="button" class="kind-btn" :class="{ active: startKind === 'page' }"
+        @click.stop="onStartKind('page')">页面</button>
+      <button type="button" class="kind-btn" :class="{ active: startKind === 'url' }"
+        @click.stop="onStartKind('url')">URL</button>
+      <button type="button" class="kind-btn" :class="{ active: startKind === 'api' }"
+        @click.stop="onStartKind('api')">API</button>
     </div>
 
     <div v-if="isStart && startKind === 'app'" class="pf-pkg nodrag" @mousedown.stop>
       <label>包名</label>
-      <input
-        class="pkg-input"
-        :value="data.packageName"
-        placeholder="com.example.app"
-        @change="onPackageChange"
-      />
+      <input class="pkg-input" :value="data.packageName" placeholder="com.example.app" @change="onPackageChange" />
+    </div>
+    <div v-if="isStart && startKind === 'url'" class="pf-pkg nodrag" @mousedown.stop>
+      <label>URL</label>
+      <input class="pkg-input" :value="data.startUrl" placeholder="https://example.com" @change="(e) => { store.setStartUrl(props.id, (e.target as HTMLInputElement).value); refreshFlow() }" />
+    </div>
+    <div v-if="isStart && startKind === 'api'" class="pf-pkg nodrag" @mousedown.stop>
+      <label>API 地址</label>
+      <input class="pkg-input" :value="data.startApi" placeholder="http://localhost/api/endpoint" @change="(e) => { store.setStartApi(props.id, (e.target as HTMLInputElement).value); refreshFlow() }" />
+    </div>
+
+    <!-- API Node: method badge + URL -->
+    <div v-if="data.isApiNode" class="pf-api nodrag" @mousedown.stop>
+      <span class="api-method" :style="{background: methodColor(data.apiMethod)}">{{ data.apiMethod }}</span>
+      <span class="api-url">{{ data.apiUrl }}</span>
     </div>
 
     <div class="pf-sub">
       <template v-if="isStart && startKind === 'app'">
         无入口 · 从「启动」连到页面入口
       </template>
-      <template v-else-if="isStart && startKind === 'page'">
-        无入口 · 流程从本页开始
-        <span v-if="data.linkedPageName"> · 关联 {{ data.linkedPageName }}</span>
+      <template v-else-if="isStart && (startKind === 'page' || startKind === 'url' || startKind === 'api')">
+        <template v-if="data.linkedPageName">
+          关联: {{ data.linkedPageName }} · 已选 {{ data.outputs.filter(o => o.el).length }} 个元素
+        </template>
+        <template v-else>
+          无入口 · 右键关联页面后添加元素
+        </template>
       </template>
       <template v-else-if="isEnd">
         无输出 · 接收 navigation / popup_close
@@ -252,6 +266,36 @@ watch(
   min-width: 180px;
   border-radius: 16px 28px 16px 16px;
   opacity: 0.96;
+}
+.pf-node.api {
+  min-width: 240px;
+  border-color: #f5a623;
+  box-shadow: 0 0 8px rgba(245, 166, 35, 0.15);
+}
+.pf-api {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: rgba(245, 166, 35, 0.08);
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+.api-method {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+.api-url {
+  font-size: 11px;
+  color: var(--app-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .pf-header {
   display: flex;

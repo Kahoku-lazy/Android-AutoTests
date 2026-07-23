@@ -31,7 +31,7 @@ Django AIAgent (ai_agents 表)
     ├── 构建 system_prompt: 平台约束 + SOP 四阶段工作流 + 用户自定义
     └── 返回 Agent(name, system_prompt, model, toolkit=None)
     ↓
-extra_agent_tools factory 注入 toolkit (25 个 Tool)
+extra_agent_tools factory 注入 toolkit (38 个 Tool)
     ↓
 Agent 就绪 → reply_stream() 处理对话
 ```

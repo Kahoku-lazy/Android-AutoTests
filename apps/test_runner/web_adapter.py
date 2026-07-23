@@ -124,3 +124,81 @@ class WebAdapter:
         elif cmd == "navigate" and arg:
             await self._page.goto(arg, wait_until="domcontentloaded", timeout=30000)
         self.log(f"  step: {line}")
+
+    # ── Structured step methods (called by WebExecutor) ──
+
+    async def _navigate(self, url: str):
+        """Navigate to URL."""
+        await self._ensure_browser()
+        await self._page.goto(url, wait_until="domcontentloaded", timeout=30000)
+
+    async def _click(self, selector: str):
+        """Click an element by selector."""
+        await self._ensure_browser()
+        await self._page.click(selector, timeout=10000)
+
+    async def _fill(self, selector: str, value: str):
+        """Fill an input field."""
+        await self._ensure_browser()
+        await self._page.fill(selector, value, timeout=10000)
+
+    async def _wait_for(self, selector: str, timeout: float = 10):
+        """Wait for a selector to appear."""
+        await self._ensure_browser()
+        await self._page.wait_for_selector(selector, timeout=timeout * 1000)
+
+    async def _verify_text(self, expected: str):
+        """Verify expected text on page."""
+        await self._ensure_browser()
+        content = await self._page.content()
+        if expected not in content:
+            raise AssertionError(f"Expected text '{expected[:100]}' not found on page")
+
+    async def _screenshot(self, name: str = "web"):
+        """Take a screenshot."""
+        await self._ensure_browser()
+        import os
+        screenshot_dir = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            "data", "screenshots",
+        )
+        os.makedirs(screenshot_dir, exist_ok=True)
+        path = os.path.join(screenshot_dir, f"web_{name}_{int(time.time() * 1000)}.png")
+        await self._page.screenshot(path=path)
+        self.log(f"Screenshot saved: {path}")
+
+    # ── Watcher support (popup/banner handling) ──
+
+    _watchers: list[dict] = []
+
+    def register_watchers(self, watchers: list[dict]):
+        """Register popup/banner watchers. Each: {selector, action: 'click'}."""
+        self._watchers = list(watchers)
+
+    def clear_watchers(self):
+        self._watchers.clear()
+
+    async def run_watchers(self):
+        """Check and dismiss matching popups. Returns count dismissed."""
+        await self._ensure_browser()
+        dismissed = 0
+        for w in self._watchers:
+            selector = w.get("selector", "")
+            if not selector:
+                continue
+            try:
+                try:
+                    await asyncio.wait_for(
+                        self._page.wait_for_selector(selector, timeout=1000),
+                        timeout=1.5,
+                    )
+                except (asyncio.TimeoutError, Exception):
+                    continue
+                action = w.get("action", "click")
+                if action == "click":
+                    await self._page.click(selector)
+                self.log(f"Watcher: dismissed {selector[:60]}")
+                dismissed += 1
+            except Exception:
+                pass
+        return dismissed

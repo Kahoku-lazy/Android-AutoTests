@@ -144,7 +144,7 @@
 
 .crumb--root {
   cursor: pointer;
-  font-family: var(--font-display, Nunito, sans-serif);
+  font-family: var(--app-font-display, 'Quicksand', sans-serif);
 }
 
 .crumb--root:not(.crumb--active):hover {
@@ -203,7 +203,7 @@
   font-size: 15px;
   font-weight: 800;
   color: var(--app-green-deep);
-  font-family: var(--font-display, Nunito, sans-serif);
+  font-family: var(--app-font-display, 'Quicksand', sans-serif);
   line-height: 1;
 }
 
@@ -515,7 +515,7 @@
 }
 
 .case-detail__title {
-  font-family: Nunito, "Noto Sans SC", sans-serif;
+  font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif);
   font-weight: 800;
   font-size: 22px;
   color: var(--app-text);
@@ -576,7 +576,7 @@
 }
 
 .case-detail__steps-title {
-  font-family: Nunito, sans-serif;
+  font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif);
   font-weight: 700;
   font-size: 16px;
   color: var(--app-text);
@@ -594,7 +594,7 @@
   margin-bottom: 12px;
 }
 .case-exports__title {
-  font-family: Nunito, sans-serif;
+  font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif);
   font-weight: 700;
   font-size: 16px;
   color: var(--app-text);

@@ -4,9 +4,11 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { animate, stagger } from "animejs";
 import { ElMessage, ElMessageBox } from "element-plus";
 // Card/Table/AppTabs → el-* (Element Plus auto-import)
-import AppCard from "@/shared/components/AppCard.vue";
-import AppTabs from "@/shared/components/AppTabs.vue";
 import AppTable from "@/shared/components/AppTable.vue";
+import DeviceFilterTabs from "./components/DeviceFilterTabs.vue";
+import DeviceCard from "./components/DeviceCard.vue";
+import DeviceStatusCell from "./components/DeviceStatusCell.vue";
+import DeviceActionsCell from "./components/DeviceActionsCell.vue";
 import { usePagination } from "@/shared/composables/usePagination.js";
 import { IconWifi, IconRefresh } from "@/shared/icons/index.js";
 import EmptyState from "@/shared/components/patterns/EmptyState.vue";
@@ -46,6 +48,27 @@ const disconnectDialog = ref({
 
 // Network (LAN) connect dialog — PRD §3.7 F-07
 const networkDialog = ref({ visible: false, loading: false });
+
+// ── View mode: table | cards ──
+const viewMode = ref("table");
+
+// ── KPI computed ──
+const kpiStats = computed(() => {
+  const devices = store.devices;
+  return {
+    online: devices.filter(d => d.status === "ONLINE").length,
+    busy: devices.filter(d => d.status === "BUSY").length,
+    offline: devices.filter(d => d.status === "OFFLINE" || d.status === "DISCONNECTED").length,
+    total: devices.length,
+  };
+});
+
+// ── Grouped devices for card view ──
+const groupedDevices = computed(() => ({
+  online: filteredDevices.value.filter(d => d.status === "ONLINE"),
+  busy: filteredDevices.value.filter(d => d.status === "BUSY"),
+  offline: filteredDevices.value.filter(d => d.status === "OFFLINE" || d.status === "DISCONNECTED"),
+}));
 
 // ── AppTabs filtering ──
 const activeFilter = ref("all");
@@ -102,7 +125,10 @@ onUnmounted(() => {
 
 function startHeartbeat() {
   stopHeartbeat();
-  heartbeatTimer = setInterval(loadDevices, 30000);
+  heartbeatTimer = setInterval(async () => {
+    await store.doHeartbeat();
+    loadDevices();
+  }, 30000);
 }
 function stopHeartbeat() {
   if (heartbeatTimer) {
@@ -212,6 +238,20 @@ async function handleLockClick(device) {
     ElMessage.success(`已锁定 ${device.serial}`);
   } else {
     ElMessage.error(result.error || "锁定失败");
+  }
+}
+
+async function handleJoinQueue(device) {
+  if (!currentUser) {
+    ElMessage.warning("无法获取当前用户信息，请重新登录");
+    return;
+  }
+  const result = await store.doJoinQueue(device.serial, currentUser);
+  if (result.ok) {
+    const pos = result.position || '?';
+    ElMessage.success(`已加入 ${device.serial} 的等待队列，当前位置：第 ${pos} 位`);
+  } else {
+    ElMessage.error(result.error || "加入队列失败");
   }
 }
 
@@ -349,76 +389,65 @@ function connectionLabel(type) {
 
     <div class="doc-body">
       <section class="doc-section device-section">
-        <div class="doc-section__header">
-          <h3 class="doc-section__title">
-            设备列表
-            <span class="doc-tag">Devices</span>
-          </h3>
+
+        <!-- 操作栏：局域网连接 + 刷新设备 -->
+        <div class="action-bar">
+          <el-button class="action-bar-btn" size="small" @click="openNetworkDialog">
+            <IconWifi :size="14" /> <span>局域网连接</span>
+          </el-button>
+          <el-button class="action-bar-btn" size="small" :loading="store.scanning || store.loading" @click="handleRefresh">
+            <IconRefresh :size="14" /> <span>刷新设备</span>
+          </el-button>
         </div>
 
-        <!-- AppTabs 筛选 + 设备表格 -->
+        <!-- KPI 统计条 -->
+        <div class="kpi-row">
+          <div class="kpi-card"><div class="kpi-dot" style="background:#6BCB77"></div><div class="kpi-value">{{ kpiStats.online }}</div><div class="kpi-label">在线</div></div>
+          <div class="kpi-card"><div class="kpi-dot" style="background:#FFB5A7"></div><div class="kpi-value">{{ kpiStats.busy }}</div><div class="kpi-label">使用中</div></div>
+          <div class="kpi-card"><div class="kpi-dot" style="background:#d4d8dc"></div><div class="kpi-value">{{ kpiStats.offline }}</div><div class="kpi-label">离线</div></div>
+          <div class="kpi-card"><div class="kpi-dot" style="background:#2d2d2d"></div><div class="kpi-value">{{ kpiStats.total }}</div><div class="kpi-label">总计</div></div>
+        </div>
+
+        <!-- 筛选 + 视图切换 -->
         <div class="filter-bar">
-          <AppTabs
-            class="device-tabs"
-            :items="filterAppTabs"
-            v-model="activeFilter"
-            :leaf-animation="true"
-            :shadow="true"
-          >
-            <template v-for="tab in filterAppTabs" #[tab.key] :key="tab.key">
-              <div class="tab-panel">
-                <div class="table-toolbar">
-                  <div class="table-toolbar-left">
-                    <div class="toolbar-actions">
-                      <el-button class="wb-btn toolbar-icon-btn lan-btn" size="small" @click="openNetworkDialog">
-                        <IconWifi :size="14" />
-                        <span>局域网连接</span>
-                      </el-button>
-                      <el-button
-                        class="wb-btn toolbar-icon-btn refresh-btn"
-                        size="small"
-                        :loading="store.scanning || store.loading"
-                        @click="handleRefresh"
-                      >
-                        <IconRefresh :size="14" />
-                        <span>刷新设备</span>
-                      </el-button>
-                    </div>
-                    <div class="page-size-control">
-                      <span class="toolbar-label">显示行数</span>
-                      <div class="page-size-btns">
-                        <button
-                          v-for="n in PAGE_SIZE_OPTIONS"
-                          :key="n"
-                          type="button"
-                          class="page-size-btn"
-                          :class="{ active: pageSize === n }"
-                          @click="setPageSize(n)"
-                        >{{ n }}</button>
-                      </div>
-                    </div>
-                  </div>
-                  <div v-if="filteredDevices.length > 0" class="table-toolbar-right">
-                    <span class="page-info">
-                      第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ filteredDevices.length }} 台
-                    </span>
-                    <div v-if="totalPages > 1" class="page-nav">
-                      <el-button class="wb-btn" size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</el-button>
-                      <el-button class="wb-btn" size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</el-button>
-                    </div>
-                  </div>
-                </div>
-                <AppCard type="default" class="table-card">
-                  <div class="device-table-wrapper">
-                    <AppTable
-                      :columns="columns"
-                      :data-source="pagedDevices"
-                    row-key="serial"
-                    :striped="true"
-                    :loading="store.loading"
-                    empty-text="暂无设备，点击「刷新设备」扫描并连接设备"
-                    @row-click="handleRowClick"
-                  >
+          <DeviceFilterTabs :tabs="filterAppTabs" v-model="activeFilter" />
+          <div class="view-toggle">
+            <button class="view-btn" :class="{ active: viewMode === 'table' }" @click="viewMode = 'table'">📋 表格</button>
+            <button class="view-btn" :class="{ active: viewMode === 'cards' }" @click="viewMode = 'cards'">📷 卡片</button>
+          </div>
+          <span class="filter-count">{{ filteredDevices.length }} 台设备</span>
+        </div>
+
+        <!-- 表视图：工具栏 + 表格 -->
+        <template v-if="viewMode === 'table'">
+          <div class="table-toolbar">
+            <div class="page-size-control">
+              <span class="toolbar-label">显示行数</span>
+              <div class="page-size-btns">
+                <button v-for="n in PAGE_SIZE_OPTIONS" :key="n" type="button" class="page-size-btn" :class="{ active: pageSize === n }" @click="setPageSize(n)">{{ n }}</button>
+              </div>
+            </div>
+            <div v-if="filteredDevices.length > 0" class="table-toolbar-right">
+              <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ filteredDevices.length }} 台</span>
+              <div v-if="totalPages > 1" class="page-nav">
+                <el-button class="wb-btn" size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</el-button>
+                <el-button class="wb-btn" size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</el-button>
+              </div>
+            </div>
+          </div>
+
+        <!-- 表格视图 -->
+        <el-card class="table-card" shadow="never">
+          <div class="device-table-wrapper">
+            <AppTable
+              :columns="columns"
+              :data-source="pagedDevices"
+              row-key="serial"
+              :striped="true"
+              :loading="store.loading"
+              empty-text="暂无设备，点击「刷新设备」扫描并连接设备"
+              @row-click="handleRowClick"
+            >
                     <!-- Serial number + selection dot -->
                     <template #cell-serial="{ record }">
                       <span v-if="isRowSelected(record)" class="row-dot"
@@ -440,50 +469,9 @@ function connectionLabel(type) {
                       <span v-else class="text-muted">—</span>
                     </template>
 
-                    <!-- Status: device state + user binding + process occupation -->
+                    <!-- Status cell -->
                     <template #cell-status="{ record }">
-                      <div class="status-cell">
-                        <el-tag
-                          :type="statusTag(record.status).type"
-                          size="small"
-                          effect="dark"
-                          round
-                        >
-                          {{ statusTag(record.status).text }}
-                        </el-tag>
-                        <!-- Execution engine occupation — highest priority -->
-                        <el-tooltip
-                          v-if="
-                            record.occupied_by &&
-                            record.status === 'BUSY' &&
-                            ['runner-', 'ai_agent', 'task-', 'run-'].some((p) =>
-                              record.occupied_by.startsWith(p),
-                            )
-                          "
-                          :content="record.occupied_by"
-                          placement="top"
-                        >
-                          <span class="occupied-badge executing-badge"
-                            >执行中</span
-                          >
-                        </el-tooltip>
-                        <!-- Other process occupation -->
-                        <el-tooltip
-                          v-else-if="record.occupied_by"
-                          :content="record.occupied_by"
-                          placement="top"
-                        >
-                          <span class="occupied-badge process-badge"
-                            >占用中: {{ record.occupied_by }}</span
-                          >
-                        </el-tooltip>
-                        <!-- User binding (no process occupation) -->
-                        <span
-                          v-else-if="record.locked_by"
-                          class="occupied-badge locked-badge"
-                          >已绑定: {{ record.locked_by }}</span
-                        >
-                      </div>
+                      <DeviceStatusCell :device="record" :status-tag="statusTag" />
                     </template>
 
                     <!-- Connection type -->
@@ -510,48 +498,16 @@ function connectionLabel(type) {
                       </span>
                     </template>
 
-                    <!-- Actions: user lock + process occupy -->
+                    <!-- Actions cell -->
                     <template #cell-actions="{ record }">
-                      <div class="action-btns">
-                        <!-- Lock button: purple unlocked → red locked (auto-switch) -->
-                        <el-button class="wb-btn lock-btn"
-                          size="small"
-                          type="primary"
-                          :class="{ 'lock-btn--locked': record.locked_by }"
-                          :danger="!!record.locked_by"
-                          :plain="!record.locked_by"
-                          :disabled="
-                            record.status === 'OFFLINE' ||
-                            record.status === 'DISCONNECTED' ||
-                            (!!record.locked_by && record.locked_by !== currentUser)
-                          "
-                          @click="handleLockClick(record)"
-                          >{{
-                            record.locked_by
-                              ? (record.locked_by === currentUser ? "解除锁定" : "已锁定")
-                              : "锁定"
-                          }}</el-button>
-                        <!-- Occupy button: yellow, always labeled "解除占用" -->
-                        <el-button class="wb-btn occupy-btn"
-                          size="small"
-                          type="primary"
-                          :disabled="
-                            record.status === 'OFFLINE' ||
-                            record.status === 'DISCONNECTED' ||
-                            !record.occupied_by
-                          "
-                          @click="handleOccupyClick(record)"
-                          >解除占用</el-button>
-                        <!-- Disconnect button: only for WIFI devices -->
-                        <el-button
-                          v-if="record.connection_type === 'WIFI'"
-                          class="wb-btn disconnect-btn"
-                          size="small"
-                          type="danger"
-                          plain
-                          @click="openDisconnectDialog(record.serial)"
-                          >断开</el-button>
-                      </div>
+                      <DeviceActionsCell
+                        :device="record"
+                        :current-user="currentUser"
+                        @lock="handleLockClick"
+                        @join-queue="handleJoinQueue"
+                        @occupy="handleOccupyClick"
+                        @disconnect="(d) => openDisconnectDialog(d.serial)"
+                      />
                     </template>
 
                     <template #empty>
@@ -559,13 +515,41 @@ function connectionLabel(type) {
                         :text="activeFilter === 'all' ? '暂无设备' : '没有匹配的设备'"
                         :hint="activeFilter === 'all' ? '点击「扫描设备」发现设备' : '尝试切换筛选条件'" />
                     </template>
-                  </AppTable>
-                  </div>
-                </AppCard>
+              </AppTable>
+          </div>
+        </el-card>
+        </template>
+
+        <!-- 卡片视图：按状态分组 -->
+        <div class="card-grid-grouped" v-if="viewMode === 'cards'">
+          <div class="card-group" v-for="group in [
+            { key:'online', label:'🟢 在线' },
+            { key:'busy', label:'🔴 使用中' },
+            { key:'offline', label:'⚫ 离线' }
+          ]" :key="group.key">
+            <template v-if="groupedDevices[group.key].length">
+              <div class="card-group-title">
+                {{ group.label }}
+                <span class="card-group-count">{{ groupedDevices[group.key].length }}</span>
+              </div>
+              <div class="card-group-grid">
+                <DeviceCard
+                  v-for="dev in groupedDevices[group.key]"
+                  :key="dev.serial"
+                  :device="dev"
+                  :status-tag="statusTag"
+                  :display-model="displayModel"
+                  :connection-label="connectionLabel"
+                  :format-relative-time="formatRelativeTime"
+                  :current-user="currentUser"
+                  @click="handleRowClick"
+                  @lock="handleLockClick"
+                  @join-queue="handleJoinQueue"
+                  @disconnect="(d) => openDisconnectDialog(d.serial)"
+                />
               </div>
             </template>
-          </AppTabs>
-          <span class="filter-count">{{ filteredDevices.length }} 台设备</span>
+          </div>
         </div>
       </section>
     </div>
@@ -599,6 +583,10 @@ function connectionLabel(type) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background:
+    radial-gradient(circle, #d4cdc0 0.8px, transparent 0.8px);
+  background-size: 14px 14px;
+  background-color: #fefcf6;
 }
 
 .header-actions {
@@ -613,164 +601,165 @@ function connectionLabel(type) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 24px 28px 28px;
-  gap: 18px;
+  padding: 16px 20px 20px;
+  gap: 12px;
 }
 
-.device-section .doc-section__header {
+.doc-section__header {
   flex-shrink: 0;
-  padding-bottom: 2px;
+  padding-bottom: 0;
+}
+.doc-section__title {
+  font-family: 'Caveat', cursive;
+  font-size: 20px; font-weight: 700; color: #2d2d2d;
+}
+.doc-section__title .doc-tag {
+  font-size: 9px; padding: 1px 8px; border-radius: 4px 8px 4px 8px;
+  background: #fff; color: #999; border: 1.5px solid #e8ecf1;
+  font-weight: 700; margin-left: 8px;
+}
+.doc-section__label { color: #999; font-size: 10px; }
+
+/* ── KPI 统计条 ── */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  border: 2.5px solid #89CFF0;
+  border-radius: 4px 8px 4px 8px;
+  overflow: hidden;
+  background: #fff;
+  margin-bottom: 4px;
+  flex-shrink: 0;
+}
+.kpi-card {
+  padding: 12px 16px;
+  text-align: center;
+  border-right: 2px solid #e8ecf1;
+}
+.kpi-card:last-child { border-right: none; }
+.kpi-dot {
+  width: 8px; height: 8px; transform: rotate(45deg);
+  margin: 0 auto 4px; border-radius: 1px;
+}
+.kpi-value {
+  font-family: 'Caveat', 'Quicksand', cursive;
+  font-size: 28px; font-weight: 700; color: #2d2d2d; line-height: 1;
+}
+.kpi-label {
+  font-size: 9px; font-weight: 700; color: #999; margin-top: 2px;
+  text-transform: uppercase; letter-spacing: 0.06em;
 }
 
-/* ── Filter bar ── */
+/* ── 视图切换 ── */
+.view-toggle {
+  display: flex; gap: 0;
+  border: 2px solid #89CFF0; border-radius: 4px 8px 4px 8px;
+  overflow: hidden;
+}
+.view-btn {
+  padding: 5px 12px; font-size: 10px; font-weight: 700;
+  background: #fff; color: #999; border: none;
+  cursor: pointer; font-family: inherit; transition: all 0.12s;
+  border-right: 1px solid #e8ecf1;
+}
+.view-btn:last-child { border-right: none; }
+.view-btn.active { background: #89CFF0; color: #fff; }
+.view-btn:hover:not(.active) { color: #89CFF0; }
+
+/* ── 卡片分组视图 ── */
+.card-grid-grouped {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 4px 0;
+}
+.card-group-title {
+  font-family: 'Caveat', cursive; font-size: 18px; font-weight: 700;
+  color: #2d2d2d; display: flex; align-items: center; gap: 8px;
+  margin-bottom: 10px;
+}
+.card-group-title::after {
+  content: ''; flex: 1; height: 2px; background: #e8ecf1; border-radius: 1px;
+}
+.card-group-count {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #999;
+  background: #f8f6f2; padding: 2px 8px; border-radius: 3px 6px 3px 6px;
+  border: 1.5px solid #e8ecf1;
+}
+.card-group-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+}
+@media (max-width: 900px) { .card-group-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* ── 表格卡片 ── */
 .filter-bar {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: stretch;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 0;
-  overflow: hidden;
-}
-.device-tabs {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.device-tabs :deep(.el-tabs) {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.device-tabs :deep(.el-tabs__list) {
-  flex-shrink: 0;
-}
-.device-tabs :deep(.el-tabs__content) {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  padding-top: 22px;
-}
-.device-tabs :deep(.el-tabs__header) {
-  margin-bottom: 0;
-}
-.device-tabs :deep(.el-tabs__inner) {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.tab-panel {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.filter-count {
-  font-size: 13px;
-  color: var(--app-text-secondary);
-  font-weight: 600;
-  white-space: nowrap;
-  flex-shrink: 0;
-  padding-top: 14px;
-  align-self: flex-start;
-}
-
-/* ── AppTable toolbar ── */
-.table-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
-  padding: 0 0 14px;
   flex-shrink: 0;
 }
-.table-toolbar-left { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-.toolbar-actions { display: flex; align-items: center; gap: 10px; }
-
-/* ── Toolbar icon buttons — AnimalButton root gets parent classes merged ── */
-.toolbar-icon-btn {
-  gap: 5px !important;
-  padding: 5px 14px !important;
-  border-radius: var(--app-radius-pill) !important;
+.filter-count {
+  font-size: 12px; color: #999; font-weight: 600;
+  white-space: nowrap; margin-left: auto;
 }
 
-.lan-btn {
-  background: rgba(162,210,255,0.16) !important;
-  border-color: rgba(162,210,255,0.38) !important;
-  color: var(--app-green-deep) !important;
+/* ── 操作栏（局域网 + 刷新）── */
+.action-bar {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
 }
-.lan-btn:hover {
-  background: rgba(162,210,255,0.26) !important;
-  border-color: rgba(162,210,255,0.62) !important;
+.action-bar-btn {
+  gap: 5px !important; padding: 5px 14px !important;
+  border-radius: 4px 8px 4px 8px !important;
+  border: 2px solid #6BCB77 !important;
+  background: #fff !important; color: #2d7a2d !important;
+  font-weight: 700 !important;
 }
+.action-bar-btn:hover { background: #C8F5D0 !important; }
 
-.refresh-btn {
-  background: rgba(111,185,141,0.14) !important;
-  border-color: rgba(111,185,141,0.34) !important;
-  color: #4c9a69 !important;
+/* ── 表格工具栏 ── */
+.table-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap; padding: 0 0 10px; flex-shrink: 0;
 }
-.refresh-btn:hover {
-  background: rgba(111,185,141,0.24) !important;
-  border-color: rgba(111,185,141,0.58) !important;
-}
-.page-size-control { display: flex; align-items: center; gap: 10px; }
-.toolbar-label { font-size: 12px; font-weight: 700; color: var(--app-text-secondary); white-space: nowrap; }
+.page-size-control { display: flex; align-items: center; gap: 8px; }
+.toolbar-label { font-size: 11px; font-weight: 700; color: #999; white-space: nowrap; }
 .page-size-btns { display: flex; gap: 6px; }
 .page-size-btn {
   min-width: 40px;
   padding: 5px 10px;
-  border-radius: var(--app-radius-pill);
-  border: 1.5px solid var(--app-glass-border);
-  background: var(--app-glass-card);
-  color: var(--app-text-secondary);
+  border-radius: 4px 8px 4px 8px;
+  border: 2px solid #e8ecf1;
+  background: #fff;
+  color: #999;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: var(--app-shadow-sm);
-  transition: all var(--app-duration) var(--app-ease);
+  box-shadow: none;
+  transition: all 0.15s;
 }
-.page-size-btn:hover { border-color: var(--app-blue); color: var(--app-green-deep); }
+.page-size-btn:hover { border-color: #89CFF0; color: #89CFF0; }
 .page-size-btn.active {
-  background: rgba(162,210,255,0.20);
-  border-color: rgba(162,210,255,0.62);
-  color: var(--app-green-deep);
+  background: #E8F4FD;
+  border-color: #89CFF0;
+  color: #89CFF0;
 }
 .table-toolbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
-.page-info { font-size: 12px; color: var(--app-text-secondary); font-weight: 600; white-space: nowrap; }
+.page-info { font-size: 12px; color: #999; font-weight: 600; white-space: nowrap; }
 .page-nav { display: flex; gap: 8px; }
 
-/* ── AppTable card ── */
+/* ── 表格卡片 ── */
 .table-card {
-  flex: 1;
-  min-height: 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  flex: 1; min-height: 0; min-width: 0;
+  display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 6px 10px 6px 10px;
+  border: 2.5px solid #89CFF0;
+  box-shadow: 2px 3px 0 rgba(137,207,240,0.12);
+  background: #fff;
 }
 .table-card :deep(.el-card__body) {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 0;
-  border-radius: var(--app-radius-lg);
-  background: rgba(255,255,255,0.38);
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  overflow: hidden; padding: 0;
 }
 
 /* ── AppTable wrapper inside AppCard ── */
@@ -783,14 +772,14 @@ function connectionLabel(type) {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
-  scrollbar-color: rgba(162,210,255,0.55) transparent;
+  scrollbar-color: #d4cdc0 transparent;
 }
 .device-table-wrapper::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 .device-table-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(162,210,255,0.55);
+  background: #d4cdc0;
   border-radius: 3px;
 }
 .device-table-wrapper :deep(.el-table),
@@ -801,19 +790,19 @@ function connectionLabel(type) {
 
 /* ── 表头与正文颜色区分 + 行列线条 ── */
 .device-table-wrapper :deep(.el-table th) {
-  background: rgba(162,210,255,0.13) !important;
-  color: var(--app-text-muted, #a8b5c4) !important;
-  font-size: 12px;
+  background: #f8f6f2 !important;
+  color: #2d2d2d !important;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.4px;
-  border-right: 1px solid rgba(162,210,255,0.22) !important;
-  border-bottom: 2px solid rgba(162,210,255,0.30) !important;
+  border-right: 1px solid #e8ecf1 !important;
+  border-bottom: 2px solid #e8ecf1 !important;
 }
 .device-table-wrapper :deep(.el-table td) {
-  color: var(--app-text, #4a4e69);
+  color: #2d2d2d;
   font-size: 13px;
-  border-right: 1px solid rgba(162,210,255,0.12) !important;
-  border-bottom: 1px solid rgba(162,210,255,0.10) !important;
+  border-right: 1px solid #f0ede8 !important;
+  border-bottom: 1px solid #f0ede8 !important;
 }
 .device-table-wrapper :deep(.el-table th:last-child),
 .device-table-wrapper :deep(.el-table td:last-child) {
@@ -834,46 +823,14 @@ function connectionLabel(type) {
 
 /* ── Row dot indicator ── */
 .row-dot {
-  color: var(--accent-blue, #409eff);
+  color: #2d2d2d;
   font-size: 12px;
   line-height: 1;
   margin-right: 6px;
   vertical-align: middle;
 }
 
-/* ── Status + occupancy badge ── */
-.status-cell {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-  justify-content: center;
-}
-.occupied-badge {
-  font-size: 11px;
-  padding: 1px 6px;
-  border-radius: 8px;
-  font-weight: 600;
-  max-width: 130px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.executing-badge {
-  background: rgba(232,153,138,0.16);
-  color: var(--ac-red);
-  border: 1px solid rgba(232,153,138,0.30);
-}
-.process-badge {
-  background: rgba(255,214,165,0.26);
-  color: #9a6a1f;
-  border: 1px solid rgba(255,214,165,0.48);
-}
-.locked-badge {
-  background: rgba(162,210,255,0.18);
-  color: var(--app-green-deep);
-  border: 1px solid rgba(162,210,255,0.42);
-}
+/* ── Cell components (moved to DeviceStatusCell.vue / DeviceActionsCell.vue) ── */
 
 /* ── Monospace serial text ── */
 .mono-text {
@@ -884,119 +841,40 @@ function connectionLabel(type) {
 }
 
 /* ── Text helpers ── */
-.text-muted {
-  color: var(--app-text-muted);
-  font-size: 13px;
-}
+.text-muted { color: #999; font-size: 13px; }
+.locked-by-text { color: #999; font-size: 13px; }
+.last-seen-text { font-size: 13px; color: #999; }
+.connection-text { font-size: 13px; color: #2d2d2d; font-weight: 600; white-space: nowrap; }
 
-.locked-by-text {
-  color: var(--text-secondary, #909399);
-  font-size: 13px;
-}
-
-.last-seen-text {
-  font-size: 13px;
-  color: var(--text-secondary, #909399);
-}
-
-.connection-text {
-  font-size: 13px;
-  color: var(--app-text);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-/* ── Action buttons row ── */
-.action-btns {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  min-height: 100%;
-}
-.action-btns .wb-btn.el-button {
-  width: 100%;
-  min-width: 0;
-  margin: 0 !important; /* 覆盖 .el-button+.el-button 的 margin-left，保证纵向对齐 */
-  height: auto;
-  min-height: 28px;
-  padding: 5px 12px;
-  font-size: 12px;
-  line-height: 1.25;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-  box-sizing: border-box;
-}
-.action-btns .wb-btn.el-button > span {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1.25;
-}
-
-/* ── Action button colors ── */
-/* Lock: purple (unlocked) → red (locked, via danger prop) */
-.lock-btn:not(.lock-btn--locked) {
-  background: rgba(200,182,255,0.20) !important;
-  border-color: rgba(200,182,255,0.46) !important;
-  color: #7059bd !important;
-}
-.lock-btn:not(.lock-btn--locked):hover {
-  background: rgba(200,182,255,0.32) !important;
-  border-color: rgba(200,182,255,0.68) !important;
-}
-.occupy-btn {
-  background: rgba(255,214,165,0.24) !important;
-  border-color: rgba(255,214,165,0.52) !important;
-  color: #9a6a1f !important;
-}
-.occupy-btn:hover:not(.is-disabled) {
-  background: rgba(255,214,165,0.36) !important;
-  border-color: rgba(255,214,165,0.72) !important;
-}
-.disconnect-btn {
-  background: rgba(232,95,95,0.10) !important;
-  border-color: rgba(232,95,95,0.32) !important;
-  color: #d45656 !important;
-}
-.disconnect-btn:hover:not(.is-disabled) {
-  background: rgba(232,95,95,0.20) !important;
-  border-color: rgba(232,95,95,0.52) !important;
-}
+/* ── 操作按钮组（样式移至 DeviceActionsCell.vue）── */
 
 /* ── Lock status badge ── */
 .lock-badge {
-  font-size: 11px;
-  padding: 2px 10px;
-  border-radius: 10px;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 3px 6px 3px 6px;
   font-weight: 700;
   white-space: nowrap;
   display: inline-block;
 }
 .lock-badge--locked {
-  background: rgba(162,210,255,0.18);
-  color: var(--app-green-deep);
-  border: 1px solid rgba(162,210,255,0.42);
+  background: #E8DDF8; color: #5a3fa0;
+  border: 1.5px solid #A78BFA;
 }
 .lock-badge--shared {
-  background: rgba(111,185,141,0.16);
-  color: #4c9a69;
-  border: 1px solid rgba(111,185,141,0.36);
+  background: #C8F5D0; color: #2d7a2d;
+  border: 1.5px solid #6BCB77;
 }
 
 /* ── Empty state ── */
 .empty-state {
-  color: var(--app-text-secondary);
+  color: #999;
   padding: 40px 0;
   text-align: center;
   font-size: 14px;
 }
 
-/* ── Row status styles (deep targeting animal-island table rows) ── */
+/* ── Row status styles — device table row highlighting ── */
 :deep(.device-table-wrapper .el-table tbody tr[data-row-status="OFFLINE"]),
 :deep(
   .device-table-wrapper .el-table tbody tr[data-row-status="DISCONNECTED"]

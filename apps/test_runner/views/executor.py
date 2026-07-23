@@ -13,6 +13,9 @@ from ..runner import mark_device_idle
 from ..callbacks import test_callbacks
 from ..models import TestResult, TestRunRecord, TaskCard
 from .. import state_machine as sm
+
+# Serial values for task types that don't require physical devices
+_VIRTUAL_SERIALS = frozenset({"api", "web"})
 from apps.device_pool.api import release_device as dp_release_device
 
 
@@ -87,7 +90,9 @@ async def _execute_tests(
     _log = logging.getLogger("test_runner.bg")
     run_record = None
     run_completed = False
-    effective_serial = serial or (getattr(runner.device, "serial", None) or "")
+    effective_serial = serial or ""
+    if not effective_serial and hasattr(runner, "device"):
+        effective_serial = getattr(runner.device, "serial", None) or ""
     try:
         client_tid = _run_client_task.get(run_id, "")
         dev_serial = serial or (runner.device_conn.serial if hasattr(runner, "device_conn") and hasattr(runner.device_conn, "serial") else "")
@@ -177,6 +182,7 @@ async def _execute_tests(
                 TestResult(
                     run=run_record,
                     case_id=r.case_id,
+                    case_type=r.case_type,
                     iteration=r.iteration,
                     result=r.result,
                     duration_ms=r.duration_ms,
@@ -349,13 +355,14 @@ async def _execute_tests(
         _run_client_task.pop(run_id, None)
     finally:
         _log.info(f"_execute_tests finally: run_completed={run_completed} device={effective_serial}")
-        mark_device_idle(effective_serial)
-        # Release DB-level device occupation
-        try:
-            from .helpers import sync_to_async
-            await sync_to_async(dp_release_device)(effective_serial, reason="manual")
-            _log.info(f"_execute_tests dp_release_device OK: {effective_serial}")
-        except Exception:
-            _bg_log.exception("dp_release_device(%s) in finally failed", effective_serial)
-        if effective_serial:
-            _schedule_next_queued(effective_serial)
+        # Virtual devices (api/web) don't need device release or queue scheduling
+        if effective_serial not in _VIRTUAL_SERIALS:
+            mark_device_idle(effective_serial)
+            try:
+                from .helpers import sync_to_async
+                await sync_to_async(dp_release_device)(effective_serial, reason="manual")
+                _log.info(f"_execute_tests dp_release_device OK: {effective_serial}")
+            except Exception:
+                _bg_log.exception("dp_release_device(%s) in finally failed", effective_serial)
+            if effective_serial:
+                _schedule_next_queued(effective_serial)

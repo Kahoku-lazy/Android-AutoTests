@@ -61,19 +61,18 @@ class TestRunRecord(models.Model):
 
 
 class TestResult(models.Model):
-    """Single iteration result → tr_test_results."""
+    """Single iteration result → tr_test_results.
+
+    case_id is a plain string (not FK) to support polymorphic case types:
+    TC-xxx (UI), API-xxx (API), WEB-xxx (Web), ST-xxx (Storage).
+    case_type disambiguates when case_id alone is insufficient.
+    """
     run = models.ForeignKey(
         TestRunRecord, on_delete=models.CASCADE, related_name='results',
         null=True, blank=True,
     )
-    case = models.ForeignKey(
-        'case_manager.TestDefinition',
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='test_results',
-        db_column='case_id',
-        to_field='id',
-    )
+    case_id = models.CharField(max_length=200, null=True, blank=True, db_index=True)
+    case_type = models.CharField(max_length=32, default='ui_automation')
     iteration = models.IntegerField()
     result = models.CharField(max_length=50)
     duration_ms = models.FloatField(default=0.0)
@@ -86,11 +85,11 @@ class TestResult(models.Model):
         verbose_name_plural = '测试结果'
         indexes = [
             models.Index(fields=['result']),
+            models.Index(fields=['case_type', 'case_id']),
         ]
 
     def __str__(self):
-        case_id = self.case_id  # FK stores raw id in case_id column
-        return f"{case_id}#{self.iteration}: {self.result}"
+        return f"{self.case_id}#{self.iteration}: {self.result}"
 
 
 class TaskCard(models.Model):

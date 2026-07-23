@@ -1,7 +1,10 @@
 # animal-island-ui 设计系统 — Android-AutoTests
 
-> **npm 包**：`animal-island-vue` | **文档**：https://guokaigdg.github.io/animal-island-ui/#/
-> **设计风格**：任天堂《集合啦！动物森友会》游戏界面 — 暖木色、大圆角、布纹质感、手绘风格
+> ⚠️ **DEPRECATED (2026-06)** — `animal-island-vue` npm 包已从项目移除，全局主题已迁移为 **Soft Glass** 玻璃态设计（见 `frontend/src/shared/styles/tokens.css`）。本文档仅保留作为历史参考，编写新代码时请使用 `tokens.css` 中定义的 CSS 变量。
+
+> **旧 npm 包**：`animal-island-vue` | **旧文档**：https://guokaigdg.github.io/animal-island-ui/#/
+> **旧设计风格**：任天堂《集合啦！动物森友会》游戏界面 — 暖木色、大圆角、布纹质感、手绘风格
+> **新风格**：Soft Glass 蓝白玻璃态 — `frontend/src/shared/styles/tokens.css`
 
 ## 使用原则
 

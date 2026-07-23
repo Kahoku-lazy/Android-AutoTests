@@ -4,7 +4,7 @@ import { ref, computed } from 'vue'
  * Standard Tabs-based filter for a reactive list.
  *
  * Combines a reactive `activeFilter` ref with a computed `filteredItems` list
- * and `filterTabs` array (compatible with animal-island-vue `<Tabs>` component).
+ * and `filterTabs` array compatible with the `<AppTabs>` shared component.
  *
  * @param {import('vue').Ref<Array>} source — reactive source list
  * @param {Record<string, {label: string, [key: string]: any}>} tabDefs — map of tab key → definition

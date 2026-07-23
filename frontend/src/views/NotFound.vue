@@ -52,7 +52,7 @@ function goBack() {
 }
 
 .not-found__code {
-  font-family: var(--font-display, 'Nunito', sans-serif);
+  font-family: var(--app-font-display, 'Quicksand', sans-serif);
   font-size: 96px;
   font-weight: 800;
   color: var(--app-yellow, #f7cd67);

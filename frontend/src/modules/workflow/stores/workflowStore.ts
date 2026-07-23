@@ -118,12 +118,11 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     return node
   }
 
-  /** Switch StartNode between「启动 App」and「页面起点」（始终无入口） */
+  /** Switch StartNode mode: app | page | url | api */
   function setStartKind(nodeId: string, kind: StartKind): void {
     const node = findNode(nodeId)
     if (!node || node.type !== 'StartNode') return
 
-    // Drop outgoing links before rewriting outputs
     const outIds = links.value.filter(l => l.origin_id === nodeId).map(l => l.id)
     for (const lid of outIds) removeLink(lid)
 
@@ -131,37 +130,51 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
       ...node.properties,
       start_kind: kind,
       package_name: (node.properties?.package_name as string) || 'com.example.app',
+      start_url: (node.properties?.start_url as string) || 'https://',
+      start_api: (node.properties?.start_api as string) || 'http://localhost/api/',
+    }
+
+    const labelMap: Record<string, string> = { app: '启动 App', page: '起始页面', url: '打开 URL', api: '调用 API' }
+    const statusMap: Record<string, string> = {
+      app: '起点已设为：启动 App（包名启动）',
+      page: '起点已设为：页面（关联页面+元素）',
+      url: '起点已设为：打开 URL（导航到网页）',
+      api: '起点已设为：调用 API（发送 HTTP 请求）',
     }
 
     if (kind === 'app') {
       clearElementOutputs(nodeId)
-      node.outputs = [{
-        name: '启动',
-        type: PORT_TYPE.NAVIGATION,
-        slot_index: 0,
-        link: null,
-        links: [],
-      }]
-      if (!node.widgets_values[0] || node.widgets_values[0] === '起始页面') {
-        node.widgets_values[0] = '启动 App'
-      }
-      setStatus('起点已设为：启动 App（无入口 · 从右侧连出）')
+      node.outputs = [{ name: '启动', type: PORT_TYPE.NAVIGATION, slot_index: 0, link: null, links: [] }]
+    } else if (kind === 'url') {
+      node.outputs = [{ name: '导航', type: PORT_TYPE.NAVIGATION, slot_index: 0, link: null, links: [] }]
+    } else if (kind === 'api') {
+      node.outputs = [{ name: '请求', type: PORT_TYPE.NAVIGATION, slot_index: 0, link: null, links: [] }]
     } else {
       node.outputs = []
       delete node.properties.linked_page_id
       delete node.properties.linked_page_name
       delete node.properties.linked_elements
-      if (!node.widgets_values[0] || node.widgets_values[0] === '启动 App') {
-        node.widgets_values[0] = '起始页面'
-      }
-      setStatus('起点已设为：页面（无入口 · 可关联页面/添加元素）')
     }
+    node.widgets_values[0] = labelMap[kind] || '起点'
+    setStatus(statusMap[kind] || '起点模式已切换')
   }
 
   function setStartPackage(nodeId: string, pkg: string): void {
     const node = findNode(nodeId)
     if (!node || node.type !== 'StartNode') return
     node.properties = { ...node.properties, package_name: pkg.trim() || 'com.example.app' }
+  }
+
+  function setStartUrl(nodeId: string, url: string): void {
+    const node = findNode(nodeId)
+    if (!node || node.type !== 'StartNode') return
+    node.properties = { ...node.properties, start_url: url.trim() || 'https://' }
+  }
+
+  function setStartApi(nodeId: string, api: string): void {
+    const node = findNode(nodeId)
+    if (!node || node.type !== 'StartNode') return
+    node.properties = { ...node.properties, start_api: api.trim() || 'http://localhost/api/' }
   }
 
   function removeNode(id: string): void {
@@ -253,14 +266,14 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
    */
   function linkPage(
     nodeId: string,
-    page: { id: string; name: string; elements: { id: string; label: string; type: string; xpath?: string }[] }
+    page: { id: string; name: string; domain?: string; elements: { id: string; label: string; type: string; xpath?: string }[] }
   ): void {
     const node = findNode(nodeId)
     if (!node) return
     const isPageLike =
       node.type === 'PageNode' ||
       node.type === 'PopupNode' ||
-      (node.type === 'StartNode' && node.properties?.start_kind === 'page')
+      (node.type === 'StartNode' && node.properties?.start_kind !== 'app')
     if (!isPageLike) {
       setStatus('当前节点不能关联页面（起点请先切到「页面」模式）')
       return
@@ -276,6 +289,7 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
       ...node.properties,
       linked_page_id: page.id,
       linked_page_name: page.name,
+      linked_page_domain: page.domain || 'android',
       linked_elements: page.elements,
     }
     node.widgets_values = [page.name, node.widgets_values[1] || 'teal']
@@ -598,12 +612,57 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
   function canCreateOutput(node: WorkflowNode): boolean {
     if (node.type === 'EndNode') return false
     if (node.type === 'StartNode') {
-      return node.properties?.start_kind === 'page'
+      return node.properties?.start_kind !== 'app'
     }
     if (node.type === 'PopupNode') {
       return links.value.some(l => l.target_id === node.id)
     }
     return true // PageNode 始终可以
+  }
+
+  /** 关联 API 端点：解析 schema 生成输入（请求参数）和输出（响应字段）端口 */
+  function linkApiEndpoint(
+    nodeId: string,
+    endpoint: { id: string; name: string; method: string; url: string; request_body_schema?: Record<string, any>; response_body_schema?: Record<string, any> }
+  ): void {
+    const node = findNode(nodeId)
+    if (!node || node.type !== 'ApiNode') return
+
+    // Clean old ports
+    const outIds = links.value.filter(l => l.origin_id === nodeId).map(l => l.id)
+    for (const lid of outIds) removeLink(lid)
+
+    const inputs: PortDefinition[] = []
+    const outputs: PortDefinition[] = []
+
+    // Generate input ports from request body schema keys
+    const reqSchema = endpoint.request_body_schema || {}
+    let inIdx = 0
+    for (const [key, val] of Object.entries(reqSchema)) {
+      const typeHint = typeof val === 'string' ? val : typeof val
+      inputs.push({ name: `body.${key}`, type: PORT_TYPE.DATA, slot_index: inIdx++, link: null, links: [] })
+    }
+
+    // Generate output ports from response body schema keys
+    const respSchema = endpoint.response_body_schema || {}
+    let outIdx = 0
+    for (const [key, val] of Object.entries(respSchema)) {
+      const typeHint = typeof val === 'string' ? val : typeof val
+      outputs.push({ name: `resp.${key}`, type: PORT_TYPE.DATA, slot_index: outIdx++, link: null, links: [] })
+    }
+
+    node.inputs = inputs
+    node.outputs = outputs
+    node.properties = {
+      ...node.properties,
+      linked_endpoint_id: endpoint.id,
+      linked_endpoint_name: endpoint.name,
+      api_method: endpoint.method,
+      api_url: endpoint.url,
+    }
+    node.widgets_values[0] = endpoint.name || endpoint.url
+    node.widgets_values[1] = 'orange'
+    setStatus(`已关联「${endpoint.name}」(${inputs.length} 入参, ${outputs.length} 出参)`)
   }
 
   function canBeSource(node: WorkflowNode): boolean {
@@ -692,6 +751,9 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     updateNodePosition,
     setStartKind,
     setStartPackage,
+    linkApiEndpoint,
+    setStartUrl,
+    setStartApi,
     addPort,
     addPortFromElement,
     clearElementOutputs,

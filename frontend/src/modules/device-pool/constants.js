@@ -13,7 +13,7 @@ export const FILTER_TABS = [
   { key: 'busy', label: '使用中' },
 ]
 
-// ── 表格列定义 (animal-island Table API) ──
+// ── 表格列定义 ──
 export const COLUMNS = [
   { dataIndex: 'serial', title: '序列号', width: 220 },
   { dataIndex: 'model', title: '型号', width: 180 },
@@ -48,7 +48,7 @@ export const CONNECTION_TYPE_LABEL = {
 export const RUNNER_OCCUPIED_PREFIXES = ['ai_agent', 'runner-', 'task-', 'run-']
 
 // ── 锁默认配置 ──
-export const LOCK_DEFAULT_TIMEOUT = 3600 // 秒
+export const LOCK_DEFAULT_TIMEOUT = 300 // 秒（与后端 api.py acquire_device 默认值一致）
 export const LOCK_DEFAULT_MODE = 'occupy'
 
 // ── 时间格式化阈值 ──

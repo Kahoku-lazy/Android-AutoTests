@@ -102,7 +102,9 @@ def acquire_device(serial, user_id, timeout=300):
 
     Returns: dict with lock info, or raises ValueError on conflict.
     """
-    device_obj = Device.objects.get(serial=serial)
+    # select_for_update() prevents concurrent processes from both passing
+    # the BUSY check before either saves (row-level lock on MySQL/PostgreSQL).
+    device_obj = Device.objects.select_for_update().get(serial=serial)
 
     # Check existing process occupation
     if device_obj.status == "BUSY":
@@ -216,6 +218,21 @@ def get_queue_for_device(serial):
     )
 
 
+def release_device_locks_for_device(device_obj, reason="disconnect"):
+    """Release all active process locks for a device (bulk — used by state recovery).
+
+    This is the API-level entry point for releasing locks during crash recovery /
+    orphan cleanup. Avoids cross-module ORM writes from test_runner or other apps.
+    """
+    return DeviceLock.objects.filter(
+        device=device_obj, lock_type="process", status="active"
+    ).update(
+        status="released",
+        released_at=datetime.now(),
+        release_reason=reason,
+    )
+
+
 __all__ = [
     "Device",
     "DeviceLock",
@@ -230,6 +247,7 @@ __all__ = [
     "ensure_device",
     "acquire_device",
     "release_device",
+    "release_device_locks_for_device",
     "join_device_queue",
     "leave_device_queue",
     "get_queue_for_device",

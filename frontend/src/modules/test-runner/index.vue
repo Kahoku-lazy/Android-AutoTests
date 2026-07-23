@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import client, { getToken } from "@/shared/api-client.js";
 import ConfirmButton from "@/shared/components/patterns/ConfirmButton.vue";
+import EmptyState from "@/shared/components/patterns/EmptyState.vue";
 // Card/AppTabs → AppCard/AppTabs
 import AppCard from "@/shared/components/AppCard.vue";
 import AppTabs from "@/shared/components/AppTabs.vue";
@@ -13,6 +14,7 @@ import {
   readTaskCounter,
   writeTaskCounter,
   isTaskQueued,
+  deriveTaskStatus,
   taskBucket,
   taskCardClass,
   taskStatusInfo,
@@ -125,12 +127,16 @@ const completedTasks = computed(() =>
 const incompleteTasks = computed(() =>
   tasks.value.filter((t) => taskBucket(t) === "incomplete"),
 );
+const idleTasks = computed(() =>
+  tasks.value.filter((t) => deriveTaskStatus(t) === "idle"),
+);
 const filterAppTabs = computed(() => [
   { key: "all", label: `📋 全部 (${tasks.value.length})` },
   { key: "running", label: `⚡ 执行中 (${runningTasks.value.length})` },
   { key: "waiting", label: `⏳ 等待中 (${waitingTasks.value.length})` },
   { key: "completed", label: `✅ 已完成 (${completedTasks.value.length})` },
   { key: "incomplete", label: `⏹ 未完成 (${incompleteTasks.value.length})` },
+  { key: "idle", label: `📝 未执行 (${idleTasks.value.length})` },
 ]);
 
 function tasksForTab(key) {
@@ -138,6 +144,7 @@ function tasksForTab(key) {
   if (key === "running") return runningTasks.value;
   if (key === "waiting") return waitingTasks.value;
   if (key === "completed") return completedTasks.value;
+  if (key === "idle") return idleTasks.value;
   return incompleteTasks.value;
 }
 
@@ -804,11 +811,9 @@ async function loadDevices() {
                 </div>
               </div>
 
-              <div v-else class="empty-hint">
-                当前分类暂无任务{{
-                  tab.key !== "all" ? "，可切换到「全部」查看" : ""
-                }}
-              </div>
+              <EmptyState v-else icon="🎯"
+                :text="'当前分类暂无任务'"
+                :hint="tab.key !== 'all' ? '可切换到「全部」查看' : '创建新任务开始测试'" />
             </template>
           </AppTabs>
         </div>
@@ -929,7 +934,7 @@ async function loadDevices() {
         <el-button
           class="wb-btn"
           type="primary"
-          :disabled="!newForm.caseIds.length || !newForm.deviceSerial"
+          :disabled="!newForm.caseIds.length || (newForm.taskType === 'ui_automation' && !newForm.deviceSerial)"
           @click="createAndStart"
         >创建并执行</el-button>
       </template>

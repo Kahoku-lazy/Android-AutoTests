@@ -6,7 +6,7 @@ from datetime import datetime
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from models.step_types import TestStep
+from models.step_types import TestStep, CaseType
 from models.test_models import TestCaseDef
 from ..runner import (
     TestRunner, stop_run, is_device_busy, mark_device_busy, mark_device_idle,
@@ -32,6 +32,33 @@ from .helpers import (
 from .executor import _execute_tests
 
 
+def _build_api_step_from_flat(r) -> list[dict]:
+    """Build a single api_request step from legacy flat ApiTestCase fields."""
+    step = {
+        "type": "api_request",
+        "method": getattr(r, "method", "GET"),
+        "url": getattr(r, "url", ""),
+        "description": f"{getattr(r, 'method', 'GET')} {getattr(r, 'url', '')}",
+    }
+    headers_str = getattr(r, "headers", "") or ""
+    body_str = getattr(r, "body", "") or ""
+    step["headers"] = _parse_json_field(headers_str)
+    step["body"] = _parse_json_field(body_str)
+    return [step]
+
+
+def _parse_json_field(value):
+    """Parse a value that may be a JSON string, dict, or list into a dict."""
+    if isinstance(value, (dict, list)):
+        return value
+    if isinstance(value, str) and value.strip():
+        try:
+            return json.loads(value)
+        except (json.JSONDecodeError, TypeError):
+            return value
+    return value if value else {}
+
+
 @require_auth
 async def start_test_run(request):
     """POST /api/runner/run — Start async test execution (multi-device + schedule)."""
@@ -54,52 +81,83 @@ async def start_test_run(request):
 
     if not case_ids:
         return JsonResponse({"ok": False, "error": "case_ids required"})
-    if task_type == "ui_automation" and not serials:
+    if task_type == CaseType.UI_AUTOMATION.value and not serials:
         return JsonResponse({"ok": False, "error": "device_serial is required for UI automation tasks"}, status=400)
 
     @_bg_sync
     def load_definitions():
-        if task_type == "api_testing":
+        if task_type == CaseType.API_TESTING.value:
             from apps.case_manager.models_api import ApiTestCase
             rows = ApiTestCase.objects.filter(id__in=case_ids, enabled=True)
-        elif task_type == "web_automation":
+        elif task_type == CaseType.WEB_AUTOMATION.value:
             from apps.case_manager.models_web import WebTestCase
             rows = WebTestCase.objects.filter(id__in=case_ids, enabled=True)
         else:
             rows = TestDefinition.objects.filter(id__in=case_ids, enabled=True)
         test_cases = []
         for r in rows:
+            extra_data = {}
             steps_raw = []
-            if task_type == "api_testing":
-                # Build a simple step list from API case fields
-                steps_raw = [{
-                    "type": "api_request",
-                    "http_method": getattr(r, "http_method", "GET") if hasattr(r, "http_method") else "GET",
-                    "url": getattr(r, "url", "") if hasattr(r, "url") else "",
-                    "headers": getattr(r, "headers", {}) if hasattr(r, "headers") else {},
-                    "request_body": getattr(r, "body", {}) if hasattr(r, "body") else {},
-                    "expected_status": getattr(r, "expected_status", 200) if hasattr(r, "expected_status") else 200,
-                    "expected_response": getattr(r, "expected_response", {}) if hasattr(r, "expected_response") else {},
-                    "assertions": getattr(r, "assertions", []) if hasattr(r, "assertions") else [],
-                }]
+
+            if task_type == CaseType.API_TESTING.value:
+                # Prefer structured steps_json, fall back to flat fields
+                try:
+                    steps_raw = json.loads(getattr(r, "steps_json", "[]") or "[]")
+                except Exception:
+                    steps_raw = []
+                if not steps_raw:
+                    steps_raw = _build_api_step_from_flat(r)
+                # Build extra_data for backward compat
+                headers_str = getattr(r, "headers", "") or ""
+                body_str = getattr(r, "body", "") or ""
+                try:
+                    h = json.loads(headers_str) if headers_str.strip().startswith("{") else {}
+                except Exception:
+                    h = {}
+                try:
+                    b = json.loads(body_str) if body_str.strip().startswith("{") else body_str
+                except Exception:
+                    b = body_str
+                extra_data = {
+                    "method": getattr(r, "method", "GET"),
+                    "url": getattr(r, "url", ""),
+                    "headers": h,
+                    "body": b,
+                    "expected_response": getattr(r, "expected_response", ""),
+                }
+
+            elif task_type == CaseType.WEB_AUTOMATION.value:
+                try:
+                    steps_raw = json.loads(getattr(r, "steps_json", "[]") or "[]")
+                except Exception:
+                    steps_raw = []
+                extra_data = {
+                    "url": getattr(r, "url", ""),
+                    "steps": getattr(r, "steps", ""),
+                    "expected_result": getattr(r, "expected_result", ""),
+                }
+
             else:
                 try:
                     steps_raw = json.loads(r.steps_json or "[]")
                 except Exception:
                     steps_raw = []
+
             steps_data = [TestStep.from_dict(s) for s in steps_raw]
             tc = TestCaseDef(
                 id=r.id,
                 title=r.title,
                 category=r.category,
                 description=r.description,
-                steps=r.steps,
+                steps=getattr(r, "steps", ""),
                 enabled=r.enabled,
                 steps_data=steps_data,
                 is_json=True,
-                package_name=r.package_name or package_name,
-                created_at=str(r.created_at),
-                updated_at=str(r.updated_at),
+                package_name=getattr(r, "package_name", "") or package_name,
+                created_at=str(r.created_at) if hasattr(r, "created_at") else "",
+                updated_at=str(r.updated_at) if hasattr(r, "updated_at") else "",
+                task_type=task_type,
+                extra_data=extra_data,
             )
             test_cases.append(tc)
         return test_cases
@@ -112,11 +170,17 @@ async def start_test_run(request):
     if not effective_pkg and test_cases:
         effective_pkg = test_cases[0].package_name or ""
 
-    # ── API / Web task execution path (no device required) ──
-    if task_type in ("api_testing", "web_automation"):
-        prefix = "WEB" if task_type == "web_automation" else "API"
+    # ── API / Web task execution path (unified pipeline, no device required) ──
+    if task_type in (CaseType.API_TESTING.value, CaseType.WEB_AUTOMATION.value):
+        is_web = task_type == CaseType.WEB_AUTOMATION.value
+        prefix = "WEB" if is_web else "API"
+        device_label = "web" if is_web else "api"
         run_id = f"{prefix}-RUN-{datetime.now().strftime('%Y%m%d%H%M%S')}-{client_task_id[:8] if client_task_id else 'direct'}"
-        _spawn_bg(_execute_remote_tests(run_id, test_cases, loop_count, interval_seconds, client_task_id, task_type), f"{task_type}_exec")
+        if client_task_id:
+            _run_client_task[run_id] = client_task_id
+        _spawn_bg(_execute_unified_remote(run_id, test_cases, loop_count, interval_seconds,
+                                            client_task_id, task_type, device_label),
+                   f"{task_type}_exec")
         return JsonResponse({
             "ok": True,
             "runs": [{"run_id": run_id, "test_cases": len(test_cases)}],
@@ -450,100 +514,62 @@ async def _start_next_queued(serial: str):
 
 # ── API test execution (no device required) ──
 
-async def _execute_remote_tests(run_id, test_cases, loop_count, interval_seconds, client_task_id="", task_type="api_testing"):
-    """Execute API or Web test cases (no device connection needed)."""
+async def _execute_unified_remote(run_id, test_cases, loop_count, interval_seconds,
+                                   client_task_id="", task_type="api_testing", device_label="api"):
+    """Unified API/Web execution through the same _execute_tests pipeline as UI."""
     from ..api_adapter import ApiAdapter
     from ..web_adapter import WebAdapter
-    from ..models import TaskCard
+    from ..remote_runner import RemoteTestRunner
+    from ..api_executor import ApiExecutor
+    from ..web_executor import WebExecutor
 
-    is_web = task_type == "web_automation"
+    is_web = task_type == CaseType.WEB_AUTOMATION.value
     label = "Web" if is_web else "API"
-    device_label = "web" if is_web else "api"
     adapter = None
 
     try:
+        loop = asyncio.get_event_loop()
+
         if is_web:
-            adapter = WebAdapter(logger=lambda msg: None, should_stop=lambda: False)
+            adapter = WebAdapter(
+                logger=lambda msg, l=loop: _bridge_ws_log(run_id, msg, l),
+                should_stop=lambda: False,
+            )
+            executor = WebExecutor(adapter)
+            runner = RemoteTestRunner(adapter, executor, device_label=device_label,
+                                      callback=test_callbacks, is_async_executor=True,
+                                      cleanup=adapter.close)
         else:
-            adapter = ApiAdapter(logger=lambda msg: None, should_stop=lambda: False)
+            adapter = ApiAdapter(
+                logger=lambda msg, l=loop: _bridge_ws_log(run_id, msg, l),
+                should_stop=lambda: False,
+            )
+            executor = ApiExecutor(adapter)
+            runner = RemoteTestRunner(adapter, executor, device_label=device_label,
+                                      callback=test_callbacks)
 
-        run_record = TestRunRecord.objects.create(
-            run_id=run_id, client_task_id=client_task_id, status="RUNNING",
-            device_serial=device_label,
-            selected_cases=[{"case_id": tc.id, "title": tc.title} for tc in test_cases],
-            loop_count=loop_count,
-            started_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        await _execute_tests(
+            run_id, runner, test_cases, loop_count, interval_seconds,
+            serial=device_label,
         )
-
-        try:
-            task = TaskCard.objects.get(task_id=client_task_id)
-            task.run = run_record; task.status = "running"; task.running = True; task.save()
-        except TaskCard.DoesNotExist:
-            pass
-
-        all_results = []
-        for tc in test_cases:
-            if is_web:
-                case_dict = {"id": tc.id, "title": tc.title,
-                    "url": getattr(tc, "url", ""),
-                    "steps": getattr(tc, "steps", ""),
-                    "expected_result": getattr(tc, "expected_result", "")}
-            else:
-                case_dict = {"id": tc.id, "title": tc.title,
-                    "http_method": getattr(tc, "http_method", "GET") if hasattr(tc, "http_method") else "GET",
-                    "url": getattr(tc, "url", ""),
-                    "headers": getattr(tc, "headers", {}) if hasattr(tc, "headers") else {},
-                    "request_body": getattr(tc, "request_body", {}) if hasattr(tc, "request_body") else {},
-                    "expected_status": getattr(tc, "expected_status", 200) if hasattr(tc, "expected_status") else 200,
-                    "expected_response": getattr(tc, "expected_response", {}) if hasattr(tc, "expected_response") else {},
-                    "assertions": getattr(tc, "assertions", []) if hasattr(tc, "assertions") else []}
-            for iteration in range(loop_count):
-                if adapter.stopped():
-                    break
-                adapter.log(f"[{label}] {tc.title} #{iteration + 1}/{loop_count}")
-                result = adapter.execute_case(case_dict)
-                all_results.append(result)
-                TestResult.objects.create(run=run_record, case_id=tc.id,
-                    iteration=iteration + 1, result=result["result"],
-                    duration_ms=result.get("duration_ms", 0), detail=result.get("detail", ""))
-                if interval_seconds > 0 and iteration < loop_count - 1:
-                    await asyncio.sleep(interval_seconds)
-
-        # Cleanup WebAdapter browser
-        if is_web and adapter:
-            await adapter.close()
-
-        passed = sum(1 for r in all_results if r["result"] == "pass")
-        failed = sum(1 for r in all_results if r["result"] == "fail")
-        run_record.status = "COMPLETED"
-        run_record.summary = {"pass": passed, "fail": failed, "total": len(all_results)}
-        run_record.finished_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        run_record.save()
-
-        try:
-            task = TaskCard.objects.get(task_id=client_task_id)
-            task.status = "done"; task.running = False; task.outcome = "completed"
-            task.overall_pass = passed; task.overall_fail = failed
-            task.conclusion = f"{label} 测试完成：{passed} 通过，{failed} 失败"
-            task.end_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            task.save()
-        except TaskCard.DoesNotExist:
-            pass
 
     except Exception as e:
         _bg_log.exception("%s test execution failed for run %s", label, run_id)
+        await test_callbacks.on_device_error(run_id, str(e))
+    finally:
         if is_web and adapter:
-            try: await adapter.close()
-            except Exception: pass
+            try:
+                await adapter.close()
+            except Exception:
+                pass
+
+
+def _bridge_ws_log(run_id: str, msg: str, loop):
+    """Bridge synchronous adapter log to async WebSocket callback."""
+    if loop and loop.is_running():
         try:
-            run_record = TestRunRecord.objects.get(run_id=run_id)
-            run_record.status = "COMPLETED"; run_record.summary = {"error": str(e)}
-            run_record.finished_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S"); run_record.save()
-        except Exception: pass
-        try:
-            task = TaskCard.objects.get(task_id=client_task_id)
-            task.status = "done"; task.running = False; task.outcome = "error"
-            task.conclusion = f"{label} 测试异常：{str(e)[:200]}"
-            task.end_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S"); task.save()
-        except TaskCard.DoesNotExist: pass
-        # else: _execute_tests.finally handles cleanup + schedules next dequeue
+            asyncio.run_coroutine_threadsafe(
+                test_callbacks.on_log(run_id, msg), loop
+            )
+        except Exception:
+            pass

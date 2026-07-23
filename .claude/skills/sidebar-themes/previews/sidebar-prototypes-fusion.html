@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>侧边栏融合主题 — 手绘·几何·AI·科技·商务</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Caveat:wght@400;600;700&family=Orbitron:wght@500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+/* ═══════════════════════════════════════════
+   全局
+   ═══════════════════════════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Quicksand','PingFang SC','Microsoft YaHei',sans-serif;
+  background:#e8ecf1;padding:24px;min-height:100vh;
+}
+h1{text-align:center;font-size:20px;font-weight:800;color:#4a4e69;margin-bottom:4px;letter-spacing:-0.01em;}
+h1+p{text-align:center;font-size:12px;color:#9a8c98;margin-bottom:24px;}
+
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px 16px;max-width:920px;margin:0 auto;}
+
+.card{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.card-label{
+  font-size:10px;font-weight:700;color:#4a4e69;letter-spacing:0.05em;text-transform:uppercase;
+  background:rgba(255,255,255,0.7);padding:4px 14px;border-radius:10px;
+  display:flex;align-items:center;gap:5px;
+}
+.card-label .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+
+:root{
+  --c-dashboard:#F7C948;--c-device:#6BCB77;--c-element:#A78BFA;
+  --c-case:#4ECDC4;--c-runner:#FF6B6B;--c-report:#7C6F83;
+  --c-ai:#E879F9;--c-workflow:#60A5FA;
+}
+
+/* ═══════════════════════════════════════════
+   共享骨架
+   ═══════════════════════════════════════════ */
+.sidebar{
+  width:248px;height:640px;display:flex;flex-direction:column;overflow:hidden;
+  font-family:'Quicksand','PingFang SC','Microsoft YaHei',sans-serif;
+  flex-shrink:0;position:relative;border-radius:16px;
+}
+.sb-brand{display:flex;align-items:center;gap:10px;padding:18px 16px 14px;flex-shrink:0;}
+.sb-brand-icon{width:34px;height:34px;display:grid;place-items:center;font-size:18px;flex-shrink:0;}
+.sb-brand-text{font-size:14px;font-weight:800;line-height:1.2;flex:1;min-width:0;}
+
+.sb-nav{flex:1;overflow-y:auto;padding:4px 12px;display:flex;flex-direction:column;gap:2px;}
+.sb-section-label{font-size:12px;font-weight:700;padding:8px 8px 4px;margin-top:2px;cursor:default;user-select:none;}
+.sb-item{display:flex;align-items:center;gap:9px;height:40px;padding:0 10px;cursor:pointer;transition:all 0.2s ease;font-size:13px;font-weight:600;position:relative;text-decoration:none;}
+.nav-lucide-icon{width:18px;height:18px;display:grid;place-items:center;font-size:14px;flex-shrink:0;}
+.nav-lucide-icon{width:18px;height:18px;flex-shrink:0;stroke-width:1.8;}
+.sb-item .nav-lucide-icon{color:inherit;}
+.sb-item.active .nav-lucide-icon{color:inherit;}
+.sb-item-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sb-item-badge{font-size:8.5px;font-weight:700;padding:2px 7px;flex-shrink:0;}
+
+.sb-footer{padding:10px 12px 14px;flex-shrink:0;}
+.sb-user-card{padding:10px;}
+.sb-user-label{font-size:10px;font-weight:700;}
+.sb-user-row{display:flex;align-items:center;gap:6px;margin:2px 0;font-size:12px;font-weight:700;}
+.sb-user-status{font-size:10px;font-weight:600;}
+.sb-logout{display:block;width:100%;margin-top:6px;padding:5px;font-size:11px;font-weight:700;text-align:center;cursor:pointer;background:transparent;font-family:inherit;transition:all 0.15s ease;}
+
+/* ========================================
+   M: NEURAL SKETCH — 神经手稿
+   几何节点 + 手绘连线 + AI 突触 + 商务白底
+   ======================================== */
+.neural{
+  background:
+    radial-gradient(circle,rgba(137,207,240,0.06) 1px,transparent 1px);
+  background-size:18px 18px;
+  background-color:#fdfdfc;
+  border:1.5px solid #e0e4e8;
+  color:#2d3748;
+  box-shadow:4px 4px 0 rgba(0,0,0,0.04);
+  overflow:visible;
+}
+/* 手绘神经网络连线装饰 */
+.neural::before{
+  content:'';
+  position:absolute;right:-20px;top:60px;width:32px;height:120px;
+  background:url("data:image/svg+xml,%3Csvg viewBox='0 0 32 120' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='6' cy='20' r='2.5' fill='%2389CFF0' opacity='0.5'/%3E%3Ccircle cx='26' cy='50' r='2.5' fill='%23C9B6F2' opacity='0.5'/%3E%3Ccircle cx='10' cy='80' r='2' fill='%2395D5B2' opacity='0.4'/%3E%3Ccircle cx='22' cy='100' r='2' fill='%2389CFF0' opacity='0.4'/%3E%3Cline x1='6' y1='20' x2='26' y2='50' stroke='%2389CFF0' stroke-width='0.8' stroke-dasharray='3,3' opacity='0.35'/%3E%3Cline x1='26' y1='50' x2='10' y2='80' stroke='%23C9B6F2' stroke-width='0.8' stroke-dasharray='3,3' opacity='0.35'/%3E%3Cline x1='10' y1='80' x2='22' y2='100' stroke='%2395D5B2' stroke-width='0.8' stroke-dasharray='3,3' opacity='0.3'/%3E%3C/svg%3E")no-repeat;
+  pointer-events:none;z-index:0;
+}
+.neural .sb-brand{border-bottom:1px solid #e8ecf1;}
+.neural .sb-brand-icon{
+  background:#fff;color:#89CFF0;border-radius:50%;
+  border:2px solid #89CFF0;
+  box-shadow:0 0 0 3px rgba(137,207,240,0.1);
+}
+.neural .sb-brand-text{color:#2d3748;}
+/* AI 神经网络小图标 */
+.neural .sb-brand::after{
+  content:'⬡ ⬡ ⬡';
+  position:absolute;right:14px;top:22px;
+  font-size:8px;letter-spacing:2px;color:#89CFF0;opacity:0.4;
+  font-family:'JetBrains Mono',monospace;
+}
+.neural .sb-section-label{
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  color:#a0aec0;letter-spacing:0.06em;
+  border-left:2px solid #89CFF0;padding-left:8px;margin-left:2px;
+}
+.neural .sb-item{color:#718096;border-radius:8px;}
+.neural .sb-item:hover{background:#f7fafc;color:#2d3748;}
+/* 活性: 几何节点激活 */
+.neural .sb-item.active{
+  color:#2d3748;font-weight:700;background:#fff;
+  border:1.5px solid #e2e8f0;
+  box-shadow:0 2px 8px rgba(137,207,240,0.1);
+  border-radius:10px;
+}
+.neural .sb-item.active .nav-lucide-icon{color:#89CFF0;}
+/* 手绘连接点 */
+.neural .sb-item.active::before{
+  content:'';position:absolute;left:-6px;top:50%;transform:translateY(-50%);
+  width:10px;height:10px;background:#fff;border:2px solid #89CFF0;
+  border-radius:50%;box-shadow:0 0 0 3px rgba(137,207,240,0.15);
+}
+/* AI 突触脉冲 */
+.neural .sb-item.active::after{
+  content:'';position:absolute;left:-6px;top:50%;transform:translateY(-50%);
+  width:10px;height:10px;background:#89CFF0;border-radius:50%;
+  opacity:0;animation:neural-fire 2.5s ease-in-out infinite;
+}
+@keyframes neural-fire{0%,100%{opacity:0;transform:translateY(-50%)scale(0.5)}30%{opacity:0.6;transform:translateY(-50%)scale(1.1)}60%{opacity:0}}
+.neural .sb-item-badge{background:#edf2f7;color:#718096;border-radius:6px;}
+.neural .sb-item-badge.pending{background:#fefcbf;color:#975a16;}
+.neural .sb-user-card{background:#fff;border:1px solid #e8ecf1;border-radius:10px;}
+.neural .sb-user-label{color:#a0aec0;}
+.neural .sb-user-status{color:#6BCB77;}
+.neural .sb-logout{color:#a0aec0;border:1px solid #e8ecf1;border-radius:8px;}
+.neural .sb-logout:hover{background:#fff5f5;border-color:#fecaca;color:#e53e3e;}
+
+/* ========================================
+   N: CYBER BLUEPRINT — 赛博蓝图
+   蓝图网格 + 手绘标注 + 霓虹连线 + AI 节点
+   ======================================== */
+.cyber{
+  background:
+    linear-gradient(rgba(255,255,255,0.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.04) 1px,transparent 1px);
+  background-size:16px 16px;
+  background-color:#0f1d2e;
+  color:#c9d6e2;
+  border:2px solid #1e3a5f;
+  box-shadow:0 0 0 1px rgba(100,200,255,0.15),0 0 40px rgba(0,100,200,0.1),8px 8px 0 rgba(0,0,0,0.3);
+}
+/* 手绘标注线 */
+.cyber::after{
+  content:'';
+  position:absolute;left:-8px;top:120px;width:1px;height:60px;
+  background:linear-gradient(180deg,transparent,rgba(100,200,255,0.5),transparent);
+  pointer-events:none;
+}
+.cyber .sb-brand{border-bottom:1px solid rgba(100,200,255,0.2);}
+.cyber .sb-brand-icon{
+  background:rgba(100,200,255,0.1);color:#64c8ff;
+  border:1.5px solid rgba(100,200,255,0.3);
+  border-radius:4px;
+  box-shadow:0 0 12px rgba(100,200,255,0.15);
+}
+.cyber .sb-brand-text{
+  color:#e0f0ff;font-family:'Orbitron','Quicksand',sans-serif;
+  font-size:12px;font-weight:700;letter-spacing:0.04em;
+}
+/* 手绘标注 */
+.cyber .sb-brand::after{
+  content:'← v2.0.4';
+  position:absolute;right:12px;top:18px;
+  font-family:'Caveat',cursive;font-size:11px;
+  color:rgba(100,200,255,0.5);transform:rotate(-2deg);
+}
+.cyber .sb-section-label{
+  font-family:'JetBrains Mono',monospace;font-size:9px;
+  color:rgba(100,200,255,0.5);letter-spacing:0.08em;
+  text-shadow:0 0 8px rgba(100,200,255,0.2);
+}
+.cyber .sb-item{color:rgba(201,214,226,0.65);border-radius:4px;font-weight:500;}
+.cyber .sb-item:hover{background:rgba(100,200,255,0.06);color:#e0f0ff;}
+/* 活性: 霓虹几何框 */
+.cyber .sb-item.active{
+  color:#e0f0ff;font-weight:600;
+  background:linear-gradient(135deg,rgba(100,200,255,0.08),rgba(160,140,255,0.06));
+  border:1px solid rgba(100,200,255,0.3);
+  box-shadow:inset 0 0 20px rgba(100,200,255,0.05),0 0 15px rgba(100,200,255,0.1);
+  border-radius:4px;
+}
+.cyber .sb-item.active .nav-lucide-icon{color:#64c8ff;filter:drop-shadow(0 0 4px rgba(100,200,255,0.5));}
+/* AI 节点指示器 */
+.cyber .sb-item.active::before{
+  content:'';position:absolute;left:2px;top:50%;transform:translateY(-50%);
+  width:4px;height:4px;background:#64c8ff;border-radius:50%;
+  box-shadow:0 0 8px #64c8ff,0 0 2px #64c8ff;
+  animation:cyber-pulse 1.8s ease-in-out infinite;
+}
+@keyframes cyber-pulse{0%,100%{box-shadow:0 0 6px #64c8ff}50%{box-shadow:0 0 16px #64c8ff,0 0 4px #64c8ff}}
+.cyber .sb-item.active::after{
+  content:'';position:absolute;left:-1px;top:6px;bottom:6px;width:1px;
+  background:linear-gradient(180deg,transparent,rgba(100,200,255,0.4),transparent);
+}
+.cyber .sb-item-badge{background:rgba(100,200,255,0.12);color:#64c8ff;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:8px;}
+.cyber .sb-item-badge.pending{color:#f0c060;background:rgba(240,192,96,0.12);}
+.cyber .sb-user-card{background:rgba(100,200,255,0.04);border:1px solid rgba(100,200,255,0.12);border-radius:6px;}
+.cyber .sb-user-label{color:rgba(201,214,226,0.5);font-family:'JetBrains Mono',monospace;font-size:9px;}
+.cyber .sb-user-status{color:#64c8ff;text-shadow:0 0 6px rgba(100,200,255,0.3);}
+.cyber .sb-logout{color:rgba(201,214,226,0.5);border:1px solid rgba(100,200,255,0.15);border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;}
+.cyber .sb-logout:hover{background:rgba(255,100,100,0.1);border-color:rgba(255,100,100,0.3);color:#ff6b6b;}
+
+/* ========================================
+   O: CRYSTAL PRISM — 水晶棱镜
+   几何切面 + 棱镜光 + AI 晶核 + 商务白
+   ======================================== */
+.crystal{
+  background:
+    linear-gradient(135deg,transparent 49.5%,rgba(137,207,240,0.04) 49.5%,rgba(137,207,240,0.04) 50.5%,transparent 50.5%),
+    linear-gradient(225deg,transparent 49.5%,rgba(201,182,242,0.04) 49.5%,rgba(201,182,242,0.04) 50.5%,transparent 50.5%);
+  background-size:24px 24px;background-color:#fdfdfc;
+  border:1.5px solid #e8ecf1;color:#2d3748;
+  box-shadow:0 4px 24px rgba(0,0,0,0.03);
+}
+.crystal .sb-brand{border-bottom:none;}
+.crystal .sb-brand-icon{
+  background:linear-gradient(135deg,#89CFF0,#C9B6F2);color:#fff;
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  border-radius:0;font-size:14px;
+}
+.crystal .sb-brand-text{color:#2d3748;font-weight:800;}
+/* 棱镜色散装饰线 */
+.crystal .sb-brand::after{
+  content:'';position:absolute;left:16px;bottom:4px;width:40px;height:2px;
+  background:linear-gradient(90deg,#89CFF0,#C9B6F2,#95D5B2,#F7C948,#FFB5A7);
+  border-radius:1px;
+}
+.crystal .sb-section-label{
+  font-family:'Inter',sans-serif;font-size:10px;font-weight:600;
+  color:#a0aec0;letter-spacing:0.06em;
+  display:flex;align-items:center;gap:6px;
+}
+/* 几何短线 */
+.crystal .sb-section-label::before{
+  content:'';display:block;width:12px;height:1.5px;
+  background:linear-gradient(90deg,#89CFF0,#C9B6F2);
+  border-radius:1px;
+}
+.crystal .sb-item{color:#718096;border-radius:6px;}
+.crystal .sb-item:hover{background:#f7fafc;color:#2d3748;}
+/* 活性: 水晶切面高光 */
+.crystal .sb-item.active{
+  color:#2d3748;font-weight:700;
+  background:linear-gradient(135deg,rgba(137,207,240,0.08),rgba(201,182,242,0.06));
+  border:1px solid rgba(137,207,240,0.2);
+  border-radius:8px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.8);
+}
+/* 棱镜折射点 */
+.crystal .sb-item.active::before{
+  content:'';position:absolute;left:8px;top:50%;transform:translateY(-50%);
+  width:6px;height:6px;
+  background:linear-gradient(135deg,#89CFF0,#C9B6F2);
+  clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);
+}
+.crystal .sb-item.active .nav-lucide-icon{color:#89CFF0;}
+.crystal .sb-item-badge{background:#edf2f7;color:#718096;border-radius:4px;}
+.crystal .sb-item-badge.pending{background:#fefcbf;color:#975a16;}
+.crystal .sb-user-card{background:#fff;border:1px solid #e8ecf1;border-radius:8px;}
+.crystal .sb-user-label{color:#a0aec0;}
+.crystal .sb-user-status{color:#6BCB77;}
+.crystal .sb-logout{color:#a0aec0;border:1px solid #e8ecf1;border-radius:6px;}
+.crystal .sb-logout:hover{background:#f7fafc;border-color:#cbd5e0;color:#2d3748;}
+
+/* ========================================
+   P: DATA FLOW — 数据流线
+   贝塞尔曲线 + 数据粒子 + AI 算力节点 + 暗色
+   ======================================== */
+.dataflow{
+  background:
+    radial-gradient(ellipse at 30% 0%,rgba(100,200,255,0.06) 0%,transparent 50%),
+    radial-gradient(ellipse at 100% 100%,rgba(160,140,255,0.05) 0%,transparent 40%),
+    #0d1117;
+  color:#c9d1d9;
+  border:1px solid rgba(255,255,255,0.06);
+  box-shadow:0 0 0 1px rgba(100,200,255,0.05),8px 8px 32px rgba(0,0,0,0.3);
+  overflow:visible;
+}
+/* 手绘贝塞尔流线 */
+.dataflow::before{
+  content:'';position:absolute;left:4px;top:80px;bottom:80px;width:1px;
+  background:linear-gradient(180deg,transparent,rgba(100,200,255,0.25) 20%,rgba(160,140,255,0.25) 50%,rgba(100,200,255,0.25) 80%,transparent);
+  pointer-events:none;z-index:0;
+}
+.dataflow .sb-brand{border-bottom:1px solid rgba(255,255,255,0.06);position:relative;z-index:1;}
+.dataflow .sb-brand-icon{
+  background:rgba(100,200,255,0.1);color:#64c8ff;
+  border:1px solid rgba(100,200,255,0.2);border-radius:50%;
+  box-shadow:0 0 16px rgba(100,200,255,0.1);
+}
+.dataflow .sb-brand-text{
+  color:#e6edf3;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;
+}
+/* 数据粒子 */
+.dataflow .sb-brand::after{
+  content:'• • •';
+  position:absolute;right:12px;top:16px;
+  font-size:6px;letter-spacing:3px;color:rgba(100,200,255,0.4);
+}
+.dataflow .sb-section-label{
+  font-family:'JetBrains Mono',monospace;font-size:9px;
+  color:rgba(100,200,255,0.45);letter-spacing:0.06em;
+  position:relative;z-index:1;
+}
+.dataflow .sb-item{color:#8b949e;border-radius:6px;font-weight:500;position:relative;z-index:1;}
+.dataflow .sb-item:hover{background:rgba(100,200,255,0.04);color:#c9d1d9;}
+/* 活性: 数据汇聚 */
+.dataflow .sb-item.active{
+  color:#e6edf3;font-weight:600;
+  background:linear-gradient(90deg,rgba(100,200,255,0.08),transparent);
+  border:1px solid rgba(100,200,255,0.15);
+  border-radius:6px;
+  box-shadow:0 0 20px rgba(100,200,255,0.05);
+}
+.dataflow .sb-item.active .nav-lucide-icon{color:#64c8ff;}
+/* 粒子汇聚动画 */
+.dataflow .sb-item.active::before{
+  content:'';position:absolute;left:4px;top:50%;transform:translateY(-50%);
+  width:1px;height:16px;
+  background:linear-gradient(180deg,transparent,#64c8ff,transparent);
+  animation:data-flow 2s ease-in-out infinite;
+}
+@keyframes data-flow{0%,100%{opacity:0.3;height:12px}50%{opacity:1;height:20px}}
+.dataflow .sb-item-badge{background:rgba(100,200,255,0.1);color:#64c8ff;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:8px;}
+.dataflow .sb-item-badge.pending{color:#f0c060;}
+.dataflow .sb-user-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;position:relative;z-index:1;}
+.dataflow .sb-user-label{color:rgba(201,209,217,0.4);font-family:'JetBrains Mono',monospace;font-size:9px;}
+.dataflow .sb-user-status{color:#64c8ff;}
+.dataflow .sb-logout{color:rgba(201,209,217,0.5);border:1px solid rgba(255,255,255,0.08);border-radius:6px;}
+.dataflow .sb-logout:hover{background:rgba(255,100,100,0.08);border-color:rgba(255,100,100,0.25);color:#ff6b6b;}
+
+/* ========================================
+   Q: ORIGAMI TECH — 折纸科技
+   锐角切面 + 褶皱阴影 + AI 核眼 + 极简白
+   ======================================== */
+.origami{
+  background:linear-gradient(180deg,#fdfdfc 0%,#f8f9fb 100%);
+  color:#1a202c;
+  border:1.5px solid #e8ecf1;
+  box-shadow:8px 0 32px rgba(0,0,0,0.03);
+}
+.origami .sb-brand{border-bottom:1.5px solid #e8ecf1;}
+.origami .sb-brand-icon{
+  background:#1a202c;color:#fff;
+  clip-path:polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%);
+  font-size:12px;
+}
+.origami .sb-brand-text{color:#1a202c;font-weight:800;font-family:'Inter',sans-serif;font-size:14px;letter-spacing:-0.02em;}
+.origami .sb-section-label{
+  font-family:'Inter',sans-serif;font-size:10px;font-weight:700;
+  color:#a0aec0;letter-spacing:0.08em;
+}
+/* 几何折线分隔 */
+.origami .sb-section-label::after{
+  content:'';display:block;width:20px;height:2px;margin-top:3px;
+  background:linear-gradient(90deg,#1a202c,transparent);
+}
+.origami .sb-item{color:#718096;border-radius:2px;font-weight:500;font-family:'Inter',sans-serif;}
+.origami .sb-item:hover{background:#f7fafc;color:#1a202c;}
+/* 活性: 折角高亮 */
+.origami .sb-item.active{
+  color:#1a202c;font-weight:700;background:#fff;
+  border:1.5px solid #1a202c;
+  clip-path:polygon(0% 0%,calc(100% - 10px) 0%,100% 10px,100% 100%,0% 100%);
+  border-radius:0;
+}
+.origami .sb-item.active .nav-lucide-icon{color:#1a202c;}
+.origami .sb-item.active .sb-item-label{font-weight:700;}
+/* AI 菱形核心 */
+.origami .sb-item.active::after{
+  content:'';position:absolute;right:10px;top:50%;transform:translateY(-50%)rotate(45deg);
+  width:6px;height:6px;background:#89CFF0;border:1px solid #1a202c;
+}
+.origami .sb-item-badge{background:#f7fafc;color:#718096;border-radius:2px;font-family:'Inter',sans-serif;font-size:9px;}
+.origami .sb-item-badge.pending{background:#fefcbf;color:#975a16;}
+.origami .sb-user-card{background:#fff;border:1px solid #e8ecf1;border-radius:4px;}
+.origami .sb-user-label{color:#a0aec0;font-family:'Inter',sans-serif;}
+.origami .sb-user-status{color:#2f9e44;}
+.origami .sb-logout{color:#a0aec0;border:1px solid #e8ecf1;border-radius:2px;font-family:'Inter',sans-serif;}
+.origami .sb-logout:hover{background:#1a202c;border-color:#1a202c;color:#fff;}
+
+/* ========================================
+   R: CONSTELLATION AI — 星座智能
+   星座连线 + 星光节点 + AI 核 + 深邃太空
+   ======================================== */
+.space{
+  background:
+    radial-gradient(1px 1px at 10% 15%,rgba(255,255,255,0.6),transparent),
+    radial-gradient(1px 1px at 25% 35%,rgba(255,255,255,0.3),transparent),
+    radial-gradient(1.5px 1.5px at 45% 12%,rgba(137,207,240,0.7),transparent),
+    radial-gradient(1px 1px at 70% 25%,rgba(255,255,255,0.4),transparent),
+    radial-gradient(1px 1px at 15% 55%,rgba(255,255,255,0.3),transparent),
+    radial-gradient(1.5px 1.5px at 35% 72%,rgba(201,182,242,0.6),transparent),
+    radial-gradient(1px 1px at 80% 65%,rgba(255,255,255,0.35),transparent),
+    radial-gradient(1px 1px at 55% 85%,rgba(255,255,255,0.3),transparent),
+    radial-gradient(1px 1px at 90% 45%,rgba(255,255,255,0.25),transparent),
+    linear-gradient(180deg,#0a0e17 0%,#111827 50%,#0d1520 100%);
+  color:#c9d1d9;
+  border:1px solid rgba(255,255,255,0.06);
+  box-shadow:0 0 0 1px rgba(137,207,240,0.04),8px 0 48px rgba(0,0,0,0.4);
+  overflow:visible;
+}
+/* 星座连线 */
+.space::before{
+  content:'';position:absolute;left:8px;top:50px;bottom:50px;width:14px;
+  background:url("data:image/svg+xml,%3Csvg viewBox='0 0 14 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='7' y1='30' x2='7' y2='80' stroke='rgba(137,207,240,0.12)' stroke-width='0.5'/%3E%3Cline x1='7' y1='140' x2='7' y2='220' stroke='rgba(160,140,255,0.12)' stroke-width='0.5'/%3E%3Ccircle cx='7' cy='30' r='1' fill='rgba(137,207,240,0.4)'/%3E%3Ccircle cx='7' cy='80' r='1.5' fill='rgba(255,255,255,0.3)'/%3E%3Ccircle cx='7' cy='140' r='1' fill='rgba(160,140,255,0.4)'/%3E%3Ccircle cx='7' cy='220' r='1' fill='rgba(255,255,255,0.25)'/%3E%3C/svg%3E")no-repeat;
+  pointer-events:none;z-index:0;
+}
+.space .sb-brand{position:relative;z-index:1;border-bottom:1px solid rgba(255,255,255,0.05);}
+.space .sb-brand-icon{
+  background:radial-gradient(circle,rgba(137,207,240,0.2),transparent);
+  color:#89CFF0;border-radius:50%;
+  text-shadow:0 0 12px rgba(137,207,240,0.6);
+}
+.space .sb-brand-text{color:#e0f0ff;font-weight:800;font-size:14px;}
+.space .sb-section-label{
+  font-family:'Caveat',cursive;font-size:14px;font-weight:600;
+  color:rgba(137,207,240,0.5);position:relative;z-index:1;
+}
+.space .sb-item{color:rgba(201,209,217,0.55);border-radius:8px;font-weight:500;position:relative;z-index:1;}
+.space .sb-item:hover{background:rgba(255,255,255,0.03);color:#c9d1d9;}
+/* 活性: 星座点亮 */
+.space .sb-item.active{
+  color:#e0f0ff;font-weight:600;
+  background:radial-gradient(ellipse at 12% 50%,rgba(137,207,240,0.1),transparent 60%);
+  border:1px solid rgba(137,207,240,0.15);
+  border-radius:8px;
+  box-shadow:0 0 24px rgba(137,207,240,0.05);
+}
+.space .sb-item.active .nav-lucide-icon{color:#89CFF0;filter:drop-shadow(0 0 6px rgba(137,207,240,0.5));}
+/* 星点 */
+.space .sb-item.active::before{
+  content:'';position:absolute;left:4px;top:50%;transform:translateY(-50%);
+  width:4px;height:4px;background:#fff;border-radius:50%;
+  box-shadow:0 0 6px #89CFF0,0 0 12px rgba(137,207,240,0.5);
+  animation:star-glow 3s ease-in-out infinite;
+}
+@keyframes star-glow{0%,100%{box-shadow:0 0 4px #89CFF0}50%{box-shadow:0 0 14px #89CFF0,0 0 24px rgba(137,207,240,0.4)}}
+.space .sb-item-badge{background:rgba(137,207,240,0.08);color:rgba(137,207,240,0.7);border-radius:8px;font-size:8px;}
+.space .sb-item-badge.pending{color:rgba(240,192,96,0.7);}
+.space .sb-user-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:8px;position:relative;z-index:1;}
+.space .sb-user-label{color:rgba(201,209,217,0.35);font-size:9px;}
+.space .sb-user-status{color:#89CFF0;text-shadow:0 0 8px rgba(137,207,240,0.3);}
+.space .sb-logout{color:rgba(201,209,217,0.4);border:1px solid rgba(255,255,255,0.06);border-radius:6px;}
+.space .sb-logout:hover{background:rgba(255,100,100,0.08);border-color:rgba(255,100,100,0.2);color:#ff6b6b;}
+
+/* ═══════════════════════════════════════════
+   响应式
+   ═══════════════════════════════════════════ */
+@media(max-width:880px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:580px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<h1>侧边栏融合主题 — 手绘 · 几何 · AI · 科技 · 商务</h1>
+<p>M–R: 6 款 5 元素融合方案 · 3 列网格对比</p>
+
+<div class="grid">
+
+<!-- M: Neural Sketch -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:#89CFF0"></span>M · Neural Sketch 神经手稿</div>
+<aside class="sidebar neural">
+<div class="sb-brand"><div class="sb-brand-icon">⬡</div><div class="sb-brand-text">自动化测试平台</div></div>
+<nav class="sb-nav">
+<div class="sb-item active"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">// 测试全流程</div>
+<div class="sb-item"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">// AI 与编排</div>
+<div class="sb-item"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">开发中</span></div>
+<div class="sb-item"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge pending">待开发</span></div>
+<div class="sb-item"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge pending">待开发</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">Digital Human</div><div class="sb-user-row"><span>◇</span><span>QA_Engineer</span></div><div class="sb-user-status">● 在线</div></div><button class="sb-logout">退出登录</button></div>
+</aside>
+</div>
+
+<!-- N: Cyber Blueprint -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:#64c8ff"></span>N · Cyber Blueprint 赛博蓝图</div>
+<aside class="sidebar cyber">
+<div class="sb-brand"><div class="sb-brand-icon">◈</div><div class="sb-brand-text">Android-AutoTests</div></div>
+<nav class="sb-nav">
+<div class="sb-item active"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">TEST PIPELINE</div>
+<div class="sb-item"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">AI ORCHESTRA</div>
+<div class="sb-item"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">DEV</span></div>
+<div class="sb-item"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge pending">TODO</span></div>
+<div class="sb-item"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge pending">TODO</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">NODE_01</div><div class="sb-user-row"><span>◈</span><span>QA_Engineer</span></div><div class="sb-user-status">● ONLINE</div></div><button class="sb-logout">disconnect</button></div>
+</aside>
+</div>
+
+<!-- O: Crystal Prism -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:linear-gradient(135deg,#89CFF0,#C9B6F2)"></span>O · Crystal Prism 水晶棱镜</div>
+<aside class="sidebar crystal">
+<div class="sb-brand"><div class="sb-brand-icon">◆</div><div class="sb-brand-text">自动化测试平台</div></div>
+<nav class="sb-nav">
+<div class="sb-item active"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">测试全流程</div>
+<div class="sb-item"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">AI 与编排</div>
+<div class="sb-item"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">开发中</span></div>
+<div class="sb-item"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge pending">待开发</span></div>
+<div class="sb-item"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge pending">待开发</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">Digital Human</div><div class="sb-user-row"><span>◇</span><span>QA_Engineer</span></div><div class="sb-user-status">● 在线</div></div><button class="sb-logout">退出登录</button></div>
+</aside>
+</div>
+
+<!-- P: Data Flow -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:#64c8ff"></span>P · Data Flow 数据流线</div>
+<aside class="sidebar dataflow">
+<div class="sb-brand"><div class="sb-brand-icon">◉</div><div class="sb-brand-text">Android-AutoTests</div></div>
+<nav class="sb-nav">
+<div class="sb-item active"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">test_pipeline</div>
+<div class="sb-item"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">ai_orchestra</div>
+<div class="sb-item"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">DEV</span></div>
+<div class="sb-item"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge pending">TODO</span></div>
+<div class="sb-item"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge pending">TODO</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">node_0x01</div><div class="sb-user-row"><span>◉</span><span>QA_Engineer</span></div><div class="sb-user-status">● streaming</div></div><button class="sb-logout">kill_session</button></div>
+</aside>
+</div>
+
+<!-- Q: Origami Tech -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:#1a202c"></span>Q · Origami Tech 折纸科技</div>
+<aside class="sidebar origami">
+<div class="sb-brand"><div class="sb-brand-icon">▲</div><div class="sb-brand-text">自动化测试平台</div></div>
+<nav class="sb-nav">
+<div class="sb-item active"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">测试全流程</div>
+<div class="sb-item"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">AI 与编排</div>
+<div class="sb-item"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">开发中</span></div>
+<div class="sb-item"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge pending">待开发</span></div>
+<div class="sb-item"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge pending">待开发</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">Digital Human</div><div class="sb-user-row"><span>◇</span><span>QA_Engineer</span></div><div class="sb-user-status">● 在线</div></div><button class="sb-logout">退出登录</button></div>
+</aside>
+</div>
+
+<!-- R: Constellation AI -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:#89CFF0;box-shadow:0 0 6px #89CFF0"></span>R · Constellation AI 星座智能</div>
+<aside class="sidebar space">
+<div class="sb-brand"><div class="sb-brand-icon">✧</div><div class="sb-brand-text">自动化测试平台</div></div>
+<nav class="sb-nav">
+<div class="sb-item active"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">测试全流程</div>
+<div class="sb-item"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">AI 与编排</div>
+<div class="sb-item"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">开发中</span></div>
+<div class="sb-item"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge pending">待开发</span></div>
+<div class="sb-item"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge pending">待开发</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">Digital Human</div><div class="sb-user-row"><span>◇</span><span>QA_Engineer</span></div><div class="sb-user-status">● 在线</div></div><button class="sb-logout">退出登录</button></div>
+</aside>
+</div>
+
+</div>
+
+<script>lucide.createIcons()</script>
+</body>
+</html>

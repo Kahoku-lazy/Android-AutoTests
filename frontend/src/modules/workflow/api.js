@@ -13,6 +13,16 @@ export function listPageElements(pageId, filter = 'all') {
   return client.get(`/elements/pages/${pageId}/items`, { params: { filter } })
 }
 
+/** 列出 Web 元素分组（项目管理） */
+export function listWebGroups() {
+  return client.get('/elements/web-groups')
+}
+
+/** 列出某分组下的 Web 元素 */
+export function listWebGroupElements(groupId) {
+  return client.get('/elements/web', { params: { group_id: groupId } })
+}
+
 /** 用例列表 */
 export function listDefinitions(directoryId) {
   const params = directoryId ? { directory_id: directoryId } : {}

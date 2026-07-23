@@ -32,6 +32,8 @@ const directories = ref([]);
 const directoryId = ref(null);
 const editLockHeld = ref(false);
 const lockOwner = ref("");
+const stepsJson = ref("[]");
+const stepsCount = computed(() => { try { return JSON.parse(stepsJson.value || "[]").length; } catch { return 0; } });
 let lockHeartbeat = null;
 const currentUser = ref(sessionStorage.getItem("current-username") || "");
 let rowCounter = 1;
@@ -49,6 +51,7 @@ async function loadCase() {
     const { data } = await getWebDefinition(caseId.value);
     if (data.ok) {
       const d = data.definition; directoryId.value = d.directory_id;
+      stepsJson.value = d.steps_json || "[]";
       const savedCols = d.custom_columns || [];
       if (savedCols.length) { const m = [...DEFAULT_COLS.map(c => ({ ...c }))]; savedCols.forEach(c => m.push({ key: c.key, label: c.key, width: 200, editable: true })); columns.value = m; }
       rows.value = d.rows || [];
@@ -79,7 +82,7 @@ async function doSave() {
   try {
     const customCols = columns.value.filter(c => !DEFAULT_COLS.find(dc => dc.key === c.key)).map(c => ({ key: c.key, label: c.label }));
     const fr = rows.value[0] || {};
-    const payload = { title: fr.title || `Web用例-${new Date().toISOString().slice(0,10)}`, priority: fr.priority || "P1", precondition: fr.precondition || "", url: fr.url || "", steps: fr.steps || "", expected_result: fr.expected_result || "", custom_columns: customCols, directory_id: directoryId.value, rows: rows.value };
+    const payload = { title: fr.title || `Web用例-${new Date().toISOString().slice(0,10)}`, priority: fr.priority || "P1", precondition: fr.precondition || "", url: fr.url || "", steps: fr.steps || "", expected_result: fr.expected_result || "", steps_json: stepsJson.value, custom_columns: customCols, directory_id: directoryId.value, rows: rows.value };
     if (!isNew.value) payload.id = caseId.value;
     const { data } = await saveWebDefinition(payload);
     if (data.ok) { ElMessage.success("保存成功"); originalJson.value = JSON.stringify({ rows: rows.value, columns: columns.value }); if (isNew.value) router.replace(`/cases/web/${data.id}/edit`); }
@@ -100,6 +103,10 @@ async function doSave() {
     <div v-if="loading" class="case-loading">加载中...</div>
     <div v-else-if="isLockedByOther" class="lock-banner">⚠️ {{ lockOwner }} 正在编辑此用例，当前为只读模式。</div>
     <div v-else class="table-editor">
+      <div v-if="stepsCount > 0" class="steps-summary">
+        <span class="steps-badge">{{ stepsCount }} 个结构化步骤</span>
+        <span class="steps-hint">（由 AI/脚本生成，编辑表格不会修改步骤）</span>
+      </div>
       <div class="table-toolbar">
         <div class="table-toolbar__left">
           <span class="toolbar-label">目录：</span>
@@ -137,14 +144,17 @@ async function doSave() {
 .col-num { width: 40px; text-align: center; color: #999; font-size: 12px; }
 .row-selected { background: #f0f7ff; } .row-selected td { border-color: #c8e0ff; }
 .cell-input { width: 100%; padding: 4px 6px; border: 1px solid transparent; border-radius: 4px; font-size: 13px; background: transparent; }
-.cell-input:focus { border-color: var(--animal-primary-color, #89CFF0); background: #fff; outline: none; }
+.cell-input:focus { border-color: var(--app-green, #89CFF0); background: #fff; outline: none; }
 .cell-input:hover { border-color: #ddd; }
 .cell-text { padding: 4px 6px; display: block; }
 .btn-col-remove { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); border: none; background: #fee; color: #e85f5f; border-radius: 3px; cursor: pointer; font-size: 10px; padding: 1px 4px; }
 .btn-primary, .btn-minor, .btn-text { padding: 6px 16px; border-radius: 8px; border: 1px solid #e0e0e0; background: #fff; cursor: pointer; font-size: 13px; }
-.btn-primary { background: var(--animal-primary-color, #89CFF0); color: #fff; border-color: var(--animal-primary-color, #89CFF0); }
+.btn-primary { background: var(--app-green, #89CFF0); color: #fff; border-color: var(--app-green, #89CFF0); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-danger-outline { color: #e85f5f; border-color: #fcc; }
 .lock-banner { padding: 12px 16px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
 .case-loading { text-align: center; padding: 40px; color: #999; }
+.steps-summary { padding: 10px 16px; background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; margin-bottom: 12px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.steps-badge { background: #4caf50; color: #fff; padding: 2px 10px; border-radius: 12px; font-weight: 600; font-size: 12px; }
+.steps-hint { color: #666; }
 </style>

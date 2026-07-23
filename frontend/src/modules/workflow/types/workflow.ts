@@ -8,6 +8,7 @@ export const PORT_TYPE = {
   NAVIGATION: 'navigation',
   POPUP_FIXED: 'popup_fixed',
   POPUP_CLOSE: 'popup_close',
+  DATA: 'data',
 } as const
 
 export type PortType = (typeof PORT_TYPE)[keyof typeof PORT_TYPE]
@@ -17,6 +18,7 @@ export const LINK_RULES: Record<string, string[]> = {
   navigation: ['entry'],
   popup_fixed: ['popup_trigger'],
   popup_close: ['entry'],
+  data: ['data'],
 }
 
 // 端口类型 → 显示颜色
@@ -47,10 +49,10 @@ export interface PortDefinition {
 export const MULTI_IN_PORT_TYPES: ReadonlySet<string> = new Set([PORT_TYPE.ENTRY])
 
 
-export type WorkflowNodeType = 'PageNode' | 'PopupNode' | 'StartNode' | 'EndNode'
+export type WorkflowNodeType = 'PageNode' | 'PopupNode' | 'StartNode' | 'EndNode' | 'ApiNode'
 export type WorkflowCategory = 'page' | 'popup' | 'start' | 'end'
-/** StartNode: launch app vs page-as-entry (still no input ports) */
-export type StartKind = 'app' | 'page'
+/** StartNode: launch app / open URL / call API / page-as-entry */
+export type StartKind = 'app' | 'page' | 'url' | 'api'
 
 export interface WorkflowNode {
   id: string

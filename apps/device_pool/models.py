@@ -69,6 +69,7 @@ class DeviceLock(models.Model):
     release_reason = models.CharField(
         max_length=20, default="", blank=True
     )  # manual | timeout | disconnect | force
+    last_heartbeat = models.DateTimeField(null=True, blank=True)  # updated by heartbeat patrol
 
     class Meta:
         db_table = "dp_device_locks"
@@ -76,6 +77,14 @@ class DeviceLock(models.Model):
         verbose_name_plural = '设备锁'
         indexes = [
             models.Index(fields=["device", "status"]),
+        ]
+        constraints = [
+            # 同一设备同时最多一个活跃锁（数据库级并发控制）
+            models.UniqueConstraint(
+                fields=["device"],
+                condition=models.Q(status="active"),
+                name="uq_device_active_lock",
+            ),
         ]
 
     @property

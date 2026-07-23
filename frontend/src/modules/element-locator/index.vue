@@ -13,6 +13,8 @@ import XPathCandidatePanel from './components/XPathCandidatePanel.vue'
 import PageElementsPanel from './components/PageElementsPanel.vue'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import ElementManager from './components/ElementManager.vue'
+import WebElementManager from './components/WebElementManager.vue'
+import ApiEndpointManager from './components/ApiEndpointManager.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -22,21 +24,36 @@ const screenRefreshing = ref(false)
 
 const activeTab = ref('discovery')
 const tabs = [
-  { key: 'discovery', label: '🔍 设备发现' },
-  { key: 'manage', label: '📋 元素管理' },
+  { key: 'discovery', label: '🔍 设备元素获取' },
+  { key: 'manage', label: '📋 Android元素管理' },
+  { key: 'web', label: '🌐 Web端元素' },
+  { key: 'api', label: '📡 API接口' },
 ]
 
-const pageMeta = computed(() =>
-  activeTab.value === 'manage'
-    ? {
-        title: '元素管理 Element Manager',
-        subtitle: '按页面组织元素库，维护 XPath、别名、测试点等定位信息',
-      }
-    : {
-        title: '元素定位 Element Locator',
-        subtitle: '连接设备、Dump UI、生成 XPath 候选并保存到元素管理',
-      },
-)
+const pageMeta = computed(() => {
+  if (activeTab.value === 'manage') {
+    return {
+      title: 'Android元素管理 Android Element Manager',
+      subtitle: '按页面组织元素库，维护 XPath、别名、测试点等定位信息',
+    }
+  }
+  if (activeTab.value === 'web') {
+    return {
+      title: 'Web端元素管理 Web Element Manager',
+      subtitle: '手动管理 Web 页面元素，支持 CSS/XPath/ID 等 12 种定位方式',
+    }
+  }
+  if (activeTab.value === 'api') {
+    return {
+      title: 'API接口管理 API Endpoint Manager',
+      subtitle: '管理 REST API 接口定义，配置请求体/响应体 JSON Schema',
+    }
+  }
+  return {
+    title: '元素定位 Element Locator',
+    subtitle: '连接设备、Dump UI、生成 XPath 候选并保存到元素管理',
+  }
+})
 
 let devicePollTimer = null
 const wsDeviceSerial = ref('')
@@ -280,6 +297,18 @@ watch(activeTab, async (tab) => {
       <template #manage>
         <div v-show="activeTab === 'manage'">
           <ElementManager />
+        </div>
+      </template>
+
+      <template #web>
+        <div v-show="activeTab === 'web'">
+          <WebElementManager />
+        </div>
+      </template>
+
+      <template #api>
+        <div v-show="activeTab === 'api'">
+          <ApiEndpointManager />
         </div>
       </template>
     </AppTabs>

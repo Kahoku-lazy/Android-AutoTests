@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, provide, onMounted, markRaw, nextTick } from 'vue'
+import { ref, computed, watch, provide, onMounted, onUnmounted, markRaw, nextTick } from 'vue'
 import { VueFlow, useVueFlow, ConnectionMode } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
@@ -18,7 +18,7 @@ import PageFlowNode from './PageFlowNode.vue'
 import NodeContextMenu from './NodeContextMenu.vue'
 import { PAGE_ELEMENTS, POPUP_ELEMENTS, ELEMENT_ICONS } from '@/modules/workflow/types/workflow'
 import { NODE_REGISTRY } from '@/modules/workflow/registry/nodeRegistry'
-import type { CatalogPage } from '@/modules/workflow/data/pageCatalog'
+import type { CatalogPage, ApiEndpointRef } from '@/modules/workflow/data/pageCatalog'
 
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
@@ -74,7 +74,7 @@ function openNodeContext(e: MouseEvent | TouchEvent, nodeId: string) {
   const canLink =
     node.type === 'PageNode' ||
     node.type === 'PopupNode' ||
-    (node.type === 'StartNode' && node.properties?.start_kind === 'page')
+    (node.type === 'StartNode' && node.properties?.start_kind !== 'app')
   ctxMenu.value = {
     show: true,
     x: clientX,
@@ -96,6 +96,13 @@ function handleLinkPage(page: CatalogPage) {
   store.linkPage(ctxMenu.value.nodeId, page)
   refreshFromStore()
   status.value = store.statusMessage || `已关联「${page.name}」，请添加元素`
+}
+
+function handleLinkApi(endpoint: ApiEndpointRef) {
+  if (!ctxMenu.value.nodeId) return
+  store.linkApiEndpoint(ctxMenu.value.nodeId, endpoint)
+  refreshFromStore()
+  status.value = store.statusMessage || `已关联 API「${endpoint.name}」`
 }
 
 async function handleResyncPage() {
@@ -205,6 +212,15 @@ function addPopup() {
   refreshFromStore()
 }
 
+function addApi() {
+  const count = store.nodes.filter(n => n.type === 'ApiNode').length
+  const n = store.createNode('ApiNode', 300, 80 + count * 60)
+  if (n) {
+    n.widgets_values = [`API 接口${count + 1}`, 'orange']
+    refreshFromStore()
+  }
+}
+
 function addStart() {
   const n = store.createNode('StartNode', 60, 200)
   if (n) {
@@ -237,6 +253,57 @@ function onEdgeClick({ edge }: EdgeMouseEvent) {
   const linkId = edge.data?.linkId
   if (linkId != null) store.select('l' + linkId)
 }
+
+// Double-click edge to delete with confirmation
+function onEdgeDoubleClick({ edge }: EdgeMouseEvent) {
+  const linkId = edge.data?.linkId
+  if (linkId == null) return
+  const link = store.findLink(linkId)
+  if (!link) return
+  const originNode = store.findNode(link.origin_id)
+  const targetNode = store.findNode(link.target_id)
+  const fromLabel = originNode?.widgets_values?.[0] || `Node#${link.origin_id}`
+  const toLabel = targetNode?.widgets_values?.[0] || `Node#${link.target_id}`
+  if (confirm(`断开「${fromLabel} → ${toLabel}」的连接？`)) {
+    store.removeLink(linkId)
+    refreshFromStore()
+    status.value = `已断开 ${fromLabel} → ${toLabel}`
+  }
+}
+
+// Keyboard: Delete/Backspace to remove selected link or node
+function onKeyDown(e: KeyboardEvent) {
+  if (e.key !== 'Delete' && e.key !== 'Backspace') return
+  // Ignore if user is typing in an input
+  const tag = (e.target as HTMLElement)?.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+
+  const sel = store.selectedId.value
+  if (!sel) return
+
+  if (sel.startsWith('l')) {
+    // Selected a link
+    const linkId = parseInt(sel.slice(1))
+    if (!isNaN(linkId) && store.findLink(linkId)) {
+      store.removeLink(linkId)
+      refreshFromStore()
+      status.value = '已断开连线'
+    }
+  } else if (sel.startsWith('n')) {
+    // Selected a node
+    const nodeId = sel.slice(1)
+    if (store.findNode(nodeId)) {
+      if (confirm(`删除节点「${store.findNode(nodeId)?.widgets_values?.[0] || nodeId}」及其所有连线？`)) {
+        store.removeNode(nodeId)
+        refreshFromStore()
+        status.value = '已删除节点'
+      }
+    }
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onKeyDown))
+onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
 
 function clearAll() {
   if (!confirm('清空 Vue Flow 画布？')) return
@@ -305,6 +372,7 @@ watch(
         <button class="btn primary" @click="addPage">+ 页面</button>
         <button class="btn" @click="addPopup">+ 弹窗</button>
         <button class="btn end" @click="addEnd" title="无输出 · 可多终点">+ 终点</button>
+        <button class="btn api-btn" @click="addApi" title="数据流节点 · 关联接口后生成端口">+ API</button>
         <button class="btn" @click="rewireSearchDemo" title="强制连接 搜索图标→搜索结果页入口">连搜索示例</button>
         <button class="btn" @click="doFit">适配视图</button>
         <button class="btn" @click="refreshFromStore">刷新</button>
@@ -331,6 +399,7 @@ watch(
         @pane-click="onPaneClick"
         @node-click="onNodeClick"
         @edge-click="onEdgeClick"
+        @edge-dblclick="onEdgeDoubleClick"
         @node-context-menu="onNodeContextMenu"
       >
         <Background pattern-color="#a2d2ff" :gap="18" :size="1.2" bg-color="rgba(255,255,255,0.28)" />
@@ -396,11 +465,13 @@ watch(
       :y="ctxMenu.y"
       :node-id="ctxMenu.nodeId"
       :node-label="ctxMenu.nodeLabel"
+      :node-type="store.findNode(ctxMenu.nodeId)?.type"
       :can-link-page="ctxMenu.canLinkPage"
       :linked-page-id="ctxMenu.linkedPageId"
       :linked-page-name="ctxMenu.linkedPageName"
       @close="ctxMenu.show = false"
       @link-page="handleLinkPage"
+      @link-api="handleLinkApi"
       @resync-page="handleResyncPage"
       @delete-node="handleDeleteFromCtx"
     />
@@ -520,6 +591,8 @@ watch(
   border-color: #6a6a76;
 }
 .btn.end:hover { filter: brightness(1.05); color: #fff; }
+.btn.api-btn { background: rgba(245, 166, 35, 0.12); color: #d4880f; border-color: rgba(245, 166, 35, 0.3); }
+.btn.api-btn:hover { filter: brightness(1.05); color: #fff; background: #f5a623; }
 .btn.danger:hover {
   border-color: var(--ac-red);
   color: var(--ac-red);
@@ -595,7 +668,7 @@ watch(
   border-radius: 14px;
   box-shadow: 0 18px 48px rgba(74,78,105,0.12);
   overflow: hidden;
-  font-family: 'Nunito', 'Noto Sans SC', system-ui, sans-serif;
+  font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif);
   color: #4a4e69;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);

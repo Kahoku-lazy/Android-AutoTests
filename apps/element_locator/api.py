@@ -46,8 +46,43 @@ def clear_all():
     Page.objects.all().delete()
 
 
+def get_web_elements(locator_type=None, is_test_point=None):
+    """Get web elements, optionally filtered."""
+    from .models import WebElement
+    qs = WebElement.objects.all()
+    if locator_type:
+        qs = qs.filter(locator_type=locator_type)
+    if is_test_point is not None:
+        qs = qs.filter(is_test_point=is_test_point)
+    return list(qs.order_by("name"))
+
+
+def get_web_groups():
+    """Get all web groups ordered by name."""
+    from .models import WebGroup
+    return list(WebGroup.objects.order_by("sort_order", "name"))
+
+
+def get_web_flows():
+    """Get all web page flows with group labels."""
+    from .models import WebPageFlow
+    return list(WebPageFlow.objects.select_related('from_group', 'to_group', 'trigger_element'))
+
+
+def get_api_groups():
+    """Get all API groups ordered by name."""
+    from .models import ApiGroup
+    return list(ApiGroup.objects.order_by("sort_order", "name"))
+
+
+def get_api_endpoints():
+    """Get all API endpoint definitions."""
+    from .models import ApiEndpoint
+    return list(ApiEndpoint.objects.order_by("name"))
+
+
 __all__ = [
     'Page', 'Element', 'PageFlow', 'gen_xpath_candidates', 'simple_yaml_dump',
-    'get_test_points', 'get_flows',
+    'get_test_points', 'get_flows', 'get_web_elements', 'get_web_groups',
     'create_page', 'create_flow', 'clear_all',
 ]

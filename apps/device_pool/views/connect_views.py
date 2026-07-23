@@ -38,7 +38,7 @@ def scan_device(request):
                         _ip,
                     )
                 )
-                _port_ok = _port.isdigit() and 1 <= int(_port) <= 65535
+                _port_ok = _port.isdigit() and 1024 <= int(_port) <= 65535
                 if not (_ip_ok and _port_ok):
                     return JsonResponse({"ok": False, "error": "无效的 IP 或端口"}, status=400)
                 result = subprocess.run(
@@ -327,28 +327,28 @@ def disconnect_device(request, serial):
             status=404,
         )
 
-    # 2. 权限校验（检查进程占用或用户绑定）
+    # 2. 权限校验（使用 JWT 验证的用户身份，不信任客户端提交的 is_admin）
     if dev.status == "BUSY" and (dev.occupied_by or dev.locked_by):
-        current_user = data.get("user_id", "")
-        is_admin = data.get("is_admin", False)
+        current_user = getattr(request, 'user_id', '') or data.get("user_id", "")
 
+        # 只有锁定者本人可以断开自己的设备
         if current_user and dev.locked_by != current_user:
-            if not force or not is_admin:
-                return JsonResponse(
-                    {
-                        "ok": False,
-                        "error": "设备正被他人使用，断开需要管理员权限和 force 标记",
-                    },
-                    status=403,
-                )
-            if not reason:
-                return JsonResponse(
-                    {
-                        "ok": False,
-                        "error": "强制断开他人设备时必须填写原因",
-                    },
-                    status=400,
-                )
+            # TODO: 实现真正的管理员角色后，管理员可强制断开他人设备
+            return JsonResponse(
+                {
+                    "ok": False,
+                    "error": "设备正被他人使用，只有锁定者可以断开",
+                },
+                status=403,
+            )
+        if not reason:
+            return JsonResponse(
+                {
+                    "ok": False,
+                    "error": "强制断开他人设备时必须填写原因",
+                },
+                status=400,
+            )
 
     # 3. 执行断开
     locks_released = 0

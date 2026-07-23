@@ -707,7 +707,7 @@ watch(
   border: 1px solid var(--app-glass-border);
   border-radius: 18px;
   box-shadow: var(--app-shadow-lg);
-  font-family: 'Nunito', 'Noto Sans SC', system-ui, sans-serif;
+  font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif);
   color: var(--app-text);
   backdrop-filter: blur(var(--app-glass-blur));
   -webkit-backdrop-filter: blur(var(--app-glass-blur));

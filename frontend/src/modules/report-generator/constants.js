@@ -4,7 +4,7 @@
  * 提取自 index.vue 和 api.js，避免魔法值散落。
  */
 
-// ── 表格列定义 (animal-island Table API) ──
+// ── 表格列定义 ──
 export const TABLE_COLUMNS = [
   { title: 'Run ID', dataIndex: 'run_id', width: '13%' },
   { title: '设备', dataIndex: 'device_serial', width: '9%' },

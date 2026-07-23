@@ -639,3 +639,718 @@ def delete_flow(request, flow_id):
     """DELETE /api/elements/flows/{flow_id}."""
     PageFlow.objects.filter(id=flow_id).delete()
     return JsonResponse({"ok": True})
+
+
+# ── Web Element CRUD ──
+
+LOCATOR_TYPE_CHOICES = [
+    "css_selector", "xpath", "id", "class_name", "name",
+    "tag_name", "link_text", "partial_link_text", "text",
+    "test_id", "role", "placeholder",
+]
+
+
+def _web_element_payload(el):
+    return {
+        "id": el.id, "name": el.name,
+        "locator_type": el.locator_type, "locator_value": el.locator_value,
+        "page_url": el.page_url, "description": el.description,
+        "tags": el.tags, "is_test_point": el.is_test_point,
+        "group_id": el.group_id,
+        "created_at": str(el.created_at), "updated_at": str(el.updated_at),
+    }
+
+
+def list_web_elements(request):
+    """GET /api/elements/web/ — List web elements with filters."""
+    from .models import WebElement
+
+    qs = WebElement.objects.all()
+
+    search = request.GET.get("search", "").strip()
+    if search:
+        from django.db.models import Q
+        qs = qs.filter(
+            Q(name__icontains=search)
+            | Q(locator_value__icontains=search)
+            | Q(description__icontains=search)
+            | Q(tags__icontains=search)
+        )
+
+    locator_type = request.GET.get("locator_type", "").strip()
+    if locator_type:
+        qs = qs.filter(locator_type=locator_type)
+
+    page_url = request.GET.get("page_url", "").strip()
+    if page_url:
+        qs = qs.filter(page_url__icontains=page_url)
+
+    is_test_point = request.GET.get("is_test_point")
+    if is_test_point is not None:
+        qs = qs.filter(is_test_point=is_test_point == "1" or is_test_point == "true")
+
+    group_id = request.GET.get("group_id")
+    if group_id is not None:
+        if group_id == "" or group_id == "null":
+            qs = qs.filter(group__isnull=True)
+        else:
+            try:
+                qs = qs.filter(group_id=int(group_id))
+            except (ValueError, TypeError):
+                pass
+
+    qs = qs.order_by("-updated_at")
+    result = [_web_element_payload(el) for el in qs]
+    return JsonResponse({"ok": True, "elements": result, "total": len(result)})
+
+
+@csrf_exempt
+def create_web_element(request):
+    """POST /api/elements/web/ — Create a web element."""
+    from .models import WebElement
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+
+    name = data.get("name", "").strip()
+    if not name:
+        return JsonResponse({"ok": False, "error": "元素名称(name)必填"}, status=400)
+
+    locator_type = data.get("locator_type", "css_selector")
+    if locator_type not in LOCATOR_TYPE_CHOICES:
+        return JsonResponse({"ok": False, "error": f"无效的定位方式, 必须是: {', '.join(LOCATOR_TYPE_CHOICES)}"}, status=400)
+
+    locator_value = data.get("locator_value", "").strip()
+    if not locator_value:
+        return JsonResponse({"ok": False, "error": "定位值(locator_value)必填"}, status=400)
+
+    try:
+        group_id = data.get("group_id")
+        group = None
+        if group_id is not None and group_id != "":
+            from .models import WebGroup
+            try:
+                group = WebGroup.objects.get(id=int(group_id))
+            except (WebGroup.DoesNotExist, ValueError, TypeError):
+                pass
+
+        el = WebElement.objects.create(
+            group=group,
+            name=name,
+            locator_type=locator_type,
+            locator_value=locator_value,
+            page_url=data.get("page_url", ""),
+            description=data.get("description", ""),
+            tags=data.get("tags", ""),
+            is_test_point=bool(data.get("is_test_point", False)),
+        )
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": f"创建失败: {e}"}, status=500)
+
+    return JsonResponse({"ok": True, "element": _web_element_payload(el)})
+
+
+@csrf_exempt
+def web_element_detail(request, el_id):
+    """PUT/DELETE /api/elements/web/{el_id}/ — Update or delete a web element."""
+    from .models import WebElement
+
+    try:
+        el = WebElement.objects.get(id=el_id)
+    except WebElement.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "元素不存在"}, status=404)
+
+    if request.method == "PUT":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+
+        if "name" in data:
+            name = data["name"].strip()
+            if not name:
+                return JsonResponse({"ok": False, "error": "名称不能为空"}, status=400)
+            el.name = name
+        if "locator_type" in data:
+            lt = data["locator_type"]
+            if lt not in LOCATOR_TYPE_CHOICES:
+                return JsonResponse({"ok": False, "error": f"无效的定位方式"}, status=400)
+            el.locator_type = lt
+        if "locator_value" in data:
+            el.locator_value = data["locator_value"].strip()
+        if "page_url" in data:
+            el.page_url = data["page_url"]
+        if "description" in data:
+            el.description = data["description"]
+        if "tags" in data:
+            el.tags = data["tags"]
+        if "is_test_point" in data:
+            el.is_test_point = bool(data["is_test_point"])
+        if "group_id" in data:
+            gid = data["group_id"]
+            from .models import WebGroup
+            if gid is None or gid == "" or gid == "null":
+                el.group = None
+            else:
+                try:
+                    el.group = WebGroup.objects.get(id=int(gid))
+                except (WebGroup.DoesNotExist, ValueError, TypeError):
+                    pass
+
+        el.save(update_fields=[
+            k for k in ["name", "locator_type", "locator_value",
+                        "page_url", "description", "tags", "is_test_point",
+                        "group", "group_id"]
+            if k in data
+        ] + ["updated_at"])
+        return JsonResponse({"ok": True, "element": _web_element_payload(el)})
+
+    elif request.method == "DELETE":
+        el.delete()
+        return JsonResponse({"ok": True})
+
+    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+
+
+@csrf_exempt
+def batch_import_web_elements(request):
+    """POST /api/elements/web/batch/ — Batch import web elements."""
+    from .models import WebElement
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+
+    items = data.get("elements", [])
+    if not items:
+        return JsonResponse({"ok": False, "error": "elements 不能为空"}, status=400)
+
+    saved, skipped, errors = 0, 0, []
+    for item in items:
+        name = item.get("name", "").strip()
+        if not name:
+            skipped += 1
+            continue
+        lt = item.get("locator_type", "css_selector")
+        if lt not in LOCATOR_TYPE_CHOICES:
+            skipped += 1
+            continue
+        lv = item.get("locator_value", "").strip()
+        if not lv:
+            skipped += 1
+            continue
+        try:
+            WebElement.objects.create(
+                name=name, locator_type=lt, locator_value=lv,
+                page_url=item.get("page_url", ""),
+                description=item.get("description", ""),
+                tags=item.get("tags", ""),
+                is_test_point=bool(item.get("is_test_point", False)),
+            )
+            saved += 1
+        except Exception as e:
+            errors.append(f"{name}: {e}")
+            skipped += 1
+
+    result = {"ok": True, "saved": saved, "skipped": skipped}
+    if errors:
+        result["errors"] = errors[:5]
+    return JsonResponse(result)
+
+
+# ── Web Group CRUD ──
+
+
+def _web_group_payload(g):
+    children = getattr(g, "children", None)
+    child_count = children.count() if children is not None else 0
+    return {
+        "id": g.id, "name": g.name,
+        "parent_id": g.parent_id,
+        "is_folder": g.is_folder,
+        "sort_order": g.sort_order,
+        "element_count": getattr(g, "_element_count", 0),
+        "child_count": child_count,
+        "created_at": str(g.created_at),
+    }
+
+
+def list_web_groups(request):
+    """GET /api/elements/web-groups/ — Flat list of all groups with element_count."""
+    from .models import WebGroup
+    from django.db.models import Count
+
+    groups = list(WebGroup.objects.annotate(
+        _element_count=Count("elements")
+    ).order_by("sort_order", "name"))
+
+    return JsonResponse({
+        "ok": True,
+        "groups": [_web_group_payload(g) for g in groups],
+    })
+
+
+@csrf_exempt
+def create_web_group(request):
+    """POST /api/elements/web-groups/create/ — Create a group or folder."""
+    from .models import WebGroup
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+
+    name = data.get("name", "").strip()
+    if not name:
+        return JsonResponse({"ok": False, "error": "分组名称必填"}, status=400)
+
+    parent_id = data.get("parent_id")
+    if parent_id in ("", 0, "0"):
+        parent_id = None
+
+    if parent_id:
+        try:
+            parent = WebGroup.objects.get(pk=parent_id)
+            if not parent.is_folder:
+                return JsonResponse({"ok": False, "error": "只能将分组添加在目录下"}, status=400)
+        except WebGroup.DoesNotExist:
+            return JsonResponse({"ok": False, "error": "父级分组不存在"}, status=404)
+
+    is_folder = bool(data.get("is_folder", False))
+
+    try:
+        g = WebGroup.objects.create(
+            name=name, parent_id=parent_id,
+            is_folder=is_folder,
+            sort_order=data.get("sort_order", 0),
+        )
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": f"创建失败: {e}"}, status=500)
+
+    return JsonResponse({"ok": True, "group": _web_group_payload(g)})
+
+
+@csrf_exempt
+def web_group_detail(request, group_id):
+    """PUT/DELETE /api/elements/web-groups/{id}/ — Rename or delete a group."""
+    from .models import WebGroup
+    from .models import WebElement
+
+    try:
+        g = WebGroup.objects.get(id=group_id)
+    except WebGroup.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "分组不存在"}, status=404)
+
+    if request.method == "PUT":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+
+        if "name" in data:
+            name = data["name"].strip()
+            if not name:
+                return JsonResponse({"ok": False, "error": "名称不能为空"}, status=400)
+            g.name = name
+
+        g.save(update_fields=["name"] if "name" in data else [])
+        return JsonResponse({"ok": True, "group": _web_group_payload(g)})
+
+    elif request.method == "DELETE":
+        # Cascade: child groups are deleted by CASCADE FK,
+        # elements in this group and all descendants become unclassified (group=null)
+        _collect_ids = set()
+
+        def _descendant_ids(node_id):
+            _collect_ids.add(node_id)
+            for child in WebGroup.objects.filter(parent_id=node_id):
+                _descendant_ids(child.id)
+
+        _descendant_ids(g.id)
+        WebElement.objects.filter(group_id__in=_collect_ids).update(group=None)
+        g.delete()
+        return JsonResponse({"ok": True})
+
+    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+
+
+@csrf_exempt
+def batch_move_web_groups(request):
+    """POST /api/elements/web-groups/batch-move/ — Batch move groups to a target parent."""
+    from .models import WebGroup
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+
+    group_ids = data.get("group_ids") or []
+    if not group_ids:
+        return JsonResponse({"ok": False, "error": "group_ids 不能为空"}, status=400)
+
+    parent_id = data.get("parent_id")
+    if parent_id in ("", 0, "0", "__root__"):
+        parent_id = None
+
+    if parent_id:
+        try:
+            parent = WebGroup.objects.get(pk=parent_id)
+            if not parent.is_folder:
+                return JsonResponse({"ok": False, "error": "目标必须是目录"}, status=400)
+        except WebGroup.DoesNotExist:
+            return JsonResponse({"ok": False, "error": "目标分组不存在"}, status=404)
+
+    WebGroup.objects.filter(id__in=group_ids).update(parent_id=parent_id)
+    return JsonResponse({"ok": True, "moved": len(group_ids)})
+
+
+# ── Web Page Flow CRUD ──
+
+
+@csrf_exempt
+def web_flows_handler(request):
+    """GET/POST /api/elements/web-flows/ — List or create web page flows."""
+    from .models import WebPageFlow, WebGroup, WebElement
+
+    if request.method == 'GET':
+        flows = WebPageFlow.objects.select_related(
+            'from_group', 'to_group', 'trigger_element'
+        ).order_by('-created_at')
+        result = [{
+            "id": f.id, "from_group_id": f.from_group_id,
+            "to_group_id": f.to_group_id,
+            "trigger_element_id": f.trigger_element_id,
+            "trigger_action": f.trigger_action,
+            "created_at": str(f.created_at),
+            "from_label": f.from_group.name if f.from_group_id else "",
+            "to_label": f.to_group.name if f.to_group_id else "",
+            "trigger_name": f.trigger_element.name if f.trigger_element_id else "",
+        } for f in flows]
+        return JsonResponse({"ok": True, "flows": result})
+
+    elif request.method == 'POST':
+        data = json.loads(request.body)
+        from_id = data.get("from_group_id")
+        to_id = data.get("to_group_id")
+        if not from_id or not to_id:
+            return JsonResponse({"ok": False, "error": "from_group_id 和 to_group_id 必填"}, status=400)
+
+        # Validate both IDs are WebGroup (not Android Page)
+        from .models import WebGroup
+        try:
+            from_g = WebGroup.objects.get(pk=from_id)
+            to_g = WebGroup.objects.get(pk=to_id)
+        except WebGroup.DoesNotExist:
+            return JsonResponse({"ok": False, "error": "分组不存在，只能使用 Web 元素分组（el_web_groups）"}, status=400)
+
+        if from_g.is_folder or to_g.is_folder:
+            return JsonResponse({"ok": False, "error": "目录节点不能作为流的端点，请选择具体的页面（非目录）"}, status=400)
+
+        trigger_id = data.get("trigger_element_id")
+        if trigger_id:
+            try:
+                trigger_el = WebElement.objects.get(pk=trigger_id)
+                if trigger_el.group_id not in (from_id, to_id):
+                    return JsonResponse({"ok": False, "error": "触发元素必须属于源页面或目标页面"}, status=400)
+            except WebElement.DoesNotExist:
+                return JsonResponse({"ok": False, "error": "触发元素不存在"}, status=400)
+
+        WebPageFlow.objects.create(
+            from_group=from_g,
+            to_group=to_g,
+            trigger_element_id=trigger_id,
+            trigger_action=data.get("trigger_action", "click"),
+        )
+        return JsonResponse({"ok": True})
+
+    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+
+
+@csrf_exempt
+def delete_web_flow(request, flow_id):
+    """DELETE /api/elements/web-flows/{id}/."""
+    from .models import WebPageFlow
+    WebPageFlow.objects.filter(id=flow_id).delete()
+    return JsonResponse({"ok": True})
+
+
+# ── API Group CRUD ──
+
+
+def _api_group_payload(g):
+    children = getattr(g, "children", None)
+    child_count = children.count() if children is not None else 0
+    return {
+        "id": g.id, "name": g.name,
+        "parent_id": g.parent_id,
+        "is_folder": g.is_folder,
+        "sort_order": g.sort_order,
+        "endpoint_count": getattr(g, "_endpoint_count", 0),
+        "child_count": child_count,
+        "created_at": str(g.created_at),
+    }
+
+
+def list_api_groups(request):
+    """GET /api/elements/api-groups/ — Flat list of all groups with endpoint_count."""
+    from .models import ApiGroup
+    from django.db.models import Count
+
+    groups = list(ApiGroup.objects.annotate(
+        _endpoint_count=Count("endpoints")
+    ).order_by("sort_order", "name"))
+
+    return JsonResponse({
+        "ok": True,
+        "groups": [_api_group_payload(g) for g in groups],
+    })
+
+
+@csrf_exempt
+def create_api_group(request):
+    """POST /api/elements/api-groups/create/ — Create a group or folder."""
+    from .models import ApiGroup
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+
+    name = data.get("name", "").strip()
+    if not name:
+        return JsonResponse({"ok": False, "error": "分组名称必填"}, status=400)
+
+    parent_id = data.get("parent_id")
+    if parent_id in ("", 0, "0"):
+        parent_id = None
+
+    if parent_id:
+        try:
+            parent = ApiGroup.objects.get(pk=parent_id)
+            if not parent.is_folder:
+                return JsonResponse({"ok": False, "error": "只能将分组添加在目录下"}, status=400)
+        except ApiGroup.DoesNotExist:
+            return JsonResponse({"ok": False, "error": "父级分组不存在"}, status=404)
+
+    is_folder = bool(data.get("is_folder", False))
+
+    try:
+        g = ApiGroup.objects.create(
+            name=name, parent_id=parent_id,
+            is_folder=is_folder,
+            sort_order=data.get("sort_order", 0),
+        )
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": f"创建失败: {e}"}, status=500)
+
+    return JsonResponse({"ok": True, "group": _api_group_payload(g)})
+
+
+@csrf_exempt
+def api_group_detail(request, group_id):
+    """PUT/DELETE /api/elements/api-groups/{id}/ — Rename or delete a group."""
+    from .models import ApiGroup
+    from .models import ApiEndpoint
+
+    try:
+        g = ApiGroup.objects.get(id=group_id)
+    except ApiGroup.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "分组不存在"}, status=404)
+
+    if request.method == "PUT":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+
+        if "name" in data:
+            name = data["name"].strip()
+            if not name:
+                return JsonResponse({"ok": False, "error": "名称不能为空"}, status=400)
+            g.name = name
+
+        g.save(update_fields=["name"] if "name" in data else [])
+        return JsonResponse({"ok": True, "group": _api_group_payload(g)})
+
+    elif request.method == "DELETE":
+        # Cascade: child groups are deleted by CASCADE FK,
+        # endpoints in this group and all descendants become unclassified (group=null)
+        _collect_ids = set()
+
+        def _descendant_ids(node_id):
+            _collect_ids.add(node_id)
+            for child in ApiGroup.objects.filter(parent_id=node_id):
+                _descendant_ids(child.id)
+
+        _descendant_ids(g.id)
+        ApiEndpoint.objects.filter(group_id__in=_collect_ids).update(group=None)
+        g.delete()
+        return JsonResponse({"ok": True})
+
+    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+
+
+@csrf_exempt
+def batch_move_api_groups(request):
+    """POST /api/elements/api-groups/batch-move/ — Batch move groups to a target parent."""
+    from .models import ApiGroup
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+
+    group_ids = data.get("group_ids") or []
+    if not group_ids:
+        return JsonResponse({"ok": False, "error": "group_ids 不能为空"}, status=400)
+
+    parent_id = data.get("parent_id")
+    if parent_id in ("", 0, "0", "__root__"):
+        parent_id = None
+
+    if parent_id:
+        try:
+            parent = ApiGroup.objects.get(pk=parent_id)
+            if not parent.is_folder:
+                return JsonResponse({"ok": False, "error": "目标必须是目录"}, status=400)
+        except ApiGroup.DoesNotExist:
+            return JsonResponse({"ok": False, "error": "目标分组不存在"}, status=404)
+
+    ApiGroup.objects.filter(id__in=group_ids).update(parent_id=parent_id)
+    return JsonResponse({"ok": True, "moved": len(group_ids)})
+
+
+# ── API Endpoint CRUD ──
+
+
+def _api_endpoint_payload(e):
+    return {
+        "id": e.id, "name": e.name, "method": e.method, "url": e.url,
+        "headers": e.headers, "request_body_schema": e.request_body_schema,
+        "response_body_schema": e.response_body_schema, "description": e.description,
+        "tags": e.tags, "is_test_point": e.is_test_point,
+        "group_id": e.group_id,
+        "created_at": str(e.created_at), "updated_at": str(e.updated_at),
+    }
+
+
+def list_api_endpoints(request):
+    """GET /api/elements/api-endpoints/ — List API endpoints with search."""
+    from .models import ApiEndpoint
+    qs = ApiEndpoint.objects.all()
+
+    search = request.GET.get("search", "").strip()
+    if search:
+        from django.db.models import Q
+        qs = qs.filter(
+            Q(name__icontains=search) | Q(url__icontains=search)
+            | Q(description__icontains=search) | Q(tags__icontains=search)
+        )
+
+    method = request.GET.get("method", "").strip().upper()
+    if method:
+        qs = qs.filter(method=method)
+
+    is_test_point = request.GET.get("is_test_point")
+    if is_test_point is not None:
+        qs = qs.filter(is_test_point=is_test_point in ("1", "true"))
+
+    group_id = request.GET.get("group_id")
+    if group_id is not None:
+        if group_id == "" or group_id == "null":
+            qs = qs.filter(group__isnull=True)
+        else:
+            try:
+                qs = qs.filter(group_id=int(group_id))
+            except (ValueError, TypeError):
+                pass
+
+    qs = qs.order_by("-updated_at")
+    return JsonResponse({"ok": True, "endpoints": [_api_endpoint_payload(e) for e in qs], "total": qs.count()})
+
+
+@csrf_exempt
+def create_api_endpoint(request):
+    """POST /api/elements/api-endpoints/ — Create API endpoint."""
+    from .models import ApiEndpoint
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+
+    name = data.get("name", "").strip()
+    if not name:
+        return JsonResponse({"ok": False, "error": "接口名称必填"}, status=400)
+    method = data.get("method", "GET").upper()
+    if method not in ("GET", "POST", "PUT", "DELETE", "PATCH"):
+        return JsonResponse({"ok": False, "error": "无效的请求方法"}, status=400)
+    url = data.get("url", "").strip()
+    if not url:
+        return JsonResponse({"ok": False, "error": "接口 URL 必填"}, status=400)
+
+    try:
+        group_id = data.get("group_id")
+        group = None
+        if group_id is not None and group_id != "":
+            from .models import ApiGroup
+            try:
+                group = ApiGroup.objects.get(id=int(group_id))
+            except (ApiGroup.DoesNotExist, ValueError, TypeError):
+                pass
+
+        el = ApiEndpoint.objects.create(
+            group=group,
+            name=name, method=method, url=url,
+            headers=data.get("headers") or {},
+            request_body_schema=data.get("request_body_schema") or {},
+            response_body_schema=data.get("response_body_schema") or {},
+            description=data.get("description", ""),
+            tags=data.get("tags", ""),
+            is_test_point=bool(data.get("is_test_point", False)),
+        )
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=500)
+    return JsonResponse({"ok": True, "endpoint": _api_endpoint_payload(el)})
+
+
+@csrf_exempt
+def api_endpoint_detail(request, el_id):
+    """PUT/DELETE /api/elements/api-endpoints/{id}/."""
+    from .models import ApiEndpoint
+    try:
+        e = ApiEndpoint.objects.get(id=el_id)
+    except ApiEndpoint.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "接口不存在"}, status=404)
+
+    if request.method == "PUT":
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+
+        for field in ["name", "method", "url", "headers", "request_body_schema",
+                        "response_body_schema", "description", "tags"]:
+            if field in data:
+                setattr(e, field, data[field])
+        if "is_test_point" in data:
+            e.is_test_point = bool(data["is_test_point"])
+        if "group_id" in data:
+            gid = data["group_id"]
+            if gid is None or gid == "" or gid == "null":
+                e.group = None
+            else:
+                from .models import ApiGroup
+                try:
+                    e.group = ApiGroup.objects.get(id=int(gid))
+                except (ApiGroup.DoesNotExist, ValueError, TypeError):
+                    pass
+        e.save()
+        return JsonResponse({"ok": True, "endpoint": _api_endpoint_payload(e)})
+
+    elif request.method == "DELETE":
+        e.delete()
+        return JsonResponse({"ok": True})
+    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)

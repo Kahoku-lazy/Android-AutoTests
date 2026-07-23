@@ -8,6 +8,7 @@ import AppTable from "@/shared/components/AppTable.vue";
 import AppTabs from "@/shared/components/AppTabs.vue";
 import { usePagination } from '@/shared/composables/usePagination.js'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
+import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import { listRuns, statusLabel, statusBadgeClass, formatTime } from './api.js'
 import PassRateTrendChart from './components/PassRateTrendChart.vue'
 import DailyPassFailChart from './components/DailyPassFailChart.vue'
@@ -419,11 +420,7 @@ function openCaseBreakdown(type, tab = 'detail') {
 
               <!-- Empty state -->
               <template #empty>
-                <div class="table-empty">
-                  <span>📋</span>
-                  <p>暂无执行记录</p>
-                  <p class="sub">请先在执行引擎中运行测试，完成后将自动生成报告</p>
-                </div>
+                <EmptyState icon="📋" text="暂无执行记录" hint="请先在执行引擎中运行测试，完成后将自动生成报告" />
               </template>
             </AppTable>
           </AppCard>

@@ -24,6 +24,8 @@ class WebTestCase(models.Model):
     precondition = models.TextField(default="", blank=True, verbose_name="前置条件")
     steps = models.TextField(default="", blank=True, verbose_name="操作步骤")
     expected_result = models.TextField(default="", blank=True, verbose_name="预期结果")
+    # ── Structured steps (aligns with TestDefinition.steps_json) ──
+    steps_json = models.TextField(default="[]", blank=True, verbose_name="结构化步骤JSON")
     custom_columns = models.JSONField(default=list, blank=True, verbose_name="自定义列")
     rows = models.JSONField(default=list, blank=True, verbose_name="表格行数据")
     directory = models.ForeignKey(

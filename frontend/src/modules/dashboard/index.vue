@@ -314,79 +314,160 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* ═══════════════════════════════════════════
+   Paper × Polaroid — 仪表盘布局
+   ═══════════════════════════════════════════ */
+
+/* ── 底纹 + 全局 ── */
 .doc-page {
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  background:
+    radial-gradient(circle, #d4cdc0 0.8px, transparent 0.8px);
+  background-size: 14px 14px;
+  background-color: #fefcf6;
 }
-
 .doc-body {
   flex: 1;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  padding: 0 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
-/* Stats grid — 对齐参考图模块卡片风格 */
+/* ── Stats Grid — 拍立得微旋转 ── */
 .dashboard__stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  gap: 18px;
+  padding-top: 16px;
 }
+.dashboard__stats-grid > :nth-child(1) { transform: rotate(-1.2deg); }
+.dashboard__stats-grid > :nth-child(2) { transform: rotate(0.7deg); }
+.dashboard__stats-grid > :nth-child(3) { transform: rotate(-0.5deg); }
+.dashboard__stats-grid > :nth-child(4) { transform: rotate(1deg); }
+.dashboard__stats-grid > :hover { transform: rotate(0deg) scale(1.03) !important; z-index: 10; }
 
 @media (max-width: 1100px) {
-  .dashboard__stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .dashboard__stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 520px) {
-  .dashboard__stats-grid {
-    grid-template-columns: 1fr;
-  }
+  .dashboard__stats-grid { grid-template-columns: 1fr; }
 }
 
-/* Trends */
+/* ── Section 区 ── */
+.doc-section {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+}
+.doc-section__header {
+  margin-bottom: 0;
+}
+.doc-section__title {
+  font-family: 'Caveat', cursive;
+  font-size: 20px;
+  font-weight: 700;
+  color: #2d2d2d;
+  display: inline-block;
+  position: relative;
+  margin-bottom: 8px;
+}
+.doc-section__title::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%232d2d2d' stroke-width='2' fill='none'/%3E%3C/svg%3E") repeat-x;
+  background-size: 40px 3px;
+}
+.doc-section__label {
+  font-size: 10px;
+  color: #999;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+.doc-tag {
+  font-size: 9px;
+  padding: 1px 8px;
+  border-radius: 4px 8px 4px 8px;
+  background: #fff;
+  color: #999;
+  border: 1.5px solid #ddd;
+  font-weight: 700;
+  margin-left: 8px;
+}
+
+/* ── Trends — 拍立得横排卡片 ── */
 .dashboard__trends {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
-  gap: 16px;
+  gap: 14px;
   align-items: stretch;
 }
-
 @media (max-width: 960px) {
-  .dashboard__trends {
-    grid-template-columns: 1fr;
-  }
+  .dashboard__trends { grid-template-columns: 1fr; }
 }
-
 .trends-chart-card,
 .trends-tasks-card {
   display: flex;
   flex-direction: column;
 }
-
 .trends-chart-card :deep(.el-card__body),
 .trends-tasks-card :deep(.el-card__body) {
-  padding: 18px;
-  border-radius: 16px;
-  background: var(--app-glass-card, rgba(255,255,255,0.65));
+  padding: 12px 12px 30px 12px;
+  border-radius: 6px 10px 6px 10px;
+  background: #fff;
+  border: 2.5px solid #2d2d2d;
   flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.05);
+  position: relative;
 }
-
+/* 图钉 */
+.trends-chart-card :deep(.el-card__body)::before,
+.trends-tasks-card :deep(.el-card__body)::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  background: radial-gradient(circle, #e8e0d5 30%, #a09080 100%);
+  border-radius: 50%;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
+  z-index: 2;
+}
+.trends-chart-card { transform: rotate(-0.3deg); }
+.trends-tasks-card { transform: rotate(0.4deg); }
+.trends-chart-card :deep(.el-card) {
+  background: transparent; border: none; box-shadow: none;
+}
+.trends-tasks-card :deep(.el-card) {
+  background: transparent; border: none; box-shadow: none;
+}
 .trends-tasks-card__title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--app-text, #4a4e69);
-  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #2d2d2d;
+  margin-bottom: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.04em;
 }
 
-/* Live dot */
+/* ── Live dot ── */
 .dashboard__live-dot {
   position: absolute;
   width: 8px;
@@ -399,29 +480,50 @@ onMounted(() => {
   animation: livePulse 1.5s ease-in-out infinite;
 }
 @keyframes livePulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
-  }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
 }
 
-/* Footer */
+/* ── Footer ── */
 .dashboard__footer {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 24px;
-  padding-top: 8px;
-  color: #9f927d;
+  padding: 14px 20px;
+  background: #FFE066;
+  border: 2.5px solid #2d2d2d;
+  border-radius: 6px 10px 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5a4e20;
+  font-family: 'Caveat', cursive;
 }
-
 .dashboard__footer-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 13px;
+}
+.dashboard__footer-item :deep(svg) {
+  color: #5a4e20;
+  stroke: #5a4e20;
+}
+
+/* ── Module Nav 覆盖 ── */
+:deep(.module-nav-card) {
+  background: #fff !important;
+  border: 2.5px solid #2d2d2d !important;
+  border-radius: 6px 10px 6px 10px !important;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.04) !important;
+}
+:deep(.module-nav-card:hover) {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.06) !important;
+}
+
+/* ── Activity Timeline 覆盖 ── */
+:deep(.activity-item) {
+  border-bottom: 1.5px dashed #ddd !important;
 }
 </style>

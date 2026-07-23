@@ -59,15 +59,16 @@ watch(() => props.icon, async () => {
 </template>
 
 <style scoped>
+/* ═══════════════════════════════════════════
+   Paper × Polaroid — 纸艺拍立得 Header
+   ═══════════════════════════════════════════ */
 .wb-header {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 12px 18px;
-  background: rgba(255,255,255,0.52);
-  border-bottom: 1px solid var(--ac-border, rgba(255,255,255,0.68));
-  backdrop-filter: blur(var(--app-glass-blur, 20px));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur, 20px));
+  padding: 14px 20px;
+  background: #fff;
+  border-bottom: 2.5px solid #2d2d2d;
   flex-shrink: 0;
   z-index: 10;
 }
@@ -82,32 +83,37 @@ watch(() => props.icon, async () => {
   height: 40px;
   display: grid;
   place-items: center;
-  font-size: 22px;
-  border-radius: 14px;
+  font-size: 16px;
+  border-radius: 8px 16px 6px 14px;
   flex-shrink: 0;
+  background: #FFE066;
+  border: 2.5px solid #2d2d2d;
+  transform: rotate(-2deg);
 }
 .brand-mark--lucide {
-  box-shadow: var(--app-icon-shadow, 0 10px 24px rgba(74, 78, 105, 0.12));
+  box-shadow: none;
 }
 .brand-mark--lucide :deep(svg) {
-  width: 20px;
-  height: 20px;
-  color: #fff;
-  stroke: #fff;
+  width: 18px;
+  height: 18px;
+  color: #2d2d2d;
+  stroke: #2d2d2d;
 }
 .brand-text { min-width: 0; }
 .brand-title {
   margin: 0;
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--ac-ink, #4a4e69);
-  line-height: 1.25;
+  font-family: 'Caveat', cursive;
+  font-size: 24px;
+  font-weight: 700;
+  color: #2d2d2d;
+  line-height: 1.2;
+  transform: rotate(-0.5deg);
 }
 .brand-sub {
-  margin: 2px 0 0;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--ac-ink-faint, #a8b5c4);
+  margin: 1px 0 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: #999;
   line-height: 1.35;
 }
 .header-actions {
@@ -116,5 +122,23 @@ watch(() => props.icon, async () => {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+/* Override .wb-btn in this header context */
+.wb-header :deep(.el-button) {
+  font-weight: 800 !important;
+  color: #2d2d2d !important;
+  background: #fff !important;
+  border: 2.5px solid #2d2d2d !important;
+  border-radius: 6px 12px 6px 12px !important;
+  padding: 5px 14px !important;
+  font-family: inherit !important;
+  transition: all 0.12s !important;
+  box-shadow: none !important;
+}
+.wb-header :deep(.el-button:hover) {
+  background: #FFE066 !important;
+}
+.wb-header :deep(.el-button:active) {
+  transform: translate(1px, 1px) !important;
 }
 </style>

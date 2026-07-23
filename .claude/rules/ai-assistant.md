@@ -2,7 +2,7 @@
 
 ## 概述
 
-面向测试人员的自然语言 AI 助手，通过对话完成自动化测试全流程。底层由 AgentScope 2.0 驱动，封装为 25 个 Tool，LLM 通过 Function Calling 自动选择。
+面向测试人员的自然语言 AI 助手，通过对话完成自动化测试全流程。底层由 AgentScope 2.0 驱动，封装为 38 个 Tool，LLM 通过 Function Calling 自动选择。
 
 ## 交互架构
 
@@ -11,7 +11,7 @@
     ↓ SSE 流式对话
 AgentScope Agent (FastAPI :8000)
     ├── system_prompt: 平台约束 + SOP 四阶段工作流
-    ├── toolkit: 25 个 Tool（21 业务 + 4 Plan）
+    ├── toolkit: 38 个 Tool（34 业务 + 4 Plan）
     ├── model: DashScope / OpenAI / Anthropic
     └── reply_stream() → EventType 事件流
     ↓ Tool 调用

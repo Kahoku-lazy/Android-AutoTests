@@ -53,3 +53,105 @@ export function apiBatchMovePages(pageIds, parentId) {
     parent_id: parentId ?? null,
   })
 }
+
+// ── Web element management ──
+
+export function apiListWebElements(params = {}) {
+  return client.get('/elements/web', { params })
+}
+
+export function apiCreateWebElement(data) {
+  return client.post('/elements/web/create', data)
+}
+
+export function apiUpdateWebElement(id, data) {
+  return client.put(`/elements/web/${id}`, data)
+}
+
+export function apiDeleteWebElement(id) {
+  return client.delete(`/elements/web/${id}`)
+}
+
+export function apiBatchImportWebElements(elements) {
+  return client.post('/elements/web/batch', { elements })
+}
+
+// ── Web group management ──
+
+export function apiListWebGroups() {
+  return client.get('/elements/web-groups')
+}
+
+export function apiCreateWebGroup(data) {
+  return client.post('/elements/web-groups/create', data)
+}
+
+export function apiUpdateWebGroup(id, data) {
+  return client.put(`/elements/web-groups/${id}`, data)
+}
+
+export function apiDeleteWebGroup(id) {
+  return client.delete(`/elements/web-groups/${id}`)
+}
+
+export function apiBatchMoveWebGroups(groupIds, parentId) {
+  return client.post('/elements/web-groups/batch-move', {
+    group_ids: groupIds,
+    parent_id: parentId ?? null,
+  })
+}
+
+// ── API group management ──
+
+export function apiListApiGroups() {
+  return client.get('/elements/api-groups')
+}
+
+export function apiCreateApiGroup(data) {
+  return client.post('/elements/api-groups/create', data)
+}
+
+export function apiUpdateApiGroup(id, data) {
+  return client.put(`/elements/api-groups/${id}`, data)
+}
+
+export function apiDeleteApiGroup(id) {
+  return client.delete(`/elements/api-groups/${id}`)
+}
+
+export function apiBatchMoveApiGroups(groupIds, parentId) {
+  return client.post('/elements/api-groups/batch-move', {
+    group_ids: groupIds,
+    parent_id: parentId ?? null,
+  })
+}
+
+// ── API endpoints ──
+
+export function apiListApiEndpoints(params = {}) {
+  return client.get('/elements/api-endpoints', { params })
+}
+
+export function apiCreateApiEndpoint(data) {
+  return client.post('/elements/api-endpoints/create', data)
+}
+
+export function apiUpdateApiEndpoint(id, data) {
+  return client.put(`/elements/api-endpoints/${id}`, data)
+}
+
+export function apiDeleteApiEndpoint(id) {
+  return client.delete(`/elements/api-endpoints/${id}`)
+}
+
+// ── Web page flows ──
+
+export function apiListWebFlows() {
+  return client.get('/elements/web-flows')
+}
+export function apiCreateWebFlow(data) {
+  return client.post('/elements/web-flows', data)
+}
+export function apiDeleteWebFlow(id) {
+  return client.delete(`/elements/web-flows/${id}`)
+}

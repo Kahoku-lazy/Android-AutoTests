@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>侧边栏全方案对比 — Android-AutoTests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Caveat:wght@400;600;700&family=Patrick+Hand&family=Reenie+Beanie&family=Bangers&family=Gochi+Hand&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+/* ═══════════════════════════════════════════
+   全局
+   ═══════════════════════════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+body{
+  font-family:'Quicksand','PingFang SC','Microsoft YaHei',sans-serif;
+  background:#e8ecf1;
+  padding:24px;
+  min-height:100vh;
+}
+
+h1{
+  text-align:center;font-size:22px;font-weight:800;color:#4a4e69;
+  margin-bottom:6px;font-family:'Quicksand',sans-serif;letter-spacing:-0.02em;
+}
+h1+p{text-align:center;font-size:13px;color:#9a8c98;margin-bottom:28px;}
+
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px 24px;max-width:920px;margin:0 auto;}
+
+.card{display:flex;flex-direction:column;align-items:center;gap:10px;}
+.card-label{
+  font-size:11px;font-weight:700;color:#4a4e69;letter-spacing:0.06em;text-transform:uppercase;
+  background:rgba(255,255,255,0.7);padding:4px 16px;border-radius:12px;
+  display:flex;align-items:center;gap:6px;
+}
+.card-label .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.card-label .tag{
+  font-size:9px;font-weight:600;padding:1px 7px;border-radius:8px;color:#fff;
+}
+.tag-glass{background:#89CFF0;}
+.tag-hand{background:#FF6B6B;}
+
+/* ── 模块色 ── */
+:root{
+  --c-dashboard:#F7C948;--c-device:#6BCB77;--c-element:#A78BFA;
+  --c-case:#4ECDC4;--c-runner:#FF6B6B;--c-report:#7C6F83;
+  --c-ai:#E879F9;--c-workflow:#60A5FA;
+}
+
+/* ═══════════════════════════════════════════
+   共享侧边栏骨架
+   ═══════════════════════════════════════════ */
+.sidebar{
+  width:248px;height:660px;display:flex;flex-direction:column;overflow:hidden;
+  font-family:'Quicksand','PingFang SC','Microsoft YaHei',sans-serif;
+  flex-shrink:0;position:relative;border-radius:20px;
+}
+.sb-brand{display:flex;align-items:center;gap:10px;padding:20px 18px 16px;flex-shrink:0;}
+.sb-brand-icon{width:36px;height:36px;display:grid;place-items:center;font-size:20px;flex-shrink:0;}
+.sb-brand-text{font-size:15px;font-weight:800;line-height:1.2;flex:1;min-width:0;}
+
+.sb-nav{flex:1;overflow-y:auto;padding:6px 14px;display:flex;flex-direction:column;gap:3px;}
+.sb-section-label{font-size:13px;font-weight:700;padding:10px 8px 4px;margin-top:4px;cursor:default;user-select:none;}
+.sb-item{display:flex;align-items:center;gap:10px;height:43px;padding:0 12px;cursor:pointer;transition:all 0.2s ease;font-size:13.5px;font-weight:600;position:relative;text-decoration:none;}
+.nav-lucide-icon{width:20px;height:20px;display:grid;place-items:center;font-size:15px;flex-shrink:0;}
+/* 平台 Lucide 图标样式 — 匹配 AppSidebar.vue */
+.nav-lucide-icon{width:18px;height:18px;flex-shrink:0;stroke-width:1.8;}
+.sb-item .nav-lucide-icon{color:inherit;}
+.sb-item.active .nav-lucide-icon{color:inherit;}
+.sb-item-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sb-item-badge{font-size:9px;font-weight:700;padding:2px 8px;flex-shrink:0;}
+
+.sb-footer{padding:12px 14px 16px;flex-shrink:0;}
+.sb-user-card{padding:12px;}
+.sb-user-label{font-size:11px;font-weight:700;}
+.sb-user-row{display:flex;align-items:center;gap:7px;margin:3px 0;font-size:13px;font-weight:700;}
+.sb-user-status{font-size:10.5px;font-weight:600;}
+.sb-logout{display:block;width:100%;margin-top:8px;padding:6px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;background:transparent;font-family:inherit;transition:all 0.15s ease;}
+
+/* ═══════════════════════════════════════════
+   导航 HTML 碎片（所有方案共享）
+   ═══════════════════════════════════════════ */
+
+/* ========================================
+   A: PRISM — 暗色指挥中心
+   ======================================== */
+.prism{
+  background:linear-gradient(180deg,rgba(15,23,42,0.92),rgba(20,30,55,0.88));
+  backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);
+  border:1px solid rgba(255,255,255,0.08);color:#e2e8f0;
+  box-shadow:0 0 0 1px rgba(137,207,240,0.06),12px 0 48px rgba(0,0,0,0.25);
+}
+.prism .sb-brand-icon{background:linear-gradient(135deg,#89CFF0,#C9B6F2);color:#0b1424;box-shadow:0 0 20px rgba(137,207,240,0.3);}
+.prism .sb-brand-text{background:linear-gradient(105deg,#89CFF0 0%,#C9B6F2 35%,#95D5B2 65%,#89CFF0 100%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:prism-shift 6s ease-in-out infinite;}
+@keyframes prism-shift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.prism .sb-section-label{color:#64748b;}
+.prism .sb-item{color:#94a3b8;border:1px solid transparent;}
+.prism .sb-item:hover{color:#e2e8f0;background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.08);}
+.prism .sb-item::before{content:'';position:absolute;left:-1px;top:20%;height:60%;width:3px;border-radius:0 3px 3px 0;background:var(--item-color);opacity:0;transform:scaleY(0.5);transition:all 0.25s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 0 8px var(--item-color);}
+.prism .sb-item:hover::before{opacity:0.7;transform:scaleY(1);}
+.prism .sb-item.active{color:#fff;background:radial-gradient(ellipse at 12% 50%,color-mix(in srgb,var(--item-color) 18%,transparent) 0%,transparent 70%),rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--item-color) 30%,transparent);}
+.prism .sb-item.active::before{opacity:1;transform:scaleY(1);box-shadow:0 0 14px var(--item-color),0 0 4px var(--item-color);}
+.prism .sb-item.active .sb-item-label{color:#fff;}
+.prism .sb-item.active .nav-lucide-icon{filter:drop-shadow(0 0 4px var(--item-color));}
+.prism .sb-item-badge{background:rgba(137,207,240,0.2);color:#BDE0FE;border-radius:10px;}
+.prism .sb-item-badge.pending{background:rgba(244,211,94,0.2);color:#F4D35E;}
+.prism .sb-user-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:14px;}
+.prism .sb-user-label{color:#64748b;}
+.prism .sb-user-status{color:#95D5B2;}
+.prism .sb-logout{color:#f87171;border:1.5px solid rgba(248,113,113,0.3);border-radius:10px;}
+.prism .sb-logout:hover{background:rgba(248,113,113,0.12);border-color:rgba(248,113,113,0.5);}
+
+/* ========================================
+   B: FROST — 精炼毛玻璃
+   ======================================== */
+.frost{
+  background:rgba(255,255,255,0.48);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
+  border-right:1px solid rgba(255,255,255,0.72);color:#4a4e69;
+  box-shadow:8px 0 40px rgba(74,78,105,0.06);
+}
+.frost .sb-brand-icon{background:linear-gradient(135deg,rgba(137,207,240,0.4),rgba(201,182,242,0.3));color:#89CFF0;box-shadow:0 4px 16px rgba(137,207,240,0.14);}
+.frost .sb-brand-text{background:linear-gradient(105deg,#89CFF0 0%,#C9B6F2 28%,#7AB88D 52%,#89CFF0 100%);background-size:240% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:frost-shift 8s ease-in-out infinite;}
+@keyframes frost-shift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.frost .sb-section-label{color:#9a8c98;}
+.frost .sb-item{color:#9a8c98;}
+.frost .sb-item:hover{background:rgba(255,255,255,0.7);color:#4a4e69;}
+.frost .sb-item.active{color:#4a4e69;background:rgba(255,255,255,0.78);box-shadow:0 4px 18px rgba(137,207,240,0.18),0 1px 3px rgba(0,0,0,0.04),inset 0 1px 0 rgba(255,255,255,0.85);border:1.5px solid rgba(255,255,255,0.9);}
+.frost .sb-item.active .nav-lucide-icon{color:var(--item-color);}
+.frost .sb-item.active::after{content:'';position:absolute;left:12px;top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:50%;background:var(--item-color);box-shadow:0 0 10px var(--item-color);}
+.frost .sb-item.active .nav-lucide-icon{margin-left:6px;}
+.frost .sb-item-badge{background:linear-gradient(135deg,rgba(137,207,240,0.3),rgba(201,182,242,0.25));color:#5588aa;border:1px solid rgba(137,207,240,0.3);border-radius:10px;}
+.frost .sb-item-badge.pending{color:#b08820;}
+.frost .sb-user-card{background:rgba(255,255,255,0.45);border:1px solid rgba(255,255,255,0.7);border-radius:14px;}
+.frost .sb-user-label{color:#9a8c98;}
+.frost .sb-user-status{color:#7AB88D;}
+.frost .sb-logout{color:#d4855e;border:1.5px solid rgba(212,133,94,0.3);border-radius:10px;}
+.frost .sb-logout:hover{background:rgba(212,133,94,0.08);border-color:rgba(212,133,94,0.5);}
+
+/* ========================================
+   C: SILK — 极简实体表面
+   ======================================== */
+.silk{
+  background:linear-gradient(180deg,#fdfdfc,#f8f7f5);color:#1e293b;
+  box-shadow:0 0 0 1px rgba(0,0,0,0.04),4px 0 24px rgba(0,0,0,0.03);position:relative;
+}
+.silk::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#F4D35E 0%,#95D5B2 12.5%,#B0A8E0 25%,#7AB88D 37.5%,#FFB5A7 50%,#9a8c98 62.5%,#C9B6F2 75%,#89CFF0 87.5%,#89CFF0 100%);border-radius:0 2px 2px 0;z-index:1;}
+.silk .sb-brand-icon{background:#f0f4f8;color:#4a4e69;}
+.silk .sb-brand-text{color:#1e293b;}
+.silk .sb-section-label{color:#94a3b8;cursor:default;}
+.silk .sb-item{color:#64748b;}
+.silk .sb-item:hover{background:#f1f5f9;color:#1e293b;}
+.silk .sb-item.active{background:color-mix(in srgb,var(--item-color) 12%,#ffffff);color:#1e293b;font-weight:700;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--item-color) 18%,transparent);}
+.silk .sb-item.active .nav-lucide-icon{color:var(--item-color);}
+.silk .sb-item-badge{background:#f1f5f9;color:#64748b;border-radius:10px;}
+.silk .sb-item-badge.pending{color:#b08820;}
+.silk .sb-user-card{background:#f8fafc;border:1px solid #e8ecf1;border-radius:8px;}
+.silk .sb-user-label{color:#94a3b8;}
+.silk .sb-user-status{color:#7AB88D;}
+.silk .sb-logout{color:#94a3b8;border:1.5px solid #e2e8f0;border-radius:6px;}
+.silk .sb-logout:hover{background:#fef2f2;border-color:#fecaca;color:#ef4444;}
+
+/* ========================================
+   D: TERMINAL — 开发者工具风
+   ======================================== */
+.terminal{
+  background:#1a1d23;color:#c9d1d9;
+  font-family:'Inter','PingFang SC','Microsoft YaHei',sans-serif;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.06),8px 0 32px rgba(0,0,0,0.3);
+}
+.terminal .sb-brand{font-family:'JetBrains Mono',monospace;}
+.terminal .sb-brand-icon{background:#252830;color:#58a6ff;border-radius:6px;font-family:'JetBrains Mono',monospace;}
+.terminal .sb-brand-text{color:#e6edf3;font-family:'Inter',sans-serif;font-size:14px;letter-spacing:-0.01em;}
+.terminal .sb-section-label{color:#484f58;font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:6px;}
+.terminal .sb-item{font-family:'Inter',sans-serif;color:#8b949e;border-radius:6px;font-size:13px;font-weight:500;height:36px;}
+.terminal .sb-item:hover{background:#252830;color:#c9d1d9;}
+.terminal .sb-item.active{background:#1f2937;color:#e6edf3;font-weight:600;box-shadow:inset 2px 0 0 0 var(--item-color);}
+.terminal .sb-item.active .nav-lucide-icon{color:var(--item-color);}
+.terminal .sb-item.active::after{content:'';position:absolute;right:12px;top:50%;transform:translateY(-50%);width:8px;height:2px;background:var(--item-color);animation:terminal-cursor 1.2s steps(1)infinite;border-radius:1px;}
+@keyframes terminal-cursor{0%,100%{opacity:1}50%{opacity:0}}
+.terminal .sb-item-badge{background:#252830;color:#8b949e;font-family:'JetBrains Mono',monospace;font-size:9px;border-radius:4px;}
+.terminal .sb-user-card{background:#252830;border:1px solid #30363d;border-radius:8px;}
+.terminal .sb-user-label{color:#484f58;font-family:'JetBrains Mono',monospace;}
+.terminal .sb-user-status{color:#3fb950;}
+.terminal .sb-logout{color:#f85149;border:1.5px solid rgba(248,81,73,0.3);border-radius:6px;}
+.terminal .sb-logout:hover{background:rgba(248,81,73,0.1);}
+
+/* ========================================
+   E: BLOOM — 有机生长态
+   ======================================== */
+.bloom{
+  background:linear-gradient(180deg,rgba(255,252,248,0.7),rgba(248,245,240,0.6));
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  color:#5a4e3c;box-shadow:6px 0 28px rgba(139,115,85,0.04);
+  border-right:1px solid rgba(180,160,130,0.18);
+}
+.bloom .sb-brand-icon{background:linear-gradient(135deg,#e8d5b7,#f0e4d0);color:#8b7355;border-radius:14px;}
+.bloom .sb-brand-text{color:#5a4e3c;}
+.bloom .sb-section-label{color:#b8a088;font-size:10px;letter-spacing:0.08em;}
+.bloom .sb-item{color:#9a8878;border-radius:14px;height:44px;transition:all 0.3s cubic-bezier(0.16,1,0.3,1);}
+.bloom .sb-item:hover{background:rgba(200,180,150,0.12);color:#5a4e3c;}
+.bloom .sb-item.active{color:#5a4e3c;background:color-mix(in srgb,var(--item-color) 10%,rgba(255,252,248,0.8));box-shadow:0 2px 16px color-mix(in srgb,var(--item-color) 18%,transparent);}
+.bloom .sb-item.active .nav-lucide-icon{color:var(--item-color);transform:scale(1.18);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+.bloom .sb-item.active::before{content:'';position:absolute;left:8px;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:var(--item-color);box-shadow:0 0 12px color-mix(in srgb,var(--item-color) 40%,transparent);animation:bloom-pulse 2.8s ease-in-out infinite;}
+@keyframes bloom-pulse{0%,100%{box-shadow:0 0 8px color-mix(in srgb,var(--item-color) 30%,transparent)}50%{box-shadow:0 0 20px color-mix(in srgb,var(--item-color) 60%,transparent)}}
+.bloom .sb-item-badge{background:rgba(180,160,130,0.16);color:#8b7355;border-radius:10px;font-size:9.5px;}
+.bloom .sb-user-card{background:rgba(255,252,248,0.55);border:0.5px solid rgba(180,160,130,0.2);border-radius:16px;}
+.bloom .sb-user-label{color:#b8a088;}
+.bloom .sb-user-status{color:#7AB88D;}
+.bloom .sb-logout{color:#b0907a;border:1.5px solid rgba(180,160,130,0.3);border-radius:14px;}
+.bloom .sb-logout:hover{background:rgba(180,100,80,0.08);border-color:rgba(200,120,80,0.4);color:#a06040;}
+
+/* ========================================
+   F: GRID — 瑞士国际风
+   ======================================== */
+.grid-style{
+  background:#fff;color:#0f1419;
+  font-family:'Inter','PingFang SC','Microsoft YaHei',sans-serif;
+  box-shadow:1px 0 0 0 #e8ecf1;border-radius:0;
+}
+.grid-style .sb-brand{border-bottom:1px solid #e8ecf1;padding:20px 18px 16px;}
+.grid-style .sb-brand-icon{background:#0f1419;color:#fff;border-radius:4px;font-size:12px;}
+.grid-style .sb-brand-text{color:#0f1419;font-family:'Inter',sans-serif;font-weight:700;letter-spacing:-0.02em;}
+.grid-style .sb-section-label{color:#536471;font-family:'Inter',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.02em;padding:14px 10px 6px;border-top:1px solid #f0f3f5;}
+.grid-style .sb-section-label:nth-of-type(1){border-top:none;margin-top:0;}
+.grid-style .sb-item{font-family:'Inter',sans-serif;color:#536471;border-radius:4px;font-size:13.5px;font-weight:500;height:38px;transition:all 0.12s ease;}
+.grid-style .sb-item:hover{background:#f7f9f9;color:#0f1419;}
+.grid-style .sb-item.active{background:#0f1419;color:#fff;font-weight:600;box-shadow:none;}
+.grid-style .sb-item.active .nav-lucide-icon{color:#fff;}
+.grid-style .sb-item.active .sb-item-label{color:#fff;}
+.grid-style .sb-item-badge{background:#f0f3f5;color:#536471;border-radius:3px;font-size:9.5px;font-family:'Inter',sans-serif;font-weight:600;}
+.grid-style .sb-user-card{background:#fafbfc;border:1px solid #e8ecf1;border-radius:6px;}
+.grid-style .sb-user-label{color:#536471;font-family:'Inter',sans-serif;}
+.grid-style .sb-user-status{color:#2f9e44;}
+.grid-style .sb-logout{color:#536471;border:1.5px solid #d4d8dc;border-radius:4px;font-family:'Inter',sans-serif;font-weight:500;}
+.grid-style .sb-logout:hover{background:#fafbfc;border-color:#0f1419;color:#0f1419;}
+
+/* ========================================
+   G: CRAYON — 蜡笔涂色风
+   ======================================== */
+.crayon{
+  background:#fffef9;border:3px solid #2d2d2d;
+  box-shadow:3px 3px 0 0 #2d2d2d,5px 5px 0 0 rgba(0,0,0,0.06),2px 8px 24px rgba(0,0,0,0.08);
+  border-radius:18px 22px 16px 20px;color:#2d2d2d;
+}
+.crayon .sb-brand{border-bottom:2.5px dashed #2d2d2d;padding-bottom:14px;}
+.crayon .sb-brand-icon{background:#FFE066;border:2.5px solid #2d2d2d;border-radius:10px 14px 8px 12px;box-shadow:2px 2px 0 0 #2d2d2d;color:#2d2d2d;}
+.crayon .sb-brand-text{color:#2d2d2d;font-family:'Caveat',cursive;font-size:20px;font-weight:700;}
+.crayon .sb-section-label{font-family:'Caveat',cursive;font-size:16px;font-weight:700;color:#2d2d2d;background:#FFE066;display:inline-block;width:fit-content;padding:2px 14px 1px;border:2.5px solid #2d2d2d;border-radius:6px 14px 8px 12px;box-shadow:2px 2px 0 0 #FF6B6B;transform:rotate(-0.8deg);margin-bottom:2px;}
+.crayon .sb-section-label:nth-of-type(2){background:#A5F0C5;box-shadow:2px 2px 0 0 #6BCB77;transform:rotate(0.5deg);}
+.crayon .sb-item{color:#555;border:2.5px solid transparent;border-radius:10px 16px 12px 14px;}
+.crayon .sb-item:hover{background:#fff;border-color:#999;color:#2d2d2d;box-shadow:2px 2px 0 0 #ccc;}
+.crayon .sb-item.active{color:#2d2d2d;background:#FFEBEB;border:2.5px solid #2d2d2d;box-shadow:3px 3px 0 0 #2d2d2d;font-weight:700;border-radius:12px 18px 10px 16px;animation:crayon-pop 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes crayon-pop{from{transform:scale(0.96)}to{transform:scale(1)}}
+.crayon .sb-item.active .nav-lucide-icon{color:#FF6B6B;}
+.crayon .sb-item-badge{background:#FFE066;color:#2d2d2d;border:2px solid #2d2d2d;border-radius:6px 12px 6px 12px;box-shadow:1.5px 1.5px 0 0 #2d2d2d;}
+.crayon .sb-item-badge.pending{background:#A5F0C5;}
+.crayon .sb-user-card{background:#fff;border:2.5px solid #2d2d2d;border-radius:12px 18px 10px 16px;box-shadow:2.5px 2.5px 0 0 #2d2d2d;}
+.crayon .sb-user-label{color:#888;font-family:'Caveat',cursive;font-size:13px;}
+.crayon .sb-user-status{color:#6BCB77;}
+.crayon .sb-logout{color:#FF6B6B;border:2.5px solid #2d2d2d;border-radius:10px 16px 10px 16px;box-shadow:2px 2px 0 0 #2d2d2d;}
+.crayon .sb-logout:hover{background:#FFEBEB;transform:translate(1px,1px);box-shadow:1px 1px 0 0 #2d2d2d;}
+.crayon .sb-item:nth-child(3n+1){transform:rotate(-0.15deg);}
+.crayon .sb-item:nth-child(3n+2){transform:rotate(0.1deg);}
+
+/* ========================================
+   H: NOTEPAD — 手账笔记风
+   ======================================== */
+.notepad{
+  background:radial-gradient(circle,#d4cdc0 1px,transparent 1px);background-size:20px 20px;
+  background-color:#fefcf6;border:2px solid #d4cdc0;border-radius:6px;
+  box-shadow:3px 4px 12px rgba(0,0,0,0.06);color:#4a3f35;
+}
+.notepad .sb-brand{border-bottom:2px solid #d4cdc0;position:relative;}
+.notepad .sb-brand::after{content:'';position:absolute;bottom:-6px;left:12px;right:12px;height:3px;background:repeating-linear-gradient(90deg,transparent,transparent 4px,#d4cdc0 4px,#d4cdc0 5px);}
+.notepad .sb-brand-icon{background:#FFE8CC;color:#4a3f35;border-radius:4px;border:1.5px solid #d4cdc0;}
+.notepad .sb-brand-text{color:#4a3f35;font-family:'Reenie Beanie','Caveat',cursive;font-size:19px;font-weight:400;transform:rotate(-0.5deg);}
+.notepad .sb-section-label{font-family:'Reenie Beanie','Patrick Hand',cursive;font-size:15px;font-weight:400;color:#fff;margin:8px 0 4px -8px;padding:3px 16px 2px;width:calc(100% + 8px);transform:rotate(-1deg);border-radius:0 4px 4px 0;border:1px solid rgba(0,0,0,0.06);box-shadow:1px 2px 3px rgba(0,0,0,0.06);}
+.notepad .sb-section-label:nth-of-type(1){background:linear-gradient(90deg,#A8E6CF,#88D8B0);}
+.notepad .sb-section-label:nth-of-type(2){background:linear-gradient(90deg,#C9B6F2,#B8A0E8);transform:rotate(0.8deg);}
+.notepad .sb-item{color:#8a7b6e;border-radius:4px;border-left:3px solid transparent;font-weight:600;padding-left:10px;}
+.notepad .sb-item:hover{background:rgba(255,255,255,0.7);border-left-color:#d4cdc0;color:#4a3f35;}
+.notepad .sb-item.active{color:#4a3f35;background:#fff;border-left:4px solid var(--item-color);box-shadow:1px 2px 6px rgba(0,0,0,0.05);}
+.notepad .sb-item.active::after{content:'';position:absolute;left:-4px;top:6px;bottom:6px;width:4px;background:var(--item-color);border-radius:0 3px 3px 0;}
+.notepad .sb-item.active .nav-lucide-icon{color:var(--item-color);}
+.notepad .sb-item-badge{background:#FFE8CC;color:#8a7b6e;border:1px solid #e8d5b7;border-radius:3px;position:relative;}
+.notepad .sb-item-badge::before{content:'';position:absolute;bottom:-3px;right:6px;width:6px;height:6px;background:#FFE8CC;border-right:1px solid #e8d5b7;border-bottom:1px solid #e8d5b7;transform:rotate(45deg);}
+.notepad .sb-item-badge.pending{background:#E8D5F5;border-color:#d4c0e8;}
+.notepad .sb-item-badge.pending::before{background:#E8D5F5;border-color:#d4c0e8;}
+.notepad .sb-user-card{background:#fff;border:1px solid #e8d5b7;border-radius:4px;box-shadow:1px 2px 4px rgba(0,0,0,0.04);background-image:repeating-linear-gradient(0deg,transparent,transparent 19px,#f5f0e8 19px,#f5f0e8 20px);background-position:0 8px;}
+.notepad .sb-user-label{color:#b8a088;font-family:'Reenie Beanie',cursive;font-size:14px;}
+.notepad .sb-user-status{color:#6BCB77;font-family:'Patrick Hand',cursive;font-size:11px;}
+.notepad .sb-logout{color:#8a7b6e;border:1px dashed #d4cdc0;border-radius:4px;font-family:'Patrick Hand',cursive;font-size:13px;}
+.notepad .sb-logout:hover{background:#fff5f5;border-color:#e8c0c0;color:#c06060;}
+
+/* ========================================
+   I: DOODLE — 白板涂鸦风
+   ======================================== */
+.doodle{
+  background:#fffeff;border:3.5px solid #1a1a2e;border-radius:8px;
+  box-shadow:4px 4px 0 0 #1a1a2e,6px 6px 0 0 rgba(26,26,46,0.08),4px 12px 28px rgba(0,0,0,0.1);
+  color:#1a1a2e;
+}
+.doodle .sb-brand{border-bottom:3.5px solid #1a1a2e;position:relative;overflow:visible;}
+.doodle .sb-brand::after{content:'✦';position:absolute;right:14px;top:14px;font-size:14px;color:#FF6B6B;animation:doodle-twinkle 2s ease-in-out infinite;}
+@keyframes doodle-twinkle{0%,100%{transform:rotate(0deg) scale(1);opacity:0.7}50%{transform:rotate(20deg) scale(1.3);opacity:1}}
+.doodle .sb-brand-icon{background:#FFE066;border:3px solid #1a1a2e;border-radius:6px;box-shadow:2.5px 2.5px 0 0 #1a1a2e;color:#1a1a2e;}
+.doodle .sb-brand-text{color:#1a1a2e;font-family:'Caveat',cursive;font-size:20px;font-weight:700;position:relative;}
+.doodle .sb-brand-text::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:4px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 4'%3E%3Cpath d='M0,2 Q15,0 30,2 Q45,4 60,1 Q75,-1 90,2 Q105,3 120,2' stroke='%23FF6B6B' stroke-width='2.5' fill='none'/%3E%3C/svg%3E")repeat-x;background-size:60px 4px;}
+.doodle .sb-section-label{font-family:'Caveat',cursive;font-size:18px;font-weight:700;color:#1a1a2e;position:relative;display:inline-block;width:fit-content;padding:1px 6px;margin-bottom:2px;}
+.doodle .sb-section-label::before{content:'';position:absolute;left:-2px;right:-2px;bottom:0;height:55%;background:#FFE066;z-index:-1;border-radius:2px;transform:rotate(-0.5deg);}
+.doodle .sb-section-label:nth-of-type(2)::before{background:#A5F0C5;}
+.doodle .sb-item{color:#555;border:2px solid transparent;border-radius:4px;}
+.doodle .sb-item:hover{background:#fafafa;border-color:#ddd;color:#1a1a2e;}
+.doodle .sb-item.active{color:#1a1a2e;font-weight:700;background:linear-gradient(180deg,transparent 0%,transparent 55%,var(--item-color) 55%,var(--item-color) 80%,transparent 80%);border:2px solid #1a1a2e;box-shadow:2px 2px 0 0 #1a1a2e;}
+.doodle .sb-item.active .nav-lucide-icon{color:#1a1a2e;}
+.doodle .sb-item.active::after{content:'★';position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:10px;color:#FF6B6B;animation:doodle-twinkle 1.5s ease-in-out infinite;}
+.doodle .sb-item-badge{background:#fff;color:#1a1a2e;border:2px solid #1a1a2e;border-radius:3px;box-shadow:1.5px 1.5px 0 0 #1a1a2e;}
+.doodle .sb-item-badge.pending{background:#FFE066;}
+.doodle .sb-user-card{background:#fff;border:3px solid #1a1a2e;border-radius:6px;box-shadow:3px 3px 0 0 #1a1a2e;}
+.doodle .sb-user-label{color:#888;font-family:'Caveat',cursive;font-size:14px;}
+.doodle .sb-user-status{color:#6BCB77;font-family:'Patrick Hand',cursive;}
+.doodle .sb-logout{color:#1a1a2e;border:3px solid #1a1a2e;border-radius:6px;box-shadow:2.5px 2.5px 0 0 #1a1a2e;}
+.doodle .sb-logout:hover{background:#FFEBEB;transform:translate(1.5px,1.5px);box-shadow:1px 1px 0 0 #1a1a2e;}
+.doodle .sb-item:nth-child(4n+1){transform:rotate(-0.12deg);}
+.doodle .sb-item:nth-child(4n+3){transform:rotate(0.08deg);}
+
+/* ========================================
+   J: CHALKBOARD — 黑板粉笔风
+   ======================================== */
+.chalkboard{
+  background:radial-gradient(ellipse at 30% 20%,rgba(255,255,255,0.03) 0%,transparent 50%),radial-gradient(ellipse at 70% 80%,rgba(255,255,255,0.02) 0%,transparent 50%),linear-gradient(180deg,#2d3a3f 0%,#34454b 40%,#2d3f45 100%);
+  background-color:#2f3e44;color:#e8e4df;
+  border:6px solid #8b7b65;border-radius:4px;
+  box-shadow:inset 0 0 80px rgba(0,0,0,0.3),4px 4px 0 0 #6b5d4a,8px 8px 0 0 rgba(0,0,0,0.1),12px 12px 32px rgba(0,0,0,0.25);
+  outline:3px solid #a09070;outline-offset:2px;
+}
+.chalkboard::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");opacity:0.6;border-radius:inherit;}
+.chalkboard .sb-brand{border-bottom:1px dashed rgba(255,255,255,0.2);position:relative;z-index:1;}
+.chalkboard .sb-brand-icon{background:rgba(255,255,255,0.08);color:#FFE066;border-radius:6px;text-shadow:0 0 10px rgba(255,224,102,0.5);}
+.chalkboard .sb-brand-text{color:#FFE066;font-family:'Caveat',cursive;font-size:20px;font-weight:700;text-shadow:0 0 12px rgba(255,224,102,0.3);position:relative;z-index:1;}
+.chalkboard .sb-section-label{font-family:'Caveat',cursive;font-size:16px;font-weight:700;color:#A5F0C5;position:relative;z-index:1;text-shadow:0 0 8px rgba(165,240,197,0.3);}
+.chalkboard .sb-section-label::after{content:'';display:block;height:2px;margin-top:1px;background:rgba(165,240,197,0.5);border-radius:1px;box-shadow:0 0 6px rgba(165,240,197,0.3);}
+.chalkboard .sb-item{color:rgba(232,228,223,0.7);border-radius:6px;position:relative;z-index:1;}
+.chalkboard .sb-item:hover{background:rgba(255,255,255,0.06);color:#e8e4df;}
+.chalkboard .sb-item.active{color:#1a1a20;background:var(--item-color);border-radius:6px 3px 8px 5px;font-weight:700;text-shadow:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.2),0 0 16px color-mix(in srgb,var(--item-color) 30%,transparent);z-index:1;}
+.chalkboard .sb-item.active::after{content:'';position:absolute;inset:-3px;border-radius:8px 5px 10px 6px;background:var(--item-color);opacity:0.15;filter:blur(5px);z-index:-1;}
+.chalkboard .sb-item.active .nav-lucide-icon,.chalkboard .sb-item.active .sb-item-label{color:#1a1a20;}
+.chalkboard .sb-item-badge{background:rgba(255,255,255,0.1);color:#e8e4df;border-radius:4px;}
+.chalkboard .sb-item-badge.pending{color:#FFE066;}
+.chalkboard .sb-user-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;position:relative;z-index:1;}
+.chalkboard .sb-user-label{color:rgba(232,228,223,0.5);}
+.chalkboard .sb-user-status{color:#A5F0C5;text-shadow:0 0 8px rgba(165,240,197,0.3);}
+.chalkboard .sb-logout{color:rgba(232,228,223,0.6);border:1px solid rgba(255,255,255,0.15);border-radius:6px;position:relative;z-index:1;}
+.chalkboard .sb-logout:hover{background:rgba(255,107,107,0.15);border-color:rgba(255,107,107,0.4);color:#FF6B6B;}
+
+/* ========================================
+   K: WATERCOLOR — 水彩晕染风
+   ======================================== */
+.watercolor{
+  background:radial-gradient(circle at 20% 15%,rgba(255,180,150,0.25) 0%,transparent 40%),radial-gradient(circle at 85% 30%,rgba(180,210,255,0.25) 0%,transparent 40%),radial-gradient(circle at 50% 85%,rgba(180,240,200,0.20) 0%,transparent 35%),#fefdfb;
+  border:2px solid #ddd8d0;border-radius:8px;
+  box-shadow:4px 6px 20px rgba(0,0,0,0.05);color:#3d3630;
+}
+.watercolor .sb-brand{border-bottom:1px solid #e8e0d5;}
+.watercolor .sb-brand-icon{background:radial-gradient(circle at 30% 30%,rgba(255,180,150,0.5),transparent 60%),radial-gradient(circle at 70% 70%,rgba(180,210,255,0.4),transparent 60%),#fff;color:#3d3630;border-radius:50%;border:1.5px solid #e0d8cc;}
+.watercolor .sb-brand-text{color:#3d3630;font-family:'Reenie Beanie','Caveat',cursive;font-size:19px;font-weight:400;}
+.watercolor .sb-section-label{font-family:'Reenie Beanie','Caveat',cursive;font-size:17px;font-weight:400;color:#8a7b6e;}
+.watercolor .sb-item{color:#8a7b6e;border-radius:6px;}
+.watercolor .sb-item:hover{background:rgba(200,180,150,0.08);color:#3d3630;}
+.watercolor .sb-item.active{color:#3d3630;font-weight:700;background:radial-gradient(ellipse at 20% 50%,color-mix(in srgb,var(--item-color) 45%,transparent),transparent 65%),radial-gradient(ellipse at 80% 50%,color-mix(in srgb,var(--item-color) 25%,transparent),transparent 50%),rgba(255,255,255,0.6);border-radius:8px 14px 10px 12px;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.04),0 0 0 2px color-mix(in srgb,var(--item-color) 15%,transparent);}
+.watercolor .sb-item.active::before{content:'';position:absolute;right:16px;bottom:-2px;width:14px;height:10px;background:color-mix(in srgb,var(--item-color) 35%,transparent);border-radius:50% 40% 50% 45%;filter:blur(0.5px);}
+.watercolor .sb-item.active .nav-lucide-icon{color:var(--item-color);}
+.watercolor .sb-item-badge{background:rgba(200,180,150,0.12);color:#8a7b6e;border-radius:10px;}
+.watercolor .sb-item-badge.pending{color:#a08060;background:rgba(200,180,150,0.18);}
+.watercolor .sb-user-card{background:rgba(255,255,255,0.6);border:1px solid #e8e0d5;border-radius:8px;}
+.watercolor .sb-user-label{color:#b0a090;font-family:'Reenie Beanie',cursive;font-size:14px;}
+.watercolor .sb-user-status{color:#6BCB77;}
+.watercolor .sb-logout{color:#8a7b6e;border:1px solid #e0d8cc;border-radius:6px;}
+.watercolor .sb-logout:hover{background:rgba(220,120,100,0.06);border-color:rgba(220,120,100,0.25);color:#c07050;}
+
+/* ========================================
+   L: COMIC — 漫画波普风
+   ======================================== */
+.comic{
+  background:radial-gradient(circle,#FFE066 1.5px,transparent 1.5px);background-size:12px 12px;
+  background-color:#fff;border:4px solid #111;border-radius:8px;
+  box-shadow:6px 6px 0 0 #111,8px 8px 0 0 rgba(0,0,0,0.06);color:#111;
+}
+.comic .sb-brand{border-bottom:4px solid #111;background:#fff;position:relative;}
+.comic .sb-brand::after{content:'';position:absolute;right:10px;top:8px;width:28px;height:18px;background:#FF6B6B;clip-path:polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%);}
+.comic .sb-brand-icon{background:#FFE066;border:3px solid #111;border-radius:4px;box-shadow:3px 3px 0 0 #111;}
+.comic .sb-brand-text{font-family:'Bangers','Caveat',cursive;font-size:18px;font-weight:400;color:#111;letter-spacing:0.03em;}
+.comic .sb-section-label{font-family:'Bangers','Caveat',cursive;font-size:16px;font-weight:400;color:#fff;background:#111;padding:3px 14px 1px;width:fit-content;letter-spacing:0.06em;clip-path:polygon(0% 0%,100% 0%,95% 100%,0% 100%);margin-bottom:4px;}
+.comic .sb-item{color:#555;border:2.5px solid transparent;border-radius:4px;font-weight:700;font-family:'Gochi Hand','Caveat',cursive;font-size:15px;}
+.comic .sb-item:hover{background:#FFFDE7;border-color:#ccc;}
+.comic .sb-item.active{color:#111;font-weight:700;background:#fff;border:3px solid #111;border-radius:8px 16px 12px 12px;box-shadow:4px 4px 0 0 #111;}
+.comic .sb-item.active::before{content:'';position:absolute;left:-11px;top:50%;transform:translateY(-50%);width:0;height:0;border-top:7px solid transparent;border-bottom:7px solid transparent;border-right:10px solid #111;}
+.comic .sb-item.active::after{content:'';position:absolute;left:-7px;top:50%;transform:translateY(-50%);width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:8px solid #fff;}
+.comic .sb-item.active .nav-lucide-icon{color:#FF6B6B;}
+.comic .sb-item-badge{font-family:'Bangers',cursive;font-size:10px;font-weight:400;background:#FF6B6B;color:#fff;border:2px solid #111;border-radius:3px;letter-spacing:0.05em;box-shadow:2px 2px 0 0 #111;}
+.comic .sb-item-badge.pending{background:#FFE066;color:#111;}
+.comic .sb-user-card{background:#fff;border:3px solid #111;border-radius:6px;box-shadow:3px 3px 0 0 #111;}
+.comic .sb-user-label{font-family:'Bangers',cursive;font-size:12px;color:#888;letter-spacing:0.04em;}
+.comic .sb-user-row{font-family:'Gochi Hand',cursive;font-size:14px;}
+.comic .sb-user-status{color:#6BCB77;font-family:'Gochi Hand',cursive;font-size:12px;}
+.comic .sb-logout{font-family:'Bangers',cursive;font-size:14px;letter-spacing:0.05em;color:#111;border:3px solid #111;border-radius:6px;box-shadow:3px 3px 0 0 #111;background:#fff;}
+.comic .sb-logout:hover{background:#FF6B6B;color:#fff;transform:translate(1px,1px);box-shadow:2px 2px 0 0 #111;}
+
+/* ═══════════════════════════════════════════
+   响应式
+   ═══════════════════════════════════════════ */
+@media(max-width:880px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:580px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<h1>侧边栏全方案对比 · 12 选 1</h1>
+<p>第一行: A–F 现代玻璃/极简 · 第二行: G–I 手绘混合 1 · 第三行: J–L 手绘混合 2 · 第四行: G–I 续</p>
+
+<div class="grid">
+
+<!-- A: Prism -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:#89CFF0"></span>A · Prism 暗色指挥中心 <span class="tag tag-glass">玻璃组</span></div>
+<aside class="sidebar prism">
+<div class="sb-brand"><div class="sb-brand-icon">◆</div><div class="sb-brand-text">自动化测试平台</div></div>
+<nav class="sb-nav">
+<div class="sb-item active" style="--item-color:#F7C948"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">测试全流程</div>
+<div class="sb-item" style="--item-color:#6BCB77"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item" style="--item-color:#A78BFA"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item" style="--item-color:#4ECDC4"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item" style="--item-color:#FF6B6B"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item" style="--item-color:#7C6F83"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">AI 与编排</div>
+<div class="sb-item" style="--item-color:#E879F9"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">开发中</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge pending">待开发</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge pending">待开发</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">Digital Human</div><div class="sb-user-row"><span>◇</span><span>QA_Engineer</span></div><div class="sb-user-status">● 在线</div></div><button class="sb-logout">退出登录</button></div>
+</aside>
+</div>
+
+<!-- B: Frost -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:#89CFF0"></span>B · Frost 精炼毛玻璃 <span class="tag tag-glass">玻璃组</span></div>
+<aside class="sidebar frost">
+<div class="sb-brand"><div class="sb-brand-icon">◆</div><div class="sb-brand-text">自动化测试平台</div></div>
+<nav class="sb-nav">
+<div class="sb-item active" style="--item-color:#F7C948"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">测试全流程</div>
+<div class="sb-item" style="--item-color:#6BCB77"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item" style="--item-color:#A78BFA"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item" style="--item-color:#4ECDC4"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item" style="--item-color:#FF6B6B"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item" style="--item-color:#7C6F83"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">AI 与编排</div>
+<div class="sb-item" style="--item-color:#E879F9"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">开发中</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge pending">待开发</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge pending">待开发</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">Digital Human</div><div class="sb-user-row"><span>◇</span><span>QA_Engineer</span></div><div class="sb-user-status">● 在线</div></div><button class="sb-logout">退出登录</button></div>
+</aside>
+</div>
+
+<!-- C: Silk -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:#1e293b"></span>C · Silk 极简实体 <span class="tag tag-glass">玻璃组</span></div>
+<aside class="sidebar silk">
+<div class="sb-brand"><div class="sb-brand-icon">◆</div><div class="sb-brand-text">自动化测试平台</div></div>
+<nav class="sb-nav">
+<div class="sb-item active" style="--item-color:#F7C948"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">测试全流程</div>
+<div class="sb-item" style="--item-color:#6BCB77"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item" style="--item-color:#A78BFA"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item" style="--item-color:#4ECDC4"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item" style="--item-color:#FF6B6B"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item" style="--item-color:#7C6F83"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">AI 与编排</div>
+<div class="sb-item" style="--item-color:#E879F9"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">开发中</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge pending">待开发</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge pending">待开发</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">Digital Human</div><div class="sb-user-row"><span>◇</span><span>QA_Engineer</span></div><div class="sb-user-status">● 在线</div></div><button class="sb-logout">退出登录</button></div>
+</aside>
+</div>
+
+<!-- D: Terminal -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:#58a6ff"></span>D · Terminal 开发者工具 <span class="tag tag-glass">玻璃组</span></div>
+<aside class="sidebar terminal">
+<div class="sb-brand"><div class="sb-brand-icon">&gt;_</div><div class="sb-brand-text">Android-AutoTests</div></div>
+<nav class="sb-nav">
+<div class="sb-item active" style="--item-color:#F7C948"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">// 测试全流程</div>
+<div class="sb-item" style="--item-color:#6BCB77"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item" style="--item-color:#A78BFA"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item" style="--item-color:#4ECDC4"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item" style="--item-color:#FF6B6B"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item" style="--item-color:#7C6F83"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">// AI 与编排</div>
+<div class="sb-item" style="--item-color:#E879F9"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">dev</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge">TODO</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge">TODO</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">$ whoami</div><div class="sb-user-row"><span>▸</span><span>QA_Engineer</span></div><div class="sb-user-status">● connected</div></div><button class="sb-logout">exit</button></div>
+</aside>
+</div>
+
+<!-- E: Bloom -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:#8b7355"></span>E · Bloom 有机生长 <span class="tag tag-glass">玻璃组</span></div>
+<aside class="sidebar bloom">
+<div class="sb-brand"><div class="sb-brand-icon">🌸</div><div class="sb-brand-text">自动化测试平台</div></div>
+<nav class="sb-nav">
+<div class="sb-item active" style="--item-color:#F7C948"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">测试全流程</div>
+<div class="sb-item" style="--item-color:#6BCB77"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item" style="--item-color:#A78BFA"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item" style="--item-color:#4ECDC4"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item" style="--item-color:#FF6B6B"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item" style="--item-color:#7C6F83"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">AI 与编排</div>
+<div class="sb-item" style="--item-color:#E879F9"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">开发中</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge pending">待开发</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge pending">待开发</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">Digital Human</div><div class="sb-user-row"><span>◇</span><span>QA_Engineer</span></div><div class="sb-user-status">● 在线</div></div><button class="sb-logout">退出登录</button></div>
+</aside>
+</div>
+
+<!-- F: Grid -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:#0f1419"></span>F · Grid 瑞士国际风 <span class="tag tag-glass">玻璃组</span></div>
+<aside class="sidebar grid-style">
+<div class="sb-brand"><div class="sb-brand-icon">◆</div><div class="sb-brand-text">Android-AutoTests</div></div>
+<nav class="sb-nav">
+<div class="sb-item active" style="--item-color:#F7C948"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">测试全流程</div>
+<div class="sb-item" style="--item-color:#6BCB77"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item" style="--item-color:#A78BFA"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item" style="--item-color:#4ECDC4"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item" style="--item-color:#FF6B6B"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item" style="--item-color:#7C6F83"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">AI 与编排</div>
+<div class="sb-item" style="--item-color:#E879F9"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">开发中</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge pending">待开发</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge pending">待开发</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">ACCOUNT</div><div class="sb-user-row"><span>◇</span><span>QA_Engineer</span></div><div class="sb-user-status">● Active</div></div><button class="sb-logout">Log out</button></div>
+</aside>
+</div>
+
+<!-- G: Crayon -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:#FF6B6B"></span>G · Crayon 蜡笔涂色 <span class="tag tag-hand">手绘组</span></div>
+<aside class="sidebar crayon">
+<div class="sb-brand"><div class="sb-brand-icon">🖍️</div><div class="sb-brand-text">自动化测试平台</div></div>
+<nav class="sb-nav">
+<div class="sb-item active" style="--item-color:#F7C948"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">测试全流程</div>
+<div class="sb-item" style="--item-color:#6BCB77"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item" style="--item-color:#A78BFA"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item" style="--item-color:#4ECDC4"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item" style="--item-color:#FF6B6B"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item" style="--item-color:#7C6F83"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">AI 与编排</div>
+<div class="sb-item" style="--item-color:#E879F9"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">开发中</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge pending">待开发</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge pending">待开发</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">✏️ Digital Human</div><div class="sb-user-row"><span>🐱</span><span>QA_Engineer</span></div><div class="sb-user-status">● 在线</div></div><button class="sb-logout">退 出</button></div>
+</aside>
+</div>
+
+<!-- H: Notepad -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:#88D8B0"></span>H · Notepad 手账笔记 <span class="tag tag-hand">手绘组</span></div>
+<aside class="sidebar notepad">
+<div class="sb-brand"><div class="sb-brand-icon">📒</div><div class="sb-brand-text">自动化测试平台</div></div>
+<nav class="sb-nav">
+<div class="sb-item active" style="--item-color:#F7C948"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">测试全流程</div>
+<div class="sb-item" style="--item-color:#6BCB77"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item" style="--item-color:#A78BFA"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item" style="--item-color:#4ECDC4"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item" style="--item-color:#FF6B6B"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item" style="--item-color:#7C6F83"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">AI 与编排</div>
+<div class="sb-item" style="--item-color:#E879F9"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">开发中</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge pending">待开发</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge pending">待开发</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">📝 Digital Human</div><div class="sb-user-row"><span>🐱</span><span>QA_Engineer</span></div><div class="sb-user-status">● 在线</div></div><button class="sb-logout">退出登录</button></div>
+</aside>
+</div>
+
+<!-- I: Doodle -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:#1a1a2e"></span>I · Doodle 白板涂鸦 <span class="tag tag-hand">手绘组</span></div>
+<aside class="sidebar doodle">
+<div class="sb-brand"><div class="sb-brand-icon">💡</div><div class="sb-brand-text">自动化测试平台</div></div>
+<nav class="sb-nav">
+<div class="sb-item active" style="--item-color:#FFE066"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">测试全流程</div>
+<div class="sb-item" style="--item-color:#A5F0C5"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item" style="--item-color:#D4C0F0"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item" style="--item-color:#A5F0C5"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item" style="--item-color:#FFB5B5"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item" style="--item-color:#DDD5E0"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">AI 与编排</div>
+<div class="sb-item" style="--item-color:#F5C8F5"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">开发中</span></div>
+<div class="sb-item" style="--item-color:#B5D8FF"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge pending">待开发</span></div>
+<div class="sb-item" style="--item-color:#B5D8FF"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge pending">待开发</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">💭 Digital Human</div><div class="sb-user-row"><span>🐱</span><span>QA_Engineer</span></div><div class="sb-user-status">● 在线</div></div><button class="sb-logout">退 出</button></div>
+</aside>
+</div>
+
+<!-- J: Chalkboard -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:#FFE066"></span>J · Chalkboard 黑板粉笔 <span class="tag tag-hand">手绘组</span></div>
+<aside class="sidebar chalkboard">
+<div class="sb-brand"><div class="sb-brand-icon">📐</div><div class="sb-brand-text">自动化测试平台</div></div>
+<nav class="sb-nav">
+<div class="sb-item active" style="--item-color:#FFE066"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">—— 测试全流程 ——</div>
+<div class="sb-item" style="--item-color:#A5F0C5"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item" style="--item-color:#D4C0F0"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item" style="--item-color:#8ED8D0"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item" style="--item-color:#FFB5A7"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item" style="--item-color:#DDD5E0"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">—— AI 与编排 ——</div>
+<div class="sb-item" style="--item-color:#F0B8F5"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">开发中</span></div>
+<div class="sb-item" style="--item-color:#A8D8FF"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge pending">待开发</span></div>
+<div class="sb-item" style="--item-color:#A8D8FF"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge pending">待开发</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">Digital Human</div><div class="sb-user-row"><span>🐱</span><span>QA_Engineer</span></div><div class="sb-user-status">● 在线</div></div><button class="sb-logout">退出登录</button></div>
+</aside>
+</div>
+
+<!-- K: Watercolor -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:#e8a090"></span>K · Watercolor 水彩晕染 <span class="tag tag-hand">手绘组</span></div>
+<aside class="sidebar watercolor">
+<div class="sb-brand"><div class="sb-brand-icon">🎨</div><div class="sb-brand-text">自动化测试平台</div></div>
+<nav class="sb-nav">
+<div class="sb-item active" style="--item-color:#F7C948"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">测试全流程</div>
+<div class="sb-item" style="--item-color:#6BCB77"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item" style="--item-color:#A78BFA"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item" style="--item-color:#4ECDC4"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item" style="--item-color:#FF6B6B"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item" style="--item-color:#7C6F83"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">AI 与编排</div>
+<div class="sb-item" style="--item-color:#E879F9"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">开发中</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge pending">待开发</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge pending">待开发</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">Digital Human</div><div class="sb-user-row"><span>🐱</span><span>QA_Engineer</span></div><div class="sb-user-status">● 在线</div></div><button class="sb-logout">退出登录</button></div>
+</aside>
+</div>
+
+<!-- L: Comic -->
+<div class="card">
+<div class="card-label"><span class="dot" style="background:#111"></span>L · Comic 漫画波普 <span class="tag tag-hand">手绘组</span></div>
+<aside class="sidebar comic">
+<div class="sb-brand"><div class="sb-brand-icon">💥</div><div class="sb-brand-text">自动化测试平台</div></div>
+<nav class="sb-nav">
+<div class="sb-item active" style="--item-color:#F7C948"><i data-lucide="layout-dashboard" class="nav-lucide-icon"></i><span class="sb-item-label">仪表盘</span></div>
+<div class="sb-section-label">测试全流程</div>
+<div class="sb-item" style="--item-color:#6BCB77"><i data-lucide="smartphone" class="nav-lucide-icon"></i><span class="sb-item-label">设备管理</span></div>
+<div class="sb-item" style="--item-color:#A78BFA"><i data-lucide="crosshair" class="nav-lucide-icon"></i><span class="sb-item-label">元素定位</span></div>
+<div class="sb-item" style="--item-color:#4ECDC4"><i data-lucide="layers" class="nav-lucide-icon"></i><span class="sb-item-label">用例管理</span></div>
+<div class="sb-item" style="--item-color:#FF6B6B"><i data-lucide="play-circle" class="nav-lucide-icon"></i><span class="sb-item-label">执行引擎</span></div>
+<div class="sb-item" style="--item-color:#7C6F83"><i data-lucide="file-bar-chart" class="nav-lucide-icon"></i><span class="sb-item-label">测试报告</span></div>
+<div class="sb-section-label">AI 与编排</div>
+<div class="sb-item" style="--item-color:#E879F9"><i data-lucide="bot" class="nav-lucide-icon"></i><span class="sb-item-label">AI 助手</span><span class="sb-item-badge">WIP</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="git-branch" class="nav-lucide-icon"></i><span class="sb-item-label">工作流工作台</span><span class="sb-item-badge">TODO</span></div>
+<div class="sb-item" style="--item-color:#60A5FA"><i data-lucide="user-round" class="nav-lucide-icon"></i><span class="sb-item-label">平台数字人</span><span class="sb-item-badge">TODO</span></div>
+</nav>
+<div class="sb-footer"><div class="sb-user-card"><div class="sb-user-label">PLAYER 1</div><div class="sb-user-row"><span>🐱</span><span>QA_Engineer</span></div><div class="sb-user-status">● ONLINE</div></div><button class="sb-logout">QUIT</button></div>
+</aside>
+</div>
+
+</div><!-- /.grid -->
+<script>lucide.createIcons()</script>
+</body>
+</html>

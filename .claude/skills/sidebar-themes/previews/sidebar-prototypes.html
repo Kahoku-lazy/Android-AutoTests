@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>侧边栏三方案原型 — Android-AutoTests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   共享底座 — 项目 tokens 映射
+   ═══════════════════════════════════════════ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Quicksand', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #e8ecf1;
+  display: flex;
+  gap: 28px;
+  padding: 32px;
+  min-height: 100vh;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* 模块色 */
+:root {
+  --c-dashboard: #F4D35E;
+  --c-device:    #95D5B2;
+  --c-element:   #B0A8E0;
+  --c-case:      #7AB88D;
+  --c-runner:    #FFB5A7;
+  --c-report:    #9a8c98;
+  --c-ai:        #C9B6F2;
+  --c-workflow:  #89CFF0;
+}
+
+.prototype-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.prototype-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #4a4e69;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.65);
+  padding: 6px 18px;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+}
+
+/* ═══════════════════════════════════════════
+   共享侧边栏骨架
+   ═══════════════════════════════════════════ */
+.sidebar {
+  width: 244px;
+  height: 640px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'Quicksand', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  flex-shrink: 0;
+  border-radius: 20px;
+}
+
+/* 品牌区 */
+.sb-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 18px 14px;
+  flex-shrink: 0;
+}
+.sb-brand-icon {
+  width: 32px; height: 32px;
+  border-radius: 10px;
+  display: grid; place-items: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.sb-brand-text {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+/* 导航 */
+.sb-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sb-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  padding: 10px 10px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sb-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-size: 13.5px;
+  font-weight: 600;
+  position: relative;
+  text-decoration: none;
+}
+.sb-item-icon {
+  width: 18px; height: 18px;
+  display: grid; place-items: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.sb-item-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-item-badge {
+  font-size: 9px; font-weight: 800; letter-spacing: 0.04em;
+  padding: 2px 7px; border-radius: 8px; flex-shrink: 0;
+}
+
+/* 底部用户区 */
+.sb-footer {
+  padding: 10px 14px 14px;
+  flex-shrink: 0;
+}
+.sb-user-card {
+  padding: 12px;
+  border-radius: 14px;
+}
+.sb-user-label { font-size: 10px; font-weight: 700; }
+.sb-user-row {
+  display: flex; align-items: center; gap: 7px;
+  margin: 3px 0;
+  font-size: 13px; font-weight: 700;
+}
+.sb-user-status { font-size: 10.5px; font-weight: 600; }
+.sb-logout {
+  display: block; width: 100%; margin-top: 8px; padding: 6px;
+  border-radius: 10px; font-size: 12px; font-weight: 700;
+  text-align: center; cursor: pointer; border: 1.5px solid;
+  background: transparent; font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+/* 导航数据 */
+.nav-items {
+  --item-dashboard: var(--c-dashboard);
+  --item-device:    var(--c-device);
+  --item-element:   var(--c-element);
+  --item-case:      var(--c-case);
+  --item-runner:    var(--c-runner);
+  --item-report:    var(--c-report);
+  --item-ai:        var(--c-ai);
+  --item-workflow:  var(--c-workflow);
+}
+
+/* ═══════════════════════════════════════════
+   原型 A: "Prism" — 暗色指挥中心
+   签名: 模块色边缘霓虹光 + 活性径向渐变光晕
+   ═══════════════════════════════════════════ */
+.prism {
+  background: linear-gradient(180deg, rgba(15,23,42,0.92) 0%, rgba(20,30,55,0.88) 100%);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #e2e8f0;
+  box-shadow: 0 0 0 1px rgba(137,207,240,0.06), 12px 0 48px rgba(0,0,0,0.25);
+}
+
+.prism .sb-brand-icon {
+  background: linear-gradient(135deg, #89CFF0, #C9B6F2);
+  color: #0b1424;
+  box-shadow: 0 0 20px rgba(137,207,240,0.3);
+}
+.prism .sb-brand-text {
+  background: linear-gradient(105deg, #89CFF0 0%, #C9B6F2 35%, #95D5B2 65%, #89CFF0 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: prism-shift 6s ease-in-out infinite;
+}
+@keyframes prism-shift { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+
+.prism .sb-section-label { color: #64748b; }
+.prism .sb-section-label:hover { color: #94a3b8; }
+
+.prism .sb-item {
+  color: #94a3b8;
+  border: 1px solid transparent;
+}
+.prism .sb-item:hover {
+  color: #e2e8f0;
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.08);
+}
+/* 签名: 模块色左边缘霓虹 */
+.prism .sb-item::before {
+  content: '';
+  position: absolute; left: -1px; top: 20%; height: 60%;
+  width: 3px; border-radius: 0 3px 3px 0;
+  background: var(--item-color);
+  opacity: 0;
+  transform: scaleY(0.5);
+  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow: 0 0 8px var(--item-color);
+}
+.prism .sb-item:hover::before {
+  opacity: 0.7; transform: scaleY(1);
+}
+
+/* 签名: active 径向光晕 */
+.prism .sb-item.active {
+  color: #fff;
+  background: radial-gradient(ellipse at 12% 50%, color-mix(in srgb, var(--item-color) 18%, transparent) 0%, transparent 70%),
+              rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.1);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--item-color) 30%, transparent);
+}
+.prism .sb-item.active::before {
+  opacity: 1; transform: scaleY(1);
+  box-shadow: 0 0 14px var(--item-color), 0 0 4px var(--item-color);
+}
+.prism .sb-item.active .sb-item-label { color: #fff; }
+.prism .sb-item.active .sb-item-icon { filter: drop-shadow(0 0 4px var(--item-color)); }
+
+.prism .sb-item-badge { background: rgba(137,207,240,0.2); color: #BDE0FE; }
+.prism .sb-item-badge.pending { background: rgba(244,211,94,0.2); color: #F4D35E; }
+
+.prism .sb-user-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
+.prism .sb-user-label { color: #64748b; }
+.prism .sb-user-status { color: #95D5B2; }
+.prism .sb-logout { color: #f87171; border-color: rgba(248,113,113,0.3); }
+.prism .sb-logout:hover { background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.5); }
+
+/* ═══════════════════════════════════════════
+   原型 B: "Frost" — 精炼毛玻璃
+   签名: 浮动玻璃药丸活性指示器 + 柔和呼吸阴影
+   ═══════════════════════════════════════════ */
+.frost {
+  background: rgba(255,255,255,0.48);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border-right: 1px solid rgba(255,255,255,0.72);
+  color: #4a4e69;
+  box-shadow: 8px 0 40px rgba(74,78,105,0.06);
+}
+
+.frost .sb-brand-icon {
+  background: linear-gradient(135deg, rgba(137,207,240,0.4), rgba(201,182,242,0.3));
+  color: #89CFF0;
+  box-shadow: 0 4px 16px rgba(137,207,240,0.14);
+}
+.frost .sb-brand-text {
+  background: linear-gradient(105deg, #89CFF0 0%, #C9B6F2 28%, #7AB88D 52%, #89CFF0 100%);
+  background-size: 240% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: frost-shift 8s ease-in-out infinite;
+}
+@keyframes frost-shift { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+
+.frost .sb-section-label { color: #9a8c98; }
+
+.frost .sb-item { color: #9a8c98; }
+.frost .sb-item:hover { background: rgba(255,255,255,0.7); color: #4a4e69; }
+.frost .sb-item:hover .sb-item-icon { color: #4a4e69; }
+
+/* 签名: 浮动活性药丸 */
+.frost .sb-item.active {
+  color: #4a4e69;
+  background: rgba(255,255,255,0.78);
+  box-shadow:
+    0 4px 18px rgba(137,207,240,0.18),
+    0 1px 3px rgba(0,0,0,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.85);
+  border: 1.5px solid rgba(255,255,255,0.9);
+}
+.frost .sb-item.active .sb-item-icon { color: var(--item-color); }
+.frost .sb-item.active .sb-item-label { color: #4a4e69; }
+
+/* 活性药丸左侧色点 */
+.frost .sb-item.active::after {
+  content: '';
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--item-color);
+  box-shadow: 0 0 10px var(--item-color);
+}
+.frost .sb-item.active .sb-item-icon { margin-left: 6px; }
+
+.frost .sb-item-badge {
+  background: linear-gradient(135deg, rgba(137,207,240,0.3), rgba(201,182,242,0.25));
+  color: #5588aa;
+  border: 1px solid rgba(137,207,240,0.3);
+}
+.frost .sb-item-badge.pending { color: #b08820; }
+
+.frost .sb-user-card { background: rgba(255,255,255,0.45); border: 1px solid rgba(255,255,255,0.7); }
+.frost .sb-user-label { color: #9a8c98; }
+.frost .sb-user-status { color: #7AB88D; }
+.frost .sb-logout { color: #d4855e; border-color: rgba(212,133,94,0.3); }
+.frost .sb-logout:hover { background: rgba(212,133,94,0.08); border-color: rgba(212,133,94,0.5); }
+
+/* ═══════════════════════════════════════════
+   原型 C: "Silk" — 极简实体表面
+   签名: 全高 8 色渐变左边缘 + solid 表面触感
+   ═══════════════════════════════════════════ */
+.silk {
+  background: linear-gradient(180deg, #fdfdfc 0%, #f8f7f5 100%);
+  border-right: none;
+  color: #1e293b;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.04), 4px 0 24px rgba(0,0,0,0.03);
+  position: relative;
+}
+
+/* 签名: 全高渐变条纹 */
+.silk::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: linear-gradient(180deg,
+    #F4D35E 0%,     /* dashboard */
+    #95D5B2 12.5%,  /* device-pool */
+    #B0A8E0 25%,    /* element-locator */
+    #7AB88D 37.5%,  /* case-manager */
+    #FFB5A7 50%,    /* test-runner */
+    #9a8c98 62.5%,  /* report-generator */
+    #C9B6F2 75%,    /* ai-assistant */
+    #89CFF0 87.5%,  /* workflow */
+    #89CFF0 100%
+  );
+  border-radius: 0 2px 2px 0;
+  z-index: 1;
+}
+
+.silk .sb-brand-icon {
+  background: #f0f4f8;
+  color: #4a4e69;
+}
+.silk .sb-brand-text {
+  color: #1e293b;
+  font-weight: 800;
+}
+
+.silk .sb-section-label { color: #94a3b8; cursor: default; }
+
+.silk .sb-item {
+  color: #64748b;
+  font-weight: 600;
+}
+.silk .sb-item:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+.silk .sb-item:hover .sb-item-icon { color: #475569; }
+
+/* 活性: 模块色浅背景 + 加粗 */
+.silk .sb-item.active {
+  background: color-mix(in srgb, var(--item-color) 12%, #ffffff);
+  color: #1e293b;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--item-color) 18%, transparent);
+}
+.silk .sb-item.active .sb-item-icon { color: var(--item-color); }
+.silk .sb-item.active .sb-item-label { font-weight: 700; }
+
+.silk .sb-item-badge {
+  background: #f1f5f9;
+  color: #64748b;
+  font-weight: 700;
+}
+.silk .sb-item-badge.pending { color: #b08820; }
+
+.silk .sb-user-card { background: #f8fafc; border: 1px solid #e8ecf1; }
+.silk .sb-user-label { color: #94a3b8; }
+.silk .sb-user-status { color: #7AB88D; }
+.silk .sb-logout { color: #94a3b8; border-color: #e2e8f0; }
+.silk .sb-logout:hover { background: #fef2f2; border-color: #fecaca; color: #ef4444; }
+
+/* ═══════════════════════════════════════════
+   原型 D: "Terminal" — 开发者工具风
+   签名: 等宽字体标签 + 光标式活性指示 + 暗色固态
+   ═══════════════════════════════════════════ */
+.terminal {
+  background: #1a1d23;
+  color: #c9d1d9;
+  font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 8px 0 32px rgba(0,0,0,0.3);
+}
+.terminal .sb-brand { font-family: 'JetBrains Mono', monospace; }
+.terminal .sb-brand-icon {
+  background: #252830; color: #58a6ff;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.terminal .sb-brand-text {
+  color: #e6edf3;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+.terminal .sb-section-label {
+  color: #484f58;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  margin-top: 6px;
+}
+.terminal .sb-item {
+  font-family: 'Inter', sans-serif;
+  color: #8b949e;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  height: 36px;
+  gap: 10px;
+}
+.terminal .sb-item:hover { background: #252830; color: #c9d1d9; }
+/* 签名: 光标式活性指示 */
+.terminal .sb-item.active {
+  background: #1f2937;
+  color: #e6edf3;
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 0 var(--item-color);
+}
+.terminal .sb-item.active .sb-item-icon { color: var(--item-color); }
+.terminal .sb-item.active .sb-item-label { font-weight: 600; }
+/* 光标闪烁 */
+.terminal .sb-item.active::after {
+  content: '';
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  width: 8px; height: 2px;
+  background: var(--item-color);
+  animation: terminal-cursor 1.2s steps(1) infinite;
+  border-radius: 1px;
+}
+@keyframes terminal-cursor { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+.terminal .sb-item-badge {
+  background: #252830; color: #8b949e;
+  font-family: 'JetBrains Mono', monospace; font-size: 9px;
+  border-radius: 4px;
+}
+.terminal .sb-user-card { background: #252830; border: 1px solid #30363d; border-radius: 8px; }
+.terminal .sb-user-label { color: #484f58; font-family: 'JetBrains Mono', monospace; }
+.terminal .sb-user-status { color: #3fb950; }
+.terminal .sb-logout { color: #f85149; border-color: rgba(248,81,73,0.3); border-radius: 6px; }
+.terminal .sb-logout:hover { background: rgba(248,81,73,0.1); }
+
+/* ═══════════════════════════════════════════
+   原型 E: "Bloom" — 有机生长态
+   签名: 活性图标放大 + 色晕扩散 + 温和暖调
+   ═══════════════════════════════════════════ */
+.bloom {
+  background: linear-gradient(180deg, rgba(255,252,248,0.7) 0%, rgba(248,245,240,0.6) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: #5a4e3c;
+  box-shadow: 6px 0 28px rgba(139,115,85,0.04);
+  border-right: 1px solid rgba(180,160,130,0.18);
+}
+.bloom .sb-brand-icon {
+  background: linear-gradient(135deg, #e8d5b7, #f0e4d0);
+  color: #8b7355;
+  border-radius: 14px;
+}
+.bloom .sb-brand-text {
+  color: #5a4e3c;
+  font-size: 15px;
+}
+.bloom .sb-section-label {
+  color: #b8a088;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+.bloom .sb-item {
+  color: #9a8878;
+  border-radius: 14px;
+  height: 44px;
+  transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+}
+.bloom .sb-item:hover {
+  background: rgba(200,180,150,0.12);
+  color: #5a4e3c;
+}
+/* 签名: 活性图标放大 + 色晕扩散 */
+.bloom .sb-item.active {
+  color: #5a4e3c;
+  background: color-mix(in srgb, var(--item-color) 10%, rgba(255,252,248,0.8));
+  box-shadow: 0 2px 16px color-mix(in srgb, var(--item-color) 18%, transparent);
+}
+.bloom .sb-item.active .sb-item-icon {
+  color: var(--item-color);
+  transform: scale(1.18);
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.bloom .sb-item.active .sb-item-label { font-weight: 700; }
+/* 活性指示: 左侧圆点呼吸 */
+.bloom .sb-item.active::before {
+  content: '';
+  position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--item-color);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--item-color) 40%, transparent);
+  animation: bloom-pulse 2.8s ease-in-out infinite;
+}
+@keyframes bloom-pulse {
+  0%,100% { box-shadow: 0 0 8px color-mix(in srgb, var(--item-color) 30%, transparent); }
+  50% { box-shadow: 0 0 20px color-mix(in srgb, var(--item-color) 60%, transparent); }
+}
+.bloom .sb-item-badge {
+  background: rgba(180,160,130,0.16);
+  color: #8b7355;
+  border-radius: 10px;
+  font-size: 9.5px;
+}
+.bloom .sb-user-card {
+  background: rgba(255,252,248,0.55);
+  border: 0.5px solid rgba(180,160,130,0.2);
+  border-radius: 16px;
+}
+.bloom .sb-user-label { color: #b8a088; }
+.bloom .sb-user-status { color: #7AB88D; }
+.bloom .sb-logout { color: #b0907a; border-color: rgba(180,160,130,0.3); border-radius: 14px; }
+.bloom .sb-logout:hover { background: rgba(180,100,80,0.08); border-color: rgba(200,120,80,0.4); color: #a06040; }
+
+/* ═══════════════════════════════════════════
+   原型 F: "Grid" — 瑞士国际风
+   签名: 直角网格 / 细线分割 / 高对比度 / 无装饰
+   ═══════════════════════════════════════════ */
+.grid {
+  background: #ffffff;
+  color: #0f1419;
+  font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  box-shadow: 1px 0 0 0 #e8ecf1;
+  border-radius: 0;
+}
+.grid .sb-brand {
+  border-bottom: 1px solid #e8ecf1;
+  padding: 20px 18px 16px;
+}
+.grid .sb-brand-icon {
+  background: #0f1419;
+  color: #ffffff;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.grid .sb-brand-text {
+  color: #0f1419;
+  font-size: 15px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.grid .sb-section-label {
+  color: #536471;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 14px 10px 6px;
+  border-top: 1px solid #f0f3f5;
+  margin-top: 4px;
+}
+.grid .sb-section-label:first-of-type { border-top: none; margin-top: 0; }
+.grid .sb-item {
+  font-family: 'Inter', sans-serif;
+  color: #536471;
+  border-radius: 4px;
+  font-size: 13.5px;
+  font-weight: 500;
+  height: 38px;
+  gap: 10px;
+  transition: all 0.12s ease;
+}
+.grid .sb-item:hover {
+  background: #f7f9f9;
+  color: #0f1419;
+}
+/* 签名: 活性 — 黑底白字纯色块，类似 Swiss 招贴 */
+.grid .sb-item.active {
+  background: #0f1419;
+  color: #ffffff;
+  font-weight: 600;
+  border-radius: 4px;
+  box-shadow: none;
+}
+.grid .sb-item.active .sb-item-icon { color: #ffffff; }
+.grid .sb-item.active .sb-item-label { color: #ffffff; font-weight: 600; }
+.grid .sb-item.active .sb-item-badge {
+  background: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.85);
+}
+.grid .sb-item-badge {
+  background: #f0f3f5;
+  color: #536471;
+  border-radius: 3px;
+  font-size: 9.5px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+}
+.grid .sb-user-card {
+  background: #fafbfc;
+  border: 1px solid #e8ecf1;
+  border-radius: 6px;
+}
+.grid .sb-user-label { color: #536471; font-family: 'Inter', sans-serif; }
+.grid .sb-user-status { color: #2f9e44; }
+.grid .sb-logout {
+  color: #536471; border-color: #d4d8dc; border-radius: 4px;
+  font-family: 'Inter', sans-serif; font-weight: 500;
+}
+.grid .sb-logout:hover { background: #fafbfc; border-color: #0f1419; color: #0f1419; }
+
+/* ═══════════════════════════════════════════
+   响应式
+   ═══════════════════════════════════════════ */
+@media (max-width: 900px) {
+  body { flex-direction: column; align-items: center; padding: 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- A: Prism -->
+<div class="prototype-col">
+  <div class="prototype-label">A · Prism 暗色指挥中心</div>
+  <aside class="sidebar prism">
+    <div class="sb-brand">
+      <div class="sb-brand-icon">◆</div>
+      <div class="sb-brand-text">自动化测试平台</div>
+    </div>
+    <nav class="sb-nav">
+      <!-- Dashboard -->
+      <div class="sb-item active" style="--item-color: var(--c-dashboard)">
+        <span class="sb-item-icon">◷</span>
+        <span class="sb-item-label">仪表盘</span>
+      </div>
+      <div class="sb-section-label">测试全流程</div>
+      <div class="sb-item" style="--item-color: var(--c-device)">
+        <span class="sb-item-icon">◼</span>
+        <span class="sb-item-label">设备管理</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-element)">
+        <span class="sb-item-icon">⊙</span>
+        <span class="sb-item-label">元素定位</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-case)">
+        <span class="sb-item-icon">▥</span>
+        <span class="sb-item-label">用例管理</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-runner)">
+        <span class="sb-item-icon">▶</span>
+        <span class="sb-item-label">执行引擎</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-report)">
+        <span class="sb-item-icon">▤</span>
+        <span class="sb-item-label">测试报告</span>
+      </div>
+      <div class="sb-section-label">AI 与编排</div>
+      <div class="sb-item" style="--item-color: var(--c-ai)">
+        <span class="sb-item-icon">⬡</span>
+        <span class="sb-item-label">AI 助手</span>
+        <span class="sb-item-badge">开发中</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-workflow)">
+        <span class="sb-item-icon">⑂</span>
+        <span class="sb-item-label">工作流工作台</span>
+        <span class="sb-item-badge pending">待开发</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-workflow)">
+        <span class="sb-item-icon">◉</span>
+        <span class="sb-item-label">平台数字人</span>
+        <span class="sb-item-badge pending">待开发</span>
+      </div>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-user-card">
+        <div class="sb-user-label">Digital Human</div>
+        <div class="sb-user-row">
+          <span>◇</span>
+          <span>QA_Engineer</span>
+        </div>
+        <div class="sb-user-status">● 在线</div>
+      </div>
+      <button class="sb-logout">退出登录</button>
+    </div>
+  </aside>
+</div>
+
+<!-- B: Frost -->
+<div class="prototype-col">
+  <div class="prototype-label">B · Frost 精炼毛玻璃</div>
+  <aside class="sidebar frost">
+    <div class="sb-brand">
+      <div class="sb-brand-icon">◆</div>
+      <div class="sb-brand-text">自动化测试平台</div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-item active" style="--item-color: var(--c-dashboard)">
+        <span class="sb-item-icon">◷</span>
+        <span class="sb-item-label">仪表盘</span>
+      </div>
+      <div class="sb-section-label">测试全流程</div>
+      <div class="sb-item" style="--item-color: var(--c-device)">
+        <span class="sb-item-icon">◼</span>
+        <span class="sb-item-label">设备管理</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-element)">
+        <span class="sb-item-icon">⊙</span>
+        <span class="sb-item-label">元素定位</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-case)">
+        <span class="sb-item-icon">▥</span>
+        <span class="sb-item-label">用例管理</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-runner)">
+        <span class="sb-item-icon">▶</span>
+        <span class="sb-item-label">执行引擎</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-report)">
+        <span class="sb-item-icon">▤</span>
+        <span class="sb-item-label">测试报告</span>
+      </div>
+      <div class="sb-section-label">AI 与编排</div>
+      <div class="sb-item" style="--item-color: var(--c-ai)">
+        <span class="sb-item-icon">⬡</span>
+        <span class="sb-item-label">AI 助手</span>
+        <span class="sb-item-badge">开发中</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-workflow)">
+        <span class="sb-item-icon">⑂</span>
+        <span class="sb-item-label">工作流工作台</span>
+        <span class="sb-item-badge pending">待开发</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-workflow)">
+        <span class="sb-item-icon">◉</span>
+        <span class="sb-item-label">平台数字人</span>
+        <span class="sb-item-badge pending">待开发</span>
+      </div>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-user-card">
+        <div class="sb-user-label">Digital Human</div>
+        <div class="sb-user-row">
+          <span>◇</span>
+          <span>QA_Engineer</span>
+        </div>
+        <div class="sb-user-status">● 在线</div>
+      </div>
+      <button class="sb-logout">退出登录</button>
+    </div>
+  </aside>
+</div>
+
+<!-- C: Silk -->
+<div class="prototype-col">
+  <div class="prototype-label">C · Silk 极简实体</div>
+  <aside class="sidebar silk">
+    <div class="sb-brand">
+      <div class="sb-brand-icon">◆</div>
+      <div class="sb-brand-text">自动化测试平台</div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-item active" style="--item-color: var(--c-dashboard)">
+        <span class="sb-item-icon">◷</span>
+        <span class="sb-item-label">仪表盘</span>
+      </div>
+      <div class="sb-section-label">测试全流程</div>
+      <div class="sb-item" style="--item-color: var(--c-device)">
+        <span class="sb-item-icon">◼</span>
+        <span class="sb-item-label">设备管理</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-element)">
+        <span class="sb-item-icon">⊙</span>
+        <span class="sb-item-label">元素定位</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-case)">
+        <span class="sb-item-icon">▥</span>
+        <span class="sb-item-label">用例管理</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-runner)">
+        <span class="sb-item-icon">▶</span>
+        <span class="sb-item-label">执行引擎</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-report)">
+        <span class="sb-item-icon">▤</span>
+        <span class="sb-item-label">测试报告</span>
+      </div>
+      <div class="sb-section-label">AI 与编排</div>
+      <div class="sb-item" style="--item-color: var(--c-ai)">
+        <span class="sb-item-icon">⬡</span>
+        <span class="sb-item-label">AI 助手</span>
+        <span class="sb-item-badge">开发中</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-workflow)">
+        <span class="sb-item-icon">⑂</span>
+        <span class="sb-item-label">工作流工作台</span>
+        <span class="sb-item-badge pending">待开发</span>
+      </div>
+      <div class="sb-item" style="--item-color: var(--c-workflow)">
+        <span class="sb-item-icon">◉</span>
+        <span class="sb-item-label">平台数字人</span>
+        <span class="sb-item-badge pending">待开发</span>
+      </div>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-user-card">
+        <div class="sb-user-label">Digital Human</div>
+        <div class="sb-user-row">
+          <span>◇</span>
+          <span>QA_Engineer</span>
+        </div>
+        <div class="sb-user-status">● 在线</div>
+      </div>
+      <button class="sb-logout">退出登录</button>
+    </div>
+  </aside>
+</div>
+
+
+<!-- D: Terminal -->
+<div class="prototype-col">
+  <div class="prototype-label">D · Terminal 开发者工具</div>
+  <aside class="sidebar terminal">
+    <div class="sb-brand">
+      <div class="sb-brand-icon">&gt;_</div>
+      <div class="sb-brand-text">Android-AutoTests</div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-item active" style="--item-color: #F4D35E">
+        <span class="sb-item-icon">◷</span>
+        <span class="sb-item-label">仪表盘</span>
+      </div>
+      <div class="sb-section-label">// 测试全流程</div>
+      <div class="sb-item" style="--item-color: #95D5B2">
+        <span class="sb-item-icon">◼</span>
+        <span class="sb-item-label">设备管理</span>
+      </div>
+      <div class="sb-item" style="--item-color: #B0A8E0">
+        <span class="sb-item-icon">⊙</span>
+        <span class="sb-item-label">元素定位</span>
+      </div>
+      <div class="sb-item" style="--item-color: #7AB88D">
+        <span class="sb-item-icon">▥</span>
+        <span class="sb-item-label">用例管理</span>
+      </div>
+      <div class="sb-item" style="--item-color: #FFB5A7">
+        <span class="sb-item-icon">▶</span>
+        <span class="sb-item-label">执行引擎</span>
+      </div>
+      <div class="sb-item" style="--item-color: #9a8c98">
+        <span class="sb-item-icon">▤</span>
+        <span class="sb-item-label">测试报告</span>
+      </div>
+      <div class="sb-section-label">// AI 与编排</div>
+      <div class="sb-item" style="--item-color: #C9B6F2">
+        <span class="sb-item-icon">⬡</span>
+        <span class="sb-item-label">AI 助手</span>
+        <span class="sb-item-badge">dev</span>
+      </div>
+      <div class="sb-item" style="--item-color: #89CFF0">
+        <span class="sb-item-icon">⑂</span>
+        <span class="sb-item-label">工作流工作台</span>
+        <span class="sb-item-badge">TODO</span>
+      </div>
+      <div class="sb-item" style="--item-color: #89CFF0">
+        <span class="sb-item-icon">◉</span>
+        <span class="sb-item-label">平台数字人</span>
+        <span class="sb-item-badge">TODO</span>
+      </div>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-user-card">
+        <div class="sb-user-label">$ whoami</div>
+        <div class="sb-user-row">
+          <span>▸</span>
+          <span>QA_Engineer</span>
+        </div>
+        <div class="sb-user-status">● connected</div>
+      </div>
+      <button class="sb-logout">exit</button>
+    </div>
+  </aside>
+</div>
+
+<!-- E: Bloom -->
+<div class="prototype-col">
+  <div class="prototype-label">E · Bloom 有机生长</div>
+  <aside class="sidebar bloom">
+    <div class="sb-brand">
+      <div class="sb-brand-icon">🌱</div>
+      <div class="sb-brand-text">自动化测试平台</div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-item active" style="--item-color: #F4D35E">
+        <span class="sb-item-icon">◷</span>
+        <span class="sb-item-label">仪表盘</span>
+      </div>
+      <div class="sb-section-label">测试全流程</div>
+      <div class="sb-item" style="--item-color: #95D5B2">
+        <span class="sb-item-icon">◼</span>
+        <span class="sb-item-label">设备管理</span>
+      </div>
+      <div class="sb-item" style="--item-color: #B0A8E0">
+        <span class="sb-item-icon">⊙</span>
+        <span class="sb-item-label">元素定位</span>
+      </div>
+      <div class="sb-item" style="--item-color: #7AB88D">
+        <span class="sb-item-icon">▥</span>
+        <span class="sb-item-label">用例管理</span>
+      </div>
+      <div class="sb-item" style="--item-color: #FFB5A7">
+        <span class="sb-item-icon">▶</span>
+        <span class="sb-item-label">执行引擎</span>
+      </div>
+      <div class="sb-item" style="--item-color: #9a8c98">
+        <span class="sb-item-icon">▤</span>
+        <span class="sb-item-label">测试报告</span>
+      </div>
+      <div class="sb-section-label">AI 与编排</div>
+      <div class="sb-item" style="--item-color: #C9B6F2">
+        <span class="sb-item-icon">⬡</span>
+        <span class="sb-item-label">AI 助手</span>
+        <span class="sb-item-badge">开发中</span>
+      </div>
+      <div class="sb-item" style="--item-color: #89CFF0">
+        <span class="sb-item-icon">⑂</span>
+        <span class="sb-item-label">工作流工作台</span>
+        <span class="sb-item-badge">待开发</span>
+      </div>
+      <div class="sb-item" style="--item-color: #89CFF0">
+        <span class="sb-item-icon">◉</span>
+        <span class="sb-item-label">平台数字人</span>
+        <span class="sb-item-badge">待开发</span>
+      </div>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-user-card">
+        <div class="sb-user-label">Digital Human</div>
+        <div class="sb-user-row">
+          <span>◇</span>
+          <span>QA_Engineer</span>
+        </div>
+        <div class="sb-user-status">● 在线</div>
+      </div>
+      <button class="sb-logout">退出登录</button>
+    </div>
+  </aside>
+</div>
+
+<!-- F: Grid -->
+<div class="prototype-col">
+  <div class="prototype-label">F · Grid 瑞士国际风</div>
+  <aside class="sidebar grid">
+    <div class="sb-brand">
+      <div class="sb-brand-icon">◆</div>
+      <div class="sb-brand-text">Android-AutoTests</div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-item active" style="--item-color: #F4D35E">
+        <span class="sb-item-icon">◷</span>
+        <span class="sb-item-label">仪表盘</span>
+      </div>
+      <div class="sb-section-label">测试全流程</div>
+      <div class="sb-item" style="--item-color: #95D5B2">
+        <span class="sb-item-icon">◼</span>
+        <span class="sb-item-label">设备管理</span>
+      </div>
+      <div class="sb-item" style="--item-color: #B0A8E0">
+        <span class="sb-item-icon">⊙</span>
+        <span class="sb-item-label">元素定位</span>
+      </div>
+      <div class="sb-item" style="--item-color: #7AB88D">
+        <span class="sb-item-icon">▥</span>
+        <span class="sb-item-label">用例管理</span>
+      </div>
+      <div class="sb-item" style="--item-color: #FFB5A7">
+        <span class="sb-item-icon">▶</span>
+        <span class="sb-item-label">执行引擎</span>
+      </div>
+      <div class="sb-item" style="--item-color: #9a8c98">
+        <span class="sb-item-icon">▤</span>
+        <span class="sb-item-label">测试报告</span>
+      </div>
+      <div class="sb-section-label">AI 与编排</div>
+      <div class="sb-item" style="--item-color: #C9B6F2">
+        <span class="sb-item-icon">⬡</span>
+        <span class="sb-item-label">AI 助手</span>
+        <span class="sb-item-badge">开发中</span>
+      </div>
+      <div class="sb-item" style="--item-color: #89CFF0">
+        <span class="sb-item-icon">⑂</span>
+        <span class="sb-item-label">工作流工作台</span>
+        <span class="sb-item-badge">待开发</span>
+      </div>
+      <div class="sb-item" style="--item-color: #89CFF0">
+        <span class="sb-item-icon">◉</span>
+        <span class="sb-item-label">平台数字人</span>
+        <span class="sb-item-badge">待开发</span>
+      </div>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-user-card">
+        <div class="sb-user-label">ACCOUNT</div>
+        <div class="sb-user-row">
+          <span>◇</span>
+          <span>QA_Engineer</span>
+        </div>
+        <div class="sb-user-status">● Active</div>
+      </div>
+      <button class="sb-logout">Log out</button>
+    </div>
+  </aside>
+</div>
+
+</body>
+</html>

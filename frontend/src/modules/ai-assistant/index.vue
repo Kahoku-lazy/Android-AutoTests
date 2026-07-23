@@ -11,6 +11,7 @@ import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import WbLoader from './components/WbLoader.vue'
 import AgentStickyNote from './components/AgentStickyNote.vue'
 import TaskStickyNote from './components/TaskStickyNote.vue'
+import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import KnowledgeBase from './KnowledgeBase.vue'
 import EvaluatorTab from './EvaluatorTab.vue'
 
@@ -355,9 +356,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
             @delete="deleteAgent(a)"
             @select="onAgentCardClick"
           />
-          <div v-if="!agents.length && !loading" class="empty">
-            点「+ 新建智能体」贴上第一张便签
-          </div>
+          <EmptyState v-if="!agents.length && !loading" icon="🤖" text="还没有智能体" hint="点击「+ 新建智能体」贴上第一张便签" />
         </div>
       </section>
 
@@ -392,9 +391,9 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
                   :tape-hue="taskTapeHue(t)"
                   @open="openTask"
                 />
-                <div v-if="!filteredTasks.length && !tasksLoading" class="empty">
-                  {{ activeTaskFilter === 'all' ? '还没有 AI 任务，在对话里让智能体创建即可' : '当前状态下没有任务便签' }}
-                </div>
+                <EmptyState v-if="!filteredTasks.length && !tasksLoading" icon="📋"
+                  :text="activeTaskFilter === 'all' ? '还没有 AI 任务' : '当前状态下没有任务便签'"
+                  :hint="activeTaskFilter === 'all' ? '在对话里让智能体帮你创建任务' : '尝试切换筛选条件'" />
               </div>
             </template>
           </AppTabs>

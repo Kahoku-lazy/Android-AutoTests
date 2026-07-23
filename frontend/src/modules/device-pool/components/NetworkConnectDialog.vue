@@ -73,7 +73,7 @@ function validatePort() {
 }
 
 function focusField(wrap) {
-  // animal-island Input 未暴露 focus 方法，直接定位内部原生 input
+  // Element Plus input wrapper — focus the native input element directly
   wrap?.querySelector?.("input")?.focus?.();
 }
 
@@ -194,7 +194,7 @@ function handleCancel() {
 
 .net-hint {
   font-size: 12px;
-  color: var(--app-text-secondary);
+  color: #999;
   margin: 4px 0 0;
   line-height: 1.5;
 }

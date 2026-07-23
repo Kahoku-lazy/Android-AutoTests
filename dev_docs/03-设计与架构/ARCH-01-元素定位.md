@@ -31,8 +31,8 @@ test-runner (执行引擎)
 flowchart TB
     subgraph Frontend_EL["🖥️ 前端 element-locator/"]
         direction TB
-        Tab1["Tab 1: 设备发现<br/>DeviceSelector + ScreenshotView<br/>+ XPathCandidatePanel + ElementDetailPanel"]
-        Tab2["Tab 2: 元素管理<br/>ElementManager.vue<br/>页面列表 + 元素表格"]
+        Tab1["Tab 1: 设备元素获取<br/>DeviceSelector + ScreenshotView<br/>+ XPathCandidatePanel + ElementDetailPanel"]
+        Tab2["Tab 2: Android元素管理<br/>ElementManager.vue<br/>页面列表 + 元素表格"]
         Tab1 --- Tab2
     end
 
@@ -78,12 +78,12 @@ flowchart TB
 frontend/src/modules/element-locator/
 │
 ├── index.vue                     页面入口 · 双 Tab 布局
-│   ├── Tab 1: 设备发现 (/elements)
+│   ├── Tab 1: 设备元素获取 (/elements)
 │   │   ├── DeviceSelector.vue     设备下拉选择器 + Dump UI 按钮
 │   │   ├── ScreenshotView.vue     截图画布 + 元素边界框覆盖层 (Canvas)
 │   │   ├── XPathCandidatePanel.vue 8 种 XPath 候选列表 + 设备操作按钮
 │   │   └── ElementDetailPanel.vue  元素属性详情面板
-│   └── Tab 2: 元素管理 (/element-mgr)
+│   └── Tab 2: Android元素管理 (/element-mgr)
 │       └── ElementManager.vue
 │           ├── 页面列表 (左 300px)     页面 CRUD + 重命名 + 批量删除
 │           └── 元素表格 (右)           别名编辑 + 测试点切换 + 筛选

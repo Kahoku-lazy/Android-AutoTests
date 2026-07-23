@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
-import type { CatalogPage } from '@/modules/workflow/data/pageCatalog'
-import { fetchCatalogPages } from '@/modules/workflow/data/pageCatalog'
+import type { CatalogPage, ApiEndpointRef } from '@/modules/workflow/data/pageCatalog'
+import { fetchCatalogPages, fetchApiEndpoints } from '@/modules/workflow/data/pageCatalog'
 
 const props = defineProps<{
   show: boolean
@@ -9,6 +9,7 @@ const props = defineProps<{
   y: number
   nodeId: string
   nodeLabel: string
+  nodeType?: string
   canLinkPage?: boolean
   linkedPageId?: string
   linkedPageName?: string
@@ -17,13 +18,16 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   linkPage: [page: CatalogPage]
+  linkApi: [endpoint: ApiEndpointRef]
   resyncPage: []
   deleteNode: []
 }>()
 
-const mode = ref<'menu' | 'link'>('menu')
+const mode = ref<'menu' | 'link' | 'api'>('menu')
+const apiEndpoints = ref<ApiEndpointRef[]>([])
+const apiSearch = ref('')
+const pickerDomain = ref<'android' | 'web'>('android')
 const pages = ref<CatalogPage[]>([])
-const source = ref<'api' | 'mock'>('mock')
 const catalogError = ref('')
 const loading = ref(false)
 const search = ref('')
@@ -61,14 +65,36 @@ function onOutside(e: MouseEvent) {
   }
 }
 
-function openLink() {
+function openLink(domain: 'android' | 'web') {
+  pickerDomain.value = domain
   mode.value = 'link'
+  search.value = ''
   loadPages()
 }
 
 function selectPage(page: CatalogPage) {
   emit('linkPage', page)
   emit('close')
+}
+
+async function openApiPicker() {
+  mode.value = 'api'
+  loading.value = true
+  try { apiEndpoints.value = await fetchApiEndpoints() } catch { apiEndpoints.value = [] }
+  loading.value = false
+}
+
+function selectApi(ep: ApiEndpointRef) {
+  emit('linkApi', ep)
+  emit('close')
+}
+
+function apiFiltered() {
+  const q = apiSearch.value.trim().toLowerCase()
+  if (!q) return apiEndpoints.value
+  return apiEndpoints.value.filter(e =>
+    e.name.toLowerCase().includes(q) || e.url.toLowerCase().includes(q) || e.method.toLowerCase().includes(q)
+  )
 }
 
 function doDelete() {
@@ -84,10 +110,11 @@ function doResync() {
 
 const filtered = () => {
   const q = search.value.trim().toLowerCase()
-  if (!q) return pages.value
-  return pages.value.filter(
-    p => p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q)
+  let list = pages.value.filter(p => p.domain === pickerDomain.value)
+  if (q) list = list.filter(p =>
+    p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q)
   )
+  return list
 }
 
 onMounted(() => {
@@ -108,31 +135,47 @@ onMounted(() => {
       <template v-if="mode === 'menu'">
         <div class="menu-title">{{ nodeLabel }}</div>
         <div v-if="linkedPageName" class="menu-hint">已关联: {{ linkedPageName }}</div>
-        <button
-          v-if="canLinkPage !== false"
-          class="menu-item"
-          @click="openLink"
-        >
-          <span>🔗</span> 关联元素管理页面…
-        </button>
-        <button
-          v-if="linkedPageId"
-          class="menu-item"
-          @click="doResync"
-        >
-          <span>🔄</span> 刷新元素目录
-        </button>
-        <div v-else-if="canLinkPage === false" class="menu-hint">该节点不支持关联页面</div>
-        <button class="menu-item danger" @click="doDelete">
-          <span>🗑</span> 删除节点
-        </button>
+
+        <!-- Page node: Android / Web -->
+        <template v-if="nodeType !== 'ApiNode' && canLinkPage !== false">
+          <button class="menu-item" @click="openLink('android')"><span>📱</span> 关联 Android 页面…</button>
+          <button class="menu-item" @click="openLink('web')"><span>🌐</span> 关联 Web 页面…</button>
+        </template>
+
+        <!-- API node: link API endpoint -->
+        <template v-if="nodeType === 'ApiNode'">
+          <button class="menu-item" @click="openApiPicker"><span>📡</span> 关联 API 接口…</button>
+        </template>
+
+        <button v-if="linkedPageId" class="menu-item" @click="doResync"><span>🔄</span> 刷新元素目录</button>
+        <button class="menu-item danger" @click="doDelete"><span>🗑</span> 删除节点</button>
+      </template>
+
+      <!-- API endpoint picker -->
+      <template v-else-if="mode === 'api'">
+        <div class="menu-header">
+          <button class="back" @click="mode = 'menu'">←</button>
+          <span>选择 API 接口</span>
+        </div>
+        <input v-model="apiSearch" class="search" placeholder="搜索接口…" autofocus @keydown.escape="$emit('close')" />
+        <div v-if="loading" class="empty">加载中…</div>
+        <div v-else class="list">
+          <button v-for="ep in apiFiltered()" :key="ep.id" class="page-item" @click="selectApi(ep)">
+            <div class="page-name">{{ ep.name }}</div>
+            <div class="page-meta">
+              <span :style="'display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;color:#fff;background:' + (ep.method === 'GET' ? '#6fba2c' : ep.method === 'POST' ? '#889df0' : '#8b7355')">{{ ep.method }}</span>
+              {{ ep.url }}
+            </div>
+          </button>
+          <div v-if="!apiFiltered().length" class="empty">无 API 接口，请先在元素定位中添加</div>
+        </div>
       </template>
 
       <!-- Link page picker -->
       <template v-else>
         <div class="menu-header">
           <button class="back" @click="mode = 'menu'">←</button>
-          <span>选择要关联的页面</span>
+          <span>选择 {{ pickerDomain === 'android' ? 'Android' : 'Web' }} 页面</span>
         </div>
         <input
           v-model="search"
@@ -141,9 +184,6 @@ onMounted(() => {
           autofocus
           @keydown.escape="$emit('close')"
         />
-        <div class="source-tag">
-          数据源: {{ source === 'api' ? '元素管理 API' : 'Demo Mock' }}
-        </div>
         <div v-if="catalogError" class="empty">API 提示: {{ catalogError }}</div>
         <div v-if="loading" class="empty">加载中…</div>
         <div v-else class="list">
@@ -154,10 +194,7 @@ onMounted(() => {
             :class="{ active: p.id === linkedPageId }"
             @click="selectPage(p)"
           >
-            <div class="page-name">
-              {{ p.name }}
-              <span v-if="p.id === linkedPageId" class="badge">当前</span>
-            </div>
+            <div class="page-name">{{ p.name }}<span v-if="p.id === linkedPageId" class="badge">当前</span></div>
             <div class="page-meta">{{ p.elements.length }} 个元素 · {{ p.description || p.package || '—' }}</div>
           </button>
           <div v-if="!filtered().length" class="empty">无匹配页面</div>

@@ -1,0 +1,2774 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>仪表盘 Origami 三方案 — Android-AutoTests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Quicksand:wght@600;700;800&family=JetBrains+Mono:wght@500;600&family=Caveat:wght@600;700&family=Bangers&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+/* ═══════════════════════════════════════════
+   共享底座
+   ═══════════════════════════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Inter','PingFang SC','Microsoft YaHei',sans-serif;
+  background:#e8ecf1;padding:28px 24px;
+}
+h1{text-align:center;font-size:20px;font-weight:800;color:#1a202c;margin-bottom:4px;letter-spacing:-0.02em;}
+h1+p{text-align:center;font-size:12px;color:#a0aec0;margin-bottom:28px;}
+
+.prototype-row{max-width:960px;margin:0 auto 36px;}
+.prototype-label{
+  font-size:10px;font-weight:700;color:#1a202c;letter-spacing:0.06em;text-transform:uppercase;
+  background:#fff;padding:5px 16px;border:1.5px solid #e8ecf1;border-radius:2px;
+  display:inline-flex;align-items:center;gap:6px;margin-bottom:14px;
+}
+.prototype-label .dot{width:6px;height:6px;background:#1a202c;flex-shrink:0;}
+
+/* ── 模块色 ── */
+:root{
+  --c-device:#6BCB77;--c-case:#4ECDC4;--c-element:#A78BFA;--c-runner:#FF6B6B;
+  --c-report:#7C6F83;--c-ai:#E879F9;--c-workflow:#60A5FA;--c-dashboard:#F7C948;
+}
+
+/* ═══════════════════════════════════════════
+   方案 S1: CRISP GRID — 锐利网格
+   签名: 2px 圆角全白 + 左色条 + 等宽数字
+   ═══════════════════════════════════════════ */
+.s1{
+  background:#fff;border:1.5px solid #e8ecf1;border-radius:2px;
+  box-shadow:4px 4px 0 rgba(0,0,0,0.03);overflow:hidden;
+}
+
+/* Header */
+.s1 .dash-header{
+  display:flex;align-items:center;gap:12px;padding:14px 20px;
+  background:#fafbfc;border-bottom:1.5px solid #e8ecf1;
+}
+.s1 .dash-header-icon{
+  width:36px;height:36px;display:grid;place-items:center;background:#1a202c;color:#fff;
+  border-radius:2px;font-size:14px;
+}
+.s1 .dash-header h2{font-size:15px;font-weight:800;color:#1a202c;letter-spacing:-0.02em;margin:0;}
+.s1 .dash-header p{font-size:11px;color:#a0aec0;font-weight:500;margin:1px 0 0;}
+.s1 .dash-header-actions{margin-left:auto;}
+.s1 .dash-btn{
+  font-size:11px;font-weight:700;color:#1a202c;background:#fff;
+  border:1.5px solid #e8ecf1;border-radius:2px;padding:5px 14px;cursor:pointer;
+  font-family:inherit;transition:all 0.15s;
+}
+.s1 .dash-btn:hover{background:#1a202c;color:#fff;border-color:#1a202c;}
+
+/* Stats Grid */
+.s1 .stats-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1.5px solid #e8ecf1;
+}
+.s1 .stat-card{
+  padding:20px;border-right:1.5px solid #e8ecf1;
+  border-left:3px solid transparent;transition:border-color 0.2s;
+  cursor:pointer;position:relative;
+}
+.s1 .stat-card:last-child{border-right:none;}
+.s1 .stat-card:hover{border-left-color:var(--c);background:#fafbfc;}
+/* 数字等宽 */
+.s1 .stat-value{
+  font-family:'JetBrains Mono','Inter',monospace;font-size:28px;font-weight:700;
+  color:#1a202c;letter-spacing:-0.03em;line-height:1;
+}
+.s1 .stat-label{font-size:12px;font-weight:600;color:#1a202c;margin:6px 0 4px;}
+.s1 .stat-desc{font-size:10px;color:#a0aec0;font-weight:500;}
+.s1 .stat-trend{font-size:10px;font-weight:600;color:#718096;margin-top:8px;}
+.s1 .stat-trend.up{color:#2f9e44;}
+.s1 .stat-enter{
+  display:inline-block;margin-top:10px;font-size:10px;font-weight:700;color:#1a202c;
+  border:1.5px solid #e8ecf1;border-radius:2px;padding:3px 10px;
+}
+
+/* Section */
+.s1 .dash-section{padding:18px 20px;border-bottom:1.5px solid #e8ecf1;}
+.s1 .dash-section:last-child{border-bottom:none;}
+.s1 .dash-section-title{
+  font-size:10px;font-weight:700;color:#a0aec0;text-transform:uppercase;
+  letter-spacing:0.08em;margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.s1 .dash-section-title::after{content:'';flex:1;height:1px;background:#e8ecf1;}
+
+/* Trends */
+.s1 .trends-row{display:grid;grid-template-columns:1.5fr 1fr;gap:0;}
+.s1 .trend-chart{
+  padding:16px 20px;border-right:1.5px solid #e8ecf1;min-height:120px;
+  display:flex;flex-direction:column;justify-content:center;gap:8px;
+}
+.s1 .trend-bars{display:flex;align-items:flex-end;gap:3px;height:70px;}
+.s1 .trend-bar{
+  flex:1;border-radius:1px 1px 0 0;min-width:6px;
+}
+.s1 .trend-bar--pass{background:#1a202c;}
+.s1 .trend-bar--fail{background:#e8ecf1;}
+.s1 .trend-legend{display:flex;gap:14px;font-size:10px;font-weight:600;color:#718096;}
+.s1 .trend-legend span{display:flex;align-items:center;gap:4px;}
+.s1 .trend-dot{width:8px;height:8px;border-radius:1px;}
+.s1 .trend-tasks{padding:16px 20px;}
+.s1 .task-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 0;border-bottom:1px solid #f0f3f5;font-size:11px;font-weight:600;
+}
+.s1 .task-row:last-child{border-bottom:none;}
+.s1 .task-status{font-weight:700;font-size:10px;padding:2px 6px;border-radius:2px;}
+.s1 .task-status.pass{background:#f0faf3;color:#2f9e44;border:1px solid #d4edda;}
+.s1 .task-status.fail{background:#fef5f5;color:#c53030;border:1px solid #fed7d7;}
+
+/* Module Nav */
+.s1 .module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.s1 .module-item{
+  padding:14px;border:1.5px solid #e8ecf1;border-radius:2px;cursor:pointer;
+  display:flex;align-items:center;gap:10px;transition:all 0.15s;
+}
+.s1 .module-item:hover{background:#fafbfc;border-color:#1a202c;}
+.s1 .module-dot{width:8px;height:8px;border-radius:1px;flex-shrink:0;}
+.s1 .module-name{font-size:12px;font-weight:700;color:#1a202c;}
+.s1 .module-count{font-size:10px;font-weight:600;color:#a0aec0;margin-left:auto;}
+
+/* Activity */
+.s1 .activity-list{display:flex;flex-direction:column;gap:0;}
+.s1 .activity-item{
+  display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f0f3f5;
+  font-size:11px;color:#718096;
+}
+.s1 .activity-item:last-child{border-bottom:none;}
+.s1 .activity-time{font-family:'JetBrains Mono',monospace;font-size:10px;color:#a0aec0;width:48px;flex-shrink:0;}
+
+/* Footer */
+.s1 .dash-footer{
+  display:flex;align-items:center;justify-content:center;gap:20px;
+  padding:12px 20px;background:#fafbfc;border-top:1.5px solid #e8ecf1;
+  font-size:10px;color:#a0aec0;font-weight:600;
+}
+
+/* ═══════════════════════════════════════════
+   方案 S2: FOLDED LAYERS — 折纸叠层
+   签名: 阴影折痕 + 切角卡片 + 纵深分层
+   ═══════════════════════════════════════════ */
+.s2{
+  background:linear-gradient(180deg,#f8f9fb 0%,#f0f2f5 100%);
+  border-radius:4px;overflow:hidden;
+  box-shadow:0 2px 0 #e0e3e7,0 4px 0 #e8eaee,0 6px 16px rgba(0,0,0,0.04);
+}
+/* 折痕线 */
+.s2::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,#1a202c 0%,#1a202c 40%,transparent 40%,transparent 60%,#1a202c 60%,#1a202c 100%);
+  z-index:2;
+}
+
+/* Header — 切角 */
+.s2 .dash-header{
+  display:flex;align-items:center;gap:12px;padding:16px 20px;
+  background:#fff;position:relative;
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%);
+  margin-bottom:3px;
+}
+.s2 .dash-header-icon{
+  width:38px;height:38px;display:grid;place-items:center;background:#1a202c;color:#fff;
+  clip-path:polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%);
+  font-size:13px;
+}
+.s2 .dash-header h2{font-size:15px;font-weight:800;color:#1a202c;margin:0;}
+.s2 .dash-header p{font-size:11px;color:#a0aec0;font-weight:500;margin:1px 0 0;}
+.s2 .dash-header-actions{margin-left:auto;}
+.s2 .dash-btn{
+  font-size:11px;font-weight:700;color:#1a202c;background:transparent;
+  border:1.5px solid #e8ecf1;border-radius:2px;padding:5px 14px;cursor:pointer;
+  font-family:inherit;transition:all 0.15s;
+}
+.s2 .dash-btn:hover{background:#1a202c;color:#fff;}
+
+/* Stats — 折纸阴影叠层 */
+.s2 .stats-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px;
+}
+.s2 .stat-card{
+  background:#fff;padding:18px 16px;cursor:pointer;position:relative;
+  border-radius:2px;
+  box-shadow:2px 2px 0 #e8ecf1,4px 4px 0 #f0f3f5;
+  transition:box-shadow 0.2s,transform 0.2s;
+  border:1.5px solid #e8ecf1;
+}
+.s2 .stat-card:hover{transform:translate(1px,1px);box-shadow:1px 1px 0 #e8ecf1,2px 2px 0 #f0f3f5;}
+/* 折角装饰 */
+.s2 .stat-card::after{
+  content:'';position:absolute;top:0;right:0;width:0;height:0;
+  border-style:solid;border-width:0 14px 14px 0;
+  border-color:transparent var(--c) transparent transparent;
+}
+.s2 .stat-value{
+  font-family:'Quicksand',sans-serif;font-size:30px;font-weight:800;
+  color:#1a202c;line-height:1;
+}
+.s2 .stat-label{font-size:12px;font-weight:700;color:#1a202c;margin:6px 0 4px;}
+.s2 .stat-desc{font-size:10px;color:#a0aec0;font-weight:500;}
+.s2 .stat-trend{font-size:10px;font-weight:600;color:#718096;margin-top:6px;}
+.s2 .stat-trend.up{color:#2f9e44;}
+.s2 .stat-enter{
+  display:inline-block;margin-top:8px;font-size:10px;font-weight:700;color:#a0aec0;
+  transition:color 0.15s;
+}
+.s2 .stat-card:hover .stat-enter{color:#1a202c;}
+
+/* Section */
+.s2 .dash-section{padding:16px;margin:0 16px 12px;background:#fff;border-radius:2px;border:1.5px solid #e8ecf1;}
+.s2 .dash-section-title{
+  font-size:10px;font-weight:700;color:#1a202c;text-transform:uppercase;
+  letter-spacing:0.06em;margin-bottom:14px;
+  display:flex;align-items:center;gap:6px;
+}
+.s2 .dash-section-title::before{content:'';width:8px;height:8px;background:#1a202c;transform:rotate(45deg);}
+
+/* Trends */
+.s2 .trends-row{display:grid;grid-template-columns:1.5fr 1fr;gap:12px;}
+.s2 .trend-chart{padding:16px;background:#fafbfc;border-radius:2px;}
+.s2 .trend-bars{display:flex;align-items:flex-end;gap:3px;height:70px;}
+.s2 .trend-bar{flex:1;border-radius:1px 1px 0 0;min-width:6px;}
+.s2 .trend-bar--pass{background:#1a202c;}
+.s2 .trend-bar--fail{background:#d4d8dc;}
+.s2 .trend-legend{display:flex;gap:14px;font-size:10px;font-weight:600;color:#718096;margin-top:8px;}
+.s2 .trend-dot{width:8px;height:8px;transform:rotate(45deg);}
+.s2 .trend-tasks{padding:16px;background:#fafbfc;border-radius:2px;}
+.s2 .task-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 0;border-bottom:1px solid #e8ecf1;font-size:11px;font-weight:600;
+}
+.s2 .task-row:last-child{border-bottom:none;}
+.s2 .task-status{font-weight:700;font-size:10px;padding:2px 6px;border-radius:2px;}
+.s2 .task-status.pass{background:#1a202c;color:#fff;}
+.s2 .task-status.fail{background:#fef5f5;color:#c53030;border:1px solid #fed7d7;}
+
+/* Module Nav */
+.s2 .module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.s2 .module-item{
+  padding:12px 14px;background:#fafbfc;border:1.5px solid #e8ecf1;border-radius:2px;
+  cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s;
+}
+.s2 .module-item:hover{background:#fff;border-color:#1a202c;}
+.s2 .module-dot{width:6px;height:6px;transform:rotate(45deg);flex-shrink:0;}
+.s2 .module-name{font-size:12px;font-weight:700;color:#1a202c;}
+.s2 .module-count{font-size:10px;font-weight:600;color:#a0aec0;margin-left:auto;}
+
+/* Activity */
+.s2 .activity-item{
+  display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid #f0f3f5;
+  font-size:11px;color:#718096;
+}
+.s2 .activity-item:last-child{border-bottom:none;}
+.s2 .activity-time{font-family:'JetBrains Mono',monospace;font-size:10px;color:#a0aec0;width:48px;flex-shrink:0;}
+
+/* Footer */
+.s2 .dash-footer{
+  display:flex;align-items:center;justify-content:center;gap:24px;
+  padding:14px 20px;font-size:10px;color:#a0aec0;font-weight:600;
+  border-top:1.5px solid #e8ecf1;margin:0 16px 16px;
+}
+
+/* ═══════════════════════════════════════════
+   方案 S3: GEOMETRIC SPECTRUM — 几何光谱
+   签名: 菱形色块 + 模块色点缀 + 黑框几何
+   ═══════════════════════════════════════════ */
+.s3{
+  background:#fdfdfc;border:2px solid #1a202c;border-radius:2px;
+  box-shadow:4px 4px 0 #1a202c,6px 6px 0 rgba(0,0,0,0.04);
+  overflow:hidden;
+}
+
+/* Header */
+.s3 .dash-header{
+  display:flex;align-items:center;gap:12px;padding:16px 20px;
+  background:#fff;border-bottom:2px solid #1a202c;
+}
+.s3 .dash-header-icon{
+  width:36px;height:36px;display:grid;place-items:center;
+  background:#1a202c;color:#fff;font-size:14px;
+  clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);
+}
+.s3 .dash-header h2{font-size:15px;font-weight:800;color:#1a202c;margin:0;}
+.s3 .dash-header p{font-size:11px;color:#718096;font-weight:500;margin:1px 0 0;}
+.s3 .dash-header-actions{margin-left:auto;}
+.s3 .dash-btn{
+  font-size:11px;font-weight:700;color:#fff;background:#1a202c;
+  border:2px solid #1a202c;border-radius:2px;padding:5px 14px;cursor:pointer;
+  font-family:inherit;transition:all 0.15s;
+}
+.s3 .dash-btn:hover{background:#fff;color:#1a202c;}
+
+/* Stats — 菱形彩色指示器 */
+.s3 .stats-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:2px solid #1a202c;
+}
+.s3 .stat-card{
+  padding:20px;border-right:2px solid #e8ecf1;cursor:pointer;position:relative;
+  transition:background 0.15s;
+}
+.s3 .stat-card:last-child{border-right:none;}
+.s3 .stat-card:hover{background:#fafbfc;}
+/* 菱形色块 */
+.s3 .stat-card::before{
+  content:'';position:absolute;top:14px;right:14px;
+  width:10px;height:10px;background:var(--c);
+  transform:rotate(45deg);border:1.5px solid #1a202c;
+}
+.s3 .stat-value{
+  font-family:'Quicksand',sans-serif;font-size:30px;font-weight:800;
+  color:#1a202c;line-height:1;
+}
+.s3 .stat-label{font-size:12px;font-weight:700;color:#1a202c;margin:6px 0 4px;}
+.s3 .stat-desc{font-size:10px;color:#718096;font-weight:500;}
+.s3 .stat-trend{font-size:10px;font-weight:600;color:#718096;margin-top:6px;}
+.s3 .stat-trend.up{color:#2f9e44;}
+.s3 .stat-enter{
+  display:inline-block;margin-top:8px;font-size:10px;font-weight:700;color:#1a202c;
+  border-bottom:1.5px solid #1a202c;padding-bottom:1px;
+}
+
+/* Section */
+.s3 .dash-section{padding:18px 20px;border-bottom:2px solid #e8ecf1;}
+.s3 .dash-section:last-child{border-bottom:none;}
+.s3 .dash-section-title{
+  font-size:10px;font-weight:700;color:#1a202c;text-transform:uppercase;
+  letter-spacing:0.06em;margin-bottom:14px;
+  position:relative;display:inline-block;
+}
+.s3 .dash-section-title::after{
+  content:'';position:absolute;bottom:-3px;left:0;right:0;height:2px;background:#1a202c;
+}
+
+/* Trends */
+.s3 .trends-row{display:grid;grid-template-columns:1.5fr 1fr;gap:0;}
+.s3 .trend-chart{
+  padding:16px 20px;border-right:2px solid #e8ecf1;min-height:120px;
+}
+.s3 .trend-bars{display:flex;align-items:flex-end;gap:3px;height:70px;}
+.s3 .trend-bar{flex:1;min-width:6px;}
+.s3 .trend-bar--pass{background:#1a202c;}
+.s3 .trend-bar--fail{background:#e8ecf1;border:1px solid #d4d8dc;}
+.s3 .trend-legend{display:flex;gap:14px;font-size:10px;font-weight:600;color:#718096;margin-top:8px;}
+.s3 .trend-dot{width:8px;height:8px;transform:rotate(45deg);}
+.s3 .trend-tasks{padding:16px 20px;}
+.s3 .task-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 0;border-bottom:1px solid #f0f3f5;font-size:11px;font-weight:600;
+}
+.s3 .task-row:last-child{border-bottom:none;}
+.s3 .task-status{font-weight:700;font-size:10px;padding:2px 6px;border-radius:2px;}
+.s3 .task-status.pass{background:#1a202c;color:#fff;}
+.s3 .task-status.fail{border:1.5px solid #1a202c;color:#c53030;}
+
+/* Module Nav — isometric geometric */
+.s3 .module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.s3 .module-item{
+  padding:14px;border:2px solid #e8ecf1;border-radius:2px;cursor:pointer;
+  display:flex;align-items:center;gap:10px;transition:all 0.15s;position:relative;
+}
+.s3 .module-item:hover{border-color:#1a202c;box-shadow:2px 2px 0 #1a202c;}
+.s3 .module-dot{
+  width:8px;height:8px;flex-shrink:0;
+  clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);
+}
+.s3 .module-name{font-size:12px;font-weight:700;color:#1a202c;}
+.s3 .module-count{font-size:10px;font-weight:600;color:#718096;margin-left:auto;}
+
+/* Activity */
+.s3 .activity-item{
+  display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid #f0f3f5;
+  font-size:11px;color:#718096;
+}
+.s3 .activity-item:last-child{border-bottom:none;}
+.s3 .activity-time{font-family:'JetBrains Mono',monospace;font-size:10px;color:#a0aec0;width:48px;flex-shrink:0;}
+
+/* Footer */
+.s3 .dash-footer{
+  display:flex;align-items:center;justify-content:center;gap:20px;
+  padding:12px 20px;background:#fafbfc;border-top:2px solid #1a202c;
+  font-size:10px;color:#718096;font-weight:600;
+}
+
+/* ═══════════════════════════════════════════
+   方案 S4: BOLD FOLD — 粗线彩色折纸
+   签名: 3.5px 纯黑全局边框 + 偏移折痕 + 饱和模块色
+   ═══════════════════════════════════════════ */
+.s4{
+  background:#fffef9;border:3.5px solid #1a1a2e;border-radius:4px;
+  box-shadow:5px 5px 0 #1a1a2e,7px 7px 0 rgba(26,26,46,0.06);
+  overflow:hidden;
+}
+/* Header — 黑底彩字 */
+.s4 .dash-header{
+  display:flex;align-items:center;gap:12px;padding:16px 20px;
+  background:#FFE066;border-bottom:3.5px solid #1a1a2e;
+}
+.s4 .dash-header-icon{
+  width:38px;height:38px;display:grid;place-items:center;
+  background:#1a1a2e;color:#FFE066;font-size:15px;
+  border-radius:4px;box-shadow:3px 3px 0 rgba(0,0,0,0.15);
+}
+.s4 .dash-header h2{font-size:15px;font-weight:800;color:#1a1a2e;margin:0;font-family:'Bangers','Inter',sans-serif;letter-spacing:0.04em;}
+.s4 .dash-header p{font-size:10px;color:#5a4e20;font-weight:600;margin:1px 0 0;}
+.s4 .dash-header-actions{margin-left:auto;}
+.s4 .dash-btn{
+  font-size:11px;font-weight:800;color:#1a1a2e;background:#fff;
+  border:3px solid #1a1a2e;border-radius:4px;padding:5px 14px;cursor:pointer;
+  font-family:'Bangers','Inter',sans-serif;letter-spacing:0.04em;
+  box-shadow:3px 3px 0 #1a1a2e;transition:all 0.12s;
+}
+.s4 .dash-btn:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 #1a1a2e;}
+.s4 .dash-btn:active{transform:translate(3px,3px);box-shadow:none;}
+
+/* Stats — 彩色粗框卡片 */
+.s4 .stats-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:3.5px solid #1a1a2e;
+}
+.s4 .stat-card{
+  padding:18px 16px;border-right:3.5px solid #1a1a2e;cursor:pointer;
+  transition:background 0.15s;position:relative;
+}
+.s4 .stat-card:last-child{border-right:none;}
+/* 各异底色 */
+.s4 .stat-card:nth-child(1){background:#C8F5D0;}
+.s4 .stat-card:nth-child(2){background:#D4F5F0;}
+.s4 .stat-card:nth-child(3){background:#E8DDF8;}
+.s4 .stat-card:nth-child(4){background:#FFE0DB;}
+.s4 .stat-card:hover{filter:brightness(0.96);}
+/* 折角 */
+.s4 .stat-card::after{
+  content:'';position:absolute;bottom:0;right:0;width:0;height:0;
+  border-style:solid;border-width:0 0 16px 16px;
+  border-color:transparent transparent #fff transparent;
+  filter:drop-shadow(-1px -1px 0 rgba(0,0,0,0.06));
+}
+.s4 .stat-value{
+  font-family:'Bangers','Quicksand',sans-serif;font-size:34px;font-weight:400;
+  color:#1a1a2e;line-height:1;letter-spacing:0.02em;
+}
+.s4 .stat-label{font-size:12px;font-weight:700;color:#1a1a2e;margin:4px 0 3px;}
+.s4 .stat-desc{font-size:10px;color:#5a5a4e;font-weight:500;}
+.s4 .stat-trend{font-size:10px;font-weight:700;color:#5a5a4e;margin-top:4px;}
+.s4 .stat-trend.up{color:#2f7a2f;}
+.s4 .stat-enter{
+  display:inline-block;margin-top:6px;font-size:10px;font-weight:800;color:#1a1a2e;
+  border-bottom:2.5px solid #1a1a2e;padding-bottom:1px;
+  font-family:'Bangers',sans-serif;letter-spacing:0.04em;
+}
+
+/* Section — 彩色分区 */
+.s4 .dash-section{
+  padding:16px 20px;border-bottom:3.5px solid #1a1a2e;
+}
+.s4 .dash-section:nth-child(3){background:#FFF9E6;}
+.s4 .dash-section:nth-child(4){background:#fff;}
+.s4 .dash-section:nth-child(5){background:#F5F0FF;}
+.s4 .dash-section-title{
+  font-size:11px;font-weight:800;color:#1a1a2e;text-transform:uppercase;
+  letter-spacing:0.06em;margin-bottom:12px;
+  font-family:'Bangers','Inter',sans-serif;
+  position:relative;display:inline-block;
+}
+.s4 .dash-section-title::after{
+  content:'';position:absolute;bottom:-3px;left:0;right:0;height:3px;background:#1a1a2e;border-radius:2px;
+}
+
+/* Trends */
+.s4 .trends-row{display:grid;grid-template-columns:1.5fr 1fr;gap:12px;}
+.s4 .trend-chart{
+  padding:14px;background:#fff;border:3px solid #1a1a2e;border-radius:4px;
+  box-shadow:3px 3px 0 #1a1a2e;
+}
+.s4 .trend-bars{display:flex;align-items:flex-end;gap:3px;height:70px;}
+.s4 .trend-bar{flex:1;min-width:6px;border:2px solid #1a1a2e;}
+.s4 .trend-bar--pass{background:#6BCB77;}
+.s4 .trend-bar--fail{background:#FFB5A7;}
+.s4 .trend-legend{display:flex;gap:16px;font-size:10px;font-weight:700;margin-top:6px;}
+.s4 .trend-dot{width:10px;height:10px;border:2px solid #1a1a2e;display:inline-block;}
+.s4 .trend-tasks{
+  padding:14px;background:#fff;border:3px solid #1a1a2e;border-radius:4px;
+  box-shadow:3px 3px 0 #1a1a2e;
+}
+.s4 .task-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 0;border-bottom:2px solid #eee;font-size:11px;font-weight:700;
+}
+.s4 .task-row:last-child{border-bottom:none;}
+.s4 .task-status{font-weight:800;font-size:10px;padding:3px 8px;border-radius:3px;border:2px solid #1a1a2e;}
+.s4 .task-status.pass{background:#C8F5D0;color:#1a5c1a;}
+.s4 .task-status.fail{background:#FFE0DB;color:#7a1c1c;}
+
+/* Module Nav */
+.s4 .module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.s4 .module-item{
+  padding:12px;border:3px solid #1a1a2e;border-radius:4px;cursor:pointer;
+  display:flex;align-items:center;gap:8px;transition:all 0.12s;
+  background:#fff;box-shadow:3px 3px 0 #1a1a2e;
+  font-weight:700;
+}
+.s4 .module-item:hover{transform:translate(1.5px,1.5px);box-shadow:1.5px 1.5px 0 #1a1a2e;}
+.s4 .module-dot{
+  width:10px;height:10px;flex-shrink:0;border:2px solid #1a1a2e;
+  transform:rotate(45deg);
+}
+.s4 .module-name{font-size:12px;color:#1a1a2e;}
+.s4 .module-count{font-size:10px;font-weight:800;color:#5a5a4e;margin-left:auto;}
+
+/* Activity */
+.s4 .activity-item{
+  display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:2px solid #eee;
+  font-size:11px;font-weight:600;color:#5a5a4e;
+}
+.s4 .activity-item:last-child{border-bottom:none;}
+.s4 .activity-time{font-weight:800;font-size:10px;color:#1a1a2e;width:48px;flex-shrink:0;}
+
+/* Footer */
+.s4 .dash-footer{
+  display:flex;align-items:center;justify-content:center;gap:24px;
+  padding:14px 20px;background:#FFE066;border-top:3.5px solid #1a1a2e;
+  font-size:10px;font-weight:700;color:#5a4e20;
+}
+
+/* ═══════════════════════════════════════════
+   方案 S5: SPECTRUM STACK — 色纸叠层
+   签名: 8色分区叠纸 + 切角层叠 + 深阴影
+   ═══════════════════════════════════════════ */
+.s5{
+  background:#f0ede5;border-radius:2px;overflow:hidden;
+  box-shadow:0 4px 24px rgba(0,0,0,0.06);
+}
+/* 每层都是彩色纸片 */
+.s5 .dash-header{
+  display:flex;align-items:center;gap:12px;padding:16px 20px;
+  background:#FFB5A7;position:relative;
+  clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,0 100%);
+  box-shadow:0 3px 0 rgba(0,0,0,0.08);
+  z-index:5;
+}
+.s5 .dash-header-icon{
+  width:36px;height:36px;display:grid;place-items:center;
+  background:#fff;color:#FF6B6B;font-size:14px;
+  clip-path:polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%);
+}
+.s5 .dash-header h2{font-size:15px;font-weight:800;color:#fff;margin:0;text-shadow:1px 1px 0 rgba(0,0,0,0.1);}
+.s5 .dash-header p{font-size:10px;color:rgba(255,255,255,0.85);font-weight:600;margin:1px 0 0;}
+.s5 .dash-header-actions{margin-left:auto;}
+.s5 .dash-btn{
+  font-size:11px;font-weight:700;color:#FF6B6B;background:#fff;
+  border:2px solid rgba(0,0,0,0.1);border-radius:2px;padding:5px 12px;cursor:pointer;
+  font-family:inherit;transition:all 0.15s;
+}
+.s5 .dash-btn:hover{box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+
+/* Stats — 4色卡片叠层 */
+.s5 .stats-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+  position:relative;z-index:4;
+}
+.s5 .stat-card{
+  padding:20px 16px;cursor:pointer;position:relative;
+  transition:transform 0.2s;
+}
+.s5 .stat-card:nth-child(1){background:#A5F0C5;margin-top:0;}
+.s5 .stat-card:nth-child(2){background:#D4F5F0;margin-top:4px;}
+.s5 .stat-card:nth-child(3){background:#E0D4F5;margin-top:8px;}
+.s5 .stat-card:nth-child(4){background:#FFE0D4;margin-top:12px;}
+.s5 .stat-card:hover{transform:translateY(-2px);}
+/* 切角 */
+.s5 .stat-card::after{
+  content:'';position:absolute;bottom:0;right:0;width:0;height:0;
+  border-style:solid;border-width:0 0 20px 20px;
+  border-color:transparent transparent rgba(255,255,255,0.6) transparent;
+}
+.s5 .stat-value{
+  font-family:'Quicksand',sans-serif;font-size:32px;font-weight:800;
+  color:#1a202c;line-height:1;
+}
+.s5 .stat-label{font-size:12px;font-weight:700;color:#1a202c;margin:4px 0 3px;}
+.s5 .stat-desc{font-size:10px;color:rgba(0,0,0,0.5);font-weight:500;}
+.s5 .stat-trend{font-size:10px;font-weight:700;color:rgba(0,0,0,0.55);margin-top:4px;}
+
+/* Sections — 色纸叠层，每层不同色 */
+.s5 .dash-section{
+  padding:18px 20px;position:relative;z-index:3;
+}
+.s5 .dash-section:nth-child(3){background:#FFF9E0;}
+.s5 .dash-section:nth-child(4){background:#F0EDFF;margin-top:-1px;box-shadow:0 -2px 0 rgba(0,0,0,0.04);}
+.s5 .dash-section:nth-child(5){background:#FFF5F0;margin-top:-1px;box-shadow:0 -2px 0 rgba(0,0,0,0.04);}
+.s5 .dash-section-title{
+  font-size:11px;font-weight:800;color:#1a202c;text-transform:uppercase;
+  letter-spacing:0.06em;margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.s5 .dash-section-title::before{content:'';width:8px;height:8px;background:currentColor;transform:rotate(45deg);}
+
+/* Trends */
+.s5 .trends-row{display:grid;grid-template-columns:1.5fr 1fr;gap:12px;}
+.s5 .trend-chart{
+  padding:16px;background:#fff;border-radius:2px;
+  box-shadow:2px 2px 0 rgba(0,0,0,0.06),4px 4px 0 rgba(0,0,0,0.03);
+}
+.s5 .trend-bars{display:flex;align-items:flex-end;gap:4px;height:70px;}
+.s5 .trend-bar{flex:1;min-width:8px;border-radius:1px 1px 0 0;}
+.s5 .trend-bar--pass{background:linear-gradient(180deg,#6BCB77,#4aab55);}
+.s5 .trend-bar--fail{background:linear-gradient(180deg,#FFB5A7,#e89585);}
+.s5 .trend-legend{display:flex;gap:16px;font-size:10px;font-weight:700;margin-top:8px;color:#1a202c;}
+.s5 .trend-dot{width:8px;height:8px;display:inline-block;transform:rotate(45deg);}
+.s5 .trend-tasks{
+  padding:16px;background:#fff;border-radius:2px;
+  box-shadow:2px 2px 0 rgba(0,0,0,0.06),4px 4px 0 rgba(0,0,0,0.03);
+}
+.s5 .task-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 0;border-bottom:1px solid #f0ede5;font-size:11px;font-weight:600;
+}
+.s5 .task-row:last-child{border-bottom:none;}
+.s5 .task-status{font-weight:700;font-size:10px;padding:2px 8px;border-radius:2px;}
+.s5 .task-status.pass{background:#1a202c;color:#fff;}
+.s5 .task-status.fail{background:#FFE0DB;color:#c53030;}
+
+/* Module Nav */
+.s5 .module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.s5 .module-item{
+  padding:12px;background:#fff;border-radius:2px;cursor:pointer;
+  display:flex;align-items:center;gap:8px;transition:all 0.15s;
+  box-shadow:2px 2px 0 rgba(0,0,0,0.06);
+  font-weight:700;
+}
+.s5 .module-item:hover{box-shadow:0 2px 8px rgba(0,0,0,0.08);transform:translateY(-1px);}
+.s5 .module-dot{
+  width:10px;height:10px;flex-shrink:0;border-radius:1px;
+}
+.s5 .module-name{font-size:12px;color:#1a202c;}
+.s5 .module-count{font-size:10px;font-weight:700;color:#a0aec0;margin-left:auto;}
+
+/* Activity */
+.s5 .activity-item{
+  display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid rgba(0,0,0,0.05);
+  font-size:11px;font-weight:600;color:#666;
+}
+.s5 .activity-item:last-child{border-bottom:none;}
+.s5 .activity-time{font-weight:700;font-size:10px;color:#a0aec0;width:48px;flex-shrink:0;}
+
+/* Footer */
+.s5 .dash-footer{
+  display:flex;align-items:center;justify-content:center;gap:24px;
+  padding:14px 20px;background:#6BCB77;
+  font-size:10px;font-weight:700;color:rgba(255,255,255,0.85);
+}
+
+/* ═══════════════════════════════════════════
+   方案 S6: PAPER CRAFT — 纸艺拼贴
+   签名: 手绘微旋转 + 粗框拼贴 + 模块色装饰几何
+   ═══════════════════════════════════════════ */
+.s6{
+  background:
+    linear-gradient(45deg,transparent 48%,rgba(0,0,0,0.03) 48%,rgba(0,0,0,0.03) 52%,transparent 52%);
+  background-size:24px 24px;
+  background-color:#fefdfb;
+  border:3px solid #2d2d2d;border-radius:2px;
+  box-shadow:4px 4px 0 #2d2d2d,8px 8px 0 rgba(0,0,0,0.05);
+  overflow:hidden;
+}
+
+/* Header — 手绘风旋转 */
+.s6 .dash-header{
+  display:flex;align-items:center;gap:12px;padding:16px 20px;
+  background:#fff;border-bottom:3px solid #2d2d2d;
+}
+.s6 .dash-header-icon{
+  width:40px;height:40px;display:grid;place-items:center;
+  background:#FFE066;border:3px solid #2d2d2d;color:#2d2d2d;
+  border-radius:6px 14px 8px 12px;
+  box-shadow:2.5px 2.5px 0 #2d2d2d;
+  font-size:16px;transform:rotate(-2deg);
+}
+.s6 .dash-header h2{
+  font-size:15px;font-weight:800;color:#2d2d2d;margin:0;
+  font-family:'Caveat','Inter',sans-serif;font-size:20px;
+  transform:rotate(-0.5deg);
+}
+.s6 .dash-header p{font-size:10px;color:#888;font-weight:600;margin:1px 0 0;}
+.s6 .dash-header-actions{margin-left:auto;}
+.s6 .dash-btn{
+  font-size:11px;font-weight:800;color:#2d2d2d;background:#fff;
+  border:2.5px solid #2d2d2d;border-radius:6px 12px 6px 12px;padding:5px 14px;cursor:pointer;
+  font-family:inherit;box-shadow:2px 2px 0 #2d2d2d;transition:all 0.12s;
+}
+.s6 .dash-btn:hover{background:#FFE066;}
+.s6 .dash-btn:active{transform:translate(1px,1px);box-shadow:1px 1px 0 #2d2d2d;}
+
+/* Stats — 手绘卡片拼贴 */
+.s6 .stats-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:3px solid #2d2d2d;
+}
+.s6 .stat-card{
+  padding:18px 16px;border-right:3px solid #2d2d2d;cursor:pointer;
+  background:#fff;position:relative;transition:all 0.15s;
+}
+.s6 .stat-card:last-child{border-right:none;}
+.s6 .stat-card:hover{background:#fffef5;}
+/* 各异微旋转 + 彩色顶条 */
+.s6 .stat-card:nth-child(1){border-top:4px solid #6BCB77;}
+.s6 .stat-card:nth-child(2){border-top:4px solid #4ECDC4;transform:rotate(0.1deg);}
+.s6 .stat-card:nth-child(3){border-top:4px solid #C9B6F2;transform:rotate(-0.08deg);}
+.s6 .stat-card:nth-child(4){border-top:4px solid #FFB5A7;transform:rotate(0.05deg);}
+/* 几何装饰 */
+.s6 .stat-card::before{
+  content:'';position:absolute;top:10px;right:10px;
+  width:12px;height:12px;border:2.5px solid #2d2d2d;
+  transform:rotate(45deg);opacity:0.2;transition:opacity 0.2s;
+}
+.s6 .stat-card:hover::before{opacity:0.5;}
+.s6 .stat-value{
+  font-family:'Caveat','Quicksand',sans-serif;font-size:34px;font-weight:700;
+  color:#2d2d2d;line-height:1;
+}
+.s6 .stat-label{font-size:12px;font-weight:700;color:#2d2d2d;margin:3px 0 2px;}
+.s6 .stat-desc{font-size:10px;color:#999;font-weight:500;}
+.s6 .stat-trend{font-size:10px;font-weight:700;color:#888;margin-top:4px;}
+.s6 .stat-trend.up{color:#4a9a4a;}
+.s6 .stat-enter{
+  display:inline-block;margin-top:6px;font-size:10px;font-weight:800;color:#2d2d2d;
+  font-family:'Caveat',cursive;font-size:14px;
+}
+
+/* Section — 不同色底 */
+.s6 .dash-section{
+  padding:16px 20px;border-bottom:3px solid #2d2d2d;
+}
+.s6 .dash-section:nth-child(3){background:#FFFDE8;}
+.s6 .dash-section:nth-child(4){background:#fff;}
+.s6 .dash-section:nth-child(5){background:#F8F5FF;}
+.s6 .dash-section-title{
+  font-size:12px;font-weight:800;color:#2d2d2d;text-transform:uppercase;
+  letter-spacing:0.04em;margin-bottom:12px;
+  font-family:'Caveat','Bangers',cursive;font-size:18px;
+  display:inline-block;position:relative;
+}
+/* 手绘下划线 */
+.s6 .dash-section-title::after{
+  content:'';position:absolute;bottom:-2px;left:0;right:0;height:3px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%232d2d2d' stroke-width='2' fill='none'/%3E%3C/svg%3E")repeat-x;
+  background-size:40px 3px;
+}
+
+/* Trends */
+.s6 .trends-row{display:grid;grid-template-columns:1.5fr 1fr;gap:10px;}
+.s6 .trend-chart{
+  padding:14px;background:#fff;border:2.5px solid #2d2d2d;border-radius:6px 12px 8px 10px;
+  box-shadow:3px 3px 0 #2d2d2d;
+}
+.s6 .trend-bars{display:flex;align-items:flex-end;gap:3px;height:70px;}
+.s6 .trend-bar{flex:1;min-width:6px;border:2px solid #2d2d2d;border-radius:1px 1px 0 0;}
+.s6 .trend-bar--pass{background:#95D5B2;}
+.s6 .trend-bar--fail{background:#FFB5A7;}
+.s6 .trend-legend{display:flex;gap:14px;font-size:10px;font-weight:700;margin-top:6px;color:#2d2d2d;}
+.s6 .trend-dot{width:8px;height:8px;border:2px solid #2d2d2d;display:inline-block;border-radius:2px 6px 2px 6px;}
+.s6 .trend-tasks{
+  padding:14px;background:#fff;border:2.5px solid #2d2d2d;border-radius:8px 10px 12px 6px;
+  box-shadow:3px 3px 0 #2d2d2d;
+}
+.s6 .task-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:5px 0;border-bottom:1.5px dashed #ddd;font-size:11px;font-weight:700;
+}
+.s6 .task-row:last-child{border-bottom:none;}
+.s6 .task-status{font-weight:800;font-size:9px;padding:3px 8px;border:2px solid #2d2d2d;}
+.s6 .task-status.pass{background:#C8F5D0;color:#1a5c1a;border-radius:4px 8px 4px 8px;}
+.s6 .task-status.fail{background:#FFE0DB;color:#7a1c1c;border-radius:8px 4px 8px 4px;}
+
+/* Module Nav */
+.s6 .module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.s6 .module-item{
+  padding:10px 12px;background:#fff;border:2.5px solid #2d2d2d;
+  cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.12s;
+  border-radius:6px 10px 6px 10px;
+  box-shadow:2px 2px 0 #2d2d2d;font-weight:700;
+}
+.s6 .module-item:hover{transform:translate(1px,1px);box-shadow:1px 1px 0 #2d2d2d;}
+.s6 .module-dot{
+  width:8px;height:8px;flex-shrink:0;border:2px solid #2d2d2d;
+  border-radius:2px 6px 2px 6px;
+}
+.s6 .module-name{font-size:11px;color:#2d2d2d;}
+.s6 .module-count{font-size:10px;font-weight:800;color:#888;margin-left:auto;}
+
+/* Activity */
+.s6 .activity-item{
+  display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1.5px dashed #ddd;
+  font-size:11px;font-weight:600;color:#666;
+}
+.s6 .activity-item:last-child{border-bottom:none;}
+.s6 .activity-time{font-weight:800;font-size:10px;color:#2d2d2d;width:48px;flex-shrink:0;}
+
+/* Footer */
+.s6 .dash-footer{
+  display:flex;align-items:center;justify-content:center;gap:24px;
+  padding:14px 20px;background:#FFE066;border-top:3px solid #2d2d2d;
+  font-size:10px;font-weight:700;color:#5a4e20;
+  font-family:'Caveat',cursive;font-size:14px;
+}
+
+/* ═══════════════════════════════════════════
+   方案 S7: TRADING CARD — 集换式卡片
+   签名: 稀有度色条 + 大号数字 + 偏移堆叠 + 卡背纹理
+   ═══════════════════════════════════════════ */
+.s7{
+  background:
+    repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(0,0,0,0.02) 3px,rgba(0,0,0,0.02) 6px);
+  background-color:#f5f3ee;border-radius:4px;overflow:hidden;
+  box-shadow:0 4px 32px rgba(0,0,0,0.05);
+}
+/* Header — 稀有卡框 */
+.s7 .dash-header{
+  display:flex;align-items:center;gap:12px;padding:16px 20px;
+  background:linear-gradient(135deg,#1a1a2e,#2d2d44);color:#fff;
+  border-bottom:4px solid #F7C948;
+  position:relative;overflow:hidden;
+}
+/* 全息纹理 */
+.s7 .dash-header::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.03) 2px,rgba(255,255,255,0.03) 4px);
+  pointer-events:none;
+}
+.s7 .dash-header-icon{
+  width:38px;height:38px;display:grid;place-items:center;
+  background:linear-gradient(135deg,#F7C948,#FFB5A7);color:#1a1a2e;
+  border-radius:4px;font-size:15px;box-shadow:0 0 12px rgba(247,201,72,0.3);
+}
+.s7 .dash-header h2{font-size:15px;font-weight:800;color:#fff;margin:0;position:relative;z-index:1;}
+.s7 .dash-header p{font-size:10px;color:rgba(255,255,255,0.7);font-weight:500;margin:1px 0 0;position:relative;z-index:1;}
+.s7 .dash-header-actions{margin-left:auto;position:relative;z-index:1;}
+.s7 .dash-btn{
+  font-size:10px;font-weight:700;color:#F7C948;background:transparent;
+  border:2px solid #F7C948;border-radius:2px;padding:5px 12px;cursor:pointer;
+  font-family:inherit;transition:all 0.15s;
+}
+.s7 .dash-btn:hover{background:rgba(247,201,72,0.15);}
+
+/* Stats — 集换卡网格 */
+.s7 .stats-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:16px;
+}
+.s7 .stat-card{
+  background:#fff;border-radius:6px;cursor:pointer;position:relative;
+  overflow:hidden;transition:all 0.2s;
+  box-shadow:2px 2px 0 rgba(0,0,0,0.06),4px 4px 0 rgba(0,0,0,0.03);
+}
+.s7 .stat-card:hover{transform:translateY(-3px);box-shadow:2px 6px 16px rgba(0,0,0,0.08);}
+/* 稀有度顶条 */
+.s7 .stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:4px;
+  background:var(--c);
+}
+/* 卡号 */
+.s7 .stat-card::after{
+  content:'#' attr(data-n);
+  position:absolute;top:8px;right:10px;
+  font-size:8px;font-weight:700;color:#ccc;
+  font-family:'JetBrains Mono',monospace;
+}
+.s7 .stat-card-inner{padding:18px 16px 14px;}
+.s7 .stat-value{
+  font-family:'Quicksand',sans-serif;font-size:36px;font-weight:900;
+  color:#1a202c;line-height:1;letter-spacing:-0.03em;
+}
+.s7 .stat-value small{font-size:16px;color:#a0aec0;font-weight:600;}
+.s7 .stat-label{font-size:11px;font-weight:700;color:#1a202c;margin:5px 0 3px;}
+.s7 .stat-desc{font-size:9.5px;color:#a0aec0;font-weight:500;}
+.s7 .stat-trend{font-size:9.5px;font-weight:700;color:#a0aec0;margin-top:6px;}
+.s7 .stat-trend.up{color:#2f9e44;}
+.s7 .stat-rarity{
+  display:inline-block;margin-top:8px;font-size:9px;font-weight:800;
+  padding:2px 8px;border-radius:2px;letter-spacing:0.04em;
+}
+.s7 .rarity-common{background:#f0f3f5;color:#718096;}
+.s7 .rarity-rare{background:#FFF9E0;color:#b08800;}
+
+/* Section — 每区独立卡片组 */
+.s7 .dash-section{
+  padding:0 16px 16px;
+}
+.s7 .dash-section-title{
+  font-size:10px;font-weight:700;color:#a0aec0;text-transform:uppercase;
+  letter-spacing:0.08em;padding:12px 0 10px;
+  display:flex;align-items:center;gap:6px;
+}
+.s7 .dash-section-title::after{content:'';flex:1;height:1px;background:#e8ecf1;}
+
+/* Trends — 横排卡片组 */
+.s7 .trends-row{display:grid;grid-template-columns:1.5fr 1fr;gap:12px;}
+.s7 .trend-chart{
+  background:#fff;border-radius:6px;padding:16px;
+  box-shadow:2px 2px 0 rgba(0,0,0,0.04);
+}
+.s7 .trend-bars{display:flex;align-items:flex-end;gap:3px;height:70px;}
+.s7 .trend-bar{flex:1;min-width:6px;border-radius:2px 2px 0 0;}
+.s7 .trend-bar--pass{background:linear-gradient(180deg,#6BCB77,#4aab55);}
+.s7 .trend-bar--fail{background:linear-gradient(180deg,#FFB5A7,#e89585);}
+.s7 .trend-legend{display:flex;gap:14px;font-size:10px;font-weight:600;color:#718096;margin-top:8px;}
+.s7 .trend-dot{width:8px;height:8px;border-radius:2px;display:inline-block;}
+.s7 .trend-tasks{
+  background:#fff;border-radius:6px;padding:16px;
+  box-shadow:2px 2px 0 rgba(0,0,0,0.04);
+}
+.s7 .task-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 0;border-bottom:1px solid #f0f3f5;font-size:11px;font-weight:600;
+}
+.s7 .task-row:last-child{border-bottom:none;}
+.s7 .task-status{font-weight:700;font-size:9.5px;padding:2px 8px;border-radius:3px;}
+.s7 .task-status.pass{background:#e8f5ec;color:#2f9e44;}
+.s7 .task-status.fail{background:#fef0ee;color:#c53030;}
+
+/* Module — 卡片收集页 */
+.s7 .module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.s7 .module-item{
+  background:#fff;padding:12px;border-radius:4px;cursor:pointer;
+  display:flex;align-items:center;gap:8px;transition:all 0.15s;
+  box-shadow:1px 2px 0 rgba(0,0,0,0.04);
+  font-weight:600;font-size:11px;
+}
+.s7 .module-item:hover{transform:translateY(-2px);box-shadow:1px 4px 12px rgba(0,0,0,0.06);}
+.s7 .module-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+.s7 .module-name{color:#1a202c;}
+.s7 .module-count{font-size:10px;font-weight:700;color:#a0aec0;margin-left:auto;}
+
+/* Activity */
+.s7 .activity-list{padding:0 16px 16px;}
+.s7 .activity-item{
+  display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid #f0f3f5;
+  font-size:11px;color:#718096;font-weight:600;
+}
+.s7 .activity-item:last-child{border-bottom:none;}
+.s7 .activity-time{font-family:'JetBrains Mono',monospace;font-size:10px;color:#a0aec0;width:48px;flex-shrink:0;}
+
+/* Footer */
+.s7 .dash-footer{
+  display:flex;align-items:center;justify-content:center;gap:24px;
+  padding:14px 20px;background:#1a1a2e;border-top:3px solid #F7C948;
+  font-size:10px;color:rgba(255,255,255,0.6);font-weight:600;
+}
+
+/* ═══════════════════════════════════════════
+   方案 S8: DECK STACK — 牌组堆叠
+   签名: 卡片层叠偏移 + 抽出动效 + 扑克牌美学
+   ═══════════════════════════════════════════ */
+.s8{
+  background:linear-gradient(180deg,#2d3a3f,#3d4a4f);border-radius:6px;overflow:hidden;
+  color:#e8e4df;
+  box-shadow:0 4px 32px rgba(0,0,0,0.2);
+}
+/* Header — 牌桌绿 */
+.s8 .dash-header{
+  display:flex;align-items:center;gap:12px;padding:16px 20px;
+  background:rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.08);
+}
+.s8 .dash-header-icon{
+  width:36px;height:36px;display:grid;place-items:center;
+  background:linear-gradient(135deg,#F7C948,#e8a030);color:#2d3a3f;
+  border-radius:4px;font-size:14px;
+}
+.s8 .dash-header h2{font-size:15px;font-weight:800;color:#fff;margin:0;}
+.s8 .dash-header p{font-size:10px;color:rgba(255,255,255,0.5);font-weight:500;margin:1px 0 0;}
+.s8 .dash-header-actions{margin-left:auto;}
+.s8 .dash-btn{
+  font-size:10px;font-weight:700;color:#F7C948;background:rgba(247,201,72,0.1);
+  border:1.5px solid rgba(247,201,72,0.3);border-radius:4px;padding:5px 12px;cursor:pointer;
+  font-family:inherit;transition:all 0.15s;
+}
+.s8 .dash-btn:hover{background:rgba(247,201,72,0.2);}
+
+/* Stats — 牌组堆叠 */
+.s8 .stats-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:20px 16px 12px;
+}
+.s8 .stat-card{
+  background:linear-gradient(180deg,#fff,#f8f9fb);color:#1a202c;border-radius:8px;
+  padding:20px 16px 14px;cursor:pointer;position:relative;
+  box-shadow:0 2px 0 #d0d4d8,0 4px 0 #c0c4c8,0 6px 0 #b0b4b8,0 10px 16px rgba(0,0,0,0.15);
+  transition:all 0.2s;border:1.5px solid #d0d4d8;
+}
+/* 牌背露出 */
+.s8 .stat-card::before{
+  content:'';position:absolute;bottom:-6px;left:4px;right:4px;height:6px;
+  background:linear-gradient(180deg,rgba(0,0,0,0.05),transparent);
+  border-radius:0 0 6px 6px;z-index:-1;
+}
+.s8 .stat-card:hover{transform:translateY(-6px);box-shadow:0 4px 0 #d0d4d8,0 8px 0 #c0c4c8,0 14px 24px rgba(0,0,0,0.2);}
+/* 花色标记 */
+.s8 .stat-card::after{
+  content:'◆';position:absolute;top:12px;right:12px;
+  font-size:16px;color:var(--c);opacity:0.6;
+}
+.s8 .stat-value{
+  font-family:'Quicksand',sans-serif;font-size:38px;font-weight:900;color:#1a202c;line-height:1;
+}
+.s8 .stat-label{font-size:11px;font-weight:700;color:#1a202c;margin:5px 0 3px;}
+.s8 .stat-desc{font-size:9.5px;color:#8b949e;font-weight:500;}
+.s8 .stat-trend{font-size:9.5px;font-weight:700;color:#8b949e;margin-top:5px;}
+.s8 .stat-trend.up{color:#2f9e44;}
+
+/* Section */
+.s8 .dash-section{padding:0 16px 14px;}
+.s8 .dash-section-title{
+  font-size:10px;font-weight:700;color:rgba(255,255,255,0.45);text-transform:uppercase;
+  letter-spacing:0.08em;padding:10px 0;
+}
+
+/* Trends — 横排双牌 */
+.s8 .trends-row{display:grid;grid-template-columns:1.5fr 1fr;gap:12px;}
+.s8 .trend-chart{
+  background:#fff;color:#1a202c;border-radius:8px;padding:16px;
+  box-shadow:0 2px 0 #d0d4d8,0 4px 0 #c0c4c8,0 8px 16px rgba(0,0,0,0.1);
+}
+.s8 .trend-bars{display:flex;align-items:flex-end;gap:3px;height:70px;}
+.s8 .trend-bar{flex:1;min-width:6px;border-radius:2px 2px 0 0;}
+.s8 .trend-bar--pass{background:#6BCB77;}
+.s8 .trend-bar--fail{background:#FFB5A7;}
+.s8 .trend-legend{display:flex;gap:14px;font-size:10px;font-weight:600;margin-top:8px;}
+.s8 .trend-dot{width:8px;height:8px;border-radius:2px;display:inline-block;}
+.s8 .trend-tasks{
+  background:#fff;color:#1a202c;border-radius:8px;padding:16px;
+  box-shadow:0 2px 0 #d0d4d8,0 4px 0 #c0c4c8,0 8px 16px rgba(0,0,0,0.1);
+}
+.s8 .task-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 0;border-bottom:1px solid #e8ecf1;font-size:11px;font-weight:600;
+}
+.s8 .task-row:last-child{border-bottom:none;}
+.s8 .task-status{font-weight:700;font-size:9px;padding:2px 8px;border-radius:3px;}
+.s8 .task-status.pass{background:#e8f5ec;color:#2f9e44;}
+.s8 .task-status.fail{background:#fef0ee;color:#c53030;}
+
+/* Module */
+.s8 .module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.s8 .module-item{
+  background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);border-radius:6px;
+  padding:11px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s;
+  font-weight:600;font-size:11px;color:rgba(255,255,255,0.7);
+}
+.s8 .module-item:hover{background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.2);}
+.s8 .module-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+.s8 .module-count{font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);margin-left:auto;}
+
+/* Activity */
+.s8 .activity-item{
+  display:flex;align-items:center;gap:12px;padding:6px 0;margin:0 16px;
+  border-bottom:1px solid rgba(255,255,255,0.06);font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;
+}
+.s8 .activity-item:last-child{border-bottom:none;}
+.s8 .activity-time{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.3);width:48px;flex-shrink:0;}
+
+/* Footer */
+.s8 .dash-footer{
+  display:flex;align-items:center;justify-content:center;gap:24px;
+  padding:16px 20px;background:rgba(255,255,255,0.03);border-top:1px solid rgba(255,255,255,0.06);
+  font-size:10px;color:rgba(255,255,255,0.4);font-weight:500;
+}
+
+/* ═══════════════════════════════════════════
+   方案 S9: POLAROID WALL — 拍立得画廊
+   签名: 白边框+宽底边 + 微旋转 + 图钉阴影 + 彩照
+   ═══════════════════════════════════════════ */
+.s9{
+  background:
+    radial-gradient(circle,rgba(0,0,0,0.03) 0.5px,transparent 0.5px);
+  background-size:8px 8px;
+  background-color:#f0ede8;border-radius:2px;overflow:hidden;
+}
+/* Header — 软木板 */
+.s9 .dash-header{
+  display:flex;align-items:center;gap:14px;padding:16px 20px;
+  background:rgba(255,255,255,0.7);backdrop-filter:blur(8px);
+  border-bottom:1.5px solid #e0d8cc;
+}
+.s9 .dash-header-icon{
+  width:38px;height:38px;display:grid;place-items:center;
+  background:#FF6B6B;color:#fff;font-size:15px;border-radius:50%;
+  box-shadow:0 2px 8px rgba(255,107,107,0.2);
+}
+.s9 .dash-header h2{font-size:15px;font-weight:800;color:#3d3630;margin:0;}
+.s9 .dash-header p{font-size:10px;color:#a09080;font-weight:500;margin:1px 0 0;}
+.s9 .dash-header-actions{margin-left:auto;}
+.s9 .dash-btn{
+  font-size:11px;font-weight:700;color:#3d3630;background:#fff;
+  border:1.5px solid #e0d8cc;border-radius:20px;padding:5px 16px;cursor:pointer;
+  font-family:inherit;transition:all 0.15s;box-shadow:0 1px 3px rgba(0,0,0,0.04);
+}
+.s9 .dash-btn:hover{box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+
+/* Stats — 拍立得照片墙 */
+.s9 .stats-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:18px;padding:20px;
+}
+.s9 .stat-card{
+  background:#fff;cursor:pointer;position:relative;transition:all 0.25s;
+  /* 拍立得白边框 */
+  padding:10px 10px 40px 10px;
+  box-shadow:2px 3px 8px rgba(0,0,0,0.1);
+}
+/* 微旋转 */
+.s9 .stat-card:nth-child(1){transform:rotate(-1.5deg);}
+.s9 .stat-card:nth-child(2){transform:rotate(0.8deg);}
+.s9 .stat-card:nth-child(3){transform:rotate(-0.6deg);}
+.s9 .stat-card:nth-child(4){transform:rotate(1.2deg);}
+.s9 .stat-card:hover{transform:rotate(0deg) scale(1.04) !important;z-index:10;box-shadow:4px 8px 24px rgba(0,0,0,0.15);}
+
+/* 彩色照片区 */
+.s9 .stat-photo{
+  height:64px;border-radius:1px;display:flex;align-items:center;justify-content:center;
+  margin-bottom:8px;
+}
+.s9 .stat-photo--green{background:linear-gradient(135deg,#A5F0C5,#6BCB77);}
+.s9 .stat-photo--teal{background:linear-gradient(135deg,#B8F0E8,#4ECDC4);}
+.s9 .stat-photo--purple{background:linear-gradient(135deg,#D4C8F5,#A78BFA);}
+.s9 .stat-photo--pink{background:linear-gradient(135deg,#FFE0D8,#FFB5A7);}
+.s9 .stat-photo-value{
+  font-family:'Quicksand',sans-serif;font-size:28px;font-weight:900;
+  color:#fff;text-shadow:1px 1px 0 rgba(0,0,0,0.1);
+}
+/* 图钉 */
+.s9 .stat-card::before{
+  content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);
+  width:10px;height:10px;background:radial-gradient(circle,#e0d8cc 30%,#c0b8a8 60%,#a09080 100%);
+  border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,0.15);z-index:2;
+}
+.s9 .stat-label{font-size:11px;font-weight:700;color:#3d3630;text-align:center;}
+.s9 .stat-desc{font-size:9px;color:#a09080;text-align:center;margin-top:2px;font-weight:500;}
+.s9 .stat-trend{font-size:9px;font-weight:700;color:#a09080;text-align:center;margin-top:4px;}
+.s9 .stat-trend.up{color:#2f9e44;}
+
+/* Section */
+.s9 .dash-section{padding:0 20px 16px;}
+.s9 .dash-section-title{
+  font-size:10px;font-weight:700;color:#a09080;text-transform:uppercase;
+  letter-spacing:0.06em;padding:8px 0 10px;
+  display:flex;align-items:center;gap:6px;
+}
+.s9 .dash-section-title::after{content:'';flex:1;height:1px;background:#e0d8cc;}
+
+/* Trends — 横排拍立得 */
+.s9 .trends-row{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;}
+.s9 .trend-chart{
+  background:#fff;padding:14px 14px 36px 14px;
+  box-shadow:2px 3px 8px rgba(0,0,0,0.08);transform:rotate(-0.3deg);
+  position:relative;
+}
+.s9 .trend-chart::before{content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);width:8px;height:8px;background:radial-gradient(circle,#e0d8cc 30%,#a09080 100%);border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,0.15);}
+.s9 .trend-bars{display:flex;align-items:flex-end;gap:3px;height:70px;}
+.s9 .trend-bar{flex:1;min-width:6px;border-radius:1px 1px 0 0;}
+.s9 .trend-bar--pass{background:#6BCB77;}
+.s9 .trend-bar--fail{background:#FFB5A7;}
+.s9 .trend-legend{display:flex;gap:14px;font-size:9px;font-weight:600;color:#a09080;margin-top:8px;}
+.s9 .trend-dot{width:8px;height:8px;border-radius:1px;display:inline-block;}
+.s9 .trend-tasks{
+  background:#fff;padding:14px 14px 36px 14px;
+  box-shadow:2px 3px 8px rgba(0,0,0,0.08);transform:rotate(0.4deg);
+  position:relative;
+}
+.s9 .trend-tasks::before{content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);width:8px;height:8px;background:radial-gradient(circle,#e0d8cc 30%,#a09080 100%);border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,0.15);}
+.s9 .task-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:4px 0;border-bottom:1px solid #f0ede8;font-size:10px;font-weight:600;color:#666;
+}
+.s9 .task-row:last-child{border-bottom:none;}
+.s9 .task-status{font-weight:700;font-size:9px;padding:1px 7px;border-radius:2px;}
+.s9 .task-status.pass{background:#e8f5ec;color:#2f9e44;}
+.s9 .task-status.fail{background:#fef0ee;color:#c53030;}
+
+/* Module */
+.s9 .module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.s9 .module-item{
+  background:#fff;padding:10px;cursor:pointer;display:flex;align-items:center;gap:8px;
+  transition:all 0.15s;font-weight:600;font-size:11px;color:#3d3630;
+  box-shadow:1px 2px 4px rgba(0,0,0,0.06);
+}
+.s9 .module-item:hover{transform:translateY(-2px);box-shadow:2px 4px 12px rgba(0,0,0,0.08);}
+.s9 .module-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.s9 .module-count{font-size:10px;font-weight:700;color:#a09080;margin-left:auto;}
+
+/* Activity */
+.s9 .activity-list{padding:0 20px 16px;}
+.s9 .activity-item{
+  display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid #f0ede8;
+  font-size:11px;color:#888;font-weight:500;
+}
+.s9 .activity-item:last-child{border-bottom:none;}
+.s9 .activity-time{font-family:'JetBrains Mono',monospace;font-size:10px;color:#a09080;width:48px;flex-shrink:0;}
+
+/* Footer */
+.s9 .dash-footer{
+  display:flex;align-items:center;justify-content:center;gap:24px;
+  padding:14px 20px;background:rgba(255,255,255,0.6);
+  font-size:10px;color:#a09080;font-weight:500;
+}
+
+/* ═══════════════════════════════════════════
+   方案 S10: PAPER POLAROID — 纸艺 × 拍立得融合
+   轻阴影 + 粗黑框 + 拍立得白边 + 手绘微旋转
+   ═══════════════════════════════════════════ */
+.s10{
+  background:
+    radial-gradient(circle,#d4cdc0 0.8px,transparent 0.8px);
+  background-size:14px 14px;
+  background-color:#fefcf6;
+  border:2.5px solid #2d2d2d;border-radius:6px 12px 6px 12px;
+  box-shadow:3px 3px 0 rgba(0,0,0,0.06);
+  overflow:hidden;
+}
+.s10 .dash-header{
+  display:flex;align-items:center;gap:12px;padding:16px 20px;
+  background:#fff;border-bottom:2.5px solid #2d2d2d;
+}
+.s10 .dash-header-icon{
+  width:40px;height:40px;display:grid;place-items:center;
+  background:#FFE066;border:2.5px solid #2d2d2d;color:#2d2d2d;
+  border-radius:8px 16px 6px 14px;
+  font-size:16px;transform:rotate(-2deg);
+}
+.s10 .dash-header h2{
+  font-size:22px;font-weight:700;color:#2d2d2d;margin:0;
+  font-family:'Caveat',cursive;transform:rotate(-0.5deg);
+}
+.s10 .dash-header p{font-size:10px;color:#999;font-weight:600;margin:1px 0 0;}
+.s10 .dash-header-actions{margin-left:auto;}
+.s10 .dash-btn{
+  font-size:11px;font-weight:800;color:#2d2d2d;background:#fff;
+  border:2.5px solid #2d2d2d;border-radius:6px 12px 6px 12px;padding:5px 14px;cursor:pointer;
+  font-family:inherit;transition:all 0.12s;
+}
+.s10 .dash-btn:hover{background:#FFE066;}
+
+/* Stats — 拍立得卡片组: 白边框 + 彩色照片 + 图钉 + 轻阴影 */
+.s10 .stats-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:18px;padding:20px;
+}
+.s10 .stat-card{
+  background:#fff;cursor:pointer;position:relative;transition:all 0.25s;
+  /* 拍立得白边框 + 宽底边 */
+  padding:8px 8px 36px 8px;
+  border:2.5px solid #2d2d2d;border-radius:6px 10px 6px 10px;
+  box-shadow:2px 3px 0 rgba(0,0,0,0.05);
+}
+/* 微旋转 */
+.s10 .stat-card:nth-child(1){transform:rotate(-1.2deg);}
+.s10 .stat-card:nth-child(2){transform:rotate(0.7deg);}
+.s10 .stat-card:nth-child(3){transform:rotate(-0.5deg);}
+.s10 .stat-card:nth-child(4){transform:rotate(1deg);}
+.s10 .stat-card:hover{transform:rotate(0deg)scale(1.03)!important;z-index:10;box-shadow:2px 4px 0 rgba(0,0,0,0.08);}
+/* 彩色照片区 */
+.s10 .stat-photo{
+  height:60px;border-radius:3px 5px 3px 5px;display:flex;align-items:center;justify-content:center;
+  border:2px solid #2d2d2d;margin-bottom:8px;
+}
+.s10 .stat-photo--green{background:#C8F5D0;}
+.s10 .stat-photo--teal{background:#D4F5F0;}
+.s10 .stat-photo--purple{background:#E8DDF8;}
+.s10 .stat-photo--pink{background:#FFE0DB;}
+.s10 .stat-photo-value{
+  font-family:'Caveat','Quicksand',sans-serif;font-size:26px;font-weight:700;color:#2d2d2d;
+}
+/* 图钉 */
+.s10 .stat-card::before{
+  content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);
+  width:9px;height:9px;background:radial-gradient(circle,#e8e0d5 30%,#c0b8a8 60%,#a09080 100%);
+  border-radius:50%;box-shadow:0 1px 1px rgba(0,0,0,0.08);z-index:2;
+}
+.s10 .stat-label{font-size:11px;font-weight:700;color:#2d2d2d;text-align:center;}
+.s10 .stat-desc{font-size:9px;color:#999;text-align:center;margin-top:2px;font-weight:500;}
+.s10 .stat-trend{font-size:9px;font-weight:700;color:#999;text-align:center;margin-top:3px;}
+.s10 .stat-trend.up{color:#4a9a4a;}
+
+/* Section */
+.s10 .dash-section{padding:0 20px 16px;}
+.s10 .dash-section-title{
+  font-size:18px;font-weight:700;color:#2d2d2d;padding:8px 0 10px;
+  font-family:'Caveat',cursive;display:inline-block;position:relative;
+}
+.s10 .dash-section-title::after{
+  content:'';position:absolute;bottom:-1px;left:0;right:0;height:2.5px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%232d2d2d' stroke-width='2' fill='none'/%3E%3C/svg%3E")repeat-x;
+  background-size:40px 3px;
+}
+
+/* Trends */
+.s10 .trends-row{display:grid;grid-template-columns:1.5fr 1fr;gap:14px;}
+.s10 .trend-chart{
+  background:#fff;padding:12px 12px 30px 12px;border:2.5px solid #2d2d2d;
+  border-radius:6px 10px 6px 10px;position:relative;transform:rotate(-0.3deg);
+  box-shadow:2px 3px 0 rgba(0,0,0,0.05);
+}
+.s10 .trend-chart::before{content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);width:8px;height:8px;background:radial-gradient(circle,#e8e0d5 30%,#a09080 100%);border-radius:50%;box-shadow:0 1px 1px rgba(0,0,0,0.08);}
+.s10 .trend-bars{display:flex;align-items:flex-end;gap:3px;height:70px;}
+.s10 .trend-bar{flex:1;min-width:6px;border:2px solid #2d2d2d;}
+.s10 .trend-bar--pass{background:#95D5B2;}
+.s10 .trend-bar--fail{background:#FFB5A7;}
+.s10 .trend-legend{display:flex;gap:14px;font-size:10px;font-weight:700;margin-top:8px;color:#2d2d2d;}
+.s10 .trend-dot{width:8px;height:8px;border:2px solid #2d2d2d;display:inline-block;border-radius:2px 6px 2px 6px;}
+.s10 .trend-tasks{
+  background:#fff;padding:12px 12px 30px 12px;border:2.5px solid #2d2d2d;
+  border-radius:8px 10px 12px 6px;position:relative;transform:rotate(0.4deg);
+  box-shadow:2px 3px 0 rgba(0,0,0,0.05);
+}
+.s10 .trend-tasks::before{content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);width:8px;height:8px;background:radial-gradient(circle,#e8e0d5 30%,#a09080 100%);border-radius:50%;box-shadow:0 1px 1px rgba(0,0,0,0.08);}
+.s10 .task-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:4px 0;border-bottom:1.5px dashed #ddd;font-size:11px;font-weight:700;color:#666;
+}
+.s10 .task-status{font-weight:800;font-size:9px;padding:2px 8px;border:2px solid #2d2d2d;}
+.s10 .task-status.pass{background:#C8F5D0;color:#1a5c1a;border-radius:4px 8px 4px 8px;}
+.s10 .task-status.fail{background:#FFE0DB;color:#7a1c1c;border-radius:8px 4px 8px 4px;}
+
+/* Module */
+.s10 .module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.s10 .module-item{
+  padding:10px 12px;background:#fff;border:2.5px solid #2d2d2d;
+  cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.12s;
+  border-radius:6px 10px 6px 10px;font-weight:700;font-size:11px;
+  box-shadow:2px 2px 0 rgba(0,0,0,0.04);
+}
+.s10 .module-item:hover{transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(0,0,0,0.06);}
+.s10 .module-dot{width:8px;height:8px;flex-shrink:0;border:2px solid #2d2d2d;border-radius:2px 6px 2px 6px;}
+.s10 .module-name{color:#2d2d2d;}
+.s10 .module-count{font-size:10px;font-weight:800;color:#999;margin-left:auto;}
+
+.s10 .activity-item{
+  display:flex;align-items:center;gap:12px;padding:6px 0;margin:0 20px 0;
+  border-bottom:1.5px dashed #ddd;font-size:11px;font-weight:600;color:#888;
+}
+.s10 .activity-item:last-child{border-bottom:none;}
+.s10 .activity-time{font-weight:800;font-size:10px;color:#2d2d2d;width:48px;flex-shrink:0;}
+
+.s10 .dash-footer{
+  display:flex;align-items:center;justify-content:center;gap:24px;
+  padding:14px 20px;background:#FFE066;border-top:2.5px solid #2d2d2d;
+  font-size:14px;font-weight:700;color:#5a4e20;font-family:'Caveat',cursive;
+}
+
+/* ═══════════════════════════════════════════
+   方案 S11: PASTEL BLOCK — 全彩填充·柔和色块
+   卡片底色全填充 + 轻阴影 + 粗边框
+   ═══════════════════════════════════════════ */
+.s11{
+  background:#f8f6f2;border-radius:4px;overflow:hidden;
+  box-shadow:0 3px 16px rgba(0,0,0,0.04);
+}
+.s11 .dash-header{
+  display:flex;align-items:center;gap:12px;padding:16px 20px;
+  background:#C8F5D0;border-bottom:2.5px solid #2d2d2d;
+}
+.s11 .dash-header-icon{
+  width:38px;height:38px;display:grid;place-items:center;
+  background:#fff;border:2.5px solid #2d2d2d;color:#2d2d2d;
+  border-radius:6px 12px 8px 10px;font-size:15px;
+}
+.s11 .dash-header h2{font-size:15px;font-weight:800;color:#2d2d2d;margin:0;}
+.s11 .dash-header p{font-size:10px;color:#5a6e5a;font-weight:600;margin:1px 0 0;}
+.s11 .dash-header-actions{margin-left:auto;}
+.s11 .dash-btn{
+  font-size:11px;font-weight:800;color:#2d2d2d;background:#fff;
+  border:2.5px solid #2d2d2d;border-radius:6px 12px 8px 10px;padding:5px 14px;cursor:pointer;
+  font-family:inherit;box-shadow:2px 2px 0 rgba(0,0,0,0.04);transition:all 0.12s;
+}
+.s11 .dash-btn:hover{transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(0,0,0,0.06);}
+
+/* Stats — 全彩填充卡片 */
+.s11 .stats-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:18px;
+}
+.s11 .stat-card{
+  padding:18px 16px;cursor:pointer;position:relative;transition:all 0.2s;
+  border:2.5px solid #2d2d2d;border-radius:6px 12px 8px 10px;
+  box-shadow:2px 3px 0 rgba(0,0,0,0.05);
+}
+/* 各异全彩底色 */
+.s11 .stat-card:nth-child(1){background:#C8F5D0;}
+.s11 .stat-card:nth-child(2){background:#D4F5F0;}
+.s11 .stat-card:nth-child(3){background:#E8DDF8;}
+.s11 .stat-card:nth-child(4){background:#FFE0DB;}
+.s11 .stat-card:hover{transform:translateY(-2px);box-shadow:2px 5px 0 rgba(0,0,0,0.06);}
+/* 折角 */
+.s11 .stat-card::after{
+  content:'';position:absolute;bottom:0;right:0;width:0;height:0;
+  border-style:solid;border-width:0 0 18px 18px;
+  border-color:transparent transparent rgba(255,255,255,0.55) transparent;
+}
+.s11 .stat-value{
+  font-family:'Quicksand',sans-serif;font-size:30px;font-weight:800;color:#2d2d2d;line-height:1;
+}
+.s11 .stat-label{font-size:12px;font-weight:700;color:#2d2d2d;margin:4px 0 3px;}
+.s11 .stat-desc{font-size:10px;color:rgba(0,0,0,0.45);font-weight:500;}
+.s11 .stat-trend{font-size:10px;font-weight:700;color:rgba(0,0,0,0.5);margin-top:4px;}
+.s11 .stat-trend.up{color:#2f7a2f;}
+
+/* Section */
+.s11 .dash-section{padding:0 18px 14px;}
+.s11 .dash-section-title{
+  font-size:12px;font-weight:800;color:#2d2d2d;text-transform:uppercase;
+  letter-spacing:0.04em;padding:8px 0 10px;
+  display:flex;align-items:center;gap:8px;
+}
+.s11 .dash-section-title::before{
+  content:'';width:8px;height:8px;background:#2d2d2d;transform:rotate(45deg);
+}
+
+/* Trends — 全彩卡片 */
+.s11 .trends-row{display:grid;grid-template-columns:1.5fr 1fr;gap:12px;}
+.s11 .trend-chart{
+  padding:14px;background:#FFF9E6;border:2.5px solid #2d2d2d;border-radius:6px 10px 8px 12px;
+  box-shadow:2px 3px 0 rgba(0,0,0,0.05);
+}
+.s11 .trend-bars{display:flex;align-items:flex-end;gap:3px;height:70px;}
+.s11 .trend-bar{flex:1;min-width:6px;border:2px solid #2d2d2d;}
+.s11 .trend-bar--pass{background:#6BCB77;}
+.s11 .trend-bar--fail{background:#FFB5A7;}
+.s11 .trend-legend{display:flex;gap:14px;font-size:10px;font-weight:700;margin-top:6px;color:#2d2d2d;}
+.s11 .trend-dot{width:8px;height:8px;border:2px solid #2d2d2d;display:inline-block;border-radius:2px 6px 2px 6px;}
+.s11 .trend-tasks{
+  padding:14px;background:#F0EDFF;border:2.5px solid #2d2d2d;border-radius:8px 12px 10px 6px;
+  box-shadow:2px 3px 0 rgba(0,0,0,0.05);
+}
+.s11 .task-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:5px 0;border-bottom:1.5px dashed #ddd;font-size:11px;font-weight:700;color:#2d2d2d;
+}
+.s11 .task-status{font-weight:800;font-size:9px;padding:3px 8px;border:2px solid #2d2d2d;}
+.s11 .task-status.pass{background:#C8F5D0;color:#1a5c1a;border-radius:4px 8px 4px 8px;}
+.s11 .task-status.fail{background:#FFE0DB;color:#7a1c1c;border-radius:8px 4px 8px 4px;}
+
+/* Module */
+.s11 .module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.s11 .module-item{
+  padding:10px 12px;background:#fff;border:2.5px solid #2d2d2d;
+  cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.12s;
+  border-radius:6px 10px 6px 10px;font-weight:700;font-size:11px;
+  box-shadow:2px 2px 0 rgba(0,0,0,0.04);
+}
+.s11 .module-item:hover{background:#FFFDE8;transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(0,0,0,0.06);}
+.s11 .module-dot{width:8px;height:8px;flex-shrink:0;border:2px solid #2d2d2d;border-radius:2px 6px 2px 6px;}
+.s11 .module-name{color:#2d2d2d;}
+.s11 .module-count{font-size:10px;font-weight:800;color:#999;margin-left:auto;}
+
+.s11 .activity-item{
+  display:flex;align-items:center;gap:12px;padding:6px 0;margin:0 18px;
+  border-bottom:1.5px dashed #ddd;font-size:11px;font-weight:600;color:#888;
+}
+.s11 .activity-item:last-child{border-bottom:none;}
+.s11 .activity-time{font-weight:800;font-size:10px;color:#2d2d2d;width:48px;flex-shrink:0;}
+
+.s11 .dash-footer{
+  display:flex;align-items:center;justify-content:center;gap:24px;
+  padding:14px 20px;background:#E8DDF8;border-top:2.5px solid #2d2d2d;
+  font-size:10px;font-weight:700;color:#5a4e5a;
+}
+
+/* ═══════════════════════════════════════════
+   方案 S12: GRADIENT DIP — 全彩填充·渐变浸润
+   对角渐变卡片 + 轻阴影 + 粗边框
+   ═══════════════════════════════════════════ */
+.s12{
+  background:#f8f6f2;border-radius:4px;overflow:hidden;
+  box-shadow:0 3px 16px rgba(0,0,0,0.04);
+}
+.s12 .dash-header{
+  display:flex;align-items:center;gap:12px;padding:16px 20px;
+  background:linear-gradient(135deg,#FFE066,#FFB5A7);
+  border-bottom:2.5px solid #2d2d2d;
+}
+.s12 .dash-header-icon{
+  width:38px;height:38px;display:grid;place-items:center;
+  background:#fff;border:2.5px solid #2d2d2d;color:#2d2d2d;
+  border-radius:4px;font-size:15px;
+}
+.s12 .dash-header h2{font-size:15px;font-weight:800;color:#2d2d2d;margin:0;}
+.s12 .dash-header p{font-size:10px;color:rgba(0,0,0,0.5);font-weight:600;margin:1px 0 0;}
+.s12 .dash-header-actions{margin-left:auto;}
+.s12 .dash-btn{
+  font-size:11px;font-weight:800;color:#2d2d2d;background:#fff;
+  border:2.5px solid #2d2d2d;border-radius:4px;padding:5px 14px;cursor:pointer;
+  font-family:inherit;box-shadow:2px 2px 0 rgba(0,0,0,0.04);transition:all 0.12s;
+}
+.s12 .dash-btn:hover{background:#2d2d2d;color:#fff;}
+
+/* Stats — 对角渐变卡片 */
+.s12 .stats-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:18px;
+}
+.s12 .stat-card{
+  padding:18px 16px;cursor:pointer;position:relative;transition:all 0.2s;
+  border:2.5px solid #2d2d2d;border-radius:6px 10px 8px 12px;
+  box-shadow:2px 3px 0 rgba(0,0,0,0.05);
+  color:#2d2d2d;
+}
+.s12 .stat-card:nth-child(1){background:linear-gradient(135deg,#C8F5D0,#A5E8B8);}
+.s12 .stat-card:nth-child(2){background:linear-gradient(135deg,#D4F5F0,#A8E8E0);}
+.s12 .stat-card:nth-child(3){background:linear-gradient(135deg,#E8DDF8,#D4C8F0);}
+.s12 .stat-card:nth-child(4){background:linear-gradient(135deg,#FFE0DB,#FFD0C8);}
+.s12 .stat-card:hover{transform:translateY(-2px);box-shadow:2px 5px 0 rgba(0,0,0,0.06);}
+/* 菱形装饰 */
+.s12 .stat-card::before{
+  content:'';position:absolute;top:12px;right:12px;
+  width:14px;height:14px;border:2.5px solid #2d2d2d;
+  background:rgba(255,255,255,0.6);transform:rotate(45deg);
+}
+.s12 .stat-value{
+  font-family:'Quicksand',sans-serif;font-size:30px;font-weight:800;color:#2d2d2d;line-height:1;
+}
+.s12 .stat-label{font-size:12px;font-weight:700;margin:4px 0 3px;}
+.s12 .stat-desc{font-size:10px;color:rgba(0,0,0,0.4);font-weight:500;}
+.s12 .stat-trend{font-size:10px;font-weight:700;color:rgba(0,0,0,0.45);margin-top:4px;}
+
+/* Section */
+.s12 .dash-section{padding:0 18px 14px;}
+.s12 .dash-section-title{
+  font-size:12px;font-weight:800;color:#2d2d2d;text-transform:uppercase;
+  letter-spacing:0.04em;padding:8px 0 10px;
+  display:flex;align-items:center;gap:8px;
+}
+.s12 .dash-section-title::before{
+  content:'';width:0;height:0;border-left:6px solid #2d2d2d;
+  border-top:5px solid transparent;border-bottom:5px solid transparent;
+}
+
+/* Trends */
+.s12 .trends-row{display:grid;grid-template-columns:1.5fr 1fr;gap:12px;}
+.s12 .trend-chart{
+  padding:14px;background:linear-gradient(135deg,#FFF9E6,#FFE8D0);
+  border:2.5px solid #2d2d2d;border-radius:6px 10px 8px 12px;
+  box-shadow:2px 3px 0 rgba(0,0,0,0.05);
+}
+.s12 .trend-bars{display:flex;align-items:flex-end;gap:3px;height:70px;}
+.s12 .trend-bar{flex:1;min-width:6px;border:2px solid #2d2d2d;}
+.s12 .trend-bar--pass{background:#6BCB77;}
+.s12 .trend-bar--fail{background:#FFB5A7;}
+.s12 .trend-legend{display:flex;gap:14px;font-size:10px;font-weight:700;margin-top:6px;color:#2d2d2d;}
+.s12 .trend-dot{width:8px;height:8px;border:2px solid #2d2d2d;display:inline-block;}
+.s12 .trend-tasks{
+  padding:14px;background:linear-gradient(135deg,#F0EDFF,#E8DDF8);
+  border:2.5px solid #2d2d2d;border-radius:8px 12px 10px 6px;
+  box-shadow:2px 3px 0 rgba(0,0,0,0.05);
+}
+.s12 .task-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:5px 0;border-bottom:1.5px dashed rgba(0,0,0,0.1);font-size:11px;font-weight:700;color:#2d2d2d;
+}
+.s12 .task-status{font-weight:800;font-size:9px;padding:3px 8px;border:2px solid #2d2d2d;}
+.s12 .task-status.pass{background:rgba(255,255,255,0.7);color:#1a5c1a;}
+.s12 .task-status.fail{background:rgba(255,255,255,0.7);color:#7a1c1c;}
+
+/* Module */
+.s12 .module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.s12 .module-item{
+  padding:10px 12px;background:linear-gradient(135deg,#fff,#f8f6f2);border:2.5px solid #2d2d2d;
+  cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.12s;
+  border-radius:6px 10px 6px 10px;font-weight:700;font-size:11px;
+  box-shadow:2px 2px 0 rgba(0,0,0,0.04);
+}
+.s12 .module-item:hover{
+  background:linear-gradient(135deg,#FFFDE8,#FFE8D0);
+  transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(0,0,0,0.06);
+}
+.s12 .module-dot{width:8px;height:8px;flex-shrink:0;border:2px solid #2d2d2d;border-radius:2px 6px 2px 6px;}
+.s12 .module-name{color:#2d2d2d;}
+.s12 .module-count{font-size:10px;font-weight:800;color:#999;margin-left:auto;}
+
+.s12 .activity-item{
+  display:flex;align-items:center;gap:12px;padding:6px 0;margin:0 18px;
+  border-bottom:1.5px dashed #ddd;font-size:11px;font-weight:600;color:#888;
+}
+.s12 .activity-item:last-child{border-bottom:none;}
+.s12 .activity-time{font-weight:800;font-size:10px;color:#2d2d2d;width:48px;flex-shrink:0;}
+
+.s12 .dash-footer{
+  display:flex;align-items:center;justify-content:center;gap:24px;
+  padding:14px 20px;background:linear-gradient(135deg,#FFE066,#FFB5A7);
+  border-top:2.5px solid #2d2d2d;font-size:10px;font-weight:700;color:#5a4e20;
+}
+
+/* ═══════════════════════════════════════════
+   方案 S13: TWO-TONE SPLIT — 全彩填充·双色分割
+   上下双色卡 + 分割线 + 轻阴影 + 粗边框
+   ═══════════════════════════════════════════ */
+.s13{
+  background:#f8f6f2;border-radius:4px;overflow:hidden;
+  box-shadow:0 3px 16px rgba(0,0,0,0.04);
+}
+.s13 .dash-header{
+  display:flex;align-items:center;gap:12px;padding:16px 20px;
+  background:#fff;border-bottom:2.5px solid #2d2d2d;
+}
+.s13 .dash-header-icon{
+  width:38px;height:38px;display:grid;place-items:center;
+  background:#FFE066;border:2.5px solid #2d2d2d;color:#2d2d2d;
+  border-radius:8px 4px 10px 4px;font-size:15px;
+}
+.s13 .dash-header h2{font-size:15px;font-weight:800;color:#2d2d2d;margin:0;}
+.s13 .dash-header p{font-size:10px;color:#999;font-weight:600;margin:1px 0 0;}
+.s13 .dash-header-actions{margin-left:auto;}
+.s13 .dash-btn{
+  font-size:11px;font-weight:800;color:#2d2d2d;background:#fff;
+  border:2.5px solid #2d2d2d;border-radius:8px 4px 10px 4px;padding:5px 14px;cursor:pointer;
+  font-family:inherit;box-shadow:2px 2px 0 rgba(0,0,0,0.04);transition:all 0.12s;
+}
+.s13 .dash-btn:hover{background:#FFE066;}
+
+/* Stats — 双色分割卡 */
+.s13 .stats-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:18px;
+}
+.s13 .stat-card{
+  cursor:pointer;position:relative;transition:all 0.2s;
+  border:2.5px solid #2d2d2d;border-radius:6px 10px 8px 12px;
+  box-shadow:2px 3px 0 rgba(0,0,0,0.05);
+  overflow:hidden;
+}
+/* 上半彩色 + 下半白 */
+.s13 .stat-card:nth-child(1){background:linear-gradient(180deg,#C8F5D0 55%,#fff 55%);}
+.s13 .stat-card:nth-child(2){background:linear-gradient(180deg,#D4F5F0 55%,#fff 55%);}
+.s13 .stat-card:nth-child(3){background:linear-gradient(180deg,#E8DDF8 55%,#fff 55%);}
+.s13 .stat-card:nth-child(4){background:linear-gradient(180deg,#FFE0DB 55%,#fff 55%);}
+.s13 .stat-card:hover{transform:translateY(-2px);box-shadow:2px 5px 0 rgba(0,0,0,0.06);}
+/* 分割装饰 */
+.s13 .stat-card::after{
+  content:'';position:absolute;left:0;right:0;top:55%;
+  height:2.5px;background:#2d2d2d;opacity:0.3;
+}
+.s13 .stat-card-inner{padding:16px 16px 14px;position:relative;z-index:1;}
+.s13 .stat-value{
+  font-family:'Quicksand',sans-serif;font-size:30px;font-weight:800;color:#2d2d2d;line-height:1;
+}
+.s13 .stat-label{font-size:12px;font-weight:700;color:#2d2d2d;margin:4px 0 3px;}
+.s13 .stat-desc{font-size:10px;color:rgba(0,0,0,0.4);font-weight:500;}
+.s13 .stat-trend{font-size:10px;font-weight:700;color:rgba(0,0,0,0.45);margin-top:4px;}
+.s13 .stat-trend.up{color:#2f7a2f;}
+
+/* Section */
+.s13 .dash-section{padding:0 18px 14px;}
+.s13 .dash-section-title{
+  font-size:12px;font-weight:800;color:#2d2d2d;text-transform:uppercase;
+  letter-spacing:0.04em;padding:8px 0 10px;
+  display:flex;align-items:center;gap:8px;
+}
+.s13 .dash-section-title::before{content:'◆';font-size:10px;color:#2d2d2d;}
+
+/* Trends */
+.s13 .trends-row{display:grid;grid-template-columns:1.5fr 1fr;gap:12px;}
+.s13 .trend-chart{
+  padding:14px;background:linear-gradient(180deg,#FFF9E6 55%,#fff 55%);
+  border:2.5px solid #2d2d2d;border-radius:6px 10px 8px 12px;
+  box-shadow:2px 3px 0 rgba(0,0,0,0.05);position:relative;
+}
+.s13 .trend-chart::after{content:'';position:absolute;left:0;right:0;top:55%;height:2.5px;background:#2d2d2d;opacity:0.2;}
+.s13 .trend-bars{display:flex;align-items:flex-end;gap:3px;height:70px;}
+.s13 .trend-bar{flex:1;min-width:6px;border:2px solid #2d2d2d;}
+.s13 .trend-bar--pass{background:#6BCB77;}
+.s13 .trend-bar--fail{background:#FFB5A7;}
+.s13 .trend-legend{display:flex;gap:14px;font-size:10px;font-weight:700;margin-top:8px;color:#2d2d2d;}
+.s13 .trend-dot{width:8px;height:8px;border:2px solid #2d2d2d;display:inline-block;}
+.s13 .trend-tasks{
+  padding:14px;background:linear-gradient(180deg,#F0EDFF 55%,#fff 55%);
+  border:2.5px solid #2d2d2d;border-radius:8px 12px 10px 6px;
+  box-shadow:2px 3px 0 rgba(0,0,0,0.05);position:relative;
+}
+.s13 .trend-tasks::after{content:'';position:absolute;left:0;right:0;top:55%;height:2.5px;background:#2d2d2d;opacity:0.2;}
+.s13 .task-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:5px 0;border-bottom:1.5px dashed #ddd;font-size:11px;font-weight:700;color:#2d2d2d;
+}
+.s13 .task-status{font-weight:800;font-size:9px;padding:3px 8px;border:2px solid #2d2d2d;}
+.s13 .task-status.pass{background:#C8F5D0;color:#1a5c1a;border-radius:4px 8px 4px 8px;}
+.s13 .task-status.fail{background:#FFE0DB;color:#7a1c1c;border-radius:8px 4px 8px 4px;}
+
+/* Module */
+.s13 .module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.s13 .module-item{
+  padding:10px 12px;background:#fff;border:2.5px solid #2d2d2d;
+  cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.12s;
+  border-radius:6px 10px 6px 10px;font-weight:700;font-size:11px;
+  box-shadow:2px 2px 0 rgba(0,0,0,0.04);
+}
+.s13 .module-item:hover{background:#FFFDE8;transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(0,0,0,0.06);}
+.s13 .module-dot{width:8px;height:8px;flex-shrink:0;border:2px solid #2d2d2d;}
+.s13 .module-name{color:#2d2d2d;}
+.s13 .module-count{font-size:10px;font-weight:800;color:#999;margin-left:auto;}
+
+.s13 .activity-item{
+  display:flex;align-items:center;gap:12px;padding:6px 0;margin:0 18px;
+  border-bottom:1.5px dashed #ddd;font-size:11px;font-weight:600;color:#888;
+}
+.s13 .activity-item:last-child{border-bottom:none;}
+.s13 .activity-time{font-weight:800;font-size:10px;color:#2d2d2d;width:48px;flex-shrink:0;}
+
+.s13 .dash-footer{
+  display:flex;align-items:center;justify-content:center;gap:24px;
+  padding:14px 20px;background:#fff;border-top:2.5px solid #2d2d2d;
+  font-size:10px;font-weight:700;color:#999;
+}
+
+/* ═══════════════════════════════════════════
+   响应式
+   ═══════════════════════════════════════════ */
+@media(max-width:820px){
+  .stats-grid,.module-grid{grid-template-columns:repeat(2,1fr);}
+  .trends-row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<h1>仪表盘 Origami Tech 三方案</h1>
+<p>折纸科技设计哲学: 几何、切角、黑框、菱形、极简对比</p>
+
+<!-- ═══════════════ S1: CRISP GRID ═══════════════ -->
+<div class="prototype-row">
+<div class="prototype-label"><span class="dot"></span> S1 · Crisp Grid 锐利网格</div>
+<div class="s1">
+  <!-- Header -->
+  <div class="dash-header">
+    <div class="dash-header-icon"><i data-lucide="layout-dashboard" style="width:16px;height:16px"></i></div>
+    <div>
+      <h2>仪表盘</h2>
+      <p>实时监控 · 设备/用例/Agent/执行</p>
+    </div>
+    <div class="dash-header-actions"><button class="dash-btn">刷新数据</button></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card" style="--c:#6BCB77">
+      <div class="stat-value">12<small style="font-size:14px;color:#a0aec0">/15</small></div>
+      <div class="stat-label">在线设备</div>
+      <div class="stat-desc">ADB 扫描 · 连接锁定 · 排队调度</div>
+      <div class="stat-trend up">↑8% 近期活跃</div>
+      <span class="stat-enter">进入 →</span>
+    </div>
+    <div class="stat-card" style="--c:#4ECDC4">
+      <div class="stat-value">1,247</div>
+      <div class="stat-label">测试用例</div>
+      <div class="stat-desc">步骤编排 · 目录树 · YAML 导入导出</div>
+      <div class="stat-trend up">↑12% 本周新增</div>
+      <span class="stat-enter">进入 →</span>
+    </div>
+    <div class="stat-card" style="--c:#C9B6F2">
+      <div class="stat-value">5</div>
+      <div class="stat-label">活跃智能体</div>
+      <div class="stat-desc">自然语言驱动 · SSE 流式 · 知识库</div>
+      <div class="stat-trend">8 智能体</div>
+      <span class="stat-enter">进入 →</span>
+    </div>
+    <div class="stat-card" style="--c:#FFB5A7">
+      <div class="stat-value">3</div>
+      <div class="stat-label">运行中任务</div>
+      <div class="stat-desc">任务调度 · 实时进度 · WS 日志</div>
+      <div class="stat-trend up">执行中</div>
+      <span class="stat-enter">进入 →</span>
+    </div>
+  </div>
+
+  <!-- Trends -->
+  <div class="dash-section">
+    <div class="dash-section-title">趋势数据</div>
+    <div class="trends-row">
+      <div class="trend-chart">
+        <div class="trend-bars">
+          <div class="trend-bar trend-bar--pass" style="height:52px"></div><div class="trend-bar trend-bar--fail" style="height:18px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:58px"></div><div class="trend-bar trend-bar--fail" style="height:12px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:48px"></div><div class="trend-bar trend-bar--fail" style="height:22px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:62px"></div><div class="trend-bar trend-bar--fail" style="height:8px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:55px"></div><div class="trend-bar trend-bar--fail" style="height:16px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:50px"></div><div class="trend-bar trend-bar--fail" style="height:20px"></div>
+        </div>
+        <div class="trend-legend"><span><span class="trend-dot" style="background:#1a202c"></span>通过</span><span><span class="trend-dot" style="background:#e8ecf1;border:1px solid #d4d8dc"></span>失败</span></div>
+      </div>
+      <div class="trend-tasks">
+        <div class="task-row"><span>smoke-test-v2.4</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>login-regression</span><span class="task-status fail">FAIL</span></div>
+        <div class="task-row"><span>payment-flow-v3</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>onboarding-e2e</span><span class="task-status pass">PASS</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Module Nav -->
+  <div class="dash-section">
+    <div class="dash-section-title">功能模块</div>
+    <div class="module-grid">
+      <div class="module-item"><span class="module-dot" style="background:#6BCB77"></span><span class="module-name">设备管理</span><span class="module-count">15</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#A78BFA"></span><span class="module-name">元素定位</span><span class="module-count">2.4k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#4ECDC4"></span><span class="module-name">用例管理</span><span class="module-count">1.2k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#FFB5A7"></span><span class="module-name">执行引擎</span><span class="module-count">3</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#7C6F83"></span><span class="module-name">测试报告</span><span class="module-count">156</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#E879F9"></span><span class="module-name">AI 助手</span><span class="module-count">5</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#60A5FA"></span><span class="module-name">工作流</span><span class="module-count">12</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#F7C948"></span><span class="module-name">数字人</span><span class="module-count">—</span></div>
+    </div>
+  </div>
+
+  <!-- Activity -->
+  <div class="dash-section">
+    <div class="dash-section-title">最近动态</div>
+    <div class="activity-list">
+      <div class="activity-item"><span class="activity-time">14:32</span><span>smoke-test-v2.4 执行完成 · 通过率 98%</span></div>
+      <div class="activity-item"><span class="activity-time">13:18</span><span>新增设备 vivo-X90 · ADB 在线</span></div>
+      <div class="activity-item"><span class="activity-time">11:05</span><span>AI 助手 Agent 创建 · 模型 qwen-max</span></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="dash-footer">
+    <span>最近更新: 2026-07-23 14:35</span>
+    <span>系统状态: 正常运行</span>
+  </div>
+</div>
+</div><!-- /S1 -->
+
+<!-- ═══════════════ S2: FOLDED LAYERS ═══════════════ -->
+<div class="prototype-row">
+<div class="prototype-label"><span class="dot"></span> S2 · Folded Layers 折纸叠层</div>
+<div class="s2">
+  <!-- Header -->
+  <div class="dash-header">
+    <div class="dash-header-icon"><i data-lucide="layout-dashboard" style="width:15px;height:15px"></i></div>
+    <div>
+      <h2>仪表盘</h2>
+      <p>实时监控 · 设备/用例/Agent/执行</p>
+    </div>
+    <div class="dash-header-actions"><button class="dash-btn">刷新数据</button></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card" style="--c:#6BCB77">
+      <div class="stat-value">12<small style="font-size:15px;color:#a0aec0"> /15</small></div>
+      <div class="stat-label">在线设备</div>
+      <div class="stat-trend up">↑8% 近期活跃</div>
+      <span class="stat-enter">进入</span>
+    </div>
+    <div class="stat-card" style="--c:#4ECDC4">
+      <div class="stat-value">1,247</div>
+      <div class="stat-label">测试用例</div>
+      <div class="stat-trend up">↑12% 本周新增</div>
+      <span class="stat-enter">进入</span>
+    </div>
+    <div class="stat-card" style="--c:#C9B6F2">
+      <div class="stat-value">5</div>
+      <div class="stat-label">活跃智能体</div>
+      <div class="stat-trend">8 智能体</div>
+      <span class="stat-enter">进入</span>
+    </div>
+    <div class="stat-card" style="--c:#FFB5A7">
+      <div class="stat-value">3</div>
+      <div class="stat-label">运行中任务</div>
+      <div class="stat-trend up">执行中</div>
+      <span class="stat-enter">进入</span>
+    </div>
+  </div>
+
+  <!-- Trends -->
+  <div class="dash-section">
+    <div class="dash-section-title">趋势数据</div>
+    <div class="trends-row">
+      <div class="trend-chart">
+        <div class="trend-bars">
+          <div class="trend-bar trend-bar--pass" style="height:52px"></div><div class="trend-bar trend-bar--fail" style="height:18px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:58px"></div><div class="trend-bar trend-bar--fail" style="height:12px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:48px"></div><div class="trend-bar trend-bar--fail" style="height:22px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:62px"></div><div class="trend-bar trend-bar--fail" style="height:8px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:55px"></div><div class="trend-bar trend-bar--fail" style="height:16px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:50px"></div><div class="trend-bar trend-bar--fail" style="height:20px"></div>
+        </div>
+        <div class="trend-legend"><span><span class="trend-dot" style="background:#1a202c"></span>通过</span><span><span class="trend-dot" style="background:#d4d8dc;border:1px solid #ccc"></span>失败</span></div>
+      </div>
+      <div class="trend-tasks">
+        <div class="task-row"><span>smoke-test-v2.4</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>login-regression</span><span class="task-status fail">FAIL</span></div>
+        <div class="task-row"><span>payment-flow-v3</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>onboarding-e2e</span><span class="task-status pass">PASS</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Module Nav -->
+  <div class="dash-section">
+    <div class="dash-section-title">功能模块</div>
+    <div class="module-grid">
+      <div class="module-item"><span class="module-dot" style="background:#6BCB77"></span><span class="module-name">设备管理</span><span class="module-count">15</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#A78BFA"></span><span class="module-name">元素定位</span><span class="module-count">2.4k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#4ECDC4"></span><span class="module-name">用例管理</span><span class="module-count">1.2k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#FFB5A7"></span><span class="module-name">执行引擎</span><span class="module-count">3</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#7C6F83"></span><span class="module-name">测试报告</span><span class="module-count">156</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#E879F9"></span><span class="module-name">AI 助手</span><span class="module-count">5</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#60A5FA"></span><span class="module-name">工作流</span><span class="module-count">12</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#F7C948"></span><span class="module-name">数字人</span><span class="module-count">—</span></div>
+    </div>
+  </div>
+
+  <!-- Activity -->
+  <div class="dash-section">
+    <div class="dash-section-title">最近动态</div>
+    <div class="activity-item"><span class="activity-time">14:32</span><span>smoke-test-v2.4 执行完成 · 通过率 98%</span></div>
+    <div class="activity-item"><span class="activity-time">13:18</span><span>新增设备 vivo-X90 · ADB 在线</span></div>
+    <div class="activity-item"><span class="activity-time">11:05</span><span>AI 助手 Agent 创建 · 模型 qwen-max</span></div>
+  </div>
+
+  <!-- Footer -->
+  <div class="dash-footer">
+    <span>最近更新: 2026-07-23 14:35</span>
+    <span>系统状态: 正常运行</span>
+  </div>
+</div>
+</div><!-- /S2 -->
+
+<!-- ═══════════════ S3: GEOMETRIC SPECTRUM ═══════════════ -->
+<div class="prototype-row">
+<div class="prototype-label"><span class="dot"></span> S3 · Geometric Spectrum 几何光谱</div>
+<div class="s3">
+  <!-- Header -->
+  <div class="dash-header">
+    <div class="dash-header-icon"><i data-lucide="layout-dashboard" style="width:15px;height:15px"></i></div>
+    <div>
+      <h2>仪表盘</h2>
+      <p>实时监控 · 设备/用例/Agent/执行</p>
+    </div>
+    <div class="dash-header-actions"><button class="dash-btn">刷新数据</button></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card" style="--c:#6BCB77">
+      <div class="stat-value">12<small style="font-size:14px;color:#718096">/15</small></div>
+      <div class="stat-label">在线设备</div>
+      <div class="stat-desc">ADB 扫描 · 连接锁定 · 排队调度</div>
+      <div class="stat-trend up">↑8% 近期活跃</div>
+      <span class="stat-enter">进入</span>
+    </div>
+    <div class="stat-card" style="--c:#4ECDC4">
+      <div class="stat-value">1,247</div>
+      <div class="stat-label">测试用例</div>
+      <div class="stat-desc">步骤编排 · 目录树 · YAML 导入导出</div>
+      <div class="stat-trend up">↑12% 本周新增</div>
+      <span class="stat-enter">进入</span>
+    </div>
+    <div class="stat-card" style="--c:#C9B6F2">
+      <div class="stat-value">5</div>
+      <div class="stat-label">活跃智能体</div>
+      <div class="stat-desc">自然语言驱动 · SSE 流式 · 知识库</div>
+      <div class="stat-trend">8 智能体</div>
+      <span class="stat-enter">进入</span>
+    </div>
+    <div class="stat-card" style="--c:#FFB5A7">
+      <div class="stat-value">3</div>
+      <div class="stat-label">运行中任务</div>
+      <div class="stat-desc">任务调度 · 实时进度 · WS 日志</div>
+      <div class="stat-trend up">执行中</div>
+      <span class="stat-enter">进入</span>
+    </div>
+  </div>
+
+  <!-- Trends -->
+  <div class="dash-section">
+    <div class="dash-section-title">趋势数据</div>
+    <div class="trends-row">
+      <div class="trend-chart">
+        <div class="trend-bars">
+          <div class="trend-bar trend-bar--pass" style="height:52px"></div><div class="trend-bar trend-bar--fail" style="height:18px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:58px"></div><div class="trend-bar trend-bar--fail" style="height:12px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:48px"></div><div class="trend-bar trend-bar--fail" style="height:22px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:62px"></div><div class="trend-bar trend-bar--fail" style="height:8px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:55px"></div><div class="trend-bar trend-bar--fail" style="height:16px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:50px"></div><div class="trend-bar trend-bar--fail" style="height:20px"></div>
+        </div>
+        <div class="trend-legend"><span><span class="trend-dot" style="background:#1a202c"></span>通过</span><span><span class="trend-dot" style="background:#fff;border:1.5px solid #1a202c"></span>失败</span></div>
+      </div>
+      <div class="trend-tasks">
+        <div class="task-row"><span>smoke-test-v2.4</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>login-regression</span><span class="task-status fail">FAIL</span></div>
+        <div class="task-row"><span>payment-flow-v3</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>onboarding-e2e</span><span class="task-status pass">PASS</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Module Nav -->
+  <div class="dash-section">
+    <div class="dash-section-title">功能模块</div>
+    <div class="module-grid">
+      <div class="module-item"><span class="module-dot" style="background:#6BCB77"></span><span class="module-name">设备管理</span><span class="module-count">15</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#A78BFA"></span><span class="module-name">元素定位</span><span class="module-count">2.4k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#4ECDC4"></span><span class="module-name">用例管理</span><span class="module-count">1.2k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#FFB5A7"></span><span class="module-name">执行引擎</span><span class="module-count">3</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#7C6F83"></span><span class="module-name">测试报告</span><span class="module-count">156</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#E879F9"></span><span class="module-name">AI 助手</span><span class="module-count">5</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#60A5FA"></span><span class="module-name">工作流</span><span class="module-count">12</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#F7C948"></span><span class="module-name">数字人</span><span class="module-count">—</span></div>
+    </div>
+  </div>
+
+  <!-- Activity -->
+  <div class="dash-section">
+    <div class="dash-section-title">最近动态</div>
+    <div class="activity-item"><span class="activity-time">14:32</span><span>smoke-test-v2.4 执行完成 · 通过率 98%</span></div>
+    <div class="activity-item"><span class="activity-time">13:18</span><span>新增设备 vivo-X90 · ADB 在线</span></div>
+    <div class="activity-item"><span class="activity-time">11:05</span><span>AI 助手 Agent 创建 · 模型 qwen-max</span></div>
+  </div>
+
+  <!-- Footer -->
+  <div class="dash-footer">
+    <span>最近更新: 2026-07-23 14:35</span>
+    <span>系统状态: 正常运行</span>
+  </div>
+</div>
+</div><!-- /S3 -->
+
+<!-- ═══════════════ S4: BOLD FOLD ═══════════════ -->
+<div class="prototype-row">
+<div class="prototype-label"><span class="dot" style="background:#FFE066;border:2px solid #1a1a2e;width:8px;height:8px"></span> S4 · Bold Fold 粗线彩色折纸</div>
+<div class="s4">
+  <div class="dash-header">
+    <div class="dash-header-icon"><i data-lucide="layout-dashboard" style="width:14px;height:14px"></i></div>
+    <div><h2>仪表盘</h2><p>实时监控 · 设备/用例/Agent/执行</p></div>
+    <div class="dash-header-actions"><button class="dash-btn">刷 新</button></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">12<small style="font-size:16px;color:#5a5a4e">/15</small></div>
+      <div class="stat-label">在线设备</div><div class="stat-desc">ADB 扫描 · 连接锁定</div>
+      <div class="stat-trend up">↑8% 近期活跃</div><span class="stat-enter">进入</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">1,247</div>
+      <div class="stat-label">测试用例</div><div class="stat-desc">步骤编排 · YAML 导入</div>
+      <div class="stat-trend up">↑12% 本周新增</div><span class="stat-enter">进入</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">5</div>
+      <div class="stat-label">活跃智能体</div><div class="stat-desc">SSE 流式 · 知识库</div>
+      <div class="stat-trend">8 智能体</div><span class="stat-enter">进入</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">3</div>
+      <div class="stat-label">运行中任务</div><div class="stat-desc">任务调度 · WS 日志</div>
+      <div class="stat-trend up">执行中</div><span class="stat-enter">进入</span>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">趋势数据</div>
+    <div class="trends-row">
+      <div class="trend-chart">
+        <div class="trend-bars">
+          <div class="trend-bar trend-bar--pass" style="height:52px"></div><div class="trend-bar trend-bar--fail" style="height:18px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:58px"></div><div class="trend-bar trend-bar--fail" style="height:12px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:48px"></div><div class="trend-bar trend-bar--fail" style="height:22px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:62px"></div><div class="trend-bar trend-bar--fail" style="height:8px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:55px"></div><div class="trend-bar trend-bar--fail" style="height:16px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:50px"></div><div class="trend-bar trend-bar--fail" style="height:20px"></div>
+        </div>
+        <div class="trend-legend"><span><span class="trend-dot" style="background:#6BCB77"></span>通过</span><span><span class="trend-dot" style="background:#FFB5A7"></span>失败</span></div>
+      </div>
+      <div class="trend-tasks">
+        <div class="task-row"><span>smoke-test-v2.4</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>login-regression</span><span class="task-status fail">FAIL</span></div>
+        <div class="task-row"><span>payment-flow-v3</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>onboarding-e2e</span><span class="task-status pass">PASS</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">功能模块</div>
+    <div class="module-grid">
+      <div class="module-item"><span class="module-dot" style="background:#6BCB77"></span><span class="module-name">设备管理</span><span class="module-count">15</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#A78BFA"></span><span class="module-name">元素定位</span><span class="module-count">2.4k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#4ECDC4"></span><span class="module-name">用例管理</span><span class="module-count">1.2k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#FFB5A7"></span><span class="module-name">执行引擎</span><span class="module-count">3</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#7C6F83"></span><span class="module-name">测试报告</span><span class="module-count">156</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#E879F9"></span><span class="module-name">AI 助手</span><span class="module-count">5</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#60A5FA"></span><span class="module-name">工作流</span><span class="module-count">12</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#F7C948"></span><span class="module-name">数字人</span><span class="module-count">—</span></div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">最近动态</div>
+    <div class="activity-item"><span class="activity-time">14:32</span><span>smoke-test-v2.4 执行完成 · 通过率 98%</span></div>
+    <div class="activity-item"><span class="activity-time">13:18</span><span>新增设备 vivo-X90 · ADB 在线</span></div>
+    <div class="activity-item"><span class="activity-time">11:05</span><span>AI 助手 Agent 创建 · 模型 qwen-max</span></div>
+  </div>
+  <div class="dash-footer"><span>最近更新: 2026-07-23 14:35</span><span>系统状态: 正常运行</span></div>
+</div></div><!-- /S4 -->
+
+<!-- ═══════════════ S5: SPECTRUM STACK ═══════════════ -->
+<div class="prototype-row">
+<div class="prototype-label"><span class="dot" style="background:#FFB5A7;width:8px;height:8px;transform:rotate(45deg)"></span> S5 · Spectrum Stack 色纸叠层</div>
+<div class="s5">
+  <div class="dash-header">
+    <div class="dash-header-icon"><i data-lucide="layout-dashboard" style="width:14px;height:14px"></i></div>
+    <div><h2>仪表盘</h2><p>实时监控 · 设备/用例/Agent/执行</p></div>
+    <div class="dash-header-actions"><button class="dash-btn">刷新数据</button></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">12<small style="font-size:15px;color:rgba(0,0,0,0.4)">/15</small></div>
+      <div class="stat-label">在线设备</div><div class="stat-desc">ADB 扫描 · 连接锁定</div>
+      <div class="stat-trend">↑8% 近期活跃</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">1,247</div>
+      <div class="stat-label">测试用例</div><div class="stat-desc">步骤编排 · YAML 导入</div>
+      <div class="stat-trend">↑12% 本周新增</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">5</div>
+      <div class="stat-label">活跃智能体</div><div class="stat-desc">SSE 流式 · 知识库</div>
+      <div class="stat-trend">8 智能体</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">3</div>
+      <div class="stat-label">运行中任务</div><div class="stat-desc">任务调度 · WS 日志</div>
+      <div class="stat-trend">执行中</div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">趋势数据</div>
+    <div class="trends-row">
+      <div class="trend-chart">
+        <div class="trend-bars">
+          <div class="trend-bar trend-bar--pass" style="height:52px"></div><div class="trend-bar trend-bar--fail" style="height:18px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:58px"></div><div class="trend-bar trend-bar--fail" style="height:12px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:48px"></div><div class="trend-bar trend-bar--fail" style="height:22px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:62px"></div><div class="trend-bar trend-bar--fail" style="height:8px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:55px"></div><div class="trend-bar trend-bar--fail" style="height:16px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:50px"></div><div class="trend-bar trend-bar--fail" style="height:20px"></div>
+        </div>
+        <div class="trend-legend"><span><span class="trend-dot" style="background:#6BCB77"></span>通过</span><span><span class="trend-dot" style="background:#FFB5A7"></span>失败</span></div>
+      </div>
+      <div class="trend-tasks">
+        <div class="task-row"><span>smoke-test-v2.4</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>login-regression</span><span class="task-status fail">FAIL</span></div>
+        <div class="task-row"><span>payment-flow-v3</span><span class="task-status pass">PASS</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">功能模块</div>
+    <div class="module-grid">
+      <div class="module-item"><span class="module-dot" style="background:#6BCB77"></span><span class="module-name">设备管理</span><span class="module-count">15</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#A78BFA"></span><span class="module-name">元素定位</span><span class="module-count">2.4k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#4ECDC4"></span><span class="module-name">用例管理</span><span class="module-count">1.2k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#FFB5A7"></span><span class="module-name">执行引擎</span><span class="module-count">3</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#7C6F83"></span><span class="module-name">测试报告</span><span class="module-count">156</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#E879F9"></span><span class="module-name">AI 助手</span><span class="module-count">5</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#60A5FA"></span><span class="module-name">工作流</span><span class="module-count">12</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#F7C948"></span><span class="module-name">数字人</span><span class="module-count">—</span></div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">最近动态</div>
+    <div class="activity-item"><span class="activity-time">14:32</span><span>smoke-test-v2.4 执行完成 · 通过率 98%</span></div>
+    <div class="activity-item"><span class="activity-time">13:18</span><span>新增设备 vivo-X90 · ADB 在线</span></div>
+    <div class="activity-item"><span class="activity-time">11:05</span><span>AI 助手 Agent 创建 · 模型 qwen-max</span></div>
+  </div>
+  <div class="dash-footer"><span>最近更新: 2026-07-23 14:35</span><span>系统状态: 正常运行</span></div>
+</div></div><!-- /S5 -->
+
+<!-- ═══════════════ S6: PAPER CRAFT ═══════════════ -->
+<div class="prototype-row">
+<div class="prototype-label"><span class="dot" style="background:#fff;border:2px solid #2d2d2d;width:8px;height:8px;border-radius:2px 6px 2px 6px"></span> S6 · Paper Craft 纸艺拼贴</div>
+<div class="s6">
+  <div class="dash-header">
+    <div class="dash-header-icon"><i data-lucide="layout-dashboard" style="width:14px;height:14px"></i></div>
+    <div><h2>仪表盘</h2><p>实时监控 · 设备/用例/Agent/执行</p></div>
+    <div class="dash-header-actions"><button class="dash-btn">刷新</button></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">12<small style="font-size:16px;color:#999">/15</small></div>
+      <div class="stat-label">在线设备</div><div class="stat-desc">ADB 扫描 · 连接锁定</div>
+      <div class="stat-trend up">↑8% 近期活跃</div><span class="stat-enter">进入</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">1,247</div>
+      <div class="stat-label">测试用例</div><div class="stat-desc">步骤编排 · YAML 导入</div>
+      <div class="stat-trend up">↑12% 本周新增</div><span class="stat-enter">进入</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">5</div>
+      <div class="stat-label">活跃智能体</div><div class="stat-desc">SSE 流式 · 知识库</div>
+      <div class="stat-trend">8 智能体</div><span class="stat-enter">进入</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">3</div>
+      <div class="stat-label">运行中任务</div><div class="stat-desc">任务调度 · WS 日志</div>
+      <div class="stat-trend up">执行中</div><span class="stat-enter">进入</span>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">趋势数据</div>
+    <div class="trends-row">
+      <div class="trend-chart">
+        <div class="trend-bars">
+          <div class="trend-bar trend-bar--pass" style="height:52px"></div><div class="trend-bar trend-bar--fail" style="height:18px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:58px"></div><div class="trend-bar trend-bar--fail" style="height:12px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:48px"></div><div class="trend-bar trend-bar--fail" style="height:22px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:62px"></div><div class="trend-bar trend-bar--fail" style="height:8px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:55px"></div><div class="trend-bar trend-bar--fail" style="height:16px"></div>
+        </div>
+        <div class="trend-legend"><span><span class="trend-dot" style="background:#95D5B2"></span>通过</span><span><span class="trend-dot" style="background:#FFB5A7"></span>失败</span></div>
+      </div>
+      <div class="trend-tasks">
+        <div class="task-row"><span>smoke-test-v2.4</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>login-regression</span><span class="task-status fail">FAIL</span></div>
+        <div class="task-row"><span>payment-flow-v3</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>onboarding-e2e</span><span class="task-status pass">PASS</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">功能模块</div>
+    <div class="module-grid">
+      <div class="module-item"><span class="module-dot" style="background:#6BCB77"></span><span class="module-name">设备管理</span><span class="module-count">15</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#A78BFA"></span><span class="module-name">元素定位</span><span class="module-count">2.4k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#4ECDC4"></span><span class="module-name">用例管理</span><span class="module-count">1.2k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#FFB5A7"></span><span class="module-name">执行引擎</span><span class="module-count">3</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#7C6F83"></span><span class="module-name">测试报告</span><span class="module-count">156</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#E879F9"></span><span class="module-name">AI 助手</span><span class="module-count">5</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#60A5FA"></span><span class="module-name">工作流</span><span class="module-count">12</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#F7C948"></span><span class="module-name">数字人</span><span class="module-count">—</span></div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">最近动态</div>
+    <div class="activity-item"><span class="activity-time">14:32</span><span>smoke-test-v2.4 执行完成 · 通过率 98%</span></div>
+    <div class="activity-item"><span class="activity-time">13:18</span><span>新增设备 vivo-X90 · ADB 在线</span></div>
+    <div class="activity-item"><span class="activity-time">11:05</span><span>AI 助手 Agent 创建 · 模型 qwen-max</span></div>
+  </div>
+  <div class="dash-footer"><span>最近更新: 2026-07-23 14:35</span><span>系统状态: 正常运行</span></div>
+</div></div><!-- /S6 -->
+
+<!-- ═══════════════ S7: TRADING CARD ═══════════════ -->
+<div class="prototype-row">
+<div class="prototype-label"><span class="dot" style="background:linear-gradient(135deg,#F7C948,#FFB5A7);width:8px;height:8px;border-radius:2px"></span> S7 · Trading Card 集换式卡片</div>
+<div class="s7">
+  <div class="dash-header">
+    <div class="dash-header-icon"><i data-lucide="layout-dashboard" style="width:14px;height:14px"></i></div>
+    <div><h2>仪表盘</h2><p>实时监控 · ★★★★ 稀有</p></div>
+    <div class="dash-header-actions"><button class="dash-btn">刷新</button></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card" style="--c:#6BCB77" data-n="001">
+      <div class="stat-card-inner">
+        <div class="stat-value">12<small>/15</small></div>
+        <div class="stat-label">在线设备</div><div class="stat-desc">ADB 扫描 · 连接锁定</div>
+        <div class="stat-trend up">↑8% 近期活跃</div>
+        <span class="stat-rarity rarity-common">COMMON</span>
+      </div>
+    </div>
+    <div class="stat-card" style="--c:#4ECDC4" data-n="042">
+      <div class="stat-card-inner">
+        <div class="stat-value">1,247</div>
+        <div class="stat-label">测试用例</div><div class="stat-desc">步骤编排 · YAML 导入</div>
+        <div class="stat-trend up">↑12% 本周新增</div>
+        <span class="stat-rarity rarity-rare">RARE</span>
+      </div>
+    </div>
+    <div class="stat-card" style="--c:#C9B6F2" data-n="007">
+      <div class="stat-card-inner">
+        <div class="stat-value">5</div>
+        <div class="stat-label">活跃智能体</div><div class="stat-desc">SSE 流式 · 知识库</div>
+        <div class="stat-trend">8 智能体</div>
+        <span class="stat-rarity rarity-rare">RARE</span>
+      </div>
+    </div>
+    <div class="stat-card" style="--c:#FFB5A7" data-n="099">
+      <div class="stat-card-inner">
+        <div class="stat-value">3</div>
+        <div class="stat-label">运行中任务</div><div class="stat-desc">任务调度 · WS 日志</div>
+        <div class="stat-trend up">执行中</div>
+        <span class="stat-rarity rarity-common">COMMON</span>
+      </div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">趋势数据</div>
+    <div class="trends-row">
+      <div class="trend-chart">
+        <div class="trend-bars">
+          <div class="trend-bar trend-bar--pass" style="height:52px"></div><div class="trend-bar trend-bar--fail" style="height:18px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:58px"></div><div class="trend-bar trend-bar--fail" style="height:12px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:48px"></div><div class="trend-bar trend-bar--fail" style="height:22px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:62px"></div><div class="trend-bar trend-bar--fail" style="height:8px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:55px"></div><div class="trend-bar trend-bar--fail" style="height:16px"></div>
+        </div>
+        <div class="trend-legend"><span><span class="trend-dot" style="background:#6BCB77"></span>通过</span><span><span class="trend-dot" style="background:#FFB5A7"></span>失败</span></div>
+      </div>
+      <div class="trend-tasks">
+        <div class="task-row"><span>smoke-test-v2.4</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>login-regression</span><span class="task-status fail">FAIL</span></div>
+        <div class="task-row"><span>payment-flow-v3</span><span class="task-status pass">PASS</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">功能模块</div>
+    <div class="module-grid">
+      <div class="module-item"><span class="module-dot" style="background:#6BCB77"></span><span class="module-name">设备管理</span><span class="module-count">15</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#A78BFA"></span><span class="module-name">元素定位</span><span class="module-count">2.4k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#4ECDC4"></span><span class="module-name">用例管理</span><span class="module-count">1.2k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#FFB5A7"></span><span class="module-name">执行引擎</span><span class="module-count">3</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#7C6F83"></span><span class="module-name">测试报告</span><span class="module-count">156</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#E879F9"></span><span class="module-name">AI 助手</span><span class="module-count">5</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#60A5FA"></span><span class="module-name">工作流</span><span class="module-count">12</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#F7C948"></span><span class="module-name">数字人</span><span class="module-count">—</span></div>
+    </div>
+  </div>
+  <div class="activity-list">
+    <div class="dash-section-title">最近动态</div>
+    <div class="activity-item"><span class="activity-time">14:32</span><span>smoke-test-v2.4 执行完成 · 通过率 98%</span></div>
+    <div class="activity-item"><span class="activity-time">13:18</span><span>新增设备 vivo-X90 · ADB 在线</span></div>
+    <div class="activity-item"><span class="activity-time">11:05</span><span>AI 助手 Agent 创建 · 模型 qwen-max</span></div>
+  </div>
+  <div class="dash-footer"><span>最近更新: 2026-07-23 14:35</span><span>系统状态: 正常运行</span></div>
+</div></div><!-- /S7 -->
+
+<!-- ═══════════════ S8: DECK STACK ═══════════════ -->
+<div class="prototype-row">
+<div class="prototype-label"><span class="dot" style="background:#F7C948;width:8px;height:8px;border-radius:1px"></span> S8 · Deck Stack 牌组堆叠</div>
+<div class="s8">
+  <div class="dash-header">
+    <div class="dash-header-icon"><i data-lucide="layout-dashboard" style="width:14px;height:14px"></i></div>
+    <div><h2>仪表盘</h2><p>实时监控 · 设备/用例/Agent/执行</p></div>
+    <div class="dash-header-actions"><button class="dash-btn">♦ 刷新</button></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card" style="--c:#6BCB77">
+      <div class="stat-value">12<small style="font-size:17px;color:#8b949e">/15</small></div>
+      <div class="stat-label">在线设备</div><div class="stat-desc">ADB 扫描 · 连接锁定</div>
+      <div class="stat-trend up">↑8% 近期活跃</div>
+    </div>
+    <div class="stat-card" style="--c:#4ECDC4">
+      <div class="stat-value">1,247</div>
+      <div class="stat-label">测试用例</div><div class="stat-desc">步骤编排 · YAML 导入</div>
+      <div class="stat-trend up">↑12% 本周新增</div>
+    </div>
+    <div class="stat-card" style="--c:#C9B6F2">
+      <div class="stat-value">5</div>
+      <div class="stat-label">活跃智能体</div><div class="stat-desc">SSE 流式 · 知识库</div>
+      <div class="stat-trend">8 智能体</div>
+    </div>
+    <div class="stat-card" style="--c:#FFB5A7">
+      <div class="stat-value">3</div>
+      <div class="stat-label">运行中任务</div><div class="stat-desc">任务调度 · WS 日志</div>
+      <div class="stat-trend up">执行中</div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">趋势数据</div>
+    <div class="trends-row">
+      <div class="trend-chart">
+        <div class="trend-bars">
+          <div class="trend-bar trend-bar--pass" style="height:52px"></div><div class="trend-bar trend-bar--fail" style="height:18px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:58px"></div><div class="trend-bar trend-bar--fail" style="height:12px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:48px"></div><div class="trend-bar trend-bar--fail" style="height:22px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:62px"></div><div class="trend-bar trend-bar--fail" style="height:8px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:55px"></div>
+        </div>
+        <div class="trend-legend"><span><span class="trend-dot" style="background:#6BCB77"></span>通过</span><span><span class="trend-dot" style="background:#FFB5A7"></span>失败</span></div>
+      </div>
+      <div class="trend-tasks">
+        <div class="task-row"><span>smoke-test-v2.4</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>login-regression</span><span class="task-status fail">FAIL</span></div>
+        <div class="task-row"><span>payment-flow-v3</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>onboarding-e2e</span><span class="task-status pass">PASS</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">功能模块</div>
+    <div class="module-grid">
+      <div class="module-item"><span class="module-dot" style="background:#6BCB77"></span><span class="module-name">设备管理</span><span class="module-count">15</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#A78BFA"></span><span class="module-name">元素定位</span><span class="module-count">2.4k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#4ECDC4"></span><span class="module-name">用例管理</span><span class="module-count">1.2k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#FFB5A7"></span><span class="module-name">执行引擎</span><span class="module-count">3</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#7C6F83"></span><span class="module-name">测试报告</span><span class="module-count">156</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#E879F9"></span><span class="module-name">AI 助手</span><span class="module-count">5</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#60A5FA"></span><span class="module-name">工作流</span><span class="module-count">12</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#F7C948"></span><span class="module-name">数字人</span><span class="module-count">—</span></div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">最近动态</div>
+    <div class="activity-item"><span class="activity-time">14:32</span><span>smoke-test-v2.4 执行完成 · 通过率 98%</span></div>
+    <div class="activity-item"><span class="activity-time">13:18</span><span>新增设备 vivo-X90 · ADB 在线</span></div>
+    <div class="activity-item"><span class="activity-time">11:05</span><span>AI 助手 Agent 创建 · 模型 qwen-max</span></div>
+  </div>
+  <div class="dash-footer"><span>♠ 最近更新: 2026-07-23 14:35</span><span>♥ 系统状态: 正常运行</span></div>
+</div></div><!-- /S8 -->
+
+<!-- ═══════════════ S9: POLAROID WALL ═══════════════ -->
+<div class="prototype-row">
+<div class="prototype-label"><span class="dot" style="background:#FF6B6B;width:8px;height:8px;border-radius:50%"></span> S9 · Polaroid Wall 拍立得画廊</div>
+<div class="s9">
+  <div class="dash-header">
+    <div class="dash-header-icon"><i data-lucide="layout-dashboard" style="width:14px;height:14px"></i></div>
+    <div><h2>仪表盘</h2><p>实时监控 · 设备/用例/Agent/执行</p></div>
+    <div class="dash-header-actions"><button class="dash-btn">刷新</button></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-photo stat-photo--green"><span class="stat-photo-value">12/15</span></div>
+      <div class="stat-label">在线设备</div><div class="stat-desc">ADB 扫描 · 连接锁定</div>
+      <div class="stat-trend up">↑8% 近期活跃</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-photo stat-photo--teal"><span class="stat-photo-value">1,247</span></div>
+      <div class="stat-label">测试用例</div><div class="stat-desc">步骤编排 · YAML 导入</div>
+      <div class="stat-trend up">↑12% 本周新增</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-photo stat-photo--purple"><span class="stat-photo-value">5</span></div>
+      <div class="stat-label">活跃智能体</div><div class="stat-desc">SSE 流式 · 知识库</div>
+      <div class="stat-trend">8 智能体</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-photo stat-photo--pink"><span class="stat-photo-value">3</span></div>
+      <div class="stat-label">运行中任务</div><div class="stat-desc">任务调度 · WS 日志</div>
+      <div class="stat-trend up">执行中</div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">趋势数据</div>
+    <div class="trends-row">
+      <div class="trend-chart">
+        <div class="trend-bars">
+          <div class="trend-bar trend-bar--pass" style="height:52px"></div><div class="trend-bar trend-bar--fail" style="height:18px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:58px"></div><div class="trend-bar trend-bar--fail" style="height:12px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:48px"></div><div class="trend-bar trend-bar--fail" style="height:22px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:62px"></div><div class="trend-bar trend-bar--fail" style="height:8px"></div>
+        </div>
+        <div class="trend-legend"><span><span class="trend-dot" style="background:#6BCB77"></span>通过</span><span><span class="trend-dot" style="background:#FFB5A7"></span>失败</span></div>
+      </div>
+      <div class="trend-tasks">
+        <div class="task-row"><span>smoke-test-v2.4</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>login-regression</span><span class="task-status fail">FAIL</span></div>
+        <div class="task-row"><span>payment-flow-v3</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>onboarding-e2e</span><span class="task-status pass">PASS</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">功能模块</div>
+    <div class="module-grid">
+      <div class="module-item"><span class="module-dot" style="background:#6BCB77"></span><span class="module-name">设备管理</span><span class="module-count">15</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#A78BFA"></span><span class="module-name">元素定位</span><span class="module-count">2.4k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#4ECDC4"></span><span class="module-name">用例管理</span><span class="module-count">1.2k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#FFB5A7"></span><span class="module-name">执行引擎</span><span class="module-count">3</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#7C6F83"></span><span class="module-name">测试报告</span><span class="module-count">156</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#E879F9"></span><span class="module-name">AI 助手</span><span class="module-count">5</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#60A5FA"></span><span class="module-name">工作流</span><span class="module-count">12</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#F7C948"></span><span class="module-name">数字人</span><span class="module-count">—</span></div>
+    </div>
+  </div>
+  <div class="activity-list">
+    <div class="dash-section-title">最近动态</div>
+    <div class="activity-item"><span class="activity-time">14:32</span><span>smoke-test-v2.4 执行完成 · 通过率 98%</span></div>
+    <div class="activity-item"><span class="activity-time">13:18</span><span>新增设备 vivo-X90 · ADB 在线</span></div>
+    <div class="activity-item"><span class="activity-time">11:05</span><span>AI 助手 Agent 创建 · 模型 qwen-max</span></div>
+  </div>
+  <div class="dash-footer"><span>最近更新: 2026-07-23 14:35</span><span>系统状态: 正常运行</span></div>
+</div></div><!-- /S9 -->
+
+<!-- ═══════════════ S10: PAPER × POLAROID ═══════════════ -->
+<div class="prototype-row">
+<div class="prototype-label"><span class="dot" style="background:#FFE066;border:2px solid #2d2d2d;width:8px;height:8px;border-radius:2px 6px 2px 6px"></span> S10 · Paper × Polaroid 纸艺拍立得融合</div>
+<div class="s10">
+  <div class="dash-header">
+    <div class="dash-header-icon"><i data-lucide="layout-dashboard" style="width:14px;height:14px"></i></div>
+    <div><h2>仪表盘</h2><p>实时监控 · 设备/用例/Agent/执行</p></div>
+    <div class="dash-header-actions"><button class="dash-btn">刷新</button></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-photo stat-photo--green"><span class="stat-photo-value">12/15</span></div>
+      <div class="stat-label">在线设备</div><div class="stat-desc">ADB 扫描 · 连接锁定</div>
+      <div class="stat-trend up">↑8% 近期活跃</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-photo stat-photo--teal"><span class="stat-photo-value">1,247</span></div>
+      <div class="stat-label">测试用例</div><div class="stat-desc">步骤编排 · YAML 导入</div>
+      <div class="stat-trend up">↑12% 本周新增</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-photo stat-photo--purple"><span class="stat-photo-value">5</span></div>
+      <div class="stat-label">活跃智能体</div><div class="stat-desc">SSE 流式 · 知识库</div>
+      <div class="stat-trend">8 智能体</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-photo stat-photo--pink"><span class="stat-photo-value">3</span></div>
+      <div class="stat-label">运行中任务</div><div class="stat-desc">任务调度 · WS 日志</div>
+      <div class="stat-trend up">执行中</div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">趋势数据</div>
+    <div class="trends-row">
+      <div class="trend-chart">
+        <div class="trend-bars">
+          <div class="trend-bar trend-bar--pass" style="height:52px"></div><div class="trend-bar trend-bar--fail" style="height:18px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:58px"></div><div class="trend-bar trend-bar--fail" style="height:12px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:48px"></div><div class="trend-bar trend-bar--fail" style="height:22px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:62px"></div><div class="trend-bar trend-bar--fail" style="height:8px"></div>
+        </div>
+        <div class="trend-legend"><span><span class="trend-dot" style="background:#95D5B2"></span>通过</span><span><span class="trend-dot" style="background:#FFB5A7"></span>失败</span></div>
+      </div>
+      <div class="trend-tasks">
+        <div class="task-row"><span>smoke-test-v2.4</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>login-regression</span><span class="task-status fail">FAIL</span></div>
+        <div class="task-row"><span>payment-flow-v3</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>onboarding-e2e</span><span class="task-status pass">PASS</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">功能模块</div>
+    <div class="module-grid">
+      <div class="module-item"><span class="module-dot" style="background:#6BCB77"></span><span class="module-name">设备管理</span><span class="module-count">15</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#A78BFA"></span><span class="module-name">元素定位</span><span class="module-count">2.4k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#4ECDC4"></span><span class="module-name">用例管理</span><span class="module-count">1.2k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#FFB5A7"></span><span class="module-name">执行引擎</span><span class="module-count">3</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#7C6F83"></span><span class="module-name">测试报告</span><span class="module-count">156</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#E879F9"></span><span class="module-name">AI 助手</span><span class="module-count">5</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#60A5FA"></span><span class="module-name">工作流</span><span class="module-count">12</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#F7C948"></span><span class="module-name">数字人</span><span class="module-count">—</span></div>
+    </div>
+  </div>
+  <div class="activity-item"><span class="activity-time">14:32</span><span>smoke-test-v2.4 执行完成 · 通过率 98%</span></div>
+  <div class="activity-item"><span class="activity-time">13:18</span><span>新增设备 vivo-X90 · ADB 在线</span></div>
+  <div class="activity-item"><span class="activity-time">11:05</span><span>AI 助手 Agent 创建 · 模型 qwen-max</span></div>
+  <div class="dash-footer"><span>最近更新: 2026-07-23 14:35</span><span>系统状态: 正常运行</span></div>
+</div></div><!-- /S10 -->
+
+<!-- ═══════════════ S11: PASTEL BLOCK ═══════════════ -->
+<div class="prototype-row">
+<div class="prototype-label"><span class="dot" style="background:#C8F5D0;border:2px solid #2d2d2d;width:8px;height:8px;transform:rotate(45deg)"></span> S11 · Pastel Block 柔和色块</div>
+<div class="s11">
+  <div class="dash-header">
+    <div class="dash-header-icon"><i data-lucide="layout-dashboard" style="width:14px;height:14px"></i></div>
+    <div><h2>仪表盘</h2><p>实时监控 · 设备/用例/Agent/执行</p></div>
+    <div class="dash-header-actions"><button class="dash-btn">刷新</button></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">12<small style="font-size:16px;opacity:0.5">/15</small></div>
+      <div class="stat-label">在线设备</div><div class="stat-desc">ADB 扫描 · 连接锁定</div>
+      <div class="stat-trend up">↑8% 近期活跃</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">1,247</div>
+      <div class="stat-label">测试用例</div><div class="stat-desc">步骤编排 · YAML 导入</div>
+      <div class="stat-trend up">↑12% 本周新增</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">5</div>
+      <div class="stat-label">活跃智能体</div><div class="stat-desc">SSE 流式 · 知识库</div>
+      <div class="stat-trend">8 智能体</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">3</div>
+      <div class="stat-label">运行中任务</div><div class="stat-desc">任务调度 · WS 日志</div>
+      <div class="stat-trend up">执行中</div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">趋势数据</div>
+    <div class="trends-row">
+      <div class="trend-chart">
+        <div class="trend-bars">
+          <div class="trend-bar trend-bar--pass" style="height:52px"></div><div class="trend-bar trend-bar--fail" style="height:18px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:58px"></div><div class="trend-bar trend-bar--fail" style="height:12px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:48px"></div><div class="trend-bar trend-bar--fail" style="height:22px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:62px"></div>
+        </div>
+        <div class="trend-legend"><span><span class="trend-dot" style="background:#6BCB77"></span>通过</span><span><span class="trend-dot" style="background:#FFB5A7"></span>失败</span></div>
+      </div>
+      <div class="trend-tasks">
+        <div class="task-row"><span>smoke-test-v2.4</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>login-regression</span><span class="task-status fail">FAIL</span></div>
+        <div class="task-row"><span>payment-flow-v3</span><span class="task-status pass">PASS</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">功能模块</div>
+    <div class="module-grid">
+      <div class="module-item"><span class="module-dot" style="background:#6BCB77"></span><span class="module-name">设备管理</span><span class="module-count">15</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#A78BFA"></span><span class="module-name">元素定位</span><span class="module-count">2.4k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#4ECDC4"></span><span class="module-name">用例管理</span><span class="module-count">1.2k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#FFB5A7"></span><span class="module-name">执行引擎</span><span class="module-count">3</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#7C6F83"></span><span class="module-name">测试报告</span><span class="module-count">156</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#E879F9"></span><span class="module-name">AI 助手</span><span class="module-count">5</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#60A5FA"></span><span class="module-name">工作流</span><span class="module-count">12</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#F7C948"></span><span class="module-name">数字人</span><span class="module-count">—</span></div>
+    </div>
+  </div>
+  <div class="activity-item"><span class="activity-time">14:32</span><span>smoke-test-v2.4 执行完成 · 通过率 98%</span></div>
+  <div class="activity-item"><span class="activity-time">13:18</span><span>新增设备 vivo-X90 · ADB 在线</span></div>
+  <div class="activity-item"><span class="activity-time">11:05</span><span>AI 助手 Agent 创建 · 模型 qwen-max</span></div>
+  <div class="dash-footer"><span>最近更新: 2026-07-23 14:35</span><span>系统状态: 正常运行</span></div>
+</div></div><!-- /S11 -->
+
+<!-- ═══════════════ S12: GRADIENT DIP ═══════════════ -->
+<div class="prototype-row">
+<div class="prototype-label"><span class="dot" style="background:linear-gradient(135deg,#FFE066,#FFB5A7);border:2px solid #2d2d2d;width:8px;height:8px"></span> S12 · Gradient Dip 渐变浸润</div>
+<div class="s12">
+  <div class="dash-header">
+    <div class="dash-header-icon"><i data-lucide="layout-dashboard" style="width:14px;height:14px"></i></div>
+    <div><h2>仪表盘</h2><p>实时监控 · 设备/用例/Agent/执行</p></div>
+    <div class="dash-header-actions"><button class="dash-btn">刷新</button></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">12<small style="font-size:16px;opacity:0.45">/15</small></div>
+      <div class="stat-label">在线设备</div><div class="stat-desc">ADB 扫描 · 连接锁定</div>
+      <div class="stat-trend up">↑8% 近期活跃</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">1,247</div>
+      <div class="stat-label">测试用例</div><div class="stat-desc">步骤编排 · YAML 导入</div>
+      <div class="stat-trend up">↑12% 本周新增</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">5</div>
+      <div class="stat-label">活跃智能体</div><div class="stat-desc">SSE 流式 · 知识库</div>
+      <div class="stat-trend">8 智能体</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">3</div>
+      <div class="stat-label">运行中任务</div><div class="stat-desc">任务调度 · WS 日志</div>
+      <div class="stat-trend up">执行中</div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">趋势数据</div>
+    <div class="trends-row">
+      <div class="trend-chart">
+        <div class="trend-bars">
+          <div class="trend-bar trend-bar--pass" style="height:52px"></div><div class="trend-bar trend-bar--fail" style="height:18px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:58px"></div><div class="trend-bar trend-bar--fail" style="height:12px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:48px"></div><div class="trend-bar trend-bar--fail" style="height:22px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:62px"></div><div class="trend-bar trend-bar--fail" style="height:8px"></div>
+        </div>
+        <div class="trend-legend"><span><span class="trend-dot" style="background:#6BCB77"></span>通过</span><span><span class="trend-dot" style="background:#FFB5A7"></span>失败</span></div>
+      </div>
+      <div class="trend-tasks">
+        <div class="task-row"><span>smoke-test-v2.4</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>login-regression</span><span class="task-status fail">FAIL</span></div>
+        <div class="task-row"><span>payment-flow-v3</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>onboarding-e2e</span><span class="task-status pass">PASS</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">功能模块</div>
+    <div class="module-grid">
+      <div class="module-item"><span class="module-dot" style="background:#6BCB77"></span><span class="module-name">设备管理</span><span class="module-count">15</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#A78BFA"></span><span class="module-name">元素定位</span><span class="module-count">2.4k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#4ECDC4"></span><span class="module-name">用例管理</span><span class="module-count">1.2k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#FFB5A7"></span><span class="module-name">执行引擎</span><span class="module-count">3</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#7C6F83"></span><span class="module-name">测试报告</span><span class="module-count">156</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#E879F9"></span><span class="module-name">AI 助手</span><span class="module-count">5</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#60A5FA"></span><span class="module-name">工作流</span><span class="module-count">12</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#F7C948"></span><span class="module-name">数字人</span><span class="module-count">—</span></div>
+    </div>
+  </div>
+  <div class="activity-item"><span class="activity-time">14:32</span><span>smoke-test-v2.4 执行完成 · 通过率 98%</span></div>
+  <div class="activity-item"><span class="activity-time">13:18</span><span>新增设备 vivo-X90 · ADB 在线</span></div>
+  <div class="activity-item"><span class="activity-time">11:05</span><span>AI 助手 Agent 创建 · 模型 qwen-max</span></div>
+  <div class="dash-footer"><span>最近更新: 2026-07-23 14:35</span><span>系统状态: 正常运行</span></div>
+</div></div><!-- /S12 -->
+
+<!-- ═══════════════ S13: TWO-TONE SPLIT ═══════════════ -->
+<div class="prototype-row">
+<div class="prototype-label"><span class="dot" style="background:linear-gradient(180deg,#C8F5D0 50%,#fff 50%);border:2px solid #2d2d2d;width:8px;height:8px"></span> S13 · Two-Tone Split 双色分割</div>
+<div class="s13">
+  <div class="dash-header">
+    <div class="dash-header-icon"><i data-lucide="layout-dashboard" style="width:14px;height:14px"></i></div>
+    <div><h2>仪表盘</h2><p>实时监控 · 设备/用例/Agent/执行</p></div>
+    <div class="dash-header-actions"><button class="dash-btn">刷新</button></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-card-inner">
+        <div class="stat-value">12<small style="font-size:16px;opacity:0.45">/15</small></div>
+        <div class="stat-label">在线设备</div><div class="stat-desc">ADB 扫描 · 连接锁定</div>
+        <div class="stat-trend up">↑8% 近期活跃</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-inner">
+        <div class="stat-value">1,247</div>
+        <div class="stat-label">测试用例</div><div class="stat-desc">步骤编排 · YAML 导入</div>
+        <div class="stat-trend up">↑12% 本周新增</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-inner">
+        <div class="stat-value">5</div>
+        <div class="stat-label">活跃智能体</div><div class="stat-desc">SSE 流式 · 知识库</div>
+        <div class="stat-trend">8 智能体</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-inner">
+        <div class="stat-value">3</div>
+        <div class="stat-label">运行中任务</div><div class="stat-desc">任务调度 · WS 日志</div>
+        <div class="stat-trend up">执行中</div>
+      </div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">趋势数据</div>
+    <div class="trends-row">
+      <div class="trend-chart">
+        <div class="trend-bars">
+          <div class="trend-bar trend-bar--pass" style="height:52px"></div><div class="trend-bar trend-bar--fail" style="height:18px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:58px"></div><div class="trend-bar trend-bar--fail" style="height:12px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:48px"></div><div class="trend-bar trend-bar--fail" style="height:22px"></div>
+          <div class="trend-bar trend-bar--pass" style="height:62px"></div>
+        </div>
+        <div class="trend-legend"><span><span class="trend-dot" style="background:#6BCB77"></span>通过</span><span><span class="trend-dot" style="background:#FFB5A7"></span>失败</span></div>
+      </div>
+      <div class="trend-tasks">
+        <div class="task-row"><span>smoke-test-v2.4</span><span class="task-status pass">PASS</span></div>
+        <div class="task-row"><span>login-regression</span><span class="task-status fail">FAIL</span></div>
+        <div class="task-row"><span>payment-flow-v3</span><span class="task-status pass">PASS</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">功能模块</div>
+    <div class="module-grid">
+      <div class="module-item"><span class="module-dot" style="background:#6BCB77"></span><span class="module-name">设备管理</span><span class="module-count">15</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#A78BFA"></span><span class="module-name">元素定位</span><span class="module-count">2.4k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#4ECDC4"></span><span class="module-name">用例管理</span><span class="module-count">1.2k</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#FFB5A7"></span><span class="module-name">执行引擎</span><span class="module-count">3</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#7C6F83"></span><span class="module-name">测试报告</span><span class="module-count">156</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#E879F9"></span><span class="module-name">AI 助手</span><span class="module-count">5</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#60A5FA"></span><span class="module-name">工作流</span><span class="module-count">12</span></div>
+      <div class="module-item"><span class="module-dot" style="background:#F7C948"></span><span class="module-name">数字人</span><span class="module-count">—</span></div>
+    </div>
+  </div>
+  <div class="activity-item"><span class="activity-time">14:32</span><span>smoke-test-v2.4 执行完成 · 通过率 98%</span></div>
+  <div class="activity-item"><span class="activity-time">13:18</span><span>新增设备 vivo-X90 · ADB 在线</span></div>
+  <div class="activity-item"><span class="activity-time">11:05</span><span>AI 助手 Agent 创建 · 模型 qwen-max</span></div>
+  <div class="dash-footer"><span>最近更新: 2026-07-23 14:35</span><span>系统状态: 正常运行</span></div>
+</div></div><!-- /S13 -->
+
+<script>lucide.createIcons()</script>
+</body>
+</html>

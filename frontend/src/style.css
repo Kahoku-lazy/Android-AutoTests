@@ -188,7 +188,18 @@ body.no-bg-anim { animation: none !important; }
 }
 .el-input__wrapper:hover,
 .el-select .el-input__wrapper:hover {
-  border-color: #89CFF0 !important;
+  border-color: var(--app-green) !important;
+}
+.el-input__wrapper:focus-within,
+.el-select .el-input__wrapper:focus-within {
+  box-shadow: 0 0 0 3px rgba(137,207,240,0.25) !important;
+  border-color: var(--app-green) !important;
+}
+
+/* ── Button active feedback ── */
+.el-button:active {
+  transform: scale(0.97);
+  transition: transform 0.1s var(--app-ease);
 }
 
 /* ── 代码字体 ── */
@@ -199,6 +210,24 @@ h1 { font-size: 26px; font-weight: 800; color: var(--app-text); font-family: var
 h2 { font-size: 22px; font-weight: 700; color: var(--app-text); font-family: var(--app-font-display); line-height: 1.35; }
 h3 { font-size: 17px; font-weight: 700; color: var(--app-text); font-family: var(--app-font-display); line-height: 1.4; }
 h4 { font-size: 15px; font-weight: 700; color: var(--app-text); font-family: var(--app-font-display); line-height: 1.4; }
+
+/* ── Toast 玻璃态 + 滑入动画 ── */
+.el-message {
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  background: var(--app-glass-heavy) !important;
+  border-radius: var(--app-radius-pill) !important;
+  border: 1px solid var(--app-glass-border) !important;
+  box-shadow: var(--app-shadow-lg) !important;
+}
+
+@keyframes toastSlideDown {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.el-message--top {
+  animation: toastSlideDown 0.3s var(--app-spring);
+}
 
 /* ═══════════════════════════════════════════════
    文档站风格页面布局

@@ -900,7 +900,7 @@ function runFromCurrent(idx) {
   font-weight: 600;
 }
 .step-result-msg.ok {
-  color: var(--animal-primary-color, #89CFF0);
+  color: var(--app-green, #89CFF0);
 }
 .step-result-msg.fail {
   color: #e85f5f;

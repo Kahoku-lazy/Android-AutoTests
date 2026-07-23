@@ -137,37 +137,39 @@ function setCardRef(el, idx) {
 </template>
 
 <style scoped>
+/* ═══════════════════════════════════════════
+   Paper × Polaroid — 模块导航卡片
+   ═══════════════════════════════════════════ */
 .module-nav { width: 100%; }
 
-/* ── V6 页面标题 ── */
-.page-header { margin-bottom: 28px; }
+/* ── 页面标题 ── */
+.page-header { margin-bottom: 22px; }
 .page-title {
-  font-size: 1.8rem; font-weight: 700;
-  color: var(--app-text, #4a4e69); margin: 0;
+  font-family: 'Caveat', cursive;
+  font-size: 24px; font-weight: 700;
+  color: #2d2d2d; margin: 0;
 }
 .page-subtitle {
-  font-size: .9rem; color: var(--app-text-secondary, #9a8c98); margin-top: 4px;
+  font-size: 10px; color: #999; margin-top: 2px; font-weight: 600;
 }
 
-/* ── V6 3 列模块卡片网格 ── */
+/* ── 网格 ── */
 .modules-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  gap: 16px;
 }
 @media (max-width: 1200px) { .modules-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 768px) { .modules-grid { grid-template-columns: 1fr; } }
 
-/* ── V6 模块卡片 ── */
+/* ── 纸艺卡片 ── */
 .module-card {
-  background: var(--app-glass-card, rgba(255,255,255,0.65));
-  backdrop-filter: blur(var(--app-glass-blur, 20px));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur, 20px));
-  border-radius: var(--app-radius-md, 20px);
-  padding: 24px;
-  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
-  box-shadow: var(--app-shadow-sm, 0 4px 15px rgba(0,0,0,.02));
-  transition: all .3s;
+  background: #fff;
+  border-radius: 6px 10px 6px 10px;
+  padding: 18px 16px;
+  border: 2.5px solid #2d2d2d;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.04);
+  transition: all .15s;
   position: relative;
   overflow: hidden;
   cursor: pointer;
@@ -175,51 +177,34 @@ function setCardRef(el, idx) {
   flex-direction: column;
   gap: 0;
 }
-
-.module-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 4px;
-  border-radius: 20px 20px 0 0;
-}
-
 .module-card:hover {
-  box-shadow: var(--app-shadow-md, 0 8px 25px rgba(0,0,0,.05));
-  transform: translateY(-3px);
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 rgba(0,0,0,0.06);
 }
-
-/* 彩色顶条 */
-.module-card--yellow::before { background: #F4D35E; }
-.module-card--green::before { background: #95D5B2; }
-.module-card--purple::before { background: #C9B6F2; }
-.module-card--teal::before { background: #89CFF0; }
-.module-card--pink::before { background: #FFB5A7; }
-.module-card--brown::before { background: #9a8c98; }
-.module-card--orange::before { background: #5EEAD4; }
-.module-card--blue::before { background: #BDE0FE; }
+.module-card::before { display: none; }
 
 /* ── 模块图标 ── */
 .module-icon {
-  width: 48px; height: 48px;
-  border-radius: var(--app-radius-sm, 16px);
+  width: 42px; height: 42px;
+  border-radius: 4px 8px 4px 8px;
   display: flex; align-items: center; justify-content: center;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
+  border: 2px solid #2d2d2d;
 }
 .module-icon i {
-  width: 24px; height: 24px;
+  width: 20px; height: 20px;
   color: #fff;
 }
 
 /* ── 模块内容 ── */
 .module-body { flex: 1; display: flex; flex-direction: column; }
 .module-name {
-  font-size: 1.05rem; font-weight: 700;
-  color: var(--app-text, #4a4e69); margin-bottom: 6px;
+  font-size: 13px; font-weight: 800;
+  color: #2d2d2d; margin-bottom: 4px;
 }
 .module-desc {
-  font-size: .82rem; color: var(--app-text-secondary, #9a8c98);
-  margin-bottom: 12px; line-height: 1.5;
+  font-size: 10px; color: #999;
+  margin-bottom: 10px; line-height: 1.4;
   flex: 1;
 }
 .module-meta {
@@ -227,27 +212,27 @@ function setCardRef(el, idx) {
   gap: 8px;
 }
 .module-stat {
-  font-size: .75rem; color: var(--app-text-secondary, #9a8c98);
+  font-size: 10px; color: #999; font-weight: 600;
 }
 .module-stat strong {
-  font-family: var(--app-font-display, Quicksand, sans-serif);
-  font-size: 1.2rem; font-weight: 800; color: var(--app-text, #4a4e69);
+  font-family: 'Quicksand', sans-serif;
+  font-size: 18px; font-weight: 800; color: #2d2d2d;
   margin-right: 2px;
 }
 .module-stat small {
-  display: block; font-size: .65rem; text-transform: uppercase;
-  letter-spacing: 0.4px; opacity: 0.7;
+  display: block; font-size: 9px; text-transform: uppercase;
+  letter-spacing: 0.4px; opacity: 0.6;
 }
 
 /* ── 进入按钮 ── */
 .module-enter {
-  font-size: .78rem; font-weight: 600; color: #fff;
-  padding: 6px 14px; border-radius: var(--app-radius-sm, 16px);
-  border: none; cursor: pointer;
-  transition: all .2s; font-family: inherit;
+  font-size: 10px; font-weight: 800; color: #fff;
+  padding: 5px 12px; border-radius: 4px 8px 4px 8px;
+  border: 2px solid transparent; cursor: pointer;
+  transition: all .15s; font-family: inherit;
   flex-shrink: 0;
 }
 .module-enter:hover {
-  transform: translateY(-1px); filter: brightness(1.1);
+  transform: translateY(-1px);
 }
 </style>

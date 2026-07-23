@@ -9,6 +9,6 @@ export default [
     path: '/element-mgr',
     name: 'ElementManager',
     component: () => import('@/modules/element-locator/components/ElementManager.vue'),
-    meta: { title: '元素管理' },
+    meta: { title: 'Android元素管理' },
   },
 ]

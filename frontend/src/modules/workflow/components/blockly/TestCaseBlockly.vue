@@ -71,7 +71,7 @@ const ANIMAL_THEME = Blockly.Theme.defineTheme('autotest-scratch', {
     cursorColour: '#8b7355',
   },
   fontStyle: {
-    family: "'Nunito', 'Noto Sans SC', system-ui, sans-serif",
+    family: "'Quicksand', 'PingFang SC', 'Microsoft YaHei', sans-serif",
     weight: '700',
     size: 12,
   },
@@ -676,11 +676,11 @@ watch(
   stroke: none !important;
 }
 .blocklyText {
-  font-family: 'Nunito', 'Noto Sans SC', system-ui, sans-serif !important;
+  font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif) !important;
   font-weight: 700 !important;
 }
 .blocklyHtmlInput {
-  font-family: 'Nunito', 'Noto Sans SC', system-ui, sans-serif !important;
+  font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif) !important;
   font-weight: 700 !important;
   border-radius: 8px !important;
 }

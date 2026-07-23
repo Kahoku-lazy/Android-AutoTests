@@ -284,13 +284,9 @@ def recover_orphans():
         dev.occupied_at = None
         dev.save(update_fields=["status", "occupied_by", "occupied_at"])
         try:
-            from apps.device_pool.models import DeviceLock
+            from apps.device_pool.api import release_device_locks_for_device
 
-            DeviceLock.objects.filter(device=dev, lock_type="process", status="active").update(
-                status="released",
-                released_at=datetime.now(),
-                release_reason="disconnect",
-            )
+            release_device_locks_for_device(dev, reason="disconnect")
         except Exception:
             pass
     if busy_devices:

@@ -28,7 +28,22 @@ _load_dotenv()
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
 
-DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
+DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in ("true", "1", "yes")
+
+# Fail fast if SECRET_KEY is not set in production (DEBUG=False).
+# Encryption, JWT signing, and session security all depend on a strong secret.
+if not SECRET_KEY:
+    if DEBUG:
+        import warnings
+        warnings.warn(
+            "DJANGO_SECRET_KEY is not set! Encryption and JWT signing will be insecure.",
+            RuntimeWarning,
+        )
+    else:
+        raise RuntimeError(
+            "DJANGO_SECRET_KEY must be set via environment variable or .env file "
+            "when DEBUG=False (production mode)."
+        )
 
 ALLOWED_HOSTS = ["*"]
 

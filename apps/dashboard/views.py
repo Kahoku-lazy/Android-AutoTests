@@ -97,27 +97,24 @@ def _recent_tasks(limit=8):
     tasks = []
 
     try:
-        from apps.test_runner.runner import _active_runs
+        from apps.test_runner.api import get_active_runs_info
 
-        for run_id, state in _active_runs.items():
-            if not state.is_running:
-                continue
-            rm = state.run_model
+        for info in get_active_runs_info():
             case_titles = {}
-            for cid in rm.selected_cases or []:
+            for cid in info.get("selected_cases", []):
                 try:
                     case_titles[cid] = TestDefinition.objects.get(id=cid).title
                 except TestDefinition.DoesNotExist:
                     case_titles[cid] = cid
             tasks.append(
                 {
-                    "id": run_id,
-                    "title": f"执行中 · {rm.device_serial or '设备'}",
+                    "id": info["run_id"],
+                    "title": f"执行中 · {info.get('device_serial') or '设备'}",
                     "status": "running",
                     "passed": 0,
                     "failed": 0,
                     "total": 0,
-                    "time": (rm.started_at or "")[:16].replace("T", " "),
+                    "time": (info.get("started_at") or "")[:16].replace("T", " "),
                     "cases": [
                         {
                             "title": case_titles.get(cid, cid),
@@ -125,7 +122,7 @@ def _recent_tasks(limit=8):
                             "passed": 0,
                             "failed": 0,
                         }
-                        for cid in (rm.selected_cases or [])
+                        for cid in info.get("selected_cases", [])
                     ],
                 }
             )
@@ -169,6 +166,7 @@ def _recent_tasks(limit=8):
     return tasks[:limit]
 
 
+@csrf_exempt
 def dashboard_stats(request):
     """GET /api/dashboard/stats/ — platform-level statistics."""
     device_online, device_total = _device_dashboard_stats()
@@ -282,6 +280,7 @@ def dashboard_stats(request):
     )
 
 
+@csrf_exempt
 def dashboard_activities(request):
     """GET /api/dashboard/activities/ — recent events across the platform."""
     items = []
@@ -312,6 +311,7 @@ def dashboard_activities(request):
     return JsonResponse({"ok": True, "data": items[:10]})
 
 
+@csrf_exempt
 def device_stats(request):
     """GET /api/devices/stats/ — device pool summary."""
     online, total = _device_dashboard_stats()
@@ -329,6 +329,7 @@ def device_stats(request):
     )
 
 
+@csrf_exempt
 def case_stats(request):
     """GET /api/cases/stats/ — test case summary."""
     return JsonResponse(

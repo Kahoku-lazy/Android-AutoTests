@@ -28,7 +28,7 @@ export const NODE_REGISTRY: Record<string, NodeRegistryEntry> = {
     size: [140, 60],
     elementPool: 'popup',
   },
-  /** 起点：无入口；默认可输出「启动」；可切为页面起点并挂元素 */
+  /** 起点：无入口；支持 4 种模式 — 启动App / 页面入口 / 打开URL / 调用API */
   StartNode: {
     category: 'start',
     displayName: '起点',
@@ -39,6 +39,17 @@ export const NODE_REGISTRY: Record<string, NodeRegistryEntry> = {
     maxInstances: 1,
     size: [200, 0],
     elementPool: 'page',
+  },
+  /** API 节点：无默认端口，关联 API 端点后从 schema 动态生成 */
+  ApiNode: {
+    category: 'page',
+    displayName: 'API 节点',
+    defaultInputs: [],
+    defaultOutputs: [],
+    color: 'orange',
+    icon: '📡',
+    maxInstances: 20,
+    size: [220, 0],
   },
   /** 终点：仅入口、无输出 */
   EndNode: {

@@ -127,7 +127,7 @@ def screenshot_b64(quality=55, max_width=0) -> str:
 # WebSocket 推送：2fps 定时截图 → ws/screenshot
 ```
 
-## 14 种测试步骤在设备上的执行
+## 28 种测试步骤（设备/API/Web 三类）在设备上的执行
 
 ### 步骤定义
 

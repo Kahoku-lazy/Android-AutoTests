@@ -115,21 +115,20 @@ watch(() => props.items.length, revealItems)
 .timeline-item__dot-inner {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
-  background: var(--text-secondary, #9a8c98);
+  border-radius: 1px;
+  background: #999;
 }
-
-.timeline-item--success .timeline-item__dot-inner { background: #10b981; }
-.timeline-item--warning .timeline-item__dot-inner { background: #f59e0b; }
-.timeline-item--error .timeline-item__dot-inner { background: #ef4444; }
+.timeline-item--success .timeline-item__dot-inner { background: #6BCB77; }
+.timeline-item--warning .timeline-item__dot-inner { background: #F7C948; }
+.timeline-item--error .timeline-item__dot-inner   { background: #FFB5A7; }
 
 .timeline-item__line {
   position: absolute;
   left: 7px;
   top: 22px;
   bottom: 0;
-  width: 2px;
-  background: rgba(0,0,0,0.06);
+  width: 1.5px;
+  background: repeating-linear-gradient(0deg, #d4cdc0 0px, #d4cdc0 3px, transparent 3px, transparent 6px);
 }
 
 .timeline-item__content {
@@ -171,11 +170,12 @@ watch(() => props.items.length, revealItems)
 }
 
 .timeline-item__tag {
-  font-size: 10px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: rgba(0,0,0,0.04);
-  color: var(--text-secondary, #9a8c98);
-  font-weight: 500;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 3px 6px 3px 6px;
+  background: #f8f6f2;
+  border: 1px solid #e8ecf1;
+  color: #999;
+  font-weight: 600;
 }
 </style>

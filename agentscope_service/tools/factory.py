@@ -24,9 +24,11 @@ from .db_helper import run_sync
 from .device_tools import AcquireDeviceTool, GetOnlineDevicesTool, ReleaseDeviceTool
 from .element_tools import (
     FetchPageFlowsTool,
+    FetchWebPageFlowsTool,
     GetTestPointsTool,
     ListPagesTool,
     SearchElementsTool,
+    SearchWebElementsTool,
 )
 from .prd_tools import DesignTestCasesFromPRDTool, ImportDesignedCasesTool, ParsePRDTool
 from .rag_tool import KnowledgeBaseSearchTool
@@ -48,6 +50,8 @@ from .tool_context import ToolContext
 _TOOL_REGISTRY: list[type[ToolBase]] = [
     GetTestPointsTool,
     SearchElementsTool,
+    SearchWebElementsTool,
+    FetchWebPageFlowsTool,
     ListPagesTool,
     FetchPageFlowsTool,
     FetchPageElementsTool,
@@ -90,6 +94,8 @@ _REGISTRY_NAMES = {cls.name for cls in _TOOL_REGISTRY}
 _READ_ONLY_TOOL_NAMES = {
     GetTestPointsTool.name,
     SearchElementsTool.name,
+    SearchWebElementsTool.name,
+    FetchWebPageFlowsTool.name,
     ListPagesTool.name,
     FetchPageFlowsTool.name,
     FetchPageElementsTool.name,

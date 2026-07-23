@@ -1,4 +1,10 @@
 {
+  "permissions": {
+    "allow": [
+      "Edit(/.claude/skills/sidebar-themes/**)",
+      "Bash(taskkill //F //IM python.exe)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -19,8 +25,7 @@
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/auto-format.sh",
-            "timeout": 30,
-            "runInBackground": true
+            "timeout": 30
           }
         ]
       }

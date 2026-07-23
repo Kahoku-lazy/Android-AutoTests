@@ -9,11 +9,12 @@ import rgRoutes   from '@/modules/report-generator/routes.js'
 // element-manager 已合并到 element-locator (routes.js 中 /element-mgr 路由)
 import aiRoutes   from '@/modules/ai-assistant/routes.js'
 import wfRoutes   from '@/modules/workflow/routes.js'
+import dhRoutes   from '@/modules/digital-human/routes.js'
 
 const routes = [
   { path: '/login', name: 'login',
     component: () => import('@/views/LoginView.vue') },
-  ...dbRoutes, ...elRoutes, ...dpRoutes, ...cmRoutes, ...trRoutes, ...rgRoutes, ...aiRoutes, ...wfRoutes,
+  ...dbRoutes, ...elRoutes, ...dpRoutes, ...cmRoutes, ...trRoutes, ...rgRoutes, ...aiRoutes, ...wfRoutes, ...dhRoutes,
   { path: '/', redirect: '/dashboard' },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('@/views/NotFound.vue'), meta: { title: '404 - 页面未找到' } },
 ]

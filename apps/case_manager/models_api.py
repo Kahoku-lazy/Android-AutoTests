@@ -26,6 +26,10 @@ class ApiTestCase(models.Model):
     headers = models.TextField(default="", blank=True, verbose_name="请求头")
     body = models.TextField(default="", blank=True, verbose_name="请求体")
     expected_response = models.TextField(default="", blank=True, verbose_name="预期响应文本")
+    # ── Structured steps (aligns with TestDefinition.steps_json) ──
+    steps_json = models.TextField(default="[]", blank=True, verbose_name="结构化步骤JSON")
+    expected_status = models.IntegerField(default=200, verbose_name="预期HTTP状态码")
+    assertions = models.JSONField(default=list, blank=True, verbose_name="自定义断言")
     # ── Custom columns (user-defined key-value pairs) ──
     custom_columns = models.JSONField(default=list, blank=True, verbose_name="自定义列")
     rows = models.JSONField(default=list, blank=True, verbose_name="表格行数据")

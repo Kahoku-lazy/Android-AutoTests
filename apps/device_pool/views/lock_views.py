@@ -207,9 +207,15 @@ def heartbeat(request):
     """GET /api/devices/heartbeat — 手动触发心跳检测。
 
     PRD §6.2.7: 同步设备状态，清理过期锁和排队。
+    同时更新所有活跃锁的 last_heartbeat 时间戳。
     """
+    from django.utils import timezone
+
     updated, offline = _update_device_status()
     _check_timeout_queue()
+
+    # 更新所有活跃锁的心跳时间戳，用于检测进程崩溃导致的僵尸锁
+    DeviceLock.objects.filter(status="active").update(last_heartbeat=timezone.now())
 
     online = Device.objects.filter(status="ONLINE").count()
     busy = Device.objects.filter(status="BUSY").count()

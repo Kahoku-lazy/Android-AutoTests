@@ -392,6 +392,7 @@ class TestRunner:
                 result=result,
                 duration_ms=duration_ms,
                 detail=detail,
+                case_type=case.task_type,
             )
         )
 
@@ -512,3 +513,24 @@ def stop_run(run_id: str) -> bool:
 
 def list_active_runs() -> list[str]:
     return list(_active_runs.keys())
+
+
+def get_active_runs_info() -> list[dict]:
+    """Return structured info about all active runs (for dashboard/public consumers).
+
+    Returns a list of dicts with safe, serializable fields — no internal state
+    objects leak across the module boundary.
+    """
+    result = []
+    for run_id, state in _active_runs.items():
+        if not state.is_running:
+            continue
+        rm = state.run_model
+        result.append({
+            "run_id": run_id,
+            "device_serial": getattr(rm, "device_serial", ""),
+            "started_at": getattr(rm, "started_at", ""),
+            "selected_cases": getattr(rm, "selected_cases", []) or [],
+            "status": "running",
+        })
+    return result

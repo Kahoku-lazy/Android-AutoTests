@@ -31,6 +31,9 @@ class TestCaseDef:
     watchers: list = field(default_factory=list)  # [{xpath, action}] for popup handling
     created_at: str = ""                 # ISO timestamp
     updated_at: str = ""                 # ISO timestamp
+    # ── 类型感知扩展 ──
+    task_type: str = "ui_automation"     # ui_automation / api_testing / web_automation
+    extra_data: dict = field(default_factory=dict)  # API/Web 专用字段
 
     def __post_init__(self):
         if self.steps_data is None:
@@ -50,6 +53,8 @@ class TestCaseDef:
             "package_name": self.package_name,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
+            "task_type": self.task_type,
+            "extra_data": self.extra_data,
         }
 
     @classmethod
@@ -73,6 +78,8 @@ class TestCaseDef:
             package_name=d.get("package_name", ""),
             created_at=d.get("created_at", ""),
             updated_at=d.get("updated_at", ""),
+            task_type=d.get("task_type", "ui_automation"),
+            extra_data=d.get("extra_data", {}),
         )
 
     @classmethod
@@ -105,6 +112,7 @@ class TestResult:
     result: str                    # 'pass' | 'fail' | 'stopped'
     duration_ms: float
     detail: str = ""
+    case_type: str = "ui_automation"  # discriminates UI/API/Web/Storage
 
     def to_dict(self) -> dict:
         return {
@@ -114,6 +122,7 @@ class TestResult:
             "result": self.result,
             "duration_ms": self.duration_ms,
             "detail": self.detail,
+            "case_type": self.case_type,
         }
 
 

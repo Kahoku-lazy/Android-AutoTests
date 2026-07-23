@@ -4,6 +4,7 @@ from pathlib import Path
 from django.http import JsonResponse, FileResponse
 from django.conf import settings
 from django.db.models import Count, Q
+from django.views.decorators.csrf import csrf_exempt
 
 # ── Shared Q objects for test result filtering ──
 # Used in Count('results', filter=...) on TestRunRecord → needs results__ prefix
@@ -143,6 +144,7 @@ def _result_matches_type(result, result_type):
     return False
 
 
+@csrf_exempt
 def list_reports(request):
     """GET /api/reports — List execution runs with optional filters + KPI summary.
 
@@ -483,6 +485,7 @@ def _collect_case_groups(request, result_type):
     return groups, total_count
 
 
+@csrf_exempt
 def case_breakdown(request):
     """GET /api/reports/cases — Hierarchical pass/fail case list under current filters.
 
@@ -512,6 +515,7 @@ def case_breakdown(request):
     return JsonResponse(payload)
 
 
+@csrf_exempt
 def run_report(request, run_id):
     """GET /api/reports/run/{run_id} — Full aggregated report for a single run."""
     from apps.test_runner.models import TestRunRecord, TestResult, TaskCard
@@ -673,6 +677,7 @@ def run_report(request, run_id):
 
 # ── Task-level report (TaskCard perspective) ──
 
+@csrf_exempt
 def task_report(request, task_id):
     """GET /api/reports/task/{task_id} — Comprehensive report from TaskCard perspective.
 
@@ -747,6 +752,7 @@ def task_report(request, task_id):
 
 # ── File-based report endpoints (download / inline view) ──
 
+@csrf_exempt
 def download_report(request, filename):
     """GET /api/reports/{filename} — Download report file."""
     safe_name = Path(filename).name
@@ -760,6 +766,7 @@ def download_report(request, filename):
     return JsonResponse({"ok": False, "error": "not found"}, status=404)
 
 
+@csrf_exempt
 def view_report(request, filename):
     """GET /api/reports/{filename}/content — Return file content for inline viewing."""
     safe_name = Path(filename).name

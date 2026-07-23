@@ -180,6 +180,10 @@ export const useDevicePoolStore = defineStore("device-pool", () => {
     }
   }
 
+  async function doHeartbeat() {
+    try { await apiHeartbeat() } catch (_) { /* silent */ }
+  }
+
   function selectDevice(serial) {
     selectedSerial.value = serial;
   }
@@ -209,6 +213,7 @@ export const useDevicePoolStore = defineStore("device-pool", () => {
     fetchQueue,
     doJoinQueue,
     doLeaveQueue,
+    doHeartbeat,
     selectDevice,
     isMyLock,
   };

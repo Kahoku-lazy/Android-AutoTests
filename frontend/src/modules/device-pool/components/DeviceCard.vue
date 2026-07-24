@@ -93,7 +93,7 @@ function go() { emit('click', props.device) }
 .card-photo-badge {
   font-size: 9px; font-weight: 700; padding: 1px 7px;
   border-radius: 3px 6px 3px 6px; border: 1.5px solid var(--app-ink);
-  background: rgba(255,255,255,0.7); color: var(--app-ink);
+  background: #fff; color: var(--app-ink);
 }
 
 .card-name {

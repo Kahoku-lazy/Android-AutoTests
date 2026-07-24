@@ -516,7 +516,7 @@ function stepTypeLabel(type) {
   background: rgba(139, 115, 85, 0.02);
 }
 .issue-row {
-  background: rgba(255, 255, 255, 0.55);
+  background: #fff;
   border: 1px solid rgba(224, 90, 90, 0.18);
   border-radius: 12px;
   padding: 12px 14px;
@@ -616,7 +616,7 @@ function stepTypeLabel(type) {
   gap: 10px;
 }
 .step-row {
-  background: rgba(255, 255, 255, 0.5);
+  background: #fff;
   border: 1px solid rgba(224, 90, 90, 0.15);
   border-radius: 12px;
   padding: 12px 14px;

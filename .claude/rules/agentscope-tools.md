@@ -12,13 +12,13 @@
 | **Agent** | `Agent(name, system_prompt, model, toolkit)` + `reply_stream()` | 构建对话 Agent，通过 SSE 事件流返回响应 |
 | **模型** | `DashScopeChatModel` `OpenAIChatModel` | 阿里百炼 / OpenAI / Anthropic / 自定义兼容提供商 |
 | **凭证** | `DashScopeCredential` `OpenAICredential` | API Key 管理，加密存储于 Django DB |
-| **Tool 基类** | `ToolBase` `ToolChunk` | 所有 22 个业务 Tool 继承 `ToolBase`，流式输出用 `ToolChunk` |
+| **Tool 基类** | `ToolBase` `ToolChunk` | 所有业务 Tool 继承 `ToolBase`，流式输出用 `ToolChunk` |
 | **Plan 工具** | `TaskCreate` `TaskGet` `TaskList` `TaskUpdate` | AgentScope 内置子任务追踪，基于 `agent.state.tasks_context` 跨 ReAct 轮次保持 |
 | **消息** | `TextBlock` `HintBlock` | Tool 返回值中构造结构化文本/提示消息 |
 | **权限** | `PermissionDecision` `PermissionBehavior` `PermissionContext` | Tool 执行前后的权限决策（允许/拒绝/需确认） |
-| **Agent Team** | `SubAgentTemplate` | 5 个角色模板（element-inspector / case-writer / device-operator / test-executor / report-writer） |
+| **Agent Team** | `SubAgentTemplate` | 多个角色模板，按 type 字段区分 |
 | **鉴权** | `dependency_overrides[get_current_user_id]` | 用项目 JWT 验证替换 AgentScope 默认 X-User-ID |
-| **知识库** | ChromaDB（自建，非 AgentScope 内置） | 32 篇文档的向量检索 RAG，通过自定义 Tool 接入 |
+| **知识库** | ChromaDB（自建，非 AgentScope 内置） | 向量检索 RAG，通过自定义 Tool 接入 |
 
 > **核心模式**：项目通过 `extra_agent_tools=build_business_tools` 将 Django ORM 操作封装为 AgentScope Tool，LLM 通过 Function Calling 自动选择工具。Agent 本身不直接访问数据库，所有平台操作必经 Tool 层。
 
@@ -32,14 +32,4 @@
 
 ## 文件结构
 
-```
-agentscope_service/tools/
-├── element_tools.py   # 元素定位相关 Tool
-├── case_tools.py      # 用例管理相关 Tool
-├── task_tools.py      # 任务/SOP 相关 Tool
-├── device_tools.py    # 设备池相关 Tool
-├── runner_tools.py    # 执行引擎相关 Tool
-├── report_tools.py    # 报告相关 Tool
-├── rag_tool.py        # 知识库检索 Tool
-└── factory.py         # 工具注册工厂 (build_business_tools)
-```
+> `ls agentscope_service/tools/` — 按 domain 拆分（`element_tools.py`、`case_tools.py`、`task_tools.py` 等），`factory.py` 为注册中心。

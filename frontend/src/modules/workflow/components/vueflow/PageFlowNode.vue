@@ -240,7 +240,7 @@ watch(
 <style scoped>
 .pf-node {
   min-width: 228px;
-  background: rgba(255,255,255,0.58);
+  background: #fff;
   border: 1px solid var(--doodle-ink, #2d2d2d);
   border-left: 5px solid var(--accent);
   border-radius: 16px;
@@ -379,7 +379,7 @@ watch(
   padding: 4px 8px;
   border: 1px solid var(--doodle-ink, #2d2d2d);
   border-radius: 8px;
-  background: rgba(255,255,255,0.50);
+  background: #fff;
   color: var(--app-text);
   font-size: 10px;
   font-family: ui-monospace, monospace;
@@ -416,7 +416,7 @@ watch(
   padding: 0 5px;
   cursor: help;
   user-select: none;
-  background: rgba(255,255,255,0.42);
+  background: #fff;
 }
 .pf-in-count {
   font-size: 10px;
@@ -433,7 +433,7 @@ watch(
   flex-shrink: 0;
 }
 .pf-actions button {
-  background: rgba(255,255,255,0.42);
+  background: #fff;
   border: 1px solid var(--doodle-ink, #2d2d2d);
   border-radius: 8px;
   color: var(--ac-ink-muted, #5c4a35);

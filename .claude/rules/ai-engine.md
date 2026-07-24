@@ -31,7 +31,7 @@ Django AIAgent (ai_agents 表)
     ├── 构建 system_prompt: 平台约束 + SOP 四阶段工作流 + 用户自定义
     └── 返回 Agent(name, system_prompt, model, toolkit=None)
     ↓
-extra_agent_tools factory 注入 toolkit (38 个 Tool)
+extra_agent_tools factory 注入业务 toolkit
     ↓
 Agent 就绪 → reply_stream() 处理对话
 ```
@@ -110,12 +110,7 @@ SubAgentTemplate(
 )
 ```
 
-5 个预设角色：
-- `element-inspector` — 查找 UI 元素
-- `case-writer` — 编写测试用例
-- `device-operator` — 管理设备锁
-- `test-executor` — 执行测试
-- `report-writer` — 生成报告
+> 预设角色列表：Read `agentscope_service/teams/` → `SubAgentTemplate.type` 字段。
 
 ## 鉴权集成
 
@@ -131,8 +126,7 @@ AgentScope 默认通过 `X-User-ID` header 识别用户 → 替换为 JWT Bearer
 | 组件 | 技术 | 位置 |
 |------|------|------|
 | 向量存储 | ChromaDB PersistentClient | `data/chromadb/` |
-| Collection | `project_knowledge` | 32 篇文档 |
-| 文档来源 | `dev_docs/` 下 `.md` 文件 + 步骤类型参考 | — |
+| Collection | `project_knowledge` | `dev_docs/` 下 `.md` 文件 + 步骤类型参考 |
 | 检索接口 | `KnowledgeBaseSearchTool` → `document_store.search()` | `tools/rag_tool.py` |
 | 初始化 | `python agentscope_service/rag/init_kb.py` | 首次运行 |
 

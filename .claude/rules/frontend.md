@@ -34,11 +34,11 @@
 
 ## 五、组件嵌套 — 探索方式
 
-项目同时使用 Element Plus 和 animal-island-vue，组件嵌套时有隐藏冲突：
+Element Plus + Doodle 主题下，组件嵌套时的注意事项：
 
-- **animal-island-vue Modal 内禁止用 `<Select>`** — Modal 的 `overflow:hidden` + `clip-path` 会裁剪下拉列表。必须用 `el-select`（Teleport 到 body）
-- **改组件前先读 DOM** — 不要只看 Vue 模板，打开浏览器 DevTools Elements 面板看实际渲染的 DOM 层级。模板中 `<Card>` 可能渲染出 5 层 div
-- **`!important` 泛滥的根因是嵌套过深** — 如果发现自己在写 `!important`，先检查是否可以用 `:deep()` 或减少嵌套层级
+- **改组件前先读 DOM** — 不要只看 Vue 模板，打开浏览器 DevTools Elements 面板看实际渲染的 DOM 层级。
+- **`!important` 泛滥的根因是嵌套过深** — 如果发现自己在写 `!important`，先检查是否可以用 `:deep()` 或减少嵌套层级。
+- **Element Plus 组件样式优先走 `--el-*` 全局变量** — `tokens.css` 已配置 Doodle 值，模块内避免重复 `:deep()` 覆盖颜色/圆角/字体
 
 ## 六、表格修改 — 注意事项与验收
 
@@ -59,20 +59,8 @@
 ## 八、质量门禁（改动后必跑）
 
 ```bash
-# 编译
+# 编译验证
 cd frontend && npx vite build --mode development 2>&1 | tail -5
-
-# 模块加载
-curl -s -o /dev/null -w "%{http_code}" http://localhost:5173/src/modules/{name}/index.vue
-
-# 令牌合规（不应有新硬编码色值）
-grep -rnP '(color|background|border|fill)[^;]*#[0-9a-fA-F]{3,6}' \
-  frontend/src/modules/{name}/ --include="*.vue" --include="*.css" \
-  | grep -v "tokens\|ECharts\|Canvas\|prototype"
-
-# 空 catch（应为 0 行）
-grep -rn "catch\s*(\s*_\s*)\s*{" frontend/src/modules/{name}/ --include="*.vue" --include="*.js"
-
-# 超大文件
-find frontend/src/modules/ -name "*.vue" | xargs wc -l | sort -rn | head -10
 ```
+
+> 详细质量检查清单（token 合规、空 catch、超大文件等）见 `.claude/rules/frontend.md` 各节红线。

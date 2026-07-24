@@ -381,7 +381,7 @@ function fmtTime(iso: string) {
   padding: 10px 12px;
   border: 1px solid var(--doodle-ink, #2d2d2d);
   border-radius: 12px;
-  background: rgba(255,255,255,0.42);
+  background: #fff;
   font-family: inherit;
   font-size: 13px;
   font-weight: 800;
@@ -443,7 +443,7 @@ function fmtTime(iso: string) {
   padding: 14px;
   border: 2px solid var(--ac-border);
   border-radius: 16px;
-  background: rgba(255,255,255,0.48);
+  background: #fff;
   cursor: pointer;
   font-family: inherit;
   box-shadow: var(--app-shadow-sm);

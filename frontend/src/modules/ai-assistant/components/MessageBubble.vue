@@ -254,7 +254,7 @@ function reasonLabel(reason) {
   background: rgba(0, 0, 0, 0.06);
 }
 .msg.user .msg-text :deep(code) {
-  background: rgba(255, 255, 255, 0.2);
+  background: #fff;
 }
 .msg-text :deep(pre) {
   margin: 8px 0;

@@ -134,7 +134,7 @@
   padding: 6px 12px;
   border-radius: 50px;
   border: 1.5px solid transparent;
-  background: rgba(255, 255, 255, 0.45);
+  background: #fff;
   color: var(--app-text);
   font-size: 13px;
   font-weight: 600;
@@ -216,7 +216,7 @@
 /* View toggle */
 .view-toggle {
   display: flex;
-  background: rgba(255, 255, 255, 0.55);
+  background: #fff;
   border: 1.5px solid var(--doodle-ink, #2d2d2d);
   border-radius: 12px;
   padding: 3px;
@@ -359,13 +359,13 @@
   color: var(--app-text);
   background: transparent;
   border: none;
-  border-bottom: 1px solid rgba(255,255,255,0.36);
+  border-bottom: 1.5px dashed rgba(0,0,0,0.08);
   vertical-align: middle;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .case-table--rainbow :deep(tr:nth-child(even) td) {
-  background: rgba(255,255,255,0.20);
+  background: #fff;
 }
 .case-table--rainbow :deep(tr:hover td) {
   background: rgba(162,210,255,0.16);

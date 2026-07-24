@@ -70,7 +70,7 @@ function formatOutput(output) {
 .tool-step {
   border-radius: 10px;
   border: 1px solid var(--doodle-bg, #faf5ee);
-  background: rgba(255, 255, 255, 0.7);
+  background: #fff;
   padding: 8px 12px;
 }
 .tool-step.calling {

@@ -593,7 +593,7 @@ watch(
   align-items: center;
   gap: 16px;
   padding: 12px 18px;
-  background: rgba(255,255,255,0.52);
+  background: #fff;
   border-bottom: 1px solid var(--doodle-ink, #2d2d2d);
   flex-shrink: 0;
   z-index: 10;

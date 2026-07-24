@@ -213,7 +213,7 @@ onMounted(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: rgba(255,255,255,0.78);
+  background: #fff;
   border: 1px solid var(--doodle-ink, #2d2d2d);
   border-radius: 16px;
   box-shadow: var(--app-shadow-lg);
@@ -267,7 +267,7 @@ onMounted(() => {
 }
 .back {
   border: 1.5px solid var(--doodle-ink, #2d2d2d);
-  background: rgba(255,255,255,0.44);
+  background: #fff;
   color: var(--ac-ink-muted, #5c4a35);
   border-radius: 10px;
   width: 28px;
@@ -280,7 +280,7 @@ onMounted(() => {
   padding: 8px 10px;
   border: 1.5px solid var(--doodle-ink, #2d2d2d);
   border-radius: 12px;
-  background: rgba(255,255,255,0.44);
+  background: #fff;
   color: var(--app-text);
   font-size: 12px;
   outline: none;

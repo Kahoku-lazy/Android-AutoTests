@@ -706,7 +706,7 @@ function outcomeBadgeClass(outcome) {
   gap: 4px;
   padding: 10px 12px;
   margin-bottom: 8px;
-  background: rgba(255,255,255,0.5);
+  background: #fff;
   border-radius: 10px;
   border: 1px dashed rgba(232,95,95,0.2);
 }

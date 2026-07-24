@@ -771,6 +771,7 @@ async function doBatchImport() {
   flex-direction: column;
   gap: 8px;
   min-height: 0;
+  overflow: hidden;
 }
 
 .element-tabs {
@@ -778,6 +779,23 @@ async function doBatchImport() {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
+}
+.element-tabs :deep(.el-tabs__content) {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0 0;
+  width: 100%;
+}
+.element-tabs :deep(.el-tabs__content > .el-tab-pane) {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -881,13 +899,26 @@ async function doBatchImport() {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
   overflow: hidden;
+}
+.table-card :deep(.el-card__body) {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
 }
 
 .table-scroll {
   flex: 1;
   overflow: auto;
   min-height: 0;
+  width: 100%;
 }
 
 /* ── Locator Tags ── */
@@ -1105,7 +1136,7 @@ async function doBatchImport() {
 .web-elements-table :deep(.el-table__header th) {
   background: var(--app-accent-purple) !important; color: #fff !important;
   font-size: 10px; font-weight: 700; padding: 6px 10px;
-  border-right: 1px solid rgba(255,255,255,0.3);
+  border-right: 2px solid var(--doodle-ink);
 }
 .web-elements-table :deep(.el-table__header th:first-child) { border-radius: 3px 0 0 0; }
 .web-elements-table :deep(.el-table__header th:last-child) { border-radius: 0 3px 0 0; border-right: none; }

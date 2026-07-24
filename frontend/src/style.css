@@ -32,41 +32,27 @@ body {
   line-height: 1.6;
   color: var(--app-text);
   background:
-    radial-gradient(circle at 14% 12%, var(--app-sky-cloud), transparent 28%),
-    radial-gradient(circle at 82% 18%, rgba(162,210,255,0.52), transparent 32%),
-    radial-gradient(circle at 78% 92%, rgba(201,182,242,0.35), transparent 36%),
-    radial-gradient(circle at 12% 88%, rgba(149,213,178,0.42), transparent 34%),
-    linear-gradient(135deg, #e0f7fa 0%, #f3e5f5 50%, #e8f5e9 100%);
-  background-size: 180% 180%;
-  animation: gradientBG 15s ease infinite;
+    radial-gradient(circle, var(--app-paper-dot, #d4cdc0) 0.8px, transparent 0.8px);
+  background-size: 14px 14px;
+  background-color: var(--doodle-bg, #faf5ee);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-variant-numeric: tabular-nums;
 }
 
-@keyframes gradientBG {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-body.no-bg-anim { animation: none !important; }
-
 /* ── Soft Glass 图标容器 ── */
 .soft-icon {
-  --soft-icon-bg: linear-gradient(145deg, rgba(255,255,255,0.74), rgba(212,234,255,0.68));
-  --soft-icon-color: var(--app-green-deep);
+  --soft-icon-bg: #fff;
+  --soft-icon-color: var(--doodle-ink);
   display: inline-grid;
   place-items: center;
   width: 42px;
   height: 42px;
-  border-radius: 14px;
+  border-radius: 6px 10px 6px 10px;
   color: var(--soft-icon-color);
   background: var(--soft-icon-bg);
-  border: 1px solid var(--app-icon-border);
-  box-shadow: var(--app-icon-shadow);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  border: 2.5px solid var(--doodle-ink);
+  box-shadow: var(--doodle-shadow);
 }
 
 .soft-icon--circle {
@@ -74,43 +60,41 @@ body.no-bg-anim { animation: none !important; }
 }
 
 .soft-icon--blue {
-  --soft-icon-bg: linear-gradient(145deg, rgba(189,224,254,0.88), rgba(162,210,255,0.68));
-  --soft-icon-color: #3f7fbd;
+  --soft-icon-bg: #89CFF0;
+  --soft-icon-color: #2d2d2d;
 }
 
 .soft-icon--mint {
-  --soft-icon-bg: linear-gradient(145deg, rgba(226,236,233,0.9), rgba(189,224,254,0.58));
-  --soft-icon-color: #4e8f95;
+  --soft-icon-bg: #95D5B2;
+  --soft-icon-color: #2d2d2d;
 }
 
 .soft-icon--violet {
-  --soft-icon-bg: linear-gradient(145deg, rgba(200,182,255,0.82), rgba(189,224,254,0.52));
-  --soft-icon-color: #7059bd;
+  --soft-icon-bg: #C9B6F2;
+  --soft-icon-color: #2d2d2d;
 }
 
 .soft-icon--amber {
-  --soft-icon-bg: linear-gradient(145deg, rgba(253,255,182,0.9), rgba(255,214,165,0.62));
-  --soft-icon-color: #b18420;
+  --soft-icon-bg: #FFE066;
+  --soft-icon-color: #5a4e20;
 }
 
 .soft-icon--success {
-  --soft-icon-bg: linear-gradient(145deg, rgba(184,232,198,0.9), rgba(226,236,233,0.68));
-  --soft-icon-color: #4c9a69;
+  --soft-icon-bg: #6BCB77;
+  --soft-icon-color: #fff;
 }
 
 .soft-icon--muted {
-  --soft-icon-bg: linear-gradient(145deg, rgba(255,255,255,0.78), rgba(235,237,238,0.7));
-  --soft-icon-color: #9a8c98;
+  --soft-icon-bg: #e0e0e0;
+  --soft-icon-color: #999;
 }
 
 /* ── Element Plus 组件毛玻璃样式 ── */
 .el-card {
   background: #fff !important;
-  border-radius: var(--app-radius-lg) !important;
-  border: 2px solid var(--doodle-ink, #2d2d2d) !important;
-  box-shadow: var(--app-shadow-md) !important;
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
+  border-radius: var(--doodle-radius) !important;
+  border: 2.5px solid var(--doodle-ink, #2d2d2d) !important;
+  box-shadow: var(--doodle-shadow) !important;
 }
 
 /* ── V6 玻璃卡片彩色顶条 ── */
@@ -126,7 +110,7 @@ body.no-bg-anim { animation: none !important; }
   left: 0;
   right: 0;
   height: 4px;
-  border-radius: var(--app-radius-lg) var(--app-radius-lg) 0 0;
+  border-radius: var(--doodle-radius) var(--doodle-radius) 0 0;
   z-index: 1;
 }
 
@@ -150,50 +134,49 @@ body.no-bg-anim { animation: none !important; }
   border-radius: var(--app-radius-sm) !important;
 }
 .el-button--primary {
-  background: linear-gradient(135deg, #89CFF0, #C9B6F2) !important;
-  border-color: transparent !important;
+  background: var(--doodle-ink) !important;
+  border-color: var(--doodle-ink) !important;
   color: #fff !important;
-  box-shadow: 0 4px 15px rgba(137,207,240,0.3);
 }
 .el-button--primary:hover {
-  opacity: 0.9;
+  opacity: 0.85;
 }
 
 .el-table {
-  border-radius: var(--app-radius-md) !important;
+  border-radius: var(--doodle-radius) !important;
   overflow: hidden;
-  background: rgba(255,255,255,0.34) !important;
+  background: #fff !important;
 }
 .el-table th {
-  background: rgba(255,255,255,0.46) !important;
-  color: var(--app-text) !important;
+  background: var(--doodle-ink) !important;
+  color: #fff !important;
   font-weight: 700 !important;
-  border-bottom: 1px solid var(--app-glass-border) !important;
+  border-bottom: 2px solid var(--doodle-ink) !important;
 }
 .el-table td {
-  background: rgba(255,255,255,0.28) !important;
-  border-bottom: 1px solid rgba(255,255,255,0.36) !important;
+  background: #fff !important;
+  border-bottom: 1.5px dashed rgba(0,0,0,0.08) !important;
 }
-.el-table tbody tr:hover > td { background: rgba(162,210,255,0.16) !important; }
+.el-table tbody tr:hover > td { background: rgba(0,0,0,0.03) !important; }
 
 .el-tag { border-radius: var(--app-radius-pill) !important; }
 
 .el-input__wrapper,
 .el-select .el-input__wrapper {
   background: #fff !important;
-  border-radius: var(--app-radius-sm) !important;
-  border: 1.5px solid var(--app-glass-border) !important;
-  box-shadow: var(--app-shadow-sm) !important;
+  border-radius: var(--doodle-radius-sm) !important;
+  border: 2.5px solid var(--doodle-ink) !important;
+  box-shadow: var(--doodle-shadow) !important;
   transition: border-color var(--app-duration-fast) var(--app-ease);
 }
 .el-input__wrapper:hover,
 .el-select .el-input__wrapper:hover {
-  border-color: var(--app-green) !important;
+  border-color: var(--doodle-ink) !important;
 }
 .el-input__wrapper:focus-within,
 .el-select .el-input__wrapper:focus-within {
-  box-shadow: 0 0 0 3px rgba(137,207,240,0.25) !important;
-  border-color: var(--app-green) !important;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.08) !important;
+  border-color: var(--doodle-ink) !important;
 }
 
 /* ── Button active feedback ── */
@@ -213,12 +196,10 @@ h4 { font-size: 15px; font-weight: 700; color: var(--app-text); font-family: var
 
 /* ── Toast 玻璃态 + 滑入动画 ── */
 .el-message {
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
   background: #fff !important;
-  border-radius: var(--app-radius-pill) !important;
-  border: 2px solid var(--doodle-ink, #2d2d2d) !important;
-  box-shadow: var(--app-shadow-lg) !important;
+  border-radius: var(--doodle-radius) !important;
+  border: 2.5px solid var(--doodle-ink, #2d2d2d) !important;
+  box-shadow: var(--doodle-shadow) !important;
 }
 
 @keyframes toastSlideDown {
@@ -247,12 +228,10 @@ h4 { font-size: 15px; font-weight: 700; color: var(--app-text); font-family: var
 
 .doc-section {
   background: #fff;
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
-  border-radius: var(--app-radius-md);
-  border: 2px solid var(--doodle-ink, #2d2d2d);
+  border-radius: var(--doodle-radius);
+  border: 2.5px solid var(--doodle-ink, #2d2d2d);
   padding: 24px; position: relative; z-index: 1;
-  box-shadow: var(--app-shadow-sm);
+  box-shadow: var(--doodle-shadow);
 }
 
 .doc-section__header {
@@ -291,11 +270,9 @@ h4 { font-size: 15px; font-weight: 700; color: var(--app-text); font-family: var
 
 .doc-page.wb-shell .doc-section {
   background: #fff;
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
-  border: 1.5px solid var(--app-glass-border);
-  border-radius: var(--app-radius-md);
-  box-shadow: var(--app-shadow-sm);
+  border: 2.5px solid var(--doodle-ink);
+  border-radius: var(--doodle-radius);
+  box-shadow: var(--doodle-shadow);
   padding: 18px 20px;
 }
 

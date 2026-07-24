@@ -102,7 +102,7 @@ const DETAIL_FIELDS = [
   border-radius: 14px;
   overflow: hidden;
   border: 1px solid var(--doodle-ink, #2d2d2d);
-  background: rgba(255,255,255,0.38);
+  background: #fff;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

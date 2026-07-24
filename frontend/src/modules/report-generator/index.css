@@ -239,7 +239,7 @@
   padding: 5px 10px;
   border-radius: 8px;
   border: 1.5px solid rgba(154, 140, 152, 0.22);
-  background: rgba(255, 255, 255, 0.55);
+  background: #fff;
   color: var(--app-text, #4a4e69);
   font-size: 12px;
   font-weight: 700;

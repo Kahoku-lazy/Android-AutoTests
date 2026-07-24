@@ -36,32 +36,11 @@ python run.py logs       # 日志
 ```bash
 python run.py status
 ```
-
-期望输出：4 个服务均为 `ONLINE`：
-```
-  Redis            (:6379)  ONLINE
-  Django backend   (:8765)  ONLINE
-  AgentScope AI    (:8000)  ONLINE
-  Vue frontend     (:5173)  ONLINE
-```
+期望：4 个服务均为 `ONLINE`（Redis/Django/AgentScope/Vue）。
 
 ### 2. 各服务健康检查
 
-```bash
-# Django API 根路径
-curl -s http://localhost:8765/api/ | python -m json.tool
-
-# AgentScope 文档页
-curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/docs
-
-# Vue 前端首页
-curl -s -o /dev/null -w "%{http_code}" http://localhost:5173
-
-# Redis 连接
-redis-cli ping
-```
-
-期望：Django 返回 JSON，其余返回 `200`，Redis 返回 `PONG`。
+> 运行 `python run.py status` 确认 4 个服务 ONLINE。各服务详细健康检查见 `troubleshooting.md` 第七节。
 
 ### 3. 常见问题排查
 
@@ -85,7 +64,7 @@ python tools/generate_html.py    # 生成自包含 phone_ui.html 检查器
 |------|---------|---------|
 | `DEVICE_SERIAL` | `DEVICE_SERIAL` | `adb devices` 或 `.env` 文件 |
 | `SCREENSHOT_INTERVAL` | `SCREENSHOT_INTERVAL` | `.env` 文件，默认 0.5s |
-| `DB_ENGINE` | `DB_ENGINE` | `config/settings.py:95`，默认 `mysql` |
+| `DB_ENGINE` | `DB_ENGINE` | `config/settings.py`，默认 `mysql` |
 | `REDIS_URL` | `REDIS_URL` | `.env` 文件，默认 `redis://localhost:6379/0` |
 | 服务端口 | — | `run.py` 顶部 `PORTS` 字典 |
 | Django Admin | — | 通过 `manage.py createsuperuser` 创建，凭据存入 `auth_user` 表 |

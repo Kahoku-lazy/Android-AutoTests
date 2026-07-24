@@ -24,12 +24,7 @@ ADB 扫描 → 注册到 dp_devices (ONLINE)
 
 ### 核心文件
 
-| 文件 | 职责 |
-|------|------|
-| `apps/device_pool/pool.py` | u2 设备连接、截图、dump UI、心跳同步 |
-| `apps/device_pool/views.py` | 设备池 HTTP API（连接/锁定/释放/排队） |
-| `apps/device_pool/api.py` | 跨模块调用的写操作函数 |
-| `apps/device_pool/models.py` | dp_devices / dp_device_locks / dp_device_queue |
+> Read `apps/device_pool/` — `pool.py`（设备连接/截图/dump）、`views.py`（HTTP API）、`api.py`（跨模块写操作）、`models.py`（表结构）。
 
 ### DevicePool 单例
 
@@ -99,21 +94,9 @@ info = d.info  # {currentPackageName, displayWidth, displayHeight, sdkVersion...
 7. 返回元素列表 + 截图 base64
 ```
 
-### 8 种 XPath 生成策略
+### XPath 生成策略
 
-```python
-# 按优先级从高到低：
-1. //{class}[@resource-id="{rid}"]           # resource-id 唯一
-2. //{class}[@text="{text}"]                  # text 唯一
-3. //{class}[@content-desc="{desc}"]           # content-desc 唯一
-4. //{class}[@resource-id="{rid}" and @text="{text}"]
-5. //{class}[@text="{text}" and @bounds="{bounds}"]
-6. //*[@resource-id="{rid}"]                  # 不限定 class
-7. //{class}[@clickable="true" and @bounds="{bounds}"]
-8. //{class}[@bounds="{bounds}"]              # 最后兜底
-```
-
-> `gen_xpath_candidates()` 按匹配数升序排列，优先选 count=1 的 XPath。
+> Read `apps/element_locator/service.py` → `gen_xpath_candidates()` — 生成 8 种 XPath，按匹配数升序排列，优先选 count=1。
 
 ### 截图
 
@@ -127,47 +110,10 @@ def screenshot_b64(quality=55, max_width=0) -> str:
 # WebSocket 推送：2fps 定时截图 → ws/screenshot
 ```
 
-## 28 种测试步骤（设备/API/Web 三类）在设备上的执行
+## 测试步骤
 
-### 步骤定义
-
-```python
-# models/step_types.py
-class StepType(enum.Enum):
-    CLICK = "click"
-    CLICK_INDEXED = "click_indexed"
-    WAIT = "wait"
-    WAIT_DISAPPEAR = "wait_disappear"
-    WAIT_EITHER = "wait_either"
-    WAIT_TOAST = "wait_toast"
-    VERIFY_TEXT = "verify_text"
-    POLL_TEXT = "poll_text"
-    SLEEP = "sleep"
-    KILL_APP = "kill_app"
-    START_APP = "start_app"
-    RESTART_APP = "restart_app"
-    RETRY_CLICK = "retry_click"
-    LOG = "log"
-```
-
-### 执行映射（adapter.py）
-
-| 步骤 | u2 操作 | 说明 |
-|------|---------|------|
-| `click` | `d.xpath(xp).click()` | 等待元素出现后点击 |
-| `click_indexed` | `d.xpath(xp).all()[N].click()` | 多匹配中选第 N 个 |
-| `retry_click` | 循环 `d.xpath(xp).click()` | 失败自动重试，最多 N 次 |
-| `wait` | 轮询 `d.xpath(xp).exists` | 等待元素出现，超时抛异常 |
-| `wait_disappear` | 轮询 `not d.xpath(xp).exists` | 等待元素消失 |
-| `wait_either` | 轮询两个 xpath 任意一个 exists | 分支等待 |
-| `wait_toast` | `d.toast.get_message()` | 获取 Toast 文本 |
-| `verify_text` | `d.xpath(xp).get_text()` | 校验文本等于期望值 |
-| `poll_text` | 循环 `d.xpath(xp).get_text()` | 轮询直到文本变化 |
-| `sleep` | `time.sleep(n)` | 固定暂停，无设备操作 |
-| `start_app` | `d.app_start(package)` | 启动 App |
-| `kill_app` | `d.app_stop(package)` | 停止 App |
-| `restart_app` | stop → sleep(1) → start | 重启 App |
-| `log` | 无设备操作 | 仅写测试日志 |
+> **步骤类型定义**：Read `models/step_types.py` → `class StepType(Enum)` — 唯一真相源。
+> **步骤执行映射**：Read `apps/test_runner/adapter.py` → 各步骤对应的 u2 操作。
 
 ## ADB 依赖
 

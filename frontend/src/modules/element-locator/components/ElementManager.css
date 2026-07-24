@@ -301,7 +301,7 @@
   padding: 12px 0 0;
   width: 100%;
 }
-.element-tabs :deep(.el-tabs__inner) {
+.element-tabs :deep(.el-tabs__content > .el-tab-pane) {
   flex: 1;
   min-height: 0;
   width: 100%;
@@ -370,6 +370,16 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+.table-card :deep(.el-card__body) {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
 }
 
 /* ── Table scroll：纵向主滚动区 + 窄屏横向滚动 */
@@ -476,21 +486,21 @@
 /* XPath 列 — 紫色调，等宽字体 */
 .elements-table :deep(td:nth-child(2)) {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 14px;
+  font-size: 12px;
   color: var(--app-accent-purple-dark);
 }
 /* 类名列 — 橙色调等宽 */
 .elements-table :deep(td:nth-child(3)) {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 14px;
+  font-size: 12px;
   color: var(--app-ink);
 }
 /* 文本列 — 绿色调 */
-.elements-table :deep(td:nth-child(4)) { color: var(--app-ink); font-size: 14px; }
+.elements-table :deep(td:nth-child(4)) { color: var(--app-ink); font-size: 13px; }
 /* Resource ID 列 — 蓝色调等宽 */
 .elements-table :deep(td:nth-child(5)) {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 14px;
+  font-size: 12px;
   color: var(--app-ink);
 }
 /* 可点击列 — 彩色徽章 */
@@ -542,18 +552,18 @@
 .cell-input:hover { border-color: rgba(179, 158, 243, 0.25); }
 .cell-input:focus { border-color: var(--app-accent-purple); background: rgba(179, 158, 243, 0.04); }
 
-/* ── Cell code (XPath, class_name, resource_id) ── */
+/* ── Cell code (XPath, class_name, resource_id) — 对齐 Web/API 的 12px mono ── */
 .cell-code {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 14px;
+  font-size: 12px;
   letter-spacing: 0.2px;
 }
 .cell-text {
-  font-size: 14px;
+  font-size: 13px;
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;

@@ -5,15 +5,15 @@
 ```mermaid
 flowchart TB
     subgraph L1["① 前端 :5173"]
-        Vue["Vue 3 + Vite<br/>7 个业务模块"]
+        Vue["Vue 3 + Vite<br/>9 个业务模块"]
     end
 
     subgraph L2["② 后端 :8765"]
-        Django["Django + Daphne<br/>6 个 App"]
+        Django["Django + Daphne<br/>9 个 App"]
     end
 
     subgraph L3["③ AI 框架 :8000"]
-        AgentScope["AgentScope + FastAPI<br/>14 Tool + 5 Team 模板"]
+        AgentScope["AgentScope + FastAPI<br/>业务 Tool + Agent Team"]
     end
 
     subgraph L4["④ 数据库"]
@@ -72,7 +72,7 @@ flowchart TB
 
 | 数据库 | 用途 | 后端访问方式 |
 |--------|------|-------------|
-| SQLite/MySQL | 18 张业务表（设备、元素、用例、报告等） | Django ORM |
+| SQLite/MySQL | 业务表（设备、元素、用例、报告等） | Django ORM |
 | Redis | Channels 消息总线 + AgentScope 状态存储 | `channels_redis` / `redis-py` |
 
 ### ⑤：设备端 → 后端
@@ -86,7 +86,7 @@ flowchart TB
 
 ## 后端内部边界（三道防火墙）
 
-Django 6 个 App 之间的模块通信规则：
+Django App 之间的模块通信规则：
 
 ```
 防火墙 #1: service.py 互不 import

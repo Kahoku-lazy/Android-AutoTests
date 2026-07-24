@@ -181,3 +181,117 @@
 .wb-shell .ac-table .el-table__body tr:hover td {
   background: rgba(0,0,0,0.015);
 }
+
+/* ══════ Doodle Input ══════ */
+.wb-shell .el-input__wrapper,
+.workflow-workbench .el-input__wrapper {
+  background: #fff !important;
+  border-radius: var(--doodle-radius-sm) !important;
+  border: 2.5px solid var(--doodle-ink) !important;
+  box-shadow: var(--doodle-shadow) !important;
+  font-family: var(--doodle-font-ui);
+}
+.wb-shell .el-input__wrapper:hover,
+.workflow-workbench .el-input__wrapper:hover {
+  border-color: var(--doodle-ink) !important;
+}
+.wb-shell .el-input__wrapper:focus-within,
+.workflow-workbench .el-input__wrapper:focus-within {
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.08) !important;
+  border-color: var(--doodle-ink) !important;
+}
+
+/* ══════ Doodle Select ══════ */
+.wb-shell .el-select .el-input__wrapper,
+.workflow-workbench .el-select .el-input__wrapper {
+  background: #fff !important;
+  border-radius: var(--doodle-radius-sm) !important;
+  border: 2.5px solid var(--doodle-ink) !important;
+  box-shadow: var(--doodle-shadow) !important;
+}
+
+/* ══════ Doodle Tag ══════ */
+.wb-shell .el-tag,
+.workflow-workbench .el-tag {
+  border-radius: var(--doodle-radius-sm) !important;
+  border: 2px solid var(--doodle-ink) !important;
+  font-family: var(--doodle-font-ui);
+  font-weight: 700;
+  background: #fff;
+  color: var(--doodle-ink);
+}
+
+/* ══════ Doodle Dialog ══════ */
+.wb-shell .el-dialog,
+.workflow-workbench .el-dialog {
+  border-radius: var(--doodle-radius) !important;
+  border: 3px solid var(--doodle-ink) !important;
+  box-shadow: var(--doodle-shadow) !important;
+  overflow: hidden;
+}
+.wb-shell .el-dialog__header,
+.workflow-workbench .el-dialog__header {
+  font-family: var(--doodle-font-title);
+  font-weight: 700;
+  color: var(--doodle-ink);
+}
+.wb-shell .el-dialog__footer,
+.workflow-workbench .el-dialog__footer {
+  font-family: var(--doodle-font-ui);
+}
+
+/* ══════ Doodle Pagination ══════ */
+.wb-shell .el-pagination .el-pager li,
+.workflow-workbench .el-pagination .el-pager li {
+  border-radius: var(--doodle-radius-sm) !important;
+  border: 2px solid var(--doodle-ink) !important;
+  font-family: var(--doodle-font-ui);
+  font-weight: 700;
+  background: #fff;
+  color: var(--doodle-ink);
+}
+.wb-shell .el-pagination .el-pager li.is-active,
+.workflow-workbench .el-pagination .el-pager li.is-active {
+  background: var(--doodle-ink) !important;
+  color: #fff !important;
+}
+.wb-shell .el-pagination button,
+.workflow-workbench .el-pagination button {
+  border: 2px solid var(--doodle-ink) !important;
+  border-radius: var(--doodle-radius-sm) !important;
+  background: #fff;
+  font-family: var(--doodle-font-ui);
+  font-weight: 700;
+}
+
+/* ══════ Doodle Dropdown ══════ */
+.wb-shell .el-dropdown-menu,
+.workflow-workbench .el-dropdown-menu {
+  border: 2.5px solid var(--doodle-ink) !important;
+  border-radius: var(--doodle-radius) !important;
+  box-shadow: var(--doodle-shadow) !important;
+  background: #fff !important;
+}
+.wb-shell .el-dropdown-menu__item,
+.workflow-workbench .el-dropdown-menu__item {
+  font-family: var(--doodle-font-ui);
+  font-weight: 600;
+  color: var(--doodle-ink);
+}
+.wb-shell .el-dropdown-menu__item:hover,
+.workflow-workbench .el-dropdown-menu__item:hover {
+  background: var(--app-highlight) !important;
+  color: var(--doodle-ink) !important;
+}
+
+/* ══════ Doodle Cascader ══════ */
+.wb-shell .el-cascader .el-input__wrapper,
+.workflow-workbench .el-cascader .el-input__wrapper {
+  border-radius: var(--doodle-radius-sm) !important;
+  border: 2.5px solid var(--doodle-ink) !important;
+  box-shadow: var(--doodle-shadow) !important;
+}
+.wb-shell .el-cascader-menu,
+.workflow-workbench .el-cascader-menu {
+  border-right: 2px solid var(--doodle-ink) !important;
+}

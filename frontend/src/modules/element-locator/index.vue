@@ -268,19 +268,19 @@ watch(activeTab, async (tab) => {
       </template>
 
       <template #manage>
-        <div v-show="activeTab === 'manage'">
+        <div v-show="activeTab === 'manage'" class="doc-body">
           <ElementManager />
         </div>
       </template>
 
       <template #web>
-        <div v-show="activeTab === 'web'">
+        <div v-show="activeTab === 'web'" class="doc-body">
           <WebElementManager />
         </div>
       </template>
 
       <template #api>
-        <div v-show="activeTab === 'api'">
+        <div v-show="activeTab === 'api'" class="doc-body">
           <ApiEndpointManager />
         </div>
       </template>
@@ -327,6 +327,13 @@ watch(activeTab, async (tab) => {
   flex-direction: column;
   padding-top: 8px;
 }
+.doc-page :deep(.locator-tabs.el-tabs > .el-tabs__content > .el-tab-pane) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
 .doc-page :deep(.locator-tabs.el-tabs > .el-tabs__header) {
   margin: 0 0 8px;
@@ -369,10 +376,9 @@ watch(activeTab, async (tab) => {
   max-width: none;
   margin: 0;
   padding: 0;
-  gap: 0;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .locator-section {

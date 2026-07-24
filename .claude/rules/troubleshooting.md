@@ -262,47 +262,7 @@ const url = `ws://localhost:8765/ws/screenshot`
 
 ---
 
-## 七、服务健康检查速查
+## 七、服务健康检查
 
-```bash
-# 一键状态
-python run.py status
-
-# Django
-curl -s http://localhost:8765/api/ | python -m json.tool
-
-# AgentScope
-curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/docs
-
-# Vue
-curl -s -o /dev/null -w "%{http_code}" http://localhost:5173
-
-# Redis
-redis-cli ping
-
-# ADB
-adb devices
-```
-
-**期望**：Django 返回 JSON，AgentScope/Vue 返回 200，Redis 返回 PONG，ADB 至少一台设备。
-
----
-
-## 八、相关文件索引
-
-| 文档 | 路径 | 说明 |
-|------|------|------|
-| 报错诊断手册 | `dev_docs/05-开发与测试/平台级/报错诊断手册.md` | 完整版，含代码示例 |
-| 截图流故障手册 | `dev_docs/05-开发与测试/元素定位/截图流故障手册.md` | 截图流专档 |
-| 启动配置 | `.claude/rules/setup.md` | 启动命令、健康检查 |
-| 前端规则 | `.claude/rules/frontend.md` | 白屏诊断、数据链路 |
-| 后端规则 | `.claude/rules/backend.md` | API 错误处理 |
-| 安全规则 | `.claude/rules/security.md` | 凭据保护 |
-
----
-
-## 变更记录
-
-| 版本 | 日期 | 变更摘要 |
-|------|------|----------|
-| v1.0 | 2026-07-03 | 融合报错诊断手册 + 截图流故障手册，面向 AI 的诊断规则 |
+> 运行 `python run.py status` 一键检查 4 个服务状态。
+> 详细健康检查命令见 `setup.md`。

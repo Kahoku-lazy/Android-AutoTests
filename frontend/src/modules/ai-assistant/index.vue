@@ -566,7 +566,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
   font-family: inherit;
 }
 .view-tab:hover {
-  background: rgba(255, 255, 255, 0.6);
+  background: #fff;
   color: var(--app-text, #4a4e69);
 }
 .view-tab.active {

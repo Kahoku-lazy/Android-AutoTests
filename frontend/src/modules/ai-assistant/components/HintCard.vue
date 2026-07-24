@@ -194,7 +194,7 @@ function genericHintText(hint) {
   margin-top: 10px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.5);
+  background: #fff;
   font-size: 13px;
   color: #3c3489;
   font-weight: 500;

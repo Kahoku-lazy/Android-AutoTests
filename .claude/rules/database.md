@@ -4,14 +4,7 @@
 
 ## 表前缀映射
 
-| 前缀 | App | models.py |
-|------|-----|-----------|
-| `dp_` | device-pool | `apps/device_pool/models.py` |
-| `el_` | element-locator | `apps/element_locator/models.py` |
-| `cm_` | case-manager | `apps/case_manager/models.py` |
-| `tr_` | test-runner | `apps/test_runner/models.py` |
-| `rg_` | report-generator | `apps/report_generator/models.py` |
-| `ai_` | ai-assistant | `apps/ai_assistant/models.py` |
+> `grep -rn "db_table" apps/*/models.py` 查看所有表前缀。前缀：`dp_` `el_` `cm_` `tr_` `rg_` `ai_` `wf_` `ev_`。
 
 ## 核心规则
 

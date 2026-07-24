@@ -22,10 +22,11 @@
 
 > **获取 XPath 生成策略**：Read `apps/element_locator/service.py` → `gen_xpath_candidates()`。生成 8 种 XPath，按匹配数升序排列，优先选 count=1。
 
-## 前端主题隔离
+## 前端主题
 
-- **业务模块**：Element Plus 蓝白风格（默认主题）
-- **AI 助手模块**：animal-island-vue（暖木色/大圆角），CSS 变量覆盖在 `animal-theme.css`
+- **全局主题**：Crayon Doodle 手绘卡通风格（`tokens.css`），粗线条 3px 墨色边框、不对称圆角、涂鸦纹理、卡通字体
+- **AI 助手模块**：`.ai-workbench` 绿色调主题变体（`tokens.css`），独立 accent 色板
+- **色值从 `tokens.css` 取**，禁止组件内硬编码颜色
 
 ## JWT 鉴权
 

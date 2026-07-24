@@ -404,10 +404,8 @@ function switchMode(m) {
   padding: 44px;
   border: 1px solid rgba(255, 255, 255, 0.55);
   border-radius: 30px;
-  background: rgba(255, 255, 255, 0.28);
+  background: #fff;
   box-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
 }
 
 .hero__text {
@@ -428,7 +426,7 @@ function switchMode(m) {
   font-weight: 600;
   padding: 4px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.6);
+  background: #fff;
   border: 1px solid rgba(255, 255, 255, 0.75);
   color: #4a4e69;
   text-shadow: none;
@@ -465,8 +463,6 @@ function switchMode(m) {
   border: 1px solid rgba(255, 255, 255, 0.76) !important;
   border-radius: 24px !important;
   box-shadow: 0 8px 32px rgba(31, 38, 135, 0.08) !important;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
 }
 
 /* Switch prompt */

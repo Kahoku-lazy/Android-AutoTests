@@ -790,7 +790,7 @@ function runFromCurrent(idx) {
   padding: 32px;
   border: 1px dashed rgba(162,210,255,0.38);
   border-radius: 12px;
-  background: rgba(255,255,255,0.36);
+  background: #fff;
 }
 
 .step-item {
@@ -798,7 +798,7 @@ function runFromCurrent(idx) {
   margin-bottom: 10px;
   border-radius: 12px;
   border: 1px solid var(--doodle-ink, #2d2d2d);
-  background: rgba(255,255,255,0.48);
+  background: #fff;
   box-shadow: var(--app-shadow-sm);
   transition: all 0.2s;
   overflow: hidden;
@@ -844,7 +844,7 @@ function runFromCurrent(idx) {
   padding: 10px 14px;
   cursor: pointer;
   user-select: none;
-  background: rgba(255,255,255,0.36);
+  background: #fff;
 }
 .drag-handle {
   color: var(--app-text-muted);
@@ -917,7 +917,7 @@ function runFromCurrent(idx) {
 .step-form {
   padding: 14px 18px 18px 48px;
   border-top: 1px solid rgba(162,210,255,0.20);
-  background: rgba(255,255,255,0.38);
+  background: #fff;
 }
 .add-bottom {
   margin-top: 14px;
@@ -1002,7 +1002,7 @@ function runFromCurrent(idx) {
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  background: rgba(255,255,255,0.6);
+  background: #fff;
   border-radius: 8px;
   border-left: 3px solid var(--app-green-deep);
 }

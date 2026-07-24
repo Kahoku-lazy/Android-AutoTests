@@ -100,8 +100,8 @@
   --app-pending-text:  #1c4a7a;
 
   /* ── 字体 ── */
-  --app-font:          'Quicksand', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
-  --app-font-display:  'Quicksand', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --app-font:          'Comic Neue', 'PingFang SC', 'Microsoft YaHei', cursive, sans-serif;
+  --app-font-display:  'Bangers', 'PingFang SC', 'Microsoft YaHei', cursive;
   --app-font-mono:     'Cascadia Code', 'Consolas', 'Courier New', monospace;
   --app-font-size-sm:  12px;
   --app-font-size-base:14px;
@@ -170,43 +170,43 @@
   --app-duration-slow: 0.35s;
 
   /* ═══════════════════════════════════════
-     Element Plus 变量覆盖
+     Element Plus 变量覆盖 — Doodle
      ═══════════════════════════════════════ */
-  --el-color-primary:           #89CFF0;
-  --el-color-primary-light-3:   #BDE0FE;
-  --el-color-primary-light-5:   #d4eaff;
-  --el-color-primary-light-7:   #e0f7fa;
-  --el-color-primary-light-8:   #e8f5e9;
-  --el-color-primary-light-9:   #f0f8f2;
-  --el-color-primary-dark-2:    #6fb8d8;
+  --el-color-primary:           #2d2d2d;
+  --el-color-primary-light-3:   #666;
+  --el-color-primary-light-5:   #999;
+  --el-color-primary-light-7:   #ccc;
+  --el-color-primary-light-8:   #e0e0e0;
+  --el-color-primary-light-9:   #f0f0f0;
+  --el-color-primary-dark-2:    #1a1a1a;
 
-  --el-color-success:           #95D5B2;
-  --el-color-warning:           #F4D35E;
-  --el-color-danger:            #FFB5A7;
-  --el-color-info:              #BDE0FE;
+  --el-color-success:           #6BCB77;
+  --el-color-warning:           #FFE066;
+  --el-color-danger:            #e85f5f;
+  --el-color-info:              #999;
 
-  --el-bg-color:                var(--app-white);
-  --el-bg-color-overlay:        var(--app-white);
-  --el-bg-color-page:           var(--app-bg);
-  --el-fill-color-blank:        var(--app-glass-card);
-  --el-fill-color-light:        rgba(162,210,255,0.12);
+  --el-bg-color:                #fffbf5;
+  --el-bg-color-overlay:        #fff;
+  --el-bg-color-page:           #faf5ee;
+  --el-fill-color-blank:        #fff;
+  --el-fill-color-light:        rgba(0,0,0,0.04);
 
-  --el-text-color-primary:      var(--app-text);
-  --el-text-color-regular:      var(--app-text);
-  --el-text-color-secondary:    var(--app-text-secondary);
+  --el-text-color-primary:      #2d2d2d;
+  --el-text-color-regular:      #2d2d2d;
+  --el-text-color-secondary:    #999;
 
-  --el-border-radius-base:      var(--app-radius-md);
-  --el-border-radius-small:     var(--app-radius-sm);
-  --el-border-radius-round:     var(--app-radius-pill);
+  --el-border-radius-base:      4px 8px 4px 8px;
+  --el-border-radius-small:     4px 8px;
+  --el-border-radius-round:     24px;
 
-  --el-border-color:            var(--app-glass-border);
-  --el-border-color-light:      rgba(255,255,255,0.35);
+  --el-border-color:            #2d2d2d;
+  --el-border-color-light:      #e0d8cc;
 
-  --el-box-shadow-light:        var(--app-shadow-sm);
-  --el-box-shadow:              var(--app-shadow-md);
-  --el-box-shadow-dark:         var(--app-shadow-lg);
+  --el-box-shadow-light:        2px 2px 0 rgba(0,0,0,0.04);
+  --el-box-shadow:              2px 2px 0 rgba(0,0,0,0.06);
+  --el-box-shadow-dark:         3px 3px 0 rgba(0,0,0,0.06);
 
-  --el-font-family:             var(--app-font);
+  --el-font-family:             'Comic Neue', cursive;
 
 }
 

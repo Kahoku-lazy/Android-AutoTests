@@ -112,7 +112,7 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   padding: 8px 10px;
   border: 1.5px solid var(--doodle-ink, #2d2d2d);
   border-radius: 12px;
-  background: rgba(255,255,255,0.48);
+  background: #fff;
   color: var(--app-text);
   font-family: inherit;
   font-size: 12px;
@@ -160,7 +160,7 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   height: 24px;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.22);
+  background: #fff;
   border-radius: 8px;
   font-size: 13px;
 }
@@ -235,7 +235,7 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.22);
+  background: #fff;
   font-size: 14px;
   flex-shrink: 0;
 }
@@ -244,7 +244,7 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.28);
+  background: #fff;
   display: grid;
   place-items: center;
   font-size: 14px;

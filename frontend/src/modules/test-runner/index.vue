@@ -1018,7 +1018,7 @@ async function loadDevices() {
   flex-direction: column;
   gap: 8px;
   transition: all 0.2s;
-  background: rgba(255,255,255,0.48);
+  background: #fff;
   box-shadow: var(--app-shadow-sm);
 }
 .task-card--running {
@@ -1042,7 +1042,7 @@ async function loadDevices() {
   border-left-color: #e85f5f;
 }
 .task-card--idle {
-  background: rgba(255,255,255,0.48);
+  background: #fff;
   border-color: rgba(162,210,255,0.30);
   border-left-color: #999;
 }

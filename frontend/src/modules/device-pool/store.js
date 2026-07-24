@@ -53,8 +53,8 @@ export const useDevicePoolStore = defineStore("device-pool", () => {
         currentSerial.value = data.current || "";
         queueLength.value = data.queue_length || 0;
       }
-    } catch (_) {
-      /* heartbeat failures are silent */
+    } catch (e) {
+      console.error('[device-pool] fetchDevices failed:', e.message || e)
     }
     loading.value = false;
   }
@@ -151,8 +151,8 @@ export const useDevicePoolStore = defineStore("device-pool", () => {
         queueEntries.value = data.queue || [];
         queueLength.value = data.count || 0;
       }
-    } catch (_) {
-      /* ignore */
+    } catch (e) {
+      console.error('[device-pool] fetchQueue failed:', e.message || e)
     }
   }
 
@@ -181,7 +181,7 @@ export const useDevicePoolStore = defineStore("device-pool", () => {
   }
 
   async function doHeartbeat() {
-    try { await apiHeartbeat() } catch (_) { /* silent */ }
+    try { await apiHeartbeat() } catch (e) { /* heartbeat interval; surface only in dev */ console.debug('[device-pool] heartbeat:', e.message || e) }
   }
 
   function selectDevice(serial) {

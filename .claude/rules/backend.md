@@ -32,7 +32,7 @@ class Device(models.Model):
         indexes = [models.Index(fields=['status'])]
 ```
 
-- 表名必须带 8 组前缀之一：`dp_` `el_` `cm_` `tr_` `rg_` `ai_` `wf_` `ev_`
+- 表名必须带正确前缀（`grep -rn "db_table" apps/*/models.py` 查看当前所有前缀）
 - 外键使用 CASCADE 或 SET_NULL，不删除关联数据用 SET_NULL
 - JSON 字段优先用 `models.JSONField`
 

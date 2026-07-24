@@ -138,7 +138,7 @@ function reasonLabel(reason) {
   height: 44px;
   border-radius: 12px;
   background: #fff;
-  border: 1px solid #e8e2d6;
+  border: 1px solid var(--doodle-bg, #faf5ee);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -156,7 +156,7 @@ function reasonLabel(reason) {
 .msg-author {
   font-size: 13px;
   font-weight: 700;
-  color: #a0936e;
+  color: var(--app-ink-muted, #999);
   padding: 0 6px;
 }
 .msg.user .msg-author {
@@ -191,19 +191,19 @@ function reasonLabel(reason) {
   box-shadow: 0 2px 10px rgba(61, 52, 40, 0.08);
 }
 .msg.user .msg-text {
-  background: linear-gradient(135deg, #19c8b9 0%, #15a89c 100%);
+  background: linear-gradient(135deg, var(--app-accent-purple, #b39ef3) 0%, #15a89c 100%);
   color: #fff;
   border-bottom-right-radius: 6px;
 }
 .msg.assistant .msg-text {
   background: #fff;
-  color: #4a3a28;
-  border: 1px solid #e8e2d6;
+  color: var(--doodle-ink, #2d2d2d);
+  border: 1px solid var(--doodle-bg, #faf5ee);
   border-bottom-left-radius: 6px;
 }
 .msg-tokens {
   font-size: 11px;
-  color: #a0936e;
+  color: var(--app-ink-muted, #999);
   padding: 0 6px;
 }
 .model-name-tag {
@@ -211,7 +211,7 @@ function reasonLabel(reason) {
   padding: 2px 7px;
   border-radius: 6px;
   background: rgba(25, 200, 185, 0.1);
-  color: #19c8b9;
+  color: var(--app-accent-purple, #b39ef3);
   border: 1px solid rgba(25, 200, 185, 0.3);
   margin-right: 6px;
 }
@@ -254,7 +254,7 @@ function reasonLabel(reason) {
   background: rgba(0, 0, 0, 0.06);
 }
 .msg.user .msg-text :deep(code) {
-  background: rgba(255, 255, 255, 0.2);
+  background: #fff;
 }
 .msg-text :deep(pre) {
   margin: 8px 0;
@@ -285,17 +285,17 @@ function reasonLabel(reason) {
 .msg-text :deep(th) {
   background: #f5f3ed;
   padding: 8px 12px;
-  border: 1px solid #e8e2d6;
+  border: 1px solid var(--doodle-bg, #faf5ee);
   font-weight: 700;
 }
 .msg-text :deep(td) {
   padding: 8px 12px;
-  border: 1px solid #e8e2d6;
+  border: 1px solid var(--doodle-bg, #faf5ee);
 }
 .msg-text :deep(blockquote) {
   margin: 8px 0;
   padding: 8px 16px;
-  border-left: 4px solid #19c8b9;
+  border-left: 4px solid var(--app-accent-purple, #b39ef3);
   background: rgba(25, 200, 185, 0.06);
   color: #6d5f4b;
 }
@@ -305,7 +305,7 @@ function reasonLabel(reason) {
   font-size: 1.1em;
 }
 .msg-text :deep(a) {
-  color: #19c8b9;
+  color: var(--app-accent-purple, #b39ef3);
   text-decoration: underline;
 }
 .msg-text :deep(.mermaid-placeholder) {
@@ -317,7 +317,7 @@ function reasonLabel(reason) {
   padding: 14px;
   background: #fff;
   border-radius: 12px;
-  border: 2px solid #19c8b9;
+  border: 2px solid var(--app-accent-purple, #b39ef3);
   overflow-x: auto;
   display: flex;
   justify-content: center;

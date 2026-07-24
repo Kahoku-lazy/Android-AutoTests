@@ -152,7 +152,7 @@ function removeWatcher(idx) {
 }
 .watcher-item {
   display: flex; align-items: center; gap: 8px; margin-top: 8px;
-  padding: 6px 10px; background: rgba(255,255,255,0.5); border-radius: 8px;
+  padding: 6px 10px; background: #fff; border-radius: 8px;
 }
 .watcher-idx {
   width: 22px; height: 22px; border-radius: 50%;

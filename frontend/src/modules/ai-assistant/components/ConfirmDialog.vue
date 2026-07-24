@@ -129,7 +129,7 @@ const emit = defineEmits(["approve", "deny", "approve-all", "deny-all", "cancel"
   gap: 12px;
   padding: 14px;
   border-radius: 10px;
-  border: 1.5px solid #e8e2d6;
+  border: 1.5px solid var(--doodle-bg, #faf5ee);
   background: #faf9f4;
 }
 .confirm-tool-icon {
@@ -144,7 +144,7 @@ const emit = defineEmits(["approve", "deny", "approve-all", "deny-all", "cancel"
 .confirm-tool-name {
   font-size: 14px;
   font-weight: 700;
-  color: #4a3a28;
+  color: var(--doodle-ink, #2d2d2d);
   display: block;
   margin-bottom: 6px;
 }
@@ -207,13 +207,13 @@ const emit = defineEmits(["approve", "deny", "approve-all", "deny-all", "cancel"
   gap: 10px;
   padding: 16px 24px;
   background: #faf9f4;
-  border-top: 1px solid #e8e2d6;
+  border-top: 1px solid var(--doodle-bg, #faf5ee);
   flex-wrap: wrap;
 }
 .confirm-btn.approve-all {
   background: #e6f9f6;
   color: #158a80;
-  border-color: #19c8b9;
+  border-color: var(--app-accent-purple, #b39ef3);
   flex: 1;
   justify-content: center;
 }

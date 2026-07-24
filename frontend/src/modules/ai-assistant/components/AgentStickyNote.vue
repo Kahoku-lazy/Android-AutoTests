@@ -287,7 +287,7 @@ function onLeave() {
 .ac-status-bubble.is-success::after { border-top-color: #5aa31f; }
 .ac-status-bubble.is-danger { background: linear-gradient(135deg, #f07878, #e85f5f); }
 .ac-status-bubble.is-danger::after { border-top-color: #e85f5f; }
-.ac-status-bubble.is-warning { background: linear-gradient(135deg, #f7cd67, #e0b52e); color: #4a3a28; }
+.ac-status-bubble.is-warning { background: linear-gradient(135deg, #f7cd67, #e0b52e); color: var(--doodle-ink, #2d2d2d); }
 .ac-status-bubble.is-warning::after { border-top-color: #e0b52e; }
 
 .note-meta {
@@ -301,7 +301,7 @@ function onLeave() {
   margin: 0;
   font-size: 15px;
   font-weight: 800;
-  color: #4a3a28;
+  color: var(--doodle-ink, #2d2d2d);
   line-height: 1.25;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -330,7 +330,7 @@ function onLeave() {
 .note-tools {
   font-size: 11px;
   font-weight: 700;
-  color: #a0936e;
+  color: var(--app-ink-muted, #999);
 }
 
 .model-row {
@@ -390,7 +390,7 @@ function onLeave() {
   height: 34px;
   border: none;
   border-radius: 999px;
-  background: #19c8b9;
+  background: var(--app-accent-purple, #b39ef3);
   color: #fff;
   font-size: 13px;
   font-weight: 800;
@@ -416,7 +416,7 @@ function onLeave() {
   cursor: pointer;
 }
 .note-tool:hover:not(:disabled) {
-  border-color: #19c8b9;
+  border-color: var(--app-accent-purple, #b39ef3);
   color: #0d7a70;
 }
 .note-tool:disabled { opacity: 0.55; cursor: wait; }

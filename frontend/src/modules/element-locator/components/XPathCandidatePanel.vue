@@ -222,10 +222,10 @@ async function copyXPath(xpath) {
 
     <!-- Action bar (only when element selected) -->
     <div v-if="element" class="action-bar">
-      <el-button size="small" type="primary" @click="doClick">👆 点击</el-button>
-      <el-button size="small" type="primary" @click="openInput">⌨ 输入</el-button>
-      <el-button type="primary" size="small"  @click="doLongClick" danger>⏱ 长按</el-button>
-      <el-button size="small" type="primary" @click="openSaveDialog" style="margin-left:auto">💾 保存到元素管理</el-button>
+      <button class="xp-btn" @click="doClick">👆 点击</button>
+      <button class="xp-btn" @click="openInput">⌨ 输入</button>
+      <button class="xp-btn xp-btn--danger" @click="doLongClick">⏱ 长按</button>
+      <button class="xp-btn xp-btn--primary" @click="openSaveDialog" style="margin-left:auto">💾 保存到元素管理</button>
     </div>
 
     <!-- Save to element-manager dialog -->
@@ -277,8 +277,8 @@ async function copyXPath(xpath) {
         </el-select>
       </div>
       <template #footer>
-        <el-button @click="saveVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="saving || pagesLoading" @click="doSave">保存</el-button>
+        <button class="xp-btn" @click="saveVisible = false">取消</button>
+        <button class="xp-btn xp-btn--primary" :disabled="saving || pagesLoading" @click="doSave">保存</button>
       </template>
     </el-dialog>
 
@@ -294,8 +294,8 @@ async function copyXPath(xpath) {
     >
       <el-input v-model="inputText" placeholder="输入要发送的文本" size="medium" />
       <template #footer>
-        <el-button @click="inputVisible = false">取消</el-button>
-        <el-button type="primary" @click="doInput">发送</el-button>
+        <button class="xp-btn" @click="inputVisible = false">取消</button>
+        <button class="xp-btn xp-btn--primary" @click="doInput">发送</button>
       </template>
     </el-dialog>
 
@@ -341,7 +341,7 @@ async function copyXPath(xpath) {
         <el-table-column prop="count" label="匹配数" width="60" align="center" />
         <el-table-column label="" width="50" align="center">
           <template #default="{ row }">
-            <el-button size="small" type="text" title="复制" @click="copyXPath(row.xpath)">📋</el-button>
+            <button class="xp-btn-icon" title="复制" @click="copyXPath(row.xpath)">📋</button>
           </template>
         </el-table-column>
         <el-table-column label="" width="50" align="center">
@@ -368,13 +368,23 @@ async function copyXPath(xpath) {
   box-shadow: var(--app-shadow-sm, 0 4px 15px rgba(0,0,0,0.02));
   overflow: hidden;
 }
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 4px; left: 50%; transform: translateX(-50%);
+  width: 9px; height: 9px;
+  background: radial-gradient(circle, #e8e0d5 30%, #c0b8a8 60%, #a09080 100%);
+  border-radius: 50%;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.08);
+  z-index: 2;
+}
 h3 {
   font-size: 14px;
-  color: var(--app-text, #3D4A3B);
+  color: var(--app-text, var(--app-ink));
   margin-bottom: 12px;
   flex-shrink: 0;
 }
-.action-bar {
+.action-bar { border-radius: 6px 10px 6px 10px;
   display: flex; gap: 6px; margin-bottom: 10px; flex-shrink: 0;
   padding: 8px; background: rgba(255,255,255,0.03);
   border-radius: 8px; border: 1px solid var(--ink));
@@ -386,7 +396,7 @@ h3 {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  color: var(--app-text-secondary, #7A8B73);
+  color: var(--app-text-secondary, var(--app-ink-muted));
   font-size: 13px;
 }
 .empty-icon {
@@ -410,7 +420,7 @@ h3 {
   gap: 4px;
   margin-bottom: 4px;
   padding: 8px 10px;
-  background: rgba(137,207,240,0.04);
+  background: rgba(179, 158, 243,0.04);
   border-radius: 8px;
 }
 .el-info__row {
@@ -422,11 +432,11 @@ h3 {
 .el-info__label {
   min-width: 56px;
   font-weight: 600;
-  color: var(--app-text, #3D4A3B);
+  color: var(--app-text, var(--app-ink));
   flex-shrink: 0;
 }
 .el-info__value {
-  color: var(--app-text-secondary, #7A8B73);
+  color: var(--app-text-secondary, var(--app-ink-muted));
   word-break: break-all;
   line-height: 1.4;
 }
@@ -443,7 +453,7 @@ h3 {
 .form-label {
   text-align: right;
   font-size: 13px;
-  color: var(--text-secondary, #988B7A);
+  color: var(--text-secondary, var(--app-ink-muted));
   font-weight: 500;
   user-select: none;
 }
@@ -462,11 +472,31 @@ h3 {
 .xpath-opt-type {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-primary, #5c4a32);
+  color: var(--text-primary, var(--app-ink));
 }
 .xpath-opt-path {
   font-size: 11px;
-  color: var(--text-secondary, #988B7A);
+  color: var(--text-secondary, var(--app-ink-muted));
   word-break: break-all;
 }
+
+/* Paper buttons */
+.xp-btn {
+  font-size: 10px; font-weight: 700; padding: 4px 12px;
+  border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px 8px 4px 8px;
+  background: #fff; color: var(--app-ink, #2d2d2d);
+  cursor: pointer; font-family: inherit; transition: all 0.12s; white-space: nowrap;
+}
+.xp-btn:hover { background: var(--app-highlight, #FFE066); }
+.xp-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.xp-btn--primary { background: var(--app-ink, #2d2d2d); color: #fff; }
+.xp-btn--primary:hover { opacity: 0.85; color: #fff; }
+.xp-btn--danger { color: #c53030; border-color: #c53030; }
+.xp-btn--danger:hover { background: var(--app-status-danger-bg, #FFE0DB); }
+.xp-btn-icon {
+  font-size: 12px; padding: 2px 6px; border: 1.5px solid var(--app-ink, #2d2d2d);
+  border-radius: 3px 6px 3px 6px; background: #fff; cursor: pointer;
+  transition: all 0.12s; color: var(--app-ink, #2d2d2d);
+}
+.xp-btn-icon:hover { background: var(--app-highlight, #FFE066); }
 </style>

@@ -1,7 +1,6 @@
 <script setup>
-import { ref, onMounted } from "vue";
-import { animate } from "animejs";
-import { fetchDashboardStats, fetchRecentActivities } from "./api.js";
+import { onMounted } from "vue";
+import { useDashboardStats } from "./composables/useDashboardStats.js";
 
 // Card, Divider → el-card, el-divider (Element Plus auto-import)
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
@@ -20,150 +19,20 @@ import TaskResultPanel from "./components/TaskResultPanel.vue";
 import ModuleNavigator from "./components/ModuleNavigator.vue";
 import ActivityTimeline from "./components/ActivityTimeline.vue";
 
-const loading = ref(true);
-const refreshing = ref(false);
-
-const stats = ref({
-  devices: { online: 0, total: 0, trend: 0 },
-  cases: { total: 0, enabled: 0, trend: 0 },
-  elements: { total: 0, pages: 0, breakdown: [] },
-  runs: { total: 0, active: 0, trend: 0 },
-  agents: { total: 0, active: 0, trend: 0 },
-  reports: { total: 0 },
-});
-
-const passRate = ref(0);
-const executionChart = ref({
-  labels: [],
-  success: [],
-  failed: [],
-  new_cases: [],
-});
-const executionSummary = ref({ passed: 0, failed: 0, new_cases_week: 0 });
-const recentTasks = ref([]);
-const lastUpdated = ref("");
-const systemStatus = ref("normal");
-const activities = ref([]);
-
-async function loadData() {
-  loading.value = true;
-  try {
-    const [statsRes, activitiesRes] = await Promise.allSettled([
-      fetchDashboardStats(),
-      fetchRecentActivities(),
-    ]);
-    if (statsRes.status === "fulfilled" && statsRes.value.data?.ok) {
-      const d = statsRes.value.data.data;
-      stats.value = {
-        devices: {
-          online: d.devices?.online ?? 0,
-          total: d.devices?.total ?? 0,
-          trend: d.devices?.trend ?? 0,
-        },
-        cases: {
-          total: d.cases?.total ?? 0,
-          enabled: d.cases?.enabled ?? 0,
-          trend: d.cases?.trend ?? 0,
-        },
-        elements: {
-          total: d.elements?.total ?? 0,
-          pages: d.elements?.pages ?? 0,
-          breakdown: d.elements?.breakdown ?? [],
-        },
-        runs: {
-          total: d.runs?.total ?? 0,
-          active: d.runs?.active ?? 0,
-          trend: d.runs?.trend ?? 0,
-        },
-        agents: {
-          total: d.agents?.total ?? 0,
-          active: d.agents?.active ?? 0,
-          trend: d.agents?.trend ?? 0,
-        },
-        reports: { total: d.reports?.total ?? 0 },
-      };
-      passRate.value = d.pass_rate ?? 0;
-      executionChart.value = d.charts?.execution ?? {
-        labels: [],
-        success: [],
-        failed: [],
-        new_cases: [],
-      };
-      executionSummary.value = d.execution_summary ?? {
-        passed: 0,
-        failed: 0,
-        new_cases_week: 0,
-      };
-      recentTasks.value = d.recent_tasks ?? [];
-      lastUpdated.value = d.last_updated ?? "";
-      systemStatus.value = d.system_status ?? "normal";
-    }
-    if (activitiesRes.status === "fulfilled" && activitiesRes.value.data?.ok) {
-      activities.value = activitiesRes.value.data.data || [];
-    }
-  } catch {}
-  loading.value = false;
-}
-
-async function refreshData() {
-  refreshing.value = true;
-  try {
-    const [statsRes, activitiesRes] = await Promise.allSettled([
-      fetchDashboardStats(),
-      fetchRecentActivities(),
-    ]);
-    if (statsRes.status === "fulfilled" && statsRes.value.data?.ok) {
-      const d = statsRes.value.data.data;
-      stats.value = {
-        devices: {
-          online: d.devices?.online ?? 0,
-          total: d.devices?.total ?? 0,
-          trend: d.devices?.trend ?? 0,
-        },
-        cases: {
-          total: d.cases?.total ?? 0,
-          enabled: d.cases?.enabled ?? 0,
-          trend: d.cases?.trend ?? 0,
-        },
-        elements: {
-          total: d.elements?.total ?? 0,
-          pages: d.elements?.pages ?? 0,
-          breakdown: d.elements?.breakdown ?? [],
-        },
-        runs: {
-          total: d.runs?.total ?? 0,
-          active: d.runs?.active ?? 0,
-          trend: d.runs?.trend ?? 0,
-        },
-        agents: {
-          total: d.agents?.total ?? 0,
-          active: d.agents?.active ?? 0,
-          trend: d.agents?.trend ?? 0,
-        },
-        reports: { total: d.reports?.total ?? 0 },
-      };
-      passRate.value = d.pass_rate ?? 0;
-      executionChart.value = d.charts?.execution ?? {
-        labels: [],
-        success: [],
-        failed: [],
-        new_cases: [],
-      };
-      executionSummary.value = d.execution_summary ?? {
-        passed: 0,
-        failed: 0,
-        new_cases_week: 0,
-      };
-      recentTasks.value = d.recent_tasks ?? [];
-      lastUpdated.value = d.last_updated ?? "";
-      systemStatus.value = d.system_status ?? "normal";
-    }
-    if (activitiesRes.status === "fulfilled" && activitiesRes.value.data?.ok) {
-      activities.value = activitiesRes.value.data.data || [];
-    }
-  } catch {}
-  refreshing.value = false;
-}
+const {
+  loading,
+  refreshing,
+  error,
+  stats,
+  executionChart,
+  executionSummary,
+  recentTasks,
+  lastUpdated,
+  systemStatus,
+  activities,
+  loadData,
+  refreshData,
+} = useDashboardStats();
 
 onMounted(() => {
   loadData();
@@ -184,6 +53,12 @@ onMounted(() => {
         </el-button>
       </template>
     </WorkbenchHeader>
+
+    <!-- 错误提示 -->
+    <div v-if="error" class="dashboard__error">
+      <span>{{ error }}</span>
+      <el-button size="small" @click="loadData">重试</el-button>
+    </div>
 
     <!-- 内容区 -->
     <div class="doc-body">
@@ -318,6 +193,22 @@ onMounted(() => {
    Paper × Polaroid — 仪表盘布局
    ═══════════════════════════════════════════ */
 
+/* ── 错误提示 ── */
+.dashboard__error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 0 20px;
+  padding: 10px 20px;
+  background: var(--app-error-bg);
+  border: 2px solid var(--app-error);
+  border-radius: 6px 10px 6px 10px;
+  font-size: 12px;
+  color: var(--app-status-danger-text);
+  font-weight: 600;
+}
+
 /* ── 底纹 + 全局 ── */
 .doc-page {
   display: flex;
@@ -325,9 +216,9 @@ onMounted(() => {
   height: 100%;
   overflow: hidden;
   background:
-    radial-gradient(circle, #d4cdc0 0.8px, transparent 0.8px);
+    radial-gradient(circle, var(--app-paper-dot) 0.8px, transparent 0.8px);
   background-size: 14px 14px;
-  background-color: #fefcf6;
+  background-color: var(--doodle-bg, #faf5ee);
 }
 .doc-body {
   flex: 1;
@@ -372,7 +263,7 @@ onMounted(() => {
   margin-bottom: 0;
 }
 .doc-section__title {
-  font-family: 'Caveat', cursive;
+  font-family: var(--doodle-font-title);
   font-size: 20px;
   font-weight: 700;
   color: var(--ink);
@@ -386,13 +277,13 @@ onMounted(() => {
   bottom: -1px;
   left: 0;
   right: 0;
-  height: 2.5px;
+  height: 3px;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%232d2d2d' stroke-width='2' fill='none'/%3E%3C/svg%3E") repeat-x;
   background-size: 40px 3px;
 }
 .doc-section__label {
   font-size: 10px;
-  color: #999;
+  color: var(--app-ink-muted);
   font-weight: 600;
   margin: 0 0 12px;
 }
@@ -401,8 +292,8 @@ onMounted(() => {
   padding: 1px 8px;
   border-radius: 4px 8px 4px 8px;
   background: #fff;
-  color: #999;
-  border: 1.5px solid #ddd;
+  color: var(--app-ink-muted);
+  border: 1.5px solid var(--app-border-light);
   font-weight: 700;
   margin-left: 8px;
 }
@@ -474,7 +365,7 @@ onMounted(() => {
   height: 8px;
   border-radius: 50%;
   background: #fff;
-  border: 2px solid #f87171;
+  border: 2px solid var(--app-live);
   top: -2px;
   right: -2px;
   animation: livePulse 1.5s ease-in-out infinite;
@@ -496,8 +387,8 @@ onMounted(() => {
   border-radius: 6px 10px 6px 10px;
   font-size: 12px;
   font-weight: 700;
-  color: #5a4e20;
-  font-family: 'Caveat', cursive;
+  color: var(--app-footer-yellow-text);
+  font-family: var(--doodle-font-title);
 }
 .dashboard__footer-item {
   display: flex;
@@ -506,8 +397,8 @@ onMounted(() => {
   font-size: 13px;
 }
 .dashboard__footer-item :deep(svg) {
-  color: #5a4e20;
-  stroke: #5a4e20;
+  color: var(--app-footer-yellow-text);
+  stroke: var(--app-footer-yellow-text);
 }
 
 /* ── Module Nav 覆盖 ── */
@@ -524,6 +415,6 @@ onMounted(() => {
 
 /* ── Activity Timeline 覆盖 ── */
 :deep(.activity-item) {
-  border-bottom: 1.5px dashed #ddd !important;
+  border-bottom: 1.5px dashed var(--app-border-light) !important;
 }
 </style>

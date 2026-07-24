@@ -519,7 +519,7 @@ watch(
   padding: 6px 10px;
   border: 2px solid var(--ac-border);
   border-radius: 10px;
-  background: rgba(255,255,255,0.58);
+  background: #fff;
   font-size: 13px;
   font-weight: 800;
   font-family: inherit;
@@ -663,7 +663,7 @@ watch(
   max-height: 420px;
   display: flex;
   flex-direction: column;
-  background: rgba(255,255,255,0.78);
+  background: #fff;
   border: 1px solid rgba(255,255,255,0.68);
   border-radius: 14px;
   box-shadow: 0 18px 48px rgba(74,78,105,0.12);
@@ -677,7 +677,7 @@ watch(
   align-items: center;
   gap: 8px;
   padding: 12px 14px;
-  background: rgba(255,255,255,0.46);
+  background: #fff;
   border-bottom: 1px solid rgba(162,210,255,0.24);
 }
 .el-picker-head strong {
@@ -722,7 +722,7 @@ watch(
   overflow: auto;
   padding: 6px 8px 12px;
   max-height: 300px;
-  background: rgba(255,255,255,0.40);
+  background: #fff;
 }
 .el-picker-item {
   width: 100%;

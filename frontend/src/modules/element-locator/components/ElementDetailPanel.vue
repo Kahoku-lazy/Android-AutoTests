@@ -86,7 +86,7 @@ onUnmounted(() => stopDetailAnimation())
   border-radius: 20px;
   border: 1px solid var(--ink));
   padding: 16px;
-  box-shadow: var(--app-shadow-sm, 0 4px 15px rgba(0,0,0,0.02));
+  box-shadow: var(--doodle-shadow);
   overflow-y: auto;
 }
 h3 {

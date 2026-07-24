@@ -884,7 +884,7 @@ async function removeTask() {
   border: 1px solid var(--ink);
 }
 .step-strip { width: 5px; flex-shrink: 0; border-radius: 5px 0 0 5px; }
-.step-body { flex: 1; padding: 12px 16px; background: rgba(255,255,255,0.52); display: flex; flex-direction: column; gap: 4px; }
+.step-body { flex: 1; padding: 12px 16px; background: #fff; display: flex; flex-direction: column; gap: 4px; }
 .step-header-row { display: flex; align-items: center; gap: 8px; }
 .step-index { font-size: 12px; font-weight: 800; color: #999; font-family: 'Cascadia Code', Consolas, monospace; }
 .step-type-tag {
@@ -988,7 +988,7 @@ async function removeTask() {
   align-items: center;
   gap: 12px;
   padding: 5px 10px;
-  background: rgba(255,255,255,0.6);
+  background: #fff;
   border-radius: 8px;
   font-size: 12px;
 }

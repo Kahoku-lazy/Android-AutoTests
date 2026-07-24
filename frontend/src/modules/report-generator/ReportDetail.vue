@@ -333,7 +333,7 @@ function outcomeBadgeClass(outcome) {
           <div v-if="failedStepsByCase.length > 0" class="section-block">
             <h3 class="sec-title">
               🔍 步骤级失败详情
-              <span class="sec-badge" style="background:#e85f5f;">{{ failedSteps.length }} 条</span>
+              <span class="sec-badge" style="background:var(--app-status-danger-text, #a03030);">{{ failedSteps.length }} 条</span>
               <span class="sec-badge sec-badge--muted">{{ failedStepsByCase.length }} 用例</span>
             </h3>
             <p class="sec-sub">按用例标题分类，点击展开查看具体失败步骤</p>
@@ -391,7 +391,7 @@ function outcomeBadgeClass(outcome) {
           <div v-if="failedCases.length > 0">
             <h3 class="sec-title" :style="failedSteps.length > 0 ? { marginTop: '16px' } : undefined">
               📋 迭代失败汇总
-              <span class="sec-badge" style="background:#e85f5f;">{{ failedCases.length }} 用例</span>
+              <span class="sec-badge" style="background:var(--app-status-danger-text, #a03030);">{{ failedCases.length }} 用例</span>
             </h3>
             <p class="sec-sub">点击用例展开查看迭代失败详情</p>
             <div v-for="(c, idx) in failedCases" :key="'fail-' + c.case_id" class="fail-card">
@@ -489,7 +489,7 @@ function outcomeBadgeClass(outcome) {
 
 /* ── Top bar ── */
 .top-bar { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; flex-shrink: 0; }
-.run-meta { display: flex; align-items: center; gap: 12px; font-size: 13px; color: #8a7b66; flex-wrap: wrap; }
+.run-meta { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--app-ink-muted, #999); flex-wrap: wrap; }
 
 /* ── KPI Cards ── */
 .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; flex-shrink: 0; }
@@ -533,7 +533,7 @@ function outcomeBadgeClass(outcome) {
   flex-basis: 100%;
 }
 .meta-label {
-  color: #9f927d;
+  color: var(--app-ink-muted, #999);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -572,7 +572,7 @@ function outcomeBadgeClass(outcome) {
   background: rgba(139, 115, 85, 0.03);
 }
 .page-size-control { display: flex; align-items: center; gap: 10px; }
-.toolbar-label { font-size: 12px; font-weight: 700; color: #8a7b66; white-space: nowrap; }
+.toolbar-label { font-size: 12px; font-weight: 700; color: var(--app-ink-muted, #999); white-space: nowrap; }
 .page-size-btns { display: flex; gap: 6px; }
 .page-size-btn {
   min-width: 40px;
@@ -586,14 +586,14 @@ function outcomeBadgeClass(outcome) {
   cursor: pointer;
   transition: all 0.2s ease;
 }
-.page-size-btn:hover { border-color: #19c8b9; color: #19c8b9; }
+.page-size-btn:hover { border-color: var(--app-accent-purple, #b39ef3); color: var(--app-accent-purple, #b39ef3); }
 .page-size-btn.active {
   background: rgba(25, 200, 185, 0.12);
-  border-color: #19c8b9;
+  border-color: var(--app-accent-purple, #b39ef3);
   color: #0f9a8e;
 }
 .table-toolbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
-.page-info { font-size: 12px; color: #8a7b66; font-weight: 600; white-space: nowrap; }
+.page-info { font-size: 12px; color: var(--app-ink-muted, #999); font-weight: 600; white-space: nowrap; }
 .page-nav { display: flex; gap: 8px; }
 
 /* ── AppTable styles ── */
@@ -623,17 +623,17 @@ function outcomeBadgeClass(outcome) {
 .rate-text { font-weight: 700; font-size: 12px; min-width: 38px; text-align: right; }
 .rate-ok { color: var(--c-workflow); }
 .rate-warn { color: #dba90e; }
-.rate-bad { color: #e05a5a; }
+.rate-bad { color: var(--app-status-danger-text, #a03030); }
 
 /* ── Badges ── */
 .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--app-radius-pill); font-size: 10px; font-weight: 700; letter-spacing: 0.02em; }
 .badge-pass { background: rgba(111,186,44,0.12); color: var(--c-workflow); border: 1.5px solid rgba(111,186,44,0.25); }
 .badge-fail { background: rgba(224,90,90,0.12); color: #e05a5a; border: 1.5px solid rgba(224,90,90,0.25); }
 .badge-running { background: rgba(245,195,28,0.12); color: #dba90e; border: 1.5px solid rgba(245,195,28,0.25); }
-.badge-stopped { background: rgba(138,123,102,0.10); color: #8a7b66; border: 1.5px solid rgba(138,123,102,0.20); }
+.badge-stopped { background: rgba(138,123,102,0.10); color: var(--app-ink-muted, #999); border: 1.5px solid rgba(138,123,102,0.20); }
 
 .mini-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; }
-.mini-table th { padding: 6px 10px; font-size: 11px; font-weight: 700; color: #9f927d; text-transform: uppercase; text-align: left; border-bottom: 1px solid rgba(196,184,158,0.3); }
+.mini-table th { padding: 6px 10px; font-size: 11px; font-weight: 700; color: var(--app-ink-muted, #999); text-transform: uppercase; text-align: left; border-bottom: 1px solid rgba(196,184,158,0.3); }
 .mini-table td { padding: 6px 10px; border-bottom: 1px dashed rgba(196,184,158,0.15); font-size: 12px; color: #725d42; }
 .row-fail { background: rgba(224,90,90,0.04); }
 
@@ -646,7 +646,7 @@ function outcomeBadgeClass(outcome) {
   margin-bottom: 0;
   padding: 12px 16px;
   font-size: 14px;
-  color: #794f27;
+  color: var(--doodle-ink, #2d2d2d);
 }
 .fail-card-header--clickable {
   cursor: pointer;
@@ -657,11 +657,11 @@ function outcomeBadgeClass(outcome) {
 .fail-card-header--clickable:hover {
   background: rgba(232, 95, 95, 0.06);
 }
-.fail-card-meta { font-size: 12px; color: #9f927d; font-weight: 500; flex: 1; min-width: 0; }
+.fail-card-meta { font-size: 12px; color: var(--app-ink-muted, #999); font-weight: 500; flex: 1; min-width: 0; }
 .fail-expand-hint {
   font-size: 12px;
   font-weight: 600;
-  color: #19c8b9;
+  color: var(--app-accent-purple, #b39ef3);
   white-space: nowrap;
   margin-left: auto;
 }
@@ -670,13 +670,13 @@ function outcomeBadgeClass(outcome) {
 .expand-icon {
   cursor: pointer;
   font-size: 11px;
-  color: #9f927d;
+  color: var(--app-ink-muted, #999);
   transition: transform 0.25s ease;
   display: inline-block;
   user-select: none;
   flex-shrink: 0;
 }
-.expand-icon.open { transform: rotate(90deg); color: #19c8b9; }
+.expand-icon.open { transform: rotate(90deg); color: var(--app-accent-purple, #b39ef3); }
 
 .expand-panel {
   padding: 0 16px 14px;
@@ -697,7 +697,7 @@ function outcomeBadgeClass(outcome) {
 }
 .fail-step-fallback__title {
   font-size: 12px;
-  color: #9f927d;
+  color: var(--app-ink-muted, #999);
   margin: 0 0 10px;
 }
 .fail-step-row {
@@ -706,13 +706,13 @@ function outcomeBadgeClass(outcome) {
   gap: 4px;
   padding: 10px 12px;
   margin-bottom: 8px;
-  background: rgba(255,255,255,0.5);
+  background: #fff;
   border-radius: 10px;
   border: 1px dashed rgba(232,95,95,0.2);
 }
-.fail-step-row__meta { font-size: 12px; font-weight: 700; color: #794f27; }
+.fail-step-row__meta { font-size: 12px; font-weight: 700; color: var(--doodle-ink, #2d2d2d); }
 .fail-step-row__desc { font-size: 13px; color: #4a3a28; }
-.fail-step-row__error { font-size: 12px; color: #e85f5f; font-family: 'SF Mono','Fira Code',monospace; word-break: break-all; }
+.fail-step-row__error { font-size: 12px; color: var(--app-status-danger-text, #a03030); font-family: 'SF Mono','Fira Code',monospace; word-break: break-all; }
 
 .fail-detail-row {
   display: flex; flex-wrap: wrap; gap: 16px;
@@ -723,12 +723,12 @@ function outcomeBadgeClass(outcome) {
   display: flex; flex-direction: column; gap: 2px;
   min-width: 140px; flex: 1;
 }
-.fd-label { font-size: 11px; color: #9f927d; font-weight: 500; }
+.fd-label { font-size: 11px; color: var(--app-ink-muted, #999); font-weight: 500; }
 .fd-value { font-size: 13px; color: #4a3a28; font-weight: 600; }
-.fd-error { color: #e85f5f; }
+.fd-error { color: var(--app-status-danger-text, #a03030); }
 
 .fail-no-iterations {
-  padding: 12px 20px; font-size: 12px; color: #9f927d; font-style: italic;
+  padding: 12px 20px; font-size: 12px; color: var(--app-ink-muted, #999); font-style: italic;
 }
 
 .sec-title {
@@ -740,9 +740,9 @@ function outcomeBadgeClass(outcome) {
   padding: 2px 10px; border-radius: var(--app-radius-pill);
 }
 .sec-badge--muted {
-  background: #8a7b66;
+  background: var(--app-ink-muted, #999);
 }
-.sec-sub { font-size: 12px; color: #9f927d; margin-bottom: 12px; }
+.sec-sub { font-size: 12px; color: var(--app-ink-muted, #999); margin-bottom: 12px; }
 
 .fail-case-title-wrap {
   display: flex;
@@ -760,7 +760,7 @@ function outcomeBadgeClass(outcome) {
   font-family: 'SF Mono','Fira Code',monospace;
   font-size: 11px;
   font-weight: 600;
-  color: #9f927d;
+  color: var(--app-ink-muted, #999);
   background: rgba(139,115,85,0.08);
   padding: 1px 6px;
   border-radius: 4px;
@@ -783,9 +783,9 @@ function outcomeBadgeClass(outcome) {
   border-top: none;
 }
 
-.empty-note { text-align: center; padding: 48px 24px; color: #9f927d; }
+.empty-note { text-align: center; padding: 48px 24px; color: var(--app-ink-muted, #999); }
 .empty-note span { font-size: 36px; display: block; margin-bottom: 12px; }
-.time-text { font-size: 12px; color: #8a7b66; white-space: nowrap; }
+.time-text { font-size: 12px; color: var(--app-ink-muted, #999); white-space: nowrap; }
 
 @media (max-width: 900px) {
   .kpi-row { grid-template-columns: repeat(2, 1fr); }

@@ -250,7 +250,7 @@ async function confirmImport() {
   overflow: auto;
   border: 1px solid var(--ink);
   border-radius: 12px;
-  background: rgba(255,255,255,0.48);
+  background: #fff;
 }
 .empty {
   padding: 32px 16px;

@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>元素定位 Paper×Polaroid 统一方案 — Android-AutoTests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Quicksand:wght@600;700;800&family=Caveat:wght@600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+/* ═══════════════════════════════════════════
+   Paper × Polaroid — 元素定位统一方案
+   对齐仪表盘 + 设备管理设计语言
+   ═══════════════════════════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Inter','PingFang SC','Microsoft YaHei',sans-serif;
+  background:#e8ecf1;padding:28px 24px;
+  --ink:#2d2d2d;--muted:#999;--paper:#fefcf6;--dot:#d4cdc0;
+  --border-light:#e8ecf1;--border-lighter:#f0ede8;--bg-subtle:#f8f6f2;
+  --highlight:#FFE066;
+  --green:#6BCB77;--green-bg:#C8F5D0;--green-text:#2d7a2d;
+  --pink:#FFB5A7;--pink-bg:#FFE0DB;--pink-text:#a03030;
+  --purple:#b39ef3;--purple-bg:#E8DDF8;--purple-text:#5a3fa0;--purple-border:#A78BFA;
+  --yellow-bg:#FFF9E0;
+  --blue:#89CFF0;--blue-light:#BDE0FE;
+  --accent:var(--purple);--accent-bg:var(--purple-bg);--accent-text:var(--purple-text);
+}
+h1{text-align:center;font-size:20px;font-weight:800;color:var(--ink);margin-bottom:4px;letter-spacing:-0.02em;}
+h1+p{text-align:center;font-size:12px;color:var(--muted);margin-bottom:28px;}
+
+.proto{max-width:1060px;margin:0 auto 32px;}
+.proto-label{
+  font-size:10px;font-weight:700;color:var(--ink);letter-spacing:0.06em;text-transform:uppercase;
+  background:#fff;padding:5px 16px;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;
+  display:inline-flex;align-items:center;gap:6px;margin-bottom:12px;
+}
+.proto-label .dot{width:7px;height:7px;background:var(--accent);flex-shrink:0;}
+
+/* ═══════════════════════════════════════════
+   共享原子
+   ═══════════════════════════════════════════ */
+.btn{
+  font-size:10px;font-weight:700;padding:4px 12px;border-radius:4px 8px 4px 8px;
+  border:2px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;
+  font-family:inherit;transition:all 0.12s;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;
+}
+.btn:hover{background:var(--highlight);}
+.btn-primary{background:var(--ink);color:#fff;}
+.btn-primary:hover{background:var(--ink);opacity:0.85;color:#fff;}
+.btn-sm{font-size:9px;padding:3px 8px;}
+.badge{
+  font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;
+  border:1.5px solid var(--ink);display:inline-block;
+}
+.badge-green{background:var(--green-bg);color:var(--green-text);}
+.badge-pink{background:var(--pink-bg);color:var(--pink-text);}
+.badge-purple{background:var(--purple-bg);color:var(--purple-text);}
+.badge-gray{background:var(--border-lighter);color:var(--muted);}
+.badge-yellow{background:var(--yellow-bg);color:#7a5a10;}
+.mono{font-family:'JetBrains Mono','Fira Code','Consolas',monospace;}
+.filter-tab{
+  padding:4px 12px;font-size:10px;font-weight:700;color:var(--muted);background:transparent;
+  border:2px solid transparent;border-radius:4px 8px 4px 8px;cursor:pointer;
+  font-family:inherit;transition:all 0.15s;
+}
+.filter-tab:hover{color:var(--ink);border-color:var(--border-light);}
+.filter-tab.active{color:var(--ink);background:#fff;border-color:var(--ink);}
+
+/* ═══════════════════════════════════════════
+   Page Shell: Paper bg + dot pattern
+   ═══════════════════════════════════════════ */
+.shell{
+  background:
+    radial-gradient(circle,var(--dot) 0.8px,transparent 0.8px);
+  background-size:14px 14px;
+  background-color:var(--paper);
+  border:2.5px solid var(--ink);border-radius:4px;overflow:hidden;
+  box-shadow:3px 3px 0 rgba(0,0,0,0.05);
+}
+
+/* Header */
+.dash-header{
+  display:flex;align-items:center;gap:14px;padding:14px 20px;
+  background:#fff;border-bottom:2.5px solid var(--ink);
+}
+.dash-header-icon{
+  width:42px;height:42px;display:grid;place-items:center;font-size:18px;
+  background:linear-gradient(135deg,var(--purple),#9b8fd4);color:#fff;
+  border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;
+  box-shadow:2px 2px 0 rgba(0,0,0,0.06);
+}
+.dash-header h2{
+  font-family:'Caveat',cursive;font-size:22px;font-weight:700;color:var(--ink);margin:0;
+}
+.dash-header p{font-size:10px;color:var(--muted);font-weight:600;margin:1px 0 0;}
+.dash-header-actions{margin-left:auto;display:flex;align-items:center;gap:8px;}
+
+/* Body */
+.doc-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
+.doc-section{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:14px 20px 16px;gap:10px;}
+
+/* Section title */
+.sec-title{
+  font-family:'Caveat',cursive;font-size:18px;font-weight:700;color:var(--ink);
+  display:inline-block;position:relative;
+}
+.sec-title::after{
+  content:'';position:absolute;bottom:-1px;left:0;right:0;height:2.5px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%232d2d2d' stroke-width='2' fill='none'/%3E%3C/svg%3E") repeat-x;
+  background-size:40px 3px;
+}
+.sec-tag{
+  font-size:9px;padding:1px 8px;border-radius:4px 8px 4px 8px;
+  background:#fff;color:var(--muted);border:1.5px solid var(--border-light);
+  font-weight:700;margin-left:8px;
+}
+.sec-label{font-size:10px;color:var(--muted);font-weight:600;margin:0 0 8px;}
+
+/* ═══════════════════════════════════════════
+   Layout: device bar + 3-col workspace
+   ═══════════════════════════════════════════ */
+.device-bar{
+  display:flex;align-items:center;gap:10px;padding:8px 14px;
+  background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;
+  margin-bottom:10px;flex-shrink:0;box-shadow:2px 2px 0 rgba(0,0,0,0.04);
+}
+.device-bar .dot{width:7px;height:7px;background:var(--green);border-radius:50%;flex-shrink:0;}
+.device-bar span{font-size:12px;font-weight:700;color:var(--ink);}
+.device-bar .meta{font-size:10px;color:var(--muted);font-weight:600;}
+.device-bar .tag{
+  font-size:9px;font-weight:700;padding:2px 8px;margin-left:auto;
+  background:var(--green-bg);color:var(--green-text);
+  border:1.5px solid var(--green);border-radius:3px 6px 3px 6px;
+}
+
+/* Filters */
+.filter-bar{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.filter-bar .right{margin-left:auto;display:flex;align-items:center;gap:6px;}
+
+/* Workspace grid */
+.workspace{
+  flex:1;min-height:420px;display:grid;
+  grid-template-columns:260px minmax(0,1fr) 260px;
+  gap:12px;overflow:hidden;padding-top:4px;
+}
+
+/* ═══════════════════════════════════════════
+   Panel: Paper卡片
+   ═══════════════════════════════════════════ */
+.panel{
+  background:#fff;border-radius:6px 10px 6px 10px;
+  border:2.5px solid var(--ink);
+  box-shadow:2px 3px 0 rgba(0,0,0,0.05);
+  padding:8px 8px 30px 8px;display:flex;flex-direction:column;
+  min-height:0;overflow:hidden;position:relative;
+}
+/* 图钉 */
+.panel::before{
+  content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);
+  width:9px;height:9px;
+  background:radial-gradient(circle,#e8e0d5 30%,#c0b8a8 60%,#a09080 100%);
+  border-radius:50%;box-shadow:0 1px 1px rgba(0,0,0,0.08);z-index:2;
+}
+.panel:nth-child(1){transform:rotate(-0.4deg);}
+.panel:nth-child(2){transform:rotate(0.3deg);}
+.panel:nth-child(3){transform:rotate(-0.3deg);}
+.panel:hover{transform:rotate(0deg) scale(1.01);z-index:5;box-shadow:2px 4px 0 rgba(0,0,0,0.08);transition:all 0.2s;}
+
+.panel-title{
+  font-size:11px;font-weight:700;color:var(--ink);
+  padding:4px 8px 8px;border-bottom:2px solid var(--border-light);
+  margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-shrink:0;
+}
+.panel-body{flex:1;min-height:0;overflow-y:auto;padding:0 4px;}
+
+/* Tree */
+.tree-node{
+  font-size:11px;font-weight:600;color:var(--ink);
+  padding:5px 8px;border-radius:3px 6px 3px 6px;cursor:pointer;
+  display:flex;align-items:center;gap:5px;transition:all 0.1s;
+}
+.tree-node:hover{background:var(--accent-bg);}
+.tree-node.sel{
+  background:var(--accent-bg);color:var(--accent-text);font-weight:700;
+  border:1.5px solid var(--accent);
+}
+.tree-node.indent{padding-left:22px;font-size:10px;}
+.tree-node .cnt{
+  font-size:9px;font-weight:700;margin-left:auto;
+  background:var(--bg-subtle);color:var(--muted);padding:1px 6px;border-radius:3px;
+}
+.tree-empty{text-align:center;color:var(--muted);font-size:11px;padding:24px 8px;}
+
+/* Screenshot area */
+.sshot-area{
+  flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+  background:linear-gradient(180deg,#e8ecf1,#dce0e5);
+  border-radius:3px 5px 3px 5px;border:2px solid var(--ink);
+}
+.sshot-phone{
+  width:150px;height:290px;background:linear-gradient(180deg,#1a1a2e,#16213e);
+  border-radius:12px;border:3px solid #444;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+}
+.sshot-phone span{color:#fff;font-size:9px;opacity:0.5;font-family:'JetBrains Mono',monospace;}
+.sshot-hl{
+  position:absolute;border:2px solid var(--purple);border-radius:3px;
+  background:rgba(179,158,243,0.1);
+  left:44%;top:28%;width:40%;height:9%;
+  box-shadow:0 0 6px rgba(179,158,243,0.2);
+}
+.sshot-label{
+  position:absolute;top:3px;left:50%;transform:translateX(-50%);
+  font-size:8px;font-weight:700;padding:1px 6px;
+  background:rgba(0,0,0,0.6);color:#fff;border-radius:3px;
+}
+
+/* XPath list */
+.xp-item{
+  font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;
+  padding:5px 8px;border-radius:3px 6px 3px 6px;cursor:pointer;
+  border:1.5px solid transparent;transition:all 0.1s;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);
+}
+.xp-item:hover{border-color:var(--purple);background:var(--purple-bg);}
+.xp-item.best{
+  background:var(--purple-bg);border-color:var(--purple);color:var(--purple-text);
+}
+.xp-rank{font-size:8px;padding:0 4px;background:var(--purple);color:#fff;border-radius:2px;margin-right:3px;}
+.xp-count{font-size:8px;color:var(--muted);margin-left:4px;flex-shrink:0;}
+
+/* Table */
+.elt-table{margin-top:10px;padding-top:8px;border-top:2px solid var(--border-light);}
+.tbl-hdr{display:grid;grid-template-columns:1.2fr 1.8fr 0.8fr 0.6fr;gap:0;margin-bottom:6px;}
+.th{
+  font-size:9px;font-weight:700;color:#fff;padding:4px 8px;text-align:center;
+  border-right:1px solid rgba(255,255,255,0.3);
+}
+.th:last-child{border-right:none;}
+.th:nth-child(1){background:var(--purple);border-radius:3px 0 0 0;}
+.th:nth-child(2){background:#6c93d4;}
+.th:nth-child(3){background:#7db84d;}
+.th:nth-child(4){background:#f0a06a;border-radius:0 3px 0 0;}
+.tbl-row{
+  display:grid;grid-template-columns:1.2fr 1.8fr 0.8fr 0.6fr;gap:0;
+  font-size:10px;padding:4px 8px;border-bottom:1px solid var(--border-lighter);
+  color:var(--ink);align-items:center;
+}
+.tbl-row:hover{background:var(--purple-bg);}
+.tbl-row .code{font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tbl-row .tp{font-size:9px;text-align:center;}
+
+/* Footer */
+.footer{
+  display:flex;align-items:center;justify-content:center;gap:18px;
+  padding:10px 20px;background:var(--highlight);
+  border-top:2.5px solid var(--ink);
+  font-size:11px;font-weight:700;color:#5a4e20;
+  font-family:'Caveat',cursive;
+}
+.footer-item{display:flex;align-items:center;gap:4px;font-size:12px;}
+
+/* ── 选项卡标签页 ── */
+.tab-bar{display:flex;gap:0;padding:12px 20px 0;background:#fff;border-bottom:2.5px solid var(--ink);}
+.tab-item{
+  padding:8px 16px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;
+  border:2px solid transparent;border-bottom:none;border-radius:6px 6px 0 0;
+  margin-bottom:-2px;transition:all 0.15s;font-family:inherit;background:transparent;
+}
+.tab-item:hover{color:var(--ink);background:var(--bg-subtle);}
+.tab-item.active{
+  color:var(--ink);background:#fff;
+  border-color:var(--ink);border-bottom-color:#fff;
+}
+
+/* 响应式 */
+@media(max-width:900px){.workspace{grid-template-columns:1fr;overflow-y:auto;}}
+</style>
+</head>
+<body>
+
+<h1>元素定位 Element Locator — Paper × Polaroid 统一方案</h1>
+<p>对齐仪表盘 · 设备管理设计语言：纸纹底 + 墨色 #2d2d2d + 图钉卡片 + 紫色模块强调</p>
+
+<div class="proto">
+  <div class="proto-label"><span class="dot"></span> 完整页面 — 发现元素 Tab（含截图 + 树 + XPath）</div>
+
+  <div class="shell">
+    <!-- Header -->
+    <div class="dash-header">
+      <div class="dash-header-icon">⊕</div>
+      <div>
+        <h2>元素定位</h2>
+        <p>连接设备 · Dump UI · 生成 XPath 候选 · 保存到元素管理</p>
+      </div>
+      <div class="dash-header-actions">
+        <button class="btn btn-sm">历史</button>
+        <button class="btn btn-primary btn-sm">🔄 获取元素</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-bar">
+      <button class="tab-item active">🔍 设备元素获取</button>
+      <button class="tab-item">📋 Android元素管理</button>
+      <button class="tab-item">🌐 Web端元素</button>
+      <button class="tab-item">📡 API接口</button>
+    </div>
+
+    <div class="doc-body">
+      <div class="doc-section">
+        <!-- Device bar -->
+        <div class="device-bar">
+          <div class="dot"></div>
+          <span>10.162.92.83:40449</span>
+          <span class="meta">· Samsung Galaxy S21 · 1080 × 2400 · Android 13</span>
+          <span class="tag">在线</span>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="filter-bar">
+          <div class="filter-tab active">全部</div>
+          <div class="filter-tab">可点击</div>
+          <div class="filter-tab">有文本</div>
+          <div class="filter-tab">有 ID</div>
+          <div class="right">
+            <span style="font-size:10px;color:var(--muted);font-weight:700;">32 个元素</span>
+            <button class="btn btn-sm">💾 保存全部</button>
+          </div>
+        </div>
+
+        <!-- Workspace: 3 columns -->
+        <div class="workspace">
+          <!-- Left: element tree -->
+          <div class="panel">
+            <div class="panel-title">📱 APP设备列表页 · 20 个元素</div>
+            <div class="panel-body">
+              <div class="tree-node"><span style="font-size:14px;">📱</span> FrameLayout <span class="cnt">4</span></div>
+              <div class="tree-node indent">📄 LinearLayout <span class="cnt">2</span></div>
+              <div class="tree-node indent">📱 RecyclerView <span class="cnt">12</span></div>
+              <div class="tree-node sel">🎯 TextView "设备列表" <span class="cnt">1</span></div>
+              <div class="tree-node indent" style="padding-left:32px;">📌 TextView "客厅空调"</div>
+              <div class="tree-node indent" style="padding-left:32px;">📌 ImageView 设备图标</div>
+              <div class="tree-node indent" style="padding-left:32px;">📌 Button "连接"</div>
+              <div class="tree-node indent" style="padding-left:32px;">📌 Switch 开关</div>
+              <div class="tree-node indent" style="padding-left:32px;">📌 TextView "断开"</div>
+              <div class="tree-node">📄 BottomNavigation</div>
+              <div class="tree-node">📄 StatusBar</div>
+            </div>
+          </div>
+
+          <!-- Center: screenshot -->
+          <div class="panel">
+            <div class="panel-title">📷 设备截图 · 实时</div>
+            <div class="sshot-area">
+              <div class="sshot-phone">
+                <span>📱 Device Screen</span>
+                <span style="font-size:7px;">1080×2400 · 420dpi</span>
+              </div>
+              <div class="sshot-hl"></div>
+              <div class="sshot-label">选中: TextView "设备列表"</div>
+            </div>
+          </div>
+
+          <!-- Right: XPath candidates + element table -->
+          <div class="panel">
+            <div class="panel-title">🎯 XPath 候选 · 8 种策略</div>
+            <div class="panel-body">
+              <div class="xp-item best"><span class="xp-rank">1</span> //TextView[@text="设备列表"] <span class="xp-count">1 匹配</span></div>
+              <div class="xp-item"><span style="color:var(--purple);font-size:8px;margin-right:3px;">2</span> //*[@text="设备列表"] <span class="xp-count">1</span></div>
+              <div class="xp-item"><span style="color:var(--muted);font-size:8px;margin-right:3px;">3</span> //android.widget.TextView[3] <span class="xp-count">1</span></div>
+              <div class="xp-item"><span style="color:var(--muted);font-size:8px;margin-right:3px;">4</span> //FrameLayout/.../TextView <span class="xp-count">1</span></div>
+              <div class="xp-item"><span style="color:var(--muted);font-size:8px;margin-right:3px;">5</span> //*[@clickable="true"][@bounds="..."] <span class="xp-count">3</span></div>
+
+              <div class="elt-table">
+                <div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:6px;">📊 已保存元素</div>
+                <div class="tbl-hdr">
+                  <div class="th">名称</div><div class="th">XPath</div><div class="th">类型</div><div class="th">测试点</div>
+                </div>
+                <div class="tbl-row"><span>设备列表</span><span class="code mono">//TextView[@text="设备列表"]</span><span>文本</span><span class="tp">✅</span></div>
+                <div class="tbl-row"><span>连接按钮</span><span class="code mono">//Button[@rid="btn_connect"]</span><span>按钮</span><span class="tp">✅</span></div>
+                <div class="tbl-row"><span>开关</span><span class="code mono">//Switch[@index="2"]</span><span>开关</span><span class="tp">—</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="footer-item">🕐 最近更新: 2026-07-23 14:30</div>
+      <div class="footer-item">📡 已连接 1 台设备</div>
+      <div class="footer-item">📋 已保存 12 个元素</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+   补充视图: Android 元素管理 Tab
+   ═══════════════════════════════════════════ -->
+<div class="proto">
+  <div class="proto-label"><span class="dot"></span> Android 元素管理 Tab — 树 + 表格视图</div>
+
+  <div class="shell">
+    <div class="dash-header">
+      <div class="dash-header-icon">📋</div>
+      <div><h2>Android元素管理</h2><p>按页面组织元素库，维护 XPath、别名、测试点等定位信息</p></div>
+      <div class="dash-header-actions">
+        <button class="btn btn-sm">➕ 新建页面</button>
+        <button class="btn btn-sm">📥 导入</button>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <button class="tab-item">🔍 设备元素获取</button>
+      <button class="tab-item active">📋 Android元素管理</button>
+      <button class="tab-item">🌐 Web端元素</button>
+      <button class="tab-item">📡 API接口</button>
+    </div>
+
+    <div class="doc-body">
+      <div class="doc-section">
+        <!-- Table view -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-shrink:0;">
+          <div class="filter-tab active">全部元素</div>
+          <div class="filter-tab">测试点</div>
+          <div class="filter-tab">未分类</div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+            <span style="font-size:10px;color:var(--muted);font-weight:700;">显示</span>
+            <button class="btn btn-sm" style="border-color:var(--purple);color:var(--purple);">10</button>
+            <button class="btn btn-sm">20</button>
+            <span class="badge badge-purple" style="margin-left:8px;">12 个元素</span>
+          </div>
+        </div>
+
+        <!-- Tree + Table layout -->
+        <div style="display:grid;grid-template-columns:240px 1fr;gap:10px;flex:1;min-height:300px;overflow:hidden;">
+          <!-- Tree panel -->
+          <div class="panel" style="transform:none;">
+            <div class="panel-title">📁 页面列表</div>
+            <div class="panel-body">
+              <div class="tree-node sel">📄 APP设备列表页 <span class="cnt">12</span></div>
+              <div class="tree-node">📄 设备详情页 <span class="cnt">8</span></div>
+              <div class="tree-node">📄 设置页面 <span class="cnt">5</span></div>
+              <div class="tree-node">📄 登录页面 <span class="cnt">3</span></div>
+            </div>
+          </div>
+
+          <!-- Table panel -->
+          <div class="panel" style="transform:none;overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:11px;">
+              <thead>
+                <tr style="background:var(--bg-subtle);border-bottom:2.5px solid var(--ink);">
+                  <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:800;">名称</th>
+                  <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:800;">XPath</th>
+                  <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:800;">class</th>
+                  <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:800;">text</th>
+                  <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:800;">测试点</th>
+                  <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:800;">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom:1.5px solid var(--border-lighter);">
+                  <td style="padding:6px 10px;font-weight:600;">设备列表容器</td>
+                  <td style="padding:6px 10px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--muted);">//RecyclerView[@rid="rv_list"]</td>
+                  <td style="padding:6px 10px;text-align:center;font-size:10px;color:var(--muted);">RecyclerView</td>
+                  <td style="padding:6px 10px;text-align:center;">—</td>
+                  <td style="padding:6px 10px;text-align:center;"><span class="badge badge-green">✅</span></td>
+                  <td style="padding:6px 10px;text-align:center;"><button class="btn btn-sm">编辑</button></td>
+                </tr>
+                <tr style="background:var(--bg-subtle);border-bottom:1.5px solid var(--border-lighter);">
+                  <td style="padding:6px 10px;font-weight:600;">设备名称</td>
+                  <td style="padding:6px 10px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--muted);">//TextView[@text="客厅空调"]</td>
+                  <td style="padding:6px 10px;text-align:center;font-size:10px;color:var(--muted);">TextView</td>
+                  <td style="padding:6px 10px;text-align:center;">客厅空调</td>
+                  <td style="padding:6px 10px;text-align:center;"><span class="badge badge-green">✅</span></td>
+                  <td style="padding:6px 10px;text-align:center;"><button class="btn btn-sm">编辑</button></td>
+                </tr>
+                <tr style="border-bottom:1.5px solid var(--border-lighter);">
+                  <td style="padding:6px 10px;font-weight:600;">连接按钮</td>
+                  <td style="padding:6px 10px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--muted);">//Button[@rid="btn_connect"]</td>
+                  <td style="padding:6px 10px;text-align:center;font-size:10px;color:var(--muted);">Button</td>
+                  <td style="padding:6px 10px;text-align:center;">连接</td>
+                  <td style="padding:6px 10px;text-align:center;"><span class="badge badge-green">✅</span></td>
+                  <td style="padding:6px 10px;text-align:center;"><button class="btn btn-sm">编辑</button></td>
+                </tr>
+                <tr style="background:var(--bg-subtle);border-bottom:1.5px solid var(--border-lighter);">
+                  <td style="padding:6px 10px;font-weight:600;">开关控件</td>
+                  <td style="padding:6px 10px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--muted);">//Switch[@index="2"]</td>
+                  <td style="padding:6px 10px;text-align:center;font-size:10px;color:var(--muted);">Switch</td>
+                  <td style="padding:6px 10px;text-align:center;">—</td>
+                  <td style="padding:6px 10px;text-align:center;">—</td>
+                  <td style="padding:6px 10px;text-align:center;"><button class="btn btn-sm">编辑</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="footer-item">📋 4 个页面 · 12 个元素 · 3 个测试点</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+   色板对照
+   ═══════════════════════════════════════════ -->
+<div class="proto">
+  <div class="proto-label"><span class="dot"></span> 色板对比 — 现状 vs 统一后</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div style="background:#fff;border:2.5px solid #2d2d2d;border-radius:6px 10px 6px 10px;padding:16px;box-shadow:2px 3px 0 rgba(0,0,0,0.05);">
+      <h4 style="font-size:12px;font-weight:800;color:#6b5b48;margin-bottom:10px;">现状 · Soft Glass 毛玻璃</h4>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
+        <span style="width:24px;height:24px;background:#4A3A28;border-radius:4px;"></span>
+        <span style="width:24px;height:24px;background:#6b5b48;border-radius:4px;"></span>
+        <span style="width:24px;height:24px;background:#9f927d;border-radius:4px;"></span>
+        <span style="width:24px;height:24px;background:#19c8b9;border-radius:4px;"></span>
+        <span style="width:24px;height:24px;background:rgba(255,255,255,0.65);border:1px solid #ddd;border-radius:4px;"></span>
+        <span style="width:24px;height:24px;background:rgba(139,115,85,0.16);border-radius:4px;"></span>
+      </div>
+      <p style="font-size:10px;color:#999;">暖棕文字 + 青绿强调 + blur 玻璃面板 · Element Plus 纯原生</p>
+    </div>
+    <div style="background:#fff;border:2.5px solid #2d2d2d;border-radius:6px 10px 6px 10px;padding:16px;box-shadow:2px 3px 0 rgba(0,0,0,0.05);">
+      <h4 style="font-size:12px;font-weight:800;color:#2d2d2d;margin-bottom:10px;">统一 · Paper × Polaroid</h4>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
+        <span style="width:24px;height:24px;background:#2d2d2d;border-radius:4px;"></span>
+        <span style="width:24px;height:24px;background:#999;border-radius:4px;"></span>
+        <span style="width:24px;height:24px;background:#fefcf6;border:1px solid #ddd;border-radius:4px;"></span>
+        <span style="width:24px;height:24px;background:#b39ef3;border-radius:4px;"></span>
+        <span style="width:24px;height:24px;background:#E8DDF8;border-radius:4px;"></span>
+        <span style="width:24px;height:24px;background:#FFE066;border-radius:4px;"></span>
+      </div>
+      <p style="font-size:10px;color:#999;">墨色 #2d2d2d + 紫色模块强调 + 纸纹底 + 图钉卡片 · 与仪表盘/设备管理统一</p>
+    </div>
+  </div>
+</div>
+
+<script>lucide.createIcons()</script>
+</body>
+</html>

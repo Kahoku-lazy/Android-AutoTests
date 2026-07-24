@@ -69,12 +69,12 @@ function formatOutput(output) {
 }
 .tool-step {
   border-radius: 10px;
-  border: 1px solid #e8e2d6;
-  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--doodle-bg, #faf5ee);
+  background: #fff;
   padding: 8px 12px;
 }
 .tool-step.calling {
-  border-color: #19c8b9;
+  border-color: var(--app-accent-purple, #b39ef3);
   background: rgba(230, 249, 246, 0.4);
 }
 .tool-step.running {
@@ -100,7 +100,7 @@ function formatOutput(output) {
 }
 .tool-step-name {
   font-weight: 700;
-  color: #4a3a28;
+  color: var(--doodle-ink, #2d2d2d);
 }
 .tool-step-state {
   font-size: 11px;
@@ -134,14 +134,14 @@ function formatOutput(output) {
   white-space: pre-wrap;
 }
 .tool-step-output.streaming {
-  color: #19c8b9;
+  color: var(--app-accent-purple, #b39ef3);
 }
 .tool-streaming-dot {
   display: inline-block;
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #19c8b9;
+  background: var(--app-accent-purple, #b39ef3);
   animation: pulse 1s infinite;
   margin-right: 4px;
   vertical-align: middle;

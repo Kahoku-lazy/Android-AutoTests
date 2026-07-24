@@ -447,7 +447,7 @@ function stepTypeLabel(type) {
 }
 .summary-pill {
   font-size: 13px;
-  color: #8a7b66;
+  color: var(--app-ink-muted, #999);
   font-weight: 600;
 }
 .num-pass { color: var(--c-workflow); font-weight: 800; }
@@ -469,12 +469,12 @@ function stepTypeLabel(type) {
 .bug-kpi-value {
   font-size: 26px;
   font-weight: 900;
-  color: #e05a5a;
+  color: var(--app-status-danger-text, #a03030);
   line-height: 1.1;
 }
 .bug-kpi-label {
   font-size: 12px;
-  color: #9f927d;
+  color: var(--app-ink-muted, #999);
   margin-top: 4px;
   font-weight: 600;
 }
@@ -516,7 +516,7 @@ function stepTypeLabel(type) {
   background: rgba(139, 115, 85, 0.02);
 }
 .issue-row {
-  background: rgba(255, 255, 255, 0.55);
+  background: #fff;
   border: 1px solid rgba(224, 90, 90, 0.18);
   border-radius: 12px;
   padding: 12px 14px;
@@ -532,7 +532,7 @@ function stepTypeLabel(type) {
   font-size: 13px;
   font-weight: 900;
   color: #fff;
-  background: #e05a5a;
+  background: var(--app-status-danger-text, #a03030);
   border-radius: 8px;
   padding: 2px 8px;
   min-width: 36px;
@@ -541,7 +541,7 @@ function stepTypeLabel(type) {
 .issue-type {
   font-size: 12px;
   font-weight: 700;
-  color: #794f27;
+  color: var(--doodle-ink, #2d2d2d);
 }
 .issue-body { display: flex; flex-direction: column; gap: 6px; }
 .task-id-inline {
@@ -549,7 +549,7 @@ function stepTypeLabel(type) {
   margin: 2px 4px 0 0;
   font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
   font-size: 11px;
-  color: #8a7b66;
+  color: var(--app-ink-muted, #999);
   background: rgba(139, 115, 85, 0.08);
   padding: 1px 6px;
   border-radius: 4px;
@@ -561,7 +561,7 @@ function stepTypeLabel(type) {
   align-items: center;
   gap: 12px;
   padding: 48px 24px;
-  color: #9f927d;
+  color: var(--app-ink-muted, #999);
   text-align: center;
 }
 .empty-state span { font-size: 36px; }
@@ -578,7 +578,7 @@ function stepTypeLabel(type) {
 
 .expand-icon {
   font-size: 10px;
-  color: #9f927d;
+  color: var(--app-ink-muted, #999);
   transition: transform 0.2s ease;
   flex-shrink: 0;
 }
@@ -590,11 +590,11 @@ function stepTypeLabel(type) {
 .case-id, .task-id {
   font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
   font-size: 12px;
-  color: #8a7b66;
+  color: var(--app-ink-muted, #999);
 }
 .case-meta, .task-meta {
   font-size: 12px;
-  color: #9f927d;
+  color: var(--app-ink-muted, #999);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -616,13 +616,13 @@ function stepTypeLabel(type) {
   gap: 10px;
 }
 .step-row {
-  background: rgba(255, 255, 255, 0.5);
+  background: #fff;
   border: 1px solid rgba(224, 90, 90, 0.15);
   border-radius: 12px;
   padding: 12px 14px;
 }
 .step-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.step-meta { font-size: 12px; font-weight: 700; color: #794f27; }
+.step-meta { font-size: 12px; font-weight: 700; color: var(--doodle-ink, #2d2d2d); }
 .badge {
   display: inline-flex;
   align-items: center;
@@ -634,7 +634,7 @@ function stepTypeLabel(type) {
 .badge-fail { background: rgba(224, 90, 90, 0.12); color: #c0392b; }
 .step-detail { display: flex; flex-direction: column; gap: 6px; }
 .detail-item { display: flex; flex-direction: column; gap: 2px; }
-.detail-label { font-size: 11px; color: #9f927d; font-weight: 600; }
+.detail-label { font-size: 11px; color: var(--app-ink-muted, #999); font-weight: 600; }
 .detail-value { font-size: 13px; color: #4a3a28; line-height: 1.45; }
-.detail-error { color: #e05a5a; font-family: 'SF Mono', 'Fira Code', Consolas, monospace; word-break: break-all; }
+.detail-error { color: var(--app-status-danger-text, #a03030); font-family: 'SF Mono', 'Fira Code', Consolas, monospace; word-break: break-all; }
 </style>

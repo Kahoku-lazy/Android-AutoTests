@@ -30,7 +30,7 @@ function formatTime(seconds) {
     </template>
 
     <template #default>
-      <div v-if="isEmpty" style="text-align:center;color:#999;padding:20px 0">
+      <div v-if="isEmpty" style="text-align:center;color:var(--app-ink-muted);padding:20px 0">
         当前无排队
       </div>
       <el-table v-else :data="entries" size="small" max-height="300">

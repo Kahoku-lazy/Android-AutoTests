@@ -24,7 +24,7 @@ const emit = defineEmits(['update:modelValue'])
 .filter-tabs { display: flex; gap: 4px; }
 .filter-tab {
   padding: 5px 14px; font-size: 11px; font-weight: 700;
-  color: #999; background: transparent;
+  color: var(--app-ink-muted); background: transparent;
   border: 2px solid transparent; border-radius: 4px 8px 4px 8px;
   cursor: pointer; font-family: inherit; transition: all 0.15s;
 }

@@ -1,0 +1,312 @@
+/* ═══════════════════════════════════════════
+   Device Pool — Paper × Polaroid 主题样式
+   从 index.vue 提取，保持 scoped 引用
+   ═══════════════════════════════════════════ */
+
+.device-workbench {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.doc-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(circle, var(--app-paper-dot) 0.8px, transparent 0.8px);
+  background-size: 14px 14px;
+  background-color: var(--doodle-bg, #faf5ee);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.device-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 16px 20px 20px;
+  gap: 12px;
+}
+
+.doc-section__header {
+  flex-shrink: 0;
+  padding-bottom: 0;
+}
+.doc-section__title {
+  font-family: var(--doodle-font-title);
+  font-size: 20px; font-weight: 700; color: var(--app-ink);
+}
+.doc-section__title .doc-tag {
+  font-size: 9px; padding: 1px 8px; border-radius: 4px 8px 4px 8px;
+  background: #fff; color: var(--app-ink-muted); border: 1.5px solid var(--app-border-light);
+  font-weight: 700; margin-left: 8px;
+}
+.doc-section__label { color: var(--app-ink-muted); font-size: 10px; }
+
+/* ── KPI 统计条 ── */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  border: 3px solid var(--app-accent-blue);
+  border-radius: 4px 8px 4px 8px;
+  overflow: hidden;
+  background: #fff;
+  margin-bottom: 4px;
+  flex-shrink: 0;
+}
+.kpi-card {
+  padding: 12px 16px;
+  text-align: center;
+  border-right: 2px solid var(--app-border-light);
+}
+.kpi-card:last-child { border-right: none; }
+.kpi-dot {
+  width: 8px; height: 8px; transform: rotate(45deg);
+  margin: 0 auto 4px; border-radius: 1px;
+}
+.kpi-value {
+  font-family: var(--doodle-font-title);
+  font-size: 28px; font-weight: 700; color: var(--app-ink); line-height: 1;
+}
+.kpi-label {
+  font-size: 9px; font-weight: 700; color: var(--app-ink-muted); margin-top: 2px;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+/* ── 视图切换 ── */
+.view-toggle {
+  display: flex; gap: 0;
+  border: 2px solid var(--app-accent-blue); border-radius: 4px 8px 4px 8px;
+  overflow: hidden;
+}
+.view-btn {
+  padding: 5px 12px; font-size: 10px; font-weight: 700;
+  background: #fff; color: var(--app-ink-muted); border: none;
+  cursor: pointer; font-family: inherit; transition: all 0.12s;
+  border-right: 1px solid var(--app-border-light);
+}
+.view-btn:last-child { border-right: none; }
+.view-btn.active { background: var(--app-accent-blue); color: #fff; }
+.view-btn:hover:not(.active) { color: var(--app-accent-blue); }
+
+/* ── 卡片分组视图 ── */
+.card-grid-grouped {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 4px 0;
+}
+.card-group-title {
+  font-family: var(--doodle-font-title); font-size: 18px; font-weight: 700;
+  color: var(--app-ink); display: flex; align-items: center; gap: 8px;
+  margin-bottom: 10px;
+}
+.card-group-title::after {
+  content: ''; flex: 1; height: 2px; background: var(--app-border-light); border-radius: 1px;
+}
+.card-group-count {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--app-ink-muted);
+  background: var(--app-bg-subtle); padding: 2px 8px; border-radius: 3px 6px 3px 6px;
+  border: 1.5px solid var(--app-border-light);
+}
+.card-group-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+}
+@media (max-width: 900px) { .card-group-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* ── 表格卡片 ── */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.filter-count {
+  font-size: 12px; color: var(--app-ink-muted); font-weight: 600;
+  white-space: nowrap; margin-left: auto;
+}
+
+/* ── 操作栏（局域网 + 刷新）── */
+.action-bar {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.action-bar-btn {
+  gap: 5px !important; padding: 5px 14px !important;
+  border-radius: 4px 8px 4px 8px !important;
+  border: 2px solid var(--app-status-success) !important;
+  background: #fff !important; color: var(--app-status-success-text) !important;
+  font-weight: 700 !important;
+}
+.action-bar-btn:hover { background: var(--app-status-success-bg) !important; }
+
+/* ── 表格工具栏 ── */
+.table-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap; padding: 0 0 10px; flex-shrink: 0;
+}
+.page-size-control { display: flex; align-items: center; gap: 8px; }
+.toolbar-label { font-size: 11px; font-weight: 700; color: var(--app-ink-muted); white-space: nowrap; }
+.page-size-btns { display: flex; gap: 6px; }
+.page-size-btn {
+  min-width: 40px;
+  padding: 5px 10px;
+  border-radius: 4px 8px 4px 8px;
+  border: 2px solid var(--app-border-light);
+  background: #fff;
+  color: var(--app-ink-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: none;
+  transition: all 0.15s;
+}
+.page-size-btn:hover { border-color: var(--app-accent-blue); color: var(--app-accent-blue); }
+.page-size-btn.active {
+  background: #E8F4FD;
+  border-color: var(--app-accent-blue);
+  color: var(--app-accent-blue);
+}
+.table-toolbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
+.page-info { font-size: 12px; color: var(--app-ink-muted); font-weight: 600; white-space: nowrap; }
+.page-nav { display: flex; gap: 8px; }
+
+/* ── 表格卡片 ── */
+.table-card {
+  flex: 1; min-height: 0; min-width: 0;
+  display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 6px 10px 6px 10px;
+  border: 3px solid var(--app-accent-blue);
+  box-shadow: 2px 3px 0 rgba(137,207,240,0.12);
+  background: #fff;
+}
+.table-card :deep(.el-card__body) {
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  overflow: hidden; padding: 0;
+}
+
+/* ── AppTable wrapper inside AppCard ── */
+.device-table-wrapper {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-paper-dot) transparent;
+}
+.device-table-wrapper::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.device-table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--app-paper-dot);
+  border-radius: 3px;
+}
+.device-table-wrapper :deep(.el-table),
+.device-table-wrapper :deep(.el-table__body-wrapper) {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+/* ── 表头与正文颜色区分 + 行列线条 ── */
+.device-table-wrapper :deep(.el-table th) {
+  background: var(--app-bg-subtle) !important;
+  color: var(--app-ink) !important;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  border-right: 1px solid var(--app-border-light) !important;
+  border-bottom: 2px solid var(--app-border-light) !important;
+}
+.device-table-wrapper :deep(.el-table td) {
+  color: var(--app-ink);
+  font-size: 13px;
+  border-right: 1px solid var(--app-border-lighter) !important;
+  border-bottom: 1px solid var(--app-border-lighter) !important;
+}
+.device-table-wrapper :deep(.el-table th:last-child),
+.device-table-wrapper :deep(.el-table td:last-child) {
+  border-right: none !important;
+}
+
+/* ── 操作列垂直居中 ── */
+.device-table-wrapper :deep(.el-table td:last-child) {
+  vertical-align: middle;
+}
+.device-table-wrapper :deep(.el-table td:last-child .cell) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* ── Row dot indicator ── */
+.row-dot {
+  color: var(--app-ink);
+  font-size: 12px;
+  line-height: 1;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* ── Monospace serial text ── */
+.mono-text {
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  font-size: 13px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* ── Text helpers ── */
+.text-muted { color: var(--app-ink-muted); font-size: 13px; }
+.locked-by-text { color: var(--app-ink-muted); font-size: 13px; }
+.last-seen-text { font-size: 13px; color: var(--app-ink-muted); }
+.connection-text { font-size: 13px; color: var(--app-ink); font-weight: 600; white-space: nowrap; }
+
+/* ── Lock status badge ── */
+.lock-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 3px 6px 3px 6px;
+  font-weight: 700;
+  white-space: nowrap;
+  display: inline-block;
+}
+.lock-badge--locked {
+  background: var(--app-status-purple-bg); color: var(--app-status-purple-text);
+  border: 1.5px solid var(--app-status-purple-border);
+}
+.lock-badge--shared {
+  background: var(--app-status-success-bg); color: var(--app-status-success-text);
+  border: 1.5px solid var(--app-status-success);
+}
+
+/* ── Empty state ── */
+.empty-state {
+  color: var(--app-ink-muted);
+  padding: 40px 0;
+  text-align: center;
+  font-size: 14px;
+}
+
+/* ── Row status styles — device table row highlighting ── */
+:deep(.device-table-wrapper .el-table tbody tr[data-row-status="OFFLINE"]),
+:deep(
+  .device-table-wrapper .el-table tbody tr[data-row-status="DISCONNECTED"]
+) {
+  opacity: 0.5;
+}

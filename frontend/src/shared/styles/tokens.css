@@ -118,6 +118,55 @@
   --app-font-size-base:14px;
   --app-font-size-lg:  16px;
 
+  /* ── Paper × Polaroid 主题色 ── */
+  --app-ink:                #2d2d2d;
+  --app-ink-muted:          #999;
+  --app-paper:              #fefcf6;
+  --app-paper-dot:          #d4cdc0;
+  --app-border-light:       #e8ecf1;
+  --app-border-lighter:     #f0ede8;
+  --app-bg-subtle:          #f8f6f2;
+  --app-highlight:          #FFE066;
+  --app-live:               #f87171;
+  --app-status-success:     #6BCB77;
+  --app-status-success-bg:  #C8F5D0;
+  --app-status-success-text:#2d7a2d;
+  --app-status-danger:      #FFB5A7;
+  --app-status-danger-bg:   #FFE0DB;
+  --app-status-danger-text: #a03030;
+  --app-status-purple:      #C9B6F2;
+  --app-status-purple-bg:   #E8DDF8;
+  --app-status-purple-text: #5a3fa0;
+  --app-status-purple-border:#A78BFA;
+  --app-status-warning-bg:  #FFF9E0;
+  --app-accent-blue:        #89CFF0;
+  --app-accent-purple:      #b39ef3;
+  --app-accent-purple-dark: #8275c2;
+  --app-offline:            #d4d8dc;
+  --app-shadow-ink:         rgba(0,0,0,0.05);
+  --app-error:              #e85f5f;
+  --app-error-bg:           #fff0f0;
+  --app-footer-yellow:      #FFE066;
+  --app-footer-yellow-text: #5a4e20;
+  --app-pushpin-light:      #e8e0d5;
+  --app-pushpin-dark:       #a09080;
+
+  /* ── Crayon Doodle 主题 ── */
+  --doodle-ink:             #2d2d2d;
+  --doodle-bg:              #faf5ee;
+  --doodle-card:            #fffbf5;
+  --doodle-border:          3px;
+  --doodle-radius:          4px 10px 4px 10px;
+  --doodle-radius-sm:       4px 8px 4px 8px;
+  --doodle-shadow:          2px 2px 0 rgba(0,0,0,0.06);
+  --doodle-font-title:      'Bangers', cursive;
+  --doodle-font-ui:         'Comic Neue', cursive;
+  --doodle-font-hand:       'Gloria Hallelujah', cursive;
+  --doodle-font-mono:       'JetBrains Mono', 'Fira Code', monospace;
+  --doodle-texture-cross:   linear-gradient(45deg,rgba(0,0,0,0.02) 25%,transparent 25%,transparent 75%,rgba(0,0,0,0.02) 75%);
+  --doodle-texture-dots:    radial-gradient(circle,rgba(0,0,0,0.03) 1px,transparent 1px);
+  --doodle-texture-stripe:  repeating-linear-gradient(-45deg,transparent,transparent 3px,rgba(0,0,0,0.015) 3px,rgba(0,0,0,0.015) 6px);
+
   /* ── 侧边栏 ── */
   --app-sidebar-w:        228px;
   --app-sidebar-collapsed:64px;
@@ -132,7 +181,7 @@
   --app-duration-slow: 0.25s;
 
   /* ═══════════════════════════════════════
-     Element Plus 变量覆盖
+     Element Plus 变量覆盖 — Doodle
      ═══════════════════════════════════════ */
   --el-color-primary:           #F7C948;
   --el-color-primary-light-3:   #F9D870;

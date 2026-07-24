@@ -194,7 +194,7 @@ function handleCancel() {
 
 .net-hint {
   font-size: 12px;
-  color: #999;
+  color: var(--app-ink-muted);
   margin: 4px 0 0;
   line-height: 1.5;
 }

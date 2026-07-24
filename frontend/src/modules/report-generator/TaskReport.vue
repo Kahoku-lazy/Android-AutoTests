@@ -252,12 +252,12 @@ function goRunner() { router.push('/runner') }
           <div v-for="entry in bugEntries" :key="entry.key" class="case-card bug-card" :class="{ expanded: expandedBugs.has(entry.key) }">
             <div class="case-header" @click="toggleBug(entry.key)">
               <span class="case-expand-icon">▶</span>
-              <span class="case-id-badge" style="background:#e85f5f;">BUG-{{ String(entry.bugNum).padStart(3, '0') }}</span>
+              <span class="case-id-badge" style="background:var(--app-status-danger-text, #a03030);">BUG-{{ String(entry.bugNum).padStart(3, '0') }}</span>
               <div class="case-title-area">
                 <span class="case-title-text">{{ entry.caseTitle }}</span>
                 <div class="bug-header-sub">第 {{ entry.iteration }} 轮 · 步骤 {{ entry.stepIndex + 1 }} 失败</div>
               </div>
-              <span class="case-status-text" style="color:#e85f5f;background:rgba(232,95,95,0.12);">🔴 执行失败</span>
+              <span class="case-status-text" style="color:var(--app-status-danger-text, #a03030);background:rgba(232,95,95,0.12);">🔴 执行失败</span>
             </div>
             <div v-if="expandedBugs.has(entry.key)" class="case-body">
               <div class="bug-meta">
@@ -363,7 +363,7 @@ function goRunner() { router.push('/runner') }
 }
 .task-meta-item { display: flex; align-items: center; gap: 6px; font-size: 13px; }
 .task-meta-item.full-width { flex-basis: 100%; }
-.meta-label { color: #9f927d; font-weight: 500; white-space: nowrap; }
+.meta-label { color: var(--app-ink-muted, #999); font-weight: 500; white-space: nowrap; }
 .meta-value { color: #4a3a28; font-weight: 600; }
 .conclusion-text { line-height: 1.5; font-style: italic; }
 
@@ -383,7 +383,7 @@ function goRunner() { router.push('/runner') }
 }
 .case-card:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(61,52,40,0.08); }
 .case-card.expanded { border-color: #c4b89e; }
-.case-card.bug-card { border-left: 4px solid #e85f5f; }
+.case-card.bug-card { border-left: 4px solid var(--app-status-danger-text, #a03030); }
 
 .case-header {
   display: flex; align-items: center; gap: 12px;
@@ -392,7 +392,7 @@ function goRunner() { router.push('/runner') }
 }
 .case-header:hover { background: rgba(245,240,215,0.8); }
 .case-expand-icon {
-  font-size: 11px; color: #9f927d; width: 16px; flex-shrink: 0;
+  font-size: 11px; color: var(--app-ink-muted, #999); width: 16px; flex-shrink: 0;
   transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
 }
 .case-card.expanded .case-expand-icon { transform: rotate(90deg); }
@@ -413,7 +413,7 @@ function goRunner() { router.push('/runner') }
 /* ── Case body (step cards) ── */
 .case-body { padding-bottom: 2px; }
 .step-list { padding: 0 20px 16px 36px; display: flex; flex-direction: column; gap: 8px; }
-.step-empty { padding: 20px 20px 16px 36px; color: #9f927d; font-size: 13px; text-align: center; }
+.step-empty { padding: 20px 20px 16px 36px; color: var(--app-ink-muted, #999); font-size: 13px; text-align: center; }
 
 .step-card {
   display: flex; align-items: stretch; border-radius: 12px;
@@ -424,13 +424,13 @@ function goRunner() { router.push('/runner') }
 .step-strip { width: 5px; flex-shrink: 0; border-radius: 5px 0 0 5px; }
 .step-body { flex: 1; padding: 12px 16px; background: #fff; display: flex; flex-direction: column; gap: 4px; }
 .step-header-row { display: flex; align-items: center; gap: 8px; }
-.step-index { font-size: 12px; font-weight: 800; color: #9f927d; font-family: 'Cascadia Code', Consolas, monospace; }
+.step-index { font-size: 12px; font-weight: 800; color: var(--app-ink-muted, #999); font-family: 'Cascadia Code', Consolas, monospace; }
 .step-type-tag {
   font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px;
   background: rgba(139,115,85,0.08); color: #8b7355; text-transform: uppercase;
 }
 .step-desc { font-size: 13px; font-weight: 600; color: #725d42; line-height: 1.4; }
-.step-xpath { font-size: 11px; color: #9f927d; font-family: 'Cascadia Code', Consolas, monospace; margin-top: 2px; }
+.step-xpath { font-size: 11px; color: var(--app-ink-muted, #999); font-family: 'Cascadia Code', Consolas, monospace; margin-top: 2px; }
 
 .step-done .step-strip { background: var(--c-workflow); }
 .step-done .step-body { background: rgba(111,186,44,0.03); }
@@ -443,12 +443,12 @@ function goRunner() { router.push('/runner') }
   border: 1px dashed rgba(232,95,95,0.2);
   font-size: 12px; font-weight: 600; color: #725d42;
 }
-.bug-meta-label { color: #9f927d; }
-.bug-meta-value { color: #e85f5f; font-weight: 700; }
+.bug-meta-label { color: var(--app-ink-muted, #999); }
+.bug-meta-value { color: var(--app-status-danger-text, #a03030); font-weight: 700; }
 .step-fail-reason {
-  font-size: 12px; font-weight: 600; color: #e85f5f;
+  font-size: 12px; font-weight: 600; color: var(--app-status-danger-text, #a03030);
   background: rgba(232,95,95,0.05); border-radius: 8px;
-  border-left: 3px solid #e85f5f; line-height: 1.5;
+  border-left: 3px solid var(--app-status-danger-text, #a03030); line-height: 1.5;
 }
 
 /* ── AppTable card ── */
@@ -468,7 +468,7 @@ function goRunner() { router.push('/runner') }
 
 /* ── Misc ── */
 .mono { font-family: 'SF Mono','Fira Code','Cascadia Code',Consolas,monospace; font-size: 10px; font-weight: 600; background: rgba(139,115,85,0.06); padding: 2px 6px; border-radius: 4px; }
-.time-text { font-size: 12px; color: #8a7b66; white-space: nowrap; }
+.time-text { font-size: 12px; color: var(--app-ink-muted, #999); white-space: nowrap; }
 
 .rate-cell { display: flex; align-items: center; gap: 8px; }
 .progress-bar { display: flex; height: 7px; border-radius: var(--app-radius-pill); overflow: hidden; background: #f0ece2; flex: 1; max-width: 90px; }
@@ -477,16 +477,16 @@ function goRunner() { router.push('/runner') }
 .rate-text { font-weight: 700; font-size: 12px; min-width: 38px; text-align: right; }
 .rate-ok { color: var(--c-workflow); }
 .rate-warn { color: #dba90e; }
-.rate-bad { color: #e05a5a; }
+.rate-bad { color: var(--app-status-danger-text, #a03030); }
 
 .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--app-radius-pill); font-size: 10px; font-weight: 700; letter-spacing: 0.02em; }
 .badge-pass { background: rgba(111,186,44,0.12); color: var(--c-workflow); border: 1.5px solid rgba(111,186,44,0.25); }
 .badge-fail { background: rgba(224,90,90,0.12); color: #e05a5a; border: 1.5px solid rgba(224,90,90,0.25); }
 .badge-stopped { background: rgba(138,123,102,0.10); color: #8a7b66; border: 1.5px solid rgba(138,123,102,0.20); }
 
-.empty-note { text-align: center; padding: 48px 24px; color: #9f927d; }
+.empty-note { text-align: center; padding: 48px 24px; color: var(--app-ink-muted, #999); }
 .empty-note span { font-size: 36px; display: block; margin-bottom: 12px; }
-.not-found { text-align: center; color: #9f927d; padding: 80px 0; font-size: 15px; }
+.not-found { text-align: center; color: var(--app-ink-muted, #999); padding: 80px 0; font-size: 15px; }
 .not-found p { margin-bottom: 16px; }
 
 @media (max-width: 900px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }

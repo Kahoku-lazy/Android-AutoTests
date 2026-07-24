@@ -36,7 +36,7 @@
   gap: 8px;
   width: 100%;
   padding: 12px 16px;
-  border: 2px solid #19c8b9;
+  border: 2px solid var(--app-accent-purple, #b39ef3);
   border-radius: 12px;
   background: #e6f9f6;
   color: #158a80;
@@ -48,7 +48,7 @@
   flex-shrink: 0;
 }
 .back-btn:hover {
-  background: #19c8b9;
+  background: var(--app-accent-purple, #b39ef3);
   color: #fff;
   box-shadow: 0 4px 14px rgba(25, 200, 185, 0.35);
   transform: translateY(-1px);
@@ -84,7 +84,7 @@
   padding: 14px;
   border-radius: 12px;
   background: linear-gradient(135deg, #faf9f4 0%, #f5f3ed 100%);
-  border: 1px solid #e8e2d6;
+  border: 1px solid var(--doodle-bg, #faf5ee);
   flex-shrink: 0;
 }
 .agent-avatar {
@@ -102,7 +102,7 @@
 .agent-name {
   font-size: 16px;
   font-weight: 700;
-  color: #4a3a28;
+  color: var(--doodle-ink, #2d2d2d);
   line-height: 1.3;
 }
 .agent-provider {
@@ -126,7 +126,7 @@
   gap: 6px;
   font-size: 13px;
   font-weight: 700;
-  color: #a0936e;
+  color: var(--app-ink-muted, #999);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 8px 6px 6px;
@@ -156,11 +156,11 @@
 }
 .conv-item:hover {
   background: #f5f3ed;
-  border-color: #e8e2d6;
+  border-color: var(--doodle-bg, #faf5ee);
 }
 .conv-item.active {
   background: #e6f9f6;
-  border-color: #19c8b9;
+  border-color: var(--app-accent-purple, #b39ef3);
   color: #158a80;
   font-weight: 700;
   box-shadow: 0 2px 8px rgba(25, 200, 185, 0.12);
@@ -174,7 +174,7 @@
   transition: all 0.18s ease;
 }
 .conv-indicator.active {
-  background: #19c8b9;
+  background: var(--app-accent-purple, #b39ef3);
   height: 32px;
   box-shadow: 0 0 8px rgba(25, 200, 185, 0.4);
 }
@@ -187,12 +187,12 @@
 }
 .conv-rename-input {
   width: 100%;
-  border: 1.5px solid #19c8b9;
+  border: 1.5px solid var(--app-accent-purple, #b39ef3);
   border-radius: 6px;
   padding: 4px 8px;
   font-size: 14px;
   font-family: inherit;
-  color: #4a3a28;
+  color: var(--doodle-ink, #2d2d2d);
   background: #fff;
   outline: none;
 }
@@ -239,7 +239,7 @@
   align-items: center;
   gap: 8px;
   padding: 40px 16px;
-  color: #a0936e;
+  color: var(--app-ink-muted, #999);
   font-size: 14px;
   text-align: center;
 }
@@ -342,7 +342,7 @@
 .stream-mode-badge.sse {
   background: #e6f9f6;
   color: #158a80;
-  border: 1px solid #19c8b9;
+  border: 1px solid var(--app-accent-purple, #b39ef3);
   animation: pulse-badge 1.5s infinite;
 }
 .stream-mode-badge.fallback {
@@ -392,7 +392,7 @@
 .model-status-badge.streaming {
   background: #e6f9f6;
   color: #158a80;
-  border-color: #19c8b9;
+  border-color: var(--app-accent-purple, #b39ef3);
 }
 .model-status-badge.done {
   background: #e6f5e6;
@@ -438,7 +438,7 @@
 .connection-indicator.sse {
   background: #e6f9f6;
   color: #158a80;
-  border: 1.5px solid #19c8b9;
+  border: 1.5px solid var(--app-accent-purple, #b39ef3);
 }
 .connection-indicator.fallback {
   background: #fef6e6;
@@ -518,7 +518,7 @@
   height: 44px;
   border-radius: 12px;
   background: #fff;
-  border: 1px solid #e8e2d6;
+  border: 1px solid var(--doodle-bg, #faf5ee);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -533,14 +533,14 @@
 .typing-row .msg-author {
   font-size: 13px;
   font-weight: 700;
-  color: #a0936e;
+  color: var(--app-ink-muted, #999);
   padding: 0 6px;
 }
 .typing-row .msg-text {
   padding: 16px 20px;
   border-radius: 18px;
   background: #fff;
-  border: 1px solid #e8e2d6;
+  border: 1px solid var(--doodle-bg, #faf5ee);
   border-bottom-left-radius: 6px;
 }
 
@@ -554,7 +554,7 @@
   padding: 14px;
   background: #fff;
   border-radius: 12px;
-  border: 2px solid #19c8b9;
+  border: 2px solid var(--app-accent-purple, #b39ef3);
   overflow-x: auto;
   display: flex;
   justify-content: center;
@@ -575,7 +575,7 @@
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #19c8b9;
+  background: var(--app-accent-purple, #b39ef3);
   animation: bounce 1.4s ease-in-out infinite;
 }
 .typing span:nth-child(1) {

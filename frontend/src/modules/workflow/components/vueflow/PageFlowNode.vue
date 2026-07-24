@@ -417,7 +417,7 @@ watch(
   padding: 0 5px;
   cursor: help;
   user-select: none;
-  background: rgba(255,255,255,0.42);
+  background: #fff;
 }
 .pf-in-count {
   font-size: 10px;

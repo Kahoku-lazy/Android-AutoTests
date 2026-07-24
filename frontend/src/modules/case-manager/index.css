@@ -144,7 +144,7 @@
 
 .crumb--root {
   cursor: pointer;
-  font-family: var(--app-font-display, 'Quicksand', sans-serif);
+  font-family: var(--doodle-font-title);
 }
 
 .crumb--root:not(.crumb--active):hover {
@@ -203,7 +203,7 @@
   font-size: 15px;
   font-weight: 800;
   color: var(--app-green-deep);
-  font-family: var(--app-font-display, 'Quicksand', sans-serif);
+  font-family: var(--doodle-font-title);
   line-height: 1;
 }
 
@@ -359,13 +359,13 @@
   color: var(--ink);
   background: transparent;
   border: none;
-  border-bottom: 1px solid rgba(255,255,255,0.36);
+  border-bottom: 1.5px dashed rgba(0,0,0,0.08);
   vertical-align: middle;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .case-table--rainbow :deep(tr:nth-child(even) td) {
-  background: rgba(255,255,255,0.20);
+  background: #fff;
 }
 .case-table--rainbow :deep(tr:hover td) {
   background: rgba(162,210,255,0.16);
@@ -430,7 +430,7 @@
   color: #fff;
 }
 .cell-id {
-  font-family: "SF Mono", "Fira Code", Consolas, monospace;
+  font-family: var(--doodle-font-mono);
   font-size: 14px;
   font-weight: 600;
   color: #c0392b;
@@ -505,7 +505,7 @@
 }
 
 .case-detail__id {
-  font-family: "SF Mono", "Fira Code", Consolas, monospace;
+  font-family: var(--doodle-font-mono);
   font-size: 12px;
   font-weight: 600;
   color: #999;
@@ -635,7 +635,7 @@
   background: rgba(162,210,255,0.10);
 }
 .exports-table__name {
-  font-family: "SF Mono", "Fira Code", Consolas, monospace;
+  font-family: var(--doodle-font-mono);
   font-size: 13px;
   color: var(--app-green-deep);
   font-weight: 600;

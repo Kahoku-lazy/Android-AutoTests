@@ -381,7 +381,7 @@ function fmtTime(iso: string) {
   padding: 10px 12px;
   border: 1px solid var(--ink);
   border-radius: 12px;
-  background: rgba(255,255,255,0.42);
+  background: #fff;
   font-family: inherit;
   font-size: 13px;
   font-weight: 800;

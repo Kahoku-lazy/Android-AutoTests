@@ -121,7 +121,7 @@ function genericHintText(hint) {
   background: rgba(230, 249, 246, 0.3);
   border: 1px solid rgba(25, 200, 185, 0.2);
   font-size: 13px;
-  color: #4a3a28;
+  color: var(--doodle-ink, #2d2d2d);
 }
 .hint-icon {
   margin-right: 6px;
@@ -194,7 +194,7 @@ function genericHintText(hint) {
   margin-top: 10px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.5);
+  background: #fff;
   font-size: 13px;
   color: #3c3489;
   font-weight: 500;
@@ -292,7 +292,7 @@ function genericHintText(hint) {
   padding: 14px 16px;
   border-radius: 12px;
   background: linear-gradient(135deg, #e6f9f6 0%, #f0faf8 100%);
-  border: 1.5px solid #19c8b9;
+  border: 1.5px solid var(--app-accent-purple, #b39ef3);
   box-shadow: 0 2px 8px rgba(25, 200, 185, 0.1);
 }
 .task-card-header {
@@ -336,7 +336,7 @@ function genericHintText(hint) {
 .task-title {
   font-size: 15px;
   font-weight: 700;
-  color: #4a3a28;
+  color: var(--doodle-ink, #2d2d2d);
   margin-bottom: 6px;
 }
 .task-meta {

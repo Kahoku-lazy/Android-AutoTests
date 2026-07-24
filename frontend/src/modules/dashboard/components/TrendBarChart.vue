@@ -13,6 +13,8 @@ const container = ref(null)
 let instance = null
 let resizeObserver = null
 
+// ⚠️ ECharts 渲染在 Canvas 上，不支持 CSS 变量，此处保留色值字面量。
+//    如需改色，修改此函数内的常量；CSS 文件使用 tokens.css 对应变量。
 function buildOption() {
   const c = props.chart
   return {

@@ -162,10 +162,10 @@ function navigate() {
   width: auto;
 }
 /* 模块色映射为照片底色 */
-.stats-card--green .stats-card__icon { background: #C8F5D0; }
-.stats-card--blue .stats-card__icon  { background: #E8DDF8; }
-.stats-card--yellow .stats-card__icon{ background: #FFF9E0; }
-.stats-card--pink .stats-card__icon  { background: #FFE0DB; }
+.stats-card--green .stats-card__icon { background: var(--app-status-success-bg); }
+.stats-card--blue .stats-card__icon  { background: var(--app-status-purple-bg); }
+.stats-card--yellow .stats-card__icon{ background: var(--app-status-warning-bg); }
+.stats-card--pink .stats-card__icon  { background: var(--app-status-danger-bg); }
 .stats-card--teal .stats-card__icon  { background: #D4F5F0; }
 .stats-card--purple .stats-card__icon{ background: #F0E8FF; }
 .stats-card--orange .stats-card__icon{ background: #FFE8D0; }
@@ -194,7 +194,7 @@ function navigate() {
 
 .stats-card__desc {
   font-size: 9px;
-  color: #999;
+  color: var(--app-ink-muted);
   text-align: center;
   line-height: 1.4;
   margin-bottom: 8px;
@@ -216,7 +216,7 @@ function navigate() {
 
 .stats-card__stat strong {
   display: block;
-  font-family: 'Caveat', 'Quicksand', cursive;
+  font-family: var(--doodle-font-title);
   font-size: 24px;
   font-weight: 700;
   color: var(--ink);
@@ -228,7 +228,7 @@ function navigate() {
   margin-top: 2px;
   font-size: 9px;
   font-weight: 700;
-  color: #999;
+  color: var(--app-ink-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -249,7 +249,7 @@ function navigate() {
   background: #fff;
 }
 .stats-card__enter:hover {
-  background: #FFE066;
+  background: var(--app-highlight);
 }
 
 /* Skeleton */

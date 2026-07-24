@@ -121,3 +121,4 @@ tests/functional/*/reports/
 tests/workflow-demo/
 workflow-demo-*.png
 _agentscope_launcher.py
+.playwright-mcp/

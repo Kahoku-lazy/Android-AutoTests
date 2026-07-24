@@ -214,18 +214,17 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   background: rgba(255,255,255,0.78);
-  border: 1px solid var(--app-glass-border);
-  border-radius: 16px;
+  border: 1px solid var(--ink);
+  border-radius: var(--app-radius-md);
   box-shadow: var(--app-shadow-lg);
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
+  
   padding: 8px;
   font-family: var(--ac-font, system-ui, sans-serif);
 }
 .menu-title {
   font-size: 13px;
   font-weight: 800;
-  color: var(--app-text);
+  color: var(--ink);
   padding: 6px 8px 2px;
 }
 .menu-hint {
@@ -265,10 +264,10 @@ onMounted(() => {
   padding: 4px 6px 8px;
   font-size: 13px;
   font-weight: 800;
-  color: var(--app-text);
+  color: var(--ink);
 }
 .back {
-  border: 1.5px solid var(--app-glass-border);
+  border: 1.5px solid var(--ink);
   background: rgba(255,255,255,0.44);
   color: var(--ac-ink-muted, #5c4a35);
   border-radius: 10px;
@@ -280,10 +279,10 @@ onMounted(() => {
 .search {
   margin: 0 4px 6px;
   padding: 8px 10px;
-  border: 1.5px solid var(--app-glass-border);
+  border: 1.5px solid var(--ink);
   border-radius: 12px;
   background: rgba(255,255,255,0.44);
-  color: var(--app-text);
+  color: var(--ink);
   font-size: 12px;
   outline: none;
   font-family: inherit;
@@ -291,7 +290,7 @@ onMounted(() => {
 .search:focus { border-color: var(--app-blue); }
 .source-tag {
   font-size: 10px;
-  color: var(--app-text-secondary);
+  color: #999;
   font-weight: 600;
   padding: 0 8px 6px;
 }
@@ -306,7 +305,7 @@ onMounted(() => {
   border: none;
   border-radius: 12px;
   background: transparent;
-  color: var(--app-text);
+  color: var(--ink);
   cursor: pointer;
   font-family: inherit;
 }
@@ -329,7 +328,7 @@ onMounted(() => {
 }
 .page-meta {
   font-size: 10px;
-  color: var(--app-text-secondary);
+  color: #999;
   margin-top: 3px;
   font-weight: 600;
 }
@@ -337,6 +336,6 @@ onMounted(() => {
   padding: 18px;
   text-align: center;
   font-size: 12px;
-  color: var(--app-text-secondary);
+  color: #999;
 }
 </style>

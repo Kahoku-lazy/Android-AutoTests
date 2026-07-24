@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Doodle Craft — 全平台高保真原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700;800&family=Caveat:wght@600;700&family=Patrick+Hand&family=Gochi+Hand&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+/* ═══════════════════════════════════════════
+   Doodle Craft — 涂鸦纸艺设计系统
+   极简 · 几何 · 粗线 · 涂鸦彩绘 · 卡通 · 手稿纸
+   ═══════════════════════════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --c-dashboard:#F7C948;--c-device:#6BCB77;--c-element:#A78BFA;
+  --c-case:#4ECDC4;--c-runner:#FFB5A7;--c-report:#7C6F83;
+  --c-ai:#E879F9;--c-workflow:#89CFF0;
+  --ink:#1e1e24;--paper:#fefcf5;--dot:#d8d2c4;
+}
+
+body{
+  font-family:'Quicksand','PingFang SC','Microsoft YaHei',sans-serif;
+  background:
+    radial-gradient(circle,var(--dot) 0.7px,transparent 0.7px);
+  background-size:16px 16px;
+  background-color:var(--paper);
+  color:var(--ink);padding:0;
+}
+
+/* ═══════════════════════════════════════════
+   Shell: 侧边栏 + 主内容
+   ═══════════════════════════════════════════ */
+.platform{display:flex;height:100vh;overflow:hidden;}
+
+/* ── 侧边栏 ── */
+.sidebar{
+  width:230px;flex-shrink:0;display:flex;flex-direction:column;
+  background:var(--paper);
+  border-right:3px solid var(--ink);
+  box-shadow:4px 0 0 rgba(0,0,0,0.04);
+  overflow:hidden;
+}
+.sb-brand{
+  display:flex;align-items:center;gap:10px;padding:16px 14px 12px;
+  border-bottom:3px solid var(--ink);flex-shrink:0;
+}
+.sb-brand-icon{
+  width:36px;height:36px;display:grid;place-items:center;
+  background:var(--c-dashboard);border:3px solid var(--ink);
+  border-radius:6px 12px 8px 10px;font-size:15px;color:var(--ink);
+  box-shadow:2px 2px 0 rgba(0,0,0,0.1);
+}
+.sb-brand-text{
+  font-family:'Caveat',cursive;font-size:19px;font-weight:700;
+  color:var(--ink);line-height:1.1;
+}
+.sb-nav{flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:1px;}
+.sb-section-label{
+  font-family:'Caveat',cursive;font-size:14px;font-weight:700;
+  padding:10px 8px 4px;color:var(--ink);opacity:0.5;
+  display:flex;align-items:center;gap:6px;
+}
+.sb-section-label::after{content:'';flex:1;height:1.5px;background:var(--ink);opacity:0.15;}
+.sb-item{
+  display:flex;align-items:center;gap:8px;height:38px;padding:0 10px;
+  border-radius:4px 10px 6px 8px;cursor:pointer;transition:all 0.15s;
+  font-size:12px;font-weight:700;color:var(--ink);opacity:0.6;
+  border:2px solid transparent;position:relative;
+}
+.sb-item:hover{opacity:1;background:#fff;border-color:var(--ink);}
+.sb-item.active{
+  opacity:1;background:var(--c-dashboard);border:2.5px solid var(--ink);
+  box-shadow:2px 2px 0 rgba(0,0,0,0.08);font-weight:800;
+  transform:rotate(-0.3deg);
+}
+.sb-item.active::after{
+  content:'✦';position:absolute;right:10px;font-size:9px;color:var(--ink);
+  animation:twinkle 2s ease-in-out infinite;
+}
+@keyframes twinkle{0%,100%{opacity:0.4}50%{opacity:1}}
+.sb-item-icon{width:16px;height:16px;display:grid;place-items:center;font-size:13px;flex-shrink:0;}
+.sb-item-label{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-badge{
+  font-size:8px;font-weight:800;padding:1px 6px;border-radius:3px 6px 3px 6px;
+  border:1.5px solid var(--ink);background:#fff;
+}
+.sb-footer{padding:8px 10px 12px;flex-shrink:0;border-top:3px solid var(--ink);}
+.sb-user{
+  padding:10px;background:#fff;border:2.5px solid var(--ink);
+  border-radius:4px 10px 6px 8px;box-shadow:2px 2px 0 rgba(0,0,0,0.06);
+}
+.sb-user-name{font-size:12px;font-weight:800;color:var(--ink);}
+.sb-user-status{font-size:9px;font-weight:700;color:var(--c-device);margin-top:2px;}
+
+/* ═══════════════════════════════════════════
+   主内容
+   ═══════════════════════════════════════════ */
+.main{flex:1;overflow-y:auto;padding:20px 24px 40px;display:flex;flex-direction:column;gap:24px;}
+
+/* ── 模块卡片 ── */
+.module-section{
+  background:var(--paper);border:3px solid var(--ink);
+  border-radius:6px 12px 8px 10px;overflow:hidden;
+  box-shadow:4px 4px 0 rgba(0,0,0,0.05);
+}
+.module-header{
+  display:flex;align-items:center;gap:10px;padding:14px 18px;
+  border-bottom:3px solid var(--ink);background:#fff;
+}
+.module-header-icon{
+  width:34px;height:34px;display:grid;place-items:center;
+  border:3px solid var(--ink);border-radius:6px 10px 8px 12px;
+  font-size:14px;color:var(--ink);transform:rotate(-2deg);
+}
+.module-header h3{
+  font-family:'Caveat',cursive;font-size:20px;font-weight:700;color:var(--ink);
+}
+.module-header .mod-tag{
+  font-size:8px;font-weight:800;padding:2px 8px;border-radius:3px 6px 3px 6px;
+  border:1.5px solid var(--ink);background:var(--c-dashboard);color:var(--ink);
+  margin-left:6px;
+}
+.module-header .mod-meta{font-size:9px;color:var(--ink);opacity:0.5;margin-left:auto;}
+
+.module-body{padding:16px 18px;}
+
+/* ── 共享原子 ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.kpi-card{
+  text-align:center;padding:14px 12px;background:#fff;
+  border:3px solid var(--ink);border-radius:4px 10px 6px 8px;
+  box-shadow:2px 3px 0 rgba(0,0,0,0.05);position:relative;
+}
+.kpi-dot{width:8px;height:8px;transform:rotate(45deg);margin:0 auto 5px;border:1.5px solid var(--ink);}
+.kpi-value{font-family:'Caveat',cursive;font-size:26px;font-weight:700;color:var(--ink);line-height:1;}
+.kpi-label{font-size:9px;font-weight:700;color:var(--ink);opacity:0.5;text-transform:uppercase;margin-top:2px;letter-spacing:0.04em;}
+/* 涂鸦装饰 */
+.kpi-card::after{
+  content:'~';position:absolute;bottom:4px;right:8px;
+  font-family:'Caveat',cursive;font-size:14px;opacity:0.2;color:var(--ink);
+}
+
+/* 卡片网格 */
+.card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.card-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+
+/* 拍立得卡片 */
+.polaroid-card{
+  background:#fff;border:3px solid var(--ink);border-radius:6px 10px 6px 10px;
+  padding:8px 8px 30px 8px;box-shadow:2px 3px 0 rgba(0,0,0,0.05);
+  position:relative;cursor:pointer;transition:all 0.2s;
+}
+.polaroid-card:hover{transform:rotate(0deg)scale(1.03)!important;z-index:5;}
+.polaroid-card:nth-child(3n+1){transform:rotate(-0.8deg);}
+.polaroid-card:nth-child(3n+2){transform:rotate(0.5deg);}
+.polaroid-card:nth-child(3n+3){transform:rotate(-0.4deg);}
+.polaroid-card::before{
+  content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);
+  width:10px;height:10px;
+  background:radial-gradient(circle,var(--dot),#b0a890);
+  border-radius:50%;box-shadow:0 1px 1px rgba(0,0,0,0.1);z-index:2;
+}
+.card-photo{
+  height:50px;border:2.5px solid var(--ink);border-radius:3px 5px 3px 5px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 10px;margin-bottom:8px;
+}
+.photo-green{background:#C8F5D0;}
+.photo-pink{background:#FFE0DB;}
+.photo-purple{background:#E8DDF8;}
+.photo-yellow{background:#FFF9E0;}
+.photo-blue{background:#D4E8FF;}
+.card-serial{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;color:var(--ink);}
+.card-badge{
+  font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px 6px 3px 6px;
+  border:1.5px solid var(--ink);background:rgba(255,255,255,0.7);color:var(--ink);
+}
+.card-name{font-size:11px;font-weight:700;color:var(--ink);text-align:center;margin-bottom:2px;}
+.card-info{font-size:8.5px;color:var(--ink);opacity:0.5;text-align:center;margin-bottom:6px;}
+.card-actions{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;}
+.c-btn{
+  font-size:8.5px;font-weight:700;padding:2px 8px;border-radius:3px 6px 3px 6px;
+  border:2px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;
+  font-family:inherit;transition:all 0.12s;
+}
+.c-btn:hover{background:var(--c-dashboard);}
+
+/* 纸艺按钮 */
+.paper-btn{
+  padding:6px 14px;font-size:11px;font-weight:700;color:var(--ink);background:#fff;
+  border:2.5px solid var(--ink);border-radius:4px 8px 4px 8px;cursor:pointer;
+  font-family:inherit;transition:all 0.12s;box-shadow:2px 2px 0 rgba(0,0,0,0.06);
+}
+.paper-btn:hover{background:var(--c-dashboard);transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(0,0,0,0.08);}
+
+/* 表格式行 */
+.data-table{width:100%;border-collapse:collapse;font-size:11px;}
+.data-table th{
+  background:#f8f6f2;color:var(--ink);font-weight:700;font-size:9px;
+  text-transform:uppercase;letter-spacing:0.04em;padding:8px 10px;
+  text-align:left;border-bottom:3px solid var(--ink);
+}
+.data-table td{padding:8px 10px;color:var(--ink);font-weight:500;border-bottom:1.5px solid #e8e4d8;}
+.data-table tr:hover td{background:rgba(255,255,255,0.5);}
+
+/* 分区标题 */
+.section-title{
+  font-family:'Caveat',cursive;font-size:18px;font-weight:700;color:var(--ink);
+  display:inline-block;position:relative;margin-bottom:12px;
+}
+.section-title::after{
+  content:'';position:absolute;bottom:-2px;left:0;right:0;height:2.5px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%231e1e24' stroke-width='2' fill='none'/%3E%3C/svg%3E")repeat-x;
+  background-size:40px 3px;
+}
+
+/* Badge */
+.tag{
+  font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px 6px 3px 6px;
+  border:2px solid var(--ink);display:inline-block;
+}
+.tag-green{background:#C8F5D0;color:#1a5c2a;}
+.tag-pink{background:#FFE0DB;color:#7a1c1c;}
+.tag-purple{background:#E8DDF8;color:#4a2a80;}
+.tag-yellow{background:#FFF9E0;color:#6a4a10;}
+.tag-gray{background:#f0ede8;color:var(--ink);opacity:0.5;}
+
+/* 虚线分割 */
+.dashed-line{height:1.5px;background:repeating-linear-gradient(90deg,var(--ink),var(--ink) 4px,transparent 4px,transparent 8px);opacity:0.15;margin:12px 0;}
+
+/* 涂鸦装饰 */
+.doodle-star{
+  position:absolute;font-size:14px;color:var(--c-runner);
+  animation:twinkle 2.5s ease-in-out infinite;
+}
+.doodle-squiggle{
+  position:absolute;font-family:'Caveat',cursive;font-size:16px;
+  color:var(--ink);opacity:0.15;transform:rotate(-5deg);
+}
+
+/* ═══════════════════════════════════════════
+   响应式
+   ═══════════════════════════════════════════ */
+@media(max-width:900px){.platform{flex-direction:column}.sidebar{width:100%;height:auto;flex-shrink:0}.card-grid,.card-grid-4{grid-template-columns:repeat(2,1fr)}.kpi-row{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="platform">
+
+<!-- ════════════════ 侧边栏 ════════════════ -->
+<aside class="sidebar">
+  <div class="sb-brand">
+    <div class="sb-brand-icon">⬡</div>
+    <div class="sb-brand-text">自动化<br>测试平台</div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-item active">
+      <span class="sb-item-icon">◷</span><span class="sb-item-label">仪表盘</span>
+    </div>
+    <div class="sb-section-label">测试全流程</div>
+    <div class="sb-item"><span class="sb-item-icon">◼</span><span class="sb-item-label">设备管理</span></div>
+    <div class="sb-item"><span class="sb-item-icon">⊙</span><span class="sb-item-label">元素定位</span></div>
+    <div class="sb-item"><span class="sb-item-icon">▥</span><span class="sb-item-label">用例管理</span></div>
+    <div class="sb-item"><span class="sb-item-icon">▶</span><span class="sb-item-label">执行引擎</span></div>
+    <div class="sb-item"><span class="sb-item-icon">▤</span><span class="sb-item-label">测试报告</span></div>
+    <div class="sb-section-label">AI 与编排</div>
+    <div class="sb-item"><span class="sb-item-icon">⬡</span><span class="sb-item-label">AI 助手</span><span class="sb-badge">NEW</span></div>
+    <div class="sb-item"><span class="sb-item-icon">⑂</span><span class="sb-item-label">工作流</span></div>
+    <div class="sb-item"><span class="sb-item-icon">◉</span><span class="sb-item-label">数字人</span><span class="sb-badge">DEV</span></div>
+  </nav>
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-user-name">🐱 QA_Engineer</div>
+      <div class="sb-user-status">● 在线</div>
+    </div>
+  </div>
+</aside>
+
+<!-- ════════════════ 主内容 ════════════════ -->
+<main class="main">
+
+<!-- 0. 全局操作栏 -->
+<div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+  <div>
+    <span style="font-family:'Caveat',cursive;font-size:28px;font-weight:700;color:var(--ink)">Doodle Craft 原型</span>
+    <span style="font-size:10px;color:var(--ink);opacity:0.4;margin-left:8px">v1.0 · 极简几何·粗线涂鸦·彩绘卡通·手稿纸</span>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="paper-btn">导出报告</button>
+    <button class="paper-btn" style="background:var(--c-dashboard)">刷新数据</button>
+  </div>
+</div>
+
+<!-- 1. Dashboard 仪表盘 -->
+<div class="module-section">
+  <div class="module-header">
+    <div class="module-header-icon" style="background:var(--c-dashboard)">◷</div>
+    <h3>仪表盘 <span class="mod-tag">Dashboard</span></h3>
+    <span class="mod-meta">实时监控</span>
+  </div>
+  <div class="module-body">
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-device)"></div><div class="kpi-value">12/15</div><div class="kpi-label">在线设备</div></div>
+      <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-case)"></div><div class="kpi-value">1,247</div><div class="kpi-label">测试用例</div></div>
+      <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-ai)"></div><div class="kpi-value">5</div><div class="kpi-label">活跃智能体</div></div>
+      <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-runner)"></div><div class="kpi-value">3</div><div class="kpi-label">运行中任务</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Device Pool 设备管理 -->
+<div class="module-section">
+  <div class="module-header">
+    <div class="module-header-icon" style="background:var(--c-device)">◼</div>
+    <h3>设备管理 <span class="mod-tag">Devices</span></h3>
+    <span class="mod-meta">4 台设备</span>
+  </div>
+  <div class="module-body">
+    <div class="card-grid">
+      <div class="polaroid-card">
+        <div class="card-photo photo-green"><span class="card-serial">emulator-5554</span><span class="card-badge">在线</span></div>
+        <div class="card-name">Pixel 6</div><div class="card-info">1080×2400 · USB · 刚刚</div>
+        <div class="card-actions"><button class="c-btn">锁定</button><button class="c-btn">解除占用</button></div>
+      </div>
+      <div class="polaroid-card">
+        <div class="card-photo photo-pink"><span class="card-serial">192.168.1.100</span><span class="card-badge">使用中</span></div>
+        <div class="card-name">Xiaomi 13</div><div class="card-info">1080×2400 · 无线 · 3分钟前</div>
+        <div class="card-actions"><button class="c-btn">解锁</button><button class="c-btn">断开</button></div>
+      </div>
+      <div class="polaroid-card">
+        <div class="card-photo photo-green"><span class="card-serial">R5CT1234ABCD</span><span class="card-badge">执行中</span></div>
+        <div class="card-name">Samsung S23</div><div class="card-info">1440×3088 · USB · 2h前</div>
+        <div class="card-actions"><button class="c-btn">锁定</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Element Locator 元素定位 -->
+<div class="module-section">
+  <div class="module-header">
+    <div class="module-header-icon" style="background:var(--c-element)">⊙</div>
+    <h3>元素定位 <span class="mod-tag">Elements</span></h3>
+    <span class="mod-meta">2,436 元素 · 28 页面</span>
+  </div>
+  <div class="module-body">
+    <div style="display:flex;gap:14px">
+      <div style="flex:1;display:flex;flex-direction:column;gap:12px">
+        <span class="section-title">页面层级</span>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;font-size:12px;font-weight:700">
+            <span style="width:8px;height:8px;background:var(--c-element);transform:rotate(45deg);border:1.5px solid var(--ink)"></span> HomeActivity
+            <span style="margin-left:auto;font-size:9px;color:var(--ink);opacity:0.4">156 元素</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;font-size:12px;font-weight:700;opacity:0.6">
+            <span style="width:8px;height:8px;background:var(--c-workflow);transform:rotate(45deg);border:1.5px solid var(--ink)"></span> LoginActivity
+            <span style="margin-left:auto;font-size:9px;color:var(--ink);opacity:0.4">42 元素</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;font-size:12px;font-weight:700;opacity:0.6">
+            <span style="width:8px;height:8px;background:var(--c-case);transform:rotate(45deg);border:1.5px solid var(--ink)"></span> SettingsActivity
+            <span style="margin-left:auto;font-size:9px;color:var(--ink);opacity:0.4">89 元素</span>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1.5;background:#fff;border:3px solid var(--ink);border-radius:4px 10px 6px 8px;padding:12px;position:relative">
+        <span class="section-title">XPath 预览</span>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink);opacity:0.6;margin-top:8px">
+          //android.widget.Button[@resource-id="com.example:id/login_btn"]<br>
+          //android.widget.EditText[@text="用户名"]<br>
+          //*[@content-desc="搜索"]
+        </div>
+        <!-- 涂鸦 -->
+        <span class="doodle-star" style="top:8px;right:12px">✦</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 4. Case Manager 用例管理 -->
+<div class="module-section">
+  <div class="module-header">
+    <div class="module-header-icon" style="background:var(--c-case)">▥</div>
+    <h3>用例管理 <span class="mod-tag">Cases</span></h3>
+    <span class="mod-meta">1,247 用例 · 28 步骤类型</span>
+  </div>
+  <div class="module-body">
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <button class="paper-btn" style="background:var(--c-dashboard)">全部</button>
+      <button class="paper-btn">UI 测试</button>
+      <button class="paper-btn">API 测试</button>
+      <button class="paper-btn">Web 测试</button>
+    </div>
+    <div class="card-grid">
+      <div class="polaroid-card">
+        <div class="card-photo photo-blue"><span class="card-serial">TC-001</span><span class="tag tag-green">已通过</span></div>
+        <div class="card-name">登录流程测试</div><div class="card-info">5 步骤 · UI · 2分钟前</div>
+        <div class="card-actions"><button class="c-btn">运行</button><button class="c-btn">编辑</button></div>
+      </div>
+      <div class="polaroid-card">
+        <div class="card-photo photo-pink"><span class="card-serial">TC-042</span><span class="tag tag-pink">失败</span></div>
+        <div class="card-name">支付回归测试</div><div class="card-info">12 步骤 · API · 1h前</div>
+        <div class="card-actions"><button class="c-btn">运行</button><button class="c-btn">调试</button></div>
+      </div>
+      <div class="polaroid-card">
+        <div class="card-photo photo-yellow"><span class="card-serial">TC-108</span><span class="tag tag-yellow">草稿</span></div>
+        <div class="card-name">搜索功能测试</div><div class="card-info">3 步骤 · UI · 草稿</div>
+        <div class="card-actions"><button class="c-btn">继续编辑</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 5. Test Runner 执行引擎 -->
+<div class="module-section">
+  <div class="module-header">
+    <div class="module-header-icon" style="background:var(--c-runner)">▶</div>
+    <h3>执行引擎 <span class="mod-tag">Runner</span></h3>
+    <span class="mod-meta">3 任务运行中</span>
+  </div>
+  <div class="module-body">
+    <div class="kpi-row" style="margin-bottom:14px">
+      <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-device)"></div><div class="kpi-value">2</div><div class="kpi-label">执行中</div></div>
+      <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-case)"></div><div class="kpi-value">48</div><div class="kpi-label">已完成</div></div>
+      <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-runner)"></div><div class="kpi-value">5</div><div class="kpi-label">失败</div></div>
+      <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-dashboard)"></div><div class="kpi-value">96%</div><div class="kpi-label">通过率</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff;border:2.5px solid var(--ink);border-radius:4px 8px 4px 8px">
+        <span style="width:10px;height:10px;background:var(--c-device);border-radius:50%;animation:twinkle 1.5s infinite"></span>
+        <span style="font-weight:700;font-size:12px">smoke-test-v2.4</span>
+        <span class="tag tag-green">PASS</span>
+        <span style="margin-left:auto;font-size:10px;color:var(--ink);opacity:0.4">32s 前完成</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff;border:2.5px solid var(--ink);border-radius:4px 8px 4px 8px">
+        <span style="width:10px;height:10px;background:var(--c-runner);border-radius:50%;animation:twinkle 1.5s infinite"></span>
+        <span style="font-weight:700;font-size:12px">login-regression</span>
+        <span class="tag tag-pink">FAIL</span>
+        <span style="margin-left:auto;font-size:10px;color:var(--ink);opacity:0.4">1h 前</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 6. Report Generator 测试报告 -->
+<div class="module-section">
+  <div class="module-header">
+    <div class="module-header-icon" style="background:var(--c-report)">▤</div>
+    <h3>测试报告 <span class="mod-tag">Reports</span></h3>
+    <span class="mod-meta">156 次执行</span>
+  </div>
+  <div class="module-body">
+    <div class="kpi-row" style="margin-bottom:14px">
+      <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-device)"></div><div class="kpi-value">156</div><div class="kpi-label">执行次数</div></div>
+      <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-case)"></div><div class="kpi-value">92%</div><div class="kpi-label">通过率</div></div>
+      <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-runner)"></div><div class="kpi-value">12</div><div class="kpi-label">失败</div></div>
+      <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-ai)"></div><div class="kpi-value">8</div><div class="kpi-label">BUG 类型</div></div>
+    </div>
+    <table class="data-table">
+      <thead><tr><th>Run ID</th><th>任务</th><th>通过率</th><th>状态</th><th>时间</th></tr></thead>
+      <tbody>
+        <tr><td style="font-family:'JetBrains Mono';font-size:10px">RUN-0248</td><td>smoke-test-v2.4</td><td>98%</td><td><span class="tag tag-green">PASS</span></td><td>14:32</td></tr>
+        <tr><td style="font-family:'JetBrains Mono';font-size:10px">RUN-0247</td><td>login-regression</td><td>72%</td><td><span class="tag tag-pink">FAIL</span></td><td>13:18</td></tr>
+        <tr><td style="font-family:'JetBrains Mono';font-size:10px">RUN-0246</td><td>payment-flow-v3</td><td>100%</td><td><span class="tag tag-green">PASS</span></td><td>11:05</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 7. AI Assistant AI助手 -->
+<div class="module-section">
+  <div class="module-header">
+    <div class="module-header-icon" style="background:var(--c-ai)">⬡</div>
+    <h3>AI 助手 <span class="mod-tag">Assistant</span></h3>
+    <span class="mod-meta">5 智能体活跃</span>
+  </div>
+  <div class="module-body">
+    <div style="display:flex;gap:14px">
+      <div style="width:200px;display:flex;flex-direction:column;gap:8px;flex-shrink:0">
+        <span class="section-title">对话列表</span>
+        <div style="padding:10px;background:#fff;border:2.5px solid var(--ink);border-radius:4px 8px 4px 8px;transform:rotate(-0.3deg);cursor:pointer">
+          <div style="font-size:11px;font-weight:700">📱 设备测试自动化</div><div style="font-size:9px;color:var(--ink);opacity:0.4;margin-top:2px">3 条消息 · 14:30</div>
+        </div>
+        <div style="padding:10px;background:#fff;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;opacity:0.5;cursor:pointer">
+          <div style="font-size:11px;font-weight:700">🔍 元素定位辅助</div><div style="font-size:9px;color:var(--ink);opacity:0.4;margin-top:2px">12 条消息 · 昨天</div>
+        </div>
+        <div style="padding:10px;background:#fff;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;opacity:0.5;cursor:pointer">
+          <div style="font-size:11px;font-weight:700">📊 报告分析</div><div style="font-size:9px;color:var(--ink);opacity:0.4;margin-top:2px">8 条消息 · 昨天</div>
+        </div>
+      </div>
+      <div style="flex:1;background:#fff;border:3px solid var(--ink);border-radius:6px 10px 6px 10px;padding:16px;position:relative">
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <div style="padding:6px 12px;background:#f8f6f2;border:2px solid var(--ink);border-radius:4px 10px 8px 6px;font-size:11px;font-weight:600">🤖 我来帮你设计设备管理的测试用例...</div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px">
+          <div style="padding:6px 12px;background:var(--c-dashboard);border:2px solid var(--ink);border-radius:10px 4px 6px 8px;font-size:11px;font-weight:600">帮我测试 Pixel 6 的登录流程</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:16px">
+          <input style="flex:1;padding:8px 12px;border:2.5px solid var(--ink);border-radius:4px 8px 4px 8px;font-family:inherit;font-size:11px" placeholder="输入消息...">
+          <button class="paper-btn" style="background:var(--c-ai)">发送</button>
+        </div>
+        <span class="doodle-star" style="top:12px;right:16px">★</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 8. Workflow 工作流 -->
+<div class="module-section">
+  <div class="module-header">
+    <div class="module-header-icon" style="background:var(--c-workflow)">⑂</div>
+    <h3>工作流工作台 <span class="mod-tag">Workflow</span></h3>
+    <span class="mod-meta">12 工作流</span>
+  </div>
+  <div class="module-body">
+    <div class="card-grid-4">
+      <div style="padding:14px;background:#fff;border:3px solid var(--ink);border-radius:4px 10px 6px 8px;text-align:center;cursor:pointer;box-shadow:2px 2px 0 rgba(0,0,0,0.04);transform:rotate(-0.3deg)">
+        <div style="width:32px;height:32px;margin:0 auto 8px;background:var(--c-device);border:2px solid var(--ink);transform:rotate(45deg)"></div>
+        <div style="font-size:11px;font-weight:700">设备测试流程</div>
+        <div style="font-size:9px;color:var(--ink);opacity:0.4">4 步骤 · Blockly</div>
+      </div>
+      <div style="padding:14px;background:#fff;border:3px solid var(--ink);border-radius:4px 10px 6px 8px;text-align:center;cursor:pointer;box-shadow:2px 2px 0 rgba(0,0,0,0.04);transform:rotate(0.2deg)">
+        <div style="width:32px;height:32px;margin:0 auto 8px;background:var(--c-case);border:2px solid var(--ink);transform:rotate(45deg)"></div>
+        <div style="font-size:11px;font-weight:700">API 测试编排</div>
+        <div style="font-size:9px;color:var(--ink);opacity:0.4">8 步骤 · VueFlow</div>
+      </div>
+      <div style="padding:14px;background:#fff;border:3px solid var(--ink);border-radius:4px 10px 6px 8px;text-align:center;cursor:pointer;box-shadow:2px 2px 0 rgba(0,0,0,0.04);transform:rotate(-0.2deg)">
+        <div style="width:32px;height:32px;margin:0 auto 8px;background:var(--c-element);border:2px solid var(--ink);transform:rotate(45deg)"></div>
+        <div style="font-size:11px;font-weight:700">元素采集流水线</div>
+        <div style="font-size:9px;color:var(--ink);opacity:0.4">3 步骤 · Blockly</div>
+      </div>
+      <div style="padding:14px;background:#fff;border:3px solid var(--ink);border-radius:4px 10px 6px 8px;text-align:center;cursor:pointer;box-shadow:2px 2px 0 rgba(0,0,0,0.04);transform:rotate(0.4deg)">
+        <div style="width:32px;height:32px;margin:0 auto 8px;background:var(--c-ai);border:2px solid var(--ink);transform:rotate(45deg)"></div>
+        <div style="font-size:11px;font-weight:700">AI 辅助工作流</div>
+        <div style="font-size:9px;color:var(--ink);opacity:0.4">6 步骤 · VueFlow</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<script>lucide.createIcons()</script>
+</body>
+</html>

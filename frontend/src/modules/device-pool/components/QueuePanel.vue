@@ -58,12 +58,12 @@ function formatTime(seconds) {
 <style scoped>
 .queue-badge {
   background: #FFB5A7;
-  color: #2d2d2d;
+  color: var(--ink);
   padding: 4px 12px;
   border-radius: 4px 8px 4px 8px;
   font-size: 11px;
   font-weight: 700;
-  border: 2px solid #2d2d2d;
+  border: 2px solid var(--ink);
   box-shadow: 2px 2px 0 rgba(0,0,0,0.05);
   cursor: pointer;
   user-select: none;

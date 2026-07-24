@@ -177,7 +177,7 @@ function handleCancel() {
 .net-label {
   font-size: 14px;
   font-weight: 700;
-  color: var(--app-text);
+  color: var(--ink);
 }
 
 .net-field.has-error :deep(input) {

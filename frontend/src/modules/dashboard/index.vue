@@ -375,7 +375,7 @@ onMounted(() => {
   font-family: 'Caveat', cursive;
   font-size: 20px;
   font-weight: 700;
-  color: #2d2d2d;
+  color: var(--ink);
   display: inline-block;
   position: relative;
   margin-bottom: 8px;
@@ -427,7 +427,7 @@ onMounted(() => {
   padding: 12px 12px 30px 12px;
   border-radius: 6px 10px 6px 10px;
   background: #fff;
-  border: 2.5px solid #2d2d2d;
+  border: 2.5px solid var(--ink);
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -461,7 +461,7 @@ onMounted(() => {
 .trends-tasks-card__title {
   font-size: 12px;
   font-weight: 800;
-  color: #2d2d2d;
+  color: var(--ink);
   margin-bottom: 10px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -492,7 +492,7 @@ onMounted(() => {
   gap: 24px;
   padding: 14px 20px;
   background: #FFE066;
-  border: 2.5px solid #2d2d2d;
+  border: 2.5px solid var(--ink);
   border-radius: 6px 10px 6px 10px;
   font-size: 12px;
   font-weight: 700;
@@ -513,7 +513,7 @@ onMounted(() => {
 /* ── Module Nav 覆盖 ── */
 :deep(.module-nav-card) {
   background: #fff !important;
-  border: 2.5px solid #2d2d2d !important;
+  border: 2.5px solid var(--ink) !important;
   border-radius: 6px 10px 6px 10px !important;
   box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.04) !important;
 }

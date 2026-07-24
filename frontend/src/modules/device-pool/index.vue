@@ -405,7 +405,7 @@ function connectionLabel(type) {
           <div class="kpi-card"><div class="kpi-dot" style="background:#6BCB77"></div><div class="kpi-value">{{ kpiStats.online }}</div><div class="kpi-label">在线</div></div>
           <div class="kpi-card"><div class="kpi-dot" style="background:#FFB5A7"></div><div class="kpi-value">{{ kpiStats.busy }}</div><div class="kpi-label">使用中</div></div>
           <div class="kpi-card"><div class="kpi-dot" style="background:#d4d8dc"></div><div class="kpi-value">{{ kpiStats.offline }}</div><div class="kpi-label">离线</div></div>
-          <div class="kpi-card"><div class="kpi-dot" style="background:#2d2d2d"></div><div class="kpi-value">{{ kpiStats.total }}</div><div class="kpi-label">总计</div></div>
+          <div class="kpi-card"><div class="kpi-dot" style="background:var(--ink)"></div><div class="kpi-value">{{ kpiStats.total }}</div><div class="kpi-label">总计</div></div>
         </div>
 
         <!-- 筛选 + 视图切换 -->
@@ -611,7 +611,7 @@ function connectionLabel(type) {
 }
 .doc-section__title {
   font-family: 'Caveat', cursive;
-  font-size: 20px; font-weight: 700; color: #2d2d2d;
+  font-size: 20px; font-weight: 700; color: var(--ink);
 }
 .doc-section__title .doc-tag {
   font-size: 9px; padding: 1px 8px; border-radius: 4px 8px 4px 8px;
@@ -625,7 +625,7 @@ function connectionLabel(type) {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0;
-  border: 2.5px solid #89CFF0;
+  border: 2.5px solid var(--c-workflow);
   border-radius: 4px 8px 4px 8px;
   overflow: hidden;
   background: #fff;
@@ -644,7 +644,7 @@ function connectionLabel(type) {
 }
 .kpi-value {
   font-family: 'Caveat', 'Quicksand', cursive;
-  font-size: 28px; font-weight: 700; color: #2d2d2d; line-height: 1;
+  font-size: 28px; font-weight: 700; color: var(--ink); line-height: 1;
 }
 .kpi-label {
   font-size: 9px; font-weight: 700; color: #999; margin-top: 2px;
@@ -654,7 +654,7 @@ function connectionLabel(type) {
 /* ── 视图切换 ── */
 .view-toggle {
   display: flex; gap: 0;
-  border: 2px solid #89CFF0; border-radius: 4px 8px 4px 8px;
+  border: 2px solid var(--c-workflow); border-radius: 4px 8px 4px 8px;
   overflow: hidden;
 }
 .view-btn {
@@ -664,8 +664,8 @@ function connectionLabel(type) {
   border-right: 1px solid #e8ecf1;
 }
 .view-btn:last-child { border-right: none; }
-.view-btn.active { background: #89CFF0; color: #fff; }
-.view-btn:hover:not(.active) { color: #89CFF0; }
+.view-btn.active { background: var(--c-workflow); color: #fff; }
+.view-btn:hover:not(.active) { color: var(--c-workflow); }
 
 /* ── 卡片分组视图 ── */
 .card-grid-grouped {
@@ -675,7 +675,7 @@ function connectionLabel(type) {
 }
 .card-group-title {
   font-family: 'Caveat', cursive; font-size: 18px; font-weight: 700;
-  color: #2d2d2d; display: flex; align-items: center; gap: 8px;
+  color: var(--ink); display: flex; align-items: center; gap: 8px;
   margin-bottom: 10px;
 }
 .card-group-title::after {
@@ -738,11 +738,11 @@ function connectionLabel(type) {
   box-shadow: none;
   transition: all 0.15s;
 }
-.page-size-btn:hover { border-color: #89CFF0; color: #89CFF0; }
+.page-size-btn:hover { border-color: var(--c-workflow); color: var(--c-workflow); }
 .page-size-btn.active {
   background: #E8F4FD;
-  border-color: #89CFF0;
-  color: #89CFF0;
+  border-color: var(--c-workflow);
+  color: var(--c-workflow);
 }
 .table-toolbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
 .page-info { font-size: 12px; color: #999; font-weight: 600; white-space: nowrap; }
@@ -753,7 +753,7 @@ function connectionLabel(type) {
   flex: 1; min-height: 0; min-width: 0;
   display: flex; flex-direction: column; overflow: hidden;
   border-radius: 6px 10px 6px 10px;
-  border: 2.5px solid #89CFF0;
+  border: 2.5px solid var(--c-workflow);
   box-shadow: 2px 3px 0 rgba(137,207,240,0.12);
   background: #fff;
 }
@@ -791,7 +791,7 @@ function connectionLabel(type) {
 /* ── 表头与正文颜色区分 + 行列线条 ── */
 .device-table-wrapper :deep(.el-table th) {
   background: #f8f6f2 !important;
-  color: #2d2d2d !important;
+  color: var(--ink) !important;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.4px;
@@ -799,7 +799,7 @@ function connectionLabel(type) {
   border-bottom: 2px solid #e8ecf1 !important;
 }
 .device-table-wrapper :deep(.el-table td) {
-  color: #2d2d2d;
+  color: var(--ink);
   font-size: 13px;
   border-right: 1px solid #f0ede8 !important;
   border-bottom: 1px solid #f0ede8 !important;
@@ -823,7 +823,7 @@ function connectionLabel(type) {
 
 /* ── Row dot indicator ── */
 .row-dot {
-  color: #2d2d2d;
+  color: var(--ink);
   font-size: 12px;
   line-height: 1;
   margin-right: 6px;
@@ -844,7 +844,7 @@ function connectionLabel(type) {
 .text-muted { color: #999; font-size: 13px; }
 .locked-by-text { color: #999; font-size: 13px; }
 .last-seen-text { font-size: 13px; color: #999; }
-.connection-text { font-size: 13px; color: #2d2d2d; font-weight: 600; white-space: nowrap; }
+.connection-text { font-size: 13px; color: var(--ink); font-weight: 600; white-space: nowrap; }
 
 /* ── 操作按钮组（样式移至 DeviceActionsCell.vue）── */
 

@@ -491,7 +491,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
 
 .filter-count {
   font-size: 13px;
-  color: var(--app-text-secondary, #9a8c98);
+  color: var(--app-text-secondary, #999);
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
@@ -505,10 +505,10 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
   align-items: flex-start;
   padding: 28px 22px 24px;
   border-radius: 18px;
-  background-color: var(--app-glass-card, rgba(255,255,255,0.65));
+  background-color: #fff);
   background-image: radial-gradient(rgba(137,207,240,0.12) 1.1px, transparent 1.1px);
   background-size: 18px 18px;
-  border: 1.5px solid var(--app-glass-border, rgba(255,255,255,0.85));
+  border: 1.5px solid var(--ink));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 .duty-roster {
@@ -522,7 +522,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
 }
 
 .empty {
-  color: var(--app-text-secondary, #9a8c98);
+  color: var(--app-text-secondary, #999);
   padding: 48px 0;
   text-align: center;
   font-size: 15px;
@@ -537,7 +537,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: var(--app-text-secondary, #9a8c98);
+  color: var(--app-text-secondary, #999);
   font-size: 13px;
   font-weight: 700;
 }
@@ -560,18 +560,18 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
   background: transparent;
   font-size: 15px;
   font-weight: 700;
-  color: var(--app-text-secondary);
+  color: #999;
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: inherit;
 }
 .view-tab:hover {
   background: rgba(255, 255, 255, 0.6);
-  color: var(--app-text, #4a4e69);
+  color: var(--app-text, var(--ink));
 }
 .view-tab.active {
   background: #fff;
-  color: var(--app-text, #4a4e69);
+  color: var(--app-text, var(--ink));
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 </style>

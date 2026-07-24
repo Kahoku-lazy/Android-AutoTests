@@ -776,7 +776,7 @@ function runFromCurrent(idx) {
 .step-header__title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--app-text);
+  color: var(--ink);
 }
 .step-header__actions {
   display: flex;
@@ -785,7 +785,7 @@ function runFromCurrent(idx) {
 
 .empty-hint {
   text-align: center;
-  color: var(--app-text-secondary);
+  color: #999;
   font-size: 14px;
   padding: 32px;
   border: 1px dashed rgba(162,210,255,0.38);
@@ -797,7 +797,7 @@ function runFromCurrent(idx) {
   position: relative;
   margin-bottom: 10px;
   border-radius: 12px;
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--ink);
   background: rgba(255,255,255,0.48);
   box-shadow: var(--app-shadow-sm);
   transition: all 0.2s;
@@ -847,7 +847,7 @@ function runFromCurrent(idx) {
   background: rgba(255,255,255,0.36);
 }
 .drag-handle {
-  color: var(--app-text-muted);
+  color: #999;
   cursor: grab;
   display: flex;
   align-items: center;
@@ -881,7 +881,7 @@ function runFromCurrent(idx) {
 .step-summary {
   flex: 1;
   font-size: 14px;
-  color: var(--app-text);
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -900,7 +900,7 @@ function runFromCurrent(idx) {
   font-weight: 600;
 }
 .step-result-msg.ok {
-  color: var(--app-green, #89CFF0);
+  color: var(--app-green, var(--c-workflow));
 }
 .step-result-msg.fail {
   color: #e85f5f;
@@ -908,7 +908,7 @@ function runFromCurrent(idx) {
 
 .step-desc {
   font-size: 13px;
-  color: var(--app-text-secondary);
+  color: #999;
   margin-bottom: 12px;
   padding: 8px 12px;
   background: rgba(162,210,255,0.10);
@@ -925,7 +925,7 @@ function runFromCurrent(idx) {
 }
 .field-hint {
   font-size: 12px;
-  color: var(--app-text-secondary);
+  color: #999;
   margin-left: 10px;
 }
 .current-xpath {
@@ -938,7 +938,7 @@ function runFromCurrent(idx) {
   border-radius: 4px;
   font-family: monospace;
   word-break: break-all;
-  color: var(--app-text);
+  color: var(--ink);
 }
 
 /* Element picker — override el-select-dropdown item height */
@@ -959,7 +959,7 @@ function runFromCurrent(idx) {
 .el-opt-name {
   font-weight: 600;
   font-size: 13px;
-  color: var(--app-text);
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1015,7 +1015,7 @@ function runFromCurrent(idx) {
 .child-step-type {
   font-size: 11px;
   font-weight: 600;
-  color: var(--app-text-secondary);
+  color: #999;
   background: rgba(162,210,255,0.15);
   padding: 1px 6px;
   border-radius: 4px;
@@ -1024,7 +1024,7 @@ function runFromCurrent(idx) {
 .child-step-desc {
   flex: 1;
   font-size: 12px;
-  color: var(--app-text);
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1035,7 +1035,7 @@ function runFromCurrent(idx) {
 .child-steps__empty {
   text-align: center;
   font-size: 12px;
-  color: var(--app-text-muted);
+  color: #999;
   padding: 12px;
 }
 </style>

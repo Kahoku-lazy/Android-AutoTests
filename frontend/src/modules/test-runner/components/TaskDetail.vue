@@ -214,7 +214,7 @@ function caseStatusLabel(ci) {
   if (isCurrent)
     return { text: '◆ 执行中', color: '#889df0', bg: 'rgba(136,157,240,0.1)' }
   if (ci.status === 'done')
-    return { text: '完成', color: '#89CFF0', bg: 'rgba(111,186,44,0.1)' }
+    return { text: '完成', color: 'var(--c-workflow)', bg: 'rgba(111,186,44,0.1)' }
   return { text: '等待中', color: '#f7cd67', bg: 'rgba(247,205,103,0.15)' }
 }
 
@@ -773,20 +773,19 @@ async function removeTask() {
 
 /* ── Info card ── */
 .info-card {
-  background: var(--app-glass-card);
-  border-radius: 14px; border: 1px solid var(--app-glass-border);
+  background: #fff;
+  border-radius: 14px; border: 1px solid var(--ink);
   padding: 20px 24px; display: flex; flex-direction: column; gap: 14px;
   box-shadow: var(--app-shadow-sm);
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
+  
 }
 .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 20px; }
 .info-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .info-item.full-width { grid-column: 1 / -1; }
 .info-item--name { padding-bottom: 4px; border-bottom: 1px dashed rgba(162,210,255,0.24); margin-bottom: 2px; }
 .info-value.task-name { font-size: 15px; line-height: 1.4; word-break: break-word; }
-.info-label { color: var(--app-text-secondary); font-weight: 500; white-space: nowrap; }
-.info-value { color: var(--app-text); font-weight: 600; }
+.info-label { color: #999; font-weight: 500; white-space: nowrap; }
+.info-value { color: var(--ink); font-weight: 600; }
 .info-value.current-case { color: #409eff; }
 .info-tag { font-size: 11px; font-weight: 700; color: #fff; padding: 2px 10px; border-radius: 12px; white-space: nowrap; }
 .info-tag.creator { background: #b39ef3; }
@@ -796,19 +795,19 @@ async function removeTask() {
 /* ── Section titles ── */
 .section-block { margin-top: 4px; }
 .sec-title {
-  font-weight: 800; font-size: 16px; color: var(--app-text);
+  font-weight: 800; font-size: 16px; color: var(--ink);
   display: flex; align-items: center; gap: 8px; margin-bottom: 2px;
 }
 .sec-badge {
   font-size: 11px; font-weight: 800; color: #fff;
-  padding: 2px 10px; border-radius: 50px;
+  padding: 2px 10px; border-radius: var(--app-radius-pill);
 }
 .sec-badge--cases { background: var(--app-green-deep); }
-.sec-sub { font-size: 12px; color: var(--app-text-secondary); margin-bottom: 14px; }
+.sec-sub { font-size: 12px; color: #999; margin-bottom: 14px; }
 
 /* ── Case card ── */
 .case-card {
-  background: rgba(255,255,255,0.48); border: 1px solid var(--app-glass-border);
+  background: rgba(255,255,255,0.48); border: 1px solid var(--ink);
   border-radius: 18px; margin-bottom: 14px; overflow: hidden;
   transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
   box-shadow: var(--app-shadow-sm);
@@ -824,26 +823,26 @@ async function removeTask() {
 }
 .case-header:hover { background: rgba(162,210,255,0.12); }
 .case-expand-icon {
-  font-size: 11px; color: var(--app-text-secondary); width: 16px; flex-shrink: 0;
+  font-size: 11px; color: #999; width: 16px; flex-shrink: 0;
   transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
 }
 .case-card.expanded .case-expand-icon { transform: rotate(90deg); }
 
 .case-id-badge {
   font-size: 11px; font-weight: 700; color: #fff;
-  padding: 3px 10px; border-radius: 50px; flex-shrink: 0;
+  padding: 3px 10px; border-radius: var(--app-radius-pill); flex-shrink: 0;
 }
 .case-title-area { flex: 1; min-width: 0; }
 .case-title-text {
-  font-size: 15px; font-weight: 700; color: var(--app-text);
+  font-size: 15px; font-weight: 700; color: var(--ink);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.bug-header-sub { font-size: 11px; color: var(--app-text-secondary); margin-top: 2px; }
-.case-status-text { font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 50px; flex-shrink: 0; }
-.case-stats { display: flex; gap: 16px; font-size: 12px; font-weight: 600; color: var(--app-text-secondary); flex-shrink: 0; }
+.bug-header-sub { font-size: 11px; color: #999; margin-top: 2px; }
+.case-status-text { font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: var(--app-radius-pill); flex-shrink: 0; }
+.case-stats { display: flex; gap: 16px; font-size: 12px; font-weight: 600; color: #999; flex-shrink: 0; }
 .case-stats span { white-space: nowrap; }
-.stat-total { color: var(--app-text-secondary); }
-.stat-pass { color: #89CFF0; }
+.stat-total { color: #999; }
+.stat-pass { color: var(--c-workflow); }
 .stat-fail { color: #e85f5f; }
 
 /* ── Case body ── */
@@ -860,7 +859,7 @@ async function removeTask() {
 }
 .iter-badge {
   font-size: 11px; font-weight: 800; color: #fff;
-  background: #889df0; padding: 2px 10px; border-radius: 50px;
+  background: #889df0; padding: 2px 10px; border-radius: var(--app-radius-pill);
 }
 
 /* ── BUG meta ── */
@@ -869,32 +868,32 @@ async function removeTask() {
   margin: 0 22px 12px; padding: 10px 14px;
   background: rgba(232,95,95,0.04); border-radius: 10px;
   border: 1px dashed rgba(232,95,95,0.2);
-  font-size: 12px; font-weight: 600; color: var(--app-text-secondary);
+  font-size: 12px; font-weight: 600; color: #999;
 }
-.bug-meta-label { color: var(--app-text-secondary); }
+.bug-meta-label { color: #999; }
 .bug-meta-value { color: #e85f5f; font-weight: 700; }
 
 /* ── Step list ── */
 .step-list { padding: 0 22px 18px 38px; display: flex; flex-direction: column; gap: 8px; }
-.step-empty { padding: 24px 22px 18px 38px; color: var(--app-text-secondary); font-size: 13px; text-align: center; }
+.step-empty { padding: 24px 22px 18px 38px; color: #999; font-size: 13px; text-align: center; }
 
 .step-card {
   display: flex; align-items: stretch; border-radius: 12px;
   overflow: hidden; transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
   box-shadow: var(--app-shadow-sm);
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--ink);
 }
 .step-strip { width: 5px; flex-shrink: 0; border-radius: 5px 0 0 5px; }
 .step-body { flex: 1; padding: 12px 16px; background: rgba(255,255,255,0.52); display: flex; flex-direction: column; gap: 4px; }
 .step-header-row { display: flex; align-items: center; gap: 8px; }
-.step-index { font-size: 12px; font-weight: 800; color: var(--app-text-secondary); font-family: 'Cascadia Code', Consolas, monospace; }
+.step-index { font-size: 12px; font-weight: 800; color: #999; font-family: 'Cascadia Code', Consolas, monospace; }
 .step-type-tag {
   font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px;
-  background: rgba(162,210,255,0.14); color: var(--app-text-secondary); text-transform: uppercase;
+  background: rgba(162,210,255,0.14); color: #999; text-transform: uppercase;
 }
-.step-status-tag { font-size: 11px; font-weight: 700; padding: 2px 12px; border-radius: 50px; margin-left: auto; }
-.step-desc { font-size: 13px; font-weight: 600; color: var(--app-text); line-height: 1.4; }
-.step-xpath { font-size: 11px; color: var(--app-text-secondary); font-family: 'Cascadia Code', Consolas, monospace; margin-top: 2px; }
+.step-status-tag { font-size: 11px; font-weight: 700; padding: 2px 12px; border-radius: var(--app-radius-pill); margin-left: auto; }
+.step-desc { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.4; }
+.step-xpath { font-size: 11px; color: #999; font-family: 'Cascadia Code', Consolas, monospace; margin-top: 2px; }
 .step-fail-reason {
   font-size: 12px; font-weight: 600; color: #e85f5f;
   background: rgba(232,95,95,0.05); padding: 8px 12px; border-radius: 8px;
@@ -902,11 +901,11 @@ async function removeTask() {
 }
 
 /* ── Step states ── */
-.step-pending .step-strip { background: var(--app-text-muted); }
+.step-pending .step-strip { background: #999; }
 .step-pending .step-body { background: rgba(255,255,255,0.34); }
-.step-pending .step-index, .step-pending .step-desc, .step-pending .step-xpath { color: var(--app-text-muted); }
-.step-pending .step-status-tag { background: rgba(162,210,255,0.12); color: var(--app-text-secondary); }
-.step-pending .step-type-tag { background: rgba(162,210,255,0.08); color: var(--app-text-muted); }
+.step-pending .step-index, .step-pending .step-desc, .step-pending .step-xpath { color: #999; }
+.step-pending .step-status-tag { background: rgba(162,210,255,0.12); color: #999; }
+.step-pending .step-type-tag { background: rgba(162,210,255,0.08); color: #999; }
 
 .step-running { animation: stepPulse 1.8s cubic-bezier(0.4,0,0.2,1) infinite; }
 .step-running .step-strip { background: #889df0; }
@@ -917,7 +916,7 @@ async function removeTask() {
   50% { box-shadow: 0 0 0 6px rgba(136,157,240,0.06); }
 }
 
-.step-pass .step-strip { background: #89CFF0; }
+.step-pass .step-strip { background: var(--c-workflow); }
 .step-pass .step-body { background: rgba(111,186,44,0.03); }
 .step-pass .step-status-tag { background: rgba(111,186,44,0.15); color: #529b2a; }
 
@@ -948,7 +947,7 @@ async function removeTask() {
 .log-warn { color: #e6a23c; }
 .log-empty { text-align: center; color: #666; padding: 40px; font-size: 13px; }
 
-.not-found { text-align: center; color: var(--app-text-secondary); padding: 80px 0; font-size: 15px; }
+.not-found { text-align: center; color: #999; padding: 80px 0; font-size: 15px; }
 .not-found p { margin-bottom: 16px; }
 
 /* ── 性能测量 ── */
@@ -973,10 +972,10 @@ async function removeTask() {
 }
 .perf-case-stat {
   font-size: 12px;
-  color: var(--app-text-secondary);
+  color: #999;
 }
 .perf-case-stat b {
-  color: var(--app-text);
+  color: var(--ink);
   font-weight: 600;
 }
 .perf-items {
@@ -995,12 +994,12 @@ async function removeTask() {
 }
 .perf-iter {
   font-weight: 600;
-  color: var(--app-text-secondary);
+  color: #999;
   min-width: 40px;
 }
 .perf-desc {
   flex: 1;
-  color: var(--app-text);
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

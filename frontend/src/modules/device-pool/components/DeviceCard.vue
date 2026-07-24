@@ -91,16 +91,16 @@ function go() { emit('click', props.device) }
 .card-photo.offline{ background: #f0ede8; border-color: #d4d8dc; }
 
 .card-photo-serial {
-  font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: #2d2d2d;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: var(--ink);
 }
 .card-photo-badge {
   font-size: 9px; font-weight: 700; padding: 1px 7px;
-  border-radius: 3px 6px 3px 6px; border: 1.5px solid #2d2d2d;
-  background: rgba(255,255,255,0.7); color: #2d2d2d;
+  border-radius: 3px 6px 3px 6px; border: 1.5px solid var(--ink);
+  background: rgba(255,255,255,0.7); color: var(--ink);
 }
 
 .card-name {
-  font-size: 12px; font-weight: 700; color: #2d2d2d; text-align: center; margin-bottom: 2px;
+  font-size: 12px; font-weight: 700; color: var(--ink); text-align: center; margin-bottom: 2px;
 }
 .card-info {
   font-size: 9px; color: #999; text-align: center; margin-bottom: 6px;
@@ -110,8 +110,8 @@ function go() { emit('click', props.device) }
 .card-actions { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
 .card-btn {
   font-size: 9px; font-weight: 700; padding: 3px 8px;
-  border-radius: 3px 6px 3px 6px; border: 1.5px solid #2d2d2d;
-  background: #fff; color: #2d2d2d;
+  border-radius: 3px 6px 3px 6px; border: 1.5px solid var(--ink);
+  background: #fff; color: var(--ink);
   cursor: pointer; font-family: inherit; transition: all 0.12s;
 }
 .card-btn:hover { background: #FFE066; }

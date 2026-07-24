@@ -899,7 +899,7 @@ async function loadDevices() {
               :max="300"
               style="width: 160px"
             />
-            <span style="margin-left: 8px; font-size: 12px; color: var(--app-text-secondary)"
+            <span style="margin-left: 8px; font-size: 12px; color: #999"
               >秒（最小 5s）</span
             >
           </el-form-item>
@@ -972,13 +972,12 @@ async function loadDevices() {
   flex-direction: column;
   min-height: 0;
   margin-top: 12px;
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--ink);
   border-radius: var(--ac-radius, 16px);
-  background: var(--app-glass-card);
+  background: #fff;
   overflow: hidden;
   box-shadow: var(--app-shadow-sm);
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
+  
 }
 .tabs-panel :deep(.el-tabs) {
   flex: 1;
@@ -1012,7 +1011,7 @@ async function loadDevices() {
 .task-card {
   cursor: pointer;
   border-radius: var(--ac-radius, 16px);
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--ink);
   border-left-width: 4px;
   padding: 16px 18px 14px;
   display: flex;
@@ -1035,7 +1034,7 @@ async function loadDevices() {
 .task-card--completed {
   background: linear-gradient(135deg, #e8f5e0 0%, #f3faf0 100%);
   border-color: rgba(111, 186, 44, 0.3);
-  border-left-color: #89CFF0;
+  border-left-color: var(--c-workflow);
 }
 .task-card--incomplete {
   background: linear-gradient(135deg, #ffe8ec 0%, #fff5f7 100%);
@@ -1045,7 +1044,7 @@ async function loadDevices() {
 .task-card--idle {
   background: rgba(255,255,255,0.48);
   border-color: rgba(162,210,255,0.30);
-  border-left-color: var(--app-text-muted);
+  border-left-color: #999;
 }
 .task-card:hover {
   transform: translateY(-2px);
@@ -1067,7 +1066,7 @@ async function loadDevices() {
 .tc-name {
   font-size: 15px;
   font-weight: 700;
-  color: var(--app-text);
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1088,7 +1087,7 @@ async function loadDevices() {
   display: inline-block;
   font-size: 10px;
   font-weight: 700;
-  color: var(--app-text-secondary);
+  color: #999;
   background: rgba(162,210,255,0.18);
   padding: 2px 10px;
   border-radius: 10px;
@@ -1103,7 +1102,7 @@ async function loadDevices() {
 .tc-device {
   font-size: 12px;
   font-weight: 600;
-  color: var(--app-text-secondary);
+  color: #999;
   font-family: "Cascadia Code", Consolas, monospace;
 }
 .tc-status-badge {
@@ -1133,7 +1132,7 @@ async function loadDevices() {
   align-items: center;
   gap: 4px 12px;
   font-size: 12px;
-  color: var(--app-text-secondary);
+  color: #999;
 }
 .tc-creator-tag {
   font-size: 11px;
@@ -1145,7 +1144,7 @@ async function loadDevices() {
 }
 .tc-time {
   font-size: 11px;
-  color: var(--app-text-secondary);
+  color: #999;
 }
 
 /* Row 3: current case + progress */
@@ -1160,14 +1159,14 @@ async function loadDevices() {
   font-weight: 600;
 }
 .tc-current-name {
-  color: var(--app-text);
+  color: var(--ink);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .tc-progress-text {
-  color: var(--app-text-secondary);
+  color: #999;
   font-weight: 600;
 }
 
@@ -1180,7 +1179,7 @@ async function loadDevices() {
 }
 
 .empty-hint {
-  color: var(--app-text-secondary);
+  color: #999;
   padding: 60px 0;
   text-align: center;
   font-size: 15px;

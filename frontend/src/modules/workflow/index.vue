@@ -594,9 +594,8 @@ watch(
   gap: 16px;
   padding: 12px 18px;
   background: rgba(255,255,255,0.52);
-  border-bottom: 1px solid var(--app-glass-border);
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
+  border-bottom: 1px solid var(--ink);
+  
   flex-shrink: 0;
   z-index: 10;
 }
@@ -624,13 +623,13 @@ watch(
   margin: 0;
   font-size: 16px;
   font-weight: 800;
-  color: var(--app-text);
+  color: var(--ink);
 }
 .brand-sub {
   margin: 2px 0 0;
   font-size: 12px;
   font-weight: 700;
-  color: var(--app-text-muted);
+  color: #999;
 }
 .header-actions {
   margin-left: auto;
@@ -641,9 +640,9 @@ watch(
 }
 .hdr-btn {
   padding: 7px 14px;
-  border: 1.5px solid var(--app-glass-border);
+  border: 1.5px solid var(--ink);
   border-radius: 999px;
-  background: var(--app-glass-card);
+  background: #fff;
   font-size: 12px;
   font-weight: 800;
   font-family: inherit;
@@ -703,14 +702,13 @@ watch(
 .wf-modal {
   width: min(400px, 100%);
   padding: 22px 22px 18px;
-  background: var(--app-glass-heavy);
-  border: 1px solid var(--app-glass-border);
+  background: #fff;
+  border: 1px solid var(--ink);
   border-radius: 18px;
   box-shadow: var(--app-shadow-lg);
   font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif);
-  color: var(--app-text);
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
+  color: var(--ink);
+  
 }
 .wf-modal-title {
   margin: 0;
@@ -721,23 +719,23 @@ watch(
   margin: 6px 0 16px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--app-text-secondary);
+  color: #999;
 }
 .wf-modal-label {
   display: block;
   font-size: 12px;
   font-weight: 800;
-  color: var(--app-text);
+  color: var(--ink);
   margin-bottom: 6px;
 }
 .wf-modal-inp {
   width: 100%;
   box-sizing: border-box;
   padding: 10px 12px;
-  border: 1.5px solid var(--app-glass-border);
+  border: 1.5px solid var(--ink);
   border-radius: 12px;
   background: #ffffff;
-  color: var(--app-text);
+  color: var(--ink);
   font-size: 14px;
   font-weight: 700;
   font-family: inherit;
@@ -752,14 +750,14 @@ watch(
 }
 .wf-modal .hdr-btn {
   padding: 8px 16px;
-  border: 1.5px solid var(--app-glass-border);
+  border: 1.5px solid var(--ink);
   border-radius: 999px;
-  background: var(--app-glass-card);
+  background: #fff;
   font-size: 13px;
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
-  color: var(--app-text-secondary);
+  color: #999;
 }
 .wf-modal .hdr-btn.primary {
   background: linear-gradient(135deg, var(--app-green-deep), var(--app-blue));

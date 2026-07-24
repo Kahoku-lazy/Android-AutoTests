@@ -291,7 +291,7 @@ function fmtTime(iso: string) {
   margin: 0;
   font-size: 20px;
   font-weight: 800;
-  color: var(--app-text);
+  color: var(--ink);
 }
 .board-sub {
   margin: 4px 0 0;
@@ -339,7 +339,7 @@ function fmtTime(iso: string) {
   padding: 5px 12px;
   border-radius: 999px;
   border: 1.5px solid var(--ac-border);
-  background: var(--app-glass-card);
+  background: #fff;
   font-size: 11px;
   font-weight: 800;
   font-family: inherit;
@@ -379,7 +379,7 @@ function fmtTime(iso: string) {
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--ink);
   border-radius: 12px;
   background: rgba(255,255,255,0.42);
   font-family: inherit;
@@ -391,7 +391,7 @@ function fmtTime(iso: string) {
 }
 .section-title.static { cursor: default; }
 .section-title:not(.static):hover { border-color: var(--ac-teal); }
-.chev { width: 14px; color: var(--app-text-secondary); }
+.chev { width: 14px; color: #999; }
 .sec-ico { font-size: 15px; }
 .sec-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sec-count {
@@ -442,7 +442,7 @@ function fmtTime(iso: string) {
   text-align: left;
   padding: 14px;
   border: 2px solid var(--ac-border);
-  border-radius: 16px;
+  border-radius: var(--app-radius-md);
   background: rgba(255,255,255,0.48);
   cursor: pointer;
   font-family: inherit;
@@ -477,7 +477,7 @@ function fmtTime(iso: string) {
   border: none;
   background: transparent;
   cursor: pointer;
-  color: var(--app-text-secondary);
+  color: #999;
   padding: 2px 5px;
   border-radius: 6px;
 }

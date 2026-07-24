@@ -26,7 +26,7 @@ const isApi = computed(() => props.data.nodeType === 'ApiNode')
 const startKind = computed<StartKind>(() => props.data.startKind || 'app')
 
 const accent = computed(() => {
-  if (isStart.value) return '#89CFF0'
+  if (isStart.value) return 'var(--c-workflow)'
   if (isEnd.value) return '#8a8a96'
   if (isPopup.value) return '#e85f5f'
   if (isApi.value) return '#f5a623'
@@ -241,15 +241,14 @@ watch(
 .pf-node {
   min-width: 228px;
   background: rgba(255,255,255,0.58);
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--ink);
   border-left: 5px solid var(--accent);
-  border-radius: 16px;
+  border-radius: var(--app-radius-md);
   padding: 10px 12px 12px;
   font-family: var(--ac-font, inherit);
-  color: var(--app-text);
+  color: var(--ink);
   box-shadow: var(--app-shadow-sm);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  
 }
 .pf-node.selected {
   border-color: var(--app-blue);
@@ -260,11 +259,11 @@ watch(
 }
 .pf-node.start {
   min-width: 240px;
-  border-radius: 16px 16px 16px 28px;
+  border-radius: var(--app-radius-md) 16px 16px 28px;
 }
 .pf-node.end {
   min-width: 180px;
-  border-radius: 16px 28px 16px 16px;
+  border-radius: var(--app-radius-md) 28px 16px 16px;
   opacity: 0.96;
 }
 .pf-node.api {
@@ -292,7 +291,7 @@ watch(
 }
 .api-url {
   font-size: 11px;
-  color: var(--app-text-secondary);
+  color: #999;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -325,7 +324,7 @@ watch(
   background: transparent;
   border: 2px solid transparent;
   border-radius: 8px;
-  color: var(--app-text);
+  color: var(--ink);
   font-size: 13px;
   font-weight: 800;
   padding: 2px 6px;
@@ -354,7 +353,7 @@ watch(
   font-weight: 800;
   font-family: inherit;
   background: transparent;
-  color: var(--app-text-secondary);
+  color: #999;
   cursor: pointer;
 }
 .kind-btn.active {
@@ -372,27 +371,27 @@ watch(
 .pf-pkg label {
   font-size: 10px;
   font-weight: 800;
-  color: var(--app-text-secondary);
+  color: #999;
   flex-shrink: 0;
 }
 .pkg-input {
   flex: 1;
   min-width: 0;
   padding: 4px 8px;
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--ink);
   border-radius: 8px;
   background: rgba(255,255,255,0.50);
-  color: var(--app-text);
+  color: var(--ink);
   font-size: 10px;
   font-family: ui-monospace, monospace;
   outline: none;
 }
 .pkg-input:focus {
-  border-color: #89CFF0;
+  border-color: var(--c-workflow);
 }
 .pf-sub {
   font-size: 10px;
-  color: var(--app-text-secondary);
+  color: #999;
   margin-bottom: 8px;
   padding-left: 4px;
   line-height: 1.4;
@@ -412,8 +411,8 @@ watch(
 .pf-port-name { color: var(--ac-ink-muted, #5c4a35); font-weight: 600; }
 .pf-port-type {
   font-size: 9px;
-  color: var(--app-text-secondary);
-  border: 1px solid var(--app-glass-border);
+  color: #999;
+  border: 1px solid var(--ink);
   border-radius: 6px;
   padding: 0 5px;
   cursor: help;
@@ -436,7 +435,7 @@ watch(
 }
 .pf-actions button {
   background: rgba(255,255,255,0.42);
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--ink);
   border-radius: 8px;
   color: var(--ac-ink-muted, #5c4a35);
   font-size: 11px;
@@ -480,7 +479,7 @@ watch(
   width: 100%;
   margin-top: 8px;
   padding: 7px;
-  border: 2px dashed var(--app-glass-border);
+  border: 2px dashed var(--ink);
   border-radius: 12px;
   background: rgba(162,210,255,0.10);
   color: var(--ac-ink-muted, #5c4a35);

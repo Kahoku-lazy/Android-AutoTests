@@ -122,7 +122,7 @@ urlpatterns = [
 | ASGI 入口 | `config/asgi.py` | HTTP → URLRouter, WS → 中央路由 |
 | WS 中央路由 | `gateway/routing.py` | 所有 WebSocket consumer 在此注册 |
 
-> 注意：Token 黑名单当前使用内存 `set()`，生产环境应迁移到 Redis。
+> Token 黑名单使用 Redis 存储（`shared/auth/jwt_auth.py`），服务重启不丢失。
 
 ## 错误处理模式
 

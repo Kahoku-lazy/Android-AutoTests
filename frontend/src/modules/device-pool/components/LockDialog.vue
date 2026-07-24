@@ -109,7 +109,7 @@ function handleCancel() {
 .lock-label {
   font-size: 14px;
   font-weight: 700;
-  color: var(--app-text);
+  color: var(--ink);
 }
 
 .lock-hint {
@@ -126,7 +126,7 @@ function handleCancel() {
   border: 2px solid #A78BFA;
   border-radius: 4px 8px 4px 8px;
   background: #fff;
-  color: #2d2d2d;
+  color: var(--ink);
   font-family: inherit;
   cursor: pointer;
   appearance: auto;

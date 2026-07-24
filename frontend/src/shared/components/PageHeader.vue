@@ -20,27 +20,12 @@ defineProps({
 
 <style scoped>
 .doc-hero {
-  background: var(--app-glass-heavy, rgba(255,255,255,0.65));
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border-radius: var(--app-radius-lg, 28px);
-  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.55));
-  box-shadow: var(--app-shadow-sm, 0 4px 15px rgba(31,38,135,0.04));
-  padding: 28px 30px;
-  position: relative;
-  overflow: hidden;
-  margin-bottom: 20px;
+  background: #fff; border-radius: 6px 10px 6px 10px;
+  border: 2.5px solid var(--ink);
+  box-shadow: 2px 3px 0 rgba(0,0,0,0.04);
+  padding: 28px 30px; position: relative; overflow: hidden; margin-bottom: 20px;
 }
-
-.doc-hero::after {
-  content: '';
-  position: absolute;
-  top: -30px; right: -30px;
-  width: 140px; height: 140px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(162,210,255,0.32), transparent);
-  pointer-events: none;
-}
+.doc-hero::after { display: none; }
 
 .doc-hero__inner {
   position: relative;

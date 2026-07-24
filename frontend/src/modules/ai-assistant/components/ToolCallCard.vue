@@ -119,7 +119,7 @@ function formatOutput(output) {
 .tool-step-args pre {
   margin: 4px 0;
   padding: 8px;
-  background: #2d2d2d;
+  background: var(--ink);
   border-radius: 8px;
   color: #e6db74;
   font-size: 12px;

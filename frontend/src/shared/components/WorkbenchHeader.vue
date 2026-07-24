@@ -15,7 +15,7 @@ const props = defineProps({
   /** 图标底色渐变，与 module-nav 卡片一致 */
   iconGradient: {
     type: String,
-    default: 'linear-gradient(135deg,#89CFF0,#60a5fa)',
+    default: 'linear-gradient(135deg,var(--c-workflow),#60a5fa)',
   },
 })
 
@@ -68,7 +68,7 @@ watch(() => props.icon, async () => {
   gap: 16px;
   padding: 14px 20px;
   background: #fff;
-  border-bottom: 2.5px solid #2d2d2d;
+  border-bottom: 2.5px solid var(--ink);
   flex-shrink: 0;
   z-index: 10;
 }
@@ -87,7 +87,7 @@ watch(() => props.icon, async () => {
   border-radius: 8px 16px 6px 14px;
   flex-shrink: 0;
   background: #FFE066;
-  border: 2.5px solid #2d2d2d;
+  border: 2.5px solid var(--ink);
   transform: rotate(-2deg);
 }
 .brand-mark--lucide {
@@ -96,8 +96,8 @@ watch(() => props.icon, async () => {
 .brand-mark--lucide :deep(svg) {
   width: 18px;
   height: 18px;
-  color: #2d2d2d;
-  stroke: #2d2d2d;
+  color: var(--ink);
+  stroke: var(--ink);
 }
 .brand-text { min-width: 0; }
 .brand-title {
@@ -105,7 +105,7 @@ watch(() => props.icon, async () => {
   font-family: 'Caveat', cursive;
   font-size: 24px;
   font-weight: 700;
-  color: #2d2d2d;
+  color: var(--ink);
   line-height: 1.2;
   transform: rotate(-0.5deg);
 }
@@ -126,9 +126,9 @@ watch(() => props.icon, async () => {
 /* Override .wb-btn in this header context */
 .wb-header :deep(.el-button) {
   font-weight: 800 !important;
-  color: #2d2d2d !important;
+  color: var(--ink) !important;
   background: #fff !important;
-  border: 2.5px solid #2d2d2d !important;
+  border: 2.5px solid var(--ink) !important;
   border-radius: 6px 12px 6px 12px !important;
   padding: 5px 14px !important;
   font-family: inherit !important;

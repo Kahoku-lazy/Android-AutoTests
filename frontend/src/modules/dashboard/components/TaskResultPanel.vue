@@ -92,7 +92,7 @@ function meta(status) {
   border-radius: 4px 8px 4px 8px;
   font-size: 11px;
   font-weight: 700;
-  border: 2px solid #2d2d2d;
+  border: 2px solid var(--ink);
   background: #fff;
 }
 
@@ -125,27 +125,27 @@ function meta(status) {
   width: 28px; height: 28px; border-radius: 4px 8px 4px 8px;
   display: flex; align-items: center; justify-content: center;
   font-size: 13px; font-weight: 800; flex-shrink: 0;
-  border: 2px solid #2d2d2d;
+  border: 2px solid var(--ink);
 }
-.task-row__status.is-success { background: #C8F5D0; color: #2d2d2d; }
-.task-row__status.is-failed  { background: #FFE0DB; color: #2d2d2d; }
-.task-row__status.is-partial { background: #FFF9E0; color: #2d2d2d; }
-.task-row__status.is-running { background: #E8DDF8; color: #2d2d2d; animation: pulse 1.5s ease-in-out infinite; }
+.task-row__status.is-success { background: #C8F5D0; color: var(--ink); }
+.task-row__status.is-failed  { background: #FFE0DB; color: var(--ink); }
+.task-row__status.is-partial { background: #FFF9E0; color: var(--ink); }
+.task-row__status.is-running { background: #E8DDF8; color: var(--ink); animation: pulse 1.5s ease-in-out infinite; }
 .task-row__status.is-idle    { background: #f8f6f2; color: #999; }
 
 .task-row__body { flex: 1; min-width: 0; }
-.task-row__title { font-size: 13px; font-weight: 700; color: #2d2d2d; margin-bottom: 3px; }
+.task-row__title { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
 
 .task-row__cases { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 3px; }
 .case-icon {
   width: 20px; height: 20px; border-radius: 3px 6px 3px 6px;
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 800; border: 1.5px solid #2d2d2d;
+  font-size: 10px; font-weight: 800; border: 1.5px solid var(--ink);
 }
-.case-icon.is-success { background: #C8F5D0; color: #2d2d2d; }
-.case-icon.is-failed  { background: #FFE0DB; color: #2d2d2d; }
-.case-icon.is-partial { background: #FFF9E0; color: #2d2d2d; }
-.case-icon.is-running { background: #E8DDF8; color: #2d2d2d; }
+.case-icon.is-success { background: #C8F5D0; color: var(--ink); }
+.case-icon.is-failed  { background: #FFE0DB; color: var(--ink); }
+.case-icon.is-partial { background: #FFF9E0; color: var(--ink); }
+.case-icon.is-running { background: #E8DDF8; color: var(--ink); }
 
 .task-row__stats { font-size: 10px; color: #999; font-weight: 600; }
 .task-row__time { font-size: 10px; color: #999; white-space: nowrap; flex-shrink: 0; padding-top: 2px; }

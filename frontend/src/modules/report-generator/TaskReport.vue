@@ -216,7 +216,7 @@ function goRunner() { router.push('/runner') }
                 <div class="case-title-area">
                   <span class="case-title-text">{{ ci.title }}</span>
                 </div>
-                <span class="case-status-text" :style="{ color: ci.fail > 0 ? '#e85f5f' : '#89CFF0', background: ci.fail > 0 ? 'rgba(232,95,95,0.12)' : 'rgba(111,186,44,0.1)' }">
+                <span class="case-status-text" :style="{ color: ci.fail > 0 ? '#e85f5f' : 'var(--c-workflow)', background: ci.fail > 0 ? 'rgba(232,95,95,0.12)' : 'rgba(111,186,44,0.1)' }">
                   {{ ci.fail > 0 ? '🔴 有失败' : '✅ 全部通过' }}
                 </span>
                 <div class="case-stats">
@@ -343,13 +343,13 @@ function goRunner() { router.push('/runner') }
 .kpi-card:hover { transform: translateY(-2px); }
 .kpi-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; border-radius: 0 3px 3px 0; }
 .accent-teal { background: #19c8b9; }
-.accent-green { background: #89CFF0; }
+.accent-green { background: var(--c-workflow); }
 .accent-red { background: #e05a5a; }
 .accent-yellow { background: #f5c31c; }
 .kpi-value { font-size: 30px; font-weight: 900; color: #794f27; line-height: 1.1; }
 .kpi-label { font-size: 12px; color: #9f927d; margin-top: 4px; font-weight: 600; }
 .kpi-sub { font-size: 11px; color: #8a7b66; margin-top: 2px; }
-.num-pass { color: #89CFF0; }
+.num-pass { color: var(--c-workflow); }
 .num-fail { color: #e05a5a; }
 .num-warn { color: #dba90e; }
 
@@ -399,15 +399,15 @@ function goRunner() { router.push('/runner') }
 
 .case-id-badge {
   font-size: 11px; font-weight: 700; color: #fff; background: #19c8b9;
-  padding: 3px 10px; border-radius: 50px; flex-shrink: 0;
+  padding: 3px 10px; border-radius: var(--app-radius-pill); flex-shrink: 0;
 }
 .case-title-area { flex: 1; min-width: 0; }
 .case-title-text { font-size: 15px; font-weight: 700; color: #4A3A28; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bug-header-sub { font-size: 11px; color: #9f927d; margin-top: 2px; }
-.case-status-text { font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 50px; flex-shrink: 0; }
+.case-status-text { font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: var(--app-radius-pill); flex-shrink: 0; }
 .case-stats { display: flex; gap: 14px; font-size: 12px; font-weight: 600; color: #725d42; flex-shrink: 0; }
 .stat-total { color: #9f927d; }
-.stat-pass { color: #89CFF0; }
+.stat-pass { color: var(--c-workflow); }
 .stat-fail { color: #e85f5f; }
 
 /* ── Case body (step cards) ── */
@@ -432,7 +432,7 @@ function goRunner() { router.push('/runner') }
 .step-desc { font-size: 13px; font-weight: 600; color: #725d42; line-height: 1.4; }
 .step-xpath { font-size: 11px; color: #9f927d; font-family: 'Cascadia Code', Consolas, monospace; margin-top: 2px; }
 
-.step-done .step-strip { background: #89CFF0; }
+.step-done .step-strip { background: var(--c-workflow); }
 .step-done .step-body { background: rgba(111,186,44,0.03); }
 
 /* ── BUG meta ── */
@@ -471,16 +471,16 @@ function goRunner() { router.push('/runner') }
 .time-text { font-size: 12px; color: #8a7b66; white-space: nowrap; }
 
 .rate-cell { display: flex; align-items: center; gap: 8px; }
-.progress-bar { display: flex; height: 7px; border-radius: 50px; overflow: hidden; background: #f0ece2; flex: 1; max-width: 90px; }
-.p-pass { background: #89CFF0; transition: width 0.5s ease; border-radius: 50px; }
-.p-fail { background: #e05a5a; transition: width 0.5s ease; border-radius: 50px; }
+.progress-bar { display: flex; height: 7px; border-radius: var(--app-radius-pill); overflow: hidden; background: #f0ece2; flex: 1; max-width: 90px; }
+.p-pass { background: var(--c-workflow); transition: width 0.5s ease; border-radius: var(--app-radius-pill); }
+.p-fail { background: #e05a5a; transition: width 0.5s ease; border-radius: var(--app-radius-pill); }
 .rate-text { font-weight: 700; font-size: 12px; min-width: 38px; text-align: right; }
-.rate-ok { color: #89CFF0; }
+.rate-ok { color: var(--c-workflow); }
 .rate-warn { color: #dba90e; }
 .rate-bad { color: #e05a5a; }
 
-.badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 50px; font-size: 10px; font-weight: 700; letter-spacing: 0.02em; }
-.badge-pass { background: rgba(111,186,44,0.12); color: #89CFF0; border: 1.5px solid rgba(111,186,44,0.25); }
+.badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--app-radius-pill); font-size: 10px; font-weight: 700; letter-spacing: 0.02em; }
+.badge-pass { background: rgba(111,186,44,0.12); color: var(--c-workflow); border: 1.5px solid rgba(111,186,44,0.25); }
 .badge-fail { background: rgba(224,90,90,0.12); color: #e05a5a; border: 1.5px solid rgba(224,90,90,0.25); }
 .badge-stopped { background: rgba(138,123,102,0.10); color: #8a7b66; border: 1.5px solid rgba(138,123,102,0.20); }
 

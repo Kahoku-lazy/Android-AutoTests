@@ -262,29 +262,9 @@ const url = `ws://localhost:8765/ws/screenshot`
 
 ---
 
-## 七、服务健康检查速查
+## 七、服务健康检查
 
-```bash
-# 一键状态
-python run.py status
-
-# Django
-curl -s http://localhost:8765/api/ | python -m json.tool
-
-# AgentScope
-curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/docs
-
-# Vue
-curl -s -o /dev/null -w "%{http_code}" http://localhost:5173
-
-# Redis
-redis-cli ping
-
-# ADB
-adb devices
-```
-
-**期望**：Django 返回 JSON，AgentScope/Vue 返回 200，Redis 返回 PONG，ADB 至少一台设备。
+→ 见 `setup.md` 重启验证章节。
 
 ---
 

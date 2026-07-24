@@ -264,7 +264,7 @@ function onLeave() {
   transition: width 0.35s ease;
 }
 .progress-fill.is-running { background: #889df0; }
-.progress-fill.is-done { background: #89CFF0; }
+.progress-fill.is-done { background: var(--c-workflow); }
 .progress-fill.is-fail { background: #e85f5f; }
 .progress-fill.is-pending { background: #f7cd67; }
 .progress-text {

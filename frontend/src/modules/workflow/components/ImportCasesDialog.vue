@@ -229,7 +229,7 @@ async function confirmImport() {
   margin: 0 0 12px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--app-text-secondary);
+  color: #999;
   line-height: 1.45;
 }
 .toolbar {
@@ -242,13 +242,13 @@ async function confirmImport() {
 .count {
   font-size: 12px;
   font-weight: 700;
-  color: var(--app-text);
+  color: var(--ink);
   white-space: nowrap;
 }
 .list {
   max-height: 360px;
   overflow: auto;
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--ink);
   border-radius: 12px;
   background: rgba(255,255,255,0.48);
 }
@@ -257,7 +257,7 @@ async function confirmImport() {
   text-align: center;
   font-size: 13px;
   font-weight: 700;
-  color: var(--app-text-secondary);
+  color: #999;
 }
 .row {
   display: flex;
@@ -282,13 +282,13 @@ async function confirmImport() {
 .title {
   font-size: 13px;
   font-weight: 800;
-  color: var(--app-text);
+  color: var(--ink);
 }
 .sub {
   margin-top: 2px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--app-text-secondary);
+  color: #999;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

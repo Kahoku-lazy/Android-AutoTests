@@ -78,10 +78,10 @@ function onInput(val) {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: var(--app-glass-card);
-  border-top: 1px solid var(--app-glass-border);
+  background: #fff;
+  border-top: 1px solid var(--ink);
   font-size: 13px;
-  backdrop-filter: blur(var(--app-glass-blur));
+  
 }
 .file-preview-icon {
   display: inline-flex;
@@ -89,20 +89,20 @@ function onInput(val) {
 }
 .file-preview-name {
   font-weight: 600;
-  color: var(--app-text);
+  color: var(--ink);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .file-preview-size {
-  color: var(--app-text-secondary);
+  color: #999;
   font-size: 12px;
 }
 .file-preview-remove {
   background: none;
   border: none;
-  color: var(--app-text-secondary);
+  color: #999;
   cursor: pointer;
   font-size: 14px;
   padding: 4px 8px;
@@ -117,14 +117,14 @@ function onInput(val) {
   align-items: flex-end;
   gap: 10px;
   padding: 10px 16px 12px;
-  background: var(--app-glass-heavy);
-  border-top: 1px solid var(--app-glass-border);
+  background: #fff;
+  border-top: 1px solid var(--ink);
   flex-shrink: 0;
-  backdrop-filter: blur(var(--app-glass-blur));
+  
 }
 .chat-input :deep(.el-textarea__inner) {
   border-radius: var(--app-radius-sm) !important;
-  border: 1.5px solid var(--app-glass-border) !important;
+  border: 1.5px solid var(--ink) !important;
   padding: 8px 12px !important;
   font-size: 14px !important;
   line-height: 1.45 !important;
@@ -132,7 +132,7 @@ function onInput(val) {
   background: var(--app-bg-input) !important;
   box-shadow: none !important;
   font-family: inherit !important;
-  color: var(--app-text) !important;
+  color: var(--ink) !important;
 }
 .chat-input :deep(.el-textarea__inner:focus) {
   border-color: var(--el-color-primary) !important;
@@ -142,9 +142,9 @@ function onInput(val) {
   width: 40px;
   height: 40px;
   border-radius: var(--app-radius-sm);
-  border: 1.5px solid var(--app-glass-border);
-  background: var(--app-glass-card);
-  color: var(--app-text-secondary);
+  border: 1.5px solid var(--ink);
+  background: #fff;
+  color: #999;
   display: inline-flex;
   align-items: center;
   justify-content: center;

@@ -41,7 +41,7 @@ const modules = computed(() => {
       id: 'case-manager', title: '用例管理',
       desc: '步骤编排 · 目录树 · YAML 导入导出',
       path: '/cases',
-      color: 'app-teal', gradient: 'linear-gradient(135deg,#89CFF0,#60a5fa)',
+      color: 'app-teal', gradient: 'linear-gradient(135deg,var(--c-workflow),#60a5fa)',
       icon: 'layers',
       stats: { label: '用例数', value: String(s.cases?.total ?? 0), total: '' },
     },
@@ -147,7 +147,7 @@ function setCardRef(el, idx) {
 .page-title {
   font-family: 'Caveat', cursive;
   font-size: 24px; font-weight: 700;
-  color: #2d2d2d; margin: 0;
+  color: var(--ink); margin: 0;
 }
 .page-subtitle {
   font-size: 10px; color: #999; margin-top: 2px; font-weight: 600;
@@ -167,7 +167,7 @@ function setCardRef(el, idx) {
   background: #fff;
   border-radius: 6px 10px 6px 10px;
   padding: 18px 16px;
-  border: 2.5px solid #2d2d2d;
+  border: 2.5px solid var(--ink);
   box-shadow: 2px 2px 0 rgba(0,0,0,0.04);
   transition: all .15s;
   position: relative;
@@ -189,7 +189,7 @@ function setCardRef(el, idx) {
   border-radius: 4px 8px 4px 8px;
   display: flex; align-items: center; justify-content: center;
   margin-bottom: 12px;
-  border: 2px solid #2d2d2d;
+  border: 2px solid var(--ink);
 }
 .module-icon i {
   width: 20px; height: 20px;
@@ -200,7 +200,7 @@ function setCardRef(el, idx) {
 .module-body { flex: 1; display: flex; flex-direction: column; }
 .module-name {
   font-size: 13px; font-weight: 800;
-  color: #2d2d2d; margin-bottom: 4px;
+  color: var(--ink); margin-bottom: 4px;
 }
 .module-desc {
   font-size: 10px; color: #999;
@@ -216,7 +216,7 @@ function setCardRef(el, idx) {
 }
 .module-stat strong {
   font-family: 'Quicksand', sans-serif;
-  font-size: 18px; font-weight: 800; color: #2d2d2d;
+  font-size: 18px; font-weight: 800; color: var(--ink);
   margin-right: 2px;
 }
 .module-stat small {

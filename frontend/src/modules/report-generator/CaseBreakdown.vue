@@ -450,7 +450,7 @@ function stepTypeLabel(type) {
   color: #8a7b66;
   font-weight: 600;
 }
-.num-pass { color: #89CFF0; font-weight: 800; }
+.num-pass { color: var(--c-workflow); font-weight: 800; }
 .num-fail { color: #e05a5a; font-weight: 800; }
 
 .bug-kpi-row {
@@ -627,7 +627,7 @@ function stepTypeLabel(type) {
   display: inline-flex;
   align-items: center;
   padding: 3px 8px;
-  border-radius: 50px;
+  border-radius: var(--app-radius-pill);
   font-size: 11px;
   font-weight: 700;
 }

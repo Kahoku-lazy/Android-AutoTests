@@ -752,7 +752,7 @@ onBeforeRouteLeave((_to, _from, next) => {
 
 .device-option-serial {
   float: right;
-  color: var(--app-text-secondary);
+  color: #999;
   font-size: 12px;
 }
 </style>

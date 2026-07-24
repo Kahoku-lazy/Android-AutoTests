@@ -35,7 +35,7 @@ defineEmits(['action'])
 }
 .quick-action-btn:deep(.el-button) {
   border-radius: 4px 8px 4px 8px !important;
-  border: 2px solid #2d2d2d !important;
+  border: 2px solid var(--ink) !important;
   font-weight: 700 !important;
   transition: all 0.12s !important;
 }

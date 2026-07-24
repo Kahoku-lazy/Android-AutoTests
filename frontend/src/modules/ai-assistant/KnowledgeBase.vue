@@ -98,7 +98,7 @@ onMounted(() => {
           <span class="kb-stat__label">最后索引时间</span>
         </div>
         <div class="kb-stat">
-          <span class="kb-stat__num" :style="{ color: status.reindex?.running ? '#f8a6b2' : '#89CFF0' }">
+          <span class="kb-stat__num" :style="{ color: status.reindex?.running ? '#f8a6b2' : 'var(--c-workflow)' }">
             {{ status.reindex?.running ? '⏳ 重建中' : '✅ 就绪' }}
           </span>
           <span class="kb-stat__label">状态</span>
@@ -181,7 +181,7 @@ onMounted(() => {
 .kb-stat__label {
   display: block;
   font-size: 12px;
-  color: var(--app-text-secondary);
+  color: #999;
   margin-top: 4px;
 }
 .kb-actions {
@@ -191,7 +191,7 @@ onMounted(() => {
 }
 .kb-hint {
   font-size: 13px;
-  color: var(--app-text-secondary);
+  color: #999;
 }
 .kb-table-card {
   flex: 1;
@@ -253,7 +253,7 @@ onMounted(() => {
   background: rgba(121, 79, 39, 0.05);
   font-size: 13px;
   font-weight: 700;
-  color: var(--app-text-secondary);
+  color: #999;
   cursor: pointer;
   font-family: inherit;
 }

@@ -30,7 +30,7 @@ function buildOption() {
       itemWidth: 10,
       itemHeight: 10,
       itemGap: 20,
-      textStyle: { fontSize: 11, color: '#2d2d2d', fontWeight: 700 },
+      textStyle: { fontSize: 11, color: 'var(--ink)', fontWeight: 700 },
     },
     grid: { top: 12, right: 8, bottom: 36, left: 8 },
     xAxis: {

@@ -406,8 +406,7 @@ function switchMode(m) {
   border-radius: 30px;
   background: rgba(255, 255, 255, 0.28);
   box-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: #fff;
 }
 
 .hero__text {
@@ -430,7 +429,7 @@ function switchMode(m) {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.75);
-  color: #4a4e69;
+  color: var(--ink);
   text-shadow: none;
   margin-top: 6px;
 }
@@ -465,8 +464,7 @@ function switchMode(m) {
   border: 1px solid rgba(255, 255, 255, 0.76) !important;
   border-radius: 24px !important;
   box-shadow: 0 8px 32px rgba(31, 38, 135, 0.08) !important;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background: #fff;
 }
 
 /* Switch prompt */
@@ -480,13 +478,13 @@ function switchMode(m) {
 }
 .switch-prompt__title {
   font-size: 14px;
-  color: #9a8c98;
+  color: #999;
   font-weight: 600;
   margin: 0;
 }
 .switch-prompt__user {
   font-size: 22px;
-  color: #4a4e69;
+  color: var(--ink);
   font-weight: 800;
   margin: 0;
 }
@@ -515,7 +513,7 @@ function switchMode(m) {
 }
 
 .form-icon {
-  color: #9a8c98;
+  color: #999;
   flex-shrink: 0;
 }
 
@@ -532,14 +530,14 @@ function switchMode(m) {
 
 .remember-label {
   font-size: 13px;
-  color: #9a8c98;
+  color: #999;
   font-weight: 500;
   user-select: none;
 }
 
 .login-toggle {
   text-align: center;
-  color: #9a8c98;
+  color: #999;
   cursor: pointer;
   font-size: 13px;
   margin: 16px 0 0;

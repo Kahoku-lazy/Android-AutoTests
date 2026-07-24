@@ -173,7 +173,7 @@ async function toggleLock() {
   font-family: "SF Mono", "Fira Code", Consolas, monospace;
   font-size: 11px;
   font-weight: 600;
-  color: var(--app-text-secondary);
+  color: #999;
   background: rgba(162,210,255,0.14);
   padding: 2px 8px;
   border-radius: 6px;
@@ -199,14 +199,14 @@ async function toggleLock() {
 
 .case-card__priority--p2 {
   background: rgba(162,210,255,0.14);
-  color: var(--app-text-secondary);
+  color: #999;
 }
 
 .case-card__title {
   font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif);
   font-weight: 700;
   font-size: 15px;
-  color: var(--app-text);
+  color: var(--ink);
   margin: 0;
   line-height: 1.4;
   overflow: hidden;
@@ -223,7 +223,7 @@ async function toggleLock() {
 .meta-tag {
   font-size: 11px;
   font-weight: 600;
-  color: var(--app-text-secondary);
+  color: #999;
   background: rgba(162,210,255,0.12);
   padding: 2px 8px;
   border-radius: 8px;
@@ -235,7 +235,7 @@ async function toggleLock() {
 }
 
 .meta-tag--steps {
-  color: var(--app-text-secondary);
+  color: #999;
 }
 
 .meta-tag--user {

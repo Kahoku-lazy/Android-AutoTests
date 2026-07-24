@@ -260,7 +260,7 @@ function reasonLabel(reason) {
   margin: 8px 0;
   padding: 12px 16px;
   border-radius: 10px;
-  background: #2d2d2d;
+  background: var(--ink);
   overflow-x: auto;
 }
 .msg-text :deep(pre code) {
@@ -336,12 +336,12 @@ function reasonLabel(reason) {
 .typing-label {
   font-size: 14px;
   font-weight: 600;
-  color: var(--app-text-secondary, #9a8c98);
+  color: var(--app-text-secondary, #999);
   background: linear-gradient(
     90deg,
-    var(--app-text-secondary, #9a8c98) 0%,
+    var(--app-text-secondary, #999) 0%,
     var(--el-color-primary, #7ab88d) 40%,
-    var(--app-text-secondary, #9a8c98) 80%
+    var(--app-text-secondary, #999) 80%
   );
   background-size: 200% 100%;
   -webkit-background-clip: text;

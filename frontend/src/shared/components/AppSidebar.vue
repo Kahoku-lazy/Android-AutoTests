@@ -318,27 +318,17 @@ onUnmounted(() => {
 
 <style scoped>
 /* ═══════════════════════════════════════════
-   Origami Tech — 折纸科技主题
-   签名: clip-path 折角 + 几何菱形 Core + 极简黑白
+   Doodle Craft — 侧边栏
    ═══════════════════════════════════════════ */
 
 /* ── 容器 ── */
 .sidebar {
-  flex: 0 0 var(--side-w, 220px);
-  width: var(--side-w, 220px);
-  min-width: var(--side-w, 220px);
-  max-width: var(--side-w, 220px);
-  height: 100%;
-  background: linear-gradient(180deg, #fdfdfc 0%, #f8f9fb 100%);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
-  z-index: 2;
-  border-right: 1px solid #e8ecf1;
-  box-shadow: 8px 0 32px rgba(0,0,0,0.03);
-  color: #1a202c;
-  font-family: var(--app-font, Quicksand, 'PingFang SC', 'Microsoft YaHei', sans-serif);
+  flex: 0 0 var(--side-w, 228px); width: var(--side-w, 228px);
+  min-width: var(--side-w, 228px); max-width: var(--side-w, 228px);
+  height: 100%; background: var(--paper); display: flex; flex-direction: column;
+  overflow: hidden; position: relative; z-index: 2;
+  border-right: 3px solid var(--ink); box-shadow: 3px 0 0 rgba(0,0,0,0.03);
+  color: var(--ink); font-family: var(--app-font);
   transition: width 0.2s ease, min-width 0.2s ease, max-width 0.2s ease, flex-basis 0.2s ease;
   border-radius: 0;
 }
@@ -478,16 +468,9 @@ onUnmounted(() => {
   line-height: 1.2;
 }
 .brand-title {
-  display: inline-block;
-  font-weight: 800;
-  font-size: 14px;
-  white-space: nowrap;
-  color: #1a202c;
-  letter-spacing: -0.02em;
-  background: none;
-  -webkit-text-fill-color: currentColor;
-  background-clip: border-box;
-  animation: none;
+  display: inline-block; font-family: 'Caveat', cursive; font-size: 18px;
+  font-weight: 700; white-space: nowrap; color: var(--ink);
+  background: none; -webkit-text-fill-color: currentColor; animation: none;
 }
 
 /* ── 品牌图标 Origami 折纸容器 ── */
@@ -612,14 +595,17 @@ onUnmounted(() => {
   transform: translateY(-50%) rotate(45deg);
   width: 6px;
   height: 6px;
-  background: #89CFF0;
+  background: var(--c-workflow);
   border: 1px solid #1a202c;
 }
 
 /* 重置旧主题的 ::before */
-.sidebar-menu__item::before {
-  display: none;
+.sidebar-menu__item::before { display: none; }
+.sidebar-menu__item.active::after {
+  content: '✦'; position: absolute; right: 8px; font-size: 8px; color: var(--ink);
+  animation: dc-twinkle 2.4s ease-in-out infinite;
 }
+@keyframes dc-twinkle { 0%,100%{opacity:0.3} 50%{opacity:1} }
 
 /* ── 标签 ── */
 .sidebar-menu__label {

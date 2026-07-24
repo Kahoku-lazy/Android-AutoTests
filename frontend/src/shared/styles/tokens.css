@@ -1,76 +1,87 @@
 /* ═══════════════════════════════════════════
-   Soft Glass 设计令牌 — 蓝白玻璃系
-   主题原型: demo_11_soft_glass.html
+   Doodle Craft 设计令牌
+   极简 · 几何 · 粗线 · 涂鸦彩绘 · 卡通 · 手稿纸
    ═══════════════════════════════════════════ */
 
 :root, [data-theme="light"] {
-  /* ── 主色板 ── */
-  --app-green:        #89CFF0;   /* baby blue — 主强调色 (V6 primary) */
-  --app-green-light:  #BDE0FE;   /* 冰蓝 */
-  --app-green-deep:   #89CFF0;   /* 玻璃蓝 — 激活态/按钮 */
-  --app-green-mint:   #e0f7fa;   /* 青白 */
-  --app-blue:         #C9B6F2;   /* 柔紫 */
-  --app-blue-light:   #f3e5f5;   /* 淡紫 */
-  --app-blue-sky:     #e8f5e9;   /* 淡绿 */
-  --app-white:        #fdfbfb;   /* 暖白 */
+  /* ── 核心色 ── */
+  --ink:              #1e1e24;
+  --paper:            #fefcf5;
+  --dot:              #d8d2c4;
 
-  /* ── 自然背景三元素：天空 / 海洋 / 森林 ── */
-  --app-sky:           #e0f7fa;
-  --app-sky-cloud:     rgba(255,255,255,0.82);
-  --app-ocean:         #a2d2ff;
-  --app-ocean-soft:    #bde0fe;
-  --app-forest:        #95D5B2;
-  --app-forest-soft:   #d8f3dc;
+  /* ── 模块强调色（8 色饱和版）── */
+  --app-module-green:   #6BCB77;   /* device-pool — 薄荷绿 */
+  --app-module-teal:    #4ECDC4;   /* case-manager — 青绿 */
+  --app-module-purple:  #A78BFA;   /* element-locator — 薰衣草紫 */
+  --app-module-pink:    #FFB5A7;   /* test-runner — 桃粉 */
+  --app-module-brown:   #7C6F83;   /* report-generator — 灰紫 */
+  --app-module-orange:  #E879F9;   /* ai-assistant — 柔粉 */
+  --app-module-yellow:  #F7C948;   /* dashboard — 柠黄 */
+  --app-module-blue:    #89CFF0;   /* workflow — 天蓝 */
 
-  /* ── 自然点缀 ── */
-  --app-moss:         #d8f3dc;
-  --app-leaf:         #BDE0FE;
-  --app-bark:         #9a8c98;
-
-  /* ── 模块强调色 ── */
-  --app-module-green:   #95D5B2;   /* device-pool */
-  --app-module-teal:    #7AB88D;   /* case-manager */
-  --app-module-purple:  #B0A8E0;   /* element-locator */
-  --app-module-pink:    #FFB5A7;   /* test-runner */
-  --app-module-brown:   #9a8c98;   /* report-generator */
-  --app-module-orange:  #C9B6F2;   /* ai-assistant */
-  --app-module-yellow:  #F4D35E;   /* dashboard */
-  --app-module-blue:    #89CFF0;   /* workflow */
+  /* ── 语义色 ── */
+  --c-dashboard: #F7C948;
+  --c-device:    #6BCB77;
+  --c-element:   #A78BFA;
+  --c-case:      #4ECDC4;
+  --c-runner:    #FFB5A7;
+  --c-report:    #7C6F83;
+  --c-ai:        #E879F9;
+  --c-workflow:  #89CFF0;
 
   /* ── 表面/背景 ── */
-  --app-bg:           #ebedee;
-  --app-bg-warm:      #fdfbfb;
-  --app-bg-card:      rgba(255,255,255,0.55);
-  --app-bg-input:     rgba(255,255,255,0.55);
+  --app-bg:           var(--paper);
+  --app-bg-warm:      var(--paper);
+  --app-bg-card:      #ffffff;
+  --app-bg-input:     #ffffff;
 
   /* ── 文字 ── */
-  --app-text:           #4a4e69;
-  --app-text-secondary: #9a8c98;
-  --app-text-muted:     #a8b5c4;
+  --app-text:           var(--ink);
+  --app-text-secondary: #999;
+  --app-text-muted:     #bbb;
   --app-text-inverse:   #ffffff;
 
-  /* 兼容别名（旧令牌） */
-  --text-primary:       var(--app-text);
-  --text-secondary:     var(--app-text-secondary);
-  --font-display:       var(--app-font-display);
-  --side-w:             220px;
-  --accent-blue:        var(--app-blue);
-  --accent-pink:        #8ecae6;
-  --accent-green:       var(--app-green-deep);
+  /* ── 兼容别名 ── */
+  --text-primary:       var(--ink);
+  --text-secondary:     #999;
+  --font-display:       'Caveat', cursive;
+  --side-w:             228px;
+  --accent-blue:        var(--c-workflow);
+  --accent-pink:        var(--c-runner);
+  --accent-green:       var(--c-device);
+  --app-green:          var(--c-workflow);
+  --app-green-deep:     var(--c-workflow);
+  --app-green-light:    #D4E8FF;
+  --app-green-mint:     #e0f7fa;
+  --app-blue:           var(--c-element);
+  --app-blue-light:     #f3e5f5;
+  --app-blue-sky:       #e8f5e9;
+  --app-white:          #fdfbfb;
 
-  /* ── 毛玻璃 ── */
-  --app-glass:         rgba(255,255,255,0.45);
-  --app-glass-heavy:   rgba(255,255,255,0.72);
-  --app-glass-card:    rgba(255,255,255,0.65);
-  --app-glass-border:  rgba(255,255,255,0.85);
-  --app-glass-blur:    20px;
+  /* ── 自然背景（保留兼容）── */
+  --app-sky:         #e0f7fa;
+  --app-sky-cloud:   rgba(255,255,255,0.82);
+  --app-ocean:       #a2d2ff;
+  --app-ocean-soft:  #bde0fe;
+  --app-forest:      #95D5B2;
+  --app-forest-soft: #d8f3dc;
+  --app-moss:        #d8f3dc;
+  --app-leaf:        #BDE0FE;
+  --app-bark:        #9a8c98;
 
-  /* ── 圆角 ── */
-  --app-radius-sm:     16px;
-  --app-radius-md:     20px;
-  --app-radius-lg:     24px;
-  --app-radius-pill:   50px;
-  --app-border-width:  1.5px;
+  /* ── 毛玻璃（全部清零/透明化）── */
+  --app-glass:         transparent;
+  --app-glass-heavy:   #fff;
+  --app-glass-card:    #fff;
+  --app-glass-border:  var(--ink);
+  --app-glass-blur:    0px;
+
+  /* ── 圆角（几何不对称）── */
+  --app-radius-sm:     4px 8px;
+  --app-radius-md:     6px 10px;
+  --app-radius-lg:     8px 14px;
+  --app-radius-pill:   4px 10px 6px 8px;
+  --app-border-width:  3px;
 
   /* ── 间距 ── */
   --app-space-xs:      4px;
@@ -81,93 +92,92 @@
   --app-space-2xl:     48px;
 
   /* ── 卡片交互 ── */
-  --app-card-hover-lift:     -3px;
-  --app-card-hover-elevation: var(--app-shadow-lg);
+  --app-card-hover-lift:     -2px;
+  --app-card-hover-elevation: none;
 
-  /* ── 阴影 ── */
-  --app-shadow-sm:     0 4px 15px rgba(0,0,0,0.02);
-  --app-shadow-md:     0 8px 25px rgba(0,0,0,0.05);
-  --app-shadow-lg:     0 18px 48px rgba(74,78,105,0.12);
-  --app-icon-shadow:   0 10px 24px rgba(74,78,105,0.12), inset 0 1px 0 rgba(255,255,255,0.75);
-  --app-icon-border:   rgba(255,255,255,0.82);
+  /* ── 阴影（扁平化）── */
+  --app-shadow-sm:     2px 2px 0 rgba(0,0,0,0.04);
+  --app-shadow-md:     2px 3px 0 rgba(0,0,0,0.05);
+  --app-shadow-lg:     3px 4px 0 rgba(0,0,0,0.06);
+  --app-icon-shadow:   2px 2px 0 rgba(0,0,0,0.06);
+  --app-icon-border:   var(--ink);
 
   /* ── 状态色 ── */
-  --app-pass:          rgba(184,232,198,0.60);
+  --app-pass:          #C8F5D0;
   --app-pass-text:     #1a5c2a;
-  --app-fail:          rgba(255,214,165,0.60);
-  --app-fail-text:     #7a3b1c;
-  --app-pending:       rgba(162,210,255,0.60);
-  --app-pending-text:  #1c4a7a;
+  --app-fail:          #FFE0DB;
+  --app-fail-text:     #7a1c1c;
+  --app-pending:       #D4E8FF;
+  --app-pending-text:  #1a3a6a;
 
   /* ── 字体 ── */
   --app-font:          'Quicksand', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
-  --app-font-display:  'Quicksand', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --app-font-mono:     'Cascadia Code', 'Consolas', 'Courier New', monospace;
+  --app-font-display:  'Caveat', cursive;
+  --app-font-mono:     'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
   --app-font-size-sm:  12px;
   --app-font-size-base:14px;
   --app-font-size-lg:  16px;
 
   /* ── 侧边栏 ── */
-  --app-sidebar-w:        230px;
+  --app-sidebar-w:        228px;
   --app-sidebar-collapsed:64px;
-  --app-sidebar-bg:       rgba(255,255,255,0.58);
-  --app-sidebar-active:   rgba(162,210,255,0.28);
+  --app-sidebar-bg:       var(--paper);
+  --app-sidebar-active:   var(--c-dashboard);
 
   /* ── 动效 ── */
   --app-ease:          cubic-bezier(0.25,0.1,0.25,1);
   --app-spring:        cubic-bezier(0.34,1.56,0.64,1);
-  --app-duration-fast: 0.15s;
-  --app-duration:      0.25s;
-  --app-duration-slow: 0.35s;
+  --app-duration-fast: 0.12s;
+  --app-duration:      0.15s;
+  --app-duration-slow: 0.25s;
 
   /* ═══════════════════════════════════════
      Element Plus 变量覆盖
      ═══════════════════════════════════════ */
-  --el-color-primary:           #89CFF0;
-  --el-color-primary-light-3:   #BDE0FE;
-  --el-color-primary-light-5:   #d4eaff;
-  --el-color-primary-light-7:   #e0f7fa;
-  --el-color-primary-light-8:   #e8f5e9;
-  --el-color-primary-light-9:   #f0f8f2;
-  --el-color-primary-dark-2:    #6fb8d8;
+  --el-color-primary:           #F7C948;
+  --el-color-primary-light-3:   #F9D870;
+  --el-color-primary-light-5:   #FBE898;
+  --el-color-primary-light-7:   #FDF0C0;
+  --el-color-primary-light-8:   #FEF6D8;
+  --el-color-primary-light-9:   #FFFBE8;
+  --el-color-primary-dark-2:    #D4A830;
 
-  --el-color-success:           #95D5B2;
-  --el-color-warning:           #F4D35E;
+  --el-color-success:           #6BCB77;
+  --el-color-warning:           #F7C948;
   --el-color-danger:            #FFB5A7;
-  --el-color-info:              #BDE0FE;
+  --el-color-info:              #89CFF0;
 
-  --el-bg-color:                var(--app-white);
-  --el-bg-color-overlay:        var(--app-white);
-  --el-bg-color-page:           var(--app-bg);
-  --el-fill-color-blank:        var(--app-glass-card);
-  --el-fill-color-light:        rgba(162,210,255,0.12);
+  --el-bg-color:                var(--paper);
+  --el-bg-color-overlay:        #fff;
+  --el-bg-color-page:           var(--paper);
+  --el-fill-color-blank:        #fff;
+  --el-fill-color-light:        #f8f6f2;
 
-  --el-text-color-primary:      var(--app-text);
-  --el-text-color-regular:      var(--app-text);
-  --el-text-color-secondary:    var(--app-text-secondary);
+  --el-text-color-primary:      var(--ink);
+  --el-text-color-regular:      var(--ink);
+  --el-text-color-secondary:    #999;
 
-  --el-border-radius-base:      var(--app-radius-md);
-  --el-border-radius-small:     var(--app-radius-sm);
-  --el-border-radius-round:     var(--app-radius-pill);
+  --el-border-radius-base:      4px 8px;
+  --el-border-radius-small:     3px 6px;
+  --el-border-radius-round:     4px 10px 6px 8px;
 
-  --el-border-color:            var(--app-glass-border);
-  --el-border-color-light:      rgba(255,255,255,0.35);
+  --el-border-color:            var(--ink);
+  --el-border-color-light:      #e8e4d8;
 
-  --el-box-shadow-light:        var(--app-shadow-sm);
-  --el-box-shadow:              var(--app-shadow-md);
-  --el-box-shadow-dark:         var(--app-shadow-lg);
+  --el-box-shadow-light:        2px 2px 0 rgba(0,0,0,0.04);
+  --el-box-shadow:              2px 3px 0 rgba(0,0,0,0.05);
+  --el-box-shadow-dark:         3px 4px 0 rgba(0,0,0,0.06);
 
   --el-font-family:             var(--app-font);
-
 }
 
-/* ── AI 助手绿色调（替代旧的木色调 .ai-animal-theme） ── */
+/* ── AI 助手 scope ── */
 .ai-workbench {
-  --el-color-primary:           #7AB88D;
-  --el-color-primary-light-3:   #9CCEA8;
-  --el-color-primary-light-5:   #BDE0C4;
-  --el-color-primary-light-7:   #D6EDDB;
-  --el-color-primary-light-8:   #E5F4E8;
-  --el-color-primary-light-9:   #F0F8F2;
-  --el-color-primary-dark-2:    #5D9A6E;
+  --el-color-primary:           #E879F9;
+  --el-color-primary-light-3:   #F0A0FA;
+  --el-color-primary-light-5:   #F5C0FB;
+  --el-color-primary-light-7:   #FAD8FC;
+  --el-color-primary-light-8:   #FCE8FD;
+  --el-color-primary-light-9:   #FEF4FE;
+  --el-color-primary-dark-2:    #C050D0;
 }

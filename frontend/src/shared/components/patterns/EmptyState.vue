@@ -27,12 +27,12 @@ defineProps({
   align-items: center;
   justify-content: center;
   padding: 48px 24px;
-  color: var(--app-text-secondary);
+  color: #999;
   text-align: center;
   gap: 8px;
 }
 .empty-state__icon { font-size: 40px; line-height: 1.2; }
-.empty-state__text { font-size: 15px; font-weight: 700; color: var(--app-text); margin: 0; }
+.empty-state__text { font-size: 15px; font-weight: 700; color: var(--ink); margin: 0; }
 .empty-state__hint { font-size: 13px; margin: 0; }
 .empty-state__cta { margin-top: 12px; }
 </style>

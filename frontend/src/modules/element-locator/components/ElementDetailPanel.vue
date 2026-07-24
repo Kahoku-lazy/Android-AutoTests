@@ -81,11 +81,10 @@ onUnmounted(() => stopDetailAnimation())
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--app-glass-card, rgba(255,255,255,0.65));
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: #fff);
+  
   border-radius: 20px;
-  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
+  border: 1px solid var(--ink));
   padding: 16px;
   box-shadow: var(--app-shadow-sm, 0 4px 15px rgba(0,0,0,0.02));
   overflow-y: auto;

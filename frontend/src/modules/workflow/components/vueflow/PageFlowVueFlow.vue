@@ -496,7 +496,7 @@ watch(
   gap: 8px;
   padding: 10px 12px;
   background: rgba(255,255,255,0.46);
-  border-bottom: 1px solid var(--app-glass-border);
+  border-bottom: 1px solid var(--ink);
   flex-shrink: 0;
 }
 .vf-docbar {
@@ -580,7 +580,7 @@ watch(
 }
 .btn.primary:hover { filter: brightness(1.05); color: #fff; }
 .btn.start {
-  background: #89CFF0;
+  background: var(--c-workflow);
   color: #fff;
   border-color: #5a9a20;
 }
@@ -669,9 +669,8 @@ watch(
   box-shadow: 0 18px 48px rgba(74,78,105,0.12);
   overflow: hidden;
   font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif);
-  color: #4a4e69;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  color: var(--ink);
+  
 }
 .el-picker-head {
   display: flex;
@@ -699,19 +698,19 @@ watch(
   background: transparent;
   font-size: 18px;
   cursor: pointer;
-  color: #9a8c98;
+  color: #999;
   line-height: 1;
   padding: 2px 6px;
   border-radius: 8px;
 }
-.el-picker-close:hover { background: rgba(162,210,255,0.14); color: #4a4e69; }
+.el-picker-close:hover { background: rgba(162,210,255,0.14); color: var(--ink); }
 .el-picker-search {
   margin: 10px 12px 6px;
   padding: 9px 12px;
   border: 1.5px solid rgba(255,255,255,0.68);
   border-radius: 10px;
   background: #ffffff;
-  color: #4a4e69;
+  color: var(--ink);
   font-size: 13px;
   font-weight: 600;
   font-family: inherit;
@@ -738,7 +737,7 @@ watch(
   text-align: left;
   cursor: pointer;
   font-family: inherit;
-  color: #4a4e69;
+  color: var(--ink);
 }
 .el-picker-item:hover:not(:disabled) {
   border-color: #a2d2ff;
@@ -764,7 +763,7 @@ watch(
 .el-label {
   font-size: 13px;
   font-weight: 800;
-  color: #4a4e69;
+  color: var(--ink);
 }
 .el-xpath {
   font-size: 10px;
@@ -781,7 +780,7 @@ watch(
   padding: 3px 8px;
   border-radius: 999px;
   background: rgba(162,210,255,0.14);
-  color: #9a8c98;
+  color: #999;
   align-self: center;
 }
 .el-tag.add {
@@ -793,6 +792,6 @@ watch(
   text-align: center;
   font-size: 12px;
   font-weight: 700;
-  color: #9a8c98;
+  color: #999;
 }
 </style>

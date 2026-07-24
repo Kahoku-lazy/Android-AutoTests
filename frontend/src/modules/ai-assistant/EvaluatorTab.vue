@@ -196,7 +196,7 @@ async function doKbQuery() {
 onMounted(async () => { await Promise.all([loadAgents(), loadBanks(), loadRuns(), loadFrameworks()]) })
 
 // Helpers
-function scoreColor(s) { const v = parseFloat(s) || 0; if (v >= 4) return '#89CFF0'; if (v >= 3) return '#f7cd67'; if (v >= 2) return '#f7a8c4'; return '#e85f5f' }
+function scoreColor(s) { const v = parseFloat(s) || 0; if (v >= 4) return 'var(--c-workflow)'; if (v >= 3) return '#f7cd67'; if (v >= 2) return '#f7a8c4'; return '#e85f5f' }
 function fwLabel(run) { const fw = SUB_TABS.find(f => f.key === (run.framework || 'self')); return fw ? fw.label : (run.framework || 'self') }
 function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2) } catch { return raw } }
 </script>
@@ -436,7 +436,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
         <span style="font-weight:600;min-width:100px">{{ r.agent_name }}</span>
         <el-tag size="small" type="info">{{ fwLabel(r) }}</el-tag>
         <span style="color:#8a7b66;font-size:13px">{{ r.bank_name }} · {{ r.total_questions }}题</span>
-        <span v-if="r.total_score>0" style="font-weight:700;color:#89CFF0;font-size:13px">总分 {{ r.total_score }}</span>
+        <span v-if="r.total_score>0" style="font-weight:700;color:var(--c-workflow);font-size:13px">总分 {{ r.total_score }}</span>
         <span v-if="r.status==='running'" style="color:#f7a8c4;font-size:13px">{{ r.completed_questions }}/{{ r.total_questions }}</span>
         <div style="margin-left:auto;display:flex;gap:8px">
           <el-button size="small" @click="viewRun(r.id)" :disabled="r.status==='running'">详情</el-button>
@@ -545,7 +545,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 .bench-name { font-size: 14px; font-weight: 700; color: #4a3a28; }
 .bench-desc { font-size: 11px; color: #a0936e; margin-top: 4px; }
 
-.doc-section { background: #fff; border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid #f0ebe0; box-shadow: 0 2px 8px rgba(61,52,40,0.04); }
+.doc-section { background: #fff; border-radius: var(--app-radius-md); padding: 24px; margin-bottom: 20px; border: 1px solid #f0ebe0; box-shadow: 0 2px 8px rgba(61,52,40,0.04); }
 .section-title { font-size: 18px; font-weight: 700; color: #4a3a28; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #f0ebe0; display: flex; align-items: center; }
 .score-badge { background: #faf9f4; border-radius: 12px; padding: 14px 22px; text-align: center; border: 1px solid #e8e2d6; min-width: 80px; }
 .score-num { font-size: 28px; font-weight: 800; }

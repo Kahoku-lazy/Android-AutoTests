@@ -30,27 +30,15 @@ body {
   font-family: var(--app-font);
   font-size: var(--app-font-size-base, 14px);
   line-height: 1.6;
-  color: var(--app-text);
+  color: var(--ink);
   background:
-    radial-gradient(circle at 14% 12%, var(--app-sky-cloud), transparent 28%),
-    radial-gradient(circle at 82% 18%, rgba(162,210,255,0.52), transparent 32%),
-    radial-gradient(circle at 78% 92%, rgba(201,182,242,0.35), transparent 36%),
-    radial-gradient(circle at 12% 88%, rgba(149,213,178,0.42), transparent 34%),
-    linear-gradient(135deg, #e0f7fa 0%, #f3e5f5 50%, #e8f5e9 100%);
-  background-size: 180% 180%;
-  animation: gradientBG 15s ease infinite;
+    radial-gradient(circle, var(--dot) 0.6px, transparent 0.6px);
+  background-size: 15px 15px;
+  background-color: var(--paper);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-variant-numeric: tabular-nums;
 }
-
-@keyframes gradientBG {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-body.no-bg-anim { animation: none !important; }
 
 /* ── Soft Glass 图标容器 ── */
 .soft-icon {
@@ -65,8 +53,7 @@ body.no-bg-anim { animation: none !important; }
   background: var(--soft-icon-bg);
   border: 1px solid var(--app-icon-border);
   box-shadow: var(--app-icon-shadow);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  /* soft-icon blur removed for Doodle Craft */
 }
 
 .soft-icon--circle {
@@ -105,12 +92,10 @@ body.no-bg-anim { animation: none !important; }
 
 /* ── Element Plus 组件毛玻璃样式 ── */
 .el-card {
-  background: var(--app-glass-card) !important;
-  border-radius: var(--app-radius-lg) !important;
-  border: 1px solid var(--app-glass-border) !important;
+  background: #fff !important;
+  border-radius: var(--app-radius-md) !important;
+  border: 2.5px solid var(--ink) !important;
   box-shadow: var(--app-shadow-md) !important;
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
 }
 
 /* ── V6 玻璃卡片彩色顶条 ── */
@@ -141,8 +126,9 @@ body.no-bg-anim { animation: none !important; }
 .ac-card--orange::before { background: var(--app-module-orange, #C9B6F2); }
 
 .el-dialog {
-  border-radius: var(--app-radius-lg) !important;
+  border-radius: 6px 10px 6px 10px !important;
   overflow: hidden;
+  border: 2.5px solid var(--ink) !important;
 }
 
 .el-button {
@@ -150,50 +136,48 @@ body.no-bg-anim { animation: none !important; }
   border-radius: var(--app-radius-sm) !important;
 }
 .el-button--primary {
-  background: linear-gradient(135deg, #89CFF0, #C9B6F2) !important;
-  border-color: transparent !important;
-  color: #fff !important;
-  box-shadow: 0 4px 15px rgba(137,207,240,0.3);
+  background: var(--c-dashboard) !important;
+  border: 2.5px solid var(--ink) !important;
+  color: var(--ink) !important;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.06);
+  font-weight: 700 !important;
 }
-.el-button--primary:hover {
-  opacity: 0.9;
-}
+.el-button--primary:hover { background: #f0c030 !important; }
 
 .el-table {
   border-radius: var(--app-radius-md) !important;
   overflow: hidden;
-  background: rgba(255,255,255,0.34) !important;
+  background: #fff !important;
 }
 .el-table th {
-  background: rgba(255,255,255,0.46) !important;
-  color: var(--app-text) !important;
+  background: #f8f6f2 !important;
+  color: var(--ink) !important;
   font-weight: 700 !important;
-  border-bottom: 1px solid var(--app-glass-border) !important;
+  border-bottom: 2px solid var(--ink) !important;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
 }
 .el-table td {
-  background: rgba(255,255,255,0.28) !important;
-  border-bottom: 1px solid rgba(255,255,255,0.36) !important;
+  background: #fff !important;
+  border-bottom: 1px solid #e8e4d8 !important;
 }
-.el-table tbody tr:hover > td { background: rgba(162,210,255,0.16) !important; }
+.el-table tbody tr:hover > td { background: #fefdfb !important; }
 
-.el-tag { border-radius: var(--app-radius-pill) !important; }
+.el-tag { border-radius: 3px 6px 3px 6px !important; font-weight: 700 !important; }
 
 .el-input__wrapper,
 .el-select .el-input__wrapper {
-  background: var(--app-glass-card) !important;
-  border-radius: var(--app-radius-sm) !important;
-  border: 1.5px solid var(--app-glass-border) !important;
-  box-shadow: var(--app-shadow-sm) !important;
-  transition: border-color var(--app-duration-fast) var(--app-ease);
+  background: #fff !important;
+  border-radius: 4px 8px 4px 8px !important;
+  border: 2px solid var(--ink) !important;
+  box-shadow: none !important;
+  transition: border-color 0.12s;
 }
 .el-input__wrapper:hover,
-.el-select .el-input__wrapper:hover {
-  border-color: var(--app-green) !important;
-}
+.el-select .el-input__wrapper:hover { border-color: var(--c-dashboard) !important; }
 .el-input__wrapper:focus-within,
 .el-select .el-input__wrapper:focus-within {
-  box-shadow: 0 0 0 3px rgba(137,207,240,0.25) !important;
-  border-color: var(--app-green) !important;
+  box-shadow: 0 0 0 3px rgba(247,201,72,0.2) !important;
+  border-color: var(--c-dashboard) !important;
 }
 
 /* ── Button active feedback ── */
@@ -206,28 +190,23 @@ body.no-bg-anim { animation: none !important; }
 pre, code, kbd, samp { font-family: var(--app-font-mono) !important; }
 
 /* ── 标题 ── */
-h1 { font-size: 26px; font-weight: 800; color: var(--app-text); font-family: var(--app-font-display); line-height: 1.3; }
-h2 { font-size: 22px; font-weight: 700; color: var(--app-text); font-family: var(--app-font-display); line-height: 1.35; }
-h3 { font-size: 17px; font-weight: 700; color: var(--app-text); font-family: var(--app-font-display); line-height: 1.4; }
-h4 { font-size: 15px; font-weight: 700; color: var(--app-text); font-family: var(--app-font-display); line-height: 1.4; }
+h1 { font-size: 26px; font-weight: 800; color: var(--ink); font-family: var(--app-font-display); line-height: 1.3; }
+h2 { font-size: 22px; font-weight: 700; color: var(--ink); font-family: var(--app-font-display); line-height: 1.35; }
+h3 { font-size: 17px; font-weight: 700; color: var(--ink); font-family: var(--app-font-display); line-height: 1.4; }
+h4 { font-size: 15px; font-weight: 700; color: var(--ink); font-family: var(--app-font-display); line-height: 1.4; }
 
-/* ── Toast 玻璃态 + 滑入动画 ── */
+/* ── Toast ── */
 .el-message {
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  background: var(--app-glass-heavy) !important;
-  border-radius: var(--app-radius-pill) !important;
-  border: 1px solid var(--app-glass-border) !important;
-  box-shadow: var(--app-shadow-lg) !important;
+  background: #fff !important;
+  border-radius: 4px 8px 4px 8px !important;
+  border: 2.5px solid var(--ink) !important;
+  box-shadow: 2px 3px 0 rgba(0,0,0,0.06) !important;
 }
-
 @keyframes toastSlideDown {
   from { opacity: 0; transform: translateY(-16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.el-message--top {
-  animation: toastSlideDown 0.3s var(--app-spring);
-}
+.el-message--top { animation: toastSlideDown 0.3s var(--app-spring); }
 
 /* ═══════════════════════════════════════════════
    文档站风格页面布局
@@ -246,11 +225,9 @@ h4 { font-size: 15px; font-weight: 700; color: var(--app-text); font-family: var
 }
 
 .doc-section {
-  background: var(--app-glass-card);
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
+  background: #fff;
   border-radius: var(--app-radius-md);
-  border: 1px solid var(--app-glass-border);
+  border: 2.5px solid var(--ink);
   padding: 24px; position: relative; z-index: 1;
   box-shadow: var(--app-shadow-sm);
 }
@@ -273,8 +250,9 @@ h4 { font-size: 15px; font-weight: 700; color: var(--app-text); font-family: var
 }
 
 .doc-tag {
-  font-size: 10px; padding: 2px 8px; border-radius: var(--app-radius-pill);
-  background: rgba(162,210,255,0.18); color: var(--app-green-deep); font-weight: 600;
+  font-size: 10px; padding: 2px 8px; border-radius: 3px 6px 3px 6px;
+  background: #fff; color: var(--ink); font-weight: 700;
+  border: 1.5px solid var(--ink); opacity: 0.6;
 }
 
 /* ═══════════════════════════════════════════════
@@ -290,25 +268,17 @@ h4 { font-size: 15px; font-weight: 700; color: var(--app-text); font-family: var
 }
 
 .doc-page.wb-shell .doc-section {
-  background: var(--app-glass-card);
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
-  border: 1.5px solid var(--app-glass-border);
+  background: #fff;
+  border: 2.5px solid var(--ink);
   border-radius: var(--app-radius-md);
   box-shadow: var(--app-shadow-sm);
   padding: 18px 20px;
 }
-
-.doc-page.wb-shell .doc-section__title {
-  color: var(--app-text); font-weight: 800;
-}
-
-.doc-page.wb-shell .doc-section__label {
-  color: var(--app-text-secondary); font-weight: 600;
-}
-
+.doc-page.wb-shell .doc-section__title { color: var(--ink); font-weight: 800; }
+.doc-page.wb-shell .doc-section__label { color: #999; font-weight: 600; }
 .doc-page.wb-shell .doc-tag {
-  background: rgba(162,210,255,0.16); color: var(--app-green-deep);
+  background: #fff; color: var(--ink); opacity: 0.6;
+  border: 1.5px solid var(--ink);
 }
 
 @media (max-width: 768px) {

@@ -115,7 +115,7 @@ function navigate() {
   background: #fff;
   border-radius: 6px 10px 6px 10px;
   padding: 8px 8px 36px 8px;
-  border: 2.5px solid #2d2d2d;
+  border: 2.5px solid var(--ink);
   box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.25s, transform 0.25s;
   position: relative;
@@ -157,7 +157,7 @@ function navigate() {
   flex-shrink: 0;
   margin-bottom: 8px;
   position: relative;
-  border: 2px solid #2d2d2d;
+  border: 2px solid var(--ink);
   box-shadow: none;
   width: auto;
 }
@@ -173,8 +173,8 @@ function navigate() {
 .stats-card__icon :deep(svg) {
   width: 22px;
   height: 22px;
-  color: #2d2d2d;
-  stroke: #2d2d2d;
+  color: var(--ink);
+  stroke: var(--ink);
 }
 
 .stats-card__icon-placeholder {
@@ -187,7 +187,7 @@ function navigate() {
 .stats-card__title {
   font-size: 11px;
   font-weight: 700;
-  color: #2d2d2d;
+  color: var(--ink);
   text-align: center;
   line-height: 1.3;
 }
@@ -219,7 +219,7 @@ function navigate() {
   font-family: 'Caveat', 'Quicksand', cursive;
   font-size: 24px;
   font-weight: 700;
-  color: #2d2d2d;
+  color: var(--ink);
   line-height: 1;
 }
 
@@ -238,10 +238,10 @@ function navigate() {
   flex-shrink: 0;
   font-size: 10px;
   font-weight: 800;
-  color: #2d2d2d;
+  color: var(--ink);
   padding: 4px 10px;
   border-radius: 4px 8px 4px 8px;
-  border: 2px solid #2d2d2d;
+  border: 2px solid var(--ink);
   cursor: pointer;
   transition: all 0.12s;
   font-family: inherit;

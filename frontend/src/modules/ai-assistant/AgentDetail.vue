@@ -1985,7 +1985,7 @@ async function save() {
 }
 
 .nav-save {
-  background: linear-gradient(135deg, #89CFF0 0%, #5a9e22 100%);
+  background: linear-gradient(135deg, var(--c-workflow) 0%, #5a9e22 100%);
   color: #fff;
   box-shadow: 0 4px 14px rgba(111, 186, 44, 0.35);
 }

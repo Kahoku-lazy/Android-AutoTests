@@ -724,7 +724,7 @@ onUnmounted(() => {
 .tree-header__title {
   font-weight: 700;
   font-size: 13px;
-  color: var(--app-text);
+  color: var(--ink);
   letter-spacing: 0.02em;
   white-space: nowrap;
   flex-shrink: 0;
@@ -814,7 +814,7 @@ onUnmounted(() => {
 .tree-node__name {
   flex: 1;
   min-width: 0;
-  color: var(--app-text);
+  color: var(--ink);
   font-weight: 500;
 }
 
@@ -833,7 +833,7 @@ onUnmounted(() => {
 
 .tree-node__count {
   font-size: 10px;
-  color: var(--app-text-secondary);
+  color: #999;
   background: rgba(162,210,255,0.14);
   padding: 0 6px;
   border-radius: 10px;
@@ -845,7 +845,7 @@ onUnmounted(() => {
 
 .tree-node--l1 .tree-node__name {
   font-weight: 700;
-  color: var(--app-text);
+  color: var(--ink);
 }
 
 .tree-node--l2 {
@@ -859,11 +859,11 @@ onUnmounted(() => {
 .tree-node--case .tree-node__name {
   font-style: italic;
   font-weight: 500;
-  color: var(--app-text-secondary);
+  color: #999;
 }
 
 .tree-node--case-disabled .tree-node__name {
-  color: var(--app-text-muted);
+  color: #999;
   text-decoration: line-through;
 }
 
@@ -888,27 +888,26 @@ onUnmounted(() => {
 }
 .tree-node__priority--p2 {
   background: rgba(162,210,255,0.14);
-  color: var(--app-text-secondary);
+  color: #999;
 }
 
 /* Context menu */
 .context-menu {
   position: fixed;
   z-index: 1000;
-  background: var(--app-glass-heavy);
-  border: 1px solid var(--app-glass-border);
+  background: #fff;
+  border: 1px solid var(--ink);
   border-radius: 14px;
   padding: 6px 0;
   min-width: 160px;
   box-shadow: var(--app-shadow-md);
-  backdrop-filter: blur(var(--app-glass-blur));
-  -webkit-backdrop-filter: blur(var(--app-glass-blur));
+  
 }
 
 .context-menu__item {
   padding: 8px 16px;
   font-size: 13px;
-  color: var(--app-text);
+  color: var(--ink);
   cursor: pointer;
   transition: background 0.15s ease;
 }
@@ -947,13 +946,13 @@ onUnmounted(() => {
 .tree-empty__text {
   font-size: 14px;
   font-weight: 600;
-  color: var(--app-text-secondary);
+  color: #999;
   margin: 0 0 6px;
 }
 
 .tree-empty__hint {
   font-size: 12px;
-  color: var(--app-text-muted);
+  color: #999;
   margin: 0;
 }
 </style>

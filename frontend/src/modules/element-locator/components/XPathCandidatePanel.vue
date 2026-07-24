@@ -360,11 +360,10 @@ async function copyXPath(xpath) {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--app-glass-card, rgba(255,255,255,0.65));
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: #fff);
+  
   border-radius: 20px;
-  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
+  border: 1px solid var(--ink));
   padding: 16px;
   box-shadow: var(--app-shadow-sm, 0 4px 15px rgba(0,0,0,0.02));
   overflow: hidden;
@@ -378,7 +377,7 @@ h3 {
 .action-bar {
   display: flex; gap: 6px; margin-bottom: 10px; flex-shrink: 0;
   padding: 8px; background: rgba(255,255,255,0.03);
-  border-radius: 8px; border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
+  border-radius: 8px; border: 1px solid var(--ink));
 }
 .empty {
   flex: 1;
@@ -398,7 +397,7 @@ h3 {
   margin: 0;
   font-size: 13px;
   font-weight: 500;
-  color: var(--app-text, #4a4e69);
+  color: var(--app-text, var(--ink));
 }
 .table-wrap {
   flex: 1;
@@ -432,7 +431,7 @@ h3 {
   line-height: 1.4;
 }
 .clickable-yes {
-  color: #89CFF0;
+  color: var(--c-workflow);
   font-weight: 600;
 }
 .form-grid {

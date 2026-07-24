@@ -496,11 +496,10 @@ onUnmounted(() => stopEmptyAnim())
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--app-glass-card, rgba(255,255,255,0.65));
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: #fff);
+  
   border-radius: 20px;
-  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
+  border: 1px solid var(--ink));
   padding: 16px;
   box-shadow: var(--app-shadow-sm, 0 4px 15px rgba(0,0,0,0.02));
   overflow: hidden;
@@ -539,9 +538,9 @@ onUnmounted(() => stopEmptyAnim())
 .pe-refresh-btn {
   padding: 4px 10px;
   font-size: 12px;
-  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
+  border: 1px solid var(--ink));
   border-radius: 6px;
-  background: var(--app-glass-card, rgba(255,255,255,0.65));
+  background: #fff);
   color: var(--app-text, #3D4A3B);
   cursor: pointer;
   transition: all 0.2s;
@@ -572,9 +571,9 @@ onUnmounted(() => stopEmptyAnim())
   margin-left: auto;
   padding: 4px 12px;
   font-size: 12px;
-  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
+  border: 1px solid var(--ink));
   border-radius: 6px;
-  background: var(--app-glass-card, rgba(255,255,255,0.65));
+  background: #fff);
   color: var(--app-text, #3D4A3B);
   cursor: pointer;
   transition: all 0.2s;
@@ -600,7 +599,7 @@ onUnmounted(() => stopEmptyAnim())
   font-size: 13px;
 }
 .empty-icon { font-size: 32px; opacity: 0.55; }
-.empty-text { margin: 0; font-size: 13px; font-weight: 500; color: var(--app-text, #4a4e69); }
+.empty-text { margin: 0; font-size: 13px; font-weight: 500; color: var(--app-text, var(--ink)); }
 
 /* Element list */
 .pe-list {
@@ -707,7 +706,7 @@ onUnmounted(() => stopEmptyAnim())
   border-radius: 4px;
 }
 .pe-badge--yes {
-  color: #89CFF0;
+  color: var(--c-workflow);
   background: rgba(137,207,240,0.1);
 }
 .pe-badge--no {
@@ -748,11 +747,11 @@ onUnmounted(() => stopEmptyAnim())
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(4px);
+  
 }
 .enlarge-card {
   background: #fff;
-  border-radius: 16px;
+  border-radius: var(--app-radius-md);
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -783,9 +782,9 @@ onUnmounted(() => stopEmptyAnim())
 }
 .enlarge-close {
   padding: 6px 24px;
-  border: 1px solid var(--app-glass-border, rgba(255,255,255,0.85));
+  border: 1px solid var(--ink));
   border-radius: 8px;
-  background: var(--app-glass-card, rgba(255,255,255,0.65));
+  background: #fff);
   color: var(--app-text, #3D4A3B);
   cursor: pointer;
   font-size: 14px;

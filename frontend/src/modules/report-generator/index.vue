@@ -184,7 +184,7 @@ function openCaseBreakdown(type, tab = 'detail') {
       title="测试报告"
       subtitle="查看历史测试执行记录，点击 Run ID 进入详细报告"
       icon="file-bar-chart"
-      icon-gradient="linear-gradient(135deg,#9a8c98,#8b7f8f)"
+      icon-gradient="linear-gradient(135deg,#999,#8b7f8f)"
     />
 
     <div class="doc-body">

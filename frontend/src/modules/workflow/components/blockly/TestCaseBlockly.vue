@@ -60,9 +60,9 @@ const ANIMAL_THEME = Blockly.Theme.defineTheme('autotest-scratch', {
   componentStyles: {
     workspaceBackgroundColour: '#f7f0e4',
     toolboxBackgroundColour: '#eef7ff',
-    toolboxForegroundColour: '#4a4e69',
+    toolboxForegroundColour: 'var(--ink)',
     flyoutBackgroundColour: '#ffffff',
-    flyoutForegroundColour: '#4a4e69',
+    flyoutForegroundColour: 'var(--ink)',
     flyoutOpacity: 1,
     scrollbarColour: '#c4b5a0',
     insertionMarkerColour: '#6f9fd8',
@@ -464,7 +464,7 @@ watch(
   gap: 10px;
   padding: 10px 14px;
   background: rgba(255,255,255,0.46);
-  border-bottom: 1px solid var(--app-glass-border);
+  border-bottom: 1px solid var(--ink);
   flex-shrink: 0;
 }
 .toolbar-left,

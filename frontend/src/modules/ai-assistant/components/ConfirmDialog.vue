@@ -75,7 +75,7 @@ const emit = defineEmits(["approve", "deny", "approve-all", "deny-all", "cancel"
 }
 .confirm-dialog {
   background: #fff;
-  border-radius: 16px;
+  border-radius: var(--app-radius-md);
   max-width: 560px;
   width: 100%;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);

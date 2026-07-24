@@ -86,7 +86,7 @@ const DETAIL_FIELDS = [
   align-items: center;
   gap: 10px;
   padding: 48px 24px;
-  color: var(--app-text-secondary);
+  color: #999;
 }
 
 .step-viewer-empty__icon {
@@ -101,7 +101,7 @@ const DETAIL_FIELDS = [
 .step-viewer__item {
   border-radius: 14px;
   overflow: hidden;
-  border: 1px solid var(--app-glass-border);
+  border: 1px solid var(--ink);
   background: rgba(255,255,255,0.38);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -138,12 +138,12 @@ const DETAIL_FIELDS = [
   flex: 1;
   font-size: 14px;
   font-weight: 600;
-  color: var(--app-text);
+  color: var(--ink);
 }
 
 .step-viewer__toggle {
   font-size: 12px;
-  color: var(--app-text-secondary);
+  color: #999;
   flex-shrink: 0;
 }
 
@@ -169,7 +169,7 @@ const DETAIL_FIELDS = [
 }
 
 .step-viewer__field-label {
-  color: var(--app-text-secondary);
+  color: #999;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -179,7 +179,7 @@ const DETAIL_FIELDS = [
 }
 
 .step-viewer__field-value {
-  color: var(--app-text);
+  color: var(--ink);
   font-weight: 600;
   font-family: "SF Mono", "Fira Code", Consolas, monospace;
   word-break: break-all;

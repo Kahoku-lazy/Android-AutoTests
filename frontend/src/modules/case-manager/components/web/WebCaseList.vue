@@ -185,14 +185,14 @@ defineExpose({ loadDefs, definitions });
 .case-toolbar__right { display: flex; align-items: center; gap: 8px; }
 .case-breadcrumb { display: flex; align-items: center; gap: 4px; }
 .crumb { background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px; font-size: 13px; }
-.crumb--active { font-weight: 600; color: var(--app-green, #89CFF0); }
+.crumb--active { font-weight: 600; color: var(--app-green, var(--c-workflow)); }
 .crumb-sep { color: #999; font-size: 14px; }
 .case-count-badge { font-size: 12px; color: #999; background: #f0f0f0; padding: 2px 10px; border-radius: 12px; }
 .view-toggle { display: flex; border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden; }
 .view-toggle button { border: none; background: #fff; padding: 4px 10px; cursor: pointer; font-size: 14px; }
-.view-toggle button.active { background: var(--app-green, #89CFF0); color: #fff; }
+.view-toggle button.active { background: var(--app-green, var(--c-workflow)); color: #fff; }
 .btn-primary, .btn-text { padding: 6px 16px; border-radius: 8px; border: 1px solid #e0e0e0; background: #fff; cursor: pointer; font-size: 13px; }
-.btn-primary { background: var(--app-green, #89CFF0); color: #fff; border-color: var(--app-green, #89CFF0); }
+.btn-primary { background: var(--app-green, var(--c-workflow)); color: #fff; border-color: var(--app-green, var(--c-workflow)); }
 .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
 .web-card__header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .web-card__id { font-size: 11px; color: #999; }
@@ -201,7 +201,7 @@ defineExpose({ loadDefs, definitions });
 .web-card__desc { font-size: 13px; color: #666; margin-bottom: 8px; }
 .web-card__meta { display: flex; gap: 12px; font-size: 12px; color: #999; margin-bottom: 8px; }
 .web-card__actions { display: flex; gap: 8px; }
-.case-link { cursor: pointer; color: var(--app-green, #89CFF0); }
+.case-link { cursor: pointer; color: var(--app-green, var(--c-workflow)); }
 .case-link:hover { text-decoration: underline; }
 /* Detail */
 .case-detail { padding: 8px 0; }

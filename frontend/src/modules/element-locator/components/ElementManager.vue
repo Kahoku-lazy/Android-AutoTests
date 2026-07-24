@@ -137,7 +137,7 @@ async function updateEl(record, field, value) {
           </div>
           <div class="tree-body" :class="{ 'drag-mode-active': dragEnabled }">
             <div v-if="loading && !pages.length" class="tree-loading">加载中...</div>
-            <div v-else-if="!pages.length" class="tree-empty">
+            <div v-else-if="!pages.length" class="empty-state">
               <span class="tree-empty__icon">📁</span>
               <p class="tree-empty__text">暂无页面</p>
               <p class="tree-empty__hint">点击「+ 目录」或「+ 页面」创建</p>

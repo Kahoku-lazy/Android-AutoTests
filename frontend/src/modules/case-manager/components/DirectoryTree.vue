@@ -723,7 +723,7 @@ onUnmounted(() => {
 
 .tree-header__title {
   font-weight: 700;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: var(--ink);
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -760,7 +760,7 @@ onUnmounted(() => {
 
 .tree-body :deep(.el-tree-node__expand-icon) {
   padding: 4px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
 }
 
 .tree-body :deep(.el-tree-node__content:hover) {
@@ -783,20 +783,20 @@ onUnmounted(() => {
 /* Drop indicator style */
 .tree-body :deep(.el-tree__drop-indicator) {
   height: 2px;
-  background-color: var(--app-green-deep);
+  background-color: var(--c-workflow);
   border-radius: 1px;
 }
 
 .tree-body :deep(.el-tree-node.is-drop-inner > .el-tree-node__content) {
   background: rgba(162,210,255,0.22) !important;
-  box-shadow: inset 0 0 0 2px var(--app-green-deep);
+  box-shadow: inset 0 0 0 2px var(--c-workflow);
 }
 
 .tree-node {
   display: flex;
   align-items: flex-start;
   gap: 5px;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   width: 100%;
   min-width: 0;
   user-select: none;
@@ -805,7 +805,7 @@ onUnmounted(() => {
 }
 
 .tree-node__icon {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   flex-shrink: 0;
   line-height: 1.35;
   margin-top: 1px;
@@ -832,7 +832,7 @@ onUnmounted(() => {
 }
 
 .tree-node__count {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   color: #999;
   background: rgba(162,210,255,0.14);
   padding: 0 6px;
@@ -868,7 +868,7 @@ onUnmounted(() => {
 }
 
 .tree-node__priority {
-  font-size: 9px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   padding: 1px 5px;
   border-radius: 6px;
@@ -906,7 +906,7 @@ onUnmounted(() => {
 
 .context-menu__item {
   padding: 8px 16px;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: var(--ink);
   cursor: pointer;
   transition: background 0.15s ease;
@@ -914,7 +914,7 @@ onUnmounted(() => {
 
 .context-menu__item:hover {
   background: rgba(162,210,255,0.16);
-  color: var(--app-green-deep);
+  color: var(--c-workflow);
 }
 
 .context-menu__item--danger:hover {
@@ -939,19 +939,19 @@ onUnmounted(() => {
 }
 
 .tree-empty__icon {
-  font-size: 36px;
+  font-size: var(--app-size-2xl);
   margin-bottom: 12px;
 }
 
 .tree-empty__text {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   color: #999;
   margin: 0 0 6px;
 }
 
 .tree-empty__hint {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: #999;
   margin: 0;
 }

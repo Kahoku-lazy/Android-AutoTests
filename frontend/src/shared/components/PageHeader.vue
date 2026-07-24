@@ -34,7 +34,7 @@ defineProps({
 
 .doc-hero__title {
   font-family: var(--app-font-display, Quicksand, sans-serif);
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--app-text, #4a4e69);
   margin-bottom: 6px;
@@ -42,7 +42,7 @@ defineProps({
 }
 
 .doc-hero__desc {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--app-text-secondary, #9a8c98);
   margin: 0;
   max-width: 600px;

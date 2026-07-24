@@ -329,13 +329,13 @@ onMounted(() => {
 
 /* ── Title (rainbow gradient text) ── */
 .title {
-  font-size: 32px;
+  font-size: var(--app-size-2xl);
   font-weight: 700;
   display: flex;
   align-items: center;
   gap: 12px;
   margin: 0;
-  font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif);
+  font-family: var(--app-font, 'Nunito', 'PingFang SC', sans-serif);
   background: linear-gradient(
     90deg,
     #6fba2c 0%,
@@ -358,7 +358,7 @@ onMounted(() => {
   100% { background-position: 200% 50%; }
 }
 .badge-pending {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   padding: 3px 10px;
   border-radius: 12px;
@@ -386,7 +386,7 @@ onMounted(() => {
   gap: 8px;
 }
 .message {
-  font-size: 18px;
+  font-size: var(--app-size-lg);
   color: #c8d0e8;
   margin: 0;
   transition: opacity 0.5s ease;
@@ -404,7 +404,7 @@ onMounted(() => {
   50% { opacity: 0; }
 }
 .sub-message {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   color: #8890b0;
   margin: 0;
 }
@@ -442,7 +442,7 @@ onMounted(() => {
   100% { background-position: 200% 50%; }
 }
 .progress-label {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   color: #5a6090;
   letter-spacing: 2px;
   text-transform: uppercase;

@@ -124,6 +124,13 @@ urlpatterns = [
 
 > Token 黑名单使用 Redis 存储（`shared/auth/jwt_auth.py`），服务重启不丢失。
 
+## 关键架构依赖
+
+- **AgentScope 依赖 Redis**：Redis 不可用时 AgentScope 无法启动，AI 对话降级到 Django 阻塞模式
+- **JWT 共享**：Django + AgentScope 共享 `SECRET_KEY`
+- **服务端口**：Django `:8765`，AgentScope `:8000`，Redis `:6379`
+- **新增 App 注册**：`settings.py` + `config/urls.py` + `router.js` + `AppSidebar.vue` 各 1 行
+
 ## 错误处理模式
 
 ```python

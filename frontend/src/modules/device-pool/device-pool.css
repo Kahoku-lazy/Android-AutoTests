@@ -44,14 +44,14 @@
 }
 .doc-section__title {
   font-family: var(--doodle-font-title);
-  font-size: 20px; font-weight: 700; color: var(--app-ink);
+  font-size: 22px; font-weight: 700; color: var(--app-ink);
 }
 .doc-section__title .doc-tag {
-  font-size: 9px; padding: 1px 8px; border-radius: 4px 8px 4px 8px;
+  font-size: 10px; padding: 1px 8px; border-radius: 4px 8px 4px 8px;
   background: #fff; color: var(--app-ink-muted); border: 1.5px solid var(--app-border-light);
   font-weight: 700; margin-left: 8px;
 }
-.doc-section__label { color: var(--app-ink-muted); font-size: 10px; }
+.doc-section__label { color: var(--app-ink-muted); font-size: 11px; }
 
 /* ── KPI 统计条 ── */
 .kpi-row {
@@ -77,10 +77,10 @@
 }
 .kpi-value {
   font-family: var(--doodle-font-title);
-  font-size: 28px; font-weight: 700; color: var(--app-ink); line-height: 1;
+  font-size: 30px; font-weight: 700; color: var(--app-ink); line-height: 1;
 }
 .kpi-label {
-  font-size: 9px; font-weight: 700; color: var(--app-ink-muted); margin-top: 2px;
+  font-size: 10px; font-weight: 700; color: var(--app-ink-muted); margin-top: 2px;
   text-transform: uppercase; letter-spacing: 0.06em;
 }
 
@@ -91,7 +91,7 @@
   overflow: hidden;
 }
 .view-btn {
-  padding: 5px 12px; font-size: 10px; font-weight: 700;
+  padding: 5px 12px; font-size: 11px; font-weight: 700;
   background: #fff; color: var(--app-ink-muted); border: none;
   cursor: pointer; font-family: inherit; transition: all 0.12s;
   border-right: 1px solid var(--app-border-light);
@@ -107,7 +107,7 @@
   padding: 4px 0;
 }
 .card-group-title {
-  font-family: var(--doodle-font-title); font-size: 18px; font-weight: 700;
+  font-family: var(--doodle-font-title); font-size: 20px; font-weight: 700;
   color: var(--app-ink); display: flex; align-items: center; gap: 8px;
   margin-bottom: 10px;
 }
@@ -115,7 +115,7 @@
   content: ''; flex: 1; height: 2px; background: var(--app-border-light); border-radius: 1px;
 }
 .card-group-count {
-  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--app-ink-muted);
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--app-ink-muted);
   background: var(--app-bg-subtle); padding: 2px 8px; border-radius: 3px 6px 3px 6px;
   border: 1.5px solid var(--app-border-light);
 }
@@ -133,7 +133,7 @@
   flex-shrink: 0;
 }
 .filter-count {
-  font-size: 12px; color: var(--app-ink-muted); font-weight: 600;
+  font-size: 13px; color: var(--app-ink-muted); font-weight: 600;
   white-space: nowrap; margin-left: auto;
 }
 
@@ -156,7 +156,7 @@
   gap: 10px; flex-wrap: wrap; padding: 0 0 10px; flex-shrink: 0;
 }
 .page-size-control { display: flex; align-items: center; gap: 8px; }
-.toolbar-label { font-size: 11px; font-weight: 700; color: var(--app-ink-muted); white-space: nowrap; }
+.toolbar-label { font-size: 12px; font-weight: 700; color: var(--app-ink-muted); white-space: nowrap; }
 .page-size-btns { display: flex; gap: 6px; }
 .page-size-btn {
   min-width: 40px;
@@ -165,7 +165,7 @@
   border: 2px solid var(--app-border-light);
   background: #fff;
   color: var(--app-ink-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   box-shadow: none;
@@ -178,7 +178,7 @@
   color: var(--app-accent-blue);
 }
 .table-toolbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
-.page-info { font-size: 12px; color: var(--app-ink-muted); font-weight: 600; white-space: nowrap; }
+.page-info { font-size: 13px; color: var(--app-ink-muted); font-weight: 600; white-space: nowrap; }
 .page-nav { display: flex; gap: 8px; }
 
 /* ── 表格卡片 ── */
@@ -225,7 +225,7 @@
 .device-table-wrapper :deep(.el-table th) {
   background: var(--app-bg-subtle) !important;
   color: var(--app-ink) !important;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.4px;
   border-right: 1px solid var(--app-border-light) !important;
@@ -233,7 +233,7 @@
 }
 .device-table-wrapper :deep(.el-table td) {
   color: var(--app-ink);
-  font-size: 13px;
+  font-size: 14px;
   border-right: 1px solid var(--app-border-lighter) !important;
   border-bottom: 1px solid var(--app-border-lighter) !important;
 }
@@ -257,7 +257,7 @@
 /* ── Row dot indicator ── */
 .row-dot {
   color: var(--app-ink);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
   margin-right: 6px;
   vertical-align: middle;
@@ -266,20 +266,20 @@
 /* ── Monospace serial text ── */
 .mono-text {
   font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
-  font-size: 13px;
+  font-size: 14px;
   white-space: nowrap;
   vertical-align: middle;
 }
 
 /* ── Text helpers ── */
-.text-muted { color: var(--app-ink-muted); font-size: 13px; }
-.locked-by-text { color: var(--app-ink-muted); font-size: 13px; }
-.last-seen-text { font-size: 13px; color: var(--app-ink-muted); }
-.connection-text { font-size: 13px; color: var(--app-ink); font-weight: 600; white-space: nowrap; }
+.text-muted { color: var(--app-ink-muted); font-size: 14px; }
+.locked-by-text { color: var(--app-ink-muted); font-size: 14px; }
+.last-seen-text { font-size: 14px; color: var(--app-ink-muted); }
+.connection-text { font-size: 14px; color: var(--app-ink); font-weight: 600; white-space: nowrap; }
 
 /* ── Lock status badge ── */
 .lock-badge {
-  font-size: 10px;
+  font-size: 11px;
   padding: 2px 8px;
   border-radius: 3px 6px 3px 6px;
   font-weight: 700;
@@ -300,7 +300,7 @@
   color: var(--app-ink-muted);
   padding: 40px 0;
   text-align: center;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 /* ── Row status styles — device table row highlighting ── */

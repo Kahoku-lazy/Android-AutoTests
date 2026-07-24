@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>执行引擎 Doodle Craft 三方案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700;800&family=Caveat:wght@600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--ink:#1e1e24;--paper:#fefcf5;--dot:#d8d2c4;--c-runner:#FFB5A7;--c-device:#6BCB77;--c-dashboard:#F7C948;--c-case:#4ECDC4;--c-ai:#E879F9;}
+body{font-family:'Quicksand','PingFang SC','Microsoft YaHei',sans-serif;background:radial-gradient(circle,var(--dot) 0.6px,transparent 0.6px);background-size:15px 15px;background-color:var(--paper);color:var(--ink);padding:24px;}
+h1{text-align:center;font-family:'Caveat',cursive;font-size:26px;margin-bottom:4px;}
+h1+p{text-align:center;font-size:11px;opacity:0.4;margin-bottom:24px;}
+.prototype-row{max-width:960px;margin:0 auto 32px;}
+.prototype-label{font-size:10px;font-weight:700;color:var(--ink);background:#fff;padding:5px 16px;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;display:inline-flex;align-items:center;gap:6px;margin-bottom:12px;}
+.prototype-label .dot{width:7px;height:7px;flex-shrink:0;}
+
+/* 共享 Header */
+.dash-header{display:flex;align-items:center;gap:12px;padding:14px 20px;background:#fff;border-bottom:3px solid var(--ink);}
+.dash-header-icon{width:40px;height:40px;display:grid;place-items:center;background:var(--c-runner);border:3px solid var(--ink);border-radius:8px 16px 6px 14px;font-size:16px;color:var(--ink);transform:rotate(-2deg);box-shadow:2px 2px 0 rgba(0,0,0,0.06);}
+.dash-header h2{font-family:'Caveat',cursive;font-size:22px;font-weight:700;transform:rotate(-0.5deg);}
+.dash-header p{font-size:9px;opacity:0.4;font-weight:600;}
+.dash-header-actions{margin-left:auto;display:flex;gap:8px;}
+
+/* 按钮 */
+.btn{padding:5px 14px;font-size:10px;font-weight:800;background:#fff;border:2.5px solid var(--ink);border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all 0.12s;box-shadow:2px 2px 0 rgba(0,0,0,0.04);white-space:nowrap;}
+.btn:hover{background:var(--c-dashboard);transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(0,0,0,0.06);}
+.btn-fill{background:var(--c-runner);}
+.btn-sm{padding:3px 8px;font-size:9px;border-width:2px;}
+
+/* 筛选 */
+.filter-tabs{display:flex;gap:4px;}
+.filter-tab{padding:5px 12px;font-size:10px;font-weight:700;color:var(--ink);opacity:0.4;background:transparent;border:2px solid transparent;border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all 0.12s;}
+.filter-tab:hover{opacity:0.7;}
+.filter-tab.active{opacity:1;background:var(--c-runner);border-color:var(--ink);}
+.view-toggle{display:flex;gap:0;border:2.5px solid var(--ink);border-radius:4px 8px 4px 8px;overflow:hidden;}
+.view-btn{padding:5px 12px;font-size:10px;font-weight:700;background:#fff;color:var(--ink);opacity:0.4;border:none;border-right:1.5px solid var(--ink);cursor:pointer;font-family:inherit;transition:all 0.12s;}
+.view-btn:last-child{border-right:none;}
+.view-btn.active{opacity:1;background:var(--ink);color:#fff;}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;}
+.kpi-card{text-align:center;padding:12px 10px 16px;background:#fff;border:3px solid var(--ink);border-radius:4px 10px 6px 8px;box-shadow:2px 3px 0 rgba(0,0,0,0.04);position:relative;}
+.kpi-dot{width:10px;height:10px;transform:rotate(45deg);margin:0 auto 5px;border:2px solid var(--ink);}
+.kpi-value{font-family:'Caveat',cursive;font-size:28px;font-weight:700;line-height:1;}
+.kpi-label{font-size:9px;font-weight:700;opacity:0.4;text-transform:uppercase;margin-top:2px;}
+.kpi-card::after{content:'~';position:absolute;bottom:2px;right:8px;font-family:'Caveat',cursive;font-size:16px;opacity:0.12;}
+
+/* 表格 */
+.data-table{width:100%;border-collapse:collapse;font-size:11px;}
+.data-table th{background:#f8f6f2;font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:0.04em;padding:8px 10px;text-align:left;border-bottom:2.5px solid var(--ink);}
+.data-table td{padding:8px 10px;font-weight:500;border-bottom:1px solid #e8e4d8;}
+.data-table tr:hover td{background:rgba(255,255,255,0.5);}
+.info-card{background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:14px 16px;box-shadow:2px 3px 0 rgba(0,0,0,0.04);}
+.tag{font-size:8px;font-weight:800;padding:2px 7px;border-radius:3px 6px 3px 6px;border:2px solid var(--ink);display:inline-block;}
+.tag-green{background:#C8F5D0;color:#1a5c2a;}
+.tag-pink{background:#FFE0DB;color:#7a1c1c;}
+.tag-purple{background:#E8DDF8;color:#4a2a80;}
+.tag-yellow{background:#FFF9E0;color:#6a4a10;}
+.tag-blue{background:#D4E8FF;color:#1a3a6a;}
+.tag-gray{background:#f0ede8;color:var(--ink);opacity:0.4;}
+
+/* 进度条 */
+.progress-bar{height:8px;background:#f0ede8;border-radius:4px;overflow:hidden;border:1.5px solid var(--ink);}
+.progress-fill{height:100%;border-radius:3px;transition:width 0.3s;}
+
+/* 卡片网格 */
+.card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.card-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+@media(max-width:800px){.card-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* ── 拍立得任务卡片 ── */
+.task-card{
+  background:#fff;border:3px solid var(--ink);border-radius:6px 10px 6px 10px;
+  padding:10px 10px 28px 10px;box-shadow:2px 3px 0 rgba(0,0,0,0.04);
+  position:relative;cursor:pointer;transition:all 0.2s;
+}
+.task-card:nth-child(3n+1){transform:rotate(-0.4deg);}
+.task-card:nth-child(3n+2){transform:rotate(0.3deg);}
+.task-card:nth-child(3n+3){transform:rotate(-0.2deg);}
+.task-card:hover{transform:rotate(0)scale(1.02)!important;z-index:5;}
+.task-card::before{content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);width:9px;height:9px;background:radial-gradient(circle,var(--dot),#b0a890);border-radius:50%;box-shadow:0 1px 1px rgba(0,0,0,0.08);z-index:2;}
+.task-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.task-card-id{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;}
+.task-card-name{font-size:12px;font-weight:700;margin-bottom:4px;}
+.task-card-meta{font-size:8px;opacity:0.4;margin-bottom:8px;}
+.task-card-progress{margin-bottom:8px;}
+.task-card-stats{display:flex;justify-content:space-between;font-size:9px;font-weight:700;margin-bottom:4px;}
+.task-card-actions{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:4px;}
+
+/* ── 照片区 ── */
+.card-photo{height:44px;border:2px solid var(--ink);border-radius:3px 5px 3px 5px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;margin-bottom:8px;}
+.photo-running{background:#E8DDF8;}
+.photo-waiting{background:#FFF9E0;}
+.photo-completed{background:#C8F5D0;}
+.photo-failed{background:#FFE0DB;}
+.photo-idle{background:#f0ede8;}
+
+/* ── 搜索栏 ── */
+.search-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:4px;}
+.search-input{flex:1;min-width:180px;padding:7px 12px;border:2.5px solid var(--ink);border-radius:4px 8px 4px 8px;font-family:inherit;font-size:11px;background:#fff;outline:none;}
+.search-input:focus{box-shadow:0 0 0 3px rgba(247,201,72,0.15);}
+</style>
+</head>
+<body>
+
+<h1>执行引擎 Doodle Craft 三方案</h1>
+<p>参考设备管理布局 · 搜索 + KPI + 筛选 + 双视图</p>
+
+<!-- ═══════════════ R1: COMPACT CARDS ═══════════════ -->
+<div class="prototype-row">
+<div class="prototype-label"><span class="dot" style="background:var(--c-runner);transform:rotate(45deg);border-radius:1px"></span> R1 · Compact Cards 紧凑卡片</div>
+
+<div style="background:var(--paper);border:3px solid var(--ink);border-radius:6px 10px 6px 10px;overflow:hidden;box-shadow:3px 3px 0 rgba(0,0,0,0.04)">
+
+<div class="dash-header">
+  <div class="dash-header-icon"><i data-lucide="play-circle" style="width:15px;height:15px"></i></div>
+  <div><h2>执行引擎</h2><p>创建并监控测试任务</p></div>
+  <div class="dash-header-actions"><button class="btn btn-fill">＋ 新建任务</button></div>
+</div>
+
+<div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+
+<!-- 搜索 + 筛选 -->
+<div class="search-bar">
+  <input class="search-input" placeholder="搜索任务名称 / ID / 设备...">
+  <div class="filter-tabs"><span class="filter-tab active">全部 8</span><span class="filter-tab">执行中 2</span><span class="filter-tab">等待中 1</span><span class="filter-tab">已完成 3</span><span class="filter-tab">失败 2</span></div>
+  <div class="view-toggle"><button class="view-btn active">📋 表格</button><button class="view-btn">📷 卡片</button></div>
+</div>
+
+<!-- KPI -->
+<div class="kpi-row">
+  <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-ai)"></div><div class="kpi-value">2</div><div class="kpi-label">执行中</div></div>
+  <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-dashboard)"></div><div class="kpi-value">1</div><div class="kpi-label">等待中</div></div>
+  <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-device)"></div><div class="kpi-value">3</div><div class="kpi-label">已完成</div></div>
+  <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-runner)"></div><div class="kpi-value">2</div><div class="kpi-label">失败/未完成</div></div>
+</div>
+
+<!-- 表格视图 -->
+<div class="info-card" style="padding:0;overflow:hidden">
+<table class="data-table">
+<thead><tr><th>任务ID</th><th>名称</th><th>设备</th><th>用例</th><th>进度</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
+<tbody>
+<tr><td style="font-family:'JetBrains Mono';font-size:10px">ID-042</td><td style="font-weight:700">smoke-test-v2.4</td><td>Pixel 6</td><td>5</td><td><div class="progress-bar" style="width:80px"><div class="progress-fill" style="width:72%;background:var(--c-device)"></div></div><span style="font-size:9px;margin-left:4px">72%</span></td><td><span class="tag tag-purple">执行中</span></td><td>14:32</td><td><button class="btn btn-sm">⏹ 停止</button></td></tr>
+<tr><td style="font-family:'JetBrains Mono';font-size:10px">ID-041</td><td style="font-weight:700">login-regression</td><td>Xiaomi 13</td><td>12</td><td><div class="progress-bar" style="width:80px"><div class="progress-fill" style="width:0%;background:var(--c-dashboard)"></div></div><span style="font-size:9px;margin-left:4px">排队</span></td><td><span class="tag tag-yellow">等待中</span></td><td>13:18</td><td><button class="btn btn-sm">⏸ 取消</button></td></tr>
+<tr><td style="font-family:'JetBrains Mono';font-size:10px">ID-040</td><td style="font-weight:700">payment-flow-v3</td><td>Samsung S23</td><td>8</td><td><div class="progress-bar" style="width:80px"><div class="progress-fill" style="width:100%;background:var(--c-device)"></div></div><span style="font-size:9px;margin-left:4px">100%</span></td><td><span class="tag tag-green">已完成</span></td><td>11:05</td><td><button class="btn btn-sm">↻ 重跑</button> <button class="btn btn-sm">📊 报告</button></td></tr>
+<tr><td style="font-family:'JetBrains Mono';font-size:10px">ID-039</td><td style="font-weight:700">onboarding-e2e</td><td>vivo X90</td><td>6</td><td><div class="progress-bar" style="width:80px"><div class="progress-fill" style="width:42%;background:var(--c-runner)"></div></div><span style="font-size:9px;margin-left:4px">42%</span></td><td><span class="tag tag-pink">失败</span></td><td>09:42</td><td><button class="btn btn-sm">↻ 重跑</button> <button class="btn btn-sm">📊 报告</button></td></tr>
+</tbody>
+</table>
+</div>
+
+</div></div></div>
+
+<!-- ═══════════════ R2: PROGRESS FOCUS ═══════════════ -->
+<div class="prototype-row">
+<div class="prototype-label"><span class="dot" style="background:var(--c-device);transform:rotate(45deg);border-radius:1px"></span> R2 · Progress Focus 进度优先</div>
+
+<div style="background:var(--paper);border:3px solid var(--ink);border-radius:6px 10px 6px 10px;overflow:hidden;box-shadow:3px 3px 0 rgba(0,0,0,0.04)">
+
+<div class="dash-header">
+  <div class="dash-header-icon"><i data-lucide="play-circle" style="width:15px;height:15px"></i></div>
+  <div><h2>执行引擎</h2><p>创建并监控测试任务</p></div>
+  <div class="dash-header-actions"><button class="btn btn-fill">＋ 新建任务</button></div>
+</div>
+
+<div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+
+<div class="search-bar">
+  <input class="search-input" placeholder="搜索任务...">
+  <div class="filter-tabs"><span class="filter-tab active">全部</span><span class="filter-tab">执行中</span><span class="filter-tab">等待</span><span class="filter-tab">完成</span><span class="filter-tab">失败</span></div>
+  <div class="view-toggle"><button class="view-btn active">📋 表格</button><button class="view-btn">📷 卡片</button></div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-ai)"></div><div class="kpi-value">2</div><div class="kpi-label">执行中</div></div>
+  <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-dashboard)"></div><div class="kpi-value">1</div><div class="kpi-label">等待中</div></div>
+  <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-device)"></div><div class="kpi-value">3</div><div class="kpi-label">已完成</div></div>
+  <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-runner)"></div><div class="kpi-value">2</div><div class="kpi-label">失败/未完成</div></div>
+</div>
+
+<!-- 卡片视图：大进度条 -->
+<div class="card-grid">
+  <div class="task-card">
+    <div class="task-card-header"><span class="task-card-id">ID-042</span><span class="tag tag-purple">执行中</span></div>
+    <div class="task-card-name">smoke-test-v2.4</div>
+    <div class="task-card-meta">Pixel 6 · 5 用例 · 第2轮</div>
+    <div class="task-card-progress"><div class="progress-bar"><div class="progress-fill" style="width:72%;background:var(--c-ai)"></div></div></div>
+    <div class="task-card-stats"><span>18/25 完成</span><span>72%</span></div>
+    <div class="task-card-actions"><button class="btn btn-sm">⏹ 停止</button><button class="btn btn-sm">查看</button></div>
+  </div>
+  <div class="task-card">
+    <div class="task-card-header"><span class="task-card-id">ID-041</span><span class="tag tag-yellow">等待中</span></div>
+    <div class="task-card-name">login-regression</div>
+    <div class="task-card-meta">Xiaomi 13 · 12 用例 · 排队</div>
+    <div class="task-card-progress"><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--c-dashboard)"></div></div></div>
+    <div class="task-card-stats"><span>排队等待</span><span>—</span></div>
+    <div class="task-card-actions"><button class="btn btn-sm">⏸ 取消排队</button></div>
+  </div>
+  <div class="task-card">
+    <div class="task-card-header"><span class="task-card-id">ID-040</span><span class="tag tag-green">已完成</span></div>
+    <div class="task-card-name">payment-flow-v3</div>
+    <div class="task-card-meta">Samsung S23 · 8 用例 · 完成</div>
+    <div class="task-card-progress"><div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--c-device)"></div></div></div>
+    <div class="task-card-stats"><span>8/8 通过</span><span>100%</span></div>
+    <div class="task-card-actions"><button class="btn btn-sm">↻ 重跑</button><button class="btn btn-sm">📊 报告</button></div>
+  </div>
+  <div class="task-card">
+    <div class="task-card-header"><span class="task-card-id">ID-039</span><span class="tag tag-pink">失败</span></div>
+    <div class="task-card-name">onboarding-e2e</div>
+    <div class="task-card-meta">vivo X90 · 6 用例 · 中断</div>
+    <div class="task-card-progress"><div class="progress-bar"><div class="progress-fill" style="width:42%;background:var(--c-runner)"></div></div></div>
+    <div class="task-card-stats"><span>3/6 通过</span><span>42%</span></div>
+    <div class="task-card-actions"><button class="btn btn-sm">↻ 重跑</button><button class="btn btn-sm">📊 报告</button><button class="btn btn-sm">🗑 删除</button></div>
+  </div>
+</div>
+
+</div></div></div>
+
+<!-- ═══════════════ R3: KANBAN STATUS ═══════════════ -->
+<div class="prototype-row">
+<div class="prototype-label"><span class="dot" style="background:var(--c-dashboard);transform:rotate(45deg);border-radius:1px"></span> R3 · Kanban Status 看板分组</div>
+
+<div style="background:var(--paper);border:3px solid var(--ink);border-radius:6px 10px 6px 10px;overflow:hidden;box-shadow:3px 3px 0 rgba(0,0,0,0.04)">
+
+<div class="dash-header">
+  <div class="dash-header-icon"><i data-lucide="play-circle" style="width:15px;height:15px"></i></div>
+  <div><h2>执行引擎</h2><p>创建并监控测试任务</p></div>
+  <div class="dash-header-actions"><button class="btn btn-fill">＋ 新建任务</button></div>
+</div>
+
+<div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+
+<div class="search-bar">
+  <input class="search-input" placeholder="搜索任务...">
+  <div class="filter-tabs"><span class="filter-tab active">全部</span><span class="filter-tab">执行中</span><span class="filter-tab">等待</span><span class="filter-tab">完成</span><span class="filter-tab">失败</span></div>
+  <div class="view-toggle"><button class="view-btn">📋 表格</button><button class="view-btn active">📷 卡片</button></div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-ai)"></div><div class="kpi-value">2</div><div class="kpi-label">执行中</div></div>
+  <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-dashboard)"></div><div class="kpi-value">1</div><div class="kpi-label">等待中</div></div>
+  <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-device)"></div><div class="kpi-value">3</div><div class="kpi-label">已完成</div></div>
+  <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-runner)"></div><div class="kpi-value">2</div><div class="kpi-label">失败/未完成</div></div>
+</div>
+
+<!-- 看板卡片：按状态分组 + 拍立得 -->
+<div style="display:flex;flex-direction:column;gap:16px">
+  <!-- 执行中组 -->
+  <div><div style="font-family:'Caveat',cursive;font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:10px">🟣 执行中 <span style="font-family:'JetBrains Mono';font-size:10px;color:var(--ink);opacity:0.4;background:#f8f6f2;padding:2px 8px;border-radius:3px 6px 3px 6px;border:1.5px solid #e8e4d8">2</span></div>
+  <div class="card-grid">
+    <div class="task-card">
+      <div class="card-photo photo-running"><span class="task-card-id">ID-042</span><span class="tag tag-purple">执行中</span></div>
+      <div class="task-card-name">smoke-test-v2.4</div><div class="task-card-meta">Pixel 6 · 5 用例 · 第2轮</div>
+      <div class="task-card-progress"><div class="progress-bar"><div class="progress-fill" style="width:72%;background:var(--c-ai)"></div></div></div>
+      <div class="task-card-stats"><span>18/25</span><span>72%</span></div>
+      <div class="task-card-actions"><button class="btn btn-sm">⏹ 停止</button><button class="btn btn-sm">查看</button></div>
+    </div>
+    <div class="task-card">
+      <div class="card-photo photo-running"><span class="task-card-id">ID-044</span><span class="tag tag-purple">执行中</span></div>
+      <div class="task-card-name">api-test-suite</div><div class="task-card-meta">Pixel 6 · 10 用例 · API</div>
+      <div class="task-card-progress"><div class="progress-bar"><div class="progress-fill" style="width:35%;background:var(--c-ai)"></div></div></div>
+      <div class="task-card-stats"><span>7/20</span><span>35%</span></div>
+      <div class="task-card-actions"><button class="btn btn-sm">⏹ 停止</button></div>
+    </div>
+  </div></div>
+  <!-- 等待组 -->
+  <div><div style="font-family:'Caveat',cursive;font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:10px">🟡 等待中 <span style="font-family:'JetBrains Mono';font-size:10px;color:var(--ink);opacity:0.4;background:#f8f6f2;padding:2px 8px;border-radius:3px 6px 3px 6px;border:1.5px solid #e8e4d8">1</span></div>
+  <div class="card-grid"><div class="task-card">
+    <div class="card-photo photo-waiting"><span class="task-card-id">ID-041</span><span class="tag tag-yellow">等待中</span></div>
+    <div class="task-card-name">login-regression</div><div class="task-card-meta">Xiaomi 13 · 12 用例 · 排队</div>
+    <div class="task-card-actions"><button class="btn btn-sm">⏸ 取消</button></div>
+  </div></div></div>
+  <!-- 完成组 -->
+  <div><div style="font-family:'Caveat',cursive;font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:10px">🟢 已完成 <span style="font-family:'JetBrains Mono';font-size:10px;color:var(--ink);opacity:0.4;background:#f8f6f2;padding:2px 8px;border-radius:3px 6px 3px 6px;border:1.5px solid #e8e4d8">3</span></div>
+  <div class="card-grid">
+    <div class="task-card"><div class="card-photo photo-completed"><span class="task-card-id">ID-040</span><span class="tag tag-green">已完成</span></div><div class="task-card-name">payment-flow-v3</div><div class="task-card-meta">Samsung S23 · 8 用例</div><div class="task-card-stats"><span>100% 通过</span></div><div class="task-card-actions"><button class="btn btn-sm">↻ 重跑</button></div></div>
+    <div class="task-card"><div class="card-photo photo-completed"><span class="task-card-id">ID-038</span><span class="tag tag-green">已完成</span></div><div class="task-card-name">search-api-test</div><div class="task-card-meta">vivo X90 · 4 用例</div><div class="task-card-stats"><span>100% 通过</span></div><div class="task-card-actions"><button class="btn btn-sm">↻ 重跑</button></div></div>
+  </div></div>
+  <!-- 失败组 -->
+  <div><div style="font-family:'Caveat',cursive;font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:10px">🔴 失败/未完成 <span style="font-family:'JetBrains Mono';font-size:10px;color:var(--ink);opacity:0.4;background:#f8f6f2;padding:2px 8px;border-radius:3px 6px 3px 6px;border:1.5px solid #e8e4d8">2</span></div>
+  <div class="card-grid"><div class="task-card">
+    <div class="card-photo photo-failed"><span class="task-card-id">ID-039</span><span class="tag tag-pink">失败</span></div><div class="task-card-name">onboarding-e2e</div><div class="task-card-meta">vivo X90 · 6 用例 · 中断</div><div class="task-card-stats"><span>3/6 通过 · 42%</span></div><div class="task-card-actions"><button class="btn btn-sm">↻ 重跑</button><button class="btn btn-sm">📊 报告</button></div>
+  </div></div></div>
+</div>
+
+</div></div></div>
+
+<script>lucide.createIcons()</script>
+</body>
+</html>

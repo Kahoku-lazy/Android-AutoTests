@@ -289,13 +289,13 @@ function fmtTime(iso: string) {
 }
 .board-title {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--app-size-lg);
   font-weight: 800;
   color: var(--ink);
 }
 .board-sub {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   color: var(--ac-ink-faint);
 }
@@ -304,7 +304,7 @@ function fmtTime(iso: string) {
   padding: 7px 12px;
   border: 1.5px dashed var(--ac-border);
   border-radius: 999px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
@@ -340,7 +340,7 @@ function fmtTime(iso: string) {
   border-radius: 999px;
   border: 1.5px solid var(--ac-border);
   background: #fff;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
@@ -362,10 +362,10 @@ function fmtTime(iso: string) {
   color: var(--ac-ink-muted);
   font-weight: 700;
 }
-.empty-ico { font-size: 40px; margin-bottom: 8px; }
+.empty-ico { font-size: var(--app-size-2xl); margin-bottom: 8px; }
 .empty-tip {
   max-width: 360px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--ac-ink-faint);
   font-weight: 600;
   line-height: 1.5;
@@ -383,7 +383,7 @@ function fmtTime(iso: string) {
   border-radius: 12px;
   background: #fff;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   color: var(--ac-ink);
   cursor: pointer;
@@ -392,10 +392,10 @@ function fmtTime(iso: string) {
 .section-title.static { cursor: default; }
 .section-title:not(.static):hover { border-color: var(--ac-teal); }
 .chev { width: 14px; color: #999; }
-.sec-ico { font-size: 15px; }
+.sec-ico { font-size: var(--app-size-md); }
 .sec-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sec-count {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   padding: 2px 8px;
   border-radius: 999px;
@@ -403,7 +403,7 @@ function fmtTime(iso: string) {
   color: var(--ac-ink-muted);
 }
 .enter {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   color: var(--app-green-deep);
   padding: 2px 8px;
   border-radius: 8px;
@@ -412,7 +412,7 @@ function fmtTime(iso: string) {
 .section-body { padding: 14px 2px 0 8px; }
 .sec-empty {
   padding: 12px 14px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   color: var(--ac-ink-faint);
   display: flex;
@@ -426,7 +426,7 @@ function fmtTime(iso: string) {
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
 }
 /* 本目录文件：标题与卡片之间留白（对齐子目录 section-body） */
 .section > .file-grid {
@@ -461,9 +461,9 @@ function fmtTime(iso: string) {
   gap: 6px;
   margin-bottom: 8px;
 }
-.file-ico { font-size: 18px; }
+.file-ico { font-size: var(--app-size-lg); }
 .file-type {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   color: var(--ac-ink-faint);
 }
@@ -484,14 +484,14 @@ function fmtTime(iso: string) {
 .file-ops button:hover { background: rgba(162,210,255,0.14); }
 .file-ops button.danger:hover { color: #e85f5f; }
 .file-name {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   color: var(--ac-ink);
   margin-bottom: 4px;
   word-break: break-word;
 }
 .file-id {
-  font-size: 9px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   color: var(--app-green-deep);
   margin-bottom: 6px;
@@ -500,13 +500,13 @@ function fmtTime(iso: string) {
   line-height: 1.3;
 }
 .file-meta {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 600;
   color: var(--ac-ink-faint);
 }
 .file-cta {
   margin-top: 10px;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   color: var(--app-green-deep);
 }
@@ -516,7 +516,7 @@ function fmtTime(iso: string) {
   padding: 4px 8px;
   border: 2px solid var(--app-green-deep);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   font-family: inherit;
 }

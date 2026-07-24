@@ -263,7 +263,7 @@ description: |
 
 ```
 询问自己:
-  - 这个方案和现有架构冲突吗？（查 architecture.md）
+  - 这个方案和现有架构冲突吗？（查 `.claude/rules/frontend.md` + `backend.md`）
   - 依赖的能力现在有没有？（别指望"以后会有"的东西）
   - 预估的工作量合理吗？（找对应的开发负责人确认）
   - 非功能指标能实现吗？（"截图 50ms"在当前的 u2 框架下现实吗？）
@@ -473,8 +473,8 @@ Step C.3 — 输出校验报告
 | `.claude/rules/api-conventions.md` | 50 REST + 2 WS 端点规范 — 写 API 规格前必读 |
 | `.claude/rules/frontend.md` | 前端规范（组件/路由/数据链路）— 写交互要求前必读 |
 | `.claude/rules/conventions.md` | 命名规范（确保术语和命名一致） |
-| `.claude/rules/architecture.md` | 项目架构全景 — 理解模块关系 |
-| `.claude/rules/module-boundaries.md` | 五层边界和防火墙规则 — 写跨模块交互前必读 |
+| `.claude/rules/frontend.md` | 项目架构全景 — 理解模块关系 |
+| `.claude/rules/api-conventions.md` | 五层边界和防火墙规则 — 写跨模块交互前必读 |
 | `.claude/rules/animal-island-ui.md` | 动森 UI 组件 API — 写前端交互时参阅 |
 
 ---

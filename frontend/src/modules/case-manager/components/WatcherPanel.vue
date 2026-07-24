@@ -138,16 +138,16 @@ function removeWatcher(idx) {
   cursor: pointer;
   user-select: none;
 }
-.watcher-toggle { font-size: 12px; color: #999; width: 16px; }
-.watcher-title { font-size: 13px; font-weight: 700; color: #b8860b; }
+.watcher-toggle { font-size: var(--app-size-sm); color: #999; width: 16px; }
+.watcher-title { font-size: var(--app-size-sm); font-weight: 700; color: #b8860b; }
 .watcher-count {
-  font-size: 11px; font-weight: 700; color: #fff;
+  font-size: var(--app-size-xs); font-weight: 700; color: #fff;
   background: #f7cd67; padding: 1px 8px; border-radius: 10px;
 }
-.watcher-hint { font-size: 11px; color: #999; margin-left: auto; }
+.watcher-hint { font-size: var(--app-size-xs); color: #999; margin-left: auto; }
 .watcher-body { padding: 0 14px 14px; }
 .watcher-empty {
-  text-align: center; color: #999; font-size: 13px;
+  text-align: center; color: #999; font-size: var(--app-size-sm);
   padding: 16px; border: 1px dashed rgba(162,210,255,0.3); border-radius: 8px;
 }
 .watcher-item {
@@ -156,11 +156,11 @@ function removeWatcher(idx) {
 }
 .watcher-idx {
   width: 22px; height: 22px; border-radius: 50%;
-  background: #f7cd67; color: #fff; font-size: 11px; font-weight: 700;
+  background: #f7cd67; color: #fff; font-size: var(--app-size-xs); font-weight: 700;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .watcher-xpath {
-  font-size: 10px; color: #999; background: rgba(162,210,255,0.1);
+  font-size: var(--app-size-xs); color: #999; background: rgba(162,210,255,0.1);
   padding: 2px 6px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; max-width: 160px;
 }

@@ -32,7 +32,7 @@ function removeAssertion(index) {
 <template>
   <div class="assertion-editor">
     <div class="assertion-toolbar">
-      <span style="font-size:13px;font-weight:500;">断言规则</span>
+      <span style="font-size:var(--app-size-sm);font-weight:500;">断言规则</span>
       <button type="button" class="btn-text" @click="addAssertion">+ 添加断言</button>
       <span class="hint" v-if="!assertions.length">未定义断言</span>
     </div>
@@ -60,10 +60,10 @@ function removeAssertion(index) {
 <style scoped>
 .assertion-editor { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .assertion-toolbar { display: flex; align-items: center; gap: 12px; }
-.hint { font-size: 13px; color: #999; }
+.hint { font-size: var(--app-size-sm); color: #999; }
 .assertion-row { display: flex; gap: 8px; align-items: center; }
-.form-input { padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
-.btn-text { padding: 4px 12px; border: 1px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer; font-size: 13px; }
-.btn-icon { padding: 2px 6px; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font-size: 11px; }
+.form-input { padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: var(--app-size-sm); }
+.btn-text { padding: 4px 12px; border: 1px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer; font-size: var(--app-size-sm); }
+.btn-icon { padding: 2px 6px; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font-size: var(--app-size-xs); }
 .btn-danger { color: #e85f5f; border-color: #fcc; }
 </style>

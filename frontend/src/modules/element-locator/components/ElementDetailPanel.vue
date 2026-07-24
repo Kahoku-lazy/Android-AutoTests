@@ -90,13 +90,13 @@ onUnmounted(() => stopDetailAnimation())
   overflow-y: auto;
 }
 h3 {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   color: var(--app-text, #3D4A3B);
   margin-bottom: 12px;
   flex-shrink: 0;
 }
 .meta {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   line-height: 1.6;
 }
 .meta p {
@@ -117,17 +117,17 @@ h3 {
   min-height: 200px;
 }
 .placeholder-icon {
-  font-size: 32px;
+  font-size: var(--app-size-2xl);
   opacity: 0.5;
 }
 .placeholder-label {
-  font-size: 15px;
+  font-size: var(--app-size-md);
   font-weight: 500;
   color: #725d42;
 }
 .hint {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--app-text-secondary, #7A8B73);
   opacity: 0.5;
 }

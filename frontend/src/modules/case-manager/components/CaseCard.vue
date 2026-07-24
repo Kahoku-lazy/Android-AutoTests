@@ -170,8 +170,8 @@ async function toggleLock() {
 }
 
 .case-card__id {
-  font-family: "SF Mono", "Fira Code", Consolas, monospace;
-  font-size: 11px;
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
   font-weight: 600;
   color: #999;
   background: rgba(162,210,255,0.14);
@@ -180,7 +180,7 @@ async function toggleLock() {
 }
 
 .case-card__priority {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 8px;
@@ -203,9 +203,9 @@ async function toggleLock() {
 }
 
 .case-card__title {
-  font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif);
+  font-family: var(--app-font, 'Nunito', 'PingFang SC', sans-serif);
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--app-size-md);
   color: var(--ink);
   margin: 0;
   line-height: 1.4;
@@ -221,7 +221,7 @@ async function toggleLock() {
 }
 
 .meta-tag {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 600;
   color: #999;
   background: rgba(162,210,255,0.12);
@@ -230,7 +230,7 @@ async function toggleLock() {
 }
 
 .meta-tag--dir {
-  color: var(--app-green-deep);
+  color: var(--c-workflow);
   background: rgba(162,210,255,0.16);
 }
 
@@ -245,7 +245,7 @@ async function toggleLock() {
 
 /* Editing status badge */
 .case-card__editing-badge {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   color: #9a6a1f;
   background: rgba(255,214,165,0.28);

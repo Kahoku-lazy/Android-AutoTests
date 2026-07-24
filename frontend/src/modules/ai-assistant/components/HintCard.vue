@@ -120,7 +120,7 @@ function genericHintText(hint) {
   border-radius: 10px;
   background: rgba(230, 249, 246, 0.3);
   border: 1px solid rgba(25, 200, 185, 0.2);
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: var(--doodle-ink, #2d2d2d);
 }
 .hint-icon {
@@ -144,18 +144,18 @@ function genericHintText(hint) {
   margin-bottom: 10px;
 }
 .sop-icon {
-  font-size: 20px;
+  font-size: var(--app-size-lg);
 }
 .sop-title {
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   color: #3c3489;
 }
 .sop-phase-badge {
   margin-left: auto;
   padding: 3px 10px;
   border-radius: 10px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 500;
   background: #534ab7;
   color: white;
@@ -173,13 +173,13 @@ function genericHintText(hint) {
   background: #d85a30;
 }
 .sop-requirement {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: #2c2c2a;
   margin: 6px 0;
   line-height: 1.5;
 }
 .sop-cases {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: #2c2c2a;
   margin: 6px 0;
 }
@@ -195,7 +195,7 @@ function genericHintText(hint) {
   padding: 8px 12px;
   border-radius: 8px;
   background: #fff;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: #3c3489;
   font-weight: 500;
 }
@@ -230,11 +230,11 @@ function genericHintText(hint) {
   margin-bottom: 10px;
 }
 .prd-icon {
-  font-size: 20px;
+  font-size: var(--app-size-lg);
 }
 .prd-title {
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   color: #8b6914;
 }
 .prd-preview-body {
@@ -246,7 +246,7 @@ function genericHintText(hint) {
   text-align: center;
 }
 .prd-stat-value {
-  font-size: 24px;
+  font-size: var(--app-size-xl);
   font-weight: 700;
   color: #f7a826;
 }
@@ -257,7 +257,7 @@ function genericHintText(hint) {
   color: #f7a826;
 }
 .prd-stat-label {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: #9f927d;
   margin-top: 2px;
 }
@@ -273,7 +273,7 @@ function genericHintText(hint) {
   border: 1.5px solid #f7a826;
   background: #fff8e7;
   color: #8b6914;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
@@ -302,7 +302,7 @@ function genericHintText(hint) {
   margin-bottom: 8px;
 }
 .task-status-badge {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   padding: 3px 10px;
   border-radius: 8px;
@@ -329,18 +329,18 @@ function genericHintText(hint) {
   color: #616161;
 }
 .task-id {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   color: #8a7b66;
-  font-family: monospace;
+  font-family: var(--app-font-mono);
 }
 .task-title {
-  font-size: 15px;
+  font-size: var(--app-size-md);
   font-weight: 700;
   color: var(--doodle-ink, #2d2d2d);
   margin-bottom: 6px;
 }
 .task-meta {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: #6d5f4b;
   margin: 2px 0;
 }

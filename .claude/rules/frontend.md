@@ -1,6 +1,10 @@
 # Frontend Rules — Android-AutoTests
 
-> AI 前端开发的行为约束。结构/模式/配置等可从代码中读出的信息不再记录，本文只放 AI 无法通过读代码获取的约束和陷阱。
+> AI 前端开发的行为约束。本文是前端架构约束的**唯一真相源**，其他文件只做指针引用。
+>
+> 技术栈：Vue 3 + Vite + Element Plus，8 模块，Doodle Craft 极简几何主题
+> 设计令牌 → `frontend/DESIGN_SYSTEM.md` | CSS 工作流 → `frontend/CLAUDE.md`
+> 命名规范/行数上限 → `.claude/rules/conventions.md` | API 格式/模块边界 → `.claude/rules/api-conventions.md`
 
 ---
 
@@ -36,7 +40,18 @@
 
 1. **颜色/圆角/阴影/字体从 `tokens.css` 取** — ❌ 组件 scoped 中硬编码色值
 2. **覆盖 Element Plus 用 `:deep()` + `--el-*` 变量** — ❌ 禁止封装薄 wrapper
-3. 当前平台主题 → `frontend/THEME.md`
+3. 当前平台主题 → `frontend/DESIGN_SYSTEM.md`
+4. **修改样式只改 CSS** — 不碰 props/emits/API/路由/动画逻辑
+5. **布局改动后验证滚动** — 涉及 flex/grid/overflow 时，浏览器中确认页面可纵向滚动
+
+## Vite Proxy 配置
+
+```
+/api  /ws  → :8765 (Django)
+/agentscope → :8000 (AgentScope)
+```
+
+WebSocket URL 必须走 Vite 代理（用 `wsUrl('/ws/...')`），禁止直连 `:8765`。
 
 ## Element Plus 陷阱
 

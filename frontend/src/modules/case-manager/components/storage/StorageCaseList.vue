@@ -145,9 +145,9 @@ defineExpose({ loadDefs, definitions });
       <div v-if="selectedCase.custom_columns?.length" class="case-detail__table-data">
         <h4>表格数据</h4>
         <p v-if="selectedCase.rows?.length" class="case-detail__row-count">{{ selectedCase.rows.length }} 行数据</p>
-        <p v-else class="case-detail__empty">暂无行数据</p>
+        <p v-else class="empty-state">暂无行数据</p>
       </div>
-      <p v-else class="case-detail__empty">暂无表格数据</p>
+      <p v-else class="empty-state">暂无表格数据</p>
     </AppCard>
   </div>
 
@@ -196,35 +196,35 @@ defineExpose({ loadDefs, definitions });
 .case-toolbar__left { display: flex; align-items: center; gap: 12px; }
 .case-toolbar__right { display: flex; align-items: center; gap: 8px; }
 .case-breadcrumb { display: flex; align-items: center; gap: 4px; }
-.crumb { background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px; font-size: 13px; }
+.crumb { background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px; font-size: var(--app-size-sm); }
 .crumb--active { font-weight: 600; color: var(--app-green, var(--c-workflow)); }
-.crumb-sep { color: #999; font-size: 14px; }
-.case-count-badge { font-size: 12px; color: #999; background: #f0f0f0; padding: 2px 10px; border-radius: 12px; }
+.crumb-sep { color: #999; font-size: var(--app-size-sm); }
+.case-count-badge { font-size: var(--app-size-sm); color: #999; background: #f0f0f0; padding: 2px 10px; border-radius: 12px; }
 .view-toggle { display: flex; border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden; }
-.view-toggle button { border: none; background: #fff; padding: 4px 10px; cursor: pointer; font-size: 14px; }
+.view-toggle button { border: none; background: #fff; padding: 4px 10px; cursor: pointer; font-size: var(--app-size-sm); }
 .view-toggle button.active { background: var(--app-green, var(--c-workflow)); color: #fff; }
-.btn-primary, .btn-text { padding: 6px 16px; border-radius: 8px; border: 1px solid #e0e0e0; background: #fff; cursor: pointer; font-size: 13px; }
+.btn-primary, .btn-text { padding: 6px 16px; border-radius: 8px; border: 1px solid #e0e0e0; background: #fff; cursor: pointer; font-size: var(--app-size-sm); }
 .btn-primary { background: var(--app-green, var(--c-workflow)); color: #fff; border-color: var(--app-green, var(--c-workflow)); }
 .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
 .storage-card__header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.storage-card__id { font-size: 11px; color: #999; }
-.storage-card__title { margin: 0 0 8px 0; font-size: 16px; }
-.storage-card__desc { font-size: 13px; color: #666; margin-bottom: 8px; }
-.storage-card__meta { display: flex; gap: 12px; font-size: 12px; color: #999; margin-bottom: 8px; }
+.storage-card__id { font-size: var(--app-size-xs); color: #999; }
+.storage-card__title { margin: 0 0 8px 0; font-size: var(--app-size-md); }
+.storage-card__desc { font-size: var(--app-size-sm); color: #666; margin-bottom: 8px; }
+.storage-card__meta { display: flex; gap: 12px; font-size: var(--app-size-sm); color: #999; margin-bottom: 8px; }
 .storage-card__actions { display: flex; gap: 8px; }
 /* Detail */
 .case-detail { padding: 8px 0; }
 .case-detail__toolbar { display: flex; justify-content: space-between; margin-bottom: 16px; }
 .case-detail__header { margin-bottom: 12px; }
-.case-detail__id { font-family: monospace; font-size: 12px; color: #999; background: rgba(162,210,255,0.14); padding: 2px 8px; border-radius: 6px; }
-.case-detail__title { margin: 8px 0; font-size: 18px; }
-.case-detail__priority { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 8px; margin-left: 8px; }
-.case-detail__meta { display: flex; gap: 16px; font-size: 13px; color: #666; margin-bottom: 12px; flex-wrap: wrap; }
-.case-detail__desc { font-size: 14px; color: #444; margin-bottom: 16px; }
+.case-detail__id { font-family: var(--app-font-mono); font-size: var(--app-size-sm); color: #999; background: rgba(162,210,255,0.14); padding: 2px 8px; border-radius: 6px; }
+.case-detail__title { margin: 8px 0; font-size: var(--app-size-lg); }
+.case-detail__priority { font-size: var(--app-size-xs); font-weight: 700; padding: 1px 6px; border-radius: 8px; margin-left: 8px; }
+.case-detail__meta { display: flex; gap: 16px; font-size: var(--app-size-sm); color: #666; margin-bottom: 12px; flex-wrap: wrap; }
+.case-detail__desc { font-size: var(--app-size-sm); color: #444; margin-bottom: 16px; }
 .case-detail__table-data { margin-top: 12px; }
-.case-detail__table-data h4 { font-size: 14px; margin-bottom: 4px; }
-.case-detail__row-count { font-size: 12px; color: #999; }
-.case-detail__empty { font-size: 13px; color: #999; }
+.case-detail__table-data h4 { font-size: var(--app-size-sm); margin-bottom: 4px; }
+.case-detail__row-count { font-size: var(--app-size-sm); color: #999; }
+.case-detail__empty { font-size: var(--app-size-sm); color: #999; }
 .case-link { cursor: pointer; color: var(--app-green, var(--c-workflow)); }
 .case-link:hover { text-decoration: underline; }
 .case-loading { text-align: center; padding: 48px; color: #999; }

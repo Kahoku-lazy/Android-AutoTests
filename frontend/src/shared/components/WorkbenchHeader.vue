@@ -66,6 +66,8 @@ watch(() => props.icon, async () => {
   display: flex;
   align-items: center;
   gap: 16px;
+  height: var(--app-topbar-h, 96px);
+  box-sizing: border-box;
   padding: 14px 20px;
   background: #fff;
   border-bottom: 2.5px solid var(--ink);
@@ -103,7 +105,7 @@ watch(() => props.icon, async () => {
 .brand-title {
   margin: 0;
   font-family: var(--doodle-font-title);
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
   color: var(--ink);
   line-height: 1.2;
@@ -111,7 +113,7 @@ watch(() => props.icon, async () => {
 }
 .brand-sub {
   margin: 1px 0 0;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: #999;
   line-height: 1.35;

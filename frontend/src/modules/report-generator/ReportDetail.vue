@@ -191,27 +191,10 @@ function outcomeBadgeClass(outcome) {
 
       <!-- KPI Cards -->
       <div class="kpi-row">
-        <div class="kpi-card">
-          <div class="kpi-accent accent-teal"></div>
-          <div class="kpi-value">{{ runMeta.case_count || 0 }}</div>
-          <div class="kpi-label">执行用例</div>
-          <div class="kpi-sub">{{ runMeta.loop_count || 0 }} 轮 × {{ runMeta.case_count || 0 }} 用例 = {{ runMeta.total_iterations || 0 }} 次迭代</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-accent accent-green"></div>
-          <div class="kpi-value num-pass">{{ runMeta.total_pass || 0 }}</div>
-          <div class="kpi-label">✅ 通过</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-accent accent-red"></div>
-          <div class="kpi-value num-fail">{{ runMeta.total_fail || 0 }}</div>
-          <div class="kpi-label">❌ 失败</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-accent accent-yellow"></div>
-          <div class="kpi-value" :class="kpiPassRate >= 95 ? 'num-pass' : kpiPassRate >= 80 ? 'num-warn' : 'num-fail'">{{ kpiPassRate }}%</div>
-          <div class="kpi-label">📊 通过率</div>
-        </div>
+        <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-workflow)"></div><div class="kpi-value">{{ runMeta.case_count || 0 }}</div><div class="kpi-label">执行用例</div><div class="kpi-sub">{{ runMeta.loop_count || 0 }} 轮 × {{ runMeta.case_count || 0 }} 用例 = {{ runMeta.total_iterations || 0 }} 次迭代</div></div>
+        <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-device)"></div><div class="kpi-value num-pass">{{ runMeta.total_pass || 0 }}</div><div class="kpi-label">✅ 通过</div></div>
+        <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-runner)"></div><div class="kpi-value num-fail">{{ runMeta.total_fail || 0 }}</div><div class="kpi-label">❌ 失败</div></div>
+        <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-dashboard)"></div><div class="kpi-value" :class="kpiPassRate >= 95 ? 'num-pass' : kpiPassRate >= 80 ? 'num-warn' : 'num-fail'">{{ kpiPassRate }}%</div><div class="kpi-label">📊 通过率</div></div>
       </div>
 
       <!-- TaskAppCard Metadata (conditional) -->
@@ -241,12 +224,12 @@ function outcomeBadgeClass(outcome) {
         class="detail-tabs"
         :items="tabs"
         v-model="activeTab"
-        :leaf-animation="true"
-        :shadow="true"
+        
+        
       >
         <!-- ═══ TAB: 用例执行明细 ═══ -->
         <template #cases>
-          <AppCard color="brown" class="table-card">
+          <AppCard color="" class="table-card">
             <div class="table-toolbar">
               <div class="page-size-control">
                 <span class="toolbar-label">显示行数</span>
@@ -338,7 +321,6 @@ function outcomeBadgeClass(outcome) {
             </h3>
             <p class="sec-sub">按用例标题分类，点击展开查看具体失败步骤</p>
             <div v-for="(group, idx) in failedStepsByCase" :key="'fsg-' + group.key" class="fail-card">
-              <AppCard :color="failCardColor(idx)">
                 <div
                   class="fail-card-header fail-card-header--clickable"
                   role="button"
@@ -383,7 +365,6 @@ function outcomeBadgeClass(outcome) {
                     </div>
                   </div>
                 </div>
-              </AppCard>
             </div>
           </div>
 
@@ -395,7 +376,7 @@ function outcomeBadgeClass(outcome) {
             </h3>
             <p class="sec-sub">点击用例展开查看迭代失败详情</p>
             <div v-for="(c, idx) in failedCases" :key="'fail-' + c.case_id" class="fail-card">
-              <AppCard :color="failCardColor(idx)">
+              
                 <div
                   class="fail-card-header fail-card-header--clickable"
                   role="button"
@@ -442,7 +423,7 @@ function outcomeBadgeClass(outcome) {
                     迭代详情暂不可用（TestResult 未持久化），请查看上方步骤级失败详情
                   </div>
                 </div>
-              </AppCard>
+              
             </div>
           </div>
         </template>
@@ -453,344 +434,24 @@ function outcomeBadgeClass(outcome) {
 </template>
 
 <style scoped>
-.doc-page {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.doc-page :deep(.doc-hero) {
-  flex-shrink: 0;
-}
-
-.doc-body {
-  flex: 0 0 auto;
-  min-height: auto;
-  display: flex;
-  flex-direction: column;
-  overflow: visible;
-}
-
-.detail-tabs {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.detail-tabs :deep(.el-tabs) {
-  display: flex;
-  flex-direction: column;
-  overflow: visible;
-}
-
-/* ── Top bar ── */
-.top-bar { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; flex-shrink: 0; }
-.run-meta { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--app-ink-muted, #999); flex-wrap: wrap; }
-
-/* ── KPI Cards ── */
-.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; flex-shrink: 0; }
-.kpi-card {
-  background: rgb(247,243,223); border-radius: 18px; padding: 20px 24px;
-  border: 1.5px solid #c4b89e; position: relative; overflow: hidden;
-  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-}
-.kpi-card:hover { transform: translateY(-2px); }
-.kpi-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; border-radius: 0 3px 3px 0; }
-.accent-teal { background: #19c8b9; }
-.accent-green { background: var(--c-workflow); }
-.accent-red { background: #e05a5a; }
-.accent-yellow { background: #f5c31c; }
-.kpi-value { font-size: 32px; font-weight: 900; color: #794f27; line-height: 1.1; }
-.kpi-label { font-size: 12px; color: #9f927d; margin-top: 4px; font-weight: 600; }
-.kpi-sub { font-size: 11px; color: #8a7b66; margin-top: 2px; }
-.num-pass { color: var(--c-workflow); }
-.num-fail { color: #e05a5a; }
-.num-warn { color: #dba90e; }
-
-/* ── TaskAppCard metadata bar ── */
-.task-meta-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 24px;
-  padding: 14px 20px;
-  background: linear-gradient(135deg, #fef9ef 0%, #fdf0d5 100%);
-  border-radius: 14px;
-  border: 1px solid rgba(139,115,85,0.1);
-  margin-bottom: 16px;
-  flex-shrink: 0;
-}
-.task-meta-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-}
-.task-meta-item.full-width {
-  flex-basis: 100%;
-}
-.meta-label {
-  color: var(--app-ink-muted, #999);
-  font-weight: 500;
-  white-space: nowrap;
-}
-.meta-value {
-  color: #4a3a28;
-  font-weight: 600;
-}
-.conclusion-text {
-  line-height: 1.5;
-  font-style: italic;
-}
-
-/* ── AppTabs ── */
-.detail-tabs :deep(.el-tabs__content) {
-  overflow: visible;
-  display: block;
-  padding-top: 16px;
-}
-
-.detail-tabs :deep(.el-tabs__inner) {
-  min-height: min-content;
-}
-
-/* ── AppTable card ── */
-.table-card { overflow: hidden; }
-.table-card :deep(.el-card__body) { padding: 0; border-radius: 14px; overflow: hidden; }
-
-.table-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(139, 115, 85, 0.1);
-  background: rgba(139, 115, 85, 0.03);
-}
-.page-size-control { display: flex; align-items: center; gap: 10px; }
-.toolbar-label { font-size: 12px; font-weight: 700; color: var(--app-ink-muted, #999); white-space: nowrap; }
-.page-size-btns { display: flex; gap: 6px; }
-.page-size-btn {
-  min-width: 40px;
-  padding: 5px 10px;
-  border-radius: 8px;
-  border: 1.5px solid rgba(139, 115, 85, 0.2);
-  background: #f7f3df;
-  color: #6b5b48;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-.page-size-btn:hover { border-color: var(--app-accent-purple, #b39ef3); color: var(--app-accent-purple, #b39ef3); }
-.page-size-btn.active {
-  background: rgba(25, 200, 185, 0.12);
-  border-color: var(--app-accent-purple, #b39ef3);
-  color: #0f9a8e;
-}
-.table-toolbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
-.page-info { font-size: 12px; color: var(--app-ink-muted, #999); font-weight: 600; white-space: nowrap; }
-.page-nav { display: flex; gap: 8px; }
-
-/* ── AppTable styles ── */
-.detail-table { width: 100%; }
-.detail-table :deep(table) { width: 100%; border-collapse: collapse; }
-.detail-table :deep(th) {
-  font-size: 12px; font-weight: 700; color: #6b5b48; padding: 12px 14px;
-  text-align: left; background: rgba(139,115,85,0.06);
-  border-bottom: 2px solid rgba(139,115,85,0.12);
-  text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;
-}
-.detail-table :deep(td) {
-  padding: 10px 14px; font-size: 13px; color: #4a3a28;
-  border-bottom: 1px dashed rgba(196,184,158,0.4); vertical-align: middle;
-}
-.detail-table :deep(tr:hover td) { background: rgba(25,200,185,0.04); }
-.detail-table :deep(tr:last-child td) { border-bottom: none; }
-
-/* ── Misc ── */
-.mono { font-family: 'SF Mono','Fira Code','Cascadia Code',Consolas,monospace; font-size: 11px; font-weight: 600; background: rgba(139,115,85,0.06); padding: 2px 6px; border-radius: 4px; }
-
-/* ── Rate cell ── */
-.rate-cell { display: flex; align-items: center; gap: 8px; }
-.progress-bar { display: flex; height: 7px; border-radius: var(--app-radius-pill); overflow: hidden; background: #f0ece2; flex: 1; max-width: 90px; }
-.p-pass { background: var(--c-workflow); transition: width 0.5s ease; border-radius: var(--app-radius-pill); }
-.p-fail { background: #e05a5a; transition: width 0.5s ease; border-radius: var(--app-radius-pill); }
-.rate-text { font-weight: 700; font-size: 12px; min-width: 38px; text-align: right; }
-.rate-ok { color: var(--c-workflow); }
-.rate-warn { color: #dba90e; }
-.rate-bad { color: var(--app-status-danger-text, #a03030); }
-
-/* ── Badges ── */
-.badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--app-radius-pill); font-size: 10px; font-weight: 700; letter-spacing: 0.02em; }
-.badge-pass { background: rgba(111,186,44,0.12); color: var(--c-workflow); border: 1.5px solid rgba(111,186,44,0.25); }
-.badge-fail { background: rgba(224,90,90,0.12); color: #e05a5a; border: 1.5px solid rgba(224,90,90,0.25); }
-.badge-running { background: rgba(245,195,28,0.12); color: #dba90e; border: 1.5px solid rgba(245,195,28,0.25); }
-.badge-stopped { background: rgba(138,123,102,0.10); color: var(--app-ink-muted, #999); border: 1.5px solid rgba(138,123,102,0.20); }
-
-.mini-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; }
-.mini-table th { padding: 6px 10px; font-size: 11px; font-weight: 700; color: var(--app-ink-muted, #999); text-transform: uppercase; text-align: left; border-bottom: 1px solid rgba(196,184,158,0.3); }
-.mini-table td { padding: 6px 10px; border-bottom: 1px dashed rgba(196,184,158,0.15); font-size: 12px; color: #725d42; }
-.row-fail { background: rgba(224,90,90,0.04); }
-
-/* ── Failure cards ── */
-.fail-card { margin-bottom: 12px; }
-.fail-card-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 0;
-  padding: 12px 16px;
-  font-size: 14px;
-  color: var(--doodle-ink, #2d2d2d);
-}
-.fail-card-header--clickable {
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.15s ease;
-  border-radius: 12px;
-}
-.fail-card-header--clickable:hover {
-  background: rgba(232, 95, 95, 0.06);
-}
-.fail-card-meta { font-size: 12px; color: var(--app-ink-muted, #999); font-weight: 500; flex: 1; min-width: 0; }
-.fail-expand-hint {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--app-accent-purple, #b39ef3);
-  white-space: nowrap;
-  margin-left: auto;
-}
-.fail-detail-text { font-family: 'SF Mono','Fira Code',monospace; font-size: 11px; white-space: pre-wrap; word-break: break-all; }
-
-.expand-icon {
-  cursor: pointer;
-  font-size: 11px;
-  color: var(--app-ink-muted, #999);
-  transition: transform 0.25s ease;
-  display: inline-block;
-  user-select: none;
-  flex-shrink: 0;
-}
-.expand-icon.open { transform: rotate(90deg); color: var(--app-accent-purple, #b39ef3); }
-
-.expand-panel {
-  padding: 0 16px 14px;
-  border-top: 1px dashed rgba(196,184,158,0.4);
-  background: rgba(232,95,95,0.03);
-  margin: 0 8px 8px;
-  border-radius: 0 0 12px 12px;
-}
-.expand-header {
-  font-size: 13px;
-  font-weight: 700;
-  color: #6b5b48;
-  padding: 12px 0 8px;
-}
-
-.fail-step-fallback {
-  padding: 4px 0 8px;
-}
-.fail-step-fallback__title {
-  font-size: 12px;
-  color: var(--app-ink-muted, #999);
-  margin: 0 0 10px;
-}
-.fail-step-row {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
-  margin-bottom: 8px;
-  background: #fff;
-  border-radius: 10px;
-  border: 1px dashed rgba(232,95,95,0.2);
-}
-.fail-step-row__meta { font-size: 12px; font-weight: 700; color: var(--doodle-ink, #2d2d2d); }
-.fail-step-row__desc { font-size: 13px; color: #4a3a28; }
-.fail-step-row__error { font-size: 12px; color: var(--app-status-danger-text, #a03030); font-family: 'SF Mono','Fira Code',monospace; word-break: break-all; }
-
-.fail-detail-row {
-  display: flex; flex-wrap: wrap; gap: 16px;
-  padding: 8px 0 4px; margin: 0 20px 12px;
-  border-top: 1px dashed rgba(232,95,95,0.2);
-}
-.fail-detail-item {
-  display: flex; flex-direction: column; gap: 2px;
-  min-width: 140px; flex: 1;
-}
-.fd-label { font-size: 11px; color: var(--app-ink-muted, #999); font-weight: 500; }
-.fd-value { font-size: 13px; color: #4a3a28; font-weight: 600; }
-.fd-error { color: var(--app-status-danger-text, #a03030); }
-
-.fail-no-iterations {
-  padding: 12px 20px; font-size: 12px; color: var(--app-ink-muted, #999); font-style: italic;
-}
-
-.sec-title {
-  font-weight: 800; font-size: 16px; color: #4A3A28;
-  display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
-}
-.sec-badge {
-  font-size: 11px; font-weight: 800; color: #fff;
-  padding: 2px 10px; border-radius: var(--app-radius-pill);
-}
-.sec-badge--muted {
-  background: var(--app-ink-muted, #999);
-}
-.sec-sub { font-size: 12px; color: var(--app-ink-muted, #999); margin-bottom: 12px; }
-
-.fail-case-title-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1;
-}
-.fail-case-title {
-  font-size: 14px;
-  line-height: 1.35;
-  word-break: break-word;
-}
-.fail-case-id {
-  font-family: 'SF Mono','Fira Code',monospace;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--app-ink-muted, #999);
-  background: rgba(139,115,85,0.08);
-  padding: 1px 6px;
-  border-radius: 4px;
-  width: fit-content;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.fail-step-row__head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.fail-detail-row--nested {
-  margin: 0;
-  padding: 0;
-  border-top: none;
-}
-
-.empty-note { text-align: center; padding: 48px 24px; color: var(--app-ink-muted, #999); }
-.empty-note span { font-size: 36px; display: block; margin-bottom: 12px; }
-.time-text { font-size: 12px; color: var(--app-ink-muted, #999); white-space: nowrap; }
-
-@media (max-width: 900px) {
-  .kpi-row { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 600px) {
-  .kpi-row { grid-template-columns: 1fr; }
-}
+.doc-page{display:flex;flex-direction:column;height:100%;overflow-y:auto}
+.doc-body{padding:16px 20px 32px;display:flex;flex-direction:column;gap:14px;max-width:1200px;margin:0 auto;width:100%}
+.top-bar{display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap}
+.run-meta{display:flex;align-items:center;gap:10px;font-size:var(--app-size-xs);color:#999;flex-wrap:wrap}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px}
+.kpi-card{text-align:center;padding:12px 10px 16px;background:#fff;border:3px solid var(--ink);border-radius:4px 10px 6px 8px;box-shadow:2px 3px 0 rgba(0,0,0,0.04);position:relative}.kpi-card:hover{transform:translateY(-2px)}
+.kpi-value{font-family:'Patrick Hand',cursive;font-size:var(--app-size-xl);font-weight:700;line-height:1}.kpi-label{font-size:var(--app-size-xs);font-weight:700;opacity:0.4;text-transform:uppercase;margin-top:2px}.kpi-sub{font-size:var(--app-size-xs);color:#999;margin-top:2px}.kpi-card::after{content:'~';position:absolute;bottom:2px;right:8px;font-family:'Patrick Hand',cursive;font-size:var(--app-size-md);opacity:0.12}
+.task-meta-bar{display:flex;flex-wrap:wrap;gap:10px;padding:12px 16px;background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;margin-bottom:4px;font-size:var(--app-size-xs)}.task-meta-item{display:flex;align-items:center;gap:6px}.meta-label{opacity:0.5;font-weight:600}.meta-value{font-weight:700}.full-width{width:100%}.conclusion-text{font-style:italic}
+.detail-tabs :deep(.el-tabs__header){margin-bottom:0;padding:0 8px}.detail-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:4px}.detail-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:#999;height:auto;line-height:1.4}.detail-tabs :deep(.el-tabs__item:hover){color:var(--ink)}.detail-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-dashboard);border-color:var(--ink)}.detail-tabs :deep(.el-tabs__active-bar){display:none}.detail-tabs :deep(.el-tabs__content){padding:12px 0 0}
+.table-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 16px 0}.page-size-btns{display:flex;gap:4px}.toolbar-label{font-size:var(--app-size-xs);font-weight:700;color:#999}.page-size-btn{padding:4px 10px;font-size:var(--app-size-xs);font-weight:700;color:#999;background:#fff;border:2px solid #e8ecf1;border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit}.page-size-btn:hover{border-color:var(--ink);color:var(--ink)}.page-size-btn.active{background:#f8f6f2;border-color:var(--ink);color:var(--ink)}.page-info{font-size:var(--app-size-xs);color:#999;font-weight:600;white-space:nowrap;margin-left:auto}.page-nav{display:flex;gap:6px;margin-left:8px}.page-nav :deep(.el-button){padding:4px 10px;font-size:var(--app-size-xs);font-weight:700;border:2px solid var(--ink)!important;border-radius:4px 8px 4px 8px!important;background:#fff;color:var(--ink)}.page-nav :deep(.el-button:hover){background:var(--c-dashboard)}
+.detail-table :deep(th){background:#f8f6f2!important;color:var(--ink)!important;font-weight:700!important;font-size:var(--app-size-xs)!important;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2.5px solid var(--ink)!important}.detail-table :deep(td){border-bottom:1px solid #e8e4d8!important;color:var(--ink)}.detail-table :deep(tr:hover td){background:#fefdfb!important}
+.mono{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600}.num-pass{color:#2d7a2d;font-weight:700}.num-fail{color:#a03030;font-weight:700}
+.rate-cell{display:flex;align-items:center;gap:8px}.progress-bar{flex:1;height:8px;background:#f0ede8;border-radius:4px;overflow:hidden;border:1px solid var(--ink)}.p-pass{height:100%;background:var(--c-device);border-radius:3px}.p-fail{height:100%;background:var(--c-runner);border-radius:3px}.rate-text{font-size:var(--app-size-xs);font-weight:700;min-width:36px}.rate-ok{color:#2d7a2d}.rate-warn{color:#b08800}.rate-bad{color:#a03030}
+.badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);display:inline-block}.badge-pass{background:var(--app-status-success-bg);color:var(--app-status-success-text)}.badge-fail{background:var(--app-status-danger-bg);color:var(--app-status-danger-text)}.badge-stopped{background:var(--app-offline);color:var(--app-text-secondary)}.badge-warn{background:var(--app-status-warning-bg);color:#7a5a10}
+/* 失败分析卡片 */
+.fail-card{background:#fff;border:2.5px solid var(--c-runner);border-radius:6px 10px 6px 10px;margin-bottom:10px;overflow:hidden;box-shadow:2px 3px 0 rgba(0,0,0,0.04)}.fail-card :deep(.el-card){border:none!important;box-shadow:none!important;border-radius:0!important}.fail-card-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;font-size:var(--app-size-xs);font-weight:600;border-bottom:1.5px solid #e8e4d8}.fail-card-header:hover{background:#fefdfb}.expand-icon{font-size:var(--app-size-xs);transition:transform 0.2s;color:var(--ink);opacity:0.5}.expand-icon.open{transform:rotate(90deg)}.fail-case-title-wrap{flex:1;min-width:0}.fail-case-title{display:block;font-weight:700}.fail-case-id{font-family:var(--app-font-mono);font-size:var(--app-size-xs);color:#999}.fail-card-meta{font-size:var(--app-size-xs);color:#999;white-space:nowrap}.fail-expand-hint{font-size:var(--app-size-xs);color:var(--c-workflow);white-space:nowrap}
+.expand-panel{padding:14px 16px;border-top:1.5px solid #e8e4d8}.expand-header{font-weight:700;font-size:var(--app-size-xs);margin-bottom:10px;color:var(--ink)}.fail-step-row{margin-bottom:10px;padding:10px 12px;background:#fefdfb;border:1.5px solid #e8e4d8;border-radius:4px 8px 4px 8px}
+.fail-detail-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}.fd-label{font-size:var(--app-size-xs);font-weight:700;opacity:0.4;text-transform:uppercase}.fd-value{font-size:var(--app-size-xs);font-weight:600}.fd-error{color:#a03030}.fail-step-row__head{display:flex;align-items:center;gap:8px;margin-bottom:4px}.fail-step-row__meta{font-size:var(--app-size-xs);color:#999}
+.mini-table{width:100%;border-collapse:collapse;font-size:var(--app-size-xs);margin:8px 0}.mini-table th{background:#f8f6f2;font-weight:700;font-size:var(--app-size-xs);text-transform:uppercase;letter-spacing:0.04em;padding:6px 10px;text-align:left;border-bottom:2px solid var(--ink)}.mini-table td{padding:6px 10px;border-bottom:1px solid #e8e4d8}.row-fail td{color:#a03030}
+.sec-title{font-family:'Patrick Hand',cursive;font-size:var(--app-size-md);font-weight:700;margin-top:12px;margin-bottom:8px;display:inline-block;position:relative}.sec-title::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%231e1e24' stroke-width='2' fill='none'/%3E%3C/svg%3E")repeat-x;background-size:40px 3px}.sec-badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 8px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);margin-left:6px}.sec-sub{font-size:var(--app-size-xs);color:#999;margin-bottom:10px}
 </style>

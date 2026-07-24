@@ -445,7 +445,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
 }
 .task-section {
   flex: 1;
-  min-height: 320px;
+  min-height: 480px;
 }
 
 .doc-section__header {
@@ -490,7 +490,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
 }
 
 .filter-count {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: var(--app-text-secondary, #999);
   font-weight: 600;
   white-space: nowrap;
@@ -518,14 +518,14 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
   overflow-y: auto;
 }
 .task-board {
-  min-height: 240px;
+  min-height: 380px;
 }
 
 .empty {
   color: var(--app-text-secondary, #999);
   padding: 48px 0;
   text-align: center;
-  font-size: 15px;
+  font-size: var(--app-size-md);
   width: 100%;
   font-weight: 700;
 }
@@ -538,7 +538,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
   justify-content: center;
   gap: 12px;
   color: var(--app-text-secondary, #999);
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
 }
 
@@ -558,7 +558,7 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
   border: none;
   border-radius: 10px;
   background: transparent;
-  font-size: 15px;
+  font-size: var(--app-size-md);
   font-weight: 700;
   color: #999;
   cursor: pointer;

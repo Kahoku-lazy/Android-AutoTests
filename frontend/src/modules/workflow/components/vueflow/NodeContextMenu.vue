@@ -163,7 +163,7 @@ onMounted(() => {
           <button v-for="ep in apiFiltered()" :key="ep.id" class="page-item" @click="selectApi(ep)">
             <div class="page-name">{{ ep.name }}</div>
             <div class="page-meta">
-              <span :style="'display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;color:#fff;background:' + (ep.method === 'GET' ? '#6fba2c' : ep.method === 'POST' ? '#889df0' : '#8b7355')">{{ ep.method }}</span>
+              <span :style="'display:inline-block;padding:1px 6px;border-radius:4px;font-size:var(--app-size-xs);font-weight:700;color:#fff;background:' + (ep.method === 'GET' ? '#6fba2c' : ep.method === 'POST' ? '#889df0' : '#8b7355')">{{ ep.method }}</span>
               {{ ep.url }}
             </div>
           </button>
@@ -222,13 +222,13 @@ onMounted(() => {
   font-family: var(--ac-font, system-ui, sans-serif);
 }
 .menu-title {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   color: var(--ink);
   padding: 6px 8px 2px;
 }
 .menu-hint {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   color: var(--app-green-deep);
   font-weight: 700;
   padding: 0 8px 8px;
@@ -243,7 +243,7 @@ onMounted(() => {
   border-radius: 12px;
   background: transparent;
   color: var(--ac-ink-muted, #5c4a35);
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   cursor: pointer;
   text-align: left;
@@ -262,7 +262,7 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   padding: 4px 6px 8px;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   color: var(--ink);
 }
@@ -283,13 +283,13 @@ onMounted(() => {
   border-radius: 12px;
   background: rgba(255,255,255,0.44);
   color: var(--ink);
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   outline: none;
   font-family: inherit;
 }
 .search:focus { border-color: var(--app-blue); }
 .source-tag {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   color: #999;
   font-weight: 600;
   padding: 0 8px 6px;
@@ -312,14 +312,14 @@ onMounted(() => {
 .page-item:hover { background: rgba(162,210,255,0.12); }
 .page-item.active { background: rgba(162,210,255,0.18); }
 .page-name {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   display: flex;
   align-items: center;
   gap: 6px;
 }
 .badge {
-  font-size: 9px;
+  font-size: var(--app-size-xs);
   color: #fff;
   background: var(--app-green-deep);
   border-radius: 6px;
@@ -327,7 +327,7 @@ onMounted(() => {
   font-weight: 700;
 }
 .page-meta {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   color: #999;
   margin-top: 3px;
   font-weight: 600;
@@ -335,7 +335,7 @@ onMounted(() => {
 .empty {
   padding: 18px;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: #999;
 }
 </style>

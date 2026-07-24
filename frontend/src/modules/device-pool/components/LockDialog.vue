@@ -107,13 +107,13 @@ function handleCancel() {
 }
 
 .lock-label {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   color: var(--ink);
 }
 
 .lock-hint {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: #999;
   margin: 0;
   line-height: 1.4;
@@ -122,7 +122,7 @@ function handleCancel() {
 .lock-select {
   width: 100%;
   padding: 10px 14px;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   border: 2px solid #A78BFA;
   border-radius: 4px 8px 4px 8px;
   background: #fff;
@@ -139,7 +139,7 @@ function handleCancel() {
 }
 
 .lock-model-text {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: #999;
 }
 </style>

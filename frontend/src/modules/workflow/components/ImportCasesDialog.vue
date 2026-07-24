@@ -227,7 +227,7 @@ async function confirmImport() {
 <style scoped>
 .hint {
   margin: 0 0 12px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   color: #999;
   line-height: 1.45;
@@ -240,7 +240,7 @@ async function confirmImport() {
 }
 .search { flex: 1; }
 .count {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   color: var(--ink);
   white-space: nowrap;
@@ -255,7 +255,7 @@ async function confirmImport() {
 .empty {
   padding: 32px 16px;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   color: #999;
 }
@@ -280,13 +280,13 @@ async function confirmImport() {
   gap: 6px;
 }
 .title {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   color: var(--ink);
 }
 .sub {
   margin-top: 2px;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 600;
   color: #999;
   overflow: hidden;
@@ -294,7 +294,7 @@ async function confirmImport() {
   white-space: nowrap;
 }
 .tag {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   padding: 1px 7px;
   border-radius: 999px;

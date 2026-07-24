@@ -97,13 +97,13 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   border-bottom: 1px solid rgba(162,210,255,0.18);
 }
 .palette-title {
-  font-size: 15px;
+  font-size: var(--app-size-md);
   font-weight: 800;
   color: var(--ink);
 }
 .palette-desc {
   margin: 2px 0 10px;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   color: #999;
   font-weight: 600;
 }
@@ -115,7 +115,7 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   background: rgba(255,255,255,0.48);
   color: var(--ink);
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   outline: none;
 }
@@ -141,7 +141,7 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   background: var(--cat);
   color: #fff;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   cursor: pointer;
   box-shadow:
@@ -162,17 +162,17 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   place-items: center;
   background: #fff;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
 }
 .cat-name { flex: 1; text-align: left; }
 .cat-count {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   background: rgba(0, 0, 0, 0.16);
   border-radius: 999px;
   padding: 2px 7px;
 }
-.cat-chevron { font-size: 11px; opacity: 0.9; }
+.cat-chevron { font-size: var(--app-size-xs); opacity: 0.9; }
 
 .cat-body {
   display: flex;
@@ -194,7 +194,7 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   background: var(--brick);
   color: #fff;
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   cursor: grab;
   text-align: left;
@@ -236,7 +236,7 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   place-items: center;
   border-radius: 8px;
   background: #fff;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   flex-shrink: 0;
 }
 .brick-label { flex: 1; line-height: 1.2; }
@@ -247,7 +247,7 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   background: #fff;
   display: grid;
   place-items: center;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   opacity: 0.85;
 }

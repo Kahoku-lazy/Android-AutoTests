@@ -46,6 +46,8 @@
   --text-secondary:     #999;
   --font-display:       'Caveat', cursive;
   --side-w:             228px;
+  /* 侧栏品牌区与主区 wb-header 底边对齐 */
+  --app-topbar-h:       96px;
   --accent-blue:        var(--c-workflow);
   --accent-pink:        var(--c-runner);
   --accent-green:       var(--c-device);
@@ -111,12 +113,22 @@
   --app-pending-text:  #1a3a6a;
 
   /* ── 字体 ── */
-  --app-font:          'Quicksand', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
-  --app-font-display:  'Caveat', cursive;
+  --app-font:          'Nunito', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --app-font-display:  'Patrick Hand', 'PingFang SC', 'Microsoft YaHei', cursive, sans-serif;
   --app-font-mono:     'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
-  --app-font-size-sm:  12px;
-  --app-font-size-base:14px;
-  --app-font-size-lg:  16px;
+
+  /* ── 字号刻度（6 档，最小 12px，禁止硬编码 font-size 字面量）── */
+  --app-size-xs:  12px;  /* 按钮文字、表格列头、标签、时间戳、Badge */
+  --app-size-sm:  14px;  /* UI 正文（默认阅读字号） */
+  --app-size-md:  16px;  /* 卡片标题、表单标签、模块标题 */
+  --app-size-lg:  20px;  /* 段落标题、弹窗标题 */
+  --app-size-xl:  24px;  /* 页面标题 */
+  --app-size-2xl: 32px;  /* KPI 数字、Hero 数字 */
+
+  /* legacy aliases → 逐步废弃，统一用 --app-size-* */
+  --app-font-size-sm:   12px;
+  --app-font-size-base: 14px;
+  --app-font-size-lg:   16px;
 
   /* ── Paper × Polaroid 主题色 ── */
   --app-ink:                #2d2d2d;
@@ -230,3 +242,10 @@
   --el-color-primary-light-9:   #FEF4FE;
   --el-color-primary-dark-2:    #C050D0;
 }
+
+/* ═══════════════════════════════════════
+   全局工具类
+   ═══════════════════════════════════════ */
+.empty-state { text-align:center;padding:60px 20px;color:var(--app-text-secondary); }
+.empty-state p { margin:var(--app-space-md) 0;font-size:var(--app-size-sm); }
+.empty-state__icon { font-size:64px;opacity:0.5;margin-bottom:var(--app-space-sm); }

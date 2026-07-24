@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>字体方案原型对比</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Patrick+Hand&family=Nunito:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f8f8f0; --card: #fff; --ink: #1e1e24; --text: #725d42;
+  --text-secondary: #9f927d; --border: #c4b89e;
+  --r: 12px; --shadow: 0 2px 2px rgba(0,0,0,0.04);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: sans-serif; padding: 40px 24px; }
+.page { max-width: 1300px; margin: 0 auto; }
+h1.main-title { text-align: center; font-size: 28px; font-weight: 800; color: var(--ink); margin-bottom: 4px; }
+.subtitle { text-align: center; color: var(--text-secondary); font-size: 14px; margin-bottom: 40px; }
+
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+.option-card {
+  background: var(--card); border: 2px solid var(--border); border-radius: var(--r);
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.option-header {
+  padding: 16px 20px; border-bottom: 1px dashed var(--border);
+  font-size: 16px; font-weight: 700; color: var(--ink);
+}
+.option-tag { font-size: 11px; font-weight: 600; color: #999; float: right; }
+
+.font-section { padding: 20px; border-bottom: 1px solid #f0ebe0; }
+.font-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-secondary); margin-bottom: 10px;
+}
+
+/* ── Option A ── */
+.opt-a .font-display { font-family: 'DM Sans', 'Noto Sans SC', sans-serif; }
+.opt-a .font-body    { font-family: 'Inter', 'Noto Sans SC', sans-serif; }
+.opt-a .font-mono    { font-family: 'JetBrains Mono', monospace; }
+
+/* ── Option B ── */
+.opt-b .font-display { font-family: 'Patrick Hand', 'Noto Sans SC', cursive; }
+.opt-b .font-body    { font-family: 'Nunito', 'Noto Sans SC', sans-serif; }
+.opt-b .font-mono    { font-family: 'JetBrains Mono', monospace; }
+
+/* ── Option C ── */
+.opt-c .font-display { font-family: 'Plus Jakarta Sans', 'Noto Sans SC', sans-serif; }
+.opt-c .font-body    { font-family: 'Work Sans', 'Noto Sans SC', sans-serif; }
+.opt-c .font-mono    { font-family: 'JetBrains Mono', monospace; }
+
+/* ── Samples ── */
+.display-sample { font-size: 28px; font-weight: 800; line-height: 1.3; color: var(--ink); margin-bottom: 6px; }
+.display-sample-cn { font-size: 26px; font-weight: 700; line-height: 1.3; color: var(--ink); margin-bottom: 10px; }
+
+.body-sample { font-size: 14px; font-weight: 500; line-height: 1.6; color: var(--text); margin-bottom: 10px; }
+.body-sample-cn { font-size: 14px; font-weight: 500; line-height: 1.6; color: var(--text); }
+
+.mono-sample { font-size: 12px; font-weight: 600; line-height: 1.6; color: #8a7b66; background: #faf9f4; padding: 10px 14px; border-radius: 8px; }
+
+.scale-row { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; margin-bottom: 8px; }
+.scale-10 { font-size: 10px; } .scale-12 { font-size: 12px; } .scale-14 { font-size: 14px; }
+.scale-16 { font-size: 16px; } .scale-20 { font-size: 20px; } .scale-24 { font-size: 24px; } .scale-32 { font-size: 32px; }
+
+.weight-bar { display: flex; gap: 10px; align-items: baseline; margin-bottom: 6px; }
+.w400 { font-weight: 400; } .w500 { font-weight: 500; } .w600 { font-weight: 600; } .w700 { font-weight: 700; } .w800 { font-weight: 800; }
+
+.current-ref { margin-top: 40px; padding: 20px; background: var(--card); border: 2px dashed var(--border); border-radius: var(--r); }
+.current-ref h3 { color: var(--text-secondary); font-size: 14px; margin-bottom: 14px; }
+.cur-display { font-family: 'Caveat', cursive; font-size: 28px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+.cur-body { font-family: 'Quicksand', sans-serif; font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.6; }
+
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1 class="main-title">Font Options — Previews</h1>
+<p class="subtitle">Doodle Craft font alternatives · <strong>Selected: 方案B 英文 + PingFang SC 中文</strong></p>
+
+<div class="grid">
+
+<!-- ══════════ OPTION A ══════════ -->
+<div class="option-card opt-a">
+  <div class="option-header">方案 A · 干净理性<span class="option-tag">DM Sans + Inter</span></div>
+
+  <div class="font-section">
+    <div class="font-label">Display · DM Sans</div>
+    <div class="display-sample">Quick Brown Fox</div>
+    <div class="display-sample-cn">敏捷棕狐跃过懒狗</div>
+    <div class="weight-bar" style="font-family:'DM Sans'">
+      <span class="w400">400</span><span class="w500">500</span><span class="w600">600</span><span class="w700">700</span><span class="w800">800</span>
+    </div>
+  </div>
+
+  <div class="font-section">
+    <div class="font-label">Body · Inter</div>
+    <div class="body-sample">The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.</div>
+    <div class="body-sample" style="font-family:'Inter','Noto Sans SC',sans-serif">敏捷的棕狐跃过那只懒狗。该设备支持 17 种步骤类型，可通过自然语言或手动编排。</div>
+    <div class="weight-bar" style="font-family:'Inter'">
+      <span class="w400">400</span><span class="w500">500</span><span class="w600">600</span><span class="w700">700</span>
+    </div>
+  </div>
+
+  <div class="font-section">
+    <div class="font-label">字号刻度 · Display + Body</div>
+    <div class="scale-row" style="font-family:'DM Sans','Noto Sans SC',sans-serif">
+      <span class="scale-10">10px Aa</span>
+      <span class="scale-12">12px Aa</span>
+      <span class="scale-14">14px Aa</span>
+      <span class="scale-16">16px Aa</span>
+      <span class="scale-20">20px Aa</span>
+      <span class="scale-24">24px Aa</span>
+      <span class="scale-32">32px Aa</span>
+    </div>
+  </div>
+
+  <div class="font-section">
+    <div class="font-label">Mono · JetBrains Mono</div>
+    <div class="mono-sample">POST /api/runner/run → { "ok": true, "run_id": "r_7a3f" }</div>
+  </div>
+</div>
+
+<!-- ══════════ OPTION B ══════════ -->
+<div class="option-card opt-b">
+  <div class="option-header">方案 B · 温暖手作<span class="option-tag">Patrick Hand + Nunito</span></div>
+
+  <div class="font-section">
+    <div class="font-label">Display · Patrick Hand</div>
+    <div class="display-sample">Quick Brown Fox</div>
+    <div class="display-sample-cn">敏捷棕狐跃过懒狗</div>
+    <div class="weight-bar" style="font-family:'Patrick Hand'">
+      <span class="w400">400</span> <span class="w500" style="opacity:0.4">500 N/A</span> <span class="w600" style="opacity:0.4">600 N/A</span>
+    </div>
+    <p style="font-size:11px;color:var(--text-secondary);margin-top:4px">Patrick Hand 仅支持 400 weight</p>
+  </div>
+
+  <div class="font-section">
+    <div class="font-label">Body · Nunito</div>
+    <div class="body-sample">The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.</div>
+    <div class="body-sample" style="font-family:'Nunito','Noto Sans SC',sans-serif">敏捷的棕狐跃过那只懒狗。该设备支持 17 种步骤类型，可通过自然语言或手动编排。</div>
+    <div class="weight-bar" style="font-family:'Nunito'">
+      <span class="w400">400</span><span class="w500">500</span><span class="w600">600</span><span class="w700">700</span><span class="w800">800</span>
+    </div>
+  </div>
+
+  <div class="font-section">
+    <div class="font-label">字号刻度 · Display + Body</div>
+    <div class="scale-row" style="font-family:'Nunito','Noto Sans SC',sans-serif">
+      <span class="scale-10">10px Aa</span>
+      <span class="scale-12">12px Aa</span>
+      <span class="scale-14">14px Aa</span>
+      <span class="scale-16">16px Aa</span>
+      <span class="scale-20">20px Aa</span>
+      <span class="scale-24">24px Aa</span>
+      <span class="scale-32">32px Aa</span>
+    </div>
+  </div>
+
+  <div class="font-section">
+    <div class="font-label">Mono · JetBrains Mono</div>
+    <div class="mono-sample">POST /api/runner/run → { "ok": true, "run_id": "r_7a3f" }</div>
+  </div>
+</div>
+
+<!-- ══════════ OPTION C ══════════ -->
+<div class="option-card opt-c">
+  <div class="option-header">方案 C · 平衡稳重<span class="option-tag">Plus Jakarta Sans + Work Sans</span></div>
+
+  <div class="font-section">
+    <div class="font-label">Display · Plus Jakarta Sans</div>
+    <div class="display-sample">Quick Brown Fox</div>
+    <div class="display-sample-cn">敏捷棕狐跃过懒狗</div>
+    <div class="weight-bar" style="font-family:'Plus Jakarta Sans'">
+      <span class="w400">400</span><span class="w500">500</span><span class="w600">600</span><span class="w700">700</span><span class="w800">800</span>
+    </div>
+  </div>
+
+  <div class="font-section">
+    <div class="font-label">Body · Work Sans</div>
+    <div class="body-sample">The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.</div>
+    <div class="body-sample" style="font-family:'Work Sans','Noto Sans SC',sans-serif">敏捷的棕狐跃过那只懒狗。该设备支持 17 种步骤类型，可通过自然语言或手动编排。</div>
+    <div class="weight-bar" style="font-family:'Work Sans'">
+      <span class="w400">400</span><span class="w500">500</span><span class="w600">600</span><span class="w700">700</span>
+    </div>
+  </div>
+
+  <div class="font-section">
+    <div class="font-label">字号刻度 · Display + Body</div>
+    <div class="scale-row" style="font-family:'Plus Jakarta Sans','Noto Sans SC',sans-serif">
+      <span class="scale-10">10px Aa</span>
+      <span class="scale-12">12px Aa</span>
+      <span class="scale-14">14px Aa</span>
+      <span class="scale-16">16px Aa</span>
+      <span class="scale-20">20px Aa</span>
+      <span class="scale-24">24px Aa</span>
+      <span class="scale-32">32px Aa</span>
+    </div>
+  </div>
+
+  <div class="font-section">
+    <div class="font-label">Mono · JetBrains Mono</div>
+    <div class="mono-sample">POST /api/runner/run → { "ok": true, "run_id": "r_7a3f" }</div>
+  </div>
+</div>
+
+</div>
+
+<!-- ══════════ CURRENT ══════════ -->
+<div class="current-ref">
+  <h3>📌 当前方案（对比参考）· Caveat + Quicksand</h3>
+  <div class="cur-display">Quick Brown Fox — 敏捷棕狐跃过懒狗</div>
+  <div class="cur-body">The quick brown fox jumps over the lazy dog. 敏捷的棕狐跃过那只懒狗。该设备支持 17 种步骤类型，可通过自然语言或手动编排构建测试用例。</div>
+</div>
+
+</div>
+</body>
+</html>

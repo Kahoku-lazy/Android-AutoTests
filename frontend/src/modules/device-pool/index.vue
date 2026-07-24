@@ -328,15 +328,15 @@ onUnmounted(() => {
   padding-bottom: 0;
 }
 .doc-section__title {
-  font-family: 'Caveat', cursive;
-  font-size: 20px; font-weight: 700; color: var(--ink);
+  font-family: 'Patrick Hand', cursive;
+  font-size: var(--app-size-lg); font-weight: 700; color: var(--ink);
 }
 .doc-section__title .doc-tag {
-  font-size: 9px; padding: 1px 8px; border-radius: 4px 8px 4px 8px;
+  font-size: var(--app-size-xs); padding: 1px 8px; border-radius: 4px 8px 4px 8px;
   background: #fff; color: #999; border: 1.5px solid #e8ecf1;
   font-weight: 700; margin-left: 8px;
 }
-.doc-section__label { color: #999; font-size: 10px; }
+.doc-section__label { color: #999; font-size: var(--app-size-xs); }
 
 /* ── KPI 统计条 ── */
 .kpi-row {
@@ -361,11 +361,11 @@ onUnmounted(() => {
   margin: 0 auto 4px; border-radius: 1px;
 }
 .kpi-value {
-  font-family: 'Caveat', 'Quicksand', cursive;
-  font-size: 28px; font-weight: 700; color: var(--ink); line-height: 1;
+  font-family: 'Patrick Hand', cursive;
+  font-size: var(--app-size-2xl); font-weight: 700; color: var(--ink); line-height: 1;
 }
 .kpi-label {
-  font-size: 9px; font-weight: 700; color: #999; margin-top: 2px;
+  font-size: var(--app-size-xs); font-weight: 700; color: #999; margin-top: 2px;
   text-transform: uppercase; letter-spacing: 0.06em;
 }
 
@@ -376,7 +376,7 @@ onUnmounted(() => {
   overflow: hidden;
 }
 .view-btn {
-  padding: 5px 12px; font-size: 10px; font-weight: 700;
+  padding: 5px 12px; font-size: var(--app-size-xs); font-weight: 700;
   background: #fff; color: #999; border: none;
   cursor: pointer; font-family: inherit; transition: all 0.12s;
   border-right: 1px solid #e8ecf1;
@@ -392,7 +392,7 @@ onUnmounted(() => {
   padding: 4px 0;
 }
 .card-group-title {
-  font-family: 'Caveat', cursive; font-size: 18px; font-weight: 700;
+  font-family: 'Patrick Hand', cursive; font-size: var(--app-size-lg); font-weight: 700;
   color: var(--ink); display: flex; align-items: center; gap: 8px;
   margin-bottom: 10px;
 }
@@ -400,7 +400,7 @@ onUnmounted(() => {
   content: ''; flex: 1; height: 2px; background: #e8ecf1; border-radius: 1px;
 }
 .card-group-count {
-  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #999;
+  font-family: var(--app-font-mono); font-size: var(--app-size-xs); color: #999;
   background: #f8f6f2; padding: 2px 8px; border-radius: 3px 6px 3px 6px;
   border: 1.5px solid #e8ecf1;
 }
@@ -418,7 +418,7 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 .filter-count {
-  font-size: 12px; color: #999; font-weight: 600;
+  font-size: var(--app-size-sm); color: #999; font-weight: 600;
   white-space: nowrap; margin-left: auto;
 }
 
@@ -441,7 +441,7 @@ onUnmounted(() => {
   gap: 10px; flex-wrap: wrap; padding: 0 0 10px; flex-shrink: 0;
 }
 .page-size-control { display: flex; align-items: center; gap: 8px; }
-.toolbar-label { font-size: 11px; font-weight: 700; color: #999; white-space: nowrap; }
+.toolbar-label { font-size: var(--app-size-xs); font-weight: 700; color: #999; white-space: nowrap; }
 .page-size-btns { display: flex; gap: 6px; }
 .page-size-btn {
   min-width: 40px;
@@ -450,7 +450,7 @@ onUnmounted(() => {
   border: 2px solid #e8ecf1;
   background: #fff;
   color: #999;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   cursor: pointer;
   box-shadow: none;
@@ -463,7 +463,7 @@ onUnmounted(() => {
   color: var(--c-workflow);
 }
 .table-toolbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
-.page-info { font-size: 12px; color: #999; font-weight: 600; white-space: nowrap; }
+.page-info { font-size: var(--app-size-sm); color: #999; font-weight: 600; white-space: nowrap; }
 .page-nav { display: flex; gap: 8px; }
 
 /* ── 表格卡片 ── */
@@ -510,7 +510,7 @@ onUnmounted(() => {
 .device-table-wrapper :deep(.el-table th) {
   background: #f8f6f2 !important;
   color: var(--ink) !important;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   letter-spacing: 0.4px;
   border-right: 1px solid #e8ecf1 !important;
@@ -518,7 +518,7 @@ onUnmounted(() => {
 }
 .device-table-wrapper :deep(.el-table td) {
   color: var(--ink);
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   border-right: 1px solid #f0ede8 !important;
   border-bottom: 1px solid #f0ede8 !important;
 }
@@ -542,7 +542,7 @@ onUnmounted(() => {
 /* ── Row dot indicator ── */
 .row-dot {
   color: var(--ink);
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   line-height: 1;
   margin-right: 6px;
   vertical-align: middle;
@@ -552,23 +552,23 @@ onUnmounted(() => {
 
 /* ── Monospace serial text ── */
 .mono-text {
-  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
-  font-size: 13px;
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-sm);
   white-space: nowrap;
   vertical-align: middle;
 }
 
 /* ── Text helpers ── */
-.text-muted { color: #999; font-size: 13px; }
-.locked-by-text { color: #999; font-size: 13px; }
-.last-seen-text { font-size: 13px; color: #999; }
-.connection-text { font-size: 13px; color: var(--ink); font-weight: 600; white-space: nowrap; }
+.text-muted { color: #999; font-size: var(--app-size-sm); }
+.locked-by-text { color: #999; font-size: var(--app-size-sm); }
+.last-seen-text { font-size: var(--app-size-sm); color: #999; }
+.connection-text { font-size: var(--app-size-sm); color: var(--ink); font-weight: 600; white-space: nowrap; }
 
 /* ── 操作按钮组（样式移至 DeviceActionsCell.vue）── */
 
 /* ── Lock status badge ── */
 .lock-badge {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   padding: 2px 8px;
   border-radius: 3px 6px 3px 6px;
   font-weight: 700;
@@ -589,7 +589,7 @@ onUnmounted(() => {
   color: #999;
   padding: 40px 0;
   text-align: center;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
 }
 
 /* ── Row status styles — device table row highlighting ── */

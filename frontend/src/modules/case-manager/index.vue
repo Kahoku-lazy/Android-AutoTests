@@ -228,80 +228,21 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.case-tabs {
-  margin-top: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-.case-tabs :deep(.el-tabs__header) {
-  margin: 0 0 8px;
-  width: 100%;
-}
-.case-tabs :deep(.el-tabs__nav-wrap),
-.case-tabs :deep(.el-tabs__nav-scroll) {
-  width: 100%;
-}
-.case-tabs :deep(.el-tabs__nav) {
-  display: flex;
-  width: 100%;
-  box-sizing: border-box;
-  border-radius: var(--app-radius-md);
-}
-.case-tabs :deep(.el-tabs__item) {
-  flex: 1;
-  width: auto;
-  max-width: none;
-  justify-content: center;
-  text-align: center;
-  height: 40px;
-  padding: 0 8px;
-  border-radius: var(--app-radius-sm);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.case-tabs :deep(.el-tabs__content) {
-  flex: 1;
-  min-height: 0;
-}
-.case-tabs :deep(.el-tab-pane) {
-  height: 100%;
-}
-.case-layout {
-  display: flex;
-  flex-direction: row;
-  height: 100%;
-  overflow: hidden;
-  gap: 0;
-  padding: 0;
-  max-width: none;
-}
-.case-layout--resizing {
-  pointer-events: none;
-}
-.case-sidebar {
-  flex-shrink: 0;
-  overflow-y: auto;
-  padding: 8px 8px 8px 0;
-  border-right: 1px solid #eee;
-}
-.case-sidebar-resizer {
-  width: 4px;
-  cursor: col-resize;
-  background: transparent;
-  transition: background 0.2s;
-  flex-shrink: 0;
-}
-.case-sidebar-resizer:hover,
-.case-sidebar-resizer.is-dragging {
-  background: var(--app-green, var(--c-workflow));
-}
-.case-main {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0 0 0 16px;
-  min-width: 0;
-}
+/* Doodle Craft — 用例列表 */
+.case-tabs{flex:1;display:flex;flex-direction:column;min-height:0}
+.case-tabs :deep(.el-tabs__header){margin:0 0 12px;width:100%}
+.case-tabs :deep(.el-tabs__nav-wrap),.case-tabs :deep(.el-tabs__nav-scroll){width:100%}
+.case-tabs :deep(.el-tabs__nav){display:flex;width:100%;border:none!important;gap:4px}
+.case-tabs :deep(.el-tabs__item){flex:1;justify-content:center;text-align:center;height:38px;padding:0 10px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:#999;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.case-tabs :deep(.el-tabs__item:hover){color:var(--ink)}
+.case-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:#fff;border-color:var(--ink)}
+.case-tabs :deep(.el-tabs__active-bar){display:none}
+.case-tabs :deep(.el-tabs__content){flex:1;min-height:0}
+.case-tabs :deep(.el-tab-pane){height:100%}
+.case-layout{display:flex;flex-direction:row;height:100%;overflow:hidden;gap:0;padding:0;max-width:none}
+.case-layout--resizing{pointer-events:none}
+.case-sidebar{flex-shrink:0;overflow-y:auto;padding:8px 8px 8px 0;border-right:2px solid var(--ink)}
+.case-sidebar-resizer{width:4px;cursor:col-resize;background:transparent;transition:background 0.2s;flex-shrink:0}
+.case-sidebar-resizer:hover,.case-sidebar-resizer.is-dragging{background:var(--c-case)}
+.case-main{flex:1;overflow-y:auto;padding:0 0 0 14px;min-width:0}
 </style>

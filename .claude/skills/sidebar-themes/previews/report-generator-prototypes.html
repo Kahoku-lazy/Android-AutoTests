@@ -1,0 +1,125 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>测试报告 Doodle Craft 三方案</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700;800&family=Caveat:wght@600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet"><script src="https://unpkg.com/lucide@latest"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}:root{--ink:#1e1e24;--paper:#fefcf5;--dot:#d8d2c4;--c-report:#7C6F83;--c-device:#6BCB77;--c-runner:#FFB5A7;--c-dashboard:#F7C948;--c-workflow:#89CFF0}
+body{font-family:'Quicksand','PingFang SC',sans-serif;background:radial-gradient(circle,var(--dot)0.6px,transparent 0.6px);background-size:15px 15px;background-color:var(--paper);color:var(--ink);padding:24px}
+h1{text-align:center;font-family:'Caveat',cursive;font-size:26px;margin-bottom:4px}h1+p{text-align:center;font-size:11px;opacity:0.4;margin-bottom:24px}
+.pr{max-width:960px;margin:0 auto 32px}.pr-label{font-size:10px;font-weight:700;color:var(--ink);background:#fff;padding:5px 16px;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;display:inline-flex;align-items:center;gap:6px;margin-bottom:12px}.pr-label .dot{width:7px;height:7px;flex-shrink:0}
+.header{display:flex;align-items:center;gap:12px;padding:14px 20px;background:#fff;border-bottom:3px solid var(--ink)}.header-icon{width:40px;height:40px;display:grid;place-items:center;background:var(--c-report);border:3px solid var(--ink);border-radius:8px 16px 6px 14px;font-size:16px;color:var(--ink);transform:rotate(-2deg)}.header h2{font-family:'Caveat',cursive;font-size:22px;font-weight:700;transform:rotate(-0.5deg)}.header p{font-size:9px;opacity:0.4;font-weight:600}.header-actions{margin-left:auto;display:flex;gap:8px}
+.btn{padding:5px 14px;font-size:10px;font-weight:800;background:#fff;border:2.5px solid var(--ink);border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all .12s;box-shadow:2px 2px 0 rgba(0,0,0,.04)}.btn:hover{background:var(--c-dashboard);transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(0,0,0,.06)}.btn-fill{background:var(--c-dashboard)}
+.section-title{font-family:'Caveat',cursive;font-size:20px;font-weight:700;display:inline-block;position:relative;margin-bottom:14px}.section-title::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2.5px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%231e1e24' stroke-width='2' fill='none'/%3E%3C/svg%3E")repeat-x;background-size:40px 3px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px}.kpi-card{text-align:center;padding:12px 10px 16px;background:#fff;border:3px solid var(--ink);border-radius:4px 10px 6px 8px;box-shadow:2px 3px 0 rgba(0,0,0,.04);position:relative}.kpi-dot{width:10px;height:10px;transform:rotate(45deg);margin:0 auto 5px;border:2px solid var(--ink)}.kpi-value{font-family:'Caveat',cursive;font-size:28px;font-weight:700;line-height:1}.kpi-label{font-size:9px;font-weight:700;opacity:0.4;text-transform:uppercase;margin-top:2px}.kpi-card::after{content:'~';position:absolute;bottom:2px;right:8px;font-family:'Caveat',cursive;font-size:16px;opacity:.12}
+.info-card{background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:14px 16px;box-shadow:2px 3px 0 rgba(0,0,0,.04)}
+.tag{font-size:8px;font-weight:800;padding:2px 7px;border-radius:3px 6px 3px 6px;border:2px solid var(--ink);display:inline-block}.tag-green{background:#C8F5D0;color:#1a5c2a}.tag-pink{background:#FFE0DB;color:#7a1c1c}.tag-yellow{background:#FFF9E0;color:#6a4a10}.tag-gray{background:#f0ede8;color:var(--ink);opacity:.4}
+.tbl{width:100%;border-collapse:collapse;font-size:11px}.tbl th{background:#f8f6f2;font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;text-align:left;border-bottom:2.5px solid var(--ink)}.tbl td{padding:8px 10px;font-weight:500;border-bottom:1px solid #e8e4d8}.tbl tr:hover td{background:rgba(255,255,255,.5)}
+.mono{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600}
+.search{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.search-in{flex:1;min-width:140px;padding:7px 12px;border:2.5px solid var(--ink);border-radius:4px 8px 4px 8px;font-family:inherit;font-size:11px;background:#fff;outline:none}
+.chart-bars{display:flex;align-items:flex-end;gap:3px;height:60px;padding:4px 0}.chart-bar{flex:1;min-width:6px;border-radius:1px 1px 0 0}
+</style></head><body>
+
+<h1>测试报告 Doodle Craft 三方案</h1>
+<p>三区结构：统计概览 → 数据图表 → 测试报告</p>
+
+<!-- R1: Compact Sections -->
+<div class="pr"><div class="pr-label"><span class="dot" style="background:var(--c-report);transform:rotate(45deg);border-radius:1px"></span> R1 · Compact 紧凑分区</div>
+<div style="background:var(--paper);border:3px solid var(--ink);border-radius:6px 10px;overflow:hidden;box-shadow:3px 3px 0 rgba(0,0,0,.04)">
+<div class="header"><div class="header-icon">▤</div><div><h2>测试报告</h2><p>查看历史测试执行记录</p></div><div class="header-actions"><button class="btn btn-fill">📤 导出</button></div></div>
+<div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+
+<div class="search"><input class="search-in" placeholder="Run ID"><input class="search-in" placeholder="任务名称"><input class="search-in" placeholder="设备"><input class="search-in" placeholder="创建人"><button class="btn">搜索</button></div>
+
+<!-- 统计概览 -->
+<div><span class="section-title">统计概览</span>
+<div class="kpi-row"><div class="kpi-card"><div class="kpi-dot" style="background:var(--c-workflow)"></div><div class="kpi-value">156</div><div class="kpi-label">总执行次数</div></div>
+<div class="kpi-card"><div class="kpi-dot" style="background:var(--c-device)"></div><div class="kpi-value">144</div><div class="kpi-label">✅ 通过</div></div>
+<div class="kpi-card"><div class="kpi-dot" style="background:var(--c-runner)"></div><div class="kpi-value">12</div><div class="kpi-label">❌ 失败</div></div>
+<div class="kpi-card"><div class="kpi-dot" style="background:var(--c-dashboard)"></div><div class="kpi-value">92%</div><div class="kpi-label">📊 通过率</div></div></div></div>
+
+<!-- 数据图表 -->
+<div class="info-card"><span class="section-title" style="font-size:16px">数据图表</span>
+<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px">
+<div><div class="chart-bars"><div class="chart-bar" style="background:var(--ink);height:42px"></div><div class="chart-bar" style="background:var(--c-runner);height:14px"></div><div class="chart-bar" style="background:var(--ink);height:48px"></div><div class="chart-bar" style="background:var(--c-runner);height:10px"></div><div class="chart-bar" style="background:var(--ink);height:52px"></div><div class="chart-bar" style="background:var(--c-runner);height:18px"></div><div class="chart-bar" style="background:var(--ink);height:55px"></div><div class="chart-bar" style="background:var(--c-runner);height:8px"></div><div class="chart-bar" style="background:var(--ink);height:44px"></div><div class="chart-bar" style="background:var(--c-runner);height:12px"></div><div class="chart-bar" style="background:var(--ink);height:50px"></div><div class="chart-bar" style="background:var(--c-runner);height:16px"></div></div>
+<div style="display:flex;gap:14px;font-size:9px;font-weight:700;margin-top:6px"><span>■ 通过</span><span style="color:var(--c-runner)">■ 失败</span></div></div>
+<div><div style="font-size:11px;font-weight:700;margin-bottom:8px">最近执行</div>
+<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #e8e4d8;font-size:10px;font-weight:600"><span>smoke-test</span><span class="tag tag-green">PASS</span></div>
+<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #e8e4d8;font-size:10px;font-weight:600"><span>login-regression</span><span class="tag tag-pink">FAIL</span></div>
+<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:10px;font-weight:600"><span>payment-flow</span><span class="tag tag-green">PASS</span></div></div></div></div>
+
+<!-- 测试报告 -->
+<div class="info-card" style="padding:0;overflow:hidden"><table class="tbl"><thead><tr><th>Run ID</th><th>任务名称</th><th>设备</th><th>通过</th><th>失败</th><th>通过率</th><th>状态</th><th>时间</th></tr></thead><tbody>
+<tr><td class="mono">RUN-0248</td><td style="font-weight:700">smoke-test-v2.4</td><td>Pixel 6</td><td>24</td><td>0</td><td>100%</td><td><span class="tag tag-green">PASS</span></td><td>14:32</td></tr>
+<tr><td class="mono">RUN-0247</td><td style="font-weight:700">login-regression</td><td>Xiaomi 13</td><td>18</td><td>7</td><td>72%</td><td><span class="tag tag-pink">FAIL</span></td><td>13:18</td></tr>
+<tr><td class="mono">RUN-0246</td><td style="font-weight:700">payment-flow-v3</td><td>Samsung S23</td><td>32</td><td>0</td><td>100%</td><td><span class="tag tag-green">PASS</span></td><td>11:05</td></tr>
+<tr><td class="mono">RUN-0245</td><td style="font-weight:700">onboarding-e2e</td><td>vivo X90</td><td>15</td><td>1</td><td>94%</td><td><span class="tag tag-green">PASS</span></td><td>09:42</td></tr></tbody></table></div>
+
+</div></div></div>
+
+<!-- R2: Card Focus -->
+<div class="pr"><div class="pr-label"><span class="dot" style="background:var(--c-device);transform:rotate(45deg);border-radius:1px"></span> R2 · Card Focus 卡片优先</div>
+<div style="background:var(--paper);border:3px solid var(--ink);border-radius:6px 10px;overflow:hidden;box-shadow:3px 3px 0 rgba(0,0,0,.04)">
+<div class="header"><div class="header-icon">▤</div><div><h2>测试报告</h2><p>查看历史测试执行记录</p></div><div class="header-actions"><button class="btn btn-fill">📤 导出</button></div></div>
+<div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+
+<div class="search"><input class="search-in" placeholder="Run ID"><input class="search-in" placeholder="任务名称"><input class="search-in" placeholder="设备"><button class="btn">搜索</button></div>
+
+<div class="kpi-row"><div class="kpi-card"><div class="kpi-dot" style="background:var(--c-workflow)"></div><div class="kpi-value">156</div><div class="kpi-label">总执行次数</div></div>
+<div class="kpi-card"><div class="kpi-dot" style="background:var(--c-device)"></div><div class="kpi-value">144</div><div class="kpi-label">✅ 通过</div></div>
+<div class="kpi-card"><div class="kpi-dot" style="background:var(--c-runner)"></div><div class="kpi-value">12</div><div class="kpi-label">❌ 失败</div></div>
+<div class="kpi-card"><div class="kpi-dot" style="background:var(--c-dashboard)"></div><div class="kpi-value">92%</div><div class="kpi-label">📊 通过率</div></div></div>
+
+<!-- 卡片式报告列表 -->
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+<div style="background:#fff;border:3px solid var(--ink);border-radius:6px 10px;padding:12px 12px 28px;box-shadow:2px 3px 0 rgba(0,0,0,.04);position:relative;cursor:pointer;transform:rotate(-0.4deg)">
+<div style="height:44px;border:2px solid var(--ink);border-radius:3px 5px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;margin-bottom:8px;background:#C8F5D0"><span class="mono">RUN-0248</span><span class="tag tag-green">PASS</span></div>
+<div style="font-size:12px;font-weight:700;margin-bottom:4px;text-align:center">smoke-test-v2.4</div>
+<div style="font-size:8px;opacity:0.4;text-align:center;margin-bottom:6px">Pixel 6 · 24/0 · 100% · 14:32</div>
+<div style="display:flex;gap:4px;justify-content:center"><button class="btn" style="padding:3px 8px;font-size:9px">查看详情</button></div>
+</div>
+<div style="background:#fff;border:3px solid var(--ink);border-radius:6px 10px;padding:12px 12px 28px;box-shadow:2px 3px 0 rgba(0,0,0,.04);position:relative;cursor:pointer;transform:rotate(0.3deg)">
+<div style="height:44px;border:2px solid var(--ink);border-radius:3px 5px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;margin-bottom:8px;background:#FFE0DB"><span class="mono">RUN-0247</span><span class="tag tag-pink">FAIL</span></div>
+<div style="font-size:12px;font-weight:700;margin-bottom:4px;text-align:center">login-regression</div>
+<div style="font-size:8px;opacity:0.4;text-align:center;margin-bottom:6px">Xiaomi 13 · 18/7 · 72% · 13:18</div>
+<div style="display:flex;gap:4px;justify-content:center"><button class="btn" style="padding:3px 8px;font-size:9px">查看详情</button></div>
+</div>
+<div style="background:#fff;border:3px solid var(--ink);border-radius:6px 10px;padding:12px 12px 28px;box-shadow:2px 3px 0 rgba(0,0,0,.04);position:relative;cursor:pointer;transform:rotate(-0.2deg)">
+<div style="height:44px;border:2px solid var(--ink);border-radius:3px 5px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;margin-bottom:8px;background:#C8F5D0"><span class="mono">RUN-0246</span><span class="tag tag-green">PASS</span></div>
+<div style="font-size:12px;font-weight:700;margin-bottom:4px;text-align:center">payment-flow-v3</div>
+<div style="font-size:8px;opacity:0.4;text-align:center;margin-bottom:6px">Samsung S23 · 32/0 · 100% · 11:05</div>
+<div style="display:flex;gap:4px;justify-content:center"><button class="btn" style="padding:3px 8px;font-size:9px">查看详情</button></div>
+</div></div>
+
+</div></div></div>
+
+<!-- R3: Dashboard Layout -->
+<div class="pr"><div class="pr-label"><span class="dot" style="background:var(--c-dashboard);transform:rotate(45deg);border-radius:1px"></span> R3 · Dashboard 仪表盘布局</div>
+<div style="background:var(--paper);border:3px solid var(--ink);border-radius:6px 10px;overflow:hidden;box-shadow:3px 3px 0 rgba(0,0,0,.04)">
+<div class="header"><div class="header-icon">▤</div><div><h2>测试报告</h2><p>查看历史测试执行记录</p></div><div class="header-actions"><button class="btn btn-fill">📤 导出</button></div></div>
+<div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+
+<!-- 三区卡片式 -->
+<div class="info-card"><span class="section-title">📊 统计概览</span>
+<div class="kpi-row" style="margin-bottom:0"><div class="kpi-card"><div class="kpi-dot" style="background:var(--c-workflow)"></div><div class="kpi-value">156</div><div class="kpi-label">总执行次数</div></div>
+<div class="kpi-card"><div class="kpi-dot" style="background:var(--c-device)"></div><div class="kpi-value">144</div><div class="kpi-label">✅ 通过</div></div>
+<div class="kpi-card"><div class="kpi-dot" style="background:var(--c-runner)"></div><div class="kpi-value">12</div><div class="kpi-label">❌ 失败</div></div>
+<div class="kpi-card"><div class="kpi-dot" style="background:var(--c-dashboard)"></div><div class="kpi-value">92%</div><div class="kpi-label">📊 通过率</div></div></div>
+<div style="font-size:9px;color:var(--ink);opacity:0.3;margin-top:8px;text-align:right">最近更新: 2026-07-24 · 共 32 次迭代</div></div>
+
+<div class="info-card"><span class="section-title">📈 数据图表</span>
+<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:14px">
+<div><div class="chart-bars"><div class="chart-bar" style="background:var(--c-device);height:42px"></div><div class="chart-bar" style="background:var(--c-runner);height:14px"></div><div class="chart-bar" style="background:var(--c-device);height:48px"></div><div class="chart-bar" style="background:var(--c-runner);height:10px"></div><div class="chart-bar" style="background:var(--c-device);height:52px"></div><div class="chart-bar" style="background:var(--c-runner);height:18px"></div><div class="chart-bar" style="background:var(--c-device);height:55px"></div><div class="chart-bar" style="background:var(--c-runner);height:8px"></div></div><div style="display:flex;gap:14px;font-size:9px;font-weight:700;margin-top:6px"><span style="color:var(--c-device)">■ 通过</span><span style="color:var(--c-runner)">■ 失败</span></div></div>
+<div><div style="font-size:11px;font-weight:700;margin-bottom:8px">🔝 最新执行结果</div>
+<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #e8e4d8;font-size:10px;font-weight:600"><span class="mono">RUN-0248</span><span>smoke-test</span><span class="tag tag-green">PASS</span></div>
+<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #e8e4d8;font-size:10px;font-weight:600"><span class="mono">RUN-0247</span><span>login-regression</span><span class="tag tag-pink">FAIL</span></div>
+<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:10px;font-weight:600"><span class="mono">RUN-0246</span><span>payment-flow</span><span class="tag tag-green">PASS</span></div></div></div></div>
+
+<div class="info-card"><span class="section-title">📋 测试报告</span>
+<div class="search" style="margin-bottom:10px"><input class="search-in" placeholder="Run ID"><input class="search-in" placeholder="任务名称"><input class="search-in" placeholder="设备"><button class="btn" style="padding:4px 12px;font-size:10px">搜索</button></div>
+<div style="border:2.5px solid var(--c-workflow);border-radius:6px 10px;overflow:hidden"><table class="tbl"><thead><tr><th>Run ID</th><th>任务名称</th><th>设备</th><th>通过</th><th>失败</th><th>通过率</th><th>状态</th><th>耗时</th><th>时间</th></tr></thead><tbody>
+<tr><td class="mono" style="cursor:pointer;text-decoration:underline">RUN-0248</td><td style="font-weight:700">smoke-test-v2.4</td><td>Pixel 6</td><td>24</td><td>0</td><td>100%</td><td><span class="tag tag-green">PASS</span></td><td>32s</td><td>14:32</td></tr>
+<tr><td class="mono" style="cursor:pointer;text-decoration:underline">RUN-0247</td><td style="font-weight:700">login-regression</td><td>Xiaomi 13</td><td>18</td><td>7</td><td>72%</td><td><span class="tag tag-pink">FAIL</span></td><td>1m12s</td><td>13:18</td></tr>
+<tr><td class="mono" style="cursor:pointer;text-decoration:underline">RUN-0246</td><td style="font-weight:700">payment-flow-v3</td><td>Samsung S23</td><td>32</td><td>0</td><td>100%</td><td><span class="tag tag-green">PASS</span></td><td>48s</td><td>11:05</td></tr>
+<tr><td class="mono" style="cursor:pointer;text-decoration:underline">RUN-0245</td><td style="font-weight:700">onboarding-e2e</td><td>vivo X90</td><td>15</td><td>1</td><td>94%</td><td><span class="tag tag-green">PASS</span></td><td>56s</td><td>09:42</td></tr></tbody></table></div></div>
+
+</div></div></div>
+
+<script>lucide.createIcons()</script></body></html>

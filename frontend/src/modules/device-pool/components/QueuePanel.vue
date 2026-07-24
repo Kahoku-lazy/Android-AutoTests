@@ -61,7 +61,7 @@ function formatTime(seconds) {
   color: var(--ink);
   padding: 4px 12px;
   border-radius: 4px 8px 4px 8px;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   border: 2px solid var(--ink);
   box-shadow: 2px 2px 0 rgba(0,0,0,0.05);

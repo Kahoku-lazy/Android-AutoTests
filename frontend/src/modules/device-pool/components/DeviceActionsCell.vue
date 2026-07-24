@@ -8,7 +8,7 @@ const emit = defineEmits(['lock', 'joinQueue', 'occupy', 'disconnect'])
 </script>
 
 <template>
-  <div class="action-btns">
+  <div class="action-bar">
     <el-button
       size="small" type="primary"
       :class="{ 'is-locked': device.locked_by }"
@@ -37,24 +37,24 @@ const emit = defineEmits(['lock', 'joinQueue', 'occupy', 'disconnect'])
 </template>
 
 <style scoped>
-.action-btns { display: flex; flex-direction: column; align-items: stretch; gap: 4px; width: 100%; }
-.action-btns :deep(.el-button) {
+.action-bar { display: flex; flex-direction: column; align-items: stretch; gap: 4px; width: 100%; }
+.action-bar :deep(.el-button) {
   width: 100%; margin: 0 !important; min-height: 26px; padding: 4px 10px;
-  font-size: 11px; font-weight: 700; line-height: 1.2; white-space: nowrap;
+  font-size: var(--app-size-xs); font-weight: 700; line-height: 1.2; white-space: nowrap;
   border-radius: 4px 8px 4px 8px !important; border-width: 2px !important;
 }
-.action-btns :deep(.el-button--primary.is-plain) {
+.action-bar :deep(.el-button--primary.is-plain) {
   background: var(--app-status-purple-bg) !important; border-color: var(--app-status-purple-border) !important; color: var(--app-status-purple-text) !important;
 }
-.action-btns :deep(.el-button--primary.is-plain:hover) { background: #D4C8F0 !important; }
-.action-btns :deep(.el-button--danger.is-plain) {
+.action-bar :deep(.el-button--primary.is-plain:hover) { background: #D4C8F0 !important; }
+.action-bar :deep(.el-button--danger.is-plain) {
   background: var(--app-status-danger-bg) !important; border-color: var(--app-status-danger) !important; color: var(--app-status-danger-text) !important;
 }
-.action-btns :deep(.el-button--danger.is-plain:hover) { background: #FFD0C8 !important; }
-.action-btns :deep(.el-button--warning.is-plain) {
+.action-bar :deep(.el-button--danger.is-plain:hover) { background: #FFD0C8 !important; }
+.action-bar :deep(.el-button--warning.is-plain) {
   background: var(--app-status-warning-bg) !important; border-color: #F7C948 !important; color: #7a5a10 !important;
 }
-.action-btns :deep(.el-button--primary.is-disabled), .action-btns :deep(.el-button.is-disabled) {
+.action-bar :deep(.el-button--primary.is-disabled), .action-bar :deep(.el-button.is-disabled) {
   background: var(--app-bg-subtle) !important; border-color: var(--app-border-light) !important; color: #ccc !important;
 }
 </style>

@@ -166,9 +166,8 @@ function switchMode(m) {
           </div>
 
           <p class="hero__desc">
-            AI 驱动的跨端 UI 自动化测试平台
-            <br />
-            让 Android / iOS 测试工作充满温暖质感
+            <span class="hero__desc-line">AI 驱动的跨端 UI 自动化测试平台</span>
+            <span class="hero__desc-line">让 Android / iOS 测试工作充满温暖质感</span>
           </p>
 
           <!-- ── 切换提示 ── -->
@@ -205,9 +204,9 @@ function switchMode(m) {
                 <el-input
                   v-model="loginPassword"
                   type="password"
+                  show-password
                   placeholder="密码"
                   size="large"
-                  
                   class="form-input"
                 />
               </div>
@@ -250,9 +249,9 @@ function switchMode(m) {
                 <el-input
                   v-model="regPassword"
                   type="password"
+                  show-password
                   placeholder="设置密码（至少 6 位）"
                   size="large"
-                  
                   class="form-input"
                 />
               </div>
@@ -261,9 +260,9 @@ function switchMode(m) {
                 <el-input
                   v-model="regPassword2"
                   type="password"
+                  show-password
                   placeholder="确认密码"
                   size="large"
-                  
                   class="form-input"
                 />
               </div>
@@ -398,7 +397,7 @@ function switchMode(m) {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 72px;
-  align-items: center;
+  align-items: end;
   max-width: 1020px;
   width: 100%;
   padding: 44px;
@@ -443,23 +442,31 @@ function switchMode(m) {
   text-shadow: 0 1px 0 rgba(255,255,255,0.4);
 }
 
+.hero__desc-line {
+  display: block;
+}
+
 .hero__visual {
   display: flex;
   justify-content: center;
+  width: 380px;
+  justify-self: center;
 }
 
 .hero__animal {
-  width: 320px;
-  height: 200px;
+  width: 380px;
+  height: 280px;
   object-fit: cover;
-  border-radius: 28px;
+  border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.72);
-  box-shadow: 0 18px 45px rgba(74, 78, 105, 0.18);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.08);
 }
 
 /* Login/Register card */
 .login-card {
   width: 380px;
+  min-height: 280px;
+  box-sizing: border-box;
   background: rgba(255, 255, 255, 0.52) !important;
   border: 1px solid rgba(255, 255, 255, 0.76) !important;
   border-radius: 24px !important;
@@ -586,7 +593,8 @@ function switchMode(m) {
   .hero__text { text-align: center; }
   .hero__title-row { justify-content: center; }
   .hero__desc { font-size: 14px; margin: 0 auto 24px; }
-  .login-card { width: 100%; max-width: 360px; margin: 0 auto; }
-  .hero__animal { width: 200px; height: 124px; }
+  .login-card { width: 100%; max-width: 360px; min-height: 0; margin: 0 auto; }
+  .hero__visual { width: 100%; max-width: 360px; margin: 0 auto; }
+  .hero__animal { width: 100%; max-width: 360px; height: 220px; }
 }
 </style>

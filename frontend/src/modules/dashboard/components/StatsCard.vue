@@ -185,7 +185,7 @@ function navigate() {
 }
 
 .stats-card__title {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   color: var(--ink);
   text-align: center;
@@ -193,7 +193,7 @@ function navigate() {
 }
 
 .stats-card__desc {
-  font-size: 9px;
+  font-size: var(--app-size-xs);
   color: var(--app-ink-muted);
   text-align: center;
   line-height: 1.4;
@@ -216,8 +216,8 @@ function navigate() {
 
 .stats-card__stat strong {
   display: block;
-  font-family: var(--doodle-font-title);
-  font-size: 24px;
+  font-family: var(--app-font-display);
+  font-size: var(--app-size-xl);
   font-weight: 700;
   color: var(--ink);
   line-height: 1;
@@ -226,7 +226,7 @@ function navigate() {
 .stats-card__stat small {
   display: block;
   margin-top: 2px;
-  font-size: 9px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   color: var(--app-ink-muted);
   white-space: nowrap;
@@ -236,7 +236,7 @@ function navigate() {
 
 .stats-card__enter {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   color: var(--ink);
   padding: 4px 10px;

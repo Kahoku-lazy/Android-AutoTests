@@ -93,28 +93,28 @@ function formatOutput(output) {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
 }
 .tool-step-icon {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
 }
 .tool-step-name {
   font-weight: 700;
   color: var(--doodle-ink, #2d2d2d);
 }
 .tool-step-state {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   color: #8a7b66;
 }
 .tool-step-args {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: #6d5f4b;
 }
 .tool-step-args details summary {
   cursor: pointer;
   color: #8a7b66;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
 }
 .tool-step-args pre {
   margin: 4px 0;
@@ -122,13 +122,13 @@ function formatOutput(output) {
   background: var(--ink);
   border-radius: 8px;
   color: #e6db74;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   overflow-x: auto;
   white-space: pre-wrap;
 }
 .tool-step-output {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: #6d5f4b;
   line-height: 1.5;
   white-space: pre-wrap;

@@ -707,7 +707,7 @@ onBeforeRouteLeave((_to, _from, next) => {
   background: rgba(247, 205, 103, 0.18);
   border-bottom: 1.5px solid rgba(247, 170, 60, 0.3);
   color: #8a6d14;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -753,6 +753,6 @@ onBeforeRouteLeave((_to, _from, next) => {
 .device-option-serial {
   float: right;
   color: #999;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
 }
 </style>

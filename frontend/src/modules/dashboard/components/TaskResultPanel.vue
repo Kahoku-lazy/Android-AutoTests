@@ -90,7 +90,7 @@ function meta(status) {
   gap: 5px;
   padding: 5px 10px;
   border-radius: 4px 8px 4px 8px;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   border: 2px solid var(--ink);
   background: #fff;
@@ -103,10 +103,10 @@ function meta(status) {
 .summary-chip__icon {
   width: 16px; height: 16px; border-radius: 3px;
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 800;
+  font-size: var(--app-size-xs); font-weight: 800;
   background: var(--app-bg-subtle);
 }
-.summary-chip__value { font-size: 15px; font-weight: 800; }
+.summary-chip__value { font-size: var(--app-size-md); font-weight: 800; }
 
 .task-result-panel__list {
   display: flex; flex-direction: column; gap: 6px;
@@ -124,7 +124,7 @@ function meta(status) {
 .task-row__status {
   width: 28px; height: 28px; border-radius: 4px 8px 4px 8px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 800; flex-shrink: 0;
+  font-size: var(--app-size-sm); font-weight: 800; flex-shrink: 0;
   border: 2px solid var(--ink);
 }
 .task-row__status.is-success { background: #C8F5D0; color: var(--ink); }
@@ -134,23 +134,23 @@ function meta(status) {
 .task-row__status.is-idle    { background: #f8f6f2; color: #999; }
 
 .task-row__body { flex: 1; min-width: 0; }
-.task-row__title { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+.task-row__title { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); margin-bottom: 3px; }
 
 .task-row__cases { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 3px; }
 .case-icon {
   width: 20px; height: 20px; border-radius: 3px 6px 3px 6px;
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 800; border: 1.5px solid var(--ink);
+  font-size: var(--app-size-xs); font-weight: 800; border: 1.5px solid var(--ink);
 }
 .case-icon.is-success { background: #C8F5D0; color: var(--ink); }
 .case-icon.is-failed  { background: #FFE0DB; color: var(--ink); }
 .case-icon.is-partial { background: #FFF9E0; color: var(--ink); }
 .case-icon.is-running { background: #E8DDF8; color: var(--ink); }
 
-.task-row__stats { font-size: 10px; color: var(--app-ink-muted); font-weight: 600; }
-.task-row__time { font-size: 10px; color: var(--app-ink-muted); white-space: nowrap; flex-shrink: 0; padding-top: 2px; }
+.task-row__stats { font-size: var(--app-size-xs); color: var(--app-ink-muted); font-weight: 600; }
+.task-row__time { font-size: var(--app-size-xs); color: var(--app-ink-muted); white-space: nowrap; flex-shrink: 0; padding-top: 2px; }
 
-.task-result-panel__empty { text-align: center; color: var(--app-ink-muted); font-size: 12px; padding: 20px 0; }
+.task-result-panel__empty { text-align: center; color: var(--app-ink-muted); font-size: var(--app-size-sm); padding: 20px 0; }
 
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 </style>

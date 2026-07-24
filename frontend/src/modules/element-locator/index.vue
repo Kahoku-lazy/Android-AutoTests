@@ -414,8 +414,8 @@ watch(activeTab, async (tab) => {
   border-radius: 6px 10px 6px 10px; box-shadow: 2px 2px 0 rgba(0,0,0,0.04);
 }
 
-.info { font-size: 14px; color: var(--app-text-secondary, #7A8B73); white-space: nowrap; }
-.error { font-size: 14px; color: var(--el-color-danger, #FFB5A7); white-space: nowrap; }
+.info { font-size: var(--app-size-sm); color: var(--app-text-secondary, #7A8B73); white-space: nowrap; }
+.error { font-size: var(--app-size-sm); color: var(--el-color-danger, #FFB5A7); white-space: nowrap; }
 
 .workspace {
   flex: 1;
@@ -443,8 +443,8 @@ watch(activeTab, async (tab) => {
   }
 }
 
-.locator-footer { display:flex;align-items:center;justify-content:center;gap:24px;padding:10px 20px;background:var(--app-highlight,#FFE066);border-top:2.5px solid var(--app-ink,#2d2d2d);font-size:12px;font-weight:700;color:#5a4e20;font-family:'Caveat',cursive;flex-shrink:0; }
-.locator-footer span{display:flex;align-items:center;gap:4px;font-size:13px;}
+.locator-footer { display:flex;align-items:center;justify-content:center;gap:24px;padding:10px 20px;background:var(--app-highlight,#FFE066);border-top:2.5px solid var(--app-ink,#2d2d2d);font-size:var(--app-size-sm);font-weight:700;color:#5a4e20;font-family:'Patrick Hand',cursive;flex-shrink:0; }
+.locator-footer span{display:flex;align-items:center;gap:4px;font-size:var(--app-size-sm);}
 
 /* Paper × Polaroid — 覆盖 AppTabs 玻璃态 */
 .locator-tabs :deep(.el-tabs__nav) {
@@ -458,7 +458,7 @@ watch(activeTab, async (tab) => {
   height: 36px !important; padding: 0 20px !important;
   border-radius: 4px 8px 0 0 !important;
   color: var(--app-ink-muted, #999) !important;
-  font-weight: 700 !important; font-size: 12px !important;
+  font-weight: 700 !important; font-size: var(--app-size-sm) !important;
   border: 2px solid transparent !important;
   background: transparent !important;
 }

@@ -98,7 +98,7 @@ function reasonLabel(reason) {
         {{ message.tokens }} tokens
         <span
           v-if="message.inputTokens"
-          style="color: #8a7b66; font-size: 11px"
+          style="color: #8a7b66; font-size: var(--app-size-xs)"
         >
           (输入 {{ message.inputTokens }} / 输出
           {{ message.tokens - message.inputTokens || message.tokens }})
@@ -142,7 +142,7 @@ function reasonLabel(reason) {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: var(--app-size-xl);
   flex-shrink: 0;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(61, 52, 40, 0.08);
@@ -154,7 +154,7 @@ function reasonLabel(reason) {
   min-width: 0;
 }
 .msg-author {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   color: var(--app-ink-muted, #999);
   padding: 0 6px;
@@ -163,7 +163,7 @@ function reasonLabel(reason) {
   text-align: right;
 }
 .msg-flow-tag {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   padding: 2px 7px;
   border-radius: 6px;
   font-weight: 700;
@@ -184,7 +184,7 @@ function reasonLabel(reason) {
 .msg-text {
   padding: 16px 20px;
   border-radius: 18px;
-  font-size: 15px;
+  font-size: var(--app-size-md);
   line-height: 1.75;
   white-space: pre-wrap;
   word-break: break-word;
@@ -202,12 +202,12 @@ function reasonLabel(reason) {
   border-bottom-left-radius: 6px;
 }
 .msg-tokens {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   color: var(--app-ink-muted, #999);
   padding: 0 6px;
 }
 .model-name-tag {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   padding: 2px 7px;
   border-radius: 6px;
   background: rgba(25, 200, 185, 0.1);
@@ -219,7 +219,7 @@ function reasonLabel(reason) {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   padding: 4px 10px;
   border-radius: 8px;
   margin-top: 4px;
@@ -247,8 +247,8 @@ function reasonLabel(reason) {
   margin-bottom: 0;
 }
 .msg-text :deep(code) {
-  font-family: "Cascadia Code", Consolas, monospace;
-  font-size: 13px;
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-sm);
   padding: 2px 6px;
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.06);
@@ -267,7 +267,7 @@ function reasonLabel(reason) {
   background: none;
   padding: 0;
   color: #f8f8f2;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
 }
 .msg-text :deep(ul),
 .msg-text :deep(ol) {
@@ -334,7 +334,7 @@ function reasonLabel(reason) {
   min-height: 22px;
 }
 .typing-label {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   color: var(--app-text-secondary, #999);
   background: linear-gradient(

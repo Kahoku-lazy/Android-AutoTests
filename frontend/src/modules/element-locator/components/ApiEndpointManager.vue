@@ -165,7 +165,7 @@ async function doSave() {
 
         <div class="tree-body" :class="{ 'drag-mode-active': dragEnabled }">
           <div v-if="loading && !groups.length" class="tree-loading">加载中...</div>
-          <div v-else-if="!groups.length" class="tree-empty">
+          <div v-else-if="!groups.length" class="empty-state">
             <span class="tree-empty__icon">📁</span>
             <p class="tree-empty__text">暂无分组</p>
             <p class="tree-empty__hint">点击「+ 项目」或「+ 模块」创建</p>
@@ -284,7 +284,7 @@ async function doSave() {
                   </template>
                   <template #cell-method="{ value }">
                     <span :style="{ background: METHOD_COLORS[value] || 'var(--app-ink)' }"
-                      style="display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;color:#fff">{{ value }}</span>
+                      style="display:inline-block;padding:2px 10px;border-radius:10px;font-size:var(--app-size-xs);font-weight:700;color:#fff">{{ value }}</span>
                   </template>
                   <template #cell-url="{ value }">
                     <span class="cell-code" :title="value">{{ value }}</span>
@@ -299,7 +299,7 @@ async function doSave() {
                       @update:model-value="(val) => updateEl(record, 'is_test_point', val)" />
                   </template>
                   <template #cell-actions="{ record }">
-                    <div class="action-btns">
+                    <div class="action-bar">
                       <el-button size="small" type="primary" link @click="openEdit(record)">编辑</el-button>
                       <el-button size="small" type="danger" link @click="doDelete(record)">删除</el-button>
                     </div>
@@ -433,7 +433,7 @@ async function doSave() {
 }
 
 .tree-header__title {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   color: var(--app-ink);
 }
@@ -460,12 +460,12 @@ async function doSave() {
   text-align: center;
   padding: 32px 16px;
   color: var(--app-ink-muted);
-  font-size: 13px;
+  font-size: var(--app-size-sm);
 }
 
 .tree-empty__icon {
   display: block;
-  font-size: 32px;
+  font-size: var(--app-size-2xl);
   margin-bottom: 8px;
 }
 
@@ -476,7 +476,7 @@ async function doSave() {
 }
 
 .tree-empty__hint {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink-muted);
   margin: 0;
 }
@@ -491,7 +491,7 @@ async function doSave() {
 }
 
 .tree-node__icon {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   flex-shrink: 0;
 }
 
@@ -500,7 +500,7 @@ async function doSave() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink);
 }
 
@@ -515,7 +515,7 @@ async function doSave() {
 }
 
 .tree-node__meta {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   color: var(--app-ink-muted);
   background: rgba(0, 0, 0, 0.06);
   padding: 1px 6px;
@@ -553,7 +553,7 @@ async function doSave() {
 
 .context-menu__item {
   padding: 8px 14px;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   cursor: pointer;
   color: var(--app-ink);
 }
@@ -595,8 +595,8 @@ async function doSave() {
   gap: 8px;
 }
 
-.panel-title { font-family: "Caveat", cursive;
-  font-size: 15px;
+.panel-title { font-family: "Patrick Hand", cursive;
+  font-size: var(--app-size-md);
   font-weight: 700;
   color: var(--app-ink);
   margin: 0;
@@ -604,7 +604,7 @@ async function doSave() {
 
 .doc-tag {
   display: inline-block;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 600;
   text-transform: uppercase;
   background: rgba(0, 0, 0, 0.1);
@@ -638,7 +638,7 @@ async function doSave() {
 }
 
 .empty-state {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink-muted);
 }
 
@@ -667,7 +667,7 @@ async function doSave() {
 }
 
 .toolbar-label {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   color: var(--app-ink-muted);
 }
@@ -683,7 +683,7 @@ async function doSave() {
   border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px 8px 4px 8px;
   border: 3px solid var(--app-ink, #2d2d2d);
   background: #fff;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   color: var(--app-ink);
   cursor: pointer;
@@ -709,7 +709,7 @@ async function doSave() {
 }
 
 .page-info {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink-muted);
 }
 
@@ -750,7 +750,7 @@ async function doSave() {
   width: 100%;
   border: none;
   background: transparent;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: var(--app-accent-purple);
   font-weight: 600;
   padding: 4px 6px;
@@ -765,12 +765,12 @@ async function doSave() {
 .cell-input--desc {
   color: var(--app-ink);
   font-weight: 400;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
 }
 
 .cell-code {
-  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
-  font-size: 12px;
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-sm);
   color: #8275c2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -779,14 +779,14 @@ async function doSave() {
   max-width: 280px;
 }
 
-.action-btns {
+.action-bar {
   display: flex;
   gap: 4px;
   justify-content: center;
 }
 
 .element-count {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink-muted);
   text-align: right;
   flex-shrink: 0;
@@ -801,11 +801,11 @@ async function doSave() {
 }
 
 .table-empty span {
-  font-size: 36px;
+  font-size: var(--app-size-2xl);
 }
 
 .table-empty p {
-  font-size: 15px;
+  font-size: var(--app-size-md);
   color: var(--app-ink-muted);
   margin: 0;
 }
@@ -819,7 +819,7 @@ async function doSave() {
 }
 
 .form-label {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink-muted);
   text-align: right;
 }
@@ -833,7 +833,7 @@ async function doSave() {
 /* Paper table headers */
 .endpoint-table :deep(.el-table__header th) {
   background: var(--app-accent-purple) !important; color: #fff !important;
-  font-size: 10px; font-weight: 700; padding: 6px 10px;
+  font-size: var(--app-size-xs); font-weight: 700; padding: 6px 10px;
   border-right: 2px solid var(--doodle-ink);
 }
 .endpoint-table :deep(.el-table__header th:first-child) { border-radius: 3px 0 0 0; }

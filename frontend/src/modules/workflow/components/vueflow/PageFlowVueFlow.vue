@@ -520,7 +520,7 @@ watch(
   border: 2px solid var(--ac-border);
   border-radius: 10px;
   background: #fff;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   font-family: inherit;
   color: var(--ac-ink);
@@ -528,7 +528,7 @@ watch(
 }
 .doc-name:focus { border-color: var(--app-blue); }
 .kind-chip {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   padding: 3px 8px;
   border-radius: 999px;
@@ -537,7 +537,7 @@ watch(
   flex-shrink: 0;
 }
 .id-chip {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   color: var(--app-green-deep);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -562,7 +562,7 @@ watch(
   background: var(--ac-paper);
   color: var(--ac-ink-muted);
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   cursor: pointer;
   box-shadow: var(--app-shadow-sm);
@@ -598,13 +598,13 @@ watch(
   color: var(--ac-red);
 }
 .hint {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--app-green-deep);
   font-weight: 600;
   margin-left: 4px;
 }
 .meta {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   color: var(--ac-ink-faint);
   margin-left: auto;
   font-weight: 600;
@@ -668,7 +668,7 @@ watch(
   border-radius: 14px;
   box-shadow: 0 18px 48px rgba(74,78,105,0.12);
   overflow: hidden;
-  font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif);
+  font-family: var(--app-font, 'Nunito', 'PingFang SC', sans-serif);
   color: var(--ink);
   
 }
@@ -681,11 +681,11 @@ watch(
   border-bottom: 1px solid rgba(162,210,255,0.24);
 }
 .el-picker-head strong {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
 }
 .el-picker-count {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   color: #6f9fd8;
   background: rgba(162,210,255,0.16);
@@ -696,7 +696,7 @@ watch(
   margin-left: auto;
   border: none;
   background: transparent;
-  font-size: 18px;
+  font-size: var(--app-size-lg);
   cursor: pointer;
   color: #999;
   line-height: 1;
@@ -711,7 +711,7 @@ watch(
   border-radius: 10px;
   background: #ffffff;
   color: var(--ink);
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   font-family: inherit;
   outline: none;
@@ -749,7 +749,7 @@ watch(
   cursor: not-allowed;
 }
 .el-ico {
-  font-size: 16px;
+  font-size: var(--app-size-md);
   line-height: 1.2;
   flex-shrink: 0;
 }
@@ -761,12 +761,12 @@ watch(
   gap: 3px;
 }
 .el-label {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   color: var(--ink);
 }
 .el-xpath {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 600;
   color: #7a6b5a;
   word-break: break-all;
@@ -775,7 +775,7 @@ watch(
 }
 .el-tag {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   padding: 3px 8px;
   border-radius: 999px;
@@ -790,7 +790,7 @@ watch(
 .el-picker-empty {
   padding: 24px 12px;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   color: #999;
 }

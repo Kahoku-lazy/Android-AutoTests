@@ -46,24 +46,24 @@ const emit = defineEmits(["toggle"]);
   gap: 6px;
   padding: 8px 14px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: #8a7b66;
   user-select: none;
 }
 .thinking-icon {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
 }
 .thinking-label {
   font-weight: 700;
 }
 .thinking-toggle {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   color: #b5a68e;
   margin-left: auto;
 }
 .thinking-body {
   padding: 10px 14px;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   line-height: 1.6;
   color: #6d5f4b;
   border-top: 1px solid #d6c9a8;

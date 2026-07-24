@@ -535,18 +535,18 @@ function onMouseLeave() {
   color: var(--app-ink-muted);
 }
 .no-signal__icon {
-  font-size: 36px;
+  font-size: var(--app-size-2xl);
   opacity: 0.7;
 }
 .no-signal__title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   color: var(--app-ink);
 }
 .no-signal__hint {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink-muted);
   max-width: 220px;
   line-height: 1.5;

@@ -158,6 +158,6 @@ done
 
 | 文件 | 说明 |
 |------|------|
-| `.claude/rules/module-boundaries.md` | 三道防火墙完整规则 |
+| `.claude/rules/api-conventions.md` | 三道防火墙完整规则 |
 | `.claude/rules/conventions.md` | 文件行数上限 |
 | `.claude/hooks/check-boundary.sh` | 每次 Edit/Write 自动触发 |

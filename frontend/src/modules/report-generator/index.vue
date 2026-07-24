@@ -32,10 +32,6 @@ const filterCreator = ref('')
 
 let filterDebounceTimer = null
 
-const TABLE_TOOLBAR_HEIGHT = 52
-const TABLE_HEADER_HEIGHT = 54
-const TABLE_ROW_HEIGHT = 50
-
 const trend = ref(null)
 
 const chartRange = ref(30)
@@ -106,15 +102,6 @@ const filteredRuns = computed(() => {
 const {
   PAGE_SIZE_OPTIONS, pageSize, currentPage, totalPages, pagedItems: pagedRuns, setPageSize, goPage
 } = usePagination(filteredRuns, { options: [10, 50, 100] })
-
-const displayRowCount = computed(() => {
-  if (pagedRuns.value.length === 0) return 3
-  return pagedRuns.value.length
-})
-
-const tableAreaMinHeight = computed(() => (
-  TABLE_TOOLBAR_HEIGHT + TABLE_HEADER_HEIGHT + displayRowCount.value * TABLE_ROW_HEIGHT
-))
 
 // ── AppTable columns（报告表 11 列，使用最小宽度避免数据挤压）──
 const columns = [
@@ -188,93 +175,33 @@ function openCaseBreakdown(type, tab = 'detail') {
     />
 
     <div class="doc-body">
-      <!-- Filter bar -->
-      <div class="filter-bar">
-        <div class="filter-fields">
-          <el-date-picker
-            v-model="dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            value-format="YYYY-MM-DD"
-            :clearable="true"
-            :unlink-panels="true"
-            class="filter-date"
-          />
-          <el-input
-            v-model="filterRunId"
-            placeholder="Run ID"
-            clearable
-            class="filter-input"
-          />
-          <el-input
-            v-model="filterTaskName"
-            placeholder="任务名称"
-            clearable
-            class="filter-input"
-          />
-          <el-input
-            v-model="filterDevice"
-            placeholder="设备"
-            clearable
-            class="filter-input"
-          />
-          <el-input
-            v-model="filterCreator"
-            placeholder="创建人"
-            clearable
-            class="filter-input"
-          />
+      <!-- 统计概览 -->
+      <div class="info-card">
+        <span class="section-title">📊 统计概览</span>
+        <div class="filter-bar">
+          <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="YYYY-MM-DD" :clearable="true" :unlink-panels="true" class="filter-date" />
+          <el-input v-model="filterRunId" placeholder="Run ID" clearable class="filter-input" />
+          <el-input v-model="filterTaskName" placeholder="任务名称" clearable class="filter-input" />
+          <el-input v-model="filterDevice" placeholder="设备" clearable class="filter-input" />
+          <el-input v-model="filterCreator" placeholder="创建人" clearable class="filter-input" />
+          <el-button class="btn-sm" v-if="hasActiveFilters" size="small" @click="clearFilters">清空条件</el-button>
+          <span v-if="summary" class="filter-summary">共 {{ summary.total_runs }} 次执行 · {{ summary.total_iterations }} 次迭代</span>
         </div>
-        <div class="filter-actions">
-          <el-button class="wb-btn"
-            v-if="hasActiveFilters"
-            size="small"
-            @click="clearFilters"
-          >清空条件</el-button>
-          <span v-if="summary" class="filter-summary">
-            共 {{ summary.total_runs }} 次执行 · {{ summary.total_iterations }} 次迭代
-          </span>
-        </div>
-      </div>
 
-      <!-- KPI Summary Cards -->
+      <!-- KPI -->
       <div v-if="summary" class="kpi-row">
-        <div class="kpi-card">
-          <div class="kpi-accent accent-teal"></div>
-          <div class="kpi-value">{{ summary.total_runs }}</div>
-          <div class="kpi-label">总执行次数</div>
-        </div>
-        <div class="kpi-card kpi-card--clickable" @click="openCaseBreakdown('pass')">
-          <div class="kpi-accent accent-green"></div>
-          <div class="kpi-value num-pass">{{ summary.total_pass }}</div>
-          <div class="kpi-label">✅ 通过</div>
-        </div>
-        <div class="kpi-card kpi-card--clickable" @click="openCaseBreakdown('fail', 'bugs')">
-          <div class="kpi-accent accent-red"></div>
-          <div class="kpi-value num-fail">{{ summary.total_fail }}</div>
-          <div class="kpi-label">❌ 失败</div>
-          <div v-if="bugSummary" class="kpi-sub kpi-sub--bug">
-            <span class="kpi-sub-num kpi-sub-num--bug">{{ bugSummary.unique_issues }}</span> 类 BUG ·
-            <span class="kpi-sub-num kpi-sub-num--occur">{{ bugSummary.total_occurrences }}</span> 次出现 ·
-            <span class="kpi-sub-num kpi-sub-num--case">{{ bugSummary.affected_cases }}</span> 个用例
-          </div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-accent accent-yellow"></div>
-          <div class="kpi-value" :class="summary.pass_rate >= 95 ? 'num-pass' : summary.pass_rate >= 80 ? 'num-warn' : 'num-fail'">
-            {{ summary.pass_rate }}%
-          </div>
-          <div class="kpi-label">📊 总通过率</div>
-          <div class="kpi-sub kpi-sub--iter">
-            <span class="kpi-sub-num">{{ summary.total_iterations }}</span> 次迭代
-          </div>
-        </div>
+        <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-workflow)"></div><div class="kpi-value">{{ summary.total_runs }}</div><div class="kpi-label">总执行次数</div></div>
+        <div class="kpi-card kpi-card--clickable" @click="openCaseBreakdown('pass')"><div class="kpi-dot" style="background:var(--c-device)"></div><div class="kpi-value" style="color:#2d7a2d">{{ summary.total_pass }}</div><div class="kpi-label">✅ 通过</div></div>
+        <div class="kpi-card kpi-card--clickable" @click="openCaseBreakdown('fail','bugs')"><div class="kpi-dot" style="background:var(--c-runner)"></div><div class="kpi-value" style="color:#a03030">{{ summary.total_fail }}</div><div class="kpi-label">❌ 失败</div><div v-if="bugSummary" style="font-size:var(--app-size-xs);color:#999;margin-top:2px">{{ bugSummary.unique_issues }} 类 · {{ bugSummary.total_occurrences }} 次 · {{ bugSummary.affected_cases }} 用例</div></div>
+        <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-dashboard)"></div><div class="kpi-value" :style="{color:summary.pass_rate>=95?'#2d7a2d':summary.pass_rate>=80?'#b08800':'#a03030'}">{{ summary.pass_rate }}%</div><div class="kpi-label">📊 通过率</div><div style="font-size:var(--app-size-xs);color:#999;margin-top:2px">{{ summary.total_iterations }} 次迭代</div></div>
+      </div>
+      <div style="font-size:var(--app-size-xs);opacity:0.3;text-align:right">最近更新: {{ lastUpdated || '暂无数据' }}</div>
       </div>
 
-      <!-- Trend Charts (Apache ECharts) -->
-      <div v-if="trend && trend.labels?.length" class="chart-section">
+      <!-- 数据图表 -->
+      <div v-if="trend && trend.labels?.length" class="info-card">
+        <span class="section-title">📈 数据图表</span>
+        <div class="chart-section">
         <div class="chart-toolbar">
           <span class="toolbar-label">图表范围</span>
           <div class="page-size-btns">
@@ -308,45 +235,29 @@ function openCaseBreakdown(type, tab = 'detail') {
             />
           </AppCard>
         </div>
-      </div>
+      </div></div>
 
-      <!-- Filter AppTabs -->
+      <!-- 测试报告 -->
+      <div class="info-card" style="padding:0">
+        <div style="padding:14px 16px 0"><span class="section-title" style="margin-bottom:8px">📋 测试报告</span></div>
       <AppTabs
         class="report-tabs"
-        :style="{ minHeight: `${tableAreaMinHeight + 88}px` }"
         :items="statusAppTabs"
         v-model="activeFilter"
         :leaf-animation="true"
         :shadow="true"
       >
         <template v-for="tab in statusAppTabs" #[tab.key] :key="tab.key">
-          <AppCard
-           
-            class="table-card"
-            :style="{ minHeight: `${tableAreaMinHeight}px` }"
-          >
+          <AppCard class="table-card">
             <div class="table-toolbar">
-              <div class="page-size-control">
-                <span class="toolbar-label">显示行数</span>
-                <div class="page-size-btns">
-                  <button
-                    v-for="n in PAGE_SIZE_OPTIONS"
-                    :key="n"
-                    type="button"
-                    class="page-size-btn"
-                    :class="{ active: pageSize === n }"
-                    @click="setPageSize(n)"
-                  >{{ n }}</button>
-                </div>
+              <span class="toolbar-label">显示行数</span>
+              <div class="page-size-btns">
+                <button v-for="n in PAGE_SIZE_OPTIONS" :key="n" type="button" class="page-size-btn" :class="{active:pageSize===n}" @click="setPageSize(n)">{{ n }}</button>
               </div>
-              <div v-if="filteredRuns.length > 0" class="table-toolbar-right">
-                <span class="page-info">
-                  第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ filteredRuns.length }} 条
-                </span>
-                <div v-if="totalPages > 1" class="page-nav">
-                  <el-button class="wb-btn" size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</el-button>
-                  <el-button class="wb-btn" size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</el-button>
-                </div>
+              <span v-if="filteredRuns.length>0" class="page-info">第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ filteredRuns.length }} 条</span>
+              <div v-if="totalPages>1" class="page-nav">
+                <button class="page-nav-btn" :disabled="currentPage<=1" @click="goPage(currentPage-1)">上一页</button>
+                <button class="page-nav-btn" :disabled="currentPage>=totalPages" @click="goPage(currentPage+1)">下一页</button>
               </div>
             </div>
             <AppTable
@@ -426,6 +337,7 @@ function openCaseBreakdown(type, tab = 'detail') {
           </AppCard>
         </template>
       </AppTabs>
+      </div>
     </div>
   </div>
 </template>

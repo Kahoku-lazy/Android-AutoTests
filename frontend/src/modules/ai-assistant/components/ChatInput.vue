@@ -80,7 +80,7 @@ function onInput(val) {
   padding: 8px 16px;
   background: #fff;
   border-top: 1px solid var(--ink);
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   
 }
 .file-preview-icon {
@@ -97,14 +97,14 @@ function onInput(val) {
 }
 .file-preview-size {
   color: #999;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
 }
 .file-preview-remove {
   background: none;
   border: none;
   color: #999;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   padding: 4px 8px;
   border-radius: 6px;
 }
@@ -126,7 +126,7 @@ function onInput(val) {
   border-radius: var(--app-radius-sm) !important;
   border: 1.5px solid var(--ink) !important;
   padding: 8px 12px !important;
-  font-size: 14px !important;
+  font-size: var(--app-size-sm) !important;
   line-height: 1.45 !important;
   min-height: 44px !important;
   background: var(--app-bg-input) !important;
@@ -179,7 +179,7 @@ function onInput(val) {
     var(--el-color-primary-dark-2)
   );
   color: #fff;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;

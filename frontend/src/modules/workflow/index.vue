@@ -609,7 +609,7 @@ watch(
   height: 40px;
   display: grid;
   place-items: center;
-  font-size: 22px;
+  font-size: var(--app-size-xl);
   border-radius: 14px;
   box-shadow: var(--app-icon-shadow);
 }
@@ -621,13 +621,13 @@ watch(
 }
 .brand-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--app-size-md);
   font-weight: 800;
   color: var(--ink);
 }
 .brand-sub {
   margin: 2px 0 0;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   color: #999;
 }
@@ -643,7 +643,7 @@ watch(
   border: 1.5px solid var(--ink);
   border-radius: 999px;
   background: #fff;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
@@ -654,7 +654,7 @@ watch(
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   color: var(--ac-ink-muted);
   cursor: pointer;
@@ -666,7 +666,7 @@ watch(
 }
 .hdr-btn:hover { filter: brightness(1.03); }
 .status-pill {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   color: var(--app-green-deep);
   padding: 4px 10px;
@@ -706,24 +706,24 @@ watch(
   border: 1px solid var(--ink);
   border-radius: 18px;
   box-shadow: var(--app-shadow-lg);
-  font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif);
+  font-family: var(--app-font, 'Nunito', 'PingFang SC', sans-serif);
   color: var(--ink);
   
 }
 .wf-modal-title {
   margin: 0;
-  font-size: 17px;
+  font-size: var(--app-size-md);
   font-weight: 800;
 }
 .wf-modal-hint {
   margin: 6px 0 16px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   color: #999;
 }
 .wf-modal-label {
   display: block;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   color: var(--ink);
   margin-bottom: 6px;
@@ -736,7 +736,7 @@ watch(
   border-radius: 12px;
   background: #ffffff;
   color: var(--ink);
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   font-family: inherit;
   outline: none;
@@ -753,7 +753,7 @@ watch(
   border: 1.5px solid var(--ink);
   border-radius: 999px;
   background: #fff;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;

@@ -174,13 +174,13 @@ onMounted(() => {
 }
 .kb-stat__num {
   display: block;
-  font-size: 22px;
+  font-size: var(--app-size-xl);
   font-weight: 800;
   color: var(--app-text, #3D4A3B);
 }
 .kb-stat__label {
   display: block;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: #999;
   margin-top: 4px;
 }
@@ -190,7 +190,7 @@ onMounted(() => {
   gap: 12px;
 }
 .kb-hint {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: #999;
 }
 .kb-table-card {
@@ -231,8 +231,8 @@ onMounted(() => {
   padding: 8px 12px;
 }
 .kb-doc-source {
-  font-family: var(--app-font-mono, monospace);
-  font-size: 12px;
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-sm);
   color: var(--app-text, #3D4A3B);
   display: block;
   width: 100%;
@@ -251,7 +251,7 @@ onMounted(() => {
   border: none;
   border-radius: 8px;
   background: rgba(121, 79, 39, 0.05);
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   color: #999;
   cursor: pointer;

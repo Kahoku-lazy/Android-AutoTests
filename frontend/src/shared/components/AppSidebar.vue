@@ -200,22 +200,13 @@ onUnmounted(() => {
     class="sidebar"
     :class="{ 'sidebar--resizing': isResizing, 'sidebar--collapsed': collapsed }"
   >
-    <!-- 头部品牌 + 折叠 -->
-    <div class="sidebar__header-row">
-      <div class="sidebar__header" @click="router.push('/dashboard')" :title="collapsed ? '自动化测试平台' : ''">
-        <AnimatedMascot :size="26" />
-        <div v-show="!collapsed" class="sidebar__brand">
-          <span class="brand-title">自动化测试平台</span>
-        </div>
+    <!-- 头部品牌（高度与主区 wb-header 底边对齐） -->
+    <div class="sidebar__header" @click="router.push('/dashboard')" :title="collapsed ? 'AI 自动化测试平台' : ''">
+      <AnimatedMascot :size="36" />
+      <div v-show="!collapsed" class="sidebar__brand">
+        <span class="brand-ai">AI</span>
+        <span class="brand-title">自动化测试平台</span>
       </div>
-      <button
-        type="button"
-        class="sidebar__toggle"
-        :title="collapsed ? '展开侧边栏' : '收起侧边栏'"
-        @click.stop="toggleCollapsed"
-      >
-        {{ collapsed ? '›' : '‹' }}
-      </button>
     </div>
 
     <!-- 导航菜单 -->
@@ -303,6 +294,15 @@ onUnmounted(() => {
       >
         ⎋
       </button>
+
+      <button
+        type="button"
+        class="sidebar__toggle"
+        :title="collapsed ? '展开侧边栏' : '收起侧边栏'"
+        @click.stop="toggleCollapsed"
+      >
+        {{ collapsed ? '›' : '‹' }}
+      </button>
     </div>
 
     <div
@@ -340,20 +340,13 @@ onUnmounted(() => {
   max-width: 64px;
 }
 
-/* ── 头部 ── */
-.sidebar__header-row {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding-right: 6px;
-  border-bottom: 1.5px solid #e8ecf1;
-  flex-shrink: 0;
-}
+/* ── 折叠按钮（底部） ── */
 .sidebar__toggle {
   flex-shrink: 0;
   width: 28px;
   height: 28px;
-  margin-top: 4px;
+  margin: 4px 10px 10px;
+  align-self: flex-start;
   border: 1.5px solid #d4d8dc;
   border-radius: 4px;
   background: #fff;
@@ -372,14 +365,9 @@ onUnmounted(() => {
   color: #fff;
 }
 
-.sidebar--collapsed .sidebar__header-row {
-  flex-direction: column;
-  padding: 8px 6px;
-  gap: 6px;
-}
 .sidebar--collapsed .sidebar__header {
   justify-content: center;
-  padding: 4px 0;
+  padding: 0;
 }
 .sidebar--collapsed .sidebar-menu__item {
   justify-content: center;
@@ -390,6 +378,10 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   padding: 10px 6px;
+}
+.sidebar--collapsed .sidebar__toggle {
+  align-self: center;
+  margin: 4px auto 8px;
 }
 .sidebar__icon-logout {
   border: 1.5px solid #e8ecf1;
@@ -443,15 +435,17 @@ onUnmounted(() => {
   background: rgba(26,32,44,0.04);
 }
 
-/* ── 品牌 ── */
+/* ── 品牌（与 wb-header 同高，底边对齐） ── */
 .sidebar__header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex: 1;
+  gap: 12px;
+  flex-shrink: 0;
+  height: var(--app-topbar-h, 96px);
+  box-sizing: border-box;
   min-width: 0;
-  padding: 16px 8px 12px 16px;
-  border-bottom: none;
+  padding: 0 16px;
+  border-bottom: 1.5px solid #e8ecf1;
   font-weight: 700;
   letter-spacing: -0.3px;
   cursor: pointer;
@@ -462,15 +456,50 @@ onUnmounted(() => {
 }
 .sidebar__brand {
   display: flex;
-  align-items: center;
+  align-items: baseline;
+  gap: 6px;
   min-width: 0;
-  font-size: 15px;
-  line-height: 1.2;
+  line-height: 1;
+}
+.brand-ai {
+  flex-shrink: 0;
+  font-family: 'Caveat', cursive;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  background: linear-gradient(
+    90deg,
+    var(--c-dashboard),
+    var(--c-device),
+    var(--c-workflow),
+    var(--c-element),
+    var(--c-ai),
+    var(--c-runner),
+    var(--c-dashboard)
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: brand-ai-flow 4s linear infinite;
+}
+@keyframes brand-ai-flow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
 }
 .brand-title {
-  display: inline-block; font-family: 'Caveat', cursive; font-size: 18px;
-  font-weight: 700; white-space: nowrap; color: var(--ink);
-  background: none; -webkit-text-fill-color: currentColor; animation: none;
+  display: inline-block;
+  font-family: 'Caveat', cursive;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--ink);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  animation: none;
 }
 
 /* ── 品牌图标 Origami 折纸容器 ── */
@@ -493,7 +522,7 @@ onUnmounted(() => {
 
 /* ── 分区标签 — 几何折线 ── */
 .sidebar__group-title {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   color: #a0aec0;
   letter-spacing: 0.08em;
@@ -515,7 +544,7 @@ onUnmounted(() => {
   border-radius: 1px;
 }
 .collapse-icon {
-  font-size: 8px;
+  font-size: 9px;
   transition: transform 0.2s ease;
   margin-right: 4px;
   color: #a0aec0;
@@ -539,9 +568,9 @@ onUnmounted(() => {
   align-items: center;
   justify-content: flex-start;
   gap: 10px;
-  height: 40px;
+  height: 42px;
   padding: 0 12px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: #718096;
   background: transparent;
@@ -553,8 +582,8 @@ onUnmounted(() => {
 }
 
 .nav-lucide-icon {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   color: #718096;
   flex-shrink: 0;
   stroke-width: 1.8;
@@ -616,7 +645,7 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: #718096;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
 }
 .sidebar-menu__item:hover .sidebar-menu__label {
@@ -627,13 +656,13 @@ onUnmounted(() => {
 .sidebar-menu__badge {
   flex-shrink: 0;
   padding: 2px 7px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.03em;
   color: #718096;
   background: #f7fafc;
   border-radius: 2px;
-  line-height: 15px;
+  line-height: 16px;
   margin-left: auto;
   animation: none;
   border: 3px solid var(--doodle-ink, #2d2d2d);
@@ -676,7 +705,7 @@ onUnmounted(() => {
   border: 3px solid var(--doodle-ink, #2d2d2d);
 }
 .sidebar__user-label {
-  font-size: 10px;
+  font-size: 11px;
   color: #a0aec0;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -685,7 +714,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: #1a202c;
   margin: 3px 0;
@@ -694,19 +723,19 @@ onUnmounted(() => {
   cursor: pointer;
 }
 .sidebar__user-arrow {
-  font-size: 10px;
+  font-size: 11px;
   margin-left: auto;
   color: #a0aec0;
 }
 .sidebar__user-status {
-  font-size: 10px;
+  font-size: 11px;
   color: #2f9e44;
   font-weight: 600;
 }
 .sidebar__user-name {
   display: inline-block;
   color: #1a202c;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   background: none;
   -webkit-text-fill-color: currentColor;
@@ -720,7 +749,7 @@ onUnmounted(() => {
   border-radius: 2px !important;
   color: #a0aec0 !important;
   font-weight: 700 !important;
-  font-size: 11px !important;
+  font-size: 12px !important;
   padding: 5px 14px !important;
   transition: all 0.15s ease !important;
   letter-spacing: 0.03em;
@@ -754,7 +783,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 9px 12px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #1a202c;
   cursor: pointer;
@@ -768,12 +797,12 @@ onUnmounted(() => {
   font-weight: 700;
 }
 .account-menu__check {
-  font-size: 12px;
+  font-size: 13px;
   color: #2f9e44;
 }
 .account-menu__item--add {
   color: #a0aec0;
-  font-size: 11px;
+  font-size: 12px;
   justify-content: center;
 }
 .account-menu__divider {

@@ -324,7 +324,7 @@ function onCreateRoot() {
           <span class="badge">{{ lib.nodes.filter(n => n.type !== 'folder').length }}</span>
         </div>
 
-        <div v-if="!treeRows.length" class="empty-hint">
+        <div v-if="!treeRows.length" class="empty-state">
           还没有内容。<br />右键空白处或点「+ 根目录」开始。
         </div>
 
@@ -459,10 +459,10 @@ function onCreateRoot() {
   color: var(--app-green-deep);
 }
 .dir-rail:hover { background: rgba(162,210,255,0.14); }
-.rail-chev { font-size: 18px; font-weight: 800; }
+.rail-chev { font-size: var(--app-size-lg); font-weight: 800; }
 .rail-label {
   writing-mode: vertical-rl;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   letter-spacing: 0.12em;
 }
@@ -482,7 +482,7 @@ function onCreateRoot() {
   border: 1.5px solid var(--ac-border);
   border-radius: 8px;
   background: #fff;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   cursor: pointer;
   color: var(--ac-ink-muted);
@@ -491,13 +491,13 @@ function onCreateRoot() {
 }
 .dir-toggle:hover { border-color: var(--app-blue); color: var(--app-green-deep); }
 .dir-title {
-  font-size: 15px;
+  font-size: var(--app-size-md);
   font-weight: 800;
   color: var(--ink);
 }
 .dir-desc {
   margin: 4px 0 10px;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   color: var(--ac-ink-faint);
   font-weight: 600;
   line-height: 1.4;
@@ -508,7 +508,7 @@ function onCreateRoot() {
   border: 1.5px solid var(--ac-border);
   border-radius: 999px;
   background: #fff;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
@@ -528,7 +528,7 @@ function onCreateRoot() {
 .empty-hint {
   margin: 12px 8px;
   padding: 12px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   color: var(--ac-ink-faint);
   line-height: 1.5;
@@ -548,7 +548,7 @@ function onCreateRoot() {
   background: transparent;
   cursor: pointer;
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   color: var(--ac-ink);
   text-align: left;
@@ -583,7 +583,7 @@ function onCreateRoot() {
   flex-shrink: 0;
 }
 .chev-sp { width: 16px; flex-shrink: 0; }
-.ico { font-size: 13px; flex-shrink: 0; }
+.ico { font-size: var(--app-size-sm); flex-shrink: 0; }
 .name {
   flex: 1;
   min-width: 0;
@@ -592,7 +592,7 @@ function onCreateRoot() {
   white-space: nowrap;
 }
 .badge {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   padding: 1px 6px;
   border-radius: 999px;
@@ -606,13 +606,13 @@ function onCreateRoot() {
   padding: 2px 6px;
   border: 2px solid var(--app-green-deep);
   border-radius: 8px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   font-family: inherit;
 }
 .drag-hint {
   padding: 8px 10px;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   color: var(--app-green-deep);
   background: rgba(162,210,255,0.16);
@@ -643,7 +643,7 @@ function onCreateRoot() {
   text-align: left;
   padding: 8px 12px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   font-family: inherit;
   color: var(--ink);

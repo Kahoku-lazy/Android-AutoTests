@@ -71,7 +71,7 @@ const ANIMAL_THEME = Blockly.Theme.defineTheme('autotest-scratch', {
     cursorColour: '#8b7355',
   },
   fontStyle: {
-    family: "'Quicksand', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+    family: "'Nunito', 'PingFang SC', 'Microsoft YaHei', sans-serif",
     weight: '700',
     size: 12,
   },
@@ -480,25 +480,25 @@ watch(
   border-radius: 12px;
   background: var(--ac-cream);
   color: var(--ac-ink);
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-family: inherit;
   font-weight: 700;
   outline: none;
 }
 .inp.name { width: 128px; }
-.inp.pkg { width: 160px; font-family: ui-monospace, monospace; font-size: 11px; font-weight: 600; }
+.inp.pkg { width: 160px; font-family: ui-monospace, monospace; font-size: var(--app-size-xs); font-weight: 600; }
 .inp:focus { border-color: var(--ac-teal); }
 .link-chip {
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   color: var(--app-green-deep);
   background: rgba(162,210,255,0.16);
   border: 1px solid rgba(162,210,255,0.28);
 }
 .kind-chip {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   padding: 3px 8px;
   border-radius: 999px;
@@ -506,7 +506,7 @@ watch(
   color: #6a5410;
 }
 .id-chip {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   color: var(--app-green-deep);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -551,10 +551,10 @@ watch(
   font-family: inherit;
 }
 .case-item:hover { border-color: var(--ac-teal); }
-.case-item strong { display: block; font-size: 12px; }
+.case-item strong { display: block; font-size: var(--app-size-sm); }
 .case-item .meta {
   display: block;
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   color: var(--ac-ink-faint);
   margin-top: 2px;
 }
@@ -564,7 +564,7 @@ watch(
   border-radius: 999px;
   background: var(--ac-paper);
   color: var(--ac-ink-muted);
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
@@ -579,7 +579,7 @@ watch(
 .btn.danger:hover { border-color: var(--ac-red); color: var(--ac-red); }
 .status {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--app-green-deep);
   font-weight: 800;
 }
@@ -605,14 +605,14 @@ watch(
   font-family: inherit;
 }
 .bridge-item:hover { border-color: var(--ac-teal); }
-.bridge-item strong { display: block; font-size: 12px; }
+.bridge-item strong { display: block; font-size: var(--app-size-sm); }
 .bridge-item code {
   display: block;
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   color: var(--ac-ink-faint);
   margin-top: 2px;
 }
-.empty { font-size: 12px; color: var(--ac-ink-faint); font-weight: 700; }
+.empty { font-size: var(--app-size-sm); color: var(--ac-ink-faint); font-weight: 700; }
 
 .bx-body {
   flex: 1;
@@ -636,7 +636,7 @@ watch(
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   color: var(--ac-ink-faint);
   border-bottom: 1px dashed var(--ac-border-soft);
@@ -647,7 +647,7 @@ watch(
   border-radius: 999px;
   background: rgba(162,210,255,0.16);
   color: var(--app-green-deep);
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
 }
 .bx-host {
@@ -676,11 +676,11 @@ watch(
   stroke: none !important;
 }
 .blocklyText {
-  font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif) !important;
+  font-family: var(--app-font, 'Nunito', 'PingFang SC', sans-serif) !important;
   font-weight: 700 !important;
 }
 .blocklyHtmlInput {
-  font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif) !important;
+  font-family: var(--app-font, 'Nunito', 'PingFang SC', sans-serif) !important;
   font-weight: 700 !important;
   border-radius: 8px !important;
 }

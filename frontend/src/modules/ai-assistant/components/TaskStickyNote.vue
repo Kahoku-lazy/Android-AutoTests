@@ -179,7 +179,7 @@ function onLeave() {
   min-width: 88px;
   max-width: 82%;
   padding: 5px 16px 6px;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   text-align: center;
   white-space: nowrap;
@@ -210,7 +210,7 @@ function onLeave() {
 }
 .task-title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   color: var(--doodle-ink, #2d2d2d);
   line-height: 1.3;
@@ -223,7 +223,7 @@ function onLeave() {
 }
 .status-pill {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   padding: 2px 8px;
   border-radius: 999px;
@@ -238,7 +238,7 @@ function onLeave() {
 
 .task-meta {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 600;
   color: #988b7a;
   overflow: hidden;
@@ -268,7 +268,7 @@ function onLeave() {
 .progress-fill.is-fail { background: #e85f5f; }
 .progress-fill.is-pending { background: #f7cd67; }
 .progress-text {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   color: #8a7b68;
   white-space: nowrap;
@@ -282,7 +282,7 @@ function onLeave() {
   border-top: 1px dashed rgba(139, 115, 85, 0.18);
 }
 .run-id {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 600;
   color: #b0a38e;
   overflow: hidden;
@@ -290,7 +290,7 @@ function onLeave() {
   max-width: 60%;
 }
 .hint {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   color: #0d7a70;
 }

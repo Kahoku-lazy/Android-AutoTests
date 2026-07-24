@@ -24,7 +24,7 @@
 
 ## 前端主题
 
-全局统一 Doodle Craft 主题。规范文档 → `frontend/THEME.md`
+全局统一 Doodle Craft 主题。规范文档 → `frontend/DESIGN_SYSTEM.md`
 
 ## JWT 鉴权
 

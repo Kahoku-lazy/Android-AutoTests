@@ -264,25 +264,25 @@ async function doSave() {
 .table-editor { display: flex; flex-direction: column; gap: 12px; }
 .table-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
 .table-toolbar__left, .table-toolbar__right { display: flex; align-items: center; gap: 8px; }
-.toolbar-label { font-size: 13px; color: #555; }
-.form-select { padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+.toolbar-label { font-size: var(--app-size-sm); color: #555; }
+.form-select { padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: var(--app-size-sm); }
 .table-card { padding: 0; overflow: hidden; }
 .table-scroll { overflow-x: auto; }
-.editable-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.editable-table { width: 100%; border-collapse: collapse; font-size: var(--app-size-sm); }
 .editable-table th { background: #f5f5f5; padding: 8px 10px; text-align: left; font-weight: 600; white-space: nowrap; border-bottom: 2px solid #e0e0e0; position: relative; }
 .editable-table td { padding: 4px 6px; border-bottom: 1px solid #f0f0f0; }
-.col-num { width: 40px; text-align: center; color: #999; font-size: 12px; }
+.col-num { width: 40px; text-align: center; color: #999; font-size: var(--app-size-sm); }
 .row-selected { background: #f0f7ff; }
 .row-selected td { border-color: #c8e0ff; }
-.cell-input { width: 100%; padding: 4px 6px; border: 1px solid transparent; border-radius: 4px; font-size: 13px; background: transparent; }
+.cell-input { width: 100%; padding: 4px 6px; border: 1px solid transparent; border-radius: 4px; font-size: var(--app-size-sm); background: transparent; }
 .cell-input:focus { border-color: var(--app-green, var(--c-workflow)); background: #fff; outline: none; }
 .cell-input:hover { border-color: #ddd; }
 .cell-text { padding: 4px 6px; display: block; }
-.btn-col-remove { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); border: none; background: #fee; color: #e85f5f; border-radius: 3px; cursor: pointer; font-size: 10px; padding: 1px 4px; }
-.btn-primary, .btn-minor, .btn-text { padding: 6px 16px; border-radius: 8px; border: 1px solid #e0e0e0; background: #fff; cursor: pointer; font-size: 13px; }
+.btn-col-remove { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); border: none; background: #fee; color: #e85f5f; border-radius: 3px; cursor: pointer; font-size: var(--app-size-xs); padding: 1px 4px; }
+.btn-primary, .btn-minor, .btn-text { padding: 6px 16px; border-radius: 8px; border: 1px solid #e0e0e0; background: #fff; cursor: pointer; font-size: var(--app-size-sm); }
 .btn-primary { background: var(--app-green, var(--c-workflow)); color: #fff; border-color: var(--app-green, var(--c-workflow)); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-danger-outline { color: #e85f5f; border-color: #fcc; }
-.lock-banner { padding: 12px 16px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
+.lock-banner { padding: 12px 16px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; margin-bottom: 16px; font-size: var(--app-size-sm); }
 .case-loading { text-align: center; padding: 40px; color: #999; }
 </style>

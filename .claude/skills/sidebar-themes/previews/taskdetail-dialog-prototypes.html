@@ -1,0 +1,96 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>任务详情 + 新建任务 Doodle Craft</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700;800&family=Caveat:wght@600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet"><script src="https://unpkg.com/lucide@latest"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}:root{--ink:#1e1e24;--paper:#fefcf5;--dot:#d8d2c4;--c-runner:#FFB5A7;--c-device:#6BCB77;--c-dashboard:#F7C948;--c-case:#4ECDC4;--c-ai:#E879F9;--c-element:#A78BFA}
+body{font-family:'Quicksand','PingFang SC',sans-serif;background:radial-gradient(circle,var(--dot)0.6px,transparent 0.6px);background-size:15px 15px;background-color:var(--paper);color:var(--ink);padding:20px}
+h1{text-align:center;font-family:'Caveat',cursive;font-size:26px;margin-bottom:2px}h1+p{text-align:center;font-size:11px;opacity:0.4;margin-bottom:20px}
+.pg{max-width:900px;margin:0 auto 32px}.pg-label{font-size:10px;font-weight:700;color:var(--ink);background:#fff;padding:5px 16px;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;display:inline-flex;align-items:center;gap:6px;margin-bottom:10px}.pg-label .dot{width:7px;height:7px;flex-shrink:0}
+.info-card{background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:16px 18px;box-shadow:2px 3px 0 rgba(0,0,0,.04)}
+.sec-title{font-family:'Caveat',cursive;font-size:18px;font-weight:700;display:inline-block;position:relative;margin-bottom:12px}.sec-title::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2.5px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%231e1e24' stroke-width='2' fill='none'/%3E%3C/svg%3E")repeat-x;background-size:40px 3px}
+.btn{padding:5px 14px;font-size:10px;font-weight:800;background:#fff;border:2.5px solid var(--ink);border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all .12s;box-shadow:2px 2px 0 rgba(0,0,0,.04)}.btn:hover{background:var(--c-dashboard);transform:translate(1px,1px)}.btn-fill{background:var(--c-runner)}.btn-sm{padding:3px 8px;font-size:9px;border-width:2px}
+.tag{font-size:8px;font-weight:800;padding:2px 7px;border-radius:3px 6px 3px 6px;border:2px solid var(--ink);display:inline-block}.tag-green{background:#C8F5D0;color:#1a5c2a}.tag-pink{background:#FFE0DB;color:#7a1c1c}.tag-purple{background:#E8DDF8;color:#4a2a80}.tag-yellow{background:#FFF9E0;color:#6a4a10}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.kpi-card{text-align:center;padding:12px 10px 16px;background:#fff;border:3px solid var(--ink);border-radius:4px 10px 6px 8px;box-shadow:2px 3px 0 rgba(0,0,0,.04);position:relative}.kpi-dot{width:10px;height:10px;transform:rotate(45deg);margin:0 auto 5px;border:2px solid var(--ink)}.kpi-value{font-family:'Caveat',cursive;font-size:26px;font-weight:700;line-height:1}.kpi-label{font-size:9px;font-weight:700;opacity:0.4;text-transform:uppercase;margin-top:2px}.kpi-card::after{content:'~';position:absolute;bottom:2px;right:8px;font-family:'Caveat',cursive;font-size:16px;opacity:.12}
+.progress-bar{height:8px;background:#f0ede8;border-radius:4px;overflow:hidden;border:1px solid var(--ink)}.progress-fill{height:100%;border-radius:3px;transition:width .3s}
+.dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;z-index:100}.dialog-box{background:var(--paper);border:3px solid var(--ink);border-radius:8px 14px 8px 14px;box-shadow:4px 4px 0 rgba(0,0,0,.08);width:520px;max-height:90vh;overflow-y:auto;padding:0}.dialog-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:3px solid var(--ink);background:#fff}.dialog-header h3{font-family:'Caveat',cursive;font-size:20px;font-weight:700}.dialog-body{padding:18px}.dialog-footer{display:flex;gap:8px;justify-content:flex-end;padding:14px 18px;border-top:2px solid var(--ink);background:#fff}
+.form-group{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}.form-label{font-size:10px;font-weight:700;opacity:0.5;text-transform:uppercase}.form-input,.form-select{padding:8px 12px;border:2.5px solid var(--ink);border-radius:4px 8px 4px 8px;font-family:inherit;font-size:12px;background:#fff;outline:none;width:100%}.form-input:focus,.form-select:focus{box-shadow:0 0 0 3px rgba(247,201,72,.15)}.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.case-card{background:#fff;border:2px solid var(--ink);border-radius:6px 10px 6px 10px;overflow:hidden;margin-bottom:8px}.case-card-header{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:11px;border-bottom:1.5px solid #e8e4d8}.case-card-header:hover{background:#fefdfb}.case-card-body{padding:12px 14px}.step-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0ede8;font-size:10px}.step-row:last-child{border-bottom:none}.step-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.step-dot.pass{background:var(--c-device)}.step-dot.fail{background:var(--c-runner)}.step-dot.pending{background:#d4d8dc}.step-dot.running{background:var(--c-ai);animation:pulse 1s infinite}@keyframes pulse{50%{opacity:.4}}
+.log-section{background:#1e1e24;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;overflow:hidden}.log-header{padding:10px 16px;background:#2d2d34;border-bottom:2px solid var(--ink);display:flex;align-items:center;justify-content:space-between}.log-body{padding:10px 16px;max-height:200px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:10px;color:#a0aec0;line-height:1.6}.log-line{display:flex;gap:8px}.log-time{color:#555;flex-shrink:0}.log-info{color:#a0aec0}.log-success{color:#6BCB77}.log-error{color:#FFB5A7}
+</style></head><body>
+
+<h1>任务详情 + 新建任务弹窗</h1>
+<p>Doodle Craft 原型</p>
+
+<!-- P1: TaskDetail -->
+<div class="pg"><div class="pg-label"><span class="dot" style="background:var(--c-runner);transform:rotate(45deg);border-radius:1px"></span> P1 · 任务详情</div>
+<div style="background:var(--paper);border:3px solid var(--ink);border-radius:6px 10px;overflow:hidden;box-shadow:3px 3px 0 rgba(0,0,0,.04)">
+
+<!-- Header -->
+<div style="display:flex;align-items:center;gap:12px;padding:14px 20px;background:#fff;border-bottom:3px solid var(--ink)">
+<div style="width:40px;height:40px;display:grid;place-items:center;background:var(--c-runner);border:3px solid var(--ink);border-radius:8px 16px 6px 14px;font-size:16px;transform:rotate(-2deg)">▶</div>
+<div><h2 style="font-family:'Caveat',cursive;font-size:22px;font-weight:700;transform:rotate(-0.5deg)">任务详情</h2><p style="font-size:9px;opacity:0.4">ID-042 · smoke-test-v2.4</p></div>
+<div style="margin-left:auto;display:flex;gap:8px"><button class="btn">← 返回列表</button></div></div>
+
+<div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+
+<!-- Info Card -->
+<div class="info-card"><span class="sec-title">📋 任务信息</span>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:10px;margin-bottom:12px">
+<div><span style="opacity:0.4">📱 设备</span><br><span style="font-weight:700">Pixel 6</span></div>
+<div><span style="opacity:0.4">👤 创建人</span><br><span style="font-weight:700">QA_Engineer</span></div>
+<div><span style="opacity:0.4">🕐 创建时间</span><br><span style="font-weight:700">2026-07-24 14:32</span></div>
+<div><span style="opacity:0.4">📋 用例数</span><br><span style="font-weight:700">5</span></div>
+<div><span style="opacity:0.4">🔁 循环</span><br><span style="font-weight:700">3 轮</span></div>
+<div><span style="opacity:0.4">🏷 状态</span><br><span class="tag tag-purple">执行中</span></div></div>
+<div class="progress-bar"><div class="progress-fill" style="width:72%;background:var(--c-ai)"></div></div>
+<div style="display:flex;justify-content:space-between;font-size:9px;font-weight:700;margin-top:4px"><span>18/25 完成</span><span>72%</span></div>
+<div style="display:flex;gap:6px;margin-top:10px"><button class="btn btn-sm btn-fill">⏹ 停止</button><button class="btn btn-sm">↻ 重新执行</button><button class="btn btn-sm">📊 查看报告</button><button class="btn btn-sm" style="border-color:var(--c-runner);color:#a03030">🗑 删除</button></div></div>
+
+<!-- Case List -->
+<div class="info-card"><span class="sec-title">📝 用例执行</span>
+<div class="case-card"><div class="case-card-header"><span style="transform:rotate(0)">▶</span><span class="tag tag-green">PASS</span><span style="flex:1;font-weight:700">登录流程测试</span><span style="font-size:9px;opacity:0.4">5/5 通过</span></div></div>
+<div class="case-card"><div class="case-card-header" style="background:#fefdfb"><span style="transform:rotate(90deg)">▶</span><span class="tag tag-purple">执行中</span><span style="flex:1;font-weight:700">首页加载测试</span><span style="font-size:9px;opacity:0.4">2/3 完成</span></div>
+<div class="case-card-body"><div style="font-size:10px;font-weight:700;margin-bottom:6px">步骤明细</div>
+<div class="step-row"><span class="step-dot pass"></span><span style="flex:1">步骤 1 · click</span><span style="color:var(--c-device);font-weight:700">PASS</span></div>
+<div class="step-row"><span class="step-dot pass"></span><span style="flex:1">步骤 2 · wait</span><span style="color:var(--c-device);font-weight:700">PASS</span></div>
+<div class="step-row"><span class="step-dot running"></span><span style="flex:1">步骤 3 · verify_text</span><span style="color:var(--c-ai);font-weight:700">执行中</span></div>
+<div class="step-row"><span class="step-dot pending"></span><span style="flex:1">步骤 4 · click</span><span style="color:#999">未执行</span></div></div></div>
+<div class="case-card"><div class="case-card-header"><span>▶</span><span style="flex:1;font-weight:700;opacity:0.5">搜索功能测试</span><span style="font-size:9px;opacity:0.4">等待执行</span></div></div></div>
+
+<!-- BUG Section -->
+<div class="info-card"><span class="sec-title">🐛 BUG 记录 <span style="font-size:9px;font-weight:700;color:var(--c-runner);margin-left:6px">2</span></span>
+<div class="case-card" style="border-color:var(--c-runner)"><div class="case-card-header" style="border-color:var(--c-runner)"><span>▶</span><span class="tag tag-pink">BUG-001</span><span style="flex:1;font-weight:700">登录按钮点击超时</span><span style="font-size:9px;opacity:0.4">第 3 轮 · 步骤 3</span></div></div>
+<div class="case-card" style="border-color:var(--c-runner)"><div class="case-card-header" style="border-color:var(--c-runner)"><span>▶</span><span class="tag tag-pink">BUG-002</span><span style="flex:1;font-weight:700">密码输入框未找到</span><span style="font-size:9px;opacity:0.4">第 5 轮 · 步骤 2</span></div></div></div>
+
+<!-- Logs -->
+<div class="info-card" style="padding:0;overflow:hidden">
+<div class="log-header"><span style="font-weight:700;font-size:12px;color:#e0e0e0">📜 执行日志</span><button class="btn btn-sm" style="border-color:#555;color:#a0aec0">清空</button></div>
+<div class="log-body"><div class="log-line"><span class="log-time">14:32:01</span><span class="log-info">[INFO] 任务开始执行</span></div>
+<div class="log-line"><span class="log-time">14:32:03</span><span class="log-success">[PASS] 步骤 1 · click · 登录按钮</span></div>
+<div class="log-line"><span class="log-time">14:32:05</span><span class="log-success">[PASS] 步骤 2 · wait · 首页加载</span></div>
+<div class="log-line"><span class="log-time">14:32:08</span><span class="log-error">[FAIL] 步骤 3 · verify_text · 标题校验</span></div></div></div>
+
+</div></div></div>
+
+<!-- P2: New Task Dialog -->
+<div class="pg"><div class="pg-label"><span class="dot" style="background:var(--c-dashboard);transform:rotate(45deg);border-radius:1px"></span> P2 · 新建任务弹窗</div>
+
+<div style="position:relative;height:520px">
+<div class="dialog-overlay" style="position:absolute">
+<div class="dialog-box">
+<div class="dialog-header"><h3>新建测试任务</h3><button style="border:none;background:none;font-size:20px;cursor:pointer;color:var(--ink);opacity:0.4">✕</button></div>
+<div class="dialog-body">
+<div class="form-group"><label class="form-label">任务名称 *</label><input class="form-input" placeholder="输入任务名称" value="smoke-test-v2.4"></div>
+<div class="form-row">
+<div class="form-group"><label class="form-label">任务类型 *</label><select class="form-select"><option>📱 Android UI 自动化测试</option><option>🌍 Web 自动化测试</option><option>🌐 API 测试</option></select></div>
+<div class="form-group"><label class="form-label">设备 *</label><select class="form-select"><option>Pixel 6 (emulator-5554)</option><option>Xiaomi 13 (192.168.1.100)</option></select></div></div>
+<div class="form-group"><label class="form-label">用例 * (多选)</label><select class="form-select" style="min-height:60px"><option>TC-001 登录流程测试</option><option>TC-002 首页加载测试</option><option selected>TC-003 搜索功能测试</option></select></div>
+<div class="form-row">
+<div class="form-group"><label class="form-label">循环次数</label><input class="form-input" type="number" value="3" min="1" max="10000"></div>
+<div class="form-group"><label class="form-label">轮间间隔 (秒)</label><input class="form-input" type="number" value="5" min="5" max="300"></div></div>
+<div class="form-group"><label class="form-label">执行方式</label>
+<div style="display:flex;gap:12px;font-size:12px;font-weight:700">
+<label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="mode" checked> 立即执行</label>
+<label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="mode"> 定时执行</label></div></div></div>
+<div class="dialog-footer"><button class="btn">取消</button><button class="btn btn-fill">创建并执行</button></div></div></div></div></div>
+
+<script>lucide.createIcons()</script></body></html>

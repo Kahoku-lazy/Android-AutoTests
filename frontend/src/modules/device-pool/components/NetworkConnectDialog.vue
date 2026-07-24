@@ -175,7 +175,7 @@ function handleCancel() {
 }
 
 .net-label {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   color: var(--ink);
 }
@@ -186,14 +186,14 @@ function handleCancel() {
 }
 
 .net-error {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--ac-red, #e8998a);
   margin: 0;
   line-height: 1.4;
 }
 
 .net-hint {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink-muted);
   margin: 4px 0 0;
   line-height: 1.5;

@@ -61,8 +61,8 @@ watch(() => props.items.length, revealItems)
 }
 
 .timeline__title {
-  font-family: var(--font-display, 'Quicksand', sans-serif);
-  font-size: 16px;
+  font-family: var(--font-display, 'Nunito', sans-serif);
+  font-size: var(--app-size-md);
   font-weight: 700;
   color: var(--ink);
   margin: 0 0 16px;
@@ -80,7 +80,7 @@ watch(() => props.items.length, revealItems)
   align-items: center;
   justify-content: center;
   color: #999;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
 }
 
 /* Item */
@@ -145,19 +145,19 @@ watch(() => props.items.length, revealItems)
 }
 
 .timeline-item__action {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   color: var(--ink);
 }
 
 .timeline-item__time {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   color: #999;
   flex-shrink: 0;
 }
 
 .timeline-item__detail {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: #999;
   margin: 0;
   line-height: 1.5;
@@ -170,7 +170,7 @@ watch(() => props.items.length, revealItems)
 }
 
 .timeline-item__tag {
-  font-size: 9px;
+  font-size: var(--app-size-xs);
   padding: 2px 7px;
   border-radius: 3px 6px 3px 6px;
   background: var(--app-bg-subtle);

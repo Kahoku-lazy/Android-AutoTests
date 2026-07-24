@@ -77,7 +77,7 @@ find frontend/src -name "*.test.js" -o -name "*.spec.js" | wc -l  # 测试文件
 | `animal-island-ui.md` | type=danger、Tabs 自闭合、el-cascader emitPath |
 | `api-conventions.md` | API 封装、命名规范 |
 | `conventions.md` | 文件行数上限、命名规范 |
-| `module-boundaries.md` | 组件归属（shared vs 模块内） |
+| `api-conventions.md` | 组件归属（shared vs 模块内） |
 
 ## 输出格式（每次必须使用此结构）
 

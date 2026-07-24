@@ -512,12 +512,12 @@ onUnmounted(() => stopEmptyAnim())
   flex-shrink: 0;
 }
 .pe-header h3 {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   color: var(--app-text, #3D4A3B);
   margin: 0;
 }
 .pe-count {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--app-text-secondary, #7A8B73);
   background: rgba(179, 158, 243,0.06);
   padding: 1px 8px;
@@ -537,7 +537,7 @@ onUnmounted(() => stopEmptyAnim())
 }
 .pe-refresh-btn {
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   border: 1px solid var(--ink));
   border-radius: 6px;
   background: #fff);
@@ -558,19 +558,19 @@ onUnmounted(() => stopEmptyAnim())
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--app-text, #3D4A3B);
   cursor: pointer;
   user-select: none;
 }
 .pe-checked-count {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--app-text-secondary, #7A8B73);
 }
 .pe-batch-btn {
   margin-left: auto;
   padding: 4px 12px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   border: 1px solid var(--ink));
   border-radius: 6px;
   background: #fff);
@@ -596,10 +596,10 @@ onUnmounted(() => stopEmptyAnim())
   justify-content: center;
   gap: 10px;
   color: var(--app-text-secondary, #7A8B73);
-  font-size: 13px;
+  font-size: var(--app-size-sm);
 }
-.empty-icon { font-size: 32px; opacity: 0.55; }
-.empty-text { margin: 0; font-size: 13px; font-weight: 500; color: var(--app-text, var(--ink)); }
+.empty-icon { font-size: var(--app-size-2xl); opacity: 0.55; }
+.empty-text { margin: 0; font-size: var(--app-size-sm); font-weight: 500; color: var(--app-text, var(--ink)); }
 
 /* Element list */
 .pe-list {
@@ -660,7 +660,7 @@ onUnmounted(() => stopEmptyAnim())
   z-index: 1;
 }
 .pe-thumb-placeholder {
-  font-size: 18px;
+  font-size: var(--app-size-lg);
   opacity: 0.4;
   width: 36px;
   height: 24px;
@@ -671,7 +671,7 @@ onUnmounted(() => stopEmptyAnim())
 .pe-cell--text {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -681,11 +681,11 @@ onUnmounted(() => stopEmptyAnim())
 .pe-text--none { color: #ccc; }
 .pe-cell--bounds {
   width: 110px;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   overflow: hidden;
 }
 .pe-code {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   color: var(--app-text-secondary, #7A8B73);
   background: rgba(179, 158, 243,0.04);
   padding: 1px 5px;
@@ -700,7 +700,7 @@ onUnmounted(() => stopEmptyAnim())
   justify-content: center;
 }
 .pe-badge {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 4px;
@@ -720,7 +720,7 @@ onUnmounted(() => stopEmptyAnim())
   gap: 12px;
 }
 .form-label {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: var(--text-secondary, var(--app-ink-muted, #999));
   font-weight: 500;
   user-select: none;
@@ -730,7 +730,7 @@ onUnmounted(() => stopEmptyAnim())
   color: var(--el-color-danger, #FFB5A7);
 }
 .form-hint {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--app-text-secondary, #7A8B73);
   line-height: 1.5;
   background: rgba(179, 158, 243,0.04);
@@ -768,7 +768,7 @@ onUnmounted(() => stopEmptyAnim())
   flex-shrink: 0;
 }
 .enlarge-info {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   line-height: 1.7;
   color: var(--app-text-secondary, #7A8B73);
   text-align: left;
@@ -787,6 +787,6 @@ onUnmounted(() => stopEmptyAnim())
   background: #fff);
   color: var(--app-text, #3D4A3B);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
 }
 </style>

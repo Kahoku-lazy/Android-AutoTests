@@ -5,10 +5,9 @@ import { ElMessage } from "element-plus";
 import client, { getToken } from "@/shared/api-client.js";
 import ConfirmButton from "@/shared/components/patterns/ConfirmButton.vue";
 import EmptyState from "@/shared/components/patterns/EmptyState.vue";
-// Card/AppTabs → AppCard/AppTabs
-import AppCard from "@/shared/components/AppCard.vue";
-import AppTabs from "@/shared/components/AppTabs.vue";
+import AppTable from "@/shared/components/AppTable.vue";
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
+import DeviceFilterTabs from "@/modules/device-pool/components/DeviceFilterTabs.vue";
 import {
   generateTaskId,
   readTaskCounter,
@@ -42,7 +41,13 @@ const devices = ref([]);
 const showNewTask = ref(false);
 
 const activeTab = ref("running");
+const viewMode = ref("table");
+const searchQuery = ref("");
 const tasks = ref([]);
+const kpiStats = computed(() => ({running:tasks.value.filter(t=>deriveTaskStatus(t)==="running").length,waiting:tasks.value.filter(t=>isTaskQueued(t)).length,completed:tasks.value.filter(t=>taskBucket(t)==="completed").length,incomplete:tasks.value.filter(t=>taskBucket(t)==="incomplete"||deriveTaskStatus(t)==="idle").length}));
+const groupedTasks = computed(() => ({running:filteredTasks.value.filter(t=>deriveTaskStatus(t)==="running"),waiting:filteredTasks.value.filter(t=>isTaskQueued(t)),completed:filteredTasks.value.filter(t=>taskBucket(t)==="completed"),incomplete:filteredTasks.value.filter(t=>taskBucket(t)==="incomplete"||deriveTaskStatus(t)==="idle")}));
+const filteredTasks = computed(()=>{let l=tasks.value;if(activeTab.value!=="all")l=l.filter(t=>{if(activeTab.value==="running")return deriveTaskStatus(t)==="running";if(activeTab.value==="waiting")return isTaskQueued(t);if(activeTab.value==="completed")return taskBucket(t)==="completed";if(activeTab.value==="incomplete")return taskBucket(t)==="incomplete";if(activeTab.value==="idle")return deriveTaskStatus(t)==="idle";return true});const q=searchQuery.value.trim().toLowerCase();if(q)l=l.filter(t=>(t.name||"").toLowerCase().includes(q)||(t.id||"").toLowerCase().includes(q)||(t.deviceSerial||"").toLowerCase().includes(q));return l});
+const tableColumns = [{dataIndex:"id",title:"任务ID",minWidth:90},{dataIndex:"name",title:"名称",minWidth:150},{dataIndex:"deviceSerial",title:"设备",minWidth:120},{dataIndex:"cases",title:"用例",minWidth:60,align:"center"},{dataIndex:"progress",title:"进度",minWidth:140},{dataIndex:"status",title:"状态",minWidth:100,align:"center"},{dataIndex:"time",title:"时间",minWidth:100},{dataIndex:"actions",title:"操作",width:200,fixed:"right"}];
 
 // ── JWT decode for creator ──
 function getCurrentUsername() {
@@ -181,10 +186,9 @@ function formatTime(isoStr) {
   }
 }
 
-// ── Navigate to detail page ──
-function openTaskDetail(task) {
-  router.push(`/runner/task/${task.id}`);
-}
+// ── Navigate ──
+function openTaskDetail(task) { router.push(`/runner/task/${task.id}`) }
+function openReport(task) { router.push(`/reports/task/${encodeURIComponent(task.id)}`) }
 
 // ── New task form ──
 const newForm = ref({
@@ -650,172 +654,54 @@ async function loadDevices() {
     />
     <div class="doc-body">
       <section class="doc-section runner-section">
-        <div class="doc-section__header">
-          <h3 class="doc-section__title">
-            任务列表<span class="doc-tag">Tasks</span>
-          </h3>
-          <el-button class="wb-btn" type="primary" @click="openNewTask">+ 新建任务</el-button>
+        <div class="action-bar">
+          <el-input class="search-input" v-model="searchQuery" placeholder="搜索任务名称 / ID / 设备..." clearable />
+          <div class="filter-bar-inline">
+            <DeviceFilterTabs :tabs="filterAppTabs" v-model="activeTab" />
+            <div class="view-toggle"><button class="view-btn" :class="{active:viewMode==='table'}" @click="viewMode='table'">📋 表格</button><button class="view-btn" :class="{active:viewMode==='cards'}" @click="viewMode='cards'">📷 卡片</button></div>
+            <span class="filter-count">{{ filteredTasks.length }} 任务</span>
+          </div>
+          <el-button class="action-btn" type="primary" @click="openNewTask">＋ 新建任务</el-button>
         </div>
-
-        <!-- AppTabs panel: cards render inside animal-tabs content slots -->
-        <div class="tabs-panel">
-          <AppTabs
-            class="runner-tabs"
-            :items="filterAppTabs"
-            v-model="activeTab"
-            :leaf-animation="true"
-            :shadow="true"
-          >
-            <template v-for="tab in filterAppTabs" #[tab.key] :key="tab.key">
-              <div v-if="tasksForTab(tab.key).length" class="card-grid">
-                <div
-                  v-for="(task, idx) in tasksForTab(tab.key)"
-                  :key="task.id"
-                  class="task-card"
-                  :class="taskCardClass(task)"
-                  :style="taskCardRateBg(task)"
-                  @click="openTaskDetail(task)"
-                >
-                  <!-- Row 1: task name + round badge + status badge -->
-                  <div class="tc-row1">
-                    <span class="tc-name">
-                      {{ task.name || task.id }}
-                      <span v-if="task.round" class="tc-round-badge"
-                        >第{{ task.round }}轮</span
-                      >
-                    </span>
-                    <span
-                      class="tc-status-badge"
-                      :style="{ background: taskStatusInfo(task).color }"
-                    >
-                      {{ taskStatusInfo(task).icon }}
-                      {{ taskStatusInfo(task).label }}
-                      <span
-                        v-if="taskStatusInfo(task).rateTag"
-                        class="tc-rate-tag"
-                        :style="{ background: taskStatusInfo(task).rateColor }"
-                      >{{ taskStatusInfo(task).rateTag }}</span>
-                    </span>
-                  </div>
-                  <!-- Row 1b: device + task ID -->
-                  <div class="tc-row1b">
-                    <span class="tc-device">📱 {{ task.deviceSerial }}</span>
-                    <span class="tc-id-badge">{{ task.id }}</span>
-                  </div>
-
-                  <!-- Row 2: meta -->
-                  <div class="tc-row2">
-                    <span>📋 {{ task.caseIds?.length || 0 }} 用例</span>
-                    <span v-if="task.loopCount"
-                      >🔁 {{ task.loopCount }} 轮</span
-                    >
-                    <span class="tc-creator-tag"
-                      >👤 {{ task.creator || "未知" }}</span
-                    >
-                    <span class="tc-time"
-                      >🕐 {{ formatTime(task.createdAt) }}</span
-                    >
-                  </div>
-
-                  <!-- Row 3: current case + progress -->
-                  <div
-                    v-if="task.running && task.currentCaseTitle"
-                    class="tc-row3"
-                  >
-                    <span class="tc-current-label">▶ 正在执行：</span>
-                    <span class="tc-current-name">{{
-                      task.currentCaseTitle
-                    }}</span>
-                  </div>
-                  <div class="tc-row3">
-                    <span class="tc-progress-text">
-                      <template v-if="isTaskQueued(task)">
-                        排队等待执行（{{ task.caseIds?.length || 0 }} 用例 ·
-                        {{ task.loopCount || 1 }} 轮）
-                      </template>
-                      <template v-else>
-                        已执行 {{ taskCompletedCount(task) }}/{{
-                          taskTotalCount(task)
-                        }}
-                        次
-                        <template v-if="task.running && task.currentIteration"
-                          >（第 {{ task.currentIteration }} 轮循环）</template
-                        >
-                        <template v-if="task.outcome">
-                          · ✅ {{ task.overallPass || 0 }} ❌ {{ task.overallFail || 0 }}
-                          <span v-if="taskPassRate(task) < 90" class="tc-rate-warn">
-                            ({{ taskPassRate(task) }}%)
-                          </span>
-                        </template>
-                      </template>
-                    </span>
-                  </div>
-
-                  <!-- Progress bar: hide for pure waiting state -->
-                  <el-progress
-                    v-if="!isTaskQueued(task)"
-                    :percentage="taskProgress(task)"
-                    :stroke-width="6"
-                    :show-text="taskProgress(task) > 0"
-                    :color="taskStatusInfo(task).color"
-                  />
-
-                  <!-- Row 4: actions -->
-                  <div class="tc-actions" @click.stop>
-                    <template v-if="task.running">
-                      <ConfirmButton size="small" type="primary" danger
-                        message="确定停止该任务？" title="停止任务" confirm-text="停止"
-                        @confirm="doStopTask(task)">⏹ 停止</ConfirmButton>
-                    </template>
-                    <template v-else-if="isTaskQueued(task)">
-                      <ConfirmButton size="small" type="primary"
-                        message="确定取消该排队任务？任务将回到未执行列表" title="取消排队" confirm-text="取消排队"
-                        @confirm="doCancelQueue(task)">⏸ 取消排队</ConfirmButton>
-                    </template>
-                    <template
-                      v-else-if="
-                        task.outcome &&
-                        [
-                          'completed',
-                          'stopped',
-                          'interrupted',
-                          'error',
-                        ].includes(task.outcome)
-                      "
-                    >
-                      <el-button
-                        size="small"
-                        type="primary"
-                        @click="restartTask(task)"
-                        >↻ 重新执行</el-button>
-                      <el-button
-                        size="small"
-                        type="info"
-                        @click="router.push(`/reports/task/${encodeURIComponent(task.id)}`)"
-                        >📊 查看报告</el-button>
-                    </template>
-                    <template v-else-if="!task.caseIds?.length">
-                      <el-button size="small" disabled>⚠ 无用例</el-button>
-                    </template>
-                    <template v-else>
-                      <el-button
-                        size="small"
-                        type="primary"
-                        @click="doStartTask(task)"
-                        >▶ 执行</el-button>
-                    </template>
-                    <ConfirmButton size="small" type="primary" danger plain
-                      :message="`删除任务「${task.name || task.id}」？`" title="确认删除" confirm-text="删除"
-                      @confirm="doRemoveTask(task)">🗑 删除</ConfirmButton>
-                  </div>
+        <div class="kpi-row">
+          <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-ai)"></div><div class="kpi-value">{{ kpiStats.running }}</div><div class="kpi-label">执行中</div></div>
+          <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-dashboard)"></div><div class="kpi-value">{{ kpiStats.waiting }}</div><div class="kpi-label">等待中</div></div>
+          <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-device)"></div><div class="kpi-value">{{ kpiStats.completed }}</div><div class="kpi-label">已完成</div></div>
+          <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-runner)"></div><div class="kpi-value">{{ kpiStats.incomplete }}</div><div class="kpi-label">失败/未完成</div></div>
+        </div>
+        <el-card v-if="viewMode==='table'" class="table-card" shadow="never"><div class="device-table-wrapper"><AppTable :columns="tableColumns" :data-source="filteredTasks" row-key="id" empty-text="暂无任务" @row-click="openTaskDetail">
+          <template #cell-id="{record}"><span class="mono-text">{{ record.id }}</span></template>
+          <template #cell-name="{record}"><span style="font-weight:700">{{ record.name||record.id }}</span></template>
+          <template #cell-deviceSerial="{record}">📱 {{ record.deviceSerial||'—' }}</template>
+          <template #cell-cases="{record}">{{ record.caseIds?.length||0 }}</template>
+          <template #cell-progress="{record}"><div v-if="!isTaskQueued(record)" class="mini-progress"><div class="mini-progress-fill" :style="{width:taskProgress(record)+'%',background:taskStatusInfo(record).color}"></div></div><span style="font-size:var(--app-size-xs);margin-left:4px">{{ isTaskQueued(record)?'排队':taskProgress(record)+'%' }}</span></template>
+          <template #cell-status="{record}"><span class="status-badge" :style="{background:taskStatusInfo(record).color}">{{ taskStatusInfo(record).icon }} {{ taskStatusInfo(record).label }}</span></template>
+          <template #cell-time="{record}">{{ formatTime(record.createdAt) }}</template>
+          <template #cell-actions="{record}"><div class="table-actions">
+            <template v-if="deriveTaskStatus(record)==='running'"><ConfirmButton size="small" type="danger" plain message="停止后任务将中断" @confirm="doStopTask(record)">⏹ 停止</ConfirmButton></template>
+            <template v-else-if="isTaskQueued(record)"><ConfirmButton size="small" type="warning" plain message="确认取消排队？" @confirm="doCancelQueue(record)">取消排队</ConfirmButton></template>
+            <template v-else><el-button size="small" v-if="record.caseIds?.length" @click.stop="doStartTask(record)">▶ 执行</el-button><el-button size="small" v-if="record.outcome" @click.stop="restartTask(record)">↻ 重跑</el-button><el-button size="small" v-if="record.outcome" @click.stop="openReport(record)">📊 报告</el-button><ConfirmButton size="small" type="danger" plain message="确认删除该任务？" @confirm="doRemoveTask(record)">🗑 删除</ConfirmButton></template>
+          </div></template>
+          <template #empty><EmptyState icon="▶️" text="暂无任务" hint="点击「新建任务」创建第一个测试任务" /></template>
+        </AppTable></div></el-card>
+        <div v-if="viewMode==='cards'" class="card-grid-grouped">
+          <div v-for="g in [{k:'running',l:'🟣 执行中'},{k:'waiting',l:'🟡 等待中'},{k:'completed',l:'🟢 已完成'},{k:'incomplete',l:'🔴 失败/未完成'}]" :key="g.k">
+            <template v-if="groupedTasks[g.k].length">
+              <div class="card-group-title">{{ g.l }} <span class="card-group-count">{{ groupedTasks[g.k].length }}</span></div>
+              <div class="card-grid"><div v-for="task in groupedTasks[g.k]" :key="task.id" class="task-card" @click="openTaskDetail(task)">
+                <div class="task-card-header"><span class="task-card-id">{{ task.id }}</span><span class="status-badge" :style="{background:taskStatusInfo(task).color}">{{ taskStatusInfo(task).icon }} {{ taskStatusInfo(task).label }}</span></div>
+                <div class="task-card-name">{{ task.name||task.id }}</div>
+                <div class="task-card-meta">📱 {{ task.deviceSerial||'—' }} · {{ task.caseIds?.length||0 }} 用例 · {{ task.loopCount||1 }} 轮</div>
+                <div v-if="!isTaskQueued(task)" class="task-card-progress"><div class="mini-progress"><div class="mini-progress-fill" :style="{width:taskProgress(task)+'%',background:taskStatusInfo(task).color}"></div></div></div>
+                <div class="task-card-stats"><span v-if="isTaskQueued(task)">排队等待</span><span v-else>{{ taskCompletedCount(task) }}/{{ taskTotalCount(task) }} · {{ taskProgress(task) }}%</span><span style="font-size:var(--app-size-xs);opacity:0.4">{{ formatTime(task.createdAt) }}</span></div>
+                <div class="task-card-actions" @click.stop>
+                  <template v-if="deriveTaskStatus(task)==='running'"><ConfirmButton size="small" type="danger" plain message="停止后任务将中断" @confirm="doStopTask(task)">⏹ 停止</ConfirmButton></template>
+                  <template v-else-if="isTaskQueued(task)"><ConfirmButton size="small" type="warning" plain message="确认取消排队？" @confirm="doCancelQueue(task)">取消排队</ConfirmButton></template>
+                  <template v-else><el-button size="small" v-if="task.caseIds?.length" @click="doStartTask(task)">▶ 执行</el-button><el-button size="small" v-if="task.outcome" @click="restartTask(task)">↻ 重跑</el-button></template>
                 </div>
-              </div>
-
-              <EmptyState v-else icon="🎯"
-                :text="'当前分类暂无任务'"
-                :hint="tab.key !== 'all' ? '可切换到「全部」查看' : '创建新任务开始测试'" />
+              </div></div>
             </template>
-          </AppTabs>
+          </div>
         </div>
       </section>
     </div>
@@ -899,7 +785,7 @@ async function loadDevices() {
               :max="300"
               style="width: 160px"
             />
-            <span style="margin-left: 8px; font-size: 12px; color: #999"
+            <span style="margin-left: 8px; font-size: var(--app-size-sm); color: #999"
               >秒（最小 5s）</span
             >
           </el-form-item>
@@ -943,269 +829,56 @@ async function loadDevices() {
 </template>
 
 <style scoped>
-.runner-page {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.runner-page :deep(.doc-body) {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-.runner-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  padding: 20px 24px 24px;
-}
-.runner-section .doc-section__header {
-  flex-shrink: 0;
-}
-
-/* AppTabs panel — unified container for tabs + content */
-.tabs-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  margin-top: 12px;
-  border: 1px solid var(--ink);
-  border-radius: var(--ac-radius, 16px);
-  background: #fff;
-  overflow: hidden;
-  box-shadow: var(--app-shadow-sm);
-  
-}
-.tabs-panel :deep(.el-tabs) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  padding: 8px 16px 0;
-}
-.runner-tabs :deep(.el-tabs__content) {
-  flex: 1;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  display: block;
-  padding-top: 12px;
-}
-.runner-tabs :deep(.el-tabs__inner) {
-  min-height: min-content;
-}
-
-/* AppCard grid */
-.card-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-  padding: 12px 16px 16px;
-  align-content: start;
-}
-
-/* Task card */
-.task-card {
-  cursor: pointer;
-  border-radius: var(--ac-radius, 16px);
-  border: 1px solid var(--ink);
-  border-left-width: 4px;
-  padding: 16px 18px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  transition: all 0.2s;
-  background: #fff;
-  box-shadow: var(--app-shadow-sm);
-}
-.task-card--running {
-  background: linear-gradient(135deg, #e8edff 0%, #f3f6ff 100%);
-  border-color: rgba(136, 157, 240, 0.28);
-  border-left-color: #889df0;
-}
-.task-card--waiting {
-  background: linear-gradient(135deg, #fff8e0 0%, #fffdf5 100%);
-  border-color: rgba(247, 205, 103, 0.35);
-  border-left-color: #f7cd67;
-}
-.task-card--completed {
-  background: linear-gradient(135deg, #e8f5e0 0%, #f3faf0 100%);
-  border-color: rgba(111, 186, 44, 0.3);
-  border-left-color: var(--c-workflow);
-}
-.task-card--incomplete {
-  background: linear-gradient(135deg, #ffe8ec 0%, #fff5f7 100%);
-  border-color: rgba(232, 95, 95, 0.28);
-  border-left-color: #e85f5f;
-}
-.task-card--idle {
-  background: #fff;
-  border-color: rgba(162,210,255,0.30);
-  border-left-color: #999;
-}
-.task-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--app-shadow-md);
-}
-
-/* Row 1: device + status */
-.tc-row1 {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.tc-row1b {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 2px;
-}
-.tc-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 200px;
-}
-.tc-round-badge {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 600;
-  color: #fff;
-  background: #889df0;
-  padding: 1px 8px;
-  border-radius: 10px;
-  margin-left: 6px;
-  vertical-align: middle;
-}
-.tc-id-badge {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 700;
-  color: #999;
-  background: rgba(162,210,255,0.18);
-  padding: 2px 10px;
-  border-radius: 10px;
-  font-family: "Cascadia Code", Consolas, monospace;
-  letter-spacing: 0.3px;
-}
-.tc-rate-warn {
-  font-size: 11px;
-  font-weight: 700;
-  color: #e85f5f;
-}
-.tc-device {
-  font-size: 12px;
-  font-weight: 600;
-  color: #999;
-  font-family: "Cascadia Code", Consolas, monospace;
-}
-.tc-status-badge {
-  font-size: 11px;
-  font-weight: 700;
-  color: #fff;
-  padding: 2px 6px 2px 10px;
-  border-radius: 12px;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.tc-rate-tag {
-  font-size: 9px;
-  font-weight: 800;
-  color: #fff;
-  padding: 1px 7px;
-  border-radius: 8px;
-  letter-spacing: 0.2px;
-}
-
-/* Row 2: meta */
-.tc-row2 {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
-  font-size: 12px;
-  color: #999;
-}
-.tc-creator-tag {
-  font-size: 11px;
-  font-weight: 600;
-  color: #fff;
-  background: #b39ef3;
-  padding: 1px 8px;
-  border-radius: 10px;
-}
-.tc-time {
-  font-size: 11px;
-  color: #999;
-}
-
-/* Row 3: current case + progress */
-.tc-row3 {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-}
-.tc-current-label {
-  color: #409eff;
-  font-weight: 600;
-}
-.tc-current-name {
-  color: var(--ink);
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.tc-progress-text {
-  color: #999;
-  font-weight: 600;
-}
-
-/* Actions */
-.tc-actions {
-  display: flex;
-  gap: 6px;
-  padding-top: 2px;
-  border-top: 1px solid rgba(162,210,255,0.18);
-}
-
-.empty-hint {
-  color: #999;
-  padding: 60px 0;
-  text-align: center;
-  font-size: 15px;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.new-task-form {
-  padding: 4px 0 8px;
-}
-.new-task-form :deep(.el-form-item) {
-  margin-bottom: 16px;
-}
-.field-hint {
-  margin: 6px 0 0;
-  font-size: 12px;
-  color: #e6a23c;
-  line-height: 1.4;
-}
-
-/* Responsive: single column on narrow screens */
-@media (max-width: 900px) {
-  .card-grid {
-    grid-template-columns: 1fr;
-  }
-}
+.runner-page { height:100%;display:flex;flex-direction:column;overflow:hidden }
+.runner-page :deep(.doc-body) { flex:1;min-height:0;overflow:hidden }
+.runner-section { flex:1;display:flex;flex-direction:column;min-height:0;padding:16px 20px 20px;gap:14px }
+.action-bar { display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0 }
+.search-input { width:240px;flex-shrink:0 }
+.filter-bar-inline { display:flex;align-items:center;gap:10px;flex:1;flex-wrap:wrap }
+.filter-count { font-size:var(--app-size-xs);color:#999;font-weight:600;white-space:nowrap }
+.action-btn { flex-shrink:0 }
+.view-toggle { display:flex;gap:0;border:2.5px solid var(--ink);border-radius:4px 8px 4px 8px;overflow:hidden }
+.view-btn { padding:5px 12px;font-size:var(--app-size-xs);font-weight:700;background:#fff;color:var(--ink);opacity:0.4;border:none;border-right:1.5px solid var(--ink);cursor:pointer;font-family:inherit;transition:all 0.12s }
+.view-btn:last-child { border-right:none }.view-btn.active { opacity:1;background:var(--ink);color:#fff }
+.kpi-row { display:grid;grid-template-columns:repeat(4,1fr);gap:12px;flex-shrink:0 }
+.kpi-card { text-align:center;padding:12px 10px 16px;background:#fff;border:3px solid var(--ink);border-radius:4px 10px 6px 8px;box-shadow:2px 3px 0 rgba(0,0,0,0.04);position:relative }
+.kpi-dot { width:10px;height:10px;transform:rotate(45deg);margin:0 auto 5px;border:2px solid var(--ink) }
+.kpi-value { font-family:'Patrick Hand',cursive;font-size:var(--app-size-2xl);font-weight:700;line-height:1 }
+.kpi-label { font-size:var(--app-size-xs);font-weight:700;opacity:0.4;text-transform:uppercase;margin-top:2px }
+.kpi-card::after { content:'~';position:absolute;bottom:2px;right:8px;font-family:'Patrick Hand',cursive;font-size:var(--app-size-md);opacity:0.12 }
+@media(max-width:700px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+.table-card { flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;border-radius:6px 10px 6px 10px;border:2.5px solid var(--ink);background:#fff }
+.table-card :deep(.el-card__body) { flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:0 }
+.mono-text { font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600 }
+.status-badge { font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);color:#fff;display:inline-block }
+.mini-progress { height:6px;background:#f0ede8;border-radius:3px;overflow:hidden;border:1px solid var(--ink);width:80px;display:inline-block;vertical-align:middle }
+.mini-progress-fill { height:100%;border-radius:2px;transition:width 0.3s }
+.device-table-wrapper { flex:1;min-height:0;overflow-y:auto;overflow-x:auto }
+.device-table-wrapper :deep(.el-table th) { background:#f8f6f2;color:var(--ink);font-weight:700;font-size:var(--app-size-xs);text-transform:uppercase;letter-spacing:0.04em;border-bottom:2.5px solid var(--ink) }
+.device-table-wrapper :deep(.el-table td) { border-bottom:1px solid #e8e4d8 }
+.table-actions { display:flex;gap:4px;flex-wrap:wrap;align-items:center }
+.card-grid-grouped { flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:16px }
+.card-group-title { font-family:'Patrick Hand',cursive;font-size:var(--app-size-lg);font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:10px }
+.card-group-count { font-family:var(--app-font-mono);font-size:var(--app-size-xs);color:var(--ink);opacity:0.4;background:#f8f6f2;padding:2px 8px;border-radius:3px 6px 3px 6px;border:1.5px solid #e8e4d8 }
+.card-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:14px }
+@media(max-width:900px){.card-grid{grid-template-columns:repeat(2,1fr)}}
+.task-card { background:#fff;border:3px solid var(--ink);border-radius:6px 10px 6px 10px;padding:10px 10px 28px 10px;box-shadow:2px 3px 0 rgba(0,0,0,0.04);position:relative;cursor:pointer;transition:all 0.2s }
+.task-card:nth-child(3n+1){transform:rotate(-0.4deg)}.task-card:nth-child(3n+2){transform:rotate(0.3deg)}.task-card:nth-child(3n+3){transform:rotate(-0.2deg)}
+.task-card:hover { transform:rotate(0)scale(1.02)!important;z-index:5;box-shadow:3px 5px 0 rgba(0,0,0,0.08) }
+.task-card-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:8px }
+.task-card-id { font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600 }
+.task-card-name { font-size:var(--app-size-sm);font-weight:700;margin-bottom:4px }
+.task-card-meta { font-size:var(--app-size-xs);opacity:0.4;margin-bottom:8px }
+.task-card-progress { margin-bottom:8px }
+.task-card-stats { display:flex;justify-content:space-between;font-size:var(--app-size-xs);font-weight:700;margin-bottom:4px }
+.task-card-actions { display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:4px }
+.task-card-actions :deep(.el-button) { font-size:var(--app-size-xs);padding:3px 8px;font-weight:700;border-radius:3px 6px 3px 6px }
+.new-task-form :deep(.el-form-item) { margin-bottom:14px }.new-task-form :deep(.el-form-item__label) { font-size:var(--app-size-xs);font-weight:700;opacity:0.5;text-transform:uppercase }.field-hint{font-size:var(--app-size-xs);color:var(--c-runner);margin-top:4px;font-weight:600}
+/* 全覆盖 dialog 内部组件 */
+:deep(.el-dialog__header){padding:14px 18px;border-bottom:3px solid var(--ink);background:#fff;border-radius:6px 10px 0 0}:deep(.el-dialog__title){font-family:'Patrick Hand',cursive;font-size:var(--app-size-lg);font-weight:700}:deep(.el-dialog__body){padding:18px}:deep(.el-dialog__footer){padding:14px 18px;border-top:2px solid var(--ink);background:#fff}
+:deep(.el-select__wrapper){border-radius:4px 8px 4px 8px!important;border:2px solid var(--ink)!important;box-shadow:none!important}:deep(.el-select__wrapper:hover){border-color:var(--c-dashboard)!important}:deep(.el-select__wrapper.is-disabled){background:#f8f6f2!important;opacity:0.5}
+:deep(.el-input-number){border-radius:4px 8px 4px 8px;border:2px solid var(--ink)}:deep(.el-input-number .el-input__wrapper){border:none!important;box-shadow:none!important}:deep(.el-input-number__decrease),:deep(.el-input-number__increase){border-color:var(--ink)!important;background:#fff!important;color:var(--ink)!important}
+:deep(.el-radio__label){font-size:var(--app-size-xs);font-weight:700}:deep(.el-radio__inner){border-color:var(--ink)!important}:deep(.el-radio.is-checked .el-radio__inner){background:var(--ink)!important;border-color:var(--ink)!important}
+:deep(.el-date-picker__wrapper){border-radius:4px 8px 4px 8px!important;border:2px solid var(--ink)!important}
+:deep(.el-dialog__headerbtn){top:16px;right:16px}:deep(.el-dialog__close){color:var(--ink)!important;font-size:var(--app-size-lg)!important}
 </style>

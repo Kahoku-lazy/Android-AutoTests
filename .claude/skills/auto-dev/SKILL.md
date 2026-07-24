@@ -51,7 +51,7 @@ Step -1.1: 领域映射
   | "保存/删除没反应" | 对应模块的 views.py / api.js / CaseEditor.vue | 前端catch吞错/后端500/权限校验 |
   | "页面白屏/加载不出来" | Vite / router.js / 对应index.vue | 语法错误/动态import失败/模块500 |
 
-  映射知识来源: .claude/rules/troubleshooting.md 速查表 / architecture.md / database.md
+  映射知识来源: .claude/rules/troubleshooting.md 速查表 / frontend.md / database.md
 
   ↓
 Step -1.2: 快速探索（只读，定位根因）

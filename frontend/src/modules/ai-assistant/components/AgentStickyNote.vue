@@ -209,7 +209,7 @@ function onLeave() {
   min-width: 96px;
   max-width: 82%;
   padding: 6px 20px 7px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   text-align: center;
   color: #2f6b3c;
@@ -256,7 +256,7 @@ function onLeave() {
   background-color: rgba(139, 115, 85, 0.08);
   display: grid;
   place-items: center;
-  font-size: 24px;
+  font-size: var(--app-size-xl);
   border: 2px solid rgba(139, 115, 85, 0.12);
 }
 .ac-status-bubble {
@@ -266,7 +266,7 @@ function onLeave() {
   z-index: 2;
   padding: 3px 7px 3px;
   border-radius: 12px 12px 12px 4px;
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   color: #fff;
   box-shadow: 0 3px 10px rgba(61, 52, 40, 0.16);
@@ -299,7 +299,7 @@ function onLeave() {
 }
 .note-name {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--app-size-md);
   font-weight: 800;
   color: var(--doodle-ink, #2d2d2d);
   line-height: 1.25;
@@ -309,7 +309,7 @@ function onLeave() {
 }
 .note-desc {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   color: #8a7b68;
   line-height: 1.35;
@@ -320,7 +320,7 @@ function onLeave() {
 }
 .note-tags { display: flex; flex-wrap: wrap; gap: 4px; }
 .note-tag {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   padding: 1px 7px;
   border-radius: 999px;
@@ -328,7 +328,7 @@ function onLeave() {
   color: #6b5a45;
 }
 .note-tools {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   color: var(--app-ink-muted, #999);
 }
@@ -349,7 +349,7 @@ function onLeave() {
   gap: 8px;
 }
 .model-provider {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   color: #8a7b68;
   letter-spacing: 0.02em;
@@ -358,7 +358,7 @@ function onLeave() {
   border: none;
   border-radius: 8px;
   padding: 3px 10px;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
@@ -392,7 +392,7 @@ function onLeave() {
   border-radius: 999px;
   background: var(--app-accent-purple, #b39ef3);
   color: #fff;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
@@ -410,7 +410,7 @@ function onLeave() {
   border: 1.5px solid rgba(139, 115, 85, 0.18);
   background: #fffbf5;
   color: #5c4a35;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;

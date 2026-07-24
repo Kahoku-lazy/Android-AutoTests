@@ -47,7 +47,7 @@ skills:
 - API 响应格式 `{ok: true/false, ...}` 
 - 错误状态码匹配（400/401/403/404/409/500）
 - 跨模块调用是否走 api.py 白名单
-- 详细规则见 `.claude/rules/backend.md`、`.claude/rules/module-boundaries.md`
+- 详细规则见 `.claude/rules/backend.md`、`.claude/rules/api-conventions.md`
 
 ### 6. 数据流一致性（case-manager 教训专项）
 

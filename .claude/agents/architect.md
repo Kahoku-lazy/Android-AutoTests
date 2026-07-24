@@ -17,7 +17,7 @@ skills:
 ## 约束
 
 - **不要**在未充分探索代码库的情况下给出方案
-- **不要**提出违反现有模块边界的设计（参考 `.claude/rules/module-boundaries.md`）
+- **不要**提出违反现有模块边界的设计（参考 `.claude/rules/api-conventions.md`）
 - **必须**给出至少 2 个候选方案并标注推荐
 - **必须**评估跨模块影响（前端/后端/数据库/AI引擎/设备层）
 - **必须**使用中文输出
@@ -37,7 +37,7 @@ AI 引擎 AgentScope (:8000) — Redis 消息总线 + ChromaDB 知识库
 五层边界：frontend → backend → ai-engine → database → device
 三道防火墙：service.py 互不 import / 读放开写收敛 / 外部只走 API
 
-详细架构见 `.claude/rules/architecture.md`
+详细架构见 `.claude/rules/frontend.md`（前端）和 `.claude/rules/backend.md`（后端）
 
 ## 工作流
 

@@ -37,7 +37,7 @@ defineProps({
 <style scoped>
 .status-cell { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; justify-content: center; }
 .status-cell :deep(.el-tag) {
-  border-radius: 4px 8px 4px 8px !important; font-weight: 700 !important; font-size: 11px !important;
+  border-radius: 4px 8px 4px 8px !important; font-weight: 700 !important; font-size: var(--app-size-xs) !important;
   border: 1.5px solid transparent !important;
 }
 .status-cell :deep(.el-tag--success) { background: var(--app-status-success-bg) !important; color: var(--app-status-success-text) !important; border-color: var(--app-status-success) !important; }
@@ -45,7 +45,7 @@ defineProps({
 .status-cell :deep(.el-tag--info)    { background: var(--app-border-lighter) !important; color: var(--app-ink-muted) !important; border-color: var(--app-offline) !important; }
 .status-cell :deep(.el-tag--danger)  { background: var(--app-status-danger-bg) !important; color: var(--app-status-danger-text) !important; border-color: var(--app-status-danger) !important; }
 .badge {
-  font-size: 10px; padding: 1px 6px; border-radius: 3px 6px 3px 6px;
+  font-size: var(--app-size-xs); padding: 1px 6px; border-radius: 3px 6px 3px 6px;
   font-weight: 700; max-width: 130px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }

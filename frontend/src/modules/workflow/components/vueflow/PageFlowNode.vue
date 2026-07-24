@@ -284,13 +284,13 @@ watch(
   display: inline-block;
   padding: 1px 6px;
   border-radius: 4px;
-  font-size: 9px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   color: #fff;
   flex-shrink: 0;
 }
 .api-url {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   color: #999;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -309,7 +309,7 @@ watch(
   place-items: center;
   border-radius: 10px;
   background: rgba(247, 205, 103, 0.35);
-  font-size: 13px;
+  font-size: var(--app-size-sm);
 }
 .pf-node.start .pf-icon {
   background: rgba(111, 186, 44, 0.28);
@@ -325,7 +325,7 @@ watch(
   border: 2px solid transparent;
   border-radius: 8px;
   color: var(--ink);
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   padding: 2px 6px;
   outline: none;
@@ -349,7 +349,7 @@ watch(
   border: none;
   border-radius: 999px;
   padding: 5px 8px;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   font-family: inherit;
   background: transparent;
@@ -369,7 +369,7 @@ watch(
   padding: 0 2px;
 }
 .pf-pkg label {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   color: #999;
   flex-shrink: 0;
@@ -382,7 +382,7 @@ watch(
   border-radius: 8px;
   background: rgba(255,255,255,0.50);
   color: var(--ink);
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-family: ui-monospace, monospace;
   outline: none;
 }
@@ -390,7 +390,7 @@ watch(
   border-color: var(--c-workflow);
 }
 .pf-sub {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   color: #999;
   margin-bottom: 8px;
   padding-left: 4px;
@@ -404,13 +404,13 @@ watch(
   min-height: 28px;
   padding: 3px 0;
   margin: 2px 0;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
 }
 .pf-row.in { justify-content: flex-start; }
 .pf-row.out { justify-content: flex-end; }
 .pf-port-name { color: var(--ac-ink-muted, #5c4a35); font-weight: 600; }
 .pf-port-type {
-  font-size: 9px;
+  font-size: var(--app-size-xs);
   color: #999;
   border: 1px solid var(--ink);
   border-radius: 6px;
@@ -420,7 +420,7 @@ watch(
   background: #fff;
 }
 .pf-in-count {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
   color: #4a6ad4;
   background: rgba(136, 157, 240, 0.2);
@@ -438,7 +438,7 @@ watch(
   border: 1px solid var(--ink);
   border-radius: 8px;
   color: var(--ac-ink-muted, #5c4a35);
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   cursor: pointer;
   padding: 0 5px;
   line-height: 18px;
@@ -468,7 +468,7 @@ watch(
 }
 
 .pf-empty-end {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   color: var(--ac-ink-faint);
   text-align: center;
   padding: 8px 0 4px;
@@ -483,7 +483,7 @@ watch(
   border-radius: 12px;
   background: rgba(162,210,255,0.10);
   color: var(--ac-ink-muted, #5c4a35);
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;

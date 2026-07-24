@@ -145,12 +145,12 @@ function setCardRef(el, idx) {
 /* ── 页面标题 ── */
 .page-header { margin-bottom: 22px; }
 .page-title {
-  font-family: var(--doodle-font-title);
-  font-size: 24px; font-weight: 700;
+  font-family: var(--app-font-display);
+  font-size: var(--app-size-xl); font-weight: 700;
   color: var(--ink); margin: 0;
 }
 .page-subtitle {
-  font-size: 10px; color: var(--app-ink-muted); margin-top: 2px; font-weight: 600;
+  font-size: var(--app-size-xs); color: var(--app-ink-muted); margin-top: 2px; font-weight: 600;
 }
 
 /* ── 网格 ── */
@@ -199,11 +199,11 @@ function setCardRef(el, idx) {
 /* ── 模块内容 ── */
 .module-body { flex: 1; display: flex; flex-direction: column; }
 .module-name {
-  font-size: 13px; font-weight: 800;
+  font-size: var(--app-size-sm); font-weight: 800;
   color: var(--ink); margin-bottom: 4px;
 }
 .module-desc {
-  font-size: 10px; color: var(--app-ink-muted);
+  font-size: var(--app-size-xs); color: var(--app-ink-muted);
   margin-bottom: 10px; line-height: 1.4;
   flex: 1;
 }
@@ -212,21 +212,21 @@ function setCardRef(el, idx) {
   gap: 8px;
 }
 .module-stat {
-  font-size: 10px; color: var(--app-ink-muted); font-weight: 600;
+  font-size: var(--app-size-xs); color: var(--app-ink-muted); font-weight: 600;
 }
 .module-stat strong {
-  font-family: 'Quicksand', sans-serif;
-  font-size: 18px; font-weight: 800; color: var(--ink);
+  font-family: 'Nunito', sans-serif;
+  font-size: var(--app-size-lg); font-weight: 800; color: var(--ink);
   margin-right: 2px;
 }
 .module-stat small {
-  display: block; font-size: 9px; text-transform: uppercase;
+  display: block; font-size: var(--app-size-xs); text-transform: uppercase;
   letter-spacing: 0.4px; opacity: 0.6;
 }
 
 /* ── 进入按钮 ── */
 .module-enter {
-  font-size: 10px; font-weight: 800; color: #fff;
+  font-size: var(--app-size-xs); font-weight: 800; color: #fff;
   padding: 5px 12px; border-radius: 4px 8px 4px 8px;
   border: 2px solid transparent; cursor: pointer;
   transition: all .15s; font-family: inherit;

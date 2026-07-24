@@ -40,7 +40,7 @@
   border-radius: 12px;
   background: #e6f9f6;
   color: #158a80;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
@@ -64,7 +64,7 @@
   border-radius: 12px;
   background: linear-gradient(135deg, #f7a8c4 0%, #e88a5f 100%);
   color: #fff;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
@@ -95,18 +95,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
+  font-size: 28px;
   flex-shrink: 0;
   overflow: hidden;
 }
 .agent-name {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--doodle-ink, #2d2d2d);
   line-height: 1.3;
 }
 .agent-provider {
-  font-size: 12px;
+  font-size: 13px;
   color: #988b7a;
   margin-top: 3px;
 }
@@ -124,7 +124,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--app-ink-muted, #999);
   text-transform: uppercase;
@@ -134,7 +134,7 @@
   margin-bottom: 4px;
 }
 .conv-count {
-  font-size: 12px;
+  font-size: 13px;
   padding: 1px 8px;
   border-radius: 10px;
   background: #f0e8d8;
@@ -149,7 +149,7 @@
   padding: 13px 14px;
   border-radius: 10px;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 16px;
   color: #5c4b38;
   transition: all 0.18s ease;
   border: 1px solid transparent;
@@ -190,7 +190,7 @@
   border: 1.5px solid var(--app-accent-purple, #b39ef3);
   border-radius: 6px;
   padding: 4px 8px;
-  font-size: 14px;
+  font-size: 15px;
   font-family: inherit;
   color: var(--doodle-ink, #2d2d2d);
   background: #fff;
@@ -206,7 +206,7 @@
   border-radius: 6px;
   background: none;
   color: #c4b89e;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.15s;
@@ -240,11 +240,11 @@
   gap: 8px;
   padding: 40px 16px;
   color: var(--app-ink-muted, #999);
-  font-size: 14px;
+  font-size: 15px;
   text-align: center;
 }
 .conv-empty-hint {
-  font-size: 12px;
+  font-size: 13px;
   color: #c4b89e;
 }
 
@@ -257,7 +257,7 @@
   border-radius: 12px;
   background: rgba(25, 200, 185, 0.06);
   color: #0d7a70;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
@@ -293,12 +293,12 @@
   border: 1.5px dashed rgba(122, 184, 141, 0.45);
 }
 .empty-title {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--ink);
 }
 .empty-desc {
-  font-size: 14px;
+  font-size: 15px;
   color: #999;
 }
 
@@ -319,12 +319,12 @@
   min-width: 0;
 }
 .chat-header-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--ink);
 }
 .msg-count {
-  font-size: 12px;
+  font-size: 13px;
   color: #999;
   padding: 2px 8px;
   background: rgba(162, 210, 255, 0.18);
@@ -334,7 +334,7 @@
 
 /* Stream mode badge */
 .stream-mode-badge {
-  font-size: 12px;
+  font-size: 13px;
   padding: 3px 10px;
   border-radius: 8px;
   font-weight: 700;
@@ -362,7 +362,7 @@
 
 /* Model status badge — shows live model activity (thinking / calling / streaming / done) */
 .model-status-badge {
-  font-size: 12px;
+  font-size: 13px;
   padding: 3px 10px 3px 8px;
   border-radius: 8px;
   font-weight: 600;
@@ -427,7 +427,7 @@
 
 /* Connection indicator — always visible in header */
 .connection-indicator {
-  font-size: 12px;
+  font-size: 13px;
   padding: 4px 12px;
   border-radius: 10px;
   font-weight: 600;
@@ -466,7 +466,7 @@
   border-radius: 10px;
   background: #fef0f0;
   color: #c43f3f;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
@@ -484,7 +484,7 @@
   background: #fef8e6;
   border-bottom: 2px solid #e8a735;
   color: #8a6d14;
-  font-size: 13px;
+  font-size: 14px;
   text-align: center;
   line-height: 1.5;
 }
@@ -522,7 +522,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 24px;
   flex-shrink: 0;
 }
 .typing-row .msg-content {
@@ -531,7 +531,7 @@
   gap: 5px;
 }
 .typing-row .msg-author {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--app-ink-muted, #999);
   padding: 0 6px;

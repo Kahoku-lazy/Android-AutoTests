@@ -136,23 +136,23 @@ function goRunner() { router.push('/runner') }
       <!-- KPI Cards -->
       <div class="kpi-row">
         <div class="kpi-card">
-          <div class="kpi-accent accent-teal"></div>
+          <div class="kpi-dot"></div>
           <div class="kpi-value">{{ kpiTotal }}</div>
           <div class="kpi-label">总迭代次数</div>
           <div class="kpi-sub">{{ taskMeta.case_ids?.length || 0 }} 用例 × {{ taskMeta.loop_count || 0 }} 轮</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-accent accent-green"></div>
+          <div class="kpi-dot"></div>
           <div class="kpi-value num-pass">{{ kpiPass }}</div>
           <div class="kpi-label">✅ 通过</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-accent accent-red"></div>
+          <div class="kpi-dot"></div>
           <div class="kpi-value num-fail">{{ kpiFail }}</div>
           <div class="kpi-label">❌ 失败</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-accent accent-yellow"></div>
+          <div class="kpi-dot"></div>
           <div class="kpi-value" :class="kpiRate >= 95 ? 'num-pass' : kpiRate >= 80 ? 'num-warn' : 'num-fail'">{{ kpiRate }}%</div>
           <div class="kpi-label">📊 通过率</div>
         </div>
@@ -163,27 +163,27 @@ function goRunner() { router.push('/runner') }
         <div class="perf-stats-title">⏱️ APP性能 — 等待元素出现耗时</div>
         <div class="perf-stats-grid">
           <div class="kpi-card perf-stat-item">
-            <div class="kpi-accent accent-teal"></div>
+            <div class="kpi-dot"></div>
             <div class="kpi-value">{{ perfStats.count }}</div>
             <div class="kpi-label">🔢 测量次数</div>
           </div>
           <div class="kpi-card perf-stat-item">
-            <div class="kpi-accent accent-red"></div>
+            <div class="kpi-dot"></div>
             <div class="kpi-value num-fail">{{ perfStats.max }}s</div>
             <div class="kpi-label">⬆ 最大耗时</div>
           </div>
           <div class="kpi-card perf-stat-item">
-            <div class="kpi-accent accent-green"></div>
+            <div class="kpi-dot"></div>
             <div class="kpi-value num-pass">{{ perfStats.min }}s</div>
             <div class="kpi-label">⬇ 最小耗时</div>
           </div>
           <div class="kpi-card perf-stat-item">
-            <div class="kpi-accent accent-yellow"></div>
+            <div class="kpi-dot"></div>
             <div class="kpi-value">{{ perfStats.avg }}s</div>
             <div class="kpi-label">📊 平均耗时</div>
           </div>
           <div class="kpi-card perf-stat-item">
-            <div class="kpi-accent accent-blue"></div>
+            <div class="kpi-dot"></div>
             <div class="kpi-value">{{ perfStats.median }}s</div>
             <div class="kpi-label">🎯 中位数</div>
           </div>
@@ -205,7 +205,7 @@ function goRunner() { router.push('/runner') }
       </div>
 
       <!-- AppTabs -->
-      <AppTabs class="detail-tabs" :items="tabs" v-model="activeTab" :leaf-animation="true" :shadow="true">
+      <AppTabs class="detail-tabs" :items="tabs" v-model="activeTab"  >
         <!-- ═══ TAB: 用例明细 ═══ -->
         <template #cases>
           <div v-if="caseItems.length" class="case-list">
@@ -275,7 +275,7 @@ function goRunner() { router.push('/runner') }
 
         <!-- ═══ TAB: 执行历史 ═══ -->
         <template v-if="(taskMeta.linked_runs || []).length > 0" #history>
-          <AppCard color="brown" class="table-card">
+          <AppCard color="" class="table-card">
             <AppTable
               :columns="[
                 { title: 'Run ID', dataIndex: 'run_id', width: '220px' },
@@ -327,168 +327,11 @@ function goRunner() { router.push('/runner') }
 </template>
 
 <style scoped>
-.detail-page { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-.doc-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; padding-bottom: 40px; }
-
-/* ── Top bar ── */
-.top-bar { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-
-/* ── KPI Cards ── */
-.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; flex-shrink: 0; }
-.kpi-card {
-  background: rgb(247,243,223); border-radius: 18px; padding: 18px 22px;
-  border: 1.5px solid #c4b89e; position: relative; overflow: hidden;
-  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-}
-.kpi-card:hover { transform: translateY(-2px); }
-.kpi-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; border-radius: 0 3px 3px 0; }
-.accent-teal { background: #19c8b9; }
-.accent-green { background: var(--c-workflow); }
-.accent-red { background: #e05a5a; }
-.accent-yellow { background: #f5c31c; }
-.kpi-value { font-size: 30px; font-weight: 900; color: #794f27; line-height: 1.1; }
-.kpi-label { font-size: 12px; color: #9f927d; margin-top: 4px; font-weight: 600; }
-.kpi-sub { font-size: 11px; color: #8a7b66; margin-top: 2px; }
-.num-pass { color: var(--c-workflow); }
-.num-fail { color: #e05a5a; }
-.num-warn { color: #dba90e; }
-
-/* ── Task meta bar ── */
-.task-meta-bar {
-  display: flex; flex-wrap: wrap; gap: 10px 24px;
-  padding: 14px 20px;
-  background: linear-gradient(135deg, #fef9ef 0%, #fdf0d5 100%);
-  border-radius: 14px; border: 1px solid rgba(139,115,85,0.1);
-  flex-shrink: 0;
-}
-.task-meta-item { display: flex; align-items: center; gap: 6px; font-size: 13px; }
-.task-meta-item.full-width { flex-basis: 100%; }
-.meta-label { color: var(--app-ink-muted, #999); font-weight: 500; white-space: nowrap; }
-.meta-value { color: #4a3a28; font-weight: 600; }
-.conclusion-text { line-height: 1.5; font-style: italic; }
-
-/* ── AppTabs ── */
-.detail-tabs { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.detail-tabs :deep(.el-tabs) { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-.detail-tabs :deep(.el-tabs__content) { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; display: block; padding-top: 14px; }
-.detail-tabs :deep(.el-tabs__inner) { min-height: min-content; }
-
-/* ── Case cards ── */
-.case-list { display: flex; flex-direction: column; gap: 10px; }
-.case-card {
-  background: rgb(247,243,223); border: 1px solid #e8e2d6;
-  border-radius: 18px; overflow: hidden;
-  transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
-  box-shadow: 0 1px 3px rgba(61,52,40,0.05);
-}
-.case-card:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(61,52,40,0.08); }
-.case-card.expanded { border-color: #c4b89e; }
-.case-card.bug-card { border-left: 4px solid var(--app-status-danger-text, #a03030); }
-
-.case-header {
-  display: flex; align-items: center; gap: 12px;
-  padding: 14px 20px; cursor: pointer; user-select: none;
-  transition: background 0.15s;
-}
-.case-header:hover { background: rgba(245,240,215,0.8); }
-.case-expand-icon {
-  font-size: 11px; color: var(--app-ink-muted, #999); width: 16px; flex-shrink: 0;
-  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-}
-.case-card.expanded .case-expand-icon { transform: rotate(90deg); }
-
-.case-id-badge {
-  font-size: 11px; font-weight: 700; color: #fff; background: #19c8b9;
-  padding: 3px 10px; border-radius: var(--app-radius-pill); flex-shrink: 0;
-}
-.case-title-area { flex: 1; min-width: 0; }
-.case-title-text { font-size: 15px; font-weight: 700; color: #4A3A28; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bug-header-sub { font-size: 11px; color: #9f927d; margin-top: 2px; }
-.case-status-text { font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: var(--app-radius-pill); flex-shrink: 0; }
-.case-stats { display: flex; gap: 14px; font-size: 12px; font-weight: 600; color: #725d42; flex-shrink: 0; }
-.stat-total { color: #9f927d; }
-.stat-pass { color: var(--c-workflow); }
-.stat-fail { color: #e85f5f; }
-
-/* ── Case body (step cards) ── */
-.case-body { padding-bottom: 2px; }
-.step-list { padding: 0 20px 16px 36px; display: flex; flex-direction: column; gap: 8px; }
-.step-empty { padding: 20px 20px 16px 36px; color: var(--app-ink-muted, #999); font-size: 13px; text-align: center; }
-
-.step-card {
-  display: flex; align-items: stretch; border-radius: 12px;
-  overflow: hidden; transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
-  box-shadow: 0 2px 4px 0 rgba(61,52,40,0.06);
-  border: 1px solid #e8e2d6;
-}
-.step-strip { width: 5px; flex-shrink: 0; border-radius: 5px 0 0 5px; }
-.step-body { flex: 1; padding: 12px 16px; background: #fff; display: flex; flex-direction: column; gap: 4px; }
-.step-header-row { display: flex; align-items: center; gap: 8px; }
-.step-index { font-size: 12px; font-weight: 800; color: var(--app-ink-muted, #999); font-family: 'Cascadia Code', Consolas, monospace; }
-.step-type-tag {
-  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px;
-  background: rgba(139,115,85,0.08); color: #8b7355; text-transform: uppercase;
-}
-.step-desc { font-size: 13px; font-weight: 600; color: #725d42; line-height: 1.4; }
-.step-xpath { font-size: 11px; color: var(--app-ink-muted, #999); font-family: 'Cascadia Code', Consolas, monospace; margin-top: 2px; }
-
-.step-done .step-strip { background: var(--c-workflow); }
-.step-done .step-body { background: rgba(111,186,44,0.03); }
-
-/* ── BUG meta ── */
-.bug-meta {
-  display: flex; gap: 20px; flex-wrap: wrap;
-  margin: 0 20px 10px; padding: 10px 14px;
-  background: rgba(232,95,95,0.04); border-radius: 10px;
-  border: 1px dashed rgba(232,95,95,0.2);
-  font-size: 12px; font-weight: 600; color: #725d42;
-}
-.bug-meta-label { color: var(--app-ink-muted, #999); }
-.bug-meta-value { color: var(--app-status-danger-text, #a03030); font-weight: 700; }
-.step-fail-reason {
-  font-size: 12px; font-weight: 600; color: var(--app-status-danger-text, #a03030);
-  background: rgba(232,95,95,0.05); border-radius: 8px;
-  border-left: 3px solid var(--app-status-danger-text, #a03030); line-height: 1.5;
-}
-
-/* ── AppTable card ── */
-.table-card { overflow: hidden; }
-.table-card :deep(.el-card__body) { padding: 0; border-radius: 14px; overflow: hidden; }
-
-.task-report-table :deep(th) {
-  font-size: 12px; font-weight: 700; color: #6b5b48; padding: 12px 14px;
-  background: rgba(139,115,85,0.06); border-bottom: 2px solid rgba(139,115,85,0.12);
-  text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;
-}
-.task-report-table :deep(td) {
-  padding: 10px 14px; font-size: 13px; color: #4a3a28;
-  border-bottom: 1px dashed rgba(196,184,158,0.4); vertical-align: middle;
-}
-.task-report-table :deep(tr:hover td) { background: rgba(25,200,185,0.04); }
-
-/* ── Misc ── */
-.mono { font-family: 'SF Mono','Fira Code','Cascadia Code',Consolas,monospace; font-size: 10px; font-weight: 600; background: rgba(139,115,85,0.06); padding: 2px 6px; border-radius: 4px; }
-.time-text { font-size: 12px; color: var(--app-ink-muted, #999); white-space: nowrap; }
-
-.rate-cell { display: flex; align-items: center; gap: 8px; }
-.progress-bar { display: flex; height: 7px; border-radius: var(--app-radius-pill); overflow: hidden; background: #f0ece2; flex: 1; max-width: 90px; }
-.p-pass { background: var(--c-workflow); transition: width 0.5s ease; border-radius: var(--app-radius-pill); }
-.p-fail { background: #e05a5a; transition: width 0.5s ease; border-radius: var(--app-radius-pill); }
-.rate-text { font-weight: 700; font-size: 12px; min-width: 38px; text-align: right; }
-.rate-ok { color: var(--c-workflow); }
-.rate-warn { color: #dba90e; }
-.rate-bad { color: var(--app-status-danger-text, #a03030); }
-
-.badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--app-radius-pill); font-size: 10px; font-weight: 700; letter-spacing: 0.02em; }
-.badge-pass { background: rgba(111,186,44,0.12); color: var(--c-workflow); border: 1.5px solid rgba(111,186,44,0.25); }
-.badge-fail { background: rgba(224,90,90,0.12); color: #e05a5a; border: 1.5px solid rgba(224,90,90,0.25); }
-.badge-stopped { background: rgba(138,123,102,0.10); color: #8a7b66; border: 1.5px solid rgba(138,123,102,0.20); }
-
-.empty-note { text-align: center; padding: 48px 24px; color: var(--app-ink-muted, #999); }
-.empty-note span { font-size: 36px; display: block; margin-bottom: 12px; }
-.not-found { text-align: center; color: var(--app-ink-muted, #999); padding: 80px 0; font-size: 15px; }
-.not-found p { margin-bottom: 16px; }
-
-@media (max-width: 900px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px) { .kpi-row { grid-template-columns: 1fr; } }
+.doc-page{display:flex;flex-direction:column;height:100%;overflow-y:auto}
+.doc-body{padding:16px 20px 32px;display:flex;flex-direction:column;gap:14px;max-width:1200px;margin:0 auto;width:100%}
+.top-bar{display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap}.run-meta{display:flex;align-items:center;gap:10px;font-size:var(--app-size-xs);color:#999;flex-wrap:wrap}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px}.kpi-card{text-align:center;padding:12px 10px 16px;background:#fff;border:3px solid var(--ink);border-radius:4px 10px 6px 8px;box-shadow:2px 3px 0 rgba(0,0,0,0.04);position:relative}.kpi-value{font-family:'Patrick Hand',cursive;font-size:var(--app-size-xl);font-weight:700;line-height:1}.kpi-label{font-size:var(--app-size-xs);font-weight:700;opacity:0.4;text-transform:uppercase;margin-top:2px}.kpi-card::after{content:'~';position:absolute;bottom:2px;right:8px;font-family:'Patrick Hand',cursive;font-size:var(--app-size-md);opacity:0.12}
+.task-meta-card{display:flex;flex-wrap:wrap;gap:10px;padding:12px 16px;background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;margin-bottom:4px;font-size:var(--app-size-xs)}.meta-item{display:flex;align-items:center;gap:6px}.meta-label{opacity:0.5;font-weight:600}.meta-value{font-weight:700}
+.detail-tabs :deep(.el-tabs__header){margin-bottom:0}.detail-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:4px}.detail-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:#999;height:auto;line-height:1.4}.detail-tabs :deep(.el-tabs__item:hover){color:var(--ink)}.detail-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-dashboard);border-color:var(--ink)}.detail-tabs :deep(.el-tabs__active-bar){display:none}
+.badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);display:inline-block}.badge-pass{background:var(--app-status-success-bg);color:var(--app-status-success-text)}.badge-fail{background:var(--app-status-danger-bg);color:var(--app-status-danger-text)}.badge-stopped{background:var(--app-offline);color:var(--app-text-secondary)}
 </style>

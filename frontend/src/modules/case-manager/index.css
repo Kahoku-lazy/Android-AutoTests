@@ -27,16 +27,10 @@
 }
 
 .case-sidebar {
-  flex-shrink: 0;
-  align-self: stretch;
-  min-height: 0;
-  min-width: 0;
-  background: #fff;
-  border-right: 1px solid var(--ink);
-  border-radius: var(--ac-radius, 16px) 0 0 var(--ac-radius, 16px);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  flex-shrink: 0; align-self: stretch; min-height: 0; min-width: 0;
+  background: #fff; border-right: 2px solid var(--ink);
+  border-radius: 6px 0 0 6px; overflow: hidden;
+  display: flex; flex-direction: column;
 }
 
 .case-sidebar-resizer {
@@ -136,7 +130,7 @@
   border: 1.5px solid transparent;
   background: rgba(255, 255, 255, 0.45);
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.3;
   transition: all 0.15s ease;
@@ -167,7 +161,7 @@
 
 .crumb__icon {
   flex-shrink: 0;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1;
 }
 
@@ -181,7 +175,7 @@
 .crumb-sep {
   color: #999;
   font-weight: 700;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1;
   user-select: none;
   padding: 0 2px;
@@ -200,7 +194,7 @@
 }
 
 .case-count-badge__num {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--app-green-deep);
   font-family: var(--doodle-font-title);
@@ -208,7 +202,7 @@
 }
 
 .case-count-badge__text {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #999;
 }
@@ -227,7 +221,7 @@
   border: none;
   border-radius: 9px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 17px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -272,7 +266,7 @@
   font-size: 48px;
 }
 .card-grid-empty p {
-  font-size: 15px;
+  font-size: 16px;
   margin: 0;
   font-weight: 600;
 }
@@ -315,7 +309,7 @@
 }
 
 .case-table--rainbow :deep(th) {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
   padding: 16px 12px;
   text-align: left;
@@ -355,7 +349,7 @@
 /* 数据行：中性背景，字体按列着色 */
 .case-table--rainbow :deep(td) {
   padding: 13px 12px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--ink);
   background: transparent;
   border: none;
@@ -389,7 +383,7 @@
 }
 .act-btn {
   padding: 3px 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.35;
   border-radius: 6px;
@@ -431,7 +425,7 @@
 }
 .cell-id {
   font-family: var(--doodle-font-mono);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: #c0392b;
   word-break: break-all;
@@ -439,7 +433,7 @@
 }
 .cell-title {
   font-weight: 700;
-  font-size: 14px;
+  font-size: 15px;
   color: #b8860b;
   line-height: 1.45;
   display: block;
@@ -448,7 +442,7 @@
   white-space: nowrap;
 }
 .cell-dir {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: #4a8c1c;
 }
@@ -457,7 +451,7 @@
   font-weight: 500;
 }
 .cell-category {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--app-green-deep);
 }
@@ -474,7 +468,7 @@
   font-size: 36px;
 }
 .table-empty p {
-  font-size: 15px;
+  font-size: 16px;
   margin: 0;
 }
 
@@ -506,7 +500,7 @@
 
 .case-detail__id {
   font-family: var(--doodle-font-mono);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #999;
   background: rgba(162,210,255,0.14);
@@ -517,13 +511,13 @@
 .case-detail__title {
   font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif);
   font-weight: 800;
-  font-size: 22px;
+  font-size: 24px;
   color: var(--ink);
   margin: 0 0 12px;
 }
 
 .case-detail__priority {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 8px;
@@ -548,7 +542,7 @@
 }
 
 .case-detail__meta-tag {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #999;
   background: rgba(162,210,255,0.12);
@@ -562,7 +556,7 @@
 
 .case-detail__desc {
   margin-top: 12px;
-  font-size: 14px;
+  font-size: 15px;
   color: #999;
   line-height: 1.6;
   padding-top: 12px;
@@ -578,7 +572,7 @@
 .case-detail__steps-title {
   font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif);
   font-weight: 700;
-  font-size: 16px;
+  font-size: 17px;
   color: var(--ink);
   margin: 0;
 }
@@ -596,7 +590,7 @@
 .case-exports__title {
   font-family: var(--app-font, 'Quicksand', 'PingFang SC', sans-serif);
   font-weight: 700;
-  font-size: 16px;
+  font-size: 17px;
   color: var(--ink);
   margin: 0;
 }
@@ -610,14 +604,14 @@
   text-align: center;
   padding: 32px;
   color: #999;
-  font-size: 14px;
+  font-size: 15px;
 }
 .exports-table {
   width: 100%;
   border-collapse: collapse;
 }
 .exports-table th {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--ink);
   padding: 14px 16px;
@@ -627,7 +621,7 @@
 }
 .exports-table td {
   padding: 12px 16px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--ink);
   border-bottom: 1px solid rgba(162,210,255,0.16);
 }
@@ -636,7 +630,7 @@
 }
 .exports-table__name {
   font-family: var(--doodle-font-mono);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--app-green-deep);
   font-weight: 600;
 }

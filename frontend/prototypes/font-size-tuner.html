@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>字号刻度调试</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Patrick+Hand&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f8f8f0; --card: #fff; --ink: #1e1e24; --text: #725d42;
+  --text-secondary: #9f927d; --border: #c4b89e; --border-light: #e8e4d8;
+  --r: 12px; --shadow: 0 2px 2px rgba(0,0,0,0.04);
+  /* default scale */
+  --s-xs: 12px; --s-sm: 14px; --s-md: 16px;
+  --s-lg: 20px; --s-xl: 24px; --s-2xl: 32px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Nunito', 'PingFang SC', sans-serif; font-weight: 500;
+  background: var(--bg); color: var(--text); padding: 20px;
+}
+.page { display: flex; gap: 20px; max-width: 1400px; margin: 0 auto; min-height: 100vh; }
+
+/* ── Left: Controls ── */
+.controls {
+  width: 340px; flex-shrink: 0;
+  background: var(--card); border: 2px solid var(--border); border-radius: var(--r);
+  padding: 20px; box-shadow: var(--shadow); overflow-y: auto; max-height: calc(100vh - 40px);
+  position: sticky; top: 20px;
+}
+.controls h2 { font-family: 'Patrick Hand','PingFang SC',cursive; font-size: 22px; color: var(--ink); margin-bottom: 4px; }
+.controls .sub { font-size: 11px; color: var(--text-secondary); margin-bottom: 16px; }
+
+.ctrl-group { margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px dashed var(--border-light); }
+.ctrl-group:last-child { border-bottom: none; }
+.ctrl-label { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.ctrl-name { font-size: 12px; font-weight: 700; color: var(--ink); }
+.ctrl-var  { font-size: 10px; font-weight: 600; color: var(--text-secondary); font-family: 'JetBrains Mono',monospace; }
+.ctrl-value { font-size: 28px; font-weight: 900; color: var(--ink); min-width: 48px; text-align: right; }
+.ctrl-use { font-size: 10px; color: var(--text-secondary); margin-bottom: 6px; }
+input[type=range] { width: 100%; accent-color: var(--ink); }
+.ctrl-preset { display: flex; gap: 4px; margin-top: 6px; }
+.ctrl-preset button {
+  font-size: 10px; padding: 3px 8px; border: 1.5px solid var(--border);
+  border-radius: 6px; background: var(--card); color: var(--text-secondary);
+  cursor: pointer; font-family: inherit;
+}
+.ctrl-preset button:hover { border-color: var(--ink); color: var(--ink); }
+.ctrl-preset button.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+.cur-stats { margin-top: 16px; padding-top: 12px; border-top: 2px solid var(--border); }
+.cur-stats h3 { font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+.stat-bar { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.stat-label { font-size: 10px; color: var(--text-secondary); width: 30px; text-align: right; }
+.stat-fill { height: 8px; background: var(--ink); border-radius: 4px; opacity: 0.6; }
+.stat-count { font-size: 10px; color: var(--text-secondary); width: 28px; }
+
+.preset-actions { display: flex; gap: 6px; margin-top: 16px; }
+.preset-actions button {
+  flex: 1; font-size: 11px; font-weight: 700; padding: 8px 12px;
+  border: 2px solid var(--ink); border-radius: 8px; cursor: pointer;
+  font-family: inherit; transition: all 0.12s;
+}
+.preset-actions button:first-child { background: var(--ink); color: #fff; }
+.preset-actions button:last-child { background: var(--card); color: var(--ink); }
+
+/* ── Right: Preview ── */
+.preview {
+  flex: 1; min-width: 0;
+  background: var(--card); border: 2px solid var(--border); border-radius: var(--r);
+  padding: 28px 32px 40px; box-shadow: var(--shadow);
+}
+.preview h2 { font-family: 'Patrick Hand','PingFang SC',cursive; font-size: 20px; color: var(--text-secondary); margin-bottom: 20px; }
+
+.preview-section { margin-bottom: 28px; }
+.sec-tag { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 8px; }
+
+/* Display */
+.preview-display-en { font-family: 'Patrick Hand','PingFang SC',cursive; color: var(--ink); margin-bottom: 2px; line-height: 1.2; }
+.preview-display-cn { font-family: 'Nunito','PingFang SC',sans-serif; font-weight: 800; color: var(--ink); margin-bottom: 8px; line-height: 1.3; }
+
+/* Body */
+.preview-body-en { font-family: 'Nunito','PingFang SC',sans-serif; color: var(--text); line-height: 1.6; margin-bottom: 6px; }
+.preview-body-cn { font-family: 'Nunito','PingFang SC',sans-serif; color: var(--text); line-height: 1.6; }
+
+/* Mono */
+.preview-mono { font-family: 'JetBrains Mono',monospace; background: #faf9f4; padding: 12px 16px; border-radius: 8px; color: #8a7b66; line-height: 1.6; }
+
+/* Badge */
+.preview-badge { display: inline-flex;padding: 2px 8px;border:1.5px solid var(--ink);border-radius:3px 6px;font-family:'Nunito','PingFang SC',sans-serif;font-weight:700;margin-right:6px; }
+.badge-green { background:#C8F5D0;color:#2d7a2d; } .badge-red { background:#FFE0DB;color:#a03030; }
+
+/* Button */
+.preview-btn { display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border:2px solid var(--ink);border-radius:4px 8px;background:#fff;color:var(--ink);font-family:'Nunito','PingFang SC',sans-serif;font-weight:700;cursor:default; }
+.preview-btn.primary { background: var(--ink); color: #fff; }
+
+/* KPI */
+.preview-kpi { text-align:center;padding:12px 20px 16px;background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px;display:inline-block;position:relative;margin-right:12px;margin-bottom:8px; }
+.preview-kpi::after { content:'~';position:absolute;bottom:2px;right:8px;font-family:'Patrick Hand',cursive;opacity:0.12; }
+.kpi-val { font-family:'Nunito','PingFang SC',sans-serif;font-weight:800;color:var(--ink); }
+.kpi-lab { color:var(--text-secondary);margin-top:2px;font-weight:500; }
+
+/* Table */
+.preview-table { width:100%;border-collapse:collapse;font-family:'Nunito','PingFang SC',sans-serif; }
+.preview-table th { text-align:left;padding:8px 12px;background:#f8f6f2;border-bottom:2px solid var(--ink);font-weight:700;color:var(--ink); }
+.preview-table td { padding:6px 12px;border-bottom:1px dashed var(--border-light); }
+
+/* Scale showcase */
+.scale-row { display:flex;align-items:baseline;gap:16px;flex-wrap:wrap; }
+.scale-row span { font-family:'Nunito','PingFang SC',sans-serif;color:var(--ink);white-space:nowrap; }
+
+.data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ══════════ Controls ══════════ -->
+<div class="controls">
+  <h2>字号刻度</h2>
+  <p class="sub">拖动滑块调整，右侧实时预览</p>
+
+  <div class="ctrl-group">
+    <div class="ctrl-label"><span class="ctrl-name">按钮 · 表格 · Badge · 代码</span><span class="ctrl-var">--s-xs</span><span class="ctrl-value" id="v-xs">12</span></div>
+    <div class="ctrl-use">按钮文字 · el-table 列头 · 筛选标签 · Badge · 代码行内 · 时间戳（最小 12px）</div>
+    <input type="range" id="r-xs" min="12" max="16" value="12" step="1">
+    <div class="ctrl-preset" id="preset-xs"></div>
+  </div>
+
+  <div class="ctrl-group">
+    <div class="ctrl-label"><span class="ctrl-name">UI 正文</span><span class="ctrl-var">--s-sm</span><span class="ctrl-value" id="v-sm">14</span></div>
+    <div class="ctrl-use">默认正文 · 列表描述 · placeholder · 表单提示</div>
+    <input type="range" id="r-sm" min="12" max="18" value="14" step="1">
+    <div class="ctrl-preset" id="preset-sm"></div>
+  </div>
+
+  <div class="ctrl-group">
+    <div class="ctrl-label"><span class="ctrl-name">卡片标题 · 表单标签</span><span class="ctrl-var">--s-md</span><span class="ctrl-value" id="v-md">16</span></div>
+    <div class="ctrl-use">模块标题 · 面板标题 · 表单 label</div>
+    <input type="range" id="r-md" min="14" max="22" value="16" step="1">
+    <div class="ctrl-preset" id="preset-md"></div>
+  </div>
+
+  <div class="ctrl-group">
+    <div class="ctrl-label"><span class="ctrl-name">段落标题 · 弹窗标题</span><span class="ctrl-var">--s-lg</span><span class="ctrl-value" id="v-lg">20</span></div>
+    <div class="ctrl-use">段落标题（中） · el-dialog 标题</div>
+    <input type="range" id="r-lg" min="16" max="26" value="20" step="1">
+    <div class="ctrl-preset" id="preset-lg"></div>
+  </div>
+
+  <div class="ctrl-group">
+    <div class="ctrl-label"><span class="ctrl-name">页面标题</span><span class="ctrl-var">--s-xl</span><span class="ctrl-value" id="v-xl">24</span></div>
+    <div class="ctrl-use">页面主标题 · 大区标题</div>
+    <input type="range" id="r-xl" min="20" max="30" value="24" step="1">
+    <div class="ctrl-preset" id="preset-xl"></div>
+  </div>
+
+  <div class="ctrl-group">
+    <div class="ctrl-label"><span class="ctrl-name">KPI · Hero 数字</span><span class="ctrl-var">--s-2xl</span><span class="ctrl-value" id="v-2xl">32</span></div>
+    <div class="ctrl-use">KPI 统计数字 · 大数字展示</div>
+    <input type="range" id="r-2xl" min="24" max="48" value="32" step="1">
+    <div class="ctrl-preset" id="preset-2xl"></div>
+  </div>
+
+  <div class="cur-stats">
+    <h3>代码中当前使用分布</h3>
+    <div class="stat-bar"><span class="stat-label">8</span><div class="stat-fill" style="width:8px"></div><span class="stat-count">5</span></div>
+    <div class="stat-bar"><span class="stat-label">9</span><div class="stat-fill" style="width:32px"></div><span class="stat-count">32</span></div>
+    <div class="stat-bar"><span class="stat-label">10</span><div class="stat-fill" style="width:61px"></div><span class="stat-count">61</span></div>
+    <div class="stat-bar"><span class="stat-label">11</span><div class="stat-fill" style="width:84px"></div><span class="stat-count">84</span></div>
+    <div class="stat-bar"><span class="stat-label">12</span><div class="stat-fill" style="width:88px"></div><span class="stat-count">88</span></div>
+    <div class="stat-bar"><span class="stat-label">13</span><div class="stat-fill" style="width:140px"></div><span class="stat-count">140</span></div>
+    <div class="stat-bar"><span class="stat-label">14</span><div class="stat-fill" style="width:142px"></div><span class="stat-count">142</span></div>
+    <div class="stat-bar"><span class="stat-label">15</span><div class="stat-fill" style="width:64px"></div><span class="stat-count">64</span></div>
+    <div class="stat-bar"><span class="stat-label">16</span><div class="stat-fill" style="width:25px"></div><span class="stat-count">25</span></div>
+    <div class="stat-bar"><span class="stat-label">17</span><div class="stat-fill" style="width:9px"></div><span class="stat-count">9</span></div>
+    <div class="stat-bar"><span class="stat-label">20</span><div class="stat-fill" style="width:16px"></div><span class="stat-count">16</span></div>
+    <div class="stat-bar"><span class="stat-label">24</span><div class="stat-fill" style="width:3px"></div><span class="stat-count">3</span></div>
+    <div class="stat-bar"><span class="stat-label">28</span><div class="stat-fill" style="width:4px"></div><span class="stat-count">4</span></div>
+    <div class="stat-bar"><span class="stat-label">32</span><div class="stat-fill" style="width:7px"></div><span class="stat-count">7</span></div>
+  </div>
+
+  <div class="preset-actions" style="margin-top: 16px;">
+    <button onclick="resetAll()">重置默认</button>
+    <button onclick="exportCSS()">导出 CSS</button>
+  </div>
+</div>
+
+<!-- ══════════ Preview ══════════ -->
+<div class="preview">
+  <h2>实时预览</h2>
+
+  <div class="preview-section">
+    <div class="sec-tag">页面标题 — --s-xl</div>
+    <div class="preview-display-en" id="disp-xl-en">Quick Brown Fox Jumps</div>
+    <div class="preview-display-cn" id="disp-xl-cn">设备管理 · 当前已连接 3 台设备</div>
+  </div>
+
+  <div class="preview-section">
+    <div class="sec-tag">段落标题 — --s-lg</div>
+    <div class="preview-display-en" id="disp-lg-en" style="font-family:'Patrick Hand','PingFang SC',cursive;">Report Dashboard</div>
+    <div class="preview-display-cn" id="disp-lg-cn">测试执行结果 · 本轮共执行 12 个用例</div>
+  </div>
+
+  <div class="preview-section">
+    <div class="sec-tag">KPI 数字 — --s-2xl</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <div class="preview-kpi"><div class="kpi-val" id="kpi-1">1,247</div><div class="kpi-lab" id="kpi-lab">总用例数</div></div>
+      <div class="preview-kpi"><div class="kpi-val" id="kpi-2">96.8%</div><div class="kpi-lab" id="kpi-lab2">通过率</div></div>
+      <div class="preview-kpi"><div class="kpi-val" id="kpi-3">8</div><div class="kpi-lab" id="kpi-lab3">在线设备</div></div>
+    </div>
+  </div>
+
+  <div class="preview-section">
+    <div class="sec-tag">卡片标题 — --s-md</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <div style="background:#fff;border:2px solid var(--border);border-radius:6px 10px;padding:12px 16px;">
+        <div id="card-title" style="font-weight:700;color:var(--ink);">Device RF8N21MSW7A</div>
+        <div id="card-meta" style="color:var(--text-secondary);">Android 14 · 1080×2400 · ONLINE</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="preview-section">
+    <div class="sec-tag">UI 正文 — --s-sm</div>
+    <div class="preview-body-en" id="body-en">The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. How vexingly quick daft zebras jump!</div>
+    <div class="preview-body-cn" id="body-cn">敏捷的棕狐跃过那只懒狗。该设备当前处于在线状态，支持 17 种测试步骤类型，可通过自然语言描述或手动编排构建完整的 UI 自动化测试用例。</div>
+  </div>
+
+  <div class="preview-section">
+    <div class="sec-tag">表格 — --s-xs 列头 / --s-sm 单元格</div>
+    <table class="preview-table">
+      <tr><th id="th-1">设备序列号</th><th id="th-2">状态</th><th id="th-3">分辨率</th><th id="th-4">最后活跃</th></tr>
+      <tr><td id="td-1">RF8N21MSW7A</td><td><span class="preview-badge badge-green">ONLINE</span></td><td id="td-2">1080×2400</td><td id="td-3">2 分钟前</td></tr>
+      <tr><td id="td-4">AB12CD34EF56</td><td><span class="preview-badge badge-red">OFFLINE</span></td><td id="td-5">720×1600</td><td id="td-6">3 小时前</td></tr>
+    </table>
+  </div>
+
+  <div class="preview-section">
+    <div class="sec-tag">Badge — --s-xs</div>
+    <span class="preview-badge badge-green" id="badge-1">ONLINE</span>
+    <span class="preview-badge badge-red" id="badge-2">FAILED</span>
+    <span class="preview-badge" style="background:#E8DDF8;color:#5a3fa0" id="badge-3">LOCKED</span>
+    <span class="preview-badge" style="background:#FFF9E0;color:#7a5a10" id="badge-4">PENDING</span>
+    <span class="preview-badge" style="background:#f0ede8;color:#999" id="badge-5">DISABLED</span>
+  </div>
+
+  <div class="preview-section">
+    <div class="sec-tag">按钮 — --s-xs</div>
+    <span class="preview-btn" id="btn-1">取 消</span>
+    <span class="preview-btn primary" id="btn-2" style="margin-left:8px">保 存</span>
+    <span class="preview-btn" id="btn-3" style="margin-left:8px;background:var(--ink);color:#fff;">▶ 执行</span>
+  </div>
+
+  <div class="preview-section">
+    <div class="sec-tag">代码 — --s-xs</div>
+    <div class="preview-mono" id="mono-1">POST /api/runner/run → { "ok": true, "run_id": "r_7a3f2d", "case_count": 5 }</div>
+    <div class="preview-mono" id="mono-2" style="margin-top:6px;">&gt; test_case.save({ "steps_data": [...], "package_name": "com.example.app" })</div>
+  </div>
+
+  <div class="preview-section">
+    <div class="sec-tag">字号刻度一览</div>
+    <div class="scale-row" id="scale-show">
+      <span id="sc-xs">12 敏捷</span>
+      <span id="sc-sm">14 敏捷棕狐</span>
+      <span id="sc-md">16 敏捷棕狐</span>
+      <span id="sc-lg">20 敏捷棕狐</span>
+      <span id="sc-xl">24 敏捷棕狐</span>
+      <span id="sc-2xl">32 敏捷</span>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const SIZES = ['xs','sm','md','lg','xl','2xl']
+const DEFAULTS = { 'xs':12, 'sm':14, 'md':16, 'lg':20, 'xl':24, '2xl':32 }
+
+// Build preset buttons
+SIZES.forEach(k => {
+  const v = DEFAULTS[k]
+  const vals = [v-2, v-1, v, v+1, v+2].filter(x => x >= 6)
+  const p = document.getElementById('preset-'+k)
+  vals.forEach(x => {
+    const b = document.createElement('button')
+    b.textContent = x
+    if (x === v) b.className = 'active'
+    b.onclick = () => { document.getElementById('r-'+k).value = x; update(k) }
+    p.appendChild(b)
+  })
+})
+
+function update(k) {
+  const v = document.getElementById('r-'+k).value
+  document.getElementById('v-'+k).textContent = v
+  document.documentElement.style.setProperty('--s-'+k, v+'px')
+
+  // Update preset active state
+  const btns = document.querySelectorAll('#preset-'+k+' button')
+  btns.forEach(b => { b.className = parseInt(b.textContent) === parseInt(v) ? 'active' : '' })
+}
+
+function updateAll() {
+  SIZES.forEach(k => { update(k); applyStyles(k) })
+}
+
+function applyStyles(k) {
+  const v = document.getElementById('r-'+k).value + 'px'
+
+  if (k === 'xs') {
+    document.querySelectorAll('.preview-btn').forEach(el => el.style.fontSize = v)
+    document.querySelectorAll('.preview-table th').forEach(el => el.style.fontSize = v)
+    document.querySelectorAll('.preview-badge').forEach(el => el.style.fontSize = v)
+    document.querySelectorAll('.preview-mono').forEach(el => el.style.fontSize = v)
+    document.querySelectorAll('.ctrl-name').forEach(el => el.style.fontSize = v)
+    document.getElementById('sc-xs').style.fontSize = v
+  }
+  if (k === 'sm') {
+    document.querySelectorAll('.preview-body-en,.preview-body-cn').forEach(el => el.style.fontSize = v)
+    document.querySelectorAll('.preview-table td').forEach(el => el.style.fontSize = v)
+    document.getElementById('card-meta').style.fontSize = v
+    document.querySelectorAll('.kpi-lab').forEach(el => el.style.fontSize = v)
+    document.getElementById('sc-sm').style.fontSize = v
+  }
+  if (k === 'md') {
+    document.getElementById('card-title').style.fontSize = v
+    document.querySelectorAll('.sec-tag').forEach(el => el.style.fontSize = v)
+    document.getElementById('sc-md').style.fontSize = v
+  }
+  if (k === 'lg') {
+    document.getElementById('disp-lg-en').style.fontSize = v
+    document.getElementById('disp-lg-cn').style.fontSize = v
+    document.getElementById('sc-lg').style.fontSize = v
+  }
+  if (k === 'xl') {
+    document.getElementById('disp-xl-en').style.fontSize = v
+    document.getElementById('disp-xl-cn').style.fontSize = v
+    document.getElementById('sc-xl').style.fontSize = v
+  }
+  if (k === '2xl') {
+    document.querySelectorAll('.kpi-val').forEach(el => el.style.fontSize = v)
+    document.getElementById('sc-2xl').style.fontSize = v
+  }
+}
+
+// Wire up sliders
+SIZES.forEach(k => {
+  document.getElementById('r-'+k).addEventListener('input', () => { update(k); applyStyles(k) })
+  update(k); applyStyles(k)
+})
+
+function resetAll() { SIZES.forEach(k => { document.getElementById('r-'+k).value = DEFAULTS[k]; update(k); applyStyles(k) }) }
+function exportCSS() {
+  let css = '/* ── 字号刻度 ── */\n'
+  SIZES.forEach(k => { css += '--app-size-'+k+': '+document.getElementById('r-'+k).value+'px;\n' })
+  navigator.clipboard.writeText(css).then(() => alert('已复制到剪贴板:\n\n'+css))
+}
+</script>
+</body>
+</html>

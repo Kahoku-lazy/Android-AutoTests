@@ -204,7 +204,7 @@ onMounted(() => {
   background: var(--app-error-bg);
   border: 2px solid var(--app-error);
   border-radius: 6px 10px 6px 10px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--app-status-danger-text);
   font-weight: 600;
 }
@@ -263,8 +263,8 @@ onMounted(() => {
   margin-bottom: 0;
 }
 .doc-section__title {
-  font-family: var(--doodle-font-title);
-  font-size: 20px;
+  font-family: var(--app-font-display);
+  font-size: var(--app-size-lg);
   font-weight: 700;
   color: var(--ink);
   display: inline-block;
@@ -282,13 +282,13 @@ onMounted(() => {
   background-size: 40px 3px;
 }
 .doc-section__label {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   color: var(--app-ink-muted);
   font-weight: 600;
   margin: 0 0 12px;
 }
 .doc-tag {
-  font-size: 9px;
+  font-size: var(--app-size-xs);
   padding: 1px 8px;
   border-radius: 4px 8px 4px 8px;
   background: #fff;
@@ -350,7 +350,7 @@ onMounted(() => {
   background: transparent; border: none; box-shadow: none;
 }
 .trends-tasks-card__title {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 800;
   color: var(--ink);
   margin-bottom: 10px;
@@ -385,16 +385,16 @@ onMounted(() => {
   background: #FFE066;
   border: 2.5px solid var(--ink);
   border-radius: 6px 10px 6px 10px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   color: var(--app-footer-yellow-text);
-  font-family: var(--doodle-font-title);
+  font-family: var(--app-font-display);
 }
 .dashboard__footer-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
 }
 .dashboard__footer-item :deep(svg) {
   color: var(--app-footer-yellow-text);

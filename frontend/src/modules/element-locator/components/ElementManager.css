@@ -63,7 +63,7 @@
 
 .tree-header__title {
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--app-ink);
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -93,7 +93,7 @@
 .tree-empty {
   text-align: center;
   color: var(--text-secondary, var(--app-ink-muted));
-  font-size: 13px;
+  font-size: 14px;
   padding: 32px 12px;
 }
 
@@ -111,7 +111,7 @@
 
 .tree-empty__hint {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .tree-body :deep(.el-tree) {
@@ -160,7 +160,7 @@
 
 .tree-node__icon {
   flex-shrink: 0;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1;
 }
 
@@ -170,7 +170,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--app-ink);
 }
 
@@ -190,7 +190,7 @@
 
 .tree-node__meta {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--app-ink-muted);
   background: var(--app-bg-subtle, #f8f6f2);
   padding: 1px 6px;
@@ -211,7 +211,7 @@
 
 .context-menu__item {
   padding: 8px 14px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--app-ink);
   cursor: pointer;
   user-select: none;
@@ -240,7 +240,7 @@
   flex-shrink: 0;
 }
 .panel-title { font-family: "Caveat", cursive;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--text-primary, var(--app-ink));
   margin: 0;
@@ -249,7 +249,7 @@
   gap: 8px;
 }
 .doc-tag {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 4px 8px 4px 8px;
@@ -310,7 +310,7 @@
   overflow: hidden;
 }
 .element-count {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--app-text-secondary, var(--app-ink-muted));
   white-space: nowrap;
   align-self: flex-end;
@@ -329,7 +329,7 @@
   flex-shrink: 0;
 }
 .page-size-control { display: flex; align-items: center; gap: 10px; }
-.toolbar-label { font-size: 12px; font-weight: 700; color: var(--app-ink-muted); white-space: nowrap; }
+.toolbar-label { font-size: 13px; font-weight: 700; color: var(--app-ink-muted); white-space: nowrap; }
 .page-size-btns { display: flex; gap: 6px; }
 .page-size-btn {
   min-width: 40px;
@@ -338,7 +338,7 @@
   border: 2px solid var(--app-ink, #2d2d2d);
   background: #fff;
   color: var(--app-ink);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -350,7 +350,7 @@
   color: var(--app-accent-purple-dark);
 }
 .table-toolbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
-.page-info { font-size: 12px; color: var(--app-ink-muted); font-weight: 600; white-space: nowrap; }
+.page-info { font-size: 13px; color: var(--app-ink-muted); font-weight: 600; white-space: nowrap; }
 .page-nav { display: flex; gap: 8px; }
 
 /* ── Table card ── */
@@ -427,7 +427,7 @@
 
 /* ── 表头：彩色渐变 ── */
 .elements-table :deep(th) {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   color: #fff;
   padding: 16px 12px;
@@ -452,7 +452,7 @@
 /* ── 单元格 ── */
 .elements-table :deep(td) {
   padding: 13px 12px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--app-ink);
   border-bottom: 1px solid rgba(0,0,0,0.04);
   vertical-align: middle;
@@ -482,31 +482,31 @@
 
 /* ── 列专属样式 ── */
 /* 名称列 — 青绿色强调 */
-.elements-table :deep(td:nth-child(1)) { font-weight: 600; color: var(--app-accent-purple-dark); font-size: 14px; }
+.elements-table :deep(td:nth-child(1)) { font-weight: 600; color: var(--app-accent-purple-dark); font-size: 15px; }
 /* XPath 列 — 紫色调，等宽字体 */
 .elements-table :deep(td:nth-child(2)) {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--app-accent-purple-dark);
 }
 /* 类名列 — 橙色调等宽 */
 .elements-table :deep(td:nth-child(3)) {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--app-ink);
 }
 /* 文本列 — 绿色调 */
-.elements-table :deep(td:nth-child(4)) { color: var(--app-ink); font-size: 13px; }
+.elements-table :deep(td:nth-child(4)) { color: var(--app-ink); font-size: 14px; }
 /* Resource ID 列 — 蓝色调等宽 */
 .elements-table :deep(td:nth-child(5)) {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--app-ink);
 }
 /* 可点击列 — 彩色徽章 */
 .elements-table :deep(td:nth-child(6)) {
   text-align: center;
-  font-size: 14px;
+  font-size: 15px;
 }
 /* 测试点列 — 居中 */
 .elements-table :deep(td:nth-child(7)) { text-align: center; }
@@ -516,7 +516,7 @@
   display: inline-block;
   padding: 3px 12px;
   border-radius: 6px 10px 6px 10px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.3px;
 }
@@ -533,7 +533,7 @@
 .elements-table :deep(td .text-muted) {
   color: var(--app-ink-muted);
   font-style: italic;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 /* ── Inline cell input ── */
@@ -542,7 +542,7 @@
   padding: 5px 10px;
   border: 1px solid transparent;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 15px;
   background: transparent;
   color: var(--app-accent-purple-dark);
   font-weight: 600;
@@ -559,11 +559,11 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0.2px;
 }
 .cell-text {
-  font-size: 13px;
+  font-size: 14px;
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -577,7 +577,7 @@
   align-items: center;
   justify-content: center;
   color: var(--app-text-secondary, var(--app-ink-muted));
-  font-size: 14px;
+  font-size: 15px;
   padding: 60px 0;
 }
 .empty-card {
@@ -596,10 +596,10 @@
   color: var(--app-ink-muted);
 }
 .table-empty span { font-size: 36px; }
-.table-empty p { font-size: 15px; margin: 0; }
+.table-empty p { font-size: 16px; margin: 0; }
 
 /* ── Utility ── */
-.mono { font-family: monospace; font-size: 12px; }
+.mono { font-family: monospace; font-size: 13px; }
 .text-muted { color: var(--app-ink-muted); }
 
 /* ── Modal form grid ── */
@@ -611,7 +611,7 @@
 }
 .form-label {
   text-align: right;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-secondary, var(--app-ink-muted));
   font-weight: 500;
   user-select: none;
@@ -624,7 +624,7 @@
 }
 .clear-warning {
   color: var(--app-status-danger-text);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   margin: 0;
   padding: 10px 14px;
@@ -633,7 +633,7 @@
   border: 1.5px solid var(--app-status-danger, #FFB5A7);
 }
 .clear-question {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-primary, var(--app-ink));
   margin: 0;
 }
@@ -641,7 +641,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-secondary, var(--app-ink-muted));
   cursor: pointer;
   user-select: none;
@@ -669,7 +669,7 @@
 .element-manager :deep(.el-button),
 .web-element-manager :deep(.el-button),
 .api-endpoint-manager :deep(.el-button) {
-  font-size: 10px; font-weight: 700; padding: 4px 12px;
+  font-size: 11px; font-weight: 700; padding: 4px 12px;
   border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px 8px 4px 8px;
   background: #fff; color: var(--app-ink, #2d2d2d);
   transition: all 0.12s;
@@ -694,7 +694,7 @@
 .element-manager :deep(.el-button--small),
 .web-element-manager :deep(.el-button--small),
 .api-endpoint-manager :deep(.el-button--small) {
-  font-size: 10px; padding: 3px 10px;
+  font-size: 11px; padding: 3px 10px;
 }
 .element-manager :deep(.el-tag),
 .web-element-manager :deep(.el-tag),

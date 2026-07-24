@@ -115,17 +115,17 @@ async function refreshDevices() {
 
 .dev-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--app-ink-muted, #999); flex-shrink: 0; }
 .dev-dot--live { background: var(--app-status-success, #6BCB77); }
-.dev-name { font-size: 12px; font-weight: 700; color: var(--app-ink, #2d2d2d); white-space: nowrap; }
-.dev-meta { font-size: 10px; color: var(--app-ink-muted, #999); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dev-name { font-size: var(--app-size-sm); font-weight: 700; color: var(--app-ink, #2d2d2d); white-space: nowrap; }
+.dev-meta { font-size: var(--app-size-xs); color: var(--app-ink-muted, #999); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .dev-tag {
-  font-size: 9px; font-weight: 700; padding: 2px 8px; margin-left: auto; flex-shrink: 0;
+  font-size: var(--app-size-xs); font-weight: 700; padding: 2px 8px; margin-left: auto; flex-shrink: 0;
   border: 1.5px solid var(--app-ink, #2d2d2d); border-radius: 3px 6px 3px 6px;
 }
 .dev-tag--online { background: var(--app-status-success-bg, #C8F5D0); color: var(--app-status-success-text, #2d7a2d); }
 
 .dev-btn {
-  font-size: 10px; font-weight: 700; padding: 4px 12px;
+  font-size: var(--app-size-xs); font-weight: 700; padding: 4px 12px;
   border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px 8px 4px 8px;
   background: #fff; color: var(--app-ink, #2d2d2d);
   cursor: pointer; font-family: inherit; transition: all 0.12s;
@@ -140,6 +140,6 @@ async function refreshDevices() {
 
 .opt-row { display: flex; justify-content: space-between; align-items: center; }
 .opt-model { font-weight: 500; }
-.opt-sub { display: flex; gap: 8px; font-size: 12px; color: var(--app-ink-muted, #999); margin-top: 2px; }
-.opt-serial { font-family: monospace; font-size: 11px; }
+.opt-sub { display: flex; gap: 8px; font-size: var(--app-size-sm); color: var(--app-ink-muted, #999); margin-top: 2px; }
+.opt-serial { font-family: var(--app-font-mono); font-size: var(--app-size-xs); }
 </style>

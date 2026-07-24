@@ -68,6 +68,8 @@
 
 ## 模块防火墙
 
+> 详细规则 → `.claude/rules/api-conventions.md`
+
 ```
 ✅ 跨 App import Model（只读查询）
 ✅ 跨 App import api.py（复杂写操作）
@@ -99,7 +101,7 @@
 - API 响应统一 `{ok, data}` 或 `{ok, error}`
 - JSON 字段 snake_case，前端变量 camelCase
 - 数据库表前缀：`dp_` `el_` `cm_` `tr_` `rg_` `ai_` `wf_` `ev_`
-- 步骤类型唯一真相源：`models/step_types.py::StepType` 枚举（28 种）
-- 设备状态：ONLINE / BUSY / OFFLINE / DISCONNECTED（4 种）
+- 步骤类型唯一真相源：`models/step_types.py::StepType` 枚举
+- 设备状态唯一真相源：`apps/device_pool/models.py`（ONLINE/BUSY/OFFLINE）
 - API Key 加密存储，前端脱敏展示，日志不输出 Key
 

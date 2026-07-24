@@ -209,7 +209,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
               :class="['view-tab', { active: subTab===tab.key }]"
               :title="tab.desc" @click="subTab=tab.key">
         {{ tab.label }}
-        <span v-if="!tab.available" style="font-size:10px;opacity:0.5;margin-left:4px">未安装</span>
+        <span v-if="!tab.available" style="font-size:var(--app-size-xs);opacity:0.5;margin-left:4px">未安装</span>
       </button>
     </div>
 
@@ -218,7 +218,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
       <div class="section-title">{{ curTab.label }} 评测</div>
 
       <!-- Description -->
-      <div class="fw-desc" style="margin-bottom:16px;padding:12px 16px;background:#faf9f4;border-radius:8px;font-size:13px;color:#5c4b38">
+      <div class="fw-desc" style="margin-bottom:16px;padding:12px 16px;background:#faf9f4;border-radius:8px;font-size:var(--app-size-sm);color:#5c4b38">
         <template v-if="subTab==='self'">
           使用 <strong>Judge LLM</strong> 对智能体的答卷进行四维评分（相关性/准确性/完整性/简洁性），支持人工纠偏。适用于自定义测试题目的精准评估。
         </template>
@@ -234,7 +234,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
       </div>
 
       <!-- Not installed warning -->
-      <div v-if="!curTab.available" style="padding:12px 16px;background:#fff3e0;border-radius:8px;margin-bottom:16px;font-size:13px;color:#e65100">
+      <div v-if="!curTab.available" style="padding:12px 16px;background:#fff3e0;border-radius:8px;margin-bottom:16px;font-size:var(--app-size-sm);color:#e65100">
         ⚠️ {{ curTab.label }} 未安装。请先执行 <code>pip install {{ subTab }}</code>，然后重启服务。
       </div>
 
@@ -303,7 +303,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
             </el-select>
           </el-form-item>
         </el-form>
-        <div style="font-size:13px;font-weight:600;color:#4a3a28;margin-bottom:8px">评测指标（勾选需要的）：</div>
+        <div style="font-size:var(--app-size-sm);font-weight:600;color:#4a3a28;margin-bottom:8px">评测指标（勾选需要的）：</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
           <el-checkbox v-for="m in METRICS_BY_FW.deepeval" :key="m.key" v-model="m.selected"
                        :label="m.label" size="small" border style="margin-right:0" />
@@ -332,7 +332,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
               <div class="bench-desc">{{ bm.desc }}</div>
             </div>
           </div>
-          <div style="font-size:12px;color:#a0936e;margin-top:4px">
+          <div style="font-size:var(--app-size-sm);color:#a0936e;margin-top:4px">
             MASEval 将整个 Agent 系统作为评测单元。支持 Leader+Worker 多智能体协作场景。
           </div>
         </template>
@@ -363,7 +363,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
           <el-select v-model="selectedAgentId" placeholder="选择智能体（查看其知识库文档范围）" style="width:280px" clearable>
             <el-option v-for="a in agents" :key="a.id" :label="a.name" :value="a.id" />
           </el-select>
-          <span style="font-size:12px;color:#a0936e;margin-left:8px">
+          <span style="font-size:var(--app-size-sm);color:#a0936e;margin-left:8px">
             选择智能体后，可查看该智能体配置的知识库文档范围
           </span>
         </el-form-item>
@@ -371,7 +371,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 
       <!-- Interactive query -->
       <div style="margin-bottom:20px">
-        <div style="font-size:14px;font-weight:600;color:#4a3a28;margin-bottom:8px">🔍 交互式检索测试</div>
+        <div style="font-size:var(--app-size-sm);font-weight:600;color:#4a3a28;margin-bottom:8px">🔍 交互式检索测试</div>
         <div style="display:flex;gap:8px">
           <el-input v-model="kbQuery" placeholder="输入查询（如：如何创建测试用例）" style="flex:1"
                     @keyup.enter="doKbQuery" />
@@ -382,7 +382,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
             查询: "{{ kbQueryResult.query }}" → {{ kbQueryResult.total || 0 }} 条结果
           </div>
           <div v-for="(doc, i) in (kbQueryResult.documents||[])" :key="i"
-               style="padding:8px 12px;background:#faf9f4;border-radius:6px;margin-bottom:4px;font-size:13px">
+               style="padding:8px 12px;background:#faf9f4;border-radius:6px;margin-bottom:4px;font-size:var(--app-size-sm)">
             <span style="color:#8a7b66;font-weight:600">{{ doc.source }}</span>
             <span style="margin-left:8px;color:#a0936e">score: {{ doc.score }}</span>
             <div style="color:#5c4b38;margin-top:4px;max-height:120px;overflow:auto">{{ doc.content }}</div>
@@ -410,7 +410,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
             [{{ d.total_hits }} hits] {{ d.query }}
             <el-tag size="small" :type="d.total_hits?'success':'danger'" style="margin-left:8px">{{ d.total_hits?'有结果':'无结果' }}</el-tag>
           </div>
-          <div v-for="doc in d.documents" :key="doc.source" style="padding:6px 12px;background:#faf9f4;border-radius:6px;margin-bottom:4px;font-size:12px">
+          <div v-for="doc in d.documents" :key="doc.source" style="padding:6px 12px;background:#faf9f4;border-radius:6px;margin-bottom:4px;font-size:var(--app-size-sm)">
             <span style="color:#8a7b66">{{ doc.source }}</span>
             <span style="margin-left:8px;color:#a0936e">score: {{ doc.score }}</span>
             <div style="color:#5c4b38;margin-top:2px">{{ doc.content_preview?.slice(0, 200) }}</div>
@@ -423,21 +423,21 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
     <div v-if="subTab!=='kb'" style="display:flex;gap:12px;align-items:center;margin-bottom:16px">
       <el-button size="small" @click="openBankEditor(null)">+ 新建试卷</el-button>
       <el-button size="small" @click="seedDefault" :disabled="banks.some(b=>b.name==='默认30题试卷')">📋 创建默认30题试卷</el-button>
-      <span style="font-size:12px;color:#a0936e">已有 {{ banks.length }} 份试卷，共 {{ banks.reduce((s,b)=>s+(b.question_count||0),0) }} 题</span>
+      <span style="font-size:var(--app-size-sm);color:#a0936e">已有 {{ banks.length }} 份试卷，共 {{ banks.reduce((s,b)=>s+(b.question_count||0),0) }} 题</span>
     </div>
 
     <!-- ═══════════════ Run History ═══════════════ -->
     <div class="doc-section">
       <div class="section-title">评测记录 ({{ filteredRuns.length }})</div>
-      <div v-if="!filteredRuns.length" style="padding:20px;text-align:center;color:#a0936e">暂无评测记录</div>
+      <div v-if="!filteredRuns.length" class="empty-state">暂无评测记录</div>
       <div v-for="r in filteredRuns" :key="r.id" class="run-card"
            style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:#faf9f4;border-radius:10px;margin-bottom:8px;border:1px solid #e8e2d6">
         <el-tag :type="r.status==='completed'?'success':r.status==='running'?'warning':r.status==='failed'?'danger':'info'" size="small">{{ r.status }}</el-tag>
         <span style="font-weight:600;min-width:100px">{{ r.agent_name }}</span>
         <el-tag size="small" type="info">{{ fwLabel(r) }}</el-tag>
-        <span style="color:#8a7b66;font-size:13px">{{ r.bank_name }} · {{ r.total_questions }}题</span>
-        <span v-if="r.total_score>0" style="font-weight:700;color:var(--c-workflow);font-size:13px">总分 {{ r.total_score }}</span>
-        <span v-if="r.status==='running'" style="color:#f7a8c4;font-size:13px">{{ r.completed_questions }}/{{ r.total_questions }}</span>
+        <span style="color:#8a7b66;font-size:var(--app-size-sm)">{{ r.bank_name }} · {{ r.total_questions }}题</span>
+        <span v-if="r.total_score>0" style="font-weight:700;color:var(--c-workflow);font-size:var(--app-size-sm)">总分 {{ r.total_score }}</span>
+        <span v-if="r.status==='running'" style="color:#f7a8c4;font-size:var(--app-size-sm)">{{ r.completed_questions }}/{{ r.total_questions }}</span>
         <div style="margin-left:auto;display:flex;gap:8px">
           <el-button size="small" @click="viewRun(r.id)" :disabled="r.status==='running'">详情</el-button>
           <el-button size="small" type="danger" plain @click="removeBank(r.id)">删除</el-button>
@@ -452,7 +452,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
         <el-tag size="small" style="margin-left:8px">{{ fwLabel(runDetail) }}</el-tag>
         <el-button size="small" style="margin-left:12px" @click="runDetail=null;activeRunId=null">关闭</el-button>
       </div>
-      <div v-if="loadingDetail" style="padding:20px;text-align:center;color:#a0936e">加载中...</div>
+      <div v-if="loadingDetail" class="empty-state">加载中...</div>
       <div v-else>
         <div style="display:flex;gap:20px;margin-bottom:16px;flex-wrap:wrap">
           <div class="score-badge"><div class="score-num" :style="{color:scoreColor(runDetail.total_score)}">{{ runDetail.total_score }}</div><div class="score-label">综合总分</div></div>
@@ -463,23 +463,23 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
         </div>
         <!-- Framework raw output -->
         <div v-if="runDetail.framework!=='self'" style="margin-bottom:16px">
-          <div style="font-size:14px;font-weight:600;color:#4a3a28;margin-bottom:8px">评测原始输出</div>
-          <pre style="background:#faf9f4;border-radius:8px;padding:12px;font-size:12px;max-height:400px;overflow:auto;white-space:pre-wrap">{{ prettyJson(runDetail.report_json) }}</pre>
+          <div style="font-size:var(--app-size-sm);font-weight:600;color:#4a3a28;margin-bottom:8px">评测原始输出</div>
+          <pre style="background:#faf9f4;border-radius:8px;padding:12px;font-size:var(--app-size-sm);max-height:400px;overflow:auto;white-space:pre-wrap">{{ prettyJson(runDetail.report_json) }}</pre>
         </div>
         <!-- Per-question (self evaluator only) -->
         <div v-if="runDetail.framework==='self'" v-for="r in (runDetail.results||[])" :key="r.id"
              style="background:#faf9f4;border-radius:10px;padding:16px;margin-bottom:12px;border:1px solid #e8e2d6">
           <div style="font-weight:700;margin-bottom:8px;color:#4a3a28">{{ r.question_text }}</div>
-          <div style="font-size:13px;color:#5c4b38;margin-bottom:8px;max-height:100px;overflow:auto"><strong>回答：</strong>{{ r.agent_response }}</div>
-          <div style="font-size:12px;color:#a0936e;margin-bottom:8px">{{ r.judge_reasoning }}</div>
+          <div style="font-size:var(--app-size-sm);color:#5c4b38;margin-bottom:8px;max-height:100px;overflow:auto"><strong>回答：</strong>{{ r.agent_response }}</div>
+          <div style="font-size:var(--app-size-sm);color:#a0936e;margin-bottom:8px">{{ r.judge_reasoning }}</div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-            <span style="font-size:12px;color:#8a7b66">机器:</span>
+            <span style="font-size:var(--app-size-sm);color:#8a7b66">机器:</span>
             <el-tag size="small" type="warning">相关 {{ r.relevance_score }}</el-tag>
             <el-tag size="small" type="warning">准确 {{ r.accuracy_score }}</el-tag>
             <el-tag size="small" type="warning">完整 {{ r.completeness_score }}</el-tag>
             <el-tag size="small" type="warning">简洁 {{ r.conciseness_score }}</el-tag>
             <el-divider direction="vertical" />
-            <span style="font-size:12px;color:#8a7b66">人工:</span>
+            <span style="font-size:var(--app-size-sm);color:#8a7b66">人工:</span>
             <el-select v-for="dim in [{k:'human_relevance',l:'相关'},{k:'human_accuracy',l:'准确'},{k:'human_completeness',l:'完整'},{k:'human_conciseness',l:'简洁'}]"
                        :key="dim.k" size="small" style="width:100px"
                        :model-value="r[dim.k]" @change="v=>doSubmitScore(r.id, dim.k, v)" clearable placeholder="调整">
@@ -520,7 +520,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 .evaluator-host { padding: 4px 0; }
 .view-tab {
   padding: 10px 22px; border: 2px solid #e8e2d6; border-radius: 12px;
-  background: #faf9f4; color: #8a7b66; font-size: 15px; font-weight: 700;
+  background: #faf9f4; color: #8a7b66; font-size: var(--app-size-md); font-weight: 700;
   font-family: inherit; cursor: pointer; transition: all 0.2s ease;
 }
 .view-tab:hover { border-color: #19c8b9; background: #e6f9f6; color: #158a80; }
@@ -529,7 +529,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 /* Mode toggle */
 .mode-btn {
   padding: 8px 18px; border: 1.5px solid #e8e2d6; border-radius: 8px;
-  background: #fff; color: #8a7b66; font-size: 13px; font-weight: 600;
+  background: #fff; color: #8a7b66; font-size: var(--app-size-sm); font-weight: 600;
   font-family: inherit; cursor: pointer; transition: all 0.2s ease;
 }
 .mode-btn:hover { border-color: #b39ef3; background: #f3f0ff; color: #5b4aa8; }
@@ -542,12 +542,12 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 }
 .bench-card:hover { border-color: #b39ef3; background: #f3f0ff; }
 .bench-card.selected { border-color: #b39ef3; background: #f3f0ff; box-shadow: 0 2px 8px rgba(179,158,243,0.25); }
-.bench-name { font-size: 14px; font-weight: 700; color: #4a3a28; }
-.bench-desc { font-size: 11px; color: #a0936e; margin-top: 4px; }
+.bench-name { font-size: var(--app-size-sm); font-weight: 700; color: #4a3a28; }
+.bench-desc { font-size: var(--app-size-xs); color: #a0936e; margin-top: 4px; }
 
 .doc-section { background: #fff; border-radius: var(--app-radius-md); padding: 24px; margin-bottom: 20px; border: 1px solid #f0ebe0; box-shadow: 0 2px 8px rgba(61,52,40,0.04); }
-.section-title { font-size: 18px; font-weight: 700; color: #4a3a28; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #f0ebe0; display: flex; align-items: center; }
+.section-title { font-size: var(--app-size-lg); font-weight: 700; color: #4a3a28; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #f0ebe0; display: flex; align-items: center; }
 .score-badge { background: #faf9f4; border-radius: 12px; padding: 14px 22px; text-align: center; border: 1px solid #e8e2d6; min-width: 80px; }
-.score-num { font-size: 28px; font-weight: 800; }
-.score-label { font-size: 12px; color: #a0936e; margin-top: 4px; }
+.score-num { font-size: var(--app-size-2xl); font-weight: 800; }
+.score-label { font-size: var(--app-size-sm); color: #a0936e; margin-top: 4px; }
 </style>

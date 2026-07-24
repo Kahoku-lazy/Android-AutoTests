@@ -1,0 +1,94 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>报告子页 Doodle Craft 原型</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700;800&family=Caveat:wght@600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet"><script src="https://unpkg.com/lucide@latest"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}:root{--ink:#1e1e24;--paper:#fefcf5;--dot:#d8d2c4;--c-report:#7C6F83;--c-device:#6BCB77;--c-runner:#FFB5A7;--c-dashboard:#F7C948;--c-workflow:#89CFF0;--c-element:#A78BFA}
+body{font-family:'Quicksand','PingFang SC',sans-serif;background:radial-gradient(circle,var(--dot)0.6px,transparent 0.6px);background-size:15px 15px;background-color:var(--paper);color:var(--ink);padding:24px}
+h1{text-align:center;font-family:'Caveat',cursive;font-size:26px;margin-bottom:4px}h1+p{text-align:center;font-size:11px;opacity:0.4;margin-bottom:20px}
+.pg{max-width:900px;margin:0 auto 32px}.pg-label{font-size:10px;font-weight:700;color:var(--ink);background:#fff;padding:5px 16px;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;display:inline-flex;align-items:center;gap:6px;margin-bottom:10px}.pg-label .dot{width:7px;height:7px;flex-shrink:0}
+.header{display:flex;align-items:center;gap:12px;padding:14px 20px;background:#fff;border-bottom:3px solid var(--ink)}.header-icon{width:40px;height:40px;display:grid;place-items:center;background:var(--c-report);border:3px solid var(--ink);border-radius:8px 16px 6px 14px;font-size:16px;color:var(--ink);transform:rotate(-2deg)}.header h2{font-family:'Caveat',cursive;font-size:22px;font-weight:700;transform:rotate(-0.5deg)}.header p{font-size:9px;opacity:0.4;font-weight:600}.header-actions{margin-left:auto;display:flex;gap:8px}
+.btn{padding:5px 14px;font-size:10px;font-weight:800;background:#fff;border:2.5px solid var(--ink);border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all .12s}.btn:hover{background:var(--c-dashboard)}
+.content{padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+.info-card{background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:16px 18px;box-shadow:2px 3px 0 rgba(0,0,0,.04)}
+.sec-title{font-family:'Caveat',cursive;font-size:18px;font-weight:700;display:inline-block;position:relative;margin-bottom:12px}.sec-title::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2.5px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%231e1e24' stroke-width='2' fill='none'/%3E%3C/svg%3E")repeat-x;background-size:40px 3px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.kpi-card{text-align:center;padding:12px 10px 16px;background:#fff;border:3px solid var(--ink);border-radius:4px 10px 6px 8px;box-shadow:2px 3px 0 rgba(0,0,0,.04);position:relative}.kpi-dot{width:10px;height:10px;transform:rotate(45deg);margin:0 auto 5px;border:2px solid var(--ink)}.kpi-value{font-family:'Caveat',cursive;font-size:26px;font-weight:700;line-height:1}.kpi-label{font-size:9px;font-weight:700;opacity:0.4;text-transform:uppercase;margin-top:2px}.kpi-card::after{content:'~';position:absolute;bottom:2px;right:8px;font-family:'Caveat',cursive;font-size:16px;opacity:.12}
+.tag{font-size:8px;font-weight:800;padding:2px 7px;border-radius:3px 6px 3px 6px;border:2px solid var(--ink);display:inline-block}.tag-green{background:#C8F5D0;color:#1a5c2a}.tag-pink{background:#FFE0DB;color:#7a1c1c}.tag-purple{background:#E8DDF8;color:#4a2a80}.tag-yellow{background:#FFF9E0;color:#6a4a10}.tag-gray{background:#f0ede8;opacity:.5}
+.tbl{width:100%;border-collapse:collapse;font-size:11px}.tbl th{background:#f8f6f2;font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;text-align:left;border-bottom:2.5px solid var(--ink)}.tbl td{padding:8px 10px;font-weight:500;border-bottom:1px solid #e8e4d8}.tbl tr:hover td{background:rgba(255,255,255,.5)}.mono{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600}
+.ftabs{display:flex;gap:4px;margin-bottom:14px}.ftab{padding:5px 14px;font-size:10px;font-weight:700;color:var(--ink);opacity:0.4;background:transparent;border:2px solid transparent;border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit}.ftab:hover{opacity:0.7}.ftab.active{opacity:1;background:#fff;border-color:var(--ink)}
+</style></head><body>
+
+<h1>报告子页 Doodle Craft 三原型</h1>
+<p>ReportDetail · CaseBreakdown (通过/失败) · TaskReport</p>
+
+<!-- P1: ReportDetail -->
+<div class="pg"><div class="pg-label"><span class="dot" style="background:var(--c-report);transform:rotate(45deg);border-radius:1px"></span> P1 · ReportDetail 执行报告</div>
+<div style="background:var(--paper);border:3px solid var(--ink);border-radius:6px 10px;overflow:hidden;box-shadow:3px 3px 0 rgba(0,0,0,0.04)">
+<div class="header"><div class="header-icon">▤</div><div><h2>测试执行报告</h2><p>Run: RUN-0248 · smoke-test-v2.4</p></div><div class="header-actions"><button class="btn">← 返回列表</button></div></div>
+<div class="content">
+<div class="kpi-row">
+<div class="kpi-card"><div class="kpi-dot" style="background:var(--c-workflow)"></div><div class="kpi-value">5</div><div class="kpi-label">执行用例</div></div>
+<div class="kpi-card"><div class="kpi-dot" style="background:var(--c-device)"></div><div class="kpi-value" style="color:#2d7a2d">24</div><div class="kpi-label">✅ 通过</div></div>
+<div class="kpi-card"><div class="kpi-dot" style="background:var(--c-runner)"></div><div class="kpi-value" style="color:#a03030">0</div><div class="kpi-label">❌ 失败</div></div>
+<div class="kpi-card"><div class="kpi-dot" style="background:var(--c-dashboard)"></div><div class="kpi-value">100%</div><div class="kpi-label">📊 通过率</div></div></div>
+
+<div class="info-card">
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:10px">
+<div><span style="opacity:0.4">📱 设备</span><br><span style="font-weight:700">Pixel 6</span></div>
+<div><span style="opacity:0.4">👤 创建人</span><br><span style="font-weight:700">QA_Engineer</span></div>
+<div><span style="opacity:0.4">🏷 结果</span><br><span class="tag tag-green">COMPLETED</span></div></div></div>
+
+<div class="info-card"><span class="sec-title">用例执行明细</span>
+<div class="ftabs"><span class="ftab active">用例明细</span><span class="ftab">失败分析</span></div>
+<div class="info-card" style="padding:12px">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1.5px solid #e8e4d8;cursor:pointer">
+<span style="font-weight:700;font-size:11px">▶ TC-001 登录流程测试</span><span class="tag tag-green">PASS</span><span style="font-size:9px;opacity:0.4">5/5 通过</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1.5px solid #e8e4d8;cursor:pointer">
+<span style="font-weight:700;font-size:11px">▶ TC-002 首页加载测试</span><span class="tag tag-green">PASS</span><span style="font-size:9px;opacity:0.4">3/3 通过</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1.5px solid #e8e4d8;cursor:pointer">
+<span style="font-weight:700;font-size:11px">▶ TC-003 搜索功能测试</span><span class="tag tag-green">PASS</span><span style="font-size:9px;opacity:0.4">8/8 通过</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;cursor:pointer">
+<span style="font-weight:700;font-size:11px">▶ TC-004 设置页面测试</span><span class="tag tag-green">PASS</span><span style="font-size:9px;opacity:0.4">4/4 通过</span></div></div></div>
+</div></div></div>
+
+<!-- P2: CaseBreakdown — 失败用例 -->
+<div class="pg"><div class="pg-label"><span class="dot" style="background:var(--c-runner);transform:rotate(45deg);border-radius:1px"></span> P2 · CaseBreakdown 失败用例</div>
+<div style="background:var(--paper);border:3px solid var(--ink);border-radius:6px 10px;overflow:hidden;box-shadow:3px 3px 0 rgba(0,0,0,0.04)">
+<div class="header"><div class="header-icon" style="background:var(--c-runner)">✗</div><div><h2>执行失败用例</h2><p>筛选条件: RUN-0247 · login-regression</p></div><div class="header-actions"><button class="btn">← 返回</button></div></div>
+<div class="content">
+<div class="ftabs"><span class="ftab">用例详情</span><span class="ftab active">BUG 汇总</span></div>
+
+<div class="info-card"><span class="sec-title">BUG 问题汇总</span>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div class="info-card" style="padding:14px;border:2px solid var(--c-runner)">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="tag tag-pink">BUG-001</span><span style="font-weight:700;font-size:12px">登录按钮点击超时</span></div>
+<div style="font-size:9px;opacity:0.5;margin-bottom:4px">出现 3 次 · 影响 2 个用例 · 关联任务: RUN-0247, RUN-0244</div>
+<div style="font-size:10px;font-weight:600;margin-top:6px">🔍 失败用例:</div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e8e4d8;font-size:10px"><span>TC-001 登录流程测试</span><span class="tag tag-pink">FAIL</span><span style="opacity:0.4">Step 3</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:10px"><span>TC-005 权限验证测试</span><span class="tag tag-pink">FAIL</span><span style="opacity:0.4">Step 2</span></div></div>
+
+<div class="info-card" style="padding:14px;border:2px solid var(--c-runner)">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="tag tag-pink">BUG-002</span><span style="font-weight:700;font-size:12px">密码输入框元素未找到</span></div>
+<div style="font-size:9px;opacity:0.5;margin-bottom:4px">出现 2 次 · 影响 1 个用例 · 关联任务: RUN-0247</div>
+<div style="font-size:10px;font-weight:600;margin-top:6px">🔍 失败用例:</div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:10px"><span>TC-001 登录流程测试</span><span class="tag tag-pink">FAIL</span><span style="opacity:0.4">Step 2</span></div></div></div></div>
+</div></div></div>
+
+<!-- P3: TaskReport / CaseBreakdown — 通过用例 -->
+<div class="pg"><div class="pg-label"><span class="dot" style="background:var(--c-device);transform:rotate(45deg);border-radius:1px"></span> P3 · CaseBreakdown 通过用例</div>
+<div style="background:var(--paper);border:3px solid var(--ink);border-radius:6px 10px;overflow:hidden;box-shadow:3px 3px 0 rgba(0,0,0,.04)">
+<div class="header"><div class="header-icon" style="background:var(--c-device)">✓</div><div><h2>已通过用例</h2><p>筛选条件: 通过 · 2026-07</p></div><div class="header-actions"><button class="btn">← 返回</button></div></div>
+<div class="content">
+<div class="kpi-row">
+<div class="kpi-card"><div class="kpi-dot" style="background:var(--c-workflow)"></div><div class="kpi-value">144</div><div class="kpi-label">通过用例</div></div>
+<div class="kpi-card"><div class="kpi-dot" style="background:var(--c-device)"></div><div class="kpi-value">12</div><div class="kpi-label">涉及任务</div></div>
+<div class="kpi-card"><div class="kpi-dot" style="background:var(--c-dashboard)"></div><div class="kpi-value">98.6%</div><div class="kpi-label">通过率</div></div>
+<div class="kpi-card"><div class="kpi-dot" style="background:var(--c-element)"></div><div class="kpi-value">8</div><div class="kpi-label">步骤类型</div></div></div>
+
+<div class="info-card" style="padding:0;overflow:hidden">
+<table class="tbl"><thead><tr><th>用例名称</th><th>通过次数</th><th>关联任务</th><th>最近通过</th><th>平均耗时</th></tr></thead><tbody>
+<tr><td style="font-weight:700">登录流程测试</td><td>12</td><td><span class="mono">RUN-0248</span>, <span class="mono">RUN-0210</span>...</td><td>14:32</td><td>18s</td></tr>
+<tr><td style="font-weight:700">首页加载测试</td><td>10</td><td><span class="mono">RUN-0248</span>, <span class="mono">RUN-0205</span>...</td><td>14:32</td><td>8s</td></tr>
+<tr><td style="font-weight:700">搜索功能测试</td><td>8</td><td><span class="mono">RUN-0248</span>, <span class="mono">RUN-0198</span>...</td><td>14:32</td><td>22s</td></tr>
+<tr><td style="font-weight:700">设置页面测试</td><td>8</td><td><span class="mono">RUN-0248</span>, <span class="mono">RUN-0195</span>...</td><td>14:32</td><td>12s</td></tr></tbody></table></div>
+</div></div></div>
+
+<script>lucide.createIcons()</script></body></html>

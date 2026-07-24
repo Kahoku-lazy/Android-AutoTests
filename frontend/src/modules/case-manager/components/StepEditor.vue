@@ -475,7 +475,7 @@ function runFromCurrent(idx) {
       </div>
     </div>
 
-    <div v-if="!steps.length" class="empty-hint">
+    <div v-if="!steps.length" class="empty-state">
       暂无步骤，点击「添加步骤」开始编排
     </div>
 
@@ -774,7 +774,7 @@ function runFromCurrent(idx) {
   margin-bottom: 12px;
 }
 .step-header__title {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   color: var(--ink);
 }
@@ -786,7 +786,7 @@ function runFromCurrent(idx) {
 .empty-hint {
   text-align: center;
   color: #999;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   padding: 32px;
   border: 1px dashed rgba(162,210,255,0.38);
   border-radius: 12px;
@@ -814,12 +814,12 @@ function runFromCurrent(idx) {
 .step-item.dragging {
   opacity: 0.4;
   transform: scale(0.97);
-  box-shadow: 0 0 0 2px var(--app-green-deep);
+  box-shadow: 0 0 0 2px var(--c-workflow);
 }
 .step-item.drop-target {
-  border-color: var(--app-green-deep) !important;
+  border-color: var(--c-workflow) !important;
   box-shadow:
-    0 0 0 2px var(--app-green-deep),
+    0 0 0 2px var(--c-workflow),
     0 4px 16px rgba(162,210,255,0.28) !important;
 }
 .step-item.drop-target .step-bar {
@@ -832,7 +832,7 @@ function runFromCurrent(idx) {
   top: 0;
   bottom: 0;
   width: 4px;
-  background: var(--app-green-deep);
+  background: var(--c-workflow);
   border-radius: 0 4px 4px 0;
   z-index: 2;
 }
@@ -856,22 +856,22 @@ function runFromCurrent(idx) {
   transition: all 0.15s;
 }
 .drag-handle:hover {
-  color: var(--app-green-deep);
+  color: var(--c-workflow);
   background: rgba(162,210,255,0.16);
 }
 .drag-handle:active {
   cursor: grabbing;
 }
 .step-item.dragging .drag-handle {
-  color: var(--app-green-deep);
+  color: var(--c-workflow);
 }
 .step-idx {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--app-green-deep);
+  background: var(--c-workflow);
   color: #fff;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -880,7 +880,7 @@ function runFromCurrent(idx) {
 }
 .step-summary {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -895,7 +895,7 @@ function runFromCurrent(idx) {
   padding: 5px 8px;
 }
 .step-result-msg {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   margin-left: 8px;
   font-weight: 600;
 }
@@ -907,7 +907,7 @@ function runFromCurrent(idx) {
 }
 
 .step-desc {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: #999;
   margin-bottom: 12px;
   padding: 8px 12px;
@@ -924,19 +924,19 @@ function runFromCurrent(idx) {
   text-align: center;
 }
 .field-hint {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: #999;
   margin-left: 10px;
 }
 .current-xpath {
   margin-top: 6px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
 }
 .current-xpath code {
   background: rgba(162,210,255,0.12);
   padding: 3px 8px;
   border-radius: 4px;
-  font-family: monospace;
+  font-family: var(--app-font-mono);
   word-break: break-all;
   color: var(--ink);
 }
@@ -958,7 +958,7 @@ function runFromCurrent(idx) {
 }
 .el-opt-name {
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -966,9 +966,9 @@ function runFromCurrent(idx) {
   min-width: 0;
 }
 .el-opt-page {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   color: #fff;
-  background: var(--app-green-deep);
+  background: var(--c-workflow);
   padding: 1px 6px;
   border-radius: 10px;
   flex-shrink: 0;
@@ -987,9 +987,9 @@ function runFromCurrent(idx) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
-  color: var(--app-green-deep);
+  color: var(--c-workflow);
   margin-bottom: 8px;
 }
 .child-steps__list {
@@ -1004,16 +1004,16 @@ function runFromCurrent(idx) {
   padding: 6px 10px;
   background: #fff;
   border-radius: 8px;
-  border-left: 3px solid var(--app-green-deep);
+  border-left: 3px solid var(--c-workflow);
 }
 .child-step-idx {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
-  color: var(--app-green-deep);
+  color: var(--c-workflow);
   min-width: 28px;
 }
 .child-step-type {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 600;
   color: #999;
   background: rgba(162,210,255,0.15);
@@ -1023,7 +1023,7 @@ function runFromCurrent(idx) {
 }
 .child-step-desc {
   flex: 1;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1034,7 +1034,7 @@ function runFromCurrent(idx) {
 }
 .child-steps__empty {
   text-align: center;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: #999;
   padding: 12px;
 }

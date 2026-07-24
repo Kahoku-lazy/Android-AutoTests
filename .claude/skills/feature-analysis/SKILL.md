@@ -136,7 +136,7 @@ description: |
 | `.claude/rules/frontend.md` | 前端规范速查 |
 | `.claude/rules/backend.md` | 后端规范速查 |
 | `.claude/rules/database.md` | 表结构速查 |
-| `.claude/rules/module-boundaries.md` | 防火墙规则速查 |
+| `.claude/rules/api-conventions.md` | 防火墙规则速查 |
 | `.claude/rules/animal-island-ui.md` | 动森 UI 组件 API 速查 |
 | `.claude/rules/conventions.md` | 命名规范速查 |
 

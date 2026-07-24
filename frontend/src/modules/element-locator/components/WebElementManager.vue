@@ -251,7 +251,7 @@ async function doBatchImport() {
 
         <div class="tree-body" :class="{ 'drag-mode-active': dragEnabled }">
           <div v-if="loading && !groups.length" class="tree-loading">加载中...</div>
-          <div v-else-if="!groups.length" class="tree-empty">
+          <div v-else-if="!groups.length" class="empty-state">
             <span class="tree-empty__icon">📁</span>
             <p class="tree-empty__text">暂无分组</p>
             <p class="tree-empty__hint">点击「+ 项目」或「+ 模块」创建</p>
@@ -379,7 +379,7 @@ async function doBatchImport() {
                             @update:model-value="(val) => updateEl(record, 'is_test_point', val)" />
                         </template>
                         <template #cell-actions="{ record }">
-                          <div class="action-btns">
+                          <div class="action-bar">
                             <el-button size="small" type="primary" link @click="openEdit(record)">编辑</el-button>
                             <el-button size="small" type="danger" link @click="doDelete(record)">删除</el-button>
                           </div>
@@ -583,7 +583,7 @@ async function doBatchImport() {
 }
 
 .tree-header__title {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   color: var(--app-ink);
 }
@@ -610,12 +610,12 @@ async function doBatchImport() {
   text-align: center;
   padding: 32px 16px;
   color: var(--app-ink-muted);
-  font-size: 13px;
+  font-size: var(--app-size-sm);
 }
 
 .tree-empty__icon {
   display: block;
-  font-size: 32px;
+  font-size: var(--app-size-2xl);
   margin-bottom: 8px;
 }
 
@@ -626,7 +626,7 @@ async function doBatchImport() {
 }
 
 .tree-empty__hint {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink-muted);
   margin: 0;
 }
@@ -641,7 +641,7 @@ async function doBatchImport() {
 }
 
 .tree-node__icon {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   flex-shrink: 0;
 }
 
@@ -650,7 +650,7 @@ async function doBatchImport() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink);
 }
 
@@ -665,7 +665,7 @@ async function doBatchImport() {
 }
 
 .tree-node__meta {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   color: var(--app-ink-muted);
   background: rgba(0, 0, 0, 0.06);
   padding: 1px 6px;
@@ -703,7 +703,7 @@ async function doBatchImport() {
 
 .context-menu__item {
   padding: 8px 14px;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   cursor: pointer;
   color: var(--app-ink);
 }
@@ -745,8 +745,8 @@ async function doBatchImport() {
   gap: 8px;
 }
 
-.panel-title { font-family: "Caveat", cursive;
-  font-size: 15px;
+.panel-title { font-family: "Patrick Hand", cursive;
+  font-size: var(--app-size-md);
   font-weight: 700;
   color: var(--app-ink);
   margin: 0;
@@ -754,7 +754,7 @@ async function doBatchImport() {
 
 .doc-tag {
   display: inline-block;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 600;
   text-transform: uppercase;
   background: rgba(0, 0, 0, 0.1);
@@ -800,7 +800,7 @@ async function doBatchImport() {
 }
 
 .element-count {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink-muted);
   text-align: right;
   flex-shrink: 0;
@@ -814,7 +814,7 @@ async function doBatchImport() {
 }
 
 .empty-state {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink-muted);
 }
 
@@ -843,7 +843,7 @@ async function doBatchImport() {
 }
 
 .toolbar-label {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   color: var(--app-ink-muted);
 }
@@ -859,7 +859,7 @@ async function doBatchImport() {
   border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px 8px 4px 8px;
   border: 3px solid var(--app-ink, #2d2d2d);
   background: #fff;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   color: var(--app-ink);
   cursor: pointer;
@@ -885,7 +885,7 @@ async function doBatchImport() {
 }
 
 .page-info {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink-muted);
 }
 
@@ -926,7 +926,7 @@ async function doBatchImport() {
   display: inline-block;
   padding: 2px 10px;
   border-radius: 6px 10px 6px 10px;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   color: #fff;
   white-space: nowrap;
@@ -950,7 +950,7 @@ async function doBatchImport() {
   width: 100%;
   border: none;
   background: transparent;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: var(--app-accent-purple);
   font-weight: 600;
   padding: 4px 6px;
@@ -967,12 +967,12 @@ async function doBatchImport() {
 .cell-input--desc {
   color: var(--app-ink);
   font-weight: 400;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
 }
 
 .cell-code {
-  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
-  font-size: 12px;
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-sm);
   color: #8275c2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -982,7 +982,7 @@ async function doBatchImport() {
 }
 
 .cell-url {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink);
   opacity: 0.7;
   overflow: hidden;
@@ -994,11 +994,11 @@ async function doBatchImport() {
 
 .text-muted {
   color: var(--app-ink-muted);
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-style: italic;
 }
 
-.action-btns {
+.action-bar {
   display: flex;
   gap: 4px;
   justify-content: center;
@@ -1014,11 +1014,11 @@ async function doBatchImport() {
 }
 
 .table-empty span {
-  font-size: 36px;
+  font-size: var(--app-size-2xl);
 }
 
 .table-empty p {
-  font-size: 15px;
+  font-size: var(--app-size-md);
   color: var(--app-ink-muted);
   margin: 0;
 }
@@ -1032,7 +1032,7 @@ async function doBatchImport() {
 }
 
 .form-label {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink-muted);
   text-align: right;
 }
@@ -1057,7 +1057,7 @@ async function doBatchImport() {
   margin-bottom: 8px;
 }
 .flows-title {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   color: var(--app-ink);
 }
@@ -1075,12 +1075,12 @@ async function doBatchImport() {
   background: #fff;
   border-radius: 6px 10px 6px 10px;
   border: 2px solid var(--app-border-light, #e8ecf1);
-  font-size: 13px;
+  font-size: var(--app-size-sm);
 }
 .flow-item.flow-outgoing { border-left: 3px solid var(--app-accent-purple); }
 .flow-item.flow-incoming { border-left: 3px solid #889df0; }
 .flow-dir-tag {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 6px;
@@ -1112,14 +1112,14 @@ async function doBatchImport() {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   color: var(--app-ink-muted);
 }
 .flow-meta code {
   background: #f0ebe0;
   padding: 1px 6px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
 }
 .flow-trigger {
   color: #8275c2;
@@ -1128,14 +1128,14 @@ async function doBatchImport() {
 .flows-empty {
   text-align: center;
   color: var(--app-ink-muted);
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   padding: 12px 0;
 }
 
 /* Paper table headers */
 .web-elements-table :deep(.el-table__header th) {
   background: var(--app-accent-purple) !important; color: #fff !important;
-  font-size: 10px; font-weight: 700; padding: 6px 10px;
+  font-size: var(--app-size-xs); font-weight: 700; padding: 6px 10px;
   border-right: 2px solid var(--doodle-ink);
 }
 .web-elements-table :deep(.el-table__header th:first-child) { border-radius: 3px 0 0 0; }

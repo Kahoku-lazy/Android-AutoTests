@@ -379,7 +379,7 @@ async function copyXPath(xpath) {
   z-index: 2;
 }
 h3 {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   color: var(--app-text, var(--app-ink));
   margin-bottom: 12px;
   flex-shrink: 0;
@@ -397,15 +397,15 @@ h3 {
   justify-content: center;
   gap: 10px;
   color: var(--app-text-secondary, var(--app-ink-muted));
-  font-size: 13px;
+  font-size: var(--app-size-sm);
 }
 .empty-icon {
-  font-size: 32px;
+  font-size: var(--app-size-2xl);
   opacity: 0.55;
 }
 .empty-text {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 500;
   color: var(--app-text, var(--ink));
 }
@@ -427,7 +427,7 @@ h3 {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--app-size-sm);
 }
 .el-info__label {
   min-width: 56px;
@@ -452,7 +452,7 @@ h3 {
 }
 .form-label {
   text-align: right;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: var(--text-secondary, var(--app-ink-muted));
   font-weight: 500;
   user-select: none;
@@ -470,19 +470,19 @@ h3 {
   padding: 2px 0;
 }
 .xpath-opt-type {
-  font-size: 12px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   color: var(--text-primary, var(--app-ink));
 }
 .xpath-opt-path {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   color: var(--text-secondary, var(--app-ink-muted));
   word-break: break-all;
 }
 
 /* Paper buttons */
 .xp-btn {
-  font-size: 10px; font-weight: 700; padding: 4px 12px;
+  font-size: var(--app-size-xs); font-weight: 700; padding: 4px 12px;
   border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px 8px 4px 8px;
   background: #fff; color: var(--app-ink, #2d2d2d);
   cursor: pointer; font-family: inherit; transition: all 0.12s; white-space: nowrap;
@@ -494,7 +494,7 @@ h3 {
 .xp-btn--danger { color: #c53030; border-color: #c53030; }
 .xp-btn--danger:hover { background: var(--app-status-danger-bg, #FFE0DB); }
 .xp-btn-icon {
-  font-size: 12px; padding: 2px 6px; border: 1.5px solid var(--app-ink, #2d2d2d);
+  font-size: var(--app-size-sm); padding: 2px 6px; border: 1.5px solid var(--app-ink, #2d2d2d);
   border-radius: 3px 6px 3px 6px; background: #fff; cursor: pointer;
   transition: all 0.12s; color: var(--app-ink, #2d2d2d);
 }

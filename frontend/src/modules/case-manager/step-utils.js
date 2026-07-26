@@ -76,11 +76,13 @@ export function resolveElementName(step, field = "xpath") {
   return step.description || step[field] || "元素";
 }
 
-/** Generate a one-line Chinese step summary with emoji icon. */
-export function stepSummary(step) {
+/** Generate a one-line Chinese step summary with emoji icon.
+ *  @param {Function} [resolveFn] — optional custom element name resolver (e.g. live lookup from element library) */
+export function stepSummary(step, resolveFn) {
   const def = STEP_TYPES.find((t) => t.value === step.type);
   const icon = def?.icon || "";
-  const elName = resolveElementName(step, "xpath");
+  const resolve = resolveFn || resolveElementName;
+  const elName = resolve(step, "xpath");
 
   switch (step.type) {
     case "click":

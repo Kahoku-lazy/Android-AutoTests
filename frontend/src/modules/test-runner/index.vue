@@ -7,7 +7,8 @@ import ConfirmButton from "@/shared/components/patterns/ConfirmButton.vue";
 import EmptyState from "@/shared/components/patterns/EmptyState.vue";
 import AppTable from "@/shared/components/AppTable.vue";
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
-import DeviceFilterTabs from "@/modules/device-pool/components/DeviceFilterTabs.vue";
+import FilterTabs from "@/shared/components/FilterTabs.vue";
+import KpiCard from "@/shared/components/KpiCard.vue";
 import {
   generateTaskId,
   readTaskCounter,
@@ -24,6 +25,9 @@ import {
   taskProgress,
   buildTaskSavePayload,
 } from "./composables/taskUtils.js";
+import { useDebouncedSave } from "./composables/useDebouncedSave.js";
+import { useQueuePoller } from "./composables/useQueuePoller.js";
+import NewTaskDialog from "./components/NewTaskDialog.vue";
 import {
   connectTaskWebSocket,
   closeTaskWebSocket,
@@ -72,21 +76,7 @@ async function saveTaskToServer(task) {
   }
 }
 
-// 脏任务 ID 集合 — 仅保存有变更的任务，避免 WS 风暴时全表写入
-const _dirtyTaskIds = new Set();
-let _saveTimer = null;
-function scheduleSave(taskId) {
-  if (taskId) _dirtyTaskIds.add(taskId);
-  if (_saveTimer) return;
-  _saveTimer = setTimeout(() => {
-    _saveTimer = null;
-    for (const id of _dirtyTaskIds) {
-      const t = tasks.value.find((x) => x.id === id);
-      if (t) saveTaskToServer(t);
-    }
-    _dirtyTaskIds.clear();
-  }, 1000);
-}
+const { scheduleSave, flushSave } = useDebouncedSave(tasks, saveTaskToServer);
 
 async function loadTasks() {
   try {
@@ -116,8 +106,9 @@ async function loadTasks() {
       }
       if (maxSeq >= readTaskCounter()) writeTaskCounter(maxSeq);
     }
-  } catch (_) {
+  } catch (e) {
     /* 加载失败保持空列表 */
+    console.error(e);
   }
 }
 
@@ -181,8 +172,9 @@ function formatTime(isoStr) {
     const d = new Date(isoStr);
     const pad = (n) => String(n).padStart(2, "0");
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  } catch (_) {
+  } catch (e) {
     return isoStr;
+    console.error(e);
   }
 }
 
@@ -316,7 +308,7 @@ function initTaskProgress(task) {
       if (!rawSteps.length && c.steps_json) {
         try {
           rawSteps = JSON.parse(c.steps_json);
-        } catch (_) {}
+        } catch (e) { console.error(e); }
       }
       const steps = rawSteps.map((s) => ({
         type: s.type || "",
@@ -549,8 +541,9 @@ async function pollQueuedTasks() {
         }
       }
     }
-  } catch (_) {
+  } catch (e) {
     /* polling is best-effort */
+    console.error(e);
   }
 }
 
@@ -611,7 +604,7 @@ async function loadCases() {
     availableCases.value = (data.definitions || []).filter(
       c => c.case_type === "ui_automation" || !c.case_type
     );
-  } catch (_) {}
+  } catch (e) { console.error(e); }
 }
 async function loadApiCases() {
   try {
@@ -621,7 +614,7 @@ async function loadApiCases() {
         c => c.case_type === "api_testing"
       );
     }
-  } catch (_) {}
+  } catch (e) { console.error(e); }
 }
 async function loadWebCases() {
   try {
@@ -631,7 +624,7 @@ async function loadWebCases() {
         c => c.case_type === "web_automation"
       );
     }
-  } catch (_) {}
+  } catch (e) { console.error(e); }
 }
 async function loadDevices() {
   try {
@@ -640,7 +633,7 @@ async function loadDevices() {
       devices.value = (data.devices || []).filter(
         (d) => d.status === "ONLINE" || d.status === "BUSY",
       );
-  } catch (_) {}
+  } catch (e) { console.error(e); }
 }
 </script>
 
@@ -653,21 +646,30 @@ async function loadDevices() {
       icon-gradient="linear-gradient(135deg,#FFB5A7,#f87171)"
     />
     <div class="doc-body">
-      <section class="doc-section runner-section">
-        <div class="action-bar">
+      <!-- 统计概览 -->
+      <section class="doc-section runner-stats">
+        <div class="doc-section__header">
+          <h3 class="doc-section__title">统计概览 <span class="doc-tag">Overview</span></h3>
+          <span class="doc-section__label">任务执行状态与进度总览</span>
+        </div>
+        <div class="kpi-row">
+          <KpiCard :value="kpiStats.running" label="执行中" color="var(--c-ai)" shape="diamond" />
+          <KpiCard :value="kpiStats.waiting" label="等待中" color="var(--c-dashboard)" shape="triangle" />
+          <KpiCard :value="kpiStats.completed" label="已完成" color="var(--c-device)" shape="square" />
+          <KpiCard :value="kpiStats.incomplete" label="失败/未完成" color="var(--c-runner)" shape="circle" />
+        </div>
+      </section>
+
+      <!-- 任务列表 -->
+      <section class="doc-section runner-tasks">
+        <div class="runner-toolbar">
           <el-input class="search-input" v-model="searchQuery" placeholder="搜索任务名称 / ID / 设备..." clearable />
-          <div class="filter-bar-inline">
-            <DeviceFilterTabs :tabs="filterAppTabs" v-model="activeTab" />
+          <div class="runner-toolbar__right">
+            <FilterTabs :tabs="filterAppTabs" v-model="activeTab" />
             <div class="view-toggle"><button class="view-btn" :class="{active:viewMode==='table'}" @click="viewMode='table'">📋 表格</button><button class="view-btn" :class="{active:viewMode==='cards'}" @click="viewMode='cards'">📷 卡片</button></div>
             <span class="filter-count">{{ filteredTasks.length }} 任务</span>
           </div>
           <el-button class="action-btn" type="primary" @click="openNewTask">＋ 新建任务</el-button>
-        </div>
-        <div class="kpi-row">
-          <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-ai)"></div><div class="kpi-value">{{ kpiStats.running }}</div><div class="kpi-label">执行中</div></div>
-          <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-dashboard)"></div><div class="kpi-value">{{ kpiStats.waiting }}</div><div class="kpi-label">等待中</div></div>
-          <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-device)"></div><div class="kpi-value">{{ kpiStats.completed }}</div><div class="kpi-label">已完成</div></div>
-          <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-runner)"></div><div class="kpi-value">{{ kpiStats.incomplete }}</div><div class="kpi-label">失败/未完成</div></div>
         </div>
         <el-card v-if="viewMode==='table'" class="table-card" shadow="never"><div class="device-table-wrapper"><AppTable :columns="tableColumns" :data-source="filteredTasks" row-key="id" empty-text="暂无任务" @row-click="openTaskDetail">
           <template #cell-id="{record}"><span class="mono-text">{{ record.id }}</span></template>
@@ -706,148 +708,65 @@ async function loadDevices() {
       </section>
     </div>
 
-    <!-- New task dialog (Element Plus) -->
-    <el-dialog
+    <NewTaskDialog
       v-model="showNewTask"
-      title="新建测试任务"
-      width="520px"
-      :close-on-click-modal="false"
-      @close="showNewTask = false"
-    >
-      <div class="new-task-form">
-        <el-form label-width="88px" label-position="right">
-          <el-form-item label="任务名称" required>
-            <el-input
-              v-model="newForm.name"
-              placeholder="如：稳定性测试"
-              maxlength="30"
-              clearable
-            />
-          </el-form-item>
-          <el-form-item label="任务类型" required>
-            <el-select v-model="newForm.taskType" style="width: 100%">
-              <el-option label="📱 Android UI 自动化测试" value="ui_automation" />
-              <el-option label="🌍 Web 自动化测试" value="web_automation" />
-              <el-option label="🌐 API 测试" value="api_testing" />
-            </el-select>
-          </el-form-item>
-          <el-form-item v-if="newForm.taskType === 'ui_automation'" label="设备" required>
-            <el-select
-              v-model="newForm.deviceSerial"
-              placeholder="选择在线设备"
-              style="width: 100%"
-              :disabled="!devices.length"
-            >
-              <el-option
-                v-for="d in devices"
-                :key="d.serial"
-                :label="deviceLabel(d)"
-                :value="d.serial"
-              />
-            </el-select>
-            <p v-if="!devices.length" class="field-hint">
-              暂无在线设备，请先在「设备管理」中连接
-            </p>
-          </el-form-item>
-          <el-form-item label="用例" required>
-            <el-select
-              v-model="newForm.caseIds"
-              multiple
-              collapse-tags
-              collapse-tags-tooltip
-              :placeholder="newForm.taskType === 'api_testing' ? '选择 API 用例（可多选）' : '选择 UI 用例（可多选）'"
-              style="width: 100%"
-              :disabled="!availableCases.length"
-            >
-              <el-option
-                v-for="c in availableCases"
-                :key="c.id"
-                :label="c.title"
-                :value="c.id"
-              />
-            </el-select>
-            <p v-if="!availableCases.length" class="field-hint">
-              {{ newForm.taskType === 'api_testing' ? '暂无 API 用例，请先在「测试用例 > API 接口用例」中创建' : '暂无 UI 用例，请先在「测试用例 > UI 自动化用例」中创建' }}
-            </p>
-          </el-form-item>
-          <el-form-item label="循环次数">
-            <el-input-number
-              v-model="newForm.loopCount"
-              :min="1"
-              :max="10000"
-              style="width: 160px"
-            />
-          </el-form-item>
-          <el-form-item label="轮间间隔">
-            <el-input-number
-              v-model="newForm.intervalSeconds"
-              :min="5"
-              :max="300"
-              style="width: 160px"
-            />
-            <span style="margin-left: 8px; font-size: var(--app-size-sm); color: #999"
-              >秒（最小 5s）</span
-            >
-          </el-form-item>
-          <el-form-item label="执行方式">
-            <el-radio-group v-model="newForm.mode">
-              <el-radio value="now">立即执行</el-radio>
-              <el-radio value="scheduled">定时执行</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <template v-if="newForm.mode === 'scheduled'">
-            <el-form-item label="开始时间">
-              <el-date-picker
-                v-model="newForm.startAt"
-                type="datetime"
-                placeholder="开始时间"
-                style="width: 100%"
-              />
-            </el-form-item>
-            <el-form-item label="结束时间">
-              <el-date-picker
-                v-model="newForm.endAt"
-                type="datetime"
-                placeholder="结束时间（可选）"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </template>
-        </el-form>
-      </div>
-      <template #footer>
-        <el-button class="wb-btn" @click="showNewTask = false">取消</el-button>
-        <el-button
-          class="wb-btn"
-          type="primary"
-          :disabled="!newForm.caseIds.length || (newForm.taskType === 'ui_automation' && !newForm.deviceSerial)"
-          @click="createAndStart"
-        >创建并执行</el-button>
-      </template>
-    </el-dialog>
+      :new-form="newForm"
+      :devices="devices"
+      :available-cases="availableCases"
+      :device-label="deviceLabel"
+      @create="createAndStart"
+    />
   </div>
 </template>
 
 <style scoped>
 .runner-page { height:100%;display:flex;flex-direction:column;overflow:hidden }
 .runner-page :deep(.doc-body) { flex:1;min-height:0;overflow:hidden }
-.runner-section { flex:1;display:flex;flex-direction:column;min-height:0;padding:16px 20px 20px;gap:14px }
-.action-bar { display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0 }
+.runner-stats { flex-shrink:0;display:flex;flex-direction:column;gap:14px;padding-top:4px }
+.runner-tasks { flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;gap:10px }
+
+/* ── Section 标题 ── */
+.doc-section__header { flex-shrink:0;margin-bottom:0 }
+.doc-section__title {
+  font-family:var(--app-font-display);font-size:var(--app-size-lg);font-weight:700;color:var(--ink);
+  display:inline-block;position:relative;margin-bottom:4px
+}
+.doc-section__title::after {
+  content:'';position:absolute;bottom:-1px;left:0;right:0;height:3px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%232d2d2d' stroke-width='2' fill='none'/%3E%3C/svg%3E") repeat-x;
+  background-size:40px 3px
+}
+.doc-section__title .doc-tag {
+  font-size:var(--app-size-xs);padding:1px 8px;border-radius:4px 8px 4px 8px;
+  background:#fff;color:#999;border:1.5px solid #e8ecf1;font-weight:700;margin-left:8px
+}
+.doc-section__label { color:#999;font-size:var(--app-size-xs);margin-top:2px }
+
+/* ── 工具栏 ── */
+.runner-toolbar { display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0 }
+.runner-toolbar__right { display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap }
 .search-input { width:240px;flex-shrink:0 }
-.filter-bar-inline { display:flex;align-items:center;gap:10px;flex:1;flex-wrap:wrap }
 .filter-count { font-size:var(--app-size-xs);color:#999;font-weight:600;white-space:nowrap }
 .action-btn { flex-shrink:0 }
-.view-toggle { display:flex;gap:0;border:2.5px solid var(--ink);border-radius:4px 8px 4px 8px;overflow:hidden }
-.view-btn { padding:5px 12px;font-size:var(--app-size-xs);font-weight:700;background:#fff;color:var(--ink);opacity:0.4;border:none;border-right:1.5px solid var(--ink);cursor:pointer;font-family:inherit;transition:all 0.12s }
-.view-btn:last-child { border-right:none }.view-btn.active { opacity:1;background:var(--ink);color:#fff }
-.kpi-row { display:grid;grid-template-columns:repeat(4,1fr);gap:12px;flex-shrink:0 }
-.kpi-card { text-align:center;padding:12px 10px 16px;background:#fff;border:3px solid var(--ink);border-radius:4px 10px 6px 8px;box-shadow:2px 3px 0 rgba(0,0,0,0.04);position:relative }
-.kpi-dot { width:10px;height:10px;transform:rotate(45deg);margin:0 auto 5px;border:2px solid var(--ink) }
-.kpi-value { font-family:'Patrick Hand',cursive;font-size:var(--app-size-2xl);font-weight:700;line-height:1 }
-.kpi-label { font-size:var(--app-size-xs);font-weight:700;opacity:0.4;text-transform:uppercase;margin-top:2px }
-.kpi-card::after { content:'~';position:absolute;bottom:2px;right:8px;font-family:'Patrick Hand',cursive;font-size:var(--app-size-md);opacity:0.12 }
+
+/* ── 视图切换 — 模块色桃粉 ── */
+.view-toggle { display:flex;gap:0;border:2px solid var(--c-runner);border-radius:4px 8px 4px 8px;overflow:hidden }
+.view-btn { padding:5px 12px;font-size:var(--app-size-xs);font-weight:700;background:#fff;color:#999;border:none;border-right:1.5px solid var(--c-runner);cursor:pointer;font-family:inherit;transition:all 0.12s }
+.view-btn:last-child { border-right:none }
+.view-btn.active { background:var(--c-runner);color:#fff }
+.view-btn:hover:not(.active) { color:var(--c-runner) }
+
+/* ── KPI 卡片 ── */
+.kpi-row { display:grid;grid-template-columns:repeat(4,1fr);gap:18px;flex-shrink:0 }
+.kpi-row > :nth-child(1) { transform:rotate(-0.8deg) }
+.kpi-row > :nth-child(2) { transform:rotate(0.5deg) }
+.kpi-row > :nth-child(3) { transform:rotate(-0.4deg) }
+.kpi-row > :nth-child(4) { transform:rotate(0.6deg) }
+.kpi-row > :hover { transform:rotate(0deg) scale(1.03)!important;z-index:5 }
 @media(max-width:700px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
-.table-card { flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;border-radius:6px 10px 6px 10px;border:2.5px solid var(--ink);background:#fff }
+
+/* ── 表格卡片 — 模块色边框 ── */
+.table-card { flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;border-radius:6px 10px 6px 10px;border:2.5px solid var(--c-runner);box-shadow:2px 3px 0 rgba(255,181,167,0.15);background:#fff }
 .table-card :deep(.el-card__body) { flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:0 }
 .mono-text { font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600 }
 .status-badge { font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);color:#fff;display:inline-block }
@@ -856,7 +775,16 @@ async function loadDevices() {
 .device-table-wrapper { flex:1;min-height:0;overflow-y:auto;overflow-x:auto }
 .device-table-wrapper :deep(.el-table th) { background:#f8f6f2;color:var(--ink);font-weight:700;font-size:var(--app-size-xs);text-transform:uppercase;letter-spacing:0.04em;border-bottom:2.5px solid var(--ink) }
 .device-table-wrapper :deep(.el-table td) { border-bottom:1px solid #e8e4d8 }
-.table-actions { display:flex;gap:4px;flex-wrap:wrap;align-items:center }
+/* 表格行 hover — 模块色淡底 */
+.device-table-wrapper :deep(.el-table tbody tr) { cursor:pointer;transition:background var(--app-duration-fast) var(--app-ease) }
+.device-table-wrapper :deep(.el-table tbody tr:hover) { background:rgba(255,181,167,0.08) }
+
+/* 卡片 hover — 上浮 */
+.task-card { cursor:pointer;transition:all var(--app-duration) var(--app-ease) }
+.task-card:hover { background:rgba(255,181,167,0.06);transform:translateY(-2px);box-shadow:var(--app-shadow-md) }
+.table-actions { display:grid;grid-template-columns:1fr 1fr;gap:4px }
+.table-actions > :only-child { grid-column:1/-1 }
+.table-actions .el-button,.table-actions .wb-btn { width:100%;justify-content:center }
 .card-grid-grouped { flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:16px }
 .card-group-title { font-family:'Patrick Hand',cursive;font-size:var(--app-size-lg);font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:10px }
 .card-group-count { font-family:var(--app-font-mono);font-size:var(--app-size-xs);color:var(--ink);opacity:0.4;background:#f8f6f2;padding:2px 8px;border-radius:3px 6px 3px 6px;border:1.5px solid #e8e4d8 }

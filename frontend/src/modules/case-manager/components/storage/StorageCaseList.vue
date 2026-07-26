@@ -29,7 +29,7 @@ async function loadCaseDetail(caseId) {
   try {
     const { data } = await getStorageDefinition(caseId);
     if (data.ok) selectedCase.value = data.definition;
-  } catch (_) {}
+  } catch (e) { console.error(e); }
   selectedCaseLoading.value = false;
 }
 
@@ -43,7 +43,7 @@ async function loadDefs() {
   try {
     const { data } = await listStorageDefinitions(props.activeDirectoryId);
     if (data.ok) definitions.value = data.definitions;
-  } catch (_) {}
+  } catch (e) { console.error(e); }
   loading.value = false;
 }
 

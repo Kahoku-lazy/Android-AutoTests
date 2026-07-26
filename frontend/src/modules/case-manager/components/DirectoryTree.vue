@@ -201,8 +201,9 @@ async function handleNodeDrop(draggingNode, dropNode, dropType) {
         type: "warning",
       },
     );
-  } catch (_) {
+  } catch (e) {
     return; // user cancelled
+    console.error(e);
   }
 
   // Execute move
@@ -302,8 +303,9 @@ async function confirmBatchMove() {
         type: "warning",
       },
     );
-  } catch (_) {
+  } catch (e) {
     return;
+    console.error(e);
   }
 
   try {

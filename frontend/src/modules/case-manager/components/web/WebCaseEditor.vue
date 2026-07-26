@@ -39,7 +39,7 @@ const currentUser = ref(sessionStorage.getItem("current-username") || "");
 let rowCounter = 1;
 
 async function loadDirectories() {
-  try { const { data } = await fetchDirectories("web_automation"); if (data.ok) directories.value = data.tree || []; } catch (_) {}
+  try { const { data } = await fetchDirectories("web_automation"); if (data.ok) directories.value = data.tree || []; } catch (e) { console.error(e); }
 }
 
 function blankRow() { const r = { id: rowCounter++ }; columns.value.forEach(c => { if (c.editable) r[c.key] = ""; }); return r; }

@@ -167,7 +167,7 @@ export function useElementTree() {
         pages.value = data.pages || []
         if (data.max_depth) maxDepth.value = data.max_depth
       }
-    } catch (_) { /* 加载失败时保持空列表 */ }
+    } catch (e) { console.error(e); }
     loading.value = false
   }
 
@@ -191,7 +191,7 @@ export function useElementTree() {
           })(),
         }))
       }
-    } catch (_) { /* 加载元素失败时保持空列表 */ }
+    } catch (e) { console.error(e); }
   }
 
   function startEditLabel(page) {

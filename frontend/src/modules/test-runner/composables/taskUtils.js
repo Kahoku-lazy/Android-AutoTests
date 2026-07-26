@@ -5,8 +5,9 @@ const COUNTER_KEY = "_task_id_counter";
 export function readTaskCounter() {
   try {
     return parseInt(localStorage.getItem(COUNTER_KEY)) || 0;
-  } catch (_) {
+  } catch (e) {
     return 0;
+    console.error(e);
   }
 }
 

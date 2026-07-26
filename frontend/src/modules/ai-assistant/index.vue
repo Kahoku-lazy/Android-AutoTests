@@ -170,7 +170,7 @@ async function checkAllHealth() {
       }
       nextTick(() => animateStatusBubbles())
     }
-  } catch (_) {}
+  } catch (e) { console.error(e); }
 }
 
 async function testConnection(agent) {
@@ -267,9 +267,10 @@ async function confirmModel(agent) {
       agent.model_name = newModel
       ElMessage.success(`已确认使用 ${newModel}`)
     }
-  } catch (_) {
+  } catch (e) {
     pendingModels.value[agent.id] = agent.model_name
     ElMessage.error('模型切换失败')
+    console.error(e);
   }
   confirmingId.value = null
 }

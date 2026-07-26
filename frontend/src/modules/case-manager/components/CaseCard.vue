@@ -29,7 +29,7 @@ function stepCount() {
   try {
     const data = props.item.steps_data;
     if (Array.isArray(data)) return data.length;
-  } catch (_) {}
+  } catch (e) { console.error(e); }
   return 0;
 }
 

@@ -86,7 +86,7 @@ export const useElementStore = defineStore('element-locator', () => {
         }
         // NOTE: No auto-select — user must explicitly connect
       }
-    } catch (_) { /* silent */ }
+    } catch (e) { console.error(e); }
   }
 
   /** Connect to a device in observe mode (lightweight, no lock) */
@@ -102,9 +102,10 @@ export const useElementStore = defineStore('element-locator', () => {
       }
       ElMessage.error(data.error || '连接设备失败')
       return false
-    } catch (_) {
+    } catch (e) {
       ElMessage.error('连接设备失败')
       return false
+      console.error(e);
     }
   }
 
@@ -134,9 +135,10 @@ export const useElementStore = defineStore('element-locator', () => {
       }
       if (!silent) ElMessage.error(data.error || '切换设备失败')
       return data
-    } catch (_) {
+    } catch (e) {
       if (!silent) ElMessage.error('切换设备失败')
       return { ok: false }
+      console.error(e);
     }
   }
 
@@ -158,7 +160,7 @@ export const useElementStore = defineStore('element-locator', () => {
         currentSerial.value = data.serial
         return data
       }
-    } catch (_) { /* silent */ }
+    } catch (e) { console.error(e); }
     return null
   }
 

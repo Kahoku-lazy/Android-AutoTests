@@ -5,6 +5,7 @@ import AppTabs from "@/shared/components/AppTabs.vue";
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PageHeader from '@/shared/components/PageHeader.vue'
+import KpiCard from '@/shared/components/KpiCard.vue'
 import { getCaseBreakdown } from './api.js'
 
 const route = useRoute()
@@ -79,8 +80,9 @@ async function loadData() {
     } else {
       data.value = null
     }
-  } catch (_) {
+  } catch (e) {
     data.value = null
+    console.error(e);
   }
   loading.value = false
 }
@@ -148,19 +150,10 @@ function stepTypeLabel(type) {
         </div>
       </div>
 
-      <div v-if="data && !isPass" class="bug-kpi-row">
-        <div class="bug-kpi-card">
-          <div class="bug-kpi-value">{{ bugSummary?.unique_issues || 0 }}</div>
-          <div class="bug-kpi-label">独立问题数</div>
-        </div>
-        <div class="bug-kpi-card">
-          <div class="bug-kpi-value">{{ bugSummary?.total_occurrences || 0 }}</div>
-          <div class="bug-kpi-label">问题出现次数</div>
-        </div>
-        <div class="bug-kpi-card">
-          <div class="bug-kpi-value">{{ bugSummary?.affected_cases || 0 }}</div>
-          <div class="bug-kpi-label">涉及用例</div>
-        </div>
+      <div v-if="data && !isPass" class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
+        <KpiCard :value="bugSummary?.unique_issues || 0" label="独立问题数" color="var(--c-runner)" shape="diamond" />
+        <KpiCard :value="bugSummary?.total_occurrences || 0" label="问题出现次数" color="var(--c-dashboard)" shape="triangle" />
+        <KpiCard :value="bugSummary?.affected_cases || 0" label="涉及用例" color="var(--c-workflow)" shape="square" />
       </div>
 
       <AppTabs
@@ -419,14 +412,14 @@ function stepTypeLabel(type) {
 .doc-body{padding:16px 20px 32px;display:flex;flex-direction:column;gap:14px;max-width:1200px;margin:0 auto;width:100%}
 .top-bar{display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap}.top-bar .run-meta{display:flex;align-items:center;gap:10px;font-size:var(--app-size-xs);color:#999;flex-wrap:wrap}
 .breakdown-tabs :deep(.el-tabs__header){margin-bottom:0}.breakdown-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:4px}.breakdown-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:#999;height:auto;line-height:1.4}.breakdown-tabs :deep(.el-tabs__item:hover){color:var(--ink)}.breakdown-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-dashboard);border-color:var(--ink)}.breakdown-tabs :deep(.el-tabs__active-bar){display:none}
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px}.kpi-card{text-align:center;padding:12px 10px 16px;background:#fff;border:3px solid var(--ink);border-radius:4px 10px 6px 8px;box-shadow:2px 3px 0 rgba(0,0,0,0.04);position:relative}.kpi-value{font-family:'Patrick Hand',cursive;font-size:var(--app-size-xl);font-weight:700;line-height:1}.kpi-label{font-size:var(--app-size-xs);font-weight:700;opacity:0.4;text-transform:uppercase;margin-top:2px}.kpi-card::after{content:'~';position:absolute;bottom:2px;right:8px;font-family:'Patrick Hand',cursive;font-size:var(--app-size-md);opacity:0.12}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px}.num-pass{color:#2d7a2d;font-weight:700}.num-fail{color:#a03030;font-weight:700}
 .summary-bar{display:flex;flex-wrap:wrap;gap:10px;padding:10px 14px;background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;margin-bottom:4px;font-size:var(--app-size-xs);font-weight:600;color:var(--ink)}
 .case-card{background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:14px 16px;margin-bottom:8px}.case-card:hover{border-color:var(--c-device)}
 .case-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:var(--app-size-xs);font-weight:700;margin-bottom:4px}.case-body{margin-top:8px;padding-top:8px;border-top:1.5px solid #e8e4d8;font-size:var(--app-size-xs)}.case-id{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600}
 .bug-card{border-color:var(--c-runner)!important}.bug-card:hover{border-color:var(--c-runner)!important}
 .badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);display:inline-block}.badge-pass{background:var(--app-status-success-bg);color:var(--app-status-success-text)}.badge-fail{background:var(--app-status-danger-bg);color:var(--app-status-danger-text)}.badge-stopped{background:var(--app-offline);color:var(--app-text-secondary)}
 .mono{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600}
-.bug-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:4px}.bug-kpi-card{text-align:center;padding:12px 10px 16px;background:#fff;border:3px solid var(--ink);border-radius:4px 10px 6px 8px;box-shadow:2px 3px 0 rgba(0,0,0,0.04);position:relative}.bug-kpi-value{font-family:'Patrick Hand',cursive;font-size:var(--app-size-xl);font-weight:700;line-height:1}.bug-kpi-label{font-size:var(--app-size-xs);font-weight:700;opacity:0.4;text-transform:uppercase;margin-top:2px}.bug-kpi-card::after{content:'~';position:absolute;bottom:2px;right:8px;font-family:'Patrick Hand',cursive;font-size:var(--app-size-md);opacity:0.12}.num-pass{color:#2d7a2d;font-weight:700}.num-fail{color:#a03030;font-weight:700}
+.num-pass{color:#2d7a2d;font-weight:700}.num-fail{color:#a03030;font-weight:700}
 /* 用例列表 */
 .case-list{display:flex;flex-direction:column;gap:8px}.case-list>.info-card,.case-list>[class*=case]{background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:14px 16px;box-shadow:2px 3px 0 rgba(0,0,0,0.04)}.case-list .case-header{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:700;font-size:var(--app-size-xs)}.case-list .case-body{margin-top:10px;padding-top:10px;border-top:1.5px solid #e8e4d8}
 /* 展开后的任务/步骤列表 */

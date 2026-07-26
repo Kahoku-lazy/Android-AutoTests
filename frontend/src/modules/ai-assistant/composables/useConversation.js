@@ -15,7 +15,7 @@ export function useConversation(agentIdRef, messageStore) {
         `/ai/agents/${agentIdRef.value}/conversations`,
       );
       if (data.ok) conversations.value = data.conversations;
-    } catch (_) {}
+    } catch (e) { console.error(e); }
   }
 
   async function newChat(onSelect) {
@@ -34,8 +34,9 @@ export function useConversation(agentIdRef, messageStore) {
         connectionMode.value = data.agent_scope_session_id ? "sse" : "fallback";
         if (onSelect) await onSelect(data.id);
       }
-    } catch (_) {
+    } catch (e) {
       connectionMode.value = "unknown";
+      console.error(e);
     }
   }
 
@@ -62,8 +63,9 @@ export function useConversation(agentIdRef, messageStore) {
           messageStore.hydrateMessages(data.messages);
         }
       }
-    } catch (_) {
+    } catch (e) {
       connectionMode.value = "unknown";
+      console.error(e);
     }
     if (onAfterSelect) await onAfterSelect(id);
   }
@@ -93,7 +95,7 @@ export function useConversation(agentIdRef, messageStore) {
         const c = conversations.value.find((x) => x.id === id);
         if (c) c.title = data.title;
       }
-    } catch (_) {}
+    } catch (e) { console.error(e); }
   }
 
   function cancelRename() {
@@ -116,7 +118,7 @@ export function useConversation(agentIdRef, messageStore) {
         }
         loadConversations();
       }
-    } catch (_) {}
+    } catch (e) { console.error(e); }
   }
 
   return {

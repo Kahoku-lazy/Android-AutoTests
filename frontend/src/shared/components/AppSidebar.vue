@@ -3,6 +3,8 @@ import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { animate } from 'animejs'
 import { sidebarNavEnter } from '../animations.js'
+import { NAV_CATEGORIES } from './sidebarNavConfig.js'
+import { useSidebarResize } from '../composables/useSidebarResize.js'
 import AnimatedMascot from './AnimatedMascot.vue'
 import AnimatedMenuIcon from './AnimatedMenuIcon.vue'
 
@@ -60,62 +62,12 @@ function logout() {
   }
 }
 
-const SIDEBAR_WIDTH_KEY = 'app-sidebar-width'
-const SIDEBAR_COLLAPSED_KEY = 'app-sidebar-collapsed'
-const SIDEBAR_MIN = 180
-const SIDEBAR_MAX = 360
-const SIDEBAR_DEFAULT = 260
-const SIDEBAR_COLLAPSED_W = 64
-
-function clampSidebarWidth(width) {
-  return Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, width))
-}
-
-const sidebarWidth = ref(SIDEBAR_DEFAULT)
-const isResizing = ref(false)
-const collapsed = ref(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1')
-
-function applySidebarWidth(width) {
-  if (collapsed.value) {
-    document.documentElement.style.setProperty('--side-w', `${SIDEBAR_COLLAPSED_W}px`)
-    return
-  }
-  const w = clampSidebarWidth(width)
-  sidebarWidth.value = w
-  document.documentElement.style.setProperty('--side-w', `${w}px`)
-}
-
-function toggleCollapsed() {
-  collapsed.value = !collapsed.value
-  localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed.value ? '1' : '0')
-  applySidebarWidth(sidebarWidth.value)
-}
-
-function onSidebarResizeStart(e) {
-  if (e.button !== 0 || collapsed.value) return
-  e.preventDefault()
-  isResizing.value = true
-  document.body.style.cursor = 'col-resize'
-  document.body.style.userSelect = 'none'
-}
-
-function onSidebarResizeMove(e) {
-  if (!isResizing.value) return
-  applySidebarWidth(e.clientX)
-}
-
-function onSidebarResizeEnd() {
-  if (!isResizing.value) return
-  isResizing.value = false
-  document.body.style.cursor = ''
-  document.body.style.userSelect = ''
-  localStorage.setItem(SIDEBAR_WIDTH_KEY, String(sidebarWidth.value))
-}
-
-function resetSidebarWidth() {
-  applySidebarWidth(SIDEBAR_DEFAULT)
-  localStorage.setItem(SIDEBAR_WIDTH_KEY, String(SIDEBAR_DEFAULT))
-}
+const {
+  sidebarWidth, isResizing, collapsed,
+  applySidebarWidth, toggleCollapsed,
+  onSidebarResizeStart, onSidebarResizeMove, onSidebarResizeEnd,
+  resetSidebarWidth, initSidebarWidth,
+} = useSidebarResize();
 
 // ── 导航分组（V6 原型结构）──
 const expandedSections = ref({})
@@ -124,38 +76,7 @@ function toggleSection(key) {
   expandedSections.value[key] = !expandedSections.value[key]
 }
 
-// ── 导航分组（对齐 PRD §5 八模块体系）──
-// 平台 8 大模块：仪表盘 / 设备管理 / 元素定位 / 用例管理 / 执行引擎 / 测试报告 / AI 助手 / 工作流工作台
-// 三条操作通道：A.手动测试流程  B.AI 对话  C.可视化编排
-const categories = [
-  {
-    key: 'main',
-    label: '',
-    items: [
-      { path: '/dashboard', icon: 'layout-dashboard', label: '仪表盘' },
-    ],
-  },
-  {
-    key: 'test-flow',
-    label: '测试全流程',
-    items: [
-      { path: '/devices', icon: 'smartphone', label: '设备管理' },
-      { path: '/elements', icon: 'crosshair', label: '元素定位' },
-      { path: '/cases', icon: 'layers', label: '用例管理' },
-      { path: '/runner', icon: 'play-circle', label: '执行引擎' },
-      { path: '/reports', icon: 'file-bar-chart', label: '测试报告' },
-    ],
-  },
-  {
-    key: 'ai-tools',
-    label: 'AI 与编排',
-    items: [
-      { path: '/ai-assistant', icon: 'bot', label: 'AI 助手', isDev: true },
-      { path: '/workflow', icon: 'git-branch', label: '工作流工作台', isDev: true },
-      { path: '/digital-human', icon: 'user-round', label: '平台数字人', badge: '待开发', badgeClass: 'sidebar-menu__badge--pending' },
-    ],
-  },
-]
+const categories = NAV_CATEGORIES
 
 function isActive(path) {
   return route.path === path || route.path.startsWith(path + '/')
@@ -166,7 +87,7 @@ function onNavClick(path, ev) {
 }
 
 onMounted(async () => {
-  applySidebarWidth(Number(localStorage.getItem(SIDEBAR_WIDTH_KEY)) || SIDEBAR_DEFAULT)
+  initSidebarWidth()
   window.addEventListener('mousemove', onSidebarResizeMove)
   window.addEventListener('mouseup', onSidebarResizeEnd)
   window.addEventListener('storage', onStorageChange)
@@ -463,7 +384,7 @@ onUnmounted(() => {
 }
 .brand-ai {
   flex-shrink: 0;
-  font-family: 'Caveat', cursive;
+  font-family: var(--app-font-display);
   font-size: 32px;
   font-weight: 800;
   line-height: 1;
@@ -491,7 +412,7 @@ onUnmounted(() => {
 }
 .brand-title {
   display: inline-block;
-  font-family: 'Caveat', cursive;
+  font-family: var(--app-font-display);
   font-size: 22px;
   font-weight: 700;
   line-height: 1;

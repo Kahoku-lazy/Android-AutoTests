@@ -218,7 +218,6 @@ h4 { font-size: 15px; font-weight: 700; color: var(--ink); font-family: var(--ap
 
 .doc-body {
   flex: 1;
-  max-width: 1600px; margin: 0 auto;
   padding: 24px 28px 60px; width: 100%;
   display: flex; flex-direction: column;
   gap: 24px; min-height: 0;
@@ -263,7 +262,11 @@ h4 { font-size: 15px; font-weight: 700; color: var(--ink); font-family: var(--ap
 }
 
 .doc-page.wb-shell .doc-body {
-  background: transparent; padding: 16px 18px 28px;
+  background:
+    radial-gradient(circle, var(--app-paper-dot) 0.8px, transparent 0.8px);
+  background-size: 14px 14px;
+  background-color: var(--doodle-bg, #faf5ee);
+  padding: 16px 18px 28px;
   gap: 16px; overflow-y: auto;
 }
 

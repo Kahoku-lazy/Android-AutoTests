@@ -101,8 +101,9 @@ export const useDevicePoolStore = defineStore("device-pool", () => {
         await fetchDevices();
       }
       return data;
-    } catch (_) {
+    } catch (e) {
       return { ok: false, error: "激活失败" };
+      console.error(e);
     }
   }
 
@@ -126,8 +127,9 @@ export const useDevicePoolStore = defineStore("device-pool", () => {
         await fetchDevices();
       }
       return data;
-    } catch (_) {
+    } catch (e) {
       return { ok: false, error: "释放失败" };
+      console.error(e);
     }
   }
 
@@ -163,8 +165,9 @@ export const useDevicePoolStore = defineStore("device-pool", () => {
         await fetchQueue();
       }
       return data;
-    } catch (_) {
+    } catch (e) {
       return { ok: false, error: "加入排队失败" };
+      console.error(e);
     }
   }
 
@@ -175,8 +178,9 @@ export const useDevicePoolStore = defineStore("device-pool", () => {
         await fetchQueue();
       }
       return data;
-    } catch (_) {
+    } catch (e) {
       return { ok: false, error: "取消排队失败" };
+      console.error(e);
     }
   }
 

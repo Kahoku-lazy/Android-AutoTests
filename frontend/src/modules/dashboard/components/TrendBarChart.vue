@@ -1,6 +1,6 @@
 <script setup>
-import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import * as echarts from 'echarts'
+import { computed } from 'vue'
+import { useECharts } from '@/shared/composables/useECharts.js'
 
 const props = defineProps({
   chart: {
@@ -8,10 +8,6 @@ const props = defineProps({
     default: () => ({ labels: [], success: [], failed: [], new_cases: [] }),
   },
 })
-
-const container = ref(null)
-let instance = null
-let resizeObserver = null
 
 // ⚠️ ECharts 渲染在 Canvas 上，不支持 CSS 变量，此处保留色值字面量。
 //    如需改色，修改此函数内的常量；CSS 文件使用 tokens.css 对应变量。
@@ -29,10 +25,8 @@ function buildOption() {
     },
     legend: {
       bottom: 0,
-      itemWidth: 10,
-      itemHeight: 10,
-      itemGap: 20,
-      textStyle: { fontSize: 11, color: 'var(--ink)', fontWeight: 700 },
+      itemWidth: 10, itemHeight: 10, itemGap: 20,
+      textStyle: { fontSize: 11, color: '#1e1e24', fontWeight: 700 },
     },
     grid: { top: 12, right: 8, bottom: 36, left: 8 },
     xAxis: {
@@ -62,28 +56,7 @@ function buildOption() {
   }
 }
 
-function renderChart() {
-  if (!instance) return
-  instance.setOption(buildOption(), true)
-}
-
-function initChart() {
-  if (!container.value) return
-  instance = echarts.init(container.value)
-  renderChart()
-
-  resizeObserver = new ResizeObserver(() => instance?.resize())
-  resizeObserver.observe(container.value)
-}
-
-onMounted(() => nextTick(initChart))
-
-watch(() => props.chart, () => nextTick(renderChart), { deep: true })
-
-onUnmounted(() => {
-  resizeObserver?.disconnect()
-  instance?.dispose()
-})
+const { container } = useECharts(buildOption, () => props.chart)
 </script>
 
 <template>

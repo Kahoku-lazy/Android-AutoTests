@@ -227,7 +227,7 @@ async function loadAgent() {
       agent.value = data.agent;
       loadConversations();
     }
-  } catch (_) {}
+  } catch (e) { console.error(e); }
 }
 
 async function handleFileUpload(e) {

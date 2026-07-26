@@ -203,7 +203,7 @@ function doInput() {
 async function copyXPath(xpath) {
   try {
     await navigator.clipboard.writeText(xpath)
-  } catch (_) {
+  } catch (e) {
     // Fallback for non-HTTPS
     const ta = document.createElement('textarea')
     ta.value = xpath
@@ -212,6 +212,7 @@ async function copyXPath(xpath) {
     ta.select()
     document.execCommand('copy')
     document.body.removeChild(ta)
+    console.error(e);
   }
 }
 </script>

@@ -230,7 +230,7 @@ function connectWS() {
         wsState.value = 'error'
         statusMessage.value = msg.message || '截图失败'
       }
-    } catch (_) {}
+    } catch (e) { console.error(e); }
   }
   ws.value.onopen = () => {
     wsState.value = 'connected'

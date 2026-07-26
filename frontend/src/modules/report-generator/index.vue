@@ -8,6 +8,7 @@ import AppTable from "@/shared/components/AppTable.vue";
 import AppTabs from "@/shared/components/AppTabs.vue";
 import { usePagination } from '@/shared/composables/usePagination.js'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
+import KpiCard from '@/shared/components/KpiCard.vue'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import { listRuns, statusLabel, statusBadgeClass, formatTime } from './api.js'
 import PassRateTrendChart from './components/PassRateTrendChart.vue'
@@ -80,7 +81,7 @@ async function fetchReports() {
       bugSummary.value = data.bug_summary || null
       trend.value = data.trend || null
     }
-  } catch (_) {}
+  } catch (e) { console.error(e); }
   loading.value = false
   await nextTick()
   animate('.report-table tbody tr', { opacity: [0, 1], translateY: [16, 0], delay: stagger(40), duration: 380, ease: 'outCubic' })
@@ -176,8 +177,11 @@ function openCaseBreakdown(type, tab = 'detail') {
 
     <div class="doc-body">
       <!-- 统计概览 -->
-      <div class="info-card">
-        <span class="section-title">📊 统计概览</span>
+      <section class="doc-section report-stats">
+        <div class="doc-section__header">
+          <h3 class="doc-section__title">统计概览 <span class="doc-tag">Overview</span></h3>
+          <span class="doc-section__label">测试执行统计与趋势总览</span>
+        </div>
         <div class="filter-bar">
           <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="YYYY-MM-DD" :clearable="true" :unlink-panels="true" class="filter-date" />
           <el-input v-model="filterRunId" placeholder="Run ID" clearable class="filter-input" />
@@ -190,17 +194,24 @@ function openCaseBreakdown(type, tab = 'detail') {
 
       <!-- KPI -->
       <div v-if="summary" class="kpi-row">
-        <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-workflow)"></div><div class="kpi-value">{{ summary.total_runs }}</div><div class="kpi-label">总执行次数</div></div>
-        <div class="kpi-card kpi-card--clickable" @click="openCaseBreakdown('pass')"><div class="kpi-dot" style="background:var(--c-device)"></div><div class="kpi-value" style="color:#2d7a2d">{{ summary.total_pass }}</div><div class="kpi-label">✅ 通过</div></div>
-        <div class="kpi-card kpi-card--clickable" @click="openCaseBreakdown('fail','bugs')"><div class="kpi-dot" style="background:var(--c-runner)"></div><div class="kpi-value" style="color:#a03030">{{ summary.total_fail }}</div><div class="kpi-label">❌ 失败</div><div v-if="bugSummary" style="font-size:var(--app-size-xs);color:#999;margin-top:2px">{{ bugSummary.unique_issues }} 类 · {{ bugSummary.total_occurrences }} 次 · {{ bugSummary.affected_cases }} 用例</div></div>
-        <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-dashboard)"></div><div class="kpi-value" :style="{color:summary.pass_rate>=95?'#2d7a2d':summary.pass_rate>=80?'#b08800':'#a03030'}">{{ summary.pass_rate }}%</div><div class="kpi-label">📊 通过率</div><div style="font-size:var(--app-size-xs);color:#999;margin-top:2px">{{ summary.total_iterations }} 次迭代</div></div>
+        <KpiCard :value="summary.total_runs" label="总执行次数" color="var(--c-workflow)" shape="diamond" />
+        <KpiCard :value="summary.total_pass" label="通过" color="var(--c-device)" shape="triangle" @click="openCaseBreakdown('pass')" />
+        <KpiCard :value="summary.total_fail" label="失败" color="var(--c-runner)" shape="square" @click="openCaseBreakdown('fail','bugs')">
+          <div v-if="bugSummary" style="font-size:var(--app-size-xs);color:#999;margin-top:4px">{{ bugSummary.unique_issues }} 类 · {{ bugSummary.total_occurrences }} 次 · {{ bugSummary.affected_cases }} 用例</div>
+        </KpiCard>
+        <KpiCard :value="`${summary.pass_rate}%`" label="通过率" color="var(--c-dashboard)" shape="circle">
+          <div style="font-size:var(--app-size-xs);color:#999;margin-top:4px">{{ summary.total_iterations }} 次迭代</div>
+        </KpiCard>
       </div>
       <div style="font-size:var(--app-size-xs);opacity:0.3;text-align:right">最近更新: {{ lastUpdated || '暂无数据' }}</div>
-      </div>
+      </section>
 
       <!-- 数据图表 -->
-      <div v-if="trend && trend.labels?.length" class="info-card">
-        <span class="section-title">📈 数据图表</span>
+      <section v-if="trend && trend.labels?.length" class="doc-section report-charts">
+        <div class="doc-section__header">
+          <h3 class="doc-section__title">数据图表 <span class="doc-tag">Trends</span></h3>
+          <span class="doc-section__label">近 {{ CHART_VISIBLE_DAYS }} 天执行通过率与成功/失败分布</span>
+        </div>
         <div class="chart-section">
         <div class="chart-toolbar">
           <span class="toolbar-label">图表范围</span>
@@ -235,11 +246,14 @@ function openCaseBreakdown(type, tab = 'detail') {
             />
           </AppCard>
         </div>
-      </div></div>
+        </div>
+      </section>
 
       <!-- 测试报告 -->
-      <div class="info-card" style="padding:0">
-        <div style="padding:14px 16px 0"><span class="section-title" style="margin-bottom:8px">📋 测试报告</span></div>
+      <section class="doc-section report-table-section" style="padding:0">
+        <div class="doc-section__header" style="padding:14px 16px 0">
+          <h3 class="doc-section__title">测试报告 <span class="doc-tag">Reports</span></h3>
+        </div>
       <AppTabs
         class="report-tabs"
         :items="statusAppTabs"
@@ -337,7 +351,7 @@ function openCaseBreakdown(type, tab = 'detail') {
           </AppCard>
         </template>
       </AppTabs>
-      </div>
+      </section>
     </div>
   </div>
 </template>

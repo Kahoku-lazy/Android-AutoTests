@@ -537,6 +537,48 @@ background-color: var(--paper);
 
 不设这三个属性 → 内容溢出时页面无法滚动。
 
+### 4.5.1 内容区宽度规则
+
+**禁止在全局样式对内容区设置 `max-width` 并居中。** 各模块通过自身 scoped CSS 决定是否需要限制内容宽度。
+
+**错误示例**（已修复的全局 bug）：
+```css
+/* ❌ 全局 style.css — 所有模块被 1600px 卡住，大屏两侧大量留白 */
+.doc-body {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+```
+
+**正确做法**：
+```css
+/* ✅ 模块自身决定宽度策略 */
+/* 默认：内容填满可用空间（dashboard、device-pool、element-locator 等） */
+.module-page .doc-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  /* 不设 max-width */
+}
+
+/* 需要限制宽度时：模块自己加 */
+.reading-page .doc-body {
+  max-width: 900px;   /* 长文本阅读舒适宽度 */
+  margin: 0 auto;
+}
+```
+
+**使用场景判断**：
+
+| 场景 | 是否需要 max-width | 理由 |
+|------|:--:|------|
+| 仪表盘、设备管理（卡片网格/表格/图表） | ❌ | 内容密度高、多列布局，天然需要更多横向空间 |
+| 元素定位（截图 + 元素树并排） | ❌ | 左右分栏，限制宽度会压缩操作区 |
+| 长文本阅读、Markdown 渲染 | ✅ | `max-width: 700-900px` 保证阅读舒适度 |
+| 表单填写页 | ⚠️ 可选 | 表单过宽时光标移动距离大，建议 `max-width: 800px` |
+
+**翻车记录**：全局 `.doc-body` 设了 `max-width: 1600px; margin: 0 auto`，导致所有模块在大屏（2560px+）下内容区卡在 1600px，两侧各有 ~480px 空白。已从 `style.css` 移除此规则，改为模块按需自定。
+
 ### 4.6 标准页面模板 — 直接复制，改内容即可
 
 ```vue

@@ -229,7 +229,7 @@ export function connectTaskWebSocket(taskId, runId, createHandler) {
   if (existing) {
     try {
       existing.close();
-    } catch (_) {}
+    } catch (e) { console.error(e); }
   }
 
   const url = `${wsUrl("/ws/test-run/" + runId)}?token=${encodeURIComponent(getToken())}`;
@@ -241,7 +241,7 @@ export function connectTaskWebSocket(taskId, runId, createHandler) {
       // 重连成功后通知 handler
       const handler = window[HANDLER_KEY]?.[taskId];
       if (handler) {
-        try { handler({ type: "_ws_reconnected" }) } catch (_) {}
+        try { handler({ type: "_ws_reconnected" }) } catch (e) { console.error(e); }
       }
     }
   };
@@ -263,7 +263,7 @@ export function connectTaskWebSocket(taskId, runId, createHandler) {
         ws._lastSeq = msg.seq;
       }
       handler(msg);
-    } catch (_) {}
+    } catch (e) { console.error(e); }
   };
 
   ws.onclose = () => {
@@ -272,7 +272,7 @@ export function connectTaskWebSocket(taskId, runId, createHandler) {
       // Notify the handler about disconnection so UI can show reconnect status
       try {
         handler({ type: "_ws_disconnected" });
-      } catch (_) {}
+      } catch (e) { console.error(e); }
     }
     // Auto-reconnect with exponential backoff (max 30s)
     if (ws._reconnectAttempts === undefined) ws._reconnectAttempts = 0;
@@ -304,7 +304,7 @@ export function closeTaskWebSocket(taskId) {
   if (wm[taskId]) {
     try {
       wm[taskId].close();
-    } catch (_) {}
+    } catch (e) { console.error(e); }
     delete wm[taskId];
     setWsMap(wm);
   }

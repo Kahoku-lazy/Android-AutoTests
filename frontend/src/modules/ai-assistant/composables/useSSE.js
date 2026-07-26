@@ -161,7 +161,7 @@ export function useSSE({
         if (abortController.value) {
           try {
             abortController.value.abort();
-          } catch (_) {}
+          } catch (e) { console.error(e); }
         }
         finishSending();
       }
@@ -188,9 +188,10 @@ export function useSSE({
       } else {
         degradedMode.value = false;
       }
-    } catch (_) {
+    } catch (e) {
       // Health endpoint itself unreachable — assume degraded
       degradedMode.value = true;
+      console.error(e);
     }
     return degradedMode.value;
   }
@@ -515,7 +516,7 @@ export function useSSE({
         );
         if (data.ok) convItem.title = data.title;
       }
-    } catch (_) {}
+    } catch (e) { console.error(e); }
   }
 
   function appendUserAndAssistantPlaceholder(displayText) {

@@ -3,7 +3,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 // Card/Table/AppTabs → el-* (Element Plus auto-import)
 import AppTable from "@/shared/components/AppTable.vue";
-import DeviceFilterTabs from "./components/DeviceFilterTabs.vue";
+import FilterTabs from "@/shared/components/FilterTabs.vue";
 import DeviceCard from "./components/DeviceCard.vue";
 import DeviceStatusCell from "./components/DeviceStatusCell.vue";
 import DeviceActionsCell from "./components/DeviceActionsCell.vue";
@@ -15,6 +15,7 @@ import DisconnectDialog from "./components/DisconnectDialog.vue";
 import NetworkConnectDialog from "./components/NetworkConnectDialog.vue";
 import QueuePanel from "./components/QueuePanel.vue";
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
+import KpiCard from "@/shared/components/KpiCard.vue";
 import { useDeviceActions } from "./composables/useDeviceActions.js";
 import {
   PAGE_HEADER, FILTER_TABS, COLUMNS, EMPTY_TEXT,
@@ -110,34 +111,47 @@ onUnmounted(() => {
     </WorkbenchHeader>
 
     <div class="doc-body">
+      <!-- 统计概览 -->
       <section class="doc-section device-section">
-
-        <!-- 操作栏：局域网连接 + 刷新设备 -->
-        <div class="action-bar">
-          <el-button class="action-bar-btn" size="small" @click="openNetworkDialog">
-            <IconWifi :size="14" /> <span>局域网连接</span>
-          </el-button>
-          <el-button class="action-bar-btn" size="small" :loading="store.scanning || store.loading" @click="handleRefresh">
-            <IconRefresh :size="14" /> <span>刷新设备</span>
-          </el-button>
+        <div class="doc-section__header">
+          <h3 class="doc-section__title">
+            统计概览
+            <span class="doc-tag">Overview</span>
+          </h3>
+          <span class="doc-section__label">设备在线状态与平台接入总览</span>
         </div>
-
-        <!-- KPI 统计条 -->
         <div class="kpi-row">
-          <div class="kpi-card"><div class="kpi-dot" style="background:#6BCB77"></div><div class="kpi-value">{{ kpiStats.online }}</div><div class="kpi-label">在线</div></div>
-          <div class="kpi-card"><div class="kpi-dot" style="background:#FFB5A7"></div><div class="kpi-value">{{ kpiStats.busy }}</div><div class="kpi-label">使用中</div></div>
-          <div class="kpi-card"><div class="kpi-dot" style="background:#d4d8dc"></div><div class="kpi-value">{{ kpiStats.offline }}</div><div class="kpi-label">离线</div></div>
-          <div class="kpi-card"><div class="kpi-dot" style="background:var(--ink)"></div><div class="kpi-value">{{ kpiStats.total }}</div><div class="kpi-label">总计</div></div>
+          <KpiCard :value="kpiStats.online" label="在线" color="#6BCB77" shape="diamond" />
+          <KpiCard :value="kpiStats.busy" label="使用中" color="#FFB5A7" shape="triangle" />
+          <KpiCard :value="kpiStats.offline" label="离线" color="#d4d8dc" shape="square" />
+          <KpiCard :value="kpiStats.total" label="总计" color="var(--ink)" shape="circle" />
         </div>
+      </section>
 
-        <!-- 筛选 + 视图切换 -->
-        <div class="filter-bar">
-          <DeviceFilterTabs :tabs="FILTER_TABS" v-model="activeFilter" />
-          <div class="view-toggle">
-            <button class="view-btn" :class="{ active: viewMode === 'table' }" @click="viewMode = 'table'">📋 表格</button>
-            <button class="view-btn" :class="{ active: viewMode === 'cards' }" @click="viewMode = 'cards'">📷 卡片</button>
+      <!-- 设备列表 -->
+      <section class="doc-section device-section--list">
+        <div class="doc-section__header">
+          <h3 class="doc-section__title">
+            设备列表
+            <span class="doc-tag">Devices</span>
+          </h3>
+          <span class="doc-section__label">管理所有已连接的 Android 设备</span>
+        </div>
+        <div class="device-toolbar">
+          <FilterTabs :tabs="FILTER_TABS" v-model="activeFilter" />
+          <div class="device-toolbar__right">
+            <div class="view-toggle">
+              <button class="view-btn" :class="{ active: viewMode === 'table' }" @click="viewMode = 'table'">📋 表格</button>
+              <button class="view-btn" :class="{ active: viewMode === 'cards' }" @click="viewMode = 'cards'">📷 卡片</button>
+            </div>
+            <span class="filter-count">{{ filteredDevices.length }} 台</span>
+            <el-button class="action-bar-btn" size="small" @click="openNetworkDialog">
+              <IconWifi :size="14" /> 局域网
+            </el-button>
+            <el-button class="action-bar-btn" size="small" :loading="store.scanning || store.loading" @click="handleRefresh">
+              <IconRefresh :size="14" /> 刷新
+            </el-button>
           </div>
-          <span class="filter-count">{{ filteredDevices.length }} 台设备</span>
         </div>
 
         <!-- 表视图：工具栏 + 表格 -->
@@ -295,16 +309,15 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-.doc-body {
+.device-workbench .doc-body {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  background:
-    radial-gradient(circle, #d4cdc0 0.8px, transparent 0.8px);
-  background-size: 14px 14px;
-  background-color: #fefcf6;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 20px 20px 20px;
+  gap: 18px;
 }
 
 .header-actions {
@@ -314,65 +327,91 @@ onUnmounted(() => {
 }
 
 .device-section {
-  flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  padding: 16px 20px 20px;
-  gap: 12px;
+  gap: 14px;
+  background: rgba(107,203,119,0.04);
+  border: 2.5px solid rgba(107,203,119,0.2);
+  border-radius: var(--app-radius-md);
+  padding: 18px;
 }
 
+/* ── Section 标题 — 手绘波浪下划线 ── */
 .doc-section__header {
   flex-shrink: 0;
-  padding-bottom: 0;
+  margin-bottom: 0;
 }
 .doc-section__title {
-  font-family: 'Patrick Hand', cursive;
+  font-family: var(--app-font-display);
   font-size: var(--app-size-lg); font-weight: 700; color: var(--ink);
+  display: inline-block; position: relative; margin-bottom: 4px;
+}
+.doc-section__title::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0; height: 3px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%232d2d2d' stroke-width='2' fill='none'/%3E%3C/svg%3E") repeat-x;
+  background-size: 40px 3px;
 }
 .doc-section__title .doc-tag {
   font-size: var(--app-size-xs); padding: 1px 8px; border-radius: 4px 8px 4px 8px;
   background: #fff; color: #999; border: 1.5px solid #e8ecf1;
   font-weight: 700; margin-left: 8px;
 }
-.doc-section__label { color: #999; font-size: var(--app-size-xs); }
+.doc-section__label {
+  color: #999; font-size: var(--app-size-xs);
+  margin-top: 2px;
+}
+.device-section--list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
-/* ── KPI 统计条 ── */
+/* ── Device Toolbar — 筛选 + 操作 + 视图切换 ── */
+.device-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  padding-bottom: 10px;
+}
+.device-toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.filter-count {
+  font-size: var(--app-size-xs); color: var(--app-text-secondary); font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── KPI 统计卡片 — 拍立得微旋转 ── */
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0;
-  border: 2.5px solid var(--c-workflow);
-  border-radius: 4px 8px 4px 8px;
-  overflow: hidden;
-  background: #fff;
-  margin-bottom: 4px;
+  gap: 18px;
   flex-shrink: 0;
 }
-.kpi-card {
-  padding: 12px 16px;
-  text-align: center;
-  border-right: 2px solid #e8ecf1;
-}
-.kpi-card:last-child { border-right: none; }
-.kpi-dot {
-  width: 8px; height: 8px; transform: rotate(45deg);
-  margin: 0 auto 4px; border-radius: 1px;
-}
-.kpi-value {
-  font-family: 'Patrick Hand', cursive;
-  font-size: var(--app-size-2xl); font-weight: 700; color: var(--ink); line-height: 1;
-}
-.kpi-label {
-  font-size: var(--app-size-xs); font-weight: 700; color: #999; margin-top: 2px;
-  text-transform: uppercase; letter-spacing: 0.06em;
+.kpi-row > :nth-child(1) { transform: rotate(-0.8deg); }
+.kpi-row > :nth-child(2) { transform: rotate(0.5deg); }
+.kpi-row > :nth-child(3) { transform: rotate(-0.4deg); }
+.kpi-row > :nth-child(4) { transform: rotate(0.6deg); }
+.kpi-row > :hover { transform: rotate(0deg) scale(1.03) !important; z-index: 5; }
+
+@media (max-width: 900px) {
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* ── 视图切换 ── */
 .view-toggle {
   display: flex; gap: 0;
-  border: 2px solid var(--c-workflow); border-radius: 4px 8px 4px 8px;
+  border: 2px solid var(--c-device); border-radius: 4px 8px 4px 8px;
   overflow: hidden;
 }
 .view-btn {
@@ -382,8 +421,8 @@ onUnmounted(() => {
   border-right: 1px solid #e8ecf1;
 }
 .view-btn:last-child { border-right: none; }
-.view-btn.active { background: var(--c-workflow); color: #fff; }
-.view-btn:hover:not(.active) { color: var(--c-workflow); }
+.view-btn.active { background: var(--c-device); color: #fff; }
+.view-btn:hover:not(.active) { color: var(--c-device); }
 
 /* ── 卡片分组视图 ── */
 .card-grid-grouped {
@@ -409,23 +448,7 @@ onUnmounted(() => {
 }
 @media (max-width: 900px) { .card-group-grid { grid-template-columns: repeat(2, 1fr); } }
 
-/* ── 表格卡片 ── */
-.filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-}
-.filter-count {
-  font-size: var(--app-size-sm); color: #999; font-weight: 600;
-  white-space: nowrap; margin-left: auto;
-}
-
-/* ── 操作栏（局域网 + 刷新）── */
-.action-bar {
-  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
-}
+/* ── 操作按钮（局域网 + 刷新）── */
 .action-bar-btn {
   gap: 5px !important; padding: 5px 14px !important;
   border-radius: 4px 8px 4px 8px !important;
@@ -471,8 +494,8 @@ onUnmounted(() => {
   flex: 1; min-height: 0; min-width: 0;
   display: flex; flex-direction: column; overflow: hidden;
   border-radius: 6px 10px 6px 10px;
-  border: 2.5px solid var(--c-workflow);
-  box-shadow: 2px 3px 0 rgba(137,207,240,0.12);
+  border: 2.5px solid var(--c-device);
+  box-shadow: 2px 3px 0 rgba(107,203,119,0.15);
   background: #fff;
 }
 .table-card :deep(.el-card__body) {

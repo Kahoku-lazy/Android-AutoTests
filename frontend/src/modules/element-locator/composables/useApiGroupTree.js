@@ -97,7 +97,7 @@ export function useApiGroupTree() {
     try {
       const { data } = await apiListApiGroups()
       if (data.ok) groups.value = data.groups || []
-    } catch (_) { }
+    } catch (e) { console.error(e); }
     loading.value = false
   }
 
@@ -110,7 +110,7 @@ export function useApiGroupTree() {
         : (groupOrNull && groupOrNull.id === '__ungrouped__' ? { group_id: 'null' } : {})
       const { data } = await apiListApiEndpoints(params)
       if (data.ok) endpoints.value = data.endpoints || []
-    } catch (_) { }
+    } catch (e) { console.error(e); }
   }
 
   function openCreateGroup(parentId = null, isFolder = false) {

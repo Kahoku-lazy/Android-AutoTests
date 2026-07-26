@@ -1,4 +1,8 @@
 <script setup>
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
 defineProps({
   tasks: { type: Array, default: () => [] },
   summary: {
@@ -17,6 +21,22 @@ const statusMeta = {
 
 function meta(status) {
   return statusMeta[status] || statusMeta.idle
+}
+
+function taskId(task) {
+  return task.id || task.task_id || task.run_id || null
+}
+
+function openTask(task) {
+  const id = taskId(task)
+  if (!id) return
+  // 只有执行中任务有 client_task_id 能定位详情页
+  // 已完成任务跳转列表页（后端 ID 与前端 ID 不兼容）
+  if (task.status === 'running') {
+    router.push(`/runner/task/${id}`)
+  } else {
+    router.push('/runner')
+  }
 }
 </script>
 
@@ -41,7 +61,12 @@ function meta(status) {
     </div>
 
     <div v-if="tasks.length" class="task-result-panel__list">
-      <div v-for="task in tasks" :key="task.id" class="task-row">
+      <div
+        v-for="task in tasks"
+        :key="task.id || task.task_id || task.run_id || Math.random()"
+        class="task-row"
+        :class="{ 'task-row--clickable': taskId(task) }"
+        @click="openTask(task)">
         <div class="task-row__status" :class="meta(task.status).cls" :title="meta(task.status).label">
           {{ meta(task.status).icon }}
         </div>
@@ -119,7 +144,10 @@ function meta(status) {
   display: flex; align-items: flex-start; gap: 10px;
   padding: 10px 12px; border-radius: 4px 8px 4px 8px;
   background: #fff; border: 1.5px solid var(--app-border-light);
+  transition: background var(--app-duration-fast) var(--app-ease);
 }
+.task-row--clickable { cursor: pointer; }
+.task-row--clickable:hover { background: rgba(78, 205, 196, 0.12); }
 
 .task-row__status {
   width: 28px; height: 28px; border-radius: 4px 8px 4px 8px;

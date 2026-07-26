@@ -1,5 +1,8 @@
 <script setup>
-/** 设备筛选标签 — 自定义按钮组，替换 AppTabs/el-tabs */
+/**
+ * FilterTabs — 通用筛选标签栏
+ * 替代手写 filter-tab button 组，配合 useFilterTabs composable 使用。
+ */
 defineProps({
   tabs: { type: Array, required: true },
   modelValue: { type: String, default: 'all' },

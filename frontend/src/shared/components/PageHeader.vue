@@ -33,7 +33,7 @@ defineProps({
 }
 
 .doc-hero__title {
-  font-family: var(--app-font-display, Quicksand, sans-serif);
+  font-family: var(--app-font-display);
   font-size: 24px;
   font-weight: 700;
   color: var(--app-text, #4a4e69);

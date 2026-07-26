@@ -18,6 +18,9 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 
 import { STEP_TYPES, STEP_FIELDS, FIELD_LABELS, DIRECTION_OPTIONS, FIELD_HINTS, APP_LIFECYCLE_TYPES } from '@/shared/constants/steps.js'
+import { useStepDragDrop } from '../composables/useStepDragDrop.js'
+import { useStepFields } from '../composables/useStepFields.js'
+import { stepSummary as buildStepSummary } from '../step-utils.js'
 // ── Element manager data for XPath picker ──
 const pages = ref([]);
 const allElements = ref([]); // flat list with page info
@@ -65,10 +68,10 @@ async function loadElementLibrary() {
             });
           }
         }
-      } catch (_) {}
+      } catch (e) { console.error(e); }
     }
     allElements.value = results;
-  } catch (_) {}
+  } catch (e) { console.error(e); }
 }
 
 function getXPath(el) {
@@ -121,35 +124,8 @@ const steps = computed({
 });
 
 
-function defaultStep(type = "click") {
-  const xpath = APP_LIFECYCLE_TYPES.includes(type)
-    ? props.packageName || ""
-    : "";
-  return {
-    type,
-    xpath,
-    xpath2: "",
-    timeout: 10,
-    expected_text: "",
-    index: 0,
-    description: "",
-    direction: "up",
-    distance: 500,
-  };
-}
-
-function visibleFields(step) {
-  const info = STEP_FIELDS[step.type] || { required: [], optional: [] };
-  return [...info.required, ...(info.optional || [])];
-}
-
-function isFieldRequired(step, field) {
-  return (STEP_FIELDS[step.type]?.required || []).includes(field);
-}
-
-function isContainer(type) {
-  return ["if_element_appear", "if_element_disappear", "loop_n", "loop_elements"].includes(type);
-}
+const { defaultStep, visibleFields, isFieldRequired, isContainer, fieldLabel, fieldHint, useElementPicker } =
+  useStepFields(() => props.packageName);
 
 function addStep() {
   if (steps.value.length >= 100) {
@@ -207,46 +183,8 @@ function confirmRemove() {
   deleteDialog.value.visible = false;
 }
 
-// ── Drag & drop reorder ──
-const dragIndex = ref(null);
-const dropTargetIdx = ref(null);
-
-function onDragStart(idx, e) {
-  dragIndex.value = idx;
-  dropTargetIdx.value = null;
-  e.dataTransfer.effectAllowed = "move";
-}
-
-function onDragOver(idx, e) {
-  e.preventDefault();
-  if (idx !== dragIndex.value) dropTargetIdx.value = idx;
-}
-
-function onDragLeave() {
-  dropTargetIdx.value = null;
-}
-
-function onDragEnd() {
-  dragIndex.value = null;
-  dropTargetIdx.value = null;
-}
-
-function onDrop(e, idx) {
-  e.preventDefault();
-  e.stopPropagation();
-  if (dragIndex.value === null || dragIndex.value === idx) {
-    dragIndex.value = null;
-    dropTargetIdx.value = null;
-    return;
-  }
-  const arr = [...steps.value];
-  const [moved] = arr.splice(dragIndex.value, 1);
-  arr.splice(idx, 0, moved);
-  steps.value = arr;
-  expanded.value = {};
-  dragIndex.value = null;
-  dropTargetIdx.value = null;
-}
+const { dragIndex, dropTargetIdx, onDragStart, onDragOver, onDragLeave, onDragEnd, onDrop } =
+  useStepDragDrop(steps, expanded);
 
 function onTypeChange(idx, newType) {
   const newSteps = [...steps.value];
@@ -287,68 +225,7 @@ onUnmounted(() => {
 
 // ── Step summary with clear action description ──
 function stepSummary(step) {
-  const def = STEP_TYPES.find((t) => t.value === step.type);
-  const icon = def?.icon || "";
-  const elName = resolveElementName(step, "xpath");
-
-  switch (step.type) {
-    case "click":
-      return `${icon} 点击「${elName}」`;
-    case "long_click":
-      return `${icon} 长按「${elName}」${step.timeout || 0.8}s`;
-    case "swipe":
-      return `${icon} 向${DIRECTION_OPTIONS.find((d) => d.value === step.direction)?.label || step.direction}滑动 ${step.distance || 500}px`;
-    case "wait":
-      return `${icon} 等待「${elName}」出现（${step.timeout || 10}s）`;
-    case "wait_disappear":
-      return `${icon} 等待「${elName}」消失`;
-    case "sleep":
-      return `${icon} 暂停 ${step.timeout || 0}s`;
-    case "verify_text":
-      return `${icon} 检查「${elName}」文字是否="${step.expected_text || "?"}"`;
-    case "poll_text":
-      return `${icon} 等待「${elName}」出现，文字="${step.expected_text || "?"}"`;
-    case "start_app":
-      return `${icon} 打开应用 ${step.xpath || ""}`;
-    case "kill_app":
-      return `${icon} 关闭应用 ${step.xpath || ""}`;
-    case "perf_element_time":
-      return `${icon} 等待「${elName}」出现耗时（超时${step.timeout || 10}s）`;
-    case "wait_toast":
-      return `${icon} 等待Toast「${step.expected_text || "?"}」`;
-    case "if_element_appear":
-      return `${icon} 如果「${elName}」出现 (${(step.children || []).length} 子步骤)`;
-    case "if_element_disappear":
-      return `${icon} 如果「${elName}」消失 (${(step.children || []).length} 子步骤)`;
-    case "loop_n":
-      return `${icon} 循环 ${step.index || 1} 次 (${(step.children || []).length} 子步骤)`;
-    case "loop_elements":
-      return `${icon} 遍历 ${(step.xpath || '').split('|').filter(Boolean).length || 0} 个元素 (${(step.children || []).length} 子步骤)`;
-    default:
-      return `${icon} ${def?.label || step.type}`;
-  }
-}
-
-function fieldLabel(step, field) {
-  if (
-    field === "xpath" &&
-    ["start_app", "kill_app"].includes(step.type)
-  )
-    return "包名";
-  if (field === "timeout" && step.type === "long_click") return "长按秒数";
-  if (field === "timeout" && step.type === "sleep") return "等待秒数";
-  return FIELD_LABELS[field] || field;
-}
-
-function fieldHint(step, field) {
-  if (field === "direction") return "滑动方向";
-  if (field === "distance") return "滑动的像素距离";
-  return "";
-}
-
-// Whether to use element picker vs free-text input for a field
-function useElementPicker(step) {
-  return !["start_app", "kill_app", "swipe"].includes(step.type);
+  return buildStepSummary(step, resolveElementName);
 }
 
 // ── Run single step on device ──
@@ -421,8 +298,9 @@ async function runStepsRange(fromIdx) {
             cancelButtonText: "停止",
             type: "warning",
           });
-        } catch (_) {
+        } catch (e) {
           break;
+          console.error(e);
         }
       }
     } catch (e) {

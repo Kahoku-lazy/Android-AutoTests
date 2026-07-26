@@ -18,6 +18,7 @@ import TrendBarChart from "./components/TrendBarChart.vue";
 import TaskResultPanel from "./components/TaskResultPanel.vue";
 import ModuleNavigator from "./components/ModuleNavigator.vue";
 import ActivityTimeline from "./components/ActivityTimeline.vue";
+import ErrorState from "@/shared/components/patterns/ErrorState.vue";
 
 const {
   loading,
@@ -54,11 +55,7 @@ onMounted(() => {
       </template>
     </WorkbenchHeader>
 
-    <!-- 错误提示 -->
-    <div v-if="error" class="dashboard__error">
-      <span>{{ error }}</span>
-      <el-button size="small" @click="loadData">重试</el-button>
-    </div>
+    <ErrorState v-if="error" :message="error" @retry="loadData" />
 
     <!-- 内容区 -->
     <div class="doc-body">
@@ -192,22 +189,6 @@ onMounted(() => {
 /* ═══════════════════════════════════════════
    Paper × Polaroid — 仪表盘布局
    ═══════════════════════════════════════════ */
-
-/* ── 错误提示 ── */
-.dashboard__error {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin: 0 20px;
-  padding: 10px 20px;
-  background: var(--app-error-bg);
-  border: 2px solid var(--app-error);
-  border-radius: 6px 10px 6px 10px;
-  font-size: var(--app-size-sm);
-  color: var(--app-status-danger-text);
-  font-weight: 600;
-}
 
 /* ── 底纹 + 全局 ── */
 .doc-page {

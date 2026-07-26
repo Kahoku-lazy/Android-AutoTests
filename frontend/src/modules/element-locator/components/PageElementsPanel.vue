@@ -35,7 +35,7 @@ async function captureThumbnailScreenshot() {
       loadImageDims(url)
       return true
     }
-  } catch (_) { /* ignore */ }
+  } catch (e) { console.error(e); }
   return false
 }
 

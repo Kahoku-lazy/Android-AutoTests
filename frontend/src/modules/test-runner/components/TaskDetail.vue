@@ -98,7 +98,7 @@ async function ensureStepDefs() {
         data = res.data
       }
       if (data?.ok) casesDefs.value = data.definitions || []
-    } catch (_) {}
+    } catch (e) { console.error(e); }
   }
 
   const idSet = new Set((t.caseIds || []).map(String))
@@ -388,7 +388,7 @@ onMounted(() => {
             taskAddLog('🔄 已恢复实时连接')
           }
         }
-      } catch (_) {}
+      } catch (e) { console.error(e); }
     }
     saveTimer = setInterval(() => { if (task.value) saveTask() }, 3000)
     if (task.value && isTaskQueued(task.value)) {
@@ -466,9 +466,11 @@ async function restartTask() {
   }
   try {
     await client.post('/runner/tasks/save', buildTaskSavePayload(newTask))
-  } catch (_) {
+  } catch (e) {
     ElMessage.error('创建新任务失败')
     return
+    console.error(e);
+    // Keep app responsive on failure
   }
   ElMessage.success(`已创建新任务「${newTask.name}」第${round}轮`)
   router.push(`/runner/task/${tid}`)
@@ -494,7 +496,7 @@ async function pollDetailQueuedTask() {
         return
       }
     }
-  } catch (_) {}
+  } catch (e) { console.error(e); }
 }
 
 function startDetailQueuePolling() {

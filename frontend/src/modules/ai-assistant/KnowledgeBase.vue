@@ -2,6 +2,7 @@
 
 import AppCard from "@/shared/components/AppCard.vue";
 import AppTable from "@/shared/components/AppTable.vue";
+import KpiCard from "@/shared/components/KpiCard.vue";
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import client from '@/shared/api-client.js'
@@ -84,25 +85,13 @@ onMounted(() => {
   <div class="kb-view">
     <!-- 状态卡片 -->
     <AppCard color="app-blue">
-      <div class="kb-stats">
-        <div class="kb-stat">
-          <span class="kb-stat__num">{{ status.doc_count ?? '—' }}</span>
-          <span class="kb-stat__label">已索引文档</span>
-        </div>
-        <div class="kb-stat">
-          <span class="kb-stat__num">{{ status.db_size_mb ?? '—' }} MB</span>
-          <span class="kb-stat__label">数据库大小</span>
-        </div>
-        <div class="kb-stat">
-          <span class="kb-stat__num">{{ status.reindex?.last_indexed || '从未' }}</span>
-          <span class="kb-stat__label">最后索引时间</span>
-        </div>
-        <div class="kb-stat">
-          <span class="kb-stat__num" :style="{ color: status.reindex?.running ? '#f8a6b2' : 'var(--c-workflow)' }">
-            {{ status.reindex?.running ? '⏳ 重建中' : '✅ 就绪' }}
-          </span>
-          <span class="kb-stat__label">状态</span>
-        </div>
+      <div class="kpi-row">
+        <KpiCard :value="status.doc_count ?? '—'" label="已索引文档" color="var(--c-ai)" shape="diamond" />
+        <KpiCard :value="`${status.db_size_mb ?? '—'} MB`" label="数据库大小" color="var(--c-case)" shape="triangle" />
+        <KpiCard :value="status.reindex?.last_indexed || '从未'" label="最后索引时间" color="var(--c-workflow)" shape="square">
+          <span style="font-size:var(--app-size-xs);color:var(--app-text-secondary)">YYYY-MM-DD HH:mm</span>
+        </KpiCard>
+        <KpiCard :value="status.reindex?.running ? '重建中' : '就绪'" label="状态" :color="status.reindex?.running ? 'var(--c-runner)' : 'var(--c-device)'" shape="circle" />
       </div>
       <div class="kb-actions">
         <el-button type="primary" :loading="reindexing" @click="reindex">
@@ -160,30 +149,8 @@ onMounted(() => {
 .kb-view > :first-child {
   flex-shrink: 0;
 }
-.kb-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 16px;
-}
-.kb-stat {
-  text-align: center;
-  padding: 12px 8px;
-  background: rgba(136, 157, 240, 0.06);
-  border-radius: 12px;
-}
-.kb-stat__num {
-  display: block;
-  font-size: var(--app-size-xl);
-  font-weight: 800;
-  color: var(--app-text, #3D4A3B);
-}
-.kb-stat__label {
-  display: block;
-  font-size: var(--app-size-sm);
-  color: #999;
-  margin-top: 4px;
-}
+.kpi-row { display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px }
+@media (max-width: 768px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
 .kb-actions {
   display: flex;
   align-items: center;
@@ -263,6 +230,6 @@ onMounted(() => {
   color: #fff;
 }
 @media (max-width: 700px) {
-  .kb-stats { grid-template-columns: repeat(2, 1fr); }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
 }
 </style>

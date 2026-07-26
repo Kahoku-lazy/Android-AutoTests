@@ -97,7 +97,7 @@ export function useWebGroupTree() {
     try {
       const { data } = await apiListWebGroups()
       if (data.ok) groups.value = data.groups || []
-    } catch (_) { }
+    } catch (e) { console.error(e); }
     loading.value = false
   }
 
@@ -110,7 +110,7 @@ export function useWebGroupTree() {
         : (groupOrNull && groupOrNull.id === '__ungrouped__' ? { group_id: 'null' } : {})
       const { data } = await apiListWebElements(params)
       if (data.ok) elements.value = data.elements || []
-    } catch (_) { }
+    } catch (e) { console.error(e); }
   }
 
   function openCreateGroup(parentId = null, isFolder = false) {

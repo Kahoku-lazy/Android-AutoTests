@@ -45,10 +45,10 @@ async function loadElements() {
             results.push({ ...e, _pageLabel: p.label || `Page#${p.id}`, _pageId: p.id });
           }
         }
-      } catch (_) {}
+      } catch (e) { console.error(e); }
     }
     allElements.value = results;
-  } catch (_) {}
+  } catch (e) { console.error(e); }
 }
 
 function getXPath(el) {

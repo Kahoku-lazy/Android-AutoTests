@@ -7,6 +7,7 @@ import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { animate, stagger } from 'animejs'
 import PageHeader from '@/shared/components/PageHeader.vue'
+import KpiCard from '@/shared/components/KpiCard.vue'
 import { getTaskReport, formatTime } from './api.js'
 
 const route = useRoute()
@@ -27,7 +28,7 @@ async function loadReport() {
   try {
     const { data } = await getTaskReport(taskId.value)
     if (data.ok) task.value = data.task
-  } catch (_) {}
+  } catch (e) { console.error(e); }
   loading.value = false
   await nextTick()
   animate('.task-report-table tbody tr', { opacity: [0, 1], translateY: [12, 0], delay: stagger(30), duration: 350, ease: 'outCubic' })
@@ -135,27 +136,12 @@ function goRunner() { router.push('/runner') }
 
       <!-- KPI Cards -->
       <div class="kpi-row">
-        <div class="kpi-card">
-          <div class="kpi-dot"></div>
-          <div class="kpi-value">{{ kpiTotal }}</div>
-          <div class="kpi-label">总迭代次数</div>
+        <KpiCard :value="kpiTotal" label="总迭代次数" color="var(--c-workflow)" shape="diamond">
           <div class="kpi-sub">{{ taskMeta.case_ids?.length || 0 }} 用例 × {{ taskMeta.loop_count || 0 }} 轮</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-dot"></div>
-          <div class="kpi-value num-pass">{{ kpiPass }}</div>
-          <div class="kpi-label">✅ 通过</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-dot"></div>
-          <div class="kpi-value num-fail">{{ kpiFail }}</div>
-          <div class="kpi-label">❌ 失败</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-dot"></div>
-          <div class="kpi-value" :class="kpiRate >= 95 ? 'num-pass' : kpiRate >= 80 ? 'num-warn' : 'num-fail'">{{ kpiRate }}%</div>
-          <div class="kpi-label">📊 通过率</div>
-        </div>
+        </KpiCard>
+        <KpiCard :value="kpiPass" label="通过" color="var(--c-device)" shape="triangle" />
+        <KpiCard :value="kpiFail" label="失败" color="var(--c-runner)" shape="square" />
+        <KpiCard :value="`${kpiRate}%`" label="通过率" color="var(--c-dashboard)" shape="circle" />
       </div>
 
       <!-- APP性能统计 -->
@@ -330,7 +316,7 @@ function goRunner() { router.push('/runner') }
 .doc-page{display:flex;flex-direction:column;height:100%;overflow-y:auto}
 .doc-body{padding:16px 20px 32px;display:flex;flex-direction:column;gap:14px;max-width:1200px;margin:0 auto;width:100%}
 .top-bar{display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap}.run-meta{display:flex;align-items:center;gap:10px;font-size:var(--app-size-xs);color:#999;flex-wrap:wrap}
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px}.kpi-card{text-align:center;padding:12px 10px 16px;background:#fff;border:3px solid var(--ink);border-radius:4px 10px 6px 8px;box-shadow:2px 3px 0 rgba(0,0,0,0.04);position:relative}.kpi-value{font-family:'Patrick Hand',cursive;font-size:var(--app-size-xl);font-weight:700;line-height:1}.kpi-label{font-size:var(--app-size-xs);font-weight:700;opacity:0.4;text-transform:uppercase;margin-top:2px}.kpi-card::after{content:'~';position:absolute;bottom:2px;right:8px;font-family:'Patrick Hand',cursive;font-size:var(--app-size-md);opacity:0.12}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px}
 .task-meta-card{display:flex;flex-wrap:wrap;gap:10px;padding:12px 16px;background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;margin-bottom:4px;font-size:var(--app-size-xs)}.meta-item{display:flex;align-items:center;gap:6px}.meta-label{opacity:0.5;font-weight:600}.meta-value{font-weight:700}
 .detail-tabs :deep(.el-tabs__header){margin-bottom:0}.detail-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:4px}.detail-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:#999;height:auto;line-height:1.4}.detail-tabs :deep(.el-tabs__item:hover){color:var(--ink)}.detail-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-dashboard);border-color:var(--ink)}.detail-tabs :deep(.el-tabs__active-bar){display:none}
 .badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);display:inline-block}.badge-pass{background:var(--app-status-success-bg);color:var(--app-status-success-text)}.badge-fail{background:var(--app-status-danger-bg);color:var(--app-status-danger-text)}.badge-stopped{background:var(--app-offline);color:var(--app-text-secondary)}

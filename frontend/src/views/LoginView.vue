@@ -62,7 +62,7 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 const mode = ref('login') // 'login' | 'register'
-const heroImageSrc = '/animal-assets/login-hero.jpg'
+const heroImageSrc = '/login/login-hero.jpg'
 const heroImageVisible = ref(true)
 
 // ── 注册表单校验 ──
@@ -321,7 +321,7 @@ function switchMode(m) {
   display: flex;
   flex-direction: column;
   position: relative;
-  font-family: 'Quicksand', 'Inter', 'Microsoft YaHei', sans-serif;
+  font-family: var(--app-font);
 }
 
 /* Soft glass 背景光斑 */

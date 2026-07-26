@@ -30,19 +30,19 @@ async function loadFrameworks() {
       ;(data.frameworks || []).forEach(f => { availMap[f.key] = f.available })
       SUB_TABS.forEach(t => { if (availMap.hasOwnProperty(t.key)) t.available = availMap[t.key] })
     }
-  } catch (_) {}
+  } catch (e) { console.error(e); }
 }
 
 // ── Agents ──
 const agents = ref([])
 async function loadAgents() {
-  try { const { data } = await listAgents(); if (data.ok) agents.value = data.agents || [] } catch (_) {}
+  try { const { data } = await listAgents(); if (data.ok) agents.value = data.agents || [] } catch (e) { console.error(e); }
 }
 
 // ── Banks ──
 const banks = ref([])
 async function loadBanks() {
-  try { const { data } = await listBanks(); if (data.ok) banks.value = data.banks || [] } catch (_) {}
+  try { const { data } = await listBanks(); if (data.ok) banks.value = data.banks || [] } catch (e) { console.error(e); }
 }
 
 // ── Bank editor ──
@@ -64,9 +64,9 @@ async function saveBank() {
     showBankEditor.value = false; await loadBanks(); ElMessage.success('已保存')
   } catch (_) { ElMessage.error('保存失败') }
 }
-async function removeBank(id) { try { await deleteBank(id); await loadBanks() } catch (_) {} }
+async function removeBank(id) { try { await deleteBank(id); await loadBanks() } catch (e) { console.error(e); } }
 async function seedDefault() {
-  try { await seedDefaultBank(); await loadBanks(); ElMessage.success('默认试卷已创建') } catch (_) {}
+  try { await seedDefaultBank(); await loadBanks(); ElMessage.success('默认试卷已创建') } catch (e) { console.error(e); }
 }
 
 // ── Eval Run (shared) ──
@@ -109,7 +109,7 @@ const METRICS_BY_FW = {
 }
 
 async function loadRuns() {
-  try { const { data } = await listRuns(); if (data.ok) runs.value = data.runs || [] } catch (_) {}
+  try { const { data } = await listRuns(); if (data.ok) runs.value = data.runs || [] } catch (e) { console.error(e); }
 }
 
 const filteredRuns = computed(() => runs.value.filter(r => (r.framework || 'self') === subTab.value))
@@ -144,7 +144,7 @@ function pollRun(runId) {
           clearInterval(timer); ElMessage.success('评测完成')
         }
       }
-    } catch (_) {}
+    } catch (e) { console.error(e); }
   }, 2000)
 }
 
@@ -154,11 +154,11 @@ const runDetail = ref(null)
 const loadingDetail = ref(false)
 async function viewRun(runId) {
   activeRunId.value = runId; loadingDetail.value = true
-  try { const { data } = await getRun(runId); if (data.ok) runDetail.value = data.run } catch (_) {}
+  try { const { data } = await getRun(runId); if (data.ok) runDetail.value = data.run } catch (e) { console.error(e); }
   loadingDetail.value = false
 }
 async function doSubmitScore(resultId, field, value) {
-  try { await submitScore(resultId, { [field]: value }); if (activeRunId.value) await viewRun(activeRunId.value) } catch (_) {}
+  try { await submitScore(resultId, { [field]: value }); if (activeRunId.value) await viewRun(activeRunId.value) } catch (e) { console.error(e); }
 }
 
 // ── KB Self-Test & Interactive Query ──
@@ -167,7 +167,7 @@ const kbQuery = ref(''); const kbQueryResult = ref(null); const kbQuerying = ref
 
 async function doKbSelfTest() {
   kbTesting.value = true
-  try { const { data } = await kbSelfTest(); if (data.ok) kbTestResult.value = data } catch (_) {}
+  try { const { data } = await kbSelfTest(); if (data.ok) kbTestResult.value = data } catch (e) { console.error(e); }
   kbTesting.value = false
 }
 
@@ -185,9 +185,10 @@ async function doKbQuery() {
     })
     const d = await resp.json()
     if (d.ok) kbQueryResult.value = d
-  } catch (_) {
+  } catch (e) {
     // Fallback: use self-test result for now
     kbQueryResult.value = { ok: true, query: q, documents: [], note: '搜索暂不可用，请先重启服务' }
+    console.error(e);
   }
   kbQuerying.value = false
 }
@@ -215,7 +216,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 
     <!-- ═══════════════ COMMON: Agent Selector ═══════════════ -->
     <div v-if="subTab!=='kb'" class="doc-section">
-      <div class="section-title">{{ curTab.label }} 评测</div>
+      <h3 class="doc-section__title">{{ curTab.label }} 评测</h3>
 
       <!-- Description -->
       <div class="fw-desc" style="margin-bottom:16px;padding:12px 16px;background:#faf9f4;border-radius:8px;font-size:var(--app-size-sm);color:#5c4b38">
@@ -355,7 +356,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 
     <!-- ═══════════════ KB Eval ═══════════════ -->
     <div v-if="subTab==='kb'" class="doc-section">
-      <div class="section-title">知识库评测</div>
+      <h3 class="doc-section__title">知识库评测</h3>
 
       <!-- Agent selector for context-aware KB testing -->
       <el-form label-width="120px" style="margin-bottom:24px">
@@ -428,7 +429,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 
     <!-- ═══════════════ Run History ═══════════════ -->
     <div class="doc-section">
-      <div class="section-title">评测记录 ({{ filteredRuns.length }})</div>
+      <h3 class="doc-section__title">评测记录 ({{ filteredRuns.length }})</h3>
       <div v-if="!filteredRuns.length" class="empty-state">暂无评测记录</div>
       <div v-for="r in filteredRuns" :key="r.id" class="run-card"
            style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:#faf9f4;border-radius:10px;margin-bottom:8px;border:1px solid #e8e2d6">
@@ -447,11 +448,11 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 
     <!-- ═══════════════ Run Detail ═══════════════ -->
     <div v-if="runDetail" class="doc-section">
-      <div class="section-title">
+      <h3 class="doc-section__title">
         评测详情 — {{ runDetail.agent_name }} × {{ runDetail.bank_name }}
         <el-tag size="small" style="margin-left:8px">{{ fwLabel(runDetail) }}</el-tag>
         <el-button size="small" style="margin-left:12px" @click="runDetail=null;activeRunId=null">关闭</el-button>
-      </div>
+      </h3>
       <div v-if="loadingDetail" class="empty-state">加载中...</div>
       <div v-else>
         <div style="display:flex;gap:20px;margin-bottom:16px;flex-wrap:wrap">
@@ -546,7 +547,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 .bench-desc { font-size: var(--app-size-xs); color: #a0936e; margin-top: 4px; }
 
 .doc-section { background: #fff; border-radius: var(--app-radius-md); padding: 24px; margin-bottom: 20px; border: 1px solid #f0ebe0; box-shadow: 0 2px 8px rgba(61,52,40,0.04); }
-.section-title { font-size: var(--app-size-lg); font-weight: 700; color: #4a3a28; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #f0ebe0; display: flex; align-items: center; }
+.doc-section__title { font-family: var(--app-font-display); font-size: var(--app-size-lg); font-weight: 700; color: var(--ink); margin-bottom: 16px }
 .score-badge { background: #faf9f4; border-radius: 12px; padding: 14px 22px; text-align: center; border: 1px solid #e8e2d6; min-width: 80px; }
 .score-num { font-size: var(--app-size-2xl); font-weight: 800; }
 .score-label { font-size: var(--app-size-sm); color: #a0936e; margin-top: 4px; }

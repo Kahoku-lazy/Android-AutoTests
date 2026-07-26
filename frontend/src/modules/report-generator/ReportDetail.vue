@@ -7,6 +7,7 @@ import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { animate, stagger } from 'animejs'
 import PageHeader from '@/shared/components/PageHeader.vue'
+import KpiCard from '@/shared/components/KpiCard.vue'
 import { getRunReport, statusLabel, statusBadgeClass, iterBadgeClass, formatTime } from './api.js'
 
 const route = useRoute()
@@ -38,7 +39,7 @@ async function loadReport() {
   try {
     const { data } = await getRunReport(runId.value)
     if (data.ok) report.value = data.run
-  } catch (_) {}
+  } catch (e) { console.error(e); }
   loading.value = false
   await nextTick()
   animate('.detail-table tbody tr', { opacity: [0, 1], translateY: [12, 0], delay: stagger(30), duration: 350, ease: 'outCubic' })
@@ -191,10 +192,12 @@ function outcomeBadgeClass(outcome) {
 
       <!-- KPI Cards -->
       <div class="kpi-row">
-        <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-workflow)"></div><div class="kpi-value">{{ runMeta.case_count || 0 }}</div><div class="kpi-label">执行用例</div><div class="kpi-sub">{{ runMeta.loop_count || 0 }} 轮 × {{ runMeta.case_count || 0 }} 用例 = {{ runMeta.total_iterations || 0 }} 次迭代</div></div>
-        <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-device)"></div><div class="kpi-value num-pass">{{ runMeta.total_pass || 0 }}</div><div class="kpi-label">✅ 通过</div></div>
-        <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-runner)"></div><div class="kpi-value num-fail">{{ runMeta.total_fail || 0 }}</div><div class="kpi-label">❌ 失败</div></div>
-        <div class="kpi-card"><div class="kpi-dot" style="background:var(--c-dashboard)"></div><div class="kpi-value" :class="kpiPassRate >= 95 ? 'num-pass' : kpiPassRate >= 80 ? 'num-warn' : 'num-fail'">{{ kpiPassRate }}%</div><div class="kpi-label">📊 通过率</div></div>
+        <KpiCard :value="runMeta.case_count || 0" label="执行用例" color="var(--c-workflow)" shape="diamond">
+          <div style="font-size:var(--app-size-xs);color:#999;margin-top:4px">{{ runMeta.loop_count || 0 }} 轮 × {{ runMeta.case_count || 0 }} 用例 = {{ runMeta.total_iterations || 0 }} 次迭代</div>
+        </KpiCard>
+        <KpiCard :value="runMeta.total_pass || 0" label="通过" color="var(--c-device)" shape="triangle" />
+        <KpiCard :value="runMeta.total_fail || 0" label="失败" color="var(--c-runner)" shape="square" />
+        <KpiCard :value="`${kpiPassRate}%`" label="通过率" color="var(--c-dashboard)" shape="circle" />
       </div>
 
       <!-- TaskAppCard Metadata (conditional) -->
@@ -439,8 +442,7 @@ function outcomeBadgeClass(outcome) {
 .top-bar{display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap}
 .run-meta{display:flex;align-items:center;gap:10px;font-size:var(--app-size-xs);color:#999;flex-wrap:wrap}
 .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px}
-.kpi-card{text-align:center;padding:12px 10px 16px;background:#fff;border:3px solid var(--ink);border-radius:4px 10px 6px 8px;box-shadow:2px 3px 0 rgba(0,0,0,0.04);position:relative}.kpi-card:hover{transform:translateY(-2px)}
-.kpi-value{font-family:'Patrick Hand',cursive;font-size:var(--app-size-xl);font-weight:700;line-height:1}.kpi-label{font-size:var(--app-size-xs);font-weight:700;opacity:0.4;text-transform:uppercase;margin-top:2px}.kpi-sub{font-size:var(--app-size-xs);color:#999;margin-top:2px}.kpi-card::after{content:'~';position:absolute;bottom:2px;right:8px;font-family:'Patrick Hand',cursive;font-size:var(--app-size-md);opacity:0.12}
+.kpi-sub{font-size:var(--app-size-xs);color:#999;margin-top:2px}
 .task-meta-bar{display:flex;flex-wrap:wrap;gap:10px;padding:12px 16px;background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;margin-bottom:4px;font-size:var(--app-size-xs)}.task-meta-item{display:flex;align-items:center;gap:6px}.meta-label{opacity:0.5;font-weight:600}.meta-value{font-weight:700}.full-width{width:100%}.conclusion-text{font-style:italic}
 .detail-tabs :deep(.el-tabs__header){margin-bottom:0;padding:0 8px}.detail-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:4px}.detail-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:#999;height:auto;line-height:1.4}.detail-tabs :deep(.el-tabs__item:hover){color:var(--ink)}.detail-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-dashboard);border-color:var(--ink)}.detail-tabs :deep(.el-tabs__active-bar){display:none}.detail-tabs :deep(.el-tabs__content){padding:12px 0 0}
 .table-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 16px 0}.page-size-btns{display:flex;gap:4px}.toolbar-label{font-size:var(--app-size-xs);font-weight:700;color:#999}.page-size-btn{padding:4px 10px;font-size:var(--app-size-xs);font-weight:700;color:#999;background:#fff;border:2px solid #e8ecf1;border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit}.page-size-btn:hover{border-color:var(--ink);color:var(--ink)}.page-size-btn.active{background:#f8f6f2;border-color:var(--ink);color:var(--ink)}.page-info{font-size:var(--app-size-xs);color:#999;font-weight:600;white-space:nowrap;margin-left:auto}.page-nav{display:flex;gap:6px;margin-left:8px}.page-nav :deep(.el-button){padding:4px 10px;font-size:var(--app-size-xs);font-weight:700;border:2px solid var(--ink)!important;border-radius:4px 8px 4px 8px!important;background:#fff;color:var(--ink)}.page-nav :deep(.el-button:hover){background:var(--c-dashboard)}

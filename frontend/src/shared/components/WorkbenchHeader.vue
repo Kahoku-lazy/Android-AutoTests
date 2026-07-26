@@ -104,7 +104,7 @@ watch(() => props.icon, async () => {
 .brand-text { min-width: 0; }
 .brand-title {
   margin: 0;
-  font-family: var(--doodle-font-title);
+  font-family: var(--app-font-display);
   font-size: 26px;
   font-weight: 700;
   color: var(--ink);

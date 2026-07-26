@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { countUpFormatted } from '@/shared/animations.js'
 import { MODULE_COLORS } from '@/shared/constants/module-colors.js'
+import SkeletonCard from '@/shared/components/patterns/SkeletonCard.vue'
 
 const props = defineProps({
   label: { type: String, required: true },
@@ -68,12 +69,7 @@ function navigate() {
     @mouseenter="onCardEnter"
     @click="navigate"
   >
-    <div v-if="loading" class="stats-card__skeleton">
-      <div class="skeleton-bar skeleton-bar--icon"></div>
-      <div class="skeleton-bar skeleton-bar--value"></div>
-      <div class="skeleton-bar skeleton-bar--label"></div>
-      <div class="skeleton-bar skeleton-bar--footer"></div>
-    </div>
+    <SkeletonCard v-if="loading" />
 
     <template v-else>
       <div
@@ -252,32 +248,8 @@ function navigate() {
   background: var(--app-highlight);
 }
 
-/* Skeleton */
-.stats-card__skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 4px 0;
-}
-.skeleton-bar {
-  background: linear-gradient(90deg, rgba(0,0,0,0.03) 25%, rgba(0,0,0,0.06) 50%, rgba(0,0,0,0.03) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s linear infinite;
-  border-radius: 4px;
-}
-.skeleton-bar--icon { width: 100%; height: 60px; border-radius: 3px 5px 3px 5px; }
-.skeleton-bar--value { width: 55%; height: 24px; }
-.skeleton-bar--label { width: 80%; height: 12px; }
-.skeleton-bar--footer { width: 100%; height: 24px; margin-top: 2px; }
-
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .stats-card { transition: none; }
   .stats-card:hover { transform: none; }
-  .skeleton-bar { animation: none; }
 }
 </style>

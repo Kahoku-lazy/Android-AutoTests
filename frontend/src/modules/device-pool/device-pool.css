@@ -43,7 +43,7 @@
   padding-bottom: 0;
 }
 .doc-section__title {
-  font-family: var(--doodle-font-title);
+  font-family: var(--app-font-display);
   font-size: 22px; font-weight: 700; color: var(--app-ink);
 }
 .doc-section__title .doc-tag {
@@ -76,7 +76,7 @@
   margin: 0 auto 4px; border-radius: 1px;
 }
 .kpi-value {
-  font-family: var(--doodle-font-title);
+  font-family: var(--app-font-display);
   font-size: 30px; font-weight: 700; color: var(--app-ink); line-height: 1;
 }
 .kpi-label {
@@ -107,7 +107,7 @@
   padding: 4px 0;
 }
 .card-group-title {
-  font-family: var(--doodle-font-title); font-size: 20px; font-weight: 700;
+  font-family: var(--app-font-display); font-size: 20px; font-weight: 700;
   color: var(--app-ink); display: flex; align-items: center; gap: 8px;
   margin-bottom: 10px;
 }

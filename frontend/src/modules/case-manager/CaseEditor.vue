@@ -61,7 +61,7 @@ async function loadDirOptions() {
     if (data.ok) {
       dirOptions.value = buildCascaderOptions(data.tree);
     }
-  } catch (_) {}
+  } catch (e) { console.error(e); }
 }
 
 // ── Current user (with fallback for new tabs) ──
@@ -127,7 +127,7 @@ async function loadDevices() {
       devices.value = data.devices || [];
       // No auto-select — user must explicitly connect
     }
-  } catch (_) {}
+  } catch (e) { console.error(e); }
 }
 
 async function connectDebugDevice() {
@@ -143,10 +143,11 @@ async function connectDebugDevice() {
     } else {
       ElMessage.error(data.error || '连接设备失败')
     }
-  } catch (_) {
+  } catch (e) {
     ElMessage.error('连接设备失败')
-  } finally {
+    } finally {
     debugConnecting.value = false
+    console.error(e);
   }
 }
 
@@ -223,7 +224,7 @@ onMounted(async () => {
           }
         }
       }
-    } catch (_) {}
+    } catch (e) { console.error(e); }
     loading.value = false;
   } else {
     generateId();
@@ -319,8 +320,9 @@ async function exitPage() {
           type: "warning",
         },
       );
-    } catch (_) {
+    } catch (e) {
       return; // user cancelled
+      console.error(e);
     }
   }
   skipGuard.value = true; // B6修复: 防止onBeforeRouteLeave二次弹窗
@@ -340,8 +342,9 @@ async function goToElementLocator() {
           type: "warning",
         },
       );
-    } catch (_) {
+    } catch (e) {
       return; // 用户取消 → 留在编辑页
+      console.error(e);
     }
   }
   const ok = await save();

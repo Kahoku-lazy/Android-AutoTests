@@ -5,6 +5,7 @@ import AppTable from "@/shared/components/AppTable.vue";
 import { ref, computed } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { apiListApiEndpoints, apiCreateApiEndpoint, apiUpdateApiEndpoint, apiDeleteApiEndpoint } from "../api.js";
+import GroupTreePanel from '@/shared/components/GroupTreePanel.vue';
 import { useApiGroupTree } from "../composables/useApiGroupTree.js";
 import { usePagination } from "@/shared/composables/usePagination.js";
 
@@ -144,92 +145,56 @@ async function doSave() {
 <template>
   <div class="api-endpoint-manager">
     <div class="main-layout">
-      <!-- Left: Group Tree -->
-      <aside class="tree-panel">
-        <div v-if="!selectMode" class="tree-header">
-          <span class="tree-header__title">接口分组</span>
-          <div class="tree-header__actions">
-            <el-button size="small" plain @click="openCreateGroup(null, true)">📁 + 项目</el-button>
-            <el-button size="small" type="primary" @click="openCreateGroup(null, false)">📄 + 模块</el-button>
-            <el-button size="small" plain @click="toggleSelectMode">☑ 选择</el-button>
-          </div>
-        </div>
-        <div v-else class="tree-header tree-header--select">
-          <span class="tree-header__title">已选 {{ selectedGroupIds.size }} 项</span>
-          <div class="tree-header__actions">
-            <el-button size="small" plain @click="handleSelectAll">☑ 全选</el-button>
-            <el-button size="small" type="primary" :disabled="selectedGroupIds.size === 0" @click="openBatchMoveDialog">📂 移动</el-button>
-            <el-button size="small" plain @click="toggleSelectMode">✕ 退出</el-button>
-          </div>
-        </div>
-
-        <div class="tree-body" :class="{ 'drag-mode-active': dragEnabled }">
-          <div v-if="loading && !groups.length" class="tree-loading">加载中...</div>
-          <div v-else-if="!groups.length" class="empty-state">
-            <span class="tree-empty__icon">📁</span>
-            <p class="tree-empty__text">暂无分组</p>
-            <p class="tree-empty__hint">点击「+ 项目」或「+ 模块」创建</p>
-          </div>
-          <el-tree
-            v-else
-            ref="treeRef"
-            :data="groupTree"
-            :props="{ children: 'children', label: 'name' }"
-            node-key="id"
-            :indent="16"
-            :expand-on-click-node="true"
-            :highlight-current="!selectMode"
-            :current-node-key="selectedGroup?.id"
-            :show-checkbox="selectMode"
-            :check-strictly="true"
-            :draggable="!selectMode"
-            :allow-drag="allowDrag"
-            :allow-drop="allowDrop"
-            default-expand-all
-            @node-click="handleTreeNodeClick"
-            @node-contextmenu="handleContextMenu"
-            @check="handleTreeCheck"
-            @node-drop="handleNodeDrop"
-          >
-            <template #default="{ data }">
-              <span
-                class="tree-node"
-                :class="nodeClass(data)"
-                @mousedown="onNodeMouseDown($event, data)"
-                @mouseup="onNodeMouseUp"
-                @mouseleave="onNodeMouseLeave"
-              >
-                <span class="tree-node__icon">{{ nodeIcon(data) }}</span>
-                <span class="tree-node__name" :title="data.name">{{ nodeName(data) }}</span>
-                <span v-if="data.endpoint_count" class="tree-node__meta">{{ data.endpoint_count }} 接口</span>
-                <span v-else-if="data.is_folder && data.child_count" class="tree-node__meta">{{ data.child_count }} 项</span>
-              </span>
-            </template>
-          </el-tree>
-
-          <!-- Ungrouped virtual node -->
-          <div
-            v-if="groups.length"
-            class="tree-node tree-node--page ungrouped-node"
-            :class="{ 'tree-node--active': selectedGroup?.id === '__ungrouped__' }"
-            @click="selectGroup({ id: '__ungrouped__', name: '未分类', is_folder: false })"
-          >
-            <span class="tree-node__icon">📄</span>
-            <span class="tree-node__name">未分类</span>
-          </div>
-        </div>
-      </aside>
-
-      <!-- Context menu -->
-      <div v-if="menuVisible && menuNode" class="context-menu" :style="{ left: menuX + 'px', top: menuY + 'px' }" @click.stop>
-        <template v-if="menuNode.is_folder">
-          <div class="context-menu__item" @click="openCreateGroup(menuNode.id, true); closeMenu()">+ 新建子目录</div>
-          <div class="context-menu__item" @click="openCreateGroup(menuNode.id, false); closeMenu()">+ 新建模块</div>
-        </template>
-        <div class="context-menu__item" @click="startEditLabel(menuNode); closeMenu()">✏️ 重命名</div>
-        <div class="context-menu__divider" />
-        <div class="context-menu__item context-menu__item--danger" @click="deleteGroup(menuNode); closeMenu()">🗑️ 删除</div>
-      </div>
+      <GroupTreePanel
+        panel-title="接口分组"
+        meta-label="接口"
+        meta-count-key="endpoint_count"
+        :groups="groups"
+        :selected-group="selectedGroup"
+        :loading="loading"
+        :select-mode="selectMode"
+        :selected-group-ids="selectedGroupIds"
+        :drag-enabled="dragEnabled"
+        :group-tree="groupTree"
+        :menu-visible="menuVisible"
+        :menu-x="menuX"
+        :menu-y="menuY"
+        :menu-node="menuNode"
+        :show-create-group="showCreateGroup"
+        :create-is-folder="createIsFolder"
+        :new-group-form="newGroupForm"
+        :show-rename-dialog="showRenameDialog"
+        :rename-target="renameTarget"
+        :rename-label="renameLabel"
+        :move-dialog-visible="moveDialogVisible"
+        :move-target-dir-id="moveTargetDirId"
+        :folder-list="folderList"
+        :node-class="nodeClass"
+        :node-icon="nodeIcon"
+        :node-name="nodeName"
+        @select-group="selectGroup"
+        @tree-node-click="handleTreeNodeClick"
+        @tree-contextmenu="handleContextMenu"
+        @tree-check="handleTreeCheck"
+        @tree-node-drop="handleNodeDrop"
+        @create-group="openCreateGroup"
+        @rename-group="startEditLabel"
+        @delete-group="deleteGroup"
+        @batch-move="confirmBatchMove"
+        @update:show-create-group="showCreateGroup = $event"
+        @update:show-rename-dialog="showRenameDialog = $event"
+        @update:move-dialog-visible="moveDialogVisible = $event"
+        @update:move-target-dir-id="moveTargetDirId = $event"
+        @node-mousedown="onNodeMouseDown"
+        @node-mouseup="onNodeMouseUp"
+        @node-mouseleave="onNodeMouseLeave"
+        @toggle-select-mode="toggleSelectMode"
+        @handle-select-all="handleSelectAll"
+        @open-batch-move="openBatchMoveDialog"
+        @confirm-batch-move="confirmBatchMove"
+        @do-create-group="doCreateGroup"
+        @do-rename="doRename"
+      />
 
       <!-- Right: Endpoint table -->
       <template v-if="selectedGroup">
@@ -348,42 +313,6 @@ async function doSave() {
       </template>
     </el-dialog>
 
-    <!-- Create Group -->
-    <el-dialog v-model="showCreateGroup" :title="createIsFolder ? '新建项目目录' : '新建模块'" width="360px" :close-on-click-modal="false">
-      <div class="form-grid">
-        <label class="form-label required">名称</label>
-        <el-input v-model="newGroupForm.name" :placeholder="createIsFolder ? '如：电商项目' : '如：用户模块'" size="middle"
-          @keyup.enter="doCreateGroup" />
-      </div>
-      <template #footer>
-        <el-button @click="showCreateGroup = false">取消</el-button>
-        <el-button type="primary" @click="doCreateGroup">创建</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- Rename Group -->
-    <el-dialog v-model="showRenameDialog" :title="renameTarget?.is_folder ? '重命名项目' : '重命名模块'" width="360px"
-      :close-on-click-modal="false">
-      <div class="form-grid">
-        <label class="form-label required">名称</label>
-        <el-input v-model="renameLabel" placeholder="输入新名称" size="middle" @keyup.enter="doRename" />
-      </div>
-      <template #footer>
-        <el-button @click="showRenameDialog = false">取消</el-button>
-        <el-button type="primary" @click="doRename">确定</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- Batch Move -->
-    <el-dialog v-model="moveDialogVisible" title="选择目标目录" width="420px" :close-on-click-modal="false">
-      <el-select v-model="moveTargetDirId" placeholder="选择要移动到的目录" filterable style="width: 100%">
-        <el-option v-for="dir in folderList" :key="dir.id" :label="dir.label" :value="dir.id" />
-      </el-select>
-      <template #footer>
-        <el-button @click="moveDialogVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="!moveTargetDirId" @click="confirmBatchMove">确认移动</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 

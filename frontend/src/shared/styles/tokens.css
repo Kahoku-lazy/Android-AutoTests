@@ -44,7 +44,7 @@
   /* ── 兼容别名 ── */
   --text-primary:       var(--ink);
   --text-secondary:     #999;
-  --font-display:       'Caveat', cursive;
+  --font-display:       'Patrick Hand', cursive;
   --side-w:             228px;
   /* 侧栏品牌区与主区 wb-header 底边对齐 */
   --app-topbar-h:       96px;
@@ -171,9 +171,9 @@
   --doodle-radius:          4px 10px 4px 10px;
   --doodle-radius-sm:       4px 8px 4px 8px;
   --doodle-shadow:          2px 2px 0 rgba(0,0,0,0.06);
-  --doodle-font-title:      'Bangers', cursive;
-  --doodle-font-ui:         'Comic Neue', cursive;
-  --doodle-font-hand:       'Gloria Hallelujah', cursive;
+  --doodle-font-title:      'Patrick Hand', cursive;
+  --doodle-font-ui:         'Nunito', 'PingFang SC', sans-serif;
+  --doodle-font-hand:       'Patrick Hand', cursive;
   --doodle-font-mono:       'JetBrains Mono', 'Fira Code', monospace;
   --doodle-texture-cross:   linear-gradient(45deg,rgba(0,0,0,0.02) 25%,transparent 25%,transparent 75%,rgba(0,0,0,0.02) 75%);
   --doodle-texture-dots:    radial-gradient(circle,rgba(0,0,0,0.03) 1px,transparent 1px);

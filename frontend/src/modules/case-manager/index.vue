@@ -46,7 +46,7 @@ async function loadTree() {
   try {
     const { data } = await fetchDirectories(caseType.value);
     if (data.ok) treeCache.value[activeTab.value] = data.tree;
-  } catch (_) {}
+  } catch (e) { console.error(e); }
 }
 
 function handleDirSelect(node) {

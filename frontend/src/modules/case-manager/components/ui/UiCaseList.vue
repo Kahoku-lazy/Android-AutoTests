@@ -56,7 +56,7 @@ async function loadDefs() {
   try {
     const { data } = await listDefinitions(props.activeDirectoryId);
     if (data.ok) definitions.value = data.definitions;
-  } catch (_) {}
+  } catch (e) { console.error(e); }
   loading.value = false;
 }
 
@@ -101,7 +101,7 @@ async function loadCaseDetail(caseId) {
   try {
     const { data } = await getDefinition(caseId);
     if (data.ok) selectedCase.value = data.definition;
-  } catch (_) {}
+  } catch (e) { console.error(e); }
   selectedCaseLoading.value = false;
 }
 
@@ -134,8 +134,9 @@ async function doExportYaml() {
       if (exp.data.ok) exportFiles.value = exp.data.files;
       showExports.value = true;
     }
-  } catch (_) {
+  } catch (e) {
     ElMessage.error("导出失败");
+    console.error(e);
   }
   exportLoading.value = false;
 }

@@ -1,8 +1,8 @@
 # ARCH-02 — 设备管理 (Device Pool)
 
 > 关联模块：`apps/device_pool/` · 前端：`frontend/src/modules/device-pool/`
-> 关联需求：[`PRD-02-设备管理`](../02-PRD需求/PRD-02-设备管理.md) · 关联架构：[`架构大纲`](./架构大纲.md) §4.1
-> 版本：v1.3 · 日期：2026-07-17
+> 关联需求：[`PRD-01-设备管理`](../02-PRD需求/PRD-01-设备管理.md) · 关联架构：[`架构大纲`](./架构大纲.md) §4.1
+> 版本：v1.4 · 日期：2026-07-28
 
 ---
 
@@ -371,7 +371,7 @@ def ensure_device(serial: str, name: str = "") -> Device
 
 | 版本 | 日期 | 变更摘要 |
 |------|------|----------|
-| v1.0 | 2026-07-16 | 初始版本：基于 `项目架构.md` 和 `PRD-02-设备管理.md` 重构 |
+| v1.0 | 2026-07-16 | 初始版本：基于 `项目架构.md` 和 `PRD-01-设备管理.md` 重构 |
 | v1.1 | 2026-07-16 | **代码对照审计**：dp_devices 补全 name/brand/screen_w/h/locked_by/occupied_by 等字段；dp_device_locks 补全 lock_type/timeout_seconds/release_reason |
 | v1.2 | 2026-07-17 | **UI 重构**：卡片网格 → 表格布局；JWT 一键锁定（无需弹窗）；新增锁定状态列；动森主题按钮（紫色锁定/红色已锁/黄色占用）；工具栏 Icon 按钮 |
 | v1.3 | 2026-07-17 | **Airtest 迁移**：DevicePool 双连接架构（Airtest Android 负责截图/手势/App生命周期/Shell，u2 仅保留 dump_hierarchy/XPath）；acquire_device 添加 @transaction.atomic（MySQL 兼容） |

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { bus } from "@/shared/event-bus.js";
-import client from "@/shared/api-client.js";
+import { listPages, getPageElements, runStep as apiRunStep } from "../api/uiAutomation.js";
 import { ElMessageBox, ElMessage } from "element-plus";
 import {
   IconPlus,
@@ -49,16 +49,14 @@ onMounted(() => loadElementLibrary());
 
 async function loadElementLibrary() {
   try {
-    const { data: pageData } = await client.get("/elements/pages");
+    const { data: pageData } = await listPages();
     if (!pageData.ok) return;
     pages.value = pageData.pages || [];
     // Load elements for all pages
     const results = [];
     for (const p of pages.value) {
       try {
-        const { data: elData } = await client.get(
-          `/elements/pages/${p.id}/items`,
-        );
+        const { data: elData } = await getPageElements(p.id);
         if (elData.ok) {
           for (const e of elData.elements || []) {
             results.push({
@@ -242,7 +240,7 @@ async function runStep(idx, step) {
   runningStep.value = idx;
   stepResults.value[idx] = null;
   try {
-    const { data } = await client.post("/runner/run-step", {
+    const { data } = await apiRunStep({
       device_serial: props.debugDevice,
       type: step.type,
       xpath: step.xpath || "",
@@ -276,7 +274,7 @@ async function runStepsRange(fromIdx) {
     stepResults.value[realIdx] = null;
     try {
       const s = stepsToRun[i];
-      const { data } = await client.post("/runner/run-step", {
+      const { data } = await apiRunStep({
         device_serial: props.debugDevice,
         type: s.type,
         xpath: s.xpath || "",

@@ -1,7 +1,8 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import client, { getToken } from "@/shared/api-client.js";
+import { getToken } from "@/shared/api-client.js";
+import { getAgentDetail } from "./api.js";
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
 import { pressFeedback, iconBounce } from "@/shared/animations.js";
 import AnimatedMascot from "@/shared/components/AnimatedMascot.vue";
@@ -222,7 +223,7 @@ const modelStatusIcon = computed(() => {
 
 async function loadAgent() {
   try {
-    const { data } = await client.get(`/ai/agents/${agentId.value}`);
+    const data = await getAgentDetail(agentId.value);
     if (data.ok) {
       agent.value = data.agent;
       loadConversations();

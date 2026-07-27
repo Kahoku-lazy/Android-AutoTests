@@ -68,6 +68,12 @@ export function kbSelfTest() {
   return client.post('/evaluator/kb-self-test')
 }
 
+// ── KB Search ──
+
+export function kbSearch(payload) {
+  return client.post('/evaluator/kb-search', payload)
+}
+
 // ── Agents (read-only from ai_assistant) ──
 
 export function listAgents() {

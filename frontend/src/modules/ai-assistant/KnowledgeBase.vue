@@ -5,7 +5,7 @@ import AppTable from "@/shared/components/AppTable.vue";
 import KpiCard from "@/shared/components/KpiCard.vue";
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import client from '@/shared/api-client.js'
+import { getKnowledgeStatus, getKnowledgeDocuments, reindexKnowledge } from './api.js'
 
 const status = ref({})
 const documents = ref([])
@@ -45,7 +45,7 @@ function formatSize(bytes) {
 
 async function fetchStatus() {
   try {
-    const { data } = await client.get('/ai/knowledge/status')
+    const { data } = await getKnowledgeStatus()
     if (data.ok) status.value = data.data
   } catch { /* ignore */ }
 }
@@ -53,7 +53,7 @@ async function fetchStatus() {
 async function fetchDocuments() {
   loading.value = true
   try {
-    const { data } = await client.get('/ai/knowledge/documents')
+    const { data } = await getKnowledgeDocuments()
     if (data.ok) documents.value = data.data.documents || []
   } catch (e) {
     ElMessage.error('加载文档列表失败')
@@ -63,7 +63,7 @@ async function fetchDocuments() {
 async function reindex() {
   reindexing.value = true
   try {
-    const { data } = await client.post('/ai/knowledge/reindex')
+    const { data } = await reindexKnowledge()
     if (data.ok) {
       ElMessage.success('索引重建已开始，请稍后刷新')
       setTimeout(() => { fetchStatus(); fetchDocuments() }, 3000)

@@ -1,254 +1,125 @@
 # PRD-06 — AI 助手 (AI Assistant)
 
 > 关联需求大纲：[`需求大纲.md`](./需求大纲.md) §5.6
-> 版本：v4.1 · 日期：2026-07-22
+> 版本：v5.0 · 日期：2026-07-27
 
 ---
 
 ## 1. 功能定位
 
-AI 助手是自然语言交互中枢。用户通过对话驱动全流程测试。
+AI 助手是平台的智能对话中枢。用户在此管理 AI Agent、发起多轮对话、上传附件、通过 SSE 流式接收回复，并查看 Agent 执行任务的状态。页面由 Agent 管理面板 + 对话窗口 + 任务看板三个区域构成。
 
 ---
 
-## 2. 功能需求与验收标准
+## 2. 设计目录
 
-### 2.1 智能体管理
-
-#### F-01-01 智能体列表
-
-**需求**：智能体卡片网格展示，支持筛选和连接测试。
-
-**验收**：
-- [ ] 卡片网格展示所有智能体，每张卡片显示名称、模型、健康状态灯
-- [ ] 状态筛选 Tab：全部 / 运行中(🟢) / 未连通(🔴) / 已暂停(🟡)
-- [ ] 点击「连接测试」→ 显示测试结果和延迟
-- [ ] API Key 无效时测试结果：「API Key 无效或已过期」
-- [ ] 删除智能体 → 确认弹窗「删除后将无法恢复，确定？」
-
-**测试方案**：
 ```
-场景1: 连接测试
-  前置：已创建智能体，API Key 有效
-  操作：点击「连接测试」
-  期望：显示「连接成功，延迟 230ms」；健康灯变 🟢
-
-场景2: Key 无效
-  前置：智能体 API Key 已过期
-  操作：点击「连接测试」
-  期望：显示「连接失败：API Key 无效或已过期」
+frontend/src/modules/ai-assistant/
+├── index.vue                         578 行 · Agent 管理 + 任务看板编排者
+├── api.js                            577 行 · 数据层（SSE 流 + AgentScope 健康检查）
+├── evaluator-api.js                   75 行 · 评估器 API
+├── routes.js                          11 行 · 路由定义
+├── composables/
+│   ├── useSSE.js                     677 行 · SSE 流处理 + 降级 + HITL 确认
+│   ├── useConversation.js            138 行 · 会话 CRUD + 内联重命名
+│   ├── useMessageStore.js            112 行 · 消息数组状态 + 重建
+│   ├── useAgentTools.js              288 行 · Agent 工具/技能加载
+│   ├── useMarkdown.js                 72 行 · Markdown 渲染 + Mermaid
+│   ├── useToolCalls.js                11 行 · 工具调用状态
+│   └── useToolConfirm.js              11 行 · HITL 确认状态
+├── ChatView.vue                      546 行 · 对话窗口（SSE 流 + 消息渲染）
+├── ChatView.css                      602 行 · 对话窗口独立样式（⚠ 非 scoped）
+├── AgentDetail.vue                   515 行 · Agent 配置（5 步向导）
+├── EvaluatorTab.vue                  554 行 · 评估器 Tab（NL 用例生成 + 执行）
+├── KnowledgeBase.vue                 235 行 · 知识库管理（KPI + 文档表）
+└── components/
+    ├── AgentStickyNote.vue           427 行 · Agent 便签卡片（动画）
+    ├── MessageBubble.vue             391 行 · 消息气泡（文本/思考块/工具卡片/提示）
+    ├── AgentToolsPanel.vue           364 行 · Agent 工具/技能配置面板
+    ├── HintCard.vue                  347 行 · SOP 提示卡片（阶段 + 用例 + PRD 预览）
+    ├── TaskStickyNote.vue            297 行 · 任务便签卡片（动画）
+    ├── ConfirmDialog.vue             233 行 · HITL 确认弹窗
+    ├── ChatInput.vue                 200 行 · 消息输入栏（附件 + 发送）
+    ├── ToolCallCard.vue              158 行 · 工具调用卡片（折叠展开）
+    ├── ThinkingBlock.vue              89 行 · 思考块（可折叠推理过程）
+    ├── AgentModelConfig.vue           67 行 · Agent 模型配置
+    ├── AgentBasicInfo.vue             61 行 · Agent 基本信息
+    ├── AgentAdvancedConfig.vue        49 行 · Agent 高级配置
+    ├── AgentFormFooter.vue            48 行 · Agent 表单底部操作栏
+    ├── AgentMcpDialog.vue             43 行 · MCP 配置弹窗
+    ├── AgentPromptEditor.vue          41 行 · 系统提示词编辑器
+    └── WbLoader.vue                   28 行 · 加载动画
 ```
+
+**架构特征**：L3 评级。Composable 层设计良好（7 个模块，职责清晰），但存在以下违规：useSSE/useConversation 直接调用 ElMessage（BL 层引用 UI 层）、5 个 .vue 文件 ~25 处裸 client 调用 bypass api.js。ChatView.css 为独立文件（非 scoped）。无 constants.js。无 Pinia store（全部 composable + local refs）。共享组件采用率 6/14（43%）。
 
 ---
 
-#### F-01-02 智能体配置（5 步向导）
+## 3. 核心功能
 
-**需求**：5 步向导配置智能体参数。
+### 3.1 Agent 管理面板
 
-**验收**：
-- [ ] 步骤 1：名称、头像(上传/Emoji)、标签、描述
-- [ ] 步骤 2：选择提供商(DashScope/OpenAI/Anthropic/DeepSeek/Custom)、🔍检测模型、API Key、Temperature(0-2)、Max Tokens
-- [ ] 步骤 3：自定义 system_prompt、最大迭代次数
-- [ ] 步骤 4：记忆模式(InMemory/LongTerm)、MCP 服务器配置
-- [ ] 步骤 5：TTS、内存压缩阈值
-- [ ] API Key 加密存储，前端脱敏展示(sk-\*\*\*xxxx)，点击「查看」展示 5 秒后隐藏
-- [ ] 保存失败时提示具体原因（如「名称不能为空」）
+`index.vue` — 顶部 Agent 便签卡片滚动行（AgentStickyNote × N），底部任务看板（TaskStickyNote × N）。每个 Agent 卡片显示名称、模型、在线状态（绿色圆点）。点击进入 ChatView 对话。新建/编辑 Agent 跳转 AgentDetail.vue（5 步向导：基本信息 → 模型配置 → 系统提示词 → 工具/技能 → 高级配置）。健康检查每 30 分钟轮询一次。
 
-**测试方案**：
-```
-场景1: 完整配置
-  前置：无
-  操作：5 步依次填写 → 保存
-  期望：智能体出现在列表中；API Key 脱敏显示
+### 3.2 对话窗口 (ChatView)
 
-场景2: 查看 Key
-  前置：智能体已配置 API Key
-  操作：点击「查看 Key」
-  期望：完整 Key 展示 5 秒后自动隐藏
-```
+`ChatView.vue` + `ChatView.css` — 左侧会话列表（新建/重命名/删除），右侧消息流。每条消息通过 MessageBubble 渲染：文本（Markdown + Mermaid 图表）→ 思考块（ThinkingBlock，可折叠）→ 工具调用卡片（ToolCallCard，折叠/展开）→ SOP 提示卡片（HintCard，含阶段进度、用例预览、PRD 摘要）。
+
+**SSE 流生命期**：`useSSE.js` 管理完整流程 — 创建 AgentScope session → 保存用户消息 → 订阅 SSE 流 → 解析 7 种事件类型 → 增量更新消息数组。45 秒看门狗超时。AgentScope 不可用时自动降级到 Django 同步模式。HITL 工具确认通过 `REQUIRE_USER_CONFIRM` 事件 → ConfirmDialog 弹窗 → 用户 ALLOW/DENY → 结果回传 SSE 流。
+
+### 3.3 知识库 (KnowledgeBase)
+
+`KnowledgeBase.vue` — 4 张 KpiCard（文档数/数据库大小/上次索引/状态）+ AppTable 文档列表（名称/来源/块数/状态）。支持手动重索引。筛选栏手写 `.kb-filter-btn` 按钮组（未用 FilterTabs 共享组件）。
+
+### 3.4 评估器 (EvaluatorTab)
+
+`EvaluatorTab.vue` — NL 用例生成 + NL 测试执行。输入自然语言描述 → 选择目标设备 → 生成测试用例或直接执行。子 Tab 切换（用例生成/执行结果）。调用 `evaluator-api.js` 封装 API。
+
+### 3.5 任务看板
+
+`index.vue` 底部 — TaskStickyNote 卡片网格。每张卡片显示任务类型/状态/Agent/进度条。RUNNING 状态任务每 15 秒自动轮询刷新。
 
 ---
 
-### 2.2 对话交互
+## 4. 数据流
 
-#### F-02-01 SSE 流式对话
-
-**需求**：实时逐字显示 AI 回复，可看到思考过程和工具调用。
-
-**验收**：
-- [ ] AI 回复逐字显示（打字机效果）
-- [ ] 思考过程默认折叠，可展开查看 ReAct 推理
-- [ ] 工具调用显示：工具名 + 参数 + 执行结果
-- [ ] AgentScope 不可用时自动降级为阻塞模式，提示「AI 引擎繁忙，已切换至降级模式」
-- [ ] 网络中断时提示「消息发送失败，请检查网络连接」，保留输入内容
-
-**测试方案**：
 ```
-场景1: 普通对话
-  前置：智能体已连接
-  操作：输入「查看在线设备」→ 发送
-  期望：AI 逐字回复，显示在线设备列表
+Composables (7, no Pinia)
+  ├── useConversation    会话列表 CRUD → api.js
+  ├── useMessageStore    消息数组 + 占位符管理
+  ├── useSSE             SSE 流核心 → api.js (streamChat) + agentscopeClient
+  ├── useAgentTools      Agent 工具/技能/知识库加载 → api.js
+  ├── useMarkdown        Markdown + Mermaid 渲染
+  ├── useToolCalls       工具调用状态
+  └── useToolConfirm     HITL 确认状态
 
-场景2: 工具调用可见
-  前置：同上
-  操作：输入「给登录页创建冒烟用例」
-  期望：看到 search_elements 工具调用 → 结果 → save_test_case 工具调用 → 结果 → AI 回复
-```
+ChatView.vue
+  ├── useSSE.sendStreamMessage()  → SSE 连接 → 增量更新 useMessageStore.messages
+  ├── useConversation             → 会话列表 + 选择 + 重命名
+  └── useMarkdown                 → 渲染消息内容
 
----
-
-#### F-02-02 HITL 确认
-
-**需求**：高风险操作需要用户确认后才执行。
-
-**验收**：
-- [ ] 创建执行任务等操作 → 弹窗展示任务卡片详情
-- [ ] 弹窗内容：设备、用例列表、循环次数
-- [ ] 点击「确认」→ 执行操作
-- [ ] 点击「取消」→ 放弃操作，AI 回到对话
-
-**测试方案**：
-```
-场景1: 确认执行
-  前置：AI 对话中已准备好执行任务
-  操作：AI 提示需要确认 → 弹窗出现 → 点击「确认」
-  期望：任务执行；对话显示执行结果
+index.vue
+  ├── client.get('/ai/agents')        ← ⚠ 裸调用，应走 api.js
+  ├── client.get('/ai/agents/health') ← ⚠
+  └── client.get('/ai/tasks')         ← ⚠ 15s 轮询
 ```
 
 ---
 
-#### F-02-03 文件上传
-
-**需求**：上传文件自动解析内容注入对话上下文。
-
-**验收**：
-- [ ] 支持格式：txt/log/md/docx/xlsx/pdf 等
-- [ ] 文件最大 20MB，超出提示「文件超过 20MB 限制」
-- [ ] 上传后文件名+大小显示在输入区上方
-- [ ] 解析后的文本自动注入 AI 消息上下文
-
-**测试方案**：
-```
-场景1: 上传 PRD 文档
-  前置：准备一个 docx 文件
-  操作：点击 📎 → 选择文件 → 发送消息「基于这个 PRD 生成用例」
-  期望：AI 回复中包含对 PRD 内容的理解和生成的用例
-```
-
----
-
-### 2.3 自然语言任务
-
-#### F-03-01 NL 生成用例
-
-**需求**：AI 自动搜索元素 → 编排步骤 → 保存用例。
-
-**验收**：
-- [ ] 用户说「给 XX 页创建冒烟用例」→ AI 自动完成
-- [ ] AI 搜索不到元素时回复「未找到 XX 相关元素，请先在元素定位页确认」
-- [ ] 生成的用例出现在用例管理模块中
-
-**测试方案**：
-```
-场景1: 生成用例
-  操作：输入「给登录页创建冒烟用例」
-  期望：AI 回复含创建的用例 ID；切换到用例管理页可看到新用例
-```
-
----
-
-#### F-03-02 NL 执行测试
-
-**需求**：AI 自动锁定设备 → 执行 → 返回结果。
-
-**验收**：
-- [ ] 用户说「在设备 X 跑用例 Y 循环 3 轮」→ AI 自动完成
-- [ ] 设备已被锁定时 AI 回复「设备 X 已被 XX 锁定，是否加入排队？」
-- [ ] 执行完成后 AI 回复含通过/失败摘要
-
-**测试方案**：
-```
-场景1: 语音执行
-  操作：输入「在设备A跑 TC-login-001 循环 2 轮」
-  期望：AI 锁定设备 → 执行 → 返回「2 轮完成，通过率 100%」
-```
-
----
-
-#### F-03-03 NL 多类型用例生成
-
-**需求**：AI 支持 4 种用例类型的智能识别与生成，用户可通过对话指定类型或由 AI 主动询问。
-
-**验收**：
-- [ ] AI 从用户输入中识别用例类型关键词（UI/Android → ui_automation、Web/网页 → web_automation、功能/业务 → storage、API/接口 → api_testing）
-- [ ] 无法识别类型时，AI 主动询问：「您需要哪种类型的用例？Android UI / Web 自动化 / 业务功能 / API 接口」
-- [ ] Android UI 用例：AI 搜索元素 → 编排 17 种步骤 → 生成可执行用例，写入 `cm_test_definitions`
-- [ ] 业务功能用例：AI 生成步骤 + 预期结果，写入 `cm_storage_testcases`
-- [ ] Web 自动化用例：AI 生成 URL + 操作步骤 + 预期结果，写入 `cm_web_testcases`
-- [ ] API 接口用例：AI 生成请求头 + 请求体 + 预期响应，写入 `cm_api_testcases`
-- [ ] 生成的用例出现在用例管理模块对应类型的目录中
-
-**测试方案**：
-```
-场景1: 关键词识别
-  操作：输入「帮我写一个 API 接口用例测试用户登录接口」
-  期望：AI 识别为 api_testing，生成含请求头/请求体/预期响应的用例
-
-场景2: 主动询问
-  操作：输入「帮我写一个登录测试」
-  期望：AI 回复询问选择用例类型，用户选择后按对应模板生成
-
-场景3: 业务功能用例
-  操作：输入「写一个业务功能用例：用户注册流程」
-  期望：AI 生成含步骤描述 + 预期结果的用例，写入 cm_storage_testcases
-```
-
----
-
-#### F-03-04 用例生成任务卡片
-
-**需求**：AI 确认生成任务后创建任务卡片，对话内和任务看板同步显示，状态实时更新。
-
-**验收**：
-- [ ] AI 确认用例类型和数量后，调用 `create_case_gen_task` 创建任务卡片
-- [ ] 任务卡片状态：等待中 → 进行中 → 已完成
-- [ ] 卡片内容：任务标题、用例类型、智能体名称、进度（当前/总数）、已生成用例列表
-- [ ] 对话内卡片通过 HintBlock 渲染，可展开查看详情
-- [ ] 任务看板 (AI 助手首页) 同步显示任务便签，含进度条
-- [ ] 任务看板状态筛选 Tab 对用例生成任务正确归类
-- [ ] 点击便签「查看详情」跳转到对应用例目录
-
-**测试方案**：
-```
-场景1: 完整流程
-  操作：输入「帮我写 3 个业务功能用例：用户登录、注册、找回密码」
-  期望：
-    1. AI 确认 → 创建任务卡片（状态: 等待中）
-    2. 对话中出现卡片 + 任务看板出现便签
-    3. 开始生成 → 状态变为「进行中」，进度条更新
-    4. 全部生成完成 → 状态变为「已完成」，卡片显示 3 个用例 ID
-
-场景2: 任务看板同步
-  前置：AI 已创建 2 个用例生成任务
-  操作：切换到 AI 助手首页 → 任务看板
-  期望：看到 2 张便签，分别显示各自的状态和进度
-```
-
----
-
-## 3. 验收汇总
+## 5. 验收汇总
 
 | 功能编号 | 功能名称 | 验收项 | 通过 | 未验证 |
 |:--:|------|:--:|:--:|:--:|
-| F-01-01 | 智能体列表 | 5 | | 5 |
-| F-01-02 | 智能体配置 | 7 | | 7 |
-| F-02-01 | SSE 流式对话 | 5 | | 5 |
-| F-02-02 | HITL 确认 | 4 | | 4 |
-| F-02-03 | 文件上传 | 4 | | 4 |
-| F-03-01 | NL 生成用例 | 3 | | 3 |
-| F-03-02 | NL 执行测试 | 3 | | 3 |
-| F-03-03 | NL 多类型用例生成 | 7 | | 7 |
-| F-03-04 | 用例生成任务卡片 | 7 | | 7 |
+| F-01-01 | Agent 列表 + 便签卡片 | 5 | | 5 |
+| F-01-02 | Agent 配置（5 步向导） | 6 | | 6 |
+| F-02-01 | SSE 流式对话 | 6 | | 6 |
+| F-02-02 | HITL 工具确认 | 4 | | 4 |
+| F-02-03 | 文件上传 | 3 | | 3 |
+| F-03-01 | NL 用例生成 | 5 | | 5 |
+| F-03-02 | NL 测试执行 | 4 | | 4 |
+| F-03-03 | 多类型用例生成 (Storage/API/Web) | 4 | | 4 |
+| F-03-04 | 用例生成任务卡片 | 4 | | 4 |
+| F-04-01 | 知识库管理 | 4 | | 4 |
 | **合计** | | **45** | **0** | **45** |
 
 ---
@@ -257,20 +128,38 @@ AI 助手是自然语言交互中枢。用户通过对话驱动全流程测试�
 
 | 优先级 | 覆盖范围 | 验收时机 |
 |:--:|------|------|
-| P0 | F-01-01~F-02-01（智能体+对话） | 每次 MR 前 |
-| P1 | F-02-02~F-03-04（HITL+NL任务+文件+多类型+卡片） | 发版前 |
+| P0 | F-01-01~F-02-02（Agent 管理 + SSE 对话 + HITL） | 每次 MR 前 |
+| P1 | F-02-03~F-03-04（文件上传 + NL 生成 + 任务卡片） | 发版前 |
+| P2 | F-04-01（知识库）、降级模式、断线重连 | 大版本前 |
 
 ## 附录B：实施状态
 
 | 功能 | 状态 |
 |------|:--:|
-| 智能体 CRUD + 5 步向导 | ✅ |
-| SSE 流式对话 + 降级 | ✅ |
-| 24 Tool 集成 | ✅ |
-| HITL 确认 | ✅ |
-| 文件上传解析 | ✅ |
-| NL 生成用例/执行 | ✅ |
-| NL 多类型用例生成 | 📋 |
-| 用例生成任务卡片 | 📋 |
-| Agent Team | ⚠️ P2 |
-| 定时任务(APScheduler) | 📋 |
+| Agent CRUD + 模型切换 + 便签卡片 | ✅ |
+| SSE 流式对话 + Markdown 渲染 | ✅ |
+| HITL 工具确认弹窗 | ✅ |
+| 文件上传 | ✅ |
+| NL 用例生成 + 执行（评估器） | ✅ |
+| 知识库管理（KPI + 文档表 + 重索引） | ✅ |
+| 降级模式（AgentScope 不可用→Django 同步） | ✅ |
+| 任务看板（15s 轮询） | ✅ |
+| F-03-03 多类型用例生成 (Storage/API/Web) | 📋 |
+| F-03-04 用例生成任务卡片 | 📋 |
+| 裸 client 收敛到 api.js (~25 处) | 📋 |
+| useSSE.js 拆分 (677→3 子模块) | 📋 |
+| ChatView.css 602 行迁移为 scoped | 📋 |
+| constants.js 补全 | 📋 |
+
+## 附录C：已知问题与改进项
+
+| 编号 | 问题 | 严重度 | 记录日期 |
+|:--:|------|:--:|:--:|
+| IMP-01 | useSSE.js 677 行超标，应拆出 streamClient/fallback/confirm 三个子模块 | 🔴 | 2026-07-27 |
+| IMP-02 | 5 个 .vue 文件 ~25 处裸 client/fetch 调用，bypass api.js | 🔴 | 2026-07-27 |
+| IMP-03 | ChatView.css 602 行独立文件 + 75 处硬编码 hex，应迁移为 scoped | 🟠 | 2026-07-27 |
+| IMP-04 | useSSE + useConversation 直接调用 ElMessage/ElMessageBox（BL 层引用 UI 层） | 🟠 | 2026-07-27 |
+| IMP-05 | 346 处硬编码 hex 颜色（271 vue + 75 css），应迁移到 tokens.css 引用 | 🟡 | 2026-07-27 |
+| IMP-06 | EvaluatorTab 554 行 + 10 处 console.error 无 ErrorState | 🟡 | 2026-07-27 |
+| IMP-07 | KnowledgeBase 手写 .kb-filter-btn 而非用 FilterTabs 共享组件 | 🟢 | 2026-07-27 |
+| IMP-08 | index.vue 行 509 样式 bug: `background-color: #fff);` 尾部多余括号 | 🟢 | 2026-07-27 |

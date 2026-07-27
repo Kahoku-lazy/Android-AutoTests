@@ -3,7 +3,6 @@
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { ElMessage } from 'element-plus'
 import type { WorkflowSaveData } from '@/modules/workflow/types/workflow'
 import {
   listWorkflowDirectories,
@@ -171,7 +170,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
     } catch (e: any) {
       const msg = e?.response?.data?.error || e?.message || '加载失败'
       status.value = `加载目录失败: ${msg}`
-      ElMessage.error(status.value)
+      throw new Error(status.value)
       throw e
     } finally {
       loading.value = false
@@ -194,7 +193,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       return node
     } catch (e: any) {
       const msg = e?.response?.data?.error || e?.message || '创建目录失败'
-      ElMessage.error(msg)
+      throw new Error(msg)
       throw e
     }
   }
@@ -226,7 +225,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       return node
     } catch (e: any) {
       const msg = e?.response?.data?.error || e?.message || '创建页面流失败'
-      ElMessage.error(msg)
+      throw new Error(msg)
       throw e
     }
   }
@@ -267,7 +266,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       return node
     } catch (e: any) {
       const msg = e?.response?.data?.error || e?.message || '创建用例失败'
-      ElMessage.error(msg)
+      throw new Error(msg)
       throw e
     }
   }
@@ -297,7 +296,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       if (!n.updatedAt) n.updatedAt = nowIso()
     } catch (e: any) {
       const msg = e?.response?.data?.error || e?.message || '重命名失败'
-      ElMessage.error(msg)
+      throw new Error(msg)
       throw e
     }
   }
@@ -323,7 +322,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       status.value = `已删除「${target.name}」`
     } catch (e: any) {
       const msg = e?.response?.data?.error || e?.message || '删除失败'
-      ElMessage.error(msg)
+      throw new Error(msg)
       throw e
     }
   }
@@ -334,7 +333,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
     if (!n) return
     if (n.parentId === targetFolderId) return
     if (n.type === 'folder' && targetFolderId === id) {
-      ElMessage.error('不能将目录移入自身')
+      throw new Error('不能将目录移入自身')
       return
     }
     // 禁止移入子孙目录
@@ -342,7 +341,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       let p: string | null = targetFolderId
       while (p) {
         if (p === id) {
-          ElMessage.error('不能将目录移入其子目录')
+          throw new Error('不能将目录移入其子目录')
           return
         }
         p = findNode(p)?.parentId ?? null
@@ -367,7 +366,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       status.value = `已移动「${n.name}」`
     } catch (e: any) {
       const msg = e?.response?.data?.error || e?.message || '移动失败'
-      ElMessage.error(msg)
+      throw new Error(msg)
       throw e
     }
   }
@@ -405,12 +404,12 @@ export const useLibraryStore = defineStore('wf-library', () => {
             `服务器上已有 ${remoteNodes} 个节点，当前画布为空。确定要用空图覆盖吗？`
           )
           if (!ok) {
-            ElMessage.info('已取消保存，未覆盖服务器数据')
+            // 已取消保存，未覆盖服务器数据（调用方处理提示）
             return
           }
         } else {
           // 默认保护：不覆盖
-          ElMessage.warning('画布为空，已跳过保存以免覆盖服务器上的流程图')
+          // 画布为空，已跳过保存（调用方处理提示）
           return
         }
       }
@@ -429,7 +428,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       n.updatedAt = res.data.document?.updated_at || nowIso()
     } catch (e: any) {
       const msg = e?.response?.data?.error || e?.message || '保存页面流失败'
-      ElMessage.error(msg)
+      throw new Error(msg)
       throw e
     }
   }
@@ -455,7 +454,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       if (n && cfg?.linkedCaseId) n.caseId = cfg.linkedCaseId
       return cfg
     } catch (e: any) {
-      ElMessage.error(e?.response?.data?.error || e?.message || '加载文档失败')
+      throw new Error(e?.response?.data?.error || e?.message || '加载文档失败')
       return null
     }
   }
@@ -496,7 +495,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       n.updatedAt = res.data.document?.updated_at || nowIso()
     } catch (e: any) {
       const msg = e?.response?.data?.error || e?.message || '保存用例失败'
-      ElMessage.error(msg)
+      throw new Error(msg)
       throw e
     }
   }
@@ -537,7 +536,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       if (!res.data?.ok) throw new Error(res.data?.error || '导出失败')
       return res.data.envelope
     } catch (e: any) {
-      ElMessage.error(e?.response?.data?.error || e?.message || '导出失败')
+      throw new Error(e?.response?.data?.error || e?.message || '导出失败')
       return null
     }
   }
@@ -558,15 +557,15 @@ export const useLibraryStore = defineStore('wf-library', () => {
       if (doc?.config) configCache.value[doc.doc_id] = doc.config
       const node = findNode(doc.doc_id) || mapDoc(doc)
       status.value = `已导入「${doc.title}」（${doc.doc_id}）`
-      ElMessage.success(status.value)
+      // success — 调用方处理 toast
       return node
     } catch (e: any) {
       const statusCode = e?.response?.status
       const msg = e?.response?.data?.error || e?.message || '导入失败'
       if (statusCode === 409) {
-        ElMessage.error(`${msg}（可勾选覆盖后重试）`)
+        throw new Error(`${msg}（可勾选覆盖后重试）`)
       } else {
-        ElMessage.error(msg)
+        throw new Error(msg)
       }
       return null
     }

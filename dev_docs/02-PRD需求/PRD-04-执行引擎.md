@@ -1,7 +1,7 @@
 # PRD-04 — 执行引擎 (Test Runner)
 
 > 关联需求大纲：[`需求大纲.md`](./需求大纲.md) §5.4
-> 版本：v7.0 · 日期：2026-07-25
+> 版本：v7.1 · 日期：2026-07-27
 
 ---
 
@@ -15,21 +15,21 @@
 
 ```
 frontend/src/modules/test-runner/
-├── index.vue                         810 行 · 页面编排者
-├── api.js                             30 行 · 数据层（5 端点）
+├── index.vue                         808 行 · 页面编排者
+├── api.js                             56 行 · 数据层（11 端点 + 跨模块封装）
 ├── routes.js                          14 行 · 路由定义
 ├── constants.js                      143 行 · L4 达标
 ├── composables/
 │   ├── taskUtils.js                  165 行 · 任务工具函数（ID 生成/状态判定/进度计算）
 │   ├── useTaskWebSocket.js           319 行 · WS 连接 + 消息处理 + 重连
-│   ├── useDebouncedSave.js            36 行 · 任务保存防抖
-│   └── useQueuePoller.js              63 行 · 排队轮询
+│   ├── useDebouncedSave.js            43 行 · 任务保存防抖 + cleanup
+│   └── useQueuePoller.js              63 行 · 排队轮询（依赖注入 getActiveRuns）
 └── components/
     ├── NewTaskDialog.vue              143 行 · 新建任务弹窗（表单 + 设备/用例选择）
-    └── TaskDetail.vue                 781 行 · 任务详情页（日志/用例/步骤/错误 4 Tab）
+    └── TaskDetail.vue                 769 行 · 任务详情页（useExpandCollapse 接入）
 ```
 
-**架构特征**：L4 全约束。四层分离，零裸调 API，shared FilterTabs/KpiCard/useECharts 接入完成。
+**架构特征**：L4 全约束。四层分离，零裸调 API，跨模块 import 收敛到 api.js。shared FilterTabs/KpiCard/useExpandCollapse 接入完成。
 
 ---
 
@@ -155,16 +155,20 @@ index.vue
 | FilterTabs/KpiCard 接入 shared | ✅ v7.0 |
 | 模块色桃粉统一 + 表格/卡片 hover 效果 | ✅ v7.0 |
 | 操作按钮 2×2 网格布局 | ✅ v7.0 |
+| 分层违规清零（裸 client 收敛到 api.js） | ✅ v7.1 |
+| 跨模块 import 收敛（case-manager/api → api.js） | ✅ v7.1 |
+| useExpandCollapse 接入（消除手写 Set-toggle） | ✅ v7.1 |
+| useDebouncedSave.cleanup() 暴露（修复 _saveTimer 引用错） | ✅ v7.1 |
 | 定时执行 (scheduled) | 📋 |
 | 队列持久化（重启恢复） | ⚠️ 内存队列 |
 | useTaskWebSocket 拆分 (319→150) | 📋 |
-| TaskDetail 拆分 (781→350) | 📋 |
+| TaskDetail 拆分 (769→350) | 📋 |
 
 ## 附录C：已知问题与改进项
 
 | 编号 | 问题 | 严重度 | 记录日期 |
 |:--:|------|:--:|:--:|
 | IMP-01 | useTaskWebSocket.js 319 行超标，应拆出 wsMessageHandlers.js | 🟠 | 2026-07-25 |
-| IMP-02 | TaskDetail.vue 781 行超标，4 个 Tab 内容可拆子组件 | 🟠 | 2026-07-25 |
+| IMP-02 | TaskDetail.vue 769 行超标，4 个 Tab 内容可拆子组件 | 🟠 | 2026-07-25 |
 | IMP-03 | 队列基于内存，服务重启后排队任务丢失 | 🟡 | 2026-07-16 |
-| IMP-04 | 跨模块 import case-manager/api（合规但耦合偏高） | 🟢 | 2026-07-25 |
+| IMP-04 | 跨模块 import case-manager/api — **已修复 v7.1**：收敛到 test-runner/api.js | ✅ | 2026-07-27 |

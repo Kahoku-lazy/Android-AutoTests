@@ -1,12 +1,13 @@
 <script setup>
 
 import AppTabs from "@/shared/components/AppTabs.vue";
+import FilterTabs from "@/shared/components/FilterTabs.vue";
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { animate } from 'animejs'
 import { bus } from '@/shared/event-bus.js'
-import client from '@/shared/api-client.js'
 import { useElementStore } from './store.js'
+import { apiInput } from './api.js'
 import DeviceSelector from './components/DeviceSelector.vue'
 import ScreenshotView from './components/ScreenshotView.vue'
 import XPathCandidatePanel from './components/XPathCandidatePanel.vue'
@@ -59,15 +60,15 @@ let devicePollTimer = null
 const wsDeviceSerial = ref('')
 const filterMode = ref('all')
 
-const FILTER_OPTIONS = [
-  { value: 'all', label: '全部' },
-  { value: 'clickable', label: '可点击' },
-  { value: 'text', label: '有文本' },
-  { value: 'rid', label: '有 Resource ID' },
-  { value: 'clickable_text', label: '可点击+文本' },
-  { value: 'clickable_no_text', label: '可点击无文本' },
-  { value: 'input', label: '输入框' },
-  { value: 'scrollable', label: '可滚动' },
+const filterOptions = [
+  { key: 'all', label: '全部' },
+  { key: 'clickable', label: '可点击' },
+  { key: 'text', label: '有文本' },
+  { key: 'rid', label: '有 Resource ID' },
+  { key: 'clickable_text', label: '可点击+文本' },
+  { key: 'clickable_no_text', label: '可点击无文本' },
+  { key: 'input', label: '输入框' },
+  { key: 'scrollable', label: '可滚动' },
 ]
 
 const searchText = ref('')
@@ -157,7 +158,7 @@ async function refreshScreen() {
 async function doAction(action, x, y, text) {
   let ok
   if (action === 'input' && text) {
-    ok = await client.post('/elements/action', { action: 'input', text, x, y, clear_first: true }).then(r => r.data.ok).catch(() => false)
+    ok = await apiInput(text, x, y, true).then(r => r.data.ok).catch(() => false)
   } else {
     ok = await store.doAction(action, x, y)
   }
@@ -232,7 +233,7 @@ watch(activeTab, async (tab) => {
 
             <!-- Filter bar: custom Paper-style tabs -->
             <div v-if="store.pageId" class="filter-bar">
-              <button v-for="f in FILTER_OPTIONS" :key="f.value" class="filter-tab" :class="{ active: filterMode === f.value }" @click="filterMode = f.value">{{ f.label }}</button>
+              <FilterTabs :tabs="filterOptions" v-model="filterMode" />
               <el-input v-model="searchText" size="small" placeholder="搜索 text / resource-id / class..." :allow-clear="true" class="filter-search" />
             </div>
 

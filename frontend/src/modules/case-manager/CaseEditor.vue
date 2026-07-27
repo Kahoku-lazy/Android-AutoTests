@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted, computed } from "vue";
 import { useRoute, useRouter, onBeforeRouteLeave } from "vue-router";
 import { animate } from "animejs";
 import { ElMessage, ElMessageBox, ElCascader } from "element-plus";
-import client from "@/shared/api-client.js";
+import { listDevices, connectDebugDevice as apiConnectDebugDevice, disconnectDebugDevice as apiDisconnectDebugDevice, getDefinition, saveDefinition } from "./api/uiAutomation.js";
 import StepEditor from "./components/StepEditor.vue";
 import WatcherPanel from "./components/WatcherPanel.vue";
 import PageHeader from "@/shared/components/PageHeader.vue";
@@ -122,7 +122,7 @@ const availableDevices = computed(() =>
 
 async function loadDevices() {
   try {
-    const { data } = await client.get("/devices");
+    const { data } = await listDevices();
     if (data.ok) {
       devices.value = data.devices || [];
       // No auto-select — user must explicitly connect
@@ -134,9 +134,7 @@ async function connectDebugDevice() {
   if (!debugDevice.value) return
   debugConnecting.value = true
   try {
-    const { data } = await client.post(`/devices/${debugDevice.value}`, {
-      activate: true, mode: 'observe',
-    })
+    const { data } = await apiConnectDebugDevice(debugDevice.value)
     if (data.ok) {
       debugConnected.value = true
       ElMessage.success(`已连接调试设备 ${debugDevice.value}`)
@@ -154,7 +152,7 @@ async function connectDebugDevice() {
 function disconnectDebugDevice() {
   const serial = debugDevice.value
   if (serial) {
-    client.post(`/devices/${serial}/disconnect-observe`).catch(() => {})
+    apiDisconnectDebugDevice(serial).catch(() => {})
   }
   debugConnected.value = false
   debugDevice.value = ''
@@ -168,7 +166,7 @@ onMounted(async () => {
   if (!isNew.value) {
     loading.value = true;
     try {
-      const { data } = await client.get(`/cases/definitions/${caseId.value}`);
+      const { data } = await getDefinition(caseId.value);
       if (data.ok) {
         const d = data.definition;
         form.value = {
@@ -274,7 +272,7 @@ async function save() {
   }
   saving.value = true;
   try {
-    const { data } = await client.post("/cases/definitions", form.value);
+    const { data } = await saveDefinition(form.value);
     if (data.ok) {
       ElMessage.success("保存成功");
       // Update id and updated_at from server response (for next save's optimistic lock)

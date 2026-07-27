@@ -2,7 +2,8 @@
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { animate } from 'animejs'
-import client, { formatApiError } from '@/shared/api-client.js'
+import { formatApiError } from '@/shared/api-client.js'
+import { apiGetScreenshot, apiGetPages, apiCreatePage, apiBatchAddElementsToPage } from '../api.js'
 import { useElementStore } from '../store.js'
 import { bus } from '@/shared/event-bus.js'
 
@@ -27,7 +28,7 @@ function loadImageDims(url) {
 /** Fetch one-frame screenshot and store for thumbnails */
 async function captureThumbnailScreenshot() {
   try {
-    const { data } = await client.get('/elements/screenshot')
+    const { data } = await apiGetScreenshot()
     if (data.ok && data.image) {
       // Use data URL directly — browser decodes natively
       const url = `data:image/${data.format || 'jpeg'};base64,${data.image}`
@@ -199,7 +200,7 @@ async function openBatchSave() {
   }
   pagesLoading.value = true
   try {
-    const { data } = await client.get('/elements/pages')
+    const { data } = await apiGetPages()
     if (data.ok) pages.value = data.pages || []
   } catch (e) {
     ElMessage.error({ message: formatApiError(e, '加载页面列表失败'), duration: 4000, showClose: true })
@@ -212,7 +213,7 @@ async function openBatchSave() {
     try {
       const pkg = store.lastDump?.package || store.currentDevice?.package || ''
       const activity = store.lastDump?.activity || ''
-      const { data } = await client.post('/elements/pages/create', {
+      const { data } = await apiCreatePage({
         label: `Page_${new Date().toISOString().slice(0, 10)}`,
         package: pkg,
         activity,
@@ -282,10 +283,7 @@ async function doBatchSave() {
   }
 
   try {
-    const { data } = await client.post(`/elements/pages/${batchSaveForm.value.pageId}/elements/batch`, {
-      elements: items,
-      strategy,
-    })
+    const { data } = await apiBatchAddElementsToPage(batchSaveForm.value.pageId, items, strategy)
     if (data.ok) {
       let msg = `已保存 ${data.saved} 个元素`
       if (data.updated) msg += `（${data.updated} 个已更新）`

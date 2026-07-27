@@ -4,7 +4,7 @@
  */
 import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { listDefinitions } from '@/modules/case-manager/api.js'
+import { listDefinitions } from '@/modules/workflow/api.js'
 import { fromCaseManagerSteps } from '@/modules/workflow/composables/caseBridge'
 import { useLibraryStore } from '@/modules/workflow/stores/libraryStore'
 

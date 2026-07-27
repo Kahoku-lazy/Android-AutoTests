@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import client from "@/shared/api-client.js";
+import { getAgentDetail, detectModels as apiDetectModels, uploadAvatar, saveAgent } from "./api.js";
 import { ElMessage, ElMessageBox } from "element-plus";
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
 import { IconArrowLeft, IconSave } from "@/shared/icons/index.js";
@@ -131,7 +131,7 @@ onMounted(async () => {
   if (!isNew.value) {
     loading.value = true;
     try {
-      const { data } = await client.get(`/ai/agents/${agentId.value}`);
+      const { data } = await getAgentDetail(agentId.value);
       if (data.ok) {
         // Restore selected platform tools from agent detail
         const allTools = data.agent.tools || [];
@@ -270,7 +270,7 @@ async function detectModels() {
   }
   detectingModels.value = true;
   try {
-    const { data } = await client.post("/ai/models/detect", {
+    const { data } = await apiDetectModels({
       model_provider: form.value.model_provider,
       api_key: form.value.api_key,
       base_url: form.value.base_url,
@@ -331,7 +331,7 @@ async function handleAvatarUpload(e) {
   const reader = new FileReader();
   reader.onload = async () => {
     try {
-      const { data } = await client.post("/ai/upload-avatar", {
+      const { data } = await uploadAvatar( {
         image: reader.result,
       });
       if (data.ok) form.value.avatar = data.url;
@@ -376,7 +376,7 @@ async function save() {
     ? "/ai/agents/create"
     : `/ai/agents/${agentId.value}/update`;
   try {
-    const { data } = await client.post(url, payload);
+    const { data } = await saveAgent(url, payload);
     if (data.ok) {
       ElMessage.success("保存成功");
       router.push("/ai-assistant");

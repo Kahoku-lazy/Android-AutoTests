@@ -2,8 +2,9 @@
 import { ref, watch, nextTick, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { animate } from 'animejs'
-import client, { formatApiError } from '@/shared/api-client.js'
+import { formatApiError } from '@/shared/api-client.js'
 import { useElementStore } from '../store.js'
+import { apiGetPages, apiCreatePage, apiAddElementToPage } from '../api.js'
 import { bus } from '@/shared/event-bus.js'
 
 const props = defineProps({ element: { type: Object, default: null } })
@@ -91,7 +92,7 @@ async function openSaveDialog() {
   saveVisible.value = true
   pagesLoading.value = true
   try {
-    const { data } = await client.get('/elements/pages')
+    const { data } = await apiGetPages()
     if (data.ok) pages.value = data.pages || []
   } catch (e) {
     ElMessage.error({ message: formatApiError(e, '加载页面列表失败'), duration: 4000, showClose: true })
@@ -103,7 +104,7 @@ async function openSaveDialog() {
     const pkg = store.lastDump?.package || store.currentDevice?.package || ''
     const activity = store.lastDump?.activity || ''
     try {
-      const { data } = await client.post('/elements/pages/create', {
+      const { data } = await apiCreatePage({
         label: `Page_${new Date().toISOString().slice(0, 10)}`,
         package: pkg,
         activity,
@@ -132,7 +133,7 @@ async function doSave() {
   const el = props.element
   saving.value = true
   try {
-    const { data } = await client.post(`/elements/pages/${saveForm.value.pageId}/elements`, {
+    const { data } = await apiAddElementToPage(saveForm.value.pageId, {
       alias: saveForm.value.alias.trim(),
       xpath: candidate.xpath,
       xpath_candidates: saveCandidates.value,

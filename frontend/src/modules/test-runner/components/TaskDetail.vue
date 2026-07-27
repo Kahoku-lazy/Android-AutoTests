@@ -2,10 +2,10 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import client from '@/shared/api-client.js'
 // Button → el-button (Element Plus auto-import)
 import ConfirmButton from '@/shared/components/patterns/ConfirmButton.vue'
 import PageHeader from '@/shared/components/PageHeader.vue'
+import { useExpandCollapse } from '@/shared/composables/useExpandCollapse.js'
 import {
   isTaskQueued,
   taskStatusInfo as getTaskStatusInfo,
@@ -20,9 +20,10 @@ import {
   closeTaskWebSocket,
   applyWsMessage,
 } from '../composables/useTaskWebSocket.js'
-import { getActiveRuns, listDefinitions } from '../api.js'
-import { listApiDefinitions } from '@/modules/case-manager/api/apiTesting.js'
-import { listWebDefinitions } from '@/modules/case-manager/api/webAutomation.js'
+import {
+  getActiveRuns, listDefinitions, listTasks, saveTask as apiSaveTask, deleteTask, cancelQueue, stopRun,
+  listApiDefinitions, listWebDefinitions,
+} from '../api.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -33,23 +34,12 @@ const task = ref(null)
 const casesDefs = ref([])   // full case definitions (with steps)
 
 // ── Expand / collapse ──
-const expandedCases = ref(new Set())
-const expandedBugs = ref(new Set())
-
-function toggleCase(id) {
-  const s = new Set(expandedCases.value)
-  if (s.has(id)) { s.delete(id) } else { s.add(id) }
-  expandedCases.value = s
-}
-function toggleBug(key) {
-  const s = new Set(expandedBugs.value)
-  if (s.has(key)) { s.delete(key) } else { s.add(key) }
-  expandedBugs.value = s
-}
+const { expandedIds: expandedCases, toggle: toggleCase, expand: expandCase } = useExpandCollapse()
+const { expandedIds: expandedBugs, toggle: toggleBug } = useExpandCollapse()
 
 async function loadTask() {
   try {
-    const { data } = await client.get('/runner/tasks')
+    const { data } = await listTasks()
     if (data.ok && data.tasks) {
       const tid = String(taskId.value)
       task.value = data.tasks.find(t => String(t.id) === tid) || null
@@ -61,7 +51,7 @@ async function loadTask() {
           const running = task.value.caseItems?.find(
             c => c.title === task.value.currentCaseTitle
           )
-          if (running) expandedCases.value = new Set([running.id])
+          if (running) expandCase(running.id)
         }
         // Ensure caseItems have step definitions
         await ensureStepDefs()
@@ -146,7 +136,7 @@ async function ensureStepDefs() {
 
 function saveTask() {
   if (!task.value) return
-  client.post('/runner/tasks/save', buildTaskSavePayload(task.value)).catch((e) => {
+  apiSaveTask(buildTaskSavePayload(task.value)).catch((e) => {
     // 高频后台自动保存:失败仅记录到控制台,避免每条日志都弹 toast 打扰用户
     console.error('[saveTask] 保存失败:', e)
   })
@@ -335,7 +325,7 @@ function bindDetailTaskWS(runId) {
       addLog: (text, level) => taskAddLog(text, level),
       save: saveTask,
       onCaseStarted: (ci) => {
-        if (ci) expandedCases.value = new Set([...expandedCases.value, ci.id])
+        if (ci) expandCase(ci.id)
       },
       onRunFinished: () => closeTaskWebSocket(taskId),
     })
@@ -409,7 +399,7 @@ async function stopTask() {
   if (!task.value.runId) {
     try { await ElMessageBox.confirm('确定移除该排队任务？', '移除排队任务', { confirmButtonText: '移除', cancelButtonText: '取消', type: 'warning' }) } catch (_) { return }
     try {
-      await client.post('/runner/queue/cancel', { client_task_id: task.value.id, device_serial: task.value.deviceSerial })
+      await cancelQueue(task.value.id, task.value.deviceSerial)
     } catch (e) {
       // 404 表示任务已开始执行,属正常;其余为真实失败,报错并留在当前页
       if (e?.response?.status !== 404) {
@@ -422,7 +412,7 @@ async function stopTask() {
   }
   try { await ElMessageBox.confirm('确定停止该任务？', '停止任务', { confirmButtonText: '停止', cancelButtonText: '取消', type: 'warning' }) } catch (_) { return }
   try {
-    await client.post(`/runner/run/${task.value.runId}/stop`)
+    await stopRun(task.value.runId)
     ElMessage.success('停止请求已发送')
   } catch (e) {
     ElMessage.error('停止请求失败，请检查网络连接')
@@ -465,12 +455,10 @@ async function restartTask() {
     outcome: '',
   }
   try {
-    await client.post('/runner/tasks/save', buildTaskSavePayload(newTask))
+    await apiSaveTask(buildTaskSavePayload(newTask))
   } catch (e) {
     ElMessage.error('创建新任务失败')
     return
-    console.error(e);
-    // Keep app responsive on failure
   }
   ElMessage.success(`已创建新任务「${newTask.name}」第${round}轮`)
   router.push(`/runner/task/${tid}`)
@@ -512,11 +500,11 @@ async function removeTask() {
   if (!task.value) return
   try { await ElMessageBox.confirm(`删除任务「${task.value.name || task.value.id}」？`, '确认删除', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }) } catch (_) { return }
   if (task.value.running) {
-    try { await client.post(`/runner/run/${task.value.runId}/stop`) } catch (e) { console.error('[removeTask] stop failed:', e) }
+    try { await stopRun(task.value.runId) } catch (e) { console.error('[removeTask] stop failed:', e) }
     const wm = getWsMap(); if (wm[task.value.id]) closeTaskWebSocket(task.value.id)
   }
   try {
-    await client.delete(`/runner/tasks/${taskId.value}`)
+    await deleteTask(taskId.value)
   } catch (e) {
     console.error('[removeTask] delete failed:', e)
     ElMessage.error('删除失败，请检查网络后重试')

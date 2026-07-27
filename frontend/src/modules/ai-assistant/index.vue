@@ -6,7 +6,7 @@ import { useRouter } from 'vue-router'
 import { selectPop, iconBounce } from '@/shared/animations.js'
 import { animate } from 'animejs'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import client from '@/shared/api-client.js'
+import { listAgents, checkAgentsHealth, testAgent, deleteAgent as apiDeleteAgent, updateAgentModel, listTasks } from './api.js'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import WbLoader from './components/WbLoader.vue'
 import AgentStickyNote from './components/AgentStickyNote.vue'
@@ -100,7 +100,7 @@ onUnmounted(() => {
 async function loadAgents() {
   loading.value = true
   try {
-    const { data } = await client.get('/ai/agents')
+    const data = await listAgents()
     if (data.ok) {
       agents.value = data.agents
       syncPendingModels()
@@ -114,7 +114,7 @@ async function loadAgents() {
 async function loadTasks({ silent = false } = {}) {
   if (!silent) tasksLoading.value = true
   try {
-    const { data } = await client.get('/ai/tasks', { params: { status: 'all' } })
+    const { data } = await listTasks({ status: 'all' })
     if (data.ok) tasks.value = data.tasks || []
   } catch {
     if (!silent) ElMessage.error('加载任务看板失败')
@@ -163,7 +163,7 @@ function animateStatusBubbles() {
 // ── Health ──
 async function checkAllHealth() {
   try {
-    const { data } = await client.get('/ai/agents/health')
+    const { data } = await checkAgentsHealth()
     if (data.ok && data.agents) {
       for (const h of data.agents) {
         healthResults.value[h.id] = { is_connected: h.is_connected, last_checked: h.last_checked }
@@ -176,7 +176,7 @@ async function checkAllHealth() {
 async function testConnection(agent) {
   testingId.value = agent.id
   try {
-    const { data } = await client.post(`/ai/agents/${agent.id}/test`)
+    const { data } = await testAgent(agent.id)
     if (data.ok) {
       healthResults.value[agent.id] = { is_connected: data.connected, last_checked: new Date().toISOString() }
       if (data.connected) {
@@ -202,7 +202,7 @@ async function deleteAgent(agent) {
     )
   } catch { return }  // 用户取消
   try {
-    const { data } = await client.post(`/ai/agents/${agent.id}/delete`)
+    const { data } = await apiDeleteAgent(agent.id)
     if (data.ok) {
       agents.value = agents.value.filter(a => a.id !== agent.id)
       ElMessage.success(`已删除「${agent.name}」`)
@@ -259,7 +259,7 @@ async function confirmModel(agent) {
   if (!newModel || newModel === agent.model_name) return
   confirmingId.value = agent.id
   try {
-    const { data } = await client.post(`/ai/agents/${agent.id}/update`, { model_name: newModel })
+    const { data } = await updateAgentModel(agent.id, newModel)
     if (!data.ok) {
       pendingModels.value[agent.id] = agent.model_name
       ElMessage.error('模型切换失败')

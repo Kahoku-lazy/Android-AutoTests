@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, onDeactivated, onActivated } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
-import client, { getToken } from "@/shared/api-client.js";
+import { getToken } from "@/shared/api-client.js";
 import ConfirmButton from "@/shared/components/patterns/ConfirmButton.vue";
 import EmptyState from "@/shared/components/patterns/EmptyState.vue";
 import AppTable from "@/shared/components/AppTable.vue";
@@ -34,9 +34,7 @@ import {
   closeAllTaskWebSockets,
   applyWsMessage,
 } from "./composables/useTaskWebSocket.js";
-import { startRun, listDefinitions, listDevices } from "./api.js";
-import { listApiDefinitions } from "@/modules/case-manager/api/apiTesting.js";
-import { listWebDefinitions } from "@/modules/case-manager/api/webAutomation.js";
+import { startRun, stopRun, getActiveRuns, listDefinitions, listDevices, listTasks, saveTask, deleteTask, cancelQueue, listApiDefinitions, listWebDefinitions } from "./api.js";
 
 const router = useRouter();
 
@@ -69,18 +67,18 @@ function getCurrentUsername() {
 // ── Server persistence ──
 async function saveTaskToServer(task) {
   try {
-    await client.post("/runner/tasks/save", buildTaskSavePayload(task));
+    await saveTask(buildTaskSavePayload(task));
   } catch (e) {
     console.error("[saveTaskToServer] failed:", e);
     ElMessage.error("保存任务失败，请检查网络");
   }
 }
 
-const { scheduleSave, flushSave } = useDebouncedSave(tasks, saveTaskToServer);
+const { scheduleSave, flushSave, cleanup: cleanupDebouncedSave } = useDebouncedSave(tasks, saveTaskToServer);
 
 async function loadTasks() {
   try {
-    const { data } = await client.get("/runner/tasks");
+    const { data } = await listTasks();
     if (data.ok && data.tasks) {
       tasks.value = data.tasks.map((d) => ({
         ...d,
@@ -173,8 +171,8 @@ function formatTime(isoStr) {
     const pad = (n) => String(n).padStart(2, "0");
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   } catch (e) {
-    return isoStr;
     console.error(e);
+    return isoStr;
   }
 }
 
@@ -399,9 +397,7 @@ async function doStartTask(task) {
 
 async function doCancelQueue(task) {
   try {
-    await client.post("/runner/queue/cancel", {
-      client_task_id: task.id, device_serial: task.deviceSerial,
-    });
+    await cancelQueue(task.id, task.deviceSerial);
   } catch (e) {
     if (e?.response?.status !== 404) {
       ElMessage.error("取消排队失败，请检查网络后重试"); return;
@@ -415,7 +411,7 @@ async function doCancelQueue(task) {
 
 async function doStopTask(task) {
   try {
-    await client.post(`/runner/run/${task.runId}/stop`);
+    await stopRun(task.runId);
     ElMessage.success("停止请求已发送");
   } catch (e) {
     ElMessage.error("停止请求失败，请检查网络连接");
@@ -433,7 +429,7 @@ async function doRemoveTask(task) {
   if (task.running) {
     if (task.runId) {
       try {
-        await client.post(`/runner/run/${task.runId}/stop`);
+        await stopRun(task.runId);
       } catch (e) {
         console.error("[removeTask] stop failed:", e);
       }
@@ -441,7 +437,7 @@ async function doRemoveTask(task) {
     closeTaskWebSocket(task.id);
   }
   try {
-    await client.delete(`/runner/tasks/${task.id}`);
+    await deleteTask(task.id);
   } catch (e) {
     console.error("[removeTask] delete failed:", e);
     ElMessage.error("删除失败，请检查网络后重试");
@@ -517,7 +513,7 @@ async function pollQueuedTasks() {
     return;
   }
   try {
-    const { data } = await client.get("/runner/active");
+    const { data } = await getActiveRuns();
     if (!data.ok || !data.active?.length) return;
     for (const active of data.active) {
       if (!active.client_task_id) continue;
@@ -574,7 +570,7 @@ onMounted(async () => {
 // keep-alive: pause timers when leaving page
 onDeactivated(() => {
   stopQueuePolling();
-  if (_saveTimer) { clearTimeout(_saveTimer); _saveTimer = null; }
+  cleanupDebouncedSave();
 });
 
 // keep-alive: resume on return (WS stays connected, messages accumulate)
@@ -585,9 +581,8 @@ onActivated(() => {
 // Final cleanup when evicted from cache
 onUnmounted(() => {
   stopQueuePolling();
-  if (_saveTimer) { clearTimeout(_saveTimer); _saveTimer = null; }
+  cleanupDebouncedSave();
   closeAllTaskWebSockets();
-  _dirtyTaskIds.clear();
 });
 
 watch(

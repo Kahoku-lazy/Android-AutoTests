@@ -100,6 +100,9 @@ def api_testing_definitions_handler(request):
         is_new_case = not ApiTestCase.objects.filter(id=case_id).exists()
 
         defaults = {
+            "method": data.get("method", "GET"),
+            "url": data.get("url", ""),
+            "expected_status": data.get("expected_status", 200),
             "title": data.get("title", ""),
             "category": data.get("category", ""),
             "description": data.get("description", ""),

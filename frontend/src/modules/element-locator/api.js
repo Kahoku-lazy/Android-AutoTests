@@ -46,6 +46,7 @@ export function apiCreatePage(data)    { return client.post('/elements/pages/cre
 export function apiDeletePage(id)      { return client.delete(`/elements/pages/${id}`) }
 export function apiGetPageElements(pid) { return client.get(`/elements/pages/${pid}/items`) }
 export function apiAddElementToPage(pid, el) { return client.post(`/elements/pages/${pid}/elements`, el) }
+export function apiBatchAddElementsToPage(pid, elements, strategy) { return client.post(`/elements/pages/${pid}/elements/batch`, { elements, strategy }) }
 export function apiClearAll()          { return client.post('/elements/pages/clear') }
 export function apiBatchMovePages(pageIds, parentId) {
   return client.post('/elements/pages/batch-move', {

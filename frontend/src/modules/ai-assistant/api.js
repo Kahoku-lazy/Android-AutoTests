@@ -575,3 +575,89 @@ export async function deleteToolById(agentId, toolId) {
   const { data } = await djangoClient.post(`/ai/agents/${agentId}/tools/${toolId}/delete`)
   return data
 }
+
+// ── Agent CRUD（从 index.vue/AgentDetail.vue/ChatView.vue 裸调用收敛）──
+
+/** 获取所有 Agent 列表 */
+export async function listAgents() {
+  const { data } = await djangoClient.get('/ai/agents')
+  return data
+}
+
+/** 获取 Agent 健康状态 */
+export async function checkAgentsHealth() {
+  const { data } = await djangoClient.get('/ai/agents/health')
+  return data
+}
+
+/** 测试 Agent 连接 */
+export async function testAgent(agentId) {
+  const { data } = await djangoClient.post(`/ai/agents/${agentId}/test`)
+  return data
+}
+
+/** 删除 Agent */
+export async function deleteAgent(agentId) {
+  const { data } = await djangoClient.post(`/ai/agents/${agentId}/delete`)
+  return data
+}
+
+/** 更新 Agent 模型名称 */
+export async function updateAgentModel(agentId, modelName) {
+  const { data } = await djangoClient.post(`/ai/agents/${agentId}/update`, { model_name: modelName })
+  return data
+}
+
+/** 获取 Agent 详情（编辑页） */
+export async function getAgentDetail(agentId) {
+  const { data } = await djangoClient.get(`/ai/agents/${agentId}`)
+  return data
+}
+
+/** 检测可用模型 */
+export async function detectModels(payload) {
+  const { data } = await djangoClient.post('/ai/models/detect', payload)
+  return data
+}
+
+/** 上传头像 */
+export async function uploadAvatar(formData) {
+  const { data } = await djangoClient.post('/ai/upload-avatar', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
+/** 保存 Agent（新建或更新） */
+export async function saveAgent(url, payload) {
+  const { data } = await djangoClient.post(url, payload)
+  return data
+}
+
+// ── 任务列表 ──
+
+/** 获取 AI 任务列表 */
+export async function listTasks(params = {}) {
+  const { data } = await djangoClient.get('/ai/tasks', { params })
+  return data
+}
+
+// ── 知识库（从 KnowledgeBase.vue 裸调用收敛）──
+
+/** 获取知识库状态 */
+export async function getKnowledgeStatus() {
+  const { data } = await djangoClient.get('/ai/knowledge/status')
+  return data
+}
+
+/** 获取知识库文档列表 */
+export async function getKnowledgeDocuments() {
+  const { data } = await djangoClient.get('/ai/knowledge/documents')
+  return data
+}
+
+/** 重建知识库索引 */
+export async function reindexKnowledge() {
+  const { data } = await djangoClient.post('/ai/knowledge/reindex')
+  return data
+}

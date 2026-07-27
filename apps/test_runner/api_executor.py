@@ -203,6 +203,18 @@ class ApiExecutor:
 
     # ── Step handlers ──
 
+    def _build_case_dict(self, s: TestStep) -> dict:
+        """Convert a TestStep to a dict for legacy adapters lacking execute_step."""
+        return {
+            "type": s.type, "url": s.url, "method": s.method or s.xpath or "GET",
+            "headers": dict(s.headers) if s.headers else {},
+            "body": dict(s.body) if s.body else "",
+            "timeout": s.timeout or 30,
+            "expected_status": s.expected_status or 200,
+            "expected_response": s.expected_response or "",
+            "assertions": s.assertions if s.assertions else [],
+        }
+
     def _do_request(self, s: TestStep) -> str:
         # Resolve variables in-place before passing to adapter
         if s.url:
@@ -216,6 +228,10 @@ class ApiExecutor:
 
         result = self.adapter.execute_step(s) if hasattr(self.adapter, 'execute_step') \
             else self.adapter.execute_case(self._build_case_dict(s))
+
+        # Guard: legacy adapters may return str (e.g. "pass"/"fail") instead of dict
+        if not isinstance(result, dict):
+            return str(result) if isinstance(result, str) else "fail"
 
         # Store response for variable extraction
         self._last_response = {
@@ -296,7 +312,7 @@ class ApiExecutor:
         return current
 
     def _do_sleep(self, s: TestStep) -> str:
-        timeout = s.timeout or 1
+        timeout = s.timeout if s.timeout is not None else 1
         self.adapter.log(f"Sleep {timeout}s")
         # Interruptible sleep
         import time as _time

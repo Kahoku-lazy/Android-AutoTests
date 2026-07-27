@@ -1,11 +1,12 @@
 /**
  * useQueuePoller — 轮询检测排队任务是否被后端调度
  * Extracted from test-runner/index.vue
+ *
+ * getActiveRuns — api.js 函数，通过依赖注入传入，避免 composable 直接 import client
  */
 import { ref } from "vue";
-import client from "@/shared/api-client.js";
 
-export function useQueuePoller(tasks, isTaskQueued, onTaskActivated, taskAddLog, scheduleSave) {
+export function useQueuePoller(tasks, isTaskQueued, onTaskActivated, taskAddLog, scheduleSave, getActiveRuns) {
   const POLL_INTERVAL = 1500;
   const queuePollTimer = ref(null);
 
@@ -19,7 +20,7 @@ export function useQueuePoller(tasks, isTaskQueued, onTaskActivated, taskAddLog,
       return;
     }
     try {
-      const { data } = await client.get("/runner/active");
+      const { data } = await getActiveRuns();
       if (!data.ok || !data.active?.length) return;
       for (const active of data.active) {
         if (!active.client_task_id) continue;

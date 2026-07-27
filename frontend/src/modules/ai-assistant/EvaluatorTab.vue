@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getToken } from '@/shared/api-client.js'
+import { kbSearch } from './evaluator-api.js'
 
 import {
   listBanks, createBank, updateBank, deleteBank, seedDefaultBank,
@@ -176,14 +176,7 @@ async function doKbQuery() {
   if (!q) { ElMessage.warning('请输入查询内容'); return }
   kbQuerying.value = true; kbQueryResult.value = null
   try {
-    const { data } = await kbSelfTest() // reuse KB search API — pass single query
-    // Actually, use a dedicated search: POST /api/evaluator/kb-search
-    const resp = await fetch('/api/evaluator/kb-search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
-      body: JSON.stringify({ query: q, top_k: 5 }),
-    })
-    const d = await resp.json()
+    const { data: d } = await kbSearch({ query: q, top_k: 5 })
     if (d.ok) kbQueryResult.value = d
   } catch (e) {
     // Fallback: use self-test result for now

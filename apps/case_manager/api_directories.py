@@ -32,6 +32,10 @@ def get_directory_tree(case_type=None):
         case_qs = getattr(dir_obj, _related).all().order_by("title")
 
         for td in case_qs:
+            try:
+                step_count = len(json.loads(td.steps_json or "[]"))
+            except Exception:
+                step_count = 0
             case_nodes.append({
                 "id": f"case:{td.id}",
                 "name": td.title or td.id,
@@ -41,6 +45,7 @@ def get_directory_tree(case_type=None):
                 "enabled": td.enabled,
                 "priority": td.priority,
                 "category": td.category,
+                "step_count": step_count,
                 "children": [],
             })
 
@@ -196,6 +201,8 @@ def delete_directory(dir_id, deleted_by=""):
         case_count += obj.storage_testcases.count()
     if hasattr(obj, 'api_testcases'):
         case_count += obj.api_testcases.count()
+    if hasattr(obj, 'web_testcases'):
+        case_count += obj.web_testcases.count()
 
     if child_count > 0 or case_count > 0:
         return False, {
@@ -271,11 +278,12 @@ def batch_move_items(items: list[dict], target_directory_id: int) -> dict:
 
 
 def _find_case_across_types(case_id):
-    """Look up a case ID across all three test case tables. Returns the model instance or None."""
+    """Look up a case ID across all four test case tables. Returns the model instance or None."""
     from .models import TestDefinition
     from .models_storage import StorageTestCase
     from .models_api import ApiTestCase
-    for model in (TestDefinition, StorageTestCase, ApiTestCase):
+    from .models_web import WebTestCase
+    for model in (TestDefinition, StorageTestCase, ApiTestCase, WebTestCase):
         try:
             return model.objects.get(id=case_id)
         except model.DoesNotExist:

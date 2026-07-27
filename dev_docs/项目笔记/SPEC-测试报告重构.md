@@ -1,7 +1,7 @@
 # SPEC — 测试报告模块重构
 
 > 基于 SPEC-模块重构规范.md，针对 report-generator 模块的逐阶段执行计划。
-> 版本：v1.0 · 日期：2026-07-25
+> 版本：v1.1 · 日期：2026-07-27
 
 ---
 
@@ -34,17 +34,30 @@ frontend/src/modules/report-generator/
 | catch(_){} 全部替换 | ✅ |
 | 背景点阵纸纹 + 全局全宽 | ✅（全局生效） |
 
+**v1.1 新增完成项（2026-07-27 分层重构 SPEC）**：
+
+| 改进 | 状态 |
+|------|:--:|
+| ErrorState 错误处理补全（index.vue） | ✅ v1.1 |
+| RateBar 通过率进度条组件化（替换内联 .p-pass/.p-fail） | ✅ v1.1 |
+| useExpandCollapse 接入 ReportDetail（替换手写 Set-toggle） | ✅ v1.1 |
+| FAIL_CARD_PALETTE + failCardColor() 死代码清理 | ✅ v1.1 |
+| index.css rate 相关 6 条规则迁移到 RateBar.vue | ✅ v1.1 |
+
 **关键问题**：
 
-| 问题 | 严重度 | 说明 |
-|------|:--:|------|
-| **缺 composables/** | 🔴 | 唯一没有逻辑层的模块（digital-human 除外）。index.vue 350 行脚本全内联 |
-| **独立 index.css** | 🟡 | 唯一有独立 CSS 文件的模块，应迁移到各 .vue 的 scoped |
-| **旧 KPI CSS 未清理** | 🟡 | index.css + CaseBreakdown + ReportDetail + TaskReport 中仍有手写 `.kpi-card`/`.kpi-dot`/`.kpi-value` 样式（已死代码） |
-| **字体不一致** | 🟡 | 用 `Caveat` 而非 `Patrick Hand`（DESIGN_SYSTEM.md §1.5 标准） |
-| **section 标题用 emoji** | 🟢 | `📊 统计概览` 而非 `doc-section__title` + `doc-tag` 标准格式 |
-| **ReportDetail 460 行** | 🟠 | 超标，子页无 composable |
-| **CaseBreakdown 431 行** | 🟡 | 接近超标，需抽 composable |
+| 问题 | 严重度 | 说明 | 状态 |
+|------|:--:|------|:--:|
+| **缺 composables/** | 🔴 | 唯一没有逻辑层的模块。index.vue 350 行脚本全内联 | 待处理 |
+| **独立 index.css** | 🟡 | 唯一有独立 CSS 文件的模块，应迁移到各 .vue 的 scoped | 待处理 |
+| **旧 KPI CSS 未清理** | 🟡 | index.css + CaseBreakdown + ReportDetail + TaskReport 中仍有手写 `.kpi-card` 样式 | 待处理 |
+| **字体不一致** | 🟡 | 用 `Caveat` 而非 `Patrick Hand` | 待处理 |
+| **section 标题用 emoji** | 🟢 | `📊 统计概览` 而非标准格式 | 待处理 |
+| **ReportDetail 446 行** | 🟠 | 超标（v1.1 已减 14 行），仍需拆子组件 | 待处理 |
+| **CaseBreakdown 431 行** | 🟡 | 接近超标，需抽 composable | 待处理 |
+| ~~无错误态~~ | — | **已修复 v1.1**：index.vue 添加 ErrorState + error ref | ✅ |
+| ~~手写 Set-toggle~~ | — | **已修复 v1.1**：ReportDetail 接入 useExpandCollapse | ✅ |
+| ~~内联 rate-bar~~ | — | **已修复 v1.1**：替换为共享 RateBar 组件 | ✅ |
 
 ---
 

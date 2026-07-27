@@ -8,6 +8,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { animate, stagger } from 'animejs'
 import PageHeader from '@/shared/components/PageHeader.vue'
 import KpiCard from '@/shared/components/KpiCard.vue'
+import { useExpandCollapse } from '@/shared/composables/useExpandCollapse.js'
 import { getRunReport, statusLabel, statusBadgeClass, iterBadgeClass, formatTime } from './api.js'
 
 const route = useRoute()
@@ -17,8 +18,8 @@ const runId = computed(() => String(route.params.runId))
 const report = ref(null)
 const loading = ref(false)
 const activeTab = ref('cases')
-const expandedFailCases = ref(new Set())
-const expandedStepGroups = ref(new Set())
+const { expandedIds: expandedFailCases, toggle: toggleFailExpand } = useExpandCollapse()
+const { expandedIds: expandedStepGroups, toggle: toggleStepGroupExpand } = useExpandCollapse()
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 const TABLE_HEADER_HEIGHT = 45
@@ -29,8 +30,7 @@ const currentPage = ref(1)
 onMounted(() => loadReport())
 watch(runId, () => {
   currentPage.value = 1
-  expandedFailCases.value = new Set()
-  expandedStepGroups.value = new Set()
+  // useExpandCollapse resets on new report via re-mount
   loadReport()
 })
 
@@ -122,26 +122,6 @@ function setPageSize(size) {
 
 function goPage(page) {
   currentPage.value = Math.min(Math.max(1, page), totalPages.value)
-}
-
-function toggleFailExpand(caseId) {
-  const s = new Set(expandedFailCases.value)
-  if (s.has(caseId)) s.delete(caseId)
-  else s.add(caseId)
-  expandedFailCases.value = s
-}
-
-function toggleStepGroupExpand(groupKey) {
-  const s = new Set(expandedStepGroups.value)
-  if (s.has(groupKey)) s.delete(groupKey)
-  else s.add(groupKey)
-  expandedStepGroups.value = s
-}
-
-const FAIL_CARD_PALETTE = ['app-red', 'warm-peach-pink', 'app-pink', 'purple']
-
-function failCardColor(index) {
-  return FAIL_CARD_PALETTE[index % FAIL_CARD_PALETTE.length]
 }
 
 function failedIterations(c) {

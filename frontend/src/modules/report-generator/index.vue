@@ -10,6 +10,8 @@ import { usePagination } from '@/shared/composables/usePagination.js'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import KpiCard from '@/shared/components/KpiCard.vue'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
+import ErrorState from '@/shared/components/patterns/ErrorState.vue'
+import RateBar from '@/shared/components/RateBar.vue'
 import { listRuns, statusLabel, statusBadgeClass, formatTime } from './api.js'
 import PassRateTrendChart from './components/PassRateTrendChart.vue'
 import DailyPassFailChart from './components/DailyPassFailChart.vue'
@@ -24,6 +26,7 @@ const runs = ref([])
 const summary = ref(null)
 const bugSummary = ref(null)
 const loading = ref(false)
+const error = ref(null)
 const activeFilter = ref('all')
 const dateRange = ref([])
 const filterRunId = ref('')
@@ -59,6 +62,7 @@ function setChartRange(days) {
 
 async function fetchReports() {
   loading.value = true
+  error.value = null
   try {
     const params = {}
     if (dateRange.value && dateRange.value.length === 2) {
@@ -81,7 +85,10 @@ async function fetchReports() {
       bugSummary.value = data.bug_summary || null
       trend.value = data.trend || null
     }
-  } catch (e) { console.error(e); }
+  } catch (e) {
+    error.value = '加载报告失败，请检查服务状态'
+    console.error(e)
+  }
   loading.value = false
   await nextTick()
   animate('.report-table tbody tr', { opacity: [0, 1], translateY: [16, 0], delay: stagger(40), duration: 380, ease: 'outCubic' })
@@ -254,6 +261,7 @@ function openCaseBreakdown(type, tab = 'detail') {
         <div class="doc-section__header" style="padding:14px 16px 0">
           <h3 class="doc-section__title">测试报告 <span class="doc-tag">Reports</span></h3>
         </div>
+        <ErrorState v-if="error && !loading" :message="error" @retry="fetchReports" />
       <AppTabs
         class="report-tabs"
         :items="statusAppTabs"
@@ -319,15 +327,7 @@ function openCaseBreakdown(type, tab = 'detail') {
 
               <!-- Pass rate with progress bar -->
               <template #cell-rate="{ record }">
-                <div class="rate-cell">
-                  <div class="progress-bar">
-                    <div class="p-pass" :style="{ width: record.rate + '%' }"></div>
-                    <div v-if="record.failed > 0" class="p-fail" :style="{ width: (100 - record.rate) + '%' }"></div>
-                  </div>
-                  <span class="rate-text" :class="{ 'rate-ok': record.rate >= 95, 'rate-warn': record.rate >= 80 && record.rate < 95, 'rate-bad': record.rate < 80 }">
-                    {{ record.rate }}%
-                  </span>
-                </div>
+                <RateBar :rate="record.rate" :show-fail="record.failed > 0" />
               </template>
 
               <!-- Status badge -->

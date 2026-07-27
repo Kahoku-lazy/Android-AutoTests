@@ -26,7 +26,7 @@ def acquire_edit_lock(request, case_id):
     if not current_user:
         return JsonResponse({"ok": False, "error": "未登录"}, status=401)
 
-    case = _get_case_for_lock(case_id)
+    case = get_case_for_lock(case_id)
     if case is None:
         return JsonResponse({"ok": False, "error": "用例不存在"}, status=404)
 
@@ -79,7 +79,7 @@ def release_edit_lock(request, case_id):
     if not current_user:
         return JsonResponse({"ok": False, "error": "未登录"}, status=401)
 
-    case = _get_case_for_lock(case_id)
+    case = get_case_for_lock(case_id)
     if case is None:
         return JsonResponse({"ok": False, "error": "用例不存在"}, status=404)
 
@@ -127,7 +127,7 @@ def case_lock(request, case_id):
     if not current_user:
         return JsonResponse({"ok": False, "error": "未登录"}, status=401)
 
-    case = _get_case_for_lock(case_id)
+    case = get_case_for_lock(case_id)
     if case is None:
         return JsonResponse({"ok": False, "error": "用例不存在"}, status=404)
 
@@ -149,7 +149,7 @@ def case_unlock(request, case_id):
     if not current_user:
         return JsonResponse({"ok": False, "error": "未登录"}, status=401)
 
-    case = _get_case_for_lock(case_id)
+    case = get_case_for_lock(case_id)
     if case is None:
         return JsonResponse({"ok": False, "error": "用例不存在"}, status=404)
 
@@ -174,7 +174,7 @@ def set_visibility(request, case_id):
     if not current_user:
         return JsonResponse({"ok": False, "error": "未登录"}, status=401)
 
-    case = _get_case_for_lock(case_id)
+    case = get_case_for_lock(case_id)
     if case is None:
         return JsonResponse({"ok": False, "error": "用例不存在"}, status=404)
 

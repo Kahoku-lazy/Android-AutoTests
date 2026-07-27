@@ -1,7 +1,7 @@
 # PRD-05 — 测试报告 (Report Generator)
 
 > 关联需求大纲：[`需求大纲.md`](./需求大纲.md) §5.5
-> 版本：v6.0 · 日期：2026-07-25
+> 版本：v6.1 · 日期：2026-07-27
 
 ---
 
@@ -15,21 +15,25 @@
 
 ```
 frontend/src/modules/report-generator/
-├── index.vue                         350 行 · 报告列表页（编排者）
-├── index.css                          52 行 · scoped CSS（src 引入）
+├── index.vue                         359 行 · 报告列表页（编排者，ErrorState + RateBar 接入）
+├── index.css                          44 行 · scoped CSS（src 引入，rate 相关 6 条规则已迁移到 RateBar）
 ├── api.js                             72 行 · 数据层（10 端点 + 5 工具函数）
 ├── routes.js                          26 行 · 路由定义
 ├── constants.js                      159 行 · L4 达标（图表颜色/样式/列定义/路由/状态映射）
-├── composables/                       ❌ 缺失 — 逻辑全内联在 index.vue
+├── composables/                       ⚠️ 尚未创建 — 内联逻辑待提取
 ├── CaseBreakdown.vue                 431 行 · 用例故障分析子页
-├── ReportDetail.vue                  460 行 · 单次报告详情子页
+├── ReportDetail.vue                  446 行 · 单次报告详情子页（useExpandCollapse + 死代码清理）
 ├── TaskReport.vue                    323 行 · 任务报告子页
 └── components/
     ├── DailyPassFailChart.vue          88 行 · 日通过/失败柱状图
     └── PassRateTrendChart.vue          79 行 · 通过率趋势折线图
+
+共享层新增（本模块使用）：
+├── shared/composables/useExpandCollapse.js  通用展开/折叠 Set-toggle
+└── shared/components/RateBar.vue            通用通过率进度条
 ```
 
-**架构特征**：L2 评级。四层中缺逻辑层（composables/），数据获取和内联状态管理全在 index.vue 中。图表组件已接入 `shared/composables/useECharts.js`。KPI 卡片已接入 `shared/components/KpiCard.vue`。
+**架构特征**：L3 评级（原 L2）。错误态已补全（ErrorState），通过率进度条已组件化（RateBar），子页面展开/折叠已接入 useExpandCollapse 消除 3 处重复。composables/ 本地逻辑层仍待提取。
 
 ---
 
@@ -159,6 +163,10 @@ index.vue (内联逻辑)
 | 字体统一（Caveat→Patrick Hand） | ✅ v6.0 |
 | 模块色收束（c-dashboard→c-report） | ✅ v6.0 |
 | 旧 KPI CSS 死代码清理 | ✅ v6.0 |
+| ErrorState 错误处理补全 | ✅ v6.1 |
+| RateBar 通过率进度条组件化 | ✅ v6.1 |
+| useExpandCollapse 接入（消除 3 处 Set-toggle 重复） | ✅ v6.1 |
+| FAIL_CARD_PALETTE 死代码清理 | ✅ v6.1 |
 | 在线详情 3 Tab | ✅ |
 | CSV/LOG 下载 | ✅ |
 | 趋势图表 | ✅ |
@@ -171,6 +179,9 @@ index.vue (内联逻辑)
 | 编号 | 问题 | 严重度 | 记录日期 |
 |:--:|------|:--:|:--:|
 | IMP-01 | 缺 composables/，逻辑全内联在 index.vue（L2→L3 待升级） | 🟠 | 2026-07-25 |
-| IMP-02 | ReportDetail.vue 460 行超标 | 🟠 | 2026-07-25 |
+| IMP-02 | ReportDetail.vue 446 行超标（已减 14 行，仍需拆子组件） | 🟠 | 2026-07-25 |
 | IMP-03 | CaseBreakdown.vue 431 行接近超标 | 🟡 | 2026-07-25 |
 | IMP-04 | index.css 为独立文件（scoped src 引入），不同于其他模块的内联 `<style scoped>` | 🟢 | 2026-07-25 |
+| IMP-05 | 无错误态 — **已修复 v6.1**：index.vue 添加 ErrorState + error ref | ✅ | 2026-07-27 |
+| IMP-06 | 3 处手写 Set-toggle 展开/折叠 — **已修复 v6.1**：接入 useExpandCollapse | ✅ | 2026-07-27 |
+| IMP-07 | 内联 rate-bar 进度条 — **已修复 v6.1**：替换为共享 RateBar 组件 | ✅ | 2026-07-27 |

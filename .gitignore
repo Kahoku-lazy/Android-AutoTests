@@ -68,6 +68,10 @@ frontend/src/components.d.ts
 Thumbs.db
 desktop.ini
 
+# ── Product-specific content (DO NOT upload to GitHub) ──
+dev_docs/H717D/
+apps/case_manager/management/commands/import_h717d_cases.py
+
 # ── Claude Code worktree sessions (auto-generated temporary workspaces) ──
 .workbuddy/
 

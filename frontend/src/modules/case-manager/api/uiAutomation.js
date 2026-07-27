@@ -68,6 +68,14 @@ export function listDevices() {
   return client.get("/devices");
 }
 
+export function connectDebugDevice(serial) {
+  return client.post(`/devices/${serial}`, { activate: true, mode: "observe" });
+}
+
+export function disconnectDebugDevice(serial) {
+  return client.post(`/devices/${serial}/disconnect-observe`);
+}
+
 export function listPages() {
   return client.get("/elements/pages");
 }

@@ -78,7 +78,7 @@ class StepExecutor:
                         return child_result
                 if self.exe._step_callback:
                     self.exe._step_callback(i, total, step.type, desc[:100], result)
-                if result != "pass":
+                if result not in ("pass", "skip"):
                     self.exe.log(f'{prefix}    ↳ 失败 ({result})')
                     return result
                 self.exe.log(f'{prefix}    ↳ 通过')
@@ -250,7 +250,9 @@ class StepExecutor:
             if self.exe.stopped():
                 return "stopped"
             self.exe.log(f'  ── 第 {i+1}/{n} 次 ──')
-            self.execute_all(s.children, depth=1)
+            child_result = self.execute_all(s.children, depth=1)
+            if child_result and child_result not in ("pass", "skip"):
+                return child_result
         return "pass"
 
     def _do_loop_elements(self, s: TestStep) -> str:
@@ -273,6 +275,8 @@ class StepExecutor:
                 self.exe.click(xp)
             # Execute child steps after each click (e.g. wait for page transition)
             if s.children:
-                self.execute_all(s.children, depth=1)
+                child_result = self.execute_all(s.children, depth=1)
+                if child_result and child_result not in ("pass", "skip"):
+                    return child_result
         return "pass"
 

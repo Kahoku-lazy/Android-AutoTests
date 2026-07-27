@@ -32,5 +32,13 @@ export function useDebouncedSave(tasks, saveTaskToServer) {
     _dirtyTaskIds.clear();
   }
 
-  return { scheduleSave, flushSave };
+  function cleanup() {
+    if (_saveTimer) {
+      clearTimeout(_saveTimer);
+      _saveTimer = null;
+    }
+    _dirtyTaskIds.clear();
+  }
+
+  return { scheduleSave, flushSave, cleanup };
 }

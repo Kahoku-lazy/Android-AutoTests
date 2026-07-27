@@ -59,12 +59,6 @@
 
 .run-link{cursor:pointer;text-decoration:none;color:var(--ink)}
 .cell-run-id{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;text-decoration:underline}
-.rate-cell{display:flex;align-items:center;gap:8px}
-.progress-bar{flex:1;height:8px;background:#f0ede8;border-radius:4px;overflow:hidden;border:1px solid var(--ink)}
-.p-pass{height:100%;background:var(--c-device);border-radius:3px}
-.p-fail{height:100%;background:var(--c-runner);border-radius:3px}
-.rate-text{font-size:12px;font-weight:700;min-width:36px}
-.rate-ok{color:#2d7a2d}.rate-warn{color:#b08800}.rate-bad{color:#a03030}
 .badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);display:inline-block}
 /* Status badge overrides from statusBadgeClass */
 .status-ok{background:#C8F5D0;color:#2d7a2d}.status-fail{background:#FFE0DB;color:#a03030}.status-stopped{background:#f0ede8;color:#999}

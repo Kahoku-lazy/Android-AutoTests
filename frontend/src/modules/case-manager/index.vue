@@ -35,6 +35,14 @@ const caseType = computed(() => {
   return map[activeTab.value] || "ui_automation";
 });
 
+const tabList = [
+  { key: "ui", caseType: "ui_automation", component: UiCaseList },
+  { key: "web", caseType: "web_automation", component: WebCaseList },
+  { key: "storage", caseType: "storage", component: StorageCaseList },
+  { key: "api", caseType: "api_testing", component: ApiCaseList },
+];
+const activeTabConfig = computed(() => tabList.find(t => t.key === activeTab.value) || tabList[0]);
+
 // ── Per-tab directory trees (independent per module) ──
 const treeCache = ref({ ui: [], web: [], storage: [], api: [] });
 const activeDirectoryId = ref(null);
@@ -68,7 +76,8 @@ const SIDEBAR_DEFAULT = 300;
 function clampW(w) { return Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, w)); }
 const sidebarWidth = ref(clampW(Number(localStorage.getItem(SIDEBAR_WIDTH_KEY)) || SIDEBAR_DEFAULT));
 const isResizingSidebar = ref(false);
-const caseLayoutRef = ref(null);
+const caseLayoutEl = ref(null);
+function setCaseLayoutRef(el) { caseLayoutEl.value = el; }
 
 function onSidebarResizeStart(e) {
   if (e.button !== 0) return;
@@ -78,8 +87,8 @@ function onSidebarResizeStart(e) {
   document.body.style.userSelect = "none";
 }
 function onSidebarResizeMove(e) {
-  if (!isResizingSidebar.value || !caseLayoutRef.value) return;
-  sidebarWidth.value = clampW(e.clientX - caseLayoutRef.value.getBoundingClientRect().left);
+  if (!isResizingSidebar.value || !caseLayoutEl.value) return;
+  sidebarWidth.value = clampW(e.clientX - caseLayoutEl.value.getBoundingClientRect().left);
 }
 function onSidebarResizeEnd() {
   if (!isResizingSidebar.value) return;
@@ -124,13 +133,13 @@ onUnmounted(() => {
       :shadow="true"
       class="case-tabs"
     >
-      <template #ui>
-        <div ref="caseLayoutRef" class="doc-body case-layout" :class="{ 'case-layout--resizing': isResizingSidebar }">
+      <template v-for="tab in tabList" :key="tab.key" #[tab.key]>
+        <div :ref="setCaseLayoutRef" class="doc-body case-layout" :class="{ 'case-layout--resizing': isResizingSidebar }">
           <aside class="case-sidebar" :style="{ width: sidebarWidth + 'px' }">
             <DirectoryTree
               :tree-data="currentTree"
               :active-id="activeDirectoryId"
-              case-type="ui_automation"
+              :case-type="tab.caseType"
               @select="handleDirSelect"
               @refresh="handleTreeRefresh"
             />
@@ -139,82 +148,7 @@ onUnmounted(() => {
             title="拖动调整宽度，双击恢复默认"
             @mousedown="onSidebarResizeStart" @dblclick="resetSidebarWidth" />
           <main class="case-main">
-            <UiCaseList
-              :tree-data="currentTree"
-              :active-directory-id="activeDirectoryId"
-              :active-dir-name="activeDirName"
-              @refresh-tree="handleTreeRefresh"
-            />
-          </main>
-        </div>
-      </template>
-
-      <template #web>
-        <div ref="caseLayoutRef" class="doc-body case-layout" :class="{ 'case-layout--resizing': isResizingSidebar }">
-          <aside class="case-sidebar" :style="{ width: sidebarWidth + 'px' }">
-            <DirectoryTree
-              :tree-data="currentTree"
-              :active-id="activeDirectoryId"
-              case-type="web_automation"
-              @select="handleDirSelect"
-              @refresh="handleTreeRefresh"
-            />
-          </aside>
-          <div class="case-sidebar-resizer" :class="{ 'is-dragging': isResizingSidebar }"
-            title="拖动调整宽度，双击恢复默认"
-            @mousedown="onSidebarResizeStart" @dblclick="resetSidebarWidth" />
-          <main class="case-main">
-            <WebCaseList
-              :tree-data="currentTree"
-              :active-directory-id="activeDirectoryId"
-              :active-dir-name="activeDirName"
-              @refresh-tree="handleTreeRefresh"
-            />
-          </main>
-        </div>
-      </template>
-
-      <template #storage>
-        <div ref="caseLayoutRef" class="doc-body case-layout" :class="{ 'case-layout--resizing': isResizingSidebar }">
-          <aside class="case-sidebar" :style="{ width: sidebarWidth + 'px' }">
-            <DirectoryTree
-              :tree-data="currentTree"
-              :active-id="activeDirectoryId"
-              case-type="storage"
-              @select="handleDirSelect"
-              @refresh="handleTreeRefresh"
-            />
-          </aside>
-          <div class="case-sidebar-resizer" :class="{ 'is-dragging': isResizingSidebar }"
-            title="拖动调整宽度，双击恢复默认"
-            @mousedown="onSidebarResizeStart" @dblclick="resetSidebarWidth" />
-          <main class="case-main">
-            <StorageCaseList
-              :tree-data="currentTree"
-              :active-directory-id="activeDirectoryId"
-              :active-dir-name="activeDirName"
-              @refresh-tree="handleTreeRefresh"
-            />
-          </main>
-        </div>
-      </template>
-
-      <template #api>
-        <div ref="caseLayoutRef" class="doc-body case-layout" :class="{ 'case-layout--resizing': isResizingSidebar }">
-          <aside class="case-sidebar" :style="{ width: sidebarWidth + 'px' }">
-            <DirectoryTree
-              :tree-data="currentTree"
-              :active-id="activeDirectoryId"
-              case-type="api_testing"
-              @select="handleDirSelect"
-              @refresh="handleTreeRefresh"
-            />
-          </aside>
-          <div class="case-sidebar-resizer" :class="{ 'is-dragging': isResizingSidebar }"
-            title="拖动调整宽度，双击恢复默认"
-            @mousedown="onSidebarResizeStart" @dblclick="resetSidebarWidth" />
-          <main class="case-main">
-            <ApiCaseList
+            <component :is="tab.component"
               :tree-data="currentTree"
               :active-directory-id="activeDirectoryId"
               :active-dir-name="activeDirName"

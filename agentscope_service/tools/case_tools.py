@@ -488,7 +488,7 @@ class GetDirectoryTreeTool(ToolBase):
         return check_platform_permission(self)
 
     async def call(self, case_type="ui_automation", **kwargs):
-        from apps.case_manager.api_directories import get_directory_tree as _get_tree
+        from apps.case_manager.api import get_directory_tree as _get_tree
 
         tree = await run_sync(lambda: _get_tree(case_type=case_type or None))
         if not tree:
@@ -556,7 +556,7 @@ class CreateDirectoryTool(ToolBase):
         return check_platform_permission(self)
 
     async def call(self, name, parent_id=None, case_type="ui_automation", **kwargs):
-        from apps.case_manager.api_directories import create_directory as _create_dir
+        from apps.case_manager.api import create_directory as _create_dir
 
         ctx = getattr(self, "_ctx", None)
         created_by = str(ctx.user_id) if ctx and ctx.user_id else ""

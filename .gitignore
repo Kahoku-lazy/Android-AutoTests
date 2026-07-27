@@ -72,7 +72,9 @@ desktop.ini
 dev_docs/H717D/
 apps/case_manager/management/commands/import_h717d_cases.py
 
-# ── Claude Code worktree sessions (auto-generated temporary workspaces) ──
+# ── Claude Code sessions & Superpowers (auto-generated, DO NOT upload) ──
+docs/
+.superpowers/
 .workbuddy/
 
 # ── Legacy frontend (pre-Vue migration, contains hardcoded device IDs) ──

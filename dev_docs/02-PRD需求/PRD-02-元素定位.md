@@ -1,4 +1,4 @@
-# PRD-01 — 元素定位 (Element Locator)
+# PRD-02 — 元素定位 (Element Locator)
 
 > 关联需求大纲：[`需求大纲.md`](./需求大纲.md) §5.2
 > 版本：v6.0 · 日期：2026-07-27

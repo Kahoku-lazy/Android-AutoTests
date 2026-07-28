@@ -172,8 +172,8 @@ function reasonLabel(reason) {
   display: inline-block;
 }
 .msg-flow-tag.sse {
-  background: #e6f9f6;
-  color: #158a80;
+  background: var(--ai-teal-bg);
+  color: var(--ai-teal-text);
   border: 1px solid rgba(25, 200, 185, 0.4);
 }
 .msg-flow-tag.fallback {
@@ -191,7 +191,7 @@ function reasonLabel(reason) {
   box-shadow: 0 2px 10px rgba(61, 52, 40, 0.08);
 }
 .msg.user .msg-text {
-  background: linear-gradient(135deg, var(--app-accent-purple, #b39ef3) 0%, #15a89c 100%);
+  background: linear-gradient(135deg, var(--app-accent-purple, #b39ef3) 0%, var(--ai-teal-hover) 100%);
   color: #fff;
   border-bottom-right-radius: 6px;
 }
@@ -231,12 +231,12 @@ function reasonLabel(reason) {
   border: 1px solid #ff8a65;
 }
 .reason-badge.stopped {
-  background: #f5f5f5;
+  background: var(--ai-bg-neutral);
   color: #616161;
   border: 1px solid #bdbdbd;
 }
 .reason-badge.error {
-  background: #ffebee;
+  background: var(--ai-bg-error);
   color: #b71c1c;
   border: 1px solid #ef5350;
 }

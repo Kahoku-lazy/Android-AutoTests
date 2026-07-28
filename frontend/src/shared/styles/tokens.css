@@ -71,7 +71,7 @@
   --app-leaf:        #BDE0FE;
   --app-bark:        #9a8c98;
 
-  /* ── 毛玻璃（全部清零/透明化）── */
+  /* ── legacy 玻璃变量（已全部清零/透明化，保留向后兼容）── */
   --app-glass:         transparent;
   --app-glass-heavy:   #fff;
   --app-glass-card:    #fff;
@@ -125,10 +125,10 @@
   --app-size-xl:  24px;  /* 页面标题 */
   --app-size-2xl: 32px;  /* KPI 数字、Hero 数字 */
 
-  /* legacy aliases → 逐步废弃，统一用 --app-size-* */
-  --app-font-size-sm:   12px;
-  --app-font-size-base: 14px;
-  --app-font-size-lg:   16px;
+  /* @deprecated legacy aliases — 统一用 --app-size-*（xs=12/sm=14/md=16/lg=20/xl=24/2xl=32） */
+  --app-font-size-sm:   var(--app-size-xs);   /* ⚠️ 旧代码中的 sm=12px，新代码用 --app-size-xs */
+  --app-font-size-base: var(--app-size-sm);   /* ⚠️ 旧代码中的 base=14px，新代码用 --app-size-sm */
+  --app-font-size-lg:   var(--app-size-md);   /* ⚠️ 旧代码中的 lg=16px，新代码用 --app-size-md */
 
   /* ── Paper × Polaroid 主题色 ── */
   --app-ink:                #2d2d2d;
@@ -191,6 +191,40 @@
   --app-duration-fast: 0.12s;
   --app-duration:      0.15s;
   --app-duration-slow: 0.25s;
+
+  /* ── AI Assistant 模块令牌 ── */
+  --ai-teal:            #19c8b9;
+  --ai-teal-bg:         #e6f9f6;
+  --ai-teal-text:       #158a80;
+  --ai-teal-hover:      #15a89c;
+  --ai-warm-bg:         #faf9f4;
+  --ai-warm-border:     #e8e2d6;
+  --ai-ink-soft:        #4a3a28;
+  --ai-ink-muted:       #a0936e;
+  --ai-ink-subtle:      #5c4b38;
+  --ai-sticky-bg:       #fffef8;
+  --ai-sticky-cream:    #fffbf5;
+  --ai-bg-subtle:       #f0ebe0;
+  --ai-bg-success:      #e8f5e9;
+  --ai-bg-success-hover:#c8e6c9;
+  --ai-bg-error:        #ffebee;
+  --ai-bg-error-hover:  #ffcdd2;
+  --ai-bg-neutral:      #f5f5f5;
+  --ai-bg-neutral-hover:#eeeeee;
+  --ai-bg-teal-hover:   #b2dfdb;
+  /* HintCard 类型色 */
+  --ai-hint-purple:     #534ab7;
+  --ai-hint-blue:       #378add;
+  --ai-hint-green:      #1d9e75;
+  --ai-hint-orange:     #ba7517;
+  --ai-hint-red:        #d85a30;
+  --ai-hint-purple-bg:  #e3f2fd;
+  --ai-hint-green-bg:   var(--ai-bg-success);      /* alias */
+  --ai-hint-orange-bg:  #fff3e0;
+  --ai-hint-red-bg:     var(--ai-bg-error);        /* alias */
+  --ai-hint-neutral-bg: var(--ai-bg-neutral);      /* alias */
+  --ai-hint-yellow-bg:  #fff8e7;
+  --ai-hint-yellow-border: #f7cd67;
 
   /* ═══════════════════════════════════════
      Element Plus 变量覆盖 — Doodle

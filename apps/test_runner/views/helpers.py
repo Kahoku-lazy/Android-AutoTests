@@ -2,6 +2,7 @@
 
 import json
 import asyncio
+import functools
 import logging
 from datetime import datetime
 from django.http import JsonResponse
@@ -13,8 +14,28 @@ from asgiref.sync import sync_to_async as _original_sta
 # the request-scoped CurrentThreadExecutor which dies after the HTTP response,
 # breaking all background tasks (delayed_execute / _execute_tests / etc).
 # None of our code relies on thread-sensitive DB state.
+# v2: added close_old_connections() before each call + retry on DB errors to
+# prevent background task hangs caused by stale/broken MySQL connections in the
+# thread pool.
 def _sta(fn):
-    return _original_sta(fn, thread_sensitive=False)
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        from django.db import close_old_connections, OperationalError, ProgrammingError
+        import time, logging
+        _bg_log = logging.getLogger("test_runner.bg")
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                close_old_connections()
+                return fn(*args, **kwargs)
+            except (OperationalError, ProgrammingError) as e:
+                if attempt < max_retries - 1:
+                    wait = 1 * (attempt + 1)
+                    _bg_log.warning(f"_sta retry {attempt+1}/{max_retries} after {e.__class__.__name__}: {e}")
+                    time.sleep(wait)
+                else:
+                    raise
+    return _original_sta(wrapper, thread_sensitive=False)
 
 # Drop-in replacements for @sync_to_async decorator and sync_to_async(func)() calls
 _bg_sync = _sta           # decorator: @_bg_sync

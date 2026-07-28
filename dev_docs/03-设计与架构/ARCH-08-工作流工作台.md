@@ -130,6 +130,24 @@ frontend/src/modules/workflow/
   └──────────────┘
 ```
 
+### 2.4 状态管理与路由
+
+**Pinia 3-Store 架构**:
+
+| Store | 职责 | 文件 |
+|------|------|------|
+| `useWorkflowStore` | 页面流画布状态（nodes, links, 序列化） | `stores/workflowStore.ts` |
+| `useTestCaseStore` | Blockly 用例编辑状态（blocks, 导入/导出） | `stores/testCaseStore.ts` |
+| `useLibraryStore` | 资源库树 + 文件 CRUD + 持久化 | `stores/libraryStore.ts` |
+
+**路由**:
+
+| 路由 | 页面 |
+|------|------|
+| `/workflow` | `index.vue` — Blockly + VueFlow 双编辑器 |
+
+> 📐 前端架构基线 v1.0（2026-07-27）— 组件树 + 状态管理 + 路由完整。已知违规：libraryStore 18 处 ElMessage（见 PRD-08 附录 C IMP-01）。
+
 ---
 
 ## 3. 后端架构

@@ -110,51 +110,157 @@ class ApiExecutor:
                 return None
         return current
 
+    @staticmethod
+    def _to_row_dicts(rows: list) -> list[dict]:
+        """Convert columnar rows [{key, values, kind}] to row-wise [{col: val}]."""
+        if not rows:
+            return []
+        # Defensive: handle JSON-string that wasn't deserialized
+        if isinstance(rows, str):
+            try:
+                rows = json.loads(rows)
+            except Exception:
+                return []
+        if not isinstance(rows, list):
+            return []
+        keys = [r.get("key", "") for r in rows if isinstance(r, dict)]
+        cols = [r.get("values", []) for r in rows if isinstance(r, dict)]
+        max_len = max((len(c) for c in cols), default=0)
+        result = []
+        for i in range(max_len):
+            row = {}
+            for j, k in enumerate(keys):
+                row[k] = cols[j][i] if i < len(cols[j]) else ""
+            result.append(row)
+        return result
+
+    @staticmethod
+    def _split_rows(rows: list) -> tuple:
+        """Split rows into input and validate groups."""
+        inputs = [r for r in rows if r.get("kind") != "validate"]
+        validates = [r for r in rows if r.get("kind") == "validate"]
+        return inputs, validates
+
+    def _clone_steps(self, steps: list[TestStep]) -> list[TestStep]:
+        """Deep-clone steps so per-row substitution doesn't mutate originals."""
+        import copy
+        return copy.deepcopy(steps)
+
     def execute_case(self, case: TestCaseDef, iteration: int = 1) -> str:
         """Execute an API test case step by step.
 
-        Args:
-            case: TestCaseDef — prefers steps_data (from steps_json),
-                  falls back to extra_data for single-step auto-build.
-            iteration: current iteration number
-
-        Returns: "pass" | "fail" | "stopped"
+        Supports data-driven testing: if extra_data._rows is present,
+        each row becomes a separate sub-iteration with {{var}} substitution.
         """
-        # ── Resolve steps: priority to steps_json, fallback to flat fields ──
         extra = getattr(case, 'extra_data', {}) or {}
+        rows = self._to_row_dicts(extra.get("_rows", []))
 
         if case.steps_data:
-            steps: list[TestStep] = case.steps_data
+            base_steps: list[TestStep] = case.steps_data
         elif extra:
-            # Auto-build single step from flat fields (backward compat)
-            steps = [self._auto_build_step(case, extra)]
+            base_steps = [self._auto_build_step(case, extra)]
         else:
             self.adapter.log(f"Error: no steps for '{case.title}'")
             return "fail"
 
-        total = len(steps)
-        self._variables.clear()
-        self._last_response = None
+        if not rows:
+            return self._execute_steps(base_steps)
 
+        # ── Data-driven: iterate over each row ──
+        input_rows, validate_rows = self._split_rows(extra.get("_rows", []))
+        validate_cols = [r for r in validate_rows if r.get("key")]
+        all_pass = True
+        for ri, row_data in enumerate(rows):
+            if self.adapter.stopped():
+                return "stopped"
+            self.adapter.log(f"Data row {ri + 1}/{len(rows)}: {row_data}")
+            steps = self._clone_steps(base_steps)
+            for step in steps:
+                self._substitute_step(step, row_data)
+            self._variables.clear()
+            self._last_response = None
+            result = self._execute_steps(steps)
+
+            # ── Validate response fields ──
+            if result == "pass" and validate_cols and self._last_response:
+                for vc in validate_cols:
+                    path = vc.get("key", "")
+                    expected_val = str(row_data.get(path, "") or "")
+                    if not path or not expected_val:
+                        continue
+                    body = self._last_response.get("response_body", "")
+                    headers = self._last_response.get("response_headers", {})
+                    actual_val = self._eval_json_path(path, body, headers)
+                    actual_str = str(actual_val) if actual_val is not None else ""
+                    if actual_val is None or actual_str != expected_val:
+                        self.adapter.log(
+                            f"Validation FAIL: {path} expected='{expected_val}' actual='{actual_str}'"
+                        )
+                        result = "fail"
+                    else:
+                        self.adapter.log(f"Validation OK: {path} = '{expected_val}'")
+
+            if result != "pass":
+                all_pass = False
+                self.adapter.log(f"Data row {ri + 1} FAILED, continuing...")
+        return "pass" if all_pass else "fail"
+
+    def _execute_steps(self, steps: list[TestStep]) -> str:
+        """Execute a list of steps and return pass/fail/stopped."""
+        total = len(steps)
         for i, step in enumerate(steps):
             if self.adapter.stopped():
                 return "stopped"
-
             step_desc = step.description or f"{step.type}: {step.url or step.xpath}"
             if self._step_started_callback:
                 self._step_started_callback(i, total, step.type, step_desc[:100])
-
             result = self._dispatch(step, i, total)
-
             if self._step_callback:
                 self._step_callback(i, total, step.type, step_desc[:100], result)
-
-            if result == "fail":
-                return "fail"
-            if result == "stopped":
-                return "stopped"
-
+            if result != "pass":
+                return result
         return "pass"
+
+    @staticmethod
+    def _resolve_with(data: dict, template: str) -> str:
+        """Replace {{key}} placeholders using the given data dict."""
+        if not isinstance(template, str):
+            return template
+        def replacer(match):
+            key = match.group(1)
+            return str(data.get(key, match.group(0)))
+        return re.sub(r'\{\{(.+?)\}\}', replacer, template)
+
+    @classmethod
+    def _resolve_dict_with(cls, data: dict, d: dict) -> dict:
+        """Recursively resolve {{key}} in dict using the given data source."""
+        if not d:
+            return d
+        result = {}
+        for k, v in d.items():
+            rk = cls._resolve_with(data, k) if isinstance(k, str) else k
+            if isinstance(v, str):
+                result[rk] = cls._resolve_with(data, v)
+            elif isinstance(v, dict):
+                result[rk] = cls._resolve_dict_with(data, v)
+            elif isinstance(v, list):
+                result[rk] = [cls._resolve_with(data, x) if isinstance(x, str) else x for x in v]
+            else:
+                result[rk] = v
+        return result
+
+    def _substitute_step(self, step: TestStep, data: dict):
+        """Replace {{key}} placeholders in step fields with data values."""
+        if step.url:
+            step.url = self._resolve_with(data, step.url)
+        if step.body and isinstance(step.body, dict):
+            step.body = self._resolve_dict_with(data, step.body)
+        if step.headers and isinstance(step.headers, dict):
+            step.headers = self._resolve_dict_with(data, step.headers)
+        if step.expected_text:
+            step.expected_text = self._resolve_with(data, step.expected_text)
+        if step.value:
+            step.value = self._resolve_with(data, step.value)
 
     def _auto_build_step(self, case: TestCaseDef, extra: dict) -> TestStep:
         """Build a single api_request step from legacy flat fields."""
@@ -271,8 +377,11 @@ class ApiExecutor:
         for a in assertions:
             a_type = a.get("type", "")
             path = a.get("path", "")
-            operator = a.get("operator", "equals")
-            expected = a.get("expected", "")
+            # Support both naming conventions: "op"/"expect" (from steps_json) and "operator"/"expected"
+            operator = a.get("op") or a.get("operator", "equals")
+            expected = a.get("expect")
+            if expected is None:
+                expected = a.get("expected", "")
 
             if a_type == "response_time":
                 max_ms = float(expected or 5000)

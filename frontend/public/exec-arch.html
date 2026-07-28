@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>执行引擎架构 · Android-AutoTests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --c-teal:#19c8b9;--c-teal-hover:#3dd4c6;--c-teal-active:#11a89b;
+  --c-text:#794f27;--c-body:#725d42;--c-secondary:#9f927d;--c-muted:#8a7b66;
+  --c-bg:#f8f8f0;--c-card:rgb(247,243,223);--c-disabled:#f0ece2;
+  --c-border:#c4b89e;--c-border-hover:#a89878;--c-border-strong:#9f927d;
+  --c-success:#6fba2c;--c-warning:#f5c31c;--c-error:#e05a5a;--c-info:#5b9bd5;
+  --c-ui:#f5c31c;--c-api:#889df0;--c-web:#6fba2c;--c-runner:#e05a5a;--c-adapter:#19c8b9;
+  --c-code-bg:rgba(121,79,39,0.06);
+  --font-display:'Nunito','Noto Sans SC',sans-serif;
+  --font-body:'Nunito','Noto Sans SC',-apple-system,'PingFang SC',sans-serif;
+  --radius-sm:12px;--radius-base:18px;--radius-lg:24px;
+  --shadow-card:0 2px 8px rgba(61,52,40,0.06);
+  --ease:cubic-bezier(0.4,0,0.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-body);font-weight:500;letter-spacing:0.01em;background:var(--c-bg);color:var(--c-body);line-height:1.6;min-height:100vh}
+.container{max-width:1200px;margin:0 auto;padding:40px 32px}
+.page-header{text-align:center;margin-bottom:40px}
+.page-header h1{font-family:var(--font-display);font-weight:900;font-size:36px;color:var(--c-text);letter-spacing:0.02em}
+.page-header .sub{font-size:16px;color:var(--c-secondary);margin-top:8px;font-weight:600}
+.footer{margin-top:48px;padding-top:20px;border-top:1px dashed var(--c-border);text-align:center;font-size:13px;color:var(--c-muted)}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
+.kpi-card{background:var(--c-card);border-radius:var(--radius-sm);padding:20px 16px;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;border-radius:3px}
+.kpi-card.kpi-ui::before{background:var(--c-ui)}
+.kpi-card.kpi-api::before{background:var(--c-api)}
+.kpi-card.kpi-web::before{background:var(--c-web)}
+.kpi-card.kpi-meta::before{background:var(--c-runner)}
+.kpi-card .dot{position:absolute;top:10px;right:14px;width:12px;height:12px;border-radius:50%;opacity:0.3}
+.kpi-card.kpi-ui .dot{background:var(--c-ui)}.kpi-card.kpi-api .dot{background:var(--c-api)}
+.kpi-card.kpi-web .dot{background:var(--c-web)}.kpi-card.kpi-meta .dot{background:var(--c-runner)}
+.kpi-label{font-size:12px;font-weight:700;color:var(--c-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px}
+.kpi-value{font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--c-text)}
+.kpi-subs{font-size:13px;color:var(--c-secondary);margin-top:4px}
+
+.section{margin-bottom:32px}
+.section-title{font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--c-text);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.section-title::after{content:'';flex:1;height:2px;background:linear-gradient(to right,var(--c-border),transparent);border-radius:2px}
+
+.arch-container{background:var(--c-card);border-radius:var(--radius-lg);padding:24px;box-shadow:var(--shadow-card);overflow-x:auto}
+.arch-flow{display:flex;align-items:stretch;gap:0;min-width:960px;flex-wrap:nowrap}
+.arch-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.arch-arrow{display:flex;align-items:center;justify-content:center;width:40px;flex-shrink:0;color:var(--c-border-strong);font-size:22px;font-weight:900}
+.arch-node{background:#fff;border:2px solid var(--c-border);border-radius:var(--radius-sm);padding:10px 12px;text-align:center;font-size:12px;font-weight:700;color:var(--c-body);position:relative}
+.arch-node.entry{border-color:var(--c-runner);border-width:3px}
+.arch-node.executor{border-color:var(--c-teal);border-width:2px}
+.arch-node.adapter{border-color:var(--c-teal);border-style:dashed}
+.arch-node.result{border-color:var(--c-success);border-width:2px}
+.arch-node .node-type{font-size:10px;color:var(--c-muted);text-transform:uppercase;letter-spacing:0.04em}
+.arch-node .node-name{font-family:var(--font-display);font-size:14px;font-weight:800;color:var(--c-text);margin:4px 0}
+.arch-node .node-file{font-size:10px;color:var(--c-secondary);font-family:monospace}
+.arch-label{text-align:center;font-size:11px;font-weight:700;color:var(--c-muted);padding:4px 0;text-transform:uppercase;letter-spacing:0.04em}
+.arch-connector{display:flex;align-items:center;justify-content:center;padding:8px 0;font-size:14px;color:var(--c-border-strong)}
+
+.detail-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.detail-card{background:var(--c-card);border-radius:var(--radius-base);padding:20px;box-shadow:var(--shadow-card)}
+.detail-card h4{font-family:var(--font-display);font-weight:800;font-size:15px;color:var(--c-text);margin-bottom:10px}
+.detail-card h4 .badge{display:inline-block;padding:2px 10px;border-radius:50px;font-size:11px;font-weight:800;color:#fff;margin-left:8px;vertical-align:middle}
+.badge-ui{background:var(--c-ui);color:var(--c-text)!important}
+.badge-api{background:var(--c-api)}
+.badge-web{background:var(--c-web)}
+.detail-table{width:100%;border-collapse:collapse;font-size:13px}
+.detail-table th{background:linear-gradient(135deg,var(--c-code-bg),transparent);padding:8px 12px;text-align:left;font-weight:700;color:var(--c-text);border-bottom:2px solid var(--c-border)}
+.detail-table td{padding:8px 12px;border-bottom:1px dashed var(--c-border)}
+.detail-table tr:nth-child(even){background:rgba(255,255,255,0.4)}
+
+.flow-chart{display:flex;flex-direction:column;gap:0;background:var(--c-card);border-radius:var(--radius-lg);padding:24px;box-shadow:var(--shadow-card)}
+.flow-row{display:flex;align-items:center;gap:12px;padding:6px 0}
+.flow-step{background:#fff;border:2px solid var(--c-border);border-radius:var(--radius-sm);padding:10px 16px;font-size:13px;font-weight:600;color:var(--c-body);flex:1;display:flex;align-items:center;gap:10px}
+.flow-step.db{border-color:var(--c-warning);border-style:dashed}
+.flow-step.http{border-color:var(--c-success);border-style:dashed}
+.flow-step.final{border-color:var(--c-runner);border-style:dashed}
+.flow-step .step-num{font-family:var(--font-display);font-weight:900;font-size:18px;color:var(--c-teal);min-width:28px}
+.flow-arrow{font-size:18px;color:var(--c-border-strong);font-weight:900;flex-shrink:0}
+
+.risk-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.risk-card{background:var(--c-card);border-radius:var(--radius-base);padding:18px;box-shadow:var(--shadow-card);border-left:5px solid var(--c-warning)}
+.risk-card h5{font-family:var(--font-display);font-weight:800;font-size:14px;color:var(--c-text);margin-bottom:6px}
+.risk-card p{font-size:13px;color:var(--c-body);line-height:1.6}
+.risk-card code{background:var(--c-code-bg);padding:1px 6px;border-radius:4px;font-size:12px;font-weight:600}
+
+.tag{display:inline-block;padding:1px 8px;border-radius:50px;font-size:10px;font-weight:800;margin-left:4px}
+.tag-ui{background:rgba(245,195,28,0.2);color:#8b6914}
+.tag-api{background:rgba(136,157,240,0.2);color:#4a5cc4}
+.tag-web{background:rgba(111,186,44,0.2);color:#3d6e14}
+.tag-fail{background:rgba(224,90,90,0.12);color:#a03030}
+.tag-pass{background:rgba(111,186,44,0.12);color:#3d6e14}
+
+@media(max-width:768px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .detail-grid,.risk-grid{grid-template-columns:1fr}
+  .container{padding:20px 16px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="page-header">
+  <h1>Android-AutoTests 执行引擎架构</h1>
+  <p class="sub">三套执行器 · 统一调度 · 数据驱动 · 2026-07-27</p>
+</div>
+
+<!-- KPI -->
+<div class="kpi-grid">
+  <div class="kpi-card kpi-ui"><span class="dot"></span>
+    <div class="kpi-label">UI 执行器</div>
+    <div class="kpi-value">14<span class="tag tag-ui">步骤</span></div>
+    <div class="kpi-subs">Android ADB + uiautomator2</div>
+  </div>
+  <div class="kpi-card kpi-api"><span class="dot"></span>
+    <div class="kpi-label">API 执行器</div>
+    <div class="kpi-value">4<span class="tag tag-api">步骤</span></div>
+    <div class="kpi-subs">urllib HTTP · 数据驱动</div>
+  </div>
+  <div class="kpi-card kpi-web"><span class="dot"></span>
+    <div class="kpi-label">Web 执行器</div>
+    <div class="kpi-value">8<span class="tag tag-web">步骤</span></div>
+    <div class="kpi-subs">Playwright 浏览器</div>
+  </div>
+  <div class="kpi-card kpi-meta"><span class="dot"></span>
+    <div class="kpi-label">架构元数据</div>
+    <div class="kpi-value">15<span style="font-size:14px"> 个文件</span></div>
+    <div class="kpi-subs">共享 RemoteTestRunner + _execute_tests 管线</div>
+  </div>
+</div>
+
+<!-- Architecture Flow -->
+<div class="section">
+  <div class="section-title">请求 → 执行 → 结果 全链路</div>
+  <div class="arch-container">
+    <div class="arch-label" style="margin-bottom:8px">POST /api/runner/run 入口</div>
+    <div class="arch-flow">
+      <div class="arch-col">
+        <div class="arch-node entry"><div class="node-type">入口</div><div class="node-name">start_test_run</div><div class="node-file">views/execution.py</div></div>
+        <div class="arch-label">解析 task_type</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-col">
+        <div class="arch-node"><div class="node-type">加载</div><div class="node-name">load_definitions</div><div class="node-file">@_bg_sync</div></div>
+        <div class="arch-label">按 type 查对应表</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-col">
+        <div class="arch-node">
+          <div class="node-type">分发</div>
+          <div class="node-name" style="font-size:12px">ui_automation → TestRunner</div>
+          <div class="node-name" style="font-size:12px">api_testing → _execute_unified_remote</div>
+          <div class="node-name" style="font-size:12px">web_automation → _execute_unified_remote</div>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-col">
+        <div class="arch-node executor"><div class="node-type">运行</div><div class="node-name">RemoteTestRunner</div><div class="node-file">remote_runner.py</div></div>
+        <div class="arch-node executor"><div class="node-name">ApiExecutor / WebExecutor</div></div>
+        <div class="arch-node adapter"><div class="node-name">ApiAdapter / WebAdapter</div></div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-col">
+        <div class="arch-node result"><div class="node-type">持久化</div><div class="node-name">persist()</div><div class="node-file">@_bg_sync</div></div>
+        <div class="arch-node result"><div class="node-name">finalize()</div><div class="node-file">sm.complete/fail</div></div>
+        <div class="arch-label">TestRunRecord + TestResult + TaskCard.outcome</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Execution Pipeline Detail -->
+<div class="section">
+  <div class="section-title">API 执行器数据流（单用例链路）</div>
+  <div class="flow-chart">
+    <div class="flow-row">
+      <div class="flow-step db"><span class="step-num">①</span><strong>load_definitions</strong> · @_bg_sync · 从 ApiTestCase 表加载 steps_json + rows + assertions</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-num">②</span><strong>TestCaseDef</strong> · 构建 dataclass: steps_data=[TestStep], extra_data={_rows, _assertions, url, method}</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-step"><span class="step-num">③</span><strong>base_url 提取</strong> · 从 extra_data.url 解析 scheme+host → ApiAdapter(base_url)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-num">④</span><strong>RemoteTestRunner.run()</strong> · 遍历 test_cases × loop_count</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-step"><span class="step-num">⑤</span><strong>ApiExecutor.execute_case()</strong> · 检测 _rows → 逐行数据驱动</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-num">⑥</span><strong>逐行替换</strong> · {{token}} → 真实 JWT · body/headers/url 中的 {{var}} 全部替换</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-step http"><span class="step-num">⑦</span><strong>ApiAdapter.execute_step()</strong> · urllib.urlopen() · 相对 URL → base_url 拼接</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><span class="step-num">⑧</span><strong>响应校验</strong> · status_code 比对 + 断言规则 + validate 列校验</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-step final"><span class="step-num">⑨</span><strong>persist()</strong> · @_bg_sync · bulk_create TestResult</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step final"><span class="step-num">⑩</span><strong>finalize()</strong> · @_bg_sync · sm.complete() · outcome="completed"</div>
+    </div>
+  </div>
+</div>
+
+<!-- Three Executors -->
+<div class="section">
+  <div class="section-title">三套执行器对比</div>
+  <div class="detail-grid">
+    <div class="detail-card">
+      <h4>Android UI<span class="badge badge-ui">ui_automation</span></h4>
+      <table class="detail-table">
+        <tr><th>属性</th><th>值</th></tr>
+        <tr><td>Runner</td><td><code>TestRunner</code> (runner.py)</td></tr>
+        <tr><td>Executor</td><td><code>StepExecutor</code> (executor.py)</td></tr>
+        <tr><td>Adapter</td><td><code>DeviceAdapter</code> (adapter.py)</td></tr>
+        <tr><td>步骤类型</td><td>click, swipe, wait, verify_text, start_app, loop_n… 14种</td></tr>
+        <tr><td>设备依赖</td><td>✅ ADB + uiautomator2</td></tr>
+        <tr><td>DB 模型</td><td><code>TestDefinition</code> (cm_test_definitions)</td></tr>
+        <tr><td>@_bg_sync 次数</td><td>~8 次/任务</td></tr>
+      </table>
+    </div>
+    <div class="detail-card">
+      <h4>API 接口<span class="badge badge-api">api_testing</span></h4>
+      <table class="detail-table">
+        <tr><th>属性</th><th>值</th></tr>
+        <tr><td>Runner</td><td><code>RemoteTestRunner</code> (remote_runner.py)</td></tr>
+        <tr><td>Executor</td><td><code>ApiExecutor</code> (api_executor.py)</td></tr>
+        <tr><td>Adapter</td><td><code>ApiAdapter</code> (api_adapter.py)</td></tr>
+        <tr><td>步骤类型</td><td>api_request, api_assert, api_sleep, api_log 4种</td></tr>
+        <tr><td>设备依赖</td><td>❌ 虚拟执行</td></tr>
+        <tr><td>DB 模型</td><td><code>ApiTestCase</code> (cm_api_testcases)</td></tr>
+        <tr><td>@_bg_sync 次数</td><td>~5 次/任务</td></tr>
+      </table>
+    </div>
+    <div class="detail-card">
+      <h4>Web 自动化<span class="badge badge-web">web_automation</span></h4>
+      <table class="detail-table">
+        <tr><th>属性</th><th>值</th></tr>
+        <tr><td>Runner</td><td><code>RemoteTestRunner</code> (remote_runner.py)</td></tr>
+        <tr><td>Executor</td><td><code>WebExecutor</code> (web_executor.py)</td></tr>
+        <tr><td>Adapter</td><td><code>WebAdapter</code> (web_adapter.py)</td></tr>
+        <tr><td>步骤类型</td><td>web_navigate, web_click, web_fill, web_assert… 8种</td></tr>
+        <tr><td>设备依赖</td><td>❌ 虚拟执行 (Playwright)</td></tr>
+        <tr><td>DB 模型</td><td><code>WebTestCase</code> (cm_web_testcases)</td></tr>
+        <tr><td>@_bg_sync 次数</td><td>~5 次/任务</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Risks -->
+<div class="section">
+  <div class="section-title">已知风险与缓解</div>
+  <div class="risk-grid">
+    <div class="risk-card">
+      <h5>@_bg_sync 线程池耗尽</h5>
+      <p>每个 <code>@_bg_sync</code> 调用 = 新线程 = 新 MySQL 连接。3 种执行器并发时，每任务 4-8 次 DB 操作。多任务排队时线程池可能耗尽，新连接被拒绝。</p>
+      <p style="margin-top:8px"><strong>缓解:</strong> 使用连接池 (django-db-connection-pool)；限制并发任务数</p>
+    </div>
+    <div class="risk-card">
+      <h5>MySQL 间歇断连 → 任务挂起</h5>
+      <p>Daphne worker 线程池独立建连。MySQL 重启或网络波动时，<code>@_bg_sync</code> 线程阻塞 TCP 超时 30 秒。不抛异常，任务挂起无结果。</p>
+      <p style="margin-top:8px"><strong>缓解:</strong> MySQL 连接重试 + 健康检查；<code>connect_timeout=5</code></p>
+    </div>
+    <div class="risk-card">
+      <h5>case_ids 跨表查询</h5>
+      <p><code>API-xxx</code> ID 只能查 <code>ApiTestCase</code>。前端选错 task_type 或 URL 路径错误时，<code>load_definitions</code> 返回空数组，任务立即失败。</p>
+      <p style="margin-top:8px"><strong>缓解:</strong> 前端 watcher 按 task_type 调不同 API；后端加校验</p>
+    </div>
+    <div class="risk-card">
+      <h5>recover_orphans 误伤</h5>
+      <p>服务重启时，<code>state_machine.recover_orphans()</code> 将所有 RUNNING 任务标记 FAILED。API 虚拟任务也被误杀。</p>
+      <p style="margin-top:8px"><strong>缓解:</strong> 重启前等待任务完成；区分虚拟/物理设备任务</p>
+    </div>
+  </div>
+</div>
+
+<!-- Verified -->
+<div class="section">
+  <div class="section-title">验证结果</div>
+  <div class="arch-container">
+    <table class="detail-table">
+      <tr><th>测试项</th><th>方式</th><th>结果</th><th>耗时</th></tr>
+      <tr><td>直接 Python 执行 API-DASH-009</td><td><code>executor.execute_case()</code></td><td><span class="tag tag-pass">pass</span></td><td>2095ms</td></tr>
+      <tr><td>RemoteTestRunner + test_callbacks</td><td><code>runner.run()</code></td><td><span class="tag tag-pass">pass</span></td><td>2117ms</td></tr>
+      <tr><td>完整 _execute_unified_remote</td><td>模拟 load_definitions 全链路</td><td><span class="tag tag-pass">pass</span></td><td>2095ms</td></tr>
+      <tr><td>REST API POST /api/runner/run</td><td>Daphne asyncio.create_task</td><td><span class="tag tag-pass">completed</span></td><td>~35s (含DB启动开销)</td></tr>
+      <tr><td>TestResult 持久化</td><td>bulk_create</td><td><span class="tag tag-pass">1 record</span></td><td>—</td></tr>
+      <tr><td>TaskCard outcome 写入</td><td>sm.complete()</td><td><span class="tag tag-pass">completed</span></td><td>—</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="footer">Android-AutoTests · 执行引擎架构报告 · 生成于 2026-07-27 · 15 个文件 · 3 套执行器 · 26 种步骤类型</div>
+
+</div>
+</body>
+</html>

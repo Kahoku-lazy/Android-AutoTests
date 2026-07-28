@@ -10,10 +10,12 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from apps.device_pool.models import Device
 from apps.case_manager.models import TestDefinition, StorageTestCase, ApiTestCase
+from apps.case_manager.models_web import WebTestCase
 from apps.test_runner.models import TestRunRecord, TestResult
 from apps.ai_assistant.models import AIAgent
 from apps.report_generator.models import Report
-from apps.element_locator.models import Element, Page
+from apps.workflow.models import WorkflowDocument
+from apps.element_locator.models import Element, Page, WebElement, ApiEndpoint
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +74,49 @@ def _device_dashboard_stats():
     total = visible.count()
     online = visible.filter(status__in=_VISIBLE_DEVICE_STATUSES).count()
     return online, total
+
+
+def _cases_breakdown():
+    """Return per-type case breakdown for the dashboard."""
+    return [
+        {
+            "type": "ui_automation", "label": "Android",
+            "total": TestDefinition.objects.count(),
+            "enabled": TestDefinition.objects.filter(enabled=True).count(),
+        },
+        {
+            "type": "web_automation", "label": "Web",
+            "total": _safe_count(WebTestCase),
+            "enabled": _safe_count(WebTestCase, {"enabled": True}),
+        },
+        {
+            "type": "api_testing", "label": "API",
+            "total": _safe_count(ApiTestCase),
+            "enabled": _safe_count(ApiTestCase, {"enabled": True}),
+        },
+        {
+            "type": "storage", "label": "功能业务",
+            "total": _safe_count(StorageTestCase),
+            "enabled": _safe_count(StorageTestCase, {"enabled": True}),
+        },
+    ]
+
+
+def _elements_breakdown():
+    """Return per-type element breakdown (Android / Web / API)."""
+    return [
+        {"type": "android", "label": "Android元素", "total": Element.objects.count()},
+        {"type": "web", "label": "Web元素", "total": _safe_count(WebElement)},
+        {"type": "api", "label": "API接口", "total": _safe_count(ApiEndpoint)},
+    ]
+
+
+def _workflow_stats():
+    """Return workflow document counts."""
+    total = _safe_count(WorkflowDocument)
+    page_flows = _safe_count(WorkflowDocument, {"doc_type": "page_flow"})
+    test_cases = _safe_count(WorkflowDocument, {"doc_type": "test_case"})
+    return {"total": total, "page_flows": page_flows, "test_cases": test_cases}
 
 
 def _daily_execution_series(days=12):
@@ -186,10 +231,11 @@ def _recent_tasks(limit=8):
 def dashboard_stats(request):
     """GET /api/dashboard/stats/ — platform-level statistics."""
     device_online, device_total = _device_dashboard_stats()
-    case_total = TestDefinition.objects.count() + _safe_count(StorageTestCase) + _safe_count(ApiTestCase)
+    case_total = TestDefinition.objects.count() + _safe_count(StorageTestCase) + _safe_count(ApiTestCase) + _safe_count(WebTestCase)
     case_enabled = (TestDefinition.objects.filter(enabled=True).count()
                     + _safe_count(StorageTestCase, {'enabled': True})
-                    + _safe_count(ApiTestCase, {'enabled': True}))
+                    + _safe_count(ApiTestCase, {'enabled': True})
+                    + _safe_count(WebTestCase, {'enabled': True}))
     run_total = TestRunRecord.objects.count()
     run_active = TestRunRecord.objects.filter(status="RUNNING").count()
     agent_total = AIAgent.objects.count()
@@ -225,12 +271,13 @@ def dashboard_stats(request):
     week_ago = timezone.now() - timedelta(days=7)
     case_trend_num = (TestDefinition.objects.filter(created_at__gte=week_ago).count()
                       + _safe_count(StorageTestCase, {'created_at__gte': week_ago})
-                      + _safe_count(ApiTestCase, {'created_at__gte': week_ago}))
+                      + _safe_count(ApiTestCase, {'created_at__gte': week_ago})
+                      + _safe_count(WebTestCase, {'created_at__gte': week_ago}))
     # Device activity = runs this week
     device_trend_num = TestResult.objects.filter(created_at__gte=week_ago).count()
 
     # ── Elements: per-page breakdown from element-manager (el_pages + el_elements) ──
-    element_total = Element.objects.count()
+    element_total = Element.objects.count() + _safe_count(WebElement) + _safe_count(ApiEndpoint)
     pages_qs = Page.objects.annotate(live_count=Count("elements")).order_by("-live_count")
     element_breakdown = [
         {
@@ -255,12 +302,15 @@ def dashboard_stats(request):
                     "total": case_total,
                     "enabled": case_enabled,
                     "trend": case_trend_num,
+                    "breakdown": _cases_breakdown(),
                 },
                 "elements": {
                     "total": element_total,
                     "pages": len(element_breakdown),
                     "breakdown": element_breakdown,
+                    "type_breakdown": _elements_breakdown(),
                 },
+                "workflow": _workflow_stats(),
                 "runs": {
                     "total": run_total,
                     "active": run_active,
@@ -352,13 +402,15 @@ def case_stats(request):
         {
             "ok": True,
             "data": {
-                "total": TestDefinition.objects.count() + _safe_count(StorageTestCase) + _safe_count(ApiTestCase),
+                "total": TestDefinition.objects.count() + _safe_count(StorageTestCase) + _safe_count(ApiTestCase) + _safe_count(WebTestCase),
                 "enabled": (TestDefinition.objects.filter(enabled=True).count()
                             + _safe_count(StorageTestCase, {'enabled': True})
-                            + _safe_count(ApiTestCase, {'enabled': True})),
+                            + _safe_count(ApiTestCase, {'enabled': True})
+                            + _safe_count(WebTestCase, {'enabled': True})),
                 "disabled": (TestDefinition.objects.filter(enabled=False).count()
                              + _safe_count(StorageTestCase, {'enabled': False})
-                             + _safe_count(ApiTestCase, {'enabled': False})),
+                             + _safe_count(ApiTestCase, {'enabled': False})
+                             + _safe_count(WebTestCase, {'enabled': False})),
             },
         }
     )

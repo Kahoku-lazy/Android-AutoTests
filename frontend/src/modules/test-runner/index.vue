@@ -5,6 +5,7 @@ import { ElMessage } from "element-plus";
 import { getToken } from "@/shared/api-client.js";
 import ConfirmButton from "@/shared/components/patterns/ConfirmButton.vue";
 import EmptyState from "@/shared/components/patterns/EmptyState.vue";
+import ErrorState from "@/shared/components/patterns/ErrorState.vue";
 import AppTable from "@/shared/components/AppTable.vue";
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
 import FilterTabs from "@/shared/components/FilterTabs.vue";
@@ -41,6 +42,7 @@ const router = useRouter();
 const cases = ref([]);
 const devices = ref([]);
 const showNewTask = ref(false);
+const error = ref("");
 
 const activeTab = ref("running");
 const viewMode = ref("table");
@@ -104,8 +106,9 @@ async function loadTasks() {
       }
       if (maxSeq >= readTaskCounter()) writeTaskCounter(maxSeq);
     }
+    error.value = "";
   } catch (e) {
-    /* 加载失败保持空列表 */
+    error.value = "加载任务列表失败，请检查网络连接";
     console.error(e);
   }
 }
@@ -332,8 +335,16 @@ function initTaskProgress(task) {
 
 async function doStartTask(task) {
   const isApi = task.taskType === "api_testing";
-  if (!isApi && !cases.value.length) await loadCases();
-  if (isApi && !availableCases.value.length) await loadApiCases();
+  const isWeb = task.taskType === "web_automation";
+  // 始终按任务类型重新加载用例列表，避免 availableCases 被 loadCases() 或
+  // createAndStart() 中 resetNewForm() 触发的 watch 覆写成错误的用例类型
+  if (isApi) {
+    await loadApiCases();
+  } else if (isWeb) {
+    await loadWebCases();
+  } else if (!cases.value.length) {
+    await loadCases();
+  }
   initTaskProgress(task);
   if (!task.caseItems.length) {
     taskAddLog(task, "❌ 未匹配到用例，请确认用例列表已加载且用例ID有效", "error");
@@ -608,8 +619,14 @@ async function loadApiCases() {
       availableCases.value = (data.definitions || []).filter(
         c => c.case_type === "api_testing"
       );
+      if (!availableCases.value.length) ElMessage.info('暂无 API 用例，请先在用例管理中创建');
+    } else {
+      ElMessage.error(data.error || '加载 API 用例失败');
     }
-  } catch (e) { console.error(e); }
+  } catch (e) {
+    ElMessage.error('加载 API 用例失败，请检查网络连接');
+    console.error(e);
+  }
 }
 async function loadWebCases() {
   try {
@@ -618,8 +635,14 @@ async function loadWebCases() {
       availableCases.value = (data.definitions || []).filter(
         c => c.case_type === "web_automation"
       );
+      if (!availableCases.value.length) ElMessage.info('暂无 Web 用例，请先在用例管理中创建');
+    } else {
+      ElMessage.error(data.error || '加载 Web 用例失败');
     }
-  } catch (e) { console.error(e); }
+  } catch (e) {
+    ElMessage.error('加载 Web 用例失败，请检查网络连接');
+    console.error(e);
+  }
 }
 async function loadDevices() {
   try {
@@ -641,6 +664,8 @@ async function loadDevices() {
       icon-gradient="linear-gradient(135deg,#FFB5A7,#f87171)"
     />
     <div class="doc-body">
+      <ErrorState v-if="error" :message="error" @retry="loadTasks" />
+      <template v-else>
       <!-- 统计概览 -->
       <section class="doc-section runner-stats">
         <div class="doc-section__header">
@@ -669,7 +694,7 @@ async function loadDevices() {
         <el-card v-if="viewMode==='table'" class="table-card" shadow="never"><div class="device-table-wrapper"><AppTable :columns="tableColumns" :data-source="filteredTasks" row-key="id" empty-text="暂无任务" @row-click="openTaskDetail">
           <template #cell-id="{record}"><span class="mono-text">{{ record.id }}</span></template>
           <template #cell-name="{record}"><span style="font-weight:700">{{ record.name||record.id }}</span></template>
-          <template #cell-deviceSerial="{record}">📱 {{ record.deviceSerial||'—' }}</template>
+          <template #cell-deviceSerial="{record}"><template v-if="record.taskType==='api_testing'||record.taskType==='web_automation'">无需设备</template><template v-else>📱 {{ record.deviceSerial||'—' }}</template></template>
           <template #cell-cases="{record}">{{ record.caseIds?.length||0 }}</template>
           <template #cell-progress="{record}"><div v-if="!isTaskQueued(record)" class="mini-progress"><div class="mini-progress-fill" :style="{width:taskProgress(record)+'%',background:taskStatusInfo(record).color}"></div></div><span style="font-size:var(--app-size-xs);margin-left:4px">{{ isTaskQueued(record)?'排队':taskProgress(record)+'%' }}</span></template>
           <template #cell-status="{record}"><span class="status-badge" :style="{background:taskStatusInfo(record).color}">{{ taskStatusInfo(record).icon }} {{ taskStatusInfo(record).label }}</span></template>
@@ -685,22 +710,47 @@ async function loadDevices() {
           <div v-for="g in [{k:'running',l:'🟣 执行中'},{k:'waiting',l:'🟡 等待中'},{k:'completed',l:'🟢 已完成'},{k:'incomplete',l:'🔴 失败/未完成'}]" :key="g.k">
             <template v-if="groupedTasks[g.k].length">
               <div class="card-group-title">{{ g.l }} <span class="card-group-count">{{ groupedTasks[g.k].length }}</span></div>
-              <div class="card-grid"><div v-for="task in groupedTasks[g.k]" :key="task.id" class="task-card" @click="openTaskDetail(task)">
-                <div class="task-card-header"><span class="task-card-id">{{ task.id }}</span><span class="status-badge" :style="{background:taskStatusInfo(task).color}">{{ taskStatusInfo(task).icon }} {{ taskStatusInfo(task).label }}</span></div>
+              <div class="card-grid"><div v-for="task in groupedTasks[g.k]" :key="task.id" class="task-card" @click="openTaskDetail(task)" :style="{'--card-accent': taskStatusInfo(task).color}">
+                <div class="task-card-header">
+                  <span class="task-card-id">{{ task.id }}</span>
+                  <span class="task-type-tag" :class="'task-type--' + (task.taskType||'ui_automation')">{{ {api_testing:'API 测试',web_automation:'Web 自动化',ui_automation:'UI 自动化'}[task.taskType||'ui_automation']||'UI 自动化' }}</span>
+                </div>
                 <div class="task-card-name">{{ task.name||task.id }}</div>
-                <div class="task-card-meta">📱 {{ task.deviceSerial||'—' }} · {{ task.caseIds?.length||0 }} 用例 · {{ task.loopCount||1 }} 轮</div>
-                <div v-if="!isTaskQueued(task)" class="task-card-progress"><div class="mini-progress"><div class="mini-progress-fill" :style="{width:taskProgress(task)+'%',background:taskStatusInfo(task).color}"></div></div></div>
-                <div class="task-card-stats"><span v-if="isTaskQueued(task)">排队等待</span><span v-else>{{ taskCompletedCount(task) }}/{{ taskTotalCount(task) }} · {{ taskProgress(task) }}%</span><span style="font-size:var(--app-size-xs);opacity:0.4">{{ formatTime(task.createdAt) }}</span></div>
+                <div class="task-card-meta">
+                  <span class="meta-item" v-if="task.taskType==='api_testing'||task.taskType==='web_automation'">🌐 无需设备</span>
+                  <span class="meta-item" v-else>📱 {{ task.deviceSerial||'—' }}</span>
+                  <span class="meta-item">📋 {{ task.caseIds?.length||0 }} 用例</span>
+                  <span class="meta-item">🔁 {{ task.loopCount||1 }} 轮</span>
+                </div>
+                <div v-if="!isTaskQueued(task)" class="task-card-progress">
+                  <div class="mini-progress"><div class="mini-progress-fill" :style="{width:taskProgress(task)+'%',background:taskStatusInfo(task).color}"></div></div>
+                </div>
+                <div class="task-card-stats">
+                  <span class="task-card-status" :style="{color:taskStatusInfo(task).color}">{{ taskStatusInfo(task).icon }} {{ taskStatusInfo(task).label }}</span>
+                  <span v-if="isTaskQueued(task)">排队等待</span>
+                  <span v-else class="task-card-count">{{ taskCompletedCount(task) }}/{{ taskTotalCount(task) }} · {{ taskProgress(task) }}%</span>
+                  <span class="task-card-time">{{ formatTime(task.createdAt) }}</span>
+                </div>
                 <div class="task-card-actions" @click.stop>
-                  <template v-if="deriveTaskStatus(task)==='running'"><ConfirmButton size="small" type="danger" plain message="停止后任务将中断" @confirm="doStopTask(task)">⏹ 停止</ConfirmButton></template>
-                  <template v-else-if="isTaskQueued(task)"><ConfirmButton size="small" type="warning" plain message="确认取消排队？" @confirm="doCancelQueue(task)">取消排队</ConfirmButton></template>
-                  <template v-else><el-button size="small" v-if="task.caseIds?.length" @click="doStartTask(task)">▶ 执行</el-button><el-button size="small" v-if="task.outcome" @click="restartTask(task)">↻ 重跑</el-button></template>
+                  <template v-if="deriveTaskStatus(task)==='running'">
+                    <ConfirmButton size="small" type="danger" plain message="停止后任务将中断" @confirm="doStopTask(task)">⏹ 停止</ConfirmButton>
+                  </template>
+                  <template v-else-if="isTaskQueued(task)">
+                    <ConfirmButton size="small" type="warning" plain message="确认取消排队？" @confirm="doCancelQueue(task)">🚫 取消排队</ConfirmButton>
+                  </template>
+                  <template v-else>
+                    <el-button size="small" v-if="task.caseIds?.length" type="primary" @click.stop="doStartTask(task)">▶ 执行</el-button>
+                    <el-button size="small" v-if="task.outcome" @click.stop="restartTask(task)">↻ 重跑</el-button>
+                    <el-button size="small" v-if="task.outcome" @click.stop="openReport(task)">📊 报告</el-button>
+                    <ConfirmButton size="small" type="danger" plain message="确认删除该任务？" @confirm="doRemoveTask(task)">🗑 删除</ConfirmButton>
+                  </template>
                 </div>
               </div></div>
             </template>
           </div>
         </div>
       </section>
+    </template>
     </div>
 
     <NewTaskDialog
@@ -785,17 +835,53 @@ async function loadDevices() {
 .card-group-count { font-family:var(--app-font-mono);font-size:var(--app-size-xs);color:var(--ink);opacity:0.4;background:#f8f6f2;padding:2px 8px;border-radius:3px 6px 3px 6px;border:1.5px solid #e8e4d8 }
 .card-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:14px }
 @media(max-width:900px){.card-grid{grid-template-columns:repeat(2,1fr)}}
-.task-card { background:#fff;border:3px solid var(--ink);border-radius:6px 10px 6px 10px;padding:10px 10px 28px 10px;box-shadow:2px 3px 0 rgba(0,0,0,0.04);position:relative;cursor:pointer;transition:all 0.2s }
-.task-card:nth-child(3n+1){transform:rotate(-0.4deg)}.task-card:nth-child(3n+2){transform:rotate(0.3deg)}.task-card:nth-child(3n+3){transform:rotate(-0.2deg)}
-.task-card:hover { transform:rotate(0)scale(1.02)!important;z-index:5;box-shadow:3px 5px 0 rgba(0,0,0,0.08) }
-.task-card-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:8px }
-.task-card-id { font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600 }
-.task-card-name { font-size:var(--app-size-sm);font-weight:700;margin-bottom:4px }
-.task-card-meta { font-size:var(--app-size-xs);opacity:0.4;margin-bottom:8px }
+/* ── Task Card — Doodle Craft Polaroid ── */
+.task-card {
+  background: radial-gradient(circle, rgba(212,205,192,0.12) 0.8px, transparent 0.8px);
+  background-size: 12px 12px;
+  background-color: #fffef9;
+  border: 2.5px solid var(--ink);
+  border-top: 5px solid var(--card-accent, var(--c-dashboard));
+  border-radius: 6px 10px 6px 10px;
+  padding: 10px 12px 32px 12px;
+  box-shadow: 2px 3px 0 rgba(0,0,0,0.06);
+  position: relative; cursor: pointer;
+  transition: all .2s cubic-bezier(.4,0,.2,1);
+}
+.task-card::before {
+  content: ''; position: absolute; top: 5px; left: 50%; transform: translateX(-50%);
+  width: 10px; height: 10px; border-radius: 50%;
+  background: radial-gradient(circle, #e8e0d5 30%, #a09080 100%);
+  box-shadow: 0 1px 1px rgba(0,0,0,.08); z-index: 2;
+}
+.task-card:nth-child(3n+1){transform:rotate(-0.5deg)}.task-card:nth-child(3n+2){transform:rotate(0.4deg)}.task-card:nth-child(3n+3){transform:rotate(-0.2deg)}
+.task-card:hover { transform:rotate(0)scale(1.03)!important;z-index:5;box-shadow:4px 6px 0 rgba(0,0,0,0.1);border-color:var(--c-dashboard) }
+
+.task-card-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:6px }
+.task-card-id { font-family:var(--app-font-mono);font-size:11px;font-weight:700;color:var(--app-ink-muted);background:rgba(0,0,0,0.05);padding:3px 10px;border-radius:5px;letter-spacing:0.02em }
+.task-type-tag{display:inline-block;padding:3px 9px;border-radius:5px;font-size:10px;font-weight:800;color:#fff;letter-spacing:0.03em}
+.task-type--api_testing{background:linear-gradient(135deg,#889df0,#6c7ce0)}
+.task-type--web_automation{background:linear-gradient(135deg,#6fba2c,#52a01e)}
+.task-type--ui_automation{background:linear-gradient(135deg,#f7cd67,#e8b830);color:var(--ink)}
+
+.task-card-name { font-family:var(--app-font-display);font-size:16px;font-weight:800;margin-bottom:8px;color:var(--ink);letter-spacing:-0.01em;line-height:1.3 }
+
+.task-card-meta { display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px }
+.meta-item { font-size:12px;font-weight:700;color:var(--app-ink-muted);background:rgba(0,0,0,0.03);padding:2px 8px;border-radius:4px }
+
 .task-card-progress { margin-bottom:8px }
-.task-card-stats { display:flex;justify-content:space-between;font-size:var(--app-size-xs);font-weight:700;margin-bottom:4px }
-.task-card-actions { display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:4px }
-.task-card-actions :deep(.el-button) { font-size:var(--app-size-xs);padding:3px 8px;font-weight:700;border-radius:3px 6px 3px 6px }
+.mini-progress { height:6px;background:rgba(0,0,0,0.06);border-radius:4px;overflow:hidden }
+.mini-progress-fill { height:100%;border-radius:4px;transition:width .4s cubic-bezier(.4,0,.2,1) }
+
+.task-card-stats { display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:8px }
+.task-card-status { font-size:13px;font-weight:800;flex-shrink:0 }
+.task-card-count { font-size:13px;font-weight:700;color:var(--ink) }
+.task-card-time { font-size:11px;color:var(--app-ink-muted);font-weight:600;opacity:0.5 }
+
+.task-card-actions { display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1.5px dashed rgba(0,0,0,0.1) }
+.task-card-actions :deep(.el-button) { font-size:12px;padding:5px 12px;font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid var(--ink);background:#fff;color:var(--ink);transition:all .15s }
+.task-card-actions :deep(.el-button:hover) { background:var(--app-highlight);transform:translateY(-1px) }
+.task-card-actions :deep(.el-button--primary) { background:var(--c-case);color:#fff;border-color:var(--ink) }
 .new-task-form :deep(.el-form-item) { margin-bottom:14px }.new-task-form :deep(.el-form-item__label) { font-size:var(--app-size-xs);font-weight:700;opacity:0.5;text-transform:uppercase }.field-hint{font-size:var(--app-size-xs);color:var(--c-runner);margin-top:4px;font-weight:600}
 /* 全覆盖 dialog 内部组件 */
 :deep(.el-dialog__header){padding:14px 18px;border-bottom:3px solid var(--ink);background:#fff;border-radius:6px 10px 0 0}:deep(.el-dialog__title){font-family:'Patrick Hand',cursive;font-size:var(--app-size-lg);font-weight:700}:deep(.el-dialog__body){padding:18px}:deep(.el-dialog__footer){padding:14px 18px;border-top:2px solid var(--ink);background:#fff}

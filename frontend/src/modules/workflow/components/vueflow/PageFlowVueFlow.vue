@@ -141,7 +141,17 @@ provide('vfAddToCase', (nodeId: string, slot: number, step: 'click' | 'wait') =>
 
 const pickerPool = computed(() => {
   const node = store.findNode(picker.value.nodeId)
-  if (!node) return PAGE_ELEMENTS
+  if (!node) return []
+
+  // API 节点：从关联端点的 response_body_schema 生成虚拟池
+  if (node.type === 'ApiNode') {
+    const schema = (node.properties?.response_body_schema as Record<string, any>) || {}
+    const fields = flattenSchemaFields(schema).map(key => ({
+      id: key, label: key, type: 'data', used: node.outputs.some(p => p.name === key)
+    }))
+    return fields.length ? fields : PAGE_ELEMENTS
+  }
+
   const linked = node.properties?.linked_elements as typeof PAGE_ELEMENTS | undefined
   if (linked?.length) return linked
   return NODE_REGISTRY[node.type]?.elementPool === 'popup' ? POPUP_ELEMENTS : PAGE_ELEMENTS
@@ -156,13 +166,32 @@ const filteredPicker = computed(() => {
     .map(e => ({ ...e, used: used.has(e.id) }))
 })
 
+function flattenSchemaFields(obj: Record<string, any>, prefix = 'resp'): string[] {
+  const keys: string[] = []
+  for (const [key, val] of Object.entries(obj)) {
+    const fullKey = `${prefix}.${key}`
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      keys.push(...flattenSchemaFields(val, fullKey))
+    } else {
+      keys.push(fullKey)
+    }
+  }
+  return keys
+}
+
 function selectElement(elId: string) {
   const item = filteredPicker.value.find(x => x.id === elId)
   if (!item || item.used) return
-  store.addPort(picker.value.nodeId, elId)
+
+  const node = store.findNode(picker.value.nodeId)
+  if (node?.type === 'ApiNode') {
+    store.addApiPort(picker.value.nodeId, elId)
+  } else {
+    store.addPort(picker.value.nodeId, elId)
+  }
   picker.value.show = false
   refreshFromStore()
-  status.value = '已添加元素: ' + item.label
+  status.value = '已添加端口: ' + item.label
 }
 
 function isValidConnection(connection: Connection) {
@@ -424,7 +453,7 @@ watch(
         @click.stop
       >
         <div class="el-picker-head">
-          <strong>添加元素</strong>
+          <strong>{{ pickerPool[0]?.type === 'data' ? '添加响应字段' : '添加元素' }}</strong>
           <span class="el-picker-count">{{ filteredPicker.filter(e => !e.used).length }} 可选</span>
           <button type="button" class="el-picker-close" @click="picker.show = false">×</button>
         </div>

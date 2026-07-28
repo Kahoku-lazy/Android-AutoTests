@@ -1,8 +1,17 @@
 # CLAUDE.md — 前端
 
-> **架构红线、三层职责、命名、样式、质量门禁** → `../.claude/rules/frontend.md`
-> **设计令牌** → `frontend/DESIGN_SYSTEM.md`
-> **前后端接口契约** → `dev_docs/03-设计与架构/工具-VUE_API_CONTRACT.md`
+> 本文定位：**行为决策** — 什么时候做什么、选什么方案。每次收到前端任务第一个读。
+
+## 文档速查
+
+| 我要…… | 读这个 |
+|------|------|
+| 判断改动的边界和步骤 | 本文 → 0️⃣ 改前四步 |
+| 选状态方案（ref / composable / Pinia） | 本文 → 状态管理决策树 |
+| 找现成的共享组件 | 本文 → 共享组件速查 |
+| 查具体实现约束和红线 | `../.claude/rules/frontend.md` |
+| 复制页面/组件代码骨架 | `frontend/DESIGN_SYSTEM.md` |
+| 查前后端字段名对照 | `../dev_docs/03-设计与架构/工具-VUE_API_CONTRACT.md` |
 
 ---
 
@@ -72,6 +81,21 @@ grep -oP 'class="[^"]*"' target.vue | sort -u
 
 ---
 
+### 新模块检查清单
+
+新建 `modules/{name}/` 时，逐项打勾：
+
+```
+[ ] 5 个文件齐全: index.vue + api.js + routes.js + components/ + composables/
+[ ] router.js 已注册（1 行 import + 1 行 spread）
+[ ] AppSidebar.vue 已注册菜单项
+[ ] index.vue 含 ErrorState + EmptyState + v-loading 三态
+[ ] WorkbenchHeader 的 icon-gradient 使用模块色 var(--c-xxx)
+[ ] 无独立 .css 文件、无 Pinia store（workflow 除外）
+```
+
+---
+
 ## ① UI 状态管理（纯 Vue，零外部依赖）
 
 改这部分不影响任何后端模块，改完构建通过即可上线。
@@ -119,6 +143,35 @@ grep -oP 'class="[^"]*"' target.vue | sort -u > /tmp/classes.txt
 改组件状态   → 确认 ref/reactive < 6 个（超了该拆子组件）
 改 localStorage → 检查 key 格式是否统一
 ```
+
+---
+
+## 状态管理决策树
+
+改状态时按此顺序选择，**不可跳级**：
+
+| 优先级 | 方案 | 适用场景 | 示例 |
+|:--:|------|------|------|
+| 1 | `ref` / `reactive` | 组件内状态，不跨组件共享 | 表单输入、弹窗显隐、筛选条件 |
+| 2 | composable | 同模块内多组件共享，或有复用价值 | `useElementTree()`、`useTaskWebSocket()` |
+| 3 | Pinia store | 跨模块共享 + 需持久化 + 复杂状态机 | 设备连接状态、工作流编辑器画布 |
+
+**升级信号**：ref 被 3+ emit 传递 → composable；composable 被 2+ 模块 import → shared/；composable 有 5+ 依赖 ref → Pinia。
+**禁止**：新模块默认用 Pinia（先 ref 起步）；在 shared/ 之外新建 Pinia store（workflow 特例）。
+
+## 共享组件速查
+
+以下场景**必须用共享组件，禁止自建**：
+
+| 场景 | 组件 | 场景 | 组件 |
+|------|------|------|------|
+| 错误+重试 | `ErrorState` | 空数据 | `EmptyState` |
+| 卡片布局 | `AppCard` | 数据表格 | `AppTable` |
+| Tab 切换 | `AppTabs` | 树形面板 | `GroupTreePanel` |
+| KPI 统计 | `KpiCard` | 筛选标签 | `FilterTabs` |
+| 骨架屏 | `SkeletonCard` | 确认按钮 | `ConfirmButton` |
+
+> 📋 详细约束和禁止项 → `../.claude/rules/frontend.md` §共享组件使用规则
 
 ---
 
@@ -224,6 +277,29 @@ api.js 封装层处理转换。
 | 改 SSE 事件处理 | 发一条消息 → 流式回复正常 → 思考块可折叠 → ToolCard 有结果 |
 | 改停止生成 | 发送消息 → 中途点停止 → 已生成内容保留 |
 | 改消息渲染 | 发多条消息 → 确认 Markdown 渲染正确（代码块/表格/列表） |
+
+---
+
+## ④ 数据加载标准模式
+
+> 📋 完整骨架代码（复制即用）→ `DESIGN_SYSTEM.md` §4.7
+
+### 关键规则（踩坑记录）
+
+| # | ✅ 正确 | ❌ 错误 |
+|---|------|------|
+| 1 | `@retry="fetchData"`（命名函数） | `@retry="() => { ... }"`（内联箭头每次渲染重建） |
+| 2 | `error.value = ''` 放 `data.ok` 内（成功后清除） | `error.value = ''` 放 try 第一行（retry 时闪白） |
+| 3 | `<template v-else>` 包裹全部内容 | 每个 `<section>` 各自写 `v-if="!error"` |
+| 4 | 一个页面一个 ErrorState | 每个 tab slot 各放一个 |
+| 5 | `finally { loading = false }` | 只在 try 关 loading（catch 永远转圈） |
+
+### ④ 改动验证
+
+| 改了什么 | 验证方式 |
+|---------|---------|
+| 新增 fetch 页面 | 断网 → 刷新 → ErrorState + 重试 → 恢复 |
+| 新增列表组件 | 空 DB → EmptyState（非空白）；有数据 → 正常 |
 
 ---
 

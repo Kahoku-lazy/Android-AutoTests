@@ -457,7 +457,7 @@ async function handleImportPRD({ sessionId }) {
           <template v-else>
             <div class="chat-header">
               <div class="chat-header-left">
-                <IconMessageCircle :size="20" :color="'#19c8b9'" />
+                <IconMessageCircle :size="20" :color="'var(--ai-teal)'" />
                 <span class="chat-header-title">{{ activeConvTitle }}</span>
                 <span
                   v-if="streamModeLabel"

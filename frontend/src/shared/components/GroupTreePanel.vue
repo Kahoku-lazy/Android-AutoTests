@@ -92,7 +92,7 @@ const emit = defineEmits([
         :allow-drop="() => true"
         default-expand-all
         @node-click="emit('tree-node-click', $event)"
-        @node-contextmenu="emit('tree-contextmenu', $event)"
+        @node-contextmenu="(evt, data) => emit('tree-contextmenu', evt, data)"
         @check="emit('tree-check', $event)"
         @node-drop="emit('tree-node-drop', $event)"
       >
@@ -197,15 +197,30 @@ const emit = defineEmits([
   width: 260px; min-width: 220px;
   background: #fff; border: 3px solid var(--ink);
   border-radius: var(--app-radius-md); display: flex; flex-direction: column;
+  overflow: hidden;
 }
 .tree-header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 12px; border-bottom: 2px solid var(--ink);
-  background: #fff; border-radius: 6px 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--ink);
+  background: #fff;
+  border-radius: 6px 10px 0 0;
+  flex-shrink: 0;
 }
 .tree-header--select { background: var(--app-highlight); }
 .tree-header__title { font-weight: 700; font-size: 13px; color: var(--ink); }
-.tree-header__actions { display: flex; gap: 4px; flex-shrink: 0; }
+.tree-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.tree-header__actions :deep(.el-button) {
+  font-size: 11px;
+  padding: 4px 8px;
+}
 .tree-body { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 6px 0; }
 .tree-body.drag-mode-active { background: rgba(255,224,102,0.15); }
 .tree-loading { text-align: center; padding: 20px; color: var(--app-text-secondary); font-size: var(--app-size-sm); }

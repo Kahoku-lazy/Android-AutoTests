@@ -59,9 +59,17 @@ const columns = [
   { title: "方法", dataIndex: "method", key: "method", minWidth: 80, align: "center" },
   { title: "URL", dataIndex: "url", key: "url", minWidth: 300 },
   { title: "描述", dataIndex: "description", key: "description", minWidth: 180 },
+  { title: "请求体", dataIndex: "request_body", key: "request_body", minWidth: 140 },
+  { title: "响应体", dataIndex: "response_body", key: "response_body", minWidth: 140 },
   { title: "测试点", dataIndex: "is_test_point", key: "is_test_point", minWidth: 72, align: "center" },
   { title: "操作", dataIndex: "actions", key: "actions", minWidth: 110, align: "center" },
 ];
+
+function fmtBody(obj) {
+  if (!obj || Object.keys(obj).length === 0) return "—"
+  const s = JSON.stringify(obj)
+  return s.length > 60 ? s.slice(0, 60) + "…" : s
+}
 
 async function loadElements() {
   await selectGroup(selectedGroup.value);
@@ -259,6 +267,12 @@ async function doSave() {
                       @blur="(e) => updateEl(record, 'description', e.target.value)"
                       @keyup.enter="(e) => { updateEl(record, 'description', e.target.value); e.target.blur() }" />
                   </template>
+                  <template #cell-request_body="{ record }">
+                    <span class="cell-code cell-code--sm" :title="fmtBody(record.request_body_schema)">{{ fmtBody(record.request_body_schema) }}</span>
+                  </template>
+                  <template #cell-response_body="{ record }">
+                    <span class="cell-code cell-code--sm" :title="fmtBody(record.response_body_schema)">{{ fmtBody(record.response_body_schema) }}</span>
+                  </template>
                   <template #cell-is_test_point="{ record }">
                     <el-switch size="small" :model-value="record.is_test_point"
                       @update:model-value="(val) => updateEl(record, 'is_test_point', val)" />
@@ -329,7 +343,7 @@ async function doSave() {
 
 .main-layout {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-columns: 310px minmax(0, 1fr);
   gap: 16px;
   height: 100%;
   flex: 1;
@@ -371,6 +385,11 @@ async function doSave() {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+
+.tree-header__actions :deep(.el-button) {
+  font-size: 11px;
+  padding: 4px 8px;
 }
 
 .tree-body {
@@ -704,8 +723,11 @@ async function doSave() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  display: block;
-  max-width: 280px;
+}
+
+.cell-code--sm {
+  font-size: 11px;
+  max-width: 140px;
 }
 
 .action-bar {

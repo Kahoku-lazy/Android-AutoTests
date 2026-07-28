@@ -126,6 +126,7 @@ if DB_ENGINE == "mysql":
             "PORT": os.environ.get("DB_PORT", "3306"),
             "OPTIONS": {
                 "charset": "utf8mb4",
+                "connect_timeout": 5,  # Fail fast on dead MySQL (was OS default 30s)
                 "init_command": (
                     "SET sql_mode='STRICT_TRANS_TABLES', "
                     "character_set_connection=utf8mb4, "

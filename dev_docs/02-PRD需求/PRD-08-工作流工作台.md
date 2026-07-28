@@ -128,16 +128,18 @@ index.vue
 
 ## 附录B：实施状态
 
+> 验收日期：2026-07-27（文档优化阶段复查）
+
 | 功能 | 状态 |
 |------|:--:|
-| 目录树 + 拖拽 + 展开折叠（libraryStore） | ✅ |
-| 文件浏览器（WorkflowFileBrowser） | ✅ |
-| Blockly 编辑器 + 17 种积木块 | ✅ |
-| 同步到用例库（caseBridge） | ✅ |
-| 从用例库导入（ImportCasesDialog） | ✅（⚠ 含跨模块违规） |
-| VueFlow 页面流编辑器 + 自定义节点 | ✅ |
-| 首次运行 Demo 自举（bootstrapIfEmpty） | ✅ |
-| JSON 导入导出 | ✅ |
+| 目录树 + 拖拽 + 展开折叠（libraryStore） | ✅（已验证 2026-07-27） |
+| 文件浏览器（WorkflowFileBrowser） | ✅（已验证 2026-07-27） |
+| Blockly 编辑器 + 17 种积木块 | ✅（已验证 2026-07-27） |
+| 同步到用例库（caseBridge） | ✅（已验证 2026-07-27） |
+| 从用例库导入（ImportCasesDialog） | ✅（⚠ 含跨模块违规，已验证 2026-07-27） |
+| VueFlow 页面流编辑器 + 自定义节点 | ✅（已验证 2026-07-27） |
+| 首次运行 Demo 自举（bootstrapIfEmpty） | ✅（已验证 2026-07-27） |
+| JSON 导入导出 | ✅（已验证 2026-07-27） |
 | 跨模块 import 修复（case-manager → workflow/api.js） | 📋 |
 | libraryStore 18 处 ElMessage 上移 | 📋 |
 | pageCatalog.ts 裸 api-client → api.js | 📋 |
@@ -154,5 +156,5 @@ index.vue
 | IMP-03 | PageFlowVueFlow.vue 797 行超标（+297），画布+工具栏+元素目录+API 面板全内联 | 🔴 | 2026-07-27 |
 | IMP-04 | 8/24 文件超标 500 行（33%，所有模块比例最高） | 🟠 | 2026-07-27 |
 | IMP-05 | 共享组件采用率 0/14，完全自建 UI（WorkflowDirTree 替代 GroupTreePanel 等） | 🟠 | 2026-07-27 |
-| IMP-06 | 97 处硬编码 hex 颜色（53 vue + 44 ts），.vue 中的 53 处应迁移到 tokens.css | 🟡 | 2026-07-27 |
+| IMP-06 | 97 处硬编码 hex 颜色（53 vue + 44 ts）→ 2026-07-27 复查：ai-assistant 模块 ~140 处已替换为 `var(--ai-*)` 令牌（Phase 2）；workflow 模块 97 处待处理 | 🟡 | 2026-07-27 |
 | IMP-07 | data/pageCatalog.ts:239 动态裸 import api-client，bypass api.js | 🟡 | 2026-07-27 |

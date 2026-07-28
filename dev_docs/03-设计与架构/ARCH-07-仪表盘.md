@@ -112,6 +112,8 @@ frontend/src/modules/dashboard/
 | 智能体数 | 🤖 | 粉红 | `ai_agents COUNT` |
 | 报告总数 | 📈 | 棕 | `rg_reports COUNT` |
 
+> 📐 前端架构基线 v1.0（2026-07-27）— 组件树 + 6 张 KPI 卡片规格完整。路由 `/`（重定向至 `/dashboard`）。纯只读模块，禁止写操作。
+
 ---
 
 ## 3. 后端架构

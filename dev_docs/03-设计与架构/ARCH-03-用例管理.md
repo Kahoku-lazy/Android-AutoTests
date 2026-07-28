@@ -106,6 +106,8 @@ frontend/src/modules/case-manager/
 | **工具** | `sleep` | duration | 时长输入 (秒) |
 | | `log` | message | 消息输入框 |
 
+> 📐 前端架构基线 v1.0（2026-07-27）— 组件树 + 17 种步骤类型文档完整。路由定义见 `routes.js`，状态管理以 composable 模式为主。
+
 ---
 
 ## 3. 后端架构

@@ -1,0 +1,15 @@
+{
+  "task_name": "browser-api-49095",
+  "task": null,
+  "bucket": "idle/not-executed",
+  "run_api": {
+    "status": null,
+    "body": null,
+    "url": null
+  },
+  "toasts": [],
+  "console_errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "page_url": "http://127.0.0.1:5173/runner"
+}

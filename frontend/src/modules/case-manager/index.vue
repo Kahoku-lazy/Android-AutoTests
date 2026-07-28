@@ -8,10 +8,12 @@ import StorageCaseList from "./components/storage/StorageCaseList.vue";
 import ApiCaseList from "./components/api/ApiCaseList.vue";
 import WebCaseList from "./components/web/WebCaseList.vue";
 import { fetchDirectories } from "./api/directories.js";
+import ErrorState from "@/shared/components/patterns/ErrorState.vue";
 
 // ── TAB state ──
 const TAB_STORAGE_KEY = "case-manager-active-tab";
 const activeTab = ref(localStorage.getItem(TAB_STORAGE_KEY) || "ui");
+const error = ref("");
 const tabs = [
   { key: "ui", label: "📱 Android UI 自动化用例" },
   { key: "web", label: "🌍 Web 自动化测试用例" },
@@ -24,6 +26,7 @@ function onTabChange(key) {
   localStorage.setItem(TAB_STORAGE_KEY, key);
   activeDirectoryId.value = null;
   activeDirName.value = "";
+  activeCaseId.value = null;
   // Load tree for this tab if it hasn't been loaded yet
   if (!treeCache.value[key] || !treeCache.value[key].length) {
     loadTree();
@@ -47,20 +50,35 @@ const activeTabConfig = computed(() => tabList.find(t => t.key === activeTab.val
 const treeCache = ref({ ui: [], web: [], storage: [], api: [] });
 const activeDirectoryId = ref(null);
 const activeDirName = ref("");
+const activeCaseId = ref(null);
 
 const currentTree = computed(() => treeCache.value[activeTab.value] || []);
+const activeTreeId = computed(() =>
+  activeCaseId.value != null ? `case:${activeCaseId.value}` : activeDirectoryId.value,
+);
 
 async function loadTree() {
   try {
     const { data } = await fetchDirectories(caseType.value);
-    if (data.ok) treeCache.value[activeTab.value] = data.tree;
-  } catch (e) { console.error(e); }
+    if (data.ok) {
+      treeCache.value[activeTab.value] = data.tree;
+      error.value = "";
+    }
+  } catch (e) {
+    error.value = "加载目录失败，请检查网络连接";
+    console.error(e);
+  }
 }
 
 function handleDirSelect(node) {
+  if (node.node_type === "case") {
+    activeCaseId.value = node.case_id;
+    return;
+  }
   if (node.node_type === "directory") {
     activeDirectoryId.value = node.id;
     activeDirName.value = node.name;
+    activeCaseId.value = null;
   }
 }
 
@@ -125,7 +143,10 @@ onUnmounted(() => {
       icon-gradient="linear-gradient(135deg,var(--c-workflow),#60a5fa)"
     />
 
+    <ErrorState v-if="error" :message="error" @retry="loadTree" />
+
     <AppTabs
+      v-if="!error"
       :items="tabs"
       :model-value="activeTab"
       @update:model-value="onTabChange"
@@ -138,7 +159,7 @@ onUnmounted(() => {
           <aside class="case-sidebar" :style="{ width: sidebarWidth + 'px' }">
             <DirectoryTree
               :tree-data="currentTree"
-              :active-id="activeDirectoryId"
+              :active-id="activeTreeId"
               :case-type="tab.caseType"
               @select="handleDirSelect"
               @refresh="handleTreeRefresh"
@@ -152,6 +173,7 @@ onUnmounted(() => {
               :tree-data="currentTree"
               :active-directory-id="activeDirectoryId"
               :active-dir-name="activeDirName"
+              :active-case-id="activeCaseId"
               @refresh-tree="handleTreeRefresh"
             />
           </main>

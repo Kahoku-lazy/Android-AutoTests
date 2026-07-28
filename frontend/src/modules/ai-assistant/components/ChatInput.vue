@@ -110,7 +110,7 @@ function onInput(val) {
 }
 .file-preview-remove:hover {
   background: rgba(0, 0, 0, 0.06);
-  color: #e85f5f;
+  color: var(--app-error);
 }
 .chat-input {
   display: flex;

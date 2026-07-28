@@ -103,6 +103,16 @@ frontend/src/modules/device-pool/
 | `BUSY` | 🟡 黄 | 实线卡片 | 加入排队、释放(锁定者) |
 | `OFFLINE` | 🔴 红 | 虚线卡片 | 重新连接、移除 |
 
+### 2.3 路由与共享组件
+
+| 路由 | 页面 | 使用的共享组件 |
+|------|------|------|
+| `/devices` | `index.vue` — 设备卡片网格 + 操作 | `KpiCard`, `EmptyState`, `ErrorState`, `FilterTabs` |
+
+**状态管理**: `store.js`（Pinia）— 设备列表、当前设备、WebSocket 连接状态。
+
+> 📐 前端架构基线 v1.0（2026-07-27）— 组件树 + 状态管理完整，路由已文档化。
+
 ---
 
 ## 3. 后端架构

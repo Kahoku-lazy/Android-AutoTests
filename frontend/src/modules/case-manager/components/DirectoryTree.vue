@@ -20,7 +20,7 @@ const router = useRouter();
 
 const props = defineProps({
   treeData: { type: Array, default: () => [] },
-  activeId: { type: Number, default: null },
+  activeId: { type: [Number, String], default: null },
   caseType: { type: String, default: "ui_automation" },
 });
 

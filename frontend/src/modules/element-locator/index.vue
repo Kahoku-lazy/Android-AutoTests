@@ -13,6 +13,7 @@ import ScreenshotView from './components/ScreenshotView.vue'
 import XPathCandidatePanel from './components/XPathCandidatePanel.vue'
 import PageElementsPanel from './components/PageElementsPanel.vue'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
+import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import ElementManager from './components/ElementManager.vue'
 import WebElementManager from './components/WebElementManager.vue'
 import ApiEndpointManager from './components/ApiEndpointManager.vue'
@@ -100,7 +101,12 @@ const filteredElements = computed(() => {
 
 onMounted(async () => {
   // Just load the device list — no auto-connect. User must manually select and connect.
-  await store.fetchDevices()
+  try {
+    await store.fetchDevices()
+  } catch (e) {
+    store.error = '加载设备列表失败，请检查网络连接'
+    console.error(e)
+  }
 
   // Periodic device list refresh (30s)
   devicePollTimer = setInterval(async () => {
@@ -228,7 +234,7 @@ watch(activeTab, async (tab) => {
               <button class="locator-action-btn" :disabled="!store.isConnected || !store.isDeviceOnline" @click="refreshScreen">↻ 刷新屏幕</button>
               <button class="locator-action-btn locator-action-btn--primary" :disabled="!store.isConnected || !store.isDeviceOnline" @click="doDump">{{ store.loading ? 'Dumping...' : '⚡ Dump UI' }}</button>
               <span v-if="store.pageId" class="info">{{ filteredElements.length }}/{{ store.elements.length }} 元素</span>
-              <span v-if="store.error" class="error">{{ store.error }}</span>
+              <ErrorState v-if="store.error" :message="store.error" @retry="() => { store.error = ''; doDump() }" />
             </div>
 
             <!-- Filter bar: custom Paper-style tabs -->
@@ -447,7 +453,7 @@ watch(activeTab, async (tab) => {
 .locator-footer { display:flex;align-items:center;justify-content:center;gap:24px;padding:10px 20px;background:var(--app-highlight,#FFE066);border-top:2.5px solid var(--app-ink,#2d2d2d);font-size:var(--app-size-sm);font-weight:700;color:#5a4e20;font-family:'Patrick Hand',cursive;flex-shrink:0; }
 .locator-footer span{display:flex;align-items:center;gap:4px;font-size:var(--app-size-sm);}
 
-/* Paper × Polaroid — 覆盖 AppTabs 玻璃态 */
+/* Doodle Craft — 覆盖 AppTabs 默认态 */
 .locator-tabs :deep(.el-tabs__nav) {
   gap: 0 !important; padding: 0 !important;
   border-radius: 0 !important;

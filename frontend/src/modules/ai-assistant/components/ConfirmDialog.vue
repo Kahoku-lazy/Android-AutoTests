@@ -130,7 +130,7 @@ const emit = defineEmits(["approve", "deny", "approve-all", "deny-all", "cancel"
   padding: 14px;
   border-radius: 10px;
   border: 1.5px solid var(--doodle-bg, #faf5ee);
-  background: #faf9f4;
+  background: var(--ai-warm-bg);
 }
 .confirm-tool-icon {
   font-size: var(--app-size-lg);
@@ -178,56 +178,56 @@ const emit = defineEmits(["approve", "deny", "approve-all", "deny-all", "cancel"
   white-space: nowrap;
 }
 .confirm-btn.approve {
-  background: #e8f5e9;
-  color: #2e7d32;
-  border-color: #66bb6a;
+  background: var(--ai-bg-success);
+  color: var(--app-status-success-text);
+  border-color: var(--app-status-success);
 }
 .confirm-btn.approve:hover {
-  background: #c8e6c9;
+  background: var(--ai-bg-success-hover);
 }
 .confirm-btn.deny {
-  background: #ffebee;
-  color: #c62828;
-  border-color: #ef5350;
+  background: var(--ai-bg-error);
+  color: var(--app-status-danger-text);
+  border-color: var(--app-status-danger);
 }
 .confirm-btn.deny:hover {
-  background: #ffcdd2;
+  background: var(--ai-bg-error-hover);
 }
 .confirm-btn.cancel {
-  background: #f5f5f5;
-  color: #616161;
-  border-color: #bdbdbd;
+  background: var(--ai-bg-neutral);
+  color: var(--app-text-secondary);
+  border-color: var(--app-offline);
 }
 .confirm-btn.cancel:hover {
-  background: #eeeeee;
+  background: var(--ai-bg-neutral-hover);
 }
 .confirm-footer {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 16px 24px;
-  background: #faf9f4;
+  background: var(--ai-warm-bg);
   border-top: 1px solid var(--doodle-bg, #faf5ee);
   flex-wrap: wrap;
 }
 .confirm-btn.approve-all {
-  background: #e6f9f6;
-  color: #158a80;
+  background: var(--ai-teal-bg);
+  color: var(--ai-teal-text);
   border-color: var(--app-accent-purple, #b39ef3);
   flex: 1;
   justify-content: center;
 }
 .confirm-btn.approve-all:hover {
-  background: #b2dfdb;
+  background: var(--ai-bg-teal-hover);
 }
 .confirm-btn.deny-all {
-  background: #ffebee;
-  color: #c62828;
-  border-color: #ef5350;
+  background: var(--ai-bg-error);
+  color: var(--app-status-danger-text);
+  border-color: var(--app-status-danger);
   flex: 1;
   justify-content: center;
 }
 .confirm-btn.deny-all:hover {
-  background: #ffcdd2;
+  background: var(--ai-bg-error-hover);
 }
 </style>

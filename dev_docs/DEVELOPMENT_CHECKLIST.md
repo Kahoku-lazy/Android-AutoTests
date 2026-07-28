@@ -112,6 +112,31 @@
 
 ---
 
+## 第 7 组：DESIGN_SYSTEM 合规（7 项）
+
+> 改 CSS/组件/样式后必检。规范来源：`frontend/DESIGN_SYSTEM.md`
+
+| # | 检查项 | 新模块 | 增量 | 修补 | 重构 |
+|---|--------|:--:|:--:|:--:|:--:|
+| 7.1 | 无硬编码色值 — `grep -rn "#[0-9a-fA-F]\{6\}" frontend/src/modules/ --include="*.vue" \| grep -v "tokens\|style.css\|var(--"` 为空 | ✅ | ✅ | ✅ | — |
+| 7.2 | 字号使用刻度变量 — 无 `font-size: Xpx`（必须走 `--app-size-*`） | ✅ | ✅ | ✅ | — |
+| 7.3 | 圆角不对称 — 无 `border-radius: 50% / 20px / 16px`（≤8px 小圆点豁免） | ✅ | ✅ | ✅ | — |
+| 7.4 | 嵌套深度 ≤ 4 层 — 无"卡片里放卡片再放卡片" | ✅ | ✅ | — | — |
+| 7.5 | 表格不在卡片内 — `<el-table>` 只放主内容区或 Tab 面板 | ✅ | ✅ | — | — |
+| 7.6 | 三态齐全 — 页面同时处理 loading / empty / error | ✅ | ✅ | ✅ | — |
+| 7.7 | 无禁止项 — 无 `backdrop-filter: blur()` / 旧色值 `#4a4e69` `#9a8c98` / 对称大圆角 | ✅ | ✅ | ✅ | ✅ |
+
+**验证方法**：
+```bash
+# 色值检查
+grep -rn "#[0-9a-fA-F]\{6\}" frontend/src/modules/ --include="*.vue" | grep -v "tokens\|style.css\|var(--"
+
+# 字号检查
+grep -rn "font-size:" frontend/src/modules/ --include="*.vue" | grep -v "var(--app" | grep -v "var(--el"
+```
+
+---
+
 ## 快速自检（日常使用）
 
 小改动不需要走全部 6 组。日常开发完成后跑这个：

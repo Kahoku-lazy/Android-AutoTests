@@ -47,11 +47,11 @@ export function listDefinitions() {
 }
 
 export function listApiDefinitions() {
-  return client.get('/cases/api-definitions')
+  return client.get('/cases/api-testing/definitions')
 }
 
 export function listWebDefinitions() {
-  return client.get('/cases/web-definitions')
+  return client.get('/cases/web/definitions')
 }
 
 // ── 设备列表（跨模块）──

@@ -44,6 +44,132 @@
 4. **修改样式只改 CSS** — 不碰 props/emits/API/路由/动画逻辑
 5. **布局改动后验证滚动** — 涉及 flex/grid/overflow 时，浏览器中确认页面可纵向滚动
 
+## 状态管理
+
+> 📋 什么时候用 ref / composable / Pinia？→ `frontend/CLAUDE.md` 状态管理决策树
+
+**禁止**：
+- ❌ 在 `shared/composables/` 之外创建 Pinia store（workflow 模块 3 个 store 特例除外）
+- ❌ 新模块默认用 Pinia — 必须先从 ref 开始，按需升级
+
+## CSS 架构层级协议
+
+三层结构，**不可跨层覆盖**：
+
+| 层级 | 文件 | 允许 | 禁止 |
+|:--:|------|------|------|
+| L1 令牌 | `shared/styles/tokens.css` | 定义 CSS 变量（`--app-*`、`--el-*`） | 写选择器、写组件样式 |
+| L2 全局 | `src/style.css` | 全局布局骨架（`.doc-page`、`.doc-body`、`.doc-section`）+ Element Plus 全局覆盖 | 模块专属样式、硬编码色值 |
+| L3 模块 | `modules/{x}/*.vue <style scoped>` | 本模块的布局微调、特有动画、组件间距 | **重定义 L2 同名类**（如在 scoped 中写 `.doc-body { ... }`） |
+
+**模块与 L2 的正确交互方式**：
+- 想改 `.doc-body` 的 padding？→ 用 CSS 变量覆盖，如 `style="--doc-padding: 12px"`（先在 tokens 定义变量）
+- 想改 `.doc-section` 的边框色？→ 内联覆盖：`style="border-color: var(--c-xxx)"`
+- **禁止**在 scoped 中写 `.doc-body { padding: ... }` 与 L2 同名选择器竞争优先级
+
+**翻车记录**（曾因违反此协议导致的 Bug）：
+- `info-card` 残留 `overflow:hidden` → 报告页无法纵向滚动
+- `el-tabs__content` 默认 `overflow:hidden` + 中间层 `overflow:hidden` → 三层裁剪
+- 全局 `.doc-body` 设 `max-width: 1600px` → 大屏（2560px+）两侧 ~480px 空白
+
+## 数据加载三态规程
+
+每个有数据请求的页面/组件**必须处理三种状态，缺一不可**：
+
+```
+组件挂载 → loading = true
+  ├── 请求成功 + 数据非空 → loading = false, 渲染内容
+  ├── 请求成功 + 数据为空 → loading = false, <EmptyState />
+  └── 请求失败           → loading = false, error = "...", <ErrorState />
+```
+
+**模板标准写法**（复制此骨架）：
+```vue
+<ErrorState v-if="error" :message="error" @retry="fetchData" />
+<template v-else>
+  <div v-loading="loading">
+    <EmptyState v-if="!list.length" icon="📋" text="暂无数据" />
+    <!-- 正常内容 -->
+  </div>
+</template>
+```
+
+**script 标准写法**：
+```javascript
+const list = ref([])
+const loading = ref(false)
+const error = ref("")
+
+async function fetchData() {
+  loading.value = true  // 请求前设 true
+  try {
+    const { data } = await api.getXxx()
+    if (data.ok) {
+      list.value = data.items
+      error.value = ""  // 成功后清除（不是请求前！避免 retry 时页面闪白）
+    }
+  } catch (e) {
+    error.value = "加载失败，请检查网络连接"
+  } finally {
+    loading.value = false
+  }
+}
+```
+
+**禁止**：
+- ❌ `try { await api.deleteX(id) } catch (_) {}` — 写操作静默吞错
+- ❌ 只有 loading 没有 error — 请求失败时页面永远转圈
+- ❌ 只有 `empty-text` 属性没有 `<EmptyState>` 组件 — 首次加载空列表应显示引导操作
+- ❌ `error.value = ""` 放在 try 第一行 — 会导致 retry 时内容区闪白再出现
+- ❌ `@retry` 用内联箭头函数 — 提取为 `@retry="fetchData"` 命名函数
+- ❌ 每个 `<section>` 写 `v-if="!error"` — 用一个 `<template v-else>` 包裹全部内容
+
+## 异常处理规则
+
+Vue 无 ErrorBoundary。按层级分工防止白屏：
+
+| 层级 | 机制 | 规则 |
+|------|------|------|
+| 全局 | `app.config.errorHandler`（main.js 已配置） | 捕获未处理异常，输出 console，不白屏 |
+| 页面 | ErrorState 组件 | 网络请求失败 → ErrorState + 重试（见数据加载三态规程） |
+| 组件 | `onErrorCaptured` | 子组件渲染异常 → 父组件捕获，显示降级 UI |
+
+**禁止**：
+- ❌ `<script setup>` 顶层抛异常（setup 阶段异常无法被 errorHandler 捕获）
+- ❌ `await` 不包 try/catch — 异步异常必须显式处理
+- ❌ 用 `v-if` 隐藏错误不上报 — 隐藏的错误在生产环境无法追踪
+
+## 共享组件使用规则
+
+> 📋 什么场景用哪个共享组件？→ `frontend/CLAUDE.md` 共享组件速查
+
+**自建同类组件的条件**（全部满足才可自建）：
+1. 共享组件确实不满足交互需求（如需要拖拽排序、右键菜单、内联编辑）
+2. 在 PR 描述中说明为何不用共享组件
+3. 优先考虑增强共享组件而非另起炉灶
+
+**禁止**：
+- ❌ 手写 `<div class="empty-state">暂无数据</div>` — 用 `<EmptyState>` 组件
+- ❌ 手写 `<div v-if="error" class="xxx-error">{{ error }}</div>` — 用 `<ErrorState>` 组件
+
+## 模块结构一致性
+
+每个模块目录必须包含（digital-human 占位页面除外）：
+
+```
+modules/{name}/
+├── index.vue       ← 页面容器
+├── api.js          ← HTTP 封装（即使只导出 1 个函数）
+├── routes.js       ← 路由定义
+├── components/     ← 子组件（即使只有 1 个）
+└── composables/    ← 状态/逻辑（即使只有 1 个）
+```
+
+**禁止**：
+- ❌ 模块目录放独立 `.css` 文件 — 样式必须在 `<style scoped>` 或 `tokens.css` 中
+- ❌ 模块目录放 `store.js` / `stores/` — Pinia store 仅在 workflow 模块允许（Blockly/VueFlow 复杂状态机）
+- ❌ `index.vue` 的 `<script setup>` 中直接写超过 20 行的 fetch/业务逻辑 — 抽到 composable
+
 ## Vite Proxy 配置
 
 ```
@@ -90,4 +216,6 @@ grep -rn 'el-cascader' frontend/src/modules/ | grep -v 'emitPath'
 
 1. 10 分钟能加一个 CRUD 页面？→ 模式一致
 2. 改一个颜色全局生效？→ 令牌驱动，无硬编码色值
-3. 删一个模块不影响其他？→ 无跨模块网状 import
+3. 新页面含 loading / empty / error 三态？→ 数据加载契约完整
+4. 删一个模块不影响其他？→ 无跨模块网状 import
+5. 没有新建 Pinia store / 独立 .css / 手写空状态？→ 共享组件优先

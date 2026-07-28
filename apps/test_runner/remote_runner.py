@@ -151,18 +151,21 @@ class RemoteTestRunner:
 
     def _wire_step_callbacks(self, run_id: str, case_id: str, iteration: int, loop):
         """Wire step callbacks for a specific case/iteration (matches UI runner pattern)."""
+        if self.callback is None:
+            def noop(*args): pass
+            self.executor._step_callback = noop
+            self.executor._step_started_callback = noop
+            return
         def step_started(si, total, st, desc):
             asyncio.run_coroutine_threadsafe(
                 self.callback.on_step_started(run_id, case_id, iteration, si, total, st, desc),
                 loop,
             )
-
         def step_result(si, total, st, desc, r):
             asyncio.run_coroutine_threadsafe(
                 self.callback.on_step_result(run_id, case_id, iteration, si, total, st, desc, r),
                 loop,
             )
-
         self.executor._step_callback = step_result
         self.executor._step_started_callback = step_started
 

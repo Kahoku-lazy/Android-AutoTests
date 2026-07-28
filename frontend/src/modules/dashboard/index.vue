@@ -6,11 +6,13 @@ import { useDashboardStats } from "./composables/useDashboardStats.js";
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
 import {
   IconDevice,
-  IconFileCode,
   IconPlay,
   IconBrain,
   IconClock,
   IconAlertCircle,
+  IconTarget,
+  IconZap,
+  IconLayers,
 } from "@/shared/icons/index.js";
 
 import StatsAppCard from "./components/StatsCard.vue";
@@ -34,6 +36,27 @@ const {
   loadData,
   refreshData,
 } = useDashboardStats();
+
+const CASE_BREAKDOWN = [
+  { type: "ui_automation",  label: "Android用例",  color: "app-green",  icon: IconDevice },
+  { type: "web_automation", label: "Web用例",      color: "app-teal",   icon: IconTarget },
+  { type: "api_testing",    label: "API用例",       color: "app-yellow", icon: IconZap },
+  { type: "storage",        label: "功能业务",       color: "app-pink",   icon: IconLayers },
+]
+
+function getBreakdownItem(type) {
+  return stats.value.cases.breakdown?.find(b => b.type === type) || { total: 0, enabled: 0 }
+}
+
+const ELEMENT_BREAKDOWN = [
+  { type: "android", label: "Android元素", color: "app-green",  icon: IconDevice },
+  { type: "web",     label: "Web元素",     color: "app-teal",   icon: IconTarget },
+  { type: "api",     label: "API接口",     color: "app-yellow", icon: IconZap },
+]
+
+function getElementItem(type) {
+  return stats.value.elements.typeBreakdown?.find(b => b.type === type) || { total: 0 }
+}
 
 onMounted(() => {
   loadData();
@@ -59,75 +82,111 @@ onMounted(() => {
 
     <!-- 内容区 -->
     <div class="doc-body">
-      <!-- 统计概览 -->
+      <!-- 欢迎导航 -->
       <section class="doc-section">
-        <div class="doc-section__header">
-          <h3 class="doc-section__title">
-            统计概览
-            <span class="doc-tag">Overview</span>
-          </h3>
+        <ModuleNavigator :stats="stats" />
+      </section>
+
+      <!-- 统计概览：平台运营 -->
+      <section class="doc-section">
+        <h3 class="doc-section__title">平台运营<span class="doc-tag">Platform</span></h3>
+        <div class="doc-section__label">
+          设备 {{ stats.devices.online }}/{{ stats.devices.total }}
+          · 智能体 {{ stats.agents.active }}/{{ stats.agents.total }}
+          · 任务 {{ stats.runs.active }}/{{ stats.runs.total }}
+          · 工作流 {{ stats.workflow.total }}
         </div>
-        <div class="doc-section__label">核心指标实时展示</div>
-        <div class="dashboard__stats-grid">
+        <div class="dashboard__stats-grid dashboard__stats-grid--compact">
           <StatsAppCard
             label="在线设备"
-            desc="ADB 扫描 · 连接锁定 · 排队调度"
             :value="stats.devices.online"
             :suffix="` / ${stats.devices.total}`"
             color="app-green"
             :trend="stats.devices.trend"
-            trend-label="近期活跃"
+            trend-label="活跃"
             path="/devices"
             :loading="loading"
           >
-            <template #icon>
-              <IconDevice :size="22" color="#fff" />
-            </template>
-          </StatsAppCard>
-          <StatsAppCard
-            label="测试用例"
-            desc="步骤编排 · 目录树 · YAML 导入导出"
-            :value="stats.cases.total"
-            color="app-teal"
-            :trend="stats.cases.trend"
-            trend-label="本周新增"
-            path="/cases"
-            :loading="loading"
-          >
-            <template #icon>
-              <IconFileCode :size="22" color="#fff" />
-            </template>
+            <template #icon><IconDevice :size="18" color="#fff" /></template>
           </StatsAppCard>
           <StatsAppCard
             label="活跃智能体"
-            desc="自然语言驱动 · SSE 流式 · 知识库"
             :value="stats.agents.active"
+            :suffix="` / ${stats.agents.total}`"
             color="app-blue"
-            :trend="stats.agents.trend"
-            trend-label="智能体"
             path="/ai-assistant"
             :loading="loading"
           >
-            <template #icon>
-              <IconBrain :size="22" color="#fff" />
-            </template>
+            <template #icon><IconBrain :size="18" color="#fff" /></template>
           </StatsAppCard>
           <StatsAppCard
             label="运行中任务"
-            desc="任务调度 · 实时进度 · WebSocket 日志"
             :value="stats.runs.active"
+            :suffix="` / ${stats.runs.total}`"
             color="app-pink"
-            :trend="stats.runs.trend"
-            trend-label="执行中"
             path="/runner"
             :loading="loading"
           >
             <template #icon>
-              <IconPlay :size="22" color="#fff" />
-              <span
-                class="dashboard__live-dot"
-                v-if="stats.runs.active > 0"
-              ></span>
+              <IconPlay :size="18" color="#fff" />
+              <span class="dashboard__live-dot" v-if="stats.runs.active > 0"></span>
+            </template>
+          </StatsAppCard>
+          <StatsAppCard
+            label="工作流"
+            :value="stats.workflow.total"
+            :suffix="`${stats.workflow.page_flows} 流 / ${stats.workflow.test_cases} 用例`"
+            color="purple"
+            path="/workflow"
+            :loading="loading"
+          >
+            <template #icon><IconLayers :size="18" color="#fff" /></template>
+          </StatsAppCard>
+        </div>
+      </section>
+
+      <!-- 统计概览：测试用例 -->
+      <section class="doc-section">
+        <h3 class="doc-section__title">测试用例<span class="doc-tag">Cases</span></h3>
+        <div class="doc-section__label">
+          共 {{ stats.cases.total }} 个 · 已启用 {{ stats.cases.enabled }} · 本周新增 {{ stats.cases.trend }}
+        </div>
+        <div class="dashboard__stats-grid dashboard__stats-grid--compact">
+          <StatsAppCard
+            v-for="item in CASE_BREAKDOWN"
+            :key="item.type"
+            :label="item.label"
+            :value="getBreakdownItem(item.type).total"
+            :suffix="`${getBreakdownItem(item.type).enabled} 启用`"
+            :color="item.color"
+            path="/cases"
+            :loading="loading"
+          >
+            <template #icon>
+              <component :is="item.icon" :size="18" color="#fff" />
+            </template>
+          </StatsAppCard>
+        </div>
+      </section>
+
+      <!-- 统计概览：元素定位 -->
+      <section class="doc-section">
+        <h3 class="doc-section__title">元素定位<span class="doc-tag">Elements</span></h3>
+        <div class="doc-section__label">
+          共 {{ stats.elements.total }} 个 · {{ stats.elements.pages }} 个页面
+        </div>
+        <div class="dashboard__stats-grid dashboard__stats-grid--compact">
+          <StatsAppCard
+            v-for="item in ELEMENT_BREAKDOWN"
+            :key="'el-' + item.type"
+            :label="item.label"
+            :value="getElementItem(item.type).total"
+            :color="item.color"
+            path="/elements"
+            :loading="loading"
+          >
+            <template #icon>
+              <component :is="item.icon" :size="18" color="#fff" />
             </template>
           </StatsAppCard>
         </div>
@@ -151,11 +210,6 @@ onMounted(() => {
             <TaskResultPanel :tasks="recentTasks" :summary="executionSummary" />
           </el-card>
         </div>
-      </section>
-
-      <!-- 功能模块 -->
-      <section class="doc-section">
-        <ModuleNavigator :stats="stats" />
       </section>
 
       <!-- 最近动态 -->
@@ -212,24 +266,46 @@ onMounted(() => {
   gap: 18px;
 }
 
-/* ── Stats Grid — 拍立得微旋转 ── */
+/* ── Stats Grid — 分层拍立得卡片 ── */
 .dashboard__stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-  padding-top: 16px;
+  gap: 12px;
+  padding-top: 8px;
 }
-.dashboard__stats-grid > :nth-child(1) { transform: rotate(-1.2deg); }
-.dashboard__stats-grid > :nth-child(2) { transform: rotate(0.7deg); }
-.dashboard__stats-grid > :nth-child(3) { transform: rotate(-0.5deg); }
-.dashboard__stats-grid > :nth-child(4) { transform: rotate(1deg); }
+.dashboard__stats-grid > :nth-child(odd)  { transform: rotate(-0.5deg); }
+.dashboard__stats-grid > :nth-child(even) { transform: rotate(0.5deg); }
 .dashboard__stats-grid > :hover { transform: rotate(0deg) scale(1.03) !important; z-index: 10; }
 
-@media (max-width: 1100px) {
-  .dashboard__stats-grid { grid-template-columns: repeat(2, 1fr); }
+/* ── Compact card overrides ── */
+.dashboard__stats-grid--compact :deep(.stats-card) {
+  min-height: 110px;
+  padding: 5px 5px 20px 5px;
 }
+.dashboard__stats-grid--compact :deep(.stats-card__icon) {
+  height: 36px;
+  margin-bottom: 4px;
+}
+.dashboard__stats-grid--compact :deep(.stats-card__icon svg) {
+  width: 18px !important;
+  height: 18px !important;
+}
+.dashboard__stats-grid--compact :deep(.stats-card__title) {
+  font-size: 11px;
+}
+.dashboard__stats-grid--compact :deep(.stats-card__stat strong) {
+  font-size: 18px;
+}
+.dashboard__stats-grid--compact :deep(.stats-card__stat small) {
+  font-size: 10px;
+}
+.dashboard__stats-grid--compact :deep(.stats-card__enter) {
+  font-size: 10px;
+  padding: 2px 8px;
+}
+
 @media (max-width: 520px) {
-  .dashboard__stats-grid { grid-template-columns: 1fr; }
+  .dashboard__stats-grid { grid-template-columns: 1fr; gap: 8px; }
 }
 
 /* ── Section 区 ── */

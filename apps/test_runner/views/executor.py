@@ -173,7 +173,14 @@ async def _execute_tests(
             await test_callbacks.on_log(run_id, f"  · 用例 [{tc.id}] {tc.title} ({step_count} 步)")
         await test_callbacks.on_log(run_id, "────────────────────")
 
-        run_model = await runner.run(run_id, test_cases, loop_count, interval_seconds)
+        try:
+            _log.info(f"_execute_tests: calling runner.run({len(test_cases)} cases, {loop_count} loops)")
+            run_model = await runner.run(run_id, test_cases, loop_count, interval_seconds)
+            _log.info(f"_execute_tests: runner.run returned status={run_model.status} case_results={len(run_model.case_results)}")
+        except Exception as e:
+            import traceback
+            _log.error(f"_execute_tests runner.run() crashed: {e}\n{traceback.format_exc()}")
+            run_model = None
         run_completed = True
 
         @_bg_sync
@@ -188,7 +195,7 @@ async def _execute_tests(
                     duration_ms=r.duration_ms,
                     detail=r.detail,
                 )
-                for r in run_model.case_results
+                for r in (run_model.case_results if run_model else [])
             ]
             if results:
                 TestResult.objects.bulk_create(results)

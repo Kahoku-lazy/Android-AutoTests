@@ -17,11 +17,13 @@ export function mapStatsResponse(d) {
         total: d.cases?.total ?? 0,
         enabled: d.cases?.enabled ?? 0,
         trend: d.cases?.trend ?? 0,
+        breakdown: d.cases?.breakdown ?? [],
       },
       elements: {
         total: d.elements?.total ?? 0,
         pages: d.elements?.pages ?? 0,
         breakdown: d.elements?.breakdown ?? [],
+        typeBreakdown: d.elements?.type_breakdown ?? [],
       },
       runs: {
         total: d.runs?.total ?? 0,
@@ -34,6 +36,7 @@ export function mapStatsResponse(d) {
         trend: d.agents?.trend ?? 0,
       },
       reports: { total: d.reports?.total ?? 0 },
+      workflow: d.workflow ?? { total: 0, page_flows: 0, test_cases: 0 },
     },
     passRate: d.pass_rate ?? 0,
     executionChart: d.charts?.execution ?? {
@@ -69,11 +72,12 @@ export function useDashboardStats() {
 
   const stats = ref({
     devices: { online: 0, total: 0, trend: 0 },
-    cases: { total: 0, enabled: 0, trend: 0 },
-    elements: { total: 0, pages: 0, breakdown: [] },
+    cases: { total: 0, enabled: 0, trend: 0, breakdown: [] },
+    elements: { total: 0, pages: 0, breakdown: [], typeBreakdown: [] },
     runs: { total: 0, active: 0, trend: 0 },
     agents: { total: 0, active: 0, trend: 0 },
     reports: { total: 0 },
+    workflow: { total: 0, page_flows: 0, test_cases: 0 },
   })
   const passRate = ref(0)
   const executionChart = ref({ labels: [], success: [], failed: [], new_cases: [] })

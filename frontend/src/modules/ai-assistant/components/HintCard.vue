@@ -157,20 +157,20 @@ function genericHintText(hint) {
   border-radius: 10px;
   font-size: var(--app-size-sm);
   font-weight: 500;
-  background: #534ab7;
+  background: var(--ai-hint-purple);
   color: white;
 }
 .sop-phase-badge.phase-1 {
-  background: #378add;
+  background: var(--ai-hint-blue);
 }
 .sop-phase-badge.phase-2 {
-  background: #1d9e75;
+  background: var(--ai-hint-green);
 }
 .sop-phase-badge.phase-3 {
-  background: #ba7517;
+  background: var(--ai-hint-orange);
 }
 .sop-phase-badge.phase-4 {
-  background: #d85a30;
+  background: var(--ai-hint-red);
 }
 .sop-requirement {
   font-size: var(--app-size-sm);
@@ -200,7 +200,7 @@ function genericHintText(hint) {
   font-weight: 500;
 }
 .sop-hint .arrow {
-  color: #1d9e75;
+  color: var(--ai-hint-green);
   font-weight: 600;
   margin-right: 4px;
 }
@@ -208,8 +208,8 @@ function genericHintText(hint) {
   margin: 8px 0;
   padding: 14px 16px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #fff8e7 0%, #fff0e0 100%);
-  border: 1.5px solid #f7cd67;
+  background: linear-gradient(135deg, var(--ai-hint-yellow-bg) 0%, #fff0e0 100%);
+  border: 1.5px solid var(--ai-hint-yellow-border);
   box-shadow: 0 2px 8px rgba(247, 205, 103, 0.12);
   animation: card-appear 0.25s ease;
 }
@@ -251,7 +251,7 @@ function genericHintText(hint) {
   color: #f7a826;
 }
 .prd-stat-value.p0 {
-  color: #e85f5f;
+  color: var(--app-error);
 }
 .prd-stat-value.p1 {
   color: #f7a826;
@@ -271,7 +271,7 @@ function genericHintText(hint) {
   padding: 10px 16px;
   border-radius: 10px;
   border: 1.5px solid #f7a826;
-  background: #fff8e7;
+  background: var(--ai-hint-yellow-bg);
   color: #8b6914;
   font-size: var(--app-size-sm);
   font-weight: 700;
@@ -280,7 +280,7 @@ function genericHintText(hint) {
   transition: all 0.15s;
 }
 .prd-import-btn:hover:not(:disabled) {
-  background: #f7cd67;
+  background: var(--ai-hint-yellow-border);
   color: #fff;
 }
 .prd-import-btn:disabled {
@@ -291,7 +291,7 @@ function genericHintText(hint) {
   margin: 8px 0;
   padding: 14px 16px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #e6f9f6 0%, #f0faf8 100%);
+  background: linear-gradient(135deg, var(--ai-teal-bg) 0%, #f0faf8 100%);
   border: 1.5px solid var(--app-accent-purple, #b39ef3);
   box-shadow: 0 2px 8px rgba(25, 200, 185, 0.1);
 }
@@ -309,7 +309,7 @@ function genericHintText(hint) {
   text-transform: uppercase;
 }
 .task-status-badge.pending {
-  background: #fff3e0;
+  background: var(--ai-hint-orange-bg);
   color: #e65100;
 }
 .task-status-badge.running {
@@ -318,15 +318,15 @@ function genericHintText(hint) {
 }
 .task-status-badge.completed {
   background: #e8f5e9;
-  color: #2e7d32;
+  color: var(--app-status-success-text);
 }
 .task-status-badge.failed {
   background: #ffebee;
-  color: #c62828;
+  color: var(--app-status-danger-text);
 }
 .task-status-badge.stopped {
   background: #f5f5f5;
-  color: #616161;
+  color: var(--app-text-secondary);
 }
 .task-id {
   font-size: var(--app-size-xs);

@@ -579,7 +579,17 @@ background-color: var(--paper);
 
 **翻车记录**：全局 `.doc-body` 设了 `max-width: 1600px; margin: 0 auto`，导致所有模块在大屏（2560px+）下内容区卡在 1600px，两侧各有 ~480px 空白。已从 `style.css` 移除此规则，改为模块按需自定。
 
-### 4.6 标准页面模板 — 直接复制，改内容即可
+### 4.6 标准页面模板（三个变体）
+
+| 你的页面是…… | 用哪个变体 | 示例模块 |
+|------------|:--:|------|
+| 卡片网格 + KPI 统计 | 变体 A | dashboard、device-pool |
+| 表格列表 + 筛选栏 | 变体 B | report-generator、test-runner |
+| 左侧树/面板 + 右侧内容 | 变体 C | element-locator、case-manager |
+
+---
+
+#### 变体 A：卡片网格页
 
 ```vue
 <template>
@@ -744,6 +754,139 @@ background-color: var(--paper);
 
 ---
 
+#### 变体 B：表格列表页
+
+> 适用：report-generator、test-runner 等以表格为主的页面。复制后改 KPI 字段 + 表格列。
+
+```vue
+<template>
+  <div class="module-page">
+    <div class="action-bar">
+      <div class="action-bar__left">
+        <KpiCard :value="stats.total" label="总计" :color="moduleColor" />
+        <KpiCard :value="stats.active" label="活跃" :color="moduleColor" />
+      </div>
+      <div class="action-bar__right">
+        <el-input v-model="keyword" placeholder="搜索..." size="small" style="width:200px" />
+        <button class="btn btn-primary" @click="handleCreate">新建</button>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <FilterTabs :tabs="statusTabs" v-model="activeFilter" />
+    </div>
+
+    <div class="content-area">
+      <ErrorState v-if="error" :message="error" @retry="fetchData" />
+      <template v-else>
+        <div v-loading="loading" class="table-wrap">
+          <AppTable :columns="columns" :data-source="filteredList" row-key="id">
+            <template #empty>
+              <EmptyState icon="📋" text="暂无数据" hint="点击「新建」创建第一条记录" />
+            </template>
+          </AppTable>
+        </div>
+      </template>
+    </div>
+  </div>
+</template>
+```
+
+---
+
+#### 变体 C：左右分栏页
+
+> 适用：element-locator、case-manager 等左侧面板 + 右侧主内容。复制后改面板组件 + 内容区。
+
+```vue
+<template>
+  <div class="module-page">
+    <div class="split-layout">
+      <aside class="split-sidebar" :style="{ width: sidebarWidth + 'px' }">
+        <!-- 树形面板 / 分组列表 -->
+        <GroupTreePanel ... @select-group="handleSelect" />
+      </aside>
+      <div class="split-resizer" @mousedown="onResizeStart" />
+      <main class="split-main">
+        <ErrorState v-if="error" :message="error" @retry="fetchData" />
+        <template v-else>
+          <div v-loading="loading">
+            <EmptyState v-if="!list.length" icon="📁" text="请先选择分组" />
+            <!-- 内容：表格 / 卡片 / 详情 -->
+          </div>
+        </template>
+      </main>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.split-layout { display:flex; flex:1; min-height:0; overflow:hidden; }
+.split-sidebar { flex-shrink:0; overflow-y:auto; border-right:2px solid var(--ink); padding:8px; }
+.split-resizer { width:4px; cursor:col-resize; flex-shrink:0; }
+.split-resizer:hover { background:var(--c-element); }
+.split-main { flex:1; min-width:0; overflow-y:auto; padding:var(--app-space-md); }
+</style>
+```
+
+---
+
+### 4.7 数据加载骨架
+
+> 所有 fetch 页面复制此骨架，只改标注 `← 改这里` 的部分。
+
+```vue
+<script setup>
+import { ref, onMounted } from 'vue'
+import ErrorState from '@/shared/components/patterns/ErrorState.vue'
+import EmptyState from '@/shared/components/patterns/EmptyState.vue'
+import { xxxApi } from './api.js'                    // ← 改这里：导入你的 api
+
+const list = ref([])                                   // ← 改这里：数据变量名
+const loading = ref(false)
+const error = ref('')
+
+async function fetchData() {                           // ← 改这里：函数名
+  loading.value = true
+  try {
+    const { data } = await xxxApi.getList()            // ← 改这里：API 调用
+    if (data.ok) {
+      list.value = data.items                          // ← 改这里：响应字段
+      error.value = ''                                 // 成功后清除，不要放 try 第一行！
+    }
+  } catch (e) {
+    error.value = '加载失败，请检查网络连接'             // ← 改这里：错误文案
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => fetchData())
+</script>
+
+<template>
+  <div class="doc-page wb-shell">
+    <WorkbenchHeader
+      title="模块名"                                   <!-- ← 改这里 -->
+      subtitle="模块描述"                               <!-- ← 改这里 -->
+      icon="layers"                                    <!-- ← 改这里 -->
+      icon-gradient="linear-gradient(135deg,var(--c-xxx),#xxx)"  <!-- ← 改这里：用模块色 -->
+    />
+    <div class="doc-body">
+      <ErrorState v-if="error" :message="error" @retry="fetchData" />
+      <template v-else>
+        <div v-loading="loading">
+          <EmptyState v-if="!list.length" icon="📋" text="暂无数据" hint="点击按钮创建第一条" />
+          <!-- 正常内容 -->                              <!-- ← 改这里：你的模板 -->
+        </div>
+      </template>
+    </div>
+  </div>
+</template>
+```
+
+---
+
 ## 五、工程约束
 
 ### 5.1 组件嵌套深度 — MAX 4 层
@@ -852,12 +995,45 @@ Canvas 渲染引擎不解析 CSS 变量。改 tokens.css 后需同步更新 JS �
 - ❌ 组件 scoped 中硬编码色值（必须走 `var(--*)`）
 - ❌ 硬编码 `font-size: Xpx`（必须走 `--app-size-*` 刻度变量）
 
+### 5.12 新模块脚手架
+
+新建模块时复制此目录结构：
+
+```
+modules/{name}/
+├── index.vue       ← 复制 §4.6 模板（选对应变体），改 WorkbenchHeader 的 title/icon
+├── api.js          ← 复制下方模板，改端点 URL
+├── routes.js       ← 复制下方模板，改 path
+├── components/     ← 至少一个占位组件
+└── composables/    ← 至少 use{Name}Data.js（复制 §4.7 骨架）
+```
+
+**api.js 最小模板**：
+```js
+import { api } from '@/shared/api-client.js'
+
+export function getList()   { return api.get('/api/{name}/') }
+export function getOne(id)  { return api.get(`/api/{name}/${id}/`) }
+export function create(body){ return api.post('/api/{name}/', body) }
+export function update(id, body) { return api.put(`/api/{name}/${id}/`, body) }
+export function remove(id)  { return api.delete(`/api/{name}/${id}/`) }
+```
+
+**routes.js 最小模板**：
+```js
+export default [
+  { path: '/{name}', name: '{Name}List', component: () => import('./index.vue'), meta: { title: '{中文名}' } },
+]
+```
+
 ---
 
 ## 速查索引
 
 | 你要做什么 | 查哪节 |
 |-----------|--------|
+| 新建模块 / 页面 | §4.6 标准页面模板 + §5.12 新模块脚手架 |
+| 写数据加载逻辑 | §4.7 数据加载骨架 |
 | 改颜色 / 加颜色 | §1.1 色板 + §1.3 状态色 + §1.9 颜色使用规则 |
 | 改字体 / 字号 | §1.4 字体层级 |
 | 改间距 / padding | §1.7 间距刻度（用变量，不写字面量） |

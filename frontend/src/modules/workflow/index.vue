@@ -17,6 +17,7 @@ import TestCaseBlockly from './components/blockly/TestCaseBlockly.vue'
 import WorkflowDirTree from './components/WorkflowDirTree.vue'
 import WorkflowFileBrowser from './components/WorkflowFileBrowser.vue'
 import ImportCasesDialog from './components/ImportCasesDialog.vue'
+import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 // animal-theme.css removed — tokens now in shared/styles/tokens.css
 
 const store = useWorkflowStore()
@@ -25,6 +26,14 @@ const lib = useLibraryStore()
 
 const selectedFolderId = ref<string | null>(null)
 const ready = ref(false)
+const error = ref("")
+function retryLoad() {
+  error.value = '';
+  ready.value = false;
+  lib.bootstrapIfEmpty()
+    .then(() => { ready.value = true; })
+    .catch(() => { error.value = '加载工作流数据失败，请检查网络连接'; });
+}
 const createName = ref('')
 const creatingKind = ref<'folder' | null>(null)
 const createParentId = ref<string | null>(null)
@@ -399,6 +408,7 @@ onMounted(async () => {
     }
   } catch {
     selectedFolderId.value = null
+    error.value = "加载工作流数据失败，请检查网络连接"
   }
   lib.setActive(null)
   hydratedFlowId.value = null
@@ -491,6 +501,8 @@ watch(
         <span v-if="lib.status" class="status-pill">{{ lib.status }}</span>
       </div>
     </header>
+
+    <ErrorState v-if="error" :message="error" @retry="retryLoad" />
 
     <Teleport to="body">
       <div

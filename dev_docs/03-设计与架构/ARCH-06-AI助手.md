@@ -117,6 +117,8 @@ frontend/src/modules/ai-assistant/
 | `REQUIRE_USER_CONFIRM` | ElMessageBox 确认弹窗 | HITL |
 | `REPLY_END` | 标记完成，触发 `save-message` | 持久化 |
 
+> 📐 前端架构基线 v1.0（2026-07-27）— 组件树 + SSE 9 种事件映射完整。详见 `frontend/CLAUDE.md` ③ 及 `VUE_API_CONTRACT.md` WS-3。
+
 ---
 
 ## 3. 后端架构

@@ -52,10 +52,10 @@ const emit = defineEmits(['trigger-upload', 'avatar-upload'])
 .avatar-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .avatar-preview {
   width: 64px; height: 64px; border-radius: 14px; background-size: cover;
-  background-position: center; background-color: #faf9f4;
+  background-position: center; background-color: var(--ai-warm-bg);
   display: flex; align-items: center; justify-content: center;
-  font-size: var(--app-size-2xl); border: 2px solid #e8e2d6; flex-shrink: 0;
+  font-size: var(--app-size-2xl); border: 2px solid var(--ai-warm-border); flex-shrink: 0;
   box-shadow: 0 2px 8px rgba(61,52,40,0.08);
 }
-.avatar-hint { font-size: var(--app-size-sm); color: #a0936e; }
+.avatar-hint { font-size: var(--app-size-sm); color: var(--ai-ink-muted); }
 </style>

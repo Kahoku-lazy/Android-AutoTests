@@ -114,6 +114,8 @@ frontend/src/modules/element-locator/
 | **XPath 复制** | `navigator.clipboard.writeText` 优先，`execCommand('copy')` 降级 |
 | **跨模块通信** | EventBus `add-step-to-case` → 一键发送 XPath 到用例编辑器 |
 
+> 📐 前端架构基线 v1.0（2026-07-27）— 组件树 + 关键技术表完整。路由定义见 `routes.js`，状态管理见 `store.js`（Pinia）。
+
 ---
 
 ## 3. 后端架构

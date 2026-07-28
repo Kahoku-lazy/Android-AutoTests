@@ -21,8 +21,8 @@ function resolveCurrentUser() {
   } catch { return "" }
 }
 const currentUser = resolveCurrentUser();
-const isCreator = currentUser && props.item.created_by === currentUser;
-const isEditing = props.item.editing_by && props.item.editing_by !== currentUser;
+const isCreator = !!(currentUser && props.item.created_by === currentUser);
+const isEditing = !!(props.item.editing_by && props.item.editing_by !== currentUser);
 const locking = ref(false);
 
 function stepCount() {

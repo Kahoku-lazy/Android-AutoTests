@@ -103,6 +103,47 @@ ENDPOINTS = [
              "response":"FileResponse (text/csv|text/markdown|text/plain)","errors":[{"code":404,"msg":"文件不存在"}],"note":"不是 JSON。前端用 fetch().then(r=>r.text())。文件名自动防目录遍历"},
         ],
     },
+    # ── dashboard (4 endpoints) ──
+    {
+        "module": "dashboard", "prefix": "/api", "desc": "仪表盘：平台聚合统计、活动时间线",
+        "items": [
+            {"method":"GET","path":"/api/dashboard/stats","desc":"平台聚合统计数据",
+             "body":None,
+             "response":{
+                 "ok":"bool",
+                 "data":{
+                     "devices":{"online":"int","total":"int","trend":"int"},
+                     "cases":{"total":"int","enabled":"int","trend":"int",
+                              "breakdown":"[{type,label,total,enabled}] (Android/Web/API/功能业务)"},
+                     "elements":{"total":"int","pages":"int",
+                                 "type_breakdown":"[{type,label,total}] (Android元素/Web元素/API接口)"},
+                     "workflow":{"total":"int","page_flows":"int","test_cases":"int"},
+                     "runs":{"total":"int","active":"int","trend":"int"},
+                     "agents":{"total":"int","active":"int","trend":"int"},
+                     "reports":{"total":"int"},
+                     "pass_rate":"float",
+                     "charts":{"execution":{"labels":"[str]","success":"[int]","failed":"[int]","new_cases":"[int]"}},
+                     "execution_summary":{"passed":"int","failed":"int","new_cases_week":"int"},
+                     "recent_tasks":"[{id,title,status,passed,failed,total,time,cases}]",
+                     "last_updated":"str",
+                     "system_status":"str(normal|no_devices)",
+                 }
+             },
+             "errors":[],"note":"跨 7 个模块聚合：device_pool、case_manager、element_locator、test_runner、ai_assistant、report_generator、workflow"},
+            {"method":"GET","path":"/api/dashboard/activities","desc":"最近平台活动时间线",
+             "body":None,
+             "response":{"ok":"bool","data":"[{type,action,detail,time}]"},
+             "errors":[],"note":"最近 5 次执行 + 3 个智能体更新，按时间倒序"},
+            {"method":"GET","path":"/api/devices/stats","desc":"设备池摘要统计",
+             "body":None,
+             "response":{"ok":"bool","data":{"online":"int","busy":"int","offline":"int","disconnected":"int","total":"int"}},
+             "errors":[],"note":"与仪表盘主接口的设备统计逻辑一致"},
+            {"method":"GET","path":"/api/cases/stats","desc":"用例摘要统计",
+             "body":None,
+             "response":{"ok":"bool","data":{"total":"int","enabled":"int","disabled":"int"}},
+             "errors":[],"note":"涵盖全部 4 种用例类型：Android(ui_automation)、Web、API、功能业务(storage)"},
+        ],
+    },
     # ── WebSocket (2 endpoints) ──
     {
         "module": "websocket", "prefix": "/ws", "desc": "WebSocket 实时推送",
@@ -123,8 +164,8 @@ def api_docs_json(request):
         "service": "Android-AutoTests API",
         "version": "v2.0",
         "base_url": "http://localhost:8765",
-        "modules": 5,
-        "endpoints": 35,
+        "modules": 6,
+        "endpoints": 39,
         "websockets": 2,
         "conventions": {
             "wrapper": '{"ok": true/false, ...}',
@@ -196,7 +237,7 @@ def api_docs_html(request):
 <div class="container">
   <div class="header">
     <h1>Android-AutoTests API</h1>
-    <p class="sub">v2.0 · 5 个模块 · 35 个 REST 端点 + 2 个 WebSocket · 所有响应: {"ok": true/false, ...}</p>
+    <p class="sub">v2.0 · 6 个模块 · 39 个 REST 端点 + 2 个 WebSocket · 所有响应: {"ok": true/false, ...}</p>
   </div>
   <div class="toolbar">
     <button class="active" onclick="expandAll()">展开全部</button>

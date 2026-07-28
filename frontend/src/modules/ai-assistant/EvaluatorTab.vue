@@ -212,7 +212,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
       <h3 class="doc-section__title">{{ curTab.label }} 评测</h3>
 
       <!-- Description -->
-      <div class="fw-desc" style="margin-bottom:16px;padding:12px 16px;background:#faf9f4;border-radius:8px;font-size:var(--app-size-sm);color:#5c4b38">
+      <div class="fw-desc" style="margin-bottom:16px;padding:12px 16px;background:var(--ai-warm-bg);border-radius:8px;font-size:var(--app-size-sm);color:var(--ai-ink-subtle)">
         <template v-if="subTab==='self'">
           使用 <strong>Judge LLM</strong> 对智能体的答卷进行四维评分（相关性/准确性/完整性/简洁性），支持人工纠偏。适用于自定义测试题目的精准评估。
         </template>
@@ -297,7 +297,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
             </el-select>
           </el-form-item>
         </el-form>
-        <div style="font-size:var(--app-size-sm);font-weight:600;color:#4a3a28;margin-bottom:8px">评测指标（勾选需要的）：</div>
+        <div style="font-size:var(--app-size-sm);font-weight:600;color:var(--ai-ink-soft);margin-bottom:8px">评测指标（勾选需要的）：</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
           <el-checkbox v-for="m in METRICS_BY_FW.deepeval" :key="m.key" v-model="m.selected"
                        :label="m.label" size="small" border style="margin-right:0" />
@@ -326,7 +326,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
               <div class="bench-desc">{{ bm.desc }}</div>
             </div>
           </div>
-          <div style="font-size:var(--app-size-sm);color:#a0936e;margin-top:4px">
+          <div style="font-size:var(--app-size-sm);color:var(--ai-ink-muted);margin-top:4px">
             MASEval 将整个 Agent 系统作为评测单元。支持 Leader+Worker 多智能体协作场景。
           </div>
         </template>
@@ -357,7 +357,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
           <el-select v-model="selectedAgentId" placeholder="选择智能体（查看其知识库文档范围）" style="width:280px" clearable>
             <el-option v-for="a in agents" :key="a.id" :label="a.name" :value="a.id" />
           </el-select>
-          <span style="font-size:var(--app-size-sm);color:#a0936e;margin-left:8px">
+          <span style="font-size:var(--app-size-sm);color:var(--ai-ink-muted);margin-left:8px">
             选择智能体后，可查看该智能体配置的知识库文档范围
           </span>
         </el-form-item>
@@ -365,30 +365,30 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 
       <!-- Interactive query -->
       <div style="margin-bottom:20px">
-        <div style="font-size:var(--app-size-sm);font-weight:600;color:#4a3a28;margin-bottom:8px">🔍 交互式检索测试</div>
+        <div style="font-size:var(--app-size-sm);font-weight:600;color:var(--ai-ink-soft);margin-bottom:8px">🔍 交互式检索测试</div>
         <div style="display:flex;gap:8px">
           <el-input v-model="kbQuery" placeholder="输入查询（如：如何创建测试用例）" style="flex:1"
                     @keyup.enter="doKbQuery" />
           <el-button type="primary" :loading="kbQuerying" @click="doKbQuery">查询</el-button>
         </div>
         <div v-if="kbQueryResult" style="margin-top:12px">
-          <div style="font-weight:600;color:#4a3a28;margin-bottom:6px">
+          <div style="font-weight:600;color:var(--ai-ink-soft);margin-bottom:6px">
             查询: "{{ kbQueryResult.query }}" → {{ kbQueryResult.total || 0 }} 条结果
           </div>
           <div v-for="(doc, i) in (kbQueryResult.documents||[])" :key="i"
-               style="padding:8px 12px;background:#faf9f4;border-radius:6px;margin-bottom:4px;font-size:var(--app-size-sm)">
+               style="padding:8px 12px;background:var(--ai-warm-bg);border-radius:6px;margin-bottom:4px;font-size:var(--app-size-sm)">
             <span style="color:#8a7b66;font-weight:600">{{ doc.source }}</span>
-            <span style="margin-left:8px;color:#a0936e">score: {{ doc.score }}</span>
-            <div style="color:#5c4b38;margin-top:4px;max-height:120px;overflow:auto">{{ doc.content }}</div>
+            <span style="margin-left:8px;color:var(--ai-ink-muted)">score: {{ doc.score }}</span>
+            <div style="color:var(--ai-ink-subtle);margin-top:4px;max-height:120px;overflow:auto">{{ doc.content }}</div>
           </div>
-          <div v-if="!kbQueryResult.documents?.length" style="color:#a0936e;padding:12px">无匹配结果</div>
+          <div v-if="!kbQueryResult.documents?.length" style="color:var(--ai-ink-muted);padding:12px">无匹配结果</div>
         </div>
       </div>
 
       <el-divider />
 
       <!-- Auto self-test -->
-      <p style="color:#a0936e;margin-bottom:12px">
+      <p style="color:var(--ai-ink-muted);margin-bottom:12px">
         使用 10 个预定义查询批量测试知识库检索覆盖率与相关性。
       </p>
       <el-button type="primary" :loading="kbTesting" @click="doKbSelfTest">🔍 自动批量自测</el-button>
@@ -400,14 +400,14 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
           <div class="score-badge"><div class="score-num">{{ kbTestResult.score.total_queries }}</div><div class="score-label">测试查询数</div></div>
         </div>
         <div v-for="d in kbTestResult.details" :key="d.query" style="margin-bottom:12px">
-          <div style="font-weight:600;color:#4a3a28;margin-bottom:4px">
+          <div style="font-weight:600;color:var(--ai-ink-soft);margin-bottom:4px">
             [{{ d.total_hits }} hits] {{ d.query }}
             <el-tag size="small" :type="d.total_hits?'success':'danger'" style="margin-left:8px">{{ d.total_hits?'有结果':'无结果' }}</el-tag>
           </div>
-          <div v-for="doc in d.documents" :key="doc.source" style="padding:6px 12px;background:#faf9f4;border-radius:6px;margin-bottom:4px;font-size:var(--app-size-sm)">
+          <div v-for="doc in d.documents" :key="doc.source" style="padding:6px 12px;background:var(--ai-warm-bg);border-radius:6px;margin-bottom:4px;font-size:var(--app-size-sm)">
             <span style="color:#8a7b66">{{ doc.source }}</span>
-            <span style="margin-left:8px;color:#a0936e">score: {{ doc.score }}</span>
-            <div style="color:#5c4b38;margin-top:2px">{{ doc.content_preview?.slice(0, 200) }}</div>
+            <span style="margin-left:8px;color:var(--ai-ink-muted)">score: {{ doc.score }}</span>
+            <div style="color:var(--ai-ink-subtle);margin-top:2px">{{ doc.content_preview?.slice(0, 200) }}</div>
           </div>
         </div>
       </div>
@@ -417,7 +417,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
     <div v-if="subTab!=='kb'" style="display:flex;gap:12px;align-items:center;margin-bottom:16px">
       <el-button size="small" @click="openBankEditor(null)">+ 新建试卷</el-button>
       <el-button size="small" @click="seedDefault" :disabled="banks.some(b=>b.name==='默认30题试卷')">📋 创建默认30题试卷</el-button>
-      <span style="font-size:var(--app-size-sm);color:#a0936e">已有 {{ banks.length }} 份试卷，共 {{ banks.reduce((s,b)=>s+(b.question_count||0),0) }} 题</span>
+      <span style="font-size:var(--app-size-sm);color:var(--ai-ink-muted)">已有 {{ banks.length }} 份试卷，共 {{ banks.reduce((s,b)=>s+(b.question_count||0),0) }} 题</span>
     </div>
 
     <!-- ═══════════════ Run History ═══════════════ -->
@@ -425,7 +425,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
       <h3 class="doc-section__title">评测记录 ({{ filteredRuns.length }})</h3>
       <div v-if="!filteredRuns.length" class="empty-state">暂无评测记录</div>
       <div v-for="r in filteredRuns" :key="r.id" class="run-card"
-           style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:#faf9f4;border-radius:10px;margin-bottom:8px;border:1px solid #e8e2d6">
+           style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--ai-warm-bg);border-radius:10px;margin-bottom:8px;border:1px solid var(--ai-warm-border)">
         <el-tag :type="r.status==='completed'?'success':r.status==='running'?'warning':r.status==='failed'?'danger':'info'" size="small">{{ r.status }}</el-tag>
         <span style="font-weight:600;min-width:100px">{{ r.agent_name }}</span>
         <el-tag size="small" type="info">{{ fwLabel(r) }}</el-tag>
@@ -457,15 +457,15 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
         </div>
         <!-- Framework raw output -->
         <div v-if="runDetail.framework!=='self'" style="margin-bottom:16px">
-          <div style="font-size:var(--app-size-sm);font-weight:600;color:#4a3a28;margin-bottom:8px">评测原始输出</div>
-          <pre style="background:#faf9f4;border-radius:8px;padding:12px;font-size:var(--app-size-sm);max-height:400px;overflow:auto;white-space:pre-wrap">{{ prettyJson(runDetail.report_json) }}</pre>
+          <div style="font-size:var(--app-size-sm);font-weight:600;color:var(--ai-ink-soft);margin-bottom:8px">评测原始输出</div>
+          <pre style="background:var(--ai-warm-bg);border-radius:8px;padding:12px;font-size:var(--app-size-sm);max-height:400px;overflow:auto;white-space:pre-wrap">{{ prettyJson(runDetail.report_json) }}</pre>
         </div>
         <!-- Per-question (self evaluator only) -->
         <div v-if="runDetail.framework==='self'" v-for="r in (runDetail.results||[])" :key="r.id"
-             style="background:#faf9f4;border-radius:10px;padding:16px;margin-bottom:12px;border:1px solid #e8e2d6">
-          <div style="font-weight:700;margin-bottom:8px;color:#4a3a28">{{ r.question_text }}</div>
-          <div style="font-size:var(--app-size-sm);color:#5c4b38;margin-bottom:8px;max-height:100px;overflow:auto"><strong>回答：</strong>{{ r.agent_response }}</div>
-          <div style="font-size:var(--app-size-sm);color:#a0936e;margin-bottom:8px">{{ r.judge_reasoning }}</div>
+             style="background:var(--ai-warm-bg);border-radius:10px;padding:16px;margin-bottom:12px;border:1px solid var(--ai-warm-border)">
+          <div style="font-weight:700;margin-bottom:8px;color:var(--ai-ink-soft)">{{ r.question_text }}</div>
+          <div style="font-size:var(--app-size-sm);color:var(--ai-ink-subtle);margin-bottom:8px;max-height:100px;overflow:auto"><strong>回答：</strong>{{ r.agent_response }}</div>
+          <div style="font-size:var(--app-size-sm);color:var(--ai-ink-muted);margin-bottom:8px">{{ r.judge_reasoning }}</div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
             <span style="font-size:var(--app-size-sm);color:#8a7b66">机器:</span>
             <el-tag size="small" type="warning">相关 {{ r.relevance_score }}</el-tag>
@@ -513,16 +513,16 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 <style scoped>
 .evaluator-host { padding: 4px 0; }
 .view-tab {
-  padding: 10px 22px; border: 2px solid #e8e2d6; border-radius: 12px;
-  background: #faf9f4; color: #8a7b66; font-size: var(--app-size-md); font-weight: 700;
+  padding: 10px 22px; border: 2px solid var(--ai-warm-border); border-radius: 12px;
+  background: var(--ai-warm-bg); color: #8a7b66; font-size: var(--app-size-md); font-weight: 700;
   font-family: inherit; cursor: pointer; transition: all 0.2s ease;
 }
-.view-tab:hover { border-color: #19c8b9; background: #e6f9f6; color: #158a80; }
-.view-tab.active { background: #19c8b9; color: #fff; border-color: #19c8b9; box-shadow: 0 4px 14px rgba(25,200,185,0.3); }
+.view-tab:hover { border-color: var(--ai-teal); background: var(--ai-teal-bg); color: var(--ai-teal-text); }
+.view-tab.active { background: var(--ai-teal); color: #fff; border-color: var(--ai-teal); box-shadow: 0 4px 14px rgba(25,200,185,0.3); }
 
 /* Mode toggle */
 .mode-btn {
-  padding: 8px 18px; border: 1.5px solid #e8e2d6; border-radius: 8px;
+  padding: 8px 18px; border: 1.5px solid var(--ai-warm-border); border-radius: 8px;
   background: #fff; color: #8a7b66; font-size: var(--app-size-sm); font-weight: 600;
   font-family: inherit; cursor: pointer; transition: all 0.2s ease;
 }
@@ -531,17 +531,17 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 
 /* Benchmark cards */
 .bench-card {
-  padding: 12px 16px; border: 1.5px solid #e8e2d6; border-radius: 10px;
-  background: #faf9f4; cursor: pointer; min-width: 140px; transition: all 0.2s ease;
+  padding: 12px 16px; border: 1.5px solid var(--ai-warm-border); border-radius: 10px;
+  background: var(--ai-warm-bg); cursor: pointer; min-width: 140px; transition: all 0.2s ease;
 }
 .bench-card:hover { border-color: #b39ef3; background: #f3f0ff; }
 .bench-card.selected { border-color: #b39ef3; background: #f3f0ff; box-shadow: 0 2px 8px rgba(179,158,243,0.25); }
-.bench-name { font-size: var(--app-size-sm); font-weight: 700; color: #4a3a28; }
-.bench-desc { font-size: var(--app-size-xs); color: #a0936e; margin-top: 4px; }
+.bench-name { font-size: var(--app-size-sm); font-weight: 700; color: var(--ai-ink-soft); }
+.bench-desc { font-size: var(--app-size-xs); color: var(--ai-ink-muted); margin-top: 4px; }
 
-.doc-section { background: #fff; border-radius: var(--app-radius-md); padding: 24px; margin-bottom: 20px; border: 1px solid #f0ebe0; box-shadow: 0 2px 8px rgba(61,52,40,0.04); }
+.doc-section { background: #fff; border-radius: var(--app-radius-md); padding: 24px; margin-bottom: 20px; border: 1px solid var(--ai-bg-subtle); box-shadow: 0 2px 8px rgba(61,52,40,0.04); }
 .doc-section__title { font-family: var(--app-font-display); font-size: var(--app-size-lg); font-weight: 700; color: var(--ink); margin-bottom: 16px }
-.score-badge { background: #faf9f4; border-radius: 12px; padding: 14px 22px; text-align: center; border: 1px solid #e8e2d6; min-width: 80px; }
+.score-badge { background: var(--ai-warm-bg); border-radius: 12px; padding: 14px 22px; text-align: center; border: 1px solid var(--ai-warm-border); min-width: 80px; }
 .score-num { font-size: var(--app-size-2xl); font-weight: 800; }
-.score-label { font-size: var(--app-size-sm); color: #a0936e; margin-top: 4px; }
+.score-label { font-size: var(--app-size-sm); color: var(--ai-ink-muted); margin-top: 4px; }
 </style>

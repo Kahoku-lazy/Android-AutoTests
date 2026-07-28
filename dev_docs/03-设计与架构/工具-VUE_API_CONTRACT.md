@@ -1,5 +1,7 @@
 # Vue ↔ 后端 交互契约
 
+> 📅 最后同步：2026-07-27 | 覆盖模块：8/8（设备/元素/用例/执行/报告/AI助手/工作流）| 下次复查：新增端点时
+
 当修改 Vue 或后端时，按此表逐项校验，确保前后端一致。
 
 ## 一、REST API 映射
@@ -63,6 +65,34 @@
 | `viewReport(rf)` | GET | `/api/reports/{filename}` | — | **FileResponse** (不是 JSON) — `fetch().then(r=>r.text())` |
 | `loadRunHistory()` | GET | `/api/runner/runs` | — | `{ok, runs:[{run_id,total,passed,failed,last_time}]}` |
 
+### 工作流
+
+| Vue 状态/方法 | HTTP | 端点 | 请求体 | 响应体关键字段 |
+|---|---|---|---|---|
+| `lib.bootstrapIfEmpty()` | GET | `/api/workflow/directories` | — | `{ok, directories:[{id,name,parent_id}]}` |
+| `lib.createFolder()` | POST | `/api/workflow/directories` | `{name, parent_id}` | `{ok, directory:{id,name}}` |
+| `lib.renameNode()` | PUT | `/api/workflow/directories/{id}` | `{name}` | `{ok}` |
+| `lib.deleteNode()` | DELETE | `/api/workflow/directories/{id}` | — | `{ok}` |
+| `lib.loadPageFlowPayload()` | GET | `/api/workflow/documents/{id}` | — | `{ok, document:{id,name,content,type}}` |
+| `lib.savePageFlowPayload()` | PUT | `/api/workflow/documents/{id}` | `{name,content}` | `{ok}` |
+| `lib.createDocument()` | POST | `/api/workflow/documents` | `{name,type,parent_id}` | `{ok, document:{id}}` |
+| `lib.deleteDocument()` | DELETE | `/api/workflow/documents/{id}` | — | `{ok}` |
+| `getDefinition()` (import) | GET | `/api/case-manager/definitions/{id}` | — | `{ok, definition:{steps_data,...}}` |
+| `lib.saveCaseDraft()` | PUT | `/api/workflow/documents/{id}` | `{name,blocks,linked_case_id}` | `{ok}` |
+
+### AI 助手
+
+| Vue 状态/方法 | HTTP | 端点 | 请求体 | 响应体关键字段 |
+|---|---|---|---|---|
+| `listAgents()` | GET | `/api/ai/agents` | — | `{ok, agents:[{id,name,provider,model,avatar}]}` |
+| `getAgent(id)` | GET | `/api/ai/agents/{id}` | — | `{ok, agent:{...}}` (api_key 脱敏为 `sk-***xxxx`) |
+| `createAgent()` | POST | `/api/ai/agents` | `{name,provider,model,api_key,...}` | `{ok, agent:{id}}` |
+| `updateAgent()` | PUT | `/api/ai/agents/{id}` | `{...}` (api_key 为 `***` 时跳过更新) | `{ok}` |
+| `deleteAgent()` | DELETE | `/api/ai/agents/{id}` | — | `{ok}` |
+| `loadConversations()` | GET | `/api/ai/conversations?agent_id=...` | — | `{ok, conversations:[...]}` |
+| `listTasks()` | GET | `/api/ai/tasks` | — | `{ok, tasks:[...]}` |
+| `testAgent()` | POST | `/api/ai/agents/{id}/test` | `{message}` | SSE 流式响应 |
+
 ---
 
 ## 二、WebSocket 映射
@@ -90,6 +120,23 @@
 | 后端→前端 | `device_error` | `error` | 设备连接失败 | `testRunning=false`, 弹 toast |
 
 **Vue 相关变量**: `testWs`, `testRunning`, `testRunId`, `runProgress`, `runLogs`, `caseResults`, `reportFiles`
+
+### WS-3: AI 助手 SSE 流式 `/agentscope/chat`
+
+> 直连 AgentScope `:8000`，不经 Django。详见 `frontend/CLAUDE.md` ③。
+
+| 方向 | SSE 事件 | 关键字段 | 触发时机 | Vue 消费 |
+|---|---|---|---|---|
+| 后端→前端 | `textGenerated` | `text` (增量) | LLM 逐 token 输出 | 追加文本到 `MessageBubble`（打字效果） |
+| 后端→前端 | `toolCallStart` | `tool_name, tool_input` | Tool 开始执行 | 渲染 `ToolCallCard`（loading 态） |
+| 后端→前端 | `toolCallEnd` | `tool_name, result` | Tool 执行完毕 | 更新 `ToolCallCard`（结果摘要） |
+| 后端→前端 | `thinkingStart` | — | 模型推理开始 | 渲染 `ThinkingBlock`（可折叠） |
+| 后端→前端 | `thinkingEnd` | — | 模型推理结束 | 折叠 `ThinkingBlock` |
+| 后端→前端 | `messageEnd` | — | 消息完成 | 调 `loadConversation()` 从 DB 拉完整历史 |
+| 后端→前端 | `error` | `message` | 连接/模型错误 | 显示错误提示 + 允许重试 |
+| 前端→后端 | — | `POST /agentscope/stop` | 用户点"停止" | 关闭 SSE，保留已生成内容 |
+
+**Vue 相关变量**: `sseConnection`, `streamMode` (`sse`/`fallback`), `isStreaming`, `stopGeneration()`
 
 ---
 

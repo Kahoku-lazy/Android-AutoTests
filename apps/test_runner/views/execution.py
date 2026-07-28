@@ -3,6 +3,7 @@ import json
 import asyncio
 import logging
 from datetime import datetime
+from urllib.parse import urlparse
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -57,6 +58,18 @@ def _parse_json_field(value):
         except (json.JSONDecodeError, TypeError):
             return value
     return value if value else {}
+
+def _parse_rows(val):
+    """Safely parse rows/assertions into a list, handling JSON-string edge cases."""
+    if isinstance(val, list):
+        return val
+    if isinstance(val, str) and val.strip():
+        try:
+            parsed = json.loads(val)
+            return parsed if isinstance(parsed, list) else []
+        except Exception:
+            return []
+    return []
 
 
 @require_auth
@@ -124,6 +137,8 @@ async def start_test_run(request):
                     "headers": h,
                     "body": b,
                     "expected_response": getattr(r, "expected_response", ""),
+                    "_rows": _parse_rows(getattr(r, "rows", [])),
+                    "_assertions": _parse_rows(getattr(r, "assertions", [])),
                 }
 
             elif task_type == CaseType.WEB_AUTOMATION.value:
@@ -540,7 +555,16 @@ async def _execute_unified_remote(run_id, test_cases, loop_count, interval_secon
                                       callback=test_callbacks, is_async_executor=True,
                                       cleanup=adapter.close)
         else:
+            # Extract base_url from first test case's url (all cases share same deployment)
+            base_url = ""
+            for tc in test_cases:
+                url = (tc.extra_data or {}).get("url", "")
+                if url and (url.startswith("http://") or url.startswith("https://")):
+                    parsed = urlparse(url)
+                    base_url = f"{parsed.scheme}://{parsed.netloc}"
+                    break
             adapter = ApiAdapter(
+                base_url=base_url,
                 logger=lambda msg, l=loop: _bridge_ws_log(run_id, msg, l),
                 should_stop=lambda: False,
             )

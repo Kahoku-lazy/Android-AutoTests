@@ -483,33 +483,33 @@ async function save() {
 /* ── Back button ── */
 .back-btn {
   display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;
-  border: 2px solid #19c8b9; border-radius: 12px; background: #e6f9f6;
-  color: #158a80; font-size: var(--app-size-md); font-weight: 700; font-family: inherit;
+  border: 2px solid var(--ai-teal); border-radius: 12px; background: var(--ai-teal-bg);
+  color: var(--ai-teal-text); font-size: var(--app-size-md); font-weight: 700; font-family: inherit;
   cursor: pointer; transition: all 0.2s ease; align-self: flex-start;
 }
-.back-btn:hover { background: #19c8b9; color: #fff; box-shadow: 0 4px 14px rgba(25,200,185,0.35); transform: translateY(-1px); }
+.back-btn:hover { background: var(--ai-teal); color: #fff; box-shadow: 0 4px 14px rgba(25,200,185,0.35); transform: translateY(-1px); }
 
 /* ── Steps bar ── */
 .steps-section { padding: 24px 32px; flex-shrink: 0; }
 .steps-section :deep(.clickable-step) { cursor: pointer; }
 .steps-section :deep(.clickable-step .el-step__title),
 .steps-section :deep(.clickable-step .el-step__icon) { cursor: pointer; }
-.steps-section :deep(.clickable-step:hover .el-step__title) { color: #19c8b9; }
+.steps-section :deep(.clickable-step:hover .el-step__title) { color: var(--ai-teal); }
 
 /* ── Shared step panel (used by all 5 sub-components) ── */
 .step-panel { padding: 28px 32px; }
 .section-title {
   display: flex; align-items: center; gap: 12px; font-size: var(--app-size-lg); font-weight: 700;
-  color: #4a3a28; margin-bottom: 24px; padding-bottom: 14px; border-bottom: 2px solid #f0ebe0;
+  color: var(--ai-ink-soft); margin-bottom: 24px; padding-bottom: 14px; border-bottom: 2px solid var(--ai-bg-subtle);
 }
 .section-num {
   display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;
-  border-radius: 10px; background: linear-gradient(135deg,#19c8b9,#15a89c);
+  border-radius: 10px; background: linear-gradient(135deg,var(--ai-teal),var(--ai-teal-hover));
   color: #fff; font-size: var(--app-size-md); font-weight: 700; box-shadow: 0 3px 8px rgba(25,200,185,0.3);
 }
-.agent-form :deep(.el-form-item__label) { font-size: var(--app-size-md); font-weight: 600; color: #5c4b38; }
+.agent-form :deep(.el-form-item__label) { font-size: var(--app-size-md); font-weight: 600; color: var(--ai-ink-subtle); }
 .agent-form :deep(.el-input__wrapper),
 .agent-form :deep(.el-textarea__inner) { border-radius: 10px; font-size: var(--app-size-md); }
-.form-hint { font-size: var(--app-size-sm); color: #a0936e; margin-left: 10px; }
+.form-hint { font-size: var(--app-size-sm); color: var(--ai-ink-muted); margin-left: 10px; }
 </style>
 

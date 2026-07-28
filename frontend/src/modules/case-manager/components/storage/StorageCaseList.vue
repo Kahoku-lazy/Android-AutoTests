@@ -2,7 +2,7 @@
 import CaseList from "../CaseList.vue";
 import { listStorageDefinitions, deleteStorageDefinition, getStorageDefinition } from "../../api/storage.js";
 
-defineProps({ treeData: Array, activeDirectoryId: null, activeDirName: String });
+defineProps({ treeData: Array, activeDirectoryId: null, activeDirName: String, activeCaseId: null });
 defineEmits(["refresh-tree"]);
 
 const api = { listDefs: listStorageDefinitions, deleteDef: deleteStorageDefinition, getDef: getStorageDefinition };
@@ -23,5 +23,6 @@ function editPath(id) { return `/cases/storage/${id}/edit`; }
 <template>
   <CaseList case-type="storage" :list-api="api" :columns="columns" create-path="/cases/storage/new" :edit-path="editPath"
     :tree-data="treeData" :active-directory-id="activeDirectoryId" :active-dir-name="activeDirName"
+    :active-case-id="activeCaseId"
     @refresh-tree="$emit('refresh-tree')" />
 </template>

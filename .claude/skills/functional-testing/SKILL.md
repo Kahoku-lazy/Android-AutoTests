@@ -113,4 +113,4 @@ generate_report("Dashboard", results, lang="en")
 ### 报告内容
 
 执行摘要 → KPI 卡片 → 逐用例详情 → 维度热力图 → Bug 证据清单 → 测试方向建议。
-样式与 animal-island-ui 一致: Nunito 字体、24px 大圆角、暖木色配色、毛玻璃卡片。
+样式与 Doodle Craft 主题一致: Nunito 字体、不对称圆角、暖木色配色、粗线卡片。

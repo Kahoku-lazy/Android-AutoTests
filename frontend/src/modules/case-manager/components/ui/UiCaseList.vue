@@ -4,7 +4,7 @@ import CaseList from "../CaseList.vue";
 import StepViewer from "../StepViewer.vue";
 import { listDefinitions, deleteDefinition, getDefinition, listExports } from "../../api/uiAutomation.js";
 
-const props = defineProps({ treeData: Array, activeDirectoryId: null, activeDirName: String });
+const props = defineProps({ treeData: Array, activeDirectoryId: null, activeDirName: String, activeCaseId: null });
 const emit = defineEmits(["refresh-tree"]);
 
 const api = { listDefs: listDefinitions, deleteDef: deleteDefinition, getDef: getDefinition };
@@ -18,14 +18,11 @@ const columns = [
   { title: "操作", dataIndex: "actions", minWidth: 180, align: "center" },
 ];
 
-const selectedDefinition = ref(null);
+const listRef = ref(null);
 const yamlLoading = ref(false);
 
-async function handleSelect(id) {
-  try {
-    const { data } = await getDefinition(id);
-    if (data.ok) selectedDefinition.value = data.definition;
-  } catch (_) {}
+function handleSelect(id) {
+  listRef.value?.loadCaseDetail(id);
 }
 
 async function handleExportYaml() {
@@ -46,12 +43,13 @@ function editPath(id) { return `/cases/${id}/edit`; }
 <template>
   <CaseList ref="listRef" case-type="ui" :list-api="api" :columns="columns" create-path="/cases/new" :edit-path="editPath"
     :tree-data="props.treeData" :active-directory-id="props.activeDirectoryId" :active-dir-name="props.activeDirName"
+    :active-case-id="props.activeCaseId"
     @refresh-tree="emit('refresh-tree')">
     <template #table-extra>
       <button class="btn-yaml" :disabled="yamlLoading" @click="handleExportYaml">📄 导出YAML</button>
     </template>
     <template #detail="{ case: c }">
-      <StepViewer v-if="selectedDefinition" :case-definition="selectedDefinition" />
+      <StepViewer v-if="c" :case-definition="c" />
     </template>
     <template #cell-id="{ record }">
       <span class="case-link" @click="handleSelect(record.id)">{{ record.id }}</span>

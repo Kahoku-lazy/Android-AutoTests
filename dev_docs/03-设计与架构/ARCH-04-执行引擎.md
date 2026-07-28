@@ -111,6 +111,8 @@ frontend/src/modules/test-runner/
 | `done (stopped)` | 未完成 | 橙色标签 | 重新执行 / 查看报告 |
 | `done (error)` | 未完成 | 红色标签 | 重新执行 / 查看日志 |
 
+> 📐 前端架构基线 v1.0（2026-07-27）— 组件树 + 6 种任务状态 UI 文档完整。路由定义见 `routes.js`，WebSocket 6 种事件已由 `useTaskWebSocket.js` 处理。
+
 ---
 
 ## 3. 后端架构

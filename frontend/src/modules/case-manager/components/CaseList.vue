@@ -34,6 +34,7 @@ const props = defineProps({
   treeData: { type: Array, default: () => [] },
   activeDirectoryId: { default: null },
   activeDirName: { type: String, default: "" },
+  activeCaseId: { default: null },
   hideCard: { type: Boolean, default: false },
 });
 
@@ -43,24 +44,38 @@ const router = useRouter();
 const definitions = ref([]);
 const loading = ref(false);
 const error = ref(null);
-const viewMode = ref(localStorage.getItem("case-manager-view-mode") || "card");
+const savedView = localStorage.getItem("case-manager-view-mode");
+const viewMode = ref(savedView === "table" ? "table" : "card");
 function setViewMode(mode) { viewMode.value = mode; localStorage.setItem("case-manager-view-mode", mode); }
 
 const selectedCase = ref(null);
 const selectedCaseLoading = ref(false);
 
-async function loadCaseDetail(caseId) {
+async function loadCaseDetail(caseOrId) {
+  const id = caseOrId && typeof caseOrId === "object" ? (caseOrId.id || caseOrId.case_id) : caseOrId;
+  if (!id) return;
   selectedCaseLoading.value = true;
   try {
-    const { data } = await props.listApi.getDef(caseId);
+    const { data } = await props.listApi.getDef(id);
     if (data.ok) selectedCase.value = data.definition;
   } catch (e) { console.error(e); }
   selectedCaseLoading.value = false;
 }
 
 let refreshTimer = null;
-watch(() => props.activeDirectoryId, () => loadDefs());
-onMounted(() => { loadDefs(); refreshTimer = setInterval(loadDefs, 30000); });
+watch(() => props.activeDirectoryId, () => {
+  selectedCase.value = null;
+  loadDefs();
+});
+watch(() => props.activeCaseId, (id) => {
+  if (id) loadCaseDetail(id);
+  else selectedCase.value = null;
+});
+onMounted(() => {
+  loadDefs();
+  if (props.activeCaseId) loadCaseDetail(props.activeCaseId);
+  refreshTimer = setInterval(loadDefs, 30000);
+});
 onUnmounted(() => clearInterval(refreshTimer));
 
 async function loadDefs() {
@@ -106,7 +121,7 @@ async function doRemove(row) {
 }
 function goToAll() { emit("refresh-tree"); }
 
-defineExpose({ loadDefs, definitions });
+defineExpose({ loadDefs, loadCaseDetail, definitions });
 </script>
 
 <template>
@@ -126,7 +141,7 @@ defineExpose({ loadDefs, definitions });
       <div class="case-toolbar__right">
         <div class="view-toggle">
           <button :class="{ active: viewMode === 'table' }" @click="setViewMode('table')">📋 表格</button>
-          <button :class="{ active: viewMode === 'card' }" @click="setViewMode('cards')">📷 卡片</button>
+          <button :class="{ active: viewMode === 'card' }" @click="setViewMode('card')">📷 卡片</button>
         </div>
         <button class="btn-primary" @click="createCase">＋ 新建</button>
         <slot name="table-extra" />
@@ -169,13 +184,14 @@ defineExpose({ loadDefs, definitions });
               <button class="btn-text" @click.stop="editCase(record)">编辑</button>
               <ConfirmButton size="small" type="danger" plain message="确认删除?" @confirm="doRemove(record)">删除</ConfirmButton>
             </template>
+            <template v-else>{{ value }}</template>
           </slot>
         </template>
       </AppTable>
     </AppCard>
 
     <!-- 卡片视图 -->
-    <div v-if="viewMode === 'cards' && !hideCard" class="card-grid">
+    <div v-if="viewMode === 'card' && !hideCard" class="card-grid">
       <CaseCard v-for="item in definitions" :key="item.id" :item="item" :case-type="caseType"
         @edit="editCase" @delete="doRemove" @select="loadCaseDetail" @refresh="loadDefs" />
     </div>

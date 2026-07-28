@@ -249,6 +249,21 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     node.size = [180, 0]
   }
 
+  /** 为 API 节点新增单个响应字段端口 */
+  function addApiPort(nodeId: string, fieldName: string): void {
+    const node = findNode(nodeId)
+    if (!node || node.type !== 'ApiNode') return
+    if (node.outputs.some(p => p.name === fieldName)) return
+    const si = node.outputs.length
+    node.outputs.push({
+      name: fieldName,
+      type: PORT_TYPE.DATA,
+      slot_index: si,
+      link: null,
+      links: [],
+    })
+  }
+
   /** Clear all element output ports (and their links) */
   function clearElementOutputs(nodeId: string): void {
     const node = findNode(nodeId)
@@ -635,20 +650,34 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     const inputs: PortDefinition[] = []
     const outputs: PortDefinition[] = []
 
-    // Generate input ports from request body schema keys
+    // Generate input ports from request body schema keys (flatten 1 level)
     const reqSchema = endpoint.request_body_schema || {}
     let inIdx = 0
     for (const [key, val] of Object.entries(reqSchema)) {
-      const typeHint = typeof val === 'string' ? val : typeof val
-      inputs.push({ name: `body.${key}`, type: PORT_TYPE.DATA, slot_index: inIdx++, link: null, links: [] })
+      if (val && typeof val === 'object' && !Array.isArray(val)) {
+        for (const [childKey, childVal] of Object.entries(val as Record<string, any>)) {
+          const typeHint = typeof childVal === 'string' ? childVal : typeof childVal
+          inputs.push({ name: `body.${key}.${childKey}`, type: PORT_TYPE.DATA, slot_index: inIdx++, link: null, links: [] })
+        }
+      } else {
+        const typeHint = typeof val === 'string' ? val : typeof val
+        inputs.push({ name: `body.${key}`, type: PORT_TYPE.DATA, slot_index: inIdx++, link: null, links: [] })
+      }
     }
 
-    // Generate output ports from response body schema keys
+    // Generate output ports from response body schema keys (flatten 1 level)
     const respSchema = endpoint.response_body_schema || {}
     let outIdx = 0
     for (const [key, val] of Object.entries(respSchema)) {
-      const typeHint = typeof val === 'string' ? val : typeof val
-      outputs.push({ name: `resp.${key}`, type: PORT_TYPE.DATA, slot_index: outIdx++, link: null, links: [] })
+      if (val && typeof val === 'object' && !Array.isArray(val)) {
+        for (const [childKey, childVal] of Object.entries(val as Record<string, any>)) {
+          const typeHint = typeof childVal === 'string' ? childVal : typeof childVal
+          outputs.push({ name: `resp.${key}.${childKey}`, type: PORT_TYPE.DATA, slot_index: outIdx++, link: null, links: [] })
+        }
+      } else {
+        const typeHint = typeof val === 'string' ? val : typeof val
+        outputs.push({ name: `resp.${key}`, type: PORT_TYPE.DATA, slot_index: outIdx++, link: null, links: [] })
+      }
     }
 
     node.inputs = inputs
@@ -659,6 +688,7 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
       linked_endpoint_name: endpoint.name,
       api_method: endpoint.method,
       api_url: endpoint.url,
+      response_body_schema: endpoint.response_body_schema || {},
     }
     node.widgets_values[0] = endpoint.name || endpoint.url
     node.widgets_values[1] = 'orange'
@@ -755,6 +785,7 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     setStartUrl,
     setStartApi,
     addPort,
+    addApiPort,
     addPortFromElement,
     clearElementOutputs,
     linkPage,

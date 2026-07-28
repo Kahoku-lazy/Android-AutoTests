@@ -90,6 +90,16 @@ frontend/src/modules/report-generator/
 └── routes.js                          路由定义
 ```
 
+### 2.2 路由与状态管理
+
+| 路由 | 页面 | 关键 composable |
+|------|------|------|
+| `/reports` | `index.vue` — 报告列表 + KPI + 图表 | `usePagination` (shared) |
+| `/reports/task/:id` | `TaskReport.vue` — 单任务报告详情 | — |
+| `/reports/case/:id` | `CaseBreakdown.vue` — 用例维度拆解 | `useECharts` (shared) |
+
+> 📐 前端架构基线 v1.0（2026-07-27）— 组件树完整，composables/ 已补建，Pinia store 未使用（纯 ref + composable 模式）。
+
 ---
 
 ## 3. 后端架构

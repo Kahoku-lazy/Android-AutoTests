@@ -63,5 +63,5 @@ const emit = defineEmits(['provider-change', 'detect-models'])
 </template>
 
 <style scoped>
-.form-hint { font-size: var(--app-size-sm); color: #a0936e; margin-left: 10px; }
+.form-hint { font-size: var(--app-size-sm); color: var(--ai-ink-muted); margin-left: 10px; }
 </style>

@@ -13,7 +13,7 @@ from ..runner import (
     TestRunner, stop_run, is_device_busy, mark_device_busy, mark_device_idle,
     _device_executor as _u2_executor,
 )
-from ..device_connect import DeviceCheckError, check_and_connect_async
+from ..executors.ui.connect import DeviceCheckError, check_and_connect_async
 from ..callbacks import test_callbacks
 from ..models import TestResult, TestRunRecord, TaskCard
 from apps.device_pool.api import device
@@ -532,11 +532,11 @@ async def _start_next_queued(serial: str):
 async def _execute_unified_remote(run_id, test_cases, loop_count, interval_seconds,
                                    client_task_id="", task_type="api_testing", device_label="api"):
     """Unified API/Web execution through the same _execute_tests pipeline as UI."""
-    from ..api_adapter import ApiAdapter
-    from ..web_adapter import WebAdapter
+    from ..executors.api.adapter import ApiAdapter
+    from ..executors.web.adapter import WebAdapter
     from ..remote_runner import RemoteTestRunner
-    from ..api_executor import ApiExecutor
-    from ..web_executor import WebExecutor
+    from ..executors.api.executor import ApiExecutor
+    from ..executors.web.executor import WebExecutor
 
     is_web = task_type == CaseType.WEB_AUTOMATION.value
     label = "Web" if is_web else "API"
@@ -580,12 +580,7 @@ async def _execute_unified_remote(run_id, test_cases, loop_count, interval_secon
     except Exception as e:
         _bg_log.exception("%s test execution failed for run %s", label, run_id)
         await test_callbacks.on_device_error(run_id, str(e))
-    finally:
-        if is_web and adapter:
-            try:
-                await adapter.close()
-            except Exception:
-                pass
+    # Web cleanup is handled by RemoteTestRunner's cleanup=adapter.close callback
 
 
 def _bridge_ws_log(run_id: str, msg: str, loop):

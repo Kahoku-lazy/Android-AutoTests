@@ -53,7 +53,7 @@ from ..runner import (
 )
 from ..runner import _active_runs as list_active_runs
 from ..runner import _device_executor as _u2_executor
-from ..device_connect import DeviceCheckError, check_and_connect_async
+from ..executors.ui.connect import DeviceCheckError, check_and_connect_async
 from ..callbacks import test_callbacks
 from ..models import TestResult, TestRunRecord, TaskCard
 from .. import state_machine as sm

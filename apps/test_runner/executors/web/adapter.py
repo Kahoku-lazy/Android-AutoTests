@@ -12,6 +12,7 @@ class WebAdapter:
         self._emit_log = logger or (lambda msg: None)
         self._should_stop = should_stop or (lambda: False)
         self._log_buffer: list[str] = []
+        self._watchers: list[dict] = []  # per-instance watcher list
         self._browser = None
         self._page = None
 
@@ -79,7 +80,7 @@ class WebAdapter:
                     line = line.strip()
                     if not line or self.stopped():
                         break
-                    self._execute_step(line)
+                    await self._execute_step(line)
 
             # Check expected result
             if expected:
@@ -169,8 +170,6 @@ class WebAdapter:
 
     # ── Watcher support (popup/banner handling) ──
 
-    _watchers: list[dict] = []
-
     def register_watchers(self, watchers: list[dict]):
         """Register popup/banner watchers. Each: {selector, action: 'click'}."""
         self._watchers = list(watchers)
@@ -179,6 +178,8 @@ class WebAdapter:
         self._watchers.clear()
 
     async def run_watchers(self):
+        if not self._watchers:
+            return 0
         """Check and dismiss matching popups. Returns count dismissed."""
         await self._ensure_browser()
         dismissed = 0

@@ -344,6 +344,7 @@ class ApiExecutor:
             "status_code": result.get("status_code", 0),
             "response_body": result.get("response_body", ""),
             "response_headers": result.get("response_headers", {}),
+            "duration_ms": result.get("duration_ms", 0),
         }
 
         # Extract variables if step has extract rules

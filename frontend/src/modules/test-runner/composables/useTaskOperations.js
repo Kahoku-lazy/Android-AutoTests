@@ -14,7 +14,8 @@ function normalizeCaseIds(ids) {
 
 function initTaskProgress(task, cases, availableCases) {
   const idSet = new Set(normalizeCaseIds(task.caseIds))
-  const sourceCases = task.taskType === 'api_testing' ? availableCases.value : cases.value
+  const sourceCases = (task.taskType === 'api_testing' || task.taskType === 'web_automation')
+    ? availableCases.value : cases.value
   task.caseItems = sourceCases
     .filter((c) => idSet.has(String(c.id)))
     .map((c, i) => {

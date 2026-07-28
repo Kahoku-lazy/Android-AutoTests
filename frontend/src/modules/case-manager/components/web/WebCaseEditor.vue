@@ -1,160 +1,388 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { useRouter, useRoute, onBeforeRouteLeave } from "vue-router";
-import { ElMessage } from "element-plus";
+import { ref, onMounted, onUnmounted, computed } from "vue";
+import { useRoute, useRouter, onBeforeRouteLeave } from "vue-router";
+import { ElMessage, ElMessageBox } from "element-plus";
+import StepEditor from "../StepEditor.vue";
 import PageHeader from "@/shared/components/PageHeader.vue";
-import AppCard from "@/shared/components/AppCard.vue";
 import { getWebDefinition, saveWebDefinition } from "../../api/webAutomation.js";
-import { acquireEditLock, releaseEditLock } from "../../api/uiAutomation.js";
-import { fetchDirectories } from "../../api/directories.js";
+import { fetchDirectories, acquireEditLock, releaseEditLock } from "../../api.js";
 
-const router = useRouter();
 const route = useRoute();
-const caseId = computed(() => route.params.id);
-const isNew = computed(() => !caseId.value);
-const saving = ref(false);
+const router = useRouter();
+
+const isNew = computed(() => route.name === "web-case-new");
+const caseId = computed(() => (isNew.value ? "" : route.params.id));
+
 const loading = ref(false);
+const saving = ref(false);
 
-const DEFAULT_COLS = [
-  { key: "id", label: "测试用例编号", width: 180, editable: false },
-  { key: "title", label: "用例标题", width: 180, editable: true },
-  { key: "priority", label: "优先级", width: 80, editable: true },
-  { key: "precondition", label: "前置条件", width: 200, editable: true },
-  { key: "url", label: "目标 URL", width: 250, editable: true },
-  { key: "steps", label: "操作步骤", width: 300, editable: true },
-  { key: "expected_result", label: "预期结果", width: 300, editable: true },
-];
+const form = ref({
+  id: "",
+  title: "",
+  url: "",
+  priority: "P1",
+  precondition: "",
+  description: "",
+  enabled: true,
+  steps_data: [],
+  directory_id: null,
+  visibility: "public",
+  permitted_users: [],
+  permission: "edit",
+  permitted_editors: [],
+});
 
-const columns = ref([...DEFAULT_COLS.map(c => ({ ...c }))]);
-const rows = ref([]);
-const selectedRow = ref(-1);
-const directories = ref([]);
-const directoryId = ref(null);
-const editLockHeld = ref(false);
-const lockOwner = ref("");
-const stepsJson = ref("[]");
-const stepsCount = computed(() => { try { return JSON.parse(stepsJson.value || "[]").length; } catch { return 0; } });
-let lockHeartbeat = null;
-const currentUser = ref(sessionStorage.getItem("current-username") || "");
-let rowCounter = 1;
+// ── Directory cascader ──
+const dirOptions = ref([]);
 
-async function loadDirectories() {
-  try { const { data } = await fetchDirectories("web_automation"); if (data.ok) directories.value = data.tree || []; } catch (e) { console.error(e); }
+function buildCascaderOptions(tree) {
+  return tree.map((node) => ({
+    value: node.id, label: node.name,
+    children: node.children?.length ? buildCascaderOptions(node.children) : undefined,
+  }));
 }
 
-function blankRow() { const r = { id: rowCounter++ }; columns.value.forEach(c => { if (c.editable) r[c.key] = ""; }); return r; }
-
-async function loadCase() {
-  if (isNew.value) { if (route.query.directory_id) directoryId.value = Number(route.query.directory_id); rows.value.push(blankRow()); return; }
-  loading.value = true;
+async function loadDirOptions() {
   try {
-    const { data } = await getWebDefinition(caseId.value);
-    if (data.ok) {
-      const d = data.definition; directoryId.value = d.directory_id;
-      stepsJson.value = d.steps_json || "[]";
-      const savedCols = d.custom_columns || [];
-      if (savedCols.length) { const m = [...DEFAULT_COLS.map(c => ({ ...c }))]; savedCols.forEach(c => m.push({ key: c.key, label: c.key, width: 200, editable: true })); columns.value = m; }
-      rows.value = d.rows || [];
-      if (!rows.value.length && d.title) { rows.value.push({ id: 1, title: d.title, priority: d.priority, precondition: d.precondition, url: d.url, steps: d.steps, expected_result: d.expected_result }); rowCounter = 2; }
-      else rowCounter = rows.value.length + 1;
-      if (d.editing_by) lockOwner.value = d.editing_by;
-    }
-  } catch (_) { ElMessage.error("加载用例失败"); }
-  loading.value = false;
+    const { data } = await fetchDirectories("web_automation");
+    if (data.ok) dirOptions.value = buildCascaderOptions(data.tree);
+  } catch (e) { console.error(e); }
 }
 
-function addRow() { rows.value.push(blankRow()); selectedRow.value = rows.value.length - 1; }
-function removeRow(index) { if (rows.value.length <= 1) { ElMessage.warning("至少保留一行"); return; } rows.value.splice(index, 1); if (selectedRow.value >= rows.value.length) selectedRow.value = rows.value.length - 1; }
-function addColumn() { const name = prompt("输入新列名称："); if (!name?.trim()) return; const key = "custom_" + name.trim().replace(/\s+/g, "_").toLowerCase(); if (columns.value.find(c => c.key === key)) { ElMessage.warning("列名已存在"); return; } columns.value.push({ key, label: name.trim(), width: 200, editable: true }); rows.value.forEach(r => { r[key] = ""; }); }
-function removeColumn(ci) { if (DEFAULT_COLS.find(dc => dc.key === columns.value[ci].key)) { ElMessage.warning("默认列不能删除"); return; } columns.value.splice(ci, 1); rows.value.forEach(r => { delete r[columns.value[ci]?.key]; }); }
+// ── Current user ──
+function resolveCurrentUser() {
+  const active = sessionStorage.getItem("auth_active") || "";
+  if (active) return active;
+  try {
+    const pool = JSON.parse(localStorage.getItem("auth_accounts") || "{}");
+    return Object.keys(pool)[0] || "";
+  } catch { return ""; }
+}
 
-async function acquireLock() { if (isNew.value || lockOwner.value) return; try { const { data } = await acquireEditLock(caseId.value); if (data.ok) { editLockHeld.value = true; lockHeartbeat = setInterval(async () => { try { await acquireEditLock(caseId.value); } catch (_) {} }, 600000); } } catch (e) { if (e.response?.status === 423) lockOwner.value = e.response.data.editing_by || "其他用户"; } }
-async function releaseLock() { if (!editLockHeld.value) return; clearInterval(lockHeartbeat); try { await releaseEditLock(caseId.value); } catch (_) {} }
-onMounted(async () => { await loadDirectories(); await loadCase(); await acquireLock(); });
-onUnmounted(() => releaseLock());
-const originalJson = ref("");
-onMounted(() => { originalJson.value = JSON.stringify({ rows: rows.value, columns: columns.value }); });
-onBeforeRouteLeave((_t, _f, next) => { if (JSON.stringify({ rows: rows.value, columns: columns.value }) !== originalJson.value) { if (!window.confirm("有未保存的修改，确定离开吗？")) return next(false); } releaseLock(); next(); });
-const isLockedByOther = computed(() => !!(lockOwner.value && lockOwner.value !== currentUser.value));
+const currentUser = resolveCurrentUser();
 
-async function doSave() {
+// ── Edit lock ──
+const isReadOnly = ref(false);
+const editingBy = ref("");
+const caseCreatedBy = ref("");
+const hasEditLock = ref(false);
+
+// ── Dirty tracking ──
+const initialForm = ref(null);
+const isDirty = computed(() => {
+  if (!initialForm.value) return false;
+  return JSON.stringify(form.value) !== JSON.stringify(initialForm.value);
+});
+
+// ── Visibility helpers ──
+const permittedUsersStr = computed({
+  get: () => (form.value.permitted_users || []).join(", "),
+  set: (val) => { form.value.permitted_users = val.split(",").map(s => s.trim()).filter(Boolean); },
+});
+const permittedEditorsStr = computed({
+  get: () => (form.value.permitted_editors || []).join(", "),
+  set: (val) => { form.value.permitted_editors = val.split(",").map(s => s.trim()).filter(Boolean); },
+});
+
+// ── ID generation ──
+function generateId() {
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10).replace(/-/g, "");
+  const time = now.toTimeString().slice(0, 8).replace(/:/g, "");
+  const rand = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+  form.value.id = `WEB-${date}-${time}-${rand}`;
+}
+
+// ── Load ──
+onMounted(async () => {
+  window.addEventListener("beforeunload", onBeforeUnload);
+  await loadDirOptions();
+  if (!isNew.value) {
+    loading.value = true;
+    try {
+      const { data } = await getWebDefinition(caseId.value);
+      if (data.ok) {
+        const d = data.definition;
+        form.value = {
+          id: d.id,
+          title: d.title || "",
+          url: d.url || "",
+          priority: d.priority || "P1",
+          precondition: d.precondition || "",
+          description: d.description || "",
+          enabled: d.enabled !== false,
+          steps_data: parseSteps(d.steps_json),
+          directory_id: d.directory_id || null,
+          visibility: d.visibility || "public",
+          permitted_users: d.permitted_users || [],
+          permission: d.permission || "edit",
+          permitted_editors: d.permitted_editors || [],
+        };
+        caseCreatedBy.value = d.created_by || "";
+        if (d.editing_by && d.editing_by !== currentUser) {
+          isReadOnly.value = true;
+          editingBy.value = d.editing_by;
+        } else if (currentUser) {
+          try {
+            const lockResp = await acquireEditLock(caseId.value);
+            if (lockResp.data.ok) hasEditLock.value = true;
+          } catch (e) {
+            if (e.response?.status === 423) {
+              isReadOnly.value = true;
+              editingBy.value = e.response.data?.editing_by || "";
+            }
+          }
+        }
+      }
+    } catch (e) { console.error(e); }
+    loading.value = false;
+  } else {
+    generateId();
+    if (route.query.directory_id) {
+      form.value.directory_id = parseInt(route.query.directory_id) || null;
+    }
+  }
+  initialForm.value = JSON.parse(JSON.stringify(form.value));
+});
+
+function parseSteps(stepsJson) {
+  if (!stepsJson) return [];
+  if (Array.isArray(stepsJson)) return stepsJson;
+  try { return JSON.parse(stepsJson); } catch { return []; }
+}
+
+onUnmounted(() => {
+  window.removeEventListener("beforeunload", onBeforeUnload);
+  if (hasEditLock.value && caseId.value) {
+    releaseEditLock(caseId.value).catch(() => {});
+  }
+});
+
+onBeforeRouteLeave((_to, _from, next) => {
+  if (!isDirty.value || skipGuard.value) return next();
+  ElMessageBox.confirm("当前用例有未保存的修改，离开后数据将会丢失。是否继续？", "未保存的修改", {
+    confirmButtonText: "不保存，直接离开",
+    cancelButtonText: "取消",
+    type: "warning",
+  }).then(() => next()).catch(() => next(false));
+});
+
+const skipGuard = ref(false);
+
+function onBeforeUnload(e) {
+  if (isDirty.value) { e.preventDefault(); e.returnValue = ""; }
+}
+
+// ── Force edit ──
+async function forceEdit() {
+  try {
+    await releaseEditLock(caseId.value, true);
+    const lockResp = await acquireEditLock(caseId.value);
+    if (lockResp.data.ok) {
+      isReadOnly.value = false; editingBy.value = ""; hasEditLock.value = true;
+      ElMessage.success("已强制获取编辑权限");
+    }
+  } catch (e) {
+    ElMessage.error(e.response?.data?.error || "强制编辑失败");
+  }
+}
+
+// ── Save ──
+async function save() {
+  if (!form.value.title.trim()) { ElMessage.warning("请输入用例标题"); return false; }
+  if (!form.value.url.trim()) { ElMessage.warning("请输入目标起始 URL"); return false; }
   saving.value = true;
   try {
-    const customCols = columns.value.filter(c => !DEFAULT_COLS.find(dc => dc.key === c.key)).map(c => ({ key: c.key, label: c.label }));
-    const fr = rows.value[0] || {};
-    const payload = { title: fr.title || `Web用例-${new Date().toISOString().slice(0,10)}`, priority: fr.priority || "P1", precondition: fr.precondition || "", url: fr.url || "", steps: fr.steps || "", expected_result: fr.expected_result || "", steps_json: stepsJson.value, custom_columns: customCols, directory_id: directoryId.value, rows: rows.value };
-    if (!isNew.value) payload.id = caseId.value;
+    const payload = {
+      ...form.value,
+      steps_json: JSON.stringify(form.value.steps_data),
+    };
     const { data } = await saveWebDefinition(payload);
-    if (data.ok) { ElMessage.success("保存成功"); originalJson.value = JSON.stringify({ rows: rows.value, columns: columns.value }); if (isNew.value) router.replace(`/cases/web/${data.id}/edit`); }
-    else ElMessage.error(data.error || "保存失败");
-  } catch (e) { ElMessage.error("保存失败: " + (e?.response?.data?.error || e?.message)); }
-  saving.value = false;
+    if (data.ok) {
+      ElMessage.success("保存成功");
+      if (data.id) form.value.id = data.id;
+      if (data.updated_at) form.value.updated_at = data.updated_at;
+      initialForm.value = JSON.parse(JSON.stringify(form.value));
+      if (isNew.value && data.id) {
+        await router.replace(`/cases/web/${data.id}/edit`);
+      }
+      return true;
+    } else {
+      ElMessage.error(data.error || "保存失败");
+      return false;
+    }
+  } catch (e) {
+    ElMessage.error("保存失败: " + (e?.response?.data?.error || e?.message || "网络错误"));
+    return false;
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function exitPage() {
+  if (isDirty.value) {
+    try {
+      await ElMessageBox.confirm("当前用例有未保存的修改，退出后数据将会丢失。是否继续退出？", "未保存的修改", {
+        confirmButtonText: "不保存，直接退出", cancelButtonText: "取消", type: "warning",
+      });
+    } catch { return; }
+  }
+  skipGuard.value = true;
+  router.push("/cases");
 }
 </script>
 
 <template>
-  <div class="doc-page wb-shell">
-    <PageHeader :title="isNew ? '新建 Web 自动化用例' : '编辑 Web 自动化用例'" icon="🌍">
-      <template #actions>
-        <button class="btn-text" @click="router.back()">取消</button>
-        <button class="btn-primary" :disabled="saving || isLockedByOther" @click="doSave">{{ saving ? "保存中..." : "保存" }}</button>
-      </template>
-    </PageHeader>
-    <div v-if="loading" class="case-loading">加载中...</div>
-    <div v-else-if="isLockedByOther" class="lock-banner">⚠️ {{ lockOwner }} 正在编辑此用例，当前为只读模式。</div>
-    <div v-else class="table-editor">
-      <div v-if="stepsCount > 0" class="steps-summary">
-        <span class="steps-badge">{{ stepsCount }} 个结构化步骤</span>
-        <span class="steps-hint">（由 AI/脚本生成，编辑表格不会修改步骤）</span>
-      </div>
-      <div class="table-toolbar">
-        <div class="table-toolbar__left">
-          <span class="toolbar-label">目录：</span>
-          <select v-model="directoryId" class="form-select"><option :value="null">根级（未分类）</option><option v-for="d in directories.filter(n => n.node_type === 'directory')" :key="d.id" :value="d.id">{{ d.name }}</option></select>
+  <div v-loading="loading" class="doc-page case-editor-page">
+    <PageHeader
+      :title="isNew ? '新建 Web 自动化用例' : '编辑 Web 自动化用例'"
+      subtitle="编排浏览器自动化步骤：页面跳转、元素点击、表单填充、文本验证、截图"
+    />
+
+    <!-- Read-only banner -->
+    <div v-if="isReadOnly" class="edit-lock-banner">
+      <span>🔒 用例正被 <strong>{{ editingBy }}</strong> 编辑中，当前为只读模式</span>
+      <el-button v-if="currentUser && currentUser === caseCreatedBy" size="small" type="primary" danger @click="forceEdit">强制编辑</el-button>
+    </div>
+
+    <div class="doc-body">
+      <!-- 基本信息 -->
+      <section class="doc-section form-section">
+        <div class="doc-section__header">
+          <h3 class="doc-section__title">基本信息 <span class="doc-tag">Basic</span></h3>
+          <div class="actions">
+            <el-button @click="exitPage" disabled="false">退出</el-button>
+            <el-button type="primary" :loading="saving" :disabled="isReadOnly" @click="save">保存</el-button>
+          </div>
         </div>
-        <div class="table-toolbar__right">
-          <button class="btn-minor" @click="addColumn">+ 新增列</button>
-          <button class="btn-minor" @click="addRow">+ 新增行</button>
-          <button class="btn-minor btn-danger-outline" @click="removeRow(selectedRow)" :disabled="selectedRow < 0">删除选中行</button>
+        <div class="doc-section__label">用例元数据与起始 URL 配置</div>
+
+        <el-form :model="form" label-width="80px" size="default">
+          <el-row :gutter="24">
+            <el-col :span="14">
+              <el-form-item label="用例 ID">
+                <el-input v-model="form.id" :disabled="!isNew" placeholder="留空则自动生成">
+                  <template #append v-if="isNew">
+                    <el-button @click="generateId">重新生成</el-button>
+                  </template>
+                </el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="10">
+              <el-form-item label="启用">
+                <el-switch v-model="form.enabled" active-text="启用" inactive-text="禁用" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-row :gutter="24">
+            <el-col :span="12">
+              <el-form-item label="标题" required>
+                <el-input v-model="form.title" placeholder="用例标题" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="目录">
+                <el-cascader v-model="form.directory_id" :options="dirOptions"
+                  :props="{ checkStrictly: true, emitPath: false, value: 'value', label: 'label' }"
+                  placeholder="选择目录（可选）" clearable style="width: 100%" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-form-item label="起始 URL" required>
+            <el-input v-model="form.url" placeholder="https://example.com（浏览器从这个 URL 开始执行）" />
+          </el-form-item>
+
+          <el-form-item label="描述">
+            <el-input v-model="form.description" type="textarea" :rows="2" placeholder="用例说明、前置条件、预期结果" />
+          </el-form-item>
+
+          <el-form-item label="前置条件">
+            <el-input v-model="form.precondition" type="textarea" :rows="2" placeholder="浏览器版本要求、需要登录状态等" />
+          </el-form-item>
+
+          <el-row :gutter="16">
+            <el-col :span="12">
+              <el-form-item label="优先级">
+                <el-select v-model="form.priority" style="width: 100%">
+                  <el-option label="P0 — 必测" value="P0" />
+                  <el-option label="P1 — 应测" value="P1" />
+                  <el-option label="P2 — 可测" value="P2" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <!-- 权限与可见性 -->
+          <template v-if="currentUser && caseCreatedBy === currentUser">
+            <el-divider content-position="left">权限与可见性</el-divider>
+            <el-row :gutter="16">
+              <el-col :span="12">
+                <el-form-item label="编辑权限">
+                  <el-select v-model="form.permission" style="width: 100%" :disabled="isReadOnly">
+                    <el-option label="所有人可编辑" value="edit" />
+                    <el-option label="所有人只读" value="readonly" />
+                    <el-option label="指定用户可编辑" value="restricted" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col v-if="form.permission === 'restricted'" :span="12">
+                <el-form-item label="允许编辑的用户">
+                  <el-input v-model="permittedEditorsStr" :disabled="isReadOnly" placeholder="用户名，逗号分隔" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="16">
+              <el-col :span="12">
+                <el-form-item label="可见范围">
+                  <el-select v-model="form.visibility" style="width: 100%" :disabled="isReadOnly">
+                    <el-option label="所有人可见" value="public" />
+                    <el-option label="仅创建者" value="hidden" />
+                    <el-option label="指定用户" value="restricted" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col v-if="form.visibility === 'restricted'" :span="12">
+                <el-form-item label="允许查看的用户">
+                  <el-input v-model="permittedUsersStr" :disabled="isReadOnly" placeholder="用户名，逗号分隔" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </template>
+        </el-form>
+      </section>
+
+      <!-- 步骤编排 -->
+      <section class="doc-section">
+        <div class="doc-section__header">
+          <h3 class="doc-section__title">步骤编排 <span class="doc-tag">Steps</span></h3>
         </div>
-      </div>
-      <AppCard class="table-card">
-        <div class="table-scroll">
-          <table class="editable-table">
-            <thead><tr><th class="col-num">#</th><th v-for="(col, ci) in columns" :key="col.key" :style="{ minWidth: col.width + 'px' }">{{ col.label }}<button v-if="!DEFAULT_COLS.find(dc => dc.key === col.key)" class="btn-col-remove" @click="removeColumn(ci)" title="删除此列">✕</button></th></tr></thead>
-            <tbody><tr v-for="(row, ri) in rows" :key="ri" :class="{ 'row-selected': selectedRow === ri }" @click="selectedRow = ri"><td class="col-num">{{ ri + 1 }}</td><td v-for="col in columns" :key="col.key"><input v-if="col.editable" v-model="row[col.key]" class="cell-input" :placeholder="col.label" /><span v-else class="cell-text">{{ row[col.key] }}</span></td></tr></tbody>
-          </table>
+        <div class="doc-section__label">
+          页面跳转、点击元素、填充表单、等待加载、验证文本、截图等浏览器自动化步骤
         </div>
-      </AppCard>
+        <StepEditor v-model="form.steps_data" :package-name="form.url" :readonly="isReadOnly" />
+      </section>
     </div>
   </div>
 </template>
 
 <style scoped>
-.table-editor { display: flex; flex-direction: column; gap: 12px; }
-.table-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-.table-toolbar__left, .table-toolbar__right { display: flex; align-items: center; gap: 8px; }
-.toolbar-label { font-size: var(--app-size-sm); color: #555; }
-.form-select { padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: var(--app-size-sm); }
-.table-card { padding: 0; overflow: hidden; }
-.table-scroll { overflow-x: auto; }
-.editable-table { width: 100%; border-collapse: collapse; font-size: var(--app-size-sm); }
-.editable-table th { background: #f5f5f5; padding: 8px 10px; text-align: left; font-weight: 600; white-space: nowrap; border-bottom: 2px solid #e0e0e0; position: relative; }
-.editable-table td { padding: 4px 6px; border-bottom: 1px solid #f0f0f0; }
-.col-num { width: 40px; text-align: center; color: #999; font-size: var(--app-size-sm); }
-.row-selected { background: #f0f7ff; } .row-selected td { border-color: #c8e0ff; }
-.cell-input { width: 100%; padding: 4px 6px; border: 1px solid transparent; border-radius: 4px; font-size: var(--app-size-sm); background: transparent; }
-.cell-input:focus { border-color: var(--app-green, var(--c-workflow)); background: #fff; outline: none; }
-.cell-input:hover { border-color: #ddd; }
-.cell-text { padding: 4px 6px; display: block; }
-.btn-col-remove { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); border: none; background: #fee; color: #e85f5f; border-radius: 3px; cursor: pointer; font-size: var(--app-size-xs); padding: 1px 4px; }
-.btn-primary, .btn-minor, .btn-text { padding: 6px 16px; border-radius: 8px; border: 1px solid #e0e0e0; background: #fff; cursor: pointer; font-size: var(--app-size-sm); }
-.btn-primary { background: var(--app-green, var(--c-workflow)); color: #fff; border-color: var(--app-green, var(--c-workflow)); }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-danger-outline { color: #e85f5f; border-color: #fcc; }
-.lock-banner { padding: 12px 16px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; margin-bottom: 16px; font-size: var(--app-size-sm); }
-.case-loading { text-align: center; padding: 40px; color: #999; }
-.steps-summary { padding: 10px 16px; background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; margin-bottom: 12px; font-size: var(--app-size-sm); display: flex; align-items: center; gap: 8px; }
-.steps-badge { background: #4caf50; color: #fff; padding: 2px 10px; border-radius: 12px; font-weight: 600; font-size: var(--app-size-sm); }
-.steps-hint { color: #666; }
+.case-editor-page {
+  display: flex; flex-direction: column; height: 100%; overflow: hidden;
+}
+.case-editor-page .doc-body {
+  flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto;
+}
+.form-section { padding: 18px 24px; }
+.edit-lock-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px; margin: 0;
+  background: rgba(247, 205, 103, 0.18);
+  border-bottom: 1.5px solid rgba(247, 170, 60, 0.3);
+  color: #8a6d14; font-size: var(--app-size-sm); font-weight: 600; flex-shrink: 0;
+}
+.edit-lock-banner strong { color: #6b4c00; }
+.actions { display: flex; gap: 10px; }
+:deep(.el-input__append) { background: rgba(162,210,255,0.12) !important; }
 </style>

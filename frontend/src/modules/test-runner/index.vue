@@ -51,7 +51,7 @@ const tasks = ref([]);
 const kpiStats = computed(() => ({running:tasks.value.filter(t=>deriveTaskStatus(t)==="running").length,waiting:tasks.value.filter(t=>isTaskQueued(t)).length,completed:tasks.value.filter(t=>taskBucket(t)==="completed").length,incomplete:tasks.value.filter(t=>taskBucket(t)==="incomplete"||deriveTaskStatus(t)==="idle").length}));
 const groupedTasks = computed(() => ({running:filteredTasks.value.filter(t=>deriveTaskStatus(t)==="running"),waiting:filteredTasks.value.filter(t=>isTaskQueued(t)),completed:filteredTasks.value.filter(t=>taskBucket(t)==="completed"),incomplete:filteredTasks.value.filter(t=>taskBucket(t)==="incomplete"||deriveTaskStatus(t)==="idle")}));
 const filteredTasks = computed(()=>{let l=tasks.value;if(activeTab.value!=="all")l=l.filter(t=>{if(activeTab.value==="running")return deriveTaskStatus(t)==="running";if(activeTab.value==="waiting")return isTaskQueued(t);if(activeTab.value==="completed")return taskBucket(t)==="completed";if(activeTab.value==="incomplete")return taskBucket(t)==="incomplete";if(activeTab.value==="idle")return deriveTaskStatus(t)==="idle";return true});const q=searchQuery.value.trim().toLowerCase();if(q)l=l.filter(t=>(t.name||"").toLowerCase().includes(q)||(t.id||"").toLowerCase().includes(q)||(t.deviceSerial||"").toLowerCase().includes(q));return l});
-const tableColumns = [{dataIndex:"id",title:"任务ID",minWidth:90},{dataIndex:"name",title:"名称",minWidth:150},{dataIndex:"deviceSerial",title:"设备",minWidth:120},{dataIndex:"cases",title:"用例",minWidth:60,align:"center"},{dataIndex:"progress",title:"进度",minWidth:140},{dataIndex:"status",title:"状态",minWidth:100,align:"center"},{dataIndex:"time",title:"时间",minWidth:100},{dataIndex:"actions",title:"操作",width:200,fixed:"right"}];
+const tableColumns = [{dataIndex:"id",title:"任务ID",minWidth:90},{dataIndex:"name",title:"名称",minWidth:150},{dataIndex:"taskType",title:"类型",minWidth:80,align:"center"},{dataIndex:"deviceSerial",title:"设备",minWidth:120},{dataIndex:"cases",title:"用例",minWidth:60,align:"center"},{dataIndex:"progress",title:"进度",minWidth:140},{dataIndex:"status",title:"状态",minWidth:100,align:"center"},{dataIndex:"time",title:"时间",minWidth:100},{dataIndex:"actions",title:"操作",width:200,fixed:"right"}];
 
 // ── JWT decode for creator ──
 function getCurrentUsername() {
@@ -300,7 +300,8 @@ async function createAndStart() {
 
 function initTaskProgress(task) {
   const idSet = new Set(normalizeCaseIds(task.caseIds));
-  const sourceCases = task.taskType === "api_testing" ? availableCases.value : cases.value;
+  const sourceCases = (task.taskType === "api_testing" || task.taskType === "web_automation")
+    ? availableCases.value : cases.value;
   task.caseItems = sourceCases
     .filter((c) => idSet.has(String(c.id)))
     .map((c, i) => {
@@ -694,6 +695,7 @@ async function loadDevices() {
         <el-card v-if="viewMode==='table'" class="table-card" shadow="never"><div class="device-table-wrapper"><AppTable :columns="tableColumns" :data-source="filteredTasks" row-key="id" empty-text="暂无任务" @row-click="openTaskDetail">
           <template #cell-id="{record}"><span class="mono-text">{{ record.id }}</span></template>
           <template #cell-name="{record}"><span style="font-weight:700">{{ record.name||record.id }}</span></template>
+          <template #cell-taskType="{record}"><span class="task-type-tag" :class="'task-type--' + (record.taskType||'ui_automation')">{{ {api_testing:'API',web_automation:'Web',ui_automation:'UI'}[record.taskType||'ui_automation']||'UI' }}</span></template>
           <template #cell-deviceSerial="{record}"><template v-if="record.taskType==='api_testing'||record.taskType==='web_automation'">无需设备</template><template v-else>📱 {{ record.deviceSerial||'—' }}</template></template>
           <template #cell-cases="{record}">{{ record.caseIds?.length||0 }}</template>
           <template #cell-progress="{record}"><div v-if="!isTaskQueued(record)" class="mini-progress"><div class="mini-progress-fill" :style="{width:taskProgress(record)+'%',background:taskStatusInfo(record).color}"></div></div><span style="font-size:var(--app-size-xs);margin-left:4px">{{ isTaskQueued(record)?'排队':taskProgress(record)+'%' }}</span></template>

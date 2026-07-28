@@ -6,7 +6,7 @@ Airtest Android handles device actions (swipe, app lifecycle, shell).
 uiautomator2 is kept ONLY for XPath element operations.
 """
 import time
-from .device_connect import DeviceConnection
+from .connect import DeviceConnection
 
 
 class DeviceAdapter:
@@ -36,6 +36,7 @@ class DeviceAdapter:
         self._step_started_callback = None  # (step_index, total, type, description)
         self._log_buffer: list[str] = []
         self._perf_results: list[dict] = []  # {"description": str, "duration": float}
+        self._watchers: list[dict] = []  # per-instance watcher list
 
     # ---- Logging ----
     def log(self, msg: str):
@@ -55,7 +56,6 @@ class DeviceAdapter:
         return list(self._perf_results)
 
     # ---- Watcher (popup monitor) ----
-    _watchers: list[dict] = []  # class-level shared across adapters for same device
 
     def register_watchers(self, watchers: list[dict]):
         """Register popup watchers. Each: {xpath, action: 'click'}."""
@@ -65,6 +65,8 @@ class DeviceAdapter:
         self._watchers.clear()
 
     def run_watchers(self):
+        if not self._watchers:
+            return 0
         """Check all watchers and dismiss any matching popups.
         Returns the number of popups dismissed.
         """

@@ -112,7 +112,7 @@ def reconnect_device(serial: str):
     Returns a DeviceConnection-compatible object.
     """
     # Lazy import to avoid circular dependency
-    from .device_connect import DeviceConnection
+    from .connect import DeviceConnection
 
     air_dev = Android(serialno=serial)
     u2_dev = u2.connect(serial)

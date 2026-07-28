@@ -28,6 +28,14 @@ export const STEP_TYPES = [
   { value: 'if_element_disappear', label: '如果元素消失', icon: '🔀', desc: '如果目标元素消失则执行子步骤，否则跳过', group: '流程控制', container: true },
   { value: 'loop_n', label: '循环N次', icon: '🔁', desc: '重复执行子步骤N次', group: '流程控制', container: true },
   { value: 'loop_elements', label: '遍历元素列表', icon: '📋', desc: '依次点击XPath列表中的每个元素（多个用|分隔），每次点击后执行子步骤', group: '流程控制', container: true },
+  // ── Web 自动化 ──
+  { value: 'web_navigate', label: '页面跳转', icon: '🔗', desc: '浏览器导航到指定 URL', group: 'Web 自动化' },
+  { value: 'web_click', label: '点击元素', icon: '👆', desc: '点击 CSS 选择器匹配的页面元素', group: 'Web 自动化' },
+  { value: 'web_fill', label: '填充输入', icon: '⌨️', desc: '向输入框填充文本内容', group: 'Web 自动化' },
+  { value: 'web_type', label: '逐字输入', icon: '⌨️', desc: '逐字符输入文本（模拟真实打字）', group: 'Web 自动化' },
+  { value: 'web_wait', label: '等待', icon: '⏳', desc: '等待元素出现或固定时间', group: 'Web 自动化' },
+  { value: 'web_assert', label: '验证文本', icon: '✅', desc: '验证页面上存在指定文本', group: 'Web 自动化' },
+  { value: 'web_screenshot', label: '截图', icon: '📸', desc: '截取当前页面截图用于报告', group: 'Web 自动化' },
 ]
 
 export const APP_LIFECYCLE_TYPES = ['start_app', 'kill_app']
@@ -49,12 +57,21 @@ export const STEP_FIELDS = {
   if_element_disappear:{ required: ['xpath'], optional: ['timeout', 'description'] },
   loop_n:              { required: ['index'], optional: ['description'] },
   loop_elements:       { required: ['xpath'], optional: ['index', 'description'] },
+  // ── Web 自动化字段 ──
+  web_navigate:        { required: ['url'], optional: ['description'] },
+  web_click:           { required: ['selector'], optional: ['description'] },
+  web_fill:            { required: ['selector', 'value'], optional: ['description'] },
+  web_type:            { required: ['selector', 'value'], optional: ['description'] },
+  web_wait:            { required: [], optional: ['selector', 'timeout', 'description'] },
+  web_assert:          { required: ['expected_text'], optional: ['timeout', 'description'] },
+  web_screenshot:      { required: [], optional: ['description'] },
 }
 
 export const FIELD_LABELS = {
   xpath: 'XPath 定位', xpath2: '备选 XPath', timeout: '超时（秒）',
   expected_text: '期望文本', direction: '方向', distance: '距离（像素）',
   index: '索引', description: '描述',
+  selector: 'CSS 选择器', url: 'URL', value: '输入值',
 }
 
 export const DIRECTION_OPTIONS = [
@@ -71,4 +88,7 @@ export const FIELD_HINTS = {
   distance: '默认 500 像素',
   index: 'wait / poll_text 的轮询间隔秒数',
   description: '步骤描述（显示在报告）',
+  selector: 'CSS 选择器，如 #login-btn / .menu-item / input[name="email"]',
+  url: '目标 URL（绝对路径或相对路径）',
+  value: '要填充的文本内容',
 }

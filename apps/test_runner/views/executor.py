@@ -207,6 +207,9 @@ async def _execute_tests(
 
         @_bg_sync
         def finalize():
+            # runner.run() crashed — skip aggregation; outer handler calls mark_failed()
+            if run_model is None:
+                return
             # Build case_items + overall counts from run results — single pass
             case_items = []
             by_case = {}

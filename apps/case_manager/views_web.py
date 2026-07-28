@@ -16,6 +16,12 @@ from .views_helpers import resolve_username as _resolve_username
 
 
 def _serialize_web(row):
+    steps_data = []
+    try:
+        steps_data = json.loads(row.steps_json or "[]")
+    except (json.JSONDecodeError, TypeError):
+        steps_data = []
+
     d = {
         "id": row.id, "title": row.title, "case_type": row.case_type,
         "category": row.category, "description": row.description,
@@ -23,6 +29,7 @@ def _serialize_web(row):
         "url": row.url, "precondition": row.precondition,
         "steps": row.steps, "expected_result": row.expected_result,
         "steps_json": row.steps_json,
+        "steps_data": steps_data,
         "custom_columns": row.custom_columns if isinstance(row.custom_columns, list) else [],
         "rows": row.rows if isinstance(row.rows, list) else [],
         "created_at": str(row.created_at), "updated_at": str(row.updated_at),

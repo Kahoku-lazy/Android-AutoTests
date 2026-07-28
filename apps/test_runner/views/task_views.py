@@ -47,9 +47,9 @@ def run_single_step(request):
         return JsonResponse({"ok": False, "error": f"Unknown step type: {step_type}"})
 
     try:
-        from ..adapter import DeviceAdapter
-        from ..device_connect import DeviceConnection
-        from ..executor import StepExecutor
+        from ..executors.ui.adapter import DeviceAdapter
+        from ..executors.ui.connect import DeviceConnection
+        from ..executors.ui.executor import StepExecutor
         from apps.device_pool.api import device
 
         target_serial = data.get("device_serial", "").strip()

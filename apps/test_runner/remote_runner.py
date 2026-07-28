@@ -15,8 +15,18 @@ from .runner import _active_runs
 
 @dataclass
 class _RemoteRunState:
-    """Lightweight mutable state for stop signalling."""
+    """Mutable state compatible with _RunState so monitoring endpoints work.
+
+    Mirrors the fields accessed by get_active_runs_info(), run_monitor(),
+    and run_snapshot() in task_views.py / runner.py.
+    """
     is_running: bool = True
+    run_model: TestRun | None = None
+    log_lines: list = None
+
+    def __post_init__(self):
+        if self.log_lines is None:
+            self.log_lines = []
 
 
 class RemoteTestRunner:
@@ -60,6 +70,9 @@ class RemoteTestRunner:
             loop_count=loop_count,
             started_at=datetime.now().isoformat(),
         )
+        # Wire run_model + log_lines for monitoring endpoints compatibility
+        state.run_model = run_model
+        state.log_lines = self.adapter._log_buffer
 
         self._wire_callbacks(run_id, loop)
         hb_task = asyncio.create_task(self._heartbeat(run_id))
@@ -86,11 +99,17 @@ class RemoteTestRunner:
                     if self._is_async:
                         result = await self.executor.execute_case(case, iteration=i)
                     else:
-                        result = self.executor.execute_case(case, iteration=i)
+                        # Offload sync HTTP calls to thread pool — avoid blocking
+                        # the asyncio event loop during requests.request() calls.
+                        result = await asyncio.to_thread(
+                            self.executor.execute_case, case, iteration=i)
 
                     elapsed = (time.time() - start) * 1000
                     if result == "pass":
                         pass_count += 1
+                    elif result == "stopped":
+                        fail_count += 1
+                        break  # 停止当前用例迭代循环
                     else:
                         fail_count += 1
 
@@ -139,8 +158,10 @@ class RemoteTestRunner:
         return buf[-1] if buf else ""
 
     async def _heartbeat(self, run_id: str, interval: float = 5.0):
-        while True:
+        while self.adapter._should_stop is None or not self.adapter._should_stop():
             await asyncio.sleep(interval)
+            if run_id not in _active_runs:
+                break
             await self._emit("on_heartbeat", run_id)
 
     def _wire_callbacks(self, run_id: str, loop):

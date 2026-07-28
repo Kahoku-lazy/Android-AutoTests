@@ -12,10 +12,10 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from models.test_models import TestCaseDef, TestResult as CaseIterationResult, TestRun, TestRunStatus
-from .adapter import DeviceAdapter
-from .executor import StepExecutor
-from .device_connect import DeviceConnection
-from .u2_recovery import (
+from .executors.ui.adapter import DeviceAdapter
+from .executors.ui.executor import StepExecutor
+from .executors.ui.connect import DeviceConnection
+from .executors.ui.recovery import (
     U2_CASE_RETRY_MAX,
     U2_RECONNECT_INTERVAL,
     check_device_alive,

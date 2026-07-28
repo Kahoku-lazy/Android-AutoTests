@@ -1,0 +1,86 @@
+{
+  "groups": {
+    "auth": {
+      "name": "认证",
+      "is_folder": true
+    },
+    "login_page": {
+      "name": "登录页",
+      "parent": "认证"
+    }
+  },
+  "elements": [
+    {
+      "_group": "login_page",
+      "name": "账号输入框",
+      "locator_type": "css_selector",
+      "locator_value": "input[placeholder=\"账号\"]",
+      "page_url": "/login",
+      "description": "登录页用户名输入框，placeholder='账号'",
+      "is_test_point": true
+    },
+    {
+      "_group": "login_page",
+      "name": "密码输入框",
+      "locator_type": "css_selector",
+      "locator_value": ".login-form input[type=\"password\"]",
+      "page_url": "/login",
+      "description": "登录页密码输入框",
+      "is_test_point": true
+    },
+    {
+      "_group": "login_page",
+      "name": "登录按钮",
+      "locator_type": "css_selector",
+      "locator_value": ".login-form .el-button--primary",
+      "page_url": "/login",
+      "description": "登录提交按钮，文本为'开始使用 →'",
+      "is_test_point": true
+    },
+    {
+      "_group": "login_page",
+      "name": "记住账号开关",
+      "locator_type": "css_selector",
+      "locator_value": ".form-remember .el-switch",
+      "page_url": "/login",
+      "description": "记住账号 el-switch 开关",
+      "is_test_point": false
+    },
+    {
+      "_group": "login_page",
+      "name": "去注册链接",
+      "locator_type": "css_selector",
+      "locator_value": ".login-toggle .link",
+      "page_url": "/login",
+      "description": "切换到注册表单的链接",
+      "is_test_point": false
+    },
+    {
+      "_group": "login_page",
+      "name": "登录错误提示",
+      "locator_type": "css_selector",
+      "locator_value": ".login-error",
+      "page_url": "/login",
+      "description": "登录失败时的错误提示文本",
+      "is_test_point": false
+    },
+    {
+      "_group": "login_page",
+      "name": "登录表单",
+      "locator_type": "css_selector",
+      "locator_value": ".login-form",
+      "page_url": "/login",
+      "description": "登录表单容器",
+      "is_test_point": false
+    },
+    {
+      "_group": "login_page",
+      "name": "平台标题",
+      "locator_type": "css_selector",
+      "locator_value": ".hero-title",
+      "page_url": "/login",
+      "description": "登录页标题 'AI 自动化测试平台'",
+      "is_test_point": false
+    }
+  ]
+}

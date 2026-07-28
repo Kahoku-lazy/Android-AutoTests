@@ -1,6 +1,7 @@
 """test-runner URL routing — 12 endpoints under /api/runner/."""
-from django.urls import path
+from django.urls import path, re_path
 from .views import start_test_run, stop_test_run, cancel_queued_task, test_run_status, list_test_runs, list_active, run_single_step, task_card_list, task_card_save, task_card_delete, run_monitor, run_snapshot
+from .views.task_views import serve_step_screenshot
 
 app_name = 'runner'
 
@@ -18,4 +19,6 @@ urlpatterns = [
     # TREP v1.0 Phase 0: 监控 + 快照端点
     path('monitor/<str:run_id>', run_monitor, name='monitor'),
     path('run/<str:run_id>/snapshot', run_snapshot, name='snapshot'),
+    # 步骤截图服务
+    re_path(r'^step-screenshots/(?P<filepath>.+)$', serve_step_screenshot, name='step_screenshot'),
 ]

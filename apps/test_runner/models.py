@@ -77,6 +77,8 @@ class TestResult(models.Model):
     result = models.CharField(max_length=50)
     duration_ms = models.FloatField(default=0.0)
     detail = models.TextField(default='', blank=True)
+    step_details = models.JSONField(default=list, blank=True,
+        help_text="Per-step execution details with annotated screenshot paths")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

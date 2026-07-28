@@ -1,0 +1,53 @@
+{
+  "title": "[Web] 正常登录流程 — 记住账号",
+  "priority": "P0",
+  "url": "http://localhost:5173/login",
+  "description": "正常登录流程：打开登录页 → 勾选记住账号 → 填写账号密码 → 点击登录 → 验证跳转到仪表盘",
+  "precondition": "1. 平台服务正常运行\n2. 账号 admin/admin123 已注册\n3. 浏览器未保存过登录状态",
+  "expected_result": "页面跳转到仪表盘，localStorage 中 saved_username = admin",
+  "directory_id": 109,
+  "steps": [
+    {
+      "type": "web_navigate",
+      "url": "http://localhost:5173/login",
+      "description": "1. 导航到登录页面"
+    },
+    {
+      "type": "web_wait",
+      "timeout": 2.0,
+      "description": "2. 等待页面渲染完成"
+    },
+    {
+      "type": "web_click",
+      "selector": ".form-remember .el-switch",
+      "description": "3. 点击「记住账号」开关，将其开启"
+    },
+    {
+      "type": "web_fill",
+      "selector": "input[placeholder=\"账号\"]",
+      "value": "admin",
+      "description": "4. 在账号输入框输入 admin"
+    },
+    {
+      "type": "web_fill",
+      "selector": ".login-form input[type=\"password\"]",
+      "value": "admin123",
+      "description": "5. 在密码输入框输入 admin123"
+    },
+    {
+      "type": "web_click",
+      "selector": ".login-form .el-button--primary",
+      "description": "6. 点击「开始使用 →」按钮提交登录"
+    },
+    {
+      "type": "web_wait",
+      "timeout": 3.0,
+      "description": "7. 等待页面跳转完成"
+    },
+    {
+      "type": "web_assert",
+      "expected_text": "仪表盘",
+      "description": "8. 验证页面成功跳转到仪表盘"
+    }
+  ]
+}

@@ -3,6 +3,7 @@
 import AppCard from "@/shared/components/AppCard.vue";
 import AppTabs from "@/shared/components/AppTabs.vue";
 import AppTable from "@/shared/components/AppTable.vue";
+import StepScreenshotPanel from "@/shared/components/StepScreenshotPanel.vue";
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { animate, stagger } from 'animejs'
@@ -190,6 +191,9 @@ function goRunner() { router.push('/runner') }
         </div>
       </div>
 
+      <!-- 自动化执行步骤详情 -->
+      <StepScreenshotPanel :steps="task?.step_details || []" />
+
       <!-- AppTabs -->
       <AppTabs class="detail-tabs" :items="tabs" v-model="activeTab"  >
         <!-- ═══ TAB: 用例明细 ═══ -->
@@ -314,7 +318,7 @@ function goRunner() { router.push('/runner') }
 
 <style scoped>
 .doc-page{display:flex;flex-direction:column;height:100%;overflow-y:auto}
-.doc-body{padding:16px 20px 32px;display:flex;flex-direction:column;gap:14px;max-width:1200px;margin:0 auto;width:100%}
+.doc-body{padding:16px 24px 48px;display:flex;flex-direction:column;gap:16px;width:100%}
 .top-bar{display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap}.run-meta{display:flex;align-items:center;gap:10px;font-size:var(--app-size-xs);color:#999;flex-wrap:wrap}
 .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px}
 .task-meta-card{display:flex;flex-wrap:wrap;gap:10px;padding:12px 16px;background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;margin-bottom:4px;font-size:var(--app-size-xs)}.meta-item{display:flex;align-items:center;gap:6px}.meta-label{opacity:0.5;font-weight:600}.meta-value{font-weight:700}

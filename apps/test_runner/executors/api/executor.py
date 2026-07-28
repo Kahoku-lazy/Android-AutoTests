@@ -146,7 +146,7 @@ class ApiExecutor:
         import copy
         return copy.deepcopy(steps)
 
-    def execute_case(self, case: TestCaseDef, iteration: int = 1) -> str:
+    def execute_case(self, case: TestCaseDef, iteration: int = 1, run_id: str = "") -> str:
         """Execute an API test case step by step.
 
         Supports data-driven testing: if extra_data._rows is present,

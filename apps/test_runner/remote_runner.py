@@ -97,12 +97,12 @@ class RemoteTestRunner:
 
                     self.adapter.log(f"--- Iteration {i}/{loop_count} ---")
                     if self._is_async:
-                        result = await self.executor.execute_case(case, iteration=i)
+                        result = await self.executor.execute_case(case, iteration=i, run_id=run_id)
                     else:
                         # Offload sync HTTP calls to thread pool — avoid blocking
                         # the asyncio event loop during requests.request() calls.
                         result = await asyncio.to_thread(
-                            self.executor.execute_case, case, iteration=i)
+                            self.executor.execute_case, case, iteration=i, run_id=run_id)
 
                     elapsed = (time.time() - start) * 1000
                     if result == "pass":
@@ -113,11 +113,19 @@ class RemoteTestRunner:
                     else:
                         fail_count += 1
 
+                    # Collect per-step screenshots from the executor
+                    step_details = (
+                        self.executor._last_step_details
+                        if hasattr(self.executor, '_last_step_details') and self._is_async
+                        else []
+                    )
+
                     run_model.case_results.append(TestResult(
                         case_id=case.id, case_title=case.title,
                         iteration=i, result=result, duration_ms=elapsed,
                         detail=self._last_log(),
                         case_type=case.task_type,
+                        step_details=step_details,
                     ))
 
                     await self._emit("on_iteration_result", run_id, case.id, i, result, elapsed)

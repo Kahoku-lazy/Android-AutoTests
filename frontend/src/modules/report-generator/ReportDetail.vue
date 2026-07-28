@@ -418,7 +418,7 @@ function outcomeBadgeClass(outcome) {
 
 <style scoped>
 .doc-page{display:flex;flex-direction:column;height:100%;overflow-y:auto}
-.doc-body{padding:16px 20px 32px;display:flex;flex-direction:column;gap:14px;max-width:1200px;margin:0 auto;width:100%}
+.doc-body{padding:16px 24px 48px;display:flex;flex-direction:column;gap:16px;width:100%}
 .top-bar{display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap}
 .run-meta{display:flex;align-items:center;gap:10px;font-size:var(--app-size-xs);color:#999;flex-wrap:wrap}
 .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px}

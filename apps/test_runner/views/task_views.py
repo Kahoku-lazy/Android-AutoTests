@@ -1,8 +1,10 @@
 """Task card + single-step + monitor endpoints."""
 import json
+import os
 from datetime import datetime
 
-from django.http import JsonResponse
+from django.conf import settings
+from django.http import FileResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Count, Q
 
@@ -163,9 +165,37 @@ def task_card_list(request):
                 "startAt": tc.start_at or "",
                 "endAt": tc.end_at or "",
                 "perfStats": _safe_perf_stats(tc),
+                "step_details": _load_step_details(tc),
             }
         )
     return JsonResponse({"ok": True, "tasks": cards})
+
+
+def _load_step_details(tc) -> list:
+    """Load per-step screenshots from linked TestResult rows."""
+    try:
+        if not tc.run_id:
+            return []
+        results = TestResult.objects.filter(run_id=tc.run_id).order_by("iteration")
+        all_steps = []
+        for tr in results:
+            details = tr.step_details or []
+            for d in details:
+                d.setdefault("caseId", tr.case_id)
+                d.setdefault("caseTitle", _resolve_case_title(tc, tr.case_id))
+                d.setdefault("_date", str(tr.created_at)[:19] if tr.created_at else "")
+            all_steps.extend(details)
+        return all_steps
+    except Exception:
+        return []
+
+
+def _resolve_case_title(tc, case_id: str) -> str:
+    """Try to resolve a case title from the TaskCard's case_items."""
+    for ci in (tc.case_items or []):
+        if str(ci.get("id", "")) == str(case_id):
+            return ci.get("title", case_id)
+    return case_id
 
 
 @require_auth
@@ -251,6 +281,22 @@ def task_card_delete(request, task_id):
         return JsonResponse({"ok": True, "message": "已删除"})
     except TaskCard.DoesNotExist:
         return JsonResponse({"ok": True, "message": "任务不存在或已删除"})
+
+
+# ═══════════════════════════════════════════════════════════════
+# 步骤截图服务
+# ═══════════════════════════════════════════════════════════════
+
+def serve_step_screenshot(request, filepath):
+    """GET /api/runner/step-screenshots/<path:filepath> — Serve annotated step screenshot."""
+    full_path = os.path.normpath(os.path.join(str(settings.SCREENSHOT_DIR), filepath))
+    # Security: ensure the resolved path is within SCREENSHOT_DIR
+    ss_dir = os.path.normpath(str(settings.SCREENSHOT_DIR))
+    if not full_path.startswith(ss_dir):
+        return JsonResponse({"ok": False, "error": "invalid path"}, status=403)
+    if not os.path.isfile(full_path):
+        return JsonResponse({"ok": False, "error": "not found"}, status=404)
+    return FileResponse(open(full_path, "rb"), content_type="image/png")
 
 
 # ═══════════════════════════════════════════════════════════════

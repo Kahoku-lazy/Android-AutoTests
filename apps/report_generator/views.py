@@ -678,6 +678,32 @@ def run_report(request, run_id):
 # ── Task-level report (TaskCard perspective) ──
 
 @csrf_exempt
+def _load_step_details_for_report(tc) -> list:
+    """Load per-step screenshots from linked TestResult rows for report."""
+    try:
+        from apps.test_runner.models import TestResult
+        if not tc.run_id:
+            return []
+        results = TestResult.objects.filter(run_id=tc.run_id).order_by("iteration")
+        all_steps = []
+        for tr in results:
+            for d in (tr.step_details or []):
+                d.setdefault("caseId", tr.case_id)
+                d.setdefault("caseTitle", _resolve_case_title(tc, tr.case_id))
+                d.setdefault("_date", str(tr.created_at)[:19] if tr.created_at else "")
+            all_steps.extend(tr.step_details or [])
+        return all_steps
+    except Exception:
+        return []
+
+
+def _resolve_case_title(tc, case_id: str) -> str:
+    for ci in (tc.case_items or []):
+        if str(ci.get("id", "")) == str(case_id):
+            return ci.get("title", case_id)
+    return case_id
+
+
 def task_report(request, task_id):
     """GET /api/reports/task/{task_id} — Comprehensive report from TaskCard perspective.
 
@@ -746,6 +772,7 @@ def task_report(request, task_id):
             "created_at": str(tc.created_at),
             "updated_at": str(tc.updated_at),
             "linked_runs": linked_runs,
+            "step_details": _load_step_details_for_report(tc),
         },
     })
 

@@ -168,6 +168,28 @@ class WebAdapter:
         await self._page.screenshot(path=path)
         self.log(f"Screenshot saved: {path}")
 
+    async def _screenshot_to_path(self, path: str) -> str:
+        """Take a screenshot and save to a specific path. Returns the path."""
+        await self._ensure_browser()
+        import os
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        await self._page.screenshot(path=path, full_page=False)
+        return path
+
+    async def _element_bounds(self, selector: str) -> dict | None:
+        """Get the bounding box of the first matching element. Returns {x, y, width, height} or None."""
+        if not selector:
+            return None
+        await self._ensure_browser()
+        try:
+            el = self._page.locator(selector).first
+            box = await el.bounding_box()
+            if box:
+                return {"x": box["x"], "y": box["y"], "width": box["width"], "height": box["height"]}
+        except Exception:
+            pass
+        return None
+
     # ── Watcher support (popup/banner handling) ──
 
     def register_watchers(self, watchers: list[dict]):

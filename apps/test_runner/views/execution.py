@@ -542,6 +542,10 @@ async def _execute_unified_remote(run_id, test_cases, loop_count, interval_secon
     label = "Web" if is_web else "API"
     adapter = None
 
+    # Register client_task_id so _execute_tests can find the TaskCard
+    if client_task_id:
+        _run_client_task[run_id] = client_task_id
+
     try:
         loop = asyncio.get_event_loop()
 

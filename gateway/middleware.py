@@ -11,6 +11,7 @@ logger = logging.getLogger("gateway")
 PUBLIC_PREFIXES = [
     "/api/ai/auth/",
     "/api/ai/avatars/",  # img src cannot send Authorization header
+    "/api/runner/step-screenshots/",  # img src cannot send Authorization header
     "/admin/",
     "/static/",
     "/api/docs",

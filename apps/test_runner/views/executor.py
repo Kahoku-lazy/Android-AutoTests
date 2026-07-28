@@ -194,6 +194,7 @@ async def _execute_tests(
                     result=r.result,
                     duration_ms=r.duration_ms,
                     detail=r.detail,
+                    step_details=getattr(r, 'step_details', None) or [],
                 )
                 for r in (run_model.case_results if run_model else [])
             ]

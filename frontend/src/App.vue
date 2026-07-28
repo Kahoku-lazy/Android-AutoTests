@@ -33,7 +33,8 @@ const showSidebar = computed(() => route.path !== '/login')
 .main-content {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 0;
   position: relative;
   z-index: 1;
@@ -45,7 +46,8 @@ const showSidebar = computed(() => route.path !== '/login')
 .main-content :deep(.doc-page) {
   flex: 1;
   min-height: 0;
-  height: 100%;
+  height: auto;
+  overflow: visible;
 }
 
 </style>

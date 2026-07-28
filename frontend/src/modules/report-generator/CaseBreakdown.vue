@@ -408,24 +408,114 @@ function stepTypeLabel(type) {
 </template>
 
 <style scoped>
-.doc-page{display:flex;flex-direction:column;height:100%;overflow-y:auto}
-.doc-body{padding:16px 20px 32px;display:flex;flex-direction:column;gap:14px;max-width:1200px;margin:0 auto;width:100%}
-.top-bar{display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap}.top-bar .run-meta{display:flex;align-items:center;gap:10px;font-size:var(--app-size-xs);color:#999;flex-wrap:wrap}
-.breakdown-tabs :deep(.el-tabs__header){margin-bottom:0}.breakdown-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:4px}.breakdown-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:#999;height:auto;line-height:1.4}.breakdown-tabs :deep(.el-tabs__item:hover){color:var(--ink)}.breakdown-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-dashboard);border-color:var(--ink)}.breakdown-tabs :deep(.el-tabs__active-bar){display:none}
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px}.num-pass{color:#2d7a2d;font-weight:700}.num-fail{color:#a03030;font-weight:700}
-.summary-bar{display:flex;flex-wrap:wrap;gap:10px;padding:10px 14px;background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;margin-bottom:4px;font-size:var(--app-size-xs);font-weight:600;color:var(--ink)}
-.case-card{background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:14px 16px;margin-bottom:8px}.case-card:hover{border-color:var(--c-device)}
-.case-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:var(--app-size-xs);font-weight:700;margin-bottom:4px}.case-body{margin-top:8px;padding-top:8px;border-top:1.5px solid #e8e4d8;font-size:var(--app-size-xs)}.case-id{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600}
-.bug-card{border-color:var(--c-runner)!important}.bug-card:hover{border-color:var(--c-runner)!important}
-.badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);display:inline-block}.badge-pass{background:var(--app-status-success-bg);color:var(--app-status-success-text)}.badge-fail{background:var(--app-status-danger-bg);color:var(--app-status-danger-text)}.badge-stopped{background:var(--app-offline);color:var(--app-text-secondary)}
-.mono{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600}
-.num-pass{color:#2d7a2d;font-weight:700}.num-fail{color:#a03030;font-weight:700}
-/* 用例列表 */
-.case-list{display:flex;flex-direction:column;gap:8px}.case-list>.info-card,.case-list>[class*=case]{background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:14px 16px;box-shadow:2px 3px 0 rgba(0,0,0,0.04)}.case-list .case-header{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:700;font-size:var(--app-size-xs)}.case-list .case-body{margin-top:10px;padding-top:10px;border-top:1.5px solid #e8e4d8}
-/* 展开后的任务/步骤列表 */
-.case-group{background:#fff;border:2.5px solid var(--c-runner);border-radius:6px 10px 6px 10px;overflow:hidden;margin-bottom:8px;box-shadow:2px 3px 0 rgba(0,0,0,0.04)}.case-group :deep(.el-card){border:none!important;box-shadow:none!important;border-radius:0!important}.case-group .case-header{padding:12px 14px}.case-group .case-header:hover{background:#fefdfb}.expand-icon{font-size:var(--app-size-xs);transition:transform 0.2s;color:var(--ink);opacity:0.5}.expand-icon.open{transform:rotate(90deg)}.expand-icon--sm{font-size:var(--app-size-xs)}.case-title-wrap{flex:1;min-width:0}.case-title{display:block;font-weight:700}.case-meta{font-size:var(--app-size-xs);color:#999;white-space:nowrap}
-.task-list{padding:0 14px 14px;border-top:1.5px solid #e8e4d8}.task-block{margin-top:10px;border:1.5px solid #e8e4d8;border-radius:4px 8px 4px 8px;overflow:hidden}.task-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fefdfb;font-size:var(--app-size-xs)}.task-header--clickable{cursor:pointer}.task-header:hover{background:#f8f6f2}.task-info{flex:1;min-width:0}.task-id{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600}.task-name{font-size:var(--app-size-xs);margin-left:6px}.task-meta{font-size:var(--app-size-xs);color:#999;white-space:nowrap}
-.step-list{padding:8px 12px}.step-row{margin-bottom:8px;padding:10px 12px;background:#fff;border:1.5px solid #e8e4d8;border-radius:4px 8px 4px 8px}.step-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}.step-meta{font-size:var(--app-size-xs);color:#999}.step-detail{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}.detail-item{display:flex;flex-direction:column;gap:2px}.detail-label{font-size:var(--app-size-xs);font-weight:700;opacity:0.4;text-transform:uppercase}.detail-value{font-size:var(--app-size-xs);font-weight:600}.detail-error{color:#a03030}
-/* BUG 迭代失败列表 */
-.issue-list{display:flex;flex-direction:column;gap:8px;padding:8px 0}.issue-row{background:#fff;border:2px solid var(--c-runner);border-radius:4px 8px 4px 8px;overflow:hidden}.issue-head{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#FFE0DB;border-bottom:1.5px solid var(--c-runner)}.issue-count-badge{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:700;background:#fff;color:var(--c-runner);padding:1px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--c-runner)}.issue-type{font-size:var(--app-size-xs);font-weight:700}.issue-body{padding:12px 14px}.task-id-inline{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600;background:#f8f6f2;padding:1px 5px;border-radius:3px;border:1px solid #e8e4d8}
+.doc-page { display: flex; flex-direction: column; height: 100%; overflow-y: auto; }
+.doc-body { padding: 16px 24px 48px; display: flex; flex-direction: column; gap: 16px; width: 100%; }
+
+/* ── Top bar ── */
+.top-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; flex-wrap: wrap; }
+.summary-pill {
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  background: #fff; border: 2px solid var(--ink); border-radius: 20px;
+  padding: 4px 14px;
+}
+
+/* ── KPI cards ── */
+.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 4px; }
+
+/* ── Case list ── */
+.case-list { display: flex; flex-direction: column; gap: 10px; }
+
+.case-group {
+  background: #fff; border: 2.5px solid var(--ink);
+  border-radius: 10px 16px 10px 16px; overflow: hidden;
+  box-shadow: 3px 4px 0 rgba(0,0,0,0.06);
+  transition: box-shadow 0.2s, transform 0.15s;
+}
+.case-group:hover { box-shadow: 4px 6px 0 rgba(0,0,0,0.1); transform: translateY(-1px); }
+.case-group :deep(.el-card) { border: none !important; box-shadow: none !important; border-radius: 0 !important; }
+
+.case-group .case-header {
+  display: flex; align-items: center; gap: 12px; cursor: pointer;
+  padding: 14px 16px; transition: background 0.15s;
+}
+.case-group .case-header:hover { background: #fefdfb; }
+
+.expand-icon { font-size: 12px; transition: transform 0.2s; color: var(--ink); opacity: 0.5; width: 14px; text-align: center; }
+.expand-icon.open { transform: rotate(90deg); }
+.expand-icon--sm { font-size: 10px; }
+
+.case-title-wrap { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.case-title { font-weight: 800; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+.case-title .case-icon { font-size: 16px; }
+.case-id { font-family: var(--app-font-mono); font-size: var(--app-size-xs); background: #f0f0f0; padding: 2px 7px; border-radius: 4px; color: #666; }
+.case-meta { font-size: 12px; color: #999; white-space: nowrap; font-weight: 600; }
+
+/* ── Task list ── */
+.task-list { padding: 0 16px 14px; border-top: 1.5px solid #eee; }
+.task-block { margin-top: 8px; border: 1.5px solid #e8e4d8; border-radius: 8px; overflow: hidden; background: #fefdfb; }
+.task-header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; font-size: 12px; }
+.task-header--clickable { cursor: pointer; }
+.task-header:hover { background: #f6f3ee; }
+.task-info { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
+.task-id { font-family: var(--app-font-mono); font-size: var(--app-size-xs); font-weight: 700; color: var(--ink); }
+.task-name { font-size: 12px; color: #888; }
+.task-meta { font-size: 11px; color: #aaa; white-space: nowrap; }
+
+/* ── Step rows ── */
+.step-list { padding: 8px 12px 4px; }
+.step-row {
+  margin-bottom: 8px; padding: 10px 14px; background: #fff;
+  border: 2px solid #f0e0e0; border-radius: 8px;
+}
+.step-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.step-meta { font-size: 12px; color: #888; }
+.step-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.detail-item { display: flex; flex-direction: column; gap: 2px; }
+.detail-label { font-size: 10px; font-weight: 700; opacity: 0.5; text-transform: uppercase; letter-spacing: 0.5px; }
+.detail-value { font-size: 12px; font-weight: 600; }
+.detail-error { color: #c0392b; }
+
+/* ── Badge ── */
+.badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; display: inline-block; }
+.badge-fail { background: rgba(232,95,95,0.12); color: #c0392b; border: 1.5px solid #e8b0b0; }
+.badge-pass { background: rgba(111,186,44,0.12); color: #5a9a20; border: 1.5px solid #b0d888; }
+
+/* ── BUG list ── */
+.bug-list { display: flex; flex-direction: column; gap: 10px; }
+.bug-case-group {
+  background: #fff; border: 2.5px solid #e85f5f;
+  border-radius: 10px 16px 10px 16px; overflow: hidden;
+  box-shadow: 3px 4px 0 rgba(232,95,95,0.12);
+}
+.bug-case-group :deep(.el-card) { border: none !important; box-shadow: none !important; border-radius: 0 !important; }
+
+.issue-list { display: flex; flex-direction: column; gap: 8px; padding: 8px 0; }
+.issue-row {
+  background: #fff; border: 2px solid #f0c0c0;
+  border-radius: 8px; overflow: hidden; margin: 0 12px;
+}
+.issue-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: #fff0ee;
+  border-bottom: 1.5px solid #f0c0c0;
+}
+.issue-count-badge {
+  font-family: var(--app-font-mono); font-size: var(--app-size-xs); font-weight: 700;
+  background: #fff; color: #c0392b;
+  padding: 2px 8px; border-radius: 4px; border: 1.5px solid #e8b0b0;
+}
+.issue-type { font-size: 13px; font-weight: 700; color: var(--ink); }
+.issue-body { padding: 12px 14px; }
+.task-id-inline {
+  font-family: var(--app-font-mono); font-size: var(--app-size-xs); font-weight: 600;
+  background: #f8f6f2; padding: 1px 6px; border-radius: 3px;
+  border: 1px solid #e8e4d8; margin-left: 4px;
+}
+
+/* ── Misc ── */
+.empty-state { text-align: center; padding: 60px 20px; color: #999; }
+.empty-state span { font-size: 48px; display: block; margin-bottom: 12px; }
+.loading-state { text-align: center; padding: 40px; color: #999; }
+.num-pass { color: #4a9a20; font-weight: 800; }
+.num-fail { color: #c0392b; font-weight: 800; }
 </style>

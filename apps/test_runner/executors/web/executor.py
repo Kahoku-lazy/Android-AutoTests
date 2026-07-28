@@ -2,20 +2,26 @@
 WebExecutor — executes Web automation test case steps from steps_json.
 
 Parses structured web step types (web_navigate, web_click, web_fill, etc.)
-and dispatches to WebAdapter with step-level callbacks.
+and dispatches to WebAdapter with step-level callbacks. Each step is
+automatically screenshotted and annotated via PIL.
 """
 import asyncio
+import os
 import time
+from django.conf import settings
 from models.step_types import TestStep
 from models.test_models import TestCaseDef
+from .annotator import annotate_screenshot
 
 
 # ── Recognised web step types ──
 _WEB_STEP_TYPES = {
-    "web_navigate", "web_click", "web_fill", "web_type",
+    "web_navigate", "web_fill", "web_type",
     "web_wait", "web_assert", "web_screenshot",
-    # Legacy text-based fallback
-    "web_step",
+    # Legacy
+    "web_click", "web_step",
+    # ── 通用操作（兼容跨平台统一命名）──
+    "click", "long_click", "swipe", "wait", "sleep", "screenshot",
 }
 
 
@@ -26,9 +32,14 @@ class WebExecutor:
         self.adapter = adapter
         self._step_callback = None
         self._step_started_callback = None
+        # Per-run state: populated by execute_case()
+        self._last_step_details: list[dict] = []
+        self._run_id: str = ""
 
-    async def execute_case(self, case: TestCaseDef, iteration: int = 1) -> str:
-        """Execute a Web test case step by step."""
+    async def execute_case(self, case: TestCaseDef, iteration: int = 1, run_id: str = "") -> str:
+        """Execute a Web test case step by step. Populates self._last_step_details."""
+        self._run_id = run_id
+        self._last_step_details = []
         extra = getattr(case, 'extra_data', {}) or {}
 
         if case.steps_data:
@@ -58,10 +69,28 @@ class WebExecutor:
             if self._step_started_callback:
                 self._step_started_callback(i, total, step.type, step_desc[:100])
 
+            error_msg = ""
             result = await self._dispatch(step)
+            if result == "fail":
+                error_msg = self.adapter.get_log_buffer()[-1] if self.adapter.get_log_buffer() else "Step failed"
 
             if self._step_callback:
                 self._step_callback(i, total, step.type, step_desc[:100], result)
+
+            # ── Auto-screenshot + annotate ──
+            ss_rel = await self._capture_step(i, total, step, step_desc, result, error_msg, iteration)
+            self._last_step_details.append({
+                "index": i,
+                "total": total,
+                "type": step.type,
+                "description": step_desc,
+                "result": result,
+                "screenshot": ss_rel,
+                "selector": step.selector or "",
+                "value": step.value or "",
+                "error": error_msg,
+                "iteration": iteration,
+            })
 
             if result == "fail":
                 return "fail"
@@ -82,6 +111,18 @@ class WebExecutor:
                     if self._step_callback:
                         self._step_callback(total, total + 1, "web_assert",
                                             f"Expected: {expected[:100]}", "fail")
+                    # Screenshot the failure state
+                    ss_rel = await self._capture_step(
+                        total, total + 1, TestStep(type="web_assert", expected_text=expected),
+                        f"Expected: {expected[:80]}", "fail",
+                        f"Expected text '{expected[:80]}' not found on page", iteration,
+                    )
+                    self._last_step_details.append({
+                        "index": total, "total": total + 1, "type": "web_assert",
+                        "description": f"Expected: {expected[:80]}", "result": "fail",
+                        "screenshot": ss_rel, "selector": "", "value": "",
+                        "error": f"Expected text not found", "iteration": iteration,
+                    })
                     return "fail"
                 if self._step_callback:
                     self._step_callback(total, total + 1, "web_assert",
@@ -90,6 +131,34 @@ class WebExecutor:
                 self.adapter.log(f"Assert error: {e}")
 
         return "pass"
+
+    async def _capture_step(self, i: int, total: int, step: TestStep, desc: str,
+                            result: str, error: str = "", iteration: int = 1) -> str:
+        """Capture, annotate, and save a step screenshot. Returns relative path."""
+        if not self._run_id:
+            return ""
+        try:
+            ss_dir = os.path.join(
+                str(settings.SCREENSHOT_DIR), "step_screenshots",
+                self._run_id, f"iter_{iteration}",
+            )
+            os.makedirs(ss_dir, exist_ok=True)
+            filename = f"step_{i:02d}_{step.type}.png"
+            abs_path = os.path.join(ss_dir, filename)
+
+            await self.adapter._screenshot_to_path(abs_path)
+
+            # Get element bounds for click/fill steps
+            bounds = None
+            selector = step.selector or getattr(step, 'xpath', '') or ''
+            if selector and step.type in ("web_click", "click", "web_fill", "web_type", "long_click"):
+                bounds = await self.adapter._element_bounds(selector)
+
+            annotate_screenshot(abs_path, i, step.type, desc, result, bounds, error)
+
+            return os.path.join("step_screenshots", self._run_id, f"iter_{iteration}", filename)
+        except Exception:
+            return ""
 
     def _parse_text_steps(self, extra: dict) -> list[TestStep]:
         """Convert legacy plain-text steps to structured TestStep list."""
@@ -144,14 +213,21 @@ class WebExecutor:
             return TestStep(type="web_step", selector=cmd, value=arg, description=raw)
 
     def _step_label(self, step: TestStep) -> str:
+        target = step.selector or step.xpath or ''
         labels = {
             "web_navigate": f"Go to {step.url}",
-            "web_click": f"Click {step.selector}",
-            "web_fill": f"Fill {step.selector} = {step.value}",
-            "web_type": f"Type {step.selector} = {step.value}",
-            "web_wait": f"Wait {step.selector or f'{step.timeout}s'}",
+            "web_fill": f"Fill {target} = {step.value}",
+            "web_type": f"Type {target} = {step.value}",
             "web_assert": f"Verify {step.expected_text}",
-            "web_screenshot": f"Screenshot {step.description or ''}",
+            "web_screenshot": "Screenshot",
+            # Legacy
+            "web_click": f"Click {target}",
+            "web_wait": f"Wait {target or f'{step.timeout}s'}",
+            # Unified common names
+            "click": f"Click {target}",
+            "wait": f"Wait {target or f'{step.timeout}s'}",
+            "sleep": f"Sleep {step.timeout or 0}s",
+            "screenshot": "Screenshot",
         }
         return labels.get(step.type, step.description or step.type)
 
@@ -165,10 +241,11 @@ class WebExecutor:
                     await self.adapter._navigate(step.url)
                 return "pass"
 
-            elif t == "web_click":
-                self.adapter.log(f"Click: {step.selector}")
-                if step.selector:
-                    await self.adapter._click(step.selector)
+            elif t == "web_click" or t == "click":
+                target = step.selector or step.xpath
+                self.adapter.log(f"Click: {target}")
+                if target:
+                    await self.adapter._click(target)
                 return "pass"
 
             elif t == "web_fill" or t == "web_type":
@@ -178,13 +255,14 @@ class WebExecutor:
                     await self.adapter._fill(step.selector, step.value or "")
                 return "pass"
 
-            elif t == "web_wait":
-                if step.timeout and step.timeout > 0 and not step.selector:
+            elif t == "web_wait" or t == "wait":
+                target = step.selector or step.xpath
+                if step.timeout and step.timeout > 0 and not target:
                     self.adapter.log(f"Wait: {step.timeout}s")
                     await asyncio.sleep(step.timeout)
-                elif step.selector:
-                    self.adapter.log(f"Wait for: {step.selector}")
-                    await self.adapter._wait_for(step.selector, step.timeout or 10)
+                elif target:
+                    self.adapter.log(f"Wait for: {target}")
+                    await self.adapter._wait_for(target, step.timeout or 10)
                 return "pass"
 
             elif t == "web_assert":
@@ -193,9 +271,15 @@ class WebExecutor:
                     await self.adapter._verify_text(step.expected_text)
                 return "pass"
 
-            elif t == "web_screenshot":
+            elif t == "web_screenshot" or t == "screenshot":
                 self.adapter.log(f"Screenshot: {step.description or 'web'}")
                 await self.adapter._screenshot(step.description or "web")
+                return "pass"
+
+            elif t == "sleep":
+                timeout = step.timeout if step.timeout is not None and step.timeout > 0 else 1
+                self.adapter.log(f"Sleep: {timeout}s")
+                await asyncio.sleep(timeout)
                 return "pass"
 
             else:

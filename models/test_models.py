@@ -113,6 +113,7 @@ class TestResult:
     duration_ms: float
     detail: str = ""
     case_type: str = "ui_automation"  # discriminates UI/API/Web/Storage
+    step_details: list = None  # per-step execution details with screenshot paths
 
     def to_dict(self) -> dict:
         return {

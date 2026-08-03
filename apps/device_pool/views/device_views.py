@@ -1,12 +1,19 @@
 """Device listing and activation endpoints."""
-import json
+
 from datetime import datetime
+
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from .helpers import _update_device_status, _device_to_dict, _purge_disconnected_devices, _check_timeout_queue, _adb_device_serials
 from ..models import Device, DeviceQueue
 from ..pool import device as device_pool
+from .helpers import (
+    _adb_device_serials,
+    _check_timeout_queue,
+    _device_to_dict,
+    _update_device_status,
+)
+
 
 def list_devices(request):
     """GET /api/devices — 设备列表 + 状态。
@@ -130,5 +137,3 @@ def activate_device(request, serial):
     dev.save(update_fields=["last_seen"])
 
     return JsonResponse({"ok": True, "current": serial})
-
-

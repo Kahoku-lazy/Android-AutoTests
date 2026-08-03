@@ -1,9 +1,20 @@
 """case-manager API interface test case API — CRUD, batch."""
 
+__all__ = [
+    "batch_save_api_definitions",
+    "get_api_definition",
+    "get_api_definitions",
+    "save_api_definition",
+]
+
 import json
+import logging
+
+from .api_ui import ConflictError, _parse_datetime
 from .models import CaseDirectory
 from .models_api import ApiTestCase
-from .api_ui import _parse_datetime, ConflictError
+
+logger = logging.getLogger(__name__)
 
 
 def get_api_definitions(case_ids):
@@ -31,7 +42,10 @@ def save_api_definition(case_id, **fields):
         try:
             directory = CaseDirectory.objects.get(id=directory_id)
         except CaseDirectory.DoesNotExist:
-            pass
+            logger.warning(
+                "Directory %s not found when saving API case, saving without directory",
+                directory_id,
+            )
 
     title = fields.get("title", "")
 
@@ -45,8 +59,7 @@ def save_api_definition(case_id, **fields):
                 raise ConflictError(f"API 用例「{title or case_id}」已被他人修改，请刷新后重试")
 
     # Check duplicate title
-    dup = (ApiTestCase.objects.filter(directory=directory, title=title)
-           .exclude(id=case_id).first())
+    dup = ApiTestCase.objects.filter(directory=directory, title=title).exclude(id=case_id).first()
     if dup:
         dir_label = directory.name if directory else "根级（未分类）"
         raise ValueError(f"目录「{dir_label}」下已存在同名 API 用例「{title}」")

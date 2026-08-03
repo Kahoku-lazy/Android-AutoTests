@@ -2,20 +2,24 @@
 UI 提取脚本 — Airtest (截图) + uiautomator2 (UI 层级 dump)
 输出: ui_data.json (结构化层级数据), screenshot.png (截图)
 """
+
 import json
 import os
 import sys
 import time
-import uiautomator2 as u2
 import xml.etree.ElementTree as ET
+
 from airtest.core.android.android import Android
+import uiautomator2 as u2
 
 # 修复 Windows 控制台编码
 if sys.platform == "win32":
     import io
+
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 OUT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 def bounds_to_rect(bounds_str: str) -> dict:
     """解析 "[left,top][right,bottom]" 格式的 bounds"""
@@ -27,6 +31,7 @@ def bounds_to_rect(bounds_str: str) -> dict:
         "width": right - left,
         "height": bottom - top,
     }
+
 
 def parse_node(node: ET.Element) -> dict:
     """递归解析 XML 节点为结构化 dict"""
@@ -57,8 +62,9 @@ def parse_node(node: ET.Element) -> dict:
         info["children"].append(parse_node(child))
     return info
 
+
 def main():
-    serial = os.environ.get('DEVICE_SERIAL', '')
+    serial = os.environ.get("DEVICE_SERIAL", "")
     if not serial:
         print("请设置环境变量 DEVICE_SERIAL=你的设备串号")
         sys.exit(1)
@@ -103,8 +109,10 @@ def main():
 
     print("\n[OK] 完成。运行 generate_html.py 生成 HTML 页面。")
 
+
 def count_nodes(node: ET.Element) -> int:
     return 1 + sum(count_nodes(c) for c in node)
+
 
 if __name__ == "__main__":
     main()

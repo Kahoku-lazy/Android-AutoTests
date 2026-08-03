@@ -1,0 +1,20 @@
+{
+  "title": "[Web] 注册-XSS注入用户名应安全转义",
+  "url": "http://localhost:5173/login?add=1",
+  "priority": "P1",
+  "description": "验证注册时XSS payload作为用户名，前端正确转义，脚本不执行",
+  "expected_result": "XSS payload被安全处理，页面无脚本执行",
+  "directory_id": 110,
+  "steps": [
+    {"type": "web_navigate", "url": "http://localhost:5173/login?add=1", "description": "打开登录页"},
+    {"type": "web_wait", "timeout": 2, "description": "等待页面加载"},
+    {"type": "web_click", "selector": ".login-toggle", "description": "切换到注册模式"},
+    {"type": "web_wait", "timeout": 1, "description": "等待表单切换"},
+    {"type": "web_fill", "selector": "input[placeholder=\"设置账号（3-20 字符）\"]", "value": "<script>alert(1)</s", "description": "填入XSS payload(截断至20字符内)"},
+    {"type": "web_fill", "selector": "input[placeholder=\"设置密码（至少 6 位）\"]", "value": "test123456", "description": "填入密码"},
+    {"type": "web_fill", "selector": "input[placeholder=\"确认密码\"]", "value": "test123456", "description": "填入确认密码"},
+    {"type": "web_click", "selector": "button.el-button--primary", "description": "点击完成注册"},
+    {"type": "web_wait", "timeout": 2, "description": "等待服务器响应"},
+    {"type": "web_screenshot", "description": "XSS注入注册结果截图"}
+  ]
+}

@@ -48,7 +48,6 @@ DEFAULT_QUESTIONS = [
         "category": "平台功能与架构",
         "order": 6,
     },
-
     # ── 测试用例设计与执行 (6) ──
     {
         "content": "用户让你设计一个测试用例，你需要遵循什么样的 SOP 流程？请描述完整的四阶段工作流。",
@@ -86,7 +85,6 @@ DEFAULT_QUESTIONS = [
         "category": "测试流程",
         "order": 12,
     },
-
     # ── 设备管理 (4) ──
     {
         "content": "平台中设备有哪些状态？每种状态代表什么含义？",
@@ -112,7 +110,6 @@ DEFAULT_QUESTIONS = [
         "category": "设备管理",
         "order": 16,
     },
-
     # ── 元素定位 (4) ──
     {
         "content": "如何查找某个页面上的 UI 元素？请描述元素定位的完整流程。",
@@ -138,7 +135,6 @@ DEFAULT_QUESTIONS = [
         "category": "元素定位",
         "order": 20,
     },
-
     # ── 知识库与 RAG (3) ──
     {
         "content": "平台的知识库（RAG）是如何工作的？AI 什么时候应该使用它？",
@@ -158,7 +154,6 @@ DEFAULT_QUESTIONS = [
         "category": "知识库",
         "order": 23,
     },
-
     # ── 异常处理 (4) ──
     {
         "content": "如果用户的提问需求不够明确，你应该如何处理？",
@@ -184,7 +179,6 @@ DEFAULT_QUESTIONS = [
         "category": "异常处理",
         "order": 27,
     },
-
     # ── 通用测试方法 (3) ──
     {
         "content": "在设计 Android UI 自动化测试用例时，应该遵循哪些最佳实践？",

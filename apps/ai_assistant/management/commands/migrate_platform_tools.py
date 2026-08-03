@@ -12,8 +12,8 @@ already have platform tool records.
 
 from django.core.management.base import BaseCommand
 
+from apps.ai_assistant.agent_scope.tool_registry import TOOL_SCHEMAS
 from apps.ai_assistant.models import AIAgent, AITool
-from agentscope_service.tools.factory import _TOOL_REGISTRY
 
 
 class Command(BaseCommand):
@@ -28,7 +28,7 @@ class Command(BaseCommand):
 
     def handle(self, **options):
         dry_run = options["dry_run"]
-        tool_names = sorted(cls.name for cls in _TOOL_REGISTRY)
+        tool_names = sorted(t["name"] for t in TOOL_SCHEMAS)
         self.stdout.write(f"Platform tools in registry: {len(tool_names)}")
         self.stdout.write(f"  {', '.join(tool_names[:8])}...")
 
@@ -67,14 +67,12 @@ class Command(BaseCommand):
                 AITool.objects.bulk_create(objs)
                 created_total += 1
                 self.stdout.write(
-                    f"  Created {len(missing)} platform tools for "
-                    f"Agent #{agent.id} '{agent.name}'"
+                    f"  Created {len(missing)} platform tools for Agent #{agent.id} '{agent.name}'"
                 )
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"Done. Agents updated: {created_total}, "
-                f"already configured: {skipped_total}"
-                + (" [DRY-RUN]" if dry_run else "")
+                f"already configured: {skipped_total}" + (" [DRY-RUN]" if dry_run else "")
             )
         )

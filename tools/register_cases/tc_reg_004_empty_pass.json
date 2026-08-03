@@ -1,0 +1,20 @@
+{
+  "title": "[Web] 注册-空密码应提示必填",
+  "url": "http://localhost:5173/login?add=1",
+  "priority": "P0",
+  "description": "验证注册密码为空时，前端校验拦截，弹窗提示「请输入密码」",
+  "expected_result": "ElMessage 弹窗显示「请输入密码」",
+  "directory_id": 110,
+  "steps": [
+    {"type": "web_navigate", "url": "http://localhost:5173/login?add=1", "description": "打开登录页"},
+    {"type": "web_wait", "timeout": 2, "description": "等待页面加载"},
+    {"type": "web_click", "selector": ".login-toggle", "description": "切换到注册模式"},
+    {"type": "web_wait", "timeout": 1, "description": "等待表单切换"},
+    {"type": "web_fill", "selector": "input[placeholder=\"设置账号（3-20 字符）\"]", "value": "testuser123", "description": "填入用户名"},
+    {"type": "web_fill", "selector": "input[placeholder=\"确认密码\"]", "value": "test123456", "description": "只填确认密码，密码为空"},
+    {"type": "web_click", "selector": "button.el-button--primary", "description": "密码为空，点击完成注册"},
+    {"type": "web_wait", "timeout": 1, "description": "等待客户端校验"},
+    {"type": "web_assert", "expected_text": "请输入密码", "description": "验证弹窗显示请输入密码"},
+    {"type": "web_screenshot", "description": "空密码校验弹窗截图"}
+  ]
+}

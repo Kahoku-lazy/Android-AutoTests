@@ -146,6 +146,7 @@ const {
   loadConversations,
   updateTaskCardProgress: _updateTaskCardProgress,
   backgroundStreamConvId,
+  appendPlaceholder: messageStore.appendUserAndAssistantPlaceholder,
 });
 
 onMounted(() => {
@@ -165,20 +166,17 @@ const activeConvTitle = computed(() => {
 
 const streamModeLabel = computed(() => {
   if (streamMode.value === "sse") return "⚡ SSE 流式";
-  if (streamMode.value === "fallback") return "⏳ 降级模式";
   return null;
 });
 
 const connectionModeLabel = computed(() => {
   if (connectionMode.value === "sse") return "SSE 流式通道";
-  if (connectionMode.value === "fallback") return "Django 直连通道";
   if (connectionMode.value === "connecting") return "发送时自动连接";
   return "检测中...";
 });
 
 const connectionModeIcon = computed(() => {
   if (connectionMode.value === "sse") return "⚡";
-  if (connectionMode.value === "fallback") return "⏳";
   if (connectionMode.value === "connecting") return "🔗";
   return "🔍";
 });
@@ -302,7 +300,13 @@ async function sendMessage() {
     uploadedFile.value = null;
   }
 
-  await sendStreamMessage(msgText, displayText);
+  try {
+    await sendStreamMessage(msgText, displayText);
+  } finally {
+    // Fallback: ensure sending is released even if an unexpected
+    // error escapes sendStreamMessage's internal catch.
+    if (sending.value) sending.value = false;
+  }
 }
 
 function handleKey(e) {
@@ -335,6 +339,17 @@ function toggleThinking(m) {
   const idx = messages.value.findIndex((msg) => msg === m);
   if (idx >= 0) {
     messages.value[idx] = { ...m, thinkingExpanded: !m.thinkingExpanded };
+  }
+}
+
+function toggleRoundThinking(msg, roundIdx) {
+  const idx = messages.value.findIndex((m) => m === msg);
+  if (idx >= 0 && messages.value[idx].rounds) {
+    const rounds = [...messages.value[idx].rounds];
+    if (rounds[roundIdx]) {
+      rounds[roundIdx] = { ...rounds[roundIdx], thinkingExpanded: !rounds[roundIdx].thinkingExpanded };
+      messages.value[idx] = { ...messages.value[idx], rounds };
+    }
   }
 }
 
@@ -493,9 +508,7 @@ async function handleImportPRD({ sessionId }) {
             </div>
 
             <div v-if="degradedMode" class="degraded-banner">
-              ⚠️ AgentScope 服务不可用，当前为
-              <strong>Django 降级模式</strong>
-              — AI 对话直接调用模型 API，SSE 流式输出和工具调用暂不可用
+              ⚠️ AgentScope 服务不可用，模型服务暂时无法使用
             </div>
             <div ref="chatBody" class="chat-body">
               <MessageBubble
@@ -514,6 +527,7 @@ async function handleImportPRD({ sessionId }) {
                   !m.content
                 "
                 @toggle-thinking="toggleThinking"
+                @toggle-round-thinking="toggleRoundThinking"
                 @import-prd="handleImportPRD"
               />
             </div>

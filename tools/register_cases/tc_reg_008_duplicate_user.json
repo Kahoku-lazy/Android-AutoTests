@@ -1,0 +1,21 @@
+{
+  "title": "[Web] 注册-用户名已存在应报错",
+  "url": "http://localhost:5173/login?add=1",
+  "priority": "P0",
+  "description": "验证注册已存在的用户名时，服务端返回409「用户名已存在」",
+  "expected_result": "ElMessage 弹窗显示「用户名已存在」",
+  "directory_id": 110,
+  "steps": [
+    {"type": "web_navigate", "url": "http://localhost:5173/login?add=1", "description": "打开登录页"},
+    {"type": "web_wait", "timeout": 2, "description": "等待页面加载"},
+    {"type": "web_click", "selector": ".login-toggle", "description": "切换到注册模式"},
+    {"type": "web_wait", "timeout": 1, "description": "等待表单切换"},
+    {"type": "web_fill", "selector": "input[placeholder=\"设置账号（3-20 字符）\"]", "value": "admin", "description": "填入已存在的用户名 admin"},
+    {"type": "web_fill", "selector": "input[placeholder=\"设置密码（至少 6 位）\"]", "value": "test123456", "description": "填入密码"},
+    {"type": "web_fill", "selector": "input[placeholder=\"确认密码\"]", "value": "test123456", "description": "填入确认密码"},
+    {"type": "web_click", "selector": "button.el-button--primary", "description": "点击完成注册"},
+    {"type": "web_wait", "timeout": 2, "description": "等待服务器响应"},
+    {"type": "web_assert", "expected_text": "用户名已存在", "description": "验证弹窗显示用户名已存在"},
+    {"type": "web_screenshot", "description": "重复用户名注册弹窗截图"}
+  ]
+}

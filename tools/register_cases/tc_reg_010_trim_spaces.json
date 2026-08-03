@@ -1,0 +1,21 @@
+{
+  "title": "[Web] 注册-用户名首尾空格应自动去除",
+  "url": "http://localhost:5173/login?add=1",
+  "priority": "P1",
+  "description": "验证用户名含首尾空格时，后端自动trim处理后注册成功",
+  "expected_result": "用户名空格被去除，注册成功跳转 dashboard",
+  "directory_id": 110,
+  "steps": [
+    {"type": "web_navigate", "url": "http://localhost:5173/login?add=1", "description": "打开登录页"},
+    {"type": "web_wait", "timeout": 2, "description": "等待页面加载"},
+    {"type": "web_click", "selector": ".login-toggle", "description": "切换到注册模式"},
+    {"type": "web_wait", "timeout": 1, "description": "等待表单切换"},
+    {"type": "web_fill", "selector": "input[placeholder=\"设置账号（3-20 字符）\"]", "value": "  autotest_u2  ", "description": "填入首尾含空格的用户名"},
+    {"type": "web_fill", "selector": "input[placeholder=\"设置密码（至少 6 位）\"]", "value": "test123456", "description": "填入密码"},
+    {"type": "web_fill", "selector": "input[placeholder=\"确认密码\"]", "value": "test123456", "description": "填入确认密码"},
+    {"type": "web_click", "selector": "button.el-button--primary", "description": "点击完成注册"},
+    {"type": "web_wait", "timeout": 3, "description": "等待注册请求和跳转"},
+    {"type": "web_assert", "expected_text": "仪表盘", "description": "验证空格被去除，注册成功跳转dashboard"},
+    {"type": "web_screenshot", "description": "空格trim注册成功截图"}
+  ]
+}

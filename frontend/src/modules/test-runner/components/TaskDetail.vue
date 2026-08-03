@@ -145,6 +145,15 @@ function saveTask() {
 
 const logPanel = ref(null)
 
+/** 日志可视行数：随数据变化，最少 25 行、最多 50 行 */
+const LOG_MIN_ROWS = 25
+const LOG_MAX_ROWS = 50
+const logBodyStyle = computed(() => {
+  const n = task.value?.logs?.length || 0
+  const rows = Math.min(LOG_MAX_ROWS, Math.max(LOG_MIN_ROWS, n || LOG_MIN_ROWS))
+  return { '--log-rows': String(rows) }
+})
+
 function ts() { return new Date().toLocaleTimeString('zh-CN', { hour12: false }) }
 function taskAddLog(msg, level = 'info') {
   if (!task.value) return
@@ -497,6 +506,40 @@ function stopDetailQueuePolling() {
   if (detailPollTimer.value) { clearInterval(detailPollTimer.value); detailPollTimer.value = null }
 }
 
+// ── ConfirmButton handlers (dialog managed by ConfirmButton component) ──
+async function doCancelQueue() {
+  const t = task.value; if (!t) return
+  try {
+    await cancelQueue(t.id, t.deviceSerial)
+  } catch (e) {
+    if (e?.response?.status !== 404) {
+      ElMessage.error('取消排队失败'); throw e
+    }
+  }
+  t.running = false; t.runId = ''; t.status = 'idle'
+  t.caseItems = []; t.stepStates = []; t.overallPass = 0
+  t.overallFail = 0; t.failedSteps = []; t.logs = []
+  saveTask()
+  router.push('/runner')
+}
+
+async function doRemoveTask() {
+  const t = task.value; if (!t) return
+  if (t.running) {
+    if (t.runId) {
+      try { await stopRun(t.runId) } catch (e) { console.error('[removeTask] stop failed:', e) }
+    }
+    const wm = getWsMap(); if (wm[t.id]) closeTaskWebSocket(t.id)
+  }
+  try {
+    await deleteTask(taskId.value)
+  } catch (e) {
+    console.error('[removeTask] delete failed:', e)
+    ElMessage.error('删除失败'); throw e
+  }
+  router.push('/runner')
+}
+
 async function removeTask() {
   if (!task.value) return
   try { await ElMessageBox.confirm(`删除任务「${task.value.name || task.value.id}」？`, '确认删除', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }) } catch (_) { return }
@@ -743,10 +786,10 @@ async function removeTask() {
       <section class="log-section">
         <div class="doc-section__header">
           <h3 class="doc-section__title log-title">执行日志 <span class="doc-tag">Logs</span></h3>
-          <el-button size="small" type="text" @click="task.logs = []" style="color:#999;">清空</el-button>
+          <el-button size="small" link @click="task.logs = []" style="color:#999;">清空</el-button>
         </div>
         <div class="doc-section__label log-sub">实时 WebSocket 日志输出 ({{ task.logs?.length || 0 }} 条)</div>
-        <div ref="logPanel" class="log-card-body">
+        <div ref="logPanel" class="log-card-body" :style="logBodyStyle">
           <div v-for="(l, i) in (task.logs || [])" :key="i" class="log-line" :class="'log-' + l.level">
             <span class="log-time">{{ l.time }}</span><span>{{ l.text }}</span>
           </div>
@@ -769,7 +812,7 @@ async function removeTask() {
 .case-card{background:#fff;border:2px solid var(--ink);border-radius:6px 10px 6px 10px;overflow:hidden;margin-bottom:8px}.case-card:hover{border-color:var(--c-device)}.case-header{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;font-size:var(--app-size-xs);font-weight:700;border-bottom:1.5px solid #e8e4d8}.case-header:hover{background:#fefdfb}.case-expand-icon{font-size:var(--app-size-xs);transition:transform 0.2s;opacity:0.5;width:14px;text-align:center}.case-id-badge{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600}.case-title-area{flex:1;min-width:0}.case-title-text{font-weight:700}.case-status-text{font-size:var(--app-size-xs);font-weight:700;white-space:nowrap}.case-stats{font-size:var(--app-size-xs);opacity:0.5;white-space:nowrap}.case-body{padding:12px 14px}.step-list{display:flex;flex-direction:column;gap:2px;padding:4px 0}.step-card{display:flex;align-items:stretch;gap:10px;padding:8px 0;border-bottom:1px solid #f0ede8;font-size:var(--app-size-xs)}.step-card:last-child{border-bottom:none}.step-strip{width:4px;border-radius:2px;flex-shrink:0}.step-pass .step-strip{background:var(--c-device)}.step-fail .step-strip{background:var(--c-runner)}.step-running .step-strip{background:var(--c-ai);animation:pulse 1s infinite}.step-pending .step-strip{background:#d4d8dc}@keyframes pulse{50%{opacity:0.4}}.step-body{flex:1;min-width:0}.step-header-row{display:flex;align-items:center;gap:8px;margin-bottom:2px}.step-index{font-family:var(--app-font-mono);font-size:var(--app-size-xs);opacity:0.5}.step-type-tag{font-size:var(--app-size-xs);font-weight:700;padding:1px 5px;border-radius:3px;background:#f8f6f2;border:1px solid #e8e4d8}.step-status-tag{font-size:var(--app-size-xs);font-weight:700;padding:1px 6px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink)}.step-pass .step-status-tag,.step-status-tag.step-pass{background:#C8F5D0;color:#2d7a2d}.step-fail .step-status-tag,.step-status-tag.step-fail{background:#FFE0DB;color:#a03030}.step-running .step-status-tag,.step-status-tag.step-running{background:#E8DDF8;color:#4a2a80}.step-desc{font-size:var(--app-size-xs);margin-bottom:2px}.step-xpath{font-family:var(--app-font-mono);font-size:var(--app-size-xs);opacity:0.5}.step-fail-reason{font-size:var(--app-size-xs);color:#a03030;font-weight:600;margin-top:2px}.step-empty{padding:20px;text-align:center;color:#999;font-size:var(--app-size-xs)}.iteration-banner{font-size:var(--app-size-xs);font-weight:700;padding:8px 12px;background:var(--c-dashboard);border:2px solid var(--ink);border-radius:4px 8px 4px 8px;margin-bottom:8px}.iter-badge{font-size:var(--app-size-xs);font-weight:700;padding:1px 6px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);display:inline-block}
 .task-type-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:800;color:#fff;margin-left:8px;vertical-align:middle}.task-type--api_testing{background:#889df0}.task-type--web_automation{background:#6fba2c}.task-type--ui_automation{background:#f7cd67;color:var(--ink)}
 .bug-card{background:#fff;border:2px solid var(--c-runner);border-radius:6px 10px 6px 10px;overflow:hidden;margin-bottom:8px}.bug-header-sub{font-size:var(--app-size-xs);opacity:0.5}.bug-meta{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:12px 14px;border-top:1.5px solid #e8e4d8}.bug-meta-label{font-size:var(--app-size-xs);opacity:0.4;text-transform:uppercase}.bug-meta-value{font-size:var(--app-size-xs);font-weight:600}
-.log-section{background:#1e1e24;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;display:flex;flex-direction:column;flex:1;min-height:250px}.log-title{font-weight:700;font-size:var(--app-size-xs);color:#e0e0e0}.log-sub{font-size:var(--app-size-xs)}.log-card-body{flex:1;padding:10px 16px;overflow-y:auto;font-family:var(--app-font-mono);font-size:13px;color:#d4d4d4;line-height:1.7}.log-line{display:flex;gap:8px;padding:2px 0}.log-time{color:#888;flex-shrink:0;min-width:60px}.log-empty{padding:20px;text-align:center;color:#888;font-size:var(--app-size-xs)}
+.log-section{background:#1e1e24;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;display:flex;flex-direction:column;flex:0 0 auto}.log-title{font-weight:700;font-size:var(--app-size-xs);color:#e0e0e0}.log-sub{font-size:var(--app-size-xs)}.log-card-body{height:calc(var(--log-rows,25) * (13px * 1.7 + 4px));padding:10px 16px;overflow-y:auto;font-family:var(--app-font-mono);font-size:13px;color:#d4d4d4;line-height:1.7;box-sizing:content-box;transition:height 0.15s ease}.log-line{display:flex;gap:8px;padding:2px 0;min-height:calc(13px * 1.7);box-sizing:content-box}.log-time{color:#888;flex-shrink:0;min-width:60px}.log-empty{padding:20px;text-align:center;color:#888;font-size:var(--app-size-xs)}
 .stat-pass{color:#2d7a2d;font-weight:700}.stat-fail{color:#a03030;font-weight:700}.stat-total{font-weight:700}.not-found{text-align:center;padding:60px 20px;color:#999}
 .task-name{font-weight:700}.creator{font-weight:700}.info-tag.status{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);display:inline-block}
 .info-progress :deep(.el-progress-bar__outer){border-radius:4px;border:1px solid var(--ink);background:#f0ede8}.info-progress :deep(.el-progress-bar__inner){background:var(--c-device)!important}.info-progress :deep(.el-progress__text){font-family:'Patrick Hand',cursive;font-weight:700}

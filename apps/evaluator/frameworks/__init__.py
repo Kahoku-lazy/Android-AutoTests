@@ -1,6 +1,6 @@
 """Framework adapters — unified interface for external eval frameworks."""
 
-from .base import BaseAdapter, AdapterResult
+from .base import AdapterResult, BaseAdapter
 
 # Registry: framework_key -> adapter class (lazy import)
 _REGISTRY: dict[str, type] = {}
@@ -28,16 +28,20 @@ def available_frameworks() -> list[dict]:
     """List all registered frameworks with availability status."""
     result = []
     for key, cls in _REGISTRY.items():
-        result.append({
-            "key": key,
-            "name": cls.name,
-            "description": cls.description,
-            "available": cls.is_available(),
-        })
+        result.append(
+            {
+                "key": key,
+                "name": cls.name,
+                "description": cls.description,
+                "available": cls.is_available(),
+            }
+        )
     return result
 
 
 # Import adapters to trigger registration
-from . import evalscope_adapter  # noqa: E402, F401
-from . import deepeval_adapter  # noqa: E402, F401
-from . import maseval_adapter  # noqa: E402, F401
+from . import (
+    deepeval_adapter,  # noqa: E402, F401
+    evalscope_adapter,  # noqa: E402, F401
+    maseval_adapter,  # noqa: E402, F401
+)

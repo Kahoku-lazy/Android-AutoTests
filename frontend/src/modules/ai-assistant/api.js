@@ -1,4 +1,4 @@
-/** AgentScope SSE streaming and API helpers — v4 (verified against AgentScope 2.0 source).
+﻿/** AgentScope SSE streaming and API helpers — v4 (verified against AgentScope 2.0 source).
 
  * Verified event payload structure (from agentscope/event/_event.py):
  *   - REPLY_START           { type, session_id, reply_id, name, role }
@@ -528,6 +528,63 @@ export async function fetchKnowledgeDocuments() {
 }
 
 
+// ── Toolbox (shared tools / skills / extensions) ──
+
+/** List all shared toolbox items. */
+export async function fetchSharedTools() {
+  const { data } = await djangoClient.get('/ai/toolbox')
+  return data
+}
+
+/** Create a shared MCP tool or extension. */
+export async function createSharedTool(payload) {
+  const { data } = await djangoClient.post('/ai/toolbox/create', {
+    name: payload.name,
+    item_type: payload.item_type,
+    description: payload.description,
+    config_json: payload.config_json,
+  })
+  return data
+}
+
+/** Update a shared toolbox item. */
+export async function updateSharedTool(itemId, payload) {
+  const { data } = await djangoClient.post(`/ai/toolbox/${itemId}/update`, {
+    name: payload.name,
+    description: payload.description,
+    config_json: payload.config_json,
+  })
+  return data
+}
+
+/** Delete a shared toolbox item. */
+export async function deleteSharedTool(itemId) {
+  const { data } = await djangoClient.post(`/ai/toolbox/${itemId}/delete`)
+  return data
+}
+
+/** Import a shared toolbox item into an agent. */
+export async function importFromToolbox(agentId, toolboxItemId) {
+  const { data } = await djangoClient.post(`/ai/agents/${agentId}/tools/import-from-toolbox`, {
+    toolbox_item_id: toolboxItemId,
+  })
+  return data
+}
+
+/** Upload a shared skill folder. */
+export async function uploadSharedSkill(files, name) {
+  const formData = new FormData()
+  formData.append('name', name)
+  for (const file of files) {
+    formData.append('files', file, file.webkitRelativePath || file.name)
+  }
+  const { data } = await djangoClient.post('/ai/toolbox/upload-skill', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
+
 // ── MCP & Skill management ──
 
 /** Fetch an agent's MCP servers and skills. */
@@ -620,11 +677,9 @@ export async function detectModels(payload) {
   return data
 }
 
-/** 上传头像 */
+/** 上传头像 — base64 JSON payload，使用默认 application/json */
 export async function uploadAvatar(formData) {
-  const { data } = await djangoClient.post('/ai/upload-avatar', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  const { data } = await djangoClient.post('/ai/upload-avatar', formData)
   return data
 }
 

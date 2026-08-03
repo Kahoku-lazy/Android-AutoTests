@@ -1,4 +1,5 @@
 """Sub-agent template definitions for Agent Team."""
+
 from agentscope.app._types import SubAgentTemplate
 
 SUB_AGENT_TEMPLATES = [

@@ -5,23 +5,36 @@ Parses structured web step types (web_navigate, web_click, web_fill, etc.)
 and dispatches to WebAdapter with step-level callbacks. Each step is
 automatically screenshotted and annotated via PIL.
 """
+
 import asyncio
 import os
-import time
+
 from django.conf import settings
+
 from models.step_types import TestStep
 from models.test_models import TestCaseDef
-from .annotator import annotate_screenshot
 
+from .adapter import _pw_run
+from .annotator import annotate_screenshot
 
 # ── Recognised web step types ──
 _WEB_STEP_TYPES = {
-    "web_navigate", "web_fill", "web_type",
-    "web_wait", "web_assert", "web_screenshot",
+    "web_navigate",
+    "web_fill",
+    "web_type",
+    "web_wait",
+    "web_assert",
+    "web_screenshot",
     # Legacy
-    "web_click", "web_step",
+    "web_click",
+    "web_step",
     # ── 通用操作（兼容跨平台统一命名）──
-    "click", "long_click", "swipe", "wait", "sleep", "screenshot",
+    "click",
+    "long_click",
+    "swipe",
+    "wait",
+    "sleep",
+    "screenshot",
 }
 
 
@@ -40,7 +53,7 @@ class WebExecutor:
         """Execute a Web test case step by step. Populates self._last_step_details."""
         self._run_id = run_id
         self._last_step_details = []
-        extra = getattr(case, 'extra_data', {}) or {}
+        extra = getattr(case, "extra_data", {}) or {}
 
         if case.steps_data:
             steps: list[TestStep] = case.steps_data
@@ -57,13 +70,17 @@ class WebExecutor:
                 return "stopped"
 
             # Run watchers before each step (popup/banner dismissal)
-            if hasattr(self.adapter, 'run_watchers') and self.adapter._watchers:
+            if hasattr(self.adapter, "run_watchers") and self.adapter._watchers:
                 try:
                     dismissed = await self.adapter.run_watchers()
                     if dismissed:
                         self.adapter.log(f"Watchers dismissed {dismissed} popup(s)")
                 except Exception:
-                    pass
+                    import logging
+
+                    logging.getLogger("test_runner.web").exception(
+                        "run_watchers dismissal failed — proceeding without watcher"
+                    )
 
             step_desc = step.description or self._step_label(step)
             if self._step_started_callback:
@@ -72,75 +89,133 @@ class WebExecutor:
             error_msg = ""
             result = await self._dispatch(step)
             if result == "fail":
-                error_msg = self.adapter.get_log_buffer()[-1] if self.adapter.get_log_buffer() else "Step failed"
+                error_msg = (
+                    self.adapter.get_log_buffer()[-1]
+                    if self.adapter.get_log_buffer()
+                    else "Step failed"
+                )
 
             if self._step_callback:
                 self._step_callback(i, total, step.type, step_desc[:100], result)
 
             # ── Auto-screenshot + annotate ──
-            ss_rel = await self._capture_step(i, total, step, step_desc, result, error_msg, iteration)
-            self._last_step_details.append({
-                "index": i,
-                "total": total,
-                "type": step.type,
-                "description": step_desc,
-                "result": result,
-                "screenshot": ss_rel,
-                "selector": step.selector or "",
-                "value": step.value or "",
-                "error": error_msg,
-                "iteration": iteration,
-            })
+            ss_rel = await self._capture_step(
+                i, total, step, step_desc, result, error_msg, iteration
+            )
+            self._last_step_details.append(
+                {
+                    "index": i,
+                    "total": total,
+                    "type": step.type,
+                    "description": step_desc,
+                    "result": result,
+                    "screenshot": ss_rel,
+                    "selector": step.selector or "",
+                    "value": step.value or "",
+                    "error": error_msg,
+                    "iteration": iteration,
+                }
+            )
 
             if result == "fail":
                 return "fail"
             if result == "stopped":
                 return "stopped"
 
-        # Final assertion: expected_result check
+        # Skip redundant case-level _verify_expected_result when steps_data
+        # already contains web_assert steps — the step-level assertions are
+        # the authoritative verification.  The case-level check uses
+        # extra_data.expected_result (a human-readable description) which
+        # would never match literal page text.
+        has_assert_step = any(s.type == "web_assert" for s in (case.steps_data or []))
+        if has_assert_step:
+            return "pass"
+
+        return await self._verify_expected_result(case, run_id, total, iteration)
+
+    async def _verify_expected_result(
+        self, case: TestCaseDef, run_id: str, total: int, iteration: int
+    ) -> str:
+        """Verify expected_result against page content after all steps complete.
+
+        Always appends a step_detail (with screenshot) for the verification,
+        whether it passes or fails — so the step count is always N+1 when
+        expected_result is set.
+        """
+        extra = case.extra_data or {}
         expected = extra.get("expected_result", "")
-        if expected:
-            if self._step_started_callback:
-                self._step_started_callback(total, total + 1, "web_assert",
-                                            f"Expected: {expected[:100]}")
-            try:
-                await self.adapter._ensure_browser()
-                page_text = await self.adapter._page.content()
-                if expected not in str(page_text)[:10000]:
-                    self.adapter.log("FAIL: expected text not found")
-                    if self._step_callback:
-                        self._step_callback(total, total + 1, "web_assert",
-                                            f"Expected: {expected[:100]}", "fail")
-                    # Screenshot the failure state
-                    ss_rel = await self._capture_step(
-                        total, total + 1, TestStep(type="web_assert", expected_text=expected),
-                        f"Expected: {expected[:80]}", "fail",
-                        f"Expected text '{expected[:80]}' not found on page", iteration,
-                    )
-                    self._last_step_details.append({
-                        "index": total, "total": total + 1, "type": "web_assert",
-                        "description": f"Expected: {expected[:80]}", "result": "fail",
-                        "screenshot": ss_rel, "selector": "", "value": "",
-                        "error": f"Expected text not found", "iteration": iteration,
-                    })
-                    return "fail"
-                if self._step_callback:
-                    self._step_callback(total, total + 1, "web_assert",
-                                        f"Expected: {expected[:100]}", "pass")
-            except Exception as e:
-                self.adapter.log(f"Assert error: {e}")
+        if not expected:
+            return "pass"
 
-        return "pass"
+        verify_desc = f"Expected: {expected[:80]}"
+        verify_index = total  # 0-based index after all manual steps
 
-    async def _capture_step(self, i: int, total: int, step: TestStep, desc: str,
-                            result: str, error: str = "", iteration: int = 1) -> str:
+        if self._step_started_callback:
+            self._step_started_callback(verify_index, total + 1, "web_assert", verify_desc)
+
+        verify_result = "pass"
+        verify_error = ""
+
+        try:
+            await self.adapter._ensure_browser()
+            page_text = await _pw_run(self.adapter._page.content)
+            if expected not in str(page_text)[:10000]:
+                self.adapter.log("FAIL: expected text not found")
+                verify_result = "fail"
+                verify_error = "Expected text not found"
+        except Exception as e:
+            self.adapter.log(f"Assert error: {e}")
+            verify_result = "fail"
+            verify_error = str(e)[:200]
+
+        if self._step_callback:
+            self._step_callback(verify_index, total + 1, "web_assert", verify_desc, verify_result)
+
+        ss_rel = await self._capture_step(
+            verify_index,
+            total + 1,
+            TestStep(type="web_assert", expected_text=expected),
+            verify_desc,
+            verify_result,
+            verify_error,
+            iteration,
+        )
+        self._last_step_details.append(
+            {
+                "index": verify_index,
+                "total": total + 1,
+                "type": "web_assert",
+                "description": verify_desc,
+                "result": verify_result,
+                "screenshot": ss_rel,
+                "selector": "",
+                "value": "",
+                "error": verify_error,
+                "iteration": iteration,
+            }
+        )
+
+        return verify_result
+
+    async def _capture_step(
+        self,
+        i: int,
+        total: int,
+        step: TestStep,
+        desc: str,
+        result: str,
+        error: str = "",
+        iteration: int = 1,
+    ) -> str:
         """Capture, annotate, and save a step screenshot. Returns relative path."""
         if not self._run_id:
             return ""
         try:
             ss_dir = os.path.join(
-                str(settings.SCREENSHOT_DIR), "step_screenshots",
-                self._run_id, f"iter_{iteration}",
+                str(settings.SCREENSHOT_DIR),
+                "step_screenshots",
+                self._run_id,
+                f"iter_{iteration}",
             )
             os.makedirs(ss_dir, exist_ok=True)
             filename = f"step_{i:02d}_{step.type}.png"
@@ -150,8 +225,14 @@ class WebExecutor:
 
             # Get element bounds for click/fill steps
             bounds = None
-            selector = step.selector or getattr(step, 'xpath', '') or ''
-            if selector and step.type in ("web_click", "click", "web_fill", "web_type", "long_click"):
+            selector = step.selector or getattr(step, "xpath", "") or ""
+            if selector and step.type in (
+                "web_click",
+                "click",
+                "web_fill",
+                "web_type",
+                "long_click",
+            ):
                 bounds = await self.adapter._element_bounds(selector)
 
             annotate_screenshot(abs_path, i, step.type, desc, result, bounds, error)
@@ -169,11 +250,17 @@ class WebExecutor:
             expected = extra.get("expected_result", "")
             result = []
             if url:
-                result.append(TestStep(type="web_navigate", url=url,
-                                       description=f"Navigate to {url}"))
+                result.append(
+                    TestStep(type="web_navigate", url=url, description=f"Navigate to {url}")
+                )
             if expected:
-                result.append(TestStep(type="web_assert", expected_text=expected,
-                                       description=f"Verify: {expected[:80]}"))
+                result.append(
+                    TestStep(
+                        type="web_assert",
+                        expected_text=expected,
+                        description=f"Verify: {expected[:80]}",
+                    )
+                )
             return result
 
         steps = []
@@ -193,12 +280,14 @@ class WebExecutor:
             return TestStep(type="web_click", selector=arg, description=raw)
         elif cmd == "fill":
             selector, _, value = arg.partition(" ")
-            return TestStep(type="web_fill", selector=selector,
-                            value=value.strip('"'), description=raw)
+            return TestStep(
+                type="web_fill", selector=selector, value=value.strip('"'), description=raw
+            )
         elif cmd == "type":
             selector, _, value = arg.partition(" ")
-            return TestStep(type="web_type", selector=selector,
-                            value=value.strip('"'), description=raw)
+            return TestStep(
+                type="web_type", selector=selector, value=value.strip('"'), description=raw
+            )
         elif cmd == "wait":
             try:
                 ms = int(arg)
@@ -213,7 +302,7 @@ class WebExecutor:
             return TestStep(type="web_step", selector=cmd, value=arg, description=raw)
 
     def _step_label(self, step: TestStep) -> str:
-        target = step.selector or step.xpath or ''
+        target = step.selector or step.xpath or ""
         labels = {
             "web_navigate": f"Go to {step.url}",
             "web_fill": f"Fill {target} = {step.value}",
@@ -249,8 +338,9 @@ class WebExecutor:
                 return "pass"
 
             elif t == "web_fill" or t == "web_type":
-                self.adapter.log(f"{'Fill' if t == 'web_fill' else 'Type'}: "
-                                 f"{step.selector} = {step.value}")
+                self.adapter.log(
+                    f"{'Fill' if t == 'web_fill' else 'Type'}: {step.selector} = {step.value}"
+                )
                 if step.selector:
                     await self.adapter._fill(step.selector, step.value or "")
                 return "pass"

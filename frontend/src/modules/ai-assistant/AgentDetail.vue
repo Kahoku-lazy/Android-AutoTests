@@ -4,7 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import { getAgentDetail, detectModels as apiDetectModels, uploadAvatar, saveAgent } from "./api.js";
 import { ElMessage, ElMessageBox } from "element-plus";
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
-import { IconArrowLeft, IconSave } from "@/shared/icons/index.js";
+import { IconArrowLeft } from "@/shared/icons/index.js";
 import { fetchDefaultPrompt } from "./api.js";
 import { useAgentTools } from "./composables/useAgentTools.js";
 import AgentBasicInfo from "./components/AgentBasicInfo.vue";
@@ -13,6 +13,7 @@ import AgentPromptEditor from "./components/AgentPromptEditor.vue";
 import AgentToolsPanel from "./components/AgentToolsPanel.vue";
 import AgentAdvancedConfig from "./components/AgentAdvancedConfig.vue";
 import AgentFormFooter from "./components/AgentFormFooter.vue";
+import KnowledgeImportDialog from "./components/KnowledgeImportDialog.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -22,7 +23,6 @@ const agent = ref(null);
 const loading = ref(false);
 const uploading = ref(false);
 const fileInput = ref(null);
-const step = ref(1);
 
 const form = ref({
   name: "",
@@ -54,104 +54,42 @@ const form = ref({
   compression_template: "",
   tts_enabled: false,
   skills_config: {},
-  phase_tool_config: {},
-  knowledge_sources: [],
+  knowledge_sources: {},
 });
-
-// SOP phase tool config helpers
-const sopPhases = [
-  { key: "1", label: "阶段 1：需求分析与用例设计", icon: "📋" },
-  { key: "2", label: "阶段 2：元素准备", icon: "🔍" },
-  { key: "3", label: "阶段 3：用例创建与调试", icon: "✏️" },
-  { key: "4", label: "阶段 4：任务执行", icon: "▶️" },
-];
-
-function phaseToolEnabled(phase, toolName) {
-  const cfg = form.value.phase_tool_config || {};
-  const phaseTools = cfg[phase];
-  if (!phaseTools || !phaseTools.length) return true; // not configured = all enabled
-  return phaseTools.includes(toolName);
-}
-
-function togglePhaseTool(phase, toolName) {
-  const cfg = { ...(form.value.phase_tool_config || {}) };
-  let phaseTools = [...(cfg[phase] || [])];
-
-  // First click on a phase: initialize with all tools minus this one
-  if (!phaseTools.length) {
-    phaseTools = availablePlatformTools.value.map((t) => t.name);
-  }
-
-  if (phaseTools.includes(toolName)) {
-    phaseTools = phaseTools.filter((n) => n !== toolName);
-  } else {
-    phaseTools.push(toolName);
-  }
-
-  // Normalize: if all tools are selected, clear to empty (all enabled)
-  const allNames = new Set(availablePlatformTools.value.map((t) => t.name));
-  const selected = new Set(phaseTools);
-  if (
-    allNames.size === selected.size &&
-    [...allNames].every((n) => selected.has(n))
-  ) {
-    delete cfg[phase];
-  } else {
-    cfg[phase] = phaseTools;
-  }
-
-  form.value.phase_tool_config = cfg;
-}
-
-function selectAllPhaseTools(phase) {
-  const cfg = { ...(form.value.phase_tool_config || {}) };
-  delete cfg[phase];
-  form.value.phase_tool_config = cfg;
-}
-
-function deselectAllPhaseTools(phase) {
-  const cfg = { ...(form.value.phase_tool_config || {}) };
-  cfg[phase] = [];
-  form.value.phase_tool_config = cfg;
-}
-
-const phaseToolConfigEnabled = ref(false);
-
-function onTogglePhaseTool({ phase, name }) { togglePhaseTool(phase, name) }
 
 const configPreviewHtml = computed(() => highlightJson(mcpForm.config_json))
 
 onMounted(async () => {
-  // Always load available platform tools list, skills, and knowledge docs
-  await loadPlatformTools();
-  await loadAvailableSkills();
-  await loadKnowledgeDocs();
-  await loadAgentTools();
-
+  // All data sources are independent — load them in a single parallel batch.
+  // Including getAgentDetail avoids a second sequential network round-trip
+  // for edit mode.
   if (!isNew.value) {
     loading.value = true;
-    try {
-      const { data } = await getAgentDetail(agentId.value);
-      if (data.ok) {
-        // Restore selected platform tools from agent detail
-        const allTools = data.agent.tools || [];
-        const platformNames = allTools
-          .filter((t) => t.tool_type === "platform" && t.enabled)
-          .map((t) => t.name);
-        selectedPlatformTools.value = new Set(platformNames);
-        // Don't populate form.tools from API — MCP tools loaded via loadAgentTools()
-        form.value = { ...form.value, ...data.agent, tools: [] };
-        agent.value = data.agent;
-        // Show phase config panel if agent already has phase_tool_config set
-        const ptc = data.agent.phase_tool_config || {};
-        if (Object.keys(ptc).length > 0) phaseToolConfigEnabled.value = true;
-      }
-    } catch (err) { console.error('Failed to load agent detail:', err) }
-    loading.value = false;
-  } else {
-    // New agent: pre-fill default system prompt template
-    await loadDefaultPrompt();
   }
+  try {
+    await Promise.all([
+      loadPlatformTools(),
+      loadAvailableSkills(),
+      loadKnowledgeDocs(),
+      loadAgentTools(),
+      isNew.value
+        ? loadDefaultPrompt()
+        : getAgentDetail(agentId.value).then((data) => {
+            if (data?.ok) {
+              const allTools = data.agent.tools || [];
+              const platformNames = allTools
+                .filter((t) => t.tool_type === "platform" && t.enabled)
+                .map((t) => t.name);
+              selectedPlatformTools.value = new Set(platformNames);
+              form.value = { ...form.value, ...data.agent, tools: [] };
+              agent.value = data.agent;
+            }
+          }),
+    ]);
+  } catch (err) {
+    if (!isNew.value) console.error('Failed to load agent detail:', err);
+  }
+  if (!isNew.value) loading.value = false;
 });
 
 const providers = [
@@ -199,13 +137,15 @@ const detectedModels = ref([]);
 	// ── Tools / Skills / MCP / Knowledge ── composable replaces ~400 lines
 	const tools = useAgentTools(form, isNew, agentId)
 	const {
-	  availablePlatformTools, selectedPlatformTools, loadingPlatformTools,
+	  toolCategories, selectedPlatformTools, loadingPlatformTools,
 	  loadPlatformTools, togglePlatformTool, isPlatformToolSelected,
-	  availableSkills, loadingSkills,
+	  toggleCategory, isCategorySelected,
+	  availableSkills, enabledSkills, loadingSkills,
 	  loadAvailableSkills, isSkillEnabled, toggleSkill,
 	  selectAllSkills, deselectAllSkills,
-	  knowledgeDocs, loadingDocs,
-	  loadKnowledgeDocs, isDocEnabled, toggleDoc, selectAllDocs, deselectAllDocs,
+	  knowledgeDocs, loadingDocs, showImportDialog,
+	  loadKnowledgeDocs, isDocEnabled, toggleDocEnabled, importDocs, removeDoc,
+	  openImportDialog, closeImportDialog, importedDocIds,
 	  mcpTools, mcpDialogVisible, mcpDialogMode, mcpForm, mcpJsonError,
 	  mcpTestingId, mcpTestResults,
 	  loadAgentTools, openMcpDialog, saveMcpTool, testMcp, toggleMcp,
@@ -216,6 +156,7 @@ const detectedModels = ref([]);
 	} = tools
 
 	function highlightJson(raw) {
+	  if (!raw) return '';
 	  try {
 	    const obj = JSON.parse(raw);
 	    const formatted = JSON.stringify(obj, null, 2);
@@ -270,7 +211,7 @@ async function detectModels() {
   }
   detectingModels.value = true;
   try {
-    const { data } = await apiDetectModels({
+    const data = await apiDetectModels({
       model_provider: form.value.model_provider,
       api_key: form.value.api_key,
       base_url: form.value.base_url,
@@ -315,12 +256,6 @@ const ltmModes = [
   { value: "both", label: "两者结合" },
 ];
 
-const stepLabels = ["基本信息", "模型配置", "提示词", "记忆工具", "高级"];
-
-function goToStep(n) {
-  if (n >= 1 && n <= stepLabels.length) step.value = n;
-}
-
 function triggerUpload() {
   fileInput.value?.click();
 }
@@ -331,7 +266,7 @@ async function handleAvatarUpload(e) {
   const reader = new FileReader();
   reader.onload = async () => {
     try {
-      const { data } = await uploadAvatar( {
+      const data = await uploadAvatar( {
         image: reader.result,
       });
       if (data.ok) form.value.avatar = data.url;
@@ -367,16 +302,11 @@ async function save() {
     ];
   }
   const payload = { ...form.value, tools: allTools };
-  // If phase tool config switch is off, clear the config so backend
-  // doesn't apply phase filtering (backward compatible: all tools injected).
-  if (!phaseToolConfigEnabled.value) {
-    payload.phase_tool_config = {};
-  }
   const url = isNew.value
     ? "/ai/agents/create"
     : `/ai/agents/${agentId.value}/update`;
   try {
-    const { data } = await saveAgent(url, payload);
+    const data = await saveAgent(url, payload);
     if (data.ok) {
       ElMessage.success("保存成功");
       router.push("/ai-assistant");
@@ -404,10 +334,10 @@ async function save() {
       :title="isNew ? '新建智能体' : '编辑智能体'"
       :subtitle="
         isNew
-          ? '配置一个全新的 AI 智能体，分 5 步完成设置'
+          ? '配置一个全新的 AI 智能体'
           : agent?.name
-            ? `编辑「${agent.name}」— 所有配置项已展开，修改后直接保存`
-            : '所有配置项已展开，修改后直接保存'
+            ? `编辑「${agent.name}」`
+            : '编辑智能体'
       "
       icon="settings"
       icon-gradient="linear-gradient(135deg,#5EEAD4,#14b8a6)"
@@ -420,55 +350,58 @@ async function save() {
         <span>返回智能体列表</span>
       </button>
 
-      <!-- Steps bar -->
-      <div v-if="isNew" class="doc-section steps-section">
-        <el-steps :active="step - 1" finish-status="success" align-center>
-          <el-step v-for="(label, i) in stepLabels" :key="i" :title="label"
-            class="clickable-step" @click="goToStep(i + 1)" />
-        </el-steps>
-      </div>
-
-      <AgentBasicInfo :form="form" :is-new="isNew" :uploading="uploading" :step="step"
+      <input
+        type="file"
+        ref="fileInput"
+        accept="image/*"
+        style="display:none"
+        @change="handleAvatarUpload"
+      />
+      <AgentBasicInfo :form="form" :is-new="isNew" :uploading="uploading"
         @trigger-upload="triggerUpload" @avatar-upload="handleAvatarUpload" />
 
-      <AgentModelConfig :form="form" :is-new="isNew" :step="step"
+      <AgentModelConfig :form="form" :is-new="isNew"
         :providers="providers" :available-models="availableModels"
         :detected-models="detectedModels" :detecting-models="detectingModels"
         @provider-change="onProviderChange" @detect-models="detectModels" />
 
-      <AgentPromptEditor :form="form" :is-new="isNew" :step="step"
+      <AgentPromptEditor :form="form" :is-new="isNew"
         @load-default-prompt="loadDefaultPrompt" />
 
-      <AgentToolsPanel :form="form" :is-new="isNew" :step="step"
+      <AgentToolsPanel :form="form" :is-new="isNew"
         :memory-modes="memoryModes" :ltm-modes="ltmModes"
-        :available-platform-tools="availablePlatformTools" :loading-platform-tools="loadingPlatformTools"
+        :tool-categories="toolCategories" :loading-platform-tools="loadingPlatformTools"
         :selected-platform-tools="selectedPlatformTools" :platform-tool-selected-count="platformToolSelectedCount"
+        :is-category-selected="isCategorySelected"
         :available-skills="availableSkills" :loading-skills="loadingSkills"
         :enabled-skills="enabledSkills" :ws-skill-enabled-count="wsSkillEnabledCount"
         :knowledge-docs="knowledgeDocs" :loading-docs="loadingDocs"
-        :enabled-doc-ids="enabledDocIds" :kb-doc-selected-count="kbDocSelectedCount"
-        :sop-phases="sopPhases" :phase-tool-config-enabled="phaseToolConfigEnabled"
+        :show-import-dialog="showImportDialog" :imported-doc-ids="importedDocIds" :kb-doc-selected-count="kbDocSelectedCount"
         :mcp-tools="mcpTools" :skills="skills" :mcp-test-results="mcpTestResults"
         :mcp-testing-id="mcpTestingId" :mcp-count="mcpCount" :custom-skill-count="customSkillCount"
         :skill-uploading="skillUploading"
         :mcp-dialog-visible="mcpDialogVisible" :mcp-dialog-mode="mcpDialogMode"
         :mcp-form="mcpForm" :mcp-json-error="mcpJsonError" :config-preview="configPreviewHtml"
-        @toggle-platform-tool="togglePlatformTool" @toggle-skill="toggleSkill"
-        @toggle-doc="toggleDoc" @toggle-phase-tool="onTogglePhaseTool"
+        @toggle-platform-tool="togglePlatformTool" @toggle-category="toggleCategory"
+        @toggle-skill="toggleSkill"
+        @toggle-doc-enabled="toggleDocEnabled"
         @select-all-skills="selectAllSkills" @deselect-all-skills="deselectAllSkills"
-        @select-all-docs="selectAllDocs" @deselect-all-docs="deselectAllDocs"
-        @select-all-phase="selectAllPhaseTools" @deselect-all-phase="deselectAllPhaseTools"
+        @open-import-dialog="openImportDialog" @remove-doc="removeDoc"
         @open-mcp-dialog="openMcpDialog" @save-mcp-tool="saveMcpTool" @close-mcp-dialog="mcpDialogVisible=false"
         @test-mcp="testMcp" @toggle-mcp="toggleMcp"
         @remove-mcp-api="removeMcpApi" @remove-mcp-local="removeMcpLocal"
         @trigger-skill-upload="triggerSkillUpload" @remove-skill="removeSkill"
-        @update:phase-tool-config-enabled="phaseToolConfigEnabled=$event"
         @update:mcp-dialog-visible="mcpDialogVisible=$event" />
 
-      <AgentAdvancedConfig :form="form" :is-new="isNew" :step="step" />
+      <KnowledgeImportDialog
+        :visible="showImportDialog"
+        :all-docs="knowledgeDocs"
+        :imported-doc-ids="importedDocIds"
+        @import="importDocs" @close="closeImportDialog" />
 
-      <AgentFormFooter :is-new="isNew" :step="step"
-        @save="save" @prev-step="step--" @next-step="step++" />
+      <AgentAdvancedConfig :form="form" :is-new="isNew" />
+
+      <AgentFormFooter :is-new="isNew" @save="save" />
     </div>
   </div>
 </template>
@@ -488,13 +421,6 @@ async function save() {
   cursor: pointer; transition: all 0.2s ease; align-self: flex-start;
 }
 .back-btn:hover { background: var(--ai-teal); color: #fff; box-shadow: 0 4px 14px rgba(25,200,185,0.35); transform: translateY(-1px); }
-
-/* ── Steps bar ── */
-.steps-section { padding: 24px 32px; flex-shrink: 0; }
-.steps-section :deep(.clickable-step) { cursor: pointer; }
-.steps-section :deep(.clickable-step .el-step__title),
-.steps-section :deep(.clickable-step .el-step__icon) { cursor: pointer; }
-.steps-section :deep(.clickable-step:hover .el-step__title) { color: var(--ai-teal); }
 
 /* ── Shared step panel (used by all 5 sub-components) ── */
 .step-panel { padding: 28px 32px; }

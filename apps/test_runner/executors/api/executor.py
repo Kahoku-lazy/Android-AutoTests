@@ -4,9 +4,12 @@ ApiExecutor — executes API test case steps with variable resolution.
 Mirrors StepExecutor pattern: receives adapter, dispatches by step.type,
 emits step-level callbacks for WebSocket progress.
 """
+
+import copy
 import json
 import re
 import time
+
 from models.step_types import TestStep
 from models.test_models import TestCaseDef
 
@@ -22,17 +25,19 @@ class ApiExecutor:
         self.adapter = adapter
         self._variables: dict[str, str] = {}
         self._last_response: dict | None = None
-        self._step_callback = None      # (step_index, total, type, description, result)
+        self._step_callback = None  # (step_index, total, type, description, result)
         self._step_started_callback = None  # (step_index, total, type, description)
 
     def _resolve(self, template: str) -> str:
         """Replace {{var}} placeholders with values from variables dict."""
         if not isinstance(template, str):
             return template
+
         def replacer(match):
             key = match.group(1)
             return str(self._variables.get(key, match.group(0)))
-        return re.sub(r'\{\{(.+?)\}\}', replacer, template)
+
+        return re.sub(r"\{\{(.+?)\}\}", replacer, template)
 
     def _resolve_dict(self, d: dict) -> dict:
         """Recursively resolve {{var}} in dict keys and values."""
@@ -47,8 +52,7 @@ class ApiExecutor:
                 result[resolved_key] = self._resolve_dict(v)
             elif isinstance(v, list):
                 result[resolved_key] = [
-                    self._resolve(item) if isinstance(item, str) else item
-                    for item in v
+                    self._resolve(item) if isinstance(item, str) else item for item in v
                 ]
             else:
                 result[resolved_key] = v
@@ -80,12 +84,14 @@ class ApiExecutor:
         """Evaluate a simple JSONPath expression against response data."""
         # Support: $.data.token, $.headers.x-csrf-token
         if path.startswith("$.headers."):
-            header_key = path[len("$.headers."):]
+            header_key = path[len("$.headers.") :]
             return response_headers.get(header_key)
 
         # Parse response body as JSON for $. paths
         try:
-            body_obj = json.loads(response_body) if isinstance(response_body, str) else response_body
+            body_obj = (
+                json.loads(response_body) if isinstance(response_body, str) else response_body
+            )
         except (json.JSONDecodeError, TypeError):
             return None
 
@@ -120,6 +126,11 @@ class ApiExecutor:
             try:
                 rows = json.loads(rows)
             except Exception:
+                import logging
+
+                logging.getLogger("test_runner.api").exception(
+                    "_to_row_dicts JSON parse failed — returning [], data-driven rows skipped"
+                )
                 return []
         if not isinstance(rows, list):
             return []
@@ -143,7 +154,6 @@ class ApiExecutor:
 
     def _clone_steps(self, steps: list[TestStep]) -> list[TestStep]:
         """Deep-clone steps so per-row substitution doesn't mutate originals."""
-        import copy
         return copy.deepcopy(steps)
 
     def execute_case(self, case: TestCaseDef, iteration: int = 1, run_id: str = "") -> str:
@@ -152,7 +162,7 @@ class ApiExecutor:
         Supports data-driven testing: if extra_data._rows is present,
         each row becomes a separate sub-iteration with {{var}} substitution.
         """
-        extra = getattr(case, 'extra_data', {}) or {}
+        extra = getattr(case, "extra_data", {}) or {}
         rows = self._to_row_dicts(extra.get("_rows", []))
 
         if case.steps_data:
@@ -226,10 +236,12 @@ class ApiExecutor:
         """Replace {{key}} placeholders using the given data dict."""
         if not isinstance(template, str):
             return template
+
         def replacer(match):
             key = match.group(1)
             return str(data.get(key, match.group(0)))
-        return re.sub(r'\{\{(.+?)\}\}', replacer, template)
+
+        return re.sub(r"\{\{(.+?)\}\}", replacer, template)
 
     @classmethod
     def _resolve_dict_with(cls, data: dict, d: dict) -> dict:
@@ -309,18 +321,6 @@ class ApiExecutor:
 
     # ── Step handlers ──
 
-    def _build_case_dict(self, s: TestStep) -> dict:
-        """Convert a TestStep to a dict for legacy adapters lacking execute_step."""
-        return {
-            "type": s.type, "url": s.url, "method": s.method or s.xpath or "GET",
-            "headers": dict(s.headers) if s.headers else {},
-            "body": dict(s.body) if s.body else "",
-            "timeout": s.timeout or 30,
-            "expected_status": s.expected_status or 200,
-            "expected_response": s.expected_response or "",
-            "assertions": s.assertions if s.assertions else [],
-        }
-
     def _do_request(self, s: TestStep) -> str:
         # Resolve variables in-place before passing to adapter
         if s.url:
@@ -332,10 +332,8 @@ class ApiExecutor:
         if s.body:
             s.body = self._resolve_dict(dict(s.body))
 
-        result = self.adapter.execute_step(s) if hasattr(self.adapter, 'execute_step') \
-            else self.adapter.execute_case(self._build_case_dict(s))
+        result = self.adapter.execute_step(s)
 
-        # Guard: legacy adapters may return str (e.g. "pass"/"fail") instead of dict
         if not isinstance(result, dict):
             return str(result) if isinstance(result, str) else "fail"
 
@@ -371,7 +369,9 @@ class ApiExecutor:
         # Run custom assertions against last response
         response_body = self._last_response.get("response_body", "")
         try:
-            body_obj = json.loads(response_body) if isinstance(response_body, str) else response_body
+            body_obj = (
+                json.loads(response_body) if isinstance(response_body, str) else response_body
+            )
         except (json.JSONDecodeError, TypeError):
             body_obj = response_body
 
@@ -396,13 +396,19 @@ class ApiExecutor:
                 resolved_expected = self._resolve(str(expected))
 
                 if operator == "equals" and str(actual) != resolved_expected:
-                    self.adapter.log(f"Assert FAIL: {path} expected '{resolved_expected}', got '{actual}'")
+                    self.adapter.log(
+                        f"Assert FAIL: {path} expected '{resolved_expected}', got '{actual}'"
+                    )
                     return "fail"
                 elif operator == "contains" and resolved_expected not in str(actual):
                     self.adapter.log(f"Assert FAIL: {path} does not contain '{resolved_expected}'")
                     return "fail"
-                elif operator == "greater_than" and float(actual or 0) <= float(resolved_expected or 0):
-                    self.adapter.log(f"Assert FAIL: {path} expected > {resolved_expected}, got {actual}")
+                elif operator == "greater_than" and float(actual or 0) <= float(
+                    resolved_expected or 0
+                ):
+                    self.adapter.log(
+                        f"Assert FAIL: {path} expected > {resolved_expected}, got {actual}"
+                    )
                     return "fail"
 
         self.adapter.log(f"Assert PASS: {len(assertions)} assertions")
@@ -425,12 +431,11 @@ class ApiExecutor:
         timeout = s.timeout if s.timeout is not None else 1
         self.adapter.log(f"Sleep {timeout}s")
         # Interruptible sleep
-        import time as _time
-        deadline = _time.time() + timeout
-        while _time.time() < deadline:
+        deadline = time.time() + timeout
+        while time.time() < deadline:
             if self.adapter.stopped():
                 return "stopped"
-            _time.sleep(0.1)
+            time.sleep(0.1)
         return "pass"
 
     def _do_log(self, s: TestStep) -> str:

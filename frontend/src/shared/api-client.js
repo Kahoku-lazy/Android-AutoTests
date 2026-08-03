@@ -97,6 +97,10 @@ client.interceptors.request.use(authInterceptor)
 agentscopeClient.interceptors.request.use(authInterceptor)
 
 // ── Response interceptor — handle 401 + token refresh ──
+// Deduplication lock: concurrent 401s share a single refresh call so
+// the interceptor doesn't cascade into hundreds of retries.
+let _refreshPromise = null
+
 async function authErrorInterceptor(err) {
   const originalRequest = err.config
   if (err.response?.status === 401 && !originalRequest._retry) {
@@ -104,15 +108,20 @@ async function authErrorInterceptor(err) {
     if (refreshToken) {
       originalRequest._retry = true
       try {
-        const resp = await axios.post('/api/ai/auth/refresh', {
-          refresh_token: refreshToken,
-        })
+        // Reuse an in-flight refresh to prevent N concurrent calls
+        if (!_refreshPromise) {
+          _refreshPromise = axios.post('/api/ai/auth/refresh', {
+            refresh_token: refreshToken,
+          }).finally(() => { _refreshPromise = null })
+        }
+        const resp = await _refreshPromise
         if (resp.data.ok) {
           setToken(resp.data.access_token)
           originalRequest.headers.Authorization = `Bearer ${resp.data.access_token}`
           return axios(originalRequest)
         }
       } catch (e) {
+        _refreshPromise = null
         // refresh failed — remove account; redirect to login only if no accounts left
         clearToken()
         const { active } = readAuthStore()
@@ -123,7 +132,7 @@ async function authErrorInterceptor(err) {
     }
   }
   const msg = err.response?.data?.error || err.message
-  // 404 通常是"资源不存在"的预期响应（如检查任务历史），不刷屏
+  // 404 通常是"资源不存在"的预期响应，不删屏
   if (err.response?.status !== 404) {
     console.error('[API]', msg)
   }

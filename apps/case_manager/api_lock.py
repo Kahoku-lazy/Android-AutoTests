@@ -1,8 +1,13 @@
 """case-manager lock & visibility helpers — generalized across all three case types."""
 
+__all__ = [
+    "find_case_across_types",
+    "get_case_for_lock",
+]
+
 from .models import TestDefinition
-from .models_storage import StorageTestCase
 from .models_api import ApiTestCase
+from .models_storage import StorageTestCase
 from .models_web import WebTestCase
 
 _ALL_CASE_MODELS = (TestDefinition, StorageTestCase, ApiTestCase, WebTestCase)
@@ -29,9 +34,15 @@ def get_case_for_lock(case_id):
     for model in _ALL_CASE_MODELS:
         try:
             return model.objects.only(
-                "id", "created_by", "editing_by", "editing_since",
-                "permission", "permitted_editors", "locked",
-                "visibility", "permitted_users",
+                "id",
+                "created_by",
+                "editing_by",
+                "editing_since",
+                "permission",
+                "permitted_editors",
+                "locked",
+                "visibility",
+                "permitted_users",
             ).get(id=case_id)
         except model.DoesNotExist:
             continue

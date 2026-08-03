@@ -31,6 +31,7 @@ class MASEvalAdapter(BaseAdapter):
     def is_available() -> bool:
         try:
             import maseval  # noqa: F401
+
             return True
         except ImportError:
             return False
@@ -51,7 +52,9 @@ class MASEvalAdapter(BaseAdapter):
             from asyncio import to_thread
 
             result = await to_thread(
-                self._run_sync, agent_config, questions,
+                self._run_sync,
+                agent_config,
+                questions,
             )
             return result
         except Exception as e:
@@ -86,18 +89,17 @@ class MASEvalAdapter(BaseAdapter):
             kw_score = 0.0
             if expected:
                 keywords = [k.strip() for k in expected.split(",") if k.strip()]
-                found = sum(
-                    1 for k in keywords
-                    if k.lower() in answer.lower()
-                )
+                found = sum(1 for k in keywords if k.lower() in answer.lower())
                 kw_score = round(found / len(keywords) * 5, 1) if keywords else 0
 
-            items.append({
-                "question": q.get("content", "")[:200],
-                "answer": answer[:300],
-                "keyword_score": kw_score,
-                "keywords_expected": expected,
-            })
+            items.append(
+                {
+                    "question": q.get("content", "")[:200],
+                    "answer": answer[:300],
+                    "keyword_score": kw_score,
+                    "keywords_expected": expected,
+                }
+            )
             total_score += kw_score
             scored += 1
 

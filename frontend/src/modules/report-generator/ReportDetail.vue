@@ -3,6 +3,7 @@
 import AppCard from "@/shared/components/AppCard.vue";
 import AppTabs from "@/shared/components/AppTabs.vue";
 import AppTable from "@/shared/components/AppTable.vue";
+import StepScreenshotPanel from "@/shared/components/StepScreenshotPanel.vue";
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { animate, stagger } from 'animejs'
@@ -35,6 +36,7 @@ watch(runId, () => {
 })
 
 async function loadReport() {
+  if (!runId.value || runId.value === 'undefined') return
   loading.value = true
   try {
     const { data } = await getRunReport(runId.value)
@@ -55,6 +57,8 @@ const tabs = computed(() => {
 
 // ── Computed ──
 const runMeta = computed(() => report.value || {})
+
+const stepDetails = computed(() => report.value?.step_details || [])
 
 const allCases = computed(() => {
   if (!report.value) return []
@@ -290,6 +294,9 @@ function outcomeBadgeClass(outcome) {
                 </span>
               </template>
             </AppTable>
+
+            <!-- 步骤截图详情（失败步骤含图片记录） -->
+            <StepScreenshotPanel v-if="stepDetails.length > 0" :steps="stepDetails" />
           </AppCard>
         </template>
 

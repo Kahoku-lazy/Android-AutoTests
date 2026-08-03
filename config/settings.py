@@ -3,6 +3,7 @@ Django settings for Android-AutoTests — pure API server, no frontend serving.
 """
 
 import os
+
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,6 +36,7 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in ("true", "1", "yes")
 if not SECRET_KEY:
     if DEBUG:
         import warnings
+
         warnings.warn(
             "DJANGO_SECRET_KEY is not set! Encryption and JWT signing will be insecure.",
             RuntimeWarning,
@@ -138,12 +140,7 @@ if DB_ENGINE == "mysql":
         },
     }
 else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "data" / "app.db",
-        },
-    }
+    raise RuntimeError(f"不支持的 DB_ENGINE={DB_ENGINE!r}，仅支持 mysql")
 
 # ── Redis ──
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
@@ -156,6 +153,7 @@ def _channel_layers_config():
     """Redis channel layer; JSON serializer avoids msgpack ABI issues on some Python builds."""
     try:
         import redis as _redis_check  # noqa: F401
+
         from channels_redis.core import RedisChannelLayer
 
         RedisChannelLayer(hosts=[REDIS_URL], serializer_format="json")

@@ -292,10 +292,10 @@ function goRunner() { router.push('/runner') }
               <template #cell-rate_bar="{ record }">
                 <div class="rate-cell">
                   <div class="progress-bar">
-                    <div class="p-pass" :style="{ width: record.rate + '%' }"></div>
-                    <div v-if="record.failed > 0" class="p-fail" :style="{ width: (100 - record.rate) + '%' }"></div>
+                    <div class="p-pass" :style="{ width: (record.rate ?? 0) + '%' }"></div>
+                    <div v-if="record.failed > 0" class="p-fail" :style="{ width: (100 - (record.rate ?? 0)) + '%' }"></div>
                   </div>
-                  <span class="rate-text" :class="{ 'rate-ok': record.rate >= 95, 'rate-warn': record.rate >= 80 && record.rate < 95, 'rate-bad': record.rate < 80 }">{{ record.rate }}%</span>
+                  <span class="rate-text" :class="{ 'rate-ok': (record.rate ?? 0) >= 95, 'rate-warn': (record.rate ?? 0) >= 80 && record.rate < 95, 'rate-bad': (record.rate ?? 0) < 80 }">{{ (record.rate ?? 0) }}%</span>
                 </div>
               </template>
               <template #cell-status_badge="{ record }">

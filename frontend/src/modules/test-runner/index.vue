@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, onDeactivated, onActivated } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
-import { getToken } from "@/shared/api-client.js";
+import { getActiveUsername } from "@/shared/api-client.js";
 import ConfirmButton from "@/shared/components/patterns/ConfirmButton.vue";
 import EmptyState from "@/shared/components/patterns/EmptyState.vue";
 import ErrorState from "@/shared/components/patterns/ErrorState.vue";
@@ -51,18 +51,11 @@ const tasks = ref([]);
 const kpiStats = computed(() => ({running:tasks.value.filter(t=>deriveTaskStatus(t)==="running").length,waiting:tasks.value.filter(t=>isTaskQueued(t)).length,completed:tasks.value.filter(t=>taskBucket(t)==="completed").length,incomplete:tasks.value.filter(t=>taskBucket(t)==="incomplete"||deriveTaskStatus(t)==="idle").length}));
 const groupedTasks = computed(() => ({running:filteredTasks.value.filter(t=>deriveTaskStatus(t)==="running"),waiting:filteredTasks.value.filter(t=>isTaskQueued(t)),completed:filteredTasks.value.filter(t=>taskBucket(t)==="completed"),incomplete:filteredTasks.value.filter(t=>taskBucket(t)==="incomplete"||deriveTaskStatus(t)==="idle")}));
 const filteredTasks = computed(()=>{let l=tasks.value;if(activeTab.value!=="all")l=l.filter(t=>{if(activeTab.value==="running")return deriveTaskStatus(t)==="running";if(activeTab.value==="waiting")return isTaskQueued(t);if(activeTab.value==="completed")return taskBucket(t)==="completed";if(activeTab.value==="incomplete")return taskBucket(t)==="incomplete";if(activeTab.value==="idle")return deriveTaskStatus(t)==="idle";return true});const q=searchQuery.value.trim().toLowerCase();if(q)l=l.filter(t=>(t.name||"").toLowerCase().includes(q)||(t.id||"").toLowerCase().includes(q)||(t.deviceSerial||"").toLowerCase().includes(q));return l});
-const tableColumns = [{dataIndex:"id",title:"任务ID",minWidth:90},{dataIndex:"name",title:"名称",minWidth:150},{dataIndex:"taskType",title:"类型",minWidth:80,align:"center"},{dataIndex:"deviceSerial",title:"设备",minWidth:120},{dataIndex:"cases",title:"用例",minWidth:60,align:"center"},{dataIndex:"progress",title:"进度",minWidth:140},{dataIndex:"status",title:"状态",minWidth:100,align:"center"},{dataIndex:"time",title:"时间",minWidth:100},{dataIndex:"actions",title:"操作",width:200,fixed:"right"}];
+const tableColumns = [{dataIndex:"id",title:"任务ID",minWidth:90},{dataIndex:"name",title:"名称",minWidth:150},{dataIndex:"taskType",title:"类型",minWidth:80,align:"center"},{dataIndex:"deviceSerial",title:"设备",minWidth:120},{dataIndex:"cases",title:"用例",minWidth:60,align:"center"},{dataIndex:"progress",title:"进度",minWidth:140},{dataIndex:"passRate",title:"成功率",minWidth:80,align:"center"},{dataIndex:"status",title:"状态",minWidth:100,align:"center"},{dataIndex:"time",title:"时间",minWidth:100},{dataIndex:"actions",title:"操作",width:200,fixed:"right"}];
 
-// ── JWT decode for creator ──
+// ── Active account username for creator（JWT sub 是 user id，不能当用户名）──
 function getCurrentUsername() {
-  try {
-    const token = getToken();
-    if (!token) return "未知";
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.username || payload.sub || "未知";
-  } catch (_) {
-    return "未知";
-  }
+  return getActiveUsername() || "未知";
 }
 
 
@@ -699,6 +692,7 @@ async function loadDevices() {
           <template #cell-deviceSerial="{record}"><template v-if="record.taskType==='api_testing'||record.taskType==='web_automation'">无需设备</template><template v-else>📱 {{ record.deviceSerial||'—' }}</template></template>
           <template #cell-cases="{record}">{{ record.caseIds?.length||0 }}</template>
           <template #cell-progress="{record}"><div v-if="!isTaskQueued(record)" class="mini-progress"><div class="mini-progress-fill" :style="{width:taskProgress(record)+'%',background:taskStatusInfo(record).color}"></div></div><span style="font-size:var(--app-size-xs);margin-left:4px">{{ isTaskQueued(record)?'排队':taskProgress(record)+'%' }}</span></template>
+          <template #cell-passRate="{record}">{{ isTaskQueued(record) || !taskCompletedCount(record) ? '—' : taskPassRate(record) + '%' }}</template>
           <template #cell-status="{record}"><span class="status-badge" :style="{background:taskStatusInfo(record).color}">{{ taskStatusInfo(record).icon }} {{ taskStatusInfo(record).label }}</span></template>
           <template #cell-time="{record}">{{ formatTime(record.createdAt) }}</template>
           <template #cell-actions="{record}"><div class="table-actions">

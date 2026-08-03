@@ -2,9 +2,14 @@
 API adapter — executes HTTP requests for API test cases.
 Provides a compatible interface for the test runner to use instead of DeviceAdapter.
 """
-import time
+
 import json
+import time
+
+from urllib.parse import urlencode
+
 import requests as _requests
+
 from models.step_types import TestStep
 
 
@@ -46,37 +51,102 @@ class ApiAdapter:
     def stopped(self) -> bool:
         return self._should_stop()
 
-    def _http_request(self, http_method: str, url: str, headers: dict,
-                      body_bytes: bytes | None, timeout: int = 30) -> tuple:
-        """Perform HTTP request, return (status_code, response_text, response_headers_dict)."""
+    def _http_request(
+        self, http_method: str, url: str, headers: dict, body_bytes: bytes | None, timeout: int = 30
+    ) -> tuple:
+        """Perform HTTP request, return (status_code, response_text, response_headers_dict).
+
+        Does NOT call raise_for_status() — status code checking is done by callers
+        via expected_status guards + assertion evaluation, which must run for ALL
+        responses including non-2xx.
+        """
         resp = _requests.request(
-            method=http_method, url=url, headers=headers,
-            data=body_bytes, timeout=timeout, allow_redirects=True,
+            method=http_method,
+            url=url,
+            headers=headers,
+            data=body_bytes,
+            timeout=timeout,
+            allow_redirects=True,
         )
         return resp.status_code, resp.text, dict(resp.headers)
 
-    def execute_case(self, case: dict) -> dict:
-        """Execute a single API test case (legacy dict interface)."""
-        if self.stopped():
-            return {"result": "stopped", "status_code": 0, "response_body": "",
-                    "response_headers": {}, "duration_ms": 0, "detail": "Execution stopped"}
+    # ── Public entry points ──
 
-        http_method = case.get("http_method", "GET").upper()
-        url = self._resolve_url(case.get("url", ""))
-        headers = case.get("headers", {}) or {}
-        query_params = case.get("query_params", {}) or {}
-        request_body = case.get("request_body", {}) or {}
-        expected_status = case.get("expected_status", 200)
-        expected_response = case.get("expected_response", {}) or {}
-        assertions = case.get("assertions", []) or []
+    def execute_case(self, case: dict) -> dict:
+        """Execute a single API test case (legacy dict interface).
+
+        Normalizes the dict to the TestStep-based pipeline so all execution
+        paths share the same HTTP request + assertion logic.
+        """
+        if self.stopped():
+            return _stopped_result()
+
+        return self._execute_request(
+            http_method=case.get("http_method", "GET").upper(),
+            url=case.get("url", ""),
+            headers=case.get("headers", {}) or {},
+            query_params=case.get("query_params", {}) or {},
+            request_body=case.get("request_body", {}) or {},
+            expected_status=case.get("expected_status", 200),
+            expected_response=case.get("expected_response", {}) or {},
+            assertions=case.get("assertions", []) or [],
+            truncate_response=2000,
+        )
+
+    def execute_step(self, step: TestStep) -> dict:
+        """Execute a single API request from a TestStep object (canonical interface)."""
+        if self.stopped():
+            return _stopped_result()
+
+        return self._execute_request(
+            http_method=(step.method or "GET").upper(),
+            url=step.url or (step.xpath if (step.xpath or "").startswith("http") else ""),
+            headers=dict(step.headers) if step.headers else {},
+            query_params={},
+            request_body=dict(step.body) if step.body else {},
+            expected_status=step.expected_status,
+            expected_response=step.expected_text or "",
+            assertions=list(step.assertions) if step.assertions else [],
+            truncate_response=0,
+        )
+
+    # ── Shared HTTP request pipeline ──
+
+    def _execute_request(
+        self,
+        http_method: str,
+        url: str,
+        headers: dict,
+        query_params: dict,
+        request_body,
+        expected_status: int,
+        expected_response,
+        assertions: list,
+        truncate_response: int = 0,
+    ) -> dict:
+        """Execute a single HTTP request and evaluate assertions.
+
+        Args:
+            http_method: GET/POST/PUT/PATCH/DELETE
+            url: Target URL (relative or absolute)
+            headers: Request headers dict
+            query_params: URL query parameters
+            request_body: Request body (dict or str)
+            expected_status: Expected HTTP status code (0 to skip check)
+            expected_response: Expected response body (dict or str)
+            assertions: List of assertion dicts
+            truncate_response: If > 0, truncate response body to this length in result
+
+        Returns: dict with result/status_code/response_body/response_headers/duration_ms/detail
+        """
+        url = self._resolve_url(url)
 
         if query_params:
-            from urllib.parse import urlencode
             sep = "&" if "?" in url else "?"
             url = url + sep + urlencode(query_params)
 
         body_bytes = None
-        if http_method in ("POST", "PUT", "PATCH") and request_body:
+        if http_method in ("POST", "PUT", "PATCH") and isinstance(request_body, (dict, str)):
             if isinstance(request_body, dict):
                 body_bytes = json.dumps(request_body, ensure_ascii=False).encode("utf-8")
                 headers.setdefault("Content-Type", "application/json")
@@ -85,145 +155,84 @@ class ApiAdapter:
 
         self.log(f"API {http_method} {url}")
         start = time.time()
-        response_headers = {}
 
         try:
             status_code, response_text, response_headers = self._http_request(
-                http_method, url, headers, body_bytes)
+                http_method, url, headers, body_bytes
+            )
             duration_ms = (time.time() - start) * 1000
 
+            # ── Status check ──
             if expected_status > 0 and status_code != expected_status:
                 self.log(f"FAIL: expected status {expected_status}, got {status_code}")
-                return _fail(status_code, response_text[:2000], duration_ms,
-                             f"Expected HTTP {expected_status}, got {status_code}", response_headers,
-                             self._build_diagnostics(http_method, url, headers, request_body,
-                                                     status_code, response_text, duration_ms))
+                return _fail(
+                    status_code,
+                    _truncate(response_text, truncate_response),
+                    duration_ms,
+                    f"Status mismatch: expected {expected_status} got {status_code}",
+                    response_headers,
+                    self._build_diagnostics(
+                        http_method,
+                        url,
+                        headers,
+                        request_body,
+                        status_code,
+                        response_text,
+                        duration_ms,
+                    ),
+                )
 
+            # ── Response body comparison ──
             if expected_response:
-                try:
-                    expected_obj = (expected_response if isinstance(expected_response, dict)
-                                    else json.loads(expected_response))
-                    actual_obj = json.loads(response_text)
-                    if expected_obj != actual_obj:
-                        self.log("FAIL: response body mismatch")
-                        return _fail(status_code, response_text[:2000], duration_ms,
-                                     "Response body does not match expected", response_headers,
-                                     self._build_diagnostics(http_method, url, headers, request_body,
-                                                             status_code, response_text, duration_ms))
-                except json.JSONDecodeError:
-                    if response_text.strip() != str(expected_response).strip():
-                        return _fail(status_code, response_text[:2000], duration_ms,
-                                     "Response text does not match expected", response_headers,
-                                     self._build_diagnostics(http_method, url, headers, request_body,
-                                                             status_code, response_text, duration_ms))
+                if _response_mismatch(expected_response, response_text):
+                    self.log("FAIL: response body mismatch")
+                    return _fail(
+                        status_code,
+                        _truncate(response_text, truncate_response),
+                        duration_ms,
+                        "Response body does not match expected",
+                        response_headers,
+                        self._build_diagnostics(
+                            http_method,
+                            url,
+                            headers,
+                            request_body,
+                            status_code,
+                            response_text,
+                            duration_ms,
+                        ),
+                    )
 
-            for a in assertions:
-                a_type = a.get("type", "")
-                expected = a.get("expect") if "expect" in a else a.get("expected", "")
-                if a_type == "response_time" and duration_ms > float(expected or 5000):
-                    self.log(f"FAIL: response time {duration_ms:.0f}ms > {expected}ms")
-                    return _fail(status_code, response_text[:2000], duration_ms,
-                                 f"Response time {duration_ms:.0f}ms exceeds {expected}ms",
-                                 response_headers,
-                                 self._build_diagnostics(http_method, url, headers, request_body,
-                                                         status_code, response_text, duration_ms))
+            # ── Custom assertions ──
+            assertion_result = _evaluate_assertions(assertions, response_text, duration_ms)
+            if assertion_result:
+                return _fail(
+                    status_code,
+                    _truncate(response_text, truncate_response),
+                    duration_ms,
+                    assertion_result,
+                    response_headers,
+                    self._build_diagnostics(
+                        http_method,
+                        url,
+                        headers,
+                        request_body,
+                        status_code,
+                        response_text,
+                        duration_ms,
+                    ),
+                )
 
-            self.log(f"PASS: {http_method} {url} -> {status_code} ({duration_ms:.0f}ms)")
-            return {"result": "pass", "status_code": status_code, "response_body": response_text[:2000],
-                    "response_headers": response_headers, "duration_ms": round(duration_ms, 1), "detail": ""}
-
-        except _requests.exceptions.ConnectionError as e:
-            duration_ms = (time.time() - start) * 1000
-            self.log(f"FAIL: Connection error - {e}")
-            return _fail(0, "", duration_ms, f"Connection failed: {e}", {},
-                         self._build_diagnostics(http_method, url, headers, request_body, 0, "", duration_ms))
-        except Exception as e:
-            duration_ms = (time.time() - start) * 1000
-            self.log(f"FAIL: {str(e)}")
-            return _fail(0, "", duration_ms, str(e), {},
-                         self._build_diagnostics(http_method, url, headers, request_body, 0, "", duration_ms))
-
-    def execute_step(self, step: TestStep) -> dict:
-        """Execute a single API request from a TestStep object (canonical interface)."""
-        if self.stopped():
-            return {"result": "stopped", "status_code": 0, "response_body": "",
-                    "response_headers": {}, "duration_ms": 0, "detail": "Execution stopped"}
-
-        http_method = (step.method or "GET").upper()
-        url = self._resolve_url(step.url or step.xpath)
-        headers = dict(step.headers) if step.headers else {}
-        request_body = dict(step.body) if step.body else {}
-        expected_status = step.expected_status
-        expected_response = step.expected_text or ""
-        assertions = list(step.assertions) if step.assertions else []
-
-        body_bytes = None
-        if http_method in ("POST", "PUT", "PATCH") and request_body:
-            body_bytes = json.dumps(request_body, ensure_ascii=False).encode("utf-8")
-            headers.setdefault("Content-Type", "application/json")
-
-        self.log(f"API {http_method} {url}")
-        start = time.time()
-        response_headers = {}
-
-        try:
-            status_code, response_text, response_headers = self._http_request(
-                http_method, url, headers, body_bytes)
-            duration_ms = (time.time() - start) * 1000
-
-            if expected_status > 0 and status_code != expected_status:
-                self.log(f"FAIL: expected status {expected_status}, got {status_code}")
-                return _fail(status_code, response_text, duration_ms,
-                             f"Status mismatch: expected {expected_status} got {status_code}",
-                             response_headers,
-                             self._build_diagnostics(http_method, url, headers, request_body,
-                                                     status_code, response_text, duration_ms))
-
-            if expected_response:
-                try:
-                    expected_json = json.loads(expected_response) if isinstance(expected_response, str) else expected_response
-                except (json.JSONDecodeError, TypeError):
-                    expected_json = expected_response
-                try:
-                    actual_json = json.loads(response_text)
-                except (json.JSONDecodeError, TypeError):
-                    actual_json = response_text
-                if expected_json != actual_json:
-                    return _fail(status_code, response_text, duration_ms,
-                                 f"Response mismatch: expected={expected_json}, actual={actual_json}",
-                                 response_headers,
-                                 self._build_diagnostics(http_method, url, headers, request_body,
-                                                         status_code, response_text, duration_ms))
-
-            for a in assertions:
-                path = a.get("path", "")
-                operator = a.get("op") or a.get("operator", "equals")
-                expected = a.get("expect") if "expect" in a else a.get("value") if "value" in a else a.get("expected", "")
-                try:
-                    actual_val = json.loads(response_text)
-                    for part in path.lstrip("$.").split("."):
-                        if isinstance(actual_val, dict): actual_val = actual_val.get(part)
-                        elif isinstance(actual_val, list) and part.isdigit(): actual_val = actual_val[int(part)]
-                        else: actual_val = None; break
-                except Exception:
-                    actual_val = None
-                if operator == "equals" and str(actual_val) != str(expected):
-                    return _fail(status_code, response_text, duration_ms,
-                                 f"Assertion failed: {path} {operator} {expected} (actual={actual_val})",
-                                 response_headers,
-                                 self._build_diagnostics(http_method, url, headers, request_body,
-                                                         status_code, response_text, duration_ms))
-                if operator == "contains" and str(expected) not in str(actual_val or ""):
-                    return _fail(status_code, response_text, duration_ms,
-                                 f"Assertion failed: {path} contains {expected}",
-                                 response_headers,
-                                 self._build_diagnostics(http_method, url, headers, request_body,
-                                                         status_code, response_text, duration_ms))
-
+            resp_body = _truncate(response_text, truncate_response)
             self.log(f"PASS ({duration_ms:.0f}ms)")
-            return {"result": "pass", "status_code": status_code, "response_body": response_text,
-                    "response_headers": response_headers, "duration_ms": duration_ms,
-                    "detail": f"HTTP {status_code} ({duration_ms:.0f}ms)"}
+            return {
+                "result": "pass",
+                "status_code": status_code,
+                "response_body": resp_body,
+                "response_headers": response_headers,
+                "duration_ms": round(duration_ms, 1),
+                "detail": f"HTTP {status_code} ({duration_ms:.0f}ms)",
+            }
 
         except _requests.exceptions.HTTPError as e:
             duration_ms = (time.time() - start) * 1000
@@ -232,33 +241,71 @@ class ApiAdapter:
             response_headers = dict(e.response.headers) if e.response is not None else {}
             if expected_status > 0 and status_code == expected_status:
                 self.log(f"PASS: HTTP {status_code} (expected) ({duration_ms:.0f}ms)")
-                return {"result": "pass", "status_code": status_code, "response_body": error_body,
-                        "response_headers": response_headers, "duration_ms": duration_ms,
-                        "detail": f"HTTP {status_code} (expected) ({duration_ms:.0f}ms)"}
+                return {
+                    "result": "pass",
+                    "status_code": status_code,
+                    "response_body": error_body,
+                    "response_headers": response_headers,
+                    "duration_ms": duration_ms,
+                    "detail": f"HTTP {status_code} (expected) ({duration_ms:.0f}ms)",
+                }
             self.log(f"FAIL: HTTP {status_code} {e}")
-            return _fail(status_code, error_body, duration_ms, f"HTTP {status_code}: {e}",
-                         response_headers,
-                         self._build_diagnostics(http_method, url, headers, request_body,
-                                                 status_code, error_body, duration_ms))
+            return _fail(
+                status_code,
+                error_body,
+                duration_ms,
+                f"HTTP {status_code}: {e}",
+                response_headers,
+                self._build_diagnostics(
+                    http_method, url, headers, request_body, status_code, error_body, duration_ms
+                ),
+            )
+
         except _requests.exceptions.ConnectionError as e:
             duration_ms = (time.time() - start) * 1000
             self.log(f"FAIL: Connection error - {e}")
-            return _fail(0, "", duration_ms, f"Connection failed: {e}", {},
-                         self._build_diagnostics(http_method, url, headers, request_body, 0, "", duration_ms))
+            return _fail(
+                0,
+                "",
+                duration_ms,
+                f"Connection failed: {e}",
+                {},
+                self._build_diagnostics(
+                    http_method, url, headers, request_body, 0, "", duration_ms
+                ),
+            )
+
         except Exception as e:
             duration_ms = (time.time() - start) * 1000
-            self.log(f"FAIL: {str(e)}")
-            return _fail(0, "", duration_ms, str(e), {},
-                         self._build_diagnostics(http_method, url, headers, request_body, 0, "", duration_ms))
+            self.log(f"FAIL: {e}")
+            return _fail(
+                0,
+                "",
+                duration_ms,
+                str(e),
+                {},
+                self._build_diagnostics(
+                    http_method, url, headers, request_body, 0, "", duration_ms
+                ),
+            )
 
-    def _build_diagnostics(self, method: str, url: str, headers: dict,
-                           body, status_code: int, response_text: str,
-                           duration_ms: float) -> dict:
+    def _build_diagnostics(
+        self,
+        method: str,
+        url: str,
+        headers: dict,
+        body,
+        status_code: int,
+        response_text: str,
+        duration_ms: float,
+    ) -> dict:
         header_str = " ".join(f'-H "{k}: {v}"' for k, v in (headers or {}).items())
         body_str = ""
         if body:
-            if isinstance(body, dict): body_str = f" -d '{json.dumps(body, ensure_ascii=False)}'"
-            elif isinstance(body, str) and body.strip(): body_str = f" -d '{body}'"
+            if isinstance(body, dict):
+                body_str = f" -d '{json.dumps(body, ensure_ascii=False)}'"
+            elif isinstance(body, str) and body.strip():
+                body_str = f" -d '{body}'"
         return {
             "curl_command": f"curl -X {method} '{url}' {header_str}{body_str}",
             "request": {"method": method, "url": url, "headers": headers, "body": body},
@@ -267,9 +314,109 @@ class ApiAdapter:
         }
 
 
-def _fail(status_code: int, response_body: str, duration_ms: float,
-          detail: str, response_headers: dict, diagnostics: dict | None = None) -> dict:
-    result = {"result": "fail", "status_code": status_code, "response_body": response_body,
-              "response_headers": response_headers, "duration_ms": round(duration_ms, 1), "detail": detail}
-    if diagnostics: result["diagnostics"] = diagnostics
+# ── Module-level helpers ──
+
+
+def _fail(
+    status_code: int,
+    response_body: str,
+    duration_ms: float,
+    detail: str,
+    response_headers: dict,
+    diagnostics: dict | None = None,
+) -> dict:
+    result = {
+        "result": "fail",
+        "status_code": status_code,
+        "response_body": response_body,
+        "response_headers": response_headers,
+        "duration_ms": round(duration_ms, 1),
+        "detail": detail,
+    }
+    if diagnostics:
+        result["diagnostics"] = diagnostics
     return result
+
+
+def _stopped_result() -> dict:
+    return {
+        "result": "stopped",
+        "status_code": 0,
+        "response_body": "",
+        "response_headers": {},
+        "duration_ms": 0,
+        "detail": "Execution stopped",
+    }
+
+
+def _truncate(text: str, limit: int) -> str:
+    return text[:limit] if limit > 0 else text
+
+
+def _response_mismatch(expected, actual_text: str) -> bool:
+    """Check if the actual response differs from expected. Returns True on mismatch."""
+    try:
+        expected_obj = expected if isinstance(expected, dict) else json.loads(expected)
+    except (json.JSONDecodeError, TypeError):
+        expected_obj = expected
+    try:
+        actual_obj = json.loads(actual_text)
+    except (json.JSONDecodeError, TypeError):
+        actual_obj = actual_text
+    return expected_obj != actual_obj
+
+
+def _evaluate_assertions(assertions: list, response_text: str, duration_ms: float) -> str | None:
+    """Evaluate custom assertions against the response. Returns error message or None (pass)."""
+    for a in assertions:
+        a_type = a.get("type", "")
+        expected = (
+            a.get("expect")
+            if "expect" in a
+            else a.get("value")
+            if "value" in a
+            else a.get("expected", "")
+        )
+
+        # response_time assertion
+        if a_type == "response_time":
+            threshold = float(expected or 5000)
+            if duration_ms > threshold:
+                return f"Response time {duration_ms:.0f}ms exceeds {threshold}ms"
+
+        # JSON-path assertions
+        path = a.get("path", "")
+        operator = a.get("op") or a.get("operator", "")
+        if path and operator:
+            actual_val = _navigate_json_path(response_text, path)
+            if operator == "equals" and str(actual_val) != str(expected):
+                return f"Assertion failed: {path} {operator} {expected} (actual={actual_val})"
+            if operator == "contains" and str(expected) not in str(actual_val or ""):
+                return f"Assertion failed: {path} contains {expected}"
+
+        # greater_than assertion
+        if a_type == "greater_than" and operator == "greater_than":
+            actual_val = _navigate_json_path(response_text, path) if path else None
+            try:
+                if actual_val is not None and float(actual_val) <= float(expected):
+                    return f"Assertion failed: {path} {operator} {expected} (actual={actual_val})"
+            except (ValueError, TypeError):
+                pass
+
+    return None
+
+
+def _navigate_json_path(response_text: str, path: str):
+    """Navigate a dotted JSON path (e.g. 'data.token') in response text."""
+    try:
+        val = json.loads(response_text)
+        for part in path.lstrip("$.").split("."):
+            if isinstance(val, dict):
+                val = val.get(part)
+            elif isinstance(val, list) and part.isdigit():
+                val = val[int(part)]
+            else:
+                return None
+        return val
+    except Exception:
+        return None

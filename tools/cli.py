@@ -11,20 +11,20 @@ CLI 工具 — 元素定位 + 用例管理 CRUD + 任务执行
   python tools/cli.py case show       <case_id>
   python tools/cli.py case delete     <case_id>
 
-  python tools/cli.py run             --case-id WEB-xxx [--loop 3] [--timeout 5]
+  python tools/cli.py run             --case-id WEB-xxx [WEB-yyy ...] [--loop 3] [--timeout 5]
 
 输出: JSON {ok, data/error}
 """
+
 import argparse
 import asyncio
+from datetime import datetime
 import json
 import os
 import random
 import string
 import sys
-import textwrap
 import time
-from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
@@ -32,18 +32,18 @@ import django
 
 django.setup()
 
-from apps.element_locator.models import WebGroup, WebElement  # noqa: E402
 from apps.case_manager.models import CaseDirectory  # noqa: E402
 from apps.case_manager.models_web import WebTestCase  # noqa: E402
-from apps.test_runner.models import TaskCard, TestRunRecord, TestResult  # noqa: E402
-from models.test_models import TestCaseDef  # noqa: E402
-from models.step_types import TestStep  # noqa: E402
+from apps.element_locator.models import WebElement, WebGroup  # noqa: E402
+from apps.test_runner.models import TaskCard, TestResult, TestRunRecord  # noqa: E402
 from apps.test_runner.views.execution import _execute_unified_remote  # noqa: E402
-
+from models.step_types import TestStep  # noqa: E402
+from models.test_models import TestCaseDef  # noqa: E402
 
 # ═══════════════════════════════════════════
 # helpers
 # ═══════════════════════════════════════════
+
 
 def ok(data=None):
     print(json.dumps({"ok": True, "data": data}, ensure_ascii=False, indent=2))
@@ -70,28 +70,33 @@ def get_or_create_group(name, parent=None):
 # element commands
 # ═══════════════════════════════════════════
 
+
 def element_list(args):
     qs = WebElement.objects.all()
     if args.page_url:
         qs = qs.filter(page_url__icontains=args.page_url)
     if args.search:
         from django.db.models import Q
+
         qs = qs.filter(
-            Q(name__icontains=args.search) | Q(locator_value__icontains=args.search) | Q(
-                description__icontains=args.search)
+            Q(name__icontains=args.search)
+            | Q(locator_value__icontains=args.search)
+            | Q(description__icontains=args.search)
         )
     rows = []
     for el in qs.select_related("group").order_by("page_url", "group__name", "name"):
-        rows.append({
-            "id": el.id,
-            "name": el.name,
-            "locator_type": el.locator_type,
-            "locator_value": el.locator_value,
-            "page_url": el.page_url,
-            "group": el.group.name if el.group else None,
-            "description": el.description,
-            "is_test_point": el.is_test_point,
-        })
+        rows.append(
+            {
+                "id": el.id,
+                "name": el.name,
+                "locator_type": el.locator_type,
+                "locator_value": el.locator_value,
+                "page_url": el.page_url,
+                "group": el.group.name if el.group else None,
+                "description": el.description,
+                "is_test_point": el.is_test_point,
+            }
+        )
     ok({"count": len(rows), "elements": rows})
 
 
@@ -140,15 +145,17 @@ def element_batch(args):
     objs = []
     for item in elements:
         g = created_groups.get(item.get("_group")) if item.get("_group") else None
-        objs.append(WebElement(
-            group=g,
-            name=item["name"],
-            locator_type=item["locator_type"],
-            locator_value=item["locator_value"],
-            page_url=item.get("page_url", ""),
-            description=item.get("description", ""),
-            is_test_point=item.get("is_test_point", False),
-        ))
+        objs.append(
+            WebElement(
+                group=g,
+                name=item["name"],
+                locator_type=item["locator_type"],
+                locator_value=item["locator_value"],
+                page_url=item.get("page_url", ""),
+                description=item.get("description", ""),
+                is_test_point=item.get("is_test_point", False),
+            )
+        )
     WebElement.objects.bulk_create(objs)
     ok({"created": len(objs), "groups": len(created_groups)})
 
@@ -156,6 +163,7 @@ def element_batch(args):
 # ═══════════════════════════════════════════
 # case commands
 # ═══════════════════════════════════════════
+
 
 def case_list(args):
     qs = WebTestCase.objects.all()
@@ -170,16 +178,18 @@ def case_list(args):
             steps = json.loads(c.steps_json or "[]")
         except json.JSONDecodeError:
             pass
-        rows.append({
-            "id": c.id,
-            "title": c.title,
-            "priority": c.priority,
-            "enabled": c.enabled,
-            "url": c.url,
-            "step_count": len(steps),
-            "directory_id": c.directory_id,
-            "updated_at": str(c.updated_at)[:19] if c.updated_at else "",
-        })
+        rows.append(
+            {
+                "id": c.id,
+                "title": c.title,
+                "priority": c.priority,
+                "enabled": c.enabled,
+                "url": c.url,
+                "step_count": len(steps),
+                "directory_id": c.directory_id,
+                "updated_at": str(c.updated_at)[:19] if c.updated_at else "",
+            }
+        )
     ok({"count": len(rows), "cases": rows})
 
 
@@ -238,16 +248,22 @@ def case_show(args):
         steps = json.loads(c.steps_json or "[]")
     except json.JSONDecodeError:
         pass
-    ok({
-        "id": c.id, "title": c.title, "priority": c.priority,
-        "enabled": c.enabled, "url": c.url,
-        "precondition": c.precondition, "description": c.description,
-        "expected_result": c.expected_result,
-        "steps": steps,
-        "directory_id": c.directory_id,
-        "created_at": str(c.created_at)[:19] if c.created_at else "",
-        "updated_at": str(c.updated_at)[:19] if c.updated_at else "",
-    })
+    ok(
+        {
+            "id": c.id,
+            "title": c.title,
+            "priority": c.priority,
+            "enabled": c.enabled,
+            "url": c.url,
+            "precondition": c.precondition,
+            "description": c.description,
+            "expected_result": c.expected_result,
+            "steps": steps,
+            "directory_id": c.directory_id,
+            "created_at": str(c.created_at)[:19] if c.created_at else "",
+            "updated_at": str(c.updated_at)[:19] if c.updated_at else "",
+        }
+    )
 
 
 def case_delete(args):
@@ -264,7 +280,12 @@ def case_delete(args):
 # dir commands
 # ═══════════════════════════════════════════
 
-_TYPE_MAP = {"web": "web_automation", "ui": "ui_automation", "api": "api_testing", "storage": "storage"}
+_TYPE_MAP = {
+    "web": "web_automation",
+    "ui": "ui_automation",
+    "api": "api_testing",
+    "storage": "storage",
+}
 
 
 def dir_list(args):
@@ -276,11 +297,15 @@ def dir_list(args):
         qs = qs.filter(parent__isnull=True)
     rows = []
     for d in qs.order_by("sort_order", "name"):
-        rows.append({
-            "id": d.id, "name": d.name, "case_type": d.case_type,
-            "parent_id": d.parent_id,
-            "child_count": d.children.count(),
-        })
+        rows.append(
+            {
+                "id": d.id,
+                "name": d.name,
+                "case_type": d.case_type,
+                "parent_id": d.parent_id,
+                "child_count": d.children.count(),
+            }
+        )
     ok({"count": len(rows), "directories": rows})
 
 
@@ -291,7 +316,15 @@ def dir_create(args):
         case_type=case_type,
         parent_id=args.parent_id,
     )
-    ok({"id": d.id, "name": d.name, "case_type": d.case_type, "parent_id": d.parent_id, "action": "created"})
+    ok(
+        {
+            "id": d.id,
+            "name": d.name,
+            "case_type": d.case_type,
+            "parent_id": d.parent_id,
+            "action": "created",
+        }
+    )
 
 
 def dir_tree(args):
@@ -327,6 +360,7 @@ def dir_tree(args):
 # run command
 # ═══════════════════════════════════════════
 
+
 def _build_testcase_def(row):
     """Build a TestCaseDef from a WebTestCase ORM row."""
     steps_raw = json.loads(getattr(row, "steps_json", "[]") or "[]")
@@ -345,31 +379,41 @@ def _build_testcase_def(row):
 
 
 def run_case(args):
-    """Execute a web test case via the execution engine and return results."""
-    case_id = args.case_id
+    """Execute one or more web test cases via the execution engine and return results."""
+    case_ids = args.case_ids
     loop_count = getattr(args, "loop", 3)
     timeout = getattr(args, "timeout", 5)
 
-    try:
-        row = WebTestCase.objects.get(id=case_id, enabled=True)
-    except WebTestCase.DoesNotExist:
-        err(f"用例不存在或未启用: {case_id}")
+    # Load all cases
+    rows = []
+    titles = []
+    for cid in case_ids:
+        try:
+            row = WebTestCase.objects.get(id=cid, enabled=True)
+            rows.append(row)
+            titles.append(row.title)
+        except WebTestCase.DoesNotExist:
+            err(f"用例不存在或未启用: {cid}")
 
-    test_case = _build_testcase_def(row)
+    test_cases = [_build_testcase_def(r) for r in rows]
     ts = str(int(time.time()))[-6:]
-    task_id = f"WEB-{ts}-{case_id}"[:50]  # TaskCard.task_id, also used as client_task_id
+    task_id = f"WEB-{ts}-BATCH"[:50]
+
+    # Task name: single case uses its title; multi-case uses first title + count
+    if len(rows) == 1:
+        task_name = rows[0].title
+    else:
+        task_name = f"{rows[0].title} 等{len(rows)}条用例"
 
     # Create TaskCard so it shows up in the frontend task list
-    # IMPORTANT: task_id MUST match client_task_id passed to _execute_unified_remote,
-    # otherwise _execute_tests can't find the TaskCard to populate case_items.
     task_card = TaskCard.objects.create(
         task_id=task_id,
-        name=row.title,
+        name=task_name,
         creator="cli",
         task_type="web_automation",
         mode="immediate",
         device_serial="web",
-        case_ids=[case_id],
+        case_ids=case_ids,
         loop_count=loop_count,
         interval_seconds=timeout,
         status="queued",
@@ -380,102 +424,146 @@ def run_case(args):
     async def _exec():
         try:
             await _execute_unified_remote(
-                task_id, [test_case], loop_count, timeout,
+                task_id,
+                test_cases,
+                loop_count,
+                timeout,
                 client_task_id=task_id,
                 task_type="web_automation",
                 device_label="web",
             )
         except Exception:
             import traceback
+
             traceback.print_exc()
 
     asyncio.run(_exec())
 
-    # Collect results — TestRunRecord.run_id == task_id (passed as run_id to engine)
-    results = list(TestResult.objects.filter(run__run_id=task_id).values(
-        "case_id", "case_type", "result", "duration_ms", "detail",
-    ))
-    run_record = TestRunRecord.objects.filter(run_id=task_id).values(
-        "status", "summary", "started_at", "finished_at",
-    ).first()
+    # Collect results
+    results = list(
+        TestResult.objects.filter(run__run_id=task_id).values(
+            "case_id",
+            "case_type",
+            "result",
+            "duration_ms",
+            "detail",
+        )
+    )
+    run_record = (
+        TestRunRecord.objects.filter(run_id=task_id)
+        .values(
+            "status",
+            "summary",
+            "started_at",
+            "finished_at",
+        )
+        .first()
+    )
 
     passed = sum(1 for r in results if r["result"] == "pass")
     failed = sum(1 for r in results if r["result"] == "fail")
 
-    # TaskCard.case_items / overall_pass etc. are already populated by _execute_tests
-    # (it looks up TaskCard by client_task_id, which matches our task_id).
-    # Refresh from DB, then fix up any cosmetic state-machine issues.
+    # Build title lookup for logs
+    title_map = {r.id: r.title for r in rows}
+
     task_card.refresh_from_db()
 
-    # Build execution logs from TestResult details (WebSocket logs unavailable in CLI mode)
     now_str = datetime.now().strftime("%H:%M:%S")
     log_entries = [
-        {"time": now_str, "text": f"任务开始: [{case_id}] {row.title}", "level": "info"},
+        {
+            "time": now_str,
+            "text": f"任务开始: {len(case_ids)} 条用例, loop={loop_count}",
+            "level": "info",
+        },
     ]
     for i, r in enumerate(results):
         level = "success" if r["result"] == "pass" else "error"
-        log_entries.append({
+        case_title = title_map.get(r["case_id"], r["case_id"])
+        log_entries.append(
+            {
+                "time": now_str,
+                "text": f"  [{r['case_id']}] {case_title}: iter={r.get('iteration', '?')} {r['result']} ({r['duration_ms']:.0f}ms) — {r['detail']}",
+                "level": level,
+            }
+        )
+    log_entries.append(
+        {
             "time": now_str,
-            "text": f"  迭代 {i + 1}/{len(results)}: {r['result']} ({r['duration_ms']:.0f}ms) — {r['detail']}",
-            "level": level,
-        })
-    log_entries.append({
-        "time": now_str,
-        "text": f"任务完成: {passed}/{len(results)} 通过" + (f", {failed} 失败" if failed else ""),
-        "level": "success" if failed == 0 else "warn",
-    })
+            "text": f"任务完成: {passed}/{len(results)} 通过"
+            + (f", {failed} 失败" if failed else ""),
+            "level": "success" if failed == 0 else "warn",
+        }
+    )
 
-    # Fix outcome if engine left it as interrupted (state-machine race in sync CLI mode)
     if task_card.outcome == "interrupted" and task_card.status == "done":
         task_card.outcome = "completed"
 
-    # Build failed_steps from step_details for BUG section display
+    # Build failed_steps from step_details
     orm_results = TestResult.objects.filter(run__run_id=task_id)
     failed_steps = []
     for tr in orm_results:
-        for sd in (tr.step_details or []):
+        case_title = title_map.get(tr.case_id, tr.case_id)
+        for sd in tr.step_details or []:
             if sd.get("result") == "fail":
-                failed_steps.append({
-                    "caseId": tr.case_id,
-                    "caseTitle": row.title,
-                    "iteration": sd.get("iteration", tr.iteration),
-                    "stepIndex": sd.get("index", 0),
-                    "stepType": sd.get("type", ""),
-                    "description": sd.get("description", ""),
-                    "result": sd.get("error", "步骤执行失败"),
-                    "screenshot": sd.get("screenshot", ""),
-                    "_date": str(tr.created_at)[:19] if tr.created_at else "",
-                })
+                failed_steps.append(
+                    {
+                        "caseId": tr.case_id,
+                        "caseTitle": case_title,
+                        "iteration": sd.get("iteration", tr.iteration),
+                        "stepIndex": sd.get("index", 0),
+                        "stepType": sd.get("type", ""),
+                        "description": sd.get("description", ""),
+                        "result": sd.get("error", "步骤执行失败"),
+                        "screenshot": sd.get("screenshot", ""),
+                        "_date": str(tr.created_at)[:19] if tr.created_at else "",
+                    }
+                )
 
     task_card.logs = log_entries
     task_card.failed_steps = failed_steps
     task_card.save(update_fields=["outcome", "logs", "failed_steps"])
 
-    ok({
-        "task_id": task_id,
-        "case_id": case_id,
-        "title": row.title,
-        "loop_count": loop_count,
-        "status": run_record["status"] if run_record else "UNKNOWN",
-        "summary": run_record["summary"] if run_record else {},
-        "total": len(results),
-        "passed": passed,
-        "failed": failed,
-        "results": [
-            {
-                "case_id": r["case_id"],
-                "result": r["result"],
-                "duration_ms": r["duration_ms"],
-                "detail": (r["detail"] or "")[:200],
-            }
-            for r in results
-        ],
-    })
+    # Group results by case
+    by_case = {}
+    for r in results:
+        by_case.setdefault(r["case_id"], []).append(r)
+
+    ok(
+        {
+            "task_id": task_id,
+            "case_ids": case_ids,
+            "title": task_name,
+            "loop_count": loop_count,
+            "status": run_record["status"] if run_record else "UNKNOWN",
+            "summary": run_record["summary"] if run_record else {},
+            "total": len(results),
+            "passed": passed,
+            "failed": failed,
+            "results": [
+                {
+                    "case_id": r["case_id"],
+                    "result": r["result"],
+                    "duration_ms": r["duration_ms"],
+                    "detail": (r["detail"] or "")[:200],
+                }
+                for r in results
+            ],
+            "by_case": {
+                cid: {
+                    "title": title_map.get(cid, cid),
+                    "passed": sum(1 for r in crs if r["result"] == "pass"),
+                    "failed": sum(1 for r in crs if r["result"] == "fail"),
+                }
+                for cid, crs in by_case.items()
+            },
+        }
+    )
 
 
 # ═══════════════════════════════════════════
 # CLI parser
 # ═══════════════════════════════════════════
+
 
 def main():
     parser = argparse.ArgumentParser(description="CLI 工具 — 元素定位 + 用例管理 CRUD")
@@ -491,10 +579,26 @@ def main():
 
     p = esp.add_parser("create", help="创建 Web 元素")
     p.add_argument("--name", required=True, help="元素名称")
-    p.add_argument("--type", required=True, dest="type",
-                   choices=["css_selector", "xpath", "id", "class_name", "name", "tag_name",
-                            "link_text", "partial_link_text", "text", "test_id", "role", "placeholder"],
-                   help="定位器类型")
+    p.add_argument(
+        "--type",
+        required=True,
+        dest="type",
+        choices=[
+            "css_selector",
+            "xpath",
+            "id",
+            "class_name",
+            "name",
+            "tag_name",
+            "link_text",
+            "partial_link_text",
+            "text",
+            "test_id",
+            "role",
+            "placeholder",
+        ],
+        help="定位器类型",
+    )
     p.add_argument("--value", required=True, dest="value", help="定位器值")
     p.add_argument("--page-url", required=True, dest="page_url", help="页面 URL")
     p.add_argument("--group", help="元素分组名称")
@@ -534,21 +638,25 @@ def main():
     dsp = dp.add_subparsers(dest="action")
 
     p = dsp.add_parser("list", help="列出目录树")
-    p.add_argument("--type", choices=["web", "ui", "api", "storage"],
-                   default="web", help="用例类型")
+    p.add_argument(
+        "--type", choices=["web", "ui", "api", "storage"], default="web", help="用例类型"
+    )
     p.add_argument("--parent-id", type=int, dest="parent_id", help="只列出指定父级下的子目录")
 
     p = dsp.add_parser("create", help="创建目录")
     p.add_argument("--name", required=True, help="目录名称")
-    p.add_argument("--type", choices=["web", "ui", "api", "storage"],
-                   default="web", help="用例类型")
+    p.add_argument(
+        "--type", choices=["web", "ui", "api", "storage"], default="web", help="用例类型"
+    )
     p.add_argument("--parent-id", type=int, dest="parent_id", help="父级目录 ID")
 
     p = dsp.add_parser("tree", help="显示完整目录树")
 
     # ── run ──
     rp = sub.add_parser("run", help="执行测试任务")
-    rp.add_argument("--case-id", required=True, dest="case_id", help="要执行的用例 ID")
+    rp.add_argument(
+        "--case-id", required=True, dest="case_ids", nargs="+", help="要执行的用例 ID（支持多个）"
+    )
     rp.add_argument("--loop", type=int, default=1, help="循环次数 (默认 1)")
     rp.add_argument("--timeout", type=int, default=5, help="步骤间隔秒数 (默认 5)")
 

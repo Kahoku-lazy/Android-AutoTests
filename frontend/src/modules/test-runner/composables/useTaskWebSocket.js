@@ -155,6 +155,12 @@ export function applyWsMessage(task, msg, hooks = {}) {
         ci.fail = parseInt(msg.fail);
         ci.rate = 100;
       }
+      // Recalculate overall totals from authoritative per-case counts.
+      // iteration_result increments them incrementally but WebSocket messages
+      // can arrive out-of-order or be dropped; case_finished carries the
+      // canonical numbers, so recompute from all caseItems to stay accurate.
+      task.overallPass = (task.caseItems || []).reduce((s, c) => s + (c.pass || 0), 0);
+      task.overallFail = (task.caseItems || []).reduce((s, c) => s + (c.fail || 0), 0);
       save();
       break;
     case "run_finished":

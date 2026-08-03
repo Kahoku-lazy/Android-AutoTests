@@ -7,7 +7,6 @@ Models:
 - EvalResult: per-question score (machine + optional human review) within a run.
 """
 
-from django.conf import settings
 from django.db import models
 
 
@@ -36,15 +35,20 @@ class Question(models.Model):
     """A single test question."""
 
     bank = models.ForeignKey(
-        QuestionBank, on_delete=models.CASCADE, related_name="questions",
+        QuestionBank,
+        on_delete=models.CASCADE,
+        related_name="questions",
     )
     content = models.TextField()  # the question text
     expected_keywords = models.TextField(
-        default="", blank=True,
+        default="",
+        blank=True,
         help_text="Comma-separated keywords the answer should cover",
     )
     category = models.CharField(
-        max_length=50, default="general", blank=True,
+        max_length=50,
+        default="general",
+        blank=True,
         help_text="e.g. 平台功能, 测试流程, 设备管理, 用例设计",
     )
     order = models.IntegerField(default=0)
@@ -78,7 +82,10 @@ class EvalRun(models.Model):
         related_name="eval_runs",
     )
     bank = models.ForeignKey(
-        QuestionBank, on_delete=models.SET_NULL, null=True, blank=True,
+        QuestionBank,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="runs",
     )
     status = models.CharField(max_length=20, default="pending", choices=STATUS_CHOICES)
@@ -87,7 +94,8 @@ class EvalRun(models.Model):
 
     # Which evaluation framework to use
     framework = models.CharField(
-        max_length=30, default="self",
+        max_length=30,
+        default="self",
         help_text="self | evalscope | deepeval | maseval",
     )
     # Judge model config — separate from the agent under test
@@ -122,10 +130,15 @@ class EvalResult(models.Model):
     """Per-question scoring within an evaluation run."""
 
     run = models.ForeignKey(
-        EvalRun, on_delete=models.CASCADE, related_name="results",
+        EvalRun,
+        on_delete=models.CASCADE,
+        related_name="results",
     )
     question = models.ForeignKey(
-        Question, on_delete=models.SET_NULL, null=True, blank=True,
+        Question,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     question_text = models.TextField(default="", blank=True)
     agent_response = models.TextField(default="", blank=True)

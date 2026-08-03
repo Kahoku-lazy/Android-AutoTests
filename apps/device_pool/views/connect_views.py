@@ -1,19 +1,30 @@
 """Device connection endpoints — scan, connect, disconnect."""
+
 import json
+import logging
 import re
-import time
 import subprocess
+
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+import uiautomator2 as u2
+
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-import uiautomator2 as u2
-from .helpers import (
-    _adb_device_serials, _update_device_status, _delete_device_record,
-    _collect_device_info, _auto_assign_from_queue, _device_to_dict,
-    _release_internal,
-)
+
 from ..models import Device, DeviceLock
 from ..pool import device as device_pool
+from .helpers import (
+    _adb_device_serials,
+    _collect_device_info,
+    _delete_device_record,
+    _device_to_dict,
+    _release_internal,
+)
+
+
 @csrf_exempt
 def scan_device(request):
     """POST /api/devices/scan — ADB 扫描并注册设备。
@@ -146,6 +157,8 @@ def scan_device(request):
         )
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)})
+
+
 @csrf_exempt
 def connect_device(request, serial):
     """POST /api/devices/{serial} — 连接设备 + 自动激活 + 锁定。
@@ -301,6 +314,8 @@ def connect_device(request, serial):
             "android_version": dev.android_version,
         }
     )
+
+
 @csrf_exempt
 def disconnect_device(request, serial):
     """POST /api/devices/{serial}/disconnect — 断开设备。
@@ -329,7 +344,7 @@ def disconnect_device(request, serial):
 
     # 2. 权限校验（使用 JWT 验证的用户身份，不信任客户端提交的 is_admin）
     if dev.status == "BUSY" and (dev.occupied_by or dev.locked_by):
-        current_user = getattr(request, 'user_id', '') or data.get("user_id", "")
+        current_user = getattr(request, "user_id", "") or data.get("user_id", "")
 
         # 只有锁定者本人可以断开自己的设备
         if current_user and dev.locked_by != current_user:
@@ -373,7 +388,7 @@ def disconnect_device(request, serial):
     serial = dev.serial
     user = data.get("user_id", "system")
     _delete_device_record(dev, reason="force" if force else "disconnect")
-    print(f"[WARNING] 设备 {serial} 已被 {user} 断开并移除 (reason={reason or 'manual'})")
+    logger.warning("设备 %s 已被 %s 断开并移除 (reason=%s)", serial, user, reason or "manual")
 
     return JsonResponse(
         {
@@ -399,5 +414,3 @@ def disconnect_observe(request, serial):
 # ═══════════════════════════════════════════════
 # v2 endpoints (6)
 # ═══════════════════════════════════════════════
-
-

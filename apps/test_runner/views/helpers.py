@@ -1,14 +1,12 @@
 """test-runner HTTP routes — 10 endpoints under /api/runner/*."""
 
-import json
 import asyncio
 import functools
 import logging
-from datetime import datetime
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Count, Q
+
 from asgiref.sync import sync_to_async as _original_sta
+from django.http import JsonResponse
+
 
 # All sync_to_async in this file use thread_sensitive=False to avoid capturing
 # the request-scoped CurrentThreadExecutor which dies after the HTTP response,
@@ -20,8 +18,11 @@ from asgiref.sync import sync_to_async as _original_sta
 def _sta(fn):
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
-        from django.db import close_old_connections, OperationalError, ProgrammingError
-        import time, logging
+        import logging
+        import time
+
+        from django.db import OperationalError, ProgrammingError, close_old_connections
+
         _bg_log = logging.getLogger("test_runner.bg")
         max_retries = 3
         for attempt in range(max_retries):
@@ -31,44 +32,36 @@ def _sta(fn):
             except (OperationalError, ProgrammingError) as e:
                 if attempt < max_retries - 1:
                     wait = 1 * (attempt + 1)
-                    _bg_log.warning(f"_sta retry {attempt+1}/{max_retries} after {e.__class__.__name__}: {e}")
+                    _bg_log.warning(
+                        f"_sta retry {attempt + 1}/{max_retries} after {e.__class__.__name__}: {e}"
+                    )
                     time.sleep(wait)
                 else:
                     raise
+
     return _original_sta(wrapper, thread_sensitive=False)
 
-# Drop-in replacements for @sync_to_async decorator and sync_to_async(func)() calls
-_bg_sync = _sta           # decorator: @_bg_sync
-sync_to_async = _sta       # inline:   sync_to_async(func)(args)
 
-from models.step_types import TestStep
-from models.test_models import TestCaseDef
+# Drop-in replacements for @sync_to_async decorator and sync_to_async(func)() calls
+_bg_sync = _sta  # decorator: @_bg_sync
+sync_to_async = _sta  # inline:   sync_to_async(func)(args)
+
+from apps.device_pool.api import release_device as dp_release_device
+
+from .. import state_machine as sm
+from ..callbacks import test_callbacks
+from ..models import TaskCard
 from ..runner import (
-    TestRunner,
-    get_active_run,
-    stop_run,
-    is_device_busy,
-    mark_device_busy,
     mark_device_idle,
 )
-from ..runner import _active_runs as list_active_runs
-from ..runner import _device_executor as _u2_executor
-from ..executors.ui.connect import DeviceCheckError, check_and_connect_async
-from ..callbacks import test_callbacks
-from ..models import TestResult, TestRunRecord, TaskCard
-from .. import state_machine as sm
-from apps.device_pool.api import device
-from apps.device_pool.api import acquire_device as dp_acquire_device
-from apps.device_pool.api import release_device as dp_release_device
-from apps.device_pool.models import Device as PoolDevice
-from apps.case_manager.models import TestDefinition
 
 
 def require_auth(view_func):
     """Decorator: enforce JWT authentication. Returns 401 if no valid token.
     Supports both sync and async view functions."""
-    from functools import wraps
     import inspect
+
+    from functools import wraps
 
     if inspect.iscoroutinefunction(view_func):
 
@@ -112,7 +105,9 @@ _preflight_runs: dict = {}
 
 def _spawn_bg(coro, label: str = "bg"):
     """创建后台任务并保存引用,完成时记录异常(替代 fire-and-forget 吞错)。"""
-    import logging, traceback, sys
+    import logging
+    import traceback
+
     _bg_log = logging.getLogger("test_runner.bg")
     t = asyncio.create_task(coro)
     _bg_tasks.add(t)
@@ -124,8 +119,7 @@ def _spawn_bg(coro, label: str = "bg"):
             exc = task.exception()
             if exc is not None:
                 tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
-                _bg_log.error(f"后台任务 {label} 异常: {exc!r}\n{tb}")
-                print(f"[views] 后台任务 {label} 异常: {exc!r}", file=sys.stderr)
+                _bg_log.error("后台任务 %s 异常: %r\n%s", label, exc, tb)
             else:
                 _bg_log.info(f"后台任务 {label} 正常完成 (remaining={len(_bg_tasks)})")
         else:
@@ -133,6 +127,7 @@ def _spawn_bg(coro, label: str = "bg"):
 
     t.add_done_callback(_done)
     return t
+
 
 # u2.connect() 超时上限（秒）—— USB 松动 / ATX agent 卡死时快速失败，
 # 避免阻塞占用 _device_executor 线程 / Daphne 事件循环。
@@ -172,6 +167,7 @@ def _schedule_next_queued(serial: str):
     """Fire-and-forget: start the next queued task for a device."""
     if serial:
         from .execution import _start_next_queued  # lazy to avoid circular import
+
         _spawn_bg(_start_next_queued(serial), f"next_queued:{serial}")
 
 
@@ -207,6 +203,7 @@ async def _abort_run_before_execute(
     释放设备、把 TaskCard 推到 done 终态、通知前端。outcome='error' 或 'stopped'。
     """
     import logging
+
     _log = logging.getLogger("test_runner.bg")
     _log.info(f"_abort_run_before_execute: {run_id} error={error} outcome={outcome}")
     icon = "⏹" if outcome == "stopped" else "❌"
@@ -244,4 +241,3 @@ async def _abort_run_before_execute(
     _run_client_task.pop(run_id, None)
     _preflight_runs.pop(run_id, None)
     _schedule_next_queued(serial)
-

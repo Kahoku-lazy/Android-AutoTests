@@ -1,9 +1,20 @@
 """case-manager storage test case API — CRUD, batch."""
 
+__all__ = [
+    "batch_save_storage_definitions",
+    "get_storage_definition",
+    "get_storage_definitions",
+    "save_storage_definition",
+]
+
 import json
+import logging
+
+from .api_ui import ConflictError, _parse_datetime
 from .models import CaseDirectory
 from .models_storage import StorageTestCase
-from .api_ui import _parse_datetime, ConflictError
+
+logger = logging.getLogger(__name__)
 
 
 def get_storage_definitions(case_ids):
@@ -32,7 +43,10 @@ def save_storage_definition(case_id, merge=False, **fields):
         try:
             directory = CaseDirectory.objects.get(id=directory_id)
         except CaseDirectory.DoesNotExist:
-            pass
+            logger.warning(
+                "Directory %s not found when saving storage case, saving without directory",
+                directory_id,
+            )
 
     title = fields.get("title", "")
 
@@ -47,8 +61,11 @@ def save_storage_definition(case_id, merge=False, **fields):
 
     # Check duplicate title (skip when merging into existing case)
     if not merge or not existing:
-        dup = (StorageTestCase.objects.filter(directory=directory, title=title)
-               .exclude(id=case_id).first())
+        dup = (
+            StorageTestCase.objects.filter(directory=directory, title=title)
+            .exclude(id=case_id)
+            .first()
+        )
         if dup:
             dir_label = directory.name if directory else "根级（未分类）"
             raise ValueError(f"目录「{dir_label}」下已存在同名存储用例「{title}」")

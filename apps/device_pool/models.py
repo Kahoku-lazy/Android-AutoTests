@@ -23,9 +23,7 @@ class Device(models.Model):
     screen_h = models.IntegerField(default=0)
     android_version = models.CharField(max_length=20, default="", blank=True)
     connection_type = models.CharField(max_length=10, default="USB")  # USB | WIFI
-    status = models.CharField(
-        max_length=20, default="ONLINE"
-    )  # ONLINE | BUSY | OFFLINE
+    status = models.CharField(max_length=20, default="ONLINE")  # ONLINE | BUSY | OFFLINE
     # User binding: which login user exclusively owns this device
     locked_by = models.CharField(max_length=200, default="", blank=True)
     locked_at = models.DateTimeField(null=True, blank=True)
@@ -42,8 +40,8 @@ class Device(models.Model):
 
     class Meta:
         db_table = "dp_devices"
-        verbose_name = '设备'
-        verbose_name_plural = '设备'
+        verbose_name = "设备"
+        verbose_name_plural = "设备"
         indexes = [
             models.Index(fields=["status"]),
         ]
@@ -73,8 +71,8 @@ class DeviceLock(models.Model):
 
     class Meta:
         db_table = "dp_device_locks"
-        verbose_name = '设备锁'
-        verbose_name_plural = '设备锁'
+        verbose_name = "设备锁"
+        verbose_name_plural = "设备锁"
         indexes = [
             models.Index(fields=["device", "status"]),
         ]
@@ -122,8 +120,8 @@ class DeviceQueue(models.Model):
 
     class Meta:
         db_table = "dp_device_queue"
-        verbose_name = '设备队列'
-        verbose_name_plural = '设备队列'
+        verbose_name = "设备队列"
+        verbose_name_plural = "设备队列"
         ordering = ["requested_at"]
 
     def __str__(self):

@@ -1,9 +1,14 @@
 """ScreenshotStream — broadcasts screenshots to Channels consumers."""
-import json
+
 import asyncio
-import traceback
+import json
+import logging
+
 from django.conf import settings
+
 from apps.device_pool.api import device
+
+logger = logging.getLogger(__name__)
 
 
 class ScreenshotStream:
@@ -49,10 +54,12 @@ class ScreenshotStream:
             try:
                 current = device.current_serial
                 if not current:
-                    status_msg = json.dumps({
-                        "type": "no_device",
-                        "message": "未选择设备，请在上方选择或连接设备",
-                    })
+                    status_msg = json.dumps(
+                        {
+                            "type": "no_device",
+                            "message": "未选择设备，请在上方选择或连接设备",
+                        }
+                    )
                     if status_msg != self._last_status_msg:
                         self._last_status_msg = status_msg
                         await self._send_all(status_msg)
@@ -62,29 +69,33 @@ class ScreenshotStream:
                 if current != last_serial:
                     last_serial = current
                     info = await loop.run_in_executor(None, device.info)
-                    change_msg = json.dumps({
-                        "type": "device_changed",
-                        "serial": current,
-                        "screen_w": info.get("displayWidth", 0),
-                        "screen_h": info.get("displayHeight", 0),
-                    })
+                    change_msg = json.dumps(
+                        {
+                            "type": "device_changed",
+                            "serial": current,
+                            "screen_w": info.get("displayWidth", 0),
+                            "screen_h": info.get("displayHeight", 0),
+                        }
+                    )
                     self._last_device_msg = change_msg
                     self._last_status_msg = None
                     await self._send_all(change_msg)
 
                 b64 = await loop.run_in_executor(
-                    None, lambda: device.screenshot_b64(quality=50, max_width=720),
+                    None,
+                    lambda: device.screenshot_b64(quality=50, max_width=720),
                 )
                 msg = json.dumps({"type": "screenshot", "image": b64, "format": "jpeg"})
                 self._last_screenshot_msg = msg
                 await self._send_all(msg)
             except Exception as e:
-                print(f"Screenshot error: {e}")
-                traceback.print_exc()
-                err_msg = json.dumps({
-                    "type": "screenshot_error",
-                    "message": str(e)[:200],
-                })
+                logger.exception("Screenshot error: %s", e)
+                err_msg = json.dumps(
+                    {
+                        "type": "screenshot_error",
+                        "message": str(e)[:200],
+                    }
+                )
                 self._last_status_msg = err_msg
                 await self._send_all(err_msg)
             await asyncio.sleep(settings.SCREENSHOT_INTERVAL)

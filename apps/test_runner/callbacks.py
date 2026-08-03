@@ -5,8 +5,10 @@ TREP v1.0 Protocol 3: Scheduler → Frontend WebSocket events.
 - seq 递增序号，前端检测 gap → 触发对账
 - heartbeat 每 5s，前端 15s 无心跳 → 连接丢失指示
 """
-import json
+
 import asyncio
+import json
+
 from .runner import TestRunnerCallback
 
 
@@ -64,48 +66,102 @@ class WsTestCallback(TestRunnerCallback):
         await self._broadcast(run_id, {"type": "run_started", "run_id": run_id})
 
     async def on_case_started(self, run_id: str, case_id: str, case_title: str, loop_count: int):
-        await self._broadcast(run_id, {"type": "case_started", "run_id": run_id,
-                                        "case_id": case_id, "case_title": case_title,
-                                        "loop_count": loop_count})
+        await self._broadcast(
+            run_id,
+            {
+                "type": "case_started",
+                "run_id": run_id,
+                "case_id": case_id,
+                "case_title": case_title,
+                "loop_count": loop_count,
+            },
+        )
 
-    async def on_iteration_result(self, run_id: str, case_id: str,
-                                   iteration: int, result: str, duration_ms: float):
-        await self._broadcast(run_id, {"type": "iteration_result", "run_id": run_id,
-                                        "case_id": case_id, "iteration": iteration,
-                                        "result": result, "duration_ms": duration_ms})
+    async def on_iteration_result(
+        self, run_id: str, case_id: str, iteration: int, result: str, duration_ms: float
+    ):
+        await self._broadcast(
+            run_id,
+            {
+                "type": "iteration_result",
+                "run_id": run_id,
+                "case_id": case_id,
+                "iteration": iteration,
+                "result": result,
+                "duration_ms": duration_ms,
+            },
+        )
 
-    async def on_case_finished(self, run_id: str, case_id: str,
-                                pass_count: int, fail_count: int, rate: str):
-        await self._broadcast(run_id, {"type": "case_finished", "run_id": run_id,
-                                        "case_id": case_id, "pass": pass_count,
-                                        "fail": fail_count, "rate": rate})
+    async def on_case_finished(
+        self, run_id: str, case_id: str, pass_count: int, fail_count: int, rate: str
+    ):
+        await self._broadcast(
+            run_id,
+            {
+                "type": "case_finished",
+                "run_id": run_id,
+                "case_id": case_id,
+                "pass": pass_count,
+                "fail": fail_count,
+                "rate": rate,
+            },
+        )
 
-    async def on_step_started(self, run_id: str, case_id: str,
-                               iteration: int, step_index: int, total_steps: int,
-                               step_type: str, description: str):
-        await self._broadcast(run_id, {
-            "type": "step_started", "run_id": run_id,
-            "case_id": case_id, "iteration": iteration,
-            "step_index": step_index, "total_steps": total_steps,
-            "step_type": step_type, "description": description,
-        })
+    async def on_step_started(
+        self,
+        run_id: str,
+        case_id: str,
+        iteration: int,
+        step_index: int,
+        total_steps: int,
+        step_type: str,
+        description: str,
+    ):
+        await self._broadcast(
+            run_id,
+            {
+                "type": "step_started",
+                "run_id": run_id,
+                "case_id": case_id,
+                "iteration": iteration,
+                "step_index": step_index,
+                "total_steps": total_steps,
+                "step_type": step_type,
+                "description": description,
+            },
+        )
 
-    async def on_step_result(self, run_id: str, case_id: str,
-                              iteration: int, step_index: int, total_steps: int,
-                              step_type: str, description: str, result: str):
-        await self._broadcast(run_id, {
-            "type": "step_result", "run_id": run_id,
-            "case_id": case_id, "iteration": iteration,
-            "step_index": step_index, "total_steps": total_steps,
-            "step_type": step_type, "description": description,
-            "result": result,
-        })
+    async def on_step_result(
+        self,
+        run_id: str,
+        case_id: str,
+        iteration: int,
+        step_index: int,
+        total_steps: int,
+        step_type: str,
+        description: str,
+        result: str,
+    ):
+        await self._broadcast(
+            run_id,
+            {
+                "type": "step_result",
+                "run_id": run_id,
+                "case_id": case_id,
+                "iteration": iteration,
+                "step_index": step_index,
+                "total_steps": total_steps,
+                "step_type": step_type,
+                "description": description,
+                "result": result,
+            },
+        )
 
-    async def on_run_finished(self, run_id: str, summary: dict,
-                               log_path: str):
-        await self._broadcast(run_id, {"type": "run_finished", "run_id": run_id,
-                                        "summary": summary,
-                                        "log_path": log_path})
+    async def on_run_finished(self, run_id: str, summary: dict, log_path: str):
+        await self._broadcast(
+            run_id,
+            {"type": "run_finished", "run_id": run_id, "summary": summary, "log_path": log_path},
+        )
         self._seq.pop(run_id, None)  # 清理 seq 计数器
 
     async def on_device_error(self, run_id: str, error: str):

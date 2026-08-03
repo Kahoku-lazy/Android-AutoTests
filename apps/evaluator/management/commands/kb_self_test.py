@@ -11,8 +11,7 @@ check).  Outputs a scored report.
 from __future__ import annotations
 
 import json
-import os
-import sys
+
 from pathlib import Path
 
 from django.core.management.base import BaseCommand
@@ -41,13 +40,15 @@ class Command(BaseCommand):
         parser.add_argument("--detail", action="store_true", help="Show per-fragment details.")
 
     def handle(self, **options):
-        from agentscope_service.rag import document_store
+        from apps.ai_assistant.agent_scope import rag_service as document_store
 
         detail = options["detail"]
         output_path = options.get("output") or ""
 
         if detail:
-            self.stdout.write(f'ChromaDB collection: {document_store._get_collection().count()} docs\n')
+            self.stdout.write(
+                f"ChromaDB collection: {document_store._get_collection().count()} docs\n"
+            )
 
         results = []
         for query in KB_TEST_QUERIES:
@@ -58,19 +59,23 @@ class Command(BaseCommand):
                 source = meta.get("source", "")
                 # Verify: check if source file exists and content is present
                 verification = self._verify_fragment(d["content"], source)
-                verified.append({
-                    "source": source,
-                    "score": round(d["score"], 4),
-                    "content_preview": d["content"][:150],
-                    **verification,
-                })
+                verified.append(
+                    {
+                        "source": source,
+                        "score": round(d["score"], 4),
+                        "content_preview": d["content"][:150],
+                        **verification,
+                    }
+                )
 
-            results.append({
-                "query": query,
-                "total_hits": len(docs),
-                "top_score": round(docs[0]["score"], 4) if docs else 0,
-                "documents": verified,
-            })
+            results.append(
+                {
+                    "query": query,
+                    "total_hits": len(docs),
+                    "top_score": round(docs[0]["score"], 4) if docs else 0,
+                    "documents": verified,
+                }
+            )
 
             if detail:
                 status = "OK" if docs else "EMPTY"
@@ -93,9 +98,9 @@ class Command(BaseCommand):
             "test_queries": len(KB_TEST_QUERIES),
             "total_fragments": total_frags,
             "scores": {
-                "coverage": coverage,       # % of queries with results
-                "avg_relevance": avg_score, # avg top-hit distance score
-                "accuracy": accuracy,       # % of fragments found in source
+                "coverage": coverage,  # % of queries with results
+                "avg_relevance": avg_score,  # avg top-hit distance score
+                "accuracy": accuracy,  # % of fragments found in source
             },
             "details": results,
         }

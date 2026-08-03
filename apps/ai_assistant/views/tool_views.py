@@ -1,13 +1,18 @@
 """Platform tool listing endpoint — exposes the tool registry to the frontend."""
+
 import json
+import logging
 import shutil
 import subprocess
+
 from pathlib import Path
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from ..decorators import require_auth
+
+logger = logging.getLogger("ai_assistant")
 from ..models import AIAgent, AITool
 from ..permissions import check_agent_owner
 
@@ -15,19 +20,39 @@ from ..permissions import check_agent_owner
 def list_available_platform_tools(request):
     """GET /api/ai/available-tools — return all available platform business tools.
 
-    Returns tool names + descriptions so the frontend can render a
-    checkbox-based tool selection UI per agent.
+    Returns tools grouped by category with icon + color, so the frontend
+    can render module-level cards instead of a flat checkbox list.
     """
-    from agentscope_service.tools.factory import _TOOL_REGISTRY
+    from apps.ai_assistant.agent_scope.tool_registry import TOOL_CATEGORIES, TOOL_SCHEMAS
 
-    tools = [
-        {
-            "name": cls.name,
-            "description": (cls.description or "").strip(),
-        }
-        for cls in _TOOL_REGISTRY
-    ]
-    return JsonResponse({"ok": True, "tools": tools})
+    tools_by_category = {}
+    for t in TOOL_SCHEMAS:
+        cat = t.get("category", "其他")
+        if cat not in tools_by_category:
+            tools_by_category[cat] = []
+        tools_by_category[cat].append(
+            {
+                "name": t["name"],
+                "summary": t.get("summary", ""),
+                "icon": t.get("icon", ""),
+                "read_only": t.get("read_only", True),
+            }
+        )
+
+    categories = []
+    for c in TOOL_CATEGORIES:
+        key = c["key"]
+        if key in tools_by_category:
+            categories.append(
+                {
+                    "key": key,
+                    "icon": c["icon"],
+                    "color": c["color"],
+                    "tools": tools_by_category[key],
+                }
+            )
+
+    return JsonResponse({"ok": True, "categories": categories})
 
 
 def list_agent_tools(request, agent_id):
@@ -105,7 +130,7 @@ def delete_tool(request, agent_id, tool_id):
                 if skill_dir.exists() and str(skill_dir.resolve()).startswith(str(skills_root)):
                     shutil.rmtree(skill_dir)
         except Exception:
-            pass
+            logger.exception("Skill dir cleanup failed for tool_id=%s", tool_id)
 
     tool.delete()
     return JsonResponse({"ok": True})
@@ -180,7 +205,10 @@ def test_mcp(request, agent_id):
                 return JsonResponse({"ok": True, "connected": False, "detail": "命令为空"})
 
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=15,
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=15,
                 cwd=data.get("cwd") or None,
             )
             detail = f"进程已启动 (stdout: {(result.stdout or '').strip()[:100] or '无输出'})"
@@ -195,26 +223,34 @@ def test_mcp(request, agent_id):
                 return JsonResponse({"ok": True, "connected": False, "detail": "URL 为空"})
             try:
                 import httpx
+
                 resp = httpx.get(url, timeout=10, follow_redirects=True)
                 if 200 <= resp.status_code < 500:
-                    return JsonResponse({"ok": True, "connected": True,
-                        "detail": f"HTTP {resp.status_code}"})
-                return JsonResponse({"ok": True, "connected": False,
-                    "detail": f"HTTP {resp.status_code}"})
+                    return JsonResponse(
+                        {"ok": True, "connected": True, "detail": f"HTTP {resp.status_code}"}
+                    )
+                return JsonResponse(
+                    {"ok": True, "connected": False, "detail": f"HTTP {resp.status_code}"}
+                )
             except ImportError:
                 import urllib.request
+
                 try:
                     r = urllib.request.urlopen(url, timeout=10)
-                    return JsonResponse({"ok": True, "connected": True,
-                        "detail": f"HTTP {r.getcode()}"})
+                    return JsonResponse(
+                        {"ok": True, "connected": True, "detail": f"HTTP {r.getcode()}"}
+                    )
                 except Exception as e:
-                    return JsonResponse({"ok": True, "connected": False,
-                        "detail": f"连接失败: {e}"})
+                    return JsonResponse(
+                        {"ok": True, "connected": False, "detail": f"连接失败: {e}"}
+                    )
 
     except subprocess.TimeoutExpired:
         return JsonResponse({"ok": True, "connected": False, "detail": "命令超时 (15s)"})
     except FileNotFoundError:
-        return JsonResponse({"ok": True, "connected": False, "detail": f"命令未找到: {cmd[0] if cmd else '未知'}"})
+        return JsonResponse(
+            {"ok": True, "connected": False, "detail": f"命令未找到: {cmd[0] if cmd else '未知'}"}
+        )
     except Exception as e:
         return JsonResponse({"ok": True, "connected": False, "detail": str(e)[:200]})
 
@@ -222,8 +258,21 @@ def test_mcp(request, agent_id):
 # ── Skill upload ──
 
 SKILL_ALLOWED_EXTENSIONS = {
-    '.py', '.sh', '.bash', '.js', '.ts', '.json', '.yaml', '.yml',
-    '.md', '.markdown', '.txt', '.toml', '.cfg', '.ini', '.env',
+    ".py",
+    ".sh",
+    ".bash",
+    ".js",
+    ".ts",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".md",
+    ".markdown",
+    ".txt",
+    ".toml",
+    ".cfg",
+    ".ini",
+    ".env",
 }
 MAX_SKILL_TOTAL_SIZE = 50 * 1024 * 1024  # 50MB
 
@@ -236,14 +285,14 @@ def _detect_skill_features(dir_path):
     for fpath in dir_path.rglob("*"):
         if fpath.is_file() and fpath.suffix.lower() in SKILL_ALLOWED_EXTENSIONS:
             total_files += 1
-            ext = fpath.suffix.lower().lstrip('.')
+            ext = fpath.suffix.lower().lstrip(".")
             ext_counts[ext] = ext_counts.get(ext, 0) + 1
             try:
                 first_line = fpath.read_text(encoding="utf-8", errors="replace")[:100]
-                if first_line.startswith("#!") or 'if __name__' in first_line:
+                if first_line.startswith("#!") or "if __name__" in first_line:
                     cli_entries += 1
             except Exception:
-                pass
+                logger.debug("Failed to read file header: %s", fpath)
 
     parts = []
     if ext_counts:
@@ -291,10 +340,13 @@ def upload_skill(request, agent_id):
 
     total_size = sum(f.size for f in uploaded_files)
     if total_size > MAX_SKILL_TOTAL_SIZE:
-        return JsonResponse({
-            "ok": False,
-            "error": f"文件总大小 {total_size} 超过限制 {MAX_SKILL_TOTAL_SIZE}",
-        }, status=400)
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": f"文件总大小 {total_size} 超过限制 {MAX_SKILL_TOTAL_SIZE}",
+            },
+            status=400,
+        )
 
     skill_dir = Path(f"data/skills/{agent_id}/{skill_name}")
     skill_dir.mkdir(parents=True, exist_ok=True)
@@ -327,6 +379,7 @@ def upload_skill(request, agent_id):
     features = _detect_skill_features(skill_dir)
 
     from datetime import datetime
+
     manifest = {
         "name": skill_name,
         "file_count": file_count,
@@ -336,16 +389,20 @@ def upload_skill(request, agent_id):
         "created_at": str(datetime.now()),
     }
     (skill_dir / "_manifest.json").write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
-    config_json = json.dumps({
-        "dir_path": str(skill_dir.resolve()),
-        "original_name": skill_name,
-        "file_count": file_count,
-        "size_bytes": total_size,
-        "features": features,
-        "uploaded_at": str(datetime.now()),
-    }, ensure_ascii=False)
+    config_json = json.dumps(
+        {
+            "dir_path": str(skill_dir.resolve()),
+            "original_name": skill_name,
+            "file_count": file_count,
+            "size_bytes": total_size,
+            "features": features,
+            "uploaded_at": str(datetime.now()),
+        },
+        ensure_ascii=False,
+    )
 
     existing = AITool.objects.filter(agent=agent, name=skill_name, tool_type="skill").first()
     if existing:
@@ -362,15 +419,17 @@ def upload_skill(request, agent_id):
             enabled=True,
         )
 
-    return JsonResponse({
-        "ok": True,
-        "data": {
-            "id": tool.id,
-            "name": tool.name,
-            "tool_type": "skill",
-            "config_json": config_json,
-            "config": json.loads(config_json),
-            "enabled": tool.enabled,
-            "created_at": str(tool.created_at),
-        },
-    })
+    return JsonResponse(
+        {
+            "ok": True,
+            "data": {
+                "id": tool.id,
+                "name": tool.name,
+                "tool_type": "skill",
+                "config_json": config_json,
+                "config": json.loads(config_json),
+                "enabled": tool.enabled,
+                "created_at": str(tool.created_at),
+            },
+        }
+    )

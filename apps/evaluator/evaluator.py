@@ -13,6 +13,7 @@ import json
 import logging
 import re
 import time
+
 from datetime import datetime
 
 logger = logging.getLogger("evaluator")
@@ -169,7 +170,7 @@ def run_evaluation(
     This is designed to be called from a background thread.
     Returns a summary dict.
     """
-    from .models import EvalRun, EvalResult
+    from .models import EvalResult, EvalRun
 
     try:
         run = EvalRun.objects.select_related("agent", "bank").get(id=run_id)
@@ -194,7 +195,7 @@ def run_evaluation(
         run.save()
         return {"ok": False, "error": "Agent has no API key"}
 
-    from agentscope_service.provider_registry import get_provider_config
+    from apps.ai_assistant.agent_scope.provider_registry import get_provider_config
 
     provider_cfg = get_provider_config(agent.model_provider, agent.base_url)
 
@@ -265,13 +266,20 @@ def run_evaluation(
             total_conciseness += con
             scored_count += 1
 
-        results.append({
-            "question_id": q.id,
-            "question": q.content[:100],
-            "answer_preview": answer[:200],
-            "scores": {"relevance": rel, "accuracy": acc, "completeness": com, "conciseness": con},
-            "latency": answer_latency,
-        })
+        results.append(
+            {
+                "question_id": q.id,
+                "question": q.content[:100],
+                "answer_preview": answer[:200],
+                "scores": {
+                    "relevance": rel,
+                    "accuracy": acc,
+                    "completeness": com,
+                    "conciseness": con,
+                },
+                "latency": answer_latency,
+            }
+        )
 
         # Update progress
         run.completed_questions = i + 1
@@ -284,23 +292,28 @@ def run_evaluation(
         run.avg_completeness = round(total_completeness / scored_count, 2)
         run.avg_conciseness = round(total_conciseness / scored_count, 2)
         run.total_score = round(
-            (run.avg_relevance + run.avg_accuracy + run.avg_completeness + run.avg_conciseness) / 4, 2,
+            (run.avg_relevance + run.avg_accuracy + run.avg_completeness + run.avg_conciseness) / 4,
+            2,
         )
 
     run.status = "completed"
     run.finished_at = datetime.now()
-    run.report_json = json.dumps({
-        "questions_total": len(questions),
-        "questions_scored": scored_count,
-        "averages": {
-            "relevance": run.avg_relevance,
-            "accuracy": run.avg_accuracy,
-            "completeness": run.avg_completeness,
-            "conciseness": run.avg_conciseness,
+    run.report_json = json.dumps(
+        {
+            "questions_total": len(questions),
+            "questions_scored": scored_count,
+            "averages": {
+                "relevance": run.avg_relevance,
+                "accuracy": run.avg_accuracy,
+                "completeness": run.avg_completeness,
+                "conciseness": run.avg_conciseness,
+            },
+            "total_score": run.total_score,
+            "details": results,
         },
-        "total_score": run.total_score,
-        "details": results,
-    }, ensure_ascii=False, indent=2)
+        ensure_ascii=False,
+        indent=2,
+    )
     run.save()
 
     return {"ok": True, "total_score": run.total_score, "details": results}

@@ -26,12 +26,30 @@ def get_protected_running_task_ids() -> set[str]:
 
 
 def recover_stale_running_taskcards() -> int:
-    """仅将真正孤儿的 running TaskCard 标为 interrupted。返回修复数量。"""
+    """仅将真正孤儿的 running TaskCard 标为 interrupted。返回修复数量。
+
+    保护逻辑（两层）：
+    1. 进程内存保护列表（_run_client_task + _active_runs）
+    2. 活跃时间窗口：如果关联的 TestRunRecord 在 2 分钟内创建，说明有其他进程
+       （如 CLI）正在执行，不应标记为孤儿。
+    """
+    from datetime import timedelta
+
+    from django.utils.timezone import now as tz_now
+
     from .models import TaskCard
 
     with _recovery_lock:
         protected = get_protected_running_task_ids()
         stale = TaskCard.objects.filter(status="running").exclude(task_id__in=protected)
+
+        # 排除最近 2 分钟内有活跃 TestRunRecord 的卡片（跨进程保护）
+        recent_cutoff = (tz_now() - timedelta(minutes=2)).isoformat()
+        stale = stale.exclude(
+            run__isnull=False,
+            run__started_at__gt=recent_cutoff,
+        )
+
         count = stale.count()
         if count:
             stale.update(status="done", running=False, outcome="interrupted")

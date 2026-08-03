@@ -15,7 +15,7 @@ class AIAgent(models.Model):
         related_name="ai_agents",
     )
     name = models.CharField(max_length=200)
-    avatar = models.CharField(max_length=500, default="", blank=True)
+    avatar = models.TextField(default="", blank=True)
     tags = models.CharField(max_length=500, default="", blank=True)
     description = models.TextField(default="", blank=True)
     model_provider = models.CharField(max_length=50, default="dashscope")
@@ -46,15 +46,10 @@ class AIAgent(models.Model):
     # JSON object: {"Bash": true, "Read": true, "Write": false, ...}
     # Missing keys default to true (enabled).
     skills_config = models.JSONField(default=dict, blank=True)
-    # Per-agent SOP phase → tool name mapping for dynamic tool injection.
-    # JSON object: {"1": ["tool_a", "tool_b"], "2": ["tool_c"], ...}
-    # Empty dict = all tools injected regardless of phase (backward compatible).
-    # Each value is a list of tool names enabled for that SOP phase.
-    phase_tool_config = models.JSONField(default=dict, blank=True)
     # Per-agent knowledge base document filter.
-    # JSON list of enabled document IDs: ["doc:02-PRD/xxx.md", "ref:step_types", ...]
-    # Empty list or null = all documents enabled.
-    knowledge_sources = models.JSONField(default=list, blank=True)
+    # Dict: {"doc:id": true/false}.  Key presence = imported, value = enabled.
+    # Empty dict = no documents imported.
+    knowledge_sources = models.JSONField(default=dict, blank=True)
     status = models.CharField(max_length=20, default="active")
     # Health check fields
     last_checked_at = models.DateTimeField(null=True, blank=True)
@@ -62,6 +57,9 @@ class AIAgent(models.Model):
     available_models = models.TextField(default="", blank=True)  # JSON list of model names
     # AgentScope agent_id returned by POST /agent/ — needed to reference in chat/session calls
     agent_scope_id = models.CharField(max_length=100, default="", blank=True)
+    # Cached AgentScope credential — reused across sessions until API key / base_url changes
+    agent_scope_credential_id = models.CharField(max_length=100, default="", blank=True)
+    credential_hash = models.CharField(max_length=64, default="", blank=True)
     # Security: one-time API key reveal — set False on key change, True after first reveal
     key_revealed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -93,6 +91,30 @@ class AITool(models.Model):
 
     def __str__(self):
         return f"{self.name} [{self.tool_type}]"
+
+
+class AISharedTool(models.Model):
+    """Shared toolbox item — skills, tools, and extensions reusable across agents.
+
+    Unlike AITool (which is per-agent), items here are global and can be
+    imported into any agent via POST /agents/{id}/tools/import-from-toolbox.
+    """
+
+    name = models.CharField(max_length=200)
+    item_type = models.CharField(max_length=20)  # 'skill' | 'mcp' | 'extension'
+    description = models.TextField(default="", blank=True)
+    config_json = models.TextField(default="{}")
+    enabled = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "ai_shared_tools"
+        verbose_name = "共享工具"
+        verbose_name_plural = "共享工具"
+
+    def __str__(self):
+        return f"{self.name} [{self.item_type}]"
 
 
 class AIConversation(models.Model):

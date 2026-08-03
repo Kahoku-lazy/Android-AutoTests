@@ -1,12 +1,17 @@
 """Register all active Django agents with AgentScope on startup."""
-import os, json, requests
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
-import django; django.setup()
+import os
 
-from apps.ai_assistant.models import AIAgent
+import requests
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+import django
+
+django.setup()
+
+from apps.ai_assistant.agent_scope.provider_registry import get_provider_config
 from apps.ai_assistant.api import decrypt_key
-from agentscope_service.provider_registry import get_provider_config
+from apps.ai_assistant.models import AIAgent
 
 AGENTSCOPE_URL = "http://127.0.0.1:8000"
 
@@ -35,7 +40,10 @@ for a in AIAgent.objects.filter(status="active"):
         # Get JWT token from Django
         login_resp = requests.post(
             f"http://127.0.0.1:8765/api/ai/auth/login",
-            json={"username": os.environ.get("ADMIN_USER", "admin"), "password": os.environ.get("ADMIN_PASSWORD", "")},
+            json={
+                "username": os.environ.get("ADMIN_USER", "admin"),
+                "password": os.environ.get("ADMIN_PASSWORD", ""),
+            },
             timeout=5,
         )
         token = login_resp.json().get("access_token", "")

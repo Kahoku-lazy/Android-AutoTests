@@ -1,44 +1,12 @@
 /**
- * Step type definitions and field metadata — shared by StepEditor.vue and
- * the backend adapter for 10 device-control step types.
+ * 步骤字段定义 — 前端渲染 StepEditor 表单所需。
+ *
+ * STEP_TYPES 已迁移至后端 models/step_types.py::STEP_TYPE_META。
+ * 前端通过 GET /api/cases/step-types?target=xxx 拉取可用步骤类型。
+ * 此文件仅保留前端渲染所需的字段定义和标签。
  */
 
-export const STEP_TYPES = [
-  // ── 点击操作 ──
-  { value: 'click', label: '点击', icon: '👆', desc: '点击匹配的单个 UI 元素', group: '点击' },
-  { value: 'long_click', label: '长按', icon: '👇', desc: '长按指定元素', group: '点击' },
-  // ── 滑动操作 ──
-  { value: 'swipe', label: '滑动', icon: '👈', desc: '按方向滑动指定距离', group: '滑动' },
-  // ── 等待操作 ──
-  { value: 'wait', label: '等待出现', icon: '⏳', desc: '等待指定元素出现', group: '等待' },
-  { value: 'wait_disappear', label: '等待消失', icon: '⌛', desc: '等待元素从屏幕消失', group: '等待' },
-  { value: 'sleep', label: '暂停', icon: '💤', desc: '固定时长暂停（秒）', group: '等待' },
-  // ── 断言操作 ──
-  { value: 'verify_text', label: '验证文本', icon: '✅', desc: '校验元素文本是否匹配期望值', group: '断言' },
-  { value: 'poll_text', label: '轮询文本', icon: '📊', desc: '轮询等待元素文本变为期望值（显示检测耗时）', group: '断言' },
-  // ── 应用控制 ──
-  { value: 'start_app', label: '启动 App', icon: '▶️', desc: '启动目标 App（package name）', group: '应用' },
-  { value: 'kill_app', label: '停止 App', icon: '⏹', desc: '强制停止目标 App', group: '应用' },
-  // ── APP性能 ──
-  { value: 'perf_element_time', label: '等待元素出现耗时', icon: '⏱️', desc: '上一步完成后开始计时，元素出现后结束计时，超时则失败', group: 'APP性能' },
-  // ── 弹窗检测 ──
-  { value: 'wait_toast', label: '等待Toast', icon: '💬', desc: '等待指定文本的Toast消息出现，超时则失败', group: '弹窗' },
-  // ── 流程控制 ──
-  { value: 'if_element_appear', label: '如果元素出现', icon: '🔀', desc: '如果目标元素出现则执行子步骤，否则跳过', group: '流程控制', container: true },
-  { value: 'if_element_disappear', label: '如果元素消失', icon: '🔀', desc: '如果目标元素消失则执行子步骤，否则跳过', group: '流程控制', container: true },
-  { value: 'loop_n', label: '循环N次', icon: '🔁', desc: '重复执行子步骤N次', group: '流程控制', container: true },
-  { value: 'loop_elements', label: '遍历元素列表', icon: '📋', desc: '依次点击XPath列表中的每个元素（多个用|分隔），每次点击后执行子步骤', group: '流程控制', container: true },
-  // ── Web 自动化 ──
-  { value: 'web_navigate', label: '页面跳转', icon: '🔗', desc: '浏览器导航到指定 URL', group: 'Web 自动化' },
-  { value: 'web_click', label: '点击元素', icon: '👆', desc: '点击 CSS 选择器匹配的页面元素', group: 'Web 自动化' },
-  { value: 'web_fill', label: '填充输入', icon: '⌨️', desc: '向输入框填充文本内容', group: 'Web 自动化' },
-  { value: 'web_type', label: '逐字输入', icon: '⌨️', desc: '逐字符输入文本（模拟真实打字）', group: 'Web 自动化' },
-  { value: 'web_wait', label: '等待', icon: '⏳', desc: '等待元素出现或固定时间', group: 'Web 自动化' },
-  { value: 'web_assert', label: '验证文本', icon: '✅', desc: '验证页面上存在指定文本', group: 'Web 自动化' },
-  { value: 'web_screenshot', label: '截图', icon: '📸', desc: '截取当前页面截图用于报告', group: 'Web 自动化' },
-]
-
-export const APP_LIFECYCLE_TYPES = ['start_app', 'kill_app']
+export const APP_LIFECYCLE_TYPES = ['adb_start_app', 'adb_kill_app']
 
 export const STEP_FIELDS = {
   click:             { required: ['xpath'], optional: ['timeout', 'description'] },
@@ -47,24 +15,27 @@ export const STEP_FIELDS = {
   wait:              { required: ['xpath'], optional: ['timeout', 'description'] },
   wait_disappear:    { required: ['xpath'], optional: ['timeout', 'description'] },
   sleep:             { required: ['timeout'], optional: ['description'] },
+  screenshot:        { required: [], optional: ['description'] },
   verify_text:       { required: ['xpath', 'expected_text'], optional: ['timeout', 'description'] },
-  poll_text:         { required: ['xpath', 'expected_text'], optional: ['timeout', 'description'] },
-  start_app:          { required: ['xpath'], optional: ['description'] },
-  kill_app:           { required: ['xpath'], optional: ['description'] },
-  perf_element_time:   { required: ['xpath'], optional: ['timeout', 'description'] },
-  wait_toast:          { required: ['expected_text'], optional: ['timeout', 'description'] },
-  if_element_appear:   { required: ['xpath'], optional: ['timeout', 'description'] },
-  if_element_disappear:{ required: ['xpath'], optional: ['timeout', 'description'] },
-  loop_n:              { required: ['index'], optional: ['description'] },
-  loop_elements:       { required: ['xpath'], optional: ['index', 'description'] },
-  // ── Web 自动化字段 ──
-  web_navigate:        { required: ['url'], optional: ['description'] },
-  web_click:           { required: ['selector'], optional: ['description'] },
-  web_fill:            { required: ['selector', 'value'], optional: ['description'] },
-  web_type:            { required: ['selector', 'value'], optional: ['description'] },
-  web_wait:            { required: [], optional: ['selector', 'timeout', 'description'] },
-  web_assert:          { required: ['expected_text'], optional: ['timeout', 'description'] },
-  web_screenshot:      { required: [], optional: ['description'] },
+  adb_start_app:     { required: ['xpath'], optional: ['description'] },
+  adb_kill_app:      { required: ['xpath'], optional: ['description'] },
+  adb_wait_toast:    { required: ['expected_text'], optional: ['timeout', 'description'] },
+  adb_perf_element_time: { required: ['xpath'], optional: ['timeout', 'description'] },
+  adb_if_appear:     { required: ['xpath'], optional: ['timeout', 'description'] },
+  adb_if_disappear:  { required: ['xpath'], optional: ['timeout', 'description'] },
+  adb_loop_n:        { required: ['index'], optional: ['description'] },
+  adb_loop_elements: { required: ['xpath'], optional: ['index', 'description'] },
+  adb_poll_text:     { required: ['xpath', 'expected_text'], optional: ['timeout', 'description'] },
+  web_navigate:      { required: ['url'], optional: ['description'] },
+  web_fill:          { required: ['selector', 'value'], optional: ['description'] },
+  web_type:          { required: ['selector', 'value'], optional: ['description'] },
+  web_wait:          { required: [], optional: ['selector', 'timeout', 'description'] },
+  web_assert:        { required: ['expected_text'], optional: ['timeout', 'description'] },
+  // ── API ──
+  api_request:       { required: ['method', 'url'], optional: ['headers', 'body', 'extract', 'expected_status', 'description'] },
+  api_assert:        { required: ['assertions'], optional: ['expected_status', 'description'] },
+  api_sleep:         { required: ['timeout'], optional: ['description'] },
+  api_log:           { required: ['value'], optional: ['description'] },
 }
 
 export const FIELD_LABELS = {
@@ -72,6 +43,8 @@ export const FIELD_LABELS = {
   expected_text: '期望文本', direction: '方向', distance: '距离（像素）',
   index: '索引', description: '描述',
   selector: 'CSS 选择器', url: 'URL', value: '输入值',
+  method: 'HTTP 方法', headers: '请求头 (JSON)', body: '请求体 (JSON)',
+  extract: '变量提取', assertions: '断言规则', expected_status: '预期状态码',
 }
 
 export const DIRECTION_OPTIONS = [
@@ -86,9 +59,15 @@ export const FIELD_HINTS = {
   expected_text: '元素应包含的文本',
   direction: '滑动方向',
   distance: '默认 500 像素',
-  index: 'wait / poll_text 的轮询间隔秒数',
+  index: '循环次数或轮询间隔',
   description: '步骤描述（显示在报告）',
   selector: 'CSS 选择器，如 #login-btn / .menu-item / input[name="email"]',
-  url: '目标 URL（绝对路径或相对路径）',
+  url: '目标 URL，支持 {{var}} 变量引用',
   value: '要填充的文本内容',
+  method: 'HTTP 方法：GET / POST / PUT / DELETE / PATCH',
+  headers: '请求头 JSON 对象，支持 {{var}}',
+  body: '请求体 JSON 对象，支持 {{var}}',
+  extract: '从响应中提取变量：{"变量名": "$.json.path"}',
+  assertions: '断言规则列表：[{path, op, expect}]',
+  expected_status: '预期 HTTP 状态码（如 200、401）',
 }

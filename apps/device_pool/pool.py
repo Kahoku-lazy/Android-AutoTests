@@ -6,17 +6,18 @@ screenshot, click, swipe, app lifecycle, shell, text input.
 uiautomator2 (u2.Device) is kept ONLY for dump_hierarchy() and XPath queries.
 """
 
+import base64
 import io
 import logging
-import time
-import base64
 import threading
+import time
+
 import uiautomator2 as u2
+
 from airtest.core.android.android import Android
 from PIL import Image
 
 logger = logging.getLogger(__name__)
-from django.conf import settings
 
 
 class DevicePool:
@@ -25,10 +26,10 @@ class DevicePool:
     Airtest Android for device operations, uiautomator2 for UI hierarchy/XPath.
     """
 
-    _u2_instances: dict = {}       # serial → u2.Device (XPath + hierarchy only)
+    _u2_instances: dict = {}  # serial → u2.Device (XPath + hierarchy only)
     _airtest_instances: dict = {}  # serial → airtest Android (everything else)
     _lock = threading.Lock()
-    _op_lock = threading.Lock()    # serializes all device operations (was _u2_lock)
+    _op_lock = threading.Lock()  # serializes all device operations (was _u2_lock)
     _connection_types: dict = {}
     current_serial = ""
 
@@ -87,18 +88,18 @@ class DevicePool:
     def info(self) -> dict:
         """Get device display info via Airtest (cached 2s to avoid redundant ADB calls)."""
         now = time.monotonic()
-        cache = getattr(self, '_info_cache', None)
-        if cache and (now - cache['ts']) < 2.0:
-            return cache['data']
+        cache = getattr(self, "_info_cache", None)
+        if cache and (now - cache["ts"]) < 2.0:
+            return cache["data"]
         with DevicePool._op_lock:
             try:
                 result = dict(self.ad.display_info)
                 result["connection_type"] = self.get_connection_type()
-                self._info_cache = {'ts': now, 'data': result}
+                self._info_cache = {"ts": now, "data": result}
                 return result
             except Exception:
                 fallback = {"connection_type": self.get_connection_type()}
-                self._info_cache = {'ts': now, 'data': fallback}
+                self._info_cache = {"ts": now, "data": fallback}
                 return fallback
 
     # ── Screenshot ──
@@ -274,7 +275,7 @@ class DevicePool:
                 self.ad.shell("input keyevent KEYCODE_CLEAR")
                 time.sleep(0.1)
             except Exception:
-                pass
+                logger.debug("Shell keyevent failed, continuing")
         try:
             # Use Yosemite IME for reliable text input (Airtest built-in)
             self.ad.text(text)

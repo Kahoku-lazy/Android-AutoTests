@@ -26,7 +26,7 @@ function formatTime(seconds) {
     :visible="undefined"
   >
     <template #reference>
-      <span v-if="count" class="queue-badge">排队 {{ count }}</span>
+      <span v-show="count" class="queue-badge">排队 {{ count }}</span>
     </template>
 
     <template #default>

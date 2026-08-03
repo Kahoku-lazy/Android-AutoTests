@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import tempfile
+
 from pathlib import Path
 
 from ..frameworks import register
@@ -31,6 +32,7 @@ class EvalScopeAdapter(BaseAdapter):
     def is_available() -> bool:
         try:
             import evalscope  # noqa: F401
+
             return True
         except ImportError:
             return False
@@ -56,8 +58,6 @@ class EvalScopeAdapter(BaseAdapter):
             base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
         try:
-            import runpy
-            import sys
             from asyncio import to_thread
 
             # Build a temporary Python script that runs EvalScope on our dataset
@@ -82,17 +82,18 @@ class EvalScopeAdapter(BaseAdapter):
     ) -> AdapterResult:
         """Synchronous EvalScope runner — runs in a thread."""
         from evalscope import TaskConfig, run_task
-        from evalscope.api.dataset import SampleDataset
         from evalscope.constants import EvalType
 
         # Build a custom dataset from our questions
         dataset = []
         for i, q in enumerate(questions):
-            dataset.append({
-                "id": i,
-                "query": q.get("content", ""),
-                "reference": q.get("expected_keywords", ""),
-            })
+            dataset.append(
+                {
+                    "id": i,
+                    "query": q.get("content", ""),
+                    "reference": q.get("expected_keywords", ""),
+                }
+            )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             dataset_path = Path(tmpdir) / "custom_dataset.jsonl"
@@ -136,16 +137,15 @@ class EvalScopeAdapter(BaseAdapter):
 
             # Build per-question items
             for i, q in enumerate(questions):
-                items.append({
-                    "question": q.get("content", "")[:200],
-                    "score": None,
-                    "note": "see raw output",
-                })
+                items.append(
+                    {
+                        "question": q.get("content", "")[:200],
+                        "score": None,
+                        "note": "see raw output",
+                    }
+                )
         except Exception:
-            items = [
-                {"question": q.get("content", "")[:200], "score": None}
-                for q in questions
-            ]
+            items = [{"question": q.get("content", "")[:200], "score": None} for q in questions]
 
         return AdapterResult(
             ok=True,

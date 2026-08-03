@@ -1,7 +1,9 @@
 """case-manager lock & visibility endpoints — generalized across all three case types."""
 
 import json
+
 from datetime import datetime
+
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -22,7 +24,7 @@ def acquire_edit_lock(request, case_id):
     if request.method != "POST":
         return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
 
-    current_user = _resolve_username(getattr(request, 'user_id', None))
+    current_user = _resolve_username(getattr(request, "user_id", None))
     if not current_user:
         return JsonResponse({"ok": False, "error": "未登录"}, status=401)
 
@@ -35,7 +37,9 @@ def acquire_edit_lock(request, case_id):
     # Permission check: deny non-authorized users
     if case.created_by != current_user:
         if case.permission == "readonly":
-            return JsonResponse({"ok": False, "error": "此用例为只读模式，仅创建者可编辑"}, status=423)
+            return JsonResponse(
+                {"ok": False, "error": "此用例为只读模式，仅创建者可编辑"}, status=423
+            )
         if case.permission == "restricted":
             editors = json.loads(case.permitted_editors or "[]")
             if current_user not in editors:
@@ -46,24 +50,29 @@ def acquire_edit_lock(request, case_id):
         if case.editing_since:
             elapsed = (now - case.editing_since).total_seconds()
             if elapsed < EDIT_LOCK_TIMEOUT_SECONDS:
-                return JsonResponse({
-                    "ok": False,
-                    "error": f"用例正被 {case.editing_by} 编辑中",
-                    "editing_by": case.editing_by,
-                    "editing_since": str(case.editing_since),
-                }, status=423)
+                return JsonResponse(
+                    {
+                        "ok": False,
+                        "error": f"用例正被 {case.editing_by} 编辑中",
+                        "editing_by": case.editing_by,
+                        "editing_since": str(case.editing_since),
+                    },
+                    status=423,
+                )
 
     # Acquire or refresh lock
     case.editing_by = current_user
     case.editing_since = now
     case.save(update_fields=["editing_by", "editing_since"])
 
-    return JsonResponse({
-        "ok": True,
-        "editing_by": current_user,
-        "editing_since": now.isoformat(),
-        "created_by": case.created_by,
-    })
+    return JsonResponse(
+        {
+            "ok": True,
+            "editing_by": current_user,
+            "editing_since": now.isoformat(),
+            "created_by": case.created_by,
+        }
+    )
 
 
 @csrf_exempt
@@ -75,7 +84,7 @@ def release_edit_lock(request, case_id):
     if request.method != "POST":
         return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
 
-    current_user = _resolve_username(getattr(request, 'user_id', None))
+    current_user = _resolve_username(getattr(request, "user_id", None))
     if not current_user:
         return JsonResponse({"ok": False, "error": "未登录"}, status=401)
 
@@ -92,10 +101,13 @@ def release_edit_lock(request, case_id):
 
     if force:
         if case.created_by and case.created_by != current_user:
-            return JsonResponse({
-                "ok": False,
-                "error": "只有用例创建者可以强制解除编辑锁",
-            }, status=403)
+            return JsonResponse(
+                {
+                    "ok": False,
+                    "error": "只有用例创建者可以强制解除编辑锁",
+                },
+                status=403,
+            )
         case.editing_by = ""
         case.editing_since = None
         case.save(update_fields=["editing_by", "editing_since"])
@@ -103,10 +115,13 @@ def release_edit_lock(request, case_id):
 
     # Normal unlock: only the lock holder or creator can release
     if case.editing_by and case.editing_by != current_user and case.created_by != current_user:
-        return JsonResponse({
-            "ok": False,
-            "error": "只有编辑者或创建者可以释放编辑锁",
-        }, status=403)
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "只有编辑者或创建者可以释放编辑锁",
+            },
+            status=403,
+        )
 
     if not case.editing_by:
         return JsonResponse({"ok": True, "already_unlocked": True})
@@ -123,7 +138,7 @@ def case_lock(request, case_id):
     if request.method != "POST":
         return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
 
-    current_user = _resolve_username(getattr(request, 'user_id', None))
+    current_user = _resolve_username(getattr(request, "user_id", None))
     if not current_user:
         return JsonResponse({"ok": False, "error": "未登录"}, status=401)
 
@@ -145,7 +160,7 @@ def case_unlock(request, case_id):
     if request.method != "POST":
         return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
 
-    current_user = _resolve_username(getattr(request, 'user_id', None))
+    current_user = _resolve_username(getattr(request, "user_id", None))
     if not current_user:
         return JsonResponse({"ok": False, "error": "未登录"}, status=401)
 
@@ -170,7 +185,7 @@ def set_visibility(request, case_id):
     if request.method != "POST":
         return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
 
-    current_user = _resolve_username(getattr(request, 'user_id', None))
+    current_user = _resolve_username(getattr(request, "user_id", None))
     if not current_user:
         return JsonResponse({"ok": False, "error": "未登录"}, status=401)
 

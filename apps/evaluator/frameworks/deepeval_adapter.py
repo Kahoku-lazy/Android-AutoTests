@@ -8,7 +8,6 @@ AnswerRelevancy / Faithfulness / GEval metrics.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 
 from ..frameworks import register
@@ -29,6 +28,7 @@ class DeepEvalAdapter(BaseAdapter):
     def is_available() -> bool:
         try:
             import deepeval  # noqa: F401
+
             return True
         except ImportError:
             return False
@@ -49,7 +49,9 @@ class DeepEvalAdapter(BaseAdapter):
             from asyncio import to_thread
 
             result = await to_thread(
-                self._run_sync, agent_config, questions,
+                self._run_sync,
+                agent_config,
+                questions,
             )
             return result
         except Exception as e:
@@ -108,7 +110,11 @@ class DeepEvalAdapter(BaseAdapter):
         if provider == "dashscope":
             url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
         else:
-            url = f"{base_url.rstrip('/')}/chat/completions" if base_url else "https://api.openai.com/v1/chat/completions"
+            url = (
+                f"{base_url.rstrip('/')}/chat/completions"
+                if base_url
+                else "https://api.openai.com/v1/chat/completions"
+            )
 
         messages = []
         sys_prompt = agent_config.get("system_prompt", "")
@@ -146,12 +152,14 @@ class DeepEvalAdapter(BaseAdapter):
                     total += float(score)
                     scored += 1
 
-                items.append({
-                    "question": questions[i].get("content", "")[:200]
-                    if i < len(questions)
-                    else "?",
-                    "metrics": metrics_data,
-                })
+                items.append(
+                    {
+                        "question": questions[i].get("content", "")[:200]
+                        if i < len(questions)
+                        else "?",
+                        "metrics": metrics_data,
+                    }
+                )
         except Exception:
             items = [
                 {"question": q.get("content", "")[:200], "note": "see raw output"}

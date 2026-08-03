@@ -2,17 +2,18 @@
 Screenshot annotator — draws AI operation markers (red rects, text labels)
 onto Web execution screenshots using PIL.
 """
+
 from __future__ import annotations
 
 import os
+
 from PIL import Image, ImageDraw, ImageFont
 
-
 # ── Colour palette (RGBA) ──
-AI_RED = (244, 67, 54, 230)       # click / fail outline
-AI_BLUE = (33, 150, 243, 230)     # fill input outline
-AI_GREEN = (76, 175, 80, 230)     # assert outline
-AI_LABEL_BG = (0, 0, 0, 190)       # label background
+AI_RED = (244, 67, 54, 230)  # click / fail outline
+AI_BLUE = (33, 150, 243, 230)  # fill input outline
+AI_GREEN = (76, 175, 80, 230)  # assert outline
+AI_LABEL_BG = (0, 0, 0, 190)  # label background
 AI_PASS = (76, 175, 80, 240)
 AI_FAIL = (244, 67, 54, 240)
 AI_WHITE = (255, 255, 255, 240)
@@ -153,9 +154,18 @@ def _text_size(draw, text: str, font) -> tuple[int, int]:
 
 def _type_label(step_type: str) -> str:
     return {
-        "web_navigate": "NAV", "web_click": "CLICK", "web_fill": "FILL",
-        "web_type": "TYPE", "web_wait": "WAIT", "web_assert": "ASSERT",
-        "web_screenshot": "SHOT", "web_step": "STEP",
-        "click": "CLICK", "wait": "WAIT", "sleep": "SLEEP",
-        "screenshot": "SHOT", "long_click": "LONG", "swipe": "SWIPE",
+        "web_navigate": "NAV",
+        "web_click": "CLICK",
+        "web_fill": "FILL",
+        "web_type": "TYPE",
+        "web_wait": "WAIT",
+        "web_assert": "ASSERT",
+        "web_screenshot": "SHOT",
+        "web_step": "STEP",
+        "click": "CLICK",
+        "wait": "WAIT",
+        "sleep": "SLEEP",
+        "screenshot": "SHOT",
+        "long_click": "LONG",
+        "swipe": "SWIPE",
     }.get(step_type, step_type[:8].upper())

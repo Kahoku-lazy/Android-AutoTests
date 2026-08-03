@@ -27,6 +27,13 @@ const summary = ref(null)
 const bugSummary = ref(null)
 const loading = ref(false)
 const error = ref(null)
+const lastUpdated = computed(() => {
+  if (!runs.value.length) return ''
+  const latest = runs.value.reduce((a, b) =>
+    new Date(a.started_at) > new Date(b.started_at) ? a : b
+  )
+  return formatTime(latest.started_at)
+})
 const activeFilter = ref('all')
 const dateRange = ref([])
 const filterRunId = ref('')
@@ -327,7 +334,7 @@ function openCaseBreakdown(type, tab = 'detail') {
 
               <!-- Pass rate with progress bar -->
               <template #cell-rate="{ record }">
-                <RateBar :rate="record.rate" :show-fail="record.failed > 0" />
+                <RateBar :rate="record.rate ?? 0" :show-fail="record.failed > 0" />
               </template>
 
               <!-- Status badge -->

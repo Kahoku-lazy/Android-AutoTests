@@ -63,6 +63,8 @@ async function loadTree() {
     if (data.ok) {
       treeCache.value[activeTab.value] = data.tree;
       error.value = "";
+    } else {
+      error.value = data.error || "加载目录失败";
     }
   } catch (e) {
     error.value = "加载目录失败，请检查网络连接";
@@ -143,10 +145,7 @@ onUnmounted(() => {
       icon-gradient="linear-gradient(135deg,var(--c-workflow),#60a5fa)"
     />
 
-    <ErrorState v-if="error" :message="error" @retry="loadTree" />
-
     <AppTabs
-      v-if="!error"
       :items="tabs"
       :model-value="activeTab"
       @update:model-value="onTabChange"
@@ -157,7 +156,9 @@ onUnmounted(() => {
       <template v-for="tab in tabList" :key="tab.key" #[tab.key]>
         <div :ref="setCaseLayoutRef" class="doc-body case-layout" :class="{ 'case-layout--resizing': isResizingSidebar }">
           <aside class="case-sidebar" :style="{ width: sidebarWidth + 'px' }">
+            <ErrorState v-if="error" :message="error" @retry="loadTree" />
             <DirectoryTree
+              v-else
               :tree-data="currentTree"
               :active-id="activeTreeId"
               :case-type="tab.caseType"

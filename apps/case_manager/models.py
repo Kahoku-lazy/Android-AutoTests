@@ -35,8 +35,8 @@ class CaseDirectory(models.Model):
                 name="unique_directory_parent_name_type",
             ),
         ]
-        verbose_name = '用例目录'
-        verbose_name_plural = '用例目录'
+        verbose_name = "用例目录"
+        verbose_name_plural = "用例目录"
 
     def __str__(self):
         prefix = f"{self.parent.name} / " if self.parent else ""
@@ -94,21 +94,27 @@ class TestDefinition(models.Model):
     locked = models.BooleanField(default=False)
     # ── 可见性控制 ──
     visibility = models.CharField(
-        max_length=20, default="public",
+        max_length=20,
+        default="public",
         choices=[("public", "所有人可见"), ("hidden", "仅创建者"), ("restricted", "指定用户")],
     )
     permitted_users = models.TextField(default="[]", blank=True)  # JSON: ["user1","user2"]
     # ── 编辑权限 ──
     permission = models.CharField(
-        max_length=20, default="edit",
-        choices=[("edit", "所有人可编辑"), ("readonly", "所有人只读"), ("restricted", "指定用户可编辑")],
+        max_length=20,
+        default="edit",
+        choices=[
+            ("edit", "所有人可编辑"),
+            ("readonly", "所有人只读"),
+            ("restricted", "指定用户可编辑"),
+        ],
     )
     permitted_editors = models.TextField(default="[]", blank=True)  # JSON: ["user1","user2"]
 
     class Meta:
         db_table = "cm_test_definitions"
-        verbose_name = '用例定义'
-        verbose_name_plural = '用例定义'
+        verbose_name = "用例定义"
+        verbose_name_plural = "用例定义"
         constraints = [
             models.UniqueConstraint(
                 fields=["directory", "title"],
@@ -121,6 +127,6 @@ class TestDefinition(models.Model):
 
 
 # Re-export for backward-compatible imports
-from .models_storage import StorageTestCase  # noqa: E402, F401
 from .models_api import ApiTestCase  # noqa: E402, F401
+from .models_storage import StorageTestCase  # noqa: E402, F401
 from .models_web import WebTestCase  # noqa: E402, F401

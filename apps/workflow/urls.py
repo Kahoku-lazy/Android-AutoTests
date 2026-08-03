@@ -1,7 +1,10 @@
 """workflow URL routing under /api/workflow/."""
 
 from django.urls import path
+
 from . import views
+
+app_name = "workflow"
 
 urlpatterns = [
     path("directories", views.directory_list, name="wf_dir_list"),

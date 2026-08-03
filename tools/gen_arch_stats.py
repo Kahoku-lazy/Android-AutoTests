@@ -13,17 +13,17 @@ Architecture stats generator — 扫描代码库，输出当前架构的可度�
   python tools/gen_arch_stats.py --check-md    # 对比 项目架构.md，输出 drift 报告
 """
 
+from collections import defaultdict
 import json
-import os
+from pathlib import Path
 import re
 import sys
-from collections import defaultdict
-from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 # ── 1. Django App 扫描 ──
+
 
 def scan_django_apps():
     """扫描 apps/ 下所有 Django App，返回结构化数据。"""
@@ -35,10 +35,13 @@ def scan_django_apps():
         if not (d / "__init__.py").exists() and not (d / "models.py").exists():
             continue
 
-        app = {"name": d.name, "has_models": (d / "models.py").exists(),
-               "has_views": (d / "views.py").exists() or (d / "views").is_dir(),
-               "has_api": (d / "api.py").exists(),
-               "has_urls": (d / "urls.py").exists()}
+        app = {
+            "name": d.name,
+            "has_models": (d / "models.py").exists(),
+            "has_views": (d / "views.py").exists() or (d / "views").is_dir(),
+            "has_api": (d / "api.py").exists(),
+            "has_urls": (d / "urls.py").exists(),
+        }
 
         # 统计表数量
         app["table_count"] = 0
@@ -72,6 +75,7 @@ def scan_django_apps():
 
 # ── 2. AgentScope Tool 扫描 ──
 
+
 def scan_tools():
     """扫描 agentscope_service/tools/ 下所有 Tool。"""
     tools_dir = PROJECT_ROOT / "agentscope_service" / "tools"
@@ -85,21 +89,29 @@ def scan_tools():
             # 提取 description
             desc_match = re.search(
                 rf"class\s+{cls_name}\s*\(.*?\).*?\n\s+name\s*=\s*['\"]([^'\"]+)['\"]",
-                content, re.DOTALL
+                content,
+                re.DOTALL,
             )
             tool_name = desc_match.group(1) if desc_match else cls_name
             # 提取 is_read_only
-            readonly = "is_read_only = True" in content.split(f"class {cls_name}")[1].split("class")[0] if f"class {cls_name}" in content else False
-            tools.append({
-                "name": tool_name,
-                "class": cls_name,
-                "file": py_file.name,
-                "is_read_only": readonly,
-            })
+            readonly = (
+                "is_read_only = True" in content.split(f"class {cls_name}")[1].split("class")[0]
+                if f"class {cls_name}" in content
+                else False
+            )
+            tools.append(
+                {
+                    "name": tool_name,
+                    "class": cls_name,
+                    "file": py_file.name,
+                    "is_read_only": readonly,
+                }
+            )
     return tools
 
 
 # ── 3. 前端模块扫描 ──
+
 
 def scan_frontend_modules():
     """扫描 frontend/src/modules/ 下所有模块。"""
@@ -130,6 +142,7 @@ def scan_frontend_modules():
 
 # ── 4. 文件体积违规扫描 ──
 
+
 def scan_file_size_violations(py_limit=400, vue_limit=500):
     """扫描超标文件。"""
     violations = []
@@ -141,13 +154,15 @@ def scan_file_size_violations(py_limit=400, vue_limit=500):
             continue
         lines = len(py_file.read_text(encoding="utf-8").splitlines())
         if lines > py_limit:
-            violations.append({
-                "file": str(py_file.relative_to(PROJECT_ROOT)),
-                "lines": lines,
-                "limit": py_limit,
-                "excess": lines - py_limit,
-                "type": "python",
-            })
+            violations.append(
+                {
+                    "file": str(py_file.relative_to(PROJECT_ROOT)),
+                    "lines": lines,
+                    "limit": py_limit,
+                    "excess": lines - py_limit,
+                    "type": "python",
+                }
+            )
 
     # AgentScope tools
     tools_dir = PROJECT_ROOT / "agentscope_service"
@@ -156,32 +171,37 @@ def scan_file_size_violations(py_limit=400, vue_limit=500):
             continue
         lines = len(py_file.read_text(encoding="utf-8").splitlines())
         if lines > py_limit:
-            violations.append({
-                "file": str(py_file.relative_to(PROJECT_ROOT)),
-                "lines": lines,
-                "limit": py_limit,
-                "excess": lines - py_limit,
-                "type": "python",
-            })
+            violations.append(
+                {
+                    "file": str(py_file.relative_to(PROJECT_ROOT)),
+                    "lines": lines,
+                    "limit": py_limit,
+                    "excess": lines - py_limit,
+                    "type": "python",
+                }
+            )
 
     # Vue 文件
     frontend_dir = PROJECT_ROOT / "frontend" / "src"
     for vue_file in frontend_dir.rglob("*.vue"):
         lines = len(vue_file.read_text(encoding="utf-8").splitlines())
         if lines > vue_limit:
-            violations.append({
-                "file": str(vue_file.relative_to(PROJECT_ROOT)),
-                "lines": lines,
-                "limit": vue_limit,
-                "excess": lines - vue_limit,
-                "type": "vue",
-            })
+            violations.append(
+                {
+                    "file": str(vue_file.relative_to(PROJECT_ROOT)),
+                    "lines": lines,
+                    "limit": vue_limit,
+                    "excess": lines - vue_limit,
+                    "type": "vue",
+                }
+            )
 
     violations.sort(key=lambda v: -v["excess"])
     return violations
 
 
 # ── 5. 跨模块依赖扫描 ──
+
 
 def scan_cross_app_imports():
     """扫描跨 App import 关系。"""
@@ -214,6 +234,7 @@ def scan_cross_app_imports():
 
 
 # ── 5b. 跨模块 ORM 写违规扫描（防火墙 #2）──
+
 
 # 已知违规白名单加载
 def _load_boundary_whitelist():
@@ -261,10 +282,16 @@ def scan_orm_write_violations():
     # Pattern 3: ModelName.objects.filter(...).update( — queryset UPDATE
     # Pattern 4: ModelName.objects.filter(...).delete( — queryset DELETE
     WRITE_PATTERNS = [
-        (r'\b({model})\s*\.\s*objects\s*\.\s*create\s*\(', 'objects.create()'),
-        (r'\b({model})\s*\.\s*objects\s*\.\s*update\s*\(', 'objects.update()'),
-        (r'\b({model})\s*\.\s*objects\s*\.\s*filter\s*\([^)]*\)\s*\.\s*update\s*\(', 'filter().update()'),
-        (r'\b({model})\s*\.\s*objects\s*\.\s*filter\s*\([^)]*\)\s*\.\s*delete\s*\(', 'filter().delete()'),
+        (r"\b({model})\s*\.\s*objects\s*\.\s*create\s*\(", "objects.create()"),
+        (r"\b({model})\s*\.\s*objects\s*\.\s*update\s*\(", "objects.update()"),
+        (
+            r"\b({model})\s*\.\s*objects\s*\.\s*filter\s*\([^)]*\)\s*\.\s*update\s*\(",
+            "filter().update()",
+        ),
+        (
+            r"\b({model})\s*\.\s*objects\s*\.\s*filter\s*\([^)]*\)\s*\.\s*delete\s*\(",
+            "filter().delete()",
+        ),
     ]
 
     # Scan all source files
@@ -287,13 +314,13 @@ def scan_orm_write_violations():
             # Find which models this file imports from OTHER apps
             imported_models = {}  # {ModelName: source_app}
             for m in re.finditer(
-                r'from\s+apps\.(\w+)\s*\.\s*models\s+import\s+([^#\n]+)',
+                r"from\s+apps\.(\w+)\s*\.\s*models\s+import\s+([^#\n]+)",
                 content,
             ):
                 source_app = m.group(1)
                 imported_str = m.group(2)
                 # Extract individual model names from the import
-                names = re.findall(r'\b(\w+)\b', imported_str.split('#')[0])
+                names = re.findall(r"\b(\w+)\b", imported_str.split("#")[0])
                 for name in names:
                     if name in model_to_app and model_to_app[name] == source_app:
                         imported_models[name] = source_app
@@ -316,15 +343,17 @@ def scan_orm_write_violations():
                     compiled = re.compile(pattern.format(model=model_name))
                     matches = list(compiled.finditer(content))
                     for match in matches:
-                        line_no = content[:match.start()].count("\n") + 1
-                        violations.append({
-                            "file": rel_path,
-                            "line": line_no,
-                            "model": model_name,
-                            "source_app": source_app,
-                            "pattern": pattern_label,
-                            "snippet": content.split("\n")[line_no - 1].strip()[:120],
-                        })
+                        line_no = content[: match.start()].count("\n") + 1
+                        violations.append(
+                            {
+                                "file": rel_path,
+                                "line": line_no,
+                                "model": model_name,
+                                "source_app": source_app,
+                                "pattern": pattern_label,
+                                "snippet": content.split("\n")[line_no - 1].strip()[:120],
+                            }
+                        )
 
     # Match against whitelist
     def _whitelist_key(v):
@@ -334,7 +363,9 @@ def scan_orm_write_violations():
     new = []
     whitelist_keys = set()
     for w in whitelist:
-        whitelist_keys.add(f"{w.get('file', '')}:{w.get('line', 0)}:{w.get('model', '')}:{w.get('pattern', '')}")
+        whitelist_keys.add(
+            f"{w.get('file', '')}:{w.get('line', 0)}:{w.get('model', '')}:{w.get('pattern', '')}"
+        )
 
     for v in violations:
         if _whitelist_key(v) in whitelist_keys:
@@ -375,7 +406,7 @@ def scan_cross_app_internal_imports():
             # Detect: from apps.X.{internal} import ...
             for mod in INTERNAL_MODULES:
                 for m in re.finditer(
-                    rf'from\s+apps\.(\w+)\.{mod}\s+import\s+([^#\n]+)',
+                    rf"from\s+apps\.(\w+)\.{mod}\s+import\s+([^#\n]+)",
                     content,
                 ):
                     source_app = m.group(1)
@@ -383,15 +414,17 @@ def scan_cross_app_internal_imports():
                     # Skip if same app
                     if f"apps/{source_app}/" in rel_path:
                         continue
-                    line_no = content[:m.start()].count("\n") + 1
-                    violations.append({
-                        "file": rel_path,
-                        "line": line_no,
-                        "source_app": source_app,
-                        "module": mod,
-                        "imports": imported_names[:100],
-                        "snippet": content.split("\n")[line_no - 1].strip()[:120],
-                    })
+                    line_no = content[: m.start()].count("\n") + 1
+                    violations.append(
+                        {
+                            "file": rel_path,
+                            "line": line_no,
+                            "source_app": source_app,
+                            "module": mod,
+                            "imports": imported_names[:100],
+                            "snippet": content.split("\n")[line_no - 1].strip()[:120],
+                        }
+                    )
 
     # Match against whitelist
     def _key(v):
@@ -416,6 +449,7 @@ def scan_cross_app_internal_imports():
 
 # ── 6. 步骤类型与设备状态 ──
 
+
 def scan_step_types():
     """从 models/step_types.py 的 StepType 枚举中提取步骤类型。"""
     step_types_path = PROJECT_ROOT / "models" / "step_types.py"
@@ -426,7 +460,7 @@ def scan_step_types():
     types = []
     for m in re.finditer(r'(\w+)\s*=\s*"(\w+)"', content):
         name, value = m.group(1), m.group(2)
-        if name.isupper() and not name.startswith('_'):
+        if name.isupper() and not name.startswith("_"):
             types.append({"name": name, "value": value})
 
     labels = {}
@@ -444,13 +478,17 @@ def scan_device_statuses():
 
     content = models_path.read_text(encoding="utf-8")
     # Pattern 1: comment-based # ONLINE | BUSY | OFFLINE
-    for m in re.finditer(r'#\s*((?:ONLINE|BUSY|OFFLINE|DISCONNECTED)(?:\s*\|\s*(?:ONLINE|BUSY|OFFLINE|DISCONNECTED))*)', content):
+    for m in re.finditer(
+        r"#\s*((?:ONLINE|BUSY|OFFLINE|DISCONNECTED)(?:\s*\|\s*(?:ONLINE|BUSY|OFFLINE|DISCONNECTED))*)",
+        content,
+    ):
         statuses = [s.strip() for s in m.group(1).split("|")]
         return {"count": len(statuses), "statuses": sorted(statuses)}
     return {"count": 0, "statuses": []}
 
 
 # ── 7. 汇总 → Markdown ──
+
 
 def generate_markdown():
     """生成可插入 项目架构.md 的 Markdown 片段。"""
@@ -493,9 +531,14 @@ def generate_markdown():
     lines.append(f"|------|-----|------|")
     for a in apps:
         prefix_map = {
-            "device_pool": "dp_", "element_locator": "el_", "case_manager": "cm_",
-            "test_runner": "tr_", "report_generator": "rg_", "ai_assistant": "ai_",
-            "workflow": "wf_", "dashboard": "—",
+            "device_pool": "dp_",
+            "element_locator": "el_",
+            "case_manager": "cm_",
+            "test_runner": "tr_",
+            "report_generator": "rg_",
+            "ai_assistant": "ai_",
+            "workflow": "wf_",
+            "dashboard": "—",
         }
         prefix = prefix_map.get(a["name"], "??")
         for t in a["tables"]:
@@ -508,7 +551,9 @@ def generate_markdown():
     lines.append(f"| Tool 名称 | 类名 | 文件 | 只读 |")
     lines.append(f"|-----------|------|------|:--:|")
     for t in tools:
-        lines.append(f"| `{t['name']}` | `{t['class']}` | `{t['file']}` | {'✅' if t['is_read_only'] else '❌'} |")
+        lines.append(
+            f"| `{t['name']}` | `{t['class']}` | `{t['file']}` | {'✅' if t['is_read_only'] else '❌'} |"
+        )
     lines.append(f"| **合计 {len(tools)} 个** | | | |")
     lines.append("")
 
@@ -546,7 +591,9 @@ def generate_markdown():
         lines.append(f"| 文件 | 行数 | 上限 | 超出 | 类型 |")
         lines.append(f"|------|:--:|:--:|:--:|------|")
         for v in top_violations:
-            lines.append(f"| `{v['file']}` | {v['lines']} | {v['limit']} | +{v['excess']} | {v['type']} |")
+            lines.append(
+                f"| `{v['file']}` | {v['lines']} | {v['limit']} | +{v['excess']} | {v['type']} |"
+            )
     else:
         lines.append("✅ 无超标文件")
     lines.append("")
@@ -581,7 +628,9 @@ def generate_markdown():
     dev_status = scan_device_statuses()
     lines.append("### 设备状态定义")
     lines.append("")
-    lines.append(f"**{dev_status['count']} 种状态**: " + " · ".join(f"`{s}`" for s in dev_status['statuses']))
+    lines.append(
+        f"**{dev_status['count']} 种状态**: " + " · ".join(f"`{s}`" for s in dev_status["statuses"])
+    )
     lines.append("")
 
     return "\n".join(lines)
@@ -590,27 +639,31 @@ def generate_markdown():
 def generate_json():
     """输出 JSON 格式（供 CI/hook 消费）。"""
     new_violations, known_violations = scan_orm_write_violations()
-    return json.dumps({
-        "django_apps": scan_django_apps(),
-        "tools": scan_tools(),
-        "frontend_modules": scan_frontend_modules(),
-        "file_size_violations": scan_file_size_violations(),
-        "cross_app_imports": scan_cross_app_imports(),
-        "orm_write_violations": {
-            "new": new_violations,
-            "known": known_violations,
+    return json.dumps(
+        {
+            "django_apps": scan_django_apps(),
+            "tools": scan_tools(),
+            "frontend_modules": scan_frontend_modules(),
+            "file_size_violations": scan_file_size_violations(),
+            "cross_app_imports": scan_cross_app_imports(),
+            "orm_write_violations": {
+                "new": new_violations,
+                "known": known_violations,
+            },
+            "summary": {
+                "app_count": len(scan_django_apps()),
+                "table_count": sum(a["table_count"] for a in scan_django_apps()),
+                "endpoint_count": sum(a["endpoint_count"] for a in scan_django_apps()),
+                "tool_count": len(scan_tools()),
+                "frontend_module_count": len(scan_frontend_modules()),
+                "file_size_violation_count": len(scan_file_size_violations()),
+                "orm_write_violation_new": len(new_violations),
+                "orm_write_violation_known": len(known_violations),
+            },
         },
-        "summary": {
-            "app_count": len(scan_django_apps()),
-            "table_count": sum(a["table_count"] for a in scan_django_apps()),
-            "endpoint_count": sum(a["endpoint_count"] for a in scan_django_apps()),
-            "tool_count": len(scan_tools()),
-            "frontend_module_count": len(scan_frontend_modules()),
-            "file_size_violation_count": len(scan_file_size_violations()),
-            "orm_write_violation_new": len(new_violations),
-            "orm_write_violation_known": len(known_violations),
-        }
-    }, indent=2, ensure_ascii=False)
+        indent=2,
+        ensure_ascii=False,
+    )
 
 
 def check_drift():
@@ -625,7 +678,10 @@ def check_drift():
     # 提取文档中的 auto 区域
     match = re.search(r"<!-- ARCH_STATS.*?-->.*?<!-- ARCH_STATS_END -->", doc_content, re.DOTALL)
     if not match:
-        return {"status": "no_auto_section", "message": "项目架构.md 中无 ARCH_STATS 区域，需要初始化"}
+        return {
+            "status": "no_auto_section",
+            "message": "项目架构.md 中无 ARCH_STATS 区域，需要初始化",
+        }
 
     existing = match.group(0)
 
@@ -651,7 +707,9 @@ def check_drift():
     drift_items = []
     for key in ["tables", "endpoints", "tools"]:
         if current_nums.get(key) != existing_nums.get(key):
-            drift_items.append(f"{key}: 文档 {existing_nums.get(key)} → 实际 {current_nums.get(key)}")
+            drift_items.append(
+                f"{key}: 文档 {existing_nums.get(key)} → 实际 {current_nums.get(key)}"
+            )
 
     if drift_items:
         return {"status": "drift", "items": drift_items, "current_stats": current_nums}
@@ -659,6 +717,7 @@ def check_drift():
 
 
 # ── 7. AGENTS.md 自动更新 ──
+
 
 def generate_agents_md_sections():
     """Generate auto-updatable sections for AGENTS.md.
@@ -698,9 +757,14 @@ def generate_agents_md_sections():
 
     # ── DB table list ──
     prefix_map = {
-        "device_pool": "dp_", "element_locator": "el_", "case_manager": "cm_",
-        "test_runner": "tr_", "report_generator": "rg_", "ai_assistant": "ai_",
-        "workflow": "wf_", "dashboard": "—",
+        "device_pool": "dp_",
+        "element_locator": "el_",
+        "case_manager": "cm_",
+        "test_runner": "tr_",
+        "report_generator": "rg_",
+        "ai_assistant": "ai_",
+        "workflow": "wf_",
+        "dashboard": "—",
     }
     lines = []
     lines.append(f"| 前缀 | App | 表名 |")
@@ -723,7 +787,9 @@ def generate_agents_md_sections():
 
     # ── Frontend module list ──
     lines = []
-    lines.append(f"| 模块 | index.vue | api.js | routes.js | store | composables | components | Vue 行数 |")
+    lines.append(
+        f"| 模块 | index.vue | api.js | routes.js | store | composables | components | Vue 行数 |"
+    )
     lines.append(f"|------|:--:|:--:|:--:|:--:|:--:|:--:|:--:|")
     for m in modules:
         lines.append(
@@ -779,7 +845,9 @@ def update_agents_md():
         print(f"   {sections['summary']}")
     else:
         print("⚠️  没有找到任何 AUTO_STATS 标记，未做修改")
-        print("   请在 AGENTS.md 中添加 <!-- AUTO_STATS: {name} -->...<!-- AUTO_STATS_END: {name} --> 标记")
+        print(
+            "   请在 AGENTS.md 中添加 <!-- AUTO_STATS: {name} -->...<!-- AUTO_STATS_END: {name} --> 标记"
+        )
 
     return 0
 
@@ -817,7 +885,9 @@ if __name__ == "__main__":
             if imp_new:
                 print(f"── 防火墙 #1: 跨模块内部实现 import ──")
                 for v in imp_new:
-                    print(f"  {v['file']}:{v['line']}  from apps.{v['source_app']}.{v['module']} import {v['imports']}")
+                    print(
+                        f"  {v['file']}:{v['line']}  from apps.{v['source_app']}.{v['module']} import {v['imports']}"
+                    )
                     print(f"    → {v['snippet']}")
                 print(f"  修复: 跨 App 只能 import api.py 或 models，禁止 import 内部实现")
                 print()
@@ -834,7 +904,7 @@ if __name__ == "__main__":
         sys.exit(exit_code)
     elif "--check-frontend" in sys.argv:
         violations = scan_file_size_violations()
-        vue_violations = [v for v in violations if v['type'] == 'vue']
+        vue_violations = [v for v in violations if v["type"] == "vue"]
         if not vue_violations:
             print("✅ 前端文件体积检查通过 ─ 所有 .vue 文件 < 500 行")
             sys.exit(0)
@@ -850,7 +920,7 @@ if __name__ == "__main__":
             except Exception:
                 pass
 
-        new_violations = [v for v in vue_violations if v['file'] not in whitelist]
+        new_violations = [v for v in vue_violations if v["file"] not in whitelist]
 
         if new_violations:
             print(f"🔴 前端文件体积超标 ─ {len(new_violations)} 个新增超标文件:\n")

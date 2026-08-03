@@ -20,16 +20,18 @@ let pendingMermaidBlocks = [];
 
 const mermaidRenderer = {
   code(code, lang) {
+    // marked v5+ passes a token object; normalize to string
+    const codeStr = typeof code === "string" ? code : code?.text || String(code || "");
     if (lang === "mermaid") {
       const id = `mm-${++mermaidId}`;
-      const escaped = code
+      const escaped = codeStr
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
-      pendingMermaidBlocks.push({ id, code });
+      pendingMermaidBlocks.push({ id, code: codeStr });
       return `<div class="mermaid-placeholder" data-mm-id="${id}"><pre><code class="language-mermaid">${escaped}</code></pre></div>`;
     }
-    const escaped = code
+    const escaped = codeStr
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
@@ -41,8 +43,14 @@ marked.use({ renderer: mermaidRenderer });
 export function renderMarkdown(text) {
   if (!text) return "";
   pendingMermaidBlocks = [];
-  const raw = marked.parse(text, { breaks: true, gfm: true });
+  const raw = marked.parse(String(text), { breaks: true, gfm: true });
   return DOMPurify.sanitize(raw);
+}
+
+/** Lightweight markdown → HTML, no sanitization. For streaming only. */
+export function renderMarkdownLight(text) {
+  if (!text) return "";
+  return marked.parse(String(text), { breaks: true, gfm: true });
 }
 
 export function sanitizeHtml(html) {

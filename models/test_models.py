@@ -2,10 +2,10 @@
 Test case and result data models.
 Migrated and extended from sku_stress_test.
 """
+
 from dataclasses import dataclass, field
 from enum import Enum
-from datetime import datetime
-from typing import Optional
+
 from .step_types import TestStep
 
 
@@ -19,20 +19,21 @@ class TestRunStatus(str, Enum):
 @dataclass
 class TestCaseDef:
     """Definition of a test case (mirrors DB row + JSON file format)."""
-    id: str                              # Unique identifier (slug)
-    title: str                           # Human-readable title
-    category: str = ""                   # Grouping category (e.g. "连接", "开关")
-    description: str = ""                # Longer description
-    steps: str = ""                      # Summary of test steps (for CSV export)
-    enabled: bool = True                 # Whether this case is active
+
+    id: str  # Unique identifier (slug)
+    title: str  # Human-readable title
+    category: str = ""  # Grouping category (e.g. "连接", "开关")
+    description: str = ""  # Longer description
+    steps: str = ""  # Summary of test steps (for CSV export)
+    enabled: bool = True  # Whether this case is active
     steps_data: list = field(default_factory=list)  # list[TestStep]
-    is_json: bool = False                # True if loaded from JSON definition
-    package_name: str = ""               # Target app package (empty = use default)
+    is_json: bool = False  # True if loaded from JSON definition
+    package_name: str = ""  # Target app package (empty = use default)
     watchers: list = field(default_factory=list)  # [{xpath, action}] for popup handling
-    created_at: str = ""                 # ISO timestamp
-    updated_at: str = ""                 # ISO timestamp
+    created_at: str = ""  # ISO timestamp
+    updated_at: str = ""  # ISO timestamp
     # ── 类型感知扩展 ──
-    task_type: str = "ui_automation"     # ui_automation / api_testing / web_automation
+    task_type: str = "ui_automation"  # ui_automation / api_testing / web_automation
     extra_data: dict = field(default_factory=dict)  # API/Web 专用字段
 
     def __post_init__(self):
@@ -47,8 +48,7 @@ class TestCaseDef:
             "description": self.description,
             "steps": self.steps,
             "enabled": self.enabled,
-            "steps_data": [s.to_dict() if isinstance(s, TestStep) else s
-                          for s in self.steps_data],
+            "steps_data": [s.to_dict() if isinstance(s, TestStep) else s for s in self.steps_data],
             "is_json": self.is_json,
             "package_name": self.package_name,
             "created_at": self.created_at,
@@ -86,6 +86,7 @@ class TestCaseDef:
     def from_db_row(cls, row: dict) -> "TestCaseDef":
         """Create from a SQLite row (from test_definitions table)."""
         import json
+
         steps_raw = json.loads(row.get("steps_json", "[]"))
         steps_data = [TestStep.from_dict(s) for s in steps_raw]
         return cls(
@@ -106,10 +107,11 @@ class TestCaseDef:
 @dataclass
 class TestResult:
     """Result of a single test case execution (one iteration)."""
+
     case_id: str
     case_title: str
     iteration: int
-    result: str                    # 'pass' | 'fail' | 'stopped'
+    result: str  # 'pass' | 'fail' | 'stopped'
     duration_ms: float
     detail: str = ""
     case_type: str = "ui_automation"  # discriminates UI/API/Web/Storage
@@ -130,14 +132,17 @@ class TestResult:
 @dataclass
 class TestRun:
     """A complete test run (one or more test cases × loop_count iterations)."""
-    run_id: str                    # Unique run identifier (timestamp-based)
-    device_serial: str             # Target device
+
+    run_id: str  # Unique run identifier (timestamp-based)
+    device_serial: str  # Target device
     status: TestRunStatus = TestRunStatus.PENDING
     selected_cases: list = field(default_factory=list)  # list of case IDs
-    loop_count: int = 1            # Iterations per case
-    case_results: list = field(default_factory=list)    # list[TestResult]
-    perf_results: list = field(default_factory=list)    # [{case_id, case_title, iteration, description, duration}]
-    summary: dict = field(default_factory=dict)         # {case_id: {pass, fail, rate}}
+    loop_count: int = 1  # Iterations per case
+    case_results: list = field(default_factory=list)  # list[TestResult]
+    perf_results: list = field(
+        default_factory=list
+    )  # [{case_id, case_title, iteration, description, duration}]
+    summary: dict = field(default_factory=dict)  # {case_id: {pass, fail, rate}}
     started_at: str = ""
     finished_at: str = ""
     csv_path: str = ""

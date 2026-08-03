@@ -4,6 +4,7 @@ import AppCard from "@/shared/components/AppCard.vue";
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
+import { ElMessage } from 'element-plus'
 import { IconUser, IconLock } from '@/shared/icons/index.js'
 
 const POOL_KEY = 'auth_accounts'
@@ -52,6 +53,25 @@ const loginUsername = ref(savedUser || '')
 const loginPassword = ref('')
 const rememberMe = ref(!!savedUser)
 
+// ── 登录表单校验 ──
+const loginErrors = computed(() => {
+  const errs = {}
+  if (mode.value !== 'login') return errs
+  if (!loginUsername.value) {
+    errs.username = '请输入用户名'
+  } else if (!loginUsername.value.trim()) {
+    errs.username = '用户名不能为空白'
+  } else if (loginUsername.value.length > 150) {
+    errs.username = '用户名过长，最多150个字符'
+  }
+  if (!loginPassword.value) {
+    errs.password = '请输入密码'
+  }
+  return errs
+})
+
+const canLogin = computed(() => Object.keys(loginErrors.value).length === 0)
+
 // ── 注册表单 ──
 const regUsername = ref('')
 const regPassword = ref('')
@@ -92,6 +112,11 @@ const regErrors = computed(() => {
 const canRegister = computed(() => Object.keys(regErrors.value).length === 0)
 
 async function handleLogin() {
+  // 客户端校验 — 前端拦截，不发送无效请求
+  if (!canLogin.value) {
+    ElMessage.warning(Object.values(loginErrors.value)[0])
+    return
+  }
   loading.value = true
   error.value = ''
   try {
@@ -106,12 +131,13 @@ async function handleLogin() {
       } else {
         localStorage.removeItem('saved_username')
       }
+      ElMessage.success('登录成功，正在跳转...')
       router.push('/dashboard')
     } else {
-      error.value = data.error || '登录失败'
+      ElMessage.error(data.error || '登录失败')
     }
   } catch (e) {
-    error.value = e.response?.data?.error || '服务异常，请检查后端是否启动'
+    ElMessage.error(e.response?.data?.error || '服务异常，请检查后端是否启动')
   } finally {
     loading.value = false
   }
@@ -119,7 +145,7 @@ async function handleLogin() {
 
 async function handleRegister() {
   if (!canRegister.value) {
-    error.value = Object.values(regErrors.value)[0]
+    ElMessage.warning(Object.values(regErrors.value)[0])
     return
   }
   loading.value = true
@@ -131,13 +157,13 @@ async function handleRegister() {
     })
     if (data.ok) {
       loginToPool(regUsername.value.trim(), data.access_token, data.refresh_token)
-      success.value = '注册成功，正在进入平台...'
+      ElMessage.success('注册成功，正在进入平台...')
       setTimeout(() => router.push('/dashboard'), 600)
     } else {
-      error.value = data.error || '注册失败'
+      ElMessage.error(data.error || '注册失败')
     }
   } catch (e) {
-    error.value = e.response?.data?.error || '服务异常，请检查后端是否启动'
+    ElMessage.error(e.response?.data?.error || '服务异常，请检查后端是否启动')
   } finally {
     loading.value = false
   }
@@ -195,10 +221,13 @@ function switchMode(m) {
                   v-model="loginUsername"
                   placeholder="账号"
                   size="large"
-                  
+
                   class="form-input"
+                  :class="{ 'is-error': loginErrors.username }"
                 />
               </div>
+              <p v-if="loginErrors.username" class="field-error">{{ loginErrors.username }}</p>
+
               <div class="form-field">
                 <IconLock :size="18" class="form-icon" />
                 <el-input
@@ -208,8 +237,10 @@ function switchMode(m) {
                   placeholder="密码"
                   size="large"
                   class="form-input"
+                  :class="{ 'is-error': loginErrors.password }"
                 />
               </div>
+              <p v-if="loginErrors.password" class="field-error">{{ loginErrors.password }}</p>
 
               <div class="form-remember">
                 <el-switch v-model="rememberMe" size="small" />
@@ -220,6 +251,7 @@ function switchMode(m) {
                 type="primary"
                 size="large"
                 :loading="loading"
+                :disabled="!canLogin"
                 block
                 @click="handleLogin"
               >开始使用 →</el-button>
@@ -228,7 +260,6 @@ function switchMode(m) {
             <p class="login-toggle" @click="switchMode('register')">
               没有账号？<span class="link">去注册 →</span>
             </p>
-            <p v-if="error" class="login-error">{{ error }}</p>
           </AppCard>
 
           <!-- ── 注册卡片 ── -->
@@ -280,8 +311,6 @@ function switchMode(m) {
             <p class="login-toggle" @click="switchMode('login')">
               已有账号？<span class="link">去登录 →</span>
             </p>
-            <p v-if="error" class="login-error">{{ error }}</p>
-            <p v-if="success" class="login-success">{{ success }}</p>
           </AppCard>
         </div>
 
@@ -526,6 +555,18 @@ function switchMode(m) {
 
 .form-input {
   flex: 1;
+}
+
+.form-input.is-error :deep(.el-input__wrapper) {
+  border-color: #e8998a;
+  box-shadow: 0 0 0 1px #e8998a inset;
+}
+
+.field-error {
+  margin: -8px 0 0 28px;
+  font-size: 12px;
+  color: #e8998a;
+  font-weight: 500;
 }
 
 .form-remember {

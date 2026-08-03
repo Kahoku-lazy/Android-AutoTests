@@ -10,23 +10,29 @@ Usage:
 This script reads from the existing SQLite database (data/app.db)
 and writes to MySQL through Django ORM models.
 """
-import os
-import sys
-import sqlite3
+
 from datetime import datetime
+import os
+import sqlite3
+import sys
 
 # Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 import django
+
 django.setup()
 
 from api.models import (
-    Device, Page, Element, PageFlow,
-    TestDefinition, TestExecutionResult,
+    Device,
+    Element,
+    Page,
+    PageFlow,
+    TestDefinition,
+    TestExecutionResult,
 )
 
 # Path to existing SQLite database
-SQLITE_PATH = os.path.join(os.path.dirname(__file__), 'data', 'app.db')
+SQLITE_PATH = os.path.join(os.path.dirname(__file__), "data", "app.db")
 
 
 def connect_sqlite():
@@ -60,10 +66,10 @@ def migrate_devices(src):
     count = 0
     for row in src.execute("SELECT * FROM devices"):
         Device.objects.update_or_create(
-            serial=row['serial'],
+            serial=row["serial"],
             defaults={
-                'name': row['name'] or '',
-                'created_at': parse_datetime(row['created_at']),
+                "name": row["name"] or "",
+                "created_at": parse_datetime(row["created_at"]),
             },
         )
         count += 1
@@ -76,15 +82,15 @@ def migrate_pages(src):
     count = 0
     for row in src.execute("SELECT * FROM pages"):
         Page.objects.update_or_create(
-            id=row['id'],
+            id=row["id"],
             defaults={
-                'device_id': row['device_id'],
-                'label': row['label'] or '',
-                'package': row['package'] or '',
-                'activity': row['activity'] or '',
-                'screenshot_path': row['screenshot_path'] or '',
-                'element_count': row['element_count'] or 0,
-                'created_at': parse_datetime(row['created_at']),
+                "device_id": row["device_id"],
+                "label": row["label"] or "",
+                "package": row["package"] or "",
+                "activity": row["activity"] or "",
+                "screenshot_path": row["screenshot_path"] or "",
+                "element_count": row["element_count"] or 0,
+                "created_at": parse_datetime(row["created_at"]),
             },
         )
         count += 1
@@ -97,22 +103,22 @@ def migrate_elements(src):
     count = 0
     for row in src.execute("SELECT * FROM elements"):
         Element.objects.update_or_create(
-            id=row['id'],
+            id=row["id"],
             defaults={
-                'page_id': row['page_id'],
-                'class_name': row['class_name'] or '',
-                'text_val': row['text_val'] or '',
-                'content_desc': row['content_desc'] or '',
-                'resource_id': row['resource_id'] or '',
-                'bounds': row['bounds'] or '',
-                'xpath_candidates': row['xpath_candidates'] or '[]',
-                'clickable': bool(row['clickable']),
-                'enabled': bool(row['enabled']),
-                'alias': row['alias'] or '',
-                'tags': row['tags'] or '',
-                'is_test_point': bool(row['is_test_point']),
-                'notes': row['notes'] or '',
-                'created_at': parse_datetime(row['created_at']),
+                "page_id": row["page_id"],
+                "class_name": row["class_name"] or "",
+                "text_val": row["text_val"] or "",
+                "content_desc": row["content_desc"] or "",
+                "resource_id": row["resource_id"] or "",
+                "bounds": row["bounds"] or "",
+                "xpath_candidates": row["xpath_candidates"] or "[]",
+                "clickable": bool(row["clickable"]),
+                "enabled": bool(row["enabled"]),
+                "alias": row["alias"] or "",
+                "tags": row["tags"] or "",
+                "is_test_point": bool(row["is_test_point"]),
+                "notes": row["notes"] or "",
+                "created_at": parse_datetime(row["created_at"]),
             },
         )
         count += 1
@@ -125,13 +131,13 @@ def migrate_page_flows(src):
     count = 0
     for row in src.execute("SELECT * FROM page_flows"):
         PageFlow.objects.update_or_create(
-            id=row['id'],
+            id=row["id"],
             defaults={
-                'from_page_id': row['from_page_id'],
-                'to_page_id': row['to_page_id'],
-                'trigger_element_id': row['trigger_element_id'],
-                'trigger_action': row['trigger_action'] or 'click',
-                'created_at': parse_datetime(row['created_at']),
+                "from_page_id": row["from_page_id"],
+                "to_page_id": row["to_page_id"],
+                "trigger_element_id": row["trigger_element_id"],
+                "trigger_action": row["trigger_action"] or "click",
+                "created_at": parse_datetime(row["created_at"]),
             },
         )
         count += 1
@@ -144,17 +150,17 @@ def migrate_test_definitions(src):
     count = 0
     for row in src.execute("SELECT * FROM test_definitions"):
         TestDefinition.objects.update_or_create(
-            id=row['id'],
+            id=row["id"],
             defaults={
-                'title': row['title'] or '',
-                'category': row['category'] or '',
-                'description': row['description'] or '',
-                'steps': row['steps'] or '',
-                'steps_json': row['steps_json'] or '[]',
-                'enabled': bool(row['enabled']),
-                'package_name': row['package_name'] or '',
-                'created_at': parse_datetime(row['created_at']),
-                'updated_at': parse_datetime(row['updated_at']),
+                "title": row["title"] or "",
+                "category": row["category"] or "",
+                "description": row["description"] or "",
+                "steps": row["steps"] or "",
+                "steps_json": row["steps_json"] or "[]",
+                "enabled": bool(row["enabled"]),
+                "package_name": row["package_name"] or "",
+                "created_at": parse_datetime(row["created_at"]),
+                "updated_at": parse_datetime(row["updated_at"]),
             },
         )
         count += 1
@@ -167,15 +173,15 @@ def migrate_test_results(src):
     count = 0
     for row in src.execute("SELECT * FROM test_results"):
         TestExecutionResult.objects.update_or_create(
-            id=row['id'],
+            id=row["id"],
             defaults={
-                'run_id': row['run_id'],
-                'case_id': row['case_id'],
-                'iteration': row['iteration'],
-                'result': row['result'],
-                'duration_ms': float(row['duration_ms'] or 0),
-                'detail': row['detail'] or '',
-                'created_at': parse_datetime(row['created_at']),
+                "run_id": row["run_id"],
+                "case_id": row["case_id"],
+                "iteration": row["iteration"],
+                "result": row["result"],
+                "duration_ms": float(row["duration_ms"] or 0),
+                "detail": row["detail"] or "",
+                "created_at": parse_datetime(row["created_at"]),
             },
         )
         count += 1
@@ -234,5 +240,5 @@ def main():
     verify()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

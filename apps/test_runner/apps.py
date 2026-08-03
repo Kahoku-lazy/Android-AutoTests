@@ -1,4 +1,8 @@
+import logging
+
 from django.apps import AppConfig
+
+_log = logging.getLogger("test_runner.startup")
 
 
 class TestRunnerConfig(AppConfig):
@@ -13,8 +17,8 @@ class TestRunnerConfig(AppConfig):
         AgentScope 进程绝不能触发恢复——否则会把 Daphne 进程里正在执行的任务
         误判为孤儿、中断并释放其设备。
         """
-        import sys
         import os
+        import sys
 
         argv = " ".join(sys.argv)
         is_asgi_server = (
@@ -24,11 +28,11 @@ class TestRunnerConfig(AppConfig):
             return
 
         try:
-            from .recovery_helpers import queue_payload_from_taskcard
-            from .state_machine import recover_orphans, repair_queued_terminal_drift
             from .models import TaskCard
-            from .views import _enqueue, _device_queue, _schedule_next_queued
-            from .runner import is_device_busy, _device_busy
+            from .recovery_helpers import queue_payload_from_taskcard
+            from .runner import _device_busy, is_device_busy
+            from .state_machine import recover_orphans, repair_queued_terminal_drift
+            from .views import _device_queue, _enqueue, _schedule_next_queued
 
             # 1. Clear in-memory device busy — fresh start, no devices are running
             _device_busy.clear()
@@ -38,10 +42,10 @@ class TestRunnerConfig(AppConfig):
             recovered = recover_orphans()
             repaired = repair_queued_terminal_drift()
             if recovered["tasks"] or recovered["runs"] or repaired:
-                print(
-                    f"[test_runner] Startup recovery: "
-                    f"{recovered['tasks']} task(s) interrupted, "
-                    f"{recovered['runs']} stale run(s) → FAILED"
+                _log.info(
+                    "Startup recovery: %d task(s) interrupted, %d stale run(s) → FAILED",
+                    recovered["tasks"],
+                    recovered["runs"],
                 )
 
             # 3. Recover queued tasks into memory queues
@@ -56,7 +60,7 @@ class TestRunnerConfig(AppConfig):
                     if not already_enqueued:
                         _enqueue(serial, queue_payload_from_taskcard(tc))
             if queued:
-                print(f"[test_runner] Recovered {queued.count()} queued task(s) from DB")
+                _log.info("Recovered %d queued task(s) from DB", queued.count())
 
             # 4. Kick off queued tasks for idle devices
             import asyncio
@@ -70,7 +74,4 @@ class TestRunnerConfig(AppConfig):
                     except RuntimeError:
                         pass
         except Exception as e:
-            import traceback
-
-            print(f"[test_runner] Startup recovery failed: {e}")
-            traceback.print_exc()
+            _log.exception("Startup recovery failed: %s", e)

@@ -1,10 +1,31 @@
 """workflow public API — 目录 + JSON 文档 CRUD / 导入导出."""
 
+__all__ = [
+    "build_export_envelope",
+    "create_directory",
+    "delete_directory",
+    "delete_document",
+    "export_document",
+    "gen_doc_id",
+    "get_directory_tree",
+    "get_document",
+    "import_document_envelope",
+    "list_directories_flat",
+    "list_documents",
+    "move_directory",
+    "move_document",
+    "serialize_directory",
+    "serialize_document",
+    "update_directory",
+    "upsert_document",
+]
+
 from __future__ import annotations
 
 import json
 import random
 import string
+
 from datetime import datetime
 from typing import Any
 
@@ -91,9 +112,7 @@ def list_directories_flat() -> list[dict]:
 
 def get_directory_tree() -> list[dict]:
     def build(node: WorkflowDirectory) -> dict:
-        children = [
-            build(c) for c in node.children.all().order_by("sort_order", "id")
-        ]
+        children = [build(c) for c in node.children.all().order_by("sort_order", "id")]
         docs = [
             {
                 "doc_id": x.doc_id,
@@ -159,6 +178,7 @@ def delete_directory(dir_id: int):
         d = WorkflowDirectory.objects.get(id=dir_id)
     except WorkflowDirectory.DoesNotExist:
         return False, "目录不存在"
+
     # 级联删除子目录内文档（避免 SET_NULL 孤儿残留）
     def collect_ids(node: WorkflowDirectory) -> list[int]:
         ids = [node.id]
@@ -346,9 +366,7 @@ def import_document_envelope(payload: dict, *, overwrite: bool = False) -> tuple
     title = payload.get("title") or payload.get("name") or ""
 
     # 兼容旧前端导出 testcase-scratch-v1
-    if fmt == "testcase-scratch-v1" or (
-        not doc_type and isinstance(payload.get("blocks"), list)
-    ):
+    if fmt == "testcase-scratch-v1" or (not doc_type and isinstance(payload.get("blocks"), list)):
         doc_type = WorkflowDocument.TYPE_TEST_CASE
         config = {
             "format": "testcase-scratch-v1",

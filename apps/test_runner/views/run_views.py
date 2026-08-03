@@ -1,24 +1,29 @@
 """Run management endpoints — stop / cancel / list / status."""
-import json
-import logging
 
+import json
+
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Count, Q
 
+from .. import state_machine as sm
+from ..models import TaskCard, TestResult, TestRunRecord
+from ..runner import (
+    _active_runs,
+    get_active_run,
+    is_device_busy,
+    list_active_runs,
+    stop_run,
+)
 from .helpers import (
-    _bg_log, _device_queue, _run_client_task, _preflight_runs,
-    _enqueue, _queue_size,
-    _schedule_next_queued,
+    _bg_log,
+    _device_queue,
+    _enqueue,
+    _preflight_runs,
+    _queue_size,
+    _run_client_task,
     require_auth,
 )
-
-from ..runner import (
-    stop_run, get_active_run, is_device_busy,
-    list_active_runs, _active_runs,
-)
-from ..models import TestResult, TestRunRecord, TaskCard
-from .. import state_machine as sm
 
 
 @require_auth
@@ -110,7 +115,7 @@ def list_active(request):
 
     Also triggers lazy recovery: rebuild queues, mark orphan running tasks.
     """
-    from ..recovery_helpers import recover_stale_running_taskcards, queue_payload_from_taskcard
+    from ..recovery_helpers import queue_payload_from_taskcard, recover_stale_running_taskcards
     from .execution import _start_next_queued
 
     recover_stale_running_taskcards()

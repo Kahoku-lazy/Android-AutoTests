@@ -1,0 +1,17 @@
+{
+  "title": "[Web] 登录-登录与注册模式切换验证",
+  "url": "http://localhost:5173/login",
+  "priority": "P1",
+  "description": "验证登录页面点击「去注册」切换到注册模式后，注册表单正确显示",
+  "expected_result": "注册表单显示，含用户名、密码、确认密码三个输入框",
+  "directory_id": 109,
+  "steps": [
+    {"type": "web_navigate", "url": "http://localhost:5173/login?add=1", "description": "打开登录页(强制表单模式)"},
+    {"type": "web_wait", "timeout": 2, "description": "等待页面加载完成"},
+    {"type": "web_screenshot", "description": "登录表单初始状态"},
+    {"type": "web_click", "selector": ".login-toggle", "description": "点击去注册切换到注册模式"},
+    {"type": "web_wait", "timeout": 1, "description": "等待表单切换"},
+    {"type": "web_assert", "expected_text": "设置密码（至少 6 位）", "description": "验证注册表单显示"},
+    {"type": "web_screenshot", "description": "切换到注册模式截图"}
+  ]
+}

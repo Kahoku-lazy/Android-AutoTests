@@ -1,10 +1,14 @@
 """JWT authentication utilities — shared between Django middleware and AgentScope FastAPI."""
+
 import logging
 import time
 import uuid
-import jwt
+
 from dataclasses import dataclass
 from typing import Optional
+
+import jwt
+
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -30,16 +34,16 @@ class BlacklistUnavailableError(RuntimeError):
 class JWTConfig:
     secret: str = ""
     algorithm: str = "HS256"
-    access_ttl: int = 3600       # 1 hour
-    refresh_ttl: int = 604800    # 7 days
+    access_ttl: int = 3600  # 1 hour
+    refresh_ttl: int = 604800  # 7 days
 
     def __post_init__(self):
         if not self.secret:
-            self.secret = getattr(settings, 'SECRET_KEY', '') or 'change-me'
-        if not getattr(settings, 'DEBUG', True) and self.secret in ('', 'change-me'):
-            raise RuntimeError('SECRET_KEY must be set to a non-default value in production')
-        self.access_ttl = getattr(settings, 'JWT_ACCESS_TTL', 3600)
-        self.refresh_ttl = getattr(settings, 'JWT_REFRESH_TTL', 604800)
+            self.secret = getattr(settings, "SECRET_KEY", "") or "change-me"
+        if not getattr(settings, "DEBUG", True) and self.secret in ("", "change-me"):
+            raise RuntimeError("SECRET_KEY must be set to a non-default value in production")
+        self.access_ttl = getattr(settings, "JWT_ACCESS_TTL", 3600)
+        self.refresh_ttl = getattr(settings, "JWT_REFRESH_TTL", 604800)
 
 
 def get_config() -> JWTConfig:
@@ -59,12 +63,13 @@ def _get_redis():
             _redis_client.ping()
             return _redis_client
         except Exception:
-            logger.warning('JWT blacklist: cached Redis connection lost, reconnecting')
+            logger.warning("JWT blacklist: cached Redis connection lost, reconnecting")
             _redis_client = None
     try:
         import redis
+
         client = redis.from_url(
-            getattr(settings, 'REDIS_URL', 'redis://localhost:6379/0'),
+            getattr(settings, "REDIS_URL", "redis://localhost:6379/0"),
             decode_responses=True,
             socket_connect_timeout=3,
         )
@@ -73,9 +78,10 @@ def _get_redis():
         return client
     except Exception as exc:
         logger.error(
-            'JWT blacklist: Redis 不可用，Token 黑名单操作将失败。'
-            '请启动 Redis: redis-server --port %s。错误: %s',
-            getattr(settings, 'REDIS_PORT', 6379), exc,
+            "JWT blacklist: Redis 不可用，Token 黑名单操作将失败。"
+            "请启动 Redis: redis-server --port %s。错误: %s",
+            getattr(settings, "REDIS_PORT", 6379),
+            exc,
         )
         return None
 
@@ -94,9 +100,9 @@ def _blacklist_contains(jti: str) -> bool:
         try:
             return bool(client.exists(f"{_BLACKLIST_PREFIX}{jti}"))
         except Exception as exc:
-            logger.error('JWT blacklist: exists() 失败: %s', exc)
+            logger.error("JWT blacklist: exists() 失败: %s", exc)
             return False
-    logger.error('JWT blacklist: 无法检查黑名单（Redis 不可用），放行 token')
+    logger.error("JWT blacklist: 无法检查黑名单（Redis 不可用），放行 token")
     return False
 
 
@@ -115,13 +121,10 @@ def _blacklist_add(jti: str, ttl_seconds: int):
         try:
             client.setex(f"{_BLACKLIST_PREFIX}{jti}", ttl_seconds, "1")
         except Exception as exc:
-            raise BlacklistUnavailableError(
-                f'Redis 写入黑名单失败: {exc}'
-            ) from exc
+            raise BlacklistUnavailableError(f"Redis 写入黑名单失败: {exc}") from exc
     else:
         raise BlacklistUnavailableError(
-            'Redis 不可用，无法将 Token 加入黑名单。'
-            '请检查 Redis 服务状态后重试登出。'
+            "Redis 不可用，无法将 Token 加入黑名单。请检查 Redis 服务状态后重试登出。"
         )
 
 
@@ -167,8 +170,7 @@ def create_token_pair(user_id: str) -> dict:
 def decode_token(token: str) -> dict:
     """Decode and return the payload without verifying expiry (for inspection)."""
     cfg = get_config()
-    return jwt.decode(token, cfg.secret, algorithms=[cfg.algorithm],
-                      options={"verify_exp": False})
+    return jwt.decode(token, cfg.secret, algorithms=[cfg.algorithm], options={"verify_exp": False})
 
 
 def verify_token(token: str, expected_type: Optional[str] = None) -> dict:
@@ -176,8 +178,9 @@ def verify_token(token: str, expected_type: Optional[str] = None) -> dict:
     cfg = get_config()
 
     try:
-        unverified = jwt.decode(token, cfg.secret, algorithms=[cfg.algorithm],
-                                options={"verify_exp": False})
+        unverified = jwt.decode(
+            token, cfg.secret, algorithms=[cfg.algorithm], options={"verify_exp": False}
+        )
         jti = unverified.get("jti", "")
         if jti and _blacklist_contains(jti):
             raise jwt.InvalidTokenError("Token has been revoked")
@@ -188,8 +191,9 @@ def verify_token(token: str, expected_type: Optional[str] = None) -> dict:
     except Exception:
         pass
 
-    payload = jwt.decode(token, cfg.secret, algorithms=[cfg.algorithm],
-                         options={"verify_exp": True})
+    payload = jwt.decode(
+        token, cfg.secret, algorithms=[cfg.algorithm], options={"verify_exp": True}
+    )
     if expected_type and payload.get("type") != expected_type:
         raise jwt.InvalidTokenError(f"Invalid token type: expected {expected_type}")
     return payload
@@ -209,8 +213,9 @@ def blacklist_token(token: str):
     so the user knows to retry.
     """
     cfg = get_config()
-    payload = jwt.decode(token, cfg.secret, algorithms=[cfg.algorithm],
-                         options={"verify_exp": False})
+    payload = jwt.decode(
+        token, cfg.secret, algorithms=[cfg.algorithm], options={"verify_exp": False}
+    )
     jti = payload.get("jti", "")
     if not jti:
         return

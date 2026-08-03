@@ -1,28 +1,35 @@
 """element-locator HTTP routes — 11 endpoints under /api/elements/*."""
+
 import json
+import logging
+
 from datetime import datetime
+
+from django.conf import settings
+
+logger = logging.getLogger(__name__)
+from django.db import IntegrityError
+from django.db import models as dm
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.conf import settings
-from django.db import IntegrityError, models as dm
 
+from apps.device_pool.api import device, ensure_device
 from apps.device_pool.models import Device
-from apps.device_pool.api import device
-from apps.device_pool.api import ensure_device
-from .models import Page, Element, PageFlow
+
+from .models import Element, Page, PageFlow
 from .page_tree import (
     MAX_PAGE_TREE_DEPTH,
+    batch_move_pages,
     build_page_maps,
     compute_depth,
     page_depth,
-    validate_parent_and_depth,
     sibling_label_exists,
-    batch_move_pages,
+    validate_parent_and_depth,
 )
 from .service import gen_xpath_candidates
 
 # Process prefixes that indicate execution engine occupation
-_EXECUTION_OCCUPY_PREFIXES = ('runner-', 'ai_agent', 'task-', 'run-')
+_EXECUTION_OCCUPY_PREFIXES = ("runner-", "ai_agent", "task-", "run-")
 
 
 def _check_device_available(serial: str) -> tuple[bool, str, str]:
@@ -36,12 +43,16 @@ def _check_device_available(serial: str) -> tuple[bool, str, str]:
         dev = Device.objects.get(serial=serial)
     except Device.DoesNotExist:
         return False, "设备未注册", ""
-    if dev.status == 'OFFLINE':
+    if dev.status == "OFFLINE":
         return False, "设备已离线", ""
-    if dev.status == 'BUSY' and dev.occupied_by:
+    if dev.status == "BUSY" and dev.occupied_by:
         for prefix in _EXECUTION_OCCUPY_PREFIXES:
             if dev.occupied_by.startswith(prefix):
-                return False, f"设备正被执行引擎占用（{dev.occupied_by}），请等待执行完毕", dev.occupied_by
+                return (
+                    False,
+                    f"设备正被执行引擎占用（{dev.occupied_by}），请等待执行完毕",
+                    dev.occupied_by,
+                )
     return True, "", dev.occupied_by or ""
 
 
@@ -66,8 +77,10 @@ def dump_page(request):
     device.screenshot_file(str(shot_file))
     pngs = sorted(shot_dir.glob("page_*.png"), key=lambda p: p.stat().st_mtime, reverse=True)
     for old in pngs[3:]:
-        try: old.unlink()
-        except Exception: pass
+        try:
+            old.unlink()
+        except Exception:
+            logger.debug("Failed to delete old screenshot: %s", old)
 
     info = device.info()
     package = info.get("currentPackageName", "")
@@ -81,17 +94,30 @@ def dump_page(request):
             e["xpaths"] = gen_xpath_candidates(e, nodes)
             xpath_count += 1
 
-    actionable = [e for e in nodes if e["clickable"] or e["text"] or e["resource_id"] or e["content_desc"]]
+    actionable = [
+        e for e in nodes if e["clickable"] or e["text"] or e["resource_id"] or e["content_desc"]
+    ]
 
-    print(f"[dump] total={len(nodes)} xpath={xpath_count} actionable={len(actionable)} "
-          f"package={package} activity={activity}")
-    return JsonResponse({
-        "ok": True, "serial": device.current_serial,
-        "package": package, "activity": activity,
-        "element_count": len(nodes),
-        "actionable_count": len(actionable), "elements": nodes,
-        "actionable": actionable,
-    })
+    logger.info(
+        "[dump] total=%d xpath=%d actionable=%d package=%s activity=%s",
+        len(nodes),
+        xpath_count,
+        len(actionable),
+        package,
+        activity,
+    )
+    return JsonResponse(
+        {
+            "ok": True,
+            "serial": device.current_serial,
+            "package": package,
+            "activity": activity,
+            "element_count": len(nodes),
+            "actionable_count": len(actionable),
+            "elements": nodes,
+            "actionable": actionable,
+        }
+    )
 
 
 @csrf_exempt
@@ -115,10 +141,17 @@ def do_action(request):
         elif action == "swipe":
             device.action_swipe(data.get("direction", "up"), int(data.get("distance", 500)))
         elif action == "drag":
-            device.action_drag(int(data["x"]), int(data["y"]), data.get("direction", "up"), int(data.get("distance", 300)))
+            device.action_drag(
+                int(data["x"]),
+                int(data["y"]),
+                data.get("direction", "up"),
+                int(data.get("distance", 300)),
+            )
         elif action == "input":
             device.action_input(
-                data.get("text", ""), data.get("x"), data.get("y"),
+                data.get("text", ""),
+                data.get("x"),
+                data.get("y"),
                 clear_first=data.get("clear_first", True),
             )
         else:
@@ -139,30 +172,34 @@ def device_info_view(request):
 
     try:
         dev = Device.objects.get(serial=serial)
-        is_occupied = dev.status == 'BUSY' and bool(dev.occupied_by)
-        return JsonResponse({
-            "ok": True,
-            "serial": serial,
-            "model": dev.model or info.get("productName", ""),
-            "brand": dev.brand or "",
-            "screen_w": dev.screen_w or info.get("displayWidth", 1440),
-            "screen_h": dev.screen_h or info.get("displayHeight", 3040),
-            "connection_type": device.get_connection_type(serial),
-            "package": info.get("currentPackageName", ""),
-            "occupied": is_occupied,
-            "occupied_by": dev.occupied_by if is_occupied else "",
-        })
+        is_occupied = dev.status == "BUSY" and bool(dev.occupied_by)
+        return JsonResponse(
+            {
+                "ok": True,
+                "serial": serial,
+                "model": dev.model or info.get("productName", ""),
+                "brand": dev.brand or "",
+                "screen_w": dev.screen_w or info.get("displayWidth", 1440),
+                "screen_h": dev.screen_h or info.get("displayHeight", 3040),
+                "connection_type": device.get_connection_type(serial),
+                "package": info.get("currentPackageName", ""),
+                "occupied": is_occupied,
+                "occupied_by": dev.occupied_by if is_occupied else "",
+            }
+        )
     except Device.DoesNotExist:
-        return JsonResponse({
-            "ok": True,
-            "serial": serial,
-            "model": info.get("productName", ""),
-            "brand": "",
-            "screen_w": info.get("displayWidth", 1440),
-            "screen_h": info.get("displayHeight", 3040),
-            "connection_type": device.get_connection_type(serial),
-            "package": info.get("currentPackageName", ""),
-        })
+        return JsonResponse(
+            {
+                "ok": True,
+                "serial": serial,
+                "model": info.get("productName", ""),
+                "brand": "",
+                "screen_w": info.get("displayWidth", 1440),
+                "screen_h": info.get("displayHeight", 3040),
+                "connection_type": device.get_connection_type(serial),
+                "package": info.get("currentPackageName", ""),
+            }
+        )
 
 
 def screenshot_snapshot(request):
@@ -175,19 +212,22 @@ def screenshot_snapshot(request):
     try:
         b64 = device.screenshot_b64(quality=50, max_width=720)
         info = device.info()
-        return JsonResponse({
-            "ok": True,
-            "image": b64,
-            "format": "jpeg",
-            "serial": device.current_serial,
-            "screen_w": info.get("displayWidth", 0),
-            "screen_h": info.get("displayHeight", 0),
-        })
+        return JsonResponse(
+            {
+                "ok": True,
+                "image": b64,
+                "format": "jpeg",
+                "serial": device.current_serial,
+                "screen_w": info.get("displayWidth", 0),
+                "screen_h": info.get("displayHeight", 0),
+            }
+        )
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)})
 
 
 # ── Page CRUD ──
+
 
 def _page_payload(p, parent_map=None):
     depth = compute_depth(p.id, parent_map) if parent_map is not None else page_depth(p)
@@ -214,10 +254,14 @@ def list_pages(request):
     Uses a single-query parent_map to compute depths without N+1 DB round-trips.
     Supports ?offset=N&limit=N for pagination.
     """
-    pages = Page.objects.select_related("parent").annotate(
-        flow_out=dm.Count('outgoing_flows', distinct=True),
-        flow_in=dm.Count('incoming_flows', distinct=True),
-    ).order_by('is_folder', 'label', '-created_at')
+    pages = (
+        Page.objects.select_related("parent")
+        .annotate(
+            flow_out=dm.Count("outgoing_flows", distinct=True),
+            flow_in=dm.Count("incoming_flows", distinct=True),
+        )
+        .order_by("is_folder", "label", "-created_at")
+    )
 
     # Build in-memory parent map once to avoid N+1 in _page_payload → page_depth
     parent_map, _ = build_page_maps()
@@ -228,21 +272,23 @@ def list_pages(request):
 @csrf_exempt
 def page_detail(request, page_id):
     """PUT/DELETE /api/elements/pages/{page_id}."""
-    if request.method == 'PUT':
+    if request.method == "PUT":
         data = json.loads(request.body)
         new_label = data.get("label", "").strip()
         if not new_label:
             return JsonResponse({"ok": False, "error": "页面名称不能为空"}, status=400)
         # Fetch once for validation, then update in one query
-        page = Page.objects.filter(id=page_id).values('parent_id').first()
+        page = Page.objects.filter(id=page_id).values("parent_id").first()
         if page is None:
             return JsonResponse({"ok": False, "error": "页面不存在"}, status=404)
-        parent_id = page['parent_id']
+        parent_id = page["parent_id"]
         if sibling_label_exists(new_label, parent_id, exclude_id=page_id):
-            return JsonResponse({"ok": False, "error": f"同级名称「{new_label}」已存在"}, status=409)
+            return JsonResponse(
+                {"ok": False, "error": f"同级名称「{new_label}」已存在"}, status=409
+            )
         Page.objects.filter(id=page_id).update(label=new_label)
         return JsonResponse({"ok": True})
-    elif request.method == 'DELETE':
+    elif request.method == "DELETE":
         Page.objects.filter(id=page_id).delete()
         return JsonResponse({"ok": True})
     return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
@@ -254,7 +300,7 @@ def create_page(request):
 
     Body: { label, parent_id?, is_folder?, package?, activity? }
     """
-    if request.method != 'POST':
+    if request.method != "POST":
         return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
     data = json.loads(request.body)
     label = data.get("label", "").strip()
@@ -293,7 +339,9 @@ def create_page(request):
             activity=data.get("activity", ""),
         )
     except IntegrityError:
-        return JsonResponse({"ok": False, "error": f"创建失败，名称「{label}」可能已存在"}, status=409)
+        return JsonResponse(
+            {"ok": False, "error": f"创建失败，名称「{label}」可能已存在"}, status=409
+        )
     return JsonResponse({"ok": True, "page": _page_payload(page)})
 
 
@@ -304,7 +352,7 @@ def pages_batch_move(request):
     Body: { page_ids: [1, 2], parent_id: 5 | null }
     parent_id=null moves items to root level.
     """
-    if request.method != 'POST':
+    if request.method != "POST":
         return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
     data = json.loads(request.body)
     page_ids = data.get("page_ids") or []
@@ -334,11 +382,17 @@ def pages_batch_move(request):
 
 def _element_payload(el):
     return {
-        "id": el.id, "page_id": el.page_id, "alias": el.alias,
-        "class_name": el.class_name, "text_val": el.text_val,
-        "resource_id": el.resource_id, "clickable": el.clickable,
-        "bounds": el.bounds, "xpath_candidates": el.xpath_candidates,
-        "is_test_point": el.is_test_point, "notes": el.notes,
+        "id": el.id,
+        "page_id": el.page_id,
+        "alias": el.alias,
+        "class_name": el.class_name,
+        "text_val": el.text_val,
+        "resource_id": el.resource_id,
+        "clickable": el.clickable,
+        "bounds": el.bounds,
+        "xpath_candidates": el.xpath_candidates,
+        "is_test_point": el.is_test_point,
+        "notes": el.notes,
     }
 
 
@@ -357,7 +411,9 @@ def add_element_to_page(request, page_id):
         except Page.DoesNotExist:
             return JsonResponse({"ok": False, "error": "页面不存在"}, status=404)
         if page.is_folder:
-            return JsonResponse({"ok": False, "error": "目录节点不能添加元素，请选择子页面"}, status=400)
+            return JsonResponse(
+                {"ok": False, "error": "目录节点不能添加元素，请选择子页面"}, status=400
+            )
 
         data = json.loads(request.body)
         alias = data.get("alias", "").strip()
@@ -401,24 +457,32 @@ def add_element_to_page(request, page_id):
                 el = Element.objects.create(page=page, **fields)
                 updated = False
             except IntegrityError:
-                return JsonResponse({
-                    "ok": False,
-                    "error": "该元素已在当前页面中（相同 resource-id 与位置），请到「元素管理」查看",
-                }, status=409)
+                return JsonResponse(
+                    {
+                        "ok": False,
+                        "error": "该元素已在当前页面中（相同 resource-id 与位置），请到「元素管理」查看",
+                    },
+                    status=409,
+                )
             page.element_count = Element.objects.filter(page=page).count()
             page.save(update_fields=["element_count"])
 
-        return JsonResponse({
-            "ok": True,
-            "updated": updated,
-            "element": _element_payload(el),
-        })
+        return JsonResponse(
+            {
+                "ok": True,
+                "updated": updated,
+                "element": _element_payload(el),
+            }
+        )
     except Exception as e:
-        return JsonResponse({
-            "ok": False,
-            "error": "保存元素失败，请稍后重试",
-            "detail": str(e),
-        }, status=500)
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "保存元素失败，请稍后重试",
+                "detail": str(e),
+            },
+            status=500,
+        )
 
 
 @csrf_exempt
@@ -461,44 +525,60 @@ def batch_add_elements(request, page_id):
         else:
             xpath = item.get("xpath", "")
             if xpath:
-                xpaths = json.dumps([{
-                    "type": item.get("xpath_type", "manual"),
-                    "xpath": xpath,
-                    "count": item.get("xpath_count", 1),
-                }])
+                xpaths = json.dumps(
+                    [
+                        {
+                            "type": item.get("xpath_type", "manual"),
+                            "xpath": xpath,
+                            "count": item.get("xpath_count", 1),
+                        }
+                    ]
+                )
             else:
                 xpaths = "[]"
 
         rid = item.get("resource_id", "")
         bounds = item.get("bounds", "")
-        prepared.append({
-            "alias": alias,
-            "resource_id": rid,
-            "bounds": bounds,
-            "fields": {
+        prepared.append(
+            {
                 "alias": alias,
-                "class_name": item.get("class_name", ""),
-                "text_val": item.get("text_val", ""),
-                "content_desc": item.get("content_desc", ""),
                 "resource_id": rid,
                 "bounds": bounds,
-                "xpath_candidates": xpaths,
-                "clickable": bool(item.get("clickable", False)),
-                "enabled": bool(item.get("enabled", True)),
-                "notes": item.get("notes", ""),
-            },
-        })
+                "fields": {
+                    "alias": alias,
+                    "class_name": item.get("class_name", ""),
+                    "text_val": item.get("text_val", ""),
+                    "content_desc": item.get("content_desc", ""),
+                    "resource_id": rid,
+                    "bounds": bounds,
+                    "xpath_candidates": xpaths,
+                    "clickable": bool(item.get("clickable", False)),
+                    "enabled": bool(item.get("enabled", True)),
+                    "notes": item.get("notes", ""),
+                },
+            }
+        )
 
     if not prepared:
-        return JsonResponse({"ok": True, "saved": 0, "updated": 0, "skipped": skipped,
-                             "errors": errors[:5] if errors else []})
+        return JsonResponse(
+            {
+                "ok": True,
+                "saved": 0,
+                "updated": 0,
+                "skipped": skipped,
+                "errors": errors[:5] if errors else [],
+            }
+        )
 
     # Batch query existing elements in ONE query: collect all (resource_id, bounds) pairs
-    lookup_keys = [(p["resource_id"], p["bounds"]) for p in prepared if p["resource_id"] and p["bounds"]]
+    lookup_keys = [
+        (p["resource_id"], p["bounds"]) for p in prepared if p["resource_id"] and p["bounds"]
+    ]
     existing_map = {}  # (resource_id, bounds) → Element
     if lookup_keys:
         # Query in batches to avoid too-large IN clauses, though this is rare
         from django.db.models import Q
+
         q_filter = Q()
         for rid, bnd in lookup_keys:
             q_filter |= Q(resource_id=rid, bounds=bnd)
@@ -565,22 +645,33 @@ def page_elements(request, page_id):
     if filter_type == "clickable":
         qs = qs.filter(clickable=True)
     elif filter_type == "text":
-        qs = qs.exclude(text_val='')
+        qs = qs.exclude(text_val="")
     elif filter_type == "testpoint":
         qs = qs.filter(is_test_point=True)
 
     total = qs.count()
-    qs = qs.order_by('id')[offset:offset + limit]
+    qs = qs.order_by("id")[offset : offset + limit]
 
-    result = [{
-        "id": e.id, "page_id": e.page_id, "class_name": e.class_name,
-        "text_val": e.text_val, "content_desc": e.content_desc,
-        "resource_id": e.resource_id, "bounds": e.bounds,
-        "xpath_candidates": e.xpath_candidates, "clickable": e.clickable,
-        "enabled": e.enabled, "alias": e.alias, "tags": e.tags,
-        "is_test_point": e.is_test_point, "notes": e.notes,
-        "created_at": str(e.created_at),
-    } for e in qs]
+    result = [
+        {
+            "id": e.id,
+            "page_id": e.page_id,
+            "class_name": e.class_name,
+            "text_val": e.text_val,
+            "content_desc": e.content_desc,
+            "resource_id": e.resource_id,
+            "bounds": e.bounds,
+            "xpath_candidates": e.xpath_candidates,
+            "clickable": e.clickable,
+            "enabled": e.enabled,
+            "alias": e.alias,
+            "tags": e.tags,
+            "is_test_point": e.is_test_point,
+            "notes": e.notes,
+            "created_at": str(e.created_at),
+        }
+        for e in qs
+    ]
     return JsonResponse({"ok": True, "elements": result, "total": total})
 
 
@@ -601,27 +692,32 @@ def update_element(request, el_id):
 
 # ── Flow CRUD ──
 
+
 @csrf_exempt
 def flows_handler(request):
     """GET/POST /api/elements/flows."""
-    if request.method == 'GET':
-        flows = PageFlow.objects.select_related(
-            'from_page', 'to_page', 'trigger_element'
-        ).order_by('-created_at')
-        result = [{
-            "id": f.id, "from_page_id": f.from_page_id,
-            "to_page_id": f.to_page_id,
-            "trigger_element_id": f.trigger_element_id,
-            "trigger_action": f.trigger_action,
-            "created_at": str(f.created_at),
-            "from_label": f.from_page.label if f.from_page_id else "",
-            "to_label": f.to_page.label if f.to_page_id else "",
-            "trigger_text": f.trigger_element.text_val if f.trigger_element_id else "",
-            "trigger_rid": f.trigger_element.resource_id if f.trigger_element_id else "",
-        } for f in flows]
+    if request.method == "GET":
+        flows = PageFlow.objects.select_related("from_page", "to_page", "trigger_element").order_by(
+            "-created_at"
+        )
+        result = [
+            {
+                "id": f.id,
+                "from_page_id": f.from_page_id,
+                "to_page_id": f.to_page_id,
+                "trigger_element_id": f.trigger_element_id,
+                "trigger_action": f.trigger_action,
+                "created_at": str(f.created_at),
+                "from_label": f.from_page.label if f.from_page_id else "",
+                "to_label": f.to_page.label if f.to_page_id else "",
+                "trigger_text": f.trigger_element.text_val if f.trigger_element_id else "",
+                "trigger_rid": f.trigger_element.resource_id if f.trigger_element_id else "",
+            }
+            for f in flows
+        ]
         return JsonResponse({"ok": True, "flows": result})
 
-    elif request.method == 'POST':
+    elif request.method == "POST":
         data = json.loads(request.body)
         PageFlow.objects.create(
             from_page_id=data["from_page_id"],
@@ -644,20 +740,34 @@ def delete_flow(request, flow_id):
 # ── Web Element CRUD ──
 
 LOCATOR_TYPE_CHOICES = [
-    "css_selector", "xpath", "id", "class_name", "name",
-    "tag_name", "link_text", "partial_link_text", "text",
-    "test_id", "role", "placeholder",
+    "css_selector",
+    "xpath",
+    "id",
+    "class_name",
+    "name",
+    "tag_name",
+    "link_text",
+    "partial_link_text",
+    "text",
+    "test_id",
+    "role",
+    "placeholder",
 ]
 
 
 def _web_element_payload(el):
     return {
-        "id": el.id, "name": el.name,
-        "locator_type": el.locator_type, "locator_value": el.locator_value,
-        "page_url": el.page_url, "description": el.description,
-        "tags": el.tags, "is_test_point": el.is_test_point,
+        "id": el.id,
+        "name": el.name,
+        "locator_type": el.locator_type,
+        "locator_value": el.locator_value,
+        "page_url": el.page_url,
+        "description": el.description,
+        "tags": el.tags,
+        "is_test_point": el.is_test_point,
         "group_id": el.group_id,
-        "created_at": str(el.created_at), "updated_at": str(el.updated_at),
+        "created_at": str(el.created_at),
+        "updated_at": str(el.updated_at),
     }
 
 
@@ -670,6 +780,7 @@ def list_web_elements(request):
     search = request.GET.get("search", "").strip()
     if search:
         from django.db.models import Q
+
         qs = qs.filter(
             Q(name__icontains=search)
             | Q(locator_value__icontains=search)
@@ -720,7 +831,10 @@ def create_web_element(request):
 
     locator_type = data.get("locator_type", "css_selector")
     if locator_type not in LOCATOR_TYPE_CHOICES:
-        return JsonResponse({"ok": False, "error": f"无效的定位方式, 必须是: {', '.join(LOCATOR_TYPE_CHOICES)}"}, status=400)
+        return JsonResponse(
+            {"ok": False, "error": f"无效的定位方式, 必须是: {', '.join(LOCATOR_TYPE_CHOICES)}"},
+            status=400,
+        )
 
     locator_value = data.get("locator_value", "").strip()
     if not locator_value:
@@ -731,6 +845,7 @@ def create_web_element(request):
         group = None
         if group_id is not None and group_id != "":
             from .models import WebGroup
+
             try:
                 group = WebGroup.objects.get(id=int(group_id))
             except (WebGroup.DoesNotExist, ValueError, TypeError):
@@ -791,6 +906,7 @@ def web_element_detail(request, el_id):
         if "group_id" in data:
             gid = data["group_id"]
             from .models import WebGroup
+
             if gid is None or gid == "" or gid == "null":
                 el.group = None
             else:
@@ -799,12 +915,24 @@ def web_element_detail(request, el_id):
                 except (WebGroup.DoesNotExist, ValueError, TypeError):
                     pass
 
-        el.save(update_fields=[
-            k for k in ["name", "locator_type", "locator_value",
-                        "page_url", "description", "tags", "is_test_point",
-                        "group", "group_id"]
-            if k in data
-        ] + ["updated_at"])
+        el.save(
+            update_fields=[
+                k
+                for k in [
+                    "name",
+                    "locator_type",
+                    "locator_value",
+                    "page_url",
+                    "description",
+                    "tags",
+                    "is_test_point",
+                    "group",
+                    "group_id",
+                ]
+                if k in data
+            ]
+            + ["updated_at"]
+        )
         return JsonResponse({"ok": True, "element": _web_element_payload(el)})
 
     elif request.method == "DELETE":
@@ -844,7 +972,9 @@ def batch_import_web_elements(request):
             continue
         try:
             WebElement.objects.create(
-                name=name, locator_type=lt, locator_value=lv,
+                name=name,
+                locator_type=lt,
+                locator_value=lv,
                 page_url=item.get("page_url", ""),
                 description=item.get("description", ""),
                 tags=item.get("tags", ""),
@@ -868,7 +998,8 @@ def _web_group_payload(g):
     children = getattr(g, "children", None)
     child_count = children.count() if children is not None else 0
     return {
-        "id": g.id, "name": g.name,
+        "id": g.id,
+        "name": g.name,
         "parent_id": g.parent_id,
         "is_folder": g.is_folder,
         "sort_order": g.sort_order,
@@ -880,17 +1011,20 @@ def _web_group_payload(g):
 
 def list_web_groups(request):
     """GET /api/elements/web-groups/ — Flat list of all groups with element_count."""
-    from .models import WebGroup
     from django.db.models import Count
 
-    groups = list(WebGroup.objects.annotate(
-        _element_count=Count("elements")
-    ).order_by("sort_order", "name"))
+    from .models import WebGroup
 
-    return JsonResponse({
-        "ok": True,
-        "groups": [_web_group_payload(g) for g in groups],
-    })
+    groups = list(
+        WebGroup.objects.annotate(_element_count=Count("elements")).order_by("sort_order", "name")
+    )
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "groups": [_web_group_payload(g) for g in groups],
+        }
+    )
 
 
 @csrf_exempt
@@ -923,7 +1057,8 @@ def create_web_group(request):
 
     try:
         g = WebGroup.objects.create(
-            name=name, parent_id=parent_id,
+            name=name,
+            parent_id=parent_id,
             is_folder=is_folder,
             sort_order=data.get("sort_order", 0),
         )
@@ -936,8 +1071,7 @@ def create_web_group(request):
 @csrf_exempt
 def web_group_detail(request, group_id):
     """PUT/DELETE /api/elements/web-groups/{id}/ — Rename or delete a group."""
-    from .models import WebGroup
-    from .models import WebElement
+    from .models import WebElement, WebGroup
 
     try:
         g = WebGroup.objects.get(id=group_id)
@@ -1013,48 +1147,63 @@ def batch_move_web_groups(request):
 @csrf_exempt
 def web_flows_handler(request):
     """GET/POST /api/elements/web-flows/ — List or create web page flows."""
-    from .models import WebPageFlow, WebGroup, WebElement
+    from .models import WebElement, WebGroup, WebPageFlow
 
-    if request.method == 'GET':
+    if request.method == "GET":
         flows = WebPageFlow.objects.select_related(
-            'from_group', 'to_group', 'trigger_element'
-        ).order_by('-created_at')
-        result = [{
-            "id": f.id, "from_group_id": f.from_group_id,
-            "to_group_id": f.to_group_id,
-            "trigger_element_id": f.trigger_element_id,
-            "trigger_action": f.trigger_action,
-            "created_at": str(f.created_at),
-            "from_label": f.from_group.name if f.from_group_id else "",
-            "to_label": f.to_group.name if f.to_group_id else "",
-            "trigger_name": f.trigger_element.name if f.trigger_element_id else "",
-        } for f in flows]
+            "from_group", "to_group", "trigger_element"
+        ).order_by("-created_at")
+        result = [
+            {
+                "id": f.id,
+                "from_group_id": f.from_group_id,
+                "to_group_id": f.to_group_id,
+                "trigger_element_id": f.trigger_element_id,
+                "trigger_action": f.trigger_action,
+                "created_at": str(f.created_at),
+                "from_label": f.from_group.name if f.from_group_id else "",
+                "to_label": f.to_group.name if f.to_group_id else "",
+                "trigger_name": f.trigger_element.name if f.trigger_element_id else "",
+            }
+            for f in flows
+        ]
         return JsonResponse({"ok": True, "flows": result})
 
-    elif request.method == 'POST':
+    elif request.method == "POST":
         data = json.loads(request.body)
         from_id = data.get("from_group_id")
         to_id = data.get("to_group_id")
         if not from_id or not to_id:
-            return JsonResponse({"ok": False, "error": "from_group_id 和 to_group_id 必填"}, status=400)
+            return JsonResponse(
+                {"ok": False, "error": "from_group_id 和 to_group_id 必填"}, status=400
+            )
 
         # Validate both IDs are WebGroup (not Android Page)
         from .models import WebGroup
+
         try:
             from_g = WebGroup.objects.get(pk=from_id)
             to_g = WebGroup.objects.get(pk=to_id)
         except WebGroup.DoesNotExist:
-            return JsonResponse({"ok": False, "error": "分组不存在，只能使用 Web 元素分组（el_web_groups）"}, status=400)
+            return JsonResponse(
+                {"ok": False, "error": "分组不存在，只能使用 Web 元素分组（el_web_groups）"},
+                status=400,
+            )
 
         if from_g.is_folder or to_g.is_folder:
-            return JsonResponse({"ok": False, "error": "目录节点不能作为流的端点，请选择具体的页面（非目录）"}, status=400)
+            return JsonResponse(
+                {"ok": False, "error": "目录节点不能作为流的端点，请选择具体的页面（非目录）"},
+                status=400,
+            )
 
         trigger_id = data.get("trigger_element_id")
         if trigger_id:
             try:
                 trigger_el = WebElement.objects.get(pk=trigger_id)
                 if trigger_el.group_id not in (from_id, to_id):
-                    return JsonResponse({"ok": False, "error": "触发元素必须属于源页面或目标页面"}, status=400)
+                    return JsonResponse(
+                        {"ok": False, "error": "触发元素必须属于源页面或目标页面"}, status=400
+                    )
             except WebElement.DoesNotExist:
                 return JsonResponse({"ok": False, "error": "触发元素不存在"}, status=400)
 
@@ -1073,6 +1222,7 @@ def web_flows_handler(request):
 def delete_web_flow(request, flow_id):
     """DELETE /api/elements/web-flows/{id}/."""
     from .models import WebPageFlow
+
     WebPageFlow.objects.filter(id=flow_id).delete()
     return JsonResponse({"ok": True})
 
@@ -1084,7 +1234,8 @@ def _api_group_payload(g):
     children = getattr(g, "children", None)
     child_count = children.count() if children is not None else 0
     return {
-        "id": g.id, "name": g.name,
+        "id": g.id,
+        "name": g.name,
         "parent_id": g.parent_id,
         "is_folder": g.is_folder,
         "sort_order": g.sort_order,
@@ -1096,17 +1247,20 @@ def _api_group_payload(g):
 
 def list_api_groups(request):
     """GET /api/elements/api-groups/ — Flat list of all groups with endpoint_count."""
-    from .models import ApiGroup
     from django.db.models import Count
 
-    groups = list(ApiGroup.objects.annotate(
-        _endpoint_count=Count("endpoints")
-    ).order_by("sort_order", "name"))
+    from .models import ApiGroup
 
-    return JsonResponse({
-        "ok": True,
-        "groups": [_api_group_payload(g) for g in groups],
-    })
+    groups = list(
+        ApiGroup.objects.annotate(_endpoint_count=Count("endpoints")).order_by("sort_order", "name")
+    )
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "groups": [_api_group_payload(g) for g in groups],
+        }
+    )
 
 
 @csrf_exempt
@@ -1139,7 +1293,8 @@ def create_api_group(request):
 
     try:
         g = ApiGroup.objects.create(
-            name=name, parent_id=parent_id,
+            name=name,
+            parent_id=parent_id,
             is_folder=is_folder,
             sort_order=data.get("sort_order", 0),
         )
@@ -1152,8 +1307,7 @@ def create_api_group(request):
 @csrf_exempt
 def api_group_detail(request, group_id):
     """PUT/DELETE /api/elements/api-groups/{id}/ — Rename or delete a group."""
-    from .models import ApiGroup
-    from .models import ApiEndpoint
+    from .models import ApiEndpoint, ApiGroup
 
     try:
         g = ApiGroup.objects.get(id=group_id)
@@ -1228,26 +1382,37 @@ def batch_move_api_groups(request):
 
 def _api_endpoint_payload(e):
     return {
-        "id": e.id, "name": e.name, "method": e.method, "url": e.url,
-        "headers": e.headers, "request_body_schema": e.request_body_schema,
-        "response_body_schema": e.response_body_schema, "description": e.description,
-        "tags": e.tags, "is_test_point": e.is_test_point,
+        "id": e.id,
+        "name": e.name,
+        "method": e.method,
+        "url": e.url,
+        "headers": e.headers,
+        "request_body_schema": e.request_body_schema,
+        "response_body_schema": e.response_body_schema,
+        "description": e.description,
+        "tags": e.tags,
+        "is_test_point": e.is_test_point,
         "group_id": e.group_id,
-        "created_at": str(e.created_at), "updated_at": str(e.updated_at),
+        "created_at": str(e.created_at),
+        "updated_at": str(e.updated_at),
     }
 
 
 def list_api_endpoints(request):
     """GET /api/elements/api-endpoints/ — List API endpoints with search."""
     from .models import ApiEndpoint
+
     qs = ApiEndpoint.objects.all()
 
     search = request.GET.get("search", "").strip()
     if search:
         from django.db.models import Q
+
         qs = qs.filter(
-            Q(name__icontains=search) | Q(url__icontains=search)
-            | Q(description__icontains=search) | Q(tags__icontains=search)
+            Q(name__icontains=search)
+            | Q(url__icontains=search)
+            | Q(description__icontains=search)
+            | Q(tags__icontains=search)
         )
 
     method = request.GET.get("method", "").strip().upper()
@@ -1269,13 +1434,16 @@ def list_api_endpoints(request):
                 pass
 
     qs = qs.order_by("-updated_at")
-    return JsonResponse({"ok": True, "endpoints": [_api_endpoint_payload(e) for e in qs], "total": qs.count()})
+    return JsonResponse(
+        {"ok": True, "endpoints": [_api_endpoint_payload(e) for e in qs], "total": qs.count()}
+    )
 
 
 @csrf_exempt
 def create_api_endpoint(request):
     """POST /api/elements/api-endpoints/ — Create API endpoint."""
     from .models import ApiEndpoint
+
     try:
         data = json.loads(request.body)
     except Exception:
@@ -1296,6 +1464,7 @@ def create_api_endpoint(request):
         group = None
         if group_id is not None and group_id != "":
             from .models import ApiGroup
+
             try:
                 group = ApiGroup.objects.get(id=int(group_id))
             except (ApiGroup.DoesNotExist, ValueError, TypeError):
@@ -1303,7 +1472,9 @@ def create_api_endpoint(request):
 
         el = ApiEndpoint.objects.create(
             group=group,
-            name=name, method=method, url=url,
+            name=name,
+            method=method,
+            url=url,
             headers=data.get("headers") or {},
             request_body_schema=data.get("request_body_schema") or {},
             response_body_schema=data.get("response_body_schema") or {},
@@ -1320,6 +1491,7 @@ def create_api_endpoint(request):
 def api_endpoint_detail(request, el_id):
     """PUT/DELETE /api/elements/api-endpoints/{id}/."""
     from .models import ApiEndpoint
+
     try:
         e = ApiEndpoint.objects.get(id=el_id)
     except ApiEndpoint.DoesNotExist:
@@ -1331,8 +1503,16 @@ def api_endpoint_detail(request, el_id):
         except Exception:
             return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
 
-        for field in ["name", "method", "url", "headers", "request_body_schema",
-                        "response_body_schema", "description", "tags"]:
+        for field in [
+            "name",
+            "method",
+            "url",
+            "headers",
+            "request_body_schema",
+            "response_body_schema",
+            "description",
+            "tags",
+        ]:
             if field in data:
                 setattr(e, field, data[field])
         if "is_test_point" in data:
@@ -1343,6 +1523,7 @@ def api_endpoint_detail(request, el_id):
                 e.group = None
             else:
                 from .models import ApiGroup
+
                 try:
                     e.group = ApiGroup.objects.get(id=int(gid))
                 except (ApiGroup.DoesNotExist, ValueError, TypeError):

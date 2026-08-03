@@ -1,8 +1,21 @@
 """case-manager UI automation case API — CRUD, batch, helpers."""
 
+__all__ = [
+    "ConflictError",
+    "batch_save_definitions",
+    "get_definition",
+    "get_enabled_definitions",
+    "save_definition",
+]
+
 import json
-from datetime import datetime, date
-from .models import TestDefinition, CaseDirectory
+import logging
+
+from datetime import date, datetime
+
+from .models import CaseDirectory, TestDefinition
+
+logger = logging.getLogger(__name__)
 
 
 class ConflictError(ValueError):
@@ -60,7 +73,9 @@ def save_definition(case_id, **fields):
         try:
             directory = CaseDirectory.objects.get(id=directory_id)
         except CaseDirectory.DoesNotExist:
-            pass
+            logger.warning(
+                "Directory %s not found when saving UI case, saving without directory", directory_id
+            )
 
     title = fields.get("title", "")
 
@@ -71,13 +86,12 @@ def save_definition(case_id, **fields):
         if client_ts and existing.updated_at:
             db_ts = existing.updated_at.replace(microsecond=0)
             if client_ts != db_ts:
-                raise ConflictError(
-                    f"用例「{title or case_id}」已被他人修改，请刷新后重试"
-                )
+                raise ConflictError(f"用例「{title or case_id}」已被他人修改，请刷新后重试")
 
     # Check for duplicate title in the same directory
-    dup = (TestDefinition.objects.filter(directory=directory, title=title)
-           .exclude(id=case_id).first())
+    dup = (
+        TestDefinition.objects.filter(directory=directory, title=title).exclude(id=case_id).first()
+    )
     if dup:
         dir_label = directory.name if directory else "根级（未分类）"
         raise ValueError(f"目录「{dir_label}」下已存在同名用例「{title}」")

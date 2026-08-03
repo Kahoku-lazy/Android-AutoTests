@@ -2,7 +2,9 @@
 Step executor — interprets TestStep sequences and calls DeviceAdapter methods.
 Migrated from sku_stress_test, adapted to use DeviceAdapter instead of TestExecutor.
 """
+
 import time
+
 from models.step_types import TestStep
 
 
@@ -23,22 +25,37 @@ class StepExecutor:
             return "stopped"
 
         handlers = {
+            # ── 通用操作 ──
             "click": self._do_click,
             "long_click": self._do_long_click,
             "swipe": self._do_swipe,
             "wait": self._do_wait,
-            "wait_disappear": self._do_wait_disappear,
-            "verify_text": self._do_verify_text,
-            "poll_text": self._do_poll_text,
             "sleep": self._do_sleep,
+            "log": self._do_log,
+            "screenshot": self._do_screenshot,
+            "click_indexed": self._do_click_indexed,
+            # ── Android 独有（adb_ 新名）──
+            "adb_start_app": self._do_start_app,
+            "adb_kill_app": self._do_kill_app,
+            "adb_wait_toast": self._do_wait_toast,
+            "adb_perf_element_time": self._do_perf_element_time,
+            "adb_if_appear": self._do_if_appear,
+            "adb_if_disappear": self._do_if_disappear,
+            "adb_loop_n": self._do_loop_n,
+            "adb_loop_elements": self._do_loop_elements,
+            "adb_poll_text": self._do_poll_text,
+            # ── 旧名（兼容迁移过渡期）──
             "start_app": self._do_start_app,
             "kill_app": self._do_kill_app,
-            "perf_element_time": self._do_perf_element_time,
             "wait_toast": self._do_wait_toast,
+            "perf_element_time": self._do_perf_element_time,
             "if_element_appear": self._do_if_appear,
             "if_element_disappear": self._do_if_disappear,
             "loop_n": self._do_loop_n,
             "loop_elements": self._do_loop_elements,
+            "poll_text": self._do_poll_text,
+            "wait_disappear": self._do_wait_disappear,
+            "verify_text": self._do_verify_text,
         }
 
         handler = handlers.get(t)
@@ -59,29 +76,38 @@ class StepExecutor:
             # ── Watcher check before each step ──
             self.exe.run_watchers()
 
-            desc = step.description or step.xpath or step.expected_text or ''
-            self.exe.log(f'{prefix}── 步骤 {i+1}/{total} [{step.type}] {desc[:80]}')
+            desc = step.description or step.xpath or step.expected_text or ""
+            self.exe.log(f"{prefix}── 步骤 {i + 1}/{total} [{step.type}] {desc[:80]}")
             # Notify step started before execution
             if self.exe._step_started_callback:
                 self.exe._step_started_callback(i, total, step.type, desc[:100])
 
             # ── Container steps: execute children recursively ──
-            is_container = step.type in ("if_element_appear", "if_element_disappear", "loop_n", "loop_elements")
+            is_container = step.type in (
+                "if_element_appear",
+                "if_element_disappear",
+                "loop_n",
+                "loop_elements",
+                "adb_if_appear",
+                "adb_if_disappear",
+                "adb_loop_n",
+                "adb_loop_elements",
+            )
             if is_container:
                 result = self.execute(step)
                 if result == "pass" and step.children:
                     child_result = self.execute_all(step.children, depth + 1)
                     if child_result != "pass":
-                        self.exe.log(f'{prefix}    ↳ 子步骤失败')
+                        self.exe.log(f"{prefix}    ↳ 子步骤失败")
                         if self.exe._step_callback:
                             self.exe._step_callback(i, total, step.type, desc[:100], child_result)
                         return child_result
                 if self.exe._step_callback:
                     self.exe._step_callback(i, total, step.type, desc[:100], result)
                 if result not in ("pass", "skip"):
-                    self.exe.log(f'{prefix}    ↳ 失败 ({result})')
+                    self.exe.log(f"{prefix}    ↳ 失败 ({result})")
                     return result
-                self.exe.log(f'{prefix}    ↳ 通过')
+                self.exe.log(f"{prefix}    ↳ 通过")
                 continue
 
             result = self.execute(step)
@@ -89,32 +115,36 @@ class StepExecutor:
             if self.exe._step_callback:
                 self.exe._step_callback(i, total, step.type, desc[:100], result)
             if result != "pass":
-                self.exe.log(f'{prefix}    ↳ 失败 ({result})')
+                self.exe.log(f"{prefix}    ↳ 失败 ({result})")
                 return result
-            self.exe.log(f'{prefix}    ↳ 通过')
+            self.exe.log(f"{prefix}    ↳ 通过")
         return "pass"
 
     # ---- Implementations ----
 
     def _do_click(self, s: TestStep) -> str:
-        self.exe.log(f'点击: {s.description or s.xpath}')
+        """点击目标元素 (CLICK step)."""
+        self.exe.log(f"点击: {s.description or s.xpath}")
         self.exe.click(s.xpath)
         return "pass"
 
     def _do_long_click(self, s: TestStep) -> str:
+        """长按目标元素 (LONG_CLICK step)."""
         dur = s.timeout if s.timeout > 0 else 0.8
-        self.exe.log(f'长按 {dur}s: {s.description or s.xpath}')
+        self.exe.log(f"长按 {dur}s: {s.description or s.xpath}")
         self.exe.long_click(s.xpath, dur)
         return "pass"
 
     def _do_swipe(self, s: TestStep) -> str:
-        self.exe.log(f'滑动: {s.direction} {s.distance}px')
+        """滑动屏幕 (SWIPE step)."""
+        self.exe.log(f"滑动: {s.direction} {s.distance}px")
         self.exe.swipe(s.direction, s.distance)
         return "pass"
 
     def _do_wait(self, s: TestStep) -> str:
-        interval = (s.index if s.index > 0 else 0.5)
-        self.exe.log(f'等待: {s.description or s.xpath} (超时 {s.timeout}s, 间隔 {interval}s)')
+        """等待元素出现 (WAIT step)."""
+        interval = s.index if s.index > 0 else 0.5
+        self.exe.log(f"等待: {s.description or s.xpath} (超时 {s.timeout}s, 间隔 {interval}s)")
         deadline = time.time() + s.timeout
         while time.time() < deadline:
             if self.exe.stopped():
@@ -124,28 +154,33 @@ class StepExecutor:
             self.exe.sleep(interval)
         if self.exe.stopped():
             return "stopped"
-        self.exe.log(f'错误: {s.timeout}s 内未找到 {s.description or s.xpath}')
+        self.exe.log(f"错误: {s.timeout}s 内未找到 {s.description or s.xpath}")
         return "fail"
 
     def _do_wait_disappear(self, s: TestStep) -> str:
+        """等待元素消失 (WAIT_DISAPPEAR step)."""
         if self.exe.wait_appear_then_disappear(s.xpath, timeout=s.timeout):
             return "pass"
         if self.exe.stopped():
             return "stopped"
-        self.exe.log(f'错误: {s.description or s.xpath} 未出现或未消失')
+        self.exe.log(f"错误: {s.description or s.xpath} 未出现或未消失")
         return "fail"
 
     def _do_verify_text(self, s: TestStep) -> str:
+        """验证元素文本 (VERIFY_TEXT step)."""
         text = self.exe.get_text(s.xpath)
         self.exe.log(f'文本: "{text}" (期望: "{s.expected_text}")')
         if text == s.expected_text:
             return "pass"
-        self.exe.log(f'错误: 文本不匹配')
+        self.exe.log(f"错误: 文本不匹配")
         return "fail"
 
     def _do_poll_text(self, s: TestStep) -> str:
-        interval = (s.index if s.index > 0 else 0.5)
-        self.exe.log(f'轮询等待文本变为 "{s.expected_text}" (超时 {s.timeout}s, 间隔 {interval}s)...')
+        """轮询等待文本变为预期值 (POLL_TEXT step)."""
+        interval = s.index if s.index > 0 else 0.5
+        self.exe.log(
+            f'轮询等待文本变为 "{s.expected_text}" (超时 {s.timeout}s, 间隔 {interval}s)...'
+        )
         start_time = time.time()
         deadline = start_time + s.timeout
         last_text = ""
@@ -163,27 +198,36 @@ class StepExecutor:
                     return "pass"
             self.exe.sleep(interval)
         elapsed = time.time() - start_time
-        self.exe.log(f'错误: {s.timeout}s 超时，轮询文本 "{s.expected_text}" 已等待 {elapsed:.1f} 秒, 最后: "{last_text}"')
+        self.exe.log(
+            f'错误: {s.timeout}s 超时，轮询文本 "{s.expected_text}" 已等待 {elapsed:.1f} 秒, 最后: "{last_text}"'
+        )
         return "fail"
 
     def _do_sleep(self, s: TestStep) -> str:
-        self.exe.log(f'等待 {s.timeout}s...')
+        """固定等待 (SLEEP step)."""
+        self.exe.log(f"等待 {s.timeout}s...")
         self.exe.sleep(s.timeout)
         return "stopped" if self.exe.stopped() else "pass"
 
     def _do_kill_app(self, s: TestStep = None) -> str:
-        pkg = (s.xpath if s and s.xpath else self.exe.PACKAGE_NAME)
+        """杀死应用 (KILL_APP step)."""
+        pkg = s.xpath if s and s.xpath else self.exe.PACKAGE_NAME
         if not pkg:
-            self.exe.log('错误: 未指定包名（请在步骤中填写 xpath="com.example.app" 或用例中设置包名）')
+            self.exe.log(
+                '错误: 未指定包名（请在步骤中填写 xpath="com.example.app" 或用例中设置包名）'
+            )
             return "fail"
         self.exe.kill_app(pkg)
         self.exe.sleep(2)
         return "pass"
 
     def _do_start_app(self, s: TestStep = None) -> str:
-        pkg = (s.xpath if s and s.xpath else self.exe.PACKAGE_NAME)
+        """启动应用 (START_APP step)."""
+        pkg = s.xpath if s and s.xpath else self.exe.PACKAGE_NAME
         if not pkg:
-            self.exe.log('错误: 未指定包名（请在步骤中填写 xpath="com.example.app" 或用例中设置包名）')
+            self.exe.log(
+                '错误: 未指定包名（请在步骤中填写 xpath="com.example.app" 或用例中设置包名）'
+            )
             return "fail"
         self.exe.log(f"正在启动 App: {pkg}")
         self.exe.d.app_start(pkg)
@@ -191,6 +235,7 @@ class StepExecutor:
         return "pass"
 
     def _do_perf_element_time(self, s: TestStep) -> str:
+        """测量元素出现耗时 (PERF_ELEMENT_TIME step)."""
         desc = s.description or s.xpath
         timeout = s.timeout if s.timeout > 0 else 10
         self.exe.log(f'等待元素出现耗时: 开始计时 "{desc}" (超时 {timeout}s)')
@@ -202,10 +247,12 @@ class StepExecutor:
             if self.exe.exists(s.xpath, timeout=0):
                 elapsed = time.time() - start_time
                 self.exe.log(f'等待元素出现耗时: "{desc}" 出现耗时 {elapsed:.2f}s')
-                self.exe._perf_results.append({
-                    "description": desc,
-                    "duration": round(elapsed, 3),
-                })
+                self.exe._perf_results.append(
+                    {
+                        "description": desc,
+                        "duration": round(elapsed, 3),
+                    }
+                )
                 return "pass"
             self.exe.sleep(0.2)
         if self.exe.stopped():
@@ -214,6 +261,7 @@ class StepExecutor:
         return "fail"
 
     def _do_wait_toast(self, s: TestStep) -> str:
+        """等待 Toast 消息 (WAIT_TOAST step)."""
         desc = s.expected_text or s.description
         timeout = s.timeout if s.timeout > 0 else 10
         self.exe.log(f'等待Toast: "{desc}" (超时 {timeout}s)')
@@ -221,10 +269,11 @@ class StepExecutor:
             return "pass"
         if self.exe.stopped():
             return "stopped"
-        self.exe.log(f'错误: {timeout}s 内未出现Toast「{desc}」')
+        self.exe.log(f"错误: {timeout}s 内未出现Toast「{desc}」")
         return "fail"
 
     def _do_if_appear(self, s: TestStep) -> str:
+        """条件分支：如果元素出现则执行子步骤 (IF_APPEAR step)."""
         desc = s.description or s.xpath
         self.exe.log(f'判断: 如果 "{desc}" 出现')
         if self.exe.exists(s.xpath, timeout=s.timeout if s.timeout > 0 else 5):
@@ -234,6 +283,7 @@ class StepExecutor:
         return "skip"
 
     def _do_if_disappear(self, s: TestStep) -> str:
+        """条件分支：如果元素消失则执行子步骤 (IF_DISAPPEAR step)."""
         desc = s.description or s.xpath
         self.exe.log(f'判断: 如果 "{desc}" 消失')
         if not self.exe.exists(s.xpath, timeout=0):
@@ -243,33 +293,35 @@ class StepExecutor:
         return "skip"
 
     def _do_loop_n(self, s: TestStep) -> str:
+        """固定次数循环执行子步骤 (LOOP_N step)."""
         n = s.index if s.index > 0 else 1
-        desc = s.description or f'循环{n}次'
-        self.exe.log(f'循环: {desc}')
+        desc = s.description or f"循环{n}次"
+        self.exe.log(f"循环: {desc}")
         for i in range(n):
             if self.exe.stopped():
                 return "stopped"
-            self.exe.log(f'  ── 第 {i+1}/{n} 次 ──')
+            self.exe.log(f"  ── 第 {i + 1}/{n} 次 ──")
             child_result = self.execute_all(s.children, depth=1)
             if child_result and child_result not in ("pass", "skip"):
                 return child_result
         return "pass"
 
     def _do_loop_elements(self, s: TestStep) -> str:
-        xpaths = [x.strip() for x in (s.xpath or '').split('|') if x.strip()]
+        """遍历元素列表执行子步骤 (LOOP_ELEMENTS step)."""
+        xpaths = [x.strip() for x in (s.xpath or "").split("|") if x.strip()]
         if not xpaths:
-            self.exe.log('错误: 未指定元素列表（多个XPath用 | 分隔）')
-            return 'fail'
+            self.exe.log("错误: 未指定元素列表（多个XPath用 | 分隔）")
+            return "fail"
         # Support indexed clicking: if index > 0, click each element by index
         use_index = s.index if s.index > 0 else 0
-        self.exe.log(f'遍历元素列表: {len(xpaths)} 个元素')
+        self.exe.log(f"遍历元素列表: {len(xpaths)} 个元素")
         for idx, xp in enumerate(xpaths):
             if self.exe.stopped():
                 return "stopped"
-            self.exe.log(f'  ── 第 {idx+1}/{len(xpaths)} 个: {xp[:60]} ──')
+            self.exe.log(f"  ── 第 {idx + 1}/{len(xpaths)} 个: {xp[:60]} ──")
             if use_index:
                 if not self.exe.click_indexed(xp, use_index - 1):
-                    self.exe.log(f'  错误: 点击第{use_index}个元素失败')
+                    self.exe.log(f"  错误: 点击第{use_index}个元素失败")
                     return "fail"
             else:
                 self.exe.click(xp)
@@ -280,3 +332,21 @@ class StepExecutor:
                     return child_result
         return "pass"
 
+    def _do_log(self, s: TestStep) -> str:
+        """输出日志消息 (LOG step)."""
+        self.exe.log(s.description or s.xpath or "---")
+        return "pass"
+
+    def _do_screenshot(self, s: TestStep) -> str:
+        """截取当前屏幕截图 (SCREENSHOT step)."""
+        desc = s.description or "screenshot"
+        self.exe.log(f"截屏: {desc}")
+        self.exe.d.screenshot()
+        return "pass"
+
+    def _do_click_indexed(self, s: TestStep) -> str:
+        """点击指定索引的元素 (CLICK_INDEXED step)."""
+        idx = s.index if s.index > 0 else 0
+        self.exe.log(f"点击索引 #{idx}: {s.description or s.xpath}")
+        ok = self.exe.click_indexed(s.xpath, idx)
+        return "pass" if ok else "fail"

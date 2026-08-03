@@ -11,7 +11,6 @@ from apps.ai_assistant.decorators import require_auth
 from .default_questions import DEFAULT_QUESTIONS
 from .models import EvalResult, EvalRun, Question, QuestionBank
 
-
 # ── short-circuit: missing-auth views that don't crash middleware ──
 
 
@@ -26,17 +25,21 @@ def _user_id(request) -> str:
 
 def list_banks(request):
     banks = QuestionBank.objects.all().order_by("-updated_at")
-    return JsonResponse({
-        "ok": True,
-        "banks": [
-            {
-                "id": b.id, "name": b.name, "description": b.description,
-                "question_count": b.question_count,
-                "created_at": str(b.created_at),
-            }
-            for b in banks
-        ],
-    })
+    return JsonResponse(
+        {
+            "ok": True,
+            "banks": [
+                {
+                    "id": b.id,
+                    "name": b.name,
+                    "description": b.description,
+                    "question_count": b.question_count,
+                    "created_at": str(b.created_at),
+                }
+                for b in banks
+            ],
+        }
+    )
 
 
 def bank_detail(request, bank_id):
@@ -44,22 +47,26 @@ def bank_detail(request, bank_id):
         bank = QuestionBank.objects.prefetch_related("questions").get(id=bank_id)
     except QuestionBank.DoesNotExist:
         return JsonResponse({"ok": False, "error": "not found"}, status=404)
-    return JsonResponse({
-        "ok": True,
-        "bank": {
-            "id": bank.id,
-            "name": bank.name,
-            "description": bank.description,
-            "questions": [
-                {
-                    "id": q.id, "content": q.content,
-                    "expected_keywords": q.expected_keywords,
-                    "category": q.category, "order": q.order,
-                }
-                for q in bank.questions.all()
-            ],
-        },
-    })
+    return JsonResponse(
+        {
+            "ok": True,
+            "bank": {
+                "id": bank.id,
+                "name": bank.name,
+                "description": bank.description,
+                "questions": [
+                    {
+                        "id": q.id,
+                        "content": q.content,
+                        "expected_keywords": q.expected_keywords,
+                        "category": q.category,
+                        "order": q.order,
+                    }
+                    for q in bank.questions.all()
+                ],
+            },
+        }
+    )
 
 
 @csrf_exempt
@@ -126,10 +133,13 @@ def seed_default_bank(request):
     """POST /api/evaluator/banks/seed — create the default 30-question bank."""
     existing = QuestionBank.objects.filter(name="默认30题试卷").first()
     if existing:
-        return JsonResponse({
-            "ok": True, "id": existing.id,
-            "message": "默认试卷已存在，直接返回",
-        })
+        return JsonResponse(
+            {
+                "ok": True,
+                "id": existing.id,
+                "message": "默认试卷已存在，直接返回",
+            }
+        )
     bank = QuestionBank.objects.create(
         name="默认30题试卷",
         description="内置 30 道评测问题，覆盖平台功能、测试流程、设备管理、元素定位、知识库、异常处理、测试方法等 7 个类别。",
@@ -164,30 +174,32 @@ def list_frameworks(request):
 
 def list_runs(request):
     runs = EvalRun.objects.select_related("agent", "bank").all()[:50]
-    return JsonResponse({
-        "ok": True,
-        "runs": [
-            {
-                "id": r.id,
-                "agent_id": r.agent_id,
-                "agent_name": r.agent.name if r.agent else "?",
-                "framework": r.framework or "self",
-                "bank_id": r.bank_id,
-                "bank_name": r.bank.name if r.bank else "?",
-                "status": r.status,
-                "total_questions": r.total_questions,
-                "completed_questions": r.completed_questions,
-                "total_score": r.total_score,
-                "avg_relevance": r.avg_relevance,
-                "avg_accuracy": r.avg_accuracy,
-                "avg_completeness": r.avg_completeness,
-                "avg_conciseness": r.avg_conciseness,
-                "created_at": str(r.created_at),
-                "finished_at": str(r.finished_at) if r.finished_at else None,
-            }
-            for r in runs
-        ],
-    })
+    return JsonResponse(
+        {
+            "ok": True,
+            "runs": [
+                {
+                    "id": r.id,
+                    "agent_id": r.agent_id,
+                    "agent_name": r.agent.name if r.agent else "?",
+                    "framework": r.framework or "self",
+                    "bank_id": r.bank_id,
+                    "bank_name": r.bank.name if r.bank else "?",
+                    "status": r.status,
+                    "total_questions": r.total_questions,
+                    "completed_questions": r.completed_questions,
+                    "total_score": r.total_score,
+                    "avg_relevance": r.avg_relevance,
+                    "avg_accuracy": r.avg_accuracy,
+                    "avg_completeness": r.avg_completeness,
+                    "avg_conciseness": r.avg_conciseness,
+                    "created_at": str(r.created_at),
+                    "finished_at": str(r.finished_at) if r.finished_at else None,
+                }
+                for r in runs
+            ],
+        }
+    )
 
 
 def run_detail(request, run_id):
@@ -199,49 +211,53 @@ def run_detail(request, run_id):
     results = []
     for r in run.results.all():
         eff = r.effective_scores()
-        results.append({
-            "id": r.id,
-            "question_id": r.question_id,
-            "question_text": r.question_text[:200],
-            "agent_response": r.agent_response[:500],
-            "relevance_score": r.relevance_score,
-            "accuracy_score": r.accuracy_score,
-            "completeness_score": r.completeness_score,
-            "conciseness_score": r.conciseness_score,
-            "human_relevance": r.human_relevance,
-            "human_accuracy": r.human_accuracy,
-            "human_completeness": r.human_completeness,
-            "human_conciseness": r.human_conciseness,
-            "human_note": r.human_note,
-            "effective_relevance": eff["relevance"],
-            "effective_accuracy": eff["accuracy"],
-            "effective_completeness": eff["completeness"],
-            "effective_conciseness": eff["conciseness"],
-            "judge_reasoning": r.judge_reasoning[:300],
-        })
+        results.append(
+            {
+                "id": r.id,
+                "question_id": r.question_id,
+                "question_text": r.question_text[:200],
+                "agent_response": r.agent_response[:500],
+                "relevance_score": r.relevance_score,
+                "accuracy_score": r.accuracy_score,
+                "completeness_score": r.completeness_score,
+                "conciseness_score": r.conciseness_score,
+                "human_relevance": r.human_relevance,
+                "human_accuracy": r.human_accuracy,
+                "human_completeness": r.human_completeness,
+                "human_conciseness": r.human_conciseness,
+                "human_note": r.human_note,
+                "effective_relevance": eff["relevance"],
+                "effective_accuracy": eff["accuracy"],
+                "effective_completeness": eff["completeness"],
+                "effective_conciseness": eff["conciseness"],
+                "judge_reasoning": r.judge_reasoning[:300],
+            }
+        )
 
-    return JsonResponse({
-        "ok": True,
-        "run": {
-            "id": run.id,
-            "agent_id": run.agent_id,
-            "agent_name": run.agent.name if run.agent else "?",
-            "framework": run.framework or "self",
-            "bank_name": run.bank.name if run.bank else "?",
-            "status": run.status,
-            "total_questions": run.total_questions,
-            "completed_questions": run.completed_questions,
-            "total_score": run.total_score,
-            "avg_relevance": run.avg_relevance,
-            "avg_accuracy": run.avg_accuracy,
-            "avg_completeness": run.avg_completeness,
-            "avg_conciseness": run.avg_conciseness,
-            "report_json": run.report_json,
-            "created_at": str(run.created_at),
-            "finished_at": str(run.finished_at) if run.finished_at else None,
-            "results": results,
-        },
-    })
+    return JsonResponse(
+        {
+            "ok": True,
+            "run": {
+                "id": run.id,
+                "agent_id": run.agent_id,
+                "agent_name": run.agent.name if run.agent else "?",
+                "framework": run.framework or "self",
+                "bank_name": run.bank.name if run.bank else "?",
+                "status": run.status,
+                "total_questions": run.total_questions,
+                "completed_questions": run.completed_questions,
+                "total_score": run.total_score,
+                "avg_relevance": run.avg_relevance,
+                "avg_accuracy": run.avg_accuracy,
+                "avg_completeness": run.avg_completeness,
+                "avg_conciseness": run.avg_conciseness,
+                "report_json": run.report_json,
+                "created_at": str(run.created_at),
+                "finished_at": str(run.finished_at) if run.finished_at else None,
+                "results": results,
+            },
+        }
+    )
 
 
 @csrf_exempt
@@ -257,7 +273,8 @@ def start_eval_run(request):
 
     if not agent_id or not bank_id:
         return JsonResponse(
-            {"ok": False, "error": "agent_id and bank_id are required"}, status=400,
+            {"ok": False, "error": "agent_id and bank_id are required"},
+            status=400,
         )
 
     from apps.ai_assistant.models import AIAgent
@@ -299,8 +316,9 @@ def start_eval_run(request):
                     return
                 # Call agent directly using the adapter
                 import asyncio
+
+                from apps.ai_assistant.agent_scope.provider_registry import get_provider_config
                 from apps.ai_assistant.api import decrypt_key
-                from agentscope_service.provider_registry import get_provider_config
 
                 api_key = decrypt_key(agent.api_key) if agent.api_key else ""
                 provider_cfg = get_provider_config(agent.model_provider, agent.base_url)
@@ -314,7 +332,11 @@ def start_eval_run(request):
                     "temperature": agent.temperature,
                 }
                 questions_list = [
-                    {"content": q.content, "expected_keywords": q.expected_keywords, "category": q.category}
+                    {
+                        "content": q.content,
+                        "expected_keywords": q.expected_keywords,
+                        "category": q.category,
+                    }
                     for q in bank.questions.all().order_by("order", "id")
                 ]
                 result = asyncio.run(adapter.run(agent_config, questions_list))
@@ -322,15 +344,20 @@ def start_eval_run(request):
                 run.total_score = result.total_score
                 run.total_questions = len(questions_list)
                 run.completed_questions = len(result.items)
-                run.report_json = json.dumps({
-                    "framework": framework,
-                    "total_score": result.total_score,
-                    "scores": result.scores,
-                    "items": result.items,
-                    "raw": result.raw,
-                    "error": result.error if not result.ok else "",
-                }, ensure_ascii=False, indent=2)
+                run.report_json = json.dumps(
+                    {
+                        "framework": framework,
+                        "total_score": result.total_score,
+                        "scores": result.scores,
+                        "items": result.items,
+                        "raw": result.raw,
+                        "error": result.error if not result.ok else "",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
                 from datetime import datetime
+
                 run.finished_at = datetime.now()
                 run.save()
             except Exception as e:
@@ -352,9 +379,13 @@ def start_eval_run(request):
     t = threading.Thread(target=_bg, daemon=True)
     t.start()
 
-    return JsonResponse({
-        "ok": True, "id": run.id, "message": f"评测已开始，共 {bank.question_count} 题",
-    })
+    return JsonResponse(
+        {
+            "ok": True,
+            "id": run.id,
+            "message": f"评测已开始，共 {bank.question_count} 题",
+        }
+    )
 
 
 @csrf_exempt
@@ -393,7 +424,8 @@ def submit_human_score(request, result_id):
         run.avg_completeness = round(tc / scored, 2)
         run.avg_conciseness = round(tcon / scored, 2)
         run.total_score = round(
-            (run.avg_relevance + run.avg_accuracy + run.avg_completeness + run.avg_conciseness) / 4, 2,
+            (run.avg_relevance + run.avg_accuracy + run.avg_completeness + run.avg_conciseness) / 4,
+            2,
         )
         run.save()
 
@@ -437,28 +469,29 @@ def kb_search(request):
 
     top_k = int(body.get("top_k", 5))
 
-    from agentscope_service.rag import document_store
+    from apps.ai_assistant.agent_scope import rag_service as document_store
 
     docs = document_store.search(query, top_k=top_k)
-    return JsonResponse({
-        "ok": True,
-        "query": query,
-        "total": len(docs),
-        "documents": [
-            {
-                "source": d.get("metadata", {}).get("source", "?"),
-                "score": round(d.get("score", 0), 4),
-                "content": d.get("content", "")[:800],
-            }
-            for d in docs
-        ],
-    })
+    return JsonResponse(
+        {
+            "ok": True,
+            "query": query,
+            "total": len(docs),
+            "documents": [
+                {
+                    "source": d.get("metadata", {}).get("source", "?"),
+                    "score": round(d.get("score", 0), 4),
+                    "content": d.get("content", "")[:800],
+                }
+                for d in docs
+            ],
+        }
+    )
 
 
 def kb_self_test(request):
     """POST /api/evaluator/kb-self-test — test knowledge base retrieval quality."""
-    from agentscope_service.rag import document_store
-    from .default_questions import VALID_CATEGORIES
+    from apps.ai_assistant.agent_scope import rag_service as document_store
 
     results = []
     for query in KB_TEST_QUERIES:
@@ -471,34 +504,42 @@ def kb_self_test(request):
             source = meta.get("source", "")
             # Truncated content check — ChromaDB stores truncated content
             # so exact match isn't possible; we do a partial match
-            verified_docs.append({
-                "source": source,
-                "score": d["score"],
-                "content_preview": d["content"][:200],
-                "content_length": len(d["content"]),
-            })
+            verified_docs.append(
+                {
+                    "source": source,
+                    "score": d["score"],
+                    "content_preview": d["content"][:200],
+                    "content_length": len(d["content"]),
+                }
+            )
 
-        results.append({
-            "query": query,
-            "total_hits": len(docs),
-            "top_score": docs[0]["score"] if docs else 0,
-            "documents": verified_docs,
-        })
+        results.append(
+            {
+                "query": query,
+                "total_hits": len(docs),
+                "top_score": docs[0]["score"] if docs else 0,
+                "documents": verified_docs,
+            }
+        )
 
     # Score: % of queries that returned at least 1 result
     queries_with_results = sum(1 for r in results if r["total_hits"] > 0)
-    coverage_score = round(queries_with_results / len(KB_TEST_QUERIES) * 100, 1) if KB_TEST_QUERIES else 0
+    coverage_score = (
+        round(queries_with_results / len(KB_TEST_QUERIES) * 100, 1) if KB_TEST_QUERIES else 0
+    )
 
     # Average relevance score of top hits
     top_scores = [r["top_score"] for r in results if r["total_hits"] > 0]
     avg_relevance = round(sum(top_scores) / len(top_scores), 3) if top_scores else 0
 
-    return JsonResponse({
-        "ok": True,
-        "score": {
-            "coverage": coverage_score,
-            "avg_relevance": avg_relevance,
-            "total_queries": len(KB_TEST_QUERIES),
-        },
-        "details": results,
-    })
+    return JsonResponse(
+        {
+            "ok": True,
+            "score": {
+                "coverage": coverage_score,
+                "avg_relevance": avg_relevance,
+                "total_queries": len(KB_TEST_QUERIES),
+            },
+            "details": results,
+        }
+    )

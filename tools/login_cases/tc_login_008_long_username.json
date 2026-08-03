@@ -1,0 +1,18 @@
+{
+  "title": "[Web] 登录-超长用户名登录应报错",
+  "url": "http://localhost:5173/login",
+  "priority": "P1",
+  "description": "验证使用超过150字符的用户名时，前端客户端校验拦截，弹窗提示「用户名过长」",
+  "expected_result": "ElMessage 弹窗显示「用户名过长，最多150个字符」",
+  "directory_id": 109,
+  "steps": [
+    {"type": "web_navigate", "url": "http://localhost:5173/login?add=1", "description": "打开登录页"},
+    {"type": "web_wait", "timeout": 2, "description": "等待页面加载完成"},
+    {"type": "web_fill", "selector": "input[placeholder=\"账号\"]", "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "description": "填入151字符超长用户名"},
+    {"type": "web_fill", "selector": "input[placeholder=\"密码\"]", "value": "test123", "description": "填入密码"},
+    {"type": "web_click", "selector": "button.el-button--primary", "description": "点击登录按钮"},
+    {"type": "web_wait", "timeout": 1, "description": "等待客户端校验响应"},
+    {"type": "web_assert", "expected_text": "用户名过长", "description": "验证弹窗显示用户名过长"},
+    {"type": "web_screenshot", "description": "超长用户名校验弹窗截图"}
+  ]
+}

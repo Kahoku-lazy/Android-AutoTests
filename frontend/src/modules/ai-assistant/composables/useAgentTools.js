@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import {
-  fetchPlatformTools, fetchAvailableSkills, fetchKnowledgeDocuments,
+  fetchPlatformTools, fetchAvailableSkills, getKnowledgeDocuments,
   fetchAgentTools, saveMcp as saveMcpApi, testMcpConnection,
   uploadSkill as uploadSkillApi, toggleToolEnabled, deleteToolById,
 } from '../api.js'
@@ -10,8 +10,8 @@ import {
  * Extracted from AgentDetail.vue to keep the parent component under the 500-line limit.
  */
 export function useAgentTools(form, isNew, agentId) {
-  // ── Platform Tools ──
-  const availablePlatformTools = ref([])
+  // ── Platform Tools (category-based) ──
+  const toolCategories = ref([])
   const selectedPlatformTools = ref(new Set())
   const loadingPlatformTools = ref(false)
 
@@ -19,7 +19,7 @@ export function useAgentTools(form, isNew, agentId) {
     loadingPlatformTools.value = true
     try {
       const data = await fetchPlatformTools()
-      if (data.ok) availablePlatformTools.value = data.tools || []
+      if (data.ok) toolCategories.value = data.categories || []
     } catch (err) { /* silent */ }
     loadingPlatformTools.value = false
   }
@@ -31,6 +31,19 @@ export function useAgentTools(form, isNew, agentId) {
   }
 
   function isPlatformToolSelected(name) { return selectedPlatformTools.value.has(name) }
+
+  function toggleCategory(cat) {
+    const allNames = cat.tools.map(t => t.name)
+    const allSelected = allNames.every(n => selectedPlatformTools.value.has(n))
+    const s = new Set(selectedPlatformTools.value)
+    if (allSelected) { allNames.forEach(n => s.delete(n)) }
+    else { allNames.forEach(n => s.add(n)) }
+    selectedPlatformTools.value = s
+  }
+
+  function isCategorySelected(cat) {
+    return cat.tools.length > 0 && cat.tools.every(t => selectedPlatformTools.value.has(t.name))
+  }
 
   // ── Workspace Skills ──
   const availableSkills = ref([])
@@ -69,49 +82,46 @@ export function useAgentTools(form, isNew, agentId) {
   }
 
   // ── Knowledge Base Docs ──
-  const knowledgeDocs = ref([])
+  const knowledgeDocs = ref([])       // all KB documents (for import dialog)
   const loadingDocs = ref(false)
-  const enabledDocIds = ref(new Set())
+  const showImportDialog = ref(false)
 
   async function loadKnowledgeDocs() {
     loadingDocs.value = true
     try {
-      const data = await fetchKnowledgeDocuments()
-      if (data.ok) {
-        knowledgeDocs.value = data.data?.documents || []
-        enabledDocIds.value = new Set(knowledgeDocs.value.map(d => d.id))
-      }
+      const data = await getKnowledgeDocuments()
+      if (data.ok) knowledgeDocs.value = data.data?.documents || []
     } catch (err) { /* silent */ }
     loadingDocs.value = false
   }
 
   function isDocEnabled(docId) {
-    const sources = form.value.knowledge_sources || []
-    if (sources.includes('__none__')) return false
-    if (!sources.length) return true
-    return sources.includes(docId)
+    const sources = form.value.knowledge_sources || {}
+    return sources[docId] === true
   }
 
-  function toggleDoc(docId) {
-    let sources = [...(form.value.knowledge_sources || [])]
-    const wasNone = sources.includes('__none__')
-    sources = sources.filter(s => s !== '__none__')
-    if (wasNone) { sources = [docId] }
-    else if (sources.length === 0) {
-      sources = knowledgeDocs.value.map(d => d.id).filter(s => s !== docId)
-    } else {
-      sources.includes(docId) ? sources = sources.filter(s => s !== docId) : sources.push(docId)
+  function toggleDocEnabled(docId) {
+    const sources = { ...(form.value.knowledge_sources || {}) }
+    sources[docId] = !sources[docId]
+    form.value.knowledge_sources = sources
+  }
+
+  function importDocs(selectedIds) {
+    const sources = { ...(form.value.knowledge_sources || {}) }
+    for (const id of selectedIds) {
+      if (!(id in sources)) sources[id] = true
     }
-    const allIds = new Set(knowledgeDocs.value.map(d => d.id))
-    const selectedIds = new Set(sources)
-    if (sources.length === 0) { form.value.knowledge_sources = ['__none__'] }
-    else if (allIds.size === selectedIds.size && [...allIds].every(id => selectedIds.has(id))) {
-      form.value.knowledge_sources = []
-    } else { form.value.knowledge_sources = sources }
+    form.value.knowledge_sources = sources
   }
 
-  function selectAllDocs() { form.value.knowledge_sources = [] }
-  function deselectAllDocs() { form.value.knowledge_sources = ['__none__'] }
+  function removeDoc(docId) {
+    const sources = { ...(form.value.knowledge_sources || {}) }
+    delete sources[docId]
+    form.value.knowledge_sources = sources
+  }
+
+  function openImportDialog() { showImportDialog.value = true }
+  function closeImportDialog() { showImportDialog.value = false }
 
   // ── MCP ──
   const mcpTools = ref([])
@@ -241,8 +251,8 @@ export function useAgentTools(form, isNew, agentId) {
   async function removeSkill(index) {
     const s = skills.value[index]
     if (s?.id) {
-      try { await deleteToolById(agentId.value, s.id) } catch (err) { /* silent */ }
-      await loadSkills()
+      try { await deleteToolById(agentId.value, s.id) } catch (err) { console.error('removeSkill failed:', err) }
+      await loadAgentTools()
     }
   }
 
@@ -255,25 +265,29 @@ export function useAgentTools(form, isNew, agentId) {
   const platformToolSelectedCount = computed(() => selectedPlatformTools.value.size)
   const wsSkillEnabledCount = computed(() => availableSkills.value.filter(s => isSkillEnabled(s.name)).length)
   const kbDocSelectedCount = computed(() => {
-    const sources = form.value.knowledge_sources || []
-    if (sources.includes('__none__')) return 0
-    if (!sources.length) return knowledgeDocs.value.length
-    return sources.filter(id => id !== '__none__').length
+    const sources = form.value.knowledge_sources || {}
+    return Object.values(sources).filter(v => v === true).length
+  })
+  const importedDocIds = computed(() => {
+    const sources = form.value.knowledge_sources || {}
+    return Object.keys(sources)
   })
   const mcpCount = computed(() => isNew.value ? form.value.tools.length : mcpTools.value.length)
   const customSkillCount = computed(() => skills.value.length)
 
   return {
     // platform tools
-    availablePlatformTools, selectedPlatformTools, loadingPlatformTools,
+    toolCategories, selectedPlatformTools, loadingPlatformTools,
     loadPlatformTools, togglePlatformTool, isPlatformToolSelected,
+    toggleCategory, isCategorySelected,
     // skills
     availableSkills, loadingSkills, enabledSkills,
     loadAvailableSkills, isSkillEnabled, toggleSkill: toggleSkill_,
     selectAllSkills, deselectAllSkills,
     // knowledge docs
-    knowledgeDocs, loadingDocs, enabledDocIds,
-    loadKnowledgeDocs, isDocEnabled, toggleDoc, selectAllDocs, deselectAllDocs,
+    knowledgeDocs, loadingDocs, showImportDialog,
+    loadKnowledgeDocs, isDocEnabled, toggleDocEnabled, importDocs, removeDoc,
+    openImportDialog, closeImportDialog, importedDocIds,
     // MCP
     mcpTools, mcpDialogVisible, mcpDialogMode, mcpForm, mcpJsonError,
     mcpTestingId, mcpTestResults,

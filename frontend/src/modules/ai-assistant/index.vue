@@ -14,9 +14,10 @@ import TaskStickyNote from './components/TaskStickyNote.vue'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import KnowledgeBase from './KnowledgeBase.vue'
 import EvaluatorTab from './EvaluatorTab.vue'
+import ToolboxPanel from './components/ToolboxPanel.vue'
 
 const router = useRouter()
-const viewMode = ref('agents')  // 'agents' | 'knowledge' | 'evaluator'
+const viewMode = ref('agents')  // 'agents' | 'toolbox' | 'knowledge' | 'evaluator'
 const agents = ref([])
 const loading = ref(false)
 const testingId = ref(null)
@@ -114,7 +115,7 @@ async function loadAgents() {
 async function loadTasks({ silent = false } = {}) {
   if (!silent) tasksLoading.value = true
   try {
-    const { data } = await listTasks({ status: 'all' })
+    const data = await listTasks({ status: 'all' })
     if (data.ok) tasks.value = data.tasks || []
   } catch {
     if (!silent) ElMessage.error('加载任务看板失败')
@@ -129,7 +130,7 @@ function openTask(task) {
     return
   }
   if (task.task_type === 'case_generation') {
-    router.push('/case-manager')
+    router.push('/cases')
   } else {
     router.push(`/runner?run=${encodeURIComponent(task.run_id)}`)
   }
@@ -163,7 +164,7 @@ function animateStatusBubbles() {
 // ── Health ──
 async function checkAllHealth() {
   try {
-    const { data } = await checkAgentsHealth()
+    const data = await checkAgentsHealth()
     if (data.ok && data.agents) {
       for (const h of data.agents) {
         healthResults.value[h.id] = { is_connected: h.is_connected, last_checked: h.last_checked }
@@ -176,7 +177,7 @@ async function checkAllHealth() {
 async function testConnection(agent) {
   testingId.value = agent.id
   try {
-    const { data } = await testAgent(agent.id)
+    const data = await testAgent(agent.id)
     if (data.ok) {
       healthResults.value[agent.id] = { is_connected: data.connected, last_checked: new Date().toISOString() }
       if (data.connected) {
@@ -202,7 +203,7 @@ async function deleteAgent(agent) {
     )
   } catch { return }  // 用户取消
   try {
-    const { data } = await apiDeleteAgent(agent.id)
+    const data = await apiDeleteAgent(agent.id)
     if (data.ok) {
       agents.value = agents.value.filter(a => a.id !== agent.id)
       ElMessage.success(`已删除「${agent.name}」`)
@@ -259,7 +260,7 @@ async function confirmModel(agent) {
   if (!newModel || newModel === agent.model_name) return
   confirmingId.value = agent.id
   try {
-    const { data } = await updateAgentModel(agent.id, newModel)
+    const data = await updateAgentModel(agent.id, newModel)
     if (!data.ok) {
       pendingModels.value[agent.id] = agent.model_name
       ElMessage.error('模型切换失败')
@@ -311,6 +312,10 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
           :class="['view-tab', { active: viewMode === 'agents' }]"
           @click="viewMode = 'agents'"
         >🤖 智能体看板</button>
+        <button
+          :class="['view-tab', { active: viewMode === 'toolbox' }]"
+          @click="viewMode = 'toolbox'"
+        >🧰 AI工具箱</button>
         <button
           :class="['view-tab', { active: viewMode === 'knowledge' }]"
           @click="viewMode = 'knowledge'"
@@ -402,6 +407,8 @@ function editAgent(id) { router.push(`/ai-assistant/agent/${id}`) }
       </section>
       </template>
 
+      <!-- AI工具箱视图 -->
+      <ToolboxPanel v-if="viewMode === 'toolbox'" class="tb-host" />
       <!-- 知识库视图：占满 doc-body 剩余区域 -->
       <KnowledgeBase v-if="viewMode === 'knowledge'" class="kb-host" />
       <!-- 评测中心视图 -->

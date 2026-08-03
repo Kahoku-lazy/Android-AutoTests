@@ -5,6 +5,9 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import { getApiDefinition, saveApiDefinition, deleteApiDefinition } from '../../api/apiTesting.js'
+import ApiStepEditor from './ApiStepEditor.vue'
+
+const STEP_TYPES = ['api_request', 'api_assert', 'api_sleep', 'api_log']
 
 const router = useRouter()
 const route = useRoute()
@@ -21,11 +24,26 @@ const PRIORITY_COLORS = { P0: '#e85f5f', P1: '#f7cd67', P2: '#889df0' }
 const TYPES = ['string', 'number', 'boolean', 'object', 'array']
 
 const form = ref({
-  id: '', title: '', method: 'GET', url: '', expected_status: 200,
-  headers: '', body: '', expected_response: '',
-  precondition: '', description: '', priority: 'P1', enabled: true,
+  id: '', title: '', description: '',
+  precondition: '', priority: 'P1', enabled: true,
   directory_id: null,
 })
+
+// ── Steps (multi-step editor) ──
+const steps = ref([])
+
+function defaultApiStep(type = 'api_request') {
+  const base = { type, description: '', expected_status: 200 }
+  if (type === 'api_request') return { ...base, method: 'GET', url: '', headers: {}, body: {}, extract: {} }
+  if (type === 'api_assert')  return { ...base, assertions: [] }
+  if (type === 'api_sleep')   return { ...base, timeout: 1 }
+  if (type === 'api_log')     return { ...base, value: '' }
+  return base
+}
+
+function addStep(type) { steps.value = [...steps.value, defaultApiStep(type || 'api_request')] }
+function removeStep(i) { const arr = [...steps.value]; arr.splice(i, 1); steps.value = arr }
+function duplicateStep(i) { const arr = [...steps.value]; arr.splice(i + 1, 0, JSON.parse(JSON.stringify(arr[i]))); steps.value = arr }
 
 // ── Field editors (parsed from JSON strings) ──
 const headerFields = ref([])    // [{key, type}]
@@ -136,10 +154,17 @@ function updateValidateColKey(vi, key) {
   form.value.rows = rows
 }
 
-// ── Assertions ──
+// ── Assertions (legacy, unused in step-list mode) ──
 const assertionOps = ['exists', 'equals', 'contains', 'not_equals']
-function addAssertion() { form.value.assertions = [...(form.value.assertions || []), { path: '', op: 'equals', expect: '' }] }
-function removeAssertion(i) { const a = [...form.value.assertions]; a.splice(i, 1); form.value.assertions = a }
+
+function jsonStr(obj, fallback = '') {
+  if (!obj || !Object.keys(obj).length) return fallback
+  try { return JSON.stringify(obj, null, 2) } catch { return fallback }
+}
+function tryParseJson(val) {
+  if (!val || typeof val !== 'string') return val || {}
+  try { const o = JSON.parse(val); return typeof o === 'object' && o ? o : {} } catch { return {} }
+}
 
 // ── Load ──
 async function load() {
@@ -154,12 +179,33 @@ async function load() {
     if (data.ok) {
       const d = data.definition
       form.value = {
-        id: d.id, title: d.title, method: d.method, url: d.url,
-        expected_status: d.expected_status, headers: d.headers || '', body: d.body || '',
-        expected_response: d.expected_response || '', precondition: d.precondition || '',
-        description: d.description || '', priority: d.priority || 'P1', enabled: d.enabled,
+        id: d.id, title: d.title,
+        description: d.description || '', precondition: d.precondition || '',
+        priority: d.priority || 'P1', enabled: d.enabled,
         directory_id: d.directory_id,
-        rows: d.rows || [], assertions: d.assertions || [],
+        rows: d.rows || [],
+      }
+      // Parse steps_json → steps array (backward compat)
+      try {
+        const parsed = JSON.parse(d.steps_json || '[]')
+        steps.value = Array.isArray(parsed) ? parsed : []
+      } catch { steps.value = [] }
+      if (!steps.value.length) {
+        if (d.method || d.url) {
+          steps.value = [{ type: 'api_request', method: d.method || 'GET', url: d.url || '',
+            headers: tryParseJson(d.headers), body: tryParseJson(d.body),
+            expected_status: d.expected_status || 200, description: '' }]
+        }
+        if ((d.assertions || []).length) {
+          steps.value.push({ type: 'api_assert', assertions: d.assertions,
+            expected_status: d.expected_status || 200, description: '' })
+        }
+      }
+      // Sync body fields from first request for data module compat
+      const reqStep = steps.value.find(s => s.type === 'api_request')
+      if (reqStep) {
+        headerFields.value = parseFields(jsonStr(reqStep.headers))
+        bodyFields.value = parseFields(jsonStr(reqStep.body))
       }
       directoryName.value = d.directory_name || ''
       syncFromForm()
@@ -169,26 +215,30 @@ async function load() {
 }
 
 // ── Save ──
-function buildStepsJson() {
-  syncToForm()
-  const steps = [{
-    type: 'api_request', url: form.value.url, method: form.value.method,
-    headers: parseFields(form.value.headers).length ? JSON.parse(form.value.headers || '{}') : {},
-    body: parseFields(form.value.body).length ? JSON.parse(form.value.body || '{}') : {},
-    expected_status: form.value.expected_status,
-  }]
-  if ((form.value.assertions || []).length) {
-    steps.push({ type: 'api_assert', assertions: form.value.assertions, expected_status: form.value.expected_status })
+function syncFieldsToStep() {
+  // Push field-editor headers/body back into the first api_request step
+  const reqStep = steps.value.find(s => s.type === 'api_request')
+  if (reqStep) {
+    reqStep.headers = parseFields(fieldsToJson(headerFields.value)).length ? JSON.parse(fieldsToJson(headerFields.value) || '{}') : {}
+    reqStep.body = parseFields(fieldsToJson(bodyFields.value)).length ? JSON.parse(fieldsToJson(bodyFields.value) || '{}') : {}
   }
-  return JSON.stringify(steps)
+}
+
+function buildStepsJson() {
+  syncFieldsToStep()
+  const clean = steps.value.map(s => {
+    const c = { ...s }
+    if (c.extract && !Object.keys(c.extract).length) delete c.extract
+    if (c.headers && !Object.keys(c.headers).length) delete c.headers
+    if (c.body && !Object.keys(c.body).length) delete c.body
+    return c
+  })
+  return JSON.stringify(clean)
 }
 
 async function doSave() {
-  if (!form.value.title.trim() || !form.value.url.trim()) { ElMessage.warning('标题和 URL 必填'); return }
-  // Validate: input cols must match body fields
-  const bodyKeys = new Set(bodyFields.value.filter(f => f.key).map(f => f.key))
-  const inputRowKeys = (form.value.rows || []).filter(r => r.kind !== 'validate').map(r => r.key)
-  for (const k of inputRowKeys) { if (!bodyKeys.has(k)) { ElMessage.warning(`输入列 "${k}" 不在请求体字段中`); return } }
+  if (!form.value.title.trim()) { ElMessage.warning('标题必填'); return }
+  if (!steps.value.length) { ElMessage.warning('至少需要一个步骤'); return }
   saving.value = true
   syncToForm()
   try {
@@ -271,47 +321,39 @@ onMounted(load)
         </div>
       </section>
 
-      <!-- Request + Response -->
-      <div class="cards-row">
-        <section class="api-card api-card--req">
-          <div class="api-card__head"><span class="api-card__pin"></span><span class="api-card__title">📤 请求 Request</span></div>
-          <div class="api-card__body">
-            <div class="field"><div class="field__pair"><el-select v-model="form.method" size="small" class="method-select"><el-option v-for="m in ['GET','POST','PUT','DELETE','PATCH']" :key="m" :label="m" :value="m" /></el-select><el-input v-model="form.url" placeholder="https:// 或 /api/..." class="url-input" @keyup.enter="doSave" /></div></div>
-            <!-- Headers field editor -->
-            <div class="field"><label class="field__label">Headers 字段</label>
-              <div class="field-editor"><div class="field-row" v-for="(f,i) in headerFields" :key="'h'+i"><input v-model="f.key" placeholder="字段名" class="field-key" /><select v-model="f.type" class="field-type"><option v-for="t in TYPES" :key="t" :value="t">{{ t }}</option></select><button class="field-btn" @click="removeField(headerFields,i)">×</button></div><button class="field-add" @click="addField(headerFields)">+ 添加</button></div>
-            </div>
-            <!-- Body field editor -->
-            <div class="field"><label class="field__label">请求体 Body 字段</label>
-              <div class="field-editor"><div class="field-row" v-for="(f,i) in bodyFields" :key="'b'+i"><input v-model="f.key" placeholder="字段名" class="field-key" /><select v-model="f.type" class="field-type"><option v-for="t in TYPES" :key="t" :value="t">{{ t }}</option></select><button class="field-btn" @click="removeField(bodyFields,i)">×</button></div><button class="field-add" @click="addField(bodyFields)">+ 添加</button></div>
-            </div>
-          </div>
-        </section>
-        <section class="api-card api-card--res">
-          <div class="api-card__head"><span class="api-card__pin"></span><span class="api-card__title">📥 响应 Response</span></div>
-          <div class="api-card__body">
-            <div class="field"><label class="field__label">预期状态码</label><el-input-number v-model="form.expected_status" :min="100" :max="599" size="small" class="status-input" /><span class="status-hint" :class="{ ok: form.expected_status === 200, err: form.expected_status >= 400 }">{{ form.expected_status === 200 ? '✓ OK' : form.expected_status >= 400 ? '✗ Error' : '' }}</span></div>
-            <!-- Response field editor -->
-            <div class="field"><label class="field__label">响应体字段</label>
-              <div class="field-editor"><div class="field-row" v-for="(f,i) in respFields" :key="'r'+i"><input v-model="f.key" placeholder="字段名" class="field-key" /><select v-model="f.type" class="field-type"><option v-for="t in TYPES" :key="t" :value="t">{{ t }}</option></select><button class="field-btn" @click="removeField(respFields,i)">×</button></div><button class="field-add" @click="addField(respFields)">+ 添加</button></div>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <!-- Assertions Card -->
-      <section class="api-card api-card--assert">
-        <div class="api-card__head"><span class="api-card__pin"></span><span class="api-card__title">🔍 断言规则</span><span class="api-card__badge">{{ (form.assertions || []).length }} 条</span></div>
+      <!-- Steps Editor -->
+      <section class="api-card api-card--steps">
+        <div class="api-card__head"><span class="api-card__pin"></span><span class="api-card__title">📋 测试步骤</span><span class="api-card__badge">{{ steps.length }} 步</span></div>
         <div class="api-card__body">
-          <div v-if="(form.assertions || []).length" class="assert-list">
-            <div class="assert-row" v-for="(a, i) in form.assertions" :key="i">
-              <input v-model="a.path" placeholder="JSONPath 如 $.data.token" class="assert-path" />
-              <select v-model="a.op" class="assert-op"><option v-for="op in assertionOps" :key="op" :value="op">{{ op }}</option></select>
-              <input v-model="a.expect" placeholder="期望值" class="assert-expect" />
-              <button class="field-btn" @click="removeAssertion(i)">×</button>
-            </div>
+          <div v-if="!steps.length" class="data-empty">
+            <p>暂无步骤，点击下方按钮添加。</p>
           </div>
-          <button class="field-add" @click="addAssertion">+ 添加断言</button>
+          <ApiStepEditor
+            v-for="(s, i) in steps" :key="i"
+            :model-value="s"
+            :index="i"
+            @update:model-value="steps[i] = $event; steps = [...steps]"
+            @remove="removeStep(i)"
+            @duplicate="duplicateStep(i)"
+          />
+          <div class="add-step-bar">
+            <el-button v-for="t in STEP_TYPES" :key="t" size="small" @click="addStep(t)" class="add-step-btn">
+              + {{ t }}
+            </el-button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Request Fields (for data module compat) -->
+      <section class="api-card api-card--req">
+        <div class="api-card__head"><span class="api-card__pin"></span><span class="api-card__title">📤 请求字段（数据模块参考）</span></div>
+        <div class="api-card__body">
+          <div class="field"><label class="field__label">Headers 字段</label>
+            <div class="field-editor"><div class="field-row" v-for="(f,i) in headerFields" :key="'h'+i"><input v-model="f.key" placeholder="字段名" class="field-key" /><select v-model="f.type" class="field-type"><option v-for="t in TYPES" :key="t" :value="t">{{ t }}</option></select><button class="field-btn" @click="removeField(headerFields,i)">×</button></div><button class="field-add" @click="addField(headerFields)">+ 添加</button></div>
+          </div>
+          <div class="field"><label class="field__label">Body 字段</label>
+            <div class="field-editor"><div class="field-row" v-for="(f,i) in bodyFields" :key="'b'+i"><input v-model="f.key" placeholder="字段名" class="field-key" /><select v-model="f.type" class="field-type"><option v-for="t in TYPES" :key="t" :value="t">{{ t }}</option></select><button class="field-btn" @click="removeField(bodyFields,i)">×</button></div><button class="field-add" @click="addField(bodyFields)">+ 添加</button></div>
+          </div>
         </div>
       </section>
 

@@ -5,8 +5,13 @@ that StepExecutor expects (compatible with sku_stress_test's TestExecutor API).
 Airtest Android handles device actions (swipe, app lifecycle, shell).
 uiautomator2 is kept ONLY for XPath element operations.
 """
+
+import logging
 import time
+
 from .connect import DeviceConnection
+
+logger = logging.getLogger(__name__)
 
 
 class DeviceAdapter:
@@ -17,9 +22,13 @@ class DeviceAdapter:
       - XPath queries (exists, click, get_text) → uiautomator2
     """
 
-    def __init__(self, device_conn: DeviceConnection, package_name: str = "",
-                 logger: callable = None,
-                 should_stop: callable = None):
+    def __init__(
+        self,
+        device_conn: DeviceConnection,
+        package_name: str = "",
+        logger: callable = None,
+        should_stop: callable = None,
+    ):
         """
         Args:
             device_conn:   DeviceConnection with .airtest (Android) and .u2 (uiautomator2)
@@ -27,8 +36,8 @@ class DeviceAdapter:
             logger:        Callable for log messages: log(msg: str)
             should_stop:   Callable that returns True when execution should abort
         """
-        self.d = device_conn.u2          # u2 device for xpath (keep attribute name)
-        self.ad = device_conn.airtest    # airtest device for actions
+        self.d = device_conn.u2  # u2 device for xpath (keep attribute name)
+        self.ad = device_conn.airtest  # airtest device for actions
         self.PACKAGE_NAME = package_name
         self._emit_log = logger or (lambda msg: None)
         self._should_stop = should_stop or (lambda: False)
@@ -83,7 +92,7 @@ class DeviceAdapter:
                         self.log(f"Watcher: 已关闭弹窗 {xpath[:60]}")
                         dismissed += 1
             except Exception:
-                pass
+                logger.debug("Watcher popup dismiss failed: %s", xpath[:60])
         return dismissed
 
     # ---- Stop / Sleep ----
@@ -140,10 +149,10 @@ class DeviceAdapter:
             w, h = self.ad.get_current_resolution()
             cx, cy = w // 2, h // 2
             dirs = {
-                'up': (cx, h * 3 // 4, cx, h * 3 // 4 - distance),
-                'down': (cx, h // 4, cx, h // 4 + distance),
-                'left': (w * 3 // 4, cy, w * 3 // 4 - distance, cy),
-                'right': (w // 4, cy, w // 4 + distance, cy),
+                "up": (cx, h * 3 // 4, cx, h * 3 // 4 - distance),
+                "down": (cx, h // 4, cx, h // 4 + distance),
+                "left": (w * 3 // 4, cy, w * 3 // 4 - distance, cy),
+                "right": (w // 4, cy, w // 4 + distance, cy),
             }
             x1, y1, x2, y2 = dirs.get(direction, (cx, h * 3 // 4, cx, h // 4))
             self.ad.swipe((x1, y1), (x2, y2))
@@ -169,7 +178,7 @@ class DeviceAdapter:
         try:
             self.d.toast.reset()
         except Exception:
-            pass
+            logger.debug("Toast reset failed, continuing")
         while time.time() < deadline:
             if self.stopped():
                 return False
@@ -180,7 +189,7 @@ class DeviceAdapter:
                 if msg and expected_text in str(msg):
                     return True
             except Exception:
-                pass
+                logger.debug("Adapter operation failed, continuing")
             self.sleep(0.3)
         return False
 
@@ -199,20 +208,19 @@ class DeviceAdapter:
         try:
             self.ad.stop_app(pkg)
         except Exception:
-            pass
+            logger.debug("stop_app failed for %s, will try fallback", pkg)
         # Fallback: kill any remaining background processes
         try:
             self.ad.shell(f"am kill {pkg}")
         except Exception:
-            pass
+            logger.debug("am kill failed for %s, trying pkill", pkg)
         try:
             self.ad.shell(f"pkill -f {pkg}")
         except Exception:
-            pass
+            logger.debug("pkill failed for %s, continuing", pkg)
 
     # ---- Composite helpers (u2 XPath) ----
-    def wait_appear_then_disappear(self, xpath: str,
-                                    timeout: float = 30) -> bool:
+    def wait_appear_then_disappear(self, xpath: str, timeout: float = 30) -> bool:
         self.log(f'Waiting for "{xpath}" to appear then disappear (timeout {timeout}s)...')
         deadline = time.time() + timeout
         appeared = False
@@ -220,19 +228,19 @@ class DeviceAdapter:
             if self.stopped():
                 return False
             if self.d.xpath(xpath).exists:
-                self.log('  Element appeared, waiting for disappear...')
+                self.log("  Element appeared, waiting for disappear...")
                 appeared = True
                 break
             self.sleep(0.3)
         if not appeared:
-            self.log('  Timeout: element did not appear')
+            self.log("  Timeout: element did not appear")
             return False
         while time.time() < deadline:
             if self.stopped():
                 return False
             if not self.d.xpath(xpath).exists:
-                self.log('  Element disappeared')
+                self.log("  Element disappeared")
                 return True
             self.sleep(0.3)
-        self.log('  Timeout: element did not disappear')
+        self.log("  Timeout: element did not disappear")
         return False

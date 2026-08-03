@@ -251,7 +251,7 @@ def start_redis():
     print(f"[Redis] Starting on port {port}...")
     redis_cmd = "redis-server.cmd" if sys.platform == "win32" else "redis-server"
     try:
-        spawn([redis_cmd, "--port", str(port)], "redis.log")
+        spawn([redis_cmd, "--port", str(port), "--save", "900", "1"], "redis.log")
     except FileNotFoundError:
         print("  FAILED: redis-server not found")
         return False

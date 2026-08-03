@@ -3,6 +3,7 @@
 所有写操作（创建/更新/删除）必须通过 check_* 函数验证权限。
 读操作（列表/详情）不需要权限检查。
 """
+
 from django.db.models import Q
 
 from apps.ai_assistant.models import AIAgent, AIConversation

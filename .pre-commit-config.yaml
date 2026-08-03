@@ -1,0 +1,17 @@
+# Pre-commit hooks — Android-AutoTests
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+#
+# Encodes .claude/rules/python-code.md as automated pre-commit checks.
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.20
+    hooks:
+      # ── Formatter: 双引号 + 尾随逗号 + 行宽 (§11) ──
+      - id: ruff-format
+        name: "ruff: format (quotes, commas, line-length)"
+      # ── Linter: import 顺序 + 未使用 import + 裸 except + print() + 双引号 (§3,§8,§11) ──
+      - id: ruff
+        name: "ruff: lint (imports, bare-except, print, quotes)"
+        args: ["--fix"]

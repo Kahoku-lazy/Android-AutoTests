@@ -1,11 +1,14 @@
 """Model connectivity — test connection, list models."""
+
 import json
+import logging
+
 from datetime import datetime
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from agentscope_service.provider_registry import get_provider_config
+from apps.ai_assistant.agent_scope.provider_registry import get_provider_config
 
 from ..api import decrypt_key
 from ..decorators import require_auth
@@ -14,12 +17,24 @@ from ..permissions import check_agent_owner
 from ..serializers import validate_model_detect_input
 from .common import validation_error
 
+logger = logging.getLogger("ai_assistant")
+
 _MODEL_LIST_PATHS = ["/models", "/v1/models"]
+
+
+def _extract_model_ids(resp_json: dict) -> list:
+    """Extract model ID strings from a /models-style API response."""
+    if "data" in resp_json:
+        return [m.get("id", "") for m in resp_json["data"] if m.get("id")]
+    if "models" in resp_json:
+        return [m.get("id", "") for m in resp_json["models"] if m.get("id")]
+    return []
 
 
 def call_model_api(agent, path, method="GET", body=None):
     """Call the model provider's API with the agent's credentials."""
     import requests
+
     api_key = decrypt_key(agent.api_key) if agent.api_key else ""
     provider_cfg = get_provider_config(agent.model_provider, agent.base_url)
     base = provider_cfg["base_url"]
@@ -60,10 +75,7 @@ def test_agent_connection(request, agent_id):
         if resp is not None and 200 <= resp.status_code < 300:
             connected = True
             data = resp.json()
-            if "data" in data:
-                available_models = [m.get("id", "") for m in data["data"] if m.get("id")]
-            elif "models" in data:
-                available_models = [m.get("id", "") for m in data["models"] if m.get("id")]
+            available_models = _extract_model_ids(data)
             if available_models:
                 cur = a.model_name
                 available_models.sort(key=lambda x: (x != cur, x))
@@ -91,12 +103,14 @@ def test_agent_connection(request, agent_id):
         a.available_models = json.dumps(available_models)
     a.save()
 
-    return JsonResponse({
-        "ok": True,
-        "connected": connected,
-        "available_models": available_models,
-        "error": last_error if not connected else "",
-    })
+    return JsonResponse(
+        {
+            "ok": True,
+            "connected": connected,
+            "available_models": available_models,
+            "error": last_error if not connected else "",
+        }
+    )
 
 
 @csrf_exempt
@@ -113,6 +127,7 @@ def list_available_models(request, agent_id=None):
         provider_cfg = get_provider_config(provider, cleaned.get("base_url", ""))
         base_url = provider_cfg["base_url"]
         import requests
+
         models = []
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         for path in _MODEL_LIST_PATHS:
@@ -120,13 +135,11 @@ def list_available_models(request, agent_id=None):
                 resp = requests.get(f"{base_url.rstrip('/')}{path}", headers=headers, timeout=15)
                 if 200 <= resp.status_code < 300:
                     data_json = resp.json()
-                    if "data" in data_json:
-                        models = [m.get("id", "") for m in data_json["data"] if m.get("id")]
-                    elif "models" in data_json:
-                        models = [m.get("id", "") for m in data_json["models"] if m.get("id")]
+                    models = _extract_model_ids(data_json)
                     if models:
                         break
             except Exception:
+                logger.warning("model detection request failed for %s", base_url)
                 continue
         return JsonResponse({"ok": True, "models": models})
 
@@ -134,12 +147,14 @@ def list_available_models(request, agent_id=None):
         try:
             a = AIAgent.objects.get(id=agent_id)
             models = json.loads(a.available_models) if a.available_models else []
-            return JsonResponse({
-                "ok": True,
-                "models": models,
-                "is_connected": a.is_connected,
-                "last_checked": str(a.last_checked_at) if a.last_checked_at else None,
-            })
+            return JsonResponse(
+                {
+                    "ok": True,
+                    "models": models,
+                    "is_connected": a.is_connected,
+                    "last_checked": str(a.last_checked_at) if a.last_checked_at else None,
+                }
+            )
         except AIAgent.DoesNotExist:
             return JsonResponse({"ok": False, "error": "not found"}, status=404)
     return JsonResponse({"ok": False, "error": "agent_id required"}, status=400)

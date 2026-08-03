@@ -7,10 +7,7 @@ is applied to every workspace before tools are listed.
 
 from __future__ import annotations
 
-import asyncio
-import json
 import logging
-import os
 import time
 
 from agentscope.app.workspace_manager._local_workspace_manager import (
@@ -21,6 +18,12 @@ from agentscope.workspace import LocalWorkspace
 from .filterable_workspace import FilterableLocalWorkspace
 
 logger = logging.getLogger("agentscope")
+
+# TTL cache for agent skills config — avoids a DB query on every
+# workspace access during a conversation.  Keyed by agent_id, holds
+# (timestamp, disabled_skills_set).  Expires after 60 seconds.
+_skills_cache: dict[str, tuple[float, set[str]]] = {}
+_SKILLS_CACHE_TTL = 60  # seconds
 
 
 class FilterableLocalWorkspaceManager(LocalWorkspaceManager):
@@ -82,55 +85,44 @@ class FilterableLocalWorkspaceManager(LocalWorkspaceManager):
 
     @staticmethod
     async def _load_disabled_skills(agent_id: str) -> set[str]:
-        """Read the agent's skills_config from Django and return disabled
-        skill names.
+        """Read the agent's disabled skills from Django via HTTP.
 
-        ``skills_config`` is expected to be a JSON object like::
-
-            {"Bash": true, "Read": true, "Write": false, ...}
-
-        Any skill whose value is ``false`` (or missing from the config
-        entirely) is considered *disabled*.
+        Results are cached per agent_id for 60 seconds.
         """
-        try:
-            from apps.ai_assistant.models import AIAgent
+        # Check TTL cache first
+        now = time.monotonic()
+        cached = _skills_cache.get(agent_id)
+        if cached is not None and (now - cached[0]) < _SKILLS_CACHE_TTL:
+            return cached[1]
 
-            agent = await asyncio.to_thread(
-                lambda: AIAgent.objects.filter(
-                    agent_scope_id=agent_id,
-                ).first(),
-            )
-            if agent is None:
-                # Try by Django PK as fallback
-                agent = await asyncio.to_thread(
-                    lambda: AIAgent.objects.filter(id=int(agent_id)).first()
-                    if agent_id.isdigit()
-                    else None,
+        try:
+            import httpx
+
+            from .auth import get_stored_jwt
+
+            jwt = get_stored_jwt()
+            headers = {"Authorization": f"Bearer {jwt}"} if jwt else {}
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(
+                    f"http://127.0.0.1:8765/api/ai/tools/agent-config/{agent_id}",
+                    headers=headers,
                 )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    agent_config = data.get("data", {})
+                    disabled = set(agent_config.get("disabled_skills", []))
+                    _skills_cache[agent_id] = (now, disabled)
+                    return disabled
         except Exception:
             logger.debug(
-                "Cannot load skills_config for agent %s", agent_id, exc_info=True,
+                "Cannot load skills_config for agent %s",
+                agent_id,
+                exc_info=True,
             )
             return set()
 
-        if agent is None:
-            return set()
-
-        cfg = agent.skills_config or {}
-        if isinstance(cfg, str):
-            try:
-                cfg = json.loads(cfg)
-            except (json.JSONDecodeError, TypeError):
-                cfg = {}
-
-        from .filterable_workspace import ALL_SKILL_NAMES
-
-        disabled = set()
-        for name in ALL_SKILL_NAMES:
-            if not cfg.get(name, True):  # default: enabled
-                disabled.add(name)
-
-        return disabled
+        _skills_cache[agent_id] = (now, set())
+        return set()
 
     # ── Override _get_or_create to use our workspace class ──
 
@@ -162,7 +154,11 @@ async def _patched_get_workspace(
 ) -> LocalWorkspace:
     # Call the original to get the workspace (possibly cached)
     ws = await _original_get_workspace(
-        self, user_id, agent_id, session_id, workspace_id,
+        self,
+        user_id,
+        agent_id,
+        session_id,
+        workspace_id,
     )
     # Patch the workspace to be filterable if it isn't already
     if type(ws) is LocalWorkspace:  # exact match, not subclass

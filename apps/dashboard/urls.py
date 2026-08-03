@@ -1,6 +1,8 @@
 """Dashboard URL routing — aggregation endpoints under /api/."""
+
 from django.urls import path
-from .views import dashboard_stats, dashboard_activities, device_stats, case_stats
+
+from .views import case_stats, dashboard_activities, dashboard_stats, device_stats
 
 app_name = "dashboard"
 

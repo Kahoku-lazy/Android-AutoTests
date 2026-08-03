@@ -1,8 +1,10 @@
 """Gateway middleware — JWT authentication, logging, CORS."""
 
 import logging
+
 from django.db import close_old_connections
 from django.http import JsonResponse
+
 from shared.auth.jwt_auth import verify_token
 
 logger = logging.getLogger("gateway")
@@ -10,8 +12,8 @@ logger = logging.getLogger("gateway")
 # Paths that do NOT require authentication
 PUBLIC_PREFIXES = [
     "/api/ai/auth/",
-    "/api/ai/avatars/",  # img src cannot send Authorization header
     "/api/runner/step-screenshots/",  # img src cannot send Authorization header
+    "/api/ai/tools/",  # AgentScope internal service-to-service
     "/admin/",
     "/static/",
     "/api/docs",

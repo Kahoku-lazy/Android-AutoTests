@@ -1,0 +1,21 @@
+{
+  "title": "[Web] 注册-用户名超过20字符应报错",
+  "url": "http://localhost:5173/login?add=1",
+  "priority": "P0",
+  "description": "验证注册用户名超过20个字符时，前端校验拦截，弹窗提示「用户名最多 20 个字符」",
+  "expected_result": "ElMessage 弹窗显示「用户名最多 20 个字符」",
+  "directory_id": 110,
+  "steps": [
+    {"type": "web_navigate", "url": "http://localhost:5173/login?add=1", "description": "打开登录页"},
+    {"type": "web_wait", "timeout": 2, "description": "等待页面加载"},
+    {"type": "web_click", "selector": ".login-toggle", "description": "切换到注册模式"},
+    {"type": "web_wait", "timeout": 1, "description": "等待表单切换"},
+    {"type": "web_fill", "selector": "input[placeholder=\"设置账号（3-20 字符）\"]", "value": "this_is_a_very_long_username_21chars", "description": "填入21字符超长用户名"},
+    {"type": "web_fill", "selector": "input[placeholder=\"设置密码（至少 6 位）\"]", "value": "test123456", "description": "填入密码"},
+    {"type": "web_fill", "selector": "input[placeholder=\"确认密码\"]", "value": "test123456", "description": "填入确认密码"},
+    {"type": "web_click", "selector": "button.el-button--primary", "description": "点击完成注册"},
+    {"type": "web_wait", "timeout": 1, "description": "等待客户端校验"},
+    {"type": "web_assert", "expected_text": "用户名最多 20 个字符", "description": "验证弹窗显示用户名最多20字符"},
+    {"type": "web_screenshot", "description": "超长用户名校验弹窗截图"}
+  ]
+}

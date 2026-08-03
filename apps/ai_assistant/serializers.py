@@ -1,7 +1,8 @@
 """ai-assistant serializers — 输入校验与输出格式化。"""
+
 import json
 
-from agentscope_service.provider_registry import VALID_PROVIDERS, validate_base_url
+from apps.ai_assistant.agent_scope.provider_registry import VALID_PROVIDERS, validate_base_url
 
 
 def _first_error(errors: dict) -> str:
@@ -15,6 +16,7 @@ def validate_agent_input(data: dict, *, require_api_key: bool = False) -> tuple:
     errors = {}
     cleaned = dict(data)
 
+    # name is required for both creation and updates
     name = (data.get("name") or "").strip()
     if not name:
         errors["name"] = "Agent 名称不能为空"
@@ -54,6 +56,14 @@ def validate_agent_input(data: dict, *, require_api_key: bool = False) -> tuple:
     except (TypeError, ValueError):
         errors["max_tokens"] = "max_tokens 必须是整数"
 
+    # Validate generate_kwargs is valid JSON if provided
+    gk = (data.get("generate_kwargs") or "{}").strip()
+    if gk and gk != "{}":
+        try:
+            json.loads(gk)
+        except (json.JSONDecodeError, TypeError):
+            errors["generate_kwargs"] = "generate_kwargs 必须是合法的 JSON 字符串"
+
     return (len(errors) == 0, errors, cleaned)
 
 
@@ -72,15 +82,6 @@ def validate_message_input(data: dict) -> tuple:
         errors["content"] = "assistant 消息需要 content 或 blocks"
 
     return (len(errors) == 0, errors, data)
-
-
-def validate_send_message_input(data: dict) -> tuple:
-    """校验 /send 端点输入。"""
-    errors = {}
-    if not (data.get("message") or "").strip():
-        errors["message"] = "消息内容不能为空"
-    cleaned = {"message": (data.get("message") or "").strip()}
-    return (len(errors) == 0, errors, cleaned)
 
 
 def validate_conversation_input(data: dict) -> tuple:
@@ -119,66 +120,3 @@ def validate_model_detect_input(data: dict) -> tuple:
         errors["api_key"] = "API Key 不能为空"
 
     return (len(errors) == 0, errors, data)
-
-
-def format_agent_response(agent) -> dict:
-    """格式化 Agent 响应（脱敏 api_key）。"""
-    from .api import mask_key, decrypt_key
-
-    return {
-        "id": agent.id,
-        "name": agent.name,
-        "avatar": agent.avatar,
-        "tags": agent.tags,
-        "description": agent.description,
-        "model_provider": agent.model_provider,
-        "model_name": agent.model_name,
-        "api_key": mask_key(decrypt_key(agent.api_key) if agent.api_key else ""),
-        "base_url": agent.base_url,
-        "system_prompt": agent.system_prompt,
-        "temperature": agent.temperature,
-        "max_tokens": agent.max_tokens,
-        "max_iters": agent.max_iters,
-        "memory_mode": agent.memory_mode,
-        "status": agent.status,
-        "is_connected": agent.is_connected,
-        "agent_scope_id": agent.agent_scope_id,
-        "owner_id": agent.owner_id,
-        "last_checked_at": agent.last_checked_at.isoformat() if agent.last_checked_at else None,
-    }
-
-
-def format_conversation_response(conv) -> dict:
-    """格式化对话响应。"""
-    return {
-        "id": conv.id,
-        "agent_id": conv.agent_id,
-        "title": conv.title,
-        "status": conv.status,
-        "agent_scope_session_id": conv.agent_scope_session_id,
-        "owner_id": conv.owner_id,
-        "created_at": conv.created_at.isoformat() if conv.created_at else None,
-    }
-
-
-def format_message_response(msg) -> dict:
-    """格式化消息响应。"""
-    blocks = None
-    if msg.blocks:
-        try:
-            blocks = json.loads(msg.blocks)
-        except (json.JSONDecodeError, TypeError):
-            blocks = msg.blocks
-
-    return {
-        "id": msg.id,
-        "conversation_id": msg.conversation_id,
-        "role": msg.role,
-        "content": msg.content,
-        "blocks": blocks,
-        "reason": msg.reason,
-        "tokens": msg.tokens,
-        "input_tokens": msg.input_tokens,
-        "model_name": msg.model_name,
-        "created_at": msg.created_at.isoformat() if msg.created_at else None,
-    }

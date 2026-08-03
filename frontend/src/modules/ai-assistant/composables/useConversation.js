@@ -31,7 +31,7 @@ export function useConversation(agentIdRef, messageStore) {
           status: "active",
           agent_scope_session_id: data.agent_scope_session_id || "",
         });
-        connectionMode.value = data.agent_scope_session_id ? "sse" : "fallback";
+        connectionMode.value = data.agent_scope_session_id ? "sse" : "connecting";
         if (onSelect) await onSelect(data.id);
       }
     } catch (e) {
@@ -60,7 +60,11 @@ export function useConversation(agentIdRef, messageStore) {
           // when the stream completes.
         } else {
           messageStore.backgroundStreamConvId.value = null;
-          messageStore.hydrateMessages(data.messages);
+          if (Array.isArray(data.messages)) {
+            messageStore.hydrateMessages(data.messages);
+          } else {
+            messageStore.clearMessages();
+          }
         }
       }
     } catch (e) {

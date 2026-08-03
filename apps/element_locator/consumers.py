@@ -1,8 +1,12 @@
 """Channels WebSocket consumer for screenshot streaming."""
+
 from urllib.parse import parse_qs
+
 from channels.generic.websocket import AsyncWebsocketConsumer
-from .stream import screenshot_stream
+
 from shared.auth.jwt_auth import verify_token
+
+from .stream import screenshot_stream
 
 
 class ScreenshotConsumer(AsyncWebsocketConsumer):
@@ -12,7 +16,7 @@ class ScreenshotConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         query_string = self.scope.get("query_string", b"").decode()
         params = parse_qs(query_string)
-        token = (params.get("token", [None])[0])
+        token = params.get("token", [None])[0]
         if not token:
             await self.close()
             return

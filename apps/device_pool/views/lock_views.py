@@ -1,15 +1,20 @@
 """Device lock, release, heartbeat, and queue endpoints."""
+
 import json
-from datetime import datetime, timedelta
+
+from datetime import datetime
+
 from django.db import transaction
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from .helpers import (
-    _update_device_status, _release_internal,
-    _auto_assign_from_queue, _check_timeout_queue, _device_to_dict,
-)
 from ..models import Device, DeviceLock, DeviceQueue
+from .helpers import (
+    _check_timeout_queue,
+    _release_internal,
+    _update_device_status,
+)
+
 
 @transaction.atomic
 @csrf_exempt

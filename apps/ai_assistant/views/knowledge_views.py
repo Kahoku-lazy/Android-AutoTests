@@ -1,8 +1,10 @@
 """Knowledge base management API — ChromaDB status, document list, reindex."""
+
 import json
 import threading
-from pathlib import Path
+
 from datetime import datetime
+from pathlib import Path
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -13,7 +15,7 @@ _reindex_status = {"running": False, "last_indexed": None, "doc_count": 0, "erro
 
 def _get_kb_stats():
     """Read current knowledge base stats from ChromaDB and file system."""
-    from agentscope_service.rag.document_store import _get_collection
+    from apps.ai_assistant.agent_scope.rag_service import _get_collection
 
     col = _get_collection()
     doc_count = col.count() if col else 0
@@ -31,8 +33,13 @@ def _get_kb_stats():
 
 
 def _scan_doc_sources():
-    """Scan dev_docs/ for markdown files that would be indexed."""
-    from agentscope_service.rag.loader import load_all_documents
+    """Scan dev_docs/ for markdown files that would be indexed.
+
+    Returns only metadata (id, source, type, size) — the actual content
+    is never used by the frontend AgentToolsPanel checkboxes and would
+    add ~300 KB of dead weight to every response.
+    """
+    from apps.ai_assistant.agent_scope.rag_service import load_all_documents
 
     docs = load_all_documents()
     return [
@@ -81,11 +88,14 @@ def kb_reindex(request):
                 _reindex_status["running"] = True
                 _reindex_status["error"] = ""
 
-                from agentscope_service.rag.document_store import clear_collection, add_documents
-                from agentscope_service.rag.loader import load_all_documents
+                from apps.ai_assistant.agent_scope.rag_service import (
+                    add_documents,
+                    clear_collection,
+                    load_all_documents,
+                )
 
                 clear_collection()
-                docs = load_all_documents()
+                docs = load_all_documents(force=True)
                 count = add_documents(docs)
                 _reindex_status["doc_count"] = count
                 _reindex_status["last_indexed"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -112,14 +122,16 @@ def kb_add_document(request):
     if not content:
         return JsonResponse({"ok": False, "error": "文档内容不能为空"}, status=400)
 
-    from agentscope_service.rag.document_store import add_documents
+    from apps.ai_assistant.agent_scope.rag_service import add_documents
 
     doc_id = f"manual:{source}:{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    add_documents([
-        {
-            "id": doc_id,
-            "content": content,
-            "metadata": {"source": source, "type": "manual"},
-        }
-    ])
+    add_documents(
+        [
+            {
+                "id": doc_id,
+                "content": content,
+                "metadata": {"source": source, "type": "manual"},
+            }
+        ]
+    )
     return JsonResponse({"ok": True, "data": {"id": doc_id, "source": source}})

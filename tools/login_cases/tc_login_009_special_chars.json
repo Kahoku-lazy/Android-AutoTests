@@ -1,0 +1,18 @@
+{
+  "title": "[Web] 登录-特殊字符用户名登录应报错",
+  "url": "http://localhost:5173/login",
+  "priority": "P1",
+  "description": "验证用户名包含特殊字符时，服务端返回「用户名或密码错误」，特殊字符被安全处理",
+  "expected_result": "ElMessage 弹窗显示「用户名或密码错误」",
+  "directory_id": 109,
+  "steps": [
+    {"type": "web_navigate", "url": "http://localhost:5173/login?add=1", "description": "打开登录页"},
+    {"type": "web_wait", "timeout": 2, "description": "等待页面加载完成"},
+    {"type": "web_fill", "selector": "input[placeholder=\"账号\"]", "value": "user!@#$%^&*()_+-=[]{}|;':\",./<>?", "description": "填入含特殊字符的用户名"},
+    {"type": "web_fill", "selector": "input[placeholder=\"密码\"]", "value": "test123", "description": "填入密码"},
+    {"type": "web_click", "selector": "button.el-button--primary", "description": "点击登录按钮"},
+    {"type": "web_wait", "timeout": 2, "description": "等待服务器响应"},
+    {"type": "web_assert", "expected_text": "用户名或密码错误", "description": "验证弹窗显示用户名或密码错误"},
+    {"type": "web_screenshot", "description": "特殊字符用户名登录弹窗截图"}
+  ]
+}

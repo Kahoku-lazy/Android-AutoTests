@@ -1,8 +1,10 @@
 """Helpers for AI assistant chat file uploads under data/uploads/."""
+
 from __future__ import annotations
 
 import logging
 import time
+
 from pathlib import Path
 
 from django.conf import settings
@@ -10,9 +12,7 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 UPLOAD_DIR = settings.BASE_DIR / "data" / "uploads"
-DEFAULT_MAX_AGE_SECONDS = int(
-    getattr(settings, "UPLOAD_CLEANUP_MAX_AGE_DAYS", 7) * 24 * 3600
-)
+DEFAULT_MAX_AGE_SECONDS = int(getattr(settings, "UPLOAD_CLEANUP_MAX_AGE_DAYS", 7) * 24 * 3600)
 
 
 def ensure_upload_dir() -> Path:

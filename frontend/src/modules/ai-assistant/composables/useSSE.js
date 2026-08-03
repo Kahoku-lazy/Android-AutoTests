@@ -3,8 +3,8 @@ import client from "@/shared/api-client.js";
 import { ElMessage } from "element-plus";
 import { streamChat } from "../api.js";
 
-/** 无有效回复时的统一文案；断线仍允许发送，但一律回这条 */
-export const AI_DISCONNECT_MSG = "AI助手已断线……";
+/** AgentScope 不可用时统一回复文案 */
+export const AI_DISCONNECT_MSG = "AgentScope 断开，模型服务无法使用";
 
 /** 无内容 / 鉴权失败 / 通道错误 → 视为断线 */
 function isDisconnectContent(content) {
@@ -16,7 +16,7 @@ function isDisconnectContent(content) {
 }
 
 /**
- * SSE streaming, fallback send, stop, and HITL confirm handling.
+ * SSE streaming, stop, and HITL confirm handling.
  */
 export function useSSE({
   activeConv,
@@ -31,6 +31,7 @@ export function useSSE({
   loadConversations,
   updateTaskCardProgress,
   backgroundStreamConvId,
+  appendPlaceholder,
 }) {
   const streamMode = ref(null);
   const abortController = ref(null);
@@ -71,7 +72,7 @@ export function useSSE({
         content: finalContent,
         // Keep existing flow if settle call omitted it
         flow:
-          extras.flow === "sse" || extras.flow === "fallback"
+          extras.flow === "sse"
             ? extras.flow
             : prev.flow || null,
         reason: disconnected
@@ -89,15 +90,50 @@ export function useSSE({
     if (!msg || msg.role !== "assistant") return;
     const content = msg.content || "";
     const thinking = msg.thinking || "";
+    const rounds = msg.rounds || [];
+    // Check if any rounds have partial data worth saving
+    const hasRoundData = rounds.some(
+      (r) => r.thinking || (r.tools && r.tools.length),
+    );
     // Nothing to save — skip
-    if (!content && !thinking) return;
+    if (!content && !thinking && !hasRoundData) return;
     const convId = _streamConvId || activeConv.value;
     if (!convId) return;
     try {
-      // Build blocks array with current thinking state so it can be
+      // Build blocks array preserving per-round grouping so it can be
       // reconstructed when the message is loaded back.
       const blocks = [];
-      if (thinking) {
+      if (hasRoundData) {
+        // Serialize rounds as per-round thinking + tool_pair blocks
+        rounds.forEach((round, ri) => {
+          if (round.thinking) {
+            blocks.push({
+              type: "thinking",
+              thinking: round.thinking,
+              done: !!round.thinkingDone,
+              roundIndex: ri + 1,
+            });
+          }
+          for (const tool of round.tools || []) {
+            blocks.push({
+              type: "tool_pair",
+              call: {
+                id: tool.id,
+                name: tool.name,
+                inputRaw: tool.displayArgs || "",
+                roundIndex: ri + 1,
+              },
+              result: {
+                id: tool.id,
+                name: tool.name,
+                output: tool.output || "",
+                state: tool.state || "success",
+              },
+            });
+          }
+        });
+      } else if (thinking) {
+        // Legacy: single thinking block (no per-round grouping)
         blocks.push({
           type: "thinking",
           thinking,
@@ -153,11 +189,29 @@ export function useSSE({
 
   function armReplyWatchdog() {
     clearReplyWatchdog();
-    replyWatchdog = setTimeout(() => {
+    replyWatchdog = setTimeout(async () => {
       if (!sending.value) return;
       const cur = messages.value[assistIdx.value];
       if (cur?.role === "assistant" && !String(cur.content || "").trim()) {
         settleAssistant("");
+        // Persist the disconnect notice so the message survives a page reload
+        const convId = _streamConvId || activeConv.value;
+        if (convId) {
+          try {
+            await client.post(`/ai/conversations/${convId}/save-message`, {
+              role: "assistant",
+              content: AI_DISCONNECT_MSG,
+              blocks: [{ type: "text", text: AI_DISCONNECT_MSG }],
+              reason: "error",
+              tokens: 0,
+              input_tokens: 0,
+              model_name: "",
+              flow: "",
+            });
+          } catch (e) {
+            console.warn("Failed to save watchdog disconnect notice:", e);
+          }
+        }
         if (abortController.value) {
           try {
             abortController.value.abort();
@@ -171,22 +225,17 @@ export function useSSE({
   /** Check platform health; update degradedMode if AgentScope is unavailable. */
   async function checkHealth() {
     try {
-      const { data } = await client.get("/ai/health");
-      if (data.ok && data.mode !== "full") {
-        degradedMode.value = true;
-        if (data.mode === "offline") {
-          ElMessage.warning(
-            "AgentScope 和 Redis 均不可用，AI 对话将使用 Django 降级模式（直接调用模型 API）",
-            { duration: 6000 },
-          );
-        } else {
-          ElMessage.warning(
-            "AgentScope 服务不可用，AI 对话已切换到 Django 降级模式",
-            { duration: 5000 },
-          );
-        }
-      } else {
+      const { data } = await client.get("/ai/agents/health");
+      // Health endpoint returns { ok, agents: [{ is_connected, ... }] }
+      const anyConnected = data.agents?.some(a => a.is_connected);
+      if (data.ok && anyConnected) {
         degradedMode.value = false;
+      } else if (data.ok) {
+        degradedMode.value = true;
+        ElMessage.warning(
+          "AgentScope 服务不可用，模型服务暂时无法使用",
+          { duration: 5000 },
+        );
       }
     } catch (e) {
       // Health endpoint itself unreachable — assume degraded
@@ -194,35 +243,6 @@ export function useSSE({
       console.error(e);
     }
     return degradedMode.value;
-  }
-
-  async function fallbackSend(msgText) {
-    const convId = _streamConvId || activeConv.value;
-    try {
-      const { data } = await client.post(`/ai/conversations/${convId}/send`, {
-        message: msgText,
-      });
-      if (data.ok) {
-        if (data.degraded) degradedMode.value = true;
-        const ok = settleAssistant(data.message?.content || "", {
-          ...data.message,
-          flow: "fallback",
-        });
-        if (ok) {
-          if (!_detached) {
-            loadConversations();
-            await nextTick();
-            renderMermaidBlocks();
-          }
-        }
-      } else {
-        settleAssistant(data.error || "", { flow: "fallback" });
-      }
-    } catch (e) {
-      console.error("Fallback send failed:", e);
-      settleAssistant("", { flow: "fallback" });
-    }
-    finishSending();
   }
 
   async function trySSEStream(msgText) {
@@ -260,8 +280,34 @@ export function useSSE({
 
     let streamDone = false;
     let fullContent = "";
-    let thinkingContent = "";
     let currentToolArgsJson = "";
+
+    // Per-round thinking: MODEL_CALL_START pushes a new slot.
+    // rAF throttle still applies — just to the current round's thinking field.
+    let _rounds = [];
+    function _curRound() {
+      if (_rounds.length === 0) _rounds.push({ thinking: '', thinkingDone: false, tools: [] });
+      return _rounds[_rounds.length - 1];
+    }
+
+    // rAF throttle: push to Vue at most once/frame
+    let _thinkRaf = null, _textRaf = null;
+    function _flushThink() {
+      _thinkRaf = null;
+      _curRound().thinking = _curRound()._pending || _curRound().thinking;
+      if (assistIdx.value < messages.value.length) {
+        messages.value[assistIdx.value].rounds = [..._rounds];
+        if (!_detached) scrollBottom();
+      }
+    }
+    function _flushText() {
+      _textRaf = null;
+      if (assistIdx.value < messages.value.length) {
+        const dc = isDisconnectContent(fullContent);
+        messages.value[assistIdx.value].content = dc ? AI_DISCONNECT_MSG : fullContent;
+        if (!_detached) scrollBottom();
+      }
+    }
 
     const { controller, builder } = streamChat(
       sessionId,
@@ -277,48 +323,32 @@ export function useSSE({
           }
         },
         onThinkingStart: () => {
-          thinkingContent = "";
+          _curRound()._pending = '';
+          _curRound().thinking = '';
           if (assistIdx.value < messages.value.length) {
-            messages.value[assistIdx.value].thinking = "";
             messages.value[assistIdx.value].content = fullContent;
             if (!_detached) scrollBottom();
           }
         },
         onThinkingDelta: (delta, full) => {
-          thinkingContent = full || thinkingContent + delta;
-          if (assistIdx.value < messages.value.length) {
-            messages.value[assistIdx.value].thinking = thinkingContent;
-            if (!_detached) scrollBottom();
-          }
+          const prev = _curRound()._pending || '';
+          _curRound()._pending = full || prev + delta;
+          if (_thinkRaf === null) _thinkRaf = requestAnimationFrame(_flushThink);
         },
         onThinkingEnd: (evt) => {
-          if (assistIdx.value < messages.value.length) {
-            messages.value[assistIdx.value].thinkingDone = true;
-            if (evt?.block?.thinking) {
-              messages.value[assistIdx.value].thinking = evt.block.thinking;
-            }
-            if (!_detached) scrollBottom();
-          }
+          if (_thinkRaf !== null) { cancelAnimationFrame(_thinkRaf); _thinkRaf = null; }
+          _curRound()._pending = evt?.block?.thinking || _curRound()._pending;
+          _flushThink();
+          _curRound().thinkingDone = true;
         },
         onTextDelta: (delta, full) => {
           fullContent = full != null ? full : fullContent + delta;
-          if (assistIdx.value < messages.value.length) {
-            // 鉴权/通道失败时立刻换成统一断线文案（发送仍保持可用）
-            messages.value[assistIdx.value].content = isDisconnectContent(
-              fullContent,
-            )
-              ? AI_DISCONNECT_MSG
-              : fullContent;
-            if (!_detached) scrollBottom();
-          }
+          if (_textRaf === null) _textRaf = requestAnimationFrame(_flushText);
         },
         onTextEnd: (evt) => {
-          if (evt?.text != null) {
-            fullContent = evt.text;
-            if (assistIdx.value < messages.value.length) {
-              messages.value[assistIdx.value].content = fullContent;
-            }
-          }
+          if (_textRaf !== null) { cancelAnimationFrame(_textRaf); _textRaf = null; }
+          if (evt?.text != null) fullContent = evt.text;
+          _flushText();
         },
         onToolCallStart: (evt) => {
           currentToolArgsJson = "";
@@ -343,12 +373,13 @@ export function useSSE({
           if (tc) {
             const idx = toolCalls.value.findIndex((t) => t.id === tc.id);
             const displayArgs = tc.inputRaw || currentToolArgsJson;
-            if (idx >= 0) {
-              toolCalls.value[idx] = { ...tc, state: "submitted", displayArgs };
-            }
+            const tagged = { ...tc, state: "submitted", displayArgs, roundIndex: _rounds.length };
+            if (idx >= 0) toolCalls.value[idx] = tagged;
+            _curRound().tools.push(tagged);
           }
           if (assistIdx.value < messages.value.length) {
             messages.value[assistIdx.value].toolFlow = [...toolCalls.value];
+            messages.value[assistIdx.value].rounds = [..._rounds];
             if (!_detached) scrollBottom();
           }
         },
@@ -391,8 +422,11 @@ export function useSSE({
           }
         },
         onModelCallStart: (evt) => {
+          // New ReAct round
+          _rounds.push({ thinking: '', thinkingDone: false, tools: [], _pending: '' });
           if (assistIdx.value < messages.value.length) {
             messages.value[assistIdx.value].modelName = evt.modelName;
+            messages.value[assistIdx.value].rounds = [..._rounds];
           }
         },
         onModelCallEnd: (evt) => {
@@ -431,9 +465,16 @@ export function useSSE({
         },
         onExceedMaxIters: () => {
           if (assistIdx.value < messages.value.length) {
-            const block = builder.getFullThinking();
-            messages.value[assistIdx.value].thinking = block;
+            const allThinking = builder.getFullThinking();
+            // Write to the current round so per-round rendering shows it
+            if (_rounds.length > 0) {
+              _curRound().thinking = allThinking || _curRound().thinking;
+              _curRound().thinkingDone = true;
+            }
+            // Also write legacy fields for backwards-compatible rendering
+            messages.value[assistIdx.value].thinking = allThinking;
             messages.value[assistIdx.value].thinkingDone = true;
+            messages.value[assistIdx.value].rounds = [..._rounds];
             messages.value[assistIdx.value].reason = "exceed_max_iters";
             messages.value[assistIdx.value].content =
               (messages.value[assistIdx.value].content || "") +
@@ -490,14 +531,10 @@ export function useSSE({
           if (streamDone) return;
           streamDone = true;
           clearReplyWatchdog();
-          console.warn("SSE stream error, falling back:", err);
-          streamMode.value = "fallback";
-          connectionMode.value = "fallback";
+          console.warn("SSE stream error:", err);
           modelStatus.value = "idle";
-          if (assistIdx.value < messages.value.length) {
-            messages.value[assistIdx.value].flow = "fallback";
-          }
-          await fallbackSend(msgText);
+          settleAssistant("");
+          finishSending();
         },
       },
     );
@@ -519,17 +556,6 @@ export function useSSE({
     } catch (e) { console.error(e); }
   }
 
-  function appendUserAndAssistantPlaceholder(displayText) {
-    messages.value.push({ role: "user", content: displayText });
-    assistIdx.value = messages.value.length;
-    messages.value.push({
-      role: "assistant",
-      content: "",
-      tokens: 0,
-      flow: null,
-    });
-    scrollBottom();
-  }
 
   async function sendStreamMessage(msgText, displayText) {
     // 防重入由调用方（ChatView.sendMessage）在置 sending=true 后保证；
@@ -540,19 +566,17 @@ export function useSSE({
     aiDisconnected.value = false;
     toolCalls.value = [];
     modelStatus.value = "calling_model";
-    appendUserAndAssistantPlaceholder(displayText);
+    appendPlaceholder(displayText);
+    scrollBottom();
     armReplyWatchdog();
 
     try {
       await trySSEStream(msgText);
     } catch (e) {
-      console.warn("SSE setup failed, falling back to Django /send:", e);
-      streamMode.value = "fallback";
-      connectionMode.value = "fallback";
-      if (assistIdx.value < messages.value.length) {
-        messages.value[assistIdx.value].flow = "fallback";
-      }
-      await fallbackSend(msgText);
+      console.warn("SSE setup failed:", e);
+      modelStatus.value = "idle";
+      settleAssistant("");
+      finishSending();
     }
   }
 
@@ -666,7 +690,6 @@ export function useSSE({
     aiDisconnected,
     checkHealth,
     trySSEStream,
-    fallbackSend,
     sendStreamMessage,
     stopStream,
     detachStream,

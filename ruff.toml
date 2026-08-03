@@ -1,9 +1,63 @@
-# Ruff formatter config — Python code style
+# Ruff configuration — Android-AutoTests
+# Encodes .claude/rules/python-code.md as automated checks.
+# Run: ruff check .        (lint)
+# Run: ruff format .       (format)
+# Run: ruff check --fix .  (auto-fix)
+
 line-length = 100
 target-version = "py313"
 
+# ── File scope ──────────────────────────────────────────
+exclude = ["**/migrations/*", "**/__pycache__/*", ".venv/*", "node_modules/*"]
+
+# ── Formatter ──────────────────────────────────────────
 [format]
+# §11: 双引号 (Q000)
 quote-style = "double"
 indent-style = "space"
+# §11: 尾随逗号 (COM812)
 skip-magic-trailing-comma = false
 line-ending = "auto"
+
+# ── Linter ─────────────────────────────────────────────
+[lint]
+select = [
+    # ─ §3: Import 顺序 stdlib → 第三方 → 项目 (I001)
+    "I",
+    # ─ §3: 禁止 from module import * (F403, F405)
+    "F403",
+    "F405",
+    # ─ §3: 禁止未使用的 import (F401)
+    "F401",
+    # ─ §8: 禁止裸 except: (E722)
+    "E722",
+    # ─ §11: 禁止 print() (T201)
+    "T201",
+    # ─ §11: 双引号 (Q000)
+    "Q",
+]
+
+# ── isort 配置 (§3 import 顺序) ────────────────────────
+[lint.isort]
+known-first-party = ["apps", "agentscope_service", "config", "gateway", "shared", "models", "tools"]
+lines-between-types = 1
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+# ── 忽略特定规则 ───────────────────────────────────────
+[lint.per-file-ignores]
+# ─ management/commands: 允许 print() 输出
+"**/management/commands/*.py" = ["T201"]
+# ─ tests/: 放宽限制
+"tests/**/*.py" = ["T201"]
+# ─ __init__.py: 允许未使用 import (re-export)
+"**/__init__.py" = ["F401"]
+# ─ apps.py / admin.py: 不要求模块 docstring
+"**/apps.py" = ["D100"]
+"**/admin.py" = ["D100"]
+# ─ settings.py / test_settings.py: 允许 *
+"config/settings.py" = ["F403", "F405"]
+"config/test_settings.py" = ["F403", "F405"]
+# ─ conftest.py
+"**/conftest.py" = ["D100"]
+# ─ state_machine.py::_bg_sync → 延迟追溯，豁免裸 except
+# (仅标记，不在此处忽略 E722，留给代码 review 判断)

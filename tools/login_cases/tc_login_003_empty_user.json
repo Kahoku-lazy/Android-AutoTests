@@ -1,0 +1,17 @@
+{
+  "title": "[Web] 登录-空用户名登录应报错",
+  "url": "http://localhost:5173/login",
+  "priority": "P0",
+  "description": "验证用户名为空时点击登录，前端客户端校验拦截，弹窗提示「请输入用户名」，不发送请求到后端",
+  "expected_result": "ElMessage 弹窗显示「请输入用户名」，表单不提交",
+  "directory_id": 109,
+  "steps": [
+    {"type": "web_navigate", "url": "http://localhost:5173/login?add=1", "description": "打开登录页(强制表单模式)"},
+    {"type": "web_wait", "timeout": 2, "description": "等待页面加载完成"},
+    {"type": "web_fill", "selector": "input[placeholder=\"密码\"]", "value": "test123", "description": "填入密码，用户名为空"},
+    {"type": "web_click", "selector": "button.el-button--primary", "description": "点击登录按钮"},
+    {"type": "web_wait", "timeout": 1, "description": "等待客户端校验响应"},
+    {"type": "web_assert", "expected_text": "请输入用户名", "description": "验证弹窗显示请输入用户名"},
+    {"type": "web_screenshot", "description": "空用户名前端校验弹窗截图"}
+  ]
+}

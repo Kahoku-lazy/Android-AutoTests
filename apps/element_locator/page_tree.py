@@ -4,6 +4,7 @@ All tree-traversal functions accept an optional parent_map / children_map
 to avoid recursive DB queries (N+1). Callers that iterate many pages should
 pre-build these maps via build_page_maps().
 """
+
 from __future__ import annotations
 
 from .models import Page
@@ -17,7 +18,7 @@ def build_page_maps():
     parent_map: {id: parent_id}     — O(1) parent lookup
     children_map: {parent_id: [child_id, ...]}  — O(1) children lookup
     """
-    rows = list(Page.objects.values_list('id', 'parent_id', 'is_folder'))
+    rows = list(Page.objects.values_list("id", "parent_id", "is_folder"))
     parent_map = {}
     children_map = {}
     for pid, parent_id, is_folder in rows:
@@ -86,7 +87,7 @@ def get_descendant_ids(page_id: int, children_map: dict | None = None) -> set[in
                     result.add(child_id)
                     stack.append(child_id)
     else:
-        for child_id in Page.objects.filter(parent_id=page_id).values_list('id', flat=True):
+        for child_id in Page.objects.filter(parent_id=page_id).values_list("id", flat=True):
             result |= get_descendant_ids(child_id)
     return result
 
@@ -98,14 +99,18 @@ def subtree_max_depth(page_id: int, children_map: dict | None = None) -> int:
         if not child_ids:
             return 1
         return 1 + max(subtree_max_depth(cid, children_map) for cid in child_ids)
-    child_ids = list(Page.objects.filter(parent_id=page_id).values_list('id', flat=True))
+    child_ids = list(Page.objects.filter(parent_id=page_id).values_list("id", flat=True))
     if not child_ids:
         return 1
     return 1 + max(subtree_max_depth(cid) for cid in child_ids)
 
 
-def validate_move(page_id: int, new_parent_id: int | None, parent_map: dict | None = None,
-                  children_map: dict | None = None) -> None:
+def validate_move(
+    page_id: int,
+    new_parent_id: int | None,
+    parent_map: dict | None = None,
+    children_map: dict | None = None,
+) -> None:
     try:
         page = Page.objects.get(pk=page_id)
     except Page.DoesNotExist:
@@ -137,8 +142,12 @@ def validate_move(page_id: int, new_parent_id: int | None, parent_map: dict | No
             raise ValueError(f"目录最多嵌套 {MAX_PAGE_TREE_DEPTH} 层")
 
 
-def move_page(page_id: int, new_parent_id: int | None,
-              parent_map: dict | None = None, children_map: dict | None = None) -> Page:
+def move_page(
+    page_id: int,
+    new_parent_id: int | None,
+    parent_map: dict | None = None,
+    children_map: dict | None = None,
+) -> Page:
     validate_move(page_id, new_parent_id, parent_map, children_map)
     Page.objects.filter(id=page_id).update(parent_id=new_parent_id)
     return Page.objects.get(pk=page_id)
@@ -163,17 +172,17 @@ def filter_top_level_page_ids(page_ids: list[int], parent_map: dict | None = Non
         return top_level
 
     for pid in page_ids:
-        page = Page.objects.filter(pk=pid).values('parent_id').first()
+        page = Page.objects.filter(pk=pid).values("parent_id").first()
         if not page:
             continue
         ancestor_in_set = False
-        current = page['parent_id']
+        current = page["parent_id"]
         while current:
             if current in id_set:
                 ancestor_in_set = True
                 break
-            row = Page.objects.filter(pk=current).values('parent_id').first()
-            current = row['parent_id'] if row else None
+            row = Page.objects.filter(pk=current).values("parent_id").first()
+            current = row["parent_id"] if row else None
         if not ancestor_in_set:
             top_level.append(pid)
     return top_level

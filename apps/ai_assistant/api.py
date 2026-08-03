@@ -2,7 +2,8 @@
 
 遵循防火墙 #2：所有跨模块写操作必须通过本文件的函数。
 """
-from apps.ai_assistant.models import AIAgent, AIConversation, AIMessage, AITask
+
+from apps.ai_assistant.models import AIAgent, AIConversation, AIMessage
 
 __all__ = [
     # Agent 操作
@@ -23,6 +24,7 @@ __all__ = [
 
 # ── Agent 查询（只读）──
 
+
 def get_agent(agent_id: int):
     """根据主键获取 Agent。"""
     try:
@@ -41,10 +43,13 @@ def get_agent_by_scope_id(scope_id: str):
 
 def list_active_agents():
     """获取所有活跃的 Agent。"""
-    return list(AIAgent.objects.filter(status="active").values("id", "name", "model_provider", "model_name"))
+    return list(
+        AIAgent.objects.filter(status="active").values("id", "name", "model_provider", "model_name")
+    )
 
 
 # ── 对话操作 ──
+
 
 def get_conversation(conv_id: int):
     """根据主键获取对话。"""
@@ -65,9 +70,18 @@ def get_or_create_conversation(agent: AIAgent, title: str = "新对话"):
 
 # ── 消息操作 ──
 
-def save_message(conversation_id: int, role: str, content: str, blocks: str = "",
-                 reason: str = "normal", tokens: int = 0, input_tokens: int = 0,
-                 model_name: str = "", flow: str = "") -> AIMessage:
+
+def save_message(
+    conversation_id: int,
+    role: str,
+    content: str,
+    blocks: str = "",
+    reason: str = "normal",
+    tokens: int = 0,
+    input_tokens: int = 0,
+    model_name: str = "",
+    flow: str = "",
+) -> AIMessage:
     """保存一条对话消息到数据库。"""
     return AIMessage.objects.create(
         conversation_id=conversation_id,
@@ -78,16 +92,17 @@ def save_message(conversation_id: int, role: str, content: str, blocks: str = ""
         tokens=tokens,
         input_tokens=input_tokens,
         model_name=model_name,
-        flow=flow if flow in ("sse", "fallback") else "",
+        flow=flow if flow == "sse" else "",
     )
 
 
 # ── 加密工具（与 views.py 共享实现）──
 
-import hashlib
 import base64
-from django.conf import settings
+import hashlib
+
 from cryptography.fernet import Fernet
+from django.conf import settings
 
 
 def _get_cipher() -> Fernet:
@@ -103,10 +118,13 @@ def encrypt_key(plain: str) -> str:
 
 
 def decrypt_key(encrypted: str) -> str:
-    """解密 API Key。"""
+    """解密 API Key。解密失败时返回空字符串而非崩溃。"""
     if not encrypted:
         return ""
-    return _get_cipher().decrypt(encrypted.encode()).decode()
+    try:
+        return _get_cipher().decrypt(encrypted.encode()).decode()
+    except Exception:
+        return ""
 
 
 def mask_key(key: str) -> str:

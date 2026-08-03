@@ -14,6 +14,7 @@ from enum import Enum
 
 class DeviceStatus(str, Enum):
     """设备状态 — dp_devices.status"""
+
     ONLINE = "ONLINE"
     BUSY = "BUSY"
     OFFLINE = "OFFLINE"
@@ -22,6 +23,7 @@ class DeviceStatus(str, Enum):
 
 class LockStatus(str, Enum):
     """设备锁状态 — dp_device_locks.status"""
+
     ACTIVE = "active"
     RELEASED = "released"
     EXPIRED = "expired"
@@ -29,6 +31,7 @@ class LockStatus(str, Enum):
 
 class LockReleaseReason(str, Enum):
     """锁释放原因 — dp_device_locks.release_reason"""
+
     MANUAL = "manual"
     TIMEOUT = "timeout"
     DISCONNECT = "disconnect"
@@ -37,12 +40,14 @@ class LockReleaseReason(str, Enum):
 
 class ConnectionType(str, Enum):
     """设备连接类型 — dp_devices.connection_type"""
+
     USB = "USB"
     WIFI = "WIFI"
 
 
 class QueueStatus(str, Enum):
     """排队状态 — dp_device_queue.status"""
+
     WAITING = "waiting"
     ASSIGNED = "assigned"
     CANCELLED = "cancelled"
@@ -51,6 +56,7 @@ class QueueStatus(str, Enum):
 
 class TestRunStatus(str, Enum):
     """测试执行状态 — tr_test_runs.status"""
+
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     PASSED = "PASSED"
@@ -60,6 +66,7 @@ class TestRunStatus(str, Enum):
 
 class TestResult(str, Enum):
     """单次迭代结果 — tr_test_results.result"""
+
     PASS = "PASS"
     FAIL = "FAIL"
     ERROR = "ERROR"
@@ -67,18 +74,21 @@ class TestResult(str, Enum):
 
 class AgentStatus(str, Enum):
     """Agent 状态 — ai_agents.status"""
+
     ACTIVE = "active"
     INACTIVE = "inactive"
 
 
 class ConversationStatus(str, Enum):
     """对话状态 — ai_conversations.status"""
+
     ACTIVE = "active"
     ARCHIVED = "archived"
 
 
 class MessageRole(str, Enum):
     """消息角色 — ai_messages.role"""
+
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
@@ -86,6 +96,7 @@ class MessageRole(str, Enum):
 
 class SOPStatus(str, Enum):
     """SOP 工作流状态 — tr_test_sop.status"""
+
     ACTIVE = "active"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
@@ -93,6 +104,7 @@ class SOPStatus(str, Enum):
 
 class TaskStatus(str, Enum):
     """任务状态 — ai_tasks.status"""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -101,12 +113,14 @@ class TaskStatus(str, Enum):
 
 class MemoryMode(str, Enum):
     """Agent 记忆模式 — ai_agents.memory_mode"""
+
     INMEMORY = "inmemory"
     LONGTERM = "longterm"
 
 
 class ModelProvider(str, Enum):
     """AI 模型提供商"""
+
     DASHSCOPE = "dashscope"
     OPENAI = "openai"
     ANTHROPIC = "anthropic"

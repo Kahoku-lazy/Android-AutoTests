@@ -251,7 +251,7 @@ async function exitPage() {
         <div class="doc-section__header">
           <h3 class="doc-section__title">基本信息 <span class="doc-tag">Basic</span></h3>
           <div class="actions">
-            <el-button @click="exitPage" disabled="false">退出</el-button>
+            <el-button @click="exitPage">退出</el-button>
             <el-button type="primary" :loading="saving" :disabled="isReadOnly" @click="save">保存</el-button>
           </div>
         </div>
@@ -361,7 +361,7 @@ async function exitPage() {
         <div class="doc-section__label">
           页面跳转、点击元素、填充表单、等待加载、验证文本、截图等浏览器自动化步骤
         </div>
-        <StepEditor v-model="form.steps_data" :package-name="form.url" :readonly="isReadOnly" />
+        <StepEditor v-model="form.steps_data" target="web" :package-name="form.url" :readonly="isReadOnly" />
       </section>
     </div>
   </div>

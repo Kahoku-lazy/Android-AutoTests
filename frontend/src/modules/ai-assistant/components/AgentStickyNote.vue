@@ -30,12 +30,13 @@ const emit = defineEmits([
 const noteRef = ref(null)
 const tapeRef = ref(null)
 
+const isImageUrl = (av) => av?.startsWith('/api/ai/avatars/') || av?.startsWith('data:image/')
 const avatarStyle = computed(() => {
   const av = props.agent.avatar
-  if (av?.startsWith('/api/ai/avatars/')) return { backgroundImage: `url(${av})` }
+  if (isImageUrl(av)) return { backgroundImage: `url(${av})` }
   return {}
 })
-const showEmoji = computed(() => !props.agent.avatar?.startsWith('/api/ai/avatars/'))
+const showEmoji = computed(() => !isImageUrl(props.agent.avatar))
 const modelDirty = computed(
   () => !!props.pendingModel && props.pendingModel !== props.agent.model_name,
 )

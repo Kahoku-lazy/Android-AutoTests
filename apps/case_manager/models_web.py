@@ -45,13 +45,19 @@ class WebTestCase(models.Model):
     editing_since = models.DateTimeField(null=True, blank=True)
     locked = models.BooleanField(default=False)
     visibility = models.CharField(
-        max_length=20, default="public",
+        max_length=20,
+        default="public",
         choices=[("public", "所有人可见"), ("hidden", "仅创建者"), ("restricted", "指定用户")],
     )
     permitted_users = models.TextField(default="[]", blank=True)
     permission = models.CharField(
-        max_length=20, default="edit",
-        choices=[("edit", "所有人可编辑"), ("readonly", "所有人只读"), ("restricted", "指定用户可编辑")],
+        max_length=20,
+        default="edit",
+        choices=[
+            ("edit", "所有人可编辑"),
+            ("readonly", "所有人只读"),
+            ("restricted", "指定用户可编辑"),
+        ],
     )
     permitted_editors = models.TextField(default="[]", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

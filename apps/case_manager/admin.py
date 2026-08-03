@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import TestDefinition, CaseDirectory
+
+from .models import CaseDirectory, TestDefinition
 
 
 @admin.register(CaseDirectory)
@@ -11,6 +12,7 @@ class CaseDirectoryAdmin(admin.ModelAdmin):
 
     def case_count(self, obj):
         return obj.test_definitions.count()
+
     case_count.short_description = "用例数"
 
 

@@ -1,36 +1,53 @@
 """Main execution flow — start_test_run + queue dequeue."""
-import json
+
 import asyncio
-import logging
+import json
+
 from datetime import datetime
 from urllib.parse import urlparse
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 
-from models.step_types import TestStep, CaseType
-from models.test_models import TestCaseDef
-from ..runner import (
-    TestRunner, stop_run, is_device_busy, mark_device_busy, mark_device_idle,
-    _device_executor as _u2_executor,
-)
-from ..executors.ui.connect import DeviceCheckError, check_and_connect_async
-from ..callbacks import test_callbacks
-from ..models import TestResult, TestRunRecord, TaskCard
-from apps.device_pool.api import device
+from django.http import JsonResponse
+
+from apps.case_manager.models import TestDefinition
 from apps.device_pool.api import acquire_device as dp_acquire_device
+from apps.device_pool.api import device
 from apps.device_pool.api import release_device as dp_release_device
 from apps.device_pool.models import Device as PoolDevice
-from apps.case_manager.models import TestDefinition
+from models.step_types import CaseType, TestStep
+from models.test_models import TestCaseDef
 
-from .helpers import (
-    _bg_sync, sync_to_async, _bg_log,
-    _enqueue, _enqueue_front, _device_lock, _dequeue, _queue_size,
-    _device_queue, _run_client_task, _preflight_runs,
-    _spawn_bg, _schedule_next_queued, _enqueue_taskcard, _abort_run_before_execute,
-    require_auth,
+from .. import state_machine as sm
+from ..callbacks import test_callbacks
+from ..executors.ui.connect import DeviceCheckError, check_and_connect_async
+from ..models import TaskCard
+from ..runner import (
+    TestRunner,
+    is_device_busy,
+    mark_device_busy,
+    mark_device_idle,
+    stop_run,
 )
-
+from ..runner import (
+    _device_executor as _u2_executor,
+)
 from .executor import _execute_tests
+from .helpers import (
+    _abort_run_before_execute,
+    _bg_log,
+    _bg_sync,
+    _dequeue,
+    _device_lock,
+    _enqueue,
+    _enqueue_front,
+    _enqueue_taskcard,
+    _preflight_runs,
+    _queue_size,
+    _run_client_task,
+    _schedule_next_queued,
+    _spawn_bg,
+    require_auth,
+    sync_to_async,
+)
 
 
 def _build_api_step_from_flat(r) -> list[dict]:
@@ -58,6 +75,7 @@ def _parse_json_field(value):
         except (json.JSONDecodeError, TypeError):
             return value
     return value if value else {}
+
 
 def _parse_rows(val):
     """Safely parse rows/assertions into a list, handling JSON-string edge cases."""
@@ -95,15 +113,19 @@ async def start_test_run(request):
     if not case_ids:
         return JsonResponse({"ok": False, "error": "case_ids required"})
     if task_type == CaseType.UI_AUTOMATION.value and not serials:
-        return JsonResponse({"ok": False, "error": "device_serial is required for UI automation tasks"}, status=400)
+        return JsonResponse(
+            {"ok": False, "error": "device_serial is required for UI automation tasks"}, status=400
+        )
 
     @_bg_sync
     def load_definitions():
         if task_type == CaseType.API_TESTING.value:
             from apps.case_manager.models_api import ApiTestCase
+
             rows = ApiTestCase.objects.filter(id__in=case_ids, enabled=True)
         elif task_type == CaseType.WEB_AUTOMATION.value:
             from apps.case_manager.models_web import WebTestCase
+
             rows = WebTestCase.objects.filter(id__in=case_ids, enabled=True)
         else:
             rows = TestDefinition.objects.filter(id__in=case_ids, enabled=True)
@@ -193,16 +215,27 @@ async def start_test_run(request):
         run_id = f"{prefix}-RUN-{datetime.now().strftime('%Y%m%d%H%M%S')}-{client_task_id[:8] if client_task_id else 'direct'}"
         if client_task_id:
             _run_client_task[run_id] = client_task_id
-        _spawn_bg(_execute_unified_remote(run_id, test_cases, loop_count, interval_seconds,
-                                            client_task_id, task_type, device_label),
-                   f"{task_type}_exec")
-        return JsonResponse({
-            "ok": True,
-            "runs": [{"run_id": run_id, "test_cases": len(test_cases)}],
-            "queued": [],
-            "case_count": len(test_cases),
-            "loop_count": loop_count,
-        })
+        _spawn_bg(
+            _execute_unified_remote(
+                run_id,
+                test_cases,
+                loop_count,
+                interval_seconds,
+                client_task_id,
+                task_type,
+                device_label,
+            ),
+            f"{task_type}_exec",
+        )
+        return JsonResponse(
+            {
+                "ok": True,
+                "runs": [{"run_id": run_id, "test_cases": len(test_cases)}],
+                "queued": [],
+                "case_count": len(test_cases),
+                "loop_count": loop_count,
+            }
+        )
 
     queued_serials = []
     run_ids = []
@@ -284,6 +317,7 @@ async def start_test_run(request):
         ):
             pending_release = True  # 已持有设备锁,退出前须确保释放(除非交接给 _execute_tests)
             import logging
+
             _bg_log = logging.getLogger("test_runner.bg")
             _bg_log.info(f"delayed_execute 开始: {rid} device={_serial}")
             try:
@@ -474,10 +508,12 @@ async def _start_next_queued(serial: str):
             # in-memory queue. Cancel the TaskCard so it doesn't become a zombie.
             if client_task_id := next_req.get("client_task_id", ""):
                 try:
+
                     @_bg_sync
                     def _cancel_empty():
                         tc = TaskCard.objects.get(task_id=client_task_id)
                         sm.cancel(tc)
+
                     await _cancel_empty()
                 except Exception:
                     _bg_log.exception("cancel empty-queue task %s", client_task_id)
@@ -529,14 +565,22 @@ async def _start_next_queued(serial: str):
 
 # ── API test execution (no device required) ──
 
-async def _execute_unified_remote(run_id, test_cases, loop_count, interval_seconds,
-                                   client_task_id="", task_type="api_testing", device_label="api"):
+
+async def _execute_unified_remote(
+    run_id,
+    test_cases,
+    loop_count,
+    interval_seconds,
+    client_task_id="",
+    task_type="api_testing",
+    device_label="api",
+):
     """Unified API/Web execution through the same _execute_tests pipeline as UI."""
     from ..executors.api.adapter import ApiAdapter
-    from ..executors.web.adapter import WebAdapter
-    from ..remote_runner import RemoteTestRunner
     from ..executors.api.executor import ApiExecutor
+    from ..executors.web.adapter import WebAdapter
     from ..executors.web.executor import WebExecutor
+    from ..remote_runner import RemoteTestRunner
 
     is_web = task_type == CaseType.WEB_AUTOMATION.value
     label = "Web" if is_web else "API"
@@ -555,9 +599,14 @@ async def _execute_unified_remote(run_id, test_cases, loop_count, interval_secon
                 should_stop=lambda: False,
             )
             executor = WebExecutor(adapter)
-            runner = RemoteTestRunner(adapter, executor, device_label=device_label,
-                                      callback=test_callbacks, is_async_executor=True,
-                                      cleanup=adapter.close)
+            runner = RemoteTestRunner(
+                adapter,
+                executor,
+                device_label=device_label,
+                callback=test_callbacks,
+                is_async_executor=True,
+                cleanup=adapter.close,
+            )
         else:
             # Extract base_url from first test case's url (all cases share same deployment)
             base_url = ""
@@ -573,11 +622,16 @@ async def _execute_unified_remote(run_id, test_cases, loop_count, interval_secon
                 should_stop=lambda: False,
             )
             executor = ApiExecutor(adapter)
-            runner = RemoteTestRunner(adapter, executor, device_label=device_label,
-                                      callback=test_callbacks)
+            runner = RemoteTestRunner(
+                adapter, executor, device_label=device_label, callback=test_callbacks
+            )
 
         await _execute_tests(
-            run_id, runner, test_cases, loop_count, interval_seconds,
+            run_id,
+            runner,
+            test_cases,
+            loop_count,
+            interval_seconds,
             serial=device_label,
         )
 
@@ -591,8 +645,6 @@ def _bridge_ws_log(run_id: str, msg: str, loop):
     """Bridge synchronous adapter log to async WebSocket callback."""
     if loop and loop.is_running():
         try:
-            asyncio.run_coroutine_threadsafe(
-                test_callbacks.on_log(run_id, msg), loop
-            )
+            asyncio.run_coroutine_threadsafe(test_callbacks.on_log(run_id, msg), loop)
         except Exception:
-            pass
+            _bg_log.exception("_bridge_ws_log: WS send failed for run_id=%s", run_id)

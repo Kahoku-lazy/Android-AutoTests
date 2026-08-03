@@ -1,0 +1,21 @@
+{
+  "title": "[Web] 注册-两次密码不一致应报错",
+  "url": "http://localhost:5173/login?add=1",
+  "priority": "P0",
+  "description": "验证两次输入的密码不一致时，前端校验拦截，弹窗提示「两次密码不一致」",
+  "expected_result": "ElMessage 弹窗显示「两次密码不一致」",
+  "directory_id": 110,
+  "steps": [
+    {"type": "web_navigate", "url": "http://localhost:5173/login?add=1", "description": "打开登录页"},
+    {"type": "web_wait", "timeout": 2, "description": "等待页面加载"},
+    {"type": "web_click", "selector": ".login-toggle", "description": "切换到注册模式"},
+    {"type": "web_wait", "timeout": 1, "description": "等待表单切换"},
+    {"type": "web_fill", "selector": "input[placeholder=\"设置账号（3-20 字符）\"]", "value": "testuser123", "description": "填入用户名"},
+    {"type": "web_fill", "selector": "input[placeholder=\"设置密码（至少 6 位）\"]", "value": "test123456", "description": "填入密码"},
+    {"type": "web_fill", "selector": "input[placeholder=\"确认密码\"]", "value": "different999", "description": "填入不一致的确认密码"},
+    {"type": "web_click", "selector": "button.el-button--primary", "description": "点击完成注册"},
+    {"type": "web_wait", "timeout": 1, "description": "等待客户端校验"},
+    {"type": "web_assert", "expected_text": "两次密码不一致", "description": "验证弹窗显示两次密码不一致"},
+    {"type": "web_screenshot", "description": "密码不一致校验弹窗截图"}
+  ]
+}

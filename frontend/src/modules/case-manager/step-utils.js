@@ -1,40 +1,33 @@
 /**
- * Shared step type definitions and utilities — imported by StepEditor and StepViewer.
+ * 步骤显示工具 — StepViewer 使用。
+ *
+ * 步骤类型定义已迁移至后端 models/step_types.py::STEP_TYPE_META。
+ * 前端通过 GET /api/cases/step-types?target=xxx 拉取。
+ * 此文件仅保留 stepSummary() 显示逻辑和 icon 映射。
  */
 
-// ── Step type definitions (10 types) ──
-export const STEP_TYPES = [
-  { value: "click", label: "点击元素", icon: "👆", desc: "点击屏幕上的一个元素", group: "点击" },
-  { value: "long_click", label: "长按元素", icon: "🖐", desc: "按住元素不放，持续N秒后松开", group: "点击" },
-  { value: "swipe", label: "滑动屏幕", icon: "👈", desc: "在屏幕上向某个方向滑动一段距离", group: "滑动" },
-  { value: "wait", label: "等待元素出现", icon: "⏳", desc: "等待某个元素出现在屏幕上，超时则失败", group: "等待" },
-  { value: "wait_disappear", label: "等待元素消失", icon: "⏳", desc: "等待某个元素从屏幕上消失，超时则失败", group: "等待" },
-  { value: "sleep", label: "暂停几秒", icon: "😴", desc: "什么都不做，暂停等待一段时间", group: "等待" },
-  { value: "verify_text", label: "校验文字", icon: "✅", desc: "检查元素的文字内容是否等于预期值", group: "断言" },
-  { value: "poll_text", label: "等待文字出现", icon: "🔄", desc: "轮询等待元素出现并且文字等于预期值，显示检测耗时", group: "断言" },
-  { value: "start_app", label: "打开应用", icon: "🚀", desc: "启动手机上的某个应用", group: "应用" },
-  { value: "kill_app", label: "关闭应用", icon: "💀", desc: "强制退出手机上的某个应用", group: "应用" },
-  { value: "perf_element_time", label: "等待元素出现耗时", icon: "⏱️", desc: "上一步完成后开始计时，元素出现后结束计时，超时则失败", group: "APP性能" },
-  { value: "wait_toast", label: "等待Toast消息", icon: "💬", desc: "等待指定文本的Toast消息出现", group: "弹窗" },
-  { value: "if_element_appear", label: "如果元素出现", icon: "🔀", desc: "如果目标元素出现则执行子步骤，否则跳过", group: "流程控制", container: true },
-  { value: "if_element_disappear", label: "如果元素消失", icon: "🔀", desc: "如果目标元素消失则执行子步骤，否则跳过", group: "流程控制", container: true },
-  { value: "loop_n", label: "循环N次", icon: "🔁", desc: "重复执行子步骤N次", group: "流程控制", container: true },
-  { value: "loop_elements", label: "遍历元素列表", icon: "📋", desc: "依次点击XPath列表中的每个元素（多个用|分隔）", group: "流程控制", container: true },
-  // ── API 请求类 ──
-  { value: "api_request", label: "API 请求", icon: "🌐", desc: "发送 HTTP 请求并记录响应", group: "API 请求" },
-  { value: "api_assert", label: "断言验证", icon: "✅", desc: "验证 API 响应内容是否符合预期", group: "API 请求" },
-  { value: "api_sleep", label: "暂停等待", icon: "😴", desc: "暂停等待一段时间", group: "API 请求" },
-  { value: "api_log", label: "输出日志", icon: "📝", desc: "输出自定义日志信息", group: "API 请求" },
-  // ── Web 自动化类 ──
-  { value: "web_navigate", label: "页面跳转", icon: "🔗", desc: "浏览器导航到指定 URL", group: "Web 自动化" },
-  { value: "web_click", label: "点击元素", icon: "👆", desc: "点击页面上的 CSS 选择器元素", group: "Web 自动化" },
-  { value: "web_fill", label: "填充输入", icon: "⌨️", desc: "向输入框填充文本", group: "Web 自动化" },
-  { value: "web_type", label: "逐字输入", icon: "⌨️", desc: "逐字符输入文本（模拟真实打字）", group: "Web 自动化" },
-  { value: "web_wait", label: "等待", icon: "⏳", desc: "等待元素出现或固定时间", group: "Web 自动化" },
-  { value: "web_assert", label: "验证文本", icon: "✅", desc: "验证页面上存在指定文本", group: "Web 自动化" },
-  { value: "web_screenshot", label: "截图", icon: "📸", desc: "截取当前页面截图", group: "Web 自动化" },
-  { value: "web_step", label: "Web 步骤", icon: "⚙️", desc: "通用 Web 操作步骤", group: "Web 自动化" },
-];
+// ── icon 映射（仅用于显示）──
+const STEP_ICONS = {
+  click: "👆", long_click: "👇", swipe: "👈", wait: "⏳", wait_disappear: "⌛",
+  sleep: "💤", screenshot: "📸",
+  verify_text: "✅", adb_poll_text: "🔄",
+  adb_start_app: "🚀", adb_kill_app: "💀",
+  adb_perf_element_time: "⏱️", adb_wait_toast: "💬",
+  adb_if_appear: "🔀", adb_if_disappear: "🔀", adb_loop_n: "🔁", adb_loop_elements: "📋",
+  api_request: "🌐", api_assert: "✅", api_sleep: "😴", api_log: "📝",
+  web_navigate: "🔗", web_fill: "⌨️", web_type: "⌨️",
+  web_wait: "⏳", web_assert: "✅", web_screenshot: "📸",
+  web_click: "👆", web_step: "⚙️",
+};
+
+// ── 旧名 → 新名归一化（过渡期兼容）──
+const _TYPE_ALIAS = {
+  start_app: "adb_start_app", kill_app: "adb_kill_app", wait_toast: "adb_wait_toast",
+  perf_element_time: "adb_perf_element_time", poll_text: "adb_poll_text",
+  if_element_appear: "adb_if_appear", if_element_disappear: "adb_if_disappear",
+  loop_n: "adb_loop_n", loop_elements: "adb_loop_elements",
+  web_click: "click", web_screenshot: "screenshot",
+};
 
 // ── Field labels ──
 export const FIELD_LABELS = {
@@ -79,8 +72,8 @@ export function resolveElementName(step, field = "xpath") {
 /** Generate a one-line Chinese step summary with emoji icon.
  *  @param {Function} [resolveFn] — optional custom element name resolver (e.g. live lookup from element library) */
 export function stepSummary(step, resolveFn) {
-  const def = STEP_TYPES.find((t) => t.value === step.type);
-  const icon = def?.icon || "";
+  const type = _TYPE_ALIAS[step.type] || step.type;
+  const icon = STEP_ICONS[type] || "";
   const resolve = resolveFn || resolveElementName;
   const elName = resolve(step, "xpath");
 
@@ -105,22 +98,24 @@ export function stepSummary(step, resolveFn) {
       return `${icon} 检查「${elName}」文字是否="${step.expected_text || "?"}"`;
     case "poll_text":
       return `${icon} 等待「${elName}」出现，文字="${step.expected_text || "?"}"`;
-    case "start_app":
+    case "adb_start_app":
       return `${icon} 打开应用 ${step.xpath || ""}`;
-    case "kill_app":
+    case "adb_kill_app":
       return `${icon} 关闭应用 ${step.xpath || ""}`;
-    case "perf_element_time":
+    case "adb_perf_element_time":
       return `${icon} 等待「${elName}」出现耗时（超时${step.timeout || 10}s）`;
-    case "wait_toast":
+    case "adb_wait_toast":
       return `${icon} 等待Toast「${step.expected_text || "?"}」`;
-    case "if_element_appear":
+    case "adb_if_appear":
       return `${icon} 如果「${elName}」出现 (${(step.children || []).length} 子步骤)`;
-    case "if_element_disappear":
+    case "adb_if_disappear":
       return `${icon} 如果「${elName}」消失 (${(step.children || []).length} 子步骤)`;
-    case "loop_n":
+    case "adb_loop_n":
       return `${icon} 循环 ${step.index || 1} 次 (${(step.children || []).length} 子步骤)`;
-    case "loop_elements":
+    case "adb_loop_elements":
       return `${icon} 遍历 ${(step.xpath || '').split('|').filter(Boolean).length || 0} 个元素 (${(step.children || []).length} 子步骤)`;
+    case "adb_poll_text":
+      return `${icon} 等待「${elName}」出现，文字="${step.expected_text || "?"}"`;
     // ── API ──
     case "api_request":
       return `${icon} ${step.method || 'GET'} ${step.url || step.xpath || ''}`;
@@ -148,6 +143,6 @@ export function stepSummary(step, resolveFn) {
     case "web_step":
       return `${icon} ${step.description || 'Web 步骤'}`;
     default:
-      return `${icon} ${def?.label || step.type}`;
+      return `${icon} ${step.type}`;
   }
 }

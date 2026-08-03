@@ -2,7 +2,7 @@
 
 import json
 
-from django.http import JsonResponse, HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from . import api as wf_api
@@ -18,11 +18,13 @@ def directory_list(request):
     """GET /api/workflow/directories — flat + tree."""
     if request.method != "GET":
         return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
-    return JsonResponse({
-        "ok": True,
-        "directories": wf_api.list_directories_flat(),
-        "tree": wf_api.get_directory_tree(),
-    })
+    return JsonResponse(
+        {
+            "ok": True,
+            "directories": wf_api.list_directories_flat(),
+            "tree": wf_api.get_directory_tree(),
+        }
+    )
 
 
 @csrf_exempt
@@ -144,9 +146,7 @@ def documents_import(request):
     if request.method != "POST":
         return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
     data = _body(request)
-    overwrite = request.GET.get("overwrite") in ("1", "true", "True") or bool(
-        data.get("overwrite")
-    )
+    overwrite = request.GET.get("overwrite") in ("1", "true", "True") or bool(data.get("overwrite"))
     # 允许 { envelope: {...} } 或直接 envelope
     payload = data.get("envelope") if isinstance(data.get("envelope"), dict) else data
     ok, result, status = wf_api.import_document_envelope(payload, overwrite=overwrite)

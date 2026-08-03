@@ -5,23 +5,16 @@ v2 per PRD §6.2:
   v2 (6): lock, release, queue, heartbeat, queue-join, queue-leave
 """
 
-import json
 import logging
-import re
 import subprocess
 
 logger = logging.getLogger(__name__)
-import time
 from datetime import datetime, timedelta
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.conf import settings
+
 import uiautomator2 as u2
 
 from ..models import Device, DeviceLock, DeviceQueue
 from ..pool import device as device_pool
-from ..pool import DevicePool
-
 
 # ═══════════════════════════════════════════════
 # 核心 Helper 函数
@@ -190,8 +183,12 @@ def _collect_device_info(dev, serial):
         )
         logger.info(
             "设备信息已采集: %s → %s %s %sx%s SDK=%s",
-            dev.serial, dev.brand, dev.model,
-            dev.screen_w, dev.screen_h, dev.android_version,
+            dev.serial,
+            dev.brand,
+            dev.model,
+            dev.screen_w,
+            dev.screen_h,
+            dev.android_version,
         )
     except Exception as e:
         logger.warning("采集设备信息失败 %s: %s", serial, e)
@@ -278,5 +275,3 @@ def _device_to_dict(dev, current_serial):
 # ═══════════════════════════════════════════════
 # v1 endpoints (5)
 # ═══════════════════════════════════════════════
-
-

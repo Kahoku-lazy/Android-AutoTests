@@ -2,6 +2,13 @@
  * case-manager API — backward-compatible re-export facade.
  * Real implementations in api/ sub-directory.
  */
+import client from "@/shared/api-client.js";
+
+// ── 操作类型（跨平台统一）──
+
+export function fetchStepTypes(target) {
+  return client.get(`/cases/step-types?target=${target}`);
+}
 
 // Directories
 export {

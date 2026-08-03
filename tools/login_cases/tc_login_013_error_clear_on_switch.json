@@ -1,0 +1,21 @@
+{
+  "title": "[Web] 登录-报错后切换模式应清除错误信息",
+  "url": "http://localhost:5173/login",
+  "priority": "P1",
+  "description": "验证登录触发错误提示后切换到注册模式，表单状态干净、注册表单正常显示",
+  "expected_result": "切换到注册模式后，注册表单正确显示，无残留错误状态",
+  "directory_id": 109,
+  "steps": [
+    {"type": "web_navigate", "url": "http://localhost:5173/login?add=1", "description": "打开登录页(强制表单模式)"},
+    {"type": "web_wait", "timeout": 2, "description": "等待页面加载完成"},
+    {"type": "web_fill", "selector": "input[placeholder=\"账号\"]", "value": "admin", "description": "填入用户名"},
+    {"type": "web_click", "selector": "button.el-button--primary", "description": "密码为空点击登录，触发表单校验"},
+    {"type": "web_wait", "timeout": 1, "description": "等待校验弹窗"},
+    {"type": "web_assert", "expected_text": "请输入密码", "description": "确认弹出密码必填提示"},
+    {"type": "web_screenshot", "description": "登录校验弹窗截图"},
+    {"type": "web_click", "selector": ".login-toggle", "description": "切换到注册模式"},
+    {"type": "web_wait", "timeout": 1, "description": "等待表单切换"},
+    {"type": "web_assert", "expected_text": "设置密码（至少 6 位）", "description": "验证注册表单正常显示，状态干净"},
+    {"type": "web_screenshot", "description": "切换后注册表单截图"}
+  ]
+}

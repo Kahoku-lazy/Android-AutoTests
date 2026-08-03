@@ -122,6 +122,8 @@ token.json
 # Test reports
 tests/functional/*/reports/
 .playwright-mcp/
+tests\temp\*
+/tests/temp/
 
 # ── Workflow demo（已并入 frontend/src/modules/workflow，不再维护）──
 tests/workflow-demo/

@@ -1,18 +1,17 @@
 # Coding Conventions — Android-AutoTests
 
-## 命名规范
+> **索引文件**。代码约束分散到各语言专属文件，本文只保留跨语言/跨层的约定。
 
-| 上下文 | 规范 | 示例 |
-|--------|------|------|
-| 后端 Python | `snake_case` | `test_runner`, `get_device()` |
-| 前端 JS/Vue | `camelCase` | `apiClient`, `getDevices()` |
-| Vue 组件文件 | `PascalCase.vue` | `AgentDetail.vue`, `AppSidebar.vue` |
-| Vue 组件模板 | `kebab-case` | `<device-pool>`, `<case-manager>` |
-| API URL | `kebab-case` | `/api/device-pool/`, `/api/test-runner/` |
-| JSON 字段 | `snake_case` | `{"test_case_id": 1, "run_status": "OK"}` |
-| 数据库表 | `{prefix}_snake_case` | `dp_devices`, `cm_test_cases` |
-| Model 类 | `PascalCase` | `Device`, `TestCase`, `TestRun` |
-| CSS class | `kebab-case` | `.device-card`, `.test-result` |
+---
+
+## 代码约束
+
+| 语言 | 文件 | 内容 |
+|------|------|------|
+| Python | `.claude/rules/python-code.md` | 命名 / 行数限制 / import / 类型注解 / api.py·views.py·models.py 规范 / 异常处理 / 响应格式 |
+| 前端 | `.claude/rules/frontend.md` | 命名 / 行数限制 / 架构红线 / 数据加载三态 / CSS 层级 / Element Plus |
+
+---
 
 ## 设备端测试步骤
 
@@ -32,19 +31,3 @@
 - `LoginView.vue` 是平台唯一登录入口
 - `beforeEach` 守卫保护全部路由
 - 前端 Axios 拦截器自动处理 401 刷新
-
-## 文件行数限制
-
-单文件超过上限必须拆分，禁止继续堆代码。
-
-| 文件类型 | 上限 | 超限处理 |
-|------|:--:|------|
-| `.vue` 组件 | 500 行 | 拆出 composables / 子组件 |
-| `.py` 模块 | 400 行 | 拆出独立模块 |
-| 测试入口 `run_tests.py` | 300 行 | 拆出 `{layer}_tests.py` + `helpers.py` |
-| 测试层文件 | 300 行 | 拆更细的测试分组文件 |
-
-**自查命令**：
-```bash
-find . -name "*.py" -o -name "*.vue" | xargs wc -l | sort -rn | head -20
-```

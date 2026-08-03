@@ -1,8 +1,13 @@
 """uiautomator2 + Airtest crash detection, health check, and reconnection."""
 
+import logging
 import time
+
 import uiautomator2 as u2
+
 from airtest.core.android.android import Android
+
+logger = logging.getLogger(__name__)
 
 # Max retries per test case on device crash
 U2_CASE_RETRY_MAX = 3
@@ -11,6 +16,7 @@ U2_RECONNECT_INTERVAL = 2
 
 
 # ── Crash Detection ──
+
 
 def is_u2_crash(exc: BaseException) -> bool:
     """Detect if exception was caused by u2/ADB connection crash or timeout."""
@@ -77,6 +83,7 @@ def is_device_crash(exc: BaseException) -> bool:
 
 # ── Health Check ──
 
+
 def check_u2_alive(device) -> bool:
     """Quick probe: u2 service is responsive."""
     if device is None:
@@ -100,6 +107,7 @@ def check_device_alive(device_conn) -> bool:
 
 
 # ── Reconnection ──
+
 
 def reconnect_u2(serial: str):
     """Re-establish u2 connection. Raises on failure."""
@@ -126,7 +134,7 @@ def reconnect_device(serial: str):
             if k not in info and k in u2_info:
                 info[k] = u2_info[k]
     except Exception:
-        pass
+        logger.debug("Recovery operation failed, continuing")
 
     return DeviceConnection(serial=serial, airtest=air_dev, u2=u2_dev, info=info)
 

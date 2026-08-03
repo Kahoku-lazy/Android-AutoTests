@@ -1,18 +1,22 @@
 """case-manager directory endpoints — tree, CRUD, batch-move, permissions."""
 
 import json
+import logging
+
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from .models import CaseDirectory
 from .api_directories import (
-    get_directory_tree,
-    create_directory,
-    update_directory,
-    delete_directory,
     batch_move_items,
+    create_directory,
+    delete_directory,
+    get_directory_tree,
+    update_directory,
 )
+from .models import CaseDirectory
 from .views_helpers import resolve_username as _resolve_username
+
+logger = logging.getLogger(__name__)
 
 
 def directory_list(request):
@@ -29,12 +33,15 @@ def directory_create(request):
     """POST /api/cases/directories/create — Create a directory."""
     if request.method != "POST":
         return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "无效的 JSON"}, status=400)
     ok, result = create_directory(
         name=data.get("name", ""),
         parent_id=data.get("parent_id"),
         sort_order=data.get("sort_order", 0),
-        created_by=_resolve_username(getattr(request, 'user_id', None)),
+        created_by=_resolve_username(getattr(request, "user_id", None)),
         case_type=data.get("case_type", "ui_automation"),
     )
     if ok:
@@ -46,12 +53,15 @@ def directory_create(request):
 def directory_detail(request, dir_id):
     """POST /api/cases/directories/{id} — update or delete."""
     if request.method == "POST":
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"ok": False, "error": "无效的 JSON"}, status=400)
         action = data.get("action", "update")
         if action == "delete":
             ok, result = delete_directory(
                 dir_id,
-                deleted_by=_resolve_username(getattr(request, 'user_id', None)),
+                deleted_by=_resolve_username(getattr(request, "user_id", None)),
             )
         else:
             ok, result = update_directory(
@@ -78,7 +88,10 @@ def directory_batch_move(request):
     """POST /api/cases/directories/batch-move — Batch move cases/directories."""
     if request.method != "POST":
         return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "无效的 JSON"}, status=400)
     items = data.get("items", [])
     target_id = data.get("target_directory_id")
     if not isinstance(items, list) or not items:
@@ -95,7 +108,7 @@ def directory_permission(request, dir_id):
     if request.method != "POST":
         return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
 
-    current_user = _resolve_username(getattr(request, 'user_id', None))
+    current_user = _resolve_username(getattr(request, "user_id", None))
     if not current_user:
         return JsonResponse({"ok": False, "error": "未登录"}, status=401)
 

@@ -198,7 +198,7 @@ onUnmounted(() => {
 
       <el-button
         v-show="!collapsed"
-        type="text"
+        link
         size="small"
         danger
         class="logout-btn"

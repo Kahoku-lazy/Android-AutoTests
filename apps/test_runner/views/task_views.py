@@ -1,23 +1,22 @@
 """Task card + single-step + monitor endpoints."""
+
 import json
 import os
-from datetime import datetime
 
 from django.conf import settings
 from django.http import FileResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Count, Q
 
 from models.step_types import TestStep
 
+from .. import state_machine as sm
+from ..api import delete_task_card, resolve_creator, save_task_card
+from ..models import TaskCard, TestResult, TestRunRecord
+from ..runner import get_active_run
 from .helpers import (
-    _bg_log, _run_client_task,
+    _run_client_task,
     require_auth,
 )
-
-from ..runner import get_active_run
-from ..models import TestResult, TestRunRecord, TaskCard
-from .. import state_machine as sm
 
 
 @require_auth
@@ -36,23 +35,31 @@ def run_single_step(request):
     description = data.get("description", step_type)
 
     if step_type not in (
-        "click", "long_click",
+        "click",
+        "long_click",
         "swipe",
-        "wait", "wait_disappear", "sleep",
-        "verify_text", "poll_text",
-        "start_app", "kill_app",
+        "wait",
+        "wait_disappear",
+        "sleep",
+        "verify_text",
+        "poll_text",
+        "start_app",
+        "kill_app",
         "perf_element_time",
         "wait_toast",
-        "if_element_appear", "if_element_disappear",
-        "loop_n", "loop_elements",
+        "if_element_appear",
+        "if_element_disappear",
+        "loop_n",
+        "loop_elements",
     ):
         return JsonResponse({"ok": False, "error": f"Unknown step type: {step_type}"})
 
     try:
+        from apps.device_pool.api import device
+
         from ..executors.ui.adapter import DeviceAdapter
         from ..executors.ui.connect import DeviceConnection
         from ..executors.ui.executor import StepExecutor
-        from apps.device_pool.api import device
 
         target_serial = data.get("device_serial", "").strip()
         if target_serial:
@@ -119,7 +126,11 @@ def _safe_perf_stats(tc):
         if tc.run_id and tc.run:
             return tc.run.summary.get("_perf") if tc.run.summary else None
     except Exception:
-        pass
+        import logging
+
+        logging.getLogger("test_runner.views").exception(
+            "_safe_perf_stats: perf stats computation failed for task %s", tc.task_id
+        )
     return None
 
 
@@ -134,6 +145,11 @@ def task_card_list(request):
     qs = TaskCard.objects.all().order_by("-created_at")[:200]
     cards = []
     for tc in qs:
+        creator = resolve_creator(tc.creator)
+        # 自愈：历史任务把 JWT sub（数字 user id）当成了创建人
+        if creator and creator != (tc.creator or ""):
+            TaskCard.objects.filter(pk=tc.pk).update(creator=creator)
+            tc.creator = creator
         cards.append(
             {
                 "id": tc.task_id,
@@ -153,7 +169,7 @@ def task_card_list(request):
                 "overallFail": tc.overall_fail,
                 "logs": tc.logs,
                 "createdAt": str(tc.created_at),
-                "creator": tc.creator,
+                "creator": creator,
                 "currentCaseTitle": tc.current_case_title or "",
                 "currentIteration": tc.current_iteration or 0,
                 "failedSteps": tc.failed_steps,
@@ -192,7 +208,7 @@ def _load_step_details(tc) -> list:
 
 def _resolve_case_title(tc, case_id: str) -> str:
     """Try to resolve a case title from the TaskCard's case_items."""
-    for ci in (tc.case_items or []):
+    for ci in tc.case_items or []:
         if str(ci.get("id", "")) == str(case_id):
             return ci.get("title", case_id)
     return case_id
@@ -203,89 +219,28 @@ def _resolve_case_title(tc, case_id: str) -> str:
 def task_card_save(request):
     """POST /api/runner/tasks/save — Upsert a task card."""
     data = json.loads(request.body) if request.body else {}
-    task_id = data.get("id", "").strip()
+    task_id = (data.get("id") or "").strip()
     if not task_id:
         return JsonResponse({"ok": False, "error": "任务ID不能为空"}, status=400)
-
-    defaults = {
-        "name": data.get("name", ""),
-        "creator": data.get("creator", ""),
-        "mode": data.get("mode", "immediate"),
-        "task_type": data.get("taskType", "ui_automation"),
-        "device_serial": data.get("deviceSerial", ""),
-        "case_ids": data.get("caseIds", []),
-        "loop_count": data.get("loopCount", 1),
-        "interval_seconds": data.get("intervalSeconds", 5),
-        # running 不接受前端传入 —— 由后端运行时路径管理，避免与 status 漂移
-        # run_id FK 由后端管理，不接受前端字符串（避免 FK 类型冲突）
-        "case_items": data.get("caseItems", []),
-        "step_states": data.get("stepStates", []),
-        "overall_pass": data.get("overallPass", 0),
-        "overall_fail": data.get("overallFail", 0),
-        "logs": (data.get("logs") or [])[-200:],
-        "outcome": data.get("outcome", ""),
-        "round": data.get("round", 0),
-        "conclusion": data.get("conclusion", ""),
-        "bug_ticket": data.get("bugTicket", ""),
-        "failed_steps": (data.get("failedSteps") or [])[-200:],
-        "current_case_title": data.get("currentCaseTitle", ""),
-        "current_iteration": int(data.get("currentIteration") or 0),
-        "start_at": data.get("startAt") or "",
-        "end_at": data.get("endAt") or "",
-    }
-    # status is backend-managed — only set on create, never overwrite from frontend
     try:
-        task = TaskCard.objects.get(task_id=task_id)
-        for k, v in defaults.items():
-            setattr(task, k, v)
-        task.save()
-    except TaskCard.DoesNotExist:
-        # Explicit create — every field must be set to avoid MySQL integrity errors
-        task = TaskCard(
-            task_id=task_id,
-            name=data.get("name", ""),
-            creator=data.get("creator", ""),
-            mode=data.get("mode", "immediate"),
-            task_type=data.get("taskType", "ui_automation"),
-            device_serial=data.get("deviceSerial", ""),
-            case_ids=data.get("caseIds", []),
-            loop_count=data.get("loopCount", 1),
-            interval_seconds=data.get("intervalSeconds", 5),
-            running=False,  # 新建任务恒为未运行；执行由 POST /run 启动
-            case_items=data.get("caseItems", []),
-            step_states=data.get("stepStates", []),
-            overall_pass=data.get("overallPass", 0),
-            overall_fail=data.get("overallFail", 0),
-            logs=(data.get("logs") or [])[-200:],
-            outcome=data.get("outcome", ""),
-            round=data.get("round", 0),
-            conclusion=data.get("conclusion", ""),
-            bug_ticket=data.get("bugTicket", ""),
-            failed_steps=(data.get("failedSteps") or [])[-200:],
-            current_case_title=data.get("currentCaseTitle", ""),
-            current_iteration=int(data.get("currentIteration") or 0),
-            start_at=data.get("startAt") or "",
-            end_at=data.get("endAt") or "",
-            status="idle",
-        )
-        task.save()
-    return JsonResponse({"ok": True, "id": task_id})
+        result = save_task_card(data)
+    except ValueError as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=400)
+    return JsonResponse({"ok": True, "id": result["id"]})
 
 
 @require_auth
 @csrf_exempt
 def task_card_delete(request, task_id):
     """DELETE /api/runner/tasks/{task_id} — Delete a task card."""
-    try:
-        TaskCard.objects.get(task_id=task_id).delete()
-        return JsonResponse({"ok": True, "message": "已删除"})
-    except TaskCard.DoesNotExist:
-        return JsonResponse({"ok": True, "message": "任务不存在或已删除"})
+    delete_task_card(task_id)
+    return JsonResponse({"ok": True, "message": "已删除"})
 
 
 # ═══════════════════════════════════════════════════════════════
 # 步骤截图服务
 # ═══════════════════════════════════════════════════════════════
+
 
 def serve_step_screenshot(request, filepath):
     """GET /api/runner/step-screenshots/<path:filepath> — Serve annotated step screenshot."""
@@ -317,17 +272,20 @@ def run_monitor(request, run_id):
         # 已完成/不存在的 run → 查 DB
         try:
             record = TestRunRecord.objects.get(run_id=run_id)
-            return JsonResponse({
-                "ok": True, "run_id": run_id,
-                "live": False,
-                "status": record.status,
-                "device_serial": record.device_serial,
-                "selected_cases": record.selected_cases,
-                "loop_count": record.loop_count,
-                "summary": record.summary,
-                "started_at": record.started_at,
-                "finished_at": record.finished_at,
-            })
+            return JsonResponse(
+                {
+                    "ok": True,
+                    "run_id": run_id,
+                    "live": False,
+                    "status": record.status,
+                    "device_serial": record.device_serial,
+                    "selected_cases": record.selected_cases,
+                    "loop_count": record.loop_count,
+                    "summary": record.summary,
+                    "started_at": record.started_at,
+                    "finished_at": record.finished_at,
+                }
+            )
         except TestRunRecord.DoesNotExist:
             return JsonResponse({"ok": False, "error": "run not found"}, status=404)
 
@@ -337,25 +295,32 @@ def run_monitor(request, run_id):
     if adapter and adapter.d:
         try:
             info = adapter.d.info
-            device_info.update({
-                "resolution": f"{info.get('displayWidth', '?')}x{info.get('displayHeight', '?')}",
-                "sdk": info.get("sdkVersion", "?"),
-                "battery": info.get("battery", {}).get("level", "?"),
-            })
+            device_info.update(
+                {
+                    "resolution": f"{info.get('displayWidth', '?')}x{info.get('displayHeight', '?')}",
+                    "sdk": info.get("sdkVersion", "?"),
+                    "battery": info.get("battery", {}).get("level", "?"),
+                }
+            )
         except Exception:
             device_info["status"] = "disconnected"
 
-    return JsonResponse({
-        "ok": True, "run_id": run_id,
-        "live": True,
-        "status": state.run_model.status.value if hasattr(state.run_model.status, 'value') else str(state.run_model.status),
-        "is_running": state.is_running,
-        "device": device_info,
-        "selected_cases": state.run_model.selected_cases,
-        "loop_count": state.run_model.loop_count,
-        "started_at": state.run_model.started_at,
-        "log_tail": state.log_lines[-50:],
-    })
+    return JsonResponse(
+        {
+            "ok": True,
+            "run_id": run_id,
+            "live": True,
+            "status": state.run_model.status.value
+            if hasattr(state.run_model.status, "value")
+            else str(state.run_model.status),
+            "is_running": state.is_running,
+            "device": device_info,
+            "selected_cases": state.run_model.selected_cases,
+            "loop_count": state.run_model.loop_count,
+            "started_at": state.run_model.started_at,
+            "log_tail": state.log_lines[-50:],
+        }
+    )
 
 
 @require_auth
@@ -371,24 +336,32 @@ def run_snapshot(request, run_id):
         # Live run — 从内存组装
         cases = []
         for r in state.all_results:
-            cases.append({
-                "case_title": r.get("case_title", ""),
-                "pass": int(r.get("pass", 0)),
-                "fail": int(r.get("fail", 0)),
-                "rate": r.get("rate", "0%"),
-            })
-        return JsonResponse({
-            "ok": True, "run_id": run_id,
-            "live": True,
-            "status": state.run_model.status.value if hasattr(state.run_model.status, 'value') else str(state.run_model.status),
-            "cases": cases,
-            "client_task_id": client_tid,
-        })
+            cases.append(
+                {
+                    "case_title": r.get("case_title", ""),
+                    "pass": int(r.get("pass", 0)),
+                    "fail": int(r.get("fail", 0)),
+                    "rate": r.get("rate", "0%"),
+                }
+            )
+        return JsonResponse(
+            {
+                "ok": True,
+                "run_id": run_id,
+                "live": True,
+                "status": state.run_model.status.value
+                if hasattr(state.run_model.status, "value")
+                else str(state.run_model.status),
+                "cases": cases,
+                "client_task_id": client_tid,
+            }
+        )
 
     # 已完成 run → 从 DB
     try:
         record = TestRunRecord.objects.get(run_id=run_id)
         from ..models import TestResult as TR
+
         results = TR.objects.filter(run=record)
         by_case = {}
         for r in results:
@@ -400,12 +373,15 @@ def run_snapshot(request, run_id):
                 by_case[cid]["pass"] += 1
             else:
                 by_case[cid]["fail"] += 1
-        return JsonResponse({
-            "ok": True, "run_id": run_id,
-            "live": False,
-            "status": record.status,
-            "cases": list(by_case.values()),
-            "client_task_id": record.client_task_id,
-        })
+        return JsonResponse(
+            {
+                "ok": True,
+                "run_id": run_id,
+                "live": False,
+                "status": record.status,
+                "cases": list(by_case.values()),
+                "client_task_id": record.client_task_id,
+            }
+        )
     except TestRunRecord.DoesNotExist:
         return JsonResponse({"ok": False, "error": "run not found"}, status=404)

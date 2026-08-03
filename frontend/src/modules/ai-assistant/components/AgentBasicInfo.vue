@@ -9,7 +9,7 @@ const emit = defineEmits(['trigger-upload', 'avatar-upload'])
 </script>
 
 <template>
-  <div v-if="!isNew || step === 1" class="doc-section step-panel">
+  <div class="doc-section step-panel">
     <div class="section-title">
       <span class="section-num">1</span>
       <span>基本信息</span>
@@ -23,12 +23,12 @@ const emit = defineEmits(['trigger-upload', 'avatar-upload'])
           <div
             class="avatar-preview"
             :style="
-              form.avatar?.startsWith('/api/ai/avatars/')
+              form.avatar?.startsWith('/api/ai/avatars/') || form.avatar?.startsWith('data:image/')
                 ? { backgroundImage: `url(${form.avatar})` }
                 : {}
             "
           >
-            <span v-if="!form.avatar?.startsWith('/api/ai/avatars/')">{{
+            <span v-if="!form.avatar?.startsWith('/api/ai/avatars/') && !form.avatar?.startsWith('data:image/')">{{
               form.avatar || '🤖'
             }}</span>
           </div>

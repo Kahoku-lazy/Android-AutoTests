@@ -10,14 +10,22 @@ Design principles:
   - Atomic: TaskCard + TestRunRecord updated together in one transaction
   - Idempotent: repeating the same transition is a safe no-op
   - Validated: illegal transitions raise InvalidTransition
-  - Observable: every transition prints to stdout
+  - Observable: every transition logs via _log.info()
 """
 
+import logging
+
 from datetime import datetime
+from typing import Optional
+
 from django.db import transaction
 from django.db.models import Q
-from .models import TaskCard, TestRunRecord, TestResult
+
 from apps.device_pool.models import Device
+
+from .models import TaskCard, TestResult, TestRunRecord
+
+_log = logging.getLogger("test_runner.state")
 
 
 class InvalidTransition(ValueError):
@@ -26,7 +34,7 @@ class InvalidTransition(ValueError):
 
 # ── Valid transition map ──
 # (from_status, from_outcome) → allowed next (status, outcome)
-_VALID_TRANSITIONS = {
+_VALID_TRANSITIONS: dict = {
     # idle → queued (enqueue)
     ("idle", ""): [("queued", "")],
     # queued → running (dequeue) or idle (cancel)
@@ -46,7 +54,7 @@ _VALID_TRANSITIONS = {
 }
 
 
-def _validate(task_card, new_status, new_outcome):
+def _validate(task_card: TaskCard, new_status: str, new_outcome: str) -> None:
     """Raise InvalidTransition if the move is not allowed."""
     key = (task_card.status, task_card.outcome or "")
     allowed = _VALID_TRANSITIONS.get(key, [])
@@ -63,8 +71,13 @@ def _validate(task_card, new_status, new_outcome):
 
 @transaction.atomic
 def _save_transition(
-    task_card, run_record, new_status, new_outcome, task_extra=None, run_extra=None
-):
+    task_card: TaskCard,
+    run_record: Optional[TestRunRecord],
+    new_status: str,
+    new_outcome: str,
+    task_extra: Optional[dict] = None,
+    run_extra: Optional[dict] = None,
+) -> None:
     """Atomic write: TaskCard + TestRunRecord in one transaction.
 
     Args:
@@ -97,7 +110,7 @@ def _save_transition(
             setattr(run_record, k, v)
         run_record.save()
 
-    print(f"[state] {task_card.task_id} → {new_status}/{new_outcome}")
+    _log.info("%s → %s/%s", task_card.task_id, new_status, new_outcome)
 
 
 # ═══════════════════════════════════════════════════════
@@ -105,18 +118,24 @@ def _save_transition(
 # ═══════════════════════════════════════════════════════
 
 
-def enqueue(task_card, device_serial):
+def enqueue(task_card: TaskCard, device_serial: str) -> None:
     """TaskCard IDLE → QUEUED. Task is waiting for device availability."""
     _save_transition(task_card, None, "queued", "", task_extra={"device_serial": device_serial})
 
 
-def cancel(task_card):
+def cancel(task_card: TaskCard) -> None:
     """TaskCard QUEUED → IDLE. User cancelled the queued task."""
     _save_transition(task_card, None, "idle", "")
 
 
 @transaction.atomic
-def dequeue(task_card, run_id, device_serial, selected_cases, loop_count):
+def dequeue(
+    task_card: TaskCard,
+    run_id: str,
+    device_serial: str,
+    selected_cases: list[dict],
+    loop_count: int,
+) -> TestRunRecord:
     """TaskCard QUEUED → RUNNING. Creates TestRunRecord atomically.
 
     Returns: TestRunRecord instance
@@ -139,11 +158,18 @@ def dequeue(task_card, run_id, device_serial, selected_cases, loop_count):
     task_card.run = run_record
     task_card.save(update_fields=["status", "running", "run"])
 
-    print(f"[state] {task_card.task_id} → running, run_id={run_id}")
+    _log.info("%s → running, run_id=%s", task_card.task_id, run_id)
     return run_record
 
 
-def record_iteration(run_record, case_id, iteration, result, duration_ms, detail=""):
+def record_iteration(
+    run_record: TestRunRecord,
+    case_id: str,
+    iteration: int,
+    result: str,
+    duration_ms: float,
+    detail: str = "",
+) -> None:
     """Append a single TestResult row. Does NOT change TaskCard state."""
     TestResult.objects.create(
         run=run_record,
@@ -156,15 +182,15 @@ def record_iteration(run_record, case_id, iteration, result, duration_ms, detail
 
 
 def complete(
-    task_card,
-    run_record,
-    summary,
-    case_items,
-    overall_pass=0,
-    overall_fail=0,
-    csv_path="",
-    log_path="",
-):
+    task_card: TaskCard,
+    run_record: TestRunRecord,
+    summary: dict,
+    case_items: list[dict],
+    overall_pass: int = 0,
+    overall_fail: int = 0,
+    csv_path: str = "",
+    log_path: str = "",
+) -> None:
     """TaskCard RUNNING → DONE (completed). Run finished successfully."""
     _save_transition(
         task_card,
@@ -187,14 +213,14 @@ def complete(
 
 
 def fail(
-    task_card,
-    run_record,
-    outcome="error",
-    overall_pass=0,
-    overall_fail=0,
-    case_items=None,
-    summary=None,
-):
+    task_card: TaskCard,
+    run_record: TestRunRecord,
+    outcome: str = "error",
+    overall_pass: int = 0,
+    overall_fail: int = 0,
+    case_items: Optional[list[dict]] = None,
+    summary: Optional[dict] = None,
+) -> None:
     """TaskCard RUNNING → DONE (error|stopped|interrupted).
 
     Args:
@@ -206,10 +232,10 @@ def fail(
         raise ValueError(f"Invalid outcome for fail(): {outcome}")
     run_status = {"error": "FAILED", "stopped": "STOPPED", "interrupted": "STOPPED"}[outcome]
 
-    task_extra = {"overall_pass": overall_pass, "overall_fail": overall_fail}
+    task_extra: dict = {"overall_pass": overall_pass, "overall_fail": overall_fail}
     if case_items is not None:
         task_extra["case_items"] = case_items
-    run_extra = {"status": run_status, "finished_at": datetime.now().isoformat()}
+    run_extra: dict = {"status": run_status, "finished_at": datetime.now().isoformat()}
     if summary is not None:
         run_extra["summary"] = summary
 
@@ -223,13 +249,13 @@ def fail(
     )
 
 
-def recover_orphans():
+def recover_orphans() -> dict[str, int]:
     """Startup recovery: fix ALL stale records from previous crashed session.
 
     Call this once in AppConfig.ready().
     Returns: dict with counts of what was fixed.
     """
-    fixed = {"tasks": 0, "runs": 0}
+    fixed: dict[str, int] = {"tasks": 0, "runs": 0}
 
     # 1. Orphan tasks → interrupted. Catch BOTH status='running' AND the
     #    inconsistent 'idle/queued + running=True' zombies left by non-atomic
@@ -245,9 +271,11 @@ def recover_orphans():
             tc.save(update_fields=["status", "running", "outcome"])
             # Also fix linked TestRunRecord if exists
             if tc.run_id:
-                TestRunRecord.objects.filter(id=tc.run_id).update(status="STOPPED", finished_at=now)
+                TestRunRecord.objects.filter(run_id=tc.run_id).update(
+                    status="STOPPED", finished_at=now
+                )
         fixed["tasks"] = count
-        print(f"[state] recover_orphans: {count} running TaskCard(s) → interrupted")
+        _log.info("recover_orphans: %d running TaskCard(s) → interrupted", count)
 
     # 2. Stale TestRunRecord (RUNNING without active process) → FAILED
     stale_runs = TestRunRecord.objects.filter(
@@ -263,14 +291,14 @@ def recover_orphans():
                 "run_id", flat=True
             )
         )
-        stale_unlinked = stale_runs.exclude(id__in=running_task_run_ids)
+        stale_unlinked = stale_runs.exclude(run_id__in=running_task_run_ids)
         fixed_count = stale_unlinked.update(
             status="FAILED",
             finished_at=now,
         )
         if fixed_count:
             fixed["runs"] = fixed_count
-            print(f"[state] recover_orphans: {fixed_count} stale TestRunRecord(s) → FAILED")
+            _log.info("recover_orphans: %d stale TestRunRecord(s) → FAILED", fixed_count)
 
     # 3. Release devices occupied by crashed test-runner processes.
     #    Match by occupied_by prefix regardless of status — a device left
@@ -288,10 +316,14 @@ def recover_orphans():
 
             release_device_locks_for_device(dev, reason="disconnect")
         except Exception:
-            pass
+            import logging
+
+            logging.getLogger("test_runner.state").exception(
+                "recover_orphans: release_device_locks_for_device(%s) failed, continuing", dev
+            )
     if busy_devices:
         fixed["devices"] = busy_devices.count()
-        print(f"[state] recover_orphans: {busy_devices.count()} BUSY device(s) → ONLINE")
+        _log.info("recover_orphans: %d BUSY device(s) → ONLINE", busy_devices.count())
 
     return fixed
 
@@ -305,5 +337,5 @@ def repair_queued_terminal_drift() -> int:
     count = drift.count()
     if count:
         drift.update(status="done", running=False)
-        print(f"[state] repair_queued_terminal_drift: {count} TaskCard(s) queued→done")
+        _log.info("repair_queued_terminal_drift: %d TaskCard(s) queued→done", count)
     return count

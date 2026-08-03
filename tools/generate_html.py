@@ -2,13 +2,15 @@
 HTML 生成器 v2 — 支持滚轮切换层级 + 元素树 + 右键菜单
 输出: phone_ui.html（自包含，可直接在浏览器打开）
 """
+
+import base64
 import json
 import os
 import sys
-import base64
 
 if sys.platform == "win32":
     import io
+
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 OUT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -104,7 +106,11 @@ def generate_html(hierarchy: dict, screenshot_b64: str) -> str:
     for i, node in enumerate(all_nodes):
         node["_id"] = i
 
-    visible_nodes = [n for n in all_nodes if n.get("rect", {}).get("width", 0) > 0 and n.get("rect", {}).get("height", 0) > 0]
+    visible_nodes = [
+        n
+        for n in all_nodes
+        if n.get("rect", {}).get("width", 0) > 0 and n.get("rect", {}).get("height", 0) > 0
+    ]
     max_depth = max((n["depth"] for n in all_nodes), default=0)
 
     print(f"  总节点: {len(all_nodes)}, 可见节点: {len(visible_nodes)}, 最大深度: {max_depth}")
@@ -129,12 +135,17 @@ def generate_html(hierarchy: dict, screenshot_b64: str) -> str:
         rid = node.get("resource_id", "")
         full_cls = node.get("class", "")
         idx = node.get("index", "")
-        tooltip = " | ".join(filter(None, [
-            f'Text: "{t}"' if t else "",
-            f'Desc: "{d}"' if d else "",
-            f"Class: {class_short(full_cls)}",
-            f"ID: {rid}" if rid else "",
-        ]))
+        tooltip = " | ".join(
+            filter(
+                None,
+                [
+                    f'Text: "{t}"' if t else "",
+                    f'Desc: "{d}"' if d else "",
+                    f"Class: {class_short(full_cls)}",
+                    f"ID: {rid}" if rid else "",
+                ],
+            )
+        )
 
         # 文字标签内容
         if t:
@@ -151,20 +162,20 @@ def generate_html(hierarchy: dict, screenshot_b64: str) -> str:
  style="left:{left:.1f}px;top:{top:.1f}px;width:{w:.1f}px;height:{h:.1f}px;z-index:{z};border-color:{border_color}"
  data-nid="{nid}"
  data-pid="{pid}"
- data-d="{node['depth']}"
+ data-d="{node["depth"]}"
  data-t="{esc(t)}"
  data-desc="{esc(d)}"
  data-rid="{esc(rid)}"
  data-fullcls="{esc(full_cls)}"
  data-shortcls="{esc(class_short(full_cls))}"
  data-idx="{esc(idx)}"
- data-bounds="[{r['x']},{r['y']}][{r['x']+r['width']},{r['y']+r['height']}]"
- data-pkg="{esc(node.get('package',''))}"
- data-clickable="{node.get('clickable',False)}"
- data-enabled="{node.get('enabled',False)}"
- data-scrollable="{node.get('scrollable',False)}"
- data-checkable="{node.get('checkable',False)}"
- data-checked="{node.get('checked',False)}"
+ data-bounds="[{r["x"]},{r["y"]}][{r["x"] + r["width"]},{r["y"] + r["height"]}]"
+ data-pkg="{esc(node.get("package", ""))}"
+ data-clickable="{node.get("clickable", False)}"
+ data-enabled="{node.get("enabled", False)}"
+ data-scrollable="{node.get("scrollable", False)}"
+ data-checkable="{node.get("checkable", False)}"
+ data-checked="{node.get("checked", False)}"
  title="{esc(tooltip)}"><span class="el-label">{label_esc}</span></div>""")
 
     # ---- 3. 元素树 HTML ----

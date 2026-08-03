@@ -1,7 +1,19 @@
 """case-manager directory API — tree, CRUD, batch-move."""
 
+__all__ = [
+    "batch_move_items",
+    "create_directory",
+    "delete_directory",
+    "get_directory_tree",
+    "update_directory",
+]
+
 import json
-from .models import TestDefinition, CaseDirectory
+import logging
+
+from .models import CaseDirectory, TestDefinition
+
+logger = logging.getLogger(__name__)
 
 
 def get_directory_tree(case_type=None):
@@ -33,21 +45,27 @@ def get_directory_tree(case_type=None):
 
         for td in case_qs:
             try:
-                step_count = len(json.loads(td.steps_json or "[]"))
-            except Exception:
+                if hasattr(td, "steps_json"):
+                    step_count = len(json.loads(td.steps_json or "[]"))
+                else:
+                    # StorageTestCase uses a plain-text 'steps' field
+                    step_count = len([l for l in (td.steps or "").split("\n") if l.strip()])
+            except (json.JSONDecodeError, TypeError):
                 step_count = 0
-            case_nodes.append({
-                "id": f"case:{td.id}",
-                "name": td.title or td.id,
-                "node_type": "case",
-                "case_id": td.id,
-                "case_type": case_type or "ui_automation",
-                "enabled": td.enabled,
-                "priority": td.priority,
-                "category": td.category,
-                "step_count": step_count,
-                "children": [],
-            })
+            case_nodes.append(
+                {
+                    "id": f"case:{td.id}",
+                    "name": td.title or td.id,
+                    "node_type": "case",
+                    "case_id": td.id,
+                    "case_type": case_type or "ui_automation",
+                    "enabled": td.enabled,
+                    "priority": td.priority,
+                    "category": td.category,
+                    "step_count": step_count,
+                    "children": [],
+                }
+            )
 
         case_count = getattr(dir_obj, _related).count()
 
@@ -65,25 +83,27 @@ def get_directory_tree(case_type=None):
         }
 
     resolved_type = case_type or "ui_automation"
-    roots = CaseDirectory.objects.filter(
-        parent__isnull=True, case_type=resolved_type
-    ).order_by("sort_order", "id")
+    roots = CaseDirectory.objects.filter(parent__isnull=True, case_type=resolved_type).order_by(
+        "sort_order", "id"
+    )
     tree = [_build_node(r) for r in roots]
 
     # Append orphan cases (directory_id=NULL) as root-level case nodes
     orphan_qs = _CaseModel.objects.filter(directory__isnull=True).order_by("title")
     for td in orphan_qs:
-        tree.append({
-            "id": f"case:{td.id}",
-            "name": td.title or td.id,
-            "node_type": "case",
-            "case_id": td.id,
-            "case_type": case_type or "ui_automation",
-            "enabled": td.enabled,
-            "priority": td.priority,
-            "category": td.category,
-            "children": [],
-        })
+        tree.append(
+            {
+                "id": f"case:{td.id}",
+                "name": td.title or td.id,
+                "node_type": "case",
+                "case_id": td.id,
+                "case_type": case_type or "ui_automation",
+                "enabled": td.enabled,
+                "priority": td.priority,
+                "category": td.category,
+                "children": [],
+            }
+        )
 
     return tree
 
@@ -92,6 +112,7 @@ def _get_storage_model():
     """Lazy-load storage model (may not exist yet in early phases)."""
     try:
         from .models_storage import StorageTestCase
+
         return StorageTestCase
     except ImportError:
         return TestDefinition
@@ -101,6 +122,7 @@ def _get_web_model():
     """Lazy-load web model."""
     try:
         from .models_web import WebTestCase
+
         return WebTestCase
     except ImportError:
         return TestDefinition
@@ -110,6 +132,7 @@ def _get_api_model():
     """Lazy-load API model (may not exist yet in early phases)."""
     try:
         from .models_api import ApiTestCase
+
         return ApiTestCase
     except ImportError:
         return TestDefinition
@@ -132,9 +155,7 @@ def create_directory(name, parent_id=None, sort_order=0, created_by="", case_typ
             return False, f"父级目录不存在: {parent_id}"
 
     # Check uniqueness within same parent + case_type
-    if CaseDirectory.objects.filter(
-        parent=parent, name=name.strip(), case_type=case_type
-    ).exists():
+    if CaseDirectory.objects.filter(parent=parent, name=name.strip(), case_type=case_type).exists():
         return False, f"该层级下已存在同名目录: {name}"
 
     obj = CaseDirectory.objects.create(
@@ -197,11 +218,11 @@ def delete_directory(dir_id, deleted_by=""):
 
     child_count = obj.children.count()
     case_count = obj.test_definitions.count()
-    if hasattr(obj, 'storage_testcases'):
+    if hasattr(obj, "storage_testcases"):
         case_count += obj.storage_testcases.count()
-    if hasattr(obj, 'api_testcases'):
+    if hasattr(obj, "api_testcases"):
         case_count += obj.api_testcases.count()
-    if hasattr(obj, 'web_testcases'):
+    if hasattr(obj, "web_testcases"):
         case_count += obj.web_testcases.count()
 
     if child_count > 0 or case_count > 0:
@@ -231,7 +252,10 @@ def batch_move_items(items: list[dict], target_directory_id: int) -> dict:
     try:
         target_dir = CaseDirectory.objects.get(id=target_directory_id)
     except CaseDirectory.DoesNotExist:
-        return {"moved": 0, "errors": [{"id": "target", "reason": f"目标目录不存在: {target_directory_id}"}]}
+        return {
+            "moved": 0,
+            "errors": [{"id": "target", "reason": f"目标目录不存在: {target_directory_id}"}],
+        }
 
     for item in items:
         item_type = item.get("type")
@@ -255,7 +279,9 @@ def batch_move_items(items: list[dict], target_directory_id: int) -> dict:
                     errors.append({"id": item_id, "reason": "只支持两级目录，目标目录已是二级目录"})
                     continue
                 if CaseDirectory.objects.filter(parent=target_dir, name=dir_obj.name).exists():
-                    errors.append({"id": item_id, "reason": f"目标位置已存在同名目录: {dir_obj.name}"})
+                    errors.append(
+                        {"id": item_id, "reason": f"目标位置已存在同名目录: {dir_obj.name}"}
+                    )
                     continue
                 ancestor = target_dir
                 while ancestor is not None:
@@ -279,13 +305,7 @@ def batch_move_items(items: list[dict], target_directory_id: int) -> dict:
 
 def _find_case_across_types(case_id):
     """Look up a case ID across all four test case tables. Returns the model instance or None."""
-    from .models import TestDefinition
-    from .models_storage import StorageTestCase
-    from .models_api import ApiTestCase
-    from .models_web import WebTestCase
-    for model in (TestDefinition, StorageTestCase, ApiTestCase, WebTestCase):
-        try:
-            return model.objects.get(id=case_id)
-        except model.DoesNotExist:
-            continue
-    return None
+    from .api_lock import find_case_across_types
+
+    instance, _ = find_case_across_types(case_id)
+    return instance

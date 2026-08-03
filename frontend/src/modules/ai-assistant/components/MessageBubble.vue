@@ -1,8 +1,23 @@
 <script setup>
+import { onErrorCaptured } from 'vue'
 import ThinkingBlock from "./ThinkingBlock.vue";
 import ToolCallAppCard from "./ToolCallCard.vue";
 import HintAppCard from "./HintCard.vue";
 import { renderMarkdown } from "../composables/useMarkdown.js";
+
+onErrorCaptured((err, instance, info) => {
+  console.error('[MessageBubble] render error caught:', err, 'info:', info, 'message:', props.message)
+  return false // prevent propagation
+})
+
+function safeMarkdown(text) {
+  try {
+    return renderMarkdown(text)
+  } catch (e) {
+    console.error('[MessageBubble] markdown render failed:', e, 'text type:', typeof text)
+    return String(text ?? '')
+  }
+}
 
 const props = defineProps({
   message: { type: Object, required: true },
@@ -15,7 +30,7 @@ const props = defineProps({
   typing: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(["toggle-thinking", "import-prd"]);
+const emit = defineEmits(["toggle-thinking", "toggle-round-thinking", "import-prd"]);
 
 function toggleThinking() {
   emit("toggle-thinking", props.message);
@@ -52,8 +67,26 @@ function reasonLabel(reason) {
         </span>
       </div>
 
+      <!-- Per-round thinking (new) -->
+      <template v-if="message.role === 'assistant' && message.rounds?.length">
+        <div v-for="(round, i) in message.rounds" :key="'r'+i" class="round-group">
+          <div class="round-label">🔁 第{{ i + 1 }}轮思考</div>
+          <ThinkingBlock
+            :thinking="round.thinking"
+            :thinking-done="round.thinkingDone"
+            :expanded="round.thinkingExpanded"
+            @toggle="emit('toggle-round-thinking', message, i)"
+          />
+          <ToolCallAppCard
+            v-if="round.tools?.length"
+            :tool-calls="round.tools"
+          />
+        </div>
+      </template>
+
+      <!-- Fallback: old single thinking block (historical messages) -->
       <ThinkingBlock
-        v-if="message.role === 'assistant' && message.thinking"
+        v-else-if="message.role === 'assistant' && message.thinking"
         :thinking="message.thinking"
         :thinking-done="message.thinkingDone"
         :expanded="message.thinkingExpanded"
@@ -61,7 +94,7 @@ function reasonLabel(reason) {
       />
 
       <ToolCallAppCard
-        v-if="message.role === 'assistant' && message.toolFlow?.length"
+        v-if="message.role === 'assistant' && message.toolFlow?.length && !message.rounds?.length"
         :tool-calls="message.toolFlow"
       />
 
@@ -87,7 +120,7 @@ function reasonLabel(reason) {
         v-html="
           message.role === 'user'
             ? message.content
-            : renderMarkdown(message.content)
+            : safeMarkdown(message.content)
         "
       />
 
@@ -175,11 +208,6 @@ function reasonLabel(reason) {
   background: var(--ai-teal-bg);
   color: var(--ai-teal-text);
   border: 1px solid rgba(25, 200, 185, 0.4);
-}
-.msg-flow-tag.fallback {
-  background: #fef6e6;
-  color: #8a6d14;
-  border: 1px solid rgba(232, 167, 53, 0.4);
 }
 .msg-text {
   padding: 16px 20px;
@@ -303,6 +331,14 @@ function reasonLabel(reason) {
 .msg-text :deep(h2) {
   margin: 12px 0 8px;
   font-size: 1.1em;
+}
+.round-group { margin: 6px 0; }
+.round-label {
+  font-size: var(--app-size-xs); font-weight: 700;
+  color: var(--ai-teal-text, #4db6ac); padding: 2px 8px;
+  border-radius: 4px; display: inline-block;
+  background: var(--ai-teal-bg, rgba(25,200,185,0.1));
+  border: 1px solid rgba(25,200,185,0.25);
 }
 .msg-text :deep(a) {
   color: var(--app-accent-purple, #b39ef3);

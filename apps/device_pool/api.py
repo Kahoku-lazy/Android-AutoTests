@@ -4,11 +4,31 @@
 遵循防火墙 #2：跨 App 写操作必须走此 API。
 """
 
+__all__ = [
+    "acquire_device",
+    "ensure_device",
+    "get_busy_devices",
+    "get_current_device_info",
+    "get_device_by_serial",
+    "get_device_info",
+    "get_online_devices",
+    "join_device_queue",
+    "leave_device_queue",
+    "get_queue_for_device",
+    "release_device",
+    "release_device_locks_for_device",
+]
+
+import logging
+
 from datetime import datetime
+
 from django.db import transaction
+
+logger = logging.getLogger(__name__)
+
 from .models import Device, DeviceLock, DeviceQueue
 from .pool import DevicePool, device
-
 
 # ── Query helpers ──
 
@@ -77,7 +97,7 @@ def get_device_info(serial: str) -> dict:
             info["screen_w"] = u2_info.get("displayWidth", 0)
             info["screen_h"] = u2_info.get("displayHeight", 0)
         except Exception:
-            pass
+            logger.debug("Failed to get u2 device info for %s", serial)
     return info
 
 

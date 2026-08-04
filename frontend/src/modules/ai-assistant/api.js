@@ -716,3 +716,4 @@ export async function reindexKnowledge() {
   const { data } = await djangoClient.post('/ai/knowledge/reindex')
   return data
 }
+

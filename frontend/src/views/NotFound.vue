@@ -1,19 +1,4 @@
-<template>
-  <div class="not-found">
-    <div class="not-found__card">
-      <div class="not-found__code">404</div>
-      <h1 class="not-found__title">页面未找到</h1>
-      <p class="not-found__desc">您访问的页面不存在或已被移除</p>
-      <div class="not-found__actions">
-        <el-button type="primary" @click="goHome">返回首页</el-button>
-        <el-button @click="goBack">返回上一页</el-button>
-      </div>
-    </div>
-    <div class="ac-footer" />
-  </div>
-</template>
-
-<script setup>
+<script setup lang="ts">
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -31,6 +16,20 @@ function goBack() {
 }
 </script>
 
+<template>
+  <div class="not-found">
+    <div class="not-found__card">
+      <div class="not-found__code">404</div>
+      <h1 class="not-found__title">页面未找到</h1>
+      <p class="not-found__desc">您访问的页面不存在或已被移除</p>
+      <div class="not-found__actions">
+        <el-button type="primary" @click="goHome">返回首页</el-button>
+        <el-button @click="goBack">返回上一页</el-button>
+      </div>
+    </div>
+  </div>
+</template>
+
 <style scoped>
 .not-found {
   display: flex;
@@ -44,9 +43,9 @@ function goBack() {
 .not-found__card {
   text-align: center;
   padding: 60px 40px;
-  background: var(--app-bg-warm, #fdfbfb);
-  border: 2px solid rgba(139, 115, 85, 0.12);
-  border-radius: var(--app-radius-lg, 24px);
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
+  border-radius: var(--app-radius-lg);
   max-width: 480px;
   width: 100%;
 }
@@ -55,27 +54,27 @@ function goBack() {
   font-family: var(--app-font-display);
   font-size: 96px;
   font-weight: 800;
-  color: var(--app-yellow, #f7cd67);
+  color: var(--c-dashboard);
   line-height: 1;
-  margin-bottom: 16px;
+  margin-bottom: var(--app-space-md);
 }
 
 .not-found__title {
-  font-size: 22px;
+  font-size: var(--app-size-xl);
   font-weight: 700;
-  color: var(--app-text, #4a4e69);
-  margin: 0 0 8px;
+  color: var(--app-text);
+  margin: 0 0 var(--app-space-sm);
 }
 
 .not-found__desc {
-  font-size: 14px;
-  color: var(--app-text-secondary, #988b7a);
-  margin: 0 0 32px;
+  font-size: var(--app-size-sm);
+  color: var(--app-text-secondary);
+  margin: 0 0 var(--app-space-xl);
 }
 
 .not-found__actions {
   display: flex;
-  gap: 12px;
+  gap: var(--app-space-sm);
   justify-content: center;
 }
 </style>

@@ -1,0 +1,224 @@
+/* LoginView 样式层 — 页面背景、Hero 布局、响应式（皮肤） */
+
+/* ── 页面背景 ── */
+.login-page {
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 16% 10%, var(--app-sky-cloud, rgba(255,255,255,0.82)), transparent 28%),
+    radial-gradient(circle at 84% 18%, rgba(162,210,255,0.5), transparent 32%),
+    radial-gradient(circle at 78% 90%, rgba(63,158,216,0.42), transparent 36%),
+    radial-gradient(circle at 14% 88%, rgba(111,185,141,0.42), transparent 34%),
+    linear-gradient(135deg, var(--app-sky, #dff5ff) 0%, var(--app-blue-light, #bde0fe) 38%, var(--app-ocean-soft, #a7d8ee) 68%, var(--app-forest-soft, #d6f2da) 100%);
+  background-size: 180% 180%;
+  animation: gradientBG 15s ease infinite;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  font-family: var(--app-font);
+}
+
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── 背景光斑 ── */
+.login-page__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.login-page__bg::before,
+.login-page__bg::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.75;
+  z-index: 0;
+}
+
+.login-page__bg::before {
+  top: -120px;
+  left: -100px;
+  width: 400px;
+  height: 400px;
+  background: var(--app-sky-cloud, rgba(255,255,255,0.82));
+}
+
+.login-page__bg::after {
+  right: -80px;
+  bottom: -120px;
+  width: 320px;
+  height: 320px;
+  background: var(--app-ocean, #3f9ed8);
+}
+
+.login-page::before {
+  content: '';
+  position: absolute;
+  left: 10%;
+  bottom: -110px;
+  width: 360px;
+  height: 300px;
+  border-radius: 50%;
+  background: var(--app-forest, #6fb98d);
+  filter: blur(80px);
+  opacity: 0.48;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.login-page > .hero,
+.login-page > .login-footer {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Hero 布局 ── */
+.hero {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 40px 40px;
+}
+
+.hero__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xl);
+  max-width: 1020px;
+  width: 100%;
+  padding: var(--app-space-2xl);
+  border: 2.5px solid var(--ink);
+  border-radius: var(--app-radius-lg);
+  background: var(--app-bg-card);
+  box-shadow: var(--app-shadow-md);
+}
+
+.hero__header {
+  text-align: center;
+}
+
+.hero__title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.hero-title {
+  margin: 0;
+  font-size: var(--app-size-2xl);
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.hero__version {
+  flex-shrink: 0;
+  display: inline-block;
+  font-size: var(--app-size-xs);
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: var(--app-radius-pill);
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
+  color: var(--ink);
+  text-shadow: none;
+  margin-top: 6px;
+}
+
+.hero__desc {
+  font-size: var(--app-size-md);
+  color: var(--app-text-secondary);
+  line-height: 1.7;
+  margin: 0 auto;
+  max-width: 520px;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+}
+
+.hero__desc-line {
+  display: block;
+}
+
+.hero__body {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: var(--app-space-2xl);
+}
+
+.hero__text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.hero__visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 380px;
+  flex-shrink: 0;
+}
+
+.hero__animal {
+  width: 380px;
+  height: 280px;
+  object-fit: cover;
+  border-radius: var(--app-radius-lg);
+  border: 2.5px solid var(--ink);
+  box-shadow: var(--app-shadow-md);
+}
+
+/* ── 卡片公共样式（子组件共享） ── */
+.login-card {
+  width: 380px;
+  min-height: 280px;
+  box-sizing: border-box;
+  background: var(--app-bg-card) !important;
+  border: 2.5px solid var(--ink) !important;
+  border-radius: var(--app-radius-md) !important;
+  box-shadow: var(--app-shadow-md) !important;
+}
+
+.login-card :deep(.el-card__body) {
+  padding: 24px;
+}
+
+/* ── Footer ── */
+.login-footer {
+  padding: var(--app-space-lg) 40px;
+  text-align: center;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.45);
+  opacity: 0.95;
+}
+
+/* ── 响应式 ── */
+@media (max-width: 768px) {
+  .hero__content {
+    gap: 24px;
+    padding: 28px 20px;
+  }
+  .hero-title { font-size: var(--app-size-xl); }
+  .hero__desc { font-size: var(--app-size-sm); }
+  .hero__body {
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+  .hero__text { width: 100%; align-items: center; }
+  .login-card { width: 100%; max-width: 360px; min-height: 0; margin: 0 auto; }
+  .hero__visual { width: 100%; max-width: 360px; margin: 0 auto; }
+  .hero__animal { width: 100%; max-width: 360px; height: 220px; }
+}

@@ -5,6 +5,7 @@ import { animate } from 'animejs'
 import { sidebarNavEnter } from '../animations.js'
 import { NAV_CATEGORIES } from './sidebarNavConfig.js'
 import { useSidebarResize } from '../composables/useSidebarResize.js'
+import { useAuthPool } from '@/shared/composables/useAuthPool'
 import AnimatedMascot from './AnimatedMascot.vue'
 import AnimatedMenuIcon from './AnimatedMenuIcon.vue'
 
@@ -12,53 +13,23 @@ const router = useRouter()
 const route = useRoute()
 
 // ── Multi-account auth ──
-const POOL_KEY = 'auth_accounts'
-const ACTIVE_KEY = 'auth_active'
+const { activeAccount, accountList, switchAccount, logoutAccount } = useAuthPool()
 
-function readPool() {
-  try { return JSON.parse(localStorage.getItem(POOL_KEY) || '{}') } catch { return {} }
-}
-function getActive() {
-  return sessionStorage.getItem(ACTIVE_KEY) || Object.keys(readPool())[0] || ''
-}
-
-const username = ref(getActive())
-const allAccounts = ref(Object.keys(readPool()))
 const showAccountMenu = ref(false)
 
-function refreshAccountState() {
-  username.value = getActive()
-  allAccounts.value = Object.keys(readPool())
-}
-
-// Listen for pool changes from other tabs (new accounts added/removed)
-function onStorageChange(e) {
-  if (e.key === POOL_KEY) refreshAccountState()
-}
-
 function switchToAccount(name) {
-  if (readPool()[name]) {
-    sessionStorage.setItem(ACTIVE_KEY, name)
+  if (switchAccount(name)) {
     showAccountMenu.value = false
     window.location.reload()
   }
 }
 
 function logout() {
-  const active = getActive()
-  if (active) {
-    const pool = readPool()
-    delete pool[active]
-    localStorage.setItem(POOL_KEY, JSON.stringify(pool))
-    const remaining = Object.keys(pool)
-    if (remaining.length > 0) {
-      sessionStorage.setItem(ACTIVE_KEY, remaining[0])
-      window.location.reload()
-    } else {
-      localStorage.removeItem(POOL_KEY)
-      sessionStorage.removeItem(ACTIVE_KEY)
-      router.push('/login')
-    }
+  const hasRemaining = logoutAccount()
+  if (!hasRemaining) {
+    router.push('/login')
+  } else {
+    window.location.reload()
   }
 }
 
@@ -90,8 +61,6 @@ onMounted(async () => {
   initSidebarWidth()
   window.addEventListener('mousemove', onSidebarResizeMove)
   window.addEventListener('mouseup', onSidebarResizeEnd)
-  window.addEventListener('storage', onStorageChange)
-
   await nextTick()
   // Lucide icons render
   if (window.lucide) window.lucide.createIcons()
@@ -110,7 +79,6 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('mousemove', onSidebarResizeMove)
   window.removeEventListener('mouseup', onSidebarResizeEnd)
-  window.removeEventListener('storage', onStorageChange)
   document.body.style.cursor = ''
   document.body.style.userSelect = ''
 })
@@ -168,12 +136,12 @@ onUnmounted(() => {
     <div class="sidebar__footer">
       <div class="sidebar__user-card">
         <div class="sidebar__user-label">Digital Human</div>
-        <div class="sidebar__user-display" :class="{ 'has-menu': allAccounts.length > 1 }"
-          :title="collapsed ? username : ''"
-          @click="allAccounts.length > 1 ? (showAccountMenu = !showAccountMenu) : null">
+        <div class="sidebar__user-display" :class="{ 'has-menu': accountList.length > 1 }"
+          :title="collapsed ? activeAccount : ''"
+          @click="accountList.length > 1 ? (showAccountMenu = !showAccountMenu) : null">
           <AnimatedMascot :size="18" />
-          <span v-show="!collapsed" class="sidebar__user-name">{{ username }}</span>
-          <span v-if="!collapsed && allAccounts.length > 1" class="sidebar__user-arrow">▾</span>
+          <span v-show="!collapsed" class="sidebar__user-name">{{ activeAccount }}</span>
+          <span v-if="!collapsed && accountList.length > 1" class="sidebar__user-arrow">▾</span>
         </div>
         <div v-show="!collapsed" class="sidebar__user-status">● 在线</div>
       </div>
@@ -181,14 +149,14 @@ onUnmounted(() => {
       <!-- Account dropdown -->
       <div v-if="showAccountMenu && !collapsed" class="account-menu">
         <div
-          v-for="name in allAccounts"
+          v-for="name in accountList"
           :key="name"
           class="account-menu__item"
-          :class="{ active: name === username }"
+          :class="{ active: name === activeAccount }"
           @click="switchToAccount(name)"
         >
           <span>{{ name }}</span>
-          <span v-if="name === username" class="account-menu__check">✓</span>
+          <span v-if="name === activeAccount" class="account-menu__check">✓</span>
         </div>
         <div class="account-menu__divider"></div>
         <div class="account-menu__item account-menu__item--add" @click="showAccountMenu = false; router.push('/login?add=1')">

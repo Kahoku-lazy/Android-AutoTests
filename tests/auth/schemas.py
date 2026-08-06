@@ -36,6 +36,40 @@ AUTH_SUCCESS_SCHEMA = {
     "required": ["status", "access_token", "refresh_token", "token_type", "user"],
 }
 
+REFRESH_SUCCESS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "status": {"const": True},
+        "access_token": {"type": "string", "minLength": 10},
+        "token_type": {"const": "bearer"},
+    },
+    "required": ["status", "access_token", "token_type"],
+}
+
+LOGOUT_SUCCESS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "status": {"const": True},
+    },
+    "required": ["status"],
+}
+
+ME_USER_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "status": {"const": True},
+        "user": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer"},
+                "username": {"type": "string"},
+            },
+            "required": ["id", "username"],
+        },
+    },
+    "required": ["status", "user"],
+}
+
 REGISTER_SUCCESS_SCHEMA = {
     "type": "object",
     "properties": {

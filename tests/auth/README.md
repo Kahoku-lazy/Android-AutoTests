@@ -1,7 +1,19 @@
 # Auth API 自动化测试
 
-认证模块（登录 / 注册）接口测试，覆盖 `POST /api/ai/auth/login` 和 `POST /api/ai/auth/register`
-两个端点，共 **44 条用例**。
+认证模块 5 个端点，**72 条用例**。
+
+| 端点 | 文件 | 用例数 | 状态 |
+|------|------|:------:|------|
+| `POST /api/ai/auth/login` | `test_login.py` | 20 | ✅ 全部通过 |
+| `POST /api/ai/auth/register` | `test_register.py` | 24 | ✅ 全部通过 |
+| `POST /api/ai/auth/refresh` | `test_refresh.py` | 10 | ✅ 7 通过 / 2 xfail |
+| `POST /api/ai/auth/logout` | `test_logout.py` | 9 | ✅ 3 通过 / 5 xfail / 1 skip |
+| `GET /api/ai/auth/me` | `test_me.py` | 9 | ✅ 6 通过 / 3 xfail |
+
+> ⚠️ **已知问题**：`/api/ai/auth/me` 和 `/api/ai/auth/logout` 的 URL 匹配
+> 中间件公开路径前缀 `/api/ai/auth/`，导致中间件跳过鉴权，两个端点无法通过
+> HTTP 获取 `user_id`。10 条涉及鉴权的用例用 `@pytest.mark.xfail` 标记，
+> 修复 `gateway/middleware.py` 的公开路径配置后自动生效。
 
 ## 架构
 
@@ -9,10 +21,13 @@
 
 ```
 tests/auth/
-├── conftest.py          # 共享基础设施：端点常量、Allure 元数据工厂
-├── schemas.py           # JSON Schema — 响应结构契约（3 个 Schema）
-├── test_login.py        # 登录测试：2 个参数化组 + 5 个独立函数 = 20 条
-└── test_register.py     # 注册测试：3 个参数化组 + 2 个独立函数 = 24 条
+├── conftest.py          # 共享基础设施：端点常量、auth_token fixture
+├── schemas.py           # JSON Schema — 响应结构契约（6 个 Schema）
+├── test_login.py        # 登录：2 参数化组 + 5 独立函数 = 20 条
+├── test_register.py     # 注册：3 参数化组 + 2 独立函数 = 24 条
+├── test_refresh.py      # 刷新：1 参数化组 + 4 独立函数 = 10 条
+├── test_logout.py       # 登出：2 参数化组 + 4 独立函数 = 9 条
+└── test_me.py           # 当前用户：1 参数化组 + 3 独立函数 = 9 条
 ```
 
 ### 为什么不是 44 个独立函数？
@@ -146,8 +161,11 @@ pytest tests/auth/test_login.py -v -k "TC-LOGIN-013"
 
 | 旧文件（已删除） | 新文件 | 用例数 |
 |---|---|---|
-| `tests/login/test_api.py` (454 行) | `tests/auth/test_login.py` (333 行) | 20 |
-| `tests/register/test_api.py` (632 行) | `tests/auth/test_register.py` (394 行) | 24 |
-| — | `tests/auth/schemas.py` (71 行) | — |
-| — | `tests/auth/conftest.py` (52 行) | — |
-| **1086 行** | **850 行** | **44** |
+| `tests/login/test_api.py` (454 行) | `tests/auth/test_login.py` | 20 |
+| `tests/register/test_api.py` (632 行) | `tests/auth/test_register.py` | 24 |
+| — | `tests/auth/test_refresh.py` | 10 |
+| — | `tests/auth/test_logout.py` | 9 |
+| — | `tests/auth/test_me.py` | 9 |
+| — | `tests/auth/schemas.py` | — |
+| — | `tests/auth/conftest.py` | — |
+| **1086 行** | **~1600 行** | **72** |

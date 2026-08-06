@@ -14,6 +14,9 @@ import pytest
 
 LOGIN_URL = "/api/ai/auth/login"
 REGISTER_URL = "/api/ai/auth/register"
+REFRESH_URL = "/api/ai/auth/refresh"
+LOGOUT_URL = "/api/ai/auth/logout"
+ME_URL = "/api/ai/auth/me"
 
 
 # ── 动态数据工厂 ──
@@ -23,6 +26,27 @@ REGISTER_URL = "/api/ai/auth/register"
 def unique_username() -> str:
     """每次调用生成唯一用户名，避免注册测试间 DB 冲突。"""
     return f"test_{uuid.uuid4().hex[:8]}"
+
+
+@pytest.fixture(scope="session")
+def auth_token(base_url: str) -> dict:
+    """登录获取有效 Token 对，供 logout / me 测试复用。
+
+    Returns:
+        dict: {"access_token": str, "refresh_token": str}
+    """
+    import requests
+
+    resp = requests.post(
+        f"{base_url}{LOGIN_URL}",
+        json={"username": "admin", "password": "admin123"},
+        timeout=10,
+    )
+    body = resp.json()
+    return {
+        "access_token": body["access_token"],
+        "refresh_token": body["refresh_token"],
+    }
 
 
 # ── Allure 元数据辅助 ──

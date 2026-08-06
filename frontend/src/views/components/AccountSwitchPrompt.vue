@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import AppCard from '@/shared/components/AppCard.vue'
+import { IconUser, IconPlus } from '@/shared/icons/index'
 
-interface Props {
+export interface AccountSwitchPromptProps {
   existingUsername: string
 }
 
-defineProps<Props>()
+defineProps<AccountSwitchPromptProps>()
 
 const emit = defineEmits<{
   switchTo: []
@@ -20,10 +21,12 @@ const emit = defineEmits<{
       <p class="switch-prompt__user">{{ existingUsername }}</p>
       <div class="switch-prompt__actions">
         <el-button type="primary" size="large" block @click="emit('switchTo')">
-          切换到 {{ existingUsername }}
+          <IconUser :size="16" />
+          <span>切换到 {{ existingUsername }}</span>
         </el-button>
         <el-button size="large" block @click="emit('addNew')">
-          添加新账号
+          <IconPlus :size="16" />
+          <span>添加新账号</span>
         </el-button>
       </div>
     </div>
@@ -31,6 +34,7 @@ const emit = defineEmits<{
 </template>
 
 <style scoped>
+/* ── 内容 ── */
 .switch-prompt {
   display: flex;
   flex-direction: column;
@@ -58,4 +62,8 @@ const emit = defineEmits<{
   width: 100%;
   margin-top: 8px;
 }
+
+</style>
+<style>
+@import '@/views/shared/login-card.css';
 </style>

@@ -2,8 +2,8 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { animate } from 'animejs'
-import { wsUrl } from '@/shared/ws-url.js'
-import { apiGetScreenshot } from '../api.js'
+import { wsUrl } from '@/shared/ws-url'
+import { apiGetScreenshot } from '../api'
 
 const props = defineProps({
   screenW: { type: Number, default: 1440 },
@@ -179,17 +179,17 @@ function stopPolling() {
 async function fetchSnapshot({ silent = false } = {}) {
   try {
     const { data } = await apiGetScreenshot()
-    if (data.ok && data.image) {
+    if (data.status && data.image) {
       applyScreenshot(data.image, data.format || 'jpeg')
       wsState.value = 'connected'
       statusMessage.value = ''
       if (data.screen_w) emit('device-changed', data)
       return true
     }
-    if (data.error) {
+    if (data.message) {
       wsState.value = 'no_device'
-      statusMessage.value = data.error
-      if (!silent) ElMessage.error(data.error)
+      statusMessage.value = data.message
+      if (!silent) ElMessage.error(data.message)
     }
     return false
   } catch (e) {

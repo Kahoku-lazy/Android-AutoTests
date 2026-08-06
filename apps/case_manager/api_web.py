@@ -71,11 +71,13 @@ def save_web_definition(case_id, **fields):
         "design_method": fields.get("design_method", ""),
         "metrics": fields.get("metrics", ""),
         "visibility": fields.get("visibility", "public"),
-        "permitted_users": json.dumps(fields.get("permitted_users", []), ensure_ascii=False),
         "permission": fields.get("permission", "edit"),
-        "permitted_editors": json.dumps(fields.get("permitted_editors", []), ensure_ascii=False),
         "case_type": "web_automation",
     }
+    if "permitted_users" in fields:
+        defaults["permitted_users"] = json.dumps(fields["permitted_users"], ensure_ascii=False)
+    if "permitted_editors" in fields:
+        defaults["permitted_editors"] = json.dumps(fields["permitted_editors"], ensure_ascii=False)
     obj, _ = WebTestCase.objects.update_or_create(id=case_id, defaults=defaults)
     return obj
 

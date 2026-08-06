@@ -1,8 +1,5 @@
-<script setup>
-defineProps({
-  form: { type: Object, required: true },
-  isNew: { type: Boolean, default: false },
-})
+<script setup lang="ts">
+defineProps<{ form: Record<string, unknown>; isNew?: boolean }>()
 </script>
 
 <template>

@@ -40,8 +40,7 @@ skills:
 
 ### 1. 环境探测
 ```bash
-curl -s -o /dev/null -w "%{http_code}" http://localhost:8765/api/    # Django
-curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/docs     # AgentScope
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8766/api/    # Django
 curl -s -o /dev/null -w "%{http_code}" http://localhost:5173          # Vue
 redis-cli ping                                                        # Redis
 ```

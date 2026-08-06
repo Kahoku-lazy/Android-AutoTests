@@ -37,22 +37,14 @@ flowchart TB
         Models["models.py · 6 表"]
     end
 
-    subgraph AS_AI["🤖 AgentScope :8000"]
-        App["app.py · FastAPI 入口"]
-        Auth2["auth.py · JWT 依赖注入 (共享密钥)"]
-        Factory["agent_factory.py<br/>Django Agent → AgentScope Agent<br/>解密 API Key · 构建 system_prompt<br/>注入 24 Tool"]
-        Tools24["tools/ (24 个 Tool)"]
-        Teams5["teams/ (5 个 Worker)"]
-        RAG["rag/ ChromaDB (32 篇)"]
-        App --- Auth2 --- Factory
-        Factory --- Tools24
-        Factory --- Teams5
-        Factory --- RAG
+    subgraph AS_AI["🤖 AgentScope (Django 进程内)"]
+        AgentScopeMod["apps/ai_assistant/agent_scope/<br/>agent_factory · system_prompt · 28 Tool"]
+        AgentScopeMod2["ReAct 推理引擎 · Tool 编排 · HITL"]
     end
 
     Frontend_AI -->|"HTTP + JWT"| Django_AI
-    Frontend_AI -->|"SSE + JWT"| App
-    Factory -->|"同进程 import"| Models
+    Frontend_AI -->|"SSE + JWT"| Django_AI
+    Django_AI -->|"进程内调用"| AS_AI
 
     style Frontend_AI fill:#667eea,color:#fff
     style Django_AI fill:#6fba2c,color:#fff
@@ -144,35 +136,26 @@ apps/ai_assistant/
 └── apps.py
 ```
 
-### 3.2 AgentScope 文件结构
+### 3.2 AgentScope 文件结构（Django 进程内）
 
 ```
-agentscope_service/
-├── app.py                            FastAPI 应用入口 (Uvicorn :8000)
-├── auth.py                           JWT 依赖注入 (共享 SECRET_KEY)
+apps/ai_assistant/agent_scope/
+├── system_prompt.py                  System prompt 构建（平台约束 + SOP 四阶段）
 ├── agent_factory.py                  Django Agent → AgentScope Agent 转换
 │   ├── 解密 api_key (Fernet)
 │   ├── 选择 Model (DashScope/OpenAI/Anthropic/DeepSeek/Custom)
-│   ├── 构建 system_prompt: 平台约束 + SOP 四阶段 + 用户自定义
-│   └── 注入 toolkit (28 Tool + 4 Plan Tool)
+│   ├── 构建 system_prompt
+│   └── 注入 toolkit (28 Tool)
 │
-├── tools/                            28 个自定义 Tool
+├── tools/                            28 个自定义 Tool（同进程调用 Django ORM/api.py）
 │   ├── element_tools.py             (2)  get_test_points · search_elements
 │   ├── case_tools.py                (7)  UI save/get/list/debug + save_storage/save_api/save_web
 │   ├── device_tools.py              (3)  get_online/acquire/release_device
 │   ├── runner_tools.py              (3)  run_test · get_run_results · stop_run
-│   ├── task_tools.py                (8)  SOP · task_card · page_elements · case_gen_task · update_case_gen_task
+│   ├── task_tools.py                (8)  SOP · task_card · page_elements · case_gen_task
 │   ├── report_tools.py              (2)  save_report · list_reports
 │   ├── prd_tools.py                 (3)  parse_prd · design_cases · import_cases
-│   ├── rag_tool.py                  (1)  search_knowledge_base
-│   └── factory.py                        工具注册工厂
-│
-├── teams/                            5 个 Agent Team 模板
-│   ├── element-inspector            查找 UI 元素 Worker
-│   ├── case-writer                  编写测试用例 Worker
-│   ├── device-operator              管理设备锁 Worker
-│   ├── test-executor                执行测试 Worker
-│   └── report-writer                生成报告 Worker
+│   └── rag_tool.py                  (1)  search_knowledge_base
 │
 └── rag/                              ChromaDB 知识库
     └── 32 篇项目文档 → 向量检索 → 上下文增强
@@ -186,7 +169,7 @@ sequenceDiagram
     participant Vue as 前端 AgentDetail
     participant Django as Django agent_views
     participant DB as ai_agents 表
-    participant AS as AgentScope agent_factory
+    participant AS as AgentScope (进程内)
 
     User->>Vue: 填写配置向导 5 步
     Vue->>Django: POST /api/ai/agents/create
@@ -195,42 +178,42 @@ sequenceDiagram
 
     User->>Vue: 点击「注册到 AgentScope」
     Vue->>Django: POST /api/ai/agents/{id}/register-scope
-    Django->>AS: agent_factory.create(agent_config)
+    Django->>AS: agent_factory.create(agent_config) [进程内调用]
     AS->>AS: 解密 api_key
     AS->>AS: 选择 Model Provider
     AS->>AS: 构建 system_prompt
-    AS->>AS: 注入 toolkit (24 Tool)
+    AS->>AS: 注入 toolkit (28 Tool)
     AS-->>Django: Agent 实例就绪
     Django-->>Vue: { ok: true, agent_scope_id: "xxx" }
 
     User->>Vue: 点击「测试连接」
     Vue->>Django: POST /api/ai/agents/{id}/test
-    Django->>AS: agent.test("ping")
+    Django->>AS: agent.test("ping") [进程内调用]
     AS-->>Django: "pong"
     Django->>DB: UPDATE is_connected=True
     Django-->>Vue: { ok: true, latency_ms: 230 }
 ```
 
-### 3.4 SSE 流式对话流程
+### 3.4 SSE 流式对话流程（AgentScope 进程内）
 
 ```mermaid
 sequenceDiagram
     actor User
     participant Vue as ChatView (SSE Client)
     participant Django as Django conversation_views
-    participant AS as AgentScope FastAPI
-    participant Tool as Tool (24个)
+    participant AS as AgentScope (进程内)
+    participant Tool as Tool (28个)
     participant Business as Django ORM (6 App)
 
     User->>Vue: 输入 "给登录页创建冒烟用例"
-    Vue->>Django: POST /api/ai/conversations/{id}/stream {message}
-    Django->>AS: POST /agentscope/chat (SSE)
+    Vue->>Django: POST /api/ai/conversations/{id}/chat/stream {message}
+    Django->>AS: 进程内调用 AgentScope [同进程，不经 HTTP]
     
     AS-->>Vue: SSE: REPLY_START
     AS-->>Vue: SSE: THINKING_BLOCK "我需要先搜索登录页的元素"
     
     AS->>Tool: search_elements("登录")
-    Tool->>Business: import element_locator.api
+    Tool->>Business: 同进程调用 Django ORM
     Business-->>Tool: [{element}, {element}]
     Tool-->>AS: 找到 3 个登录相关元素
     
@@ -240,7 +223,7 @@ sequenceDiagram
     AS-->>Vue: SSE: THINKING_BLOCK "现在创建用例"
     
     AS->>Tool: save_test_case({title: "登录冒烟", steps: [...]})
-    Tool->>Business: import case_manager.api
+    Tool->>Business: 同进程调用 api.py
     Business-->>Tool: {case_id: 42}
     Tool-->>AS: 用例创建成功
     

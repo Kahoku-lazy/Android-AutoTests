@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from "vue";
-import { stepSummary, FIELD_LABELS } from "../step-utils.js";
+import { stepSummary, FIELD_LABELS } from "../step-utils";
 
 defineProps({
   steps: { type: Array, default: () => [] },

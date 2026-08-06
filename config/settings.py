@@ -47,7 +47,7 @@ if not SECRET_KEY:
             "when DEBUG=False (production mode)."
         )
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",")
 
 # ── Application definition ──
 INSTALLED_APPS = [
@@ -111,7 +111,12 @@ TEMPLATES = [
 ]
 
 # ── CORS — allow frontend dev server ──
-CORS_ALLOW_ALL_ORIGINS = True  # dev only
+# 生产环境应设为 False，通过 CORS_ALLOWED_ORIGINS 精确控制
+CORS_ALLOW_ALL_ORIGINS = os.environ.get("CORS_ALLOW_ALL_ORIGINS", "True").lower() in (
+    "true",
+    "1",
+    "yes",
+)
 CORS_ALLOW_CREDENTIALS = True
 
 # ── Database ──
@@ -139,8 +144,15 @@ if DB_ENGINE == "mysql":
             "CONN_HEALTH_CHECKS": True,  # Auto-detect and replace dead connections
         },
     }
+elif DB_ENGINE == "sqlite":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        },
+    }
 else:
-    raise RuntimeError(f"不支持的 DB_ENGINE={DB_ENGINE!r}，仅支持 mysql")
+    raise RuntimeError(f"不支持的 DB_ENGINE={DB_ENGINE!r}，仅支持 mysql / sqlite")
 
 # ── Redis ──
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
@@ -205,7 +217,13 @@ AIRTEST_ENABLED = os.environ.get("AIRTEST_ENABLED", "True").lower() in ("true", 
 # ── Project-specific configuration ──
 DEVICE_SERIAL = os.environ.get("DEVICE_SERIAL", "")
 SCREENSHOT_INTERVAL = float(os.environ.get("SCREENSHOT_INTERVAL", "0.5"))
-SERVER_PORT = int(os.environ.get("SERVER_PORT", "8765"))
+SERVER_PORT = int(os.environ.get("SERVER_PORT", "8766"))
+
+# ADB server 地址 — 容器内连接宿主机 ADB daemon
+# Android 调试桥 (adb) 和 uiautomator2 原生支持此环境变量
+ANDROID_ADB_SERVER_ADDRESS = os.environ.get("ANDROID_ADB_SERVER_ADDRESS", "")
+if ANDROID_ADB_SERVER_ADDRESS:
+    os.environ["ANDROID_ADB_SERVER_ADDRESS"] = ANDROID_ADB_SERVER_ADDRESS
 
 # Paths
 DATA_DIR = BASE_DIR / "data"
@@ -225,6 +243,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]  # 项目自定义静态文件源目录
+
+# ── Media files (uploads) ──
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "data" / "uploads"
 
 # ── Jazzmin Admin Theme ──
 JAZZMIN_SETTINGS = {
@@ -260,3 +282,39 @@ JAZZMIN_UI_TWEAKS = {
     "sidebar_nav_small_text": False,
     "theme": "cosmo",
 }
+
+# ── Logging — 容器环境输出到 stdout，本地开发沿用文件日志 ──
+if os.environ.get("DOCKER_CONTAINER", "").lower() in ("true", "1", "yes"):
+    LOGGING = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "simple": {
+                "format": "{levelname} {asctime} {name} {message}",
+                "style": "{",
+            },
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stdout",
+                "formatter": "simple",
+            },
+        },
+        "root": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+        "loggers": {
+            "django": {
+                "handlers": ["console"],
+                "level": "INFO",
+                "propagate": False,
+            },
+            "daphne": {
+                "handlers": ["console"],
+                "level": "INFO",
+                "propagate": False,
+            },
+        },
+    }

@@ -8,27 +8,24 @@ Verifies all 4 services are healthy, auth works, and key API endpoints respond.
 Returns exit code 0 on success, non-zero on failure.
 """
 
-import sys
-import os
-import time
-import json
-import socket
 import argparse
-import urllib.request
+import json
+import os
+import socket
+import sys
 import urllib.error
+import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 SERVICES = {
     "redis": 6379,
-    "backend": 8765,
-    "agentscope": 8000,
+    "backend": 8766,
     "frontend": 5173,
 }
 
-AUTH_URL = "http://127.0.0.1:8765/api/ai/auth/login"
-API_BASE = "http://127.0.0.1:8765"
-AGENTSCOPE_URL = "http://127.0.0.1:8000"
+AUTH_URL = "http://127.0.0.1:8766/api/ai/auth/login"
+API_BASE = "http://127.0.0.1:8766"
 FRONTEND_URL = "http://127.0.0.1:5173"
 
 CREDS = {"username": "admin", "password": "admin123"}
@@ -85,7 +82,7 @@ def http_post(url, data, headers=None, timeout=5):
 
 
 def check_services():
-    """Step 1: verify all 4 services are listening."""
+    """Step 1: verify all 3 services are listening."""
     print("[1/4] Checking services...")
     ok = True
     for name, port in SERVICES.items():
@@ -109,8 +106,8 @@ def check_auth():
     except json.JSONDecodeError:
         log(f"Login returned non-JSON: {body[:100]}")
         return None
-    if not data.get("ok"):
-        log(f"Login error: {data.get('error')}")
+    if not data.get("status"):
+        log(f"Login error: {data.get('message')}")
         return None
     token = data.get("access_token")
     if not token:
@@ -138,18 +135,11 @@ def check_api(token):
         try:
             data = json.loads(body) if body else {}
         except json.JSONDecodeError:
-            data = {"ok": False, "error": "invalid JSON"}
-        emoji = "OK" if status == 200 and data.get("ok") else "FAIL"
+            data = {"status": False, "message": "invalid JSON"}
+        emoji = "OK" if status == 200 and data.get("status") else "FAIL"
         if emoji == "FAIL":
             ok = False
         log(f"  {emoji}  {method} {path}  -> {status}")
-
-    # Check AgentScope docs
-    status, _ = http_get(f"{AGENTSCOPE_URL}/docs")
-    emoji = "OK" if status == 200 else "FAIL"
-    if emoji == "FAIL":
-        ok = False
-    log(f"  {emoji}  GET /docs (AgentScope) -> {status}")
 
     return ok
 

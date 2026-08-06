@@ -40,7 +40,7 @@ async function loadPages() {
     const res = await fetchCatalogPages()
     pages.value = res.pages
     source.value = res.source
-    if (res.error) catalogError.value = res.error
+    if (res.message) catalogError.value = res.message
   } finally {
     loading.value = false
   }

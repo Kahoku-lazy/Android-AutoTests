@@ -4,10 +4,10 @@ import AppTabs from "@/shared/components/AppTabs.vue";
 import AppTable from "@/shared/components/AppTable.vue";
 import { ref, computed } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { apiListApiEndpoints, apiCreateApiEndpoint, apiUpdateApiEndpoint, apiDeleteApiEndpoint } from "../api.js";
+import { apiListApiEndpoints, apiCreateApiEndpoint, apiUpdateApiEndpoint, apiDeleteApiEndpoint } from "../api";
 import GroupTreePanel from '@/shared/components/GroupTreePanel.vue';
-import { useApiGroupTree } from "../composables/useApiGroupTree.js";
-import { usePagination } from "@/shared/composables/usePagination.js";
+import { useApiGroupTree } from "../composables/useApiGroupTree";
+import { usePagination } from "@/shared/composables/usePagination";
 
 const methods = ["GET", "POST", "PUT", "DELETE", "PATCH"];
 const METHOD_COLORS = { GET: "#6fba2c", POST: "#889df0", PUT: "#f7cd67", DELETE: "#e85f5f", PATCH: "#b39ef3" };
@@ -78,7 +78,7 @@ async function loadElements() {
 async function updateEl(record, field, value) {
   try {
     const { data } = await apiUpdateApiEndpoint(record.id, { [field]: value });
-    if (!data.ok) ElMessage.error(data.error || "更新失败");
+    if (!data.status) ElMessage.error(data.message || "更新失败");
   } catch (_) { ElMessage.error("更新失败"); }
 }
 
@@ -139,14 +139,14 @@ async function doSave() {
   try {
     if (editingId.value) {
       const { data } = await apiUpdateApiEndpoint(editingId.value, payload);
-      if (data.ok) { showForm.value = false; await loadElements(); }
-      else ElMessage.error(data.error || "更新失败");
+      if (data.status) { showForm.value = false; await loadElements(); }
+      else ElMessage.error(data.message || "更新失败");
     } else {
       const { data } = await apiCreateApiEndpoint(payload);
-      if (data.ok) { showForm.value = false; await loadElements(); }
-      else ElMessage.error(data.error || "创建失败");
+      if (data.status) { showForm.value = false; await loadElements(); }
+      else ElMessage.error(data.message || "创建失败");
     }
-  } catch (e) { ElMessage.error(e?.response?.data?.error || "操作失败"); }
+  } catch (e) { ElMessage.error(e?.response?.data?.message || "操作失败"); }
 }
 </script>
 

@@ -10,7 +10,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 _reindex_lock = threading.Lock()
-_reindex_status = {"running": False, "last_indexed": None, "doc_count": 0, "error": ""}
+_reindex_status = {"running": False, "last_indexed": None, "doc_count": 0, "message": ""}
 
 
 def _get_kb_stats():
@@ -60,9 +60,9 @@ def kb_status(request):
     stats["reindex"] = {
         "running": _reindex_status["running"],
         "last_indexed": _reindex_status["last_indexed"],
-        "error": _reindex_status["error"],
+        "message": _reindex_status["error"],
     }
-    return JsonResponse({"ok": True, "data": stats})
+    return JsonResponse({"status": True, "data": stats})
 
 
 @csrf_exempt
@@ -71,15 +71,15 @@ def kb_documents(request):
     try:
         docs = _scan_doc_sources()
     except Exception as e:
-        return JsonResponse({"ok": False, "error": str(e)}, status=500)
-    return JsonResponse({"ok": True, "data": {"documents": docs, "total": len(docs)}})
+        return JsonResponse({"status": False, "message": str(e)}, status=500)
+    return JsonResponse({"status": True, "data": {"documents": docs, "total": len(docs)}})
 
 
 @csrf_exempt
 def kb_reindex(request):
     """POST /api/ai/knowledge/reindex — trigger full reindex."""
     if _reindex_status["running"]:
-        return JsonResponse({"ok": False, "error": "索引重建已在进行中"}, status=409)
+        return JsonResponse({"status": False, "message": "索引重建已在进行中"}, status=409)
 
     def _run_reindex():
         global _reindex_status
@@ -106,7 +106,7 @@ def kb_reindex(request):
 
     t = threading.Thread(target=_run_reindex, daemon=True)
     t.start()
-    return JsonResponse({"ok": True, "message": "索引重建已开始"})
+    return JsonResponse({"status": True, "message": "索引重建已开始"})
 
 
 @csrf_exempt
@@ -115,12 +115,12 @@ def kb_add_document(request):
     try:
         body = json.loads(request.body) if request.body else {}
     except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "无效的 JSON"}, status=400)
+        return JsonResponse({"status": False, "message": "无效的 JSON"}, status=400)
 
     content = body.get("content", "").strip()
     source = body.get("source", "manual")
     if not content:
-        return JsonResponse({"ok": False, "error": "文档内容不能为空"}, status=400)
+        return JsonResponse({"status": False, "message": "文档内容不能为空"}, status=400)
 
     from apps.ai_assistant.agent_scope.rag_service import add_documents
 
@@ -134,4 +134,4 @@ def kb_add_document(request):
             }
         ]
     )
-    return JsonResponse({"ok": True, "data": {"id": doc_id, "source": source}})
+    return JsonResponse({"status": True, "data": {"id": doc_id, "source": source}})

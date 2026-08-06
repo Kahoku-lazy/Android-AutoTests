@@ -1,29 +1,30 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, computed } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import { getToken } from "@/shared/api-client.js";
-import { getAgentDetail } from "./api.js";
+import { useRoute } from "vue-router";
+import { getAgentDetail, uploadFile } from "./api/agents";
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
-import { pressFeedback, iconBounce } from "@/shared/animations.js";
+import { pressFeedback, iconBounce } from "@/shared/animations";
 import AnimatedMascot from "@/shared/components/AnimatedMascot.vue";
-import {
-  IconPlus,
-  IconSearch,
-  IconArrowLeft,
-  IconMessageCircle,
-} from "@/shared/icons/index.js";
+import { IconMessageCircle } from "@/shared/icons/index";
 import { ElMessage } from "element-plus";
-import { renderMermaidBlocks } from "./composables/useMarkdown.js";
+import { renderMermaidBlocks } from "./composables/useMarkdown";
+import ErrorState from "@/shared/components/patterns/ErrorState.vue";
+import {
+  AVATAR_PATH_PREFIX,
+  MODEL_STATUS_MAP,
+  CONNECTION_MODE_LABELS,
+  CONNECTION_MODE_ICONS,
+} from "./constants";
 import MessageBubble from "./components/MessageBubble.vue";
 import ConfirmDialog from "./components/ConfirmDialog.vue";
 import ChatInput from "./components/ChatInput.vue";
-import { useMessageStore } from "./composables/useMessageStore.js";
-import { useToolCalls } from "./composables/useToolCalls.js";
-import { useConversation } from "./composables/useConversation.js";
-import { useSSE } from "./composables/useSSE.js";
+import ChatSidebar from "./components/ChatSidebar.vue";
+import { useMessageStore } from "./composables/useMessageStore";
+import { useToolCalls } from "./composables/useToolCalls";
+import { useConversation } from "./composables/useConversation";
+import { useSSE } from "./composables/useSSE";
 
 const route = useRoute();
-const router = useRouter();
 const agentId = ref(parseInt(route.params.agentId));
 const agent = ref(null);
 const inputText = ref("");
@@ -80,40 +81,36 @@ function _updateTaskCardProgress(tr) {
   const name = tr?.name || "";
   const output = tr?.output || "";
   const state = tr?.state || "";
+
+  // Find the matching task card by checking if output content overlaps
+  let matchedRunId = null
   for (const [runId, card] of Object.entries(taskCards.value)) {
-    if (name === "create_runner_task") {
-      taskCards.value[runId] = {
-        ...card,
-        status: "PENDING",
-        updatedAt: Date.now(),
-      };
-    } else if (name === "run_test") {
-      const parsed = _parseTaskCardProgress(output);
-      const isDone = state === "success" || state === "finished";
-      const status = isDone
-        ? parsed?.failed > 0
-          ? "FAILED"
-          : "COMPLETED"
-        : "RUNNING";
-      const progress = parsed
-        ? { current: parsed.total, total: parsed.total }
-        : card.progress;
-      taskCards.value[runId] = {
-        ...card,
-        status,
-        progress,
-        updatedAt: Date.now(),
-      };
-      for (const m of messages.value) {
-        if (m.hint?.run_id === runId) m.hint = { ...card, status, progress };
-      }
-    } else if (name === "stop_run") {
-      taskCards.value[runId] = {
-        ...card,
-        status: "STOPPED",
-        updatedAt: Date.now(),
-      };
+    if (card?.output && output.includes(card.output.slice(0, 30))) {
+      matchedRunId = runId
+      break
     }
+  }
+  // Fallback: use the first card if no content match found (for create_runner_task)
+  if (!matchedRunId && name === 'create_runner_task') {
+    const entries = Object.entries(taskCards.value)
+    if (entries.length) matchedRunId = entries[entries.length - 1][0]
+  }
+  if (!matchedRunId) return
+
+  const card = taskCards.value[matchedRunId]
+  if (name === "create_runner_task") {
+    taskCards.value[matchedRunId] = { ...card, status: "PENDING", updatedAt: Date.now() }
+  } else if (name === "run_test") {
+    const parsed = _parseTaskCardProgress(output)
+    const isDone = state === "success" || state === "finished"
+    const status = isDone ? (parsed?.failed > 0 ? "FAILED" : "COMPLETED") : "RUNNING"
+    const progress = parsed ? { current: parsed.total, total: parsed.total } : card.progress
+    taskCards.value[matchedRunId] = { ...card, status, progress, updatedAt: Date.now() }
+    for (const m of messages.value) {
+      if (m.hint?.run_id === matchedRunId) m.hint = { ...card, status, progress }
+    }
+  } else if (name === "stop_run") {
+    taskCards.value[matchedRunId] = { ...card, status: "STOPPED", updatedAt: Date.now() }
   }
 }
 
@@ -170,63 +167,37 @@ const streamModeLabel = computed(() => {
 });
 
 const connectionModeLabel = computed(() => {
-  if (connectionMode.value === "sse") return "SSE 流式通道";
-  if (connectionMode.value === "connecting") return "发送时自动连接";
-  return "检测中...";
+  return CONNECTION_MODE_LABELS[connectionMode.value] || "检测中...";
 });
 
 const connectionModeIcon = computed(() => {
-  if (connectionMode.value === "sse") return "⚡";
-  if (connectionMode.value === "connecting") return "🔗";
-  return "🔍";
+  return CONNECTION_MODE_ICONS[connectionMode.value] || "🔍";
 });
 
 // Live model activity status — driven by SSE onStatus callback
 const modelStatusLabel = computed(() => {
-  switch (modelStatus.value) {
-    case "thinking":
-      return "🤔 思考中";
-    case "calling_model":
-      return "🧠 调用模型";
-    case "tool_calling":
-      return "🔧 调用工具";
-    case "streaming":
-      return "✍️ 输出中";
-    case "done":
-      return "✅ 已完成";
-    case "idle":
-      return null;
-    default:
-      return null;
-  }
+  return MODEL_STATUS_MAP[modelStatus.value]?.label || null;
 });
 const modelStatusIcon = computed(() => {
-  switch (modelStatus.value) {
-    case "thinking":
-      return "🤔";
-    case "calling_model":
-      return "🧠";
-    case "tool_calling":
-      return "🔧";
-    case "streaming":
-      return "✍️";
-    case "done":
-      return "✅";
-    case "idle":
-      return null;
-    default:
-      return null;
-  }
+  return MODEL_STATUS_MAP[modelStatus.value]?.icon || null;
 });
 
+const loadError = ref("");
+
 async function loadAgent() {
+  loadError.value = "";
   try {
     const data = await getAgentDetail(agentId.value);
-    if (data.ok) {
+    if (data.status) {
       agent.value = data.agent;
       loadConversations();
+    } else {
+      loadError.value = data.message || "加载 Agent 失败";
     }
-  } catch (e) { console.error(e); }
+  } catch (e) {
+    loadError.value = "网络请求失败，请检查连接";
+    console.error(e);
+  }
 }
 
 async function handleFileUpload(e) {
@@ -236,19 +207,14 @@ async function handleFileUpload(e) {
   const formData = new FormData();
   formData.append("file", file);
   try {
-    const token = getToken();
-    const resp = await fetch("/api/ai/upload-file", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-    const data = await resp.json();
-    if (data.ok) {
+    const data = await uploadFile(formData);
+    if (data.status) {
       uploadedFile.value = data.data;
+      const sizeKB = ((data.data && data.data.size) || 0) / 1024;
       ElMessage.success(
-        `已解析: ${file.name} (${(data.data.size / 1024).toFixed(1)}KB)`,
+        `已解析: ${file.name} (${sizeKB.toFixed(1)}KB)`,
       );
-    } else ElMessage.error(data.error || "文件上传失败");
+    } else ElMessage.error(data.message || "文件上传失败");
   } catch (e) {
     ElMessage.error("文件上传失败");
   }
@@ -284,8 +250,7 @@ async function sendMessage() {
   const text = inputText.value.trim();
   if ((!text && !uploadedFile.value) || !activeConv.value || sending.value)
     return;
-  // 同步占位，防止 Enter 连触 / 重复事件在 await 前再次进入
-  sending.value = true;
+
   inputText.value = "";
 
   let msgText = text;
@@ -300,6 +265,8 @@ async function sendMessage() {
     uploadedFile.value = null;
   }
 
+  // 同步占位，防止 Enter 连触 / 重复事件在 await 前再次进入
+  sending.value = true;
   try {
     await sendStreamMessage(msgText, displayText);
   } finally {
@@ -320,7 +287,7 @@ function handleKey(e) {
 
 // Avatars
 function avatarStyle(avatar) {
-  return avatar?.startsWith("/api/ai/avatars/")
+  return avatar?.startsWith(AVATAR_PATH_PREFIX)
     ? {
         backgroundImage: `url(${avatar})`,
         backgroundSize: "cover",
@@ -329,7 +296,7 @@ function avatarStyle(avatar) {
     : {};
 }
 function avatarText(avatar) {
-  return avatar?.startsWith("/api/ai/avatars/") ? "" : avatar || "";
+  return avatar?.startsWith(AVATAR_PATH_PREFIX) ? "" : avatar || "";
 }
 
 function toggleThinking(m) {
@@ -377,87 +344,25 @@ async function handleImportPRD({ sessionId }) {
       icon-gradient="linear-gradient(135deg,#5EEAD4,#14b8a6)"
     />
 
+    <ErrorState v-if="loadError" :message="loadError" @retry="loadAgent" />
+
     <div class="doc-body">
       <div class="chat-layout">
         <!-- Left: conversation sidebar -->
-        <section class="doc-section chat-sidebar">
-          <button class="back-btn" @click="router.push('/ai-assistant')">
-            <IconArrowLeft :size="18" /><span>返回智能体列表</span>
-          </button>
-          <button class="new-chat-btn" @click="newChat($event)">
-            <IconPlus :size="18" /><span>开启新对话</span>
-          </button>
-
-          <!-- Agent card -->
-          <div class="agent-card" v-if="agent">
-            <div class="agent-avatar" :style="avatarStyle(agent.avatar)">
-              <span v-if="avatarText(agent.avatar)">{{
-                avatarText(agent.avatar)
-              }}</span>
-            </div>
-            <div class="agent-info">
-              <div class="agent-name">{{ agent.name }}</div>
-              <div class="agent-provider">
-                {{ agent.model_provider }} / {{ agent.model_name }}
-              </div>
-            </div>
-          </div>
-
-          <!-- Conversation list -->
-          <div class="conv-list">
-            <div class="conv-list-title">
-              <IconMessageCircle :size="15" /><span>对话历史</span
-              ><span class="conv-count">{{ conversations.length }}</span>
-            </div>
-            <div
-              v-for="c in conversations"
-              :key="c.id"
-              :class="['conv-item', { active: activeConv === c.id }]"
-              @click="selectChat(c.id)"
-            >
-              <span
-                class="conv-indicator"
-                :class="{ active: activeConv === c.id }"
-              />
-              <span
-                v-if="editingConvId === c.id"
-                class="conv-title"
-                @click.stop
-              >
-                <input
-                  class="conv-rename-input"
-                  v-model="editingTitle"
-                  @keydown.enter="finishRename"
-                  @keydown.escape="cancelRename"
-                  @blur="finishRename"
-                />
-              </span>
-              <span
-                v-else
-                class="conv-title"
-                @dblclick.stop="startRename(c)"
-                :title="'双击修改名称'"
-                >{{ c.title }}</span
-              >
-              <span class="conv-status" :class="c.status" />
-              <button
-                class="conv-delete-btn"
-                @click.stop="deleteConversation(c)"
-                title="删除对话"
-              >
-                ✕
-              </button>
-            </div>
-            <div v-if="!conversations.length" class="conv-empty">
-              <IconSearch :size="36" /><span>暂无对话记录</span
-              ><span class="conv-empty-hint">点击上方「开启新对话」</span>
-            </div>
-          </div>
-
-          <button class="wb-tasks-link" @click="router.push('/ai-assistant')">
-            📋 在工作台查看任务看板
-          </button>
-        </section>
+        <ChatSidebar
+          :agent="agent"
+          :conversations="conversations"
+          :active-conv="activeConv"
+          :editing-conv-id="editingConvId"
+          :editing-title="editingTitle"
+          @update:editing-title="editingTitle = $event"
+          @new-chat="newChat"
+          @select-chat="selectChat"
+          @start-rename="startRename"
+          @finish-rename="finishRename"
+          @cancel-rename="cancelRename"
+          @delete-conversation="deleteConversation"
+        />
 
         <!-- Right: chat area -->
         <section class="doc-section chat-main">
@@ -508,7 +413,7 @@ async function handleImportPRD({ sessionId }) {
             </div>
 
             <div v-if="degradedMode" class="degraded-banner">
-              ⚠️ AgentScope 服务不可用，模型服务暂时无法使用
+              ⚠️ AI 模型服务暂不可用，请检查 Agent 的 API Key 和网络配置
             </div>
             <div ref="chatBody" class="chat-body">
               <MessageBubble

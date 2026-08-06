@@ -1,42 +1,43 @@
-<script setup>
+<script setup lang="ts">
 /**
  * 智能体便签 — 和纸胶带 + 轻微倾斜，贴在点阵看板上
  */
 import { computed, onMounted, ref } from 'vue'
 import { animate } from 'animejs'
+import { isImageAvatar } from '../constants'
+import type { AgentRecord } from '@/shared/types/ai'
 
-const props = defineProps({
-  agent: { type: Object, required: true },
-  rotation: { type: Number, default: -2 },
-  tapeHue: { type: String, default: 'mint' }, // mint | peach | sky | lilac | honey
-  pendingModel: { type: String, default: '' },
-  confirming: { type: Boolean, default: false },
-  testing: { type: Boolean, default: false },
-  statusClass: { type: String, default: 'is-success' },
-  statusText: { type: String, default: '' },
-  modelOptions: { type: Array, default: () => [] },
-})
+const props = defineProps<{
+  agent: AgentRecord
+  rotation?: number
+  tapeHue?: string
+  pendingModel?: string
+  confirming?: boolean
+  testing?: boolean
+  statusClass?: string
+  statusText?: string
+  modelOptions?: { label: string; value: string }[]
+}>()
 
-const emit = defineEmits([
-  'update:pendingModel',
-  'confirm-model',
-  'chat',
-  'edit',
-  'test',
-  'delete',
-  'select',
-])
+const emit = defineEmits<{
+  'update:pendingModel': [value: string]
+  'confirm-model': []
+  chat: []
+  edit: []
+  test: []
+  delete: []
+  select: [ev: Event]
+}>()
 
-const noteRef = ref(null)
+const noteRef = ref<HTMLElement | null>(null)
 const tapeRef = ref(null)
 
-const isImageUrl = (av) => av?.startsWith('/api/ai/avatars/') || av?.startsWith('data:image/')
 const avatarStyle = computed(() => {
   const av = props.agent.avatar
-  if (isImageUrl(av)) return { backgroundImage: `url(${av})` }
+  if (isImageAvatar(av)) return { backgroundImage: `url(${av})` }
   return {}
 })
-const showEmoji = computed(() => !isImageUrl(props.agent.avatar))
+const showEmoji = computed(() => !isImageAvatar(props.agent.avatar))
 const modelDirty = computed(
   () => !!props.pendingModel && props.pendingModel !== props.agent.model_name,
 )

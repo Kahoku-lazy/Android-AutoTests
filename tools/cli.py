@@ -18,13 +18,14 @@ CLI 工具 — 元素定位 + 用例管理 CRUD + 任务执行
 
 import argparse
 import asyncio
-from datetime import datetime
 import json
 import os
 import random
 import string
 import sys
 import time
+
+from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
@@ -46,11 +47,11 @@ from models.test_models import TestCaseDef  # noqa: E402
 
 
 def ok(data=None):
-    print(json.dumps({"ok": True, "data": data}, ensure_ascii=False, indent=2))
+    print(json.dumps({"status": True, "data": data}, ensure_ascii=False, indent=2))
 
 
 def err(msg):
-    print(json.dumps({"ok": False, "error": msg}, ensure_ascii=False, indent=2))
+    print(json.dumps({"status": False, "message": msg}, ensure_ascii=False, indent=2))
     sys.exit(1)
 
 
@@ -513,7 +514,7 @@ def run_case(args):
                         "stepIndex": sd.get("index", 0),
                         "stepType": sd.get("type", ""),
                         "description": sd.get("description", ""),
-                        "result": sd.get("error", "步骤执行失败"),
+                        "result": sd.get("message", "步骤执行失败"),
                         "screenshot": sd.get("screenshot", ""),
                         "_date": str(tr.created_at)[:19] if tr.created_at else "",
                     }

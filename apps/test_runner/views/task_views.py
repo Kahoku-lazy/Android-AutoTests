@@ -52,7 +52,7 @@ def run_single_step(request):
         "loop_n",
         "loop_elements",
     ):
-        return JsonResponse({"ok": False, "error": f"Unknown step type: {step_type}"})
+        return JsonResponse({"status": False, "message": f"Unknown step type: {step_type}"})
 
     try:
         from apps.device_pool.api import device
@@ -65,7 +65,7 @@ def run_single_step(request):
         if target_serial:
             device.switch_to(target_serial)
         elif not device.current_serial:
-            return JsonResponse({"ok": False, "error": "请先在用例编辑页顶部选择调试设备"})
+            return JsonResponse({"status": False, "message": "请先在用例编辑页顶部选择调试设备"})
 
         step = TestStep(
             type=step_type,
@@ -97,7 +97,7 @@ def run_single_step(request):
         if result == "pass":
             return JsonResponse(
                 {
-                    "ok": True,
+                    "status": True,
                     "result": result,
                     "message": f"步骤「{description}」执行成功",
                     "logs": logs,
@@ -105,14 +105,14 @@ def run_single_step(request):
             )
         return JsonResponse(
             {
-                "ok": False,
+                "status": False,
                 "result": result,
-                "error": f"步骤「{description}」执行失败 ({result})",
+                "message": f"步骤「{description}」执行失败 ({result})",
                 "logs": logs,
             }
         )
     except Exception as e:
-        return JsonResponse({"ok": False, "error": f"步骤执行异常: {str(e)}"})
+        return JsonResponse({"status": False, "message": f"步骤执行异常: {str(e)}"})
 
 
 # ═══════════════════════════════════════════════════════
@@ -184,7 +184,7 @@ def task_card_list(request):
                 "step_details": _load_step_details(tc),
             }
         )
-    return JsonResponse({"ok": True, "tasks": cards})
+    return JsonResponse({"status": True, "tasks": cards})
 
 
 def _load_step_details(tc) -> list:
@@ -221,12 +221,12 @@ def task_card_save(request):
     data = json.loads(request.body) if request.body else {}
     task_id = (data.get("id") or "").strip()
     if not task_id:
-        return JsonResponse({"ok": False, "error": "任务ID不能为空"}, status=400)
+        return JsonResponse({"status": False, "message": "任务ID不能为空"}, status=400)
     try:
         result = save_task_card(data)
     except ValueError as e:
-        return JsonResponse({"ok": False, "error": str(e)}, status=400)
-    return JsonResponse({"ok": True, "id": result["id"]})
+        return JsonResponse({"status": False, "message": str(e)}, status=400)
+    return JsonResponse({"status": True, "id": result["id"]})
 
 
 @require_auth
@@ -234,7 +234,7 @@ def task_card_save(request):
 def task_card_delete(request, task_id):
     """DELETE /api/runner/tasks/{task_id} — Delete a task card."""
     delete_task_card(task_id)
-    return JsonResponse({"ok": True, "message": "已删除"})
+    return JsonResponse({"status": True, "message": "已删除"})
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -248,9 +248,9 @@ def serve_step_screenshot(request, filepath):
     # Security: ensure the resolved path is within SCREENSHOT_DIR
     ss_dir = os.path.normpath(str(settings.SCREENSHOT_DIR))
     if not full_path.startswith(ss_dir):
-        return JsonResponse({"ok": False, "error": "invalid path"}, status=403)
+        return JsonResponse({"status": False, "message": "invalid path"}, status=403)
     if not os.path.isfile(full_path):
-        return JsonResponse({"ok": False, "error": "not found"}, status=404)
+        return JsonResponse({"status": False, "message": "not found"}, status=404)
     return FileResponse(open(full_path, "rb"), content_type="image/png")
 
 
@@ -274,7 +274,7 @@ def run_monitor(request, run_id):
             record = TestRunRecord.objects.get(run_id=run_id)
             return JsonResponse(
                 {
-                    "ok": True,
+                    "status": True,
                     "run_id": run_id,
                     "live": False,
                     "status": record.status,
@@ -287,7 +287,7 @@ def run_monitor(request, run_id):
                 }
             )
         except TestRunRecord.DoesNotExist:
-            return JsonResponse({"ok": False, "error": "run not found"}, status=404)
+            return JsonResponse({"status": False, "message": "run not found"}, status=404)
 
     # Live run — 组装实时状态快照
     adapter = state.adapter
@@ -307,7 +307,7 @@ def run_monitor(request, run_id):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "run_id": run_id,
             "live": True,
             "status": state.run_model.status.value
@@ -346,7 +346,7 @@ def run_snapshot(request, run_id):
             )
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "run_id": run_id,
                 "live": True,
                 "status": state.run_model.status.value
@@ -375,7 +375,7 @@ def run_snapshot(request, run_id):
                 by_case[cid]["fail"] += 1
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "run_id": run_id,
                 "live": False,
                 "status": record.status,
@@ -384,4 +384,4 @@ def run_snapshot(request, run_id):
             }
         )
     except TestRunRecord.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "run not found"}, status=404)
+        return JsonResponse({"status": False, "message": "run not found"}, status=404)

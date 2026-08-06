@@ -7,16 +7,10 @@ export interface AccountTokens {
 /** localStorage.auth_accounts 的完整存储格式 */
 export type AuthPool = Record<string, AccountTokens>
 
-/** 登录/注册 API 响应（与后端 {ok, data/error} 格式一致） */
-export interface AuthResponse {
-  ok: boolean
-  access_token?: string
-  refresh_token?: string
-  error?: string
-}
-
-/** 表单模式 */
-export type LoginMode = 'login' | 'register'
+/** 登录/注册 API 响应 — discriminated union，if (data.status) 后自动收窄 */
+export type AuthResponse =
+  | { status: true; access_token: string; refresh_token: string }
+  | { status: false; message: string }
 
 /** 登录页视图状态机 */
 export type ViewState = 'switchPrompt' | 'login' | 'register'
@@ -26,4 +20,5 @@ export interface FieldErrors {
   username?: string
   password?: string
   password2?: string
+  email?: string
 }

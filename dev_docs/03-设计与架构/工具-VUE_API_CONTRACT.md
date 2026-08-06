@@ -219,5 +219,5 @@
 | 后端改了字段名 | 页面空白，无报错 | `data.xxx` 为 undefined |
 | api() 拿到了非 JSON | 解析异常 | 后端返回了 HTML 或纯文本 |
 | WS type 不匹配 | 日志不更新 | `handleTestMessage` switch 未命中 |
-| 请求体字段名不一致 | `{"ok":false,"error":"..."}` | 后端 `data.get("xxx")` 取不到值 |
+| 请求体字段名不一致 | `{"status":false,"message":"..."}` | 后端 `data.get("xxx")` 取不到值 |
 | `api()` vs `fetch()` 混用 | 报告内容为乱码 | 报告下载是 FileResponse，须用 `r.text()` |

@@ -1,36 +1,64 @@
-<script setup>
-import { onErrorCaptured } from 'vue'
-import ThinkingBlock from "./ThinkingBlock.vue";
-import ToolCallAppCard from "./ToolCallCard.vue";
-import HintAppCard from "./HintCard.vue";
-import { renderMarkdown } from "../composables/useMarkdown.js";
+<script setup lang="ts">
+import { computed, onErrorCaptured } from 'vue'
+import ThinkingBlock from './ThinkingBlock.vue'
+import ToolCallAppCard from './ToolCallCard.vue'
+import HintAppCard from './HintCard.vue'
+import { renderMarkdown } from '../composables/useMarkdown'
+import { WORKSPACE_TOOL_NAMES, toolSourceLabel as _toolSourceLabel } from '../constants'
+import type { ChatMessage, ToolCall } from '@/shared/types/ai'
 
-onErrorCaptured((err, instance, info) => {
-  console.error('[MessageBubble] render error caught:', err, 'info:', info, 'message:', props.message)
-  return false // prevent propagation
+onErrorCaptured((err) => {
+  console.error('[MessageBubble] render error caught:', err, 'message:', props.message)
+  return false
 })
 
-function safeMarkdown(text) {
-  try {
-    return renderMarkdown(text)
-  } catch (e) {
-    console.error('[MessageBubble] markdown render failed:', e, 'text type:', typeof text)
-    return String(text ?? '')
-  }
+function safeMarkdown(text: string): string {
+  try { return renderMarkdown(text) }
+  catch (e) { return String(text ?? '') }
 }
 
-const props = defineProps({
-  message: { type: Object, required: true },
-  agentName: { type: String, default: "AI" },
-  agentAvatar: { type: String, default: "" },
-  avatarStyleFn: { type: Function, default: () => ({}) },
-  avatarTextFn: { type: Function, default: () => "" },
-  importingPrd: { type: Boolean, default: false },
-  /** 流式等待中：在气泡内显示打字点，避免外层再叠一层 typing-row */
-  typing: { type: Boolean, default: false },
-});
+const props = defineProps<{
+  message: ChatMessage
+  agentName?: string
+  agentAvatar?: string
+  avatarStyleFn?: () => Record<string, string>
+  avatarTextFn?: () => string
+  importingPrd?: boolean
+  typing?: boolean
+}>()
 
-const emit = defineEmits(["toggle-thinking", "toggle-round-thinking", "import-prd"]);
+// ── Capability usage summary ──
+
+function toolSourceLabel(tool: ToolCall | { name: string; source?: string }): string {
+  if (tool.source === 'builtin' || WORKSPACE_TOOL_NAMES.includes(tool.name)) return '内置工具'
+  return _toolSourceLabel(tool.source)
+}
+
+const capabilitySummary = computed(() => {
+  const sources = new Set<string>()
+  // Collect from rounds
+  if (props.message.rounds) {
+    for (const round of props.message.rounds) {
+      for (const tool of (round.tools || [])) {
+        sources.add(toolSourceLabel(tool))
+      }
+    }
+  }
+  // Collect from legacy toolFlow
+  if (props.message.toolFlow) {
+    for (const tool of props.message.toolFlow) {
+      sources.add(toolSourceLabel(tool))
+    }
+  }
+  if (sources.size === 0) return null
+  return Array.from(sources).join(' · ')
+})
+
+const emit = defineEmits<{
+  'toggle-thinking': [message: ChatMessage]
+  'toggle-round-thinking': [payload: { roundIndex: number }]
+  'import-prd': [payload: object]
+}>()
 
 function toggleThinking() {
   emit("toggle-thinking", props.message);
@@ -124,6 +152,10 @@ function reasonLabel(reason) {
         "
       />
 
+      <div v-if="capabilitySummary" class="capability-summary">
+        <span class="capability-icon">🔧</span>
+        {{ capabilitySummary }}
+      </div>
       <div v-if="message.tokens" class="msg-tokens">
         <span v-if="message.model_name" class="model-name-tag">{{
           message.model_name
@@ -234,6 +266,17 @@ function reasonLabel(reason) {
   color: var(--app-ink-muted, #999);
   padding: 0 6px;
 }
+.capability-summary {
+  font-size: var(--app-size-xs);
+  color: #8a7b66;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.capability-icon {
+  font-size: var(--app-size-sm);
+}
 .model-name-tag {
   font-size: var(--app-size-xs);
   padding: 2px 7px;
@@ -263,7 +306,7 @@ function reasonLabel(reason) {
   color: #616161;
   border: 1px solid #bdbdbd;
 }
-.reason-badge.error {
+.reason-badge.message {
   background: var(--ai-bg-error);
   color: #b71c1c;
   border: 1px solid #ef5350;

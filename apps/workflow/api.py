@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """workflow public API — 目录 + JSON 文档 CRUD / 导入导出."""
 
 __all__ = [
@@ -19,8 +21,6 @@ __all__ = [
     "update_directory",
     "upsert_document",
 ]
-
-from __future__ import annotations
 
 import json
 import random

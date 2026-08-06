@@ -107,8 +107,8 @@ function stepTypeColor(type) {
             <div class="ss-card__body">
               <div class="ss-desc">{{ step.description }}</div>
               <div v-if="step.selector" class="ss-selector">📍 {{ step.selector }}</div>
-              <div v-if="step.result === 'fail' && step.error" class="ss-error">
-                ❌ {{ step.error }}
+              <div v-if="step.result === 'fail' && step.message" class="ss-error">
+                ❌ {{ step.message }}
               </div>
             </div>
           </div>

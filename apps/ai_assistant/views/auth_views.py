@@ -33,7 +33,7 @@ def login(request):
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "请求格式错误"}, status=400)
+        return JsonResponse({"status": False, "message": "请求格式错误"}, status=400)
 
     username = data.get("username", "")
     password = data.get("password", "")
@@ -41,41 +41,41 @@ def login(request):
     # ── 逐层校验，返回对应中文错误 ──
     if not username and not password:
         return JsonResponse(
-            {"ok": False, "error": "请输入用户名和密码"},
+            {"status": False, "message": "请输入用户名和密码"},
             status=400,
         )
     if not username:
         return JsonResponse(
-            {"ok": False, "error": "请输入用户名"},
+            {"status": False, "message": "请输入用户名"},
             status=400,
         )
     if not password:
         return JsonResponse(
-            {"ok": False, "error": "请输入密码"},
+            {"status": False, "message": "请输入密码"},
             status=400,
         )
     if not username.strip():
         return JsonResponse(
-            {"ok": False, "error": "用户名不能为空白"},
+            {"status": False, "message": "用户名不能为空白"},
             status=400,
         )
     if len(username) > 150:
         return JsonResponse(
-            {"ok": False, "error": "用户名过长，最多150个字符"},
+            {"status": False, "message": "用户名过长，最多150个字符"},
             status=400,
         )
 
     user = authenticate(username=username, password=password)
     if user is None:
         return JsonResponse(
-            {"ok": False, "error": "用户名或密码错误"},
+            {"status": False, "message": "用户名或密码错误"},
             status=401,
         )
 
     tokens = create_token_pair(str(user.id))
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             **tokens,
             "user": {"id": user.id, "username": user.username},
         }
@@ -97,49 +97,66 @@ def register(request):
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "请求格式错误"}, status=400)
+        return JsonResponse({"status": False, "message": "请求格式错误"}, status=400)
 
     username = data.get("username", "").strip()
     password = data.get("password", "").strip()
+    password2 = data.get("password2", "").strip()
+    email = data.get("email", "").strip()
 
     if not username and not password:
         return JsonResponse(
-            {"ok": False, "error": "请输入用户名和密码"},
+            {"status": False, "message": "请输入用户名和密码"},
             status=400,
         )
     if not username:
         return JsonResponse(
-            {"ok": False, "error": "请输入用户名"},
+            {"status": False, "message": "请输入用户名"},
             status=400,
         )
     if not password:
         return JsonResponse(
-            {"ok": False, "error": "请输入密码"},
+            {"status": False, "message": "请输入密码"},
             status=400,
         )
     if len(username) < 3:
         return JsonResponse(
-            {"ok": False, "error": "用户名至少 3 个字符"},
+            {"status": False, "message": "用户名至少 3 个字符"},
             status=400,
         )
     if len(username) > 20:
         return JsonResponse(
-            {"ok": False, "error": "用户名最多 20 个字符"},
+            {"status": False, "message": "用户名最多 20 个字符"},
+            status=400,
+        )
+    if password != password2:
+        return JsonResponse(
+            {"status": False, "message": "两次密码不一致"},
+            status=400,
+        )
+    if not email:
+        return JsonResponse(
+            {"status": False, "message": "请输入邮箱"},
+            status=400,
+        )
+    if "@" not in email:
+        return JsonResponse(
+            {"status": False, "message": "邮箱格式不正确"},
             status=400,
         )
     if User.objects.filter(username=username).exists():
         return JsonResponse(
-            {"ok": False, "error": "用户名已存在"},
+            {"status": False, "message": "用户名已存在"},
             status=409,
         )
 
-    user = User.objects.create_user(username=username, password=password)
+    user = User.objects.create_user(username=username, password=password, email=email)
     tokens = create_token_pair(str(user.id))
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             **tokens,
-            "user": {"id": user.id, "username": user.username},
+            "user": {"id": user.id, "username": user.username, "email": user.email},
         }
     )
 
@@ -152,11 +169,11 @@ def refresh_token(request):
     try:
         payload = verify_token(token, expected_type="refresh")
         if payload.get("type") != "refresh":
-            return JsonResponse({"ok": False, "error": "Not a refresh token"}, status=401)
+            return JsonResponse({"status": False, "message": "Not a refresh token"}, status=401)
         new_access = create_access_token(payload["sub"])
-        return JsonResponse({"ok": True, "access_token": new_access, "token_type": "bearer"})
+        return JsonResponse({"status": True, "access_token": new_access, "token_type": "bearer"})
     except Exception as e:
-        return JsonResponse({"ok": False, "error": str(e)}, status=401)
+        return JsonResponse({"status": False, "message": str(e)}, status=401)
 
 
 @csrf_exempt
@@ -173,24 +190,24 @@ def logout(request):
         except BlacklistUnavailableError as e:
             return JsonResponse(
                 {
-                    "ok": False,
-                    "error": str(e),
+                    "status": False,
+                    "message": str(e),
                     "retry": True,
                 },
                 status=503,
             )
-    return JsonResponse({"ok": True})
+    return JsonResponse({"status": True})
 
 
 def me(request):
     """GET /api/ai/auth/me — return current user info from JWT."""
     user_id = getattr(request, "user_id", None)
     if not user_id:
-        return JsonResponse({"ok": False, "error": "Not authenticated"}, status=401)
+        return JsonResponse({"status": False, "message": "Not authenticated"}, status=401)
     from django.contrib.auth.models import User
 
     try:
         user = User.objects.get(id=user_id)
-        return JsonResponse({"ok": True, "user": {"id": user.id, "username": user.username}})
+        return JsonResponse({"status": True, "user": {"id": user.id, "username": user.username}})
     except User.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "User not found"}, status=404)
+        return JsonResponse({"status": False, "message": "User not found"}, status=404)

@@ -69,7 +69,9 @@ def require_auth(view_func):
         async def async_wrapper(request, *args, **kwargs):
             user_id = getattr(request, "user_id", None)
             if not user_id:
-                return JsonResponse({"ok": False, "error": "未登录或 token 已过期"}, status=401)
+                return JsonResponse(
+                    {"status": False, "message": "未登录或 token 已过期"}, status=401
+                )
             return await view_func(request, *args, **kwargs)
 
         return async_wrapper
@@ -79,7 +81,9 @@ def require_auth(view_func):
         def wrapper(request, *args, **kwargs):
             user_id = getattr(request, "user_id", None)
             if not user_id:
-                return JsonResponse({"ok": False, "error": "未登录或 token 已过期"}, status=401)
+                return JsonResponse(
+                    {"status": False, "message": "未登录或 token 已过期"}, status=401
+                )
             return view_func(request, *args, **kwargs)
 
         return wrapper

@@ -18,10 +18,10 @@
 
 ```json
 // 成功
-{"ok": true,  ...}
+{"status": true,  ...}
 
 // 失败 — 统一格式
-{"ok": false, "error": "人类可读的中文描述"}
+{"status": false, "message": "人类可读的中文描述"}
 ```
 
 ### 错误码速查
@@ -43,13 +43,13 @@
 
 | 传值错误 | HTTP | 响应体 |
 |------|:--:|------|
-| JSON 格式非法（如缺少引号、括号） | `400` | `{"ok": false, "error": "无效的 JSON"}` |
-| 必填字段为空（title=""） | `400` | `{"ok": false, "error": "user_id 不能为空"}` 或通过前端校验拦截 |
+| JSON 格式非法（如缺少引号、括号） | `400` | `{"status": false, "message": "无效的 JSON"}` |
+| 必填字段为空（title=""） | `400` | `{"status": false, "message": "user_id 不能为空"}` 或通过前端校验拦截 |
 | 布尔字段传字符串（"true"而非 true） | `400` | JSON 解析失败 → `"无效的 JSON"` |
 | int 字段传字符串（"abc"而非数字） | `400` | JSON 解析失败 → `"无效的 JSON"` |
 | 枚举值非法（priority="P99"） | `400` | **静默降级为默认值 P1**（Django choices 特性） |
 | 枚举值非法（visibility="deleted"） | `400` | 同上（静默降级） |
-| 字段超长（title=500字符+1） | `500` | 数据库报错 → `{"ok": false, "error": "服务器内部错误"}` |
+| 字段超长（title=500字符+1） | `500` | 数据库报错 → `{"status": false, "message": "服务器内部错误"}` |
 | URL 路径参数非法（dir_id="abc"） | `404` | Django 路由不匹配 → 或返回 Not Found |
 
 ### 自动生成字段
@@ -81,7 +81,7 @@ GET /api/cases/directories
 **响应** `200`：
 ```json
 {
-  "ok": true,
+  "status": true,
   "tree": [
     {
       "id": 1,                          // int, 自增, 自动生成
@@ -122,17 +122,17 @@ POST /api/cases/directories/create
 
 **响应** `200`：
 ```json
-{"ok": true, "directory": {"id": 1, "name": "登录模块", "parent_id": null}}
+{"status": true, "directory": {"id": 1, "name": "登录模块", "parent_id": null}}
 ```
 
 **所有错误场景**：
 
 | 传值错误 | HTTP | 响应体 |
 |------|:--:|------|
-| `name` 为空或纯空格 | `400` | `{"ok": false, "error": "该层级下已存在同名目录: "}` 或前端拦截 |
-| 同级重复 `name` | `400` | `{"ok": false, "error": "该层级下已存在同名目录: 登录模块"}` |
-| `parent_id` 指向自身 | `500` | `{"ok": false, "error": "服务器内部错误"}` |
-| `name` 超 200 字符 | `500` | `{"ok": false, "error": "服务器内部错误"}` |
+| `name` 为空或纯空格 | `400` | `{"status": false, "message": "该层级下已存在同名目录: "}` 或前端拦截 |
+| 同级重复 `name` | `400` | `{"status": false, "message": "该层级下已存在同名目录: 登录模块"}` |
+| `parent_id` 指向自身 | `500` | `{"status": false, "message": "服务器内部错误"}` |
+| `name` 超 200 字符 | `500` | `{"status": false, "message": "服务器内部错误"}` |
 
 ---
 
@@ -166,12 +166,12 @@ POST /api/cases/directories/{dir_id}
 
 **错误** `403`：
 ```json
-{"ok": false, "error": "只有目录创建者（admin）可以删除此目录"}
+{"status": false, "message": "只有目录创建者（admin）可以删除此目录"}
 ```
 
 **错误** `400`：
 ```json
-{"ok": false, "error": "目录下存在子目录或用例，请先清空后再删除"}
+{"status": false, "message": "目录下存在子目录或用例，请先清空后再删除"}
 ```
 
 ---
@@ -196,9 +196,9 @@ POST /api/cases/directories/{dir_id}/permission
 {"allow_create": false, "allow_delete": true}
 ```
 
-**响应** `200`：`{"ok": true}`
+**响应** `200`：`{"status": true}`
 
-**错误** `403`：`{"ok": false, "error": "只有目录创建者可以修改权限"}`
+**错误** `403`：`{"status": false, "message": "只有目录创建者可以修改权限"}`
 
 ---
 
@@ -222,15 +222,15 @@ POST /api/cases/directories/batch-move
 }
 ```
 
-**响应** `200`：`{"ok": true, "moved": 2}`
+**响应** `200`：`{"status": true, "moved": 2}`
 
 **所有错误场景**：
 
 | 传值错误 | HTTP | 响应体 |
 |------|:--:|------|
-| `items` 为空数组 | `400` | `{"ok": false, "error": "items 必须是非空数组"}` |
-| `target_directory_id` 缺失 | `400` | `{"ok": false, "error": "target_directory_id 是必填项"}` |
-| `items` 中 id 不存在 | `500` | `{"ok": false, "error": "服务器内部错误"}` |
+| `items` 为空数组 | `400` | `{"status": false, "message": "items 必须是非空数组"}` |
+| `target_directory_id` 缺失 | `400` | `{"status": false, "message": "target_directory_id 是必填项"}` |
+| `items` 中 id 不存在 | `500` | `{"status": false, "message": "服务器内部错误"}` |
 | 目标目录不存在 | `500` | 同上（外键约束失败） |
 
 ---
@@ -334,19 +334,19 @@ POST /api/cases/definitions
 }
 ```
 
-**响应** `200`：`{"ok": true, "id": "TC-20260717-143022-1234"}`
+**响应** `200`：`{"status": true, "id": "TC-20260717-143022-1234"}`
 
 **所有错误场景**：
 
 | 传值错误 | HTTP | 响应体 |
 |------|:--:|------|
-| `title` 为空 | `400` | `{"ok": false, "error": "invalid JSON"}` 或前端拦截 |
-| `id` 已存在（重复创建） | `409` | `{"ok": false, "error": "目录「登录模块」下已存在同名用例「xxx」（ID: TC-xxx）"}` |
-| `updated_at` 不匹配 | `409` | `{"ok": false, "error": "用例「xxx」已被他人修改，请刷新后重试"}` |
+| `title` 为空 | `400` | `{"status": false, "message": "invalid JSON"}` 或前端拦截 |
+| `id` 已存在（重复创建） | `409` | `{"status": false, "message": "目录「登录模块」下已存在同名用例「xxx」（ID: TC-xxx）"}` |
+| `updated_at` 不匹配 | `409` | `{"status": false, "message": "用例「xxx」已被他人修改，请刷新后重试"}` |
 | `steps_data` 缺 `type` 字段 | `200` | 保存成功但步骤不完整（后端不校验步骤结构） |
 | `directory_id` 指向不存在的目录 | `200` | 静默设为 null |
-| `design_method` 超过 100 字符 | `500` | `{"ok": false, "error": "服务器内部错误"}` |
-| JSON 格式非法 | `400` | `{"ok": false, "error": "无效的 JSON"}` |
+| `design_method` 超过 100 字符 | `500` | `{"status": false, "message": "服务器内部错误"}` |
+| JSON 格式非法 | `400` | `{"status": false, "message": "无效的 JSON"}` |
 
 
 ---
@@ -361,15 +361,15 @@ GET /api/cases/definitions/{case_id}
 |------|:--:|:--:|------|
 | `case_id` | string | ✅ | 用例 ID（路径参数） |
 
-**响应** `200`：`{"ok": true, "definition": {...}}`（字段同 2.1）
+**响应** `200`：`{"status": true, "definition": {...}}`（字段同 2.1）
 
 **所有错误场景**：
 
 | 传值错误 | HTTP | 响应体 |
 |------|:--:|------|
-| `case_id` 不存在 | `404` | `{"ok": false, "error": "not found"}` |
-| 用例 visibility=hidden + 非创建者 | `404` | `{"ok": false, "error": "not found"}`（隐藏用例不可见） |
-| 用例 visibility=restricted + 不在 permitted_users | `404` | `{"ok": false, "error": "not found"}`（同上） |
+| `case_id` 不存在 | `404` | `{"status": false, "message": "not found"}` |
+| 用例 visibility=hidden + 非创建者 | `404` | `{"status": false, "message": "not found"}`（隐藏用例不可见） |
+| 用例 visibility=restricted + 不在 permitted_users | `404` | `{"status": false, "message": "not found"}`（同上） |
 
 ---
 
@@ -381,13 +381,13 @@ DELETE /api/cases/definitions/{case_id}
 
 无请求体。
 
-**响应** `200`：`{"ok": true}`
+**响应** `200`：`{"status": true}`
 
 **所有错误场景**：
 
 | 传值错误 | HTTP | 响应体 |
 |------|:--:|------|
-| `case_id` 不存在 | `404` | `{"ok": false, "error": "not found"}` |
+| `case_id` 不存在 | `404` | `{"status": false, "message": "not found"}` |
 
 ---
 
@@ -418,10 +418,10 @@ POST /api/cases/definitions/batch
 
 **响应** `200`：
 ```json
-{"ok": true, "imported": ["TC-001"], "skipped": [], "failed": []}
+{"status": true, "imported": ["TC-001"], "skipped": [], "failed": []}
 ```
 
-**错误** `400`：`{"ok": false, "error": "单次批量导入最多 500 条用例"}`
+**错误** `400`：`{"status": false, "message": "单次批量导入最多 500 条用例"}`
 
 ---
 
@@ -440,7 +440,7 @@ POST /api/cases/definitions/{case_id}/lock
 **响应** `200`：
 ```json
 {
-  "ok": true,
+  "status": true,
   "editing_by": "admin",
   "editing_since": "2026-07-17T15:30:00",
   "created_by": "admin"
@@ -449,29 +449,29 @@ POST /api/cases/definitions/{case_id}/lock
 
 **错误** `423`（已被他人锁定）：
 ```json
-{"ok": false, "error": "用例正被 tester 编辑中", "editing_by": "tester", "editing_since": "2026-07-17 15:28:00"}
+{"status": false, "message": "用例正被 tester 编辑中", "editing_by": "tester", "editing_since": "2026-07-17 15:28:00"}
 ```
 
 **错误** `423`（只读模式）：
 ```json
-{"ok": false, "error": "此用例为只读模式，仅创建者可编辑"}
+{"status": false, "message": "此用例为只读模式，仅创建者可编辑"}
 ```
 
 **错误** `423`（指定用户）：
 ```json
-{"ok": false, "error": "此用例仅限指定用户编辑"}
+{"status": false, "message": "此用例仅限指定用户编辑"}
 ```
 
 **所有错误场景**：
 
 | 传值错误 | HTTP | 响应体 |
 |------|:--:|------|
-| 未登录 | `401` | `{"ok": false, "error": "未登录"}` |
-| 用例不存在 | `404` | `{"ok": false, "error": "用例不存在"}` |
-| 已被他人锁定（30min内） | `423` | `{"ok": false, "error": "用例正被 tester 编辑中", "editing_by": "tester", ...}` |
-| permission=readonly + 非创建者 | `423` | `{"ok": false, "error": "此用例为只读模式，仅创建者可编辑"}` |
-| permission=restricted + 不在 permitted_editors | `423` | `{"ok": false, "error": "此用例仅限指定用户编辑"}` |
-| 锁超时（30min）→ 自动释放，重新获取成功 | `200` | `{"ok": true, ...}` |
+| 未登录 | `401` | `{"status": false, "message": "未登录"}` |
+| 用例不存在 | `404` | `{"status": false, "message": "用例不存在"}` |
+| 已被他人锁定（30min内） | `423` | `{"status": false, "message": "用例正被 tester 编辑中", "editing_by": "tester", ...}` |
+| permission=readonly + 非创建者 | `423` | `{"status": false, "message": "此用例为只读模式，仅创建者可编辑"}` |
+| permission=restricted + 不在 permitted_editors | `423` | `{"status": false, "message": "此用例仅限指定用户编辑"}` |
+| 锁超时（30min）→ 自动释放，重新获取成功 | `200` | `{"status": true, ...}` |
 
 ---
 
@@ -493,11 +493,11 @@ POST /api/cases/definitions/{case_id}/unlock
 
 **强制释放（创建者）**：`{"force": true}`
 
-**响应** `200`：`{"ok": true, "released": true}` 或 `{"ok": true, "already_unlocked": true}`
+**响应** `200`：`{"status": true, "released": true}` 或 `{"status": true, "already_unlocked": true}`
 
 **错误** `403`：
 ```json
-{"ok": false, "error": "只有用例创建者可以强制解除编辑锁"}
+{"status": false, "message": "只有用例创建者可以强制解除编辑锁"}
 ```
 
 ---
@@ -512,15 +512,15 @@ POST /api/cases/definitions/{case_id}/case-lock
 
 **权限**：仅创建者。无请求体。
 
-**响应** `200`：`{"ok": true, "locked": true}`
+**响应** `200`：`{"status": true, "locked": true}`
 
 **所有错误场景**：
 
 | 传值错误 | HTTP | 响应体 |
 |------|:--:|------|
-| 未登录 | `401` | `{"ok": false, "error": "未登录"}` |
-| 用例不存在 | `404` | `{"ok": false, "error": "用例不存在"}` |
-| 非创建者 | `403` | `{"ok": false, "error": "只有创建者可以锁定用例"}` |
+| 未登录 | `401` | `{"status": false, "message": "未登录"}` |
+| 用例不存在 | `404` | `{"status": false, "message": "用例不存在"}` |
+| 非创建者 | `403` | `{"status": false, "message": "只有创建者可以锁定用例"}` |
 | 已锁定再锁 | `200` | 正常返回（幂等） |
 
 ---
@@ -533,16 +533,16 @@ POST /api/cases/definitions/{case_id}/case-unlock
 
 **权限**：仅创建者。无请求体。
 
-**响应** `200`：`{"ok": true, "unlocked": true}` 或 `{"ok": true, "already_unlocked": true}`
+**响应** `200`：`{"status": true, "unlocked": true}` 或 `{"status": true, "already_unlocked": true}`
 
 **所有错误场景**：
 
 | 传值错误 | HTTP | 响应体 |
 |------|:--:|------|
-| 未登录 | `401` | `{"ok": false, "error": "未登录"}` |
-| 用例不存在 | `404` | `{"ok": false, "error": "用例不存在"}` |
-| 非创建者 | `403` | `{"ok": false, "error": "只有创建者可以解除锁定"}` |
-| 未锁定时解除 | `200` | `{"ok": true, "already_unlocked": true}`（幂等） |
+| 未登录 | `401` | `{"status": false, "message": "未登录"}` |
+| 用例不存在 | `404` | `{"status": false, "message": "用例不存在"}` |
+| 非创建者 | `403` | `{"status": false, "message": "只有创建者可以解除锁定"}` |
+| 未锁定时解除 | `200` | `{"status": true, "already_unlocked": true}`（幂等） |
 
 ---
 
@@ -575,9 +575,9 @@ POST /api/cases/definitions/{case_id}/visibility
 {"visibility": "restricted", "permitted_users": ["tester", "dev1"]}
 ```
 
-**响应** `200`：`{"ok": true, "visibility": "restricted"}`
+**响应** `200`：`{"status": true, "visibility": "restricted"}`
 
-**错误** `403`：`{"ok": false, "error": "只有创建者可以修改可见性"}`
+**错误** `403`：`{"status": false, "message": "只有创建者可以修改可见性"}`
 
 ---
 
@@ -600,15 +600,15 @@ POST /api/cases/export/yaml
 {"test_case_name": "回归测试套件", "page_ids": [1, 2]}
 ```
 
-**响应** `200`：`{"ok": true, "filename": "回归测试套件_20260717_153000.yaml", "yaml": "..."}`
+**响应** `200`：`{"status": true, "filename": "回归测试套件_20260717_153000.yaml", "yaml": "..."}`
 
 **所有错误场景**：
 
 | 传值错误 | HTTP | 响应体 |
 |------|:--:|------|
-| JSON 格式非法 | `400` | `{"ok": false, "error": "无效的 JSON"}` |
+| JSON 格式非法 | `400` | `{"status": false, "message": "无效的 JSON"}` |
 | 无测试点元素 | `200` | 导出文件为空（仅含框架） |
-| 文件写入失败 | `500` | `{"ok": false, "error": "服务器内部错误"}` |
+| 文件写入失败 | `500` | `{"status": false, "message": "服务器内部错误"}` |
 
 ### 6.2 导出文件列表
 
@@ -620,7 +620,7 @@ GET /api/cases/exports
 
 **响应** `200`：
 ```json
-{"ok": true, "files": [{"name": "test_20260717.yaml", "size": 2048, "time": "2026-07-17T15:30:00"}]}
+{"status": true, "files": [{"name": "test_20260717.yaml", "size": 2048, "time": "2026-07-17T15:30:00"}]}
 ```
 
 ### 6.3 下载导出文件
@@ -635,7 +635,7 @@ GET /api/cases/exports/{filename}
 
 **响应** `200`：直接返回 YAML 文件流（`Content-Type: application/x-yaml`）
 
-**错误** `404`：`{"ok": false, "error": "not found"}`
+**错误** `404`：`{"status": false, "message": "not found"}`
 
 ---
 

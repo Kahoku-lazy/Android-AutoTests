@@ -98,35 +98,35 @@ def upload_avatar(request):
         data = json.loads(request.body)
         img_b64 = data.get("image", "")
         if not img_b64:
-            return JsonResponse({"ok": False, "error": "no image data"})
+            return JsonResponse({"status": False, "message": "no image data"})
         # Normalise: strip the data: prefix if present, so we can prepend our own
         if "," in img_b64:
             img_b64 = img_b64.split(",", 1)[1]
         # Validate that it's actually decodable base64
         base64.b64decode(img_b64)
         data_uri = f"data:image/png;base64,{img_b64}"
-        return JsonResponse({"ok": True, "url": data_uri})
+        return JsonResponse({"status": True, "url": data_uri})
     except Exception:
         logger.exception("Avatar upload failed")
-        return JsonResponse({"ok": False, "error": "头像上传失败，请重试"}, status=500)
+        return JsonResponse({"status": False, "message": "头像上传失败，请重试"}, status=500)
 
 
 @csrf_exempt
 @require_auth
 def upload_and_parse_file(request):
     if request.method != "POST":
-        return JsonResponse({"ok": False, "error": "POST required"}, status=405)
+        return JsonResponse({"status": False, "message": "POST required"}, status=405)
 
     uploaded = request.FILES.get("file")
     if not uploaded:
-        return JsonResponse({"ok": False, "error": "No file uploaded"}, status=400)
+        return JsonResponse({"status": False, "message": "No file uploaded"}, status=400)
 
     ext = uploaded.name.rsplit(".", 1)[-1].lower() if "." in uploaded.name else ""
     if ext not in ALLOWED_EXTENSIONS:
         return JsonResponse(
             {
-                "ok": False,
-                "error": f"Unsupported file type: .{ext}. Supported: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
+                "status": False,
+                "message": f"Unsupported file type: .{ext}. Supported: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
             },
             status=400,
         )
@@ -134,8 +134,8 @@ def upload_and_parse_file(request):
     if uploaded.size > MAX_UPLOAD_SIZE:
         return JsonResponse(
             {
-                "ok": False,
-                "error": f"File too large ({uploaded.size} bytes). Max: {MAX_UPLOAD_SIZE} bytes",
+                "status": False,
+                "message": f"File too large ({uploaded.size} bytes). Max: {MAX_UPLOAD_SIZE} bytes",
             },
             status=400,
         )
@@ -183,14 +183,14 @@ def upload_and_parse_file(request):
 
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "data": {
                     "filename": uploaded.name,
                     "size": uploaded.size,
                     "type": ext,
                     "content": content,
                     "preview": content[:300] + ("..." if len(content) > 300 else ""),
-                    "error": parse_error,
+                    "message": parse_error,
                 },
             }
         )

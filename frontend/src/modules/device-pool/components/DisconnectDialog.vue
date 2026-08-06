@@ -1,19 +1,28 @@
-<script setup>
+<script setup lang="ts">
 /** DisconnectDialog — 强制断开确认弹窗 per PRD §7.2 */
 import { ref, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-// el-dialog → el-dialog, Button → el-button (Element Plus auto-import)
 
-const props = defineProps({
-  visible: { type: Boolean, default: false },
-  serial: { type: String, default: '' },
-  model: { type: String, default: '' },
-  status: { type: String, default: '' },
-  lockedBy: { type: String, default: '' },
-  isBusyOthers: { type: Boolean, default: false },
+const props = withDefaults(defineProps<{
+  visible?: boolean
+  serial?: string
+  model?: string
+  status?: string
+  lockedBy?: string
+  isBusyOthers?: boolean
+}>(), {
+  visible: false,
+  serial: '',
+  model: '',
+  status: '',
+  lockedBy: '',
+  isBusyOthers: false,
 })
 
-const emit = defineEmits(['confirm', 'cancel'])
+const emit = defineEmits<{
+  confirm: [payload: { reason: string }]
+  cancel: []
+}>()
 
 const reason = ref('')
 
@@ -47,14 +56,14 @@ function handleCancel() {
     :close-on-click-modal="false"
     @close="handleCancel"
   >
-    <div style="margin-bottom:16px">
+    <div class="disconnect-body">
       <p>
         确定要断开
         <strong>{{ serial }}</strong>
         <template v-if="model">({{ model }})</template>
         吗？
       </p>
-      <p v-if="isBusyOthers" style="background:var(--el-color-warning-light-9);padding:10px;border-radius:6px;margin-top:8px">
+      <p v-if="isBusyOthers" class="disconnect-warning">
         该设备状态：<el-tag type="warning" size="small">BUSY</el-tag>
         锁定者：<strong>{{ lockedBy }}</strong><br />
         断开后该设备所有锁将被<strong>强制释放</strong>。
@@ -85,3 +94,15 @@ function handleCancel() {
     </template>
   </el-dialog>
 </template>
+
+<style scoped>
+.disconnect-body {
+  margin-bottom: 16px;
+}
+.disconnect-warning {
+  background: var(--el-color-warning-light-9);
+  padding: 10px;
+  border-radius: 6px;
+  margin-top: 8px;
+}
+</style>

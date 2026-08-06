@@ -57,11 +57,11 @@ def call_model_api(agent, path, method="GET", body=None):
 def test_agent_connection(request, agent_id):
     """POST /api/ai/agents/{id}/test — test API connectivity and fetch models."""
     if not check_agent_owner(request.user_id, agent_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
     try:
         a = AIAgent.objects.get(id=agent_id)
     except AIAgent.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "not found"}, status=404)
+        return JsonResponse({"status": False, "message": "not found"}, status=404)
 
     available_models = []
     connected = False
@@ -105,10 +105,10 @@ def test_agent_connection(request, agent_id):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "connected": connected,
             "available_models": available_models,
-            "error": last_error if not connected else "",
+            "message": last_error if not connected else "",
         }
     )
 
@@ -141,7 +141,7 @@ def list_available_models(request, agent_id=None):
             except Exception:
                 logger.warning("model detection request failed for %s", base_url)
                 continue
-        return JsonResponse({"ok": True, "models": models})
+        return JsonResponse({"status": True, "models": models})
 
     if agent_id:
         try:
@@ -149,12 +149,12 @@ def list_available_models(request, agent_id=None):
             models = json.loads(a.available_models) if a.available_models else []
             return JsonResponse(
                 {
-                    "ok": True,
+                    "status": True,
                     "models": models,
                     "is_connected": a.is_connected,
                     "last_checked": str(a.last_checked_at) if a.last_checked_at else None,
                 }
             )
         except AIAgent.DoesNotExist:
-            return JsonResponse({"ok": False, "error": "not found"}, status=404)
-    return JsonResponse({"ok": False, "error": "agent_id required"}, status=400)
+            return JsonResponse({"status": False, "message": "not found"}, status=404)
+    return JsonResponse({"status": False, "message": "agent_id required"}, status=400)

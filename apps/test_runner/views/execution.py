@@ -111,10 +111,11 @@ async def start_test_run(request):
         serials = [device.current_serial]
 
     if not case_ids:
-        return JsonResponse({"ok": False, "error": "case_ids required"})
+        return JsonResponse({"status": False, "message": "case_ids required"})
     if task_type == CaseType.UI_AUTOMATION.value and not serials:
         return JsonResponse(
-            {"ok": False, "error": "device_serial is required for UI automation tasks"}, status=400
+            {"status": False, "message": "device_serial is required for UI automation tasks"},
+            status=400,
         )
 
     @_bg_sync
@@ -201,7 +202,7 @@ async def start_test_run(request):
 
     test_cases = await load_definitions()
     if not test_cases:
-        return JsonResponse({"ok": False, "error": "no enabled test cases found"})
+        return JsonResponse({"status": False, "message": "no enabled test cases found"})
 
     effective_pkg = package_name
     if not effective_pkg and test_cases:
@@ -229,7 +230,7 @@ async def start_test_run(request):
         )
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "runs": [{"run_id": run_id, "test_cases": len(test_cases)}],
                 "queued": [],
                 "case_count": len(test_cases),
@@ -417,15 +418,15 @@ async def start_test_run(request):
     if not run_ids and not queued_serials:
         return JsonResponse(
             {
-                "ok": False,
-                "error": "没有可用设备，请确认设备已连接且状态为在线",
+                "status": False,
+                "message": "没有可用设备，请确认设备已连接且状态为在线",
             },
             status=400,
         )
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "runs": run_ids,
             "queued": queued_serials,
             "case_count": len(test_cases),

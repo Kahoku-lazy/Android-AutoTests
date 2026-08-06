@@ -5,9 +5,9 @@ import FilterTabs from "@/shared/components/FilterTabs.vue";
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { animate } from 'animejs'
-import { bus } from '@/shared/event-bus.js'
-import { useElementStore } from './store.js'
-import { apiInput } from './api.js'
+import { bus } from '@/shared/event-bus'
+import { useElementStore } from './store'
+import { apiInput } from './api'
 import DeviceSelector from './components/DeviceSelector.vue'
 import ScreenshotView from './components/ScreenshotView.vue'
 import XPathCandidatePanel from './components/XPathCandidatePanel.vue'
@@ -104,7 +104,7 @@ onMounted(async () => {
   try {
     await store.fetchDevices()
   } catch (e) {
-    store.error = '加载设备列表失败，请检查网络连接'
+    store.message = '加载设备列表失败，请检查网络连接'
     console.error(e)
   }
 
@@ -112,7 +112,7 @@ onMounted(async () => {
   devicePollTimer = setInterval(async () => {
     await store.fetchDevices()
     if (!store.isDeviceOnline && store.currentSerial) {
-      store.error = `设备 ${store.currentSerial} 已离线`
+      store.message = `设备 ${store.currentSerial} 已离线`
     }
   }, 30000)
 })
@@ -127,15 +127,15 @@ onUnmounted(() => {
 
 async function doDump() {
   if (!store.isConnected) {
-    store.error = '请先选择设备并点击"连接"'
+    store.message = '请先选择设备并点击"连接"'
     return
   }
   if (!store.isDeviceOnline) {
-    store.error = `设备 ${store.currentSerial} 已离线`
+    store.message = `设备 ${store.currentSerial} 已离线`
     return
   }
   const result = await store.doDump()
-  if (result?.ok) {
+  if (result?.status) {
     await nextTick()
     animate('.info', { opacity: [0,1], translateX: [-10,0], duration: 400, ease: 'outCubic' })
   }
@@ -143,11 +143,11 @@ async function doDump() {
 
 async function refreshScreen() {
   if (!store.isConnected) {
-    store.error = '请先选择设备并点击"连接"'
+    store.message = '请先选择设备并点击"连接"'
     return
   }
   if (!store.isDeviceOnline) {
-    store.error = `设备 ${store.currentSerial} 已离线`
+    store.message = `设备 ${store.currentSerial} 已离线`
     return
   }
   screenRefreshing.value = true
@@ -164,13 +164,13 @@ async function refreshScreen() {
 async function doAction(action, x, y, text) {
   let ok
   if (action === 'input' && text) {
-    ok = await apiInput(text, x, y, true).then(r => r.data.ok).catch(() => false)
+    ok = await apiInput(text, x, y, true).then(r => r.data.status).catch(() => false)
   } else {
     ok = await store.doAction(action, x, y)
   }
   if (!ok) {
     await nextTick()
-    animate('.error', { translateX: [0,-5,5,-3,3,0], duration: 400 })
+    animate('.message', { translateX: [0,-5,5,-3,3,0], duration: 400 })
   }
 }
 
@@ -234,7 +234,7 @@ watch(activeTab, async (tab) => {
               <button class="locator-action-btn" :disabled="!store.isConnected || !store.isDeviceOnline" @click="refreshScreen">↻ 刷新屏幕</button>
               <button class="locator-action-btn locator-action-btn--primary" :disabled="!store.isConnected || !store.isDeviceOnline" @click="doDump">{{ store.loading ? 'Dumping...' : '⚡ Dump UI' }}</button>
               <span v-if="store.pageId" class="info">{{ filteredElements.length }}/{{ store.elements.length }} 元素</span>
-              <ErrorState v-if="store.error" :message="store.error" @retry="() => { store.error = ''; doDump() }" />
+              <ErrorState v-if="store.message" :message="store.message" @retry="() => { store.message = ''; doDump() }" />
             </div>
 
             <!-- Filter bar: custom Paper-style tabs -->
@@ -422,7 +422,7 @@ watch(activeTab, async (tab) => {
 }
 
 .info { font-size: var(--app-size-sm); color: var(--app-text-secondary, #7A8B73); white-space: nowrap; }
-.error { font-size: var(--app-size-sm); color: var(--el-color-danger, #FFB5A7); white-space: nowrap; }
+.message { font-size: var(--app-size-sm); color: var(--el-color-danger, #FFB5A7); white-space: nowrap; }
 
 .workspace {
   flex: 1;

@@ -1,14 +1,20 @@
-<script setup>
+<script setup lang="ts">
 /** 拍立得设备卡片 — 彩色边框 + 照片区 + 图钉 + 微旋转 */
 import { computed } from 'vue'
-import { statusTag, displayModel, connectionLabel, formatRelativeTime } from '../constants.js'
+import { statusTag, displayModel, connectionLabel, formatRelativeTime } from '../helpers'
+import type { DeviceRecord } from '@/shared/types/device'
 
-const props = defineProps({
-  device: { type: Object, required: true },
-  currentUser: { type: String, default: '' },
-})
+const props = defineProps<{
+  device: DeviceRecord
+  currentUser?: string
+}>()
 
-const emit = defineEmits(['lock', 'join-queue', 'disconnect', 'click'])
+const emit = defineEmits<{
+  lock: [device: DeviceRecord]
+  joinQueue: [device: DeviceRecord]
+  disconnect: [device: DeviceRecord]
+  click: [device: DeviceRecord]
+}>()
 
 const status = computed(() => {
   const s = props.device.status
@@ -41,7 +47,7 @@ function go() { emit('click', props.device) }
         class="card-btn unlock" @click.stop="emit('lock', device)">解锁</button>
       <button
         v-if="device.locked_by && device.locked_by !== currentUser"
-        class="card-btn queue" @click.stop="emit('join-queue', device)">排队</button>
+        class="card-btn queue" @click.stop="emit('joinQueue', device)">排队</button>
       <button
         v-if="device.connection_type === 'WIFI'"
         class="card-btn disconnect" @click.stop="emit('disconnect', device)">断开</button>

@@ -163,9 +163,10 @@ class WsTestCallback(TestRunnerCallback):
             {"type": "run_finished", "run_id": run_id, "summary": summary, "log_path": log_path},
         )
         self._seq.pop(run_id, None)  # 清理 seq 计数器
+        self.clients.pop(run_id, None)  # 清理 clients 集合
 
     async def on_device_error(self, run_id: str, error: str):
-        await self._broadcast(run_id, {"type": "device_error", "run_id": run_id, "error": error})
+        await self._broadcast(run_id, {"type": "device_error", "run_id": run_id, "message": error})
 
     async def on_heartbeat(self, run_id: str):
         """每 5s 心跳 — 前端据此检测连接存活（15s 无心跳 → 连接丢失）。"""

@@ -175,12 +175,12 @@ def run_evaluation(
     try:
         run = EvalRun.objects.select_related("agent", "bank").get(id=run_id)
     except EvalRun.DoesNotExist:
-        return {"ok": False, "error": f"Run {run_id} not found"}
+        return {"status": False, "message": f"Run {run_id} not found"}
 
     if not run.agent or not run.bank:
         run.status = "failed"
         run.save()
-        return {"ok": False, "error": "Agent or question bank missing"}
+        return {"status": False, "message": "Agent or question bank missing"}
 
     agent = run.agent
     questions = list(run.bank.questions.all().order_by("order", "id"))
@@ -191,11 +191,11 @@ def run_evaluation(
     api_key = decrypt_key(agent.api_key) if agent.api_key else ""
     if not api_key:
         run.status = "failed"
-        run.report_json = json.dumps({"error": "Agent has no API key"}, ensure_ascii=False)
+        run.report_json = json.dumps({"message": "Agent has no API key"}, ensure_ascii=False)
         run.save()
-        return {"ok": False, "error": "Agent has no API key"}
+        return {"status": False, "message": "Agent has no API key"}
 
-    from apps.ai_assistant.agent_scope.provider_registry import get_provider_config
+    from apps.ai_assistant.api import get_provider_config
 
     provider_cfg = get_provider_config(agent.model_provider, agent.base_url)
 
@@ -316,4 +316,4 @@ def run_evaluation(
     )
     run.save()
 
-    return {"ok": True, "total_score": run.total_score, "details": results}
+    return {"status": True, "total_score": run.total_score, "details": results}

@@ -52,17 +52,17 @@ def list_available_platform_tools(request):
                 }
             )
 
-    return JsonResponse({"ok": True, "categories": categories})
+    return JsonResponse({"status": True, "categories": categories})
 
 
 def list_agent_tools(request, agent_id):
     """GET /api/ai/agents/{id}/tools — list all MCP and Skill tools for an agent."""
     if not check_agent_owner(request.user_id, agent_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
     try:
         agent = AIAgent.objects.get(id=agent_id)
     except AIAgent.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "agent not found"}, status=404)
+        return JsonResponse({"status": False, "message": "agent not found"}, status=404)
 
     tools_qs = AITool.objects.filter(agent=agent)
     mcp_list = []
@@ -86,7 +86,7 @@ def list_agent_tools(request, agent_id):
         else:
             mcp_list.append(item)
 
-    return JsonResponse({"ok": True, "data": {"mcp": mcp_list, "skills": skill_list}})
+    return JsonResponse({"status": True, "data": {"mcp": mcp_list, "skills": skill_list}})
 
 
 @csrf_exempt
@@ -94,16 +94,16 @@ def list_agent_tools(request, agent_id):
 def toggle_tool(request, agent_id, tool_id):
     """POST /api/ai/agents/{id}/tools/{tool_id}/toggle — enable or disable a tool."""
     if not check_agent_owner(request.user_id, agent_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
     try:
         tool = AITool.objects.get(id=tool_id, agent_id=agent_id)
     except AITool.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "tool not found"}, status=404)
+        return JsonResponse({"status": False, "message": "tool not found"}, status=404)
 
     data = json.loads(request.body)
     tool.enabled = data.get("enabled", True)
     tool.save(update_fields=["enabled"])
-    return JsonResponse({"ok": True, "enabled": tool.enabled})
+    return JsonResponse({"status": True, "enabled": tool.enabled})
 
 
 @csrf_exempt
@@ -114,11 +114,11 @@ def delete_tool(request, agent_id, tool_id):
     Skill tools also have their file directories cleaned up.
     """
     if not check_agent_owner(request.user_id, agent_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
     try:
         tool = AITool.objects.get(id=tool_id, agent_id=agent_id)
     except AITool.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "tool not found"}, status=404)
+        return JsonResponse({"status": False, "message": "tool not found"}, status=404)
 
     if tool.tool_type == "skill":
         try:
@@ -133,7 +133,7 @@ def delete_tool(request, agent_id, tool_id):
             logger.exception("Skill dir cleanup failed for tool_id=%s", tool_id)
 
     tool.delete()
-    return JsonResponse({"ok": True})
+    return JsonResponse({"status": True})
 
 
 @csrf_exempt
@@ -145,11 +145,11 @@ def save_mcp(request, agent_id):
     If name already exists → update; otherwise → create.
     """
     if not check_agent_owner(request.user_id, agent_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
     try:
         agent = AIAgent.objects.get(id=agent_id)
     except AIAgent.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "agent not found"}, status=404)
+        return JsonResponse({"status": False, "message": "agent not found"}, status=404)
 
     data = json.loads(request.body)
     name = (data.get("name") or "").strip()
@@ -158,16 +158,16 @@ def save_mcp(request, agent_id):
     try:
         json.loads(config_json_str)
     except (json.JSONDecodeError, TypeError):
-        return JsonResponse({"ok": False, "error": "config_json 不是有效的 JSON"}, status=400)
+        return JsonResponse({"status": False, "message": "config_json 不是有效的 JSON"}, status=400)
 
     if not name:
-        return JsonResponse({"ok": False, "error": "name 不能为空"}, status=400)
+        return JsonResponse({"status": False, "message": "name 不能为空"}, status=400)
 
     existing = AITool.objects.filter(agent=agent, name=name, tool_type="mcp").first()
     if existing:
         existing.config_json = config_json_str
         existing.save(update_fields=["config_json"])
-        return JsonResponse({"ok": True, "id": existing.id, "created": False})
+        return JsonResponse({"status": True, "id": existing.id, "created": False})
 
     tool = AITool.objects.create(
         agent=agent,
@@ -176,7 +176,7 @@ def save_mcp(request, agent_id):
         config_json=config_json_str,
         enabled=True,
     )
-    return JsonResponse({"ok": True, "id": tool.id, "created": True})
+    return JsonResponse({"status": True, "id": tool.id, "created": True})
 
 
 @csrf_exempt
@@ -188,7 +188,7 @@ def test_mcp(request, agent_id):
     Returns {ok, connected, detail}.
     """
     if not check_agent_owner(request.user_id, agent_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
 
     data = json.loads(request.body)
     transport = data.get("transport", "stdio")
@@ -202,7 +202,7 @@ def test_mcp(request, agent_id):
             cmd.extend(args)
             cmd = [c for c in cmd if c]
             if not cmd:
-                return JsonResponse({"ok": True, "connected": False, "detail": "命令为空"})
+                return JsonResponse({"status": True, "connected": False, "detail": "命令为空"})
 
             result = subprocess.run(
                 cmd,
@@ -212,25 +212,25 @@ def test_mcp(request, agent_id):
                 cwd=data.get("cwd") or None,
             )
             detail = f"进程已启动 (stdout: {(result.stdout or '').strip()[:100] or '无输出'})"
-            if result.stderr and "error" in result.stderr.lower():
+            if result.stderr and "message" in result.stderr.lower():
                 detail = f"stderr: {result.stderr.strip()[:200]}"
-                return JsonResponse({"ok": True, "connected": False, "detail": detail})
-            return JsonResponse({"ok": True, "connected": True, "detail": detail})
+                return JsonResponse({"status": True, "connected": False, "detail": detail})
+            return JsonResponse({"status": True, "connected": True, "detail": detail})
 
         else:
             url = data.get("url", "")
             if not url:
-                return JsonResponse({"ok": True, "connected": False, "detail": "URL 为空"})
+                return JsonResponse({"status": True, "connected": False, "detail": "URL 为空"})
             try:
                 import httpx
 
                 resp = httpx.get(url, timeout=10, follow_redirects=True)
                 if 200 <= resp.status_code < 500:
                     return JsonResponse(
-                        {"ok": True, "connected": True, "detail": f"HTTP {resp.status_code}"}
+                        {"status": True, "connected": True, "detail": f"HTTP {resp.status_code}"}
                     )
                 return JsonResponse(
-                    {"ok": True, "connected": False, "detail": f"HTTP {resp.status_code}"}
+                    {"status": True, "connected": False, "detail": f"HTTP {resp.status_code}"}
                 )
             except ImportError:
                 import urllib.request
@@ -238,21 +238,25 @@ def test_mcp(request, agent_id):
                 try:
                     r = urllib.request.urlopen(url, timeout=10)
                     return JsonResponse(
-                        {"ok": True, "connected": True, "detail": f"HTTP {r.getcode()}"}
+                        {"status": True, "connected": True, "detail": f"HTTP {r.getcode()}"}
                     )
                 except Exception as e:
                     return JsonResponse(
-                        {"ok": True, "connected": False, "detail": f"连接失败: {e}"}
+                        {"status": True, "connected": False, "detail": f"连接失败: {e}"}
                     )
 
     except subprocess.TimeoutExpired:
-        return JsonResponse({"ok": True, "connected": False, "detail": "命令超时 (15s)"})
+        return JsonResponse({"status": True, "connected": False, "detail": "命令超时 (15s)"})
     except FileNotFoundError:
         return JsonResponse(
-            {"ok": True, "connected": False, "detail": f"命令未找到: {cmd[0] if cmd else '未知'}"}
+            {
+                "status": True,
+                "connected": False,
+                "detail": f"命令未找到: {cmd[0] if cmd else '未知'}",
+            }
         )
     except Exception as e:
-        return JsonResponse({"ok": True, "connected": False, "detail": str(e)[:200]})
+        return JsonResponse({"status": True, "connected": False, "detail": str(e)[:200]})
 
 
 # ── Skill upload ──
@@ -317,33 +321,33 @@ def upload_skill(request, agent_id):
     writes _manifest.json, creates/updates AITool record.
     """
     if request.method != "POST":
-        return JsonResponse({"ok": False, "error": "POST required"}, status=405)
+        return JsonResponse({"status": False, "message": "POST required"}, status=405)
 
     if not check_agent_owner(request.user_id, agent_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
 
     try:
         agent = AIAgent.objects.get(id=agent_id)
     except AIAgent.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "agent not found"}, status=404)
+        return JsonResponse({"status": False, "message": "agent not found"}, status=404)
 
     skill_name = (request.POST.get("name") or "").strip()
     uploaded_files = request.FILES.getlist("files")
 
     if not skill_name:
-        return JsonResponse({"ok": False, "error": "skill name 不能为空"}, status=400)
+        return JsonResponse({"status": False, "message": "skill name 不能为空"}, status=400)
     if not uploaded_files:
-        return JsonResponse({"ok": False, "error": "未上传任何文件"}, status=400)
+        return JsonResponse({"status": False, "message": "未上传任何文件"}, status=400)
 
     if any(c in skill_name for c in ("..", "/", "\\")):
-        return JsonResponse({"ok": False, "error": "skill name 包含非法字符"}, status=400)
+        return JsonResponse({"status": False, "message": "skill name 包含非法字符"}, status=400)
 
     total_size = sum(f.size for f in uploaded_files)
     if total_size > MAX_SKILL_TOTAL_SIZE:
         return JsonResponse(
             {
-                "ok": False,
-                "error": f"文件总大小 {total_size} 超过限制 {MAX_SKILL_TOTAL_SIZE}",
+                "status": False,
+                "message": f"文件总大小 {total_size} 超过限制 {MAX_SKILL_TOTAL_SIZE}",
             },
             status=400,
         )
@@ -370,11 +374,11 @@ def upload_skill(request, agent_id):
             file_count += 1
     except Exception as e:
         shutil.rmtree(skill_dir, ignore_errors=True)
-        return JsonResponse({"ok": False, "error": f"文件写入失败: {e}"}, status=500)
+        return JsonResponse({"status": False, "message": f"文件写入失败: {e}"}, status=500)
 
     if file_count == 0:
         shutil.rmtree(skill_dir, ignore_errors=True)
-        return JsonResponse({"ok": False, "error": "没有有效的 Skill 文件"}, status=400)
+        return JsonResponse({"status": False, "message": "没有有效的 Skill 文件"}, status=400)
 
     features = _detect_skill_features(skill_dir)
 
@@ -421,7 +425,7 @@ def upload_skill(request, agent_id):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "data": {
                 "id": tool.id,
                 "name": tool.name,

@@ -16,7 +16,7 @@ from apps.dashboard.views import (
 from .api_docs import api_docs_html, api_docs_json
 
 urlpatterns = [
-    path("", lambda r: JsonResponse({"ok": True, "service": "Android-AutoTests API"})),
+    path("", lambda r: JsonResponse({"status": True, "service": "Android-AutoTests API"})),
     # API documentation
     path("api/docs", api_docs_json, name="api_docs_json"),
     path("api/docs.html", api_docs_html, name="api_docs_html"),
@@ -38,6 +38,7 @@ urlpatterns = [
     path("api/evaluator/", include("apps.evaluator.urls")),
 ]
 
-# DEBUG 模式下由 Django 直接提供静态文件服务（Daphne/ASGI 不像 runserver 自动提供）
+# DEBUG 模式下由 Django 直接提供静态/媒体文件服务
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

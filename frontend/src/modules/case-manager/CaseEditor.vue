@@ -2,14 +2,14 @@
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { getDefinition, saveDefinition } from "./api/uiAutomation.js";
+import { getDefinition, saveDefinition } from "./api/uiAutomation";
 import StepEditor from "./components/StepEditor.vue";
 import WatcherPanel from "./components/WatcherPanel.vue";
 import PageHeader from "@/shared/components/PageHeader.vue";
-import { useEditLock } from "./composables/useEditLock.js";
-import { useDebugDevice } from "./composables/useDebugDevice.js";
-import { useDirtyGuard } from "./composables/useDirtyGuard.js";
-import { useDirectoryCascader } from "./composables/useDirectoryCascader.js";
+import { useEditLock } from "./composables/useEditLock";
+import { useDebugDevice } from "./composables/useDebugDevice";
+import { useDirtyGuard } from "./composables/useDirtyGuard";
+import { useDirectoryCascader } from "./composables/useDirectoryCascader";
 
 const route = useRoute();
 const router = useRouter();
@@ -67,17 +67,17 @@ async function save() {
   saving.value = true;
   try {
     const { data } = await saveDefinition(form.value);
-    if (data.ok) {
+    if (data.status) {
       ElMessage.success("保存成功");
       if (data.id) form.value.id = data.id;
       if (data.updated_at) form.value.updated_at = data.updated_at;
       initialForm.value = JSON.parse(JSON.stringify(form.value));
       if (isNew.value && data.id) await router.replace(`/cases/${data.id}/edit`);
       return true;
-    } else { ElMessage.error(data.error || "保存失败"); return false; }
+    } else { ElMessage.error(data.message || "保存失败"); return false; }
   } catch (e) {
     const status = e.response?.status;
-    const errMsg = e.response?.data?.error || "";
+    const errMsg = e.response?.data?.message || "";
     if (status === 409 && errMsg.includes("已被他人修改")) {
       ElMessageBox.alert(errMsg, "保存冲突", { confirmButtonText: "知道了", type: "warning" });
     } else {
@@ -96,7 +96,7 @@ onMounted(async () => {
     loading.value = true;
     try {
       const { data } = await getDefinition(caseId.value);
-      if (data.ok) {
+      if (data.status) {
         const d = data.definition;
         form.value = {
           id: d.id, title: d.title || "", category: d.category || "",

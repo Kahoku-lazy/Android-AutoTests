@@ -1,18 +1,19 @@
-<script setup>
-/** NetworkConnectDialog — 局域网（网络）连接设备弹窗 per PRD §3.7 F-07
- * 用户输入 IP 地址 + 端口（默认 5555）→ 前端强校验 → emit confirm({ target })
- * 父组件负责调用 store.doScan(target) 并回填 loading。
- */
-import { ref, watch } from "vue";
-// el-dialog → el-dialog, Input → el-input, Button → el-button (Element Plus auto-import)
+<script setup lang="ts">
+/** NetworkConnectDialog — 局域网连接设备弹窗 per PRD §3.7 F-07 */
+import { ref, watch } from 'vue'
 
-const props = defineProps({
-  visible: { type: Boolean, default: false },
-  // 提交中：由父组件在调用 store.doScan 期间置 true，防止重复点击
-  loading: { type: Boolean, default: false },
-});
+const props = withDefaults(defineProps<{
+  visible?: boolean
+  loading?: boolean
+}>(), {
+  visible: false,
+  loading: false,
+})
 
-const emit = defineEmits(["confirm", "cancel"]);
+const emit = defineEmits<{
+  confirm: [payload: { target: string }]
+  cancel: []
+}>()
 
 const ip = ref("");
 const port = ref("5555");

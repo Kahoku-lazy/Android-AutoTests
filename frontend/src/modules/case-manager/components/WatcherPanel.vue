@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from "vue";
-import { listPages, getPageElements } from "../api/uiAutomation.js";
-import { IconPlus, IconTrash } from "@/shared/icons/index.js";
+import { listPages, getPageElements } from "../api/uiAutomation";
+import { IconPlus, IconTrash } from "@/shared/icons/index";
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
@@ -34,13 +34,13 @@ const filteredElements = computed(() => {
 async function loadElements() {
   try {
     const { data: pageData } = await listPages();
-    if (!pageData.ok) return;
+    if (!pageData.status) return;
     pages.value = pageData.pages || [];
     const results = [];
     for (const p of pages.value) {
       try {
         const { data: elData } = await getPageElements(p.id);
-        if (elData.ok) {
+        if (elData.status) {
           for (const e of elData.elements || []) {
             results.push({ ...e, _pageLabel: p.label || `Page#${p.id}`, _pageId: p.id });
           }

@@ -1,23 +1,23 @@
-<script setup>
-import { IconSend, IconPaperclip } from "@/shared/icons/index.js";
+<script setup lang="ts">
+import { IconSend, IconPaperclip } from '@/shared/icons/index'
 
-defineProps({
-  modelValue: { type: String, default: "" },
-  sending: { type: Boolean, default: false },
-  uploadedFile: { type: Object, default: null },
-  uploading: { type: Boolean, default: false },
-});
+defineProps<{
+  modelValue?: string
+  sending?: boolean
+  uploadedFile?: { name: string; size: number } | null
+  uploading?: boolean
+}>()
 
-const emit = defineEmits([
-  "update:modelValue",
-  "send",
-  "keydown",
-  "upload",
-  "remove-file",
-]);
+const emit = defineEmits<{
+  'update:modelValue': [value: string]
+  send: []
+  keydown: [e: KeyboardEvent]
+  upload: []
+  'remove-file': []
+}>()
 
-function onInput(val) {
-  emit("update:modelValue", val);
+function onInput(val: string) {
+  emit('update:modelValue', val)
 }
 </script>
 

@@ -70,12 +70,12 @@ urlpatterns = [
     path("web/definitions", web_definitions_handler, name="web_defs"),
     path("web/definitions/batch", web_definitions_batch, name="web_defs_batch"),
     path("web/definitions/<str:case_id>", web_definition_detail, name="web_def_detail"),
-    # ── Lock & Visibility (shared, type-agnostic) ──
-    path("definitions/<str:case_id>/lock", acquire_edit_lock, name="def_lock"),
-    path("definitions/<str:case_id>/unlock", release_edit_lock, name="def_unlock"),
-    path("definitions/<str:case_id>/case-lock", case_lock, name="case_lock"),
-    path("definitions/<str:case_id>/case-unlock", case_unlock, name="case_unlock"),
-    path("definitions/<str:case_id>/visibility", set_visibility, name="def_visibility"),
+    # ── Lock & Visibility (作用于全部 4 种 case 类型) ──
+    path("cases/<str:case_id>/lock", acquire_edit_lock, name="case_lock"),
+    path("cases/<str:case_id>/unlock", release_edit_lock, name="case_unlock"),
+    path("cases/<str:case_id>/case-lock", case_lock, name="case_perm_lock"),
+    path("cases/<str:case_id>/case-unlock", case_unlock, name="case_perm_unlock"),
+    path("cases/<str:case_id>/visibility", set_visibility, name="case_visibility"),
     # ── YAML Export (UI automation only) ──
     # ── 操作类型查询（全平台统一）──
     path("step-types", list_step_types, name="step_types"),

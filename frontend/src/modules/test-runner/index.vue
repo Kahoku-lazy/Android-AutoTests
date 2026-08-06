@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, onDeactivated, onActivated } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
-import { getActiveUsername } from "@/shared/api-client.js";
+import { getActiveUsername } from "@/shared/auth/token-storage";
 import ConfirmButton from "@/shared/components/patterns/ConfirmButton.vue";
 import EmptyState from "@/shared/components/patterns/EmptyState.vue";
 import ErrorState from "@/shared/components/patterns/ErrorState.vue";
@@ -25,17 +25,17 @@ import {
   taskCardRateBg,
   taskProgress,
   buildTaskSavePayload,
-} from "./composables/taskUtils.js";
-import { useDebouncedSave } from "./composables/useDebouncedSave.js";
-import { useQueuePoller } from "./composables/useQueuePoller.js";
+} from "./composables/taskUtils";
+import { useDebouncedSave } from "./composables/useDebouncedSave";
+import { useQueuePoller } from "./composables/useQueuePoller";
 import NewTaskDialog from "./components/NewTaskDialog.vue";
 import {
   connectTaskWebSocket,
   closeTaskWebSocket,
   closeAllTaskWebSockets,
   applyWsMessage,
-} from "./composables/useTaskWebSocket.js";
-import { startRun, stopRun, getActiveRuns, listDefinitions, listDevices, listTasks, saveTask, deleteTask, cancelQueue, listApiDefinitions, listWebDefinitions } from "./api.js";
+} from "./composables/useTaskWebSocket";
+import { startRun, stopRun, getActiveRuns, listDefinitions, listDevices, listTasks, saveTask, deleteTask, cancelQueue, listApiDefinitions, listWebDefinitions } from "./api";
 
 const router = useRouter();
 
@@ -74,7 +74,7 @@ const { scheduleSave, flushSave, cleanup: cleanupDebouncedSave } = useDebouncedS
 async function loadTasks() {
   try {
     const { data } = await listTasks();
-    if (data.ok && data.tasks) {
+    if (data.status && data.tasks) {
       tasks.value = data.tasks.map((d) => ({
         ...d,
         status: d.status || "idle",
@@ -359,7 +359,7 @@ async function doStartTask(task) {
   }
   try {
     const { data } = await startRun(body);
-    if (data.ok && data.runs?.[0]?.run_id) {
+    if (data.status && data.runs?.[0]?.run_id) {
       const idx = tasks.value.findIndex((t) => t.id === task.id);
       if (idx !== -1) {
         const runId = data.runs[0].run_id;
@@ -373,7 +373,7 @@ async function doStartTask(task) {
         bindListTaskWS(tasks.value[idx], runId);
         taskAddLog(tasks.value[idx], "🚀 任务已启动");
       }
-    } else if (data.ok && data.queued?.length) {
+    } else if (data.status && data.queued?.length) {
       // Device busy — task queued
       task.running = false;
       task.status = "queued";
@@ -382,18 +382,18 @@ async function doStartTask(task) {
       taskAddLog(task, `⏳ 设备正忙，任务已加入队列等待执行`);
       ElMessage.info("设备正忙，任务已加入队列，设备空闲后自动执行");
       startQueuePolling();
-    } else if (data.ok) {
+    } else if (data.status) {
       task.running = false;
       taskAddLog(task, "❌ 设备不可用，任务未启动", "error");
       ElMessage.warning("设备不可用或未就绪，任务已保存，可在列表中重试");
     } else {
       task.running = false;
-      taskAddLog(task, `❌ ${data.error}`, "error");
-      ElMessage.error(data.error || "启动失败");
+      taskAddLog(task, `❌ ${data.message}`, "error");
+      ElMessage.error(data.message || "启动失败");
     }
   } catch (e) {
     task.running = false;
-    const errMsg = e?.response?.data?.error || e.message || "未知错误";
+    const errMsg = e?.response?.data?.message || e.message || "未知错误";
     taskAddLog(task, `❌ ${errMsg}`, "error");
     ElMessage.error(`启动失败：${errMsg}`);
   }
@@ -519,7 +519,7 @@ async function pollQueuedTasks() {
   }
   try {
     const { data } = await getActiveRuns();
-    if (!data.ok || !data.active?.length) return;
+    if (!data.status || !data.active?.length) return;
     for (const active of data.active) {
       if (!active.client_task_id) continue;
       const task = tasks.value.find((t) => t.id === active.client_task_id);
@@ -600,7 +600,7 @@ watch(
 async function loadCases() {
   try {
     const { data } = await listDefinitions();
-    if (data.ok) cases.value = data.definitions;
+    if (data.status) cases.value = data.definitions;
     availableCases.value = (data.definitions || []).filter(
       c => c.case_type === "ui_automation" || !c.case_type
     );
@@ -609,13 +609,13 @@ async function loadCases() {
 async function loadApiCases() {
   try {
     const { data } = await listApiDefinitions();
-    if (data.ok) {
+    if (data.status) {
       availableCases.value = (data.definitions || []).filter(
         c => c.case_type === "api_testing"
       );
       if (!availableCases.value.length) ElMessage.info('暂无 API 用例，请先在用例管理中创建');
     } else {
-      ElMessage.error(data.error || '加载 API 用例失败');
+      ElMessage.error(data.message || '加载 API 用例失败');
     }
   } catch (e) {
     ElMessage.error('加载 API 用例失败，请检查网络连接');
@@ -625,13 +625,13 @@ async function loadApiCases() {
 async function loadWebCases() {
   try {
     const { data } = await listWebDefinitions();
-    if (data.ok) {
+    if (data.status) {
       availableCases.value = (data.definitions || []).filter(
         c => c.case_type === "web_automation"
       );
       if (!availableCases.value.length) ElMessage.info('暂无 Web 用例，请先在用例管理中创建');
     } else {
-      ElMessage.error(data.error || '加载 Web 用例失败');
+      ElMessage.error(data.message || '加载 Web 用例失败');
     }
   } catch (e) {
     ElMessage.error('加载 Web 用例失败，请检查网络连接');
@@ -641,7 +641,7 @@ async function loadWebCases() {
 async function loadDevices() {
   try {
     const { data } = await listDevices();
-    if (data.ok)
+    if (data.status)
       devices.value = (data.devices || []).filter(
         (d) => d.status === "ONLINE" || d.status === "BUSY",
       );

@@ -2,7 +2,7 @@
  * 页面目录 — 与「元素定位 → 元素管理」同步
  */
 import type { ElementDef } from '@/modules/workflow/types/workflow'
-import { listPages, listPageElements, listWebGroups, listWebGroupElements } from '@/modules/workflow/api.js'
+import { listPages, listPageElements, listWebGroups, listWebGroupElements } from '@/modules/workflow/api'
 
 export type PageDomain = 'android' | 'web'
 
@@ -131,14 +131,14 @@ export async function fetchCatalogPages(): Promise<{
     // Android pages
     const res = await listPages()
     const data = res.data
-    if (data?.ok && Array.isArray(data.pages)) {
+    if (data?.status && Array.isArray(data.pages)) {
       for (const p of data.pages) {
         if (p.is_folder) continue
         let elements: ElementDef[] = []
         try {
           const elRes = await listPageElements(p.id)
           const elData = elRes.data
-          if (elData?.ok && Array.isArray(elData.elements)) {
+          if (elData?.status && Array.isArray(elData.elements)) {
             elements = elData.elements.map(mapApiElement)
           }
         } catch { elements = [] }
@@ -153,14 +153,14 @@ export async function fetchCatalogPages(): Promise<{
   try {
     const wRes = await listWebGroups()
     const wData = wRes.data
-    if (wData?.ok && Array.isArray(wData.groups)) {
+    if (wData?.status && Array.isArray(wData.groups)) {
       const webPages = wData.groups.filter((g: any) => !g.is_folder)
       for (const g of webPages) {
         let elements: ElementDef[] = []
         try {
           const elRes = await listWebGroupElements(g.id)
           const elData = elRes.data
-          if (elData?.ok && Array.isArray(elData.elements)) {
+          if (elData?.status && Array.isArray(elData.elements)) {
             elements = elData.elements.map(mapWebElement)
           }
         } catch { elements = [] }
@@ -187,13 +187,13 @@ export async function fetchCatalogPageById(pageId: string): Promise<CatalogPage 
     try {
       const wRes = await listWebGroups()
       const wData = wRes.data
-      if (!wData?.ok || !Array.isArray(wData.groups)) return null
+      if (!wData?.status || !Array.isArray(wData.groups)) return null
       const g = wData.groups.find((x: any) => String(x.id) === String(rawId) && !x.is_folder)
       if (!g) return null
       const elRes = await listWebGroupElements(g.id)
       const elData = elRes.data
       const elements =
-        elData?.ok && Array.isArray(elData.elements)
+        elData?.status && Array.isArray(elData.elements)
           ? elData.elements.map(mapWebElement)
           : []
       return mapWebGroup(g, elements)
@@ -206,13 +206,13 @@ export async function fetchCatalogPageById(pageId: string): Promise<CatalogPage 
   try {
     const res = await listPages()
     const data = res.data
-    if (!data?.ok || !Array.isArray(data.pages)) return null
+    if (!data?.status || !Array.isArray(data.pages)) return null
     const p = data.pages.find((x: any) => String(x.id) === String(pageId) && !x.is_folder)
     if (!p) return null
     const elRes = await listPageElements(p.id)
     const elData = elRes.data
     const elements =
-      elData?.ok && Array.isArray(elData.elements)
+      elData?.status && Array.isArray(elData.elements)
         ? elData.elements.map(mapApiElement)
         : []
     return mapApiPage(p, elements)
@@ -239,7 +239,7 @@ export async function fetchApiEndpoints(): Promise<ApiEndpointRef[]> {
     const client = (await import('@/shared/api-client.js')).default
     const res = await client.get('/elements/api-endpoints')
     const data = res.data
-    if (data?.ok && Array.isArray(data.endpoints)) {
+    if (data?.status && Array.isArray(data.endpoints)) {
       return data.endpoints.map((e: any) => ({
         id: String(e.id),
         name: e.name,

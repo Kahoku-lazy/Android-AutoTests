@@ -1,12 +1,12 @@
-<script setup>
+<script setup lang="ts">
 /**
  * anime.js 三点彩色加载指示器
  */
 import { onMounted, onBeforeUnmount, ref } from 'vue'
-import { loadingDots } from '@/shared/animations.js'
+import { loadingDots } from '@/shared/animations'
 
-const root = ref(null)
-let anim = null
+const root = ref<HTMLElement | null>(null)
+let anim: ReturnType<typeof loadingDots> | null = null
 
 onMounted(() => {
   const dots = root.value?.querySelectorAll('.dot')

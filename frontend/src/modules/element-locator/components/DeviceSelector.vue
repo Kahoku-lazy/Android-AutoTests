@@ -5,7 +5,7 @@
   已占用的设备（执行引擎运行中）不显示在下拉列表中。
 */
 import { ref } from 'vue'
-import { useElementStore } from '../store.js'
+import { useElementStore } from '../store'
 
 const store = useElementStore()
 const refreshing = ref(false)

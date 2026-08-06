@@ -123,7 +123,7 @@ function parseJson(str) {
       <template v-else-if="step.type === 'api_assert'">
         <div class="assert-list">
           <div class="assert-row" v-for="(a, i) in assertions" :key="i">
-            <input v-model="a.path" placeholder="$.data.ok" class="a-path" />
+            <input v-model="a.path" placeholder="$.data.status" class="a-path" />
             <select v-model="a.op" class="a-op"><option v-for="o in OP_OPTIONS" :key="o" :value="o">{{ o }}</option></select>
             <input v-model="a.expect" placeholder="期望值" class="a-expect" />
             <button class="kv-remove" @click="removeAssertion(i)">×</button>

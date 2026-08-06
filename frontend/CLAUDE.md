@@ -199,8 +199,8 @@ api.js 封装层处理转换。
 ### 响应格式
 
 ```json
-{"ok": true, "data": {...}}   // 成功
-{"ok": false, "error": "..."}  // 失败
+{"status": true, "data": {...}}   // 成功
+{"status": false, "message": "..."}  // 失败
 ```
 
 **禁止** `try { await api.deleteX(id) } catch (_) {}` — 写操作静默吞错。
@@ -235,24 +235,29 @@ api.js 封装层处理转换。
 
 ## ③ AgentScope 交互协议（SSE 流式）
 
-仅 `ai-assistant` 模块，直连 `:8000` 不经 Django。
+AgentScope 在 Django 进程内运行，前端 SSE 直连 Django（不经独立 :8000 服务）。
 
 ### SSE 调用链
 
 ```
-用户发消息 → POST /agentscope/chat (JWT) → SSE 连接 → 逐 token 推送 → 组件渲染
+用户发消息 → POST /api/ai/conversations/{id}/chat/stream (JWT) → Django → AgentScope (进程内) → SSE 流 → 前端渲染
 ```
 
 ### SSE 事件类型 → 前端渲染映射
 
 | 事件 | 前端渲染 |
 |------|---------|
-| `textGenerated` | 追加文本到消息气泡（逐字打字效果） |
-| `toolCallStart` | 渲染 ToolCallCard（loading 态） |
-| `toolCallEnd` | 更新 ToolCallCard（显示结果摘要） |
-| `thinkingStart` | 渲染 ThinkingBlock（可折叠推理过程） |
-| `thinkingEnd` | 折叠 ThinkingBlock |
-| `messageEnd` | 消息完成 → 调 `loadConversation()` 从 DB 拉完整历史 |
+| `REPLY_START` | 消息气泡出现，开始新回复 |
+| `TEXT_BLOCK_DELTA` | 追加文本到消息气泡（逐字打字效果） |
+| `THINKING_BLOCK_START` | 渲染 ThinkingBlock（可折叠推理过程） |
+| `THINKING_BLOCK_DELTA` | 追加推理文本 |
+| `THINKING_BLOCK_END` | 折叠 ThinkingBlock |
+| `TOOL_CALL_START` | 渲染 ToolCallCard（loading 态） |
+| `TOOL_CALL_DELTA` | 追加工具参数 JSON |
+| `TOOL_RESULT_START/DELTA/END` | 更新 ToolCallCard（显示结果摘要） |
+| `HINT_BLOCK` | 渲染 SOP 状态卡片 / 任务卡片 |
+| `REQUIRE_USER_CONFIRM` | 显示 HITL 确认弹窗 |
+| `REPLY_END` | 消息完成 → 调 `save-message` 持久化 |
 | `error` | 显示错误提示，允许重试 |
 
 ### 连接管理
@@ -260,8 +265,8 @@ api.js 封装层处理转换。
 | 场景 | 处理 |
 |------|------|
 | 断线重连 | 自动重试，最多 3 次，间隔递增（1s/2s/4s） |
-| 用户点"停止" | `POST /agentscope/stop` → 关闭 SSE → 保留已生成内容 |
-| AgentScope 不可用 | 自动降级 Django 阻塞模式 `POST /api/ai/chat/sync` |
+| 用户点"停止" | 关闭 SSE → 保留已生成内容 |
+| AI 不可用 | 自动降级 Django 阻塞模式 `POST /api/ai/chat/sync` |
 
 ### 子组件折叠规则
 
@@ -289,7 +294,7 @@ api.js 封装层处理转换。
 | # | ✅ 正确 | ❌ 错误 |
 |---|------|------|
 | 1 | `@retry="fetchData"`（命名函数） | `@retry="() => { ... }"`（内联箭头每次渲染重建） |
-| 2 | `error.value = ''` 放 `data.ok` 内（成功后清除） | `error.value = ''` 放 try 第一行（retry 时闪白） |
+| 2 | `error.value = ''` 放 `data.status` 内（成功后清除） | `error.value = ''` 放 try 第一行（retry 时闪白） |
 | 3 | `<template v-else>` 包裹全部内容 | 每个 `<section>` 各自写 `v-if="!error"` |
 | 4 | 一个页面一个 ErrorState | 每个 tab slot 各放一个 |
 | 5 | `finally { loading = false }` | 只在 try 关 loading（catch 永远转圈） |

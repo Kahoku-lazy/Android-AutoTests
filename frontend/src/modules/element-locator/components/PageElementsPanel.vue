@@ -2,10 +2,10 @@
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { animate } from 'animejs'
-import { formatApiError } from '@/shared/api-client.js'
-import { apiGetScreenshot, apiGetPages, apiCreatePage, apiBatchAddElementsToPage } from '../api.js'
-import { useElementStore } from '../store.js'
-import { bus } from '@/shared/event-bus.js'
+import { formatApiError } from '@/shared/api-client'
+import { apiGetScreenshot, apiGetPages, apiCreatePage, apiBatchAddElementsToPage } from '../api'
+import { useElementStore } from '../store'
+import { bus } from '@/shared/event-bus'
 
 const store = useElementStore()
 
@@ -29,7 +29,7 @@ function loadImageDims(url) {
 async function captureThumbnailScreenshot() {
   try {
     const { data } = await apiGetScreenshot()
-    if (data.ok && data.image) {
+    if (data.status && data.image) {
       // Use data URL directly — browser decodes natively
       const url = `data:image/${data.format || 'jpeg'};base64,${data.image}`
       thumbnailUrl.value = url
@@ -57,7 +57,7 @@ async function refreshElements() {
   try {
     await captureThumbnailScreenshot()
     const result = await store.doDump()
-    if (!result?.ok) ElMessage.error('Dump 失败')
+    if (!result?.status) ElMessage.error('Dump 失败')
   } catch (e) {
     ElMessage.error('刷新失败')
   } finally {
@@ -201,7 +201,7 @@ async function openBatchSave() {
   pagesLoading.value = true
   try {
     const { data } = await apiGetPages()
-    if (data.ok) pages.value = data.pages || []
+    if (data.status) pages.value = data.pages || []
   } catch (e) {
     ElMessage.error({ message: formatApiError(e, '加载页面列表失败'), duration: 4000, showClose: true })
   } finally {
@@ -218,12 +218,12 @@ async function openBatchSave() {
         package: pkg,
         activity,
       })
-      if (data.ok) {
+      if (data.status) {
         const page = data.page || {}
         batchSaveForm.value.pageId = page.id
         pages.value.push({ id: page.id, label: page.label || data.label })
       } else {
-        ElMessage.error(data.error || '自动创建页面失败')
+        ElMessage.error(data.message || '自动创建页面失败')
       }
     } catch (e) {
       ElMessage.error({ message: formatApiError(e, '自动创建页面失败'), duration: 4000, showClose: true })
@@ -284,7 +284,7 @@ async function doBatchSave() {
 
   try {
     const { data } = await apiBatchAddElementsToPage(batchSaveForm.value.pageId, items, strategy)
-    if (data.ok) {
+    if (data.status) {
       let msg = `已保存 ${data.saved} 个元素`
       if (data.updated) msg += `（${data.updated} 个已更新）`
       if (data.skipped) msg += `，${data.skipped} 个跳过`
@@ -295,7 +295,7 @@ async function doBatchSave() {
       // Notify element manager to refresh its table
       bus.emit('elements-saved', { pageId: batchSaveForm.value.pageId })
     } else {
-      ElMessage.error(data.error || '批量保存失败')
+      ElMessage.error(data.message || '批量保存失败')
     }
   } catch (e) {
     ElMessage.error({ message: formatApiError(e, '批量保存失败'), duration: 5000, showClose: true })

@@ -28,20 +28,10 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     proxy: {
-      '/api': 'http://localhost:8765',
+      '/api': `http://localhost:${process.env.SERVER_PORT || 8766}`,
       '/ws': {
-        target: 'ws://localhost:8765',
+        target: `ws://localhost:${process.env.SERVER_PORT || 8766}`,
         ws: true,
-      },
-      '/agentscope': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/agentscope/, ''),
-      },
-      '/agentscope-stream': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/agentscope-stream/, ''),
       },
     },
   },

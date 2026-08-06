@@ -3,7 +3,7 @@ Android-AutoTests platform manager — start / stop / restart / status / logs.
 
 Usage:
     python run.py start                            # 启动全部服务
-    python run.py start backend agentscope          # 只启动指定服务
+    python run.py start backend               # 只启动指定服务
     python run.py stop                              # 停止全部
     python run.py stop frontend                     # 只停止指定服务
     python run.py restart                           # 重启全部
@@ -12,15 +12,16 @@ Usage:
     python run.py logs                              # 查看全部日志（各 20 行）
     python run.py logs backend                      # 查看指定服务日志
 
-可用服务名: redis  backend  agentscope  frontend
+可用服务名: redis  backend  frontend
 """
 
-import sys
-import os
-import time
-import socket
 import argparse
+import os
+import socket
 import subprocess
+import sys
+import time
+
 from pathlib import Path
 
 ROOT = Path(__file__).parent
@@ -28,19 +29,38 @@ LOG_DIR = ROOT / "logs"
 
 SERVICES = {
     "redis": 6379,
-    "backend": 8765,
-    "agentscope": 8000,
+    "backend": int(os.environ.get("SERVER_PORT", "8766")),
     "frontend": 5173,
 }
 
+
+# ── 加载 .env（让 DB_PORT / REDIS_PORT 等配置优先于 BASE_ENV 硬编码） ──
+def _load_env():
+    env_file = ROOT / ".env"
+    if not env_file.exists():
+        return
+    with open(env_file, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key, value = key.strip(), value.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+
+_load_env()
+
 # ── 基础环境变量 ──
 BASE_ENV = {
-    "DB_ENGINE": "mysql",
-    "DB_NAME": "android_autotests",
-    "DB_HOST": "127.0.0.1",
-    "DB_PORT": "3306",
+    "DB_ENGINE": os.environ.get("DB_ENGINE", "mysql"),
+    "DB_NAME": os.environ.get("DB_NAME", "android_autotests"),
+    "DB_HOST": os.environ.get("DB_HOST", "127.0.0.1"),
+    "DB_PORT": os.environ.get("DB_PORT", "3306"),
     "PYTHONUTF8": "1",
     "DJANGO_SETTINGS_MODULE": "config.settings",
+    "SERVER_PORT": str(SERVICES["backend"]),
 }
 
 
@@ -249,11 +269,12 @@ def start_redis():
         print(f"  Redis            already running on :{port}")
         return True
     print(f"[Redis] Starting on port {port}...")
-    redis_cmd = "redis-server.cmd" if sys.platform == "win32" else "redis-server"
+    # Try .cmd first (official MSI), then bare name (Scoop shim resolves .exe)
+    redis_cmd = "redis-server"
     try:
         spawn([redis_cmd, "--port", str(port), "--save", "900", "1"], "redis.log")
     except FileNotFoundError:
-        print("  FAILED: redis-server not found")
+        print("  FAILED: redis-server not found (install via scoop or MSI)")
         return False
     for _ in range(10):
         if port_in_use(port):
@@ -289,42 +310,6 @@ def start_backend():
     return False
 
 
-def start_agentscope():
-    port = SERVICES["agentscope"]
-    print(f"[AgentScope] Starting FastAPI on port {port}...")
-
-    # Write inline launch script to temp file (avoids shell escaping issues)
-    launcher = LOG_DIR / "_agentscope_launcher.py"
-    LOG_DIR.mkdir(exist_ok=True)
-    launcher.write_text(
-        f"""
-import sys; sys.path.insert(0, r"{ROOT}")
-import os; os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
-import django; django.setup()
-import uvicorn
-from agentscope_service.app import create_agentscope_app, RedisUnavailableError
-from config.agentscope_config import TITLE, VERSION
-try:
-    app = create_agentscope_app()
-except RedisUnavailableError:
-    print("AgentScope startup failed: Redis unavailable")
-    import sys; sys.exit(1)
-print(f"  {{TITLE}} v{{VERSION}}")
-uvicorn.run(app, host="0.0.0.0", port={port}, log_level="info")
-""".strip()
-    )
-
-    spawn(
-        [sys.executable, str(launcher)],
-        "agentscope.log",
-    )
-    if wait_http(f"http://127.0.0.1:{port}/docs", 30):
-        print(f"  AgentScope       ready http://localhost:{port}/docs")
-        return True
-    print("  FAILED: AgentScope did not start (check logs/agentscope.log)")
-    return False
-
-
 def start_frontend():
     port = SERVICES["frontend"]
     print(f"[Frontend] Starting Vite on port {port}...")
@@ -351,12 +336,6 @@ def stop_backend():
     kill_port(port)
 
 
-def stop_agentscope():
-    port = SERVICES["agentscope"]
-    print(f"[AgentScope] Stopping port {port}...")
-    kill_port(port)
-
-
 def stop_frontend():
     port = SERVICES["frontend"]
     print(f"[Frontend] Stopping port {port}...")
@@ -366,13 +345,11 @@ def stop_frontend():
 _START = {
     "redis": start_redis,
     "backend": start_backend,
-    "agentscope": start_agentscope,
     "frontend": start_frontend,
 }
 _STOP = {
     "redis": stop_redis,
     "backend": stop_backend,
-    "agentscope": stop_agentscope,
     "frontend": stop_frontend,
 }
 
@@ -391,8 +368,8 @@ def cmd_start(services):
             _STOP[s]()
     time.sleep(1)
 
-    # 依赖顺序：redis → backend → agentscope → frontend
-    order = [s for s in ["redis", "backend", "agentscope", "frontend"] if s in names]
+    # 依赖顺序：redis → backend → frontend
+    order = [s for s in ["redis", "backend", "frontend"] if s in names]
     ok = True
     for s in order:
         if not _START[s]():
@@ -408,17 +385,16 @@ def cmd_start(services):
         print(f"  Frontend    : http://localhost:{SERVICES['frontend']}")
     if "backend" in order:
         print(f"  API (Django): http://localhost:{SERVICES['backend']}")
-    if "agentscope" in order:
-        print(f"  AI (AgentS) : http://localhost:{SERVICES['agentscope']}/docs")
+        print(f"  AI (Agent)  : in-process (runs inside Django)")
     if "redis" in order:
         print(f"  Redis       : redis://localhost:{SERVICES['redis']}")
-    print("  Admin       : http://localhost:8765/admin/  (admin/admin123)")
+    print(f"  Admin       : http://localhost:{SERVICES['backend']}/admin/  (admin/admin123)")
     print("=" * 54)
 
 
 def cmd_stop(services):
     names = resolve_services(services)
-    if "backend" in names or "agentscope" in names or "all" in names:
+    if "backend" in names or "all" in names:
         cleanup_mysql_connections()
     for s in names:
         _STOP[s]()
@@ -427,7 +403,7 @@ def cmd_stop(services):
 
 def cmd_restart(services):
     names = resolve_services(services)
-    if "backend" in names or "agentscope" in names or "all" in names:
+    if "backend" in names or "all" in names:
         cleanup_mysql_connections()
     for s in names:
         if s != "redis":
@@ -447,12 +423,10 @@ def cmd_status():
             return "OFFLINE"
 
     redis_ok = "ONLINE" if port_in_use(6379) else "OFFLINE"
-    be_ok = check("http://127.0.0.1:8765/")
-    as_ok = check("http://127.0.0.1:8000/docs")
+    be_ok = check(f"http://127.0.0.1:{SERVICES['backend']}/")
     fe_ok = check("http://127.0.0.1:5173/")
     print(f"  Redis            (:6379)  {redis_ok}")
-    print(f"  Django backend   (:8765)  {be_ok}")
-    print(f"  AgentScope AI    (:8000)  {as_ok}")
+    print(f"  Django backend   (:{SERVICES['backend']})  {be_ok}")
     print(f"  Vue frontend     (:5173)  {fe_ok}")
 
 
@@ -460,7 +434,6 @@ def cmd_logs(services):
     log_map = {
         "redis": "redis.log",
         "backend": "backend.log",
-        "agentscope": "agentscope.log",
         "frontend": "frontend.log",
     }
     names = resolve_services(services)
@@ -488,7 +461,7 @@ if __name__ == "__main__":
         "services",
         nargs="*",
         default=[],
-        help="Services: redis backend agentscope frontend (default: all)",
+        help="Services: redis backend frontend (default: all)",
     )
     args = p.parse_args()
 

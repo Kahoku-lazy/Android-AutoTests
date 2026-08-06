@@ -1,15 +1,15 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { bus } from "@/shared/event-bus.js";
+import { bus } from "@/shared/event-bus";
 import { ElMessageBox, ElMessage } from "element-plus";
-import { IconPlus, IconRefresh, IconTrash, IconGripVertical } from "@/shared/icons/index.js";
-import { STEP_FIELDS, FIELD_LABELS, DIRECTION_OPTIONS, FIELD_HINTS, APP_LIFECYCLE_TYPES } from "@/shared/constants/steps.js";
-import { fetchStepTypes } from "../api.js";
-import { useStepDragDrop } from "../composables/useStepDragDrop.js";
-import { useStepFields } from "../composables/useStepFields.js";
-import { useElementLibrary } from "../composables/useElementLibrary.js";
-import { useStepRunner } from "../composables/useStepRunner.js";
-import { stepSummary as buildStepSummary } from "../step-utils.js";
+import { IconPlus, IconRefresh, IconTrash, IconGripVertical } from "@/shared/icons/index";
+import { STEP_FIELDS, FIELD_LABELS, DIRECTION_OPTIONS, FIELD_HINTS, APP_LIFECYCLE_TYPES } from "@/shared/constants/steps";
+import { fetchStepTypes } from "../api";
+import { useStepDragDrop } from "../composables/useStepDragDrop";
+import { useStepFields } from "../composables/useStepFields";
+import { useElementLibrary } from "../composables/useElementLibrary";
+import { useStepRunner } from "../composables/useStepRunner";
+import { stepSummary as buildStepSummary } from "../step-utils";
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
@@ -24,7 +24,7 @@ const availableTypes = ref([]);
 async function loadStepTypes() {
   try {
     const { data } = await fetchStepTypes(props.target);
-    if (data?.ok) availableTypes.value = data.data?.types || [];
+    if (data?.status) availableTypes.value = data.data?.types || [];
   } catch { /* ignore */ }
 }
 onMounted(loadStepTypes);
@@ -137,10 +137,10 @@ function stepSummary(step) { return buildStepSummary(step, resolveElementName); 
       <div class="step-bar" @click="expanded[idx] = !expanded[idx]">
         <span class="drag-handle" title="拖动排序"><IconGripVertical :size="16" /></span>
         <span class="step-idx">
-          <template v-if="stepResults[idx]">{{ stepResults[idx].ok ? '✅' : '❌' }}</template>
+          <template v-if="stepResults[idx]">{{ stepResults[idx].status ? '✅' : '❌' }}</template>
           <template v-else>{{ idx + 1 }}</template>
         </span>
-        <span class="step-summary">{{ stepSummary(step) }}<span v-if="stepResults[idx]" :class="['step-result-msg', stepResults[idx].ok ? 'ok' : 'fail']">{{ stepResults[idx].message }}</span></span>
+        <span class="step-summary">{{ stepSummary(step) }}<span v-if="stepResults[idx]" :class="['step-result-msg', stepResults[idx].status ? 'ok' : 'fail']">{{ stepResults[idx].message }}</span></span>
         <span class="step-actions" @click.stop>
           <el-button size="small" type="primary" plain :loading="runningStep === idx" @click="runStep(idx, step)" title="单步执行">▶</el-button>
           <el-button size="small" type="primary" plain :loading="runningFromIdx === idx" @click="runFromCurrent(idx)" title="从这步开始" :disabled="runningBatch && runningFromIdx !== idx">▶▶ ▸</el-button>
@@ -233,7 +233,7 @@ function stepSummary(step) { return buildStepSummary(step, resolveElementName); 
 .step-idx { font-weight: 700; font-size: var(--app-size-sm); color: var(--c-workflow); min-width: 24px; text-align: center; }
 .step-summary { flex: 1; min-width: 0; font-size: var(--app-size-sm); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .step-result-msg { font-size: var(--app-size-xs); margin-left: 6px; }
-.step-result-msg.ok { color: #27ae60; } .step-result-msg.fail { color: #e05a5a; }
+.step-result-msg.status { color: #27ae60; } .step-result-msg.fail { color: #e05a5a; }
 .step-actions { display: flex; gap: 4px; flex-shrink: 0; }
 .step-form { padding: 8px 12px 12px 36px; background: rgba(162,210,255,0.03); border-top: 1px solid rgba(162,210,255,0.12); }
 .step-desc { font-size: var(--app-size-xs); color: #999; margin-bottom: 8px; }

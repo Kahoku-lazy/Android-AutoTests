@@ -4,8 +4,9 @@ import { useRoute, useRouter, onBeforeRouteLeave } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import StepEditor from "../StepEditor.vue";
 import PageHeader from "@/shared/components/PageHeader.vue";
-import { getWebDefinition, saveWebDefinition } from "../../api/webAutomation.js";
-import { fetchDirectories, acquireEditLock, releaseEditLock } from "../../api.js";
+import { getWebDefinition, saveWebDefinition } from "../../api/webAutomation";
+import { getActive } from "@/shared/auth/token-storage";
+import { fetchDirectories, acquireEditLock, releaseEditLock } from "../../api";
 
 const route = useRoute();
 const router = useRouter();
@@ -45,21 +46,12 @@ function buildCascaderOptions(tree) {
 async function loadDirOptions() {
   try {
     const { data } = await fetchDirectories("web_automation");
-    if (data.ok) dirOptions.value = buildCascaderOptions(data.tree);
+    if (data.status) dirOptions.value = buildCascaderOptions(data.tree);
   } catch (e) { console.error(e); }
 }
 
 // ── Current user ──
-function resolveCurrentUser() {
-  const active = sessionStorage.getItem("auth_active") || "";
-  if (active) return active;
-  try {
-    const pool = JSON.parse(localStorage.getItem("auth_accounts") || "{}");
-    return Object.keys(pool)[0] || "";
-  } catch { return ""; }
-}
-
-const currentUser = resolveCurrentUser();
+const currentUser = getActive();
 
 // ── Edit lock ──
 const isReadOnly = ref(false);
@@ -101,7 +93,7 @@ onMounted(async () => {
     loading.value = true;
     try {
       const { data } = await getWebDefinition(caseId.value);
-      if (data.ok) {
+      if (data.status) {
         const d = data.definition;
         form.value = {
           id: d.id,
@@ -125,7 +117,7 @@ onMounted(async () => {
         } else if (currentUser) {
           try {
             const lockResp = await acquireEditLock(caseId.value);
-            if (lockResp.data.ok) hasEditLock.value = true;
+            if (lockResp.data.status) hasEditLock.value = true;
           } catch (e) {
             if (e.response?.status === 423) {
               isReadOnly.value = true;
@@ -178,12 +170,12 @@ async function forceEdit() {
   try {
     await releaseEditLock(caseId.value, true);
     const lockResp = await acquireEditLock(caseId.value);
-    if (lockResp.data.ok) {
+    if (lockResp.data.status) {
       isReadOnly.value = false; editingBy.value = ""; hasEditLock.value = true;
       ElMessage.success("已强制获取编辑权限");
     }
   } catch (e) {
-    ElMessage.error(e.response?.data?.error || "强制编辑失败");
+    ElMessage.error(e.response?.data?.message || "强制编辑失败");
   }
 }
 
@@ -198,7 +190,7 @@ async function save() {
       steps_json: JSON.stringify(form.value.steps_data),
     };
     const { data } = await saveWebDefinition(payload);
-    if (data.ok) {
+    if (data.status) {
       ElMessage.success("保存成功");
       if (data.id) form.value.id = data.id;
       if (data.updated_at) form.value.updated_at = data.updated_at;
@@ -208,11 +200,11 @@ async function save() {
       }
       return true;
     } else {
-      ElMessage.error(data.error || "保存失败");
+      ElMessage.error(data.message || "保存失败");
       return false;
     }
   } catch (e) {
-    ElMessage.error("保存失败: " + (e?.response?.data?.error || e?.message || "网络错误"));
+    ElMessage.error("保存失败: " + (e?.response?.data?.message || e?.message || "网络错误"));
     return false;
   } finally {
     saving.value = false;

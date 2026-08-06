@@ -48,9 +48,9 @@
 ## 🏗️ 架构概览
 
 ```
-Vue 前端 :5173  ──HTTP/WS──→  Django :8765  ──ORM──→  SQLite/MySQL
+Vue 前端 :5173  ──HTTP/WS──→  Django :8765/8766  ──ORM──→  SQLite/MySQL
        │                           │
-       └──SSE──→  AgentScope :8000 ──→  Redis :6379
+       └──SSE──→  AgentScope（进程内运行于 Django）
                       │
                       └── 同进程调用 Django ORM（28 Tool + 5 Agent Team + RAG）
 
@@ -61,7 +61,7 @@ Django ──uiautomator2──→  Android 设备
 |----|------|------|
 | 前端 | Vue 3.4 + Vite + Element Plus + animal-island-vue | 8 个业务模块，AI 助手独立动森主题 |
 | 后端 | Django 4.2 + Daphne + Channels | 8 个 App，纯 API，JWT 鉴权 |
-| AI 引擎 | AgentScope 2.0 + FastAPI + Redis | 28 Tool，SOP 四阶段工作流，ChromaDB 知识库 |
+| AI 引擎 | AgentScope 2.0（Django 进程内）+ Redis | 28 Tool，SOP 四阶段工作流，ChromaDB 知识库 |
 | 设备控制 | uiautomator2 + ADB | UI dump、8 种 XPath、14 种步骤、2fps 截图流 |
 | 数据 | SQLite (开发) / MySQL (生产) + Redis | 22 张业务表，7 组前缀 |
 
@@ -125,12 +125,27 @@ python run.py logs       # 查看日志
 
 ### 访问地址
 
+#### 本地开发（`python run.py start`）
+
 | 服务 | 地址 | 说明 |
 |------|------|------|
-| 🏠 前端 | http://localhost:5173 | Vue 3 主界面 |
-| ⚙️ 管理后台 | http://localhost:8765/admin/ | Django Admin（admin/admin123） |
-| 🔌 后端 API | http://localhost:8765/api/ | REST JSON |
-| 🤖 AI 引擎 | http://localhost:8000/docs | AgentScope Swagger |
+| 🏠 前端 | `http://localhost:5173` | Vite 热重载，改代码秒刷新 |
+| ⚙️ 管理后台 | `http://localhost:8766/admin/` | Django Admin（admin/admin123） |
+| 🔌 后端 API | `http://localhost:8766/api/` | REST JSON |
+| 🤖 AI 引擎 | Django 进程内运行 | AgentScope 已集成，无独立端口 |
+
+> 本地端口可通过环境变量 `SERVER_PORT` 自定义，默认为 `8766`。
+
+#### Docker 部署（`docker compose up -d`）
+
+| 服务 | 地址 | 说明 |
+|------|------|------|
+| 🏠 前端 | `http://localhost` | Nginx 伺服生产构建 |
+| ⚙️ 管理后台 | `http://localhost:8765/admin/` | Django Admin（admin/admin123） |
+| 🔌 后端 API | `http://localhost:8765/api/` | REST JSON |
+| 🤖 AI 引擎 | Django 进程内运行 | AgentScope 已集成，无独立端口 |
+
+> **本地开发与 Docker 端口不冲突，可以同时运行。** 本地用 8766/5173，Docker 用 80/8765。
 
 ---
 
@@ -159,15 +174,14 @@ python run.py logs       # 查看日志
 7. 启动全部服务：python run.py start
 
 8. 验证服务状态：python run.py status
-   期望 4 个服务全部 ONLINE：Redis / Django backend / AgentScope AI / Vue frontend
+   期望 3 个服务全部 ONLINE：Redis / Django backend / Vue frontend
 
 9. 健康检查：
-   curl -s http://localhost:8765/api/ | python -m json.tool
+   curl -s http://localhost:8766/api/ | python -m json.tool
    curl -s -o /dev/null -w "%{http_code}" http://localhost:5173
 
 10. 如果任何步骤失败，分析日志并修复：
     tail -20 logs/backend.log
-    tail -20 logs/agentscope.log
     tail -20 logs/frontend.log
 
 完成后告诉我各服务状态和访问地址。

@@ -1,6 +1,6 @@
 <script setup>
 import CaseList from "../CaseList.vue";
-import { listStorageDefinitions, deleteStorageDefinition, getStorageDefinition } from "../../api/storage.js";
+import { listStorageDefinitions, deleteStorageDefinition, getStorageDefinition } from "../../api/storage";
 
 defineProps({ treeData: Array, activeDirectoryId: null, activeDirName: String, activeCaseId: null });
 defineEmits(["refresh-tree"]);

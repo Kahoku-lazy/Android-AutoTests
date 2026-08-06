@@ -22,15 +22,15 @@ def acquire_edit_lock(request, case_id):
     用例不存在 → 404
     """
     if request.method != "POST":
-        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+        return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
     current_user = _resolve_username(getattr(request, "user_id", None))
     if not current_user:
-        return JsonResponse({"ok": False, "error": "未登录"}, status=401)
+        return JsonResponse({"status": False, "message": "未登录"}, status=401)
 
     case = get_case_for_lock(case_id)
     if case is None:
-        return JsonResponse({"ok": False, "error": "用例不存在"}, status=404)
+        return JsonResponse({"status": False, "message": "用例不存在"}, status=404)
 
     now = datetime.now()
 
@@ -38,12 +38,21 @@ def acquire_edit_lock(request, case_id):
     if case.created_by != current_user:
         if case.permission == "readonly":
             return JsonResponse(
-                {"ok": False, "error": "此用例为只读模式，仅创建者可编辑"}, status=423
+                {"status": False, "message": "此用例为只读模式，仅创建者可编辑"}, status=423
             )
         if case.permission == "restricted":
             editors = json.loads(case.permitted_editors or "[]")
             if current_user not in editors:
-                return JsonResponse({"ok": False, "error": "此用例仅限指定用户编辑"}, status=423)
+                return JsonResponse(
+                    {"status": False, "message": "此用例仅限指定用户编辑"}, status=423
+                )
+
+    # 持久锁（owner-only）— 被锁定时其他人无法获取编辑锁
+    if case.locked and case.created_by and case.created_by != current_user:
+        return JsonResponse(
+            {"status": False, "message": "用例已被所有者锁定"},
+            status=423,
+        )
 
     # Already locked by someone else?
     if case.editing_by and case.editing_by != current_user:
@@ -52,8 +61,8 @@ def acquire_edit_lock(request, case_id):
             if elapsed < EDIT_LOCK_TIMEOUT_SECONDS:
                 return JsonResponse(
                     {
-                        "ok": False,
-                        "error": f"用例正被 {case.editing_by} 编辑中",
+                        "status": False,
+                        "message": f"用例正被 {case.editing_by} 编辑中",
                         "editing_by": case.editing_by,
                         "editing_since": str(case.editing_since),
                     },
@@ -67,7 +76,7 @@ def acquire_edit_lock(request, case_id):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "editing_by": current_user,
             "editing_since": now.isoformat(),
             "created_by": case.created_by,
@@ -82,15 +91,15 @@ def release_edit_lock(request, case_id):
     force=true 时：创建者可以强制踢出其他编辑者。
     """
     if request.method != "POST":
-        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+        return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
     current_user = _resolve_username(getattr(request, "user_id", None))
     if not current_user:
-        return JsonResponse({"ok": False, "error": "未登录"}, status=401)
+        return JsonResponse({"status": False, "message": "未登录"}, status=401)
 
     case = get_case_for_lock(case_id)
     if case is None:
-        return JsonResponse({"ok": False, "error": "用例不存在"}, status=404)
+        return JsonResponse({"status": False, "message": "用例不存在"}, status=404)
 
     try:
         body = json.loads(request.body) if request.body else {}
@@ -103,105 +112,112 @@ def release_edit_lock(request, case_id):
         if case.created_by and case.created_by != current_user:
             return JsonResponse(
                 {
-                    "ok": False,
-                    "error": "只有用例创建者可以强制解除编辑锁",
+                    "status": False,
+                    "message": "只有用例创建者可以强制解除编辑锁",
                 },
                 status=403,
             )
         case.editing_by = ""
         case.editing_since = None
         case.save(update_fields=["editing_by", "editing_since"])
-        return JsonResponse({"ok": True, "force_unlocked": True})
+        return JsonResponse({"status": True, "force_unlocked": True})
 
     # Normal unlock: only the lock holder or creator can release
     if case.editing_by and case.editing_by != current_user and case.created_by != current_user:
         return JsonResponse(
             {
-                "ok": False,
-                "error": "只有编辑者或创建者可以释放编辑锁",
+                "status": False,
+                "message": "只有编辑者或创建者可以释放编辑锁",
             },
             status=403,
         )
 
     if not case.editing_by:
-        return JsonResponse({"ok": True, "already_unlocked": True})
+        return JsonResponse({"status": True, "already_unlocked": True})
 
     case.editing_by = ""
     case.editing_since = None
     case.save(update_fields=["editing_by", "editing_since"])
-    return JsonResponse({"ok": True, "released": True})
+    return JsonResponse({"status": True, "released": True})
 
 
 @csrf_exempt
 def case_lock(request, case_id):
     """POST /api/cases/definitions/{case_id}/case-lock — 创建者锁定用例（他人只读）。"""
     if request.method != "POST":
-        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+        return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
     current_user = _resolve_username(getattr(request, "user_id", None))
     if not current_user:
-        return JsonResponse({"ok": False, "error": "未登录"}, status=401)
+        return JsonResponse({"status": False, "message": "未登录"}, status=401)
 
     case = get_case_for_lock(case_id)
     if case is None:
-        return JsonResponse({"ok": False, "error": "用例不存在"}, status=404)
+        return JsonResponse({"status": False, "message": "用例不存在"}, status=404)
 
     if case.created_by and case.created_by != current_user:
-        return JsonResponse({"ok": False, "error": "只有创建者可以锁定用例"}, status=403)
+        return JsonResponse({"status": False, "message": "只有创建者可以锁定用例"}, status=403)
 
     case.locked = True
     case.save(update_fields=["locked"])
-    return JsonResponse({"ok": True, "locked": True})
+    return JsonResponse({"status": True, "locked": True})
 
 
 @csrf_exempt
 def case_unlock(request, case_id):
     """POST /api/cases/definitions/{case_id}/case-unlock — 创建者解除用例锁。"""
     if request.method != "POST":
-        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+        return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
     current_user = _resolve_username(getattr(request, "user_id", None))
     if not current_user:
-        return JsonResponse({"ok": False, "error": "未登录"}, status=401)
+        return JsonResponse({"status": False, "message": "未登录"}, status=401)
 
     case = get_case_for_lock(case_id)
     if case is None:
-        return JsonResponse({"ok": False, "error": "用例不存在"}, status=404)
+        return JsonResponse({"status": False, "message": "用例不存在"}, status=404)
 
     if case.created_by and case.created_by != current_user:
-        return JsonResponse({"ok": False, "error": "只有创建者可以解除锁定"}, status=403)
+        return JsonResponse({"status": False, "message": "只有创建者可以解除锁定"}, status=403)
 
     if not case.locked:
-        return JsonResponse({"ok": True, "already_unlocked": True})
+        return JsonResponse({"status": True, "already_unlocked": True})
 
     case.locked = False
     case.save(update_fields=["locked"])
-    return JsonResponse({"ok": True, "unlocked": True})
+    return JsonResponse({"status": True, "unlocked": True})
 
 
 @csrf_exempt
 def set_visibility(request, case_id):
     """POST /api/cases/definitions/{case_id}/visibility — 更新可见性（仅创建者）。"""
     if request.method != "POST":
-        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+        return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
     current_user = _resolve_username(getattr(request, "user_id", None))
     if not current_user:
-        return JsonResponse({"ok": False, "error": "未登录"}, status=401)
+        return JsonResponse({"status": False, "message": "未登录"}, status=401)
 
     case = get_case_for_lock(case_id)
     if case is None:
-        return JsonResponse({"ok": False, "error": "用例不存在"}, status=404)
+        return JsonResponse({"status": False, "message": "用例不存在"}, status=404)
 
     if case.created_by and case.created_by != current_user:
-        return JsonResponse({"ok": False, "error": "只有创建者可以修改可见性"}, status=403)
+        return JsonResponse({"status": False, "message": "只有创建者可以修改可见性"}, status=403)
 
     try:
         body = json.loads(request.body) if request.body else {}
     except json.JSONDecodeError:
         body = {}
 
-    case.visibility = body.get("visibility", "public")
+    visibility = body.get("visibility", "public")
+    if visibility not in ("public", "hidden", "restricted"):
+        return JsonResponse(
+            {"status": False, "message": "无效的可见性值，可选: public / hidden / restricted"},
+            status=400,
+        )
+
+    case.visibility = visibility
     case.permitted_users = json.dumps(body.get("permitted_users", []), ensure_ascii=False)
     case.save(update_fields=["visibility", "permitted_users"])
-    return JsonResponse({"ok": True, "visibility": case.visibility})
+    return JsonResponse({"status": True, "visibility": case.visibility})

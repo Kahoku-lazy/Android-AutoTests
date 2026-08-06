@@ -60,14 +60,14 @@ def list_devices(request):
 
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "devices": result_list,
                 "current": current_serial,
                 "queue_length": queue_count,
             }
         )
     except Exception as e:
-        return JsonResponse({"ok": False, "error": str(e)})
+        return JsonResponse({"status": False, "message": str(e)})
 
 
 def device_current(request):
@@ -83,7 +83,7 @@ def device_current(request):
         dev = Device.objects.get(serial=current_serial)
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "serial": current_serial,
                 "screen_w": dev.screen_w or info.get("displayWidth", 0),
                 "screen_h": dev.screen_h or info.get("displayHeight", 0),
@@ -96,7 +96,7 @@ def device_current(request):
     except Device.DoesNotExist:
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "serial": current_serial,
                 "screen_w": info.get("displayWidth", 1440),
                 "screen_h": info.get("displayHeight", 3040),
@@ -123,8 +123,8 @@ def activate_device(request, serial):
     if dev.status in ("OFFLINE", "DISCONNECTED"):
         return JsonResponse(
             {
-                "ok": False,
-                "error": f"设备 {serial} 当前{dev.status}，无法激活",
+                "status": False,
+                "message": f"设备 {serial} 当前{dev.status}，无法激活",
             },
             status=400,
         )
@@ -136,4 +136,4 @@ def activate_device(request, serial):
     dev.last_seen = datetime.now()
     dev.save(update_fields=["last_seen"])
 
-    return JsonResponse({"ok": True, "current": serial})
+    return JsonResponse({"status": True, "current": serial})

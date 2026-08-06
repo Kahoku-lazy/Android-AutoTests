@@ -21,10 +21,10 @@
 
 ```json
 // 成功
-{"ok": true, "data": {...}}
+{"status": true, "data": {...}}
 
 // 失败
-{"ok": false, "error": "具体错误描述"}
+{"status": false, "message": "具体错误描述"}
 ```
 
 ### 错误码速查
@@ -91,7 +91,7 @@
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "runs": [
     {"run_id": "run_ABCD1234_20260729_143000", "serial": "ABCD1234"}
   ],
@@ -108,10 +108,10 @@
 
 | 传值错误 | HTTP | 响应体 |
 |----------|:--:|------|
-| 缺 `case_ids` | 400 | `{"ok":false,"error":"case_ids required"}` |
-| UI 类型缺设备 | 400 | `{"ok":false,"error":"device_serial is required for UI automation tasks"}` |
-| 无用例定义 | 200 | `{"ok":false,"error":"no enabled test cases found"}` |
-| 无可用设备 | 400 | `{"ok":false,"error":"没有可用设备，请确认设备已连接且状态为在线"}` |
+| 缺 `case_ids` | 400 | `{"status":false,"message":"case_ids required"}` |
+| UI 类型缺设备 | 400 | `{"status":false,"message":"device_serial is required for UI automation tasks"}` |
+| 无用例定义 | 200 | `{"status":false,"message":"no enabled test cases found"}` |
+| 无可用设备 | 400 | `{"status":false,"message":"没有可用设备，请确认设备已连接且状态为在线"}` |
 
 ---
 
@@ -129,17 +129,17 @@
 
 ```json
 // 运行中
-{"ok": true, "message": "stop requested"}
+{"status": true, "message": "stop requested"}
 
 // 前置检查阶段
-{"ok": true, "message": "stopping (pre-flight)"}
+{"status": true, "message": "stopping (pre-flight)"}
 ```
 
 **所有错误场景**：
 
 | 传值错误 | HTTP | 响应体 |
 |----------|:--:|------|
-| run_id 不存在或已结束 | 200 | `{"ok":false,"error":"run not found or already finished"}` |
+| run_id 不存在或已结束 | 200 | `{"status":false,"message":"run not found or already finished"}` |
 
 ---
 
@@ -164,15 +164,15 @@
 **响应** `200`：
 
 ```json
-{"ok": true, "message": "已取消排队任务（5 个用例）"}
+{"status": true, "message": "已取消排队任务（5 个用例）"}
 ```
 
 **所有错误场景**：
 
 | 传值错误 | HTTP | 响应体 |
 |----------|:--:|------|
-| 缺少必填字段 | 400 | `{"ok":false,"error":"需要提供 client_task_id 和 device_serial"}` |
-| 不在队列或已执行 | 404 | `{"ok":false,"error":"未找到该排队任务，可能已经开始执行"}` |
+| 缺少必填字段 | 400 | `{"status":false,"message":"需要提供 client_task_id 和 device_serial"}` |
+| 不在队列或已执行 | 404 | `{"status":false,"message":"未找到该排队任务，可能已经开始执行"}` |
 
 ---
 
@@ -188,7 +188,7 @@
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "tasks": [
     {
       "id": "ID-001",
@@ -299,14 +299,14 @@
 **响应** `200`：
 
 ```json
-{"ok": true, "id": "ID-001"}
+{"status": true, "id": "ID-001"}
 ```
 
 **所有错误场景**：
 
 | 传值错误 | HTTP | 响应体 |
 |----------|:--:|------|
-| 缺少 id | 400 | `{"ok":false,"error":"任务ID不能为空"}` |
+| 缺少 id | 400 | `{"status":false,"message":"任务ID不能为空"}` |
 
 ---
 
@@ -323,7 +323,7 @@
 **响应** `200`：
 
 ```json
-{"ok": true, "message": "已删除"}
+{"status": true, "message": "已删除"}
 ```
 
 ---
@@ -340,7 +340,7 @@
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "active": [
     {
       "run_id": "run_ABCD1234_20260729_143000",
@@ -373,7 +373,7 @@
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "run_id": "run_ABCD1234_20260729_143000",
   "status": "RUNNING",
   "is_running": true,
@@ -387,7 +387,7 @@
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "run_id": "run_ABCD1234_20260729_143000",
   "status": "COMPLETED",
   "total_iterations": 6,
@@ -404,7 +404,7 @@
 
 | 传值错误 | HTTP | 响应体 |
 |----------|:--:|------|
-| run_id 不存在 | 404 | `{"ok":false,"error":"run not found"}` |
+| run_id 不存在 | 404 | `{"status":false,"message":"run not found"}` |
 
 ---
 
@@ -418,7 +418,7 @@
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "runs": [
     {
       "run_id": "run_ABCD1234_20260729_143000",
@@ -452,7 +452,7 @@ TREP v1.0 运行健康监控。返回设备信息、最近日志。用于 WebSoc
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "run_id": "run_ABCD1234_20260729_143000",
   "live": true,
   "status": "RUNNING",
@@ -475,7 +475,7 @@ TREP v1.0 运行健康监控。返回设备信息、最近日志。用于 WebSoc
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "run_id": "...",
   "live": false,
   "status": "COMPLETED",
@@ -504,7 +504,7 @@ TREP v1.0 进度快照。返回每用例通过/失败统计。
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "run_id": "run_ABCD1234_20260729_143000",
   "live": true,
   "status": "RUNNING",
@@ -520,7 +520,7 @@ TREP v1.0 进度快照。返回每用例通过/失败统计。
 
 | 传值错误 | HTTP | 响应体 |
 |----------|:--:|------|
-| run_id 不存在 | 404 | `{"ok":false,"error":"run not found"}` |
+| run_id 不存在 | 404 | `{"status":false,"message":"run not found"}` |
 
 ---
 
@@ -558,7 +558,7 @@ TREP v1.0 进度快照。返回每用例通过/失败统计。
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "result": "pass",
   "message": "步骤「点击确定按钮」执行成功",
   "logs": ["14:30:01 [INFO] 查找元素...", "14:30:02 [INFO] 点击成功"]
@@ -569,9 +569,9 @@ TREP v1.0 进度快照。返回每用例通过/失败统计。
 
 | 传值错误 | HTTP | 响应体 |
 |----------|:--:|------|
-| 未知步骤类型 | 200 | `{"ok":false,"error":"Unknown step type: xxx"}` |
-| 未选择调试设备 | 200 | `{"ok":false,"error":"请先在用例编辑页顶部选择调试设备"}` |
-| 步骤执行失败 | 200 | `{"ok":false,"result":"fail","error":"步骤「xxx」执行失败"}` |
+| 未知步骤类型 | 200 | `{"status":false,"message":"Unknown step type: xxx"}` |
+| 未选择调试设备 | 200 | `{"status":false,"message":"请先在用例编辑页顶部选择调试设备"}` |
+| 步骤执行失败 | 200 | `{"status":false,"result":"fail","message":"步骤「xxx」执行失败"}` |
 
 ---
 
@@ -593,8 +593,8 @@ TREP v1.0 进度快照。返回每用例通过/失败统计。
 
 | 传值错误 | HTTP | 响应体 |
 |----------|:--:|------|
-| 非法路径（目录穿越） | 403 | `{"ok":false,"error":"invalid path"}` |
-| 文件不存在 | 404 | `{"ok":false,"error":"not found"}` |
+| 非法路径（目录穿越） | 403 | `{"status":false,"message":"invalid path"}` |
+| 文件不存在 | 404 | `{"status":false,"message":"not found"}` |
 
 ---
 
@@ -626,7 +626,7 @@ TREP v1.0 进度快照。返回每用例通过/失败统计。
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "summary": {
     "total_runs": 10,
     "total_iterations": 60,
@@ -688,7 +688,7 @@ TREP v1.0 进度快照。返回每用例通过/失败统计。
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "result_type": "pass",
   "total": 55,
   "case_count": 3,
@@ -709,7 +709,7 @@ TREP v1.0 进度快照。返回每用例通过/失败统计。
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "result_type": "fail",
   "total": 5,
   "case_count": 2,
@@ -744,7 +744,7 @@ TREP v1.0 进度快照。返回每用例通过/失败统计。
 
 | 传值错误 | HTTP | 响应体 |
 |----------|:--:|------|
-| result 不是 pass 或 fail | 400 | `{"ok":false,"error":"result 必须为 pass 或 fail"}` |
+| result 不是 pass 或 fail | 400 | `{"status":false,"message":"result 必须为 pass 或 fail"}` |
 
 ---
 
@@ -764,7 +764,7 @@ TREP v1.0 进度快照。返回每用例通过/失败统计。
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "run": {
     "run_id": "run_ABCD1234_20260729_143000",
     "status": "COMPLETED",
@@ -811,7 +811,7 @@ TREP v1.0 进度快照。返回每用例通过/失败统计。
 
 | 传值错误 | HTTP | 响应体 |
 |----------|:--:|------|
-| run_id 不存在 | 404 | `{"ok":false,"error":"run not found"}` |
+| run_id 不存在 | 404 | `{"status":false,"message":"run not found"}` |
 
 ---
 
@@ -831,7 +831,7 @@ TREP v1.0 进度快照。返回每用例通过/失败统计。
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "task": {
     "task_id": "ID-001",
     "name": "登录回归测试",
@@ -883,7 +883,7 @@ TREP v1.0 进度快照。返回每用例通过/失败统计。
 
 | 传值错误 | HTTP | 响应体 |
 |----------|:--:|------|
-| task_id 不存在 | 404 | `{"ok":false,"error":"task not found"}` |
+| task_id 不存在 | 404 | `{"status":false,"message":"task not found"}` |
 
 ---
 
@@ -905,7 +905,7 @@ TREP v1.0 进度快照。返回每用例通过/失败统计。
 
 | 传值错误 | HTTP | 响应体 |
 |----------|:--:|------|
-| 文件不存在 | 404 | `{"ok":false,"error":"not found"}` |
+| 文件不存在 | 404 | `{"status":false,"message":"not found"}` |
 
 ---
 
@@ -923,7 +923,7 @@ TREP v1.0 进度快照。返回每用例通过/失败统计。
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "name": "report_20260729.csv",
   "type": "csv",
   "size": 12345,
@@ -937,7 +937,7 @@ TREP v1.0 进度快照。返回每用例通过/失败统计。
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "name": "report_20260729.md",
   "type": "md",
   "size": 5678,

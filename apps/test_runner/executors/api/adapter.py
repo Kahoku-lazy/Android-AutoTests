@@ -234,33 +234,6 @@ class ApiAdapter:
                 "detail": f"HTTP {status_code} ({duration_ms:.0f}ms)",
             }
 
-        except _requests.exceptions.HTTPError as e:
-            duration_ms = (time.time() - start) * 1000
-            status_code = e.response.status_code if e.response is not None else 0
-            error_body = e.response.text if e.response is not None else ""
-            response_headers = dict(e.response.headers) if e.response is not None else {}
-            if expected_status > 0 and status_code == expected_status:
-                self.log(f"PASS: HTTP {status_code} (expected) ({duration_ms:.0f}ms)")
-                return {
-                    "result": "pass",
-                    "status_code": status_code,
-                    "response_body": error_body,
-                    "response_headers": response_headers,
-                    "duration_ms": duration_ms,
-                    "detail": f"HTTP {status_code} (expected) ({duration_ms:.0f}ms)",
-                }
-            self.log(f"FAIL: HTTP {status_code} {e}")
-            return _fail(
-                status_code,
-                error_body,
-                duration_ms,
-                f"HTTP {status_code}: {e}",
-                response_headers,
-                self._build_diagnostics(
-                    http_method, url, headers, request_body, status_code, error_body, duration_ms
-                ),
-            )
-
         except _requests.exceptions.ConnectionError as e:
             duration_ms = (time.time() - start) * 1000
             self.log(f"FAIL: Connection error - {e}")

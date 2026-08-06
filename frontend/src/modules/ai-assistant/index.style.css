@@ -1,0 +1,168 @@
+/* ═══════════════════════════════════════════
+   AI 助手 — 智能体看板样式
+   ═══════════════════════════════════════════ */
+
+.ai-workbench {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.doc-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: auto;
+  padding-bottom: 12px;
+}
+.kb-host {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.duty-section,
+.task-section {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 24px 8px;
+  flex-shrink: 0;
+}
+.duty-section {
+  min-height: 0;
+}
+.task-section {
+  flex: 1;
+  min-height: 480px;
+}
+
+.doc-section__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+
+.filter-bar {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.task-tabs {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.task-tabs :deep(.el-tabs) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.task-tabs :deep(.el-tabs__content) {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: block;
+  padding-top: 12px;
+}
+.task-tabs :deep(.el-tabs__inner) {
+  min-height: min-content;
+}
+
+.filter-count {
+  font-size: var(--app-size-sm);
+  color: var(--app-text-secondary, #999);
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.dot-board {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px 32px;
+  align-content: flex-start;
+  align-items: flex-start;
+  padding: 28px 22px 24px;
+  border-radius: 18px;
+  background-color: #fff;
+  background-image: radial-gradient(rgba(137,207,240,0.12) 1.1px, transparent 1.1px);
+  background-size: 18px 18px;
+  border: 1.5px solid var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+.duty-roster {
+  min-height: 200px;
+  max-height: 340px;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+.task-board {
+  min-height: 380px;
+}
+
+.empty {
+  color: var(--app-text-secondary, #999);
+  padding: 48px 0;
+  text-align: center;
+  font-size: var(--app-size-md);
+  width: 100%;
+  font-weight: 700;
+}
+.ai-loading-wrap {
+  width: 100%;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--app-text-secondary, #999);
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+}
+
+/* View tabs — pill-style switcher */
+.view-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  margin: 0 24px;
+  background: rgba(137,207,240,0.06);
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+.view-tab {
+  flex: 1;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font-size: var(--app-size-md);
+  font-weight: 700;
+  color: #999;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+.view-tab:hover {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--app-text, var(--ink));
+}
+.view-tab.active {
+  background: #fff;
+  color: var(--app-text, var(--ink));
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}

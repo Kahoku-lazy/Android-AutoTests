@@ -4,11 +4,12 @@
 """
 
 import asyncio
-from datetime import datetime
 import json
 import os
 import sys
 import time
+
+from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
@@ -55,7 +56,9 @@ def main():
             titles.append(f"[{row.id}] {row.title}")
         except WebTestCase.DoesNotExist:
             print(
-                json.dumps({"ok": False, "error": f"用例不存在或未启用: {cid}"}, ensure_ascii=False)
+                json.dumps(
+                    {"status": False, "error": f"用例不存在或未启用: {cid}"}, ensure_ascii=False
+                )
             )
             sys.exit(1)
 

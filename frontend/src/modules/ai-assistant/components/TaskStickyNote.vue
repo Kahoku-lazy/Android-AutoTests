@@ -1,17 +1,18 @@
-<script setup>
+<script setup lang="ts">
 /**
  * 任务便签 — 胶带=智能体名，正文=任务名/进度/状态
  */
 import { computed, onMounted, ref } from 'vue'
 import { animate } from 'animejs'
+import type { TaskRecord } from '@/shared/types/ai'
 
-const props = defineProps({
-  task: { type: Object, required: true },
-  rotation: { type: Number, default: -2 },
-  tapeHue: { type: String, default: 'mint' },
-})
+const props = defineProps<{
+  task: TaskRecord
+  rotation?: number
+  tapeHue?: string
+}>()
 
-const emit = defineEmits(['open'])
+const emit = defineEmits<{ open: [task: TaskRecord] }>()
 
 const noteRef = ref(null)
 const tapeRef = ref(null)

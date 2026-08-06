@@ -6,19 +6,19 @@ import { animate, stagger } from 'animejs'
 import AppCard from "@/shared/components/AppCard.vue";
 import AppTable from "@/shared/components/AppTable.vue";
 import AppTabs from "@/shared/components/AppTabs.vue";
-import { usePagination } from '@/shared/composables/usePagination.js'
+import { usePagination } from '@/shared/composables/usePagination'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import KpiCard from '@/shared/components/KpiCard.vue'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import RateBar from '@/shared/components/RateBar.vue'
-import { listRuns, statusLabel, statusBadgeClass, formatTime } from './api.js'
+import { listRuns, statusLabel, statusBadgeClass, formatTime } from './api'
 import PassRateTrendChart from './components/PassRateTrendChart.vue'
 import DailyPassFailChart from './components/DailyPassFailChart.vue'
 import {
   CHART_RANGE_OPTIONS,
   CHART_VISIBLE_DAYS,
-} from './constants.js'
+} from './constants'
 
 const router = useRouter()
 
@@ -86,7 +86,7 @@ async function fetchReports() {
     if (creator) params.creator = creator
     params.chart_range = String(chartRange.value)
     const { data } = await listRuns(params)
-    if (data.ok) {
+    if (data.status) {
       runs.value = data.runs || []
       summary.value = data.summary || null
       bugSummary.value = data.bug_summary || null

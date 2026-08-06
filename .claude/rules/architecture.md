@@ -13,8 +13,8 @@
 |:--:|------|------|
 | ① | 前端 ↔ Django | HTTP REST + JWT |
 | ② | Django → 前端 | WebSocket + JWT |
-| ③ | 前端 → AgentScope | SSE + JWT |
-| ④ | AgentScope → Django | HTTP API |
+| ③ | 前端 → Django (AI SSE) | SSE + JWT |
+| ④ | AgentScope → Django | 进程内直接调用 |
 | ⑤ | Django ↔ 设备 | ADB |
 
 ```
@@ -40,14 +40,12 @@
 
 ## 三、AgentScope 边界
 
-`agentscope_service/` 下：
+AgentScope 已从独立服务迁移为 Django 进程内模块（`apps/ai_assistant/agent_scope/`），不再有独立 `agentscope_service/` 目录。
 
 ```
-❌ 禁止 import apps.* 或 Django ORM
-❌ 禁止直连数据库
-❌ 禁止直连设备
-❌ 禁止新增 adapters/ 或 rag/ 目录（已删除，架构不再使用）
-✅ 所有平台数据通过 HTTP 调用 Django API 获取
+❌ 禁止 AgentScope 直连数据库
+❌ 禁止 AgentScope 直连设备
+✅ 所有平台数据通过 Django ORM / api.py 获取（同进程直接调用）
 ```
 
 ---
@@ -104,12 +102,12 @@ config/urls.py → 移除 include
 ```
 1.  前端直连数据库
 2.  后端返回 Django Template
-3.  AgentScope import Django 模块
-4.  跨模块 import 内部实现（views/service/runner/executor/state_machine）
-5.  跨模块直接 ORM 写（必须走目标 api.py）
-6.  device_pool import 上层模块
-7.  dashboard 做 ORM 写
-8.  引入五条通道之外的协议
-9.  新增 App 不检查 §五 门槛
-10. agentscope_service/ 下新增 adapters/ 或 rag/
+3.  跨模块 import 内部实现（views/service/runner/executor/state_machine）
+4.  跨模块直接 ORM 写（必须走目标 api.py）
+5.  device_pool import 上层模块
+6.  dashboard 做 ORM 写
+7.  引入五条通道之外的协议
+8.  新增 App 不检查 §五 门槛
+9.  AgentScope 直连数据库或设备
+10. apps/ai_assistant/agent_scope/ 下新增 adapters/ 或 rag/
 ```

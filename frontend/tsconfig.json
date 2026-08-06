@@ -4,10 +4,13 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
     "jsx": "preserve",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "esModuleInterop": true,
+    "allowJs": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
     "noEmit": true,
@@ -17,5 +20,5 @@
     },
     "types": ["vite/client"]
   },
-  "include": ["src/**/*.ts", "src/**/*.vue", "src/**/*.d.ts"]
+  "include": ["src/**/*.ts", "src/**/*.vue", "src/**/*.d.ts", "src/**/*.js"]
 }

@@ -4,7 +4,8 @@ import { ref } from "vue";
 import AppCard from "@/shared/components/AppCard.vue";
 import { ElTag } from "element-plus";
 import ConfirmButton from "@/shared/components/patterns/ConfirmButton.vue";
-import { caseLock, caseUnlock } from "../api.js";
+import { getActive } from "@/shared/auth/token-storage";
+import { caseLock, caseUnlock } from "../api";
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -12,15 +13,7 @@ const props = defineProps({
 
 const emit = defineEmits(["edit", "delete", "select", "refresh"]);
 
-function resolveCurrentUser() {
-  const active = sessionStorage.getItem("auth_active") || ""
-  if (active) return active
-  try {
-    const pool = JSON.parse(localStorage.getItem("auth_accounts") || "{}")
-    return Object.keys(pool)[0] || ""
-  } catch { return "" }
-}
-const currentUser = resolveCurrentUser();
+const currentUser = getActive();
 const isCreator = !!(currentUser && props.item.created_by === currentUser);
 const isEditing = !!(props.item.editing_by && props.item.editing_by !== currentUser);
 const locking = ref(false);

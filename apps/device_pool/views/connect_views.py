@@ -33,7 +33,7 @@ def scan_device(request):
     try:
         data = json.loads(request.body) if request.body else {}
     except Exception:
-        return JsonResponse({"ok": False, "error": "invalid JSON"})
+        return JsonResponse({"status": False, "message": "invalid JSON"})
     target = data.get("target", "").strip()
 
     try:
@@ -51,7 +51,9 @@ def scan_device(request):
                 )
                 _port_ok = _port.isdigit() and 1024 <= int(_port) <= 65535
                 if not (_ip_ok and _port_ok):
-                    return JsonResponse({"ok": False, "error": "无效的 IP 或端口"}, status=400)
+                    return JsonResponse(
+                        {"status": False, "message": "无效的 IP 或端口"}, status=400
+                    )
                 result = subprocess.run(
                     ["adb", "connect", target],
                     capture_output=True,
@@ -71,7 +73,7 @@ def scan_device(request):
                         _collect_device_info(dev, target)
                     return JsonResponse(
                         {
-                            "ok": True,
+                            "status": True,
                             "count": 1,
                             "newly_added": 1 if created else 0,
                             "devices": [_device_to_dict(dev, device_pool.current_serial)],
@@ -79,8 +81,8 @@ def scan_device(request):
                     )
                 return JsonResponse(
                     {
-                        "ok": False,
-                        "error": f"无法连接到 {target}，请检查设备网络和 ADB 服务",
+                        "status": False,
+                        "message": f"无法连接到 {target}，请检查设备网络和 ADB 服务",
                     },
                     status=400,
                 )
@@ -99,7 +101,7 @@ def scan_device(request):
                         _collect_device_info(dev, target)
                     return JsonResponse(
                         {
-                            "ok": True,
+                            "status": True,
                             "count": 1,
                             "newly_added": 1 if created else 0,
                             "devices": [_device_to_dict(dev, device_pool.current_serial)],
@@ -107,8 +109,8 @@ def scan_device(request):
                     )
                 return JsonResponse(
                     {
-                        "ok": False,
-                        "error": f"device {target} not found",
+                        "status": False,
+                        "message": f"device {target} not found",
                     },
                     status=400,
                 )
@@ -141,7 +143,7 @@ def scan_device(request):
 
             return JsonResponse(
                 {
-                    "ok": True,
+                    "status": True,
                     "count": len(devices_out),
                     "newly_added": newly_added,
                     "devices": devices_out,
@@ -150,13 +152,13 @@ def scan_device(request):
     except subprocess.TimeoutExpired:
         return JsonResponse(
             {
-                "ok": False,
-                "error": "连接超时，请检查设备 USB/WiFi 连接",
+                "status": False,
+                "message": "连接超时，请检查设备 USB/WiFi 连接",
             },
             status=504,
         )
     except Exception as e:
-        return JsonResponse({"ok": False, "error": str(e)})
+        return JsonResponse({"status": False, "message": str(e)})
 
 
 @csrf_exempt
@@ -182,8 +184,8 @@ def connect_device(request, serial):
     except Device.DoesNotExist:
         return JsonResponse(
             {
-                "ok": False,
-                "error": f"设备 {serial} 未注册",
+                "status": False,
+                "message": f"设备 {serial} 未注册",
             },
             status=404,
         )
@@ -192,8 +194,8 @@ def connect_device(request, serial):
     if dev.status in ("OFFLINE", "DISCONNECTED"):
         return JsonResponse(
             {
-                "ok": False,
-                "error": "设备已离线，无法连接",
+                "status": False,
+                "message": "设备已离线，无法连接",
             },
             status=400,
         )
@@ -211,8 +213,8 @@ def connect_device(request, serial):
             if remaining > 0:
                 return JsonResponse(
                     {
-                        "ok": False,
-                        "error": f"设备已被 {dev.locked_by} 锁定，剩余 {remaining} 秒",
+                        "status": False,
+                        "message": f"设备已被 {dev.locked_by} 锁定，剩余 {remaining} 秒",
                         "locked_by": dev.locked_by,
                         "remaining": remaining,
                     },
@@ -233,8 +235,8 @@ def connect_device(request, serial):
             if "connected" not in output.lower() and "already" not in output.lower():
                 return JsonResponse(
                     {
-                        "ok": False,
-                        "error": f"连接超时，请检查设备 USB/WiFi 连接",
+                        "status": False,
+                        "message": f"连接超时，请检查设备 USB/WiFi 连接",
                     },
                     status=504,
                 )
@@ -248,15 +250,15 @@ def connect_device(request, serial):
             if "atx-agent" in error_msg.lower() or "offline" in error_msg.lower():
                 return JsonResponse(
                     {
-                        "ok": False,
-                        "error": "设备 ATX Agent 未运行，请在设备端启动 uiautomator2 服务",
+                        "status": False,
+                        "message": "设备 ATX Agent 未运行，请在设备端启动 uiautomator2 服务",
                     },
                     status=502,
                 )
             return JsonResponse(
                 {
-                    "ok": False,
-                    "error": f"连接超时，请检查设备 USB/WiFi 连接",
+                    "status": False,
+                    "message": f"连接超时，请检查设备 USB/WiFi 连接",
                 },
                 status=504,
             )
@@ -264,8 +266,8 @@ def connect_device(request, serial):
     except subprocess.TimeoutExpired:
         return JsonResponse(
             {
-                "ok": False,
-                "error": "连接超时，请检查设备 USB/WiFi 连接",
+                "status": False,
+                "message": "连接超时，请检查设备 USB/WiFi 连接",
             },
             status=504,
         )
@@ -306,7 +308,7 @@ def connect_device(request, serial):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "serial": dev.serial,
             "model": dev.model,
             "screen_w": dev.screen_w,
@@ -336,8 +338,8 @@ def disconnect_device(request, serial):
     except Device.DoesNotExist:
         return JsonResponse(
             {
-                "ok": False,
-                "error": f"设备 {serial} 未注册",
+                "status": False,
+                "message": f"设备 {serial} 未注册",
             },
             status=404,
         )
@@ -351,16 +353,16 @@ def disconnect_device(request, serial):
             # TODO: 实现真正的管理员角色后，管理员可强制断开他人设备
             return JsonResponse(
                 {
-                    "ok": False,
-                    "error": "设备正被他人使用，只有锁定者可以断开",
+                    "status": False,
+                    "message": "设备正被他人使用，只有锁定者可以断开",
                 },
                 status=403,
             )
         if not reason:
             return JsonResponse(
                 {
-                    "ok": False,
-                    "error": "强制断开他人设备时必须填写原因",
+                    "status": False,
+                    "message": "强制断开他人设备时必须填写原因",
                 },
                 status=400,
             )
@@ -392,7 +394,7 @@ def disconnect_device(request, serial):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "serial": serial,
             "disconnected": True,
             "locks_released": locks_released,
@@ -408,7 +410,7 @@ def disconnect_observe(request, serial):
     仅清理 uiautomator2 连接缓存，不删除 DB 记录，不释放锁。
     """
     device_pool.remove_device(serial)
-    return JsonResponse({"ok": True, "serial": serial, "message": "设备观察连接已断开"})
+    return JsonResponse({"status": True, "serial": serial, "message": "设备观察连接已断开"})
 
 
 # ═══════════════════════════════════════════════

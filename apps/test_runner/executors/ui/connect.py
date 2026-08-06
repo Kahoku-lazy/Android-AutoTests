@@ -72,7 +72,9 @@ def _adb_connect(serial: str, pool_device, log: Callable[[str], None]) -> Androi
             output = (result.stdout + result.stderr).strip()
             if output:
                 log(f"  → {output}")
-            if "connected" not in output.lower() and "already" not in output.lower():
+            output_lower = output.lower()
+            connected_keywords = ("connected", "already", "已连接", "已经连接", "成功")
+            if not any(kw in output_lower for kw in connected_keywords):
                 raise DeviceCheckError("ADB connect failed. Check WiFi network and device port.")
         except subprocess.TimeoutExpired:
             raise DeviceCheckError("ADB connect timed out (10s). Check network.") from None
@@ -105,11 +107,11 @@ def _tune_u2_http_timeout(u2_dev: u2.Device) -> None:
 
         _u2base.HTTP_TIMEOUT = U2_OP_TIMEOUT
     except Exception:
-        logger.debug("Device disconnect cleanup failed, continuing")
+        logger.debug("u2 HTTP timeout tuning failed, continuing")
     try:
         u2_dev.settings["wait_timeout"] = U2_OP_TIMEOUT
     except Exception:
-        logger.debug("Device disconnect cleanup failed, continuing")
+        logger.debug("u2 HTTP timeout tuning failed, continuing")
 
 
 def _verify_display(air_dev: Android, u2_dev: u2.Device, log: Callable[[str], None]) -> dict:

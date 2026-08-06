@@ -148,7 +148,7 @@ test_cases = [
         "expected_status": 401,
         "priority": "P0",
         "enabled": True,
-        "description": '请求无 Authorization header → 401 + {"ok":false,"error":"..."}',
+        "description": '请求无 Authorization header → 401 + {"status":false,"error":"..."}',
         "steps_json": steps_json(
             request_step("/api/dashboard/stats/", 401),
             assert_step(

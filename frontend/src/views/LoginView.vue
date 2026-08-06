@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LoginErrorOverlay from '@/views/components/LoginErrorOverlay.vue'
 import { useLoginView } from './LoginView.logic'
 import AccountSwitchPrompt from '@/views/components/AccountSwitchPrompt.vue'
 import LoginCard from '@/views/components/LoginCard.vue'
@@ -13,6 +14,7 @@ const {
   regUsername,
   regPassword,
   regPassword2,
+  regEmail,
   loading,
   loginErrors,
   canLogin,
@@ -20,11 +22,14 @@ const {
   canRegister,
   heroImageSrc,
   heroImageVisible,
+  serverError,
+  clearServerError,
   handleLogin,
   handleRegister,
   switchMode,
   onSwitchToExisting,
   onAddNewAccount,
+  onHeroImageError,
 } = useLoginView()
 </script>
 
@@ -40,44 +45,49 @@ const {
             <span class="hero__version">v2.1</span>
           </div>
           <p class="hero__desc">
-            <span class="hero__desc-line">AI 驱动的跨端 UI 自动化测试平台</span>
-            <span class="hero__desc-line">让 Android / iOS 测试工作充满温暖质感</span>
+            <span class="hero__desc-line">AI 自动化测试平台，让AI来做测试</span>
+            <span class="hero__desc-line">让测试工作摆脱重复的劳动，专注于创造价值</span>
           </p>
         </div>
 
         <div class="hero__body">
-          <div class="hero__text">
-            <AccountSwitchPrompt
-              v-if="viewState === 'switchPrompt'"
-              :existing-username="activeAccount"
-              @switch-to="onSwitchToExisting"
-              @add-new="onAddNewAccount"
-            />
+          <LoginErrorOverlay
+            :visible="!!serverError"
+            :message="serverError"
+            @close="clearServerError"
+          />
 
-            <LoginCard
-              v-else-if="viewState === 'login'"
-              v-model:username="loginUsername"
-              v-model:password="loginPassword"
-              v-model:remember-me="rememberMe"
-              :loading="loading"
-              :errors="loginErrors"
-              :can-submit="canLogin"
-              @submit="handleLogin"
-              @switch-to-register="switchMode('register')"
-            />
+          <AccountSwitchPrompt
+            v-if="viewState === 'switchPrompt'"
+            :existing-username="activeAccount"
+            @switch-to="onSwitchToExisting"
+            @add-new="onAddNewAccount"
+          />
 
-            <RegisterCard
-              v-else-if="viewState === 'register'"
-              v-model:username="regUsername"
-              v-model:password="regPassword"
-              v-model:password2="regPassword2"
-              :loading="loading"
-              :errors="regErrors"
-              :can-submit="canRegister"
-              @submit="handleRegister"
-              @switch-to-login="switchMode('login')"
-            />
-          </div>
+          <LoginCard
+            v-else-if="viewState === 'login'"
+            v-model:username="loginUsername"
+            v-model:password="loginPassword"
+            v-model:remember-me="rememberMe"
+            :loading="loading"
+            :errors="loginErrors"
+            :can-submit="canLogin"
+            @submit="handleLogin"
+            @switch-to-register="switchMode('register')"
+          />
+
+          <RegisterCard
+            v-else-if="viewState === 'register'"
+            v-model:username="regUsername"
+            v-model:email="regEmail"
+            v-model:password="regPassword"
+            v-model:password2="regPassword2"
+            :loading="loading"
+            :errors="regErrors"
+            :can-submit="canRegister"
+            @submit="handleRegister"
+            @switch-to-login="switchMode('login')"
+          />
 
           <div class="hero__visual">
             <img
@@ -85,7 +95,7 @@ const {
               :src="heroImageSrc"
               alt="AI 自动化测试平台视觉图"
               class="hero__animal"
-              @error="heroImageVisible = false"
+              @error="onHeroImageError"
             />
           </div>
         </div>

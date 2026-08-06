@@ -1,10 +1,19 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { staggerReveal } from '@/shared/animations.js'
+import { staggerReveal } from '@/shared/animations'
+import type { DashboardStats } from '@/shared/types/dashboard'
 
-const props = defineProps({
-  stats: { type: Object, default: () => ({}) },
+const props = withDefaults(defineProps<{ stats: DashboardStats }>(), {
+  stats: () => ({
+    devices: { online: 0, total: 0, trend: 0 },
+    cases: { total: 0, enabled: 0, trend: 0, breakdown: [] },
+    elements: { total: 0, pages: 0, breakdown: [], typeBreakdown: [] },
+    runs: { total: 0, active: 0, trend: 0 },
+    agents: { total: 0, active: 0, trend: 0 },
+    reports: { total: 0 },
+    workflow: { total: 0, page_flows: 0, test_cases: 0 },
+  }),
 })
 
 const router = useRouter()

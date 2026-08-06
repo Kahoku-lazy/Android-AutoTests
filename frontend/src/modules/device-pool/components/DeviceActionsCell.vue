@@ -1,10 +1,17 @@
-<script setup>
+<script setup lang="ts">
 /** 设备操作列 — 锁定/排队/占用/断开 */
-defineProps({
-  device: { type: Object, required: true },
-  currentUser: { type: String, default: '' },
-})
-const emit = defineEmits(['lock', 'joinQueue', 'occupy', 'disconnect'])
+import type { DeviceRecord } from '@/shared/types/device'
+
+defineProps<{
+  device: DeviceRecord
+  currentUser?: string
+}>()
+const emit = defineEmits<{
+  lock: [device: DeviceRecord]
+  joinQueue: [device: DeviceRecord]
+  occupy: [device: DeviceRecord]
+  disconnect: [device: DeviceRecord]
+}>()
 </script>
 
 <template>

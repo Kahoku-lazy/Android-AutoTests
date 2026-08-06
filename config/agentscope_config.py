@@ -58,7 +58,5 @@ WORKSPACE_TTL = float(os.environ.get("AGENTSCOPE_WORKSPACE_TTL", "3600"))  # 1 h
 # JWT: use shared.auth.jwt_auth (verify_token / get_config) — do not duplicate secrets here.
 
 # ── Tools ──
-# Additional skill / MCP directories to pre-load into workspaces
-SKILL_PATHS = [
-    str(Path(__file__).resolve().parent.parent / "agentscope_service" / "skills"),
-]
+# Skill paths have been moved in-process to apps/ai_assistant/agent_scope/
+SKILL_PATHS = []

@@ -4,15 +4,14 @@ from django.urls import path
 
 from .views import (
     agent_detail,
+    chat_stream,
     create_agent,
     create_conversation,
-    create_scope_session,
     create_shared_tool,
     delete_agent,
     delete_conversation,
     delete_shared_tool,
     get_conv_task,
-    get_default_system_prompt,
     health_check_all_agents,
     import_from_toolbox,
     kb_add_document,
@@ -32,7 +31,6 @@ from .views import (
     me,
     refresh_token,
     register,
-    register_agent_in_agentscope,
     rename_conversation,
     reveal_api_key,
     save_message,
@@ -83,14 +81,8 @@ urlpatterns = [
     path("models/detect", list_available_models, name="models_detect"),
     path("agents/<int:agent_id>/test", test_agent_connection, name="agent_test"),
     path("agents/<int:agent_id>/models", list_available_models, name="agent_models"),
-    path(
-        "agents/<int:agent_id>/register-scope",
-        register_agent_in_agentscope,
-        name="agent_register_scope",
-    ),
     path("agents/health", health_check_all_agents, name="agent_health"),
-    # Default prompt template & available platform tools
-    path("default-system-prompt", get_default_system_prompt, name="default_system_prompt"),
+    # Available platform tools
     path("available-tools", list_available_platform_tools, name="available_tools"),
     path("available-skills", list_available_skills, name="available_skills"),
     # MCP & Skill management (per-agent)
@@ -100,11 +92,11 @@ urlpatterns = [
     path("agents/<int:agent_id>/tools/skill/upload", upload_skill, name="agent_skill_upload"),
     path("agents/<int:agent_id>/tools/<int:tool_id>/toggle", toggle_tool, name="agent_tool_toggle"),
     path("agents/<int:agent_id>/tools/<int:tool_id>/delete", delete_tool, name="agent_tool_delete"),
-    # AgentScope SSE session management
+    # SSE streaming chat — Agent runs in-process (no AgentScope service needed)
     path(
-        "conversations/<int:conv_id>/create-scope-session",
-        create_scope_session,
-        name="conv_scope_session",
+        "conversations/<int:conv_id>/chat/stream",
+        chat_stream,
+        name="conv_chat_stream",
     ),
     # Conversation-level task history
     path("conversations/<int:conv_id>/tasks", list_conv_tasks, name="conv_tasks"),

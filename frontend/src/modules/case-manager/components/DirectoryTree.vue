@@ -1,10 +1,10 @@
 <script setup>
 import { ref, computed } from "vue";
 import EmptyState from "@/shared/components/patterns/EmptyState.vue";
-import { useBatchSelect } from "../composables/useBatchSelect.js";
-import { useContextMenu } from "../composables/useContextMenu.js";
-import { useTreeDragDrop } from "../composables/useTreeDragDrop.js";
-import { useDirectoryDialog } from "../composables/useDirectoryDialog.js";
+import { useBatchSelect } from "../composables/useBatchSelect";
+import { useContextMenu } from "../composables/useContextMenu";
+import { useTreeDragDrop } from "../composables/useTreeDragDrop";
+import { useDirectoryDialog } from "../composables/useDirectoryDialog";
 
 const props = defineProps({
   treeData: { type: Array, default: () => [] },

@@ -1,13 +1,14 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { kbSearch } from './evaluator-api.js'
+import { kbSearch } from './evaluator-api'
+import { EVALUATOR_POLL_MS, KB_SEARCH_TOP_K } from './constants'
 
 import {
   listBanks, createBank, updateBank, deleteBank, seedDefaultBank,
   listRuns, getRun, startRun, deleteRun, submitScore,
   kbSelfTest, listAgents, listFrameworks,
-} from './evaluator-api.js'
+} from './evaluator-api'
 
 // ── Sub-tabs ──
 const subTab = ref('self')
@@ -24,8 +25,8 @@ const curTab = computed(() => SUB_TABS.find(t => t.key === subTab) || SUB_TABS[0
 // ── Frameworks availability ──
 async function loadFrameworks() {
   try {
-    const { data } = await listFrameworks()
-    if (data.ok) {
+    const data = await listFrameworks()
+    if (data.status) {
       const availMap = {}
       ;(data.frameworks || []).forEach(f => { availMap[f.key] = f.available })
       SUB_TABS.forEach(t => { if (availMap.hasOwnProperty(t.key)) t.available = availMap[t.key] })
@@ -36,13 +37,13 @@ async function loadFrameworks() {
 // ── Agents ──
 const agents = ref([])
 async function loadAgents() {
-  try { const { data } = await listAgents(); if (data.ok) agents.value = data.agents || [] } catch (e) { console.error(e); }
+  try { const data = await listAgents(); if (data.status) agents.value = data.agents || [] } catch (e) { console.error(e); }
 }
 
 // ── Banks ──
 const banks = ref([])
 async function loadBanks() {
-  try { const { data } = await listBanks(); if (data.ok) banks.value = data.banks || [] } catch (e) { console.error(e); }
+  try { const data = await listBanks(); if (data.status) banks.value = data.banks || [] } catch (e) { console.error(e); }
 }
 
 // ── Bank editor ──
@@ -109,7 +110,7 @@ const METRICS_BY_FW = {
 }
 
 async function loadRuns() {
-  try { const { data } = await listRuns(); if (data.ok) runs.value = data.runs || [] } catch (e) { console.error(e); }
+  try { const data = await listRuns(); if (data.status) runs.value = data.runs || [] } catch (e) { console.error(e); }
 }
 
 const filteredRuns = computed(() => runs.value.filter(r => (r.framework || 'self') === subTab.value))
@@ -126,27 +127,32 @@ async function doStartRun() {
     if (curTab.value.kind === 'metric') {
       extra.metrics = selectedMetrics.value.filter(m => m.selected).map(m => m.key)
     }
-    const { data } = await startRun(selectedAgentId.value, selectedBankId.value, judgeModel.value, subTab.value)
-    if (data.ok) { ElMessage.success(data.message || '评测已开始'); await loadRuns(); pollRun(data.id) }
-    else ElMessage.error(data.error || '启动失败')
+    const data = await startRun(selectedAgentId.value, selectedBankId.value, judgeModel.value, subTab.value)
+    if (data.status) { ElMessage.success(data.message || '评测已开始'); await loadRuns(); pollRun(data.run?.id) }
+    else ElMessage.error(data.message || '启动失败')
   } catch (_) { ElMessage.error('启动失败') }
   starting.value = false
 }
 
 function pollRun(runId) {
-  const timer = setInterval(async () => {
+  // Clear any existing poll timer before starting a new one.
+  if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null }
+  _pollTimer = setInterval(async () => {
     try {
-      const { data } = await getRun(runId)
-      if (data.ok) {
+      const data = await getRun(runId)
+      if (data.status) {
         const idx = runs.value.findIndex(r => r.id === runId)
         if (idx >= 0) { runs.value[idx] = data.run; runs.value = [...runs.value] }
-        if (data.run.status === 'completed' || data.run.status === 'failed') {
-          clearInterval(timer); ElMessage.success('评测完成')
+        if (data.run?.status === 'completed' || data.run?.status === 'failed') {
+          clearInterval(_pollTimer); _pollTimer = null; ElMessage.success('评测完成')
         }
       }
     } catch (e) { console.error(e); }
-  }, 2000)
+  }, EVALUATOR_POLL_MS)
 }
+
+// Track poll timer for cleanup.
+let _pollTimer = null
 
 // ── Run Detail ──
 const activeRunId = ref(null)
@@ -154,7 +160,7 @@ const runDetail = ref(null)
 const loadingDetail = ref(false)
 async function viewRun(runId) {
   activeRunId.value = runId; loadingDetail.value = true
-  try { const { data } = await getRun(runId); if (data.ok) runDetail.value = data.run } catch (e) { console.error(e); }
+  try { const data = await getRun(runId); if (data.status) runDetail.value = data.run } catch (e) { console.error(e); }
   loadingDetail.value = false
 }
 async function doSubmitScore(resultId, field, value) {
@@ -167,7 +173,7 @@ const kbQuery = ref(''); const kbQueryResult = ref(null); const kbQuerying = ref
 
 async function doKbSelfTest() {
   kbTesting.value = true
-  try { const { data } = await kbSelfTest(); if (data.ok) kbTestResult.value = data } catch (e) { console.error(e); }
+  try { const data = await kbSelfTest(); if (data.status) kbTestResult.value = data } catch (e) { console.error(e); }
   kbTesting.value = false
 }
 
@@ -176,8 +182,8 @@ async function doKbQuery() {
   if (!q) { ElMessage.warning('请输入查询内容'); return }
   kbQuerying.value = true; kbQueryResult.value = null
   try {
-    const { data: d } = await kbSearch({ query: q, top_k: 5 })
-    if (d.ok) kbQueryResult.value = d
+    const d = await kbSearch({ query: q, top_k: KB_SEARCH_TOP_K })
+    if (d.status) kbQueryResult.value = d
   } catch (e) {
     // Fallback: use self-test result for now
     kbQueryResult.value = { ok: true, query: q, documents: [], note: '搜索暂不可用，请先重启服务' }
@@ -188,6 +194,7 @@ async function doKbQuery() {
 
 // ── Init ──
 onMounted(async () => { await Promise.all([loadAgents(), loadBanks(), loadRuns(), loadFrameworks()]) })
+onUnmounted(() => { if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null } })
 
 // Helpers
 function scoreColor(s) { const v = parseFloat(s) || 0; if (v >= 4) return 'var(--c-workflow)'; if (v >= 3) return '#f7cd67'; if (v >= 2) return '#f7a8c4'; return '#e85f5f' }

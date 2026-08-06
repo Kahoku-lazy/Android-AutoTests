@@ -1,16 +1,18 @@
-/** LoginView 逻辑层 — 状态、事件、计算（大脑）。
+/** LoginView 逻辑层 — 薄编排器，组合子 composable。
  *
  *  作为 composable 导出，LoginView.vue 的 <script setup> 调用 useLoginView()
  *  并解构所有返回值供模板绑定。
  */
-import { ref, computed, onMounted, type Ref, type ComputedRef } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ref, type Ref, type ComputedRef } from "vue"
 
-import { login, register } from '@/shared/api/auth'
-import { useAuthPool, type UseAuthPoolReturn } from '@/shared/composables/useAuthPool'
-import { useLoginForm, type UseLoginFormReturn } from '@/shared/composables/useLoginForm'
-import type { ViewState, FieldErrors } from '@/shared/types/auth'
+import { useAuthPool } from "@/shared/composables/useAuthPool"
+import { useLoginForm } from "@/shared/composables/useLoginForm"
+import type { ViewState, FieldErrors } from "@/shared/types/auth"
+
+import { useViewStateMachine } from "./composables/useViewStateMachine"
+import { useSavedUsername } from "./composables/useSavedUsername"
+import { useAuthFlow } from "./composables/useAuthFlow"
+import { useHeroImage } from "./composables/useHeroImage"
 
 export interface LoginViewState {
   activeAccount: Ref<string>
@@ -22,6 +24,7 @@ export interface LoginViewState {
   regUsername: Ref<string>
   regPassword: Ref<string>
   regPassword2: Ref<string>
+  regEmail: Ref<string>
   loading: Ref<boolean>
   loginErrors: ComputedRef<FieldErrors>
   canLogin: ComputedRef<boolean>
@@ -29,118 +32,89 @@ export interface LoginViewState {
   canRegister: ComputedRef<boolean>
   heroImageSrc: string
   heroImageVisible: Ref<boolean>
+  serverError: Ref<string>
+  clearServerError: () => void
   handleLogin: () => Promise<void>
   handleRegister: () => Promise<void>
-  switchMode: (m: string) => void
+  switchMode: (m: ViewState) => void
   onSwitchToExisting: () => void
   onAddNewAccount: () => void
+  onHeroImageError: () => void
 }
 
 export function useLoginView(): LoginViewState {
-  const router = useRouter()
-  const route = useRoute()
+  // ── 子 composable 组合 ──
 
-  // ── Auth pool ──
-  const { activeAccount, accountList, loginAccount } = useAuthPool()
+  const auth = useAuthPool()
+  const { loginUsername, rememberMe, saveUsername } = useSavedUsername()
+  const { heroImageSrc, heroImageVisible, onHeroImageError } = useHeroImage()
 
-  // ── View state machine ──
-  const viewState = ref<ViewState>('login')
-
-  onMounted(() => {
-    if (accountList.value.length > 0 && !route.query.add) {
-      viewState.value = 'switchPrompt'
-    }
-  })
-
-  function onSwitchToExisting() {
-    router.push('/dashboard')
-  }
-
-  function onAddNewAccount() {
-    viewState.value = 'login'
-    router.replace({ query: { add: '1' } })
-  }
-
-  // ── 登录表单 ──
-  const savedUser = localStorage.getItem('saved_username')
-  const loginUsername = ref(savedUser || '')
-  const loginPassword = ref('')
-  const rememberMe = ref(!!savedUser)
-
-  // ── 注册表单 ──
-  const regUsername = ref('')
-  const regPassword = ref('')
-  const regPassword2 = ref('')
-
-  // ── 公共状态 ──
-  const loading = ref(false)
-  const mode = computed(() => viewState.value === 'register' ? 'register' : 'login') as Ref<'login' | 'register'>
+  // ── 表单 ref ──
+  const loginPassword = ref("")
+  const regUsername = ref("")
+  const regPassword = ref("")
+  const regPassword2 = ref("")
+  const regEmail = ref("")
 
   // ── 校验 ──
-  const { loginErrors, canLogin, regErrors, canRegister } =
-    useLoginForm(mode, loginUsername, loginPassword, regUsername, regPassword, regPassword2)
+  const { loginErrors, canLogin, regErrors, canRegister } = useLoginForm(
+    loginUsername,
+    loginPassword,
+    regUsername,
+    regPassword,
+    regPassword2,
+    regEmail,
+  )
 
-  // ── 操作 ──
+  // ── 认证流程（必须在 useViewStateMachine 之前，因为后者需要 clearServerError）──
+  const { loading, serverError, clearServerError, authenticate } = useAuthFlow({
+    auth,
+    saveUsername,
+  })
+
+  const { viewState, switchMode: _switchMode, onSwitchToExisting, onAddNewAccount } =
+    useViewStateMachine(auth.accountList, clearServerError)
+
+  /** 切换登录/注册时清空目标表单 */
+  function switchMode(m: ViewState) {
+    if (m === "register") {
+      regUsername.value = ""
+      regPassword.value = ""
+      regPassword2.value = ""
+      regEmail.value = ""
+    }
+    if (m === "login") {
+      loginPassword.value = ""
+    }
+    _switchMode(m)
+  }
+
+  // ── 便捷包装：保持原 LoginView.vue 的 @submit 绑定方式 ──
   async function handleLogin() {
-    if (!canLogin.value) {
-      ElMessage.warning(Object.values(loginErrors.value)[0])
-      return
-    }
-    loading.value = true
-    try {
-      const data = await login(loginUsername.value, loginPassword.value)
-      if (data.ok) {
-        loginAccount(loginUsername.value, data.access_token, data.refresh_token)
-        if (rememberMe.value) {
-          localStorage.setItem('saved_username', loginUsername.value)
-        } else {
-          localStorage.removeItem('saved_username')
-        }
-        ElMessage.success('登录成功，正在跳转...')
-        router.push('/dashboard')
-      } else {
-        ElMessage.error(data.error || '登录失败')
-      }
-    } catch (e: any) {
-      ElMessage.error(e.response?.data?.error || '服务异常，请检查后端是否启动')
-    } finally {
-      loading.value = false
-    }
+    await authenticate({
+      mode: "login",
+      username: loginUsername.value,
+      password: loginPassword.value,
+      canSubmit: canLogin,
+      errors: loginErrors,
+    })
   }
 
   async function handleRegister() {
-    if (!canRegister.value) {
-      ElMessage.warning(Object.values(regErrors.value)[0])
-      return
-    }
-    loading.value = true
-    try {
-      const data = await register(regUsername.value.trim(), regPassword.value)
-      if (data.ok) {
-        loginAccount(regUsername.value.trim(), data.access_token, data.refresh_token)
-        ElMessage.success('注册成功，正在进入平台...')
-        setTimeout(() => router.push('/dashboard'), 600)
-      } else {
-        ElMessage.error(data.error || '注册失败')
-      }
-    } catch (e: any) {
-      ElMessage.error(e.response?.data?.error || '服务异常，请检查后端是否启动')
-    } finally {
-      loading.value = false
-    }
+    await authenticate({
+      mode: "register",
+      username: regUsername.value,
+      password: regPassword.value,
+      password2: regPassword2.value,
+      email: regEmail.value,
+      canSubmit: canRegister,
+      errors: regErrors,
+    })
   }
-
-  function switchMode(m: string) {
-    viewState.value = m as ViewState
-  }
-
-  // ── 视觉图 ──
-  const heroImageSrc = '/login/login-hero.jpg'
-  const heroImageVisible = ref(true)
 
   return {
-    activeAccount,
-    accountList,
+    activeAccount: auth.activeAccount,
+    accountList: auth.accountList,
     viewState,
     loginUsername,
     loginPassword,
@@ -148,6 +122,7 @@ export function useLoginView(): LoginViewState {
     regUsername,
     regPassword,
     regPassword2,
+    regEmail,
     loading,
     loginErrors,
     canLogin,
@@ -155,10 +130,13 @@ export function useLoginView(): LoginViewState {
     canRegister,
     heroImageSrc,
     heroImageVisible,
+    serverError,
+    clearServerError,
     handleLogin,
     handleRegister,
     switchMode,
     onSwitchToExisting,
     onAddNewAccount,
+    onHeroImageError,
   }
 }

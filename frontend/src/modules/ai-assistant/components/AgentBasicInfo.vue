@@ -1,11 +1,12 @@
-<script setup>
-defineProps({
-  form: { type: Object, required: true },
-  isNew: { type: Boolean, default: false },
-  uploading: { type: Boolean, default: false },
-})
+<script setup lang="ts">
+import { AVATAR_PATH_PREFIX, DATA_IMAGE_PREFIX } from '../constants'
 
-const emit = defineEmits(['trigger-upload', 'avatar-upload'])
+defineProps<{
+  form: Record<string, unknown>
+  isNew?: boolean
+  uploading?: boolean
+}>()
+const emit = defineEmits<{ 'trigger-upload': []; 'avatar-upload': [e: Event] }>()
 </script>
 
 <template>
@@ -23,12 +24,12 @@ const emit = defineEmits(['trigger-upload', 'avatar-upload'])
           <div
             class="avatar-preview"
             :style="
-              form.avatar?.startsWith('/api/ai/avatars/') || form.avatar?.startsWith('data:image/')
+              form.avatar?.startsWith(AVATAR_PATH_PREFIX) || form.avatar?.startsWith(DATA_IMAGE_PREFIX)
                 ? { backgroundImage: `url(${form.avatar})` }
                 : {}
             "
           >
-            <span v-if="!form.avatar?.startsWith('/api/ai/avatars/') && !form.avatar?.startsWith('data:image/')">{{
+            <span v-if="!form.avatar?.startsWith(AVATAR_PATH_PREFIX) && !form.avatar?.startsWith(DATA_IMAGE_PREFIX)">{{
               form.avatar || '🤖'
             }}</span>
           </div>

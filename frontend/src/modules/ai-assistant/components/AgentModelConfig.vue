@@ -1,14 +1,13 @@
-<script setup>
-defineProps({
-  form: { type: Object, required: true },
-  isNew: { type: Boolean, default: false },
-  providers: { type: Array, default: () => [] },
-  availableModels: { type: Array, default: () => [] },
-  detectedModels: { type: Array, default: () => [] },
-  detectingModels: { type: Boolean, default: false },
-})
-
-const emit = defineEmits(['provider-change', 'detect-models'])
+<script setup lang="ts">
+defineProps<{
+  form: Record<string, unknown>
+  isNew?: boolean
+  providers?: string[]
+  availableModels?: string[]
+  detectedModels?: string[]
+  detectingModels?: boolean
+}>()
+const emit = defineEmits<{ 'provider-change': []; 'detect-models': [] }>()
 </script>
 
 <template>

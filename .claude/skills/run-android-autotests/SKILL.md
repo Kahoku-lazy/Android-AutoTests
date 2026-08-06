@@ -1,22 +1,22 @@
 ---
 name: run-android-autotests
 description: |
-  Launch, smoke-test, and drive the Android-AutoTests platform (Django + AgentScope + Vue).
+  Launch, smoke-test, and drive the Android-AutoTests platform (Django + Vue).
   Use when asked to run, start, restart, check status, take screenshots, or verify the
-  platform is healthy after code changes. Covers all 4 services: Redis, Django backend,
-  AgentScope AI, and Vue frontend.
+  platform is healthy after code changes. Covers all 3 services: Redis, Django backend,
+  and Vue frontend. AgentScope runs in-process inside Django.
 ---
 
 # Run: Android-AutoTests
 
-AI-driven Android UI automation test platform. Four services: Redis (`:6379`),
-Django backend (`:8765`), AgentScope AI (`:8000`), Vue frontend (`:5173`).
+AI-driven Android UI automation test platform. Three services: Redis (`:6379`),
+Django backend (`:8766`, with AgentScope in-process), Vue frontend (`:5173`).
 
 All paths below are relative to the repo root.
 
 ## Prerequisites
 
-All four are required. The platform will not start if any is missing.
+All three are required. The platform will not start if any is missing.
 
 ```bash
 python --version   # >= 3.10
@@ -39,10 +39,7 @@ cd frontend && npm install && cd ..
 python manage.py migrate
 python manage.py createsuperuser   # or use admin/admin123 if auto-created
 
-# 3. Knowledge base (AI assistant RAG)
-python agentscope_service/rag/init_kb.py
-
-# 4. Configure .env (copy from .env.example if needed)
+# 3. Configure .env (copy from .env.example if needed)
 # Key settings: DB_ENGINE, DB_NAME, DB_USER, DB_PASSWORD, DJANGO_SECRET_KEY
 ```
 
@@ -54,13 +51,13 @@ python agentscope_service/rag/init_kb.py
 python .claude/skills/run-android-autotests/driver.py --verbose
 ```
 
-This checks all 4 services, auth, key API endpoints, and frontend — exit code 0
+This checks all 3 services, auth, key API endpoints, and frontend — exit code 0
 on success. Run it after Django model/view changes or after `npm run build`.
 
 ### Launch platform
 
 ```bash
-python run.py start           # all 4 services (dependency order: redis → backend → agentscope → frontend)
+python run.py start           # all 3 services (dependency order: redis → backend → frontend)
 python run.py status          # check what's running
 python run.py restart         # restart all (stops → 2s wait → start)
 python run.py logs            # tail last 20 lines of each service log
@@ -80,7 +77,7 @@ interact with the app at `http://localhost:5173`.
 
 **Auth** — get a JWT token for API calls:
 ```bash
-curl -s -X POST http://127.0.0.1:8765/api/ai/auth/login \
+curl -s -X POST http://127.0.0.1:8766/api/ai/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"admin123"}'
 ```
@@ -99,9 +96,8 @@ curl -s -X POST http://127.0.0.1:8765/api/ai/auth/login \
 | `/workflow` | Workflow workbench |
 | `/login` | Login page |
 
-**API base:** `http://localhost:8765/api/`
-**AgentScope docs:** `http://localhost:8000/docs`
-**Django admin:** `http://localhost:8765/admin/`
+**API base:** `http://localhost:8766/api/`
+**Django admin:** `http://localhost:8766/admin/`
 
 A typical Playwright MCP interaction to verify the dashboard:
 ```
@@ -138,8 +134,8 @@ There is no full e2e suite. The driver above is the integration smoke test.
 - **Django restart required after model/route changes.** New routes and
   migrations are invisible to a running Daphne server. `python run.py restart
   backend` after any `models.py` or `urls.py` change.
-- **AgentScope depends on Redis.** If Redis is down, AgentScope refuses to
-  start. `redis-cli ping` first.
+- **AgentScope runs in-process.** It depends on Redis for message bus. If Redis is
+  down, AI features won't work. `redis-cli ping` first.
 - **MySQL required by default.** `run.py` sets `DB_ENGINE=mysql`. For SQLite,
   set `DB_ENGINE=sqlite` before launching, or edit `run.py`'s `BASE_ENV`.
 - **Frontend dev server is Vite.** It compiles routes on demand — the first
@@ -158,11 +154,11 @@ There is no full e2e suite. The driver above is the integration smoke test.
 
 | Symptom | Fix |
 |---------|-----|
-| AgentScope won't start | `redis-cli ping` — if Redis is down, start it first |
+| AgentScope won't work | `redis-cli ping` — if Redis is down, start it first |
 | `Port already in use` | `python run.py stop` then `python run.py start` |
 | Django 500 after migration | Check `logs/backend.log` — often a missing column or unapplied migration |
 | Frontend white screen | Wait 5s for Vite HMR, hard-refresh. Check `logs/frontend.log` |
 | API 401 on all calls | Token expired — re-login. Token TTL is 1 hour (`JWT_ACCESS_TTL`) |
 | `no such table` | `python manage.py migrate` — migrations not applied |
 | `database is locked` (SQLite) | `python run.py restart` — SQLite doesn't handle concurrent writes well |
-| AgentScope `ModuleNotFoundError` | `pip install -r requirements.txt` — dependency missing |
+| AI `ModuleNotFoundError` | `pip install -r requirements.txt` — dependency missing |

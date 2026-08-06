@@ -56,7 +56,7 @@ def list_shared_tools(request):
     items = AISharedTool.objects.filter(enabled=True).order_by("-updated_at")
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "items": [
                 {
                     "id": item.id,
@@ -79,16 +79,16 @@ def create_shared_tool(request):
     try:
         body = json.loads(request.body)
     except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "无效的 JSON"}, status=400)
+        return JsonResponse({"status": False, "message": "无效的 JSON"}, status=400)
 
     name = (body.get("name") or "").strip()
     if not name:
-        return JsonResponse({"ok": False, "error": "name is required"}, status=400)
+        return JsonResponse({"status": False, "message": "name is required"}, status=400)
 
     item_type = (body.get("item_type") or "").strip()
     if item_type not in ("mcp", "extension"):
         return JsonResponse(
-            {"ok": False, "error": "item_type must be 'mcp' or 'extension'"}, status=400
+            {"status": False, "message": "item_type must be 'mcp' or 'extension'"}, status=400
         )
 
     config_json = body.get("config_json", "{}")
@@ -101,7 +101,7 @@ def create_shared_tool(request):
         description=body.get("description", ""),
         config_json=config_json,
     )
-    return JsonResponse({"ok": True, "id": item.id})
+    return JsonResponse({"status": True, "id": item.id})
 
 
 @csrf_exempt
@@ -111,12 +111,12 @@ def update_shared_tool(request, item_id):
     try:
         item = AISharedTool.objects.get(id=item_id)
     except AISharedTool.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "not found"}, status=404)
+        return JsonResponse({"status": False, "message": "not found"}, status=404)
 
     try:
         body = json.loads(request.body)
     except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "无效的 JSON"}, status=400)
+        return JsonResponse({"status": False, "message": "无效的 JSON"}, status=400)
 
     if "name" in body:
         item.name = body["name"].strip()
@@ -127,7 +127,7 @@ def update_shared_tool(request, item_id):
         item.config_json = json.dumps(cfg) if isinstance(cfg, dict) else cfg
 
     item.save(update_fields=[f for f in ("name", "description", "config_json") if f in body])
-    return JsonResponse({"ok": True})
+    return JsonResponse({"status": True})
 
 
 @csrf_exempt
@@ -137,7 +137,7 @@ def delete_shared_tool(request, item_id):
     try:
         item = AISharedTool.objects.get(id=item_id)
     except AISharedTool.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "not found"}, status=404)
+        return JsonResponse({"status": False, "message": "not found"}, status=404)
 
     # If it's a skill type, also remove the uploaded files
     if item.item_type == "skill":
@@ -148,7 +148,7 @@ def delete_shared_tool(request, item_id):
             shutil.rmtree(skill_dir, ignore_errors=True)
 
     item.delete()
-    return JsonResponse({"ok": True})
+    return JsonResponse({"status": True})
 
 
 @csrf_exempt
@@ -158,20 +158,20 @@ def upload_shared_skill(request):
     files = request.FILES.getlist("files")
     skill_name = (request.POST.get("name") or "").strip()
     if not files:
-        return JsonResponse({"ok": False, "error": "no files uploaded"}, status=400)
+        return JsonResponse({"status": False, "message": "no files uploaded"}, status=400)
     if not skill_name:
-        return JsonResponse({"ok": False, "error": "name is required"}, status=400)
+        return JsonResponse({"status": False, "message": "name is required"}, status=400)
 
     # Validate files
     total_size = 0
     file_names = []
     for f in files:
         if ".." in f.name or f.name.startswith("/"):
-            return JsonResponse({"ok": False, "error": f"非法文件名: {f.name}"}, status=400)
+            return JsonResponse({"status": False, "message": f"非法文件名: {f.name}"}, status=400)
         _, ext = os.path.splitext(f.name)
         if ext.lower() not in _SKILL_EXTENSIONS:
             return JsonResponse(
-                {"ok": False, "error": f"不支持的文件类型: {ext or '无后缀'}"}, status=400
+                {"status": False, "message": f"不支持的文件类型: {ext or '无后缀'}"}, status=400
             )
         total_size += f.size
         file_names.append(f.name)
@@ -179,7 +179,10 @@ def upload_shared_skill(request):
     size_mb = total_size / (1024 * 1024)
     if size_mb > _SHARED_SKILL_MAX_MB:
         return JsonResponse(
-            {"ok": False, "error": f"总大小 {size_mb:.1f}MB 超过 {_SHARED_SKILL_MAX_MB}MB 限制"},
+            {
+                "status": False,
+                "message": f"总大小 {size_mb:.1f}MB 超过 {_SHARED_SKILL_MAX_MB}MB 限制",
+            },
             status=400,
         )
 
@@ -209,7 +212,7 @@ def upload_shared_skill(request):
             for chunk in f.chunks():
                 dst.write(chunk)
 
-    return JsonResponse({"ok": True, "id": item.id})
+    return JsonResponse({"status": True, "id": item.id})
 
 
 @csrf_exempt
@@ -220,16 +223,16 @@ def import_from_toolbox(request, agent_id):
     try:
         body = json.loads(request.body)
     except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "无效的 JSON"}, status=400)
+        return JsonResponse({"status": False, "message": "无效的 JSON"}, status=400)
 
     toolbox_item_id = body.get("toolbox_item_id")
     if not toolbox_item_id:
-        return JsonResponse({"ok": False, "error": "toolbox_item_id is required"}, status=400)
+        return JsonResponse({"status": False, "message": "toolbox_item_id is required"}, status=400)
 
     try:
         shared = AISharedTool.objects.get(id=toolbox_item_id, enabled=True)
     except AISharedTool.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "toolbox item not found"}, status=404)
+        return JsonResponse({"status": False, "message": "toolbox item not found"}, status=404)
 
     # Check for duplicate import by name
     exists = AITool.objects.filter(
@@ -239,7 +242,7 @@ def import_from_toolbox(request, agent_id):
     ).exists()
     if exists:
         return JsonResponse(
-            {"ok": False, "error": f"'{shared.name}' 已存在于当前智能体"}, status=409
+            {"status": False, "message": f"'{shared.name}' 已存在于当前智能体"}, status=409
         )
 
     # For skill type, copy files to agent's skill directory
@@ -262,4 +265,4 @@ def import_from_toolbox(request, agent_id):
         config_json=config,
         enabled=True,
     )
-    return JsonResponse({"ok": True, "id": tool.id})
+    return JsonResponse({"status": True, "id": tool.id})

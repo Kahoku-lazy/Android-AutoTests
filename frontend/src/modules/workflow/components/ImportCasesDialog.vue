@@ -4,7 +4,7 @@
  */
 import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { listDefinitions } from '@/modules/workflow/api.js'
+import { listDefinitions } from '@/modules/workflow/api'
 import { fromCaseManagerSteps } from '@/modules/workflow/composables/caseBridge'
 import { useLibraryStore } from '@/modules/workflow/stores/libraryStore'
 
@@ -71,7 +71,7 @@ async function loadList() {
   selected.value = new Set()
   try {
     const { data } = await listDefinitions()
-    if (!data?.ok) throw new Error(data?.error || '加载用例失败')
+    if (!data?.status) throw new Error(data?.message || '加载用例失败')
     rows.value = (data.definitions || []) as PlatformCaseRow[]
   } catch (e: any) {
     rows.value = []

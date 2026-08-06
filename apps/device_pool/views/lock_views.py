@@ -27,21 +27,23 @@ def lock_device(request, serial):
     try:
         data = json.loads(request.body)
     except Exception:
-        return JsonResponse({"ok": False, "error": "invalid JSON"})
+        return JsonResponse({"status": False, "message": "invalid JSON"})
 
     lock_type = data.get("type", "user")
     user_id = data.get("user_id", "").strip()
     if not user_id:
-        return JsonResponse({"ok": False, "error": "user_id 不能为空"}, status=400)
+        return JsonResponse({"status": False, "message": "user_id 不能为空"}, status=400)
     timeout = int(data.get("timeout", 300))
 
     try:
         dev = Device.objects.get(serial=serial)
     except Device.DoesNotExist:
-        return JsonResponse({"ok": False, "error": f"设备 {serial} 未注册"}, status=404)
+        return JsonResponse({"status": False, "message": f"设备 {serial} 未注册"}, status=404)
 
     if dev.status == "OFFLINE" or dev.status == "DISCONNECTED":
-        return JsonResponse({"ok": False, "error": f"设备已{dev.status}，无法操作"}, status=400)
+        return JsonResponse(
+            {"status": False, "message": f"设备已{dev.status}，无法操作"}, status=400
+        )
 
     now = datetime.now()
 
@@ -49,7 +51,7 @@ def lock_device(request, serial):
     if lock_type == "occupy":
         if dev.occupied_by and dev.occupied_by != user_id:
             return JsonResponse(
-                {"ok": False, "error": f"设备已被 {dev.occupied_by} 占用"}, status=409
+                {"status": False, "message": f"设备已被 {dev.occupied_by} 占用"}, status=409
             )
         dev.occupied_by = user_id
         dev.occupied_at = now
@@ -64,7 +66,7 @@ def lock_device(request, serial):
         )
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "serial": serial,
                 "occupied_by": user_id,
                 "occupied_at": now.isoformat(),
@@ -74,7 +76,9 @@ def lock_device(request, serial):
 
     # ── 用户绑定 ──
     if dev.locked_by and dev.locked_by != user_id:
-        return JsonResponse({"ok": False, "error": f"设备已被 {dev.locked_by} 绑定"}, status=409)
+        return JsonResponse(
+            {"status": False, "message": f"设备已被 {dev.locked_by} 绑定"}, status=409
+        )
     dev.locked_by = user_id
     dev.locked_at = now
     dev.save(update_fields=["locked_by", "locked_at"])
@@ -87,7 +91,7 @@ def lock_device(request, serial):
     )
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "serial": serial,
             "user_id": user_id,
             "locked_at": now.isoformat(),
@@ -115,8 +119,8 @@ def release_device(request, serial):
     except Device.DoesNotExist:
         return JsonResponse(
             {
-                "ok": False,
-                "error": f"设备 {serial} 未注册",
+                "status": False,
+                "message": f"设备 {serial} 未注册",
             },
             status=404,
         )
@@ -138,8 +142,8 @@ def release_device(request, serial):
     if is_runner_occupied and not force_release:
         return JsonResponse(
             {
-                "ok": False,
-                "error": "设备正在执行用例，无法解除占用。请等待用例执行完毕或先停止执行任务。",
+                "status": False,
+                "message": "设备正在执行用例，无法解除占用。请等待用例执行完毕或先停止执行任务。",
                 "occupied_by": occupied_by,
                 "is_runner": True,
             },
@@ -149,23 +153,23 @@ def release_device(request, serial):
     # 仅解除用户绑定（不清 occupied_by）
     if unlock_too and not dev.occupied_by:
         if not dev.locked_by:
-            return JsonResponse({"ok": False, "error": "设备未被绑定，无需操作"}, status=400)
+            return JsonResponse({"status": False, "message": "设备未被绑定，无需操作"}, status=400)
         dev.locked_by = ""
         dev.locked_at = None
         dev.save(update_fields=["locked_by", "locked_at"])
         DeviceLock.objects.filter(device=dev, lock_type="user", status="active").update(
             status="released", released_at=datetime.now(), release_reason="manual"
         )
-        return JsonResponse({"ok": True, "serial": serial, "unlocked": True})
+        return JsonResponse({"status": True, "serial": serial, "unlocked": True})
 
     # 解除占用（委托给共享 helper，保证 DeviceLock 审计 + 队列自动分配）
     if not dev.occupied_by:
-        return JsonResponse({"ok": False, "error": "设备未被占用，无需操作"}, status=400)
+        return JsonResponse({"status": False, "message": "设备未被占用，无需操作"}, status=400)
     _release_internal(dev, reason="force" if force_release else "manual", clear_lock=unlock_too)
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "serial": serial,
             "released": True,
             "force_released": force_release,
@@ -201,7 +205,7 @@ def device_queue(request):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "queue": result,
             "count": len(result),
         }
@@ -229,7 +233,7 @@ def heartbeat(request):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "updated": updated,
             "offline": offline,
             "online": online,
@@ -255,14 +259,14 @@ def join_device_queue(request, serial):
     try:
         data = json.loads(request.body) if request.body else {}
     except Exception:
-        return JsonResponse({"ok": False, "error": "invalid JSON"})
+        return JsonResponse({"status": False, "message": "invalid JSON"})
 
     user_id = data.get("user_id", "").strip()
     if not user_id:
         return JsonResponse(
             {
-                "ok": False,
-                "error": "user_id 不能为空",
+                "status": False,
+                "message": "user_id 不能为空",
             },
             status=400,
         )
@@ -272,8 +276,8 @@ def join_device_queue(request, serial):
     except Device.DoesNotExist:
         return JsonResponse(
             {
-                "ok": False,
-                "error": f"设备 {serial} 未注册",
+                "status": False,
+                "message": f"设备 {serial} 未注册",
             },
             status=404,
         )
@@ -292,7 +296,7 @@ def join_device_queue(request, serial):
         )
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "message": "已在排队中",
                 "position": position,
                 "waited_seconds": waited,
@@ -317,7 +321,7 @@ def join_device_queue(request, serial):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "message": f"已加入 {serial} 的排队队列",
             "position": position,
             "waited_seconds": 0,
@@ -340,8 +344,8 @@ def leave_device_queue(request, serial):
     except Device.DoesNotExist:
         return JsonResponse(
             {
-                "ok": False,
-                "error": f"设备 {serial} 未注册",
+                "status": False,
+                "message": f"设备 {serial} 未注册",
             },
             status=404,
         )
@@ -355,7 +359,7 @@ def leave_device_queue(request, serial):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "cancelled": updated,
         }
     )

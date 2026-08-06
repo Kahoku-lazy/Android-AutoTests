@@ -26,14 +26,14 @@ logger = logging.getLogger("ai_assistant")
 @require_auth
 def list_conversations(request, agent_id):
     if not check_agent_owner(request.user_id, agent_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
     convs = filter_conversations_for_user(
         AIConversation.objects.filter(agent_id=agent_id),
         getattr(request, "user_id", None),
     ).order_by("-updated_at")
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "conversations": [
                 {
                     "id": c.id,
@@ -52,7 +52,7 @@ def list_conversations(request, agent_id):
 @require_auth
 def create_conversation(request, agent_id):
     if not check_agent_owner(request.user_id, agent_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
     data = json.loads(request.body)
     ok, errors, cleaned = validate_conversation_input(data)
     if not ok:
@@ -63,7 +63,7 @@ def create_conversation(request, agent_id):
         title=cleaned.get("title", "新对话"),
     )
     return JsonResponse(
-        {"ok": True, "id": c.id, "agent_scope_session_id": c.agent_scope_session_id or ""}
+        {"status": True, "id": c.id, "agent_scope_session_id": c.agent_scope_session_id or ""}
     )
 
 
@@ -71,46 +71,46 @@ def create_conversation(request, agent_id):
 @require_auth
 def delete_conversation(request, conv_id):
     if not check_conversation_access(request.user_id, conv_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
     try:
         c = AIConversation.objects.get(id=conv_id)
     except AIConversation.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "not found"}, status=404)
+        return JsonResponse({"status": False, "message": "not found"}, status=404)
     c.delete()
-    return JsonResponse({"ok": True})
+    return JsonResponse({"status": True})
 
 
 @csrf_exempt
 @require_auth
 def rename_conversation(request, conv_id):
     if not check_conversation_access(request.user_id, conv_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
     try:
         c = AIConversation.objects.get(id=conv_id)
     except AIConversation.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "conversation not found"}, status=404)
+        return JsonResponse({"status": False, "message": "conversation not found"}, status=404)
     try:
         data = json.loads(request.body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError):
         return JsonResponse(
-            {"ok": False, "error": "invalid request encoding, use UTF-8"}, status=400
+            {"status": False, "message": "invalid request encoding, use UTF-8"}, status=400
         )
     ok, errors, cleaned = validate_rename_input(data)
     if not ok:
         return validation_error(errors)
     c.title = cleaned["title"]
     c.save()
-    return JsonResponse({"ok": True, "title": c.title})
+    return JsonResponse({"status": True, "title": c.title})
 
 
 @require_auth
 def list_messages(request, conv_id):
     if not check_conversation_access(request.user_id, conv_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
     msgs = AIMessage.objects.filter(conversation_id=conv_id)
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "messages": [
                 {
                     "id": m.id,
@@ -135,7 +135,7 @@ def list_messages(request, conv_id):
 @require_auth
 def save_message(request, conv_id):
     if not check_conversation_access(request.user_id, conv_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
     data = json.loads(request.body)
     ok, errors, _ = validate_message_input(data)
     if not ok:
@@ -161,7 +161,7 @@ def save_message(request, conv_id):
         model_name=model_name,
         flow=flow,
     )
-    return JsonResponse({"ok": True, "id": msg.id})
+    return JsonResponse({"status": True, "id": msg.id})
 
 
 @require_auth
@@ -169,7 +169,7 @@ def list_conv_tasks(request, conv_id):
     try:
         AIConversation.objects.get(id=conv_id)
     except AIConversation.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "conversation not found"}, status=404)
+        return JsonResponse({"status": False, "message": "conversation not found"}, status=404)
 
     try:
         from django.db.models import Q
@@ -196,10 +196,10 @@ def list_conv_tasks(request, conv_id):
             )
         tasks = qs.order_by("-id")[:50]
 
-        return JsonResponse({"ok": True, "tasks": [_serialize_ai_task(t) for t in tasks]})
+        return JsonResponse({"status": True, "tasks": [_serialize_ai_task(t) for t in tasks]})
     except Exception:
         logger.exception("list_conv_tasks failed")
-        return JsonResponse({"ok": False, "error": "查询任务历史失败"}, status=500)
+        return JsonResponse({"status": False, "message": "查询任务历史失败"}, status=500)
 
 
 def _parse_summary(summary):
@@ -287,10 +287,10 @@ def list_ai_tasks(request):
             qs = qs.filter(status__in=status_map[status_q])
 
         tasks = [_serialize_ai_task(t, total=t.total) for t in qs[:80]]
-        return JsonResponse({"ok": True, "tasks": tasks})
+        return JsonResponse({"status": True, "tasks": tasks})
     except Exception:
         logger.exception("list_ai_tasks failed")
-        return JsonResponse({"ok": False, "error": "查询 AI 任务列表失败"}, status=500)
+        return JsonResponse({"status": False, "message": "查询 AI 任务列表失败"}, status=500)
 
 
 @require_auth
@@ -300,11 +300,11 @@ def get_conv_task(request, conv_id, run_id):
 
         task = TestRunRecord.objects.filter(run_id=run_id).first()
         if not task:
-            return JsonResponse({"ok": False, "error": "task not found"}, status=404)
+            return JsonResponse({"status": False, "message": "task not found"}, status=404)
 
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "task": {
                     "run_id": task.run_id,
                     "status": task.status,
@@ -321,4 +321,4 @@ def get_conv_task(request, conv_id, run_id):
         )
     except Exception:
         logger.exception("get_conv_task failed for run_id=%s", run_id)
-        return JsonResponse({"ok": False, "error": "查询任务详情失败"}, status=500)
+        return JsonResponse({"status": False, "message": "查询任务详情失败"}, status=500)

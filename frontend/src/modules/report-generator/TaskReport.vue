@@ -9,7 +9,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { animate, stagger } from 'animejs'
 import PageHeader from '@/shared/components/PageHeader.vue'
 import KpiCard from '@/shared/components/KpiCard.vue'
-import { getTaskReport, formatTime } from './api.js'
+import { getTaskReport, formatTime } from './api'
 
 const route = useRoute()
 const router = useRouter()
@@ -28,7 +28,7 @@ async function loadReport() {
   loading.value = true
   try {
     const { data } = await getTaskReport(taskId.value)
-    if (data.ok) task.value = data.task
+    if (data.status) task.value = data.task
   } catch (e) { console.error(e); }
   loading.value = false
   await nextTick()

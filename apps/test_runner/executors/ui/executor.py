@@ -44,7 +44,7 @@ class StepExecutor:
             "adb_loop_n": self._do_loop_n,
             "adb_loop_elements": self._do_loop_elements,
             "adb_poll_text": self._do_poll_text,
-            # ── 旧名（兼容迁移过渡期）──
+            # ── 旧名（向后兼容；新用例请用 adb_ 前缀；见 models/step_types.py StepType 枚举）──
             "start_app": self._do_start_app,
             "kill_app": self._do_kill_app,
             "wait_toast": self._do_wait_toast,

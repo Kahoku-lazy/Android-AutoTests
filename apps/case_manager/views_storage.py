@@ -70,10 +70,6 @@ def _normalize_storage_batch(cases, directory_id):
                 "enabled": c.get("enabled", False),
                 "directory_id": directory_id,
                 "priority": c.get("priority", "P1"),
-                "data_schema": c.get("data_schema", {}),
-                "operations": c.get("operations", []),
-                "validation_rules": c.get("validation_rules", {}),
-                "expected_data": c.get("expected_data", {}),
                 "design_method": c.get("design_method", ""),
                 "precondition": c.get("precondition", ""),
                 "expected_result": c.get("expected_result", ""),
@@ -98,7 +94,7 @@ def storage_definitions_handler(request):
         try:
             data = json.loads(request.body)
         except json.JSONDecodeError:
-            return JsonResponse({"ok": False, "error": "无效的 JSON"}, status=400)
+            return JsonResponse({"status": False, "message": "无效的 JSON"}, status=400)
 
         case_id = data.get("id", "").strip()
         if not case_id:
@@ -136,7 +132,7 @@ def storage_definitions_handler(request):
             defaults,
         )
 
-    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+    return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
 
 def storage_definition_detail(request, case_id):

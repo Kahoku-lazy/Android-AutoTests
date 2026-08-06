@@ -27,9 +27,9 @@ skills:
 ```
 前端 Vue 3 + Vite (:5173)
   ↓ HTTP/WS + JWT
-后端 Django (:8765) — 6 个 App（device_pool, element_locator, case_manager, test_runner, report_generator, ai_assistant）
-  ↓ 同进程直接调用
-AI 引擎 AgentScope (:8000) — Redis 消息总线 + ChromaDB 知识库
+后端 Django (:8766) — 6 个 App（device_pool, element_locator, case_manager, test_runner, report_generator, ai_assistant）
+  ↓ 进程内调用
+AI 引擎 AgentScope — Django 进程内运行，Redis 消息总线 + ChromaDB 知识库
   ↓ uiautomator2 + ADB
 设备层 Android
 ```

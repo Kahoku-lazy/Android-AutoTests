@@ -1,9 +1,9 @@
 /** useLoginForm — 登录/注册表单校验（typed composable）。
  *
- *  纯函数式，无副作用。从 LoginView.vue 的 computed 校验规则抽出。
+ *  纯函数式，无副作用。loginErrors 和 regErrors 各自独立计算。
  */
 import { computed, type Ref, type ComputedRef } from 'vue'
-import type { LoginMode, FieldErrors } from '@/shared/types/auth'
+import type { FieldErrors } from '@/shared/types/auth'
 
 export interface UseLoginFormReturn {
   loginErrors: ComputedRef<FieldErrors>
@@ -13,16 +13,15 @@ export interface UseLoginFormReturn {
 }
 
 export function useLoginForm(
-  mode: Ref<LoginMode>,
   loginUsername: Ref<string>,
   loginPassword: Ref<string>,
   regUsername: Ref<string>,
   regPassword: Ref<string>,
   regPassword2: Ref<string>,
+  regEmail: Ref<string>,
 ): UseLoginFormReturn {
   const loginErrors = computed<FieldErrors>(() => {
     const errs: FieldErrors = {}
-    if (mode.value !== 'login') return errs
     if (!loginUsername.value) {
       errs.username = '请输入用户名'
     } else if (!loginUsername.value.trim()) {
@@ -40,13 +39,17 @@ export function useLoginForm(
 
   const regErrors = computed<FieldErrors>(() => {
     const errs: FieldErrors = {}
-    if (mode.value !== 'register') return errs
     if (!regUsername.value.trim()) {
       errs.username = '请输入用户名'
     } else if (regUsername.value.trim().length < 3) {
       errs.username = '用户名至少 3 个字符'
     } else if (regUsername.value.trim().length > 20) {
       errs.username = '用户名最多 20 个字符'
+    }
+    if (!regEmail.value) {
+      errs.email = '请输入邮箱'
+    } else if (!regEmail.value.includes('@')) {
+      errs.email = '邮箱格式不正确'
     }
     if (!regPassword.value) {
       errs.password = '请输入密码'

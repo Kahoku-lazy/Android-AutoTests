@@ -65,7 +65,7 @@ def dump_page(request):
     """
     available, err_msg, _ = _check_device_available(device.current_serial)
     if not available:
-        return JsonResponse({"ok": False, "error": err_msg}, status=409)
+        return JsonResponse({"status": False, "message": err_msg}, status=409)
 
     nodes = device.dump_hierarchy()
 
@@ -108,7 +108,7 @@ def dump_page(request):
     )
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "serial": device.current_serial,
             "package": package,
             "activity": activity,
@@ -125,12 +125,12 @@ def do_action(request):
     """POST /api/elements/action — Execute click or input on device."""
     available, err_msg, _ = _check_device_available(device.current_serial)
     if not available:
-        return JsonResponse({"ok": False, "error": err_msg}, status=409)
+        return JsonResponse({"status": False, "message": err_msg}, status=409)
 
     try:
         data = json.loads(request.body)
     except Exception:
-        return JsonResponse({"ok": False, "error": "invalid JSON"})
+        return JsonResponse({"status": False, "message": "invalid JSON"})
 
     action = data.get("action", "")
     try:
@@ -155,10 +155,10 @@ def do_action(request):
                 clear_first=data.get("clear_first", True),
             )
         else:
-            return JsonResponse({"ok": False, "error": f"unknown action: {action}"})
-        return JsonResponse({"ok": True})
+            return JsonResponse({"status": False, "message": f"unknown action: {action}"})
+        return JsonResponse({"status": True})
     except Exception as e:
-        return JsonResponse({"ok": False, "error": str(e)})
+        return JsonResponse({"status": False, "message": str(e)})
 
 
 def device_info_view(request):
@@ -175,7 +175,7 @@ def device_info_view(request):
         is_occupied = dev.status == "BUSY" and bool(dev.occupied_by)
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "serial": serial,
                 "model": dev.model or info.get("productName", ""),
                 "brand": dev.brand or "",
@@ -190,7 +190,7 @@ def device_info_view(request):
     except Device.DoesNotExist:
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "serial": serial,
                 "model": info.get("productName", ""),
                 "brand": "",
@@ -205,16 +205,16 @@ def device_info_view(request):
 def screenshot_snapshot(request):
     """GET /api/elements/screenshot — Single JPEG snapshot for fast first paint."""
     if not device.current_serial:
-        return JsonResponse({"ok": False, "error": "未选择设备"})
+        return JsonResponse({"status": False, "message": "未选择设备"})
     available, err_msg, _ = _check_device_available(device.current_serial)
     if not available:
-        return JsonResponse({"ok": False, "error": err_msg}, status=409)
+        return JsonResponse({"status": False, "message": err_msg}, status=409)
     try:
         b64 = device.screenshot_b64(quality=50, max_width=720)
         info = device.info()
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "image": b64,
                 "format": "jpeg",
                 "serial": device.current_serial,
@@ -223,7 +223,7 @@ def screenshot_snapshot(request):
             }
         )
     except Exception as e:
-        return JsonResponse({"ok": False, "error": str(e)})
+        return JsonResponse({"status": False, "message": str(e)})
 
 
 # ── Page CRUD ──
@@ -266,7 +266,7 @@ def list_pages(request):
     # Build in-memory parent map once to avoid N+1 in _page_payload → page_depth
     parent_map, _ = build_page_maps()
     result = [_page_payload(p, parent_map) for p in pages]
-    return JsonResponse({"ok": True, "pages": result, "max_depth": MAX_PAGE_TREE_DEPTH})
+    return JsonResponse({"status": True, "pages": result, "max_depth": MAX_PAGE_TREE_DEPTH})
 
 
 @csrf_exempt
@@ -276,22 +276,22 @@ def page_detail(request, page_id):
         data = json.loads(request.body)
         new_label = data.get("label", "").strip()
         if not new_label:
-            return JsonResponse({"ok": False, "error": "页面名称不能为空"}, status=400)
+            return JsonResponse({"status": False, "message": "页面名称不能为空"}, status=400)
         # Fetch once for validation, then update in one query
         page = Page.objects.filter(id=page_id).values("parent_id").first()
         if page is None:
-            return JsonResponse({"ok": False, "error": "页面不存在"}, status=404)
+            return JsonResponse({"status": False, "message": "页面不存在"}, status=404)
         parent_id = page["parent_id"]
         if sibling_label_exists(new_label, parent_id, exclude_id=page_id):
             return JsonResponse(
-                {"ok": False, "error": f"同级名称「{new_label}」已存在"}, status=409
+                {"status": False, "message": f"同级名称「{new_label}」已存在"}, status=409
             )
         Page.objects.filter(id=page_id).update(label=new_label)
-        return JsonResponse({"ok": True})
+        return JsonResponse({"status": True})
     elif request.method == "DELETE":
         Page.objects.filter(id=page_id).delete()
-        return JsonResponse({"ok": True})
-    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+        return JsonResponse({"status": True})
+    return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
 
 @csrf_exempt
@@ -301,11 +301,11 @@ def create_page(request):
     Body: { label, parent_id?, is_folder?, package?, activity? }
     """
     if request.method != "POST":
-        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+        return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
     data = json.loads(request.body)
     label = data.get("label", "").strip()
     if not label:
-        return JsonResponse({"ok": False, "error": "名称(label)必填"})
+        return JsonResponse({"status": False, "message": "名称(label)必填"})
 
     parent_id = data.get("parent_id")
     if parent_id in ("", 0, "0"):
@@ -315,18 +315,18 @@ def create_page(request):
     try:
         validate_parent_and_depth(parent_id, is_folder=is_folder)
     except ValueError as e:
-        return JsonResponse({"ok": False, "error": str(e)}, status=400)
+        return JsonResponse({"status": False, "message": str(e)}, status=400)
 
     if parent_id:
         try:
             parent = Page.objects.get(pk=parent_id)
         except Page.DoesNotExist:
-            return JsonResponse({"ok": False, "error": "父级目录不存在"}, status=404)
+            return JsonResponse({"status": False, "message": "父级目录不存在"}, status=404)
         if not parent.is_folder:
-            return JsonResponse({"ok": False, "error": "只能在目录下创建子级"}, status=400)
+            return JsonResponse({"status": False, "message": "只能在目录下创建子级"}, status=400)
 
     if sibling_label_exists(label, parent_id):
-        return JsonResponse({"ok": False, "error": f"同级名称「{label}」已存在"}, status=409)
+        return JsonResponse({"status": False, "message": f"同级名称「{label}」已存在"}, status=409)
 
     dev_obj = ensure_device(serial=device.current_serial, name="Samsung")
     try:
@@ -340,9 +340,9 @@ def create_page(request):
         )
     except IntegrityError:
         return JsonResponse(
-            {"ok": False, "error": f"创建失败，名称「{label}」可能已存在"}, status=409
+            {"status": False, "message": f"创建失败，名称「{label}」可能已存在"}, status=409
         )
-    return JsonResponse({"ok": True, "page": _page_payload(page)})
+    return JsonResponse({"status": True, "page": _page_payload(page)})
 
 
 @csrf_exempt
@@ -353,11 +353,11 @@ def pages_batch_move(request):
     parent_id=null moves items to root level.
     """
     if request.method != "POST":
-        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+        return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
     data = json.loads(request.body)
     page_ids = data.get("page_ids") or []
     if not page_ids:
-        return JsonResponse({"ok": False, "error": "page_ids 不能为空"}, status=400)
+        return JsonResponse({"status": False, "message": "page_ids 不能为空"}, status=400)
 
     parent_id = data.get("parent_id")
     if parent_id in ("", 0, "0"):
@@ -367,17 +367,17 @@ def pages_batch_move(request):
         try:
             parent = Page.objects.get(pk=parent_id)
         except Page.DoesNotExist:
-            return JsonResponse({"ok": False, "error": "目标目录不存在"}, status=404)
+            return JsonResponse({"status": False, "message": "目标目录不存在"}, status=404)
         if not parent.is_folder:
-            return JsonResponse({"ok": False, "error": "目标必须是目录"}, status=400)
+            return JsonResponse({"status": False, "message": "目标必须是目录"}, status=400)
 
     try:
         ids = [int(x) for x in page_ids]
     except (TypeError, ValueError):
-        return JsonResponse({"ok": False, "error": "page_ids 格式无效"}, status=400)
+        return JsonResponse({"status": False, "message": "page_ids 格式无效"}, status=400)
 
     result = batch_move_pages(ids, parent_id)
-    return JsonResponse({"ok": True, **result})
+    return JsonResponse({"status": True, **result})
 
 
 def _element_payload(el):
@@ -409,16 +409,16 @@ def add_element_to_page(request, page_id):
         try:
             page = Page.objects.get(id=page_id)
         except Page.DoesNotExist:
-            return JsonResponse({"ok": False, "error": "页面不存在"}, status=404)
+            return JsonResponse({"status": False, "message": "页面不存在"}, status=404)
         if page.is_folder:
             return JsonResponse(
-                {"ok": False, "error": "目录节点不能添加元素，请选择子页面"}, status=400
+                {"status": False, "message": "目录节点不能添加元素，请选择子页面"}, status=400
             )
 
         data = json.loads(request.body)
         alias = data.get("alias", "").strip()
         if not alias:
-            return JsonResponse({"ok": False, "error": "元素名称(alias)必填"})
+            return JsonResponse({"status": False, "message": "元素名称(alias)必填"})
 
         xpath = data.get("xpath", "")
         xpath_candidates_data = data.get("xpath_candidates")
@@ -459,8 +459,8 @@ def add_element_to_page(request, page_id):
             except IntegrityError:
                 return JsonResponse(
                     {
-                        "ok": False,
-                        "error": "该元素已在当前页面中（相同 resource-id 与位置），请到「元素管理」查看",
+                        "status": False,
+                        "message": "该元素已在当前页面中（相同 resource-id 与位置），请到「元素管理」查看",
                     },
                     status=409,
                 )
@@ -469,7 +469,7 @@ def add_element_to_page(request, page_id):
 
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "updated": updated,
                 "element": _element_payload(el),
             }
@@ -477,8 +477,8 @@ def add_element_to_page(request, page_id):
     except Exception as e:
         return JsonResponse(
             {
-                "ok": False,
-                "error": "保存元素失败，请稍后重试",
+                "status": False,
+                "message": "保存元素失败，请稍后重试",
                 "detail": str(e),
             },
             status=500,
@@ -497,14 +497,14 @@ def batch_add_elements(request, page_id):
     try:
         page = Page.objects.get(id=page_id)
     except Page.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "页面不存在"}, status=400)
+        return JsonResponse({"status": False, "message": "页面不存在"}, status=400)
     if page.is_folder:
-        return JsonResponse({"ok": False, "error": "目录节点不能添加元素"}, status=400)
+        return JsonResponse({"status": False, "message": "目录节点不能添加元素"}, status=400)
 
     data = json.loads(request.body)
     items = data.get("elements", [])
     if not items:
-        return JsonResponse({"ok": False, "error": "elements 不能为空"}, status=400)
+        return JsonResponse({"status": False, "message": "elements 不能为空"}, status=400)
 
     saved = 0
     updated = 0
@@ -562,7 +562,7 @@ def batch_add_elements(request, page_id):
     if not prepared:
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "saved": 0,
                 "updated": 0,
                 "skipped": skipped,
@@ -612,7 +612,7 @@ def batch_add_elements(request, page_id):
     page.element_count = Element.objects.filter(page=page).count()
     page.save(update_fields=["element_count"])
 
-    result = {"ok": True, "saved": saved, "updated": updated, "skipped": skipped}
+    result = {"status": True, "saved": saved, "updated": updated, "skipped": skipped}
     if errors:
         result["errors"] = errors[:5]
     return JsonResponse(result)
@@ -624,7 +624,7 @@ def clear_pages(request):
     Element.objects.all().delete()
     PageFlow.objects.all().delete()
     Page.objects.all().delete()
-    return JsonResponse({"ok": True})
+    return JsonResponse({"status": True})
 
 
 def page_elements(request, page_id):
@@ -672,7 +672,7 @@ def page_elements(request, page_id):
         }
         for e in qs
     ]
-    return JsonResponse({"ok": True, "elements": result, "total": total})
+    return JsonResponse({"status": True, "elements": result, "total": total})
 
 
 @csrf_exempt
@@ -687,7 +687,7 @@ def update_element(request, el_id):
         updates["is_test_point"] = bool(data["is_test_point"])
     if updates:
         Element.objects.filter(id=el_id).update(**updates)
-    return JsonResponse({"ok": True})
+    return JsonResponse({"status": True})
 
 
 # ── Flow CRUD ──
@@ -715,7 +715,7 @@ def flows_handler(request):
             }
             for f in flows
         ]
-        return JsonResponse({"ok": True, "flows": result})
+        return JsonResponse({"status": True, "flows": result})
 
     elif request.method == "POST":
         data = json.loads(request.body)
@@ -725,16 +725,16 @@ def flows_handler(request):
             trigger_element_id=data.get("trigger_element_id"),
             trigger_action=data.get("trigger_action", "click"),
         )
-        return JsonResponse({"ok": True})
+        return JsonResponse({"status": True})
 
-    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+    return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
 
 @csrf_exempt
 def delete_flow(request, flow_id):
     """DELETE /api/elements/flows/{flow_id}."""
     PageFlow.objects.filter(id=flow_id).delete()
-    return JsonResponse({"ok": True})
+    return JsonResponse({"status": True})
 
 
 # ── Web Element CRUD ──
@@ -812,7 +812,7 @@ def list_web_elements(request):
 
     qs = qs.order_by("-updated_at")
     result = [_web_element_payload(el) for el in qs]
-    return JsonResponse({"ok": True, "elements": result, "total": len(result)})
+    return JsonResponse({"status": True, "elements": result, "total": len(result)})
 
 
 @csrf_exempt
@@ -823,22 +823,25 @@ def create_web_element(request):
     try:
         data = json.loads(request.body)
     except Exception:
-        return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+        return JsonResponse({"status": False, "message": "invalid JSON"}, status=400)
 
     name = data.get("name", "").strip()
     if not name:
-        return JsonResponse({"ok": False, "error": "元素名称(name)必填"}, status=400)
+        return JsonResponse({"status": False, "message": "元素名称(name)必填"}, status=400)
 
     locator_type = data.get("locator_type", "css_selector")
     if locator_type not in LOCATOR_TYPE_CHOICES:
         return JsonResponse(
-            {"ok": False, "error": f"无效的定位方式, 必须是: {', '.join(LOCATOR_TYPE_CHOICES)}"},
+            {
+                "status": False,
+                "message": f"无效的定位方式, 必须是: {', '.join(LOCATOR_TYPE_CHOICES)}",
+            },
             status=400,
         )
 
     locator_value = data.get("locator_value", "").strip()
     if not locator_value:
-        return JsonResponse({"ok": False, "error": "定位值(locator_value)必填"}, status=400)
+        return JsonResponse({"status": False, "message": "定位值(locator_value)必填"}, status=400)
 
     try:
         group_id = data.get("group_id")
@@ -862,9 +865,9 @@ def create_web_element(request):
             is_test_point=bool(data.get("is_test_point", False)),
         )
     except Exception as e:
-        return JsonResponse({"ok": False, "error": f"创建失败: {e}"}, status=500)
+        return JsonResponse({"status": False, "message": f"创建失败: {e}"}, status=500)
 
-    return JsonResponse({"ok": True, "element": _web_element_payload(el)})
+    return JsonResponse({"status": True, "element": _web_element_payload(el)})
 
 
 @csrf_exempt
@@ -875,23 +878,23 @@ def web_element_detail(request, el_id):
     try:
         el = WebElement.objects.get(id=el_id)
     except WebElement.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "元素不存在"}, status=404)
+        return JsonResponse({"status": False, "message": "元素不存在"}, status=404)
 
     if request.method == "PUT":
         try:
             data = json.loads(request.body)
         except Exception:
-            return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+            return JsonResponse({"status": False, "message": "invalid JSON"}, status=400)
 
         if "name" in data:
             name = data["name"].strip()
             if not name:
-                return JsonResponse({"ok": False, "error": "名称不能为空"}, status=400)
+                return JsonResponse({"status": False, "message": "名称不能为空"}, status=400)
             el.name = name
         if "locator_type" in data:
             lt = data["locator_type"]
             if lt not in LOCATOR_TYPE_CHOICES:
-                return JsonResponse({"ok": False, "error": f"无效的定位方式"}, status=400)
+                return JsonResponse({"status": False, "message": f"无效的定位方式"}, status=400)
             el.locator_type = lt
         if "locator_value" in data:
             el.locator_value = data["locator_value"].strip()
@@ -933,13 +936,13 @@ def web_element_detail(request, el_id):
             ]
             + ["updated_at"]
         )
-        return JsonResponse({"ok": True, "element": _web_element_payload(el)})
+        return JsonResponse({"status": True, "element": _web_element_payload(el)})
 
     elif request.method == "DELETE":
         el.delete()
-        return JsonResponse({"ok": True})
+        return JsonResponse({"status": True})
 
-    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+    return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
 
 @csrf_exempt
@@ -950,11 +953,11 @@ def batch_import_web_elements(request):
     try:
         data = json.loads(request.body)
     except Exception:
-        return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+        return JsonResponse({"status": False, "message": "invalid JSON"}, status=400)
 
     items = data.get("elements", [])
     if not items:
-        return JsonResponse({"ok": False, "error": "elements 不能为空"}, status=400)
+        return JsonResponse({"status": False, "message": "elements 不能为空"}, status=400)
 
     saved, skipped, errors = 0, 0, []
     for item in items:
@@ -985,7 +988,7 @@ def batch_import_web_elements(request):
             errors.append(f"{name}: {e}")
             skipped += 1
 
-    result = {"ok": True, "saved": saved, "skipped": skipped}
+    result = {"status": True, "saved": saved, "skipped": skipped}
     if errors:
         result["errors"] = errors[:5]
     return JsonResponse(result)
@@ -1021,7 +1024,7 @@ def list_web_groups(request):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "groups": [_web_group_payload(g) for g in groups],
         }
     )
@@ -1035,11 +1038,11 @@ def create_web_group(request):
     try:
         data = json.loads(request.body)
     except Exception:
-        return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+        return JsonResponse({"status": False, "message": "invalid JSON"}, status=400)
 
     name = data.get("name", "").strip()
     if not name:
-        return JsonResponse({"ok": False, "error": "分组名称必填"}, status=400)
+        return JsonResponse({"status": False, "message": "分组名称必填"}, status=400)
 
     parent_id = data.get("parent_id")
     if parent_id in ("", 0, "0"):
@@ -1049,9 +1052,11 @@ def create_web_group(request):
         try:
             parent = WebGroup.objects.get(pk=parent_id)
             if not parent.is_folder:
-                return JsonResponse({"ok": False, "error": "只能将分组添加在目录下"}, status=400)
+                return JsonResponse(
+                    {"status": False, "message": "只能将分组添加在目录下"}, status=400
+                )
         except WebGroup.DoesNotExist:
-            return JsonResponse({"ok": False, "error": "父级分组不存在"}, status=404)
+            return JsonResponse({"status": False, "message": "父级分组不存在"}, status=404)
 
     is_folder = bool(data.get("is_folder", False))
 
@@ -1063,9 +1068,9 @@ def create_web_group(request):
             sort_order=data.get("sort_order", 0),
         )
     except Exception as e:
-        return JsonResponse({"ok": False, "error": f"创建失败: {e}"}, status=500)
+        return JsonResponse({"status": False, "message": f"创建失败: {e}"}, status=500)
 
-    return JsonResponse({"ok": True, "group": _web_group_payload(g)})
+    return JsonResponse({"status": True, "group": _web_group_payload(g)})
 
 
 @csrf_exempt
@@ -1076,22 +1081,22 @@ def web_group_detail(request, group_id):
     try:
         g = WebGroup.objects.get(id=group_id)
     except WebGroup.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "分组不存在"}, status=404)
+        return JsonResponse({"status": False, "message": "分组不存在"}, status=404)
 
     if request.method == "PUT":
         try:
             data = json.loads(request.body)
         except Exception:
-            return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+            return JsonResponse({"status": False, "message": "invalid JSON"}, status=400)
 
         if "name" in data:
             name = data["name"].strip()
             if not name:
-                return JsonResponse({"ok": False, "error": "名称不能为空"}, status=400)
+                return JsonResponse({"status": False, "message": "名称不能为空"}, status=400)
             g.name = name
 
         g.save(update_fields=["name"] if "name" in data else [])
-        return JsonResponse({"ok": True, "group": _web_group_payload(g)})
+        return JsonResponse({"status": True, "group": _web_group_payload(g)})
 
     elif request.method == "DELETE":
         # Cascade: child groups are deleted by CASCADE FK,
@@ -1106,9 +1111,9 @@ def web_group_detail(request, group_id):
         _descendant_ids(g.id)
         WebElement.objects.filter(group_id__in=_collect_ids).update(group=None)
         g.delete()
-        return JsonResponse({"ok": True})
+        return JsonResponse({"status": True})
 
-    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+    return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
 
 @csrf_exempt
@@ -1119,11 +1124,11 @@ def batch_move_web_groups(request):
     try:
         data = json.loads(request.body)
     except Exception:
-        return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+        return JsonResponse({"status": False, "message": "invalid JSON"}, status=400)
 
     group_ids = data.get("group_ids") or []
     if not group_ids:
-        return JsonResponse({"ok": False, "error": "group_ids 不能为空"}, status=400)
+        return JsonResponse({"status": False, "message": "group_ids 不能为空"}, status=400)
 
     parent_id = data.get("parent_id")
     if parent_id in ("", 0, "0", "__root__"):
@@ -1133,12 +1138,12 @@ def batch_move_web_groups(request):
         try:
             parent = WebGroup.objects.get(pk=parent_id)
             if not parent.is_folder:
-                return JsonResponse({"ok": False, "error": "目标必须是目录"}, status=400)
+                return JsonResponse({"status": False, "message": "目标必须是目录"}, status=400)
         except WebGroup.DoesNotExist:
-            return JsonResponse({"ok": False, "error": "目标分组不存在"}, status=404)
+            return JsonResponse({"status": False, "message": "目标分组不存在"}, status=404)
 
     WebGroup.objects.filter(id__in=group_ids).update(parent_id=parent_id)
-    return JsonResponse({"ok": True, "moved": len(group_ids)})
+    return JsonResponse({"status": True, "moved": len(group_ids)})
 
 
 # ── Web Page Flow CRUD ──
@@ -1167,7 +1172,7 @@ def web_flows_handler(request):
             }
             for f in flows
         ]
-        return JsonResponse({"ok": True, "flows": result})
+        return JsonResponse({"status": True, "flows": result})
 
     elif request.method == "POST":
         data = json.loads(request.body)
@@ -1175,7 +1180,7 @@ def web_flows_handler(request):
         to_id = data.get("to_group_id")
         if not from_id or not to_id:
             return JsonResponse(
-                {"ok": False, "error": "from_group_id 和 to_group_id 必填"}, status=400
+                {"status": False, "message": "from_group_id 和 to_group_id 必填"}, status=400
             )
 
         # Validate both IDs are WebGroup (not Android Page)
@@ -1186,13 +1191,16 @@ def web_flows_handler(request):
             to_g = WebGroup.objects.get(pk=to_id)
         except WebGroup.DoesNotExist:
             return JsonResponse(
-                {"ok": False, "error": "分组不存在，只能使用 Web 元素分组（el_web_groups）"},
+                {"status": False, "message": "分组不存在，只能使用 Web 元素分组（el_web_groups）"},
                 status=400,
             )
 
         if from_g.is_folder or to_g.is_folder:
             return JsonResponse(
-                {"ok": False, "error": "目录节点不能作为流的端点，请选择具体的页面（非目录）"},
+                {
+                    "status": False,
+                    "message": "目录节点不能作为流的端点，请选择具体的页面（非目录）",
+                },
                 status=400,
             )
 
@@ -1202,10 +1210,10 @@ def web_flows_handler(request):
                 trigger_el = WebElement.objects.get(pk=trigger_id)
                 if trigger_el.group_id not in (from_id, to_id):
                     return JsonResponse(
-                        {"ok": False, "error": "触发元素必须属于源页面或目标页面"}, status=400
+                        {"status": False, "message": "触发元素必须属于源页面或目标页面"}, status=400
                     )
             except WebElement.DoesNotExist:
-                return JsonResponse({"ok": False, "error": "触发元素不存在"}, status=400)
+                return JsonResponse({"status": False, "message": "触发元素不存在"}, status=400)
 
         WebPageFlow.objects.create(
             from_group=from_g,
@@ -1213,9 +1221,9 @@ def web_flows_handler(request):
             trigger_element_id=trigger_id,
             trigger_action=data.get("trigger_action", "click"),
         )
-        return JsonResponse({"ok": True})
+        return JsonResponse({"status": True})
 
-    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+    return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
 
 @csrf_exempt
@@ -1224,7 +1232,7 @@ def delete_web_flow(request, flow_id):
     from .models import WebPageFlow
 
     WebPageFlow.objects.filter(id=flow_id).delete()
-    return JsonResponse({"ok": True})
+    return JsonResponse({"status": True})
 
 
 # ── API Group CRUD ──
@@ -1257,7 +1265,7 @@ def list_api_groups(request):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "groups": [_api_group_payload(g) for g in groups],
         }
     )
@@ -1271,11 +1279,11 @@ def create_api_group(request):
     try:
         data = json.loads(request.body)
     except Exception:
-        return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+        return JsonResponse({"status": False, "message": "invalid JSON"}, status=400)
 
     name = data.get("name", "").strip()
     if not name:
-        return JsonResponse({"ok": False, "error": "分组名称必填"}, status=400)
+        return JsonResponse({"status": False, "message": "分组名称必填"}, status=400)
 
     parent_id = data.get("parent_id")
     if parent_id in ("", 0, "0"):
@@ -1285,9 +1293,11 @@ def create_api_group(request):
         try:
             parent = ApiGroup.objects.get(pk=parent_id)
             if not parent.is_folder:
-                return JsonResponse({"ok": False, "error": "只能将分组添加在目录下"}, status=400)
+                return JsonResponse(
+                    {"status": False, "message": "只能将分组添加在目录下"}, status=400
+                )
         except ApiGroup.DoesNotExist:
-            return JsonResponse({"ok": False, "error": "父级分组不存在"}, status=404)
+            return JsonResponse({"status": False, "message": "父级分组不存在"}, status=404)
 
     is_folder = bool(data.get("is_folder", False))
 
@@ -1299,9 +1309,9 @@ def create_api_group(request):
             sort_order=data.get("sort_order", 0),
         )
     except Exception as e:
-        return JsonResponse({"ok": False, "error": f"创建失败: {e}"}, status=500)
+        return JsonResponse({"status": False, "message": f"创建失败: {e}"}, status=500)
 
-    return JsonResponse({"ok": True, "group": _api_group_payload(g)})
+    return JsonResponse({"status": True, "group": _api_group_payload(g)})
 
 
 @csrf_exempt
@@ -1312,22 +1322,22 @@ def api_group_detail(request, group_id):
     try:
         g = ApiGroup.objects.get(id=group_id)
     except ApiGroup.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "分组不存在"}, status=404)
+        return JsonResponse({"status": False, "message": "分组不存在"}, status=404)
 
     if request.method == "PUT":
         try:
             data = json.loads(request.body)
         except Exception:
-            return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+            return JsonResponse({"status": False, "message": "invalid JSON"}, status=400)
 
         if "name" in data:
             name = data["name"].strip()
             if not name:
-                return JsonResponse({"ok": False, "error": "名称不能为空"}, status=400)
+                return JsonResponse({"status": False, "message": "名称不能为空"}, status=400)
             g.name = name
 
         g.save(update_fields=["name"] if "name" in data else [])
-        return JsonResponse({"ok": True, "group": _api_group_payload(g)})
+        return JsonResponse({"status": True, "group": _api_group_payload(g)})
 
     elif request.method == "DELETE":
         # Cascade: child groups are deleted by CASCADE FK,
@@ -1342,9 +1352,9 @@ def api_group_detail(request, group_id):
         _descendant_ids(g.id)
         ApiEndpoint.objects.filter(group_id__in=_collect_ids).update(group=None)
         g.delete()
-        return JsonResponse({"ok": True})
+        return JsonResponse({"status": True})
 
-    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+    return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
 
 @csrf_exempt
@@ -1355,11 +1365,11 @@ def batch_move_api_groups(request):
     try:
         data = json.loads(request.body)
     except Exception:
-        return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+        return JsonResponse({"status": False, "message": "invalid JSON"}, status=400)
 
     group_ids = data.get("group_ids") or []
     if not group_ids:
-        return JsonResponse({"ok": False, "error": "group_ids 不能为空"}, status=400)
+        return JsonResponse({"status": False, "message": "group_ids 不能为空"}, status=400)
 
     parent_id = data.get("parent_id")
     if parent_id in ("", 0, "0", "__root__"):
@@ -1369,12 +1379,12 @@ def batch_move_api_groups(request):
         try:
             parent = ApiGroup.objects.get(pk=parent_id)
             if not parent.is_folder:
-                return JsonResponse({"ok": False, "error": "目标必须是目录"}, status=400)
+                return JsonResponse({"status": False, "message": "目标必须是目录"}, status=400)
         except ApiGroup.DoesNotExist:
-            return JsonResponse({"ok": False, "error": "目标分组不存在"}, status=404)
+            return JsonResponse({"status": False, "message": "目标分组不存在"}, status=404)
 
     ApiGroup.objects.filter(id__in=group_ids).update(parent_id=parent_id)
-    return JsonResponse({"ok": True, "moved": len(group_ids)})
+    return JsonResponse({"status": True, "moved": len(group_ids)})
 
 
 # ── API Endpoint CRUD ──
@@ -1435,7 +1445,7 @@ def list_api_endpoints(request):
 
     qs = qs.order_by("-updated_at")
     return JsonResponse(
-        {"ok": True, "endpoints": [_api_endpoint_payload(e) for e in qs], "total": qs.count()}
+        {"status": True, "endpoints": [_api_endpoint_payload(e) for e in qs], "total": qs.count()}
     )
 
 
@@ -1447,17 +1457,17 @@ def create_api_endpoint(request):
     try:
         data = json.loads(request.body)
     except Exception:
-        return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+        return JsonResponse({"status": False, "message": "invalid JSON"}, status=400)
 
     name = data.get("name", "").strip()
     if not name:
-        return JsonResponse({"ok": False, "error": "接口名称必填"}, status=400)
+        return JsonResponse({"status": False, "message": "接口名称必填"}, status=400)
     method = data.get("method", "GET").upper()
     if method not in ("GET", "POST", "PUT", "DELETE", "PATCH"):
-        return JsonResponse({"ok": False, "error": "无效的请求方法"}, status=400)
+        return JsonResponse({"status": False, "message": "无效的请求方法"}, status=400)
     url = data.get("url", "").strip()
     if not url:
-        return JsonResponse({"ok": False, "error": "接口 URL 必填"}, status=400)
+        return JsonResponse({"status": False, "message": "接口 URL 必填"}, status=400)
 
     try:
         group_id = data.get("group_id")
@@ -1483,8 +1493,8 @@ def create_api_endpoint(request):
             is_test_point=bool(data.get("is_test_point", False)),
         )
     except Exception as e:
-        return JsonResponse({"ok": False, "error": str(e)}, status=500)
-    return JsonResponse({"ok": True, "endpoint": _api_endpoint_payload(el)})
+        return JsonResponse({"status": False, "message": str(e)}, status=500)
+    return JsonResponse({"status": True, "endpoint": _api_endpoint_payload(el)})
 
 
 @csrf_exempt
@@ -1495,13 +1505,13 @@ def api_endpoint_detail(request, el_id):
     try:
         e = ApiEndpoint.objects.get(id=el_id)
     except ApiEndpoint.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "接口不存在"}, status=404)
+        return JsonResponse({"status": False, "message": "接口不存在"}, status=404)
 
     if request.method == "PUT":
         try:
             data = json.loads(request.body)
         except Exception:
-            return JsonResponse({"ok": False, "error": "invalid JSON"}, status=400)
+            return JsonResponse({"status": False, "message": "invalid JSON"}, status=400)
 
         for field in [
             "name",
@@ -1529,9 +1539,9 @@ def api_endpoint_detail(request, el_id):
                 except (ApiGroup.DoesNotExist, ValueError, TypeError):
                     pass
         e.save()
-        return JsonResponse({"ok": True, "endpoint": _api_endpoint_payload(e)})
+        return JsonResponse({"status": True, "endpoint": _api_endpoint_payload(e)})
 
     elif request.method == "DELETE":
         e.delete()
-        return JsonResponse({"ok": True})
-    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+        return JsonResponse({"status": True})
+    return JsonResponse({"status": False, "message": "method not allowed"}, status=405)

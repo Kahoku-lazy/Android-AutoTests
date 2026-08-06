@@ -174,7 +174,7 @@ _safe_pct(part, total)
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "data": {
     "stats": {
       "devices": 3,

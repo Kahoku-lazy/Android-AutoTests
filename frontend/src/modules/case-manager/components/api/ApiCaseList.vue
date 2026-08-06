@@ -1,6 +1,6 @@
 <script setup>
 import CaseList from "../CaseList.vue";
-import { listApiDefinitions, deleteApiDefinition, getApiDefinition } from "../../api/apiTesting.js";
+import { listApiDefinitions, deleteApiDefinition, getApiDefinition } from "../../api/apiTesting";
 
 defineProps({ treeData: Array, activeDirectoryId: null, activeDirName: String, activeCaseId: null });
 defineEmits(["refresh-tree"]);

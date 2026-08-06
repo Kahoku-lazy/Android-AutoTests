@@ -16,6 +16,7 @@ PUBLIC_PREFIXES = [
     "/api/ai/tools/",  # AgentScope internal service-to-service
     "/admin/",
     "/static/",
+    "/media/",
     "/api/docs",
 ]
 
@@ -54,7 +55,7 @@ class JWTAuthenticationMiddleware:
         auth_header = request.META.get("HTTP_AUTHORIZATION", "")
         if not auth_header.startswith("Bearer "):
             return JsonResponse(
-                {"ok": False, "error": "Authorization header required"},
+                {"status": False, "message": "Authorization header required"},
                 status=401,
             )
 
@@ -65,7 +66,7 @@ class JWTAuthenticationMiddleware:
         except Exception as e:
             logger.warning(f"JWT verify failed for {path}: {e}")
             return JsonResponse(
-                {"ok": False, "error": "Invalid or expired token"},
+                {"status": False, "message": "Invalid or expired token"},
                 status=401,
             )
 

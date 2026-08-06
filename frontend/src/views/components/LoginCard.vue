@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import AppCard from '@/shared/components/AppCard.vue'
-import { IconUser, IconLock } from '@/shared/icons/index.js'
+import { IconUser, IconLock } from '@/shared/icons/index'
 import type { FieldErrors } from '@/shared/types/auth'
 
-interface Props {
+export interface LoginCardProps {
   username: string
   password: string
   rememberMe?: boolean
@@ -12,7 +12,7 @@ interface Props {
   canSubmit: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<LoginCardProps>(), {
   rememberMe: false,
   loading: false,
 })
@@ -28,7 +28,7 @@ const emit = defineEmits<{
 
 <template>
   <AppCard color="app-blue" class="login-card">
-    <form class="login-form" @submit.prevent="emit('submit')">
+    <form class="auth-form" @submit.prevent="emit('submit')">
       <div class="form-field">
         <IconUser :size="18" class="form-icon" />
         <el-input
@@ -72,35 +72,13 @@ const emit = defineEmits<{
       >登录</el-button>
     </form>
 
-    <p class="login-toggle" @click="emit('switchToRegister')">
-      没有账号？<span class="link">去注册 →</span>
+    <p class="form-toggle" @click="emit('switchToRegister')">
+      没有账号？<span class="form-link">去注册 →</span>
     </p>
   </AppCard>
 </template>
 
 <style>
-@import '@/views/shared/login-form.css';
-</style>
-
-<style scoped>
-.field-error {
-  margin: -8px 0 0 28px;
-  font-size: var(--app-size-xs);
-  color: var(--app-error);
-  font-weight: 500;
-}
-
-.form-remember {
-  display: flex;
-  align-items: center;
-  gap: var(--app-space-sm);
-  padding: 0 2px;
-}
-
-.remember-label {
-  font-size: var(--app-size-xs);
-  color: var(--app-text-secondary);
-  font-weight: 500;
-  user-select: none;
-}
+@import '@/views/shared/login-card.css';
+@import '@/views/shared/auth-form-card.css';
 </style>

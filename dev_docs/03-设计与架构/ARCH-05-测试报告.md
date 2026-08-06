@@ -172,7 +172,7 @@ report_generator.service (save_csv / save_log / generate_json_report)(run_id)
 
 ```json
 {
-  "ok": true,
+  "status": true,
   "data": {
     "run_id": "run_20260716_001",
     "device_serial": "abc123",

@@ -4,11 +4,9 @@ import json
 import logging
 
 from django.http import JsonResponse
-
-logger = logging.getLogger("ai_assistant")
 from django.views.decorators.csrf import csrf_exempt
 
-from apps.ai_assistant.agent_scope.provider_registry import get_provider_config
+logger = logging.getLogger("ai_assistant")
 
 from ..api import decrypt_key, encrypt_key, mask_key
 from ..decorators import require_auth
@@ -21,24 +19,12 @@ from ..permissions import (
     filter_agents_for_user,
 )
 from ..serializers import validate_agent_input
-from .common import (
-    call_agentscope,
-    create_agentscope_credential,
-    get_agentscope_token,
-    validation_error,
-)
-
-
-def get_default_system_prompt(request):
-    """GET /api/ai/default-system-prompt — return the default system prompt template."""
-    from apps.ai_assistant.agent_scope.system_prompt import get_default_system_prompt
-
-    return JsonResponse({"ok": True, "template": get_default_system_prompt()})
+from .common import validation_error
 
 
 def list_available_skills(request):
     """GET /api/ai/available-skills — return workspace skills that can be toggled."""
-    from agentscope_service.filterable_workspace import _SKILL_CLASS_MAP, ALL_SKILL_NAMES
+    from apps.ai_assistant.agent_scope.skill_registry import _SKILL_CLASS_MAP, ALL_SKILL_NAMES
 
     skills = []
     for name in ALL_SKILL_NAMES:
@@ -49,7 +35,7 @@ def list_available_skills(request):
                 "description": (cls.description or "").strip() if cls else "",
             }
         )
-    return JsonResponse({"ok": True, "skills": skills})
+    return JsonResponse({"status": True, "skills": skills})
 
 
 def list_agents(request):
@@ -71,16 +57,17 @@ def list_agents(request):
                 "created_at": str(a.created_at),
             }
         )
-    return JsonResponse({"ok": True, "agents": agents})
+    return JsonResponse({"status": True, "agents": agents})
 
 
+@require_auth
 def agent_detail(request, agent_id):
     if not check_agent_owner(request.user_id, agent_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
     try:
         a = AIAgent.objects.prefetch_related("tools").get(id=agent_id)
     except AIAgent.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "not found"}, status=404)
+        return JsonResponse({"status": False, "message": "not found"}, status=404)
     tools = [
         {
             "id": t.id,
@@ -93,7 +80,7 @@ def agent_detail(request, agent_id):
     ]
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "agent": {
                 "id": a.id,
                 "name": a.name,
@@ -116,9 +103,13 @@ def agent_detail(request, agent_id):
                 "enable_meta_tool": a.enable_meta_tool,
                 "enable_rewrite_query": a.enable_rewrite_query,
                 "enable_knowledge_base": a.enable_knowledge_base,
+                "enable_workspace_tools": a.enable_workspace_tools,
+                "enable_business_tools": a.enable_business_tools,
+                "enable_mcp_tools": a.enable_mcp_tools,
+                "enable_skills": a.enable_skills,
                 "generate_kwargs": a.generate_kwargs,
                 "skills_config": a.skills_config or {},
-                "knowledge_sources": a.knowledge_sources or [],
+                "knowledge_sources": a.knowledge_sources or {},
                 "compression_enabled": a.compression_enabled,
                 "compression_threshold": a.compression_threshold,
                 "compression_keep_recent": a.compression_keep_recent,
@@ -140,17 +131,16 @@ def agent_detail(request, agent_id):
 @require_auth
 def create_agent(request):
     if not check_can_create_agent(request.user_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
-    data = json.loads(request.body)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": False, "message": "无效的 JSON"}, status=400)
     ok, errors, cleaned = validate_agent_input(data, require_api_key=False)
     if not ok:
         return validation_error(errors)
     data = cleaned
-    # Auto-fill default system prompt template when empty
-    if not (data.get("system_prompt") or "").strip():
-        from apps.ai_assistant.agent_scope.system_prompt import get_default_system_prompt
-
-        data["system_prompt"] = get_default_system_prompt()
+    # Agents start as pure conversation models — no default system prompt.
     a = AIAgent.objects.create(
         owner_id=int(request.user_id),
         name=data.get("name", ""),
@@ -172,7 +162,11 @@ def create_agent(request):
         long_term_memory_mode=data.get("long_term_memory_mode", "both"),
         enable_meta_tool=data.get("enable_meta_tool", False),
         enable_rewrite_query=data.get("enable_rewrite_query", True),
-        enable_knowledge_base=data.get("enable_knowledge_base", True),
+        enable_knowledge_base=data.get("enable_knowledge_base", False),
+        enable_workspace_tools=data.get("enable_workspace_tools", False),
+        enable_business_tools=data.get("enable_business_tools", False),
+        enable_mcp_tools=data.get("enable_mcp_tools", False),
+        enable_skills=data.get("enable_skills", False),
         generate_kwargs=data.get("generate_kwargs", "{}"),
         compression_enabled=data.get("compression_enabled", False),
         compression_threshold=data.get("compression_threshold", 10000),
@@ -192,7 +186,7 @@ def create_agent(request):
             config_json=t.get("config_json", "{}"),
             enabled=t.get("enabled", True),
         )
-    return JsonResponse({"ok": True, "id": a.id})
+    return JsonResponse({"status": True, "id": a.id})
 
 
 def _sync_agent_tools(agent, tools_data):
@@ -243,12 +237,15 @@ def _sync_agent_tools(agent, tools_data):
 @require_auth
 def update_agent(request, agent_id):
     if not check_can_update_agent(request.user_id, agent_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
     try:
         a = AIAgent.objects.get(id=agent_id)
     except AIAgent.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "not found"}, status=404)
-    data = json.loads(request.body)
+        return JsonResponse({"status": False, "message": "not found"}, status=404)
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": False, "message": "无效的 JSON"}, status=400)
     ok, errors, cleaned = validate_agent_input(data, require_api_key=False)
     if not ok:
         return validation_error(errors)
@@ -257,6 +254,7 @@ def update_agent(request, agent_id):
     prompt_changed = False
     provider_changed = False
     if "api_key" in data and data["api_key"]:
+        # Frontend sends masked value (contains "***") when key is unchanged
         if "***" in data["api_key"]:
             del data["api_key"]
         else:
@@ -288,6 +286,10 @@ def update_agent(request, agent_id):
         "enable_meta_tool",
         "enable_rewrite_query",
         "enable_knowledge_base",
+        "enable_workspace_tools",
+        "enable_business_tools",
+        "enable_mcp_tools",
+        "enable_skills",
         "generate_kwargs",
         "compression_enabled",
         "compression_threshold",
@@ -313,20 +315,7 @@ def update_agent(request, agent_id):
     if "tools" in data:
         _sync_agent_tools(a, data["tools"])
 
-    # Sync API key / provider to AgentScope credential if agent is registered and config changed
-    if (key_changed or provider_changed) and a.agent_scope_id:
-        try:
-            provider_cfg = get_provider_config(a.model_provider, a.base_url)
-            token = get_agentscope_token(request)
-            create_agentscope_credential(provider_cfg, decrypt_key(a.api_key), str(a.id), token)
-            # Invalidate cached credential so create_scope_session picks up the change
-            a.agent_scope_credential_id = ""
-            a.credential_hash = ""
-            a.save(update_fields=["agent_scope_credential_id", "credential_hash"])
-        except Exception:
-            logger.exception("AgentScope credential sync failed for agent %s", agent_id)
-
-    return JsonResponse({"ok": True})
+    return JsonResponse({"status": True})
 
 
 @csrf_exempt
@@ -334,20 +323,20 @@ def update_agent(request, agent_id):
 def reveal_api_key(request, agent_id):
     """POST /api/ai/agents/<id>/reveal-key — one-time decrypted API key reveal."""
     if not check_agent_owner(request.user_id, agent_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
     try:
         a = AIAgent.objects.get(id=agent_id)
     except AIAgent.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "not found"}, status=404)
+        return JsonResponse({"status": False, "message": "not found"}, status=404)
 
     if not a.api_key:
-        return JsonResponse({"ok": False, "error": "未配置 API Key"}, status=400)
+        return JsonResponse({"status": False, "message": "未配置 API Key"}, status=400)
 
     if a.key_revealed:
         decrypted = decrypt_key(a.api_key)
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "api_key": mask_key(decrypted),
                 "revealed": False,
                 "hint": "API Key 仅支持一次性查看，已过期",
@@ -360,7 +349,7 @@ def reveal_api_key(request, agent_id):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "api_key": decrypted,
             "revealed": True,
             "hint": "请立即复制保存，此 Key 仅显示一次",
@@ -372,11 +361,12 @@ def reveal_api_key(request, agent_id):
 @require_auth
 def delete_agent(request, agent_id):
     if not check_can_delete_agent(request.user_id, agent_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
+        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
     AIAgent.objects.filter(id=agent_id).delete()
-    return JsonResponse({"ok": True})
+    return JsonResponse({"status": True})
 
 
+@require_auth
 def health_check_all_agents(request):
     """GET /api/ai/agents/health — check connectivity of all active agents."""
     from datetime import datetime, timedelta
@@ -410,69 +400,4 @@ def health_check_all_agents(request):
                 "last_checked": str(a.last_checked_at) if a.last_checked_at else None,
             }
         )
-    return JsonResponse({"ok": True, "agents": results})
-
-
-def _do_register_agentscope_agent(agent_cfg, token: str):
-    """Register (or re-register) an agent with AgentScope.  Returns (agent_scope_id, error).
-
-    This is the internal helper used by both the view and create_scope_session.
-    It does NOT create a credential — the caller is responsible for credential setup.
-    """
-    agent_body = {
-        "name": agent_cfg.name,
-        "system_prompt": agent_cfg.system_prompt or "你是一个有用的AI测试助手。",
-        "formatter": agent_cfg.formatter or "dashscope",
-        "enable_meta_tool": agent_cfg.enable_meta_tool,
-        "enable_rewrite_query": agent_cfg.enable_rewrite_query,
-        "react_config": {
-            "max_iters": agent_cfg.max_iters or 10,
-            "parallel_tool_calls": agent_cfg.parallel_tool_calls,
-        },
-    }
-    resp, err = call_agentscope("/agent/", "POST", agent_body, token)
-    if err:
-        return "", f"agent creation failed: {err}"
-    if resp.status_code not in (200, 201):
-        return "", f"agent creation failed: HTTP {resp.status_code} — {resp.text[:200]}"
-
-    agent_scope_id = resp.json().get("agent_id", "")
-    if not agent_scope_id:
-        return "", "AgentScope did not return agent_id"
-
-    agent_cfg.agent_scope_id = agent_scope_id
-    agent_cfg.save(update_fields=["agent_scope_id", "updated_at"])
-    return agent_scope_id, ""
-
-
-@csrf_exempt
-@require_auth
-def register_agent_in_agentscope(request, agent_id):
-    """POST /api/ai/agents/{id}/register-scope — Register Django agent with AgentScope."""
-    if not check_agent_owner(request.user_id, agent_id):
-        return JsonResponse({"ok": False, "error": "Forbidden"}, status=403)
-    try:
-        agent_cfg = AIAgent.objects.get(id=agent_id)
-    except AIAgent.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "agent not found"}, status=404)
-
-    api_key = decrypt_key(agent_cfg.api_key) if agent_cfg.api_key else ""
-    if not api_key:
-        return JsonResponse(
-            {"ok": False, "error": "API key required for AgentScope registration"}, status=400
-        )
-
-    token = get_agentscope_token(request)
-    provider_cfg = get_provider_config(agent_cfg.model_provider, agent_cfg.base_url)
-
-    credential_id, err = create_agentscope_credential(provider_cfg, api_key, str(agent_id), token)
-    if err:
-        return JsonResponse({"ok": False, "error": err}, status=503)
-
-    agent_scope_id, err = _do_register_agentscope_agent(agent_cfg, token)
-    if err:
-        return JsonResponse({"ok": False, "error": err}, status=503)
-
-    return JsonResponse(
-        {"ok": True, "agent_scope_id": agent_scope_id, "credential_id": credential_id}
-    )
+    return JsonResponse({"status": True, "agents": results})

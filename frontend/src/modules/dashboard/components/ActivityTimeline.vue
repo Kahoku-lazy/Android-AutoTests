@@ -1,9 +1,10 @@
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, nextTick, watch } from 'vue'
-import { staggerReveal } from '@/shared/animations.js'
+import { staggerReveal } from '@/shared/animations'
+import type { ActivityItem } from '@/shared/types/dashboard'
 
-const props = defineProps({
-  items: { type: Array, default: () => [] },
+const props = withDefaults(defineProps<{ items?: ActivityItem[] }>(), {
+  items: () => [],
 })
 
 const listRef = ref(null)

@@ -97,7 +97,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
@@ -107,7 +107,7 @@ import {
   updateSharedTool,
   deleteSharedTool,
   uploadSharedSkill,
-} from '../api.js'
+} from '../api/toolbox'
 
 const items = ref([])
 const loading = ref(false)
@@ -136,7 +136,7 @@ async function loadItems() {
   loading.value = true
   try {
     const data = await fetchSharedTools()
-    if (data.ok) items.value = data.items || []
+    if (data.status) items.value = data.items || []
   } catch (e) { console.error('Failed to load toolbox:', e) }
   loading.value = false
 }
@@ -189,7 +189,7 @@ async function removeItem(item) {
   } catch { return }
   try {
     const data = await deleteSharedTool(item.id)
-    if (data.ok) {
+    if (data.status) {
       ElMessage.success('已删除')
       items.value = items.value.filter((i) => i.id !== item.id)
     }
@@ -207,11 +207,11 @@ async function onSkillFolderPicked(e) {
   loading.value = true
   try {
     const data = await uploadSharedSkill(fd)
-    if (data.ok) {
+    if (data.status) {
       ElMessage.success('Skill 文件夹已上传')
       await loadItems()
     } else {
-      ElMessage.error(data.error || '上传失败')
+      ElMessage.error(data.message || '上传失败')
     }
   } catch (e) { ElMessage.error('上传失败') }
   loading.value = false

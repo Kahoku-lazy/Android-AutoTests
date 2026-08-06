@@ -6,7 +6,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PageHeader from '@/shared/components/PageHeader.vue'
 import KpiCard from '@/shared/components/KpiCard.vue'
-import { getCaseBreakdown } from './api.js'
+import { getCaseBreakdown } from './api'
 
 const route = useRoute()
 const router = useRouter()
@@ -73,7 +73,7 @@ async function loadData() {
   expandedBugCases.value = new Set()
   try {
     const { data: resp } = await getCaseBreakdown(resultType.value, filterParamsFromQuery())
-    if (resp.ok) {
+    if (resp.status) {
       data.value = resp
       expandedCases.value = new Set((resp.groups || []).map(g => g.case_title))
       expandedBugCases.value = new Set((resp.bug_summary?.cases || []).map(c => c.case_title))

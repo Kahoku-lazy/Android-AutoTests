@@ -13,8 +13,8 @@ AgentScope Tool 只能通过 api.py 函数写数据 → 同进程直接调用
 ## 响应格式
 
 ```json
-{"ok": true, "data": {...}}  // 成功
-{"ok": false, "error": "..."}  // 失败
+{"status": true, "data": {...}}  // 成功
+{"status": false, "message": "..."}  // 失败
 ```
 
 ## 鉴权

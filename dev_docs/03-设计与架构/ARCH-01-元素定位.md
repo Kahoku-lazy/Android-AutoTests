@@ -218,8 +218,8 @@ gen_xpath_candidates(element, all_elements) → List[{strategy, xpath, count}]
 ### 4.3 统一响应格式
 
 ```json
-{ "ok": true, "data": { ... } }
-{ "ok": false, "error": "错误描述" }
+{ "status": true, "data": { ... } }
+{ "status": false, "message": "错误描述" }
 ```
 
 ---

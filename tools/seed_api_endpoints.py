@@ -55,7 +55,7 @@ ROOT = create_folder("Android-AutoTests 平台", sort=0)
 f_platform = create_folder("平台入口", parent=ROOT, sort=0)
 g_root = create_group("根路径 & 文档", parent=f_platform, sort=0)
 create_endpoint(
-    g_root, "GET", "服务健康检查", "/", '返回 {"ok":true,"service":"Android-AutoTests API"}'
+    g_root, "GET", "服务健康检查", "/", '返回 {"status":true,"service":"Android-AutoTests API"}'
 )
 create_endpoint(g_root, "GET", "API 文档 JSON", "/api/docs", "完整 JSON 格式的 API 文档")
 create_endpoint(g_root, "GET", "API 文档 HTML", "/api/docs.html", "交互式 HTML API 文档页面")

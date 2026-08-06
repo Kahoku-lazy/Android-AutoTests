@@ -40,19 +40,17 @@ class Command(BaseCommand):
         parser.add_argument("--detail", action="store_true", help="Show per-fragment details.")
 
     def handle(self, **options):
-        from apps.ai_assistant.agent_scope import rag_service as document_store
+        from apps.ai_assistant.api import get_kb_doc_count, search_knowledge
 
         detail = options["detail"]
         output_path = options.get("output") or ""
 
         if detail:
-            self.stdout.write(
-                f"ChromaDB collection: {document_store._get_collection().count()} docs\n"
-            )
+            self.stdout.write(f"ChromaDB collection: {get_kb_doc_count()} docs\n")
 
         results = []
         for query in KB_TEST_QUERIES:
-            docs = document_store.search(query, top_k=3)
+            docs = search_knowledge(query, top_k=3)
             verified = []
             for d in docs:
                 meta = d.get("metadata", {})

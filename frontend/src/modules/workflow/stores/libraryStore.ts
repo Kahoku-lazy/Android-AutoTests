@@ -18,7 +18,7 @@ import {
   exportWorkflowDocument,
   moveWorkflowDocument,
   moveWorkflowDirectory,
-} from '@/modules/workflow/api.js'
+} from '@/modules/workflow/api'
 
 export type LibNodeType = 'folder' | 'page_flow' | 'test_case'
 
@@ -168,7 +168,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       }
       persistUi()
     } catch (e: any) {
-      const msg = e?.response?.data?.error || e?.message || '加载失败'
+      const msg = e?.response?.data?.message || e?.message || '加载失败'
       status.value = `加载目录失败: ${msg}`
       throw new Error(status.value)
       throw e
@@ -184,7 +184,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
         name: title,
         parent_id: parentToDirectoryId(parentId),
       })
-      if (!res.data?.ok) throw new Error(res.data?.error || '创建目录失败')
+      if (!res.data?.status) throw new Error(res.data?.message || '创建目录失败')
       const node = mapDir(res.data.directory)
       nodes.value.push(node)
       if (parentId) expanded.value[parentId] = true
@@ -192,7 +192,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       status.value = `已创建目录「${node.name}」`
       return node
     } catch (e: any) {
-      const msg = e?.response?.data?.error || e?.message || '创建目录失败'
+      const msg = e?.response?.data?.message || e?.message || '创建目录失败'
       throw new Error(msg)
       throw e
     }
@@ -214,7 +214,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
         directory_id: parentToDirectoryId(parentId),
         config: empty,
       })
-      if (!res.data?.ok) throw new Error(res.data?.error || '创建失败')
+      if (!res.data?.status) throw new Error(res.data?.message || '创建失败')
       const doc = res.data.document
       const node = mapDoc(doc)
       configCache.value[node.id] = doc.config || empty
@@ -224,7 +224,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       status.value = `已创建页面流「${title}」（${node.id}）`
       return node
     } catch (e: any) {
-      const msg = e?.response?.data?.error || e?.message || '创建页面流失败'
+      const msg = e?.response?.data?.message || e?.message || '创建页面流失败'
       throw new Error(msg)
       throw e
     }
@@ -255,7 +255,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
         directory_id: parentToDirectoryId(parentId),
         config,
       })
-      if (!res.data?.ok) throw new Error(res.data?.error || '创建失败')
+      if (!res.data?.status) throw new Error(res.data?.message || '创建失败')
       const doc = res.data.document
       const node = mapDoc(doc)
       configCache.value[node.id] = doc.config || config
@@ -265,7 +265,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       status.value = `已创建测试用例「${title}」（${node.id}）`
       return node
     } catch (e: any) {
-      const msg = e?.response?.data?.error || e?.message || '创建用例失败'
+      const msg = e?.response?.data?.message || e?.message || '创建用例失败'
       throw new Error(msg)
       throw e
     }
@@ -280,7 +280,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
         const dbId = parseDirDbId(id)
         if (dbId == null) return
         const res = await updateWorkflowDirectory(dbId, { name: title })
-        if (!res.data?.ok) throw new Error(res.data?.error || '重命名失败')
+        if (!res.data?.status) throw new Error(res.data?.message || '重命名失败')
       } else {
         // 只改标题，禁止附带 config：configCache 可能是创建时的空图或过期快照，
         // 一旦 PUT 会把未落库的画布数据洗成空（多端/改名失焦时尤其易发）。
@@ -289,13 +289,13 @@ export const useLibraryStore = defineStore('wf-library', () => {
           doc_type: n.type === 'test_case' ? 'test_case' : 'page_flow',
           directory_id: parentToDirectoryId(n.parentId),
         })
-        if (!res.data?.ok) throw new Error(res.data?.error || '重命名失败')
+        if (!res.data?.status) throw new Error(res.data?.message || '重命名失败')
         if (res.data.document?.updated_at) n.updatedAt = res.data.document.updated_at
       }
       n.name = title
       if (!n.updatedAt) n.updatedAt = nowIso()
     } catch (e: any) {
-      const msg = e?.response?.data?.error || e?.message || '重命名失败'
+      const msg = e?.response?.data?.message || e?.message || '重命名失败'
       throw new Error(msg)
       throw e
     }
@@ -309,11 +309,11 @@ export const useLibraryStore = defineStore('wf-library', () => {
         const dbId = parseDirDbId(id)
         if (dbId == null) return
         const res = await deleteWorkflowDirectory(dbId)
-        if (!res.data?.ok) throw new Error(res.data?.error || '删除失败')
+        if (!res.data?.status) throw new Error(res.data?.message || '删除失败')
         await refreshFromServer()
       } else {
         const res = await deleteWorkflowDocument(id)
-        if (!res.data?.ok) throw new Error(res.data?.error || '删除失败')
+        if (!res.data?.status) throw new Error(res.data?.message || '删除失败')
         delete configCache.value[id]
         nodes.value = nodes.value.filter(n => n.id !== id)
         if (activeId.value === id) activeId.value = null
@@ -321,7 +321,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       }
       status.value = `已删除「${target.name}」`
     } catch (e: any) {
-      const msg = e?.response?.data?.error || e?.message || '删除失败'
+      const msg = e?.response?.data?.message || e?.message || '删除失败'
       throw new Error(msg)
       throw e
     }
@@ -352,10 +352,10 @@ export const useLibraryStore = defineStore('wf-library', () => {
         const dbId = parseDirDbId(id)
         if (dbId == null) return
         const res = await moveWorkflowDirectory(dbId, parentToDirectoryId(targetFolderId))
-        if (!res.data?.ok) throw new Error(res.data?.error || '移动失败')
+        if (!res.data?.status) throw new Error(res.data?.message || '移动失败')
       } else {
         const res = await moveWorkflowDocument(id, parentToDirectoryId(targetFolderId))
-        if (!res.data?.ok) throw new Error(res.data?.error || '移动失败')
+        if (!res.data?.status) throw new Error(res.data?.message || '移动失败')
       }
       n.parentId = targetFolderId
       n.updatedAt = nowIso()
@@ -365,7 +365,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       }
       status.value = `已移动「${n.name}」`
     } catch (e: any) {
-      const msg = e?.response?.data?.error || e?.message || '移动失败'
+      const msg = e?.response?.data?.message || e?.message || '移动失败'
       throw new Error(msg)
       throw e
     }
@@ -421,13 +421,13 @@ export const useLibraryStore = defineStore('wf-library', () => {
         directory_id: parentToDirectoryId(n.parentId),
         config: data,
       })
-      if (!res.data?.ok) throw new Error(res.data?.error || '保存失败')
+      if (!res.data?.status) throw new Error(res.data?.message || '保存失败')
       // 以服务端回写为准，保证缓存与库一致
       const saved = res.data.document?.config ?? data
       configCache.value[id] = saved
       n.updatedAt = res.data.document?.updated_at || nowIso()
     } catch (e: any) {
-      const msg = e?.response?.data?.error || e?.message || '保存页面流失败'
+      const msg = e?.response?.data?.message || e?.message || '保存页面流失败'
       throw new Error(msg)
       throw e
     }
@@ -445,7 +445,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
     }
     try {
       const res = await getWorkflowDocument(docId)
-      if (!res.data?.ok) return null
+      if (!res.data?.status) return null
       const cfg = res.data.document?.config ?? {}
       configCache.value[docId] = cfg
       const n = findNode(docId)
@@ -454,7 +454,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       if (n && cfg?.linkedCaseId) n.caseId = cfg.linkedCaseId
       return cfg
     } catch (e: any) {
-      throw new Error(e?.response?.data?.error || e?.message || '加载文档失败')
+      throw new Error(e?.response?.data?.message || e?.message || '加载文档失败')
       return null
     }
   }
@@ -488,13 +488,13 @@ export const useLibraryStore = defineStore('wf-library', () => {
         directory_id: parentToDirectoryId(n.parentId),
         config,
       })
-      if (!res.data?.ok) throw new Error(res.data?.error || '保存失败')
+      if (!res.data?.status) throw new Error(res.data?.message || '保存失败')
       configCache.value[id] = res.data.document?.config ?? config
       if (draft.linkedCaseId) n.caseId = draft.linkedCaseId
       n.name = config.name
       n.updatedAt = res.data.document?.updated_at || nowIso()
     } catch (e: any) {
-      const msg = e?.response?.data?.error || e?.message || '保存用例失败'
+      const msg = e?.response?.data?.message || e?.message || '保存用例失败'
       throw new Error(msg)
       throw e
     }
@@ -533,10 +533,10 @@ export const useLibraryStore = defineStore('wf-library', () => {
   async function exportDoc(docId: string): Promise<Record<string, unknown> | null> {
     try {
       const res = await exportWorkflowDocument(docId)
-      if (!res.data?.ok) throw new Error(res.data?.error || '导出失败')
+      if (!res.data?.status) throw new Error(res.data?.message || '导出失败')
       return res.data.envelope
     } catch (e: any) {
-      throw new Error(e?.response?.data?.error || e?.message || '导出失败')
+      throw new Error(e?.response?.data?.message || e?.message || '导出失败')
       return null
     }
   }
@@ -551,7 +551,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
         payload.directory_id = parentToDirectoryId(opts.directoryId)
       }
       const res = await importWorkflowDocument(payload, { overwrite: !!opts?.overwrite })
-      if (!res.data?.ok) throw new Error(res.data?.error || '导入失败')
+      if (!res.data?.status) throw new Error(res.data?.message || '导入失败')
       await refreshFromServer()
       const doc = res.data.document
       if (doc?.config) configCache.value[doc.doc_id] = doc.config
@@ -561,7 +561,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       return node
     } catch (e: any) {
       const statusCode = e?.response?.status
-      const msg = e?.response?.data?.error || e?.message || '导入失败'
+      const msg = e?.response?.data?.message || e?.message || '导入失败'
       if (statusCode === 409) {
         throw new Error(`${msg}（可勾选覆盖后重试）`)
       } else {

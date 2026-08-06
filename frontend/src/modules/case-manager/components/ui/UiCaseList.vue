@@ -2,7 +2,7 @@
 import { ref } from "vue";
 import CaseList from "../CaseList.vue";
 import StepViewer from "../StepViewer.vue";
-import { listDefinitions, deleteDefinition, getDefinition, listExports } from "../../api/uiAutomation.js";
+import { listDefinitions, deleteDefinition, getDefinition, listExports } from "../../api/uiAutomation";
 
 const props = defineProps({ treeData: Array, activeDirectoryId: null, activeDirName: String, activeCaseId: null });
 const emit = defineEmits(["refresh-tree"]);
@@ -29,7 +29,7 @@ async function handleExportYaml() {
   yamlLoading.value = true;
   try {
     const { data } = await listExports();
-    if (data.ok && data.files?.length) {
+    if (data.status && data.files?.length) {
       const latest = data.files[0];
       window.open(`/api/cases/export/yaml/${latest.filename}`, "_blank");
     }

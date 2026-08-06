@@ -41,11 +41,19 @@ class AIAgent(models.Model):
     compression_prompt = models.TextField(default="", blank=True)
     compression_template = models.TextField(default="", blank=True)
     tts_enabled = models.BooleanField(default=False)
-    enable_knowledge_base = models.BooleanField(default=True)
+    enable_knowledge_base = models.BooleanField(default=False)
     # Per-agent workspace skill toggles.
     # JSON object: {"Bash": true, "Read": true, "Write": false, ...}
     # Missing keys default to true (enabled).
     skills_config = models.JSONField(default=dict, blank=True)
+    # Capability toggles — all default False (pure conversation model).
+    # User enables capabilities through the frontend UI.
+    enable_workspace_tools = models.BooleanField(default=False)  # Bash/Edit/Glob/Grep/Read/Write
+    enable_business_tools = models.BooleanField(
+        default=False
+    )  # 14 platform tools (device/case/test)
+    enable_mcp_tools = models.BooleanField(default=False)  # User-configured MCP servers
+    enable_skills = models.BooleanField(default=False)  # User-uploaded skill folders
     # Per-agent knowledge base document filter.
     # Dict: {"doc:id": true/false}.  Key presence = imported, value = enabled.
     # Empty dict = no documents imported.

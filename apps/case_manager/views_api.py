@@ -76,16 +76,13 @@ def _normalize_api_batch(cases, directory_id):
                 "enabled": c.get("enabled", False),
                 "directory_id": directory_id,
                 "priority": c.get("priority", "P1"),
-                "http_method": c.get("http_method", "GET"),
+                "method": c.get("http_method", c.get("method", "GET")),
                 "url": c.get("url", ""),
                 "headers": c.get("headers", {}),
-                "query_params": c.get("query_params", {}),
-                "request_body": c.get("request_body", {}),
+                "body": c.get("request_body", c.get("body", {})),
                 "expected_status": c.get("expected_status", 200),
                 "expected_response": c.get("expected_response", {}),
                 "assertions": c.get("assertions", []),
-                "pre_script": c.get("pre_script", ""),
-                "post_script": c.get("post_script", ""),
                 "design_method": c.get("design_method", ""),
                 "precondition": c.get("precondition", ""),
                 "expected_result": c.get("expected_result", ""),
@@ -110,7 +107,7 @@ def api_testing_definitions_handler(request):
         try:
             data = json.loads(request.body)
         except json.JSONDecodeError:
-            return JsonResponse({"ok": False, "error": "无效的 JSON"}, status=400)
+            return JsonResponse({"status": False, "message": "无效的 JSON"}, status=400)
 
         case_id = data.get("id", "").strip()
         if not case_id:
@@ -153,7 +150,7 @@ def api_testing_definitions_handler(request):
             defaults,
         )
 
-    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+    return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
 
 def api_testing_definition_detail(request, case_id):

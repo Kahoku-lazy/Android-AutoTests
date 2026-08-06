@@ -195,12 +195,12 @@ function selectElement(elId: string) {
 }
 
 function isValidConnection(connection: Connection) {
-  return explainConnection(store, connection).ok
+  return explainConnection(store, connection).status
 }
 
 onConnect((connection) => {
   const explained = explainConnection(store, connection)
-  if (!explained.ok) {
+  if (!explained.status) {
     status.value = explained.reason
     return
   }

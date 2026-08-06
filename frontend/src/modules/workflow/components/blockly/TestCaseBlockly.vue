@@ -19,7 +19,7 @@ import {
   getDefinition,
   saveDefinition,
   fetchDirectories,
-} from '@/modules/workflow/api.js'
+} from '@/modules/workflow/api'
 import ScratchPalette from './ScratchPalette.vue'
 
 const props = withDefaults(
@@ -137,14 +137,14 @@ async function saveToCaseLibrary() {
     })
     const res = await saveDefinition(form)
     const data = res.data
-    if (!data?.ok) {
-      status.value = data?.error || '保存到用例库失败'
+    if (!data?.status) {
+      status.value = data?.message || '保存到用例库失败'
       return
     }
     tcStore.setLinkedCase(data.id || tcStore.linkedCaseId, title, tcStore.packageName)
     status.value = `已同步到用例设计「${title}」· id=${data.id}`
   } catch (e: any) {
-    const msg = e?.response?.data?.error || e?.message || '保存失败'
+    const msg = e?.response?.data?.message || e?.message || '保存失败'
     status.value = String(msg)
   } finally {
     caseSaving.value = false
@@ -165,7 +165,7 @@ async function openCasePicker() {
     if (!Array.isArray(caseDirs.value)) caseDirs.value = []
   } catch (e: any) {
     caseList.value = []
-    status.value = e?.response?.data?.error || e?.message || '加载用例列表失败'
+    status.value = e?.response?.data?.message || e?.message || '加载用例列表失败'
   } finally {
     caseLoading.value = false
   }
@@ -193,7 +193,7 @@ async function loadCaseFromLibrary(item: { id: string }) {
     })
     showCasePicker.value = false
   } catch (e: any) {
-    status.value = e?.response?.data?.error || e?.message || '加载失败'
+    status.value = e?.response?.data?.message || e?.message || '加载失败'
   } finally {
     caseLoading.value = false
   }

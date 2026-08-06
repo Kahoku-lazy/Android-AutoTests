@@ -32,14 +32,14 @@ def stop_test_run(request, run_id):
     """POST /api/runner/run/{run_id}/stop."""
     # 活跃 run:走优雅停止(设置 is_running=False,执行循环到检查点自然收尾)
     if stop_run(run_id):
-        return JsonResponse({"ok": True, "message": "stop requested"})
+        return JsonResponse({"status": True, "message": "stop requested"})
     # 预检阶段(锁了手机但还没真正执行):打停止标记,
     # delayed_execute 会在预检检查点释放设备 + 标记停止,避免设备锁泄漏
     pf = _preflight_runs.get(run_id)
     if pf is not None:
         pf["stopped"] = True
-        return JsonResponse({"ok": True, "message": "stopping (pre-flight)"})
-    return JsonResponse({"ok": False, "error": "run not found or already finished"})
+        return JsonResponse({"status": True, "message": "stopping (pre-flight)"})
+    return JsonResponse({"status": False, "message": "run not found or already finished"})
 
 
 @require_auth
@@ -53,8 +53,8 @@ def cancel_queued_task(request):
     if not client_task_id or not serial:
         return JsonResponse(
             {
-                "ok": False,
-                "error": "需要提供 client_task_id 和 device_serial",
+                "status": False,
+                "message": "需要提供 client_task_id 和 device_serial",
             },
             status=400,
         )
@@ -82,7 +82,7 @@ def cancel_queued_task(request):
             _bg_log.warning("cancel transition %s: %s", client_task_id, e)
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "message": f"已取消排队任务（{len(removed.get('case_ids', []))} 个用例）",
             }
         )
@@ -93,7 +93,7 @@ def cancel_queued_task(request):
         sm.cancel(tc)
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "message": f"已从数据库中取消排队任务",
             }
         )
@@ -102,8 +102,8 @@ def cancel_queued_task(request):
 
     return JsonResponse(
         {
-            "ok": False,
-            "error": "未找到该排队任务，可能已经开始执行",
+            "status": False,
+            "message": "未找到该排队任务，可能已经开始执行",
         },
         status=404,
     )
@@ -165,7 +165,7 @@ def list_active(request):
                     "client_task_id": _run_client_task.get(run_id, ""),
                 }
             )
-    return JsonResponse({"ok": True, "active": active})
+    return JsonResponse({"status": True, "active": active})
 
 
 def test_run_status(request, run_id):
@@ -174,7 +174,7 @@ def test_run_status(request, run_id):
     if state:
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "run_id": run_id,
                 "status": state.run_model.status.value,
                 "is_running": state.is_running,
@@ -194,7 +194,7 @@ def test_run_status(request, run_id):
         )
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "run_id": run_id,
                 "status": run_record.status,
                 "total_iterations": agg["total"],
@@ -205,7 +205,7 @@ def test_run_status(request, run_id):
             }
         )
     except TestRunRecord.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "run not found"}, status=404)
+        return JsonResponse({"status": False, "message": "run not found"}, status=404)
 
 
 def list_test_runs(request):
@@ -216,7 +216,7 @@ def list_test_runs(request):
     ).order_by("-id")[:50]
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "runs": [
                 {
                     "run_id": r.run_id,

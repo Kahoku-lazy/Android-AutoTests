@@ -1,11 +1,16 @@
-<script setup>
-import { formatConfirmArgs } from "../composables/useToolConfirm.js";
+<script setup lang="ts">
+import { formatConfirmArgs } from '../composables/useToolConfirm'
+import type { HitlConfirmEvent } from '@/shared/types/ai'
 
-defineProps({
-  confirm: { type: Object, default: null },
-});
+defineProps<{ confirm?: HitlConfirmEvent | null }>()
 
-const emit = defineEmits(["approve", "deny", "approve-all", "deny-all", "cancel"]);
+const emit = defineEmits<{
+  approve: [toolCallId: string]
+  deny: [toolCallId: string]
+  'approve-all': []
+  'deny-all': []
+  cancel: []
+}>()
 </script>
 
 <template>

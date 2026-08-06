@@ -1,10 +1,12 @@
-<script setup>
-defineProps({
-  toolCalls: { type: Array, default: () => [] },
-});
+<script setup lang="ts">
+import type { ToolCall } from '@/shared/types/ai'
 
-function toolStateLabel(state) {
-  const labels = {
+defineProps<{
+  toolCalls?: ToolCall[]
+}>()
+
+function toolStateLabel(state: string): string {
+  const labels: Record<string, string> = {
     calling: "调用中...",
     submitted: "参数已提交",
     running: "执行中...",
@@ -16,7 +18,7 @@ function toolStateLabel(state) {
   return labels[state] || state || "";
 }
 
-function toolIcon(state) {
+function toolIcon(state: string): string {
   if (state === "calling") return "⏳";
   if (state === "running") return "🔄";
   if (state === "success") return "✅";
@@ -24,7 +26,33 @@ function toolIcon(state) {
   return "🔧";
 }
 
-function formatOutput(output) {
+// ── Tool source detection ──
+const WORKSPACE_NAMES = ["Bash", "Edit", "Glob", "Grep", "Read", "Write"]
+
+function detectSource(tool: ToolCall): { label: string; cls: string } {
+  if (tool.source) {
+    const map: Record<string, { label: string; cls: string }> = {
+      builtin:  { label: "内置", cls: "src-builtin" },
+      platform: { label: "平台", cls: "src-platform" },
+      mcp:      { label: "MCP",  cls: "src-mcp" },
+      skill:    { label: "Skill", cls: "src-skill" },
+    }
+    return map[tool.source] || { label: tool.source, cls: "" }
+  }
+  // Fallback: detect from tool name
+  if (WORKSPACE_NAMES.includes(tool.name)) return { label: "内置", cls: "src-builtin" }
+  if (tool.name.startsWith("mcp__")) return { label: "MCP", cls: "src-mcp" }
+  return { label: "平台", cls: "src-platform" }
+}
+
+function elapsedMs(tool: ToolCall): string {
+  if (!tool.startedAt) return ""
+  const ms = Date.now() - tool.startedAt
+  if (ms < 1000) return `${ms}ms`
+  return `${(ms / 1000).toFixed(1)}s`
+}
+
+function formatOutput(output: unknown): string {
   if (typeof output === "string") return output.slice(0, 300);
   return JSON.stringify(output).slice(0, 300);
 }
@@ -41,7 +69,9 @@ function formatOutput(output) {
       <div class="tool-step-header">
         <span class="tool-step-icon">{{ toolIcon(tc.state) }}</span>
         <span class="tool-step-name">{{ tc.name }}</span>
+        <span class="tool-source-tag" :class="detectSource(tc).cls">{{ detectSource(tc).label }}</span>
         <span class="tool-step-state">{{ toolStateLabel(tc.state) }}</span>
+        <span v-if="tc.startedAt && tc.state !== 'calling'" class="tool-elapsed">{{ elapsedMs(tc) }}</span>
       </div>
       <div v-if="tc.displayArgs" class="tool-step-args">
         <details>
@@ -85,7 +115,7 @@ function formatOutput(output) {
   border-color: #a3d977;
   background: rgba(242, 251, 230, 0.4);
 }
-.tool-step.error {
+.tool-step.message {
   border-color: #e85f5f;
   background: rgba(254, 237, 237, 0.4);
 }
@@ -105,6 +135,23 @@ function formatOutput(output) {
 .tool-step-state {
   font-size: var(--app-size-xs);
   color: #8a7b66;
+}
+.tool-source-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  line-height: 1.4;
+}
+.src-builtin  { background: rgba(179,158,243,0.15); color: #7c6ff7; }
+.src-platform { background: rgba(25,200,185,0.12); color: #0fa89b; }
+.src-mcp      { background: rgba(232,167,53,0.12); color: #c7851a; }
+.src-skill    { background: rgba(77,182,172,0.12); color: #2d8a82; }
+.tool-elapsed {
+  font-size: 10px;
+  color: #b5a68e;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
 }
 .tool-step-args {
   margin: 6px 0 0;

@@ -15,7 +15,7 @@ Step 0: 关键词匹配 §一 速查表
   └── 未命中 ↓
 Step 1: 收集信息
   ├── 前端问题 → 检查浏览器 Console + Network 面板
-  ├── 后端问题 → 查 logs/backend.log、logs/agentscope.log
+  ├── 后端问题 → 查 logs/backend.log
   └── 设备问题 → adb devices + GET /api/devices
 Step 2: 定位根因 → 输出诊断结果 + 修复步骤
 Step 3: 修复后验证 → 确认问题消失
@@ -74,7 +74,7 @@ python run.py restart
 
 ```
 1. 服务状态
-   python run.py status → Django :8765 必须 ONLINE
+   python run.py status → Django :8766 必须 ONLINE
 
 2. WebSocket 握手
    grep "MsgPackSerializer\|abstract methods" logs/backend.log
@@ -85,16 +85,16 @@ python run.py restart
    adb devices → 至少一台 status=device
 
 4. 当前设备激活
-   curl http://localhost:8765/api/devices → data.current 非空
+   curl http://localhost:8766/api/devices → data.current 非空
 
 5. REST 截图兜底
-   curl http://localhost:8765/api/elements/screenshot → ok:true
+   curl http://localhost:8766/api/elements/screenshot → ok:true
 ```
 
 **前端检查**：
 ```bash
-# WS URL 是否走代理（不能直连 :8765）
-grep -r ":8765/ws" frontend/src/
+# WS URL 是否走代理（不能直连 :8766）
+grep -r ":8766/ws" frontend/src/
 # 如果命中 → 应改为 wsUrl('/ws/screenshot')，走 Vite proxy
 ```
 
@@ -127,8 +127,8 @@ python -m uiautomator2 init  # 安装 ATX agent 到设备
 
 ```bash
 # 查占用进程
-netstat -ano | findstr 8765    # Windows
-lsof -i :8765                   # macOS/Linux
+netstat -ano | findstr 8766    # Windows
+lsof -i :8766                   # macOS/Linux
 # 杀进程
 taskkill /PID {PID} /F          # Windows
 kill {PID}                       # macOS/Linux
@@ -175,7 +175,7 @@ python run.py restart
    → 非 200 → npm run build 语法错 → 修复后重试
 
 2. 检查 API 是否正常
-   curl http://localhost:8765/api/{module}/ → ok:true?
+   curl http://localhost:8766/api/{module}/ → ok:true?
 
 3. Console 报错
    - Unexpected token → 括号/花括号配对
@@ -204,22 +204,22 @@ python manage.py show_urls | grep {keyword}
 # 检查 config/urls.py 是否有 include('apps.{name}.urls')
 ```
 
-### 4.4 AgentScope 故障
+### 4.4 AI 对话故障
 
 ```bash
 # Redis 是否运行
 redis-cli ping → PONG
 
-# AgentScope 日志
-tail -50 logs/agentscope.log
+# Django 日志
+tail -50 logs/backend.log
 
 # 重启
 python run.py restart
 ```
 
 AI 对话无响应常见原因：
-- Redis 未运行 → AgentScope 无法启动
-- AgentScope 挂了 → 检查 `logs/agentscope.log`
+- Redis 未运行 → AgentScope 无法启动（AgentScope 在 Django 进程内，依赖 Redis）
+- Django 挂了 → 检查 `logs/backend.log`
 - 模型 API Key 失效 → 检查 `ai_agents` 表中 `api_key` 是否有效
 
 ### 4.5 前端数据与 DB 不一致
@@ -257,7 +257,7 @@ import { wsUrl } from '@/shared/ws-url.js'
 const url = wsUrl('/ws/screenshot')
 
 // ❌ 错误：直连后端端口
-const url = `ws://localhost:8765/ws/screenshot`
+const url = `ws://localhost:8766/ws/screenshot`
 ```
 
 ---

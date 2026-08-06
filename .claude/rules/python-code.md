@@ -265,10 +265,10 @@ def list_devices(request):
     try:
         body = json.loads(request.body) if request.body else {}
     except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "无效的 JSON"}, status=400)
+        return JsonResponse({"status": False, "message": "无效的 JSON"}, status=400)
 
     # 业务逻辑...
-    return JsonResponse({"ok": True, "data": devices})
+    return JsonResponse({"status": True, "data": devices})
 ```
 
 | 规则 | 说明 |
@@ -276,7 +276,7 @@ def list_devices(request):
 | 装饰器 | 所有 view 用 `@csrf_exempt` |
 | JSON 解析 | `request.body` → `json.loads`，失败返回 400 |
 | 用户身份 | 通过 `request.user_id` 获取（中间件注入） |
-| 响应格式 | 始终 `JsonResponse({"ok": True/False, ...})` |
+| 响应格式 | 始终 `JsonResponse({"status": True/False, ...})` |
 | 状态码 | 错误必须带 HTTP 状态码：400/401/403/404/409/500 |
 | 简洁 | view 只做分发，重逻辑抽到 `api.py` 或 `service.py` |
 
@@ -367,19 +367,19 @@ except:  # ← 会吞掉 KeyboardInterrupt / SystemExit
 ```python
 # 资源不存在 → 404
 if not device:
-    return JsonResponse({"ok": False, "error": "not found"}, status=404)
+    return JsonResponse({"status": False, "message": "not found"}, status=404)
 
 # 状态冲突 → 409
 if device.status != "ONLINE":
-    return JsonResponse({"ok": False, "error": "设备不可用"}, status=409)
+    return JsonResponse({"status": False, "message": "设备不可用"}, status=409)
 
 # 外部服务不可用 → 502
 except ConnectionError:
-    return JsonResponse({"ok": False, "error": "设备连接失败"}, status=502)
+    return JsonResponse({"status": False, "message": "设备连接失败"}, status=502)
 
 # JSON 解析失败 → 400
 except json.JSONDecodeError:
-    return JsonResponse({"ok": False, "error": "无效的 JSON"}, status=400)
+    return JsonResponse({"status": False, "message": "无效的 JSON"}, status=400)
 ```
 
 ---
@@ -387,8 +387,8 @@ except json.JSONDecodeError:
 ## 10. 响应格式
 
 ```json
-{"ok": true,  "data": {...}}
-{"ok": false, "error": "具体错误描述"}
+{"status": true,  "data": {...}}
+{"status": false, "message": "具体错误描述"}
 ```
 
 - 错误描述面向用户，不暴露技术术语（堆栈、SQL、文件路径）

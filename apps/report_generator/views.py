@@ -215,7 +215,7 @@ def list_reports(request):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "summary": {
                 "total_runs": len(runs),
                 "total_iterations": summary_total_iterations,
@@ -539,12 +539,12 @@ def case_breakdown(request):
     """
     result_type = request.GET.get("result", "").strip().lower()
     if result_type not in ("pass", "fail"):
-        return JsonResponse({"ok": False, "error": "result 必须为 pass 或 fail"}, status=400)
+        return JsonResponse({"status": False, "message": "result 必须为 pass 或 fail"}, status=400)
 
     groups, total_count = _collect_case_groups(request, result_type)
 
     payload = {
-        "ok": True,
+        "status": True,
         "result_type": result_type,
         "total": total_count,
         "case_count": len(groups),
@@ -565,7 +565,7 @@ def run_report(request, run_id):
     try:
         run_record = TestRunRecord.objects.get(run_id=run_id)
     except TestRunRecord.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "run not found"}, status=404)
+        return JsonResponse({"status": False, "message": "run not found"}, status=404)
 
     # ── Fetch linked TaskCard metadata ──
     task_card = None
@@ -704,7 +704,7 @@ def run_report(request, run_id):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "run": {
                 "run_id": run_record.run_id,
                 "status": run_record.status,
@@ -778,7 +778,7 @@ def task_report(request, task_id):
     try:
         tc = TaskCard.objects.get(task_id=task_id)
     except TaskCard.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "task not found"}, status=404)
+        return JsonResponse({"status": False, "message": "task not found"}, status=404)
 
     # ── Linked run summaries (last 10) ──
     run_records = TestRunRecord.objects.filter(client_task_id=task_id).order_by("-id")[:10]
@@ -813,7 +813,7 @@ def task_report(request, task_id):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "task": {
                 "task_id": tc.task_id,
                 "name": tc.name,
@@ -858,7 +858,7 @@ def download_report(request, filename):
         response = FileResponse(open(str(fp), "rb"), content_type=mt)
         response["Content-Disposition"] = f'attachment; filename="{safe_name}"'
         return response
-    return JsonResponse({"ok": False, "error": "not found"}, status=404)
+    return JsonResponse({"status": False, "message": "not found"}, status=404)
 
 
 @csrf_exempt
@@ -867,7 +867,7 @@ def view_report(request, filename):
     safe_name = Path(filename).name
     fp = settings.LOG_DIR / safe_name
     if not fp.exists():
-        return JsonResponse({"ok": False, "error": "not found"}, status=404)
+        return JsonResponse({"status": False, "message": "not found"}, status=404)
 
     try:
         content = fp.read_text(encoding="utf-8-sig")
@@ -892,7 +892,7 @@ def view_report(request, filename):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "name": safe_name,
             "type": ftype,
             "size": fp.stat().st_size,

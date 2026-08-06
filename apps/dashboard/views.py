@@ -310,7 +310,7 @@ def dashboard_stats(request):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "data": {
                 "devices": {
                     "online": device_online,
@@ -393,7 +393,7 @@ def dashboard_activities(request):
         )
 
     items.sort(key=lambda x: x.get("time", ""), reverse=True)
-    return JsonResponse({"ok": True, "data": items[:10]})
+    return JsonResponse({"status": True, "data": items[:10]})
 
 
 @csrf_exempt
@@ -402,7 +402,7 @@ def device_stats(request):
     online, total = _device_dashboard_stats()
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "data": {
                 "online": online,
                 "busy": Device.objects.filter(status="BUSY").count(),
@@ -419,7 +419,7 @@ def case_stats(request):
     """GET /api/cases/stats/ — test case summary."""
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "data": {
                 "total": TestDefinition.objects.count()
                 + _safe_count(StorageTestCase)

@@ -1,14 +1,16 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 
-const props = defineProps({
-  visible: { type: Boolean, default: false },
-  allDocs: { type: Array, default: () => [] },
-  importedDocIds: { type: Array, default: () => [] },
-})
+interface DocItem { id: number; name?: string; source?: string; type?: string }
 
-const emit = defineEmits(['import', 'close'])
+const props = defineProps<{
+  visible?: boolean
+  allDocs?: DocItem[]
+  importedDocIds?: number[]
+}>()
+
+const emit = defineEmits<{ import: [ids: number[]]; close: [] }>()
 
 const searchText = ref('')
 const selectedIds = ref(new Set())

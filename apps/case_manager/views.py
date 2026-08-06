@@ -46,4 +46,4 @@ def list_step_types(request):
     """
     target = request.GET.get("target", "android")
     types = get_step_types_by_target(target)
-    return JsonResponse({"ok": True, "data": {"types": types}})
+    return JsonResponse({"status": True, "data": {"types": types}})

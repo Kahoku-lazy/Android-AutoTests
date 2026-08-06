@@ -4,15 +4,14 @@ from .agent_views import (
     agent_detail,
     create_agent,
     delete_agent,
-    get_default_system_prompt,
     health_check_all_agents,
     list_agents,
     list_available_skills,
-    register_agent_in_agentscope,
     reveal_api_key,
     update_agent,
 )
 from .auth_views import login, logout, me, refresh_token, register
+from .chat_views import chat_stream
 from .conversation_views import (
     create_conversation,
     delete_conversation,
@@ -25,7 +24,7 @@ from .conversation_views import (
     save_message,
 )
 from .file_views import upload_and_parse_file, upload_avatar
-from .hitl_views import create_scope_session, send_confirm_result
+from .hitl_views import send_confirm_result
 from .knowledge_views import kb_add_document, kb_documents, kb_reindex, kb_status
 from .model_views import list_available_models, test_agent_connection
 from .tool_views import (
@@ -58,16 +57,15 @@ __all__ = [
     "update_agent",
     "delete_agent",
     "reveal_api_key",
-    "get_default_system_prompt",
     "list_available_skills",
     "health_check_all_agents",
-    "register_agent_in_agentscope",
     "list_conversations",
     "create_conversation",
     "delete_conversation",
     "rename_conversation",
     "list_messages",
     "save_message",
+    "chat_stream",
     "list_conv_tasks",
     "get_conv_task",
     "list_ai_tasks",
@@ -76,7 +74,6 @@ __all__ = [
     "test_agent_connection",
     "list_available_models",
     "send_confirm_result",
-    "create_scope_session",
     "kb_status",
     "kb_documents",
     "kb_reindex",

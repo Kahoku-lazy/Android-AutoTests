@@ -1,12 +1,10 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
-import { useECharts } from '@/shared/composables/useECharts.js'
+import { useECharts } from '@/shared/composables/useECharts'
+import type { ExecutionChart } from '@/shared/types/dashboard'
 
-const props = defineProps({
-  chart: {
-    type: Object,
-    default: () => ({ labels: [], success: [], failed: [], new_cases: [] }),
-  },
+const props = withDefaults(defineProps<{ chart: ExecutionChart }>(), {
+  chart: () => ({ labels: [], success: [], failed: [], new_cases: [] }),
 })
 
 // ⚠️ ECharts 渲染在 Canvas 上，不支持 CSS 变量，此处保留色值字面量。

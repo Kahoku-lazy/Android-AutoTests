@@ -2,7 +2,7 @@
 import { ref } from "vue";
 import CaseList from "../CaseList.vue";
 import StepViewer from "../StepViewer.vue";
-import { listWebDefinitions, deleteWebDefinition, getWebDefinition } from "../../api/webAutomation.js";
+import { listWebDefinitions, deleteWebDefinition, getWebDefinition } from "../../api/webAutomation";
 
 const props = defineProps({ treeData: Array, activeDirectoryId: null, activeDirName: String, activeCaseId: null });
 const emit = defineEmits(["refresh-tree"]);

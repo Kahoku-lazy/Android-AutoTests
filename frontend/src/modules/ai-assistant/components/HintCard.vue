@@ -1,12 +1,12 @@
-<script setup>
-defineProps({
-  hint: { type: [Object, String], default: null },
-  importing: { type: Boolean, default: false },
-});
+<script setup lang="ts">
+defineProps<{
+  hint?: object | string | null
+  importing?: boolean
+}>()
 
-const emit = defineEmits(["import-prd"]);
+const emit = defineEmits<{ 'import-prd': [payload: object] }>()
 
-function taskStatusClass(status) {
+function taskStatusClass(status: string): string {
   return status?.toLowerCase() || "";
 }
 

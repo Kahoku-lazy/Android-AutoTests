@@ -20,11 +20,11 @@ NO_AUTH_JSON = {"Content-Type": "application/json"}
 PLAIN_HEADER = {"Authorization": "Bearer <JWT>"}
 
 # Response wrappers
-OK_RESP = {"ok": True, "data": "object | array | null"}
-ERR_RESP = {"ok": False, "error": "string — error description"}
-LIST_RESP = {"ok": True, "data": {"items": "array", "total": "integer"}}
+OK_RESP = {"status": True, "data": "object | array | null"}
+ERR_RESP = {"status": False, "error": "string — error description"}
+LIST_RESP = {"status": True, "data": {"items": "array", "total": "integer"}}
 PAGINATED_RESP = {
-    "ok": True,
+    "status": True,
     "data": {"items": "array", "total": "integer", "page": "integer", "page_size": "integer"},
 }
 
@@ -35,7 +35,7 @@ SCHEMAS = {
         "headers": NO_AUTH_JSON,
         "request": {"username": "string", "password": "string"},
         "response": {
-            "ok": True,
+            "status": True,
             "access_token": "string — JWT",
             "refresh_token": "string",
             "token_type": "bearer",
@@ -45,75 +45,80 @@ SCHEMAS = {
     "register": {
         "headers": NO_AUTH_JSON,
         "request": {"username": "string", "password": "string", "email": "string (optional)"},
-        "response": {"ok": True, "user": {"id": 1, "username": "string"}},
+        "response": {"status": True, "user": {"id": 1, "username": "string"}},
     },
     "refresh": {
         "headers": NO_AUTH_JSON,
         "request": {"refresh_token": "string"},
-        "response": {"ok": True, "access_token": "string — new JWT"},
+        "response": {"status": True, "access_token": "string — new JWT"},
     },
     "logout": {
         "headers": AUTH_HEADER,
         "request": None,
-        "response": {"ok": True},
+        "response": {"status": True},
     },
     "me": {
         "headers": AUTH_HEADER,
         "request": None,
-        "response": {"ok": True, "user": {"id": 1, "username": "string", "email": "string"}},
+        "response": {"status": True, "user": {"id": 1, "username": "string", "email": "string"}},
     },
     # List queries
     "list": {
         "headers": AUTH_HEADER,
         "request": None,
-        "response": {"ok": True, "items": "array", "total": "integer"},
+        "response": {"status": True, "items": "array", "total": "integer"},
     },
     "list_paginated": {
         "headers": AUTH_HEADER,
         "request": None,
-        "response": {"ok": True, "items": "array", "total": "integer", "page": "integer"},
+        "response": {"status": True, "items": "array", "total": "integer", "page": "integer"},
     },
     "detail": {
         "headers": AUTH_HEADER,
         "request": None,
-        "response": {"ok": True, "item": "object"},
+        "response": {"status": True, "item": "object"},
     },
     # CRUD operations
     "create": {
         "headers": JSON_HEADER,
         "request": "object — resource fields",
-        "response": {"ok": True, "item": {"id": "integer", "name": "string", "...": "..."}},
+        "response": {"status": True, "item": {"id": "integer", "name": "string", "...": "..."}},
     },
     "update": {
         "headers": JSON_HEADER,
         "request": {"field1": "value1", "...": "partial update fields"},
-        "response": {"ok": True, "item": "object — updated resource"},
+        "response": {"status": True, "item": "object — updated resource"},
     },
     "delete": {
         "headers": AUTH_HEADER,
         "request": None,
-        "response": {"ok": True},
+        "response": {"status": True},
     },
     "batch": {
         "headers": JSON_HEADER,
         "request": {"items": "array of objects", "action": "string (optional)"},
-        "response": {"ok": True, "saved": "integer", "updated": "integer", "skipped": "integer"},
+        "response": {
+            "status": True,
+            "saved": "integer",
+            "updated": "integer",
+            "skipped": "integer",
+        },
     },
     "batch_move": {
         "headers": JSON_HEADER,
         "request": {"ids": "array of integers", "parent_id": "integer | null"},
-        "response": {"ok": True, "moved": "integer"},
+        "response": {"status": True, "moved": "integer"},
     },
     # Device operations
     "device_connect": {
         "headers": JSON_HEADER,
         "request": {"activate": "boolean", "mode": "string — observe | control"},
-        "response": {"ok": True, "serial": "string", "status": "string — ONLINE"},
+        "response": {"status": True, "serial": "string", "status": "string — ONLINE"},
     },
     "device_lock": {
         "headers": JSON_HEADER,
         "request": {"user_id": "string", "timeout": "integer — seconds"},
-        "response": {"ok": True, "lock_id": "integer", "expires_at": "string — ISO datetime"},
+        "response": {"status": True, "lock_id": "integer", "expires_at": "string — ISO datetime"},
     },
     # Test execution
     "start_run": {
@@ -123,13 +128,13 @@ SCHEMAS = {
             "device_serial": "string",
             "loop_count": "integer (default: 3)",
         },
-        "response": {"ok": True, "run_id": "string", "ws_url": "string"},
+        "response": {"status": True, "run_id": "string", "ws_url": "string"},
     },
     "run_status": {
         "headers": AUTH_HEADER,
         "request": None,
         "response": {
-            "ok": True,
+            "status": True,
             "run_id": "string",
             "status": "string — running | completed | failed | stopped",
             "progress": "object",
@@ -140,7 +145,7 @@ SCHEMAS = {
         "headers": AUTH_HEADER,
         "request": None,
         "response": {
-            "ok": True,
+            "status": True,
             "serial": "string",
             "package": "string",
             "activity": "string",
@@ -152,7 +157,7 @@ SCHEMAS = {
         "headers": AUTH_HEADER,
         "request": None,
         "response": {
-            "ok": True,
+            "status": True,
             "image": "string — base64 JPEG",
             "format": "jpeg",
             "screen_w": "integer",
@@ -167,24 +172,24 @@ SCHEMAS = {
             "y": "integer",
             "text": "string (for input)",
         },
-        "response": {"ok": True},
+        "response": {"status": True},
     },
     # Import/Export
     "import": {
         "headers": JSON_HEADER,
         "request": "object — JSON envelope with nested data",
-        "response": {"ok": True, "imported": "integer"},
+        "response": {"status": True, "imported": "integer"},
     },
     "export": {
         "headers": JSON_HEADER,
         "request": {"ids": "array — item IDs to export", "format": "string — yaml | json"},
-        "response": {"ok": True, "filename": "string", "data": "string — file content"},
+        "response": {"status": True, "filename": "string", "data": "string — file content"},
     },
     # File upload
     "upload": {
         "headers": MULTIPART_HEADER,
         "request": "FormData — file binary",
-        "response": {"ok": True, "filename": "string", "url": "string"},
+        "response": {"status": True, "filename": "string", "url": "string"},
     },
     "file_download": {
         "headers": AUTH_HEADER,
@@ -195,7 +200,7 @@ SCHEMAS = {
     "kb_search": {
         "headers": JSON_HEADER,
         "request": {"query": "string", "top_k": "integer (default: 5)"},
-        "response": {"ok": True, "results": "array of {chunk, score, source}"},
+        "response": {"status": True, "results": "array of {chunk, score, source}"},
     },
     # AgentScope SSE
     "sse_stream": {
@@ -206,18 +211,18 @@ SCHEMAS = {
     "hitl_confirm": {
         "headers": JSON_HEADER,
         "request": {"tool_call_id": "string", "decision": "string — ALLOW | DENY"},
-        "response": {"ok": True},
+        "response": {"status": True},
     },
     # Health / Info
     "health": {
         "headers": AUTH_HEADER,
         "request": None,
-        "response": {"ok": True, "service": "string", "status": "string — healthy"},
+        "response": {"status": True, "service": "string", "status": "string — healthy"},
     },
     "detect": {
         "headers": JSON_HEADER,
         "request": {"api_key": "string (optional)", "base_url": "string (optional)"},
-        "response": {"ok": True, "models": "array of {id, name, provider}"},
+        "response": {"status": True, "models": "array of {id, name, provider}"},
     },
     # Task card
     "task_save": {
@@ -229,7 +234,7 @@ SCHEMAS = {
             "device_serial": "string",
             "case_ids": "array",
         },
-        "response": {"ok": True, "task": "object"},
+        "response": {"status": True, "task": "object"},
     },
     # WebSocket (special)
     "ws_screenshot": {
@@ -251,7 +256,7 @@ SCHEMAS = {
             "model": "string",
             "iterations": "integer",
         },
-        "response": {"ok": True, "run_id": "integer", "status": "string — running"},
+        "response": {"status": True, "run_id": "integer", "status": "string — running"},
     },
     "human_score": {
         "headers": JSON_HEADER,
@@ -259,23 +264,23 @@ SCHEMAS = {
             "dimensions": "object — {accuracy: n, completeness: n, ...}",
             "comment": "string",
         },
-        "response": {"ok": True},
+        "response": {"status": True},
     },
     # Lock / permission
     "lock": {
         "headers": JSON_HEADER,
         "request": {"user_id": "string", "duration": "integer — seconds"},
-        "response": {"ok": True, "locked_by": "string", "expires_at": "string"},
+        "response": {"status": True, "locked_by": "string", "expires_at": "string"},
     },
     "unlock": {
         "headers": AUTH_HEADER,
         "request": None,
-        "response": {"ok": True},
+        "response": {"status": True},
     },
     "visibility": {
         "headers": JSON_HEADER,
         "request": {"visibility": "string — public | private | restricted"},
-        "response": {"ok": True},
+        "response": {"status": True},
     },
 }
 
@@ -311,7 +316,7 @@ def schema_for(name, method, url):
         return SCHEMAS["kb_search"]
     if "reindex" in url_lower:
         return dict(
-            SCHEMAS["kb_search"], response={"ok": True, "status": "string — reindex complete"}
+            SCHEMAS["kb_search"], response={"status": True, "status": "string — reindex complete"}
         )
 
     # File operations

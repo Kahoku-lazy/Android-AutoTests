@@ -47,6 +47,10 @@ section-order = ["future", "standard-library", "third-party", "first-party", "lo
 [lint.per-file-ignores]
 # ─ management/commands: 允许 print() 输出
 "**/management/commands/*.py" = ["T201"]
+# ─ CLI 入口 / 种子脚本 / skill driver: 允许 print() 输出
+"run.py" = ["T201"]
+"tools/**/*.py" = ["T201"]
+".claude/skills/**/*.py" = ["T201"]
 # ─ tests/: 放宽限制
 "tests/**/*.py" = ["T201"]
 # ─ __init__.py: 允许未使用 import (re-export)

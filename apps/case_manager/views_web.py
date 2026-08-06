@@ -105,7 +105,7 @@ def web_definitions_handler(request):
         try:
             data = json.loads(request.body)
         except json.JSONDecodeError:
-            return JsonResponse({"ok": False, "error": "无效的 JSON"}, status=400)
+            return JsonResponse({"status": False, "message": "无效的 JSON"}, status=400)
 
         case_id = data.get("id", "").strip()
         if not case_id:
@@ -145,7 +145,7 @@ def web_definitions_handler(request):
             defaults,
         )
 
-    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+    return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
 
 def web_definition_detail(request, case_id):

@@ -1,31 +1,46 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { countUpFormatted } from '@/shared/animations.js'
-import { MODULE_COLORS } from '@/shared/constants/module-colors.js'
+import { countUpFormatted } from '@/shared/animations'
+import { MODULE_COLORS } from '@/shared/constants/module-colors'
 import SkeletonCard from '@/shared/components/patterns/SkeletonCard.vue'
 
-const props = defineProps({
-  label: { type: String, required: true },
-  value: { type: Number, default: 0 },
-  prefix: { type: String, default: '' },
-  suffix: { type: String, default: '' },
-  desc: { type: String, default: '' },
-  trend: { type: Number, default: 0 },
-  trendLabel: { type: String, default: '' },
+export interface StatsCardProps {
+  label: string
+  value?: number
+  prefix?: string
+  suffix?: string
+  desc?: string
+  trend?: number
+  trendLabel?: string
   /** app-green | app-blue | app-yellow | app-pink | app-teal | purple */
-  color: { type: String, default: 'app-teal' },
-  path: { type: String, default: '' },
-  loading: { type: Boolean, default: false },
+  color?: string
+  path?: string
+  loading?: boolean
+}
+
+const props = withDefaults(defineProps<StatsCardProps>(), {
+  value: 0,
+  prefix: '',
+  suffix: '',
+  desc: '',
+  trend: 0,
+  trendLabel: '',
+  color: 'app-teal',
+  path: '',
+  loading: false,
 })
 
 const router = useRouter()
-const valueRef = ref(null)
+const valueRef = ref<HTMLElement | null>(null)
 const displayed = ref(false)
 
 const colorKey = computed(() => props.color.replace(/^app-/, ''))
 
-const theme = computed(() => MODULE_COLORS[colorKey.value] || MODULE_COLORS.teal)
+const theme = computed(() => {
+  const m: Record<string, { gradient: string }> = MODULE_COLORS
+  return m[colorKey.value] || m['teal']
+})
 
 const metaText = computed(() => {
   if (props.trend !== 0 && props.trendLabel) {

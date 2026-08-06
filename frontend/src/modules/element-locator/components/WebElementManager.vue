@@ -14,9 +14,9 @@ import {
   apiListWebFlows,
   apiCreateWebFlow,
   apiDeleteWebFlow,
-} from "../api.js";
-import { useWebGroupTree } from "../composables/useWebGroupTree.js";
-import { usePagination } from "@/shared/composables/usePagination.js";
+} from "../api";
+import { useWebGroupTree } from "../composables/useWebGroupTree";
+import { usePagination } from "@/shared/composables/usePagination";
 
 const LOCATOR_TYPES = [
   { value: "css_selector", label: "CSS Selector", hint: ".class, #id, div > p" },
@@ -80,7 +80,7 @@ const columns = [
 async function updateEl(record, field, value) {
   try {
     const { data } = await apiUpdateWebElement(record.id, { [field]: value });
-    if (!data.ok) ElMessage.error(data.error || "更新失败");
+    if (!data.status) ElMessage.error(data.message || "更新失败");
   } catch (_) { ElMessage.error("更新失败，请检查网络"); }
 }
 
@@ -114,7 +114,7 @@ const newFlowForm = ref({ from_group_id: null, to_group_id: null, trigger_elemen
 async function loadFlows() {
   try {
     const { data } = await apiListWebFlows();
-    if (data.ok) {
+    if (data.status) {
       const gid = selectedGroup.value?.id;
       flows.value = (data.flows || []).filter(
         f => f.from_group_id === gid || f.to_group_id === gid
@@ -141,9 +141,9 @@ async function doCreateFlow() {
   }
   try {
     const { data } = await apiCreateWebFlow(f);
-    if (data.ok) { showFlowDialog.value = false; await loadFlows(); }
-    else ElMessage.error(data.error || '创建失败');
-  } catch (e) { ElMessage.error(e?.response?.data?.error || '创建失败'); }
+    if (data.status) { showFlowDialog.value = false; await loadFlows(); }
+    else ElMessage.error(data.message || '创建失败');
+  } catch (e) { ElMessage.error(e?.response?.data?.message || '创建失败'); }
 }
 
 async function doDeleteFlow(flow) {
@@ -197,14 +197,14 @@ async function doSave() {
   try {
     if (editingId.value) {
       const { data } = await apiUpdateWebElement(editingId.value, form.value);
-      if (data.ok) { showFormDialog.value = false; await loadElements(); }
-      else ElMessage.error(data.error || "更新失败");
+      if (data.status) { showFormDialog.value = false; await loadElements(); }
+      else ElMessage.error(data.message || "更新失败");
     } else {
       const { data } = await apiCreateWebElement(form.value);
-      if (data.ok) { showFormDialog.value = false; await loadElements(); }
-      else ElMessage.error(data.error || "创建失败");
+      if (data.status) { showFormDialog.value = false; await loadElements(); }
+      else ElMessage.error(data.message || "创建失败");
     }
-  } catch (e) { ElMessage.error(e?.response?.data?.error || "操作失败"); }
+  } catch (e) { ElMessage.error(e?.response?.data?.message || "操作失败"); }
 }
 
 // ── Batch import ──
@@ -219,11 +219,11 @@ async function doBatchImport() {
   if (!Array.isArray(items) || !items.length) { ElMessage.warning("请输入有效的 JSON 数组"); return; }
   try {
     const { data } = await apiBatchImportWebElements(items);
-    if (data.ok) {
+    if (data.status) {
       ElMessage.success(`成功导入 ${data.saved} 个元素${data.skipped ? `，跳过 ${data.skipped} 个` : ""}`);
       showBatchDialog.value = false;
       await loadElements();
-    } else ElMessage.error(data.error || "导入失败");
+    } else ElMessage.error(data.message || "导入失败");
   } catch (e) { ElMessage.error("导入失败"); }
 }
 </script>

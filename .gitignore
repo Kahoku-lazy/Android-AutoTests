@@ -150,22 +150,23 @@ token.json
 /aurora-*.png
 /perf-stats-visible.png
 /taskdetail-*.png
-/tests/screenshots/
 
-# Test reports
-tests/functional/*/reports/
+# ── Tests（本地维护，不入库）──
+tests/
+
+# Test reports / browser artifacts
 .playwright-mcp/
-tests/temp/
 allure-results/
 allure-report/
-tests/allure-results/
-tests/allure-report/
 playwright-report/
 test-results/
 blob-report/
 
 # ── Workflow demo（已并入 frontend/src/modules/workflow，不再维护）──
-tests/workflow-demo/
 workflow-demo-*.png
 _agentscope_launcher.py
 .playwright-mcp/
+
+# ���� Vite cache ����
+frontend/.vite/
+

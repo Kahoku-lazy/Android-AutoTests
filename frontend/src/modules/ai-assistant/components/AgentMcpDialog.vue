@@ -1,13 +1,12 @@
-<script setup>
-defineProps({
-  visible: { type: Boolean, default: false },
-  mode: { type: String, default: 'add' },
-  mcpForm: { type: Object, required: true },
-  mcpJsonError: { type: String, default: '' },
-  configPreview: { type: String, default: '' },
-})
-
-const emit = defineEmits(['close', 'save'])
+<script setup lang="ts">
+defineProps<{
+  visible?: boolean
+  mode?: string
+  mcpForm: { name: string; config_json: string }
+  mcpJsonError?: string
+  configPreview?: string
+}>()
+const emit = defineEmits<{ close: []; save: [] }>()
 </script>
 
 <template>

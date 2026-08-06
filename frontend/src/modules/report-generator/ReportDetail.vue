@@ -9,8 +9,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { animate, stagger } from 'animejs'
 import PageHeader from '@/shared/components/PageHeader.vue'
 import KpiCard from '@/shared/components/KpiCard.vue'
-import { useExpandCollapse } from '@/shared/composables/useExpandCollapse.js'
-import { getRunReport, statusLabel, statusBadgeClass, iterBadgeClass, formatTime } from './api.js'
+import { useExpandCollapse } from '@/shared/composables/useExpandCollapse'
+import { getRunReport, statusLabel, statusBadgeClass, iterBadgeClass, formatTime } from './api'
 
 const route = useRoute()
 const router = useRouter()
@@ -40,7 +40,7 @@ async function loadReport() {
   loading.value = true
   try {
     const { data } = await getRunReport(runId.value)
-    if (data.ok) report.value = data.run
+    if (data.status) report.value = data.run
   } catch (e) { console.error(e); }
   loading.value = false
   await nextTick()

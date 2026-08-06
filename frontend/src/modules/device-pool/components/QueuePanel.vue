@@ -1,17 +1,23 @@
-<script setup>
+<script setup lang="ts">
 /** QueuePanel — 排队详情 Popover 面板 per PRD §7.1 */
 import { computed } from 'vue'
+import type { QueueEntry } from '@/shared/types/device'
 
-const props = defineProps({
-  entries: { type: Array, default: () => [] },
-  count: { type: Number, default: 0 },
+const props = withDefaults(defineProps<{
+  entries?: QueueEntry[]
+  count?: number
+}>(), {
+  entries: () => [],
+  count: 0,
 })
 
-const emit = defineEmits(['cancel'])
+const emit = defineEmits<{
+  cancel: [serial: string, userId: string]
+}>()
 
 const isEmpty = computed(() => props.count === 0)
 
-function formatTime(seconds) {
+function formatTime(seconds: number): string {
   if (!seconds || seconds < 60) return '刚刚'
   if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟`
   return `${Math.floor(seconds / 3600)} 小时`

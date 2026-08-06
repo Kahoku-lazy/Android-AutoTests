@@ -184,8 +184,7 @@ manifest 更新 → phase=review, status=done, p0_count=N
 Step 4.1: 环境探测 (5秒)
   redis-cli ping → PONG/FAIL
   adb devices    → 有/无设备
-  curl :8765/api/ → 200/FAIL
-  curl :8000/docs → 200/FAIL
+  curl :8766/api/ → 200/FAIL
 
 Step 4.2: 分级执行
   ┌──────────────────────────────────────────┐
@@ -265,7 +264,7 @@ F2. 四层下钻排查
 
   层3: API 层
     检查: 后端是否收到请求 / 返回了什么
-    命令: curl -s :8765/api/{endpoint} | python -m json.tool
+    命令: curl -s :8766/api/{endpoint} | python -m json.tool
           tail -50 logs/backend.log | grep ERROR
     发现: 404/500 / 响应格式不对 / 字段缺失
 
@@ -298,7 +297,7 @@ F4. 用户确认 → 进入 Phase 1 (方案) → 正常流水线
 |------|---------|-----------|
 | 浏览器 | DevTools Console / Network 面板 | JS 报错、API 状态码、请求是否发出 |
 | 前端编译 | `npx vite build 2>&1` | 语法错误、模块加载失败 |
-| API | `curl -s :8765/api/xxx` | 响应格式、状态码、字段完整性 |
+| API | `curl -s :8766/api/xxx` | 响应格式、状态码、字段完整性 |
 | 后端日志 | `tail -100 logs/backend.log` | Django 异常、ORM 错误 |
 | 数据库 | `python manage.py shell` + ORM 查询 | 数据是否真的写入了 |
 

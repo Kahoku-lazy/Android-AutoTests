@@ -65,8 +65,8 @@
   [ ] 字段超长 → 400 或自动截断
 
 响应格式:
-  [ ] 成功 → {"ok": true, "data": ...}
-  [ ] 失败 → {"ok": false, "error": "..."} + HTTP 状态码
+  [ ] 成功 → {"status": true, "data": ...}
+  [ ] 失败 → {"status": false, "message": "..."} + HTTP 状态码
   [ ] 列表 → 有分页或数量限制
 
 HTTP 状态码:

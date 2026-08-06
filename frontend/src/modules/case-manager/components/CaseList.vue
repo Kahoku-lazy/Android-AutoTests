@@ -57,7 +57,7 @@ async function loadCaseDetail(caseOrId) {
   selectedCaseLoading.value = true;
   try {
     const { data } = await props.listApi.getDef(id);
-    if (data.ok) selectedCase.value = data.definition;
+    if (data.status) selectedCase.value = data.definition;
   } catch (e) { console.error(e); }
   selectedCaseLoading.value = false;
 }
@@ -83,7 +83,7 @@ async function loadDefs() {
   error.value = null;
   try {
     const { data } = await props.listApi.listDefs(props.activeDirectoryId);
-    if (data.ok) definitions.value = data.definitions;
+    if (data.status) definitions.value = data.definitions;
   } catch (e) {
     error.value = '加载用例列表失败';
     console.error(e);
@@ -116,7 +116,7 @@ async function doRemove(row) {
     loadDefs();
     emit("refresh-tree");
   } catch (e) {
-    ElMessage.error("删除失败: " + (e?.response?.data?.error || e?.message || "网络错误"));
+    ElMessage.error("删除失败: " + (e?.response?.data?.message || e?.message || "网络错误"));
   }
 }
 function goToAll() { emit("refresh-tree"); }

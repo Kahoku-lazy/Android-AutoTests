@@ -4,17 +4,10 @@
 echo "🏥 服务健康检查..."
 
 # Django
-if curl -s -o /dev/null -w "%{http_code}" http://localhost:8765/api/ 2>/dev/null | grep -q "200"; then
-  echo "   ✅ Django  :8765"
+if curl -s -o /dev/null -w "%{http_code}" http://localhost:8766/api/ 2>/dev/null | grep -q "200"; then
+  echo "   ✅ Django  :8766"
 else
-  echo "   ⚠️  Django  :8765 — 未响应"
-fi
-
-# AgentScope
-if curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/docs 2>/dev/null | grep -q "200"; then
-  echo "   ✅ AgentScope :8000"
-else
-  echo "   ⚠️  AgentScope :8000 — 未响应"
+  echo "   ⚠️  Django  :8766 — 未响应"
 fi
 
 # Vite

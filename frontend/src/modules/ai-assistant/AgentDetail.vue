@@ -1,12 +1,13 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { getAgentDetail, detectModels as apiDetectModels, uploadAvatar, saveAgent } from "./api.js";
+import { getAgentDetail, detectModels as apiDetectModels, uploadAvatar, saveAgent } from "./api/agents";
 import { ElMessage, ElMessageBox } from "element-plus";
+import ErrorState from "@/shared/components/patterns/ErrorState.vue";
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
-import { IconArrowLeft } from "@/shared/icons/index.js";
-import { fetchDefaultPrompt } from "./api.js";
-import { useAgentTools } from "./composables/useAgentTools.js";
+import { IconArrowLeft } from "@/shared/icons/index";
+import { ROUTE_AI_ASSISTANT } from "./constants";
+import { useAgentTools } from "./composables/useAgentTools";
 import AgentBasicInfo from "./components/AgentBasicInfo.vue";
 import AgentModelConfig from "./components/AgentModelConfig.vue";
 import AgentPromptEditor from "./components/AgentPromptEditor.vue";
@@ -21,6 +22,7 @@ const agentId = computed(() => route.params.agentId);
 const isNew = computed(() => agentId.value === "new");
 const agent = ref(null);
 const loading = ref(false);
+const loadError = ref("");
 const uploading = ref(false);
 const fileInput = ref(null);
 
@@ -45,7 +47,11 @@ const form = ref({
   long_term_memory_mode: "both",
   enable_meta_tool: false,
   enable_rewrite_query: true,
-  enable_knowledge_base: true,
+  enable_knowledge_base: false,
+  enable_workspace_tools: false,
+  enable_business_tools: false,
+  enable_mcp_tools: false,
+  enable_skills: false,
   tools: [],
   compression_enabled: false,
   compression_threshold: 10000,
@@ -57,12 +63,11 @@ const form = ref({
   knowledge_sources: {},
 });
 
-const configPreviewHtml = computed(() => highlightJson(mcpForm.config_json))
-
-onMounted(async () => {
+async function loadAgentDetail() {
   // All data sources are independent — load them in a single parallel batch.
   // Including getAgentDetail avoids a second sequential network round-trip
   // for edit mode.
+  loadError.value = "";
   if (!isNew.value) {
     loading.value = true;
   }
@@ -73,9 +78,9 @@ onMounted(async () => {
       loadKnowledgeDocs(),
       loadAgentTools(),
       isNew.value
-        ? loadDefaultPrompt()
+        ? Promise.resolve()  // New agents start with empty prompt — no default.
         : getAgentDetail(agentId.value).then((data) => {
-            if (data?.ok) {
+            if (data?.status) {
               const allTools = data.agent.tools || [];
               const platformNames = allTools
                 .filter((t) => t.tool_type === "platform" && t.enabled)
@@ -87,10 +92,15 @@ onMounted(async () => {
           }),
     ]);
   } catch (err) {
-    if (!isNew.value) console.error('Failed to load agent detail:', err);
+    if (!isNew.value) {
+      loadError.value = "加载智能体详情失败，请检查网络连接";
+      console.error('Failed to load agent detail:', err);
+    }
   }
   if (!isNew.value) loading.value = false;
-});
+}
+
+onMounted(() => { loadAgentDetail() });
 
 const providers = [
   {
@@ -170,6 +180,8 @@ const detectedModels = ref([]);
 	  } catch { return raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 	}
 
+	const configPreviewHtml = computed(() => highlightJson(mcpForm.config_json))
+
 	function triggerSkillUpload() { skillFolderInput.value?.click() }
 	async function handleSkillFolderChange(e) {
 	  const files = Array.from(e.target.files || [])
@@ -180,17 +192,6 @@ const detectedModels = ref([]);
 
 	// Step 4 collapse panel — default expand memory + platform
 	const memoryToolActive = ref(["memory", "platform"])
-
-// Load default system prompt template
-const loadingDefaultPrompt = ref(false);
-async function loadDefaultPrompt() {
-  loadingDefaultPrompt.value = true;
-  try {
-    const data = await fetchDefaultPrompt();
-    if (data.ok && data.template) form.value.system_prompt = data.template;
-  } catch (err) { console.error('Failed to load default prompt:', err) }
-  loadingDefaultPrompt.value = false;
-}
 
 // 合并内置模型 + API 检测到的模型，去重
 const availableModels = computed(() => {
@@ -216,7 +217,7 @@ async function detectModels() {
       api_key: form.value.api_key,
       base_url: form.value.base_url,
     });
-    if (data.ok) {
+    if (data.status) {
       detectedModels.value = data.models || [];
       if (data.models.length) {
         ElMessage.success(`检测到 ${data.models.length} 个可用模型`);
@@ -269,7 +270,7 @@ async function handleAvatarUpload(e) {
       const data = await uploadAvatar( {
         image: reader.result,
       });
-      if (data.ok) form.value.avatar = data.url;
+      if (data.status) form.value.avatar = data.url;
     } catch (err) { console.error('Failed to upload avatar:', err) }
     uploading.value = false;
   };
@@ -302,21 +303,18 @@ async function save() {
     ];
   }
   const payload = { ...form.value, tools: allTools };
-  const url = isNew.value
-    ? "/ai/agents/create"
-    : `/ai/agents/${agentId.value}/update`;
   try {
-    const data = await saveAgent(url, payload);
-    if (data.ok) {
+    const data = await saveAgent(isNew.value, agentId.value, payload);
+    if (data.status) {
       ElMessage.success("保存成功");
-      router.push("/ai-assistant");
+      router.push(ROUTE_AI_ASSISTANT);
     } else {
-      ElMessage.error(data.error || "保存失败");
+      ElMessage.error(data.message || "保存失败");
     }
   } catch (err) {
     const errors = err.response?.data?.errors;
     const msg =
-      err.response?.data?.error ||
+      err.response?.data?.message ||
       (errors
         ? Object.entries(errors)
             .map(([k, v]) => `${k}: ${v}`)
@@ -343,9 +341,11 @@ async function save() {
       icon-gradient="linear-gradient(135deg,#5EEAD4,#14b8a6)"
     />
 
+    <ErrorState v-if="loadError" :message="loadError" @retry="loadAgentDetail" />
+
     <div class="doc-body agent-body">
       <!-- Back button -->
-      <button class="back-btn" @click="router.push('/ai-assistant')">
+      <button class="back-btn" @click="router.push(ROUTE_AI_ASSISTANT)">
         <IconArrowLeft :size="18" />
         <span>返回智能体列表</span>
       </button>
@@ -365,8 +365,7 @@ async function save() {
         :detected-models="detectedModels" :detecting-models="detectingModels"
         @provider-change="onProviderChange" @detect-models="detectModels" />
 
-      <AgentPromptEditor :form="form" :is-new="isNew"
-        @load-default-prompt="loadDefaultPrompt" />
+      <AgentPromptEditor :form="form" :is-new="isNew" />
 
       <AgentToolsPanel :form="form" :is-new="isNew"
         :memory-modes="memoryModes" :ltm-modes="ltmModes"

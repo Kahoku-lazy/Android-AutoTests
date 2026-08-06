@@ -7,7 +7,7 @@ import UiCaseList from "./components/ui/UiCaseList.vue";
 import StorageCaseList from "./components/storage/StorageCaseList.vue";
 import ApiCaseList from "./components/api/ApiCaseList.vue";
 import WebCaseList from "./components/web/WebCaseList.vue";
-import { fetchDirectories } from "./api/directories.js";
+import { fetchDirectories } from "./api/directories";
 import ErrorState from "@/shared/components/patterns/ErrorState.vue";
 
 // ── TAB state ──
@@ -60,11 +60,11 @@ const activeTreeId = computed(() =>
 async function loadTree() {
   try {
     const { data } = await fetchDirectories(caseType.value);
-    if (data.ok) {
+    if (data.status) {
       treeCache.value[activeTab.value] = data.tree;
       error.value = "";
     } else {
-      error.value = data.error || "加载目录失败";
+      error.value = data.message || "加载目录失败";
     }
   } catch (e) {
     error.value = "加载目录失败，请检查网络连接";

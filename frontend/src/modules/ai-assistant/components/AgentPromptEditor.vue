@@ -1,8 +1,5 @@
-<script setup>
-defineProps({
-  form: { type: Object, required: true },
-  isNew: { type: Boolean, default: false },
-})
+<script setup lang="ts">
+defineProps<{ form: Record<string, unknown>; isNew?: boolean }>()
 </script>
 
 <template>
@@ -17,9 +14,6 @@ defineProps({
           <span class="label-with-help">系统提示词 <el-tooltip content="定义 AI 的角色和行为。模型每次对话都会先读取这段指令。越具体越好，建议包含角色、能力边界、输出格式。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
         </template>
         <div style="display:flex;flex-direction:column;gap:8px;width:100%">
-          <el-button size="small" @click="$emit('load-default-prompt')" style="align-self:flex-start">
-            📋 加载默认模板
-          </el-button>
           <el-input v-model="form.system_prompt" type="textarea" :rows="10"
             placeholder="你是一个专业的测试用例编写助手，擅长..." />
         </div>

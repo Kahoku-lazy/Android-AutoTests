@@ -1,17 +1,26 @@
-<script setup>
+<script setup lang="ts">
 import { useRouter } from 'vue-router'
+import type { RecentTask, ExecutionSummary } from '@/shared/types/dashboard'
 
 const router = useRouter()
 
-defineProps({
-  tasks: { type: Array, default: () => [] },
-  summary: {
-    type: Object,
-    default: () => ({ passed: 0, failed: 0, new_cases_week: 0 }),
-  },
+interface TaskResultPanelProps {
+  tasks?: RecentTask[]
+  summary?: ExecutionSummary
+}
+
+withDefaults(defineProps<TaskResultPanelProps>(), {
+  tasks: () => [],
+  summary: () => ({ passed: 0, failed: 0, new_cases_week: 0 }),
 })
 
-const statusMeta = {
+interface StatusMetaItem {
+  icon: string
+  label: string
+  cls: string
+}
+
+const statusMeta: Record<string, StatusMetaItem> = {
   success: { icon: '✓', label: '全部通过', cls: 'is-success' },
   failed: { icon: '✗', label: '全部失败', cls: 'is-failed' },
   partial: { icon: '△', label: '部分失败', cls: 'is-partial' },
@@ -19,15 +28,15 @@ const statusMeta = {
   idle: { icon: '○', label: '未执行', cls: 'is-idle' },
 }
 
-function meta(status) {
-  return statusMeta[status] || statusMeta.idle
+function meta(status: string): StatusMetaItem {
+  return statusMeta[status] || statusMeta['idle']
 }
 
-function taskId(task) {
+function taskId(task: RecentTask): string | number | null {
   return task.id || task.task_id || task.run_id || null
 }
 
-function openTask(task) {
+function openTask(task: RecentTask) {
   const id = taskId(task)
   if (!id) return
   // 只有执行中任务有 client_task_id 能定位详情页

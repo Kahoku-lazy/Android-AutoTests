@@ -27,7 +27,7 @@ def list_banks(request):
     banks = QuestionBank.objects.all().order_by("-updated_at")
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "banks": [
                 {
                     "id": b.id,
@@ -46,10 +46,10 @@ def bank_detail(request, bank_id):
     try:
         bank = QuestionBank.objects.prefetch_related("questions").get(id=bank_id)
     except QuestionBank.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "not found"}, status=404)
+        return JsonResponse({"status": False, "message": "not found"}, status=404)
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "bank": {
                 "id": bank.id,
                 "name": bank.name,
@@ -75,7 +75,7 @@ def create_bank(request):
     data = json.loads(request.body)
     name = (data.get("name") or "").strip()
     if not name:
-        return JsonResponse({"ok": False, "error": "试卷名称不能为空"}, status=400)
+        return JsonResponse({"status": False, "message": "试卷名称不能为空"}, status=400)
     bank = QuestionBank.objects.create(
         name=name,
         description=data.get("description", ""),
@@ -89,7 +89,7 @@ def create_bank(request):
             category=q.get("category", "general"),
             order=i,
         )
-    return JsonResponse({"ok": True, "id": bank.id, "question_count": bank.question_count})
+    return JsonResponse({"status": True, "id": bank.id, "question_count": bank.question_count})
 
 
 @csrf_exempt
@@ -98,7 +98,7 @@ def update_bank(request, bank_id):
     try:
         bank = QuestionBank.objects.get(id=bank_id)
     except QuestionBank.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "not found"}, status=404)
+        return JsonResponse({"status": False, "message": "not found"}, status=404)
     data = json.loads(request.body)
     if "name" in data:
         bank.name = data["name"]
@@ -117,14 +117,14 @@ def update_bank(request, bank_id):
                 category=q.get("category", "general"),
                 order=i,
             )
-    return JsonResponse({"ok": True, "question_count": bank.question_count})
+    return JsonResponse({"status": True, "question_count": bank.question_count})
 
 
 @csrf_exempt
 @require_auth
 def delete_bank(request, bank_id):
     QuestionBank.objects.filter(id=bank_id).delete()
-    return JsonResponse({"ok": True})
+    return JsonResponse({"status": True})
 
 
 @csrf_exempt
@@ -135,7 +135,7 @@ def seed_default_bank(request):
     if existing:
         return JsonResponse(
             {
-                "ok": True,
+                "status": True,
                 "id": existing.id,
                 "message": "默认试卷已存在，直接返回",
             }
@@ -152,7 +152,7 @@ def seed_default_bank(request):
             category=q.get("category", "general"),
             order=q.get("order", 0),
         )
-    return JsonResponse({"ok": True, "id": bank.id, "question_count": bank.question_count})
+    return JsonResponse({"status": True, "id": bank.id, "question_count": bank.question_count})
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -164,7 +164,7 @@ def list_frameworks(request):
     """GET /api/evaluator/frameworks — list available eval frameworks."""
     from .frameworks import available_frameworks
 
-    return JsonResponse({"ok": True, "frameworks": available_frameworks()})
+    return JsonResponse({"status": True, "frameworks": available_frameworks()})
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -176,7 +176,7 @@ def list_runs(request):
     runs = EvalRun.objects.select_related("agent", "bank").all()[:50]
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "runs": [
                 {
                     "id": r.id,
@@ -206,7 +206,7 @@ def run_detail(request, run_id):
     try:
         run = EvalRun.objects.prefetch_related("results__question").get(id=run_id)
     except EvalRun.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "not found"}, status=404)
+        return JsonResponse({"status": False, "message": "not found"}, status=404)
 
     results = []
     for r in run.results.all():
@@ -236,7 +236,7 @@ def run_detail(request, run_id):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "run": {
                 "id": run.id,
                 "agent_id": run.agent_id,
@@ -273,7 +273,7 @@ def start_eval_run(request):
 
     if not agent_id or not bank_id:
         return JsonResponse(
-            {"ok": False, "error": "agent_id and bank_id are required"},
+            {"status": False, "message": "agent_id and bank_id are required"},
             status=400,
         )
 
@@ -282,12 +282,12 @@ def start_eval_run(request):
     try:
         agent = AIAgent.objects.get(id=agent_id)
     except AIAgent.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "agent not found"}, status=404)
+        return JsonResponse({"status": False, "message": "agent not found"}, status=404)
 
     try:
         bank = QuestionBank.objects.get(id=bank_id)
     except QuestionBank.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "question bank not found"}, status=404)
+        return JsonResponse({"status": False, "message": "question bank not found"}, status=404)
 
     run = EvalRun.objects.create(
         agent=agent,
@@ -309,7 +309,7 @@ def start_eval_run(request):
                 if adapter is None:
                     run.status = "failed"
                     run.report_json = json.dumps(
-                        {"error": f"Unknown framework: {framework}"},
+                        {"message": f"Unknown framework: {framework}"},
                         ensure_ascii=False,
                     )
                     run.save()
@@ -317,8 +317,7 @@ def start_eval_run(request):
                 # Call agent directly using the adapter
                 import asyncio
 
-                from apps.ai_assistant.agent_scope.provider_registry import get_provider_config
-                from apps.ai_assistant.api import decrypt_key
+                from apps.ai_assistant.api import decrypt_key, get_provider_config
 
                 api_key = decrypt_key(agent.api_key) if agent.api_key else ""
                 provider_cfg = get_provider_config(agent.model_provider, agent.base_url)
@@ -351,7 +350,7 @@ def start_eval_run(request):
                         "scores": result.scores,
                         "items": result.items,
                         "raw": result.raw,
-                        "error": result.error if not result.ok else "",
+                        "message": result.error if not result.ok else "",
                     },
                     ensure_ascii=False,
                     indent=2,
@@ -362,7 +361,7 @@ def start_eval_run(request):
                 run.save()
             except Exception as e:
                 run.status = "failed"
-                run.report_json = json.dumps({"error": str(e)}, ensure_ascii=False)
+                run.report_json = json.dumps({"message": str(e)}, ensure_ascii=False)
                 run.save()
     else:
         # Built-in self evaluator (LLM-as-Judge)
@@ -373,7 +372,7 @@ def start_eval_run(request):
                 run_evaluation(run.id, judge_provider, judge_model)
             except Exception as e:
                 run.status = "failed"
-                run.report_json = json.dumps({"error": str(e)}, ensure_ascii=False)
+                run.report_json = json.dumps({"message": str(e)}, ensure_ascii=False)
                 run.save()
 
     t = threading.Thread(target=_bg, daemon=True)
@@ -381,7 +380,7 @@ def start_eval_run(request):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "id": run.id,
             "message": f"评测已开始，共 {bank.question_count} 题",
         }
@@ -395,7 +394,7 @@ def submit_human_score(request, result_id):
     try:
         result = EvalResult.objects.get(id=result_id)
     except EvalResult.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "not found"}, status=404)
+        return JsonResponse({"status": False, "message": "not found"}, status=404)
 
     data = json.loads(request.body)
     for field in ["human_relevance", "human_accuracy", "human_completeness", "human_conciseness"]:
@@ -429,14 +428,14 @@ def submit_human_score(request, result_id):
         )
         run.save()
 
-    return JsonResponse({"ok": True})
+    return JsonResponse({"status": True})
 
 
 @csrf_exempt
 @require_auth
 def delete_run(request, run_id):
     EvalRun.objects.filter(id=run_id).delete()
-    return JsonResponse({"ok": True})
+    return JsonResponse({"status": True})
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -461,20 +460,20 @@ def kb_search(request):
     try:
         body = json.loads(request.body) if request.body else {}
     except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "无效的 JSON"}, status=400)
+        return JsonResponse({"status": False, "message": "无效的 JSON"}, status=400)
 
     query = (body.get("query") or "").strip()
     if not query:
-        return JsonResponse({"ok": False, "error": "query required"}, status=400)
+        return JsonResponse({"status": False, "message": "query required"}, status=400)
 
     top_k = int(body.get("top_k", 5))
 
-    from apps.ai_assistant.agent_scope import rag_service as document_store
+    from apps.ai_assistant.api import search_knowledge
 
-    docs = document_store.search(query, top_k=top_k)
+    docs = search_knowledge(query, top_k=top_k)
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "query": query,
             "total": len(docs),
             "documents": [
@@ -491,11 +490,11 @@ def kb_search(request):
 
 def kb_self_test(request):
     """POST /api/evaluator/kb-self-test — test knowledge base retrieval quality."""
-    from apps.ai_assistant.agent_scope import rag_service as document_store
+    from apps.ai_assistant.api import search_knowledge
 
     results = []
     for query in KB_TEST_QUERIES:
-        docs = document_store.search(query, top_k=3)
+        docs = search_knowledge(query, top_k=3)
 
         # Verify each retrieved fragment against its claimed source file
         verified_docs = []
@@ -534,7 +533,7 @@ def kb_self_test(request):
 
     return JsonResponse(
         {
-            "ok": True,
+            "status": True,
             "score": {
                 "coverage": coverage_score,
                 "avg_relevance": avg_relevance,

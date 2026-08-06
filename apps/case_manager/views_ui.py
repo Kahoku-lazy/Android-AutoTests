@@ -120,7 +120,7 @@ def definitions_handler(request):
         try:
             data = json.loads(request.body)
         except json.JSONDecodeError:
-            return JsonResponse({"ok": False, "error": "无效的 JSON"}, status=400)
+            return JsonResponse({"status": False, "message": "无效的 JSON"}, status=400)
 
         case_id = data.get("id", "").strip()
         if not case_id:
@@ -167,7 +167,7 @@ def definitions_handler(request):
             defaults,
         )
 
-    return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
+    return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
 
 def definition_detail(request, case_id):
@@ -192,7 +192,7 @@ def export_yaml(request):
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return JsonResponse({"ok": False, "error": "无效的 JSON"}, status=400)
+        return JsonResponse({"status": False, "message": "无效的 JSON"}, status=400)
     qs = Element.objects.filter(is_test_point=True).select_related("page")
     if data.get("page_ids"):
         qs = qs.filter(page_id__in=data["page_ids"])
@@ -251,11 +251,13 @@ def export_yaml(request):
     filepath = export_dir / filename
     filepath.write_text(yaml_str, encoding="utf-8")
 
-    return JsonResponse({"ok": True, "filename": filename, "yaml": yaml_str})
+    return JsonResponse({"status": True, "filename": filename, "yaml": yaml_str})
 
 
 def list_exports(request):
     """GET /api/cases/exports — List exported YAML files."""
+    if not getattr(request, "user_id", None):
+        return JsonResponse({"status": False, "message": "Unauthorized"}, status=401)
     files = []
     export_dir = settings.EXPORT_DIR
     if export_dir.exists():
@@ -268,12 +270,14 @@ def list_exports(request):
                 }
             )
     files.sort(key=lambda x: x["time"], reverse=True)
-    return JsonResponse({"ok": True, "files": files})
+    return JsonResponse({"status": True, "files": files})
 
 
 def download_export(request, filename):
     """GET /api/cases/exports/{filename} — Download YAML export."""
+    if not getattr(request, "user_id", None):
+        return JsonResponse({"status": False, "message": "Unauthorized"}, status=401)
     fp = settings.EXPORT_DIR / filename
     if fp.exists():
         return FileResponse(fp, content_type="application/x-yaml", filename=filename)
-    return JsonResponse({"ok": False, "error": "not found"}, status=404)
+    return JsonResponse({"status": False, "message": "not found"}, status=404)

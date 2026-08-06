@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import { getApiDefinition, saveApiDefinition, deleteApiDefinition } from '../../api/apiTesting.js'
+import { getApiDefinition, saveApiDefinition, deleteApiDefinition } from '../../api/apiTesting'
 import ApiStepEditor from './ApiStepEditor.vue'
 
 const STEP_TYPES = ['api_request', 'api_assert', 'api_sleep', 'api_log']
@@ -176,7 +176,7 @@ async function load() {
   loading.value = true
   try {
     const { data } = await getApiDefinition(caseId.value)
-    if (data.ok) {
+    if (data.status) {
       const d = data.definition
       form.value = {
         id: d.id, title: d.title,
@@ -209,7 +209,7 @@ async function load() {
       }
       directoryName.value = d.directory_name || ''
       syncFromForm()
-    } else { error.value = data.error || '加载失败' }
+    } else { error.value = data.message || '加载失败' }
   } catch (e) { error.value = '加载用例失败' }
   loading.value = false
 }
@@ -244,8 +244,8 @@ async function doSave() {
   try {
     const payload = { ...form.value, steps_json: buildStepsJson() }
     const { data } = await saveApiDefinition(payload)
-    if (data.ok) { ElMessage.success(isNew.value ? '创建成功' : '保存成功'); router.push({ path: '/cases', query: { tab: 'api', directory_id: form.value.directory_id } }) }
-    else { ElMessage.error(data.error || '保存失败') }
+    if (data.status) { ElMessage.success(isNew.value ? '创建成功' : '保存成功'); router.push({ path: '/cases', query: { tab: 'api', directory_id: form.value.directory_id } }) }
+    else { ElMessage.error(data.message || '保存失败') }
   } catch (e) { ElMessage.error('保存失败') }
   saving.value = false
 }
@@ -402,7 +402,7 @@ onMounted(load)
 .url-input { flex:1; }
 .status-input { width:120px; }
 .status-hint { font-size:12px;font-weight:700;margin-left:6px; }
-.status-hint.ok { color:#6fba2c; }
+.status-hint.status { color:#6fba2c; }
 .status-hint.err { color:#e85f5f; }
 .info-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
 @media (max-width:600px) { .info-grid { grid-template-columns:1fr; } }

@@ -12,7 +12,7 @@ from apps.device_pool.api import release_device as dp_release_device
 
 from ..callbacks import test_callbacks
 from ..models import TestRunRecord
-from ..runner import mark_device_idle
+from ..runner import _active_runs, mark_device_idle
 from .execution_steps import (
     _finalize_run,
     _mark_run_failed,
@@ -156,7 +156,15 @@ async def _execute_tests(
                 e,
                 traceback.format_exc(),
             )
+            # 尝试从 active runs 中恢复已完成的 case 结果
             run_model = None
+            if run_id in _active_runs:
+                state = _active_runs[run_id]
+                if hasattr(state, "run_model") and state.run_model:
+                    run_model = state.run_model
+                    _log.info(
+                        "_execute_tests: recovered partial results from crashed run %s", run_id
+                    )
 
         run_completed = True
 

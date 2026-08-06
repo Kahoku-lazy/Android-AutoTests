@@ -7,9 +7,9 @@ import AppTable from "@/shared/components/AppTable.vue";
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { animate, stagger } from 'animejs'
-import { apiAddElementToPage, apiUpdateElement } from '../api.js'
-import { useElementTree } from '../composables/useElementTree.js'
-import { usePagination } from '@/shared/composables/usePagination.js'
+import { apiAddElementToPage, apiUpdateElement } from '../api'
+import { useElementTree } from '../composables/useElementTree'
+import { usePagination } from '@/shared/composables/usePagination'
 
 const {
   pages, selectedPage, elements, loading, maxDepth, treeRef,
@@ -67,8 +67,8 @@ async function doAddElement() {
   if (!newElForm.value.alias.trim()) { ElMessage.warning('请输入元素名称'); return }
   try {
     const { data } = await apiAddElementToPage(selectedPage.value.id, newElForm.value)
-    if (data.ok) { showAddElement.value = false; await selectPage(selectedPage.value) }
-  } catch (e) { ElMessage.error(e?.response?.data?.error || '添加元素失败，请检查网络连接') }
+    if (data.status) { showAddElement.value = false; await selectPage(selectedPage.value) }
+  } catch (e) { ElMessage.error(e?.response?.data?.message || '添加元素失败，请检查网络连接') }
 }
 
 const filterMode = ref('all')
@@ -96,7 +96,7 @@ const columns = [
 async function updateEl(record, field, value) {
   try {
     const { data } = await apiUpdateElement(record.id, { [field]: value })
-    if (!data.ok) ElMessage.error(data.error || '更新失败')
+    if (!data.status) ElMessage.error(data.message || '更新失败')
   } catch (_) { ElMessage.error('更新失败，请检查网络') }
 }
 </script>

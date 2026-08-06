@@ -181,7 +181,7 @@ export function explainConnection(
 }
 
 export function isValidPortConnection(store: WorkflowStore, connection: Connection): boolean {
-  return explainConnection(store, connection).ok
+  return explainConnection(store, connection).status
 }
 
 export function applyVueFlowConnect(store: WorkflowStore, connection: Connection): boolean {

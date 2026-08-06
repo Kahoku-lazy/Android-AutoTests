@@ -64,18 +64,30 @@ class StepType(Enum):
     VERIFY_TEXT = "verify_text"  # 验证元素文本
     POLL_TEXT = "poll_text"  # 轮询等待文本变为期望值
     # ── UI: 应用控制类 ──
-    START_APP = "start_app"  # 启动APP
-    KILL_APP = "kill_app"  # 杀掉APP
+    START_APP = "start_app"  # [deprecated] 启动APP — use ADB_START_APP
+    KILL_APP = "kill_app"  # [deprecated] 杀掉APP — use ADB_KILL_APP
     # ── UI: 性能测试类 ──
-    PERF_ELEMENT_TIME = "perf_element_time"  # APP性能: 等待元素出现耗时
+    PERF_ELEMENT_TIME = "perf_element_time"  # [deprecated] APP性能 — use ADB_PERF_ELEMENT_TIME
     # ── UI: 弹窗检测类 ──
-    WAIT_TOAST = "wait_toast"  # 等待Toast消息
+    WAIT_TOAST = "wait_toast"  # [deprecated] 等待Toast — use ADB_WAIT_TOAST
     # ── UI: 流程控制 — 分支 ──
-    IF_ELEMENT_APPEAR = "if_element_appear"  # 如果元素出现，执行子步骤
-    IF_ELEMENT_DISAPPEAR = "if_element_disappear"  # 如果元素消失，执行子步骤
+    IF_ELEMENT_APPEAR = "if_element_appear"  # [deprecated] 如果元素出现 — use ADB_IF_APPEAR
+    IF_ELEMENT_DISAPPEAR = (
+        "if_element_disappear"  # [deprecated] 如果元素消失 — use ADB_IF_DISAPPEAR
+    )
     # ── UI: 流程控制 — 循环 ──
-    LOOP_N = "loop_n"  # 重复执行子步骤N次
-    LOOP_ELEMENTS = "loop_elements"  # 遍历元素列表依次执行
+    LOOP_N = "loop_n"  # [deprecated] 重复执行 — use ADB_LOOP_N
+    LOOP_ELEMENTS = "loop_elements"  # [deprecated] 遍历元素 — use ADB_LOOP_ELEMENTS
+    # ── UI: Android 专属（adb_ 前缀 — 统一命名，与 STEP_TYPE_META 一致）──
+    ADB_START_APP = "adb_start_app"  # 启动APP
+    ADB_KILL_APP = "adb_kill_app"  # 杀掉APP
+    ADB_WAIT_TOAST = "adb_wait_toast"  # 等待Toast消息
+    ADB_PERF_ELEMENT_TIME = "adb_perf_element_time"  # 元素出现耗时
+    ADB_IF_APPEAR = "adb_if_appear"  # 如果元素出现
+    ADB_IF_DISAPPEAR = "adb_if_disappear"  # 如果元素消失
+    ADB_LOOP_N = "adb_loop_n"  # 重复执行子步骤N次
+    ADB_LOOP_ELEMENTS = "adb_loop_elements"  # 遍历元素列表
+    ADB_POLL_TEXT = "adb_poll_text"  # 轮询等待文本变为期望值
     # ── API: 请求与验证 ──
     API_REQUEST = "api_request"  # 发送HTTP请求
     API_ASSERT = "api_assert"  # 断言响应内容

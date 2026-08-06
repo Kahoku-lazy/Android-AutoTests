@@ -6,7 +6,7 @@ import { ElMessage } from 'element-plus'
 import ConfirmButton from '@/shared/components/patterns/ConfirmButton.vue'
 import PageHeader from '@/shared/components/PageHeader.vue'
 import StepScreenshotPanel from '@/shared/components/StepScreenshotPanel.vue'
-import { useExpandCollapse } from '@/shared/composables/useExpandCollapse.js'
+import { useExpandCollapse } from '@/shared/composables/useExpandCollapse'
 import {
   isTaskQueued,
   taskStatusInfo as getTaskStatusInfo,
@@ -15,16 +15,16 @@ import {
   taskTotalCount,
   buildTaskSavePayload,
   generateTaskId,
-} from '../composables/taskUtils.js'
+} from '../composables/taskUtils'
 import {
   connectTaskWebSocket,
   closeTaskWebSocket,
   applyWsMessage,
-} from '../composables/useTaskWebSocket.js'
+} from '../composables/useTaskWebSocket'
 import {
   getActiveRuns, listDefinitions, listTasks, saveTask as apiSaveTask, deleteTask, cancelQueue, stopRun,
   listApiDefinitions, listWebDefinitions,
-} from '../api.js'
+} from '../api'
 
 const route = useRoute()
 const router = useRouter()
@@ -41,7 +41,7 @@ const { expandedIds: expandedBugs, toggle: toggleBug } = useExpandCollapse()
 async function loadTask() {
   try {
     const { data } = await listTasks()
-    if (data.ok && data.tasks) {
+    if (data.status && data.tasks) {
       const tid = String(taskId.value)
       task.value = data.tasks.find(t => String(t.id) === tid) || null
       if (!task.value) {
@@ -88,7 +88,7 @@ async function ensureStepDefs() {
         const res = await listDefinitions()
         data = res.data
       }
-      if (data?.ok) casesDefs.value = data.definitions || []
+      if (data?.status) casesDefs.value = data.definitions || []
     } catch (e) { console.error(e); }
   }
 
@@ -380,7 +380,7 @@ onMounted(() => {
     } else if (task.value.running && !task.value.runId) {
       try {
         const { data } = await getActiveRuns()
-        if (data.ok && data.active?.length) {
+        if (data.status && data.active?.length) {
           const active = data.active.find(a => a.client_task_id === task.value.id)
           if (active) {
             task.value.runId = active.run_id
@@ -482,7 +482,7 @@ async function pollDetailQueuedTask() {
   if (!isTaskQueued(task.value)) { stopDetailQueuePolling(); return }
   try {
     const { data } = await getActiveRuns()
-    if (!data.ok || !data.active?.length) return
+    if (!data.status || !data.active?.length) return
     for (const active of data.active) {
       if (active.client_task_id === task.value.id) {
         task.value.running = true

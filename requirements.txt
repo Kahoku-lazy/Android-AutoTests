@@ -22,6 +22,11 @@ Pillow>=10.0
 # ── HTTP ──
 requests>=2.30
 
+# ── Testing ──
+pytest>=8.0
+pytest-django>=4.0
+allure-pytest>=2.13
+
 # ── AgentScope 2.0 AI ──
 agentscope>=2.0.0
 fastapi>=0.109.0

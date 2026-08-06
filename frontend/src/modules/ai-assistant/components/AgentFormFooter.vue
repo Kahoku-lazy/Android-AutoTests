@@ -1,11 +1,8 @@
-<script setup>
-import { IconSave } from '@/shared/icons/index.js'
+<script setup lang="ts">
+import { IconSave } from '@/shared/icons/index'
 
-defineProps({
-  isNew: { type: Boolean, default: false },
-})
-
-const emit = defineEmits(['save'])
+defineProps<{ isNew?: boolean }>()
+const emit = defineEmits<{ save: [] }>()
 </script>
 
 <template>

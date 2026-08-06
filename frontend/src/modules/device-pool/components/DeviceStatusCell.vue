@@ -1,10 +1,12 @@
-<script setup>
+<script setup lang="ts">
 /** 设备状态列 — el-tag + 占用/锁定 Badge */
-import { statusTag, RUNNER_OCCUPIED_PREFIXES } from '../constants.js'
+import { statusTag } from '../helpers'
+import { RUNNER_OCCUPIED_PREFIXES } from '../constants'
+import type { DeviceRecord } from '@/shared/types/device'
 
-defineProps({
-  device: { type: Object, required: true },
-})
+defineProps<{
+  device: DeviceRecord
+}>()
 </script>
 
 <template>

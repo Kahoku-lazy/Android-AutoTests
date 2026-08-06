@@ -1,9 +1,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { IconPlus } from '@/shared/icons/index.js'
+import { IconPlus } from '@/shared/icons/index'
 import AgentMcpDialog from './AgentMcpDialog.vue'
-import { fetchSharedTools, importFromToolbox } from '../api.js'
+import { fetchSharedTools, importFromToolbox } from '../api/toolbox'
 
 const props = defineProps({
   form: { type: Object, required: true },
@@ -55,7 +55,7 @@ onMounted(async () => {
   toolboxLoading.value = true
   try {
     const data = await fetchSharedTools()
-    if (data.ok) toolboxItems.value = data.items || []
+    if (data.status) toolboxItems.value = data.items || []
   } catch (e) { console.error('Failed to load toolbox:', e) }
   toolboxLoading.value = false
 })
@@ -69,12 +69,12 @@ async function doImportFromToolbox(item) {
   importingIds.value.add(item.id)
   try {
     const data = await importFromToolbox(props.form.id, item.id)
-    if (data.ok) {
+    if (data.status) {
       ElMessage.success(`已导入: ${item.name}`)
       // Remove from available list after import
       toolboxItems.value = toolboxItems.value.filter((i) => i.id !== item.id)
     } else {
-      ElMessage.warning(data.error || '导入失败')
+      ElMessage.warning(data.message || '导入失败')
     }
   } catch (e) { ElMessage.error('导入失败') }
   importingIds.value.delete(item.id)
@@ -118,6 +118,50 @@ function formatSkillSize(bytes) {
 
     <el-collapse v-model="memoryToolActive" class="memory-tools-collapse">
 
+      <!-- 能力开关 -->
+      <el-collapse-item name="capability">
+        <template #title>
+          <div class="collapse-title-row"><span class="collapse-title-text">能力开关</span><span class="collapse-badge">控制 AI 可用能力</span></div>
+        </template>
+        <el-form label-width="140px" class="agent-form">
+          <el-form-item>
+            <template #label>
+              <span class="label-with-help">内置工具 <el-tooltip content="AgentScope 工作区内置工具：Bash/Edit/Glob/Grep/Read/Write。开启后可在下方「工作区 Skills」中选择具体启用项。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
+            </template>
+            <el-switch v-model="form.enable_workspace_tools" />
+            <span class="form-hint">Bash · Edit · Glob · Grep · Read · Write</span>
+          </el-form-item>
+          <el-form-item>
+            <template #label>
+              <span class="label-with-help">平台技能 <el-tooltip content="设备管理 / 元素定位 / 用例管理 / 测试执行。开启后可在下方「平台业务工具」中选择具体模块。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
+            </template>
+            <el-switch v-model="form.enable_business_tools" />
+            <span class="form-hint">设备管理 · 元素定位 · 用例管理 · 测试执行</span>
+          </el-form-item>
+          <el-form-item>
+            <template #label>
+              <span class="label-with-help">MCP 工具 <el-tooltip content="用户自配的 MCP Server 工具（如 GitHub、Slack）。开启后可在下方「MCP 工具」中配置。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
+            </template>
+            <el-switch v-model="form.enable_mcp_tools" />
+            <span class="form-hint">{{ mcpCount > 0 ? `已配置 ${mcpCount} 个 MCP` : '暂无 MCP 工具' }}</span>
+          </el-form-item>
+          <el-form-item>
+            <template #label>
+              <span class="label-with-help">自定义 Skills <el-tooltip content="用户上传的 Skill 文件夹（脚本 + 文档）。开启后可在下方「自定义 Skills」中上传和管理。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
+            </template>
+            <el-switch v-model="form.enable_skills" />
+            <span class="form-hint">{{ customSkillCount > 0 ? `已上传 ${customSkillCount} 个 Skill` : '暂无自定义 Skill' }}</span>
+          </el-form-item>
+          <el-form-item>
+            <template #label>
+              <span class="label-with-help">知识库 <el-tooltip content="ChromaDB RAG 检索。开启后 AI 回答问题时自动搜索项目文档作为上下文。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
+            </template>
+            <el-switch v-model="form.enable_knowledge_base" />
+            <span class="form-hint">{{ kbDocSelectedCount > 0 ? `已索引 ${kbDocSelectedCount} 篇文档` : '暂无知识库文档' }}</span>
+          </el-form-item>
+        </el-form>
+      </el-collapse-item>
+
       <!-- 记忆与能力 -->
       <el-collapse-item name="memory">
         <template #title>
@@ -156,13 +200,6 @@ function formatSkillSize(bytes) {
             <el-switch v-model="form.enable_rewrite_query" />
             <span class="form-hint">LLM 检索前重写用户查询</span>
           </el-form-item>
-          <el-form-item>
-            <template #label>
-              <span class="label-with-help">知识库检索 <el-tooltip content="开启后 Agent 回答问题时自动搜索项目文档（ChromaDB RAG）作为上下文。建议保持开启。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
-            </template>
-            <el-switch v-model="form.enable_knowledge_base" />
-            <span class="form-hint">开启后对话将自动搜索项目文档（ChromaDB RAG）作为上下文</span>
-          </el-form-item>
         </el-form>
       </el-collapse-item>
 
@@ -177,7 +214,7 @@ function formatSkillSize(bytes) {
         <div v-if="loadingPlatformTools" class="empty-state">加载工具列表中...</div>
         <div v-else-if="!toolCategories.length" class="empty-state">暂无可用工具</div>
         <div v-else>
-          <p class="section-desc">勾选模块即可激活该模块下全部工具。工具使用指南由 testing-workflow Skill 提供。</p>
+          <p class="section-desc">勾选模块即可激活该模块下全部工具。</p>
           <div class="module-cards">
             <div v-for="cat in toolCategories" :key="cat.key" class="module-card"
                  :class="{ selected: isCategorySelected(cat) }"

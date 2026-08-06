@@ -3,13 +3,15 @@
 import AppCard from "@/shared/components/AppCard.vue";
 import AppTable from "@/shared/components/AppTable.vue";
 import KpiCard from "@/shared/components/KpiCard.vue";
+import ErrorState from "@/shared/components/patterns/ErrorState.vue";
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getKnowledgeStatus, getKnowledgeDocuments, reindexKnowledge } from './api.js'
+import { getKnowledgeStatus, getKnowledgeDocuments, reindexKnowledge } from './api/toolbox'
 
 const status = ref({})
 const documents = ref([])
 const loading = ref(false)
+const loadError = ref("")
 const reindexing = ref(false)
 const activeFilter = ref('all')
 
@@ -45,44 +47,47 @@ function formatSize(bytes) {
 
 async function fetchStatus() {
   try {
-    const { data } = await getKnowledgeStatus()
-    if (data.ok) status.value = data.data
+    const { ok, data } = await getKnowledgeStatus()
+    if (ok) status.value = data
   } catch { /* ignore */ }
 }
 
 async function fetchDocuments() {
   loading.value = true
   try {
-    const { data } = await getKnowledgeDocuments()
-    if (data.ok) documents.value = data.data.documents || []
+    const { ok, data } = await getKnowledgeDocuments()
+    if (ok) documents.value = data.documents || []
   } catch (e) {
-    ElMessage.error('加载文档列表失败')
+    loadError.value = "加载文档列表失败"
   } finally { loading.value = false }
+}
+
+async function loadAll() {
+  loadError.value = ""
+  await Promise.all([fetchStatus(), fetchDocuments()])
 }
 
 async function reindex() {
   reindexing.value = true
   try {
-    const { data } = await reindexKnowledge()
-    if (data.ok) {
+    const { ok, data, error } = await reindexKnowledge()
+    if (ok) {
       ElMessage.success('索引重建已开始，请稍后刷新')
       setTimeout(() => { fetchStatus(); fetchDocuments() }, 3000)
     } else {
-      ElMessage.error(data.error || '索引重建失败')
+      ElMessage.error(error || '索引重建失败')
     }
   } catch (e) {
     ElMessage.error('索引重建请求失败')
   } finally { reindexing.value = false }
 }
 
-onMounted(() => {
-  fetchStatus()
-  fetchDocuments()
-})
+onMounted(() => { loadAll() })
 </script>
 
 <template>
   <div class="kb-view">
+    <ErrorState v-if="loadError" :message="loadError" @retry="loadAll" />
     <!-- 状态卡片 -->
     <AppCard color="app-blue">
       <div class="kpi-row">

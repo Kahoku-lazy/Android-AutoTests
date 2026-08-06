@@ -2,10 +2,10 @@
 import { ref, watch, nextTick, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { animate } from 'animejs'
-import { formatApiError } from '@/shared/api-client.js'
-import { useElementStore } from '../store.js'
-import { apiGetPages, apiCreatePage, apiAddElementToPage } from '../api.js'
-import { bus } from '@/shared/event-bus.js'
+import { formatApiError } from '@/shared/api-client'
+import { useElementStore } from '../store'
+import { apiGetPages, apiCreatePage, apiAddElementToPage } from '../api'
+import { bus } from '@/shared/event-bus'
 
 const props = defineProps({ element: { type: Object, default: null } })
 const emit = defineEmits(['add-step', 'do-action'])
@@ -93,7 +93,7 @@ async function openSaveDialog() {
   pagesLoading.value = true
   try {
     const { data } = await apiGetPages()
-    if (data.ok) pages.value = data.pages || []
+    if (data.status) pages.value = data.pages || []
   } catch (e) {
     ElMessage.error({ message: formatApiError(e, '加载页面列表失败'), duration: 4000, showClose: true })
   } finally {
@@ -109,7 +109,7 @@ async function openSaveDialog() {
         package: pkg,
         activity,
       })
-      if (data.ok) {
+      if (data.status) {
         const page = data.page || {}
         saveForm.value.pageId = page.id
         pages.value.push({
@@ -117,7 +117,7 @@ async function openSaveDialog() {
           label: page.label || data.label,
         })
       } else {
-        ElMessage.error(data.error || '自动创建页面失败')
+        ElMessage.error(data.message || '自动创建页面失败')
       }
     } catch (e) {
       ElMessage.error({ message: formatApiError(e, '自动创建页面失败'), duration: 4000, showClose: true })
@@ -144,7 +144,7 @@ async function doSave() {
       clickable: el.clickable || false,
       content_desc: el.content_desc || '',
     })
-    if (data.ok) {
+    if (data.status) {
       const name = saveForm.value.alias.trim()
       ElMessage.success({
         message: data.updated ? `元素「${name}」已更新` : `元素「${name}」已保存`,
@@ -154,7 +154,7 @@ async function doSave() {
       // Notify element manager to refresh its table
       bus.emit('elements-saved', { pageId: saveForm.value.pageId })
     } else {
-      ElMessage.warning({ message: data.error || '保存未完成，请检查填写内容', duration: 4000, showClose: true })
+      ElMessage.warning({ message: data.message || '保存未完成，请检查填写内容', duration: 4000, showClose: true })
     }
   } catch (e) {
     const status = e.response?.status

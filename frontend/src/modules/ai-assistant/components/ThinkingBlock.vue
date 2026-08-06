@@ -1,13 +1,13 @@
-<script setup>
-import { sanitizeHtml } from "../composables/useMarkdown.js";
+<script setup lang="ts">
+import { sanitizeHtml } from '../composables/useMarkdown'
 
-defineProps({
-  thinking: { type: String, default: "" },
-  thinkingDone: { type: Boolean, default: false },
-  expanded: { type: Boolean, default: false },
-});
+defineProps<{
+  thinking?: string
+  thinkingDone?: boolean
+  expanded?: boolean
+}>()
 
-const emit = defineEmits(["toggle"]);
+const emit = defineEmits<{ toggle: [] }>()
 </script>
 
 <template>

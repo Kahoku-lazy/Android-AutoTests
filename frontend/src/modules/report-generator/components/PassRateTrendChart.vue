@@ -1,8 +1,8 @@
 <script setup>
 import { computed } from 'vue'
 import * as echarts from 'echarts'
-import { useECharts } from '@/shared/composables/useECharts.js'
-import { CHART_COLORS, CHART_VISIBLE_DAYS } from '../constants.js'
+import { useECharts } from '@/shared/composables/useECharts'
+import { CHART_COLORS, CHART_VISIBLE_DAYS } from '../constants'
 
 const props = defineProps({
   labels: { type: Array, default: () => [] },

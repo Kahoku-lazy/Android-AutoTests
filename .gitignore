@@ -7,6 +7,15 @@ build/
 *.egg
 .eggs/
 .venv/
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+coverage/
 
 # ── Django ──
 *.log
@@ -37,23 +46,34 @@ logs/
 *.log
 
 # ── Test Exports & Results ──
-exports/*.yaml
-exports/*.csv
-exports/*.json
-exports/*.md
+exports/
 result_*.csv
 result_*.md
+result_*.json
+result_*.log
 
 # ── Frontend ──
 frontend/node_modules/
 frontend/dist/
 frontend/src/auto-imports.d.ts
 frontend/src/components.d.ts
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
 
 # ── Environment ──
 .env
 .env.local
 .env.*.local
+.env.docker
+.env.docker.example
+
+# ── Docker ──
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+docker/
+frontend/vite.config.docker.js
 
 # ── IDS & Editor ──
 .vscode/
@@ -61,6 +81,9 @@ frontend/src/components.d.ts
 *.swp
 *.swo
 *~
+*.bak
+*.orig
+*.rej
 .ruff_cache/
 
 # ── OS ──
@@ -76,6 +99,7 @@ apps/case_manager/management/commands/import_h717d_cases.py
 docs/
 .superpowers/
 .workbuddy/
+.claude/*.diff
 
 # ── Legacy frontend (pre-Vue migration, contains hardcoded device IDs) ──
 frontend/_legacy/
@@ -97,14 +121,23 @@ dev_docs/**/前端笔记.md
 /device-page-snapshot.md
 /CODE_DEBT_REPORT.md
 /*.html
+/1.md
+frontend/login-module-architecture.html
 
 # ── Third-party project (not part of this repo) ──
 PM-Project-main/
 
 # ── Temp files ──
+*.tmp
 *.tmp.*
+*.temp
+tmp_*.txt
+tmp_*.diff
+*_diff.txt
 skills-lock.json
 agent_scope_map.html
+tools/_tmp*/
+tools/_tmp_*.py
 
 # ── Runtime artifacts ──
 dump.rdb
@@ -122,8 +155,14 @@ token.json
 # Test reports
 tests/functional/*/reports/
 .playwright-mcp/
-tests\temp\*
-/tests/temp/
+tests/temp/
+allure-results/
+allure-report/
+tests/allure-results/
+tests/allure-report/
+playwright-report/
+test-results/
+blob-report/
 
 # ── Workflow demo（已并入 frontend/src/modules/workflow，不再维护）──
 tests/workflow-demo/

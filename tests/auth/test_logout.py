@@ -1,16 +1,11 @@
 """登出接口测试 — POST /api/ai/auth/logout（数据驱动 + JSON Schema）。
 
-⚠️ 已知问题：/api/ai/auth/logout 匹配中间件公开路径前缀 /api/ai/auth/，
-中间件跳过鉴权 → require_auth 拿不到 user_id → 总是返回 401 "Unauthorized"。
-涉及鉴权的用例用 @pytest.mark.xfail 标记，修复中间件后自动生效。
-
-9 条用例按断言 Shape 分为 2 个参数化组 + 4 个独立函数：
-  - test_logout_success[3]       — 200 + status=True（xfail：中间件 BUG）
-  - test_logout_reject[3]        — 401（require_auth 拦截）
-  - test_logout_token_invalid    — 两步验证：登出 → /me（xfail：中间件 BUG）
-  - test_logout_repeated         — 重复登出（xfail：中间件 BUG）
+9 条用例按断言 Shape 分为 2 个参数化组 + 3 个独立函数：
+  - test_logout_success[1]       — 200 + status=True（正常登出）
+  - test_logout_reject[5]        — 401（中间件拦截）
+  - test_logout_token_invalid    — 两步验证：登出 → /me 401
+  - test_logout_repeated         — 重复登出
   - test_logout_redis_unavailable — 503（skip：需 Redis 不可用环境）
-  - test_logout_non_bearer_skip  — 非 Bearer 格式（xfail：中间件 BUG）
 
 运行方式：
     pytest tests/auth/test_logout.py -v
@@ -24,12 +19,6 @@ import pytest
 
 from tests.auth.conftest import LOGOUT_URL, ME_URL, set_allure_metadata
 from tests.auth.schemas import ERROR_RESPONSE_SCHEMA, LOGOUT_SUCCESS_SCHEMA
-
-_XFAIL_MIDDLEWARE = (
-    "中间件 BUG: /api/ai/auth/ 整个前缀被标记为公开路径，"
-    "logout 和 me 也在其中 → 中间件跳过鉴权 → user_id 永为 None"
-)
-
 
 # ═══════════════════════════════════════════════════════════════════
 # 数据类型
@@ -82,33 +71,14 @@ LOGOUT_SUCCESS_CASES: list[LogoutCase] = [
         expected_status=200,
         auth_format="bearer",
     ),
-    LogoutCase(
-        id="TC-LOGOUT-004",
-        title="Authorization 值非 Bearer 格式",
-        description='Authorization: Token xxx\n期望：200（跳过黑名单，直接返回成功）\n测试点：auth_header.startswith("Bearer ") 为 False',
-        severity="normal",
-        priority="P1",
-        expected_status=200,
-        auth_format="non-bearer",
-    ),
-    LogoutCase(
-        id="TC-LOGOUT-005",
-        title="Authorization 值为空 Bearer",
-        description='Authorization: Bearer \n期望：200（auth_header[7:] → ""，空 token 入黑名单）\n测试点：边界行为',
-        severity="normal",
-        priority="P1",
-        expected_status=200,
-        auth_format="empty-bearer",
-    ),
 ]
 
 
-@pytest.mark.xfail(reason=_XFAIL_MIDDLEWARE)
 @pytest.mark.parametrize("case", LOGOUT_SUCCESS_CASES, ids=lambda c: c.id)
 @pytest.mark.api
 @pytest.mark.auth
 def test_logout_success(base_url, api_session, auth_token, case):
-    """参数化：登出成功（3 条）— xfail：中间件 BUG。"""
+    """参数化：登出成功（1 条）。"""
     tags = ("auth", "api", case.priority) + case.extra_tags
     set_allure_metadata(
         feature="认证模块",
@@ -119,7 +89,15 @@ def test_logout_success(base_url, api_session, auth_token, case):
         tags=tags,
     )
     headers = {}
-    if case.auth_format != "none":
+    if case.auth_format == "bearer":
+        # TC-LOGOUT-001: 独立登录获取 token，避免污染共享 auth_token
+        login_resp = api_session.post(
+            f"{base_url}/api/ai/auth/login",
+            json={"username": "admin", "password": "admin123"},
+        )
+        access = login_resp.json()["access_token"]
+        headers["Authorization"] = f"Bearer {access}"
+    elif case.auth_format != "none":
         headers["Authorization"] = _build_auth_header(case, auth_token)
 
     resp = api_session.post(f"{base_url}{LOGOUT_URL}", headers=headers)
@@ -131,23 +109,41 @@ def test_logout_success(base_url, api_session, auth_token, case):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Group 2: 401 — require_auth 拦截（3 条）— 全部通过
+# Group 2: 401 — 中间件拦截（5 条）
 # ═══════════════════════════════════════════════════════════════════
 
 LOGOUT_REJECT_CASES: list[LogoutCase] = [
     LogoutCase(
         id="TC-LOGOUT-003",
         title="无 Authorization 请求头",
-        description="无 Authorization 头\n期望：401（require_auth 装饰器拦截）\n测试点：缺少鉴权信息",
+        description="无 Authorization 头\n期望：401（中间件拦截：缺 Authorization header）\n测试点：缺少鉴权信息",
         severity="critical",
         priority="P0",
         expected_status=401,
         auth_format="none",
     ),
     LogoutCase(
+        id="TC-LOGOUT-004",
+        title="Authorization 值非 Bearer 格式",
+        description="Authorization: Token xxx\n期望：401（中间件拦截：非 Bearer 格式）\n测试点：中间件只接受 Bearer scheme",
+        severity="normal",
+        priority="P1",
+        expected_status=401,
+        auth_format="non-bearer",
+    ),
+    LogoutCase(
+        id="TC-LOGOUT-005",
+        title="Authorization 值为空 Bearer",
+        description="Authorization: Bearer \n期望：401（中间件拦截：空 token 无法通过 verify_token）\n测试点：边界行为 — 空 token",
+        severity="normal",
+        priority="P1",
+        expected_status=401,
+        auth_format="empty-bearer",
+    ),
+    LogoutCase(
         id="TC-LOGOUT-006",
         title="使用已过期的 access_token",
-        description="Authorization: Bearer <过期token>\n期望：401（require_auth 先校验 JWT 有效性）\n测试点：过期 token 被 require_auth 拦截",
+        description="Authorization: Bearer <过期token>\n期望：401（中间件 verify_token exp 校验失败）\n测试点：过期 token 被中间件拦截",
         severity="normal",
         priority="P1",
         expected_status=401,
@@ -170,7 +166,7 @@ LOGOUT_REJECT_CASES: list[LogoutCase] = [
 @pytest.mark.api
 @pytest.mark.auth
 def test_logout_reject(base_url, api_session, auth_token, case):
-    """参数化：登出被 require_auth 拒绝（3 条）。"""
+    """参数化：登出被中间件拒绝（5 条）。"""
     tags = ("auth", "api", case.priority) + case.extra_tags
     set_allure_metadata(
         feature="认证模块",
@@ -195,7 +191,6 @@ def test_logout_reject(base_url, api_session, auth_token, case):
 # ═══════════════════════════════════════════════════════════════════
 
 
-@pytest.mark.xfail(reason=_XFAIL_MIDDLEWARE)
 @allure.feature("认证模块")
 @allure.story("登出接口")
 @allure.severity(allure.severity_level.CRITICAL)
@@ -207,8 +202,13 @@ def test_logout_reject(base_url, api_session, auth_token, case):
 @pytest.mark.api
 @pytest.mark.auth
 def test_logout_token_invalid(base_url, api_session, auth_token):
-    """两步验证：登出后 token 失效 — xfail：中间件 BUG。"""
-    access = auth_token["access_token"]
+    """两步验证：登出后 token 失效。"""
+    # 独立登录获取 token，避免污染共享 auth_token
+    login_resp = api_session.post(
+        f"{base_url}/api/ai/auth/login",
+        json={"username": "admin", "password": "admin123"},
+    )
+    access = login_resp.json()["access_token"]
 
     # Step 1: 确认 token 有效
     me_before = api_session.get(
@@ -234,22 +234,26 @@ def test_logout_token_invalid(base_url, api_session, auth_token):
     assert body["status"] is False
 
 
-@pytest.mark.xfail(reason=_XFAIL_MIDDLEWARE)
 @allure.feature("认证模块")
 @allure.story("登出接口")
 @allure.severity(allure.severity_level.NORMAL)
 @allure.title("TC-LOGOUT-009: 重复登出")
 @allure.description(
     "对已登出的 token 再次登出\n"
-    "期望：第二次登出返回 401（require_auth 检测到黑名单）或 200（幂等）\n"
+    "期望：第二次登出返回 401（中间件 verify_token 检测到黑名单）或 200（幂等）\n"
     "测试点：验证重复登出不产生意外副作用"
 )
 @allure.tag("auth", "api", "P2")
 @pytest.mark.api
 @pytest.mark.auth
 def test_logout_repeated(base_url, api_session, auth_token):
-    """重复登出 — xfail：中间件 BUG。"""
-    access = auth_token["access_token"]
+    """重复登出。"""
+    # 独立登录获取 token，避免污染共享 auth_token
+    login_resp = api_session.post(
+        f"{base_url}/api/ai/auth/login",
+        json={"username": "admin", "password": "admin123"},
+    )
+    access = login_resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {access}"}
 
     resp1 = api_session.post(f"{base_url}{LOGOUT_URL}", headers=headers)

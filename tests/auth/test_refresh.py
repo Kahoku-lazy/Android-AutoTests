@@ -100,9 +100,7 @@ def _resolve_refresh_payload(case: RefreshRejectCase, auth_token: dict) -> dict:
     if case.id == "TC-REF-007":
         return {"refresh_token": auth_token["access_token"]}
     if case.id == "TC-REF-008":
-        tampered = auth_token["refresh_token"][:-1] + (
-            "0" if auth_token["refresh_token"][-1] != "0" else "1"
-        )
+        tampered = auth_token["refresh_token"][:-5] + "XXXXX"
         return {"refresh_token": tampered}
     return case.payload
 
@@ -155,25 +153,20 @@ def test_refresh_success(base_url, api_session, auth_token):
     assert body["access_token"] != auth_token["access_token"], "新 access_token 应与旧 token 不同"
 
 
-@pytest.mark.xfail(
-    reason="中间件 BUG: /api/ai/auth/me 匹配公开路径前缀 /api/ai/auth/，"
-    "中间件跳过鉴权 → me view 永远拿不到 user_id → 返回 401。"
-    "修复 middleware 后再运行此用例。"
-)
 @allure.feature("认证模块")
 @allure.story("刷新 Token")
 @allure.severity(allure.severity_level.CRITICAL)
 @allure.title("TC-REF-002: 刷新后原 access_token 对 /me 的效力")
 @allure.description(
     "先刷新获取新 access_token → 用新旧 token 分别请求 /me\n"
-    "期望：新 token 200（当前因中间件 BUG 返回 401）\n"
+    "期望：新 token 200，旧 token 也 200（access_token 刷新后仍有效）\n"
     "测试点：刷新不影响旧 access_token 有效期（当前设计）"
 )
 @allure.tag("auth", "api", "P1")
 @pytest.mark.api
 @pytest.mark.auth
 def test_refresh_replaces_token(base_url, api_session, auth_token):
-    """刷新后新旧 token 对 /me 的效力 — 受中间件 BUG 影响 xfail。"""
+    """刷新后新旧 token 对 /me 的效力。"""
     old_access = auth_token["access_token"]
 
     resp = api_session.post(
@@ -246,9 +239,8 @@ def test_refresh_invalid_json(base_url, api_session):
 
 
 @pytest.mark.xfail(
-    reason="中间件 BUG: /api/ai/auth/logout 匹配公开路径前缀 /api/ai/auth/，"
-    "中间件跳过鉴权 → require_auth 拿不到 user_id → 总是返回 401。"
-    "修复 middleware 后再运行此用例。"
+    reason="logout 只黑名单化 access_token，refresh_token 不受影响。refresh view 的 verify_token 仍能通过。"
+    "若未来 logout 同步失效 refresh_token，此用例自动变为 PASS。"
 )
 @allure.feature("认证模块")
 @allure.story("刷新 Token")
@@ -259,16 +251,22 @@ def test_refresh_invalid_json(base_url, api_session):
 @pytest.mark.api
 @pytest.mark.auth
 def test_refresh_post_logout(base_url, api_session, auth_token):
-    """登出后 refresh_token 应被拒绝 — 受中间件 BUG 影响 xfail。"""
+    """登出后 refresh_token 应被拒绝 — xfail：logout 不黑名单 refresh_token。"""
+    # 独立登录获取 token，避免污染共享 auth_token
+    login_resp = api_session.post(
+        f"{base_url}/api/ai/auth/login",
+        json={"username": "admin", "password": "admin123"},
+    )
+    own_tokens = login_resp.json()
     logout_resp = api_session.post(
         f"{base_url}/api/ai/auth/logout",
-        headers={"Authorization": f"Bearer {auth_token['access_token']}"},
+        headers={"Authorization": f"Bearer {own_tokens['access_token']}"},
     )
     assert logout_resp.status_code == 200, f"登出失败: {logout_resp.json()}"
 
     resp = api_session.post(
         f"{base_url}{REFRESH_URL}",
-        json={"refresh_token": auth_token["refresh_token"]},
+        json={"refresh_token": own_tokens["refresh_token"]},
     )
     body = resp.json()
     assert resp.status_code == 401, f"期望 401，实际 {resp.status_code}: {body}"

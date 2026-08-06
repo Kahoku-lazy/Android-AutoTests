@@ -1,14 +1,10 @@
 """当前用户接口测试 — GET /api/ai/auth/me（数据驱动 + JSON Schema）。
 
-⚠️ 已知问题：/api/ai/auth/me 匹配中间件公开路径前缀 /api/ai/auth/，
-中间件跳过鉴权 → me view 永远拿不到 user_id → 总是返回 401 "Not authenticated"。
-成功路径用例用 @pytest.mark.xfail 标记，修复中间件后自动生效。
-
 9 条用例按断言 Shape 分为 1 个参数化组 + 3 个独立函数：
-  - test_me_auth_reject[6]      — 401 "Not authenticated"
-  - test_me_success              — 200 + user 对象（xfail：中间件 BUG）
-  - test_me_no_sensitive_fields  — 不返回敏感字段（xfail：中间件 BUG）
-  - test_me_user_deleted         — 404 "User not found"（xfail：中间件 BUG）
+  - test_me_auth_reject[6]      — 401（中间件拦截，2 种消息）
+  - test_me_success              — 200 + user 对象
+  - test_me_no_sensitive_fields  — 不返回敏感字段
+  - test_me_user_deleted         — 404 "User not found"（xfail：django_db）
 
 运行方式：
     pytest tests/auth/test_me.py -v
@@ -27,12 +23,6 @@ from django.conf import settings
 
 from tests.auth.conftest import LOGOUT_URL, ME_URL, REGISTER_URL, set_allure_metadata
 from tests.auth.schemas import ME_USER_SCHEMA
-
-_XFAIL_MIDDLEWARE = (
-    "中间件 BUG: /api/ai/auth/me 匹配公开路径前缀 /api/ai/auth/，"
-    "中间件跳过鉴权 → me view 拿不到 user_id → 始终返回 401"
-)
-
 
 # ═══════════════════════════════════════════════════════════════════
 # 数据类型
@@ -59,7 +49,6 @@ class MeRejectCase:
 # ═══════════════════════════════════════════════════════════════════
 
 
-@pytest.mark.xfail(reason=_XFAIL_MIDDLEWARE)
 @allure.feature("认证模块")
 @allure.story("当前用户")
 @allure.severity(allure.severity_level.BLOCKER)
@@ -71,7 +60,7 @@ class MeRejectCase:
 @pytest.mark.api
 @pytest.mark.auth
 def test_me_success(base_url, api_session, auth_token):
-    """正常获取当前用户 → 200 — xfail：中间件 BUG。"""
+    """正常获取当前用户 → 200。"""
     headers = {"Authorization": f"Bearer {auth_token['access_token']}"}
     resp = api_session.get(f"{base_url}{ME_URL}", headers=headers)
     body = resp.json()
@@ -80,7 +69,6 @@ def test_me_success(base_url, api_session, auth_token):
     assert body["user"]["username"] == "admin"
 
 
-@pytest.mark.xfail(reason=_XFAIL_MIDDLEWARE)
 @allure.feature("认证模块")
 @allure.story("当前用户")
 @allure.severity(allure.severity_level.CRITICAL)
@@ -92,7 +80,7 @@ def test_me_success(base_url, api_session, auth_token):
 @pytest.mark.api
 @pytest.mark.auth
 def test_me_no_sensitive_fields(base_url, api_session, auth_token):
-    """验证 /me 响应不泄露敏感字段 — xfail：中间件 BUG。"""
+    """验证 /me 响应不泄露敏感字段。"""
     headers = {"Authorization": f"Bearer {auth_token['access_token']}"}
     resp = api_session.get(f"{base_url}{ME_URL}", headers=headers)
     assert resp.status_code == 200
@@ -110,62 +98,62 @@ ME_REJECT_CASES: list[MeRejectCase] = [
     MeRejectCase(
         id="TC-ME-003",
         title="无 Authorization 请求头",
-        description='无 Authorization 头\n期望：401，message="Not authenticated"\n测试点：request.user_id 为 None',
+        description='无 Authorization 头\n期望：401，message="Authorization header required"\n测试点：中间件拦截无鉴权请求',
         severity="critical",
         priority="P0",
         expected_status=401,
-        expected_message="Not authenticated",
+        expected_message="Authorization header required",
         auth_format="none",
     ),
     MeRejectCase(
         id="TC-ME-004",
         title="Authorization 值非 Bearer 格式",
-        description='Authorization: Token xxx\n期望：401，message="Not authenticated"\n测试点：中间件无法从非 Bearer 格式提取 Token',
+        description='Authorization: Token xxx\n期望：401，message="Authorization header required"\n测试点：中间件只接受 Bearer 格式',
         severity="normal",
         priority="P1",
         expected_status=401,
-        expected_message="Not authenticated",
+        expected_message="Authorization header required",
         auth_format="non-bearer",
     ),
     MeRejectCase(
         id="TC-ME-005",
         title="access_token 已过期",
-        description='Authorization: Bearer <过期token>\n期望：401，message="Not authenticated"\n测试点：过期 token → verify_token 失败 → user_id=None',
+        description='Authorization: Bearer <过期token>\n期望：401，message="Invalid or expired token"\n测试点：过期 token → verify_token exp 校验失败',
         severity="normal",
         priority="P1",
         expected_status=401,
-        expected_message="Not authenticated",
+        expected_message="Invalid or expired token",
         auth_format="expired",
     ),
     MeRejectCase(
         id="TC-ME-006",
         title="access_token 被篡改",
-        description='Authorization: Bearer <篡改token>\n期望：401，message="Not authenticated"\n测试点：JWT 签名验证失败',
+        description='Authorization: Bearer <篡改token>\n期望：401，message="Invalid or expired token"\n测试点：JWT 签名验证失败',
         severity="normal",
         priority="P1",
         expected_status=401,
-        expected_message="Not authenticated",
+        expected_message="Invalid or expired token",
         auth_format="tampered",
         extra_tags=("security",),
     ),
     MeRejectCase(
         id="TC-ME-007",
         title="access_token 已在黑名单",
-        description='Authorization: Bearer <已登出token>\n期望：401，message="Not authenticated"\n测试点：中间件/me view 对已登出 token 的处理',
+        description='Authorization: Bearer <已登出token>\n期望：401，message="Invalid or expired token"\n测试点：verify_token 检测 jti 在黑名单 → InvalidTokenError',
         severity="critical",
         priority="P0",
         expected_status=401,
-        expected_message="Not authenticated",
+        expected_message="Invalid or expired token",
         auth_format="blacklisted",
     ),
     MeRejectCase(
         id="TC-ME-009",
         title="使用 refresh_token 访问",
-        description="Authorization: Bearer <refresh_token>\n期望：401（me view 的 user_id 为 None）\n测试点：type 校验",
+        description='Authorization: Bearer <refresh_token>\n期望：401，message="Invalid or expired token"\n测试点：verify_token expected_type="access" 校验失败',
         severity="normal",
         priority="P1",
         expected_status=401,
-        expected_message="Not authenticated",
+        expected_message="Invalid or expired token",
         auth_format="refresh",
         extra_tags=("security",),
     ),
@@ -207,11 +195,10 @@ def _build_me_headers(case: MeRejectCase, auth_token: dict) -> dict:
 @pytest.mark.api
 @pytest.mark.auth
 def test_me_auth_reject(base_url, api_session, auth_token, case):
-    """参数化：鉴权被拒 — 始终 401 "Not authenticated"（6 条）。
+    """参数化：鉴权被拒 — 中间件拦截返回 401（6 条）。
 
-    注意：由于中间件将 /api/ai/auth/me 视为公开路径跳过鉴权，
-    实际 401 来自 me view 自身（user_id 为 None），而非来自中间件。
-    修复中间件后，部分用例的 401 来源会从 me view 变为中间件。
+    中间件先于 view 执行，检查 Authorization header → verify_token → 注入 user_id。
+    6 类失败场景：无头 / 非 Bearer / 过期 / 篡改 / 黑名单 / 类型错误。
     """
     tags = ("auth", "api", case.priority) + case.extra_tags
     set_allure_metadata(
@@ -222,14 +209,22 @@ def test_me_auth_reject(base_url, api_session, auth_token, case):
         severity=case.severity,
         tags=tags,
     )
-    # TC-ME-007 需要先登出
+    # TC-ME-007 需要先登出（独立登录获取 token，避免污染共享 auth_token）
+    own_token = None
     if case.auth_format == "blacklisted":
+        login_resp = api_session.post(
+            f"{base_url}/api/ai/auth/login",
+            json={"username": "admin", "password": "admin123"},
+        )
+        own_token = login_resp.json()["access_token"]
         api_session.post(
             f"{base_url}{LOGOUT_URL}",
-            headers={"Authorization": f"Bearer {auth_token['access_token']}"},
+            headers={"Authorization": f"Bearer {own_token}"},
         )
 
     headers = _build_me_headers(case, auth_token)
+    if own_token:
+        headers = {"Authorization": f"Bearer {own_token}"}
     resp = api_session.get(f"{base_url}{ME_URL}", headers=headers)
     body = resp.json()
     assert resp.status_code == case.expected_status, (
@@ -243,7 +238,7 @@ def test_me_auth_reject(base_url, api_session, auth_token, case):
 # ═══════════════════════════════════════════════════════════════════
 
 
-@pytest.mark.xfail(reason=_XFAIL_MIDDLEWARE + " + django_db 兼容性问题")
+@pytest.mark.xfail(reason="django_db(transaction=True) + SQLite ALTER TABLE 兼容性问题")
 @allure.feature("认证模块")
 @allure.story("当前用户")
 @allure.severity(allure.severity_level.NORMAL)
@@ -258,7 +253,7 @@ def test_me_auth_reject(base_url, api_session, auth_token, case):
 @pytest.mark.auth
 @pytest.mark.django_db(transaction=True)
 def test_me_user_deleted(base_url, api_session, unique_username):
-    """用户已删除 → 404 — xfail：中间件 BUG。"""
+    """用户已删除 → 404 — xfail：django_db 兼容性。"""
     from django.contrib.auth.models import User
 
     register_resp = api_session.post(

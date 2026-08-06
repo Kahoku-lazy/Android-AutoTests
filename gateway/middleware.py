@@ -11,7 +11,9 @@ logger = logging.getLogger("gateway")
 
 # Paths that do NOT require authentication
 PUBLIC_PREFIXES = [
-    "/api/ai/auth/",
+    "/api/ai/auth/login",
+    "/api/ai/auth/register",
+    "/api/ai/auth/refresh",
     "/api/runner/step-screenshots/",  # img src cannot send Authorization header
     "/api/ai/tools/",  # AgentScope internal service-to-service
     "/admin/",

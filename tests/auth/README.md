@@ -6,14 +6,11 @@
 |------|------|:------:|------|
 | `POST /api/ai/auth/login` | `test_login.py` | 20 | ✅ 全部通过 |
 | `POST /api/ai/auth/register` | `test_register.py` | 24 | ✅ 全部通过 |
-| `POST /api/ai/auth/refresh` | `test_refresh.py` | 10 | ✅ 7 通过 / 2 xfail |
-| `POST /api/ai/auth/logout` | `test_logout.py` | 9 | ✅ 3 通过 / 5 xfail / 1 skip |
-| `GET /api/ai/auth/me` | `test_me.py` | 9 | ✅ 6 通过 / 3 xfail |
+| `POST /api/ai/auth/refresh` | `test_refresh.py` | 10 | ✅ 全部通过 |
+| `POST /api/ai/auth/logout` | `test_logout.py` | 9 | ✅ 8 通过 / 1 skip |
+| `GET /api/ai/auth/me` | `test_me.py` | 9 | ✅ 8 通过 / 1 xfail |
 
-> ⚠️ **已知问题**：`/api/ai/auth/me` 和 `/api/ai/auth/logout` 的 URL 匹配
-> 中间件公开路径前缀 `/api/ai/auth/`，导致中间件跳过鉴权，两个端点无法通过
-> HTTP 获取 `user_id`。10 条涉及鉴权的用例用 `@pytest.mark.xfail` 标记，
-> 修复 `gateway/middleware.py` 的公开路径配置后自动生效。
+> `test_me_user_deleted`（TC-ME-008）xfail：`django_db(transaction=True)` + SQLite ALTER TABLE 兼容性。
 
 ## 架构
 

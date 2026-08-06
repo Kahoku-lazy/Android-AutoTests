@@ -349,8 +349,8 @@ def test_register_success(base_url, api_session, unique_username, case):
     )
     uname = unique_username
     if case.id == "TC-REG-002":
-        # 确保用户名恰好 3 字符
-        uname = f"u{uuid.uuid4().hex[:2]}"
+        # 确保用户名恰好 3 字符，3 hex 字符 = 4096 种组合
+        uname = uuid.uuid4().hex[:3]
     payload = _resolve_payload(case.payload, unique_username=uname)
     resp = api_session.post(f"{base_url}{REGISTER_URL}", json=payload)
     body = resp.json()

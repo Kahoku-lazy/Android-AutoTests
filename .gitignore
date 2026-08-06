@@ -151,13 +151,12 @@ token.json
 /perf-stats-visible.png
 /taskdetail-*.png
 
-# ── Tests（本地维护，不入库）──
-tests/
+# ── Tests（测试代码入库，报告产物不入库）──
 
 # Test reports / browser artifacts
 .playwright-mcp/
-allure-results/
-allure-report/
+tests/allure-results/
+tests/allure-report/
 playwright-report/
 test-results/
 blob-report/
@@ -167,6 +166,6 @@ workflow-demo-*.png
 _agentscope_launcher.py
 .playwright-mcp/
 
-# ���� Vite cache ����
+# ���� Vite cache ����
 frontend/.vite/
 

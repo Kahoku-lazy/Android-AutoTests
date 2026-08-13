@@ -1,28 +1,57 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import { resolve } from 'path'
+import { fileURLToPath, URL } from 'node:url'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
+const isTest = !!process.env.VITEST
+
 export default defineConfig({
   plugins: [
     vue(),
-    // Element Plus 按需引入：AutoImport 负责 ElMessage / ElMessageBox 等 API
-    AutoImport({
-      resolvers: [ElementPlusResolver()],
-      dts: 'src/auto-imports.d.ts',
-    }),
-    // Components 负责 <el-xxx> 组件自动注册
-    Components({
-      resolvers: [ElementPlusResolver()],
-      dts: 'src/components.d.ts',
-    }),
+    // 单测用 stub 替换 el-*，避免 Element Plus 按需 CSS 拖垮 Vitest
+    ...(!isTest
+      ? [
+          AutoImport({
+            resolvers: [ElementPlusResolver()],
+            dts: 'src/auto-imports.d.ts',
+          }),
+          Components({
+            resolvers: [ElementPlusResolver()],
+            dts: 'src/components.d.ts',
+          }),
+        ]
+      : []),
   ],
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src'),
+      // ESM-safe：package.json "type":"module" 下无 __dirname
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
+  },
+  test: {
+    // Vitest UI 按 project 分栏：P0 / P1（P2 故意无用例）
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'P0',
+          include: ['tests/**/p0/**/*.{test,spec}.{js,ts}'],
+          environment: 'jsdom',
+          css: false,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'P1',
+          include: ['tests/**/p1/**/*.{test,spec}.{js,ts}'],
+          environment: 'jsdom',
+          css: false,
+        },
+      },
+    ],
   },
   server: {
     host: '0.0.0.0',

@@ -116,7 +116,7 @@ Read `composables/useDeviceActions.ts`、`DevicePoolView.logic.ts`、`@/shared/c
 ```ts
 vi.mock('@/shared/animations', () => ({ countUpFormatted: vi.fn(), staggerReveal: vi.fn(), animate: vi.fn() }))
 vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), warning: vi.fn(), error: vi.fn() } }))
-vi.mock('@/shared/auth/token-storage', () => ({ getActive: vi.fn(() => ({ username: 'u1' })), getActiveUsername: vi.fn(() => 'u1') }))
+vi.mock('@/shared/auth/token-storage', () => ({ getActive: vi.fn(() => 'u1'), getActiveUsername: vi.fn(() => 'u1') }))
 ```
 pool 用**桩对象**注入（不 mock api）：构造 `{ devices: ref([...]), scanning: ref(false), loading: ref(false), doLock: vi.fn(), doRelease: vi.fn(), ... }` 按源码签名补齐。用例：
 1. `handleLockClick：他人锁定时仅 warning 不发请求`（目标设备状态含锁且非本人，断言 ElMessage.warning 调用、pool.doLock 未调用）

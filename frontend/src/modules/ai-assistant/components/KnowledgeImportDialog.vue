@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 
-interface DocItem { id: number; name?: string; source?: string; type?: string }
+interface DocItem { id: number | string; name?: string; source?: string; type?: string; size?: number }
 
 const props = defineProps<{
   visible?: boolean
@@ -13,17 +13,17 @@ const props = defineProps<{
 const emit = defineEmits<{ import: [ids: number[]]; close: [] }>()
 
 const searchText = ref('')
-const selectedIds = ref(new Set())
+const selectedIds = ref(new Set<number | string>())
 
 const filteredDocs = computed(() => {
   const query = searchText.value.trim().toLowerCase()
-  const importedSet = new Set(props.importedDocIds)
+  const importedSet = new Set<number | string>(props.importedDocIds)
   // Only show docs that haven't been imported yet
   const available = props.allDocs.filter(d => !importedSet.has(d.id))
   if (!query) return available
   return available.filter(d =>
-    d.source.toLowerCase().includes(query) ||
-    d.id.toLowerCase().includes(query) ||
+    String(d.source || '').toLowerCase().includes(query) ||
+    String(d.id).toLowerCase().includes(query) ||
     (d.type || '').toLowerCase().includes(query)
   )
 })
@@ -51,7 +51,7 @@ function handleImport() {
     ElMessage.warning('请至少选择一个文档')
     return
   }
-  emit('import', [...selectedIds.value])
+  emit('import', [...selectedIds.value].map(Number))
   selectedIds.value = new Set()
   searchText.value = ''
 }
@@ -82,7 +82,7 @@ function formatSize(bytes) {
           v-model="searchText"
           class="import-search-input"
           placeholder="搜索文档..."
-          @input="(e) => searchText = e.target.value"
+          @input="(e) => searchText = (e.target as HTMLInputElement).value"
         />
       </div>
       <div class="import-select-row">
@@ -130,7 +130,7 @@ function formatSize(bytes) {
 .import-doc-item {
   display: flex; align-items: center; gap: 10px; padding: 10px 14px;
   border: 1.5px solid var(--ai-warm-border); border-radius: 10px;
-  cursor: pointer; transition: all .15s; background: #fff;
+  cursor: pointer; transition: all .15s; background: var(--app-bg-card);
 }
 .import-doc-item:hover { border-color: var(--ai-teal); background: var(--ai-teal-bg); }
 .import-doc-item.selected { border-color: var(--ai-teal); background: var(--ai-teal-bg); }

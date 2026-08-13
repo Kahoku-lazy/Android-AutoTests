@@ -519,7 +519,7 @@ watch(
   border-radius: 8px;
 }
 .btn.back {
-  background: #fff;
+  background: var(--app-bg-card);
   color: var(--app-green-deep);
   border-color: rgba(162,210,255,0.42);
 }

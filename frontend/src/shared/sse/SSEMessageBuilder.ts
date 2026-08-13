@@ -250,7 +250,7 @@ export class SSEMessageBuilder {
       }
       const tc = this._toolCall.get(event.tool_call_id as string)
       if (tc) tc.state = finalState
-      const pairedBlock: ContentBlock = { type: 'tool_pair', call: tc || { id: event.tool_call_id as string, name: (tr as { name: string }).name }, result: tr }
+      const pairedBlock: ContentBlock = { type: 'tool_pair', call: tc || { id: event.tool_call_id as string, name: (tr as unknown as { name: string }).name }, result: tr }
       this.blocks.push(pairedBlock)
       return { phase: 'tool_result_end', toolResult: tr, toolCall: tc }
     }
@@ -276,8 +276,8 @@ export class SSEMessageBuilder {
 
   getBlocks(): ContentBlock[] { return this.blocks }
   getReason(): string { return this.exceedMaxIters ? 'exceed_max_iters' : 'normal' }
-  getFullText(): string { return this.blocks.filter(b => b.type === 'text').map(b => (b as { text: string }).text).join('\n') }
-  getFullThinking(): string { return this.blocks.filter(b => b.type === 'thinking').map(b => (b as { thinking: string }).thinking).join('\n') }
+  getFullText(): string { return this.blocks.filter(b => b.type === 'text').map(b => (b as unknown as { text: string }).text).join('\n') }
+  getFullThinking(): string { return this.blocks.filter(b => b.type === 'thinking').map(b => (b as unknown as { thinking: string }).thinking).join('\n') }
 
   getToolFlow(): { call: ToolCallAccum; result?: ToolResultAccum }[] {
     return this.toolCalls.map(tc => {

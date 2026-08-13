@@ -6,15 +6,22 @@ Usage:
     python report_generator.py --data analysis.json --output report.html
 """
 
-import json
 import argparse
+import json
+
 from datetime import datetime
 from pathlib import Path
 
 ANIMAL_ISLAND_PALETTE = {
-    "green": "#6fba2c", "blue": "#889df0", "yellow": "#f7cd67",
-    "pink": "#f8a6b2", "teal": "#19c8b9", "purple": "#b39ef3",
-    "orange": "#f7a8c4", "brown": "#8b7355", "red": "#e85f5f",
+    "green": "#6fba2c",
+    "blue": "#889df0",
+    "yellow": "#f7cd67",
+    "pink": "#f8a6b2",
+    "teal": "#19c8b9",
+    "purple": "#b39ef3",
+    "orange": "#f7a8c4",
+    "brown": "#8b7355",
+    "red": "#e85f5f",
 }
 
 
@@ -38,11 +45,11 @@ def _build_html(data: dict, timestamp: str) -> str:
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {{
-    --green:  {ANIMAL_ISLAND_PALETTE['green']}; --blue:   {ANIMAL_ISLAND_PALETTE['blue']};
-    --yellow: {ANIMAL_ISLAND_PALETTE['yellow']}; --pink:   {ANIMAL_ISLAND_PALETTE['pink']};
-    --teal:   {ANIMAL_ISLAND_PALETTE['teal']}; --purple: {ANIMAL_ISLAND_PALETTE['purple']};
-    --orange: {ANIMAL_ISLAND_PALETTE['orange']}; --brown:  {ANIMAL_ISLAND_PALETTE['brown']};
-    --red:    {ANIMAL_ISLAND_PALETTE['red']};
+    --green:  {ANIMAL_ISLAND_PALETTE["green"]}; --blue:   {ANIMAL_ISLAND_PALETTE["blue"]};
+    --yellow: {ANIMAL_ISLAND_PALETTE["yellow"]}; --pink:   {ANIMAL_ISLAND_PALETTE["pink"]};
+    --teal:   {ANIMAL_ISLAND_PALETTE["teal"]}; --purple: {ANIMAL_ISLAND_PALETTE["purple"]};
+    --orange: {ANIMAL_ISLAND_PALETTE["orange"]}; --brown:  {ANIMAL_ISLAND_PALETTE["brown"]};
+    --red:    {ANIMAL_ISLAND_PALETTE["red"]};
     --bg:     #fdf8f0; --card:   #fffaf5;
     --text:   #794f27; --text2:  #9f927d;
     --radius-lg: 24px; --radius-md: 16px; --radius-sm: 10px;
@@ -189,8 +196,8 @@ def _build_html(data: dict, timestamp: str) -> str:
 <div class="container">
 <div class="header">
   <div class="header-icon">🏗️</div>
-  <h1>{data.get('title', 'Architecture Review Report')}</h1>
-  <div class="meta">{timestamp} &middot; {data.get('subtitle', '')}</div>
+  <h1>{data.get("title", "Architecture Review Report")}</h1>
+  <div class="meta">{timestamp} &middot; {data.get("subtitle", "")}</div>
 </div>
 
 {_build_kpi_section(kpi)}
@@ -268,15 +275,23 @@ def _build_layers_section(layers: list) -> str:
 
         cards = ""
         if modules:
-            cards = '<div class="module-grid cols-auto">' + "\n".join(
-                f'<div class="module-card" style="border-color:{m.get("color","#e8dcc8")}">'
-                f'<div class="module-card-icon">{m.get("icon","")}</div>'
-                f'<div class="module-card-name">{m.get("name","")}</div>'
-                f'<div class="module-card-desc">{m.get("desc","")}</div>'
-                + (f'<div class="module-card-endpoints">{m.get("endpoints","")}</div>' if m.get("endpoints") else "")
+            cards = (
+                '<div class="module-grid cols-auto">'
+                + "\n".join(
+                    f'<div class="module-card" style="border-color:{m.get("color", "#e8dcc8")}">'
+                    f'<div class="module-card-icon">{m.get("icon", "")}</div>'
+                    f'<div class="module-card-name">{m.get("name", "")}</div>'
+                    f'<div class="module-card-desc">{m.get("desc", "")}</div>'
+                    + (
+                        f'<div class="module-card-endpoints">{m.get("endpoints", "")}</div>'
+                        if m.get("endpoints")
+                        else ""
+                    )
+                    + "</div>"
+                    for m in modules
+                )
                 + "</div>"
-                for m in modules
-            ) + "</div>"
+            )
 
         subs_html = ""
         if subs:
@@ -285,11 +300,15 @@ def _build_layers_section(layers: list) -> str:
                 + (
                     f'<div class="module-grid cols-auto">'
                     + "\n".join(
-                        f'<div class="module-card" style="border-color:{m.get("color","#e8dcc8")}">'
-                        f'<div class="module-card-icon">{m.get("icon","")}</div>'
-                        f'<div class="module-card-name">{m.get("name","")}</div>'
-                        f'<div class="module-card-desc">{m.get("desc","")}</div>'
-                        + (f'<div class="module-card-endpoints">{m.get("endpoints","")}</div>' if m.get("endpoints") else "")
+                        f'<div class="module-card" style="border-color:{m.get("color", "#e8dcc8")}">'
+                        f'<div class="module-card-icon">{m.get("icon", "")}</div>'
+                        f'<div class="module-card-name">{m.get("name", "")}</div>'
+                        f'<div class="module-card-desc">{m.get("desc", "")}</div>'
+                        + (
+                            f'<div class="module-card-endpoints">{m.get("endpoints", "")}</div>'
+                            if m.get("endpoints")
+                            else ""
+                        )
                         + "</div>"
                         for m in sg.get("modules", [])
                     )
@@ -301,34 +320,38 @@ def _build_layers_section(layers: list) -> str:
 
         comm_html = ""
         if comm_lines:
-            comm_html = '<div class="comm-line-group">' + "\n".join(
-                f'<div class="comm-line"><span class="comm-dot comm-{cl.get("type","rest")}"></span>{cl.get("text","")}</div>'
-                for cl in comm_lines
-            ) + "</div>"
+            comm_html = (
+                '<div class="comm-line-group">'
+                + "\n".join(
+                    f'<div class="comm-line"><span class="comm-dot comm-{cl.get("type", "rest")}"></span>{cl.get("text", "")}</div>'
+                    for cl in comm_lines
+                )
+                + "</div>"
+            )
 
         sections.append(
             f'<div class="arch-layer">'
             f'<div class="arch-layer-title"><span class="layer-badge {badge_class}">{level}</span>{name}</div>'
-            f'{cards}{subs_html}{comm_html}'
-            f'</div>'
+            f"{cards}{subs_html}{comm_html}"
+            f"</div>"
         )
-    return f'<h2>🍃 理想架构图</h2>{"".join(sections)}'
+    return f"<h2>🍃 理想架构图</h2>{''.join(sections)}"
 
 
 def _build_gaps_section(gaps: list) -> str:
     if not gaps:
         return ""
     rows = "\n".join(
-        f'<tr>'
-        f'<td>{g.get("id","")}</td>'
-        f'<td>{g.get("layer","")}</td>'
-        f'<td><strong>{g.get("gap","")}</strong></td>'
-        f'<td>{g.get("ideal","")}</td>'
-        f'<td>{g.get("actual","")}</td>'
-        f'<td class="{"fail" if g.get("severity")=="high" else "warn" if g.get("severity")=="medium" else ""}">'
-        f'{g.get("severity_label","")}</td>'
-        f'<td style="font-size:12px">{g.get("fix","")}</td>'
-        f'</tr>'
+        f"<tr>"
+        f"<td>{g.get('id', '')}</td>"
+        f"<td>{g.get('layer', '')}</td>"
+        f"<td><strong>{g.get('gap', '')}</strong></td>"
+        f"<td>{g.get('ideal', '')}</td>"
+        f"<td>{g.get('actual', '')}</td>"
+        f'<td class="{"fail" if g.get("severity") == "high" else "warn" if g.get("severity") == "medium" else ""}">'
+        f"{g.get('severity_label', '')}</td>"
+        f'<td style="font-size:12px">{g.get("fix", "")}</td>'
+        f"</tr>"
         for g in gaps
     )
     return f"""<h2>🔍 差距对照表</h2>
@@ -343,11 +366,11 @@ def _build_tasks_section(tasks: list) -> str:
         return ""
     items = "\n".join(
         f'<li class="focus-item">'
-        f'<span class="focus-prio prio-{t.get("priority","p2").lower()}">{t.get("priority","P2")}</span>'
+        f'<span class="focus-prio prio-{t.get("priority", "p2").lower()}">{t.get("priority", "P2")}</span>'
         f'<div class="focus-body">'
-        f'<div class="focus-title">{t.get("title","")}</div>'
-        f'<div class="focus-desc">{t.get("desc","")}</div>'
-        f'</div></li>'
+        f'<div class="focus-title">{t.get("title", "")}</div>'
+        f'<div class="focus-desc">{t.get("desc", "")}</div>'
+        f"</div></li>"
         for t in tasks
     )
     return f'<h2>🛠️ 实施路线</h2><ul class="focus-list">{items}</ul>'
@@ -357,7 +380,7 @@ def _build_verification(checks: list) -> str:
     if not checks:
         return ""
     rows = "\n".join(
-        f'<tr><td><code>{c.get("cmd","")}</code></td><td>{c.get("expect","")}</td></tr>'
+        f"<tr><td><code>{c.get('cmd', '')}</code></td><td>{c.get('expect', '')}</td></tr>"
         for c in checks
     )
     return f"""<h2>✅ 验证清单</h2>
@@ -389,13 +412,55 @@ EXAMPLE_DATA = {
             "name": "前端展示层 — Vue 3 SPA :5173",
             "level": "L1",
             "modules": [
-                {"icon": "📊", "name": "dashboard", "desc": "跨模块统计", "endpoints": "GET ×4", "color": "#f7cd67"},
-                {"icon": "📱", "name": "device-pool", "desc": "设备连接/锁定", "endpoints": "12 端点", "color": "#6fba2c"},
-                {"icon": "🔍", "name": "element-locator", "desc": "UI Dump/元素库", "endpoints": "11 端点", "color": "#b39ef3"},
-                {"icon": "📋", "name": "case-manager", "desc": "用例定义/编辑", "endpoints": "5 端点", "color": "#19c8b9"},
-                {"icon": "▶️", "name": "test-runner", "desc": "执行引擎", "endpoints": "6 端点", "color": "#f8a6b2"},
-                {"icon": "📄", "name": "report-generator", "desc": "报告生成", "endpoints": "3 端点", "color": "#8b7355"},
-                {"icon": "🤖", "name": "ai-assistant", "desc": "Agent/对话", "endpoints": "26 端点", "color": "#f7a8c4"},
+                {
+                    "icon": "📊",
+                    "name": "dashboard",
+                    "desc": "跨模块统计",
+                    "endpoints": "GET ×4",
+                    "color": "#f7cd67",
+                },
+                {
+                    "icon": "📱",
+                    "name": "device-pool",
+                    "desc": "设备连接/锁定",
+                    "endpoints": "12 端点",
+                    "color": "#6fba2c",
+                },
+                {
+                    "icon": "🔍",
+                    "name": "element-locator",
+                    "desc": "UI Dump/元素库",
+                    "endpoints": "11 端点",
+                    "color": "#b39ef3",
+                },
+                {
+                    "icon": "📋",
+                    "name": "case-manager",
+                    "desc": "用例定义/编辑",
+                    "endpoints": "5 端点",
+                    "color": "#19c8b9",
+                },
+                {
+                    "icon": "▶️",
+                    "name": "test-runner",
+                    "desc": "执行引擎",
+                    "endpoints": "6 端点",
+                    "color": "#f8a6b2",
+                },
+                {
+                    "icon": "📄",
+                    "name": "report-generator",
+                    "desc": "报告生成",
+                    "endpoints": "3 端点",
+                    "color": "#8b7355",
+                },
+                {
+                    "icon": "🤖",
+                    "name": "ai-assistant",
+                    "desc": "Agent/对话",
+                    "endpoints": "26 端点",
+                    "color": "#f7a8c4",
+                },
             ],
             "communication": [
                 {"type": "rest", "text": "HTTP REST + JWT Bearer"},
@@ -419,23 +484,58 @@ EXAMPLE_DATA = {
                 {
                     "label": "底层（零依赖）",
                     "modules": [
-                        {"icon": "📱", "name": "device_pool", "desc": "设备注册/锁定/排队", "color": "#6fba2c"},
-                        {"icon": "📄", "name": "report_generator", "desc": "报告生成/模板", "color": "#8b7355"},
-                        {"icon": "📊", "name": "dashboard 🆕", "desc": "跨模块聚合统计", "color": "#f7cd67"},
+                        {
+                            "icon": "📱",
+                            "name": "device_pool",
+                            "desc": "设备注册/锁定/排队",
+                            "color": "#6fba2c",
+                        },
+                        {
+                            "icon": "📄",
+                            "name": "report_generator",
+                            "desc": "报告生成/模板",
+                            "color": "#8b7355",
+                        },
+                        {
+                            "icon": "📊",
+                            "name": "dashboard 🆕",
+                            "desc": "跨模块聚合统计",
+                            "color": "#f7cd67",
+                        },
                     ],
                 },
                 {
                     "label": "中层（单向依赖底层）",
                     "modules": [
-                        {"icon": "🔍", "name": "element_locator", "desc": "→ device_pool (FK)", "color": "#b39ef3"},
-                        {"icon": "📋", "name": "case_manager", "desc": "→ element_locator (FK)", "color": "#19c8b9"},
-                        {"icon": "▶️", "name": "test_runner", "desc": "→ DP+CM+RG", "color": "#f8a6b2"},
+                        {
+                            "icon": "🔍",
+                            "name": "element_locator",
+                            "desc": "→ device_pool (FK)",
+                            "color": "#b39ef3",
+                        },
+                        {
+                            "icon": "📋",
+                            "name": "case_manager",
+                            "desc": "→ element_locator (FK)",
+                            "color": "#19c8b9",
+                        },
+                        {
+                            "icon": "▶️",
+                            "name": "test_runner",
+                            "desc": "→ DP+CM+RG",
+                            "color": "#f8a6b2",
+                        },
                     ],
                 },
                 {
                     "label": "聚合层",
                     "modules": [
-                        {"icon": "🤖", "name": "ai_assistant", "desc": "→ 5 Apps", "color": "#f7a8c4"},
+                        {
+                            "icon": "🤖",
+                            "name": "ai_assistant",
+                            "desc": "→ 5 Apps",
+                            "color": "#f7a8c4",
+                        },
                     ],
                 },
             ],
@@ -447,41 +547,56 @@ EXAMPLE_DATA = {
     ],
     "gaps": [
         {
-            "id": 1, "layer": "L3", "gap": "Dashboard 职责错位",
-            "ideal": "独立的 apps/dashboard/", "actual": "散落在 ai_assistant/dashboard_views.py",
-            "severity": "high", "severity_label": "🔴 高",
+            "id": 1,
+            "layer": "L3",
+            "gap": "Dashboard 职责错位",
+            "ideal": "独立的 apps/dashboard/",
+            "actual": "散落在 ai_assistant/dashboard_views.py",
+            "severity": "high",
+            "severity_label": "🔴 高",
             "fix": "新建 apps/dashboard/ → 迁移 views + urls",
         },
         {
-            "id": 2, "layer": "L2", "gap": "WebSocket 无认证",
-            "ideal": "connect() 验证 JWT", "actual": "直接 accept()",
-            "severity": "high", "severity_label": "🔴 高",
+            "id": 2,
+            "layer": "L2",
+            "gap": "WebSocket 无认证",
+            "ideal": "connect() 验证 JWT",
+            "actual": "直接 accept()",
+            "severity": "high",
+            "severity_label": "🔴 高",
             "fix": "consumers.py 添加 token 验证",
         },
         {
-            "id": 3, "layer": "L1", "gap": "element-manager 重叠",
-            "ideal": "element-locator 子视图", "actual": "独立前端模块",
-            "severity": "medium", "severity_label": "🟠 中",
+            "id": 3,
+            "layer": "L1",
+            "gap": "element-manager 重叠",
+            "ideal": "element-locator 子视图",
+            "actual": "独立前端模块",
+            "severity": "medium",
+            "severity_label": "🟠 中",
             "fix": "合并到 element-locator",
         },
     ],
     "tasks": [
         {
-            "priority": "P0", "title": "提取 Dashboard 为独立 App",
+            "priority": "P0",
+            "title": "提取 Dashboard 为独立 App",
             "desc": "新建 apps/dashboard/，从 ai_assistant 迁移 4 个统计视图，更新 config/urls.py",
         },
         {
-            "priority": "P0", "title": "添加 WebSocket JWT 认证",
+            "priority": "P0",
+            "title": "添加 WebSocket JWT 认证",
             "desc": "在 ScreenshotConsumer 和 TestRunConsumer 的 connect() 中验证 token",
         },
         {
-            "priority": "P1", "title": "合并 element-manager → element-locator",
+            "priority": "P1",
+            "title": "合并 element-manager → element-locator",
             "desc": "前端合并路由，将 element-manager/index.vue 迁移为 ElementManager.vue 子组件",
         },
     ],
     "verification": [
-        {"cmd": "grep -r \"dashboard_views\" config/", "expect": "指向 apps.dashboard"},
-        {"cmd": "grep -r \"element-manager\" frontend/src/router.js", "expect": "无匹配"},
+        {"cmd": 'grep -r "dashboard_views" config/', "expect": "指向 apps.dashboard"},
+        {"cmd": 'grep -r "element-manager" frontend/src/router.js', "expect": "无匹配"},
         {"cmd": "python manage.py check", "expect": "0 issues"},
         {"cmd": "npx vite build --mode development", "expect": "✓ built"},
         {"cmd": "python run.py start", "expect": "4 服务 ONLINE"},
@@ -492,8 +607,12 @@ EXAMPLE_DATA = {
 def main():
     parser = argparse.ArgumentParser(description="Architecture Review Report Generator")
     parser.add_argument("--data", type=Path, help="JSON data file (uses example if omitted)")
-    parser.add_argument("--output", type=Path, default=Path("architecture_review.html"),
-                        help="Output HTML file path")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("architecture_review.html"),
+        help="Output HTML file path",
+    )
     args = parser.parse_args()
 
     if args.data:

@@ -10,6 +10,7 @@ import logging
 from django.db.models import Q
 from django.http import JsonResponse
 
+from .api_lock import delete_case
 from .api_ui import _parse_datetime
 from .models import CaseDirectory
 from .views_helpers import resolve_username
@@ -195,6 +196,8 @@ def handle_definition_detail(request, case_id, Model, serialize_fn):
             return JsonResponse({"status": False, "message": "not found"}, status=404)
 
         current_user = resolve_username(getattr(request, "user_id", None))
+        if row.visibility == "hidden" and row.created_by != current_user:
+            return JsonResponse({"status": False, "message": "not found"}, status=404)
         if row.locked and row.created_by != current_user:
             return JsonResponse({"status": False, "message": "用例已被所有者锁定"}, status=403)
         if row.visibility == "restricted":
@@ -202,7 +205,7 @@ def handle_definition_detail(request, case_id, Model, serialize_fn):
             if current_user not in permitted:
                 return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
 
-        Model.objects.filter(id=case_id).delete()
+        delete_case(case_id)
         return JsonResponse({"status": True})
 
     return JsonResponse({"status": False, "message": "method not allowed"}, status=405)

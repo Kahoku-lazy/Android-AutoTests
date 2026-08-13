@@ -10,7 +10,7 @@ type WorkflowStore = ReturnType<typeof useWorkflowStore>
 
 export interface PageFlowNodeData {
   label: string
-  nodeType: 'PageNode' | 'PopupNode' | 'StartNode' | 'EndNode'
+  nodeType: 'PageNode' | 'PopupNode' | 'StartNode' | 'EndNode' | 'ApiNode'
   color: string
   inputs: PortDefinition[]
   outputs: PortDefinition[]
@@ -181,7 +181,7 @@ export function explainConnection(
 }
 
 export function isValidPortConnection(store: WorkflowStore, connection: Connection): boolean {
-  return explainConnection(store, connection).status
+  return explainConnection(store, connection).ok
 }
 
 export function applyVueFlowConnect(store: WorkflowStore, connection: Connection): boolean {

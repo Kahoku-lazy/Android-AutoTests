@@ -63,14 +63,14 @@ class DevicePool:
         """
         return self.u2d
 
-    def switch_to(self, serial: str, connection_type: str = None):
+    def switch_to(self, serial: str, connection_type: str | None = None):
         self.current_serial = serial
         if connection_type:
             DevicePool._connection_types[serial] = connection_type
         elif serial not in DevicePool._connection_types:
             DevicePool._connection_types[serial] = "WIFI" if ":" in serial else "USB"
 
-    def get_connection_type(self, serial: str = None) -> str:
+    def get_connection_type(self, serial: str | None = None) -> str:
         """Return the connection type for a device (USB or WIFI)."""
         s = serial or self.current_serial
         return DevicePool._connection_types.get(s, "WIFI" if ":" in s else "USB")
@@ -264,7 +264,9 @@ class DevicePool:
         x1, y1, x2, y2 = dirs.get(direction, (x, y, x, y - distance))
         self.ad.swipe((x1, y1), (x2, y2), duration=0.5)
 
-    def action_input(self, text: str, x: int = None, y: int = None, clear_first: bool = True):
+    def action_input(
+        self, text: str, x: int | None = None, y: int | None = None, clear_first: bool = True
+    ):
         """Input text using Yosemite IME (Airtest built-in), with ADB shell fallback."""
         if x is not None and y is not None:
             self.ad.touch((x, y))

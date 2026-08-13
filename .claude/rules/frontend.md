@@ -5,6 +5,12 @@
 2. 严禁在组件内直接使用 fetch 或 axios
 3. 严禁在代码中直接使用魔法字符串（Magic Strings）或硬编码的正则
 4. Vue 组件文件名必须使用 PascalCase（大驼峰），且后缀必须为 .vue
+5. API/认证类 composable 不做表单校验；校验与 ElMessage 警告放在调用方（handleXxx）
+6. 公开 TypeScript 签名与实现参数必须同步；禁止实现多参、导出类型少参
+7. 新 SVG 图标在 `shared/icons/index.ts` 用 `makeIcon` 导出；禁止无必要的独立 `IconXxx.vue`
+8. 抽 shared 组件等第二个真实消费方；单处使用不提前抽象
+
+> 完整取舍与反例 → `dev_docs/项目笔记/前端claude笔记.md` → 编码行为规范（默认取舍）
 
 ## 代码拆分规范
 

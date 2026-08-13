@@ -9,17 +9,27 @@ from shared.auth.jwt_auth import verify_token
 
 logger = logging.getLogger("gateway")
 
-# Paths that do NOT require authentication
-PUBLIC_PREFIXES = [
+RETIRED_AUTH_PATHS = {
     "/api/ai/auth/login",
     "/api/ai/auth/register",
     "/api/ai/auth/refresh",
+    "/api/ai/auth/logout",
+    "/api/ai/auth/me",
+}
+
+# Paths that do NOT require authentication
+PUBLIC_PREFIXES = [
+    "/api/auth/login",
+    "/api/auth/register",
+    "/api/auth/refresh",
     "/api/runner/step-screenshots/",  # img src cannot send Authorization header
     "/api/ai/tools/",  # AgentScope internal service-to-service
     "/admin/",
     "/static/",
     "/media/",
     "/api/docs",
+    "/api/schema/",  # drf-spectacular OpenAPI schema
+    "/api/swagger/",  # drf-spectacular Swagger UI
 ]
 
 
@@ -48,7 +58,7 @@ class JWTAuthenticationMiddleware:
 
         path = request.path
 
-        if _is_public(path):
+        if path in RETIRED_AUTH_PATHS or _is_public(path):
             return self.get_response(request)
 
         if not path.startswith("/api/"):
@@ -57,7 +67,7 @@ class JWTAuthenticationMiddleware:
         auth_header = request.META.get("HTTP_AUTHORIZATION", "")
         if not auth_header.startswith("Bearer "):
             return JsonResponse(
-                {"status": False, "message": "Authorization header required"},
+                {"status": False, "message": "请先登录"},
                 status=401,
             )
 
@@ -68,7 +78,7 @@ class JWTAuthenticationMiddleware:
         except Exception as e:
             logger.warning(f"JWT verify failed for {path}: {e}")
             return JsonResponse(
-                {"status": False, "message": "Invalid or expired token"},
+                {"status": False, "message": "登录已过期或令牌无效"},
                 status=401,
             )
 

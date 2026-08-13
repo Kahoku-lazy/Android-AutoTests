@@ -81,8 +81,12 @@ function navigate() {
       'stats-card--' + colorKey,
       { 'is-clickable': !!path },
     ]"
+    :role="path ? 'button' : undefined"
+    :tabindex="path ? 0 : undefined"
     @mouseenter="onCardEnter"
     @click="navigate"
+    @keydown.enter.prevent="navigate"
+    @keydown.space.prevent="navigate"
   >
     <SkeletonCard v-if="loading" />
 
@@ -123,11 +127,11 @@ function navigate() {
    Paper × Polaroid — 拍立得统计卡片
    ═══════════════════════════════════════════ */
 .stats-card {
-  background: #fff;
+  background: var(--app-bg-card);
   border-radius: 6px 10px 6px 10px;
   padding: 8px 8px 36px 8px;
   border: 2.5px solid var(--ink);
-  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.05);
+  box-shadow: var(--app-shadow-md);
   transition: box-shadow 0.25s, transform 0.25s;
   position: relative;
   overflow: visible;
@@ -146,14 +150,14 @@ function navigate() {
   transform: translateX(-50%);
   width: 9px;
   height: 9px;
-  background: radial-gradient(circle, #e8e0d5 30%, #c0b8a8 60%, #a09080 100%);
+  background: radial-gradient(circle, var(--app-pushpin-light) 30%, var(--app-pushpin-mid) 60%, var(--app-pushpin-dark) 100%);
   border-radius: 50%;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
   z-index: 2;
 }
 
 .stats-card:hover {
-  box-shadow: 2px 4px 0 rgba(0, 0, 0, 0.08);
+  box-shadow: var(--app-shadow-lg);
   transform: rotate(0deg) scale(1.03);
   z-index: 10;
 }
@@ -177,9 +181,9 @@ function navigate() {
 .stats-card--blue .stats-card__icon  { background: var(--app-status-purple-bg); }
 .stats-card--yellow .stats-card__icon{ background: var(--app-status-warning-bg); }
 .stats-card--pink .stats-card__icon  { background: var(--app-status-danger-bg); }
-.stats-card--teal .stats-card__icon  { background: #D4F5F0; }
-.stats-card--purple .stats-card__icon{ background: #F0E8FF; }
-.stats-card--orange .stats-card__icon{ background: #FFE8D0; }
+.stats-card--teal .stats-card__icon  { background: var(--app-icon-teal-bg); }
+.stats-card--purple .stats-card__icon{ background: var(--app-icon-purple-bg); }
+.stats-card--orange .stats-card__icon{ background: var(--app-icon-orange-bg); }
 
 .stats-card__icon :deep(svg) {
   width: 22px;
@@ -257,7 +261,7 @@ function navigate() {
   transition: all 0.12s;
   font-family: inherit;
   line-height: 1.2;
-  background: #fff;
+  background: var(--app-bg-card);
 }
 .stats-card__enter:hover {
   background: var(--app-highlight);

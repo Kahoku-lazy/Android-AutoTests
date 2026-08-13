@@ -140,6 +140,29 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         "read_only": True,
     },
     {
+        "name": "save_api_test_case",
+        "category": "用例管理",
+        "icon": "🌐",
+        "summary": "创建或更新 API 测试用例（支持单接口 meta/request/cases 和多接口 case_info/steps/test_data 两种格式，自动探测）",
+        "module": "cases",
+        "action": "save_api_config",
+        "params": [
+            {
+                "name": "case_id",
+                "type": "string",
+                "required": True,
+                "desc": "用例ID（格式 API-YYYYMMDD-HHMMSS-XXXX）",
+            },
+            {
+                "name": "config_json",
+                "type": "object",
+                "required": True,
+                "desc": "完整 JSON 配置：单接口格式 meta/request/cases 或多接口格式 case_info/steps/test_data/validation",
+            },
+        ],
+        "read_only": False,
+    },
+    {
         "name": "debug_case",
         "category": "用例管理",
         "icon": "📋",
@@ -324,24 +347,60 @@ def _cases_save_definition(
 ):
     if case_id is PROTECTED:
         raise ValueError("缺少必填参数: case_id")
-    from apps.case_manager.api import save_definition
 
-    return save_definition(
-        case_id=case_id,
-        title=title,
-        case_type=case_type or "ui_automation",
-        steps=steps or [],
-        **{k: v for k, v in kwargs.items() if k not in ("user_id",)},
-    )
+    ct = case_type or "ui_automation"
+    filtered_kwargs = {k: v for k, v in kwargs.items() if k not in ("user_id",)}
+
+    if ct == "api_testing":
+        raise ValueError(
+            "API 测试用例请使用 save_api_test_case 工具，"
+            "传入完整的 config_json（含 case_info/steps/test_data/validation 四个模块）"
+        )
+    elif ct == "storage":
+        from apps.case_manager.api import save_storage_definition
+
+        return save_storage_definition(
+            case_id=case_id, title=title, case_type=ct, steps=steps or [], **filtered_kwargs
+        )
+    elif ct == "web_automation":
+        from apps.case_manager.api import save_web_definition
+
+        return save_web_definition(
+            case_id=case_id, title=title, case_type=ct, steps=steps or [], **filtered_kwargs
+        )
+    else:
+        from apps.case_manager.api import save_definition
+
+        return save_definition(
+            case_id=case_id, title=title, case_type=ct, steps=steps or [], **filtered_kwargs
+        )
+
+
+@_register("cases", "save_api_config")
+def _cases_save_api_config(
+    user_id: str,
+    case_id: str = PROTECTED,
+    config_json: dict = PROTECTED,
+    **kwargs,
+):
+    """AI writes complete config_json to an API test case."""
+    if case_id is PROTECTED:
+        raise ValueError("缺少必填参数: case_id")
+    if config_json is PROTECTED:
+        raise ValueError("缺少必填参数: config_json")
+    from apps.case_manager.api_api import save_api_definition
+
+    return save_api_definition(case_id=case_id, config_json=config_json, **kwargs)
 
 
 @_register("cases", "get_definition")
 def _cases_get_definition(user_id: str, case_id: str = PROTECTED, **kwargs):
     if case_id is PROTECTED:
         raise ValueError("缺少必填参数: case_id")
-    from apps.case_manager.api import get_definition
+    from apps.case_manager.api_lock import find_case_across_types
 
-    return get_definition(case_id)
+    obj, _ = find_case_across_types(case_id)
+    return obj
 
 
 @_register("cases", "get_case_detail")

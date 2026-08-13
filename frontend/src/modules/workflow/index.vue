@@ -628,8 +628,8 @@ watch(
 .brand-mark--lucide :deep(svg) {
   width: 20px;
   height: 20px;
-  color: #fff;
-  stroke: #fff;
+  color: var(--app-bg-card);
+  stroke: var(--app-bg-card);
 }
 .brand-title {
   margin: 0;
@@ -641,7 +641,7 @@ watch(
   margin: 2px 0 0;
   font-size: var(--app-size-sm);
   font-weight: 700;
-  color: #999;
+  color: var(--app-ink-muted);
 }
 .header-actions {
   margin-left: auto;
@@ -654,7 +654,7 @@ watch(
   padding: 7px 14px;
   border: 1.5px solid var(--ink);
   border-radius: 999px;
-  background: #fff;
+  background: var(--app-bg-card);
   font-size: var(--app-size-sm);
   font-weight: 800;
   font-family: inherit;
@@ -673,7 +673,7 @@ watch(
 }
 .hdr-btn.primary {
   background: linear-gradient(135deg, var(--app-green-deep), var(--app-blue));
-  color: #fff;
+  color: var(--app-bg-card);
   border-color: var(--app-green-deep);
 }
 .hdr-btn:hover { filter: brightness(1.03); }
@@ -714,7 +714,7 @@ watch(
 .wf-modal {
   width: min(400px, 100%);
   padding: 22px 22px 18px;
-  background: #fff;
+  background: var(--app-bg-card);
   border: 1px solid var(--ink);
   border-radius: 18px;
   box-shadow: var(--app-shadow-lg);
@@ -731,7 +731,7 @@ watch(
   margin: 6px 0 16px;
   font-size: var(--app-size-sm);
   font-weight: 600;
-  color: #999;
+  color: var(--app-ink-muted);
 }
 .wf-modal-label {
   display: block;
@@ -764,16 +764,16 @@ watch(
   padding: 8px 16px;
   border: 1.5px solid var(--ink);
   border-radius: 999px;
-  background: #fff;
+  background: var(--app-bg-card);
   font-size: var(--app-size-sm);
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
-  color: #999;
+  color: var(--app-ink-muted);
 }
 .wf-modal .hdr-btn.primary {
   background: linear-gradient(135deg, var(--app-green-deep), var(--app-blue));
-  color: #fff;
+  color: var(--app-bg-card);
   border-color: var(--app-green-deep);
 }
 .wf-modal .hdr-btn:hover { filter: brightness(1.03); }

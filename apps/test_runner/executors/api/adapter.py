@@ -6,6 +6,7 @@ Provides a compatible interface for the test runner to use instead of DeviceAdap
 import json
 import time
 
+from collections.abc import Callable
 from urllib.parse import urlencode
 
 import requests as _requests
@@ -21,7 +22,12 @@ class ApiAdapter:
     - log(), stopped(), get_log_buffer(), clear_log_buffer()
     """
 
-    def __init__(self, base_url: str = "", logger: callable = None, should_stop: callable = None):
+    def __init__(
+        self,
+        base_url: str = "",
+        logger: Callable[[str], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
+    ):
         self.base_url = base_url
         self._emit_log = logger or (lambda msg: None)
         self._should_stop = should_stop or (lambda: False)
@@ -106,7 +112,7 @@ class ApiAdapter:
             request_body=dict(step.body) if step.body else {},
             expected_status=step.expected_status,
             expected_response=step.expected_text or "",
-            assertions=list(step.assertions) if step.assertions else [],
+            assertions=list(step.assertions) if isinstance(step.assertions, (list, tuple)) else [],
             truncate_response=0,
         )
 

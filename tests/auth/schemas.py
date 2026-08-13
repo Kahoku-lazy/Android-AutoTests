@@ -21,73 +21,106 @@ AUTH_SUCCESS_SCHEMA = {
     "type": "object",
     "properties": {
         "status": {"const": True},
-        "access_token": {"type": "string", "minLength": 10},
-        "refresh_token": {"type": "string", "minLength": 10},
-        "token_type": {"const": "bearer"},
-        "user": {
+        "data": {
             "type": "object",
             "properties": {
-                "id": {"type": "integer"},
-                "username": {"type": "string"},
+                "access_token": {"type": "string", "minLength": 10},
+                "refresh_token": {"type": "string", "minLength": 10},
+                "token_type": {"const": "bearer"},
+                "user": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "username": {"type": "string"},
+                    },
+                    "required": ["id", "username"],
+                    "additionalProperties": False,
+                },
             },
-            "required": ["id", "username"],
+            "required": ["access_token", "refresh_token", "token_type", "user"],
+            "additionalProperties": False,
         },
     },
-    "required": ["status", "access_token", "refresh_token", "token_type", "user"],
+    "required": ["status", "data"],
+    "additionalProperties": False,
 }
 
 REFRESH_SUCCESS_SCHEMA = {
     "type": "object",
     "properties": {
         "status": {"const": True},
-        "access_token": {"type": "string", "minLength": 10},
-        "token_type": {"const": "bearer"},
+        "data": {
+            "type": "object",
+            "properties": {
+                "access_token": {"type": "string", "minLength": 10},
+                "token_type": {"const": "bearer"},
+            },
+            "required": ["access_token", "token_type"],
+            "additionalProperties": False,
+        },
     },
-    "required": ["status", "access_token", "token_type"],
+    "required": ["status", "data"],
+    "additionalProperties": False,
 }
 
 LOGOUT_SUCCESS_SCHEMA = {
     "type": "object",
     "properties": {
         "status": {"const": True},
+        "data": {"type": "object"},
     },
-    "required": ["status"],
+    "required": ["status", "data"],
+    "additionalProperties": False,
 }
 
 ME_USER_SCHEMA = {
     "type": "object",
     "properties": {
         "status": {"const": True},
-        "user": {
+        "data": {
             "type": "object",
             "properties": {
-                "id": {"type": "integer"},
-                "username": {"type": "string"},
+                "user": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "username": {"type": "string"},
+                    },
+                    "required": ["id", "username"],
+                },
             },
-            "required": ["id", "username"],
+            "required": ["user"],
         },
     },
-    "required": ["status", "user"],
+    "required": ["status", "data"],
+    "additionalProperties": False,
 }
 
 REGISTER_SUCCESS_SCHEMA = {
     "type": "object",
     "properties": {
         "status": {"const": True},
-        "access_token": {"type": "string", "minLength": 10},
-        "refresh_token": {"type": "string", "minLength": 10},
-        "token_type": {"const": "bearer"},
-        "user": {
+        "data": {
             "type": "object",
             "properties": {
-                "id": {"type": "integer"},
-                "username": {"type": "string"},
-                "email": {"type": "string"},
+                "access_token": {"type": "string", "minLength": 10},
+                "refresh_token": {"type": "string", "minLength": 10},
+                "token_type": {"const": "bearer"},
+                "user": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "username": {"type": "string"},
+                        "email": {"type": "string"},
+                    },
+                    "required": ["id", "username", "email"],
+                },
             },
-            "required": ["id", "username", "email"],
+            "required": ["access_token", "refresh_token", "token_type", "user"],
         },
     },
-    "required": ["status", "access_token", "refresh_token", "token_type", "user"],
+    "required": ["status", "data"],
+    "additionalProperties": False,
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -101,5 +134,16 @@ ERROR_RESPONSE_SCHEMA = {
         "message": {"type": "string", "minLength": 1},
     },
     "required": ["status", "message"],
+    "additionalProperties": False,
+}
+
+ERROR_503_RETRY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "status": {"const": False},
+        "message": {"type": "string", "minLength": 1},
+        "retry": {"const": True},
+    },
+    "required": ["status", "message", "retry"],
     "additionalProperties": False,
 }

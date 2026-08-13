@@ -1,9 +1,9 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 
 const props = defineProps({
-  columns: { type: Array, required: true },
-  dataSource: { type: Array, required: true },
+  columns: { type: Array as () => any[], required: true },
+  dataSource: { type: Array as () => any[], required: true },
   rowKey: { type: String, default: 'id' },
   striped: { type: Boolean, default: false },
   border: { type: Boolean, default: false },
@@ -12,6 +12,12 @@ const props = defineProps({
   /** fixed 时弹性列会吃掉剩余宽度，适合需要铺满容器的列表 */
   tableLayout: { type: String, default: 'auto' },
 })
+
+/** 单元格插槽类型 — record 透传行数据，消费方自行窄化 */
+defineSlots<{
+  empty: () => any
+  [key: `cell-${string}`]: (props: { record: any; row: any; value: any; column: any; index: number }) => any
+}>()
 
 /** Element Plus 列宽只认 px 数字/字符串，百分比会导致列塌缩挤成一团 */
 function normalizeSize(value) {
@@ -36,7 +42,7 @@ const elColumns = computed(() =>
       align: col.align,
       fixed: col.fixed,
       sortable: col.sortable,
-      showOverflowTooltip: col.showOverflowTooltip ?? false,
+      showOverflowTooltip: col.showOverflowTooltip ?? true,
     }
   }),
 )
@@ -51,7 +57,7 @@ const elColumns = computed(() =>
     v-loading="loading"
     class="ac-table"
     style="width: 100%"
-    :table-layout="tableLayout"
+    :table-layout="tableLayout as any"
     :empty-text="emptyText"
   >
     <el-table-column

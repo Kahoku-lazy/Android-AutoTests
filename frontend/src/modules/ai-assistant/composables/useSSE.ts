@@ -4,7 +4,7 @@ import client from '@/shared/api-client'
 import { ElMessage } from 'element-plus'
 import { streamChat } from '../api/sse'
 import { logError, logWarn } from '../helpers/logger'
-import type { ChatMessage, Conversation, ToolCall, SSERound } from '@/shared/types/ai'
+import type { ChatMessage, Conversation, ToolCall, ToolState, SSERound } from '@/shared/types/ai'
 import {
   WORKSPACE_TOOL_NAMES,
   PLATFORM_TOOL_NAMES,
@@ -82,13 +82,15 @@ export interface UseSSEOptions {
   loadConversations: () => Promise<void>
   updateTaskCardProgress: (tr: ToolCallResult) => void
   backgroundStreamConvId: Ref<number | null>
-  appendPlaceholder: (displayText: string) => void
+  appendPlaceholder: (displayText: string, blocks?: object[]) => void
 }
+
+type SseBuilderValue = { getBlocks: () => object[]; getFullText: () => string; getFullThinking: () => string; getReason: () => string; getTokenUsage: () => { total: number; input: number }; modelName: string }
 
 export interface UseSSEReturn {
   streamMode: Ref<string | null>
   abortController: Ref<AbortController | null>
-  sseBuilder: Ref<{ getBlocks: () => object[]; getFullText: () => string; getFullThinking: () => string; getReason: () => string; getTokenUsage: () => { total: number; input: number }; modelName: string } | null>
+  sseBuilder: Ref<SseBuilderValue | null>
   modelStatus: Ref<string>
   sending: Ref<boolean>
   pendingConfirm: Ref<PendingConfirm | null>
@@ -96,8 +98,12 @@ export interface UseSSEReturn {
   degradedMode: Ref<boolean>
   aiDisconnected: Ref<boolean>
   checkHealth: () => Promise<boolean>
-  trySSEStream: (msgText: string) => Promise<void>
-  sendStreamMessage: (msgText: string, displayText: string) => Promise<void>
+  trySSEStream: (msgText: string, images?: { media_type: string; data: string }[]) => Promise<void>
+  sendStreamMessage: (
+    msgText: string,
+    displayText: string,
+    opts?: { images?: { media_type: string; data: string }[]; blocks?: object[] },
+  ) => Promise<void>
   stopStream: () => void
   detachStream: () => Promise<void>
   resolveConfirm: (toolCallId: string, approved: boolean, reason?: string) => Promise<void>
@@ -132,7 +138,7 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
 
   const streamMode = ref<string | null>(null)
   const abortController = ref<AbortController | null>(null)
-  const sseBuilder = ref<UseSSEReturn['sseBuilder']>(null)
+  const sseBuilder = ref<SseBuilderValue | null>(null)
   const modelStatus = ref('idle')
   const sending = ref(false)
   const pendingConfirm = ref<PendingConfirm | null>(null)
@@ -143,6 +149,7 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
   let statusResetTimer: ReturnType<typeof setTimeout> | null = null
 
   let _detached = false
+  let _streamGen = 0  // per-stream generation counter — stale callbacks check _streamGen !== myGen
   let _streamConvId: number | null = null
 
   function clearReplyWatchdog() {
@@ -157,7 +164,7 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
     aiDisconnected.value = disconnected
     const finalContent = disconnected ? AI_DISCONNECT_MSG : content
     if (assistIdx.value < messages.value.length) {
-      const prev = messages.value[assistIdx.value] || {}
+      const prev = (messages.value[assistIdx.value] || {}) as ChatMessage
       messages.value[assistIdx.value] = {
         ...prev,
         role: 'assistant',
@@ -213,7 +220,15 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
     if (!sending.value) return
     clearReplyWatchdog()
     await _savePartialToBackend('detached')
+    // Abort the SSE fetch so the old stream stops immediately and its onDone
+    // won't fire later to corrupt a new stream's state.
+    if (abortController.value) {
+      try { abortController.value.abort() } catch (_) { /* ignore */ }
+    }
     _detached = true
+    // Bump generation so all in-flight callbacks from the detached stream
+    // see _streamGen !== myGen and bail out without touching shared state.
+    ++_streamGen
   }
 
   function finishSending() {
@@ -256,7 +271,7 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
         degradedMode.value = false
       } else if (data.status) {
         degradedMode.value = true
-        ElMessage.warning('AI 模型服务暂不可用，请检查 Agent 配置', { duration: 5000 })
+        ElMessage({ type: 'warning', message: 'AI 模型服务暂不可用，请检查 Agent 配置', duration: 5000 })
       }
     } catch (e) {
       degradedMode.value = true
@@ -265,9 +280,11 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
     return degradedMode.value
   }
 
-  async function trySSEStream(msgText: string) {
+  async function trySSEStream(msgText: string, images?: { media_type: string; data: string }[], displayText?: string) {
     _streamConvId = activeConv.value
     _detached = false
+    const myGen = ++_streamGen  // capture current generation — stale callbacks bail out when _streamGen changes
+    function _isStale() { return _detached || _streamGen !== myGen }
     backgroundStreamConvId.value = _streamConvId
 
     // Agent runs in-process — no separate AgentScope session needed.
@@ -296,17 +313,17 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
       _thinkRaf = null
       const r = _curRound()
       r.thinking = r._pending || r.thinking
-      if (assistIdx.value < messages.value.length) {
+      if (!_isStale() && assistIdx.value < messages.value.length) {
         messages.value[assistIdx.value].rounds = _rounds as SSERound[]
-        if (!_detached) scrollBottom()
+        scrollBottom()
       }
     }
     function _flushText() {
       _textRaf = null
-      if (assistIdx.value < messages.value.length) {
+      if (!_isStale() && assistIdx.value < messages.value.length) {
         const dc = isDisconnectContent(fullContent)
         messages.value[assistIdx.value].content = dc ? AI_DISCONNECT_MSG : fullContent
-        if (!_detached) scrollBottom()
+        scrollBottom()
       }
     }
 
@@ -319,11 +336,12 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
         }
       },
       onThinkingStart: () => {
+        if (_isStale()) return
         _curRound()._pending = ''
         _curRound().thinking = ''
         if (assistIdx.value < messages.value.length) {
           messages.value[assistIdx.value].content = fullContent
-          if (!_detached) scrollBottom()
+          scrollBottom()
         }
       },
       onThinkingDelta: (delta: string, full: string) => {
@@ -347,6 +365,7 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
         _flushText()
       },
       onToolCallStart: (evt: SSEEventGeneric) => {
+        if (_isStale()) return
         currentToolArgsJson = ''
         const toolName = (evt.name as string) || ''
         toolCalls.value.push({
@@ -358,13 +377,14 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
         })
         if (assistIdx.value < messages.value.length) {
           messages.value[assistIdx.value].toolFlow = [...toolCalls.value]
-          if (!_detached) scrollBottom()
+          scrollBottom()
         }
       },
       onToolCallDelta: (evt: SSEEventGeneric) => {
         currentToolArgsJson = evt.argsJson != null ? evt.argsJson as string : currentToolArgsJson + (evt.delta || '')
       },
       onToolCallEnd: (evt: SSEEventGeneric) => {
+        if (_isStale()) return
         const tc = evt.toolCall
         if (tc) {
           const idx = toolCalls.value.findIndex(t => t.id === tc.id)
@@ -383,18 +403,20 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
         if (assistIdx.value < messages.value.length) {
           messages.value[assistIdx.value].toolFlow = [...toolCalls.value]
           messages.value[assistIdx.value].rounds = _rounds as SSERound[]
-          if (!_detached) scrollBottom()
+          scrollBottom()
         }
       },
       onToolResultStart: (evt: SSEEventGeneric) => {
+        if (_isStale()) return
         const idx = toolCalls.value.findIndex(t => t.id === evt.toolCallId)
         if (idx >= 0) toolCalls.value[idx].state = 'running'
         if (assistIdx.value < messages.value.length) {
           messages.value[assistIdx.value].toolFlow = [...toolCalls.value]
-          if (!_detached) scrollBottom()
+          scrollBottom()
         }
       },
       onToolResultDelta: (evt: SSEEventGeneric) => {
+        if (_isStale()) return
         const idx = toolCalls.value.findIndex(t => t.id === evt.toolCallId)
         if (idx >= 0) {
           const tc = toolCalls.value[idx] as ToolCall & { partialOutput?: string | null }
@@ -402,26 +424,27 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
         }
         if (assistIdx.value < messages.value.length) {
           messages.value[assistIdx.value].toolFlow = [...toolCalls.value]
-          if (!_detached) scrollBottom()
+          scrollBottom()
         }
       },
       onToolResultEnd: (evt: SSEEventGeneric) => {
         const tr = evt.toolResult
-        if (tr) {
+        if (tr && !_isStale()) {
           const idx = toolCalls.value.findIndex(t => t.id === tr.id)
           if (idx >= 0) {
-            toolCalls.value[idx].state = tr.state || 'success'
+            toolCalls.value[idx].state = (tr.state || 'success') as ToolState
             toolCalls.value[idx].output = tr.output
             ;(toolCalls.value[idx] as ToolCall & { partialOutput?: string | null }).partialOutput = null
           }
           updateTaskCardProgress(tr)
         }
-        if (assistIdx.value < messages.value.length) {
+        if (!_isStale() && assistIdx.value < messages.value.length) {
           messages.value[assistIdx.value].toolFlow = [...toolCalls.value]
-          if (!_detached) scrollBottom()
+          scrollBottom()
         }
       },
       onModelCallStart: (evt: SSEEventGeneric) => {
+        if (_isStale()) return
         _rounds.push({ thinking: '', thinkingDone: false, tools: [], _pending: '' })
         if (assistIdx.value < messages.value.length) {
           messages.value[assistIdx.value].modelName = evt.modelName
@@ -429,33 +452,37 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
         }
       },
       onModelCallEnd: (evt: SSEEventGeneric) => {
+        if (_isStale()) return
         if (assistIdx.value < messages.value.length) {
           messages.value[assistIdx.value].tokens = evt.outputTokens || 0
           ;(messages.value[assistIdx.value] as ChatMessage & { inputTokens?: number }).inputTokens = evt.inputTokens || 0
         }
       },
       onHint: (evt: SSEEventGeneric) => {
+        if (_isStale()) return
         let hintData: unknown = evt.hint
         if (typeof hintData === 'string') { try { hintData = JSON.parse(hintData) } catch { /* empty */ } }
-        if ((hintData as TaskCardHint)?.type === 'task_card' && (hintData as TaskCardHint)?.run_id) {
-          const td = hintData as TaskCardHint
+        if ((hintData as unknown as TaskCardHint)?.type === 'task_card' && (hintData as unknown as TaskCardHint)?.run_id) {
+          const td = hintData as unknown as TaskCardHint
           const existing = taskCards.value[td.run_id] || {}
-          taskCards.value[td.run_id] = { ...existing, ...(td as object), updatedAt: Date.now() } as TaskCardHint
+          taskCards.value[td.run_id] = { ...existing, ...(td as object), updatedAt: Date.now() } as unknown as TaskCardHint
           if (assistIdx.value < messages.value.length) {
             messages.value[assistIdx.value].hint = hintData as ChatMessage['hint']
           }
-          if (!_detached) scrollBottom()
+          scrollBottom()
         } else if (assistIdx.value < messages.value.length) {
           messages.value[assistIdx.value].hint = hintData as ChatMessage['hint']
-          if (!_detached) scrollBottom()
+          scrollBottom()
         }
       },
       onRequireConfirm: (evt: SSEEventGeneric) => {
+        if (_isStale()) return
         modelStatus.value = 'idle'
         pendingConfirm.value = evt as unknown as PendingConfirm
         pendingConfirmMsgIdx.value = assistIdx.value
       },
       onExceedMaxIters: () => {
+        if (_isStale()) return
         if (assistIdx.value < messages.value.length) {
           const allThinking = builder.getFullThinking()
           if (_rounds.length > 0) {
@@ -469,13 +496,26 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
           messages.value[assistIdx.value].content =
             (messages.value[assistIdx.value].content || '') +
             '\n\n⚠️ **[智能体已达最大推理次数]** 响应可能被截断，建议简化问题或分步提问。'
-          if (!_detached) scrollBottom()
+          scrollBottom()
         }
       },
       onDone: async () => {
         if (streamDone) return
         streamDone = true
         clearReplyWatchdog()
+
+        if (_detached) {
+          // Stream was detached — backend already saved the reply, just clean up.
+          finishSending()
+          return
+        }
+
+        // Stale stream — a newer stream has started since this one began.
+        // Don't call finishSending() — it would corrupt the new stream's state
+        // (resets sending, abortController, _streamConvId, etc.).
+        if (_streamGen !== myGen) return
+
+        const backendMsgId = (builder as unknown as { _backendMsgId?: number })._backendMsgId
         const finalContent = builder.getFullText() || fullContent
         const blocks = builder.getBlocks()
         const reason = builder.getReason()
@@ -487,7 +527,8 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
           model_name: builder.modelName || '',
           flow: 'sse',
         })
-        if (ok) {
+        if (ok && !backendMsgId) {
+          // Only save via frontend if backend didn't already persist (no _backend_msg_id).
           try {
             const saveConvId = _streamConvId || activeConv.value
             await client.post(`/ai/conversations/${saveConvId}/save-message`, {
@@ -496,7 +537,7 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
               input_tokens: builder.getTokenUsage().input || 0,
               model_name: builder.modelName || '', flow: 'sse',
             })
-            if (!_detached) { loadConversations(); await nextTick(); renderMermaidBlocks() }
+            loadConversations(); await nextTick(); renderMermaidBlocks()
           } catch (e) { console.error('Failed to save streamed message:', e) }
         }
         finishSending()
@@ -506,36 +547,47 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
         streamDone = true
         clearReplyWatchdog()
         console.warn('SSE stream error:', err)
+
+        // Stale stream — don't corrupt new stream's state
+        if (_isStale()) return
+
         modelStatus.value = 'idle'
         settleAssistant('')
         finishSending()
       },
-    })
+    }, images, displayText)
 
     abortController.value = controller
-    sseBuilder.value = builder as unknown as UseSSEReturn['sseBuilder']
+    sseBuilder.value = builder as unknown as SseBuilderValue
 
     try {
       const convItem = conversations.value.find(c => c.id === activeConv.value)
       if (convItem && convItem.title === '新对话') {
-        const { data } = await client.post(`/ai/conversations/${activeConv.value}/rename`, { title: msgText.slice(0, 30) })
-        if ((data as { ok?: boolean; title?: string }).status) convItem.title = (data as { title: string }).title
+        const renameTitle = (msgText || (images?.length ? '[图片]' : '')).slice(0, 30)
+        if (renameTitle) {
+          const { data } = await client.post(`/ai/conversations/${activeConv.value}/rename`, { title: renameTitle })
+          if ((data as { status?: boolean; title?: string }).status) convItem.title = (data as { title: string }).title
+        }
       }
     } catch (e) { console.error(e) }
   }
 
-  async function sendStreamMessage(msgText: string, displayText: string) {
+  async function sendStreamMessage(
+    msgText: string,
+    displayText: string,
+    opts?: { images?: { media_type: string; data: string }[]; blocks?: object[] },
+  ) {
     if (!activeConv.value) return
     sending.value = true
     aiDisconnected.value = false
     toolCalls.value = []
     modelStatus.value = 'calling_model'
-    appendPlaceholder(displayText)
+    appendPlaceholder(displayText, opts?.blocks)
     scrollBottom()
     armReplyWatchdog()
 
     try {
-      await trySSEStream(msgText)
+      await trySSEStream(msgText, opts?.images, displayText)
     } catch (e) {
       console.warn('SSE setup failed:', e)
       modelStatus.value = 'idle'
@@ -548,22 +600,20 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
     clearReplyWatchdog()
     clearStatusReset()
     if (abortController.value) {
-      abortController.value.abort()
-      if (assistIdx.value < messages.value.length && messages.value[assistIdx.value].flow === 'sse') {
-        const partial = messages.value[assistIdx.value].content
-        const content = String(partial || '').trim() ? partial : '（用户主动停止）'
-        if (assistIdx.value < messages.value.length) {
-          messages.value[assistIdx.value].content = content
-          messages.value[assistIdx.value].reason = 'stopped'
-        }
-        client.post(`/ai/conversations/${_streamConvId || activeConv.value}/save-message`, {
-          role: 'assistant', content, tokens: 0, reason: 'stopped',
-          blocks: sseBuilder.value ? sseBuilder.value.getBlocks() : [], flow: 'sse',
-        }).catch(e => console.error('Failed to save partial stream:', e))
-      }
-      finishSending()
+      try { abortController.value.abort() } catch (e) { console.error('SSE abort failed', e) }
+    }
+    if (assistIdx.value < messages.value.length && messages.value[assistIdx.value]?.role === 'assistant') {
+      const partial = messages.value[assistIdx.value].content
+      const content = String(partial || '').trim() ? partial : '（用户主动停止）'
+      messages.value[assistIdx.value].content = content
+      messages.value[assistIdx.value].reason = 'stopped'
+      client.post(`/ai/conversations/${_streamConvId || activeConv.value}/save-message`, {
+        role: 'assistant', content, tokens: 0, reason: 'stopped',
+        blocks: sseBuilder.value ? sseBuilder.value.getBlocks() : [], flow: 'sse',
+      }).catch(e => console.error('Failed to save partial stream:', e))
     }
     pendingConfirm.value = null
+    finishSending()
   }
 
   async function resolveConfirm(toolCallId: string, approved: boolean, reason = '') {

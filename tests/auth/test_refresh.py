@@ -1,4 +1,4 @@
-"""刷新 Token 接口测试 — POST /api/ai/auth/refresh（数据驱动 + JSON Schema）。
+"""刷新 Token 接口测试 — POST /api/auth/refresh（数据驱动 + JSON Schema）。
 
 10 条用例按断言 Shape 分为 1 个参数化组 + 4 个独立函数：
   - test_refresh_reject[5]       — 401 + status=False
@@ -23,7 +23,13 @@ import pytest
 
 from django.conf import settings
 
-from tests.auth.conftest import REFRESH_URL, set_allure_metadata
+from tests.auth.conftest import (
+    LOGIN_URL,
+    LOGOUT_URL,
+    ME_URL,
+    REFRESH_URL,
+    set_allure_metadata,
+)
 from tests.auth.schemas import ERROR_RESPONSE_SCHEMA, REFRESH_SUCCESS_SCHEMA
 
 # ═══════════════════════════════════════════════════════════════════
@@ -77,11 +83,11 @@ REFRESH_REJECT_CASES: list[RefreshRejectCase] = [
     RefreshRejectCase(
         id="TC-REF-007",
         title="使用 access_token 代替 refresh_token",
-        description='请求体：{"refresh_token":"<有效access_token>"}\n期望：401，message="Invalid token type: expected refresh"\n测试点：payload.get("type") != "refresh"',
+        description='请求体：{"refresh_token":"<有效access_token>"}\n期望：401，message="令牌类型错误，需要刷新令牌"\n测试点：payload.get("type") != "refresh"',
         severity="critical",
         priority="P0",
         payload=None,  # 运行时注入 auth_token.access_token
-        expected_message="Invalid token type: expected refresh",
+        expected_message="令牌类型错误，需要刷新令牌",
     ),
     RefreshRejectCase(
         id="TC-REF-008",
@@ -150,7 +156,9 @@ def test_refresh_success(base_url, api_session, auth_token):
     body = resp.json()
     assert resp.status_code == 200, f"期望 200，实际 {resp.status_code}: {body}"
     jsonschema.validate(instance=body, schema=REFRESH_SUCCESS_SCHEMA)
-    assert body["access_token"] != auth_token["access_token"], "新 access_token 应与旧 token 不同"
+    assert body["data"]["access_token"] != auth_token["access_token"], (
+        "新 access_token 应与旧 token 不同"
+    )
 
 
 @allure.feature("认证模块")
@@ -175,15 +183,15 @@ def test_refresh_replaces_token(base_url, api_session, auth_token):
     )
     body = resp.json()
     assert resp.status_code == 200, f"刷新失败: {body}"
-    new_access = body["access_token"]
+    new_access = body["data"]["access_token"]
     assert new_access != old_access
 
     me_old = api_session.get(
-        f"{base_url}/api/ai/auth/me",
+        f"{base_url}{ME_URL}",
         headers={"Authorization": f"Bearer {old_access}"},
     )
     me_new = api_session.get(
-        f"{base_url}/api/ai/auth/me",
+        f"{base_url}{ME_URL}",
         headers={"Authorization": f"Bearer {new_access}"},
     )
     assert me_new.status_code == 200, f"新 token 调 /me 失败: {me_new.json()}"
@@ -254,12 +262,12 @@ def test_refresh_post_logout(base_url, api_session, auth_token):
     """登出后 refresh_token 应被拒绝 — xfail：logout 不黑名单 refresh_token。"""
     # 独立登录获取 token，避免污染共享 auth_token
     login_resp = api_session.post(
-        f"{base_url}/api/ai/auth/login",
+        f"{base_url}{LOGIN_URL}",
         json={"username": "admin", "password": "admin123"},
     )
-    own_tokens = login_resp.json()
+    own_tokens = login_resp.json()["data"]
     logout_resp = api_session.post(
-        f"{base_url}/api/ai/auth/logout",
+        f"{base_url}{LOGOUT_URL}",
         headers={"Authorization": f"Bearer {own_tokens['access_token']}"},
     )
     assert logout_resp.status_code == 200, f"登出失败: {logout_resp.json()}"

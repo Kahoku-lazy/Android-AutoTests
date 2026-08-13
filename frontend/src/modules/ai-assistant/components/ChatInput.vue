@@ -1,32 +1,65 @@
 <script setup lang="ts">
-import { IconSend, IconPaperclip } from '@/shared/icons/index'
+import { ref } from 'vue'
+import { IconSend, IconPaperclip, IconImage } from '@/shared/icons/index'
 
-defineProps<{
+export type PendingImage = {
+  filename: string
+  size: number
+  media_type: string
+  data_uri: string
+}
+
+const props = defineProps<{
   modelValue?: string
   sending?: boolean
-  uploadedFile?: { name: string; size: number } | null
+  uploadedFile?: { filename?: string; name?: string; size: number } | null
+  uploadedImage?: PendingImage | null
   uploading?: boolean
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
   send: []
+  stop: []
   keydown: [e: KeyboardEvent]
-  upload: []
+  upload: [e: Event]
+  'upload-image': [e: Event]
   'remove-file': []
+  'remove-image': []
 }>()
 
-function onInput(val: string) {
-  emit('update:modelValue', val)
+const fileInputRef = ref<HTMLInputElement | null>(null)
+const imageInputRef = ref<HTMLInputElement | null>(null)
+
+function onInput(val: string | number) {
+  emit('update:modelValue', String(val))
+}
+
+function onPrimaryClick() {
+  if (props.sending) emit('stop')
+  else emit('send')
 }
 </script>
 
 <template>
-  <div v-if="uploadedFile" class="file-preview">
+  <div v-if="uploadedImage" class="file-preview image-preview">
+    <el-image
+      class="image-preview-thumb"
+      :src="uploadedImage.data_uri"
+      :preview-src-list="[uploadedImage.data_uri]"
+      fit="cover"
+    />
+    <span class="file-preview-name">{{ uploadedImage.filename }}</span>
+    <span class="file-preview-size">
+      ({{ (uploadedImage.size / 1024).toFixed(1) }} KB)
+    </span>
+    <button class="file-preview-remove" @click="emit('remove-image')">✕</button>
+  </div>
+  <div v-else-if="uploadedFile" class="file-preview">
     <span class="file-preview-icon">
       <IconPaperclip :size="14" />
     </span>
-    <span class="file-preview-name">{{ uploadedFile.filename }}</span>
+    <span class="file-preview-name">{{ uploadedFile.filename || uploadedFile.name }}</span>
     <span class="file-preview-size">
       ({{ (uploadedFile.size / 1024).toFixed(1) }} KB)
     </span>
@@ -41,33 +74,56 @@ function onInput(val: string) {
       style="display: none"
       @change="emit('upload', $event)"
     />
+    <input
+      ref="imageInputRef"
+      type="file"
+      accept="image/png,image/jpeg,image/webp,image/gif"
+      style="display: none"
+      @change="emit('upload-image', $event)"
+    />
     <button
       class="upload-btn"
       :disabled="sending || uploading"
       title="上传文件 (txt/log/md/docx/xlsx/pdf 等)"
-      @click="$refs.fileInputRef?.click()"
+      @click="fileInputRef?.click()"
     >
       <IconPaperclip :size="18" />
+    </button>
+    <button
+      class="upload-btn"
+      :disabled="sending || uploading"
+      title="上传图片 (png/jpg/webp/gif，最大 5MB)"
+      @click="imageInputRef?.click()"
+    >
+      <IconImage :size="18" />
     </button>
     <div class="input-box">
       <el-input
         :model-value="modelValue"
         type="textarea"
-        :rows="2"
+        :rows="1"
+        :autosize="{ minRows: 1, maxRows: 6 }"
         placeholder="输入消息，Enter 发送，Shift+Enter 换行..."
         :disabled="sending"
         resize="none"
-        @update:model-value="onInput"
-        @keydown="emit('keydown', $event)"
+        @update:model-value="(v: string | number) => onInput(String(v))"
+        @keydown="emit('keydown', $event as KeyboardEvent)"
       />
     </div>
     <button
-      class="send-btn"
-      :disabled="(!modelValue.trim() && !uploadedFile) || sending"
-      @click="emit('send')"
+      :class="['send-btn', { 'is-stop': sending }]"
+      :disabled="!sending && !modelValue?.trim() && !uploadedFile && !uploadedImage"
+      :title="sending ? '停止生成' : '发送'"
+      @click="onPrimaryClick"
     >
-      <IconSend :size="16" />
-      <span>{{ sending ? "发送中" : "发送" }}</span>
+      <template v-if="sending">
+        <span class="stop-square" aria-hidden="true" />
+        <span>停止</span>
+      </template>
+      <template v-else>
+        <IconSend :size="16" />
+        <span>发送</span>
+      </template>
     </button>
   </div>
 </template>
@@ -78,10 +134,17 @@ function onInput(val: string) {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: #fff;
+  background: var(--app-bg-card);
   border-top: 1px solid var(--ink);
   font-size: var(--app-size-sm);
-  
+}
+.image-preview-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--ink);
+  flex-shrink: 0;
+  overflow: hidden;
 }
 .file-preview-icon {
   display: inline-flex;
@@ -96,13 +159,13 @@ function onInput(val: string) {
   white-space: nowrap;
 }
 .file-preview-size {
-  color: #999;
+  color: var(--app-ink-muted);
   font-size: var(--app-size-sm);
 }
 .file-preview-remove {
   background: none;
   border: none;
-  color: #999;
+  color: var(--app-ink-muted);
   cursor: pointer;
   font-size: var(--app-size-sm);
   padding: 4px 8px;
@@ -117,18 +180,17 @@ function onInput(val: string) {
   align-items: flex-end;
   gap: 10px;
   padding: 10px 16px 12px;
-  background: #fff;
+  background: var(--app-bg-card);
   border-top: 1px solid var(--ink);
   flex-shrink: 0;
-  
 }
 .chat-input :deep(.el-textarea__inner) {
   border-radius: var(--app-radius-sm) !important;
   border: 1.5px solid var(--ink) !important;
   padding: 8px 12px !important;
   font-size: var(--app-size-sm) !important;
-  line-height: 1.45 !important;
-  min-height: 44px !important;
+  line-height: 1.35 !important;
+  min-height: 40px !important;
   background: var(--app-bg-input) !important;
   box-shadow: none !important;
   font-family: inherit !important;
@@ -143,8 +205,8 @@ function onInput(val: string) {
   height: 40px;
   border-radius: var(--app-radius-sm);
   border: 1.5px solid var(--ink);
-  background: #fff;
-  color: #999;
+  background: var(--app-bg-card);
+  color: var(--app-ink-muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -178,7 +240,7 @@ function onInput(val: string) {
     var(--el-color-primary),
     var(--el-color-primary-dark-2)
   );
-  color: #fff;
+  color: var(--app-bg-card);
   font-size: var(--app-size-sm);
   font-weight: 700;
   font-family: inherit;
@@ -196,5 +258,19 @@ function onInput(val: string) {
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+.send-btn.is-stop {
+  background: linear-gradient(135deg, #e85f5f, #c43f3f);
+  box-shadow: 0 2px 8px rgba(196, 63, 63, 0.25);
+}
+.send-btn.is-stop:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+.stop-square {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--app-bg-card);
+  flex-shrink: 0;
 }
 </style>

@@ -14,7 +14,7 @@ from pathlib import Path
 _log = logging.getLogger("test_runner.runner")
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 from models.test_models import (
     TestCaseDef,
@@ -141,8 +141,8 @@ class _RunState:
     log_lines: list = field(default_factory=list)
 
 
-# Global registry of active runs
-_active_runs: dict[str, _RunState] = {}
+# Global registry of active runs — holds _RunState or _RemoteRunState (duck-typed)
+_active_runs: dict[str, Any] = {}
 
 # Device busy tracking — one device can only run one task at a time
 _device_busy: set[str] = set()
@@ -170,7 +170,7 @@ class TestRunner:
         self,
         device_conn: DeviceConnection,
         package_name: str = "",
-        callback: TestRunnerCallback = None,
+        callback: TestRunnerCallback | None = None,
     ):
         self.device_conn = device_conn
         self.package_name = package_name
@@ -181,7 +181,7 @@ class TestRunner:
         return DeviceAdapter(
             self.device_conn,
             package_name=self.package_name,
-            logger=lambda msg, l=loop: self._sync_log(state, msg, l),
+            logger=lambda msg: self._sync_log(state, msg, loop),
             should_stop=lambda: not state.is_running,
         )
 
@@ -343,6 +343,7 @@ class TestRunner:
 
             return cb
 
+        assert state.adapter is not None
         state.adapter._step_callback = _make_step_cb(iteration)
         state.adapter._step_started_callback = _make_step_started_cb(iteration)
 
@@ -369,6 +370,7 @@ class TestRunner:
             (result, executor, fatal_device)
             - fatal_device=True: device unrecoverable, stop entire task
         """
+        assert state.adapter is not None
         if not case.steps_data:
             state.adapter.log(f'Case "{case.title}" has no steps, pass')
             return "pass", executor, False
@@ -382,6 +384,7 @@ class TestRunner:
 
             try:
                 if not check_device_alive(self.device_conn):
+                    assert state.adapter is not None
                     state.adapter.log(
                         f"⚠️ Device unresponsive, attempting reconnect ({attempt}/{U2_CASE_RETRY_MAX})..."
                     )
@@ -393,6 +396,7 @@ class TestRunner:
                         error_msg="Device reconnect failed",
                     )
                     executor = await self._recreate_adapter_executor(state, loop)
+                    assert state.adapter is not None
                     self._wire_step_callbacks(state, case, iteration, loop)
 
                 result = await _safe_run_in_executor(
@@ -407,6 +411,7 @@ class TestRunner:
                 if not is_device_crash(e):
                     raise
                 last_error = str(e)
+                assert state.adapter is not None
                 state.adapter.log(f"⚠️ Device crash ({attempt}/{U2_CASE_RETRY_MAX}): {last_error}")
                 if attempt >= U2_CASE_RETRY_MAX:
                     break
@@ -419,9 +424,12 @@ class TestRunner:
                         error_msg="Device reconnect failed",
                     )
                     executor = await self._recreate_adapter_executor(state, loop)
+                    assert state.adapter is not None
                 except Exception as reconnect_err:
+                    assert state.adapter is not None
                     state.adapter.log(f"  Reconnect failed: {reconnect_err}")
 
+        assert state.adapter is not None
         if not check_device_alive(self.device_conn):
             state.adapter.log(
                 f"💥 Device unrecoverable after {U2_CASE_RETRY_MAX} retries, stopping task"
@@ -477,6 +485,7 @@ class TestRunner:
             if not state.is_running:
                 break
 
+            assert state.adapter is not None
             state.adapter.clear_log_buffer()
             state.adapter.clear_perf_results()
             start = time.time()
@@ -492,6 +501,7 @@ class TestRunner:
                 loop,
             )
 
+            assert state.adapter is not None
             if fatal_u2:
                 state.is_running = False
                 fail_count += 1

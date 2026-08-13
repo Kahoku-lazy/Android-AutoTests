@@ -34,7 +34,7 @@ with sync_playwright() as p:
         try:
             text = btn.inner_text().strip() if btn.is_visible() else "[hidden]"
             print(f"  [{i}] {text[:80]}")
-        except:
+        except Exception:
             print(f"  [{i}] [error reading]")
 
     # Discover links
@@ -46,7 +46,7 @@ with sync_playwright() as p:
             href = link.get_attribute("href")
             if text:
                 print(f"  - {text[:60]} -> {href}")
-        except:
+        except Exception:
             pass
 
     # Discover inputs
@@ -62,7 +62,7 @@ with sync_playwright() as p:
             )
             itype = inp.get_attribute("type") or "text"
             print(f"  - {name} ({itype})")
-        except:
+        except Exception:
             pass
 
     # Discover navigation items (sidebar)
@@ -75,7 +75,7 @@ with sync_playwright() as p:
             text = item.inner_text().strip()
             if text:
                 print(f"  - {text[:80]}")
-        except:
+        except Exception:
             pass
 
     # Discover headings
@@ -86,7 +86,7 @@ with sync_playwright() as p:
             text = h.inner_text().strip()
             if text:
                 print(f"  - {text[:80]}")
-        except:
+        except Exception:
             pass
 
     # Check page content for login form or main content

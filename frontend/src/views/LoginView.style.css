@@ -4,12 +4,12 @@
 .login-page {
   width: 100%;
   min-height: 100vh;
-  overflow: hidden;
+  /* overflow 仅放装饰层，避免裁切表单主操作区 */
   background:
     radial-gradient(circle at 16% 10%, var(--app-sky-cloud, rgba(255,255,255,0.82)), transparent 28%),
-    radial-gradient(circle at 84% 18%, rgba(162,210,255,0.5), transparent 32%),
-    radial-gradient(circle at 78% 90%, rgba(63,158,216,0.42), transparent 36%),
-    radial-gradient(circle at 14% 88%, rgba(111,185,141,0.42), transparent 34%),
+    radial-gradient(circle at 84% 18%, var(--app-glow-sky), transparent 32%),
+    radial-gradient(circle at 78% 90%, var(--app-glow-ocean), transparent 36%),
+    radial-gradient(circle at 14% 88%, var(--app-glow-forest), transparent 34%),
     linear-gradient(135deg, var(--app-sky, #dff5ff) 0%, var(--app-blue-light, #bde0fe) 38%, var(--app-ocean-soft, #a7d8ee) 68%, var(--app-forest-soft, #d6f2da) 100%);
   background-size: 180% 180%;
   animation: gradientBG 15s ease infinite;
@@ -25,22 +25,28 @@
   100% { background-position: 0% 50%; }
 }
 
-/* ── 背景光斑 ── */
+/* ── 背景光斑（独立 overflow，裁剪负坐标 blur） ── */
 .login-page__bg {
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  overflow: hidden;
 }
 
 .login-page__bg::before,
-.login-page__bg::after {
-  content: '';
+.login-page__bg::after,
+.login-page__glow {
   position: absolute;
   border-radius: 50%;
   filter: blur(60px);
   opacity: 0.75;
   z-index: 0;
+}
+
+.login-page__bg::before,
+.login-page__bg::after {
+  content: '';
 }
 
 .login-page__bg::before {
@@ -59,19 +65,14 @@
   background: var(--app-ocean, #3f9ed8);
 }
 
-.login-page::before {
-  content: '';
-  position: absolute;
+.login-page__glow--forest {
   left: 10%;
   bottom: -110px;
   width: 360px;
   height: 300px;
-  border-radius: 50%;
   background: var(--app-forest, #6fb98d);
   filter: blur(80px);
   opacity: 0.48;
-  z-index: 0;
-  pointer-events: none;
 }
 
 .login-page > .hero,
@@ -142,7 +143,7 @@
   line-height: 1.7;
   margin: 0 auto;
   max-width: 520px;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+  text-shadow: var(--app-text-shadow-light);
 }
 
 .hero__desc-line {
@@ -180,7 +181,7 @@
   text-align: center;
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
-  text-shadow: 0 1px 0 rgba(255,255,255,0.45);
+  text-shadow: var(--app-text-shadow-light);
   opacity: 0.95;
 }
 
@@ -212,10 +213,10 @@
   .hero-title { font-size: var(--app-size-lg); }
   .hero__desc { font-size: var(--app-size-xs); }
   .hero__version {
-    font-size: 10px;
+    font-size: var(--app-size-xs);
     padding: 2px 8px;
     margin-top: 4px;
   }
   .hero__animal { height: 160px; }
-  .login-footer { font-size: 10px; padding: 12px 16px; }
+  .login-footer { font-size: var(--app-size-xs); padding: 12px 16px; }
 }

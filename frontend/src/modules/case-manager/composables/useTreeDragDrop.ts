@@ -2,7 +2,7 @@
  * useTreeDragDrop — 目录树长按拖拽 + el-tree drop 处理器
  * Extracted from DirectoryTree.vue
  */
-import { ref } from "vue";
+import { ref, onUnmounted } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { formatApiError } from "@/shared/api-client";
 import { batchMoveItems } from "../api";
@@ -12,26 +12,32 @@ export function useTreeDragDrop(emit) {
   const longPressTimer = ref(null);
   const dragSourceNode = ref(null);
 
+  function clearLongPress() {
+    if (longPressTimer.value) {
+      clearTimeout(longPressTimer.value);
+      longPressTimer.value = null;
+    }
+  }
+
   function onNodeMouseDown(e) {
     if (e.button !== 0) return;
+    clearLongPress();
     longPressTimer.value = setTimeout(() => {
       dragEnabled.value = true;
     }, 500);
   }
 
   function onNodeMouseUp() {
-    if (longPressTimer.value) {
-      clearTimeout(longPressTimer.value);
-      longPressTimer.value = null;
-    }
+    clearLongPress();
   }
 
   function onNodeMouseLeave() {
-    if (longPressTimer.value) {
-      clearTimeout(longPressTimer.value);
-      longPressTimer.value = null;
-    }
+    clearLongPress();
   }
+
+  onUnmounted(() => {
+    clearLongPress();
+  });
 
   function allowDrag() {
     return dragEnabled.value;

@@ -209,7 +209,7 @@ class StepExecutor:
         self.exe.sleep(s.timeout)
         return "stopped" if self.exe.stopped() else "pass"
 
-    def _do_kill_app(self, s: TestStep = None) -> str:
+    def _do_kill_app(self, s: TestStep | None = None) -> str:
         """杀死应用 (KILL_APP step)."""
         pkg = s.xpath if s and s.xpath else self.exe.PACKAGE_NAME
         if not pkg:
@@ -221,7 +221,7 @@ class StepExecutor:
         self.exe.sleep(2)
         return "pass"
 
-    def _do_start_app(self, s: TestStep = None) -> str:
+    def _do_start_app(self, s: TestStep | None = None) -> str:
         """启动应用 (START_APP step)."""
         pkg = s.xpath if s and s.xpath else self.exe.PACKAGE_NAME
         if not pkg:

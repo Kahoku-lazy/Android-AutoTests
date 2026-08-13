@@ -28,7 +28,7 @@
   flex-direction: column;
   min-height: 0;
   height: 100%;
-  background: #fff;
+  background: var(--app-bg-card);
   border: 3px solid var(--app-ink, #2d2d2d);
   border-radius: 6px 10px 6px 10px;
   box-shadow: 2px 3px 0 rgba(0,0,0,0.05);
@@ -41,7 +41,7 @@
   position: absolute;
   top: 4px; left: 50%; transform: translateX(-50%);
   width: 9px; height: 9px;
-  background: radial-gradient(circle, #e8e0d5 30%, #c0b8a8 60%, #a09080 100%);
+  background: radial-gradient(circle, var(--app-pushpin-light) 30%, var(--app-pushpin-mid) 60%, var(--app-pushpin-dark) 100%);
   border-radius: 50%;
   box-shadow: 0 1px 1px rgba(0,0,0,0.08);
   z-index: 2;
@@ -54,7 +54,7 @@
   padding: 10px 12px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
   flex-shrink: 0;
-  background: #fff;
+  background: var(--app-bg-card);
 }
 
 .tree-header--select {
@@ -63,7 +63,7 @@
 
 .tree-header__title {
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink);
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -93,12 +93,12 @@
 .tree-empty {
   text-align: center;
   color: var(--text-secondary, var(--app-ink-muted));
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   padding: 32px 12px;
 }
 
 .tree-empty__icon {
-  font-size: 32px;
+  font-size: var(--app-size-2xl);
   display: block;
   margin-bottom: 8px;
 }
@@ -111,7 +111,7 @@
 
 .tree-empty__hint {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
 }
 
 .tree-body :deep(.el-tree) {
@@ -160,7 +160,7 @@
 
 .tree-node__icon {
   flex-shrink: 0;
-  font-size: 15px;
+  font-size: var(--app-size-sm);
   line-height: 1;
 }
 
@@ -170,7 +170,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink);
 }
 
@@ -190,7 +190,7 @@
 
 .tree-node__meta {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--app-size-xs);
   color: var(--app-ink-muted);
   background: var(--app-bg-subtle, #f8f6f2);
   padding: 1px 6px;
@@ -202,7 +202,7 @@
   position: fixed;
   z-index: 3000;
   min-width: 148px;
-  background: #fff;
+  background: var(--app-bg-card);
   border: 3px solid var(--app-ink, #2d2d2d);
   border-radius: 6px 10px 6px 10px;
   box-shadow: 0 8px 24px rgba(45,45,45,0.12);
@@ -211,7 +211,7 @@
 
 .context-menu__item {
   padding: 8px 14px;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink);
   cursor: pointer;
   user-select: none;
@@ -240,7 +240,7 @@
   flex-shrink: 0;
 }
 .panel-title { font-family: var(--app-font-display);
-  font-size: 16px;
+  font-size: var(--app-size-md);
   font-weight: 700;
   color: var(--text-primary, var(--app-ink));
   margin: 0;
@@ -249,7 +249,7 @@
   gap: 8px;
 }
 .doc-tag {
-  font-size: 12px;
+  font-size: var(--app-size-xs);
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 4px 8px 4px 8px;
@@ -310,7 +310,7 @@
   overflow: hidden;
 }
 .element-count {
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: var(--app-text-secondary, var(--app-ink-muted));
   white-space: nowrap;
   align-self: flex-end;
@@ -329,16 +329,16 @@
   flex-shrink: 0;
 }
 .page-size-control { display: flex; align-items: center; gap: 10px; }
-.toolbar-label { font-size: 13px; font-weight: 700; color: var(--app-ink-muted); white-space: nowrap; }
+.toolbar-label { font-size: var(--app-size-sm); font-weight: 700; color: var(--app-ink-muted); white-space: nowrap; }
 .page-size-btns { display: flex; gap: 6px; }
 .page-size-btn {
   min-width: 40px;
   padding: 5px 10px;
   border-radius: 4px 8px 4px 8px;
   border: 2px solid var(--app-ink, #2d2d2d);
-  background: #fff;
+  background: var(--app-bg-card);
   color: var(--app-ink);
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -350,7 +350,7 @@
   color: var(--app-accent-purple-dark);
 }
 .table-toolbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
-.page-info { font-size: 13px; color: var(--app-ink-muted); font-weight: 600; white-space: nowrap; }
+.page-info { font-size: var(--app-size-sm); color: var(--app-ink-muted); font-weight: 600; white-space: nowrap; }
 .page-nav { display: flex; gap: 8px; }
 
 /* ── Table card ── */
@@ -427,9 +427,9 @@
 
 /* ── 表头：彩色渐变 ── */
 .elements-table :deep(th) {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 800;
-  color: #fff;
+  color: var(--app-bg-card);
   padding: 16px 12px;
   text-align: left;
   text-transform: uppercase;
@@ -452,7 +452,7 @@
 /* ── 单元格 ── */
 .elements-table :deep(td) {
   padding: 13px 12px;
-  font-size: 15px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink);
   border-bottom: 1px solid rgba(0,0,0,0.04);
   vertical-align: middle;
@@ -482,31 +482,31 @@
 
 /* ── 列专属样式 ── */
 /* 名称列 — 青绿色强调 */
-.elements-table :deep(td:nth-child(1)) { font-weight: 600; color: var(--app-accent-purple-dark); font-size: 15px; }
+.elements-table :deep(td:nth-child(1)) { font-weight: 600; color: var(--app-accent-purple-dark); font-size: var(--app-size-sm); }
 /* XPath 列 — 紫色调，等宽字体 */
 .elements-table :deep(td:nth-child(2)) {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: var(--app-accent-purple-dark);
 }
 /* 类名列 — 橙色调等宽 */
 .elements-table :deep(td:nth-child(3)) {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink);
 }
 /* 文本列 — 绿色调 */
-.elements-table :deep(td:nth-child(4)) { color: var(--app-ink); font-size: 14px; }
+.elements-table :deep(td:nth-child(4)) { color: var(--app-ink); font-size: var(--app-size-sm); }
 /* Resource ID 列 — 蓝色调等宽 */
 .elements-table :deep(td:nth-child(5)) {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   color: var(--app-ink);
 }
 /* 可点击列 — 彩色徽章 */
 .elements-table :deep(td:nth-child(6)) {
   text-align: center;
-  font-size: 15px;
+  font-size: var(--app-size-sm);
 }
 /* 测试点列 — 居中 */
 .elements-table :deep(td:nth-child(7)) { text-align: center; }
@@ -516,7 +516,7 @@
   display: inline-block;
   padding: 3px 12px;
   border-radius: 6px 10px 6px 10px;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
   letter-spacing: 0.3px;
 }
@@ -533,7 +533,7 @@
 .elements-table :deep(td .text-muted) {
   color: var(--app-ink-muted);
   font-style: italic;
-  font-size: 12px;
+  font-size: var(--app-size-xs);
 }
 
 /* ── Inline cell input ── */
@@ -542,7 +542,7 @@
   padding: 5px 10px;
   border: 1px solid transparent;
   border-radius: 6px;
-  font-size: 15px;
+  font-size: var(--app-size-sm);
   background: transparent;
   color: var(--app-accent-purple-dark);
   font-weight: 600;
@@ -559,11 +559,11 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
-  font-size: 13px;
+  font-size: var(--app-size-sm);
   letter-spacing: 0.2px;
 }
 .cell-text {
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -577,7 +577,7 @@
   align-items: center;
   justify-content: center;
   color: var(--app-text-secondary, var(--app-ink-muted));
-  font-size: 15px;
+  font-size: var(--app-size-sm);
   padding: 60px 0;
 }
 .empty-card {
@@ -595,11 +595,11 @@
   padding: 48px 24px;
   color: var(--app-ink-muted);
 }
-.table-empty span { font-size: 36px; }
-.table-empty p { font-size: 16px; margin: 0; }
+.table-empty span { font-size: var(--app-size-2xl); }
+.table-empty p { font-size: var(--app-size-md); margin: 0; }
 
 /* ── Utility ── */
-.mono { font-family: monospace; font-size: 13px; }
+.mono { font-family: monospace; font-size: var(--app-size-sm); }
 .text-muted { color: var(--app-ink-muted); }
 
 /* ── Modal form grid ── */
@@ -611,7 +611,7 @@
 }
 .form-label {
   text-align: right;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   color: var(--text-secondary, var(--app-ink-muted));
   font-weight: 500;
   user-select: none;
@@ -624,7 +624,7 @@
 }
 .clear-warning {
   color: var(--app-status-danger-text);
-  font-size: 15px;
+  font-size: var(--app-size-sm);
   font-weight: 600;
   margin: 0;
   padding: 10px 14px;
@@ -633,7 +633,7 @@
   border: 1.5px solid var(--app-status-danger, #FFB5A7);
 }
 .clear-question {
-  font-size: 15px;
+  font-size: var(--app-size-sm);
   color: var(--text-primary, var(--app-ink));
   margin: 0;
 }
@@ -641,7 +641,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   color: var(--text-secondary, var(--app-ink-muted));
   cursor: pointer;
   user-select: none;
@@ -669,9 +669,9 @@
 .element-manager :deep(.el-button),
 .web-element-manager :deep(.el-button),
 .api-endpoint-manager :deep(.el-button) {
-  font-size: 11px; font-weight: 700; padding: 4px 12px;
+  font-size: var(--app-size-xs); font-weight: 700; padding: 4px 12px;
   border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px 8px 4px 8px;
-  background: #fff; color: var(--app-ink, #2d2d2d);
+  background: var(--app-bg-card); color: var(--app-ink, #2d2d2d);
   transition: all 0.12s;
 }
 .element-manager :deep(.el-button:hover),
@@ -684,17 +684,17 @@
 .element-manager :deep(.el-button--primary),
 .web-element-manager :deep(.el-button--primary),
 .api-endpoint-manager :deep(.el-button--primary) {
-  background: var(--app-ink, #2d2d2d); color: #fff; border-color: var(--app-ink, #2d2d2d);
+  background: var(--app-ink, #2d2d2d); color: var(--app-bg-card); border-color: var(--app-ink, #2d2d2d);
 }
 .element-manager :deep(.el-button--primary:hover),
 .web-element-manager :deep(.el-button--primary:hover),
 .api-endpoint-manager :deep(.el-button--primary:hover) {
-  opacity: 0.85; color: #fff; background: var(--app-ink, #2d2d2d) !important;
+  opacity: 0.85; color: var(--app-bg-card); background: var(--app-ink, #2d2d2d) !important;
 }
 .element-manager :deep(.el-button--small),
 .web-element-manager :deep(.el-button--small),
 .api-endpoint-manager :deep(.el-button--small) {
-  font-size: 11px; padding: 3px 10px;
+  font-size: var(--app-size-xs); padding: 3px 10px;
 }
 .element-manager :deep(.el-tag),
 .web-element-manager :deep(.el-tag),

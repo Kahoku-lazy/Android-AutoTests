@@ -228,4 +228,5 @@ async def check_and_connect_async(
 
     if err is not None:
         raise err
+    assert device_conn is not None  # err is None only when device_conn was successfully assigned
     return device_conn

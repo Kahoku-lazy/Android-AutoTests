@@ -30,7 +30,7 @@ const emit = defineEmits<{
 }>()
 
 const noteRef = ref<HTMLElement | null>(null)
-const tapeRef = ref(null)
+const tapeRef = ref<HTMLElement | null>(null)
 
 const avatarStyle = computed(() => {
   const av = props.agent.avatar
@@ -270,7 +270,7 @@ function onLeave() {
   border-radius: 12px 12px 12px 4px;
   font-size: var(--app-size-xs);
   font-weight: 800;
-  color: #fff;
+  color: var(--app-bg-card);
   box-shadow: 0 3px 10px rgba(61, 52, 40, 0.16);
   pointer-events: none;
   white-space: nowrap;
@@ -364,7 +364,7 @@ function onLeave() {
   font-weight: 800;
   font-family: inherit;
   cursor: pointer;
-  color: #fff;
+  color: var(--app-bg-card);
   background: linear-gradient(135deg, #6f9fd8, #5e8fca);
 }
 .model-save:disabled {
@@ -393,7 +393,7 @@ function onLeave() {
   border: none;
   border-radius: 999px;
   background: var(--app-accent-purple, #b39ef3);
-  color: #fff;
+  color: var(--app-bg-card);
   font-size: var(--app-size-sm);
   font-weight: 800;
   font-family: inherit;

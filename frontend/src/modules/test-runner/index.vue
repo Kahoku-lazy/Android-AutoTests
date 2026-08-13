@@ -706,7 +706,7 @@ async function loadDevices() {
           <div v-for="g in [{k:'running',l:'🟣 执行中'},{k:'waiting',l:'🟡 等待中'},{k:'completed',l:'🟢 已完成'},{k:'incomplete',l:'🔴 失败/未完成'}]" :key="g.k">
             <template v-if="groupedTasks[g.k].length">
               <div class="card-group-title">{{ g.l }} <span class="card-group-count">{{ groupedTasks[g.k].length }}</span></div>
-              <div class="card-grid"><div v-for="task in groupedTasks[g.k]" :key="task.id" class="task-card" @click="openTaskDetail(task)" :style="{'--card-accent': taskStatusInfo(task).color}">
+              <div class="card-grid"><div v-for="task in groupedTasks[g.k]" :key="task.id" class="task-card" role="button" tabindex="0" @click="openTaskDetail(task)" @keydown.enter.prevent="openTaskDetail(task)" @keydown.space.prevent="openTaskDetail(task)" :style="{'--card-accent': taskStatusInfo(task).color}">
                 <div class="task-card-header">
                   <span class="task-card-id">{{ task.id }}</span>
                   <span class="task-type-tag" :class="'task-type--' + (task.taskType||'ui_automation')">{{ {api_testing:'API 测试',web_automation:'Web 自动化',ui_automation:'UI 自动化'}[task.taskType||'ui_automation']||'UI 自动化' }}</span>
@@ -779,22 +779,22 @@ async function loadDevices() {
 }
 .doc-section__title .doc-tag {
   font-size:var(--app-size-xs);padding:1px 8px;border-radius:4px 8px 4px 8px;
-  background:#fff;color:#999;border:1.5px solid #e8ecf1;font-weight:700;margin-left:8px
+  background:var(--app-bg-card);color:var(--app-ink-muted);border:1.5px solid #e8ecf1;font-weight:700;margin-left:8px
 }
-.doc-section__label { color:#999;font-size:var(--app-size-xs);margin-top:2px }
+.doc-section__label { color:var(--app-ink-muted);font-size:var(--app-size-xs);margin-top:2px }
 
 /* ── 工具栏 ── */
 .runner-toolbar { display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0 }
 .runner-toolbar__right { display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap }
 .search-input { width:240px;flex-shrink:0 }
-.filter-count { font-size:var(--app-size-xs);color:#999;font-weight:600;white-space:nowrap }
+.filter-count { font-size:var(--app-size-xs);color:var(--app-ink-muted);font-weight:600;white-space:nowrap }
 .action-btn { flex-shrink:0 }
 
 /* ── 视图切换 — 模块色桃粉 ── */
 .view-toggle { display:flex;gap:0;border:2px solid var(--c-runner);border-radius:4px 8px 4px 8px;overflow:hidden }
-.view-btn { padding:5px 12px;font-size:var(--app-size-xs);font-weight:700;background:#fff;color:#999;border:none;border-right:1.5px solid var(--c-runner);cursor:pointer;font-family:inherit;transition:all 0.12s }
+.view-btn { padding:5px 12px;font-size:var(--app-size-xs);font-weight:700;background:var(--app-bg-card);color:var(--app-ink-muted);border:none;border-right:1.5px solid var(--c-runner);cursor:pointer;font-family:inherit;transition:all 0.12s }
 .view-btn:last-child { border-right:none }
-.view-btn.active { background:var(--c-runner);color:#fff }
+.view-btn.active { background:var(--c-runner);color:var(--app-bg-card) }
 .view-btn:hover:not(.active) { color:var(--c-runner) }
 
 /* ── KPI 卡片 ── */
@@ -807,14 +807,14 @@ async function loadDevices() {
 @media(max-width:700px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
 
 /* ── 表格卡片 — 模块色边框 ── */
-.table-card { flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;border-radius:6px 10px 6px 10px;border:2.5px solid var(--c-runner);box-shadow:2px 3px 0 rgba(255,181,167,0.15);background:#fff }
+.table-card { flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;border-radius:6px 10px 6px 10px;border:2.5px solid var(--c-runner);box-shadow:2px 3px 0 rgba(255,181,167,0.15);background:var(--app-bg-card) }
 .table-card :deep(.el-card__body) { flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:0 }
 .mono-text { font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600 }
-.status-badge { font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);color:#fff;display:inline-block }
-.mini-progress { height:6px;background:#f0ede8;border-radius:3px;overflow:hidden;border:1px solid var(--ink);width:80px;display:inline-block;vertical-align:middle }
+.status-badge { font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);color:var(--app-bg-card);display:inline-block }
+.mini-progress { height:6px;background:var(--app-border-lighter);border-radius:3px;overflow:hidden;border:1px solid var(--ink);width:80px;display:inline-block;vertical-align:middle }
 .mini-progress-fill { height:100%;border-radius:2px;transition:width 0.3s }
 .device-table-wrapper { flex:1;min-height:0;overflow-y:auto;overflow-x:auto }
-.device-table-wrapper :deep(.el-table th) { background:#f8f6f2;color:var(--ink);font-weight:700;font-size:var(--app-size-xs);text-transform:uppercase;letter-spacing:0.04em;border-bottom:2.5px solid var(--ink) }
+.device-table-wrapper :deep(.el-table th) { background:var(--app-bg-subtle);color:var(--ink);font-weight:700;font-size:var(--app-size-xs);text-transform:uppercase;letter-spacing:0.04em;border-bottom:2.5px solid var(--ink) }
 .device-table-wrapper :deep(.el-table td) { border-bottom:1px solid #e8e4d8 }
 /* 表格行 hover — 模块色淡底 */
 .device-table-wrapper :deep(.el-table tbody tr) { cursor:pointer;transition:background var(--app-duration-fast) var(--app-ease) }
@@ -828,7 +828,7 @@ async function loadDevices() {
 .table-actions .el-button,.table-actions .wb-btn { width:100%;justify-content:center }
 .card-grid-grouped { flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:16px }
 .card-group-title { font-family:'Patrick Hand',cursive;font-size:var(--app-size-lg);font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:10px }
-.card-group-count { font-family:var(--app-font-mono);font-size:var(--app-size-xs);color:var(--ink);opacity:0.4;background:#f8f6f2;padding:2px 8px;border-radius:3px 6px 3px 6px;border:1.5px solid #e8e4d8 }
+.card-group-count { font-family:var(--app-font-mono);font-size:var(--app-size-xs);color:var(--ink);opacity:0.4;background:var(--app-bg-subtle);padding:2px 8px;border-radius:3px 6px 3px 6px;border:1.5px solid #e8e4d8 }
 .card-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:14px }
 @media(max-width:900px){.card-grid{grid-template-columns:repeat(2,1fr)}}
 /* ── Task Card — Doodle Craft Polaroid ── */
@@ -847,42 +847,42 @@ async function loadDevices() {
 .task-card::before {
   content: ''; position: absolute; top: 5px; left: 50%; transform: translateX(-50%);
   width: 10px; height: 10px; border-radius: 50%;
-  background: radial-gradient(circle, #e8e0d5 30%, #a09080 100%);
+  background: radial-gradient(circle, var(--app-pushpin-light) 30%, var(--app-pushpin-dark) 100%);
   box-shadow: 0 1px 1px rgba(0,0,0,.08); z-index: 2;
 }
 .task-card:nth-child(3n+1){transform:rotate(-0.5deg)}.task-card:nth-child(3n+2){transform:rotate(0.4deg)}.task-card:nth-child(3n+3){transform:rotate(-0.2deg)}
 .task-card:hover { transform:rotate(0)scale(1.03)!important;z-index:5;box-shadow:4px 6px 0 rgba(0,0,0,0.1);border-color:var(--c-dashboard) }
 
 .task-card-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:6px }
-.task-card-id { font-family:var(--app-font-mono);font-size:11px;font-weight:700;color:var(--app-ink-muted);background:rgba(0,0,0,0.05);padding:3px 10px;border-radius:5px;letter-spacing:0.02em }
-.task-type-tag{display:inline-block;padding:3px 9px;border-radius:5px;font-size:10px;font-weight:800;color:#fff;letter-spacing:0.03em}
+.task-card-id { font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:700;color:var(--app-ink-muted);background:rgba(0,0,0,0.05);padding:3px 10px;border-radius:5px;letter-spacing:0.02em }
+.task-type-tag{display:inline-block;padding:3px 9px;border-radius:5px;font-size:var(--app-size-xs);font-weight:800;color:var(--app-bg-card);letter-spacing:0.03em}
 .task-type--api_testing{background:linear-gradient(135deg,#889df0,#6c7ce0)}
 .task-type--web_automation{background:linear-gradient(135deg,#6fba2c,#52a01e)}
 .task-type--ui_automation{background:linear-gradient(135deg,#f7cd67,#e8b830);color:var(--ink)}
 
-.task-card-name { font-family:var(--app-font-display);font-size:16px;font-weight:800;margin-bottom:8px;color:var(--ink);letter-spacing:-0.01em;line-height:1.3 }
+.task-card-name { font-family:var(--app-font-display);font-size:var(--app-size-md);font-weight:800;margin-bottom:8px;color:var(--ink);letter-spacing:-0.01em;line-height:1.3 }
 
 .task-card-meta { display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px }
-.meta-item { font-size:12px;font-weight:700;color:var(--app-ink-muted);background:rgba(0,0,0,0.03);padding:2px 8px;border-radius:4px }
+.meta-item { font-size:var(--app-size-xs);font-weight:700;color:var(--app-ink-muted);background:rgba(0,0,0,0.03);padding:2px 8px;border-radius:4px }
 
 .task-card-progress { margin-bottom:8px }
 .mini-progress { height:6px;background:rgba(0,0,0,0.06);border-radius:4px;overflow:hidden }
 .mini-progress-fill { height:100%;border-radius:4px;transition:width .4s cubic-bezier(.4,0,.2,1) }
 
 .task-card-stats { display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:8px }
-.task-card-status { font-size:13px;font-weight:800;flex-shrink:0 }
-.task-card-count { font-size:13px;font-weight:700;color:var(--ink) }
-.task-card-time { font-size:11px;color:var(--app-ink-muted);font-weight:600;opacity:0.5 }
+.task-card-status { font-size:var(--app-size-sm);font-weight:800;flex-shrink:0 }
+.task-card-count { font-size:var(--app-size-sm);font-weight:700;color:var(--ink) }
+.task-card-time { font-size:var(--app-size-xs);color:var(--app-ink-muted);font-weight:600;opacity:0.5 }
 
 .task-card-actions { display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1.5px dashed rgba(0,0,0,0.1) }
-.task-card-actions :deep(.el-button) { font-size:12px;padding:5px 12px;font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid var(--ink);background:#fff;color:var(--ink);transition:all .15s }
+.task-card-actions :deep(.el-button) { font-size:var(--app-size-xs);padding:5px 12px;font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid var(--ink);background:var(--app-bg-card);color:var(--ink);transition:all .15s }
 .task-card-actions :deep(.el-button:hover) { background:var(--app-highlight);transform:translateY(-1px) }
-.task-card-actions :deep(.el-button--primary) { background:var(--c-case);color:#fff;border-color:var(--ink) }
+.task-card-actions :deep(.el-button--primary) { background:var(--c-case);color:var(--app-bg-card);border-color:var(--ink) }
 .new-task-form :deep(.el-form-item) { margin-bottom:14px }.new-task-form :deep(.el-form-item__label) { font-size:var(--app-size-xs);font-weight:700;opacity:0.5;text-transform:uppercase }.field-hint{font-size:var(--app-size-xs);color:var(--c-runner);margin-top:4px;font-weight:600}
 /* 全覆盖 dialog 内部组件 */
-:deep(.el-dialog__header){padding:14px 18px;border-bottom:3px solid var(--ink);background:#fff;border-radius:6px 10px 0 0}:deep(.el-dialog__title){font-family:'Patrick Hand',cursive;font-size:var(--app-size-lg);font-weight:700}:deep(.el-dialog__body){padding:18px}:deep(.el-dialog__footer){padding:14px 18px;border-top:2px solid var(--ink);background:#fff}
-:deep(.el-select__wrapper){border-radius:4px 8px 4px 8px!important;border:2px solid var(--ink)!important;box-shadow:none!important}:deep(.el-select__wrapper:hover){border-color:var(--c-dashboard)!important}:deep(.el-select__wrapper.is-disabled){background:#f8f6f2!important;opacity:0.5}
-:deep(.el-input-number){border-radius:4px 8px 4px 8px;border:2px solid var(--ink)}:deep(.el-input-number .el-input__wrapper){border:none!important;box-shadow:none!important}:deep(.el-input-number__decrease),:deep(.el-input-number__increase){border-color:var(--ink)!important;background:#fff!important;color:var(--ink)!important}
+:deep(.el-dialog__header){padding:14px 18px;border-bottom:3px solid var(--ink);background:var(--app-bg-card);border-radius:6px 10px 0 0}:deep(.el-dialog__title){font-family:'Patrick Hand',cursive;font-size:var(--app-size-lg);font-weight:700}:deep(.el-dialog__body){padding:18px}:deep(.el-dialog__footer){padding:14px 18px;border-top:2px solid var(--ink);background:var(--app-bg-card)}
+:deep(.el-select__wrapper){border-radius:4px 8px 4px 8px!important;border:2px solid var(--ink)!important;box-shadow:none!important}:deep(.el-select__wrapper:hover){border-color:var(--c-dashboard)!important}:deep(.el-select__wrapper.is-disabled){background:var(--app-bg-subtle)!important;opacity:0.5}
+:deep(.el-input-number){border-radius:4px 8px 4px 8px;border:2px solid var(--ink)}:deep(.el-input-number .el-input__wrapper){border:none!important;box-shadow:none!important}:deep(.el-input-number__decrease),:deep(.el-input-number__increase){border-color:var(--ink)!important;background:var(--app-bg-card)!important;color:var(--ink)!important}
 :deep(.el-radio__label){font-size:var(--app-size-xs);font-weight:700}:deep(.el-radio__inner){border-color:var(--ink)!important}:deep(.el-radio.is-checked .el-radio__inner){background:var(--ink)!important;border-color:var(--ink)!important}
 :deep(.el-date-picker__wrapper){border-radius:4px 8px 4px 8px!important;border:2px solid var(--ink)!important}
 :deep(.el-dialog__headerbtn){top:16px;right:16px}:deep(.el-dialog__close){color:var(--ink)!important;font-size:var(--app-size-lg)!important}

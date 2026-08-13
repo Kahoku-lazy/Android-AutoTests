@@ -24,7 +24,7 @@ export function listWebGroupElements(groupId) {
 }
 
 /** 用例列表 */
-export function listDefinitions(directoryId) {
+export function listDefinitions(directoryId?: string | null) {
   const params = directoryId ? { directory_id: directoryId } : {}
   return client.get('/cases/definitions', { params })
 }

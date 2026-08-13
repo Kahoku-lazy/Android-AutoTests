@@ -38,27 +38,32 @@ export function useLoginForm(
   const canLogin = computed<boolean>(() => Object.keys(loginErrors.value).length === 0)
 
   const regErrors = computed<FieldErrors>(() => {
+    // 与 RegisterSerializer.strip() 对齐后再校验
+    const username = regUsername.value.trim()
+    const email = regEmail.value.trim()
+    const password = regPassword.value.trim()
+    const password2 = regPassword2.value.trim()
     const errs: FieldErrors = {}
-    if (!regUsername.value.trim()) {
+    if (!username) {
       errs.username = '请输入用户名'
-    } else if (regUsername.value.trim().length < 3) {
+    } else if (username.length < 3) {
       errs.username = '用户名至少 3 个字符'
-    } else if (regUsername.value.trim().length > 20) {
+    } else if (username.length > 20) {
       errs.username = '用户名最多 20 个字符'
     }
-    if (!regEmail.value) {
+    if (!email) {
       errs.email = '请输入邮箱'
-    } else if (!regEmail.value.includes('@')) {
+    } else if (!email.includes('@')) {
       errs.email = '邮箱格式不正确'
     }
-    if (!regPassword.value) {
+    if (!password) {
       errs.password = '请输入密码'
-    } else if (regPassword.value.length < 6) {
+    } else if (password.length < 6) {
       errs.password = '密码至少 6 位'
     }
-    if (!regPassword2.value) {
+    if (!password2) {
       errs.password2 = '请再次输入密码'
-    } else if (regPassword.value !== regPassword2.value) {
+    } else if (password !== password2) {
       errs.password2 = '两次密码不一致'
     }
     return errs

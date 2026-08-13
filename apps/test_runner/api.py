@@ -2,27 +2,15 @@
 
 __all__ = [
     "delete_task_card",
-    "get_active_run",
     "get_active_runs_info",
     "get_run_results",
-    "list_active_runs",
-    "persist_results",
     "resolve_creator",
     "save_task_card",
     "stop_run",
-    "TestRunner",
-    "TestRunnerCallback",
 ]
 
-from .models import TaskCard, TestResult, TestRunRecord
-from .runner import (
-    TestRunner,
-    TestRunnerCallback,
-    get_active_run,
-    get_active_runs_info,
-    list_active_runs,
-    stop_run,
-)
+from .models import TaskCard, TestResult
+from .runner import get_active_runs_info, stop_run
 
 
 def resolve_creator(creator) -> str:
@@ -48,8 +36,9 @@ def resolve_creator(creator) -> str:
 
 def get_run_results(run_id: str) -> list[dict]:
     """获取某次执行的所有测试结果。返回 dict 列表，不返回 ORM 对象。"""
-    return list(
-        TestResult.objects.filter(run_id=run_id)
+    return [
+        dict(row)
+        for row in TestResult.objects.filter(run__run_id=run_id)
         .order_by("created_at")
         .values(
             "id",
@@ -62,28 +51,7 @@ def get_run_results(run_id: str) -> list[dict]:
             "step_details",
             "created_at",
         )
-    )
-
-
-# ── Write helpers ──
-
-
-def persist_results(run_record, case_results: list) -> list[dict]:
-    """批量持久化测试结果。返回写入记录的 dict 列表。"""
-    objs = [
-        TestResult(
-            run=run_record,
-            case_id=r.case_id,
-            case_type=getattr(r, "case_type", "ui_automation"),
-            iteration=r.iteration,
-            result=r.result,
-            duration_ms=r.duration_ms,
-            detail=getattr(r, "detail", "") or "",
-        )
-        for r in case_results
     ]
-    created = TestResult.objects.bulk_create(objs)
-    return [{"id": obj.id, "case_id": obj.case_id, "result": obj.result} for obj in created]
 
 
 # ── TaskCard write helpers ──
@@ -188,20 +156,3 @@ def save_task_card(task_data: dict) -> dict:
 def delete_task_card(task_id: str) -> None:
     """Delete a TaskCard by task_id. No-op if not found."""
     TaskCard.objects.filter(task_id=task_id).delete()
-
-
-__all__ = [
-    "TaskCard",
-    "TestRunRecord",
-    "TestResult",
-    "TestRunner",
-    "TestRunnerCallback",
-    "get_active_run",
-    "stop_run",
-    "list_active_runs",
-    "get_active_runs_info",
-    "get_run_results",
-    "persist_results",
-    "save_task_card",
-    "delete_task_card",
-]

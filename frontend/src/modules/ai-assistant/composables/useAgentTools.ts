@@ -279,7 +279,7 @@ export function useAgentTools(
           }
         }
         await loadAgentTools()
-      } catch (err) { mcpJsonError.value = (err as { response?: { data?: { error?: string } } })?.response?.data?.message || '保存失败' }
+      } catch (err) { mcpJsonError.value = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '保存失败' }
     }
     mcpDialogVisible.value = false
   }
@@ -299,14 +299,14 @@ export function useAgentTools(
       } else {
         const data = await testMcpConnection(agentId.value, config)
         mcpTestResults.value[name] = {
-          connected: !!(data as { ok?: boolean }).status,
-          message: ((data as { message?: string }).message) || ((data as { ok?: boolean }).status ? '连通' : '未连通'),
+          connected: !!(data as { status?: boolean }).status,
+          message: ((data as { message?: string }).message) || ((data as { status?: boolean }).status ? '连通' : '未连通'),
         }
       }
     } catch (err) {
       mcpTestResults.value[name] = {
         connected: false,
-        message: (err as { response?: { data?: { error?: string } } })?.response?.data?.message || '测试失败',
+        message: (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '测试失败',
       }
     }
     mcpTestingId.value = null

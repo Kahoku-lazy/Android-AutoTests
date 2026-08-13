@@ -29,7 +29,7 @@ export function useApi() {
    * @param {boolean} [opts.silent=false] — if true, suppress error toast (for read ops)
    * @returns {Promise<{status: boolean, message?: string, ...}>} — the `data` from axios response, or `{status:false, message}` on failure
    */
-  async function exec(promise, { loading, silent = false } = {}) {
+  async function exec(promise, { loading, silent = false }: { loading?: any; silent?: boolean } = {}) {
     try {
       if (loading) loading.value = true
       const { data } = await promise

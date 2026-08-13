@@ -1,6 +1,7 @@
-"""evaluator URL routing."""
+"""evaluator URL routing — DRF router + legacy paths coexist during migration."""
 
 from django.urls import path
+from rest_framework.routers import DefaultRouter
 
 from .views import (
     bank_detail,
@@ -18,18 +19,30 @@ from .views import (
     submit_human_score,
     update_bank,
 )
+from .views_api import (
+    EvalResultViewSet,
+    EvalRunViewSet,
+    QuestionBankViewSet,
+)
 
 app_name = "evaluator"
 
-urlpatterns = [
-    # Question banks
+# ── DRF router (new standard REST endpoints) ──
+router = DefaultRouter()
+router.register(r"banks", QuestionBankViewSet, basename="bank")
+router.register(r"runs", EvalRunViewSet, basename="run")
+router.register(r"results", EvalResultViewSet, basename="result")
+
+# ── Legacy paths (保留，旧前端继续工作) ──
+legacy_patterns = [
+    # Question banks (old CRUD)
     path("banks", list_banks, name="banks_list"),
     path("banks/create", create_bank, name="bank_create"),
     path("banks/seed", seed_default_bank, name="bank_seed"),
     path("banks/<int:bank_id>", bank_detail, name="bank_detail"),
     path("banks/<int:bank_id>/update", update_bank, name="bank_update"),
     path("banks/<int:bank_id>/delete", delete_bank, name="bank_delete"),
-    # Eval runs
+    # Eval runs (old CRUD)
     path("runs", list_runs, name="runs_list"),
     path("runs/start", start_eval_run, name="run_start"),
     path("runs/<int:run_id>", run_detail, name="run_detail"),
@@ -38,7 +51,9 @@ urlpatterns = [
     path("results/<int:result_id>/score", submit_human_score, name="result_score"),
     # Frameworks
     path("frameworks", list_frameworks, name="frameworks_list"),
-    # KB search & self-test
+    # KB search & self-test (no DRF equivalent — plain views)
     path("kb-search", kb_search, name="kb_search"),
     path("kb-self-test", kb_self_test, name="kb_self_test"),
 ]
+
+urlpatterns = router.urls + legacy_patterns

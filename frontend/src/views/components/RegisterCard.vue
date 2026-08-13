@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppCard from '@/shared/components/AppCard.vue'
-import { IconUser, IconLock } from '@/shared/icons/index'
+import { IconUser, IconLock, IconMail } from '@/shared/icons/index'
 import type { FieldErrors } from '@/shared/types/auth'
 
 export interface RegisterCardProps {
@@ -30,7 +30,7 @@ const emit = defineEmits<{
 <template>
   <AppCard color="app-teal" class="login-card">
     <form class="auth-form" @submit.prevent="emit('submit')">
-      <div class="form-field">
+      <div class="form-field" data-testid="register-username">
         <IconUser :size="18" class="form-icon" />
         <el-input
           :model-value="username"
@@ -43,8 +43,8 @@ const emit = defineEmits<{
       </div>
       <p v-if="errors.username" class="field-error">{{ errors.username }}</p>
 
-      <div class="form-field">
-        <svg class="form-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 4-10 8L2 4"/></svg>
+      <div class="form-field" data-testid="register-email">
+        <IconMail :size="18" class="form-icon" />
         <el-input
           :model-value="email"
           @update:model-value="emit('update:email', $event)"
@@ -56,7 +56,7 @@ const emit = defineEmits<{
       </div>
       <p v-if="errors.email" class="field-error">{{ errors.email }}</p>
 
-      <div class="form-field">
+      <div class="form-field" data-testid="register-password">
         <IconLock :size="18" class="form-icon" />
         <el-input
           :model-value="password"
@@ -71,7 +71,7 @@ const emit = defineEmits<{
       </div>
       <p v-if="errors.password" class="field-error">{{ errors.password }}</p>
 
-      <div class="form-field">
+      <div class="form-field" data-testid="register-password2">
         <IconLock :size="18" class="form-icon" />
         <el-input
           :model-value="password2"
@@ -86,19 +86,20 @@ const emit = defineEmits<{
       </div>
       <p v-if="errors.password2" class="field-error">{{ errors.password2 }}</p>
 
-      <el-button
-        type="primary"
-        size="large"
-        :loading="loading"
-        :disabled="!canSubmit"
-        block
-        @click="emit('submit')"
-      >完成注册 →</el-button>
+      <div class="form-submit" data-testid="register-submit">
+        <el-button
+          type="primary"
+          size="large"
+          :loading="loading"
+          :disabled="!canSubmit"
+          @click="emit('submit')"
+        >完成注册 →</el-button>
+      </div>
     </form>
 
-    <p class="form-toggle" @click="emit('switchToLogin')">
+    <button class="form-toggle" data-testid="register-to-login" @click="emit('switchToLogin')">
       已有账号？<span class="form-link">去登录 →</span>
-    </p>
+    </button>
   </AppCard>
 </template>
 

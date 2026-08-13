@@ -30,7 +30,7 @@ import { ref, computed } from 'vue'
  *     </template>
  *   </Tabs>
  */
-export function useFilterTabs(source, tabDefs, matchFn) {
+export function useFilterTabs(source, tabDefs: Record<string, any>, matchFn) {
   const activeFilter = ref('all')
 
   const filterTabs = Object.entries(tabDefs).map(([key, def]) => ({

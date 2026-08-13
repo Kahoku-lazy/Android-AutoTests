@@ -2,13 +2,9 @@
 
 import json
 
+from typing import Any
+
 from apps.ai_assistant.agent_scope.provider_registry import VALID_PROVIDERS, validate_base_url
-
-
-def _first_error(errors: dict) -> str:
-    if not errors:
-        return "validation failed"
-    return "; ".join(f"{k}: {v}" for k, v in errors.items())
 
 
 def validate_agent_input(data: dict, *, require_api_key: bool = False) -> tuple:
@@ -76,7 +72,7 @@ def validate_message_input(data: dict) -> tuple:
 
     if role not in ("user", "assistant", "system"):
         errors["role"] = "无效的角色类型"
-    elif role == "user" and not content:
+    elif role == "user" and not content and not blocks:
         errors["content"] = "消息内容不能为空"
     elif role == "assistant" and not content and not blocks:
         errors["content"] = "assistant 消息需要 content 或 blocks"
@@ -86,7 +82,7 @@ def validate_message_input(data: dict) -> tuple:
 
 def validate_conversation_input(data: dict) -> tuple:
     """校验对话创建输入。"""
-    errors = {}
+    errors: dict[str, Any] = {}
     title = (data.get("title") or "新对话").strip() or "新对话"
     cleaned = dict(data)
     cleaned["title"] = title[:500]

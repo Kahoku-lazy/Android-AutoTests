@@ -134,7 +134,9 @@ def _persist_run_start(
                 tc_card.refresh_from_db()
                 return sm.dequeue(tc_card, run_id, dev_serial, snapshots, loop_count)
             if tc_card.status == "running" and tc_card.run_id:
-                return tc_card.run
+                run = tc_card.run
+                assert run is not None  # run_id is set, so the related record exists
+                return run
             _bg_log.warning(
                 "start_run skip transition %s: status=%s outcome=%s",
                 client_tid,
@@ -321,6 +323,9 @@ def _mark_run_failed(
             summary = dict(getattr(run_model, "summary", {}) or {})
             if perf_stats:
                 summary["_perf"] = perf_stats
+            assert (
+                run_record is not None
+            )  # guarded by caller — run_record created before _mark_run_failed
             sm.fail(tc_card, run_record, outcome="error", summary=summary)
             return  # fail() 内部已完结 run_record
         except sm.InvalidTransition as e:

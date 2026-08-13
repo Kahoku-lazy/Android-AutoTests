@@ -77,7 +77,7 @@ export function stepSummary(step, resolveFn) {
   const resolve = resolveFn || resolveElementName;
   const elName = resolve(step, "xpath");
 
-  switch (step.type) {
+  switch (type) {
     case "click":
       return `${icon} 点击「${elName}」`;
     case "long_click":

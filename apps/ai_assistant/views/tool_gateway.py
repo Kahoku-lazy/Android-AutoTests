@@ -214,7 +214,7 @@ def _model_to_dict(instance) -> dict:
     data = {}
     for field in instance._meta.concrete_fields:
         value = getattr(instance, field.attname, None)
-        if hasattr(value, "isoformat"):
+        if value is not None and hasattr(value, "isoformat"):
             value = value.isoformat()
         data[field.attname] = value
     # Include @property and cached relations

@@ -41,10 +41,10 @@ export function useElementLibrary() {
               results.push({ ...e, _pageLabel: p.label || `Page#${p.id}`, _pageId: p.id });
             }
           }
-        } catch { /* skip failed page */ }
+        } catch { console.error("加载页面元素失败", p.id) }
       }
       allElements.value = results;
-    } catch { /* skip failed load */ }
+    } catch { console.error("加载元素库失败") }
   }
 
   function getXPath(el) {

@@ -20,7 +20,7 @@ export function useDirectoryCascader() {
     try {
       const { data } = await fetchDirectories();
       if (data.status) dirOptions.value = buildCascaderOptions(data.tree);
-    } catch { /* ignore */ }
+    } catch { console.error("加载目录数据失败") }
   }
 
   return { dirOptions, loadDirOptions };

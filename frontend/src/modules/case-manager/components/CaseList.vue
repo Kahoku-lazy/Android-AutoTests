@@ -38,7 +38,7 @@ const props = defineProps({
   hideCard: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(["refresh-tree"]);
+const emit = defineEmits(["refresh-tree", "clear-case", "select-case", "go-all"]);
 
 const router = useRouter();
 const definitions = ref([]);
@@ -50,35 +50,50 @@ function setViewMode(mode) { viewMode.value = mode; localStorage.setItem("case-m
 
 const selectedCase = ref(null);
 const selectedCaseLoading = ref(false);
+const deleting = ref(false);
 
-async function loadCaseDetail(caseOrId) {
+async function loadCaseDetail(caseOrId, { syncTree = true } = {}) {
   const id = caseOrId && typeof caseOrId === "object" ? (caseOrId.id || caseOrId.case_id) : caseOrId;
   if (!id) return;
+  if (syncTree) emit("select-case", id);
   selectedCaseLoading.value = true;
   try {
     const { data } = await props.listApi.getDef(id);
-    if (data.status) selectedCase.value = data.definition;
-  } catch (e) { console.error(e); }
+    if (data.status) {
+      selectedCase.value = data.definition;
+    } else {
+      selectedCase.value = null;
+      ElMessage.error(data.message || "加载用例详情失败");
+    }
+  } catch (e) {
+    selectedCase.value = null;
+    ElMessage.error("加载用例详情失败: " + (e?.response?.data?.message || e?.message || "网络错误"));
+    console.error(e);
+  }
   selectedCaseLoading.value = false;
 }
 
 let refreshTimer = null;
+let refreshGate = false;
 watch(() => props.activeDirectoryId, () => {
-  selectedCase.value = null;
+  // 树选中用例时会同步更新目录；若同时有 activeCaseId，勿清详情（避免闪回列表）
+  if (!props.activeCaseId) selectedCase.value = null;
   loadDefs();
 });
 watch(() => props.activeCaseId, (id) => {
-  if (id) loadCaseDetail(id);
+  if (id) loadCaseDetail(id, { syncTree: false });
   else selectedCase.value = null;
 });
 onMounted(() => {
   loadDefs();
-  if (props.activeCaseId) loadCaseDetail(props.activeCaseId);
+  if (props.activeCaseId) loadCaseDetail(props.activeCaseId, { syncTree: false });
   refreshTimer = setInterval(loadDefs, 30000);
 });
 onUnmounted(() => clearInterval(refreshTimer));
 
 async function loadDefs() {
+  if (refreshGate) return;
+  refreshGate = true;
   loading.value = true;
   error.value = null;
   try {
@@ -89,6 +104,7 @@ async function loadDefs() {
     console.error(e);
   }
   loading.value = false;
+  refreshGate = false;
 }
 
 const breadcrumbPath = computed(() => {
@@ -110,6 +126,8 @@ function createCase() {
 function editCase(row) { router.push(props.editPath(row.id)); }
 
 async function doRemove(row) {
+  if (deleting.value) return;
+  deleting.value = true;
   try {
     await props.listApi.deleteDef(row.id);
     ElMessage.success("已删除");
@@ -117,9 +135,20 @@ async function doRemove(row) {
     emit("refresh-tree");
   } catch (e) {
     ElMessage.error("删除失败: " + (e?.response?.data?.message || e?.message || "网络错误"));
+  } finally {
+    deleting.value = false;
   }
 }
-function goToAll() { emit("refresh-tree"); }
+function goToAll() {
+  selectedCase.value = null;
+  emit("go-all");
+  emit("refresh-tree");
+}
+
+function clearDetail() {
+  selectedCase.value = null;
+  emit("clear-case");
+}
 
 defineExpose({ loadDefs, loadCaseDetail, definitions });
 </script>
@@ -130,7 +159,7 @@ defineExpose({ loadDefs, loadCaseDetail, definitions });
     <div class="case-toolbar">
       <div class="case-toolbar__left">
         <div class="case-breadcrumb">
-          <span class="crumb" @click="goToAll">📂 全部用例</span>
+          <button class="crumb crumb-btn" @click="goToAll">📂 全部用例</button>
           <template v-for="(p, i) in breadcrumbPath" :key="p.id">
             <span class="crumb-sep">›</span>
             <span class="crumb" :class="{ 'crumb--active': i === breadcrumbPath.length - 1 }">{{ p.name || p.label }}</span>
@@ -155,9 +184,9 @@ defineExpose({ loadDefs, loadCaseDetail, definitions });
     </div>
 
     <!-- 详情面板 -->
-    <div v-if="selectedCase" class="case-detail">
+    <div v-if="selectedCase" class="case-detail" v-loading="selectedCaseLoading">
       <div class="case-detail__toolbar">
-        <button class="btn-text" @click="selectedCase = null">← 返回列表</button>
+        <button class="btn-text" @click="clearDetail">← 返回列表</button>
         <button class="btn-primary" @click="editCase(selectedCase)">编辑</button>
       </div>
       <div class="case-detail__header">
@@ -173,31 +202,31 @@ defineExpose({ loadDefs, loadCaseDetail, definitions });
       <slot name="detail" :case="selectedCase" />
     </div>
 
-    <!-- 表格视图 -->
-    <AppCard v-if="viewMode === 'table'" class="table-card">
+    <!-- 表格视图（选中用例时隐藏，避免与详情面板叠在一起） -->
+    <AppCard v-if="!selectedCase && viewMode === 'table'" class="table-card">
       <AppTable :columns="columns" :data-source="definitions" row-key="id" :loading="loading" empty-text="暂无用例" @row-click="loadCaseDetail">
         <template v-for="col in columns" :key="col.dataIndex" #[`cell-${col.dataIndex}`]="{ record, value }">
           <slot :name="`cell-${col.dataIndex}`" :record="record" :value="value">
-            <template v-if="col.dataIndex === 'id'"><span class="case-link">{{ value }}</span></template>
+            <template v-if="col.dataIndex === 'id'"><span class="case-link" :title="String(value || '')">{{ value }}</span></template>
             <template v-else-if="col.dataIndex === 'enabled'"><el-tag :type="value ? 'success' : 'info'" size="small">{{ value ? '启用' : '禁用' }}</el-tag></template>
             <template v-else-if="col.dataIndex === 'actions'">
               <button class="btn-text" @click.stop="editCase(record)">编辑</button>
               <ConfirmButton size="small" type="danger" plain message="确认删除?" @confirm="doRemove(record)">删除</ConfirmButton>
             </template>
-            <template v-else>{{ value }}</template>
+            <template v-else><span :title="value == null ? '' : String(value)">{{ value }}</span></template>
           </slot>
         </template>
       </AppTable>
     </AppCard>
 
-    <!-- 卡片视图 -->
-    <div v-if="viewMode === 'card' && !hideCard" class="card-grid">
+    <!-- 卡片视图（选中用例时隐藏） -->
+    <div v-if="!selectedCase && viewMode === 'card' && !hideCard" class="card-grid">
       <CaseCard v-for="item in definitions" :key="item.id" :item="item" :case-type="caseType"
         @edit="editCase" @delete="doRemove" @select="loadCaseDetail" @refresh="loadDefs" />
     </div>
 
     <!-- 加载态 -->
-    <div v-if="loading && !definitions.length" class="case-loading">加载中...</div>
+    <div v-if="!selectedCase && loading && !definitions.length" class="case-loading">加载中...</div>
   </div>
 </template>
 
@@ -206,22 +235,23 @@ defineExpose({ loadDefs, loadCaseDetail, definitions });
 .case-toolbar__left{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
 .case-toolbar__right{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .case-breadcrumb{display:flex;align-items:center;gap:4px;font-size:var(--app-size-xs);font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.crumb{cursor:pointer;opacity:0.5;transition:opacity 0.12s}.crumb:hover{opacity:0.8}.crumb--active{opacity:1}
+.crumb{cursor:pointer;opacity:0.5;transition:opacity 0.12s}.crumb:hover{opacity:0.8}.crumb--active{opacity:1}.crumb-btn{background:none;border:none;padding:0;font-family:inherit;font-size:inherit}
 .crumb-sep{opacity:0.3}
-.case-count-badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:4px 8px 4px 8px;background:var(--c-case);color:#fff;border:1.5px solid var(--ink)}
+.case-count-badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:4px 8px 4px 8px;background:var(--c-case);color:var(--app-bg-card);border:1.5px solid var(--ink)}
 .view-toggle{display:flex;gap:0;border:2px solid var(--c-case);border-radius:4px 8px 4px 8px;overflow:hidden}
-.view-toggle button{padding:4px 10px;font-size:var(--app-size-xs);font-weight:700;background:#fff;color:var(--ink);border:none;border-right:1px solid var(--c-case);cursor:pointer;transition:all 0.12s}
+.view-toggle button{padding:4px 10px;font-size:var(--app-size-xs);font-weight:700;background:var(--app-bg-card);color:var(--ink);border:none;border-right:1px solid var(--c-case);cursor:pointer;transition:all 0.12s}
 .view-toggle button:last-child{border-right:none}
-.view-toggle button.active{background:var(--c-case);color:#fff}
-.btn-primary{padding:5px 12px;font-size:var(--app-size-xs);font-weight:700;color:#fff;background:var(--c-case);border:2px solid var(--ink);border-radius:4px 8px 4px 8px;cursor:pointer}
+.view-toggle button.active{background:var(--c-case);color:var(--app-bg-card)}
+.btn-primary{padding:5px 12px;font-size:var(--app-size-xs);font-weight:700;color:var(--app-bg-card);background:var(--c-case);border:2px solid var(--ink);border-radius:4px 8px 4px 8px;cursor:pointer}
 .btn-text{padding:4px 8px;font-size:var(--app-size-xs);font-weight:700;background:none;border:none;color:var(--ink);cursor:pointer;opacity:0.5}
 .case-error{text-align:center;padding:20px;color:var(--app-status-danger-text)}
-.case-detail{background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:16px;margin-bottom:10px}
+.case-detail{background:var(--app-bg-card);border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:16px;margin-bottom:10px}
 .case-detail__toolbar{display:flex;justify-content:space-between;margin-bottom:10px}
-.case-detail__header{display:flex;gap:12px;align-items:baseline;margin-bottom:8px}
-.case-detail__id{font-family:var(--app-font-mono);font-size:var(--app-size-xs);opacity:0.5}
-.case-detail__title{font-size:var(--app-size-md);font-weight:700}
-.case-detail__meta{display:flex;gap:16px;font-size:var(--app-size-xs);color:var(--app-text-secondary);margin-bottom:8px}
+.case-detail__header{display:flex;gap:12px;align-items:baseline;margin-bottom:8px;min-width:0}
+.case-detail__id{font-family:var(--app-font-mono);font-size:var(--app-size-xs);opacity:0.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.case-detail__title{font-size:var(--app-size-md);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.case-detail__meta{display:flex;gap:16px;font-size:var(--app-size-xs);color:var(--app-text-secondary);margin-bottom:8px;flex-wrap:wrap}
+.case-detail__meta span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px}
 .case-detail__desc{font-size:var(--app-size-sm);color:var(--ink);line-height:1.5}
 .case-link{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600;cursor:pointer}
 .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}

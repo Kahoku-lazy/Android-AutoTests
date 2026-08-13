@@ -22,6 +22,7 @@ from ..serializers import validate_agent_input
 from .common import validation_error
 
 
+@require_auth
 def list_available_skills(request):
     """GET /api/ai/available-skills — return workspace skills that can be toggled."""
     from apps.ai_assistant.agent_scope.skill_registry import _SKILL_CLASS_MAP, ALL_SKILL_NAMES
@@ -38,6 +39,7 @@ def list_available_skills(request):
     return JsonResponse({"status": True, "skills": skills})
 
 
+@require_auth
 def list_agents(request):
     qs = filter_agents_for_user(AIAgent.objects.all(), getattr(request, "user_id", None))
     agents = []
@@ -315,7 +317,7 @@ def update_agent(request, agent_id):
     if "tools" in data:
         _sync_agent_tools(a, data["tools"])
 
-    return JsonResponse({"status": True})
+    return JsonResponse({"status": True, "id": a.id})
 
 
 @csrf_exempt
@@ -362,7 +364,11 @@ def reveal_api_key(request, agent_id):
 def delete_agent(request, agent_id):
     if not check_can_delete_agent(request.user_id, agent_id):
         return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
-    AIAgent.objects.filter(id=agent_id).delete()
+    try:
+        a = AIAgent.objects.get(id=agent_id)
+    except AIAgent.DoesNotExist:
+        return JsonResponse({"status": False, "message": "not found"}, status=404)
+    a.delete()
     return JsonResponse({"status": True})
 
 

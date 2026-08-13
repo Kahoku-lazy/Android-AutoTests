@@ -31,6 +31,7 @@ const form = ref({
   permitted_users: [],
   permission: "edit",
   permitted_editors: [],
+  updated_at: "",
 });
 
 // ── Directory cascader ──
@@ -109,9 +110,13 @@ onMounted(async () => {
           permitted_users: d.permitted_users || [],
           permission: d.permission || "edit",
           permitted_editors: d.permitted_editors || [],
+          updated_at: d.updated_at || "",
         };
         caseCreatedBy.value = d.created_by || "";
-        if (d.editing_by && d.editing_by !== currentUser) {
+        if (d.locked && d.created_by !== currentUser) {
+          isReadOnly.value = true;
+          editingBy.value = "创建者（已锁定用例）";
+        } else if (d.editing_by && d.editing_by !== currentUser) {
           isReadOnly.value = true;
           editingBy.value = d.editing_by;
         } else if (currentUser) {
@@ -125,8 +130,12 @@ onMounted(async () => {
             }
           }
         }
+      } else {
+        ElMessage.error(data.message || "加载用例失败");
       }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      ElMessage.error("加载用例失败: " + (e.response?.data?.message || e.message || "网络错误"));
+    }
     loading.value = false;
   } else {
     generateId();
@@ -204,7 +213,13 @@ async function save() {
       return false;
     }
   } catch (e) {
-    ElMessage.error("保存失败: " + (e?.response?.data?.message || e?.message || "网络错误"));
+    const status = e.response?.status;
+    const errMsg = e.response?.data?.message || "";
+    if (status === 409 && errMsg.includes("已被他人修改")) {
+      ElMessageBox.alert(errMsg, "保存冲突", { confirmButtonText: "知道了", type: "warning" });
+    } else {
+      ElMessage.error("保存失败: " + (errMsg || e.message || "网络错误"));
+    }
     return false;
   } finally {
     saving.value = false;
@@ -366,15 +381,15 @@ async function exitPage() {
 .case-editor-page .doc-body {
   flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto;
 }
-.form-section { padding: 18px 24px; }
+.form-section { padding: 18px var(--app-space-lg); }
 .edit-lock-banner {
   display: flex; align-items: center; justify-content: space-between;
   padding: 10px 20px; margin: 0;
-  background: rgba(247, 205, 103, 0.18);
-  border-bottom: 1.5px solid rgba(247, 170, 60, 0.3);
-  color: #8a6d14; font-size: var(--app-size-sm); font-weight: 600; flex-shrink: 0;
+  background: var(--case-warn-bg-strong);
+  border-bottom: 1.5px solid var(--case-warn-border);
+  color: var(--case-warn-text); font-size: var(--app-size-sm); font-weight: 600; flex-shrink: 0;
 }
-.edit-lock-banner strong { color: #6b4c00; }
+.edit-lock-banner strong { color: var(--case-warn-text-strong); }
 .actions { display: flex; gap: 10px; }
-:deep(.el-input__append) { background: rgba(162,210,255,0.12) !important; }
+:deep(.el-input__append) { background: var(--case-bg-code) !important; }
 </style>

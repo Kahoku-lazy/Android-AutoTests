@@ -9,8 +9,9 @@ import sys
 import time
 import xml.etree.ElementTree as ET
 
-from airtest.core.android.android import Android
 import uiautomator2 as u2
+
+from airtest.core.android.android import Android
 
 # 修复 Windows 控制台编码
 if sys.platform == "win32":

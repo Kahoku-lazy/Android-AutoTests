@@ -44,17 +44,10 @@ export const KB_SEARCH_TOP_K = 5
 /** Agent health check interval (ms). */
 export const HEALTH_CHECK_INTERVAL_MS = 30 * 60 * 1000
 
-/** Task refresh interval when tasks are running (ms). */
-export const TASK_REFRESH_INTERVAL_MS = 15_000
-
 // ── Route Paths ──
 
 export const ROUTE_AI_ASSISTANT = "/ai-assistant"
-export const ROUTE_AGENT_DETAIL = "/ai-assistant/agent/:agentId"
-export const ROUTE_AGENT_CHAT = "/ai-assistant/chat/:agentId"
 export const ROUTE_LOGIN = "/login"
-export const ROUTE_CASES = "/cases"
-export const ROUTE_RUNNER = "/runner"
 
 /** Build the chat route for a specific agent. */
 export function chatRoute(agentId: number | string): string {
@@ -64,11 +57,6 @@ export function chatRoute(agentId: number | string): string {
 /** Build the agent detail/edit route. */
 export function agentDetailRoute(id: number | string): string {
   return `/ai-assistant/agent/${id}`
-}
-
-/** Build the runner route for a run ID. */
-export function runnerRoute(runId: string): string {
-  return `/runner?run=${encodeURIComponent(runId)}`
 }
 
 // ── Model Status Labels ──

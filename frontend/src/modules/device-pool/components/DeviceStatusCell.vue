@@ -52,6 +52,6 @@ defineProps<{
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .badge-exec   { background: var(--app-status-danger-bg); color: var(--app-status-danger-text); border: 1.5px solid var(--app-status-danger); }
-.badge-process{ background: var(--app-status-warning-bg); color: #7a5a10; border: 1.5px solid #F7C948; }
+.badge-process{ background: var(--app-status-warning-bg); color: var(--app-warning-text); border: 1.5px solid var(--c-dashboard); }
 .badge-locked { background: var(--app-status-purple-bg); color: var(--app-status-purple-text); border: 1.5px solid var(--app-status-purple-border); }
 </style>

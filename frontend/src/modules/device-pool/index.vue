@@ -17,6 +17,7 @@ import { useDevicePoolView } from './DevicePoolView.logic'
 const {
   scanning,
   loading,
+  error,
   activeFilter,
   kpiStats,
   viewMode,
@@ -77,7 +78,9 @@ const {
       </template>
     </WorkbenchHeader>
 
-    <div class="doc-body">
+    <ErrorState v-if="error" :message="error" @retry="handleRefresh" />
+
+    <div class="doc-body" v-else>
       <!-- 统计概览 -->
       <section class="doc-section device-section">
         <div class="doc-section__header">

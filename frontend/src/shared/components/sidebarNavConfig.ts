@@ -9,6 +9,7 @@ export const NAV_CATEGORIES = [
     label: "测试全流程",
     items: [
       { path: "/devices", icon: "smartphone", label: "设备管理" },
+      { path: "/inspector", icon: "search", label: "设备检查器" },
       { path: "/elements", icon: "crosshair", label: "元素定位" },
       { path: "/cases", icon: "layers", label: "用例管理" },
       { path: "/runner", icon: "play-circle", label: "执行引擎" },
@@ -19,7 +20,7 @@ export const NAV_CATEGORIES = [
     key: "ai-tools",
     label: "AI 与编排",
     items: [
-      { path: "/ai-assistant", icon: "bot", label: "AI 助手", isDev: true },
+      { path: "/ai-assistant", icon: "bot", label: "AI 助手" },
       { path: "/workflow", icon: "git-branch", label: "工作流工作台", isDev: true },
       {
         path: "/digital-human",

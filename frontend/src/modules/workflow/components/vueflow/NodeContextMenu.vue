@@ -31,6 +31,7 @@ const pages = ref<CatalogPage[]>([])
 const catalogError = ref('')
 const loading = ref(false)
 const search = ref('')
+const source = ref<string>('')
 const menuRef = ref<HTMLDivElement | null>(null)
 
 async function loadPages() {
@@ -163,7 +164,7 @@ onMounted(() => {
           <button v-for="ep in apiFiltered()" :key="ep.id" class="page-item" @click="selectApi(ep)">
             <div class="page-name">{{ ep.name }}</div>
             <div class="page-meta">
-              <span :style="'display:inline-block;padding:1px 6px;border-radius:4px;font-size:var(--app-size-xs);font-weight:700;color:#fff;background:' + (ep.method === 'GET' ? '#6fba2c' : ep.method === 'POST' ? '#889df0' : '#8b7355')">{{ ep.method }}</span>
+              <span :style="'display:inline-block;padding:1px 6px;border-radius:4px;font-size:var(--app-size-xs);font-weight:700;color:var(--app-bg-card);background:' + (ep.method === 'GET' ? '#6fba2c' : ep.method === 'POST' ? '#889df0' : '#8b7355')">{{ ep.method }}</span>
               {{ ep.url }}
             </div>
           </button>
@@ -290,7 +291,7 @@ onMounted(() => {
 .search:focus { border-color: var(--app-blue); }
 .source-tag {
   font-size: var(--app-size-xs);
-  color: #999;
+  color: var(--app-ink-muted);
   font-weight: 600;
   padding: 0 8px 6px;
 }
@@ -320,7 +321,7 @@ onMounted(() => {
 }
 .badge {
   font-size: var(--app-size-xs);
-  color: #fff;
+  color: var(--app-bg-card);
   background: var(--app-green-deep);
   border-radius: 6px;
   padding: 1px 6px;
@@ -328,7 +329,7 @@ onMounted(() => {
 }
 .page-meta {
   font-size: var(--app-size-xs);
-  color: #999;
+  color: var(--app-ink-muted);
   margin-top: 3px;
   font-weight: 600;
 }
@@ -336,6 +337,6 @@ onMounted(() => {
   padding: 18px;
   text-align: center;
   font-size: var(--app-size-sm);
-  color: #999;
+  color: var(--app-ink-muted);
 }
 </style>

@@ -8,8 +8,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 from apps.ai_assistant.decorators import require_auth
 
-from .default_questions import DEFAULT_QUESTIONS
-from .models import EvalResult, EvalRun, Question, QuestionBank
+from . import api
+from .models import EvalResult, EvalRun, QuestionBank
 
 # ── short-circuit: missing-auth views that don't crash middleware ──
 
@@ -76,54 +76,30 @@ def create_bank(request):
     name = (data.get("name") or "").strip()
     if not name:
         return JsonResponse({"status": False, "message": "试卷名称不能为空"}, status=400)
-    bank = QuestionBank.objects.create(
+    result = api.create_question_bank(
         name=name,
         description=data.get("description", ""),
+        questions_data=data.get("questions") or [],
     )
-    questions_data = data.get("questions") or []
-    for i, q in enumerate(questions_data):
-        Question.objects.create(
-            bank=bank,
-            content=q.get("content", ""),
-            expected_keywords=q.get("expected_keywords", ""),
-            category=q.get("category", "general"),
-            order=i,
-        )
-    return JsonResponse({"status": True, "id": bank.id, "question_count": bank.question_count})
+    return JsonResponse(
+        {"status": True, "id": result["id"], "question_count": result["question_count"]}
+    )
 
 
 @csrf_exempt
 @require_auth
 def update_bank(request, bank_id):
     try:
-        bank = QuestionBank.objects.get(id=bank_id)
+        result = api.update_question_bank(bank_id, json.loads(request.body))
     except QuestionBank.DoesNotExist:
         return JsonResponse({"status": False, "message": "not found"}, status=404)
-    data = json.loads(request.body)
-    if "name" in data:
-        bank.name = data["name"]
-    if "description" in data:
-        bank.description = data["description"]
-    bank.save()
-
-    # Full question replacement if provided
-    if "questions" in data:
-        bank.questions.all().delete()
-        for i, q in enumerate(data["questions"]):
-            Question.objects.create(
-                bank=bank,
-                content=q.get("content", ""),
-                expected_keywords=q.get("expected_keywords", ""),
-                category=q.get("category", "general"),
-                order=i,
-            )
-    return JsonResponse({"status": True, "question_count": bank.question_count})
+    return JsonResponse({"status": True, "question_count": result["question_count"]})
 
 
 @csrf_exempt
 @require_auth
 def delete_bank(request, bank_id):
-    QuestionBank.objects.filter(id=bank_id).delete()
+    api.delete_question_bank(bank_id)
     return JsonResponse({"status": True})
 
 
@@ -131,28 +107,18 @@ def delete_bank(request, bank_id):
 @require_auth
 def seed_default_bank(request):
     """POST /api/evaluator/banks/seed — create the default 30-question bank."""
-    existing = QuestionBank.objects.filter(name="默认30题试卷").first()
-    if existing:
+    result = api.seed_default_bank()
+    if result["existed"]:
         return JsonResponse(
             {
                 "status": True,
-                "id": existing.id,
+                "id": result["id"],
                 "message": "默认试卷已存在，直接返回",
             }
         )
-    bank = QuestionBank.objects.create(
-        name="默认30题试卷",
-        description="内置 30 道评测问题，覆盖平台功能、测试流程、设备管理、元素定位、知识库、异常处理、测试方法等 7 个类别。",
+    return JsonResponse(
+        {"status": True, "id": result["id"], "question_count": result["question_count"]}
     )
-    for q in DEFAULT_QUESTIONS:
-        Question.objects.create(
-            bank=bank,
-            content=q["content"],
-            expected_keywords=q.get("expected_keywords", ""),
-            category=q.get("category", "general"),
-            order=q.get("order", 0),
-        )
-    return JsonResponse({"status": True, "id": bank.id, "question_count": bank.question_count})
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -289,14 +255,13 @@ def start_eval_run(request):
     except QuestionBank.DoesNotExist:
         return JsonResponse({"status": False, "message": "question bank not found"}, status=404)
 
-    run = EvalRun.objects.create(
+    run_id = api.create_eval_run(
         agent=agent,
         bank=bank,
         framework=framework,
-        status="pending",
         judge_provider=judge_provider,
         judge_model=judge_model,
-    )
+    )["id"]
 
     # Run evaluation in background thread
     if framework and framework != "self":
@@ -304,6 +269,7 @@ def start_eval_run(request):
         from .frameworks import get_adapter
 
         def _bg():
+            run = EvalRun.objects.get(id=run_id)
             try:
                 adapter = get_adapter(framework)
                 if adapter is None:
@@ -369,8 +335,9 @@ def start_eval_run(request):
 
         def _bg():
             try:
-                run_evaluation(run.id, judge_provider, judge_model)
+                run_evaluation(run_id, judge_provider, judge_model)
             except Exception as e:
+                run = EvalRun.objects.get(id=run_id)
                 run.status = "failed"
                 run.report_json = json.dumps({"message": str(e)}, ensure_ascii=False)
                 run.save()
@@ -381,7 +348,7 @@ def start_eval_run(request):
     return JsonResponse(
         {
             "status": True,
-            "id": run.id,
+            "run": {"id": run_id},
             "message": f"评测已开始，共 {bank.question_count} 题",
         }
     )
@@ -392,49 +359,16 @@ def start_eval_run(request):
 def submit_human_score(request, result_id):
     """POST /api/evaluator/results/<id>/score — submit manual (human) scores."""
     try:
-        result = EvalResult.objects.get(id=result_id)
+        api.submit_human_score(result_id, json.loads(request.body))
     except EvalResult.DoesNotExist:
         return JsonResponse({"status": False, "message": "not found"}, status=404)
-
-    data = json.loads(request.body)
-    for field in ["human_relevance", "human_accuracy", "human_completeness", "human_conciseness"]:
-        if field in data and data[field] is not None:
-            setattr(result, field, float(data[field]))
-    if "human_note" in data:
-        result.human_note = data["human_note"]
-    result.save()
-
-    # Recalculate run averages using effective scores
-    run = result.run
-    all_results = run.results.all()
-    scored = 0
-    tr, ta, tc, tcon = 0.0, 0.0, 0.0, 0.0
-    for r in all_results:
-        eff = r.effective_scores()
-        if any(v > 0 for v in eff.values()):
-            scored += 1
-            tr += eff["relevance"]
-            ta += eff["accuracy"]
-            tc += eff["completeness"]
-            tcon += eff["conciseness"]
-    if scored > 0:
-        run.avg_relevance = round(tr / scored, 2)
-        run.avg_accuracy = round(ta / scored, 2)
-        run.avg_completeness = round(tc / scored, 2)
-        run.avg_conciseness = round(tcon / scored, 2)
-        run.total_score = round(
-            (run.avg_relevance + run.avg_accuracy + run.avg_completeness + run.avg_conciseness) / 4,
-            2,
-        )
-        run.save()
-
     return JsonResponse({"status": True})
 
 
 @csrf_exempt
 @require_auth
 def delete_run(request, run_id):
-    EvalRun.objects.filter(id=run_id).delete()
+    api.delete_eval_run(run_id)
     return JsonResponse({"status": True})
 
 

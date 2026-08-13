@@ -4,15 +4,13 @@
 读操作（列表/详情）不需要权限检查。
 """
 
-from django.db.models import Q
-
 from apps.ai_assistant.models import AIAgent, AIConversation
 
 
 def _same_user(record_owner_id, user_id: str) -> bool:
-    """Legacy rows with null owner are shared until explicitly assigned."""
+    """Check ownership. Null-owner records are considered unowned — no access."""
     if record_owner_id is None:
-        return True
+        return False
     return str(record_owner_id) == str(user_id)
 
 
@@ -59,14 +57,14 @@ def check_can_update_agent(user_id: str, agent_id: int) -> bool:
 
 
 def filter_agents_for_user(queryset, user_id: str | None):
-    """Scope agent list to owned + legacy shared rows."""
+    """Scope agent list to user-owned rows only."""
     if not user_id:
         return queryset.none()
-    return queryset.filter(Q(owner_id=user_id) | Q(owner_id__isnull=True))
+    return queryset.filter(owner_id=user_id)
 
 
 def filter_conversations_for_user(queryset, user_id: str | None):
-    """Scope conversation list to owned + legacy shared rows."""
+    """Scope conversation list to user-owned rows only."""
     if not user_id:
         return queryset.none()
-    return queryset.filter(Q(owner_id=user_id) | Q(owner_id__isnull=True))
+    return queryset.filter(owner_id=user_id)

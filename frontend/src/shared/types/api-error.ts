@@ -18,7 +18,7 @@ export function isApiError(e: unknown): e is ApiError {
 }
 
 /** 从 ApiError 中安全提取用户可读的错误消息 */
-export function getApiErrorMessage(e: unknown, fallback = "服务异常，请检查后端是否启动"): string {
+export function getApiErrorMessage(e: unknown, fallback = "服务暂时不可用，请稍后重试"): string {
   if (!isApiError(e)) return fallback
   return e.response?.data?.message || fallback
 }

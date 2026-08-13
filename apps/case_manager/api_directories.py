@@ -6,6 +6,7 @@ __all__ = [
     "delete_directory",
     "get_directory_tree",
     "update_directory",
+    "update_directory_permission",
 ]
 
 import json
@@ -45,12 +46,17 @@ def get_directory_tree(case_type=None):
 
         for td in case_qs:
             try:
-                if hasattr(td, "steps_json"):
+                if hasattr(td, "config_json"):
+                    # ApiTestCase: steps stored inside config_json
+                    cfg = td.config_json or {}
+                    steps = cfg.get("steps", [])
+                    step_count = len(steps) if isinstance(steps, list) else 0
+                elif hasattr(td, "steps_json"):
                     step_count = len(json.loads(td.steps_json or "[]"))
                 else:
                     # StorageTestCase uses a plain-text 'steps' field
                     step_count = len([l for l in (td.steps or "").split("\n") if l.strip()])
-            except (json.JSONDecodeError, TypeError):
+            except (json.JSONDecodeError, TypeError, AttributeError):
                 step_count = 0
             case_nodes.append(
                 {
@@ -236,6 +242,29 @@ def delete_directory(dir_id, deleted_by=""):
     return True, {"id": dir_id, "deleted": True}
 
 
+def update_directory_permission(dir_id, allow_create=None, allow_delete=None):
+    """更新目录权限（allow_create/allow_delete）。返回 (ok, data_or_error)。"""
+    try:
+        obj = CaseDirectory.objects.get(id=dir_id)
+    except CaseDirectory.DoesNotExist:
+        return False, f"目录不存在: {dir_id}"
+
+    update_fields = []
+    if allow_create is not None:
+        obj.allow_create = bool(allow_create)
+        update_fields.append("allow_create")
+    if allow_delete is not None:
+        obj.allow_delete = bool(allow_delete)
+        update_fields.append("allow_delete")
+    if update_fields:
+        obj.save(update_fields=update_fields)
+    return True, {
+        "id": dir_id,
+        "allow_create": obj.allow_create,
+        "allow_delete": obj.allow_delete,
+    }
+
+
 def batch_move_items(items: list[dict], target_directory_id: int) -> dict:
     """Batch move cases and/or directories to a target directory.
 
@@ -271,6 +300,9 @@ def batch_move_items(items: list[dict], target_directory_id: int) -> dict:
                 case.save()
                 moved += 1
             elif item_type == "directory":
+                if item_id is None:
+                    errors.append({"id": item_id, "reason": "目录ID不能为空"})
+                    continue
                 if int(item_id) == int(target_directory_id):
                     errors.append({"id": item_id, "reason": "不能将目录移动到自身"})
                     continue
@@ -283,7 +315,7 @@ def batch_move_items(items: list[dict], target_directory_id: int) -> dict:
                         {"id": item_id, "reason": f"目标位置已存在同名目录: {dir_obj.name}"}
                     )
                     continue
-                ancestor = target_dir
+                ancestor: CaseDirectory | None = target_dir
                 while ancestor is not None:
                     if ancestor.id == dir_obj.id:
                         errors.append({"id": item_id, "reason": "不能将目录移动到其子目录下"})

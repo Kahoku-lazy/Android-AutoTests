@@ -79,7 +79,7 @@ const emit = defineEmits<{
   padding: 20px;
 }
 .confirm-dialog {
-  background: #fff;
+  background: var(--app-bg-card);
   border-radius: var(--app-radius-md);
   max-width: 560px;
   width: 100%;
@@ -156,7 +156,7 @@ const emit = defineEmits<{
 .confirm-tool-args {
   font-size: var(--app-size-sm);
   color: #6d5f4b;
-  background: #fff;
+  background: var(--app-bg-card);
   border-radius: 8px;
   padding: 8px 10px;
   margin: 0;

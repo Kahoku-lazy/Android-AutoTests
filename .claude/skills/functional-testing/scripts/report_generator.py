@@ -9,7 +9,8 @@ Usage:
     html_path = generate_report("Dashboard", results, lang="en")
 """
 
-import os, sys
+import os
+
 from datetime import datetime
 
 
@@ -18,16 +19,26 @@ def _labels(lang="zh"):
     if lang == "en":
         return {
             "title": "{module} Functional Test Report",
-            "kpi_total": "Total Cases", "kpi_passed": "Passed",
-            "kpi_failed": "Failed", "kpi_rate": "Pass Rate",
-            "h_cases": "Case Details", "h_dims": "Dimension Coverage",
-            "h_bugs": "Bugs Found", "h_focus": "Next Test Focus",
-            "th_desc": "Description", "th_expected": "Expected",
-            "th_actual": "Actual", "th_result": "Result",
-            "th_time": "Time", "th_dim": "Dimension",
-            "th_cases": "Cases", "th_pass": "Pass",
-            "th_fail": "Fail", "th_rate": "Rate",
-            "th_coverage": "Coverage", "th_rec": "Recommendation",
+            "kpi_total": "Total Cases",
+            "kpi_passed": "Passed",
+            "kpi_failed": "Failed",
+            "kpi_rate": "Pass Rate",
+            "h_cases": "Case Details",
+            "h_dims": "Dimension Coverage",
+            "h_bugs": "Bugs Found",
+            "h_focus": "Next Test Focus",
+            "th_desc": "Description",
+            "th_expected": "Expected",
+            "th_actual": "Actual",
+            "th_result": "Result",
+            "th_time": "Time",
+            "th_dim": "Dimension",
+            "th_cases": "Cases",
+            "th_pass": "Pass",
+            "th_fail": "Fail",
+            "th_rate": "Rate",
+            "th_coverage": "Coverage",
+            "th_rec": "Recommendation",
             "rec_func": "Coverage sufficient",
             "rec_api": "Coverage sufficient",
             "rec_sec": "Add concurrency/auth tests",
@@ -53,16 +64,26 @@ def _labels(lang="zh"):
     # Default: zh
     return {
         "title": "{module} 功能测试报告",
-        "kpi_total": "用例总数", "kpi_passed": "通过",
-        "kpi_failed": "失败", "kpi_rate": "通过率",
-        "h_cases": "用例详情", "h_dims": "维度覆盖",
-        "h_bugs": "Bug 发现", "h_focus": "测试方向建议",
-        "th_desc": "描述", "th_expected": "预期",
-        "th_actual": "实际", "th_result": "结果",
-        "th_time": "耗时", "th_dim": "维度",
-        "th_cases": "用例数", "th_pass": "通过",
-        "th_fail": "失败", "th_rate": "通过率",
-        "th_coverage": "覆盖率", "th_rec": "建议",
+        "kpi_total": "用例总数",
+        "kpi_passed": "通过",
+        "kpi_failed": "失败",
+        "kpi_rate": "通过率",
+        "h_cases": "用例详情",
+        "h_dims": "维度覆盖",
+        "h_bugs": "Bug 发现",
+        "h_focus": "测试方向建议",
+        "th_desc": "描述",
+        "th_expected": "预期",
+        "th_actual": "实际",
+        "th_result": "结果",
+        "th_time": "耗时",
+        "th_dim": "维度",
+        "th_cases": "用例数",
+        "th_pass": "通过",
+        "th_fail": "失败",
+        "th_rate": "通过率",
+        "th_coverage": "覆盖率",
+        "th_rec": "建议",
         "rec_func": "覆盖充分，可适当减少",
         "rec_api": "覆盖充分",
         "rec_sec": "建议补充并发/权限测试",
@@ -237,7 +258,9 @@ _TEMPLATE = r"""<!DOCTYPE html>
 </html>"""
 
 
-def generate_report(module_name, results, lang="zh", env="Django:8765 + Vite:5173 + MySQL", output_dir=None):
+def generate_report(
+    module_name, results, lang="zh", env="Django:8765 + Vite:5173 + MySQL", output_dir=None
+):
     """Generate an HTML test report.
 
     Args:
@@ -275,16 +298,21 @@ def generate_report(module_name, results, lang="zh", env="Django:8765 + Vite:517
 
     # Module context — explains what this module does to non-technical readers
     _MODULE_CONTEXT = {
-        "Dashboard": ("测试范围：仪表盘首页的统计概览功能",
+        "Dashboard": (
+            "测试范围：仪表盘首页的统计概览功能",
             "仪表盘是用户登录后看到的第一个页面，展示 6 项核心统计：在线设备、"
             "测试用例、页面元素、执行记录、智能体数量、测试报告。"
-            "本次测试验证所有统计数据与源模块保持一致，接口安全可靠，页面加载速度达标。"),
-        "AI-Assistant": ("测试范围：AI 助手的智能体管理功能",
+            "本次测试验证所有统计数据与源模块保持一致，接口安全可靠，页面加载速度达标。",
+        ),
+        "AI-Assistant": (
+            "测试范围：AI 助手的智能体管理功能",
             "AI 助手是用户与 AI 交互的核心模块，支持创建智能体、对话交流、"
-            "知识库检索、测试用例自动生成。本次测试验证智能体的增删改查与数据库同步。"),
+            "知识库检索、测试用例自动生成。本次测试验证智能体的增删改查与数据库同步。",
+        ),
     }
-    ctx = _MODULE_CONTEXT.get(module_name, (f"{module_name}",
-        f"对 {module_name} 模块进行五维功能测试"))
+    ctx = _MODULE_CONTEXT.get(
+        module_name, (f"{module_name}", f"对 {module_name} 模块进行五维功能测试")
+    )
     context_title, context_body = ctx
 
     # Case rows — show human-readable title, not cryptic case IDs
@@ -297,20 +325,26 @@ def generate_report(module_name, results, lang="zh", env="Django:8765 + Vite:517
         status_text = "PASS" if r["status"] == "PASS" else "FAIL"
         title = r.get("title", r["case"])  # Use human-readable title if available
         desc = r.get("description", "")
-        title_html = f'<strong>{_esc(title)}</strong>'
+        title_html = f"<strong>{_esc(title)}</strong>"
         if desc:
             title_html += f'<br><span style="font-size:11px;color:var(--text2)">{_esc(desc)}</span>'
         case_rows.append(
             f'<tr><td>{i}</td><td style="font-size:11px">{r["case"]}</td><td>{r["dim"]}</td>'
-            f'<td>{title_html}</td>'
+            f"<td>{title_html}</td>"
             f'<td style="font-size:11px">{_esc(expected)}</td>'
             f'<td style="font-size:11px">{_esc(actual)}</td>'
             f'<td class="{status_cls}">{status_text}</td>'
-            f'<td>{r["duration_ms"]}ms</td></tr>'
+            f"<td>{r['duration_ms']}ms</td></tr>"
         )
 
     # Dimension rows
-    rec_keys = {"FUNC": "rec_func", "API": "rec_api", "SEC": "rec_sec", "DATA": "rec_data", "PERF": "rec_perf"}
+    rec_keys = {
+        "FUNC": "rec_func",
+        "API": "rec_api",
+        "SEC": "rec_sec",
+        "DATA": "rec_data",
+        "PERF": "rec_perf",
+    }
     dim_rows = []
     for dim_name in ["FUNC", "API", "SEC", "DATA", "PERF"]:
         if dim_name not in dims:
@@ -319,10 +353,16 @@ def generate_report(module_name, results, lang="zh", env="Django:8765 + Vite:517
         dpct = round(d["passed"] / d["total"] * 100) if d["total"] > 0 else 0
         green_bars = max(1, int(dpct / 100 * 30))
         red_bars = 30 - green_bars
-        heat_html = (f'<span class="heat-bar heat-green" style="width:{green_bars * 4}px"></span>'
-                     + (f'<span class="heat-bar heat-red" style="width:{red_bars * 4}px"></span>' if red_bars > 0 else ""))
+        heat_html = (
+            f'<span class="heat-bar heat-green" style="width:{green_bars * 4}px"></span>'
+            + (
+                f'<span class="heat-bar heat-red" style="width:{red_bars * 4}px"></span>'
+                if red_bars > 0
+                else ""
+            )
+        )
         dim_rows.append(
-            f'<tr><td><strong>{dim_name}</strong></td><td>{d["total"]}</td>'
+            f"<tr><td><strong>{dim_name}</strong></td><td>{d['total']}</td>"
             f'<td style="color:var(--green)">{d["passed"]}</td>'
             f'<td style="color:var(--red)">{d["total"] - d["passed"]}</td>'
             f'<td>{dpct}%</td><td><div class="heatmap">{heat_html}</div></td>'
@@ -341,17 +381,17 @@ def generate_report(module_name, results, lang="zh", env="Django:8765 + Vite:517
                 f'<div class="bug-card">'
                 f'<div class="bug-header">'
                 f'<span class="bug-severity {sev_cls}">{sev}</span>'
-                f'<span>{b["bug_type"]}</span>'
-                f'<strong>{b["case"]}</strong>'
+                f"<span>{b['bug_type']}</span>"
+                f"<strong>{b['case']}</strong>"
                 f'<span style="color:var(--text2)">({b["dim"]})</span>'
-                f'</div>'
+                f"</div>"
                 f'<div class="bug-evidence">{_esc(b.get("error", "No details"))}</div>'
                 f'<div class="bug-meta">'
-                f'{L["bug_expected"]}: {_esc(ev.get("expected", "N/A"))}'
-                f' | {L["bug_actual"]}: {_esc(ev.get("actual", "N/A"))}'
-                f'</div></div>'
+                f"{L['bug_expected']}: {_esc(ev.get('expected', 'N/A'))}"
+                f" | {L['bug_actual']}: {_esc(ev.get('actual', 'N/A'))}"
+                f"</div></div>"
             )
-        bugs_section = f'<h2>{L["h_bugs"]}</h2>\n' + "\n".join(bug_cards)
+        bugs_section = f"<h2>{L['h_bugs']}</h2>\n" + "\n".join(bug_cards)
     else:
         bugs_section = f'<h2>{L["h_bugs"]}</h2>\n<p style="color:var(--green);font-size:14px">{L["no_bugs"]}</p>'
 
@@ -372,7 +412,7 @@ def generate_report(module_name, results, lang="zh", env="Django:8765 + Vite:517
             action = L["focus_ok"]
         focus_items.append(
             f'<li class="focus-item"><span class="focus-prio {cls}">{prio}</span>'
-            f'<strong>{dim_name}</strong>: {action}</li>'
+            f"<strong>{dim_name}</strong>: {action}</li>"
         )
 
     # Fill template
@@ -382,28 +422,50 @@ def generate_report(module_name, results, lang="zh", env="Django:8765 + Vite:517
         title_raw=f"{module_name} Test Report",
         header_icon="🍃" if lang == "zh" else "📊",
         footer_icon="🍃" if lang == "zh" else "📊",
-        timestamp=timestamp, env=env, total_ms=total_ms,
+        timestamp=timestamp,
+        env=env,
+        total_ms=total_ms,
         env_label=L["env_label"],
-        kpi_total=L["kpi_total"], kpi_passed=L["kpi_passed"],
-        kpi_failed=L["kpi_failed"], kpi_rate=L["kpi_rate"],
-        total=total, passed=passed, failed=failed, pct=pct,
-        conclusion=conclusion, next_action=next_action, next_label=next_label,
-        h_cases=L["h_cases"], h_dims=L["h_dims"], h_focus=L["h_focus"],
-        th_desc=L["th_desc"], th_expected=L["th_expected"],
-        th_actual=L["th_actual"], th_result=L["th_result"], th_time=L["th_time"],
-        th_dim=L["th_dim"], th_cases=L["th_cases"], th_pass=L["th_pass"],
-        th_fail=L["th_fail"], th_rate=L["th_rate"],
-        th_coverage=L["th_coverage"], th_rec=L["th_rec"],
-        case_rows="\n".join(case_rows), dim_rows="\n".join(dim_rows),
-        bugs_section=bugs_section, focus_items="\n".join(focus_items),
-        context_title=context_title, context_body=context_body,
+        kpi_total=L["kpi_total"],
+        kpi_passed=L["kpi_passed"],
+        kpi_failed=L["kpi_failed"],
+        kpi_rate=L["kpi_rate"],
+        total=total,
+        passed=passed,
+        failed=failed,
+        pct=pct,
+        conclusion=conclusion,
+        next_action=next_action,
+        next_label=next_label,
+        h_cases=L["h_cases"],
+        h_dims=L["h_dims"],
+        h_focus=L["h_focus"],
+        th_desc=L["th_desc"],
+        th_expected=L["th_expected"],
+        th_actual=L["th_actual"],
+        th_result=L["th_result"],
+        th_time=L["th_time"],
+        th_dim=L["th_dim"],
+        th_cases=L["th_cases"],
+        th_pass=L["th_pass"],
+        th_fail=L["th_fail"],
+        th_rate=L["th_rate"],
+        th_coverage=L["th_coverage"],
+        th_rec=L["th_rec"],
+        case_rows="\n".join(case_rows),
+        dim_rows="\n".join(dim_rows),
+        bugs_section=bugs_section,
+        focus_items="\n".join(focus_items),
+        context_title=context_title,
+        context_body=context_body,
         footer=L["footer"],
     )
 
     # Write to file
     if output_dir is None:
-        output_dir = os.path.join(os.getcwd(), "tests", "functional",
-                                  module_name.lower().replace(" ", "-"), "reports")
+        output_dir = os.path.join(
+            os.getcwd(), "tests", "functional", module_name.lower().replace(" ", "-"), "reports"
+        )
     os.makedirs(output_dir, exist_ok=True)
     filename = f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
     filepath = os.path.join(output_dir, filename)
@@ -438,4 +500,10 @@ def _desc_for(case_id):
 
 
 def _esc(text):
-    return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    return (
+        str(text)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )

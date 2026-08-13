@@ -10,7 +10,7 @@ import { ElMessage } from "element-plus";
 import { renderMermaidBlocks } from "./composables/useMarkdown";
 import ErrorState from "@/shared/components/patterns/ErrorState.vue";
 import {
-  AVATAR_PATH_PREFIX,
+  isImageAvatar,
   MODEL_STATUS_MAP,
   CONNECTION_MODE_LABELS,
   CONNECTION_MODE_ICONS,
@@ -50,11 +50,12 @@ const {
   deleteConversation,
 } = useConversation(agentId, messageStore);
 
-// File upload
+// File / image upload
 const uploading = ref(false);
 const uploadedFile = ref(null);
+const uploadedImage = ref(null);
 
-// Task cards (SSE → HintCard；历史任务见工作台看板)
+// Task cards (SSE → HintCard；内嵌进度卡片)
 const taskCards = ref({});
 const importingPRD = ref(false);
 
@@ -209,20 +210,59 @@ async function handleFileUpload(e) {
   try {
     const data = await uploadFile(formData);
     if (data.status) {
+      if (uploadedImage.value) {
+        uploadedImage.value = null;
+        ElMessage.info("已改用文件附件（图片已清除）");
+      }
       uploadedFile.value = data.data;
       const sizeKB = ((data.data && data.data.size) || 0) / 1024;
       ElMessage.success(
         `已解析: ${file.name} (${sizeKB.toFixed(1)}KB)`,
       );
     } else ElMessage.error(data.message || "文件上传失败");
-  } catch (e) {
-    ElMessage.error("文件上传失败");
+  } catch (err) {
+    const msg =
+      err?.response?.data?.message ||
+      err?.message ||
+      "文件上传失败";
+    ElMessage.error(msg);
   }
   uploading.value = false;
   e.target.value = "";
 }
 function removeFile() {
   uploadedFile.value = null;
+}
+
+async function handleImageUpload(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  uploading.value = true;
+  const formData = new FormData();
+  formData.append("file", file);
+  try {
+    const data = await uploadFile(formData);
+    if (data.status && data.data?.data_uri) {
+      if (uploadedFile.value) {
+        uploadedFile.value = null;
+        ElMessage.info("已改用图片附件（文件已清除）");
+      }
+      uploadedImage.value = data.data;
+      const sizeKB = ((data.data && data.data.size) || 0) / 1024;
+      ElMessage.success(`已添加图片: ${file.name} (${sizeKB.toFixed(1)}KB)`);
+    } else ElMessage.error(data.message || "图片上传失败");
+  } catch (err) {
+    const msg =
+      err?.response?.data?.message ||
+      err?.message ||
+      "图片上传失败";
+    ElMessage.error(msg);
+  }
+  uploading.value = false;
+  e.target.value = "";
+}
+function removeImage() {
+  uploadedImage.value = null;
 }
 
 // Chat
@@ -235,10 +275,11 @@ async function newChat(ev) {
 
 async function selectChat(id) {
   // Save partial content of current conversation before switching.
-  // Use stopStream (not detachStream) here because switching conversations
-  // replaces messages.value — the old stream's callbacks would write to
-  // the wrong array otherwise.
-  stopStream();
+  // Detach (don't stop) — the AI continues working in the background.
+  // Detached SSE callbacks are guarded to skip writes to messages.value
+  // so they won't corrupt the newly loaded conversation's messages.
+  // Awaited to prevent race with switchChat → hydrateMessages.
+  await detachStream();
   await switchChat(id, {
     onAfterSelect: async () => {
       scrollBottom();
@@ -248,37 +289,75 @@ async function selectChat(id) {
 
 async function sendMessage() {
   const text = inputText.value.trim();
-  if ((!text && !uploadedFile.value) || !activeConv.value || sending.value)
+  if (
+    (!text && !uploadedFile.value && !uploadedImage.value) ||
+    !activeConv.value ||
+    sending.value
+  )
     return;
 
   inputText.value = "";
 
   let msgText = text;
   let displayText = text || "";
-  if (uploadedFile.value) {
+  let images;
+  let userBlocks;
+
+  if (uploadedImage.value) {
+    const img = uploadedImage.value;
+    const dataUri = img.data_uri || "";
+    // data URI 格式: data:[<mediatype>][;base64],<data>
+    const comma = dataUri.indexOf(",");
+    if (comma < 0) {
+      ElMessage.error("图片数据格式无效");
+      uploadedImage.value = null;
+      return;
+    }
+    const b64 = dataUri.slice(comma + 1);
+    images = [{ media_type: img.media_type, data: b64 }];
+    userBlocks = [];
+    if (text) userBlocks.push({ type: "text", text });
+    userBlocks.push({
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: img.media_type,
+        data: b64,
+      },
+      // 气泡直接用完整 data URI，避免再拼一次
+      data_uri: dataUri.startsWith("data:")
+        ? dataUri
+        : `data:${img.media_type || "image/png"};base64,${b64}`,
+    });
+    displayText = text || "[图片]";
+    uploadedImage.value = null;
+  } else if (uploadedFile.value) {
     const f = uploadedFile.value;
     msgText += `\n\n[上传文件: ${f.filename} (${f.type})]\n\`\`\`\n${f.content}\n\`\`\``;
+    const sizeKB = (f.size / 1024).toFixed(1);
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const statusHtml = f.parse_error
+      ? `<br><span style="color:#e85f5f;font-size:var(--app-size-xs);font-weight:600;">❌ 解析失败: ${esc(f.parse_error)}</span>`
+      : `<br><span style="color:#ffffff;font-size:var(--app-size-xs);font-weight:600;">✅ 解析成功</span>`;
     displayText =
       (text ? text + "\n" : "") +
-      `📎 ${f.filename} (${(f.size / 1024).toFixed(1)}KB)` +
+      `📎 ${esc(f.filename)} (${sizeKB}KB)` +
+      statusHtml +
       (text ? "" : "\n文件内容已发送给 AI");
     uploadedFile.value = null;
   }
 
-  // 同步占位，防止 Enter 连触 / 重复事件在 await 前再次进入
-  sending.value = true;
-  try {
-    await sendStreamMessage(msgText, displayText);
-  } finally {
-    // Fallback: ensure sending is released even if an unexpected
-    // error escapes sendStreamMessage's internal catch.
-    if (sending.value) sending.value = false;
-  }
+  // sending 由 useSSE.sendStreamMessage / finishSending 管理，
+  // 勿在此处 finally 提前清掉，否则回复中「停止」按钮不会出现
+  await sendStreamMessage(msgText, displayText, {
+    images,
+    blocks: userBlocks,
+  });
 }
 
 function handleKey(e) {
   if (e.key === "Enter" && !e.shiftKey) {
-    // 中文输入法确认选词时不发送
+    // 中文输入法确认选词时不发送；Shift+Enter 保留换行
     if (e.isComposing || e.keyCode === 229) return;
     e.preventDefault();
     sendMessage();
@@ -287,7 +366,7 @@ function handleKey(e) {
 
 // Avatars
 function avatarStyle(avatar) {
-  return avatar?.startsWith(AVATAR_PATH_PREFIX)
+  return isImageAvatar(avatar)
     ? {
         backgroundImage: `url(${avatar})`,
         backgroundSize: "cover",
@@ -296,7 +375,7 @@ function avatarStyle(avatar) {
     : {};
 }
 function avatarText(avatar) {
-  return avatar?.startsWith(AVATAR_PATH_PREFIX) ? "" : avatar || "";
+  return isImageAvatar(avatar) ? "" : avatar || "";
 }
 
 function toggleThinking(m) {
@@ -401,14 +480,6 @@ async function handleImportPRD({ sessionId }) {
                   >{{ connectionModeIcon }} {{ connectionModeLabel }}</span
                 >
                 <span class="msg-count">{{ messages.length }} 条消息</span>
-                <button
-                  v-if="sending && streamMode === 'sse'"
-                  class="stop-btn"
-                  @click="stopStream"
-                  title="停止生成"
-                >
-                  ⏹ 停止
-                </button>
               </div>
             </div>
 
@@ -418,7 +489,7 @@ async function handleImportPRD({ sessionId }) {
             <div ref="chatBody" class="chat-body">
               <MessageBubble
                 v-for="(m, i) in messages"
-                :key="i"
+                :key="m.id || i"
                 :message="m"
                 :agent-name="agent?.name || 'AI'"
                 :agent-avatar="agent?.avatar || ''"
@@ -450,11 +521,15 @@ async function handleImportPRD({ sessionId }) {
               v-model="inputText"
               :sending="sending"
               :uploaded-file="uploadedFile"
+              :uploaded-image="uploadedImage"
               :uploading="uploading"
               @send="sendMessage"
+              @stop="stopStream"
               @keydown="handleKey"
               @upload="handleFileUpload"
+              @upload-image="handleImageUpload"
               @remove-file="removeFile"
+              @remove-image="removeImage"
             />
           </template>
         </section>

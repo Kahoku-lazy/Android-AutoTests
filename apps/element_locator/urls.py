@@ -1,6 +1,7 @@
-"""element-locator URL routing — 11 endpoints under /api/elements/."""
+"""element-locator URL routing — DRF router + legacy paths coexist."""
 
 from django.urls import path
+from rest_framework.routers import DefaultRouter
 
 from .views import (
     add_element_to_page,
@@ -18,9 +19,6 @@ from .views import (
     create_web_group,
     delete_flow,
     delete_web_flow,
-    device_info_view,
-    do_action,
-    dump_page,
     flows_handler,
     list_api_endpoints,
     list_api_groups,
@@ -30,20 +28,32 @@ from .views import (
     page_detail,
     page_elements,
     pages_batch_move,
-    screenshot_snapshot,
     update_element,
     web_element_detail,
     web_flows_handler,
     web_group_detail,
 )
+from .views_drf import (
+    ApiEndpointViewSet,
+    ApiGroupViewSet,
+    PageFlowViewSet,
+    WebElementViewSet,
+    WebGroupViewSet,
+    WebPageFlowViewSet,
+)
 
 app_name = "elements"
 
+# ── DRF router ──
+router = DefaultRouter()
+router.register(r"web-groups", WebGroupViewSet, basename="el_web_group")
+router.register(r"web", WebElementViewSet, basename="el_web_el")
+router.register(r"api-groups", ApiGroupViewSet, basename="el_api_group")
+router.register(r"api-endpoints", ApiEndpointViewSet, basename="el_api_ep")
+router.register(r"flows", PageFlowViewSet, basename="el_flow")
+router.register(r"web-flows", WebPageFlowViewSet, basename="el_web_flow")
+
 urlpatterns = [
-    path("dump", dump_page, name="dump"),
-    path("action", do_action, name="action"),
-    path("device-info", device_info_view, name="device_info"),
-    path("screenshot", screenshot_snapshot, name="screenshot"),
     path("pages", list_pages, name="pages_list"),
     path("pages/create", create_page, name="page_create"),
     path("pages/clear", clear_pages, name="pages_clear"),
@@ -78,3 +88,5 @@ urlpatterns = [
     path("api-endpoints/create", create_api_endpoint, name="api_endpoint_create"),
     path("api-endpoints/<int:el_id>", api_endpoint_detail, name="api_endpoint_detail"),
 ]
+
+urlpatterns = router.urls + urlpatterns

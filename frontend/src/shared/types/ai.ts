@@ -11,9 +11,6 @@ export type DeliveryStatus = 'sending' | 'sent' | 'error'
 export type StreamReason = 'normal' | 'exceed_max_iters' | 'stopped' | 'error' | 'detached'
 export type ToolState = 'calling' | 'submitted' | 'running' | 'success' | 'error' | 'denied'
 
-// ── Task 相关 ──
-export type TaskFilterKey = 'all' | 'pending' | 'running' | 'completed' | 'failed'
-
 // ── Agent ──
 export interface AgentRecord {
   id: number
@@ -25,6 +22,7 @@ export interface AgentRecord {
   tags?: string[]
   description?: string
   avatar_url?: string
+  avatar?: string
   tool_count?: number
 }
 
@@ -108,6 +106,7 @@ export interface SSERound {
 
 // ── Chat Message ──
 export interface ChatMessage {
+  id?: number | string
   role: MessageRole
   content: string
   blocks?: ContentBlock[]
@@ -115,25 +114,15 @@ export interface ChatMessage {
   tokens?: number
   inputTokens?: number
   modelName?: string
+  model_name?: string
   thinking?: string
   thinkingDone?: boolean
+  thinkingExpanded?: boolean
   toolFlow?: ToolCall[]
   rounds?: SSERound[]
   hint?: object | string | null
   reason?: StreamReason
   deliveryStatus?: DeliveryStatus
-}
-
-// ── Task Record ──
-export interface TaskRecord {
-  run_id: string
-  agent_name?: string
-  status: string
-  title?: string
-  task_type?: string
-  device_serial?: string
-  case_count?: number
-  _demo?: boolean
 }
 
 // ── HITL Confirm Event ──
@@ -148,73 +137,72 @@ export interface HitlConfirmEvent {
   toolCalls?: HitlToolCall[]
 }
 
-// ── Evaluator types ──
-export type EvalSubTab = 'self' | 'kb' | 'evalscope' | 'deepeval' | 'maseval'
-export type EvalMode = 'benchmark' | 'custom'
-export type EvalRunStatus = 'pending' | 'running' | 'completed' | 'failed'
-
-export interface QuestionBank {
-  id: number
-  name: string
-  question_count?: number
-  category?: string
+// ── API 响应（宽松 interface — strict:false 下字面量判别属性会被拓宽，union 窄化失效）
+export interface AgentListResponse {
+  status?: boolean
+  agents?: AgentRecord[]
+  message?: string
 }
 
-export interface EvalRun {
-  id: number
-  agent_id?: number
-  bank_id?: number
-  status: EvalRunStatus
-  framework?: string
-  score?: number
-  created_at?: string
+export interface AgentDetailResponse {
+  status?: boolean
+  agent?: AgentRecord
+  message?: string
 }
 
-// ── API 响应 discriminated unions ──
-export type AgentListResponse =
-  | { ok: true; agents: AgentRecord[] }
-  | { ok: false; error: string }
+export interface AgentOpResponse {
+  status?: boolean
+  message?: string
+}
 
-export type AgentDetailResponse =
-  | { ok: true; agent: AgentRecord }
-  | { ok: false; error: string }
+export interface AgentTestResponse {
+  status?: boolean
+  connected?: boolean
+  available_models?: string[]
+  message?: string
+}
 
-export type AgentOpResponse =
-  | { ok: true }
-  | { ok: false; error: string }
+export interface AgentHealthResponse {
+  status?: boolean
+  agents?: { id: number; is_connected: boolean; last_checked?: string }[]
+  message?: string
+}
 
-export type AgentTestResponse =
-  | { ok: true; connected: boolean; available_models: string[] }
-  | { ok: false; error: string }
+export interface ConversationListResponse {
+  status?: boolean
+  conversations?: Conversation[]
+  message?: string
+}
 
-export type AgentHealthResponse =
-  | { ok: true; agents: { id: number; is_connected: boolean; last_checked?: string }[] }
-  | { ok: false; error: string }
+export interface ConversationCreateResponse {
+  status?: boolean
+  id?: number
+  title?: string
+  message?: string
+}
 
-export type ConversationListResponse =
-  | { ok: true; conversations: Conversation[] }
-  | { ok: false; error: string }
+export interface MessagesResponse {
+  status?: boolean
+  messages?: ChatMessage[]
+  message?: string
+}
 
-export type ConversationCreateResponse =
-  | { ok: true; id: number }
-  | { ok: false; error: string }
+export interface SaveMessageResponse {
+  status?: boolean
+  message?: string
+}
 
-export type MessagesResponse =
-  | { ok: true; messages: ChatMessage[] }
-  | { ok: false; error: string }
+export interface ToolboxListResponse {
+  status?: boolean
+  items?: object[]
+  message?: string
+}
 
-export type SaveMessageResponse =
-  | { ok: true }
-  | { ok: false; error: string }
-
-export type ToolboxListResponse =
-  | { ok: true; items: object[] }
-  | { ok: false; error: string }
-
-export type TaskListResponse =
-  | { ok: true; tasks: TaskRecord[] }
-  | { ok: false; error: string }
-
-export type KnowledgeStatusResponse =
-  | { ok: true; doc_count: number; db_size_mb: number; last_indexed?: string; running: boolean }
-  | { ok: false; error: string }
+export interface KnowledgeStatusResponse {
+  status?: boolean
+  doc_count?: number
+  db_size_mb?: number
+  last_indexed?: string
+  running?: boolean
+  message?: string
+}

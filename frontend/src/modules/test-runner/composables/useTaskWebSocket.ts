@@ -4,6 +4,25 @@
 import { wsUrl } from "@/shared/ws-url";
 import { getToken } from "@/shared/auth/token-storage";
 
+/** WebSocket 实例扩展 — 挂载重连/序号检测等自定义状态 */
+interface TaskWsConnection extends WebSocket {
+  _runId?: string
+  _seqGapDetected?: boolean
+  _lastSeq?: number
+  _reconnectAttempts?: number
+}
+
+/** WS 消息处理 hooks — 由调用方注入（列表页/详情页各有一份实现） */
+interface WsHandlerHooks {
+  addLog?: (msg: string, level?: string) => void
+  save?: () => void
+  onPollQueue?: () => void
+  onCaseStarted?: (ci: unknown) => void
+  onRunFinished?: (payload: unknown) => void
+  onDeviceError?: (payload: unknown) => void
+  reconnectAware?: boolean
+}
+
 const WS_MAP_KEY = "_task_ws_map";
 const HANDLER_KEY = "_task_ws_handlers";
 
@@ -30,7 +49,7 @@ export function unregisterHandler(taskId) {
  * @param {object} msg - WS 消息
  * @param {object} hooks - { addLog, save, onPollQueue, onCaseStarted, onRunFinished, onDeviceError }
  */
-export function applyWsMessage(task, msg, hooks = {}) {
+export function applyWsMessage(task, msg, hooks: WsHandlerHooks = {}) {
   if (!task) return;
   const ci = task.caseItems?.find(
     (c) => String(c.id) === String(msg.case_id),
@@ -239,7 +258,7 @@ export function connectTaskWebSocket(taskId, runId, createHandler) {
   }
 
   const url = `${wsUrl("/ws/test-run/" + runId)}?token=${encodeURIComponent(getToken())}`;
-  const ws = new WebSocket(url);
+  const ws = new WebSocket(url) as TaskWsConnection;
   ws._runId = runId;
 
   ws.onopen = () => {

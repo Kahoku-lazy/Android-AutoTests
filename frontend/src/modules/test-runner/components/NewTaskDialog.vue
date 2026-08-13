@@ -100,7 +100,7 @@ function onClose() {
             style="width: 160px"
             @update:model-value="newForm.intervalSeconds = $event"
           />
-          <span style="margin-left: 8px; font-size: var(--app-size-sm); color: #999">秒（最小 5s）</span>
+          <span style="margin-left: 8px; font-size: var(--app-size-sm); color: var(--app-ink-muted)">秒（最小 5s）</span>
         </el-form-item>
         <el-form-item label="执行方式">
           <el-radio-group :model-value="newForm.mode" @update:model-value="newForm.mode = $event">

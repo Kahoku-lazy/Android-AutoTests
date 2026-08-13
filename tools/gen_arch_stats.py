@@ -13,11 +13,12 @@ Architecture stats generator — 扫描代码库，输出当前架构的可度�
   python tools/gen_arch_stats.py --check-md    # 对比 项目架构.md，输出 drift 报告
 """
 
-from collections import defaultdict
 import json
-from pathlib import Path
 import re
 import sys
+
+from collections import defaultdict
+from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 

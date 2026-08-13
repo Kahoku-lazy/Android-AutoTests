@@ -21,8 +21,8 @@ const props = defineProps<{
   message: ChatMessage
   agentName?: string
   agentAvatar?: string
-  avatarStyleFn?: () => Record<string, string>
-  avatarTextFn?: () => string
+  avatarStyleFn?: (avatar: string) => Record<string, string>
+  avatarTextFn?: (avatar: string) => string
   importingPrd?: boolean
   typing?: boolean
 }>()
@@ -56,7 +56,7 @@ const capabilitySummary = computed(() => {
 
 const emit = defineEmits<{
   'toggle-thinking': [message: ChatMessage]
-  'toggle-round-thinking': [payload: { roundIndex: number }]
+  'toggle-round-thinking': [message: ChatMessage, roundIndex: number]
   'import-prd': [payload: object]
 }>()
 
@@ -70,6 +70,42 @@ function reasonLabel(reason) {
   if (reason === "error") return "❌ 异常终止";
   return reason;
 }
+
+function imageSrcFromBlock(block: {
+  data_uri?: string
+  source?: { type?: string; data?: string; media_type?: string; url?: string }
+}): string {
+  if (block?.data_uri) return block.data_uri
+  const source = block?.source
+  if (!source) return ''
+  if (source.type === 'url' && source.url) return source.url
+  if (source.data) {
+    const raw = String(source.data)
+    if (raw.startsWith('data:') && raw.includes(',')) return raw
+    // 残缺 data:xxx;base64（无逗号后数据）视为无效
+    if (raw.startsWith('data:') && !raw.includes(',')) return ''
+    const media = source.media_type || 'image/png'
+    return `data:${media};base64,${raw}`
+  }
+  return ''
+}
+
+const userImages = computed(() => {
+  if (props.message.role !== 'user' || !Array.isArray(props.message.blocks)) return []
+  return props.message.blocks
+    .filter((b) => b?.type === 'image' || b?.type === 'data')
+    .map((b) => imageSrcFromBlock(b as {
+      data_uri?: string
+      source?: { type?: string; data?: string; media_type?: string; url?: string }
+    }))
+    .filter(Boolean)
+})
+
+const userTextContent = computed(() => {
+  const c = props.message.content || ''
+  if (userImages.value.length && (c === '[图片]' || !c.trim())) return ''
+  return c
+})
 </script>
 
 <template>
@@ -142,14 +178,28 @@ function reasonLabel(reason) {
           <i></i><i></i><i></i>
         </span>
       </div>
+      <div v-else-if="message.role === 'user'" class="msg-user-body">
+        <div v-if="userImages.length" class="msg-images">
+          <el-image
+            v-for="(src, i) in userImages"
+            :key="i"
+            class="msg-image"
+            :src="src"
+            :preview-src-list="userImages"
+            :initial-index="i"
+            fit="cover"
+          />
+        </div>
+        <div
+          v-if="userTextContent"
+          class="msg-text"
+          v-html="userTextContent"
+        />
+      </div>
       <div
-        v-else-if="message.role === 'user' || message.content"
+        v-else-if="message.content"
         class="msg-text"
-        v-html="
-          message.role === 'user'
-            ? message.content
-            : safeMarkdown(message.content)
-        "
+        v-html="safeMarkdown(message.content)"
       />
 
       <div v-if="capabilitySummary" class="capability-summary">
@@ -202,7 +252,7 @@ function reasonLabel(reason) {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: #fff;
+  background: var(--app-bg-card);
   border: 1px solid var(--doodle-bg, #faf5ee);
   display: flex;
   align-items: center;
@@ -226,6 +276,33 @@ function reasonLabel(reason) {
 }
 .msg.user .msg-author {
   text-align: right;
+}
+.msg-user-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.msg-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.msg-image {
+  width: 160px;
+  height: 160px;
+  border-radius: 12px;
+  border: 1.5px solid var(--ink);
+  overflow: hidden;
+  cursor: zoom-in;
+  display: block;
+  background: #f5f5f5;
+}
+.msg-image :deep(.el-image__inner) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .msg-flow-tag {
   font-size: var(--app-size-xs);
@@ -252,11 +329,11 @@ function reasonLabel(reason) {
 }
 .msg.user .msg-text {
   background: linear-gradient(135deg, var(--app-accent-purple, #b39ef3) 0%, var(--ai-teal-hover) 100%);
-  color: #fff;
+  color: var(--app-bg-card);
   border-bottom-right-radius: 6px;
 }
 .msg.assistant .msg-text {
-  background: #fff;
+  background: var(--app-bg-card);
   color: var(--doodle-ink, #2d2d2d);
   border: 1px solid var(--doodle-bg, #faf5ee);
   border-bottom-left-radius: 6px;
@@ -306,7 +383,7 @@ function reasonLabel(reason) {
   color: #616161;
   border: 1px solid #bdbdbd;
 }
-.reason-badge.message {
+.reason-badge.error {
   background: var(--ai-bg-error);
   color: #b71c1c;
   border: 1px solid #ef5350;
@@ -325,7 +402,7 @@ function reasonLabel(reason) {
   background: rgba(0, 0, 0, 0.06);
 }
 .msg.user .msg-text :deep(code) {
-  background: #fff;
+  background: var(--app-bg-card);
 }
 .msg-text :deep(pre) {
   margin: 8px 0;
@@ -394,7 +471,7 @@ function reasonLabel(reason) {
 .msg-text :deep(.mermaid-diagram) {
   margin: 10px 0;
   padding: 14px;
-  background: #fff;
+  background: var(--app-bg-card);
   border-radius: 12px;
   border: 2px solid var(--app-accent-purple, #b39ef3);
   overflow-x: auto;

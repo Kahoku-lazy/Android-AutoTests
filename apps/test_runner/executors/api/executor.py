@@ -43,7 +43,7 @@ class ApiExecutor:
         """Recursively resolve {{var}} in dict keys and values."""
         if not d:
             return d
-        result = {}
+        result: dict = {}
         for k, v in d.items():
             resolved_key = self._resolve(k) if isinstance(k, str) else k
             if isinstance(v, str):
@@ -248,7 +248,7 @@ class ApiExecutor:
         """Recursively resolve {{key}} in dict using the given data source."""
         if not d:
             return d
-        result = {}
+        result: dict = {}
         for k, v in d.items():
             rk = cls._resolve_with(data, k) if isinstance(k, str) else k
             if isinstance(v, str):
@@ -278,8 +278,8 @@ class ApiExecutor:
         """Build a single api_request step from legacy flat fields."""
         headers_str = extra.get("headers", "")
         body_str = extra.get("body", "")
-        headers = {}
-        body = {}
+        headers: dict = {}
+        body: dict = {}
         if isinstance(headers_str, str) and headers_str.strip():
             try:
                 headers = json.loads(headers_str)
@@ -289,9 +289,11 @@ class ApiExecutor:
             headers = headers_str
         if isinstance(body_str, str) and body_str.strip():
             try:
-                body = json.loads(body_str)
+                parsed = json.loads(body_str)
+                if isinstance(parsed, dict):
+                    body = parsed
             except (json.JSONDecodeError, TypeError):
-                body = body_str
+                pass  # JSON parse failed — TestStep.body must be dict, leave as {}
         elif isinstance(body_str, dict):
             body = body_str
 

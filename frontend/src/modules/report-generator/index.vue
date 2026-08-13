@@ -211,10 +211,10 @@ function openCaseBreakdown(type, tab = 'detail') {
         <KpiCard :value="summary.total_runs" label="总执行次数" color="var(--c-workflow)" shape="diamond" />
         <KpiCard :value="summary.total_pass" label="通过" color="var(--c-device)" shape="triangle" @click="openCaseBreakdown('pass')" />
         <KpiCard :value="summary.total_fail" label="失败" color="var(--c-runner)" shape="square" @click="openCaseBreakdown('fail','bugs')">
-          <div v-if="bugSummary" style="font-size:var(--app-size-xs);color:#999;margin-top:4px">{{ bugSummary.unique_issues }} 类 · {{ bugSummary.total_occurrences }} 次 · {{ bugSummary.affected_cases }} 用例</div>
+          <div v-if="bugSummary" style="font-size:var(--app-size-xs);color:var(--app-ink-muted);margin-top:4px">{{ bugSummary.unique_issues }} 类 · {{ bugSummary.total_occurrences }} 次 · {{ bugSummary.affected_cases }} 用例</div>
         </KpiCard>
         <KpiCard :value="`${summary.pass_rate}%`" label="通过率" color="var(--c-dashboard)" shape="circle">
-          <div style="font-size:var(--app-size-xs);color:#999;margin-top:4px">{{ summary.total_iterations }} 次迭代</div>
+          <div style="font-size:var(--app-size-xs);color:var(--app-ink-muted);margin-top:4px">{{ summary.total_iterations }} 次迭代</div>
         </KpiCard>
       </div>
       <div style="font-size:var(--app-size-xs);opacity:0.3;text-align:right">最近更新: {{ lastUpdated || '暂无数据' }}</div>
@@ -369,12 +369,12 @@ function openCaseBreakdown(type, tab = 'detail') {
 .doc-body{flex:1 1 0;min-height:0;overflow-y:auto!important;padding:16px 20px 32px;display:flex;flex-direction:column;gap:14px}
 
 /* 分区卡片 — doc-section 统一样式 */
-.doc-section{background:#fff;border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:16px 18px;box-shadow:2px 3px 0 rgba(0,0,0,0.04)}
+.doc-section{background:var(--app-bg-card);border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:16px 18px;box-shadow:2px 3px 0 rgba(0,0,0,0.04)}
 .doc-section__header{margin-bottom:12px}
-.doc-section__title{font-family:'Patrick Hand',cursive;font-size:22px;font-weight:700;display:inline-block;position:relative;margin-bottom:6px}
+.doc-section__title{font-family:'Patrick Hand',cursive;font-size:var(--app-size-xl);font-weight:700;display:inline-block;position:relative;margin-bottom:6px}
 .doc-section__title::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2.5px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%231e1e24' stroke-width='2' fill='none'/%3E%3C/svg%3E")repeat-x;background-size:40px 3px}
-.doc-section__title .doc-tag{font-size:var(--app-size-xs);padding:1px 8px;border-radius:4px 8px 4px 8px;background:#fff;color:#999;border:1.5px solid #e8ecf1;font-weight:700;margin-left:8px}
-.doc-section__label{color:#999;font-size:var(--app-size-xs);margin-top:2px}
+.doc-section__title .doc-tag{font-size:var(--app-size-xs);padding:1px 8px;border-radius:4px 8px 4px 8px;background:var(--app-bg-card);color:var(--app-ink-muted);border:1.5px solid #e8ecf1;font-weight:700;margin-left:8px}
+.doc-section__label{color:var(--app-ink-muted);font-size:var(--app-size-xs);margin-top:2px}
 
 /* KPI 网格 — 渲染由 shared/KpiCard.vue 接管 */
 .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:8px}
@@ -383,27 +383,27 @@ function openCaseBreakdown(type, tab = 'detail') {
 /* 筛选栏 */
 .filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .filter-date{width:220px}.filter-input{width:140px}
-.filter-summary{font-size:11px;color:#999;font-weight:600;white-space:nowrap;margin-left:auto}
-.btn-sm{padding:4px 10px;font-size:11px;font-weight:700;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;background:#fff;color:var(--ink);cursor:pointer;font-family:inherit;transition:all 0.12s}
+.filter-summary{font-size:var(--app-size-xs);color:var(--app-ink-muted);font-weight:600;white-space:nowrap;margin-left:auto}
+.btn-sm{padding:4px 10px;font-size:var(--app-size-xs);font-weight:700;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;background:var(--app-bg-card);color:var(--ink);cursor:pointer;font-family:inherit;transition:all 0.12s}
 .btn-sm:hover{background:var(--c-report)}
 
 /* 图表 */
 .chart-section{display:flex;flex-direction:column;gap:12px}
 .chart-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.toolbar-label{font-size:12px;font-weight:700;color:#999}
+.toolbar-label{font-size:var(--app-size-xs);font-weight:700;color:var(--app-ink-muted)}
 .page-size-btns{display:flex;gap:4px}
-.page-size-btn{padding:4px 10px;font-size:11px;font-weight:700;color:#999;background:#fff;border:2px solid #e8ecf1;border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all 0.12s}
+.page-size-btn{padding:4px 10px;font-size:var(--app-size-xs);font-weight:700;color:var(--app-ink-muted);background:var(--app-bg-card);border:2px solid #e8ecf1;border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all 0.12s}
 .page-size-btn:hover{border-color:var(--ink);color:var(--ink)}
-.page-size-btn.active{background:#f8f6f2;border-color:var(--ink);color:var(--ink)}
+.page-size-btn.active{background:var(--app-bg-subtle);border-color:var(--ink);color:var(--ink)}
 .chart-row{display:grid;grid-template-columns:1.5fr 1fr;gap:14px}
 @media(max-width:900px){.chart-row{grid-template-columns:1fr}}
-.chart-card{padding:0}.chart-title{font-size:15px;font-weight:700;margin-bottom:8px}
+.chart-card{padding:0}.chart-title{font-size:var(--app-size-sm);font-weight:700;margin-bottom:8px}
 
 /* 表格工具栏（单行） */
 .table-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 16px 0}
-.page-info{font-size:11px;color:#999;font-weight:600;white-space:nowrap;margin-left:auto}
+.page-info{font-size:var(--app-size-xs);color:var(--app-ink-muted);font-weight:600;white-space:nowrap;margin-left:auto}
 .page-nav{display:flex;gap:6px;margin-left:8px}
-.page-nav-btn{padding:4px 10px;font-size:10px;font-weight:700;color:var(--ink);background:#fff;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all 0.12s}
+.page-nav-btn{padding:4px 10px;font-size:var(--app-size-xs);font-weight:700;color:var(--ink);background:var(--app-bg-card);border:2px solid var(--ink);border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all 0.12s}
 .page-nav-btn:hover{background:var(--c-report)}
 .page-nav-btn:disabled{opacity:0.3;cursor:default}
 
@@ -411,20 +411,20 @@ function openCaseBreakdown(type, tab = 'detail') {
 .report-tabs{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
 .report-tabs :deep(.el-tabs__header){margin-bottom:0;padding:0 16px}
 .report-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:4px}
-.report-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:11px;font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:#999;height:auto;line-height:1.4}
+.report-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:var(--app-ink-muted);height:auto;line-height:1.4}
 .report-tabs :deep(.el-tabs__item:hover){color:var(--ink)}
 .report-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-report);border-color:var(--ink)}
 .report-tabs :deep(.el-tabs__active-bar){display:none}
 .report-tabs :deep(.el-tabs__content){flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:12px 0 0}
-.table-card{background:#fff;border:2.5px solid var(--c-report);border-radius:6px 10px 6px 10px;overflow:hidden;margin:0 16px 14px}
+.table-card{background:var(--app-bg-card);border:2.5px solid var(--c-report);border-radius:6px 10px 6px 10px;overflow:hidden;margin:0 16px 14px}
 
 .report-table{width:100%}
-.report-table :deep(.el-table__header th){background:#f8f6f2!important;color:var(--ink)!important;font-weight:700!important;font-size:11px!important;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2.5px solid var(--ink)!important}
+.report-table :deep(.el-table__header th){background:var(--app-bg-subtle)!important;color:var(--ink)!important;font-weight:700!important;font-size:var(--app-size-xs)!important;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2.5px solid var(--ink)!important}
 .report-table :deep(.el-table__body td){border-bottom:1px solid #e8e4d8!important;color:var(--ink)}
 .report-table :deep(.el-table__body tr:hover td){background:#fefdfb!important}
 
 .run-link{cursor:pointer;text-decoration:none;color:var(--ink)}
-.cell-run-id{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;text-decoration:underline}
-.badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);display:inline-block}
-.status-ok{background:#C8F5D0;color:#2d7a2d}.status-fail{background:#FFE0DB;color:#a03030}.status-stopped{background:#f0ede8;color:#999}
+.cell-run-id{font-family:'JetBrains Mono',monospace;font-size:var(--app-size-xs);font-weight:600;text-decoration:underline}
+.badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);display:inline-block}
+.status-ok{background:var(--app-pass);color:var(--app-status-success-text)}.status-fail{background:var(--app-fail);color:#a03030}.status-stopped{background:var(--app-border-lighter);color:var(--app-ink-muted)}
 </style>

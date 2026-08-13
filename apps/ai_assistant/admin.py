@@ -37,7 +37,6 @@ class AIExecutionLogAdmin(admin.ModelAdmin):
     list_display = ("id", "agent", "level", "short_msg", "created_at")
     list_filter = ("level",)
 
+    @admin.display(description="message")
     def short_msg(self, obj):
         return obj.message[:80]
-
-    short_msg.short_description = "message"

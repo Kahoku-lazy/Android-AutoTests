@@ -123,7 +123,7 @@ class EvalScopeAdapter(BaseAdapter):
     def _normalize(self, result, questions: list[dict]) -> AdapterResult:
         """Convert EvalScope output to our standardized AdapterResult."""
         items = []
-        scores = {}
+        scores: dict[str, float] = {}
         total = 0.0
 
         try:

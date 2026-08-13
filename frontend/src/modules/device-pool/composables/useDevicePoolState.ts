@@ -31,6 +31,7 @@ export interface UseDevicePoolStateReturn {
   loading: Ref<boolean>
   selectedSerial: Ref<string | null>
   scanning: Ref<boolean>
+  error: Ref<string | null>
   // getters
   selectedDevice: ComputedRef<DeviceRecord | undefined>
   onlineDevices: ComputedRef<DeviceRecord[]>
@@ -61,6 +62,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
   const loading = ref(false)
   const selectedSerial = ref<string | null>(null)
   const scanning = ref(false)
+  const error = ref<string | null>(null)
 
   // ── Getters ──
   const selectedDevice = computed(() =>
@@ -75,6 +77,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
 
   async function fetchDevices() {
     loading.value = true
+    error.value = null
     try {
       const { data } = await apiListDevices()
       if (data.status) {
@@ -83,7 +86,8 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
         queueLength.value = (data.queue_length as number) || 0
       }
     } catch (e: unknown) {
-      console.error('[device-pool] fetchDevices failed:', (e as { message?: string })?.message || e)
+      error.value = '设备列表加载失败，请稍后重试'
+      console.warn('[device-pool] fetchDevices failed:', (e as { message?: string })?.message || e)
     }
     loading.value = false
   }
@@ -102,7 +106,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
       return data
     } catch (e: unknown) {
       const errData = (e as { response?: { data?: ScanResponse } })?.response?.data
-      return errData || { ok: false, error: '扫描失败' }
+      return errData || { status: false, message: '扫描失败' }
     } finally {
       scanning.value = false
     }
@@ -117,7 +121,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
       return data
     } catch (e: unknown) {
       const errData = (e as { response?: { data?: DeviceOpResponse } })?.response?.data
-      return errData || { ok: false, error: '连接失败' }
+      return errData || { status: false, message: '连接失败' }
     }
   }
 
@@ -131,7 +135,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
       return data
     } catch (e: unknown) {
       console.error('[device-pool] doActivate failed:', e)
-      return { ok: false, error: '激活失败' }
+      return { status: false, message: '激活失败' }
     }
   }
 
@@ -144,7 +148,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
       return data
     } catch (e: unknown) {
       const errData = (e as { response?: { data?: DeviceOpResponse } })?.response?.data
-      return errData || { ok: false, error: '锁定失败' }
+      return errData || { status: false, message: '锁定失败' }
     }
   }
 
@@ -157,7 +161,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
       return data
     } catch (e: unknown) {
       console.error('[device-pool] doRelease failed:', e)
-      return { ok: false, error: '释放失败' }
+      return { status: false, message: '释放失败' }
     }
   }
 
@@ -170,7 +174,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
       return data
     } catch (e: unknown) {
       const errData = (e as { response?: { data?: DeviceOpResponse } })?.response?.data
-      return errData || { ok: false, error: '断开失败' }
+      return errData || { status: false, message: '断开失败' }
     }
   }
 
@@ -195,7 +199,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
       return data
     } catch (e: unknown) {
       console.error('[device-pool] doJoinQueue failed:', e)
-      return { ok: false, error: '加入排队失败' }
+      return { status: false, message: '加入排队失败' }
     }
   }
 
@@ -208,7 +212,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
       return data
     } catch (e: unknown) {
       console.error('[device-pool] doLeaveQueue failed:', e)
-      return { ok: false, error: '取消排队失败' }
+      return { status: false, message: '取消排队失败' }
     }
   }
 
@@ -232,6 +236,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
     loading,
     selectedSerial,
     scanning,
+    error,
     selectedDevice,
     onlineDevices,
     hasDevices,

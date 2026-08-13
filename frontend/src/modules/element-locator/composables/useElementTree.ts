@@ -297,7 +297,7 @@ export function useElementTree() {
   async function doClearPages() {
     const ids = clearSelectedOnly.value && selectedPageIds.size > 0 ? [...selectedPageIds] : null
     try {
-      const { data } = await apiClearAll(ids)
+      const { data } = await apiClearAll(ids as (string | number)[])
       if (data.status) {
         showClearDialog.value = false
         selectedPage.value = null

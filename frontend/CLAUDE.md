@@ -1,323 +1,86 @@
-# CLAUDE.md — 前端
+# Frontend CLAUDE.md — AI 约束
 
-> 本文定位：**行为决策** — 什么时候做什么、选什么方案。每次收到前端任务第一个读。
+> 工作于 `frontend/` 时必须遵守。细则与反例见 `dev_docs/项目笔记/前端claude笔记.md`；关单自检用 skill `vue-frontend-check`。
 
-## 文档速查
-
-| 我要…… | 读这个 |
-|------|------|
-| 判断改动的边界和步骤 | 本文 → 0️⃣ 改前四步 |
-| 选状态方案（ref / composable / Pinia） | 本文 → 状态管理决策树 |
-| 找现成的共享组件 | 本文 → 共享组件速查 |
-| 查具体实现约束和红线 | `../.claude/rules/frontend.md` |
-| 复制页面/组件代码骨架 | `frontend/DESIGN_SYSTEM.md` |
-| 查前后端字段名对照 | `../dev_docs/03-设计与架构/工具-VUE_API_CONTRACT.md` |
+**口诀**：展示不碰网，流程不做校验，类型跟着实现走，图标进工厂，共享等第二人，重构先问值不值。  
+**完成定义**：构建通过 ≠ 完成；必须在真实页面验证。
 
 ---
 
-## 0️⃣ 改前准备（动手之前必走）
+## 0. 动手前
 
-收到"改 UI"指令后，不直接写代码。先走完下面四步，再跳转到 ①②③ 执行。
-
-### 第一步：理解需求
-
-```
-"改 UI" →
-  ├── 需求明确（"把设备列表的 ONLINE 标签从红色改绿色"）→ 继续
-  └── 需求模糊（"优化一下设备页"）→ 列 3-5 个具体理解让用户选，不默默挑一种执行
-```
-
-不假设。不隐藏困惑。不确定时主动问：改哪个页面？改什么元素？期望的效果是什么？
-
-### 第二步：定位当前位置
-
-```bash
-# 1. 列出模块所有 .vue
-ls frontend/src/modules/{domain}/components/
-
-# 2. 逐个 Read 三个块
-#    <template>   → DOM 结构 + 数据绑定 + class 名
-#    <script setup> → props / emits / ref / computed / 调了哪些 api.js
-#    <style scoped> → 用了哪些 CSS 变量 + 类名列表
-
-# 3. 提取模板中全部 class（防止漏 inner class）
-grep -oP 'class="[^"]*"' target.vue | sort -u
-```
-
-**为什么要读完三个块才动手？** 反面教材：只看了 `<style>` 就开改，删了 340 行旧 CSS。凭印象写新 CSS 只覆盖主类名，漏了 `.fail-card`、`.issue-row`、`.task-block` 等 12+ 个 inner class，用户报一个补一个，5 轮才修完。
-
-### 第三步：查约束规则
-
-**通用约束（不管改哪都要守）：**
-
-| 查什么 | 去哪看 | 守什么 |
-|--------|--------|--------|
-| 架构红线 | `../.claude/rules/frontend.md` | 调用链单向、三层职责、文件上限 500 行 |
-| 设计系统 | `frontend/DESIGN_SYSTEM.md` | 改颜色→§1 色板+§1.3状态色 / 改组件→§3组件模板 / 改Element Plus→§2原子层 / 改布局→§4页面层 / 嵌套+表格+表单→§5工程约束 |
-| 命名规范 | `../.claude/rules/conventions.md` | PascalCase.vue / kebab-case 模板 / camelCase JS / snake_case JSON |
-
-**模块专属约束（改哪个模块，查哪条约束）：**
-
-| 模块 | 特殊约束 | 踩坑后果 |
-|------|---------|---------|
-| `element-locator` | WS 截图流 2fps 不能阻塞主线程；dump 结果 `_idx`/`_xpaths`/`_testpoint` 前缀字段不能用错 | 截图流卡顿或断连 |
-| `case-manager` | 步骤 JSON 结构不能破坏；`steps_data` 序列化字段名与 StepType 枚举对齐 | 用例保存后执行失败 |
-| `ai-assistant` | SSE 事件类型决定渲染时机；`MessageBubble`/`ToolCallCard`/`ThinkingBlock` 各有独立折叠规则 | AI 对话 UI 错乱 |
-| `test-runner` | WS 6 种事件 type 一个不能漏；`runProgress` 结构决定进度条正确性 | 进度不更新或页面空白 |
-| `report-generator` | 报告下载是 FileResponse 非 JSON，必须用 `fetch().text()` 而非 `api()` | 报告内容乱码 |
-| `device-pool` | 设备状态只有 3 种（ONLINE/BUSY/OFFLINE），无 DISCONNECTED | 状态标签渲染错误 |
-| `dashboard` | 纯聚合只读，**禁止写操作** | 违反模块边界 |
-| `workflow` | Blockly/VueFlow 内部状态不能外部直接篡改 | 可视化编排数据丢失 |
-
-### 第四步：判边界 → 跳转执行
-
-```
-改动涉及什么？
-  ├── 只改颜色/间距/布局/动画/组件内部状态     → 跳转到 ①
-  ├── 数据显示变了，需要新字段或改 API 调用      → 跳转到 ②
-  ├── 改了 AI 对话的气泡/ToolCard/思考块/输入框  → 跳转到 ③
-  └── 跨了多个边界                              → 逐个按 ①②③ 顺序执行
-```
+1. 需求模糊 → 列 3～5 种理解让用户选，禁止默默挑一种执行。
+2. 先读目标 `.vue` 的 **template + script + style 三块**；改 CSS 前提取全部 class，禁止凭印象重写漏 inner class。
+3. 查：`DESIGN_SYSTEM.md`（色/组件/布局）、`.claude/rules/frontend.md`、模块专属约束（见笔记 §0️⃣）。
+4. 判边界：纯 UI→①；API/字段→②；AI SSE→③；跨界按序做。
 
 ---
 
-### 新模块检查清单
+## 1. 职责与红线
 
-新建 `modules/{name}/` 时，逐项打勾：
-
-```
-[ ] 5 个文件齐全: index.vue + api.js + routes.js + components/ + composables/
-[ ] router.js 已注册（1 行 import + 1 行 spread）
-[ ] AppSidebar.vue 已注册菜单项
-[ ] index.vue 含 ErrorState + EmptyState + v-loading 三态
-[ ] WorkbenchHeader 的 icon-gradient 使用模块色 var(--c-xxx)
-[ ] 无独立 .css 文件、无 Pinia store（workflow 除外）
-```
-
----
-
-## ① UI 状态管理（纯 Vue，零外部依赖）
-
-改这部分不影响任何后端模块，改完构建通过即可上线。
-
-### 修改铁律
-
-1. **先出原型，再写代码** — 改任何模块前先出 3 个 HTML 概念原型
-2. **只改 CSS，不改逻辑** — 不碰 props/emits/API/路由/动画
-
-### CSS 替换标准流程
-
-改一个文件的 `<style>` 块时：
-```bash
-# 1. 提取模板中所有 class（0️⃣ 第二步已完成）
-grep -oP 'class="[^"]*"' target.vue | sort -u > /tmp/classes.txt
-
-# 2. 逐个确认新 CSS 里每个 class 都有规则
-# 3. 再删旧 CSS、写新 CSS
-# 4. 构建 + grep 残留
-```
-
-### 布局修改 Debug 流程
-
-改完 CSS 后：
-1. 在浏览器打开实际页面（非原型 HTML）
-2. 纵向缩小窗口 → 检查页面是否可滚动
-3. 不能滚动 → DevTools 逐层查 `overflow` 属性，找到所有 `hidden` 的容器
-4. 表格区必须 `flex: 1 1 0; min-height: 0; overflow-y: auto`（Flexbox 默认 min-height:auto 阻止滚动）
-5. 外层卡片容器不能有 `overflow:hidden`
-
-> 反面教材：改报告生成器 CSS → 构建通过 → 以为完成 → 实际页面不可滚动。根因：`info-card` 残留 `overflow:hidden` + `el-tabs__content` 的 `overflow:hidden` 三层裁剪。
-
-### 状态管理边界
-
-| 用 `ref` | 用 Pinia store | 用 localStorage |
-|----------|---------------|-----------------|
-| 组件内状态 | 跨组件共享（设备/用例/Agent） | 持久化偏好（视图模式/主题） |
-
-优先 `ref` → 不够用 composable → 还不够才 Pinia。
-
-### ① 改动验证
-
-```
-改 CSS/布局  → 构建 → 浏览器 → 缩小窗口确认可滚动
-改组件状态   → 确认 ref/reactive < 6 个（超了该拆子组件）
-改 localStorage → 检查 key 格式是否统一
-```
-
----
-
-## 状态管理决策树
-
-改状态时按此顺序选择，**不可跳级**：
-
-| 优先级 | 方案 | 适用场景 | 示例 |
-|:--:|------|------|------|
-| 1 | `ref` / `reactive` | 组件内状态，不跨组件共享 | 表单输入、弹窗显隐、筛选条件 |
-| 2 | composable | 同模块内多组件共享，或有复用价值 | `useElementTree()`、`useTaskWebSocket()` |
-| 3 | Pinia store | 跨模块共享 + 需持久化 + 复杂状态机 | 设备连接状态、工作流编辑器画布 |
-
-**升级信号**：ref 被 3+ emit 传递 → composable；composable 被 2+ 模块 import → shared/；composable 有 5+ 依赖 ref → Pinia。
-**禁止**：新模块默认用 Pinia（先 ref 起步）；在 shared/ 之外新建 Pinia store（workflow 特例）。
-
-## 共享组件速查
-
-以下场景**必须用共享组件，禁止自建**：
-
-| 场景 | 组件 | 场景 | 组件 |
-|------|------|------|------|
-| 错误+重试 | `ErrorState` | 空数据 | `EmptyState` |
-| 卡片布局 | `AppCard` | 数据表格 | `AppTable` |
-| Tab 切换 | `AppTabs` | 树形面板 | `GroupTreePanel` |
-| KPI 统计 | `KpiCard` | 筛选标签 | `FilterTabs` |
-| 骨架屏 | `SkeletonCard` | 确认按钮 | `ConfirmButton` |
-
-> 📋 详细约束和禁止项 → `../.claude/rules/frontend.md` §共享组件使用规则
-
----
-
-## ② Django 交互协议（HTTP + WebSocket）
-
-改这部分需要确认 API 字段名一致，对照 `VUE_API_CONTRACT.md` 校验。
-
-### HTTP 调用链
-
-```
-组件 emit → composable 调 api.js → axios → :8765 → {ok, data} → 更新 ref
-```
-
-**铁律：组件不直接调 axios，必须走 api.js。**
-
-### JSON 字段转换
-
-| 层 | 规范 | 示例 |
+| 层 | 只做 | 严禁 |
 |----|------|------|
-| JS 变量 | `camelCase` | `testDefinitions`, `lastDump` |
-| HTTP 请求/响应 JSON | `snake_case` | `{"page_id": 1, "element_count": 5}` |
+| `.vue` 展示 | 渲染 / v-model / emit / testid | fetch、axios、复杂业务、校验编排 |
+| `*.logic.ts` 编排 | 组合 composable、提交前校验、清表单 | 直连 HTTP |
+| 流程 composable | API → 副作用 → 跳转 | 表单校验、弹校验 toast |
+| 校验 composable | `errors` / `canSubmit` | 发请求 |
 
-api.js 封装层处理转换。
+- 组件**必须**走模块 `api.js` / `api/*.ts`，禁止组件内 axios/fetch。
+- 业务 HTTP 经 **djangoClient → `/api/...` DRF**；逻辑层接口与后端协议（urls/Serializer/契约）一致。
+- API/认证函数不做表单校验；`ElMessage.warning` 在 `handleXxx` 调用方。
+- 公开 TS 签名与实现参数**同改**；单测随职责迁移。
+- `.vue` > 500 行：先拆样式，再拆逻辑。
+- JSON：前端 camelCase，HTTP snake_case；响应 `{status, data|message}`。
+- 写操作禁止空 `catch` 静默吞错。
+- `dashboard` 只读，禁止写操作。
+- 新图标：`shared/icons/index.ts` 的 `makeIcon`；禁止无必要的 `IconXxx.vue`。
+- 抽 `@/shared`：等第二个真实消费方；单处不提前抽象。
+- 状态：`ref` → composable → Pinia（不可跳级）；新模块默认不用 Pinia（workflow 除外）。
+- 必用共享件：`ErrorState` / `EmptyState` / `AppCard` / `AppTable` 等（见笔记共享组件表）；禁止同场景自建。
 
-### 响应格式
-
-```json
-{"status": true, "data": {...}}   // 成功
-{"status": false, "message": "..."}  // 失败
-```
-
-**禁止** `try { await api.deleteX(id) } catch (_) {}` — 写操作静默吞错。
-
-### WebSocket
-
-- **URL 构建**：必须走 Vite 代理 `wsUrl('/ws/...')`，禁止直连 `:8765`
-- **截图流** (`/ws/screenshot`)：后端每 500ms 推一帧 base64 → canvas 渲染
-- **执行进度** (`/ws/test-run/{id}`)：6 种事件 — `log` / `case_started` / `step_result` / `case_finished` / `run_finished` / `device_error`，每个 type 在 `handleTestMessage` switch 中都要有处理
-
-### ② 改动验证
-
-| 改动类型 | 验证方式 |
-|----------|---------|
-| 新增/修改 API 调用 | `curl` 往返验证 → 确认 `{ok, data}` 结构 |
-| 改 api.js | 登录 → 刷新 → 不跳回登录页（401 拦截器正常） |
-| 改 WS URL | DevTools Network → WS → 状态码 101，持续收到帧 |
-| 改报告下载 | 确认用 `fetch().text()` 而非 `api()`（FileResponse 非 JSON） |
-| 改 router/routes | 点侧边栏每个菜单 → 确认加载 |
-| 改 LoginView | 登录 → 跳转 dashboard |
-
-### 常见断裂点
-
-| 问题 | 前端表现 | 原因 |
-|------|---------|------|
-| 后端改了 JSON 字段名 | 页面空白，无报错 | `data.xxx` 为 undefined |
-| `api()` 拿到非 JSON | 解析异常 | 后端返回了 HTML/纯文本 |
-| WS type 不匹配 | 日志不更新 | switch 未命中 |
-| 请求体字段名不一致 | `{ok:false, error:"..."}` | snake_case vs camelCase |
+**默认拒绝的重构**：动态 `component :is` 硬合并不同 props 卡片；整表 `reactive` 连锁大改；首屏图 `lazy`；1～2 处路径就抽常量；无行为变化的间接层。  
+登录暂缓项与触发条件 → `dev_docs/项目笔记/前端claude笔记.md` §编码行为规范.8。
 
 ---
 
-## ③ AgentScope 交互协议（SSE 流式）
+## 2. 模板 / 样式 / 布局（每次改 UI 必做）
 
-AgentScope 在 Django 进程内运行，前端 SSE 直连 Django（不经独立 :8000 服务）。
-
-### SSE 调用链
-
-```
-用户发消息 → POST /api/ai/conversations/{id}/chat/stream (JWT) → Django → AgentScope (进程内) → SSE 流 → 前端渲染
-```
-
-### SSE 事件类型 → 前端渲染映射
-
-| 事件 | 前端渲染 |
-|------|---------|
-| `REPLY_START` | 消息气泡出现，开始新回复 |
-| `TEXT_BLOCK_DELTA` | 追加文本到消息气泡（逐字打字效果） |
-| `THINKING_BLOCK_START` | 渲染 ThinkingBlock（可折叠推理过程） |
-| `THINKING_BLOCK_DELTA` | 追加推理文本 |
-| `THINKING_BLOCK_END` | 折叠 ThinkingBlock |
-| `TOOL_CALL_START` | 渲染 ToolCallCard（loading 态） |
-| `TOOL_CALL_DELTA` | 追加工具参数 JSON |
-| `TOOL_RESULT_START/DELTA/END` | 更新 ToolCallCard（显示结果摘要） |
-| `HINT_BLOCK` | 渲染 SOP 状态卡片 / 任务卡片 |
-| `REQUIRE_USER_CONFIRM` | 显示 HITL 确认弹窗 |
-| `REPLY_END` | 消息完成 → 调 `save-message` 持久化 |
-| `error` | 显示错误提示，允许重试 |
-
-### 连接管理
-
-| 场景 | 处理 |
-|------|------|
-| 断线重连 | 自动重试，最多 3 次，间隔递增（1s/2s/4s） |
-| 用户点"停止" | 关闭 SSE → 保留已生成内容 |
-| AI 不可用 | 自动降级 Django 阻塞模式 `POST /api/ai/chat/sync` |
-
-### 子组件折叠规则
-
-| 组件 | 输入/参数 | 输出/结果 |
-|------|:--:|:--:|
-| ThinkingBlock | — | 默认折叠，用户手动展开 |
-| ToolCallCard | 默认折叠 | 默认展开 |
-
-### ③ 改动验证
-
-| 改动类型 | 验证方式 |
-|----------|---------|
-| 改 SSE 事件处理 | 发一条消息 → 流式回复正常 → 思考块可折叠 → ToolCard 有结果 |
-| 改停止生成 | 发送消息 → 中途点停止 → 已生成内容保留 |
-| 改消息渲染 | 发多条消息 → 确认 Markdown 渲染正确（代码块/表格/列表） |
+1. **布局裁剪（P0）**：真实页面缩小窗口可滚；侧栏展开不挤爆；表格区 `flex: 1 1 0; min-height: 0; overflow-y: auto`；外层禁止乱加 `overflow:hidden`。
+2. **Dialog/Drawer**：长内容可滚，底部按钮可达。
+3. **字段显示完整性**：有数据来源与空值占位；列表列 / Card / detail 关键字段不漏。
+4. **表格长文本列**：`show-overflow-tooltip` 或等价。
+5. **视图模式切换**（卡片↔表格等）后布局仍可用。
+6. 字号/颜色走 token；静态样式进 class。
+7. 三态 + **saving**；错误文案对用户友好，不暴露技术术语。
+8. **多视图互斥**；**composable 入参**约定一致。
+9. **保存**：信封解包；strip UI-only；校验≥Schema。
+10. **展示组件**：薄组件；危险操作确认；编辑锁只读禁用；子面板只改自己 v-model 块。
+11. 纯展示子组件：不为「配套重构」而改；只改契约/图标/bug/a11y。
 
 ---
 
-## ④ 数据加载标准模式
+## 3. 协议要点
 
-> 📋 完整骨架代码（复制即用）→ `DESIGN_SYSTEM.md` §4.7
-
-### 关键规则（踩坑记录）
-
-| # | ✅ 正确 | ❌ 错误 |
-|---|------|------|
-| 1 | `@retry="fetchData"`（命名函数） | `@retry="() => { ... }"`（内联箭头每次渲染重建） |
-| 2 | `error.value = ''` 放 `data.status` 内（成功后清除） | `error.value = ''` 放 try 第一行（retry 时闪白） |
-| 3 | `<template v-else>` 包裹全部内容 | 每个 `<section>` 各自写 `v-if="!error"` |
-| 4 | 一个页面一个 ErrorState | 每个 tab slot 各放一个 |
-| 5 | `finally { loading = false }` | 只在 try 关 loading（catch 永远转圈） |
-
-### ④ 改动验证
-
-| 改了什么 | 验证方式 |
-|---------|---------|
-| 新增 fetch 页面 | 断网 → 刷新 → ErrorState + 重试 → 恢复 |
-| 新增列表组件 | 空 DB → EmptyState（非空白）；有数据 → 正常 |
+**HTTP / DRF**：组件 emit → composable → 模块 `api` → `djangoClient`（统一客户端）→ `/api/...` **DRF**。  
+- 逻辑层接口须与后端协议一致（路径、方法、字段、信封）；对照 `urls.py`、Serializer、`VUE_API_CONTRACT.md`。  
+- 禁止组件/composable 旁路直连后端端口或另起非约定 HTTP 客户端。  
+**WS**：`wsUrl('/ws/...')` 经 Vite 代理，禁止直连后端端口。test-runner 六种事件 type 不可漏。  
+**报告下载**：FileResponse 用 `fetch().text()`，不用 JSON `api()`。  
+**SSE（AI）**：按事件类型渲染；停止生成须保留已生成内容；ThinkingBlock / ToolCallCard 折叠规则见笔记 §③。
 
 ---
 
-## 最终验证（所有改动必走）
+## 4. 关单前最短清单
 
 ```
-[ ] 构建通过  cd frontend && npx vite build --mode development
-[ ] 浏览器验证实际页面（非原型 HTML）
-[ ] grep 残留色值   grep -rnP "color:\s*#[0-9a-fA-F]" src/modules/ --include="*.vue" | grep -v tokens
-[ ] grep 残留旧类名（如果有删旧 CSS）
-[ ] 文件未超上限  find src/modules/ -name "*.vue" | xargs wc -l | sort -rn | head -5
-[ ] 自评 3 问：
-      1. 删这个模块，其他模块不受影响？
-      2. 改这个颜色，全局生效（从令牌取）？
-      3. diff 里每一行都能追溯到用户的需求？
+[ ] 真实页面验证；布局可滚；Dialog 按钮可达；关键字段可见
+[ ] 三态/saving；错误文案无技术术语
+[ ] 多视图互斥、父子选中/清空同步（若涉及）
+[ ] 展示层：危险确认、锁态禁用、分块面板/步骤字段对齐（若改 components）
+[ ] 保存：信封解包、DTO 清洗、校验≥Schema（若涉及编辑器）
+[ ] 逻辑层 API 与后端 DRF 协议一致；经 djangoClient/`api` 通道（若涉及接口）
+[ ] 类型与实现一致；testid 未无故改名
+[ ] diff 每行可追溯到用户需求
 ```
+
+详细门禁 → skill `vue-frontend-check`。完整决策树与模块踩坑 → `dev_docs/项目笔记/前端claude笔记.md`。

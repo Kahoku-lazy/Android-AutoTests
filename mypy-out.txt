@@ -1,0 +1,328 @@
+﻿apps\evaluator\default_questions.py:203: error: Value of type variable
+"SupportsRichComparisonT" of "sorted" cannot be "object"  [type-var]
+    VALID_CATEGORIES = sorted({q["category"] for q in DEFAULT_QUESTIONS})
+                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+apps\device_inspector\service.py:20: error: Need type annotation for "by_class"
+(hint: "by_class: dict[<type>, <type>] = ...")  [var-annotated]
+        by_class = {}
+        ^~~~~~~~
+apps\device_inspector\service.py:21: error: Need type annotation for "by_rid"
+(hint: "by_rid: dict[<type>, <type>] = ...")  [var-annotated]
+        by_rid = {}
+        ^~~~~~
+apps\device_inspector\service.py:22: error: Need type annotation for "by_text"
+(hint: "by_text: dict[<type>, <type>] = ...")  [var-annotated]
+        by_text = {}
+        ^~~~~~~
+apps\device_inspector\service.py:23: error: Need type annotation for
+"by_class_rid" (hint: "by_class_rid: dict[<type>, <type>] = ...") 
+[var-annotated]
+        by_class_rid = {}
+        ^~~~~~~~~~~~
+apps\device_inspector\service.py:24: error: Need type annotation for
+"by_text_and_class" (hint: "by_text_and_class: dict[<type>, <type>] = ...") 
+[var-annotated]
+        by_text_and_class = {}  # (class_name, text) → count  — O(1) for t...
+        ^~~~~~~~~~~~~~~~~
+apps\device_inspector\service.py:25: error: Need type annotation for
+"by_desc_and_class" (hint: "by_desc_and_class: dict[<type>, <type>] = ...") 
+[var-annotated]
+        by_desc_and_class = {}  # (class_name, content_desc) → count  — O(...
+        ^~~~~~~~~~~~~~~~~
+apps\device_inspector\service.py:26: error: Need type annotation for
+"by_rid_text_class" (hint: "by_rid_text_class: dict[<type>, <type>] = ...") 
+[var-annotated]
+        by_rid_text_class = {}  # (class_name, resource_id, text) → count ...
+        ^~~~~~~~~~~~~~~~~
+apps\test_runner\executors\ui\executor.py:212: error: Incompatible default for
+parameter "s" (default has type "None", parameter has type "TestStep") 
+[assignment]
+        def _do_kill_app(self, s: TestStep = None) -> str:
+                                             ^~~~
+apps\test_runner\executors\ui\executor.py:212: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+apps\test_runner\executors\ui\executor.py:212: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+apps\test_runner\executors\ui\executor.py:224: error: Incompatible default for
+parameter "s" (default has type "None", parameter has type "TestStep") 
+[assignment]
+        def _do_start_app(self, s: TestStep = None) -> str:
+                                              ^~~~
+apps\test_runner\executors\ui\executor.py:224: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+apps\test_runner\executors\ui\executor.py:224: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+models\test_models.py:118: error: Incompatible types in assignment (expression
+has type "None", variable has type "list[Any]")  [assignment]
+        step_details: list = None  # per-step execution details with scree...
+                             ^~~~
+apps\report_generator\service.py:31: error: Incompatible default for parameter
+"failure_details" (default has type "None", parameter has type
+"list[dict[Any, Any]]")  [assignment]
+    ...def save_csv(result: dict, failure_details: list[dict] = None) -> str:
+                                                                ^~~~
+apps\report_generator\service.py:31: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+apps\report_generator\service.py:31: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+apps\test_runner\executors\api\executor.py:26: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+apps\test_runner\executors\api\executor.py:27: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+apps\test_runner\executors\api\executor.py:52: error: Incompatible types in
+assignment (expression has type "dict[Any, Any]", target has type "str") 
+[assignment]
+                    result[resolved_key] = self._resolve_dict(v)
+                                           ^~~~~~~~~~~~~~~~~~~~~
+apps\test_runner\executors\api\executor.py:54: error: Incompatible types in
+assignment (expression has type "list[str | Any]", target has type "str") 
+[assignment]
+                    result[resolved_key] = [
+                                           ^
+apps\test_runner\executors\api\executor.py:257: error: Incompatible types in
+assignment (expression has type "dict[Any, Any]", target has type "str") 
+[assignment]
+                    result[rk] = cls._resolve_dict_with(data, v)
+                                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+apps\test_runner\executors\api\executor.py:259: error: Incompatible types in
+assignment (expression has type "list[str | Any]", target has type "str") 
+[assignment]
+                    result[rk] = [cls._resolve_with(data, x) if isinstance...
+                                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+apps\test_runner\executors\api\executor.py:294: error: Incompatible types in
+assignment (expression has type "str", variable has type "dict[Any, Any]") 
+[assignment]
+                    body = body_str
+                           ^~~~~~~~
+apps\test_runner\executors\api\executor_v2.py:34: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+apps\test_runner\executors\api\executor_v2.py:35: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+apps\test_runner\executors\api\adapter.py:24: error: Function
+"builtins.callable" is not valid as a type  [valid-type]
+    ...  def __init__(self, base_url: str = "", logger: callable = None, shou...
+                                                        ^
+apps\test_runner\executors\api\adapter.py:24: note: Perhaps you meant "typing.Callable" instead of "callable"?
+apps\test_runner\executors\api\adapter.py:42: error: callable? not callable 
+[misc]
+            self._emit_log(msg)
+            ^~~~~~~~~~~~~~~~~~~
+apps\test_runner\executors\api\adapter.py:52: error: callable? not callable 
+[misc]
+            return self._should_stop()
+                   ^~~~~~~~~~~~~~~~~~~
+apps\evaluator\frameworks\__init__.py:34: error: "type" has no attribute "name"
+ [attr-defined]
+                    "name": cls.name,
+                            ^~~~~~~~
+apps\evaluator\frameworks\__init__.py:35: error: "type" has no attribute
+"description"  [attr-defined]
+                    "description": cls.description,
+                                   ^~~~~~~~~~~~~~~
+apps\evaluator\frameworks\__init__.py:36: error: "type" has no attribute
+"is_available"  [attr-defined]
+                    "available": cls.is_available(),
+                                 ^~~~~~~~~~~~~~~~
+apps\evaluator\frameworks\evalscope_adapter.py:126: error: Need type annotation
+for "scores" (hint: "scores: dict[<type>, <type>] = ...")  [var-annotated]
+            scores = {}
+            ^~~~~~
+apps\device_pool\pool.py:66: error: Incompatible default for parameter
+"connection_type" (default has type "None", parameter has type "str") 
+[assignment]
+        def switch_to(self, serial: str, connection_type: str = None):
+                                                                ^~~~
+apps\device_pool\pool.py:66: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+apps\device_pool\pool.py:66: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+apps\device_pool\pool.py:73: error: Incompatible default for parameter "serial"
+(default has type "None", parameter has type "str")  [assignment]
+        def get_connection_type(self, serial: str = None) -> str:
+                                                    ^~~~
+apps\device_pool\pool.py:73: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+apps\device_pool\pool.py:73: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+apps\device_pool\pool.py:267: error: Incompatible default for parameter "x"
+(default has type "None", parameter has type "int")  [assignment]
+        def action_input(self, text: str, x: int = None, y: int = None, cl...
+                                                   ^~~~
+apps\device_pool\pool.py:267: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+apps\device_pool\pool.py:267: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+apps\device_pool\pool.py:267: error: Incompatible default for parameter "y"
+(default has type "None", parameter has type "int")  [assignment]
+    ...n_input(self, text: str, x: int = None, y: int = None, clear_first: bo...
+                                                        ^~~~
+apps\test_runner\executors\web\adapter.py:44: error: Function
+"builtins.callable" is not valid as a type  [valid-type]
+        def __init__(self, logger: callable = None, should_stop: callable ...
+                                   ^
+apps\test_runner\executors\web\adapter.py:44: note: Perhaps you meant "typing.Callable" instead of "callable"?
+apps\test_runner\executors\web\adapter.py:54: error: callable? not callable 
+[misc]
+            self._emit_log(msg)
+            ^~~~~~~~~~~~~~~~~~~
+apps\test_runner\executors\web\adapter.py:64: error: callable? not callable 
+[misc]
+            return self._should_stop()
+                   ^~~~~~~~~~~~~~~~~~~
+apps\test_runner\executors\web\adapter.py:153: error: "None" has no attribute
+"goto"  [attr-defined]
+                    self._page.goto,
+                    ^~~~~~~~~~~~~~~
+apps\test_runner\executors\web\adapter.py:169: error: "None" has no attribute
+"content"  [attr-defined]
+                    page_text = await _pw_run(self._page.content)
+                                              ^~~~~~~~~~~~~~~~~~
+apps\test_runner\executors\web\adapter.py:195: error: "None" has no attribute
+"click"  [attr-defined]
+                await _pw_run(self._page.click, arg)
+                              ^~~~~~~~~~~~~~~~
+apps\test_runner\executors\web\adapter.py:198: error: "None" has no attribute
+"fill"  [attr-defined]
+                await _pw_run(self._page.fill, selector, value.strip('"'))
+                              ^~~~~~~~~~~~~~~
+apps\test_runner\executors\web\adapter.py:201: error: "None" has no attribute
+"type"  [attr-defined]
+                await _pw_run(self._page.type, selector, value.strip('"'))
+                              ^~~~~~~~~~~~~~~
+apps\test_runner\executors\web\adapter.py:208: error: "None" has no attribute
+"wait_for_selector"  [attr-defined]
+                        self._page.wait_for_selector,
+                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+apps\test_runner\executors\web\adapter.py:216: error: "None" has no attribute
+"goto"  [attr-defined]
+                    self._page.goto,
+                    ^~~~~~~~~~~~~~~
+apps\test_runner\executors\web\adapter.py:229: error: "None" has no attribute
+"goto"  [attr-defined]
+                self._page.goto,
+                ^~~~~~~~~~~~~~~
+apps\test_runner\executors\web\adapter.py:238: error: "None" has no attribute
+"click"  [attr-defined]
+            await _pw_run(self._page.click, selector, timeout=10000)
+                          ^~~~~~~~~~~~~~~~
+apps\test_runner\executors\web\adapter.py:243: error: "None" has no attribute
+"fill"  [attr-defined]
+            await _pw_run(self._page.fill, selector, value, timeout=10000)
+                          ^~~~~~~~~~~~~~~
+apps\test_runner\executors\web\adapter.py:249: error: "None" has no attribute
+"wait_for_selector"  [attr-defined]
+                self._page.wait_for_selector,
+                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+apps\test_runner\executors\web\adapter.py:257: error: "None" has no attribute
+"content"  [attr-defined]
+            content = await _pw_run(self._page.content)
+                                    ^~~~~~~~~~~~~~~~~~
+apps\test_runner\executors\web\adapter.py:271: error: "None" has no attribute
+"screenshot"  [attr-defined]
+            await _pw_run(self._page.screenshot, path=path)
+                          ^~~~~~~~~~~~~~~~~~~~~
+apps\test_runner\executors\web\adapter.py:278: error: "None" has no attribute
+"screenshot"  [attr-defined]
+            await _pw_run(self._page.screenshot, path=path, full_page=Fals...
+                          ^~~~~~~~~~~~~~~~~~~~~
+apps\ai_assistant\admin.py:43: error:
+"Callable[[AIExecutionLogAdmin, Any], Any]" has no attribute "short_description"
+ [attr-defined]
+        short_msg.short_description = "message"
+        ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+apps\test_runner\executors\web\annotator.py:43: error: Incompatible types in
+assignment (expression has type "FreeTypeFont | ImageFont", variable has type
+"FreeTypeFont")  [assignment]
+        f = ImageFont.load_default()
+            ^~~~~~~~~~~~~~~~~~~~~~~~
+apps\workflow\api.py:331: error: Incompatible types in assignment (expression
+has type "WorkflowDirectory | None", variable has type "WorkflowDirectory") 
+[assignment]
+                cur = cur.parent
+                      ^~~~~~~~~~
+apps\test_runner\admin.py:30: error: "Callable[[TestResultAdmin, Any], Any]"
+has no attribute "short_description"  [attr-defined]
+        case_display.short_description = "用例 ID"
+        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+apps\test_runner\executors\ui\connect.py:231: error: Incompatible return value
+type (got "Any | None", expected "DeviceConnection")  [return-value]
+        return device_conn
+               ^~~~~~~~~~~
+apps\case_manager\admin.py:33: error:
+"Callable[[CaseDirectoryAdmin, Any], Any]" has no attribute "short_description" 
+[attr-defined]
+        case_count.short_description = "用例数"
+        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+apps\ai_assistant\serializers.py:83: error: Need type annotation for "errors"
+(hint: "errors: dict[<type>, <type>] = ...")  [var-annotated]
+        errors = {}
+        ^~~~~~
+apps\test_runner\executors\web\executor.py:49: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+apps\test_runner\executors\web\executor.py:50: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+apps\test_runner\executors\ui\adapter.py:29: error: Function
+"builtins.callable" is not valid as a type  [valid-type]
+            logger: callable = None,
+                    ^
+apps\test_runner\executors\ui\adapter.py:29: note: Perhaps you meant "typing.Callable" instead of "callable"?
+apps\test_runner\executors\ui\adapter.py:30: error: Function
+"builtins.callable" is not valid as a type  [valid-type]
+            should_stop: callable = None,
+                         ^
+apps\test_runner\executors\ui\adapter.py:30: note: Perhaps you meant "typing.Callable" instead of "callable"?
+apps\test_runner\executors\ui\adapter.py:52: error: callable? not callable 
+[misc]
+            self._emit_log(msg)
+            ^~~~~~~~~~~~~~~~~~~
+apps\test_runner\executors\ui\adapter.py:100: error: callable? not callable 
+[misc]
+            return self._should_stop()
+                   ^~~~~~~~~~~~~~~~~~~
+apps\case_manager\api_directories.py:279: error: Argument 1 to "int" has
+incompatible type "Any | None"; expected
+"str | Buffer | SupportsInt | SupportsIndex | SupportsTrunc"  [arg-type]
+                    if int(item_id) == int(target_directory_id):
+                           ^~~~~~~
+apps\case_manager\api_directories.py:282: error: Incompatible type for lookup
+'id': (got "Any | None", expected "str | int")  [misc]
+                    dir_obj = CaseDirectory.objects.get(id=item_id)
+                              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+apps\case_manager\api_directories.py:296: error: Incompatible types in
+assignment (expression has type "CaseDirectory | None", variable has type
+"CaseDirectory")  [assignment]
+                        ancestor = ancestor.parent
+                                   ^~~~~~~~~~~~~~~
+apps\accounts\views.py:22: error: Need type annotation for
+"authentication_classes" (hint: "authentication_classes: list[<type>] = ...") 
+[var-annotated]
+        authentication_classes = []
+        ^~~~~~~~~~~~~~~~~~~~~~
+apps\accounts\views.py:48: error: Need type annotation for
+"authentication_classes" (hint: "authentication_classes: list[<type>] = ...") 
+[var-annotated]
+        authentication_classes = []
+        ^~~~~~~~~~~~~~~~~~~~~~
+apps\accounts\views.py:82: error: Need type annotation for
+"authentication_classes" (hint: "authentication_classes: list[<type>] = ...") 
+[var-annotated]
+        authentication_classes = []
+        ^~~~~~~~~~~~~~~~~~~~~~
+python : error: INTERNAL ERROR -- Please try using mypy master on GitHub:
+所在位置 C:\Users\zhiyan\AppData\Local\Temp\ps-script-1c8acb6a-99e9-4a99-b2e0-7c53e62ed8cc.ps1:111 字符: 146
++ ... Object -Last 20; Write-Host '===='; python -m mypy apps/ 2>&1 | Out-F ...
++                                         ~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: INTERNAL...ster on GitHub::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+https://mypy.readthedocs.io/en/stable/common_issues.html#using-a-development-mypy-build
+If this issue continues with mypy master, please report a bug at https://github.com/python/mypy/issues
+version: 2.3.0
+note: please use --show-traceback to print a traceback when reporting a bug
+apps\test_runner\runner.py:173: error: Incompatible default for parameter
+"callback" (default has type "None", parameter has type "TestRunnerCallback") 
+[assignment]
+            callback: TestRunnerCallback = None,
+                                           ^~~~
+apps\test_runner\runner.py:173: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+apps\test_runner\runner.py:173: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+apps\test_runner\runner.py:346: error: Item "None" of "DeviceAdapter | None"
+has no attribute "_step_callback"  [union-attr]
+            state.adapter._step_callback = _make_step_cb(iteration)
+            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+apps\test_runner\runner.py:347: error: Item "None" of "DeviceAdapter | None"
+has no attribute "_step_started_callback"  [union-attr]
+            state.adapter._step_started_callback = _make_step_started_cb(i...
+            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+apps\test_runner\runner.py:373: error: Item "None" of "DeviceAdapter | None"
+has no attribute "log"  [union-attr]
+                state.adapter.log(f'Case "{case.title}" has no steps, pass...
+                ^~~~~~~~~~~~~~~~~
+apps\test_runner\runner.py:385: error: Item "None" of "DeviceAdapter | None"
+has no attribute "log"  [union-attr]
+                        state.adapter.log(
+                        ^~~~~~~~~~~~~~~~~
+apps\test_runner\runner.py:410: error: Item "None" of "DeviceAdapter | None"
+has no attribute "log"  [union-attr]

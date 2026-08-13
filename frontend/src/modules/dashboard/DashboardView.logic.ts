@@ -1,5 +1,5 @@
 /** DashboardView 逻辑编排器 — 组合子 composable + 展示辅助 */
-import { onMounted, type Ref } from 'vue'
+import { onMounted } from 'vue'
 import { useDashboardStats, type UseDashboardStatsReturn } from './composables/useDashboardStats'
 import type {
   CaseBreakdownItem,

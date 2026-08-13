@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { getToken, getActiveUsername } from '@/shared/auth/token-storage'
 import dbRoutes  from '@/modules/dashboard/routes'
 import elRoutes   from '@/modules/element-locator/routes'
+import diRoutes   from '@/modules/device-inspector/routes'
 import dpRoutes   from '@/modules/device-pool/routes'
 import cmRoutes   from '@/modules/case-manager/routes'
 import trRoutes   from '@/modules/test-runner/routes'
@@ -14,7 +15,7 @@ import dhRoutes   from '@/modules/digital-human/routes'
 const routes = [
   { path: '/login', name: 'login',
     component: () => import('@/views/LoginView.vue') },
-  ...dbRoutes, ...elRoutes, ...dpRoutes, ...cmRoutes, ...trRoutes, ...rgRoutes, ...aiRoutes, ...wfRoutes, ...dhRoutes,
+  ...dbRoutes, ...diRoutes, ...elRoutes, ...dpRoutes, ...cmRoutes, ...trRoutes, ...rgRoutes, ...aiRoutes, ...wfRoutes, ...dhRoutes,
   { path: '/', redirect: '/dashboard' },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('@/views/NotFound.vue'), meta: { title: '404 - 页面未找到' } },
 ]

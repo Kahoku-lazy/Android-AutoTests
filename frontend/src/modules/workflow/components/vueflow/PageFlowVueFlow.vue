@@ -18,6 +18,11 @@ import PageFlowNode from './PageFlowNode.vue'
 import NodeContextMenu from './NodeContextMenu.vue'
 import { PAGE_ELEMENTS, POPUP_ELEMENTS, ELEMENT_ICONS } from '@/modules/workflow/types/workflow'
 import { NODE_REGISTRY } from '@/modules/workflow/registry/nodeRegistry'
+
+/** 元素卡片 xpath 展示 — 兼容可选字段 */
+function elXpath(el: { xpath?: string; type: string }): string {
+  return el.xpath || el.type
+}
 import type { CatalogPage, ApiEndpointRef } from '@/modules/workflow/data/pageCatalog'
 
 import '@vue-flow/core/dist/style.css'
@@ -195,12 +200,12 @@ function selectElement(elId: string) {
 }
 
 function isValidConnection(connection: Connection) {
-  return explainConnection(store, connection).status
+  return explainConnection(store, connection).ok
 }
 
 onConnect((connection) => {
   const explained = explainConnection(store, connection)
-  if (!explained.status) {
+  if (!explained.ok) {
     status.value = explained.reason
     return
   }
@@ -307,7 +312,7 @@ function onKeyDown(e: KeyboardEvent) {
   const tag = (e.target as HTMLElement)?.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
 
-  const sel = store.selectedId.value
+  const sel = store.selectedId
   if (!sel) return
 
   if (sel.startsWith('l')) {
@@ -476,7 +481,7 @@ watch(
             <span class="el-ico">{{ ELEMENT_ICONS[el.type] || '◆' }}</span>
             <span class="el-body">
               <span class="el-label">{{ el.label }}</span>
-              <span class="el-xpath">{{ el.xpath || el.type }}</span>
+              <span class="el-xpath">{{ elXpath(el) }}</span>
             </span>
             <span v-if="el.used" class="el-tag">已添加</span>
             <span v-else class="el-tag add">+ 添加</span>
@@ -548,7 +553,7 @@ watch(
   padding: 6px 10px;
   border: 2px solid var(--ac-border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--app-bg-card);
   font-size: var(--app-size-sm);
   font-weight: 800;
   font-family: inherit;
@@ -580,7 +585,7 @@ watch(
 }
 .btn.back {
   flex-shrink: 0;
-  background: #fff;
+  background: var(--app-bg-card);
   color: var(--app-green-deep);
   border-color: rgba(162,210,255,0.42);
 }
@@ -604,24 +609,24 @@ watch(
 }
 .btn.primary {
   background: linear-gradient(135deg, var(--app-green-deep), var(--app-blue));
-  color: #fff;
+  color: var(--app-bg-card);
   border-color: var(--app-green-deep);
 }
-.btn.primary:hover { filter: brightness(1.05); color: #fff; }
+.btn.primary:hover { filter: brightness(1.05); color: var(--app-bg-card); }
 .btn.start {
   background: var(--c-workflow);
-  color: #fff;
+  color: var(--app-bg-card);
   border-color: #5a9a20;
 }
-.btn.start:hover { filter: brightness(1.05); color: #fff; }
+.btn.start:hover { filter: brightness(1.05); color: var(--app-bg-card); }
 .btn.end {
   background: #8a8a96;
-  color: #fff;
+  color: var(--app-bg-card);
   border-color: #6a6a76;
 }
-.btn.end:hover { filter: brightness(1.05); color: #fff; }
+.btn.end:hover { filter: brightness(1.05); color: var(--app-bg-card); }
 .btn.api-btn { background: rgba(245, 166, 35, 0.12); color: #d4880f; border-color: rgba(245, 166, 35, 0.3); }
-.btn.api-btn:hover { filter: brightness(1.05); color: #fff; background: #f5a623; }
+.btn.api-btn:hover { filter: brightness(1.05); color: var(--app-bg-card); background: #f5a623; }
 .btn.danger:hover {
   border-color: var(--ac-red);
   color: var(--ac-red);
@@ -692,7 +697,7 @@ watch(
   max-height: 420px;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--app-bg-card);
   border: 1px solid rgba(255,255,255,0.68);
   border-radius: 14px;
   box-shadow: 0 18px 48px rgba(74,78,105,0.12);
@@ -706,7 +711,7 @@ watch(
   align-items: center;
   gap: 8px;
   padding: 12px 14px;
-  background: #fff;
+  background: var(--app-bg-card);
   border-bottom: 1px solid rgba(162,210,255,0.24);
 }
 .el-picker-head strong {
@@ -727,7 +732,7 @@ watch(
   background: transparent;
   font-size: var(--app-size-lg);
   cursor: pointer;
-  color: #999;
+  color: var(--app-ink-muted);
   line-height: 1;
   padding: 2px 6px;
   border-radius: 8px;
@@ -751,7 +756,7 @@ watch(
   overflow: auto;
   padding: 6px 8px 12px;
   max-height: 300px;
-  background: #fff;
+  background: var(--app-bg-card);
 }
 .el-picker-item {
   width: 100%;
@@ -809,7 +814,7 @@ watch(
   padding: 3px 8px;
   border-radius: 999px;
   background: rgba(162,210,255,0.14);
-  color: #999;
+  color: var(--app-ink-muted);
   align-self: center;
 }
 .el-tag.add {
@@ -821,6 +826,6 @@ watch(
   text-align: center;
   font-size: var(--app-size-sm);
   font-weight: 700;
-  color: #999;
+  color: var(--app-ink-muted);
 }
 </style>

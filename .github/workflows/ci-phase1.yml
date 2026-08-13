@@ -69,11 +69,15 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm ci
 
-      # 4. 前端编译
+      # 4. 前端单元测试（登录等 P0/P1）
+      - name: Vitest P0+P1
+        run: cd frontend && npm test
+
+      # 5. 前端编译
       - name: Vite build
         run: cd frontend && npx vite build
 
-      # 5. JS/Vue/CSS 格式
+      # 6. JS/Vue/CSS 格式
       - name: Prettier check
         run: cd frontend && npx prettier --check "src/**/*.{vue,js,css}"
 

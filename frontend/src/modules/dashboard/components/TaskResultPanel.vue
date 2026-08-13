@@ -71,11 +71,15 @@ function openTask(task: RecentTask) {
 
     <div v-if="tasks.length" class="task-result-panel__list">
       <div
-        v-for="task in tasks"
-        :key="task.id || task.task_id || task.run_id || Math.random()"
+        v-for="(task, idx) in tasks"
+        :key="String(task.id ?? task.task_id ?? task.run_id ?? `${task.title}-${task.time}-${idx}`)"
         class="task-row"
         :class="{ 'task-row--clickable': taskId(task) }"
-        @click="openTask(task)">
+        :role="taskId(task) ? 'button' : undefined"
+        :tabindex="taskId(task) ? 0 : undefined"
+        @click="openTask(task)"
+        @keydown.enter.prevent="openTask(task)"
+        @keydown.space.prevent="openTask(task)">
         <div class="task-row__status" :class="meta(task.status).cls" :title="meta(task.status).label">
           {{ meta(task.status).icon }}
         </div>
@@ -127,12 +131,12 @@ function openTask(task: RecentTask) {
   font-size: var(--app-size-xs);
   font-weight: 700;
   border: 2px solid var(--ink);
-  background: #fff;
+  background: var(--app-bg-card);
 }
 
 .summary-chip.is-success { border-color: var(--app-status-success); color: var(--app-status-success-text); }
 .summary-chip.is-failed  { border-color: var(--app-status-danger); color: var(--app-status-danger-text); }
-.summary-chip.is-new     { border-color: var(--app-status-purple); color: #5a3fa0; }
+.summary-chip.is-new     { border-color: var(--app-status-purple); color: var(--app-status-purple-text); }
 
 .summary-chip__icon {
   width: 16px; height: 16px; border-radius: 3px;
@@ -152,23 +156,22 @@ function openTask(task: RecentTask) {
 .task-row {
   display: flex; align-items: flex-start; gap: 10px;
   padding: 10px 12px; border-radius: 4px 8px 4px 8px;
-  background: #fff; border: 1.5px solid var(--app-border-light);
+  background: var(--app-bg-card); border: 1.5px solid var(--app-border-light);
   transition: background var(--app-duration-fast) var(--app-ease);
 }
 .task-row--clickable { cursor: pointer; }
 .task-row--clickable:hover { background: rgba(78, 205, 196, 0.12); }
-
 .task-row__status {
   width: 28px; height: 28px; border-radius: 4px 8px 4px 8px;
   display: flex; align-items: center; justify-content: center;
   font-size: var(--app-size-sm); font-weight: 800; flex-shrink: 0;
   border: 2px solid var(--ink);
 }
-.task-row__status.is-success { background: #C8F5D0; color: var(--ink); }
-.task-row__status.is-failed  { background: #FFE0DB; color: var(--ink); }
-.task-row__status.is-partial { background: #FFF9E0; color: var(--ink); }
-.task-row__status.is-running { background: #E8DDF8; color: var(--ink); animation: pulse 1.5s ease-in-out infinite; }
-.task-row__status.is-idle    { background: #f8f6f2; color: #999; }
+.task-row__status.is-success { background: var(--app-pass); color: var(--ink); }
+.task-row__status.is-failed  { background: var(--app-fail); color: var(--ink); }
+.task-row__status.is-partial { background: var(--app-status-warning-bg); color: var(--ink); }
+.task-row__status.is-running { background: var(--app-status-purple-bg); color: var(--ink); animation: pulse 1.5s ease-in-out infinite; }
+.task-row__status.is-idle    { background: var(--app-bg-subtle); color: var(--app-ink-muted); }
 
 .task-row__body { flex: 1; min-width: 0; }
 .task-row__title { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); margin-bottom: 3px; }
@@ -179,10 +182,10 @@ function openTask(task: RecentTask) {
   display: inline-flex; align-items: center; justify-content: center;
   font-size: var(--app-size-xs); font-weight: 800; border: 1.5px solid var(--ink);
 }
-.case-icon.is-success { background: #C8F5D0; color: var(--ink); }
-.case-icon.is-failed  { background: #FFE0DB; color: var(--ink); }
-.case-icon.is-partial { background: #FFF9E0; color: var(--ink); }
-.case-icon.is-running { background: #E8DDF8; color: var(--ink); }
+.case-icon.is-success { background: var(--app-pass); color: var(--ink); }
+.case-icon.is-failed  { background: var(--app-fail); color: var(--ink); }
+.case-icon.is-partial { background: var(--app-status-warning-bg); color: var(--ink); }
+.case-icon.is-running { background: var(--app-status-purple-bg); color: var(--ink); }
 
 .task-row__stats { font-size: var(--app-size-xs); color: var(--app-ink-muted); font-weight: 600; }
 .task-row__time { font-size: var(--app-size-xs); color: var(--app-ink-muted); white-space: nowrap; flex-shrink: 0; padding-top: 2px; }

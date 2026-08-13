@@ -189,13 +189,16 @@ async function updateEl(record, field, value) {
             <div
               v-if="canCreateSubFolder(menuNode.id)"
               class="context-menu__item"
+              role="menuitem" tabindex="0"
               @click="openCreateFolder(menuNode.id); closeMenu()"
+              @keydown.enter.prevent="openCreateFolder(menuNode.id); closeMenu()"
+              @keydown.space.prevent="openCreateFolder(menuNode.id); closeMenu()"
             >+ 新建子目录</div>
-            <div class="context-menu__item" @click="openCreatePage(menuNode.id); closeMenu()">+ 新建页面</div>
+            <div class="context-menu__item" role="menuitem" tabindex="0" @click="openCreatePage(menuNode.id); closeMenu()" @keydown.enter.prevent="openCreatePage(menuNode.id); closeMenu()" @keydown.space.prevent="openCreatePage(menuNode.id); closeMenu()">+ 新建页面</div>
           </template>
-          <div class="context-menu__item" @click="startEditLabel(menuNode); closeMenu()">✏️ 重命名</div>
+          <div class="context-menu__item" role="menuitem" tabindex="0" @click="startEditLabel(menuNode); closeMenu()" @keydown.enter.prevent="startEditLabel(menuNode); closeMenu()" @keydown.space.prevent="startEditLabel(menuNode); closeMenu()">✏️ 重命名</div>
           <div class="context-menu__divider" />
-          <div class="context-menu__item context-menu__item--danger" @click="deletePage(menuNode); closeMenu()">🗑️ 删除</div>
+          <div class="context-menu__item context-menu__item--danger" role="menuitem" tabindex="0" @click="deletePage(menuNode); closeMenu()" @keydown.enter.prevent="deletePage(menuNode); closeMenu()" @keydown.space.prevent="deletePage(menuNode); closeMenu()">🗑️ 删除</div>
         </div>
 
         <!-- Right: Element table -->

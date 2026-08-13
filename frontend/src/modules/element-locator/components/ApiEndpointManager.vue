@@ -257,7 +257,7 @@ async function doSave() {
                   </template>
                   <template #cell-method="{ value }">
                     <span :style="{ background: METHOD_COLORS[value] || 'var(--app-ink)' }"
-                      style="display:inline-block;padding:2px 10px;border-radius:10px;font-size:var(--app-size-xs);font-weight:700;color:#fff">{{ value }}</span>
+                      style="display:inline-block;padding:2px 10px;border-radius:10px;font-size:var(--app-size-xs);font-weight:700;color:var(--app-bg-card)">{{ value }}</span>
                   </template>
                   <template #cell-url="{ value }">
                     <span class="cell-code" :title="value">{{ value }}</span>
@@ -354,7 +354,7 @@ async function doSave() {
 .tree-panel { background: radial-gradient(circle, var(--app-paper-dot, #d4cdc0) 0.8px, transparent 0.8px); background-size: 14px 14px; background-color: var(--app-paper, #fefcf6);
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--app-bg-card);
   border: 3px solid var(--app-ink, #2d2d2d);
   border-radius: 6px 10px 6px 10px;
   overflow: hidden;
@@ -388,7 +388,7 @@ async function doSave() {
 }
 
 .tree-header__actions :deep(.el-button) {
-  font-size: 11px;
+  font-size:var(--app-size-xs);
   padding: 4px 8px;
 }
 
@@ -491,7 +491,7 @@ async function doSave() {
 .context-menu {
   position: fixed;
   z-index: 3000;
-  background: #fff;
+  background: var(--app-bg-card);
   border: 3px solid var(--app-ink, #2d2d2d);
   border-radius: 6px 10px 6px 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
@@ -630,7 +630,7 @@ async function doSave() {
   padding: 4px 10px;
   border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px 8px 4px 8px;
   border: 3px solid var(--app-ink, #2d2d2d);
-  background: #fff;
+  background: var(--app-bg-card);
   font-size: var(--app-size-sm);
   font-weight: 600;
   color: var(--app-ink);
@@ -726,7 +726,7 @@ async function doSave() {
 }
 
 .cell-code--sm {
-  font-size: 11px;
+  font-size:var(--app-size-xs);
   max-width: 140px;
 }
 
@@ -783,7 +783,7 @@ async function doSave() {
 
 /* Paper table headers */
 .endpoint-table :deep(.el-table__header th) {
-  background: var(--app-accent-purple) !important; color: #fff !important;
+  background: var(--app-accent-purple) !important; color: var(--app-bg-card) !important;
   font-size: var(--app-size-xs); font-weight: 700; padding: 6px 10px;
   border-right: 2px solid var(--doodle-ink);
 }

@@ -38,8 +38,8 @@ export async function renameConversation(convId: number, title: string): Promise
 }
 
 /** 删除对话 */
-export async function deleteConversation(convId: number): Promise<{ ok: boolean; error?: string }> {
-  const { data } = await djangoClient.post<{ ok: boolean; error?: string }>(`/ai/conversations/${convId}/delete`)
+export async function deleteConversation(convId: number): Promise<{ status: boolean; message?: string }> {
+  const { data } = await djangoClient.post<{ status: boolean; message?: string }>(`/ai/conversations/${convId}/delete`)
   return data
 }
 
@@ -68,8 +68,8 @@ export async function saveAssistantMessage(
 }
 
 /** 发送 HITL 确认结果 */
-export async function postConfirmResult(convId: number, result: object): Promise<{ ok: boolean; error?: string }> {
-  const { data } = await djangoClient.post<{ ok: boolean; error?: string }>(
+export async function postConfirmResult(convId: number, result: object): Promise<{ status: boolean; message?: string }> {
+  const { data } = await djangoClient.post<{ status: boolean; message?: string }>(
     `/ai/conversations/${convId}/confirm-result`,
     result,
   )

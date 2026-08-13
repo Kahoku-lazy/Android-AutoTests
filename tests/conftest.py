@@ -13,7 +13,7 @@ import requests
 # ── 环境配置 ──
 
 BASE_URL = os.environ.get("TEST_BASE_URL", "http://localhost:8766")
-LOGIN_PATH = "/api/ai/auth/login"
+LOGIN_PATH = "/api/auth/login"
 
 # ── Allure 元数据文件生成 ──
 

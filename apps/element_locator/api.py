@@ -4,21 +4,21 @@ Semi-shared: models (cross-app read), api functions (cross-app write).
 """
 
 __all__ = [
-    "clear_all",
-    "create_flow",
-    "create_page",
-    "get_api_endpoints",
-    "get_api_groups",
-    "get_flows",
+    "Page",
+    "Element",
+    "PageFlow",
+    "simple_yaml_dump",
     "get_test_points",
+    "get_flows",
     "get_web_elements",
     "get_web_groups",
-    "get_web_flows",
-    "simple_yaml_dump",
+    "create_page",
+    "create_flow",
+    "clear_all",
 ]
 
 from .models import Element, Page, PageFlow
-from .service import gen_xpath_candidates, simple_yaml_dump
+from .service import simple_yaml_dump
 
 # ── Query helpers (cross-app read — allowed per 读放开规则) ──
 
@@ -84,40 +84,3 @@ def get_web_groups():
     from .models import WebGroup
 
     return list(WebGroup.objects.order_by("sort_order", "name"))
-
-
-def get_web_flows():
-    """Get all web page flows with group labels."""
-    from .models import WebPageFlow
-
-    return list(WebPageFlow.objects.select_related("from_group", "to_group", "trigger_element"))
-
-
-def get_api_groups():
-    """Get all API groups ordered by name."""
-    from .models import ApiGroup
-
-    return list(ApiGroup.objects.order_by("sort_order", "name"))
-
-
-def get_api_endpoints():
-    """Get all API endpoint definitions."""
-    from .models import ApiEndpoint
-
-    return list(ApiEndpoint.objects.order_by("name"))
-
-
-__all__ = [
-    "Page",
-    "Element",
-    "PageFlow",
-    "gen_xpath_candidates",
-    "simple_yaml_dump",
-    "get_test_points",
-    "get_flows",
-    "get_web_elements",
-    "get_web_groups",
-    "create_page",
-    "create_flow",
-    "clear_all",
-]

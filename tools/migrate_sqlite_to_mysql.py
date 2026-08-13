@@ -11,10 +11,11 @@ This script reads from the existing SQLite database (data/app.db)
 and writes to MySQL through Django ORM models.
 """
 
-from datetime import datetime
 import os
 import sqlite3
 import sys
+
+from datetime import datetime
 
 # Setup Django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")

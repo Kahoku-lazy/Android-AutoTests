@@ -1,7 +1,7 @@
 # 聊天图片上传与多模态发送 — 设计文档
 
 日期：2026-08-10  
-状态：待用户确认  
+状态：已实现（2026-08-10）  
 范围：AI 助手对话页（`frontend/src/modules/ai-assistant` + `apps/ai_assistant`）  
 说明：`docs/` 被 gitignore，规格放在 `dev_docs/03-设计与架构/`
 

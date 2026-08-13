@@ -163,7 +163,7 @@ onMounted(() => { loadAll() })
 }
 .kb-hint {
   font-size: var(--app-size-sm);
-  color: #999;
+  color: var(--app-ink-muted);
 }
 .kb-table-card {
   flex: 1;
@@ -225,14 +225,14 @@ onMounted(() => { loadAll() })
   background: rgba(121, 79, 39, 0.05);
   font-size: var(--app-size-sm);
   font-weight: 700;
-  color: #999;
+  color: var(--app-ink-muted);
   cursor: pointer;
   font-family: inherit;
 }
 .kb-filter-btn:hover { color: var(--app-text, #3D4A3B); }
 .kb-filter-btn.active {
   background: var(--app-text, #3D4A3B);
-  color: #fff;
+  color: var(--app-bg-card);
 }
 @media (max-width: 700px) {
   .kpi-row { grid-template-columns: repeat(2, 1fr); }

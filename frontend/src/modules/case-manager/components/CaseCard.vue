@@ -2,7 +2,7 @@
 import { ref } from "vue";
 // Button → el-button, AppCard → AppCard
 import AppCard from "@/shared/components/AppCard.vue";
-import { ElTag } from "element-plus";
+import { ElMessage, ElTag } from "element-plus";
 import ConfirmButton from "@/shared/components/patterns/ConfirmButton.vue";
 import { getActive } from "@/shared/auth/token-storage";
 import { caseLock, caseUnlock } from "../api";
@@ -19,6 +19,14 @@ const isEditing = !!(props.item.editing_by && props.item.editing_by !== currentU
 const locking = ref(false);
 
 function stepCount() {
+  const cfg = props.item.config_json;
+  if (cfg && typeof cfg === "object") {
+    // Single format API: count cases
+    if (Array.isArray(cfg.cases)) return cfg.cases.length;
+    // Multi format API: count steps
+    if (Array.isArray(cfg.steps)) return cfg.steps.length;
+  }
+  // UI/Web: derive from steps_data
   try {
     const data = props.item.steps_data;
     if (Array.isArray(data)) return data.length;
@@ -47,7 +55,7 @@ async function toggleLock() {
     }
     emit("refresh");
   } catch (e) {
-    // silently fail, parent refreshes
+    ElMessage.error(e?.response?.data?.message || e?.message || "锁定操作失败");
   } finally {
     locking.value = false;
   }
@@ -137,17 +145,17 @@ async function toggleLock() {
 <style scoped>
 .case-card {
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform var(--app-duration-slow) var(--app-ease);
 }
 
 .case-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(var(--app-card-hover-lift));
 }
 
 .case-card__body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--app-space-sm);
 }
 
 .case-card__header {
@@ -159,40 +167,40 @@ async function toggleLock() {
 .case-card__header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-sm);
 }
 
 .case-card__id {
   font-family: var(--app-font-mono);
   font-size: var(--app-size-xs);
   font-weight: 600;
-  color: #999;
-  background: rgba(162,210,255,0.14);
-  padding: 2px 8px;
-  border-radius: 6px;
+  color: var(--app-text-secondary);
+  background: var(--case-bg-dragover);
+  padding: 2px var(--app-space-sm);
+  border-radius: var(--app-radius-sm);
 }
 
 .case-card__priority {
   font-size: var(--app-size-xs);
   font-weight: 700;
   padding: 1px 6px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   letter-spacing: 0.02em;
 }
 
 .case-card__priority--p0 {
-  background: rgba(224, 90, 90, 0.12);
-  color: #c0392b;
+  background: var(--case-badge-danger-bg);
+  color: var(--case-badge-danger-text);
 }
 
 .case-card__priority--p1 {
-  background: rgba(245, 195, 28, 0.15);
-  color: #8b6914;
+  background: var(--case-badge-warn-bg);
+  color: var(--case-badge-warn-text);
 }
 
 .case-card__priority--p2 {
-  background: rgba(162,210,255,0.14);
-  color: #999;
+  background: var(--case-bg-dragover);
+  color: var(--app-text-secondary);
 }
 
 .case-card__title {
@@ -216,41 +224,41 @@ async function toggleLock() {
 .meta-tag {
   font-size: var(--app-size-xs);
   font-weight: 600;
-  color: #999;
-  background: rgba(162,210,255,0.12);
-  padding: 2px 8px;
-  border-radius: 8px;
+  color: var(--app-text-secondary);
+  background: var(--case-bg-code);
+  padding: 2px var(--app-space-sm);
+  border-radius: var(--app-radius-md);
 }
 
 .meta-tag--dir {
   color: var(--c-workflow);
-  background: rgba(162,210,255,0.16);
+  background: var(--case-bg-code-hover);
 }
 
 .meta-tag--steps {
-  color: #999;
+  color: var(--app-text-secondary);
 }
 
 .meta-tag--user {
-  color: #889df0;
-  background: rgba(136, 157, 240, 0.08);
+  color: var(--case-purple-text);
+  background: var(--case-purple-bg);
 }
 
 /* Editing status badge */
 .case-card__editing-badge {
   font-size: var(--app-size-xs);
   font-weight: 700;
-  color: #9a6a1f;
-  background: rgba(255,214,165,0.28);
-  padding: 4px 10px;
-  border-radius: 8px;
+  color: var(--case-badge-editing-text);
+  background: var(--case-badge-editing-bg);
+  padding: var(--app-space-xs) 10px;
+  border-radius: var(--app-radius-md);
 }
 
 .case-card__actions {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  gap: var(--app-space-sm);
+  margin-top: var(--app-space-sm);
   padding-top: 12px;
-  border-top: 1px dashed rgba(162,210,255,0.38);
+  border-top: 1px dashed var(--case-border-divider);
 }
 </style>

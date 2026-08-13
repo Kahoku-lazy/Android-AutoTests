@@ -23,7 +23,7 @@ export function useDebugDevice() {
     try {
       const { data } = await listDevices();
       if (data.status) devices.value = data.devices || [];
-    } catch { /* ignore */ }
+    } catch { console.error("加载设备列表失败") }
   }
 
   async function connectDebugDevice() {

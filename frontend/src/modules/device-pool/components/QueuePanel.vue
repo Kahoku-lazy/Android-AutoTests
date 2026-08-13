@@ -63,7 +63,7 @@ function formatTime(seconds: number): string {
 
 <style scoped>
 .queue-badge {
-  background: #FFB5A7;
+  background: var(--app-status-danger);
   color: var(--ink);
   padding: 4px 12px;
   border-radius: 4px 8px 4px 8px;

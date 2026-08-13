@@ -198,15 +198,12 @@ async function removeItem(item) {
 
 // ── Skill folder upload ──
 async function onSkillFolderPicked(e) {
-  const files = Array.from(e.target.files || [])
+  const files = Array.from((e.target as HTMLInputElement).files || [])
   if (!files.length) return
   const folderName = files[0].webkitRelativePath?.split('/')[0] || 'skill'
-  const fd = new FormData()
-  fd.append('name', folderName)
-  files.forEach((f) => fd.append('files', f))
   loading.value = true
   try {
-    const data = await uploadSharedSkill(fd)
+    const data = await uploadSharedSkill(files, folderName)
     if (data.status) {
       ElMessage.success('Skill 文件夹已上传')
       await loadItems()
@@ -233,51 +230,51 @@ onMounted(() => loadItems())
   gap: 16px;
   margin-bottom: 16px;
 }
-.toolbox-title { font-size: 18px; font-weight: 700; color: var(--app-text-primary, #2c2c2c); margin: 0; }
-.toolbox-subtitle { font-size: 13px; color: var(--app-text-secondary, #888); flex: 1; }
+.toolbox-title { font-size:var(--app-size-md); font-weight: 700; color: var(--app-text-primary, #2c2c2c); margin: 0; }
+.toolbox-subtitle { font-size:var(--app-size-sm); color: var(--app-text-secondary, #888); flex: 1; }
 .toolbox-actions { display: flex; gap: 8px; }
 .tb-btn {
   display: inline-flex; align-items: center; gap: 4px;
-  padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  padding: 8px 16px; border-radius: 8px; font-size:var(--app-size-sm); font-weight: 600;
   border: none; cursor: pointer; font-family: inherit; transition: all 0.15s;
 }
-.tb-btn-primary { background: #6c5ce7; color: #fff; }
+.tb-btn-primary { background: #6c5ce7; color: var(--app-bg-card); }
 .tb-btn-primary:hover { background: #5a4bd1; }
-.tb-btn-outline { background: #fff; color: #6c5ce7; border: 1.5px solid #6c5ce7; }
+.tb-btn-outline { background: var(--app-bg-card); color: #6c5ce7; border: 1.5px solid #6c5ce7; }
 .tb-btn-outline:hover { background: #f5f3ff; }
 .toolbox-filters { display: flex; gap: 6px; margin-bottom: 16px; }
 .tb-filter-btn {
   padding: 6px 14px; border-radius: 8px; border: 1px solid var(--app-border, #e0e0e0);
-  background: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+  background: var(--app-bg-card); font-size:var(--app-size-sm); font-weight: 600; cursor: pointer;
   font-family: inherit; color: var(--app-text-secondary, #666); transition: all 0.15s;
 }
-.tb-filter-btn.active { background: #6c5ce7; color: #fff; border-color: #6c5ce7; }
+.tb-filter-btn.active { background: #6c5ce7; color: var(--app-bg-card); border-color: #6c5ce7; }
 .toolbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
 .tb-card {
-  background: #fff; border-radius: 12px; border: 1px solid var(--app-border, #e8e8e8);
+  background: var(--app-bg-card); border-radius: 12px; border: 1px solid var(--app-border, #e8e8e8);
   padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
   transition: box-shadow 0.15s;
 }
 .tb-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
 .tb-card-header { display: flex; align-items: center; gap: 8px; }
-.tb-card-name { font-weight: 700; font-size: 15px; color: var(--app-text-primary, #2c2c2c); flex:1; }
-.tb-card-type { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+.tb-card-name { font-weight: 700; font-size:var(--app-size-sm); color: var(--app-text-primary, #2c2c2c); flex:1; }
+.tb-card-type { font-size:var(--app-size-xs); font-weight: 700; padding: 2px 8px; border-radius: 6px; }
 .tb-type-mcp { background: #e8f5e9; color: #2e7d32; }
 .tb-type-skill { background: #e3f2fd; color: #1565c0; }
 .tb-type-extension { background: #fff3e0; color: #e65100; }
 .tb-card-body { flex: 1; }
-.tb-card-desc { font-size: 13px; color: var(--app-text-secondary, #666); margin: 0; }
-.tb-card-config { font-size: 11px; color: #888; background: #f8f8f8; padding: 6px 8px;
+.tb-card-desc { font-size:var(--app-size-sm); color: var(--app-text-secondary, #666); margin: 0; }
+.tb-card-config { font-size:var(--app-size-xs); color: #888; background: #f8f8f8; padding: 6px 8px;
   border-radius: 6px; margin: 4px 0 0; overflow-x: auto; white-space: pre-wrap; }
 .tb-card-footer { display: flex; align-items: center; gap: 8px; }
-.tb-card-date { font-size: 11px; color: #aaa; flex: 1; }
+.tb-card-date { font-size:var(--app-size-xs); color: #aaa; flex: 1; }
 .tb-card-btn {
-  font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 6px;
-  border: 1px solid var(--app-border, #ddd); background: #fff; cursor: pointer;
+  font-size:var(--app-size-xs); font-weight: 600; padding: 4px 10px; border-radius: 6px;
+  border: 1px solid var(--app-border, #ddd); background: var(--app-bg-card); cursor: pointer;
   font-family: inherit; color: var(--app-text-secondary, #555);
 }
 .tb-card-btn:hover { background: #f5f5f5; }
 .tb-card-btn.danger { color: #c43f3f; border-color: #f5d5d5; }
 .tb-card-btn.danger:hover { background: #fef0f0; }
-.tb-json-input :deep(textarea) { font-family: monospace; font-size: 12px; }
+.tb-json-input :deep(textarea) { font-family: monospace; font-size:var(--app-size-xs); }
 </style>

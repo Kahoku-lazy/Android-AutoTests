@@ -12,11 +12,11 @@ import pytest
 
 # ── 端点常量（避免 URL 字符串散落各测试函数） ──
 
-LOGIN_URL = "/api/ai/auth/login"
-REGISTER_URL = "/api/ai/auth/register"
-REFRESH_URL = "/api/ai/auth/refresh"
-LOGOUT_URL = "/api/ai/auth/logout"
-ME_URL = "/api/ai/auth/me"
+LOGIN_URL = "/api/auth/login"
+REGISTER_URL = "/api/auth/register"
+REFRESH_URL = "/api/auth/refresh"
+LOGOUT_URL = "/api/auth/logout"
+ME_URL = "/api/auth/me"
 
 
 # ── 动态数据工厂 ──
@@ -43,9 +43,11 @@ def auth_token(base_url: str) -> dict:
         timeout=10,
     )
     body = resp.json()
+    assert body.get("status") is True, body
+    data = body["data"]
     return {
-        "access_token": body["access_token"],
-        "refresh_token": body["refresh_token"],
+        "access_token": data["access_token"],
+        "refresh_token": data["refresh_token"],
     }
 
 

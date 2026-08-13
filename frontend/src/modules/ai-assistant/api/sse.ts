@@ -39,6 +39,8 @@ export function streamChat(
   convId: number,
   message: string,
   callbacks: SSECallbacks = {},
+  images?: { media_type: string; data: string }[],
+  displayText?: string,
 ): { controller: AbortController; builder: SSEMessageBuilder } {
   const controller = new AbortController()
   const builder = new SSEMessageBuilder()
@@ -46,13 +48,21 @@ export function streamChat(
 
   /** Attempt the SSE fetch with the given token. On 401, refresh + retry. */
   function doFetch(authToken: string, isRetry: boolean = false): void {
+    const body: {
+      message: string
+      display_text?: string
+      images?: { media_type: string; data: string }[]
+    } = { message }
+    if (displayText) body.display_text = displayText
+    if (images?.length) body.images = images
+
     fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${authToken}`,
       },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify(body),
       signal: controller.signal,
     }).then(response => {
       // ── 401 → attempt token refresh once ──
@@ -65,11 +75,12 @@ export function streamChat(
           else callbacks.onError?.(new Error('登录已过期，请重新登录'))
           return
         }
-        return axios.post('/api/ai/auth/refresh', { refresh_token: refreshToken })
+        return axios.post('/api/auth/refresh', { refresh_token: refreshToken })
           .then(refreshResp => {
-            if (refreshResp.data?.status) {
-              setToken(refreshResp.data.access_token)
-              doFetch(refreshResp.data.access_token, true)
+            if (refreshResp.data?.status === true) {
+              const access = refreshResp.data.data.access_token
+              setToken(access)
+              doFetch(access, true)
             } else {
               clearToken()
               const active = getActive()
@@ -118,6 +129,10 @@ export function streamChat(
             let raw: Record<string, unknown> | null = null
             try { raw = JSON.parse(dataLines.join('\n')) } catch { /* skip non-JSON lines (heartbeat comments) */ }
             if (raw) {
+              // Track backend-saved message ID so frontend can skip duplicate save
+              if (raw._backend_msg_id) {
+                ;(builder as { _backendMsgId?: number })._backendMsgId = raw._backend_msg_id as number
+              }
               const uiEvent = builder.processEvent(raw)
               if (uiEvent.phase === 'reply_end' || uiEvent.phase === 'exceed_max_iters') {
                 callbacks._completed = true

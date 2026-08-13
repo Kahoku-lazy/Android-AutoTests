@@ -200,4 +200,4 @@ DEFAULT_QUESTIONS = [
     },
 ]
 
-VALID_CATEGORIES = sorted({q["category"] for q in DEFAULT_QUESTIONS})
+VALID_CATEGORIES: list[str] = sorted({str(q["category"]) for q in DEFAULT_QUESTIONS})

@@ -1,5 +1,5 @@
 /** message-normalizer — 消息数据标准化（从 useMessageStore 提取） */
-import type { ChatMessage, ContentBlock, SSERound, ToolCall } from '@/shared/types/ai'
+import type { ChatMessage, ContentBlock, SSERound, ToolCall, ToolState } from '@/shared/types/ai'
 
 /** 从 hint block 解析 hint 内容（处理 string / JSON object） */
 export function parseHintFromBlocks(hintBlock: ContentBlock | null): object | string | null {
@@ -22,7 +22,7 @@ export function rebuildToolFlow(blocks: ContentBlock[]): ToolCall[] {
       name: (p.call as ContentBlock)?.name as string || '',
       displayArgs: ((p.call as { inputRaw?: string; input?: object }).inputRaw as string)
         || (((p.call as { input?: object }).input) ? JSON.stringify((p.call as { input?: object }).input) : ''),
-      state: ((p.result as ContentBlock)?.state as string) || 'success',
+      state: ((p.result as ContentBlock)?.state as ToolState) || 'success',
       output: ((p.result as ContentBlock)?.output as string) || '',
     }))
   }
@@ -35,7 +35,7 @@ export function rebuildToolFlow(blocks: ContentBlock[]): ToolCall[] {
       name: (c.name as string) || '',
       displayArgs: ((c as { inputRaw?: string; input?: object }).inputRaw as string)
         || ((c as { input?: object }).input ? JSON.stringify((c as { input?: object }).input) : ''),
-      state: (r?.state as string) || 'success',
+      state: (r?.state as ToolState) || 'success',
       output: (r?.output as string) || '',
     }
   })
@@ -50,8 +50,8 @@ export function rebuildRoundsFromBlocks(blocks: ContentBlock[]): SSERound[] {
 
   const thinkingByRound: Record<number, string> = {}
   for (const b of blocks) {
-    if (b.type === 'thinking' && typeof (b as { roundIndex?: number }).roundIndex === 'number') {
-      thinkingByRound[(b as { roundIndex: number }).roundIndex] = (b as { thinking: string }).thinking || ''
+    if (b.type === 'thinking' && typeof (b as unknown as { roundIndex?: number }).roundIndex === 'number') {
+      thinkingByRound[(b as unknown as { roundIndex: number }).roundIndex] = (b as unknown as { thinking: string }).thinking || ''
     }
   }
 
@@ -65,7 +65,7 @@ export function rebuildRoundsFromBlocks(blocks: ContentBlock[]): SSERound[] {
         id: (p.call as ContentBlock)?.id as string || '',
         name: (p.call as ContentBlock)?.name as string || '',
         displayArgs: ((p.call as { inputRaw?: string; input?: object }).inputRaw as string) || '',
-        state: ((p.result as ContentBlock)?.state as string) || 'success',
+        state: ((p.result as ContentBlock)?.state as ToolState) || 'success',
         output: ((p.result as ContentBlock)?.output as string) || '',
       })
     }
@@ -81,7 +81,7 @@ export function rebuildRoundsFromBlocks(blocks: ContentBlock[]): SSERound[] {
         id: (c.id as string) || '',
         name: (c.name as string) || '',
         displayArgs: ((c as { inputRaw?: string }).inputRaw as string) || '',
-        state: (r?.state as string) || 'success',
+        state: (r?.state as ToolState) || 'success',
         output: (r?.output as string) || '',
       })
     }
@@ -117,6 +117,7 @@ export function normalizeLoadedMessage(m: Record<string, unknown>): ChatMessage 
     ...m as unknown as ChatMessage,
     flow,
     content,
+    blocks,
     rounds,
     thinking: (thinkingBlock as { thinking?: string })?.thinking || '',
     thinkingDone: !!(thinkingBlock as { thinking?: string })?.thinking,

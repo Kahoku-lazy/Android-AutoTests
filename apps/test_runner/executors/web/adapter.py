@@ -13,11 +13,13 @@ import asyncio
 import concurrent.futures
 import logging
 import os
+import time
 
+from collections.abc import Callable
 from functools import partial
+from typing import Any
 
 logger = logging.getLogger(__name__)
-import time
 
 # Dedicated single-thread executor for all Playwright sync API calls.
 # All browser/page operations MUST use this executor because Playwright's
@@ -41,14 +43,18 @@ def _pw_run(func, *args, **kwargs):
 class WebAdapter:
     """Executes web automation test cases via Playwright (headless Chromium)."""
 
-    def __init__(self, logger: callable = None, should_stop: callable = None):
+    def __init__(
+        self,
+        logger: Callable[[str], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
+    ):
         self._emit_log = logger or (lambda msg: None)
         self._should_stop = should_stop or (lambda: False)
         self._log_buffer: list[str] = []
         self._watchers: list[dict] = []  # per-instance watcher list
-        self._browser = None
-        self._page = None
-        self._pw = None
+        self._browser: Any = None
+        self._page: Any = None
+        self._pw: Any = None
 
     def log(self, msg: str):
         self._emit_log(msg)

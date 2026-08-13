@@ -88,7 +88,7 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--app-bg-card);
   border-right: 1px solid var(--ink);
   min-height: 0;
 }
@@ -104,7 +104,7 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
 .palette-desc {
   margin: 2px 0 10px;
   font-size: var(--app-size-xs);
-  color: #999;
+  color: var(--app-ink-muted);
   font-weight: 600;
 }
 .palette-search {
@@ -139,7 +139,7 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   border: none;
   border-radius: 14px;
   background: var(--cat);
-  color: #fff;
+  color: var(--app-bg-card);
   font-family: inherit;
   font-size: var(--app-size-sm);
   font-weight: 800;
@@ -160,7 +160,7 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   height: 24px;
   display: grid;
   place-items: center;
-  background: #fff;
+  background: var(--app-bg-card);
   border-radius: 8px;
   font-size: var(--app-size-sm);
 }
@@ -192,7 +192,7 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   border: none;
   border-radius: 10px 10px 12px 12px;
   background: var(--brick);
-  color: #fff;
+  color: var(--app-bg-card);
   font-family: inherit;
   font-size: var(--app-size-sm);
   font-weight: 800;
@@ -235,7 +235,7 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: #fff;
+  background: var(--app-bg-card);
   font-size: var(--app-size-sm);
   flex-shrink: 0;
 }
@@ -244,7 +244,7 @@ function onDragStart(e: DragEvent, item: PaletteItem) {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--app-bg-card);
   display: grid;
   place-items: center;
   font-size: var(--app-size-sm);

@@ -1,7 +1,7 @@
 """case-manager API interface test case model → cm_api_testcases.
 
-Table-based CRUD. Default columns: 编号, 标题, 优先级, 前置条件, 请求头, 请求体, 预期响应文本.
-User can add custom columns.
+Uses unified config_json (4 modules: case_info/steps/test_data/validation)
+instead of flat fields. Title is denormalized from config_json.case_info.title.
 """
 
 from django.db import models
@@ -21,19 +21,8 @@ class ApiTestCase(models.Model):
         verbose_name="优先级",
     )
     precondition = models.TextField(default="", blank=True, verbose_name="前置条件")
-    method = models.CharField(max_length=10, default="GET", blank=True, verbose_name="HTTP 方法")
-    url = models.TextField(default="", blank=True, verbose_name="请求 URL")
-    headers = models.TextField(default="", blank=True, verbose_name="请求头")
-    body = models.TextField(default="", blank=True, verbose_name="请求体")
-    expected_response = models.TextField(default="", blank=True, verbose_name="预期响应文本")
-    # ── Structured steps (aligns with TestDefinition.steps_json) ──
-    steps_json = models.TextField(default="[]", blank=True, verbose_name="结构化步骤JSON")
-    expected_status = models.IntegerField(default=200, verbose_name="预期HTTP状态码")
-    assertions = models.JSONField(default=list, blank=True, verbose_name="自定义断言")
-    # ── Custom columns (user-defined key-value pairs) ──
-    custom_columns = models.JSONField(default=list, blank=True, verbose_name="自定义列")
-    rows = models.JSONField(default=list, blank=True, verbose_name="表格行数据")
-    # [{key: "col_name", values: ["v1","v2",...]}]
+    # ── Unified JSON config (replaces flat fields + steps_json + rows + assertions) ──
+    config_json = models.JSONField(default=dict, verbose_name="统一 JSON 配置")
     directory = models.ForeignKey(
         "CaseDirectory",
         on_delete=models.SET_NULL,
@@ -43,9 +32,6 @@ class ApiTestCase(models.Model):
     )
     description = models.TextField(default="", blank=True)
     enabled = models.BooleanField(default=True)
-    # ── IoT PRD fields ──
-    design_method = models.CharField(max_length=100, default="", blank=True)
-    metrics = models.TextField(default="", blank=True)
     # ── Collaboration ──
     created_by = models.CharField(max_length=200, default="", blank=True)
     updated_by = models.CharField(max_length=200, default="", blank=True)

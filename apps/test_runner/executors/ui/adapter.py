@@ -9,6 +9,8 @@ uiautomator2 is kept ONLY for XPath element operations.
 import logging
 import time
 
+from collections.abc import Callable
+
 from .connect import DeviceConnection
 
 logger = logging.getLogger(__name__)
@@ -26,8 +28,8 @@ class DeviceAdapter:
         self,
         device_conn: DeviceConnection,
         package_name: str = "",
-        logger: callable = None,
-        should_stop: callable = None,
+        logger: Callable[[str], None] | None = None,
+        should_stop: Callable[[], bool] | None = None,
     ):
         """
         Args:

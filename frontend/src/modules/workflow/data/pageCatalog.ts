@@ -123,6 +123,7 @@ export async function fetchCatalogPages(): Promise<{
   pages: CatalogPage[]
   source: 'api' | 'mock'
   error?: string
+  message?: string
 }> {
   const pages: CatalogPage[] = []
   let source: 'api' | 'mock' = 'api'
@@ -170,7 +171,7 @@ export async function fetchCatalogPages(): Promise<{
   } catch { /* web groups optional, don't fail the whole catalog */ }
 
   if (pages.length === 0) {
-    return { pages: MOCK_PAGES, source: 'mock', error: '无可用页面数据' }
+    return { pages: MOCK_PAGES, source: 'mock', error: '无可用页面数据', message: '无可用页面数据' }
   }
   return { pages, source }
 }

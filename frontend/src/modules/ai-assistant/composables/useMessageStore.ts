@@ -1,6 +1,6 @@
 /** useMessageStore — 消息状态管理（TypeScript） */
 import { ref, type Ref } from 'vue'
-import type { ChatMessage } from '@/shared/types/ai'
+import type { ChatMessage, ContentBlock } from '@/shared/types/ai'
 import { normalizeLoadedMessage } from '../helpers/message-normalizer'
 
 export interface UseMessageStoreReturn {
@@ -8,10 +8,12 @@ export interface UseMessageStoreReturn {
   assistIdx: Ref<number>
   backgroundStreamConvId: Ref<number | null>
   hydrateMessages: (dataMessages: unknown[]) => void
-  appendUserAndAssistantPlaceholder: (displayText: string) => number
+  appendUserAndAssistantPlaceholder: (displayText: string, blocks?: ContentBlock[]) => number
   clearMessages: () => void
   normalizeLoadedMessage: typeof normalizeLoadedMessage
 }
+
+let _msgSeq = 0
 
 export function useMessageStore(): UseMessageStoreReturn {
   const messages = ref<ChatMessage[]>([])
@@ -22,12 +24,21 @@ export function useMessageStore(): UseMessageStoreReturn {
     messages.value = dataMessages
       .map(m => normalizeLoadedMessage(m as Record<string, unknown>))
       .filter((m): m is ChatMessage => m !== null)
+    assistIdx.value = -1  // reset — will be set by appendUserAndAssistantPlaceholder on next send
   }
 
-  function appendUserAndAssistantPlaceholder(displayText: string): number {
-    messages.value.push({ role: 'user', content: displayText })
+  function appendUserAndAssistantPlaceholder(displayText: string, blocks?: ContentBlock[]): number {
+    const uid = `u${++_msgSeq}`
+    messages.value.push({
+      id: uid,
+      role: 'user',
+      content: displayText,
+      ...(blocks?.length ? { blocks } : {}),
+    })
+    const aid = `a${++_msgSeq}`
     assistIdx.value = messages.value.length
     messages.value.push({
+      id: aid,
       role: 'assistant',
       content: '',
       tokens: 0,

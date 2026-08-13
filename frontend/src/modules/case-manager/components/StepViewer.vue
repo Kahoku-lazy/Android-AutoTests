@@ -37,7 +37,7 @@ const DETAIL_FIELDS = [
       :class="{ 'step-viewer__item--expanded': expanded[idx] }"
     >
       <!-- Collapsed summary bar -->
-      <div class="step-viewer__bar" @click="toggle(idx)">
+      <div class="step-viewer__bar" role="button" tabindex="0" @click="toggle(idx)" @keydown.enter.prevent="toggle(idx)" @keydown.space.prevent="toggle(idx)">
         <span class="step-viewer__idx">{{ idx + 1 }}</span>
         <span class="step-viewer__summary">{{ stepSummary(step) }}</span>
         <span class="step-viewer__toggle">{{ expanded[idx] ? "▾" : "▸" }}</span>
@@ -85,8 +85,8 @@ const DETAIL_FIELDS = [
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 48px 24px;
-  color: #999;
+  padding: var(--app-space-2xl) var(--app-space-lg);
+  color: var(--app-text-secondary);
 }
 
 .step-viewer-empty__icon {
@@ -102,20 +102,20 @@ const DETAIL_FIELDS = [
   border-radius: 14px;
   overflow: hidden;
   border: 1px solid var(--ink);
-  background: rgba(255,255,255,0.38);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--case-bg-card);
+  transition: all var(--app-duration-slow) var(--app-ease);
 }
 
 .step-viewer__item:hover {
-  border-color: rgba(162,210,255,0.58);
-  background: rgba(162,210,255,0.12);
+  border-color: var(--case-border);
+  background: var(--case-bg-hover);
 }
 
 .step-viewer__bar {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 14px var(--app-space-md);
   cursor: pointer;
   user-select: none;
 }
@@ -123,8 +123,8 @@ const DETAIL_FIELDS = [
 .step-viewer__idx {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
-  background: rgba(162,210,255,0.18);
+  border-radius: var(--app-radius-md);
+  background: var(--case-bg-active);
   color: var(--c-workflow);
   font-size: var(--app-size-sm);
   font-weight: 700;
@@ -139,11 +139,14 @@ const DETAIL_FIELDS = [
   font-size: var(--app-size-sm);
   font-weight: 600;
   color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .step-viewer__toggle {
   font-size: var(--app-size-sm);
-  color: #999;
+  color: var(--app-text-secondary);
   flex-shrink: 0;
 }
 
@@ -169,7 +172,7 @@ const DETAIL_FIELDS = [
 }
 
 .step-viewer__field-label {
-  color: #999;
+  color: var(--app-text-secondary);
   font-weight: 500;
   white-space: nowrap;
 }

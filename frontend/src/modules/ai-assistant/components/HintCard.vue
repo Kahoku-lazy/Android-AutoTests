@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineProps<{
-  hint?: object | string | null
+  hint?: Record<string, any> | string | null
   importing?: boolean
 }>()
 
@@ -28,7 +28,7 @@ function genericHintText(hint) {
 </script>
 
 <template>
-  <template v-if="hint">
+  <template v-if="hint && typeof hint !== 'string'">
     <div v-if="hint.type === 'task_card'" class="task-card">
       <div class="task-card-header">
         <span class="task-status-badge" :class="taskStatusClass(hint.status)">
@@ -194,7 +194,7 @@ function genericHintText(hint) {
   margin-top: 10px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: #fff;
+  background: var(--app-bg-card);
   font-size: var(--app-size-sm);
   color: #3c3489;
   font-weight: 500;
@@ -281,7 +281,7 @@ function genericHintText(hint) {
 }
 .prd-import-btn:hover:not(:disabled) {
   background: var(--ai-hint-yellow-border);
-  color: #fff;
+  color: var(--app-bg-card);
 }
 .prd-import-btn:disabled {
   opacity: 0.6;

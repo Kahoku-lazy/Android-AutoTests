@@ -49,16 +49,16 @@
   height: 18px !important;
 }
 .dashboard__stats-grid--compact :deep(.stats-card__title) {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
 }
 .dashboard__stats-grid--compact :deep(.stats-card__stat strong) {
-  font-size: 18px;
+  font-size: var(--app-size-md);
 }
 .dashboard__stats-grid--compact :deep(.stats-card__stat small) {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
 }
 .dashboard__stats-grid--compact :deep(.stats-card__enter) {
-  font-size: 10px;
+  font-size: var(--app-size-xs);
   padding: 2px 8px;
 }
 
@@ -106,7 +106,7 @@
   font-size: var(--app-size-xs);
   padding: 1px 8px;
   border-radius: 4px 8px 4px 8px;
-  background: #fff;
+  background: var(--app-bg-card);
   color: var(--app-ink-muted);
   border: 1.5px solid var(--app-border-light);
   font-weight: 700;
@@ -132,13 +132,13 @@
 .trends-tasks-card :deep(.el-card__body) {
   padding: 12px 12px 30px 12px;
   border-radius: 6px 10px 6px 10px;
-  background: #fff;
+  background: var(--app-bg-card);
   border: 2.5px solid var(--ink);
   flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.05);
+  box-shadow: var(--app-shadow-md);
   position: relative;
 }
 /* 图钉 */
@@ -151,7 +151,7 @@
   transform: translateX(-50%);
   width: 8px;
   height: 8px;
-  background: radial-gradient(circle, #e8e0d5 30%, #a09080 100%);
+  background: radial-gradient(circle, var(--app-pushpin-light) 30%, var(--app-pushpin-dark) 100%);
   border-radius: 50%;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
   z-index: 2;
@@ -179,7 +179,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--app-bg-card);
   border: 2px solid var(--app-live);
   top: -2px;
   right: -2px;
@@ -197,7 +197,7 @@
   justify-content: center;
   gap: 24px;
   padding: 14px 20px;
-  background: #FFE066;
+  background: var(--app-footer-yellow);
   border: 2.5px solid var(--ink);
   border-radius: 6px 10px 6px 10px;
   font-size: var(--app-size-sm);
@@ -216,19 +216,14 @@
   stroke: var(--app-footer-yellow-text);
 }
 
-/* ── Module Nav 覆盖 ── */
-:deep(.module-nav-card) {
-  background: #fff !important;
+/* ── Module Nav 覆盖（与 ModuleNavigator .module-card 对齐） ── */
+:deep(.module-card) {
+  background: var(--app-bg-card) !important;
   border: 2.5px solid var(--ink) !important;
   border-radius: 6px 10px 6px 10px !important;
   box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.04) !important;
 }
-:deep(.module-nav-card:hover) {
+:deep(.module-card:hover) {
   transform: translate(1px, 1px) !important;
   box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.06) !important;
-}
-
-/* ── Activity Timeline 覆盖 ── */
-:deep(.activity-item) {
-  border-bottom: 1.5px dashed var(--app-border-light) !important;
 }

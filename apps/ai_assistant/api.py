@@ -30,6 +30,7 @@ __all__ = [
     "decrypt_key",
     "mask_key",
     # 跨模块接口（供 evaluator 等使用）
+    "get_kb_doc_count",
     "get_provider_config",
     "search_knowledge",
 ]
@@ -151,7 +152,7 @@ def get_provider_config(provider: str, base_url: str = "", model_name: str = "")
     """
     from apps.ai_assistant.agent_scope.provider_registry import get_provider_config as _get
 
-    return _get(provider, base_url, model_name)
+    return _get(provider, base_url)
 
 
 def search_knowledge(query: str, top_k: int = 5, sources: list[str] | None = None) -> list[dict]:

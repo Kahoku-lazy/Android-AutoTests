@@ -68,6 +68,7 @@ export type StepStatus = 'pending' | 'running' | 'pass' | 'fail'
 // ═══════════════════════════════════════════
 
 export interface StepBlock {
+  package_name?: string
   id: string
   kind: 'step'
   stepType: StepTypeValue
@@ -110,6 +111,7 @@ export type Block = StepBlock | BranchBlock | LoopBlock
 
 // ── Platform-aligned flat step (case-manager compatible) ──
 export interface FlatTestStep {
+  package_name?: string
   type: string
   xpath: string
   xpath2: string

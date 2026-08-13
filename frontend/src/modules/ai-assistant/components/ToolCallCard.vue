@@ -100,7 +100,7 @@ function formatOutput(output: unknown): string {
 .tool-step {
   border-radius: 10px;
   border: 1px solid var(--doodle-bg, #faf5ee);
-  background: #fff;
+  background: var(--app-bg-card);
   padding: 8px 12px;
 }
 .tool-step.calling {
@@ -115,7 +115,7 @@ function formatOutput(output: unknown): string {
   border-color: #a3d977;
   background: rgba(242, 251, 230, 0.4);
 }
-.tool-step.message {
+.tool-step.error {
   border-color: #e85f5f;
   background: rgba(254, 237, 237, 0.4);
 }
@@ -137,7 +137,7 @@ function formatOutput(output: unknown): string {
   color: #8a7b66;
 }
 .tool-source-tag {
-  font-size: 10px;
+  font-size:var(--app-size-xs);
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 4px;
@@ -148,7 +148,7 @@ function formatOutput(output: unknown): string {
 .src-mcp      { background: rgba(232,167,53,0.12); color: #c7851a; }
 .src-skill    { background: rgba(77,182,172,0.12); color: #2d8a82; }
 .tool-elapsed {
-  font-size: 10px;
+  font-size:var(--app-size-xs);
   color: #b5a68e;
   margin-left: auto;
   font-variant-numeric: tabular-nums;

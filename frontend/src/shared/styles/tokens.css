@@ -101,8 +101,14 @@
   --app-shadow-sm:     2px 2px 0 rgba(0,0,0,0.04);
   --app-shadow-md:     2px 3px 0 rgba(0,0,0,0.05);
   --app-shadow-lg:     3px 4px 0 rgba(0,0,0,0.06);
-  --app-icon-shadow:   2px 2px 0 rgba(0,0,0,0.06);
-  --app-icon-border:   var(--ink);
+  --app-icon-shadow:       2px 2px 0 rgba(0,0,0,0.06);
+  --app-icon-border:       var(--ink);
+  --app-overlay:           rgba(0, 0, 0, 0.38);
+  --app-text-shadow-light: 0 1px 0 rgba(255, 255, 255, 0.45);
+  /* 登录页装饰光晕（仅氛围，非交互色） */
+  --app-glow-sky:          rgba(162, 210, 255, 0.5);
+  --app-glow-ocean:        rgba(63, 158, 216, 0.42);
+  --app-glow-forest:       rgba(111, 185, 141, 0.42);
 
   /* ── 状态色 ── */
   --app-pass:          #C8F5D0;
@@ -162,6 +168,18 @@
   --app-footer-yellow-text: #5a4e20;
   --app-pushpin-light:      #e8e0d5;
   --app-pushpin-dark:       #a09080;
+  --app-pushpin-mid:        #c0b8a8;
+  --app-icon-teal-bg:       #D4F5F0;
+  --app-icon-purple-bg:     #F0E8FF;
+  --app-icon-orange-bg:     #FFE8D0;
+  --app-timeline-dot:       #999;
+  --app-warning-text:       #7a5a10;
+  --app-queue-text:         #b08800;
+  --app-disconnect-text:    #c53030;
+  --app-btn-hover-purple:   #D4C8F0;
+  --app-btn-hover-danger:   #FFD0C8;
+  --app-btn-disabled-color: #ccc;
+  --app-page-active-bg:     #E8F4FD;
 
   /* ── Crayon Doodle 主题 ── */
   --doodle-ink:             #2d2d2d;
@@ -225,6 +243,48 @@
   --ai-hint-neutral-bg: var(--ai-bg-neutral);      /* alias */
   --ai-hint-yellow-bg:  #fff8e7;
   --ai-hint-yellow-border: #f7cd67;
+
+  /* ── Case Manager 模块令牌 ── */
+  --case-border-subtle:     rgba(162, 210, 255, 0.18);
+  --case-border:            rgba(162, 210, 255, 0.24);
+  --case-border-dashed:     rgba(162, 210, 255, 0.30);
+  --case-border-divider:    rgba(162, 210, 255, 0.38);
+  --case-bg-hover:          rgba(162, 210, 255, 0.12);
+  --case-bg-active:         rgba(162, 210, 255, 0.18);
+  --case-bg-subtle:         rgba(162, 210, 255, 0.06);
+  --case-bg-drag:           rgba(162, 210, 255, 0.08);
+  --case-bg-dragover:       rgba(162, 210, 255, 0.14);
+  --case-bg-code:           rgba(162, 210, 255, 0.12);
+  --case-bg-code-hover:     rgba(162, 210, 255, 0.16);
+  --case-bg-skeleton:       rgba(162, 210, 255, 0.03);
+  --case-bg-card:           rgba(255, 255, 255, 0.38);
+  --case-warn-bg:           rgba(247, 205, 103, 0.06);
+  --case-warn-bg-strong:    rgba(247, 205, 103, 0.18);
+  --case-warn-border:       rgba(247, 170, 60, 0.30);
+  --case-warn-border-dashed:rgba(247, 205, 103, 0.45);
+  --case-warn-text:         #8a6d14;
+  --case-warn-text-strong:  #6b4c00;
+  --case-warn-accent:       #f7cd67;
+  --case-warn-accent-text:  #b8860b;
+  --case-step-success:      #27ae60;
+  --case-step-error:        #e05a5a;
+  --case-badge-danger-bg:   rgba(224, 90, 90, 0.12);
+  --case-badge-danger-text: #c0392b;
+  --case-badge-warn-bg:     rgba(245, 195, 28, 0.15);
+  --case-badge-warn-text:   #8b6914;
+  --case-badge-editing-bg:  rgba(255, 214, 165, 0.28);
+  --case-badge-editing-text:#9a6a1f;
+  --case-btn-count-bg:      rgba(111, 186, 44, 0.15);
+  --case-btn-count-text:    #4a8a1a;
+  --case-purple-bg:         rgba(136, 157, 240, 0.08);
+  --case-purple-text:       #889df0;
+  --case-purple-bg-light:   rgba(136, 157, 240, 0.06);
+  --case-purple-bg-strong:  rgba(136, 157, 240, 0.15);
+  --case-purple-bg-heavy:   rgba(136, 157, 240, 0.30);
+  --case-context-menu-bg:   #ffffff;
+  --case-watcher-badge-bg:  #f7cd67;
+  --case-watcher-badge-text:#ffffff;
+  --case-divider-line:      rgba(162, 210, 255, 0.24);
 
   /* ═══════════════════════════════════════
      Element Plus 变量覆盖 — Doodle

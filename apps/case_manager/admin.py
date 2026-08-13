@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db.models import Count
 
 from .models import CaseDirectory, TestDefinition
 from .models_api import ApiTestCase
@@ -13,14 +14,26 @@ class CaseDirectoryAdmin(admin.ModelAdmin):
     search_fields = ("name",)
     ordering = ("parent__id", "sort_order", "id")
 
-    def case_count(self, obj):
-        total = obj.test_definitions.count()
-        total += obj.api_testcases.count() if hasattr(obj, "api_testcases") else 0
-        total += obj.web_testcases.count() if hasattr(obj, "web_testcases") else 0
-        total += obj.storage_testcases.count() if hasattr(obj, "storage_testcases") else 0
-        return total
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .annotate(
+                _td_count=Count("test_definitions", distinct=True),
+                _api_count=Count("api_testcases", distinct=True),
+                _web_count=Count("web_testcases", distinct=True),
+                _stor_count=Count("storage_testcases", distinct=True),
+            )
+        )
 
-    case_count.short_description = "用例数"
+    @admin.display(description="用例数")
+    def case_count(self, obj):
+        return (
+            (getattr(obj, "_td_count", 0) or 0)
+            + (getattr(obj, "_api_count", 0) or 0)
+            + (getattr(obj, "_web_count", 0) or 0)
+            + (getattr(obj, "_stor_count", 0) or 0)
+        )
 
 
 @admin.register(TestDefinition)
@@ -32,7 +45,7 @@ class TestDefinitionAdmin(admin.ModelAdmin):
 
 @admin.register(ApiTestCase)
 class ApiTestCaseAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "directory", "method", "priority", "enabled", "updated_at")
+    list_display = ("id", "title", "directory", "priority", "enabled", "updated_at")
     list_filter = ("enabled", "priority")
     search_fields = ("id", "title")
 

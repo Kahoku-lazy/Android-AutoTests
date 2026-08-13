@@ -30,7 +30,7 @@ class _RemoteRunState:
 
     is_running: bool = True
     run_model: TestRun | None = None
-    log_lines: list = None
+    log_lines: list | None = None
 
     def __post_init__(self):
         if self.log_lines is None:

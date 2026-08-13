@@ -1,4 +1,4 @@
-"""登出接口测试 — POST /api/ai/auth/logout（数据驱动 + JSON Schema）。
+"""登出接口测试 — POST /api/auth/logout（数据驱动 + JSON Schema）。
 
 9 条用例按断言 Shape 分为 2 个参数化组 + 3 个独立函数：
   - test_logout_success[1]       — 200 + status=True（正常登出）
@@ -17,7 +17,7 @@ import allure
 import jsonschema
 import pytest
 
-from tests.auth.conftest import LOGOUT_URL, ME_URL, set_allure_metadata
+from tests.auth.conftest import LOGIN_URL, LOGOUT_URL, ME_URL, set_allure_metadata
 from tests.auth.schemas import ERROR_RESPONSE_SCHEMA, LOGOUT_SUCCESS_SCHEMA
 
 # ═══════════════════════════════════════════════════════════════════
@@ -92,10 +92,10 @@ def test_logout_success(base_url, api_session, auth_token, case):
     if case.auth_format == "bearer":
         # TC-LOGOUT-001: 独立登录获取 token，避免污染共享 auth_token
         login_resp = api_session.post(
-            f"{base_url}/api/ai/auth/login",
+            f"{base_url}{LOGIN_URL}",
             json={"username": "admin", "password": "admin123"},
         )
-        access = login_resp.json()["access_token"]
+        access = login_resp.json()["data"]["access_token"]
         headers["Authorization"] = f"Bearer {access}"
     elif case.auth_format != "none":
         headers["Authorization"] = _build_auth_header(case, auth_token)
@@ -205,10 +205,10 @@ def test_logout_token_invalid(base_url, api_session, auth_token):
     """两步验证：登出后 token 失效。"""
     # 独立登录获取 token，避免污染共享 auth_token
     login_resp = api_session.post(
-        f"{base_url}/api/ai/auth/login",
+        f"{base_url}{LOGIN_URL}",
         json={"username": "admin", "password": "admin123"},
     )
-    access = login_resp.json()["access_token"]
+    access = login_resp.json()["data"]["access_token"]
 
     # Step 1: 确认 token 有效
     me_before = api_session.get(
@@ -250,10 +250,10 @@ def test_logout_repeated(base_url, api_session, auth_token):
     """重复登出。"""
     # 独立登录获取 token，避免污染共享 auth_token
     login_resp = api_session.post(
-        f"{base_url}/api/ai/auth/login",
+        f"{base_url}{LOGIN_URL}",
         json={"username": "admin", "password": "admin123"},
     )
-    access = login_resp.json()["access_token"]
+    access = login_resp.json()["data"]["access_token"]
     headers = {"Authorization": f"Bearer {access}"}
 
     resp1 = api_session.post(f"{base_url}{LOGOUT_URL}", headers=headers)

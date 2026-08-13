@@ -15,7 +15,7 @@ const emit = defineEmits<{ toggle: [] }>()
     class="thinking-block"
     :class="{ 'thinking-done': thinkingDone }"
   >
-    <div class="thinking-header" @click="emit('toggle')">
+    <div class="thinking-header" role="button" tabindex="0" @click="emit('toggle')" @keydown.enter.prevent="emit('toggle')" @keydown.space.prevent="emit('toggle')">
       <span class="thinking-icon">{{ thinkingDone ? "💭" : "🤔" }}</span>
       <span class="thinking-label">思考过程</span>
       <span class="thinking-toggle">{{ expanded ? "收起" : "展开" }}</span>

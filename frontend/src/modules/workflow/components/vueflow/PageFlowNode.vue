@@ -286,12 +286,12 @@ watch(
   border-radius: 4px;
   font-size: var(--app-size-xs);
   font-weight: 800;
-  color: #fff;
+  color: var(--app-bg-card);
   flex-shrink: 0;
 }
 .api-url {
   font-size: var(--app-size-xs);
-  color: #999;
+  color: var(--app-ink-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -353,11 +353,11 @@ watch(
   font-weight: 800;
   font-family: inherit;
   background: transparent;
-  color: #999;
+  color: var(--app-ink-muted);
   cursor: pointer;
 }
 .kind-btn.active {
-  background: #fff;
+  background: var(--app-bg-card);
   color: #3d7a12;
   box-shadow: var(--app-shadow-sm);
 }
@@ -371,7 +371,7 @@ watch(
 .pf-pkg label {
   font-size: var(--app-size-xs);
   font-weight: 800;
-  color: #999;
+  color: var(--app-ink-muted);
   flex-shrink: 0;
 }
 .pkg-input {
@@ -391,7 +391,7 @@ watch(
 }
 .pf-sub {
   font-size: var(--app-size-xs);
-  color: #999;
+  color: var(--app-ink-muted);
   margin-bottom: 8px;
   padding-left: 4px;
   line-height: 1.4;
@@ -411,13 +411,13 @@ watch(
 .pf-port-name { color: var(--ac-ink-muted, #5c4a35); font-weight: 600; }
 .pf-port-type {
   font-size: var(--app-size-xs);
-  color: #999;
+  color: var(--app-ink-muted);
   border: 1px solid var(--ink);
   border-radius: 6px;
   padding: 0 5px;
   cursor: help;
   user-select: none;
-  background: #fff;
+  background: var(--app-bg-card);
 }
 .pf-in-count {
   font-size: var(--app-size-xs);

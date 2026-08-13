@@ -50,46 +50,6 @@ from .helpers import (
 )
 
 
-def _build_api_step_from_flat(r) -> list[dict]:
-    """Build a single api_request step from legacy flat ApiTestCase fields."""
-    step = {
-        "type": "api_request",
-        "method": getattr(r, "method", "GET"),
-        "url": getattr(r, "url", ""),
-        "description": f"{getattr(r, 'method', 'GET')} {getattr(r, 'url', '')}",
-    }
-    headers_str = getattr(r, "headers", "") or ""
-    body_str = getattr(r, "body", "") or ""
-    step["headers"] = _parse_json_field(headers_str)
-    step["body"] = _parse_json_field(body_str)
-    return [step]
-
-
-def _parse_json_field(value):
-    """Parse a value that may be a JSON string, dict, or list into a dict."""
-    if isinstance(value, (dict, list)):
-        return value
-    if isinstance(value, str) and value.strip():
-        try:
-            return json.loads(value)
-        except (json.JSONDecodeError, TypeError):
-            return value
-    return value if value else {}
-
-
-def _parse_rows(val):
-    """Safely parse rows/assertions into a list, handling JSON-string edge cases."""
-    if isinstance(val, list):
-        return val
-    if isinstance(val, str) and val.strip():
-        try:
-            parsed = json.loads(val)
-            return parsed if isinstance(parsed, list) else []
-        except Exception:
-            return []
-    return []
-
-
 @require_auth
 async def start_test_run(request):
     """POST /api/runner/run — Start async test execution (multi-device + schedule)."""
@@ -136,33 +96,37 @@ async def start_test_run(request):
             steps_raw = []
 
             if task_type == CaseType.API_TESTING.value:
-                # Prefer structured steps_json, fall back to flat fields
-                try:
-                    steps_raw = json.loads(getattr(r, "steps_json", "[]") or "[]")
-                except Exception:
+                # ── config_json path (v2 unified JSON format) ──
+                cfg = getattr(r, "config_json", None)
+                if cfg and isinstance(cfg, dict) and cfg.get("steps"):
+                    # Convert config_json steps to TestStep-compatible dicts
                     steps_raw = []
-                if not steps_raw:
-                    steps_raw = _build_api_step_from_flat(r)
-                # Build extra_data for backward compat
-                headers_str = getattr(r, "headers", "") or ""
-                body_str = getattr(r, "body", "") or ""
-                try:
-                    h = json.loads(headers_str) if headers_str.strip().startswith("{") else {}
-                except Exception:
-                    h = {}
-                try:
-                    b = json.loads(body_str) if body_str.strip().startswith("{") else body_str
-                except Exception:
-                    b = body_str
-                extra_data = {
-                    "method": getattr(r, "method", "GET"),
-                    "url": getattr(r, "url", ""),
-                    "headers": h,
-                    "body": b,
-                    "expected_response": getattr(r, "expected_response", ""),
-                    "_rows": _parse_rows(getattr(r, "rows", [])),
-                    "_assertions": _parse_rows(getattr(r, "assertions", [])),
-                }
+                    for s in cfg["steps"]:
+                        # Map extract array → dict for TestStep compatibility
+                        extract_dict = {}
+                        for ex in s.get("extract", []):
+                            if isinstance(ex, dict) and ex.get("name"):
+                                extract_dict[ex["name"]] = ex.get("path", "")
+                        steps_raw.append(
+                            {
+                                "type": "api_request",
+                                "description": s.get("name", ""),
+                                "method": s.get("method", "GET"),
+                                "url": (s.get("domain") or "") + (s.get("url") or ""),
+                                "headers": s.get("headers", {}),
+                                "body": s.get("body", {}),
+                                "extract": extract_dict,
+                                "request_schema": s.get("request_schema") or {},
+                                "response_schema": s.get("response_schema") or {},
+                            }
+                        )
+                    extra_data = {
+                        "config_json": cfg,  # pass full config to executor
+                    }
+                else:
+                    # Empty config_json → no steps
+                    steps_raw = []
+                    extra_data = {}
 
             elif task_type == CaseType.WEB_AUTOMATION.value:
                 try:
@@ -578,7 +542,7 @@ async def _execute_unified_remote(
 ):
     """Unified API/Web execution through the same _execute_tests pipeline as UI."""
     from ..executors.api.adapter import ApiAdapter
-    from ..executors.api.executor import ApiExecutor
+    from ..executors.api.executor_v2 import ApiExecutorV2
     from ..executors.web.adapter import WebAdapter
     from ..executors.web.executor import WebExecutor
     from ..remote_runner import RemoteTestRunner
@@ -622,7 +586,7 @@ async def _execute_unified_remote(
                 logger=lambda msg, l=loop: _bridge_ws_log(run_id, msg, l),
                 should_stop=lambda: False,
             )
-            executor = ApiExecutor(adapter)
+            executor = ApiExecutorV2(adapter)
             runner = RemoteTestRunner(
                 adapter, executor, device_label=device_label, callback=test_callbacks
             )

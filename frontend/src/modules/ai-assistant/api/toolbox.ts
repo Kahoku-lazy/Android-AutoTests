@@ -14,7 +14,7 @@ export async function fetchSharedTools(): Promise<ToolboxListResponse> {
 }
 
 export async function createSharedTool(payload: {
-  name: string; item_type: string; description?: string; config_json?: object
+  name: string; item_type: string; description?: string; config_json?: object | string
 }): Promise<AgentOpResponse> {
   const { data } = await djangoClient.post<AgentOpResponse>('/ai/toolbox/create', {
     name: payload.name,
@@ -26,7 +26,7 @@ export async function createSharedTool(payload: {
 }
 
 export async function updateSharedTool(itemId: number, payload: {
-  name?: string; description?: string; config_json?: object
+  name?: string; item_type?: string; description?: string; config_json?: object | string
 }): Promise<AgentOpResponse> {
   const { data } = await djangoClient.post<AgentOpResponse>(`/ai/toolbox/${itemId}/update`, {
     name: payload.name,
@@ -63,12 +63,12 @@ export async function uploadSharedSkill(files: File[], name: string): Promise<Ag
 
 // ── MCP & Skill management ──
 
-export async function fetchAgentTools(agentId: number): Promise<{ ok: boolean; tools?: object[]; error?: string }> {
+export async function fetchAgentTools(agentId: number): Promise<{ status: boolean; tools?: object[]; message?: string }> {
   const { data } = await djangoClient.get(`/ai/agents/${agentId}/tools`)
   return data
 }
 
-export async function saveMcp(agentId: number, name: string, configJson: object): Promise<AgentOpResponse> {
+export async function saveMcp(agentId: number, name: string, configJson: object | string): Promise<AgentOpResponse> {
   const { data } = await djangoClient.post<AgentOpResponse>(`/ai/agents/${agentId}/tools/mcp/save`, {
     name,
     config_json: configJson,
@@ -76,7 +76,7 @@ export async function saveMcp(agentId: number, name: string, configJson: object)
   return data
 }
 
-export async function testMcpConnection(agentId: number, configObj: object): Promise<{ ok: boolean; connected?: boolean; detail?: string }> {
+export async function testMcpConnection(agentId: number, configObj: object): Promise<{ status: boolean; connected?: boolean; detail?: string }> {
   const { data } = await djangoClient.post(`/ai/agents/${agentId}/tools/mcp/test`, configObj)
   return data
 }
@@ -107,12 +107,12 @@ export async function deleteToolById(agentId: number, toolId: number): Promise<A
 
 // ── Platform tools ──
 
-export async function fetchPlatformTools(): Promise<{ ok: boolean; tools?: object[]; error?: string }> {
+export async function fetchPlatformTools(): Promise<{ status: boolean; tools?: object[]; message?: string }> {
   const { data } = await djangoClient.get('/ai/available-tools')
   return data
 }
 
-export async function fetchAvailableSkills(): Promise<{ ok: boolean; skills?: object[]; error?: string }> {
+export async function fetchAvailableSkills(): Promise<{ status: boolean; skills?: object[]; message?: string }> {
   const { data } = await djangoClient.get('/ai/available-skills')
   return data
 }
@@ -124,7 +124,7 @@ export async function getKnowledgeStatus(): Promise<KnowledgeStatusResponse> {
   return data
 }
 
-export async function getKnowledgeDocuments(): Promise<{ ok: boolean; documents?: object[]; error?: string }> {
+export async function getKnowledgeDocuments(): Promise<{ status: boolean; documents?: object[]; message?: string }> {
   const { data } = await djangoClient.get('/ai/knowledge/documents')
   return data
 }

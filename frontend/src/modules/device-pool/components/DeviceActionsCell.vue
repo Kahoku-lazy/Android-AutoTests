@@ -53,15 +53,15 @@ const emit = defineEmits<{
 .action-bar :deep(.el-button--primary.is-plain) {
   background: var(--app-status-purple-bg) !important; border-color: var(--app-status-purple-border) !important; color: var(--app-status-purple-text) !important;
 }
-.action-bar :deep(.el-button--primary.is-plain:hover) { background: #D4C8F0 !important; }
+.action-bar :deep(.el-button--primary.is-plain:hover) { background: var(--app-btn-hover-purple) !important; }
 .action-bar :deep(.el-button--danger.is-plain) {
   background: var(--app-status-danger-bg) !important; border-color: var(--app-status-danger) !important; color: var(--app-status-danger-text) !important;
 }
-.action-bar :deep(.el-button--danger.is-plain:hover) { background: #FFD0C8 !important; }
+.action-bar :deep(.el-button--danger.is-plain:hover) { background: var(--app-btn-hover-danger) !important; }
 .action-bar :deep(.el-button--warning.is-plain) {
-  background: var(--app-status-warning-bg) !important; border-color: #F7C948 !important; color: #7a5a10 !important;
+  background: var(--app-status-warning-bg) !important; border-color: var(--c-dashboard) !important; color: var(--app-warning-text) !important;
 }
 .action-bar :deep(.el-button--primary.is-disabled), .action-bar :deep(.el-button.is-disabled) {
-  background: var(--app-bg-subtle) !important; border-color: var(--app-border-light) !important; color: #ccc !important;
+  background: var(--app-bg-subtle) !important; border-color: var(--app-border-light) !important; color: var(--app-btn-disabled-color) !important;
 }
 </style>

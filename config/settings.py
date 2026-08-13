@@ -6,6 +6,14 @@ import os
 
 from pathlib import Path
 
+# django-stubs：让 QuerySet/Manager 等在类型检查下更准确
+try:
+    import django_stubs_ext
+
+    django_stubs_ext.monkeypatch()
+except ImportError:
+    pass
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -63,16 +71,20 @@ INSTALLED_APPS = [
     # Third-party
     "corsheaders",
     "channels",
+    "rest_framework",
+    "drf_spectacular",
     # Framework
     "gateway",
     "shared",
-    # Django Apps (7)
+    # Django Apps (8)
+    "apps.device_inspector",
     "apps.element_locator",
     "apps.device_pool",
     "apps.case_manager",
     "apps.workflow",
     "apps.test_runner",
     "apps.report_generator",
+    "apps.accounts",
     "apps.ai_assistant",
     "apps.evaluator",
     "apps.dashboard",
@@ -207,6 +219,32 @@ AGENTSCOPE_SERVICE_VERSION = "2.0.0"
 # ── JWT ──
 JWT_ACCESS_TTL = int(os.environ.get("JWT_ACCESS_TTL", "3600"))  # 1 hour
 JWT_REFRESH_TTL = int(os.environ.get("JWT_REFRESH_TTL", "604800"))  # 7 days
+
+# ── Django REST Framework ──
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "shared.auth.drf_auth.JWTAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_RENDERER_CLASSES": [
+        "shared.renderers.EnvelopeJSONRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",
+    ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "UNAUTHENTICATED_USER": None,
+}
+
+# ── drf-spectacular (OpenAPI 3.0 schema + Swagger UI) ──
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Android-AutoTests API",
+    "DESCRIPTION": (
+        "Android UI 自动化测试平台 — 覆盖设备管理、元素定位、用例编排、"
+        "测试执行、AI 助手、评测、报告生成全流程。"
+    ),
+    "VERSION": "2.0.0",
+}
 
 # Chat upload temp files — cleanup_uploads management command
 UPLOAD_CLEANUP_MAX_AGE_DAYS = int(os.environ.get("UPLOAD_CLEANUP_MAX_AGE_DAYS", "7"))

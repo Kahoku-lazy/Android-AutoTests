@@ -56,11 +56,11 @@
 }
 .doc-section__title .doc-tag {
   font-size: var(--app-size-xs); padding: 1px 8px; border-radius: 4px 8px 4px 8px;
-  background: #fff; color: #999; border: 1.5px solid #e8ecf1;
+  background: var(--app-bg-card); color: var(--app-ink-muted); border: 1.5px solid var(--app-border-light);
   font-weight: 700; margin-left: 8px;
 }
 .doc-section__label {
-  color: #999; font-size: var(--app-size-xs);
+  color: var(--app-ink-muted); font-size: var(--app-size-xs);
   margin-top: 2px;
 }
 .device-section--list {
@@ -116,12 +116,12 @@
 }
 .view-btn {
   padding: 5px 12px; font-size: var(--app-size-xs); font-weight: 700;
-  background: #fff; color: #999; border: none;
+  background: var(--app-bg-card); color: var(--app-ink-muted); border: none;
   cursor: pointer; font-family: inherit; transition: all 0.12s;
-  border-right: 1px solid #e8ecf1;
+  border-right: 1px solid var(--app-border-light);
 }
 .view-btn:last-child { border-right: none; }
-.view-btn.active { background: var(--c-device); color: #fff; }
+.view-btn.active { background: var(--c-device); color: var(--paper); }
 .view-btn:hover:not(.active) { color: var(--c-device); }
 
 /* ── 卡片分组视图 ── */
@@ -136,12 +136,12 @@
   margin-bottom: 10px;
 }
 .card-group-title::after {
-  content: ''; flex: 1; height: 2px; background: #e8ecf1; border-radius: 1px;
+  content: ''; flex: 1; height: 2px; background: var(--app-border-light); border-radius: 1px;
 }
 .card-group-count {
-  font-family: var(--app-font-mono); font-size: var(--app-size-xs); color: #999;
-  background: #f8f6f2; padding: 2px 8px; border-radius: 3px 6px 3px 6px;
-  border: 1.5px solid #e8ecf1;
+  font-family: var(--app-font-mono); font-size: var(--app-size-xs); color: var(--app-ink-muted);
+  background: var(--app-bg-subtle); padding: 2px 8px; border-radius: 3px 6px 3px 6px;
+  border: 1.5px solid var(--app-border-light);
 }
 .card-group-grid {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
@@ -152,11 +152,11 @@
 .action-bar-btn {
   gap: 5px !important; padding: 5px 14px !important;
   border-radius: 4px 8px 4px 8px !important;
-  border: 2px solid #6BCB77 !important;
-  background: #fff !important; color: #2d7a2d !important;
+  border: 2px solid var(--c-device) !important;
+  background: var(--app-bg-card) !important; color: var(--app-status-success-text) !important;
   font-weight: 700 !important;
 }
-.action-bar-btn:hover { background: #C8F5D0 !important; }
+.action-bar-btn:hover { background: var(--app-pass) !important; }
 
 /* ── 表格工具栏 ── */
 .table-toolbar {
@@ -164,15 +164,15 @@
   gap: 10px; flex-wrap: wrap; padding: 0 0 10px; flex-shrink: 0;
 }
 .page-size-control { display: flex; align-items: center; gap: 8px; }
-.toolbar-label { font-size: var(--app-size-xs); font-weight: 700; color: #999; white-space: nowrap; }
+.toolbar-label { font-size: var(--app-size-xs); font-weight: 700; color: var(--app-ink-muted); white-space: nowrap; }
 .page-size-btns { display: flex; gap: 6px; }
 .page-size-btn {
   min-width: 40px;
   padding: 5px 10px;
   border-radius: 4px 8px 4px 8px;
-  border: 2px solid #e8ecf1;
-  background: #fff;
-  color: #999;
+  border: 2px solid var(--app-border-light);
+  background: var(--app-bg-card);
+  color: var(--app-ink-muted);
   font-size: var(--app-size-sm);
   font-weight: 700;
   cursor: pointer;
@@ -181,12 +181,12 @@
 }
 .page-size-btn:hover { border-color: var(--c-workflow); color: var(--c-workflow); }
 .page-size-btn.active {
-  background: #E8F4FD;
+  background: var(--app-page-active-bg);
   border-color: var(--c-workflow);
   color: var(--c-workflow);
 }
 .table-toolbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
-.page-info { font-size: var(--app-size-sm); color: #999; font-weight: 600; white-space: nowrap; }
+.page-info { font-size: var(--app-size-sm); color: var(--app-ink-muted); font-weight: 600; white-space: nowrap; }
 .page-nav { display: flex; gap: 8px; }
 
 /* ── 表格卡片 ── */
@@ -196,7 +196,7 @@
   border-radius: 6px 10px 6px 10px;
   border: 2.5px solid var(--c-device);
   box-shadow: 2px 3px 0 rgba(107,203,119,0.15);
-  background: #fff;
+  background: var(--app-bg-card);
 }
 .table-card :deep(.el-card__body) {
   flex: 1; min-height: 0; display: flex; flex-direction: column;
@@ -213,14 +213,14 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
-  scrollbar-color: #d4cdc0 transparent;
+  scrollbar-color: var(--app-paper-dot) transparent;
 }
 .device-table-wrapper::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 .device-table-wrapper::-webkit-scrollbar-thumb {
-  background: #d4cdc0;
+  background: var(--app-paper-dot);
   border-radius: 3px;
 }
 .device-table-wrapper :deep(.el-table),
@@ -231,19 +231,19 @@
 
 /* ── 表头与正文颜色区分 + 行列线条 ── */
 .device-table-wrapper :deep(.el-table th) {
-  background: #f8f6f2 !important;
+  background: var(--app-bg-subtle) !important;
   color: var(--ink) !important;
   font-size: var(--app-size-xs);
   font-weight: 700;
   letter-spacing: 0.4px;
-  border-right: 1px solid #e8ecf1 !important;
-  border-bottom: 2px solid #e8ecf1 !important;
+  border-right: 1px solid var(--app-border-light) !important;
+  border-bottom: 2px solid var(--app-border-light) !important;
 }
 .device-table-wrapper :deep(.el-table td) {
   color: var(--ink);
   font-size: var(--app-size-sm);
-  border-right: 1px solid #f0ede8 !important;
-  border-bottom: 1px solid #f0ede8 !important;
+  border-right: 1px solid var(--app-border-lighter) !important;
+  border-bottom: 1px solid var(--app-border-lighter) !important;
 }
 .device-table-wrapper :deep(.el-table th:last-child),
 .device-table-wrapper :deep(.el-table td:last-child) {
@@ -280,9 +280,9 @@
 }
 
 /* ── Text helpers ── */
-.text-muted { color: #999; font-size: var(--app-size-sm); }
-.locked-by-text { color: #999; font-size: var(--app-size-sm); }
-.last-seen-text { font-size: var(--app-size-sm); color: #999; }
+.text-muted { color: var(--app-ink-muted); font-size: var(--app-size-sm); }
+.locked-by-text { color: var(--app-ink-muted); font-size: var(--app-size-sm); }
+.last-seen-text { font-size: var(--app-size-sm); color: var(--app-ink-muted); }
 .connection-text { font-size: var(--app-size-sm); color: var(--ink); font-weight: 600; white-space: nowrap; }
 
 /* ── Lock status badge ── */
@@ -295,17 +295,17 @@
   display: inline-block;
 }
 .lock-badge--locked {
-  background: #E8DDF8; color: #5a3fa0;
+  background: var(--app-status-purple-bg); color: var(--app-status-purple-text);
   border: 1.5px solid #A78BFA;
 }
 .lock-badge--shared {
-  background: #C8F5D0; color: #2d7a2d;
-  border: 1.5px solid #6BCB77;
+  background: var(--app-pass); color: var(--app-status-success-text);
+  border: 1.5px solid var(--c-device);
 }
 
 /* ── Empty state ── */
 .empty-state {
-  color: #999;
+  color: var(--app-ink-muted);
   padding: 40px 0;
   text-align: center;
   font-size: var(--app-size-sm);

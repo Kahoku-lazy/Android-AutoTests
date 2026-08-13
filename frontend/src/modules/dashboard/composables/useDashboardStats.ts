@@ -17,7 +17,6 @@ export interface UseDashboardStatsReturn {
   refreshing: Ref<boolean>
   error: Ref<string | null>
   stats: Ref<DashboardStats>
-  passRate: Ref<number>
   executionChart: Ref<ExecutionChart>
   executionSummary: Ref<ExecutionSummary>
   recentTasks: Ref<RecentTask[]>
@@ -47,7 +46,6 @@ const DEFAULT_SUMMARY: ExecutionSummary = { passed: 0, failed: 0, new_cases_week
 
 interface MappedData {
   stats: DashboardStats
-  passRate: number
   executionChart: ExecutionChart
   executionSummary: ExecutionSummary
   recentTasks: RecentTask[]
@@ -89,7 +87,6 @@ export function mapStatsResponse(raw: DashboardRawData): MappedData {
       reports: { total: raw.reports?.total ?? 0 },
       workflow: raw.workflow ?? { total: 0, page_flows: 0, test_cases: 0 },
     },
-    passRate: raw.pass_rate ?? 0,
     executionChart: raw.charts?.execution ?? DEFAULT_CHART,
     executionSummary: raw.execution_summary ?? DEFAULT_SUMMARY,
     recentTasks: raw.recent_tasks ?? [],
@@ -106,7 +103,6 @@ export function useDashboardStats(): UseDashboardStatsReturn {
   const error = ref<string | null>(null)
 
   const stats = ref<DashboardStats>({ ...DEFAULT_STATS })
-  const passRate = ref(0)
   const executionChart = ref<ExecutionChart>({ ...DEFAULT_CHART })
   const executionSummary = ref<ExecutionSummary>({ ...DEFAULT_SUMMARY })
   const recentTasks = ref<RecentTask[]>([])
@@ -124,31 +120,32 @@ export function useDashboardStats(): UseDashboardStatsReturn {
       ])
 
       if (statsRes.status === 'fulfilled') {
-        if (statsRes.value.data?.status) {
-          const mapped = mapStatsResponse(statsRes.value.data.data)
+        const body = statsRes.value.data
+        if (body?.status && body.data) {
+          const mapped = mapStatsResponse(body.data)
           stats.value = mapped.stats
-          passRate.value = mapped.passRate
           executionChart.value = mapped.executionChart
           executionSummary.value = mapped.executionSummary
           recentTasks.value = mapped.recentTasks
           lastUpdated.value = mapped.lastUpdated
           systemStatus.value = mapped.systemStatus
         } else {
-          error.value = (statsRes.value.data as { error?: string })?.message || '统计数据加载失败，请检查网络连接'
+          error.value = body?.message || '统计数据加载失败，请检查网络连接'
         }
       } else {
         error.value = '统计数据加载失败，请检查网络连接'
       }
 
       if (activitiesRes.status === 'fulfilled') {
-        if (activitiesRes.value.data?.status) {
-          activities.value = (activitiesRes.value.data.data as ActivityItem[]) || []
+        const body = activitiesRes.value.data
+        if (body?.status) {
+          activities.value = body.data || []
         }
       } else {
         if (!error.value) error.value = '活动记录加载失败，请检查网络连接'
       }
     } catch (e: unknown) {
-      error.value = (e as { message?: string })?.message || '仪表盘数据加载失败'
+      error.value = '仪表盘数据加载失败，请稍后重试'
     } finally {
       setLoadingFlag(false)
     }
@@ -167,7 +164,6 @@ export function useDashboardStats(): UseDashboardStatsReturn {
     refreshing,
     error,
     stats,
-    passRate,
     executionChart,
     executionSummary,
     recentTasks,

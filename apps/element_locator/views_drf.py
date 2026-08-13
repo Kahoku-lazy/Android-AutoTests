@@ -1,0 +1,269 @@
+"""element_locator DRF ViewSets — WebGroup, ApiGroup, WebElement, ApiEndpoint, flows.
+
+Page tree + Page elements (device-dependent, complex validation) remain
+as plain Django views in views.py.
+"""
+
+from django.db import models as db_models
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
+
+from .models import (
+    ApiEndpoint,
+    ApiGroup,
+    PageFlow,
+    WebElement,
+    WebGroup,
+    WebPageFlow,
+)
+from .serializers import (
+    ApiEndpointSerializer,
+    ApiGroupSerializer,
+    PageFlowSerializer,
+    WebElementSerializer,
+    WebGroupSerializer,
+    WebPageFlowSerializer,
+)
+
+# ═══════════════════════════════════════════════════════
+# WebGroup ViewSet
+# ═══════════════════════════════════════════════════════
+
+
+class WebGroupViewSet(viewsets.ModelViewSet):
+    """Web element grouping tree — CRUD + batch-move."""
+
+    serializer_class = WebGroupSerializer
+    http_method_names = ["get", "post", "put", "patch", "delete", "head", "options"]
+
+    def get_queryset(self):
+        return WebGroup.objects.prefetch_related("children").order_by("sort_order", "id")
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset().filter(parent__isnull=True)
+        return Response(WebGroupSerializer(qs, many=True).data)
+
+    def perform_destroy(self, instance):
+        # Orphan descendant elements instead of deleting
+        def collect_ids(node):
+            ids = [node.id]
+            for c in node.children.all():
+                ids.extend(collect_ids(c))
+            return ids
+
+        ids = collect_ids(instance)
+        WebElement.objects.filter(group_id__in=ids).update(group=None)
+        instance.delete()
+
+    @action(detail=False, methods=["post"], url_path="batch-move")
+    def batch_move(self, request):
+        """POST /web-groups/batch-move/ — batch move groups to a new parent."""
+        group_ids = request.data.get("group_ids", [])
+        target_parent_id = request.data.get("target_parent_id")
+
+        if not group_ids:
+            return Response({"message": "group_ids is required"}, status=400)
+
+        parent = None
+        if target_parent_id:
+            try:
+                parent = WebGroup.objects.get(id=target_parent_id)
+            except WebGroup.DoesNotExist:
+                return Response({"message": "目标分组不存在"}, status=400)
+
+        WebGroup.objects.filter(id__in=group_ids).update(parent=parent)
+        return Response({"moved": len(group_ids)})
+
+
+# ═══════════════════════════════════════════════════════
+# WebElement ViewSet
+# ═══════════════════════════════════════════════════════
+
+
+class WebElementViewSet(viewsets.ModelViewSet):
+    """Web element CRUD — list with filters, batch import."""
+
+    serializer_class = WebElementSerializer
+
+    def get_queryset(self):
+        qs = WebElement.objects.select_related("group").order_by("-updated_at")
+        search = self.request.query_params.get("search")
+        locator_type = self.request.query_params.get("locator_type")
+        page_url = self.request.query_params.get("page_url")
+        is_test_point = self.request.query_params.get("is_test_point")
+        group_id = self.request.query_params.get("group_id")
+
+        if search:
+            qs = qs.filter(
+                db_models.Q(name__icontains=search) | db_models.Q(locator_value__icontains=search)
+            )
+        if locator_type:
+            qs = qs.filter(locator_type=locator_type)
+        if page_url:
+            qs = qs.filter(page_url=page_url)
+        if is_test_point is not None:
+            qs = qs.filter(is_test_point=is_test_point.lower() in ("true", "1", "yes"))
+        if group_id and group_id.isdigit():
+            qs = qs.filter(group_id=int(group_id))
+
+        return qs
+
+    def perform_update(self, serializer):
+        allowed = {"alias", "tags", "is_test_point", "notes"}
+        actual = set(serializer.validated_data.keys())
+        extra = (
+            actual
+            - allowed
+            - {"name", "locator_type", "locator_value", "page_url", "description", "group"}
+        )
+        serializer.save()
+
+    @action(detail=False, methods=["post"], url_path="batch")
+    def batch_import(self, request):
+        """POST /web/batch/ — batch import web elements."""
+        items = request.data if isinstance(request.data, list) else request.data.get("items", [])
+        if not items:
+            return Response({"message": "items is required"}, status=400)
+
+        created = 0
+        for item in items:
+            group_id = item.get("group_id")
+            group = None
+            if group_id:
+                try:
+                    group = WebGroup.objects.get(id=group_id)
+                except WebGroup.DoesNotExist:
+                    continue
+            WebElement.objects.create(
+                name=item.get("name", ""),
+                group=group,
+                locator_type=item.get("locator_type", "css_selector"),
+                locator_value=item.get("locator_value", ""),
+                page_url=item.get("page_url", ""),
+                description=item.get("description", ""),
+                is_test_point=item.get("is_test_point", False),
+            )
+            created += 1
+
+        return Response({"created": created})
+
+
+# ═══════════════════════════════════════════════════════
+# ApiGroup ViewSet
+# ═══════════════════════════════════════════════════════
+
+
+class ApiGroupViewSet(viewsets.ModelViewSet):
+    """API endpoint grouping tree — CRUD + batch-move."""
+
+    serializer_class = ApiGroupSerializer
+    http_method_names = ["get", "post", "put", "patch", "delete", "head", "options"]
+
+    def get_queryset(self):
+        return ApiGroup.objects.prefetch_related("children").order_by("sort_order", "id")
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset().filter(parent__isnull=True)
+        return Response(ApiGroupSerializer(qs, many=True).data)
+
+    def perform_destroy(self, instance):
+        # Orphan descendant endpoints instead of deleting
+        def collect_ids(node):
+            ids = [node.id]
+            for c in node.children.all():
+                ids.extend(collect_ids(c))
+            return ids
+
+        ids = collect_ids(instance)
+        ApiEndpoint.objects.filter(group_id__in=ids).update(group=None)
+        instance.delete()
+
+    @action(detail=False, methods=["post"], url_path="batch-move")
+    def batch_move(self, request):
+        group_ids = request.data.get("group_ids", [])
+        target_parent_id = request.data.get("target_parent_id")
+
+        if not group_ids:
+            return Response({"message": "group_ids is required"}, status=400)
+
+        parent = None
+        if target_parent_id:
+            try:
+                parent = ApiGroup.objects.get(id=target_parent_id)
+            except ApiGroup.DoesNotExist:
+                return Response({"message": "目标分组不存在"}, status=400)
+
+        ApiGroup.objects.filter(id__in=group_ids).update(parent=parent)
+        return Response({"moved": len(group_ids)})
+
+
+# ═══════════════════════════════════════════════════════
+# ApiEndpoint ViewSet
+# ═══════════════════════════════════════════════════════
+
+
+class ApiEndpointViewSet(viewsets.ModelViewSet):
+    """API endpoint CRUD — list with filters."""
+
+    serializer_class = ApiEndpointSerializer
+
+    def get_queryset(self):
+        qs = ApiEndpoint.objects.select_related("group").order_by("-updated_at")
+        search = self.request.query_params.get("search")
+        method = self.request.query_params.get("method")
+        is_test_point = self.request.query_params.get("is_test_point")
+        group_id = self.request.query_params.get("group_id")
+
+        if search:
+            qs = qs.filter(db_models.Q(name__icontains=search) | db_models.Q(url__icontains=search))
+        if method:
+            qs = qs.filter(method=method.upper())
+        if is_test_point is not None:
+            qs = qs.filter(is_test_point=is_test_point.lower() in ("true", "1", "yes"))
+        if group_id and group_id.isdigit():
+            qs = qs.filter(group_id=int(group_id))
+
+        return qs
+
+
+# ═══════════════════════════════════════════════════════
+# PageFlow ViewSet (Android)
+# ═══════════════════════════════════════════════════════
+
+
+class PageFlowViewSet(viewsets.ModelViewSet):
+    """Android page navigation flow — list + create + destroy."""
+
+    serializer_class = PageFlowSerializer
+    http_method_names = ["get", "post", "delete", "head", "options"]
+
+    def get_queryset(self):
+        return PageFlow.objects.select_related("from_page", "to_page", "trigger_element").order_by(
+            "-created_at"
+        )
+
+
+# ═══════════════════════════════════════════════════════
+# WebPageFlow ViewSet
+# ═══════════════════════════════════════════════════════
+
+
+class WebPageFlowViewSet(viewsets.ModelViewSet):
+    """Web page navigation flow — list + create + destroy."""
+
+    serializer_class = WebPageFlowSerializer
+    http_method_names = ["get", "post", "delete", "head", "options"]
+
+    def get_queryset(self):
+        return WebPageFlow.objects.select_related("from_group", "to_group").order_by("-created_at")
+
+    def perform_create(self, serializer):
+        from_group = serializer.validated_data.get("from_group")
+        to_group = serializer.validated_data.get("to_group")
+        if from_group and from_group.is_folder:
+            raise ValidationError({"from_group": "源节点不能是目录"})
+        if to_group and to_group.is_folder:
+            raise ValidationError({"to_group": "目标节点不能是目录"})
+        serializer.save()

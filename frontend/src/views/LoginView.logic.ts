@@ -4,6 +4,7 @@
  *  并解构所有返回值供模板绑定。
  */
 import { ref, type Ref, type ComputedRef } from "vue"
+import { ElMessage } from "element-plus"
 
 import { useAuthPool } from "@/shared/composables/useAuthPool"
 import { useLoginForm } from "@/shared/composables/useLoginForm"
@@ -72,7 +73,7 @@ export function useLoginView(): LoginViewState {
     saveUsername,
   })
 
-  const { viewState, switchMode: _switchMode, onSwitchToExisting, onAddNewAccount } =
+  const { viewState, switchMode: baseSwitchMode, onSwitchToExisting, onAddNewAccount } =
     useViewStateMachine(auth.accountList, clearServerError)
 
   /** 切换登录/注册时清空目标表单 */
@@ -86,29 +87,39 @@ export function useLoginView(): LoginViewState {
     if (m === "login") {
       loginPassword.value = ""
     }
-    _switchMode(m)
+    baseSwitchMode(m)
   }
 
   // ── 便捷包装：保持原 LoginView.vue 的 @submit 绑定方式 ──
   async function handleLogin() {
+    if (!canLogin.value) {
+      const firstError = loginErrors.value.username || loginErrors.value.password
+      ElMessage.warning(firstError || "请完善表单")
+      return
+    }
     await authenticate({
       mode: "login",
       username: loginUsername.value,
       password: loginPassword.value,
-      canSubmit: canLogin,
-      errors: loginErrors,
     })
   }
 
   async function handleRegister() {
+    if (!canRegister.value) {
+      const firstError =
+        regErrors.value.username ||
+        regErrors.value.email ||
+        regErrors.value.password ||
+        regErrors.value.password2
+      ElMessage.warning(firstError || "请完善表单")
+      return
+    }
     await authenticate({
       mode: "register",
       username: regUsername.value,
       password: regPassword.value,
       password2: regPassword2.value,
       email: regEmail.value,
-      canSubmit: canRegister,
-      errors: regErrors,
     })
   }
 

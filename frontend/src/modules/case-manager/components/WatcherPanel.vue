@@ -74,7 +74,7 @@ function removeWatcher(idx) {
 
 <template>
   <div class="watcher-panel">
-    <div class="watcher-header" @click="expanded = !expanded; if (!allElements.length) loadElements()">
+    <div class="watcher-header" role="button" tabindex="0" @click="expanded = !expanded; if (!allElements.length) loadElements()" @keydown.enter.prevent="expanded = !expanded; if (!allElements.length) loadElements()" @keydown.space.prevent="expanded = !expanded; if (!allElements.length) loadElements()">
       <span class="watcher-toggle">{{ expanded ? '▾' : '▸' }}</span>
       <span class="watcher-title">🛡️ 前置条件 — 全局弹窗监视器</span>
       <span class="watcher-count">{{ watchers.length }}</span>
@@ -124,44 +124,44 @@ function removeWatcher(idx) {
 
 <style scoped>
 .watcher-panel {
-  border: 1px dashed rgba(247, 205, 103, 0.45);
-  border-radius: 12px;
-  background: rgba(247, 205, 103, 0.06);
+  border: 1px dashed var(--case-warn-border-dashed);
+  border-radius: var(--app-radius-md);
+  background: var(--case-warn-bg);
   margin-bottom: 12px;
   overflow: hidden;
 }
 .watcher-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-sm);
   padding: 10px 14px;
   cursor: pointer;
   user-select: none;
 }
-.watcher-toggle { font-size: var(--app-size-sm); color: #999; width: 16px; }
-.watcher-title { font-size: var(--app-size-sm); font-weight: 700; color: #b8860b; }
+.watcher-toggle { font-size: var(--app-size-sm); color: var(--app-text-secondary); width: 16px; }
+.watcher-title { font-size: var(--app-size-sm); font-weight: 700; color: var(--case-warn-accent-text); }
 .watcher-count {
-  font-size: var(--app-size-xs); font-weight: 700; color: #fff;
-  background: #f7cd67; padding: 1px 8px; border-radius: 10px;
+  font-size: var(--app-size-xs); font-weight: 700; color: var(--case-watcher-badge-text);
+  background: var(--case-watcher-badge-bg); padding: 1px 8px; border-radius: 10px;
 }
-.watcher-hint { font-size: var(--app-size-xs); color: #999; margin-left: auto; }
+.watcher-hint { font-size: var(--app-size-xs); color: var(--app-text-secondary); margin-left: auto; }
 .watcher-body { padding: 0 14px 14px; }
 .watcher-empty {
-  text-align: center; color: #999; font-size: var(--app-size-sm);
-  padding: 16px; border: 1px dashed rgba(162,210,255,0.3); border-radius: 8px;
+  text-align: center; color: var(--app-text-secondary); font-size: var(--app-size-sm);
+  padding: var(--app-space-md); border: 1px dashed var(--case-border-dashed); border-radius: var(--app-radius-md);
 }
 .watcher-item {
-  display: flex; align-items: center; gap: 8px; margin-top: 8px;
-  padding: 6px 10px; background: #fff; border-radius: 8px;
+  display: flex; align-items: center; gap: var(--app-space-sm); margin-top: var(--app-space-sm);
+  padding: 6px 10px; background: var(--app-bg-card); border-radius: var(--app-radius-md);
 }
 .watcher-idx {
   width: 22px; height: 22px; border-radius: 50%;
-  background: #f7cd67; color: #fff; font-size: var(--app-size-xs); font-weight: 700;
+  background: var(--case-watcher-badge-bg); color: var(--case-watcher-badge-text); font-size: var(--app-size-xs); font-weight: 700;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .watcher-xpath {
-  font-size: var(--app-size-xs); color: #999; background: rgba(162,210,255,0.1);
-  padding: 2px 6px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis;
+  font-size: var(--app-size-xs); color: var(--app-text-secondary); background: var(--case-bg-dragover);
+  padding: 2px 6px; border-radius: var(--app-radius-sm); overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; max-width: 160px;
 }
 </style>

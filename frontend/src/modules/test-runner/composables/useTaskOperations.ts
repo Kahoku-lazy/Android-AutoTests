@@ -56,7 +56,7 @@ export function useTaskOperations({
       ElMessage.warning('用例数据未加载或ID不匹配，请刷新页面后重试')
       return
     }
-    const body = {
+    const body: Record<string, any> = {
       case_ids: task.caseIds,
       loop_count: task.loopCount,
       interval_seconds: task.intervalSeconds,

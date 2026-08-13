@@ -28,7 +28,7 @@ def _sanitize_filename(name: str, max_len: int = 40) -> str:
 
 class ReportGenerator:
     @staticmethod
-    def save_csv(result: dict, failure_details: list[dict] = None) -> str:
+    def save_csv(result: dict, failure_details: list[dict] | None = None) -> str:
         """Append one case result to its per-case CSV file.
 
         Each test case gets its own CSV: {case_title}.csv

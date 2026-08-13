@@ -113,8 +113,12 @@ onMounted(async () => {
         };
         lock.caseCreatedBy.value = d.created_by || "";
         await lock.acquireLock(caseId.value, d);
+      } else {
+        ElMessage.error(data.message || "加载用例失败");
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      ElMessage.error("加载用例失败: " + (e.response?.data?.message || e.message || "网络错误"));
+    }
     loading.value = false;
   } else {
     generateId();
@@ -198,7 +202,7 @@ onUnmounted(() => {
             </el-select>
             <el-button v-if="!debugConnected" type="primary" size="small" :disabled="!debugDevice" :loading="debugConnecting" @click="connectDebugDevice">连接设备</el-button>
             <el-button v-else type="primary" size="small" plain @click="disconnectDebugDevice" danger>断开</el-button>
-            <el-button type="primary" size="small" @click="guard.goToElementLocator(save)"><Icon name="icon-search" :size="14" style="margin-right:4px" />去元素定位</el-button>
+            <el-button type="primary" size="small" @click="guard.goToDeviceInspector(save)"><Icon name="icon-search" :size="14" style="margin-right:4px" />去元素定位</el-button>
           </div>
         </div>
         <div class="doc-section__label">全局弹窗监视器 — 在步骤执行过程中自动检测并关闭意外弹出的弹窗</div>
@@ -214,14 +218,14 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.edit-lock-banner { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; background: rgba(247,205,103,0.18); border-bottom: 1.5px solid rgba(247,170,60,0.3); color: #8a6d14; font-size: var(--app-size-sm); font-weight: 600; flex-shrink: 0; }
-.edit-lock-banner strong { color: #6b4c00; }
+.edit-lock-banner { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; background: var(--case-warn-bg-strong); border-bottom: 1.5px solid var(--case-warn-border); color: var(--case-warn-text); font-size: var(--app-size-sm); font-weight: 600; flex-shrink: 0; }
+.edit-lock-banner strong { color: var(--case-warn-text-strong); }
 .case-editor-page { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .case-editor-page .doc-body { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; }
-.form-section { padding: 18px 24px; }
-.steps-section { padding: 18px 24px 24px; }
+.form-section { padding: 18px var(--app-space-lg); }
+.steps-section { padding: 18px var(--app-space-lg) var(--app-space-lg); }
 .steps-header-actions { display: flex; gap: 10px; align-items: center; }
 .actions { display: flex; gap: 10px; }
-:deep(.el-input__append) { background: rgba(162,210,255,0.12) !important; }
-.device-option-serial { float: right; color: #999; font-size: var(--app-size-sm); }
+:deep(.el-input__append) { background: var(--case-bg-code) !important; }
+.device-option-serial { float: right; color: var(--app-text-secondary); font-size: var(--app-size-sm); }
 </style>

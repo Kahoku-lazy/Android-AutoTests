@@ -10,7 +10,6 @@ from .agent_views import (
     reveal_api_key,
     update_agent,
 )
-from .auth_views import login, logout, me, refresh_token, register
 from .chat_views import chat_stream
 from .conversation_views import (
     create_conversation,
@@ -46,11 +45,6 @@ from .toolbox_views import (
 )
 
 __all__ = [
-    "login",
-    "register",
-    "refresh_token",
-    "logout",
-    "me",
     "list_agents",
     "agent_detail",
     "create_agent",

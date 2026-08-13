@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import AppTabs from '@/shared/components/AppTabs.vue'
+import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import WbLoader from './components/WbLoader.vue'
 import AgentStickyNote from './components/AgentStickyNote.vue'
-import TaskStickyNote from './components/TaskStickyNote.vue'
 import KnowledgeBase from './KnowledgeBase.vue'
 import EvaluatorTab from './EvaluatorTab.vue'
 import ToolboxPanel from './components/ToolboxPanel.vue'
@@ -16,12 +15,11 @@ import { agentDetailRoute } from './constants'
 const router = useRouter()
 const dutyRosterRef = ref<HTMLElement | null>(null)
 const {
-  viewMode, agents, loading, testingId, confirmingId, healthResults, pendingModels,
-  tasks, tasksLoading, activeTaskFilter, taskFilterAppTabs, filteredTasks,
-  PAGE_HEADER, noteRotation, tapeHue, taskRotation, taskTapeHue,
+  viewMode, agents, loading, agentsError, testingId, confirmingId, pendingModels,
+  PAGE_HEADER, noteRotation, tapeHue,
   agentStatusClass, agentStatusText, getModelOptions,
-  loadAgents, loadTasks, confirmModel, deleteAgent, testConnection,
-  openAgent, editAgent, openTask, onAgentCardClick,
+  loadAgents, confirmModel, deleteAgent, testConnection,
+  openAgent, editAgent, onAgentCardClick,
 } = useAgentBoard(dutyRosterRef)
 </script>
 
@@ -52,7 +50,8 @@ const {
           <h3 class="doc-section__title">智能体看板<span class="doc-tag">Agents</span></h3>
           <span class="filter-count">{{ agents.length }} 张便签</span>
         </div>
-        <div ref="dutyRosterRef" class="dot-board duty-roster" v-loading="loading">
+        <ErrorState v-if="agentsError" :message="agentsError" @retry="loadAgents" />
+        <div v-else ref="dutyRosterRef" class="dot-board duty-roster" v-loading="loading">
           <div v-if="loading && !agents.length" class="ai-loading-wrap">
             <WbLoader /><span>正在加载智能体…</span>
           </div>
@@ -71,30 +70,6 @@ const {
         </div>
       </section>
 
-      <section class="doc-section task-section">
-        <div class="doc-section__header">
-          <h3 class="doc-section__title">任务看板<span class="doc-tag">Tasks</span></h3>
-          <span class="filter-count">{{ filteredTasks.length }} / {{ tasks.length }}</span>
-        </div>
-        <div class="filter-bar">
-          <AppTabs class="task-tabs" :items="taskFilterAppTabs" v-model="activeTaskFilter" :leaf-animation="true" :shadow="true">
-            <template v-for="tab in taskFilterAppTabs" #[tab.key] :key="tab.key">
-              <div class="dot-board task-board" v-loading="tasksLoading">
-                <div v-if="tasksLoading && !filteredTasks.length" class="ai-loading-wrap">
-                  <WbLoader /><span>正在加载任务…</span>
-                </div>
-                <TaskStickyNote
-                  v-for="t in filteredTasks" :key="t.run_id" :task="t"
-                  :rotation="taskRotation(t)" :tape-hue="taskTapeHue(t)" @open="openTask"
-                />
-                <EmptyState v-if="!filteredTasks.length && !tasksLoading" icon="📋"
-                  :text="activeTaskFilter === 'all' ? '还没有 AI 任务' : '当前状态下没有任务便签'"
-                  :hint="activeTaskFilter === 'all' ? '在对话里让智能体帮你创建任务' : '尝试切换筛选条件'" />
-              </div>
-            </template>
-          </AppTabs>
-        </div>
-      </section>
       </template>
 
       <ToolboxPanel v-if="viewMode === 'toolbox'" class="tb-host" />

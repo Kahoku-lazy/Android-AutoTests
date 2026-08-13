@@ -419,7 +419,7 @@ async function save() {
   color: var(--ai-teal-text); font-size: var(--app-size-md); font-weight: 700; font-family: inherit;
   cursor: pointer; transition: all 0.2s ease; align-self: flex-start;
 }
-.back-btn:hover { background: var(--ai-teal); color: #fff; box-shadow: 0 4px 14px rgba(25,200,185,0.35); transform: translateY(-1px); }
+.back-btn:hover { background: var(--ai-teal); color: var(--app-bg-card); box-shadow: 0 4px 14px rgba(25,200,185,0.35); transform: translateY(-1px); }
 
 /* ── Shared step panel (used by all 5 sub-components) ── */
 .step-panel { padding: 28px 32px; }
@@ -430,7 +430,7 @@ async function save() {
 .section-num {
   display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;
   border-radius: 10px; background: linear-gradient(135deg,var(--ai-teal),var(--ai-teal-hover));
-  color: #fff; font-size: var(--app-size-md); font-weight: 700; box-shadow: 0 3px 8px rgba(25,200,185,0.3);
+  color: var(--app-bg-card); font-size: var(--app-size-md); font-weight: 700; box-shadow: 0 3px 8px rgba(25,200,185,0.3);
 }
 .agent-form :deep(.el-form-item__label) { font-size: var(--app-size-md); font-weight: 600; color: var(--ai-ink-subtle); }
 .agent-form :deep(.el-input__wrapper),

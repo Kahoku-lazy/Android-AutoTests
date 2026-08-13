@@ -3,10 +3,11 @@ SPEC: TaskCard 状态机全流转测试
 用法: python tools/test_state_machine.py
 """
 
-from datetime import datetime
 import os
 import sys
 import time
+
+from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")

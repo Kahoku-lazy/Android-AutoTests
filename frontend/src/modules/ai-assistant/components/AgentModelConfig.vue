@@ -1,8 +1,8 @@
 <script setup lang="ts">
 defineProps<{
-  form: Record<string, unknown>
+  form: Record<string, any>
   isNew?: boolean
-  providers?: string[]
+  providers?: { label: string; value: string }[]
   availableModels?: string[]
   detectedModels?: string[]
   detectingModels?: boolean
@@ -79,8 +79,8 @@ const emit = defineEmits<{ 'provider-change': []; 'detect-models': [] }>()
 .help-icon {
   display: inline-flex; align-items: center; justify-content: center;
   width: 16px; height: 16px; border-radius: 50%;
-  background: var(--ai-ink-muted); color: #fff;
-  font-size: 11px; font-weight: 700; cursor: help;
+  background: var(--ai-ink-muted); color: var(--app-bg-card);
+  font-size:var(--app-size-xs); font-weight: 700; cursor: help;
   opacity: 0.5; transition: opacity 0.15s;
 }
 .help-icon:hover { opacity: 1; background: var(--app-accent-purple, #b39ef3); }

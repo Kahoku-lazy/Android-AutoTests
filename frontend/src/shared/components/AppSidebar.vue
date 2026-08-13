@@ -1,11 +1,13 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { animate } from 'animejs'
 import { sidebarNavEnter } from '../animations'
 import { NAV_CATEGORIES } from './sidebarNavConfig'
 import { useSidebarResize } from '../composables/useSidebarResize'
 import { useAuthPool } from '@/shared/composables/useAuthPool'
+import { logout as logoutApi } from '@/shared/api/auth'
 import AnimatedMascot from './AnimatedMascot.vue'
 import AnimatedMenuIcon from './AnimatedMenuIcon.vue'
 
@@ -24,13 +26,28 @@ function switchToAccount(name) {
   }
 }
 
-function logout() {
+function finishLocalLogout() {
   const hasRemaining = logoutAccount()
   if (!hasRemaining) {
     router.push('/login')
   } else {
     window.location.reload()
   }
+}
+
+async function logout() {
+  try {
+    await logoutApi()
+  } catch (e) {
+    const data = e?.response?.data
+    // Redis 不可用：保留本地登录态，提示稍后重试
+    if (e?.response?.status === 503 && data?.retry) {
+      ElMessage.warning(data.message || '服务暂时异常，请稍后重试')
+      return
+    }
+    // 其它失败（网络/已失效）：仍清本地，避免用户卡在已失效会话
+  }
+  finishLocalLogout()
 }
 
 const {
@@ -87,6 +104,7 @@ onUnmounted(() => {
 <template>
   <aside
     class="sidebar"
+    data-testid="app-sidebar"
     :class="{ 'sidebar--resizing': isResizing, 'sidebar--collapsed': collapsed }"
   >
     <!-- 头部品牌（高度与主区 wb-header 底边对齐） -->
@@ -136,12 +154,15 @@ onUnmounted(() => {
     <div class="sidebar__footer">
       <div class="sidebar__user-card">
         <div class="sidebar__user-label">Digital Human</div>
-        <div class="sidebar__user-display" :class="{ 'has-menu': accountList.length > 1 }"
+        <div
+          class="sidebar__user-display has-menu"
+          data-testid="sidebar-account-menu"
           :title="collapsed ? activeAccount : ''"
-          @click="accountList.length > 1 ? (showAccountMenu = !showAccountMenu) : null">
+          @click="showAccountMenu = !showAccountMenu"
+        >
           <AnimatedMascot :size="18" />
-          <span v-show="!collapsed" class="sidebar__user-name">{{ activeAccount }}</span>
-          <span v-if="!collapsed && accountList.length > 1" class="sidebar__user-arrow">▾</span>
+          <span v-show="!collapsed" class="sidebar__user-name" data-testid="sidebar-active-account">{{ activeAccount }}</span>
+          <span v-if="!collapsed" class="sidebar__user-arrow">▾</span>
         </div>
         <div v-show="!collapsed" class="sidebar__user-status">● 在线</div>
       </div>
@@ -153,27 +174,33 @@ onUnmounted(() => {
           :key="name"
           class="account-menu__item"
           :class="{ active: name === activeAccount }"
+          :data-testid="`sidebar-account-${name}`"
           @click="switchToAccount(name)"
         >
           <span>{{ name }}</span>
           <span v-if="name === activeAccount" class="account-menu__check">✓</span>
         </div>
         <div class="account-menu__divider"></div>
-        <div class="account-menu__item account-menu__item--add" @click="showAccountMenu = false; router.push('/login?add=1')">
+        <div
+          class="account-menu__item account-menu__item--add"
+          data-testid="sidebar-add-account"
+          @click="showAccountMenu = false; router.push('/login?add=1')"
+        >
           添加账号
         </div>
       </div>
 
-      <el-button
-        v-show="!collapsed"
-        link
-        size="small"
-        danger
-        class="logout-btn"
-        @click.stop="logout"
-      >
-        退出
-      </el-button>
+      <div v-show="!collapsed" data-testid="sidebar-logout">
+        <el-button
+          link
+          size="small"
+          danger
+          class="logout-btn"
+          @click.stop="logout"
+        >
+          退出
+        </el-button>
+      </div>
       <button
         v-show="collapsed"
         type="button"

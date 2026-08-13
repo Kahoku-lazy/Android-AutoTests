@@ -13,6 +13,7 @@ export function useStepRunner(debugDevice, steps) {
   const stepResults = ref({});
 
   async function runStep(idx, step) {
+    if (runningBatch.value) return;
     if (!debugDevice.value) {
       ElMessage.warning("请先在顶部选择调试设备");
       return;
@@ -42,6 +43,11 @@ export function useStepRunner(debugDevice, steps) {
   }
 
   async function runStepsRange(fromIdx) {
+    if (runningBatch.value) return;
+    if (!debugDevice.value) {
+      ElMessage.warning("请先在顶部选择调试设备");
+      return;
+    }
     runningBatch.value = true;
     runningFromIdx.value = fromIdx;
     const stepsToRun = steps.value.slice(fromIdx);

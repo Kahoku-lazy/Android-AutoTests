@@ -525,16 +525,16 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
   font-family: inherit; cursor: pointer; transition: all 0.2s ease;
 }
 .view-tab:hover { border-color: var(--ai-teal); background: var(--ai-teal-bg); color: var(--ai-teal-text); }
-.view-tab.active { background: var(--ai-teal); color: #fff; border-color: var(--ai-teal); box-shadow: 0 4px 14px rgba(25,200,185,0.3); }
+.view-tab.active { background: var(--ai-teal); color: var(--app-bg-card); border-color: var(--ai-teal); box-shadow: 0 4px 14px rgba(25,200,185,0.3); }
 
 /* Mode toggle */
 .mode-btn {
   padding: 8px 18px; border: 1.5px solid var(--ai-warm-border); border-radius: 8px;
-  background: #fff; color: #8a7b66; font-size: var(--app-size-sm); font-weight: 600;
+  background: var(--app-bg-card); color: #8a7b66; font-size: var(--app-size-sm); font-weight: 600;
   font-family: inherit; cursor: pointer; transition: all 0.2s ease;
 }
 .mode-btn:hover { border-color: #b39ef3; background: #f3f0ff; color: #5b4aa8; }
-.mode-btn.active { background: #b39ef3; color: #fff; border-color: #b39ef3; }
+.mode-btn.active { background: #b39ef3; color: var(--app-bg-card); border-color: #b39ef3; }
 
 /* Benchmark cards */
 .bench-card {
@@ -546,7 +546,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 .bench-name { font-size: var(--app-size-sm); font-weight: 700; color: var(--ai-ink-soft); }
 .bench-desc { font-size: var(--app-size-xs); color: var(--ai-ink-muted); margin-top: 4px; }
 
-.doc-section { background: #fff; border-radius: var(--app-radius-md); padding: 24px; margin-bottom: 20px; border: 1px solid var(--ai-bg-subtle); box-shadow: 0 2px 8px rgba(61,52,40,0.04); }
+.doc-section { background: var(--app-bg-card); border-radius: var(--app-radius-md); padding: 24px; margin-bottom: 20px; border: 1px solid var(--ai-bg-subtle); box-shadow: 0 2px 8px rgba(61,52,40,0.04); }
 .doc-section__title { font-family: var(--app-font-display); font-size: var(--app-size-lg); font-weight: 700; color: var(--ink); margin-bottom: 16px }
 .score-badge { background: var(--ai-warm-bg); border-radius: 12px; padding: 14px 22px; text-align: center; border: 1px solid var(--ai-warm-border); min-width: 80px; }
 .score-num { font-size: var(--app-size-2xl); font-weight: 800; }

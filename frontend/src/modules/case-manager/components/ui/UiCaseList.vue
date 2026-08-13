@@ -1,11 +1,12 @@
 <script setup>
 import { ref } from "vue";
+import { ElMessage } from "element-plus";
 import CaseList from "../CaseList.vue";
 import StepViewer from "../StepViewer.vue";
 import { listDefinitions, deleteDefinition, getDefinition, listExports } from "../../api/uiAutomation";
 
 const props = defineProps({ treeData: Array, activeDirectoryId: null, activeDirName: String, activeCaseId: null });
-const emit = defineEmits(["refresh-tree"]);
+const emit = defineEmits(["refresh-tree", "clear-case", "select-case", "go-all"]);
 
 const api = { listDefs: listDefinitions, deleteDef: deleteDefinition, getDef: getDefinition };
 
@@ -31,9 +32,13 @@ async function handleExportYaml() {
     const { data } = await listExports();
     if (data.status && data.files?.length) {
       const latest = data.files[0];
-      window.open(`/api/cases/export/yaml/${latest.filename}`, "_blank");
+      window.open(`/api/cases/exports/${latest.filename}`, "_blank");
+    } else {
+      ElMessage.warning("暂无导出文件，请先生成 YAML");
     }
-  } catch (_) {}
+  } catch (_) {
+    ElMessage.error("获取导出列表失败");
+  }
   yamlLoading.value = false;
 }
 
@@ -44,20 +49,23 @@ function editPath(id) { return `/cases/${id}/edit`; }
   <CaseList ref="listRef" case-type="ui" :list-api="api" :columns="columns" create-path="/cases/new" :edit-path="editPath"
     :tree-data="props.treeData" :active-directory-id="props.activeDirectoryId" :active-dir-name="props.activeDirName"
     :active-case-id="props.activeCaseId"
-    @refresh-tree="emit('refresh-tree')">
+    @refresh-tree="emit('refresh-tree')"
+    @clear-case="emit('clear-case')"
+    @select-case="(id) => emit('select-case', id)"
+    @go-all="emit('go-all')">
     <template #table-extra>
       <button class="btn-yaml" :disabled="yamlLoading" @click="handleExportYaml">📄 导出YAML</button>
     </template>
     <template #detail="{ case: c }">
-      <StepViewer v-if="c" :case-definition="c" />
+      <StepViewer v-if="c" :steps="c.steps_data || []" />
     </template>
     <template #cell-id="{ record }">
-      <span class="case-link" @click="handleSelect(record.id)">{{ record.id }}</span>
+      <button class="case-link case-link-btn" @click="handleSelect(record.id)">{{ record.id }}</button>
     </template>
   </CaseList>
 </template>
 
 <style scoped>
-.btn-yaml{padding:5px 12px;font-size:var(--app-size-xs);font-weight:700;color:var(--ink);background:#fff;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;cursor:pointer}
-.case-link{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600;cursor:pointer;text-decoration:underline}
+.btn-yaml{padding:5px 12px;font-size:var(--app-size-xs);font-weight:700;color:var(--ink);background:var(--app-bg-card);border:2px solid var(--ink);border-radius:var(--app-radius-sm);cursor:pointer}
+.case-link{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600;cursor:pointer;text-decoration:underline}.case-link-btn{background:none;border:none;padding:0;color:inherit}
 </style>

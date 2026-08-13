@@ -75,15 +75,12 @@ export function useConversation(
       if (data.status) {
         connectionMode.value = 'sse'
 
-        if (messageStore.backgroundStreamConvId.value === id) {
-          // Don't hydrate — in-memory messages updated by background SSE
+        // Always hydrate from DB — the backend persists AI replies for
+        // background streams, so DB is always the source of truth.
+        if (Array.isArray(data.messages)) {
+          messageStore.hydrateMessages(data.messages)
         } else {
-          messageStore.backgroundStreamConvId.value = null
-          if (Array.isArray(data.messages)) {
-            messageStore.hydrateMessages(data.messages)
-          } else {
-            messageStore.clearMessages()
-          }
+          messageStore.clearMessages()
         }
       }
     } catch (e) {

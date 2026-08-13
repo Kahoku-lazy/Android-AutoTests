@@ -20,7 +20,7 @@ export function deleteStorageDefinition(id) {
   return client.delete(`/cases/storage/definitions/${id}`);
 }
 
-export function batchImportStorageDefinitions(cases, options = {}) {
+export function batchImportStorageDefinitions(cases, options: Record<string, any> = {}) {
   return client.post("/cases/storage/definitions/batch", {
     cases,
     overwrite: options.overwrite || false,

@@ -419,6 +419,8 @@ class TestStep:
     extract: dict = field(default_factory=dict)  # API: variable extraction rules
     assertions: list = field(default_factory=list)  # API: assertion rules
     expected_status: int = 200  # API: expected HTTP status code
+    request_schema: dict = field(default_factory=dict)  # API: request body JSON Schema
+    response_schema: dict = field(default_factory=dict)  # API: response body JSON Schema
 
     def to_dict(self) -> dict:
         return {
@@ -441,6 +443,8 @@ class TestStep:
             "extract": self.extract,
             "assertions": self.assertions,
             "expected_status": self.expected_status,
+            "request_schema": self.request_schema,
+            "response_schema": self.response_schema,
         }
 
     @classmethod
@@ -467,4 +471,6 @@ class TestStep:
             extract=d.get("extract", {}),
             assertions=d.get("assertions", []),
             expected_status=d.get("expected_status", 200),
+            request_schema=d.get("request_schema", {}),
+            response_schema=d.get("response_schema", {}),
         )

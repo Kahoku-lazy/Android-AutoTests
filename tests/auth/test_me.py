@@ -1,10 +1,10 @@
-"""当前用户接口测试 — GET /api/ai/auth/me（数据驱动 + JSON Schema）。
+"""当前用户接口测试 — GET /api/auth/me（数据驱动 + JSON Schema）。
 
 9 条用例按断言 Shape 分为 1 个参数化组 + 3 个独立函数：
   - test_me_auth_reject[6]      — 401（中间件拦截，2 种消息）
   - test_me_success              — 200 + user 对象
   - test_me_no_sensitive_fields  — 不返回敏感字段
-  - test_me_user_deleted         — 404 "User not found"（xfail：django_db）
+  - test_me_user_deleted         — 404 "用户不存在"（xfail：django_db）
 
 运行方式：
     pytest tests/auth/test_me.py -v
@@ -21,7 +21,13 @@ import pytest
 
 from django.conf import settings
 
-from tests.auth.conftest import LOGOUT_URL, ME_URL, REGISTER_URL, set_allure_metadata
+from tests.auth.conftest import (
+    LOGIN_URL,
+    LOGOUT_URL,
+    ME_URL,
+    REGISTER_URL,
+    set_allure_metadata,
+)
 from tests.auth.schemas import ME_USER_SCHEMA
 
 # ═══════════════════════════════════════════════════════════════════
@@ -66,7 +72,7 @@ def test_me_success(base_url, api_session, auth_token):
     body = resp.json()
     assert resp.status_code == 200, f"期望 200，实际 {resp.status_code}: {body}"
     jsonschema.validate(instance=body, schema=ME_USER_SCHEMA)
-    assert body["user"]["username"] == "admin"
+    assert body["data"]["user"]["username"] == "admin"
 
 
 @allure.feature("认证模块")
@@ -85,75 +91,75 @@ def test_me_no_sensitive_fields(base_url, api_session, auth_token):
     resp = api_session.get(f"{base_url}{ME_URL}", headers=headers)
     assert resp.status_code == 200
     body = resp.json()
-    user = body["user"]
+    user = body["data"]["user"]
     for forbidden in ("password", "email", "api_key"):
         assert forbidden not in user, f"user 对象不应包含 {forbidden} 字段"
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Group 1: 401 — "Not authenticated"（6 条）
+# Group 1: 401 — 未登录 / 令牌无效（6 条）
 # ═══════════════════════════════════════════════════════════════════
 
 ME_REJECT_CASES: list[MeRejectCase] = [
     MeRejectCase(
         id="TC-ME-003",
         title="无 Authorization 请求头",
-        description='无 Authorization 头\n期望：401，message="Authorization header required"\n测试点：中间件拦截无鉴权请求',
+        description='无 Authorization 头\n期望：401，message="请先登录"\n测试点：中间件拦截无鉴权请求',
         severity="critical",
         priority="P0",
         expected_status=401,
-        expected_message="Authorization header required",
+        expected_message="请先登录",
         auth_format="none",
     ),
     MeRejectCase(
         id="TC-ME-004",
         title="Authorization 值非 Bearer 格式",
-        description='Authorization: Token xxx\n期望：401，message="Authorization header required"\n测试点：中间件只接受 Bearer 格式',
+        description='Authorization: Token xxx\n期望：401，message="请先登录"\n测试点：中间件只接受 Bearer 格式',
         severity="normal",
         priority="P1",
         expected_status=401,
-        expected_message="Authorization header required",
+        expected_message="请先登录",
         auth_format="non-bearer",
     ),
     MeRejectCase(
         id="TC-ME-005",
         title="access_token 已过期",
-        description='Authorization: Bearer <过期token>\n期望：401，message="Invalid or expired token"\n测试点：过期 token → verify_token exp 校验失败',
+        description='Authorization: Bearer <过期token>\n期望：401，message="登录已过期或令牌无效"\n测试点：过期 token → verify_token exp 校验失败',
         severity="normal",
         priority="P1",
         expected_status=401,
-        expected_message="Invalid or expired token",
+        expected_message="登录已过期或令牌无效",
         auth_format="expired",
     ),
     MeRejectCase(
         id="TC-ME-006",
         title="access_token 被篡改",
-        description='Authorization: Bearer <篡改token>\n期望：401，message="Invalid or expired token"\n测试点：JWT 签名验证失败',
+        description='Authorization: Bearer <篡改token>\n期望：401，message="登录已过期或令牌无效"\n测试点：JWT 签名验证失败',
         severity="normal",
         priority="P1",
         expected_status=401,
-        expected_message="Invalid or expired token",
+        expected_message="登录已过期或令牌无效",
         auth_format="tampered",
         extra_tags=("security",),
     ),
     MeRejectCase(
         id="TC-ME-007",
         title="access_token 已在黑名单",
-        description='Authorization: Bearer <已登出token>\n期望：401，message="Invalid or expired token"\n测试点：verify_token 检测 jti 在黑名单 → InvalidTokenError',
+        description='Authorization: Bearer <已登出token>\n期望：401，message="登录已过期或令牌无效"\n测试点：verify_token 检测 jti 在黑名单 → InvalidTokenError',
         severity="critical",
         priority="P0",
         expected_status=401,
-        expected_message="Invalid or expired token",
+        expected_message="登录已过期或令牌无效",
         auth_format="blacklisted",
     ),
     MeRejectCase(
         id="TC-ME-009",
         title="使用 refresh_token 访问",
-        description='Authorization: Bearer <refresh_token>\n期望：401，message="Invalid or expired token"\n测试点：verify_token expected_type="access" 校验失败',
+        description='Authorization: Bearer <refresh_token>\n期望：401，message="登录已过期或令牌无效"\n测试点：verify_token expected_type="access" 校验失败',
         severity="normal",
         priority="P1",
         expected_status=401,
-        expected_message="Invalid or expired token",
+        expected_message="登录已过期或令牌无效",
         auth_format="refresh",
         extra_tags=("security",),
     ),
@@ -213,10 +219,10 @@ def test_me_auth_reject(base_url, api_session, auth_token, case):
     own_token = None
     if case.auth_format == "blacklisted":
         login_resp = api_session.post(
-            f"{base_url}/api/ai/auth/login",
+            f"{base_url}{LOGIN_URL}",
             json={"username": "admin", "password": "admin123"},
         )
-        own_token = login_resp.json()["access_token"]
+        own_token = login_resp.json()["data"]["access_token"]
         api_session.post(
             f"{base_url}{LOGOUT_URL}",
             headers={"Authorization": f"Bearer {own_token}"},
@@ -245,7 +251,7 @@ def test_me_auth_reject(base_url, api_session, auth_token, case):
 @allure.title("TC-ME-008: Token 中 user_id 对应用户已删除")
 @allure.description(
     "步骤：注册新用户 → 获取 token → 删除用户 → 用 token 调 /me\n"
-    '期望：404，message="User not found"\n'
+    '期望：404，message="用户不存在"\n'
     "测试点：User.objects.get(id=user_id) 抛出 DoesNotExist"
 )
 @allure.tag("auth", "api", "P2")
@@ -266,7 +272,7 @@ def test_me_user_deleted(base_url, api_session, unique_username):
         },
     )
     assert register_resp.status_code == 200, f"注册失败: {register_resp.json()}"
-    tokens = register_resp.json()
+    tokens = register_resp.json()["data"]
     access = tokens["access_token"]
     user_id = tokens["user"]["id"]
 
@@ -280,4 +286,4 @@ def test_me_user_deleted(base_url, api_session, unique_username):
     )
     body = resp.json()
     assert resp.status_code == 404, f"期望 404，实际 {resp.status_code}: {body}"
-    assert body["message"] == "User not found"
+    assert body["message"] == "用户不存在"

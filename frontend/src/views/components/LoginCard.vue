@@ -29,7 +29,8 @@ const emit = defineEmits<{
 <template>
   <AppCard color="app-blue" class="login-card">
     <form class="auth-form" @submit.prevent="emit('submit')">
-      <div class="form-field">
+      <!-- testid 挂在原生包裹层：Element Plus 组件不一定透传 data-testid -->
+      <div class="form-field" data-testid="login-username">
         <IconUser :size="18" class="form-icon" />
         <el-input
           :model-value="username"
@@ -42,7 +43,7 @@ const emit = defineEmits<{
       </div>
       <p v-if="errors.username" class="field-error">{{ errors.username }}</p>
 
-      <div class="form-field">
+      <div class="form-field" data-testid="login-password">
         <IconLock :size="18" class="form-icon" />
         <el-input
           :model-value="password"
@@ -57,24 +58,29 @@ const emit = defineEmits<{
       </div>
       <p v-if="errors.password" class="field-error">{{ errors.password }}</p>
 
-      <div class="form-remember">
-        <el-switch :model-value="rememberMe" @update:model-value="emit('update:rememberMe', !!$event)" size="small" />
+      <div class="form-remember" data-testid="login-remember">
+        <el-switch
+          :model-value="rememberMe"
+          @update:model-value="emit('update:rememberMe', !!$event)"
+          size="small"
+        />
         <span class="remember-label">记住账号</span>
       </div>
 
-      <el-button
-        type="primary"
-        size="large"
-        :loading="loading"
-        :disabled="!canSubmit"
-        block
-        @click="emit('submit')"
-      >登录</el-button>
+      <div class="form-submit" data-testid="login-submit">
+        <el-button
+          type="primary"
+          size="large"
+          :loading="loading"
+          :disabled="!canSubmit"
+          @click="emit('submit')"
+        >登录</el-button>
+      </div>
     </form>
 
-    <p class="form-toggle" @click="emit('switchToRegister')">
+    <button class="form-toggle" data-testid="login-to-register" @click="emit('switchToRegister')">
       没有账号？<span class="form-link">去注册 →</span>
-    </p>
+    </button>
   </AppCard>
 </template>
 

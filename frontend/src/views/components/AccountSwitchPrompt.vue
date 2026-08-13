@@ -15,19 +15,23 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <AppCard color="app-blue" class="login-card">
+  <AppCard color="app-blue" class="login-card" data-testid="account-switch-prompt">
     <div class="switch-prompt">
       <p class="switch-prompt__title">检测到已登录账号</p>
       <p class="switch-prompt__user">{{ existingUsername }}</p>
       <div class="switch-prompt__actions">
-        <el-button type="primary" size="large" block @click="emit('switchTo')">
-          <IconUser :size="16" />
-          <span>切换到 {{ existingUsername }}</span>
-        </el-button>
-        <el-button size="large" block @click="emit('addNew')">
-          <IconPlus :size="16" />
-          <span>添加新账号</span>
-        </el-button>
+        <div data-testid="switch-to-existing">
+          <el-button type="primary" size="large" block @click="emit('switchTo')">
+            <IconUser :size="16" />
+            <span>切换到 {{ existingUsername }}</span>
+          </el-button>
+        </div>
+        <div data-testid="add-new-account">
+          <el-button size="large" block @click="emit('addNew')">
+            <IconPlus :size="16" />
+            <span>添加新账号</span>
+          </el-button>
+        </div>
       </div>
     </div>
   </AppCard>

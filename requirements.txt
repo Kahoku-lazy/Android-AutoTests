@@ -3,6 +3,8 @@ cryptography>=41.0
 
 # ── Django Core ──
 Django>=4.2
+djangorestframework>=3.15
+drf-spectacular>=0.28
 daphne>=4.0
 channels>=4.0
 channels-redis>=4.0
@@ -26,6 +28,8 @@ requests>=2.30
 pytest>=8.0
 pytest-django>=4.0
 allure-pytest>=2.13
+jsonschema>=4.0
+pytest-playwright>=0.5.0
 
 # ── AgentScope 2.0 AI ──
 agentscope>=2.0.0

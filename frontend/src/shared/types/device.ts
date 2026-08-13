@@ -58,6 +58,12 @@ export interface DeviceStatusMeta {
   text: string
 }
 
+/** 设备状态 → 展示 meta 映射表 */
+export type DeviceStatusMap = Record<string, DeviceStatusMeta>
+
+/** 连接类型 → 中文标签映射表 */
+export type ConnectionTypeLabelMap = Record<string, string>
+
 // ── 配置类型 ──
 
 export interface FilterTabConfig {
@@ -84,29 +90,29 @@ export interface DevicePageHeader {
 // ── API 响应 ──
 
 export interface DeviceListResponse {
-  ok: boolean
+  status: boolean
   devices?: DeviceRecord[]
   current?: string
   queue_length?: number
-  error?: string
+  message?: string
 }
 
 export interface ScanResponse {
-  ok: boolean
+  status: boolean
   devices?: DeviceRecord[]
   count?: number
-  error?: string
+  message?: string
 }
 
 export interface DeviceOpResponse {
-  ok: boolean
-  error?: string
+  status: boolean
+  message?: string
   position?: number
 }
 
 export interface QueueResponse {
-  ok: boolean
+  status: boolean
   queue?: QueueEntry[]
   count?: number
-  error?: string
+  message?: string
 }

@@ -436,7 +436,7 @@ function onCreateRoot() {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: #fff;
+  background: var(--app-bg-card);
   border-right: 1px solid var(--ink);
   position: relative;
   user-select: none;
@@ -481,7 +481,7 @@ function onCreateRoot() {
   height: 26px;
   border: 1.5px solid var(--ac-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--app-bg-card);
   font-size: var(--app-size-sm);
   font-weight: 800;
   cursor: pointer;
@@ -507,7 +507,7 @@ function onCreateRoot() {
   padding: 5px 10px;
   border: 1.5px solid var(--ac-border);
   border-radius: 999px;
-  background: #fff;
+  background: var(--app-bg-card);
   font-size: var(--app-size-xs);
   font-weight: 800;
   font-family: inherit;
@@ -578,7 +578,7 @@ function onCreateRoot() {
   background: transparent;
   width: 16px;
   cursor: pointer;
-  color: #999;
+  color: var(--app-ink-muted);
   padding: 0;
   flex-shrink: 0;
 }
@@ -628,7 +628,7 @@ function onCreateRoot() {
   z-index: 9999;
   min-width: 160px;
   padding: 6px;
-  background: #fff;
+  background: var(--app-bg-card);
   border: 1px solid var(--ink);
   border-radius: 12px;
   box-shadow: var(--app-shadow-md);

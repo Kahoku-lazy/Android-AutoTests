@@ -21,6 +21,6 @@ const emit = defineEmits<{ save: [] }>()
   border: 2px solid var(--ink); border-radius: 12px; font-size: var(--app-size-md); font-weight: 700;
   font-family: inherit; cursor: pointer; transition: all 0.2s ease;
 }
-.nav-save { background: linear-gradient(135deg, var(--ai-teal), var(--ai-teal-hover)); color: #fff; border-color: var(--ai-teal); }
+.nav-save { background: linear-gradient(135deg, var(--ai-teal), var(--ai-teal-hover)); color: var(--app-bg-card); border-color: var(--ai-teal); }
 .nav-save:hover { background: linear-gradient(135deg, var(--ai-teal-hover), #0d8a80); transform: translateY(-2px); box-shadow: 0 4px 14px rgba(25,200,185,0.35); }
 </style>

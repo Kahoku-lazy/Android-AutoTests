@@ -20,7 +20,7 @@ export function deleteDefinition(id) {
   return client.delete(`/cases/definitions/${id}`);
 }
 
-export function batchImportDefinitions(cases, options = {}) {
+export function batchImportDefinitions(cases, options: Record<string, any> = {}) {
   return client.post("/cases/definitions/batch", {
     cases,
     overwrite: options.overwrite || false,

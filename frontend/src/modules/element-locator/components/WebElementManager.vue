@@ -490,7 +490,7 @@ async function doBatchImport() {
 .tree-panel { background: radial-gradient(circle, var(--app-paper-dot, #d4cdc0) 0.8px, transparent 0.8px); background-size: 14px 14px; background-color: var(--app-paper, #fefcf6);
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--app-bg-card);
   border: 3px solid var(--app-ink, #2d2d2d);
   border-radius: 6px 10px 6px 10px;
   overflow: hidden;
@@ -622,7 +622,7 @@ async function doBatchImport() {
 .context-menu {
   position: fixed;
   z-index: 3000;
-  background: #fff;
+  background: var(--app-bg-card);
   border: 3px solid var(--app-ink, #2d2d2d);
   border-radius: 6px 10px 6px 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
@@ -787,7 +787,7 @@ async function doBatchImport() {
   padding: 4px 10px;
   border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px 8px 4px 8px;
   border: 3px solid var(--app-ink, #2d2d2d);
-  background: #fff;
+  background: var(--app-bg-card);
   font-size: var(--app-size-sm);
   font-weight: 600;
   color: var(--app-ink);
@@ -857,7 +857,7 @@ async function doBatchImport() {
   border-radius: 6px 10px 6px 10px;
   font-size: var(--app-size-xs);
   font-weight: 700;
-  color: #fff;
+  color: var(--app-bg-card);
   white-space: nowrap;
 }
 
@@ -1001,7 +1001,7 @@ async function doBatchImport() {
   justify-content: space-between;
   gap: 8px;
   padding: 8px 12px;
-  background: #fff;
+  background: var(--app-bg-card);
   border-radius: 6px 10px 6px 10px;
   border: 2px solid var(--app-border-light, #e8ecf1);
   font-size: var(--app-size-sm);
@@ -1063,7 +1063,7 @@ async function doBatchImport() {
 
 /* Paper table headers */
 .web-elements-table :deep(.el-table__header th) {
-  background: var(--app-accent-purple) !important; color: #fff !important;
+  background: var(--app-accent-purple) !important; color: var(--app-bg-card) !important;
   font-size: var(--app-size-xs); font-weight: 700; padding: 6px 10px;
   border-right: 2px solid var(--doodle-ink);
 }

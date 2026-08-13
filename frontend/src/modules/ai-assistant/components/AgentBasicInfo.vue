@@ -2,7 +2,7 @@
 import { AVATAR_PATH_PREFIX, DATA_IMAGE_PREFIX } from '../constants'
 
 defineProps<{
-  form: Record<string, unknown>
+  form: Record<string, any>
   isNew?: boolean
   uploading?: boolean
 }>()

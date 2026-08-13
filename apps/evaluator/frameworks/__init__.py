@@ -3,7 +3,7 @@
 from .base import AdapterResult, BaseAdapter
 
 # Registry: framework_key -> adapter class (lazy import)
-_REGISTRY: dict[str, type] = {}
+_REGISTRY: dict[str, type[BaseAdapter]] = {}
 
 
 def register(key: str):

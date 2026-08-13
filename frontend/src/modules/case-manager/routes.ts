@@ -50,13 +50,13 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/cases/storage/new",
     name: "storage-case-new",
-    component: () => import("@/modules/case-manager/components/api/ApiCaseEditor.vue"),
+    component: () => import("@/modules/case-manager/components/storage/StorageCaseEditor.vue"),
     meta: { title: '新建功能用例' },
   },
   {
     path: "/cases/storage/:id/edit",
     name: "storage-case-edit",
-    component: () => import("@/modules/case-manager/components/api/ApiCaseEditor.vue"),
+    component: () => import("@/modules/case-manager/components/storage/StorageCaseEditor.vue"),
     meta: { title: '编辑功能用例' },
   },
 ];

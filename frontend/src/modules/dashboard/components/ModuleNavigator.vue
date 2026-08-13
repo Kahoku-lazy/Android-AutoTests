@@ -1,8 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, nextTick } from 'vue'
+import { ref, onMounted, computed, nextTick, type Component, type ComponentPublicInstance } from 'vue'
 import { useRouter } from 'vue-router'
 import { staggerReveal } from '@/shared/animations'
 import type { DashboardStats } from '@/shared/types/dashboard'
+import {
+  IconDashboard,
+  IconDevice,
+  IconTarget,
+  IconLayers,
+  IconPlay,
+  IconBarChart,
+  IconBrain,
+  IconActivity,
+} from '@/shared/icons/index'
 
 const props = withDefaults(defineProps<{ stats: DashboardStats }>(), {
   stats: () => ({
@@ -18,8 +28,19 @@ const props = withDefaults(defineProps<{ stats: DashboardStats }>(), {
 
 const router = useRouter()
 
-// ── PRD 8 模块 → V6 配色 + Lucide 图标 ──
-const modules = computed(() => {
+interface ModuleNavItem {
+  id: string
+  title: string
+  desc: string
+  path: string
+  color: string
+  gradient: string
+  icon: Component
+  stats: { label: string; value: string; total: string }
+}
+
+// ── PRD 8 模块 → V6 配色 + shared icons ──
+const modules = computed<ModuleNavItem[]>(() => {
   const s = props.stats
   return [
     {
@@ -27,7 +48,7 @@ const modules = computed(() => {
       desc: '平台首页 · KPI 概览 · 全局导航',
       path: '/dashboard',
       color: 'app-yellow', gradient: 'linear-gradient(135deg,#F4D35E,#f0c06a)',
-      icon: 'layout-dashboard',
+      icon: IconDashboard,
       stats: { label: '快捷入口', value: '8', total: '' },
     },
     {
@@ -35,15 +56,23 @@ const modules = computed(() => {
       desc: 'ADB 扫描 · 连接锁定 · 排队调度',
       path: '/devices',
       color: 'app-green', gradient: 'linear-gradient(135deg,#95D5B2,#52b788)',
-      icon: 'smartphone',
-      stats: { label: '在线设备', value: String(s.devices?.online ?? 0), total: String(s.devices?.total ?? 0) },
+      icon: IconDevice,
+      stats: { label: '在线设备', value: String(s.devices?.online ?? 0), total: '' },
+    },
+    {
+      id: 'device-inspector', title: '设备检查器',
+      desc: '连接设备 · 实时截图 · Dump UI · XPath 生成',
+      path: '/inspector',
+      color: 'purple', gradient: 'linear-gradient(135deg,var(--app-status-purple),#a78bfa)',
+      icon: IconTarget,
+      stats: { label: '设备检查器', value: '', total: '' },
     },
     {
       id: 'element-locator', title: '元素定位',
-      desc: '实时截图 · Dump UI · XPath 生成',
+      desc: '页面管理 · 元素库 · Web定位 · API接口',
       path: '/elements',
-      color: 'purple', gradient: 'linear-gradient(135deg,var(--app-status-purple),#a78bfa)',
-      icon: 'crosshair',
+      color: 'app-teal', gradient: 'linear-gradient(135deg,var(--c-workflow),#60a5fa)',
+      icon: IconTarget,
       stats: { label: '元素数', value: String(s.elements?.total ?? 0), total: '' },
     },
     {
@@ -51,7 +80,7 @@ const modules = computed(() => {
       desc: '步骤编排 · 目录树 · YAML 导入导出',
       path: '/cases',
       color: 'app-teal', gradient: 'linear-gradient(135deg,var(--c-workflow),#60a5fa)',
-      icon: 'layers',
+      icon: IconLayers,
       stats: { label: '用例数', value: String(s.cases?.total ?? 0), total: '' },
     },
     {
@@ -59,15 +88,15 @@ const modules = computed(() => {
       desc: '任务调度 · 实时进度 · WebSocket 日志',
       path: '/runner',
       color: 'app-pink', gradient: 'linear-gradient(135deg,var(--app-status-danger),var(--app-live))',
-      icon: 'play-circle',
-      stats: { label: '运行中', value: String(s.runs?.active ?? 0), total: String(s.runs?.total ?? 0) },
+      icon: IconPlay,
+      stats: { label: '运行中', value: String(s.runs?.active ?? 0), total: '' },
     },
     {
       id: 'report-generator', title: '测试报告',
       desc: 'KPI 摘要 · 失败定位 · 趋势图表',
       path: '/reports',
       color: 'brown', gradient: 'linear-gradient(135deg,var(--app-text-secondary),#8b7f8f)',
-      icon: 'file-bar-chart',
+      icon: IconBarChart,
       stats: { label: '报告数', value: String(s.reports?.total ?? 0), total: '' },
     },
     {
@@ -75,7 +104,7 @@ const modules = computed(() => {
       desc: '自然语言驱动 · SSE 流式 · 知识库',
       path: '/ai-assistant',
       color: 'app-orange', gradient: 'linear-gradient(135deg,#5EEAD4,#14b8a6)',
-      icon: 'bot',
+      icon: IconBrain,
       stats: { label: '智能体', value: String(s.agents?.total ?? 0), total: '' },
     },
     {
@@ -83,28 +112,30 @@ const modules = computed(() => {
       desc: 'Blockly 积木 · VueFlow 画图 · 同步用例库',
       path: '/workflow',
       color: 'app-blue', gradient: 'linear-gradient(135deg,#BDE0FE,#93c5fd)',
-      icon: 'git-branch',
-      stats: { label: 'Demo', value: '', total: '' },
+      icon: IconActivity,
+      stats: { label: '工作流', value: String(s.workflow?.total ?? 0), total: '' },
     },
   ]
 })
 
-const cardRefs = ref([])
+const cardRefs = ref<(HTMLElement | null)[]>([])
 
 onMounted(async () => {
   await nextTick()
-  if (window.lucide) window.lucide.createIcons()
-  if (cardRefs.value.length) {
-    staggerReveal(cardRefs.value, 70, 0.9)
+  const nodes = cardRefs.value.filter((el): el is HTMLElement => !!el)
+  if (nodes.length) {
+    staggerReveal(nodes, 70, 0.9)
   }
 })
 
-function navigate(path) {
+function navigate(path: string) {
   router.push(path)
 }
 
-function setCardRef(el, idx) {
-  if (el) cardRefs.value[idx] = el.$el || el
+function setCardRef(el: Element | ComponentPublicInstance | null, idx: number) {
+  if (!el) return
+  const node = (el as ComponentPublicInstance).$el ?? el
+  cardRefs.value[idx] = node as HTMLElement
 }
 </script>
 
@@ -121,10 +152,14 @@ function setCardRef(el, idx) {
         :key="mod.id"
         :ref="(el) => setCardRef(el, idx)"
         :class="['module-card', 'module-card--' + mod.color.replace('app-','')]"
+        :role="mod.path ? 'button' : undefined"
+        :tabindex="mod.path ? 0 : undefined"
         @click="navigate(mod.path)"
+        @keydown.enter.prevent="navigate(mod.path)"
+        @keydown.space.prevent="navigate(mod.path)"
       >
         <div class="module-icon" :style="{ background: mod.gradient }">
-          <i :data-lucide="mod.icon"></i>
+          <component :is="mod.icon" :size="20" color="#fff" />
         </div>
         <div class="module-body">
           <div class="module-name">{{ mod.title }}</div>
@@ -137,7 +172,7 @@ function setCardRef(el, idx) {
             <span v-else class="module-stat">
               <small>{{ mod.stats.label }}</small>
             </span>
-            <button class="module-enter" :style="{ background: mod.gradient }">进入 →</button>
+            <button type="button" class="module-enter" :style="{ background: mod.gradient }">进入 →</button>
           </div>
         </div>
       </div>
@@ -173,11 +208,11 @@ function setCardRef(el, idx) {
 
 /* ── 纸艺卡片 ── */
 .module-card {
-  background: #fff;
+  background: var(--app-bg-card);
   border-radius: 6px 10px 6px 10px;
   padding: 18px 16px;
   border: 2.5px solid var(--ink);
-  box-shadow: 2px 2px 0 rgba(0,0,0,0.04);
+  box-shadow: var(--app-shadow-sm);
   transition: all .15s;
   position: relative;
   overflow: hidden;
@@ -188,7 +223,7 @@ function setCardRef(el, idx) {
 }
 .module-card:hover {
   transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 rgba(0,0,0,0.06);
+  box-shadow: var(--app-shadow-ink);
 }
 .module-card::before { display: none; }
 
@@ -200,9 +235,10 @@ function setCardRef(el, idx) {
   margin-bottom: 12px;
   border: 2px solid var(--ink);
 }
-.module-icon i {
+.module-icon :deep(svg) {
   width: 20px; height: 20px;
-  color: #fff;
+  color: var(--paper);
+  stroke: var(--paper);
 }
 
 /* ── 模块内容 ── */
@@ -235,7 +271,7 @@ function setCardRef(el, idx) {
 
 /* ── 进入按钮 ── */
 .module-enter {
-  font-size: var(--app-size-xs); font-weight: 800; color: #fff;
+  font-size: var(--app-size-xs); font-weight: 800; color: var(--paper);
   padding: 5px 12px; border-radius: 4px 8px 4px 8px;
   border: 2px solid transparent; cursor: pointer;
   transition: all .15s; font-family: inherit;

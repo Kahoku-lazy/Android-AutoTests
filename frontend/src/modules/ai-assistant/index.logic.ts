@@ -1,28 +1,25 @@
 /** AI 助手看板页 — 逻辑编排器（从 index.vue 提取） */
-import { ref, computed, onMounted, onActivated, onUnmounted, nextTick, type Ref, type ComputedRef } from 'vue'
+import { ref, onMounted, onActivated, onUnmounted, nextTick, type Ref } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { animate } from 'animejs'
 import { selectPop, iconBounce } from '@/shared/animations'
 import {
   listAgents, checkAgentsHealth, testAgent,
-  deleteAgent as apiDeleteAgent, updateAgentModel, listTasks,
+  deleteAgent as apiDeleteAgent, updateAgentModel,
 } from './api/agents'
-import type { AgentRecord, TaskRecord, ViewMode, TaskFilterKey } from '@/shared/types/ai'
+import type { AgentRecord, ViewMode } from '@/shared/types/ai'
 import { getModelOptions } from './helpers/model-config'
 import {
-  ROUTE_CASES,
   chatRoute,
   agentDetailRoute,
-  runnerRoute,
   HEALTH_CHECK_INTERVAL_MS,
-  TASK_REFRESH_INTERVAL_MS,
 } from './constants'
 
 // ── 页面配置 ──
 
 export const PAGE_HEADER = {
   title: 'AI 助手',
-  subtitle: '智能体看板贴便签，任务看板跟进度',
+  subtitle: '智能体看板贴便签，工具箱与评测一站管理',
   icon: 'bot' as const,
   iconGradient: 'linear-gradient(135deg,#5EEAD4,#14b8a6)',
 }
@@ -32,56 +29,31 @@ export const PAGE_HEADER = {
 const TAPE_HUES = ['mint', 'peach', 'sky', 'lilac', 'honey']
 const NOTE_ROTATIONS = [-2.8, 1.6, -1.4, 2.2, -2.1, 1.2, -1.8, 2.5]
 
-const TASK_STATUS_MAP: Record<string, string[]> = {
-  pending: ['PENDING'],
-  running: ['RUNNING'],
-  completed: ['COMPLETED', 'SUCCESS'],
-  failed: ['FAILED', 'ERROR'],
-}
-
-export const CARD_GROUPS = [
-  { key: 'all' as const, label: '全部', icon: '📋' },
-]
-
 // ── 返回类型 ──
 
 export interface AgentBoardState {
   viewMode: Ref<ViewMode>
   agents: Ref<AgentRecord[]>
   loading: Ref<boolean>
+  agentsError: Ref<string>
   testingId: Ref<number | null>
   confirmingId: Ref<number | null>
   healthResults: Ref<Record<number, { is_connected: boolean; last_checked?: string }>>
   pendingModels: Ref<Record<number, string>>
-  tasks: Ref<TaskRecord[]>
-  tasksLoading: Ref<boolean>
-  activeTaskFilter: Ref<TaskFilterKey>
-  taskFilterAppTabs: ComputedRef<{ key: string; label: string }[]>
-  filteredTasks: ComputedRef<TaskRecord[]>
   // helpers
   PAGE_HEADER: typeof PAGE_HEADER
-  TAPE_HUES: string[]
-  NOTE_ROTATIONS: number[]
   noteRotation: (agent: AgentRecord) => number
   tapeHue: (agent: AgentRecord) => string
-  taskRotation: (task: TaskRecord) => number
-  taskTapeHue: (task: TaskRecord) => string
-  agentStatusType: (agent: AgentRecord) => string
   agentStatusText: (agent: AgentRecord) => string
   agentStatusClass: (agent: AgentRecord) => string
-  getModelOptions: (agent: AgentRecord) => { label: string; value: string }[]
-  hasPendingModelChange: (agent: AgentRecord) => boolean
-  countTasksByFilter: (key: string) => number
+  getModelOptions: (agent: AgentRecord, pendingModel?: string) => { label: string; value: string }[]
   // actions
   loadAgents: () => Promise<void>
-  loadTasks: (opts?: { silent?: boolean }) => Promise<void>
-  checkAllHealth: () => Promise<void>
   testConnection: (agent: AgentRecord) => Promise<void>
   confirmModel: (agent: AgentRecord) => Promise<void>
   deleteAgent: (agent: AgentRecord) => Promise<void>
   openAgent: (agent: AgentRecord) => void
   editAgent: (id: number) => void
-  openTask: (task: TaskRecord) => void
   onAgentCardClick: (ev: Event) => void
 }
 
@@ -99,35 +71,11 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
   const testingId = ref<number | null>(null)
   const confirmingId = ref<number | null>(null)
   const healthTimer = ref<ReturnType<typeof setInterval> | null>(null)
-  const taskTimer = ref<ReturnType<typeof setInterval> | null>(null)
   const healthResults = ref<Record<number, { is_connected: boolean; last_checked?: string }>>({})
   const pendingModels = ref<Record<number, string>>({})
-  const tasks = ref<TaskRecord[]>([])
-  const tasksLoading = ref(false)
-  const activeTaskFilter = ref<TaskFilterKey>('all')
+  const agentsError = ref('')
 
   // ── Derived ──
-
-  function countTasksByFilter(key: string): number {
-    const list = tasks.value
-    if (key === 'all') return list.length
-    const allow = TASK_STATUS_MAP[key] || []
-    return list.filter(t => allow.includes(String(t.status || '').toUpperCase())).length
-  }
-
-  const taskFilterAppTabs = computed(() => [
-    { key: 'all', label: `全部 (${countTasksByFilter('all')})` },
-    { key: 'pending', label: `待执行 (${countTasksByFilter('pending')})` },
-    { key: 'running', label: `执行中 (${countTasksByFilter('running')})` },
-    { key: 'completed', label: `已完成 (${countTasksByFilter('completed')})` },
-    { key: 'failed', label: `失败 (${countTasksByFilter('failed')})` },
-  ])
-
-  const filteredTasks = computed(() => {
-    if (activeTaskFilter.value === 'all') return tasks.value
-    const allow = TASK_STATUS_MAP[activeTaskFilter.value] || []
-    return tasks.value.filter(t => allow.includes(String(t.status || '').toUpperCase()))
-  })
 
   // ── Sticky note display ──
 
@@ -139,8 +87,6 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
 
   function noteRotation(agent: AgentRecord) { return NOTE_ROTATIONS[hashString(String(agent.id), NOTE_ROTATIONS.length)] }
   function tapeHue(agent: AgentRecord) { return TAPE_HUES[hashString(agent.name || String(agent.id), TAPE_HUES.length)] }
-  function taskRotation(task: TaskRecord) { return NOTE_ROTATIONS[hashString(task.run_id || '', NOTE_ROTATIONS.length)] }
-  function taskTapeHue(task: TaskRecord) { return TAPE_HUES[hashString(task.agent_name || task.run_id || '', TAPE_HUES.length)] }
 
   // ── Status helpers ──
 
@@ -176,12 +122,12 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
   }
 
   function onAgentCardClick(ev: Event) {
-    const card = (ev as { currentTarget?: HTMLElement }).currentTarget
-    if (card) selectPop(card)
+    const card = (ev as unknown as { currentTarget?: HTMLElement }).currentTarget
+    if (card) selectPop(card as HTMLElement)
     const container = dutyRosterRef.value
     if (container) {
       const mark = container.querySelector('.brand-mark')
-      if (mark) iconBounce(mark)
+      if (mark) iconBounce(mark as HTMLElement)
     }
   }
 
@@ -195,21 +141,14 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
 
   async function loadAgents() {
     loading.value = true
+    agentsError.value = ''
     try {
       const data = await listAgents()
       if (data.status) { agents.value = data.agents; syncPendingModels() }
-    } catch { ElMessage.error('加载智能体列表失败') }
+      else { agentsError.value = data.message || '加载失败' }
+    } catch { agentsError.value = '加载智能体列表失败，请检查网络连接' }
     loading.value = false
     nextTick(() => animateStatusBubbles())
-  }
-
-  async function loadTasks({ silent = false }: { silent?: boolean } = {}) {
-    if (!silent) tasksLoading.value = true
-    try {
-      const data = await listTasks({ status: 'all' })
-      if (data.status) tasks.value = data.tasks || []
-    } catch { if (!silent) ElMessage.error('加载任务看板失败') }
-    finally { tasksLoading.value = false }
   }
 
   async function checkAllHealth() {
@@ -219,7 +158,7 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
         for (const h of data.agents) healthResults.value[h.id] = { is_connected: h.is_connected, last_checked: h.last_checked }
         nextTick(() => animateStatusBubbles())
       }
-    } catch (e) { console.error(e) }
+    } catch { ElMessage.error('健康检查失败') }
   }
 
   async function testConnection(agent: AgentRecord) {
@@ -229,7 +168,7 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
       if (data.status) {
         healthResults.value[agent.id] = { is_connected: data.connected, last_checked: new Date().toISOString() }
         if (data.connected) { ElMessage.success(`${agent.name} 连接成功`); loadAgents() }
-        else ElMessage.warning(`${agent.name} 连接失败: ${(data as { error?: string }).message || '未知错误'}`)
+        else ElMessage.warning(`${agent.name} 连接失败: ${(data as { message?: string }).message || '未知错误'}`)
       }
     } catch { ElMessage.error(`${agent.name} 检测请求失败`) }
     testingId.value = null
@@ -253,7 +192,7 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
     try {
       const data = await apiDeleteAgent(agent.id)
       if (data.status) { agents.value = agents.value.filter(a => a.id !== agent.id); ElMessage.success(`已删除「${agent.name}」`) }
-      else ElMessage.error((data as { error?: string }).message || '删除失败')
+      else ElMessage.error(data.message || '删除失败')
     } catch { ElMessage.error('删除请求失败，请检查网络') }
   }
 
@@ -263,40 +202,27 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
   }
   function editAgent(id: number) { router.push(agentDetailRoute(id)) }
 
-  function openTask(task: TaskRecord) {
-    if (!task?.run_id || task._demo || String(task.run_id).startsWith('demo-')) {
-      ElMessage.info('这是预览便签，真实任务创建后可进入执行页')
-      return
-    }
-    if (task.task_type === 'case_generation') router.push(ROUTE_CASES)
-    else router.push(runnerRoute(task.run_id))
-  }
-
   // ── Lifecycle ──
 
-  onMounted(() => {
-    loadAgents(); checkAllHealth(); loadTasks()
+  onMounted(async () => {
+    await loadAgents()
+    checkAllHealth()
     healthTimer.value = setInterval(checkAllHealth, HEALTH_CHECK_INTERVAL_MS)
-    taskTimer.value = setInterval(() => {
-      if (tasks.value.some(t => String(t.status).toUpperCase() === 'RUNNING')) loadTasks({ silent: true })
-    }, TASK_REFRESH_INTERVAL_MS)
   })
   onActivated(() => {
-    loadAgents(); loadTasks()
+    loadAgents()
   })
   onUnmounted(() => {
     if (healthTimer.value) clearInterval(healthTimer.value)
-    if (taskTimer.value) clearInterval(taskTimer.value)
   })
 
   return {
-    viewMode, agents, loading, testingId, confirmingId, healthResults, pendingModels,
-    tasks, tasksLoading, activeTaskFilter, taskFilterAppTabs, filteredTasks,
-    PAGE_HEADER, TAPE_HUES, NOTE_ROTATIONS, CARD_GROUPS,
-    noteRotation, tapeHue, taskRotation, taskTapeHue,
-    agentStatusType, agentStatusText, agentStatusClass,
-    getModelOptions, hasPendingModelChange, countTasksByFilter,
-    loadAgents, loadTasks, checkAllHealth, testConnection, confirmModel, deleteAgent,
-    openAgent, editAgent, openTask, onAgentCardClick,
+    viewMode, agents, loading, agentsError, testingId, confirmingId, healthResults, pendingModels,
+    PAGE_HEADER,
+    noteRotation, tapeHue,
+    agentStatusText, agentStatusClass,
+    getModelOptions,
+    loadAgents, testConnection, confirmModel, deleteAgent,
+    openAgent, editAgent, onAgentCardClick,
   }
 }

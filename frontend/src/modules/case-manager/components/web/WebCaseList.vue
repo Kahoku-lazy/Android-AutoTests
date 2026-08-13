@@ -5,7 +5,7 @@ import StepViewer from "../StepViewer.vue";
 import { listWebDefinitions, deleteWebDefinition, getWebDefinition } from "../../api/webAutomation";
 
 const props = defineProps({ treeData: Array, activeDirectoryId: null, activeDirName: String, activeCaseId: null });
-const emit = defineEmits(["refresh-tree"]);
+const emit = defineEmits(["refresh-tree", "clear-case", "select-case", "go-all"]);
 
 const api = { listDefs: listWebDefinitions, deleteDef: deleteWebDefinition, getDef: getWebDefinition };
 
@@ -39,13 +39,16 @@ function editPath(id) { return `/cases/web/${id}/edit`; }
   <CaseList ref="listRef" case-type="web" :list-api="api" :columns="columns" create-path="/cases/web/new" :edit-path="editPath"
     :tree-data="props.treeData" :active-directory-id="props.activeDirectoryId" :active-dir-name="props.activeDirName"
     :active-case-id="props.activeCaseId"
-    @refresh-tree="emit('refresh-tree')">
+    @refresh-tree="emit('refresh-tree')"
+    @clear-case="emit('clear-case')"
+    @select-case="(id) => emit('select-case', id)"
+    @go-all="emit('go-all')">
     <template #detail="{ case: c }">
       <StepViewer v-if="c?.steps_data?.length" :steps="c.steps_data" />
       <div v-else class="no-steps">暂无步骤 — 点击「编辑」添加 Web 自动化步骤</div>
     </template>
     <template #cell-id="{ record }">
-      <span class="case-link" @click="handleSelect(record.id)">{{ record.id }}</span>
+      <button class="case-link case-link-btn" @click="handleSelect(record.id)">{{ record.id }}</button>
     </template>
     <template #cell-stepCount="{ record }">
       <span class="step-count-badge">{{ stepCount(record) }}</span>
@@ -54,7 +57,7 @@ function editPath(id) { return `/cases/web/${id}/edit`; }
 </template>
 
 <style scoped>
-.case-link{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600;cursor:pointer;text-decoration:underline}
-.step-count-badge{display:inline-block;min-width:24px;padding:1px 8px;border-radius:10px;background:rgba(111,186,44,0.15);color:#4a8a1a;font-weight:700;font-size:var(--app-size-xs)}
-.no-steps{text-align:center;padding:24px;color:#999;font-size:var(--app-size-sm)}
+.case-link{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600;cursor:pointer;text-decoration:underline}.case-link-btn{background:none;border:none;padding:0;color:inherit}
+.step-count-badge{display:inline-block;min-width:24px;padding:1px 8px;border-radius:10px;background:var(--case-btn-count-bg);color:var(--case-btn-count-text);font-weight:700;font-size:var(--app-size-xs)}
+.no-steps{text-align:center;padding:var(--app-space-lg);color:var(--app-text-secondary);font-size:var(--app-size-sm)}
 </style>

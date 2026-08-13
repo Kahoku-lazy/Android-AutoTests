@@ -7,7 +7,7 @@ const props = withDefaults(defineProps<{ items?: ActivityItem[] }>(), {
   items: () => [],
 })
 
-const listRef = ref(null)
+const listRef = ref<HTMLElement | null>(null)
 
 async function revealItems() {
   await nextTick()
@@ -80,7 +80,7 @@ watch(() => props.items.length, revealItems)
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #999;
+  color: var(--app-ink-muted);
   font-size: var(--app-size-sm);
 }
 
@@ -101,17 +101,17 @@ watch(() => props.items.length, revealItems)
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border: 2px solid #999;
-  background: white;
+  border: 2px solid var(--app-timeline-dot);
+  background: var(--app-bg-card);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1;
 }
 
-.timeline-item--success .timeline-item__dot { border-color: #10b981; }
-.timeline-item--warning .timeline-item__dot { border-color: #f59e0b; }
-.timeline-item--error .timeline-item__dot { border-color: #ef4444; }
+.timeline-item--success .timeline-item__dot { border-color: var(--app-status-success); }
+.timeline-item--warning .timeline-item__dot { border-color: var(--c-dashboard); }
+.timeline-item--error .timeline-item__dot { border-color: var(--app-error); }
 
 .timeline-item__dot-inner {
   width: 6px;
@@ -120,7 +120,7 @@ watch(() => props.items.length, revealItems)
   background: var(--app-ink-muted);
 }
 .timeline-item--success .timeline-item__dot-inner { background: var(--app-status-success); }
-.timeline-item--warning .timeline-item__dot-inner { background: #F7C948; }
+.timeline-item--warning .timeline-item__dot-inner { background: var(--c-dashboard); }
 .timeline-item--error .timeline-item__dot-inner   { background: var(--app-status-danger); }
 
 .timeline-item__line {
@@ -153,13 +153,13 @@ watch(() => props.items.length, revealItems)
 
 .timeline-item__time {
   font-size: var(--app-size-xs);
-  color: #999;
+  color: var(--app-ink-muted);
   flex-shrink: 0;
 }
 
 .timeline-item__detail {
   font-size: var(--app-size-sm);
-  color: #999;
+  color: var(--app-ink-muted);
   margin: 0;
   line-height: 1.5;
 }

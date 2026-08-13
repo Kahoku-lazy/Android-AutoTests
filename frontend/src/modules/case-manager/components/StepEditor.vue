@@ -25,7 +25,7 @@ async function loadStepTypes() {
   try {
     const { data } = await fetchStepTypes(props.target);
     if (data?.status) availableTypes.value = data.data?.types || [];
-  } catch { /* ignore */ }
+  } catch { console.error("加载步骤类型失败") }
 }
 onMounted(loadStepTypes);
 
@@ -134,7 +134,7 @@ function stepSummary(step) { return buildStepSummary(step, resolveElementName); 
       :class="{ expanded: expanded[idx], dragging: dragIndex === idx, 'drop-target': dropTargetIdx === idx && dragIndex !== idx }"
       draggable="true"
       @dragstart="onDragStart(idx, $event)" @dragover="onDragOver(idx, $event)" @dragleave="onDragLeave" @dragend="onDragEnd" @drop="onDrop($event, idx)">
-      <div class="step-bar" @click="expanded[idx] = !expanded[idx]">
+      <div class="step-bar" role="button" tabindex="0" @click="expanded[idx] = !expanded[idx]" @keydown.enter.prevent="expanded[idx] = !expanded[idx]" @keydown.space.prevent="expanded[idx] = !expanded[idx]">
         <span class="drag-handle" title="拖动排序"><IconGripVertical :size="16" /></span>
         <span class="step-idx">
           <template v-if="stepResults[idx]">{{ stepResults[idx].status ? '✅' : '❌' }}</template>
@@ -220,33 +220,33 @@ function stepSummary(step) { return buildStepSummary(step, resolveElementName); 
 
 <style scoped>
 .step-editor { display: flex; flex-direction: column; gap: 8px; }
-.step-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 2px solid rgba(162,210,255,0.18); }
+.step-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 2px solid var(--case-border-subtle); }
 .step-header__title { font-weight: 700; font-size: var(--app-size-sm); color: var(--ink); }
 .step-header__actions { display: flex; gap: 6px; align-items: center; }
-.step-item { border: 1px solid rgba(162,210,255,0.24); border-radius: 12px; margin-bottom: 6px; overflow: hidden; transition: box-shadow 0.2s, transform 0.15s; }
-.step-item.expanded { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.step-item { border: 1px solid var(--case-border); border-radius: var(--app-radius-md); margin-bottom: 6px; overflow: hidden; transition: box-shadow var(--app-duration-slow), transform var(--app-duration); }
+.step-item.expanded { box-shadow: var(--app-shadow-md); }
 .step-item.dragging { opacity: 0.5; transform: scale(0.98); }
-.step-item.drop-target { border-color: var(--c-workflow); background: rgba(162,210,255,0.08); }
-.step-bar { display: flex; align-items: center; gap: 6px; padding: 8px 10px; cursor: pointer; user-select: none; transition: background 0.15s; }
-.step-bar:hover { background: rgba(162,210,255,0.06); }
-.drag-handle { cursor: grab; color: #999; flex-shrink: 0; }
+.step-item.drop-target { border-color: var(--c-workflow); background: var(--case-bg-drag); }
+.step-bar { display: flex; align-items: center; gap: 6px; padding: var(--app-space-sm) 10px; cursor: pointer; user-select: none; transition: background var(--app-duration); }
+.step-bar:hover { background: var(--case-bg-subtle); }
+.drag-handle { cursor: grab; color: var(--app-text-secondary); flex-shrink: 0; }
 .step-idx { font-weight: 700; font-size: var(--app-size-sm); color: var(--c-workflow); min-width: 24px; text-align: center; }
 .step-summary { flex: 1; min-width: 0; font-size: var(--app-size-sm); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .step-result-msg { font-size: var(--app-size-xs); margin-left: 6px; }
-.step-result-msg.status { color: #27ae60; } .step-result-msg.fail { color: #e05a5a; }
-.step-actions { display: flex; gap: 4px; flex-shrink: 0; }
-.step-form { padding: 8px 12px 12px 36px; background: rgba(162,210,255,0.03); border-top: 1px solid rgba(162,210,255,0.12); }
-.step-desc { font-size: var(--app-size-xs); color: #999; margin-bottom: 8px; }
-.field-hint { font-size: var(--app-size-xs); color: #999; margin-left: 8px; }
-.current-xpath { margin-top: 4px; font-size: var(--app-size-xs); }
-.current-xpath code { background: rgba(162,210,255,0.12); padding: 2px 6px; border-radius: 4px; word-break: break-all; }
+.step-result-msg.status { color: var(--case-step-success); } .step-result-msg.fail { color: var(--case-step-error); }
+.step-actions { display: flex; gap: var(--app-space-xs); flex-shrink: 0; }
+.step-form { padding: var(--app-space-sm) 12px 12px 36px; background: var(--case-bg-skeleton); border-top: 1px solid var(--case-bg-code); }
+.step-desc { font-size: var(--app-size-xs); color: var(--app-text-secondary); margin-bottom: var(--app-space-sm); }
+.field-hint { font-size: var(--app-size-xs); color: var(--app-text-secondary); margin-left: var(--app-space-sm); }
+.current-xpath { margin-top: var(--app-space-xs); font-size: var(--app-size-xs); }
+.current-xpath code { background: var(--case-bg-code); padding: 2px 6px; border-radius: var(--app-radius-sm); word-break: break-all; }
 .el-opt { display: flex; flex-direction: column; }
 .el-opt-name { font-size: var(--app-size-sm); }
-.el-opt-page { font-size: var(--app-size-xs); color: #999; }
-.child-steps { margin-top: 8px; padding: 8px; border: 1px dashed rgba(162,210,255,0.3); border-radius: 8px; }
+.el-opt-page { font-size: var(--app-size-xs); color: var(--app-text-secondary); }
+.child-steps { margin-top: var(--app-space-sm); padding: var(--app-space-sm); border: 1px dashed var(--case-border-dashed); border-radius: var(--app-radius-md); }
 .child-steps__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: var(--app-size-sm); font-weight: 600; }
 .child-step-item { display: flex; align-items: center; gap: 6px; padding: 4px 0; }
 .child-step-idx { font-weight: 600; color: var(--c-workflow); min-width: 24px; }
 .child-step-summary { flex: 1; font-size: var(--app-size-sm); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.empty-state { text-align: center; padding: 24px; color: #999; font-size: var(--app-size-sm); }
+.empty-state { text-align: center; padding: var(--app-space-lg); color: var(--app-text-secondary); font-size: var(--app-size-sm); }
 </style>

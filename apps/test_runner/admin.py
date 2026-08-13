@@ -24,10 +24,9 @@ class TestResultAdmin(admin.ModelAdmin):
     list_filter = ("result",)
     search_fields = ("case_id",)
 
+    @admin.display(description="用例 ID")
     def case_display(self, obj):
         return obj.case_id or "(已删除)"
-
-    case_display.short_description = "用例 ID"
 
 
 @admin.register(TaskCard)

@@ -8,10 +8,11 @@ Usage:
 """
 
 import base64
-from datetime import datetime
 import io
-from pathlib import Path
 import sys
+
+from datetime import datetime
+from pathlib import Path
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 

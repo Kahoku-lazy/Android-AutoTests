@@ -5,9 +5,9 @@
  * 替代原内联 ErrorState，固定定位悬浮在登录页面之上，
  * 不破坏 hero 布局。支持点击遮罩/按钮/ESC 关闭。
  */
-import { onMounted, onBeforeUnmount } from 'vue'
+import { watch, onBeforeUnmount } from 'vue'
 
-defineProps<{
+const props = defineProps<{
   message: string
   visible: boolean
 }>()
@@ -20,18 +20,38 @@ function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') emit('close')
 }
 
-onMounted(() => document.addEventListener('keydown', onKeydown))
+watch(
+  () => props.visible,
+  (visible) => {
+    if (visible) {
+      document.addEventListener('keydown', onKeydown)
+    } else {
+      document.removeEventListener('keydown', onKeydown)
+    }
+  },
+  { immediate: true },
+)
+
 onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
   <Teleport to="body">
     <Transition name="overlay">
-      <div v-if="visible" class="error-overlay" @click.self="emit('close')">
+      <div
+        v-if="visible"
+        class="error-overlay"
+        data-testid="login-error-overlay"
+        @click.self="emit('close')"
+      >
         <div class="error-card">
           <div class="error-card__icon">!</div>
-          <p class="error-card__message">{{ message }}</p>
-          <button class="error-card__btn" @click="emit('close')">知道了</button>
+          <p class="error-card__message" data-testid="login-error-message">{{ message }}</p>
+          <button
+            class="error-card__btn"
+            data-testid="login-error-dismiss"
+            @click="emit('close')"
+          >知道了</button>
         </div>
       </div>
     </Transition>
@@ -42,11 +62,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 .error-overlay {
   position: fixed;
   inset: 0;
+  /* 浮于登录页 hero/表单之上 */
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.38);
+  background: var(--app-overlay);
   padding: 20px;
 }
 
@@ -57,12 +78,14 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   box-shadow: var(--app-shadow-lg);
   max-width: 400px;
   width: 100%;
+  max-height: min(80vh, 480px);
   padding: 32px 28px 24px;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16px;
+  overflow: hidden;
 }
 
 .error-card__icon {
@@ -70,7 +93,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   height: 44px;
   border-radius: 50%;
   background: var(--app-status-danger, #FFB5A7);
-  color: #fff;
+  color: var(--paper);
   font-size: var(--app-size-xl);
   font-weight: 800;
   font-family: var(--app-font);
@@ -78,6 +101,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   align-items: center;
   justify-content: center;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .error-card__message {
@@ -87,6 +111,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   color: var(--ink);
   line-height: 1.6;
   word-break: break-word;
+  max-height: min(40vh, 240px);
+  overflow-y: auto;
+  min-height: 0;
+  width: 100%;
 }
 
 .error-card__btn {
@@ -101,6 +129,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   border-radius: var(--app-radius-sm);
   cursor: pointer;
   transition: transform 0.12s var(--app-ease);
+  flex-shrink: 0;
 }
 
 .error-card__btn:hover {

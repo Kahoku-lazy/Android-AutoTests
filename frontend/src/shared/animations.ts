@@ -123,7 +123,7 @@ export function cardTilt(el: HTMLElement, intensity = 8): () => void {
   return () => { el.removeEventListener("mousemove", onMove); el.removeEventListener("mouseleave", onLeave) }
 }
 
-export function staggerReveal(targets: string | HTMLElement | NodeList, delay = 80, fromScale = 0.85): ReturnType<typeof animate> {
+export function staggerReveal(targets: string | HTMLElement | HTMLElement[] | NodeList, delay = 80, fromScale = 0.85): ReturnType<typeof animate> {
   return animate(targets, { opacity: [0, 1], scale: [fromScale, 1], translateY: [24, 0], delay: stagger(delay), duration: 600, ease: "outBack(1.5)" })
 }
 
@@ -165,8 +165,8 @@ export function typewriter(el: HTMLElement, text: string, speed = 40): () => voi
 
 export function sequentialHighlight(targets: string | HTMLElement, color = "#a2d2ff", interval = 300): ReturnType<typeof createTimeline> {
   return createTimeline()
-    .add(staggerReveal(targets, interval))
-    .add(animate(targets, { boxShadow: ["none", `0 0 0 2px ${color}40`, "none"], delay: stagger(interval), duration: 600, ease: "inOutSine" }), "+=200")
+    .add(staggerReveal(targets, interval) as unknown as Parameters<ReturnType<typeof createTimeline>["add"]>[0])
+    .add(animate(targets, { boxShadow: ["none", `0 0 0 2px ${color}40`, "none"], delay: stagger(interval), duration: 600, ease: "inOutSine" }) as unknown as Parameters<ReturnType<typeof createTimeline>["add"]>[0], "+=200")
 }
 
 export function skeletonShimmer(targets: string | HTMLElement): ReturnType<typeof animate> {
@@ -190,8 +190,8 @@ function animeSetDashoffset(el: SVGGeometryElement): number {
 
 export function fadeSwap(leaveEl: HTMLElement, enterEl: HTMLElement, duration = 300): ReturnType<typeof createTimeline> {
   return createTimeline()
-    .add(animate(leaveEl, { opacity: [1, 0], duration, ease: "inCubic" }))
-    .add(animate(enterEl, { opacity: [0, 1], duration, ease: "outCubic" }), `-=${duration * 0.6}`)
+    .add(animate(leaveEl, { opacity: [1, 0], duration, ease: "inCubic" }) as unknown as Parameters<ReturnType<typeof createTimeline>["add"]>[0])
+    .add(animate(enterEl, { opacity: [0, 1], duration, ease: "outCubic" }) as unknown as Parameters<ReturnType<typeof createTimeline>["add"]>[0], `-=${duration * 0.6}`)
 }
 
 export function bounceBadge(el: HTMLElement): ReturnType<typeof animate> {

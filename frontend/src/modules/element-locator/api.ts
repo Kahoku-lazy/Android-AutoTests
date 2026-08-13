@@ -1,11 +1,5 @@
-/** element-locator API client functions */
+/** element-locator API client functions — persistent element repository CRUD */
 import client from '@/shared/api-client'
-
-// ── Element dump & actions ──
-
-export function apiDump()         { return client.post('/elements/dump', {}) }
-export function apiAction(a,x,y)  { return client.post('/elements/action',{action:a,x,y}) }
-export function apiInput(t,x,y,c) { return client.post('/elements/action',{action:'input',text:t,x,y,clear_first:c}) }
 
 // ── Pages ──
 
@@ -23,22 +17,6 @@ export function apiFlows()        { return client.get('/elements/flows') }
 export function apiCreateFlow(f)  { return client.post('/elements/flows',f) }
 export function apiDeleteFlow(id) { return client.delete(`/elements/flows/${id}`) }
 
-// ── Device integration (v2) ──
-
-export function apiGetDevices()           { return client.get('/devices') }
-export function apiActivateDevice(s)      { return client.post(`/devices/${s}/activate`) }
-export function apiGetDeviceInfo()        { return client.get('/elements/device-info') }
-export function apiGetScreenshot()        { return client.get('/elements/screenshot') }
-
-// ── Observe-mode connect/disconnect (manual device control) ──
-
-export function apiConnectObserve(serial) {
-  return client.post(`/devices/${serial}`, { activate: true, mode: 'observe' })
-}
-export function apiDisconnectObserve(serial) {
-  return client.post(`/devices/${serial}/disconnect-observe`)
-}
-
 // ── Element Manager (page & element CRUD) ──
 
 export function apiGetPages()          { return client.get('/elements/pages') }
@@ -47,7 +25,7 @@ export function apiDeletePage(id)      { return client.delete(`/elements/pages/$
 export function apiGetPageElements(pid) { return client.get(`/elements/pages/${pid}/items`) }
 export function apiAddElementToPage(pid, el) { return client.post(`/elements/pages/${pid}/elements`, el) }
 export function apiBatchAddElementsToPage(pid, elements, strategy) { return client.post(`/elements/pages/${pid}/elements/batch`, { elements, strategy }) }
-export function apiClearAll()          { return client.post('/elements/pages/clear') }
+export function apiClearAll(ids?: (string | number)[] | null) { return client.post('/elements/pages/clear', ids ? { page_ids: ids } : {}) }
 export function apiBatchMovePages(pageIds, parentId) {
   return client.post('/elements/pages/batch-move', {
     page_ids: pageIds,

@@ -60,14 +60,22 @@ export function useBatchSelect(treeData, treeRef, allCheckableIds, findNodeById,
     moveDialogVisible.value = true;
   }
 
+  function resolveTreeNodes() {
+    // 支持 ComputedRef / Ref / 直接数组 / getter
+    if (typeof treeData === "function") return treeData() || [];
+    if (treeData && typeof treeData === "object" && "value" in treeData) return treeData.value || [];
+    return Array.isArray(treeData) ? treeData : [];
+  }
+
   async function confirmBatchMove() {
     if (!moveTargetDirId.value) {
       ElMessage.warning("请选择目标目录");
       return;
     }
     const items = [];
+    const nodes = resolveTreeNodes();
     for (const id of checkedIds.value) {
-      const node = findNodeById(treeData.value, id);
+      const node = findNodeById(nodes, id);
       if (node) {
         items.push({
           type: node.node_type === "case" ? "case" : "directory",
@@ -75,7 +83,10 @@ export function useBatchSelect(treeData, treeRef, allCheckableIds, findNodeById,
         });
       }
     }
-    if (items.length === 0) return;
+    if (items.length === 0) {
+      ElMessage.warning("未找到可移动的项，请重新选择");
+      return;
+    }
     try {
       await ElMessageBox.confirm(`确认将 ${items.length} 项移动到目标位置？`, "批量移动", {
         confirmButtonText: "确认移动", cancelButtonText: "取消", type: "warning",

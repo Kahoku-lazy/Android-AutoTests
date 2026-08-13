@@ -59,4 +59,4 @@ WORKSPACE_TTL = float(os.environ.get("AGENTSCOPE_WORKSPACE_TTL", "3600"))  # 1 h
 
 # ── Tools ──
 # Skill paths have been moved in-process to apps/ai_assistant/agent_scope/
-SKILL_PATHS = []
+SKILL_PATHS: list[str] = []

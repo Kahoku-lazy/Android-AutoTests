@@ -1,9 +1,10 @@
 """E2E SSE test v4 — samples all event types."""
 
-from collections import Counter
 import json
 import threading
 import time
+
+from collections import Counter
 
 import requests
 
@@ -95,7 +96,7 @@ def listen():
                 data_str = line[6:]
                 try:
                     d = json.loads(data_str) if data_str not in ("", "[DONE]") else data_str
-                except:
+                except Exception:
                     d = data_str
 
                 if len(sample_events) < 30:

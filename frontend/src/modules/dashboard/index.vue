@@ -13,11 +13,8 @@ import {
   IconBrain,
   IconClock,
   IconAlertCircle,
-  IconTarget,
-  IconZap,
   IconLayers,
 } from '@/shared/icons/index'
-import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 
 const {
   loading,
@@ -68,16 +65,15 @@ const {
       <section class="doc-section">
         <h3 class="doc-section__title">平台运营<span class="doc-tag">Platform</span></h3>
         <div class="doc-section__label">
-          设备 {{ stats.devices.online }}/{{ stats.devices.total }}
-          · 智能体 {{ stats.agents.active }}/{{ stats.agents.total }}
-          · 任务 {{ stats.runs.active }}/{{ stats.runs.total }}
+          设备 {{ stats.devices.total }}
+          · 智能体 {{ stats.agents.total }}
+          · 任务 {{ stats.runs.total }}
           · 工作流 {{ stats.workflow.total }}
         </div>
         <div class="dashboard__stats-grid dashboard__stats-grid--compact">
           <StatsAppCard
             label="在线设备"
             :value="stats.devices.online"
-            :suffix="` / ${stats.devices.total}`"
             color="app-green"
             :trend="stats.devices.trend"
             trend-label="活跃"
@@ -89,7 +85,6 @@ const {
           <StatsAppCard
             label="活跃智能体"
             :value="stats.agents.active"
-            :suffix="` / ${stats.agents.total}`"
             color="app-blue"
             path="/ai-assistant"
             :loading="loading"
@@ -99,7 +94,6 @@ const {
           <StatsAppCard
             label="运行中任务"
             :value="stats.runs.active"
-            :suffix="` / ${stats.runs.total}`"
             color="app-pink"
             path="/runner"
             :loading="loading"
@@ -112,7 +106,6 @@ const {
           <StatsAppCard
             label="工作流"
             :value="stats.workflow.total"
-            :suffix="`${stats.workflow.page_flows} 流 / ${stats.workflow.test_cases} 用例`"
             color="purple"
             path="/workflow"
             :loading="loading"
@@ -126,7 +119,7 @@ const {
       <section class="doc-section">
         <h3 class="doc-section__title">测试用例<span class="doc-tag">Cases</span></h3>
         <div class="doc-section__label">
-          共 {{ stats.cases.total }} 个 · 已启用 {{ stats.cases.enabled }} · 本周新增 {{ stats.cases.trend }}
+          共 {{ stats.cases.total }} 个 · 本周新增 {{ stats.cases.trend }}
         </div>
         <div class="dashboard__stats-grid dashboard__stats-grid--compact">
           <StatsAppCard
@@ -134,7 +127,6 @@ const {
             :key="item.type"
             :label="item.label"
             :value="getBreakdownItem(item.type).total"
-            :suffix="`${getBreakdownItem(item.type).enabled} 启用`"
             :color="item.color"
             path="/cases"
             :loading="loading"

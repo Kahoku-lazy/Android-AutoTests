@@ -26,6 +26,18 @@ logger = logging.getLogger("ai_assistant")
 _agent_sessions: dict[int, dict] = {}
 _sessions_lock = threading.Lock()
 
+# Reference to the main event loop (Daphne's loop) for thread-safe queue delivery.
+# Set by chat_stream on first use. send_confirm_result (sync view, runs in
+# Daphne's thread pool) uses call_soon_threadsafe to safely put into
+# the asyncio.Queue from outside the event loop.
+_main_loop: asyncio.AbstractEventLoop | None = None
+
+
+def set_main_loop(loop: asyncio.AbstractEventLoop) -> None:
+    """Store the main event loop reference for thread-safe HITL delivery."""
+    global _main_loop
+    _main_loop = loop
+
 
 def register_agent_session(conv_id: int, confirm_queue: asyncio.Queue) -> None:
     """Register a running agent session for HITL confirm delivery."""
@@ -72,12 +84,18 @@ def send_confirm_result(request, conv_id):
             )
 
         try:
-            session["confirm_queue"].put_nowait(
-                {
-                    "reply_id": reply_id,
-                    "confirm_results": confirm_results,
-                }
-            )
+            data = {
+                "reply_id": reply_id,
+                "confirm_results": confirm_results,
+            }
+            if _main_loop is not None:
+                _main_loop.call_soon_threadsafe(
+                    session["confirm_queue"].put_nowait,
+                    data,
+                )
+            else:
+                # Fallback for tests or edge cases where main loop is unavailable
+                session["confirm_queue"].put_nowait(data)
         except asyncio.QueueFull:
             return JsonResponse(
                 {"status": False, "message": "Agent is busy — please try again"},

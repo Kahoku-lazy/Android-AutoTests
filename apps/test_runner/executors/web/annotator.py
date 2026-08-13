@@ -23,7 +23,7 @@ AI_TEXT_DIM = (255, 255, 255, 180)
 _FONT_CACHE: dict[int, ImageFont.FreeTypeFont | ImageFont.ImageFont] = {}
 
 
-def _get_font(size: int = 14):
+def _get_font(size: int = 14) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     if size in _FONT_CACHE:
         return _FONT_CACHE[size]
     candidates = [
@@ -32,17 +32,18 @@ def _get_font(size: int = 14):
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/System/Library/Fonts/Helvetica.ttc",
     ]
+    font: ImageFont.FreeTypeFont | ImageFont.ImageFont
     for path in candidates:
         if os.path.exists(path):
             try:
-                f = ImageFont.truetype(path, size)
-                _FONT_CACHE[size] = f
-                return f
+                font = ImageFont.truetype(path, size)
+                _FONT_CACHE[size] = font
+                return font
             except OSError:
                 pass
-    f = ImageFont.load_default()
-    _FONT_CACHE[size] = f
-    return f
+    font = ImageFont.load_default()
+    _FONT_CACHE[size] = font
+    return font
 
 
 def annotate_screenshot(

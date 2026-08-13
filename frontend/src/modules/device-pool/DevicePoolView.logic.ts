@@ -38,6 +38,7 @@ export interface DevicePoolViewState {
   queueEntries: Ref<QueueEntry[]>
   queueLength: Ref<number>
   selectedSerial: Ref<string | null>
+  error: Ref<string | null>
   // UI state
   viewMode: Ref<DeviceViewMode>
   switchViewMode: (mode: DeviceViewMode) => void
@@ -138,7 +139,7 @@ export function useDevicePoolView(): DevicePoolViewState {
     pagedItems: pagedDevices,
     setPageSize,
     goPage,
-  } = usePagination<DeviceRecord>(filteredDevices, { options: [5, 10, 20] })
+  } = usePagination(filteredDevices, { options: [5, 10, 20] })
 
   // 8. Watch filter changes → reset page
   watch([activeFilter], () => {
@@ -183,6 +184,7 @@ export function useDevicePoolView(): DevicePoolViewState {
     queueEntries: pool.queueEntries,
     queueLength: pool.queueLength,
     selectedSerial: pool.selectedSerial,
+    error: pool.error,
     // UI state
     viewMode,
     switchViewMode,

@@ -1,4 +1,4 @@
-"""注册接口 API 测试 — POST /api/ai/auth/register（数据驱动 + JSON Schema）。
+"""注册接口 API 测试 — POST /api/auth/register（数据驱动 + JSON Schema）。
 
 24 条用例按断言 Shape 分为 3 个参数化组 + 2 个独立函数：
   - test_register_validation[15]  — 400/409 + 精确错误消息
@@ -175,6 +175,21 @@ REGISTER_VALIDATION_CASES: list[ValidationCase] = [
         expected_message="用户名最多 20 个字符",
     ),
     ValidationCase(
+        id="TC-REG-019",
+        title="密码过短 — 不足 6 位",
+        description='请求体：password="12345"\n期望：400，message="密码至少 6 位"\n测试点：len(password) < 6',
+        severity="critical",
+        priority="P0",
+        payload={
+            "username": UNIQUE_SENTINEL,
+            "password": "12345",
+            "password2": "12345",
+            "email": "a@b.com",
+        },
+        expected_status=400,
+        expected_message="密码至少 6 位",
+    ),
+    ValidationCase(
         id="TC-REG-011",
         title="两次密码不一致",
         description='请求体：password="pass123", password2="pass456"\n期望：400，message="两次密码不一致"\n测试点：password != password2',
@@ -281,7 +296,7 @@ REGISTER_VALIDATION_CASES: list[ValidationCase] = [
 @pytest.mark.api
 @pytest.mark.auth
 def test_register_validation(base_url, api_session, unique_username, case):
-    """参数化：注册校验拒绝（15 条）。"""
+    """参数化：注册校验拒绝（16 条）。"""
     set_allure_metadata(
         feature="认证模块",
         story="注册接口",
@@ -356,8 +371,8 @@ def test_register_success(base_url, api_session, unique_username, case):
     body = resp.json()
     assert resp.status_code == 200, f"期望 200，实际 {resp.status_code}: {body}"
     jsonschema.validate(instance=body, schema=REGISTER_SUCCESS_SCHEMA)
-    assert body["user"]["username"] == uname
-    assert body["user"]["email"] == "a@b.com"
+    assert body["data"]["user"]["username"] == uname
+    assert body["data"]["user"]["email"] == "a@b.com"
 
 
 # ═══════════════════════════════════════════════════════════════════

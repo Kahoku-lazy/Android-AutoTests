@@ -29,7 +29,7 @@ function go() { emit('click', props.device) }
 </script>
 
 <template>
-  <div class="device-card" :class="status" @click="go">
+  <div class="device-card" :class="status" role="button" tabindex="0" @click="go" @keydown.enter.prevent="go" @keydown.space.prevent="go">
     <div class="card-photo" :class="status">
       <span class="card-photo-serial">{{ device.serial }}</span>
       <span class="card-photo-badge">{{ statusText }}</span>
@@ -58,7 +58,7 @@ function go() { emit('click', props.device) }
 <style scoped>
 /* ── 拍立得卡片 ── */
 .device-card {
-  background: #fff; border-radius: 6px 10px 6px 10px;
+  background: var(--app-bg-card); border-radius: 6px 10px 6px 10px;
   padding: 8px 8px 30px 8px; cursor: pointer; position: relative;
   box-shadow: 2px 3px 0 rgba(0,0,0,0.05); transition: all 0.2s;
 }
@@ -79,7 +79,7 @@ function go() { emit('click', props.device) }
 .device-card::before {
   content: ''; position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
   width: 9px; height: 9px;
-  background: radial-gradient(circle, #e8e0d5, #a09080);
+  background: radial-gradient(circle, var(--app-pushpin-light), var(--app-pushpin-dark));
   border-radius: 50%; box-shadow: 0 1px 1px rgba(0,0,0,0.08); z-index: 2;
 }
 
@@ -114,13 +114,13 @@ function go() { emit('click', props.device) }
 .card-btn {
   font-size: var(--app-size-xs); font-weight: 700; padding: 3px 8px;
   border-radius: 3px 6px 3px 6px; border: 1.5px solid var(--ink);
-  background: #fff; color: var(--ink);
+  background: var(--app-bg-card); color: var(--ink);
   cursor: pointer; font-family: inherit; transition: all 0.12s;
 }
 .card-btn:hover { background: var(--app-highlight); }
 .card-btn.unlock:hover { background: var(--app-status-purple-bg); border-color: var(--app-status-purple-border); }
-.card-btn.queue { color: #b08800; border-color: #b08800; }
+.card-btn.queue { color: var(--app-queue-text); border-color: var(--app-queue-text); }
 .card-btn.queue:hover { background: var(--app-status-warning-bg); }
-.card-btn.disconnect { color: #c53030; border-color: #c53030; }
+.card-btn.disconnect { color: var(--app-disconnect-text); border-color: var(--app-disconnect-text); }
 .card-btn.disconnect:hover { background: var(--app-status-danger-bg); }
 </style>

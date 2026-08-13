@@ -5,7 +5,7 @@
  */
 import { defineComponent, h } from 'vue'
 
-function makeIcon(name, d, opts = {}) {
+function makeIcon(name, d, opts: { fill?: string; viewBox?: string; strokeW?: number } = {}) {
   const { fill = 'none', viewBox = '0 0 24 24', strokeW = 1.8 } = opts
   return defineComponent({
     name,
@@ -86,6 +86,9 @@ export const IconMessageCircle = makeIcon('IconMessageCircle',
 export const IconPaperclip = makeIcon('IconPaperclip',
   '<path d="M21.4 11.6 12 21a5.2 5.2 0 0 1-7.4-7.4l10.1-10.1a3.5 3.5 0 0 1 4.9 4.9L9.5 18.5a1.8 1.8 0 0 1-2.6-2.6l9.4-9.4"/>')
 
+export const IconImage = makeIcon('IconImage',
+  '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>')
+
 // ─── 报告 ───
 export const IconBarChart = makeIcon('IconBarChart',
   '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>')
@@ -147,6 +150,10 @@ export const IconUser = makeIcon('IconUser',
 export const IconLock = makeIcon('IconLock',
   '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M12 11V7a4 4 0 0 0-4-4v0a4 4 0 0 0-4 4v4"/>',
   { strokeW: 1.8 })
+
+export const IconMail = makeIcon('IconMail',
+  '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 4-10 8L2 4"/>',
+  { strokeW: 2 })
 
 // ─── 导航 & 发送 ───
 export const IconArrowLeft = makeIcon('IconArrowLeft',

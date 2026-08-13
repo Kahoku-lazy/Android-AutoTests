@@ -324,7 +324,7 @@ def move_directory(dir_id: int, parent_id: int | None) -> tuple[bool, Any]:
         except WorkflowDirectory.DoesNotExist:
             return False, "目标目录不存在"
         # 禁止移入子孙
-        cur = parent
+        cur: WorkflowDirectory | None = parent
         while cur:
             if cur.id == dir_id:
                 return False, "不能将目录移入其子目录"

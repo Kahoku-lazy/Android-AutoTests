@@ -1,4 +1,4 @@
-/** Agent CRUD + Tasks API — TypeScript */
+/** Agent CRUD API — TypeScript */
 import djangoClient from '@/shared/api-client'
 import type {
   AgentListResponse,
@@ -6,7 +6,6 @@ import type {
   AgentOpResponse,
   AgentTestResponse,
   AgentHealthResponse,
-  TaskListResponse,
 } from '@/shared/types/ai'
 
 /** 获取所有 Agent 列表 */
@@ -46,7 +45,7 @@ export async function getAgentDetail(agentId: number): Promise<AgentDetailRespon
 }
 
 /** 检测可用模型 */
-export async function detectModels(payload: object): Promise<{ ok: boolean; models?: string[]; error?: string }> {
+export async function detectModels(payload: object): Promise<{ status: boolean; models?: string[]; message?: string }> {
   const { data } = await djangoClient.post('/ai/models/detect', payload)
   return data
 }
@@ -57,9 +56,11 @@ export async function uploadAvatar(formData: FormData): Promise<AgentOpResponse>
   return data
 }
 
-/** 上传文件（PRD/需求文档等） */
+/** 上传文件 / 图片（multipart；勿带默认 application/json） */
 export async function uploadFile(formData: FormData): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>('/ai/upload-file', formData)
+  const { data } = await djangoClient.post<AgentOpResponse>('/ai/upload-file', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
   return data
 }
 
@@ -70,8 +71,3 @@ export async function saveAgent(isNew: boolean, agentId: number | null, payload:
   return data
 }
 
-/** 获取 AI 任务列表 */
-export async function listTasks(params: Record<string, string> = {}): Promise<TaskListResponse> {
-  const { data } = await djangoClient.get<TaskListResponse>('/ai/tasks', { params })
-  return data
-}

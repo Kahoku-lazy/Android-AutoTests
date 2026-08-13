@@ -14,7 +14,7 @@
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import * as echarts from 'echarts';
 
-export function useECharts(buildOption, watchSource, opts = {}) {
+export function useECharts(buildOption, watchSource, opts: { group?: string; devicePixelRatio?: number } = {}) {
   const container = ref(null);
   let instance = null;
   let resizeObserver = null;

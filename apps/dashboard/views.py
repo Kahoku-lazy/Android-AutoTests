@@ -11,8 +11,10 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.ai_assistant.models import AIAgent
+from apps.ai_assistant.permissions import filter_agents_for_user
 from apps.case_manager.models import ApiTestCase, StorageTestCase, TestDefinition
 from apps.case_manager.models_web import WebTestCase
+from apps.case_manager.views_helpers import resolve_username as _resolve_username
 from apps.device_pool.models import Device
 from apps.element_locator.models import ApiEndpoint, Element, Page, WebElement
 from apps.report_generator.models import Report
@@ -22,7 +24,7 @@ from apps.workflow.models import WorkflowDocument
 logger = logging.getLogger(__name__)
 
 
-def _safe_count(queryset_or_model, filter_kwargs=None):
+def _safe_count(queryset_or_model, filter_kwargs=None, q_filter=None):
     """Safely count records, returning 0 if the table doesn't exist yet."""
     try:
         qs = (
@@ -32,10 +34,24 @@ def _safe_count(queryset_or_model, filter_kwargs=None):
         )
         if filter_kwargs:
             qs = qs.filter(**filter_kwargs)
+        if q_filter:
+            qs = qs.filter(q_filter)
         return qs.count()
     except (OperationalError, ProgrammingError) as e:
         logger.debug("Safe count fallback for %s: %s", str(queryset_or_model)[:80], e)
         return 0
+
+
+def _visibility_q(user_id):
+    """Build a Q object for case visibility filtering, matching handle_get_definitions."""
+    current_user = _resolve_username(user_id)
+    q = Q(visibility="public")
+    if current_user:
+        q |= Q(created_by=current_user)
+        q |= Q(visibility="restricted") & Q(permitted_users__contains=f'"{current_user}"')
+    else:
+        q |= Q(created_by="")
+    return q
 
 
 def _safe_pct(part, total):
@@ -82,32 +98,33 @@ def _device_dashboard_stats():
     return online, total
 
 
-def _cases_breakdown():
-    """Return per-type case breakdown for the dashboard."""
+def _cases_breakdown(user_id=None):
+    """Return per-type case breakdown for the dashboard, with visibility filtering."""
+    vq = _visibility_q(user_id)
     return [
         {
             "type": "ui_automation",
             "label": "Android",
-            "total": TestDefinition.objects.count(),
-            "enabled": TestDefinition.objects.filter(enabled=True).count(),
+            "total": TestDefinition.objects.filter(vq).count(),
+            "enabled": TestDefinition.objects.filter(vq, enabled=True).count(),
         },
         {
             "type": "web_automation",
             "label": "Web",
-            "total": _safe_count(WebTestCase),
-            "enabled": _safe_count(WebTestCase, {"enabled": True}),
+            "total": _safe_count(WebTestCase, q_filter=vq),
+            "enabled": _safe_count(WebTestCase, {"enabled": True}, q_filter=vq),
         },
         {
             "type": "api_testing",
             "label": "API",
-            "total": _safe_count(ApiTestCase),
-            "enabled": _safe_count(ApiTestCase, {"enabled": True}),
+            "total": _safe_count(ApiTestCase, q_filter=vq),
+            "enabled": _safe_count(ApiTestCase, {"enabled": True}, q_filter=vq),
         },
         {
             "type": "storage",
             "label": "功能业务",
-            "total": _safe_count(StorageTestCase),
-            "enabled": _safe_count(StorageTestCase, {"enabled": True}),
+            "total": _safe_count(StorageTestCase, q_filter=vq),
+            "enabled": _safe_count(StorageTestCase, {"enabled": True}, q_filter=vq),
         },
     ]
 
@@ -240,23 +257,28 @@ def _recent_tasks(limit=8):
 @csrf_exempt
 def dashboard_stats(request):
     """GET /api/dashboard/stats/ — platform-level statistics."""
+    user_id = getattr(request, "user_id", None)
+    vq = _visibility_q(user_id)
+
     device_online, device_total = _device_dashboard_stats()
     case_total = (
-        TestDefinition.objects.count()
-        + _safe_count(StorageTestCase)
-        + _safe_count(ApiTestCase)
-        + _safe_count(WebTestCase)
+        TestDefinition.objects.filter(vq).count()
+        + _safe_count(StorageTestCase, q_filter=vq)
+        + _safe_count(ApiTestCase, q_filter=vq)
+        + _safe_count(WebTestCase, q_filter=vq)
     )
     case_enabled = (
-        TestDefinition.objects.filter(enabled=True).count()
-        + _safe_count(StorageTestCase, {"enabled": True})
-        + _safe_count(ApiTestCase, {"enabled": True})
-        + _safe_count(WebTestCase, {"enabled": True})
+        TestDefinition.objects.filter(vq, enabled=True).count()
+        + _safe_count(StorageTestCase, {"enabled": True}, q_filter=vq)
+        + _safe_count(ApiTestCase, {"enabled": True}, q_filter=vq)
+        + _safe_count(WebTestCase, {"enabled": True}, q_filter=vq)
     )
     run_total = TestRunRecord.objects.count()
     run_active = TestRunRecord.objects.filter(status="RUNNING").count()
-    agent_total = AIAgent.objects.count()
-    agent_active = AIAgent.objects.filter(status="active").count()
+    agent_total = filter_agents_for_user(AIAgent.objects.all(), user_id).count()
+    agent_active = (
+        filter_agents_for_user(AIAgent.objects.all(), user_id).filter(status="active").count()
+    )
 
     # Pass rate from test results (field is 'result', not 'status')
     result_total = TestResult.objects.count()
@@ -287,10 +309,10 @@ def dashboard_stats(request):
     # Trends — this week's new items
     week_ago = timezone.now() - timedelta(days=7)
     case_trend_num = (
-        TestDefinition.objects.filter(created_at__gte=week_ago).count()
-        + _safe_count(StorageTestCase, {"created_at__gte": week_ago})
-        + _safe_count(ApiTestCase, {"created_at__gte": week_ago})
-        + _safe_count(WebTestCase, {"created_at__gte": week_ago})
+        TestDefinition.objects.filter(vq, created_at__gte=week_ago).count()
+        + _safe_count(StorageTestCase, {"created_at__gte": week_ago}, q_filter=vq)
+        + _safe_count(ApiTestCase, {"created_at__gte": week_ago}, q_filter=vq)
+        + _safe_count(WebTestCase, {"created_at__gte": week_ago}, q_filter=vq)
     )
     # Device activity = runs this week
     device_trend_num = TestResult.objects.filter(created_at__gte=week_ago).count()
@@ -321,7 +343,7 @@ def dashboard_stats(request):
                     "total": case_total,
                     "enabled": case_enabled,
                     "trend": case_trend_num,
-                    "breakdown": _cases_breakdown(),
+                    "breakdown": _cases_breakdown(user_id),
                 },
                 "elements": {
                     "total": element_total,
@@ -382,7 +404,8 @@ def dashboard_activities(request):
         )
 
     # Recent agents
-    for agent in AIAgent.objects.order_by("-updated_at")[:3]:
+    user_id = getattr(request, "user_id", None)
+    for agent in filter_agents_for_user(AIAgent.objects.all(), user_id).order_by("-updated_at")[:3]:
         items.append(
             {
                 "type": "agent",
@@ -417,25 +440,27 @@ def device_stats(request):
 @csrf_exempt
 def case_stats(request):
     """GET /api/cases/stats/ — test case summary."""
+    user_id = getattr(request, "user_id", None)
+    vq = _visibility_q(user_id)
     return JsonResponse(
         {
             "status": True,
             "data": {
-                "total": TestDefinition.objects.count()
-                + _safe_count(StorageTestCase)
-                + _safe_count(ApiTestCase)
-                + _safe_count(WebTestCase),
+                "total": TestDefinition.objects.filter(vq).count()
+                + _safe_count(StorageTestCase, q_filter=vq)
+                + _safe_count(ApiTestCase, q_filter=vq)
+                + _safe_count(WebTestCase, q_filter=vq),
                 "enabled": (
-                    TestDefinition.objects.filter(enabled=True).count()
-                    + _safe_count(StorageTestCase, {"enabled": True})
-                    + _safe_count(ApiTestCase, {"enabled": True})
-                    + _safe_count(WebTestCase, {"enabled": True})
+                    TestDefinition.objects.filter(vq, enabled=True).count()
+                    + _safe_count(StorageTestCase, {"enabled": True}, q_filter=vq)
+                    + _safe_count(ApiTestCase, {"enabled": True}, q_filter=vq)
+                    + _safe_count(WebTestCase, {"enabled": True}, q_filter=vq)
                 ),
                 "disabled": (
-                    TestDefinition.objects.filter(enabled=False).count()
-                    + _safe_count(StorageTestCase, {"enabled": False})
-                    + _safe_count(ApiTestCase, {"enabled": False})
-                    + _safe_count(WebTestCase, {"enabled": False})
+                    TestDefinition.objects.filter(vq, enabled=False).count()
+                    + _safe_count(StorageTestCase, {"enabled": False}, q_filter=vq)
+                    + _safe_count(ApiTestCase, {"enabled": False}, q_filter=vq)
+                    + _safe_count(WebTestCase, {"enabled": False}, q_filter=vq)
                 ),
             },
         }

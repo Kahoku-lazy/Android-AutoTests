@@ -748,11 +748,11 @@ def _load_step_details_for_report(tc) -> list:
         if not tc.run_id:
             return []
         results = TestResult.objects.filter(run_id=tc.run_id).order_by("iteration")
-        all_steps = []
+        all_steps: list[dict] = []
         for tr in results:
             for d in tr.step_details or []:
                 d.setdefault("caseId", tr.case_id)
-                d.setdefault("caseTitle", _resolve_case_title(tc, tr.case_id))
+                d.setdefault("caseTitle", _resolve_case_title(tc, tr.case_id or ""))
                 d.setdefault("_date", str(tr.created_at)[:19] if tr.created_at else "")
             all_steps.extend(tr.step_details or [])
         return all_steps

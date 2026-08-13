@@ -26,11 +26,6 @@ from .views import (
     list_conversations,
     list_messages,
     list_shared_tools,
-    login,
-    logout,
-    me,
-    refresh_token,
-    register,
     rename_conversation,
     reveal_api_key,
     save_message,
@@ -56,12 +51,6 @@ from .views.tool_views import (
 app_name = "ai"
 
 urlpatterns = [
-    # Auth
-    path("auth/login", login, name="auth_login"),
-    path("auth/register", register, name="auth_register"),
-    path("auth/refresh", refresh_token, name="auth_refresh"),
-    path("auth/logout", logout, name="auth_logout"),
-    path("auth/me", me, name="auth_me"),
     # Agents
     path("agents", list_agents, name="agents_list"),
     path("agents/create", create_agent, name="agent_create"),

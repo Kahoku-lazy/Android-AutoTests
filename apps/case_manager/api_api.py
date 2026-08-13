@@ -10,9 +10,13 @@ __all__ = [
 import json
 import logging
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
 from .api_ui import ConflictError, _parse_datetime
 from .models import CaseDirectory
 from .models_api import ApiTestCase
+from .schema_config import validate_any_api_config
 
 logger = logging.getLogger(__name__)
 
@@ -30,11 +34,29 @@ def get_api_definition(case_id):
         return None
 
 
-def save_api_definition(case_id, **fields):
+def save_api_definition(case_id, config_json=None, **fields):
     """Create or update an API test case.
 
-    Raises ValueError on duplicate title, ConflictError on optimistic lock failure.
+    Args:
+        case_id: API test case ID (auto-generated if new).
+        config_json: Unified JSON config (case_info/steps/test_data/validation).
+            Validated via jsonschema before save.
+        **fields: Metadata fields (title, category, priority, visibility, etc.).
+
+    Raises ValueError on duplicate title / invalid config_json,
+    ConflictError on optimistic lock failure.
     """
+    # ── Validate config_json (auto-detect single/multi format) ──
+    if config_json is not None:
+        validate_any_api_config(config_json)
+        # Sync denormalized title from config_json
+        from .schema_config import is_single_format
+
+        if is_single_format(config_json):
+            fields.setdefault("title", config_json["meta"]["title"])
+        else:
+            fields.setdefault("title", config_json["case_info"]["title"])
+
     client_updated_at = fields.pop("client_updated_at", None)
     directory_id = fields.get("directory_id")
     directory = None
@@ -72,24 +94,33 @@ def save_api_definition(case_id, **fields):
         "directory": directory,
         "priority": fields.get("priority", "P1"),
         "precondition": fields.get("precondition", ""),
-        "method": fields.get("method", "GET"),
-        "url": fields.get("url", ""),
-        "headers": fields.get("headers", ""),
-        "body": fields.get("body", ""),
-        "expected_response": fields.get("expected_response", ""),
-        "custom_columns": fields.get("custom_columns", []),
-        "rows": fields.get("rows", []),
-        "design_method": fields.get("design_method", ""),
-        "metrics": fields.get("metrics", ""),
         "visibility": fields.get("visibility", "public"),
         "permission": fields.get("permission", "edit"),
         "case_type": "api_testing",
     }
+    # 只在显式传入 config_json 时才更新，避免覆盖已有配置
+    if config_json is not None:
+        defaults["config_json"] = config_json
     if "permitted_users" in fields:
         defaults["permitted_users"] = json.dumps(fields["permitted_users"], ensure_ascii=False)
     if "permitted_editors" in fields:
         defaults["permitted_editors"] = json.dumps(fields["permitted_editors"], ensure_ascii=False)
     obj, _ = ApiTestCase.objects.update_or_create(id=case_id, defaults=defaults)
+
+    # ── WebSocket push: notify editors that case was updated ──
+    try:
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                f"case_editing_{case_id}",
+                {
+                    "type": "case_updated",
+                    "message": '{"type":"case_updated","case_id":"%s"}' % case_id,
+                },
+            )
+    except Exception:
+        logger.debug("WebSocket push skipped (channel layer unavailable)", exc_info=True)
+
     return obj
 
 

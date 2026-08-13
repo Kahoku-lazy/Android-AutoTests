@@ -12,6 +12,7 @@ from .api_directories import (
     delete_directory,
     get_directory_tree,
     update_directory,
+    update_directory_permission,
 )
 from .models import CaseDirectory
 from .views_helpers import resolve_username as _resolve_username
@@ -129,7 +130,11 @@ def directory_permission(request, dir_id):
     except json.JSONDecodeError:
         body = {}
 
-    d.allow_create = body.get("allow_create", True)
-    d.allow_delete = body.get("allow_delete", False)
-    d.save(update_fields=["allow_create", "allow_delete"])
+    ok, result = update_directory_permission(
+        dir_id,
+        allow_create=body.get("allow_create", True),
+        allow_delete=body.get("allow_delete", False),
+    )
+    if not ok:
+        return JsonResponse({"status": False, "message": result}, status=400)
     return JsonResponse({"status": True})

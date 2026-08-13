@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useRoute } from "vue-router";
 import AppTabs from "@/shared/components/AppTabs.vue";
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
 import DirectoryTree from "./components/DirectoryTree.vue";
@@ -10,9 +11,20 @@ import WebCaseList from "./components/web/WebCaseList.vue";
 import { fetchDirectories } from "./api/directories";
 import ErrorState from "@/shared/components/patterns/ErrorState.vue";
 
+const route = useRoute();
+
 // ── TAB state ──
 const TAB_STORAGE_KEY = "case-manager-active-tab";
-const activeTab = ref(localStorage.getItem(TAB_STORAGE_KEY) || "ui");
+const VALID_TABS = ["ui", "web", "storage", "api"];
+function resolveInitialTab() {
+  const q = route.query.tab;
+  if (typeof q === "string" && VALID_TABS.includes(q)) return q;
+  const saved = localStorage.getItem(TAB_STORAGE_KEY);
+  if (saved && VALID_TABS.includes(saved)) return saved;
+  return "ui";
+}
+const activeTab = ref(resolveInitialTab());
+localStorage.setItem(TAB_STORAGE_KEY, activeTab.value);
 const error = ref("");
 const tabs = [
   { key: "ui", label: "📱 Android UI 自动化用例" },
@@ -72,9 +84,30 @@ async function loadTree() {
   }
 }
 
+/** 在目录树中查找用例节点的父目录（孤儿用例返回 null） */
+function findParentDirectory(nodes, caseNodeId, parentDir = null) {
+  for (const node of nodes) {
+    if (String(node.id) === String(caseNodeId)) return parentDir;
+    if (node.children?.length) {
+      const nextParent = node.node_type === "directory" ? node : parentDir;
+      const found = findParentDirectory(node.children, caseNodeId, nextParent);
+      if (found !== undefined) return found;
+    }
+  }
+  return undefined;
+}
+
 function handleDirSelect(node) {
   if (node.node_type === "case") {
     activeCaseId.value = node.case_id;
+    const parentDir = findParentDirectory(currentTree.value, node.id);
+    if (parentDir) {
+      activeDirectoryId.value = parentDir.id;
+      activeDirName.value = parentDir.name;
+    } else {
+      activeDirectoryId.value = null;
+      activeDirName.value = "";
+    }
     return;
   }
   if (node.node_type === "directory") {
@@ -82,6 +115,20 @@ function handleDirSelect(node) {
     activeDirName.value = node.name;
     activeCaseId.value = null;
   }
+}
+
+function handleClearCase() {
+  activeCaseId.value = null;
+}
+
+function handleSelectCase(id) {
+  activeCaseId.value = id;
+}
+
+function handleGoAll() {
+  activeCaseId.value = null;
+  activeDirectoryId.value = null;
+  activeDirName.value = "";
 }
 
 function handleTreeRefresh() {
@@ -174,8 +221,11 @@ onUnmounted(() => {
               :tree-data="currentTree"
               :active-directory-id="activeDirectoryId"
               :active-dir-name="activeDirName"
-              :active-case-id="activeCaseId"
+              :active-case-id="tab.key === activeTab ? activeCaseId : null"
               @refresh-tree="handleTreeRefresh"
+              @clear-case="handleClearCase"
+              @select-case="handleSelectCase"
+              @go-all="handleGoAll"
             />
           </main>
         </div>
@@ -190,16 +240,16 @@ onUnmounted(() => {
 .case-tabs :deep(.el-tabs__header){margin:0 0 12px;width:100%}
 .case-tabs :deep(.el-tabs__nav-wrap),.case-tabs :deep(.el-tabs__nav-scroll){width:100%}
 .case-tabs :deep(.el-tabs__nav){display:flex;width:100%;border:none!important;gap:4px}
-.case-tabs :deep(.el-tabs__item){flex:1;justify-content:center;text-align:center;height:38px;padding:0 10px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:#999;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.case-tabs :deep(.el-tabs__item){flex:1;justify-content:center;text-align:center;height:38px;padding:0 10px;font-size:var(--app-size-xs);font-weight:700;border-radius:var(--app-radius-sm);border:2px solid transparent;color:var(--app-text-secondary);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .case-tabs :deep(.el-tabs__item:hover){color:var(--ink)}
-.case-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:#fff;border-color:var(--ink)}
+.case-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--app-bg-card);border-color:var(--ink)}
 .case-tabs :deep(.el-tabs__active-bar){display:none}
 .case-tabs :deep(.el-tabs__content){flex:1;min-height:0}
 .case-tabs :deep(.el-tab-pane){height:100%}
 .case-layout{display:flex;flex-direction:row;height:100%;overflow:hidden;gap:0;padding:0;max-width:none}
 .case-layout--resizing{pointer-events:none}
 .case-sidebar{flex-shrink:0;overflow-y:auto;padding:8px 8px 8px 0;border-right:2px solid var(--ink)}
-.case-sidebar-resizer{width:4px;cursor:col-resize;background:transparent;transition:background 0.2s;flex-shrink:0}
+.case-sidebar-resizer{width:4px;cursor:col-resize;background:transparent;transition:background var(--app-duration-slow);flex-shrink:0}
 .case-sidebar-resizer:hover,.case-sidebar-resizer.is-dragging{background:var(--c-case)}
 .case-main{flex:1;overflow-y:auto;padding:0 0 0 14px;min-width:0}
 </style>

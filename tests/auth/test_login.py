@@ -1,4 +1,4 @@
-"""登录接口 API 测试 — POST /api/ai/auth/login（数据驱动 + JSON Schema）。
+"""登录接口 API 测试 — POST /api/auth/login（数据驱动 + JSON Schema）。
 
 20 条用例按断言 Shape 分为 3 个参数化组 + 5 个独立函数：
   - test_login_validation[8]   — 400 + 精确/子串错误消息
@@ -272,7 +272,7 @@ def test_login_success(base_url, api_session):
     body = resp.json()
     assert resp.status_code == 200, f"期望 200，实际 {resp.status_code}: {body}"
     jsonschema.validate(instance=body, schema=AUTH_SUCCESS_SCHEMA)
-    assert body["user"]["username"] == "admin"
+    assert body["data"]["user"]["username"] == "admin"
 
 
 @allure.feature("认证模块")

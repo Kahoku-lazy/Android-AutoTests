@@ -20,7 +20,7 @@ export function deleteApiDefinition(id) {
   return client.delete(`/cases/api-testing/definitions/${id}`);
 }
 
-export function batchImportApiDefinitions(cases, options = {}) {
+export function batchImportApiDefinitions(cases, options: Record<string, any> = {}) {
   return client.post("/cases/api-testing/definitions/batch", {
     cases,
     overwrite: options.overwrite || false,

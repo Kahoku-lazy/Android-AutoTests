@@ -1,4 +1,5 @@
 <script setup lang="ts">
+
 import LoginErrorOverlay from '@/views/components/LoginErrorOverlay.vue'
 import { useLoginView } from './LoginView.logic'
 import AccountSwitchPrompt from '@/views/components/AccountSwitchPrompt.vue'
@@ -6,51 +7,59 @@ import LoginCard from '@/views/components/LoginCard.vue'
 import RegisterCard from '@/views/components/RegisterCard.vue'
 
 const {
+  // ── 账号 & 视图状态 ──
   activeAccount,
   viewState,
+  // ── 登录表单 ──
   loginUsername,
   loginPassword,
   rememberMe,
+  loginErrors,
+  canLogin,
+  // ── 注册表单 ──
   regUsername,
   regPassword,
   regPassword2,
   regEmail,
-  loading,
-  loginErrors,
-  canLogin,
   regErrors,
   canRegister,
-  heroImageSrc,
-  heroImageVisible,
+  // ── 认证流程 ──
+  loading,
   serverError,
   clearServerError,
   handleLogin,
   handleRegister,
   switchMode,
+  // ── 账号切换 ──
   onSwitchToExisting,
   onAddNewAccount,
+  // ── 视觉 ──
+  heroImageSrc,
+  heroImageVisible,
   onHeroImageError,
 } = useLoginView()
 </script>
 
 <template>
-  <div class="login-page">
-    <div class="login-page__bg" aria-hidden="true"></div>
+  <div class="login-page" data-testid="login-page">
+    <div class="login-page__bg" aria-hidden="true">
+      <span class="login-page__glow login-page__glow--forest"></span>
+    </div>
 
     <div class="hero">
       <div class="hero__content">
-        <div class="hero__header">
+        <header class="hero__header">
           <div class="hero__title-row">
             <h1 class="hero-title">AI 自动化测试平台</h1>
-            <span class="hero__version">v2.1</span>
+            <span class="hero__version" aria-label="当前版本 v2.1">v2.1</span>
           </div>
           <p class="hero__desc">
             <span class="hero__desc-line">AI 自动化测试平台，让AI来做测试</span>
             <span class="hero__desc-line">让测试工作摆脱重复的劳动，专注于创造价值</span>
           </p>
-        </div>
+        </header>
 
-        <div class="hero__body">
+        <main class="hero__body">
           <LoginErrorOverlay
             :visible="!!serverError"
             :message="serverError"
@@ -93,18 +102,18 @@ const {
             <img
               v-if="heroImageVisible"
               :src="heroImageSrc"
-              alt="AI 自动化测试平台视觉图"
+              alt=""
               class="hero__animal"
               @error="onHeroImageError"
             />
           </div>
-        </div>
+        </main>
       </div>
     </div>
 
-    <div class="login-footer">
+    <footer class="login-footer">
       <span>AI Automated Testing Platform · Django + Vue + Animal Island</span>
-    </div>
+    </footer>
   </div>
 </template>
 

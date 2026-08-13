@@ -20,6 +20,7 @@
     "test:report": "node tests/run.mjs all",
     "test:report:junit": "node tests/run.mjs junit",
     "test:report:json": "node tests/run.mjs json",
+    "test:report:html": "node tests/run.mjs html",
     "test:verbose": "node tests/run.mjs verbose",
     "test:ui": "node tests/run.mjs ui"
   },

@@ -22,6 +22,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { listProjects, scanModules } from './module-scan.mjs'
+import { buildSummary, generateReport, parseReport } from './generate-html-report.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const frontendRoot = join(__dirname, '..')
@@ -75,6 +76,13 @@ function presetsFor(mode) {
       }
       return ['run', `tests/${moduleName}`, ...extraArgs.slice(1)]
     }
+    case 'html':
+      return [
+        'run',
+        '--reporter=json',
+        `--outputFile.json=${join(reportsDir, 'report.json')}`,
+        ...extraArgs,
+      ]
     case 'prio': {
       const prio = extraArgs[0]
       if (!['p0', 'p1'].includes(prio)) {
@@ -105,6 +113,24 @@ const result = spawnSync('npx', ['vitest', ...args], {
 
 if (['junit', 'json', 'all'].includes(mode)) {
   console.log(`\n报告目录: ${reportsDir}`)
+}
+
+if (mode === 'html' && result.status === 0) {
+  const summary = generateReport(
+    join(reportsDir, 'report.json'),
+    join(reportsDir, 'html', 'index.html'),
+  )
+  console.log(`\n模块 ${summary.kpi.modules} 个 · 用例 ${summary.kpi.total} · 通过 ${summary.kpi.passed} · 失败 ${summary.kpi.failed}`)
+  console.log(`HTML 报告: ${join(reportsDir, 'html', 'index.html')}`)
+}
+
+if (mode === 'all' && result.status === 0) {
+  const summary = buildSummary(parseReport(join(reportsDir, 'report.json')))
+  console.log('\n── 按模块汇总 ──')
+  for (const m of summary.modules) {
+    const line = [`${m.name}: P0 ${m.p0.passed}/${m.p0.total}`, `P1 ${m.p1.passed}/${m.p1.total}`, `失败 ${m.p0.failed + m.p1.failed}`]
+    console.log(line.join(' · '))
+  }
 }
 
 process.exit(result.status ?? 1)

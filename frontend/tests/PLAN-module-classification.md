@@ -385,7 +385,7 @@ export function parseReport(jsonPath) {
 
 export function buildSummary(report) {
   const modules = new Map()
-  let unclassified = { files: 0, total: 0, passed: 0, failed: 0 }
+  let unclassified = { files: 0, total: 0, passed: 0, failed: 0, duration: 0 }
 
   for (const file of report.testResults ?? []) {
     const m = MODULE_RE.exec(file.name ?? "")

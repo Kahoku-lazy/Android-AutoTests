@@ -12,6 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .api_api import batch_save_api_definitions
 from .models_api import ApiTestCase
+from .schema_config import validate_any_api_config
 from .views_base import (
     handle_batch_definitions,
     handle_definition_detail,
@@ -175,6 +176,13 @@ def api_testing_definitions_handler(request):
                 "validation": [{"step_index": 0, "enabled": True}],
             }
 
+        # 校验 config_json 结构（空 title/steps/缺 case_info 返回 400）
+        if isinstance(config_json, dict):
+            try:
+                validate_any_api_config(config_json)
+            except ValueError as e:
+                return JsonResponse({"status": False, "message": str(e)}, status=400)
+
         # 兼容新结构 body：id/title 嵌在 config_json.case_info 内
         case_info = (config_json.get("case_info") or {}) if isinstance(config_json, dict) else {}
         if not case_id:
@@ -183,7 +191,7 @@ def api_testing_definitions_handler(request):
             suffix = "".join(random.choices(string.digits, k=4))
             case_id = f"API-{datetime.now().strftime('%Y%m%d')}-{datetime.now().strftime('%H%M%S')}-{suffix}"
 
-        defaults = {
+        fields = {
             "title": data.get("title", "") or case_info.get("title", ""),
             "category": data.get("category", ""),
             "description": data.get("description", ""),
@@ -192,12 +200,12 @@ def api_testing_definitions_handler(request):
             "precondition": data.get("precondition", ""),
             "config_json": config_json,
             "visibility": data.get("visibility", "public"),
-            "permitted_users": json.dumps(data.get("permitted_users", []), ensure_ascii=False),
+            "permitted_users": data.get("permitted_users", []),
             "permission": data.get("permission", "edit"),
-            "permitted_editors": json.dumps(data.get("permitted_editors", []), ensure_ascii=False),
+            "permitted_editors": data.get("permitted_editors", []),
             "case_type": "api_testing",
-            "_directory_id": data.get("directory_id"),
-            "_client_updated_at": data.get("updated_at"),
+            "directory_id": data.get("directory_id"),
+            "client_updated_at": data.get("updated_at"),
         }
 
         return handle_post_definition(
@@ -206,7 +214,7 @@ def api_testing_definitions_handler(request):
             ApiTestCase,
             "api_testing",
             "API 用例",
-            defaults,
+            fields,
         )
 
     return JsonResponse({"status": False, "message": "method not allowed"}, status=405)

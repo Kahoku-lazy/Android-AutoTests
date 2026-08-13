@@ -7,6 +7,7 @@ pre-build these maps via build_page_maps().
 
 from __future__ import annotations
 
+from . import api
 from .models import Page
 
 MAX_PAGE_TREE_DEPTH = 5
@@ -149,7 +150,7 @@ def move_page(
     children_map: dict | None = None,
 ) -> Page:
     validate_move(page_id, new_parent_id, parent_map, children_map)
-    Page.objects.filter(id=page_id).update(parent_id=new_parent_id)
+    api.update_page_parent(page_id, new_parent_id)
     return Page.objects.get(pk=page_id)
 
 

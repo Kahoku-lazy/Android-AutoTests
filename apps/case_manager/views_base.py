@@ -10,13 +10,27 @@ import logging
 from django.db.models import Q
 from django.http import JsonResponse
 
+from .api_api import save_api_definition
 from .api_lock import delete_case
-from .api_ui import _parse_datetime
-from .models import CaseDirectory
+from .api_storage import save_storage_definition
+from .api_ui import ConflictError, save_definition
+from .api_web import save_web_definition
+from .models import CaseDirectory, TestDefinition
+from .models_api import ApiTestCase
+from .models_storage import StorageTestCase
+from .models_web import WebTestCase
 from .views_helpers import resolve_username
 
 logger = logging.getLogger(__name__)
 BATCH_IMPORT_LIMIT = 500
+
+# Model → save_* 分派映射（写操作收敛到 api 层单一写源）
+_SAVE_FN = {
+    TestDefinition: save_definition,
+    ApiTestCase: save_api_definition,
+    StorageTestCase: save_storage_definition,
+    WebTestCase: save_web_definition,
+}
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -51,75 +65,11 @@ def handle_get_definitions(request, Model, serialize_fn):
 # ═══════════════════════════════════════════════════════════════
 
 
-def resolve_directory(data, case_type_label):
-    """Resolve directory_id from POST data to a CaseDirectory instance or None."""
-    directory_id = data.get("directory_id")
-    if directory_id is not None:
-        try:
-            return CaseDirectory.objects.get(id=directory_id)
-        except CaseDirectory.DoesNotExist:
-            logger.warning(
-                "Directory %s not found (case_type=%s), saving without directory",
-                directory_id,
-                case_type_label,
-            )
-    return None
-
-
-def assign_user_fields(defaults, is_new_case, current_user):
-    """Set created_by (new only) and updated_by (always) on the defaults dict."""
-    if is_new_case and current_user:
-        defaults["created_by"] = current_user
-    if current_user:
-        defaults["updated_by"] = current_user
-
-
-def check_duplicate_title(Model, directory, title, case_id, error_label):
-    """Return JsonResponse(409) if duplicate exists, or None."""
-    existing = Model.objects.filter(directory=directory, title=title).exclude(id=case_id).first()
-    if existing:
-        dir_name = directory.name if directory else "根级（未分类）"
-        return JsonResponse(
-            {
-                "status": False,
-                "message": f"目录「{dir_name}」下已存在同名{error_label}「{title}」（ID: {existing.id}）",
-            },
-            status=409,
-        )
-    return None
-
-
-def check_optimistic_lock(Model, case_id, client_updated_at, title, error_label):
-    """Return JsonResponse(409) on version conflict, or None."""
-    if not case_id or not client_updated_at:
-        return None
-    current = Model.objects.filter(id=case_id).only("id", "updated_at").first()
-    if current and current.updated_at:
-        client_ts = _parse_datetime(client_updated_at)
-        db_ts = current.updated_at.replace(microsecond=0)
-        if client_ts and client_ts != db_ts:
-            return JsonResponse(
-                {
-                    "status": False,
-                    "message": f"{error_label}「{title or case_id}」已被他人修改，请刷新后重试",
-                },
-                status=409,
-            )
-    return None
-
-
-def do_update_or_create(Model, case_id, defaults):
-    """Perform update_or_create and return (ok, id, updated_at_str) dict."""
-    Model.objects.update_or_create(id=case_id, defaults=defaults)
-    updated = Model.objects.filter(id=case_id).only("id", "updated_at", "title").first()
-    resp = {"status": True, "id": case_id}
-    if updated and updated.updated_at:
-        resp["updated_at"] = updated.updated_at.strftime("%Y-%m-%d %H:%M:%S")
-    return resp
-
-
-def handle_post_definition(request, case_id, Model, case_type, error_label, defaults):
+def handle_post_definition(request, case_id, Model, case_type, error_label, fields):
     """POST /api/cases/{type}/definitions — shared create/update logic.
+
+    写操作收敛：注入 created_by/updated_by 后按 Model 类型分派调用 save_*，
+    由 api 层统一做乐观锁 + 重复 title 检查 + update_or_create。
 
     Args:
         request: Django request object.
@@ -127,42 +77,28 @@ def handle_post_definition(request, case_id, Model, case_type, error_label, defa
         Model: the ORM model class for this case type.
         case_type: "ui_automation" / "web_automation" / "storage" / "api_testing".
         error_label: "用例" / "Web 用例" / "存储用例" / "API 用例".
-        defaults: dict of all model fields to save. May contain magic keys:
-            _directory_id: resolved to a CaseDirectory instance.
-            _client_updated_at: used for optimistic lock check.
+        fields: dict of raw fields（directory_id / client_updated_at / steps_data /
+            permitted_users list 等），由 save_* 统一构造 defaults。
     """
-    # Resolve directory
-    directory_id = defaults.pop("_directory_id", None)
-    directory = None
-    if directory_id is not None:
-        try:
-            directory = CaseDirectory.objects.get(id=directory_id)
-        except CaseDirectory.DoesNotExist:
-            logger.warning(
-                "Directory %s not found (case_type=%s), saving without directory",
-                directory_id,
-                case_type,
-            )
-    defaults["directory"] = directory
-
     current_user = resolve_username(getattr(request, "user_id", None))
     is_new_case = not Model.objects.filter(id=case_id).exists()
 
-    assign_user_fields(defaults, is_new_case, current_user)
+    if is_new_case and current_user:
+        fields["created_by"] = current_user
+    if current_user:
+        fields["updated_by"] = current_user
 
-    # Duplicate title check
-    title = defaults.get("title", "")
-    err = check_duplicate_title(Model, directory, title, case_id, error_label)
-    if err:
-        return err
+    save_fn = _SAVE_FN[Model]
+    try:
+        obj = save_fn(case_id, **fields)
+    except ConflictError as e:
+        return JsonResponse({"status": False, "message": str(e)}, status=409)
+    except ValueError as e:
+        return JsonResponse({"status": False, "message": str(e)}, status=409)
 
-    # Optimistic lock
-    client_updated_at = defaults.pop("_client_updated_at", None)
-    err = check_optimistic_lock(Model, case_id, client_updated_at, title, error_label)
-    if err:
-        return err
-
-    resp = do_update_or_create(Model, case_id, defaults)
+    resp = {"status": True, "id": case_id}
+    if obj and obj.updated_at:
+        resp["updated_at"] = obj.updated_at.strftime("%Y-%m-%d %H:%M:%S")
     return JsonResponse(resp)
 
 

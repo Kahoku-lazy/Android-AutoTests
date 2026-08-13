@@ -135,12 +135,12 @@ def definitions_handler(request):
         else:
             steps_summary = data.get("steps", "")
 
-        defaults = {
+        fields = {
             "title": data.get("title", ""),
             "category": data.get("category", ""),
             "description": data.get("description", ""),
             "steps": steps_summary,
-            "steps_json": json.dumps(steps_data, ensure_ascii=False),
+            "steps_data": steps_data,
             "enabled": bool(data.get("enabled", True)),
             "package_name": data.get("package_name", ""),
             "priority": data.get("priority", "P1"),
@@ -149,13 +149,13 @@ def definitions_handler(request):
             "expected_result": data.get("expected_result", ""),
             "metrics": data.get("metrics", ""),
             "visibility": data.get("visibility", "public"),
-            "permitted_users": json.dumps(data.get("permitted_users", []), ensure_ascii=False),
+            "permitted_users": data.get("permitted_users", []),
             "permission": data.get("permission", "edit"),
-            "permitted_editors": json.dumps(data.get("permitted_editors", []), ensure_ascii=False),
+            "permitted_editors": data.get("permitted_editors", []),
             "watchers": data.get("watchers", []),
             "case_type": "ui_automation",
-            "_directory_id": data.get("directory_id"),
-            "_client_updated_at": data.get("updated_at"),
+            "directory_id": data.get("directory_id"),
+            "client_updated_at": data.get("updated_at"),
         }
 
         return handle_post_definition(
@@ -164,7 +164,7 @@ def definitions_handler(request):
             TestDefinition,
             "ui_automation",
             "用例",
-            defaults,
+            fields,
         )
 
     return JsonResponse({"status": False, "message": "method not allowed"}, status=405)

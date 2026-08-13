@@ -110,6 +110,7 @@ def save_definition(case_id, **fields):
         "precondition": fields.get("precondition", ""),
         "expected_result": fields.get("expected_result", ""),
         "metrics": fields.get("metrics", ""),
+        "watchers": fields.get("watchers", []),
         "visibility": fields.get("visibility", "public"),
         "permission": fields.get("permission", "edit"),
         "case_type": fields.get("case_type", "ui_automation"),
@@ -118,6 +119,10 @@ def save_definition(case_id, **fields):
         defaults["permitted_users"] = json.dumps(fields["permitted_users"], ensure_ascii=False)
     if "permitted_editors" in fields:
         defaults["permitted_editors"] = json.dumps(fields["permitted_editors"], ensure_ascii=False)
+    if "created_by" in fields:
+        defaults["created_by"] = fields["created_by"]
+    if "updated_by" in fields:
+        defaults["updated_by"] = fields["updated_by"]
     obj, _ = TestDefinition.objects.update_or_create(id=case_id, defaults=defaults)
     return obj
 

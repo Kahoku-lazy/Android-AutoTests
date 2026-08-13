@@ -10,6 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
+from . import api
 from .models import (
     ApiEndpoint,
     ApiGroup,
@@ -46,16 +47,7 @@ class WebGroupViewSet(viewsets.ModelViewSet):
         return Response(WebGroupSerializer(qs, many=True).data)
 
     def perform_destroy(self, instance):
-        # Orphan descendant elements instead of deleting
-        def collect_ids(node):
-            ids = [node.id]
-            for c in node.children.all():
-                ids.extend(collect_ids(c))
-            return ids
-
-        ids = collect_ids(instance)
-        WebElement.objects.filter(group_id__in=ids).update(group=None)
-        instance.delete()
+        api.delete_web_group(instance.id)
 
     @action(detail=False, methods=["post"], url_path="batch-move")
     def batch_move(self, request):
@@ -73,7 +65,7 @@ class WebGroupViewSet(viewsets.ModelViewSet):
             except WebGroup.DoesNotExist:
                 return Response({"message": "目标分组不存在"}, status=400)
 
-        WebGroup.objects.filter(id__in=group_ids).update(parent=parent)
+        api.batch_move_web_groups(group_ids, parent.id if parent else None)
         return Response({"moved": len(group_ids)})
 
 
@@ -136,11 +128,11 @@ class WebElementViewSet(viewsets.ModelViewSet):
                     group = WebGroup.objects.get(id=group_id)
                 except WebGroup.DoesNotExist:
                     continue
-            WebElement.objects.create(
-                name=item.get("name", ""),
-                group=group,
-                locator_type=item.get("locator_type", "css_selector"),
-                locator_value=item.get("locator_value", ""),
+            api.create_web_element(
+                group,
+                item.get("name", ""),
+                item.get("locator_type", "css_selector"),
+                item.get("locator_value", ""),
                 page_url=item.get("page_url", ""),
                 description=item.get("description", ""),
                 is_test_point=item.get("is_test_point", False),
@@ -169,16 +161,7 @@ class ApiGroupViewSet(viewsets.ModelViewSet):
         return Response(ApiGroupSerializer(qs, many=True).data)
 
     def perform_destroy(self, instance):
-        # Orphan descendant endpoints instead of deleting
-        def collect_ids(node):
-            ids = [node.id]
-            for c in node.children.all():
-                ids.extend(collect_ids(c))
-            return ids
-
-        ids = collect_ids(instance)
-        ApiEndpoint.objects.filter(group_id__in=ids).update(group=None)
-        instance.delete()
+        api.delete_api_group(instance.id)
 
     @action(detail=False, methods=["post"], url_path="batch-move")
     def batch_move(self, request):
@@ -195,7 +178,7 @@ class ApiGroupViewSet(viewsets.ModelViewSet):
             except ApiGroup.DoesNotExist:
                 return Response({"message": "目标分组不存在"}, status=400)
 
-        ApiGroup.objects.filter(id__in=group_ids).update(parent=parent)
+        api.batch_move_api_groups(group_ids, parent.id if parent else None)
         return Response({"moved": len(group_ids)})
 
 

@@ -65,6 +65,7 @@ def save_web_definition(case_id, **fields):
         "url": fields.get("url", ""),
         "precondition": fields.get("precondition", ""),
         "steps": fields.get("steps", ""),
+        "steps_json": fields.get("steps_json", "[]"),
         "expected_result": fields.get("expected_result", ""),
         "custom_columns": fields.get("custom_columns", []),
         "rows": fields.get("rows", []),
@@ -78,6 +79,10 @@ def save_web_definition(case_id, **fields):
         defaults["permitted_users"] = json.dumps(fields["permitted_users"], ensure_ascii=False)
     if "permitted_editors" in fields:
         defaults["permitted_editors"] = json.dumps(fields["permitted_editors"], ensure_ascii=False)
+    if "created_by" in fields:
+        defaults["created_by"] = fields["created_by"]
+    if "updated_by" in fields:
+        defaults["updated_by"] = fields["updated_by"]
     obj, _ = WebTestCase.objects.update_or_create(id=case_id, defaults=defaults)
     return obj
 

@@ -10,6 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from apps.device_pool.api import device, ensure_device
 
+from . import api
 from .models import Element, Page, PageFlow
 from .page_tree import (
     MAX_PAGE_TREE_DEPTH,
@@ -84,10 +85,10 @@ def page_detail(request, page_id):
             return JsonResponse(
                 {"status": False, "message": f"同级名称「{new_label}」已存在"}, status=409
             )
-        Page.objects.filter(id=page_id).update(label=new_label)
+        api.rename_page(page_id, new_label)
         return JsonResponse({"status": True})
     elif request.method == "DELETE":
-        Page.objects.filter(id=page_id).delete()
+        api.delete_page(page_id)
         return JsonResponse({"status": True})
     return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
@@ -128,11 +129,11 @@ def create_page(request):
 
     dev_obj = ensure_device(serial=device.current_serial, name="Samsung")
     try:
-        page = Page.objects.create(
-            device=dev_obj,
-            parent_id=parent_id,
-            is_folder=is_folder,
-            label=label,
+        page = api.create_page_manually(
+            dev_obj,
+            parent_id,
+            is_folder,
+            label,
             package=data.get("package", ""),
             activity=data.get("activity", ""),
         )
@@ -239,31 +240,16 @@ def add_element_to_page(request, page_id):
             "notes": data.get("notes", ""),
         }
 
-        existing = Element.objects.filter(
-            page=page,
-            resource_id=fields["resource_id"],
-            bounds=fields["bounds"],
-        ).first()
-        if existing:
-            for k, v in fields.items():
-                setattr(existing, k, v)
-            existing.save()
-            el = existing
-            updated = True
-        else:
-            try:
-                el = Element.objects.create(page=page, **fields)
-                updated = False
-            except IntegrityError:
-                return JsonResponse(
-                    {
-                        "status": False,
-                        "message": "该元素已在当前页面中（相同 resource-id 与位置），请到「元素管理」查看",
-                    },
-                    status=409,
-                )
-            page.element_count = Element.objects.filter(page=page).count()
-            page.save(update_fields=["element_count"])
+        try:
+            el, updated = api.upsert_element(page, fields)
+        except IntegrityError:
+            return JsonResponse(
+                {
+                    "status": False,
+                    "message": "该元素已在当前页面中（相同 resource-id 与位置），请到「元素管理」查看",
+                },
+                status=409,
+            )
 
         return JsonResponse(
             {
@@ -368,47 +354,21 @@ def batch_add_elements(request, page_id):
             }
         )
 
-    # Batch query existing elements in ONE query: collect all (resource_id, bounds) pairs
-    lookup_keys = [
-        (p["resource_id"], p["bounds"]) for p in prepared if p["resource_id"] and p["bounds"]
-    ]
-    existing_map = {}  # (resource_id, bounds) → Element
-    if lookup_keys:
-        # Query in batches to avoid too-large IN clauses, though this is rare
-        from django.db.models import Q
-
-        q_filter = Q()
-        for rid, bnd in lookup_keys:
-            q_filter |= Q(resource_id=rid, bounds=bnd)
-        existing_qs = Element.objects.filter(page=page).filter(q_filter)
-        for el in existing_qs:
-            existing_map[(el.resource_id, el.bounds)] = el
-
-    # Process each element — O(1) lookup instead of per-item DB query
+    # Process each element via api.upsert_element（写操作收敛到 api 层）
     for p in prepared:
         try:
-            key = (p["resource_id"], p["bounds"])
-            existing = existing_map.get(key) if key[0] and key[1] else None
-            if existing:
-                for k, v in p["fields"].items():
-                    setattr(existing, k, v)
-                existing.save()
+            _, was_updated = api.upsert_element(page, p["fields"])
+            if was_updated:
                 updated += 1
             else:
-                try:
-                    Element.objects.create(page=page, **p["fields"])
-                    saved += 1
-                except IntegrityError:
-                    skipped += 1
-                    continue
+                saved += 1
+        except IntegrityError:
+            skipped += 1
+            continue
         except Exception as e:
             errors.append(f"{p['alias']}: {e}")
             skipped += 1
             continue
-
-    # Update page element count
-    page.element_count = Element.objects.filter(page=page).count()
-    page.save(update_fields=["element_count"])
 
     result = {"status": True, "saved": saved, "updated": updated, "skipped": skipped}
     if errors:
@@ -419,9 +379,7 @@ def batch_add_elements(request, page_id):
 @csrf_exempt
 def clear_pages(request):
     """POST /api/elements/pages/clear — Clear all pages/elements/flows."""
-    Element.objects.all().delete()
-    PageFlow.objects.all().delete()
-    Page.objects.all().delete()
+    api.clear_all()
     return JsonResponse({"status": True})
 
 
@@ -483,8 +441,7 @@ def update_element(request, el_id):
             updates[k] = data[k]
     if "is_test_point" in data:
         updates["is_test_point"] = bool(data["is_test_point"])
-    if updates:
-        Element.objects.filter(id=el_id).update(**updates)
+    api.update_element(el_id, updates)
     return JsonResponse({"status": True})
 
 
@@ -517,9 +474,9 @@ def flows_handler(request):
 
     elif request.method == "POST":
         data = json.loads(request.body)
-        PageFlow.objects.create(
-            from_page_id=data["from_page_id"],
-            to_page_id=data["to_page_id"],
+        api.create_flow(
+            data["from_page_id"],
+            data["to_page_id"],
             trigger_element_id=data.get("trigger_element_id"),
             trigger_action=data.get("trigger_action", "click"),
         )
@@ -531,7 +488,7 @@ def flows_handler(request):
 @csrf_exempt
 def delete_flow(request, flow_id):
     """DELETE /api/elements/flows/{flow_id}."""
-    PageFlow.objects.filter(id=flow_id).delete()
+    api.delete_flow(flow_id)
     return JsonResponse({"status": True})
 
 
@@ -616,7 +573,6 @@ def list_web_elements(request):
 @csrf_exempt
 def create_web_element(request):
     """POST /api/elements/web/ — Create a web element."""
-    from .models import WebElement
 
     try:
         data = json.loads(request.body)
@@ -652,11 +608,11 @@ def create_web_element(request):
             except (WebGroup.DoesNotExist, ValueError, TypeError):
                 pass
 
-        el = WebElement.objects.create(
-            group=group,
-            name=name,
-            locator_type=locator_type,
-            locator_value=locator_value,
+        el = api.create_web_element(
+            group,
+            name,
+            locator_type,
+            locator_value,
             page_url=data.get("page_url", ""),
             description=data.get("description", ""),
             tags=data.get("tags", ""),
@@ -684,60 +640,33 @@ def web_element_detail(request, el_id):
         except Exception:
             return JsonResponse({"status": False, "message": "invalid JSON"}, status=400)
 
-        if "name" in data:
-            name = data["name"].strip()
-            if not name:
-                return JsonResponse({"status": False, "message": "名称不能为空"}, status=400)
-            el.name = name
-        if "locator_type" in data:
-            lt = data["locator_type"]
-            if lt not in LOCATOR_TYPE_CHOICES:
-                return JsonResponse({"status": False, "message": f"无效的定位方式"}, status=400)
-            el.locator_type = lt
-        if "locator_value" in data:
-            el.locator_value = data["locator_value"].strip()
-        if "page_url" in data:
-            el.page_url = data["page_url"]
-        if "description" in data:
-            el.description = data["description"]
-        if "tags" in data:
-            el.tags = data["tags"]
-        if "is_test_point" in data:
-            el.is_test_point = bool(data["is_test_point"])
-        if "group_id" in data:
-            gid = data["group_id"]
+        if "name" in data and not data["name"].strip():
+            return JsonResponse({"status": False, "message": "名称不能为空"}, status=400)
+        if "locator_type" in data and data["locator_type"] not in LOCATOR_TYPE_CHOICES:
+            return JsonResponse({"status": False, "message": "无效的定位方式"}, status=400)
+
+        updates = dict(data)
+        if "locator_value" in updates:
+            updates["locator_value"] = updates["locator_value"].strip()
+        if "is_test_point" in updates:
+            updates["is_test_point"] = bool(updates["is_test_point"])
+        if "group_id" in updates:
+            gid = updates.pop("group_id")
             from .models import WebGroup
 
-            if gid is None or gid == "" or gid == "null":
-                el.group = None
+            if gid in (None, "", "null"):
+                updates["group"] = None
             else:
                 try:
-                    el.group = WebGroup.objects.get(id=int(gid))
+                    updates["group"] = WebGroup.objects.get(id=int(gid))
                 except (WebGroup.DoesNotExist, ValueError, TypeError):
-                    pass
+                    updates.pop("group", None)
 
-        el.save(
-            update_fields=[
-                k
-                for k in [
-                    "name",
-                    "locator_type",
-                    "locator_value",
-                    "page_url",
-                    "description",
-                    "tags",
-                    "is_test_point",
-                    "group",
-                    "group_id",
-                ]
-                if k in data
-            ]
-            + ["updated_at"]
-        )
+        el = api.update_web_element(el_id, updates)
         return JsonResponse({"status": True, "element": _web_element_payload(el)})
 
     elif request.method == "DELETE":
-        el.delete()
+        api.delete_web_element(el_id)
         return JsonResponse({"status": True})
 
     return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
@@ -746,7 +675,6 @@ def web_element_detail(request, el_id):
 @csrf_exempt
 def batch_import_web_elements(request):
     """POST /api/elements/web/batch/ — Batch import web elements."""
-    from .models import WebElement
 
     try:
         data = json.loads(request.body)
@@ -772,10 +700,11 @@ def batch_import_web_elements(request):
             skipped += 1
             continue
         try:
-            WebElement.objects.create(
-                name=name,
-                locator_type=lt,
-                locator_value=lv,
+            api.create_web_element(
+                None,
+                name,
+                lt,
+                lv,
                 page_url=item.get("page_url", ""),
                 description=item.get("description", ""),
                 tags=item.get("tags", ""),
@@ -859,8 +788,8 @@ def create_web_group(request):
     is_folder = bool(data.get("is_folder", False))
 
     try:
-        g = WebGroup.objects.create(
-            name=name,
+        g = api.create_web_group(
+            name,
             parent_id=parent_id,
             is_folder=is_folder,
             sort_order=data.get("sort_order", 0),
@@ -874,7 +803,7 @@ def create_web_group(request):
 @csrf_exempt
 def web_group_detail(request, group_id):
     """PUT/DELETE /api/elements/web-groups/{id}/ — Rename or delete a group."""
-    from .models import WebElement, WebGroup
+    from .models import WebGroup
 
     try:
         g = WebGroup.objects.get(id=group_id)
@@ -891,24 +820,13 @@ def web_group_detail(request, group_id):
             name = data["name"].strip()
             if not name:
                 return JsonResponse({"status": False, "message": "名称不能为空"}, status=400)
+            api.rename_web_group(group_id, name)
             g.name = name
 
-        g.save(update_fields=["name"] if "name" in data else [])
         return JsonResponse({"status": True, "group": _web_group_payload(g)})
 
     elif request.method == "DELETE":
-        # Cascade: child groups are deleted by CASCADE FK,
-        # elements in this group and all descendants become unclassified (group=null)
-        _collect_ids = set()
-
-        def _descendant_ids(node_id):
-            _collect_ids.add(node_id)
-            for child in WebGroup.objects.filter(parent_id=node_id):
-                _descendant_ids(child.id)
-
-        _descendant_ids(g.id)
-        WebElement.objects.filter(group_id__in=_collect_ids).update(group=None)
-        g.delete()
+        api.delete_web_group(group_id)
         return JsonResponse({"status": True})
 
     return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
@@ -940,7 +858,7 @@ def batch_move_web_groups(request):
         except WebGroup.DoesNotExist:
             return JsonResponse({"status": False, "message": "目标分组不存在"}, status=404)
 
-    WebGroup.objects.filter(id__in=group_ids).update(parent_id=parent_id)
+    api.batch_move_web_groups(group_ids, parent_id)
     return JsonResponse({"status": True, "moved": len(group_ids)})
 
 
@@ -1013,9 +931,9 @@ def web_flows_handler(request):
             except WebElement.DoesNotExist:
                 return JsonResponse({"status": False, "message": "触发元素不存在"}, status=400)
 
-        WebPageFlow.objects.create(
-            from_group=from_g,
-            to_group=to_g,
+        api.create_web_page_flow(
+            from_g,
+            to_g,
             trigger_element_id=trigger_id,
             trigger_action=data.get("trigger_action", "click"),
         )
@@ -1027,9 +945,8 @@ def web_flows_handler(request):
 @csrf_exempt
 def delete_web_flow(request, flow_id):
     """DELETE /api/elements/web-flows/{id}/."""
-    from .models import WebPageFlow
 
-    WebPageFlow.objects.filter(id=flow_id).delete()
+    api.delete_web_page_flow(flow_id)
     return JsonResponse({"status": True})
 
 
@@ -1100,8 +1017,8 @@ def create_api_group(request):
     is_folder = bool(data.get("is_folder", False))
 
     try:
-        g = ApiGroup.objects.create(
-            name=name,
+        g = api.create_api_group(
+            name,
             parent_id=parent_id,
             is_folder=is_folder,
             sort_order=data.get("sort_order", 0),
@@ -1115,7 +1032,7 @@ def create_api_group(request):
 @csrf_exempt
 def api_group_detail(request, group_id):
     """PUT/DELETE /api/elements/api-groups/{id}/ — Rename or delete a group."""
-    from .models import ApiEndpoint, ApiGroup
+    from .models import ApiGroup
 
     try:
         g = ApiGroup.objects.get(id=group_id)
@@ -1132,24 +1049,13 @@ def api_group_detail(request, group_id):
             name = data["name"].strip()
             if not name:
                 return JsonResponse({"status": False, "message": "名称不能为空"}, status=400)
+            api.rename_api_group(group_id, name)
             g.name = name
 
-        g.save(update_fields=["name"] if "name" in data else [])
         return JsonResponse({"status": True, "group": _api_group_payload(g)})
 
     elif request.method == "DELETE":
-        # Cascade: child groups are deleted by CASCADE FK,
-        # endpoints in this group and all descendants become unclassified (group=null)
-        _collect_ids = set()
-
-        def _descendant_ids(node_id):
-            _collect_ids.add(node_id)
-            for child in ApiGroup.objects.filter(parent_id=node_id):
-                _descendant_ids(child.id)
-
-        _descendant_ids(g.id)
-        ApiEndpoint.objects.filter(group_id__in=_collect_ids).update(group=None)
-        g.delete()
+        api.delete_api_group(group_id)
         return JsonResponse({"status": True})
 
     return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
@@ -1181,7 +1087,7 @@ def batch_move_api_groups(request):
         except ApiGroup.DoesNotExist:
             return JsonResponse({"status": False, "message": "目标分组不存在"}, status=404)
 
-    ApiGroup.objects.filter(id__in=group_ids).update(parent_id=parent_id)
+    api.batch_move_api_groups(group_ids, parent_id)
     return JsonResponse({"status": True, "moved": len(group_ids)})
 
 
@@ -1250,7 +1156,6 @@ def list_api_endpoints(request):
 @csrf_exempt
 def create_api_endpoint(request):
     """POST /api/elements/api-endpoints/ — Create API endpoint."""
-    from .models import ApiEndpoint
 
     try:
         data = json.loads(request.body)
@@ -1278,11 +1183,11 @@ def create_api_endpoint(request):
             except (ApiGroup.DoesNotExist, ValueError, TypeError):
                 pass
 
-        el = ApiEndpoint.objects.create(
-            group=group,
-            name=name,
-            method=method,
-            url=url,
+        el = api.create_api_endpoint(
+            group,
+            name,
+            method,
+            url,
             headers=data.get("headers") or {},
             request_body_schema=data.get("request_body_schema") or {},
             response_body_schema=data.get("response_body_schema") or {},
@@ -1311,35 +1216,25 @@ def api_endpoint_detail(request, el_id):
         except Exception:
             return JsonResponse({"status": False, "message": "invalid JSON"}, status=400)
 
-        for field in [
-            "name",
-            "method",
-            "url",
-            "headers",
-            "request_body_schema",
-            "response_body_schema",
-            "description",
-            "tags",
-        ]:
-            if field in data:
-                setattr(e, field, data[field])
-        if "is_test_point" in data:
-            e.is_test_point = bool(data["is_test_point"])
-        if "group_id" in data:
-            gid = data["group_id"]
-            if gid is None or gid == "" or gid == "null":
-                e.group = None
+        updates = dict(data)
+        if "is_test_point" in updates:
+            updates["is_test_point"] = bool(updates["is_test_point"])
+        if "group_id" in updates:
+            gid = updates.pop("group_id")
+            if gid in (None, "", "null"):
+                updates["group"] = None
             else:
                 from .models import ApiGroup
 
                 try:
-                    e.group = ApiGroup.objects.get(id=int(gid))
+                    updates["group"] = ApiGroup.objects.get(id=int(gid))
                 except (ApiGroup.DoesNotExist, ValueError, TypeError):
-                    pass
-        e.save()
+                    updates.pop("group", None)
+
+        e = api.update_api_endpoint(el_id, updates)
         return JsonResponse({"status": True, "endpoint": _api_endpoint_payload(e)})
 
     elif request.method == "DELETE":
-        e.delete()
+        api.delete_api_endpoint(el_id)
         return JsonResponse({"status": True})
     return JsonResponse({"status": False, "message": "method not allowed"}, status=405)

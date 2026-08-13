@@ -19,6 +19,7 @@ from rest_framework.exceptions import NotFound, PermissionDenied, ValidationErro
 from rest_framework.response import Response
 
 from . import api_directories
+from .api_api import save_api_definition
 from .api_lock import (
     acquire_edit_lock,
     delete_case,
@@ -26,6 +27,9 @@ from .api_lock import (
     set_case_lock,
     set_case_visibility,
 )
+from .api_storage import save_storage_definition
+from .api_ui import ConflictError, save_definition
+from .api_web import save_web_definition
 from .models import CaseDirectory, TestDefinition
 from .models_api import ApiTestCase
 from .models_storage import StorageTestCase
@@ -37,6 +41,14 @@ from .serializers import (
     TestDefinitionSerializer,
     WebTestCaseSerializer,
 )
+
+# Model → save_* 分派映射（写操作收敛到 api 层单一写源）
+_SAVE_FN = {
+    TestDefinition: save_definition,
+    ApiTestCase: save_api_definition,
+    StorageTestCase: save_storage_definition,
+    WebTestCase: save_web_definition,
+}
 
 # ── Helpers ──
 
@@ -117,24 +129,24 @@ class BaseCaseViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         model = self.get_model()
         user = _user_id(self.request)
-        data = serializer.validated_data
+        data = dict(serializer.validated_data)
 
         new_id = _make_id(self.id_prefix)
-        directory = data.get("directory")
-        title = data.get("title", "")
-        if directory and title:
-            existing = model.objects.filter(directory=directory, title=title).first()
-            if existing:
-                raise ValidationError({"title": f"目录下已存在「{title}」"})
 
-        extra = self._prepare_extra_fields(data)
-        instance = model.objects.create(
-            id=new_id,
-            created_by=user,
-            updated_by=user,
-            **{k: v for k, v in data.items() if k not in extra},
-            **extra,
-        )
+        # directory 对象 → directory_id；steps_data_write → steps_data（save_* 统一处理）
+        directory = data.pop("directory", None)
+        if directory is not None:
+            data["directory_id"] = directory.id
+        if "steps_data_write" in data:
+            data["steps_data"] = data.pop("steps_data_write")
+        data["created_by"] = user
+        data["updated_by"] = user
+
+        try:
+            instance = _SAVE_FN[model](new_id, **data)
+        except (ConflictError, ValueError) as e:
+            raise ValidationError({"detail": str(e)})
+
         serializer.instance = instance
 
     def perform_update(self, serializer):
@@ -197,34 +209,25 @@ class BaseCaseViewSet(viewsets.ModelViewSet):
             if not title:
                 errors.append({"item": item, "error": "标题不能为空"})
                 continue
-            directory_id = item.get("directory_id")
-            directory = None
-            if directory_id:
-                try:
-                    directory = CaseDirectory.objects.get(id=directory_id)
-                except CaseDirectory.DoesNotExist:
-                    errors.append({"item": item, "error": f"目录不存在: {directory_id}"})
-                    continue
-
-            defaults = {
+            fields = {
                 "title": title,
                 "category": item.get("category", ""),
                 "priority": item.get("priority", "P1"),
                 "enabled": item.get("enabled", True),
+                "created_by": user,
                 "updated_by": user,
+                "directory_id": item.get("directory_id"),
             }
-            if hasattr(model, "steps_json") and "steps_data" in item:
-                defaults["steps_json"] = json.dumps(item["steps_data"], ensure_ascii=False)
-            if hasattr(model, "config_json") and "config_json" in item:
-                defaults["config_json"] = item["config_json"]
-            if hasattr(model, "url") and "url" in item:
-                defaults["url"] = item.get("url", "")
+            if "steps_data" in item:
+                fields["steps_data"] = item["steps_data"]
+            if "config_json" in item:
+                fields["config_json"] = item["config_json"]
+            if "url" in item:
+                fields["url"] = item.get("url", "")
 
+            is_new = not model.objects.filter(id=item_id).exists()
             try:
-                obj, is_new = model.objects.update_or_create(
-                    id=item_id,
-                    defaults={**defaults, "directory": directory, "created_by": user},
-                )
+                _SAVE_FN[model](item_id, **fields)
                 if is_new:
                     created += 1
                 else:

@@ -101,7 +101,7 @@ def storage_definitions_handler(request):
             suffix = "".join(random.choices(string.digits, k=4))
             case_id = f"ST-{datetime.now().strftime('%Y%m%d')}-{datetime.now().strftime('%H%M%S')}-{suffix}"
 
-        defaults = {
+        fields = {
             "title": data.get("title", ""),
             "category": data.get("category", ""),
             "description": data.get("description", ""),
@@ -115,12 +115,12 @@ def storage_definitions_handler(request):
             "design_method": data.get("design_method", ""),
             "metrics": data.get("metrics", ""),
             "visibility": data.get("visibility", "public"),
-            "permitted_users": json.dumps(data.get("permitted_users", []), ensure_ascii=False),
+            "permitted_users": data.get("permitted_users", []),
             "permission": data.get("permission", "edit"),
-            "permitted_editors": json.dumps(data.get("permitted_editors", []), ensure_ascii=False),
+            "permitted_editors": data.get("permitted_editors", []),
             "case_type": "storage",
-            "_directory_id": data.get("directory_id"),
-            "_client_updated_at": data.get("updated_at"),
+            "directory_id": data.get("directory_id"),
+            "client_updated_at": data.get("updated_at"),
         }
 
         return handle_post_definition(
@@ -129,7 +129,7 @@ def storage_definitions_handler(request):
             StorageTestCase,
             "storage",
             "存储用例",
-            defaults,
+            fields,
         )
 
     return JsonResponse({"status": False, "message": "method not allowed"}, status=405)

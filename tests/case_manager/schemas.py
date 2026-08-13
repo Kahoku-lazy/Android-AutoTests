@@ -67,6 +67,25 @@ CONFIG_JSON_SCHEMA = {
     },
 }
 
+# 单接口格式（meta/request/cases）的简化 schema，够测试校验关键结构即可
+_SINGLE_CONFIG_JSON_SCHEMA = {
+    "type": "object",
+    "required": ["meta", "request", "cases"],
+    "properties": {
+        "meta": {
+            "type": "object",
+            "required": ["title"],
+            "properties": {"title": {"type": "string"}},
+        },
+        "request": {
+            "type": "object",
+            "required": ["method", "path"],
+            "properties": {"method": {"type": "string"}, "path": {"type": "string"}},
+        },
+        "cases": {"type": "array"},
+    },
+}
+
 # ── Top-level API response schemas ──
 
 # GET /api/cases/api-testing/definitions  (list)
@@ -84,7 +103,7 @@ API_LIST_RESPONSE_SCHEMA = {
                     "id": {"type": "string"},
                     "title": {"type": "string"},
                     "case_type": {"const": "api_testing"},
-                    "config_json": CONFIG_JSON_SCHEMA,
+                    "config_json": {"oneOf": [CONFIG_JSON_SCHEMA, _SINGLE_CONFIG_JSON_SCHEMA]},
                 },
             },
         },
@@ -103,7 +122,7 @@ API_DETAIL_RESPONSE_SCHEMA = {
             "properties": {
                 "id": {"type": "string"},
                 "title": {"type": "string"},
-                "config_json": CONFIG_JSON_SCHEMA,
+                "config_json": {"oneOf": [CONFIG_JSON_SCHEMA, _SINGLE_CONFIG_JSON_SCHEMA]},
             },
         },
     },

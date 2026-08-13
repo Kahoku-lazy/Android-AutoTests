@@ -106,6 +106,10 @@ def save_storage_definition(case_id, merge=False, **fields):
         defaults["permitted_users"] = json.dumps(fields["permitted_users"], ensure_ascii=False)
     if "permitted_editors" in fields:
         defaults["permitted_editors"] = json.dumps(fields["permitted_editors"], ensure_ascii=False)
+    if "created_by" in fields:
+        defaults["created_by"] = fields["created_by"]
+    if "updated_by" in fields:
+        defaults["updated_by"] = fields["updated_by"]
     obj, _ = StorageTestCase.objects.update_or_create(id=case_id, defaults=defaults)
     return obj
 

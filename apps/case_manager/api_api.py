@@ -105,6 +105,10 @@ def save_api_definition(case_id, config_json=None, **fields):
         defaults["permitted_users"] = json.dumps(fields["permitted_users"], ensure_ascii=False)
     if "permitted_editors" in fields:
         defaults["permitted_editors"] = json.dumps(fields["permitted_editors"], ensure_ascii=False)
+    if "created_by" in fields:
+        defaults["created_by"] = fields["created_by"]
+    if "updated_by" in fields:
+        defaults["updated_by"] = fields["updated_by"]
     obj, _ = ApiTestCase.objects.update_or_create(id=case_id, defaults=defaults)
 
     # ── WebSocket push: notify editors that case was updated ──

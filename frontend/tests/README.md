@@ -1,49 +1,56 @@
-# Frontend Vitest — 登录模块 + 仪表盘模块
+# Frontend Vitest — 总注册表
 
-优先级约定见 **[PRIORITY_TEMPLATE.md](./PRIORITY_TEMPLATE.md)**。
+优先级约定见 **[PRIORITY_TEMPLATE.md](./PRIORITY_TEMPLATE.md)**；分类设计见 **[DESIGN-module-classification.md](./DESIGN-module-classification.md)**。
 
-目录按模块 × 优先级分类：
+目录按「模块 × 优先级」分类：
 
 ```
 tests/<module>/
-  p0/   # 必测
-  p1/   # 建议测
+  p0/   # 必测 *.spec.ts
+  p1/   # 建议测 *.spec.ts
   p2/   # 默认不测（仅 README 登记）
 ```
 
-## 覆盖范围
+`helpers/`（挂载工具）与 `reports/`（报告产物）不是模块。Vitest UI 按 `<module>/<prio>` 分栏自动生成，新增模块只需建目录。
 
-| 级别 | 路径 | 测什么 |
-|------|------|--------|
-| P0 | `login/p0/useLoginForm.spec.ts` | 登录/注册校验 |
-| P0 | `login/p0/useSavedUsername.spec.ts` | 记住账号 |
-| P0 | `login/p0/useViewStateMachine.spec.ts` | 三态切换 |
-| P0 | `login/p0/useAuthFlow.spec.ts` | API 编排（mock） |
-| P0 | `login/p0/useAuthPool.spec.ts` | 多账号 token 池 |
-| P0 | `login/p0/apiAuthInterceptors.spec.ts` | 401 refresh 并发去重 / 重试 / 多账号失败 |
-| P0 | `login/p0/LoginCard.spec.ts` | 提交/禁用/记住账号 |
-| P0 | `login/p0/RegisterCard.spec.ts` | 提交/禁用/去登录 |
-| P1 | `login/p1/LoginView.logic.spec.ts` | 切模式清表单 |
-| P1 | `login/p1/AccountSwitchPrompt.spec.ts` | 切换/添加账号 emit |
-| P1 | `login/p1/LoginErrorOverlay.spec.ts` | 展示/关闭/ESC |
-| P2 | `login/p2/README.md` | 整页/插画/真后端 — 不写用例 |
-| P0 | `dashboard/p0/useDashboardStats.spec.ts` | 数据获取编排 + mapStatsResponse 纯映射 |
-| P0 | `dashboard/p0/StatsCard.spec.ts` | 数值展示/趋势文案/loading 骨架/跳转 |
-| P1 | `dashboard/p1/DashboardView.logic.spec.ts` | 挂载自动加载 + 分项查询回退 |
-| P1 | `dashboard/p1/TaskResultPanel.spec.ts` | 摘要 chip / 状态图标 / 任务跳转分支 |
-| P1 | `dashboard/p1/ActivityTimeline.spec.ts` | 条目渲染/类型样式/空态/分隔线 |
-| P1 | `dashboard/p1/ModuleNavigator.spec.ts` | 模块卡片渲染/统计注入/跳转 |
-| P2 | `dashboard/p2/README.md` | 整页/ECharts 图表/动画/真后端 — 不写用例 |
+## 模块注册表
+
+| 模块 | 目录 | 状态 | P0 文件 | P1 文件 | 说明 |
+|------|------|------|---------|---------|------|
+| dashboard | `tests/dashboard/` | ✅ P0+P1 | 2 | 4 | 数据编排 / 统计卡 / 导航 / 任务面板 / 活动线 |
+| login | `tests/login/` | ✅ P0+P1 | 8 | 3 | 表单校验 / 账号池 / 认证流程 / 卡片 |
+| devices | — | ⬜ 未开始 | 0 | 0 | 待开测 |
+| inspector | — | ⬜ 未开始 | 0 | 0 | 待开测 |
+| elements | — | ⬜ 未开始 | 0 | 0 | 待开测 |
+| cases | — | ⬜ 未开始 | 0 | 0 | 待开测 |
+| runner | — | ⬜ 未开始 | 0 | 0 | 待开测 |
+| reports | — | ⬜ 未开始 | 0 | 0 | 待开测 |
+| ai-assistant | — | ⬜ 未开始 | 0 | 0 | 待开测 |
+| workflow | — | ⬜ 未开始 | 0 | 0 | 待开测 |
+| digital-human | — | ⬜ 未开始 | 0 | 0 | 待开测 |
+
+> 新模块开测流程：按 `PRIORITY_TEMPLATE.md` 的 Checklist 建目录与用例 → 更新本表状态列。
+
+## 用例命名规范
+
+```ts
+describe('[P0] <被测单元>')    // composable / 组件 / 编排器
+it('<场景>：<预期>')            // 场景=操作或输入；预期=断言结果；多预期用「，」并列
+```
+
+模块名不写进命名（由文件路径 + UI 分栏承载）。反例：`it('测试登录')`（无场景无预期）、`it('登录成功, 写token')`（半角逗号）。
 
 ## 命令
 
 ```bash
 cd frontend
-npm test                 # 全部（P0+P1）
-npm run test:p0          # 只跑 P0
-npm run test:p1          # 只跑 P1
-npm run test:ui          # UI：左侧按 project 分 P0 / P1
-npm run test:report
+npm test                          # 全部（所有模块 P0+P1）
+npm run test:p0                   # 跨模块只跑 P0
+npm run test:p1                   # 跨模块只跑 P1
+npm run test:module -- login      # 只跑指定模块
+npm run test:report               # 终端 + JUnit + JSON + 按模块汇总
+npm run test:report:html          # 静态 HTML 报告（tests/reports/html/index.html）
+npm run test:ui                   # Vitest UI：左侧按 模块/优先级 分栏
 ```
 
-Vitest UI（`/__vitest__/`）会按 **project：P0 / P1** 分栏；套件名也带 `[P0]` / `[P1]` 前缀。P2 无用例，不出现在报告里。
+底层入口：`node tests/run.mjs [default|module|prio|file|verbose|junit|json|all|html|watch|ui]`。

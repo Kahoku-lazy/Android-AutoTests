@@ -22,7 +22,7 @@ describe('[P0] useAuthPool', () => {
     expect(result.activeAccount.value).toBe('')
   })
 
-  it('loginAccount 写入池并设为 active', async () => {
+  it('loginAccount：写入池并设为 active', async () => {
     const { result } = await mountComposable(() => useAuthPool())
     result.loginAccount('alice', 'access', 'refresh')
 
@@ -32,7 +32,7 @@ describe('[P0] useAuthPool', () => {
     expect(sessionStorage.getItem('auth_active')).toBe('alice')
   })
 
-  it('switchAccount 对存在账号返回 true', async () => {
+  it('switchAccount 对存在账号：返回 true', async () => {
     const { result } = await mountComposable(() => useAuthPool())
     result.loginAccount('alice', 'a', 'r')
     result.loginAccount('bob', 'b', 'r')
@@ -42,7 +42,7 @@ describe('[P0] useAuthPool', () => {
     expect(result.switchAccount('ghost')).toBe(false)
   })
 
-  it('logoutAccount 有剩余账号时切到下一个', async () => {
+  it('logoutAccount 有剩余账号时：切到下一个', async () => {
     const { result } = await mountComposable(() => useAuthPool())
     result.loginAccount('alice', 'a', 'r')
     result.loginAccount('bob', 'b', 'r')
@@ -52,7 +52,7 @@ describe('[P0] useAuthPool', () => {
     expect(result.activeAccount.value).toBe('alice')
   })
 
-  it('logoutAccount 无剩余账号时返回 false', async () => {
+  it('logoutAccount 无剩余账号时：返回 false', async () => {
     const { result } = await mountComposable(() => useAuthPool())
     result.loginAccount('alice', 'a', 'r')
     expect(result.logoutAccount()).toBe(false)

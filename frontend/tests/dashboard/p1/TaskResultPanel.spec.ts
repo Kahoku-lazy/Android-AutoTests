@@ -26,7 +26,7 @@ describe('[P1] TaskResultPanel', () => {
     pushMock.mockClear()
   })
 
-  it('摘要 chips 显示成功 / 失败 / 本周新建', () => {
+  it('摘要 chips：显示成功 / 失败 / 本周新建', () => {
     const wrapper = mountPanel()
     const text = wrapper.find('.task-result-panel__summary').text()
     expect(text).toContain('8')

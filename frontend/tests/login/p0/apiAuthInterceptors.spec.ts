@@ -52,13 +52,13 @@ describe("[P0] createAuthInterceptors", () => {
     })
   })
 
-  it("请求拦截器注入 Bearer token", () => {
+  it("请求拦截器：注入 Bearer token", () => {
     const config = { headers: {} } as InternalAxiosRequestConfig
     const next = interceptors.authRequestInterceptor(config)
     expect(next.headers.Authorization).toBe("Bearer old-access")
   })
 
-  it("无 token 时不写 Authorization", () => {
+  it("无 token 时：不写 Authorization", () => {
     getToken.mockReturnValue("")
     const config = { headers: {} } as InternalAxiosRequestConfig
     interceptors.authRequestInterceptor(config)
@@ -89,7 +89,7 @@ describe("[P0] createAuthInterceptors", () => {
     expect(redirectToLogin).not.toHaveBeenCalled()
   })
 
-  it("并发两个 401 只触发一次 refresh", async () => {
+  it("并发两个 401：只触发一次 refresh", async () => {
     let resolveRefresh!: (v: {
       data: {
         status: true
@@ -149,7 +149,7 @@ describe("[P0] createAuthInterceptors", () => {
     expect(redirectToLogin).not.toHaveBeenCalled()
   })
 
-  it("无 refresh_token 时直接拒绝，不跳转", async () => {
+  it("无 refresh_token 时：直接拒绝，不跳转", async () => {
     getRefreshToken.mockReturnValue("")
     const config = { headers: {}, url: "/x" } as InternalAxiosRequestConfig
 
@@ -159,7 +159,7 @@ describe("[P0] createAuthInterceptors", () => {
     expect(redirectToLogin).not.toHaveBeenCalled()
   })
 
-  it("同一请求已 _retry 过则不再 refresh", async () => {
+  it("同一请求已 _retry 过：不再 refresh", async () => {
     const config = { headers: {}, url: "/x", _retry: true } as InternalAxiosRequestConfig & {
       _retry?: boolean
     }

@@ -16,7 +16,7 @@ describe('[P0] useViewStateMachine', () => {
     clearAuthStorage()
   })
 
-  it('无已登录账号时，初始保持 login', async () => {
+  it('无已登录账号时：初始保持 login', async () => {
     const clearError = vi.fn()
     const { result } = await mountComposable(() =>
       useViewStateMachine(computed(() => []), clearError),
@@ -24,7 +24,7 @@ describe('[P0] useViewStateMachine', () => {
     expect(result.viewState.value).toBe('login')
   })
 
-  it('有已登录账号且无 add 参数时，进入 switchPrompt', async () => {
+  it('有已登录账号且无 add 参数时：进入 switchPrompt', async () => {
     const clearError = vi.fn()
     const { result } = await mountComposable(() =>
       useViewStateMachine(computed(() => ['alice']), clearError),
@@ -32,7 +32,7 @@ describe('[P0] useViewStateMachine', () => {
     expect(result.viewState.value).toBe('switchPrompt')
   })
 
-  it('有账号但 query.add=1 时，仍保持 login', async () => {
+  it('有账号但 query.add=1 时：仍保持 login', async () => {
     const clearError = vi.fn()
     const { result } = await mountComposable(
       () => useViewStateMachine(computed(() => ['alice']), clearError),
@@ -41,7 +41,7 @@ describe('[P0] useViewStateMachine', () => {
     expect(result.viewState.value).toBe('login')
   })
 
-  it('switchMode 会清错并切换视图', async () => {
+  it('switchMode：清错并切换视图', async () => {
     const clearError = vi.fn()
     const { result } = await mountComposable(() =>
       useViewStateMachine(computed(() => []), clearError),
@@ -51,7 +51,7 @@ describe('[P0] useViewStateMachine', () => {
     expect(result.viewState.value).toBe('register')
   })
 
-  it('onSwitchToExisting 跳转 dashboard', async () => {
+  it('onSwitchToExisting：跳转 dashboard', async () => {
     const clearError = vi.fn()
     const { result, router } = await mountComposable(() =>
       useViewStateMachine(computed(() => ['alice']), clearError),
@@ -61,7 +61,7 @@ describe('[P0] useViewStateMachine', () => {
     expect(push).toHaveBeenCalledWith('/dashboard')
   })
 
-  it('onAddNewAccount 切到 login 并写入 query.add', async () => {
+  it('onAddNewAccount：切到 login 并写入 query.add', async () => {
     const clearError = vi.fn()
     const { result, router } = await mountComposable(() =>
       useViewStateMachine(computed(() => ['alice']), clearError),

@@ -39,7 +39,7 @@ describe('[P1] ModuleNavigator', () => {
     vi.clearAllMocks()
   })
 
-  it('渲染 9 张模块卡片（8 模块 + 仪表盘快捷入口）', () => {
+  it('渲染：9 张模块卡片（8 模块 + 仪表盘快捷入口）', () => {
     const wrapper = mountNav()
     expect(wrapper.findAll('.module-card')).toHaveLength(9)
   })
@@ -59,7 +59,7 @@ describe('[P1] ModuleNavigator', () => {
     expect(runnerCard.find('.module-stat strong').text()).toBe('2')
   })
 
-  it('数值为 0 仍显示 0；无数值模块只显示标签', () => {
+  it('数值为 0：仍显示 0，无数值模块只显示标签', () => {
     const wrapper = mountNav({ ...makeStats(), devices: { online: 0, total: 0, trend: 0 } })
     const cards = wrapper.findAll('.module-card')
 
@@ -80,7 +80,7 @@ describe('[P1] ModuleNavigator', () => {
     expect(pushMock).toHaveBeenCalledWith('/ai-assistant')
   })
 
-  it('键盘 Enter 触发跳转', async () => {
+  it('键盘 Enter：触发跳转', async () => {
     const wrapper = mountNav()
     const cards = wrapper.findAll('.module-card')
 

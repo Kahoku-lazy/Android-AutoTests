@@ -55,24 +55,24 @@ describe('[P0] LoginCard', () => {
     expect(wrapper.text()).toContain('请输入密码')
   })
 
-  it('canSubmit=false 时登录按钮禁用', () => {
+  it('canSubmit=false 时：登录按钮禁用', () => {
     const wrapper = mountCard({ canSubmit: false })
     expect(wrapper.find('button.el-button').attributes('disabled')).toBeDefined()
   })
 
-  it('点击登录触发 submit', async () => {
+  it('点击登录：触发 submit', async () => {
     const wrapper = mountCard()
     await wrapper.find('button.el-button').trigger('click')
     expect(wrapper.emitted('submit')).toHaveLength(1)
   })
 
-  it('点击去注册触发 switchToRegister', async () => {
+  it('点击去注册：触发 switchToRegister', async () => {
     const wrapper = mountCard()
     await wrapper.find('.form-toggle').trigger('click')
     expect(wrapper.emitted('switchToRegister')).toHaveLength(1)
   })
 
-  it('勾选记住账号触发 update:rememberMe', async () => {
+  it('勾选记住账号：触发 update:rememberMe', async () => {
     const wrapper = mountCard({ rememberMe: false })
     await wrapper.find('input.el-switch').setValue(true)
     expect(wrapper.emitted('update:rememberMe')?.[0]).toEqual([true])

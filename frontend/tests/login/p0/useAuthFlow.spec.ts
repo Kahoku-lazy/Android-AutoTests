@@ -131,7 +131,7 @@ describe("[P0] useAuthFlow", () => {
     expect(push).toHaveBeenCalledWith("/dashboard")
   })
 
-  it("clearServerError 清空错误", async () => {
+  it("clearServerError：清空错误", async () => {
     const auth = makeAuth()
     const { result } = await mountComposable(() => useAuthFlow({ auth, saveUsername: vi.fn() }))
     result.serverError.value = "oops"

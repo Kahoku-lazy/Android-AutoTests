@@ -24,13 +24,13 @@ describe('[P0] StatsCard', () => {
     pushMock.mockClear()
   })
 
-  it('展示 label 与千分位数值', () => {
+  it('展示：label 与千分位数值', () => {
     const wrapper = mountCard({ label: '在线设备', value: 1234 })
     expect(wrapper.text()).toContain('在线设备')
     expect(wrapper.find('.stats-card__stat strong').text()).toBe('1,234')
   })
 
-  it('prefix / suffix 拼接在数值两侧', () => {
+  it('prefix / suffix：拼接在数值两侧', () => {
     const wrapper = mountCard({ value: 1234, prefix: '¥', suffix: ' 台' })
     expect(wrapper.find('.stats-card__stat strong').text()).toBe('¥1,234 台')
   })
@@ -50,7 +50,7 @@ describe('[P0] StatsCard', () => {
     expect(wrapper.find('.stats-card__stat small').text()).toBe('活跃')
   })
 
-  it('desc 缺省时显示默认描述', () => {
+  it('desc 缺省时：显示默认描述', () => {
     const wrapper = mountCard({})
     expect(wrapper.find('.stats-card__desc').text()).toBe('核心指标实时更新')
   })
@@ -71,7 +71,7 @@ describe('[P0] StatsCard', () => {
     expect(pushMock).toHaveBeenCalledWith('/devices')
   })
 
-  it('点击「进入」按钮同样跳转且不重复触发', async () => {
+  it('点击「进入」按钮：同样跳转且不重复触发', async () => {
     const wrapper = mountCard({ value: 3, path: '/devices' })
 
     await wrapper.find('.stats-card__enter').trigger('click')
@@ -90,7 +90,7 @@ describe('[P0] StatsCard', () => {
     expect(pushMock).not.toHaveBeenCalled()
   })
 
-  it('键盘 Enter 触发跳转', async () => {
+  it('键盘 Enter：触发跳转', async () => {
     const wrapper = mountCard({ value: 3, path: '/runner' })
 
     await wrapper.trigger('keydown', { key: 'Enter' })

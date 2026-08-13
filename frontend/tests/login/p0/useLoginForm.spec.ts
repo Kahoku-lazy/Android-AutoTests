@@ -32,7 +32,7 @@ describe('[P0] useLoginForm', () => {
     expect(loginErrors.value.password).toBe('请输入密码')
   })
 
-  it('登录用户名仅空白时提示错误', () => {
+  it('登录用户名仅空白时：提示错误', () => {
     const { loginErrors, canLogin } = makeForm({
       loginUsername: '   ',
       loginPassword: 'x',
@@ -92,7 +92,7 @@ describe('[P0] useLoginForm', () => {
     expect(regErrors.value.password2).toBe('两次密码不一致')
   })
 
-  it('注册密码 trim 后过短', () => {
+  it('注册密码 trim 后：过短', () => {
     const { regErrors, canRegister } = makeForm({
       regUsername: 'alice',
       regEmail: 'a@b.com',
@@ -103,7 +103,7 @@ describe('[P0] useLoginForm', () => {
     expect(regErrors.value.password).toBe('密码至少 6 位')
   })
 
-  it('注册字段含首尾空格但 trim 后合法可通过', () => {
+  it('注册字段含首尾空格但 trim 后：合法可通过', () => {
     const { regErrors, canRegister } = makeForm({
       regUsername: '  bob  ',
       regEmail: '  bob@example.com  ',

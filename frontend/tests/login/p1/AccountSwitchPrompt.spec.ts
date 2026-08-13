@@ -26,7 +26,7 @@ describe('[P1] AccountSwitchPrompt', () => {
     expect(wrapper.text()).toContain('检测到已登录账号')
   })
 
-  it('点击切换账号触发 switchTo', async () => {
+  it('点击切换账号：触发 switchTo', async () => {
     const wrapper = mount(AccountSwitchPrompt, {
       props: { existingUsername: 'alice' },
       global: { stubs },
@@ -36,7 +36,7 @@ describe('[P1] AccountSwitchPrompt', () => {
     expect(wrapper.emitted('switchTo')).toHaveLength(1)
   })
 
-  it('点击添加新账号触发 addNew', async () => {
+  it('点击添加新账号：触发 addNew', async () => {
     const wrapper = mount(AccountSwitchPrompt, {
       props: { existingUsername: 'alice' },
       global: { stubs },

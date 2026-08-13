@@ -37,7 +37,7 @@ describe('[P1] ActivityTimeline', () => {
     expect(wrapper.text()).toContain('暂无活动记录')
   })
 
-  it('渲染条目的动作、时间、详情与标签', () => {
+  it('渲染条目：动作、时间、详情与标签', () => {
     const wrapper = mountTimeline({ items })
     const first = wrapper.findAll('.timeline-item')[0]
 
@@ -48,7 +48,7 @@ describe('[P1] ActivityTimeline', () => {
     expect(first.text()).toContain('回归')
   })
 
-  it('按 type 追加条目样式类', () => {
+  it('按 type：追加条目样式类', () => {
     const wrapper = mountTimeline({ items })
 
     const classes = wrapper.findAll('.timeline-item').map((i) => i.classes())
@@ -56,7 +56,7 @@ describe('[P1] ActivityTimeline', () => {
     expect(classes[1]).toContain('timeline-item--error')
   })
 
-  it('无 detail / tags 的条目不渲染对应节点', () => {
+  it('无 detail / tags 的条目：不渲染对应节点', () => {
     const wrapper = mountTimeline({ items })
     const second = wrapper.findAll('.timeline-item')[1]
 
@@ -64,7 +64,7 @@ describe('[P1] ActivityTimeline', () => {
     expect(second.find('.timeline-item__tags').exists()).toBe(false)
   })
 
-  it('分隔线数量 = 条目数 - 1（最后一条无线）', () => {
+  it('分隔线：数量 = 条目数 - 1（最后一条无线）', () => {
     const wrapper = mountTimeline({ items })
     expect(wrapper.findAll('.timeline-item__line')).toHaveLength(items.length - 1)
   })

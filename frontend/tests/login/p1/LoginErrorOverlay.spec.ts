@@ -22,35 +22,35 @@ describe('[P1] LoginErrorOverlay', () => {
     document.body.innerHTML = ''
   })
 
-  it('visible=false 时不渲染内容', () => {
+  it('visible=false 时：不渲染内容', () => {
     const wrapper = mountOverlay({ visible: false, message: '失败' })
     expect(wrapper.find('.error-overlay').exists()).toBe(false)
   })
 
-  it('visible=true 时展示错误文案', () => {
+  it('visible=true 时：展示错误文案', () => {
     const wrapper = mountOverlay({ visible: true, message: '密码错误' })
     expect(wrapper.text()).toContain('密码错误')
   })
 
-  it('点「知道了」触发 close', async () => {
+  it('点「知道了」：触发 close', async () => {
     const wrapper = mountOverlay({ visible: true, message: '失败' })
     await wrapper.find('.error-card__btn').trigger('click')
     expect(wrapper.emitted('close')).toHaveLength(1)
   })
 
-  it('按 ESC 触发 close', () => {
+  it('按 ESC：触发 close', () => {
     const wrapper = mountOverlay({ visible: true, message: '失败' })
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     expect(wrapper.emitted('close')).toHaveLength(1)
   })
 
-  it('visible=false 时 ESC 不触发 close', () => {
+  it('visible=false 时：ESC 不触发 close', () => {
     const wrapper = mountOverlay({ visible: false, message: '失败' })
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     expect(wrapper.emitted('close')).toBeUndefined()
   })
 
-  it('点击遮罩（self）触发 close', async () => {
+  it('点击遮罩（self）：触发 close', async () => {
     const wrapper = mountOverlay({ visible: true, message: '失败' })
     await wrapper.find('.error-overlay').trigger('click')
     expect(wrapper.emitted('close')).toHaveLength(1)

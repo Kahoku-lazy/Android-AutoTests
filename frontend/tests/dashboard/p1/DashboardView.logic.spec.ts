@@ -67,7 +67,7 @@ describe('[P1] useDashboardView（编排）', () => {
     vi.clearAllMocks()
   })
 
-  it('挂载时自动 loadData，数据进入 stats', async () => {
+  it('挂载时：自动 loadData，数据进入 stats', async () => {
     const result = await mountView()
 
     expect(fetchDashboardStats).toHaveBeenCalledTimes(1)

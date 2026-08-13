@@ -50,18 +50,18 @@ describe('[P0] RegisterCard', () => {
     expect(wrapper.text()).toContain('两次密码不一致')
   })
 
-  it('canSubmit=false 时注册按钮禁用', () => {
+  it('canSubmit=false 时：注册按钮禁用', () => {
     const wrapper = mountCard({ canSubmit: false })
     expect(wrapper.find('button.el-button').attributes('disabled')).toBeDefined()
   })
 
-  it('点击完成注册触发 submit', async () => {
+  it('点击完成注册：触发 submit', async () => {
     const wrapper = mountCard()
     await wrapper.find('button.el-button').trigger('click')
     expect(wrapper.emitted('submit')).toHaveLength(1)
   })
 
-  it('点击去登录触发 switchToLogin', async () => {
+  it('点击去登录：触发 switchToLogin', async () => {
     const wrapper = mountCard()
     await wrapper.find('.form-toggle').trigger('click')
     expect(wrapper.emitted('switchToLogin')).toHaveLength(1)

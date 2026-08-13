@@ -24,7 +24,7 @@ describe('[P1] useLoginView（编排）', () => {
     vi.clearAllMocks()
   })
 
-  it('切到 register 时清空注册表单字段', async () => {
+  it('切到 register 时：清空注册表单字段', async () => {
     const { result } = await mountComposable(() => useLoginView())
     result.regUsername.value = 'bob'
     result.regPassword.value = '123456'
@@ -40,7 +40,7 @@ describe('[P1] useLoginView（编排）', () => {
     expect(result.viewState.value).toBe('register')
   })
 
-  it('切到 login 时清空登录密码（保留用户名）', async () => {
+  it('切到 login 时：清空登录密码（保留用户名）', async () => {
     const { result } = await mountComposable(() => useLoginView())
     result.loginUsername.value = 'alice'
     result.loginPassword.value = 'secret'
@@ -52,7 +52,7 @@ describe('[P1] useLoginView（编排）', () => {
     expect(result.viewState.value).toBe('login')
   })
 
-  it('登录表单无效时只警告，不调 API', async () => {
+  it('登录表单无效时：只警告，不调 API', async () => {
     const { result } = await mountComposable(() => useLoginView())
     result.loginUsername.value = ''
     result.loginPassword.value = ''

@@ -215,7 +215,7 @@ node tests/run.mjs html
 
 1. `npx vitest run` 全量 107 用例通过，数量与改造前一致；
 2. UI 报告页左侧出现 `dashboard/p0` `dashboard/p1` `login/p0` `login/p1` 四栏，各自只含本模块本优先级用例；
-3. `npm run test:p0` 只跑两个模块的 p0（30 条），`test:p1` 同理；
+3. `npm run test:p0` 只跑两个模块的 p0 用例（数量与全量运行中 P0 项目一致），`test:p1` 同理；
 4. `node tests/run.mjs module login` 只跑 login（11 文件），`module dashboard` 只跑 dashboard（6 文件）；
 5. `node tests/run.mjs html` 生成 `tests/reports/html/index.html`，浏览器打开：KPI 正确、模块分区正确、用例表中文不乱码、失败用例能展开看到失败信息；
 6. `tests/README.md` 注册表登记全部平台模块（对照 router.js），dashboard/login 状态 ✅；

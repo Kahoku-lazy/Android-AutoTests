@@ -376,7 +376,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const DEFAULT_INPUT = join(__dirname, "reports", "report.json")
 const DEFAULT_OUTPUT = join(__dirname, "reports", "html", "index.html")
 
-const MODULE_RE = /tests[\\/]([^\\/]+)[\\/]p([01])[\\/]/
+const MODULE_RE = /tests[\\/]([^\\/]+)[\\/](p[01])[\\/]/
 const STATUS_LABEL = { passed: "通过", failed: "失败", pending: "跳过", todo: "待办" }
 
 export function parseReport(jsonPath) {
@@ -458,7 +458,7 @@ export function renderHtml(summary) {
   const passRate = kpi.total ? Math.round((kpi.passed / kpi.total) * 1000) / 10 : 100
   const moduleSections = summary.modules
     .map((m) => {
-      const files = summaryFilesForModule(m.name)
+      const files = summaryFilesForModule(summary, m.name)
       return `<section class="module">
         <h3>${esc(m.name)}</h3>
         ${prioSection("p0", m.p0, files)}
@@ -511,7 +511,7 @@ ${moduleSections}
 }
 
 // 保留文件列表供分优先级渲染：模块名 → 该模块全部 testResults
-function summaryFilesForModule(name) {
+function summaryFilesForModule(summary, name) {
   const files = []
   for (const f of summary._files ?? []) {
     const m = MODULE_RE.exec(f.name ?? "")

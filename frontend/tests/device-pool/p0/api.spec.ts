@@ -2,7 +2,7 @@
  * [P0] 必测 — device-pool API 端点封装（表驱动，mock api-client，不断真网络）
  * 目录：tests/device-pool/p0/
  *
- * api.ts 12 个端点函数：断言 client 方法、URL、body 透传，且恰好调用一次。
+ * api.ts 11 个端点函数（13 条表驱动用例）：断言 client 方法、URL、body 透传，且恰好调用一次。
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import client from '@/shared/api-client'

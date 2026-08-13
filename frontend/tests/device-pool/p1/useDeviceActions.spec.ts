@@ -71,7 +71,10 @@ const successRows: BranchRow[] = [
   {
     name: 'handleNetworkConnect 成功：已连接文案并关闭弹窗',
     arrange: (p) => vi.mocked(p.doScan).mockResolvedValue({ status: true }),
-    act: (a) => a.handleNetworkConnect({ target: '192.168.1.10' }),
+    act: async (a) => {
+      a.openNetworkDialog()
+      await a.handleNetworkConnect({ target: '192.168.1.10' })
+    },
     expectMsg: '已连接 192.168.1.10',
     extra: (a) => expect(a.networkDialog.value.visible).toBe(false),
   },

@@ -98,6 +98,7 @@ describe('[P0] useQueuePoller', () => {
     poller.startQueuePolling()
     await flushPromises()
 
+    expect(getActiveRuns).toHaveBeenCalled() // 轮询确实发生：防止源码退化为完全不再轮询（早退）
     expect(tasks.value[0].runId).toBeUndefined()
     expect(onTaskActivated).not.toHaveBeenCalled()
     expect(taskAddLog).not.toHaveBeenCalled()

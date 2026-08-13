@@ -6,13 +6,15 @@
  * availableCases，ui_automation 取 cases——经 doStartTask 触发，用两源不同标题的用例
  * 断言 caseItems 出处与对应加载器调用）；restartTask 重置运行残留字段创建新任务
  * （round+1、新 ID、清 runId/日志/计数）后保存提示并自动启动（restartTask 不 await
- * doStartTask，vi.waitFor 等启动链路落地后再断言）。
+ * doStartTask，vi.waitFor 等启动链路落地后再断言）；doRemoveTask running 带 runId
+ * 先 stopRun + closeTaskWebSocket 再 deleteTask（含调用顺序断言）后本地剔除。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as trApi from '@/modules/test-runner/api'
 import { useTaskOperations } from '@/modules/test-runner/composables/useTaskOperations'
+import { closeTaskWebSocket } from '@/modules/test-runner/composables/useTaskWebSocket'
 
 vi.mock('@/modules/test-runner/api', () => ({
   startRun: vi.fn(),
@@ -183,5 +185,25 @@ describe('[P1] useTaskOperations', () => {
     expect(ctx.bindListTaskWS).toHaveBeenCalledWith(started, 'r1')
     expect(ctx.taskAddLog).toHaveBeenCalledWith(started, '🚀 任务已启动')
     expect(ctx.scheduleSave).toHaveBeenCalledWith(nt.id)
+  })
+
+  // ── doRemoveTask：running 带 runId 先停后删 ──
+
+  it('doRemoveTask：running 带 runId 先 stopRun + closeTaskWebSocket 再 deleteTask，任务从本地剔除', async () => {
+    const ctx = buildOps()
+    const task = makeTask({ running: true, runId: 'r1' })
+    ctx.tasks.value = [task]
+
+    await ctx.ops.doRemoveTask(task)
+
+    expect(trApi.stopRun).toHaveBeenCalledWith('r1')
+    expect(closeTaskWebSocket).toHaveBeenCalledWith('t1')
+    expect(trApi.deleteTask).toHaveBeenCalledWith('t1')
+    expect(ctx.tasks.value).toHaveLength(0)
+    expect(ElMessage.success).toHaveBeenCalledWith('已删除')
+    // 「先停后删」顺序：stopRun 的调用序严格早于 deleteTask
+    expect(vi.mocked(trApi.stopRun).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(trApi.deleteTask).mock.invocationCallOrder[0],
+    )
   })
 })

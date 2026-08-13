@@ -59,7 +59,7 @@ P1：doRemoveTask 先停后删、删除失败不剔除本地；createAndStart �
 2. **element-plus**：ElMessage / ElMessageBox 全局 mock；`ElMessageBox.confirm` 用 `mockRejectedValue` 模拟用户取消。
 3. **token-storage**：getActive / getToken / getActiveUsername 按需 mock。
 4. **全局单例卫生**：useTaskWebSocket 挂 window 的 `_task_ws_map`/`_task_ws_handlers` 在每个 `beforeEach` 里 `closeAllTaskWebSockets()`（或重置 window 键）；taskUtils 的 localStorage `_task_id_counter` 用 `clearAuthStorage()` 同款清理。
-5. **animejs**：useDeviceActions 动画依赖，`vi.mock('@/shared/animations')`（countUpFormatted/staggerReveal 等 vi.fn()）。
+5. **animejs**：useDeviceActions 动画依赖，`vi.mock('animejs')`（animate/stagger vi.fn()——composable 直接 import animejs，非 @/shared/animations）。
 
 ## 4. 明确不做
 

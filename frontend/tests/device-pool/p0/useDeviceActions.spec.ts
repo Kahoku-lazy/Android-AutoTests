@@ -13,7 +13,7 @@ import { RUNNER_OCCUPIED_PREFIXES } from '@/modules/device-pool/constants'
 import type { DeviceRecord } from '@/shared/types/device'
 import type { UseDevicePoolStateReturn } from '@/modules/device-pool/composables/useDevicePoolState'
 
-vi.mock('@/shared/animations', () => ({ countUpFormatted: vi.fn(), staggerReveal: vi.fn(), animate: vi.fn() }))
+vi.mock('animejs', () => ({ animate: vi.fn(), stagger: vi.fn() }))
 vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), warning: vi.fn(), error: vi.fn() } }))
 vi.mock('@/shared/auth/token-storage', () => ({ getActive: vi.fn(() => 'u1'), getActiveUsername: vi.fn(() => 'u1') }))
 

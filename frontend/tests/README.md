@@ -20,11 +20,11 @@ tests/<module>/
 | dashboard | `tests/dashboard/` | ✅ P0+P1 | 2 | 4 | 数据编排 / 统计卡 / 导航 / 任务面板 / 活动线 |
 | login | `tests/login/` | ✅ P0+P1 | 8 | 3 | 表单校验 / 账号池 / 认证流程 / 卡片 |
 | device-pool | `tests/device-pool/` | ✅ P0+P1 | 5 | 3 | 设备端点 / 心跳轮询 / 设备操作 / KPI 统计 |
-| inspector | — | ⬜ 未开始 | 0 | 0 | 待开测 |
+| device-inspector | — | ⬜ 未开始 | 0 | 0 | 待开测（src: device-inspector） |
 | element-locator | `tests/element-locator/` | ✅ P0+P1 | 4 | 3 | 元素端点 / 元素树 / 分组树 |
-| cases | — | ⬜ 未开始 | 0 | 0 | 待开测 |
+| case-manager | — | ⬜ 未开始 | 0 | 0 | 待开测（src: case-manager） |
 | test-runner | `tests/test-runner/` | ✅ P0+P1 | 6 | 2 | 任务端点 / 队列轮询 / 任务操作 / WS 消息 / 防抖保存 |
-| reports | — | ⬜ 未开始 | 0 | 0 | 待开测 |
+| report-generator | — | ⬜ 未开始 | 0 | 0 | 待开测（src: report-generator） |
 | ai-assistant | — | ⬜ 未开始 | 0 | 0 | 待开测 |
 | workflow | — | ⬜ 未开始 | 0 | 0 | 待开测 |
 | digital-human | — | ⬜ 未开始 | 0 | 0 | 待开测 |

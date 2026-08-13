@@ -17,7 +17,7 @@
  * 也可传文件路径：
  *   node tests/run.mjs junit tests/login-form.demo.spec.ts
  */
-import { mkdirSync } from 'node:fs'
+import { existsSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
@@ -79,6 +79,7 @@ function presetsFor(mode) {
     case 'html':
       return [
         'run',
+        '--reporter=default',
         '--reporter=json',
         `--outputFile.json=${join(reportsDir, 'report.json')}`,
         ...extraArgs,
@@ -115,7 +116,7 @@ if (['junit', 'json', 'all'].includes(mode)) {
   console.log(`\n报告目录: ${reportsDir}`)
 }
 
-if (mode === 'html' && result.status === 0) {
+if (mode === 'html' && existsSync(join(reportsDir, 'report.json'))) {
   const summary = generateReport(
     join(reportsDir, 'report.json'),
     join(reportsDir, 'html', 'index.html'),
@@ -124,7 +125,7 @@ if (mode === 'html' && result.status === 0) {
   console.log(`HTML 报告: ${join(reportsDir, 'html', 'index.html')}`)
 }
 
-if (mode === 'all' && result.status === 0) {
+if (mode === 'all' && existsSync(join(reportsDir, 'report.json'))) {
   const summary = buildSummary(parseReport(join(reportsDir, 'report.json')))
   console.log('\n── 按模块汇总 ──')
   for (const m of summary.modules) {

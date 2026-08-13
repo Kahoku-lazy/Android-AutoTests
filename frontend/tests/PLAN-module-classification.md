@@ -600,6 +600,7 @@ import { buildSummary, generateReport, parseReport } from './generate-html-repor
     case 'html':
       return [
         'run',
+        '--reporter=default',
         '--reporter=json',
         `--outputFile.json=${join(reportsDir, 'report.json')}`,
         ...extraArgs,
@@ -609,7 +610,7 @@ import { buildSummary, generateReport, parseReport } from './generate-html-repor
 在文件末尾 `process.exit(result.status ?? 1)` 之前加：
 
 ```js
-if (mode === 'html' && result.status === 0) {
+if (mode === 'html' && existsSync(join(reportsDir, 'report.json'))) {
   const summary = generateReport(
     join(reportsDir, 'report.json'),
     join(reportsDir, 'html', 'index.html'),
@@ -618,7 +619,7 @@ if (mode === 'html' && result.status === 0) {
   console.log(`HTML 报告: ${join(reportsDir, 'html', 'index.html')}`)
 }
 
-if (mode === 'all' && result.status === 0) {
+if (mode === 'all' && existsSync(join(reportsDir, 'report.json'))) {
   const summary = buildSummary(parseReport(join(reportsDir, 'report.json')))
   console.log('\n── 按模块汇总 ──')
   for (const m of summary.modules) {
@@ -627,6 +628,8 @@ if (mode === 'all' && result.status === 0) {
   }
 }
 ```
+
+> 守卫语义：vitest 崩溃无 report.json 产物时跳过；测试失败仍生成报告（`existsSync` 守卫替代 `result.status === 0`）。
 
 - [ ] **Step 2: package.json 新增 script**
 

@@ -33,7 +33,7 @@ export function buildSummary(report) {
     const assertions = file.assertionResults ?? []
     const total = assertions.length
     const passed = assertions.filter((a) => a.status === "passed").length
-    const failed = total - passed
+    const failed = assertions.filter((a) => a.status === "failed").length
     const duration = assertions.reduce((s, a) => s + (a.duration ?? 0), 0)
 
     let entry
@@ -164,6 +164,7 @@ function summaryFilesForModule(summary, name) {
 export function generateReport(inputPath = DEFAULT_INPUT, outputPath = DEFAULT_OUTPUT) {
   const report = parseReport(inputPath)
   const summary = buildSummary(report)
+  // renderHtml 依赖 _files 渲染模块用例表；勿直接以 buildSummary 输出调用 renderHtml（会静默空表）
   summary._files = report.testResults ?? []
   const html = renderHtml(summary)
   mkdirSync(dirname(outputPath), { recursive: true })

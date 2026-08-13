@@ -118,6 +118,8 @@ it('<场景>：<预期>')            // 场景=操作或输入；预期=断言�
 3. 断言顺序与命名中预期顺序一致；
 4. 反例：`it('测试登录')`（无场景无预期）、`it('登录成功, 写token, 跳转')`（半角逗号、无「：」）。
 
+例外：≤12 字且明确表达单一预期的短名可省略「：」（如 展示校验错误）
+
 动作：审计现有 17 个 spec 文件（login 11 + dashboard 6），不合规用例名微调，断言不动。
 
 ---
@@ -219,7 +221,7 @@ node tests/run.mjs html
 4. `node tests/run.mjs module login` 只跑 login（11 文件），`module dashboard` 只跑 dashboard（6 文件）；
 5. `node tests/run.mjs html` 生成 `tests/reports/html/index.html`，浏览器打开：KPI 正确、模块分区正确、用例表中文不乱码、失败用例能展开看到失败信息；
 6. `tests/README.md` 注册表登记全部平台模块（对照 router.js），dashboard/login 状态 ✅；
-7. 命名审计完成：全部用例名符合「场景：预期」模板；
+7. 命名审计完成：全部用例名符合「场景：预期」模板（含已入档的短名例外）；
 8. `npm run dev`、`npm run build` 不受 vite.config 改动影响。
 
 ---

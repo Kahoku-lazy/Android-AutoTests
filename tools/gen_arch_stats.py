@@ -227,7 +227,7 @@ def scan_cross_app_imports():
                 pattern = rf"from apps\.{app_name}\."
                 if re.search(pattern, content):
                     # 排除同 App 内的 import
-                    rel_path = str(py_file.relative_to(PROJECT_ROOT))
+                    rel_path = str(py_file.relative_to(PROJECT_ROOT)).replace("\\", "/")
                     if f"apps/{app_name}/" not in rel_path:
                         targets[app_name].add(rel_path)
 
@@ -306,7 +306,7 @@ def scan_orm_write_violations():
             if py_file.name == "__init__.py" and py_file.stat().st_size < 100:
                 continue
 
-            rel_path = str(py_file.relative_to(PROJECT_ROOT))
+            rel_path = str(py_file.relative_to(PROJECT_ROOT)).replace("\\", "/")
             try:
                 content = py_file.read_text(encoding="utf-8")
             except Exception:
@@ -398,7 +398,7 @@ def scan_cross_app_internal_imports():
             if "migrations" in str(py_file) or "__pycache__" in str(py_file):
                 continue
 
-            rel_path = str(py_file.relative_to(PROJECT_ROOT))
+            rel_path = str(py_file.relative_to(PROJECT_ROOT)).replace("\\", "/")
             try:
                 content = py_file.read_text(encoding="utf-8")
             except Exception:

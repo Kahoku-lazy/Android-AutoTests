@@ -76,6 +76,26 @@
       "td": "TD-05",
       "note": "适配器集中封装 TestRunRecord 创建（替代散落 tool 中的直接 ORM 写入）",
       "added": "2026-07-15"
+    },
+    {
+      "file": "apps/ai_assistant/agent_scope/tool_registry.py",
+      "line": 438,
+      "source_app": "test_runner",
+      "module": "callbacks",
+      "pattern": "internal",
+      "td": "TD-04",
+      "note": "AgentScope Tool import test_runner 内部实现 TestRunnerCallback（AgentScope 迁移到 ai_assistant/agent_scope 后路径更新）",
+      "added": "2026-08-13"
+    },
+    {
+      "file": "apps/ai_assistant/agent_scope/tool_registry.py",
+      "line": 439,
+      "source_app": "test_runner",
+      "module": "runner",
+      "pattern": "internal",
+      "td": "TD-04",
+      "note": "AgentScope Tool import test_runner 内部实现 TestRunner（AgentScope 迁移到 ai_assistant/agent_scope 后路径更新）",
+      "added": "2026-08-13"
     }
   ]
 }

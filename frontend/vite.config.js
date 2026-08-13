@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
+import { scanModules } from './tests/module-scan.mjs'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
@@ -31,27 +32,19 @@ export default defineConfig({
     },
   },
   test: {
-    // Vitest UI 按 project 分栏：P0 / P1（P2 故意无用例）
-    projects: [
-      {
+    // Vitest UI 按 project 分栏：每模块 × 优先级（login/p0、login/p1…），
+    // 由 module-scan.mjs 扫描 tests/ 生成，新增模块零配置
+    projects: scanModules().flatMap((m) =>
+      m.prios.map((prio) => ({
         extends: true,
         test: {
-          name: 'P0',
-          include: ['tests/**/p0/**/*.{test,spec}.{js,ts}'],
+          name: `${m.name}/${prio}`,
+          include: [`tests/${m.name}/${prio}/**/*.{test,spec}.{js,ts}`],
           environment: 'jsdom',
           css: false,
         },
-      },
-      {
-        extends: true,
-        test: {
-          name: 'P1',
-          include: ['tests/**/p1/**/*.{test,spec}.{js,ts}'],
-          environment: 'jsdom',
-          css: false,
-        },
-      },
-    ],
+      })),
+    ),
   },
   server: {
     host: '0.0.0.0',

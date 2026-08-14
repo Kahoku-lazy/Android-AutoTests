@@ -6,9 +6,9 @@ from datetime import timedelta
 
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Count, Max, Q
-from django.http import JsonResponse
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.ai_assistant.models import AIAgent
 from apps.ai_assistant.permissions import filter_agents_for_user
@@ -17,11 +17,16 @@ from apps.case_manager.models_web import WebTestCase
 from apps.case_manager.views_helpers import resolve_username as _resolve_username
 from apps.device_pool.models import Device
 from apps.element_locator.models import ApiEndpoint, Element, Page, WebElement
-from apps.report_generator.models import Report
 from apps.test_runner.models import TestResult, TestRunRecord
 from apps.workflow.models import WorkflowDocument
 
 logger = logging.getLogger(__name__)
+
+
+def _user_id(request):
+    """Extract authenticated user id from a DRF request."""
+    user = getattr(request, "user", None)
+    return user.id if user else None
 
 
 def _safe_count(queryset_or_model, filter_kwargs=None, q_filter=None):
@@ -52,34 +57,6 @@ def _visibility_q(user_id):
     else:
         q |= Q(created_by="")
     return q
-
-
-def _safe_pct(part, total):
-    """Return percentage as float, 0 if total is 0."""
-    if total == 0:
-        return 0
-    return round(part / total * 100, 1)
-
-
-def _daily_counts(queryset, date_field, days=12):
-    """Group a queryset by day for the last N days; returns a list of daily counts."""
-    cutoff = timezone.now() - timedelta(days=days)
-    daily = (
-        queryset.filter(**{f"{date_field}__gte": cutoff})
-        .extra(select={"day": f"date({date_field})"})
-        .values("day")
-        .annotate(cnt=Count("id"))
-        .order_by("day")
-    )
-    by_day = {}
-    for row in daily:
-        key = str(row["day"])[:10]  # 'YYYY-MM-DD'
-        by_day[key] = row["cnt"]
-    series = []
-    for i in range(days):
-        d = (timezone.now() - timedelta(days=days - 1 - i)).date().isoformat()
-        series.append(by_day.get(d, 0))
-    return series
 
 
 PASS_Q = Q(result__iexact="pass") | Q(result__iexact="passed")
@@ -139,35 +116,41 @@ def _elements_breakdown():
 
 
 def _workflow_stats():
-    """Return workflow document counts."""
-    total = _safe_count(WorkflowDocument)
-    page_flows = _safe_count(WorkflowDocument, {"doc_type": "page_flow"})
-    test_cases = _safe_count(WorkflowDocument, {"doc_type": "test_case"})
-    return {"total": total, "page_flows": page_flows, "test_cases": test_cases}
+    """Return workflow document count."""
+    return {"total": _safe_count(WorkflowDocument)}
+
+
+def _daily_bucket_counts(queryset, days=12):
+    """Group a queryset into `days` calendar-day buckets (midnight-aligned), zero-filled.
+
+    One grouped SQL query replaces N per-day count() calls; buckets match the
+    per-day [00:00, 24:00) windows of the original loop implementation.
+    """
+    first_day = (timezone.now() - timedelta(days=days - 1)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    daily = (
+        queryset.filter(created_at__gte=first_day)
+        .extra(select={"day": "date(created_at)"})
+        .values("day")
+        .annotate(cnt=Count("id"))
+    )
+    by_day = {str(row["day"])[:10]: row["cnt"] for row in daily}
+    series = []
+    for i in range(days):
+        day = (first_day + timedelta(days=i)).date().isoformat()
+        series.append(by_day.get(day, 0))
+    return series
 
 
 def _daily_execution_series(days=12):
-    """Daily success / failed executions and newly created cases."""
-    labels, success, failed, new_cases = [], [], [], []
-    for i in range(days):
-        day_start = timezone.now() - timedelta(days=days - 1 - i)
-        day_start = day_start.replace(hour=0, minute=0, second=0, microsecond=0)
-        day_end = day_start + timedelta(days=1)
-        labels.append(day_start.strftime("%m/%d"))
-        success.append(
-            TestResult.objects.filter(
-                PASS_Q, created_at__gte=day_start, created_at__lt=day_end
-            ).count()
-        )
-        failed.append(
-            TestResult.objects.filter(
-                FAIL_Q, created_at__gte=day_start, created_at__lt=day_end
-            ).count()
-        )
-        new_cases.append(
-            TestDefinition.objects.filter(created_at__gte=day_start, created_at__lt=day_end).count()
-        )
-    return {"labels": labels, "success": success, "failed": failed, "new_cases": new_cases}
+    """Daily success / failed executions (2 grouped queries)."""
+    labels = [
+        (timezone.now() - timedelta(days=days - 1 - i)).strftime("%m/%d") for i in range(days)
+    ]
+    success = _daily_bucket_counts(TestResult.objects.filter(PASS_Q), days)
+    failed = _daily_bucket_counts(TestResult.objects.filter(FAIL_Q), days)
+    return {"labels": labels, "success": success, "failed": failed}
 
 
 def _case_result_status(passed, failed):
@@ -180,6 +163,16 @@ def _case_result_status(passed, failed):
     return "partial"
 
 
+def _case_titles(case_ids: set) -> dict:
+    """Batch-fetch case titles by id; missing ids fall back to the id itself."""
+    if not case_ids:
+        return {}
+    return {
+        row["id"]: row["title"]
+        for row in TestDefinition.objects.filter(id__in=case_ids).values("id", "title")
+    }
+
+
 def _recent_tasks(limit=8):
     """Recent case execution summaries + active runs."""
     tasks = []
@@ -187,13 +180,10 @@ def _recent_tasks(limit=8):
     try:
         from apps.test_runner.api import get_active_runs_info
 
-        for info in get_active_runs_info():
-            case_titles = {}
-            for cid in info.get("selected_cases", []):
-                try:
-                    case_titles[cid] = TestDefinition.objects.get(id=cid).title
-                except TestDefinition.DoesNotExist:
-                    case_titles[cid] = cid
+        active_infos = list(get_active_runs_info())
+        selected_ids = {cid for info in active_infos for cid in info.get("selected_cases", [])}
+        case_titles = _case_titles(selected_ids)
+        for info in active_infos:
             tasks.append(
                 {
                     "id": info["run_id"],
@@ -222,21 +212,32 @@ def _recent_tasks(limit=8):
         .annotate(last=Max("created_at"))
         .order_by("-last")[:limit]
     )
-    for row in recent_cases:
+    rows = list(recent_cases)
+    if not rows:
+        return tasks
+
+    # Batched: one title query + one results query; per-case 2h windows applied in Python.
+    titles = _case_titles({row["case_id"] for row in rows})
+    min_start = min(row["last"] for row in rows) - timedelta(hours=2)
+    windows = {row["case_id"]: row["last"] - timedelta(hours=2) for row in rows}
+    results = TestResult.objects.filter(
+        case_id__in=windows.keys(), created_at__gte=min_start
+    ).values_list("case_id", "result", "created_at")
+    passed_map, failed_map = {}, {}
+    for cid, result, created in results:
+        if created < windows[cid]:
+            continue
+        if result.lower() in ("pass", "passed"):
+            passed_map[cid] = passed_map.get(cid, 0) + 1
+        elif result.lower() in ("fail", "failed"):
+            failed_map[cid] = failed_map.get(cid, 0) + 1
+    for row in rows:
         cid = row["case_id"]
-        last = row["last"]
-        window_start = last - timedelta(hours=2)
-        qs = TestResult.objects.filter(
-            case_id=cid, created_at__gte=window_start, created_at__lte=last
-        )
-        passed = qs.filter(PASS_Q).count()
-        failed = qs.filter(FAIL_Q).count()
+        passed = passed_map.get(cid, 0)
+        failed = failed_map.get(cid, 0)
         if passed == 0 and failed == 0:
             continue
-        try:
-            title = TestDefinition.objects.get(id=cid).title
-        except TestDefinition.DoesNotExist:
-            title = cid
+        title = titles.get(cid, cid)
         status = _case_result_status(passed, failed)
         tasks.append(
             {
@@ -246,7 +247,7 @@ def _recent_tasks(limit=8):
                 "passed": passed,
                 "failed": failed,
                 "total": passed + failed,
-                "time": last.strftime("%Y-%m-%d %H:%M"),
+                "time": row["last"].strftime("%Y-%m-%d %H:%M"),
                 "cases": [{"title": title, "status": status, "passed": passed, "failed": failed}],
             }
         )
@@ -254,198 +255,120 @@ def _recent_tasks(limit=8):
     return tasks[:limit]
 
 
-@csrf_exempt
-def dashboard_stats(request):
+class DashboardStatsAPIView(APIView):
     """GET /api/dashboard/stats/ — platform-level statistics."""
-    user_id = getattr(request, "user_id", None)
-    vq = _visibility_q(user_id)
 
-    device_online, device_total = _device_dashboard_stats()
-    case_total = (
-        TestDefinition.objects.filter(vq).count()
-        + _safe_count(StorageTestCase, q_filter=vq)
-        + _safe_count(ApiTestCase, q_filter=vq)
-        + _safe_count(WebTestCase, q_filter=vq)
-    )
-    case_enabled = (
-        TestDefinition.objects.filter(vq, enabled=True).count()
-        + _safe_count(StorageTestCase, {"enabled": True}, q_filter=vq)
-        + _safe_count(ApiTestCase, {"enabled": True}, q_filter=vq)
-        + _safe_count(WebTestCase, {"enabled": True}, q_filter=vq)
-    )
-    run_total = TestRunRecord.objects.count()
-    run_active = TestRunRecord.objects.filter(status="RUNNING").count()
-    agent_total = filter_agents_for_user(AIAgent.objects.all(), user_id).count()
-    agent_active = (
-        filter_agents_for_user(AIAgent.objects.all(), user_id).filter(status="active").count()
-    )
+    def get(self, request):
+        user_id = _user_id(request)
 
-    # Pass rate from test results (field is 'result', not 'status')
-    result_total = TestResult.objects.count()
-    result_passed = TestResult.objects.filter(PASS_Q).count()
-    result_failed = TestResult.objects.filter(FAIL_Q).count()
-    pass_rate = _safe_pct(result_passed, result_total)
+        device_online, device_total = _device_dashboard_stats()
+        # Totals derive from breakdown (single source of truth — no double counting)
+        cases_breakdown = _cases_breakdown(user_id)
+        case_total = sum(row["total"] for row in cases_breakdown)
+        case_enabled = sum(row["enabled"] for row in cases_breakdown)
+        run_total = TestRunRecord.objects.count()
+        run_active = TestRunRecord.objects.filter(status="RUNNING").count()
+        agent_total = filter_agents_for_user(AIAgent.objects.all(), user_id).count()
+        agent_active = (
+            filter_agents_for_user(AIAgent.objects.all(), user_id).filter(status="active").count()
+        )
 
-    # Trend series (last 12 days)
-    # TestRunRecord.started_at is CharField, so we use TestResult.created_at (DateTimeField) for activity trend
-    activity_trend = _daily_counts(TestResult.objects, "created_at")
-    case_trend = _daily_counts(TestDefinition.objects, "created_at")
+        # Pass/fail totals from test results (field is 'result', not 'status')
+        result_passed = TestResult.objects.filter(PASS_Q).count()
+        result_failed = TestResult.objects.filter(FAIL_Q).count()
 
-    # Pass-rate trend per day
-    pass_trend = []
-    for i in range(12):
-        day_start = timezone.now() - timedelta(days=12 - 1 - i)
-        day_end = day_start + timedelta(days=1)
-        day_total = TestResult.objects.filter(
-            created_at__gte=day_start, created_at__lt=day_end
-        ).count()
-        day_passed = TestResult.objects.filter(
-            PASS_Q,
-            created_at__gte=day_start,
-            created_at__lt=day_end,
-        ).count()
-        pass_trend.append(_safe_pct(day_passed, day_total))
+        # ── Elements: totals + page count ──
+        elements_breakdown = _elements_breakdown()
+        element_total = sum(row["total"] for row in elements_breakdown)
+        pages_count = _safe_count(Page)
 
-    # Trends — this week's new items
-    week_ago = timezone.now() - timedelta(days=7)
-    case_trend_num = (
-        TestDefinition.objects.filter(vq, created_at__gte=week_ago).count()
-        + _safe_count(StorageTestCase, {"created_at__gte": week_ago}, q_filter=vq)
-        + _safe_count(ApiTestCase, {"created_at__gte": week_ago}, q_filter=vq)
-        + _safe_count(WebTestCase, {"created_at__gte": week_ago}, q_filter=vq)
-    )
-    # Device activity = runs this week
-    device_trend_num = TestResult.objects.filter(created_at__gte=week_ago).count()
-
-    # ── Elements: per-page breakdown from element-manager (el_pages + el_elements) ──
-    element_total = Element.objects.count() + _safe_count(WebElement) + _safe_count(ApiEndpoint)
-    pages_qs = Page.objects.annotate(live_count=Count("elements")).order_by("-live_count")
-    element_breakdown = [
-        {
-            "page_name": p.label or f"页面 #{p.id}",
-            "package": p.package or "",
-            "element_count": p.live_count,
-            "page_id": p.id,
-        }
-        for p in pages_qs
-    ]
-
-    return JsonResponse(
-        {
-            "status": True,
-            "data": {
-                "devices": {
-                    "online": device_online,
-                    "total": device_total,
-                    "trend": device_trend_num,
-                },
+        return Response(
+            {
+                "devices": {"online": device_online, "total": device_total},
                 "cases": {
                     "total": case_total,
                     "enabled": case_enabled,
-                    "trend": case_trend_num,
-                    "breakdown": _cases_breakdown(user_id),
+                    "breakdown": cases_breakdown,
                 },
                 "elements": {
                     "total": element_total,
-                    "pages": len(element_breakdown),
-                    "breakdown": element_breakdown,
-                    "type_breakdown": _elements_breakdown(),
+                    "pages": pages_count,
+                    "type_breakdown": elements_breakdown,
                 },
                 "workflow": _workflow_stats(),
-                "runs": {
-                    "total": run_total,
-                    "active": run_active,
-                    "trend": run_total,
-                },
-                "agents": {
-                    "total": agent_total,
-                    "active": agent_active,
-                    "trend": agent_active,
-                },
-                "reports": {
-                    "total": Report.objects.count(),
-                },
-                "pass_rate": pass_rate,
-                "charts": {
-                    "devices": activity_trend if sum(activity_trend) > 0 else [1] * 12,
-                    "cases": case_trend if sum(case_trend) > 0 else [1] * 12,
-                    "pass_rate": pass_trend if sum(pass_trend) > 0 else [0] * 12,
-                    "execution": _daily_execution_series(),
-                },
-                "execution_summary": {
-                    "passed": result_passed,
-                    "failed": result_failed,
-                    "new_cases_week": case_trend_num,
-                },
+                "runs": {"total": run_total, "active": run_active},
+                "agents": {"total": agent_total, "active": agent_active},
+                "charts": {"execution": _daily_execution_series()},
+                "execution_summary": {"passed": result_passed, "failed": result_failed},
                 "recent_tasks": _recent_tasks(),
                 "last_updated": timezone.now().strftime("%Y-%m-%d %H:%M"),
                 "system_status": "normal"
                 if device_online > 0 or device_total == 0
                 else "no_devices",
-            },
-        }
-    )
+            }
+        )
 
 
-@csrf_exempt
-def dashboard_activities(request):
+class DashboardActivitiesAPIView(APIView):
     """GET /api/dashboard/activities/ — recent events across the platform."""
-    items = []
 
-    # Recent test runs (started_at is CharField, order by id desc as fallback)
-    for run in TestRunRecord.objects.order_by("-id")[:5]:
-        items.append(
-            {
-                "type": "run",
-                "action": f"测试执行: {run.run_id}",
-                "detail": f"设备: {run.device_serial} · 状态: {run.status}",
-                "time": run.started_at if run.started_at else "",
-            }
-        )
+    def get(self, request):
+        items = []
 
-    # Recent agents
-    user_id = getattr(request, "user_id", None)
-    for agent in filter_agents_for_user(AIAgent.objects.all(), user_id).order_by("-updated_at")[:3]:
-        items.append(
-            {
-                "type": "agent",
-                "action": f"智能体更新: {agent.name}",
-                "detail": f"模型: {agent.model_provider}/{agent.model_name}",
-                "time": agent.updated_at.strftime("%Y-%m-%d %H:%M"),
-            }
-        )
+        # Recent test runs (started_at is CharField, order by id desc as fallback)
+        for run in TestRunRecord.objects.order_by("-id")[:5]:
+            items.append(
+                {
+                    "type": "run",
+                    "action": f"测试执行: {run.run_id}",
+                    "detail": f"设备: {run.device_serial} · 状态: {run.status}",
+                    # 归一化为 16 字符（PRD §5.3：固定 YYYY-MM-DD HH:MM）
+                    "time": (run.started_at or "")[:16].replace("T", " "),
+                }
+            )
 
-    items.sort(key=lambda x: x.get("time", ""), reverse=True)
-    return JsonResponse({"status": True, "data": items[:10]})
+        # Recent agents
+        user_id = _user_id(request)
+        for agent in filter_agents_for_user(AIAgent.objects.all(), user_id).order_by("-updated_at")[
+            :3
+        ]:
+            items.append(
+                {
+                    "type": "agent",
+                    "action": f"智能体更新: {agent.name}",
+                    "detail": f"模型: {agent.model_provider}/{agent.model_name}",
+                    "time": agent.updated_at.strftime("%Y-%m-%d %H:%M"),
+                }
+            )
+
+        items.sort(key=lambda x: x.get("time", ""), reverse=True)
+        return Response(items[:10])
 
 
-@csrf_exempt
-def device_stats(request):
+class DeviceStatsAPIView(APIView):
     """GET /api/devices/stats/ — device pool summary."""
-    online, total = _device_dashboard_stats()
-    return JsonResponse(
-        {
-            "status": True,
-            "data": {
+
+    def get(self, request):
+        online, total = _device_dashboard_stats()
+        return Response(
+            {
                 "online": online,
                 "busy": Device.objects.filter(status="BUSY").count(),
                 "offline": Device.objects.filter(status="OFFLINE").count(),
                 "disconnected": Device.objects.filter(status="DISCONNECTED").count(),
                 "total": total,
-            },
-        }
-    )
+            }
+        )
 
 
-@csrf_exempt
-def case_stats(request):
+class CaseStatsAPIView(APIView):
     """GET /api/cases/stats/ — test case summary."""
-    user_id = getattr(request, "user_id", None)
-    vq = _visibility_q(user_id)
-    return JsonResponse(
-        {
-            "status": True,
-            "data": {
+
+    def get(self, request):
+        user_id = _user_id(request)
+        vq = _visibility_q(user_id)
+        return Response(
+            {
                 "total": TestDefinition.objects.filter(vq).count()
                 + _safe_count(StorageTestCase, q_filter=vq)
                 + _safe_count(ApiTestCase, q_filter=vq)
@@ -462,6 +385,5 @@ def case_stats(request):
                     + _safe_count(ApiTestCase, {"enabled": False}, q_filter=vq)
                     + _safe_count(WebTestCase, {"enabled": False}, q_filter=vq)
                 ),
-            },
-        }
-    )
+            }
+        )

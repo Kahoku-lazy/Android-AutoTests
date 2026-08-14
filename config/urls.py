@@ -7,13 +7,6 @@ from django.http import JsonResponse
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
-from apps.dashboard.views import (
-    case_stats,
-    dashboard_activities,
-    dashboard_stats,
-    device_stats,
-)
-
 from .api_docs import api_docs_html, api_docs_json
 
 urlpatterns = [
@@ -21,11 +14,8 @@ urlpatterns = [
     # API documentation
     path("api/docs", api_docs_json, name="api_docs_json"),
     path("api/docs.html", api_docs_html, name="api_docs_html"),
-    # Dashboard stats (aggregated from all modules)
-    path("api/dashboard/stats/", dashboard_stats, name="dashboard_stats"),
-    path("api/dashboard/activities/", dashboard_activities, name="dashboard_activities"),
-    path("api/devices/stats/", device_stats, name="device_stats"),
-    path("api/cases/stats/", case_stats, name="case_stats"),
+    # Dashboard stats (aggregated from all modules) — 见 apps/dashboard/urls.py
+    path("api/", include("apps.dashboard.urls")),
     # Django Admin (管理员专用，不给普通用户)
     path("admin/", admin.site.urls),
     # ── Module routes (1 include() per app) ──

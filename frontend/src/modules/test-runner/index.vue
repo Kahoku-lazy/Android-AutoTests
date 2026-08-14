@@ -827,7 +827,7 @@ async function loadDevices() {
 .table-actions > :only-child { grid-column:1/-1 }
 .table-actions .el-button,.table-actions .wb-btn { width:100%;justify-content:center }
 .card-grid-grouped { flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:16px }
-.card-group-title { font-family:'Patrick Hand',cursive;font-size:var(--app-size-lg);font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:10px }
+.card-group-title { font-family:var(--app-font-display);font-size:var(--app-size-lg);font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:10px }
 .card-group-count { font-family:var(--app-font-mono);font-size:var(--app-size-xs);color:var(--ink);opacity:0.4;background:var(--app-bg-subtle);padding:2px 8px;border-radius:3px 6px 3px 6px;border:1.5px solid #e8e4d8 }
 .card-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:14px }
 @media(max-width:900px){.card-grid{grid-template-columns:repeat(2,1fr)}}
@@ -880,7 +880,7 @@ async function loadDevices() {
 .task-card-actions :deep(.el-button--primary) { background:var(--c-case);color:var(--app-bg-card);border-color:var(--ink) }
 .new-task-form :deep(.el-form-item) { margin-bottom:14px }.new-task-form :deep(.el-form-item__label) { font-size:var(--app-size-xs);font-weight:700;opacity:0.5;text-transform:uppercase }.field-hint{font-size:var(--app-size-xs);color:var(--c-runner);margin-top:4px;font-weight:600}
 /* 全覆盖 dialog 内部组件 */
-:deep(.el-dialog__header){padding:14px 18px;border-bottom:3px solid var(--ink);background:var(--app-bg-card);border-radius:6px 10px 0 0}:deep(.el-dialog__title){font-family:'Patrick Hand',cursive;font-size:var(--app-size-lg);font-weight:700}:deep(.el-dialog__body){padding:18px}:deep(.el-dialog__footer){padding:14px 18px;border-top:2px solid var(--ink);background:var(--app-bg-card)}
+:deep(.el-dialog__header){padding:14px 18px;border-bottom:3px solid var(--ink);background:var(--app-bg-card);border-radius:6px 10px 0 0}:deep(.el-dialog__title){font-family:var(--app-font-display);font-size:var(--app-size-lg);font-weight:700}:deep(.el-dialog__body){padding:18px}:deep(.el-dialog__footer){padding:14px 18px;border-top:2px solid var(--ink);background:var(--app-bg-card)}
 :deep(.el-select__wrapper){border-radius:4px 8px 4px 8px!important;border:2px solid var(--ink)!important;box-shadow:none!important}:deep(.el-select__wrapper:hover){border-color:var(--c-dashboard)!important}:deep(.el-select__wrapper.is-disabled){background:var(--app-bg-subtle)!important;opacity:0.5}
 :deep(.el-input-number){border-radius:4px 8px 4px 8px;border:2px solid var(--ink)}:deep(.el-input-number .el-input__wrapper){border:none!important;box-shadow:none!important}:deep(.el-input-number__decrease),:deep(.el-input-number__increase){border-color:var(--ink)!important;background:var(--app-bg-card)!important;color:var(--ink)!important}
 :deep(.el-radio__label){font-size:var(--app-size-xs);font-weight:700}:deep(.el-radio__inner){border-color:var(--ink)!important}:deep(.el-radio.is-checked .el-radio__inner){background:var(--ink)!important;border-color:var(--ink)!important}

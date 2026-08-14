@@ -118,7 +118,8 @@
 .hero-title {
   margin: 0;
   font-size: var(--app-size-2xl);
-  font-weight: 800;
+  font-family: var(--app-font-brand);
+  font-weight: 400; /* 飞扬体仅 Regular 字重，不设加粗 */
   color: var(--ink);
   line-height: 1.2;
 }
@@ -139,6 +140,7 @@
 
 .hero__desc {
   font-size: var(--app-size-md);
+  font-family: var(--app-font-brand);
   color: var(--app-text-secondary);
   line-height: 1.7;
   margin: 0 auto;

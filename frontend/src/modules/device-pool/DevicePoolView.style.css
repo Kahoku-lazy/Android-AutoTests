@@ -131,7 +131,7 @@
   padding: 4px 0;
 }
 .card-group-title {
-  font-family: 'Patrick Hand', cursive; font-size: var(--app-size-lg); font-weight: 700;
+  font-family: var(--app-font-display); font-size: var(--app-size-lg); font-weight: 700;
   color: var(--ink); display: flex; align-items: center; gap: 8px;
   margin-bottom: 10px;
 }

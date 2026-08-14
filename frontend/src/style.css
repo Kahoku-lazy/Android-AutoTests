@@ -3,24 +3,31 @@
    令牌来源: shared/styles/tokens.css
    ═══════════════════════════════════════════════ */
 
-/* ── 性能优化：拦截 Noto Sans SC 字体下载 ── */
+/* ── 品牌手写字体：字库星球飞扬体（本地文件，仅 Regular） ── */
 @font-face {
-  font-family: "Noto Sans SC";
-  font-weight: 400; font-display: swap;
-  src: local("PingFang SC"), local("Microsoft YaHei"),
-       local("Hiragino Sans GB"), local("Heiti SC");
+  font-family: "Ziku FeiYang";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/ziku-feiyang.ttf") format("truetype");
+}
+
+/* ── 英文等宽字体：Cascadia Mono（本机已装则零下载，否则 jsDelivr） ── */
+@font-face {
+  font-family: "Cascadia Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local("Cascadia Mono"),
+       url("https://cdn.jsdelivr.net/npm/@fontsource/cascadia-mono@5.3.0/files/cascadia-mono-latin-400-normal.woff2") format("woff2");
 }
 @font-face {
-  font-family: "Noto Sans SC";
-  font-weight: 500; font-display: swap;
-  src: local("PingFang SC"), local("Microsoft YaHei"),
-       local("Hiragino Sans GB"), local("Heiti SC");
-}
-@font-face {
-  font-family: "Noto Sans SC";
-  font-weight: 700; font-display: swap;
-  src: local("PingFang SC Semibold"), local("Microsoft YaHei Bold"),
-       local("Hiragino Sans GB W6"), local("Heiti SC Medium");
+  font-family: "Cascadia Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local("Cascadia Mono Bold"), local("Cascadia Mono"),
+       url("https://cdn.jsdelivr.net/npm/@fontsource/cascadia-mono@5.3.0/files/cascadia-mono-latin-700-normal.woff2") format("woff2");
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }

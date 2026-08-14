@@ -1,0 +1,477 @@
+/* ═══════════════════════════════════════════
+   Doodle Craft — 侧边栏
+   ═══════════════════════════════════════════ */
+
+/* ── 容器 ── */
+.sidebar {
+  flex: 0 0 var(--side-w, 228px); width: var(--side-w, 228px);
+  min-width: var(--side-w, 228px); max-width: var(--side-w, 228px);
+  height: 100%; background: var(--paper); display: flex; flex-direction: column;
+  overflow: hidden; position: relative; z-index: 2;
+  border-right: 3px solid var(--ink); box-shadow: var(--app-shadow-sm);
+  color: var(--ink); font-family: var(--app-font);
+  transition: width 0.2s ease, min-width 0.2s ease, max-width 0.2s ease, flex-basis 0.2s ease;
+  border-radius: 0;
+}
+
+.sidebar--collapsed {
+  flex: 0 0 64px;
+  width: 64px;
+  min-width: 64px;
+  max-width: 64px;
+}
+
+/* ── 折叠按钮（底部） ── */
+.sidebar__toggle {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin: 4px 10px 10px;
+  align-self: flex-start;
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: #fff;
+  box-shadow: var(--app-shadow-sm);
+  color: var(--ink);
+  font-family: var(--app-font); /* button 不继承父级字体，需显式声明 */
+  font-size: var(--app-size-md);
+  font-weight: 800;
+  cursor: pointer;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  transition: all 0.15s ease;
+}
+.sidebar__toggle:hover {
+  border-color: var(--ink);
+  background: var(--app-highlight);
+  color: var(--ink);
+}
+
+.sidebar--collapsed .sidebar__header {
+  justify-content: center;
+  padding: 0;
+}
+.sidebar--collapsed .sidebar-menu__item {
+  justify-content: center;
+  padding: 10px 8px;
+}
+.sidebar--collapsed .sidebar__footer {
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px;
+}
+.sidebar--collapsed .sidebar__toggle {
+  align-self: center;
+  margin: 4px auto 8px;
+}
+.sidebar__icon-logout {
+  border: 2px solid var(--ink);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--app-font); /* button 不继承父级字体，需显式声明 */
+  font-size: var(--app-size-md);
+  color: var(--ink);
+  padding: 4px;
+  border-radius: var(--app-radius-sm);
+  box-shadow: var(--app-shadow-sm);
+}
+.sidebar__icon-logout:hover {
+  background: var(--app-highlight);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.sidebar--resizing {
+  user-select: none;
+}
+
+/* ── 拖拽调整 ── */
+.sidebar__resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  transform: translateX(50%);
+}
+.sidebar__resizer::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  border-radius: 1px;
+  background: var(--dot);
+  transition: background 0.15s ease, width 0.15s ease;
+}
+.sidebar__resizer:hover::before,
+.sidebar__resizer.is-dragging::before {
+  width: 3px;
+  background: var(--ink);
+}
+.sidebar__resizer:hover,
+.sidebar__resizer.is-dragging {
+  background: color-mix(in srgb, var(--ink) 4%, transparent); /* ink 4% 薄纱 */
+}
+
+/* ── 品牌（与 wb-header 同高，底边对齐） ── */
+.sidebar__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  height: var(--app-topbar-h, 96px);
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 0 16px;
+  border-bottom: 1.5px solid var(--dot);
+  letter-spacing: -0.3px;
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.sidebar__header:hover {
+  color: var(--ink);
+}
+.sidebar__brand {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  line-height: 1;
+}
+.brand-ai {
+  flex-shrink: 0;
+  font-family: var(--app-font-brand);
+  font-size: var(--app-size-2xl);
+  font-weight: 400; /* 飞扬体仅 Regular 字重 */
+  line-height: 1;
+  letter-spacing: -0.02em;
+  background: linear-gradient(
+    90deg,
+    var(--c-dashboard),
+    var(--c-device),
+    var(--c-workflow),
+    var(--c-element),
+    var(--c-ai),
+    var(--c-runner),
+    var(--c-dashboard)
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: brand-ai-flow 4s linear infinite;
+}
+@keyframes brand-ai-flow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+.brand-title {
+  display: inline-block;
+  font-family: var(--app-font-brand);
+  font-size: 30px;
+  font-weight: 400; /* 飞扬体仅 Regular 字重 */
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--ink);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  animation: none;
+}
+
+/* ── 品牌图标 Origami 折纸容器 ── */
+.sidebar__header :deep(img),
+.sidebar__header :deep(svg) {
+  border-radius: 0;
+}
+
+/* ── 导航 ── */
+.sidebar__nav {
+  flex: 1;
+  min-height: 0; /* flex 滚动区：矮窗口时收缩并内部滚动，不挤出底部用户区 */
+  overflow-y: auto;
+  padding: 12px 12px;
+}
+.sidebar__group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ── 菜单项 — 纸签 ── */
+.sidebar-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  height: 42px;
+  padding: 0 12px;
+  margin-bottom: 2px;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--app-nav-text);
+  text-decoration: none; /* RouterLink anchor 去下划线 */
+  background: transparent;
+  border: 1.5px solid transparent;
+  border-radius: var(--app-radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.nav-lucide-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--app-ink-muted);
+  flex-shrink: 0;
+  stroke-width: 1.8;
+}
+
+/* hover — 荧光笔 */
+.sidebar-menu__item:hover {
+  background: var(--app-highlight);
+  color: var(--ink);
+  transform: translateX(2px);
+}
+.sidebar-menu__item:hover .nav-lucide-icon {
+  color: var(--ink);
+}
+
+/* ── 活性状态: 墨色描边 + 折角 + 模块色书签 ── */
+.sidebar-menu__item.active {
+  color: var(--ink);
+  font-weight: 700;
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  clip-path: polygon(0% 0%, calc(100% - 12px) 0%, 100% 12px, 100% 100%, 0% 100%);
+  box-shadow: none;
+}
+.sidebar-menu__item.active .nav-lucide-icon {
+  color: var(--ink);
+}
+.sidebar-menu__item.active .sidebar-menu__label {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* 签名: 模块色书签条（左） + 微光 ✦（右） */
+.sidebar-menu__item.active::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 5px;
+  bottom: 5px;
+  width: 5px;
+  border-radius: 2px 4px 2px 4px;
+  background: var(--mod-color, var(--c-workflow));
+  border: 1.5px solid var(--ink);
+}
+.sidebar-menu__item.active::after {
+  content: '✦'; position: absolute; right: 10px; font-size: var(--app-size-sm); color: var(--ink);
+  animation: dc-twinkle 2.4s ease-in-out infinite;
+}
+@keyframes dc-twinkle { 0%,100%{opacity:0.3} 50%{opacity:1} }
+
+/* ── 标签 ── */
+.sidebar-menu__label {
+  flex: 1;
+  min-width: 0;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+/* ── Badge — 与主区状态 badge 同语言 ── */
+.sidebar-menu__badge {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #5a3fa0;
+  background: #E8DDF8;
+  border-radius: 3px 6px 3px 6px;
+  line-height: 16px;
+  margin-left: auto;
+  animation: none;
+  border: 1.5px solid var(--ink);
+}
+.sidebar-menu__badge--dev {
+  background: #E8DDF8;
+  color: #5a3fa0;
+  animation: none;
+}
+.sidebar-menu__badge--pending {
+  background: #fefcbf;
+  color: #975a16;
+  border-color: var(--ink);
+  animation: origami-pending 2s ease-in-out infinite;
+}
+@keyframes origami-pending {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.sidebar-menu__item.active .sidebar-menu__badge {
+  color: var(--ink);
+  background: #fff;
+  border-color: var(--ink);
+}
+
+/* ── 底部用户区 ── */
+.sidebar__footer {
+  position: relative;
+  flex-shrink: 0; /* 用户区永不被导航区挤压 */
+  padding: 0;
+  border-top: none;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+}
+.sidebar__user-card {
+  margin: 10px;
+  padding: 12px;
+  background: #fff;
+  border-radius: var(--app-radius-sm);
+  border: 2px solid var(--ink);
+  box-shadow: var(--app-shadow-sm);
+}
+.sidebar__user-label {
+  font-size: var(--app-size-md);
+  color: var(--app-ink-muted);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.sidebar__user-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: var(--app-font); /* button 不继承父级字体，需显式声明 */
+  font-size: var(--app-size-md);
+  font-weight: 700;
+  color: var(--ink);
+  text-align: left;
+  margin: 3px 0;
+}
+.sidebar__user-display.has-menu {
+  cursor: pointer;
+}
+.sidebar__user-arrow {
+  font-size: var(--app-size-md);
+  margin-left: auto;
+  color: var(--app-ink-muted);
+}
+.sidebar__user-status {
+  font-size: var(--app-size-md);
+  color: var(--app-status-success-text);
+  font-weight: 600;
+}
+/* 在线（左） + 退出（右）同行 */
+.sidebar__user-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+.sidebar__user-name {
+  display: inline-block;
+  color: var(--ink);
+  font-size: var(--app-size-md);
+  font-weight: 700;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  background-clip: border-box;
+}
+
+/* ── 退出按钮 — 天蓝填充 + ink 描边 ── */
+.logout-btn {
+  background: var(--c-workflow) !important;
+  border: 2px solid var(--ink) !important;
+  border-radius: var(--app-radius-sm) !important;
+  color: var(--ink) !important;
+  font-weight: 700 !important;
+  font-size: var(--app-size-md) !important;
+  padding: 5px 14px !important;
+  transition: all 0.15s ease !important;
+  letter-spacing: 0.03em;
+  box-shadow: var(--app-shadow-sm);
+}
+.logout-btn:hover {
+  background: var(--app-highlight) !important;
+  border-color: var(--ink) !important;
+  color: var(--ink) !important;
+  transform: none !important;
+}
+.logout-btn:active {
+  transform: scale(0.97) !important;
+}
+
+/* ── 账号下拉 — 纸卡 ── */
+.account-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 6px;
+  right: 6px;
+  margin-bottom: 4px;
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  box-shadow: var(--app-shadow-lg);
+  overflow: hidden;
+  z-index: 100;
+}
+.account-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  font-family: var(--app-font); /* button 不继承父级字体，需显式声明 */
+  font-size: var(--app-size-md);
+  font-weight: 700;
+  color: var(--ink);
+  text-align: left;
+  text-decoration: none; /* 添加账号为 RouterLink */
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+.account-menu__item:hover {
+  background: var(--app-highlight);
+}
+.account-menu__item.active {
+  color: var(--ink);
+  font-weight: 700;
+}
+.account-menu__check {
+  font-size: var(--app-size-md);
+  color: var(--app-status-success-text);
+}
+.account-menu__item--add {
+  color: var(--app-ink-muted);
+  font-size: var(--app-size-md);
+  font-weight: 600; /* 添加账号入口：600，区别于账号项 700 */
+  justify-content: center;
+}
+.account-menu__divider {
+  height: 1px;
+  background: var(--dot);
+  margin: 0 8px;
+}

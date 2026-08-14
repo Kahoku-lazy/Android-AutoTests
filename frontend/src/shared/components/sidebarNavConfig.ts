@@ -6,7 +6,6 @@ export const NAV_CATEGORIES = [
   },
   {
     key: "test-flow",
-    label: "测试全流程",
     items: [
       { path: "/devices", icon: "smartphone", label: "设备管理" },
       { path: "/inspector", icon: "search", label: "设备检查器" },
@@ -18,10 +17,9 @@ export const NAV_CATEGORIES = [
   },
   {
     key: "ai-tools",
-    label: "AI 与编排",
     items: [
       { path: "/ai-assistant", icon: "bot", label: "AI 助手" },
-      { path: "/workflow", icon: "git-branch", label: "工作流工作台", isDev: true },
+      { path: "/workflow", icon: "git-branch", label: "工作流工作台" },
       {
         path: "/digital-human",
         icon: "user-round",
@@ -32,3 +30,17 @@ export const NAV_CATEGORIES = [
     ],
   },
 ]
+
+// ── Doodle Craft 协调：path → 模块色（active 书签条），与主区 8 模块色同源 ──
+export const MOD_COLORS = {
+  "/dashboard": "var(--c-dashboard)",
+  "/devices": "var(--c-device)",
+  "/inspector": "var(--c-device)",
+  "/elements": "var(--c-element)",
+  "/cases": "var(--c-case)",
+  "/runner": "var(--c-runner)",
+  "/reports": "var(--c-report)",
+  "/ai-assistant": "var(--c-ai)",
+  "/workflow": "var(--c-workflow)",
+  "/digital-human": "var(--c-ai)",
+}

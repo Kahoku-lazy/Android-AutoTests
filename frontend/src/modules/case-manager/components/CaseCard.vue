@@ -204,7 +204,7 @@ async function toggleLock() {
 }
 
 .case-card__title {
-  font-family: var(--app-font, 'Nunito', 'PingFang SC', sans-serif);
+  font-family: var(--app-font, 'Cascadia Mono', 'Noto Sans SC', sans-serif);
   font-weight: 700;
   font-size: var(--app-size-md);
   color: var(--ink);

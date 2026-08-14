@@ -485,13 +485,13 @@
 .elements-table :deep(td:nth-child(1)) { font-weight: 600; color: var(--app-accent-purple-dark); font-size: var(--app-size-sm); }
 /* XPath 列 — 紫色调，等宽字体 */
 .elements-table :deep(td:nth-child(2)) {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
+  font-family: var(--app-font-mono);
   font-size: var(--app-size-sm);
   color: var(--app-accent-purple-dark);
 }
 /* 类名列 — 橙色调等宽 */
 .elements-table :deep(td:nth-child(3)) {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
+  font-family: var(--app-font-mono);
   font-size: var(--app-size-sm);
   color: var(--app-ink);
 }
@@ -499,7 +499,7 @@
 .elements-table :deep(td:nth-child(4)) { color: var(--app-ink); font-size: var(--app-size-sm); }
 /* Resource ID 列 — 蓝色调等宽 */
 .elements-table :deep(td:nth-child(5)) {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
+  font-family: var(--app-font-mono);
   font-size: var(--app-size-sm);
   color: var(--app-ink);
 }
@@ -558,7 +558,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'SF Mono', monospace;
+  font-family: var(--app-font-mono);
   font-size: var(--app-size-sm);
   letter-spacing: 0.2px;
 }

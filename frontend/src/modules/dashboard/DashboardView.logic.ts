@@ -25,16 +25,16 @@ export const PAGE_HEADER = {
 }
 
 const CASE_BREAKDOWN: CaseBreakdownDisplay[] = [
-  { type: 'ui_automation', label: 'Android用例', color: 'app-green', icon: IconDevice },
-  { type: 'web_automation', label: 'Web用例', color: 'app-teal', icon: IconTarget },
-  { type: 'api_testing', label: 'API用例', color: 'app-yellow', icon: IconZap },
-  { type: 'storage', label: '功能业务', color: 'app-pink', icon: IconLayers },
+  { type: 'ui_automation', label: 'Android用例', color: 'deep', icon: IconDevice },
+  { type: 'web_automation', label: 'Web用例', color: 'sage', icon: IconTarget },
+  { type: 'api_testing', label: 'API用例', color: 'cream', icon: IconZap },
+  { type: 'storage', label: '功能业务', color: 'dust', icon: IconLayers },
 ]
 
 const ELEMENT_BREAKDOWN: ElementBreakdownDisplay[] = [
-  { type: 'android', label: 'Android元素', color: 'app-green', icon: IconDevice },
-  { type: 'web', label: 'Web元素', color: 'app-teal', icon: IconTarget },
-  { type: 'api', label: 'API接口', color: 'app-yellow', icon: IconZap },
+  { type: 'android', label: 'Android元素', color: 'deep', icon: IconDevice },
+  { type: 'web', label: 'Web元素', color: 'sage', icon: IconTarget },
+  { type: 'api', label: 'API接口', color: 'cream', icon: IconZap },
 ]
 
 // ── 返回类型接口 ──

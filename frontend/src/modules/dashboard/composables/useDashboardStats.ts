@@ -30,17 +30,16 @@ export interface UseDashboardStatsReturn {
 // ── 默认值 ──
 
 const DEFAULT_STATS: DashboardStats = {
-  devices: { online: 0, total: 0, trend: 0 },
-  cases: { total: 0, enabled: 0, trend: 0, breakdown: [] },
-  elements: { total: 0, pages: 0, breakdown: [], typeBreakdown: [] },
-  runs: { total: 0, active: 0, trend: 0 },
-  agents: { total: 0, active: 0, trend: 0 },
-  reports: { total: 0 },
-  workflow: { total: 0, page_flows: 0, test_cases: 0 },
+  devices: { online: 0, total: 0 },
+  cases: { total: 0, enabled: 0, breakdown: [] },
+  elements: { total: 0, pages: 0, typeBreakdown: [] },
+  runs: { total: 0, active: 0 },
+  agents: { total: 0, active: 0 },
+  workflow: { total: 0 },
 }
 
-const DEFAULT_CHART: ExecutionChart = { labels: [], success: [], failed: [], new_cases: [] }
-const DEFAULT_SUMMARY: ExecutionSummary = { passed: 0, failed: 0, new_cases_week: 0 }
+const DEFAULT_CHART: ExecutionChart = { labels: [], success: [], failed: [] }
+const DEFAULT_SUMMARY: ExecutionSummary = { passed: 0, failed: 0 }
 
 // ── 映射函数 ──
 
@@ -60,32 +59,26 @@ export function mapStatsResponse(raw: DashboardRawData): MappedData {
       devices: {
         online: raw.devices?.online ?? 0,
         total: raw.devices?.total ?? 0,
-        trend: raw.devices?.trend ?? 0,
       },
       cases: {
         total: raw.cases?.total ?? 0,
         enabled: raw.cases?.enabled ?? 0,
-        trend: raw.cases?.trend ?? 0,
         breakdown: raw.cases?.breakdown ?? [],
       },
       elements: {
         total: raw.elements?.total ?? 0,
         pages: raw.elements?.pages ?? 0,
-        breakdown: raw.elements?.breakdown ?? [],
         typeBreakdown: raw.elements?.type_breakdown ?? [],
       },
       runs: {
         total: raw.runs?.total ?? 0,
         active: raw.runs?.active ?? 0,
-        trend: raw.runs?.trend ?? 0,
       },
       agents: {
         total: raw.agents?.total ?? 0,
         active: raw.agents?.active ?? 0,
-        trend: raw.agents?.trend ?? 0,
       },
-      reports: { total: raw.reports?.total ?? 0 },
-      workflow: raw.workflow ?? { total: 0, page_flows: 0, test_cases: 0 },
+      workflow: { total: raw.workflow?.total ?? 0 },
     },
     executionChart: raw.charts?.execution ?? DEFAULT_CHART,
     executionSummary: raw.execution_summary ?? DEFAULT_SUMMARY,

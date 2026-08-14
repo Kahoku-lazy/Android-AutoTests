@@ -335,7 +335,7 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   margin: 0;
-  font-family: var(--app-font, 'Nunito', 'PingFang SC', sans-serif);
+  font-family: var(--app-font, 'Cascadia Mono', 'Noto Sans SC', sans-serif);
   background: linear-gradient(
     90deg,
     #6fba2c 0%,

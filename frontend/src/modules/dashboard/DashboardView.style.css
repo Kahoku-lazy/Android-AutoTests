@@ -24,46 +24,12 @@
   gap: 18px;
 }
 
-/* ── Stats Grid — 分层拍立得卡片 ── */
+/* ── Stats Grid — 紧凑方形涂鸦卡（148px 定宽，自动列数） ── */
 .dashboard__stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  padding-top: 8px;
-}
-.dashboard__stats-grid > :nth-child(odd)  { transform: rotate(-0.5deg); }
-.dashboard__stats-grid > :nth-child(even) { transform: rotate(0.5deg); }
-.dashboard__stats-grid > :hover { transform: rotate(0deg) scale(1.03) !important; z-index: 10; }
-
-/* ── Compact card overrides ── */
-.dashboard__stats-grid--compact :deep(.stats-card) {
-  min-height: 110px;
-  padding: 5px 5px 20px 5px;
-}
-.dashboard__stats-grid--compact :deep(.stats-card__icon) {
-  height: 36px;
-  margin-bottom: 4px;
-}
-.dashboard__stats-grid--compact :deep(.stats-card__icon svg) {
-  width: 18px !important;
-  height: 18px !important;
-}
-.dashboard__stats-grid--compact :deep(.stats-card__title) {
-  font-size: var(--app-size-xs);
-}
-.dashboard__stats-grid--compact :deep(.stats-card__stat strong) {
-  font-size: var(--app-size-md);
-}
-.dashboard__stats-grid--compact :deep(.stats-card__stat small) {
-  font-size: var(--app-size-xs);
-}
-.dashboard__stats-grid--compact :deep(.stats-card__enter) {
-  font-size: var(--app-size-xs);
-  padding: 2px 8px;
-}
-
-@media (max-width: 520px) {
-  .dashboard__stats-grid { grid-template-columns: 1fr; gap: 8px; }
+  grid-template-columns: repeat(auto-fill, 148px);
+  gap: 14px;
+  padding-top: 6px;
 }
 
 /* ── Section 区 ── */
@@ -111,6 +77,12 @@
   border: 1.5px solid var(--app-border-light);
   font-weight: 700;
   margin-left: 8px;
+}
+.doc-section__title :deep(svg) {
+  width: 19px;
+  height: 19px;
+  vertical-align: -3px;
+  margin-right: 7px;
 }
 
 /* ── Trends — 拍立得横排卡片 ── */
@@ -173,23 +145,6 @@
   letter-spacing: 0.04em;
 }
 
-/* ── Live dot ── */
-.dashboard__live-dot {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--app-bg-card);
-  border: 2px solid var(--app-live);
-  top: -2px;
-  right: -2px;
-  animation: livePulse 1.5s ease-in-out infinite;
-}
-@keyframes livePulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
-  50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
-}
-
 /* ── Footer ── */
 .dashboard__footer {
   display: flex;
@@ -214,16 +169,4 @@
 .dashboard__footer-item :deep(svg) {
   color: var(--app-footer-yellow-text);
   stroke: var(--app-footer-yellow-text);
-}
-
-/* ── Module Nav 覆盖（与 ModuleNavigator .module-card 对齐） ── */
-:deep(.module-card) {
-  background: var(--app-bg-card) !important;
-  border: 2.5px solid var(--ink) !important;
-  border-radius: 6px 10px 6px 10px !important;
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.04) !important;
-}
-:deep(.module-card:hover) {
-  transform: translate(1px, 1px) !important;
-  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.06) !important;
 }

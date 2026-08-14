@@ -309,6 +309,6 @@ function onScreenshotUpdate({ url }) {
   }
 }
 
-.inspector-footer { display:flex;align-items:center;justify-content:center;gap:24px;padding:10px 20px;background:var(--app-highlight,#FFE066);border-top:2.5px solid var(--app-ink,#2d2d2d);font-size:var(--app-size-sm);font-weight:700;color:#5a4e20;font-family:'Patrick Hand',cursive;flex-shrink:0; }
+.inspector-footer { display:flex;align-items:center;justify-content:center;gap:24px;padding:10px 20px;background:var(--app-highlight,#FFE066);border-top:2.5px solid var(--app-ink,#2d2d2d);font-size:var(--app-size-sm);font-weight:700;color:#5a4e20;font-family:var(--app-font-display);flex-shrink:0; }
 .inspector-footer span{display:flex;align-items:center;gap:4px;font-size:var(--app-size-sm);}
 </style>

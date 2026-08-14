@@ -702,7 +702,7 @@ watch(
   border-radius: 14px;
   box-shadow: 0 18px 48px rgba(74,78,105,0.12);
   overflow: hidden;
-  font-family: var(--app-font, 'Nunito', 'PingFang SC', sans-serif);
+  font-family: var(--app-font, 'Cascadia Mono', 'Noto Sans SC', sans-serif);
   color: var(--ink);
   
 }

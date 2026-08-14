@@ -371,7 +371,7 @@ function openCaseBreakdown(type, tab = 'detail') {
 /* 分区卡片 — doc-section 统一样式 */
 .doc-section{background:var(--app-bg-card);border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:16px 18px;box-shadow:2px 3px 0 rgba(0,0,0,0.04)}
 .doc-section__header{margin-bottom:12px}
-.doc-section__title{font-family:'Patrick Hand',cursive;font-size:var(--app-size-xl);font-weight:700;display:inline-block;position:relative;margin-bottom:6px}
+.doc-section__title{font-family:var(--app-font-display);font-size:var(--app-size-xl);font-weight:700;display:inline-block;position:relative;margin-bottom:6px}
 .doc-section__title::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2.5px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%231e1e24' stroke-width='2' fill='none'/%3E%3C/svg%3E")repeat-x;background-size:40px 3px}
 .doc-section__title .doc-tag{font-size:var(--app-size-xs);padding:1px 8px;border-radius:4px 8px 4px 8px;background:var(--app-bg-card);color:var(--app-ink-muted);border:1.5px solid #e8ecf1;font-weight:700;margin-left:8px}
 .doc-section__label{color:var(--app-ink-muted);font-size:var(--app-size-xs);margin-top:2px}
@@ -424,7 +424,7 @@ function openCaseBreakdown(type, tab = 'detail') {
 .report-table :deep(.el-table__body tr:hover td){background:#fefdfb!important}
 
 .run-link{cursor:pointer;text-decoration:none;color:var(--ink)}
-.cell-run-id{font-family:'JetBrains Mono',monospace;font-size:var(--app-size-xs);font-weight:600;text-decoration:underline}
+.cell-run-id{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600;text-decoration:underline}
 .badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);display:inline-block}
 .status-ok{background:var(--app-pass);color:var(--app-status-success-text)}.status-fail{background:var(--app-fail);color:#a03030}.status-stopped{background:var(--app-border-lighter);color:var(--app-ink-muted)}
 </style>

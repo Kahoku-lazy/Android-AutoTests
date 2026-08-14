@@ -16,13 +16,12 @@ export interface ElementBreakdownItem {
 // ── 平台概览统计 ──
 
 export interface DashboardStats {
-  devices: { online: number; total: number; trend: number }
-  cases: { total: number; enabled: number; trend: number; breakdown: CaseBreakdownItem[] }
-  elements: { total: number; pages: number; breakdown: ElementBreakdownItem[]; typeBreakdown: ElementBreakdownItem[] }
-  runs: { total: number; active: number; trend: number }
-  agents: { total: number; active: number; trend: number }
-  reports: { total: number }
-  workflow: { total: number; page_flows: number; test_cases: number }
+  devices: { online: number; total: number }
+  cases: { total: number; enabled: number; breakdown: CaseBreakdownItem[] }
+  elements: { total: number; pages: number; typeBreakdown: ElementBreakdownItem[] }
+  runs: { total: number; active: number }
+  agents: { total: number; active: number }
+  workflow: { total: number }
 }
 
 // ── 图表与摘要 ──
@@ -31,13 +30,11 @@ export interface ExecutionChart {
   labels: string[]
   success: number[]
   failed: number[]
-  new_cases: number[]
 }
 
 export interface ExecutionSummary {
   passed: number
   failed: number
-  new_cases_week: number
 }
 
 // ── 最近任务 ──
@@ -59,7 +56,7 @@ export interface RecentTask {
 // ── 活动时间线 ──
 
 export interface ActivityItem {
-  type: 'success' | 'warning' | 'error' | 'info'
+  type: string // 'run' | 'agent'，枚举外值按默认样式展示（PRD §2.3）
   action: string
   time: string
   detail?: string
@@ -70,14 +67,12 @@ export interface ActivityItem {
 
 /** GET /api/dashboard/stats/ 返回的原始数据 */
 export interface DashboardRawData {
-  devices: { online: number; total: number; trend: number }
-  cases: { total: number; enabled: number; trend: number; breakdown: CaseBreakdownItem[] }
-  elements: { total: number; pages: number; breakdown: ElementBreakdownItem[]; type_breakdown: ElementBreakdownItem[] }
-  runs: { total: number; active: number; trend: number }
-  agents: { total: number; active: number; trend: number }
-  reports: { total: number }
-  workflow: { total: number; page_flows: number; test_cases: number }
-  pass_rate: number
+  devices: { online: number; total: number }
+  cases: { total: number; enabled: number; breakdown: CaseBreakdownItem[] }
+  elements: { total: number; pages: number; type_breakdown: ElementBreakdownItem[] }
+  runs: { total: number; active: number }
+  agents: { total: number; active: number }
+  workflow: { total: number }
   charts: { execution: ExecutionChart }
   execution_summary: ExecutionSummary
   recent_tasks: RecentTask[]

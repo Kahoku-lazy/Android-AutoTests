@@ -62,7 +62,7 @@ watch(() => props.items.length, revealItems)
 }
 
 .timeline__title {
-  font-family: var(--font-display, 'Nunito', sans-serif);
+  font-family: var(--font-display, 'Cascadia Mono', 'Noto Sans SC', sans-serif);
   font-size: var(--app-size-md);
   font-weight: 700;
   color: var(--ink);
@@ -109,9 +109,9 @@ watch(() => props.items.length, revealItems)
   z-index: 1;
 }
 
-.timeline-item--success .timeline-item__dot { border-color: var(--app-status-success); }
-.timeline-item--warning .timeline-item__dot { border-color: var(--c-dashboard); }
-.timeline-item--error .timeline-item__dot { border-color: var(--app-error); }
+/* 事件类型样式（PRD §2.3）：run=测试执行→紫，agent=智能体更新→黄；枚举外值用默认灰 */
+.timeline-item--run .timeline-item__dot { border-color: var(--app-status-purple); }
+.timeline-item--agent .timeline-item__dot { border-color: var(--c-dashboard); }
 
 .timeline-item__dot-inner {
   width: 6px;
@@ -119,9 +119,8 @@ watch(() => props.items.length, revealItems)
   border-radius: 1px;
   background: var(--app-ink-muted);
 }
-.timeline-item--success .timeline-item__dot-inner { background: var(--app-status-success); }
-.timeline-item--warning .timeline-item__dot-inner { background: var(--c-dashboard); }
-.timeline-item--error .timeline-item__dot-inner   { background: var(--app-status-danger); }
+.timeline-item--run .timeline-item__dot-inner { background: var(--app-status-purple); }
+.timeline-item--agent .timeline-item__dot-inner { background: var(--c-dashboard); }
 
 .timeline-item__line {
   position: absolute;

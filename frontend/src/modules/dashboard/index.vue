@@ -5,7 +5,6 @@ import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import StatsAppCard from './components/StatsCard.vue'
 import TrendBarChart from './components/TrendBarChart.vue'
 import TaskResultPanel from './components/TaskResultPanel.vue'
-import ModuleNavigator from './components/ModuleNavigator.vue'
 import ActivityTimeline from './components/ActivityTimeline.vue'
 import {
   IconDevice,
@@ -14,6 +13,11 @@ import {
   IconClock,
   IconAlertCircle,
   IconLayers,
+  IconMonitor,
+  IconClipboardCheck,
+  IconTarget,
+  IconTrendingUp,
+  IconActivity,
 } from '@/shared/icons/index'
 
 const {
@@ -56,72 +60,63 @@ const {
 
     <!-- 内容区 -->
     <div class="doc-body">
-      <!-- 欢迎导航 -->
-      <section class="doc-section">
-        <ModuleNavigator :stats="stats" />
-      </section>
-
       <!-- 统计概览：平台运营 -->
       <section class="doc-section">
-        <h3 class="doc-section__title">平台运营<span class="doc-tag">Platform</span></h3>
+        <h3 class="doc-section__title"><IconMonitor :size="19" />平台运营<span class="doc-tag">Platform</span></h3>
         <div class="doc-section__label">
           设备 {{ stats.devices.total }}
           · 智能体 {{ stats.agents.total }}
           · 任务 {{ stats.runs.total }}
           · 工作流 {{ stats.workflow.total }}
         </div>
-        <div class="dashboard__stats-grid dashboard__stats-grid--compact">
+        <div class="dashboard__stats-grid">
           <StatsAppCard
             label="在线设备"
             :value="stats.devices.online"
-            color="app-green"
-            :trend="stats.devices.trend"
-            trend-label="活跃"
+            color="sage"
             path="/devices"
             :loading="loading"
           >
-            <template #icon><IconDevice :size="18" color="#fff" /></template>
+            <template #icon><IconDevice :size="12" /></template>
           </StatsAppCard>
           <StatsAppCard
             label="活跃智能体"
             :value="stats.agents.active"
-            color="app-blue"
+            color="gray"
             path="/ai-assistant"
             :loading="loading"
           >
-            <template #icon><IconBrain :size="18" color="#fff" /></template>
+            <template #icon><IconBrain :size="12" /></template>
           </StatsAppCard>
           <StatsAppCard
             label="运行中任务"
             :value="stats.runs.active"
-            color="app-pink"
+            color="rose"
             path="/runner"
             :loading="loading"
+            :live="stats.runs.active > 0"
           >
-            <template #icon>
-              <IconPlay :size="18" color="#fff" />
-              <span class="dashboard__live-dot" v-if="stats.runs.active > 0"></span>
-            </template>
+            <template #icon><IconPlay :size="12" /></template>
           </StatsAppCard>
           <StatsAppCard
             label="工作流"
             :value="stats.workflow.total"
-            color="purple"
+            color="pale"
             path="/workflow"
             :loading="loading"
           >
-            <template #icon><IconLayers :size="18" color="#fff" /></template>
+            <template #icon><IconLayers :size="12" /></template>
           </StatsAppCard>
         </div>
       </section>
 
       <!-- 统计概览：测试用例 -->
       <section class="doc-section">
-        <h3 class="doc-section__title">测试用例<span class="doc-tag">Cases</span></h3>
+        <h3 class="doc-section__title"><IconClipboardCheck :size="19" />测试用例<span class="doc-tag">Cases</span></h3>
         <div class="doc-section__label">
-          共 {{ stats.cases.total }} 个 · 本周新增 {{ stats.cases.trend }}
+          共 {{ stats.cases.total }} 个
         </div>
-        <div class="dashboard__stats-grid dashboard__stats-grid--compact">
+        <div class="dashboard__stats-grid">
           <StatsAppCard
             v-for="item in caseBreakdown"
             :key="item.type"
@@ -132,7 +127,7 @@ const {
             :loading="loading"
           >
             <template #icon>
-              <component :is="item.icon" :size="18" color="#fff" />
+              <component :is="item.icon" :size="12" />
             </template>
           </StatsAppCard>
         </div>
@@ -140,11 +135,11 @@ const {
 
       <!-- 统计概览：元素定位 -->
       <section class="doc-section">
-        <h3 class="doc-section__title">元素定位<span class="doc-tag">Elements</span></h3>
+        <h3 class="doc-section__title"><IconTarget :size="19" />元素定位<span class="doc-tag">Elements</span></h3>
         <div class="doc-section__label">
           共 {{ stats.elements.total }} 个 · {{ stats.elements.pages }} 个页面
         </div>
-        <div class="dashboard__stats-grid dashboard__stats-grid--compact">
+        <div class="dashboard__stats-grid">
           <StatsAppCard
             v-for="item in elementBreakdown"
             :key="'el-' + item.type"
@@ -155,7 +150,7 @@ const {
             :loading="loading"
           >
             <template #icon>
-              <component :is="item.icon" :size="18" color="#fff" />
+              <component :is="item.icon" :size="12" />
             </template>
           </StatsAppCard>
         </div>
@@ -164,6 +159,7 @@ const {
       <!-- 趋势图表 -->
       <section class="doc-section">
         <h3 class="doc-section__title">
+          <IconTrendingUp :size="19" />
           趋势数据
           <span class="doc-tag">Trends</span>
         </h3>
@@ -184,6 +180,7 @@ const {
       <!-- 最近动态 -->
       <section class="doc-section">
         <h3 class="doc-section__title">
+          <IconActivity :size="19" />
           最近动态
           <span class="doc-tag">Activity</span>
         </h3>

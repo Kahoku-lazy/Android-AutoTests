@@ -543,7 +543,7 @@ async function doSave() {
   gap: 8px;
 }
 
-.panel-title { font-family: "Patrick Hand", cursive;
+.panel-title { font-family: var(--app-font-display);
   font-size: var(--app-size-md);
   font-weight: 700;
   color: var(--app-ink);

@@ -11,7 +11,7 @@ interface TaskResultPanelProps {
 
 withDefaults(defineProps<TaskResultPanelProps>(), {
   tasks: () => [],
-  summary: () => ({ passed: 0, failed: 0, new_cases_week: 0 }),
+  summary: () => ({ passed: 0, failed: 0 }),
 })
 
 interface StatusMetaItem {
@@ -61,11 +61,6 @@ function openTask(task: RecentTask) {
         <span class="summary-chip__icon">✗</span>
         <span class="summary-chip__value">{{ summary.failed }}</span>
         <span class="summary-chip__label">失败</span>
-      </div>
-      <div class="summary-chip is-new">
-        <span class="summary-chip__icon">+</span>
-        <span class="summary-chip__value">{{ summary.new_cases_week }}</span>
-        <span class="summary-chip__label">本周新建</span>
       </div>
     </div>
 
@@ -136,7 +131,6 @@ function openTask(task: RecentTask) {
 
 .summary-chip.is-success { border-color: var(--app-status-success); color: var(--app-status-success-text); }
 .summary-chip.is-failed  { border-color: var(--app-status-danger); color: var(--app-status-danger-text); }
-.summary-chip.is-new     { border-color: var(--app-status-purple); color: var(--app-status-purple-text); }
 
 .summary-chip__icon {
   width: 16px; height: 16px; border-radius: 3px;

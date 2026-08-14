@@ -718,7 +718,7 @@ watch(
   border: 1px solid var(--ink);
   border-radius: 18px;
   box-shadow: var(--app-shadow-lg);
-  font-family: var(--app-font, 'Nunito', 'PingFang SC', sans-serif);
+  font-family: var(--app-font, 'Cascadia Mono', 'Noto Sans SC', sans-serif);
   color: var(--ink);
   
 }

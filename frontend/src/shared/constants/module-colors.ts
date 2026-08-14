@@ -1,5 +1,5 @@
 // ── 平台模块视觉常量（V6 配色）──
-// ModuleNavigator、StatsCard、AppSidebar 共用
+// ⚠️ 暂无消费方（ModuleNavigator 已删、统计卡已改用 tokens.css --app-stat-*）——保留待清理
 
 export const MODULE_COLORS = {
   green:  { bar: '#95D5B2', gradient: 'linear-gradient(135deg,#95D5B2,#52b788)' },

@@ -40,11 +40,12 @@
   --app-text-secondary: #999;
   --app-text-muted:     #bbb;
   --app-text-inverse:   #ffffff;
+  --app-nav-text:       #5a5547;  /* 侧边栏导航未激活文字（暖灰，纸面语言） */
 
   /* ── 兼容别名 ── */
   --text-primary:       var(--ink);
   --text-secondary:     #999;
-  --font-display:       'Patrick Hand', cursive;
+  --font-display:       'Cascadia Mono', 'Noto Sans SC', sans-serif;
   --side-w:             228px;
   /* 侧栏品牌区与主区 wb-header 底边对齐 */
   --app-topbar-h:       96px;
@@ -118,10 +119,12 @@
   --app-pending:       #D4E8FF;
   --app-pending-text:  #1a3a6a;
 
-  /* ── 字体 ── */
-  --app-font:          'Nunito', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
-  --app-font-display:  'Patrick Hand', 'PingFang SC', 'Microsoft YaHei', cursive, sans-serif;
-  --app-font-mono:     'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
+  /* ── 字体 ──
+     英文 Cascadia Mono（等宽）+ 中文思源黑体 Noto Sans SC；品牌文字例外用 --app-font-brand */
+  --app-font:          'Cascadia Mono', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', monospace, sans-serif;
+  --app-font-display:  'Cascadia Mono', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', monospace, sans-serif;
+  --app-font-mono:     'Cascadia Mono', 'Consolas', monospace;
+  --app-font-brand:    'Ziku FeiYang', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;  /* 品牌手写体，仅 400 字重 */
 
   /* ── 字号刻度（6 档，最小 12px，禁止硬编码 font-size 字面量）── */
   --app-size-xs:  12px;  /* 按钮文字、表格列头、标签、时间戳、Badge */
@@ -189,10 +192,10 @@
   --doodle-radius:          4px 10px 4px 10px;
   --doodle-radius-sm:       4px 8px 4px 8px;
   --doodle-shadow:          2px 2px 0 rgba(0,0,0,0.06);
-  --doodle-font-title:      'Patrick Hand', cursive;
-  --doodle-font-ui:         'Nunito', 'PingFang SC', sans-serif;
-  --doodle-font-hand:       'Patrick Hand', cursive;
-  --doodle-font-mono:       'JetBrains Mono', 'Fira Code', monospace;
+  --doodle-font-title:      var(--app-font-display);
+  --doodle-font-ui:         var(--app-font);
+  --doodle-font-hand:       var(--app-font-brand);
+  --doodle-font-mono:       var(--app-font-mono);
   --doodle-texture-cross:   linear-gradient(45deg,rgba(0,0,0,0.02) 25%,transparent 25%,transparent 75%,rgba(0,0,0,0.02) 75%);
   --doodle-texture-dots:    radial-gradient(circle,rgba(0,0,0,0.03) 1px,transparent 1px);
   --doodle-texture-stripe:  repeating-linear-gradient(-45deg,transparent,transparent 3px,rgba(0,0,0,0.015) 3px,rgba(0,0,0,0.015) 6px);
@@ -202,6 +205,21 @@
   --app-sidebar-collapsed:64px;
   --app-sidebar-bg:       var(--paper);
   --app-sidebar-active:   var(--c-dashboard);
+
+  /* ── 仪表盘统计卡（奶油低饱和 · 参考图配色） ── */
+  --app-stat-line:          #7a7874;   /* 卡片软灰线条（描边/十字/图标） */
+  --app-stat-line-soft:     #9e9994;   /* 辅助文字 */
+  --app-stat-text:          #5f5d59;   /* 卡片主文字 */
+  --app-stat-hover:         #f5eecf;   /* hover 奶油黄 */
+  --app-stat-shadow:        rgba(122, 120, 116, 0.14);
+  --app-stat-shadow-hover:  rgba(122, 120, 116, 0.22);
+  --app-stat-sage:          #e6f0ea;   /* 薄荷淡绿 */
+  --app-stat-gray:          #dedfdc;   /* 柔灰 */
+  --app-stat-rose:          #f4e8e1;   /* 浅粉 */
+  --app-stat-pale:          #f0f6e7;   /* 淡青柠奶油 */
+  --app-stat-deep:          #cdd9d3;   /* 深一档薄荷 */
+  --app-stat-cream:         #fdf7ed;   /* 米白 */
+  --app-stat-dust:          #d0c5c1;   /* 灰粉 */
 
   /* ── 动效 ── */
   --app-ease:          cubic-bezier(0.25,0.1,0.25,1);

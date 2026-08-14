@@ -4,7 +4,7 @@ import { useECharts } from '@/shared/composables/useECharts'
 import type { ExecutionChart } from '@/shared/types/dashboard'
 
 const props = withDefaults(defineProps<{ chart: ExecutionChart }>(), {
-  chart: () => ({ labels: [], success: [], failed: [], new_cases: [] }),
+  chart: () => ({ labels: [], success: [], failed: [] }),
 })
 
 // ⚠️ ECharts 渲染在 Canvas 上，不支持 CSS 变量，此处保留色值字面量。
@@ -46,9 +46,6 @@ function buildOption() {
       { name: '执行失败', type: 'bar', data: c.failed || [], color: '#FFB5A7',
         barMaxWidth: 14, itemStyle: { borderRadius: [2, 2, 0, 0] },
         animationDelay: (idx) => idx * 40 + 60 },
-      { name: '新建用例', type: 'bar', data: c.new_cases || [], color: '#C9B6F2',
-        barMaxWidth: 14, itemStyle: { borderRadius: [2, 2, 0, 0] },
-        animationDelay: (idx) => idx * 40 + 120 },
     ],
     animationDelayUpdate: (idx) => idx * 30,
   }

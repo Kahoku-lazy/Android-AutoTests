@@ -23,7 +23,7 @@
 | 严重度 | 必须归入的情形 |
 |--------|----------------|
 | 🔴 | 契约/信封/DRF 通道错误；TS 类型与后端响应字段名不一致（如类型声明 `ok` 但后端返回 `status`）；静默当成功；锁态仍可写；主路径不可用（点了没反应/白屏）；DTO 污染致必现 400 |
-| 🟠 | `font-size` **&lt; 12px** 或未走 `--app-size-*`（见 DESIGN_SYSTEM）；**交互色**硬编码 `#hex`（非 `var(--x, fallback)` 的主值）；可点击非 button/a 且无键盘角色；错误文案含「后端/端口/Axios/status code」等技术词；三态缺失；视图互斥缺口；危险操作无确认；编辑锁可改；字段漏展影响主路径 |
+| 🟠 | `font-size` **&lt; 12px** 或未走 `--app-size-*`（见 DESIGN_SYSTEM）；**交互色**硬编码 `#hex`（非 `var(--x, fallback)` 的主值）；对称大圆角 `50px/16px/20px`；`backdrop-filter: blur()`；旧色值 `#4a4e69` `#9a8c98`；模块色用错 token；可点击非 button/a 且无键盘角色；错误文案含「后端/端口/Axios/status code」等技术词；三态缺失；视图互斥缺口；危险操作无确认；编辑锁可改；字段漏展影响主路径 |
 | 🟡 | 装饰性 `rgba` text-shadow / 光晕；`var(--token, #fallback)` 的 fallback；`z-index` 无注释；间距裸 px；`@import` 共享 css（已暂缓项）；ESC 常驻；TS 收窄不完美；双错误工具函数并存；密码 trim 与后端微差 |
 
 **禁止**：把 DESIGN_SYSTEM 明确禁止的 `10px` 判成 🟡；禁止把未浏览器确认的布局直接 ✅。
@@ -66,6 +66,8 @@ rg -n "color:\s*#|background:[^;]*#|rgba?\(|hsla?\(" <scope>
 rg -n "overflow:\s*hidden" <scope>
 rg -n "@click" <scope>   # 再人工排除 button/a
 rg -n "\bfetch\b|\baxios\b|djangoClient" <scope>
+rg -n "backdrop-filter|border-radius:\s*(50px|16px|20px)|#4a4e69|#9a8c98" <scope>
+rg -n "box-shadow|padding:\s*\d+px|gap:\s*\d+px" <scope>
 ```
 
 未跑命令不得对二.1/二.2 下结论。

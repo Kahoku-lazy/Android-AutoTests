@@ -71,6 +71,11 @@ description: |
 | 2 | 颜色 | 见 calibration §4（交互 hex/遮罩 🟠；装饰 shadow 🟡） |
 | 3 | 行内 style | 静态进 class |
 | 4 | 独立 CSS / z-index | 共享 `@import` 可记债；魔法 z-index 须注释 |
+| 5 | 圆角 | 不对称（`6px 10px 6px 10px` 等）；对称大圆角 `50px/16px/20px` → 🟠 |
+| 6 | 阴影 | 扁平（0 模糊半径）；模糊 shadow / 大扩散 → 🟡 |
+| 7 | 间距 | `--app-space-*`；裸 px → 🟡 |
+| 8 | 模块色 | 用对应 `--c-*` / `--app-status-*` token；用错色 → 🟠 |
+| 9 | 禁止事项 | 无 `backdrop-filter: blur()`、玻璃态、旧色值 `#4a4e69` `#9a8c98` → 🟠 |
 
 ### 三、逻辑层（P2）
 
@@ -185,4 +190,4 @@ description: |
 | Python 质量 | `code-health-check` |
 | 功能跑测 | `functional-testing` |
 | Vue 写法 | `vue` |
-| 设计系统落地 | `frontend-design` |
+| 设计系统落地 | `doodle-craft` |

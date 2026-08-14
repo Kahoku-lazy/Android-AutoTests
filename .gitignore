@@ -97,6 +97,9 @@ desktop.ini
 dev_docs/H717D/
 apps/case_manager/management/commands/import_h717d_cases.py
 
+# ── Archived obsolete docs (已实现计划/被取代配套文档，不随仓库分发) ──
+dev_docs/_archive/
+
 # ── Claude Code sessions & Superpowers (auto-generated, DO NOT upload) ──
 docs/
 .superpowers/

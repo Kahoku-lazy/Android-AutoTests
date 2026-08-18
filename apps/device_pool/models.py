@@ -1,9 +1,8 @@
 """device-pool ORM models — dp_ prefix tables.
 
 v2 schema per PRD §5:
-  dp_devices       — 13 fields: device registry with full metadata
-  dp_device_locks  —  7 fields: lock audit trail (never deleted)
-  dp_device_queue  —  6 fields: FIFO waiting queue
+  dp_devices       — device registry（序列号唯一 + 元信息 + 状态 + 锁定/占用 + 连接地址/时间/添加人）
+  dp_device_locks  — lock audit trail（永不删除，status 追踪生命周期）
 """
 
 from django.db import models
@@ -23,13 +22,17 @@ class Device(models.Model):
     screen_h = models.IntegerField(default=0)
     android_version = models.CharField(max_length=20, default="", blank=True)
     connection_type = models.CharField(max_length=10, default="USB")  # USB | WIFI
-    status = models.CharField(max_length=20, default="ONLINE")  # ONLINE | BUSY | OFFLINE
-    # User binding: which login user exclusively owns this device
+    connection_addr = models.CharField(max_length=200, default="", blank=True)  # 无线设备 IP:port
+    status = models.CharField(max_length=20, default="ONLINE")  # ONLINE | BUSY
+    # 锁定（可见性）：锁定者用户名；空 = 公开
     locked_by = models.CharField(max_length=200, default="", blank=True)
     locked_at = models.DateTimeField(null=True, blank=True)
-    # Process occupation: which process is currently using the hardware
+    # 进程占用：设备检查器 / 执行引擎占用
     occupied_by = models.CharField(max_length=200, default="", blank=True)
     occupied_at = models.DateTimeField(null=True, blank=True)
+    # 连接时间点 / 添加人
+    connected_at = models.DateTimeField(null=True, blank=True)
+    added_by = models.CharField(max_length=200, default="", blank=True)
 
     @property
     def is_occupied(self):
@@ -101,28 +104,3 @@ class DeviceLock(models.Model):
 
     def __str__(self):
         return f"Lock: {self.device.serial} by {self.user_id} [{self.status}]"
-
-
-class DeviceQueue(models.Model):
-    """FIFO waiting queue → dp_device_queue (v2).
-
-    When a device is BUSY and another user wants it, they join the queue.
-    On release the first waiting entry is auto-assigned.
-    """
-
-    device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name="queue_entries")
-    user_id = models.CharField(max_length=200)
-    requested_at = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(
-        max_length=20, default="waiting"
-    )  # waiting | assigned | cancelled | timeout
-    assigned_at = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        db_table = "dp_device_queue"
-        verbose_name = "设备队列"
-        verbose_name_plural = "设备队列"
-        ordering = ["requested_at"]
-
-    def __str__(self):
-        return f"Queue: {self.user_id} → {self.device.serial} [{self.status}]"

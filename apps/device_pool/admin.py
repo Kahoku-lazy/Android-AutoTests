@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Device, DeviceLock, DeviceQueue
+from .models import Device, DeviceLock
 
 
 @admin.register(Device)
@@ -13,6 +13,7 @@ class DeviceAdmin(admin.ModelAdmin):
         "brand",
         "status",
         "connection_type",
+        "connection_addr",
         "locked_by",
         "last_seen",
         "created_at",
@@ -37,11 +38,3 @@ class DeviceLockAdmin(admin.ModelAdmin):
     search_fields = ("user_id", "device__serial")
     list_filter = ("status", "release_reason")
     readonly_fields = ("locked_at",)
-
-
-@admin.register(DeviceQueue)
-class DeviceQueueAdmin(admin.ModelAdmin):
-    list_display = ("id", "device", "user_id", "status", "requested_at", "assigned_at")
-    search_fields = ("user_id", "device__serial")
-    list_filter = ("status",)
-    readonly_fields = ("requested_at",)

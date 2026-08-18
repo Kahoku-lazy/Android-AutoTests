@@ -1,4 +1,5 @@
 import logging
+import threading
 
 from django.apps import AppConfig
 
@@ -16,6 +17,10 @@ class TestRunnerConfig(AppConfig):
         只在 ASGI 服务进程（Daphne）执行。管理命令（shell/migrate/test）和
         AgentScope 进程绝不能触发恢复——否则会把 Daphne 进程里正在执行的任务
         误判为孤儿、中断并释放其设备。
+
+        恢复逻辑在后台线程中执行，阻塞至 apps 完全 ready 后再查库，避免在
+        AppConfig.ready() 内查询触发 Django 的
+        "Accessing the database during app initialization" RuntimeWarning。
         """
         import os
         import sys
@@ -26,6 +31,18 @@ class TestRunnerConfig(AppConfig):
         )
         if not is_asgi_server:
             return
+
+        threading.Thread(
+            target=self._run_startup_recovery,
+            name="test-runner-startup-recovery",
+            daemon=True,
+        ).start()
+
+    def _run_startup_recovery(self) -> None:
+        """后台执行启动恢复：等 apps 完全 ready 后查库并恢复状态。"""
+        from django.apps import apps as django_apps
+
+        django_apps.ready_event.wait()
 
         try:
             from .models import TaskCard

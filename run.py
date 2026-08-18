@@ -244,8 +244,7 @@ def start_backend() -> bool:
     spawn(
         [
             sys.executable,
-            "-m",
-            "daphne",
+            str(ROOT / "run_daphne.py"),
             "-p",
             str(port),
             "-b",

@@ -1,6 +1,5 @@
 """device-inspector HTTP routes — live device interaction endpoints."""
 
-import json
 import logging
 
 from datetime import datetime
@@ -12,7 +11,8 @@ from django.views.decorators.csrf import csrf_exempt
 from apps.device_pool.api import device
 from apps.device_pool.models import Device
 
-from .service import gen_xpath_candidates
+from .ocr import recognize
+from .service import gen_xpath_candidates, trim_hierarchy
 
 logger = logging.getLogger(__name__)
 
@@ -75,21 +75,23 @@ def dump_page(request):
     cur = device.app_current()
     activity = cur.get("activity", "")
 
-    # Generate XPath candidates for actionable elements
+    # Generate XPath candidates for actionable elements（用完整层级算 count，保证定位语义准确）
     xpath_count = 0
     for e in nodes:
         if e["resource_id"] or e["text"] or e["content_desc"] or e["clickable"]:
             e["xpaths"] = gen_xpath_candidates(e, nodes)
             xpath_count += 1
 
+    # 裁剪展示层级：去纯布局容器 + 按 bounds 去重
+    elements = trim_hierarchy(nodes)
     actionable = [
-        e for e in nodes if e["clickable"] or e["text"] or e["resource_id"] or e["content_desc"]
+        e for e in elements if e["clickable"] or e["text"] or e["resource_id"] or e["content_desc"]
     ]
 
     logger.info(
-        "[dump] total=%d xpath=%d actionable=%d package=%s activity=%s",
+        "[dump] total=%d trimmed=%d actionable=%d package=%s activity=%s",
         len(nodes),
-        xpath_count,
+        len(elements),
         len(actionable),
         package,
         activity,
@@ -100,53 +102,12 @@ def dump_page(request):
             "serial": device.current_serial,
             "package": package,
             "activity": activity,
-            "element_count": len(nodes),
+            "element_count": len(elements),
             "actionable_count": len(actionable),
-            "elements": nodes,
+            "elements": elements,
             "actionable": actionable,
         }
     )
-
-
-@csrf_exempt
-def do_action(request):
-    """POST /api/inspector/action — Execute click or input on device."""
-    available, err_msg, _ = _check_device_available(device.current_serial)
-    if not available:
-        return JsonResponse({"status": False, "message": err_msg}, status=409)
-
-    try:
-        data = json.loads(request.body)
-    except Exception:
-        return JsonResponse({"status": False, "message": "invalid JSON"})
-
-    action = data.get("action", "")
-    try:
-        if action == "click":
-            device.action_click(int(data["x"]), int(data["y"]))
-        elif action == "longclick":
-            device.action_longclick(int(data["x"]), int(data["y"]))
-        elif action == "swipe":
-            device.action_swipe(data.get("direction", "up"), int(data.get("distance", 500)))
-        elif action == "drag":
-            device.action_drag(
-                int(data["x"]),
-                int(data["y"]),
-                data.get("direction", "up"),
-                int(data.get("distance", 300)),
-            )
-        elif action == "input":
-            device.action_input(
-                data.get("text", ""),
-                data.get("x"),
-                data.get("y"),
-                clear_first=data.get("clear_first", True),
-            )
-        else:
-            return JsonResponse({"status": False, "message": f"unknown action: {action}"})
-        return JsonResponse({"status": True})
-    except Exception as e:
-        return JsonResponse({"status": False, "message": str(e)})
 
 
 def device_info_view(request):
@@ -188,6 +149,46 @@ def device_info_view(request):
                 "package": info.get("currentPackageName", ""),
             }
         )
+
+
+@csrf_exempt
+def ocr_page(request):
+    """POST /api/inspector/ocr — OCR text recognition on the current screen.
+
+    No persistence: results are session-only (transient inspector service).
+    """
+    if not device.current_serial:
+        return JsonResponse({"status": False, "message": "未选择设备"}, status=409)
+    available, err_msg, _ = _check_device_available(device.current_serial)
+    if not available:
+        return JsonResponse({"status": False, "message": err_msg}, status=409)
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    shot_dir = settings.SCREENSHOT_DIR
+    shot_dir.mkdir(parents=True, exist_ok=True)
+    shot_file = shot_dir / f"ocr_{ts}.png"
+    try:
+        device.screenshot_file(str(shot_file))
+        texts = recognize(str(shot_file))
+        info = device.info()
+        return JsonResponse(
+            {
+                "status": True,
+                "serial": device.current_serial,
+                "screen_w": info.get("displayWidth", 0),
+                "screen_h": info.get("displayHeight", 0),
+                "count": len(texts),
+                "texts": texts,
+            }
+        )
+    except Exception:
+        logger.exception("OCR recognition failed")
+        return JsonResponse({"status": False, "message": "OCR 识别失败，请稍后重试"}, status=500)
+    finally:
+        try:
+            shot_file.unlink()
+        except Exception:
+            logger.debug("Failed to delete OCR screenshot: %s", shot_file)
 
 
 def screenshot_snapshot(request):

@@ -134,3 +134,95 @@ def gen_xpath_candidates(el: dict, all_els: list[dict]) -> list[dict]:
             uniq.append(l)
     uniq.sort(key=lambda x: int(str(x.get("count", 0))))
     return uniq
+
+
+# ═══════════════════════════════════════════════
+# 层级裁剪（去纯容器 + bounds 去重）
+# ═══════════════════════════════════════════════
+
+# 布局 ViewGroup 类名（取末段小写）。无可定位身份时作为「纯容器」裁剪掉。
+_LAYOUT_VIEWGROUPS = {
+    "framelayout",
+    "linearlayout",
+    "relativelayout",
+    "gridlayout",
+    "viewgroup",
+    "constraintlayout",
+    "coordinatorlayout",
+    "recyclerview",
+    "listview",
+    "gridview",
+    "scrollview",
+    "horizontalscrollview",
+    "viewpager",
+    "viewpager2",
+    "abslistview",
+    "linearlayoutcompat",
+    "toolbar",
+    "tablerow",
+    "tablelayout",
+    "radiogroup",
+    "cardview",
+    "appbarlayout",
+    "navigationview",
+    "drawerlayout",
+    "swiperefreshlayout",
+    "nestedscrollview",
+}
+
+
+def _simple_class(class_name: str) -> str:
+    """取类名末段并小写：android.widget.FrameLayout → framelayout。"""
+    return class_name.rsplit(".", 1)[-1].lower() if class_name else ""
+
+
+def _has_identity(el: dict) -> bool:
+    """是否具有可定位身份：可点击 / 有文本 / 有 content-desc / 有真实 id（含 ':'）。"""
+    return bool(
+        el.get("clickable")
+        or el.get("text")
+        or el.get("content_desc")
+        or ":" in (el.get("resource_id") or "")
+    )
+
+
+def _specificity(el: dict) -> tuple:
+    """衡量节点「具体程度」，bounds 去重时越大越优先保留。"""
+    return (
+        1 if el.get("clickable") else 0,
+        1 if el.get("text") else 0,
+        1 if el.get("content_desc") else 0,
+        1 if ":" in (el.get("resource_id") or "") else 0,
+        el.get("depth", 0),
+    )
+
+
+def trim_hierarchy(nodes: list[dict]) -> list[dict]:
+    """裁剪 UI 层级：去纯布局容器 + 按 bounds 去重（保留最具体节点）。
+
+    纯布局容器 = 布局 ViewGroup 类且无可定位身份。XPath count 仍用完整 nodes
+    计算（见 views.dump_page），此处只决定「展示哪些元素」，不改变定位语义。
+    """
+    kept = [
+        e
+        for e in nodes
+        if not (
+            _simple_class(e.get("class_name", "")) in _LAYOUT_VIEWGROUPS and not _has_identity(e)
+        )
+    ]
+
+    groups: dict[str, list[dict]] = {}
+    for e in kept:
+        groups.setdefault(e.get("bounds", ""), []).append(e)
+    for g in groups.values():
+        g.sort(key=_specificity, reverse=True)
+
+    result = []
+    seen: set[str] = set()
+    for e in kept:
+        b = e.get("bounds", "")
+        if b in seen:
+            continue
+        seen.add(b)
+        result.append(groups[b][0])
+    return result

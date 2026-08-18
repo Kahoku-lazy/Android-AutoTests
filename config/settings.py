@@ -57,6 +57,10 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",")
 
+# 设备管理管理员白名单（逗号分隔的用户名）。命中者全局查看所有设备（含锁定）。
+# 默认空 = 无管理员，仅公开/自身设备可见。示例：ADMIN_USERS=admin,ops
+ADMIN_USERS = {u.strip() for u in os.environ.get("ADMIN_USERS", "").split(",") if u.strip()}
+
 # ── Application definition ──
 INSTALLED_APPS = [
     # Admin theme (must be before django.contrib.admin)

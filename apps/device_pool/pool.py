@@ -31,6 +31,7 @@ class DevicePool:
     _lock = threading.Lock()
     _op_lock = threading.Lock()  # serializes all device operations (was _u2_lock)
     _connection_types: dict = {}
+    _addresses: dict = {}  # serial → 连接地址（无线为 IP:port / mDNS，USB 为空）
     current_serial = ""
 
     # ── Device Accessors ──
@@ -42,7 +43,7 @@ class DevicePool:
         if serial not in DevicePool._u2_instances:
             with DevicePool._lock:
                 if serial not in DevicePool._u2_instances:
-                    DevicePool._u2_instances[serial] = u2.connect(serial)
+                    DevicePool._u2_instances[serial] = u2.connect(self._addr(serial))
         return DevicePool._u2_instances[serial]
 
     @property
@@ -52,7 +53,7 @@ class DevicePool:
         if serial not in DevicePool._airtest_instances:
             with DevicePool._lock:
                 if serial not in DevicePool._airtest_instances:
-                    DevicePool._airtest_instances[serial] = Android(serialno=serial)
+                    DevicePool._airtest_instances[serial] = Android(serialno=self._addr(serial))
         return DevicePool._airtest_instances[serial]
 
     @property
@@ -63,12 +64,23 @@ class DevicePool:
         """
         return self.u2d
 
-    def switch_to(self, serial: str, connection_type: str | None = None):
+    def switch_to(self, serial: str, connection_type: str | None = None, addr: str | None = None):
+        """切换当前设备。addr 为无线设备连接地址（IP:port / mDNS），USB 传空。
+
+        无线设备的 DB 序列号是真实串号，ADB 需要传输地址才能连上，故连接层
+        按「地址优先于序列号」解析（见 _addr）。
+        """
         self.current_serial = serial
         if connection_type:
             DevicePool._connection_types[serial] = connection_type
         elif serial not in DevicePool._connection_types:
             DevicePool._connection_types[serial] = "WIFI" if ":" in serial else "USB"
+        if addr:
+            DevicePool._addresses[serial] = addr
+
+    def _addr(self, serial: str) -> str:
+        """解析连接地址：无线设备返回连接地址，USB 返回序列号本身。"""
+        return DevicePool._addresses.get(serial) or serial
 
     def get_connection_type(self, serial: str | None = None) -> str:
         """Return the connection type for a device (USB or WIFI)."""
@@ -80,6 +92,7 @@ class DevicePool:
         DevicePool._u2_instances.pop(serial, None)
         DevicePool._airtest_instances.pop(serial, None)
         DevicePool._connection_types.pop(serial, None)
+        DevicePool._addresses.pop(serial, None)
         if self.current_serial == serial:
             self.current_serial = ""
 

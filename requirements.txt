@@ -21,6 +21,9 @@ airtest>=1.3.4
 opencv-python-headless>=4.5
 Pillow>=10.0
 
+# ── OCR ──
+cnocr>=2.3.1,<3.0
+
 # ── HTTP ──
 requests>=2.30
 

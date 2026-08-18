@@ -1,7 +1,7 @@
-"""device-pool public API.
+"""device-pool 跨模块写操作白名单。
 
-共享给其他模块（element-locator, test-runner, report-generator）使用。
-遵循防火墙 #2：跨 App 写操作必须走此 API。
+共享给其他模块（test_runner / ai_assistant / element_locator / device_inspector）。
+遵循防火墙 #2：跨 App 写操作必须走本 api；本模块写逻辑下沉到 service.py。
 """
 
 __all__ = [
@@ -13,30 +13,22 @@ __all__ = [
     "release_device_locks_for_device",
 ]
 
-import logging
-
 from datetime import datetime
 
 from django.db import transaction
 
-logger = logging.getLogger(__name__)
-
 from .models import Device, DeviceLock
 from .pool import device
-
-# ── Query helpers ──
+from .service import release_internal
 
 
 def get_online_devices():
-    """Get all online devices (status=ONLINE)."""
+    """返回所有在线设备（status=ONLINE）。"""
     return list(Device.objects.filter(status="ONLINE"))
 
 
-# ── Write helpers ──
-
-
 def ensure_device(serial, name=""):
-    """Get or create a device record (backward-compatible)."""
+    """Get or create 设备记录（向后兼容）。"""
     obj, _ = Device.objects.get_or_create(
         serial=serial,
         defaults={
@@ -49,15 +41,12 @@ def ensure_device(serial, name=""):
 
 @transaction.atomic
 def acquire_device(serial, user_id, timeout=300):
-    """Lock a device for a user (v2 — creates audit trail).
+    """锁定设备（进程占用，供 test_runner / AgentScope 调用）。
 
-    Returns: dict with lock info, or raises ValueError on conflict.
+    select_for_update() 保证多进程并发下不重复通过 BUSY 检查。
     """
-    # select_for_update() prevents concurrent processes from both passing
-    # the BUSY check before either saves (row-level lock on MySQL/PostgreSQL).
     device_obj = Device.objects.select_for_update().get(serial=serial)
 
-    # Check existing process occupation
     if device_obj.status == "BUSY":
         active_lock = (
             DeviceLock.objects.filter(device=device_obj, lock_type="process", status="active")
@@ -73,7 +62,7 @@ def acquire_device(serial, user_id, timeout=300):
 
     now = datetime.now()
     device_obj.status = "BUSY"
-    device_obj.occupied_by = user_id  # process occupation
+    device_obj.occupied_by = user_id
     device_obj.occupied_at = now
     device_obj.save(update_fields=["status", "occupied_by", "occupied_at"])
 
@@ -94,16 +83,11 @@ def acquire_device(serial, user_id, timeout=300):
 
 
 def release_device(serial, reason="manual"):
-    """Release a locked device (v2 — preserves audit trail).
-
-    Marks DeviceLock as released instead of deleting.
-    """
-    from .views import _release_internal
-
+    """释放锁定设备（保留锁审计，触发队列自动分配）。"""
     try:
         dev = Device.objects.get(serial=serial)
         if dev.status == "BUSY":
-            _release_internal(dev, reason=reason)
+            release_internal(dev, reason=reason)
             return True
     except Device.DoesNotExist:
         pass
@@ -111,11 +95,7 @@ def release_device(serial, reason="manual"):
 
 
 def release_device_locks_for_device(device_obj, reason="disconnect"):
-    """Release all active process locks for a device (bulk — used by state recovery).
-
-    This is the API-level entry point for releasing locks during crash recovery /
-    orphan cleanup. Avoids cross-module ORM writes from test_runner or other apps.
-    """
+    """批量释放设备的活跃进程锁（崩溃恢复 / 孤儿清理入口）。"""
     return DeviceLock.objects.filter(
         device=device_obj, lock_type="process", status="active"
     ).update(

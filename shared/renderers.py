@@ -38,6 +38,9 @@ class EnvelopeJSONRenderer(JSONRenderer):
 def _extract_message(data) -> str:
     """Pull a user-facing message from a DRF error response."""
     if isinstance(data, dict):
+        message = data.get("message")
+        if isinstance(message, str):
+            return message
         detail = data.get("detail")
         if isinstance(detail, str):
             if detail.startswith("JSON parse error"):

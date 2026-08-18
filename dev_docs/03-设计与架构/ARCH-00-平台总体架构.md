@@ -223,7 +223,8 @@ flowchart TB
 |---|---|---|
 | DRF ViewSet / Serializer | case_manager、element_locator、evaluator、workflow | `views_drf.py` / `views_api.py`，写收敛改造逐步迁移 |
 | DRF APIView | accounts | 认证接口 |
-| 裸 Django View | device_pool、dashboard、test_runner、ai_assistant、device_inspector、report_generator | `views.py`，`@csrf_exempt` + 手写 `JsonResponse`，旧端点稳定运行 |
+| DRF 函数视图 | device_pool | `views.py`（`@api_view` + `Response`）+ `service.py` 写收敛 |
+| 裸 Django View | dashboard、test_runner、ai_assistant、device_inspector、report_generator | `views.py`，`@csrf_exempt` + 手写 `JsonResponse`，旧端点稳定运行 |
 
 ### 2.5 AI 引擎的边界设定
 
@@ -487,13 +488,13 @@ flowchart TB
 
 | 维度 | 说明 |
 |------|------|
-| **模块职责** | ADB 设备发现 → 注册 → 状态监控(30s心跳) → 锁定(FIFO排队) → 释放 |
+| **模块职责** | ADB 设备发现 → 注册 → 状态监控(30s心跳) → 锁定/公开 → 强制释放 |
 | **核心边界** | 仅管理设备连接与锁状态，不关心设备上跑什么用例 |
 | **上游依赖** | 无（基础设施层） |
-| **下游消费** | element-locator (截图/Dump)、test-runner (锁定执行) |
+| **下游消费** | element-locator (截图/Dump)、test-runner (占用执行) |
 | **AI Tool** | `get_online_devices`、`acquire_device`、`release_device` (3个) |
-| **数据表** | `dp_devices` · `dp_device_locks` · `dp_device_queue` |
-| **API** | 13 REST |
+| **数据表** | `dp_devices` · `dp_device_locks` |
+| **API** | 10 REST |
 | **核心组件** | `DevicePool` 单例 (pool.py) — 线程安全的 Airtest + u2 双连接管理 |
 
 ### 4.3 元素定位 (element-locator)
@@ -725,7 +726,7 @@ Android-AutoTests/
 | 模块 | 子 ARCH 文件 | 关键架构要素 |
 |------|-----------|------------|
 | 仪表盘 | [`ARCH-01-仪表盘.md`](ARCH-01-仪表盘.md) | 6 KPI 跨模块聚合 + 趋势图 + 活动时间线 |
-| 设备管理 | [`ARCH-02-设备管理.md`](ARCH-02-设备管理.md) | DevicePool 单例 + FIFO 排队 + 锁审计 |
+| 设备管理 | [`ARCH-02-设备管理.md`](ARCH-02-设备管理.md) | DevicePool 单例 + 锁定/公开 + 锁审计 |
 | 元素定位 | [`ARCH-04-元素定位.md`](ARCH-04-元素定位.md) | WebSocket 截图流 2fps + 8 XPath 策略 + 三列工作区 |
 | 用例管理 | [`ARCH-05-用例管理.md`](ARCH-05-用例管理.md) | 步骤编排 + 二级目录树 + YAML 导入导出 |
 | 执行引擎 | [`ARCH-06-执行引擎.md`](ARCH-06-执行引擎.md) | 状态机 + 三组执行器 + SOP 四阶段 |
@@ -787,7 +788,7 @@ Android-AutoTests/
 |------|-----|------|
 | `ai_` | ai_assistant | `ai_agents` · `ai_tools` · `ai_shared_tools` · `ai_conversations` · `ai_messages` · `ai_tasks` · `ai_execution_logs` |
 | `cm_` | case_manager | `cm_case_directories` · `cm_test_definitions` · `cm_api_testcases` · `cm_web_testcases` · `cm_storage_testcases` |
-| `dp_` | device_pool | `dp_devices` · `dp_device_locks` · `dp_device_queue` |
+| `dp_` | device_pool | `dp_devices` · `dp_device_locks` |
 | `el_` | element_locator | `el_pages` · `el_elements` · `el_page_flows` · `el_web_groups` · `el_web_elements` · `el_api_groups` · `el_api_endpoints` · `el_web_page_flows` |
 | `ev_` | evaluator | `ev_question_banks` · `ev_questions` · `ev_runs` · `ev_results` |
 | `rg_` | report_generator | `rg_reports` · `rg_report_templates` |
@@ -861,9 +862,9 @@ Android-AutoTests/
 
 ### 设备状态（来自 `apps/device_pool/models.py`）
 
-**3 种设备状态**：`ONLINE` · `BUSY` · `OFFLINE`
+**2 种设备状态**：`ONLINE` · `BUSY`
 
-断连操作直接删除设备记录，不存在 `DISCONNECTED` 持久状态。锁审计日志永不删除，通过 `status` 字段（active/released/expired）追踪生命周期。
+设备离线或断开即删除记录，不存在 `OFFLINE` / `DISCONNECTED` 持久状态。锁审计日志永不删除，通过 `status` 字段（active/released/expired）追踪生命周期。
 
 ---
 

@@ -9,7 +9,6 @@ import { animate, stagger } from 'animejs'
 import { ElMessage } from 'element-plus'
 import { getActive } from '@/shared/auth/token-storage'
 import {
-  RUNNER_OCCUPIED_PREFIXES,
   DEFAULT_DIALOGS,
   LIST_ANIMATION,
 } from '../constants'
@@ -33,12 +32,9 @@ export interface UseDeviceActionsReturn {
   cancelNetworkDialog: () => void
   handleRowClick: (record: DeviceRecord) => void
   handleLockClick: (device: DeviceRecord) => Promise<void>
-  handleJoinQueue: (device: DeviceRecord) => Promise<void>
-  handleCancelQueue: (serial: string, uid: string) => Promise<void>
-  handleOccupyClick: (device: DeviceRecord) => void
   handleRelease: (serial: string) => Promise<void>
   openDisconnectDialog: (serial: string) => void
-  handleDisconnectConfirm: (opts: { reason: string }) => Promise<void>
+  handleDisconnectConfirm: () => Promise<void>
   cancelDisconnectDialog: () => void
 }
 
@@ -82,7 +78,7 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
     if (pool.scanning.value || pool.loading.value) return
     const result = await pool.doScan()
     if (result && result.status) {
-      ElMessage.success(`扫描完成，发现 ${(result as { count?: number }).count || 0} 台设备`)
+      ElMessage.success(`扫描完成，发现 ${result.data?.count || 0} 台设备`)
     } else if (result && !result.status) {
       ElMessage.error(result.message || '扫描失败')
     }
@@ -115,119 +111,53 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
   // ── Row click ──
   function handleRowClick(record: DeviceRecord) {
     if (!record || !record.serial) return
-    const dev = pool.devices.value.find((d) => d.serial === record.serial)
-    if (!dev) return
-    if (dev.status === 'OFFLINE' || dev.status === 'DISCONNECTED') return
+    if (record.status !== 'ONLINE' && record.status !== 'BUSY') return
     pool.selectDevice(record.serial)
   }
 
-  // ── Lock / Unlock ──
+  // ── 锁定 / 公开切换 ──
   async function handleLockClick(device: DeviceRecord) {
-    if (device.locked_by) {
-      if (device.locked_by !== currentUser) {
-        ElMessage.warning(`设备已被 ${device.locked_by} 锁定，只有锁定者可以解除`)
-        return
-      }
-      const result = await pool.doRelease(device.serial, {
-        unlock: true, reason: 'manual', userId: currentUser,
-      })
-      if (result.status) {
-        ElMessage.success(`${device.serial} 已解除锁定`)
-      } else {
-        ElMessage.error(result.message || '操作失败')
-      }
-      return
-    }
-    if (!currentUser) {
-      ElMessage.warning('无法获取当前用户信息，请重新登录')
-      return
-    }
-    const result = await pool.doLock(device.serial, currentUser, 3600, 'user')
+    const nextLocked = !device.locked
+    const result = await pool.doLock(device.serial, nextLocked)
     if (result.status) {
-      ElMessage.success(`已锁定 ${device.serial}`)
+      ElMessage.success(nextLocked ? `已锁定 ${device.serial}` : `${device.serial} 已公开`)
     } else {
-      ElMessage.error(result.message || '锁定失败')
+      ElMessage.error(result.message || '操作失败')
     }
   }
 
-  // ── Queue ──
-  async function handleJoinQueue(device: DeviceRecord) {
-    if (!currentUser) {
-      ElMessage.warning('无法获取当前用户信息，请重新登录')
-      return
-    }
-    const result = await pool.doJoinQueue(device.serial, currentUser)
-    if (result.status) {
-      const pos = (result as { position?: number }).position || '?'
-      ElMessage.success(`已加入 ${device.serial} 的等待队列，当前位置：第 ${pos} 位`)
-    } else {
-      ElMessage.error(result.message || '加入队列失败')
-    }
-  }
-
-  async function handleCancelQueue(serial: string, uid: string) {
-    await pool.doLeaveQueue(serial, uid)
-    await pool.fetchQueue()
-  }
-
-  // ── Occupy / Release ──
-  function handleOccupyClick(device: DeviceRecord) {
-    if (device.occupied_by) {
-      handleRelease(device.serial)
-    }
-  }
-
+  // ── 强制释放 ──
   async function handleRelease(serial: string) {
-    const dev = pool.devices.value.find((d) => d.serial === serial)
-    if (!dev) return
-
-    const occupiedBy = dev.occupied_by || ''
-    const isRunnerOccupied = RUNNER_OCCUPIED_PREFIXES.some((p) => occupiedBy.startsWith(p))
-
-    if (isRunnerOccupied) {
-      ElMessage.error('设备正在执行用例，无法解除占用。请等待用例执行完毕。')
-      return
-    }
-
-    const result = await pool.doRelease(serial, {
-      userId: currentUser, reason: 'manual',
-    })
+    const result = await pool.doRelease(serial)
     if (result.status) {
       ElMessage.success(`${serial} 已解除占用`)
     } else {
-      ElMessage.error(result.message || '解除失败')
+      ElMessage.error(result.message || '释放失败')
     }
   }
 
-  // ── Disconnect ──
+  // ── 删除 ──
   function openDisconnectDialog(serial: string) {
     const dev = pool.devices.value.find((d) => d.serial === serial)
     if (!dev) return
-    const isBusyOthers =
-      dev.status === 'BUSY' && !!dev.locked_by && dev.locked_by !== currentUser
     disconnectDialog.value = {
       visible: true,
       serial,
       model: dev.model || dev.name || '',
       status: dev.status,
       lockedBy: dev.locked_by || '',
-      isBusyOthers,
+      isBusyOthers: false,
     }
   }
 
-  async function handleDisconnectConfirm({ reason }: { reason: string }) {
-    const { serial, isBusyOthers } = disconnectDialog.value
-    const result = await pool.doDisconnect(serial, {
-      force: isBusyOthers,
-      reason,
-      userId: currentUser,
-      isAdmin: isBusyOthers,
-    })
+  async function handleDisconnectConfirm() {
+    const { serial } = disconnectDialog.value
+    const result = await pool.doDisconnect(serial)
     if (result.status) {
-      ElMessage.success(`${serial} 已断开`)
+      ElMessage.success(`${serial} 已删除`)
       disconnectDialog.value.visible = false
     } else {
-      ElMessage.error(result.message || '断开失败')
+      ElMessage.error(result.message || '删除失败')
     }
   }
 
@@ -246,9 +176,6 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
     cancelNetworkDialog,
     handleRowClick,
     handleLockClick,
-    handleJoinQueue,
-    handleCancelQueue,
-    handleOccupyClick,
     handleRelease,
     openDisconnectDialog,
     handleDisconnectConfirm,

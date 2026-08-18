@@ -5,10 +5,10 @@ import FilterTabs from '@/shared/components/FilterTabs.vue'
 import DeviceCard from './components/DeviceCard.vue'
 import DeviceStatusCell from './components/DeviceStatusCell.vue'
 import DeviceActionsCell from './components/DeviceActionsCell.vue'
+import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import DisconnectDialog from './components/DisconnectDialog.vue'
 import NetworkConnectDialog from './components/NetworkConnectDialog.vue'
-import QueuePanel from './components/QueuePanel.vue'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import KpiCard from '@/shared/components/KpiCard.vue'
 import { IconWifi, IconRefresh } from '@/shared/icons/index'
@@ -32,23 +32,21 @@ const {
   disconnectDialog,
   networkDialog,
   currentUser,
-  queueEntries,
-  queueLength,
   handleRefresh,
   openNetworkDialog,
   handleNetworkConnect,
   cancelNetworkDialog,
   handleRowClick,
   handleLockClick,
-  handleJoinQueue,
-  handleCancelQueue,
-  handleOccupyClick,
+  handleRelease,
   openDisconnectDialog,
   handleDisconnectConfirm,
   cancelDisconnectDialog,
   isRowSelected,
   displayModel,
   connectionLabel,
+  deviceAddress,
+  formatDateTime,
   formatRelativeTime,
   statusTag,
   PAGE_HEADER,
@@ -69,13 +67,6 @@ const {
       :icon="PAGE_HEADER.icon"
       :icon-gradient="PAGE_HEADER.iconGradient"
     >
-      <template #actions>
-        <QueuePanel
-          :entries="queueEntries"
-          :count="queueLength"
-          @cancel="handleCancelQueue"
-        />
-      </template>
     </WorkbenchHeader>
 
     <ErrorState v-if="error" :message="error" @retry="handleRefresh" />
@@ -93,7 +84,6 @@ const {
         <div class="kpi-row">
           <KpiCard :value="kpiStats.online" label="在线" color="#6BCB77" shape="diamond" />
           <KpiCard :value="kpiStats.busy" label="使用中" color="#FFB5A7" shape="triangle" />
-          <KpiCard :value="kpiStats.offline" label="离线" color="#d4d8dc" shape="square" />
           <KpiCard :value="kpiStats.total" label="总计" color="var(--ink)" shape="circle" />
         </div>
       </section>
@@ -153,6 +143,9 @@ const {
               empty-text="暂无设备，点击「刷新设备」扫描并连接设备"
               @row-click="handleRowClick"
             >
+                    <template #cell-adb_addr="{ record }">
+                      <span class="mono-text" :title="deviceAddress(record)">{{ deviceAddress(record) }}</span>
+                    </template>
                     <template #cell-serial="{ record }">
                       <span v-if="isRowSelected(record)" class="row-dot">●</span>
                       <span class="mono-text" :title="record.serial">{{ record.serial }}</span>
@@ -168,11 +161,14 @@ const {
                       <DeviceStatusCell :device="record" />
                     </template>
                     <template #cell-connection_type="{ record }">
-                      <span class="connection-text">{{ connectionLabel(record.connection_type) }}</span>
+                      <span class="connection-text">{{ connectionLabel(record) }}</span>
                     </template>
                     <template #cell-lock_status="{ record }">
                       <span v-if="record.locked_by" class="lock-badge lock-badge--locked" :title="`锁定者: ${record.locked_by}`">{{ record.locked_by }}</span>
-                      <span v-else class="lock-badge lock-badge--shared">共用</span>
+                      <span v-else class="lock-badge lock-badge--shared">公开</span>
+                    </template>
+                    <template #cell-connected_at="{ record }">
+                      <span class="last-seen-text">{{ formatDateTime(record.connected_at) }}</span>
                     </template>
                     <template #cell-last_seen="{ record }">
                       <span class="last-seen-text">{{ formatRelativeTime(record.last_seen) }}</span>
@@ -182,8 +178,7 @@ const {
                         :device="record"
                         :current-user="currentUser"
                         @lock="handleLockClick"
-                        @join-queue="handleJoinQueue"
-                        @occupy="handleOccupyClick"
+                        @release="(d) => handleRelease(d.serial)"
                         @disconnect="(d) => openDisconnectDialog(d.serial)"
                       />
                     </template>
@@ -213,7 +208,7 @@ const {
                   :current-user="currentUser"
                   @click="handleRowClick"
                   @lock="handleLockClick"
-                  @join-queue="handleJoinQueue"
+                  @release="(d) => handleRelease(d.serial)"
                   @disconnect="(d) => openDisconnectDialog(d.serial)"
                 />
               </div>

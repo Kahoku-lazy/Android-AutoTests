@@ -1,18 +1,16 @@
 <script setup>
 /** Device Inspector — live device interaction: connect, dump UI, view XPath, save to element manager. */
 
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { animate } from 'animejs'
-import { bus } from '@/shared/event-bus'
 import { useElementStore } from './store'
-import { apiInput } from './api'
 import DeviceSelector from './components/DeviceSelector.vue'
 import ScreenshotView from './components/ScreenshotView.vue'
-import XPathCandidatePanel from './components/XPathCandidatePanel.vue'
 import PageElementsPanel from './components/PageElementsPanel.vue'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import FilterTabs from '@/shared/components/FilterTabs.vue'
+import { IconRefresh, IconZap, IconClock, IconWifi, IconLayers, IconScan } from '@/shared/icons'
 
 const store = useElementStore()
 const screenshotRef = ref(null)
@@ -20,8 +18,6 @@ const screenRefreshing = ref(false)
 
 let devicePollTimer = null
 const wsDeviceSerial = ref('')
-const filterMode = ref('all')
-
 const filterOptions = [
   { key: 'all', label: '全部' },
   { key: 'clickable', label: '可点击' },
@@ -33,45 +29,18 @@ const filterOptions = [
   { key: 'scrollable', label: '可滚动' },
 ]
 
-const searchText = ref('')
-
-const filteredElements = computed(() => {
-  let els = store.actionable || []
-  // Filter by mode
-  switch (filterMode.value) {
-    case 'clickable':       els = els.filter(e => e.clickable); break
-    case 'text':            els = els.filter(e => e.text); break
-    case 'rid':             els = els.filter(e => e.resource_id); break
-    case 'clickable_text':  els = els.filter(e => e.clickable && e.text); break
-    case 'clickable_no_text': els = els.filter(e => e.clickable && !e.text); break
-    case 'input':           els = els.filter(e => e.class_name?.toLowerCase().includes('edit')); break
-    case 'scrollable':      els = els.filter(e => e.scrollable); break
-  }
-  // Filter by search text
-  if (searchText.value.trim()) {
-    const q = searchText.value.trim().toLowerCase()
-    els = els.filter(e =>
-      (e.text || '').toLowerCase().includes(q) ||
-      (e.resource_id || '').toLowerCase().includes(q) ||
-      (e.content_desc || '').toLowerCase().includes(q) ||
-      (e.class_name || '').toLowerCase().includes(q)
-    )
-  }
-  return els
-})
-
 onMounted(async () => {
   try {
     await store.fetchDevices()
   } catch (e) {
-    store.message = '加载设备列表失败，请检查网络连接'
+    store.error = '加载设备列表失败，请检查网络连接'
     console.error(e)
   }
   // Periodic device list refresh (30s)
   devicePollTimer = setInterval(async () => {
     await store.fetchDevices()
     if (!store.isDeviceOnline && store.currentSerial) {
-      store.message = `设备 ${store.currentSerial} 已离线`
+      store.error = `设备 ${store.currentSerial} 已离线`
     }
   }, 30000)
 })
@@ -85,11 +54,11 @@ onUnmounted(() => {
 
 async function doDump() {
   if (!store.isConnected) {
-    store.message = '请先选择设备并点击"连接"'
+    store.error = '请先选择设备并点击"连接"'
     return
   }
   if (!store.isDeviceOnline) {
-    store.message = `设备 ${store.currentSerial} 已离线`
+    store.error = `设备 ${store.currentSerial} 已离线`
     return
   }
   const result = await store.doDump()
@@ -101,11 +70,11 @@ async function doDump() {
 
 async function refreshScreen() {
   if (!store.isConnected) {
-    store.message = '请先选择设备并点击"连接"'
+    store.error = '请先选择设备并点击"连接"'
     return
   }
   if (!store.isDeviceOnline) {
-    store.message = `设备 ${store.currentSerial} 已离线`
+    store.error = `设备 ${store.currentSerial} 已离线`
     return
   }
   screenRefreshing.value = true
@@ -117,37 +86,14 @@ async function refreshScreen() {
   }
 }
 
-// ── Action ──
-
-async function doAction(action, x, y, text) {
-  let ok
-  if (action === 'input' && text) {
-    ok = await apiInput(text, x, y, true).then(r => r.data.status).catch(() => false)
-  } else {
-    ok = await store.doAction(action, x, y)
-  }
-  if (!ok) {
-    await nextTick()
-    animate('.message', { translateX: [0,-5,5,-3,3,0], duration: 400 })
-  }
-}
-
 // ── Element selection ──
 
 function onElementClick(el) {
   store.selectElement(el)
-  nextTick(() => {
-    animate('.col-xpath', { opacity: [0.85, 1], duration: 300, ease: 'outCubic' })
-  })
 }
 
-function onAddStep(xp) {
-  const xpathSnippet = (xp.xpath || '').length > 50 ? xp.xpath.slice(0, 47) + '...' : xp.xpath
-  bus.emit('add-step-to-case', {
-    type: xp.type || 'resource-id',
-    xpath: xp.xpath || '',
-    description: `${xp.type}: ${xpathSnippet}`,
-  })
+function onOcrClick(ocr) {
+  store.selectOcr(ocr)
 }
 
 // ── WebSocket device change ──
@@ -177,16 +123,17 @@ function onScreenshotUpdate({ url }) {
         <!-- Device bar + action buttons -->
         <div class="toolbar">
           <DeviceSelector />
-          <button class="action-btn" :disabled="!store.isConnected || !store.isDeviceOnline" @click="refreshScreen">↻ 刷新屏幕</button>
-          <button class="action-btn action-btn--primary" :disabled="!store.isConnected || !store.isDeviceOnline" @click="doDump">{{ store.loading ? 'Dumping...' : '⚡ Dump UI' }}</button>
-          <span v-if="store.pageId" class="info">{{ filteredElements.length }}/{{ store.elements.length }} 元素</span>
-          <ErrorState v-if="store.message" :message="store.message" @retry="() => { store.message = ''; doDump() }" />
+          <button class="action-btn" :disabled="!store.isConnected || !store.isDeviceOnline" @click="refreshScreen"><IconRefresh :size="14" />刷新屏幕</button>
+          <button class="action-btn action-btn--primary" :disabled="!store.isConnected || !store.isDeviceOnline" @click="doDump"><IconZap :size="14" />{{ store.loading ? 'Dumping...' : 'Dump UI' }}</button>
+          <button class="action-btn" :disabled="store.ocrLoading || !store.isConnected || !store.isDeviceOnline" @click="store.doOcr"><IconScan :size="14" />{{ store.ocrLoading ? '识别中...' : 'OCR 检测' }}</button>
+          <span v-if="store.elements.length" class="info">{{ store.filteredElements.length }}/{{ store.elements.length }} 元素</span>
+          <ErrorState v-if="store.error" :message="store.error" @retry="() => { store.error = ''; doDump() }" />
         </div>
 
         <!-- Filter bar -->
-        <div v-if="store.pageId" class="filter-bar">
-          <FilterTabs :tabs="filterOptions" v-model="filterMode" />
-          <el-input v-model="searchText" size="small" placeholder="搜索 text / resource-id / class..." :allow-clear="true" class="filter-search" />
+        <div v-if="store.elements.length" class="filter-bar">
+          <FilterTabs :tabs="filterOptions" v-model="store.filterMode" />
+          <el-input v-model="store.searchText" size="small" placeholder="搜索 text / resource-id / class..." :allow-clear="true" class="filter-search" />
         </div>
 
         <!-- Workspace: 三栏 1:2:1 — 手机屏幕 | XPath 候选 | 详情 -->
@@ -197,19 +144,14 @@ function onScreenshotUpdate({ url }) {
               :active="store.isConnected"
               :screen-w="store.screenW"
               :screen-h="store.screenH"
-              :elements="filteredElements"
+              :elements="store.filteredElements"
               :selected="store.selected"
+              :ocr-results="store.ocrResults"
+              :selected-ocr="store.selectedOcr"
               @click-element="onElementClick"
-              @do-action="doAction"
+              @click-ocr="onOcrClick"
               @device-changed="onDeviceChanged"
               @screenshot-update="onScreenshotUpdate"
-            />
-          </section>
-          <section class="col col-xpath">
-            <XPathCandidatePanel
-              :element="store.selected"
-              @add-step="onAddStep"
-              @do-action="doAction"
             />
           </section>
           <section class="col col-elements">
@@ -220,9 +162,9 @@ function onScreenshotUpdate({ url }) {
     </div>
 
     <footer class="inspector-footer">
-      <span>🕐 就绪</span>
-      <span>📡 {{ store.isConnected ? '已连接 '+store.connectedSerial : '未连接设备' }}</span>
-      <span>📋 {{ store.actionable?.length || 0 }} 个元素</span>
+      <span><IconClock :size="14" />就绪</span>
+      <span><IconWifi :size="14" />{{ store.isConnected ? '已连接 '+store.connectedSerial : '未连接设备' }}</span>
+      <span><IconLayers :size="14" />{{ store.actionable?.length || 0 }} 个元素</span>
     </footer>
   </div>
 </template>
@@ -280,15 +222,14 @@ function onScreenshotUpdate({ url }) {
   border-radius: 6px 10px 6px 10px; box-shadow: 2px 2px 0 rgba(0,0,0,0.04);
 }
 
-.info { font-size: var(--app-size-sm); color: var(--app-text-secondary, #7A8B73); white-space: nowrap; }
-.message { font-size: var(--app-size-sm); color: var(--el-color-danger, #FFB5A7); white-space: nowrap; }
+.info { font-size: var(--app-size-sm); color: var(--app-text-secondary); white-space: nowrap; }
 
 .workspace {
   flex: 1;
-  min-height: 420px;
+  min-height: 0;
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1.35fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
   gap: 24px;
   overflow: hidden;
 }
@@ -304,11 +245,23 @@ function onScreenshotUpdate({ url }) {
 @media (max-width: 1200px) {
   .workspace {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(280px, 1fr) minmax(200px, auto) minmax(160px, auto);
+    grid-template-rows: minmax(280px, 1fr) minmax(160px, auto);
     overflow-y: auto;
   }
 }
 
-.inspector-footer { display:flex;align-items:center;justify-content:center;gap:24px;padding:10px 20px;background:var(--app-highlight,#FFE066);border-top:2.5px solid var(--app-ink,#2d2d2d);font-size:var(--app-size-sm);font-weight:700;color:#5a4e20;font-family:var(--app-font-display);flex-shrink:0; }
+.inspector-footer { display:flex;align-items:center;justify-content:center;gap:24px;padding:10px 20px;background:var(--app-highlight,#FFE066);border-top:2.5px solid var(--app-ink,#2d2d2d);font-size:var(--app-size-sm);font-weight:700;color: var(--app-footer-yellow-text);font-family:var(--app-font-display);flex-shrink:0; }
 .inspector-footer span{display:flex;align-items:center;gap:4px;font-size:var(--app-size-sm);}
+
+.action-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: var(--app-size-xs); font-weight: 700; padding: 4px 12px;
+  border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px 8px 4px 8px;
+  background: var(--app-bg-card); color: var(--app-ink, #2d2d2d);
+  cursor: pointer; font-family: inherit; transition: all 0.12s; white-space: nowrap; flex-shrink: 0;
+}
+.action-btn:hover:not(:disabled) { background: var(--app-highlight, #FFE066); }
+.action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.action-btn--primary { background: var(--app-ink, #2d2d2d); color: var(--app-bg-card); }
+.action-btn--primary:hover:not(:disabled) { background: var(--app-ink, #2d2d2d); opacity: 0.85; }
 </style>

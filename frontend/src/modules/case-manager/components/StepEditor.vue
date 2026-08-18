@@ -1,6 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { bus } from "@/shared/event-bus";
+import { ref, computed, onMounted } from "vue";
 import { ElMessageBox, ElMessage } from "element-plus";
 import { IconPlus, IconRefresh, IconTrash, IconGripVertical } from "@/shared/icons/index";
 import { STEP_FIELDS, FIELD_LABELS, DIRECTION_OPTIONS, FIELD_HINTS, APP_LIFECYCLE_TYPES } from "@/shared/constants/steps";
@@ -100,17 +99,6 @@ function onTypeChange(idx, newType) {
   }
   newSteps[idx] = newStep; steps.value = newSteps;
 }
-
-// ── Event bus ──
-const onAddStepFromLocator = (payload) => {
-  if (steps.value.length >= 100) { ElMessage.warning("单用例最多 100 个步骤"); return; }
-  const step = defaultStep("click");
-  step.xpath = payload.xpath || "";
-  step.description = payload.description || `${payload.type}: ${(payload.xpath || "").slice(0, 60)}`;
-  steps.value = [...steps.value, step];
-};
-bus.on("add-step-to-case", onAddStepFromLocator);
-onUnmounted(() => { bus.off("add-step-to-case", onAddStepFromLocator); });
 
 function stepSummary(step) { return buildStepSummary(step, resolveElementName); }
 </script>

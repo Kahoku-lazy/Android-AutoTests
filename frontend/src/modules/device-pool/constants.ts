@@ -22,17 +22,18 @@ export const FILTER_TABS: FilterTabConfig[] = [
   { key: 'all', label: '全部设备' },
   { key: 'online', label: '在线' },
   { key: 'busy', label: '使用中' },
-  { key: 'offline', label: '离线' },
 ]
 
 // ── 表格列定义 ──
 export const COLUMNS: ColumnConfig[] = [
+  { dataIndex: 'adb_addr', title: '设备地址', minWidth: 180 },
   { dataIndex: 'serial', title: '序列号', minWidth: 200 },
   { dataIndex: 'model', title: '型号', minWidth: 120 },
   { dataIndex: 'screen', title: '分辨率', minWidth: 110, align: 'center' },
   { dataIndex: 'status', title: '状态', minWidth: 160, align: 'center' },
-  { dataIndex: 'connection_type', title: '连接', minWidth: 90, align: 'center' },
+  { dataIndex: 'connection_type', title: '连接', minWidth: 180, align: 'center' },
   { dataIndex: 'lock_status', title: '锁定', minWidth: 100, align: 'center' },
+  { dataIndex: 'connected_at', title: '设备连接时间点', minWidth: 150 },
   { dataIndex: 'last_seen', title: '最后在线', minWidth: 110 },
   { dataIndex: 'actions', title: '操作', width: 220, fixed: 'right' },
 ]
@@ -77,7 +78,6 @@ export const DEFAULT_DIALOGS = {
 export const CARD_GROUPS = [
   { key: 'online' as const, label: '🟢 在线' },
   { key: 'busy' as const, label: '🔴 使用中' },
-  { key: 'offline' as const, label: '⚫ 离线' },
 ]
 
 // ── 列表动画配置 ──

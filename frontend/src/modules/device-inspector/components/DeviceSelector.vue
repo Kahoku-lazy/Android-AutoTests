@@ -6,6 +6,7 @@
 */
 import { ref } from 'vue'
 import { useElementStore } from '../store'
+import { IconRefresh } from '@/shared/icons'
 
 const store = useElementStore()
 const refreshing = ref(false)
@@ -71,7 +72,8 @@ async function refreshDevices() {
       </el-select>
 
       <button v-if="!store.isConnected" class="dev-btn dev-btn--primary" :disabled="!pendingSerial" @click="handleConnect">连接</button>
-      <button v-else class="dev-btn dev-btn--danger" @click="handleDisconnect">断开</button>
+      <button v-else class="dev-btn dev-btn--connected" disabled>已连接</button>
+      <button class="dev-btn dev-btn--danger" :disabled="!store.isConnected" @click="handleDisconnect">断开</button>
     </div>
 
     <!-- Center: current device info -->
@@ -90,7 +92,7 @@ async function refreshDevices() {
 
     <!-- Right: refresh -->
     <button class="dev-btn" @click="refreshDevices" :disabled="refreshing">
-      {{ refreshing ? '...' : '↻' }}
+      <IconRefresh :size="14" />
     </button>
   </div>
 </template>
@@ -130,13 +132,16 @@ async function refreshDevices() {
   background: var(--app-bg-card); color: var(--app-ink, #2d2d2d);
   cursor: pointer; font-family: inherit; transition: all 0.12s;
   white-space: nowrap; flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 4px;
 }
 .dev-btn:hover { background: var(--app-highlight, #FFE066); }
 .dev-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .dev-btn--primary { background: var(--app-ink, #2d2d2d); color: var(--app-bg-card); }
 .dev-btn--primary:hover { background: var(--app-ink, #2d2d2d); opacity: 0.85; color: var(--app-bg-card); }
-.dev-btn--danger { color: var(--app-disconnect-text); border-color: var(--app-disconnect-text); }
-.dev-btn--danger:hover { background: var(--app-status-danger-bg, #FFE0DB); }
+.dev-btn--connected { background: var(--app-status-success-bg, #C8F5D0); color: var(--app-status-success-text, #2d7a2d); border-color: var(--app-status-success, #6BCB77); }
+.dev-btn--connected:disabled { opacity: 1; cursor: default; }
+.dev-btn--danger { background: var(--app-disconnect-text, #c53030); color: var(--app-text-inverse, #fff); border-color: var(--app-disconnect-text, #c53030); }
+.dev-btn--danger:not(:disabled):hover { background: var(--app-status-danger-text, #a03030); border-color: var(--app-status-danger-text, #a03030); }
 
 .opt-row { display: flex; justify-content: space-between; align-items: center; }
 .opt-model { font-weight: 500; }

@@ -4,7 +4,7 @@
 
 export type DeviceStatus = 'ONLINE' | 'BUSY' | 'OFFLINE' | 'DISCONNECTED'
 export type ConnectionType = 'USB' | 'WIFI'
-export type DeviceFilterKey = 'all' | 'online' | 'busy' | 'offline'
+export type DeviceFilterKey = 'all' | 'online' | 'busy'
 export type DeviceViewMode = 'table' | 'cards'
 
 // ── 核心数据 ──
@@ -17,15 +17,13 @@ export interface DeviceRecord {
   screen?: string
   status: DeviceStatus
   connection_type: ConnectionType
+  connection_addr?: string
+  locked?: boolean
   locked_by?: string
   occupied_by?: string
+  connected_at?: string
+  added_by?: string
   last_seen: string
-}
-
-export interface QueueEntry {
-  user_id: string
-  serial: string
-  waited_seconds?: number
 }
 
 // ── UI 状态 ──
@@ -33,7 +31,6 @@ export interface QueueEntry {
 export interface DeviceKpiStats {
   online: number
   busy: number
-  offline: number
   total: number
 }
 
@@ -87,32 +84,22 @@ export interface DevicePageHeader {
   iconGradient: string
 }
 
-// ── API 响应 ──
+// ── API 响应（DRF 信封 {status, data}） ──
 
 export interface DeviceListResponse {
   status: boolean
-  devices?: DeviceRecord[]
-  current?: string
-  queue_length?: number
+  data?: { devices: DeviceRecord[]; current?: string }
   message?: string
 }
 
 export interface ScanResponse {
   status: boolean
-  devices?: DeviceRecord[]
-  count?: number
+  data?: { devices?: DeviceRecord[]; count?: number; newly_added?: number }
   message?: string
 }
 
 export interface DeviceOpResponse {
   status: boolean
-  message?: string
-  position?: number
-}
-
-export interface QueueResponse {
-  status: boolean
-  queue?: QueueEntry[]
-  count?: number
+  data?: { [key: string]: unknown }
   message?: string
 }

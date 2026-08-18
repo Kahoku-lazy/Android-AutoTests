@@ -7,6 +7,7 @@ import { apiGetScreenshot } from '../api'
 import { apiGetPages, apiCreatePage, apiBatchAddElementsToPage } from '@/modules/element-locator/api'
 import { useElementStore } from '../store'
 import { bus } from '@/shared/event-bus'
+import { IconRefresh, IconSave, IconDevice, IconScan } from '@/shared/icons'
 
 const store = useElementStore()
 
@@ -82,15 +83,16 @@ function toggleCheck(el) {
 }
 
 function toggleAll() {
-  if (checkedIds.value.size === store.elements.length) {
+  const list = store.filteredElements
+  if (checkedIds.value.size === list.length) {
     checkedIds.value = new Set()
   } else {
-    checkedIds.value = new Set(store.elements.map(e => e._idx ?? e.__uid))
+    checkedIds.value = new Set(list.map(e => e._idx ?? e.__uid))
   }
 }
 
 const allChecked = computed(() =>
-  store.elements.length > 0 && checkedIds.value.size === store.elements.length
+  store.filteredElements.length > 0 && checkedIds.value.size === store.filteredElements.length
 )
 
 const checkedCount = computed(() => checkedIds.value.size)
@@ -99,12 +101,21 @@ function getElId(el) {
   return el._idx ?? el.__uid
 }
 
+// ── Unique XPath for display: pick single count===1 locator, ID → Text priority ──
+const XPATH_PRIORITY = ['resource-id', 'text', 'content-desc', 'class', 'index', 'combined', 'resource-id (any)', 'text (any)']
+
+function uniqueXPath(el) {
+  const xpaths = el.xpaths || []
+  const unique = xpaths.filter(x => x.count === 1 && x.xpath)
+  if (!unique.length) return ''
+  const prio = t => { const i = XPATH_PRIORITY.indexOf(t); return i === -1 ? 999 : i }
+  unique.sort((a, b) => prio(a.type) - prio(b.type))
+  return unique[0].xpath
+}
+
 // ── Row click → select element (same as screen click) ──
 function onRowClick(el) {
   store.selectElement(el)
-  nextTick(() => {
-    animate('.col-xpath', { opacity: [0.85, 1], duration: 300, ease: 'outCubic' })
-  })
 }
 
 // ── Thumbnail: proportional fit in fixed container ──
@@ -234,7 +245,7 @@ async function openBatchSave() {
 
 function getCheckedElements() {
   const idSet = checkedIds.value
-  return store.elements.filter(el => idSet.has(getElId(el)))
+  return store.filteredElements.filter(el => idSet.has(getElId(el)))
 }
 
 function pickXPath(el, strategy) {
@@ -343,16 +354,26 @@ onUnmounted(() => stopEmptyAnim())
     <!-- Header -->
     <div class="pe-header">
       <h3>页面元素</h3>
-      <span v-if="store.elements.length" class="pe-count">{{ store.elements.length }} 个</span>
+      <span v-if="store.elements.length && store.activePanelTab === 'elements'" class="pe-count">{{ store.elements.length }} 个</span>
     </div>
 
+    <!-- Tab toggle -->
+    <div class="pe-tabs">
+      <button class="pe-tab" :class="{ 'pe-tab--active': store.activePanelTab === 'elements' }" @click="store.activePanelTab = 'elements'">元素</button>
+      <button class="pe-tab" :class="{ 'pe-tab--active': store.activePanelTab === 'ocr' }" @click="store.activePanelTab = 'ocr'">
+        OCR<span v-if="store.ocrResults.length" class="pe-tab-badge">{{ store.ocrResults.length }}</span>
+      </button>
+    </div>
+
+    <!-- Elements view -->
+    <template v-if="store.activePanelTab === 'elements'">
     <!-- Toolbar -->
     <div v-if="store.elements.length" class="pe-toolbar">
       <button
         class="pe-refresh-btn"
         :disabled="refreshLoading || !store.isConnected"
         @click="refreshElements"
-      >{{ refreshLoading ? '⏳ 刷新中...' : '🔄 刷新元素' }}</button>
+      ><IconRefresh :size="14" /> {{ refreshLoading ? '刷新中...' : '刷新元素' }}</button>
       <label class="pe-check-all">
         <input type="checkbox" :checked="allChecked" @change="toggleAll" />
         <span>全选</span>
@@ -362,17 +383,17 @@ onUnmounted(() => stopEmptyAnim())
         class="pe-batch-btn"
         :disabled="checkedCount === 0"
         @click="openBatchSave"
-      >💾 批量保存</button>
+      ><IconSave :size="14" /> 批量保存</button>
     </div>
 
     <!-- Element list -->
     <div v-if="!store.elements.length" class="empty">
-      <span ref="emptyIconRef" class="empty-icon">📱</span>
+      <span ref="emptyIconRef" class="empty-icon"><IconDevice :size="32" /></span>
       <p ref="emptyTitleRef" class="empty-text">Dump UI 后显示页面元素</p>
     </div>
     <div v-else class="pe-list">
       <div
-        v-for="el in store.elements"
+        v-for="el in store.filteredElements"
         :key="getElId(el)"
         class="pe-row"
         :class="{
@@ -397,7 +418,7 @@ onUnmounted(() => stopEmptyAnim())
             :title="`${el.class_name || ''} [${el.bounds || ''}] — 点击放大`"
             @click.stop="openEnlarge(el)"
           />
-          <span v-else class="pe-thumb-placeholder">📱</span>
+          <span v-else class="pe-thumb-placeholder"><IconDevice :size="16" /></span>
         </div>
         <!-- Text -->
         <div class="pe-cell pe-cell--text" :title="el.text || el.content_desc || ''">
@@ -405,9 +426,19 @@ onUnmounted(() => stopEmptyAnim())
           <span v-else-if="el.content_desc" class="pe-text pe-text--desc">{{ el.content_desc }}</span>
           <span v-else class="pe-text--none">—</span>
         </div>
+        <!-- Resource ID -->
+        <div class="pe-cell pe-cell--rid" :title="el.resource_id || ''">
+          <code v-if="el.resource_id" class="pe-code">{{ el.resource_id }}</code>
+          <span v-else class="pe-text--none">—</span>
+        </div>
         <!-- Bounds -->
         <div class="pe-cell pe-cell--bounds">
           <code class="pe-code">{{ el.bounds || '—' }}</code>
+        </div>
+        <!-- Unique XPath -->
+        <div class="pe-cell pe-cell--xpath" :title="uniqueXPath(el)">
+          <code v-if="uniqueXPath(el)" class="pe-code pe-code--xpath">{{ uniqueXPath(el) }}</code>
+          <span v-else class="pe-text--none">—</span>
         </div>
         <!-- Clickable -->
         <div class="pe-cell pe-cell--clickable">
@@ -416,6 +447,41 @@ onUnmounted(() => stopEmptyAnim())
         </div>
       </div>
     </div>
+    </template>
+
+    <!-- OCR view -->
+    <template v-else>
+      <div v-if="!store.ocrResults.length" class="empty">
+        <span class="empty-icon"><IconScan :size="32" /></span>
+        <p class="empty-text">点击工具栏「OCR 检测」后显示识别结果</p>
+      </div>
+      <div v-else class="pe-list">
+        <div
+          v-for="(it, i) in store.ocrResults"
+          :key="i"
+          class="ocr-row"
+          :class="{ 'ocr-row--selected': store.selectedOcr === it }"
+          @click="store.selectOcr(it)"
+        >
+          <img
+            v-if="it.thumbnail"
+            class="ocr-thumb"
+            :src="`data:image/${it.thumbnail_format || 'jpeg'};base64,${it.thumbnail}`"
+            :alt="it.text || 'ocr'"
+          />
+          <span v-else class="pe-thumb-placeholder"><IconScan :size="16" /></span>
+          <div class="pe-cell pe-cell--text" :title="it.text">
+            <span class="pe-text">{{ it.text || '—' }}</span>
+          </div>
+          <div class="pe-cell pe-cell--confidence">
+            <span class="pe-badge pe-badge--yes">{{ (it.confidence * 100).toFixed(1) }}%</span>
+          </div>
+          <div class="pe-cell pe-cell--bounds">
+            <code class="pe-code">[{{ it.x }},{{ it.y }}][{{ it.x + it.width }},{{ it.y + it.height }}]</code>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <!-- Batch save dialog -->
     <el-dialog
@@ -489,303 +555,4 @@ onUnmounted(() => stopEmptyAnim())
   </div>
 </template>
 
-<style scoped>
-.panel {
-  height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--app-bg-card));
-  
-  border-radius: 20px;
-  border: 1px solid var(--ink));
-  padding: 16px;
-  box-shadow: var(--doodle-shadow);
-  overflow: hidden;
-}
-.pe-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  flex-shrink: 0;
-}
-.pe-header h3 {
-  font-size: var(--app-size-sm);
-  color: var(--app-text, #3D4A3B);
-  margin: 0;
-}
-.pe-count {
-  font-size: var(--app-size-sm);
-  color: var(--app-text-secondary, #7A8B73);
-  background: rgba(179, 158, 243,0.06);
-  padding: 1px 8px;
-  border-radius: 10px;
-}
-
-/* Toolbar */
-.pe-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-  flex-shrink: 0;
-  padding: 6px 10px;
-  background: rgba(179, 158, 243,0.04);
-  border-radius: 8px;
-}
-.pe-refresh-btn {
-  padding: 4px 10px;
-  font-size: var(--app-size-sm);
-  border: 1px solid var(--ink));
-  border-radius: 6px;
-  background: var(--app-bg-card));
-  color: var(--app-text, #3D4A3B);
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-.pe-refresh-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.pe-refresh-btn:not(:disabled):hover {
-  border-color: var(--app-purple, #b39ef3);
-  color: var(--app-purple, #b39ef3);
-}
-.pe-check-all {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: var(--app-size-sm);
-  color: var(--app-text, #3D4A3B);
-  cursor: pointer;
-  user-select: none;
-}
-.pe-checked-count {
-  font-size: var(--app-size-sm);
-  color: var(--app-text-secondary, #7A8B73);
-}
-.pe-batch-btn {
-  margin-left: auto;
-  padding: 4px 12px;
-  font-size: var(--app-size-sm);
-  border: 1px solid var(--ink));
-  border-radius: 6px;
-  background: var(--app-bg-card));
-  color: var(--app-text, #3D4A3B);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.pe-batch-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.pe-batch-btn:not(:disabled):hover {
-  border-color: var(--app-teal, var(--app-accent-purple, #b39ef3));
-  color: var(--app-teal, var(--app-accent-purple, #b39ef3));
-}
-
-/* Empty */
-.empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: var(--app-text-secondary, #7A8B73);
-  font-size: var(--app-size-sm);
-}
-.empty-icon { font-size: var(--app-size-2xl); opacity: 0.55; }
-.empty-text { margin: 0; font-size: var(--app-size-sm); font-weight: 500; color: var(--app-text, var(--ink)); }
-
-/* Element list */
-.pe-list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-.pe-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 6px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.15s;
-  border: 1px solid transparent;
-}
-.pe-row:hover {
-  background: rgba(179, 158, 243,0.04);
-}
-.pe-row--selected {
-  background: rgba(179, 158, 243,0.08);
-  border-color: var(--app-teal, var(--app-accent-purple, #b39ef3));
-}
-.pe-row--checked {
-  background: rgba(179, 158, 243,0.04);
-}
-
-.pe-checkbox {
-  flex-shrink: 0;
-  cursor: pointer;
-  accent-color: var(--app-teal, var(--app-accent-purple, #b39ef3));
-}
-
-/* Cells */
-.pe-cell {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-.pe-cell--thumb {
-  width: 56px;
-  justify-content: center;
-}
-.pe-thumb {
-  border-radius: 4px;
-  border: 1px solid rgba(179, 158, 243,0.12);
-  background-repeat: no-repeat;
-  flex-shrink: 0;
-  cursor: zoom-in;
-  transition: transform 0.15s;
-}
-.pe-thumb:hover {
-  transform: scale(1.1);
-  border-color: var(--app-teal, var(--app-accent-purple, #b39ef3));
-  z-index: 1;
-}
-.pe-thumb-placeholder {
-  font-size: var(--app-size-lg);
-  opacity: 0.4;
-  width: 36px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.pe-cell--text {
-  flex: 1;
-  min-width: 0;
-  font-size: var(--app-size-sm);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.pe-text { color: var(--app-text, #3D4A3B); }
-.pe-text--desc { color: var(--app-text-secondary, #7A8B73); font-style: italic; }
-.pe-text--none { color: var(--app-btn-disabled-color); }
-.pe-cell--bounds {
-  width: 110px;
-  font-size: var(--app-size-xs);
-  overflow: hidden;
-}
-.pe-code {
-  font-size: var(--app-size-xs);
-  color: var(--app-text-secondary, #7A8B73);
-  background: rgba(179, 158, 243,0.04);
-  padding: 1px 5px;
-  border-radius: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-.pe-cell--clickable {
-  width: 32px;
-  justify-content: center;
-}
-.pe-badge {
-  font-size: var(--app-size-xs);
-  font-weight: 600;
-  padding: 1px 6px;
-  border-radius: 4px;
-}
-.pe-badge--yes {
-  color: var(--c-workflow);
-  background: rgba(137,207,240,0.1);
-}
-.pe-badge--no {
-  color: var(--app-btn-disabled-color);
-}
-
-/* Form */
-.form-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.form-label {
-  font-size: var(--app-size-sm);
-  color: var(--text-secondary, var(--app-ink-muted, #999));
-  font-weight: 500;
-  user-select: none;
-}
-.form-label.required::before {
-  content: '* ';
-  color: var(--el-color-danger, #FFB5A7);
-}
-.form-hint {
-  font-size: var(--app-size-sm);
-  color: var(--app-text-secondary, #7A8B73);
-  line-height: 1.5;
-  background: rgba(179, 158, 243,0.04);
-  padding: 8px 10px;
-  border-radius: 6px;
-}
-
-/* Enlarge overlay */
-.enlarge-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  background: rgba(0,0,0,0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  
-}
-.enlarge-card {
-  background: var(--app-bg-card);
-  border-radius: var(--app-radius-md);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  max-width: 90vw;
-  max-height: 90vh;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.2);
-}
-.enlarge-img {
-  border-radius: 8px;
-  border: 2px solid rgba(179, 158, 243,0.15);
-  background-repeat: no-repeat;
-  flex-shrink: 0;
-}
-.enlarge-info {
-  font-size: var(--app-size-sm);
-  line-height: 1.7;
-  color: var(--app-text-secondary, #7A8B73);
-  text-align: left;
-  width: 100%;
-}
-.enlarge-info p {
-  margin: 2px 0;
-}
-.enlarge-info strong {
-  color: var(--app-text, #3D4A3B);
-}
-.enlarge-close {
-  padding: 6px 24px;
-  border: 1px solid var(--ink));
-  border-radius: 8px;
-  background: var(--app-bg-card));
-  color: var(--app-text, #3D4A3B);
-  cursor: pointer;
-  font-size: var(--app-size-sm);
-}
-</style>
+<style scoped src="./PageElementsPanel.css"></style>

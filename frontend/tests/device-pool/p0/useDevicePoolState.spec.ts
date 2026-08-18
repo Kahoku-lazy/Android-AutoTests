@@ -18,9 +18,6 @@ vi.mock('@/modules/device-pool/api', () => ({
   apiLockDevice: vi.fn(),
   apiReleaseDevice: vi.fn(),
   apiDisconnect: vi.fn(),
-  apiGetQueue: vi.fn(),
-  apiJoinQueue: vi.fn(),
-  apiLeaveQueue: vi.fn(),
   apiHeartbeat: vi.fn(),
 }))
 
@@ -34,13 +31,8 @@ function makeDevice(serial: string): DeviceRecord {
   }
 }
 
-function makeListRes(
-  status: boolean,
-  devices: DeviceRecord[],
-  current = '',
-  queueLength = 0,
-) {
-  return { data: { status, devices, current, queue_length: queueLength } }
+function makeListRes(status: boolean, devices: DeviceRecord[], current = '') {
+  return { data: { status, data: { devices, current } } }
 }
 
 describe('[P0] useDevicePoolState', () => {
@@ -48,9 +40,9 @@ describe('[P0] useDevicePoolState', () => {
     vi.clearAllMocks()
   })
 
-  it('fetchDevices 成功：写入 devices/currentSerial/queueLength，loading 复位', async () => {
+  it('fetchDevices 成功：写入 devices/currentSerial，loading 复位', async () => {
     vi.mocked(dpApi.apiListDevices).mockResolvedValue(
-      makeListRes(true, [makeDevice('S1'), makeDevice('S2')], 'S1', 3) as never,
+      makeListRes(true, [makeDevice('S1'), makeDevice('S2')], 'S1') as never,
     )
 
     const s = useDevicePoolState()
@@ -61,7 +53,6 @@ describe('[P0] useDevicePoolState', () => {
 
     expect(s.devices.value).toEqual([makeDevice('S1'), makeDevice('S2')])
     expect(s.currentSerial.value).toBe('S1')
-    expect(s.queueLength.value).toBe(3)
     expect(s.loading.value).toBe(false)
     expect(s.error.value).toBeNull()
   })
@@ -90,7 +81,7 @@ describe('[P0] useDevicePoolState', () => {
   it('doActivate 成功：写入 currentSerial 并触发刷新', async () => {
     vi.mocked(dpApi.apiActivate).mockResolvedValue({ data: { status: true } } as never)
     vi.mocked(dpApi.apiListDevices).mockResolvedValue(
-      makeListRes(true, [makeDevice('S1')], 'S1', 0) as never,
+      makeListRes(true, [makeDevice('S1')], 'S1') as never,
     )
 
     const s = useDevicePoolState()

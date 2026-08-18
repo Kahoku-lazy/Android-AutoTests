@@ -94,23 +94,21 @@ describe('[P0] DevicePoolView.logic', () => {
     vi.mocked(useHeartbeat).mockReturnValue(heartbeatStub)
   })
 
-  it('KPI 统计：按状态聚合 online/busy/offline/total', async () => {
+  it('KPI 统计：按状态聚合 online/busy/total', async () => {
     poolStub.devices.value = [
       makeDevice('S1', 'ONLINE'),
       makeDevice('S2', 'BUSY'),
-      makeDevice('S3', 'OFFLINE'),
-      makeDevice('S4', 'DISCONNECTED'),
     ]
 
     const { result } = await mountComposable(() => useDevicePoolView())
 
-    expect(result.kpiStats.value).toEqual({ online: 1, busy: 1, offline: 2, total: 4 })
+    expect(result.kpiStats.value).toEqual({ online: 1, busy: 1, total: 2 })
   })
 
   it('切换 activeFilter：过滤列表并重置页码', async () => {
     poolStub.devices.value = [
       ...Array.from({ length: 6 }, (_, i) => makeDevice(`O${i + 1}`, 'ONLINE')),
-      ...Array.from({ length: 6 }, (_, i) => makeDevice(`F${i + 1}`, 'OFFLINE')),
+      ...Array.from({ length: 6 }, (_, i) => makeDevice(`B${i + 1}`, 'BUSY')),
     ]
 
     const { result } = await mountComposable(() => useDevicePoolView())

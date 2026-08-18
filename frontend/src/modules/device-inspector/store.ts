@@ -9,7 +9,7 @@ import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { ElMessage } from 'element-plus'
 import {
-  apiDump, apiAction,
+  apiDump, apiOcr,
   apiGetDevices, apiActivateDevice, apiGetDeviceInfo,
   apiConnectObserve, apiDisconnectObserve,
 } from './api'
@@ -21,6 +21,15 @@ const EXEC_PREFIXES = ['runner-', 'ai_agent', 'task-', 'run-']
 function isExecutionOccupied(device) {
   return device.status === 'BUSY' && device.occupied_by &&
     EXEC_PREFIXES.some(p => device.occupied_by.startsWith(p))
+}
+
+// Input widget class keywords for the "输入框" filter
+const INPUT_CLASS_KEYWORDS = ['edittext', 'autocomplete', 'searchview']
+
+function isInputClass(className) {
+  if (!className) return false
+  const c = className.toLowerCase()
+  return INPUT_CLASS_KEYWORDS.some(k => c.includes(k))
 }
 
 export const useElementStore = defineStore('device-inspector', () => {
@@ -37,11 +46,20 @@ export const useElementStore = defineStore('device-inspector', () => {
   const elements = ref([])
   const actionable = ref([])
   const selected = ref(null)
-  const pageId = ref(null)
   const loading = ref(false)
   const error = ref('')
   const lastDump = ref(null)
   const screenshotUrl = ref('')   // shared screenshot for thumbnail cropping
+
+  // ── OCR state ──
+  const ocrResults = ref([])
+  const ocrLoading = ref(false)
+  const selectedOcr = ref(null)
+  const activePanelTab = ref('elements')   // 'elements' | 'ocr'
+
+  // ── Filter state ──
+  const filterMode = ref('all')
+  const searchText = ref('')
 
   // ── Computed ──
   const onlineDevices = computed(() =>
@@ -57,6 +75,29 @@ export const useElementStore = defineStore('device-inspector', () => {
     const d = devices.value.find(d => d.serial === currentSerial.value)
     return d && (d.status === 'ONLINE' || d.status === 'BUSY')
   })
+  /** Full element list filtered by mode + search text (page element list). */
+  const filteredElements = computed(() => {
+    let els = elements.value || []
+    switch (filterMode.value) {
+      case 'clickable': els = els.filter(e => e.clickable); break
+      case 'text': els = els.filter(e => e.text); break
+      case 'rid': els = els.filter(e => e.resource_id); break
+      case 'clickable_text': els = els.filter(e => e.clickable && e.text); break
+      case 'clickable_no_text': els = els.filter(e => e.clickable && !e.text); break
+      case 'input': els = els.filter(e => isInputClass(e.class_name)); break
+      case 'scrollable': els = els.filter(e => e.scrollable); break
+    }
+    const q = searchText.value.trim().toLowerCase()
+    if (q) {
+      els = els.filter(e =>
+        (e.text || '').toLowerCase().includes(q) ||
+        (e.resource_id || '').toLowerCase().includes(q) ||
+        (e.content_desc || '').toLowerCase().includes(q) ||
+        (e.class_name || '').toLowerCase().includes(q)
+      )
+    }
+    return els
+  })
 
   // ── Device actions ──
 
@@ -64,7 +105,7 @@ export const useElementStore = defineStore('device-inspector', () => {
     try {
       const { data } = await apiGetDevices()
       if (data.status) {
-        devices.value = data.devices || []
+        devices.value = data.data?.devices || []
         // Restore current device info if still connected
         if (connectedSerial.value) {
           const cd = devices.value.find(d => d.serial === connectedSerial.value)
@@ -120,7 +161,6 @@ export const useElementStore = defineStore('device-inspector', () => {
     // Reset element state
     elements.value = []
     actionable.value = []
-    pageId.value = null
     selected.value = null
   }
 
@@ -174,7 +214,6 @@ export const useElementStore = defineStore('device-inspector', () => {
       if (data.status) {
         elements.value = data.elements || []
         actionable.value = data.actionable || []
-        pageId.value = data.page_id
         lastDump.value = data
         // Update device serial from response
         if (data.serial) currentSerial.value = data.serial
@@ -206,22 +245,33 @@ export const useElementStore = defineStore('device-inspector', () => {
     return null
   }
 
-  async function doAction(action, x, y) {
+  async function doOcr() {
+    ocrLoading.value = true
     try {
-      const { data } = await apiAction(action, x, y)
-      if (!data.status) {
-        error.value = data.message || 'Action failed'
-        return false
+      const { data } = await apiOcr()
+      if (data.status) {
+        ocrResults.value = data.texts || []
+        activePanelTab.value = 'ocr'
+        return data
       }
-      return true
+      ElMessage.warning(data.message || 'OCR 识别失败')
     } catch (e) {
-      error.value = e.message || 'Action failed'
-      return false
+      ElMessage.error('OCR 识别失败')
+    } finally {
+      ocrLoading.value = false
     }
+    return null
   }
 
   function selectElement(el) {
     selected.value = el
+    selectedOcr.value = null
+  }
+
+  function selectOcr(item) {
+    selectedOcr.value = item
+    selected.value = null
+    activePanelTab.value = 'ocr'
   }
 
   function clearError() {
@@ -233,10 +283,13 @@ export const useElementStore = defineStore('device-inspector', () => {
     devices, currentSerial, connectedSerial, currentDevice, screenW, screenH, wsConnected,
     onlineDevices, availableDevices, hasDevices, isConnected, isDeviceOnline,
     // element state
-    elements, actionable, selected, pageId, loading, error, lastDump, screenshotUrl,
+    elements, actionable, selected, loading, error, lastDump, screenshotUrl,
+    filterMode, searchText, filteredElements,
+    // ocr state
+    ocrResults, ocrLoading, selectedOcr, activePanelTab,
     // device actions
     fetchDevices, connectDevice, disconnectDevice, activateDevice, fetchCurrentDevice,
     // element actions
-    doDump, doAction, selectElement, clearError,
+    doDump, doOcr, selectElement, selectOcr, clearError,
   }
 })

@@ -642,7 +642,7 @@ async function loadDevices() {
   try {
     const { data } = await listDevices();
     if (data.status)
-      devices.value = (data.devices || []).filter(
+      devices.value = (data.data?.devices || []).filter(
         (d) => d.status === "ONLINE" || d.status === "BUSY",
       );
   } catch (e) { console.error(e); }

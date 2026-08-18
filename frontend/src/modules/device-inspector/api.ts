@@ -1,11 +1,10 @@
 /** device-inspector API client functions */
 import client from '@/shared/api-client'
 
-// ── Element dump & actions ──
+// ── Element dump ──
 
 export function apiDump()         { return client.post('/inspector/dump', {}) }
-export function apiAction(a,x,y)  { return client.post('/inspector/action',{action:a,x,y}) }
-export function apiInput(t,x,y,c) { return client.post('/inspector/action',{action:'input',text:t,x,y,clear_first:c}) }
+export function apiOcr()          { return client.post('/inspector/ocr', {}) }
 
 // ── Device integration ──
 

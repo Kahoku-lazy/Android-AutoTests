@@ -175,3 +175,14 @@ export const IconSave = makeIcon('IconSave',
 
 export const IconEdit = makeIcon('IconEdit',
   '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>')
+
+// ─── 设备检查器 ───
+export const IconTap = makeIcon('IconTap',
+  '<path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>',
+  { strokeW: 2 })
+
+export const IconKeyboard = makeIcon('IconKeyboard',
+  '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h12M6 12h12M6 16h8"/>')
+
+export const IconCopy = makeIcon('IconCopy',
+  '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>')

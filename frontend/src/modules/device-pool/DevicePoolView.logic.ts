@@ -11,7 +11,6 @@ import type {
   DeviceKpiStats,
   DisconnectDialogState,
   NetworkDialogState,
-  QueueEntry,
 } from '@/shared/types/device'
 import {
   PAGE_HEADER,
@@ -24,6 +23,8 @@ import {
 import {
   displayModel,
   connectionLabel,
+  deviceAddress,
+  formatDateTime,
   formatRelativeTime,
   statusTag,
 } from './helpers'
@@ -35,8 +36,6 @@ export interface DevicePoolViewState {
   devices: Ref<DeviceRecord[]>
   loading: Ref<boolean>
   scanning: Ref<boolean>
-  queueEntries: Ref<QueueEntry[]>
-  queueLength: Ref<number>
   selectedSerial: Ref<string | null>
   error: Ref<string | null>
   // UI state
@@ -58,7 +57,6 @@ export interface DevicePoolViewState {
   groupedDevices: ComputedRef<{
     online: DeviceRecord[]
     busy: DeviceRecord[]
-    offline: DeviceRecord[]
   }>
   // dialogs + actions
   disconnectDialog: Ref<DisconnectDialogState>
@@ -70,17 +68,16 @@ export interface DevicePoolViewState {
   cancelNetworkDialog: () => void
   handleRowClick: (record: DeviceRecord) => void
   handleLockClick: (device: DeviceRecord) => Promise<void>
-  handleJoinQueue: (device: DeviceRecord) => Promise<void>
-  handleCancelQueue: (serial: string, uid: string) => Promise<void>
-  handleOccupyClick: (device: DeviceRecord) => void
   handleRelease: (serial: string) => Promise<void>
   openDisconnectDialog: (serial: string) => void
-  handleDisconnectConfirm: (opts: { reason: string }) => Promise<void>
+  handleDisconnectConfirm: () => Promise<void>
   cancelDisconnectDialog: () => void
   // helpers
   isRowSelected: (record: DeviceRecord) => boolean
   displayModel: typeof displayModel
   connectionLabel: typeof connectionLabel
+  deviceAddress: typeof deviceAddress
+  formatDateTime: typeof formatDateTime
   formatRelativeTime: typeof formatRelativeTime
   statusTag: typeof statusTag
   // constants
@@ -113,7 +110,6 @@ export function useDevicePoolView(): DevicePoolViewState {
     return {
       online: devs.filter((d) => d.status === 'ONLINE').length,
       busy: devs.filter((d) => d.status === 'BUSY').length,
-      offline: devs.filter((d) => d.status === 'OFFLINE' || d.status === 'DISCONNECTED').length,
       total: devs.length,
     }
   })
@@ -121,11 +117,6 @@ export function useDevicePoolView(): DevicePoolViewState {
   // 6. Filter
   const filteredDevices = computed<DeviceRecord[]>(() => {
     if (activeFilter.value === 'all') return pool.devices.value
-    if (activeFilter.value === 'offline') {
-      return pool.devices.value.filter(
-        (d) => d.status === 'OFFLINE' || d.status === 'DISCONNECTED',
-      )
-    }
     return pool.devices.value.filter(
       (d) => d.status === activeFilter.value.toUpperCase(),
     )
@@ -155,7 +146,6 @@ export function useDevicePoolView(): DevicePoolViewState {
   const groupedDevices = computed(() => ({
     online: filteredDevices.value.filter((d) => d.status === 'ONLINE'),
     busy: filteredDevices.value.filter((d) => d.status === 'BUSY'),
-    offline: filteredDevices.value.filter((d) => d.status === 'OFFLINE' || d.status === 'DISCONNECTED'),
   }))
 
   // 10. View mode toggle
@@ -181,8 +171,6 @@ export function useDevicePoolView(): DevicePoolViewState {
     devices: pool.devices,
     loading: pool.loading,
     scanning: pool.scanning,
-    queueEntries: pool.queueEntries,
-    queueLength: pool.queueLength,
     selectedSerial: pool.selectedSerial,
     error: pool.error,
     // UI state
@@ -212,9 +200,6 @@ export function useDevicePoolView(): DevicePoolViewState {
     cancelNetworkDialog: actions.cancelNetworkDialog,
     handleRowClick: actions.handleRowClick,
     handleLockClick: actions.handleLockClick,
-    handleJoinQueue: actions.handleJoinQueue,
-    handleCancelQueue: actions.handleCancelQueue,
-    handleOccupyClick: actions.handleOccupyClick,
     handleRelease: actions.handleRelease,
     openDisconnectDialog: actions.openDisconnectDialog,
     handleDisconnectConfirm: actions.handleDisconnectConfirm,
@@ -223,6 +208,8 @@ export function useDevicePoolView(): DevicePoolViewState {
     isRowSelected,
     displayModel,
     connectionLabel,
+    deviceAddress,
+    formatDateTime,
     formatRelativeTime,
     statusTag,
     // constants

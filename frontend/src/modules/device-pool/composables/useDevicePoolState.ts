@@ -8,14 +8,10 @@ import {
   apiLockDevice,
   apiReleaseDevice,
   apiDisconnect,
-  apiGetQueue,
-  apiJoinQueue,
-  apiLeaveQueue,
   apiHeartbeat,
 } from '../api'
 import type {
   DeviceRecord,
-  QueueEntry,
   ScanResponse,
   DeviceOpResponse,
 } from '@/shared/types/device'
@@ -26,8 +22,6 @@ export interface UseDevicePoolStateReturn {
   // state
   devices: Ref<DeviceRecord[]>
   currentSerial: Ref<string>
-  queueLength: Ref<number>
-  queueEntries: Ref<QueueEntry[]>
   loading: Ref<boolean>
   selectedSerial: Ref<string | null>
   scanning: Ref<boolean>
@@ -39,14 +33,11 @@ export interface UseDevicePoolStateReturn {
   // actions
   fetchDevices: () => Promise<void>
   doScan: (target?: string) => Promise<ScanResponse>
-  doConnect: (serial: string, opts?: Record<string, unknown>) => Promise<DeviceOpResponse>
+  doConnect: (serial: string, opts?: { activate?: boolean }) => Promise<DeviceOpResponse>
   doActivate: (serial: string) => Promise<DeviceOpResponse>
-  doLock: (serial: string, userId: string, timeout?: number, type?: string) => Promise<DeviceOpResponse>
-  doRelease: (serial: string, opts?: Record<string, unknown>) => Promise<DeviceOpResponse>
-  doDisconnect: (serial: string, opts?: Record<string, unknown>) => Promise<DeviceOpResponse>
-  fetchQueue: () => Promise<void>
-  doJoinQueue: (serial: string, userId: string) => Promise<DeviceOpResponse & { position?: number }>
-  doLeaveQueue: (serial: string, userId: string) => Promise<DeviceOpResponse>
+  doLock: (serial: string, locked: boolean) => Promise<DeviceOpResponse>
+  doRelease: (serial: string) => Promise<DeviceOpResponse>
+  doDisconnect: (serial: string) => Promise<DeviceOpResponse>
   doHeartbeat: () => Promise<void>
   selectDevice: (serial: string) => void
 }
@@ -57,8 +48,6 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
   // ── State ──
   const devices = ref<DeviceRecord[]>([])
   const currentSerial = ref('')
-  const queueLength = ref(0)
-  const queueEntries = ref<QueueEntry[]>([])
   const loading = ref(false)
   const selectedSerial = ref<string | null>(null)
   const scanning = ref(false)
@@ -80,10 +69,9 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
     error.value = null
     try {
       const { data } = await apiListDevices()
-      if (data.status) {
-        devices.value = (data.devices as DeviceRecord[]) || []
-        currentSerial.value = (data.current as string) || ''
-        queueLength.value = (data.queue_length as number) || 0
+      if (data.status && data.data) {
+        devices.value = data.data.devices || []
+        currentSerial.value = data.data.current || ''
       }
     } catch (e: unknown) {
       error.value = '设备列表加载失败，请稍后重试'
@@ -97,9 +85,9 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
     try {
       const { data } = await apiScanDevices(target)
       if (data.status) {
-        devices.value = (data.devices as DeviceRecord[]) || []
-        if (data.devices?.length && !currentSerial.value) {
-          currentSerial.value = data.devices[0].serial
+        devices.value = data.data?.devices || []
+        if (data.data?.devices?.length && !currentSerial.value) {
+          currentSerial.value = data.data.devices[0].serial
         }
         return data
       }
@@ -112,9 +100,9 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
     }
   }
 
-  async function doConnect(serial: string, opts: Record<string, unknown> = {}): Promise<DeviceOpResponse> {
+  async function doConnect(serial: string, opts: { activate?: boolean } = {}): Promise<DeviceOpResponse> {
     try {
-      const { data } = await apiConnectDevice(serial, opts as Parameters<typeof apiConnectDevice>[1])
+      const { data } = await apiConnectDevice(serial, opts)
       if (data.status) {
         await fetchDevices()
       }
@@ -139,22 +127,22 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
     }
   }
 
-  async function doLock(serial: string, userId: string, timeout = 300, type = 'user'): Promise<DeviceOpResponse> {
+  async function doLock(serial: string, locked: boolean): Promise<DeviceOpResponse> {
     try {
-      const { data } = await apiLockDevice(serial, userId, timeout, type)
+      const { data } = await apiLockDevice(serial, locked)
       if (data.status) {
         await fetchDevices()
       }
       return data
     } catch (e: unknown) {
       const errData = (e as { response?: { data?: DeviceOpResponse } })?.response?.data
-      return errData || { status: false, message: '锁定失败' }
+      return errData || { status: false, message: '操作失败' }
     }
   }
 
-  async function doRelease(serial: string, opts: Record<string, unknown> = {}): Promise<DeviceOpResponse> {
+  async function doRelease(serial: string): Promise<DeviceOpResponse> {
     try {
-      const { data } = await apiReleaseDevice(serial, opts as Parameters<typeof apiReleaseDevice>[1])
+      const { data } = await apiReleaseDevice(serial)
       if (data.status) {
         await fetchDevices()
       }
@@ -165,54 +153,16 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
     }
   }
 
-  async function doDisconnect(serial: string, opts: Record<string, unknown> = {}): Promise<DeviceOpResponse> {
+  async function doDisconnect(serial: string): Promise<DeviceOpResponse> {
     try {
-      const { data } = await apiDisconnect(serial, opts as Parameters<typeof apiDisconnect>[1])
+      const { data } = await apiDisconnect(serial)
       if (data.status) {
         await fetchDevices()
       }
       return data
     } catch (e: unknown) {
       const errData = (e as { response?: { data?: DeviceOpResponse } })?.response?.data
-      return errData || { status: false, message: '断开失败' }
-    }
-  }
-
-  async function fetchQueue() {
-    try {
-      const { data } = await apiGetQueue()
-      if (data.status) {
-        queueEntries.value = (data.queue as QueueEntry[]) || []
-        queueLength.value = (data.count as number) || 0
-      }
-    } catch (e: unknown) {
-      console.error('[device-pool] fetchQueue failed:', (e as { message?: string })?.message || e)
-    }
-  }
-
-  async function doJoinQueue(serial: string, userId: string): Promise<DeviceOpResponse & { position?: number }> {
-    try {
-      const { data } = await apiJoinQueue(serial, userId)
-      if (data.status) {
-        await fetchQueue()
-      }
-      return data
-    } catch (e: unknown) {
-      console.error('[device-pool] doJoinQueue failed:', e)
-      return { status: false, message: '加入排队失败' }
-    }
-  }
-
-  async function doLeaveQueue(serial: string, userId: string): Promise<DeviceOpResponse> {
-    try {
-      const { data } = await apiLeaveQueue(serial, userId)
-      if (data.status) {
-        await fetchQueue()
-      }
-      return data
-    } catch (e: unknown) {
-      console.error('[device-pool] doLeaveQueue failed:', e)
-      return { status: false, message: '取消排队失败' }
+      return errData || { status: false, message: '删除失败' }
     }
   }
 
@@ -231,8 +181,6 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
   return {
     devices,
     currentSerial,
-    queueLength,
-    queueEntries,
     loading,
     selectedSerial,
     scanning,
@@ -247,9 +195,6 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
     doLock,
     doRelease,
     doDisconnect,
-    fetchQueue,
-    doJoinQueue,
-    doLeaveQueue,
     doHeartbeat,
     selectDevice,
   }

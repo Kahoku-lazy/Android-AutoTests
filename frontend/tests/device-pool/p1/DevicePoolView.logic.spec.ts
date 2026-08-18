@@ -111,14 +111,12 @@ describe('[P1] DevicePoolView.logic', () => {
     expect(result.pagedDevices.value).toHaveLength(5)
   })
 
-  it('groupedDevices：按状态三分组', async () => {
+  it('groupedDevices：按状态两分组', async () => {
     poolStub.devices.value = [
       makeDevice('O1', 'ONLINE'),
       makeDevice('O2', 'ONLINE'),
       makeDevice('B1', 'BUSY'),
       makeDevice('B2', 'BUSY'),
-      makeDevice('F1', 'OFFLINE'),
-      makeDevice('D1', 'DISCONNECTED'),
     ]
 
     const { result } = await mountComposable(() => useDevicePoolView())
@@ -126,6 +124,5 @@ describe('[P1] DevicePoolView.logic', () => {
     const groups = result.groupedDevices.value
     expect(groups.online.map((d) => d.serial)).toEqual(['O1', 'O2'])
     expect(groups.busy.map((d) => d.serial)).toEqual(['B1', 'B2'])
-    expect(groups.offline.map((d) => d.serial)).toEqual(['F1', 'D1'])
   })
 })

@@ -3,16 +3,20 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { animate } from 'animejs'
 import { wsUrl } from '@/shared/ws-url'
+import { getToken } from '@/shared/auth/token-storage'
 import { apiGetScreenshot } from '../api'
+import { IconDevice } from '@/shared/icons'
 
 const props = defineProps({
   screenW: { type: Number, default: 1440 },
   screenH: { type: Number, default: 3040 },
   elements: { type: Array, default: () => [] },
   selected: { type: Object, default: null },
+  ocrResults: { type: Array, default: () => [] },
+  selectedOcr: { type: Object, default: null },
   active: { type: Boolean, default: false },
 })
-const emit = defineEmits(['click-element', 'do-action', 'device-changed', 'screenshot-update'])
+const emit = defineEmits(['click-element', 'click-ocr', 'device-changed', 'screenshot-update'])
 
 const screenshotUrl = ref('')
 const ws = ref(null)
@@ -209,7 +213,9 @@ defineExpose({ refresh, redraw: scheduleDrawOverlay })
 function connectWS() {
   wsState.value = 'connecting'
   statusMessage.value = '正在连接截图流…'
-  const url = wsUrl('/ws/screenshot')
+  const token = getToken()
+  if (!token) return
+  const url = `${wsUrl('/ws/screenshot')}?token=${encodeURIComponent(token)}`
   ws.value = new WebSocket(url)
   ws.value.onmessage = (e) => {
     try {
@@ -346,6 +352,26 @@ function drawOverlay() {
       Math.round(el.width * s), Math.round(el.height * s),
     )
   })
+
+  props.ocrResults.forEach(ocr => {
+    const isSelected = props.selectedOcr && ocr === props.selectedOcr
+    if (isSelected) {
+      ctx.fillStyle = 'rgba(231,76,60,0.15)'
+      ctx.fillRect(
+        Math.round(ocr.x * s), Math.round(ocr.y * s),
+        Math.round(ocr.width * s), Math.round(ocr.height * s),
+      )
+      ctx.strokeStyle = '#e74c3c'
+      ctx.lineWidth = 2.5
+    } else {
+      ctx.strokeStyle = 'rgba(167,139,250,0.55)'
+      ctx.lineWidth = 1.2
+    }
+    ctx.strokeRect(
+      Math.round(ocr.x * s), Math.round(ocr.y * s),
+      Math.round(ocr.width * s), Math.round(ocr.height * s),
+    )
+  })
 }
 
 function onImgLoad() {
@@ -353,8 +379,10 @@ function onImgLoad() {
 }
 
 watch(() => props.selected, () => scheduleDrawOverlay())
+watch(() => props.selectedOcr, () => scheduleDrawOverlay())
 // Shallow watch — parent passes new array reference when elements change
 watch(() => props.elements, () => scheduleDrawOverlay())
+watch(() => props.ocrResults, () => scheduleDrawOverlay())
 watch([() => props.screenW, () => props.screenH], () => scheduleDrawOverlay())
 
 function hitTest(clientX, clientY) {
@@ -379,7 +407,34 @@ function hitTest(clientX, clientY) {
   return best
 }
 
+function hitTestOcr(clientX, clientY) {
+  const img = imgRef.value
+  if (!img) return null
+  const rect = img.getBoundingClientRect()
+  const s = displayScale()
+  if (!s) return null
+  const x = Math.round((clientX - rect.left) / s)
+  const y = Math.round((clientY - rect.top) / s)
+  let best = null
+  let bestArea = Infinity
+  for (const ocr of props.ocrResults) {
+    if (x >= ocr.x && x <= ocr.x + ocr.width && y >= ocr.y && y <= ocr.y + ocr.height) {
+      const area = ocr.width * ocr.height
+      if (area > 0 && area < bestArea) {
+        bestArea = area
+        best = ocr
+      }
+    }
+  }
+  return best
+}
+
 function onScreenClick(e) {
+  const ocrHit = hitTestOcr(e.clientX, e.clientY)
+  if (ocrHit) {
+    emit('click-ocr', ocrHit)
+    return
+  }
   const hit = hitTest(e.clientX, e.clientY)
   if (hit) emit('click-element', hit)
 }
@@ -438,7 +493,7 @@ function onMouseLeave() {
 
       <!-- Active but no screenshot yet → WS state placeholder -->
       <div v-else-if="active && !screenshotUrl" class="no-signal" :class="`no-signal--${wsState}`">
-        <span class="no-signal__icon">📱</span>
+        <span class="no-signal__icon"><IconDevice :size="32" /></span>
         <p class="no-signal__title">{{ placeholderText }}</p>
         <p v-if="wsState === 'error'" class="no-signal__hint">请确认后端服务与 ADB 设备已就绪</p>
       </div>
@@ -450,7 +505,7 @@ function onMouseLeave() {
             <div ref="ringOuterRef" class="no-device-ring no-device-ring--outer"></div>
             <div ref="ringInnerRef" class="no-device-ring no-device-ring--inner"></div>
           </div>
-          <span ref="noDeviceIconRef" class="no-signal__icon">📱</span>
+          <span ref="noDeviceIconRef" class="no-signal__icon"><IconDevice :size="32" /></span>
           <p ref="noDeviceTitleRef" class="no-signal__title">设备未连接~</p>
           <p class="no-signal__hint">在上方下拉框选择设备并点击「连接」后开始</p>
         </div>
@@ -459,131 +514,4 @@ function onMouseLeave() {
   </div>
 </template>
 
-<style scoped>
-.screenshot-panel {
-  height: 100%;
-  min-height: 0;
-  width: 100%;
-  background: var(--app-bg-card));
-  
-  border-radius: 20px;
-  border: 1px solid var(--ink));
-  display: flex;
-  overflow: hidden;
-  box-shadow: 2px 3px 0 rgba(0,0,0,0.05);
-  position: relative;
-  padding-top: 6px;
-}
-.screenshot-panel::before {
-  content: '';
-  position: absolute;
-  top: 4px; left: 50%; transform: translateX(-50%);
-  width: 9px; height: 9px;
-  background: radial-gradient(circle, var(--app-pushpin-light) 30%, var(--app-pushpin-mid) 60%, var(--app-pushpin-dark) 100%);
-  border-radius: 50%;
-  box-shadow: 0 1px 1px rgba(0,0,0,0.08);
-  z-index: 10;
-}
-.phone-frame {
-  container-type: size;
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-  box-sizing: border-box;
-}
-.screen-wrap {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-}
-.screen-inner {
-  position: relative;
-  line-height: 0;
-  width: min(100cqw, calc(100cqh * var(--phone-w) / var(--phone-h)));
-  height: min(100cqh, calc(100cqw * var(--phone-h) / var(--phone-w)));
-}
-.screen-img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  border-radius: 6px 10px 6px 10px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
-}
-.overlay {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  cursor: crosshair;
-}
-.no-signal {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  text-align: center;
-  padding: 24px;
-  color: var(--app-ink-muted);
-}
-.no-signal__icon {
-  font-size: var(--app-size-2xl);
-  opacity: 0.7;
-}
-.no-signal__title {
-  margin: 0;
-  font-size: var(--app-size-sm);
-  font-weight: 600;
-  color: var(--app-ink);
-}
-.no-signal__hint {
-  margin: 0;
-  font-size: var(--app-size-sm);
-  color: var(--app-ink-muted);
-  max-width: 220px;
-  line-height: 1.5;
-}
-.no-signal--error .no-signal__title { color: var(--app-status-danger-text); }
-
-/* ── No-device idle animation ── */
-.no-device-animation {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  position: relative;
-}
-.no-device-rings {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-.no-device-ring {
-  position: absolute;
-  border-radius: 50%;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-.no-device-ring--outer {
-  width: 110px;
-  height: 110px;
-  border: 3px solid var(--app-ink, #2d2d2d);
-}
-.no-device-ring--inner {
-  width: 78px;
-  height: 78px;
-  border: 3px solid var(--app-ink, #2d2d2d);
-}
-</style>
+<style scoped src="./ScreenshotView.css"></style>

@@ -2,7 +2,7 @@
  * [P0] 必测 — device-pool API 端点封装（表驱动，mock api-client，不断真网络）
  * 目录：tests/device-pool/p0/
  *
- * api.ts 11 个端点函数（13 条表驱动用例）：断言 client 方法、URL、body 透传，且恰好调用一次。
+ * api.ts 8 个端点函数（10 条表驱动用例）：断言 client 方法、URL、body 透传，且恰好调用一次。
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import client from '@/shared/api-client'
@@ -15,7 +15,6 @@ vi.mock('@/shared/api-client', () => ({
 type ClientMethod = 'get' | 'post' | 'put' | 'delete'
 
 interface ApiCase {
-  /** 用例名：场景 + 全角冒号 + 预期 */
   name: string
   invoke: () => unknown
   method: ClientMethod
@@ -45,18 +44,18 @@ const cases: ApiCase[] = [
     body: { target: '10.0.0.1' },
   },
   {
-    name: 'apiConnectDevice：完整参数透传 body 含 activate',
-    invoke: () => dpApi.apiConnectDevice('S1', { activate: true, userId: '1', timeout: 999 }),
+    name: 'apiConnectDevice：透传 activate',
+    invoke: () => dpApi.apiConnectDevice('S1', { activate: false }),
     method: 'post',
     url: '/devices/S1',
-    body: { activate: true, user_id: '1', timeout: 999 },
+    body: { activate: false },
   },
   {
-    name: 'apiConnectDevice：缺省参数注入默认 timeout 300',
+    name: 'apiConnectDevice：缺省参数默认 activate true',
     invoke: () => dpApi.apiConnectDevice('S1', {}),
     method: 'post',
     url: '/devices/S1',
-    body: { activate: true, user_id: '', timeout: 300 },
+    body: { activate: true },
   },
   {
     name: 'apiActivate：POST 激活 URL',
@@ -65,47 +64,23 @@ const cases: ApiCase[] = [
     url: '/devices/S1/activate',
   },
   {
-    name: 'apiLockDevice：user_id/timeout/type 透传 body',
-    invoke: () => dpApi.apiLockDevice('S1', '1', 900, 'user'),
+    name: 'apiLockDevice：透传 locked',
+    invoke: () => dpApi.apiLockDevice('S1', true),
     method: 'post',
     url: '/devices/S1/lock',
-    body: { user_id: '1', timeout: 900, type: 'user' },
+    body: { locked: true },
   },
   {
-    name: 'apiReleaseDevice：透传 reason/unlock/force',
-    invoke: () =>
-      dpApi.apiReleaseDevice('S1', { userId: '1', reason: 'done', unlock: true, force: false }),
+    name: 'apiReleaseDevice：POST 释放 URL',
+    invoke: () => dpApi.apiReleaseDevice('S1'),
     method: 'post',
     url: '/devices/S1/release',
-    body: { user_id: '1', reason: 'done', unlock: true, force: false },
   },
   {
-    name: 'apiDisconnect：布尔字段映射 is_admin',
-    invoke: () =>
-      dpApi.apiDisconnect('S1', { force: true, reason: 'x', userId: '1', isAdmin: false }),
+    name: 'apiDisconnect：POST 删除 URL',
+    invoke: () => dpApi.apiDisconnect('S1'),
     method: 'post',
     url: '/devices/S1/disconnect',
-    body: { force: true, reason: 'x', user_id: '1', is_admin: false },
-  },
-  {
-    name: 'apiGetQueue：GET /devices/queue',
-    invoke: () => dpApi.apiGetQueue(),
-    method: 'get',
-    url: '/devices/queue',
-  },
-  {
-    name: 'apiJoinQueue：透传 user_id',
-    invoke: () => dpApi.apiJoinQueue('S1', '1'),
-    method: 'post',
-    url: '/devices/S1/queue',
-    body: { user_id: '1' },
-  },
-  {
-    name: 'apiLeaveQueue：透传 user_id',
-    invoke: () => dpApi.apiLeaveQueue('S1', '1'),
-    method: 'post',
-    url: '/devices/S1/queue/leave',
-    body: { user_id: '1' },
   },
   {
     name: 'apiHeartbeat：GET 心跳 URL',

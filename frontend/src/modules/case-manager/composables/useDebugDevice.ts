@@ -22,7 +22,7 @@ export function useDebugDevice() {
   async function loadDevices() {
     try {
       const { data } = await listDevices();
-      if (data.status) devices.value = data.devices || [];
+      if (data.status) devices.value = data.data?.devices || [];
     } catch { console.error("加载设备列表失败") }
   }
 

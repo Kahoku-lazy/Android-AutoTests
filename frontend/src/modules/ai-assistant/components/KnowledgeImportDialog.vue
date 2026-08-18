@@ -96,7 +96,10 @@ function formatSize(bytes) {
           v-for="doc in filteredDocs" :key="doc.id"
           class="import-doc-item"
           :class="{ selected: isSelected(doc.id) }"
+          role="button" tabindex="0"
           @click="toggleDoc(doc.id)"
+          @keydown.enter.prevent="toggleDoc(doc.id)"
+          @keydown.space.prevent="toggleDoc(doc.id)"
         >
           <el-checkbox :model-value="isSelected(doc.id)" />
           <div class="import-doc-info">

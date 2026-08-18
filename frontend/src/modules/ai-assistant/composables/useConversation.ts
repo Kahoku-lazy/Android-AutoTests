@@ -111,7 +111,7 @@ export function useConversation(
         const c = conversations.value.find(x => x.id === id)
         if (c) c.title = data.title || title
       }
-    } catch (e) { logError('Failed to rename conversation', e, 'useConversation') }
+    } catch (e) { logError('Failed to rename conversation', e, 'useConversation'); ElMessage.error('重命名失败，请稍后重试') }
   }
 
   function cancelRename() {
@@ -133,9 +133,10 @@ export function useConversation(
         loadConversations()
       }
     } catch (e) {
-      // ElMessageBox.confirm rejection lands here — ignore. Real errors log.
+      // ElMessageBox.confirm rejection lands here — ignore. Real errors must reach the user.
       if (e !== 'cancel' && e !== 'close') {
         logError('Failed to delete conversation', e, 'useConversation')
+        ElMessage.error('删除失败，请稍后重试')
       }
     }
   }

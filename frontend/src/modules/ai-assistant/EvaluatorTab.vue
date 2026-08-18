@@ -1,26 +1,26 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { kbSearch } from './evaluator-api'
 import { EVALUATOR_POLL_MS, KB_SEARCH_TOP_K } from './constants'
 
 import {
-  listBanks, createBank, updateBank, deleteBank, seedDefaultBank,
+  listBanks, createBank, updateBank, seedDefaultBank, getBank,
   listRuns, getRun, startRun, deleteRun, submitScore,
   kbSelfTest, listAgents, listFrameworks,
 } from './evaluator-api'
 
 // ── Sub-tabs ──
 const subTab = ref('self')
-const SUB_TABS = [
+const SUB_TABS = ref([
   { key: 'self', label: '答卷评分', desc: '自建 LLM-as-Judge 四维评分', available: true, kind: 'exam' },
   { key: 'kb', label: '知识库评测', desc: 'ChromaDB 检索质量自测', available: true, kind: 'kb' },
   { key: 'evalscope', label: 'EvalScope', desc: '模型基准跑分 + Arena 对战', available: false, kind: 'benchmark' },
   { key: 'deepeval', label: 'DeepEval', desc: 'Pytest 风格指标化评测', available: false, kind: 'metric' },
   { key: 'maseval', label: 'MASEval', desc: '多 Agent 系统级评测', available: false, kind: 'system' },
-]
+])
 
-const curTab = computed(() => SUB_TABS.find(t => t.key === subTab) || SUB_TABS[0])
+const curTab = computed(() => SUB_TABS.value.find(t => t.key === subTab.value) || SUB_TABS.value[0])
 
 // ── Frameworks availability ──
 async function loadFrameworks() {
@@ -29,7 +29,7 @@ async function loadFrameworks() {
     if (data.status) {
       const availMap = {}
       ;(data.frameworks || []).forEach(f => { availMap[f.key] = f.available })
-      SUB_TABS.forEach(t => { if (availMap.hasOwnProperty(t.key)) t.available = availMap[t.key] })
+      SUB_TABS.value.forEach(t => { if (Object.prototype.hasOwnProperty.call(availMap, t.key)) t.available = availMap[t.key] })
     }
   } catch (e) { console.error(e); }
 }
@@ -50,8 +50,14 @@ async function loadBanks() {
 const showBankEditor = ref(false)
 const editingBank = ref(null)
 const bankForm = ref({ name: '', description: '', questions: [] })
-function openBankEditor(bank) {
-  if (bank) { editingBank.value = bank; bankForm.value = { name: bank.name, description: bank.description || '', questions: [] } }
+async function openBankEditor(bank) {
+  if (bank) {
+    editingBank.value = bank; bankForm.value = { name: bank.name, description: bank.description || '', questions: [] }
+    try {
+      const d = await getBank(bank.id)
+      if (d.status && d.bank?.questions) bankForm.value.questions = d.bank.questions
+    } catch (e) { ElMessage.error('题目加载失败，请勿直接保存以免清空题库') }
+  }
   else { editingBank.value = null; bankForm.value = { name: '', description: '', questions: [] } }
   showBankEditor.value = true
 }
@@ -65,9 +71,12 @@ async function saveBank() {
     showBankEditor.value = false; await loadBanks(); ElMessage.success('已保存')
   } catch (_) { ElMessage.error('保存失败') }
 }
-async function removeBank(id) { try { await deleteBank(id); await loadBanks() } catch (e) { console.error(e); } }
+async function removeRun(id) {
+  try { await ElMessageBox.confirm('确定要删除这条评测记录吗？', '确认删除', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }) } catch { return }
+  try { await deleteRun(id); await loadRuns(); ElMessage.success('已删除') } catch (e) { ElMessage.error('删除失败，请稍后重试') }
+}
 async function seedDefault() {
-  try { await seedDefaultBank(); await loadBanks(); ElMessage.success('默认试卷已创建') } catch (e) { console.error(e); }
+  try { await seedDefaultBank(); await loadBanks(); ElMessage.success('默认试卷已创建') } catch (e) { ElMessage.error('创建默认试卷失败，请稍后重试') }
 }
 
 // ── Eval Run (shared) ──
@@ -127,7 +136,7 @@ async function doStartRun() {
     if (curTab.value.kind === 'metric') {
       extra.metrics = selectedMetrics.value.filter(m => m.selected).map(m => m.key)
     }
-    const data = await startRun(selectedAgentId.value, selectedBankId.value, judgeModel.value, subTab.value)
+    const data = await startRun(selectedAgentId.value, selectedBankId.value, judgeModel.value, subTab.value, extra)
     if (data.status) { ElMessage.success(data.message || '评测已开始'); await loadRuns(); pollRun(data.run?.id) }
     else ElMessage.error(data.message || '启动失败')
   } catch (_) { ElMessage.error('启动失败') }
@@ -164,7 +173,7 @@ async function viewRun(runId) {
   loadingDetail.value = false
 }
 async function doSubmitScore(resultId, field, value) {
-  try { await submitScore(resultId, { [field]: value }); if (activeRunId.value) await viewRun(activeRunId.value) } catch (e) { console.error(e); }
+  try { await submitScore(resultId, { [field]: value }); if (activeRunId.value) await viewRun(activeRunId.value) } catch (e) { ElMessage.error('评分提交失败，请稍后重试') }
 }
 
 // ── KB Self-Test & Interactive Query ──
@@ -173,7 +182,7 @@ const kbQuery = ref(''); const kbQueryResult = ref(null); const kbQuerying = ref
 
 async function doKbSelfTest() {
   kbTesting.value = true
-  try { const data = await kbSelfTest(); if (data.status) kbTestResult.value = data } catch (e) { console.error(e); }
+  try { const data = await kbSelfTest(); if (data.status) kbTestResult.value = data } catch (e) { ElMessage.error('知识库自测失败，请稍后重试') }
   kbTesting.value = false
 }
 
@@ -186,7 +195,7 @@ async function doKbQuery() {
     if (d.status) kbQueryResult.value = d
   } catch (e) {
     // Fallback: use self-test result for now
-    kbQueryResult.value = { ok: true, query: q, documents: [], note: '搜索暂不可用，请先重启服务' }
+    kbQueryResult.value = { ok: true, query: q, documents: [], note: '搜索暂不可用，请稍后重试' }
     console.error(e);
   }
   kbQuerying.value = false
@@ -198,7 +207,7 @@ onUnmounted(() => { if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = nu
 
 // Helpers
 function scoreColor(s) { const v = parseFloat(s) || 0; if (v >= 4) return 'var(--c-workflow)'; if (v >= 3) return '#f7cd67'; if (v >= 2) return '#f7a8c4'; return '#e85f5f' }
-function fwLabel(run) { const fw = SUB_TABS.find(f => f.key === (run.framework || 'self')); return fw ? fw.label : (run.framework || 'self') }
+function fwLabel(run) { const fw = SUB_TABS.value.find(f => f.key === (run.framework || 'self')); return fw ? fw.label : (run.framework || 'self') }
 function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2) } catch { return raw } }
 </script>
 
@@ -236,7 +245,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 
       <!-- Not installed warning -->
       <div v-if="!curTab.available" style="padding:12px 16px;background:#fff3e0;border-radius:8px;margin-bottom:16px;font-size:var(--app-size-sm);color:#e65100">
-        ⚠️ {{ curTab.label }} 未安装。请先执行 <code>pip install {{ subTab }}</code>，然后重启服务。
+        ⚠️ {{ curTab.label }} 尚未安装，请联系管理员启用后使用。
       </div>
 
       <!-- ── Self: Exam paper mode ── -->
@@ -275,7 +284,10 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
             <div v-for="bm in BENCHMARKS_BY_FW.evalscope" :key="bm.key"
                  :class="['bench-card', { selected: selectedBenchmark===bm.key }]"
-                 @click="selectedBenchmark=bm.key">
+                 role="button" tabindex="0"
+                 @click="selectedBenchmark=bm.key"
+                 @keydown.enter.prevent="selectedBenchmark=bm.key"
+                 @keydown.space.prevent="selectedBenchmark=bm.key">
               <div class="bench-name">{{ bm.label }}</div>
               <div class="bench-desc">{{ bm.desc }}</div>
             </div>
@@ -328,7 +340,10 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
             <div v-for="bm in BENCHMARKS_BY_FW.maseval" :key="bm.key"
                  :class="['bench-card', { selected: selectedBenchmark===bm.key }]"
-                 @click="selectedBenchmark=bm.key">
+                 role="button" tabindex="0"
+                 @click="selectedBenchmark=bm.key"
+                 @keydown.enter.prevent="selectedBenchmark=bm.key"
+                 @keydown.space.prevent="selectedBenchmark=bm.key">
               <div class="bench-name">{{ bm.label }}</div>
               <div class="bench-desc">{{ bm.desc }}</div>
             </div>
@@ -441,7 +456,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
         <span v-if="r.status==='running'" style="color:#f7a8c4;font-size:var(--app-size-sm)">{{ r.completed_questions }}/{{ r.total_questions }}</span>
         <div style="margin-left:auto;display:flex;gap:8px">
           <el-button size="small" @click="viewRun(r.id)" :disabled="r.status==='running'">详情</el-button>
-          <el-button size="small" type="danger" plain @click="removeBank(r.id)">删除</el-button>
+          <el-button size="small" type="danger" plain @click="removeRun(r.id)">删除</el-button>
         </div>
       </div>
     </div>
@@ -498,6 +513,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
         <el-form-item label="描述"><el-input v-model="bankForm.description" type="textarea" :rows="2" /></el-form-item>
       </el-form>
       <el-divider>题目列表 ({{ bankForm.questions.length }})</el-divider>
+      <div class="bank-question-list">
       <div v-for="(q,i) in bankForm.questions" :key="i" style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-start">
         <el-input v-model="q.content" type="textarea" :rows="2" placeholder="问题内容" style="flex:1" />
         <el-input v-model="q.expected_keywords" placeholder="预期关键词" style="width:140px" />
@@ -507,6 +523,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
           <el-option value="测试方法" /><el-option value="general" label="通用" />
         </el-select>
         <el-button size="small" type="danger" plain @click="removeQuestionRow(i)">✕</el-button>
+      </div>
       </div>
       <el-button size="small" @click="addQuestionRow" style="margin-top:8px">+ 添加题目</el-button>
       <template #footer>
@@ -519,6 +536,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 
 <style scoped>
 .evaluator-host { padding: 4px 0; }
+.bank-question-list { max-height: 45vh; overflow-y: auto; }
 .view-tab {
   padding: 10px 22px; border: 2px solid var(--ai-warm-border); border-radius: 12px;
   background: var(--ai-warm-bg); color: #8a7b66; font-size: var(--app-size-md); font-weight: 700;

@@ -2,13 +2,12 @@
 
 // ── Avatar / Image ──
 
-export const AVATAR_PATH_PREFIX = "/api/ai/avatars/"
 export const DATA_IMAGE_PREFIX = "data:image/"
 
-/** Check whether an avatar string is an image URL (uploaded avatar or data URI). */
+/** Check whether an avatar string is an image URL (data URI). */
 export function isImageAvatar(av: string | null | undefined): boolean {
   if (!av) return false
-  return av.startsWith(AVATAR_PATH_PREFIX) || av.startsWith(DATA_IMAGE_PREFIX)
+  return av.startsWith(DATA_IMAGE_PREFIX)
 }
 
 // ── Built-in Tool Names ──
@@ -21,9 +20,9 @@ export const WORKSPACE_TOOL_NAMES: readonly string[] = [
 /** Platform business tool names — registered by the Django backend. */
 export const PLATFORM_TOOL_NAMES: readonly string[] = [
   "get_online_devices", "acquire_device", "release_device",
-  "search_elements", "get_test_points", "list_pages", "fetch_page_elements",
-  "save_test_case", "list_test_cases", "get_test_case", "delete_test_case",
-  "run_test", "get_run_results", "get_run_status",
+  "search_elements", "list_pages", "fetch_page_elements",
+  "save_case", "get_case", "save_api_test_case", "debug_case",
+  "run_test", "get_run_results", "stop_run",
   "search_knowledge_base",
 ]
 

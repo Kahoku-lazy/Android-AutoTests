@@ -43,11 +43,11 @@ jobs:
 
       # 2. Python 代码格式（ruff format）
       - name: Ruff format check
-        run: ruff format --check apps/ agentscope_service/ config/ gateway/ shared/ models/
+        run: ruff format --check apps/ config/ gateway/ shared/ models/
 
       # 3. Python lint（ruff check）
       - name: Ruff lint
-        run: ruff check apps/ agentscope_service/ config/ gateway/ shared/ models/
+        run: ruff check apps/ config/ gateway/ shared/ models/
 
   # ═══════════════════════════════════════════
   # Job 2: 前端编译 + 格式检查
@@ -101,7 +101,7 @@ jobs:
 
           # ── 规则 1: 硬编码密码 ──
           echo "▶ 检查：硬编码密码 (password = '...')"
-          PASSWORD_MATCHES=$(grep -rnE "password\s*=\s*'[^']+'" apps/ config/ gateway/ shared/ models/ agentscope_service/ \
+          PASSWORD_MATCHES=$(grep -rnE "password\s*=\s*'[^']+'" apps/ config/ gateway/ shared/ models/ \
             --include="*.py" 2>/dev/null | grep -v "password\s*=\s*''" | grep -v "PASSWORD" || true)
           if [ -n "$PASSWORD_MATCHES" ]; then
             echo "❌ 发现硬编码密码："
@@ -115,7 +115,7 @@ jobs:
           # ── 规则 2: 明文 API Key ──
           echo "▶ 检查：明文 API Key (api_key = 'sk-...')"
           APIKEY_MATCHES=$(grep -rnE "(api_key|apikey|API_KEY)\s*=\s*'sk-[A-Za-z0-9]+'" \
-            apps/ agentscope_service/ config/ gateway/ shared/ --include="*.py" 2>/dev/null || true)
+            apps/ config/ gateway/ shared/ --include="*.py" 2>/dev/null || true)
           if [ -n "$APIKEY_MATCHES" ]; then
             echo "❌ 发现明文 API Key："
             echo "$APIKEY_MATCHES"

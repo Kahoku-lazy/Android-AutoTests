@@ -435,12 +435,17 @@ def _runner_run_test(
         raise ValueError("缺少必填参数: run_id")
     if serial is PROTECTED:
         raise ValueError("缺少必填参数: serial")
-    from apps.test_runner.callbacks import TestRunnerCallback
-    from apps.test_runner.runner import TestRunner
+    if not case_ids:
+        raise ValueError("缺少必填参数: case_ids")
+    from apps.test_runner.api import start_run
 
-    # The runner handles test execution asynchronously
-    runner = TestRunner(callbacks=TestRunnerCallback())
-    return {"status": "RUNNING", "run_id": run_id, "serial": serial}
+    return start_run(
+        run_id=run_id,
+        serial=serial,
+        case_ids=case_ids,
+        user_id=str(user_id),
+        loop_count=1,
+    )
 
 
 @_register("runner", "get_run_results")

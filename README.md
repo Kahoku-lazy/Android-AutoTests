@@ -112,7 +112,7 @@ if not User.objects.filter(username='admin').exists() else None
 "
 
 # 知识库初始化（AI 助手 RAG，首次运行）
-python agentscope_service/rag/init_kb.py
+python manage.py init_knowledge_base
 ```
 
 ### 启动
@@ -167,7 +167,7 @@ python run.py logs       # 查看日志
    python manage.py migrate
    python manage.py shell -c "from django.contrib.auth.models import User; User.objects.create_superuser('admin','admin@local','admin123') if not User.objects.filter(username='admin').exists() else None"
 
-5. 初始化知识库：python agentscope_service/rag/init_kb.py
+5. 初始化知识库：python manage.py init_knowledge_base
 
 6. 检查 Redis 是否运行，如果未运行则启动：redis-server --daemonize yes
 

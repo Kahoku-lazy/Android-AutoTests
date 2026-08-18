@@ -113,7 +113,7 @@ watch(() => props.icon, async () => {
 }
 .brand-sub {
   margin: 1px 0 0;
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   font-weight: 600;
   color: #999;
   line-height: 1.35;

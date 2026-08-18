@@ -60,7 +60,7 @@ def kb_status(request):
     stats["reindex"] = {
         "running": _reindex_status["running"],
         "last_indexed": _reindex_status["last_indexed"],
-        "message": _reindex_status["error"],
+        "message": _reindex_status.get("error") or _reindex_status["message"],
     }
     return JsonResponse({"status": True, "data": stats})
 

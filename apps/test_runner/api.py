@@ -1,16 +1,39 @@
 """test-runner public API."""
 
+import asyncio
+import json
+import logging
+
+from apps.case_manager.models import TestDefinition
+from apps.device_pool.models import Device as PoolDevice
+from models.step_types import CaseType, TestStep
+from models.test_models import TestCaseDef
+
+from .models import TaskCard, TestResult, TestRunRecord
+from .runner import get_active_runs_info, stop_run
+
+_log = logging.getLogger("test_runner.api")
+
+# Daphne 主循环引用 —— 供 AI 工具（run_test）从 worker 线程投递 async 执行回主循环。
+_main_loop: asyncio.AbstractEventLoop | None = None
+
+
+def set_main_loop(loop: asyncio.AbstractEventLoop) -> None:
+    """缓存 Daphne 主循环（bootstrap，供跨线程投递）。由 AI 助手 chat 流写入。"""
+    global _main_loop
+    _main_loop = loop
+
+
 __all__ = [
     "delete_task_card",
     "get_active_runs_info",
     "get_run_results",
     "resolve_creator",
     "save_task_card",
+    "set_main_loop",
+    "start_run",
     "stop_run",
 ]
-
-from .models import TaskCard, TestResult
-from .runner import get_active_runs_info, stop_run
 
 
 def resolve_creator(creator) -> str:
@@ -156,3 +179,93 @@ def save_task_card(task_data: dict) -> dict:
 def delete_task_card(task_id: str) -> None:
     """Delete a TaskCard by task_id. No-op if not found."""
     TaskCard.objects.filter(task_id=task_id).delete()
+
+
+def _resolve_loop() -> asyncio.AbstractEventLoop | None:
+    """获取 Daphne 主循环：优先缓存引用，兜底 get_event_loop（worker 线程可能抛 RuntimeError）。"""
+    if _main_loop is not None and _main_loop.is_running():
+        return _main_loop
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            return loop
+    except RuntimeError:
+        pass
+    return None
+
+
+def start_run(
+    run_id: str,
+    serial: str,
+    case_ids: list,
+    user_id: str = "",
+    loop_count: int = 1,
+    interval_seconds: int = 5,
+    package_name: str = "",
+) -> dict:
+    """启动一次 UI 测试执行（投递到 Daphne 主循环后台执行，立即返回）。
+
+    供 AI 助手的 run_test 工具调用。返回 {"status": True/False, ...}。
+    """
+    if not run_id or not serial or not case_ids:
+        return {"status": False, "message": "run_id/serial/case_ids 不能为空"}
+
+    if TestRunRecord.objects.filter(run_id=run_id).exists():
+        return {"status": False, "message": f"run_id 已存在: {run_id}"}
+
+    # ── 加载 UI 用例定义（同步 ORM）──
+    rows = TestDefinition.objects.filter(id__in=case_ids, enabled=True)
+    test_cases: list[TestCaseDef] = []
+    for r in rows:
+        try:
+            steps_raw = json.loads(r.steps_json or "[]")
+        except (json.JSONDecodeError, TypeError):
+            steps_raw = []
+        steps_data = [TestStep.from_dict(s) for s in steps_raw]
+        test_cases.append(
+            TestCaseDef(
+                id=r.id,
+                title=r.title,
+                category=r.category,
+                description=r.description,
+                steps=getattr(r, "steps", ""),
+                enabled=r.enabled,
+                steps_data=steps_data,
+                is_json=True,
+                package_name=getattr(r, "package_name", "") or package_name,
+                created_at=str(r.created_at) if hasattr(r, "created_at") else "",
+                updated_at=str(r.updated_at) if hasattr(r, "updated_at") else "",
+                task_type=CaseType.UI_AUTOMATION.value,
+            )
+        )
+    if not test_cases:
+        return {"status": False, "message": "no enabled test cases found"}
+
+    # ── 设备轻校验 ──
+    dev = PoolDevice.objects.filter(serial=serial).first()
+    if dev is None:
+        return {"status": False, "message": "设备未注册"}
+    if dev.status in ("OFFLINE", "DISCONNECTED"):
+        return {"status": False, "message": "设备离线"}
+
+    # ── 投递到 Daphne 主循环 ──
+    loop = _resolve_loop()
+    if loop is None:
+        return {"status": False, "message": "主事件循环不可用，无法投递测试任务"}
+
+    from .views.ai_execution import _run_ui_for_ai
+
+    coro = _run_ui_for_ai(
+        run_id, test_cases, loop_count, interval_seconds, package_name, serial, user_id
+    )
+    future = asyncio.run_coroutine_threadsafe(coro, loop)
+
+    def _on_done(f):
+        if not f.cancelled():
+            exc = f.exception()
+            if exc is not None:
+                _log.error("AI run dispatch %s failed: %s", run_id, exc)
+
+    future.add_done_callback(_on_done)
+
+    return {"status": True, "run_id": run_id, "serial": serial, "case_count": len(test_cases)}

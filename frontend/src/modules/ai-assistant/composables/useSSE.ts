@@ -60,7 +60,7 @@ interface SSEEventGeneric {
 
 interface PendingConfirm {
   replyId: string
-  toolCalls: Array<{ tool_call_id: string }>
+  toolCalls: Array<{ tool_call_id: string; tool_call_name?: string; arguments?: string | object }>
 }
 
 interface TaskCardHint {
@@ -213,7 +213,7 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
         tokens: msg.tokens || 0, input_tokens: (msg as { inputTokens?: number }).inputTokens || 0,
         model_name: (msg as { modelName?: string }).modelName || '', flow: msg.flow || '',
       })
-    } catch (e) { console.warn('Failed to save partial message before detach:', e) }
+    } catch (e) { console.warn('Failed to save partial message before detach:', e); ElMessage.warning('消息保存失败，刷新后可能丢失') }
   }
 
   async function detachStream() {
@@ -538,7 +538,7 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
               model_name: builder.modelName || '', flow: 'sse',
             })
             loadConversations(); await nextTick(); renderMermaidBlocks()
-          } catch (e) { console.error('Failed to save streamed message:', e) }
+          } catch (e) { console.error('Failed to save streamed message:', e); ElMessage.warning('消息保存失败，刷新后可能丢失') }
         }
         finishSending()
       },
@@ -551,6 +551,7 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
         // Stale stream — don't corrupt new stream's state
         if (_isStale()) return
 
+        ElMessage.error('AI 回复中断，请重试')
         modelStatus.value = 'idle'
         settleAssistant('')
         finishSending()
@@ -610,7 +611,7 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
       client.post(`/ai/conversations/${_streamConvId || activeConv.value}/save-message`, {
         role: 'assistant', content, tokens: 0, reason: 'stopped',
         blocks: sseBuilder.value ? sseBuilder.value.getBlocks() : [], flow: 'sse',
-      }).catch(e => console.error('Failed to save partial stream:', e))
+      }).catch(e => { console.error('Failed to save partial stream:', e); ElMessage.warning('消息保存失败，刷新后可能丢失') })
     }
     pendingConfirm.value = null
     finishSending()
@@ -632,9 +633,15 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
     pendingConfirm.value = null
     modelStatus.value = 'tool_calling'
 
+    const tc = confirm.toolCalls?.find(t => t.tool_call_id === toolCallId)
     const result = {
       reply_id: confirm.replyId || '',
-      confirm_results: [{ tool_call_id: toolCallId, approved, ...(reason ? { reason } : {}) }],
+      confirm_results: [{
+        tool_call_id: toolCallId,
+        approved,
+        tool_call: { name: tc?.tool_call_name || '', input: tc?.arguments ?? {} },
+        ...(reason ? { reason } : {}),
+      }],
     }
     try {
       await client.post(`/ai/conversations/${activeConv.value}/confirm-result`, result)

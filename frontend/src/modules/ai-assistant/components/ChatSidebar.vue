@@ -71,7 +71,11 @@ function avatarText(avatar: string | undefined): string {
         v-for="c in conversations"
         :key="c.id"
         :class="['conv-item', { active: activeConv === c.id }]"
+        role="button"
+        tabindex="0"
         @click="emit('select-chat', c.id)"
+        @keydown.enter.prevent="emit('select-chat', c.id)"
+        @keydown.space.prevent="emit('select-chat', c.id)"
       >
         <span class="conv-indicator" :class="{ active: activeConv === c.id }" />
         <span v-if="editingConvId === c.id" class="conv-title" @click.stop>

@@ -13,6 +13,7 @@ Architecture stats generator — 扫描代码库，输出当前架构的可度�
   python tools/gen_arch_stats.py --check-md    # 对比 项目架构.md，输出 drift 报告
 """
 
+import ast
 import json
 import re
 import sys
@@ -78,37 +79,29 @@ def scan_django_apps():
 
 
 def scan_tools():
-    """扫描 agentscope_service/tools/ 下所有 Tool。"""
-    tools_dir = PROJECT_ROOT / "agentscope_service" / "tools"
-    tools = []
-    for py_file in sorted(tools_dir.glob("*.py")):
-        if py_file.name.startswith("_"):
+    """扫描 tool_registry.py 的 TOOL_SCHEMAS（AgentScope 工具的唯一事实源）。"""
+    registry_path = PROJECT_ROOT / "apps" / "ai_assistant" / "agent_scope" / "tool_registry.py"
+    if not registry_path.exists():
+        return []
+    tree = ast.parse(registry_path.read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            target, value = node.targets[0], node.value
+        elif isinstance(node, ast.AnnAssign):
+            target, value = node.target, node.value
+        else:
             continue
-        content = py_file.read_text(encoding="utf-8")
-        tool_classes = re.findall(r"class\s+(\w+)\s*\(\s*ToolBase\s*\)", content)
-        for cls_name in tool_classes:
-            # 提取 description
-            desc_match = re.search(
-                rf"class\s+{cls_name}\s*\(.*?\).*?\n\s+name\s*=\s*['\"]([^'\"]+)['\"]",
-                content,
-                re.DOTALL,
-            )
-            tool_name = desc_match.group(1) if desc_match else cls_name
-            # 提取 is_read_only
-            readonly = (
-                "is_read_only = True" in content.split(f"class {cls_name}")[1].split("class")[0]
-                if f"class {cls_name}" in content
-                else False
-            )
-            tools.append(
+        if isinstance(target, ast.Name) and target.id == "TOOL_SCHEMAS" and value is not None:
+            return [
                 {
-                    "name": tool_name,
-                    "class": cls_name,
-                    "file": py_file.name,
-                    "is_read_only": readonly,
+                    "name": s["name"],
+                    "class": f"{s['module']}.{s['action']}",
+                    "file": str(registry_path.relative_to(PROJECT_ROOT)).replace("\\", "/"),
+                    "is_read_only": bool(s.get("read_only", False)),
                 }
-            )
-    return tools
+                for s in ast.literal_eval(value)
+            ]
+    return []
 
 
 # ── 3. 前端模块扫描 ──
@@ -165,23 +158,6 @@ def scan_file_size_violations(py_limit=400, vue_limit=500):
                 }
             )
 
-    # AgentScope tools
-    tools_dir = PROJECT_ROOT / "agentscope_service"
-    for py_file in tools_dir.rglob("*.py"):
-        if "__pycache__" in str(py_file):
-            continue
-        lines = len(py_file.read_text(encoding="utf-8").splitlines())
-        if lines > py_limit:
-            violations.append(
-                {
-                    "file": str(py_file.relative_to(PROJECT_ROOT)),
-                    "lines": lines,
-                    "limit": py_limit,
-                    "excess": lines - py_limit,
-                    "type": "python",
-                }
-            )
-
     # Vue 文件
     frontend_dir = PROJECT_ROOT / "frontend" / "src"
     for vue_file in frontend_dir.rglob("*.vue"):
@@ -207,7 +183,6 @@ def scan_file_size_violations(py_limit=400, vue_limit=500):
 def scan_cross_app_imports():
     """扫描跨 App import 关系。"""
     apps_dir = PROJECT_ROOT / "apps"
-    agentscope_dir = PROJECT_ROOT / "agentscope_service"
     gateway_dir = PROJECT_ROOT / "gateway"
 
     # 从 INSTALLED_APPS 获取 App 列表
@@ -218,7 +193,7 @@ def scan_cross_app_imports():
     # 按目标 App 分组
     targets = defaultdict(set)  # {target_app: {source_file1, source_file2, ...}}
 
-    for scan_dir in [apps_dir, agentscope_dir, gateway_dir]:
+    for scan_dir in [apps_dir, gateway_dir]:
         for py_file in scan_dir.rglob("*.py"):
             if "migrations" in str(py_file) or "__pycache__" in str(py_file):
                 continue
@@ -262,7 +237,6 @@ def scan_orm_write_violations():
     should fail CI.
     """
     apps_dir = PROJECT_ROOT / "apps"
-    agentscope_dir = PROJECT_ROOT / "agentscope_service"
     whitelist = _load_boundary_whitelist()
 
     # Build a mapping: model_class_name → app_name
@@ -296,7 +270,7 @@ def scan_orm_write_violations():
     ]
 
     # Scan all source files
-    scan_dirs = [apps_dir, agentscope_dir]
+    scan_dirs = [apps_dir]
     violations = []
 
     for scan_dir in scan_dirs:
@@ -385,7 +359,6 @@ def scan_cross_app_internal_imports():
     (e.g. runner.py internals, views.py private symbols like _active_runs).
     """
     apps_dir = PROJECT_ROOT / "apps"
-    agentscope_dir = PROJECT_ROOT / "agentscope_service"
 
     # Apps that have these internal modules
     INTERNAL_MODULES = ["service", "runner", "consumer", "callbacks", "state_machine"]
@@ -393,7 +366,7 @@ def scan_cross_app_internal_imports():
     whitelist = _load_boundary_whitelist()
     violations = []
 
-    for scan_dir in [apps_dir, agentscope_dir]:
+    for scan_dir in [apps_dir]:
         for py_file in scan_dir.rglob("*.py"):
             if "migrations" in str(py_file) or "__pycache__" in str(py_file):
                 continue
@@ -549,7 +522,7 @@ def generate_markdown():
     # AgentScope Tool
     lines.append("### AgentScope Tool 清单")
     lines.append("")
-    lines.append(f"| Tool 名称 | 类名 | 文件 | 只读 |")
+    lines.append(f"| Tool 名称 | 标识 (module.action) | 文件 | 只读 |")
     lines.append(f"|-----------|------|------|:--:|")
     for t in tools:
         lines.append(

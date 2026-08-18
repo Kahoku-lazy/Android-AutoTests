@@ -32,9 +32,9 @@ export async function deleteAgent(agentId: number): Promise<AgentOpResponse> {
   return data
 }
 
-/** 更新 Agent 模型名称 */
-export async function updateAgentModel(agentId: number, modelName: string): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>(`/ai/agents/${agentId}/update`, { model_name: modelName })
+/** 更新 Agent 模型名称（后端 update 契约强制 name 必填，由调用方传入） */
+export async function updateAgentModel(agentId: number, modelName: string, agentName: string): Promise<AgentOpResponse> {
+  const { data } = await djangoClient.post<AgentOpResponse>(`/ai/agents/${agentId}/update`, { name: agentName, model_name: modelName })
   return data
 }
 

@@ -23,11 +23,6 @@ export async function updateBank(id: number, payload: object): Promise<{ status:
   return data
 }
 
-export async function deleteBank(id: number): Promise<{ status: boolean; message?: string }> {
-  const { data } = await djangoClient.post<{ status: boolean; message?: string }>(`/evaluator/banks/${id}/delete`)
-  return data
-}
-
 export async function seedDefaultBank(): Promise<{ status: boolean; bank?: object; message?: string }> {
   const { data } = await djangoClient.post<{ status: boolean; bank?: object; message?: string }>('/evaluator/banks/seed')
   return data
@@ -52,12 +47,13 @@ export async function getRun(id: number): Promise<{ status: boolean; run?: objec
   return data
 }
 
-export async function startRun(agentId: number, bankId: number, judgeModel?: string, framework?: string): Promise<{ status: boolean; run?: object; message?: string }> {
+export async function startRun(agentId: number, bankId: number, judgeModel?: string, framework?: string, extra?: object): Promise<{ status: boolean; run?: object; message?: string }> {
   const { data } = await djangoClient.post<{ status: boolean; run?: object; message?: string }>('/evaluator/runs/start', {
     agent_id: agentId,
     bank_id: bankId,
     judge_model: judgeModel || 'qwen-max',
     framework: framework || 'self',
+    ...(extra || {}),
   })
   return data
 }

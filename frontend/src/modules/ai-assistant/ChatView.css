@@ -99,8 +99,8 @@
   font-weight: 700;
 }
 .stream-mode-badge.sse {
-  background: #e6f9f6;
-  color: #158a80;
+  background: var(--ai-teal-bg);
+  color: var(--ai-teal-text);
   border: 1px solid var(--app-accent-purple, #b39ef3);
   animation: pulse-badge 1.5s infinite;
 }
@@ -129,29 +129,29 @@
   display: none;
 }
 .model-status-badge.thinking {
-  background: #f0f4ff;
-  color: #4256b8;
-  border-color: #6c80d4;
+  background: var(--ai-status-blue-bg);
+  color: var(--ai-status-blue-text);
+  border-color: var(--ai-status-blue-border);
 }
 .model-status-badge.calling_model {
-  background: #fef0ff;
-  color: #9448b3;
-  border-color: #c97adb;
+  background: var(--ai-status-purple-bg);
+  color: var(--ai-status-purple-text);
+  border-color: var(--ai-status-purple-border);
 }
 .model-status-badge.tool_calling {
-  background: #fff5e6;
-  color: #a36600;
-  border-color: #e0a13a;
+  background: var(--ai-status-orange-bg);
+  color: var(--ai-status-orange-text);
+  border-color: var(--ai-status-orange-border);
 }
 .model-status-badge.streaming {
-  background: #e6f9f6;
-  color: #158a80;
+  background: var(--ai-teal-bg);
+  color: var(--ai-teal-text);
   border-color: var(--app-accent-purple, #b39ef3);
 }
 .model-status-badge.done {
-  background: #e6f5e6;
-  color: #2a7a2a;
-  border-color: #4caf50;
+  background: var(--ai-status-green-bg);
+  color: var(--ai-status-green-text);
+  border-color: var(--ai-status-green-border);
 }
 /* Animated dot for "in progress" states */
 .model-status-dot {
@@ -191,19 +191,19 @@
   white-space: nowrap;
 }
 .connection-indicator.sse {
-  background: #e6f9f6;
-  color: #158a80;
+  background: var(--ai-teal-bg);
+  color: var(--ai-teal-text);
   border: 1.5px solid var(--app-accent-purple, #b39ef3);
 }
 .connection-indicator.connecting {
-  background: #eef0f7;
-  color: #4a5a8a;
-  border: 1.5px solid #7889c4;
+  background: var(--ai-status-conn-bg);
+  color: var(--ai-status-conn-text);
+  border: 1.5px solid var(--ai-status-conn-border);
 }
 .connection-indicator.unknown {
-  background: #f5f3ed;
-  color: #988b7a;
-  border: 1.5px solid #d0c8b8;
+  background: var(--ai-status-warm-bg);
+  color: var(--ai-status-warm-text);
+  border: 1.5px solid var(--ai-status-warm-border);
 }
 
 
@@ -212,10 +212,10 @@
   align-items: center;
   gap: 4px;
   padding: 6px 14px;
-  border: 1.5px solid #e85f5f;
+  border: 1.5px solid var(--ai-status-danger);
   border-radius: 10px;
-  background: #fef0f0;
-  color: #c43f3f;
+  background: var(--ai-status-danger-bg);
+  color: var(--ai-status-danger-text);
   font-size:var(--app-size-sm);
   font-weight: 700;
   font-family: inherit;
@@ -223,8 +223,8 @@
   transition: all 0.15s;
 }
 .stop-btn:hover {
-  background: #fde0e0;
-  border-color: #c43f3f;
+  background: var(--ai-status-danger-hover);
+  border-color: var(--ai-status-danger-text);
 }
 
 .chat-body {

@@ -21,7 +21,7 @@ export const PAGE_HEADER = {
   title: 'AI 助手',
   subtitle: '智能体看板贴便签，工具箱与评测一站管理',
   icon: 'bot' as const,
-  iconGradient: 'linear-gradient(135deg,#5EEAD4,#14b8a6)',
+  iconGradient: 'linear-gradient(135deg, var(--ai-teal), var(--ai-teal-hover))',
 }
 
 // ── 展示辅助 ──
@@ -179,7 +179,7 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
     if (!newModel || newModel === agent.model_name) return
     confirmingId.value = agent.id
     try {
-      const data = await updateAgentModel(agent.id, newModel)
+      const data = await updateAgentModel(agent.id, newModel, agent.name)
       if (!data.status) { pendingModels.value[agent.id] = agent.model_name || ''; ElMessage.error('模型切换失败') }
       else { agent.model_name = newModel; ElMessage.success(`已确认使用 ${newModel}`) }
     } catch { pendingModels.value[agent.id] = agent.model_name || ''; ElMessage.error('模型切换失败') }

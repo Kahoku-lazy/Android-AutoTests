@@ -1,5 +1,6 @@
 /** useAgentTools — Agent Detail Step 4 (Memory & Tools) state management */
 import { ref, computed, type Ref, type ComputedRef } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   fetchPlatformTools, fetchAvailableSkills, getKnowledgeDocuments,
   fetchAgentTools, saveMcp as saveMcpApi, testMcpConnection,
@@ -254,7 +255,7 @@ export function useAgentTools(
     mcpJsonError.value = ''
     let config: object
     try { config = JSON.parse(mcpForm.value.config_json) }
-    catch (e) { mcpJsonError.value = 'JSON 格式错误: ' + (e as Error).message; return }
+    catch (e) { mcpJsonError.value = 'JSON 格式错误，请检查配置'; return }
     const name = mcpForm.value.name.trim()
     if (!name) { mcpJsonError.value = '请输入名称'; return }
 
@@ -279,7 +280,7 @@ export function useAgentTools(
           }
         }
         await loadAgentTools()
-      } catch (err) { mcpJsonError.value = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '保存失败' }
+      } catch (err) { mcpJsonError.value = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '保存失败'; return }
     }
     mcpDialogVisible.value = false
   }
@@ -299,8 +300,8 @@ export function useAgentTools(
       } else {
         const data = await testMcpConnection(agentId.value, config)
         mcpTestResults.value[name] = {
-          connected: !!(data as { status?: boolean }).status,
-          message: ((data as { message?: string }).message) || ((data as { status?: boolean }).status ? '连通' : '未连通'),
+          connected: !!data.connected,
+          message: data.detail || (data.connected ? '连通' : '未连通'),
         }
       }
     } catch (err) {
@@ -316,7 +317,7 @@ export function useAgentTools(
     if (!isNew.value) {
       const t = mcpTools.value[index]
       if (t?.id) {
-        try { await toggleToolEnabled(agentId.value, t.id, !!t.enabled) } catch (err) { console.warn(err) }
+        try { await toggleToolEnabled(agentId.value, t.id, !!t.enabled) } catch (err) { ElMessage.error('工具开关切换失败，请稍后重试') }
       }
     }
   }
@@ -324,7 +325,8 @@ export function useAgentTools(
   async function removeMcpApi(index: number) {
     const t = mcpTools.value[index]
     if (t?.id) {
-      try { await deleteToolById(agentId.value, t.id) } catch (err) { console.warn(err) }
+      try { await ElMessageBox.confirm(`确定要删除 MCP 工具「${t.name}」吗？`, '确认删除', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }) } catch { return }
+      try { await deleteToolById(agentId.value, t.id) } catch (err) { ElMessage.error('删除失败，请稍后重试') }
       await loadAgentTools()
     }
   }
@@ -345,14 +347,15 @@ export function useAgentTools(
     try {
       await uploadSkillApi(agentId.value, files, '')
       await loadAgentTools()
-    } catch (err) { console.warn(err) }
+    } catch (err) { ElMessage.error('技能上传失败，请稍后重试') }
     skillUploading.value = false
   }
 
   async function removeSkill(index: number) {
     const s = skills.value[index]
     if (s?.id) {
-      try { await deleteToolById(agentId.value, s.id) } catch (err) { console.error('removeSkill failed:', err) }
+      try { await ElMessageBox.confirm(`确定要删除技能「${s.name}」吗？`, '确认删除', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }) } catch { return }
+      try { await deleteToolById(agentId.value, s.id) } catch (err) { ElMessage.error('删除失败，请稍后重试') }
       await loadAgentTools()
     }
   }

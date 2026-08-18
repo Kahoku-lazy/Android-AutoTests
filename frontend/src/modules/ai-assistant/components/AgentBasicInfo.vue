@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AVATAR_PATH_PREFIX, DATA_IMAGE_PREFIX } from '../constants'
+import { DATA_IMAGE_PREFIX } from '../constants'
 
 defineProps<{
   form: Record<string, any>
@@ -24,12 +24,12 @@ const emit = defineEmits<{ 'trigger-upload': []; 'avatar-upload': [e: Event] }>(
           <div
             class="avatar-preview"
             :style="
-              form.avatar?.startsWith(AVATAR_PATH_PREFIX) || form.avatar?.startsWith(DATA_IMAGE_PREFIX)
+              form.avatar?.startsWith(DATA_IMAGE_PREFIX)
                 ? { backgroundImage: `url(${form.avatar})` }
                 : {}
             "
           >
-            <span v-if="!form.avatar?.startsWith(AVATAR_PATH_PREFIX) && !form.avatar?.startsWith(DATA_IMAGE_PREFIX)">{{
+            <span v-if="!form.avatar?.startsWith(DATA_IMAGE_PREFIX)">{{
               form.avatar || '🤖'
             }}</span>
           </div>

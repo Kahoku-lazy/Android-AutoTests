@@ -7,6 +7,7 @@ import { pressFeedback, iconBounce } from "@/shared/animations";
 import AnimatedMascot from "@/shared/components/AnimatedMascot.vue";
 import { IconMessageCircle } from "@/shared/icons/index";
 import { ElMessage } from "element-plus";
+import { formatApiError } from "@/shared/api-client";
 import { renderMermaidBlocks } from "./composables/useMarkdown";
 import ErrorState from "@/shared/components/patterns/ErrorState.vue";
 import {
@@ -221,11 +222,7 @@ async function handleFileUpload(e) {
       );
     } else ElMessage.error(data.message || "文件上传失败");
   } catch (err) {
-    const msg =
-      err?.response?.data?.message ||
-      err?.message ||
-      "文件上传失败";
-    ElMessage.error(msg);
+    ElMessage.error(formatApiError(err, "文件上传失败"));
   }
   uploading.value = false;
   e.target.value = "";
@@ -252,11 +249,7 @@ async function handleImageUpload(e) {
       ElMessage.success(`已添加图片: ${file.name} (${sizeKB.toFixed(1)}KB)`);
     } else ElMessage.error(data.message || "图片上传失败");
   } catch (err) {
-    const msg =
-      err?.response?.data?.message ||
-      err?.message ||
-      "图片上传失败";
-    ElMessage.error(msg);
+    ElMessage.error(formatApiError(err, "图片上传失败"));
   }
   uploading.value = false;
   e.target.value = "";
@@ -420,7 +413,7 @@ async function handleImportPRD({ sessionId }) {
         '与智能体进行多轮对话，支持 Markdown、Mermaid 图表与文件上传'
       "
       icon="message-circle"
-      icon-gradient="linear-gradient(135deg,#5EEAD4,#14b8a6)"
+      icon-gradient="linear-gradient(135deg, var(--ai-teal), var(--ai-teal-hover))"
     />
 
     <ErrorState v-if="loadError" :message="loadError" @retry="loadAgent" />

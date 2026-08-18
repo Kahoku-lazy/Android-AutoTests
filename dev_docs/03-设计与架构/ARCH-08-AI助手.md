@@ -1,8 +1,27 @@
-# ARCH-06 — AI 助手 (AI Assistant)
+# ARCH-08 — AI 助手 (AI Assistant)
 
-> 关联模块：`apps/ai_assistant/` · 前端：`frontend/src/modules/ai-assistant/`
-> 关联需求：[`PRD-08-AI助手`](../02-PRD需求/PRD-08-AI助手.md) · 关联架构：[`ARCH-00-平台总体架构`](./ARCH-00-平台总体架构.md) §4.7
-> 版本：v1.2 · 日期：2026-07-22
+> **版本**：v2.0 · **日期**：2026-08-18 · **关联模块**：`apps/ai_assistant/` · 前端 `frontend/src/modules/ai-assistant/`
+
+## 文档内容简述
+
+本文档是 **AI 助手模块**的架构设计，覆盖该模块而非平台全貌：
+
+- **架构四图**：架构全景图 · 模块包图（含防火墙）· 数据流图 · API 关系图（§1.2~1.5）
+- **后端架构**：进程内 Agent 构建 + 单请求 SSE 流 + HITL 线程安全 + 工具双通道（§3）
+- **API 设计**：44 REST 端点 + SSE（§4）
+- **数据模型**：7 表 ER 图（§5）
+
+## 你能从文档获取什么信息
+
+- **AgentScope 如何集成**：`agent_scope/` 作为 Django 进程内模块，`agent_factory.build_agent()` 直接构建 Agent，不再经 HTTP 注册
+- **工具如何编排**：`tool_registry.py` 的 14 平台工具单一真相源，`InProcessPlatformTool` 进程内直调 handler；能力开关决定 Toolkit 组装
+- **SSE 流如何工作**：单请求 async view + asyncio.Queue，AgentScope `reply_stream` 直接消费逐 token 流式返回
+- **端点消费**：44 端点中前端消费 36，8 个后端保留（reveal-key / 任务历史 / 工具网关 / 手动加文档）
+
+## 关联文档
+
+- **架构总纲**：[`ARCH-00-平台总体架构`](./ARCH-00-平台总体架构.md) §4.7
+- **需求规格**：[`PRD-08-AI助手`](../02-PRD需求/PRD-08-AI助手.md) — **契约以 PRD §5 为准**
 
 ---
 
@@ -10,296 +29,350 @@
 
 ### 1.1 架构定位
 
-AI 助手是平台的 **自然语言交互中枢**，通过 AgentScope ReAct 推理引擎，让用户以对话方式驱动全流程测试。在三层架构中横跨后端层和 AI 引擎层——Django 管理智能体配置和对话记录，AgentScope 执行推理和 Tool 编排。
+AI 助手是平台的**自然语言交互中枢**，通过 AgentScope ReAct 推理引擎，让用户以对话方式驱动全流程测试。AgentScope 已从独立 FastAPI 服务迁移为 Django 进程内模块（`apps/ai_assistant/agent_scope/`），Agent 在 Django 进程内构建、运行、流式返回，不再有独立 `agentscope_service/` 目录与 :8000 端口。
 
-支持 4 种用例类型的智能生成：Android UI 自动化 / Web 自动化 / 业务功能 / API 接口。AI 通过语义识别或主动询问确定类型后，按对应模板生成用例并写入用例管理模块。生成任务以卡片形式嵌入对话流，并同步到 AI 助手首页任务看板。
+模块横跨后端层与 AI 引擎层——Django 管理智能体配置、对话记录与工具编排，AgentScope 执行推理与 Tool 调用。AI 引擎不直连设备、不直写数据库，一切通过 Tool 调用各业务模块。
+
+### 1.2 架构全景图
+
+> 四层：前端组件 → API 网关（JWT）→ Django 后端（views + agent_scope 进程内）→ 业务模块（Tool 编排）。
+
+```mermaid
+flowchart TD
+    U["👤 用户浏览器<br/>ai-assistant 3 路由"]
+
+    U -->|"① HTTP REST + JWT"| GATEWAY["API 网关层<br/>JWT 中间件 · urls.py 注册 44 端点"]
+    U -->|"③ SSE + JWT 流式"| GATEWAY
+
+    GATEWAY --> V["① 前端组件层 · ai-assistant/<br/>智能体看板 · 对话窗口 · 工具箱 · 知识库 · 评测中心"]
+
+    V --> L2["② 后端层 · apps/ai_assistant/<br/>views/（10 视图模块）· api.py · models.py（7 表）"]
+
+    L2 --> AS["🤖 AgentScope 进程内 · agent_scope/<br/>agent_factory · tool_registry(14 Tool) · in_process_tool · rag_service"]
+
+    AS -->|"进程内直调 handler"| BIZ["④ 业务模块 · device_pool / element_locator / case_manager / test_runner<br/>经各模块 api.py + 只读 ORM"]
+
+    style U fill:#e3f2fd,stroke:#2196f3
+    style GATEWAY fill:#fff3e0,stroke:#ff9800
+    style V fill:#e8f5e9,stroke:#4caf50
+    style L2 fill:#e8eaf6,stroke:#3f51b5
+    style AS fill:#f7a8c4,stroke:#3a7a10
+    style BIZ fill:#fff8e1,stroke:#ffc107
+```
+
+### 1.3 模块包图
+
+> 箭头 = import 方向。ai_assistant 是聚合层，允许 import 任意下层；下层禁止 import 它（agent_scope 内部实现除外）。
+
+```mermaid
+flowchart TD
+    AI["apps/ai_assistant/<br/>models · views/ · api.py · agent_scope/"]
+
+    DP["device_pool"] -->|"api.get_online_devices / acquire / release"| AI
+    EL["element_locator"] -->|"models.Element / Page（只读）"| AI
+    CM["case_manager"] -->|"api.save_* / api_api / api_lock + models（只读）"| AI
+    TR["test_runner"] -->|"api.get_run_results / stop_run"| AI
+
+    style AI fill:#f7a8c4,stroke:#3a7a10
+    style DP fill:#e8f5e9,stroke:#4caf50
+    style EL fill:#e8f5e9,stroke:#4caf50
+    style CM fill:#e8f5e9,stroke:#4caf50
+    style TR fill:#e8f5e9,stroke:#4caf50
+```
+
+> 注：箭头方向为「数据/依赖来源」视角。实际 `tool_registry.py` 与 `views/` 反向 import 这些下层模块（见 §6.3）。聚合层消费方向：`evaluator` / `dashboard` import `ai_assistant.api` / `ai_assistant.permissions`。
+
+**防火墙规则**：
 
 ```
-用户自然语言 → AI 助手 (本模块) → 28 个 Tool → 6 个业务模块
+ai_assistant ──✅ import──→ device_pool.api / element_locator.models / case_manager.api* / test_runner.api
+ai_assistant ──✅ import──→ 各模块 models（只读查询）
+ai_assistant ──❌ import──→ 下层内部实现（service / runner / consumer / state_machine）
+下层模块     ──❌ import──→ ai_assistant.agent_scope（内部实现，仅 evaluator 经 api.py 白名单）
 ```
 
-### 1.2 全栈架构图
+### 1.4 数据流图
+
+> 用户消息 → SSE view → 进程内 Agent → reply_stream 事件 → SSE 推送 → 消息持久化。
+
+```mermaid
+flowchart LR
+    subgraph FE["前端"]
+        INPUT["输入栏<br/>消息 + 图片/文件"]
+        BUBBLE["消息气泡<br/>流式渲染"]
+        CONFIRM["HITL 确认弹窗"]
+    end
+
+    subgraph DJ["Django views/"]
+        CHAT["chat_views.chat_stream<br/>(async view)"]
+        QUEUE["asyncio.Queue"]
+        HITL["hitl_views.send_confirm_result"]
+    end
+
+    subgraph AS["agent_scope/ 进程内"]
+        FACTORY["agent_factory.build_agent"]
+        STREAM["Agent.reply_stream"]
+        TOOLS["InProcessPlatformTool.call"]
+    end
+
+    subgraph DB["存储"]
+        MSG["ai_messages"]
+        EXEC["ai_execution_logs"]
+    end
+
+    INPUT -->|"POST /chat/stream"| CHAT
+    CHAT --> FACTORY
+    FACTORY --> STREAM
+    STREAM -->|"SSE 事件"| QUEUE
+    QUEUE -->|"text/event-stream"| BUBBLE
+    STREAM -->|"RequireUserConfirmEvent"| CONFIRM
+    CONFIRM -->|"POST /confirm-result"| HITL
+    HITL -->|"call_soon_threadsafe"| QUEUE
+    STREAM --> TOOLS
+    STREAM -->|"持久化 user/assistant"| MSG
+    HITL -->|"审计"| EXEC
+
+    style FE fill:#e8f5e9,stroke:#4caf50
+    style DJ fill:#e8eaf6,stroke:#3f51b5
+    style AS fill:#f7a8c4,stroke:#3a7a10
+    style DB fill:#f5f5f5,stroke:#999
+```
+
+### 1.5 API 关系图
+
+> 44 端点 → 前端消费映射，标注前端消费状态（抽象角色）。
 
 ```mermaid
 flowchart TB
-    subgraph Frontend_AI["🖥️ 前端 ai-assistant/"]
-        AgentList["index.vue<br/>智能体列表 · 卡片网格<br/>13 色调色板"]
-        AgentDetail["AgentDetail.vue<br/>5 步配置向导<br/>模型/工具/MCP/Skill"]
-        ChatView["ChatView.vue<br/>SSE 流式对话<br/>HITL 确认弹窗"]
+    subgraph API["后端 44 端点（urls.py）"]
+        A["agents CRUD + reveal-key + health"]
+        C["conversations + messages + chat/stream"]
+        T["tools / mcp / skill / available-*"]
+        K["knowledge status/documents/reindex"]
+        TB["toolbox + import"]
+        U["upload-avatar / upload-file"]
+        GW["tools/schemas + tools/{module}/{action}"]
+        TASK["conversations/{id}/tasks + /ai/tasks"]
     end
 
-    subgraph Django_AI["⚙️ Django apps/ai_assistant/"]
-        Auth["认证 views (5)<br/>JWT 签发/验证/刷新/登出"]
-        AgentViews["Agent views (12)<br/>CRUD · 连接测试 · 健康检查"]
-        ConvViews["Conversation views (8)<br/>SSE 流 · 消息保存 · HITL"]
-        TaskViews["Task views (2)<br/>任务列表 · 任务详情"]
-        FileViews["File views (3)<br/>头像上传 · 文件解析"]
-        Models["models.py · 6 表"]
+    subgraph FE["前端抽象角色"]
+        BOARD["智能体看板"]
+        DETAIL["智能体配置"]
+        CHAT["对话窗口"]
+        TOOLBOX["AI 工具箱"]
+        KB["知识库"]
+        EVAL["评测中心"]
     end
 
-    subgraph AS_AI["🤖 AgentScope (Django 进程内)"]
-        AgentScopeMod["apps/ai_assistant/agent_scope/<br/>agent_factory · system_prompt · 28 Tool"]
-        AgentScopeMod2["ReAct 推理引擎 · Tool 编排 · HITL"]
-    end
+    A -->|"列表/详情/创建/更新/删除"| BOARD
+    A -->|"详情/创建/更新"| DETAIL
+    C -->|"会话/消息/流式/HITL"| CHAT
+    T -->|"工具/技能/MCP 配置"| DETAIL
+    K -->|"状态/文档/重建"| KB
+    TB -->|"列表/创建/导入"| TOOLBOX
+    U -->|"头像/文件"| DETAIL
 
-    Frontend_AI -->|"HTTP + JWT"| Django_AI
-    Frontend_AI -->|"SSE + JWT"| Django_AI
-    Django_AI -->|"进程内调用"| AS_AI
+    GW -.->|"❌ 前端未消费（供外部 AgentScope）"| NO["—"]
+    TASK -.->|"❌ 前端未消费（任务历史后端保留）"| NO
+    REVEAL["reveal-key"] -.->|"❌ 前端未消费（一次性查看）"| NO
+    MODELS["agents/{id}/models GET"] -.->|"❌ 前端未消费（详情内嵌缓存）"| NO
 
-    style Frontend_AI fill:#667eea,color:#fff
-    style Django_AI fill:#6fba2c,color:#fff
-    style AS_AI fill:#f7a8c4,color:#3a7a10
+    style API fill:#e8f5e9,stroke:#4caf50
+    style FE fill:#e3f2fd,stroke:#2196f3
+    style GW fill:#f5f5f5,stroke:#999
+    style TASK fill:#f5f5f5,stroke:#999
+    style REVEAL fill:#f5f5f5,stroke:#999
+    style MODELS fill:#f5f5f5,stroke:#999
+    style NO fill:#f5f5f5,stroke:#999
 ```
 
----
+**数据同步方式**：
 
-## 2. 前端架构
-
-### 2.1 组件树
-
-```
-frontend/src/modules/ai-assistant/
-│
-├── index.vue (~459行)                 智能体列表页
-│   ├── Tabs 筛选栏                    全部 | 运行中 | 未连通 | 已暂停
-│   ├── 智能体卡片网格
-│   │   └── AgentCard.vue (×N)
-│   │       ├── 头像 (上传/Emoji)
-│   │       ├── 模型选择器             内置 + API检测 + 自定义合并去重
-│   │       ├── 健康状态点              绿(运行中) / 红(未连通) / 黄(已暂停)
-│   │       ├── 连接测试按钮            POST /test
-│   │       └── 操作菜单                编辑/删除/注册到 AgentScope
-│   └── 定时巡检                        setInterval(30min) → GET /health
-│
-├── AgentDetail.vue (~800行)           智能体配置页
-│   └── 5 步配置向导 (v-if 按需渲染)
-│       ├── 步骤1: 基本信息             名称 · 头像 · 标签 · 描述
-│       ├── 步骤2: 模型配置             提供商(DashScope/OpenAI/Anthropic/DeepSeek/自定义)
-│       │                               🔍 检测模型按钮 · API Key · 温度 · Token
-│       ├── 步骤3: 工具配置             勾选可用 Tool · MCP 服务器配置
-│       ├── 步骤4: 提示词              自定义 system_prompt
-│       └── 步骤5: 预览与测试           摘要预览 · 连接测试
-│
-├── ChatView.vue (~1325行)             对话页
-│   ├── 对话列表 (左)                   历史对话 · 新建对话
-│   ├── 消息区 (中)                     SSE 流式渲染
-│   │   ├── TEXT_BLOCK_DELTA           逐 token 打字机效果
-│   │   ├── THINKING_BLOCK             折叠思考过程
-│   │   ├── TOOL_CALL_START/DELTA      工具调用卡片
-│   │   ├── TOOL_RESULT                工具结果折叠面板
-│   │   ├── HINT_BLOCK                 SOP 状态卡片 / 任务卡片
-│   │   └── REQUIRE_USER_CONFIRM       HITL 确认弹窗
-│   └── 输入区 (下)                    消息输入 · 发送 · 停止生成
-│
-├── api.js                             axios + SSE 封装
-└── routes.js                          路由定义
-```
-
-### 2.2 SSE 事件类型与前端渲染
-
-| 事件 | 前端渲染 | 说明 |
-|------|------|------|
-| `REPLY_START` | 消息气泡出现 | 开始新回复 |
-| `TEXT_BLOCK_DELTA` | 打字机效果追加文本 | 逐 token |
-| `THINKING_BLOCK_START/DELTA/END` | 折叠面板 (默认折叠) | ReAct 推理过程 |
-| `TOOL_CALL_START` | 工具调用卡片 (loading) | 工具名 + 参数 |
-| `TOOL_CALL_DELTA` | 追加工具参数 | JSON 增量 |
-| `TOOL_RESULT_START/DELTA/END` | 结果面板 (折叠) | 成功/失败 |
-| `HINT_BLOCK` | SOP 卡片 / 任务卡片 | UI 结构化提示 |
-| `REQUIRE_USER_CONFIRM` | ElMessageBox 确认弹窗 | HITL |
-| `REPLY_END` | 标记完成，触发 `save-message` | 持久化 |
-
-> 📐 前端架构基线 v1.0（2026-07-27）— 组件树 + SSE 9 种事件映射完整。详见 `frontend/CLAUDE.md` ③ 及 `VUE_API_CONTRACT.md` WS-3。
+| 数据 | 同步方式 |
+|------|------|
+| 智能体列表 | 首次 `loadAgents` + 手动刷新 + **30min 健康检查轮询**（`checkAgentsHealth`） |
+| 对话消息 | 首次 `getMessages` + **SSE 流式增量** + 终端事件后端持久化 |
+| 知识库状态 | 首次 `getKnowledgeStatus` + 手动「重建索引」 |
 
 ---
 
 ## 3. 后端架构
 
-### 3.1 Django 文件结构
+### 3.1 文件结构
 
 ```
 apps/ai_assistant/
-├── models.py                         6 表
-├── views/
-│   ├── __init__.py
-│   ├── auth_views.py                 5 认证端点
-│   ├── agent_views.py                12 Agent 管理端点
-│   ├── conversation_views.py         8 对话与消息端点
-│   ├── task_views.py                 2 任务端点
-│   ├── file_views.py                 3 文件端点
-│   ├── knowledge_views.py            4 知识库端点
-│   ├── model_views.py                模型检测端点
-│   ├── hitl_views.py                 HITL 确认端点
-│   └── common.py                     公共工具函数
-├── api.py                            跨模块 __all__ 白名单
-├── urls.py                           路由注册
-└── apps.py
+├── models.py              7 表（ai_ 前缀）：AIAgent/AITool/AISharedTool/AIConversation/AIMessage/AITask/AIExecutionLog
+├── api.py                 跨模块 __all__ 白名单 + 加密工具（encrypt/decrypt/mask_key）+ evaluator 接口
+├── serializers.py         输入校验（validate_agent_input / message / conversation / rename / model_detect）
+├── permissions.py         所有权检查（check_agent_owner / check_conversation_access / filter_*_for_user）
+├── decorators.py          require_auth（sync/async 双支持，未认证 401）
+├── urls.py                44 端点路由（app_name="ai"）
+├── views/                 10 视图模块
+│   ├── agent_views.py       Agent CRUD · reveal-key · health · available-skills
+│   ├── chat_views.py        SSE 流式对话（async，进程内 Agent）
+│   ├── conversation_views.py 会话/消息/任务历史
+│   ├── hitl_views.py        HITL 确认（in-memory session registry）
+│   ├── model_views.py       模型检测 · 连接测试
+│   ├── file_views.py        头像/文件上传解析
+│   ├── knowledge_views.py   知识库状态/文档/重索引/加文档
+│   ├── tool_views.py        平台工具列表 · MCP/Skill 管理
+│   ├── toolbox_views.py     共享工具箱 CRUD · 上传 · 导入
+│   ├── tool_gateway.py      HTTP 工具网关（schemas/agent-config/执行）
+│   └── common.py            validation_error
+├── agent_scope/            Django 进程内 AgentScope 模块
+│   ├── agent_factory.py     进程内构建 AgentScope Agent
+│   ├── tool_registry.py     14 平台工具单一真相源 + handler 注册
+│   ├── in_process_tool.py   进程内工具封装（InProcessPlatformTool）
+│   ├── provider_registry.py 模型提供商 → base_url/credential 映射
+│   ├── rag_service.py       ChromaDB 知识库（唯一所有者）
+│   └── skill_registry.py    workspace 技能（Bash/Edit/Glob/Grep/Read/Write）映射
+├── management/commands/    init_knowledge_base · migrate_platform_tools · cleanup_uploads
+├── migrations/             20 迁移（0001~0021）
+├── admin.py                Django Admin 注册
+└── apps.py                 verbose_name="AI 助手"
 ```
 
-### 3.2 AgentScope 文件结构（Django 进程内）
+### 3.2 核心设计：进程内 Agent 构建
 
 ```
-apps/ai_assistant/agent_scope/
-├── system_prompt.py                  System prompt 构建（平台约束 + SOP 四阶段）
-├── agent_factory.py                  Django Agent → AgentScope Agent 转换
-│   ├── 解密 api_key (Fernet)
-│   ├── 选择 Model (DashScope/OpenAI/Anthropic/DeepSeek/Custom)
-│   ├── 构建 system_prompt
-│   └── 注入 toolkit (28 Tool)
-│
-├── tools/                            28 个自定义 Tool（同进程调用 Django ORM/api.py）
-│   ├── element_tools.py             (2)  get_test_points · search_elements
-│   ├── case_tools.py                (7)  UI save/get/list/debug + save_storage/save_api/save_web
-│   ├── device_tools.py              (3)  get_online/acquire/release_device
-│   ├── runner_tools.py              (3)  run_test · get_run_results · stop_run
-│   ├── task_tools.py                (8)  SOP · task_card · page_elements · case_gen_task
-│   ├── report_tools.py              (2)  save_report · list_reports
-│   ├── prd_tools.py                 (3)  parse_prd · design_cases · import_cases
-│   └── rag_tool.py                  (1)  search_knowledge_base
-│
-└── rag/                              ChromaDB 知识库
-    └── 32 篇项目文档 → 向量检索 → 上下文增强
+build_agent(agent_model, user_id)  → AgentScope Agent
+  1. 解密 api_key（decrypt_key，失败返回 ""）
+  2. provider = get_provider_config(provider, base_url)  → base_url + credential 类型
+  3. model = dashscope ? DashScopeChatModel : OpenAIChatModel（其余 OpenAI 兼容）
+  4. toolkit = _build_toolkit（按能力开关组装）
+  5. ModelConfig / ContextConfig（压缩触发比）/ ReActConfig（max_iters / parallel_tool_calls）
+  6. system_prompt = agent_model.system_prompt（无默认，纯对话模型）
 ```
 
-### 3.3 Agent 创建流程
+**Toolkit 组装（能力开关）**：
 
-```mermaid
-sequenceDiagram
-    actor User
-    participant Vue as 前端 AgentDetail
-    participant Django as Django agent_views
-    participant DB as ai_agents 表
-    participant AS as AgentScope (进程内)
-
-    User->>Vue: 填写配置向导 5 步
-    Vue->>Django: POST /api/ai/agents/create
-    Django->>DB: INSERT ai_agents (加密 api_key)
-    Django-->>Vue: { ok: true, data: { id: N } }
-
-    User->>Vue: 点击「注册到 AgentScope」
-    Vue->>Django: POST /api/ai/agents/{id}/register-scope
-    Django->>AS: agent_factory.create(agent_config) [进程内调用]
-    AS->>AS: 解密 api_key
-    AS->>AS: 选择 Model Provider
-    AS->>AS: 构建 system_prompt
-    AS->>AS: 注入 toolkit (28 Tool)
-    AS-->>Django: Agent 实例就绪
-    Django-->>Vue: { ok: true, agent_scope_id: "xxx" }
-
-    User->>Vue: 点击「测试连接」
-    Vue->>Django: POST /api/ai/agents/{id}/test
-    Django->>AS: agent.test("ping") [进程内调用]
-    AS-->>Django: "pong"
-    Django->>DB: UPDATE is_connected=True
-    Django-->>Vue: { ok: true, latency_ms: 230 }
+```
+_build_toolkit(agent_model, user_id)
+  enable_workspace_tools → 6 内置文件工具（skills_config 逐工具过滤）
+  enable_business_tools  → 14 平台工具（AITool tool_type="platform" 逐工具过滤，无配置默认只读子集）
+  enable_mcp_tools       → MCP 客户端（AITool tool_type="mcp"）
+  enable_skills          → skill 目录（AITool tool_type="skill" 的 dir_path）
 ```
 
-### 3.4 SSE 流式对话流程（AgentScope 进程内）
+### 3.3 核心设计：单请求 SSE 流
 
-```mermaid
-sequenceDiagram
-    actor User
-    participant Vue as ChatView (SSE Client)
-    participant Django as Django conversation_views
-    participant AS as AgentScope (进程内)
-    participant Tool as Tool (28个)
-    participant Business as Django ORM (6 App)
-
-    User->>Vue: 输入 "给登录页创建冒烟用例"
-    Vue->>Django: POST /api/ai/conversations/{id}/chat/stream {message}
-    Django->>AS: 进程内调用 AgentScope [同进程，不经 HTTP]
-    
-    AS-->>Vue: SSE: REPLY_START
-    AS-->>Vue: SSE: THINKING_BLOCK "我需要先搜索登录页的元素"
-    
-    AS->>Tool: search_elements("登录")
-    Tool->>Business: 同进程调用 Django ORM
-    Business-->>Tool: [{element}, {element}]
-    Tool-->>AS: 找到 3 个登录相关元素
-    
-    AS-->>Vue: SSE: TOOL_CALL_START (search_elements)
-    AS-->>Vue: SSE: TOOL_RESULT (3 elements)
-    
-    AS-->>Vue: SSE: THINKING_BLOCK "现在创建用例"
-    
-    AS->>Tool: save_test_case({title: "登录冒烟", steps: [...]})
-    Tool->>Business: 同进程调用 api.py
-    Business-->>Tool: {case_id: 42}
-    Tool-->>AS: 用例创建成功
-    
-    AS-->>Vue: SSE: TOOL_CALL_START (save_test_case)
-    AS-->>Vue: SSE: TOOL_RESULT {case_id: 42}
-    
-    AS-->>Vue: SSE: TEXT_BLOCK_DELTA "已为登录页创建冒烟用例..."
-    AS-->>Vue: SSE: HINT_BLOCK {type: "case_card", case_id: 42}
-    AS-->>Vue: SSE: REPLY_END
-    
-    Vue->>Django: POST /api/ai/conversations/{id}/save-message
-    Django->>Business: INSERT ai_messages
 ```
+chat_stream（async Django view，运行在 Daphne 事件循环）
+  ├─ require_auth + check_conversation_access
+  ├─ save_message(user, flow="sse")
+  ├─ asyncio.Queue + asyncio.Task(_agent_stream)
+  │    ├─ build_agent（sync → thread pool，thread_sensitive=False）
+  │    ├─ _restore_context（从 ai_messages 恢复历史到 agent.state.context）
+  │    ├─ reply_stream 事件循环 → queue.put(SSE)
+  │    ├─ RequireUserConfirmEvent → 等待 confirm_queue（120s）→ 续跑
+  │    └─ ReplyEnd / ExceedMaxIters → save_message(assistant) + 附 _backend_msg_id
+  └─ event_generator → StreamingHttpResponse（text/event-stream，2min 心跳）
+```
+
+- `_sta` = `sync_to_async(thread_sensitive=False)`，DB 操作在泛型线程池跑，响应发出后仍可写
+- `_bg_agent_tasks` / `_active_agent_tasks` 持有 Task 引用防 GC + 取消 stale 任务
+
+### 3.4 核心设计：HITL 线程安全投递
+
+```
+send_confirm_result（sync view，Daphne 线程池）
+  → _agent_sessions[conv_id]（in-memory registry + threading.Lock）
+  → _main_loop.call_soon_threadsafe(confirm_queue.put_nowait, data)
+  → 审计写 AIExecutionLog
+```
+
+`chat_stream` 首次运行时 `set_main_loop()` 记录主事件循环引用，跨线程安全投递确认结果。
+
+### 3.5 核心设计：工具双通道
+
+| 通道 | 文件 | 场景 | 是否走 HTTP |
+|------|------|------|:--:|
+| 进程内 | `in_process_tool.py` | 当前 Agent 工具调用 | ❌（`asyncio.to_thread` 直调 handler） |
+| HTTP | `tool_gateway.py` | `/api/tools/{module}/{action}` 供外部 AgentScope | ✅（httpx） |
+
+两者共享 `tool_registry.py` 的 `TOOL_SCHEMAS` + `resolve()`，handler 签名统一 `handler(user_id, **kwargs)`。`tool_gateway` 的 `tool_schemas` / `agent_config` 端点返回工具定义与每智能体配置。
 
 ---
 
 ## 4. API 设计
 
-### 4.1 REST 端点 (37 个)
+> 响应信封统一 `{status, data}` / `{status, message}`；字段 snake_case。**完整字段契约以 PRD §5 为准**，本节只列概览。
 
-#### 认证 (5)
+### 4.1 REST 端点（44 个）+ SSE
 
-| 方法 | 路径 | 鉴权 | 说明 |
-|------|------|:--:|------|
-| `POST` | `/api/ai/auth/login` | ❌ | JWT 签发 |
-| `POST` | `/api/ai/auth/register` | ❌ | 用户注册 |
-| `POST` | `/api/ai/auth/refresh` | ✅ | 刷新 token |
-| `POST` | `/api/ai/auth/logout` | ✅ | 登出（token 加黑名单） |
-| `GET` | `/api/ai/auth/me` | ✅ | 当前用户信息 |
+| 组 | 方法 | 路径 | 前端消费 |
+|------|------|------|:--:|
+| Agent | GET | `/api/ai/agents` | ✅ |
+| Agent | POST | `/api/ai/agents/create` | ✅ |
+| Agent | GET | `/api/ai/agents/{id}` | ✅ |
+| Agent | POST | `/api/ai/agents/{id}/update` | ✅ |
+| Agent | POST | `/api/ai/agents/{id}/delete` | ✅ |
+| Agent | POST | `/api/ai/agents/{id}/reveal-key` | ❌ |
+| Agent | GET | `/api/ai/agents/{id}/conversations` | ✅ |
+| Agent | POST | `/api/ai/agents/{id}/conversations/create` | ✅ |
+| 对话 | GET | `/api/ai/conversations/{id}/messages` | ✅ |
+| 对话 | POST | `/api/ai/conversations/{id}/save-message` | ✅ |
+| 对话 | POST | `/api/ai/conversations/{id}/confirm-result` | ✅ |
+| 对话 | POST | `/api/ai/conversations/{id}/rename` | ✅ |
+| 对话 | POST | `/api/ai/conversations/{id}/delete` | ✅ |
+| 对话 | POST | `/api/ai/conversations/{id}/chat/stream`（SSE） | ✅ |
+| 模型 | POST | `/api/ai/models/detect` | ✅ |
+| 模型 | POST | `/api/ai/agents/{id}/test` | ✅ |
+| 模型 | GET | `/api/ai/agents/{id}/models` | ❌ |
+| 模型 | GET | `/api/ai/agents/health` | ✅ |
+| 工具 | GET | `/api/ai/available-tools` | ✅ |
+| 工具 | GET | `/api/ai/available-skills` | ✅ |
+| 工具 | GET | `/api/ai/agents/{id}/tools` | ✅ |
+| 工具 | POST | `/api/ai/agents/{id}/tools/mcp/save` | ✅ |
+| 工具 | POST | `/api/ai/agents/{id}/tools/mcp/test` | ✅ |
+| 工具 | POST | `/api/ai/agents/{id}/tools/skill/upload` | ✅ |
+| 工具 | POST | `/api/ai/agents/{id}/tools/{tid}/toggle` | ✅ |
+| 工具 | POST | `/api/ai/agents/{id}/tools/{tid}/delete` | ✅ |
+| 任务 | GET | `/api/ai/conversations/{id}/tasks` | ❌ |
+| 任务 | GET | `/api/ai/conversations/{id}/tasks/{run_id}` | ❌ |
+| 任务 | GET | `/api/ai/tasks` | ❌ |
+| 上传 | POST | `/api/ai/upload-avatar` | ✅ |
+| 上传 | POST | `/api/ai/upload-file` | ✅ |
+| 知识库 | GET | `/api/ai/knowledge/status` | ✅ |
+| 知识库 | GET | `/api/ai/knowledge/documents` | ✅ |
+| 知识库 | POST | `/api/ai/knowledge/reindex` | ✅ |
+| 知识库 | POST | `/api/ai/knowledge/documents/add` | ❌ |
+| 工具网关 | GET | `/api/ai/tools/schemas` | ❌ |
+| 工具网关 | GET | `/api/ai/tools/agent-config/{id}` | ❌ |
+| 工具网关 | POST | `/api/ai/tools/{module}/{action}` | ❌ |
+| 工具箱 | GET | `/api/ai/toolbox` | ✅ |
+| 工具箱 | POST | `/api/ai/toolbox/create` | ✅ |
+| 工具箱 | POST | `/api/ai/toolbox/{id}/update` | ✅ |
+| 工具箱 | POST | `/api/ai/toolbox/{id}/delete` | ✅ |
+| 工具箱 | POST | `/api/ai/toolbox/upload-skill` | ✅ |
+| 工具箱 | POST | `/api/ai/agents/{id}/tools/import-from-toolbox` | ✅ |
 
-#### Agent 管理 (12)
+### 4.2 响应格式（Agent 详情）
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| `GET` | `/api/ai/agents` | 列出智能体 |
-| `POST` | `/api/ai/agents/create` | 创建智能体 |
-| `GET` | `/api/ai/agents/{id}` | 详情（含脱敏 api_key） |
-| `POST` | `/api/ai/agents/{id}/update` | 更新配置 |
-| `POST` | `/api/ai/agents/{id}/delete` | 删除 |
-| `POST` | `/api/ai/agents/{id}/reveal-key` | 查看完整 Key（5s 有效） |
-| `POST` | `/api/ai/agents/{id}/register-scope` | 注册到 AgentScope |
-| `POST` | `/api/ai/agents/{id}/test` | 测试连接 |
-| `GET` | `/api/ai/agents/{id}/models` | 可用模型列表 |
-| `GET` | `/api/ai/agents/{id}/conversations` | 智能体的对话列表 |
-| `POST` | `/api/ai/agents/{id}/conversations/create` | 创建新对话 |
-| `GET` | `/api/ai/agents/health` | 全部智能体健康检查 |
+```json
+{
+  "status": true,
+  "agent": {
+    "id": 1,
+    "name": "测试助手",
+    "model_provider": "dashscope",
+    "model_name": "qwen-max",
+    "api_key": "sk-***abcd",
+    "enable_workspace_tools": false,
+    "enable_business_tools": true,
+    "enable_mcp_tools": false,
+    "enable_skills": false,
+    "knowledge_sources": { "doc:02-PRD需求/PRD-02-设备管理.md": true },
+    "is_connected": true,
+    "tools": [
+      { "id": 1, "name": "save_case", "tool_type": "platform", "config_json": "{}", "enabled": true }
+    ]
+  }
+}
+```
 
-#### 对话与消息 (8)
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| `GET` | `/api/ai/conversations/{id}/messages` | 获取消息列表 |
-| `POST` | `/api/ai/conversations/{id}/send` | 发送消息（阻塞模式兜底） |
-| `POST` | `/api/ai/conversations/{id}/stream` | 启动 SSE 流式对话 |
-| `POST` | `/api/ai/conversations/{id}/save-message` | 保存消息到数据库 |
-| `POST` | `/api/ai/conversations/{id}/confirm-result` | 用户确认结果 (HITL) |
-| `POST` | `/api/ai/conversations/{id}/create-scope-session` | 创建 AgentScope 会话 |
-| `POST` | `/api/ai/conversations/{id}/rename` | 重命名对话 |
-| `POST` | `/api/ai/conversations/{id}/delete` | 删除对话 |
-
-#### 其他 (12)
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| `GET` | `/api/ai/conversations/{id}/tasks` | 对话关联任务 |
-| `GET` | `/api/ai/conversations/{id}/tasks/{run_id}` | 单个任务详情 |
-| `POST` | `/api/ai/upload-avatar` | 上传智能体头像 |
-| `POST` | `/api/ai/upload-file` | 上传并解析文件 |
-| `GET` | `/api/ai/avatars/{name}` | 获取头像文件 |
-| `POST` | `/api/ai/models/detect` | 检测所有模型连接 |
-| `GET` | `/api/ai/health` | 平台健康检查 |
-| `GET` | `/api/ai/tasks` | 全部 AI 任务列表 |
-| `GET` | `/api/ai/knowledge/status` | 知识库状态 |
-| `GET` | `/api/ai/knowledge/documents` | 知识库文档列表 |
-| `POST` | `/api/ai/knowledge/reindex` | 重建知识库索引 |
-| `POST` | `/api/ai/knowledge/documents/add` | 添加知识库文档 |
+> 完整字段表（能力开关 / AgentScope 参数 / 工具列表）见 PRD §5.2。
 
 ---
 
@@ -309,77 +382,130 @@ sequenceDiagram
 
 ```mermaid
 erDiagram
-    ai_agents ||--o{ ai_conversations : "拥有对话"
-    ai_agents ||--o{ ai_tools : "配置工具"
-    ai_conversations ||--o{ ai_messages : "包含消息"
-    ai_conversations ||--o{ ai_tasks : "关联任务"
-    ai_tasks ||--o{ ai_execution_logs : "执行日志"
+    auth_user ||--o{ ai_agents : "owner (SET_NULL)"
+    auth_user ||--o{ ai_conversations : "owner (SET_NULL)"
+
+    ai_agents ||--o{ ai_tools : "agent (CASCADE)"
+    ai_agents ||--o{ ai_conversations : "agent (CASCADE)"
+    ai_agents ||--o{ ai_tasks : "agent (CASCADE)"
+    ai_agents ||--o{ ai_execution_logs : "agent (CASCADE)"
+
+    ai_conversations ||--o{ ai_messages : "conversation (CASCADE)"
+    ai_tasks ||--o{ ai_execution_logs : "task (SET_NULL, 可空)"
 
     ai_agents {
         int id PK
-        int user_id
+        int owner_id FK "auth_user, SET_NULL"
         string name
-        string model_provider "DashScope/OpenAI/Anthropic/DeepSeek/Custom"
+        text avatar "data URI"
+        string tags
+        text description
+        string model_provider "dashscope/openai/anthropic/deepseek/gemini/custom"
         string model_name
-        text api_key "加密存储"
+        string api_key "Fernet 加密"
+        string base_url
         text system_prompt
         float temperature
         int max_tokens
+        string formatter
         int max_iters
-        string avatar
-        text tags
+        bool parallel_tool_calls
+        string memory_mode "inmemory/longterm"
+        text generate_kwargs
+        bool compression_enabled
+        int compression_threshold
+        bool tts_enabled
+        bool enable_knowledge_base
+        bool enable_workspace_tools
+        bool enable_business_tools
+        bool enable_mcp_tools
+        bool enable_skills
+        json skills_config "逐 workspace 工具开关"
+        json knowledge_sources "逐文档开关"
+        string status
         bool is_connected
-        string health_status
+        text available_models "JSON 列表"
         string agent_scope_id
+        string agent_scope_credential_id
+        string credential_hash
+        bool key_revealed
+        datetime last_checked_at
         datetime created_at
+        datetime updated_at
     }
 
     ai_tools {
         int id PK
         int agent_id FK
-        string tool_type "builtin/MCP/Skill"
-        string tool_name
-        text config "JSON 配置"
+        string name
+        string tool_type "platform/mcp/skill"
+        text config_json
         bool enabled
+        datetime created_at
+    }
+
+    ai_shared_tools {
+        int id PK
+        string name
+        string item_type "skill/mcp/extension"
+        text description
+        text config_json
+        bool enabled
+        datetime created_at
+        datetime updated_at
     }
 
     ai_conversations {
         int id PK
+        int owner_id FK "auth_user, SET_NULL"
         int agent_id FK
-        int user_id
         string title
+        string status "active"
         string agent_scope_session_id
-        string status "active/archived"
         datetime created_at
+        datetime updated_at
     }
 
     ai_messages {
         int id PK
         int conversation_id FK
-        string role "user/assistant/system/tool"
-        text content "完整 ContentBlock JSON"
-        text metadata "token 使用/延迟/工具调用"
+        string role "user/assistant/system"
+        text content
+        text tool_calls
+        text blocks "ContentBlock JSON 数组"
+        string reason "normal/exceed_max_iters/stopped/error"
+        int tokens
+        int input_tokens
+        string model_name
+        string flow "sse/fallback"
         datetime created_at
     }
 
     ai_tasks {
         int id PK
-        int conversation_id FK
-        string task_type
-        string run_id
+        int agent_id FK
+        string title
+        text description
         string status
         text result
+        datetime scheduled_at
+        datetime started_at
+        datetime finished_at
         datetime created_at
     }
 
     ai_execution_logs {
         int id PK
-        int task_id FK
+        int agent_id FK
+        int task_id FK "SET_NULL, 可空"
         string level "info/warn/error"
         text message
+        text metadata
         datetime created_at
     }
 ```
+
+> `ai_tasks`（AITask）当前无视图使用；任务历史由 `test_runner.TestRunRecord`（`tr_test_runs`）以 `run_id` 前缀 `ai-task-*` / `case-gen-*` 支撑。
 
 ---
 
@@ -389,142 +515,52 @@ erDiagram
 
 | 规则 | 说明 |
 |------|------|
-| AgentScope 不走 HTTP 调 Django | 同进程 import ORM/API |
-| Django 不管理 Agent 生命周期 | 只存配置；生命周期由 AgentScope 管理 |
-| 共享 JWT 密钥 | `SECRET_KEY` 两边一致，Django 签发，AgentScope 验证 |
-| SSE + 阻塞 POST 兜底 | AgentScope 不可用时自动降级 |
-| API Key 加密存储 | Fernet 对称加密，前端脱敏展示 |
+| AgentScope 进程内直连 | 构建 / 推理 / Tool 编排全在 Django 进程内，无独立服务 / 端口 |
+| AI 不直连设备 / 数据库 | 一切通过 Tool 调用各模块 api.py / 只读 ORM |
+| 工具单一真相源 | `tool_registry.py` `TOOL_SCHEMAS` 定义 14 平台工具 + handler 注册 |
+| 写操作走 api.py | 跨模块写走目标 App 的 api.py，禁止直接 ORM 写 |
+| 知识库唯一所有者 | ChromaDB 由 `rag_service.py` 独占，AgentScope 不直接接触 |
+| API Key 安全 | Fernet 加密 + 脱敏 + 一次性 reveal + base_url 白名单防 SSRF |
+| 所有权隔离 | Agent / 对话按 `owner_id` 过滤，非所有者 403 |
 
-### 6.2 system_prompt 构建
+### 6.2 对外接口（api.py `__all__`）
 
-```
-agent_factory.py 构建的 system_prompt 结构:
-═══════════════════════════════════════════
-
-[平台上下文]
-  你是 Android-AutoTests 平台的 AI 助手。
-  你可以通过 Tool 调用以下模块：设备管理、元素定位、用例管理、执行引擎、测试报告。
-
-[用例类型识别与分发]
-  当用户要求创建测试用例时，先识别用例类型：
-  - UI/Android/App → ui_automation（可执行，17 种步骤类型，需 XPath 定位）
-  - Web/网页/浏览器 → web_automation（Playwright 风格，URL + 操作步骤 + 预期结果）
-  - 功能/业务/流程 → storage（步骤描述 + 预期结果，不需要自动化执行）
-  - API/接口/HTTP → api_testing（请求头 + 请求体 + 预期响应）
-  
-  若无法从输入中识别类型，主动询问：
-  「您需要哪种类型的用例？Android UI / Web 自动化 / 业务功能 / API 接口」
-
-[SOP 四阶段工作流]
-  当用户要求创建和执行测试时，遵循四阶段流程：
-  1. 需求分析与用例设计 (phase=1) → 确认类型 + 用例数 → 创建任务卡片
-  2. 元素准备 (phase=2)（仅 ui_automation）
-  3. 用例创建与调试 (phase=3) → 按类型调用对应 save 工具
-  4. 任务执行 (phase=4)（仅 ui_automation 可执行）
-
-[用例生成任务卡片]
-  创建用例生成任务的标准流程：
-  1. 调用 create_case_gen_task 创建任务卡片（status=PENDING）
-     - task_type: case_generation
-     - case_type: 用户选择的类型
-     - total_count: 计划生成的用例数量
-  2. 任务卡片同步出现在 AI 助手首页任务看板
-  3. 开始生成用例 → 调用 update_case_gen_task 更新 status=RUNNING
-  4. 每完成一个用例 → 更新 progress
-  5. 全部完成 → 调用 update_case_gen_task 更新 status=COMPLETED
-
-[约束]
-  - 创建 UI 自动化用例前必须搜索/确认元素存在
-  - 执行测试前必须锁定设备
-  - 执行完成后必须释放设备
-  - Android UI 和 Web 自动化用例写入 cm_test_definitions / cm_web_testcases
-  - 业务功能用例写入 cm_storage_testcases（步骤 + 预期结果）
-  - API 用例写入 cm_api_testcases（请求头 + 请求体 + 预期响应）
-
-[用户自定义]
-  {user's custom system_prompt}
+```python
+get_agent(agent_id) -> AIAgent | None               # 只读
+get_agent_by_scope_id(scope_id) -> AIAgent | None   # 只读
+list_active_agents() -> list[dict]                  # 只读
+get_conversation(conv_id) -> AIConversation | None  # 只读
+get_or_create_conversation(agent, title) -> tuple   # 写
+save_message(conversation_id, role, content, ...)   # 写
+encrypt_key(plain) -> str                           # 加密
+decrypt_key(encrypted) -> str                       # 解密（失败返回 ""）
+mask_key(key) -> str                                # 脱敏
+# 跨模块接口（供 evaluator 等，避免直接 import agent_scope 内部）
+get_provider_config(provider, base_url, model_name) -> dict
+search_knowledge(query, top_k, sources) -> list[dict]
+get_kb_doc_count() -> int
 ```
 
-### 6.3 跨模块交互
+### 6.3 跨模块消费者
 
-| 方向 | 模块 | Tool 数量 | 说明 |
-|------|------|:--:|------|
-| → | device-pool | 3 | get_online · acquire · release |
-| → | element-locator | 2 | get_test_points · search_elements |
-| → | case-manager | 7 | UI: save/get/list/debug + Storage/API/Web 专用 save |
-| → | test-runner | 10 | run · results · stop · SOP · task · case_gen_task |
-| → | report-generator | 2 | save · list |
-| → | RAG (ChromaDB) | 1 | search_knowledge_base |
-| → | PRD | 3 | parse · design · import |
+| 消费方 | 调用方式 | 用途 |
+|------|------|------|
+| **evaluator** | `api.get_provider_config` / `search_knowledge` / `get_kb_doc_count` | NL 用例生成 / 执行 |
+| **dashboard** | `ai_assistant.permissions`（⚠️ 跨 App import 内部实现，见 TD-03） | 聚合层复用权限逻辑 |
 
 ---
 
-### 6.4 用例生成任务卡片架构
+## 7. 设计要点
 
-任务卡片存在于两个位置，共享同一个后端记录（`TestRunRecord`，`run_id` 以 `case-gen-` 开头）：
-
-```
-CreateCaseGenTaskTool (AgentScope)
-    │
-    ├──→ TestRunRecord (tr_test_runs)
-    │      run_id: case-gen-xxxxxxxx
-    │      status: PENDING → RUNNING → COMPLETED
-    │      summary: { task_type, case_type, case_titles, progress, ... }
-    │
-    ├──→ HintBlock (type: task_card) → 对话内嵌卡片
-    │      ChatView 解析 SSE 流，渲染 TaskCard 组件
-    │
-    └──→ GET /api/ai/tasks → 任务看板
-           list_ai_tasks() 同时查询 ai-task-* 和 case-gen-*
-           TaskStickyNote 渲染便签卡片
-```
-
-**任务卡片状态流转：**
-```
-PENDING (等待中) → RUNNING (进行中) → COMPLETED (已完成)
-                                      → FAILED (失败)
-```
-
-**TaskStickyNote 适配：**
-- 用例生成任务：显示用例类型标签 + 用例数量，无设备信息
-- 执行任务：显示设备序列号 + 用例数量（现有行为）
-
----
-
-## 7. Agent Team 架构
-
-```
-Leader Agent (AI 助手主智能体)
-  │
-  │  根据任务类型派发
-  │
-  ├── element-inspector    查找 UI 元素 Worker
-  │     Tools: search_elements, get_test_points, fetch_page_elements
-  │
-  ├── case-writer          编写测试用例 Worker
-  │     Tools: save_test_case, get_test_case, list_test_cases
-  │
-  ├── device-operator      管理设备锁 Worker
-  │     Tools: get_online_devices, acquire_device, release_device
-  │
-  ├── test-executor        执行测试 Worker
-  │     Tools: run_test, get_run_results, stop_run, create_runner_task
-  │
-  └── report-writer        生成报告 Worker
-        Tools: save_report, list_reports
-```
-
----
-
-## 8. 关键约束
-
-| 约束 | 实施位置 |
-|------|:--:|
-| API Key 加密存储 | `models.py` Fernet |
-| 前端不获取完整 Key | `reveal-key` 仅 5s 有效期 |
-| Tool 不直写数据库 | 全部通过 Django api.py |
-| 对话消息完整持久化 | `save-message` 在 REPLY_END 后触发 |
-| 知识库文档只读 | ChromaDB 向量检索 |
+| 要点 | 说明 |
+|------|------|
+| 进程内 Agent | `agent_factory.build_agent()` 直接构建，消除 HTTP 注册 / session 往返，Django 进程即 AgentScope 运行时 |
+| 单请求 SSE | async view + asyncio.Queue 替换旧「create-session + subscribe + trigger」三请求流，真逐 token 流式 |
+| 能力开关 | 四组 `enable_*` 开关决定 Toolkit 组装，新建默认纯对话模型，避免过度授权 |
+| 工具双通道 | 进程内直调为主，HTTP `tool_gateway` 保留供外部 AgentScope；共享 `tool_registry` 单一真相源 |
+| HITL 线程安全 | in-memory registry + `call_soon_threadsafe` 跨线程投递确认结果 |
+| 安全闭环 | Key 加密 + 脱敏 + 一次性 reveal + base_url 白名单防 SSRF |
+| 知识库隔离 | ChromaDB 由 `rag_service.py` 独占，`knowledge_sources` 逐智能体过滤文档 |
 
 ---
 
@@ -532,6 +568,7 @@ Leader Agent (AI 助手主智能体)
 
 | 版本 | 日期 | 变更摘要 |
 |------|------|----------|
-| v1.0 | 2026-07-16 | 初始版本：基于 `项目架构.md`、`模块-AI助手-技术架构与功能设计.md` 和 `PRD-08-AI助手.md` 重构 |
-| v1.1 | 2026-07-16 | **代码对照审计**：API 端点 32→37（补齐 knowledge/health/tasks 端点），views 文件 5→9（补齐 common/hitl/knowledge/model_views） |
-| v1.2 | 2026-07-22 | **多类型用例生成**：Tool 24→28（新增 save_storage/save_api/save_web + case_gen_task/update_case_gen_task）；system_prompt 增加用例类型识别分发 + 任务卡片工作流；任务卡片双位置同步架构（对话内嵌 + 任务看板） |
+| v1.0 | 2026-07-16 | 初始版本：基于 `项目架构.md` 与旧 PRD 重构 |
+| v1.1 | 2026-07-16 | 代码对照审计：端点 32→37，views 文件 5→9 |
+| v1.2 | 2026-07-22 | 多类型用例生成：Tool 24→28，任务卡片双位置同步 |
+| v2.0 | 2026-08-18 | 按 ARCH-02 格式重构：补架构四图 + 防火墙 + 契约偏差登记；同步代码真相——AgentScope 独立服务→进程内（`agent_scope/`，无 tools/ 目录、system_prompt.py、rag/ 目录）；Tool 28→14 平台工具 + 能力开关（workspace/business/mcp/skills）；端点校正 44（移除 register-scope/create-scope-session/send/avatars，新增 toolbox/available-tools/available-skills/tools 网关）；表 6→7（新增 `ai_shared_tools`）；登记 TD-04~TD-08 |

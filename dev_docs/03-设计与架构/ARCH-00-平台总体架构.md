@@ -335,7 +335,7 @@ flowchart TD
     style B_AI fill:#f7a8c4,color:#3a7a10
 ```
 
-> ⚠️ 标注：`ai_assistant → test_runner` 中经 `agent_scope/tool_registry.py` 直连 `runner`/`callbacks` 属防火墙违规（技术债 TD-04）。`evaluator → ai_assistant.decorators`、`dashboard → ai_assistant.permissions / case_manager.views_helpers` 同属跨 App import 内部实现（TD-03 等）。
+> ⚠️ 标注：`evaluator → ai_assistant.decorators`、`dashboard → ai_assistant.permissions / case_manager.views_helpers` 属跨 App import 内部实现（TD-03 等）。
 
 ### 防火墙规则
 
@@ -435,7 +435,7 @@ flowchart TB
         B_CM["case_manager/ (5表 29API)"]
         B_TR["test_runner/ (4表 12API)"]
         B_RG["report_generator/ (2表 6API)"]
-        B_AI["ai_assistant/ (7表 42API)"]
+        B_AI["ai_assistant/ (7表 44API)"]
         B_WF["workflow/ (2表 10API)"]
         B_ACC["accounts/ (0表 5API)"]
         B_EV["evaluator/ (4表 14API)"]
@@ -567,7 +567,7 @@ flowchart TB
 | **下游消费** | 无（AI 是顶层调用者） |
 | **AI Tool** | 全部 14 个 Tool（AI 模块自身是 Tool 宿主） |
 | **数据表** | `ai_agents` · `ai_tools` · `ai_shared_tools` · `ai_conversations` · `ai_messages` · `ai_tasks` · `ai_execution_logs` |
-| **API** | 42 REST + SSE |
+| **API** | 44 REST + SSE |
 | **核心组件** | `agent_scope/`（tool_registry · agent_factory · rag_service · in_process_tool） |
 
 ### 4.8 工作流工作台 (workflow)
@@ -679,7 +679,7 @@ Android-AutoTests/
 │   ├── case_manager/              · models*.py(5表) / views*.py(29) / api*.py
 │   ├── test_runner/               · models.py(4表) / views/(12) / runner.py / remote_runner.py / executors/
 │   ├── report_generator/          · models.py(2表) / views.py(6)
-│   ├── ai_assistant/              · models.py(7表) / views/(42) / agent_scope/
+│   ├── ai_assistant/              · models.py(7表) / views/(44) / agent_scope/
 │   ├── evaluator/                 · models.py(4表) / views.py + views_api.py(14) / frameworks/
 │   └── workflow/                  · models.py(2表) / views.py + views_api.py(10)
 │
@@ -770,7 +770,7 @@ Android-AutoTests/
 | App | 表 | 端点 | models | views | api | urls |
 |-----|:--:|:--:|:--:|:--:|:--:|:--:|
 | `accounts` | 0 | 5 | ❌ | ✅ | ✅ | ✅ |
-| `ai_assistant` | 7 | 42 | ✅ | ✅ | ✅ | ✅ |
+| `ai_assistant` | 7 | 44 | ✅ | ✅ | ✅ | ✅ |
 | `case_manager` | 5 | 29 | ✅ | ✅ | ✅ | ✅ |
 | `dashboard` | 0 | 4 | ❌ | ✅ | ❌ | ✅ |
 | `device_inspector` | 0 | 4 | ❌ | ✅ | ✅ | ✅ |

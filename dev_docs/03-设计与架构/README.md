@@ -28,6 +28,7 @@
 
 | 文件 | 说明 |
 |------|------|
+| [`ARCH-00-附录-架构图-代码实测.md`](./ARCH-00-附录-架构图-代码实测.md) | 代码实测架构图（9 张）+ 与 ARCH-00 的数字 drift 对照 |
 | [`技术栈参考.md`](./技术栈参考.md) | 技术选型 · 命名统一标准 · UI 设计素材 · AI 一键提示词 |
 | [`工具-VUE_API_CONTRACT.md`](./工具-VUE_API_CONTRACT.md) | 前后端接口契约 |
 | [`Harness_Loop_Engineering_方案.md`](./Harness_Loop_Engineering_方案.md) | Harness Loop 工程方案 |

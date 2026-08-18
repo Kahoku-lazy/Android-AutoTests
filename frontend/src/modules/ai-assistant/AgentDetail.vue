@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { getAgentDetail, detectModels as apiDetectModels, uploadAvatar, saveAgent } from "./api/agents";
+import { formatApiError } from "@/shared/api-client";
 import { ElMessage, ElMessageBox } from "element-plus";
 import ErrorState from "@/shared/components/patterns/ErrorState.vue";
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
@@ -271,7 +272,7 @@ async function handleAvatarUpload(e) {
         image: reader.result,
       });
       if (data.status) form.value.avatar = data.url;
-    } catch (err) { console.error('Failed to upload avatar:', err) }
+    } catch (err) { console.error('Failed to upload avatar:', err); ElMessage.error('头像上传失败，请稍后重试') }
     uploading.value = false;
   };
   reader.readAsDataURL(file);
@@ -302,7 +303,10 @@ async function save() {
       ...platformToolRecords,
     ];
   }
-  const payload = { ...form.value, tools: allTools };
+  const payload = { ...form.value };
+  // 编辑模式工具经独立 API 管理，payload 携带 tools 会被后端视为「清空全部工具」
+  if (isNew.value) payload.tools = allTools;
+  else delete payload.tools;
   try {
     const data = await saveAgent(isNew.value, agentId.value, payload);
     if (data.status) {
@@ -312,16 +316,7 @@ async function save() {
       ElMessage.error(data.message || "保存失败");
     }
   } catch (err) {
-    const errors = err.response?.data?.errors;
-    const msg =
-      err.response?.data?.message ||
-      (errors
-        ? Object.entries(errors)
-            .map(([k, v]) => `${k}: ${v}`)
-            .join("; ")
-        : null) ||
-      err.message;
-    ElMessage.error("保存失败: " + msg);
+    ElMessage.error("保存失败: " + formatApiError(err));
   }
 }
 </script>
@@ -338,7 +333,7 @@ async function save() {
             : '编辑智能体'
       "
       icon="settings"
-      icon-gradient="linear-gradient(135deg,#5EEAD4,#14b8a6)"
+      icon-gradient="linear-gradient(135deg, var(--ai-teal), var(--ai-teal-hover))"
     />
 
     <ErrorState v-if="loadError" :message="loadError" @retry="loadAgentDetail" />

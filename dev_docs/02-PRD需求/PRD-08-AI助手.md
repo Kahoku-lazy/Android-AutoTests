@@ -1,165 +1,612 @@
-# PRD-06 — AI 助手 (AI Assistant)
+# PRD-08 — AI 助手 (AI Assistant)
 
-> 关联需求大纲：[`需求大纲.md`](./需求大纲.md) §5.7
-> 版本：v5.0 · 日期：2026-07-27
+> 关联模块：`apps/ai_assistant/` · 前端：`frontend/src/modules/ai-assistant/`
+> 关联全局：[`需求大纲.md`](./需求大纲.md) §5.7
+> 版本：v6.0 · 状态：评审中 · 日期：2026-08-18
+
+**修订记录**
+
+| 版本 | 日期 | 变更摘要 |
+|------|------|----------|
+| v5.0 | 2026-07-27 | 前端 JS 时代基线（Agent 便签 + 任务看板 + 5 步向导 + 45 项验收） |
+| v6.0 | 2026-08-18 | 同步代码真相：AgentScope 由独立服务迁入 Django 进程内（`agent_scope/`）；Tool 28→14 平台工具 + 能力开关（workspace/business/mcp/skills）；前端全面 TS 化（`api/*.ts` + `constants.ts` + `index.logic.ts`）；5 步向导→分区表单；任务看板 UI 移除（任务历史改由 test_runner `TestRunRecord` 支撑）；数据表 6→7（新增 `ai_shared_tools`）；按 PRD-02 十章结构重构 |
 
 ---
 
 ## 1. 功能定位
 
-AI 助手是平台的智能对话中枢。用户在此管理 AI Agent、发起多轮对话、上传附件、通过 SSE 流式接收回复，并查看 Agent 执行任务的状态。页面由 Agent 管理面板 + 对话窗口 + 任务看板三个区域构成。
+AI 助手是平台的**智能对话中枢**，用户通过自然语言对话驱动全流程测试——无需逐个操作设备管理、元素定位、用例管理、执行引擎等模块。AgentScope ReAct 推理引擎作为 Django 进程内模块运行，通过 14 个平台业务 Tool 编排跨模块能力。
+
+**核心职责**：
+
+- **智能体管理**：创建 / 编辑 / 删除 AI 智能体，配置模型提供商、API Key、系统提示词、参数与能力开关
+- **流式对话**：SSE 逐 token 流式回复，展示思考过程、工具调用、HITL 确认；支持文件 / 图片上传
+- **自然语言操控**：通过 14 个平台 Tool 完成设备操控、元素检索、用例生成、测试执行、知识库检索
+- **知识库管理**：ChromaDB 向量库状态、文档列表、重建索引；按智能体过滤可用文档
+- **评测中心**：自然语言用例生成与执行
+- **AI 工具箱**：共享 skill / MCP / 扩展，跨智能体复用
+
+AI 助手是**管理模块（有写操作）**：所有写操作走 `api.py` → ORM，跨模块写走目标 App 的 `api.py`；AI 引擎不直连设备、不直写数据库，一切通过 Tool 调用 Django。
 
 ---
 
-## 2. 设计目录
+## 2. 功能详细规格
 
-```
-frontend/src/modules/ai-assistant/
-├── index.vue                         578 行 · Agent 管理 + 任务看板编排者
-├── api.js                            577 行 · 数据层（SSE 流 + AgentScope 健康检查）
-├── evaluator-api.js                   75 行 · 评估器 API
-├── routes.js                          11 行 · 路由定义
-├── composables/
-│   ├── useSSE.js                     677 行 · SSE 流处理 + 降级 + HITL 确认
-│   ├── useConversation.js            138 行 · 会话 CRUD + 内联重命名
-│   ├── useMessageStore.js            112 行 · 消息数组状态 + 重建
-│   ├── useAgentTools.js              288 行 · Agent 工具/技能加载
-│   ├── useMarkdown.js                 72 行 · Markdown 渲染 + Mermaid
-│   ├── useToolCalls.js                11 行 · 工具调用状态
-│   └── useToolConfirm.js              11 行 · HITL 确认状态
-├── ChatView.vue                      546 行 · 对话窗口（SSE 流 + 消息渲染）
-├── ChatView.css                      602 行 · 对话窗口独立样式（⚠ 非 scoped）
-├── AgentDetail.vue                   515 行 · Agent 配置（5 步向导）
-├── EvaluatorTab.vue                  554 行 · 评估器 Tab（NL 用例生成 + 执行）
-├── KnowledgeBase.vue                 235 行 · 知识库管理（KPI + 文档表）
-└── components/
-    ├── AgentStickyNote.vue           427 行 · Agent 便签卡片（动画）
-    ├── MessageBubble.vue             391 行 · 消息气泡（文本/思考块/工具卡片/提示）
-    ├── AgentToolsPanel.vue           364 行 · Agent 工具/技能配置面板
-    ├── HintCard.vue                  347 行 · SOP 提示卡片（阶段 + 用例 + PRD 预览）
-    ├── TaskStickyNote.vue            297 行 · 任务便签卡片（动画）
-    ├── ConfirmDialog.vue             233 行 · HITL 确认弹窗
-    ├── ChatInput.vue                 200 行 · 消息输入栏（附件 + 发送）
-    ├── ToolCallCard.vue              158 行 · 工具调用卡片（折叠展开）
-    ├── ThinkingBlock.vue              89 行 · 思考块（可折叠推理过程）
-    ├── AgentModelConfig.vue           67 行 · Agent 模型配置
-    ├── AgentBasicInfo.vue             61 行 · Agent 基本信息
-    ├── AgentAdvancedConfig.vue        49 行 · Agent 高级配置
-    ├── AgentFormFooter.vue            48 行 · Agent 表单底部操作栏
-    ├── AgentMcpDialog.vue             43 行 · MCP 配置弹窗
-    ├── AgentPromptEditor.vue          41 行 · 系统提示词编辑器
-    └── WbLoader.vue                   28 行 · 加载动画
-```
+### 2.1 智能体看板（F-01-01）
 
-**架构特征**：L3 评级。Composable 层设计良好（7 个模块，职责清晰），但存在以下违规：useSSE/useConversation 直接调用 ElMessage（BL 层引用 UI 层）、5 个 .vue 文件 ~25 处裸 client 调用 bypass api.js。ChatView.css 为独立文件（非 scoped）。无 constants.js。无 Pinia store（全部 composable + local refs）。共享组件采用率 6/14（43%）。
+主工作台「智能体看板」Tab，以便签卡片网格展示全部智能体。每张卡片显示名称、模型、健康状态（绿点 = 已连通）。点击卡片进入对话；点击编辑进入配置页。
 
----
+**健康检查**：`GET /ai/agents/health` 批量检测全部 active 智能体连通性，30 分钟轮询一次（`HEALTH_CHECK_INTERVAL_MS`）。
 
-## 3. 核心功能
+**组件**：`index.vue` + `AgentStickyNote.vue` + `useAgentBoard`（`index.logic.ts`）。
 
-### 3.1 Agent 管理面板
+**边界状态**：
 
-`index.vue` — 顶部 Agent 便签卡片滚动行（AgentStickyNote × N），底部任务看板（TaskStickyNote × N）。每个 Agent 卡片显示名称、模型、在线状态（绿色圆点）。点击进入 ChatView 对话。新建/编辑 Agent 跳转 AgentDetail.vue（5 步向导：基本信息 → 模型配置 → 系统提示词 → 工具/技能 → 高级配置）。健康检查每 30 分钟轮询一次。
+| 场景 | 行为 |
+|------|------|
+| 无智能体 | 空态「还没有智能体」，引导「+ 新建智能体」 |
+| 健康检查失败（Key 失效/网络） | 卡片状态点变红，不阻断列表 |
+| 数据加载中 | 便签加载动画（`WbLoader`） |
 
-### 3.2 对话窗口 (ChatView)
+**验收标准**：
 
-`ChatView.vue` + `ChatView.css` — 左侧会话列表（新建/重命名/删除），右侧消息流。每条消息通过 MessageBubble 渲染：文本（Markdown + Mermaid 图表）→ 思考块（ThinkingBlock，可折叠）→ 工具调用卡片（ToolCallCard，折叠/展开）→ SOP 提示卡片（HintCard，含阶段进度、用例预览、PRD 摘要）。
+- 列表按创建时间展示全部智能体，卡片含名称 / 模型 / 健康状态点
+- 健康检查 30 分钟轮询，状态点与后端 `is_connected` 一致
+- 无智能体时展示空态引导
 
-**SSE 流生命期**：`useSSE.js` 管理完整流程 — 创建 AgentScope session → 保存用户消息 → 订阅 SSE 流 → 解析 7 种事件类型 → 增量更新消息数组。45 秒看门狗超时。AgentScope 不可用时自动降级到 Django 同步模式。HITL 工具确认通过 `REQUIRE_USER_CONFIRM` 事件 → ConfirmDialog 弹窗 → 用户 ALLOW/DENY → 结果回传 SSE 流。
+### 2.2 智能体创建 / 编辑（F-01-02）
 
-### 3.3 知识库 (KnowledgeBase)
+配置页采用**分区表单**（自上而下六个区块，非分步向导），新建与编辑共用 `AgentDetail.vue`。
 
-`KnowledgeBase.vue` — 4 张 KpiCard（文档数/数据库大小/上次索引/状态）+ AppTable 文档列表（名称/来源/块数/状态）。支持手动重索引。筛选栏手写 `.kb-filter-btn` 按钮组（未用 FilterTabs 共享组件）。
+| 区块 | 字段 | 说明 |
+|------|------|------|
+| 基本信息 | 名称 · 头像 · 标签 · 描述 | 名称必填；头像 emoji 或上传图片（存 data URI） |
+| 模型配置 | 提供商 · 模型名 · API Key · base_url · temperature · max_tokens | 6 提供商；「检测模型」从 API 拉取可用模型列表 |
+| 系统提示词 | system_prompt | 新建默认空（纯对话模型） |
+| 工具 / 技能 | 平台工具勾选 · workspace 技能开关 · 知识库文档 · MCP · Skill | 见 F-01-05 能力开关 |
+| 高级配置 | formatter · max_iters · 记忆模式 · 上下文压缩 · TTS · generate_kwargs | AgentScope 2.0 参数 |
+| 保存 | 底部操作栏 | 新建含工具配置，编辑 diff 同步 |
 
-### 3.4 评估器 (EvaluatorTab)
+**模型提供商**（`provider_registry.py`）：
 
-`EvaluatorTab.vue` — NL 用例生成 + NL 测试执行。输入自然语言描述 → 选择目标设备 → 生成测试用例或直接执行。子 Tab 切换（用例生成/执行结果）。调用 `evaluator-api.js` 封装 API。
+| 提供商 | base_url（默认） |
+|------|------|
+| dashscope | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| openai | `https://api.openai.com/v1` |
+| anthropic | `https://api.anthropic.com/v1` |
+| deepseek | `https://api.deepseek.com/v1` |
+| gemini | `https://generativelanguage.googleapis.com/v1beta/openai` |
+| custom | 用户自定义（OpenAI 兼容） |
 
-### 3.5 任务看板
+**组件**：`AgentDetail.vue` + `AgentBasicInfo` / `AgentModelConfig` / `AgentPromptEditor` / `AgentToolsPanel` / `AgentAdvancedConfig` / `AgentFormFooter` + `useAgentTools`。
 
-`index.vue` 底部 — TaskStickyNote 卡片网格。每张卡片显示任务类型/状态/Agent/进度条。RUNNING 状态任务每 15 秒自动轮询刷新。
+**边界状态**：
 
----
+| 场景 | 行为 |
+|------|------|
+| 名称空 | 表单提示「Agent 名称不能为空」 |
+| temperature 越界 | 提示「温度必须在 0-2 之间」 |
+| max_tokens 越界 | 提示「max_tokens 必须在 1-128000 之间」 |
+| base_url 指向本机 / 非白名单主机 | 提示「base_url 主机不在 X 提供商白名单内」 |
+| generate_kwargs 非法 JSON | 提示「generate_kwargs 必须是合法的 JSON 字符串」 |
+| API Key 未填（检测模型时） | 提示「请先填写 API Key」 |
 
-## 4. 数据流
+**验收标准**：
 
-```
-Composables (7, no Pinia)
-  ├── useConversation    会话列表 CRUD → api.js
-  ├── useMessageStore    消息数组 + 占位符管理
-  ├── useSSE             SSE 流核心 → api.js (streamChat) + agentscopeClient
-  ├── useAgentTools      Agent 工具/技能/知识库加载 → api.js
-  ├── useMarkdown        Markdown + Mermaid 渲染
-  ├── useToolCalls       工具调用状态
-  └── useToolConfirm     HITL 确认状态
+- 6 个提供商均可选，切换时自动带出默认模型与 formatter
+- 「检测模型」成功后返回模型列表并合并去重内置模型
+- 保存后跳转智能体看板，卡片反映最新配置
 
-ChatView.vue
-  ├── useSSE.sendStreamMessage()  → SSE 连接 → 增量更新 useMessageStore.messages
-  ├── useConversation             → 会话列表 + 选择 + 重命名
-  └── useMarkdown                 → 渲染消息内容
+### 2.3 API Key 安全（F-01-03）
 
-index.vue
-  ├── client.get('/ai/agents')        ← ⚠ 裸调用，应走 api.js
-  ├── client.get('/ai/agents/health') ← ⚠
-  └── client.get('/ai/tasks')         ← ⚠ 15s 轮询
-```
+API Key 全程加密存储（Fernet），列表 / 详情只返回脱敏值，完整 Key 仅一次性查看。
 
----
+| 规则 | 行为 |
+|------|------|
+| 写入 | 明文 Key 经 `encrypt_key()` 加密后落库，DB 值不以 `sk-` 开头 |
+| 展示 | 列表不返回 Key；详情返回 `mask_key()` 脱敏值（前 3 + `***` + 后 4） |
+| 一次性查看 | `POST /agents/{id}/reveal-key` 仅首次返回明文，之后返回脱敏值 + `revealed: false` |
+| 更新 | 前端回传 `***` 掩码视为未变更，跳过更新保留原值；Key 变更后 `key_revealed` 复位 |
 
-## 5. 验收汇总
+**验收标准**：
 
-| 功能编号 | 功能名称 | 验收项 | 通过 | 未验证 |
-|:--:|------|:--:|:--:|:--:|
-| F-01-01 | Agent 列表 + 便签卡片 | 5 | | 5 |
-| F-01-02 | Agent 配置（5 步向导） | 6 | | 6 |
-| F-02-01 | SSE 流式对话 | 6 | | 6 |
-| F-02-02 | HITL 工具确认 | 4 | | 4 |
-| F-02-03 | 文件上传 | 3 | | 3 |
-| F-03-01 | NL 用例生成 | 5 | | 5 |
-| F-03-02 | NL 测试执行 | 4 | | 4 |
-| F-03-03 | 多类型用例生成 (Storage/API/Web) | 4 | | 4 |
-| F-03-04 | 用例生成任务卡片 | 4 | | 4 |
-| F-04-01 | 知识库管理 | 4 | | 4 |
-| **合计** | | **45** | **0** | **45** |
+- `GET /ai/agents` 响应无 `api_key` 字段
+- `GET /ai/agents/{id}` 的 `api_key` 为脱敏值
+- reveal-key 首次返回明文，二次返回脱敏；Key 变更后可再次查看一次
+- 解密失败返回空字符串而非崩溃，不 fallback 原文
 
----
+### 2.4 模型连接测试与检测（F-01-04）
 
-## 附录A：测试优先级
+- **连接测试**（`POST /agents/{id}/test`）：调 `/models` 或 `/chat/completions` 验证连通性，回写 `is_connected` + `available_models` + `last_checked_at`
+- **模型检测**（`POST /models/detect`）：用 provider + api_key + base_url 拉取可用模型列表，供配置页合并去重
 
-| 优先级 | 覆盖范围 | 验收时机 |
-|:--:|------|------|
-| P0 | F-01-01~F-02-02（Agent 管理 + SSE 对话 + HITL） | 每次 MR 前 |
-| P1 | F-02-03~F-03-04（文件上传 + NL 生成 + 任务卡片） | 发版前 |
-| P2 | F-04-01（知识库）、降级模式、断线重连 | 大版本前 |
+**边界状态**：
 
-## 附录B：实施状态
+| 场景 | 行为 |
+|------|------|
+| API Key 无效 | `connected: false`，message 返回 HTTP 状态与错误摘要 |
+| 网络不可达 | `connected: false`，message 返回连接错误 |
 
-| 功能 | 状态 |
+**验收标准**：
+
+- 连接成功返回 `connected: true` + 模型列表；失败返回 `connected: false` + message
+- 检测到的模型与内置模型合并去重，当前选中模型始终在列表中
+
+### 2.5 能力开关（F-01-05）
+
+智能体通过四组能力开关决定可用的工具集，构建时由 `agent_factory` 按开关组装 Toolkit：
+
+| 开关字段 | 默认 | 启用后注入的工具 |
+|------|:--:|------|
+| `enable_workspace_tools` | false | 6 个 AgentScope 内置文件工具（Bash / Edit / Glob / Grep / Read / Write），受 `skills_config` 逐工具开关 |
+| `enable_business_tools` | false | 14 个平台业务工具（见 §4.1），受 `AITool(tool_type=platform)` 逐工具开关 |
+| `enable_mcp_tools` | false | 用户配置的 MCP 客户端（`AITool(tool_type=mcp)`） |
+| `enable_skills` | false | 用户上传的 skill 目录（`AITool(tool_type=skill)`） |
+| `enable_knowledge_base` + `knowledge_sources` | false / {} | 知识库文档过滤（仅导入的文档参与检索） |
+
+新建智能体默认**纯对话模型**（全部开关 false，无默认系统提示词）。
+
+**验收标准**：
+
+- 未启用 business_tools 时，`/api/tools/agent-config` 返回 `enabled_tools: []`
+- 启用 workspace_tools 但 `skills_config` 关闭 Bash 时，构建出的 Toolkit 不含 Bash
+- `knowledge_sources` 只导入的文档参与 `search_knowledge_base` 检索
+
+### 2.6 SSE 流式对话（F-02-01）
+
+对话页发起 `POST /conversations/{id}/chat/stream`，AgentScope 在 Django 进程内运行，`reply_stream` 事件经 SSE 逐 token 流式返回。单请求完成「构建 Agent → 恢复上下文 → 流式回复 → 持久化」。
+
+**流式生命期**：构建 Agent（进程内）→ 保存用户消息 → 恢复历史上下文 → `reply_stream` 消费事件 → SSE 推送 → 终端事件时后端持久化 assistant 消息。
+
+**模型状态**（`MODEL_STATUS_MAP`）：思考中 / 调用模型 / 调用工具 / 输出中 / 已完成。
+
+**组件**：`ChatView.vue` + `useSSE` + `api/sse.ts`（`streamChat` 用原生 fetch 读 ReadableStream，401 自动刷新重试一次）。
+
+**边界状态**：
+
+| 场景 | 行为 |
+|------|------|
+| 消息为空且无附件 | 400「消息不能为空」 |
+| 无权限访问对话 | 403 |
+| 对话不存在 | 404 |
+| 2 分钟无事件 | SSE 发送心跳注释 `: heartbeat` |
+| 客户端断开 / 换对话 | 取消旧 agent Task（`CancelledError`），保留已生成内容，后台续跑 |
+| 模型服务不可用 | 顶部降级横幅「AI 模型服务暂不可用…」 |
+| 同一对话重复请求 | 取消上一 stale Task，保留最新 |
+
+**验收标准**：
+
+- 回复逐 token 渲染，非整段一次性
+- 切换 / 关闭对话后已生成内容不丢失，历史消息从后端加载
+- 401 时自动刷新 token 并重试一次
+- 终端事件（REPLY_END / ExceedMaxIters）后端持久化 assistant 消息
+
+### 2.7 消息渲染（F-02-02）
+
+每条消息经 `MessageBubble` 渲染，按内容块类型区分：
+
+| 内容块 | 渲染 | 说明 |
+|------|------|------|
+| 文本 | Markdown + Mermaid 图表 | `useMarkdown` 渲染 |
+| 思考块 | `ThinkingBlock`（默认折叠） | ReAct 推理过程，多轮可折叠 |
+| 工具调用 | `ToolCallCard`（折叠 / 展开） | 工具名 + 参数 + 结果 |
+| 提示块 | `HintCard` | SOP 阶段卡片 / 任务卡片（内嵌进度） |
+| 数据块 | 图片气泡 | 用户上传图片 |
+
+**任务卡片**（内嵌于对话流）：`create_runner_task` / `run_test` / `stop_run` 工具调用时，`ChatView` 解析输出维护内嵌进度卡片（PENDING → RUNNING → COMPLETED / FAILED / STOPPED）。
+
+**组件**：`MessageBubble.vue` + `ThinkingBlock` / `ToolCallCard` / `HintCard` + `useMarkdown` / `useMessageStore`。
+
+**验收标准**：
+
+- Markdown 与 Mermaid 正常渲染；思考块默认折叠可展开
+- 工具调用卡片折叠 / 展开切换正常，含参数与结果
+- 任务卡片随工具调用更新进度与终态
+
+### 2.8 HITL 工具确认（F-02-03）
+
+Agent 执行写操作工具前，若需要用户确认，流中返回 `RequireUserConfirmEvent`，前端弹出确认对话框；用户 ALLOW / DENY / 全部允许 / 全部拒绝后，结果经 `POST /conversations/{id}/confirm-result` 回传正在运行的 Agent。
+
+**实现**：进程内 `asyncio.Queue` + in-memory session registry（`hitl_views.py`），`call_soon_threadsafe` 跨线程投递确认结果。
+
+**组件**：`ConfirmDialog.vue` + `useToolConfirm`。
+
+**边界状态**：
+
+| 场景 | 行为 |
+|------|------|
+| 确认超时（2 分钟） | 记录 warning，终止本轮回复 |
+| 无活跃 agent session | 400「No active agent session…」 |
+| 确认队列已满 | 409「Agent is busy」 |
+
+**验收标准**：
+
+- 确认弹窗展示工具名与参数，支持单个 / 全部允许 / 拒绝
+- ALLOW 后 Agent 继续执行，DENY 后跳过该工具
+- 确认结果经 `AIExecutionLog` 记录审计
+
+### 2.9 文件 / 图片上传（F-02-04）
+
+对话输入栏支持上传文档与图片：
+
+| 类型 | 支持格式 | 大小上限 | 处理 |
+|------|------|:--:|------|
+| 文档 | txt / md / json / xml / csv / py / js / html / css / yaml / docx / xlsx / pdf | 20MB | 解析为文本注入消息（超 5 万字符截断） |
+| 图片 | png / jpg / jpeg / webp / gif | 5MB | base64 编码，随消息以 DataBlock 发送 |
+
+**组件**：`ChatInput.vue` + `api/agents.ts`（`uploadFile`）。头像上传走 `upload-avatar`（data URI 存 DB）。
+
+**边界状态**：
+
+| 场景 | 行为 |
+|------|------|
+| 不支持的文件类型 | 400「Unsupported file type」 |
+| 文件超限 | 400「File too large」 |
+| docx / xlsx / pdf 解析失败 | 返回 `parse_error`，前端展示解析失败标记 |
+
+**验收标准**：
+
+- 文本 / 文档上传后解析内容注入消息，图片以 DataBlock 随消息发送
+- 一次仅支持 1 张图片（多图 400）
+- 上传文件在解析后即时清理临时文件
+
+### 2.10 知识库管理（F-03-01）
+
+「知识库」Tab 展示 ChromaDB 向量库状态（文档数 / 库大小 / 上次索引 / 状态）与可索引文档列表，支持重建索引。
+
+**文档来源**：`rag_service.py` 动态扫描 `dev_docs/` 下所有 Markdown + 生成的步骤类型参考。
+
+**组件**：`KnowledgeBase.vue` + `api/toolbox.ts`（`getKnowledgeStatus` / `getKnowledgeDocuments` / `reindexKnowledge`）。
+
+**边界状态**：
+
+| 场景 | 行为 |
+|------|------|
+| 索引重建进行中 | 409「索引重建已在进行中」 |
+| ChromaDB 不可用 | 状态返回 doc_count 0，不崩溃 |
+| 知识库为空 | 检索跳过，返回空列表 |
+
+**验收标准**：
+
+- 状态卡展示文档数 / 库大小 / 上次索引时间
+- 文档列表仅返回元数据（不含正文），供智能体配置页勾选
+- 重建索引异步执行，状态页可查询进度
+
+### 2.11 评测中心（F-04-01）
+
+「评测中心」Tab 提供自然语言用例生成与执行：输入自然语言描述 → 选择目标设备 → 生成用例或直接执行。调用 `evaluator-api.ts` 封装 API（评估器模块 `ev_` 前缀）。
+
+**组件**：`EvaluatorTab.vue`。
+
+**验收标准**：
+
+- 自然语言描述可生成用例或触发执行
+- 执行轮询间隔 2s（`EVALUATOR_POLL_MS`）
+
+### 2.12 AI 工具箱（F-05-01）
+
+「AI 工具箱」Tab 管理跨智能体复用的共享项（skill / MCP / 扩展），可导入到任一智能体。
+
+| 项类型 | 说明 |
 |------|:--:|
-| Agent CRUD + 模型切换 + 便签卡片 | ✅ |
-| SSE 流式对话 + Markdown 渲染 | ✅ |
-| HITL 工具确认弹窗 | ✅ |
-| 文件上传 | ✅ |
-| NL 用例生成 + 执行（评估器） | ✅ |
-| 知识库管理（KPI + 文档表 + 重索引） | ✅ |
-| 降级模式（AgentScope 不可用→Django 同步） | ✅ |
-| 任务看板（15s 轮询） | ✅ |
-| F-03-03 多类型用例生成 (Storage/API/Web) | 📋 |
-| F-03-04 用例生成任务卡片 | 📋 |
-| 裸 client 收敛到 api.js (~25 处) | 📋 |
-| useSSE.js 拆分 (677→3 子模块) | 📋 |
-| ChatView.css 602 行迁移为 scoped | 📋 |
-| constants.js 补全 | 📋 |
+| skill | 上传 skill 文件夹，存 `data/shared_skills/{id}/` |
+| mcp | 共享 MCP 配置 |
+| extension | 扩展配置 |
 
-## 附录C：已知问题与改进项
+**导入**：`POST /agents/{id}/tools/import-from-toolbox` 生成 per-agent `AITool` 副本（skill 复制文件目录）。重复导入同名项返回 409。
 
-| 编号 | 问题 | 严重度 | 记录日期 |
-|:--:|------|:--:|:--:|
-| IMP-01 | useSSE.js 677 行超标，应拆出 streamClient/fallback/confirm 三个子模块 | 🔴 | 2026-07-27 |
-| IMP-02 | 5 个 .vue 文件 ~25 处裸 client/fetch 调用，bypass api.js | 🔴 | 2026-07-27 |
-| IMP-03 | ChatView.css 602 行独立文件 + 75 处硬编码 hex，应迁移为 scoped | 🟠 | 2026-07-27 |
-| IMP-04 | useSSE + useConversation 直接调用 ElMessage/ElMessageBox（BL 层引用 UI 层） | 🟠 | 2026-07-27 |
-| IMP-05 | 346 处硬编码 hex 颜色（271 vue + 75 css），应迁移到 tokens.css 引用 | 🟡 | 2026-07-27 |
-| IMP-06 | EvaluatorTab 554 行 + 10 处 console.error 无 ErrorState | 🟡 | 2026-07-27 |
-| IMP-07 | KnowledgeBase 手写 .kb-filter-btn 而非用 FilterTabs 共享组件 | 🟢 | 2026-07-27 |
-| IMP-08 | index.vue 行 509 样式 bug: `background-color: #fff);` 尾部多余括号 | 🟢 | 2026-07-27 |
+**组件**：`ToolboxPanel.vue` + `api/toolbox.ts`。
+
+**验收标准**：
+
+- 工具箱列表 / 创建 / 更新 / 删除 / 上传 skill 正常
+- 导入后智能体工具列表出现副本；同名重复导入 409
+- 删除 skill 类型项时清理上传目录
+
+---
+
+## 3. 布局与视觉设计
+
+> 全部颜色 / 字号引用 Doodle Craft 主题令牌（[`frontend/DESIGN_SYSTEM.md`](../frontend/DESIGN_SYSTEM.md)）。
+
+### 3.1 主工作台布局
+
+```
+┌─────────────────────────────────────────────┐
+│ WorkbenchHeader（标题 + 「+ 新建智能体」）        │
+├─────────────────────────────────────────────┤
+│ 视图 Tab：🤖智能体看板 | 🧰AI工具箱 | 📚知识库 | 📊评测中心 │
+├─────────────────────────────────────────────┤
+│ 智能体看板：便签卡片网格（AgentStickyNote × N）    │
+└─────────────────────────────────────────────┘
+```
+
+- 页面底色：米白纸纹叠加点阵底纹
+- 智能体卡片为便签风格（微旋转排列，hover 归正放大），健康状态点绿 / 红
+
+### 3.2 配置页布局（分区表单）
+
+```
+┌─ 基本信息（名称/头像/标签/描述）─────┐
+├─ 模型配置（提供商/模型/Key/温度）────┤
+├─ 系统提示词 ───────────────────────┤
+├─ 工具/技能（平台工具/workspace/知识库/MCP/Skill）┤
+├─ 高级配置（记忆/压缩/TTS）─────────┤
+└─ 底部操作栏（保存/取消）────────────┘
+```
+
+### 3.3 对话页布局
+
+```
+┌────────────────────────────────────────────┐
+│ 左侧：会话列表（新建/重命名/删除）               │
+├────────────────────────────────────────────┤
+│ 右侧：消息流（MessageBubble 流式渲染）          │
+│       顶部状态徽标（模型状态 + 连接模式 + 消息数）  │
+│       底部：输入栏（附件/图片 + 发送/停止）        │
+└────────────────────────────────────────────┘
+```
+
+---
+
+## 4. 后端功能逻辑
+
+### 4.1 平台业务工具（14 个）
+
+`tool_registry.py` 的 `TOOL_SCHEMAS` 是平台工具的**单一真相源**，按 5 分类：
+
+| 分类 | 工具 | 只读 |
+|------|------|:--:|
+| 设备管理 | `get_online_devices` · `acquire_device` · `release_device` | 1 读 2 写 |
+| 元素定位 | `search_elements` · `list_pages` · `fetch_page_elements` | 3 读 |
+| 用例管理 | `save_case`（UI/Storage/Web） · `save_api_test_case` · `get_case` · `debug_case` | 2 读 2 写 |
+| 测试执行 | `run_test` · `get_run_results` · `stop_run` | 1 读 2 写 |
+| 知识库 | `search_knowledge_base` | 1 读 |
+
+工具执行：`InProcessPlatformTool` 通过 `tool_registry.resolve(module, action)` 进程内直调 handler（`asyncio.to_thread` 跑同步 ORM），**不走 HTTP**。handler 签名 `handler(user_id, **kwargs)`，写操作工具校验 `user_id` 非空。
+
+### 4.2 Agent 构建流程（进程内）
+
+```
+build_agent(agent_model, user_id)
+  1. 解密 api_key → 选 Model（dashscope 用 DashScopeChatModel，其余 OpenAI 兼容）
+  2. 按能力开关组装 Toolkit（workspace + business + mcp + skills）
+  3. 构建 ModelConfig / ContextConfig（压缩）/ ReActConfig（max_iters / parallel_tool_calls）
+  4. system_prompt = agent_model.system_prompt（无默认）
+  5. 返回 Agent 实例（name / system_prompt / model / toolkit / configs）
+```
+
+### 4.3 SSE 流式对话流程
+
+```
+POST /conversations/{id}/chat/stream（async view，Daphne 事件循环）
+  ├─ 鉴权 + 加载对话
+  ├─ 保存用户消息（flow="sse"）
+  ├─ asyncio.Queue + asyncio.Task（_agent_stream 后台执行）
+  │    ├─ build_agent（sync → thread pool）
+  │    ├─ _restore_context（从 ai_messages 恢复历史）
+  │    ├─ reply_stream 消费事件 → queue.put(SSE)
+  │    ├─ RequireUserConfirmEvent → 等待 confirm_queue → 续跑
+  │    └─ ReplyEnd / ExceedMaxIters → 持久化 assistant 消息
+  └─ event_generator 从 queue 读取 → StreamingHttpResponse（SSE）
+```
+
+### 4.4 知识库（ChromaDB）
+
+- 存储：`data/chromadb`，collection `project_knowledge`，`rag_service.py` 是唯一所有者
+- 文档：`dev_docs/*.md`（内容截断 4000 字符）+ 生成的步骤类型参考
+- 检索：`search(query, top_k=5, sources=[...])`；`sources` 过滤（单值时用 where 过滤，多值时 post-filter）
+- 缓存：文档列表按文件 mtime + 60s TTL 缓存
+
+### 4.5 任务历史口径
+
+任务看板 UI 已移除，任务历史由 **test_runner 的 `TestRunRecord`**（`tr_test_runs`）支撑，通过 `run_id` 前缀区分：
+
+| 前缀 | 类型 | 关联 |
+|------|------|------|
+| `ai-task-` | 执行任务 | 经 `TestSOP` 关联对话 |
+| `case-gen-` | 用例生成任务 | 不关联具体对话（对话内无条件包含） |
+
+`ai_tasks` 表（`AITask`）当前无视图使用，仅 admin 注册与 `AIExecutionLog` 可空外键。
+
+---
+
+## 5. API 接口功能
+
+鉴权：除 `/api/tools/*`（工具网关，内部服务）外全部端点需要 JWT Bearer。响应统一 `{status, data}` / `{status, message}`，JSON 字段 snake_case。
+
+### 5.1 端点总览（44 个）
+
+| # | 方法 | 端点 | 功能 | 前端消费 |
+|---|------|------|------|:--:|
+| 1 | GET | `/ai/agents` | 智能体列表 | ✅ |
+| 2 | POST | `/ai/agents/create` | 创建智能体（F-01-02） | ✅ |
+| 3 | GET | `/ai/agents/{id}` | 智能体详情（含脱敏 Key） | ✅ |
+| 4 | POST | `/ai/agents/{id}/update` | 更新智能体 | ✅ |
+| 5 | POST | `/ai/agents/{id}/delete` | 删除智能体 | ✅ |
+| 6 | POST | `/ai/agents/{id}/reveal-key` | 一次性查看完整 Key（F-01-03） | ❌ |
+| 7 | GET | `/ai/agents/{id}/conversations` | 智能体对话列表 | ✅ |
+| 8 | POST | `/ai/agents/{id}/conversations/create` | 新建对话 | ✅ |
+| 9 | GET | `/ai/conversations/{id}/messages` | 消息列表 | ✅ |
+| 10 | POST | `/ai/conversations/{id}/save-message` | 保存消息 | ✅ |
+| 11 | POST | `/ai/conversations/{id}/confirm-result` | HITL 确认回传（F-02-03） | ✅ |
+| 12 | POST | `/ai/conversations/{id}/rename` | 重命名对话 | ✅ |
+| 13 | POST | `/ai/conversations/{id}/delete` | 删除对话 | ✅ |
+| 14 | POST | `/ai/models/detect` | 检测可用模型（F-01-04） | ✅ |
+| 15 | POST | `/ai/agents/{id}/test` | 连接测试（F-01-04） | ✅ |
+| 16 | GET | `/ai/agents/{id}/models` | 缓存的可用模型 | ❌ |
+| 17 | GET | `/ai/agents/health` | 全部智能体健康检查 | ✅ |
+| 18 | GET | `/ai/available-tools` | 平台工具（按分类） | ✅ |
+| 19 | GET | `/ai/available-skills` | workspace 技能列表 | ✅ |
+| 20 | GET | `/ai/agents/{id}/tools` | MCP / Skill 工具列表 | ✅ |
+| 21 | POST | `/ai/agents/{id}/tools/mcp/save` | 新增 / 更新 MCP | ✅ |
+| 22 | POST | `/ai/agents/{id}/tools/mcp/test` | 测试 MCP 连通 | ✅ |
+| 23 | POST | `/ai/agents/{id}/tools/skill/upload` | 上传 skill 文件夹 | ✅ |
+| 24 | POST | `/ai/agents/{id}/tools/{tid}/toggle` | 启用 / 禁用工具 | ✅ |
+| 25 | POST | `/ai/agents/{id}/tools/{tid}/delete` | 删除工具（skill 清目录） | ✅ |
+| 26 | POST | `/ai/conversations/{id}/chat/stream` | SSE 流式对话（F-02-01） | ✅ |
+| 27 | GET | `/ai/conversations/{id}/tasks` | 对话关联任务 | ❌ |
+| 28 | GET | `/ai/conversations/{id}/tasks/{run_id}` | 单个任务详情 | ❌ |
+| 29 | GET | `/ai/tasks` | 任务便签看板 | ❌ |
+| 30 | POST | `/ai/upload-avatar` | 上传头像（data URI） | ✅ |
+| 31 | POST | `/ai/upload-file` | 上传并解析文件（F-02-04） | ✅ |
+| 32 | GET | `/ai/knowledge/status` | 知识库状态 | ✅ |
+| 33 | GET | `/ai/knowledge/documents` | 可索引文档列表 | ✅ |
+| 34 | POST | `/ai/knowledge/reindex` | 重建索引 | ✅ |
+| 35 | POST | `/ai/knowledge/documents/add` | 手动添加文档 | ❌ |
+| 36 | GET | `/ai/tools/schemas` | 工具定义（供 AgentScope） | ❌ |
+| 37 | GET | `/ai/tools/agent-config/{id}` | 智能体工具 / 技能 / 能力配置 | ❌ |
+| 38 | POST | `/ai/tools/{module}/{action}` | 工具网关执行 | ❌ |
+| 39 | GET | `/ai/toolbox` | 共享工具箱列表 | ✅ |
+| 40 | POST | `/ai/toolbox/create` | 新增共享项 | ✅ |
+| 41 | POST | `/ai/toolbox/{id}/update` | 更新共享项 | ✅ |
+| 42 | POST | `/ai/toolbox/{id}/delete` | 删除共享项 | ✅ |
+| 43 | POST | `/ai/toolbox/upload-skill` | 上传共享 skill | ✅ |
+| 44 | POST | `/ai/agents/{id}/tools/import-from-toolbox` | 导入共享项到智能体 | ✅ |
+
+> 端点 6 / 16 / 27~29 / 35~38 前端未直接消费（后端保留：一次性 Key 查看、任务历史、工具网关 HTTP 通道、手动加文档）。
+
+### 5.2 智能体详情（端点 3）
+
+**接口地址**：`GET /api/ai/agents/{id}`
+
+**响应 `agent` 字段**（核心）：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` / `name` / `avatar` / `tags` / `description` | — | 基本信息 |
+| `model_provider` / `model_name` / `base_url` | string | 模型配置 |
+| `api_key` | string | **脱敏值**（`mask_key`） |
+| `system_prompt` | string | 系统提示词 |
+| `temperature` / `max_tokens` | number | 采样参数 |
+| `formatter` / `max_iters` / `parallel_tool_calls` / `print_hint_msg` | — | AgentScope 参数 |
+| `memory_mode` / `long_term_memory_mode` / `enable_meta_tool` / `enable_rewrite_query` | — | 记忆 / 元工具 |
+| `enable_knowledge_base` / `enable_workspace_tools` / `enable_business_tools` / `enable_mcp_tools` / `enable_skills` | boolean | 能力开关 |
+| `generate_kwargs` | string | JSON 字符串 |
+| `skills_config` / `knowledge_sources` | object | 逐工具 / 逐文档开关 |
+| `compression_*` / `tts_enabled` | — | 压缩 / TTS |
+| `status` | string | active 等 |
+| `is_connected` / `last_checked_at` / `available_models` | — | 健康状态 |
+| `tools[]` | array | 每项含 `id/name/tool_type/config_json/enabled` |
+
+### 5.3 SSE 流式对话（端点 26）
+
+**接口地址**：`POST /api/ai/conversations/{id}/chat/stream`
+
+**请求字段**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|:--:|------|
+| `message` | string | 是* | 用户文本（有图片时可为空） |
+| `images` | array | 否 | `[{media_type, data(base64)}]`，最多 1 张 |
+| `display_text` | string | 否 | 前端展示文本（含附件标记） |
+
+**响应**：`text/event-stream`，事件为 AgentScope `reply_stream` 的 `event.model_dump()`，含 `type` 字段（`TEXT_BLOCK_DELTA` / `THINKING_BLOCK_*` / `TOOL_CALL_*` / `TOOL_RESULT_*` / `HINT_BLOCK` / `REQUIRE_USER_CONFIRM` / `REPLY_END` / `EXCEED_MAX_ITERS`）。终端事件附带 `_backend_msg_id`。
+
+**错误**：403 无权限 / 404 对话不存在 / 400 JSON 或消息非法。
+
+### 5.4 错误码汇总
+
+| 状态码 | 场景 |
+|:--:|------|
+| 400 | JSON 非法 / 字段校验失败 / 图片格式或超限 |
+| 401 | 未认证（`require_auth`） |
+| 403 | 非资源所有者（`check_agent_owner` / `check_conversation_access`） |
+| 404 | Agent / 对话 / 工具不存在 |
+| 409 | 重索引进行中 / HITL 队列满 / 工具箱重复导入 |
+
+### 5.5 契约变更
+
+| 版本 | 变更 |
+|------|------|
+| v5.0 | 端点 37→…（补齐 knowledge/health/tasks） |
+| v6.0 | 端点校正为 44（补齐 toolbox/available-tools/available-skills/tools 网关）；移除 register-scope / create-scope-session / send 阻塞兜底 / avatars 文件端点；`GET /models/detect` 改为 POST（检测）+ `GET /agents/{id}/models`（缓存）；头像改 data URI 存 DB |
+
+---
+
+## 6. 数据来源表
+
+| 表 | 表前缀 | 说明 |
+|------|:--:|------|
+| `ai_agents` | ai_ | 智能体配置（模型 / 参数 / 能力开关 / 健康 / 凭据缓存 / Key 揭示） |
+| `ai_tools` | ai_ | 每智能体工具配置（mcp / skill / platform），`tool_type` 区分 |
+| `ai_shared_tools` | ai_ | 共享工具箱（skill / mcp / extension） |
+| `ai_conversations` | ai_ | 对话（owner / agent / title / status / agent_scope_session_id） |
+| `ai_messages` | ai_ | 消息（content / blocks / reason / tokens / model_name / flow） |
+| `ai_tasks` | ai_ | 智能体任务（**当前无视图使用**） |
+| `ai_execution_logs` | ai_ | 执行日志（agent / task 可空 / level / message / metadata） |
+| `tr_test_runs` | tr_ | **跨模块**：任务历史（`ai-task-*` / `case-gen-*` 前缀），主权在 PRD-06 |
+
+---
+
+## 7. 非功能需求
+
+| 类别 | 指标 | 目标值 |
+|------|------|:--:|
+| 性能 | SSE 首 token | 心跳 2 分钟无事件触发；流式逐 token 推送 |
+| 可靠性 | SSE 断开恢复 | 切换 / 关闭保留已生成内容，后台续跑 |
+| 并发 | 同对话重复请求 | 取消 stale Task，保留最新 |
+| 安全 | API Key | 加密存储 + 脱敏 + 一次性查看；base_url 白名单防 SSRF |
+| 数据隔离 | 所有权 | Agent / 对话列表按 `owner_id` 过滤 |
+| 兼容性 | 模型提供商 | 6 家（dashscope/openai/anthropic/deepseek/gemini/custom） |
+
+---
+
+## 8. 非目标（Non-goals）
+
+| 不做的功能 | 原因 |
+|------|------|
+| AI 直连设备 / 直写数据库 | 一切通过 Tool 调 Django，架构红线 |
+| Agent Team（Leader + Worker 多智能体编排） | 当前单 Agent 进程内构建，无多智能体派发 |
+| 独立任务看板 UI（TaskStickyNote 网格） | 已移除，任务进度内嵌对话流 HintCard |
+| 长期记忆 / 元工具 / TTS 深度能力 | 字段已建模，能力未产品化 |
+| 图片多张上传 | 每次仅支持 1 张（后端校验） |
+
+---
+
+## 9. 关键约束速查
+
+| 编号 | 约束 | 实施位置 |
+|------|------|------|
+| C-01 | 写操作收敛：View / Tool → api.py → ORM；跨模块写走目标 api.py | `api.py` |
+| C-02 | 平台工具单一真相源 | `agent_scope/tool_registry.py` `TOOL_SCHEMAS` |
+| C-03 | AgentScope 进程内直连，禁止直连 DB / 设备 | `agent_scope/` |
+| C-04 | API Key 加密存储 + 脱敏 + 一次性查看 | `api.py` `encrypt_key/mask_key` + `reveal-key` |
+| C-05 | base_url 白名单校验（禁本机 / 非白名单主机） | `provider_registry.py` |
+| C-06 | 知识库 ChromaDB 由 `rag_service.py` 唯一拥有 | `rag_service.py` |
+| C-07 | 响应 `{status, data}` / `{status, message}`，snake_case | 全部端点 |
+| C-08 | 所有权隔离：Agent / 对话按 `owner_id` 过滤 | `permissions.py` |
+
+---
+
+## 10. 相关文件索引
+
+| 层 | 文件 | 说明 |
+|------|------|------|
+| 前端 | `frontend/src/modules/ai-assistant/index.vue` | 主工作台（4 Tab） |
+| 前端 | `frontend/src/modules/ai-assistant/index.logic.ts` | 编排器 `useAgentBoard` |
+| 前端 | `frontend/src/modules/ai-assistant/AgentDetail.vue` | 智能体配置（分区表单） |
+| 前端 | `frontend/src/modules/ai-assistant/ChatView.vue` | 对话页 |
+| 前端 | `frontend/src/modules/ai-assistant/EvaluatorTab.vue` | 评测中心 |
+| 前端 | `frontend/src/modules/ai-assistant/KnowledgeBase.vue` | 知识库管理 |
+| 前端 | `frontend/src/modules/ai-assistant/api/*.ts` | 数据层（agents / conversations / sse / toolbox） |
+| 前端 | `frontend/src/modules/ai-assistant/composables/` | useSSE / useConversation / useMessageStore / useAgentTools 等 |
+| 前端 | `frontend/src/modules/ai-assistant/constants.ts` | 常量 / 状态映射 |
+| 后端 | `apps/ai_assistant/models.py` | 7 表定义 |
+| 后端 | `apps/ai_assistant/urls.py` | 44 端点路由 |
+| 后端 | `apps/ai_assistant/views/` | agent / chat / conversation / hitl / model / file / knowledge / tool / toolbox / tool_gateway |
+| 后端 | `apps/ai_assistant/api.py` | 跨模块白名单 + 加密工具 |
+| 后端 | `apps/ai_assistant/serializers.py` | 输入校验 |
+| 后端 | `apps/ai_assistant/permissions.py` | 所有权检查 |
+| 后端 | `apps/ai_assistant/agent_scope/` | agent_factory / tool_registry / in_process_tool / provider_registry / rag_service / skill_registry |
+
+---
+
+## 附录A：功能边界规则
+
+| 边界 | 规则 |
+|------|------|
+| 我能做什么 | 智能体管理 · SSE 流式对话 · HITL · 文件 / 图片上传 · 知识库管理 · 评测中心 · 工具箱 |
+| 我不能做什么 | 直接操作设备（走 device_pool Tool）、直接定位元素（走 element_locator Tool）、直接执行测试（走 test_runner Tool）、直接写业务数据（走各模块 api.py） |
+| 如需越界 | 通过 14 平台 Tool 调用各模块 api.py / 只读 ORM；跨模块写走目标 App 的 `api.py` |
+| 数据可见性 | Agent / 对话 / 消息按 `owner_id` 隔离，非所有者 403 |

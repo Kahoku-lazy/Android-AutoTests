@@ -47,16 +47,16 @@ function formatSize(bytes) {
 
 async function fetchStatus() {
   try {
-    const { ok, data } = await getKnowledgeStatus()
-    if (ok) status.value = data
+    const data = await getKnowledgeStatus()
+    if (data.status) status.value = data.data
   } catch { /* ignore */ }
 }
 
 async function fetchDocuments() {
   loading.value = true
   try {
-    const { ok, data } = await getKnowledgeDocuments()
-    if (ok) documents.value = data.documents || []
+    const data = await getKnowledgeDocuments()
+    if (data.status) documents.value = data.data?.documents || []
   } catch (e) {
     loadError.value = "加载文档列表失败"
   } finally { loading.value = false }
@@ -70,12 +70,12 @@ async function loadAll() {
 async function reindex() {
   reindexing.value = true
   try {
-    const { ok, data, error } = await reindexKnowledge()
-    if (ok) {
+    const data = await reindexKnowledge()
+    if (data.status) {
       ElMessage.success('索引重建已开始，请稍后刷新')
       setTimeout(() => { fetchStatus(); fetchDocuments() }, 3000)
     } else {
-      ElMessage.error(error || '索引重建失败')
+      ElMessage.error(data.message || '索引重建失败')
     }
   } catch (e) {
     ElMessage.error('索引重建请求失败')

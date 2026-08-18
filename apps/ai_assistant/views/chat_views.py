@@ -134,6 +134,11 @@ async def chat_stream(request, conv_id):
 
     set_main_loop(asyncio.get_running_loop())
 
+    # ── Cache the loop for test_runner cross-thread dispatch (AI run_test tool) ──
+    from apps.test_runner.api import set_main_loop as set_test_runner_loop
+
+    set_test_runner_loop(asyncio.get_running_loop())
+
     # ── asyncio.Queue replaces the old sync queue.Queue ──
     result_queue: asyncio.Queue = asyncio.Queue()
 

@@ -9,7 +9,7 @@
     "filesystem": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/aeron/Desktop/workspace"],
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "D:/Github/Android-AutoTests"],
       "env": {}
     },
     "github": {

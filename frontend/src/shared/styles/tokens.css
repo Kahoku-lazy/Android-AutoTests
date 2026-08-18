@@ -262,6 +262,30 @@
   --ai-hint-yellow-bg:  #fff8e7;
   --ai-hint-yellow-border: #f7cd67;
 
+  /* ── AI 状态色（ChatView 状态徽章/连接指示/停止按钮，值迁移自原硬编码）── */
+  --ai-status-blue-bg:     #f0f4ff;
+  --ai-status-blue-text:   #4256b8;
+  --ai-status-blue-border: #6c80d4;
+  --ai-status-purple-bg:   #fef0ff;
+  --ai-status-purple-text: #9448b3;
+  --ai-status-purple-border: #c97adb;
+  --ai-status-orange-bg:   #fff5e6;
+  --ai-status-orange-text: #a36600;
+  --ai-status-orange-border: #e0a13a;
+  --ai-status-green-bg:    #e6f5e6;
+  --ai-status-green-text:  #2a7a2a;
+  --ai-status-green-border: #4caf50;
+  --ai-status-conn-bg:     #eef0f7;
+  --ai-status-conn-text:   #4a5a8a;
+  --ai-status-conn-border: #7889c4;
+  --ai-status-warm-bg:     #f5f3ed;
+  --ai-status-warm-text:   #988b7a;
+  --ai-status-warm-border: #d0c8b8;
+  --ai-status-danger:      #e85f5f;
+  --ai-status-danger-bg:   #fef0f0;
+  --ai-status-danger-text: #c43f3f;
+  --ai-status-danger-hover: #fde0e0;
+
   /* ── Case Manager 模块令牌 ── */
   --case-border-subtle:     rgba(162, 210, 255, 0.18);
   --case-border:            rgba(162, 210, 255, 0.24);

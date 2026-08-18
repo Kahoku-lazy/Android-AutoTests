@@ -39,7 +39,7 @@ select = [
 
 # ── isort 配置 (§3 import 顺序) ────────────────────────
 [lint.isort]
-known-first-party = ["apps", "agentscope_service", "config", "gateway", "shared", "models", "tools"]
+known-first-party = ["apps", "config", "gateway", "shared", "models", "tools"]
 lines-between-types = 1
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 

@@ -1,9 +1,8 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref } from 'vue'
 import { IconPlus } from '@/shared/icons/index'
 import AgentMcpDialog from './AgentMcpDialog.vue'
-import { fetchSharedTools, importFromToolbox } from '../api/toolbox'
+import { useToolbox } from '../composables/useToolbox'
 
 const props = defineProps({
   form: { type: Object, required: true },
@@ -47,38 +46,7 @@ const emit = defineEmits([
 ])
 
 // ── AI Toolbox import ──
-const toolboxItems = ref([])
-const toolboxLoading = ref(false)
-const importingIds = ref(new Set())
-
-onMounted(async () => {
-  toolboxLoading.value = true
-  try {
-    const data = await fetchSharedTools()
-    if (data.status) toolboxItems.value = data.items || []
-  } catch (e) { console.error('Failed to load toolbox:', e) }
-  toolboxLoading.value = false
-})
-
-async function doImportFromToolbox(item) {
-  if (!props.form.id) {
-    ElMessage.warning('请先保存智能体，再导入工具箱项目')
-    return
-  }
-  if (importingIds.value.has(item.id)) return
-  importingIds.value.add(item.id)
-  try {
-    const data = await importFromToolbox(props.form.id, item.id)
-    if (data.status) {
-      ElMessage.success(`已导入: ${item.name}`)
-      // Remove from available list after import
-      toolboxItems.value = toolboxItems.value.filter((i) => i.id !== item.id)
-    } else {
-      ElMessage.warning(data.message || '导入失败')
-    }
-  } catch (e) { ElMessage.error('导入失败') }
-  importingIds.value.delete(item.id)
-}
+const { items: toolboxItems, loading: toolboxLoading, importingIds, importFromToolbox: doImportFromToolbox } = useToolbox()
 
 const memoryToolActive = ref(['memory', 'platform'])
 
@@ -219,7 +187,10 @@ function formatSkillSize(bytes) {
             <div v-for="cat in toolCategories" :key="cat.key" class="module-card"
                  :class="{ selected: isCategorySelected(cat) }"
                  :style="{ '--mc-color': cat.color }"
-                 @click="emit('toggle-category', cat)">
+                 role="button" tabindex="0"
+                 @click="emit('toggle-category', cat)"
+                 @keydown.enter.prevent="emit('toggle-category', cat)"
+                 @keydown.space.prevent="emit('toggle-category', cat)">
               <div class="mc-icon">{{ cat.icon }}</div>
               <div class="mc-body">
                 <div class="mc-name">{{ cat.key }}</div>
@@ -251,7 +222,11 @@ function formatSkillSize(bytes) {
           </div>
           <div class="platform-tools-grid">
             <div v-for="skill in availableSkills" :key="skill.name" class="platform-tool-item"
-                 :class="{ selected: isSkillEnabled(skill.name) }" @click="toggleSkill(skill.name)">
+                 :class="{ selected: isSkillEnabled(skill.name) }"
+                 role="button" tabindex="0"
+                 @click="toggleSkill(skill.name)"
+                 @keydown.enter.prevent="toggleSkill(skill.name)"
+                 @keydown.space.prevent="toggleSkill(skill.name)">
               <el-checkbox :model-value="isSkillEnabled(skill.name)" />
               <div class="platform-tool-info">
                 <span class="platform-tool-name">{{ skill.name }}</span>
@@ -292,7 +267,10 @@ function formatSkillSize(bytes) {
               </div>
               <div class="kb-doc-card-right">
                 <span :class="['kb-doc-toggle', { on: doc.enabled }]"
+                      role="button" tabindex="0"
                       @click="toggleDocEnabled(doc.id)"
+                      @keydown.enter.prevent="toggleDocEnabled(doc.id)"
+                      @keydown.space.prevent="toggleDocEnabled(doc.id)"
                       :title="doc.enabled ? '已启用索引' : '已禁用索引'">
                   {{ doc.enabled ? '🔛' : '🔘' }}
                 </span>
@@ -415,7 +393,7 @@ function formatSkillSize(bytes) {
             <button
               class="tb-import-btn"
               :disabled="importingIds.has(item.id)"
-              @click="doImportFromToolbox(item)"
+              @click="doImportFromToolbox(form.id, item)"
             >
               {{ importingIds.has(item.id) ? '导入中...' : '导入' }}
             </button>
@@ -449,7 +427,7 @@ function formatSkillSize(bytes) {
 .memory-tools-collapse :deep(.el-collapse-item__header) { padding:14px 18px;font-size:var(--app-size-md);font-weight:700;color:var(--ink);background:var(--ai-warm-bg);border-bottom:1px solid var(--ai-bg-subtle); }
 .memory-tools-collapse :deep(.el-collapse-item__content) { padding:18px; }
 .collapse-title-row { display:flex;align-items:center;gap:10px;width:100%; }
-.collapse-badge { font-size:var(--app-size-xs);font-weight:600;color:var(--ai-teal);background:var(--ai-teal-bg);padding:2px 10px;border-radius:20px; }
+.collapse-badge { font-size:var(--app-size-xs);font-weight:600;color:var(--ai-teal);background:var(--ai-teal-bg);padding:2px 10px;border-radius:6px 10px 6px 10px; }
 .collapse-badge--muted { color:var(--ai-ink-muted);background:var(--app-border-lighter); }
 .platform-tools-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px; }
 .platform-tool-item { display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--ai-warm-border);border-radius:10px;cursor:pointer;transition:all .15s ease;background:var(--app-bg-card); }

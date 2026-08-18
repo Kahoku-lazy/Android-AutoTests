@@ -93,9 +93,13 @@ function onLeave() {
     ref="noteRef"
     class="sticky-note"
     :style="{ '--rot': rotation + 'deg' }"
+    role="button"
+    tabindex="0"
     @mouseenter="onEnter"
     @mouseleave="onLeave"
     @click="emit('select', $event)"
+    @keydown.enter.prevent="emit('select', $event)"
+    @keydown.space.prevent="emit('select', $event)"
   >
     <div
       ref="tapeRef"

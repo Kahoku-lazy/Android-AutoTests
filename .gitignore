@@ -143,6 +143,7 @@ skills-lock.json
 agent_scope_map.html
 tools/_tmp*/
 tools/_tmp_*.py
+.tmp-verify/
 
 # ── Runtime artifacts ──
 dump.rdb

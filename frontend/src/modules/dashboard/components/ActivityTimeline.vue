@@ -62,7 +62,7 @@ watch(() => props.items.length, revealItems)
 }
 
 .timeline__title {
-  font-family: var(--font-display, 'Cascadia Mono', 'Noto Sans SC', sans-serif);
+  font-family: var(--app-font-display);
   font-size: var(--app-size-md);
   font-weight: 700;
   color: var(--ink);
@@ -87,7 +87,7 @@ watch(() => props.items.length, revealItems)
 /* Item */
 .timeline-item {
   position: relative;
-  padding-left: 28px;
+  padding-left: 30px;
   padding-bottom: 20px;
   opacity: 0;
 }
@@ -98,8 +98,8 @@ watch(() => props.items.length, revealItems)
   position: absolute;
   left: 0;
   top: 4px;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   border: 2px solid var(--app-timeline-dot);
   background: var(--app-bg-card);
@@ -114,21 +114,22 @@ watch(() => props.items.length, revealItems)
 .timeline-item--agent .timeline-item__dot { border-color: var(--c-dashboard); }
 
 .timeline-item__dot-inner {
-  width: 6px;
-  height: 6px;
-  border-radius: 1px;
-  background: var(--app-ink-muted);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--app-timeline-dot);
 }
 .timeline-item--run .timeline-item__dot-inner { background: var(--app-status-purple); }
 .timeline-item--agent .timeline-item__dot-inner { background: var(--c-dashboard); }
 
 .timeline-item__line {
   position: absolute;
-  left: 7px;
+  left: 6px;
   top: 22px;
   bottom: 0;
-  width: 1.5px;
-  background: repeating-linear-gradient(0deg, var(--app-paper-dot) 0px, var(--app-paper-dot) 3px, transparent 3px, transparent 6px);
+  width: 2px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(0deg, var(--app-border-light) 0px, var(--app-border-light) 3px, transparent 3px, transparent 6px);
 }
 
 .timeline-item__content {
@@ -146,7 +147,7 @@ watch(() => props.items.length, revealItems)
 
 .timeline-item__action {
   font-size: var(--app-size-sm);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
 }
 
@@ -171,8 +172,8 @@ watch(() => props.items.length, revealItems)
 
 .timeline-item__tag {
   font-size: var(--app-size-xs);
-  padding: 2px 7px;
-  border-radius: 3px 6px 3px 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
   background: var(--app-bg-subtle);
   border: 1px solid var(--app-border-light);
   color: var(--app-ink-muted);

@@ -10,7 +10,7 @@ export interface StatsCardProps {
   prefix?: string
   suffix?: string
   desc?: string
-  /** sage | gray | rose | pale | deep | cream | dust（奶油低饱和填充，tokens.css --app-stat-*） */
+  /** sage | gray | rose | pale | deep | cream | dust（奶油低饱和点缀，tokens.css --app-stat-*） */
   color?: string
   path?: string
   loading?: boolean
@@ -38,18 +38,18 @@ const router = useRouter()
 const valueRef = ref<HTMLElement | null>(null)
 const displayed = ref(false)
 
-// ── 奶油低饱和填充映射（tokens.css ── 仪表盘统计卡 ──） ──
-const STAT_FILLS: Record<string, string> = {
-  sage: 'var(--app-stat-sage)',
-  gray: 'var(--app-stat-gray)',
-  rose: 'var(--app-stat-rose)',
-  pale: 'var(--app-stat-pale)',
-  deep: 'var(--app-stat-deep)',
-  cream: 'var(--app-stat-cream)',
-  dust: 'var(--app-stat-dust)',
+// ── 饱和度强调色映射（模块色 token，用于顶部条 / 图标 chip 底 / 图标描边） ──
+const COLOR_ACCENTS: Record<string, string> = {
+  sage:  'var(--c-device)',    // 设备在线 — 薄荷绿
+  gray:  'var(--c-ai)',        // 活跃智能体 — 柔粉
+  rose:  'var(--c-runner)',    // 运行中任务 — 桃粉
+  pale:  'var(--c-workflow)',  // 工作流 — 天蓝
+  deep:  'var(--c-case)',      // Android 用例/元素 — 青绿
+  cream: 'var(--c-element)',   // API 用例/接口 — 薰衣草紫
+  dust:  'var(--c-report)',    // 功能业务 — 灰紫
 }
 
-const fill = computed(() => STAT_FILLS[props.color] || STAT_FILLS['sage'])
+const fill = computed(() => COLOR_ACCENTS[props.color] || COLOR_ACCENTS['sage'])
 
 const trendText = computed(() => {
   if (props.trend === undefined) return ''
@@ -84,7 +84,7 @@ function navigate() {
   <div
     class="stats-card"
     :class="{ 'is-clickable': !!path }"
-    :style="{ '--fill': fill }"
+    :style="{ '--accent': fill }"
     :role="path ? 'button' : undefined"
     :tabindex="path ? 0 : undefined"
     @mouseenter="onCardEnter"
@@ -95,14 +95,14 @@ function navigate() {
     <SkeletonCard v-if="loading" />
 
     <template v-else>
-      <!-- 彩色铅笔排线填充带：图标 + 标签同行，居中，位于填充区内 -->
-      <div class="stats-card__band">
+      <!-- 头部：模块色图标 + 标签同行，右上角 live 呼吸点 -->
+      <div class="stats-card__head">
         <span class="stats-card__icon-chip">
           <slot name="icon">
             <div class="stats-card__icon-placeholder"></div>
           </slot>
         </span>
-        <div class="stats-card__title">{{ label }}</div>
+        <span class="stats-card__title">{{ label }}</span>
         <span v-if="live" class="stats-card__live" aria-hidden="true"></span>
       </div>
 
@@ -127,95 +127,87 @@ function navigate() {
 
 <style scoped>
 /* ═══════════════════════════════════════════
-   统计卡 — 铅笔涂鸦 × 奶油低饱和（方角十字收角）
+   统计卡 — 纯净指标卡（白底 · 模块色点缀 · 统一圆角轻阴影）
    ═══════════════════════════════════════════ */
 .stats-card {
   position: relative;
   background: var(--app-bg-card, #fff);
-  border: 2.5px solid var(--app-stat-line);
-  border-radius: 0; /* 方角设计 */
-  box-shadow: 3px 3px 0 var(--app-stat-shadow);
+  border: 1px solid var(--app-border-light);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-sm);
   display: flex;
   flex-direction: column;
-  aspect-ratio: 1 / 1; /* 方形 */
+  min-height: 116px;
   transition: transform var(--app-duration) var(--app-ease),
-    box-shadow var(--app-duration) var(--app-ease);
+    box-shadow var(--app-duration) var(--app-ease),
+    border-color var(--app-duration) var(--app-ease);
+}
+.stats-card::before {
+  /* 顶部模块色点缀条 */
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: var(--app-radius-md) var(--app-radius-md) 0 0;
+  background: var(--accent);
+  pointer-events: none;
 }
 .stats-card:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 5px 5px 0 var(--app-stat-shadow-hover);
+  box-shadow: var(--app-shadow-lg);
+  border-color: var(--app-border-lighter);
 }
 .stats-card:focus-visible {
-  outline: 2px dashed var(--app-stat-line);
-  outline-offset: 4px;
+  outline: 2px solid var(--app-status-purple);
+  outline-offset: 3px;
 }
 .stats-card.is-clickable { cursor: pointer; }
 
-/* 四角十字交叉笔触 */
-.stats-card::before {
-  content: '';
-  position: absolute;
-  inset: -3px;
-  pointer-events: none;
-  z-index: 3;
-  background:
-    linear-gradient(var(--app-stat-line), var(--app-stat-line)) left 0 top 0 / 14px 2.5px no-repeat,
-    linear-gradient(var(--app-stat-line), var(--app-stat-line)) left 0 top 0 / 2.5px 14px no-repeat,
-    linear-gradient(var(--app-stat-line), var(--app-stat-line)) right 0 top 0 / 14px 2.5px no-repeat,
-    linear-gradient(var(--app-stat-line), var(--app-stat-line)) right 0 top 0 / 2.5px 14px no-repeat,
-    linear-gradient(var(--app-stat-line), var(--app-stat-line)) left 0 bottom 0 / 14px 2.5px no-repeat,
-    linear-gradient(var(--app-stat-line), var(--app-stat-line)) left 0 bottom 0 / 2.5px 14px no-repeat,
-    linear-gradient(var(--app-stat-line), var(--app-stat-line)) right 0 bottom 0 / 14px 2.5px no-repeat,
-    linear-gradient(var(--app-stat-line), var(--app-stat-line)) right 0 bottom 0 / 2.5px 14px no-repeat;
-}
-
-/* 奶油低饱和铅笔排线填充带：边缘留白内嵌，直线描边 */
-.stats-card__band {
-  position: relative;
-  height: 36px;
-  flex-shrink: 0;
-  margin: 6px 6px 0; /* 边缘留白：填充区与卡片边框的间隙 */
+/* 头部：图标 + 标签 */
+.stats-card__head {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 6px;
-  padding: 0 6px;
-  border: 2px solid var(--app-stat-line);
-  background:
-    repeating-linear-gradient(115deg, rgba(122,120,116,0.10) 0 1.5px, transparent 1.5px 7px),
-    repeating-linear-gradient(65deg, rgba(255,255,255,0.55) 0 1.5px, transparent 1.5px 9px),
-    var(--fill);
+  padding: 12px 12px 0;
+  flex-shrink: 0;
+  min-width: 0;
 }
 .stats-card__icon-chip {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1.5px solid var(--app-stat-line);
-  color: var(--app-stat-line);
+  border-radius: 7px;
+  background: var(--accent);
+  color: #fff;
 }
 .stats-card__icon-chip :deep(svg) {
-  stroke: var(--app-stat-line);
-  color: var(--app-stat-line);
+  stroke: #fff;
+  color: #fff;
 }
 .stats-card__icon-placeholder {
   width: 12px;
   height: 12px;
-  background: var(--app-stat-line-soft);
+  background: var(--accent);
 }
 .stats-card__title {
-  font-size: var(--app-size-xs);
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: var(--app-stat-text);
+  flex: 1;
+  min-width: 0;
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
   white-space: nowrap;
+  text-overflow: ellipsis;
+  line-height: 1.3;
 }
 .stats-card__live {
   position: absolute;
-  top: -4px;
-  right: -4px;
+  top: 8px;
+  right: 9px;
   width: 8px;
   height: 8px;
   background: var(--app-bg-card, #fff);
@@ -235,48 +227,57 @@ function navigate() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  padding: 6px 10px 0;
+  gap: 4px;
+  padding: 0 14px;
 }
 .stats-card__stat strong {
   display: block;
   font-family: var(--app-font-display);
   font-size: var(--app-size-2xl);
   font-weight: 800;
-  color: var(--app-stat-text);
-  line-height: 1;
+  /* 用主题偏移色加深，保证白卡上的对比度与"数值=主题色"辨识 */
+  color: color-mix(in srgb, var(--accent) 62%, var(--ink));
+  line-height: 1.15;
 }
 .stats-card__stat small {
   font-size: var(--app-size-xs);
-  font-weight: 600;
-  color: var(--app-stat-line-soft);
+  font-weight: 700;
+  color: var(--app-status-success-text);
 }
 .stats-card__desc {
   font-size: var(--app-size-xs);
   font-weight: 600;
-  color: var(--app-stat-line-soft);
+  color: var(--app-ink-muted);
   text-align: center;
   line-height: 1.4;
 }
 
 .stats-card__enter {
   align-self: center;
-  margin-bottom: 10px;
+  margin: 8px 0 14px;
   font-size: var(--app-size-xs);
   font-weight: 800;
-  color: var(--app-stat-text);
-  background: var(--app-bg-card, #fff);
-  border: 1.5px solid var(--app-stat-line);
-  border-radius: 0;
-  padding: 3px 8px;
+  color: var(--ink);
+  background: var(--app-bg-subtle);
+  border: 1px solid var(--app-border-light);
+  border-radius: 999px;
+  padding: 4px 12px;
   cursor: pointer;
   font-family: inherit;
   line-height: 1.2;
+  transition: background var(--app-duration-fast) var(--app-ease),
+    border-color var(--app-duration-fast) var(--app-ease),
+    color var(--app-duration-fast) var(--app-ease);
 }
-.stats-card__enter:hover { background: var(--app-stat-hover); }
+.stats-card__enter:hover {
+  background: var(--app-highlight);
+  border-color: var(--app-highlight);
+  color: var(--ink);
+}
 
 @media (prefers-reduced-motion: reduce) {
   .stats-card { transition: none; }
   .stats-card:hover { transform: none; }
+  .stats-card__live { animation: none; }
 }
 </style>

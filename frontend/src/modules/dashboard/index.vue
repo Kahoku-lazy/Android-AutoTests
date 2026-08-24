@@ -77,7 +77,7 @@ const {
             path="/devices"
             :loading="loading"
           >
-            <template #icon><IconDevice :size="12" /></template>
+            <template #icon><IconDevice :size="15" /></template>
           </StatsAppCard>
           <StatsAppCard
             label="活跃智能体"
@@ -86,7 +86,7 @@ const {
             path="/ai-assistant"
             :loading="loading"
           >
-            <template #icon><IconBrain :size="12" /></template>
+            <template #icon><IconBrain :size="15" /></template>
           </StatsAppCard>
           <StatsAppCard
             label="运行中任务"
@@ -96,7 +96,7 @@ const {
             :loading="loading"
             :live="stats.runs.active > 0"
           >
-            <template #icon><IconPlay :size="12" /></template>
+            <template #icon><IconPlay :size="15" /></template>
           </StatsAppCard>
           <StatsAppCard
             label="工作流"
@@ -105,7 +105,7 @@ const {
             path="/workflow"
             :loading="loading"
           >
-            <template #icon><IconLayers :size="12" /></template>
+            <template #icon><IconLayers :size="15" /></template>
           </StatsAppCard>
         </div>
       </section>
@@ -127,7 +127,7 @@ const {
             :loading="loading"
           >
             <template #icon>
-              <component :is="item.icon" :size="12" />
+              <component :is="item.icon" :size="15" />
             </template>
           </StatsAppCard>
         </div>
@@ -150,7 +150,7 @@ const {
             :loading="loading"
           >
             <template #icon>
-              <component :is="item.icon" :size="12" />
+              <component :is="item.icon" :size="15" />
             </template>
           </StatsAppCard>
         </div>

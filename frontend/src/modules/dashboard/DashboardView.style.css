@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Paper × Polaroid — 仪表盘布局
+   仪表盘布局 — 清新简洁风（暖纸底 · 收敛装饰 · 统一圆角轻阴影）
    ═══════════════════════════════════════════ */
 
 /* ── 底纹 + 全局 ── */
@@ -21,15 +21,7 @@
   padding: 0 var(--app-space-lg) var(--app-space-lg);
   display: flex;
   flex-direction: column;
-  gap: var(--app-space-md);
-}
-
-/* ── Stats Grid — 紧凑方形涂鸦卡（148px 定宽，自动列数） ── */
-.dashboard__stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, 148px);
-  gap: var(--app-space-sm);
-  padding-top: 6px;
+  gap: var(--app-space-xl);
 }
 
 /* ── Section 区 ── */
@@ -44,52 +36,55 @@
   margin-bottom: 0;
 }
 .doc-section__title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-family: var(--app-font-display);
-  font-size: var(--app-size-lg);
+  font-size: var(--app-size-md);
   font-weight: 700;
   color: var(--ink);
-  display: inline-block;
-  position: relative;
-  margin-bottom: 8px;
+  margin: 0 0 4px;
+  letter-spacing: 0.01em;
 }
-.doc-section__title::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%232d2d2d' stroke-width='2' fill='none'/%3E%3C/svg%3E") repeat-x;
-  background-size: 40px 3px;
+.doc-section__title :deep(svg) {
+  width: 19px;
+  height: 19px;
+  stroke: var(--ink);
+  flex-shrink: 0;
+}
+.doc-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--app-size-xs);
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--app-bg-subtle);
+  color: var(--app-ink-muted);
+  border: 1px solid var(--app-border-light);
+  font-weight: 700;
+  margin-left: 6px;
+  letter-spacing: 0.02em;
 }
 .doc-section__label {
   font-size: var(--app-size-xs);
   color: var(--app-ink-muted);
   font-weight: 600;
-  margin: 0 0 12px;
-}
-.doc-tag {
-  font-size: var(--app-size-xs);
-  padding: 1px 8px;
-  border-radius: 4px 8px 4px 8px;
-  background: var(--app-bg-card);
-  color: var(--app-ink-muted);
-  border: 1.5px solid var(--app-border-light);
-  font-weight: 700;
-  margin-left: 8px;
-}
-.doc-section__title :deep(svg) {
-  width: 19px;
-  height: 19px;
-  vertical-align: -3px;
-  margin-right: 7px;
+  margin: 0 0 14px;
 }
 
-/* ── Trends — 拍立得横排卡片 ── */
+/* ── Stats Grid — 纯净指标卡（自动列数，紧凑矩形，标签单行可见） ── */
+.dashboard__stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 168px);
+  gap: var(--app-space-md);
+  padding-top: 2px;
+}
+
+/* ── Trends — 双卡横排 ── */
 .dashboard__trends {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
-  gap: 14px;
+  gap: var(--app-space-md);
   align-items: stretch;
 }
 @media (max-width: 960px) {
@@ -102,34 +97,16 @@
 }
 .trends-chart-card :deep(.el-card__body),
 .trends-tasks-card :deep(.el-card__body) {
-  padding: 12px 12px 30px 12px;
-  border-radius: 6px 10px 6px 10px;
+  padding: var(--app-space-md);
+  border-radius: var(--app-radius-md);
   background: var(--app-bg-card);
-  border: 2.5px solid var(--ink);
+  border: 1px solid var(--app-border-light);
   flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  box-shadow: var(--app-shadow-md);
-  position: relative;
+  box-shadow: var(--app-shadow-sm);
 }
-/* 图钉 */
-.trends-chart-card :deep(.el-card__body)::before,
-.trends-tasks-card :deep(.el-card__body)::before {
-  content: '';
-  position: absolute;
-  top: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 8px;
-  height: 8px;
-  background: radial-gradient(circle, var(--app-pushpin-light) 30%, var(--app-pushpin-dark) 100%);
-  border-radius: 50%;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
-  z-index: 2;
-}
-.trends-chart-card { transform: rotate(-0.3deg); }
-.trends-tasks-card { transform: rotate(0.4deg); }
 .trends-chart-card :deep(.el-card) {
   background: transparent; border: none; box-shadow: none;
 }
@@ -140,33 +117,31 @@
   font-size: var(--app-size-sm);
   font-weight: 800;
   color: var(--ink);
-  margin-bottom: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  margin-bottom: 12px;
+  letter-spacing: 0.01em;
 }
 
-/* ── Footer ── */
+/* ── Footer — 轻量信息条 ── */
 .dashboard__footer {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 24px;
-  padding: 14px 20px;
-  background: var(--app-footer-yellow);
-  border: 2.5px solid var(--ink);
-  border-radius: 6px 10px 6px 10px;
+  gap: var(--app-space-xl);
+  padding: 12px 16px;
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-light);
+  border-radius: var(--app-radius-md);
+  color: var(--app-ink-muted);
   font-size: var(--app-size-sm);
-  font-weight: 700;
-  color: var(--app-footer-yellow-text);
-  font-family: var(--app-font-display);
 }
 .dashboard__footer-item {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: var(--app-size-sm);
+  font-weight: 600;
 }
 .dashboard__footer-item :deep(svg) {
-  color: var(--app-footer-yellow-text);
-  stroke: var(--app-footer-yellow-text);
+  color: var(--app-ink-muted);
+  stroke: var(--app-ink-muted);
 }

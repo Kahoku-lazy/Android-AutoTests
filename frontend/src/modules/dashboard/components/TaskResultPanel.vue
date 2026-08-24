@@ -101,7 +101,7 @@ function openTask(task: RecentTask) {
 </template>
 
 <style scoped>
-/* Paper × Polaroid — 任务结果面板 */
+/* 任务结果面板 — 纯净卡片风 */
 .task-result-panel {
   display: flex;
   flex-direction: column;
@@ -120,71 +120,87 @@ function openTask(task: RecentTask) {
 .summary-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  border-radius: 4px 8px 4px 8px;
-  font-size: var(--app-size-xs);
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
-  border: 2px solid var(--ink);
+  border: 1px solid var(--app-border-light);
   background: var(--app-bg-card);
+  color: var(--ink);
 }
 
-.summary-chip.is-success { border-color: var(--app-status-success); color: var(--app-status-success-text); }
-.summary-chip.is-failed  { border-color: var(--app-status-danger); color: var(--app-status-danger-text); }
+.summary-chip.is-success {
+  border-color: var(--app-status-success-bg);
+  background: var(--app-status-success-bg);
+  color: var(--app-status-success-text);
+}
+.summary-chip.is-failed {
+  border-color: var(--app-status-danger-bg);
+  background: var(--app-status-danger-bg);
+  color: var(--app-status-danger-text);
+}
 
 .summary-chip__icon {
-  width: 16px; height: 16px; border-radius: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center;
   font-size: var(--app-size-xs); font-weight: 800;
-  background: var(--app-bg-subtle);
+  background: var(--app-bg-card);
 }
 .summary-chip__value { font-size: var(--app-size-md); font-weight: 800; }
 
 .task-result-panel__list {
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; flex-direction: column; gap: 8px;
   flex: 1; min-height: 0; overflow-y: auto;
   --task-row-height: 68px;
-  max-height: calc(var(--task-row-height) * 4 + 6px * 3);
+  max-height: calc(var(--task-row-height) * 4 + 8px * 3);
 }
 
 .task-row {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 10px 12px; border-radius: 4px 8px 4px 8px;
-  background: var(--app-bg-card); border: 1.5px solid var(--app-border-light);
-  transition: background var(--app-duration-fast) var(--app-ease);
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 10px 12px; border-radius: var(--app-radius-sm);
+  background: var(--app-bg-card); border: 1px solid var(--app-border-light);
+  transition: background var(--app-duration-fast) var(--app-ease),
+    border-color var(--app-duration-fast) var(--app-ease);
 }
 .task-row--clickable { cursor: pointer; }
-.task-row--clickable:hover { background: rgba(78, 205, 196, 0.12); }
+.task-row--clickable:hover {
+  background: var(--app-bg-subtle);
+  border-color: var(--app-border-lighter);
+}
 .task-row__status {
-  width: 28px; height: 28px; border-radius: 4px 8px 4px 8px;
+  width: 28px; height: 28px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   font-size: var(--app-size-sm); font-weight: 800; flex-shrink: 0;
-  border: 2px solid var(--ink);
 }
-.task-row__status.is-success { background: var(--app-pass); color: var(--ink); }
-.task-row__status.is-failed  { background: var(--app-fail); color: var(--ink); }
-.task-row__status.is-partial { background: var(--app-status-warning-bg); color: var(--ink); }
-.task-row__status.is-running { background: var(--app-status-purple-bg); color: var(--ink); animation: pulse 1.5s ease-in-out infinite; }
+.task-row__status.is-success { background: var(--app-status-success-bg); color: var(--app-status-success-text); }
+.task-row__status.is-failed  { background: var(--app-status-danger-bg); color: var(--app-status-danger-text); }
+.task-row__status.is-partial { background: var(--app-status-warning-bg); color: var(--app-warning-text); }
+.task-row__status.is-running { background: var(--app-status-purple-bg); color: var(--app-status-purple-text); animation: pulse 1.5s ease-in-out infinite; }
 .task-row__status.is-idle    { background: var(--app-bg-subtle); color: var(--app-ink-muted); }
 
 .task-row__body { flex: 1; min-width: 0; }
 .task-row__title { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); margin-bottom: 3px; }
 
-.task-row__cases { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 3px; }
+.task-row__cases { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 3px; }
 .case-icon {
-  width: 20px; height: 20px; border-radius: 3px 6px 3px 6px;
+  width: 20px; height: 20px; border-radius: 6px;
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: var(--app-size-xs); font-weight: 800; border: 1.5px solid var(--ink);
+  font-size: var(--app-size-xs); font-weight: 800;
 }
-.case-icon.is-success { background: var(--app-pass); color: var(--ink); }
-.case-icon.is-failed  { background: var(--app-fail); color: var(--ink); }
-.case-icon.is-partial { background: var(--app-status-warning-bg); color: var(--ink); }
-.case-icon.is-running { background: var(--app-status-purple-bg); color: var(--ink); }
+.case-icon.is-success { background: var(--app-status-success-bg); color: var(--app-status-success-text); }
+.case-icon.is-failed  { background: var(--app-status-danger-bg); color: var(--app-status-danger-text); }
+.case-icon.is-partial { background: var(--app-status-warning-bg); color: var(--app-warning-text); }
+.case-icon.is-running { background: var(--app-status-purple-bg); color: var(--app-status-purple-text); }
 
 .task-row__stats { font-size: var(--app-size-xs); color: var(--app-ink-muted); font-weight: 600; }
-.task-row__time { font-size: var(--app-size-xs); color: var(--app-ink-muted); white-space: nowrap; flex-shrink: 0; padding-top: 2px; }
+.task-row__time { font-size: var(--app-size-xs); color: var(--app-ink-muted); white-space: nowrap; flex-shrink: 0; padding-top: 3px; }
 
 .task-result-panel__empty { text-align: center; color: var(--app-ink-muted); font-size: var(--app-size-sm); padding: 20px 0; }
 
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .task-row__status.is-running { animation: none; }
+}
 </style>

@@ -135,8 +135,8 @@
 .wb-shell .ac-table th.el-table__cell {
   background: var(--app-bg-subtle); color: var(--ink);
   font-weight: 700; font-size: var(--app-size-xs); text-transform: uppercase;
-  letter-spacing: 0.04em; border-bottom: 2.5px solid var(--ink);
+  letter-spacing: 0.04em; border-bottom: 1px solid var(--app-border-light);
 }
 .wb-shell .ac-table td.el-table__cell {
-  color: var(--ink); border-bottom: 1px solid var(--app-border-light);
+  color: var(--ink); border-bottom: 1px solid var(--app-border-lighter);
 }

@@ -19,6 +19,7 @@
 
 - 心跳轮询 `HEARTBEAT_INTERVAL = 30000`（30s，改这里即改全局行为）
 - 表格列 `COLUMNS`、筛选 `FILTER_TABS`、状态文案 `DEVICE_STATUS_MAP`、连接类型 `CONNECTION_TYPE_LABEL`
+- **开发调试 mock 按钮**：设备列表工具栏的「开发调试」开关（`useDevicePoolState.toggleDevMock`），开启时 `fetchDevices()` 用 `makeMockDevices(60)` 注入 60 条模拟设备（测分页/横向滚动），关闭时回拉真实后端。`devMockEnabled` 状态默认 false，**交付/联调真实设备时保持关闭**。
 
 ## 本模块协议要点
 

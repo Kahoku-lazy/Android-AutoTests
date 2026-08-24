@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Device-Pool — 设备管理工作台样式
+   Device-Pool — 设备管理工作台样式（清新简洁风）
    ═══════════════════════════════════════════ */
 
 .device-workbench {
@@ -16,8 +16,8 @@
   flex-direction: column;
   overflow-x: hidden;
   overflow-y: auto;
-  padding: 20px 20px 20px;
-  gap: 18px;
+  padding: var(--app-space-lg);
+  gap: var(--app-space-xl);
 }
 
 .header-actions {
@@ -26,49 +26,64 @@
   gap: 10px;
 }
 
+/* ── Section ── */
 .device-section {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  background: rgba(107,203,119,0.04);
-  border: 2.5px solid rgba(107,203,119,0.2);
-  border-radius: var(--app-radius-md);
-  padding: 18px;
+  gap: 12px;
+  background: transparent;
+  border: none;
+  padding: 0;
 }
-
-/* ── Section 标题 — 手绘波浪下划线 ── */
+.device-section--list {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+/* ── Section 标题 ── */
 .doc-section__header {
   flex-shrink: 0;
   margin-bottom: 0;
 }
 .doc-section__title {
   font-family: var(--app-font-display);
-  font-size: var(--app-size-lg); font-weight: 700; color: var(--ink);
-  display: inline-block; position: relative; margin-bottom: 4px;
-}
-.doc-section__title::after {
-  content: '';
-  position: absolute;
-  bottom: -1px; left: 0; right: 0; height: 3px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%232d2d2d' stroke-width='2' fill='none'/%3E%3C/svg%3E") repeat-x;
-  background-size: 40px 3px;
+  font-size: var(--app-size-md);
+  font-weight: 700;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  letter-spacing: 0.01em;
 }
 .doc-section__title .doc-tag {
-  font-size: var(--app-size-xs); padding: 1px 8px; border-radius: 4px 8px 4px 8px;
-  background: var(--app-bg-card); color: var(--app-ink-muted); border: 1.5px solid var(--app-border-light);
-  font-weight: 700; margin-left: 8px;
+  font-size: var(--app-size-xs);
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--app-bg-subtle);
+  color: var(--app-ink-muted);
+  border: 1px solid var(--app-border-light);
+  font-weight: 700;
 }
 .doc-section__label {
-  color: var(--app-ink-muted); font-size: var(--app-size-xs);
+  color: var(--app-ink-muted);
+  font-size: var(--app-size-xs);
+  font-weight: 600;
   margin-top: 2px;
 }
-.device-section--list {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+
+/* ── KPI 统计卡片（干净网格，无微旋转） ── */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--app-space-md);
+  flex-shrink: 0;
+}
+@media (max-width: 900px) {
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* ── Device Toolbar — 筛选 + 操作 + 视图切换 ── */
@@ -78,7 +93,7 @@
   gap: 12px;
   flex-wrap: wrap;
   flex-shrink: 0;
-  padding-bottom: 10px;
+  padding-bottom: 4px;
 }
 .device-toolbar__right {
   display: flex;
@@ -87,163 +102,204 @@
   margin-left: auto;
 }
 .filter-count {
-  font-size: var(--app-size-xs); color: var(--app-text-secondary); font-weight: 600;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 4px 10px;
+  background: var(--app-bg-subtle);
+  border-radius: 999px;
+}
+.dev-mock-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--app-bg-subtle);
+  border: 1px solid var(--app-border-light);
+}
+.dev-mock-toggle__label {
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--app-ink-muted);
   white-space: nowrap;
 }
 
-/* ── KPI 统计卡片 — 拍立得微旋转 ── */
-.kpi-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--app-space-md);
-  flex-shrink: 0;
-}
-.kpi-row > :nth-child(1) { transform: rotate(-0.8deg); }
-.kpi-row > :nth-child(2) { transform: rotate(0.5deg); }
-.kpi-row > :nth-child(3) { transform: rotate(-0.4deg); }
-.kpi-row > :nth-child(4) { transform: rotate(0.6deg); }
-/* z-index 5 = hover 卡片浮于同级内容区之上（低于 50 固定头部/60 下拉层级） */
-.kpi-row > :hover { transform: rotate(0deg) scale(1.03) !important; z-index: 5; }
-
-@media (max-width: 900px) {
-  .kpi-row { grid-template-columns: repeat(2, 1fr); }
-}
-
-/* ── 视图切换 ── */
+/* ── 视图切换（干净分段控件） ── */
 .view-toggle {
-  display: flex; gap: 0;
-  border: 2px solid var(--c-device); border-radius: 4px 8px 4px 8px;
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--app-border-light);
+  border-radius: var(--app-radius-sm);
   overflow: hidden;
+  background: var(--app-bg-card);
 }
 .view-btn {
-  padding: 5px 12px; font-size: var(--app-size-xs); font-weight: 700;
-  background: var(--app-bg-card); color: var(--app-ink-muted); border: none;
-  cursor: pointer; font-family: inherit; transition: all 0.12s;
+  padding: 5px 12px;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  background: transparent;
+  color: var(--app-ink-muted);
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s;
   border-right: 1px solid var(--app-border-light);
 }
 .view-btn:last-child { border-right: none; }
-.view-btn.active { background: var(--c-device); color: var(--paper); }
-.view-btn:hover:not(.active) { color: var(--c-device); }
+.view-btn.active { background: var(--app-bg-subtle); color: var(--ink); }
+.view-btn:hover:not(.active) { color: var(--ink); }
 
 /* ── 卡片分组视图 ── */
 .card-grid-grouped {
-  flex: 1; min-height: 0; overflow-y: auto;
-  display: flex; flex-direction: column; gap: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   padding: 4px 0;
 }
 .card-group-title {
-  font-family: var(--app-font-display); font-size: var(--app-size-lg); font-weight: 700;
-  color: var(--ink); display: flex; align-items: center; gap: 8px;
+  font-family: var(--app-font-display);
+  font-size: var(--app-size-md);
+  font-weight: 700;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 10px;
 }
 .card-group-title::after {
-  content: ''; flex: 1; height: 2px; background: var(--app-border-light); border-radius: 1px;
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--app-border-light);
 }
 .card-group-count {
-  font-family: var(--app-font-mono); font-size: var(--app-size-xs); color: var(--app-ink-muted);
-  background: var(--app-bg-subtle); padding: 2px 8px; border-radius: 3px 6px 3px 6px;
-  border: 1.5px solid var(--app-border-light);
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  color: var(--app-ink-muted);
+  background: var(--app-bg-subtle);
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--app-border-light);
 }
 .card-group-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--app-space-md);
 }
 @media (max-width: 900px) { .card-group-grid { grid-template-columns: repeat(2, 1fr); } }
 
-/* ── 操作按钮（局域网 + 刷新）── */
+/* ── 操作按钮（局域网 + 刷新） ── */
 .action-bar-btn {
-  gap: 5px !important; padding: 5px 14px !important;
-  border-radius: 4px 8px 4px 8px !important;
-  border: 2px solid var(--c-device) !important;
-  background: var(--app-bg-card) !important; color: var(--app-status-success-text) !important;
+  gap: 5px !important;
+  padding: 5px 14px !important;
+  border-radius: var(--app-radius-sm) !important;
+  border: 1px solid var(--app-border-light) !important;
+  background: var(--app-bg-card) !important;
+  color: var(--ink) !important;
   font-weight: 700 !important;
+  box-shadow: none !important;
 }
-.action-bar-btn:hover { background: var(--app-pass) !important; }
+.action-bar-btn:hover { background: var(--app-bg-subtle) !important; }
 
 /* ── 表格工具栏 ── */
 .table-toolbar {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 10px; flex-wrap: wrap; padding: 0 0 10px; flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 0 0 10px;
+  flex-shrink: 0;
 }
 .page-size-control { display: flex; align-items: center; gap: 8px; }
 .toolbar-label { font-size: var(--app-size-xs); font-weight: 700; color: var(--app-ink-muted); white-space: nowrap; }
 .page-size-btns { display: flex; gap: 6px; }
 .page-size-btn {
-  min-width: 40px;
-  padding: 5px 10px;
-  border-radius: 4px 8px 4px 8px;
-  border: 2px solid var(--app-border-light);
+  min-width: 36px;
+  padding: 4px 10px;
+  border-radius: var(--app-radius-sm);
+  border: 1px solid var(--app-border-light);
   background: var(--app-bg-card);
   color: var(--app-ink-muted);
   font-size: var(--app-size-sm);
   font-weight: 700;
   cursor: pointer;
-  box-shadow: none;
   transition: all 0.15s;
 }
-.page-size-btn:hover { border-color: var(--c-workflow); color: var(--c-workflow); }
+.page-size-btn:hover { border-color: var(--app-border-lighter); color: var(--ink); }
 .page-size-btn.active {
-  background: var(--app-page-active-bg);
-  border-color: var(--c-workflow);
-  color: var(--c-workflow);
+  background: var(--app-bg-subtle);
+  border-color: var(--ink);
+  color: var(--ink);
 }
 .table-toolbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
 .page-info { font-size: var(--app-size-sm); color: var(--app-ink-muted); font-weight: 600; white-space: nowrap; }
 .page-nav { display: flex; gap: 8px; }
 
-/* ── 表格卡片 ── */
+/* ── 表格卡片（轻边 + 轻阴影，高度随 pageSize 行数自适应） ── */
 .table-card {
-  flex: 1; min-height: 0; min-width: 0;
-  display: flex; flex-direction: column; overflow: hidden;
-  border-radius: 6px 10px 6px 10px;
-  border: 2.5px solid var(--c-device);
-  box-shadow: 2px 3px 0 rgba(107,203,119,0.15);
+  flex-shrink: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--app-radius-md);
+  border: 1px solid var(--app-border-light);
+  box-shadow: var(--app-shadow-sm);
   background: var(--app-bg-card);
 }
 .table-card :deep(.el-card__body) {
-  flex: 1; min-height: 0; display: flex; flex-direction: column;
-  overflow: hidden; padding: 0;
-}
-
-/* ── AppTable wrapper inside AppCard ── */
-.device-table-wrapper {
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+/* ── AppTable wrapper — 横向滚动窗口（蓝色常驻滚动条，锚定卡片底部） ── */
+.device-table-wrapper {
   min-width: 0;
   padding: 0;
-  overflow-y: auto;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
-  scrollbar-color: var(--app-paper-dot) transparent;
+  scrollbar-color: var(--c-workflow) transparent;
+}
+/* 让 el-table 列按内容总宽平铺，横向滚动交给 wrapper（蓝色滚动条锚定卡片底部） */
+.device-table-wrapper :deep(.el-table) {
+  min-width: max-content;
+  width: auto !important;
 }
 .device-table-wrapper::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 .device-table-wrapper::-webkit-scrollbar-thumb {
-  background: var(--app-paper-dot);
-  border-radius: 3px;
+  background: var(--c-workflow);
+  border-radius: 4px;
 }
-.device-table-wrapper :deep(.el-table),
-.device-table-wrapper :deep(.el-table__body-wrapper) {
-  overflow: visible !important;
-  max-height: none !important;
+.device-table-wrapper::-webkit-scrollbar-track {
+  background: var(--app-bg-subtle);
 }
 
-/* ── 表头与正文颜色区分 + 行列线条 ── */
+/* ── 表头与正文颜色区分 + 行分割 ── */
 .device-table-wrapper :deep(.el-table th) {
   background: var(--app-bg-subtle) !important;
   color: var(--ink) !important;
   font-size: var(--app-size-xs);
   font-weight: 700;
   letter-spacing: 0.4px;
-  border-right: 1px solid var(--app-border-light) !important;
-  border-bottom: 2px solid var(--app-border-light) !important;
+  border-bottom: 1px solid var(--app-border-light) !important;
 }
 .device-table-wrapper :deep(.el-table td) {
   color: var(--ink);
   font-size: var(--app-size-sm);
-  border-right: 1px solid var(--app-border-lighter) !important;
   border-bottom: 1px solid var(--app-border-lighter) !important;
 }
 .device-table-wrapper :deep(.el-table th:last-child),
@@ -289,19 +345,21 @@
 /* ── Lock status badge ── */
 .lock-badge {
   font-size: var(--app-size-xs);
-  padding: 2px 8px;
-  border-radius: 3px 6px 3px 6px;
+  padding: 2px 9px;
+  border-radius: 999px;
   font-weight: 700;
   white-space: nowrap;
   display: inline-block;
 }
 .lock-badge--locked {
-  background: var(--app-status-purple-bg); color: var(--app-status-purple-text);
-  border: 1.5px solid #A78BFA;
+  background: var(--app-status-purple-bg);
+  color: var(--app-status-purple-text);
+  border: 1px solid var(--app-status-purple-border);
 }
 .lock-badge--shared {
-  background: var(--app-pass); color: var(--app-status-success-text);
-  border: 1.5px solid var(--c-device);
+  background: var(--app-pass);
+  color: var(--app-status-success-text);
+  border: 1px solid var(--app-status-success);
 }
 
 /* ── Empty state ── */
@@ -310,12 +368,4 @@
   padding: 40px 0;
   text-align: center;
   font-size: var(--app-size-sm);
-}
-
-/* ── Row status styles — device table row highlighting ── */
-:deep(.device-table-wrapper .el-table tbody tr[data-row-status="OFFLINE"]),
-:deep(
-  .device-table-wrapper .el-table tbody tr[data-row-status="DISCONNECTED"]
-) {
-  opacity: 0.5;
 }

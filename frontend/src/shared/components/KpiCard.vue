@@ -1,6 +1,6 @@
 <script setup>
 /**
- * KpiCard — Doodle Craft 统计数字卡片
+ * KpiCard — 统计数字卡片（清新简洁风）
  *
  * label 在上，数字在下。color + shape 四个卡片各不同，一眼识别。
  * shape: diamond | triangle | square | circle
@@ -33,19 +33,23 @@ defineEmits(['click'])
 <style scoped>
 .kpi-card {
   text-align: center; padding: var(--app-space-md) var(--app-space-lg) var(--app-space-sm); background: var(--app-bg-card);
-  border: 3px solid var(--ink); border-radius: var(--app-radius-md);
+  border: 1px solid var(--app-border-light); border-radius: var(--app-radius-md);
   box-shadow: var(--app-shadow-sm); position: relative;
   min-width: 120px; overflow: hidden;
+  transition: transform var(--app-duration) var(--app-ease),
+    box-shadow var(--app-duration) var(--app-ease),
+    border-color var(--app-duration) var(--app-ease);
 }
-.kpi-card::after {
-  content: '~'; position: absolute; bottom: 2px; right: var(--app-space-sm);
-  font-family: var(--app-font-display); font-size: var(--app-size-md); opacity: 0.12;
+.kpi-card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--app-shadow-lg);
+  border-color: var(--app-border-lighter);
 }
 
-/* ── 几何图形 — Doodle Craft 不对称几何 ── */
+/* ── 几何图形 — 模块色、白描边，一眼识别 ── */
 .kpi-card__shape {
   width: 22px; height: 22px; margin: 0 auto 10px;
-  border: 2.5px solid var(--ink);
+  border: 2px solid rgba(255, 255, 255, 0.85);
   display: flex; align-items: center; justify-content: center;
 }
 .kpi-card__shape-inner {

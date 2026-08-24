@@ -1,9 +1,9 @@
 # 设备管理前端 UI 规范与 Checklist
 
-> 版本 v1 · 2026-08-14
+> 版本 v2 · 2026-08-18
 > 适用范围：`frontend/src/modules/device-pool/`（index.vue / DevicePoolView.logic.ts / api.ts / constants.ts / helpers.ts / routes.ts / composables×3 / components×6）及共享依赖（WorkbenchHeader / KpiCard / FilterTabs / AppTable / EmptyState / ErrorState 等）
-> 设计语言：Doodle Craft × Paper/Polaroid（纸艺拍立得 · 点阵纸底 · 手绘波浪线 · 图钉微旋转），与主区同源
-> 唯一真相源：`frontend/src/shared/styles/tokens.css`（令牌）、`frontend/CLAUDE.md` §2（风格规则）、`.agents/skills/doodle-craft/references/components.md`（组件像素级规格）
+> 设计语言：清新简洁风（暖纸底 · 模块色点缀 · 统一圆角 · 轻阴影），继承 Doodle Craft 的 paper 底纹与设计令牌，但**收敛装饰**（去图钉/微旋转/粗边/手绘波浪线）
+> 唯一真相源：`frontend/src/shared/styles/tokens.css`（令牌）、`frontend/CLAUDE.md` §2（风格规则）
 
 ---
 
@@ -97,11 +97,9 @@
 
 | 卡片 | color | 形状 | 对应状态 |
 |------|-------|------|---------|
-| 在线 | `#6BCB77`（硬编码，应 `var(--app-status-success)`） | diamond | ONLINE |
-| 使用中 | `#FFB5A7`（硬编码，应 `var(--app-status-danger)`） | triangle | BUSY |
-| 总计 | `var(--ink)` ✅ | circle | 全部 |
-
-> ⚠️ 前两张卡硬编码 hex，与「总计」的 token 写法不一致，见 §8 已知偏差 #1。
+| 在线 | `var(--app-status-success)` ✅ | diamond | ONLINE |
+| 使用中 | `var(--app-status-danger)` ✅ | triangle | BUSY |
+| 总计 | `var(--app-ink-muted)` ✅ | circle | 全部 |
 
 ---
 
@@ -109,18 +107,15 @@
 
 | 风格元素 | 规格 | 应用处 |
 |---------|------|--------|
-| 拍立得设备卡 | 3px 状态色边（绿/粉）+ 圆角 6px 10px + `::before` 图钉（9×9 径向渐变圆，居中置顶）+ 扁平投影 | DeviceCard |
-| 照片区 | 44px 高，状态色底 + 2px 同色边，序列号 mono 12px + 状态 badge | DeviceCard `.card-photo` |
-| 微旋转 | KPI 卡 `nth-child` ±0.4~0.8°；设备卡 `nth-child(3n)` -0.8°/+0.5°/-0.4° | KpiCard / DeviceCard |
-| hover 抬卡 | `rotate(0) scale(1.03)` + 阴影升一档 | KPI 卡、设备卡 |
+| KPI 统计卡 | 白底 + **统一圆角 `--app-radius-md`** + 1px 浅边 + 轻阴影 + 模块色几何图形（白描边）+ hover 抬升 | KpiCard（共享收敛） |
+| 设备卡 | 白底 + `--app-radius-md` + **顶部 4px 状态色点缀条** + 轻阴影，标题区状态色底 | DeviceCard |
+| 状态色渲染 | 999px 圆角 el-tag + Badge，状态色底/边（`--app-status-*`） | DeviceStatusCell |
+| 视图切换 / FilterTabs | 分段控件 + pill 选中态（`--app-bg-subtle` 底 + ink 边） | FilterTabs（共享收敛）/ view-toggle |
+| 数据卡（表格） | 白底 + `--app-radius-md` + 1px 浅边 + 轻阴影 | table-card |
 | 点阵纸底 | radial-gradient 点阵 / `--doodle-bg` | doc-page 全局 |
-| 手绘波浪线 | 章节标题 `::after` SVG data URI（3px 高波浪，40px 周期重复） | doc-section__title |
-| doc-tag | 英文小标签 12px/700、圆角 4px 8px、1.5px 浅边 | 章节标题右侧 |
-| 荧光黄 hover | 背景 `--app-highlight` | 卡片操作按钮、filter 标签 |
-| 状态 el-tag + Badge | 不对称圆角 + 1.5px 状态色边 + 状态色底 | DeviceStatusCell |
-| 视图切换 | 2px 模块色边圆角容器，active 填模块色白字 | table/cards 切换 |
-| 空态/错误态 | 居中 EmptyState（📱 图标 + 文案 + 提示）/ ErrorState + 重试 | 整页 / 表格空态 |
-| 禁止项 | ❌ 模糊阴影 ❌ 对称大圆角 ❌ 玻璃态（backdrop-filter）❌ 全屏 spinner | — |
+| doc-tag | 英文小标签 12px/700、圆角 999px、1px 浅边 | 章节标题右侧 |
+| 空态/错误态 | 居中 EmptyState / ErrorState + 重试 | 整页 / 表格空态 |
+| 禁止项 | ❌ 模糊阴影 ❌ 对称大圆角（统一 `--app-radius-*`）❌ 玻璃态（backdrop-filter）❌ 全屏 spinner ❌ 手绘装饰（图钉/微旋转/波浪线/粗边） | — |
 
 ---
 
@@ -128,13 +123,14 @@
 
 | 区域 | 规格 |
 |------|------|
-| 页面骨架 | `wb-shell`：wb-header（96px，`flex-shrink:0`）+ `doc-body`（`flex:1; min-height:0; overflow-y:auto`，padding 20px，gap 18px） |
-| 章节流 | 统计概览 → 设备列表（`gap: 18px`），`device-section` 为模块色 4% 底 + 2.5px 20% 边圆角容器 |
-| KPI 网格 | `repeat(3, 1fr)` gap 18px；**≤900px 断点** → 2 列 |
+| 页面骨架 | `wb-shell`：wb-header（96px，`flex-shrink:0`）+ `doc-body`（`flex:1; min-height:0; overflow-y:auto`，padding 24px，gap 32px） |
+| 章节流 | 统计概览 → 设备列表（`gap: 32px`），`device-section` 透明底无边框 |
+| KPI 网格 | `repeat(3, 1fr)` gap 16px；**≤900px 断点** → 2 列 |
 | 工具栏 | FilterTabs + 右侧（视图切换 / 设备计数 / 局域网 / 刷新），`flex-wrap: wrap` |
-| 表格视图 | `table-card`（2.5px 模块色边 + 圆角 6px 10px + 扁平投影）+ `device-table-wrapper`（`overflow: auto` 双向滚动，6px 细滚动条）；表头 `--app-bg-subtle` 底、正文白色 |
-| 卡片视图 | `card-group-grid` `repeat(3, 1fr)` gap 14px；**≤900px** → 2 列；按状态分组（🟢在线 / 🔴使用中） |
-| 滚动出口 | `doc-body` 纵向滚动；卡片组视图 `overflow-y:auto`；表格 wrapper 双向滚动 |
+| 表格视图 | `table-card`（1px `--app-border-light` 边 + 圆角 `--app-radius-md` + 轻阴影）+ `device-table-wrapper`（横向滚动窗口，滚动条**蓝色常驻** `--c-workflow` 锚定卡片底部，8px 细分滚动条；el-table `min-width:max-content` 列按总宽平铺）；表头 `--app-bg-subtle` 底、正文白色 |
+| 卡片视图 | `card-group-grid` `repeat(3, 1fr)` gap 16px；**≤900px** → 2 列；按状态分组（🟢在线 / 🔴使用中） |
+| 滚动出口 | `doc-body` 纵向滚动（页面级）；卡片组视图 `overflow-y:auto`；表格**高度跟随 pageSize 行数**：首屏完整显示所选行数（5/10/20），超出屏幕由 `doc-body` 页面滚动查看 |
+| 分页联动 | `usePagination`（`PAGE_SIZE_OPTIONS=[5,10,20]`）：`setPageSize` 重置至第 1 页并响应式重算 `pagedItems`/`totalPages`，切换行数**表格高度随之变化**并显示对应行数 |
 | 键盘可达 | DeviceCard 有 `role="button"` + `tabindex="0"` + Enter/Space；其余交互为原生 button / el-button / router-link（无 div @click） |
 
 ---
@@ -172,10 +168,10 @@
 
 ### 7.3 风格
 
-- [ ] 设备卡三要素齐备：3px 状态色边 + 圆角 6px 10px + 图钉（::before 径向渐变）
-- [ ] 新卡片带微旋转（nth-child），hover 抬卡
-- [ ] 章节标题有手绘波浪线 ::after 与 doc-tag
-- [ ] 无玻璃态 / 对称大圆角 / 全屏 spinner / 模糊阴影
+- [ ] 设备卡三要素齐备：白底 + 顶部 4px 状态色点缀条 + 统一圆角 `--app-radius-md` + 轻阴影（无图钉/微旋转/粗边）
+- [ ] KPI 卡：白底 + 统一圆角 + 1px 浅边 + 轻阴影 + 模块色几何图形，无 `~` 水印
+- [ ] 章节标题有模块色图标 + doc-tag（无手绘波浪线 ::after）
+- [ ] 无玻璃态 / 手绘装饰（图钉/微旋转/波浪线/粗边）/ 全屏 spinner / 模糊阴影
 
 ### 7.4 布局与交互
 
@@ -199,12 +195,12 @@
 
 | # | 位置 | 偏差 | 建议 |
 |---|------|------|------|
-| 1 | `index.vue` KPI 卡 `#6BCB77`/`#FFB5A7` | 硬编码 hex（「总计」却用 `var(--ink)`，写法不一致） | 换 `var(--app-status-success/-danger)` |
+| 1 | ~~`index.vue` KPI 卡 `#6BCB77`/`#FFB5A7`~~ | 硬编码 hex（「总计」却用 `var(--ink)`，写法不一致） | ✅ v2 已改为 `var(--app-status-success/-danger)` + `--app-ink-muted` |
 | 2 | `constants.ts` `PAGE_HEADER.iconGradient` `#95D5B2/#52b788` | 硬编码渐变 hex | 收敛为 `var(--c-device)` 衍生或登记为白名单 |
-| 3 | `DevicePoolView.style.css` `rgba(107,203,119,0.04/0.2/0.15)` | 设备绿硬编码 rgba（section 底/边/表卡投影） | 换 `color-mix(in srgb, var(--c-device) N%, transparent)` |
-| 4 | `DeviceCard.vue` `rgba(0,0,0,0.05/0.08)` + `rgba(255,255,255,0.7)` | 硬编码阴影 / 照片区 badge 底 | 阴影换 `--app-shadow-md`；badge 底换 token |
+| 3 | ~~`DevicePoolView.style.css` `rgba(107,203,119,0.04/0.2/0.15)`~~ | 设备绿硬编码 rgba（section 底/边/表卡投影） | ✅ v2 已移除（section/表卡改透明 + `--app-border-light`） |
+| 4 | `DeviceCard.vue` `rgba(0,0,0,0.05/0.08)` + `rgba(255,255,255,0.7)` | 硬编码阴影 / 照片区 badge 底 | ✅ v2 已改用 `--app-shadow-sm/md`（图钉/照片区已移除） |
 | 5 | `NetworkConnectDialog.vue` `#e8998a` + `rgba(232,153,138,0.14)` | 错误红硬编码（`--ac-red` fallback 带硬编码值） | 收敛为状态 token（如 `--app-error`） |
-| 6 | `FilterTabs.vue`（共享组件）`#e8ecf1`/`#FFE066` | 共享组件硬编码（非本模块） | 与仪表盘/侧边栏终审同法收敛，本模块不重复登记 |
+| 6 | `FilterTabs.vue`（共享组件）`#e8ecf1`/`#FFE066` | 共享组件硬编码（非本模块） | ✅ 已收敛为 `--app-border-light`/`--app-bg-subtle` |
 
 ### 8.1 待实现（PRD 新需求，尚未落地）
 
@@ -224,3 +220,6 @@
 | 2026-08-17 | 移除离线设备：KPI 4→3 卡、筛选 4→3 tab、卡片 3→2 组、状态 4→2（在线/使用中）、去离线灰 token；信封统一 `{status,data}`（DRF 化） |
 | 2026-08-17 | 设备锁定语义重构：由「用户独占」改为「锁定 / 公开」可见性（USB 恒公开无锁定、局域网默认锁定、仅管理员 + 锁定者可见、登录用户只操作自己的局域网设备） |
 | 2026-08-17 | 登记待实现项（§8.1）：设备唯一性（serial 拆分）、设备连接时间点字段、被谁添加字段 |
+| 2026-08-18 | 方向 A 落地 v2：整版收敛装饰改「清新简洁风」——共享 KpiCard 去 3px ink 粗边/`~` 水印（白底+统一圆角+轻阴影+模块色几何）；共享 FilterTabs 去粗边（pill 选中态）；全局 AppTable 表头 2.5px ink → 1px；设备卡去图钉/微旋转/粗状状态边改顶部点缀条；section 去模块绿底/2.5px 边；表格卡去 2.5px 模块边；KPI 卡硬编码 hex 收敛 token；操作按钮/状态标签圆角柔和化 |
+| 2026-08-18 | 表格交互增强：`device-table-wrapper` 为滚动窗口，横向滚动条**蓝色常驻**（`--c-workflow`）并锚定卡片底部，便于左右滑动；表格高度自适应（首屏显示当前页行数，内容超过卡片才上下滚动）；新增「开发调试」按钮开关（`useDevicePoolState.toggleDevMock`），开启注入 60 条模拟设备测分页/横向滚动，关闭回拉真实后端 |
+| 2026-08-18 | 表格高度随 pageSize 行数变化：去掉「表格占满剩余高度(flex:1)」语义，改 `.device-section--list`/`.table-card`/`wrapper` 内容自适应 + `doc-body` 页面级滚动；选择 5/10/20 行时组件高度随之变化并在首屏完整显示所选行数，超出屏幕由页面滚动；el-table `min-width:max-content` 横向滚动交 wrapper（蓝色常驻锚底） |

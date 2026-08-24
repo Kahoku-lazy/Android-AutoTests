@@ -24,15 +24,15 @@ const emit = defineEmits(['update:modelValue'])
 </template>
 
 <style scoped>
-.filter-tabs { display: flex; gap: 4px; }
+.filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
 .filter-tab {
   padding: 5px 14px; font-size: var(--app-size-xs); font-weight: 700;
-  color: var(--app-ink-muted); background: transparent;
-  border: 2px solid transparent; border-radius: 4px 8px 4px 8px;
+  color: var(--app-ink-muted); background: var(--app-bg-card);
+  border: 1px solid var(--app-border-light); border-radius: 999px;
   cursor: pointer; font-family: inherit; transition: all 0.15s;
 }
-.filter-tab:hover { color: var(--ink); border-color: var(--app-border-light); }
+.filter-tab:hover { color: var(--ink); border-color: var(--app-border-lighter); }
 .filter-tab.active {
-  color: var(--ink); background: var(--app-highlight); border-color: var(--ink);
+  color: var(--ink); background: var(--app-bg-subtle); border-color: var(--ink);
 }
 </style>

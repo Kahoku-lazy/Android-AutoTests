@@ -43,24 +43,38 @@ const isRunnerOccupied = computed(() =>
 </template>
 
 <style scoped>
-.action-bar { display: flex; flex-direction: column; align-items: stretch; gap: 4px; width: 100%; }
+.action-bar { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; width: 100%; flex-wrap: wrap; }
 .action-bar :deep(.el-button) {
-  width: 100%; margin: 0 !important; min-height: 26px; padding: 4px 10px;
-  font-size: var(--app-size-xs); font-weight: 700; line-height: 1.2; white-space: nowrap;
-  border-radius: 4px 8px 4px 8px !important; border-width: 2px !important;
+  margin: 0 !important;
+  min-height: 26px;
+  padding: 4px 10px;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  border-radius: 999px !important;
+  border-width: 1px !important;
 }
 .action-bar :deep(.el-button--primary) {
-  background: var(--app-status-purple-bg) !important; border-color: var(--app-status-purple-border) !important; color: var(--app-status-purple-text) !important;
+  background: var(--app-status-purple-bg) !important;
+  border-color: var(--app-status-purple-border) !important;
+  color: var(--app-status-purple-text) !important;
 }
 .action-bar :deep(.el-button--primary:hover) { background: var(--app-btn-hover-purple) !important; }
 .action-bar :deep(.el-button--danger.is-plain) {
-  background: var(--app-status-danger-bg) !important; border-color: var(--app-status-danger) !important; color: var(--app-status-danger-text) !important;
+  background: var(--app-status-danger-bg) !important;
+  border-color: var(--app-status-danger) !important;
+  color: var(--app-status-danger-text) !important;
 }
 .action-bar :deep(.el-button--danger.is-plain:hover) { background: var(--app-btn-hover-danger) !important; }
 .action-bar :deep(.el-button--warning.is-plain) {
-  background: var(--app-status-warning-bg) !important; border-color: var(--c-dashboard) !important; color: var(--app-warning-text) !important;
+  background: var(--app-status-warning-bg) !important;
+  border-color: var(--c-dashboard) !important;
+  color: var(--app-warning-text) !important;
 }
 .action-bar :deep(.el-button.is-disabled) {
-  background: var(--app-bg-subtle) !important; border-color: var(--app-border-light) !important; color: var(--app-btn-disabled-color) !important;
+  background: var(--app-bg-subtle) !important;
+  border-color: var(--app-border-light) !important;
+  color: var(--app-btn-disabled-color) !important;
 }
 </style>

@@ -38,6 +38,10 @@ export interface DevicePoolViewState {
   scanning: Ref<boolean>
   selectedSerial: Ref<string | null>
   error: Ref<string | null>
+  /** 开发调试：注入模拟设备开关 */
+  devMockEnabled: Ref<boolean>
+  /** 开发调试：切换模拟设备（60 条） */
+  toggleDevMock: (enabled: boolean) => Promise<void>
   // UI state
   viewMode: Ref<DeviceViewMode>
   switchViewMode: (mode: DeviceViewMode) => void
@@ -173,6 +177,8 @@ export function useDevicePoolView(): DevicePoolViewState {
     scanning: pool.scanning,
     selectedSerial: pool.selectedSerial,
     error: pool.error,
+    devMockEnabled: pool.devMockEnabled,
+    toggleDevMock: pool.toggleDevMock,
     // UI state
     viewMode,
     switchViewMode,

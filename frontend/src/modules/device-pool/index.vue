@@ -18,6 +18,8 @@ const {
   scanning,
   loading,
   error,
+  devMockEnabled,
+  toggleDevMock,
   activeFilter,
   kpiStats,
   viewMode,
@@ -82,9 +84,9 @@ const {
           <span class="doc-section__label">设备在线状态与平台接入总览</span>
         </div>
         <div class="kpi-row">
-          <KpiCard :value="kpiStats.online" label="在线" color="var(--c-device)" shape="diamond" />
-          <KpiCard :value="kpiStats.busy" label="使用中" color="var(--c-runner)" shape="triangle" />
-          <KpiCard :value="kpiStats.total" label="总计" color="var(--ink)" shape="circle" />
+          <KpiCard :value="kpiStats.online" label="在线" color="var(--app-status-success)" shape="diamond" />
+          <KpiCard :value="kpiStats.busy" label="使用中" color="var(--app-status-danger)" shape="triangle" />
+          <KpiCard :value="kpiStats.total" label="总计" color="var(--app-ink-muted)" shape="circle" />
         </div>
       </section>
 
@@ -105,6 +107,14 @@ const {
               <button class="view-btn" :class="{ active: viewMode === 'cards' }" @click="switchViewMode('cards')">📷 卡片</button>
             </div>
             <span class="filter-count">{{ filteredDevices.length }} 台</span>
+            <div class="dev-mock-toggle" title="开发调试：注入 60 条模拟设备">
+              <span class="dev-mock-toggle__label">开发调试</span>
+              <el-switch
+                :model-value="devMockEnabled"
+                size="small"
+                @change="toggleDevMock"
+              />
+            </div>
             <el-button class="action-bar-btn" size="small" @click="openNetworkDialog">
               <IconWifi :size="14" /> 局域网
             </el-button>

@@ -240,6 +240,19 @@ apps/{app_name}/
 └── service.py    # 内部业务逻辑（可省略）
 ```
 
+**职责分层决策树**（写代码按此顺序选落点，不可跳级乱塞）：
+
+| 优先级 | 落点 | 适用场景 |
+|:--:|------|------|
+| 1 | 纯函数 / 模块内 util | 无 I/O 的转换、校验 |
+| 2 | `api.py` | 任何 INSERT/UPDATE/DELETE；跨模块要复用的写 |
+| 3 | `service.py` / executor | 本模块多步编排、设备/外部 I/O |
+| 4 | `views` / ViewSet | HTTP 适配：解析、权限、调用 api、封信封 |
+| 5 | `serializers` | DRF 入出参形状与校验 |
+| 6 | `consumers` | WS 推送；写库仍回调 api |
+
+**升级信号**：view 超过 ~300 行 → 抽 api/service；api 被 2+ App 需要 → 保持在提供方 api 并扩 `__all__`；出现循环 import → 边界画错，下沉共享或只经 api。
+
 ### 6.1 models.py — 只定义表结构
 
 ```python

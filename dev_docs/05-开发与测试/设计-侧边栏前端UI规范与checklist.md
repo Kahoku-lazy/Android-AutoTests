@@ -3,7 +3,7 @@
 > 版本 v1 · 2026-08-14
 > 适用范围：`frontend/src/shared/components/AppSidebar.vue` 及配套（sidebarNavConfig.ts / useSidebarResize.ts）
 > 设计语言：Doodle Craft（手稿纸 · 粗线涂鸦 · 彩绘卡通），与主功能区同源
-> 唯一真相源：`frontend/src/shared/styles/tokens.css`（令牌）、`frontend/DESIGN_SYSTEM.md`（设计系统）
+> 唯一真相源：`frontend/src/shared/styles/tokens.css`（令牌）、`frontend/CLAUDE.md` §2（风格规则）
 
 ---
 
@@ -87,7 +87,7 @@
 | /cases | `--c-case` #4ECDC4 青绿 |
 | /runner | `--c-runner` #FFB5A7 桃粉 |
 | /reports | `--c-report` #7C6F83 灰紫 |
-| /ai-assistant、/digital-human | `--c-ai` #E879F9 柔粉紫 |
+| /ai-assistant | `--c-ai` #E879F9 柔粉紫 |
 | /workflow | `--c-workflow` #89CFF0 天蓝 |
 
 > 新增导航项时：① 在 `sidebarNavConfig.ts` 登记 ② 在 `MOD_COLORS` 补映射，缺省回落 `var(--c-workflow)`。
@@ -178,3 +178,5 @@
 | 2026-08-14 | 终审加固：`--app-border-light`（冷灰蓝）→ `var(--dot)`；账号菜单项 600→700（添加账号保持 600）；容器投影 → `--app-shadow-sm`、拖拽条薄纱 → color-mix；清理 header 死代码 font-weight |
 | 2026-08-14 | A11y 加固：6 处 div @click → `router-link` / 原生 `button`（键盘可达 + 语义 + aria-expanded）；导航区 `min-height:0`、用户区 `flex-shrink:0`（矮窗口防裁剪） |
 | 2026-08-14 | 移除分组标题胶带（"测试全流程"/"AI 与编排"）与分组折叠机制——导航改为扁平列表；同步清理 expandedSections/GROUP_TAPE_BG/胶带样式 |
+| 2026-08-19 | 「元素定位」改为可展开分组：父项原生 `button`（`aria-expanded` + ▾ 旋转箭头），子项 `router-link`（Android元素管理/Web端元素/API接口，各自独立路由）；进入子页自动展开、父项 active；折叠态点父项跳默认子页；子项字号 14px（`--app-size-sm`），复用纸签 active 语言但去 ✦ |
+| 2026-08-19 | 同款分组扩展至「用例管理」（4 子项：Android UI 自动化用例/Web 自动化测试用例/业务功能用例/API 接口用例）与「AI 助手」（4 子项：智能体看板/AI工具箱/知识库/评测中心）；页内 Tab 同步移除，导航统一由侧边栏承担 |

@@ -2,12 +2,13 @@
 
 > 关联模块：`apps/device_pool/` · 前端：`frontend/src/modules/device-pool/`
 > 关联全局：[`需求大纲.md`](./需求大纲.md) §5.2
-> 版本：v6.4 · 状态：评审中 · 日期：2026-08-18
+> 版本：v6.5 · 状态：评审中 · 日期：2026-08-21
 
 **修订记录**
 
 | 版本 | 日期 | 变更摘要 |
 |------|------|----------|
+| v6.5 | 2026-08-21 | 以代码为真相源偏差登记：权限 403 校验未实施（删除/锁定/释放）、locked 字段补入契约、release_reason 枚举校正、锁超时按占用方区分（300/1800/3600s）、信封示例改 {status,data}、connect timeout/user_id 标注、disconnect-observe 消费方校正、C-08 实施位置修正 |
 | v6.0 | 2026-08-14 | 按仪表盘 PRD 格式重构：移除实现细节（文件行数/实施状态/已知问题），补齐功能详细规格（F-XX-XX 逐项 + 边界状态 + 验收标准）、布局与视觉设计、后端功能逻辑、API 字段级契约（13 端点）、数据来源表、非功能/非目标/关键约束/文件索引；同步代码真相（Pinia→composable、.js→.ts、views.py→views/ 包、动森→Doodle Craft） |
 | v6.1 | 2026-08-17 | DRF 化 + 写收敛：views/ → views.py + service.py；响应信封统一 `{status, data}`（前端解包 data）；修 connect 用户锁误设 BUSY；移除前端 is_admin 冗余字段 |
 | v6.2 | 2026-08-17 | 移除离线设备记录：设备离线即删除（BUSY 保护）；状态统计 4 卡→3 卡、筛选 4 tab→3 tab、卡片 3 组→2 组；状态机收敛为 ONLINE/BUSY 两态 |
@@ -206,7 +207,7 @@
 
 - USB 设备不显示锁定按钮，恒为公开
 - 局域网设备默认已锁定，点击按钮在「已锁定 / 公开」间切换
-- 登录用户只能对自己配置的局域网设备执行「公开 / 锁定」，无法操作他人设备
+- 登录用户只能对自己配置的局域网设备执行「公开 / 锁定」，无法操作他人设备 ⚠️ 未实施（见 §4.6 偏差登记）
 - 锁定时，除管理员与有锁定权限的用户外，其他用户列表不显示该设备
 - 每次锁定 / 公开切换记录审计
 
@@ -233,7 +234,7 @@
 
 **验收标准**：
 
-- 仅管理员或局域网设备配置者可释放
+- 仅管理员或局域网设备配置者可释放 ⚠️ 未实施（见 §4.6 偏差登记）
 - 设备未被占用时不显示「强制释放」按钮
 - 释放设备检查器占用的设备后，强退出使用中用户、断开连接、检查器选中设备被取消
 - 执行引擎占用的设备不可释放（受保护）
@@ -260,7 +261,7 @@
 
 **验收标准**：
 
-- 仅管理员或局域网设备配置者可删除，配置者只能删除自己的设备
+- 仅管理员或局域网设备配置者可删除，配置者只能删除自己的设备 ⚠️ 未实施（见 §4.6 偏差登记）
 - USB 设备不显示删除键
 - 使用中设备删除键置灰、不可交互
 - 删除后设备记录移除、连接缓存清理
@@ -269,7 +270,7 @@
 
 ## 3. 布局与视觉设计
 
-> 全部颜色/字号引用 Doodle Craft 主题令牌（[`frontend/DESIGN_SYSTEM.md`](../frontend/DESIGN_SYSTEM.md)）。KPI 卡片颜色为 hex 字面量（见约束 C-03）。
+> 全部颜色/字号引用 Doodle Craft 主题令牌（[`frontend/CLAUDE.md` §2](../../frontend/CLAUDE.md)）。KPI 卡片颜色为 hex 字面量（见约束 C-03）。
 
 ### 3.1 页面布局
 
@@ -339,10 +340,11 @@
 | 项 | 说明 |
 |------|------|
 | 锁语义 | 锁定 / 公开（可见性，不改 status）+ 占用（设备检查器 / 执行引擎，改 BUSY） |
+| lock_type | `user`（锁定/公开）· `observe`（设备检查器观察占用）· `process`（执行引擎占用） |
 | 审计 | DeviceLock 永不删除，通过 `status`（active/released/expired）追踪生命周期 |
 | 并发 | 数据库 UNIQUE 约束保证同一设备同时最多 1 个活跃锁 |
-| 超时 | 默认 300s；`remaining_seconds` 计算剩余时长 |
-| 释放原因 | manual / timeout / disconnect / force |
+| 超时 | 按占用方区分：用户锁 300s（`models.py:69` 默认）/ observe 1800s（`service.py:26` OBSERVE_LOCK_TTL）/ 执行引擎 3600s（见 PRD-06 §4.3）；`remaining_seconds` 计算剩余时长 |
+| 释放原因 | manual / timeout / disconnect / offline / purge（无 force；`service.py:175/189/192/248/441/472/500`） |
 
 ### 4.4 心跳与状态同步
 
@@ -356,6 +358,17 @@
 | adb 不可用 | `_adb_device_serials` 返回空集，非 BUSY 设备删除记录，BUSY 设备锁超时后删除 |
 | 设备信息采集失败 | 记录 warning，不影响注册 |
 | 心跳失败 | 前端 debug 日志，不打断 UI |
+
+### 4.6 已知偏差登记
+
+| 偏差 | 说明 |
+|------|------|
+| ⚠️ 删除设备权限 403 未实施 | `views.py:300-313` disconnect 仅判 USB（400）/BUSY（409），未校验「仅管理员或局域网配置者可删」（产品口径见 §2.5.3） |
+| ⚠️ 锁定/公开权限 403 未实施 | `service.py:423-443` set_device_lock 仅判 USB（400）/锁冲突（409），未校验「登录用户只能操作自己的局域网设备」（产品口径见 §2.5.1） |
+| ⚠️ 释放权限 403 未实施 | `service.py:464-473` release_occupy 仅判 runner 前缀（409）/空（400），未校验「仅管理员或配置者可释放」（产品口径见 §2.5.2） |
+| 心跳响应兼容占位字段 | `offline_count`/`disconnected` 恒 0（`service.py:537-538`）；`offline` 返回本次同步删除数 `removed`（`service.py:534`），非「离线设备数」 |
+| connect `timeout`/`user_id` 不读 | `views.py:244-246` 仅取 JWT `user_id` 用于 observe 锁/claim；请求体 `timeout`/`user_id` 未消费 |
+| OFFLINE/DISCONNECTED 残留 | 前端 `constants.ts:48-53` 仍定义 OFFLINE/DISCONNECTED 状态映射；`service.py:244-249` purge_disconnected_devices 残留清理逻辑——属已声明技术债（PRD-03 v1.1 同源） |
 
 ---
 
@@ -378,7 +391,7 @@
 | 9 | POST | `/api/devices/{serial}/lock` | 锁定设备（F-02-03） | ✅ |
 | 10 | POST | `/api/devices/{serial}/release` | 释放设备（F-02-04） | ✅ |
 
-> 端点 3（`/current`）前端未消费；端点 7（`/disconnect-observe`）由设备检查器 / 用例管理调试设备在断开观察连接时消费。
+> 端点 3（`/current`）前端未消费；端点 7（`/disconnect-observe`）由 case-manager 调试设备在断开观察连接时消费（`case-manager/api/uiAutomation.ts:76`；设备检查器 v1.7 起不再调用，见 PRD-03 §5.1）。
 
 ### 5.2 端点 1 — 设备列表
 
@@ -406,6 +419,7 @@
 | `status` | string | 是 | 枚举 `ONLINE`/`BUSY`（离线设备即删除，不返回） | 状态 |
 | `connection_type` | string | 是 | 枚举 `USB`/`WIFI` | 连接类型 |
 | `locked_by` | string | 是 | 可空 | 锁定者用户 |
+| `locked` | boolean | 是 | `locked_by` 非空且 WIFI 时为 true | 锁定/公开标记（`service.py:361`，前端 `useDeviceActions.ts` 消费） |
 | `locked_at` | string \| null | 是 | ISO 时间或 null | 锁定时间 |
 | `occupied_by` | string | 是 | 可空 | 占用进程 |
 | `occupied_at` | string \| null | 是 | ISO 时间或 null | 占用时间 |
@@ -421,26 +435,29 @@
 ```json
 {
   "status": true,
-  "devices": [
-    {
-      "id": 1,
-      "serial": "emulator-5554",
-      "name": "",
-      "model": "Pixel 8",
-      "brand": "Google",
-      "screen": "1080x2400",
-      "status": "ONLINE",
-      "connection_type": "USB",
-      "locked_by": "",
-      "locked_at": null,
-      "occupied_by": "",
-      "occupied_at": null,
-      "last_seen": "2026-08-14T10:00:00",
-      "is_current": true,
-      "remaining": 0
-    }
-  ],
-  "current": "emulator-5554"
+  "data": {
+    "devices": [
+      {
+        "id": 1,
+        "serial": "emulator-5554",
+        "name": "",
+        "model": "Pixel 8",
+        "brand": "Google",
+        "screen": "1080x2400",
+        "status": "ONLINE",
+        "connection_type": "USB",
+        "locked": false,
+        "locked_by": "",
+        "locked_at": null,
+        "occupied_by": "",
+        "occupied_at": null,
+        "last_seen": "2026-08-14T10:00:00",
+        "is_current": true,
+        "remaining": 0
+      }
+    ],
+    "current": "emulator-5554"
+  }
 }
 ```
 
@@ -469,7 +486,7 @@
 **响应示例**：
 
 ```json
-{ "status": true, "count": 1, "newly_added": 0, "devices": [ { "serial": "emulator-5554", "status": "ONLINE" } ] }
+{ "status": true, "data": { "count": 1, "newly_added": 0, "devices": [ { "serial": "emulator-5554", "status": "ONLINE" } ] } }
 ```
 
 ### 5.4 端点 3 — 当前设备
@@ -495,7 +512,9 @@
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `updated` | number | 本次同步更新的设备数 |
-| `offline` / `online` / `busy` / `offline_count` / `disconnected` | number | 各状态计数 |
+| `online` / `busy` | number | 当前 ONLINE / BUSY 状态计数 |
+| `offline` | number | ⚠️ 兼容占位：返回本次同步删除数 `removed`（非「离线设备数」，`service.py:534`） |
+| `offline_count` / `disconnected` | number | ⚠️ 兼容占位：恒 0（`service.py:537-538`） |
 | `total` | number | 状态计数总和 |
 
 ### 5.6 端点 5 — 连接设备
@@ -508,12 +527,12 @@
 |------|------|:--:|------|------|
 | `activate` | boolean | 否 | 默认 true | 是否自动激活 |
 | `mode` | string | 否 | `observe` 检查器连接（置使用中 BUSY） | 连接模式 |
-| `user_id` | string | 否 | 提供则自动锁定 | 操作用户 |
-| `timeout` | number | 否 | 默认 300 | 锁超时秒 |
+| `user_id` | string | 否 | ⚠️ 代码当前不读（实际取 JWT `user_id`） | 操作用户 |
+| `timeout` | number | 否 | ⚠️ 代码当前不读 | 锁超时秒 |
 
 **响应 data 字段**：`serial` / `model` / `screen_w` / `screen_h` / `android_version`。
 
-**错误**：设备未注册 404；他人锁定 409；ATX Agent 未运行 502；连接超时 504。
+**错误**：设备未注册 404；他人锁定 409 ⚠️ 未实施（`views.py:249-250` 只判 BUSY）；ATX Agent 未运行 502；连接超时 504。
 
 ### 5.7 端点 6 — 删除设备
 
@@ -523,13 +542,13 @@
 
 **响应 data 字段**：`serial` / `deleted`（bool）。
 
-**错误**：未注册 404；设备使用中 409（删除键置灰不可交互）；USB 设备 400（无删除键）；无权限 403。
+**错误**：未注册 404；设备使用中 409（删除键置灰不可交互）；USB 设备 400（无删除键）；无权限 403 ⚠️ 未实施（见 §4.6 偏差登记）。
 
 ### 5.8 端点 7 — 释放观察占用（observe）
 
 **接口地址**：`POST /api/devices/{serial}/disconnect-observe`
 
-清理 uiautomator2 连接缓存，并释放观察占用（仅当占用者为观察连接时恢复 ONLINE；执行引擎占用受保护，不释放）。供设备检查器 / 用例管理调试设备断开观察连接时消费。
+清理 uiautomator2 连接缓存，并释放观察占用（仅当占用者为观察连接时恢复 ONLINE；执行引擎占用受保护，不释放）。供 case-manager 调试设备断开观察连接时消费（设备检查器 v1.7 起不再调用）。
 
 **响应 data 字段**：`serial` / `message`。
 
@@ -551,7 +570,7 @@
 
 **响应 data 字段**：`serial` / `locked`（bool）。
 
-**错误**：未注册 404；USB 设备 400（无锁定能力）；无权限 403（仅管理员或局域网设备配置者）。
+**错误**：未注册 404；USB 设备 400（无锁定能力）；无权限 403（仅管理员或局域网设备配置者）⚠️ 未实施（见 §4.6 偏差登记）。
 
 ### 5.11 端点 10 — 释放设备
 
@@ -561,7 +580,7 @@
 
 **响应 data 字段**：`serial` / `released`（bool）。
 
-**错误**：未注册 404；执行引擎占用 409（受保护，不可释放）；设备未被占用 400；无权限 403。
+**错误**：未注册 404；执行引擎占用 409（受保护，不可释放）；设备未被占用 400；无权限 403 ⚠️ 未实施（见 §4.6 偏差登记）。
 
 ### 5.12 契约变更
 
@@ -615,7 +634,7 @@
 | C-05 | 锁审计永不删除，仅标记 status | `models.py` + `_release_internal` |
 | C-06 | 响应统一 `{status, data}` / `{status, message}`，snake_case | 全部端点 |
 | C-07 | 设备操作走 DevicePool 单例，禁止直接 u2/Airtest | `pool.py` |
-| C-08 | 心跳超时 300s 自动释放 | `helpers.py` |
+| C-08 | 心跳超时 300s 自动释放 | `service.py`（`update_device_status` / `heartbeat_sync`） |
 
 ---
 

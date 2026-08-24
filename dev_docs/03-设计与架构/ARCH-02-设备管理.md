@@ -1,6 +1,6 @@
 # ARCH-02 — 设备管理 (Device Pool)
 
-> **版本**：v2.0 · **日期**：2026-08-14 · **关联模块**：`apps/device_pool/` · 前端 `frontend/src/modules/device-pool/`
+> **版本**：v2.4 · **日期**：2026-08-21 · **关联模块**：`apps/device_pool/` · 前端 `frontend/src/modules/device-pool/`
 
 ## 文档内容简述
 
@@ -13,13 +13,13 @@
 
 ## 你能从文档获取什么信息
 
-- **设备管理如何接入设备**：DevicePool 单例（Airtest + uiautomator2 双连接）的职责划分
+- **设备管理如何接入设备**：`DeviceSession` 租用协议（L2 宿主）经 `engines.registry` 工厂调 `AirtestU2Engine`（L1c）；`pool.py` 已收敛为协议消费壳
 - **数据链路**：ADB 设备 → DevicePool → views → 前端组件的完整链路
 - **端点消费**：10 端点中前端消费 8，`/current` 与 `/disconnect-observe` 供 observe 场景
 
 ## 关联文档
 
-- **架构总纲**：[`ARCH-00-平台总体架构`](./ARCH-00-平台总体架构.md) §4.2
+- **架构总纲**：[`ARCH-00-平台总体架构`](./ARCH-00-平台总体架构.md) §3.2（device_pool 行）· §4.3 引擎注册表 · §4.4 DeviceSession · §二 L2
 - **需求规格**：[`PRD-02-设备管理`](../02-PRD需求/PRD-02-设备管理.md) — **契约以 PRD §5 为准**
 
 ---
@@ -28,7 +28,7 @@
 
 ### 1.1 架构定位
 
-设备管理是平台的 **设备基础设施层**，在三层架构中处于后端层最底层——它是唯一直接与 Android 设备通信的模块。其他模块（element-locator、test-runner、AI 助手）通过它获取设备能力。设备管理**拥有业务写操作**（扫描/连接/锁定/释放/断开），是平台仅有的两个 L4 全约束模块之一（与 workflow 并列）。
+设备管理在五层架构中身兼两职：**L2 设备交互中台宿主**（`DeviceSession` 租用协议：lease/release/感知/操作/查询，per-serial 锁）+ **L3 业务 App**（设备发现/注册/心跳/锁审计，10 端点 REST）。设备物理操作下沉 **L1c `engines/`**（`UiEngine` 协议 + `registry` 工厂，`settings.DEVICE_ENGINE` 一键切换）——本模块与任何其他 App 均不直触 u2/Airtest。其他模块（device-inspector、test-runner、AI 助手）经本模块 `api.py`（业务锁）与 `DeviceSession`（物理会话）获取设备能力。
 
 ### 1.2 架构全景图
 
@@ -42,20 +42,20 @@ flowchart TD
 
     GATEWAY --> V["① 前端组件层 · device-pool/<br/>KPI 统计卡 · 设备表格/卡片 · 弹窗"]
 
-    V --> L2["② 后端层 · apps/device_pool/<br/>views.py + service.py<br/>pool.py DevicePool 单例 · api.py 白名单"]
+    V --> B["② 后端层 · apps/device_pool/<br/>views.py + service.py<br/>DeviceSession 协议（L2）· api.py 白名单"]
 
-    L2 --> L3["③ 设备接入层 · Airtest + uiautomator2<br/>ad = Airtest（截图/手势/Shell）<br/>u2d = u2（层级 dump/XPath）"]
+    B --> D["③ 设备接入层 · engines/（L1c）<br/>get_device_engine() → AirtestU2Engine<br/>UiEngine 协议：连接/感知/操作/能力声明"]
 
-    L3 --> ADB["ADB Server<br/>USB / WiFi 局域网"]
+    D --> ADB["ADB Server<br/>USB / WiFi 局域网"]
     ADB --> DEV["📱 Android 设备"]
 
-    AS["🤖 AgentScope tools（ai_assistant）"] -->|"同进程 import api.py"| L2
+    AS["🤖 AgentScope tools（ai_assistant）"] -->|"同进程 import api.py"| B
 
     style U fill:#e3f2fd,stroke:#2196f3
     style GATEWAY fill:#fff3e0,stroke:#ff9800
     style V fill:#e8f5e9,stroke:#4caf50
-    style L2 fill:#e8eaf6,stroke:#3f51b5
-    style L3 fill:#fff8e1,stroke:#ffc107
+    style B fill:#e8eaf6,stroke:#3f51b5
+    style D fill:#fff8e1,stroke:#ffc107
     style ADB fill:#f5f5f5,stroke:#999
     style DEV fill:#f5f5f5,stroke:#999
     style AS fill:#f7a8c4,stroke:#3a7a10
@@ -69,7 +69,7 @@ flowchart TD
 flowchart TD
     DP["apps/device_pool/<br/>models · views.py · service.py · pool.py · api.py"]
 
-    EL["element_locator"] -->|"pool.device（截屏/Dump/手势）"| DP
+    EL["element_locator"] -->|"api.device（会话截图/Dump）"| DP
     TR["test_runner"] -->|"api.acquire_device / release_device"| DP
     AI["ai_assistant"] -->|"3 个 Tool（查询/锁定/释放）"| DP
     DASH["dashboard"] -->|"models.Device（只读 count）"| DP
@@ -85,9 +85,11 @@ flowchart TD
 
 ```
 其他 App ──✅ import──→ device_pool.models（只读 Model 查询）
-其他 App ──✅ import──→ device_pool.api.py（跨模块写操作白名单）
-其他 App ──✅ import──→ device_pool.pool.device（设备操作单例）
+其他 App ──✅ import──→ device_pool.api.py（跨模块写操作白名单：acquire/release/list/ensure）
+其他 App ──✅ import──→ device_pool.api.device（会话入口；L2 DeviceSession 经此消费截图/Dump）
+device_pool ──✅ import──→ engines.registry（工厂，L2→L1c）
 device_pool ──❌ import──→ 任何其他 App（唯一底层）
+device_pool ──⚠️ 内部 views/service 直 import engines 实现（过渡期残留，见 ARCH-00 §1.6 #2；目标态只经 DeviceSession）
 ```
 
 ### 1.4 数据流图
@@ -97,7 +99,7 @@ device_pool ──❌ import──→ 任何其他 App（唯一底层）
 ```mermaid
 flowchart LR
     subgraph SRC["设备接入"]
-        DEV["ADB / uiautomator2 / Airtest"]
+        DEV["engines/（L1c）AirtestU2Engine<br/>经 DeviceSession（L2）会话"]
     end
 
     subgraph POOL["pool.py DevicePool 单例"]
@@ -208,6 +210,8 @@ apps/device_pool/
 ```
 
 ### 3.2 DevicePool 单例设计（Airtest + u2 双连接）
+
+> **v2.4 收敛状态（2026-08-20 落地）**：本节描述的双连接实现已下沉 **`engines/android/airtest_u2.py`（L1c `AirtestU2Engine`）**；`pool.py` 收敛为协议消费壳——状态管理保留、操作全委托 `DeviceSession`（`apps/device_pool/session.py`，L2）、`dump→dict` 兼容。`apps/` 内 u2/Airtest import 实测 **0 命中**；`DEVICE_ENGINE` 一键切换经 `engines.registry.get_device_engine()`。下列 Airtest/u2 双连接细节即当前引擎层的实现形态（协议见 ARCH-00 §4.3/§4.4 与 `openspec/specs/engine-protocol/spec.md`）。
 
 ```
 DevicePool（线程安全单例）
@@ -357,13 +361,15 @@ stateDiagram-v2
 | 锁审计永不删除 | 通过 `status`（active/released/expired）追踪生命周期 |
 | 同时最多 1 个活跃锁 | 数据库 UNIQUE 约束保证 |
 | 超时 300s 自动释放 | 心跳 30s 轮询，锁超时自动恢复 |
-| 设备操作通过 DevicePool | 不直接 import u2/Airtest |
+| 设备操作通过 DevicePool | 不直接 import u2/Airtest（引擎层是唯一接触点；`engines.registry` 工厂取引擎） |
 | 写操作走 api.py | 跨模块写不直接 ORM |
+| 物理会话走 DeviceSession | L2 租用协议：EXCLUSIVE 前置业务锁、TRANSIENT 校验未被执行占用；per-serial 锁替代全局 `_op_lock`（已落地 2026-08-20） |
 
 ### 6.2 对外接口（api.py `__all__`）
 
 ```python
-get_online_devices() -> list[Device]            # 只读查询
+get_online_devices() -> list[Device]            # 只读查询（仅 status=ONLINE）
+list_devices(user_id="") -> list[dict]          # 只读查询（设备管理口径全量：ONLINE + BUSY，含可见性过滤）
 ensure_device(serial, name="") -> Device        # get_or_create
 acquire_device(serial, user_id, timeout=300)    # 锁定（@transaction.atomic + select_for_update）
 release_device(serial, reason="manual") -> bool # 释放
@@ -376,9 +382,9 @@ release_device_locks_for_device(device_obj, reason)  # 批量释放（崩溃恢�
 
 | 消费方 | 调用方式 | 用途 |
 |------|------|------|
-| **element-locator** | `pool.device`（`get_device`） | 截屏、Dump、手势操作 |
-| **test-runner** | `api.acquire_device()` / `api.release_device()` | 执行前锁定、执行后释放 |
-| **AI 助手** | `get_online_devices` / `acquire_device` / `release_device`（3 Tool） | 自然语言设备操控 |
+| **element-locator** | `api.device`（会话截图/Dump） | 截屏、Dump、手势操作 |
+| **test-runner** | `api.acquire_device()` / `api.release_device()`（+ `DeviceSession.lease(EXCLUSIVE)`，开关 `DEVICE_SESSION_ENABLED`） | 执行前锁定、执行后释放 |
+| **AI 助手** | `list_devices` / `get_online_devices` / `acquire_device` / `release_device`（4 Tool） | 自然语言设备操控 |
 | **dashboard** | `Device.objects.count()` | 设备在线数统计（只读） |
 
 ---
@@ -387,7 +393,8 @@ release_device_locks_for_device(device_obj, reason)  # 批量释放（崩溃恢�
 
 | 要点 | 说明 |
 |------|------|
-| 双连接架构 | Airtest 负责设备操作，u2 仅做层级 dump/XPath，互不冲突 |
+| 双连接架构 | Airtest 负责设备操作，u2 仅做层级 dump/XPath——实现下沉 `engines/android/airtest_u2.py`（L1c），互不冲突 |
+| L2 协议宿主 | `DeviceSession.lease(TRANSIENT|EXCLUSIVE)` 租用式会话 + per-serial 锁 + 业务锁先于物理会话（已落地 2026-08-20） |
 | 锁审计不删除 | DeviceLock 永不删除，通过 status 追踪，支持崩溃恢复 |
 | 并发安全 | `select_for_update` + UNIQUE(device, active) 数据库级并发控制 |
 | 状态同步 | list/heartbeat 触发 `update_device_status`，同步 adb 真实状态 |
@@ -399,6 +406,7 @@ release_device_locks_for_device(device_obj, reason)  # 批量释放（崩溃恢�
 
 | 版本 | 日期 | 变更摘要 |
 |------|------|----------|
+| v2.4 | 2026-08-21 | **五层口径回填**：§1.1 改为「L2 设备交互中台宿主 + L3 业务 App」双职（去旧三层口径与"L4 全约束"表述）；§1.2/§1.4 图设备接入层改 `engines/`（L1c）经 DeviceSession（L2）；防火墙补 `engines.registry` ✅ 与 views/service 直 import engines ⚠️ 过渡期登记（ARCH-00 §1.6 #2）；§3.2 补收敛状态注记（pool.py = 协议消费壳，2026-08-20 落地）；§6.1 补 DeviceSession/per-serial 锁行；§6.3 test-runner 补 lease(EXCLUSIVE) 开关；关联指针改 §3.2/§4.3/§4.4/§二 L2 |
 | v1.0 | 2026-07-16 | 初始版本：基于 `项目架构.md` 和 `PRD-02-设备管理.md` 重构 |
 | v1.1 | 2026-07-16 | 代码对照审计：dp_devices 补全字段；dp_device_locks 补全 lock_type/timeout_seconds/release_reason |
 | v1.2 | 2026-07-17 | UI 重构：卡片网格 → 表格布局；JWT 一键锁定；新增锁定状态列 |

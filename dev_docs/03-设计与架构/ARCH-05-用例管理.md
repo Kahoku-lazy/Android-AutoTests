@@ -1,6 +1,6 @@
 # ARCH-05 — 用例管理 (Case Manager)
 
-> **版本**：v2.0 · **日期**：2026-08-14 · **关联模块**：`apps/case_manager/` · 前端 `frontend/src/modules/case-manager/`
+> **版本**：v2.2 · **日期**：2026-08-21 · **关联模块**：`apps/case_manager/` · 前端 `frontend/src/modules/case-manager/`
 
 ## 文档内容简述
 
@@ -8,7 +8,7 @@
 
 - **架构四图**：架构全景图 · 模块包图 · 数据流图 · API 关系图（§1.2~1.5）
 - **后端架构**：分模块文件结构（9 view + 7 api + 4 model）+ 步骤类型注册表（§3）
-- **API 设计**：DRF ViewSet（5）+ legacy（25）双视图层共存（§4）
+- **API 设计**：DRF ViewSet（6）+ legacy（26 条 path）双视图层共存（§4）
 - **数据模型**：5 表 ER 图 + 4 用例类型（§5）
 
 ## 你能从文档获取什么信息
@@ -20,7 +20,7 @@
 
 ## 关联文档
 
-- **架构总纲**：[`ARCH-00-平台总体架构`](./ARCH-00-平台总体架构.md) §4.4
+- **架构总纲**：[`ARCH-00-平台总体架构`](./ARCH-00-平台总体架构.md) §3.2（case_manager 行）· §4.6 枚举真相源 · §8.1 步骤类型
 - **需求规格**：[`PRD-05-用例管理`](../02-PRD需求/PRD-05-用例管理.md) — **契约以 PRD §5 为准**
 
 ---
@@ -29,7 +29,7 @@
 
 ### 1.1 架构定位
 
-用例管理是平台的**测试资产管理中枢**，在三层架构中位于后端业务层，承上（接收元素定位的 XPath 测试点）启下（为执行引擎提供用例定义）。本模块**只做用例定义与编排**，不执行用例、不管理设备。
+用例管理是平台的**测试资产管理中枢**，位于 **L3 业务 App 层**，承上（接收元素定位的 XPath 测试点）启下（为执行引擎提供用例定义）。本模块**只做用例定义与编排**，不执行用例、不管理设备。
 
 ### 1.2 架构全景图
 
@@ -43,19 +43,19 @@ flowchart TD
 
     GATEWAY --> V["① 前端组件层 · case-manager/<br/>目录树 + 4 类型列表/编辑器 + 步骤编排器"]
 
-    V --> L2["② 后端层 · apps/case_manager/<br/>views_*（9 文件）· api_*（7 文件）<br/>models_*（4 文件）· 步骤类型注册表"]
+    V --> B["② 后端层 · apps/case_manager/<br/>views_*（9 文件）· api_*（7 文件）<br/>models_*（4 文件）· 步骤类型注册表"]
 
-    L2 --> L3["③ 数据源 · 5 表<br/>cm_case_directories<br/>cm_test_definitions / cm_web_testcases<br/>cm_api_testcases / cm_storage_testcases"]
+    B --> D["③ 数据源 · 5 表<br/>cm_case_directories<br/>cm_test_definitions / cm_web_testcases<br/>cm_api_testcases / cm_storage_testcases"]
 
-    L3 --> DB[("🗄 数据库 · cm_ 前缀 5 表")]
+    D --> DB[("🗄 数据库 · cm_ 前缀 5 表")]
 
-    AS["🤖 AgentScope case_tools"] -->|"同进程 import api.py"| L2
+    AS["🤖 AgentScope case_tools"] -->|"同进程 import api.py"| B
 
     style U fill:#e3f2fd,stroke:#2196f3
     style GATEWAY fill:#fff3e0,stroke:#ff9800
     style V fill:#e8f5e9,stroke:#4caf50
-    style L2 fill:#e8eaf6,stroke:#3f51b5
-    style L3 fill:#fff8e1,stroke:#ffc107
+    style B fill:#e8eaf6,stroke:#3f51b5
+    style D fill:#fff8e1,stroke:#ffc107
     style DB fill:#f5f5f5,stroke:#999
     style AS fill:#f7a8c4,stroke:#3a7a10
 ```
@@ -72,14 +72,12 @@ flowchart TD
 
     TR["test_runner"] -->|"api.get_enabled_definitions"| CM
     DASH["dashboard"] -->|"models（只读 count）"| CM
-    WF["workflow"] -->|"api.save_definition"| CM
-    AI["ai_assistant"] -->|"7 个 Tool"| CM
+    AI["ai_assistant"] -->|"6 个 Tool（cases 组）"| CM
 
     style CM fill:#4ecdc4,color:#fff
     style EL fill:#a78bfa,color:#fff
     style TR fill:#e8f5e9,stroke:#4caf50
     style DASH fill:#f7cd67,stroke:#3a7a10
-    style WF fill:#89CFF0,color:#fff
     style AI fill:#f7a8c4,stroke:#3a7a10
 ```
 
@@ -180,7 +178,7 @@ flowchart TB
 |---|---|---|---|
 | 1 | 步骤类型数量 | 旧 ARCH「17 种」，实际 `STEP_TYPE_META` 29 种（common 6 + android 11 + web 8 + api 4） | ✅ 已校正（PRD §2.3） |
 | 2 | 数据表数量 | 旧 ARCH「models.py 2 表」，实际 5 表（目录 + 4 用例类型） | ✅ 已校正（§5） |
-| 3 | 端点数量 | 旧 ARCH「10-14 端点」，实际 DRF 5 ViewSet + legacy 25 | ✅ 已校正（PRD §5.1） |
+| 3 | 端点数量 | 旧 ARCH「10-14 端点」，实际 DRF 6 ViewSet + legacy 31 条 path（含锁 5） | ✅ 已校正（PRD §5.1；v2.2 口径对齐 ARCH-00 路径条目） |
 
 ---
 
@@ -202,7 +200,7 @@ apps/case_manager/
 ├── views_api.py         API 用例 CRUD
 ├── views_storage.py     Storage 用例 CRUD
 ├── views_lock.py        编辑锁/持久锁/可见性
-├── views_drf.py         5 个 DRF ViewSet
+├── views_drf.py         6 个 DRF ViewSet（含手工注册 CaseActionsViewSet）
 ├── api.py               向后兼容 facade（re-export 6 子模块）
 ├── api_ui.py / api_web.py / api_api.py / api_storage.py
 ├── api_directories.py / api_lock.py
@@ -241,11 +239,13 @@ models/step_types.py
 
 ### 4.1 端点概览
 
-**DRF ViewSet（5 个）**：`directories`、`definitions`（UI）、`storage/definitions`、`api-testing/definitions`、`web/definitions`，各生成标准 CRUD 路由。
+**DRF ViewSet（6 个）**：`directories`、`definitions`（UI）、`storage/definitions`、`api-testing/definitions`、`web/definitions`（router 注册 5 个）+ `CaseActionsViewSet`（手工注册，避免前缀冲突），各生成标准 CRUD 路由。
 
 **DRF 锁/权限（5 个）**：`/definitions/{case_id}/lock|unlock|case-lock|case-unlock|visibility`（CaseActionsViewSet，跨类型共享）。
 
-**legacy（25 个）**：目录 5 + UI 用例 8 + Web 3 + API 3 + Storage 3 + 步骤类型 1 + YAML 2。
+**legacy（31 条 path）**：目录 5 + UI 用例 8 + Web 3 + API 3 + Storage 3 + 步骤类型 1 + YAML 3（export/yaml · exports · exports/{filename}）+ 锁/可见性 5（lock/unlock/case-lock/case-unlock/visibility）。
+
+> **端点口径**：31 条 path 与 ARCH-00 A.1（路径条目口径）一致；DRF 生成路由另计。
 
 ### 4.2 用例 steps_json 结构
 
@@ -360,9 +360,10 @@ find_case_across_types / get_case_for_lock
 |------|------|------|
 | **test-runner** | `api.get_enabled_definitions()` | 获取启用用例定义执行 |
 | **dashboard** | `models` 只读 count | 用例统计 |
-| **workflow** | `api.save_definition()` | Blockly → JSON 导入用例 |
-| **AI 助手** | 7 个 Tool（save/get/list/debug + storage/api/web 专用） | 自然语言生成用例 |
+| **AI 助手** | 6 个 Tool（save_definition/get_definition/save_api_config/get_case_detail/list_directories/search，见 ARCH-00 A.3） | 自然语言生成用例 |
 | **element-locator** | EventBus `add-step-to-case` | 供 XPath 测试点 |
+
+> v2.2：移除「workflow → api.save_definition（Blockly 时代用例导入）」行——积木用例已随 PRD-09 v5.2 下线，workflow 后端零 case_manager import（实测），用例互操作链路已删除。
 
 ---
 
@@ -382,8 +383,10 @@ find_case_across_types / get_case_for_lock
 
 | 版本 | 日期 | 变更摘要 |
 |------|------|----------|
+| v2.2 | 2026-08-21 | **五层口径回填 + 事实校正**：§1.1 去"三层架构"改 L3 业务 App 层；§1.2 图去旧 L2/L3 标签（B/D）；§1.3 包图删 workflow→CM 边（Blockly 时代残留，实测零 import）与 style WF；AI Tool 7→6（对齐 tool_registry cases 组）；§4.1 legacy 26→31 条 path（补锁 5）+ 口径注；§6.3 删 workflow 行、AI 行 7→6；关联指针改 §3.2/§4.6/§8.1 |
 | v1.0 | 2026-07-16 | 初始版本 |
 | v1.1 | 2026-07-16 | 代码对照审计：TestDefinition.id CharField PK；IoT 字段 |
 | v1.2 | 2026-07-17 | 协作功能：+5 字段 +4 端点 |
 | v1.3 | 2026-07-22 | 多类型用例：+3 分表；AI Tool 4→7 |
 | v2.0 | 2026-08-14 | 按仪表盘 ARCH 格式重构：补四图；校正 5 表 + 29 步骤类型 + 双视图层；标题 ARCH-03→ARCH-05 |
+| v2.1 | 2026-08-19 | 计数校正：DRF ViewSet 5→6（含手工注册 CaseActionsViewSet）、legacy 25→26 条 path（YAML 2→3），与 PRD-05 v7.1 对齐 |

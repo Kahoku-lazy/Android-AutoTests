@@ -3,7 +3,7 @@
 > 版本 v1 · 2026-08-14
 > 适用范围：`frontend/src/modules/dashboard/`（index.vue / DashboardView.logic.ts / api.ts / composables / components×4）及共享依赖（WorkbenchHeader / StatsCard / ActivityTimeline 等）
 > 设计语言：Paper × Polaroid（纸艺拍立得 · 点阵纸底 · 手绘波浪线），与 Doodle Craft 同源
-> 唯一真相源：`frontend/src/shared/styles/tokens.css`（令牌）、`frontend/DESIGN_SYSTEM.md`（设计系统）、`.claude/skills/doodle-craft/references/components.md`（组件像素级规格）
+> 唯一真相源：`frontend/src/shared/styles/tokens.css`（令牌）、`frontend/CLAUDE.md` §2（风格规则）、`.agents/skills/doodle-craft/references/components.md`（组件像素级规格）
 
 ---
 
@@ -213,7 +213,7 @@
 
 | # | 位置 | 偏差 | 建议 |
 |---|------|------|------|
-| 1 | WorkbenchHeader `.brand-sub` 11px | CSS 字号 < 12px，违反 DESIGN_SYSTEM 最小字号（共享组件，非仅仪表盘） | 收敛为 `--app-size-xs` 12px |
+| 1 | WorkbenchHeader `.brand-sub` 11px | CSS 字号 < 12px，违反最小字号规则（frontend/CLAUDE.md §2）（共享组件，非仅仪表盘） | 收敛为 `--app-size-xs` 12px |
 | 2 | TrendBarChart 轴标签 10px / 图例 11px | 画布字面量 < 12px（canvas 豁免存争议） | 若严格执行最小字号 → 12px |
 | 3 | TaskResultPanel `.task-row--clickable:hover` `rgba(78,205,196,0.12)` | 硬编码交互色（青绿 12%） | 换 `color-mix(in srgb, var(--c-case) 12%, transparent)`，零视觉变化 |
 | 4 | WorkbenchHeader `#FFE066`/`#999`/`#fff` 字面量 | 与 token 同值未走变量（共享组件） | 与侧边栏终审同法收敛 |

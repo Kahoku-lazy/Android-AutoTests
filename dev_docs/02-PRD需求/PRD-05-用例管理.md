@@ -1,13 +1,20 @@
 # PRD-05 — 用例管理 (Case Manager)
 
 > 关联模块：`apps/case_manager/` · 前端：`frontend/src/modules/case-manager/`
-> 关联全局：[`需求大纲.md`](./需求大纲.md) §5.4
-> 版本：v7.0 · 状态：评审中 · 日期：2026-08-14
+> 关联全局：[`需求大纲.md`](./需求大纲.md) §5.5
+> 关联上游：[`PRD-04-元素定位`](./PRD-04-元素定位.md)（测试点元素选取 XPath）· [`PRD-09-工作流工作台`](./PRD-09-工作流工作台.md)（积木同步为用例）
+> 关联下游：[`PRD-06-执行引擎`](./PRD-06-执行引擎.md)（steps_json 执行输入）
+> 版本：v7.5 · 状态：评审中 · 日期：2026-08-21
 
 **修订记录**
 
 | 版本 | 日期 | 变更摘要 |
 |------|------|----------|
+| v7.5 | 2026-08-21 | 补 config_json 双格式（4 模块 + 单接口 meta/request/cases）；§5.5 标注 403/423 视图层口径漂移；登记 steps_json↔steps_data/steps_data_write 三层映射 |
+| v7.4 | 2026-08-19 | 工作台顶栏随子项切换：标题/副标题按 4 类型子项（UI/Web/业务功能/API）分别展示 |
+| v7.3 | 2026-08-19 | 导航重构：页内 4 类型 Tab 改为侧边栏「用例管理」分组子项（Android UI 自动化用例 / Web 自动化测试用例 / 业务功能用例 / API 接口用例），各自独立路由（/cases/ui、/cases/web、/cases/storage、/cases/api，/cases 重定向到 /cases/ui）；编辑器退出目标同步改为对应子路由 |
+| v7.2 | 2026-08-19 | PRD/ARCH 分工回退：§4.1 移除私有函数名 `get_step_types_by_target` 与缓存实现，改产品口径并指向 ARCH-05 §3.2 |
+| v7.1 | 2026-08-19 | 格式对齐 PRD-03：文头补关联上下游 PRD；校正端点/文件计数（legacy 26 条 path、DRF 6 个 ViewSet、views 文件 10 个、composables 16 个）；登记 StepType 枚举与 STEP_TYPE_META 内部漂移（screenshot/poll_text）；修正「YAML 批量导入」为 JSON `/definitions/batch`；补错误码与契约变更 |
 | v7.0 | 2026-08-14 | 按仪表盘 PRD 格式重构：移除实现细节（行数/实施状态/已知问题），补齐功能详细规格、布局视觉、后端功能逻辑、API 字段级契约、数据来源表、非功能/非目标/约束/索引；校正 4 类用例（UI/Web/API/Storage）、步骤类型注册表 29 种、API 用例统一 config_json、协作字段 |
 | v6.0 | 2026-07-27 | 裸 client 收敛到 api 子模块 |
 
@@ -15,14 +22,14 @@
 
 ## 1. 功能定位
 
-用例管理是平台的**测试资产管理中枢**。用户在此创建、组织、编排 4 类测试用例（UI 自动化 / Web 自动化 / API 测试 / 功能业务），通过步骤编排器编写操作序列，并管理协作（编辑锁/持久锁/可见性/权限）。页面由左侧目录树 + 右侧内容区（4 类型 Tab）构成。
+用例管理是平台的**测试资产管理中枢**。用户在此创建、组织、编排 4 类测试用例（UI 自动化 / Web 自动化 / API 测试 / 功能业务），通过步骤编排器编写操作序列，并管理协作（编辑锁/持久锁/可见性/权限）。页面由左侧目录树 + 右侧内容区构成，4 类型切换在侧边栏「用例管理」分组子项。
 
 **核心职责**：
 
 - **组织**：二级目录树，按 4 类型独立缓存
 - **编排**：步骤编排器（步骤类型注册表驱动，跨平台 29 种）
 - **协作**：编辑锁（30min 超时）、持久锁、可见性控制、编辑权限
-- **导入导出**：YAML 批量导入（≤500 条）/ 导出
+- **导入导出**：JSON 批量导入（≤500 条）/ YAML 导出
 - **供给下游**：向执行引擎提供 `steps_json` 作为执行输入
 
 ---
@@ -33,7 +40,7 @@
 
 #### 2.1.1 目录树展示（F-01-01）
 
-左侧目录树，按 4 类型独立缓存（切换 Tab 复用）。节点区分目录/用例，用例节点显示优先级标签（P0=红 / P1=黄 / P2=灰），禁用用例删除线+灰。
+左侧目录树，按 4 类型独立缓存（切换侧边栏子项复用）。节点区分目录/用例，用例节点显示优先级标签（P0=红 / P1=黄 / P2=灰），禁用用例删除线+灰。
 
 **组件**：`DirectoryTree.vue`。
 
@@ -70,7 +77,7 @@
 
 #### 2.2.3 API 测试用例（F-02-03）
 
-统一 `config_json`（4 模块：case_info / steps / test_data / validation），替代扁平字段。
+统一 `config_json`（双格式：4 模块 `case_info`/`steps`/`test_data`/`validation` 多步骤格式 + 单接口格式 `meta`/`request`/`cases`），替代扁平字段。
 
 **组件**：`ApiCaseList.vue` + `ApiCaseEditor.vue`。
 
@@ -96,6 +103,8 @@
 | API | api_request / api_assert / api_sleep / api_log | 4 |
 
 > `StepType` 枚举（`models/step_types.py`）是唯一真相源，含 8 个 deprecated 旧类型（start_app/kill_app/perf_element_time/wait_toast/if_element_appear/if_element_disappear/loop_n/loop_elements），已由 `adb_*` 前缀新类型替代。
+>
+> ⚠️ 偏差：枚举与 `STEP_TYPE_META` 存在内部漂移——`screenshot` 仅在 META（不在枚举）、`poll_text` 在枚举（不在 META），前端注册表以 META 为准（已登记）。
 
 **组件**：`StepEditor.vue` + `step-utils.ts`。步骤结构 `TestStep`（type/xpath/timeout/expected_text/direction/distance/children/selector/value/url/method/headers/body/extract/assertions/expected_status/request_schema/response_schema）。
 
@@ -105,7 +114,7 @@
 
 ### 2.4 YAML 导入导出（F-04）
 
-UI 类型多选用例导出为 YAML（ID/标题/步骤 JSON/优先级/包名）；YAML 批量导入（≤500 条/次，ID 冲突跳过或覆盖）。
+UI 类型多选用例导出为 YAML（ID/标题/步骤 JSON/优先级/包名）；JSON 批量导入（`POST /cases/definitions/batch`，≤500 条/次，ID 冲突跳过或覆盖）。
 
 **组件**：`export_yaml` / `batchImportDefinitions`。
 
@@ -132,17 +141,20 @@ UI 类型多选用例导出为 YAML（ID/标题/步骤 JSON/优先级/包名）�
 
 ## 3. 布局与视觉设计
 
-> 颜色/字号引用 Doodle Craft 令牌（[`frontend/DESIGN_SYSTEM.md`](../frontend/DESIGN_SYSTEM.md)）。模块色青绿 `--c-case` #4ECDC4。
+> 颜色/字号引用 Doodle Craft 令牌（[`frontend/CLAUDE.md` §2](../../frontend/CLAUDE.md)）。模块色青绿 `--c-case` #4ECDC4。
 
 ### 3.1 页面布局
 
 ```
 ┌─────────────────────────────────────────────┐
+│ 侧边栏：「用例管理」分组（可展开，4 子项）        │
+│  UI / Web / 业务功能 / API 接口用例            │
+├──────────┬──────────────────────────────────┤
 │ WorkbenchHeader                              │
 ├──────────┬──────────────────────────────────┤
-│ 目录树    │ 4 类型 Tab（UI/Web/API/Storage）  │
-│ (左 300px)│  ├ 工具栏（面包屑/计数/视图切换）   │
-│          │  └ 卡片视图 / 表格视图             │
+│ 目录树    │ 工具栏（面包屑/计数/视图切换）      │
+│ (左 300px)│  ├ 卡片视图 / 表格视图             │
+│          │  └ （按侧边栏子项切换类型）          │
 └──────────┴──────────────────────────────────┘
 ```
 
@@ -161,7 +173,9 @@ UI 类型多选用例导出为 YAML（ID/标题/步骤 JSON/优先级/包名）�
 
 ### 4.1 步骤类型注册表
 
-`models/step_types.py` `STEP_TYPE_META` 是唯一权威数据，`get_step_types_by_target(target)` 按平台预计算缓存，`GET /cases/step-types?target=` 供前端拉取。
+`models/step_types.py` 的 `STEP_TYPE_META` 注册表是唯一权威数据，按目标平台（common / android / web / api）分组；`GET /cases/step-types?target=` 供前端拉取（实现结构见 ARCH-05 §3.2）。
+
+> ⚠️ META 与 `StepType` 枚举存在内部漂移（`screenshot` 仅 META / `poll_text` 仅枚举），见 §2.3.1 登记。
 
 ### 4.2 编辑锁（30min）
 
@@ -185,7 +199,9 @@ UI 类型多选用例导出为 YAML（ID/标题/步骤 JSON/优先级/包名）�
 
 鉴权：全部端点需 JWT Bearer 鉴权。响应统一 `{status, data}` / `{status, message}`，JSON 字段 snake_case。
 
-> 双视图层共存：DRF ViewSets（5 个，新标准）+ legacy Django views（25 端点，旧前端），两者前缀不冲突。
+> 双视图层共存：DRF ViewSets（6 个，含手工注册的 CaseActionsViewSet，新标准）+ legacy Django views（26 条 path 条目，旧前端），两者前缀不冲突。
+>
+> 前端消费：legacy 26 条 path 全部被前端消费（✅）——经模块根 `api.ts`（step-types）与 `api/` 5 子模块，导出文件下载经 `window.open` 直链（`UiCaseList.vue`）；DRF ViewSet 与 legacy 双注册中前端以 legacy 为主。
 
 ### 5.1 端点总览
 
@@ -232,13 +248,34 @@ UI 类型多选用例导出为 YAML（ID/标题/步骤 JSON/优先级/包名）�
 | `visibility` / `permitted_users` | string | 可见性 + 白名单 |
 | `permission` / `permitted_editors` | string | 权限 + 白名单 |
 
+> ⚠️ 字段名三层映射（v7.5 登记）：模型字段 `steps_json` ↔ DRF 读字段 `steps_data`（`SerializerMethodField`）/ 写字段 `steps_data_write`（`JSONField(source="steps_json")`，`serializers.py:106-107`）——API 线缆对外用 `steps_data`/`steps_data_write`，模型层统一落 `steps_json`。
+
 ### 5.4 其余类型差异字段
 
 | 类型 | 差异字段 |
 |------|------|
 | WebTestCase | `url`、`custom_columns`、`rows`（表格行） |
 | StorageTestCase | `custom_columns`、`rows`（表格行） |
-| ApiTestCase | `config_json`（统一 4 模块：case_info/steps/test_data/validation） |
+| ApiTestCase | `config_json`（双格式：4 模块 case_info/steps/test_data/validation + 单接口格式 meta/request/cases） |
+
+### 5.5 错误码汇总
+
+| 状态码 | 场景 |
+|:--:|------|
+| 400 | 必填字段为空（name / title 等）/ 父级非目录 / 目录层级超二级 |
+| 403 | 无编辑权限（permission=readonly 或非白名单） |
+| 404 | 目录 / 用例不存在 |
+| 409 | 同级重名（目录 name / 用例 title）/ ID 冲突 |
+| 423 | 他人编辑中（编辑锁冲突） |
+
+> ⚠️ 实现口径漂移（v7.5 登记）：上表「无权限 403 / 编辑冲突 423」为产品口径。实际 legacy `api_lock.acquire_edit_lock` 对 readonly/restricted/owner 锁定/编辑中四类冲突**全部返回 423**（`api_lock.py:89/93/96/102`）；DRF `views_drf._raise_lock_error`（`views_drf.py:75-83`）将 423 等非 404/400 一律映射为 403（PermissionDenied）。故实际 HTTP 状态码随视图层（legacy vs DRF）漂移。
+
+### 5.6 契约变更
+
+| 版本 | 变更 |
+|------|------|
+| v7.0 | API 用例统一 `config_json`（4 模块）替代扁平字段；步骤类型注册表收敛为 `STEP_TYPE_META` 29 种 |
+| v7.1 | 计数校正（legacy 26 条 path、DRF 6 ViewSet）；「YAML 批量导入」更正为 JSON `POST /cases/definitions/batch`；无字段契约破坏 |
 
 ---
 
@@ -296,9 +333,9 @@ UI 类型多选用例导出为 YAML（ID/标题/步骤 JSON/优先级/包名）�
 | 前端 | `frontend/src/modules/case-manager/api.ts` | facade re-export |
 | 前端 | `frontend/src/modules/case-manager/api/`（5 子模块） | directories/uiAutomation/storage/apiTesting/webAutomation |
 | 前端 | `frontend/src/modules/case-manager/components/` | DirectoryTree/CaseEditor/StepEditor/StepViewer/CaseCard/WatcherPanel + 4 CaseList + 4 Editor |
-| 前端 | `frontend/src/modules/case-manager/composables/`（15 个） | useCaseManager/useStepDragDrop/useEditLock 等 |
+| 前端 | `frontend/src/modules/case-manager/composables/`（16 个） | useCaseManager/useStepDragDrop/useEditLock 等 |
 | 后端 | `apps/case_manager/models.py` + `models_web.py` + `models_storage.py` + `models_api.py` | 5 表定义 |
-| 后端 | `apps/case_manager/views_*.py`（9 文件） | legacy + DRF 视图 |
+| 后端 | `apps/case_manager/views.py` + `views_*.py`（10 文件） | legacy + DRF 视图 |
 | 后端 | `apps/case_manager/api_*.py`（7 文件） | 跨模块写操作 |
 | 后端 | `apps/case_manager/urls.py` | 路由（DRF router + legacy） |
 | 共享 | `models/step_types.py` | 步骤类型注册表 + TestStep |

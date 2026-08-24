@@ -1,26 +1,27 @@
 # ARCH-04 — 元素定位 (Element Locator)
 
-> **版本**：v2.0 · **日期**：2026-08-14 · **关联模块**：`apps/element_locator/` · 前端 `frontend/src/modules/element-locator/`
+> **版本**：v2.2 · **日期**：2026-08-21 · **关联模块**：`apps/element_locator/` · 前端 `frontend/src/modules/element-locator/`
 
 ## 文档内容简述
 
 本文档是**元素定位模块**的架构设计，覆盖该模块而非平台全貌：
 
 - **架构四图**：架构全景图 · 模块包图 · 数据流图 · API 关系图（§1.2~1.5）
-- **后端架构**：双视图层（legacy + DRF）+ 8 表 + 页面树工具（§3）
-- **API 设计**：35 legacy 端点 + 6 DRF ViewSet 共存（§4）
-- **数据模型**：8 表 ER 图 + 三域对称结构（§5）
+- **后端架构**：双视图层（legacy + DRF）+ 8 表 + 页面树工具 + 快照导入（§3）
+- **API 设计**：35 legacy 端点 + 6 DRF ViewSet + 快照导入端点共存（§4）
+- **数据模型**：8 表 ER 图（页面携带 OCR JSON / 快照溯源，元素含完整 dump 字段）+ 三域对称结构（§5）
 
 ## 你能从文档获取什么信息
 
 - **三域元素资产如何组织**：Android（页面树）/ Web（分组树）/ API（分组树）的对称 CRUD 架构
+- **快照导入链路**：检查器 / AI 经 `api.import_snapshot_page` 自动建目录 + 页面（截图 + 页面级 OCR JSON）+ 元素 upsert（完整 dump 字段）
 - **双视图层共存**：legacy `views.py`（前端消费 35 端点）与 DRF `views_drf.py`（6 ViewSet 并行）的关系
 - **元素去重与树校验**：`(page, resource_id, bounds)` upsert + 页面树 5 层限制
 - **边界与隐患**：旧文档已下线功能（设备获取/XPath 引擎）与 api.py 接口漂移
 
 ## 关联文档
 
-- **架构总纲**：[`ARCH-00-平台总体架构`](./ARCH-00-平台总体架构.md) §4.3
+- **架构总纲**：[`ARCH-00-平台总体架构`](./ARCH-00-平台总体架构.md) §3.2（element_locator 行）· §4.1 写收敛 · §二 L3
 - **需求规格**：[`PRD-04-元素定位`](../02-PRD需求/PRD-04-元素定位.md) — **契约以 PRD §5 为准**
 
 ---
@@ -29,7 +30,7 @@
 
 ### 1.1 架构定位
 
-元素定位是平台的**元素资产仓库**，在三层架构中位于后端层，集中管理 Android UI 元素、Web 页面元素、API 接口定义三类定位资产，供用例管理与执行引擎引用。本模块**只做持久化 CRUD**——设备截屏/Dump/XPath 候选生成等实时交互能力已迁出到设备检查器（inspector）。
+元素定位是平台的**元素资产仓库**，位于 **L3 业务 App 层**，集中管理 Android UI 元素、Web 页面元素、API 接口定义三类定位资产，供用例管理与执行引擎引用。本模块**只做持久化 CRUD**——设备截屏/Dump/XPath 候选生成等实时交互能力已迁出到设备检查器（inspector），XPath/OCR 算法在 L1a `algorithms/`。
 
 ### 1.2 架构全景图
 
@@ -43,17 +44,17 @@ flowchart TD
 
     GATEWAY --> V["① 前端组件层 · element-locator/<br/>Android/Web/API 三 Tab 管理器"]
 
-    V --> L2["② 后端层 · apps/element_locator/<br/>views.py（legacy 35 端点）· views_drf.py（6 ViewSet）<br/>api.py 白名单 · page_tree.py 树校验"]
+    V --> B["② 后端层 · apps/element_locator/<br/>views.py（legacy 35 端点）· views_drf.py（6 ViewSet）<br/>api.py 白名单 · page_tree.py 树校验"]
 
-    L2 --> L3["③ 数据源 · 8 表<br/>el_pages/el_elements/el_page_flows<br/>el_web_groups/el_web_elements/el_web_page_flows<br/>el_api_groups/el_api_endpoints"]
+    B --> D["③ 数据源 · 8 表<br/>el_pages/el_elements/el_page_flows<br/>el_web_groups/el_web_elements/el_web_page_flows<br/>el_api_groups/el_api_endpoints"]
 
-    L3 --> DB[("🗄 数据库 · el_ 前缀 8 表")]
+    D --> DB[("🗄 数据库 · el_ 前缀 8 表")]
 
     style U fill:#e3f2fd,stroke:#2196f3
     style GATEWAY fill:#fff3e0,stroke:#ff9800
     style V fill:#e8f5e9,stroke:#4caf50
-    style L2 fill:#e8eaf6,stroke:#3f51b5
-    style L3 fill:#fff8e1,stroke:#ffc107
+    style B fill:#e8eaf6,stroke:#3f51b5
+    style D fill:#fff8e1,stroke:#ffc107
     style DB fill:#f5f5f5,stroke:#999
 ```
 
@@ -221,7 +222,9 @@ page_tree.py — 页面目录树校验
 
 > 响应信封统一 `{status, data}` / `{status, message}`；字段 snake_case。**完整字段契约以 PRD §5.2~5.7 为准**，本节只列概览。
 
-### 4.1 端点概览（35 legacy + 6 DRF ViewSet）
+### 4.1 端点概览（35 legacy 逻辑端点 + 6 DRF ViewSet）
+
+> **端点口径**：35 legacy 逻辑端点 = ARCH-00 路径条目口径的 **29 条 path**（如 `pages`/`pages/{id}/items`/`elements/batch` 按方法拆分计数）；DRF 6 ViewSet 另计（ARCH-00 A.1 同口径）。
 
 **legacy（前端消费，按资源域）**：
 
@@ -281,6 +284,8 @@ erDiagram
         string package
         string activity
         string screenshot_path
+        json ocr_json "页面级 OCR（v2.1，快照导入写入）"
+        int snapshot_id "来源检查器快照（v2.1 溯源，可空）"
         int element_count
         datetime created_at
     }
@@ -294,8 +299,17 @@ erDiagram
         string resource_id
         string bounds
         text xpath_candidates
+        int x "v2.1 坐标"
+        int y "v2.1 坐标"
+        int width "v2.1 尺寸"
+        int height "v2.1 尺寸"
+        int depth "v2.1 层级深度"
+        string index "v2.1 兄弟索引"
         bool clickable
         bool enabled
+        bool scrollable "v2.1"
+        bool checked "v2.1"
+        string thumbnail_path "v2.1 缩略图路径"
         string alias
         string tags
         bool is_test_point
@@ -355,10 +369,12 @@ get_test_points(page_ids=None)      # 测试点元素
 get_flows()                         # Android 跳转流
 get_web_elements(locator_type, is_test_point)
 get_web_groups()
+get_page_full(page_id)              # 页面只读视图（元信息 + 元素 + OCR JSON，供检查器回看）
 
 # 写操作（跨模块收敛）
 create_page / rename_page / delete_page / update_page_parent
 upsert_element / update_element
+import_snapshot_page(...)           # 快照导入：自动建目录+页面+元素+OCR JSON+截图
 create_flow / delete_flow / clear_all
 create_web_group / ... / create_api_endpoint / ... （三域对称）
 ```
@@ -368,7 +384,8 @@ create_web_group / ... / create_api_endpoint / ... （三域对称）
 | 消费方 | 调用方式 | 用途 |
 |------|------|------|
 | **case-manager** | `api.get_test_points()` | 测试点元素供用例步骤引用 |
-| **AI 助手** | AgentScope Tool `get_test_points` | 自然语言查询元素 |
+| **AI 助手** | AgentScope Tool `get_test_points` / `save_page_to_elements` | 自然语言查询元素 / 快照保存到元素定位 |
+| **device-inspector** | `api.import_snapshot_page`（写）/ `api.get_page_full`（读） | 筛减导入快照 / 已保存页面只读回看 |
 | **dashboard** | `models.Element/Page` 只读 count | 元素/页面统计 |
 | **device-pool** | 提供设备（Page.device FK） | 页面关联设备 |
 
@@ -382,7 +399,8 @@ create_web_group / ... / create_api_endpoint / ... （三域对称）
 | 双视图层 | legacy（前端消费）+ DRF（并行备用）共存，URL 前缀不冲突 |
 | 树校验 | page_tree.py 单查询 parent_map 避免 N+1，5 层目录限制 |
 | 元素去重 | UNIQUE(page, resource_id, bounds) + upsert，防重复 |
-| 功能收敛 | 设备获取/XPath 引擎已迁出，本模块专注持久化资产 CRUD |
+| 快照导入 | import_snapshot_page 收敛写库：自动建目录（≤5 层）+ 页面 + 元素 upsert + 页面级 OCR JSON + 截图；检查器与 AI 共用 |
+| 功能收敛 | 设备获取/XPath 引擎已迁出，本模块专注持久化资产 CRUD 与快照导入 |
 
 ---
 
@@ -390,6 +408,8 @@ create_web_group / ... / create_api_endpoint / ... （三域对称）
 
 | 版本 | 日期 | 变更摘要 |
 |------|------|----------|
+| v2.2 | 2026-08-21 | **五层口径回填**：§1.1 去"三层架构"改 L3 业务 App 层；§1.2 图去旧 L2/L3 标签（B/D）；§4.1 补端点口径说明（35 逻辑端点 = ARCH-00 29 条 path）；关联指针改 §3.2/§4.1/§二 L3 |
 | v1.0 | 2026-07-16 | 初始版本 |
 | v1.1 | 2026-07-16 | 代码对照审计：补 parent FK + is_folder；新增 page_tree.py |
 | v2.0 | 2026-08-14 | 按仪表盘 ARCH 格式重构：补四图；校正 8 表 + 双视图层 + 35 端点；功能收敛（设备获取/XPath 引擎迁出）；标题 ARCH-01→ARCH-04；api.py 接口漂移登记 |
+| v2.1 | 2026-08-19 | 承接设备检查器快照化（PRD v7.2 / ARCH-03 v1.7）：`el_pages` 增加 `ocr_json`（页面级 OCR）与 `snapshot_id`（快照溯源）；`el_elements` 补完整 dump 字段（x/y/width/height/depth/index/scrollable/checked/thumbnail_path）；api.py 白名单新增 `import_snapshot_page`（快照导入）与 `get_page_full`（页面只读视图）；跨模块消费者新增 device-inspector 与 AI 保存工具 |

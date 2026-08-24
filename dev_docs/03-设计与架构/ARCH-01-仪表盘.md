@@ -1,6 +1,6 @@
 # ARCH-01 — 仪表盘 (Dashboard)
 
-> **版本**：v1.6 · **日期**：2026-08-14 · **关联模块**：`apps/dashboard/` · 前端 `frontend/src/modules/dashboard/`
+> **版本**：v1.7 · **日期**：2026-08-21 · **关联模块**：`apps/dashboard/` · 前端 `frontend/src/modules/dashboard/`
 
 ## 文档内容简述
 
@@ -16,11 +16,11 @@
 - **仪表盘如何聚合**：跨 6 个 App 只读查询，无自有表、无写操作
 - **数据链路**：数据源 Model → 聚合函数 → 字段 → 前端组件的完整链路
 - **端点消费与同步**：哪 2 个端点前端在用、哪 2 个后端-only，以及数据同步方式
-- **边界与隐患**：2 处跨模块内部 import 违规（历史 4 处前后端契约不匹配已于 v1.6 全部修复）
+- **边界与隐患**：历史 2 处跨模块内部 import 违规已于 2026-08-20 修复（fix-cross-app-firewall：`filter_agents_for_user→ai_assistant.api`、`resolve_username→shared/users.py`）；历史 4 处前后端契约不匹配已于 v1.6 全部修复
 
 ## 关联文档
 
-- **架构总纲**：[`ARCH-00-平台总体架构`](./ARCH-00-平台总体架构.md) §4.1
+- **架构总纲**：[`ARCH-00-平台总体架构`](./ARCH-00-平台总体架构.md) §3.2（dashboard 行）· §4.1 写收敛 · §二 L3
 - **需求规格**：[`PRD-01-仪表盘`](../02-PRD需求/PRD-01-仪表盘.md) — **契约以 PRD §5~§6 为准**
 
 ---
@@ -43,16 +43,16 @@ flowchart TD
 
     GATEWAY --> V["① 前端组件层 · dashboard/<br/>统计卡片 · 趋势图 · 任务面板 · 活动时间线"]
 
-    V --> L2["② 后端聚合层 · apps/dashboard/views.py<br/>4 APIView + 12 辅助函数<br/>纯只读 · 无 models.py · 无 api.py"]
+    V --> AGG["② 后端聚合层 · apps/dashboard/views.py<br/>4 APIView + 12 辅助函数<br/>纯只读 · 无 models.py · 无 api.py"]
 
-    L2 --> L3["③ 数据源 · 6 个 App 直读 Model"]
+    AGG --> SRC["③ 数据源 · 6 个 App 直读 Model"]
 
-    L3 --> S1["📱 device_pool · Device"]
-    L3 --> S2["🔍 element_locator · Element/Page/ApiEndpoint/WebElement"]
-    L3 --> S3["📋 case_manager · TestDefinition/ApiTestCase/WebTestCase/StorageTestCase"]
-    L3 --> S4["⚡ test_runner · TestRunRecord/TestResult + api.get_active_runs_info"]
-    L3 --> S6["🤖 ai_assistant · AIAgent"]
-    L3 --> S7["🔄 workflow · WorkflowDocument"]
+    SRC --> S1["📱 device_pool · Device"]
+    SRC --> S2["🔍 element_locator · Element/Page/ApiEndpoint/WebElement"]
+    SRC --> S3["📋 case_manager · TestDefinition/ApiTestCase/WebTestCase/StorageTestCase"]
+    SRC --> S4["⚡ test_runner · TestRunRecord/TestResult + api.get_active_runs_info"]
+    SRC --> S6["🤖 ai_assistant · AIAgent"]
+    SRC --> S7["🔄 workflow · WorkflowDocument"]
 
     S1 --> DB[("🗄 数据库<br/>6 前缀 13 张来源表 · 只读 count()")]
     S2 --> DB
@@ -64,8 +64,8 @@ flowchart TD
     style U fill:#e3f2fd,stroke:#2196f3
     style GATEWAY fill:#fff3e0,stroke:#ff9800
     style V fill:#e8f5e9,stroke:#4caf50
-    style L2 fill:#e8eaf6,stroke:#3f51b5
-    style L3 fill:#fff8e1,stroke:#ffc107
+    style AGG fill:#e8eaf6,stroke:#3f51b5
+    style SRC fill:#fff8e1,stroke:#ffc107
     style DB fill:#f5f5f5,stroke:#999
 ```
 
@@ -96,8 +96,8 @@ flowchart TD
     DASH -->|"models.WorkflowDocument"| WF
 
     DASH -.->|"✅ api.get_active_runs_info"| TR
-    DASH -.->|"⚠️ permissions.filter_agents_for_user"| AI
-    DASH -.->|"⚠️ views_helpers.resolve_username"| CM
+    DASH -.->|"✅ api.filter_agents_for_user（2026-08-20 修复）"| AI
+    DASH -.->|"✅ shared.users.resolve_username（2026-08-20 修复）"| CM
 
     style DASH fill:#f7cd67,stroke:#3a7a10
     style SOURCES fill:#e8f5e9,stroke:#4caf50
@@ -107,8 +107,9 @@ flowchart TD
 
 ```
 dashboard ──✅ import──→ 各 App models（只读 Model 查询）
-dashboard ──✅ import──→ 各 App api.py（test_runner.api.get_active_runs_info）
-dashboard ──❌ import──→ 各 App 内部实现（permissions / views_helpers）← 现有 2 处违规
+dashboard ──✅ import──→ 各 App api.py（test_runner.api.get_active_runs_info · ai_assistant.api.filter_agents_for_user）
+dashboard ──✅ import──→ shared.users（resolve_username，2026-08-20 下沉）
+dashboard ──❌ import──→ 各 App 内部实现（permissions / views_helpers）← 历史 2 处违规已于 2026-08-20 修复（fix-cross-app-firewall）
 dashboard ──❌ 任何写操作（无 models.py · 无 api.py · 视图内无 save/create/update/delete）
 ```
 
@@ -357,6 +358,7 @@ _safe_count(...)                       # 表缺失时计 0（降级规则）
 
 | 版本 | 日期 | 变更摘要 |
 |------|------|----------|
+| v1.7 | 2026-08-21 | **五层口径回填 + 防火墙修复同步**：§1.2 图去旧 L2/L3 标签（AGG/SRC）；§1.3 包图 2 处 ⚠️ 改 ✅（2026-08-20 fix-cross-app-firewall：filter_agents_for_user→ai_assistant.api、resolve_username→shared/users.py）；防火墙 ASCII 同步；简述"边界与隐患"更新；关联指针改 §3.2/§4.1/§二 L3 |
 | v1.0 | 2026-07-16 | 初始版本：基于 `项目架构.md` 和 `PRD-01-仪表盘.md` 重构 |
 | v1.1 | 2026-07-16 | **代码对照审计**：API 路径修正为 `/api/dashboard/stats/` + `/api/devices/stats/` + `/api/cases/stats/`；函数名对齐实际 views.py |
 | v1.3 | 2026-08-13 | 补绘架构四图（架构全景图/模块包图/数据流图/API关系图）；数据源 6→7 校正；标注 2 处跨模块 import 违规 + 4 处前后端契约不匹配 |

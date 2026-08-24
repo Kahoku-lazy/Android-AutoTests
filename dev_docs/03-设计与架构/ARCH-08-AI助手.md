@@ -1,6 +1,6 @@
 # ARCH-08 — AI 助手 (AI Assistant)
 
-> **版本**：v2.0 · **日期**：2026-08-18 · **关联模块**：`apps/ai_assistant/` · 前端 `frontend/src/modules/ai-assistant/`
+> **版本**：v3.0 · **日期**：2026-08-21 · **关联模块**：`apps/ai_assistant/` · 前端 `frontend/src/modules/ai-assistant/`
 
 ## 文档内容简述
 
@@ -8,19 +8,19 @@
 
 - **架构四图**：架构全景图 · 模块包图（含防火墙）· 数据流图 · API 关系图（§1.2~1.5）
 - **后端架构**：进程内 Agent 构建 + 单请求 SSE 流 + HITL 线程安全 + 工具双通道（§3）
-- **API 设计**：44 REST 端点 + SSE（§4）
+- **API 设计**：41 REST 端点 + SSE（§4）
 - **数据模型**：7 表 ER 图（§5）
 
 ## 你能从文档获取什么信息
 
 - **AgentScope 如何集成**：`agent_scope/` 作为 Django 进程内模块，`agent_factory.build_agent()` 直接构建 Agent，不再经 HTTP 注册
-- **工具如何编排**：`tool_registry.py` 的 14 平台工具单一真相源，`InProcessPlatformTool` 进程内直调 handler；能力开关决定 Toolkit 组装
+- **工具如何编排**：`tool_registry.py` 的 26 平台工具单一真相源，`InProcessPlatformTool` 进程内直调 handler；能力开关决定 Toolkit 组装；MCP / Skill 统一由 AI 工具箱导入（智能体禁止自配置）
 - **SSE 流如何工作**：单请求 async view + asyncio.Queue，AgentScope `reply_stream` 直接消费逐 token 流式返回
-- **端点消费**：44 端点中前端消费 36，8 个后端保留（reveal-key / 任务历史 / 工具网关 / 手动加文档）
+- **端点消费**：41 端点中前端消费 34，7 个后端保留（reveal-key / 任务历史 / 工具网关 / 手动加文档）
 
 ## 关联文档
 
-- **架构总纲**：[`ARCH-00-平台总体架构`](./ARCH-00-平台总体架构.md) §4.7
+- **架构总纲**：[`ARCH-00-平台总体架构`](./ARCH-00-平台总体架构.md) §3.2（ai_assistant 行）· §4.5 AI 工具编排与 SSE · A.3 Tool 清单
 - **需求规格**：[`PRD-08-AI助手`](../02-PRD需求/PRD-08-AI助手.md) — **契约以 PRD §5 为准**
 
 ---
@@ -29,9 +29,9 @@
 
 ### 1.1 架构定位
 
-AI 助手是平台的**自然语言交互中枢**，通过 AgentScope ReAct 推理引擎，让用户以对话方式驱动全流程测试。AgentScope 已从独立 FastAPI 服务迁移为 Django 进程内模块（`apps/ai_assistant/agent_scope/`），Agent 在 Django 进程内构建、运行、流式返回，不再有独立 `agentscope_service/` 目录与 :8000 端口。
+AI 助手是平台的**自然语言交互中枢**（**L3 业务 App 层**），通过 AgentScope ReAct 推理引擎，让用户以对话方式驱动全流程测试。AgentScope 已从独立 FastAPI 服务迁移为 Django 进程内模块（`apps/ai_assistant/agent_scope/`），Agent 在 Django 进程内构建、运行、流式返回，不再有独立 `agentscope_service/` 目录与 :8000 端口——即 ARCH-00 部署形态的「AgentScope in-process」，非独立分层。
 
-模块横跨后端层与 AI 引擎层——Django 管理智能体配置、对话记录与工具编排，AgentScope 执行推理与 Tool 调用。AI 引擎不直连设备、不直写数据库，一切通过 Tool 调用各业务模块。
+模块在 L3 内承担智能体配置、对话记录与工具编排（26 个 Tool 单一真相源 `tool_registry.py`）；AI 引擎不直连设备、不直写数据库，一切通过 Tool 调用各业务模块 api.py。
 
 ### 1.2 架构全景图
 
@@ -41,21 +41,21 @@ AI 助手是平台的**自然语言交互中枢**，通过 AgentScope ReAct 推�
 flowchart TD
     U["👤 用户浏览器<br/>ai-assistant 3 路由"]
 
-    U -->|"① HTTP REST + JWT"| GATEWAY["API 网关层<br/>JWT 中间件 · urls.py 注册 44 端点"]
+    U -->|"① HTTP REST + JWT"| GATEWAY["API 网关层<br/>JWT 中间件 · urls.py 注册 41 端点"]
     U -->|"③ SSE + JWT 流式"| GATEWAY
 
     GATEWAY --> V["① 前端组件层 · ai-assistant/<br/>智能体看板 · 对话窗口 · 工具箱 · 知识库 · 评测中心"]
 
-    V --> L2["② 后端层 · apps/ai_assistant/<br/>views/（10 视图模块）· api.py · models.py（7 表）"]
+    V --> BE["② 后端层 · apps/ai_assistant/<br/>views/（3 视图模块 + DRF 组）· api.py · models.py（7 表）"]
 
-    L2 --> AS["🤖 AgentScope 进程内 · agent_scope/<br/>agent_factory · tool_registry(14 Tool) · in_process_tool · rag_service"]
+    BE --> AS["🤖 AgentScope 进程内 · agent_scope/<br/>agent_factory · tool_registry(26 Tool) · in_process_tool · rag_service"]
 
-    AS -->|"进程内直调 handler"| BIZ["④ 业务模块 · device_pool / element_locator / case_manager / test_runner<br/>经各模块 api.py + 只读 ORM"]
+    AS -->|"进程内直调 handler"| BIZ["④ 业务模块 · device_pool / element_locator / case_manager / test_runner / workflow<br/>经各模块 api.py + 只读 ORM"]
 
     style U fill:#e3f2fd,stroke:#2196f3
     style GATEWAY fill:#fff3e0,stroke:#ff9800
     style V fill:#e8f5e9,stroke:#4caf50
-    style L2 fill:#e8eaf6,stroke:#3f51b5
+    style BE fill:#e8eaf6,stroke:#3f51b5
     style AS fill:#f7a8c4,stroke:#3a7a10
     style BIZ fill:#fff8e1,stroke:#ffc107
 ```
@@ -68,16 +68,20 @@ flowchart TD
 flowchart TD
     AI["apps/ai_assistant/<br/>models · views/ · api.py · agent_scope/"]
 
-    DP["device_pool"] -->|"api.get_online_devices / acquire / release"| AI
-    EL["element_locator"] -->|"models.Element / Page（只读）"| AI
+    DP["device_pool"] -->|"api.list_devices / get_online_devices / acquire / release"| AI
+    DI["device_inspector"] -->|"api.capture_snapshot / save_snapshot_to_elements"| AI
+    EL["element_locator"] -->|"models.Element / Page（只读）+ api.import_snapshot_page"| AI
     CM["case_manager"] -->|"api.save_* / api_api / api_lock + models（只读）"| AI
     TR["test_runner"] -->|"api.get_run_results / stop_run"| AI
+    WF["workflow"] -->|"api.get_document_digest / list_document_summaries（只读）"| AI
 
     style AI fill:#f7a8c4,stroke:#3a7a10
     style DP fill:#e8f5e9,stroke:#4caf50
+    style DI fill:#e8f5e9,stroke:#4caf50
     style EL fill:#e8f5e9,stroke:#4caf50
     style CM fill:#e8f5e9,stroke:#4caf50
     style TR fill:#e8f5e9,stroke:#4caf50
+    style WF fill:#e8f5e9,stroke:#4caf50
 ```
 
 > 注：箭头方向为「数据/依赖来源」视角。实际 `tool_registry.py` 与 `views/` 反向 import 这些下层模块（见 §6.3）。聚合层消费方向：`evaluator` / `dashboard` import `ai_assistant.api` / `ai_assistant.permissions`。
@@ -85,7 +89,7 @@ flowchart TD
 **防火墙规则**：
 
 ```
-ai_assistant ──✅ import──→ device_pool.api / element_locator.models / case_manager.api* / test_runner.api
+ai_assistant ──✅ import──→ device_pool.api / element_locator.models / case_manager.api* / test_runner.api / workflow.api
 ai_assistant ──✅ import──→ 各模块 models（只读查询）
 ai_assistant ──❌ import──→ 下层内部实现（service / runner / consumer / state_machine）
 下层模块     ──❌ import──→ ai_assistant.agent_scope（内部实现，仅 evaluator 经 api.py 白名单）
@@ -140,14 +144,14 @@ flowchart LR
 
 ### 1.5 API 关系图
 
-> 44 端点 → 前端消费映射，标注前端消费状态（抽象角色）。
+> 41 端点 → 前端消费映射，标注前端消费状态（抽象角色）。
 
 ```mermaid
 flowchart TB
-    subgraph API["后端 44 端点（urls.py）"]
+    subgraph API["后端 41 端点（urls.py）"]
         A["agents CRUD + reveal-key + health"]
         C["conversations + messages + chat/stream"]
-        T["tools / mcp / skill / available-*"]
+        T["tools / available-*"]
         K["knowledge status/documents/reindex"]
         TB["toolbox + import"]
         U["upload-avatar / upload-file"]
@@ -203,35 +207,33 @@ flowchart TB
 ```
 apps/ai_assistant/
 ├── models.py              7 表（ai_ 前缀）：AIAgent/AITool/AISharedTool/AIConversation/AIMessage/AITask/AIExecutionLog
-├── api.py                 跨模块 __all__ 白名单 + 加密工具（encrypt/decrypt/mask_key）+ evaluator 接口
-├── serializers.py         输入校验（validate_agent_input / message / conversation / rename / model_detect）
+├── api.py                 跨模块 __all__ 白名单 + 写操作（Agent/对话 CRUD）+ 加密工具 + evaluator 接口
+├── serializers.py         DRF 入参校验与输出 DTO（Agent/对话/消息组）
+├── views_drf.py           DRF 视图：AgentViewSet + ConversationViewSet + health/detect/available/tasks APIView
+├── views_toolbox_drf.py   AI 工具箱 DRF 视图（共享项 CRUD · 上传 skill · 导入）
+├── views_knowledge_drf.py 知识库 DRF 视图（状态/文档/重索引）
+├── views_upload_drf.py    头像/文件上传 DRF 视图
 ├── permissions.py         所有权检查（check_agent_owner / check_conversation_access / filter_*_for_user）
-├── decorators.py          require_auth（sync/async 双支持，未认证 401）
-├── urls.py                44 端点路由（app_name="ai"）
-├── views/                 10 视图模块
-│   ├── agent_views.py       Agent CRUD · reveal-key · health · available-skills
-│   ├── chat_views.py        SSE 流式对话（async，进程内 Agent）
-│   ├── conversation_views.py 会话/消息/任务历史
-│   ├── hitl_views.py        HITL 确认（in-memory session registry）
-│   ├── model_views.py       模型检测 · 连接测试
-│   ├── file_views.py        头像/文件上传解析
-│   ├── knowledge_views.py   知识库状态/文档/重索引/加文档
-│   ├── tool_views.py        平台工具列表 · MCP/Skill 管理
-│   ├── toolbox_views.py     共享工具箱 CRUD · 上传 · 导入
-│   ├── tool_gateway.py      HTTP 工具网关（schemas/agent-config/执行）
-│   └── common.py            validation_error
+├── decorators.py          require_auth（遗留函数视图用，sync/async 双支持）
+├── urls.py                DRF router（agents/conversations，无尾斜杠）+ 遗留/豁免路径
+├── views/                 遗留与豁免视图模块（仅 3 文件）
+│   ├── chat_views.py        SSE 流式对话（async，进程内 Agent）— 豁免
+│   ├── hitl_views.py        HITL 内存会话注册表 + deliver_confirm_result（DRF 视图共用）
+│   └── tool_gateway.py      HTTP 工具网关（schemas/agent-config/执行）— 豁免
 ├── agent_scope/            Django 进程内 AgentScope 模块
 │   ├── agent_factory.py     进程内构建 AgentScope Agent
-│   ├── tool_registry.py     14 平台工具单一真相源 + handler 注册
+│   ├── tool_registry.py     26 平台工具单一真相源 + handler 注册
 │   ├── in_process_tool.py   进程内工具封装（InProcessPlatformTool）
 │   ├── provider_registry.py 模型提供商 → base_url/credential 映射
 │   ├── rag_service.py       ChromaDB 知识库（唯一所有者）
 │   └── skill_registry.py    workspace 技能（Bash/Edit/Glob/Grep/Read/Write）映射
 ├── management/commands/    init_knowledge_base · migrate_platform_tools · cleanup_uploads
-├── migrations/             20 迁移（0001~0021）
+├── migrations/             21 迁移（0001~0021）
 ├── admin.py                Django Admin 注册
 └── apps.py                 verbose_name="AI 助手"
 ```
+
+> Batch 1/2 起 Agent 组与对话组迁移到 DRF（`views_drf.py`），原 `agent_views.py`/`model_views.py`/`conversation_views.py` 已删除；SSE（`chat_stream`）与工具网关保留函数视图（豁免）。
 
 ### 3.2 核心设计：进程内 Agent 构建
 
@@ -250,7 +252,7 @@ build_agent(agent_model, user_id)  → AgentScope Agent
 ```
 _build_toolkit(agent_model, user_id)
   enable_workspace_tools → 6 内置文件工具（skills_config 逐工具过滤）
-  enable_business_tools  → 14 平台工具（AITool tool_type="platform" 逐工具过滤，无配置默认只读子集）
+  enable_business_tools  → 26 平台工具（AITool tool_type="platform" 逐工具过滤，无配置默认只读子集）
   enable_mcp_tools       → MCP 客户端（AITool tool_type="mcp"）
   enable_skills          → skill 目录（AITool tool_type="skill" 的 dir_path）
 ```
@@ -299,7 +301,9 @@ send_confirm_result（sync view，Daphne 线程池）
 
 > 响应信封统一 `{status, data}` / `{status, message}`；字段 snake_case。**完整字段契约以 PRD §5 为准**，本节只列概览。
 
-### 4.1 REST 端点（44 个）+ SSE
+### 4.1 REST 端点（41 个）+ SSE
+
+> **端点口径**：41 REST 方法端点 = ARCH-00 路径条目口径的 **15 条 path + DRF 生成路由**（Batch 1-3 已全量收官，SSE 与工具网关豁免函数视图）；本节按方法端点列全量消费映射。
 
 | 组 | 方法 | 路径 | 前端消费 |
 |------|------|------|:--:|
@@ -324,9 +328,6 @@ send_confirm_result（sync view，Daphne 线程池）
 | 工具 | GET | `/api/ai/available-tools` | ✅ |
 | 工具 | GET | `/api/ai/available-skills` | ✅ |
 | 工具 | GET | `/api/ai/agents/{id}/tools` | ✅ |
-| 工具 | POST | `/api/ai/agents/{id}/tools/mcp/save` | ✅ |
-| 工具 | POST | `/api/ai/agents/{id}/tools/mcp/test` | ✅ |
-| 工具 | POST | `/api/ai/agents/{id}/tools/skill/upload` | ✅ |
 | 工具 | POST | `/api/ai/agents/{id}/tools/{tid}/toggle` | ✅ |
 | 工具 | POST | `/api/ai/agents/{id}/tools/{tid}/delete` | ✅ |
 | 任务 | GET | `/api/ai/conversations/{id}/tasks` | ❌ |
@@ -348,29 +349,34 @@ send_confirm_result（sync view，Daphne 线程池）
 | 工具箱 | POST | `/api/ai/toolbox/upload-skill` | ✅ |
 | 工具箱 | POST | `/api/ai/agents/{id}/tools/import-from-toolbox` | ✅ |
 
-### 4.2 响应格式（Agent 详情）
+### 4.2 响应格式（Agent 详情，Batch 1 起 DRF 信封）
 
 ```json
 {
   "status": true,
-  "agent": {
-    "id": 1,
-    "name": "测试助手",
-    "model_provider": "dashscope",
-    "model_name": "qwen-max",
-    "api_key": "sk-***abcd",
-    "enable_workspace_tools": false,
-    "enable_business_tools": true,
-    "enable_mcp_tools": false,
-    "enable_skills": false,
-    "knowledge_sources": { "doc:02-PRD需求/PRD-02-设备管理.md": true },
-    "is_connected": true,
-    "tools": [
-      { "id": 1, "name": "save_case", "tool_type": "platform", "config_json": "{}", "enabled": true }
-    ]
+  "data": {
+    "agent": {
+      "id": 1,
+      "name": "测试助手",
+      "model_provider": "dashscope",
+      "model_name": "qwen-max",
+      "api_key": "sk-***abcd",
+      "enable_workspace_tools": false,
+      "enable_business_tools": true,
+      "enable_mcp_tools": false,
+      "enable_skills": false,
+      "knowledge_sources": { "doc:02-PRD需求/PRD-02-设备管理.md": true },
+      "is_connected": true,
+      "tools": [
+        { "id": 1, "name": "save_case", "tool_type": "platform", "config_json": "{}", "enabled": true }
+      ]
+    }
   }
 }
 ```
+
+> Agents/Conversations 组已迁 DRF，成功响应由 `EnvelopeJSONRenderer` 统一包裹为 `{status: true, data: {...}}`；
+> 错误为 `{status: false, message}` + HTTP 状态码。toolbox/knowledge/uploads/agent tools 组（Batch 3）暂为过渡形态。
 
 > 完整字段表（能力开关 / AgentScope 参数 / 工具列表）见 PRD §5.2。
 
@@ -517,9 +523,10 @@ erDiagram
 |------|------|
 | AgentScope 进程内直连 | 构建 / 推理 / Tool 编排全在 Django 进程内，无独立服务 / 端口 |
 | AI 不直连设备 / 数据库 | 一切通过 Tool 调用各模块 api.py / 只读 ORM |
-| 工具单一真相源 | `tool_registry.py` `TOOL_SCHEMAS` 定义 14 平台工具 + handler 注册 |
+| 工具单一真相源 | `tool_registry.py` `TOOL_SCHEMAS` 定义 26 平台工具 + handler 注册 |
 | 写操作走 api.py | 跨模块写走目标 App 的 api.py，禁止直接 ORM 写 |
-| 知识库唯一所有者 | ChromaDB 由 `rag_service.py` 独占，AgentScope 不直接接触 |
+| 工具箱集中管理 | skill 上传 / MCP 配置唯一入口是 AI 工具箱（`views_toolbox_drf.py`）；智能体只能 `import-from-toolbox` 导入副本，禁止自配置 |
+| 知识库唯一所有者 | ChromaDB 由 `rag_service.py` 独占，AgentScope 不直接接触；引用键 `doc:`（按文件）/ `dir:`（按目录，检索时动态展开为目录下当前全部文件） |
 | API Key 安全 | Fernet 加密 + 脱敏 + 一次性 reveal + base_url 白名单防 SSRF |
 | 所有权隔离 | Agent / 对话按 `owner_id` 过滤，非所有者 403 |
 
@@ -545,8 +552,8 @@ get_kb_doc_count() -> int
 
 | 消费方 | 调用方式 | 用途 |
 |------|------|------|
-| **evaluator** | `api.get_provider_config` / `search_knowledge` / `get_kb_doc_count` | NL 用例生成 / 执行 |
-| **dashboard** | `ai_assistant.permissions`（⚠️ 跨 App import 内部实现，见 TD-03） | 聚合层复用权限逻辑 |
+| **evaluator** | `api.get_provider_config` / `search_knowledge` / `get_kb_doc_count`（`require_auth` 已于 2026-08-20 下沉 `shared/auth/`，fix-cross-app-firewall） | NL 用例生成 / 执行 |
+| **dashboard** | `ai_assistant.api.filter_agents_for_user`（原 `permissions` 违规已于 2026-08-20 修复改走 api） | 聚合层复用权限过滤 |
 
 ---
 
@@ -561,6 +568,7 @@ get_kb_doc_count() -> int
 | HITL 线程安全 | in-memory registry + `call_soon_threadsafe` 跨线程投递确认结果 |
 | 安全闭环 | Key 加密 + 脱敏 + 一次性 reveal + base_url 白名单防 SSRF |
 | 知识库隔离 | ChromaDB 由 `rag_service.py` 独占，`knowledge_sources` 逐智能体过滤文档 |
+| 工具箱集中管理 | 智能体配置页仅保留「从 AI 工具箱选取」导入面板；MCP/Skill 自配置 UI 与端点（`mcp/save`、`mcp/test`、`skill/upload`）已移除 |
 
 ---
 
@@ -568,7 +576,18 @@ get_kb_doc_count() -> int
 
 | 版本 | 日期 | 变更摘要 |
 |------|------|----------|
+| v3.0 | 2026-08-21 | **五层口径回填 + 事实同步**：§1.1 去「横跨后端层与 AI 引擎层」改 L3 业务 App + in-process 说明（非独立分层）；§1.2 图去旧 L2 标签（BE）、views/ 收敛 3 文件；§6.1 工具箱落点改 `views_toolbox_drf.py`；§6.3 dashboard/evaluator 违规改 ✅（2026-08-20 fix-cross-app-firewall：filter_agents_for_user→api、require_auth→shared/auth/）；§4.1 补端点口径（41 方法端点 = 15 path + DRF 生成）；关联指针改 §3.2/§4.5/A.3 |
 | v1.0 | 2026-07-16 | 初始版本：基于 `项目架构.md` 与旧 PRD 重构 |
 | v1.1 | 2026-07-16 | 代码对照审计：端点 32→37，views 文件 5→9 |
 | v1.2 | 2026-07-22 | 多类型用例生成：Tool 24→28，任务卡片双位置同步 |
 | v2.0 | 2026-08-18 | 按 ARCH-02 格式重构：补架构四图 + 防火墙 + 契约偏差登记；同步代码真相——AgentScope 独立服务→进程内（`agent_scope/`，无 tools/ 目录、system_prompt.py、rag/ 目录）；Tool 28→14 平台工具 + 能力开关（workspace/business/mcp/skills）；端点校正 44（移除 register-scope/create-scope-session/send/avatars，新增 toolbox/available-tools/available-skills/tools 网关）；表 6→7（新增 `ai_shared_tools`）；登记 TD-04~TD-08 |
+| v2.1 | 2026-08-19 | 工具箱集中管理收紧：移除端点 `mcp/save`、`mcp/test`、`skill/upload` 及前端「MCP 服务器」「Skills」面板（44→41）；智能体只能从工具箱导入 skill/MCP |
+| v2.2 | 2026-08-19 | DRF 迁移（Batch 0-2）：Agent 组 + 对话/消息/任务/HITL 组迁移到 DRF（`views_drf.py`：AgentViewSet/ConversationViewSet/health/detect/available/tasks APIView）；`urls.py` 改 `DefaultRouter(trailing_slash=False)`；写库收敛到 `api.py`（19 处视图直写 ORM 已收敛 15 处）；响应统一 `{status, data}` 信封（前端 `data.data` 解包）；删除 `agent_views.py`/`model_views.py`/`conversation_views.py`；新增 `tests/ai_assistant/` live-server 接口测试 70 例；SSE 与工具网关豁免 |
+| v2.3 | 2026-08-19 | 知识库目录树化：`helpers/kb-tree.ts` 按 `dev_docs/` 本地目录构建折叠树 + `KbTreeView.vue` 递归树组件；知识库 Tab 与导入弹窗支持目录级（`dir:` 动态展开）与文件级（`doc:`）混选；`rag_service.search` 前置 `_resolve_sources` 统一展开引用键并修复 `doc:` 前缀过滤不匹配 |
+| v2.4 | 2026-08-19 | DRF 迁移 Batch 3 完成（全量迁移收官）：工具箱/知识库/上传/Agent 工具管理迁移到 DRF（`views_toolbox_drf.py`/`views_knowledge_drf.py`/`views_upload_drf.py`）；写库全部收敛 `api.py`；删除 `toolbox_views.py`/`knowledge_views.py`/`file_views.py`/`tool_views.py`/`common.py`；Swagger 收录 37 个 ai 路径；全模块仅 SSE 与工具网关保留函数视图（豁免） |
+| v2.5 | 2026-08-19 | 设备管理新增只读工具 `list_devices`（devices/list_all）：返回设备管理口径全量设备（ONLINE + BUSY，含使用人/剩余占用时间，按可见性过滤），修复 AI 回答设备数时漏报使用中设备；平台工具 14→15 |
+| v2.6 | 2026-08-19 | 承接设备检查器快照化（ARCH-03 v1.7）：新增「设备检查器」工具分类与 2 工具——`capture_page`（inspector/capture，只读，抓取 JSON 并落库快照）/ `save_page_to_elements`（inspector/save_elements，写工具，基于快照按自定义目录/页面名写入元素定位）；工具 15→17、分类 5→6；包图增 device_inspector 依赖；element_locator 依赖补 api.import_snapshot_page |
+| v2.6 | 2026-08-19 | §3.1 文件结构对齐 v2.4 迁移结果：模块级补 `views_toolbox_drf.py`/`views_knowledge_drf.py`/`views_upload_drf.py`，`views/` 收敛为 chat_views/hitl_views/tool_gateway 3 文件（删除已下线的 file_views/knowledge_views/tool_views/toolbox_views/common）；全景图端点计数 44→41 |
+| v2.7 | 2026-08-19 | 新增「工作流」工具分类与 2 只读工具——`list_page_flows`（workflow/list_page_flows）/`get_page_flow`（workflow/get_page_flow，返回页面流语义摘要）；平台工具 23→25、分类 6→7；包图/全景图/防火墙清单增 workflow 依赖（AI 只经 `workflow.api` 调 `get_document_digest`/`list_document_summaries`，语义编译在 `workflow/semantics.py` 纯函数）；正文工具计数 17→25 对齐代码真相 |
+| v2.8 | 2026-08-20 | 用例工具可执行性修复：case-manager 新增 `api_ai.py`（`get_case_digest` 结构化 digest / `save_ai_definition` 校验写入 / `validate_steps` 步骤白名单校验，api.py 门面再导出）；`get_case`/`save_case` handler 改走 api_ai（UI 步骤落 `steps_json`、Web 落 `steps_json` 字符串）；`in_process_tool._format_result` 新增 dict 与单模型实例 JSON 序列化分支（详情类工具不再 str() 化为标题；关系字段只输出原始外键 id，防事件循环线程懒加载 ORM 致 SynchronousOnlyOperation）；save_case schema 增 directory_id/package_name/enabled/priority；步骤白名单与语义沿用 `models/step_types.py` `STEP_TYPE_META` |
+| v2.9 | 2026-08-20 | 执行引擎状态打通：test_runner.api 新增 `get_run_status`（TestRunRecord 状态/设备/用例快照/结果计数/汇总）；新增只读工具 `get_run_status`（runner/get_run_status）；`get_run_results` handler 信封化（`{run_status, results}`，run 不存在 400）；平台工具 25→26 |

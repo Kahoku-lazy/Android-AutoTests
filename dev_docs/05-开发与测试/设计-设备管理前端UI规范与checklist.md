@@ -3,7 +3,7 @@
 > 版本 v1 · 2026-08-14
 > 适用范围：`frontend/src/modules/device-pool/`（index.vue / DevicePoolView.logic.ts / api.ts / constants.ts / helpers.ts / routes.ts / composables×3 / components×6）及共享依赖（WorkbenchHeader / KpiCard / FilterTabs / AppTable / EmptyState / ErrorState 等）
 > 设计语言：Doodle Craft × Paper/Polaroid（纸艺拍立得 · 点阵纸底 · 手绘波浪线 · 图钉微旋转），与主区同源
-> 唯一真相源：`frontend/src/shared/styles/tokens.css`（令牌）、`frontend/DESIGN_SYSTEM.md`（设计系统）、`.claude/skills/doodle-craft/references/components.md`（组件像素级规格）
+> 唯一真相源：`frontend/src/shared/styles/tokens.css`（令牌）、`frontend/CLAUDE.md` §2（风格规则）、`.agents/skills/doodle-craft/references/components.md`（组件像素级规格）
 
 ---
 

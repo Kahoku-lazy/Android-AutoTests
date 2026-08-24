@@ -112,9 +112,9 @@
 
 ---
 
-## 第 7 组：DESIGN_SYSTEM 合规（7 项）
+## 第 7 组：风格合规（Doodle Craft，7 项）
 
-> 改 CSS/组件/样式后必检。规范来源：`frontend/DESIGN_SYSTEM.md`
+> 改 CSS/组件/样式后必检。规范来源：`frontend/CLAUDE.md` §2（风格规则）· `frontend/src/shared/styles/tokens.css`（值）
 
 | # | 检查项 | 新模块 | 增量 | 修补 | 重构 |
 |---|--------|:--:|:--:|:--:|:--:|

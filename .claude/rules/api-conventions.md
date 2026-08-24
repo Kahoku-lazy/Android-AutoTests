@@ -17,6 +17,8 @@ AgentScope Tool 只能通过 api.py 函数写数据 → 同进程直接调用
 {"status": false, "message": "..."}  // 失败
 ```
 
+> **legacy 平铺特例**（test_runner `/runner/*`、report_generator `/reports/*`、workflow legacy）唯一登记在 `apps/CLAUDE.md` §1.3，禁止新增；未收敛前禁止把特例改造成标准信封。
+
 ## 鉴权
 
 `Authorization: Bearer <JWT>`（除 `/api/ai/auth/*` `/admin/` `/static/` 外全部需要）。所有业务视图使用 `@csrf_exempt`。
@@ -38,6 +40,16 @@ AgentScope Tool 只能通过 api.py 函数写数据 → 同进程直接调用
   Django Admin → ORM → DB (管理员专用)
 ```
 
+典型反例（跨模块边界）：
+
+```text
+❌ View 里 Device.objects.create(...)
+❌ case_manager import test_runner.service / state_machine
+❌ api.py 返回 Model 实例给跨模块调用方
+✅ View → api.create_xxx(...) → ORM
+✅ AgentScope Tool → api.create_xxx(...) → run_sync → ORM
+```
+
 ## 各层交互协议
 
 | 层 | 协议 | 鉴权 |
@@ -47,6 +59,17 @@ AgentScope Tool 只能通过 api.py 函数写数据 → 同进程直接调用
 | AI ↔ 后端 | 同进程直接调用 | Tool 调用前 AgentScope 已验证 |
 | 后端 → 设备 | ADB + uiautomator2 | — |
 
-## 新增 App 注册（4 文件各 1 行）
+## 新 App 检查清单（新增 Django App 必走）
 
-`config/settings.py` → `config/urls.py` → `frontend/src/router.js` → `frontend/src/shared/components/AppSidebar.vue`
+```
+[ ] apps/{name}/ 具备: models / views(或 views_drf) / api.py / urls.py / apps.py
+[ ] models 显式 db_table + 正确表前缀（见 database.md）
+[ ] api.py 有 __all__；写操作参数为简单类型
+[ ] config/settings.py INSTALLED_APPS 已注册
+[ ] config/urls.py include 已注册
+[ ] 若有 WS：gateway/routing.py 已注册
+[ ] apps/{name}/CLAUDE.md 已建（照既有 App 模板：红线/契约特例/协议/关单附加项）
+[ ] 前端：router.js + AppSidebar.vue 各 1 行（若暴露页面）
+[ ] python manage.py makemigrations && migrate
+[ ] python manage.py check 通过
+```

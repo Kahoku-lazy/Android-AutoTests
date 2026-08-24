@@ -2,12 +2,14 @@
 
 > 关联模块：`apps/dashboard/` · 前端：`frontend/src/modules/dashboard/`
 > 关联全局：[`需求大纲.md`](./需求大纲.md) §5.1
-> 版本：v5.4 · 状态：评审中 · 日期：2026-08-14
+> 版本：v5.6 · 状态：评审中 · 日期：2026-08-21
 
 **修订记录**
 
 | 版本 | 日期 | 变更摘要 |
 |------|------|----------|
+| v5.6 | 2026-08-21 | 组件契约校正：StatsCard props 补 prefix/suffix/live；最近动态 agent 圆点色改为 --c-dashboard（原「主题状态黄色」令牌不存在） |
+| v5.5 | 2026-08-19 | 设备口径统一（随 PRD-02 v6.2 两态化）：§4.1 在线/总数口径改「仅 ONLINE/BUSY 两态（离线即删），排除陈旧残留记录兜底」；§5.4 `offline`/`disconnected` 标注为 ⚠️ 兼容遗留字段（历史口径，通常为 0）；C-05 同步两态口径 |
 | v5.4 | 2026-08-14 | 契约清理完成：v5.0 拍板批已实施（后端查询 34→27；前端删除新建用例系列/本周新建标签/"本周新增"文字/设备卡趋势装饰）；口径存档补 4 字段 |
 | v5.3 | 2026-08-14 | 契约清理（已实施）：移除 10 个无前端消费字段（pass_rate 等），端点 3/4 保留；附已移除字段口径存档 |
 | v5.2 | 2026-08-14 | 一致性校验修复：脉冲点颜色/卡片倾斜方向/数值字号与实现对齐；统一"汇总行"术语；补全智能体总数与任务执行记录总数口径；示例补齐 12 项约束 |
@@ -75,7 +77,7 @@
 
 区块汇总行展示"共 N 个 · N 个页面"。
 
-**组件**：`StatsCard.vue`，props: label / value / color / path / loading。
+**组件**：`StatsCard.vue`，props: label / value / prefix / suffix / color / path / loading / live（prefix/suffix 为数值前后缀；live 为右上角呼吸点，如「运行中任务」计数 >0 时置 true）。
 
 #### 2.1.4 边界状态
 
@@ -162,7 +164,7 @@
 | type | 来源 | 圆点颜色（主题令牌） |
 |------|------|------|
 | `run` | 测试执行 | 主题状态紫色 |
-| `agent` | 智能体更新 | 主题状态黄色 |
+| `agent` | 智能体更新 | 柠黄 `--c-dashboard`（#F7C948） |
 | 枚举外值 | — | 默认灰色 |
 
 时间线使用圆点 + 虚线连线连接各事件节点；数据更新时逐行渐入（每行间隔约 100ms）；空数据时显示"暂无活动记录"。
@@ -180,7 +182,7 @@
 
 ## 3. 布局与视觉设计
 
-> 全部颜色/字号引用 Doodle Craft 主题令牌（[`frontend/DESIGN_SYSTEM.md`](../frontend/DESIGN_SYSTEM.md)），本节只标令牌名；趋势图柱子 2 色为 Canvas 字面量例外（见约束 C-03）。
+> 全部颜色/字号引用 Doodle Craft 主题令牌（[`frontend/CLAUDE.md` §2](../../frontend/CLAUDE.md)），本节只标令牌名；趋势图柱子 2 色为 Canvas 字面量例外（见约束 C-03）。
 
 ### 3.1 页面布局
 
@@ -252,8 +254,8 @@
 
 | 模块类别 | 指标 | 计算口径 |
 |------|------|----------|
-| 平台运营/在线设备 | 在线设备数 | 排除 OFFLINE / DISCONNECTED 状态的设备后，统计 ONLINE + BUSY 的数量（与设备管理页口径一致） |
-| 平台运营/汇总行 | 设备总数 | 同上"可见设备"总数（不含 OFFLINE / DISCONNECTED 的陈旧记录） |
+| 平台运营/在线设备 | 在线设备数 | 设备仅 ONLINE / BUSY 两态（离线即删，见 PRD-02 §4.1）；统计 ONLINE + BUSY 为可见设备（统计时排除陈旧 OFFLINE / DISCONNECTED 残留记录兜底） |
+| 平台运营/汇总行 | 设备总数 | 同上"可见设备"总数（不含 OFFLINE / DISCONNECTED 陈旧残留记录） |
 | 平台运营/汇总行 | 智能体总数 | 当前用户可见的智能体总数（不受状态过滤） |
 | 平台运营/汇总行 | 任务执行记录总数 | 任务执行记录总数（含运行中与已完成） |
 | 平台运营/活跃智能体 | 活跃智能体数 | 当前用户可见的智能体中，状态为 active 的数量 |
@@ -476,9 +478,9 @@
 |------|------|:--:|------|:--:|------|
 | `online` | number | 是 | 整数 ≥0；`busy ≤ online ≤ total` | 业务 | 在线设备数（可见设备中 ONLINE + BUSY） |
 | `busy` | number | 是 | 整数 ≥0；`busy ≤ online` | 业务 | 忙碌设备数（BUSY） |
-| `offline` | number | 是 | 整数 ≥0；与 `total` 无交集 | 业务 | 离线设备数（OFFLINE） |
-| `disconnected` | number | 是 | 整数 ≥0；与 `total` 无交集 | 业务 | 断连设备数（DISCONNECTED） |
-| `total` | number | 是 | 整数 ≥0；`offline + disconnected + total` 与全部设备记录数的差额为未归类状态设备 | 业务 | 可见设备总数（排除 OFFLINE / DISCONNECTED） |
+| `offline` | number | 是 | 整数 ≥0；与 `total` 无交集 | 业务 | ⚠️ 兼容遗留字段（离线设备数，OFFLINE）。设备已改为离线即删（PRD-02 v6.2），此字段通常为 0 或陈旧残留记录数 |
+| `disconnected` | number | 是 | 整数 ≥0；与 `total` 无交集 | 业务 | ⚠️ 兼容遗留字段（断连设备数，DISCONNECTED），同 offline 为历史口径遗留 |
+| `total` | number | 是 | 整数 ≥0；`offline + disconnected + total` 与全部设备记录数的差额为未归类状态设备 | 业务 | 可见设备总数（排除 OFFLINE / DISCONNECTED 陈旧残留） |
 
 **响应示例**：
 
@@ -611,7 +613,7 @@
 | C-02 | 用例/智能体计数必须按当前用户可见性过滤 | 统计接口实现 |
 | C-03 | 颜色/字号全部引用 Doodle Craft 主题令牌；趋势图柱子 2 色为 Canvas 字面量例外（改色需改组件常量并同步本 PRD §2.2.1） | `DashboardView.style.css`、`TrendBarChart.vue` |
 | C-04 | 响应统一 `{status, data}` / `{status, message}`，JSON 字段 snake_case | 全部端点 |
-| C-05 | 设备口径：排除 OFFLINE / DISCONNECTED，与设备管理页一致 | 统计接口实现 |
+| C-05 | 设备口径：仅 ONLINE / BUSY 两态（离线即删），统计排除陈旧 OFFLINE / DISCONNECTED 残留记录，与设备管理页一致 | 统计接口实现 |
 | C-06 | 动态事件 type 枚举：run / agent，前端样式与枚举同步 | 动态接口 + `ActivityTimeline.vue` |
 
 ---
@@ -630,7 +632,7 @@
 | 前端 | `frontend/src/modules/dashboard/components/ActivityTimeline.vue` | 活动时间线 |
 | 前端 | `frontend/src/modules/dashboard/api.ts` | 数据层（2 端点） |
 | 前端 | `frontend/src/shared/types/dashboard.ts` | 前端类型契约 |
-| 前端 | `frontend/DESIGN_SYSTEM.md` | Doodle Craft 主题令牌 |
+| 前端 | `frontend/CLAUDE.md` §2 + `tokens.css` | Doodle Craft 主题令牌 |
 | 后端 | `apps/dashboard/views.py` | 4 个统计端点实现 |
 | 后端 | `apps/dashboard/urls.py` | 路由注册 |
 

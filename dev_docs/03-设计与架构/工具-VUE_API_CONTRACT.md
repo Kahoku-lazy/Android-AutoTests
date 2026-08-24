@@ -82,30 +82,51 @@
 
 ### AI 助手
 
+> 信封：全部端点统一 `{status, data}` / `{status, message}`（DRF `EnvelopeJSONRenderer`），JSON snake_case。
+> Agents/Conversations 组为 DRF ViewSet；SSE 与工具网关为豁免端点（详见 PRD-08 §5 与 ARCH-08 §4）。
+
 | Vue 状态/方法 | HTTP | 端点 | 请求体 | 响应体关键字段 |
 |---|---|---|---|---|
-| `listAgents()` | GET | `/api/ai/agents` | — | `{ok, agents:[{id,name,provider,model,avatar}]}` |
-| `getAgent(id)` | GET | `/api/ai/agents/{id}` | — | `{ok, agent:{...}}` (api_key 脱敏为 `sk-***xxxx`) |
-| `createAgent()` | POST | `/api/ai/agents` | `{name,provider,model,api_key,...}` | `{ok, agent:{id}}` |
-| `updateAgent()` | PUT | `/api/ai/agents/{id}` | `{...}` (api_key 为 `***` 时跳过更新) | `{ok}` |
-| `deleteAgent()` | DELETE | `/api/ai/agents/{id}` | — | `{ok}` |
-| `loadConversations()` | GET | `/api/ai/conversations?agent_id=...` | — | `{ok, conversations:[...]}` |
-| `listTasks()` | GET | `/api/ai/tasks` | — | `{ok, tasks:[...]}` |
-| `testAgent()` | POST | `/api/ai/agents/{id}/test` | `{message}` | SSE 流式响应 |
+| `listAgents()` | GET | `/api/ai/agents` | — | `{status, data:{agents:[{id,name,model_provider,model_name,tool_count,...}]}}` |
+| `getAgentDetail(id)` | GET | `/api/ai/agents/{id}` | — | `{status, data:{agent:{...}}}`（api_key 脱敏 `sk-***xxxx`） |
+| `saveAgent()` 新建 | POST | `/api/ai/agents/create` | `{name, model_provider, api_key, ...}` | `{status, data:{id}}` |
+| `saveAgent()` 更新 | POST | `/api/ai/agents/{id}/update` | `{...}`（api_key 含 `***` 时跳过更新） | `{status, data:{id}}` |
+| `deleteAgent(id)` | POST | `/api/ai/agents/{id}/delete` | — | `{status, data:{}}` |
+| `checkAgentsHealth()` | GET | `/api/ai/agents/health` | — | `{status, data:{agents:[{id,name,is_connected,last_checked}]}}` |
+| `testAgent(id)` | POST | `/api/ai/agents/{id}/test` | — | `{status, data:{connected, available_models, message}}` |
+| `detectModels()` | POST | `/api/ai/models/detect` | `{model_provider, api_key, base_url}` | `{status, data:{models}}` |
+| `listConversations(agentId)` | GET | `/api/ai/agents/{id}/conversations` | — | `{status, data:{conversations:[...]}}` |
+| `createConversation()` | POST | `/api/ai/agents/{id}/conversations/create` | `{title}` | `{status, data:{id, agent_scope_session_id}}` |
+| `getMessages(convId)` | GET | `/api/ai/conversations/{id}/messages` | — | `{status, data:{messages:[...]}}` |
+| `saveMessage()` | POST | `/api/ai/conversations/{id}/save-message` | `{role, content, blocks, ...}` | `{status, data:{id}}` |
+| `renameConversation()` | POST | `/api/ai/conversations/{id}/rename` | `{title}` | `{status, data:{title}}` |
+| `deleteConversation()` | POST | `/api/ai/conversations/{id}/delete` | — | `{status, data:{}}` |
+| HITL 确认 | POST | `/api/ai/conversations/{id}/confirm-result` | `{reply_id, confirm_results}` | `{status, data:{}}` |
+| `listTasks()` | GET | `/api/ai/tasks` | — | `{status, data:{tasks:[...]}}` |
+| 对话任务 | GET | `/api/ai/conversations/{id}/tasks[/{run_id}]` | — | `{status, data:{tasks:[...]}}` / `{status, data:{task}}` |
+
+> 鉴权：除 `/api/ai/tools/*`（网关白名单）外全部需要 JWT Bearer；错误统一 `{status:false, message}` + HTTP 状态码。
+> 权限语义：对象级检查先于存在性检查 —— 不存在/无权资源均返回 403（不泄露存在性）。
 
 ---
 
 ## 二、WebSocket 映射
 
-### WS-1: 实时截图 `/ws/screenshot`
+### WS-1: 实时截图 `/ws/screenshot` — 已移除（v1.7 快照化）
 
-| 方向 | 消息格式 | 触发时机 | Vue 消费 |
+> 设备检查器 v1.7 起无实时截图流：`ScreenshotConsumer` / `stream.py` 已删除，`ws/screenshot` 路由下线。
+> 截图与页面数据改由 HTTP 快照链路获取（见下方 REST 表）；前端 `ScreenshotView` 仅静态展示快照截图 + 边界框 overlay。
+
+**设备检查器快照 REST 端点（替代原 WS-1 + dump/ocr）**：
+
+| 方法 | 路径 | 请求 | 响应 |
 |---|---|---|---|
-| 后端→前端 | `{"type":"screenshot", "image":"base64..."}` | 每 500ms 自动推送 | `screenshotB64.value = data.image` |
-| 后端→前端 | `{"type":"device_changed", "serial":"...", "screen_w":1080, "screen_h":2400}` | 切换设备时 | 更新分辨率 |
-| 前端→后端 | 任意文本 (keep-alive) | — | — |
-
-**Vue 相关变量**: `ws`, `wsManualClose`, `connectWS()`, `disconnectWS()`, `reconnectWS()`, `screenshotB64`, `deviceOnline`, `autoReconnect`
+| POST | `/api/inspector/capture` | `{serial, method: dump\|ocr\|both}` | `{status, data:{snapshot_id, elements, actionable, texts, screenshot_path, ...}}` |
+| GET | `/api/inspector/snapshots?offset=&limit=` | — | `{status, data:{total, items:[...]}}` |
+| GET | `/api/inspector/snapshots/{id}` | — | `{status, data:{...同 capture}}` |
+| DELETE | `/api/inspector/snapshots/{id}/delete` | — | `{status, data:{deleted:true}}` |
+| POST | `/api/inspector/snapshots/{id}/save-elements` | `{page_label, folder_path?, include_ocr?, element_ids?}` | `{status, data:{saved, updated, skipped, page_id}}` |
+| GET | `/api/inspector/pages/{page_id}` | — | `{status, data:{label, screenshot_path, ocr_json, elements:[...]}}` |
 
 ### WS-2: 测试执行进度 `/ws/test-run/{run_id}`
 

@@ -465,13 +465,7 @@ def schema_for(name, method, url):
     if "clear" in url_lower:
         return SCHEMAS["update"]
 
-    # MCP / Tool management
-    if "mcp/test" in url_lower:
-        return SCHEMAS["detail"]
-    if "mcp/save" in url_lower:
-        return SCHEMAS["create"]
-    if "skill/upload" in url_lower:
-        return SCHEMAS["upload"]
+    # Tool copy management
     if "toggle" in url_lower:
         return SCHEMAS["update"]
     if "tools/" in url_lower and method == "DELETE":

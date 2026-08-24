@@ -47,7 +47,7 @@
 | # | 检查项 | 怎么扫 | 通过标准 | 常见反例 |
 |---|--------|--------|----------|----------|
 | 1 | DRF 契约 | urls + Serializer | 一致 | export 路径错 |
-| 2 | DRF 通道 | HTTP 出口 | api→djangoClient→/api | 直连 :8765 |
+| 2 | DRF 通道 | HTTP 出口 | api→djangoClient→/api | 直连 :8766 |
 | 3 | 父子选中/清空 | 返回/clear | 双侧+关联上下文 | 只清本地 |
 | 4 | 路由深链 | routes/query | 有人读 query | tab 写入不读 |
 | 5 | 离开守卫 | leave 位置 | setup 同步 | onMounted 注册 |
@@ -94,3 +94,112 @@ rg -n "const \{[^}]*ok," path/to/   # 视图数据流走查：解包字段名 vs
 | 3 | 嵌套路径正确？ | 后端 `data:{documents}` 却读顶层 `documents` |
 | 4 | 赋值后模板真能渲染？ | `if(ok)` 恒假 → 状态卡永远「—」 |
 | 5 | **写方向**：save payload 的字段语义 = 后端 update 语义？ | 编辑模式发 `tools:[]`，后端 `_sync_agent_tools` 视为清空 → 保存即删光工具 |
+
+## SSE 与文件下载（六.5 / 六.6 的执行细则，改 AI 对话流或下载时必做）
+
+### SSE（AI 对话流）
+
+后端经 `data: {json}` 推 AgentScope 事件；前端 `shared/sse/SSEMessageBuilder.ts` 归一化为 `phase`（真相源），`api/sse.ts` dispatch 回调分发。
+
+| # | 检查项 | 怎么扫 | 通过标准 | 常见反例 |
+|---|--------|--------|----------|----------|
+| 1 | 事件分派 | 读 `SSEMessageBuilder.ts`（phase 真相源）+ `api/sse.ts` dispatch + `useSSE` 各回调 | 每个 phase 组（`reply_*` / `model_call_*` / `thinking_*` / `text_*` / `data_*` / `tool_call_*` / `tool_result_*` / `hint` / `require_confirm` / `confirm_result` 等，完整清单以 SSEMessageBuilder.ts 为准）有消费分支；未知 phase 经可选链忽略不抛 | 只处理 `text_delta`，thinking/tool_call 内容落空 |
+| 2 | 停止生成 | abort 路径 + `_detached` / `_streamGen` stale 检查 | 停止仅断流，已生成 rounds/content 保留；旧流回调失效不写屏 | 停止即清空输入与回复；旧流迟到事件污染新对话 |
+| 3 | 折叠规则 | `ThinkingBlock` / `ToolCallCard` 折叠状态 | 各块折叠状态独立、初始态一致（见 `frontend/CLAUDE.md` §3 SSE） | 嵌套折叠串状态；默认展开 |
+| 4 | 终端事件 | `reply_end` / `exceed_max_iters` 分支 | 两者都触发 `onDone` + status `done`；未到终端即断流报错（`REPLY_END` 前关闭） | 只认 `reply_end`，超限流永不结束 |
+
+### 文件下载（FileResponse / 导出）
+
+| # | 检查项 | 怎么扫 | 通过标准 | 常见反例 |
+|---|--------|--------|----------|----------|
+| 1 | 通道选择 | 找报告下载/导出调用 | FileResponse 走 `fetch().text()`（或 blob），不套 JSON `api()` 信封解包 | 用 `api()` 解包二进制 → 乱码 |
+| 2 | 错误分支 | catch / status | 非 2xx 读 text 并提示用户；不静默吞错 | 下载失败无任何提示 |
+
+## WebSocket（六.7 的执行细则，改 WS 消费/推送时必做）
+
+| # | 检查项 | 怎么扫 | 通过标准 | 常见反例 |
+|---|--------|--------|----------|----------|
+| 1 | URL 构建 | 找 `new WebSocket` / `wsUrl` 调用 | 一律 `wsUrl('/ws/...')` 经 Vite 代理 | 直连 `:8766` 或硬拼完整 URL |
+| 2 | 事件覆盖 | 对照 `useTaskWebSocket.ts` switch ↔ 后端 `apps/test_runner/callbacks.py` | `/ws/test-run/{id}` 9 种 type（`log` / `heartbeat` / `case_started` / `step_started` / `step_result` / `iteration_result` / `case_finished` / `run_finished` / `device_error`）全覆盖；后端另发 `run_started`（前端暂不消费，消费时须同步 frontend/CLAUDE.md） | 缺 `heartbeat` / `step_started` 分支 |
+| 3 | 编辑广播 | `case-editing` 消费侧 | `/ws/case-editing/{id}` 收到 `case_updated` 触发刷新/锁提示 | 收到不处理 |
+| 4 | 断线重连 | 重连钩子 + `_wsJustReconnected` | 重连后 `stepStates` 重置逻辑生效，无僵尸进度/重复首步 | 重连后 stepStates 未清，进度错位 |
+
+## 改动验证（改后如何验证）
+
+| 改动类型 | 验证方式 |
+|---------|---------|
+| 新增/修改 API 调用 | `curl` 往返验证 → 确认 `{status, data}` 结构 |
+| 改 api.js | 登录 → 刷新 → 不跳回登录页（401 拦截器正常） |
+| 改 WS URL | DevTools Network → WS → 状态码 101，持续收到帧 |
+| 改报告下载 | 确认用 `fetch().text()` 而非 `api()`（FileResponse 非 JSON） |
+| 改 router/routes | 点侧边栏每个菜单 → 确认加载 |
+| 改 LoginView | 登录 → 跳转 dashboard |
+| 改 SSE 事件处理 | 发一条消息 → 流式回复正常 → 思考块可折叠 → ToolCard 有结果 |
+| 改停止生成 | 发送消息 → 中途点停止 → 已生成内容保留 |
+| 改消息渲染 | 发多条消息 → 确认 Markdown 渲染正确（代码块/表格/列表） |
+| 新增 fetch 页面 | 断网 → 刷新 → ErrorState + 重试 → 恢复 |
+| 新增列表组件 | 空 DB → EmptyState（非空白）；有数据 → 正常 |
+| 改 CSS/布局 | 构建 → 浏览器 → 缩小窗口确认可滚动 |
+| 改 localStorage | 检查 key 格式统一 |
+
+## 常见断裂点（诊断线索）
+
+| 问题 | 前端表现 | 原因 |
+|------|---------|------|
+| 后端改了 JSON 字段名 | 页面空白，无报错 | `data.xxx` 为 undefined |
+| `api()` 拿到非 JSON | 解析异常 | 后端返回了 HTML/纯文本 |
+| WS type 不匹配 | 日志不更新 | switch 未命中 |
+| 请求体字段名不一致 | `{status:false, message:...}` | snake_case vs camelCase |
+
+## 新模块检查清单（新建 modules/{name}/ 时逐项打勾）
+
+```
+[ ] 5 个文件齐全: index.vue + api.js + routes.js + components/ + composables/
+[ ] router.js 已注册（1 行 import + 1 行 spread）
+[ ] AppSidebar.vue 已注册菜单项
+[ ] index.vue 含 ErrorState + EmptyState + v-loading 三态
+[ ] WorkbenchHeader 的 icon-gradient 使用模块色 var(--c-xxx)
+[ ] 无独立 .css 文件、无 Pinia store（workflow 除外）
+```
+
+## 最终验证（所有改动必走）
+
+```
+[ ] 构建通过  cd frontend && npx vite build --mode development
+[ ] 浏览器验证实际页面（非原型 HTML）
+[ ] grep 残留色值   grep -rnP "color:\s*#[0-9a-fA-F]" src/modules/ --include="*.vue" | grep -v tokens
+[ ] grep 残留旧类名（如果有删旧 CSS）
+[ ] 文件未超上限  find src/modules/ -name "*.vue" | xargs wc -l | sort -rn | head -5
+[ ] 自评 3 问：
+      1. 删这个模块，其他模块不受影响？
+      2. 改这个颜色，全局生效（从令牌取）？
+      3. diff 里每一行都能追溯到用户的需求？
+```
+
+## 组件规格验收（Doodle Craft 主题，原 DESIGN_SYSTEM.md 已归档并入）
+
+### 基础组件（Element Plus）
+
+| 组件 | 规格 |
+|------|------|
+| Button | 圆角 `--app-radius-sm`、边框 2px solid `var(--ink)`、hover `--app-highlight`、一个操作区最多一个 primary |
+| Table | 无外框、行间虚线分隔、表头暖色渐变、斑马纹、hover 浅 teal |
+| Dialog | 遮罩无模糊、标题下划线分隔、内容无内部滚动 |
+| Input | focus 边框 `--app-highlight`、错误边框 `--app-status-danger` |
+| Tag/Badge | 圆角 3px 6px、边框 1.5px、状态色背景/文字 |
+
+### 业务组件
+
+| 组件 | 规格 |
+|------|------|
+| 拍立得卡片 | 图钉装饰、hover 归正放大、阴影 `--app-shadow-md` |
+| 纸艺卡片 | 比拍立得更扁、无图钉、阴影 `--app-shadow-sm` |
+| KPI 卡 | 顶部菱形色块 + 底部 `~` 水印、数字手写体 |
+| 状态 Badge | 状态色正确、圆角 3px 6px |
+| 筛选标签 | active 白底墨边、default 透明 |
+
+### 三态 / 图标 / 动画
+
+- 空态（居中图标 +「暂无数据」）/ 加载（骨架屏，非全屏 spinner）/ 错误（提示 +「重试」）
+- 图标统一 Element Plus Icon，尺寸 14/16/20px，颜色 `currentColor`
+- 动画只在 hover / 展开收起 / 路由切换，无布局抖动 / 数据更新动画

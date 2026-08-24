@@ -90,7 +90,7 @@ description: |
 | # | 检查项 | 通过标准（要点） |
 |---|--------|------------------|
 | 1 | 路由注册 | `urls.py` + `config/urls.py` include 齐全 |
-| 2 | 响应信封 | `{status, data\|message}`；错误有 HTTP 状态码 |
+| 2 | 响应信封 | `{status, data\|message}`；错误有 HTTP 状态码；**已登记特例除外**（test_runner `/runner/*`、report_generator `/reports/*`、workflow legacy 平铺，唯一登记 `apps/CLAUDE.md` §1.3，禁止新增） |
 | 3 | Serializer↔Model↔前端 | 字段名/可选性一致（对照契约） |
 | 4 | 鉴权上下文 | 用 `request.user_id`；公开路径未误伤 |
 | 5 | 错误文案 | 用户可见；**禁技术词**（calibration §5） |
@@ -131,6 +131,7 @@ description: |
 |---------|------|----------|
 | DRF `Response` | APIView / ViewSet | `{status, data}`（经统一 renderer 则按其实现） |
 | `JsonResponse` | `@csrf_exempt` 手工返回 | 必须仍是 `{status, data\|message}` |
+| `JsonResponse` | 已登记特例（`/runner/*`、`/reports/*`、workflow legacy） | 平铺 `{status, ...}`；对照 `apps/CLAUDE.md` §1.3 与对应 App `CLAUDE.md` 契约段，不得新增同类特例 |
 
 **7.3 字段对照表**
 

@@ -3,14 +3,14 @@
 Architecture stats generator — 扫描代码库，输出当前架构的可度量事实。
 
 用途:
-  - architect agent 被调用时自动运行，对比 项目架构.md 的 auto 区域
+  - architect agent 被调用时自动运行，对比 ARCH-00-平台总体架构.md 的 auto 区域
   - 发现 drift 后自动更新文档的事实部分
   - 也支持 --json 输出，供 CI/hook 消费
 
 用法:
   python tools/gen_arch_stats.py              # 输出 Markdown 片段
   python tools/gen_arch_stats.py --json        # 输出 JSON
-  python tools/gen_arch_stats.py --check-md    # 对比 项目架构.md，输出 drift 报告
+  python tools/gen_arch_stats.py --check-md    # 对比 ARCH-00-平台总体架构.md，输出 drift 报告
 """
 
 import ast
@@ -45,21 +45,23 @@ def scan_django_apps():
             "has_urls": (d / "urls.py").exists(),
         }
 
-        # 统计表数量
+        # 统计表数量（含 models_*.py 分表，如 case_manager 的 models_web/models_storage/models_api）
         app["table_count"] = 0
         app["tables"] = []
-        if app["has_models"]:
-            models_path = d / "models.py"
+        model_files = sorted(d.glob("models*.py"))
+        for models_path in model_files:
             content = models_path.read_text(encoding="utf-8")
-            app["table_count"] = len(re.findall(r"db_table\s*=\s*['\"](\w+)['\"]", content))
-            app["tables"] = re.findall(r"db_table\s*=\s*['\"](\w+)['\"]", content)
+            app["table_count"] += len(re.findall(r"db_table\s*=\s*['\"](\w+)['\"]", content))
+            app["tables"].extend(re.findall(r"db_table\s*=\s*['\"](\w+)['\"]", content))
 
-        # 统计端点数量
+        # 统计端点数量（path() 与 re_path() 均计；path("", ...) 空串根路径亦计）
         app["endpoint_count"] = 0
         if app["has_urls"]:
             urls_path = d / "urls.py"
             urls_content = urls_path.read_text(encoding="utf-8")
-            app["endpoint_count"] = len(re.findall(r"^\s*path\([\"']", urls_content, re.MULTILINE))
+            app["endpoint_count"] = len(
+                re.findall(r"^\s*(?:path|re_path)\(", urls_content, re.MULTILINE)
+            )
 
         # 统计代码行数
         app["total_lines"] = 0
@@ -244,12 +246,10 @@ def scan_orm_write_violations():
     for d in sorted(apps_dir.iterdir()):
         if not d.is_dir() or d.name.startswith("_") or d.name.startswith("."):
             continue
-        models_path = d / "models.py"
-        if not models_path.exists():
-            continue
-        content = models_path.read_text(encoding="utf-8")
-        for m in re.findall(r"class\s+(\w+)\s*\(\s*models\.Model\s*\)", content):
-            model_to_app[m] = d.name
+        for models_path in sorted(d.glob("models*.py")):
+            content = models_path.read_text(encoding="utf-8")
+            for m in re.findall(r"class\s+(\w+)\s*\(\s*models\.Model\s*\)", content):
+                model_to_app[m] = d.name
 
     # Write patterns to detect
     # Pattern 1: ModelName.objects.create(   — direct INSERT
@@ -506,12 +506,14 @@ def generate_markdown():
     for a in apps:
         prefix_map = {
             "device_pool": "dp_",
+            "device_inspector": "di_",
             "element_locator": "el_",
             "case_manager": "cm_",
             "test_runner": "tr_",
             "report_generator": "rg_",
             "ai_assistant": "ai_",
             "workflow": "wf_",
+            "evaluator": "ev_",
             "dashboard": "—",
         }
         prefix = prefix_map.get(a["name"], "??")
@@ -641,10 +643,10 @@ def generate_json():
 
 
 def check_drift():
-    """对比 项目架构.md 中的 auto 区域，检测 drift。"""
-    doc_path = PROJECT_ROOT / "dev_docs" / "03-设计与架构" / "项目架构.md"
+    """对比 ARCH-00-平台总体架构.md 中的 auto 区域，检测 drift。"""
+    doc_path = PROJECT_ROOT / "dev_docs" / "03-设计与架构" / "ARCH-00-平台总体架构.md"
     if not doc_path.exists():
-        return {"status": "no_doc", "message": "项目架构.md 不存在"}
+        return {"status": "no_doc", "message": "ARCH-00-平台总体架构.md 不存在"}
 
     doc_content = doc_path.read_text(encoding="utf-8")
     current = generate_markdown()
@@ -654,7 +656,7 @@ def check_drift():
     if not match:
         return {
             "status": "no_auto_section",
-            "message": "项目架构.md 中无 ARCH_STATS 区域，需要初始化",
+            "message": "ARCH-00-平台总体架构.md 中无 ARCH_STATS 区域，需要初始化",
         }
 
     existing = match.group(0)
@@ -732,12 +734,14 @@ def generate_agents_md_sections():
     # ── DB table list ──
     prefix_map = {
         "device_pool": "dp_",
+        "device_inspector": "di_",
         "element_locator": "el_",
         "case_manager": "cm_",
         "test_runner": "tr_",
         "report_generator": "rg_",
         "ai_assistant": "ai_",
         "workflow": "wf_",
+        "evaluator": "ev_",
         "dashboard": "—",
     }
     lines = []
@@ -913,10 +917,10 @@ if __name__ == "__main__":
             print(f"🔴 架构文档落后于代码: {', '.join(result['items'])}")
             sys.exit(1)
         elif result["status"] == "no_auto_section":
-            print("💡 项目架构.md 需要初始化 ARCH_STATS 区域")
+            print("💡 ARCH-00-平台总体架构.md 需要初始化 ARCH_STATS 区域")
             sys.exit(0)
         elif result["status"] == "no_doc":
-            print("💡 项目架构.md 不存在")
+            print("💡 ARCH-00-平台总体架构.md 不存在")
             sys.exit(0)
         else:
             print("✅ 架构文档与实际代码一致")

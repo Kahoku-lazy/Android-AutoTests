@@ -39,11 +39,20 @@
 | # | 检查项 | 怎么扫 | 通过标准 | 常见反例 |
 |---|--------|--------|----------|----------|
 | 1 | 路由 | urls + config/urls | include + path 齐全 | 只改 views 未注册 |
-| 2 | 信封 | 所有返回点 | `{status, data\|message}` + HTTP code | 裸 dict / 只 message 无 status |
+| 2 | 信封 | 所有返回点 | `{status, data\|message}` + HTTP code；**已登记特例除外**（`apps/CLAUDE.md` §1.3：`/runner/*`、`/reports/*`、workflow legacy 平铺，禁止新增） | 裸 dict / 只 message 无 status |
 | 3 | 字段契约 | Serializer↔Model↔前端 | 名与可选性一致 | Model 改名 Serializer 未改 |
 | 4 | 鉴权 | 中间件/公开列表 | `user_id`；公开路径正确 | 误加公开或漏鉴权 |
 | 5 | 错误文案 | catch / status false | 友好中文；禁技术词 | 返回 traceback 字符串 |
 | 6 | WS | consumers + gateway/routing | 已注册；type 与前端对齐 | 漏中央路由 |
+
+### 四.1 常见断裂点（接口契约层）
+
+| 问题 | 表现 | 原因 |
+|------|------|------|
+| 只改 Model 未改 Serializer | 前端缺字段 / 校验失败 | 契约不同步 |
+| View 直接 ORM 写 | 边界扫描失败；Tool 复用不上 | 违反写收敛 |
+| message 塞堆栈 | 用户看到技术细节 | 错误处理不当 |
+| URL 未 include | 404 | 漏 `config/urls.py` |
 
 ## 五、错误处理与副作用
 

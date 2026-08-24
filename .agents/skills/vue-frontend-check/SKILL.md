@@ -1,8 +1,8 @@
 ---
 name: vue-frontend-check
 description: |
-  Vue 前端代码校验 — 带统一判罚量规：布局裁剪、字号≥12px、硬编码色、DRF契约、展示可达性、DTO/信封。强制逐项记录防同skill结果漂移。
-  Keywords: Vue校验, 前端检查, DRF, API契约, 布局裁剪, 字段完整性, 展示组件, vue check, frontend checklist, UI门禁
+  Vue 前端代码校验 — 带统一判罚量规：布局裁剪、字号≥12px、硬编码色、DRF契约、展示可达性、DTO/信封、SSE/WebSocket/文件下载协议对照。强制逐项记录防同skill结果漂移。
+  Keywords: Vue校验, 前端检查, DRF, API契约, 布局裁剪, 字段完整性, 展示组件, SSE, WebSocket, WS事件, 文件下载, vue check, frontend checklist, UI门禁
   Trigger: 用户表达"校验前端/检查 Vue/前端自检/UI 门禁/布局裁剪检查"，或改完 .vue / components / composable / 编辑器后要求确认是否可关单时。
 ---
 
@@ -13,8 +13,7 @@ description: |
 **防漂移（必读）**: 同一 skill 两次结果曾不一致 → 判罚必须以 [references/calibration.md](references/calibration.md) 为准，禁止凭感觉升降严重度。
 
 **关联**:
-- `frontend/CLAUDE.md` / `frontend/DESIGN_SYSTEM.md`（字号最小 **12px**，禁硬编码 px）
-- `dev_docs/项目笔记/前端claude笔记.md`
+- `frontend/CLAUDE.md` §2（风格约束，字号最小 **12px**，禁硬编码 px）+ `frontend/src/shared/styles/tokens.css`（风格值真相源）
 - `.claude/rules/frontend.md`
 - 检查细表 → [references/checklist.md](references/checklist.md)
 - **量规/例外/强制输出** → [references/calibration.md](references/calibration.md)
@@ -48,7 +47,8 @@ description: |
 改详情/列表切换       → 三.5 + 四.3 + 五.3
 改 composable 传参    → 三.6
 改编辑器/保存/API     → 三.7 + 四全部 + 五（若动面板）
-改逻辑/协议/SSE       → 六全部 + calibration §7 逻辑类扫描 + checklist「数据流走查」
+改逻辑/协议/SSE       → 六全部（含 6.5 SSE / 6.6 文件下载 / 6.7 WebSocket）+ calibration §7 逻辑类扫描 + checklist「数据流走查」「SSE 与文件下载」「WebSocket」
+改 WS 消费/推送        → 六.7 + checklist「WebSocket」+ 六.4 数据流走查
 任意改动               → 六全部（每次必做，作为三.7 和四.1 的执行细则；含 6.4）
 ```
 
@@ -66,6 +66,7 @@ description: |
 | 三、逻辑层（P2） | 四态 / 响应式 / 文案 / 空值 / 多视图互斥 / composable 入参 / 协议 |
 | 四、模块级 | 契约 / 通道 / 父子选中 / 深链 / 守卫 / 体积 / 信封 / DTO / 校验 |
 | 五、展示组件层 | 薄组件 / 列表 / 面板 / 危险确认 / 锁态 / emits / 可点击可达 |
+| 六、协议对照（每次必做） | 路径 / 信封 / 字段 / 数据流 / SSE / 文件下载 / WebSocket |
 
 ### 六、前后端协议对照（每次必做）
 
@@ -87,8 +88,8 @@ description: |
 
 | 后端方式 | 识别特征 | 响应格式 |
 |---------|---------|---------|
-| DRF `Response()` | 视图继承 `APIView` | 经过 `EnvelopeJSONRenderer` → `{status, data}` |
-| Django `JsonResponse()` | 视图用 `@csrf_exempt` + 直接 return | 手动构造，格式不统一 |
+| DRF（`APIView` / ViewSet / `@api_view`） | 全局 `EnvelopeJSONRenderer`（`config/settings.py`）统一包装 | 2xx → `{status, data}`；异常 → `{status, message}` |
+| Django `JsonResponse()`（非 DRF 视图） | 视图直接 return，不经 DRF renderer | 手动构造，格式不统一——逐处核对，不得套用 DRF 信封假设 |
 
 - 前端解包代码必须与后端实际格式一致
 - 用 `data.data.xxx` 但后端返回顶层字段 → 🔴
@@ -115,11 +116,36 @@ description: |
 
 按视图逐个走查 `fetch → 解包 → 赋值 → 渲染`（细则见 checklist「数据流走查」），每步对照后端真实信封与字段名。解包字段名/嵌套不一致 → 🔴（calibration §2）。
 
+**6.5 SSE 事件渲染对照**（改 AI 对话/SSE 时必须逐项做；细则见 checklist「SSE 与文件下载」）
+
+| # | 检查点 | 通过标准 |
+|---|--------|---------|
+| 1 | 事件分派 | 每个 phase 在 `api/sse.ts` dispatch / `useSSE` 回调有消费分支；未知 phase 忽略不抛 |
+| 2 | 停止生成 | 停止仅断流，已生成内容保留；旧流回调经 stale 检查失效 |
+| 3 | 折叠规则 | `ThinkingBlock` / `ToolCallCard` 折叠状态独立（见 `frontend/CLAUDE.md` §3 SSE） |
+| 4 | 终端事件 | `reply_end` 与 `exceed_max_iters` 均触发完成；未到终端断流要报错 |
+
+**6.6 文件下载对照**（报告/导出等 FileResponse 接口；细则见 checklist「SSE 与文件下载」）
+
+| # | 检查点 | 通过标准 |
+|---|--------|---------|
+| 1 | 通道选择 | FileResponse 走 `fetch().text()`（或 blob），不套 JSON `api()` 信封解包 |
+| 2 | 错误分支 | 非 2xx 读 text 并提示用户；不静默吞错 |
+
+**6.7 WebSocket 对照**（改 WS 消费/推送时必做；细则见 checklist「WebSocket」）
+
+| # | 检查点 | 通过标准 |
+|---|--------|---------|
+| 1 | URL 构建 | 经 `wsUrl('/ws/...')`（Vite 代理），禁直连后端端口 |
+| 2 | 事件覆盖 | `/ws/test-run/{id}` 前端处理 9 种 type（`log` / `heartbeat` / `case_started` / `step_started` / `step_result` / `iteration_result` / `case_finished` / `run_finished` / `device_error`），每种在 `useTaskWebSocket.ts` switch 有分支；后端另发 `run_started`（前端暂不消费，新增消费时须同步 `frontend/CLAUDE.md`） |
+| 3 | 编辑广播 | `/ws/case-editing/{id}` 消费 `case_updated`（`group_send` 推送） |
+| 4 | 断线重连 | 重连钩子生效，`_wsJustReconnected` 触发 `stepStates` 重置，无僵尸进度/重复首步 |
+
 ## 多代理执行与合并（范围 >30 文件或 >3000 行时启用）
 
 | 层 | 范围 | 必做 |
 |----|------|------|
-| 协议层 | `api/*`、`shared/api-client`、后端 `urls/views/serializers` | 六.1/6.2/6.3 三表 + 四.1/2/7/8/9 |
+| 协议层 | `api/*`、`shared/api-client`、`shared/sse`、后端 `urls/views/serializers/callbacks` | 六.1/6.2/6.3/6.5/6.6/6.7 对照表 + 四.1/2/7/8/9 |
 | 主视图层 | 模块根 `.vue/.ts/.css` + 共享壳 | 一/二 + 三.1-5 + 四.3-6 + **六.4 数据流走查** |
 | 组件层 | `components/` + `composables/` + `helpers/` | 五全部 + 三.2/3/6 + 一.4-6 |
 

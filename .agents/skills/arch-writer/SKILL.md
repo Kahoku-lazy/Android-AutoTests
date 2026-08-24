@@ -21,17 +21,11 @@ ARCH 答「怎么拼」；PRD 答「要什么 / 怎么验收」。沟通用「�
 | **C 校验** | 校验/准出/查格式 | 严格度（快扫/标准/正式）→ `references/arch-checklist.md`；❌ 写清补哪一节 |
 
 **写之前必问**：模块编号？新建还是重写？对应 PRD 是否已定稿？
-
-**写之前必读**：编号对照表、ARCH-00 本模块小节、同号 PRD §5、**标杆 `ARCH-01-仪表盘.md`**（有表再读 `ARCH-02`）、本模块 `models/views/urls/api/service/consumers` + 前端 `api.ts` 消费点 + `config/urls.py` / `gateway/routing.py`。
-
 ---
 
 ## 出厂规格（唯一标杆 = ARCH-01）
 
 落盘：`dev_docs/03-设计与架构/ARCH-{序号}-{模块名}.md`。
-
-**同系参考**：有表/状态机 → ARCH-02/04/05。  
-**禁止模仿**：ARCH-06~09 的「§2 前端组件树」；ARCH-03 图中 Vue 组件名。
 
 | 块 | 要点 |
 |----|------|

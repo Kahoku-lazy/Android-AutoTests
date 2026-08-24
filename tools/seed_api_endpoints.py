@@ -768,26 +768,9 @@ create_endpoint(
     g_model, "GET", "可用技能列表", "/api/ai/available-skills", "列出所有可用 Agent 技能"
 )
 
-g_mcp = create_group("MCP 与技能管理", parent=f_ai, sort=4)
+g_mcp = create_group("工具副本管理", parent=f_ai, sort=4)
 create_endpoint(
-    g_mcp, "GET", "Agent 工具列表", "/api/ai/agents/{agent_id}/tools", "列出 Agent 已配置的工具"
-)
-create_endpoint(
-    g_mcp,
-    "POST",
-    "保存 MCP 配置",
-    "/api/ai/agents/{agent_id}/tools/mcp/save",
-    "保存 MCP 服务器配置",
-)
-create_endpoint(
-    g_mcp,
-    "POST",
-    "测试 MCP 连接",
-    "/api/ai/agents/{agent_id}/tools/mcp/test",
-    "测试 MCP 服务器连接",
-)
-create_endpoint(
-    g_mcp, "POST", "上传技能文件", "/api/ai/agents/{agent_id}/tools/skill/upload", "上传技能文件"
+    g_mcp, "GET", "Agent 工具列表", "/api/ai/agents/{agent_id}/tools", "列出 Agent 已导入的工具副本"
 )
 create_endpoint(
     g_mcp, "POST", "开关工具", "/api/ai/agents/{agent_id}/tools/{tool_id}/toggle", "启用或禁用工具"

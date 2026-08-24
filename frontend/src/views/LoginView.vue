@@ -5,6 +5,7 @@ import { useLoginView } from './LoginView.logic'
 import AccountSwitchPrompt from '@/views/components/AccountSwitchPrompt.vue'
 import LoginCard from '@/views/components/LoginCard.vue'
 import RegisterCard from '@/views/components/RegisterCard.vue'
+import AnimalFace from '@/views/components/AnimalFace.vue'
 
 const {
   // ── 账号 & 视图状态 ──
@@ -95,12 +96,27 @@ const {
           />
 
           <aside class="hero__brand" aria-hidden="true">
-            <span class="sticker sticker--ai sticker--featured">AI助手</span>
+            <div class="hero__brand-featured">
+              <AnimalFace variant="robot" :size="72" color="var(--c-ai)" />
+              <span class="featured-label">AI助手</span>
+            </div>
             <div class="hero__brand-tags">
-              <span class="sticker sticker--device">设备管理</span>
-              <span class="sticker sticker--case">用例编排</span>
-              <span class="sticker sticker--runner">用例执行</span>
-              <span class="sticker sticker--report">报告生成</span>
+              <div class="sticker sticker--device">
+                <AnimalFace variant="owl" :size="34" color="var(--c-device)" />
+                <span class="sticker__label">设备管理</span>
+              </div>
+              <div class="sticker sticker--case">
+                <AnimalFace variant="fox" :size="34" color="var(--c-case)" />
+                <span class="sticker__label">用例编排</span>
+              </div>
+              <div class="sticker sticker--runner">
+                <AnimalFace variant="rabbit" :size="34" color="var(--c-runner)" />
+                <span class="sticker__label">用例执行</span>
+              </div>
+              <div class="sticker sticker--report">
+                <AnimalFace variant="squirrel" :size="34" color="var(--c-report)" />
+                <span class="sticker__label">报告生成</span>
+              </div>
             </div>
           </aside>
         </main>

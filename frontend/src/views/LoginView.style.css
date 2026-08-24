@@ -127,6 +127,7 @@
   gap: var(--app-space-2xl);
 }
 
+/* ── 功能贴纸板（动物岛化身）── */
 .hero__brand {
   display: flex;
   flex-direction: row;
@@ -135,40 +136,82 @@
   padding: var(--app-space-sm);
 }
 
+.hero__brand-featured {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--app-space-sm);
+  width: 168px;
+  min-height: 100%;
+  padding: var(--app-space-lg) var(--app-space-md);
+  background: var(--app-bg-card);
+  border: var(--app-border-width) solid var(--ink);
+  border-radius: 18px 26px 18px 26px;
+  box-shadow: var(--app-shadow-md);
+  transform: rotate(-1.5deg);
+}
+.hero__brand-featured .animal-face {
+  filter: drop-shadow(0 3px 0 color-mix(in srgb, var(--ink) 12%, transparent));
+}
+
 .hero__brand-tags {
   display: flex;
   flex-direction: column;
-  gap: var(--app-space-lg);
+  gap: var(--app-space-md);
 }
 
 .sticker {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: var(--app-space-sm);
   width: 148px;
-  padding: var(--app-space-md) var(--app-space-sm);
+  padding: var(--app-space-sm) var(--app-space-md);
   background: var(--app-bg-card);
   border: var(--app-border-width) solid var(--ink);
-  border-left-width: calc(var(--app-border-width) * 2);
-  border-radius: var(--app-radius-md);
+  border-radius: 14px 20px 14px 20px;
   box-shadow: var(--app-shadow-sm);
-  font-size: var(--app-size-sm);
-  font-weight: 700;
   font-family: var(--app-font);
   color: var(--ink);
+  cursor: default;
+  transition: transform var(--app-duration) var(--app-spring),
+    box-shadow var(--app-duration) var(--app-ease);
+}
+.sticker .animal-face {
+  flex-shrink: 0;
+}
+.sticker__label {
+  font-family: var(--app-font-brand);
+  font-size: var(--app-size-sm);
+  font-weight: 400;
+  line-height: 1.3;
 }
 
-.sticker--case { border-left-color: var(--c-case); transform: rotate(-2deg); }
-.sticker--device { border-left-color: var(--c-device); transform: rotate(1.5deg); }
-.sticker--runner { border-left-color: var(--c-runner); transform: rotate(-1deg); }
-.sticker--report { border-left-color: var(--c-report); transform: rotate(-1.5deg); }
-.sticker--ai { border-left-color: var(--c-ai); transform: rotate(2deg); }
+.sticker--device { border-color: var(--c-device); transform: rotate(1.5deg); }
+.sticker--case { border-color: var(--c-case); transform: rotate(-1.2deg); }
+.sticker--runner { border-color: var(--c-runner); transform: rotate(1deg); }
+.sticker--report { border-color: var(--c-report); transform: rotate(-1.8deg); }
 
-.sticker--featured {
-  width: 168px;
-  min-height: 100%;
+.sticker:hover {
+  transform: rotate(0deg) translateY(-3px);
+  box-shadow: var(--app-shadow-lg);
+}
+.sticker:active {
+  transform: rotate(0deg) translateY(-1px);
+}
+
+.hero__brand-featured .animal-face {
+  width: 72px;
+  height: 72px;
+}
+
+.featured-label {
+  font-family: var(--app-font-brand);
   font-size: var(--app-size-lg);
-  align-self: stretch;
+  font-weight: 400;
+  color: var(--ink);
+  text-align: center;
+  line-height: 1.2;
 }
 
 /* ── Footer ── */
@@ -177,6 +220,16 @@
   text-align: center;
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
+}
+
+/* ── 动效降级 ── */
+@media (prefers-reduced-motion: reduce) {
+  .sticker,
+  .sticker:hover,
+  .sticker:active {
+    transition: none;
+    transform: none;
+  }
 }
 
 /* ── 响应式 ── */
@@ -198,8 +251,10 @@
   .hero__desc { font-size: var(--app-size-xs); }
   .hero__version { padding: var(--app-space-xs) var(--app-space-sm); margin-top: var(--app-space-xs); }
   .hero__brand { flex-direction: row; gap: var(--app-space-sm); }
+  .hero__brand-featured { width: auto; min-height: auto; padding: var(--app-space-md); transform: rotate(-1deg); }
+  .hero__brand-featured .animal-face { width: 48px; height: 48px; }
+  .featured-label { font-size: var(--app-size-sm); }
   .hero__brand-tags { flex-direction: row; flex-wrap: wrap; gap: var(--app-space-sm); justify-content: center; }
   .sticker { width: auto; padding: var(--app-space-sm) var(--app-space-md); }
-  .sticker--featured { width: auto; min-height: auto; font-size: var(--app-size-sm); }
   .login-footer { padding: var(--app-space-md) var(--app-space-sm); }
 }

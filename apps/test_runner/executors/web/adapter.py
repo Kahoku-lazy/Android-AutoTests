@@ -40,6 +40,18 @@ def _pw_run(func, *args, **kwargs):
     return loop.run_in_executor(_PW_EXECUTOR, func, *args)
 
 
+def _as_locator(selector: str) -> str:
+    """Prefix bare XPath expressions so Playwright parses them as XPath.
+
+    Common step types (click/wait) may carry an XPath in the xpath field;
+    Playwright otherwise treats the string as a CSS selector and fails.
+    """
+    s = (selector or "").strip()
+    if s.startswith(("//", "(")):
+        return f"xpath={s}"
+    return s
+
+
 class WebAdapter:
     """Executes web automation test cases via Playwright (headless Chromium)."""
 
@@ -241,19 +253,19 @@ class WebAdapter:
     async def _click(self, selector: str):
         """Click an element by selector."""
         await self._ensure_browser()
-        await _pw_run(self._page.click, selector, timeout=10000)
+        await _pw_run(self._page.click, _as_locator(selector), timeout=10000)
 
     async def _fill(self, selector: str, value: str):
         """Fill an input field."""
         await self._ensure_browser()
-        await _pw_run(self._page.fill, selector, value, timeout=10000)
+        await _pw_run(self._page.fill, _as_locator(selector), value, timeout=10000)
 
     async def _wait_for(self, selector: str, timeout: float = 10):
         """Wait for a selector to appear."""
         await self._ensure_browser()
         await _pw_run(
             self._page.wait_for_selector,
-            selector,
+            _as_locator(selector),
             timeout=timeout * 1000,
         )
 
@@ -293,7 +305,7 @@ class WebAdapter:
 
         def _get_bounds():
             try:
-                el = self._page.locator(selector).first
+                el = self._page.locator(_as_locator(selector)).first
                 box = el.bounding_box()
                 if box:
                     return {

@@ -17,26 +17,6 @@ from models.test_models import TestCaseDef
 from .adapter import _pw_run
 from .annotator import annotate_screenshot
 
-# ── Recognised web step types ──
-_WEB_STEP_TYPES = {
-    "web_navigate",
-    "web_fill",
-    "web_type",
-    "web_wait",
-    "web_assert",
-    "web_screenshot",
-    # Legacy
-    "web_click",
-    "web_step",
-    # ── 通用操作（兼容跨平台统一命名）──
-    "click",
-    "long_click",
-    "swipe",
-    "wait",
-    "sleep",
-    "screenshot",
-}
-
 
 class WebExecutor:
     """Executes Web automation test case steps sequentially."""
@@ -61,6 +41,10 @@ class WebExecutor:
             steps = self._parse_text_steps(extra)
         else:
             self.adapter.log(f"Error: no steps for '{case.title}'")
+            return "fail"
+
+        if not steps:
+            self.adapter.log(f"Error: no executable steps for '{case.title}'")
             return "fail"
 
         total = len(steps)
@@ -326,23 +310,29 @@ class WebExecutor:
         try:
             if t == "web_navigate":
                 self.adapter.log(f"Navigate: {step.url}")
-                if step.url:
-                    await self.adapter._navigate(step.url)
+                if not step.url:
+                    self.adapter.log("Navigate FAIL: no url")
+                    return "fail"
+                await self.adapter._navigate(step.url)
                 return "pass"
 
             elif t == "web_click" or t == "click":
                 target = step.selector or step.xpath
                 self.adapter.log(f"Click: {target}")
-                if target:
-                    await self.adapter._click(target)
+                if not target:
+                    self.adapter.log("Click FAIL: no selector/xpath")
+                    return "fail"
+                await self.adapter._click(target)
                 return "pass"
 
             elif t == "web_fill" or t == "web_type":
                 self.adapter.log(
                     f"{'Fill' if t == 'web_fill' else 'Type'}: {step.selector} = {step.value}"
                 )
-                if step.selector:
-                    await self.adapter._fill(step.selector, step.value or "")
+                if not step.selector:
+                    self.adapter.log(f"{'Fill' if t == 'web_fill' else 'Type'} FAIL: no selector")
+                    return "fail"
+                await self.adapter._fill(step.selector, step.value or "")
                 return "pass"
 
             elif t == "web_wait" or t == "wait":
@@ -353,12 +343,17 @@ class WebExecutor:
                 elif target:
                     self.adapter.log(f"Wait for: {target}")
                     await self.adapter._wait_for(target, step.timeout or 10)
+                else:
+                    self.adapter.log("Wait FAIL: no selector/xpath and no timeout")
+                    return "fail"
                 return "pass"
 
             elif t == "web_assert":
                 self.adapter.log(f"Verify: {step.expected_text or step.selector}")
-                if step.expected_text:
-                    await self.adapter._verify_text(step.expected_text)
+                if not step.expected_text:
+                    self.adapter.log("Verify FAIL: no expected_text")
+                    return "fail"
+                await self.adapter._verify_text(step.expected_text)
                 return "pass"
 
             elif t == "web_screenshot" or t == "screenshot":

@@ -8,6 +8,9 @@ __all__ = [
     "Page",
     "Element",
     "PageFlow",
+    "ImportConflictError",
+    "get_page_full",
+    "import_snapshot_page",
     "simple_yaml_dump",
     "get_test_points",
     "get_flows",
@@ -42,6 +45,7 @@ __all__ = [
     "delete_api_endpoint",
 ]
 
+from .api_snapshot import ImportConflictError, get_page_full, import_snapshot_page
 from .models import Element, Page, PageFlow
 from .service import simple_yaml_dump
 

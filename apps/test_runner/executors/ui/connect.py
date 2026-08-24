@@ -1,30 +1,37 @@
-"""Execution pre-flight device check — dual Airtest + uiautomator2 connection.
+"""Execution pre-flight device check — 经 AirtestU2Engine 建立双栈连接。
 
-Creates independent connections (not via DevicePool singleton) for test execution
-isolation. Airtest for device operations, u2 kept for XPath element location.
+L1c 收敛（consolidate-airtest-u2-engine）：连接细节（adb connect / Airtest / u2 /
+超时调优 / display 验证）已迁入 engines/android/airtest_u2.py，本模块保留执行编排
+（池查询、45s 总超时、日志回调、DeviceConnection 兼容壳）。
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-import subprocess
 
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
-import uiautomator2 as u2
-
-from airtest.core.android.android import Android
+from engines.android.airtest_u2 import AirtestU2Engine, EngineConnectError
 
 logger = logging.getLogger(__name__)
 
 # adb connect(10s) + Android init(5s) + u2.connect(15s) + display_info + margin
 DEVICE_CHECK_TIMEOUT = 45
 
-# Single u2 HTTP operation timeout ceiling (seconds). u2 default HTTP_TIMEOUT=300,
-# device freeze causes permanent blocking. Lowered to 20s for quick failure.
-U2_OP_TIMEOUT = 20
+# 会话模式登记（executor-session-toggle：DEVICE_SESSION_ENABLED=True 时使用）
+_sessions: dict[str, object] = {}
+
+
+def release_session(serial: str) -> None:
+    """释放该 serial 的 EXCLUSIVE 会话（未使用会话模式时 no-op，幂等）。"""
+    session = _sessions.pop(serial, None)
+    if session is not None:
+        try:
+            session.release()
+        except Exception:
+            logger.debug("release_session(%s) failed, continuing", serial)
 
 
 @dataclass
@@ -32,8 +39,8 @@ class DeviceConnection:
     """Holds both Airtest and uiautomator2 device references for a single serial."""
 
     serial: str
-    airtest: Android
-    u2: u2.Device
+    airtest: object
+    u2: object
     info: dict = field(default_factory=dict)
 
 
@@ -42,7 +49,11 @@ class DeviceCheckError(Exception):
 
 
 def _query_pool_device(serial: str):
-    """Query device pool for serial. Raises DeviceCheckError if not found or offline."""
+    """Query device pool for serial. Raises DeviceCheckError if not found.
+
+    L1b 收敛：设备状态仅 ONLINE/BUSY 两态（离线即删除记录），
+    原 OFFLINE/DISCONNECTED 幽灵状态检查为死分支，已删除。
+    """
     from apps.device_pool.models import Device as PoolDevice
 
     try:
@@ -52,104 +63,20 @@ def _query_pool_device(serial: str):
             f"Device {serial} not registered in pool. Add it in Device Management first."
         ) from None
 
-    if dev.status in ("OFFLINE", "DISCONNECTED"):
-        raise DeviceCheckError(f"Device status is {dev.status}. Connect and confirm online first.")
-
     return dev
 
 
-def _adb_connect(serial: str, pool_device, log: Callable[[str], None]) -> Android:
-    """ADB connect for WiFi devices + Airtest init. Raises DeviceCheckError on failure."""
-    if ":" in serial:
-        log(f"  ② Wireless ADB: adb connect {serial}")
-        try:
-            result = subprocess.run(
-                ["adb", "connect", serial],
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            output = (result.stdout + result.stderr).strip()
-            if output:
-                log(f"  → {output}")
-            output_lower = output.lower()
-            connected_keywords = ("connected", "already", "已连接", "已经连接", "成功")
-            if not any(kw in output_lower for kw in connected_keywords):
-                raise DeviceCheckError("ADB connect failed. Check WiFi network and device port.")
-        except subprocess.TimeoutExpired:
-            raise DeviceCheckError("ADB connect timed out (10s). Check network.") from None
-        log("  ✓ ADB ready")
-    else:
-        log("  ② USB device, skip adb connect")
-
-    log("  ③ Establish Airtest connection…")
-    try:
-        air_dev = Android(serialno=serial)
-    except Exception as e:
-        raise DeviceCheckError(f"Airtest connection failed: {e}") from e
-    log("  ✓ Airtest session established")
-
-    return air_dev
-
-
-def _connect_u2(serial: str) -> u2.Device:
-    """Connect uiautomator2. Raises DeviceCheckError on failure."""
-    try:
-        return u2.connect(serial)
-    except Exception as e:
-        raise DeviceCheckError(f"u2.connect failed: {e}") from e
-
-
-def _tune_u2_http_timeout(u2_dev: u2.Device) -> None:
-    """Lower u2 HTTP timeout to prevent permanent blocking on device freeze."""
-    try:
-        import uiautomator2.base as _u2base
-
-        _u2base.HTTP_TIMEOUT = U2_OP_TIMEOUT
-    except Exception:
-        logger.debug("u2 HTTP timeout tuning failed, continuing")
-    try:
-        u2_dev.settings["wait_timeout"] = U2_OP_TIMEOUT
-    except Exception:
-        logger.debug("u2 HTTP timeout tuning failed, continuing")
-
-
-def _verify_display(air_dev: Android, u2_dev: u2.Device, log: Callable[[str], None]) -> dict:
-    """Verify Airtest connection via display_info. Raises DeviceCheckError on failure."""
-    try:
-        info = dict(air_dev.display_info)
-        w = info.get("displayWidth", "?")
-        h = info.get("displayHeight", "?")
-        # display_info may not have productName/brand — enrich from u2 if needed
-        try:
-            u2_info = u2_dev.info
-            for k in ("productName", "brand", "sdkInt"):
-                if k not in info and k in u2_info:
-                    info[k] = u2_info[k]
-        except Exception:
-            logger.debug("Failed to read extra device info via u2")
-        extra = f" · {info.get('productName', '')}" if info.get("productName") else ""
-        log(f"  ✓ Connection verified · {w}x{h}{extra}")
-        return info
-    except Exception as e:
-        msg = str(e)
-        if "atx-agent" in msg.lower() or "offline" in msg.lower():
-            raise DeviceCheckError(
-                "ATX Agent not running. Start uiautomator2 service on device."
-            ) from e
-        raise DeviceCheckError(f"Device verification failed: {e}") from e
-
-
 def check_and_connect(
-    serial: str, on_log: Optional[Callable[[str], None]] = None
+    serial: str,
+    on_log: Optional[Callable[[str], None]] = None,
+    use_session: bool = False,
 ) -> DeviceConnection:
-    """Synchronous dual-connection: Airtest (device ops) + u2 (XPath only).
+    """Synchronous dual-connection (Airtest ops + u2 XPath).
+
+    use_session=True（DEVICE_SESSION_ENABLED 开关）时经 DeviceSession.lease(EXCLUSIVE)
+    取引擎；会话登记进程内，由 _cleanup_device → release_session 释放。
 
     Runs in thread pool. on_log must not block the event loop (string collection only).
-
-    Args:
-        serial: Device serial (USB or host:port for WiFi)
-        on_log: Optional log callback for progress messages
 
     Returns:
         DeviceConnection with both airtest and u2 references
@@ -171,23 +98,36 @@ def check_and_connect(
     name = dev.name or dev.model or serial
     log(f"  ✓ Pool: {dev.status} · {conn} · {name}")
 
-    # ② ADB + ③ Airtest
-    air_dev = _adb_connect(serial, dev, log)
+    if use_session:
+        from apps.device_pool.session import DeviceSession, LeaseConflict, LeaseError, LeaseMode
 
-    # ④ Connect u2 (XPath only)
-    log("  ④ Establish uiautomator2 connection (XPath)…")
-    u2_dev = _connect_u2(serial)
-    log("  ✓ u2 session established")
+        try:
+            session = DeviceSession.lease(
+                serial, LeaseMode.EXCLUSIVE, addr=dev.connection_addr or serial
+            )
+        except LeaseConflict as e:
+            raise DeviceCheckError(str(e)) from e
+        except LeaseError as e:
+            raise DeviceCheckError(str(e)) from e
+        _sessions[serial] = session
+        engine = session.engine  # 惰性连接在首操作；此处主动触发以完成预检
+        engine.connect(serial, dev.connection_addr or serial)
+        log("✅ Pre-flight check passed (session mode), starting test execution")
+        return DeviceConnection(
+            serial=serial, airtest=engine.airtest, u2=engine.u2, info=engine.device_info
+        )
 
-    # Tune u2 HTTP timeout to prevent permanent blocking on device freeze
-    _tune_u2_http_timeout(u2_dev)
-
-    # ⑤ Verify via Airtest display_info
-    log("  ⑤ Verify Airtest connection (display_info)…")
-    info = _verify_display(air_dev, u2_dev, log)
+    # ②~⑤ 连接细节由引擎完成（进度日志经 on_log 回传）
+    engine = AirtestU2Engine()
+    try:
+        engine.connect(serial, dev.connection_addr or serial, on_log=log)
+    except EngineConnectError as e:
+        raise DeviceCheckError(str(e)) from e
 
     log("✅ Pre-flight check passed, starting test execution")
-    return DeviceConnection(serial=serial, airtest=air_dev, u2=u2_dev, info=info)
+    return DeviceConnection(
+        serial=serial, airtest=engine.airtest, u2=engine.u2, info=engine.device_info
+    )
 
 
 async def _flush_check_logs(run_id: str, callbacks, messages: list[str]):
@@ -202,13 +142,14 @@ async def check_and_connect_async(
     callbacks,
     executor,
     timeout: float = DEVICE_CHECK_TIMEOUT,
+    use_session: bool = False,
 ) -> DeviceConnection:
     """Async wrapper: run dual-connection check in thread pool, push logs via WebSocket."""
     loop = asyncio.get_event_loop()
     collected: list[str] = []
 
     def do_check():
-        return check_and_connect(serial, on_log=collected.append)
+        return check_and_connect(serial, on_log=collected.append, use_session=use_session)
 
     err: Optional[BaseException] = None
     device_conn = None

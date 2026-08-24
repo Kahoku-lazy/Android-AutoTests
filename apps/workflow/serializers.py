@@ -55,9 +55,13 @@ class WorkflowDirectoryTreeSerializer(serializers.ModelSerializer):
 
     def get_documents(self, obj):
         if not hasattr(obj, "_prefetched_documents"):
-            docs = obj.documents.all().order_by("title")
+            docs = obj.documents.filter(doc_type=WorkflowDocument.TYPE_PAGE_FLOW).order_by("title")
         else:
-            docs = obj._prefetched_documents
+            docs = [
+                d
+                for d in obj._prefetched_documents
+                if d.doc_type == WorkflowDocument.TYPE_PAGE_FLOW
+            ]
         return [
             {
                 "doc_id": d.doc_id,

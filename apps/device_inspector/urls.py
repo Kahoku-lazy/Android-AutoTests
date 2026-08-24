@@ -1,19 +1,23 @@
-"""device-inspector URL routing — /api/inspector/*."""
+"""device-inspector URL routing — /api/inspector/*（v1.7 快照化 6 端点）."""
 
 from django.urls import path
 
 from .views import (
-    device_info_view,
-    dump_page,
-    ocr_page,
-    screenshot_snapshot,
+    capture,
+    page_view,
+    save_elements,
+    snapshot_delete,
+    snapshot_detail,
+    snapshots,
 )
 
 app_name = "inspector"
 
 urlpatterns = [
-    path("dump", dump_page, name="dump"),
-    path("device-info", device_info_view, name="device_info"),
-    path("screenshot", screenshot_snapshot, name="screenshot"),
-    path("ocr", ocr_page, name="ocr"),
+    path("capture", capture, name="capture"),
+    path("snapshots", snapshots, name="snapshots"),
+    path("snapshots/<int:snapshot_id>", snapshot_detail, name="snapshot_detail"),
+    path("snapshots/<int:snapshot_id>/delete", snapshot_delete, name="snapshot_delete"),
+    path("snapshots/<int:snapshot_id>/save-elements", save_elements, name="save_elements"),
+    path("pages/<int:page_id>", page_view, name="page_view"),
 ]

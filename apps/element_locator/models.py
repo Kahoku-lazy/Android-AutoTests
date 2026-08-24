@@ -4,7 +4,11 @@ from django.db import models
 
 
 class Page(models.Model):
-    """Recorded UI page snapshot or folder node → el_pages."""
+    """Recorded UI page snapshot or folder node → el_pages.
+
+    v7.2：快照导入时页面携带截图、页面级 OCR JSON（ocr_json）与快照溯源
+    （snapshot_id）；手动创建的页面两者为空。
+    """
 
     device = models.ForeignKey(
         "device_pool.Device",
@@ -25,6 +29,8 @@ class Page(models.Model):
     package = models.CharField(max_length=500, default="", blank=True)
     activity = models.CharField(max_length=500, default="", blank=True)
     screenshot_path = models.CharField(max_length=1000, default="", blank=True)
+    ocr_json = models.JSONField(default=dict, blank=True)  # 页面级 OCR 结果（v7.2）
+    snapshot_id = models.IntegerField(null=True, blank=True)  # 来源检查器快照（v7.2）
     element_count = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -41,7 +47,10 @@ class Page(models.Model):
 
 
 class Element(models.Model):
-    """UI element with XPath candidates → el_elements."""
+    """UI element with XPath candidates → el_elements.
+
+    v7.2：快照导入补全 dump 完整字段（坐标/深度/缩略图路径等），默认值向后兼容。
+    """
 
     page = models.ForeignKey(Page, on_delete=models.CASCADE, related_name="elements")
     class_name = models.CharField(max_length=500, default="", blank=True)
@@ -50,8 +59,17 @@ class Element(models.Model):
     resource_id = models.CharField(max_length=500, default="", blank=True)
     bounds = models.CharField(max_length=200, default="", blank=True)
     xpath_candidates = models.TextField(default="[]")
+    x = models.IntegerField(default=0)  # v7.2
+    y = models.IntegerField(default=0)  # v7.2
+    width = models.IntegerField(default=0)  # v7.2
+    height = models.IntegerField(default=0)  # v7.2
+    depth = models.IntegerField(default=0)  # v7.2
+    index = models.CharField(max_length=50, default="", blank=True)  # v7.2
     clickable = models.BooleanField(default=False)
     enabled = models.BooleanField(default=False)
+    scrollable = models.BooleanField(default=False)  # v7.2
+    checked = models.BooleanField(default=False)  # v7.2
+    thumbnail_path = models.CharField(max_length=1000, default="", blank=True)  # v7.2
     alias = models.CharField(max_length=500, default="", blank=True)
     tags = models.CharField(max_length=500, default="", blank=True)
     is_test_point = models.BooleanField(default=False, db_index=True)

@@ -1,215 +1,101 @@
-"""device-inspector HTTP routes — live device interaction endpoints."""
+"""device-inspector HTTP 入口 — v1.7 快照化 6 端点（薄层：解析 → 调 api → 信封）。
+
+响应经 EnvelopeJSONRenderer 统一为 {status, data} / {status, message}。
+写操作全部下沉 api.py / service.py，本文件不直接 ORM。
+"""
 
 import logging
 
-from datetime import datetime
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
-from django.conf import settings
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-
-from apps.device_pool.api import device
-from apps.device_pool.models import Device
-
-from .ocr import recognize
-from .service import gen_xpath_candidates, trim_hierarchy
+from . import api
+from .service import CaptureError
 
 logger = logging.getLogger(__name__)
 
-# Process prefixes that indicate execution engine occupation
-_EXECUTION_OCCUPY_PREFIXES = ("runner-", "ai_agent", "task-", "run-")
+
+def _user_id(request) -> str:
+    return str(getattr(request, "user_id", "") or "")
 
 
-def _check_device_available(serial: str) -> tuple[bool, str, str]:
-    """Check if a device is available for inspector operations.
-
-    Returns (available, error_message, occupied_by).
-    """
-    if not serial:
-        return False, "未选择设备，请先连接设备", ""
+@api_view(["POST"])
+def capture(request):
+    """POST /api/inspector/capture — 一键获取（serial + method）→ 快照落库。"""
+    serial = (request.data.get("serial") or "").strip()
+    method = request.data.get("method") or "both"
     try:
-        dev = Device.objects.get(serial=serial)
-    except Device.DoesNotExist:
-        return False, "设备未注册", ""
-    if dev.status == "OFFLINE":
-        return False, "设备已离线", ""
-    if dev.status == "BUSY" and dev.occupied_by:
-        for prefix in _EXECUTION_OCCUPY_PREFIXES:
-            if dev.occupied_by.startswith(prefix):
-                return (
-                    False,
-                    f"设备正被执行引擎占用（{dev.occupied_by}），请等待执行完毕",
-                    dev.occupied_by,
-                )
-    return True, "", dev.occupied_by or ""
-
-
-@csrf_exempt
-def dump_page(request):
-    """POST /api/inspector/dump — Dump current UI hierarchy (no persistence).
-
-    Pages and elements are now managed manually via the element-manager.
-    This endpoint only returns the live hierarchy for the locator UI.
-    """
-    available, err_msg, _ = _check_device_available(device.current_serial)
-    if not available:
-        return JsonResponse({"status": False, "message": err_msg}, status=409)
-
-    nodes = device.dump_hierarchy()
-
-    # Save screenshot for visual reference (keep last 3)
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    shot_dir = settings.SCREENSHOT_DIR
-    shot_dir.mkdir(parents=True, exist_ok=True)
-    shot_file = shot_dir / f"page_{ts}.png"
-    device.screenshot_file(str(shot_file))
-    pngs = sorted(shot_dir.glob("page_*.png"), key=lambda p: p.stat().st_mtime, reverse=True)
-    for old in pngs[3:]:
-        try:
-            old.unlink()
-        except Exception:
-            logger.debug("Failed to delete old screenshot: %s", old)
-
-    info = device.info()
-    package = info.get("currentPackageName", "")
-    cur = device.app_current()
-    activity = cur.get("activity", "")
-
-    # Generate XPath candidates for actionable elements（用完整层级算 count，保证定位语义准确）
-    xpath_count = 0
-    for e in nodes:
-        if e["resource_id"] or e["text"] or e["content_desc"] or e["clickable"]:
-            e["xpaths"] = gen_xpath_candidates(e, nodes)
-            xpath_count += 1
-
-    # 裁剪展示层级：去纯布局容器 + 按 bounds 去重
-    elements = trim_hierarchy(nodes)
-    actionable = [
-        e for e in elements if e["clickable"] or e["text"] or e["resource_id"] or e["content_desc"]
-    ]
-
-    logger.info(
-        "[dump] total=%d trimmed=%d actionable=%d package=%s activity=%s",
-        len(nodes),
-        len(elements),
-        len(actionable),
-        package,
-        activity,
-    )
-    return JsonResponse(
-        {
-            "status": True,
-            "serial": device.current_serial,
-            "package": package,
-            "activity": activity,
-            "element_count": len(elements),
-            "actionable_count": len(actionable),
-            "elements": elements,
-            "actionable": actionable,
-        }
-    )
-
-
-def device_info_view(request):
-    """GET /api/inspector/device-info — Current device info with resolution.
-
-    Combines DB cached fields with live u2 info for the active device.
-    Includes occupation status for frontend awareness.
-    """
-    info = device.info()
-    serial = device.current_serial
-
-    try:
-        dev = Device.objects.get(serial=serial)
-        is_occupied = dev.status == "BUSY" and bool(dev.occupied_by)
-        return JsonResponse(
-            {
-                "status": True,
-                "serial": serial,
-                "model": dev.model or info.get("productName", ""),
-                "brand": dev.brand or "",
-                "screen_w": dev.screen_w or info.get("displayWidth", 1440),
-                "screen_h": dev.screen_h or info.get("displayHeight", 3040),
-                "connection_type": device.get_connection_type(serial),
-                "package": info.get("currentPackageName", ""),
-                "occupied": is_occupied,
-                "occupied_by": dev.occupied_by if is_occupied else "",
-            }
-        )
-    except Device.DoesNotExist:
-        return JsonResponse(
-            {
-                "status": True,
-                "serial": serial,
-                "model": info.get("productName", ""),
-                "brand": "",
-                "screen_w": info.get("displayWidth", 1440),
-                "screen_h": info.get("displayHeight", 3040),
-                "connection_type": device.get_connection_type(serial),
-                "package": info.get("currentPackageName", ""),
-            }
-        )
-
-
-@csrf_exempt
-def ocr_page(request):
-    """POST /api/inspector/ocr — OCR text recognition on the current screen.
-
-    No persistence: results are session-only (transient inspector service).
-    """
-    if not device.current_serial:
-        return JsonResponse({"status": False, "message": "未选择设备"}, status=409)
-    available, err_msg, _ = _check_device_available(device.current_serial)
-    if not available:
-        return JsonResponse({"status": False, "message": err_msg}, status=409)
-
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    shot_dir = settings.SCREENSHOT_DIR
-    shot_dir.mkdir(parents=True, exist_ok=True)
-    shot_file = shot_dir / f"ocr_{ts}.png"
-    try:
-        device.screenshot_file(str(shot_file))
-        texts = recognize(str(shot_file))
-        info = device.info()
-        return JsonResponse(
-            {
-                "status": True,
-                "serial": device.current_serial,
-                "screen_w": info.get("displayWidth", 0),
-                "screen_h": info.get("displayHeight", 0),
-                "count": len(texts),
-                "texts": texts,
-            }
-        )
+        return Response(api.capture_snapshot(_user_id(request), serial, method))
+    except CaptureError as e:
+        return Response({"message": str(e)}, status=e.status_code)
     except Exception:
-        logger.exception("OCR recognition failed")
-        return JsonResponse({"status": False, "message": "OCR 识别失败，请稍后重试"}, status=500)
-    finally:
-        try:
-            shot_file.unlink()
-        except Exception:
-            logger.debug("Failed to delete OCR screenshot: %s", shot_file)
+        logger.exception("capture failed serial=%s", serial)
+        return Response({"message": "获取失败"}, status=500)
 
 
-def screenshot_snapshot(request):
-    """GET /api/inspector/screenshot — Single JPEG snapshot for fast first paint."""
-    if not device.current_serial:
-        return JsonResponse({"status": False, "message": "未选择设备"})
-    available, err_msg, _ = _check_device_available(device.current_serial)
-    if not available:
-        return JsonResponse({"status": False, "message": err_msg}, status=409)
+@api_view(["GET"])
+def snapshots(request):
+    """GET /api/inspector/snapshots — 快照列表（offset/limit，倒序）。"""
     try:
-        b64 = device.screenshot_b64(quality=50, max_width=720)
-        info = device.info()
-        return JsonResponse(
-            {
-                "status": True,
-                "image": b64,
-                "format": "jpeg",
-                "serial": device.current_serial,
-                "screen_w": info.get("displayWidth", 0),
-                "screen_h": info.get("displayHeight", 0),
-            }
+        offset = int(request.query_params.get("offset", 0))
+        limit = min(int(request.query_params.get("limit", 100)), 100)
+    except ValueError:
+        return Response({"message": "无效的分页参数"}, status=400)
+    return Response(api.list_snapshots(_user_id(request), offset, limit))
+
+
+@api_view(["GET"])
+def snapshot_detail(request, snapshot_id: int):
+    """GET /api/inspector/snapshots/{id} — 快照详情 JSON。"""
+    data = api.get_snapshot(snapshot_id)
+    if data is None:
+        return Response({"message": "快照不存在"}, status=404)
+    return Response(data)
+
+
+@api_view(["DELETE"])
+def snapshot_delete(request, snapshot_id: int):
+    """DELETE /api/inspector/snapshots/{id} — 删除快照 + 文件清理。"""
+    if not api.delete_snapshot(snapshot_id):
+        return Response({"message": "快照不存在"}, status=404)
+    return Response({"deleted": True})
+
+
+@api_view(["POST"])
+def save_elements(request, snapshot_id: int):
+    """POST /api/inspector/snapshots/{id}/save-elements — 筛减保存到元素定位。"""
+    from apps.element_locator.api import ImportConflictError
+
+    body = request.data or {}
+    page_label = (body.get("page_label") or "").strip()
+    folder_path = (body.get("folder_path") or "").strip()
+    page_id = body.get("page_id")
+    element_ids = body.get("element_ids")
+    include_ocr = bool(body.get("include_ocr", True))
+    try:
+        return Response(
+            api.save_snapshot_to_elements(
+                snapshot_id,
+                page_label=page_label,
+                folder_path=folder_path,
+                page_id=int(page_id) if page_id else None,
+                element_ids=element_ids,
+                include_ocr=include_ocr,
+            )
         )
-    except Exception as e:
-        return JsonResponse({"status": False, "message": str(e)})
+    except ImportConflictError as e:
+        return Response({"message": str(e)}, status=409)
+    except ValueError as e:
+        return Response({"message": str(e)}, status=400)
+    except Exception:
+        logger.exception("save snapshot %s to elements failed", snapshot_id)
+        return Response({"message": "保存失败"}, status=500)
+
+
+@api_view(["GET"])
+def page_view(request, page_id: int):
+    """GET /api/inspector/pages/{page_id} — 元素定位已保存页面只读视图。"""
+    data = api.get_page_view(page_id)
+    if data is None:
+        return Response({"message": "页面不存在"}, status=404)
+    return Response(data)

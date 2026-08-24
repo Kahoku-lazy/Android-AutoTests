@@ -40,6 +40,8 @@ def _page_payload(p, parent_map=None):
         "package": p.package,
         "activity": p.activity,
         "screenshot_path": p.screenshot_path,
+        "ocr_json": p.ocr_json or None,
+        "snapshot_id": p.snapshot_id,
         "element_count": p.element_count,
         "created_at": str(p.created_at),
         "flow_out": getattr(p, "flow_out", 0),
@@ -186,9 +188,20 @@ def _element_payload(el):
         "alias": el.alias,
         "class_name": el.class_name,
         "text_val": el.text_val,
+        "content_desc": el.content_desc,
         "resource_id": el.resource_id,
         "clickable": el.clickable,
+        "enabled": el.enabled,
+        "scrollable": el.scrollable,
+        "checked": el.checked,
         "bounds": el.bounds,
+        "x": el.x,
+        "y": el.y,
+        "width": el.width,
+        "height": el.height,
+        "depth": el.depth,
+        "index": el.index,
+        "thumbnail_path": el.thumbnail_path,
         "xpath_candidates": el.xpath_candidates,
         "is_test_point": el.is_test_point,
         "notes": el.notes,
@@ -1238,3 +1251,39 @@ def api_endpoint_detail(request, el_id):
         api.delete_api_endpoint(el_id)
         return JsonResponse({"status": True})
     return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
+
+
+# ── 快照导入（v7.2：供设备检查器 / AI 保存工具调用）──
+
+
+@csrf_exempt
+def import_snapshot(request):
+    """POST /api/elements/pages/import-snapshot — 快照导入（检查器 / AI 保存工具）。
+
+    Body: { page_label, folder_path?, package?, activity?, screenshot_path?,
+            ocr_json?, snapshot_id?, elements[] }
+    响应统一信封 {status, data} / {status, message}（新端点新契约）。
+    """
+    try:
+        body = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"status": False, "message": "无效的 JSON 请求体"}, status=400)
+    try:
+        result = api.import_snapshot_page(
+            page_label=(body.get("page_label") or "").strip(),
+            folder_path=(body.get("folder_path") or "").strip(),
+            package=body.get("package", ""),
+            activity=body.get("activity", ""),
+            screenshot_path=body.get("screenshot_path", ""),
+            ocr_json=body.get("ocr_json"),
+            snapshot_id=body.get("snapshot_id"),
+            elements=body.get("elements") or [],
+        )
+        return JsonResponse({"status": True, "data": result})
+    except api.ImportConflictError as e:
+        return JsonResponse({"status": False, "message": str(e)}, status=409)
+    except ValueError as e:
+        return JsonResponse({"status": False, "message": str(e)}, status=400)
+    except Exception:
+        logger.exception("import_snapshot failed")
+        return JsonResponse({"status": False, "message": "导入失败"}, status=500)

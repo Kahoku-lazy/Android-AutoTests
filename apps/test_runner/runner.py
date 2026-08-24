@@ -372,8 +372,8 @@ class TestRunner:
         """
         assert state.adapter is not None
         if not case.steps_data:
-            state.adapter.log(f'Case "{case.title}" has no steps, pass')
-            return "pass", executor, False
+            state.adapter.log(f'Case "{case.title}" has no steps, marking failed')
+            return "fail", executor, False
 
         last_error = ""
         for attempt in range(1, U2_CASE_RETRY_MAX + 1):

@@ -110,7 +110,17 @@ class RemoteTestRunner:
                         "on_log", run_id, f"⏸ 等待 {interval_seconds}s 后执行下一条用例…"
                     )
                     await asyncio.sleep(interval_seconds)
-                await self._run_single_case(case, run_model, loop_count, interval_seconds, run_id)
+                res = await self._run_single_case(
+                    case, run_model, loop_count, interval_seconds, run_id
+                )
+                # Populate run-level summary (mirrors UI TestRunner.run() format)
+                actual = res.pass_count + res.fail_count
+                rate = f"{(res.pass_count / actual * 100):.1f}%" if actual > 0 else "0%"
+                run_model.summary[case.title] = {
+                    "pass": str(res.pass_count),
+                    "fail": str(res.fail_count),
+                    "rate": rate,
+                }
 
             run_model.status = (
                 TestRunStatus.COMPLETED if not self.adapter.stopped() else TestRunStatus.STOPPED

@@ -27,7 +27,7 @@ class AIAgent(models.Model):
     max_tokens = models.IntegerField(default=4096)
     # AgentScope 2.0 fields
     formatter = models.CharField(max_length=50, default="dashscope")
-    max_iters = models.IntegerField(default=10)
+    max_iters = models.IntegerField(default=20)
     parallel_tool_calls = models.BooleanField(default=True)
     print_hint_msg = models.BooleanField(default=False)
     memory_mode = models.CharField(max_length=20, default="inmemory")  # inmemory | longterm
@@ -51,7 +51,7 @@ class AIAgent(models.Model):
     enable_workspace_tools = models.BooleanField(default=False)  # Bash/Edit/Glob/Grep/Read/Write
     enable_business_tools = models.BooleanField(
         default=False
-    )  # 14 platform tools (device/case/test)
+    )  # 23 platform tools (device/case/test/elements)
     enable_mcp_tools = models.BooleanField(default=False)  # User-configured MCP servers
     enable_skills = models.BooleanField(default=False)  # User-uploaded skill folders
     # Per-agent knowledge base document filter.

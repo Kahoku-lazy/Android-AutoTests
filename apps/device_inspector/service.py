@@ -1,228 +1,209 @@
-"""XPath generation utility — moved from element_locator.service."""
+"""device_inspector 服务 — capture 编排 + XPath 算法 re-export。
 
+L1a 下沉（extract-algorithms-package）：XPath 纯算法已迁 `algorithms/xpath.py`，
+此处 re-export 仅保本 App 内部兼容；跨 App 复用请直接 import `algorithms.*`。
+"""
 
-def gen_xpath_candidates(el: dict, all_els: list[dict]) -> list[dict]:
-    """Generate candidate XPath locators for an element, sorted by match count.
-
-    Produces up to 8 locator types: resource-id, text, content-desc, class,
-    index, combined (resource-id+text), wildcard resource-id, wildcard text.
-
-    Pre-indexes all_els into dicts keyed by class_name, resource_id, text,
-    and compound keys for O(1) count lookups instead of O(n) scans.
-    """
-    cls = el["class_name"]
-    rid = el["resource_id"]
-    txt = el["text"]
-    desc = el["content_desc"]
-    idx = el.get("index", "")
-
-    # ── Build indexes once per call (shared across all locate types) ──
-    by_class: dict[str, int] = {}
-    by_rid: dict[str, int] = {}
-    by_text: dict[str, int] = {}
-    by_class_rid: dict[tuple[str, str], int] = {}
-    by_text_and_class: dict[tuple[str, str], int] = {}  # (class_name, text) → count
-    by_desc_and_class: dict[tuple[str, str], int] = {}  # (class_name, content_desc) → count
-    by_rid_text_class: dict[tuple[str, str, str], int] = {}  # (class, rid, text) → count
-    for e in all_els:
-        c = e["class_name"]
-        by_class[c] = by_class.get(c, 0) + 1
-        r = e["resource_id"]
-        if r:
-            by_rid[r] = by_rid.get(r, 0) + 1
-            k = (c, r)
-            by_class_rid[k] = by_class_rid.get(k, 0) + 1
-        t = e["text"]
-        if t:
-            by_text[t] = by_text.get(t, 0) + 1
-            by_text_and_class[(c, t)] = by_text_and_class.get((c, t), 0) + 1
-            if r:
-                by_rid_text_class[(c, r, t)] = by_rid_text_class.get((c, r, t), 0) + 1
-        d = e["content_desc"]
-        if d:
-            by_desc_and_class[(c, d)] = by_desc_and_class.get((c, d), 0) + 1
-
-    locators = []
-
-    if rid:
-        xp = f"//{cls}[@resource-id='{rid}']"
-        locators.append(
-            {
-                "type": "resource-id",
-                "xpath": xp,
-                "count": by_class_rid.get((cls, rid), 0),
-            }
-        )
-
-    if txt:
-        xp = f"//{cls}[@text='{txt}']"
-        locators.append(
-            {
-                "type": "text",
-                "xpath": xp,
-                "count": by_text_and_class.get((cls, txt), 0),
-            }
-        )
-
-    if desc:
-        xp = f"//{cls}[@content-desc='{desc}']"
-        locators.append(
-            {
-                "type": "content-desc",
-                "xpath": xp,
-                "count": by_desc_and_class.get((cls, desc), 0),
-            }
-        )
-
-    xp = f"//{cls}"
-    locators.append(
-        {
-            "type": "class",
-            "xpath": xp,
-            "count": by_class.get(cls, 0),
-        }
-    )
-
-    if idx:
-        try:
-            pos = int(idx) + 1
-            locators.append(
-                {
-                    "type": "index",
-                    "xpath": f"({xp})[{pos}]",
-                    "count": 1,
-                    "note": "fragile",
-                }
-            )
-        except ValueError:
-            pass
-
-    if rid and txt:
-        xp = f"//{cls}[@resource-id='{rid}' and @text='{txt}']"
-        locators.append(
-            {
-                "type": "combined",
-                "xpath": xp,
-                "count": by_rid_text_class.get((cls, rid, txt), 0),
-            }
-        )
-
-    if rid:
-        locators.append(
-            {
-                "type": "resource-id (any)",
-                "xpath": f"//*[@resource-id='{rid}']",
-                "count": by_rid.get(rid, 0),
-            }
-        )
-
-    if txt:
-        locators.append(
-            {
-                "type": "text (any)",
-                "xpath": f"//*[@text='{txt}']",
-                "count": by_text.get(txt, 0),
-            }
-        )
-
-    # Deduplicate + sort
-    seen = set()
-    uniq = []
-    for l in locators:
-        if l["xpath"] not in seen:
-            seen.add(l["xpath"])
-            uniq.append(l)
-    uniq.sort(key=lambda x: int(str(x.get("count", 0))))
-    return uniq
-
+from algorithms.xpath import (  # noqa: F401
+    _LAYOUT_VIEWGROUPS,
+    _has_identity,
+    _simple_class,
+    _specificity,
+    gen_xpath_candidates,
+    trim_hierarchy,
+)
 
 # ═══════════════════════════════════════════════
-# 层级裁剪（去纯容器 + bounds 去重）
+# v1.7 快照化 — capture 编排（设备可用性 / 截图 / 缩略图落盘）
 # ═══════════════════════════════════════════════
 
-# 布局 ViewGroup 类名（取末段小写）。无可定位身份时作为「纯容器」裁剪掉。
-_LAYOUT_VIEWGROUPS = {
-    "framelayout",
-    "linearlayout",
-    "relativelayout",
-    "gridlayout",
-    "viewgroup",
-    "constraintlayout",
-    "coordinatorlayout",
-    "recyclerview",
-    "listview",
-    "gridview",
-    "scrollview",
-    "horizontalscrollview",
-    "viewpager",
-    "viewpager2",
-    "abslistview",
-    "linearlayoutcompat",
-    "toolbar",
-    "tablerow",
-    "tablelayout",
-    "radiogroup",
-    "cardview",
-    "appbarlayout",
-    "navigationview",
-    "drawerlayout",
-    "swiperefreshlayout",
-    "nestedscrollview",
-}
+
+# 执行引擎占用前缀：检查器不与执行引擎抢设备（PRD-03 §4.1）
+_EXECUTION_OCCUPY_PREFIXES = ("runner-", "ai_agent", "task-", "run-")
 
 
-def _simple_class(class_name: str) -> str:
-    """取类名末段并小写：android.widget.FrameLayout → framelayout。"""
-    return class_name.rsplit(".", 1)[-1].lower() if class_name else ""
+class CaptureError(Exception):
+    """capture 业务失败（用户可读 message + HTTP 状态码）。"""
+
+    def __init__(self, message: str, status_code: int = 409):
+        super().__init__(message)
+        self.status_code = status_code
 
 
-def _has_identity(el: dict) -> bool:
-    """是否具有可定位身份：可点击 / 有文本 / 有 content-desc / 有真实 id（含 ':'）。"""
-    return bool(
-        el.get("clickable")
-        or el.get("text")
-        or el.get("content_desc")
-        or ":" in (el.get("resource_id") or "")
-    )
+def _check_device_available(serial: str) -> None:
+    """capture 前可用性校验（PRD-03 §4.1 口径）。
 
-
-def _specificity(el: dict) -> tuple:
-    """衡量节点「具体程度」，bounds 去重时越大越优先保留。"""
-    return (
-        1 if el.get("clickable") else 0,
-        1 if el.get("text") else 0,
-        1 if el.get("content_desc") else 0,
-        1 if ":" in (el.get("resource_id") or "") else 0,
-        el.get("depth", 0),
-    )
-
-
-def trim_hierarchy(nodes: list[dict]) -> list[dict]:
-    """裁剪 UI 层级：去纯布局容器 + 按 bounds 去重（保留最具体节点）。
-
-    纯布局容器 = 布局 ViewGroup 类且无可定位身份。XPath count 仍用完整 nodes
-    计算（见 views.dump_page），此处只决定「展示哪些元素」，不改变定位语义。
+    Raises:
+        CaptureError: serial 空 / 设备未注册 / 执行引擎占用（409）。
     """
-    kept = [
-        e
-        for e in nodes
-        if not (
-            _simple_class(e.get("class_name", "")) in _LAYOUT_VIEWGROUPS and not _has_identity(e)
-        )
+    if not serial:
+        raise CaptureError("未选择设备，请先连接设备")
+    from apps.device_pool.models import Device
+
+    try:
+        Device.objects.get(serial=serial)
+    except Device.DoesNotExist:
+        raise CaptureError("设备未注册")
+
+
+def ensure_current_device(serial: str) -> None:
+    """将 DevicePool 单例切换到目标设备（capture 作用于池当前设备）。
+
+    pool 的 dump/screenshot 不接收 serial 参数，只操作 current_serial 指向的
+    连接；capture 支持按 serial 指定设备，故抓取前需切换（与设备管理
+    activate_device 同一机制）。已为当前设备时跳过。
+    """
+    from apps.device_pool.api import device
+    from apps.device_pool.models import Device
+
+    dev = Device.objects.get(serial=serial)
+    if dev.status == "BUSY" and dev.occupied_by:
+        for prefix in _EXECUTION_OCCUPY_PREFIXES:
+            if dev.occupied_by.startswith(prefix):
+                raise CaptureError(f"设备正被执行引擎占用（{dev.occupied_by}），请等待执行完毕")
+    if device.current_serial != serial:
+        device.switch_to(serial, dev.connection_type or "USB", dev.connection_addr)
+
+
+def _shot_dir():
+    """媒体目录下 inspector 根目录（截图/缩略图统一存放）。"""
+    from pathlib import Path
+
+    from django.conf import settings
+
+    return Path(settings.MEDIA_ROOT) / "inspector"
+
+
+def capture_page_screenshot(device, ts: str) -> str:
+    """截图落盘，返回相对路径（media 目录内）。"""
+
+    base = _shot_dir()
+    shots = base / "shots"
+    shots.mkdir(parents=True, exist_ok=True)
+    shot_file = shots / f"capture_{ts}.png"
+    device.screenshot_file(str(shot_file))
+    return f"inspector/shots/capture_{ts}.png"
+
+
+def _crop_thumbnail(source: str, box: tuple[int, int, int, int], dest: str) -> bool:
+    """按 box 从 source 裁剪并保存到 dest；失败返回 False。"""
+    try:
+        from PIL import Image
+
+        img = Image.open(source)
+        img.crop(box).save(dest, format="PNG")
+        return True
+    except Exception:
+        import logging
+
+        logging.getLogger(__name__).warning("缩略图裁剪失败: %s → %s", box, dest)
+        return False
+
+
+def capture_dump_payload(device, ts: str) -> dict:
+    """抓取 UI 层级 + XPath 候选 + 元素缩略图落盘，返回 dump_json。"""
+    nodes = device.dump_hierarchy()
+
+    # 生成 XPath 候选（用完整层级算 count，保证定位语义准确）
+    for e in nodes:
+        if e["resource_id"] or e["text"] or e["content_desc"] or e["clickable"]:
+            e["xpaths"] = gen_xpath_candidates(e, nodes)
+
+    elements = trim_hierarchy(nodes)
+    actionable = [
+        e for e in elements if e["clickable"] or e["text"] or e["resource_id"] or e["content_desc"]
     ]
 
-    groups: dict[str, list[dict]] = {}
-    for e in kept:
-        groups.setdefault(e.get("bounds", ""), []).append(e)
-    for g in groups.values():
-        g.sort(key=_specificity, reverse=True)
+    # 元素缩略图：按 bounds 从页面截图裁剪落盘
+    thumb_dir = _shot_dir() / "thumbs" / ts
+    source = str(_shot_dir() / "shots" / f"capture_{ts}.png")
+    for i, e in enumerate(actionable):
+        w, h = e.get("width", 0), e.get("height", 0)
+        if w > 0 and h > 0:
+            thumb_dir.mkdir(parents=True, exist_ok=True)
+            dest = str(thumb_dir / f"el_{i}.png")
+            if _crop_thumbnail(
+                source,
+                (e["x"], e["y"], e["x"] + w, e["y"] + h),
+                dest,
+            ):
+                e["thumbnail_path"] = f"inspector/thumbs/{ts}/el_{i}.png"
+            else:
+                e["thumbnail_path"] = ""
+        else:
+            e["thumbnail_path"] = ""
 
-    result = []
-    seen: set[str] = set()
-    for e in kept:
-        b = e.get("bounds", "")
-        if b in seen:
+    package = ""
+    activity = ""
+    try:
+        cur = device.app_current()
+        package = cur.get("package", "")
+        activity = cur.get("activity", "")
+    except Exception:
+        pass
+
+    return {
+        "elements": elements,
+        "actionable": actionable,
+        "element_count": len(elements),
+        "actionable_count": len(actionable),
+        "package": package,
+        "activity": activity,
+    }
+
+
+def capture_ocr_payload(device, ts: str) -> dict:
+    """截屏 OCR 识别 + OCR 缩略图落盘，返回 ocr_json（不含 base64）。"""
+    from .ocr import recognize
+
+    shot_abs = str(_shot_dir() / "shots" / f"capture_{ts}.png")
+    texts = recognize(shot_abs)
+
+    thumb_dir = _shot_dir() / "thumbs" / ts
+    for i, t in enumerate(texts):
+        # 丢弃 base64 缩略图，改为文件落盘 + 路径（PRD-03 C-07）
+        t.pop("thumbnail", None)
+        t.pop("thumbnail_format", None)
+        w, h = t.get("width", 0), t.get("height", 0)
+        if w > 0 and h > 0:
+            thumb_dir.mkdir(parents=True, exist_ok=True)
+            dest = str(thumb_dir / f"ocr_{i}.png")
+            if _crop_thumbnail(
+                shot_abs,
+                (t["x"], t["y"], t["x"] + w, t["y"] + h),
+                dest,
+            ):
+                t["thumbnail_path"] = f"inspector/thumbs/{ts}/ocr_{i}.png"
+            else:
+                t["thumbnail_path"] = ""
+        else:
+            t["thumbnail_path"] = ""
+
+    return {
+        "texts": texts,
+        "ocr_count": len(texts),
+    }
+
+
+def delete_snapshot_files(screenshot_path: str, thumb_dir_rel: str) -> None:
+    """删除快照关联的截图与缩略图文件（尽力清理，失败仅告警）。"""
+    import logging
+
+    from pathlib import Path
+
+    from django.conf import settings
+
+    logger = logging.getLogger(__name__)
+    for rel in (screenshot_path, thumb_dir_rel):
+        if not rel:
             continue
-        seen.add(b)
-        result.append(groups[b][0])
-    return result
+        target = Path(settings.MEDIA_ROOT) / rel
+        try:
+            if target.is_file():
+                target.unlink()
+            elif target.is_dir():
+                for f in target.iterdir():
+                    f.unlink()
+                target.rmdir()
+        except Exception:
+            logger.debug("清理快照文件失败: %s", rel)

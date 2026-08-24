@@ -230,7 +230,7 @@ class StepExecutor:
             )
             return "fail"
         self.exe.log(f"正在启动 App: {pkg}")
-        self.exe.d.app_start(pkg)
+        self.exe.app_start(pkg)
         self.exe.sleep(3)
         return "pass"
 
@@ -341,12 +341,13 @@ class StepExecutor:
         """截取当前屏幕截图 (SCREENSHOT step)."""
         desc = s.description or "screenshot"
         self.exe.log(f"截屏: {desc}")
-        self.exe.d.screenshot()
+        self.exe.screenshot()
         return "pass"
 
     def _do_click_indexed(self, s: TestStep) -> str:
-        """点击指定索引的元素 (CLICK_INDEXED step)."""
-        idx = s.index if s.index > 0 else 0
-        self.exe.log(f"点击索引 #{idx}: {s.description or s.xpath}")
+        """点击第 N 个匹配元素 (CLICK_INDEXED step). N 从 1 开始, 与 adb_loop_elements 的 index 语义一致。"""
+        pos = s.index if s.index > 0 else 1
+        idx = pos - 1
+        self.exe.log(f"点击第 {pos} 个匹配元素: {s.description or s.xpath}")
         ok = self.exe.click_indexed(s.xpath, idx)
         return "pass" if ok else "fail"

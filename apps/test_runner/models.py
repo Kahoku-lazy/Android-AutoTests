@@ -2,6 +2,8 @@
 
 from django.db import models
 
+from models.test_models import TaskCardStatus, TaskOutcome
+
 
 class TestSOP(models.Model):
     """AI Test SOP context — tracks the 4-phase workflow across a conversation."""
@@ -128,14 +130,7 @@ class TaskCard(models.Model):
     loop_count = models.IntegerField(default=1)
     interval_seconds = models.IntegerField(default=5)
     status = models.CharField(
-        max_length=20,
-        choices=[
-            ("idle", "未执行"),
-            ("queued", "排队中"),
-            ("running", "执行中"),
-            ("done", "已完成"),
-        ],
-        default="idle",
+        max_length=20, choices=TaskCardStatus.choices(), default=TaskCardStatus.IDLE
     )
     running = models.BooleanField(default=False)
     run = models.ForeignKey(
@@ -150,17 +145,7 @@ class TaskCard(models.Model):
     overall_pass = models.IntegerField(default=0)
     overall_fail = models.IntegerField(default=0)
     logs = models.JSONField(default=list)
-    outcome = models.CharField(
-        max_length=20,
-        default="",
-        blank=True,
-        choices=[
-            ("completed", "已完成"),
-            ("stopped", "已停止"),
-            ("interrupted", "运行中断"),
-            ("error", "异常终止"),
-        ],
-    )
+    outcome = models.CharField(max_length=20, default="", blank=True, choices=TaskOutcome.choices())
     round = models.IntegerField(default=0)
     conclusion = models.TextField(default="", blank=True)
     bug_ticket = models.TextField(default="", blank=True)

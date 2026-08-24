@@ -1,33 +1,24 @@
-"""HITL confirmation endpoint — works with in-process Agent.
+"""HITL 会话注册表与确认投递 — 与 SSE 事件循环（chat_views）耦合的内存实现。
 
-The Agent runs in a background thread during SSE streaming. When the frontend
-sends a HITL confirmation result, we relay it to the running Agent via a
-thread-safe queue stored in the in-memory agent registry.
+Batch 2：确认端点已迁至 DRF（views_drf.ConversationViewSet.confirm_result），
+本文件保留注册表 + 投递函数（chat_stream 与 DRF 视图共用）。
 """
 
 import asyncio
-import json
 import logging
 import threading
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-
-from ..decorators import require_auth
-from ..models import AIConversation, AIExecutionLog
-from ..permissions import check_conversation_access
 
 logger = logging.getLogger("ai_assistant")
 
 # ── In-memory agent session registry ──
 # Maps conv_id → asyncio.Queue used to deliver HITL confirm results to the
 # running Agent's event loop. The chat_stream view registers the queue when
-# streaming starts; send_confirm_result puts results into it.
+# streaming starts; deliver_confirm_result puts results into it.
 _agent_sessions: dict[int, dict] = {}
 _sessions_lock = threading.Lock()
 
 # Reference to the main event loop (Daphne's loop) for thread-safe queue delivery.
-# Set by chat_stream on first use. send_confirm_result (sync view, runs in
+# Set by chat_stream on first use. deliver_confirm_result (sync, runs in
 # Daphne's thread pool) uses call_soon_threadsafe to safely put into
 # the asyncio.Queue from outside the event loop.
 _main_loop: asyncio.AbstractEventLoop | None = None
@@ -51,37 +42,18 @@ def unregister_agent_session(conv_id: int) -> None:
         _agent_sessions.pop(conv_id, None)
 
 
-@csrf_exempt
-@require_auth
-def send_confirm_result(request, conv_id):
-    """POST /api/ai/conversations/{id}/confirm-result — relay HITL decision to running Agent."""
-    if not check_conversation_access(request.user_id, conv_id):
-        return JsonResponse({"status": False, "message": "Forbidden"}, status=403)
-    try:
-        conv = AIConversation.objects.get(id=conv_id)
-    except AIConversation.DoesNotExist:
-        return JsonResponse({"status": False, "message": "conversation not found"}, status=404)
+def deliver_confirm_result(
+    conv_id: int, reply_id: str, confirm_results: list
+) -> tuple[int, str] | None:
+    """向运行中的 Agent 会话投递 HITL 确认结果。
 
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({"status": False, "message": "无效的 JSON"}, status=400)
-
-    reply_id = data.get("reply_id", "")
-    confirm_results = data.get("confirm_results", [])
-
-    # Try to deliver to running agent (lock held for the entire critical section
-    # to prevent the session from being unregistered between lookup and delivery)
+    成功返回 None；失败返回 (status_code, message)：
+      (400, ...) 无活跃会话；(409, ...) 队列已满。
+    """
     with _sessions_lock:
         session = _agent_sessions.get(conv_id)
         if session is None:
-            return JsonResponse(
-                {
-                    "status": False,
-                    "message": "No active agent session — the conversation may have ended or timed out",
-                },
-                status=400,
-            )
+            return 400, "No active agent session — the conversation may have ended or timed out"
 
         try:
             data = {
@@ -97,20 +69,6 @@ def send_confirm_result(request, conv_id):
                 # Fallback for tests or edge cases where main loop is unavailable
                 session["confirm_queue"].put_nowait(data)
         except asyncio.QueueFull:
-            return JsonResponse(
-                {"status": False, "message": "Agent is busy — please try again"},
-                status=409,
-            )
+            return 409, "Agent is busy — please try again"
 
-    # Log the confirmation
-    try:
-        AIExecutionLog.objects.create(
-            agent=conv.agent,
-            level="info",
-            message=f"User confirm: {json.dumps(confirm_results, ensure_ascii=False)}",
-            metadata=json.dumps({"reply_id": reply_id, "conv_id": conv_id}),
-        )
-    except Exception:
-        logger.exception("AIExecutionLog insert failed for conv_id=%s", conv_id)
-
-    return JsonResponse({"status": True})
+    return None

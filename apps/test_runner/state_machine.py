@@ -22,6 +22,7 @@ from django.db import transaction
 from django.db.models import Q
 
 from apps.device_pool.models import Device
+from models.test_models import TaskCardStatus, TaskOutcome, TestRunStatus
 
 from .models import TaskCard, TestResult, TestRunRecord
 
@@ -36,21 +37,24 @@ class InvalidTransition(ValueError):
 # (from_status, from_outcome) → allowed next (status, outcome)
 _VALID_TRANSITIONS: dict = {
     # idle → queued (enqueue)
-    ("idle", ""): [("queued", "")],
+    (TaskCardStatus.IDLE.value, ""): [(TaskCardStatus.QUEUED.value, "")],
     # queued → running (dequeue) or idle (cancel)
-    ("queued", ""): [("running", ""), ("idle", "")],
+    (TaskCardStatus.QUEUED.value, ""): [
+        (TaskCardStatus.RUNNING.value, ""),
+        (TaskCardStatus.IDLE.value, ""),
+    ],
     # running → done (complete / fail)
-    ("running", ""): [
-        ("done", "completed"),
-        ("done", "stopped"),
-        ("done", "interrupted"),
-        ("done", "error"),
+    (TaskCardStatus.RUNNING.value, ""): [
+        (TaskCardStatus.DONE.value, TaskOutcome.COMPLETED.value),
+        (TaskCardStatus.DONE.value, TaskOutcome.STOPPED.value),
+        (TaskCardStatus.DONE.value, TaskOutcome.INTERRUPTED.value),
+        (TaskCardStatus.DONE.value, TaskOutcome.ERROR.value),
     ],
     # terminal states — no further transitions
-    ("done", "completed"): [],
-    ("done", "stopped"): [],
-    ("done", "interrupted"): [],
-    ("done", "error"): [],
+    (TaskCardStatus.DONE.value, TaskOutcome.COMPLETED.value): [],
+    (TaskCardStatus.DONE.value, TaskOutcome.STOPPED.value): [],
+    (TaskCardStatus.DONE.value, TaskOutcome.INTERRUPTED.value): [],
+    (TaskCardStatus.DONE.value, TaskOutcome.ERROR.value): [],
 }
 
 
@@ -96,9 +100,9 @@ def _save_transition(
 
     task_card.status = new_status
     task_card.outcome = new_outcome
-    if new_status == "running":
+    if new_status == TaskCardStatus.RUNNING.value:
         task_card.running = True
-    elif new_status == "done" or new_status == "idle":
+    elif new_status == TaskCardStatus.DONE.value or new_status == TaskCardStatus.IDLE.value:
         task_card.running = False
     if task_extra:
         for k, v in task_extra.items():
@@ -120,12 +124,18 @@ def _save_transition(
 
 def enqueue(task_card: TaskCard, device_serial: str) -> None:
     """TaskCard IDLE → QUEUED. Task is waiting for device availability."""
-    _save_transition(task_card, None, "queued", "", task_extra={"device_serial": device_serial})
+    _save_transition(
+        task_card,
+        None,
+        TaskCardStatus.QUEUED.value,
+        "",
+        task_extra={"device_serial": device_serial},
+    )
 
 
 def cancel(task_card: TaskCard) -> None:
     """TaskCard QUEUED → IDLE. User cancelled the queued task."""
-    _save_transition(task_card, None, "idle", "")
+    _save_transition(task_card, None, TaskCardStatus.IDLE.value, "")
 
 
 @transaction.atomic
@@ -136,24 +146,42 @@ def dequeue(
     selected_cases: list[dict],
     loop_count: int,
 ) -> TestRunRecord:
-    """TaskCard QUEUED → RUNNING. Creates TestRunRecord atomically.
+    """TaskCard QUEUED → RUNNING. Creates or upgrades TestRunRecord atomically.
 
-    Returns: TestRunRecord instance
+    AI 路径：start_run 已预建 PENDING 记录——复用并升级为 running（保留原
+    started_at）；队列路径：记录不存在则新建。Returns: TestRunRecord instance
     """
-    _validate(task_card, "running", "")
+    _validate(task_card, TaskCardStatus.RUNNING.value, "")
 
-    run_record = TestRunRecord.objects.create(
+    run_record, created = TestRunRecord.objects.get_or_create(
         run_id=run_id,
-        client_task_id=task_card.task_id,
-        status="RUNNING",
-        device_serial=device_serial,
-        selected_cases=selected_cases,
-        loop_count=loop_count,
-        started_at=datetime.now().isoformat(),
+        defaults={
+            "client_task_id": task_card.task_id,
+            "status": TestRunStatus.RUNNING.value,
+            "device_serial": device_serial,
+            "selected_cases": selected_cases,
+            "loop_count": loop_count,
+            "started_at": datetime.now().isoformat(),
+        },
     )
+    if not created:
+        run_record.client_task_id = task_card.task_id
+        run_record.status = TestRunStatus.RUNNING.value
+        run_record.device_serial = device_serial
+        run_record.selected_cases = selected_cases
+        run_record.loop_count = loop_count
+        run_record.save(
+            update_fields=[
+                "client_task_id",
+                "status",
+                "device_serial",
+                "selected_cases",
+                "loop_count",
+            ]
+        )
 
     task_card = TaskCard.objects.select_for_update().get(pk=task_card.pk)
-    task_card.status = "running"
+    task_card.status = TaskCardStatus.RUNNING.value
     task_card.running = True
     task_card.run = run_record
     task_card.save(update_fields=["status", "running", "run"])
@@ -195,15 +223,15 @@ def complete(
     _save_transition(
         task_card,
         run_record,
-        "done",
-        "completed",
+        TaskCardStatus.DONE.value,
+        TaskOutcome.COMPLETED.value,
         task_extra={
             "case_items": case_items,
             "overall_pass": overall_pass,
             "overall_fail": overall_fail,
         },
         run_extra={
-            "status": "COMPLETED",
+            "status": TestRunStatus.COMPLETED.value,
             "summary": summary,
             "finished_at": datetime.now().isoformat(),
             "csv_path": csv_path,
@@ -228,9 +256,13 @@ def fail(
         case_items: optional per-case aggregation to persist on the TaskCard
         summary: optional run summary to persist on the TestRunRecord
     """
-    if outcome not in ("error", "stopped", "interrupted"):
+    if outcome not in TaskOutcome.fail_values():
         raise ValueError(f"Invalid outcome for fail(): {outcome}")
-    run_status = {"error": "FAILED", "stopped": "STOPPED", "interrupted": "STOPPED"}[outcome]
+    run_status = {
+        TaskOutcome.ERROR.value: TestRunStatus.FAILED.value,
+        TaskOutcome.STOPPED.value: TestRunStatus.STOPPED.value,
+        TaskOutcome.INTERRUPTED.value: TestRunStatus.STOPPED.value,
+    }[outcome]
 
     task_extra: dict = {"overall_pass": overall_pass, "overall_fail": overall_fail}
     if case_items is not None:
@@ -242,7 +274,7 @@ def fail(
     _save_transition(
         task_card,
         run_record,
-        "done",
+        TaskCardStatus.DONE.value,
         outcome,
         task_extra=task_extra,
         run_extra=run_extra,
@@ -260,26 +292,26 @@ def recover_orphans() -> dict[str, int]:
     # 1. Orphan tasks → interrupted. Catch BOTH status='running' AND the
     #    inconsistent 'idle/queued + running=True' zombies left by non-atomic
     #    direct .update() writes (status/running dual-source drift).
-    orphans = TaskCard.objects.filter(Q(status="running") | Q(running=True))
+    orphans = TaskCard.objects.filter(Q(status=TaskCardStatus.RUNNING.value) | Q(running=True))
     count = orphans.count()
     if count:
         now = datetime.now().isoformat()
         for tc in orphans:
-            tc.status = "done"
+            tc.status = TaskCardStatus.DONE.value
             tc.running = False
-            tc.outcome = "interrupted"
+            tc.outcome = TaskOutcome.INTERRUPTED.value
             tc.save(update_fields=["status", "running", "outcome"])
             # Also fix linked TestRunRecord if exists
             if tc.run_id:
                 TestRunRecord.objects.filter(run_id=tc.run_id).update(
-                    status="STOPPED", finished_at=now
+                    status=TestRunStatus.STOPPED.value, finished_at=now
                 )
         fixed["tasks"] = count
         _log.info("recover_orphans: %d running TaskCard(s) → interrupted", count)
 
     # 2. Stale TestRunRecord (RUNNING without active process) → FAILED
     stale_runs = TestRunRecord.objects.filter(
-        status="RUNNING",
+        status=TestRunStatus.RUNNING.value,
         finished_at="",
     )
     count = stale_runs.count()
@@ -287,13 +319,13 @@ def recover_orphans() -> dict[str, int]:
         now = datetime.now().isoformat()
         # Only fix runs NOT linked to an active (running) TaskCard
         running_task_run_ids = set(
-            TaskCard.objects.filter(status="running", run_id__isnull=False).values_list(
-                "run_id", flat=True
-            )
+            TaskCard.objects.filter(
+                status=TaskCardStatus.RUNNING.value, run_id__isnull=False
+            ).values_list("run_id", flat=True)
         )
         stale_unlinked = stale_runs.exclude(run_id__in=running_task_run_ids)
         fixed_count = stale_unlinked.update(
-            status="FAILED",
+            status=TestRunStatus.FAILED.value,
             finished_at=now,
         )
         if fixed_count:
@@ -331,11 +363,34 @@ def recover_orphans() -> dict[str, int]:
 def repair_queued_terminal_drift() -> int:
     """修复 status=queued 但 outcome 已终态的数据漂移（历史 bug 遗留）。"""
     drift = TaskCard.objects.filter(
-        status="queued",
-        outcome__in=["completed", "stopped", "interrupted", "error"],
+        status=TaskCardStatus.QUEUED.value,
+        outcome__in=TaskOutcome.terminal_values(),
     )
     count = drift.count()
     if count:
-        drift.update(status="done", running=False)
+        drift.update(status=TaskCardStatus.DONE.value, running=False)
         _log.info("repair_queued_terminal_drift: %d TaskCard(s) queued→done", count)
     return count
+
+
+def display_state(tc: TaskCard) -> str:
+    """任务「处于什么状态」的权威判定（后端唯一入口，Step 5）。
+
+    返回四值（与前端展示分桶一一对应）：
+        running — 执行中
+        queued  — 排队中
+        done    — 已终态（终态原因见 tc.outcome）
+        idle    — 未执行
+
+    判定顺序与历史语义对齐（含 queued+终态漂移容错——DB 自愈由
+    repair_queued_terminal_drift 负责，本函数对内存中脏行同样容错）。
+    """
+    if tc.running:
+        return "running"
+    if tc.status == TaskCardStatus.QUEUED.value:
+        if tc.outcome in TaskOutcome.terminal_values():
+            return "done"  # 历史漂移数据：queued + 终态 outcome → 已终态
+        return "queued"
+    if tc.outcome in TaskOutcome.terminal_values():
+        return "done"
+    return "idle"

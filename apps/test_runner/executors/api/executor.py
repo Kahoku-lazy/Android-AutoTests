@@ -387,7 +387,11 @@ class ApiExecutor:
                 expected = a.get("expected", "")
 
             if a_type == "response_time":
-                max_ms = float(expected or 5000)
+                try:
+                    max_ms = float(expected or 5000)
+                except (TypeError, ValueError):
+                    self.adapter.log(f"Assert FAIL: invalid response_time threshold '{expected}'")
+                    return "fail"
                 duration = self._last_response.get("duration_ms", 0)
                 if duration > max_ms:
                     self.adapter.log(f"Assert FAIL: response time {duration}ms > {max_ms}ms")
@@ -405,13 +409,27 @@ class ApiExecutor:
                 elif operator == "contains" and resolved_expected not in str(actual):
                     self.adapter.log(f"Assert FAIL: {path} does not contain '{resolved_expected}'")
                     return "fail"
-                elif operator == "greater_than" and float(actual or 0) <= float(
-                    resolved_expected or 0
-                ):
-                    self.adapter.log(
-                        f"Assert FAIL: {path} expected > {resolved_expected}, got {actual}"
-                    )
+                elif operator == "greater_than":
+                    try:
+                        actual_num = float(actual or 0)
+                        expected_num = float(resolved_expected or 0)
+                    except (TypeError, ValueError):
+                        self.adapter.log(
+                            f"Assert FAIL: {path} > {resolved_expected} non-numeric "
+                            f"(actual={actual})"
+                        )
+                        return "fail"
+                    if actual_num <= expected_num:
+                        self.adapter.log(
+                            f"Assert FAIL: {path} expected > {resolved_expected}, got {actual}"
+                        )
+                        return "fail"
+                else:
+                    self.adapter.log(f"Assert FAIL: unsupported operator '{operator}' for {path}")
                     return "fail"
+            else:
+                self.adapter.log(f"Assert FAIL: assertion missing path/type: {a}")
+                return "fail"
 
         self.adapter.log(f"Assert PASS: {len(assertions)} assertions")
         return "pass"

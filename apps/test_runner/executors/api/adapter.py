@@ -359,9 +359,29 @@ def _evaluate_assertions(assertions: list, response_text: str, duration_ms: floa
 
         # response_time assertion
         if a_type == "response_time":
-            threshold = float(expected or 5000)
+            try:
+                threshold = float(expected or 5000)
+            except (TypeError, ValueError):
+                return f"Invalid response_time threshold: {expected}"
             if duration_ms > threshold:
                 return f"Response time {duration_ms:.0f}ms exceeds {threshold}ms"
+            continue
+
+        # greater_than assertion (type is authoritative; op may be omitted)
+        if a_type == "greater_than":
+            path = a.get("path", "")
+            if not path:
+                return "Assertion failed: greater_than requires a path"
+            actual_val = _navigate_json_path(response_text, path)
+            try:
+                if actual_val is not None and float(actual_val) <= float(expected):
+                    return f"Assertion failed: {path} greater_than {expected} (actual={actual_val})"
+            except (ValueError, TypeError):
+                return (
+                    f"Assertion failed: {path} greater_than {expected} "
+                    f"(non-numeric actual={actual_val})"
+                )
+            continue
 
         # JSON-path assertions
         path = a.get("path", "")
@@ -372,15 +392,12 @@ def _evaluate_assertions(assertions: list, response_text: str, duration_ms: floa
                 return f"Assertion failed: {path} {operator} {expected} (actual={actual_val})"
             if operator == "contains" and str(expected) not in str(actual_val or ""):
                 return f"Assertion failed: {path} contains {expected}"
+            if operator not in ("equals", "contains"):
+                return f"Assertion failed: unsupported operator '{operator}' for {path}"
+            continue
 
-        # greater_than assertion
-        if a_type == "greater_than" and operator == "greater_than":
-            actual_val = _navigate_json_path(response_text, path) if path else None
-            try:
-                if actual_val is not None and float(actual_val) <= float(expected):
-                    return f"Assertion failed: {path} {operator} {expected} (actual={actual_val})"
-            except (ValueError, TypeError):
-                pass
+        # Malformed assertion entry — fail loudly instead of silently passing
+        return f"Assertion failed: malformed assertion entry {a}"
 
     return None
 

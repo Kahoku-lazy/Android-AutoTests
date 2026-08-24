@@ -258,6 +258,35 @@ async def _agent_stream(
             next_input = UserMsg(name=user_id, content=user_message)
 
         accumulated_text = ""  # accumulated TEXT_BLOCK_DELTA text for backend persistence
+        terminal_event = None  # ReplyEnd/ExceedMaxIters — forwarded after final Msg captured
+
+        async def _persist_and_forward_terminal(
+            conv, accumulated: str, blocks: list[dict], terminal, queue
+        ) -> None:
+            """Persist the AI reply (text + blocks) and forward the terminal event."""
+            t_dict = terminal.model_dump()
+            content = accumulated
+            if not content:
+                has_text = any(isinstance(b, dict) and b.get("type") == "text" for b in blocks)
+                # 迭代耗尽且没有任何文本产出时，落库兜底文案，避免刷新后出现空白气泡
+                if not has_text and isinstance(terminal, ExceedMaxItersEvent):
+                    content = "⚠️ 已达最大推理次数，回答未完成，建议简化问题或分步提问。"
+            if content or blocks:
+                try:
+                    msg = await _sta(save_message)(
+                        conversation_id=conv.id,
+                        role="assistant",
+                        content=content,
+                        blocks=json.dumps(blocks, ensure_ascii=False) if blocks else "",
+                        flow="sse",
+                    )
+                    t_dict["_backend_msg_id"] = msg.id
+                except Exception:
+                    logger.exception(
+                        "Failed to persist AI reply for conv=%s",
+                        conv.id,
+                    )
+            await queue.put(f"data: {json.dumps(t_dict, ensure_ascii=False)}\n\n")
 
         while True:
             async for event in agent.reply_stream(next_input):
@@ -306,29 +335,39 @@ async def _agent_stream(
                     )
                     continue  # Continue the reply loop with confirm result
 
-                # Terminal events — persist AI reply then send the event
+                # Terminal event — remember it. AgentScope's reply_stream
+                # filters out Msg events, so the final message content is read
+                # from the agent's context after the generator is exhausted.
                 if isinstance(event, (ReplyEndEvent, ExceedMaxItersEvent)):
-                    if accumulated_text:
-                        try:
-                            msg = await _sta(save_message)(
-                                conversation_id=conv.id,
-                                role="assistant",
-                                content=accumulated_text,
-                                flow="sse",
-                            )
-                            event_dict["_backend_msg_id"] = msg.id
-                        except Exception:
-                            logger.exception(
-                                "Failed to persist AI reply for conv=%s",
-                                conv.id,
-                            )
-                    json_str = json.dumps(event_dict, ensure_ascii=False)
-                    await queue.put(f"data: {json_str}\n\n")
-                    break
+                    if terminal_event is None:
+                        terminal_event = event
+                    continue
 
                 json_str = event.model_dump_json()
                 await queue.put(f"data: {json_str}\n\n")
 
+            # Generator exhausted — pull the final assistant message from the
+            # agent's context (guarded by the current reply_id so history
+            # messages are never reused), then persist and forward the
+            # terminal event so the frontend stream completes.
+            if terminal_event is not None:
+                final_blocks: list[dict] = []
+                context = getattr(agent.state, "context", [])
+                if context:
+                    last_msg = context[-1]
+                    if (
+                        getattr(last_msg, "role", None) == "assistant"
+                        and getattr(last_msg, "name", None) == agent.name
+                        and getattr(last_msg, "id", None) == agent.state.reply_id
+                    ):
+                        final_blocks = _dump_msg_blocks(last_msg)
+                await _persist_and_forward_terminal(
+                    conv,
+                    accumulated_text,
+                    final_blocks,
+                    terminal_event,
+                    queue,
+                )
             break  # Exit outer while if inner loop completed naturally
 
     except asyncio.CancelledError:
@@ -350,6 +389,33 @@ async def _agent_stream(
 
     # ── Sentinel ──
     await queue.put(None)
+
+
+def _dump_msg_blocks(msg) -> list[dict]:
+    """Serialize an AgentScope assistant Msg's content blocks for persistence.
+
+    Adds ``roundIndex`` to thinking / tool blocks so the frontend
+    ``rebuildRoundsFromBlocks`` can restore the per-round ReAct grouping.
+    """
+    content = getattr(msg, "content", None)
+    if content is None:
+        return []
+    if isinstance(content, str):
+        return [{"type": "text", "text": content}]
+    blocks: list[dict] = []
+    round_index = 0
+    for block in content:
+        if not hasattr(block, "model_dump"):
+            continue
+        data = block.model_dump()
+        block_type = data.get("type")
+        if block_type == "thinking":
+            round_index += 1
+            data["roundIndex"] = round_index
+        elif block_type in ("tool_call", "tool_result"):
+            data["roundIndex"] = round_index
+        blocks.append(data)
+    return blocks
 
 
 def _restore_context(agent, conv: AIConversation) -> None:
@@ -485,6 +551,7 @@ def _dicts_to_blocks(blocks_data: list[dict]) -> list:
         ThinkingBlock,
         ToolCallBlock,
         ToolResultBlock,
+        ToolResultState,
     )
 
     _BLOCK_CLASS_MAP = {
@@ -512,6 +579,33 @@ def _dicts_to_blocks(blocks_data: list[dict]) -> list:
                     blocks.append(DataBlock(source=Base64Source(data=data, media_type=media_type)))
                 except Exception:
                     pass
+            continue
+
+        # Stored tool_pair blocks (frontend partial-save format) → native
+        # ToolCallBlock + ToolResultBlock so the model gets tool history back.
+        if block_type == "tool_pair":
+            call = b.get("call") or {}
+            result = b.get("result") or {}
+            call_name = call.get("name") or ""
+            if call_name:
+                raw_input = call.get("inputRaw") or call.get("input") or ""
+                if not isinstance(raw_input, str):
+                    raw_input = json.dumps(raw_input, ensure_ascii=False, default=str)
+                blocks.append(
+                    ToolCallBlock(id=call.get("id") or "", name=call_name, input=raw_input)
+                )
+                try:
+                    state_enum = ToolResultState(result.get("state") or "success")
+                except ValueError:
+                    state_enum = ToolResultState.SUCCESS
+                blocks.append(
+                    ToolResultBlock(
+                        id=result.get("id") or call.get("id") or "",
+                        name=result.get("name") or call_name,
+                        output=str(result.get("output") or ""),
+                        state=state_enum,
+                    )
+                )
             continue
 
         cls = _BLOCK_CLASS_MAP.get(block_type)

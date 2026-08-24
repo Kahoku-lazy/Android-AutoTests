@@ -10,15 +10,15 @@ from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.ai_assistant.api import filter_agents_for_user
 from apps.ai_assistant.models import AIAgent
-from apps.ai_assistant.permissions import filter_agents_for_user
 from apps.case_manager.models import ApiTestCase, StorageTestCase, TestDefinition
 from apps.case_manager.models_web import WebTestCase
-from apps.case_manager.views_helpers import resolve_username as _resolve_username
 from apps.device_pool.models import Device
 from apps.element_locator.models import ApiEndpoint, Element, Page, WebElement
 from apps.test_runner.models import TestResult, TestRunRecord
 from apps.workflow.models import WorkflowDocument
+from shared.users import resolve_username as _resolve_username
 
 logger = logging.getLogger(__name__)
 

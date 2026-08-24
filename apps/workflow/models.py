@@ -30,13 +30,12 @@ class WorkflowDirectory(models.Model):
 
 
 class WorkflowDocument(models.Model):
-    """页面流 / 测试用例 JSON 文档 → wf_documents."""
+    """页面流 JSON 文档 → wf_documents（积木 test_case 已下线，常量仅供清库/兼容）。"""
 
     TYPE_PAGE_FLOW = "page_flow"
-    TYPE_TEST_CASE = "test_case"
+    TYPE_TEST_CASE = "test_case"  # 历史值；新建/导入已拒绝
     TYPE_CHOICES = [
         (TYPE_PAGE_FLOW, "页面流"),
-        (TYPE_TEST_CASE, "测试用例"),
     ]
 
     # 业务唯一 ID（导入导出与前端管理主键）

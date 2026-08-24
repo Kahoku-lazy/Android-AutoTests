@@ -92,13 +92,17 @@ class WorkflowDocumentViewSet(viewsets.ModelViewSet):
         return WorkflowDocumentDetailSerializer
 
     def get_queryset(self):
-        qs = WorkflowDocument.objects.order_by("-updated_at")
+        qs = WorkflowDocument.objects.filter(doc_type=WorkflowDocument.TYPE_PAGE_FLOW).order_by(
+            "-updated_at"
+        )
         directory_id = self.request.query_params.get("directory_id")
         doc_type = self.request.query_params.get("doc_type")
         if directory_id and directory_id.isdigit():
             qs = qs.filter(directory_id=int(directory_id))
-        if doc_type:
-            qs = qs.filter(doc_type=doc_type)
+        if doc_type == WorkflowDocument.TYPE_TEST_CASE:
+            return qs.none()
+        if doc_type and doc_type != WorkflowDocument.TYPE_PAGE_FLOW:
+            return qs.none()
         return qs
 
     def perform_create(self, serializer):

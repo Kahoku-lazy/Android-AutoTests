@@ -6,6 +6,7 @@
 
 from apps.device_pool.api import acquire_device as dp_acquire_device
 from apps.device_pool.api import release_device as dp_release_device
+from models.test_models import TaskOutcome
 
 from ..callbacks import test_callbacks
 from ..executors.ui.connect import DeviceCheckError, check_and_connect_async
@@ -16,6 +17,7 @@ from .helpers import (
     _abort_run_before_execute,
     _bg_log,
     _preflight_runs,
+    _run_client_task,
     _schedule_next_queued,
     sync_to_async,
 )
@@ -49,31 +51,40 @@ async def _run_ui_for_ai(
             serial, user_id=_device_user_id(user_id), timeout=3600
         )
     except ValueError as e:
+        # 落库失败原因：WS 事件在 AI 对话场景无订阅者，仅靠 WS 信息会蒸发
+        from ..api import mark_run_failed
+
+        mark_run_failed(run_id, str(e))
+        _bg_log.warning("ai run %s acquire failed: %s", run_id, e)
         await test_callbacks.on_log(run_id, f"❌ {e}")
         await test_callbacks.on_device_error(run_id, str(e))
         return
 
     mark_device_busy(serial)
     pending_release = True
+    # AI 运行的任务卡（start_run 登记）：执行前失败时经 abort 走状态机终态
+    client_tid = _run_client_task.get(run_id, "")
 
     try:
-        _preflight_runs[run_id] = {"stopped": False, "serial": serial, "client_task_id": ""}
+        _preflight_runs[run_id] = {"stopped": False, "serial": serial, "client_task_id": client_tid}
 
         # ── 2. 预检连接 ──
         try:
             d = await check_and_connect_async(serial, run_id, test_callbacks, _u2_executor)
         except DeviceCheckError as e:
-            await _abort_run_before_execute(run_id, serial, "", f"手机连接不上: {e}")
+            await _abort_run_before_execute(run_id, serial, client_tid, f"手机连接不上: {e}")
             pending_release = False
             return
         except Exception as e:
-            await _abort_run_before_execute(run_id, serial, "", f"执行前异常: {e}")
+            await _abort_run_before_execute(run_id, serial, client_tid, f"执行前异常: {e}")
             pending_release = False
             return
 
         # ── 3. 连接期间被停止 ──
         if _preflight_runs.get(run_id, {}).get("stopped"):
-            await _abort_run_before_execute(run_id, serial, "", "任务已被停止", outcome="stopped")
+            await _abort_run_before_execute(
+                run_id, serial, client_tid, "任务已被停止", outcome=TaskOutcome.STOPPED.value
+            )
             pending_release = False
             return
 
@@ -85,7 +96,7 @@ async def _run_ui_for_ai(
         await _execute_tests(run_id, runner, test_cases, loop_count, interval_seconds, serial)
     except Exception as e:
         _bg_log.exception("ai run failed %s", run_id)
-        await _abort_run_before_execute(run_id, serial, "", str(e))
+        await _abort_run_before_execute(run_id, serial, client_tid, str(e))
     finally:
         # 兜底：拿到锁却未交接执行、也未走 abort 的异常退出，确保释放设备（幂等）
         if pending_release:

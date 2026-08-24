@@ -1,60 +1,55 @@
-"""DevicePool — thread-safe Airtest + uiautomator2 device manager singleton.
+"""DevicePool — 设备交互中台的协议消费壳（L2 收敛，introduce-device-session）。
 
-Airtest (airtest.core.android.Android) handles all low-level device operations:
-screenshot, click, swipe, app lifecycle, shell, text input.
-
-uiautomator2 (u2.Device) is kept ONLY for dump_hierarchy() and XPath queries.
+设备连接/感知/操作的物理实现已全部下沉 engines/；本类保留设备管理链路的
+状态管理（switch_to/_addr/连接类型/清理）并委托 DeviceSession 完成取数与操作。
+第三方引擎 import 清零（红线：仅 engines/ 可触碰 u2/Airtest）。
 """
 
-import base64
-import io
 import logging
 import threading
 import time
 
-import uiautomator2 as u2
+from dataclasses import asdict
 
-from airtest.core.android.android import Android
-from PIL import Image
+from .session import DeviceSession, LeaseMode
 
 logger = logging.getLogger(__name__)
 
 
 class DevicePool:
-    """Thread-safe singleton managing dual device connections.
+    """Thread-safe device manager — 状态管理 + DeviceSession 委托。"""
 
-    Airtest Android for device operations, uiautomator2 for UI hierarchy/XPath.
-    """
-
-    _u2_instances: dict = {}  # serial → u2.Device (XPath + hierarchy only)
-    _airtest_instances: dict = {}  # serial → airtest Android (everything else)
-    _lock = threading.Lock()
-    _op_lock = threading.Lock()  # serializes all device operations (was _u2_lock)
     _connection_types: dict = {}
     _addresses: dict = {}  # serial → 连接地址（无线为 IP:port / mDNS，USB 为空）
+    _sessions: dict = {}  # serial → DeviceSession（TRANSIENT，惰性）
+    _sessions_lock = threading.Lock()
     current_serial = ""
 
-    # ── Device Accessors ──
+    # ── 会话获取 ──
+
+    def _session(self) -> DeviceSession:
+        """取当前 serial 的会话（惰性租用 TRANSIENT）。"""
+        serial = self.current_serial
+        if not serial:
+            raise RuntimeError("no current device: switch_to(serial) first")
+        with DevicePool._sessions_lock:
+            session = DevicePool._sessions.get(serial)
+            if session is None:
+                session = DeviceSession.lease(serial, LeaseMode.TRANSIENT, addr=self._addr(serial))
+                DevicePool._sessions[serial] = session
+            return session
+
+    # ── Device Accessors（兼容：单步调试 task_views 用 .ad/.u2d）──
 
     @property
-    def u2d(self) -> u2.Device:
-        """Thin u2 connection for dump_hierarchy() and xpath operations only."""
-        serial = self.current_serial
-        if serial not in DevicePool._u2_instances:
-            with DevicePool._lock:
-                if serial not in DevicePool._u2_instances:
-                    DevicePool._u2_instances[serial] = u2.connect(self._addr(serial))
-        return DevicePool._u2_instances[serial]
+    def u2d(self):
+        """u2 原始句柄（XPath + dump），经会话引擎。"""
+        return self._session().engine.u2
 
     @property
     def ad(self):
-        """Airtest Android device for screenshots, actions, shell commands."""
-        serial = self.current_serial
-        if serial not in DevicePool._airtest_instances:
-            with DevicePool._lock:
-                if serial not in DevicePool._airtest_instances:
-                    DevicePool._airtest_instances[serial] = Android(serialno=self._addr(serial))
-        return DevicePool._airtest_instances[serial]
+        """Airtest 原始句柄（操作），经会话引擎。"""
+        return self._session().engine.airtest
 
     @property
     def d(self):
@@ -88,9 +83,11 @@ class DevicePool:
         return DevicePool._connection_types.get(s, "WIFI" if ":" in s else "USB")
 
     def remove_device(self, serial: str):
-        """Clean up a disconnected device from all caches."""
-        DevicePool._u2_instances.pop(serial, None)
-        DevicePool._airtest_instances.pop(serial, None)
+        """Clean up a disconnected device from all caches（含会话释放）。"""
+        with DevicePool._sessions_lock:
+            session = DevicePool._sessions.pop(serial, None)
+        if session is not None:
+            session.release()
         DevicePool._connection_types.pop(serial, None)
         DevicePool._addresses.pop(serial, None)
         if self.current_serial == serial:
@@ -99,163 +96,65 @@ class DevicePool:
     # ── Info ──
 
     def info(self) -> dict:
-        """Get device display info via Airtest (cached 2s to avoid redundant ADB calls)."""
+        """Get device display info via engine（cached 2s to avoid redundant calls）。"""
         now = time.monotonic()
         cache = getattr(self, "_info_cache", None)
         if cache and (now - cache["ts"]) < 2.0:
             return cache["data"]
-        with DevicePool._op_lock:
-            try:
-                result = dict(self.ad.display_info)
-                result["connection_type"] = self.get_connection_type()
-                self._info_cache = {"ts": now, "data": result}
-                return result
-            except Exception:
-                fallback = {"connection_type": self.get_connection_type()}
-                self._info_cache = {"ts": now, "data": fallback}
-                return fallback
+        try:
+            result = dict(self._session().info())
+            result["connection_type"] = self.get_connection_type()
+            self._info_cache = {"ts": now, "data": result}
+            return result
+        except Exception:
+            fallback = {"connection_type": self.get_connection_type()}
+            self._info_cache = {"ts": now, "data": fallback}
+            return fallback
 
     # ── Screenshot ──
 
     def screenshot_b64(self, quality: int = 55, max_width: int = 0) -> str:
-        """Capture screen as base64 JPEG (compact for WebSocket streaming).
-
-        Airtest snapshot() returns a BGR numpy array; convert to PIL Image.
-        """
-        with DevicePool._op_lock:
-            arr = self.ad.snapshot(quality=quality)
-            # Airtest returns BGR numpy array → convert to RGB PIL Image
-            img = Image.fromarray(arr[..., ::-1])
-            if max_width and img.width > max_width:
-                ratio = max_width / img.width
-                new_h = max(1, int(img.height * ratio))
-                img = img.resize((max_width, new_h))
-            buf = io.BytesIO()
-            img.save(buf, format="JPEG", quality=quality, optimize=True)
-            return base64.b64encode(buf.getvalue()).decode("ascii")
+        """Capture screen as base64 JPEG (compact for WebSocket streaming)."""
+        return self._session().screenshot_b64(quality=quality, max_width=max_width)
 
     def screenshot_file(self, path: str):
         """Save screenshot directly to file path (replaces device.d.screenshot(path))."""
-        arr = self.ad.snapshot()
-        Image.fromarray(arr[..., ::-1]).save(path)
+        self._session().screenshot_file(path)
 
-    # ── UI Hierarchy (KEEP u2 — no Airtest equivalent) ──
+    # ── UI Hierarchy（会话返回 Node，此处转 dict 兼容 inspector 契约）──
 
     def dump_hierarchy(self) -> list[dict]:
-        """Dump UI hierarchy via uiautomator2 XML dump + XPath generation.
+        """Dump UI hierarchy via session engine（3 层 fallback 在引擎内）。
 
-        Uses 3-layer fallback: default → compressed=False → pretty=True.
-        Detects XML truncation and attempts repair.
+        Node → dict 兼容转换（丢弃 xpaths 空列表，保持 inspector 既有契约：
+        xpaths 由 capture_dump_payload 按需生成）。
         """
-        import xml.etree.ElementTree as ET
-
-        raw = None
-        last_error = None
-
-        try:
-            raw = self.u2d.dump_hierarchy()
-        except Exception as e:
-            last_error = e
-
-        if raw is None:
-            try:
-                raw = self.u2d.dump_hierarchy(compressed=False)
-            except Exception as e:
-                last_error = last_error or e
-
-        if raw is None:
-            try:
-                raw = self.u2d.dump_hierarchy(compressed=False, pretty=True)
-            except Exception as e:
-                last_error = last_error or e
-
-        if raw is None:
-            raise RuntimeError(f"dump_hierarchy all strategies failed: {last_error}")
-
-        if isinstance(raw, bytes):
-            raw = raw.decode("utf-8", errors="replace")
-
-        raw_len = len(raw)
-        logger.debug("[dump] XML length: %s chars", raw_len)
-
-        if not raw.lstrip().startswith("<?"):
-            raw = '<?xml version="1.0" encoding="UTF-8"?>\n' + raw
-
-        stripped = raw.rstrip()
-        if not stripped.endswith(">") or stripped.endswith("/>"):
-            logger.warning("[dump] XML may be truncated, last 100 chars: ...%s", stripped[-100:])
-
-        try:
-            root = ET.fromstring(raw.encode("utf-8") if isinstance(raw, str) else raw)
-        except ET.ParseError as pe:
-            logger.warning("[dump] XML parse failed: %s, trying truncation repair...", pe)
-            last_complete = raw.rfind(">")
-            if last_complete > 0:
-                fixed = raw[: last_complete + 1]
-                try:
-                    root = ET.fromstring(fixed.encode("utf-8"))
-                    logger.info("[dump] Repair succeeded, truncated %s chars", raw_len - len(fixed))
-                except ET.ParseError:
-                    raise RuntimeError(f"XML parse failed and cannot repair: {pe}")
-            else:
-                raise RuntimeError(f"XML parse failed: {pe}")
-
         nodes = []
-
-        def walk(el, depth=0):
-            bounds_str = el.attrib.get("bounds", "[0,0][0,0]")
-            parts = bounds_str.replace("][", ",").strip("[]").split(",")
-            try:
-                l, t, r, b = map(int, parts)
-            except Exception:
-                l, t, r, b = 0, 0, 0, 0
-
-            nodes.append(
-                {
-                    "depth": depth,
-                    "class_name": el.attrib.get("class", ""),
-                    "text": el.attrib.get("text", ""),
-                    "content_desc": el.attrib.get("content-desc", ""),
-                    "resource_id": el.attrib.get("resource-id", ""),
-                    "package": el.attrib.get("package", ""),
-                    "index": el.attrib.get("index", ""),
-                    "bounds": f"[{l},{t}][{r},{b}]",
-                    "x": l,
-                    "y": t,
-                    "width": r - l,
-                    "height": b - t,
-                    "clickable": el.attrib.get("clickable", "false") == "true",
-                    "enabled": el.attrib.get("enabled", "false") == "true",
-                    "scrollable": el.attrib.get("scrollable", "false") == "true",
-                    "checkable": el.attrib.get("checkable", "false") == "true",
-                    "checked": el.attrib.get("checked", "false") == "true",
-                    "focusable": el.attrib.get("focusable", "false") == "true",
-                    "long_clickable": el.attrib.get("long-clickable", "false") == "true",
-                }
-            )
-            for child in el:
-                walk(child, depth + 1)
-
-        walk(root)
+        for n in self._session().dump_hierarchy():
+            d = asdict(n)
+            d.pop("xpaths", None)
+            nodes.append(d)
         return nodes
 
-    # ── App Info (u2 — no Airtest equivalent) ──
+    # ── App Info ──
 
     def app_current(self) -> dict:
-        """Get current foreground app info (uses u2 — no Airtest equivalent)."""
-        return self.u2d.app_current()
+        """Get current foreground app info."""
+        return self._session().app_current()
 
-    # ── Actions (migrated to Airtest) ──
+    # ── Actions（计算坐标 → 会话操作原语）──
 
     def action_click(self, x: int, y: int):
-        self.ad.touch((x, y))
+        self._session().click(x, y)
 
     def action_longclick(self, x: int, y: int, duration: float = 0.8):
-        self.ad.touch((x, y), duration=duration)
+        self._session().long_click(x, y, duration)
 
     def action_swipe(self, direction: str, distance: int = 500):
         """Swipe screen in direction by distance pixels."""
-        w, h = self.ad.get_current_resolution()
+        info = self.info()
+        w = info.get("displayWidth", 0) or 0
+        h = info.get("displayHeight", 0) or 0
         cx, cy = w // 2, h // 2
         dirs = {
             "up": (cx, h * 3 // 4, cx, h * 3 // 4 - distance),
@@ -264,7 +163,7 @@ class DevicePool:
             "right": (w // 4, cy, w // 4 + distance, cy),
         }
         x1, y1, x2, y2 = dirs.get(direction, (cx, h * 3 // 4, cx, h // 4))
-        self.ad.swipe((x1, y1), (x2, y2))
+        self._session().swipe(x1, y1, x2, y2)
 
     def action_drag(self, x: int, y: int, direction: str, distance: int = 300):
         """Long-press and drag from (x,y) in direction by distance."""
@@ -275,29 +174,16 @@ class DevicePool:
             "right": (x, y, x + distance, y),
         }
         x1, y1, x2, y2 = dirs.get(direction, (x, y, x, y - distance))
-        self.ad.swipe((x1, y1), (x2, y2), duration=0.5)
+        self._session().swipe(x1, y1, x2, y2, duration=0.5)
 
     def action_input(
         self, text: str, x: int | None = None, y: int | None = None, clear_first: bool = True
     ):
-        """Input text using Yosemite IME (Airtest built-in), with ADB shell fallback."""
+        """Input text (clear first optional); optional tap before input."""
         if x is not None and y is not None:
-            self.ad.touch((x, y))
+            self._session().click(x, y)
             time.sleep(0.25)
-        if clear_first:
-            try:
-                self.ad.shell("input keyevent KEYCODE_MOVE_END")
-                self.ad.shell("input keyevent KEYCODE_CLEAR")
-                time.sleep(0.1)
-            except Exception:
-                logger.debug("Shell keyevent failed, continuing")
-        try:
-            # Use Yosemite IME for reliable text input (Airtest built-in)
-            self.ad.text(text)
-        except Exception:
-            # Fallback: ADB shell input text
-            safe = text.replace(" ", "%s").replace("'", "\\'")
-            self.ad.shell(f"input text '{safe}'")
+        self._session().input_text(text, clear_first=clear_first)
 
 
 device = DevicePool()

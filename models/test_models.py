@@ -8,12 +8,80 @@ from enum import Enum
 
 from .step_types import TestStep
 
+# Enum 内的单下划线名会被收为成员，展示标签放模块级常量（枚举保持零 Django 依赖）。
+_TASK_OUTCOME_LABELS = {
+    "completed": "已完成",
+    "stopped": "已停止",
+    "interrupted": "运行中断",
+    "error": "异常终止",
+}
+_TASK_CARD_STATUS_LABELS = {
+    "idle": "未执行",
+    "queued": "排队中",
+    "running": "执行中",
+    "done": "已完成",
+}
+
 
 class TestRunStatus(str, Enum):
+    """测试执行状态 — tr_test_runs.status 唯一真相源（L1b 收敛后）。
+
+    值口径统一小写，与 TaskCard.outcome（TaskOutcome）语义对齐：
+        completed = 正常跑完（对应 TaskOutcome.COMPLETED）
+        stopped   = 用户停止 / 运行中断（对应 TaskOutcome.STOPPED / INTERRUPTED）
+        failed    = 异常终止 / 崩溃残留（对应 TaskOutcome.ERROR / 孤儿回收）
+    """
+
     PENDING = "pending"
     RUNNING = "running"
-    STOPPED = "stopped"
     COMPLETED = "completed"
+    STOPPED = "stopped"
+    FAILED = "failed"
+
+
+class TaskOutcome(str, Enum):
+    """任务卡终态 — tr_task_cards.outcome 唯一真相源（L1b 收敛后新增）。
+
+    仅当 TaskCard.status = done 时有意义；空串表示未终态。
+    """
+
+    COMPLETED = "completed"  # 正常完成
+    STOPPED = "stopped"  # 用户主动停止
+    INTERRUPTED = "interrupted"  # 运行中断（崩溃 / 孤儿回收）
+    ERROR = "error"  # 异常终止
+
+    @classmethod
+    def terminal_values(cls) -> list[str]:
+        """全部终态取值集合，供 state_machine/views 校验与查询复用。"""
+        return [e.value for e in cls]
+
+    @classmethod
+    def fail_values(cls) -> list[str]:
+        """fail() 合法取值：终态去掉 COMPLETED（正常完成不可走 fail）。"""
+        return [cls.STOPPED.value, cls.INTERRUPTED.value, cls.ERROR.value]
+
+    @classmethod
+    def choices(cls):
+        """Django field choices 格式。"""
+        return [(e.value, _TASK_OUTCOME_LABELS.get(e.value, e.value)) for e in cls]
+
+
+class TaskCardStatus(str, Enum):
+    """任务卡状态 — tr_task_cards.status 唯一真相源（L1b 收敛后新增）。
+
+    与 TestRunStatus（run 态）不同，这是 task 态的 4 值状态机；
+    终态语义由 TaskOutcome 细分。
+    """
+
+    IDLE = "idle"  # 未执行（初始态）
+    QUEUED = "queued"  # 排队中（等待设备）
+    RUNNING = "running"  # 执行中
+    DONE = "done"  # 已终态（outcome 细分）
+
+    @classmethod
+    def choices(cls):
+        """Django field choices 格式。"""
+        return [(e.value, _TASK_CARD_STATUS_LABELS.get(e.value, e.value)) for e in cls]
 
 
 @dataclass

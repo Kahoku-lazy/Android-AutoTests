@@ -8,11 +8,11 @@ import logging
 import re
 import subprocess
 
-import uiautomator2 as u2
-
 from django.conf import settings
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+
+from engines.android.airtest_u2 import AirtestU2Engine, EngineConnectError
 
 from .models import Device
 from .pool import device as device_pool
@@ -264,9 +264,8 @@ def connect_device(request, serial):
                 return Response({"message": "连接超时，请检查设备 USB/WiFi 连接"}, status=504)
 
         try:
-            d = u2.connect(addr)
-            _ = d.info
-        except Exception as e:
+            AirtestU2Engine.probe_u2(addr)
+        except EngineConnectError as e:
             error_msg = str(e)
             if "atx-agent" in error_msg.lower() or "offline" in error_msg.lower():
                 return Response(

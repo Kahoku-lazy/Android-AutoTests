@@ -4,10 +4,12 @@ import asyncio
 import json
 import logging
 
+from datetime import datetime
+
 from apps.case_manager.models import TestDefinition
 from apps.device_pool.models import Device as PoolDevice
 from models.step_types import CaseType, TestStep
-from models.test_models import TestCaseDef
+from models.test_models import TestCaseDef, TestRunStatus
 
 from .models import TaskCard, TestResult, TestRunRecord
 from .runner import get_active_runs_info, stop_run
@@ -28,6 +30,8 @@ __all__ = [
     "delete_task_card",
     "get_active_runs_info",
     "get_run_results",
+    "get_run_status",
+    "mark_run_failed",
     "resolve_creator",
     "save_task_card",
     "set_main_loop",
@@ -75,6 +79,51 @@ def get_run_results(run_id: str) -> list[dict]:
             "created_at",
         )
     ]
+
+
+def get_run_status(run_id: str) -> dict | None:
+    """执行运行状态摘要（AI 只读工具数据出口）。
+
+    返回 TestRunRecord 状态 + 计划用例快照 + 已完成结果条数与汇总。
+    status 透传 DB 原始值（RUNNING / completed / stopped / FAILED / PENDING，
+    历史写入大小写不一）。运行中时 result_count 恒 0（TestResult 在整轮
+    结束后批量落库），结束后用 get_run_results 取明细。不存在返回 None。
+    """
+    try:
+        rec = TestRunRecord.objects.get(run_id=run_id)
+    except TestRunRecord.DoesNotExist:
+        return None
+    result_count = TestResult.objects.filter(run__run_id=run_id).count()
+    return {
+        "run_id": rec.run_id,
+        "status": rec.status,
+        "device_serial": rec.device_serial,
+        "client_task_id": rec.client_task_id,
+        "loop_count": rec.loop_count,
+        "selected_cases": rec.selected_cases or [],
+        "result_count": result_count,
+        "summary": rec.summary or {},
+        "started_at": rec.started_at,
+        "finished_at": rec.finished_at,
+    }
+
+
+def mark_run_failed(run_id: str, error: str, status: str = "") -> bool:
+    """执行前失败标记：把 run 记录置为终态并写入错误摘要（AI 经 get_run_status 可见）。
+
+    供 _run_ui_for_ai / _abort_run_before_execute 的失败路径调用；
+    状态默认 failed（用户主动停止传 stopped）。run 不存在时静默返回 False。
+    """
+    if not run_id:
+        return False
+    updated = TestRunRecord.objects.filter(run_id=run_id).update(
+        status=status or TestRunStatus.FAILED.value,
+        summary={"error": error or ""},
+        finished_at=datetime.now().isoformat(),
+    )
+    if updated:
+        _log.info("mark_run_failed: %s status=%s error=%s", run_id, status or "failed", error)
+    return bool(updated)
 
 
 # ── TaskCard write helpers ──
@@ -241,6 +290,11 @@ def start_run(
     if not test_cases:
         return {"status": False, "message": "no enabled test cases found"}
 
+    # 未显式传包名时，以用例自身声明的 package_name 为准——
+    # adb_start_app/adb_kill_app 空 xpath 回退到该值（executor 语义：xpath 或用例包名）
+    if not package_name and test_cases:
+        package_name = test_cases[0].package_name or ""
+
     # ── 设备轻校验 ──
     dev = PoolDevice.objects.filter(serial=serial).first()
     if dev is None:
@@ -254,6 +308,43 @@ def start_run(
         return {"status": False, "message": "主事件循环不可用，无法投递测试任务"}
 
     from .views.ai_execution import _run_ui_for_ai
+    from .views.execution_steps import _build_case_snapshots
+    from .views.helpers import _run_client_task
+
+    # ── 任务卡：AI 运行同样进入执行引擎任务列表（task_id = run_id 一一对应）──
+    if len(test_cases) == 1:
+        task_name = test_cases[0].title
+    else:
+        task_name = f"{test_cases[0].title} 等{len(test_cases)}条用例"
+    save_task_card(
+        {
+            "id": run_id,
+            "name": task_name,
+            "creator": user_id or "ai",
+            "mode": "immediate",
+            "taskType": "ui_automation",
+            "deviceSerial": serial,
+            "caseIds": case_ids,
+            "loopCount": loop_count,
+            "intervalSeconds": interval_seconds,
+        }
+    )
+    # 执行器经该映射走任务卡状态机（idle→queued→running→done）
+    _run_client_task[run_id] = run_id
+
+    # ── 预建 PENDING 记录：run 从投递起即可被 get_run_status 查询 ──
+    # 执行前失败路径（设备锁 / 连接失败 / 中途停止）经 mark_run_failed 落到
+    # 该记录（终态 failed/stopped + 错误摘要），AI 不再看到「run 不存在」。
+    snapshots = _build_case_snapshots(test_cases)
+    TestRunRecord.objects.create(
+        run_id=run_id,
+        client_task_id=run_id,
+        status=TestRunStatus.PENDING.value,
+        device_serial=serial,
+        selected_cases=snapshots,
+        loop_count=loop_count,
+        started_at=datetime.now().isoformat(),
+    )
 
     coro = _run_ui_for_ai(
         run_id, test_cases, loop_count, interval_seconds, package_name, serial, user_id

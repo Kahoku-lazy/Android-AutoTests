@@ -58,13 +58,46 @@ def add_documents(docs: list[dict]) -> int:
     return len(docs)
 
 
+def _resolve_sources(sources: list[str] | None) -> list[str] | None:
+    """Normalize knowledge_sources keys into Chroma metadata.source values.
+
+    - ``dir:X`` → all document sources under directory ``X`` (dynamic —
+      recomputed per call, so files added/removed take effect immediately)
+    - ``doc:X`` → ``X`` (strip prefix)
+    - bare values pass through unchanged
+    """
+    if not sources:
+        return None
+
+    resolved: list[str] = []
+    dirs: list[str] = []
+    for s in sources:
+        s = str(s)
+        if s.startswith("dir:"):
+            dirs.append(s[4:].strip("/"))
+        elif s.startswith("doc:"):
+            resolved.append(s[4:])
+        else:
+            resolved.append(s)
+
+    if dirs:
+        for d in load_all_documents():
+            src = (d.get("metadata") or {}).get("source", "")
+            if any(src == ddir or src.startswith(ddir + "/") for ddir in dirs):
+                if src not in resolved:
+                    resolved.append(src)
+
+    return resolved or None
+
+
 def search(query: str, top_k: int = 5, sources: list[str] | None = None) -> list[dict]:
     """Search the knowledge base by natural language query.
 
     Args:
         query: Natural language search query.
         top_k: Number of results to return.
-        sources: Optional list of document IDs to restrict search to.
+        sources: Optional list of reference keys to restrict search to.
+            ``doc:X`` 按文件；``dir:X`` 按目录（动态展开）；裸路径直通。
 
     Returns list of {"content": str, "metadata": dict, "score": float}.
     """
@@ -75,12 +108,14 @@ def search(query: str, top_k: int = 5, sources: list[str] | None = None) -> list
         logger.info("Knowledge base is empty, skipping search")
         return []
 
+    resolved_sources = _resolve_sources(sources)
+
     where_filter = None
-    if sources:
-        if len(sources) == 1:
-            where_filter = {"source": sources[0]}
+    if resolved_sources:
+        if len(resolved_sources) == 1:
+            where_filter = {"source": resolved_sources[0]}
         else:
-            where_filter = {"source": {"$in": list(sources)}}
+            where_filter = {"source": {"$in": list(resolved_sources)}}
 
     try:
         kwargs = {"query_texts": [query], "n_results": top_k}
@@ -88,7 +123,7 @@ def search(query: str, top_k: int = 5, sources: list[str] | None = None) -> list
             kwargs["where"] = where_filter
         results = col.query(**kwargs)
     except Exception as e:
-        if where_filter and sources:
+        if where_filter and resolved_sources:
             logger.debug("ChromaDB where-filter failed (%s), falling back to post-filter", e)
             try:
                 results = col.query(query_texts=[query], n_results=top_k * 3)
@@ -113,9 +148,9 @@ def search(query: str, top_k: int = 5, sources: list[str] | None = None) -> list
                 else 0
             )
 
-            if sources and where_filter is None:
+            if resolved_sources and where_filter is None:
                 doc_source = meta.get("source", "")
-                if doc_source not in sources:
+                if doc_source not in resolved_sources:
                     continue
 
             items.append({"content": doc, "metadata": meta, "score": float(dist)})
@@ -162,7 +197,8 @@ def _load_project_docs() -> list[dict]:
             content = md_file.read_text(encoding="utf-8", errors="replace")
             if len(content) < 50:
                 continue
-            rel_path = str(md_file.relative_to(doc_dir))
+            # Windows 反斜杠统一为 "/"，保证目录引用展开与前端树构建一致
+            rel_path = str(md_file.relative_to(doc_dir)).replace("\\", "/")
             docs.append(
                 {
                     "id": f"doc:{rel_path}",

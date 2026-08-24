@@ -19,6 +19,7 @@ __all__ = [
     "find_case_across_types",
     "get_api_definition",
     "get_api_definitions",
+    "get_case_digest",
     "get_case_for_lock",
     "get_definition",
     "get_directory_tree",
@@ -27,14 +28,22 @@ __all__ = [
     "get_storage_definitions",
     "get_web_definition",
     "get_web_definitions",
+    "save_ai_definition",
     "save_api_definition",
     "save_definition",
     "save_storage_definition",
     "save_web_definition",
     "update_directory",
+    "validate_steps",
 ]
 
 # API test case API
+# AI tool data exits (digest + validated write)
+from .api_ai import (  # noqa: E402
+    get_case_digest,
+    save_ai_definition,
+    validate_steps,
+)
 from .api_api import (  # noqa: E402
     batch_save_api_definitions,
     get_api_definition,

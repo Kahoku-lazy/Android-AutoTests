@@ -11,11 +11,14 @@ __all__ = [
     "gen_doc_id",
     "get_directory_tree",
     "get_document",
+    "get_document_digest",
     "import_document_envelope",
     "list_directories_flat",
     "list_documents",
+    "list_document_summaries",
     "move_directory",
     "move_document",
+    "purge_test_case_documents",
     "serialize_directory",
     "serialize_document",
     "update_directory",
@@ -31,14 +34,17 @@ from typing import Any
 
 from django.db import IntegrityError
 
+from .api_digest import get_document_digest, list_document_summaries
 from .models import WorkflowDirectory, WorkflowDocument
 
 FORMAT_V1 = "workflow-doc-v1"
 
 
 def gen_doc_id(doc_type: str) -> str:
-    """WF-PF|TC-YYYYMMDD-HHMMSS-XXXX — 全局唯一."""
-    prefix = "PF" if doc_type == WorkflowDocument.TYPE_PAGE_FLOW else "TC"
+    """WF-PF-YYYYMMDD-HHMMSS-XXXX — 全局唯一（仅 page_flow）."""
+    if doc_type != WorkflowDocument.TYPE_PAGE_FLOW:
+        doc_type = WorkflowDocument.TYPE_PAGE_FLOW
+    prefix = "PF"
     now = datetime.now()
     suffix = "".join(random.choices(string.ascii_uppercase + string.digits, k=4))
     candidate = f"WF-{prefix}-{now.strftime('%Y%m%d')}-{now.strftime('%H%M%S')}-{suffix}"
@@ -49,6 +55,12 @@ def gen_doc_id(doc_type: str) -> str:
         suffix = "".join(random.choices(string.ascii_uppercase + string.digits, k=4))
         candidate = f"WF-{prefix}-{now.strftime('%Y%m%d')}-{now.strftime('%H%M%S')}-{suffix}"
     return f"WF-{prefix}-{now.strftime('%Y%m%d%H%M%S%f')}-{suffix}"
+
+
+def purge_test_case_documents() -> int:
+    """删除全部积木用例文档（doc_type=test_case），返回删除条数。"""
+    deleted, _ = WorkflowDocument.objects.filter(doc_type=WorkflowDocument.TYPE_TEST_CASE).delete()
+    return int(deleted)
 
 
 def _parse_config(raw: str | dict | list | None) -> Any:
@@ -120,7 +132,9 @@ def get_directory_tree() -> list[dict]:
                 "doc_type": x.doc_type,
                 "updated_at": x.updated_at.isoformat() if x.updated_at else "",
             }
-            for x in node.documents.all().order_by("title")
+            for x in node.documents.filter(doc_type=WorkflowDocument.TYPE_PAGE_FLOW).order_by(
+                "title"
+            )
         ]
         return {
             **serialize_directory(node),
@@ -201,13 +215,20 @@ def list_documents(
     doc_type: str | None = None,
     include_orphans: bool = True,
 ) -> list[dict]:
-    qs = WorkflowDocument.objects.all().order_by("-updated_at")
+    # 积木用例已下线：默认只返回 page_flow；显式请求 test_case 返回空列表
+    qs = WorkflowDocument.objects.filter(doc_type=WorkflowDocument.TYPE_PAGE_FLOW).order_by(
+        "-updated_at"
+    )
+    if doc_type == WorkflowDocument.TYPE_TEST_CASE:
+        return []
+    if doc_type and doc_type != WorkflowDocument.TYPE_PAGE_FLOW:
+        qs = qs.none()
+    elif doc_type:
+        qs = qs.filter(doc_type=doc_type)
     if directory_id is not None:
         qs = qs.filter(directory_id=directory_id)
     elif not include_orphans:
         qs = qs.filter(directory__isnull=False)
-    if doc_type:
-        qs = qs.filter(doc_type=doc_type)
     return [serialize_document(d, include_config=False) for d in qs]
 
 
@@ -215,6 +236,8 @@ def get_document(doc_id: str) -> dict | None:
     try:
         doc = WorkflowDocument.objects.get(doc_id=doc_id)
     except WorkflowDocument.DoesNotExist:
+        return None
+    if doc.doc_type == WorkflowDocument.TYPE_TEST_CASE:
         return None
     return serialize_document(doc, include_config=True)
 
@@ -238,8 +261,10 @@ def upsert_document(
     title = (title or "").strip()
     if not title:
         return False, "标题不能为空", 400
-    if doc_type not in (WorkflowDocument.TYPE_PAGE_FLOW, WorkflowDocument.TYPE_TEST_CASE):
-        return False, "doc_type 必须是 page_flow 或 test_case", 400
+    if doc_type == WorkflowDocument.TYPE_TEST_CASE:
+        return False, "工作流已不再支持积木测试用例，请使用用例管理模块", 400
+    if doc_type != WorkflowDocument.TYPE_PAGE_FLOW:
+        return False, "doc_type 必须是 page_flow", 400
 
     directory = None
     set_directory = clear_directory or directory_id is not None
@@ -357,25 +382,21 @@ def import_document_envelope(payload: dict, *, overwrite: bool = False) -> tuple
         return False, "导入内容必须是 JSON 对象", 400
 
     fmt = payload.get("format") or FORMAT_V1
-    if fmt not in (FORMAT_V1, "testcase-scratch-v1"):
-        # 仍允许无 format 的裸对象（需有 doc_type + config/blocks）
+    if fmt not in (FORMAT_V1,):
+        # 仍允许无 format 的裸对象（需有 doc_type + config）
         pass
 
     doc_type = payload.get("doc_type")
     config = payload.get("config")
     title = payload.get("title") or payload.get("name") or ""
 
-    # 兼容旧前端导出 testcase-scratch-v1
-    if fmt == "testcase-scratch-v1" or (not doc_type and isinstance(payload.get("blocks"), list)):
-        doc_type = WorkflowDocument.TYPE_TEST_CASE
-        config = {
-            "format": "testcase-scratch-v1",
-            "name": payload.get("name") or title,
-            "package_name": payload.get("package_name") or "",
-            "blocks": payload.get("blocks") or [],
-            "flat_steps": payload.get("flat_steps") or [],
-        }
-        title = title or payload.get("name") or "导入的用例"
+    # 积木用例导入已下线
+    if (
+        fmt == "testcase-scratch-v1"
+        or doc_type == WorkflowDocument.TYPE_TEST_CASE
+        or (not doc_type and isinstance(payload.get("blocks"), list))
+    ):
+        return False, "工作流已不再支持积木测试用例导入，请使用用例管理模块", 400
 
     # 兼容页面流裸 snapshot
     if not doc_type and ("nodes" in payload or (isinstance(config, dict) and "nodes" in config)):
@@ -388,8 +409,8 @@ def import_document_envelope(payload: dict, *, overwrite: bool = False) -> tuple
                 "links": payload.get("links") or [],
             }
 
-    if doc_type not in (WorkflowDocument.TYPE_PAGE_FLOW, WorkflowDocument.TYPE_TEST_CASE):
-        return False, "无法识别 doc_type（page_flow / test_case）", 400
+    if doc_type != WorkflowDocument.TYPE_PAGE_FLOW:
+        return False, "无法识别 doc_type（仅支持 page_flow）", 400
     if config is None:
         config = {}
     if not title:
@@ -442,5 +463,7 @@ def export_document(doc_id: str) -> tuple[bool, Any]:
     try:
         doc = WorkflowDocument.objects.get(doc_id=doc_id)
     except WorkflowDocument.DoesNotExist:
+        return False, "文档不存在"
+    if doc.doc_type == WorkflowDocument.TYPE_TEST_CASE:
         return False, "文档不存在"
     return True, build_export_envelope(doc)

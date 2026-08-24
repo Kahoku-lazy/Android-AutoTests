@@ -95,6 +95,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # 尾斜杠规范化必须最先（真机发现 #1：301 丢 Authorization 头 → 401）
+    "gateway.normalize_slash.NormalizeTrailingSlashMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.gzip.GZipMiddleware",
@@ -110,11 +112,11 @@ ROOT_URLCONF = "config.urls"
 
 ASGI_APPLICATION = "config.asgi.application"
 
-# Templates — minimal config for Django Admin only (frontend is served separately)
+# Templates — Django Admin + drf-spectacular Swagger UI 主题覆盖（templates/drf_spectacular/）
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -137,6 +139,19 @@ CORS_ALLOW_CREDENTIALS = True
 
 # ── Database ──
 DB_ENGINE = os.environ.get("DB_ENGINE", "mysql")
+
+# ── 设备引擎（L1c 可替换插槽）──
+# 调用方（DeviceSession）经 engines.registry 取引擎；换引擎只改此配置。
+DEVICE_ENGINE = os.environ.get("DEVICE_ENGINE", "airtest_u2")
+
+# ── 执行链路会话化开关（executor-session-toggle）──
+# True：执行链路经 DeviceSession.lease(EXCLUSIVE)（业务锁前置 + 会话释放）；
+# 默认 False 走旧路径。真机验证开关后另行删除旧路径。
+DEVICE_SESSION_ENABLED = os.environ.get("DEVICE_SESSION_ENABLED", "False").lower() in (
+    "1",
+    "true",
+    "yes",
+)
 
 if DB_ENGINE == "mysql":
     DATABASES = {
@@ -252,6 +267,10 @@ SPECTACULAR_SETTINGS = {
 
 # Chat upload temp files — cleanup_uploads management command
 UPLOAD_CLEANUP_MAX_AGE_DAYS = int(os.environ.get("UPLOAD_CLEANUP_MAX_AGE_DAYS", "7"))
+
+# AI 对话发图：5MB 图片 base64 约 6.7MB，须大于 Django 默认 2.5MB 请求体上限，
+# 否则 chat_stream 读 body 时抛 RequestDataTooBig（超限图片由应用层 5MB 校验拦截）
+DATA_UPLOAD_MAX_MEMORY_SIZE = 16 * 1024 * 1024
 
 # ── Airtest migration feature flags (toggle per environment) ──
 AIRTEST_ENABLED = os.environ.get("AIRTEST_ENABLED", "True").lower() in ("true", "1", "yes")

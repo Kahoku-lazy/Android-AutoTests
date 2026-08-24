@@ -2,6 +2,8 @@
 
 import threading
 
+from models.test_models import TaskCardStatus, TaskOutcome
+
 _recovery_lock = threading.Lock()
 
 
@@ -52,7 +54,11 @@ def recover_stale_running_taskcards() -> int:
 
         count = stale.count()
         if count:
-            stale.update(status="done", running=False, outcome="interrupted")
+            stale.update(
+                status=TaskCardStatus.DONE.value,
+                running=False,
+                outcome=TaskOutcome.INTERRUPTED.value,
+            )
         return count
 
 

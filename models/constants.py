@@ -13,12 +13,10 @@ from enum import Enum
 
 
 class DeviceStatus(str, Enum):
-    """设备状态 — dp_devices.status"""
+    """设备状态 — dp_devices.status（L1b 收敛：仅两态，离线即删除记录）"""
 
     ONLINE = "ONLINE"
     BUSY = "BUSY"
-    OFFLINE = "OFFLINE"
-    DISCONNECTED = "DISCONNECTED"
 
 
 class LockStatus(str, Enum):
@@ -43,33 +41,6 @@ class ConnectionType(str, Enum):
 
     USB = "USB"
     WIFI = "WIFI"
-
-
-class QueueStatus(str, Enum):
-    """排队状态 — dp_device_queue.status"""
-
-    WAITING = "waiting"
-    ASSIGNED = "assigned"
-    CANCELLED = "cancelled"
-    TIMEOUT = "timeout"
-
-
-class TestRunStatus(str, Enum):
-    """测试执行状态 — tr_test_runs.status"""
-
-    PENDING = "PENDING"
-    RUNNING = "RUNNING"
-    PASSED = "PASSED"
-    FAILED = "FAILED"
-    STOPPED = "STOPPED"
-
-
-class TestResult(str, Enum):
-    """单次迭代结果 — tr_test_results.result"""
-
-    PASS = "PASS"
-    FAIL = "FAIL"
-    ERROR = "ERROR"
 
 
 class AgentStatus(str, Enum):
@@ -132,9 +103,6 @@ class ModelProvider(str, Enum):
 ALL_STATUS_ENUMS = {
     "device": DeviceStatus,
     "lock": LockStatus,
-    "queue": QueueStatus,
-    "test_run": TestRunStatus,
-    "test_result": TestResult,
     "agent": AgentStatus,
     "conversation": ConversationStatus,
     "sop": SOPStatus,

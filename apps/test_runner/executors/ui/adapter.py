@@ -184,8 +184,16 @@ class DeviceAdapter:
         while time.time() < deadline:
             if self.stopped():
                 return False
-            if self.d.xpath(f'//*[@text="{expected_text}"]').exists:
-                return True
+            # NOTE: interpolating expected_text into the XPath can produce an
+            # invalid expression (e.g. text containing quotes) — guard it so a
+            # bad pattern degrades to the toast-API probe below instead of
+            # raising XPathError into the runner (which would misclassify it
+            # as a device crash).
+            try:
+                if self.d.xpath(f'//*[@text="{expected_text}"]').exists:
+                    return True
+            except Exception:
+                logger.debug("Toast xpath probe failed for %r, falling back", expected_text[:60])
             try:
                 msg = self.d.toast.get_message(0)
                 if msg and expected_text in str(msg):
@@ -220,6 +228,15 @@ class DeviceAdapter:
             self.ad.shell(f"pkill -f {pkg}")
         except Exception:
             logger.debug("pkill failed for %s, continuing", pkg)
+
+    # ---- App start / screenshot thin wrappers（executor 旁路收敛）----
+    def app_start(self, pkg: str):
+        """启动应用（u2 app_start；executor 不再直触 self.d）。"""
+        self.d.app_start(pkg)
+
+    def screenshot(self):
+        """当前屏幕截图（u2 screenshot；executor 不再直触 self.d）。"""
+        return self.d.screenshot()
 
     # ---- Composite helpers (u2 XPath) ----
     def wait_appear_then_disappear(self, xpath: str, timeout: float = 30) -> bool:

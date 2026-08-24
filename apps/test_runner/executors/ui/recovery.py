@@ -1,11 +1,14 @@
-"""uiautomator2 + Airtest crash detection, health check, and reconnection."""
+"""uiautomator2 + Airtest crash detection, health check, and reconnection.
+
+L1c 收敛（consolidate-airtest-u2-engine）：重连实现迁入 engines/android/airtest_u2.py
+（AirtestU2Engine.reconnect），本模块保留纯检测函数与常量，并保留
+reconnect_* 兼容入口（签名不变，内部经引擎）。
+"""
 
 import logging
 import time
 
-import uiautomator2 as u2
-
-from airtest.core.android.android import Android
+from engines.android.airtest_u2 import AirtestU2Engine
 
 logger = logging.getLogger(__name__)
 
@@ -106,12 +109,14 @@ def check_device_alive(device_conn) -> bool:
         return False
 
 
-# ── Reconnection ──
+# ── Reconnection（兼容入口，内部经引擎）──
 
 
 def reconnect_u2(serial: str):
     """Re-establish u2 connection. Raises on failure."""
-    return u2.connect(serial)
+    engine = AirtestU2Engine()
+    engine.connect(serial)
+    return engine.u2
 
 
 def reconnect_device(serial: str):
@@ -122,21 +127,11 @@ def reconnect_device(serial: str):
     # Lazy import to avoid circular dependency
     from .connect import DeviceConnection
 
-    air_dev = Android(serialno=serial)
-    u2_dev = u2.connect(serial)
-
-    # Try to enrich info from u2
-    info = {}
-    try:
-        info = dict(air_dev.display_info)
-        u2_info = u2_dev.info
-        for k in ("productName", "brand", "sdkInt"):
-            if k not in info and k in u2_info:
-                info[k] = u2_info[k]
-    except Exception:
-        logger.debug("Recovery operation failed, continuing")
-
-    return DeviceConnection(serial=serial, airtest=air_dev, u2=u2_dev, info=info)
+    engine = AirtestU2Engine()
+    engine.connect(serial)
+    return DeviceConnection(
+        serial=serial, airtest=engine.airtest, u2=engine.u2, info=engine.device_info
+    )
 
 
 def wait_and_reconnect(serial: str, wait_seconds: float = U2_RECONNECT_INTERVAL):

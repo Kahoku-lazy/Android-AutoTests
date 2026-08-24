@@ -3,9 +3,9 @@ ApiExecutorV2 — config_json-native API test executor.
 
 Parses the unified config_json (case_info/steps/test_data/validation) and
 executes each test data row through all steps with a 7-step pipeline:
-  ① validation check → ② variable substitution → ③ request_schema check
-  → ④ HTTP request → ⑤ extract variables → ⑥ response assertion
-  → ⑦ row-level output assertion
+  ① variable substitution → ② validation check (substituted body)
+  → ③ request_schema check → ④ HTTP request → ⑤ extract variables
+  → ⑥ response assertion → ⑦ row-level output assertion
 
 Reuses the existing ApiAdapter.execute_step() for HTTP transport.
 """
@@ -32,6 +32,7 @@ class ApiExecutorV2:
         self.adapter = adapter
         self._variables: dict[str, str] = {}
         self._last_response: dict | None = None
+        self._row_responses: dict[int, dict] = {}  # step_index → response, for output_schema
         self._step_callback = None  # (step_index, total, type, description, result)
         self._step_started_callback = None  # (step_index, total, type, description)
 
@@ -118,6 +119,13 @@ class ApiExecutorV2:
             row_headers = inp.get("headers", {}) or {}
             headers.update(row_headers)
 
+            # ── Apply auth (row input.auth overrides meta.auth; explicit headers win) ──
+            row_auth = inp.get("auth") if isinstance(inp, dict) else None
+            auth = row_auth if isinstance(row_auth, dict) and row_auth.get("type") else None
+            if auth is None:
+                auth = meta.get("auth") or {}
+            headers = {**self._build_auth_headers(auth), **headers}
+
             # ── Build overridden step for _cfg_to_test_step ──
             step_cfg = {
                 "method": method,
@@ -162,8 +170,8 @@ class ApiExecutorV2:
                 all_pass = False
                 continue
 
-            # ── Body schema assertion ──
-            body_schema = expect.get("body_schema")
+            # ── Body schema assertion (use substituted schema from step_cfg) ──
+            body_schema = step_cfg.get("response_schema")
             if body_schema and isinstance(body_schema, dict):
                 try:
                     body_obj = (
@@ -179,6 +187,10 @@ class ApiExecutorV2:
                     jsonschema.validate(body_obj, body_schema)
                 except jsonschema.ValidationError as e:
                     self.adapter.log(f"  FAIL body_schema: {e.message}")
+                    all_pass = False
+                    continue
+                except jsonschema.SchemaError as e:
+                    self.adapter.log(f"  FAIL body_schema invalid schema: {e.message}")
                     all_pass = False
                     continue
                 except ImportError:
@@ -202,19 +214,20 @@ class ApiExecutorV2:
         """Execute one test data row through all config_json steps."""
         self._variables = {}
         self._last_response = None
+        self._row_responses = {}
 
         for step_idx, step_cfg in enumerate(steps_cfg):
             if self.adapter.stopped():
                 return "stopped"
 
-            # ── ① Validation check (before request) ──
+            # ── ① Variable substitution (6 fields) ──
+            step_cfg = self._substitute_vars(step_cfg, row_input)
+
+            # ── ② Validation check (on the substituted body) ──
             pre_check = self._validate_before_request(step_cfg, step_idx, row_input, validation)
             if pre_check:
                 self.adapter.log(f"Step {step_idx} validation FAIL: {pre_check}")
                 return "fail"
-
-            # ── ② Variable substitution (5 fields) ──
-            step_cfg = self._substitute_vars(step_cfg, row_input)
 
             # ── ③ Request schema check ──
             request_schema = step_cfg.get("request_schema")
@@ -226,6 +239,9 @@ class ApiExecutorV2:
                     jsonschema.validate(body, request_schema)
                 except jsonschema.ValidationError as e:
                     self.adapter.log(f"Step {step_idx} request_schema FAIL: {e.message}")
+                    return "fail"
+                except jsonschema.SchemaError as e:
+                    self.adapter.log(f"Step {step_idx} request_schema invalid schema: {e.message}")
                     return "fail"
                 except ImportError:
                     _log.warning("jsonschema not installed, skipping request_schema validation")
@@ -244,6 +260,7 @@ class ApiExecutorV2:
                 "response_headers": http_result.get("response_headers", {}),
                 "duration_ms": http_result.get("duration_ms", 0),
             }
+            self._row_responses[step_idx] = self._last_response
 
             if http_result.get("result") != "pass":
                 self.adapter.log(
@@ -276,6 +293,11 @@ class ApiExecutorV2:
                     except jsonschema.ValidationError as e:
                         self.adapter.log(f"Step {step_idx} response_schema FAIL: {e.message}")
                         return "fail"
+                    except jsonschema.SchemaError as e:
+                        self.adapter.log(
+                            f"Step {step_idx} response_schema invalid schema: {e.message}"
+                        )
+                        return "fail"
                     except ImportError:
                         _log.warning(
                             "jsonschema not installed, skipping response_schema validation"
@@ -285,8 +307,17 @@ class ApiExecutorV2:
         if row_output_schema and isinstance(row_output_schema, dict):
             target_step_idx = row_output_schema.get("step_index", -1)
             output_schema = row_output_schema.get("schema")
-            if output_schema and isinstance(output_schema, dict) and self._last_response:
-                response_body = self._last_response.get("response_body", "")
+            if not isinstance(target_step_idx, int) or target_step_idx < 0:
+                target_resp = self._last_response
+            else:
+                target_resp = self._row_responses.get(target_step_idx)
+            if output_schema and isinstance(output_schema, dict):
+                if not target_resp:
+                    self.adapter.log(
+                        f"Row output_schema FAIL: no response recorded for step {target_step_idx}"
+                    )
+                    return "fail"
+                response_body = target_resp.get("response_body", "")
                 try:
                     body_obj = (
                         json.loads(response_body)
@@ -304,8 +335,13 @@ class ApiExecutorV2:
                         f"Row output_schema FAIL (step {target_step_idx}): {e.message}"
                     )
                     return "fail"
+                except jsonschema.SchemaError as e:
+                    self.adapter.log(
+                        f"Row output_schema invalid schema (step {target_step_idx}): {e.message}"
+                    )
+                    return "fail"
                 except ImportError:
-                    pass
+                    _log.warning("jsonschema not installed, skipping row output_schema validation")
 
         return "pass"
 
@@ -409,7 +445,10 @@ class ApiExecutorV2:
                 jsonschema.validate(body, schema)
             except jsonschema.ValidationError as e:
                 return f"validation[step={step_idx}] body schema mismatch: {e.message}"
+            except jsonschema.SchemaError as e:
+                return f"validation[step={step_idx}] invalid schema: {e.message}"
             except ImportError:
+                _log.warning("jsonschema not installed, skipping validation check")
                 return None
         return None
 
@@ -479,8 +518,37 @@ class ApiExecutorV2:
     # ═══════════════════════════════════════════════════════════════
 
     @staticmethod
+    def _build_auth_headers(auth: dict | None) -> dict:
+        """Build auth headers from a meta.auth / input.auth dict.
+
+        Supports the three auth types defined in SINGLE_API_SCHEMA:
+        bearer(token) / basic(username, password) / api_key(key, value).
+        Returns {} when auth is absent, has no type, or lacks required fields.
+        """
+        if not auth or not isinstance(auth, dict):
+            return {}
+        a_type = auth.get("type", "")
+        if a_type == "bearer" and auth.get("token"):
+            return {"Authorization": f"Bearer {auth['token']}"}
+        if a_type == "basic" and auth.get("username"):
+            import base64
+
+            cred = base64.b64encode(
+                f"{auth['username']}:{auth.get('password', '')}".encode("utf-8")
+            ).decode("ascii")
+            return {"Authorization": f"Basic {cred}"}
+        if a_type == "api_key" and auth.get("key"):
+            return {auth["key"]: auth.get("value", "")}
+        return {}
+
+    @staticmethod
     def _cfg_to_test_step(step_cfg: dict) -> TestStep:
         """Convert a config_json step dict to a TestStep for the adapter."""
+        raw_status = step_cfg.get("expected_status", 0) or 0
+        try:
+            expected_status = int(raw_status)
+        except (TypeError, ValueError):
+            expected_status = 0
         return TestStep(
             type="api_request",
             method=step_cfg.get("method", "GET"),
@@ -489,6 +557,6 @@ class ApiExecutorV2:
             body=step_cfg.get("body", {}),
             extract=step_cfg.get("extract", {}),
             assertions=step_cfg.get("assertions", []),
-            expected_status=int(step_cfg.get("expected_status", 0) or 0),
+            expected_status=expected_status,
             description=step_cfg.get("name", ""),
         )

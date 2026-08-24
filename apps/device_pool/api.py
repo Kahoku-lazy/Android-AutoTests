@@ -9,6 +9,7 @@ __all__ = [
     "device",
     "ensure_device",
     "get_online_devices",
+    "list_devices",
     "release_device",
     "release_device_locks_for_device",
 ]
@@ -25,6 +26,37 @@ from .service import release_internal
 def get_online_devices():
     """返回所有在线设备（status=ONLINE）。"""
     return list(Device.objects.filter(status="ONLINE"))
+
+
+def list_devices(user_id: str = "") -> list[dict]:
+    """设备管理口径的全量设备列表（只读快照，供 AI 助手 list_devices 工具调用）。
+
+    与 GET /api/devices/ 同一套可见性规则（is_device_visible）与序列化口径
+    （device_to_dict：status/occupied_by/remaining/last_seen 等），包含使用中
+    （BUSY）设备。不做 ADB 状态同步——工具保持只读无副作用，状态由 heartbeat /
+    设备管理页列表刷新。
+    """
+    from django.conf import settings
+
+    from .service import (
+        device_to_dict,
+        is_device_visible,
+        resolve_admin_ids,
+        usernames_by_ids,
+    )
+
+    admin_ids = resolve_admin_ids(settings.ADMIN_USERS)
+    devices = [d for d in Device.objects.all() if is_device_visible(d, user_id, admin_ids)]
+    status_order = {"ONLINE": 0, "BUSY": 1}
+    devices.sort(key=lambda d: status_order.get(d.status, 99))
+
+    owner_ids = (
+        {d.locked_by for d in devices if d.locked_by}
+        | {d.added_by for d in devices if d.added_by}
+        | {d.occupied_by for d in devices if d.occupied_by}
+    )
+    id_to_name = usernames_by_ids(owner_ids)
+    return [device_to_dict(d, device.current_serial, id_to_name) for d in devices]
 
 
 def ensure_device(serial, name=""):
@@ -54,7 +86,9 @@ def acquire_device(serial, user_id, timeout=300):
             .first()
         )
         if active_lock and not active_lock.is_expired:
-            if device_obj.occupied_by != user_id:
+            # occupied_by 为 CharField，调用方 user_id 多为 int——统一按字符串比较，
+            # 避免同一用户（AI 先 acquire 后执行）被误判为他人占用。
+            if str(device_obj.occupied_by) != str(user_id):
                 raise ValueError(
                     f"设备已被 {device_obj.occupied_by or 'unknown'} 占用，"
                     f"剩余 {active_lock.remaining_seconds} 秒"

@@ -11,16 +11,19 @@ import time
 
 from datetime import datetime
 
-import uiautomator2 as u2
-
 from django.contrib.auth.models import User
 from django.utils import timezone
 from rest_framework.exceptions import APIException
+
+from engines.android.airtest_u2 import AirtestU2Engine
 
 from .models import Device, DeviceLock
 from .pool import device as device_pool
 
 logger = logging.getLogger(__name__)
+
+# observe 观察占用锁的兜底超时（秒）：关页/崩溃无释放时，30 分钟后由心跳回收
+OBSERVE_LOCK_TTL = 1800
 
 # ═══════════════════════════════════════════════
 # 业务异常
@@ -247,10 +250,9 @@ def purge_disconnected_devices() -> int:
 
 
 def collect_device_info(dev: Device, addr: str) -> None:
-    """通过 uiautomator2 采集设备元信息并更新记录。"""
+    """通过 uiautomator2 采集设备元信息并更新记录（L1c：经引擎静态方法）。"""
     try:
-        d = u2.connect(addr)
-        info = d.info
+        info = AirtestU2Engine.fetch_device_info(addr)
         dev.model = _getprop(addr, "ro.product.model") or info.get("productName", "") or ""
         dev.brand = _getprop(addr, "ro.product.brand") or ""
         dev.screen_w = info.get("displayWidth", 0) or 0
@@ -472,11 +474,22 @@ def release_occupy(dev: Device) -> dict:
 
 
 def occupy_observe(dev: Device, user_id: str) -> None:
-    """观察连接占用：置 BUSY + occupied_by（轻量，不创建锁）。"""
+    """观察连接占用：置 BUSY + occupied_by + observe 超时锁（30min 兜底回收）。
+
+    fix-observe-leak：原实现不建锁（无超时回收，关页/崩溃后设备永久 BUSY），
+    现建 lock_type="observe" 锁，由 heartbeat_sync 过期回收。
+    """
     dev.status = "BUSY"
     dev.occupied_by = user_id or "observe"
     dev.occupied_at = datetime.now()
     dev.save(update_fields=["status", "occupied_by", "occupied_at"])
+    DeviceLock.objects.create(
+        device=dev,
+        user_id=user_id or "observe",
+        lock_type="observe",
+        timeout_seconds=OBSERVE_LOCK_TTL,
+        status="active",
+    )
 
 
 def release_observe(dev: Device) -> None:
@@ -501,9 +514,17 @@ def touch_last_seen(dev: Device) -> None:
 
 
 def heartbeat_sync() -> dict:
-    """心跳同步：状态同步 + 刷新活跃锁心跳，返回各状态计数。"""
+    """心跳同步：状态同步 + 刷新活跃锁心跳 + 回收过期 observe 锁，返回各状态计数。"""
     updated, removed = update_device_status()
     DeviceLock.objects.filter(status="active").update(last_heartbeat=timezone.now())
+
+    # fix-observe-leak：过期 observe 锁（关页/崩溃无释放）→ 自动释放占用
+    for lock in DeviceLock.objects.filter(lock_type="observe", status="active"):
+        if lock.is_expired:
+            try:
+                release_observe(lock.device)
+            except Exception:
+                logger.warning("过期 observe 锁回收失败: device=%s", lock.device_id)
 
     online = Device.objects.filter(status="ONLINE").count()
     busy = Device.objects.filter(status="BUSY").count()

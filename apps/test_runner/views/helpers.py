@@ -47,6 +47,7 @@ _bg_sync = _sta  # decorator: @_bg_sync
 sync_to_async = _sta  # inline:   sync_to_async(func)(args)
 
 from apps.device_pool.api import release_device as dp_release_device
+from models.test_models import TaskOutcome, TestRunStatus
 
 from .. import state_machine as sm
 from ..callbacks import test_callbacks
@@ -201,7 +202,11 @@ async def _enqueue_taskcard(client_task_id: str, serial: str):
 
 
 async def _abort_run_before_execute(
-    run_id: str, serial: str, client_task_id: str, error: str, outcome: str = "error"
+    run_id: str,
+    serial: str,
+    client_task_id: str,
+    error: str,
+    outcome: str = TaskOutcome.ERROR.value,
 ):
     """执行前退出(设备检查失败 / 执行前异常 / 用户中途停止):
     释放设备、把 TaskCard 推到 done 终态、通知前端。outcome='error' 或 'stopped'。
@@ -210,11 +215,25 @@ async def _abort_run_before_execute(
 
     _log = logging.getLogger("test_runner.bg")
     _log.info(f"_abort_run_before_execute: {run_id} error={error} outcome={outcome}")
-    icon = "⏹" if outcome == "stopped" else "❌"
+    icon = "⏹" if outcome == TaskOutcome.STOPPED.value else "❌"
     await test_callbacks.on_log(run_id, f"{icon} {error}")
     # 停止是用户主动行为,不当作"设备错误"上报(避免前端标红为 error)
-    if outcome != "stopped":
+    if outcome != TaskOutcome.STOPPED.value:
         await test_callbacks.on_device_error(run_id, error)
+    # AI 路径（无 TaskCard）：把 start_run 预建的记录置为终态，
+    # 让 get_run_status 可见失败原因（WS 事件在 AI 对话场景无订阅者）
+    if not client_task_id:
+        from ..api import mark_run_failed
+
+        mark_run_failed(
+            run_id,
+            error,
+            status=(
+                TestRunStatus.STOPPED.value
+                if outcome == TaskOutcome.STOPPED.value
+                else TestRunStatus.FAILED.value
+            ),
+        )
     mark_device_idle(serial)
     try:
         await sync_to_async(dp_release_device)(serial, reason="manual")

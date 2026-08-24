@@ -18,6 +18,41 @@ from .helpers import (
     require_auth,
 )
 
+# 单步调试支持的全部步骤类型（新名 adb_* 与旧名并存——旧名保留兼容历史用例，
+# 与 step_types.STEP_TYPE_META 对齐；fix-run-step-step-types 修复）
+KNOWN_STEP_TYPES = frozenset(
+    {
+        # 基础 UI
+        "click",
+        "long_click",
+        "swipe",
+        "wait",
+        "wait_disappear",
+        "sleep",
+        "verify_text",
+        "poll_text",
+        # adb_* 新名（Step 1 收敛后唯一真相源 STEP_TYPE_META）
+        "adb_start_app",
+        "adb_kill_app",
+        "adb_perf_element_time",
+        "adb_wait_toast",
+        "adb_if_appear",
+        "adb_if_disappear",
+        "adb_loop_n",
+        "adb_loop_elements",
+        "adb_poll_text",
+        # deprecated 旧名（历史用例兼容）
+        "start_app",
+        "kill_app",
+        "perf_element_time",
+        "wait_toast",
+        "if_element_appear",
+        "if_element_disappear",
+        "loop_n",
+        "loop_elements",
+    }
+)
+
 
 @require_auth
 @csrf_exempt
@@ -34,24 +69,7 @@ def run_single_step(request):
     distance = data.get("distance", 500)
     description = data.get("description", step_type)
 
-    if step_type not in (
-        "click",
-        "long_click",
-        "swipe",
-        "wait",
-        "wait_disappear",
-        "sleep",
-        "verify_text",
-        "poll_text",
-        "start_app",
-        "kill_app",
-        "perf_element_time",
-        "wait_toast",
-        "if_element_appear",
-        "if_element_disappear",
-        "loop_n",
-        "loop_elements",
-    ):
+    if step_type not in KNOWN_STEP_TYPES:
         return JsonResponse({"status": False, "message": f"Unknown step type: {step_type}"})
 
     try:
@@ -88,7 +106,9 @@ def run_single_step(request):
         )
         adapter = DeviceAdapter(
             conn,
-            package_name=xpath if step_type in ("start_app", "kill_app") else "",
+            package_name=xpath
+            if step_type in ("start_app", "kill_app", "adb_start_app", "adb_kill_app")
+            else "",
             logger=logs.append,
         )
         executor = StepExecutor(adapter)
@@ -175,6 +195,8 @@ def task_card_list(request):
                 "failedSteps": tc.failed_steps,
                 "status": tc.status,
                 "outcome": tc.outcome,
+                # Step 5 权威状态：状态判定唯一入口在 state_machine.display_state
+                "state": sm.display_state(tc),
                 "round": tc.round,
                 "conclusion": tc.conclusion,
                 "bugTicket": tc.bug_ticket,

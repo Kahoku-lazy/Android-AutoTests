@@ -20,6 +20,7 @@ from .views import (
     delete_flow,
     delete_web_flow,
     flows_handler,
+    import_snapshot,
     list_api_endpoints,
     list_api_groups,
     list_pages,
@@ -56,6 +57,7 @@ router.register(r"web-flows", WebPageFlowViewSet, basename="el_web_flow")
 urlpatterns = [
     path("pages", list_pages, name="pages_list"),
     path("pages/create", create_page, name="page_create"),
+    path("pages/import-snapshot", import_snapshot, name="pages_import_snapshot"),
     path("pages/clear", clear_pages, name="pages_clear"),
     path("pages/batch-move", pages_batch_move, name="pages_batch_move"),
     path("pages/<int:page_id>", page_detail, name="page_detail"),

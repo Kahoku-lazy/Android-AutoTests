@@ -6,7 +6,7 @@ import threading
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from apps.ai_assistant.decorators import require_auth
+from shared.auth.require_auth import require_auth
 
 from . import api
 from .models import EvalResult, EvalRun, QuestionBank

@@ -6,6 +6,7 @@ import json
 from datetime import datetime
 from urllib.parse import urlparse
 
+from django.conf import settings
 from django.http import JsonResponse
 
 from apps.case_manager.models import TestDefinition
@@ -14,7 +15,7 @@ from apps.device_pool.api import device
 from apps.device_pool.api import release_device as dp_release_device
 from apps.device_pool.models import Device as PoolDevice
 from models.step_types import CaseType, TestStep
-from models.test_models import TestCaseDef
+from models.test_models import TaskOutcome, TestCaseDef
 
 from .. import state_machine as sm
 from ..callbacks import test_callbacks
@@ -313,14 +314,20 @@ async def start_test_run(request):
                 # 延迟阶段就被停止
                 if _preflight_runs.get(rid, {}).get("stopped"):
                     await _abort_run_before_execute(
-                        rid, _serial, _ctid, "任务已被停止", outcome="stopped"
+                        rid, _serial, _ctid, "任务已被停止", outcome=TaskOutcome.STOPPED.value
                     )
                     pending_release = False
                     return
 
                 # ── 预检:检测在线 → 连接 → 验证能跑用例 ──
                 try:
-                    d = await check_and_connect_async(_serial, rid, test_callbacks, _u2_executor)
+                    d = await check_and_connect_async(
+                        _serial,
+                        rid,
+                        test_callbacks,
+                        _u2_executor,
+                        use_session=getattr(settings, "DEVICE_SESSION_ENABLED", False),
+                    )
                 except DeviceCheckError as e:
                     await _abort_run_before_execute(rid, _serial, _ctid, f"手机连接不上: {e}")
                     pending_release = False
@@ -333,7 +340,7 @@ async def start_test_run(request):
                 # 连接期间被停止 → 按停止善后,不进入执行
                 if _preflight_runs.get(rid, {}).get("stopped"):
                     await _abort_run_before_execute(
-                        rid, _serial, _ctid, "任务已被停止", outcome="stopped"
+                        rid, _serial, _ctid, "任务已被停止", outcome=TaskOutcome.STOPPED.value
                     )
                     pending_release = False
                     return
@@ -496,7 +503,13 @@ async def _start_next_queued(serial: str):
             _run_client_task[run_id] = client_task_id
 
         try:
-            d = await check_and_connect_async(serial, run_id, test_callbacks, _u2_executor)
+            d = await check_and_connect_async(
+                serial,
+                run_id,
+                test_callbacks,
+                _u2_executor,
+                use_session=getattr(settings, "DEVICE_SESSION_ENABLED", False),
+            )
         except DeviceCheckError as e:
             await _abort_run_before_execute(run_id, serial, client_task_id, str(e))
             return

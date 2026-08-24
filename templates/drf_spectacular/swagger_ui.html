@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    {% block head %}
+    <title>{{ title|default:"Swagger" }}</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% if favicon_href %}<link rel="icon" href="{{ favicon_href }}">{% endif %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ swagger_ui_css }}">
+    <style>
+      html { box-sizing: border-box; overflow-y: scroll; }
+      *, *:after, *:before { box-sizing: inherit; }
+      /* ═══════════════════════════════════════════════════════════
+         animal-island-ui 主题（权威来源：.agents/skills/html-report/references/PROMPT.md）
+         token：--primary #19c8b9 · --text #794f27 · --text-body #725d42
+                --bg #f8f8f0 · --bg-content rgb(247,243,223) · --border #c4b89e
+                --success #6fba2c · --warning #f5c31c · --error #e05a5a
+                --focus-yellow #ffcc00 · --shadow-btn #bdaea0
+         HTTP 方法徽章按语义映射到规范状态色：GET=teal / POST=success /
+         PUT·PATCH=warning / DELETE=error / HEAD·OPTIONS=border-strong
+         ═══════════════════════════════════════════════════════════ */
+      body { background: #f8f8f0; margin: 0; }
+      .swagger-ui {
+        color: #725d42;
+        font-family: Nunito, 'Noto Sans SC', -apple-system, 'PingFang SC', sans-serif;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+      }
+      /* ── 顶部栏 ── */
+      .swagger-ui .topbar { background-color: #f8f8f0; border-bottom: 2px solid #c4b89e; }
+      .swagger-ui .topbar .download-url-wrapper .select-label,
+      .swagger-ui .topbar .download-url-wrapper .select-label span { color: #794f27; font-weight: 700; }
+      .swagger-ui .topbar .download-url-wrapper input[type=text] {
+        background: #f8f8f0;
+        border: 2px solid #9f927d;
+        border-radius: 12px;
+        color: #725d42;
+      }
+      .swagger-ui .topbar .download-url-wrapper input[type=text]:focus { border-color: #ffcc00; }
+      .swagger-ui .topbar .download-url-wrapper .download-url-button {
+        background: #f8f8f0;
+        color: #794f27;
+        border: 2px solid #f8f8f0;
+        border-radius: 50px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        box-shadow: 0 5px 0 0 #bdaea0;
+        transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .swagger-ui .topbar .download-url-wrapper .download-url-button:hover {
+        background: #f8f8f0;
+        box-shadow: 0 6px 0 0 #bdaea0;
+        transform: translateY(-1px);
+      }
+      .swagger-ui .topbar .download-url-wrapper .download-url-button:active {
+        box-shadow: 0 1px 0 0 #bdaea0;
+        transform: translateY(2px);
+      }
+      /* ── 信息区 ── */
+      .swagger-ui .info .title { color: #794f27; font-weight: 800; letter-spacing: 0.02em; }
+      .swagger-ui .info .title small { background: #19c8b9; color: #fff; border-radius: 50px; font-weight: 700; }
+      .swagger-ui .info li, .swagger-ui .info p, .swagger-ui .info table { color: #725d42; }
+      .swagger-ui .info .base-url { color: #8a7b66; }
+      /* ── 链接 / 强调色 ── */
+      .swagger-ui a { color: #11a89b; }
+      .swagger-ui .opblock-tag { color: #794f27; font-weight: 700; }
+      .swagger-ui .opblock-tag small { color: #9f927d; }
+      .swagger-ui .prop-format { color: #11a89b; }
+      .swagger-ui .model-title { color: #794f27; }
+      .swagger-ui .tab li button.tablinks.active { color: #11a89b; }
+      /* ── 操作区 ── */
+      .swagger-ui .opblock { border-color: #c4b89e; border-radius: 18px; background: #f8f8f0; }
+      .swagger-ui .opblock .opblock-summary {
+        border-color: #c4b89e;
+        border-radius: 18px;
+        background: #f8f8f0;
+        transition: background 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .swagger-ui .opblock .opblock-summary:hover { background: #e6f9f6; }
+      .swagger-ui .opblock .opblock-summary-description { color: #8a7b66; }
+      .swagger-ui .opblock .opblock-summary-operation-id { color: #8a7b66; }
+      .swagger-ui .opblock .opblock-section-header { background: transparent; border-color: #c4b89e; }
+      .swagger-ui .opblock .opblock-section-header h4 { color: #794f27; }
+      .swagger-ui .opblock-description-wrapper p { color: #725d42; }
+      /* ── HTTP 方法徽章（语义色 → animal-island 状态色） ── */
+      .swagger-ui .opblock .opblock-summary-method { border-radius: 12px; font-weight: 700; }
+      .swagger-ui .opblock.opblock-get .opblock-summary-method { background: #19c8b9; }
+      .swagger-ui .opblock.opblock-post .opblock-summary-method { background: #6fba2c; }
+      .swagger-ui .opblock.opblock-put .opblock-summary-method,
+      .swagger-ui .opblock.opblock-patch .opblock-summary-method { background: #f5c31c; color: #794f27; }
+      .swagger-ui .opblock.opblock-delete .opblock-summary-method { background: #e05a5a; }
+      .swagger-ui .opblock.opblock-head .opblock-summary-method,
+      .swagger-ui .opblock.opblock-options .opblock-summary-method { background: #9f927d; }
+      /* ── 服务器/鉴权区：卡片容器（无阴影，仅边框） ── */
+      .swagger-ui .scheme-container {
+        background: rgb(247, 243, 223);
+        border: 1.5px solid #c4b89e;
+        border-radius: 18px;
+        box-shadow: none;
+        margin: 0 0 20px;
+      }
+      .swagger-ui .servers > label span { color: #794f27; }
+      /* ── 按钮 ── */
+      .swagger-ui .btn {
+        background: #f8f8f0;
+        border: 2px solid #9f927d;
+        color: #794f27;
+        border-radius: 12px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        box-shadow: 0 2px 4px 0 rgba(61, 52, 40, 0.06);
+        transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .swagger-ui .btn:hover { color: #19c8b9; border-color: #19c8b9; box-shadow: 0 3px 10px 0 rgba(61, 52, 40, 0.10); transform: translateY(-1px); }
+      .swagger-ui .btn:focus-visible { outline: 2px solid #19c8b9; outline-offset: 2px; }
+      .swagger-ui .btn.authorize, .swagger-ui .btn.execute {
+        background: #f8f8f0;
+        border: 2px solid #f8f8f0;
+        color: #794f27;
+        border-radius: 50px;
+        box-shadow: 0 5px 0 0 #bdaea0;
+      }
+      .swagger-ui .btn.authorize:hover, .swagger-ui .btn.execute:hover {
+        color: #794f27;
+        border-color: #f8f8f0;
+        box-shadow: 0 6px 0 0 #bdaea0;
+        transform: translateY(-1px);
+      }
+      .swagger-ui .btn.authorize:active, .swagger-ui .btn.execute:active {
+        box-shadow: 0 1px 0 0 #bdaea0;
+        transform: translateY(2px);
+      }
+      .swagger-ui .btn.cancel { border-color: #e05a5a; color: #e05a5a; }
+      .swagger-ui .btn.cancel:hover { color: #c94444; border-color: #c94444; }
+      /* ── 输入控件：聚焦黄（禁冷蓝） ── */
+      .swagger-ui input[type=email], .swagger-ui input[type=file],
+      .swagger-ui input[type=password], .swagger-ui input[type=search],
+      .swagger-ui input[type=text], .swagger-ui select, .swagger-ui textarea {
+        background: #f8f8f0;
+        border: 2px solid #9f927d;
+        border-radius: 12px;
+        color: #725d42;
+      }
+      .swagger-ui input[type=email]:focus, .swagger-ui input[type=file]:focus,
+      .swagger-ui input[type=password]:focus, .swagger-ui input[type=search]:focus,
+      .swagger-ui input[type=text]:focus, .swagger-ui select:focus, .swagger-ui textarea:focus {
+        border-color: #ffcc00;
+        outline: none;
+      }
+      /* ── 弹窗（Authorize 等） ── */
+      .swagger-ui .dialog-ux .modal-ux {
+        background: rgb(247, 243, 223);
+        border: 2px solid #c4b89e;
+        border-radius: 18px;
+      }
+      .swagger-ui .dialog-ux .modal-ux-header h3 { color: #794f27; font-weight: 700; }
+      .swagger-ui .dialog-ux .modal-ux-content h4,
+      .swagger-ui .dialog-ux .modal-ux-content .scopes h2 { color: #794f27; }
+      /* ── 表格：暖色表头 + 斑马纹 + 虚线分隔 ── */
+      .swagger-ui table thead tr td, .swagger-ui table thead tr th {
+        color: #794f27;
+        font-weight: 700;
+        background: linear-gradient(180deg, #f0ece2, #e9e3d2);
+        border-bottom: 1px dashed #c4b89e;
+      }
+      .swagger-ui table tbody tr td { background: #f8f8f0; }
+      .swagger-ui table tbody tr:nth-child(2n) td { background: rgba(247, 243, 223, 0.6); }
+      /* ── 模型区 / 代码块 ── */
+      .swagger-ui section.models { border-color: #c4b89e; border-radius: 18px; }
+      .swagger-ui section.models h4 span { color: #794f27; font-weight: 700; }
+      .swagger-ui .parameter__name { color: #794f27; font-weight: 600; }
+      .swagger-ui .parameter__type { color: #8a7b66; }
+      .swagger-ui pre, .swagger-ui .microlight { color: #725d42; }
+      .swagger-ui .highlight-code { background: rgb(247, 243, 223); border-radius: 12px; }
+    </style>
+    {% endblock head %}
+  </head>
+  <body>
+    {% block body %}
+    <div id="swagger-ui"></div>
+    <script src="{{ swagger_ui_bundle }}"></script>
+    <script src="{{ swagger_ui_standalone }}"></script>
+    {% if script_url %}
+    <script src="{{ script_url }}"></script>
+    {% else %}
+    <script>
+    {% include template_name_js %}
+    </script>
+    {% endif %}
+    {% endblock %}
+  </body>
+</html>

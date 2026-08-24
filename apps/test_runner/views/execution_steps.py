@@ -8,6 +8,8 @@ import logging
 
 from datetime import datetime
 
+from models.test_models import TaskCardStatus, TaskOutcome, TestRunStatus
+
 from .. import state_machine as sm
 from ..models import TaskCard, TestResult, TestRunRecord
 from .helpers import _bg_log, _bg_sync
@@ -124,16 +126,16 @@ def _persist_run_start(
 
     if tc_card is not None:
         try:
-            if tc_card.status == "queued":
+            if tc_card.status == TaskCardStatus.QUEUED.value:
                 return sm.dequeue(tc_card, run_id, dev_serial, snapshots, loop_count)
-            if tc_card.status == "idle":
+            if tc_card.status == TaskCardStatus.IDLE.value:
                 sm.enqueue(tc_card, dev_serial)
                 # sm.enqueue() updates the DB row but not the in-memory instance
                 # (it re-fetches inside _save_transaction). Refresh so the
                 # subsequent sm.dequeue() sees status="queued" not "idle".
                 tc_card.refresh_from_db()
                 return sm.dequeue(tc_card, run_id, dev_serial, snapshots, loop_count)
-            if tc_card.status == "running" and tc_card.run_id:
+            if tc_card.status == TaskCardStatus.RUNNING.value and tc_card.run_id:
                 run = tc_card.run
                 assert run is not None  # run_id is set, so the related record exists
                 return run
@@ -148,10 +150,30 @@ def _persist_run_start(
         except Exception:
             _bg_log.exception("start_run %s failed", client_tid)
 
+    # AI 路径（无 TaskCard）：start_run 已预建 PENDING 记录，原地升级为 running；
+    # 兜底：预建缺失（历史调用方直入本函数）时保持创建语义。
+    rec = TestRunRecord.objects.filter(run_id=run_id).first()
+    if rec is not None:
+        rec.status = TestRunStatus.RUNNING.value
+        rec.device_serial = dev_serial
+        rec.selected_cases = snapshots
+        rec.loop_count = loop_count
+        rec.started_at = rec.started_at or datetime.now().isoformat()
+        rec.save(
+            update_fields=[
+                "status",
+                "device_serial",
+                "selected_cases",
+                "loop_count",
+                "started_at",
+            ]
+        )
+        return rec
+
     return TestRunRecord.objects.create(
         run_id=run_id,
         client_task_id=client_tid or "",
-        status="RUNNING",
+        status=TestRunStatus.RUNNING.value,
         device_serial=dev_serial,
         selected_cases=snapshots,
         loop_count=loop_count,
@@ -252,7 +274,7 @@ def _finalize_run(run_record: TestRunRecord, run_model, client_tid: str) -> None
     # ── 状态机终态转换 ──
     if tc_card is not None:
         try:
-            if tc_card.outcome in ("stopped", "interrupted", "error"):
+            if tc_card.outcome in TaskOutcome.fail_values():
                 sm.fail(
                     tc_card,
                     run_record,
@@ -262,7 +284,7 @@ def _finalize_run(run_record: TestRunRecord, run_model, client_tid: str) -> None
                     case_items=case_items,
                     summary=summary,
                 )
-            elif run_model.status.value == "completed":
+            elif run_model.status.value == TestRunStatus.COMPLETED.value:
                 sm.complete(
                     tc_card,
                     run_record,
@@ -275,7 +297,7 @@ def _finalize_run(run_record: TestRunRecord, run_model, client_tid: str) -> None
                 sm.fail(
                     tc_card,
                     run_record,
-                    outcome="stopped",
+                    outcome=TaskOutcome.STOPPED.value,
                     overall_pass=overall_pass,
                     overall_fail=overall_fail,
                     case_items=case_items,
@@ -314,11 +336,7 @@ def _mark_run_failed(
             tc_card = None
 
     # 已有终态（用户手动停止等）→ 不动
-    if tc_card is not None and tc_card.outcome not in (
-        "stopped",
-        "interrupted",
-        "error",
-    ):
+    if tc_card is not None and tc_card.outcome not in TaskOutcome.fail_values():
         try:
             summary = dict(getattr(run_model, "summary", {}) or {})
             if perf_stats:

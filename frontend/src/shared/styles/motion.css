@@ -87,5 +87,5 @@
   transition: box-shadow 0.2s ease;
 }
 .wb-header .brand-mark:hover {
-  box-shadow: 0 4px 12px rgba(162,210,255,0.45);
+  box-shadow: var(--app-shadow-sm);
 }

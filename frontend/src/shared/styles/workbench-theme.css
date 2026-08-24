@@ -44,11 +44,11 @@
 /* 按钮 — Doodle Craft 粗框 */
 .wb-shell .wb-btn.el-button,
 .wb-shell .el-button.wb-btn {
-  border-radius: 4px 8px 4px 8px;
+  border-radius: var(--app-radius-sm);
   font-weight: 700; font-family: inherit;
   border: 2px solid var(--ink);
-  background: #fff; color: var(--ink);
-  box-shadow: 2px 2px 0 rgba(0,0,0,0.04);
+  background: var(--app-bg-card); color: var(--ink);
+  box-shadow: var(--app-shadow-sm);
   transition: all 0.12s;
 }
 .wb-shell .wb-btn.el-button:hover,
@@ -66,10 +66,10 @@
 
 .wb-shell .wb-btn.el-button--danger,
 .wb-shell .el-button.wb-btn.el-button--danger {
-  background: #FFE0DB; color: #a03030; border-color: var(--c-runner);
+  background: var(--app-status-danger-bg); color: var(--app-status-danger-text); border-color: var(--c-runner);
 }
 .wb-shell .wb-btn.el-button--danger:hover {
-  background: #FFD0C8;
+  background: var(--app-btn-hover-danger, #FFD0C8);
 }
 .wb-shell .wb-btn.el-button--success {
   background: var(--c-device); color: var(--ink); border-color: var(--ink);
@@ -78,28 +78,28 @@
 /* 筛选 chip */
 .wb-shell .wb-chip {
   display: inline-flex; align-items: center;
-  padding: 5px 12px; border-radius: 4px 8px 4px 8px;
+  padding: 5px 12px; border-radius: var(--app-radius-sm);
   border: 2px solid transparent; background: transparent;
-  font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer;
-  color: #999;
+  font-size: var(--app-size-xs); font-weight: 700; font-family: inherit; cursor: pointer;
+  color: var(--app-text-secondary);
 }
 .wb-shell .wb-chip.is-active,
 .wb-shell .wb-chip.on {
   background: var(--c-dashboard); border-color: var(--ink); color: var(--ink);
 }
 .wb-shell .wb-status-pill {
-  font-size: 12px; font-weight: 700; padding: 4px 10px;
-  background: #fff; border: 1.5px solid var(--ink);
+  font-size: var(--app-size-xs); font-weight: 700; padding: var(--app-space-xs) 10px;
+  background: var(--app-bg-card); border: 1.5px solid var(--ink);
   border-radius: 3px 6px 3px 6px;
 }
 
 /* AppCard */
 .wb-shell .ac-card,
 .workflow-workbench .ac-card {
-  background: #fff !important;
+  background: var(--app-bg-card) !important;
   border: 2.5px solid var(--ink) !important;
-  border-radius: 6px 10px 6px 10px !important;
-  box-shadow: 2px 3px 0 rgba(0,0,0,0.04) !important;
+  border-radius: var(--app-radius-md) !important;
+  box-shadow: var(--app-shadow-md) !important;
   transition: all 0.15s;
 }
 .wb-shell .ac-card:hover,
@@ -113,16 +113,16 @@
 }
 
 /* AppTabs */
-.wb-shell .ac-tabs .el-tabs__header { margin-bottom: 12px; }
+.wb-shell .ac-tabs .el-tabs__header { margin-bottom: var(--app-space-md); }
 .wb-shell .ac-tabs .el-tabs__nav-wrap::after { display: none; }
 .wb-shell .ac-tabs .el-tabs__active-bar { display: none; }
 .wb-shell .ac-tabs .el-tabs__nav {
-  display: flex; gap: 4px; border: none; padding: 0;
+  display: flex; gap: var(--app-space-xs); border: none; padding: 0;
 }
 .wb-shell .ac-tabs .el-tabs__item {
-  padding: 5px 14px; font-size: 12px; font-weight: 700;
-  border-radius: 4px 8px 4px 8px; border: 2px solid transparent;
-  color: #999; height: auto; line-height: 1.4;
+  padding: 5px 14px; font-size: var(--app-size-xs); font-weight: 700;
+  border-radius: var(--app-radius-sm); border: 2px solid transparent;
+  color: var(--app-text-secondary); height: auto; line-height: 1.4;
   transition: all 0.12s;
 }
 .wb-shell .ac-tabs .el-tabs__item:hover { color: var(--ink); }
@@ -133,10 +133,10 @@
 
 /* AppTable */
 .wb-shell .ac-table th.el-table__cell {
-  background: #f8f6f2; color: var(--ink);
-  font-weight: 700; font-size: 11px; text-transform: uppercase;
+  background: var(--app-bg-subtle); color: var(--ink);
+  font-weight: 700; font-size: var(--app-size-xs); text-transform: uppercase;
   letter-spacing: 0.04em; border-bottom: 2.5px solid var(--ink);
 }
 .wb-shell .ac-table td.el-table__cell {
-  color: var(--ink); border-bottom: 1px solid #e8e4d8;
+  color: var(--ink); border-bottom: 1px solid var(--app-border-light);
 }

@@ -34,7 +34,7 @@ export function useToolbox() {
     loading.value = true
     try {
       const data = await fetchSharedTools()
-      if (data.status) items.value = data.items || []
+      if (data.status) items.value = data.data?.items || []
     } catch (e) { console.error('Failed to load toolbox:', e) }
     loading.value = false
   }
@@ -115,23 +115,23 @@ export function useToolbox() {
 
   // ── Agent 工具箱导入（AgentToolsPanel Step4 使用）──
   const importingIds = ref(new Set())
-  async function importFromToolbox(formId, item) {
+  async function importFromToolbox(formId, item): Promise<boolean> {
     if (!formId) {
       ElMessage.warning('请先保存智能体，再导入工具箱项目')
-      return
+      return false
     }
-    if (importingIds.value.has(item.id)) return
+    if (importingIds.value.has(item.id)) return false
     importingIds.value.add(item.id)
     try {
       const data = await importFromToolboxApi(formId, item.id)
       if (data.status) {
         ElMessage.success(`已导入: ${item.name}`)
-        items.value = items.value.filter((i) => i.id !== item.id)
-      } else {
-        ElMessage.warning(data.message || '导入失败')
+        return true
       }
+      ElMessage.warning(data.message || '导入失败')
     } catch (e) { ElMessage.error('导入失败') }
-    importingIds.value.delete(item.id)
+    finally { importingIds.value.delete(item.id) }
+    return false
   }
 
   onMounted(() => loadItems())

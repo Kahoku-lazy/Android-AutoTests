@@ -35,7 +35,7 @@ html, body, #app { height: 100%; overflow: hidden; }
 
 body {
   font-family: var(--app-font);
-  font-size: var(--app-font-size-base, 14px);
+  font-size: var(--app-size-sm);
   line-height: 1.6;
   color: var(--ink);
   background:
@@ -99,7 +99,7 @@ body {
 
 /* ── Element Plus 组件样式 ── */
 .el-card {
-  background: #fff !important;
+  background: var(--app-bg-card) !important;
   border-radius: var(--app-radius-md) !important;
   border: 2.5px solid var(--ink) !important;
   box-shadow: var(--app-shadow-md) !important;
@@ -128,7 +128,7 @@ body {
 .ac-card--purple::before { background: var(--app-module-purple, #C9B6F2); }
 .ac-card--pink::before { background: var(--app-module-pink, #FFB5A7); }
 .ac-card--yellow::before { background: var(--app-module-yellow, #F4D35E); }
-.ac-card--brown::before { background: var(--app-module-brown, #9a8c98); }
+.ac-card--brown::before { background: var(--app-module-brown, #7C6F83); }
 .ac-card--red::before { background: var(--app-module-pink, #FFB5A7); }
 .ac-card--orange::before { background: var(--app-module-orange, #C9B6F2); }
 
@@ -149,31 +149,31 @@ body {
   box-shadow: 2px 2px 0 rgba(0,0,0,0.06);
   font-weight: 700 !important;
 }
-.el-button--primary:hover { background: #f0c030 !important; }
+.el-button--primary:hover { background: var(--app-highlight) !important; }
 
 .el-table {
   border-radius: var(--doodle-radius) !important;
   overflow: hidden;
-  background: #fff !important;
+  background: var(--app-bg-card) !important;
 }
 .el-table th {
-  background: #f8f6f2 !important;
+  background: var(--app-bg-subtle) !important;
   color: var(--ink) !important;
   font-weight: 700 !important;
   border-bottom: 2px solid var(--ink) !important;
   font-size: var(--app-size-xs); text-transform: uppercase; letter-spacing: 0.04em;
 }
 .el-table td {
-  background: #fff !important;
-  border-bottom: 1px solid #e8e4d8 !important;
+  background: var(--app-bg-card) !important;
+  border-bottom: 1px solid var(--app-border-light) !important;
 }
-.el-table tbody tr:hover > td { background: #fefdfb !important; }
+.el-table tbody tr:hover > td { background: var(--paper) !important; }
 
 .el-tag { border-radius: 3px 6px 3px 6px !important; font-weight: 700 !important; }
 
 .el-input__wrapper,
 .el-select .el-input__wrapper {
-  background: #fff !important;
+  background: var(--app-bg-input) !important;
   border-radius: 4px 8px 4px 8px !important;
   border: 2px solid var(--ink) !important;
   box-shadow: none !important;
@@ -204,7 +204,7 @@ h4 { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); font-fa
 
 /* ── Toast ── */
 .el-message {
-  background: #fff !important;
+  background: var(--app-bg-card) !important;
   border-radius: 4px 8px 4px 8px !important;
   border: 2.5px solid var(--ink) !important;
   box-shadow: 2px 3px 0 rgba(0,0,0,0.06) !important;

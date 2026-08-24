@@ -32,14 +32,14 @@ defineEmits(['click'])
 
 <style scoped>
 .kpi-card {
-  text-align: center; padding: 18px 20px 14px; background: #fff;
+  text-align: center; padding: var(--app-space-md) var(--app-space-lg) var(--app-space-sm); background: var(--app-bg-card);
   border: 3px solid var(--ink); border-radius: var(--app-radius-md);
   box-shadow: var(--app-shadow-sm); position: relative;
   min-width: 120px; overflow: hidden;
 }
 .kpi-card::after {
-  content: '~'; position: absolute; bottom: 2px; right: 8px;
-  font-family: var(--app-font-display); font-size: 17px; opacity: 0.12;
+  content: '~'; position: absolute; bottom: 2px; right: var(--app-space-sm);
+  font-family: var(--app-font-display); font-size: var(--app-size-md); opacity: 0.12;
 }
 
 /* ── 几何图形 — Doodle Craft 不对称几何 ── */
@@ -49,7 +49,7 @@ defineEmits(['click'])
   display: flex; align-items: center; justify-content: center;
 }
 .kpi-card__shape-inner {
-  width: 6px; height: 6px; background: #fff; border-radius: 1px;
+  width: 6px; height: 6px; background: var(--app-bg-card); border-radius: 1px;
 }
 /* 菱形 */
 .kpi-card__shape--diamond { transform: rotate(45deg); }

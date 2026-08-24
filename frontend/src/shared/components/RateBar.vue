@@ -38,7 +38,7 @@ const rateClass = computed(() => {
 
 .rate-bar__track {
   height: 8px;
-  background: #f0ede8;
+  background: var(--app-border-lighter);
   border-radius: 3px;
   overflow: hidden;
   border: 1px solid var(--ink);
@@ -68,14 +68,14 @@ const rateClass = computed(() => {
 }
 
 .rate-bar__label--ok {
-  color: #2d7a2d;
+  color: var(--app-status-success-text);
 }
 
 .rate-bar__label--warn {
-  color: #b08800;
+  color: var(--app-queue-text, #b08800);
 }
 
 .rate-bar__label--bad {
-  color: #a03030;
+  color: var(--app-status-danger-text);
 }
 </style>

@@ -83,7 +83,7 @@ const emit = defineEmits<{
   border-radius: var(--app-radius-md);
   max-width: 560px;
   width: 100%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--app-shadow-lg);
   overflow: hidden;
   animation: dialog-appear 0.2s ease;
 }

@@ -14,10 +14,6 @@ const { updateNodeInternals } = useVueFlow()
 
 const openPicker = inject<(nodeId: string) => void>('vfOpenPicker', () => {})
 const refreshFlow = inject<() => void>('vfRefresh', () => {})
-const addToCase = inject<(nodeId: string, slot: number, step: 'click' | 'wait') => void>(
-  'vfAddToCase',
-  () => {}
-)
 
 const isPopup = computed(() => props.data.nodeType === 'PopupNode')
 const isStart = computed(() => props.data.nodeType === 'StartNode')
@@ -58,10 +54,6 @@ function onAddElement() {
 async function refreshHandles() {
   await nextTick()
   updateNodeInternals([props.id])
-}
-
-function onAddToCase(slot: number, step: 'click' | 'wait') {
-  addToCase(props.id, slot, step)
 }
 
 function onRemovePort(slot: number) {
@@ -207,8 +199,6 @@ watch(
         {{ port.type }}
       </span>
       <div v-if="port.el" class="pf-actions nodrag">
-        <button type="button" title="添加到用例·点击" @click.stop="onAddToCase(port.slot_index, 'click')">👆</button>
-        <button type="button" title="添加到用例·等待" @click.stop="onAddToCase(port.slot_index, 'wait')">⏳</button>
         <button type="button" title="移除" @click.stop="onRemovePort(port.slot_index)">×</button>
       </div>
       <Handle

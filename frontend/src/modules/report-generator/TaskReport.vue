@@ -9,6 +9,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { animate, stagger } from 'animejs'
 import PageHeader from '@/shared/components/PageHeader.vue'
 import KpiCard from '@/shared/components/KpiCard.vue'
+import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import { getTaskReport, formatTime } from './api'
 
 const route = useRoute()
@@ -17,6 +18,7 @@ const taskId = computed(() => String(route.params.taskId))
 
 const task = ref(null)
 const loading = ref(false)
+const error = ref('')
 const activeTab = ref('cases')
 const expandedCases = ref(new Set())
 const expandedBugs = ref(new Set())
@@ -26,10 +28,14 @@ watch(taskId, () => { expandedCases.value = new Set(); expandedBugs.value = new 
 
 async function loadReport() {
   loading.value = true
+  error.value = ''
   try {
     const { data } = await getTaskReport(taskId.value)
     if (data.status) task.value = data.task
-  } catch (e) { console.error(e); }
+    else error.value = data.message || '加载报告失败'
+  } catch (e) {
+    error.value = e?.response?.data?.message || e?.message || '加载报告失败'
+  }
   loading.value = false
   await nextTick()
   animate('.task-report-table tbody tr', { opacity: [0, 1], translateY: [12, 0], delay: stagger(30), duration: 350, ease: 'outCubic' })
@@ -104,12 +110,12 @@ const bugEntries = computed(() => {
 })
 
 function runStatusLabel(s) {
-  const map = { COMPLETED: '通过', FAILED: '失败', STOPPED: '已停止', RUNNING: '运行中' }
+  const map = { completed: '通过', failed: '失败', stopped: '已停止', running: '运行中' }
   return map[s] || s
 }
 function runStatusClass(s) {
-  if (s === 'COMPLETED') return 'badge-pass'
-  if (s === 'FAILED') return 'badge-fail'
+  if (s === 'completed') return 'badge-pass'
+  if (s === 'failed') return 'badge-fail'
   return 'badge-stopped'
 }
 
@@ -118,7 +124,16 @@ function goRunner() { router.push('/runner') }
 </script>
 
 <template>
-  <div v-if="task" class="doc-page detail-page">
+  <div v-if="error" class="doc-page detail-page">
+    <PageHeader
+      title="任务报告 Task Report"
+      color="app-yellow"
+    />
+    <div class="doc-body">
+      <ErrorState :message="error" @retry="loadReport" />
+    </div>
+  </div>
+  <div v-else-if="task" class="doc-page detail-page">
     <PageHeader
       title="任务报告 Task Report"
       :subtitle="`${taskMeta.name || taskMeta.task_id} · ${taskMeta.device_serial || '未知设备'}`"

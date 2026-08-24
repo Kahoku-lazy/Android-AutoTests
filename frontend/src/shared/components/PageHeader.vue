@@ -20,10 +20,10 @@ defineProps({
 
 <style scoped>
 .doc-hero {
-  background: #fff; border-radius: 6px 10px 6px 10px;
+  background: var(--app-bg-card); border-radius: var(--app-radius-lg);
   border: 2.5px solid var(--ink);
-  box-shadow: 2px 3px 0 rgba(0,0,0,0.04);
-  padding: 28px 30px; position: relative; overflow: hidden; margin-bottom: 20px;
+  box-shadow: var(--app-shadow-md);
+  padding: var(--app-space-xl) 30px; position: relative; overflow: hidden; margin-bottom: var(--app-space-lg);
 }
 .doc-hero::after { display: none; }
 
@@ -34,16 +34,16 @@ defineProps({
 
 .doc-hero__title {
   font-family: var(--app-font-display);
-  font-size: 24px;
+  font-size: var(--app-size-xl);
   font-weight: 700;
-  color: var(--app-text, #4a4e69);
+  color: var(--app-text);
   margin-bottom: 6px;
   letter-spacing: -0.5px;
 }
 
 .doc-hero__desc {
-  font-size: 15px;
-  color: var(--app-text-secondary, #9a8c98);
+  font-size: var(--app-size-md);
+  color: var(--app-text-secondary);
   margin: 0;
   max-width: 600px;
   font-weight: 600;
@@ -52,12 +52,12 @@ defineProps({
 .doc-hero__actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--app-space-sm);
   position: relative;
   z-index: 1;
 }
 
 @media (max-width: 768px) {
-  .doc-hero { padding: 24px 20px; border-radius: var(--app-radius-md, 20px); }
+  .doc-hero { padding: var(--app-space-lg) var(--app-space-lg); border-radius: var(--app-radius-md); }
 }
 </style>

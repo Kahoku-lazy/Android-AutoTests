@@ -215,7 +215,7 @@ async function exitPage() {
     }
   }
   skipGuard.value = true;
-  router.push({ path: "/cases", query: { tab: "storage" } });
+  router.push("/cases/storage");
 }
 </script>
 

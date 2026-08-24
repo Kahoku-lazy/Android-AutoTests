@@ -65,11 +65,11 @@ watch(() => props.icon, async () => {
 .wb-header {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--app-space-md);
   height: var(--app-topbar-h, 96px);
   box-sizing: border-box;
-  padding: 14px 20px;
-  background: #fff;
+  padding: var(--app-space-sm) var(--app-space-lg);
+  background: var(--app-bg-card);
   border-bottom: 2.5px solid var(--ink);
   flex-shrink: 0;
   z-index: 10;
@@ -85,10 +85,10 @@ watch(() => props.icon, async () => {
   height: 40px;
   display: grid;
   place-items: center;
-  font-size: 16px;
+  font-size: var(--app-size-md);
   border-radius: 8px 16px 6px 14px;
   flex-shrink: 0;
-  background: #FFE066;
+  background: var(--app-highlight);
   border: 2.5px solid var(--ink);
   transform: rotate(-2deg);
 }
@@ -105,7 +105,7 @@ watch(() => props.icon, async () => {
 .brand-title {
   margin: 0;
   font-family: var(--app-font-display);
-  font-size: 26px;
+  font-size: var(--app-size-2xl);
   font-weight: 700;
   color: var(--ink);
   line-height: 1.2;
@@ -115,7 +115,7 @@ watch(() => props.icon, async () => {
   margin: 1px 0 0;
   font-size: var(--app-size-xs);
   font-weight: 600;
-  color: #999;
+  color: var(--app-text-secondary);
   line-height: 1.35;
 }
 .header-actions {
@@ -129,16 +129,16 @@ watch(() => props.icon, async () => {
 .wb-header :deep(.el-button) {
   font-weight: 800 !important;
   color: var(--ink) !important;
-  background: #fff !important;
+  background: var(--app-bg-card) !important;
   border: 2.5px solid var(--ink) !important;
-  border-radius: 6px 12px 6px 12px !important;
+  border-radius: var(--app-radius-md) !important;
   padding: 5px 14px !important;
   font-family: inherit !important;
   transition: all 0.12s !important;
   box-shadow: none !important;
 }
 .wb-header :deep(.el-button:hover) {
-  background: #FFE066 !important;
+  background: var(--app-highlight) !important;
 }
 .wb-header :deep(.el-button:active) {
   transform: translate(1px, 1px) !important;

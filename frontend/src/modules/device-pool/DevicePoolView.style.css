@@ -95,13 +95,14 @@
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
+  gap: var(--app-space-md);
   flex-shrink: 0;
 }
 .kpi-row > :nth-child(1) { transform: rotate(-0.8deg); }
 .kpi-row > :nth-child(2) { transform: rotate(0.5deg); }
 .kpi-row > :nth-child(3) { transform: rotate(-0.4deg); }
 .kpi-row > :nth-child(4) { transform: rotate(0.6deg); }
+/* z-index 5 = hover 卡片浮于同级内容区之上（低于 50 固定头部/60 下拉层级） */
 .kpi-row > :hover { transform: rotate(0deg) scale(1.03) !important; z-index: 5; }
 
 @media (max-width: 900px) {

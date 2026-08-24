@@ -184,6 +184,7 @@ export function applyWsMessage(task, msg, hooks: WsHandlerHooks = {}) {
       break;
     case "run_finished":
       task.running = false;
+      task.state = "done";  // Step 6 镜像同步（权威 outcome 由服务端事件/刷新覆盖）
       task.status = "done";
       if (task.outcome !== "stopped") task.outcome = "completed";
       task.caseItems?.forEach((c) => {
@@ -208,6 +209,7 @@ export function applyWsMessage(task, msg, hooks: WsHandlerHooks = {}) {
       break;
     case "device_error":
       task.running = false;
+      task.state = "done";  // Step 6 镜像同步
       task.status = "done";
       task.outcome = "error";
       addLog(`💥 ${msg.message}`, "error");

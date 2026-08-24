@@ -84,36 +84,3 @@
   font-size: var(--app-size-sm);
   font-weight: 700;
 }
-
-/* View tabs — pill-style switcher */
-.view-tabs {
-  display: flex;
-  gap: 4px;
-  padding: 6px;
-  margin: 0 24px;
-  background: rgba(137,207,240,0.06);
-  border-radius: 14px;
-  flex-shrink: 0;
-}
-.view-tab {
-  flex: 1;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 10px;
-  background: transparent;
-  font-size: var(--app-size-md);
-  font-weight: 700;
-  color: var(--app-ink-muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: inherit;
-}
-.view-tab:hover {
-  background: rgba(255, 255, 255, 0.6);
-  color: var(--app-text, var(--ink));
-}
-.view-tab.active {
-  background: var(--app-bg-card);
-  color: var(--app-text, var(--ink));
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-}

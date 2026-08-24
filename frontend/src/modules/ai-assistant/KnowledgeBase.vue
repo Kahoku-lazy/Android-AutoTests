@@ -1,9 +1,10 @@
 <script setup>
 
 import AppCard from "@/shared/components/AppCard.vue";
-import AppTable from "@/shared/components/AppTable.vue";
 import KpiCard from "@/shared/components/KpiCard.vue";
 import ErrorState from "@/shared/components/patterns/ErrorState.vue";
+import KbTreeView from "./components/KbTreeView.vue";
+import { buildKbTree } from "./helpers/kb-tree";
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getKnowledgeStatus, getKnowledgeDocuments, reindexKnowledge } from './api/toolbox'
@@ -27,23 +28,8 @@ const filteredDocs = computed(() => {
   return documents.value.filter(d => d.type === activeFilter.value)
 })
 
-const columns = [
-  // 来源列只设 minWidth，其余空间由它吃掉，表格才能铺满
-  { title: '来源', dataIndex: 'source', minWidth: 280, showOverflowTooltip: true },
-  { title: '类型', dataIndex: 'type', width: 160 },
-  { title: '大小', dataIndex: 'size', width: 120, align: 'right' },
-]
-
-function formatType(type) {
-  const map = { project_doc: '📄 项目文档', reference: '📖 参考', manual: '✏️ 手动', generated: '🤖 自动' }
-  return map[type] || type
-}
-
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-}
+/** 按 dev_docs/ 本地目录层级构建折叠树 */
+const docTree = computed(() => buildKbTree(filteredDocs.value))
 
 async function fetchStatus() {
   try {
@@ -117,24 +103,9 @@ onMounted(() => { loadAll() })
         >{{ tab.label }}</button>
       </div>
       <div class="kb-table-wrap">
-        <AppTable
-          :columns="columns"
-          :data-source="filteredDocs"
-          row-key="id"
-          :loading="loading"
-          table-layout="fixed"
-          empty-text="暂无文档，请先点击「重建索引」"
-        >
-          <template #cell-source="{ record }">
-            <span class="kb-doc-source">{{ record.source }}</span>
-          </template>
-          <template #cell-type="{ record }">
-            <span>{{ formatType(record.type) }}</span>
-          </template>
-          <template #cell-size="{ record }">
-            <span>{{ formatSize(record.size) }}</span>
-          </template>
-        </AppTable>
+        <div v-if="loading" class="kb-empty">加载中...</div>
+        <div v-else-if="!docTree.length" class="kb-empty">暂无文档，请先点击「重建索引」</div>
+        <KbTreeView v-else :nodes="docTree" show-meta />
       </div>
     </AppCard>
   </div>
@@ -189,28 +160,11 @@ onMounted(() => { loadAll() })
   width: 100%;
   overflow: auto;
 }
-.kb-table-wrap :deep(.ac-table),
-.kb-table-wrap :deep(.el-table),
-.kb-table-wrap :deep(.el-table__inner-wrapper),
-.kb-table-wrap :deep(.el-table__header-wrapper),
-.kb-table-wrap :deep(.el-table__body-wrapper),
-.kb-table-wrap :deep(.el-table__header),
-.kb-table-wrap :deep(.el-table__body) {
-  width: 100% !important;
-}
-.kb-table-wrap :deep(.el-table .cell) {
-  line-height: 1.45;
-  padding: 8px 12px;
-}
-.kb-doc-source {
-  font-family: var(--app-font-mono);
+.kb-empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--ai-ink-muted);
   font-size: var(--app-size-sm);
-  color: var(--app-text, #3D4A3B);
-  display: block;
-  width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .kb-filters {
   display: flex;

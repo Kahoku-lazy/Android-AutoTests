@@ -3,18 +3,9 @@ import { ref, computed, type Ref, type ComputedRef } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   fetchPlatformTools, fetchAvailableSkills, getKnowledgeDocuments,
-  fetchAgentTools, saveMcp as saveMcpApi, testMcpConnection,
-  uploadSkill as uploadSkillApi, toggleToolEnabled, deleteToolById,
+  fetchAgentTools, deleteToolById,
 } from '../api/toolbox'
-
-interface ToolItem {
-  id?: number
-  name: string
-  tool_type?: string
-  enabled?: boolean
-  config_json?: string
-  config?: object
-}
+import type { ToolItem, KnowledgeDoc } from '../api/toolbox'
 
 interface ToolCategory {
   name: string
@@ -25,16 +16,6 @@ interface SkillItem {
   id?: number
   name: string
   size?: number
-}
-
-interface KnowledgeDoc {
-  id: number | string
-  name?: string
-}
-
-interface McpTestResult {
-  connected: boolean
-  message: string
 }
 
 export interface UseAgentToolsReturn {
@@ -65,31 +46,13 @@ export interface UseAgentToolsReturn {
   openImportDialog: () => void
   closeImportDialog: () => void
   importedDocIds: ComputedRef<string[]>
-  mcpTools: Ref<ToolItem[]>
-  mcpDialogVisible: Ref<boolean>
-  mcpDialogMode: Ref<string>
-  mcpForm: Ref<{ name: string; config_json: string }>
-  mcpJsonError: Ref<string>
-  mcpTestingId: Ref<string | null>
-  mcpTestResults: Ref<Record<string, McpTestResult>>
+  agentImportedTools: Ref<ToolItem[]>
   loadAgentTools: () => Promise<void>
-  openMcpDialog: (mode: string, index?: number) => void
-  saveMcpTool: () => Promise<void>
-  testMcp: (index: number) => Promise<void>
-  toggleMcp: (index: number) => Promise<void>
-  removeMcpApi: (index: number) => Promise<void>
-  removeMcpLocal: (index: number) => void
-  skills: Ref<SkillItem[]>
-  skillUploading: Ref<boolean>
-  skillFolderInput: Ref<HTMLInputElement | null>
-  uploadSkill: (files: File[]) => Promise<void>
-  removeSkill: (index: number) => Promise<void>
+  removeImportedTool: (toolId: number) => Promise<void>
   formatSkillSize: (bytes: number) => string
   platformToolSelectedCount: ComputedRef<number>
   wsSkillEnabledCount: ComputedRef<number>
   kbDocSelectedCount: ComputedRef<number>
-  mcpCount: ComputedRef<number>
-  customSkillCount: ComputedRef<number>
 }
 
 export function useAgentTools(
@@ -106,7 +69,7 @@ export function useAgentTools(
     loadingPlatformTools.value = true
     try {
       const data = await fetchPlatformTools()
-      if (data.status) toolCategories.value = (data as { categories?: ToolCategory[] }).categories || []
+      if (data.status) toolCategories.value = (data.data?.categories || []) as ToolCategory[]
     } catch (err) { console.warn(err) }
     loadingPlatformTools.value = false
   }
@@ -142,7 +105,7 @@ export function useAgentTools(
     try {
       const data = await fetchAvailableSkills()
       if (data.status) {
-        availableSkills.value = (data as { skills?: SkillItem[] }).skills || []
+        availableSkills.value = (data.data?.skills || []) as SkillItem[]
         enabledSkills.value = new Set(availableSkills.value.map(s => s.name))
       }
     } catch (err) { console.warn(err) }
@@ -176,7 +139,7 @@ export function useAgentTools(
     loadingDocs.value = true
     try {
       const data = await getKnowledgeDocuments()
-      if (data.status) knowledgeDocs.value = ((data as { data?: { documents?: KnowledgeDoc[] } }).data?.documents) || []
+      if (data.status) knowledgeDocs.value = data.data?.documents || []
     } catch (err) { console.warn(err) }
     loadingDocs.value = false
   }
@@ -209,155 +172,30 @@ export function useAgentTools(
   function openImportDialog() { showImportDialog.value = true }
   function closeImportDialog() { showImportDialog.value = false }
 
-  // ── MCP ──
-  const mcpTools = ref<ToolItem[]>([])
-  const mcpDialogVisible = ref(false)
-  const mcpDialogMode = ref('add')
-  const mcpEditingIndex = ref(-1)
-  const mcpForm = ref<{ name: string; config_json: string }>({
-    name: '', config_json: '{\n  "transport": "stdio",\n  "command": "",\n  "args": []\n}',
-  })
-  const mcpJsonError = ref('')
-  const mcpTestingId = ref<string | null>(null)
-  const mcpTestResults = ref<Record<string, McpTestResult>>({})
+  // ── 已从 AI 工具箱导入的工具副本（mcp / skill）──
+  const agentImportedTools = ref<ToolItem[]>([])
 
   async function loadAgentTools() {
-    if (isNew.value) return
+    if (isNew.value) { agentImportedTools.value = []; return }
     try {
       const data = await fetchAgentTools(agentId.value)
       if (data.status) {
-        mcpTools.value = ((data as { data?: { mcp?: ToolItem[] } }).data?.mcp) || []
-        skills.value = ((data as { data?: { skills?: SkillItem[] } }).data?.skills) || []
+        const mcp = data.data?.mcp || []
+        const skills = data.data?.skills || []
+        agentImportedTools.value = [...mcp, ...skills].filter(
+          (t) => t.tool_type === 'mcp' || t.tool_type === 'skill',
+        )
       }
     } catch (err) { console.warn(err) }
   }
 
-  function openMcpDialog(mode: string, index?: number) {
-    mcpDialogMode.value = mode
-    mcpEditingIndex.value = index ?? -1
-    mcpJsonError.value = ''
-    if (mode === 'edit' && index !== undefined) {
-      const source = isNew.value
-        ? (form.value.tools as ToolItem[])?.[index]
-        : mcpTools.value[index]
-      if (source) {
-        let cfg: object = {}
-        try { cfg = typeof source.config_json === 'string' ? JSON.parse(source.config_json) : (source.config_json || source.config || {}) } catch { /* empty */ }
-        mcpForm.value = { name: source.name || '', config_json: JSON.stringify(cfg, null, 2) }
-      }
-    } else {
-      mcpForm.value = { name: '', config_json: '{\n  "transport": "stdio",\n  "command": "",\n  "args": []\n}' }
-    }
-    mcpDialogVisible.value = true
-  }
-
-  async function saveMcpTool() {
-    mcpJsonError.value = ''
-    let config: object
-    try { config = JSON.parse(mcpForm.value.config_json) }
-    catch (e) { mcpJsonError.value = 'JSON 格式错误，请检查配置'; return }
-    const name = mcpForm.value.name.trim()
-    if (!name) { mcpJsonError.value = '请输入名称'; return }
-
-    if (isNew.value) {
-      const tools = (form.value.tools || []) as ToolItem[]
-      if (mcpDialogMode.value === 'add') {
-        tools.push({ name, tool_type: 'mcp', enabled: true, config_json: mcpForm.value.config_json })
-      } else {
-        const i = mcpEditingIndex.value
-        if (i >= 0) { tools[i].name = name; tools[i].config_json = mcpForm.value.config_json }
-      }
-      form.value.tools = tools
-    } else {
-      try {
-        if (mcpDialogMode.value === 'add') {
-          await saveMcpApi(agentId.value, name, mcpForm.value.config_json)
-        } else {
-          const t = mcpTools.value[mcpEditingIndex.value]
-          if (t?.id) {
-            await saveMcpApi(agentId.value, name, mcpForm.value.config_json)
-            await toggleToolEnabled(agentId.value, t.id, !!t.enabled)
-          }
-        }
-        await loadAgentTools()
-      } catch (err) { mcpJsonError.value = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '保存失败'; return }
-    }
-    mcpDialogVisible.value = false
-  }
-
-  async function testMcp(index: number) {
-    const source = isNew.value
-      ? (form.value.tools as ToolItem[])?.[index]
-      : mcpTools.value[index]
-    if (!source) return
-    let config: object = {}
-    try { config = typeof source.config_json === 'string' ? JSON.parse(source.config_json) : (source.config_json || source.config || {}) } catch { /* empty */ }
-    const name = source.name
-    mcpTestingId.value = name
+  async function removeImportedTool(toolId: number) {
+    try { await ElMessageBox.confirm('确定要移除该工具吗？', '移除工具', { confirmButtonText: '移除', cancelButtonText: '取消', type: 'warning' }) } catch { return }
     try {
-      if (isNew.value) {
-        mcpTestResults.value[name] = { connected: true, message: '创建模式，跳过测试' }
-      } else {
-        const data = await testMcpConnection(agentId.value, config)
-        mcpTestResults.value[name] = {
-          connected: !!data.connected,
-          message: data.detail || (data.connected ? '连通' : '未连通'),
-        }
-      }
-    } catch (err) {
-      mcpTestResults.value[name] = {
-        connected: false,
-        message: (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '测试失败',
-      }
-    }
-    mcpTestingId.value = null
-  }
-
-  async function toggleMcp(index: number) {
-    if (!isNew.value) {
-      const t = mcpTools.value[index]
-      if (t?.id) {
-        try { await toggleToolEnabled(agentId.value, t.id, !!t.enabled) } catch (err) { ElMessage.error('工具开关切换失败，请稍后重试') }
-      }
-    }
-  }
-
-  async function removeMcpApi(index: number) {
-    const t = mcpTools.value[index]
-    if (t?.id) {
-      try { await ElMessageBox.confirm(`确定要删除 MCP 工具「${t.name}」吗？`, '确认删除', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }) } catch { return }
-      try { await deleteToolById(agentId.value, t.id) } catch (err) { ElMessage.error('删除失败，请稍后重试') }
+      await deleteToolById(agentId.value, toolId)
+      ElMessage.success('已移除')
       await loadAgentTools()
-    }
-  }
-
-  function removeMcpLocal(index: number) {
-    const tools = (form.value.tools || []) as ToolItem[]
-    tools.splice(index, 1)
-    form.value.tools = tools
-  }
-
-  // ── Custom Skills ──
-  const skills = ref<SkillItem[]>([])
-  const skillUploading = ref(false)
-  const skillFolderInput = ref<HTMLInputElement | null>(null)
-
-  async function uploadSkill(files: File[]) {
-    skillUploading.value = true
-    try {
-      await uploadSkillApi(agentId.value, files, '')
-      await loadAgentTools()
-    } catch (err) { ElMessage.error('技能上传失败，请稍后重试') }
-    skillUploading.value = false
-  }
-
-  async function removeSkill(index: number) {
-    const s = skills.value[index]
-    if (s?.id) {
-      try { await ElMessageBox.confirm(`确定要删除技能「${s.name}」吗？`, '确认删除', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }) } catch { return }
-      try { await deleteToolById(agentId.value, s.id) } catch (err) { ElMessage.error('删除失败，请稍后重试') }
-      await loadAgentTools()
-    }
+    } catch (err) { ElMessage.error('移除失败，请稍后重试') }
   }
 
   function formatSkillSize(bytes: number) {
@@ -376,8 +214,6 @@ export function useAgentTools(
     const sources = (form.value.knowledge_sources || {}) as Record<string, boolean>
     return Object.keys(sources)
   })
-  const mcpCount = computed(() => isNew.value ? ((form.value.tools as object[]) || []).length : mcpTools.value.length)
-  const customSkillCount = computed(() => skills.value.length)
 
   return {
     toolCategories, selectedPlatformTools, loadingPlatformTools,
@@ -389,12 +225,8 @@ export function useAgentTools(
     knowledgeDocs, loadingDocs, showImportDialog,
     loadKnowledgeDocs, isDocEnabled, toggleDocEnabled, importDocs, removeDoc,
     openImportDialog, closeImportDialog, importedDocIds,
-    mcpTools, mcpDialogVisible, mcpDialogMode, mcpForm, mcpJsonError,
-    mcpTestingId, mcpTestResults,
-    loadAgentTools, openMcpDialog, saveMcpTool, testMcp, toggleMcp,
-    removeMcpApi, removeMcpLocal,
-    skills, skillUploading, skillFolderInput, uploadSkill, removeSkill, formatSkillSize,
+    agentImportedTools, loadAgentTools, removeImportedTool,
+    formatSkillSize,
     platformToolSelectedCount, wsSkillEnabledCount, kbDocSelectedCount,
-    mcpCount, customSkillCount,
   }
 }

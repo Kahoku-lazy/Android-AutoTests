@@ -12,6 +12,15 @@ export function parseHintFromBlocks(hintBlock: ContentBlock | null): object | st
   return null
 }
 
+/** tool_call 块参数展示文本：inputRaw 优先，其次 input（原生块是 JSON 字符串） */
+function toolInputToDisplay(c: ContentBlock | {}): string {
+  const raw = (c as { inputRaw?: string }).inputRaw
+  if (raw) return raw
+  const input = (c as { input?: unknown }).input
+  if (input == null) return ''
+  return typeof input === 'string' ? input : JSON.stringify(input)
+}
+
 /** 从 persisted blocks 重建 toolFlow 数组 */
 export function rebuildToolFlow(blocks: ContentBlock[]): ToolCall[] {
   if (!blocks.length) return []
@@ -20,8 +29,7 @@ export function rebuildToolFlow(blocks: ContentBlock[]): ToolCall[] {
     return pairs.map(p => ({
       id: (p.call as ContentBlock)?.id as string || '',
       name: (p.call as ContentBlock)?.name as string || '',
-      displayArgs: ((p.call as { inputRaw?: string; input?: object }).inputRaw as string)
-        || (((p.call as { input?: object }).input) ? JSON.stringify((p.call as { input?: object }).input) : ''),
+      displayArgs: toolInputToDisplay((p.call as ContentBlock) || {}),
       state: ((p.result as ContentBlock)?.state as ToolState) || 'success',
       output: ((p.result as ContentBlock)?.output as string) || '',
     }))
@@ -33,8 +41,7 @@ export function rebuildToolFlow(blocks: ContentBlock[]): ToolCall[] {
     return {
       id: (c.id as string) || '',
       name: (c.name as string) || '',
-      displayArgs: ((c as { inputRaw?: string; input?: object }).inputRaw as string)
-        || ((c as { input?: object }).input ? JSON.stringify((c as { input?: object }).input) : ''),
+      displayArgs: toolInputToDisplay(c),
       state: (r?.state as ToolState) || 'success',
       output: (r?.output as string) || '',
     }
@@ -64,7 +71,7 @@ export function rebuildRoundsFromBlocks(blocks: ContentBlock[]): SSERound[] {
       toolsByRound[ri].push({
         id: (p.call as ContentBlock)?.id as string || '',
         name: (p.call as ContentBlock)?.name as string || '',
-        displayArgs: ((p.call as { inputRaw?: string; input?: object }).inputRaw as string) || '',
+        displayArgs: toolInputToDisplay((p.call as ContentBlock) || {}),
         state: ((p.result as ContentBlock)?.state as ToolState) || 'success',
         output: ((p.result as ContentBlock)?.output as string) || '',
       })
@@ -80,7 +87,7 @@ export function rebuildRoundsFromBlocks(blocks: ContentBlock[]): SSERound[] {
       toolsByRound[ri].push({
         id: (c.id as string) || '',
         name: (c.name as string) || '',
-        displayArgs: ((c as { inputRaw?: string }).inputRaw as string) || '',
+        displayArgs: toolInputToDisplay(c),
         state: (r?.state as ToolState) || 'success',
         output: (r?.output as string) || '',
       })

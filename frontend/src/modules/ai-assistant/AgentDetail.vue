@@ -41,7 +41,7 @@ const form = ref({
   max_tokens: 4096,
   generate_kwargs: "{}",
   formatter: "dashscope",
-  max_iters: 10,
+  max_iters: 20,
   parallel_tool_calls: true,
   print_hint_msg: false,
   memory_mode: "inmemory",
@@ -81,14 +81,15 @@ async function loadAgentDetail() {
       isNew.value
         ? Promise.resolve()  // New agents start with empty prompt — no default.
         : getAgentDetail(agentId.value).then((data) => {
-            if (data?.status) {
-              const allTools = data.agent.tools || [];
+            if (data?.status && data.data?.agent) {
+              const agentPayload = data.data.agent;
+              const allTools = agentPayload.tools || [];
               const platformNames = allTools
                 .filter((t) => t.tool_type === "platform" && t.enabled)
                 .map((t) => t.name);
               selectedPlatformTools.value = new Set(platformNames);
-              form.value = { ...form.value, ...data.agent, tools: [] };
-              agent.value = data.agent;
+              form.value = { ...form.value, ...agentPayload, tools: [] };
+              agent.value = agentPayload;
             }
           }),
     ]);
@@ -128,6 +129,7 @@ const providers = [
     formatter: "openai",
     models: [
       "deepseek-v4-flash",
+      "deepseek-v4-flash-vision-exp",
       "deepseek-v4-pro",
       "deepseek-chat",
       "deepseek-reasoner",
@@ -157,39 +159,10 @@ const detectedModels = ref([]);
 	  knowledgeDocs, loadingDocs, showImportDialog,
 	  loadKnowledgeDocs, isDocEnabled, toggleDocEnabled, importDocs, removeDoc,
 	  openImportDialog, closeImportDialog, importedDocIds,
-	  mcpTools, mcpDialogVisible, mcpDialogMode, mcpForm, mcpJsonError,
-	  mcpTestingId, mcpTestResults,
-	  loadAgentTools, openMcpDialog, saveMcpTool, testMcp, toggleMcp,
-	  removeMcpApi, removeMcpLocal,
-	  skills, skillUploading, skillFolderInput, removeSkill, formatSkillSize,
+	  agentImportedTools, loadAgentTools, removeImportedTool,
+	  formatSkillSize,
 	  platformToolSelectedCount, wsSkillEnabledCount, kbDocSelectedCount,
-	  mcpCount, customSkillCount,
 	} = tools
-
-	function highlightJson(raw) {
-	  if (!raw) return '';
-	  try {
-	    const obj = JSON.parse(raw);
-	    const formatted = JSON.stringify(obj, null, 2);
-	    return formatted
-	      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-	      .replace(/("(?:[^"\\]|\\.)*")\s*:/g, '<span style="color:#9cdcfe">$1</span>:')
-	      .replace(/:\s*("(?:[^"\\]|\\.)*")/g, ': <span style="color:#ce9178">$1</span>')
-	      .replace(/:\s*(\d+\.?\d*)/g, ': <span style="color:#b5cea8">$1</span>')
-	      .replace(/:\s*(true|false)/g, ': <span style="color:#569cd6">$1</span>')
-	      .replace(/:\s*(null)/g, ': <span style="color:#569cd6">$1</span>');
-	  } catch { return raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
-	}
-
-	const configPreviewHtml = computed(() => highlightJson(mcpForm.config_json))
-
-	function triggerSkillUpload() { skillFolderInput.value?.click() }
-	async function handleSkillFolderChange(e) {
-	  const files = Array.from(e.target.files || [])
-	  if (!files.length) return
-	  await tools.uploadSkill(files)
-	  e.target.value = ''
-	}
 
 	// Step 4 collapse panel — default expand memory + platform
 	const memoryToolActive = ref(["memory", "platform"])
@@ -218,16 +191,17 @@ async function detectModels() {
       api_key: form.value.api_key,
       base_url: form.value.base_url,
     });
-    if (data.status) {
-      detectedModels.value = data.models || [];
-      if (data.models.length) {
-        ElMessage.success(`检测到 ${data.models.length} 个可用模型`);
+    if (data.status && data.data) {
+      const models = data.data.models || [];
+      detectedModels.value = models;
+      if (models.length) {
+        ElMessage.success(`检测到 ${models.length} 个可用模型`);
         // 如果当前模型不在列表中，自动选择第一个
         if (
-          !data.models.includes(form.value.model_name) &&
-          data.models.length
+          !models.includes(form.value.model_name) &&
+          models.length
         ) {
-          form.value.model_name = data.models[0];
+          form.value.model_name = models[0];
         }
       } else {
         ElMessage.warning("未能检测到可用模型，请检查 API Key 和地址");
@@ -248,16 +222,6 @@ function onProviderChange(p) {
   detectedModels.value = [];
 }
 
-const memoryModes = [
-  { value: "inmemory", label: "短期记忆 (InMemory)" },
-  { value: "longterm", label: "长期记忆 (LongTerm)" },
-];
-const ltmModes = [
-  { value: "agent_control", label: "智能体控制" },
-  { value: "static_control", label: "静态控制" },
-  { value: "both", label: "两者结合" },
-];
-
 function triggerUpload() {
   fileInput.value?.click();
 }
@@ -271,7 +235,7 @@ async function handleAvatarUpload(e) {
       const data = await uploadAvatar( {
         image: reader.result,
       });
-      if (data.status) form.value.avatar = data.url;
+      if (data.status) form.value.avatar = data.data?.url || '';
     } catch (err) { console.error('Failed to upload avatar:', err); ElMessage.error('头像上传失败，请稍后重试') }
     uploading.value = false;
   };
@@ -304,9 +268,13 @@ async function save() {
     ];
   }
   const payload = { ...form.value };
-  // 编辑模式工具经独立 API 管理，payload 携带 tools 会被后端视为「清空全部工具」
+  // 编辑模式：平台工具勾选经 platform_tools 单独同步（后端只 diff platform 类型记录）；
+  // 携带 tools 会被后端视为「清空全部工具」（含 MCP/Skill 副本）
   if (isNew.value) payload.tools = allTools;
-  else delete payload.tools;
+  else {
+    delete payload.tools;
+    payload.platform_tools = [...selectedPlatformTools.value];
+  }
   try {
     const data = await saveAgent(isNew.value, agentId.value, payload);
     if (data.status) {
@@ -363,7 +331,6 @@ async function save() {
       <AgentPromptEditor :form="form" :is-new="isNew" />
 
       <AgentToolsPanel :form="form" :is-new="isNew"
-        :memory-modes="memoryModes" :ltm-modes="ltmModes"
         :tool-categories="toolCategories" :loading-platform-tools="loadingPlatformTools"
         :selected-platform-tools="selectedPlatformTools" :platform-tool-selected-count="platformToolSelectedCount"
         :is-category-selected="isCategorySelected"
@@ -371,21 +338,13 @@ async function save() {
         :enabled-skills="enabledSkills" :ws-skill-enabled-count="wsSkillEnabledCount"
         :knowledge-docs="knowledgeDocs" :loading-docs="loadingDocs"
         :show-import-dialog="showImportDialog" :imported-doc-ids="importedDocIds" :kb-doc-selected-count="kbDocSelectedCount"
-        :mcp-tools="mcpTools" :skills="skills" :mcp-test-results="mcpTestResults"
-        :mcp-testing-id="mcpTestingId" :mcp-count="mcpCount" :custom-skill-count="customSkillCount"
-        :skill-uploading="skillUploading"
-        :mcp-dialog-visible="mcpDialogVisible" :mcp-dialog-mode="mcpDialogMode"
-        :mcp-form="mcpForm" :mcp-json-error="mcpJsonError" :config-preview="configPreviewHtml"
+        :agent-imported-tools="agentImportedTools"
         @toggle-platform-tool="togglePlatformTool" @toggle-category="toggleCategory"
         @toggle-skill="toggleSkill"
         @toggle-doc-enabled="toggleDocEnabled"
         @select-all-skills="selectAllSkills" @deselect-all-skills="deselectAllSkills"
         @open-import-dialog="openImportDialog" @remove-doc="removeDoc"
-        @open-mcp-dialog="openMcpDialog" @save-mcp-tool="saveMcpTool" @close-mcp-dialog="mcpDialogVisible=false"
-        @test-mcp="testMcp" @toggle-mcp="toggleMcp"
-        @remove-mcp-api="removeMcpApi" @remove-mcp-local="removeMcpLocal"
-        @trigger-skill-upload="triggerSkillUpload" @remove-skill="removeSkill"
-        @update:mcp-dialog-visible="mcpDialogVisible=$event" />
+        @toolbox-imported="loadAgentTools" @remove-imported="removeImportedTool" />
 
       <KnowledgeImportDialog
         :visible="showImportDialog"
@@ -414,7 +373,7 @@ async function save() {
   color: var(--ai-teal-text); font-size: var(--app-size-md); font-weight: 700; font-family: inherit;
   cursor: pointer; transition: all 0.2s ease; align-self: flex-start;
 }
-.back-btn:hover { background: var(--ai-teal); color: var(--app-bg-card); box-shadow: 0 4px 14px rgba(25,200,185,0.35); transform: translateY(-1px); }
+.back-btn:hover { background: var(--ai-teal); color: var(--app-bg-card); box-shadow: var(--app-shadow-md); transform: translateY(-1px); }
 
 /* ── Shared step panel (used by all 5 sub-components) ── */
 .step-panel { padding: 28px 32px; }
@@ -425,7 +384,7 @@ async function save() {
 .section-num {
   display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;
   border-radius: 10px; background: linear-gradient(135deg,var(--ai-teal),var(--ai-teal-hover));
-  color: var(--app-bg-card); font-size: var(--app-size-md); font-weight: 700; box-shadow: 0 3px 8px rgba(25,200,185,0.3);
+  color: var(--app-bg-card); font-size: var(--app-size-md); font-weight: 700; box-shadow: var(--app-shadow-sm);
 }
 .agent-form :deep(.el-form-item__label) { font-size: var(--app-size-md); font-weight: 600; color: var(--ai-ink-subtle); }
 .agent-form :deep(.el-input__wrapper),

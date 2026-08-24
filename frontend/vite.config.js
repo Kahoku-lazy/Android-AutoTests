@@ -51,6 +51,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': `http://localhost:${process.env.SERVER_PORT || 8766}`,
+      '/media': `http://localhost:${process.env.SERVER_PORT || 8766}`,
       '/ws': {
         target: `ws://localhost:${process.env.SERVER_PORT || 8766}`,
         ws: true,
@@ -70,7 +71,6 @@ export default defineConfig({
             '@vue-flow/controls',
             '@vue-flow/minimap',
           ],
-          blockly: ['blockly'],
         },
       },
     },

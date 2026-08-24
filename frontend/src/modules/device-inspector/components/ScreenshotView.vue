@@ -1,10 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { ElMessage } from 'element-plus'
 import { animate } from 'animejs'
-import { wsUrl } from '@/shared/ws-url'
-import { getToken } from '@/shared/auth/token-storage'
-import { apiGetScreenshot } from '../api'
+import { mediaUrl } from '../store'
 import { IconDevice } from '@/shared/icons'
 
 const props = defineProps({
@@ -14,35 +11,26 @@ const props = defineProps({
   selected: { type: Object, default: null },
   ocrResults: { type: Array, default: () => [] },
   selectedOcr: { type: Object, default: null },
-  active: { type: Boolean, default: false },
+  screenshotPath: { type: String, default: '' },
 })
-const emit = defineEmits(['click-element', 'click-ocr', 'device-changed', 'screenshot-update'])
+const emit = defineEmits(['click-element', 'click-ocr'])
 
-const screenshotUrl = ref('')
-const ws = ref(null)
-const wsState = ref('connecting')
-const statusMessage = ref('正在连接截图流…')
 const imgRef = ref(null)
 const overlayRef = ref(null)
 const screenInnerRef = ref(null)
+const imgBoxRef = ref(null)
 const hovered = ref(null)
 
-// ── No-device animation refs ──
+// ── No-snapshot idle animation ──
 const ringOuterRef = ref(null)
 const ringInnerRef = ref(null)
 const noDeviceIconRef = ref(null)
 const noDeviceTitleRef = ref(null)
 
 let resizeObserver = null
-let frameTimer = null
-let pendingFrame = null
-let reconnectTimer = null
-let snapshotTimer = null
-let pollTimer = null
-const FRAME_INTERVAL_MS = 250
-const POLL_INTERVAL_MS = 250
-
 let noDeviceAnimeInstances = []
+
+const screenshotUrl = computed(() => mediaUrl(props.screenshotPath))
 
 function startNoDeviceAnimation() {
   stopNoDeviceAnimation()
@@ -56,39 +44,13 @@ function startNoDeviceAnimation() {
     for (const { el, key } of targets) {
       if (!el) continue
       if (key === 'icon') {
-        noDeviceAnimeInstances.push(animate(el, {
-          translateY: [-8, 8],
-          duration: 2500,
-          loop: true,
-          ease: 'inOutSine',
-          direction: 'alternate',
-        }))
+        noDeviceAnimeInstances.push(animate(el, { translateY: [-8, 8], duration: 2500, loop: true, ease: 'inOutSine', direction: 'alternate' }))
       } else if (key === 'title') {
-        noDeviceAnimeInstances.push(animate(el, {
-          opacity: [0.55, 1],
-          duration: 2500,
-          loop: true,
-          ease: 'inOutSine',
-          direction: 'alternate',
-        }))
+        noDeviceAnimeInstances.push(animate(el, { opacity: [0.55, 1], duration: 2500, loop: true, ease: 'inOutSine', direction: 'alternate' }))
       } else if (key === 'ringOuter') {
-        noDeviceAnimeInstances.push(animate(el, {
-          scale: [0.85, 1.2],
-          opacity: [0.28, 0.04],
-          duration: 3000,
-          loop: true,
-          ease: 'inOutSine',
-          direction: 'alternate',
-        }))
+        noDeviceAnimeInstances.push(animate(el, { scale: [0.85, 1.2], opacity: [0.28, 0.04], duration: 3000, loop: true, ease: 'inOutSine', direction: 'alternate' }))
       } else if (key === 'ringInner') {
-        noDeviceAnimeInstances.push(animate(el, {
-          scale: [0.9, 1.3],
-          opacity: [0.22, 0.04],
-          duration: 2200,
-          loop: true,
-          ease: 'inOutSine',
-          direction: 'alternate',
-        }))
+        noDeviceAnimeInstances.push(animate(el, { scale: [0.9, 1.3], opacity: [0.22, 0.04], duration: 2200, loop: true, ease: 'inOutSine', direction: 'alternate' }))
       }
     }
   })
@@ -99,186 +61,91 @@ function stopNoDeviceAnimation() {
   noDeviceAnimeInstances = []
 }
 
-const placeholderText = computed(() => {
-  if (wsState.value === 'connecting') return '正在连接截图流…'
-  if (wsState.value === 'no_device') return statusMessage.value || '请先在上方选择设备'
-  if (wsState.value === 'error') return statusMessage.value || '截图获取失败'
-  if (wsState.value === 'connected') return '等待设备画面…'
-  return '暂无设备画面'
-})
-
-const aspectStyle = computed(() => {
-  if (!props.screenW || !props.screenH) return {}
-  return {
-    aspectRatio: `${props.screenW} / ${props.screenH}`,
-    '--phone-w': props.screenW,
-    '--phone-h': props.screenH,
-  }
-})
-
-// ── Lifecycle ──
-
 onMounted(() => {
-  if (props.active) {
-    startPolling()
-    connectWS()
-  } else {
-    startNoDeviceAnimation()
-  }
-  resizeObserver = new ResizeObserver(() => scheduleDrawOverlay())
+  if (!props.screenshotPath) startNoDeviceAnimation()
+  resizeObserver = new ResizeObserver(() => {
+    fitBox()
+    scheduleDrawOverlay()
+  })
+  // 初始渲染时机：mounted 时 refs 已就绪，直接 observe + 首帧校正
+  // （watch(ref) 默认 pre-flush 会错过本次赋值，这里补一次兜底）
+  nextTick(() => {
+    if (screenInnerRef.value) {
+      resizeObserver.observe(screenInnerRef.value)
+      fitBox()
+      scheduleDrawOverlay()
+    }
+  })
 })
 
 watch(screenInnerRef, (el, prev) => {
   if (!resizeObserver) return
   if (prev) resizeObserver.unobserve(prev)
-  if (el) resizeObserver.observe(el)
+  if (el) {
+    resizeObserver.observe(el)
+    fitBox()
+    scheduleDrawOverlay()
+  }
 })
 
 onUnmounted(() => {
-  teardown()
-})
-
-// ── active gate: when parent connects/disconnects ──
-
-watch(() => props.active, (val) => {
-  if (val) {
-    stopNoDeviceAnimation()
-    startPolling()
-    connectWS()
-  } else {
-    teardown()
-    // Clear screenshot immediately
-    revokeBlobUrl()
-    screenshotUrl.value = ''
-    startNoDeviceAnimation()
-  }
-})
-
-function teardown() {
-  ws.value?.close()
-  ws.value = null
-  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null }
-  if (snapshotTimer) { clearTimeout(snapshotTimer); snapshotTimer = null }
-  if (frameTimer) { clearTimeout(frameTimer); frameTimer = null }
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+  if (resizeObserver) resizeObserver.disconnect()
   stopNoDeviceAnimation()
-}
+})
 
-// ── Screenshot polling (250 ms) ──
+watch(() => props.screenshotPath, (val) => {
+  if (val) stopNoDeviceAnimation()
+  else startNoDeviceAnimation()
+  nextTick(() => {
+    fitBox()
+    scheduleDrawOverlay()
+  })
+})
 
-function startPolling() {
-  stopPolling()
-  fetchSnapshot({ silent: true })
-  pollTimer = setInterval(() => {
-    fetchSnapshot({ silent: true })
-  }, POLL_INTERVAL_MS)
-}
+// ── 选中联动：表格选中元素 → 截图区滚动到该位置（在可视区外时平滑滚动）──
 
-function stopPolling() {
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
-}
+const phoneFrameRef = ref(null)
 
-// ── REST screenshot ──
-
-async function fetchSnapshot({ silent = false } = {}) {
-  try {
-    const { data } = await apiGetScreenshot()
-    if (data.status && data.image) {
-      applyScreenshot(data.image, data.format || 'jpeg')
-      wsState.value = 'connected'
-      statusMessage.value = ''
-      if (data.screen_w) emit('device-changed', data)
-      return true
-    }
-    if (data.message) {
-      wsState.value = 'no_device'
-      statusMessage.value = data.message
-      if (!silent) ElMessage.error(data.message)
-    }
-    return false
-  } catch (e) {
-    if (!silent) ElMessage.error(e?.message || '截图获取失败')
-    return false
+function scrollToRow(el) {
+  const box = imgBoxRef.value
+  const frame = phoneFrameRef.value
+  if (!box || !frame || !el || !props.screenW) return
+  const scale = box.clientWidth / props.screenW
+  if (!scale) return
+  const centerY = (el.y + (el.height || 0) / 2) * scale
+  const viewTop = frame.scrollTop
+  const viewBottom = frame.scrollTop + frame.clientHeight
+  if (centerY < viewTop || centerY > viewBottom) {
+    frame.scrollTo({ top: Math.max(0, centerY - frame.clientHeight / 2), behavior: 'smooth' })
   }
 }
 
-async function refresh() {
-  return fetchSnapshot()
+watch(() => props.selected, (el) => {
+  if (!el) return
+  scheduleDrawOverlay()
+  nextTick(() => scrollToRow(el))
+})
+watch(() => props.selectedOcr, (t) => {
+  if (!t) return
+  scheduleDrawOverlay()
+  nextTick(() => scrollToRow(t))
+})
+
+// ── 图片盒按屏幕比例精确适配容器（JS 计算，避免 aspect-ratio 双约束变形）──
+
+function fitBox() {
+  const frame = phoneFrameRef.value
+  const box = imgBoxRef.value
+  if (!frame || !box || !props.screenW || !props.screenH) return
+  const cw = frame.clientWidth - 24   // 减去 phone-frame padding（12×2）
+  const ch = frame.clientHeight - 24
+  if (cw < 10 || ch < 10) return
+  const scale = Math.min(cw / props.screenW, ch / props.screenH)
+  box.style.width = `${Math.floor(props.screenW * scale)}px`
+  box.style.height = `${Math.floor(props.screenH * scale)}px`
 }
 
-defineExpose({ refresh, redraw: scheduleDrawOverlay })
-
-// ── WebSocket ──
-
-function connectWS() {
-  wsState.value = 'connecting'
-  statusMessage.value = '正在连接截图流…'
-  const token = getToken()
-  if (!token) return
-  const url = `${wsUrl('/ws/screenshot')}?token=${encodeURIComponent(token)}`
-  ws.value = new WebSocket(url)
-  ws.value.onmessage = (e) => {
-    try {
-      const msg = JSON.parse(e.data)
-      if (msg.type === 'device_changed') {
-        wsState.value = 'connected'
-        emit('device-changed', msg)
-      } else if (msg.type === 'screenshot' && msg.image) {
-        wsState.value = 'connected'
-        statusMessage.value = ''
-        queueScreenshot(msg.image, msg.format || 'jpeg')
-      } else if (msg.type === 'no_device') {
-        wsState.value = 'no_device'
-        statusMessage.value = msg.message || '未选择设备'
-        revokeBlobUrl()
-        screenshotUrl.value = ''
-      } else if (msg.type === 'screenshot_error') {
-        wsState.value = 'error'
-        statusMessage.value = msg.message || '截图失败'
-      }
-    } catch (e) { console.error(e); }
-  }
-  ws.value.onopen = () => {
-    wsState.value = 'connected'
-    statusMessage.value = screenshotUrl.value ? '' : '已连接，正在获取画面…'
-    emit('device-changed', { type: 'connected' })
-    if (!screenshotUrl.value) fetchSnapshot({ silent: true })
-    // WebSocket connected — stop redundant HTTP polling
-    stopPolling()
-  }
-  ws.value.onerror = () => {
-    wsState.value = 'error'
-    statusMessage.value = '截图流连接失败，3 秒后重试'
-  }
-  ws.value.onclose = () => {
-    if (!props.active) return  // don't reconnect if parent disconnected
-    wsState.value = 'connecting'
-    statusMessage.value = '连接已断开，正在重连…'
-    // Restart HTTP polling as fallback while WS reconnects
-    startPolling()
-    reconnectTimer = setTimeout(connectWS, 3000)
-  }
-}
-
-function queueScreenshot(b64, format) {
-  pendingFrame = { b64, format }
-  if (frameTimer) return
-  frameTimer = setTimeout(flushScreenshot, FRAME_INTERVAL_MS)
-}
-
-function flushScreenshot() {
-  frameTimer = null
-  if (!pendingFrame) return
-  const { b64, format } = pendingFrame
-  pendingFrame = null
-  applyScreenshot(b64, format)
-}
-
-function applyScreenshot(b64, format) {
-  // Use data URL directly — browser decodes natively (much faster than atob + byte loop)
-  screenshotUrl.value = `data:image/${format};base64,${b64}`
-  emit('screenshot-update', { url: screenshotUrl.value })
-}
+// ── Overlay ──
 
 function displayScale() {
   const img = imgRef.value
@@ -302,7 +169,7 @@ function scheduleDrawOverlay() {
 function drawOverlay() {
   const img = imgRef.value
   const canvas = overlayRef.value
-  if (!img || !canvas || !screenshotUrl.value) return
+  if (!img || !canvas || !props.screenshotPath) return
   const w = img.clientWidth
   const h = img.clientHeight
   if (w < 10 || h < 10) return
@@ -327,60 +194,44 @@ function drawOverlay() {
     const isSelected = props.selected && el._idx === props.selected._idx
 
     if (isSelected) {
-      // Fill with semi-transparent color for readability
       ctx.fillStyle = 'rgba(231,76,60,0.15)'
-      ctx.fillRect(
-        Math.round(el.x * s), Math.round(el.y * s),
-        Math.round(el.width * s), Math.round(el.height * s),
-      )
+      ctx.fillRect(Math.round(el.x * s), Math.round(el.y * s), Math.round(el.width * s), Math.round(el.height * s))
       ctx.strokeStyle = '#e74c3c'
       ctx.lineWidth = 2.5
     } else if (isHovered) {
       ctx.fillStyle = 'rgba(255,152,0,0.10)'
-      ctx.fillRect(
-        Math.round(el.x * s), Math.round(el.y * s),
-        Math.round(el.width * s), Math.round(el.height * s),
-      )
+      ctx.fillRect(Math.round(el.x * s), Math.round(el.y * s), Math.round(el.width * s), Math.round(el.height * s))
       ctx.strokeStyle = '#ff9800'
       ctx.lineWidth = 2
     } else {
       ctx.strokeStyle = 'rgba(64,158,255,0.5)'
       ctx.lineWidth = 1.2
     }
-    ctx.strokeRect(
-      Math.round(el.x * s), Math.round(el.y * s),
-      Math.round(el.width * s), Math.round(el.height * s),
-    )
+    ctx.strokeRect(Math.round(el.x * s), Math.round(el.y * s), Math.round(el.width * s), Math.round(el.height * s))
   })
 
   props.ocrResults.forEach(ocr => {
     const isSelected = props.selectedOcr && ocr === props.selectedOcr
     if (isSelected) {
       ctx.fillStyle = 'rgba(231,76,60,0.15)'
-      ctx.fillRect(
-        Math.round(ocr.x * s), Math.round(ocr.y * s),
-        Math.round(ocr.width * s), Math.round(ocr.height * s),
-      )
+      ctx.fillRect(Math.round(ocr.x * s), Math.round(ocr.y * s), Math.round(ocr.width * s), Math.round(ocr.height * s))
       ctx.strokeStyle = '#e74c3c'
       ctx.lineWidth = 2.5
     } else {
       ctx.strokeStyle = 'rgba(167,139,250,0.55)'
       ctx.lineWidth = 1.2
     }
-    ctx.strokeRect(
-      Math.round(ocr.x * s), Math.round(ocr.y * s),
-      Math.round(ocr.width * s), Math.round(ocr.height * s),
-    )
+    ctx.strokeRect(Math.round(ocr.x * s), Math.round(ocr.y * s), Math.round(ocr.width * s), Math.round(ocr.height * s))
   })
 }
 
 function onImgLoad() {
+  fitBox()
   scheduleDrawOverlay()
 }
 
 watch(() => props.selected, () => scheduleDrawOverlay())
 watch(() => props.selectedOcr, () => scheduleDrawOverlay())
-// Shallow watch — parent passes new array reference when elements change
 watch(() => props.elements, () => scheduleDrawOverlay())
 watch(() => props.ocrResults, () => scheduleDrawOverlay())
 watch([() => props.screenW, () => props.screenH], () => scheduleDrawOverlay())
@@ -444,7 +295,7 @@ function onScreenContextMenu(e) { e.preventDefault(); onScreenClick(e) }
 let mousemoveRaf = null
 
 function onMouseMove(e) {
-  if (mousemoveRaf) return // throttle to one hit-test per animation frame
+  if (mousemoveRaf) return
   mousemoveRaf = requestAnimationFrame(() => {
     mousemoveRaf = null
     const hit = hitTest(e.clientX, e.clientY)
@@ -469,36 +320,31 @@ function onMouseLeave() {
 
 <template>
   <div class="screenshot-panel">
-    <div class="phone-frame">
-      <!-- Active + screenshot → phone screen -->
-      <div v-if="active && screenshotUrl" class="screen-wrap">
-        <div ref="screenInnerRef" class="screen-inner" :style="aspectStyle">
-          <img
-            ref="imgRef"
-            :src="screenshotUrl"
-            class="screen-img"
-            draggable="false"
-            @load="onImgLoad"
-          />
-          <canvas
-            ref="overlayRef"
-            class="overlay"
-            @click="onScreenClick"
-            @contextmenu="onScreenContextMenu"
-            @mousemove="onMouseMove"
-            @mouseleave="onMouseLeave"
-          />
+    <div ref="phoneFrameRef" class="phone-frame">
+      <!-- 快照截图（静态，按屏幕比例自适应）+ 边界框 overlay 贴图 -->
+      <div v-if="screenshotPath" class="screen-wrap">
+        <div ref="screenInnerRef" class="screen-inner">
+          <div ref="imgBoxRef" class="img-box">
+            <img
+              ref="imgRef"
+              :src="screenshotUrl"
+              class="screen-img"
+              draggable="false"
+              @load="onImgLoad"
+            />
+            <canvas
+              ref="overlayRef"
+              class="overlay"
+              @click="onScreenClick"
+              @contextmenu="onScreenContextMenu"
+              @mousemove="onMouseMove"
+              @mouseleave="onMouseLeave"
+            />
+          </div>
         </div>
       </div>
 
-      <!-- Active but no screenshot yet → WS state placeholder -->
-      <div v-else-if="active && !screenshotUrl" class="no-signal" :class="`no-signal--${wsState}`">
-        <span class="no-signal__icon"><IconDevice :size="32" /></span>
-        <p class="no-signal__title">{{ placeholderText }}</p>
-        <p v-if="wsState === 'error'" class="no-signal__hint">请确认后端服务与 ADB 设备已就绪</p>
-      </div>
-
-      <!-- Not active → idle animation -->
+      <!-- 无快照 → 空态 -->
       <div v-else class="no-signal no-signal--idle">
         <div class="no-device-animation">
           <div class="no-device-rings">
@@ -506,8 +352,8 @@ function onMouseLeave() {
             <div ref="ringInnerRef" class="no-device-ring no-device-ring--inner"></div>
           </div>
           <span ref="noDeviceIconRef" class="no-signal__icon"><IconDevice :size="32" /></span>
-          <p ref="noDeviceTitleRef" class="no-signal__title">设备未连接~</p>
-          <p class="no-signal__hint">在上方下拉框选择设备并点击「连接」后开始</p>
+          <p ref="noDeviceTitleRef" class="no-signal__title">暂无页面快照</p>
+          <p class="no-signal__hint">选择设备与方法后点击「获取」，或从快照列表 / 已保存页面回看</p>
         </div>
       </div>
     </div>

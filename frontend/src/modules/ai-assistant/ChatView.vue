@@ -133,6 +133,7 @@ const {
   approveAll,
   denyAll,
 } = useSSE({
+  agentId,
   activeConv,
   conversations,
   messages,
@@ -190,8 +191,8 @@ async function loadAgent() {
   loadError.value = "";
   try {
     const data = await getAgentDetail(agentId.value);
-    if (data.status) {
-      agent.value = data.agent;
+    if (data.status && data.data?.agent) {
+      agent.value = data.data.agent;
       loadConversations();
     } else {
       loadError.value = data.message || "加载 Agent 失败";

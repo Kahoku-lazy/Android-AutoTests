@@ -1,77 +1,88 @@
 <script setup lang="ts">
+/** KnowledgeImportDialog — 知识库导入弹窗：目录（dir:）与文件（doc:）混选 */
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-
-interface DocItem { id: number | string; name?: string; source?: string; type?: string; size?: number }
+import KbTreeView from './KbTreeView.vue'
+import { buildKbTree, dirKeyToPath, type KbDoc } from '../helpers/kb-tree'
 
 const props = defineProps<{
   visible?: boolean
-  allDocs?: DocItem[]
-  importedDocIds?: number[]
+  allDocs?: KbDoc[]
+  importedDocIds?: (string | number)[]
 }>()
 
-const emit = defineEmits<{ import: [ids: number[]]; close: [] }>()
+const emit = defineEmits<{ import: [keys: string[]]; close: [] }>()
 
 const searchText = ref('')
-const selectedIds = ref(new Set<number | string>())
+const selectedKeys = ref(new Set<string>())
 
-const filteredDocs = computed(() => {
+const importedKeys = computed(() => new Set<string>((props.importedDocIds || []).map(String)))
+
+/** 文档是否已被导入覆盖（文件键或某个目录键命中） */
+function isCovered(doc: KbDoc): boolean {
+  const keys = importedKeys.value
+  if (keys.has(String(doc.id))) return true
+  const src = doc.source || ''
+  for (const k of keys) {
+    if (k.startsWith('dir:')) {
+      const dirPath = dirKeyToPath(k)
+      if (src === dirPath || src.startsWith(dirPath + '/')) return true
+    }
+  }
+  return false
+}
+
+const availableDocs = computed(() => {
   const query = searchText.value.trim().toLowerCase()
-  const importedSet = new Set<number | string>(props.importedDocIds)
-  // Only show docs that haven't been imported yet
-  const available = props.allDocs.filter(d => !importedSet.has(d.id))
-  if (!query) return available
-  return available.filter(d =>
+  const docs = (props.allDocs || []).filter(d => !isCovered(d))
+  if (!query) return docs
+  return docs.filter(d =>
     String(d.source || '').toLowerCase().includes(query) ||
     String(d.id).toLowerCase().includes(query) ||
-    (d.type || '').toLowerCase().includes(query)
+    (d.type || '').toLowerCase().includes(query),
   )
 })
 
-const selectedCount = computed(() => selectedIds.value.size)
+const tree = computed(() => buildKbTree(availableDocs.value))
 
-function isSelected(id) { return selectedIds.value.has(id) }
+const selectedCount = computed(() => selectedKeys.value.size)
 
-function toggleDoc(id) {
-  const next = new Set(selectedIds.value)
-  next.has(id) ? next.delete(id) : next.add(id)
-  selectedIds.value = next
+function toggleSelect(key: string) {
+  const next = new Set(selectedKeys.value)
+  next.has(key) ? next.delete(key) : next.add(key)
+  selectedKeys.value = next
 }
 
+/** 全选 = 全部顶层节点键（目录保持 dir: 动态引用语义） */
 function selectAll() {
-  selectedIds.value = new Set(filteredDocs.value.map(d => d.id))
+  selectedKeys.value = new Set(tree.value.map(n => n.key))
 }
 
 function deselectAll() {
-  selectedIds.value = new Set()
+  selectedKeys.value = new Set()
 }
 
 function handleImport() {
-  if (selectedIds.value.size === 0) {
-    ElMessage.warning('请至少选择一个文档')
+  if (selectedKeys.value.size === 0) {
+    ElMessage.warning('请至少选择一个文档或目录')
     return
   }
-  emit('import', [...selectedIds.value].map(Number))
-  selectedIds.value = new Set()
+  emit('import', [...selectedKeys.value])
+  selectedKeys.value = new Set()
   searchText.value = ''
 }
 
 function handleClose() {
-  selectedIds.value = new Set()
+  selectedKeys.value = new Set()
   searchText.value = ''
   emit('close')
-}
-
-function formatSize(bytes) {
-  if (!bytes) return '0 B'
-  return bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(bytes/1024).toFixed(1)} KB` : `${(bytes/1048576).toFixed(1)} MB`
 }
 </script>
 
 <template>
   <el-dialog
     :model-value="visible"
-    title="从知识库导入文档"
+    title="从知识库导入文档 / 目录"
     width="650px"
     :close-on-click-modal="false"
     @update:model-value="val => { if (!val) handleClose() }"
@@ -82,31 +93,23 @@ function formatSize(bytes) {
           v-model="searchText"
           class="import-search-input"
           placeholder="搜索文档..."
-          @input="(e) => searchText = (e.target as HTMLInputElement).value"
         />
       </div>
       <div class="import-select-row">
         <el-button size="small" text type="primary" @click="selectAll">全选</el-button>
         <el-button size="small" text type="primary" @click="deselectAll">全部取消</el-button>
-        <span class="import-count">已选 {{ selectedCount }} 个</span>
+        <span class="import-count">已选 {{ selectedCount }} 项</span>
+        <span class="import-hint">勾选目录 = 动态引用该目录下全部文件</span>
       </div>
       <div class="import-doc-list">
-        <div v-if="!filteredDocs.length" class="import-empty">没有可导入的文档</div>
-        <div
-          v-for="doc in filteredDocs" :key="doc.id"
-          class="import-doc-item"
-          :class="{ selected: isSelected(doc.id) }"
-          role="button" tabindex="0"
-          @click="toggleDoc(doc.id)"
-          @keydown.enter.prevent="toggleDoc(doc.id)"
-          @keydown.space.prevent="toggleDoc(doc.id)"
-        >
-          <el-checkbox :model-value="isSelected(doc.id)" />
-          <div class="import-doc-info">
-            <span class="import-doc-name">{{ doc.source || doc.id }}</span>
-            <span class="import-doc-meta">{{ doc.type }} · {{ formatSize(doc.size) }}</span>
-          </div>
-        </div>
+        <div v-if="!tree.length" class="import-empty">没有可导入的文档</div>
+        <KbTreeView
+          v-else
+          :nodes="tree"
+          selectable
+          :selected-keys="selectedKeys"
+          @toggle-select="toggleSelect"
+        />
       </div>
     </div>
     <template #footer>
@@ -126,18 +129,9 @@ function formatSize(bytes) {
   box-sizing: border-box;
 }
 .import-search-input:focus { border-color: var(--ai-teal); }
-.import-select-row { display: flex; align-items: center; gap: 8px; }
+.import-select-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .import-count { font-size: var(--app-size-xs); color: var(--ai-ink-muted); margin-left: auto; }
+.import-hint { font-size: var(--app-size-xs); color: var(--ai-ink-muted); }
 .import-doc-list { max-height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
 .import-empty { padding: 24px; text-align: center; color: var(--ai-ink-muted); font-size: var(--app-size-sm); }
-.import-doc-item {
-  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
-  border: 1.5px solid var(--ai-warm-border); border-radius: 10px;
-  cursor: pointer; transition: all .15s; background: var(--app-bg-card);
-}
-.import-doc-item:hover { border-color: var(--ai-teal); background: var(--ai-teal-bg); }
-.import-doc-item.selected { border-color: var(--ai-teal); background: var(--ai-teal-bg); }
-.import-doc-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.import-doc-name { font-weight: 600; font-size: var(--app-size-sm); color: var(--ink); }
-.import-doc-meta { font-size: var(--app-size-xs); color: var(--ai-ink-muted); }
 </style>

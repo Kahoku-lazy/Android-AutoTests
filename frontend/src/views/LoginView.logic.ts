@@ -13,7 +13,6 @@ import type { ViewState, FieldErrors } from "@/shared/types/auth"
 import { useViewStateMachine } from "./composables/useViewStateMachine"
 import { useSavedUsername } from "./composables/useSavedUsername"
 import { useAuthFlow } from "./composables/useAuthFlow"
-import { useHeroImage } from "./composables/useHeroImage"
 
 export interface LoginViewState {
   activeAccount: Ref<string>
@@ -31,8 +30,6 @@ export interface LoginViewState {
   canLogin: ComputedRef<boolean>
   regErrors: ComputedRef<FieldErrors>
   canRegister: ComputedRef<boolean>
-  heroImageSrc: string
-  heroImageVisible: Ref<boolean>
   serverError: Ref<string>
   clearServerError: () => void
   handleLogin: () => Promise<void>
@@ -40,7 +37,6 @@ export interface LoginViewState {
   switchMode: (m: ViewState) => void
   onSwitchToExisting: () => void
   onAddNewAccount: () => void
-  onHeroImageError: () => void
 }
 
 export function useLoginView(): LoginViewState {
@@ -48,7 +44,6 @@ export function useLoginView(): LoginViewState {
 
   const auth = useAuthPool()
   const { loginUsername, rememberMe, saveUsername } = useSavedUsername()
-  const { heroImageSrc, heroImageVisible, onHeroImageError } = useHeroImage()
 
   // ── 表单 ref ──
   const loginPassword = ref("")
@@ -139,8 +134,6 @@ export function useLoginView(): LoginViewState {
     canLogin,
     regErrors,
     canRegister,
-    heroImageSrc,
-    heroImageVisible,
     serverError,
     clearServerError,
     handleLogin,
@@ -148,6 +141,5 @@ export function useLoginView(): LoginViewState {
     switchMode,
     onSwitchToExisting,
     onAddNewAccount,
-    onHeroImageError,
   }
 }

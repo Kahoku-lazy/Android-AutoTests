@@ -79,6 +79,7 @@ export function useTaskOperations({
             running: true,
             runId,
             status: 'running',
+            state: 'running',  // Step 6 镜像同步
           }
           bindListTaskWS(tasks.value[idx], runId)
           taskAddLog(tasks.value[idx], '🚀 任务已启动')
@@ -86,6 +87,7 @@ export function useTaskOperations({
       } else if (data.status && data.queued?.length) {
         task.running = false
         task.status = 'queued'
+        task.state = 'queued'  // Step 6 镜像同步
         task.outcome = ''
         task.conclusion = ''
         taskAddLog(task, '⏳ 设备正忙，任务已加入队列等待执行')
@@ -93,15 +95,18 @@ export function useTaskOperations({
         startQueuePolling()
       } else if (data.status) {
         task.running = false
+        task.state = 'idle'  // Step 6 镜像同步
         taskAddLog(task, '❌ 设备不可用，任务未启动', 'error')
         ElMessage.warning('设备不可用或未就绪，任务已保存，可在列表中重试')
       } else {
         task.running = false
+        task.state = 'idle'  // Step 6 镜像同步
         taskAddLog(task, `❌ ${data.message}`, 'error')
         ElMessage.error(data.message || '启动失败')
       }
     } catch (e) {
       task.running = false
+      task.state = 'idle'  // Step 6 镜像同步
       const errMsg = e?.response?.data?.message || e.message || '未知错误'
       taskAddLog(task, `❌ ${errMsg}`, 'error')
       ElMessage.error(`启动失败：${errMsg}`)
@@ -121,6 +126,7 @@ export function useTaskOperations({
     task.running = false
     task.runId = ''
     task.status = 'idle'
+    task.state = 'idle'  // Step 6 镜像同步
     task.caseItems = []
     task.stepStates = []
     task.overallPass = 0
@@ -139,6 +145,7 @@ export function useTaskOperations({
     }
     task.running = false
     task.status = 'done'
+    task.state = 'done'  // Step 6 镜像同步
     task.currentCaseTitle = ''
     task.currentIteration = 0
     task.outcome = 'stopped'
@@ -172,7 +179,7 @@ export function useTaskOperations({
       mode: task.mode, deviceSerial: task.deviceSerial,
       caseIds: [...task.caseIds], loopCount: task.loopCount,
       intervalSeconds: task.intervalSeconds || 5,
-      running: false, runId: '', caseItems: [], stepStates: [], logs: [],
+      running: false, runId: '', state: 'idle', caseItems: [], stepStates: [], logs: [],
       overallPass: 0, overallFail: 0,
       createdAt: new Date().toISOString(), creator: getCurrentUsername(),
       currentCaseTitle: '', currentIteration: 0, outcome: '',
@@ -210,7 +217,7 @@ export function useTaskOperations({
       caseIds: normalizeCaseIds(newForm.value.caseIds),
       loopCount: newForm.value.loopCount,
       intervalSeconds: newForm.value.intervalSeconds,
-      running: false, runId: '', status: 'idle',
+      running: false, runId: '', status: 'idle', state: 'idle',
       caseItems: [], stepStates: [], logs: [],
       overallPass: 0, overallFail: 0,
       createdAt: new Date().toISOString(), creator: getCurrentUsername(),

@@ -4,12 +4,12 @@ export const BUILTIN_MODELS: Record<string, string[]> = {
   dashscope: ['qwen-max', 'qwen-plus', 'qwen-turbo', 'qwen3-235b'],
   openai: ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo', 'o4-mini'],
   anthropic: ['claude-fable-5', 'claude-opus-4-8', 'claude-sonnet-4-6'],
-  deepseek: ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-chat', 'deepseek-reasoner'],
+  deepseek: ['deepseek-v4-flash', 'deepseek-v4-flash-vision-exp', 'deepseek-v4-pro', 'deepseek-chat', 'deepseek-reasoner'],
   custom: [],
 }
 
 export const CUSTOM_PROVIDER_MODELS: Record<string, string[]> = {
-  deepseek: ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-chat', 'deepseek-reasoner'],
+  deepseek: ['deepseek-v4-flash', 'deepseek-v4-flash-vision-exp', 'deepseek-v4-pro', 'deepseek-chat', 'deepseek-reasoner'],
 }
 
 /** 合并内置 + 自定义 + 检测到的模型列表 */

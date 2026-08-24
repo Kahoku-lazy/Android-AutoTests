@@ -45,7 +45,7 @@ export async function getAgentDetail(agentId: number): Promise<AgentDetailRespon
 }
 
 /** 检测可用模型 */
-export async function detectModels(payload: object): Promise<{ status: boolean; models?: string[]; message?: string }> {
+export async function detectModels(payload: object): Promise<{ status?: boolean; data?: { models?: string[] }; message?: string }> {
   const { data } = await djangoClient.post('/ai/models/detect', payload)
   return data
 }

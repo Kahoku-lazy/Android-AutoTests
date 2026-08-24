@@ -2,7 +2,7 @@
  * useDebugDevice — 调试设备选择与连接管理
  * Extracted from CaseEditor.vue
  */
-import { ref, computed } from "vue";
+import { ref, computed, onUnmounted, onDeactivated } from "vue";
 import { ElMessage } from "element-plus";
 import { listDevices, connectDebugDevice as apiConnectDebugDevice, disconnectDebugDevice as apiDisconnectDebugDevice } from "../api/uiAutomation";
 
@@ -50,6 +50,17 @@ export function useDebugDevice() {
     debugConnected.value = false;
     debugDevice.value = '';
   }
+
+  // fix-observe-leak：离开编辑页即释放观察占用（后端另有 30min 超时兜底）。
+  // App.vue 对路由页 keep-alive → 切页触发 onDeactivated 而非 onUnmounted，双钩子兜底。
+  function releaseOnLeave() {
+    if (debugConnected.value && debugDevice.value) {
+      apiDisconnectDebugDevice(debugDevice.value).catch(() => {});
+      debugConnected.value = false;
+    }
+  }
+  onDeactivated(releaseOnLeave);
+  onUnmounted(releaseOnLeave);
 
   return { devices, debugDevice, debugConnected, debugConnecting, availableDevices, loadDevices, connectDebugDevice, disconnectDebugDevice };
 }

@@ -13,14 +13,13 @@ const props = defineProps<{
 const emit = defineEmits<{
   open: [node: LibNode]
   createFlow: []
-  createCase: []
   createFolder: [parentId: string | null]
   export: [node: LibNode]
   enterFolder: [folderId: string]
 }>()
 
 const lib = useLibraryStore()
-const filter = ref<'all' | 'page_flow' | 'test_case'>('all')
+const filter = ref<'all' | 'page_flow'>('all')
 const renamingId = ref<string | null>(null)
 const renameValue = ref('')
 /** 子目录折叠：默认全部展开 */
@@ -39,14 +38,11 @@ watch(
 )
 
 function sortFiles(list: LibNode[]): LibNode[] {
-  return list.slice().sort((a, b) => {
-    if (a.type !== b.type) return a.type === 'page_flow' ? -1 : 1
-    return a.name.localeCompare(b.name, 'zh')
-  })
+  return list.slice().sort((a, b) => a.name.localeCompare(b.name, 'zh'))
 }
 
 function filesOf(parentId: string | null): LibNode[] {
-  let list = lib.nodes.filter(n => n.type !== 'folder' && n.parentId === parentId)
+  let list = lib.nodes.filter(n => n.type === 'page_flow' && n.parentId === parentId)
   if (filter.value !== 'all') list = list.filter(n => n.type === filter.value)
   return sortFiles(list)
 }
@@ -114,7 +110,6 @@ function fmtTime(iso: string) {
           + 子目录
         </button>
         <button type="button" class="btn flow" @click="emit('createFlow')">+ 页面流</button>
-        <button type="button" class="btn case" @click="emit('createCase')">+ 用例</button>
       </div>
     </div>
 
@@ -135,23 +130,14 @@ function fmtTime(iso: string) {
       >
         页面流
       </button>
-      <button
-        type="button"
-        class="chip"
-        :class="{ on: filter === 'test_case' }"
-        @click="filter = 'test_case'"
-      >
-        测试用例
-      </button>
     </div>
 
     <div v-if="!directFiles.length && !childFolders.length" class="empty">
       <div class="empty-ico">📂</div>
       <p>这个目录还是空的</p>
-      <p class="empty-tip">新建页面流 / 用例，或添加子目录整理文件</p>
+      <p class="empty-tip">新建页面流，或添加子目录整理文件</p>
       <div class="empty-btns">
         <button type="button" class="btn flow solid" @click="emit('createFlow')">新建页面流</button>
-        <button type="button" class="btn case solid" @click="emit('createCase')">新建测试用例</button>
       </div>
     </div>
 
@@ -173,8 +159,8 @@ function fmtTime(iso: string) {
             @click="emit('open', f)"
           >
             <div class="file-top">
-              <span class="file-ico">{{ f.type === 'page_flow' ? '🗺️' : '🧩' }}</span>
-              <span class="file-type">{{ f.type === 'page_flow' ? '页面流' : '测试用例' }}</span>
+              <span class="file-ico">🗺️</span>
+              <span class="file-type">页面流</span>
               <span class="file-ops" @click.stop>
                 <button type="button" title="导出" @click="emit('export', f)">↓</button>
                 <button type="button" title="重命名" @click="startRename(f)">✎</button>
@@ -238,8 +224,8 @@ function fmtTime(iso: string) {
               @click="emit('open', f)"
             >
               <div class="file-top">
-                <span class="file-ico">{{ f.type === 'page_flow' ? '🗺️' : '🧩' }}</span>
-                <span class="file-type">{{ f.type === 'page_flow' ? '页面流' : '测试用例' }}</span>
+                <span class="file-ico">🗺️</span>
+                <span class="file-type">页面流</span>
                 <span class="file-ops" @click.stop>
                   <button type="button" title="导出" @click="emit('export', f)">↓</button>
                   <button type="button" title="重命名" @click="startRename(f)">✎</button>
@@ -317,21 +303,10 @@ function fmtTime(iso: string) {
   color: var(--app-green-deep);
   background: rgba(162,210,255,0.14);
 }
-.btn.case:hover {
-  border-color: #e0b52e;
-  color: var(--ac-ink);
-  background: rgba(247, 205, 103, 0.2);
-}
 .btn.solid.flow {
   background: linear-gradient(135deg, var(--app-green-deep), var(--app-blue));
   color: var(--app-bg-card);
   border: 2px solid var(--app-green-deep);
-  border-style: solid;
-}
-.btn.solid.case {
-  background: rgba(255,214,165,0.72);
-  color: var(--ac-ink);
-  border: 2px solid #e0b52e;
   border-style: solid;
 }
 .filters { display: flex; gap: 8px; margin-bottom: 14px; }
@@ -454,7 +429,6 @@ function fmtTime(iso: string) {
   border-color: var(--ac-teal);
 }
 .file-card.page_flow { border-left: 5px solid var(--app-green-deep); }
-.file-card.test_case { border-left: 5px solid #ffd6a5; }
 .file-top {
   display: flex;
   align-items: center;

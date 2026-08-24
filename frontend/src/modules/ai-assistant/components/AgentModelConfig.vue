@@ -55,16 +55,6 @@ const emit = defineEmits<{ 'provider-change': []; 'detect-models': [] }>()
       </el-form-item>
       <el-form-item>
         <template #label>
-          <span class="label-with-help">Formatter <el-tooltip content="消息格式模板。DashScope=阿里Qwen，OpenAI=GPT/DeepSeek，Anthropic=Claude。选错会导致 API 报错。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
-        </template>
-        <el-select v-model="form.formatter" style="width:100%">
-          <el-option value="dashscope" label="DashScope (Qwen)" />
-          <el-option value="openai" label="OpenAI (GPT)" />
-          <el-option value="anthropic" label="Anthropic (Claude)" />
-        </el-select>
-      </el-form-item>
-      <el-form-item>
-        <template #label>
           <span class="label-with-help">生成参数 <el-tooltip content="JSON 格式额外参数，合并到 API 请求中。常用: top_p(核采样), frequency_penalty(减少重复), presence_penalty(鼓励新话题)。不支持的参数会被静默忽略。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
         </template>
         <el-input v-model="form.generate_kwargs" type="textarea" :rows="2" placeholder='{"parallel_tool_calls":true}' />

@@ -1,8 +1,8 @@
 # Frontend CLAUDE.md — AI 约束
 
-> 工作于 `frontend/` 时必须遵守。细则与反例见 `dev_docs/项目笔记/前端claude笔记.md`；关单自检用 skill `vue-frontend-check`。
+> 工作于 `frontend/` 时必须遵守
 
-**口诀**：展示不碰网，流程不做校验，类型跟着实现走，图标进工厂，共享等第二人，重构先问值不值。  
+**口诀**：展示不碰网，流程不做校验，类型跟着实现走，图标进工厂，共享等第二人，重构先问值不值。
 **完成定义**：构建通过 ≠ 完成；必须在真实页面验证。
 
 ---
@@ -11,35 +11,70 @@
 
 1. 需求模糊 → 列 3～5 种理解让用户选，禁止默默挑一种执行。
 2. 先读目标 `.vue` 的 **template + script + style 三块**；改 CSS 前提取全部 class，禁止凭印象重写漏 inner class。
-3. 查：`DESIGN_SYSTEM.md`（色/组件/布局）、`.claude/rules/frontend.md`、模块专属约束（见笔记 §0️⃣）。
-4. 判边界：纯 UI→①；API/字段→②；AI SSE→③；跨界按序做。
+3. 编写细则与决策树 → `.claude/rules/frontend.md`；关单自检 → skill `vue-frontend-check`。
+4. **同步约定**：全局事项（后端 WS 事件表、响应信封、共享组件清单、端口/协议、分层纪律）变更时，必须同步 `.claude/rules/frontend.md` 与 skill `vue-frontend-check`（checklist/calibration 对应口径）。
+5. **模块专属约束**（红线/契约/协议特例/关单附加项）唯一落点为 `src/modules/{name}/CLAUDE.md`，变更只改对应模块文件。
 
 ---
 
 ## 1. 职责与红线
 
-| 层 | 只做 | 严禁 |
-|----|------|------|
-| `.vue` 展示 | 渲染 / v-model / emit / testid | fetch、axios、复杂业务、校验编排 |
-| `*.logic.ts` 编排 | 组合 composable、提交前校验、清表单 | 直连 HTTP |
-| 流程 composable | API → 副作用 → 跳转 | 表单校验、弹校验 toast |
-| 校验 composable | `errors` / `canSubmit` | 发请求 |
+### 1.1 分层与模块边界
 
-- 组件**必须**走模块 `api.js` / `api/*.ts`，禁止组件内 axios/fetch。
-- 业务 HTTP 经 **djangoClient → `/api/...` DRF**；逻辑层接口与后端协议（urls/Serializer/契约）一致。
-- API/认证函数不做表单校验；`ElMessage.warning` 在 `handleXxx` 调用方。
-- 公开 TS 签名与实现参数**同改**；单测随职责迁移。
-- `.vue` > 500 行：先拆样式，再拆逻辑。
-- JSON：前端 camelCase，HTTP snake_case；响应 `{status, data|message}`。
-- 写操作禁止空 `catch` 静默吞错。
-- `dashboard` 只读，禁止写操作。
-- 新图标：`shared/icons/index.ts` 的 `makeIcon`；禁止无必要的 `IconXxx.vue`。
-- 抽 `@/shared`：等第二个真实消费方；单处不提前抽象。
-- 状态：`ref` → composable → Pinia（不可跳级）；新模块默认不用 Pinia（workflow 除外）。
-- 必用共享件：`ErrorState` / `EmptyState` / `AppCard` / `AppTable` 等（见笔记共享组件表）；禁止同场景自建。
+| 层               | 只做                           | 严禁                    |
+| --------------- | ---------------------------- | --------------------- |
+| `.vue` 展示       | 渲染 / v-model / emit / testid | 任何 HTTP、复杂业务、校验编排   |
+| `*.logic.ts` 编排 | 组合 composable、提交前校验、清表单      | 直连 HTTP               |
+| 流程 composable   | API → 副作用 → 跳转               | 表单校验、弹校验 toast        |
+| 校验 composable   | `errors` / `canSubmit`       | 发请求                   |
 
-**默认拒绝的重构**：动态 `component :is` 硬合并不同 props 卡片；整表 `reactive` 连锁大改；首屏图 `lazy`；1～2 处路径就抽常量；无行为变化的间接层。  
-登录暂缓项与触发条件 → `dev_docs/项目笔记/前端claude笔记.md` §编码行为规范.8。
+- 组件**必须**走模块 `api.js` / `api/*.ts`；业务 HTTP 经 **djangoClient →** `/api/...` **DRF**（唯一 HTTP 出口）。
+
+**总体禁止（适用于任何前端代码）**：
+
+| 禁止 | 说明 |
+| --- | --- |
+| 数据库直连 | 一切数据来自 REST / WS / SSE |
+| 业务状态判定 | 消费后端权威 `state` 字段，禁止自行推导（`deriveTaskStatus` 已删，taskUtils 只读 `state` + `running`；禁止新增推导逻辑） |
+| 设备 / 引擎直连 | 不碰 ADB / u2 / Airtest / Playwright；设备交互全经后端 API |
+| AI 推理 | 只消费 SSE 事件流，禁止前端调用模型 |
+| 文件 I/O | 报告 / 截图 / 日志落盘全由后端完成 |
+| WS 通道（硬约束） | 仅 2 消费点：`/ws/test-run/{runId}`（执行进度）、`/ws/case-editing/{id}`（编辑锁）——**禁止新增**；截图流已快照化，禁止恢复 WS 截图流 |
+| SSE 通道（硬约束） | 仅 1 个：AI 对话流 |
+
+**模块边界与契约总表**（模块专属细节唯一落点 → `src/modules/{name}/CLAUDE.md`）：
+
+| 前端模块 | 后端 App | 通道 | 一句话提示 |
+| --- | --- | --- | --- |
+| dashboard | dashboard | HTTP | 全平台唯一只读区 |
+| device-pool | device_pool | HTTP | 设备生命周期 UI，30s 心跳 |
+| device-inspector | device_inspector + device_pool（设备列表） | HTTP（无 WS） | 快照抓取回看（REST） |
+| element-locator | element_locator | HTTP | 三域资产 CRUD |
+| case-manager | case_manager + device_pool/element_locator/test_runner（调试） | HTTP + **WS**（编辑锁） | 用例定义编排 |
+| test-runner | test_runner + case_manager/device_pool（只读） | HTTP + **WS**（进度） | 执行看板 |
+| report-generator | report_generator | HTTP（下载走 FileResponse） | 报告只读 |
+| workflow | workflow + element_locator（素材） | HTTP | VueFlow 编排（Pinia 用户之一） |
+| ai-assistant | ai_assistant + **evaluator（前端寄宿）** + 各业务 App（经 Tool 后端） | HTTP + **SSE** | 对话 UI + 唯一 SSE |
+| views/LoginView | accounts | HTTP | 登录/注册入口（accounts 唯一前端入口；认证经 `/api/auth/*`） |
+
+**Pinia 现状（唯一真相）**：全前端仅 3 个 store —— workflow `wf-workflow` / `wf-library` + device-inspector `device-inspector`；均模块内使用，禁止跨模块 import；新建 store 走 `.claude/rules/frontend.md` 状态管理决策树（先 ref → composable，不默认用 Pinia）。
+
+**共享层边界（**`frontend/src/shared/`**）**：
+
+| 单元 | 只做 | 禁止 |
+| --- | --- | --- |
+| `api-client.ts` + `api-auth-interceptors.ts` + `auth/token-storage.ts` | axios 实例（baseURL `/api`、120s 超时）、`DjangoResponse` 信封类型、`formatApiError` 中文文案（拦截 409/404/401/5xx）；JWT 附加、401→refresh→重放、失败跳登录 | 业务逻辑；表单校验；文案暴露技术术语 |
+| `ws-url.ts` | WS URL 构造（Vite 代理） | 直连后端端口 |
+| `icons/` | `makeIcon` 工厂统一生成 | 无必要的独立 `IconXxx.vue` |
+| `components/` / `patterns/` | 通用展示组件（WorkbenchHeader/AppTable/AppCard/KpiCard/FilterTabs/RateBar/ErrorState/EmptyState/ConfirmButton） | 业务组件（归各模块） |
+| `types/` | 跨模块 DTO 类型 | 类型与后端契约不一致 |
+
+**视图层与路由**：`views/LoginView`（登录/注册入口、表单校验、错误提示；accounts 后端唯一前端入口，认证经 `/api/auth/*`）· `views/NotFound.vue`（404 兜底）· `router.ts`（汇总 9 模块 routes、JWT 守卫无 token→/login、`afterEach` 更新 document.title；路由只声明不做业务）。
+
+### 1.3 契约规则
+
+- 逻辑层接口与后端协议一致（路径、方法、字段、信封）；对照后端 `urls.py`、Serializer、`dev_docs/03-设计与架构/工具-VUE_API_CONTRACT.md`；模块级特例见各模块 `CLAUDE.md`。
+- JSON：前端 camelCase，HTTP snake_case；响应 `{status, data|message}`（**特例**：test-runner `/runner/*`、report-generator `/reports/*`、workflow legacy、element_locator legacy（`/elements/pages|items|web*|api-*`）、case_manager legacy（`/cases/definitions|directories|lock|...`）、evaluator legacy（`/evaluator/banks|runs|frameworks|...`）为平铺 `{status, ...}` 信封，前端按端点结构读取；`step-types` 特例 `{status, data:{types}}`）。
 
 ---
 
@@ -47,40 +82,38 @@
 
 1. **布局裁剪（P0）**：真实页面缩小窗口可滚；侧栏展开不挤爆；表格区 `flex: 1 1 0; min-height: 0; overflow-y: auto`；外层禁止乱加 `overflow:hidden`。
 2. **Dialog/Drawer**：长内容可滚，底部按钮可达。
-3. **字段显示完整性**：有数据来源与空值占位；列表列 / Card / detail 关键字段不漏。
-4. **表格长文本列**：`show-overflow-tooltip` 或等价。
-5. **视图模式切换**（卡片↔表格等）后布局仍可用。
-6. 字号/颜色走 token；静态样式进 class。
-7. 三态 + **saving**；错误文案对用户友好，不暴露技术术语。
-8. **多视图互斥**；**composable 入参**约定一致。
-9. **保存**：信封解包；strip UI-only；校验≥Schema。
-10. **展示组件**：薄组件；危险操作确认；编辑锁只读禁用；子面板只改自己 v-model 块。
-11. 纯展示子组件：不为「配套重构」而改；只改契约/图标/bug/a11y。
+3. **展示组件**：薄组件；危险操作确认；编辑锁只读禁用；子面板只改自己 v-model 块；纯展示子组件不为「配套重构」而改（只改契约/图标/bug/a11y）。
+
+其余验收口径（字段完整性 / 截断 / 四态 / 多视图互斥 / composable 入参 / 信封解包与保存清洗）→ skill `vue-frontend-check`；布局与组件规格 → `doodle-craft` skill；风格值一律读 `src/shared/styles/tokens.css`（先看头部「现行 / @deprecated / 待收敛」声明再取 token）。
+
+**硬陷阱**：① CSS 块注释内禁止嵌 `*/`（列举 token 用顿号或 `、`，不要用 `/` 拼接）；② 组件 scoped 内禁硬编码色值/字号（字号 ≥12px、只用 `--app-*` token）；JS 画布例外（ECharts/Canvas/动态 SVG）用字面量，改 tokens 后同步 JS 渲染配置；③ 禁项：玻璃态（`backdrop-filter` 全局清零）、旧色值 `#4a4e69`/`#9a8c98`。
 
 ---
 
 ## 3. 协议要点
 
-**HTTP / DRF**：组件 emit → composable → 模块 `api` → `djangoClient`（统一客户端）→ `/api/...` **DRF**。  
-- 逻辑层接口须与后端协议一致（路径、方法、字段、信封）；对照 `urls.py`、Serializer、`VUE_API_CONTRACT.md`。  
-- 禁止组件/composable 旁路直连后端端口或另起非约定 HTTP 客户端。  
-**WS**：`wsUrl('/ws/...')` 经 Vite 代理，禁止直连后端端口。test-runner 六种事件 type 不可漏。  
-**报告下载**：FileResponse 用 `fetch().text()`，不用 JSON `api()`。  
-**SSE（AI）**：按事件类型渲染；停止生成须保留已生成内容；ThinkingBlock / ToolCallCard 折叠规则见笔记 §③。
+- **HTTP / DRF**：组件 emit → composable → 模块 `api` → `djangoClient` → `/api/...` DRF（唯一出口；禁止旁路直连后端端口或另起非约定 HTTP 客户端）。
+- **WS**：`wsUrl('/ws/...')` 经 Vite 代理，禁止直连端口。test-runner 事件 type 不可漏（9 种：`log` / `heartbeat` / `case_started` / `step_started` / `step_result` / `iteration_result` / `case_finished` / `run_finished` / `device_error`，见 `useTaskWebSocket.ts`；后端另发 `run_started`，前端暂不消费）。编辑锁见 `src/modules/case-manager/CLAUDE.md`。
+- **报告下载**：FileResponse 用 `fetch().text()`，不用 JSON `api()`。
+- **SSE（AI）**：单请求流式对话；事件经 `SSEMessageBuilder` 归一化 phase 后按类型渲染（细节 → `src/modules/ai-assistant/CLAUDE.md`）：
+
+| 事件 | 前端渲染 |
+| --- | --- |
+| `REPLY_START` | 消息气泡出现，开始新回复 |
+| `TEXT_BLOCK_DELTA` | 追加文本到消息气泡（逐字打字效果） |
+| `THINKING_BLOCK_START/DELTA/END` | ThinkingBlock 可折叠推理过程 |
+| `TOOL_CALL_START/DELTA` | ToolCallCard（loading 态 + 参数 JSON） |
+| `TOOL_RESULT_START/DELTA/END` | 更新 ToolCallCard 结果摘要 |
+| `HINT_BLOCK` | SOP 状态卡片 / 任务卡片 |
+| `REQUIRE_USER_CONFIRM` | HITL 确认弹窗 |
+| `REPLY_END` | 消息完成 → `save-message` 持久化 |
+| `error` | 错误提示，允许重试 |
+
+- 停止生成：断流保留已生成内容，旧流回调经 stale 检查失效；断线重连最多 3 次（1s/2s/4s），AI 不可用降级阻塞模式 `POST /api/ai/chat/sync`；终端 `reply_end` 与 `exceed_max_iters` 均触发完成，未到终端断流须报错；`ThinkingBlock` 默认折叠、`ToolCallCard` 默认展开。
 
 ---
 
-## 4. 关单前最短清单
+## 4. 关单前
 
-```
-[ ] 真实页面验证；布局可滚；Dialog 按钮可达；关键字段可见
-[ ] 三态/saving；错误文案无技术术语
-[ ] 多视图互斥、父子选中/清空同步（若涉及）
-[ ] 展示层：危险确认、锁态禁用、分块面板/步骤字段对齐（若改 components）
-[ ] 保存：信封解包、DTO 清洗、校验≥Schema（若涉及编辑器）
-[ ] 逻辑层 API 与后端 DRF 协议一致；经 djangoClient/`api` 通道（若涉及接口）
-[ ] 类型与实现一致；testid 未无故改名
-[ ] diff 每行可追溯到用户需求
-```
-
-详细门禁 → skill `vue-frontend-check`。完整决策树与模块踩坑 → `dev_docs/项目笔记/前端claude笔记.md`。
+- 跑 skill `vue-frontend-check`（详细门禁）+ 本模块 `CLAUDE.md` 关单附加项。
+- 非 skill 项：`diff` 每行可追溯到用户需求；真实页面验证（构建通过 ≠ 完成）。

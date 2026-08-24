@@ -41,25 +41,45 @@ export function useConversation(
   const connectionMode = ref<ConnectionMode>('unknown')
   const editingConvId = ref<number | null>(null)
   const editingTitle = ref('')
+  let bgRefreshTimer: ReturnType<typeof setTimeout> | null = null
+
+  /** 切走后仍在后台生成的回复：轮询拉取，直到 assistant 回复落库或放弃。 */
+  function scheduleBgRefresh(id: number, retriesLeft: number) {
+    bgRefreshTimer = setTimeout(async () => {
+      bgRefreshTimer = null
+      if (activeConv.value !== id) return
+      try {
+        const data = await getMessages(id)
+        const msgs = data.data?.messages
+        if (!data.status || !Array.isArray(msgs)) return
+        const last = msgs[msgs.length - 1] as { role?: string } | undefined
+        messageStore.hydrateMessages(msgs)
+        if (last && last.role === 'user' && retriesLeft > 1) {
+          scheduleBgRefresh(id, retriesLeft - 1)
+        }
+      } catch (e) { logError('Failed to refresh background messages', e, 'useConversation') }
+    }, 3000)
+  }
 
   async function loadConversations() {
     try {
       const data = await listConversations(agentIdRef.value)
-      if (data.status) conversations.value = data.conversations
+      if (data.status) conversations.value = data.data?.conversations || []
     } catch (e) { logError('Failed to load conversations', e, 'useConversation') }
   }
 
   async function newChat(onSelect?: (id: number) => Promise<void>) {
     try {
       const data = await apiCreateConversation(agentIdRef.value, '新对话')
-      if (data.status) {
+      const payload = data.data
+      if (data.status && payload?.id) {
         conversations.value.unshift({
-          id: data.id,
+          id: payload.id,
           title: '新对话',
           status: 'active',
         })
         connectionMode.value = 'sse'
-        if (onSelect) await onSelect(data.id)
+        if (onSelect) await onSelect(payload.id)
       }
     } catch (e) {
       connectionMode.value = 'unknown'
@@ -70,6 +90,7 @@ export function useConversation(
 
   async function selectChat(id: number, { onAfterSelect }: { onAfterSelect?: (id: number) => Promise<void> } = {}) {
     activeConv.value = id
+    if (bgRefreshTimer) { clearTimeout(bgRefreshTimer); bgRefreshTimer = null }
     try {
       const data = await getMessages(id)
       if (data.status) {
@@ -77,10 +98,19 @@ export function useConversation(
 
         // Always hydrate from DB — the backend persists AI replies for
         // background streams, so DB is always the source of truth.
-        if (Array.isArray(data.messages)) {
-          messageStore.hydrateMessages(data.messages)
+        const msgs = data.data?.messages
+        if (Array.isArray(msgs)) {
+          messageStore.hydrateMessages(msgs)
         } else {
           messageStore.clearMessages()
+        }
+
+        // Last message is still a user message → a background stream may be
+        // generating its reply. Poll until the assistant reply lands.
+        const list = Array.isArray(msgs) ? msgs : []
+        const last = list[list.length - 1] as { role?: string } | undefined
+        if (last && last.role === 'user' && activeConv.value === id) {
+          scheduleBgRefresh(id, 10)
         }
       }
     } catch (e) {
@@ -109,7 +139,7 @@ export function useConversation(
       const data = await renameConversation(id, title)
       if (data.status) {
         const c = conversations.value.find(x => x.id === id)
-        if (c) c.title = data.title || title
+        if (c) c.title = data.data?.title || title
       }
     } catch (e) { logError('Failed to rename conversation', e, 'useConversation'); ElMessage.error('重命名失败，请稍后重试') }
   }

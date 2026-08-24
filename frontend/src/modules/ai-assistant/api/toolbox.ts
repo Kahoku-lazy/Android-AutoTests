@@ -6,6 +6,21 @@ import type {
   KnowledgeStatusResponse,
 } from '@/shared/types/ai'
 
+// ── Agent 已导入工具副本 / 知识库文档 DTO（类型跟着实现走，消费方从此处 import） ──
+export interface ToolItem {
+  id?: number
+  name: string
+  tool_type?: string
+  enabled?: boolean
+  config_json?: string
+  config?: object
+}
+
+export interface KnowledgeDoc {
+  id: number | string
+  name?: string
+}
+
 // ── Toolbox (shared tools / skills / extensions) ──
 
 export async function fetchSharedTools(): Promise<ToolboxListResponse> {
@@ -61,42 +76,10 @@ export async function uploadSharedSkill(files: File[], name: string): Promise<Ag
   return data
 }
 
-// ── MCP & Skill management ──
+// ── Agent 已导入工具副本（来自工具箱） ──
 
-export async function fetchAgentTools(agentId: number): Promise<{ status: boolean; tools?: object[]; message?: string }> {
+export async function fetchAgentTools(agentId: number): Promise<{ status: boolean; data?: { mcp?: ToolItem[]; skills?: ToolItem[] }; message?: string }> {
   const { data } = await djangoClient.get(`/ai/agents/${agentId}/tools`)
-  return data
-}
-
-export async function saveMcp(agentId: number, name: string, configJson: object | string): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>(`/ai/agents/${agentId}/tools/mcp/save`, {
-    name,
-    config_json: configJson,
-  })
-  return data
-}
-
-export async function testMcpConnection(agentId: number, configObj: object): Promise<{ status: boolean; connected?: boolean; detail?: string }> {
-  const { data } = await djangoClient.post(`/ai/agents/${agentId}/tools/mcp/test`, configObj)
-  return data
-}
-
-export async function uploadSkill(agentId: number, files: File[], name: string): Promise<AgentOpResponse> {
-  const formData = new FormData()
-  formData.append('name', name)
-  for (const file of files) {
-    formData.append('files', file, (file as unknown as { webkitRelativePath?: string }).webkitRelativePath || file.name)
-  }
-  const { data } = await djangoClient.post<AgentOpResponse>(
-    `/ai/agents/${agentId}/tools/skill/upload`,
-    formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
-  )
-  return data
-}
-
-export async function toggleToolEnabled(agentId: number, toolId: number, enabled: boolean): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>(`/ai/agents/${agentId}/tools/${toolId}/toggle`, { enabled })
   return data
 }
 
@@ -107,12 +90,12 @@ export async function deleteToolById(agentId: number, toolId: number): Promise<A
 
 // ── Platform tools ──
 
-export async function fetchPlatformTools(): Promise<{ status: boolean; tools?: object[]; message?: string }> {
+export async function fetchPlatformTools(): Promise<{ status: boolean; data?: { categories?: object[] }; message?: string }> {
   const { data } = await djangoClient.get('/ai/available-tools')
   return data
 }
 
-export async function fetchAvailableSkills(): Promise<{ status: boolean; skills?: object[]; message?: string }> {
+export async function fetchAvailableSkills(): Promise<{ status: boolean; data?: { skills?: object[] }; message?: string }> {
   const { data } = await djangoClient.get('/ai/available-skills')
   return data
 }
@@ -124,7 +107,7 @@ export async function getKnowledgeStatus(): Promise<KnowledgeStatusResponse> {
   return data
 }
 
-export async function getKnowledgeDocuments(): Promise<{ status: boolean; documents?: object[]; message?: string }> {
+export async function getKnowledgeDocuments(): Promise<{ status: boolean; data?: { documents?: KnowledgeDoc[]; total?: number }; message?: string }> {
   const { data } = await djangoClient.get('/ai/knowledge/documents')
   return data
 }

@@ -31,7 +31,6 @@ import '@vue-flow/controls/dist/style.css'
 import '@vue-flow/minimap/dist/style.css'
 
 const emit = defineEmits<{
-  addToCase: [payload: { nodeId: string; slotIndex: number; stepType: 'click' | 'wait' }]
   'update:docName': [name: string]
   back: []
   rename: []
@@ -138,10 +137,6 @@ provide('vfOpenPicker', (nodeId: string) => {
 
 provide('vfRefresh', () => {
   refreshFromStore()
-})
-
-provide('vfAddToCase', (nodeId: string, slot: number, step: 'click' | 'wait') => {
-  emit('addToCase', { nodeId, slotIndex: slot, stepType: step })
 })
 
 const pickerPool = computed(() => {

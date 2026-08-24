@@ -82,8 +82,8 @@ const {
           <span class="doc-section__label">设备在线状态与平台接入总览</span>
         </div>
         <div class="kpi-row">
-          <KpiCard :value="kpiStats.online" label="在线" color="#6BCB77" shape="diamond" />
-          <KpiCard :value="kpiStats.busy" label="使用中" color="#FFB5A7" shape="triangle" />
+          <KpiCard :value="kpiStats.online" label="在线" color="var(--c-device)" shape="diamond" />
+          <KpiCard :value="kpiStats.busy" label="使用中" color="var(--c-runner)" shape="triangle" />
           <KpiCard :value="kpiStats.total" label="总计" color="var(--ink)" shape="circle" />
         </div>
       </section>

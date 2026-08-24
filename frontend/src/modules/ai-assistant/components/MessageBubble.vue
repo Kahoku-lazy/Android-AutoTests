@@ -3,7 +3,7 @@ import { computed, onErrorCaptured } from 'vue'
 import ThinkingBlock from './ThinkingBlock.vue'
 import ToolCallAppCard from './ToolCallCard.vue'
 import HintAppCard from './HintCard.vue'
-import { renderMarkdown } from '../composables/useMarkdown'
+import { renderMarkdown, sanitizeHtml } from '../composables/useMarkdown'
 import { WORKSPACE_TOOL_NAMES, toolSourceLabel as _toolSourceLabel } from '../constants'
 import type { ChatMessage, ToolCall } from '@/shared/types/ai'
 
@@ -15,6 +15,16 @@ onErrorCaptured((err) => {
 function safeMarkdown(text: string): string {
   try { return renderMarkdown(text) }
   catch (e) { return String(text ?? '') }
+}
+
+/** ISO 时间 → YYYY-MM-DD HH:mm:ss（精确到秒）；无效输入返回空串 */
+function formatTime(iso?: string): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+    `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
 const props = defineProps<{
@@ -53,6 +63,8 @@ const capabilitySummary = computed(() => {
   if (sources.size === 0) return null
   return Array.from(sources).join(' · ')
 })
+
+const timeText = computed(() => formatTime(props.message.created_at))
 
 const emit = defineEmits<{
   'toggle-thinking': [message: ChatMessage]
@@ -129,6 +141,7 @@ const userTextContent = computed(() => {
         >
           {{ message.flow === "sse" ? "⚡ SSE" : "⏳ Django" }}
         </span>
+        <span v-if="timeText" class="msg-time">{{ timeText }}</span>
       </div>
 
       <!-- Per-round thinking (new) -->
@@ -193,7 +206,7 @@ const userTextContent = computed(() => {
         <div
           v-if="userTextContent"
           class="msg-text"
-          v-html="userTextContent"
+          v-html="sanitizeHtml(userTextContent)"
         />
       </div>
       <div
@@ -312,6 +325,14 @@ const userTextContent = computed(() => {
   margin-left: 8px;
   vertical-align: middle;
   display: inline-block;
+}
+.msg-time {
+  margin-left: 8px;
+  font-size: var(--app-size-xs);
+  font-weight: 400;
+  color: var(--app-ink-muted, #999);
+  opacity: 0.85;
+  vertical-align: middle;
 }
 .msg-flow-tag.sse {
   background: var(--ai-teal-bg);

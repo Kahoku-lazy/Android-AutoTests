@@ -33,6 +33,7 @@ export function useMessageStore(): UseMessageStoreReturn {
       id: uid,
       role: 'user',
       content: displayText,
+      created_at: new Date().toISOString(),
       ...(blocks?.length ? { blocks } : {}),
     })
     const aid = `a${++_msgSeq}`

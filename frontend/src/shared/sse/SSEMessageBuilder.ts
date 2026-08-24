@@ -42,7 +42,7 @@ export type SSEEventType = typeof EventType[keyof typeof EventType]
 
 // ── Internal accumulator types ──
 interface ToolCallAccum { id: string; name: string; argsJson: string; state: string; input?: object; inputRaw?: string }
-interface ToolResultAccum { id: string; name: string; output: string; state: string }
+interface ToolResultAccum { id: string; name: string; output: string; state: string; data?: string; mediaType?: string }
 interface DataAccum { data: string; media_type: string }
 
 // ── Process result types ──
@@ -227,6 +227,16 @@ export class SSEMessageBuilder {
       if (tc) tc.state = 'running'
       return { phase: 'tool_result_start', toolCallId: event.tool_call_id, name: event.tool_call_name }
     }
+    if (type === EventType.TOOL_RESULT_DATA_DELTA) {
+      // 数据型工具结果（图片/音频等）——累积到独立字段，完整数据随 block 落库，不静默丢弃
+      const cur = this._toolResult.get(event.tool_call_id as string)
+      if (cur) {
+        cur.data = (cur.data || '') + ((event.delta as string) || '')
+        cur.mediaType = (event.media_type as string) || cur.mediaType || 'data'
+        return { phase: 'tool_result_data_delta', toolCallId: event.tool_call_id, delta: event.delta, mediaType: cur.mediaType }
+      }
+      return { phase: 'tool_result_data_delta', toolCallId: event.tool_call_id, delta: event.delta }
+    }
     if (type === EventType.TOOL_RESULT_TEXT_DELTA) {
       const cur = this._toolResult.get(event.tool_call_id as string)
       if (cur) {
@@ -241,7 +251,11 @@ export class SSEMessageBuilder {
       let tr: ContentBlock
       if (cur) {
         cur.state = finalState
-        tr = { type: 'tool_result', id: cur.id, name: cur.name, output: cur.output, state: finalState }
+        const output = cur.output || (cur.data ? `[数据结果 · ${cur.mediaType || 'data'}]` : '')
+        tr = {
+          type: 'tool_result', id: cur.id, name: cur.name, output, state: finalState,
+          ...(cur.data ? { data: cur.data, mediaType: cur.mediaType || 'data' } : {}),
+        }
         this.toolResults.push(cur)
         this._toolResult.delete(event.tool_call_id as string)
       } else {

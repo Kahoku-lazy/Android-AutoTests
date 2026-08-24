@@ -1,21 +1,18 @@
-/** device-inspector Pinia store — device + element state
-
-  Device connection is manual (observe mode):
-  - User selects a device and clicks "Connect" to observe it
-  - Occupied devices are filtered from the dropdown
-  - Leaving the page auto-disconnects
-*/
+/** device-inspector Pinia store — v1.7 快照中心：设备列表 / capture / 快照回看删除 / 保存到元素定位 / 页面回看 */
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { ElMessage } from 'element-plus'
 import {
-  apiDump, apiOcr,
-  apiGetDevices, apiActivateDevice, apiGetDeviceInfo,
-  apiConnectObserve, apiDisconnectObserve,
+  apiCapture,
+  apiGetSnapshots,
+  apiGetSnapshot,
+  apiDeleteSnapshot,
+  apiSaveToElements,
+  apiGetPageView,
+  apiGetDevices,
 } from './api'
 
-// Process prefixes that indicate execution engine occupation — these devices
-// are unavailable for inspector and case-manager
+// 执行引擎占用前缀：不可用于 capture（PRD-03 §4.1）
 const EXEC_PREFIXES = ['runner-', 'ai_agent', 'task-', 'run-']
 
 function isExecutionOccupied(device) {
@@ -23,7 +20,6 @@ function isExecutionOccupied(device) {
     EXEC_PREFIXES.some(p => device.occupied_by.startsWith(p))
 }
 
-// Input widget class keywords for the "输入框" filter
 const INPUT_CLASS_KEYWORDS = ['edittext', 'autocomplete', 'searchview']
 
 function isInputClass(className) {
@@ -32,50 +28,71 @@ function isInputClass(className) {
   return INPUT_CLASS_KEYWORDS.some(k => c.includes(k))
 }
 
+/** 缩略图 / 截图相对路径 → 媒体 URL */
+export function mediaUrl(path) {
+  if (!path) return ''
+  return `/media/${path}`
+}
+
 export const useElementStore = defineStore('device-inspector', () => {
-  // ── Device state ──
+  // ── Device ──
   const devices = ref([])
-  const currentSerial = ref('')
-  const connectedSerial = ref('')   // explicitly connected (observe mode)
-  const currentDevice = ref(null)
-  const screenW = ref(1440)
-  const screenH = ref(3040)
-  const wsConnected = ref(false)
+  const captureSerial = ref('')
+  const captureMethod = ref('both') // 'dump' | 'ocr' | 'both'
 
-  // ── Element state ──
-  const elements = ref([])
-  const actionable = ref([])
-  const selected = ref(null)
-  const loading = ref(false)
+  const availableDevices = computed(() =>
+    devices.value.filter(d =>
+      (d.status === 'ONLINE' || d.status === 'BUSY') && !isExecutionOccupied(d)
+    )
+  )
+
+  // ── Snapshot state ──
+  const snapshot = ref(null)      // 当前展示的快照全量 JSON
+  const snapshots = ref([])       // 快照列表 items
+  const snapshotTotal = ref(0)
+  const captLoading = ref(false)
   const error = ref('')
-  const lastDump = ref(null)
-  const screenshotUrl = ref('')   // shared screenshot for thumbnail cropping
 
-  // ── OCR state ──
-  const ocrResults = ref([])
-  const ocrLoading = ref(false)
+  // ── 展示（合并表格：dump 元素 + OCR 文本，_kind 区分）──
+  const elements = computed(() => snapshot.value?.elements || [])
+  const ocrTexts = computed(() => snapshot.value?.texts || [])
+  const selected = ref(null)      // 选中元素（截图联动）
   const selectedOcr = ref(null)
-  const activePanelTab = ref('elements')   // 'elements' | 'ocr'
-
-  // ── Filter state ──
   const filterMode = ref('all')
   const searchText = ref('')
 
-  // ── Computed ──
-  const onlineDevices = computed(() =>
-    devices.value.filter(d => d.status === 'ONLINE' || d.status === 'BUSY')
-  )
-  /** Devices available for observe connection (excludes execution-occupied) */
-  const availableDevices = computed(() =>
-    onlineDevices.value.filter(d => !isExecutionOccupied(d))
-  )
-  const hasDevices = computed(() => availableDevices.value.length > 0)
-  const isConnected = computed(() => !!connectedSerial.value)
-  const isDeviceOnline = computed(() => {
-    const d = devices.value.find(d => d.serial === currentSerial.value)
-    return d && (d.status === 'ONLINE' || d.status === 'BUSY')
+  /**
+   * 合并行：按坐标（x/y/width/height 全等）把 OCR 文本合并进 dump 元素行——
+   * 匹配行 _kind='dump' + _ocrMatched=true（附 ocr_text/ocr_confidence/ocr_thumbnail_path）；
+   * 未匹配的 OCR 独立成行（_kind='ocr'，_rowKey='o{idx}'）。
+   */
+  const mergedRows = computed(() => {
+    const usedOcr = new Set()
+    const rows = elements.value.map(e => {
+      const base = { ...e, _kind: 'dump', _rowKey: `d${e._idx ?? e.__uid}` }
+      const match = ocrTexts.value.find(t =>
+        !usedOcr.has(t._idx) &&
+        t.x === e.x && t.y === e.y && t.width === e.width && t.height === e.height
+      )
+      if (match) {
+        usedOcr.add(match._idx)
+        return {
+          ...base,
+          _ocrMatched: true,
+          ocr_text: match.text,
+          ocr_confidence: match.confidence,
+          ocr_thumbnail_path: match.thumbnail_path,
+          ocr_idx: match._idx,
+        }
+      }
+      return base
+    })
+    const unmatched = ocrTexts.value
+      .filter(t => !usedOcr.has(t._idx))
+      .map(t => ({ ...t, _kind: 'ocr', _rowKey: `o${t._idx ?? t.__uid}` }))
+    return [...rows, ...unmatched]
   })
-  /** Full element list filtered by mode + search text (page element list). */
+
   const filteredElements = computed(() => {
     let els = elements.value || []
     switch (filterMode.value) {
@@ -99,166 +116,221 @@ export const useElementStore = defineStore('device-inspector', () => {
     return els
   })
 
-  // ── Device actions ──
+  /** 合并表格行：筛选模式作用于 dump 行（非 all 时隐藏纯 OCR 行），搜索对两类都生效 */
+  const filteredRows = computed(() => {
+    const q = searchText.value.trim().toLowerCase()
+    const elKeys = new Set(filteredElements.value.map(e => `d${e._idx ?? e.__uid}`))
+    return mergedRows.value.filter(row => {
+      if (row._kind === 'ocr' && filterMode.value !== 'all') return false
+      if (row._kind === 'dump' && !elKeys.has(row._rowKey)) return false
+      if (q) {
+        const hay = `${row.text || ''} ${row.ocr_text || ''} ${row.resource_id || ''} ${row.content_desc || ''} ${row.class_name || ''}`.toLowerCase()
+        if (!hay.includes(q)) return false
+      }
+      return true
+    })
+  })
+
+  // ── 勾选（保存到元素定位的筛减；key = _rowKey）──
+  const checkedIds = ref(new Set())
+  function toggleCheck(row) {
+    if (!row || typeof row !== 'object') return
+    const id = row._rowKey ?? row._idx ?? row.__uid
+    if (id == null) return
+    const next = new Set(checkedIds.value)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    checkedIds.value = next
+  }
+  function clearChecked() {
+    checkedIds.value = new Set()
+  }
+
+  // ── 快照抽屉 / 保存弹窗 / 回看选择器状态 ──
+  const drawerVisible = ref(false)
+  const saveDialogVisible = ref(false)
+  const pickerVisible = ref(false)
+  const saving = ref(false)
+
+  // ── Actions ──
 
   async function fetchDevices() {
     try {
       const { data } = await apiGetDevices()
-      if (data.status) {
-        devices.value = data.data?.devices || []
-        // Restore current device info if still connected
-        if (connectedSerial.value) {
-          const cd = devices.value.find(d => d.serial === connectedSerial.value)
-          if (cd) {
-            currentSerial.value = cd.serial
-            currentDevice.value = {
-              serial: cd.serial, model: cd.model, brand: cd.brand,
-              screen_w: cd.screen_w || 0,
-              screen_h: cd.screen_h || 0,
-              connection_type: cd.connection_type,
-              status: cd.status,
-            }
-            if (currentDevice.value.screen_w) screenW.value = currentDevice.value.screen_w
-            if (currentDevice.value.screen_h) screenH.value = currentDevice.value.screen_h
-          } else {
-            // Connected device went offline — clear connection
-            disconnectDevice()
-          }
-        }
-        // NOTE: No auto-select — user must explicitly connect
-      }
-    } catch (e) { console.error(e); }
-  }
-
-  /** Connect to a device in observe mode (lightweight, no lock) */
-  async function connectDevice(serial) {
-    try {
-      const { data } = await apiConnectObserve(serial)
-      if (data.status) {
-        connectedSerial.value = serial
-        currentSerial.value = serial
-        await fetchCurrentDevice()
-        ElMessage.success(`已连接设备 ${serial}`)
-        return true
-      }
-      ElMessage.error(data.message || '连接设备失败')
-      return false
+      if (data.status) devices.value = data.data?.devices || []
+      else error.value = data.message || '设备列表加载失败'
     } catch (e) {
-      ElMessage.error('连接设备失败')
-      return false
-      console.error(e);
+      error.value = '设备列表加载失败，请稍后重试'
     }
   }
 
-  /** Disconnect from the currently observed device */
-  function disconnectDevice() {
-    const serial = connectedSerial.value
-    if (!serial) return
-    apiDisconnectObserve(serial).catch(() => {})
-    connectedSerial.value = ''
-    currentSerial.value = ''
-    currentDevice.value = null
-    // Reset element state
-    elements.value = []
-    actionable.value = []
-    selected.value = null
-  }
-
-  async function activateDevice(serial, { silent = false } = {}) {
-    try {
-      const { data } = await apiActivateDevice(serial)
-      if (data.status) {
-        currentSerial.value = serial
-        await fetchCurrentDevice()
-        if (!silent) ElMessage.success(`已切换到 ${serial}`)
-        return data
-      }
-      if (!silent) ElMessage.error(data.message || '切换设备失败')
-      return data
-    } catch (e) {
-      if (!silent) ElMessage.error('切换设备失败')
-      return { ok: false }
-      console.error(e);
+  async function capture() {
+    if (!captureSerial.value) {
+      ElMessage.warning('请先选择设备')
+      return
     }
-  }
-
-  async function fetchCurrentDevice() {
-    try {
-      const { data } = await apiGetDeviceInfo()
-      if (data.status) {
-        currentDevice.value = {
-          serial: data.serial,
-          model: data.model || '',
-          brand: data.brand || '',
-          screen_w: data.screen_w || 1440,
-          screen_h: data.screen_h || 3040,
-          connection_type: data.connection_type || 'USB',
-          package: data.package || '',
-        }
-        screenW.value = data.screen_w || 1440
-        screenH.value = data.screen_h || 3040
-        currentSerial.value = data.serial
-        return data
-      }
-    } catch (e) { console.error(e); }
-    return null
-  }
-
-  // ── Element actions ──
-
-  async function doDump() {
-    loading.value = true
+    captLoading.value = true
     error.value = ''
     try {
-      const { data } = await apiDump()
+      const { data } = await apiCapture(captureSerial.value, captureMethod.value)
       if (data.status) {
-        elements.value = data.elements || []
-        actionable.value = data.actionable || []
-        lastDump.value = data
-        // Update device serial from response
-        if (data.serial) currentSerial.value = data.serial
-        if (elements.value.length) {
-          elements.value.forEach((e, i) => {
-            e._idx = i
-          })
-        }
-        if (actionable.value.length) {
-          // Sync _idx with elements so selection works across both arrays
-          const idxMap = new Map()
-          elements.value.forEach(e => {
-            idxMap.set((e.bounds || '') + '|' + (e.class_name || ''), e._idx)
-          })
-          actionable.value.forEach((e) => {
-            const key = (e.bounds || '') + '|' + (e.class_name || '')
-            e._idx = idxMap.has(key) ? idxMap.get(key) : e._idx
-          })
-        }
-        return data
-      } else {
-        error.value = data.message || 'Dump failed'
+        applySnapshot(data.data)
+        ElMessage.success(`获取成功（元素 ${data.data?.element_count ?? 0} · OCR ${data.data?.ocr_count ?? 0}）`)
+        await fetchSnapshots()
+        return data.data
       }
+      error.value = data.message || '获取失败'
+      ElMessage.error(data.message || '获取失败')
     } catch (e) {
-      error.value = e.message || 'Dump failed'
+      ElMessage.error('获取失败')
     } finally {
-      loading.value = false
+      captLoading.value = false
     }
     return null
   }
 
-  async function doOcr() {
-    ocrLoading.value = true
+  function applySnapshot(data) {
+    ;(data.elements || []).forEach((e, i) => { e._idx = i })
+    ;(data.texts || []).forEach((t, i) => { t._idx = i })
+    snapshot.value = data
+    selected.value = null
+    selectedOcr.value = null
+    filterMode.value = 'all'
+    searchText.value = ''
+    clearChecked()
+  }
+
+  async function fetchSnapshots() {
     try {
-      const { data } = await apiOcr()
+      const { data } = await apiGetSnapshots(0, 100)
       if (data.status) {
-        ocrResults.value = data.texts || []
-        activePanelTab.value = 'ocr'
-        return data
+        snapshots.value = data.data?.items || []
+        snapshotTotal.value = data.data?.total || 0
+      } else {
+        error.value = data.message || '快照列表加载失败'
       }
-      ElMessage.warning(data.message || 'OCR 识别失败')
     } catch (e) {
-      ElMessage.error('OCR 识别失败')
+      error.value = '快照列表加载失败，请稍后重试'
+    }
+  }
+
+  async function viewSnapshot(id) {
+    try {
+      const { data } = await apiGetSnapshot(id)
+      if (data.status) {
+        applySnapshot(data.data)
+        drawerVisible.value = false
+        return data.data
+      }
+      ElMessage.error(data.message || '快照加载失败')
+    } catch (e) {
+      ElMessage.error('快照加载失败')
+    }
+    return null
+  }
+
+  async function deleteSnapshot(id) {
+    try {
+      const { data } = await apiDeleteSnapshot(id)
+      if (data.status) {
+        ElMessage.success('快照已删除')
+        if (snapshot.value?.snapshot_id === id) {
+          snapshot.value = null
+          clearChecked()
+        }
+        await fetchSnapshots()
+        return true
+      }
+      ElMessage.error(data.message || '删除失败')
+    } catch (e) {
+      ElMessage.error('删除失败')
+    }
+    return false
+  }
+
+  async function saveToElements(payload) {
+    if (!snapshot.value) return null
+    if (checkedIds.value.size === 0) {
+      ElMessage.warning('请先勾选要保存的数据')
+      return null
+    }
+    saving.value = true
+    try {
+      const body: {
+        page_label: string; folder_path: string; include_ocr: boolean;
+        element_ids?: number[]; page_id?: number;
+      } = {
+        page_label: payload.pageLabel || '',
+        folder_path: payload.folderPath || '',
+        include_ocr: payload.includeOcr !== false,
+      }
+      if (payload.pageId) body.page_id = payload.pageId
+      // 勾选 = 筛减：dump 行（含坐标匹配行）按元素索引筛减；勾了纯 OCR 行自动携带页面级 OCR
+      const all = snapshot.value.elements || []
+      const checkedDumpIdx = mergedRows.value
+        .filter(r => r._kind === 'dump' && checkedIds.value.has(r._rowKey))
+        .map(r => r._idx)
+      const hasOcrChecked = mergedRows.value.some(r =>
+        (r._kind === 'ocr' || r._ocrMatched) && checkedIds.value.has(r._rowKey)
+      )
+      if (checkedDumpIdx.length > 0 && checkedDumpIdx.length < all.length) {
+        body.element_ids = checkedDumpIdx
+      }
+      if (payload.includeOcr !== false && hasOcrChecked) {
+        body.include_ocr = true
+      }
+      const { data } = await apiSaveToElements(snapshot.value.snapshot_id, body)
+      if (data.status) {
+        const r = data.data || {}
+        ElMessage.success(`已保存 ${r.saved ?? 0} 个元素（${r.updated ?? 0} 个已更新，${r.skipped ?? 0} 个跳过）`)
+        saveDialogVisible.value = false
+        await fetchSnapshots()
+        return r
+      }
+      ElMessage.error(data.message || '保存失败')
+    } catch (e) {
+      ElMessage.error('保存失败')
     } finally {
-      ocrLoading.value = false
+      saving.value = false
+    }
+    return null
+  }
+
+  async function viewSavedPage(pageId) {
+    try {
+      const { data } = await apiGetPageView(pageId)
+      if (data.status) {
+        applySnapshot({
+          snapshot_id: null,
+          serial: '',
+          method: 'saved',
+          package: data.data?.package || '',
+          activity: data.data?.activity || '',
+          element_count: data.data?.element_count || 0,
+          actionable_count: 0,
+          elements: (data.data?.elements || []).map(e => ({
+            class_name: e.class_name, text: e.text_val, content_desc: e.content_desc,
+            resource_id: e.resource_id, bounds: e.bounds, xpaths: e.xpaths || [],
+            x: e.x, y: e.y, width: e.width, height: e.height,
+            clickable: e.clickable, enabled: e.enabled, scrollable: e.scrollable,
+            checked: e.checked, thumbnail_path: e.thumbnail_path,
+          })),
+          ocr_count: data.data?.ocr_json?.ocr_count || 0,
+          texts: (data.data?.ocr_json?.texts || []).map(t => ({
+            text: t.text, confidence: t.confidence, x: t.x, y: t.y,
+            width: t.width, height: t.height,
+            bounds: t.bounds || `[${t.x},${t.y}][${(t.x || 0) + (t.width || 0)},${(t.y || 0) + (t.height || 0)}]`,
+            thumbnail_path: t.thumbnail_path || '',
+          })),
+          screenshot_path: data.data?.screenshot_path || '',
+          created_at: null,
+        })
+        pickerVisible.value = false
+        return data.data
+      }
+      ElMessage.error(data.message || '页面加载失败')
+    } catch (e) {
+      ElMessage.error('页面加载失败')
     }
     return null
   }
@@ -267,29 +339,21 @@ export const useElementStore = defineStore('device-inspector', () => {
     selected.value = el
     selectedOcr.value = null
   }
-
   function selectOcr(item) {
     selectedOcr.value = item
     selected.value = null
-    activePanelTab.value = 'ocr'
   }
-
-  function clearError() {
-    error.value = ''
-  }
+  function clearError() { error.value = '' }
 
   return {
-    // device state
-    devices, currentSerial, connectedSerial, currentDevice, screenW, screenH, wsConnected,
-    onlineDevices, availableDevices, hasDevices, isConnected, isDeviceOnline,
-    // element state
-    elements, actionable, selected, loading, error, lastDump, screenshotUrl,
-    filterMode, searchText, filteredElements,
-    // ocr state
-    ocrResults, ocrLoading, selectedOcr, activePanelTab,
-    // device actions
-    fetchDevices, connectDevice, disconnectDevice, activateDevice, fetchCurrentDevice,
-    // element actions
-    doDump, doOcr, selectElement, selectOcr, clearError,
+    devices, captureSerial, captureMethod, availableDevices,
+    snapshot, snapshots, snapshotTotal, captLoading, error,
+    elements, ocrTexts, selected, selectedOcr, filterMode, searchText, filteredElements,
+    mergedRows, filteredRows, checkedIds,
+    drawerVisible, saveDialogVisible, pickerVisible, saving,
+    fetchDevices, capture, fetchSnapshots, viewSnapshot, deleteSnapshot,
+    saveToElements, viewSavedPage,
+    toggleCheck, clearChecked,
+    selectElement, selectOcr, clearError,
   }
 })

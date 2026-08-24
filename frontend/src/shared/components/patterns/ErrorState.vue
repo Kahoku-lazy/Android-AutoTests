@@ -23,16 +23,16 @@ defineEmits(['retry'])
 <style scoped>
 .error-state {
   display: flex; align-items: center; justify-content: center;
-  gap: 12px; padding: 10px 20px; margin: 0 20px;
-  background: #fff0f0; border: 2px solid var(--app-status-danger);
+  gap: var(--app-space-md); padding: var(--app-space-sm) var(--app-space-lg); margin: 0 var(--app-space-lg);
+  background: var(--app-error-bg, #fff0f0); border: 2px solid var(--app-status-danger);
   border-radius: var(--app-radius-md);
   font-size: var(--app-size-sm); color: var(--app-status-danger-text);
   font-weight: 600;
 }
 .error-state__btn {
-  font-size: 11px; font-weight: 700; padding: 4px 12px;
+  font-size: var(--app-size-xs); font-weight: 700; padding: var(--app-space-xs) var(--app-space-md);
   border: 2px solid var(--ink); border-radius: var(--app-radius-sm);
-  background: #fff; color: var(--ink); cursor: pointer;
+  background: var(--app-bg-card); color: var(--ink); cursor: pointer;
   transition: all var(--app-duration-fast) var(--app-ease);
   font-family: var(--app-font);
 }

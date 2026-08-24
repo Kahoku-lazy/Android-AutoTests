@@ -15,6 +15,9 @@ import {
 /** AI 服务不可用时统一回复文案 */
 export const AI_DISCONNECT_MSG = 'AI 服务暂不可用，请检查 Agent 配置后重试'
 
+/** 看门狗超时（长时间无文本回复）提示文案 —— 区别于真正的服务断连，不误导用户检查 Agent 配置 */
+export const AI_TIMEOUT_MSG = '等待回复超时：AI 仍在后台处理中，请稍后刷新本会话查看结果，或重新提问'
+
 /** Built-in workspace tool names — used to classify tool source. */
 const WORKSPACE_NAMES = new Set(WORKSPACE_TOOL_NAMES)
 
@@ -70,6 +73,7 @@ interface TaskCardHint {
 }
 
 export interface UseSSEOptions {
+  agentId: Ref<number>
   activeConv: Ref<number | null>
   conversations: Ref<Conversation[]>
   messages: Ref<ChatMessage[]>
@@ -131,7 +135,7 @@ interface InternalRound {
 
 export function useSSE(opts: UseSSEOptions): UseSSEReturn {
   const {
-    activeConv, conversations, messages, assistIdx, toolCalls, taskCards,
+    agentId, activeConv, conversations, messages, assistIdx, toolCalls, taskCards,
     connectionMode, scrollBottom, renderMermaidBlocks, loadConversations,
     updateTaskCardProgress, backgroundStreamConvId, appendPlaceholder,
   } = opts
@@ -229,11 +233,27 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
     // Bump generation so all in-flight callbacks from the detached stream
     // see _streamGen !== myGen and bail out without touching shared state.
     ++_streamGen
+    // Reset the shared send state so another conversation can be used
+    // immediately. The detached stream keeps running on the backend and
+    // persists its reply when done — finishSending() would be the natural
+    // cleanup, but it also clears _detached, so reset the fields here.
+    sending.value = false
+    streamMode.value = null
+    abortController.value = null
+    sseBuilder.value = null
+    modelStatus.value = 'idle'
+    pendingConfirm.value = null
+    _streamConvId = null
   }
 
   function finishSending() {
     clearReplyWatchdog()
     sending.value = false; streamMode.value = null; abortController.value = null; modelStatus.value = 'idle'
+    // 回复完成即打时间戳（未持久化的直播消息）；落库后由后端 created_at 覆盖
+    const doneMsg = messages.value[assistIdx.value]
+    if (doneMsg?.role === 'assistant' && !doneMsg.created_at) {
+      doneMsg.created_at = new Date().toISOString()
+    }
     if (!_detached) scrollBottom()
     _detached = false
     if (backgroundStreamConvId.value) backgroundStreamConvId.value = null
@@ -246,16 +266,16 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
       if (!sending.value) return
       const cur = messages.value[assistIdx.value]
       if (cur?.role === 'assistant' && !String(cur.content || '').trim()) {
-        settleAssistant('')
+        settleAssistant(AI_TIMEOUT_MSG, { reason: 'error' })
         const convId = _streamConvId || activeConv.value
         if (convId) {
           try {
             await client.post(`/ai/conversations/${convId}/save-message`, {
-              role: 'assistant', content: AI_DISCONNECT_MSG,
-              blocks: [{ type: 'text', text: AI_DISCONNECT_MSG }],
+              role: 'assistant', content: AI_TIMEOUT_MSG,
+              blocks: [{ type: 'text', text: AI_TIMEOUT_MSG }],
               reason: 'error', tokens: 0, input_tokens: 0, model_name: '', flow: '',
             })
-          } catch (e) { logWarn('Failed to save watchdog disconnect notice', e, 'useSSE') }
+          } catch (e) { logWarn('Failed to save watchdog timeout notice', e, 'useSSE') }
         }
         if (abortController.value) { try { abortController.value.abort() } catch (e) { logError('SSE abort failed', e, 'useSSE') } }
         finishSending()
@@ -263,11 +283,23 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
     }, SSE_WATCHDOG_MS)
   }
 
+  /** 任一 SSE 事件到达即重置看门狗 —— 仅在流完全静默 SSE_WATCHDOG_MS 后才判定超时。 */
+  function pokeReplyWatchdog() {
+    if (sending.value) armReplyWatchdog()
+  }
+
   async function checkHealth(): Promise<boolean> {
     try {
       const { data } = await client.get('/ai/agents/health')
-      const anyConnected = (data as { agents?: Array<{ is_connected: boolean }> }).agents?.some(a => a.is_connected)
-      if (data.status && anyConnected) {
+      const agents = (data.data as { agents?: Array<{ id: number; is_connected: boolean }> } | undefined)?.agents
+      // 横幅只按当前对话的 Agent 判定；查不到该 Agent 时退回全局判定
+      const current = Number.isFinite(agentId.value)
+        ? agents?.find(a => a.id === agentId.value)
+        : undefined
+      const connected = current
+        ? current.is_connected
+        : (agents?.some(a => a.is_connected) ?? false)
+      if (data.status && connected) {
         degradedMode.value = false
       } else if (data.status) {
         degradedMode.value = true
@@ -330,6 +362,7 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
     const { controller, builder } = streamChat(convId, msgText, {
       onStatus: (status: string) => {
         clearStatusReset()
+        pokeReplyWatchdog()
         modelStatus.value = status
         if (status === 'done') {
           statusResetTimer = setTimeout(() => { if (modelStatus.value === 'done') modelStatus.value = 'idle' }, MODEL_STATUS_RESET_MS)
@@ -337,6 +370,7 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
       },
       onThinkingStart: () => {
         if (_isStale()) return
+        pokeReplyWatchdog()
         _curRound()._pending = ''
         _curRound().thinking = ''
         if (assistIdx.value < messages.value.length) {
@@ -345,6 +379,8 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
         }
       },
       onThinkingDelta: (delta: string, full: string) => {
+        if (_isStale()) return
+        pokeReplyWatchdog()
         const prev = _curRound()._pending || ''
         _curRound()._pending = full || prev + delta
         if (_thinkRaf === null) _thinkRaf = requestAnimationFrame(_flushThink)
@@ -356,6 +392,8 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
         _curRound().thinkingDone = true
       },
       onTextDelta: (delta: string, full: string) => {
+        if (_isStale()) return
+        pokeReplyWatchdog()
         fullContent = full != null ? full : fullContent + delta
         if (_textRaf === null) _textRaf = requestAnimationFrame(_flushText)
       },
@@ -381,6 +419,8 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
         }
       },
       onToolCallDelta: (evt: SSEEventGeneric) => {
+        if (_isStale()) return
+        pokeReplyWatchdog()
         currentToolArgsJson = evt.argsJson != null ? evt.argsJson as string : currentToolArgsJson + (evt.delta || '')
       },
       onToolCallEnd: (evt: SSEEventGeneric) => {
@@ -417,6 +457,7 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
       },
       onToolResultDelta: (evt: SSEEventGeneric) => {
         if (_isStale()) return
+        pokeReplyWatchdog()
         const idx = toolCalls.value.findIndex(t => t.id === evt.toolCallId)
         if (idx >= 0) {
           const tc = toolCalls.value[idx] as ToolCall & { partialOutput?: string | null }
@@ -428,6 +469,8 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
         }
       },
       onToolResultEnd: (evt: SSEEventGeneric) => {
+        if (_isStale()) return
+        pokeReplyWatchdog()
         const tr = evt.toolResult
         if (tr && !_isStale()) {
           const idx = toolCalls.value.findIndex(t => t.id === tr.id)
@@ -460,6 +503,7 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
       },
       onHint: (evt: SSEEventGeneric) => {
         if (_isStale()) return
+        pokeReplyWatchdog()
         let hintData: unknown = evt.hint
         if (typeof hintData === 'string') { try { hintData = JSON.parse(hintData) } catch { /* empty */ } }
         if ((hintData as unknown as TaskCardHint)?.type === 'task_card' && (hintData as unknown as TaskCardHint)?.run_id) {
@@ -477,6 +521,8 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
       },
       onRequireConfirm: (evt: SSEEventGeneric) => {
         if (_isStale()) return
+        // 等待用户确认期间暂停看门狗（流保持打开，后续事件到达时自动重新计时）
+        clearReplyWatchdog()
         modelStatus.value = 'idle'
         pendingConfirm.value = evt as unknown as PendingConfirm
         pendingConfirmMsgIdx.value = assistIdx.value

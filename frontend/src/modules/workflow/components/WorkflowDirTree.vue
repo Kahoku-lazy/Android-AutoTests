@@ -2,7 +2,7 @@
 /**
  * 左侧资源树：目录 + 文件
  * - 点击文件 → 右侧打开编辑
- * - 右键目录 → 新建子目录 / 页面流 / 用例
+ * - 右键目录 → 新建子目录 / 页面流
  * - 右键文件 → 打开 / 重命名 / 导出 / 删除
  * - 长按拖拽 → 移入目录
  */
@@ -20,8 +20,6 @@ const emit = defineEmits<{
   open: [node: LibNode]
   createFolder: [parentId: string | null]
   createFlow: [parentId: string | null]
-  createCase: [parentId: string | null]
-  importCases: [parentId: string | null]
   export: [node: LibNode]
 }>()
 
@@ -60,7 +58,7 @@ const treeRows = computed(() => {
       .filter(n => n.parentId === parentId)
       .slice()
       .sort((a, b) => {
-        const order = { folder: 0, page_flow: 1, test_case: 2 }
+        const order = { folder: 0, page_flow: 1 }
         return (order[a.type] - order[b.type]) || a.name.localeCompare(b.name, 'zh')
       })
     for (const n of kids) {
@@ -74,7 +72,7 @@ const treeRows = computed(() => {
 
 function fileCount(folderId: string): number {
   return lib.nodes.filter(
-    n => n.parentId === folderId && (n.type === 'page_flow' || n.type === 'test_case')
+    n => n.parentId === folderId && n.type === 'page_flow'
   ).length
 }
 
@@ -138,7 +136,7 @@ async function confirmRename() {
 async function removeNode(n: LibNode) {
   const tip =
     n.type === 'folder'
-      ? `删除目录「${n.name}」？其中的页面流/用例也会删除。`
+      ? `删除目录「${n.name}」？其中的页面流也会删除。`
       : `删除「${n.name}」？\n${n.id}`
   if (!confirm(tip)) return
   await lib.deleteNode(n.id)
@@ -163,15 +161,6 @@ function ctxCreateFlow() {
       ? ctx.value.node?.id ?? null
       : props.selectedFolderId
   emit('createFlow', parent)
-  closeCtx()
-}
-
-function ctxCreateCase() {
-  const parent =
-    ctx.value?.kind === 'folder'
-      ? ctx.value.node?.id ?? null
-      : props.selectedFolderId
-  emit('createCase', parent)
   closeCtx()
 }
 
@@ -290,21 +279,6 @@ function onCreateRoot() {
           >
             + 页面流
           </button>
-          <button
-            type="button"
-            class="mini"
-            @click="emit('createCase', selectedFolderId)"
-          >
-            + 用例
-          </button>
-          <button
-            type="button"
-            class="mini import"
-            title="从测试用例模块导入"
-            @click="emit('importCases', selectedFolderId)"
-          >
-            + 导入用例
-          </button>
         </div>
       </div>
 
@@ -339,7 +313,6 @@ function onCreateRoot() {
                 : activeFileId === row.node.id,
             file: row.node.type !== 'folder',
             flow: row.node.type === 'page_flow',
-            case: row.node.type === 'test_case',
             dragging: dragId === row.node.id,
             'drop-on':
               dragging &&
@@ -373,8 +346,7 @@ function onCreateRoot() {
             <template v-if="row.node.type === 'folder'">
               {{ lib.expanded[row.node.id] ? '📂' : '📁' }}
             </template>
-            <template v-else-if="row.node.type === 'page_flow'">🗺️</template>
-            <template v-else>🧩</template>
+            <template v-else>🗺️</template>
           </span>
           <input
             v-if="renamingId === row.node.id"
@@ -410,7 +382,6 @@ function onCreateRoot() {
         <template v-if="ctx.kind === 'root' || ctx.kind === 'folder'">
           <button type="button" @click="ctxCreateFolder">新建子目录</button>
           <button type="button" @click="ctxCreateFlow">新建页面流</button>
-          <button type="button" @click="ctxCreateCase">新建测试用例</button>
           <template v-if="ctx.kind === 'folder' && ctx.node">
             <hr />
             <button type="button" @click="ctxRename">重命名</button>
@@ -515,15 +486,6 @@ function onCreateRoot() {
   color: var(--ac-ink-muted);
 }
 .mini:hover { border-color: var(--app-blue); color: var(--app-green-deep); }
-.mini.import {
-  border-color: rgba(136, 157, 240, 0.45);
-  color: #4a5bb8;
-  background: rgba(136, 157, 240, 0.1);
-}
-.mini.import:hover {
-  border-color: #889df0;
-  color: #3a4aa0;
-}
 .dir-scroll { flex: 1; overflow: auto; padding: 8px 6px 12px; }
 .empty-hint {
   margin: 12px 8px;
@@ -572,7 +534,6 @@ function onCreateRoot() {
 }
 .dir-row.root { margin-bottom: 4px; }
 .dir-row.flow .name { color: var(--app-green-deep); }
-.dir-row.case .name { color: #8a6a18; }
 .chev {
   border: none;
   background: transparent;

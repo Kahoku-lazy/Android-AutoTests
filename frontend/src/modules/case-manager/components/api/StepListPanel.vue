@@ -3,7 +3,7 @@
     <div class="panel-header">
       <h3>📋 测试步骤</h3>
       <span class="panel-badge">{{ modelValue.length }} 步</span>
-      <el-button size="small" type="primary" text @click="addStep">+ 添加步骤</el-button>
+      <el-button size="small" type="primary" text :disabled="readonly" @click="addStep">+ 添加步骤</el-button>
     </div>
     <div class="panel-body">
       <el-empty v-if="!modelValue.length" description="暂无步骤，点击上方按钮添加" :image-size="60" />
@@ -13,6 +13,7 @@
         :model-value="step"
         :index="i"
         :upstream-vars="getUpstreamVars(i)"
+        :readonly="readonly"
         @update:model-value="updateStep(i, $event)"
         @remove="removeStep(i)"
         @duplicate="duplicateStep(i)"
@@ -24,12 +25,14 @@
 </template>
 
 <script setup lang="ts">
+import { ElMessageBox } from 'element-plus'
 import type { ApiStep } from '../../types/api-config'
 import { defaultApiStep } from '../../types/api-config'
 import ApiStepCard from './ApiStepCard.vue'
 
 const props = defineProps<{
   modelValue: ApiStep[]
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -46,7 +49,10 @@ function addStep() {
   emit('update:modelValue', [...props.modelValue, defaultApiStep()])
 }
 
-function removeStep(index: number) {
+async function removeStep(index: number) {
+  try {
+    await ElMessageBox.confirm('确定删除此步骤？', '确认删除', { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' })
+  } catch { return }
   const copy = [...props.modelValue]
   copy.splice(index, 1)
   emit('update:modelValue', copy)

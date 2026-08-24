@@ -343,11 +343,15 @@ function bindDetailTaskWS(runId) {
   const wm = getWsMap()
   const ws = wm[taskId]
   if (ws) {
-    ws.onopen = () => {
-      taskAddLog('🟢 日志已连接', 'success')
-      if (task.value) task.value._wsJustReconnected = true
+    // 追加日志监听，不覆盖 useTaskWebSocket 注册的 onopen/onclose（保留自动重连与 _ws_reconnected 通知）
+    if (!ws._detailLogBound) {
+      ws._detailLogBound = true
+      ws.addEventListener('open', () => {
+        taskAddLog('🟢 日志已连接', 'success')
+        if (task.value) task.value._wsJustReconnected = true
+      })
+      ws.addEventListener('close', () => { if (task.value?.running) taskAddLog('🔴 日志断开', 'warn') })
     }
-    ws.onclose = () => { if (task.value?.running) taskAddLog('🔴 日志断开', 'warn') }
   }
 }
 
@@ -428,6 +432,7 @@ async function stopTask() {
     ElMessage.error('停止请求失败，请检查网络连接')
   }
   task.value.running = false
+  task.value.state = 'done'  // Step 6 镜像同步
   task.value.status = 'done'
   task.value.currentCaseTitle = ''
   task.value.currentIteration = 0
@@ -453,6 +458,7 @@ async function restartTask() {
     running: false,
     runId: '',
     status: 'idle',
+    state: 'idle',  // Step 6 镜像同步
     caseItems: [],
     stepStates: [],
     logs: [],
@@ -486,6 +492,7 @@ async function pollDetailQueuedTask() {
     for (const active of data.active) {
       if (active.client_task_id === task.value.id) {
         task.value.running = true
+        task.value.state = 'running'  // Step 6 镜像同步
         task.value.status = 'running'
         task.value.runId = active.run_id
         bindDetailTaskWS(active.run_id)
@@ -517,6 +524,7 @@ async function doCancelQueue() {
     }
   }
   t.running = false; t.runId = ''; t.status = 'idle'
+  t.state = 'idle'  // Step 6 镜像同步
   t.caseItems = []; t.stepStates = []; t.overallPass = 0
   t.overallFail = 0; t.failedSteps = []; t.logs = []
   saveTask()

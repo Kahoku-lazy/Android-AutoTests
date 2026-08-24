@@ -1,14 +1,10 @@
 <script setup>
 import { ref } from 'vue'
-import { IconPlus } from '@/shared/icons/index'
-import AgentMcpDialog from './AgentMcpDialog.vue'
 import { useToolbox } from '../composables/useToolbox'
 
 const props = defineProps({
   form: { type: Object, required: true },
   isNew: { type: Boolean, default: false },
-  memoryModes: { type: Array, default: () => [] },
-  ltmModes: { type: Array, default: () => [] },
   toolCategories: { type: Array, default: () => [] },
   isCategorySelected: { type: Function, default: () => () => false },
   loadingPlatformTools: { type: Boolean, default: false },
@@ -20,29 +16,16 @@ const props = defineProps({
   loadingDocs: { type: Boolean, default: false },
   showImportDialog: { type: Boolean, default: false },
   importedDocIds: { type: Array, default: () => [] },
-  mcpTools: { type: Array, default: () => [] },
-  skills: { type: Array, default: () => [] },
-  mcpTestResults: { type: Object, default: () => ({}) },
-  mcpTestingId: { type: String, default: '' },
-  mcpCount: { type: Number, default: 0 },
-  customSkillCount: { type: Number, default: 0 },
+  agentImportedTools: { type: Array, default: () => [] },
   wsSkillEnabledCount: { type: Number, default: 0 },
   platformToolSelectedCount: { type: Number, default: 0 },
   kbDocSelectedCount: { type: Number, default: 0 },
-  skillUploading: { type: Boolean, default: false },
-  mcpDialogVisible: { type: Boolean, default: false },
-  mcpDialogMode: { type: String, default: 'add' },
-  mcpForm: { type: Object, required: true },
-  mcpJsonError: { type: String, default: '' },
-  configPreview: { type: String, default: '' },
 })
 
 const emit = defineEmits([
   'toggle-platform-tool', 'toggle-category', 'toggle-skill', 'toggle-doc-enabled', 'select-all-skills', 'deselect-all-skills',
   'open-import-dialog', 'remove-doc',
-  'open-mcp-dialog', 'save-mcp-tool', 'close-mcp-dialog', 'test-mcp', 'toggle-mcp',
-  'remove-mcp-api', 'remove-mcp-local', 'trigger-skill-upload',
-  'remove-skill', 'update:mcp-dialog-visible',
+  'toolbox-imported', 'remove-imported',
 ])
 
 // ── AI Toolbox import ──
@@ -64,6 +47,15 @@ function importedDocs() {
   const sources = props.form.knowledge_sources || {}
   const ids = Object.keys(sources)
   return ids.map(id => {
+    if (id.startsWith('dir:')) {
+      return {
+        id,
+        dirPath: id.slice(4),
+        type: 'directory',
+        size: 0,
+        enabled: sources[id] === true,
+      }
+    }
     const doc = props.knowledgeDocs.find(d => d.id === id)
     return doc ? { ...doc, enabled: sources[id] === true } : null
   }).filter(Boolean)
@@ -71,6 +63,11 @@ function importedDocs() {
 function togglePlatformTool(name) { emit('toggle-platform-tool', name) }
 function toggleSkill(name) { emit('toggle-skill', name) }
 function toggleDocEnabled(id) { emit('toggle-doc-enabled', id) }
+function importedToolOf(item) { return props.agentImportedTools.find(t => t.name === item.name) }
+async function handleImport(item) {
+  const ok = await doImportFromToolbox(props.form.id, item)
+  if (ok) emit('toolbox-imported')
+}
 function formatSkillSize(bytes) {
   if (!bytes) return '0 B'
   return bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(bytes/1024).toFixed(1)} KB` : `${(bytes/1048576).toFixed(1)} MB`
@@ -108,17 +105,17 @@ function formatSkillSize(bytes) {
           </el-form-item>
           <el-form-item>
             <template #label>
-              <span class="label-with-help">MCP 工具 <el-tooltip content="用户自配的 MCP Server 工具（如 GitHub、Slack）。开启后可在下方「MCP 工具」中配置。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
+              <span class="label-with-help">MCP 工具 <el-tooltip content="MCP Server 统一在「AI 工具箱」中配置，智能体只能从工具箱导入。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
             </template>
             <el-switch v-model="form.enable_mcp_tools" />
-            <span class="form-hint">{{ mcpCount > 0 ? `已配置 ${mcpCount} 个 MCP` : '暂无 MCP 工具' }}</span>
+            <span class="form-hint">从「AI 工具箱选取」导入</span>
           </el-form-item>
           <el-form-item>
             <template #label>
-              <span class="label-with-help">自定义 Skills <el-tooltip content="用户上传的 Skill 文件夹（脚本 + 文档）。开启后可在下方「自定义 Skills」中上传和管理。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
+              <span class="label-with-help">自定义 Skills <el-tooltip content="Skill 统一在「AI 工具箱」中上传，智能体只能从工具箱导入。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
             </template>
             <el-switch v-model="form.enable_skills" />
-            <span class="form-hint">{{ customSkillCount > 0 ? `已上传 ${customSkillCount} 个 Skill` : '暂无自定义 Skill' }}</span>
+            <span class="form-hint">从「AI 工具箱选取」导入</span>
           </el-form-item>
           <el-form-item>
             <template #label>
@@ -136,38 +133,10 @@ function formatSkillSize(bytes) {
           <div class="collapse-title-row"><span class="collapse-title-text">记忆与能力</span></div>
         </template>
         <el-form label-width="120px" class="agent-form">
-          <el-form-item>
-            <template #label>
-              <span class="label-with-help">记忆模式 <el-tooltip content="短期记忆=只记当前会话。长期记忆=跨会话保留对话摘要。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
-            </template>
-            <el-select v-model="form.memory_mode" style="width:100%">
-              <el-option v-for="m in memoryModes" :key="m.value" :label="m.label" :value="m.value" />
-            </el-select>
-          </el-form-item>
-          <template v-if="form.memory_mode === 'longterm'">
-            <el-form-item>
-              <template #label>
-                <span class="label-with-help">长期记忆模式 <el-tooltip content="智能体控制=Agent 自己决定何时记忆；静态控制=固定策略；两者结合=推荐。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
-              </template>
-              <el-select v-model="form.long_term_memory_mode" style="width:100%">
-                <el-option v-for="m in ltmModes" :key="m.value" :label="m.label" :value="m.value" />
-              </el-select>
-            </el-form-item>
-          </template>
-          <el-form-item>
-            <template #label>
-              <span class="label-with-help">元工具 <el-tooltip content="允许 Agent 动态管理自己的工具集。高级功能，不建议普通场景开启。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
-            </template>
-            <el-switch v-model="form.enable_meta_tool" />
-            <span class="form-hint">允许智能体动态管理自己的工具集</span>
-          </el-form-item>
-          <el-form-item>
-            <template #label>
-              <span class="label-with-help">重写查询 <el-tooltip content="开启后 LLM 在检索知识库前自动重写用户问题，提高检索精度。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
-            </template>
-            <el-switch v-model="form.enable_rewrite_query" />
-            <span class="form-hint">LLM 检索前重写用户查询</span>
-          </el-form-item>
+          <p class="form-hint">
+            Agent 每次对话自动恢复当前会话的完整上下文（无需配置）。跨会话长期记忆、
+            元工具、查询重写等高级能力当前版本暂未开放。
+          </p>
         </el-form>
       </el-collapse-item>
 
@@ -258,12 +227,16 @@ function formatSkillSize(bytes) {
           </div>
           <div v-else class="kb-imported-list">
             <div class="form-hint collapse-footer-hint" style="margin-bottom:8px">
-              AI 调用 <code>search_knowledge_base</code> 时只检索已启用的文档。
+              AI 调用 <code>search_knowledge_base</code> 时只检索已启用的文档 / 目录。
             </div>
             <div v-for="doc in importedDocs()" :key="doc.id" class="kb-doc-card">
               <div class="kb-doc-card-left">
-                <span class="kb-doc-card-name">📄 {{ doc.source || doc.id }}</span>
-                <span class="kb-doc-card-meta">{{ doc.type }} · {{ formatSkillSize(doc.size) }}</span>
+                <span class="kb-doc-card-name">
+                  {{ doc.type === 'directory' ? '📁' : '📄' }} {{ doc.type === 'directory' ? doc.dirPath : (doc.source || doc.id) }}
+                </span>
+                <span class="kb-doc-card-meta">
+                  {{ doc.type === 'directory' ? '目录引用（动态包含其下全部文件）' : `${doc.type} · ${formatSkillSize(doc.size)}` }}
+                </span>
               </div>
               <div class="kb-doc-card-right">
                 <span :class="['kb-doc-toggle', { on: doc.enabled }]"
@@ -274,99 +247,11 @@ function formatSkillSize(bytes) {
                       :title="doc.enabled ? '已启用索引' : '已禁用索引'">
                   {{ doc.enabled ? '🔛' : '🔘' }}
                 </span>
-                <button class="kb-doc-remove-btn" @click="emit('remove-doc', doc.id)" title="移除文档">✕</button>
+                <button class="kb-doc-remove-btn" @click="emit('remove-doc', doc.id)" title="移除引用">✕</button>
               </div>
             </div>
           </div>
         </div>
-      </el-collapse-item>
-
-      <!-- MCP 服务器 -->
-      <el-collapse-item name="mcp">
-        <template #title>
-          <div class="collapse-title-row">
-            <span class="collapse-title-text">MCP 服务器</span>
-            <span class="collapse-badge">{{ mcpCount }}</span>
-          </div>
-        </template>
-        <button class="add-tool-btn" @click="emit('open-mcp-dialog','add')">
-          <IconPlus :size="16" /><span>添加 MCP 服务器</span>
-        </button>
-
-        <template v-if="!isNew">
-          <div v-for="(t,i) in mcpTools" :key="t.id" class="mcp-card">
-            <div class="mcp-card-head">
-              <span class="mcp-card-name">{{ t.name }}</span>
-              <span class="mcp-card-transport">{{ t.config?.transport||'stdio' }}</span>
-              <span v-if="mcpTestResults[t.name]" class="mcp-card-status" :class="mcpTestResults[t.name].connected?'connected':'failed'">
-                {{ mcpTestResults[t.name].connected?'已连通':'未连通' }}</span>
-              <el-switch v-model="t.enabled" size="small" @change="emit('toggle-mcp',i)" />
-            </div>
-            <div class="mcp-card-body"><code>{{ t.config?.command||t.config?.url||'(未配置)' }}</code></div>
-            <div class="mcp-card-actions">
-              <el-button size="small" :loading="mcpTestingId===t.name" @click="emit('test-mcp',i)">测试连通</el-button>
-              <el-button size="small" @click="emit('open-mcp-dialog','edit',i)">编辑</el-button>
-              <el-button size="small" type="danger" plain @click="emit('remove-mcp-api',i)">删除</el-button>
-            </div>
-          </div>
-        </template>
-
-        <template v-if="isNew">
-          <div v-for="(t,i) in form.tools" :key="i" class="mcp-card">
-            <div class="mcp-card-head">
-              <span class="mcp-card-name">{{ t.name||'(未命名)' }}</span>
-              <span v-if="mcpTestResults[t.name]" class="mcp-card-status" :class="mcpTestResults[t.name].connected?'connected':'failed'">
-                {{ mcpTestResults[t.name].connected?'已连通':'未连通' }}</span>
-              <el-switch v-model="t.enabled" size="small" />
-            </div>
-            <div class="mcp-card-body"><code>{{ (typeof t.config_json==='string'?JSON.parse(t.config_json):t.config_json)?.command||'(未配置)' }}</code></div>
-            <div class="mcp-card-actions">
-              <el-button size="small" :loading="mcpTestingId===t.name" @click="emit('test-mcp',i)">测试连通</el-button>
-              <el-button size="small" @click="emit('open-mcp-dialog','edit',i)">编辑</el-button>
-              <el-button size="small" type="danger" plain @click="emit('remove-mcp-local',i)">删除</el-button>
-            </div>
-          </div>
-        </template>
-
-        <div v-if="mcpCount===0" class="empty-state">暂未添加 MCP 服务器，点击上方按钮添加</div>
-      </el-collapse-item>
-
-      <!-- 自定义 Skills -->
-      <el-collapse-item name="skills">
-        <template #title>
-          <div class="collapse-title-row">
-            <span class="collapse-title-text">Skills</span>
-            <span class="collapse-badge">{{ customSkillCount }}</span>
-          </div>
-        </template>
-        <template v-if="!isNew">
-          <button class="add-tool-btn add-skill-btn" @click="emit('trigger-skill-upload')" :disabled="skillUploading">
-            <IconPlus :size="16" /><span>{{ skillUploading?'上传中...':'上传 Skill 文件夹' }}</span>
-          </button>
-          <div v-if="skillUploading" style="padding:12px 0">
-            <el-progress :percentage="100" :indeterminate="true" :duration="2" />
-          </div>
-
-          <div v-for="(s,i) in skills" :key="s.id" class="skill-card">
-            <div class="skill-card-head">
-              <span class="skill-card-name">{{ s.name }}</span>
-              <span class="skill-card-count">{{ s.config?.file_count||0 }} 个文件</span>
-            </div>
-            <div class="skill-card-body">
-              <div class="skill-card-features">{{ s.config?.features||'无功能描述' }}</div>
-              <div class="skill-card-meta">
-                <span>{{ formatSkillSize(s.config?.size_bytes) }}</span><span>·</span>
-                <span>{{ s.config?.uploaded_at||s.created_at }}</span>
-              </div>
-            </div>
-            <div class="skill-card-actions">
-              <el-button size="small" type="danger" plain @click="emit('remove-skill',i)">删除</el-button>
-            </div>
-          </div>
-
-          <div v-if="!skills.length&&!skillUploading" class="empty-state">暂未上传 Skill，点击上方按钮选择文件夹上传</div>
-        </template>
-        <div v-else class="empty-state">Skills 管理在创建智能体后可用。请先保存智能体，再进入编辑模式上传 Skill。</div>
       </el-collapse-item>
 
       <!-- 从 AI 工具箱选取 -->
@@ -390,10 +275,20 @@ function formatSkillSize(bytes) {
                 {{ { mcp: 'MCP', skill: 'Skill', extension: '扩展' }[item.item_type] || item.item_type }}
               </span>
             </div>
+            <template v-if="importedToolOf(item)">
+              <span class="tb-imported-badge">✓ 已导入</span>
+              <button
+                class="tb-remove-btn"
+                @click="emit('remove-imported', importedToolOf(item).id)"
+              >
+                移除
+              </button>
+            </template>
             <button
+              v-else
               class="tb-import-btn"
               :disabled="importingIds.has(item.id)"
-              @click="doImportFromToolbox(form.id, item)"
+              @click="handleImport(item)"
             >
               {{ importingIds.has(item.id) ? '导入中...' : '导入' }}
             </button>
@@ -401,17 +296,6 @@ function formatSkillSize(bytes) {
         </div>
       </el-collapse-item>
     </el-collapse>
-
-    <!-- MCP 编辑弹窗 -->
-    <AgentMcpDialog
-      :visible="mcpDialogVisible"
-      :mode="mcpDialogMode"
-      :mcp-form="mcpForm"
-      :mcp-json-error="mcpJsonError"
-      :config-preview="configPreview"
-      @close="emit('close-mcp-dialog')"
-      @save="emit('save-mcp-tool')"
-    />
   </div>
 </template>
 
@@ -513,4 +397,39 @@ function formatSkillSize(bytes) {
   transition: all .15s;
 }
 .kb-doc-remove-btn:hover { color: #e74c3c; background: #fef0ef; }
+
+/* ── 工具箱导入列表 ── */
+.collapse-title-badge { font-size:var(--app-size-xs); font-weight: 600; color: var(--ai-ink-muted); background: var(--app-border-lighter); padding: 2px 10px; border-radius: 6px 10px 6px 10px; }
+.toolbox-import-list { display: flex; flex-direction: column; gap: 8px; }
+.toolbox-import-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 16px; border: 1.5px solid var(--ai-warm-border);
+  border-radius: 12px; background: var(--app-bg-card); transition: border-color .15s;
+}
+.toolbox-import-row:hover { border-color: var(--ai-teal); }
+.toolbox-import-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.toolbox-import-name { font-weight: 600; font-size: var(--app-size-sm); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-card-type { font-size: var(--app-size-xs); font-weight: 700; padding: 2px 8px; border-radius: 6px; flex-shrink: 0; }
+.tb-type-mcp { color: #0fa89b; background: rgba(25, 200, 185, 0.12); }
+.tb-type-skill { color: #7c5cd6; background: rgba(124, 92, 214, 0.12); }
+.tb-type-extension { color: #b06c1f; background: rgba(240, 173, 78, 0.15); }
+.tb-import-btn {
+  flex-shrink: 0; border: none; border-radius: 8px; cursor: pointer;
+  padding: 6px 16px; font-size: var(--app-size-sm); font-weight: 700; font-family: inherit;
+  background: var(--ai-teal); color: #fff; transition: opacity .15s;
+}
+.tb-import-btn:hover:not(:disabled) { opacity: 0.85; }
+.tb-import-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.tb-imported-badge {
+  flex-shrink: 0; font-size: var(--app-size-xs); font-weight: 700;
+  color: var(--app-status-success-text, #2e7d32);
+  background: var(--app-status-success-bg, rgba(76, 175, 80, 0.12));
+  padding: 4px 10px; border-radius: 8px;
+}
+.tb-remove-btn {
+  flex-shrink: 0; border: 1.5px solid #e74c3c; border-radius: 8px; cursor: pointer;
+  padding: 5px 14px; font-size: var(--app-size-sm); font-weight: 700; font-family: inherit;
+  background: #fef0ef; color: #e74c3c; transition: all .15s;
+}
+.tb-remove-btn:hover { background: #e74c3c; color: #fff; }
 </style>

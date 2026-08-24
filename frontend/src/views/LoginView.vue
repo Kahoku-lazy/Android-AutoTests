@@ -33,10 +33,6 @@ const {
   // ── 账号切换 ──
   onSwitchToExisting,
   onAddNewAccount,
-  // ── 视觉 ──
-  heroImageSrc,
-  heroImageVisible,
-  onHeroImageError,
 } = useLoginView()
 </script>
 
@@ -98,15 +94,15 @@ const {
             @switch-to-login="switchMode('login')"
           />
 
-          <div class="hero__visual">
-            <img
-              v-if="heroImageVisible"
-              :src="heroImageSrc"
-              alt=""
-              class="hero__animal"
-              @error="onHeroImageError"
-            />
-          </div>
+          <aside class="hero__brand" aria-hidden="true">
+            <span class="sticker sticker--ai sticker--featured">AI助手</span>
+            <div class="hero__brand-tags">
+              <span class="sticker sticker--device">设备管理</span>
+              <span class="sticker sticker--case">用例编排</span>
+              <span class="sticker sticker--runner">用例执行</span>
+              <span class="sticker sticker--report">报告生成</span>
+            </div>
+          </aside>
         </main>
       </div>
     </div>

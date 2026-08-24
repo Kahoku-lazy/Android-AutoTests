@@ -1,16 +1,33 @@
-/* 登录卡片共享尺寸 — LoginCard / RegisterCard / AccountSwitchPrompt 共用 */
+/* 登录卡片共享尺寸 — LoginCard / RegisterCard / AccountSwitchPrompt 共用（便签纸风格） */
 
 .login-card {
   width: 380px;
   box-sizing: border-box;
-  background: var(--app-bg-card) !important;
-  border: 2.5px solid var(--ink) !important;
-  border-radius: var(--app-radius-md) !important;
-  box-shadow: var(--app-shadow-md) !important;
+  position: relative;
+  overflow: visible !important;
+  background: var(--app-bg-subtle) !important;
+  border: var(--app-border-width) solid var(--ink) !important;
+  border-radius: var(--app-radius-lg) !important;
+  box-shadow: var(--app-shadow-lg) !important;
+  transform: rotate(-0.5deg);
 }
 
-.login-card :deep(.el-card__body) {
-  padding: 24px;
+/* 顶部便签条 */
+.login-card::before {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--app-space-sm));
+  left: 50%;
+  transform: translateX(-50%) rotate(-1.5deg);
+  width: 96px;
+  height: var(--app-space-md);
+  background: var(--c-runner);
+  border: var(--app-border-width) solid var(--ink);
+  border-radius: var(--app-radius-sm);
+}
+
+.login-card .el-card__body {
+  padding: var(--app-space-lg);
 }
 
 @media (max-width: 768px) {
@@ -19,5 +36,8 @@
     max-width: 360px;
     min-height: 0;
     margin: 0 auto;
+    transform: none;
   }
+
+  .login-card::before { display: none; }
 }

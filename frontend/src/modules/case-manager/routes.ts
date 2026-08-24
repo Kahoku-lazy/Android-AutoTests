@@ -3,9 +3,31 @@ import type { RouteRecordRaw } from "vue-router"
 const routes: RouteRecordRaw[] = [
   {
     path: "/cases",
-    name: "case-manager",
+    redirect: "/cases/ui",
+  },
+  {
+    path: "/cases/ui",
+    name: "case-manager-ui",
     component: () => import("@/modules/case-manager/index.vue"),
-    meta: { title: '用例管理' },
+    meta: { title: 'Android UI 自动化用例' },
+  },
+  {
+    path: "/cases/web",
+    name: "case-manager-web",
+    component: () => import("@/modules/case-manager/index.vue"),
+    meta: { title: 'Web 自动化测试用例' },
+  },
+  {
+    path: "/cases/storage",
+    name: "case-manager-storage",
+    component: () => import("@/modules/case-manager/index.vue"),
+    meta: { title: '业务功能用例' },
+  },
+  {
+    path: "/cases/api",
+    name: "case-manager-api",
+    component: () => import("@/modules/case-manager/index.vue"),
+    meta: { title: 'API 接口用例' },
   },
   // UI Automation
   {

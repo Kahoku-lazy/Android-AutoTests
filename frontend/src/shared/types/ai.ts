@@ -115,6 +115,7 @@ export interface ChatMessage {
   inputTokens?: number
   modelName?: string
   model_name?: string
+  created_at?: string
   thinking?: string
   thinkingDone?: boolean
   thinkingExpanded?: boolean
@@ -138,71 +139,75 @@ export interface HitlConfirmEvent {
 }
 
 // ── API 响应（宽松 interface — strict:false 下字面量判别属性会被拓宽，union 窄化失效）
+// Agents 组（Batch 1 已迁 DRF）：信封 {status, data}；其余端点（conversations 等）待迁移，暂保持平铺。
 export interface AgentListResponse {
   status?: boolean
-  agents?: AgentRecord[]
+  data?: { agents: AgentRecord[] }
   message?: string
 }
 
 export interface AgentDetailResponse {
   status?: boolean
-  agent?: AgentRecord
+  data?: { agent: AgentRecord }
   message?: string
 }
 
 export interface AgentOpResponse {
   status?: boolean
+  data?: { id?: number }
   message?: string
 }
 
 export interface AgentTestResponse {
   status?: boolean
-  connected?: boolean
-  available_models?: string[]
+  data?: { connected?: boolean; available_models?: string[]; message?: string }
   message?: string
 }
 
 export interface AgentHealthResponse {
   status?: boolean
-  agents?: { id: number; is_connected: boolean; last_checked?: string }[]
+  data?: { agents: { id: number; is_connected: boolean; last_checked?: string }[] }
   message?: string
 }
 
+// Conversations 组（Batch 2 已迁 DRF）：信封 {status, data}；toolbox/knowledge 待迁移，暂保持平铺。
 export interface ConversationListResponse {
   status?: boolean
-  conversations?: Conversation[]
+  data?: { conversations: Conversation[] }
   message?: string
 }
 
 export interface ConversationCreateResponse {
   status?: boolean
-  id?: number
-  title?: string
+  data?: { id?: number; title?: string; agent_scope_session_id?: string }
   message?: string
 }
 
 export interface MessagesResponse {
   status?: boolean
-  messages?: ChatMessage[]
+  data?: { messages: ChatMessage[] }
   message?: string
 }
 
 export interface SaveMessageResponse {
   status?: boolean
+  data?: { id?: number }
   message?: string
 }
 
+// Toolbox / Knowledge（Batch 3 已迁 DRF）：信封 {status, data}。
 export interface ToolboxListResponse {
   status?: boolean
-  items?: object[]
+  data?: { items: object[] }
   message?: string
 }
 
 export interface KnowledgeStatusResponse {
   status?: boolean
-  doc_count?: number
-  db_size_mb?: number
-  last_indexed?: string
-  running?: boolean
+  data?: {
+    doc_count?: number
+    db_size_mb?: number
+    reindex?: { running?: boolean; last_indexed?: string | null; message?: string }
+  }
   message?: string
 }

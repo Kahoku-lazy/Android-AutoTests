@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { animate } from 'animejs'
@@ -59,9 +59,62 @@ const {
 
 const categories = NAV_CATEGORIES
 
+// ── 可展开分组（元素定位）：父项点击展开/收起；进入子页时自动展开 ──
+const expandedGroups = ref(new Set())
+
 function isActive(path) {
   return route.path === path || route.path.startsWith(path + '/')
 }
+
+function isGroupActive(item) {
+  return !!item.children?.some((sub) => isActive(sub.path))
+}
+
+function isGroupExpanded(item) {
+  return expandedGroups.value.has(item.path)
+}
+
+function toggleGroup(item) {
+  const next = new Set(expandedGroups.value)
+  if (next.has(item.path)) {
+    next.delete(item.path)
+  } else {
+    next.add(item.path)
+  }
+  expandedGroups.value = next
+}
+
+function onGroupClick(item) {
+  if (collapsed.value) {
+    // 折叠态无子项区：跳转到默认子页，保持可用
+    router.push(item.children[0].path)
+    return
+  }
+  toggleGroup(item)
+  // 子项为点击后新增的 DOM：补渲染 lucide 图标
+  nextTick(() => {
+    if (window.lucide) window.lucide.createIcons()
+  })
+}
+
+// 路由变化时自动展开当前分组（不覆盖用户手动收起后的再点击）
+watch(
+  () => route.path,
+  () => {
+    for (const cat of categories) {
+      for (const item of cat.items) {
+        if (item.children?.some((sub) => isActive(sub.path))) {
+          const next = new Set(expandedGroups.value)
+          if (!next.has(item.path)) {
+            next.add(item.path)
+            expandedGroups.value = next
+          }
+        }
+      }
+    }
+  },
+  { immediate: true },
+)
 
 onMounted(async () => {
   initSidebarWidth()
@@ -96,7 +149,6 @@ onUnmounted(() => {
   >
     <!-- 头部品牌（高度与主区 wb-header 底边对齐） -->
     <router-link to="/dashboard" class="sidebar__header" :title="collapsed ? 'AI 自动化测试平台' : ''">
-      <AnimatedMascot :size="36" />
       <div v-show="!collapsed" class="sidebar__brand">
         <span class="brand-ai">AI</span>
         <span class="brand-title">自动化测试平台</span>
@@ -107,21 +159,52 @@ onUnmounted(() => {
     <nav class="sidebar__nav">
       <div v-for="cat in categories" :key="cat.key" class="sidebar__group">
         <div class="nav-section-items">
-          <router-link
-            v-for="item in cat.items"
-            :key="item.path"
-            :to="item.path"
-            :class="['sidebar-menu__item', { active: isActive(item.path) }]"
-            :style="{ '--mod-color': MOD_COLORS[item.path] || 'var(--c-workflow)' }"
-            :title="collapsed ? item.label : ''"
-          >
-            <i :data-lucide="item.icon" class="nav-lucide-icon"></i>
-            <span v-show="!collapsed" class="sidebar-menu__label">{{ item.label }}</span>
-            <span
-              v-if="(item.isDev || item.badge) && !collapsed"
-              :class="['sidebar-menu__badge', item.badgeClass || 'sidebar-menu__badge--dev']"
-            >{{ item.badge || '开发中' }}</span>
-          </router-link>
+          <template v-for="item in cat.items" :key="item.path">
+            <!-- 可展开分组：父项（展开/收起） + 子项 -->
+            <template v-if="item.children">
+              <button
+                type="button"
+                class="sidebar-menu__item sidebar-menu__item--group"
+                :class="{ active: isGroupActive(item) }"
+                :style="{ '--mod-color': MOD_COLORS[item.path] || 'var(--c-workflow)' }"
+                :aria-expanded="isGroupExpanded(item)"
+                :title="collapsed ? item.label : ''"
+                @click="onGroupClick(item)"
+              >
+                <i :data-lucide="item.icon" class="nav-lucide-icon"></i>
+                <span v-show="!collapsed" class="sidebar-menu__label">{{ item.label }}</span>
+                <span v-show="!collapsed" class="sidebar-menu__chevron" :class="{ open: isGroupExpanded(item) }">▾</span>
+              </button>
+              <div v-show="isGroupExpanded(item) && !collapsed" class="sidebar-menu__sub">
+                <router-link
+                  v-for="sub in item.children"
+                  :key="sub.path"
+                  :to="sub.path"
+                  :class="['sidebar-menu__item', 'sidebar-menu__item--sub', { active: isActive(sub.path) }]"
+                  :style="{ '--mod-color': MOD_COLORS[sub.path] || MOD_COLORS[item.path] || 'var(--c-workflow)' }"
+                >
+                  <i :data-lucide="sub.icon" class="nav-lucide-icon nav-lucide-icon--sub"></i>
+                  <span class="sidebar-menu__label">{{ sub.label }}</span>
+                </router-link>
+              </div>
+            </template>
+
+            <!-- 普通导航项 -->
+            <router-link
+              v-else
+              :to="item.path"
+              :class="['sidebar-menu__item', { active: isActive(item.path) }]"
+              :style="{ '--mod-color': MOD_COLORS[item.path] || 'var(--c-workflow)' }"
+              :title="collapsed ? item.label : ''"
+            >
+              <i :data-lucide="item.icon" class="nav-lucide-icon"></i>
+              <span v-show="!collapsed" class="sidebar-menu__label">{{ item.label }}</span>
+              <span
+                v-if="(item.isDev || item.badge) && !collapsed"
+                :class="['sidebar-menu__badge', item.badgeClass || 'sidebar-menu__badge--dev']"
+              >{{ item.badge || '开发中' }}</span>
+            </router-link>
+          </template>
         </div>
       </div>
     </nav>

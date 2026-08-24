@@ -24,20 +24,6 @@ defineProps<{ form: Record<string, any>; isNew?: boolean }>()
         </template>
         <el-input-number v-model="form.max_iters" :min="1" :max="100" />
       </el-form-item>
-      <el-form-item>
-        <template #label>
-          <span class="label-with-help">并行工具调用 <el-tooltip content="开启后 Agent 可同时调用多个工具（如同时查设备和用例），速度更快。关闭则串行逐个调用。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
-        </template>
-        <el-switch v-model="form.parallel_tool_calls" />
-        <span class="form-hint">允许智能体同时调用多个工具</span>
-      </el-form-item>
-      <el-form-item>
-        <template #label>
-          <span class="label-with-help">打印提示消息 <el-tooltip content="开启后在控制台输出运行时的调试信息，用于排查问题。生产环境建议关闭。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
-        </template>
-        <el-switch v-model="form.print_hint_msg" />
-        <span class="form-hint">在控制台输出运行时提示</span>
-      </el-form-item>
     </el-form>
   </div>
 </template>

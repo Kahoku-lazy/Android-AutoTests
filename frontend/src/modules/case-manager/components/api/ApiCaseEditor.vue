@@ -6,11 +6,12 @@
  *   single — meta / request / cases[]   (read-only display for now)
  *   multi  — case_info / steps[] / test_data[] / validation[]
  */
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
+import { getActive } from '@/shared/auth/token-storage'
 import CaseInfoPanel from './CaseInfoPanel.vue'
 import StepListPanel from './StepListPanel.vue'
 import TestDataPanel from './TestDataPanel.vue'
@@ -18,6 +19,7 @@ import ValidationPanel from './ValidationPanel.vue'
 import { useApiConfigJson } from '../../composables/useApiConfigJson'
 import { useCaseEditingSocket } from '../../composables/useCaseEditingSocket'
 import { deleteApiDefinition } from '../../api/apiTesting'
+import { acquireEditLock, releaseEditLock } from '../../api'
 
 const router = useRouter()
 const route = useRoute()
@@ -57,6 +59,13 @@ const METHOD_COLORS = {
   GET: '#6fba2c', POST: '#889df0', PUT: '#f7cd67', DELETE: '#e85f5f', PATCH: '#a78bfa',
 }
 
+const currentUser = getActive()
+
+// ── Edit lock ──
+const isReadOnly = ref(false)
+const editingBy = ref('')
+const hasEditLock = ref(false)
+
 // ── WebSocket: listen for remote updates (e.g. AI modifying the case) ──
 useCaseEditingSocket(
   () => isNew.value ? null : caseId.value,
@@ -91,10 +100,28 @@ onMounted(async () => {
       directoryName.value = route.query.dir_name
     }
     captureSnapshot()
+    // 编辑锁：与 ui/web/storage 编辑器口径一致（后端乐观锁仍为兜底）
+    if (currentUser) {
+      try {
+        const lockResp = await acquireEditLock(caseId.value)
+        if (lockResp?.data?.status) hasEditLock.value = true
+      } catch (e) {
+        if (e?.response?.status === 423) {
+          isReadOnly.value = true
+          editingBy.value = e?.response?.data?.editing_by || ''
+        }
+      }
+    }
   } catch (e) {
     error.value = e?.response?.data?.message || e?.message || '加载用例失败'
   } finally {
     loading.value = false
+  }
+})
+
+onUnmounted(() => {
+  if (hasEditLock.value && caseId.value) {
+    releaseEditLock(caseId.value).catch(() => {})
   }
 })
 
@@ -144,6 +171,7 @@ function validateBeforeSave() {
 
 // ── Save ──
 async function doSave() {
+  if (isReadOnly.value) { ElMessage.warning('当前用例为只读，无法保存'); return }
   if (!validateBeforeSave()) return
   saving.value = true
   try {
@@ -152,8 +180,8 @@ async function doSave() {
     if (data && data.status !== false) {
       ElMessage.success(isNew.value ? '创建成功' : '保存成功')
       router.push({
-        path: '/cases',
-        query: { tab: 'api', directory_id: meta.directory_id || undefined },
+        path: '/cases/api',
+        query: { directory_id: meta.directory_id || undefined },
       })
     } else {
       ElMessage.error((data && data.message) || '保存失败')
@@ -185,7 +213,7 @@ async function doDelete() {
     deleting.value = true
     await deleteApiDefinition(caseId.value)
     ElMessage.success('已删除')
-    router.push({ path: '/cases', query: { tab: 'api' } })
+    router.push('/cases/api')
   } catch (e) {
     if (e !== 'cancel' && e !== 'close') ElMessage.error('删除失败')
   } finally {
@@ -312,35 +340,43 @@ async function doDelete() {
 
       <!-- ═══ Multi format (original) ═══ -->
       <template v-else>
+        <!-- Edit lock banner -->
+        <div v-if="isReadOnly" class="edit-lock-banner">
+          🔒 {{ editingBy ? `用例正被 ${editingBy} 编辑` : '用例已锁定' }}，当前为只读模式
+        </div>
+
         <!-- ① Case Info -->
-        <CaseInfoPanel v-model="config.case_info" />
+        <CaseInfoPanel v-model="config.case_info" :readonly="isReadOnly" />
 
         <!-- ② Steps -->
-        <StepListPanel v-model="config.steps" />
+        <StepListPanel v-model="config.steps" :readonly="isReadOnly" />
 
         <!-- ③ Test Data -->
         <TestDataPanel
           v-model="config.test_data"
           :data-columns="dataColumns"
           :step-count="stepCount"
+          :readonly="isReadOnly"
         />
 
         <!-- ④ Validation -->
         <ValidationPanel
           v-model="config.validation"
           :step-count="stepCount"
+          :readonly="isReadOnly"
         />
       </template>
 
       <!-- Action bar (shared) -->
       <div class="action-bar">
-        <el-button v-if="!isNew" type="danger" plain @click="doDelete">🗑 删除用例</el-button>
+        <el-button v-if="!isNew" type="danger" plain :disabled="isReadOnly" @click="doDelete">🗑 删除用例</el-button>
         <div class="action-bar__spacer"></div>
         <el-button class="wb-btn" @click="router.back()">取消</el-button>
         <el-button
           v-if="format !== 'single'"
           type="primary"
           :loading="saving"
+          :disabled="isReadOnly"
           class="save-btn"
           @click="doSave"
         >
@@ -379,6 +415,15 @@ async function doDelete() {
 }
 .action-bar__spacer { flex: 1; }
 .save-btn :deep(span) { font-weight: 800; }
+.edit-lock-banner {
+  background: var(--app-status-warning-bg, #FFF9E0);
+  border: 2px solid var(--app-highlight, #FFE066);
+  border-radius: var(--app-radius-md);
+  padding: var(--app-space-sm) var(--app-space-md);
+  font-size: var(--app-size-sm);
+  font-weight: 600;
+  color: var(--app-warning-text, #7a5a10);
+}
 :deep(.el-loading-mask) { background: rgba(250, 245, 238, 0.6); }
 
 /* ── Single format panels ── */

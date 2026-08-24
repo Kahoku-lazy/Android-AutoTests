@@ -1,6 +1,15 @@
 /* ═══════════════════════════════════════════
    Doodle Craft 设计令牌
    极简 · 几何 · 粗线 · 涂鸦彩绘 · 卡通 · 手稿纸
+   ═══════════════════════════════════════════
+   现行体系（frontend/CLAUDE.md §2 口径）：
+     --c-* 模块色 · --app-status-* 状态色 · --app-size-* 字号 · --app-space-* 间距
+     --app-radius-* 圆角 · --app-shadow-* 阴影 · --app-duration-*、--app-ease、--app-spring 动效
+     --app-font* 字体 · --ink/--paper/--dot/--app-bg-subtle/--app-border-*、--app-highlight 核心色
+   @deprecated（新代码禁用，旧代码保留兼容）：
+     --app-module-*（值同 --c-*）· --app-font-size-* · --app-glass-* · 兼容别名块 · 自然背景块
+   ⚠️ 待收敛：--doodle-* 主题家族与 --ink/--paper 两套并存；
+     --app-green 实为 workflow 蓝、--app-blue 实为 element 紫（名字误导，慎用）
    ═══════════════════════════════════════════ */
 
 :root, [data-theme="light"] {
@@ -9,7 +18,7 @@
   --paper:            #fefcf5;
   --dot:              #d8d2c4;
 
-  /* ── 模块强调色（8 色饱和版）── */
+  /* ── @deprecated 模块强调色（旧命名，值同下方 --c-*；新代码用 --c-*）── */
   --app-module-green:   #6BCB77;   /* device-pool — 薄荷绿 */
   --app-module-teal:    #4ECDC4;   /* case-manager — 青绿 */
   --app-module-purple:  #A78BFA;   /* element-locator — 薰衣草紫 */
@@ -42,7 +51,7 @@
   --app-text-inverse:   #ffffff;
   --app-nav-text:       #5a5547;  /* 侧边栏导航未激活文字（暖灰，纸面语言） */
 
-  /* ── 兼容别名 ── */
+  /* ── @deprecated 兼容别名（新代码用上方现行 token；--app-green/--app-blue 名字误导，慎用）── */
   --text-primary:       var(--ink);
   --text-secondary:     #999;
   --font-display:       'Cascadia Mono', 'Noto Sans SC', sans-serif;
@@ -61,7 +70,7 @@
   --app-blue-sky:       #e8f5e9;
   --app-white:          #fdfbfb;
 
-  /* ── 自然背景（保留兼容）── */
+  /* ── @deprecated 自然背景（保留兼容）── */
   --app-sky:         #e0f7fa;
   --app-sky-cloud:   rgba(255,255,255,0.82);
   --app-ocean:       #a2d2ff;
@@ -139,7 +148,7 @@
   --app-font-size-base: var(--app-size-sm);   /* ⚠️ 旧代码中的 base=14px，新代码用 --app-size-sm */
   --app-font-size-lg:   var(--app-size-md);   /* ⚠️ 旧代码中的 lg=16px，新代码用 --app-size-md */
 
-  /* ── Paper × Polaroid 主题色 ── */
+  /* ── Paper × Polaroid 主题色（--app-ink/--app-paper 等旧主题值与上方 --ink/--paper 并存待收敛；其中 --app-status-* 为现行状态色）── */
   --app-ink:                #2d2d2d;
   --app-ink-muted:          #999;
   --app-paper:              #fefcf6;

@@ -27,36 +27,29 @@ export function generateTaskId(existingIds = new Set()) {
   return tid;
 }
 
+/** 权威状态读取（Step 6）：后端下发 state；无 state 的本地/旧数据回退 idle（字段读取，非推导） */
+export function resolveTaskState(task) {
+  return task.state || "idle";
+}
+
 export function deriveTaskStatus(task) {
-  if (task.running) return "running";
-  // 历史数据漂移：DB status=queued 但 outcome 已终态 → 视为已完成
-  if (
-    task.status === "queued" &&
-    task.outcome &&
-    ["completed", "stopped", "interrupted", "error"].includes(task.outcome)
-  ) {
-    return "done";
-  }
-  if (task.status === "queued") return "queued";
-  if (task.outcome === "completed") return "done";
-  if (
-    task.outcome &&
-    ["stopped", "interrupted", "error"].includes(task.outcome)
-  )
-    return "done";
-  return "idle";
+  // 兼容旧名：语义 = 读后端权威 state（判定唯一入口在后端 display_state）
+  return resolveTaskState(task);
 }
 
 export function isTaskQueued(task) {
-  return deriveTaskStatus(task) === "queued";
+  return resolveTaskState(task) === "queued";
 }
 
 export function taskBucket(task) {
-  if (task.running) return "running";
-  if (isTaskQueued(task)) return "waiting";
-  // 仅成功跑完全部用例归入「已完成」；停止/中断/异常归入「未完成」
-  if (task.outcome === "completed") return "completed";
-  return "incomplete";
+  const state = resolveTaskState(task);
+  if (state === "running") return "running";
+  if (state === "queued") return "waiting";
+  if (state === "done") {
+    // 仅成功跑完全部用例归入「已完成」；停止/中断/异常归入「未完成」
+    return task.outcome === "completed" ? "completed" : "incomplete";
+  }
+  return "incomplete"; // idle 保持现状语义
 }
 
 /** 计算通过率 0-100 */
@@ -96,24 +89,25 @@ export function taskCardClass(task) {
 }
 
 export function taskStatusInfo(task) {
-  if (task.running) return { label: "执行中", color: "#889df0", icon: "⚡" };
+  // 色值统一走 tokens.css 状态色（JS 返回 CSS 变量字符串，模板 style 绑定可用）
+  if (task.running) return { label: "执行中", color: "var(--app-pending-text)", icon: "⚡" };
   if (isTaskQueued(task))
-    return { label: "等待中", color: "#f7cd67", icon: "⏳" };
+    return { label: "等待中", color: "var(--app-queue-text)", icon: "⏳" };
   if (task.outcome === "completed") {
     const failRate = 100 - taskPassRate(task);
     if (failRate <= 5)
-      return { label: "已完成", color: "#f7cd67", icon: "✅", rateTag: "<5%", rateColor: "#b8860b" };
+      return { label: "已完成", color: "var(--app-status-success-text)", icon: "✅", rateTag: "<5%", rateColor: "var(--app-queue-text)" };
     if (failRate <= 15)
-      return { label: "已完成", color: "#e85f5f", icon: "✅", rateTag: "5%~15%", rateColor: "#c0392b" };
-    return { label: "已完成", color: "#a8b5c4", icon: "✅", rateTag: ">15%", rateColor: "#7f8c8d" };
+      return { label: "已完成", color: "var(--app-status-danger-text)", icon: "✅", rateTag: "5%~15%", rateColor: "var(--app-status-danger-text)" };
+    return { label: "已完成", color: "var(--app-text-muted)", icon: "✅", rateTag: ">15%", rateColor: "var(--app-text-secondary)" };
   }
   if (task.outcome === "stopped")
-    return { label: "已停止", color: "#f7a8c4", icon: "⏹" };
+    return { label: "已停止", color: "var(--app-status-danger)", icon: "⏹" };
   if (task.outcome === "interrupted")
-    return { label: "运行中断", color: "#f7a8c4", icon: "⚠️" };
+    return { label: "运行中断", color: "var(--app-status-danger)", icon: "⚠️" };
   if (task.outcome === "error")
-    return { label: "异常终止", color: "#e85f5f", icon: "💥" };
-  return { label: "未执行", color: "#a8b5c4", icon: "📝" };
+    return { label: "异常终止", color: "var(--app-status-danger-text)", icon: "💥" };
+  return { label: "未执行", color: "var(--app-text-muted)", icon: "📝" };
 }
 
 export function taskCompletedCount(task) {

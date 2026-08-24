@@ -330,6 +330,53 @@
   border-color: var(--ink);
 }
 
+/* ── 可展开分组（元素定位）：父项 + 子项 ── */
+.sidebar-menu__item--group {
+  width: 100%;
+  text-align: left;
+  font-family: var(--app-font); /* button 不继承父级字体，需显式声明 */
+}
+.sidebar-menu__chevron {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: var(--app-size-sm);
+  color: var(--app-ink-muted);
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+.sidebar-menu__chevron.open {
+  transform: rotate(180deg);
+}
+.sidebar-menu__item--group:hover .sidebar-menu__chevron,
+.sidebar-menu__item--group.active .sidebar-menu__chevron {
+  color: var(--ink);
+}
+
+.sidebar-menu__sub {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 4px 17px;
+  padding-left: 10px;
+  border-left: 2px solid var(--dot);
+}
+.sidebar-menu__item--sub {
+  height: 34px;
+  padding: 0 10px;
+  font-size: var(--app-size-sm);
+}
+.sidebar-menu__item--sub .sidebar-menu__label {
+  font-size: var(--app-size-sm);
+}
+.nav-lucide-icon--sub {
+  width: 16px;
+  height: 16px;
+}
+/* 子项 active：复用纸签语言，但去掉右端 ✦（行窄，避免与文字重叠） */
+.sidebar-menu__item--sub.active::after {
+  display: none;
+}
+
 /* ── 底部用户区 ── */
 .sidebar__footer {
   position: relative;

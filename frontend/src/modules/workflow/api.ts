@@ -1,5 +1,5 @@
 /**
- * 工作流工作台 API — 元素/用例 + Django workflow JSON 持久化
+ * 工作流工作台 API — 元素 + Django workflow JSON 持久化
  */
 import client from '@/shared/api-client'
 
@@ -21,27 +21,6 @@ export function listWebGroups() {
 /** 列出某分组下的 Web 元素 */
 export function listWebGroupElements(groupId) {
   return client.get('/elements/web', { params: { group_id: groupId } })
-}
-
-/** 用例列表 */
-export function listDefinitions(directoryId?: string | null) {
-  const params = directoryId ? { directory_id: directoryId } : {}
-  return client.get('/cases/definitions', { params })
-}
-
-/** 用例详情 */
-export function getDefinition(id) {
-  return client.get(`/cases/definitions/${id}`)
-}
-
-/** 创建/更新用例（与 CaseEditor 同一 upsert） */
-export function saveDefinition(form) {
-  return client.post('/cases/definitions', form)
-}
-
-/** 用例目录 */
-export function fetchDirectories() {
-  return client.get('/cases/directories')
 }
 
 // ── Workflow 目录 / JSON 文档 ──

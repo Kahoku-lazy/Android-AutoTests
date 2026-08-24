@@ -235,7 +235,7 @@ async function exitPage() {
     } catch { return; }
   }
   skipGuard.value = true;
-  router.push("/cases");
+  router.push("/cases/web");
 }
 </script>
 

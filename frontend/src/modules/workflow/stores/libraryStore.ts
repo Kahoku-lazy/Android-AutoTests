@@ -1,5 +1,5 @@
 /**
- * 工作流资源库 — 目录 / 页面流 / 测试用例（Django JSON 持久化，doc_id 权威）
+ * 工作流资源库 — 目录 / 页面流（Django JSON 持久化，doc_id 权威）
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
@@ -20,15 +20,13 @@ import {
   moveWorkflowDirectory,
 } from '@/modules/workflow/api'
 
-export type LibNodeType = 'folder' | 'page_flow' | 'test_case'
+export type LibNodeType = 'folder' | 'page_flow'
 
 export interface LibNode {
   id: string
   name: string
   type: LibNodeType
   parentId: string | null
-  /** 平台用例 id（可选，存在 config.linkedCaseId） */
-  caseId?: string
   createdAt: string
   updatedAt: string
 }
@@ -75,7 +73,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
     }
     for (const list of byParent.values()) {
       list.sort((a, b) => {
-        const order = { folder: 0, page_flow: 1, test_case: 2 }
+        const order = { folder: 0, page_flow: 1 }
         return (order[a.type] - order[b.type]) || a.name.localeCompare(b.name, 'zh')
       })
     }
@@ -138,14 +136,13 @@ export const useLibraryStore = defineStore('wf-library', () => {
     directory_id: number | null
     created_at?: string
     updated_at?: string
-    config?: { linkedCaseId?: string }
-  }): LibNode {
+  }): LibNode | null {
+    if (d.doc_type === 'test_case') return null
     return {
       id: d.doc_id,
       name: d.title,
-      type: d.doc_type === 'test_case' ? 'test_case' : 'page_flow',
+      type: 'page_flow',
       parentId: d.directory_id != null ? folderId(d.directory_id) : null,
-      caseId: d.config?.linkedCaseId || undefined,
       createdAt: d.created_at || '',
       updatedAt: d.updated_at || '',
     }
@@ -159,9 +156,13 @@ export const useLibraryStore = defineStore('wf-library', () => {
         listWorkflowDocuments(),
       ])
       const dirs = dirRes.data?.directories || []
-      const docs = docRes.data?.documents || []
+      const docs = (docRes.data?.documents || []).filter(
+        (d: { doc_type?: string }) => d.doc_type !== 'test_case'
+      )
       const folderNodes = dirs.map(mapDir)
-      const docNodes = docs.map((d: any) => mapDoc(d))
+      const docNodes = docs
+        .map((d: any) => mapDoc(d))
+        .filter((n: LibNode | null): n is LibNode => n != null)
       nodes.value = [...folderNodes, ...docNodes]
       for (const n of folderNodes) {
         if (expanded.value[n.id] === undefined) expanded.value[n.id] = true
@@ -217,6 +218,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       if (!res.data?.status) throw new Error(res.data?.message || '创建失败')
       const doc = res.data.document
       const node = mapDoc(doc)
+      if (!node) throw new Error('创建失败')
       configCache.value[node.id] = doc.config || empty
       nodes.value.push(node)
       if (parentId) expanded.value[parentId] = true
@@ -225,47 +227,6 @@ export const useLibraryStore = defineStore('wf-library', () => {
       return node
     } catch (e: any) {
       const msg = e?.response?.data?.message || e?.message || '创建页面流失败'
-      throw new Error(msg)
-      throw e
-    }
-  }
-
-  async function createTestCase(
-    name: string,
-    parentId: string | null = null,
-    _opts?: {
-      packageName?: string
-      syncPlatform?: boolean
-      blocks?: unknown[]
-      linkedCaseId?: string
-    }
-  ): Promise<LibNode> {
-    const title = name.trim() || '未命名用例'
-    const config = {
-      format: 'testcase-scratch-v1',
-      name: title,
-      package_name: _opts?.packageName || 'com.example.app',
-      blocks: Array.isArray(_opts?.blocks) ? _opts!.blocks! : ([] as unknown[]),
-      linkedCaseId: _opts?.linkedCaseId || '',
-    }
-    try {
-      const res = await saveWorkflowDocument({
-        title,
-        doc_type: 'test_case',
-        directory_id: parentToDirectoryId(parentId),
-        config,
-      })
-      if (!res.data?.status) throw new Error(res.data?.message || '创建失败')
-      const doc = res.data.document
-      const node = mapDoc(doc)
-      configCache.value[node.id] = doc.config || config
-      nodes.value.push(node)
-      if (parentId) expanded.value[parentId] = true
-      persistUi()
-      status.value = `已创建测试用例「${title}」（${node.id}）`
-      return node
-    } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || '创建用例失败'
       throw new Error(msg)
       throw e
     }
@@ -286,7 +247,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
         // 一旦 PUT 会把未落库的画布数据洗成空（多端/改名失焦时尤其易发）。
         const res = await updateWorkflowDocument(id, {
           title,
-          doc_type: n.type === 'test_case' ? 'test_case' : 'page_flow',
+          doc_type: 'page_flow',
           directory_id: parentToDirectoryId(n.parentId),
         })
         if (!res.data?.status) throw new Error(res.data?.message || '重命名失败')
@@ -451,7 +412,6 @@ export const useLibraryStore = defineStore('wf-library', () => {
       const n = findNode(docId)
       if (n && res.data.document?.title) n.name = res.data.document.title
       if (n && res.data.document?.updated_at) n.updatedAt = res.data.document.updated_at
-      if (n && cfg?.linkedCaseId) n.caseId = cfg.linkedCaseId
       return cfg
     } catch (e: any) {
       throw new Error(e?.response?.data?.message || e?.message || '加载文档失败')
@@ -464,70 +424,6 @@ export const useLibraryStore = defineStore('wf-library', () => {
     const cfg = await fetchDocumentConfig(id, { force: true })
     if (!cfg) return null
     return cfg as WorkflowSaveData
-  }
-
-  async function saveCaseDraft(id: string, draft: {
-    name: string
-    package_name: string
-    blocks: unknown[]
-    linkedCaseId?: string
-  }): Promise<void> {
-    const n = findNode(id)
-    if (!n || n.type !== 'test_case') return
-    const config = {
-      format: 'testcase-scratch-v1',
-      name: draft.name || n.name,
-      package_name: draft.package_name || 'com.example.app',
-      blocks: draft.blocks || [],
-      linkedCaseId: draft.linkedCaseId || '',
-    }
-    try {
-      const res = await updateWorkflowDocument(id, {
-        title: config.name,
-        doc_type: 'test_case',
-        directory_id: parentToDirectoryId(n.parentId),
-        config,
-      })
-      if (!res.data?.status) throw new Error(res.data?.message || '保存失败')
-      configCache.value[id] = res.data.document?.config ?? config
-      if (draft.linkedCaseId) n.caseId = draft.linkedCaseId
-      n.name = config.name
-      n.updatedAt = res.data.document?.updated_at || nowIso()
-    } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || '保存用例失败'
-      throw new Error(msg)
-      throw e
-    }
-  }
-
-  /** 打开用例：始终拉服务端最新 */
-  async function loadCaseDraft(id: string): Promise<{
-    name: string
-    package_name: string
-    blocks: unknown[]
-    linkedCaseId?: string
-  } | null> {
-    const cfg = await fetchDocumentConfig(id, { force: true })
-    if (!cfg || typeof cfg !== 'object') return null
-    const c = cfg as Record<string, unknown>
-    return {
-      name: (c.name as string) || '',
-      package_name: (c.package_name as string) || 'com.example.app',
-      blocks: (c.blocks as unknown[]) || [],
-      linkedCaseId: (c.linkedCaseId as string) || '',
-    }
-  }
-
-  async function setCaseId(id: string, caseId: string): Promise<void> {
-    const n = findNode(id)
-    if (!n || n.type !== 'test_case') return
-    const draft = await loadCaseDraft(id)
-    await saveCaseDraft(id, {
-      name: draft?.name || n.name,
-      package_name: draft?.package_name || 'com.example.app',
-      blocks: draft?.blocks || [],
-      linkedCaseId: caseId,
-    })
   }
 
   async function exportDoc(docId: string): Promise<Record<string, unknown> | null> {
@@ -555,7 +451,12 @@ export const useLibraryStore = defineStore('wf-library', () => {
       await refreshFromServer()
       const doc = res.data.document
       if (doc?.config) configCache.value[doc.doc_id] = doc.config
-      const node = findNode(doc.doc_id) || mapDoc(doc)
+      const mapped = doc ? mapDoc(doc) : null
+      const node = (doc && findNode(doc.doc_id)) || mapped
+      if (!node) {
+        status.value = `已导入「${doc?.title || ''}」，但类型不支持展示`
+        return null
+      }
       status.value = `已导入「${doc.title}」（${doc.doc_id}）`
       // success — 调用方处理 toast
       return node
@@ -582,7 +483,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
     expanded.value[folder.id] = true
     activeId.value = folder.id
     persistUi()
-    status.value = '已创建「默认目录」，可在右侧新建页面流/用例'
+    status.value = '已创建「默认目录」，可在右侧新建页面流'
     return { folder }
   }
 
@@ -606,7 +507,6 @@ export const useLibraryStore = defineStore('wf-library', () => {
     childrenOf,
     createFolder,
     createPageFlow,
-    createTestCase,
     configCache,
     renameNode,
     deleteNode,
@@ -615,9 +515,6 @@ export const useLibraryStore = defineStore('wf-library', () => {
     toggleExpand,
     savePageFlowPayload,
     loadPageFlowPayload,
-    saveCaseDraft,
-    loadCaseDraft,
-    setCaseId,
     exportDoc,
     importDoc,
     bootstrapIfEmpty,

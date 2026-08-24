@@ -1,23 +1,35 @@
-/** device-inspector API client functions */
+/** device-inspector API client functions — v1.7 快照化 6 端点 + 设备列表 */
 import client from '@/shared/api-client'
 
-// ── Element dump ──
+// ── Capture & snapshots ──
 
-export function apiDump()         { return client.post('/inspector/dump', {}) }
-export function apiOcr()          { return client.post('/inspector/ocr', {}) }
-
-// ── Device integration ──
-
-export function apiGetDevices()           { return client.get('/devices') }
-export function apiActivateDevice(s)      { return client.post(`/devices/${s}/activate`) }
-export function apiGetDeviceInfo()        { return client.get('/inspector/device-info') }
-export function apiGetScreenshot()        { return client.get('/inspector/screenshot') }
-
-// ── Observe-mode connect/disconnect (manual device control) ──
-
-export function apiConnectObserve(serial) {
-  return client.post(`/devices/${serial}`, { activate: true, mode: 'observe' })
+export function apiCapture(serial, method) {
+  return client.post('/inspector/capture', { serial, method })
 }
-export function apiDisconnectObserve(serial) {
-  return client.post(`/devices/${serial}/disconnect-observe`)
+export function apiGetSnapshots(offset = 0, limit = 100) {
+  return client.get('/inspector/snapshots', { params: { offset, limit } })
+}
+export function apiGetSnapshot(id) {
+  return client.get(`/inspector/snapshots/${id}`)
+}
+export function apiDeleteSnapshot(id) {
+  return client.delete(`/inspector/snapshots/${id}/delete`)
+}
+
+// ── Save to element locator ──
+
+export function apiSaveToElements(id, payload) {
+  return client.post(`/inspector/snapshots/${id}/save-elements`, payload)
+}
+
+// ── Saved page view (read-only) ──
+
+export function apiGetPageView(pageId) {
+  return client.get(`/inspector/pages/${pageId}`)
+}
+
+// ── Device integration (device-pool) ──
+
+export function apiGetDevices() {
+  return client.get('/devices')
 }

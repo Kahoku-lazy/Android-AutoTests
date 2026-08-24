@@ -144,7 +144,7 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
     agentsError.value = ''
     try {
       const data = await listAgents()
-      if (data.status) { agents.value = data.agents; syncPendingModels() }
+      if (data.status && data.data) { agents.value = data.data.agents; syncPendingModels() }
       else { agentsError.value = data.message || '加载失败' }
     } catch { agentsError.value = '加载智能体列表失败，请检查网络连接' }
     loading.value = false
@@ -154,8 +154,8 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
   async function checkAllHealth() {
     try {
       const data = await checkAgentsHealth()
-      if (data.status && data.agents) {
-        for (const h of data.agents) healthResults.value[h.id] = { is_connected: h.is_connected, last_checked: h.last_checked }
+      if (data.status && data.data?.agents) {
+        for (const h of data.data.agents) healthResults.value[h.id] = { is_connected: h.is_connected, last_checked: h.last_checked }
         nextTick(() => animateStatusBubbles())
       }
     } catch { ElMessage.error('健康检查失败') }
@@ -165,10 +165,11 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
     testingId.value = agent.id
     try {
       const data = await testAgent(agent.id)
-      if (data.status) {
-        healthResults.value[agent.id] = { is_connected: data.connected, last_checked: new Date().toISOString() }
-        if (data.connected) { ElMessage.success(`${agent.name} 连接成功`); loadAgents() }
-        else ElMessage.warning(`${agent.name} 连接失败: ${(data as { message?: string }).message || '未知错误'}`)
+      const payload = data.data
+      if (data.status && payload) {
+        healthResults.value[agent.id] = { is_connected: payload.connected ?? false, last_checked: new Date().toISOString() }
+        if (payload.connected) { ElMessage.success(`${agent.name} 连接成功`); loadAgents() }
+        else ElMessage.warning(`${agent.name} 连接失败: ${payload.message || '未知错误'}`)
       }
     } catch { ElMessage.error(`${agent.name} 检测请求失败`) }
     testingId.value = null

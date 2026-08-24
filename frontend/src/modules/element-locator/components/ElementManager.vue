@@ -76,8 +76,37 @@ const filterTabs = [
   { key: 'all', label: '全部' },
   { key: 'test_point', label: '测试点' },
 ]
+
+/** 缩略图相对路径 → 媒体 URL（与设备检查器同口径） */
+function thumbUrl(path) {
+  return path ? `/media/${path}` : ''
+}
+
+/** 页面级 OCR 文本（当前选中页面 ocr_json） */
+const ocrTextsOfPage = computed(() => {
+  const p = pages.value.find(x => x.id === selectedPage.value?.id)
+  return p?.ocr_json?.texts || []
+})
+
+/** 行数据：元素 + 坐标匹配的 OCR 字段（与设备检查器合并表格同口径） */
+const tableRows = computed(() =>
+  elements.value.map(e => {
+    const m = ocrTextsOfPage.value.find(t =>
+      t.x === e.x && t.y === e.y && t.width === e.width && t.height === e.height
+    )
+    if (!m) return e
+    return {
+      ...e,
+      _ocr_text: m.text,
+      _ocr_conf: m.confidence,
+      _ocr_thumb: m.thumbnail_path || '',
+      _ocr_bounds: m.bounds || `[${m.x},${m.y}][${(m.x || 0) + (m.width || 0)},${(m.y || 0) + (m.height || 0)}]`,
+    }
+  })
+)
+
 const filteredElements = computed(() =>
-  filterMode.value === 'test_point' ? elements.value.filter((e) => e.is_test_point) : elements.value)
+  filterMode.value === 'test_point' ? tableRows.value.filter((e) => e.is_test_point) : tableRows.value)
 
 const {
   PAGE_SIZE_OPTIONS, pageSize, currentPage, totalPages, pagedItems: pagedElements, setPageSize, goPage
@@ -85,12 +114,16 @@ const {
 
 const columns = [
   { title: '别名', dataIndex: 'alias', key: 'alias', minWidth: 160 },
-  { title: 'XPath', dataIndex: 'xpath', key: 'xpath', minWidth: 320 },
-  { title: '类名', dataIndex: 'class_name', key: 'class_name', minWidth: 160 },
-  { title: '文本', dataIndex: 'text_val', key: 'text_val', minWidth: 160 },
-  { title: 'Resource ID', dataIndex: 'resource_id', key: 'resource_id', minWidth: 220 },
-  { title: '可点击', dataIndex: 'clickable', key: 'clickable', minWidth: 100, align: 'center' },
-  { title: '测试点', dataIndex: 'is_test_point', key: 'is_test_point', minWidth: 100, align: 'center' },
+  { title: '缩略图', dataIndex: 'thumbnail_path', key: 'thumb', width: 70 },
+  { title: 'text', dataIndex: 'text_val', key: 'text_val', minWidth: 120 },
+  { title: 'resource-id', dataIndex: 'resource_id', key: 'resource_id', minWidth: 180 },
+  { title: 'XPath', dataIndex: 'xpath', key: 'xpath', minWidth: 260 },
+  { title: '坐标', dataIndex: 'bounds', key: 'bounds', minWidth: 130 },
+  { title: 'OCR缩略图', dataIndex: '_ocr_thumb', key: 'ocr_thumb', width: 70 },
+  { title: 'OCR文字', dataIndex: '_ocr_text', key: 'ocr_text', minWidth: 120 },
+  { title: 'OCR坐标', dataIndex: '_ocr_bounds', key: 'ocr_bounds', minWidth: 130 },
+  { title: 'OCR置信度', dataIndex: '_ocr_conf', key: 'ocr_conf', width: 90, align: 'center' },
+  { title: '测试点', dataIndex: 'is_test_point', key: 'is_test_point', minWidth: 90, align: 'center' },
 ]
 
 async function updateEl(record, field, value) {
@@ -266,6 +299,12 @@ async function updateEl(record, field, value) {
                         />
                       </template>
 
+                      <!-- Custom cell: thumb (dump 缩略图) -->
+                      <template #cell-thumb="{ record }">
+                        <img v-if="record.thumbnail_path" :src="thumbUrl(record.thumbnail_path)" class="cell-thumb" />
+                        <span v-else class="text-muted">—</span>
+                      </template>
+
                       <!-- Custom cell: xpath — pre-parsed in selectPage() for performance -->
                       <template #cell-xpath="{ record }">
                         <span v-if="record._first_xpath"
@@ -288,11 +327,22 @@ async function updateEl(record, field, value) {
                         <span v-else class="text-muted">—</span>
                       </template>
 
-                      <!-- Custom cell: clickable -->
-                      <template #cell-clickable="{ value }">
-                        <span :class="['clickable-badge', value ? 'clickable-yes' : 'clickable-no']">
-                          {{ value ? '✓ 可点击' : '—' }}
-                        </span>
+                      <!-- Custom cell: OCR 缩略图 -->
+                      <template #cell-ocr_thumb="{ record }">
+                        <img v-if="record._ocr_thumb" :src="thumbUrl(record._ocr_thumb)" class="cell-thumb" />
+                        <span v-else class="text-muted">—</span>
+                      </template>
+
+                      <!-- Custom cell: OCR 文字 -->
+                      <template #cell-ocr_text="{ record }">
+                        <span v-if="record._ocr_text" class="cell-text">{{ record._ocr_text }}</span>
+                        <span v-else class="text-muted">—</span>
+                      </template>
+
+                      <!-- Custom cell: OCR 置信度 -->
+                      <template #cell-ocr_conf="{ record }">
+                        <span v-if="record._ocr_conf != null" class="cell-conf">{{ (record._ocr_conf * 100).toFixed(1) }}%</span>
+                        <span v-else class="text-muted">—</span>
                       </template>
 
                       <!-- Custom cell: is_test_point -->

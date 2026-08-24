@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
@@ -11,23 +11,55 @@ import EvaluatorTab from './EvaluatorTab.vue'
 import ToolboxPanel from './components/ToolboxPanel.vue'
 import { useAgentBoard } from './index.logic'
 import { agentDetailRoute } from './constants'
+import type { ViewMode } from '@/shared/types/ai'
 
 const router = useRouter()
+const route = useRoute()
 const dutyRosterRef = ref<HTMLElement | null>(null)
 const {
-  viewMode, agents, loading, agentsError, testingId, confirmingId, pendingModels,
+  agents, loading, agentsError, testingId, confirmingId, pendingModels,
   PAGE_HEADER, noteRotation, tapeHue,
   agentStatusClass, agentStatusText, getModelOptions,
   loadAgents, confirmModel, deleteAgent, testConnection,
   openAgent, editAgent, onAgentCardClick,
 } = useAgentBoard(dutyRosterRef)
+
+// ── 视图（侧边栏子项路由驱动，/ai-assistant/agents|toolbox|knowledge|evaluator）──
+const VIEW_BY_PATH: Record<string, ViewMode> = {
+  '/ai-assistant/agents': 'agents',
+  '/ai-assistant/toolbox': 'toolbox',
+  '/ai-assistant/knowledge': 'knowledge',
+  '/ai-assistant/evaluator': 'evaluator',
+}
+const viewMode = computed<ViewMode>(() => VIEW_BY_PATH[route.path] || 'agents')
+
+// ── 顶部 WorkbenchHeader 随侧边栏子项变化 ──
+const VIEW_META: Record<ViewMode, { title: string; subtitle: string }> = {
+  agents: {
+    title: '智能体看板 Agent Board',
+    subtitle: '管理智能体：创建、编辑、连接测试与模型切换',
+  },
+  toolbox: {
+    title: 'AI工具箱 AI Toolbox',
+    subtitle: '集中管理跨智能体复用的 Skill、MCP 与扩展',
+  },
+  knowledge: {
+    title: '知识库 Knowledge Base',
+    subtitle: 'ChromaDB 向量库状态与可索引文档，支持重建索引',
+  },
+  evaluator: {
+    title: '评测中心 Evaluation Center',
+    subtitle: '自然语言用例生成与执行：描述输入 → 设备选择 → 生成或直接执行',
+  },
+}
+const pageMeta = computed(() => VIEW_META[viewMode.value])
 </script>
 
 <template>
   <div class="doc-page wb-shell ai-workbench">
     <WorkbenchHeader
-      :title="PAGE_HEADER.title"
-      :subtitle="PAGE_HEADER.subtitle"
+      :title="pageMeta.title"
+      :subtitle="pageMeta.subtitle"
       :icon="PAGE_HEADER.icon"
       :icon-gradient="PAGE_HEADER.iconGradient"
     >
@@ -37,13 +69,6 @@ const {
     </WorkbenchHeader>
 
     <div class="doc-body">
-      <div class="view-tabs">
-        <button :class="['view-tab', { active: viewMode === 'agents' }]" @click="viewMode = 'agents'">🤖 智能体看板</button>
-        <button :class="['view-tab', { active: viewMode === 'toolbox' }]" @click="viewMode = 'toolbox'">🧰 AI工具箱</button>
-        <button :class="['view-tab', { active: viewMode === 'knowledge' }]" @click="viewMode = 'knowledge'">📚 知识库</button>
-        <button :class="['view-tab', { active: viewMode === 'evaluator' }]" @click="viewMode = 'evaluator'">📊 评测中心</button>
-      </div>
-
       <template v-if="viewMode === 'agents'">
       <section class="doc-section duty-section">
         <div class="doc-section__header">

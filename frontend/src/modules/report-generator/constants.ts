@@ -49,12 +49,12 @@ export const CHART_RENDER_DELAY = 100
 export const PASS_RATE_EXCELLENT = 95
 export const PASS_RATE_WARNING = 80
 
-// ── 执行状态枚举 ──
+// ── 执行状态枚举（Step 1 后端小写收敛后单口径）──
 export const STATUS_KEYS = {
   ALL: 'all',
-  COMPLETED: 'COMPLETED',
-  FAILED: 'FAILED',
-  STOPPED: 'STOPPED',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+  STOPPED: 'stopped',
 }
 
 // ── 状态筛选 Tabs（label 不含动态计数，由 computed 拼接） ──
@@ -65,31 +65,23 @@ export const STATUS_TAB_LABELS = {
   [STATUS_KEYS.STOPPED]: '已停止',
 }
 
-// ── 状态标签映射 ──
+// ── 状态标签映射（小写口径）──
 export const STATUS_LABEL_MAP = {
-  COMPLETED: '通过',
   completed: '通过',
-  FAILED: '失败',
   failed: '失败',
-  RUNNING: '运行中',
   running: '运行中',
-  STOPPED: '已停止',
   stopped: '已停止',
-  PENDING: '排队中',
+  pending: '排队中',
 }
 
-// ── 状态 CSS 类映射 ──
+// ── 状态 CSS 类映射（小写口径）──
 export const STATUS_BADGE_CLASS = {
-  COMPLETED: 'badge-pass',
   completed: 'badge-pass',
-  PASSED: 'badge-pass',
-  FAILED: 'badge-fail',
+  passed: 'badge-pass',
   failed: 'badge-fail',
-  RUNNING: 'badge-running',
   running: 'badge-running',
-  STOPPED: 'badge-stopped',
   stopped: 'badge-stopped',
-  PENDING: 'badge-stopped',
+  pending: 'badge-stopped',
 }
 
 // ── 图表配色 ──

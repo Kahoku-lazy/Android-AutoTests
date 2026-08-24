@@ -8,16 +8,6 @@ defineProps<{ form: Record<string, any>; isNew?: boolean }>()
       <span class="section-num">5</span>
       <span>高级设置</span>
     </div>
-    <el-form label-width="120px" class="agent-form">
-      <el-form-item>
-        <template #label>
-          <span class="label-with-help">TTS 语音 <el-tooltip content="将 AI 回复转为语音输出。需要模型支持 TTS 功能。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
-        </template>
-        <el-switch v-model="form.tts_enabled" />
-        <span class="form-hint">启用文本转语音输出</span>
-      </el-form-item>
-    </el-form>
-
     <el-divider>内存压缩 (CompressionConfig)</el-divider>
     <el-form label-width="120px" class="agent-form">
       <el-form-item>

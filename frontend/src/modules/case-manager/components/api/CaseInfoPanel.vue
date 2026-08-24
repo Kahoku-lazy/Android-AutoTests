@@ -20,6 +20,7 @@
           placeholder="输入测试标题（必填）"
           maxlength="500"
           show-word-limit
+          :disabled="readonly"
           @update:model-value="$emit('update:modelValue', { ...modelValue, title: $event })"
         />
       </div>
@@ -30,6 +31,7 @@
           type="textarea"
           :rows="2"
           placeholder="描述测试目的和覆盖场景"
+          :disabled="readonly"
           @update:model-value="$emit('update:modelValue', { ...modelValue, description: $event })"
         />
       </div>
@@ -40,6 +42,7 @@
           type="textarea"
           :rows="2"
           placeholder="如：1. 测试用户 admin 已注册&#10;2. 密码为 admin123"
+          :disabled="readonly"
           @update:model-value="$emit('update:modelValue', { ...modelValue, precondition: $event })"
         />
       </div>
@@ -51,7 +54,7 @@
 import type { CaseInfo } from '../../types/api-config'
 import { ElMessage } from 'element-plus'
 
-const props = defineProps<{ modelValue: CaseInfo }>()
+const props = defineProps<{ modelValue: CaseInfo; readonly?: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [value: CaseInfo] }>()
 
 function copyId() {

@@ -101,12 +101,12 @@ async function fetchReports() {
   animate('.report-table tbody tr', { opacity: [0, 1], translateY: [16, 0], delay: stagger(40), duration: 380, ease: 'outCubic' })
 }
 
-// ── Filter tabs ──
+// ── Filter tabs（Step 1 后端小写收敛后单口径）──
 const statusAppTabs = computed(() => [
   { key: 'all', label: `全部 (${runs.value.length})` },
-  { key: 'COMPLETED', label: '已完成' },
-  { key: 'FAILED', label: '失败' },
-  { key: 'STOPPED', label: '已停止' },
+  { key: 'completed', label: '已完成' },
+  { key: 'failed', label: '失败' },
+  { key: 'stopped', label: '已停止' },
 ])
 
 const filteredRuns = computed(() => {
@@ -426,5 +426,8 @@ function openCaseBreakdown(type, tab = 'detail') {
 .run-link{cursor:pointer;text-decoration:none;color:var(--ink)}
 .cell-run-id{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600;text-decoration:underline}
 .badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);display:inline-block}
-.status-ok{background:var(--app-pass);color:var(--app-status-success-text)}.status-fail{background:var(--app-fail);color:#a03030}.status-stopped{background:var(--app-border-lighter);color:var(--app-ink-muted)}
+.badge-pass{background:var(--app-status-success-bg);color:var(--app-status-success-text)}
+.badge-fail{background:var(--app-status-danger-bg);color:var(--app-status-danger-text)}
+.badge-running{background:var(--app-pending);color:var(--app-pending-text)}
+.badge-stopped{background:var(--app-offline);color:var(--app-text-secondary)}
 </style>

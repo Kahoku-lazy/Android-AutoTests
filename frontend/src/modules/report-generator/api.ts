@@ -38,11 +38,11 @@ export function getReportDownloadUrl(filename) {
 // ── 共享工具函数 ──
 
 const STATUS_LABEL_MAP = {
-  COMPLETED: '通过', completed: '通过',
-  FAILED: '失败', failed: '失败',
-  RUNNING: '运行中', running: '运行中',
-  STOPPED: '已停止', stopped: '已停止',
-  PENDING: '排队中',
+  completed: '通过',
+  failed: '失败',
+  running: '运行中',
+  stopped: '已停止',
+  pending: '排队中',
 }
 
 export function statusLabel(status) {
@@ -50,9 +50,9 @@ export function statusLabel(status) {
 }
 
 export function statusBadgeClass(status) {
-  if (status === 'COMPLETED' || status === 'completed') return 'badge-pass'
-  if (status === 'FAILED' || status === 'failed') return 'badge-fail'
-  if (status === 'RUNNING' || status === 'running') return 'badge-running'
+  if (status === 'completed') return 'badge-pass'
+  if (status === 'failed') return 'badge-fail'
+  if (status === 'running') return 'badge-running'
   return 'badge-stopped'
 }
 

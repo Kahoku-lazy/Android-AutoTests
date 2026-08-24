@@ -26,13 +26,13 @@ defineProps({
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 24px;
-  color: #999;
+  padding: var(--app-space-2xl) var(--app-space-lg);
+  color: var(--app-text-secondary);
   text-align: center;
-  gap: 8px;
+  gap: var(--app-space-sm);
 }
 .empty-state__icon { font-size: 40px; line-height: 1.2; }
-.empty-state__text { font-size: 16px; font-weight: 700; color: var(--ink); margin: 0; }
-.empty-state__hint { font-size: 14px; margin: 0; }
-.empty-state__cta { margin-top: 12px; }
+.empty-state__text { font-size: var(--app-size-md); font-weight: 700; color: var(--ink); margin: 0; }
+.empty-state__hint { font-size: var(--app-size-sm); margin: 0; }
+.empty-state__cta { margin-top: var(--app-space-md); }
 </style>

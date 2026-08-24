@@ -78,6 +78,7 @@ async function loadTasks() {
       tasks.value = data.tasks.map((d) => ({
         ...d,
         status: d.status || "idle",
+        state: d.state || "",  // Step 6：后端权威状态字段
         createdAt: d.createdAt || "",
         creator: d.creator || "",
         currentCaseTitle: d.currentCaseTitle || "",
@@ -267,6 +268,7 @@ async function createAndStart() {
     running: false,
     runId: "",
     status: "idle",
+    state: "idle",  // Step 6 镜像同步
     caseItems: [],
     stepStates: [],
     logs: [],
@@ -368,6 +370,7 @@ async function doStartTask(task) {
           running: true,
           runId,
           status: "running",
+          state: "running",  // Step 6 镜像同步
         };
         // 先绑 WS 再写前台日志，确保能收到后台「设备 ID / 开始执行测试」推送
         bindListTaskWS(tasks.value[idx], runId);
@@ -377,6 +380,7 @@ async function doStartTask(task) {
       // Device busy — task queued
       task.running = false;
       task.status = "queued";
+      task.state = "queued";  // Step 6 镜像同步
       task.outcome = "";
       task.conclusion = "";
       taskAddLog(task, `⏳ 设备正忙，任务已加入队列等待执行`);
@@ -384,15 +388,18 @@ async function doStartTask(task) {
       startQueuePolling();
     } else if (data.status) {
       task.running = false;
+      task.state = "idle";  // Step 6 镜像同步
       taskAddLog(task, "❌ 设备不可用，任务未启动", "error");
       ElMessage.warning("设备不可用或未就绪，任务已保存，可在列表中重试");
     } else {
       task.running = false;
+      task.state = "idle";  // Step 6 镜像同步
       taskAddLog(task, `❌ ${data.message}`, "error");
       ElMessage.error(data.message || "启动失败");
     }
   } catch (e) {
     task.running = false;
+    task.state = "idle";  // Step 6 镜像同步
     const errMsg = e?.response?.data?.message || e.message || "未知错误";
     taskAddLog(task, `❌ ${errMsg}`, "error");
     ElMessage.error(`启动失败：${errMsg}`);
@@ -409,6 +416,7 @@ async function doCancelQueue(task) {
     }
   }
   task.running = false; task.runId = ""; task.status = "idle";
+  task.state = "idle";  // Step 6 镜像同步
   task.caseItems = []; task.stepStates = []; task.overallPass = 0;
   task.overallFail = 0; task.failedSteps = []; task.logs = [];
   saveTaskToServer(task);
@@ -423,6 +431,7 @@ async function doStopTask(task) {
   }
   task.running = false;
   task.status = "done";
+  task.state = "done";  // Step 6 镜像同步
   task.currentCaseTitle = "";
   task.currentIteration = 0;
   task.outcome = "stopped";
@@ -467,6 +476,7 @@ function restartTask(task) {
     intervalSeconds: task.intervalSeconds || 5,
     running: false,
     runId: "",
+    state: "idle",  // Step 6 镜像同步
     caseItems: [],
     stepStates: [],
     logs: [],
@@ -534,6 +544,7 @@ async function pollQueuedTasks() {
             running: true,
             runId: active.run_id,
             status: "running",
+            state: "running",  // Step 6 镜像同步
           };
           tasks.value.splice(idx, 1, updated);
           bindListTaskWS(updated, active.run_id);

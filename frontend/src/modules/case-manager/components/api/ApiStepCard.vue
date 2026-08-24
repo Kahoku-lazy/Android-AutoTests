@@ -8,10 +8,10 @@
       <span v-if="modelValue.assert" class="step-card__assert-badge">断言</span>
       <span class="step-card__toggle">{{ collapsed ? '▶' : '▼' }}</span>
       <div class="step-card__actions" @click.stop>
-        <button class="act-btn" @click="$emit('moveUp')" :disabled="index === 0" title="上移">↑</button>
-        <button class="act-btn" @click="$emit('moveDown')" title="下移">↓</button>
-        <button class="act-btn" @click="$emit('duplicate')" title="复制">⧉</button>
-        <button class="act-btn act-btn--del" @click="$emit('remove')" title="删除">×</button>
+        <button class="act-btn" @click="$emit('moveUp')" :disabled="readonly || index === 0" title="上移">↑</button>
+        <button class="act-btn" @click="$emit('moveDown')" :disabled="readonly" title="下移">↓</button>
+        <button class="act-btn" @click="$emit('duplicate')" :disabled="readonly" title="复制">⧉</button>
+        <button class="act-btn act-btn--del" @click="$emit('remove')" :disabled="readonly" title="删除">×</button>
       </div>
     </div>
 
@@ -21,11 +21,11 @@
       <div class="form-row">
         <div class="form-group form-group--flex">
           <label class="form-label">步骤名称</label>
-          <el-input v-model="local.name" size="small" placeholder="如：登录获取Token" @change="emitUpdate" />
+          <el-input v-model="local.name" size="small" placeholder="如：登录获取Token" :disabled="readonly" @change="emitUpdate" />
         </div>
         <div class="form-group form-group--w110">
           <label class="form-label">方法</label>
-          <el-select v-model="local.method" size="small" @change="emitUpdate">
+          <el-select v-model="local.method" size="small" :disabled="readonly" @change="emitUpdate">
             <el-option v-for="m in METHODS" :key="m" :label="m" :value="m" />
           </el-select>
         </div>
@@ -35,11 +35,11 @@
       <div class="form-row">
         <div class="form-group form-group--w200">
           <label class="form-label">域名</label>
-          <el-input v-model="local.domain" size="small" placeholder="https://api.example.com" @change="emitUpdate" />
+          <el-input v-model="local.domain" size="small" placeholder="https://api.example.com" :disabled="readonly" @change="emitUpdate" />
         </div>
         <div class="form-group form-group--flex">
           <label class="form-label">路径 <span class="form-hint">支持 {{ mustache('var') }}</span></label>
-          <el-input v-model="local.url" size="small" placeholder="/api/auth/login" @change="emitUpdate" />
+          <el-input v-model="local.url" size="small" placeholder="/api/auth/login" :disabled="readonly" @change="emitUpdate" />
         </div>
       </div>
 
@@ -56,6 +56,7 @@
           :rows="3"
           size="small"
           placeholder='{"Content-Type": "application/json", "Authorization": "Bearer {{token}}"}'
+          :disabled="readonly"
           @update:model-value="updateJsonField('headers', $event)"
         />
       </div>
@@ -73,6 +74,7 @@
           :rows="4"
           size="small"
           placeholder='{"username": "{{username}}", "password": "{{password}}"}'
+          :disabled="readonly"
           @update:model-value="updateJsonField('body', $event)"
         />
       </div>
@@ -82,18 +84,21 @@
         <label class="form-label">变量提取</label>
         <div v-if="!local.extract.length" class="empty-hint">暂无提取规则，从响应中提取变量供后续步骤使用</div>
         <div v-for="(ex, ei) in local.extract" :key="ei" class="extract-row">
-          <el-input v-model="ex.name" size="small" placeholder="变量名" class="form-group__input--w130" @change="emitUpdate" />
+          <el-input v-model="ex.name" size="small" placeholder="变量名" class="form-group__input--w130" :disabled="readonly" @change="emitUpdate" />
           <span class="extract-arrow">←</span>
-          <el-input v-model="ex.path" size="small" placeholder="$.data.token" class="form-group__input--flex" @change="emitUpdate" />
-          <el-button size="small" text type="danger" @click="removeExtract(ei)">×</el-button>
+          <el-input v-model="ex.path" size="small" placeholder="$.data.token" class="form-group__input--flex" :disabled="readonly" @change="emitUpdate" />
+          <el-button size="small" text type="danger" :disabled="readonly" @click="removeExtract(ei)">×</el-button>
         </div>
-        <el-button size="small" text type="primary" @click="addExtract">+ 添加提取规则</el-button>
+        <el-button size="small" text type="primary" :disabled="readonly" @click="addExtract">+ 添加提取规则</el-button>
       </div>
 
       <!-- Upstream variables reference -->
       <div v-if="upstreamVars && upstreamVars.length" class="upstream-hint">
         <span class="upstream-title">📥 可用上游变量：</span>
-        <span v-for="(v, vi) in upstreamVars" :key="vi" class="upstream-chip" @click="insertVar(v.name)">
+        <span v-for="(v, vi) in upstreamVars" :key="vi" class="upstream-chip" role="button" tabindex="0"
+          @click="insertVar(v.name)"
+          @keydown.enter.prevent="insertVar(v.name)"
+          @keydown.space.prevent="insertVar(v.name)">
           {{ mustache(v.name) }}
         </span>
       </div>
@@ -103,15 +108,15 @@
         <div class="form-group form-group--flex">
           <label class="form-label">请求体 Schema</label>
           <div class="mode-switch">
-            <el-radio-group v-model="reqSchemaMode" size="small">
+            <el-radio-group v-model="reqSchemaMode" size="small" :disabled="readonly">
               <el-radio-button value="visual">可视化</el-radio-button>
               <el-radio-button value="code">代码</el-radio-button>
             </el-radio-group>
           </div>
           <div v-if="reqSchemaMode === 'visual'" class="visual-schema">
             <div v-for="(f, fi) in reqFields" :key="fi" class="schema-field">
-              <el-input v-model="f.key" size="small" placeholder="字段名" class="form-group__input--w110" @change="syncReqSchema" />
-              <el-select v-model="f.type" size="small" class="form-group__select--w85" @change="syncReqSchema">
+              <el-input v-model="f.key" size="small" placeholder="字段名" class="form-group__input--w110" :disabled="readonly" @change="syncReqSchema" />
+              <el-select v-model="f.type" size="small" class="form-group__select--w85" :disabled="readonly" @change="syncReqSchema">
                 <el-option label="string" value="string" />
                 <el-option label="number" value="number" />
                 <el-option label="integer" value="integer" />
@@ -119,10 +124,10 @@
                 <el-option label="object" value="object" />
                 <el-option label="array" value="array" />
               </el-select>
-              <el-checkbox v-model="f.required" size="small" @change="syncReqSchema">必填</el-checkbox>
-              <el-button size="small" text type="danger" @click="removeReqField(fi)">×</el-button>
+              <el-checkbox v-model="f.required" size="small" :disabled="readonly" @change="syncReqSchema">必填</el-checkbox>
+              <el-button size="small" text type="danger" :disabled="readonly" @click="removeReqField(fi)">×</el-button>
             </div>
-            <el-button size="small" text @click="addReqField">+ 字段</el-button>
+            <el-button size="small" text :disabled="readonly" @click="addReqField">+ 字段</el-button>
           </div>
           <el-input
             v-else
@@ -130,21 +135,22 @@
             type="textarea"
             :rows="4"
             size="small"
+            :disabled="readonly"
             @update:model-value="updateReqSchemaCode($event)"
           />
         </div>
         <div class="form-group form-group--flex">
           <label class="form-label">响应体 Schema</label>
           <div class="mode-switch">
-            <el-radio-group v-model="respSchemaMode" size="small">
+            <el-radio-group v-model="respSchemaMode" size="small" :disabled="readonly">
               <el-radio-button value="visual">可视化</el-radio-button>
               <el-radio-button value="code">代码</el-radio-button>
             </el-radio-group>
           </div>
           <div v-if="respSchemaMode === 'visual'" class="visual-schema">
             <div v-for="(f, fi) in respFields" :key="fi" class="schema-field">
-              <el-input v-model="f.key" size="small" placeholder="字段名" class="form-group__input--w110" @change="syncRespSchema" />
-              <el-select v-model="f.type" size="small" class="form-group__select--w85" @change="syncRespSchema">
+              <el-input v-model="f.key" size="small" placeholder="字段名" class="form-group__input--w110" :disabled="readonly" @change="syncRespSchema" />
+              <el-select v-model="f.type" size="small" class="form-group__select--w85" :disabled="readonly" @change="syncRespSchema">
                 <el-option label="string" value="string" />
                 <el-option label="number" value="number" />
                 <el-option label="integer" value="integer" />
@@ -152,10 +158,10 @@
                 <el-option label="object" value="object" />
                 <el-option label="array" value="array" />
               </el-select>
-              <el-checkbox v-model="f.required" size="small" @change="syncRespSchema">必填</el-checkbox>
-              <el-button size="small" text type="danger" @click="removeRespField(fi)">×</el-button>
+              <el-checkbox v-model="f.required" size="small" :disabled="readonly" @change="syncRespSchema">必填</el-checkbox>
+              <el-button size="small" text type="danger" :disabled="readonly" @click="removeRespField(fi)">×</el-button>
             </div>
-            <el-button size="small" text @click="addRespField">+ 字段</el-button>
+            <el-button size="small" text :disabled="readonly" @click="addRespField">+ 字段</el-button>
           </div>
           <el-input
             v-else
@@ -163,6 +169,7 @@
             type="textarea"
             :rows="4"
             size="small"
+            :disabled="readonly"
             @update:model-value="updateRespSchemaCode($event)"
           />
         </div>
@@ -171,7 +178,7 @@
       <!-- Assert toggle -->
       <div class="form-row form-row--end">
         <label class="form-label">响应断言</label>
-        <el-switch v-model="local.assert" size="small" @change="emitUpdate" />
+        <el-switch v-model="local.assert" size="small" :disabled="readonly" @change="emitUpdate" />
       </div>
     </div>
   </div>
@@ -179,6 +186,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import type { ApiStep, ExtractRule, ResolvedVariable } from '../../types/api-config'
 import { useJsonSchemaEditor, type SchemaField } from '../../composables/useJsonSchemaEditor'
 
@@ -192,6 +200,7 @@ const props = defineProps<{
   modelValue: ApiStep
   index: number
   upstreamVars?: { stepIndex: number; stepName: string; name: string; path: string }[]
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -241,7 +250,10 @@ function addExtract() {
   local.extract = [...local.extract, { name: '', path: '' }]
   emitUpdate()
 }
-function removeExtract(i: number) {
+async function removeExtract(i: number) {
+  try {
+    await ElMessageBox.confirm('确定删除此提取规则？', '确认删除', { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' })
+  } catch { return }
   const arr = [...local.extract]; arr.splice(i, 1)
   local.extract = arr
   emitUpdate()

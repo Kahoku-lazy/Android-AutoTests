@@ -37,7 +37,7 @@ async function loadFrameworks() {
 // ── Agents ──
 const agents = ref([])
 async function loadAgents() {
-  try { const data = await listAgents(); if (data.status) agents.value = data.agents || [] } catch (e) { console.error(e); }
+  try { const data = await listAgents(); if (data.status) agents.value = data.data?.agents || [] } catch (e) { console.error(e); }
 }
 
 // ── Banks ──
@@ -205,8 +205,8 @@ async function doKbQuery() {
 onMounted(async () => { await Promise.all([loadAgents(), loadBanks(), loadRuns(), loadFrameworks()]) })
 onUnmounted(() => { if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null } })
 
-// Helpers
-function scoreColor(s) { const v = parseFloat(s) || 0; if (v >= 4) return 'var(--c-workflow)'; if (v >= 3) return '#f7cd67'; if (v >= 2) return '#f7a8c4'; return '#e85f5f' }
+// Helpers（色值走 tokens.css 状态色/模块色，JS 返回 CSS 变量字符串）
+function scoreColor(s) { const v = parseFloat(s) || 0; if (v >= 4) return 'var(--c-workflow)'; if (v >= 3) return 'var(--app-highlight)'; if (v >= 2) return 'var(--app-status-danger)'; return 'var(--app-status-danger-text)' }
 function fwLabel(run) { const fw = SUB_TABS.value.find(f => f.key === (run.framework || 'self')); return fw ? fw.label : (run.framework || 'self') }
 function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2) } catch { return raw } }
 </script>
@@ -244,7 +244,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
       </div>
 
       <!-- Not installed warning -->
-      <div v-if="!curTab.available" style="padding:12px 16px;background:#fff3e0;border-radius:8px;margin-bottom:16px;font-size:var(--app-size-sm);color:#e65100">
+      <div v-if="!curTab.available" style="padding:12px 16px;background:var(--app-status-warning-bg, #FFF9E0);border-radius:8px;margin-bottom:16px;font-size:var(--app-size-sm);color:var(--app-warning-text, #7a5a10)">
         ⚠️ {{ curTab.label }} 尚未安装，请联系管理员启用后使用。
       </div>
 
@@ -399,7 +399,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
           </div>
           <div v-for="(doc, i) in (kbQueryResult.documents||[])" :key="i"
                style="padding:8px 12px;background:var(--ai-warm-bg);border-radius:6px;margin-bottom:4px;font-size:var(--app-size-sm)">
-            <span style="color:#8a7b66;font-weight:600">{{ doc.source }}</span>
+            <span style="color:var(--ai-ink-subtle);font-weight:600">{{ doc.source }}</span>
             <span style="margin-left:8px;color:var(--ai-ink-muted)">score: {{ doc.score }}</span>
             <div style="color:var(--ai-ink-subtle);margin-top:4px;max-height:120px;overflow:auto">{{ doc.content }}</div>
           </div>
@@ -427,7 +427,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
             <el-tag size="small" :type="d.total_hits?'success':'danger'" style="margin-left:8px">{{ d.total_hits?'有结果':'无结果' }}</el-tag>
           </div>
           <div v-for="doc in d.documents" :key="doc.source" style="padding:6px 12px;background:var(--ai-warm-bg);border-radius:6px;margin-bottom:4px;font-size:var(--app-size-sm)">
-            <span style="color:#8a7b66">{{ doc.source }}</span>
+            <span style="color:var(--ai-ink-subtle)">{{ doc.source }}</span>
             <span style="margin-left:8px;color:var(--ai-ink-muted)">score: {{ doc.score }}</span>
             <div style="color:var(--ai-ink-subtle);margin-top:2px">{{ doc.content_preview?.slice(0, 200) }}</div>
           </div>
@@ -451,9 +451,9 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
         <el-tag :type="r.status==='completed'?'success':r.status==='running'?'warning':r.status==='failed'?'danger':'info'" size="small">{{ r.status }}</el-tag>
         <span style="font-weight:600;min-width:100px">{{ r.agent_name }}</span>
         <el-tag size="small" type="info">{{ fwLabel(r) }}</el-tag>
-        <span style="color:#8a7b66;font-size:var(--app-size-sm)">{{ r.bank_name }} · {{ r.total_questions }}题</span>
+        <span style="color:var(--ai-ink-subtle);font-size:var(--app-size-sm)">{{ r.bank_name }} · {{ r.total_questions }}题</span>
         <span v-if="r.total_score>0" style="font-weight:700;color:var(--c-workflow);font-size:var(--app-size-sm)">总分 {{ r.total_score }}</span>
-        <span v-if="r.status==='running'" style="color:#f7a8c4;font-size:var(--app-size-sm)">{{ r.completed_questions }}/{{ r.total_questions }}</span>
+        <span v-if="r.status==='running'" style="color:var(--app-status-danger);font-size:var(--app-size-sm)">{{ r.completed_questions }}/{{ r.total_questions }}</span>
         <div style="margin-left:auto;display:flex;gap:8px">
           <el-button size="small" @click="viewRun(r.id)" :disabled="r.status==='running'">详情</el-button>
           <el-button size="small" type="danger" plain @click="removeRun(r.id)">删除</el-button>
@@ -489,13 +489,13 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
           <div style="font-size:var(--app-size-sm);color:var(--ai-ink-subtle);margin-bottom:8px;max-height:100px;overflow:auto"><strong>回答：</strong>{{ r.agent_response }}</div>
           <div style="font-size:var(--app-size-sm);color:var(--ai-ink-muted);margin-bottom:8px">{{ r.judge_reasoning }}</div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-            <span style="font-size:var(--app-size-sm);color:#8a7b66">机器:</span>
+            <span style="font-size:var(--app-size-sm);color:var(--ai-ink-subtle)">机器:</span>
             <el-tag size="small" type="warning">相关 {{ r.relevance_score }}</el-tag>
             <el-tag size="small" type="warning">准确 {{ r.accuracy_score }}</el-tag>
             <el-tag size="small" type="warning">完整 {{ r.completeness_score }}</el-tag>
             <el-tag size="small" type="warning">简洁 {{ r.conciseness_score }}</el-tag>
             <el-divider direction="vertical" />
-            <span style="font-size:var(--app-size-sm);color:#8a7b66">人工:</span>
+            <span style="font-size:var(--app-size-sm);color:var(--ai-ink-subtle)">人工:</span>
             <el-select v-for="dim in [{k:'human_relevance',l:'相关'},{k:'human_accuracy',l:'准确'},{k:'human_completeness',l:'完整'},{k:'human_conciseness',l:'简洁'}]"
                        :key="dim.k" size="small" style="width:100px"
                        :model-value="r[dim.k]" @change="v=>doSubmitScore(r.id, dim.k, v)" clearable placeholder="调整">
@@ -543,7 +543,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
   font-family: inherit; cursor: pointer; transition: all 0.2s ease;
 }
 .view-tab:hover { border-color: var(--ai-teal); background: var(--ai-teal-bg); color: var(--ai-teal-text); }
-.view-tab.active { background: var(--ai-teal); color: var(--app-bg-card); border-color: var(--ai-teal); box-shadow: 0 4px 14px rgba(25,200,185,0.3); }
+.view-tab.active { background: var(--ai-teal); color: var(--app-bg-card); border-color: var(--ai-teal); box-shadow: var(--app-shadow-md); }
 
 /* Mode toggle */
 .mode-btn {
@@ -551,20 +551,20 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
   background: var(--app-bg-card); color: #8a7b66; font-size: var(--app-size-sm); font-weight: 600;
   font-family: inherit; cursor: pointer; transition: all 0.2s ease;
 }
-.mode-btn:hover { border-color: #b39ef3; background: #f3f0ff; color: #5b4aa8; }
-.mode-btn.active { background: #b39ef3; color: var(--app-bg-card); border-color: #b39ef3; }
+.mode-btn:hover { border-color: var(--app-accent-purple, #b39ef3); background: var(--app-icon-purple-bg, #f3f0ff); color: var(--app-status-purple-text, #5b4aa8); }
+.mode-btn.active { background: var(--app-accent-purple, #b39ef3); color: var(--app-bg-card); border-color: var(--app-accent-purple, #b39ef3); }
 
 /* Benchmark cards */
 .bench-card {
   padding: 12px 16px; border: 1.5px solid var(--ai-warm-border); border-radius: 10px;
   background: var(--ai-warm-bg); cursor: pointer; min-width: 140px; transition: all 0.2s ease;
 }
-.bench-card:hover { border-color: #b39ef3; background: #f3f0ff; }
-.bench-card.selected { border-color: #b39ef3; background: #f3f0ff; box-shadow: 0 2px 8px rgba(179,158,243,0.25); }
+.bench-card:hover { border-color: var(--app-accent-purple, #b39ef3); background: var(--app-icon-purple-bg, #f3f0ff); }
+.bench-card.selected { border-color: var(--app-accent-purple, #b39ef3); background: var(--app-icon-purple-bg, #f3f0ff); box-shadow: var(--app-shadow-sm); }
 .bench-name { font-size: var(--app-size-sm); font-weight: 700; color: var(--ai-ink-soft); }
 .bench-desc { font-size: var(--app-size-xs); color: var(--ai-ink-muted); margin-top: 4px; }
 
-.doc-section { background: var(--app-bg-card); border-radius: var(--app-radius-md); padding: 24px; margin-bottom: 20px; border: 1px solid var(--ai-bg-subtle); box-shadow: 0 2px 8px rgba(61,52,40,0.04); }
+.doc-section { background: var(--app-bg-card); border-radius: var(--app-radius-md); padding: var(--app-space-lg); margin-bottom: var(--app-space-lg); border: 1px solid var(--ai-bg-subtle); box-shadow: var(--app-shadow-sm); }
 .doc-section__title { font-family: var(--app-font-display); font-size: var(--app-size-lg); font-weight: 700; color: var(--ink); margin-bottom: 16px }
 .score-badge { background: var(--ai-warm-bg); border-radius: 12px; padding: 14px 22px; text-align: center; border: 1px solid var(--ai-warm-border); min-width: 80px; }
 .score-num { font-size: var(--app-size-2xl); font-weight: 800; }

@@ -2,14 +2,14 @@
   <div class="validation-panel">
     <div class="panel-header">
       <h3>🔍 数据校验</h3>
-      <el-button size="small" type="primary" text @click="addRule">+ 添加规则</el-button>
+      <el-button size="small" type="primary" text :disabled="readonly" @click="addRule">+ 添加规则</el-button>
     </div>
     <div class="panel-body">
       <el-empty v-if="!modelValue.length" description="暂无校验规则" :image-size="60" />
       <div v-for="(rule, i) in modelValue" :key="i" class="validation-rule">
         <div class="rule-header">
           <span class="rule-title">规则 {{ i + 1 }}</span>
-          <el-button size="small" text type="danger" @click="removeRule(i)">删除</el-button>
+          <el-button size="small" text type="danger" :disabled="readonly" @click="removeRule(i)">删除</el-button>
         </div>
         <div class="rule-row">
           <label>目标步骤</label>
@@ -17,6 +17,7 @@
             :model-value="rule.step_index"
             size="small"
             class="form-group__select--w120"
+            :disabled="readonly"
             @update:model-value="updateRule(i, 'step_index', $event)"
           >
             <el-option
@@ -32,6 +33,7 @@
           <el-switch
             :model-value="rule.enabled"
             size="small"
+            :disabled="readonly"
             @update:model-value="updateRule(i, 'enabled', $event)"
           />
         </div>
@@ -41,6 +43,7 @@
             <el-radio-group
               :model-value="editorModes[i] || 'visual'"
               size="small"
+              :disabled="readonly"
               @update:model-value="switchMode(i, String($event))"
             >
               <el-radio-button value="visual">可视化</el-radio-button>
@@ -50,8 +53,8 @@
           <!-- Visual mode -->
           <div v-if="(editorModes[i] || 'visual') === 'visual'" class="visual-schema">
             <div v-for="(field, fi) in (fieldCache[i] || [])" :key="fi" class="schema-field">
-              <el-input v-model="field.key" size="small" placeholder="字段名" class="form-group__input--w120" @change="syncFieldsToRule(i)" />
-              <el-select v-model="field.type" size="small" class="form-group__select--w90" @change="syncFieldsToRule(i)">
+              <el-input v-model="field.key" size="small" placeholder="字段名" class="form-group__input--w120" :disabled="readonly" @change="syncFieldsToRule(i)" />
+              <el-select v-model="field.type" size="small" class="form-group__select--w90" :disabled="readonly" @change="syncFieldsToRule(i)">
                 <el-option label="string" value="string" />
                 <el-option label="number" value="number" />
                 <el-option label="integer" value="integer" />
@@ -59,10 +62,10 @@
                 <el-option label="object" value="object" />
                 <el-option label="array" value="array" />
               </el-select>
-              <el-checkbox v-model="field.required" size="small" @change="syncFieldsToRule(i)">必填</el-checkbox>
-              <el-button size="small" text type="danger" @click="removeField(i, fi)">×</el-button>
+              <el-checkbox v-model="field.required" size="small" :disabled="readonly" @change="syncFieldsToRule(i)">必填</el-checkbox>
+              <el-button size="small" text type="danger" :disabled="readonly" @click="removeField(i, fi)">×</el-button>
             </div>
-            <el-button size="small" text @click="addField(i)">+ 字段</el-button>
+            <el-button size="small" text :disabled="readonly" @click="addField(i)">+ 字段</el-button>
           </div>
           <!-- Code mode -->
           <div v-else class="code-schema">
@@ -71,6 +74,7 @@
               type="textarea"
               :rows="6"
               size="small"
+              :disabled="readonly"
               @update:model-value="updateCode(i, $event)"
             />
           </div>
@@ -82,10 +86,11 @@
 
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import type { ValidationRule } from '../../types/api-config'
 import { useJsonSchemaEditor, type SchemaField } from '../../composables/useJsonSchemaEditor'
 
-const props = defineProps<{ modelValue: ValidationRule[]; stepCount: number }>()
+const props = defineProps<{ modelValue: ValidationRule[]; stepCount: number; readonly?: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [value: ValidationRule[]] }>()
 
 // Per-rule editor state
@@ -118,7 +123,10 @@ function addRule() {
   ])
 }
 
-function removeRule(index: number) {
+async function removeRule(index: number) {
+  try {
+    await ElMessageBox.confirm('确定删除此校验规则？', '确认删除', { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' })
+  } catch { return }
   const copy = [...props.modelValue]
   copy.splice(index, 1)
   // Shift cached state for rules after the removed index

@@ -15,6 +15,7 @@ const props = defineProps({
   debugDevice: { type: String, default: "" },
   packageName: { type: String, default: "" },
   target: { type: String, default: "android" },
+  readonly: { type: Boolean, default: false },
 });
 const emit = defineEmits(["update:modelValue"]);
 
@@ -109,10 +110,10 @@ function stepSummary(step) { return buildStepSummary(step, resolveElementName); 
       <span class="step-header__title">步骤列表 ({{ steps.length }})</span>
       <div class="step-header__actions">
         <template v-if="steps.length">
-          <el-button size="small" type="primary" plain :loading="runningBatch && runningFromIdx === 0" @click="runAllSteps" :disabled="runningBatch">▶▶ 从头执行</el-button>
-          <el-button size="small" @click="loadElementLibrary" text title="刷新元素库"><IconRefresh :size="14" /></el-button>
+          <el-button size="small" type="primary" plain :loading="runningBatch && runningFromIdx === 0" @click="runAllSteps" :disabled="runningBatch || readonly">▶▶ 从头执行</el-button>
+          <el-button size="small" @click="loadElementLibrary" text title="刷新元素库" :disabled="readonly"><IconRefresh :size="14" /></el-button>
         </template>
-        <el-button size="small" type="primary" @click="addStep"><IconPlus :size="14" style="margin-right:4px" />添加步骤</el-button>
+        <el-button size="small" type="primary" @click="addStep" :disabled="readonly"><IconPlus :size="14" style="margin-right:4px" />添加步骤</el-button>
       </div>
     </div>
 
@@ -120,7 +121,7 @@ function stepSummary(step) { return buildStepSummary(step, resolveElementName); 
 
     <div v-for="(step, idx) in steps" :key="idx" class="step-item"
       :class="{ expanded: expanded[idx], dragging: dragIndex === idx, 'drop-target': dropTargetIdx === idx && dragIndex !== idx }"
-      draggable="true"
+      :draggable="!readonly"
       @dragstart="onDragStart(idx, $event)" @dragover="onDragOver(idx, $event)" @dragleave="onDragLeave" @dragend="onDragEnd" @drop="onDrop($event, idx)">
       <div class="step-bar" role="button" tabindex="0" @click="expanded[idx] = !expanded[idx]" @keydown.enter.prevent="expanded[idx] = !expanded[idx]" @keydown.space.prevent="expanded[idx] = !expanded[idx]">
         <span class="drag-handle" title="拖动排序"><IconGripVertical :size="16" /></span>
@@ -130,16 +131,16 @@ function stepSummary(step) { return buildStepSummary(step, resolveElementName); 
         </span>
         <span class="step-summary">{{ stepSummary(step) }}<span v-if="stepResults[idx]" :class="['step-result-msg', stepResults[idx].status ? 'ok' : 'fail']">{{ stepResults[idx].message }}</span></span>
         <span class="step-actions" @click.stop>
-          <el-button size="small" type="primary" plain :loading="runningStep === idx" @click="runStep(idx, step)" title="单步执行">▶</el-button>
-          <el-button size="small" type="primary" plain :loading="runningFromIdx === idx" @click="runFromCurrent(idx)" title="从这步开始" :disabled="runningBatch && runningFromIdx !== idx">▶▶ ▸</el-button>
-          <el-button size="small" plain @click="duplicateStep(idx)" title="复制">📋</el-button>
-          <el-button type="primary" size="small" plain @click="requestRemoveStep(idx)" danger><IconTrash :size="14" style="margin-right:4px" />删除</el-button>
+          <el-button size="small" type="primary" plain :loading="runningStep === idx" @click="runStep(idx, step)" title="单步执行" :disabled="readonly">▶</el-button>
+          <el-button size="small" type="primary" plain :loading="runningFromIdx === idx" @click="runFromCurrent(idx)" title="从这步开始" :disabled="readonly || (runningBatch && runningFromIdx !== idx)">▶▶ ▸</el-button>
+          <el-button size="small" plain @click="duplicateStep(idx)" title="复制" :disabled="readonly">📋</el-button>
+          <el-button type="primary" size="small" plain @click="requestRemoveStep(idx)" danger :disabled="readonly"><IconTrash :size="14" style="margin-right:4px" />删除</el-button>
         </span>
       </div>
 
       <div v-show="expanded[idx]" class="step-form">
         <div class="step-desc">{{ availableTypes.find(t => t.value === step.type)?.desc }}</div>
-        <el-form label-width="80px" size="small">
+        <el-form label-width="80px" size="small" :disabled="readonly">
           <el-form-item label="类型">
             <el-select v-model="step.type" @change="(t) => onTypeChange(idx, t)" style="width:240px">
               <el-option-group v-for="grp in [...new Set(availableTypes.map(s => s.group))]" :key="grp" :label="grp">
@@ -172,6 +173,9 @@ function stepSummary(step) { return buildStepSummary(step, resolveElementName); 
             <el-form-item v-else-if="field === 'expected_text' || field === 'description'" :label="FIELD_LABELS[field]" :required="isFieldRequired(step, field)">
               <el-input v-model="step[field]" :placeholder="FIELD_HINTS[field] || ''" />
             </el-form-item>
+            <el-form-item v-else-if="field === 'url' || field === 'selector' || field === 'value'" :label="FIELD_LABELS[field]" :required="isFieldRequired(step, field)">
+              <el-input v-model="step[field]" :placeholder="FIELD_HINTS[field] || ''" />
+            </el-form-item>
             <el-form-item v-else-if="field === 'timeout' || field === 'index'" :label="fieldLabel(step, field)" :required="isFieldRequired(step, field)">
               <el-input-number v-model="step[field]" :min="0" :step="1" :precision="field === 'timeout' ? 1 : 0" />
               <span class="field-hint" v-if="fieldHint(step, field)">{{ fieldHint(step, field) }}</span>
@@ -182,20 +186,20 @@ function stepSummary(step) { return buildStepSummary(step, resolveElementName); 
         <div v-if="isContainer(step)" class="child-steps">
           <div class="child-steps__header">
             <span>子步骤 ({{ step.children?.length || 0 }})</span>
-            <el-button size="small" @click="addChildStep(step)">+ 添加子步骤</el-button>
+            <el-button size="small" @click="addChildStep(step)" :disabled="readonly">+ 添加子步骤</el-button>
           </div>
           <div v-if="!step.children?.length" class="empty-state">暂无子步骤</div>
           <div v-for="(child, ci) in (step.children || [])" :key="ci" class="child-step-item">
             <span class="child-step-idx">{{ ci + 1 }}.</span>
             <span class="child-step-summary">[{{ child.type }}] {{ child.description || child.xpath || '未命名' }}</span>
-            <el-button size="small" plain @click="removeChildStep(step, ci)" danger><IconTrash :size="12" /></el-button>
+            <el-button size="small" plain @click="removeChildStep(step, ci)" danger :disabled="readonly"><IconTrash :size="12" /></el-button>
           </div>
         </div>
       </div>
     </div>
 
     <div v-if="steps.length" style="padding: 8px 0; text-align: center">
-      <el-button size="small" @click="addStep"><IconPlus :size="14" style="margin-right:4px" />添加步骤</el-button>
+      <el-button size="small" @click="addStep" :disabled="readonly"><IconPlus :size="14" style="margin-right:4px" />添加步骤</el-button>
     </div>
 
     <el-dialog v-model="deleteDialog.visible" title="确认删除" width="360px">

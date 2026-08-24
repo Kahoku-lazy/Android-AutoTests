@@ -2,45 +2,35 @@
 /**
  * 工作流工作台
  * 左：目录+文件树（右键/长按移动）
- * 右：点击文件后直接编辑内容（不再显示文件网格）
+ * 右：点击文件后直接编辑内容（页面流 VueFlow）
  */
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useWorkflowStore } from '@/modules/workflow/stores/workflowStore'
-import { useTestCaseStore } from '@/modules/workflow/stores/testCaseStore'
 import { useLibraryStore, type LibNode } from '@/modules/workflow/stores/libraryStore'
-import type { Block } from '@/modules/workflow/types/testCase'
-import { fromCaseManagerSteps } from '@/modules/workflow/composables/caseBridge'
-import { getDefinition } from '@/modules/workflow/api'
 import PageFlowVueFlow from './components/vueflow/PageFlowVueFlow.vue'
-import TestCaseBlockly from './components/blockly/TestCaseBlockly.vue'
 import WorkflowDirTree from './components/WorkflowDirTree.vue'
 import WorkflowFileBrowser from './components/WorkflowFileBrowser.vue'
-import ImportCasesDialog from './components/ImportCasesDialog.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-// animal-theme.css removed — tokens now in shared/styles/tokens.css
 
 const store = useWorkflowStore()
-const tcStore = useTestCaseStore()
 const lib = useLibraryStore()
 
 const selectedFolderId = ref<string | null>(null)
 const ready = ref(false)
-const error = ref("")
+const error = ref('')
 function retryLoad() {
-  error.value = '';
-  ready.value = false;
+  error.value = ''
+  ready.value = false
   lib.bootstrapIfEmpty()
-    .then(() => { ready.value = true; })
-    .catch(() => { error.value = '加载工作流数据失败，请检查网络连接'; });
+    .then(() => { ready.value = true })
+    .catch(() => { error.value = '加载工作流数据失败，请检查网络连接' })
 }
 const createName = ref('')
 const creatingKind = ref<'folder' | null>(null)
 const createParentId = ref<string | null>(null)
 const editDocName = ref('')
 const overwriteImport = ref(false)
-const showImportCases = ref(false)
-const importTargetFolderId = ref<string | null>(null)
 /**
  * 当前画布已从服务端 hydrate 的页面流 doc_id。
  * 未 hydrate 时禁止 persist（刷新后 localStorage 恢复 activeId 但 store 仍空，
@@ -71,11 +61,10 @@ const breadcrumb = computed(() => {
   }
   if (!cur) return '编辑'
   const parent = cur.parentId ? lib.findNode(cur.parentId) : null
-  const kind = cur.type === 'page_flow' ? '页面流' : '测试用例'
   const title = editDocName.value || cur.name
   return parent
-    ? `${parent.name} / ${kind}「${title}」`
-    : `${kind}「${title}」`
+    ? `${parent.name} / 页面流「${title}」`
+    : `页面流「${title}」`
 })
 
 function clearAutosaveTimer() {
@@ -99,17 +88,8 @@ async function persistPageFlow(opts?: { confirmEmptyOverwrite?: boolean }) {
 async function persistActive() {
   await applyDocRename()
   const cur = lib.activeNode
-  if (!cur || cur.type === 'folder') return
-  if (cur.type === 'page_flow') {
-    await persistPageFlow()
-  } else if (cur.type === 'test_case') {
-    await lib.saveCaseDraft(cur.id, {
-      name: tcStore.caseName || editDocName.value || cur.name,
-      package_name: tcStore.packageName,
-      blocks: JSON.parse(JSON.stringify(tcStore.rootBlocks)),
-      linkedCaseId: tcStore.linkedCaseId || cur.caseId || '',
-    })
-  }
+  if (!cur || cur.type !== 'page_flow') return
+  await persistPageFlow()
 }
 
 function schedulePageFlowAutosave() {
@@ -159,12 +139,8 @@ async function saveCurrent() {
   clearAutosaveTimer()
   await applyDocRename()
   const cur = lib.activeNode
-  if (!cur) return
-  if (cur.type === 'page_flow') {
-    await persistPageFlow({ confirmEmptyOverwrite: true })
-  } else {
-    await persistActive()
-  }
+  if (!cur || cur.type !== 'page_flow') return
+  await persistPageFlow({ confirmEmptyOverwrite: true })
   const parentName = cur.parentId
     ? lib.findNode(cur.parentId)?.name || '…'
     : folderName.value
@@ -185,6 +161,7 @@ async function ensureParentFolder(preferred?: string | null): Promise<string> {
 
 async function openFile(node: LibNode) {
   if (node.type === 'folder') return
+  if (node.type !== 'page_flow') return
   if (lib.activeNode?.id === node.id && editing.value && hydratedFlowId.value === node.id) return
   clearAutosaveTimer()
   await persistActive()
@@ -194,48 +171,12 @@ async function openFile(node: LibNode) {
   editDocName.value = node.name
   if (node.parentId) selectedFolderId.value = node.parentId
 
-  if (node.type === 'page_flow') {
-    // 关键：先把 config 灌进 store，再 setActive 挂载 VueFlow，避免空画布闪现/竞态写回
-    const data = await lib.loadPageFlowPayload(node.id)
-    if (data) store.applySnapshot({ ...data, name: node.name })
-    else store.clearGraph()
-    hydratedFlowId.value = node.id
-    lib.setActive(node.id)
-  } else if (node.type === 'test_case') {
-    lib.setActive(node.id)
-    const draft = await lib.loadCaseDraft(node.id)
-    if (draft?.linkedCaseId || node.caseId) {
-      const cid = draft?.linkedCaseId || node.caseId
-      try {
-        const res = await getDefinition(cid)
-        const d = res.data?.definition
-        if (d) {
-          const steps = fromCaseManagerSteps(d.steps_data || [])
-          tcStore.loadStepBlocks(steps as Block[], {
-            id: d.id,
-            title: d.title || node.name,
-            packageName: d.package_name || 'com.example.app',
-            directoryId: d.directory_id ?? null,
-          })
-          editDocName.value = d.title || node.name
-          return
-        }
-      } catch { /* use draft */ }
-    }
-    if (draft) {
-      tcStore.loadStepBlocks((draft.blocks || []) as Block[], {
-        id: draft.linkedCaseId || node.caseId || '',
-        title: draft.name || node.name,
-        packageName: draft.package_name || 'com.example.app',
-      })
-      editDocName.value = draft.name || node.name
-    } else {
-      tcStore.clearAll()
-      tcStore.caseName = node.name
-      tcStore.setLinkedCase(node.caseId || '', node.name)
-      editDocName.value = node.name
-    }
-  }
+  // 关键：先把 config 灌进 store，再 setActive 挂载 VueFlow，避免空画布闪现/竞态写回
+  const data = await lib.loadPageFlowPayload(node.id)
+  if (data) store.applySnapshot({ ...data, name: node.name })
+  else store.clearGraph()
+  hydratedFlowId.value = node.id
+  lib.setActive(node.id)
 }
 
 async function applyDocRename() {
@@ -243,9 +184,6 @@ async function applyDocRename() {
   const name = editDocName.value.trim()
   if (!cur || !name || cur.type === 'folder') return
   if (cur.name !== name) await lib.renameNode(cur.id, name)
-  if (cur.type === 'test_case' && tcStore.caseName !== name) {
-    tcStore.caseName = name
-  }
 }
 
 function askCreateFolder(parentId: string | null) {
@@ -291,27 +229,6 @@ async function askCreateFlow(parentId?: string | null) {
   lib.status = `已创建页面流（${flow.id}）`
 }
 
-async function askCreateCase(parentId?: string | null) {
-  const pid = await ensureParentFolder(parentId ?? selectedFolderId.value)
-  const tc = await lib.createTestCase('未命名用例', pid, { syncPlatform: false })
-  await openFile(tc)
-  lib.status = `已创建测试用例（${tc.id}）`
-}
-
-async function openImportCases(parentId?: string | null) {
-  importTargetFolderId.value = await ensureParentFolder(parentId ?? selectedFolderId.value)
-  showImportCases.value = true
-}
-
-async function onCasesImported(ids: string[]) {
-  if (ids.length === 1) {
-    const n = lib.findNode(ids[0])
-    if (n) await openFile(n)
-  } else {
-    lib.status = `已从用例库导入 ${ids.length} 条`
-  }
-}
-
 async function exportCurrent() {
   const cur = lib.activeNode
   if (!cur || cur.type === 'folder') return
@@ -339,7 +256,7 @@ async function importJsonFile(file: File) {
       overwrite: overwriteImport.value,
       directoryId: selectedFolderId.value,
     })
-    if (node && node.type !== 'folder') await openFile(node)
+    if (node && node.type === 'page_flow') await openFile(node)
   } catch (e: any) {
     ElMessage.error(e?.message || 'JSON 解析失败')
   }
@@ -350,43 +267,6 @@ function onImportPick(ev: Event) {
   const file = input.files?.[0]
   input.value = ''
   if (file) importJsonFile(file)
-}
-
-function handleAddToCase(payload: {
-  nodeId: string
-  slotIndex: number
-  stepType: 'click' | 'wait'
-}) {
-  const node = store.findNode(payload.nodeId)
-  const port = node?.outputs[payload.slotIndex]
-  if (!port?.el) {
-    tcStore.setStatus('该端口没有关联元素')
-    return
-  }
-  if (lib.activeNode?.type !== 'test_case') {
-    const parentId = lib.activeNode?.parentId ?? selectedFolderId.value ?? null
-    lib.createTestCase(`用例-${port.name}`, parentId, { syncPlatform: false }).then((created) => {
-      openFile(created).then(() => addBridgedStep(port, payload.stepType))
-    })
-    return
-  }
-  addBridgedStep(port, payload.stepType)
-}
-
-function addBridgedStep(
-  port: { name: string; el?: { xpath?: string; id: string } },
-  stepType: 'click' | 'wait'
-) {
-  const block = tcStore.addStepAfter(tcStore.selectedId, stepType)
-  tcStore.updateStepData(block.id, {
-    label: port.name,
-    xpath: port.el?.xpath || '',
-    element_id: port.el?.id,
-    element_label: port.name,
-    timeout: stepType === 'wait' ? 10 : 5,
-  })
-  tcStore.setStatus(`已添加步骤「${port.name}」`)
-  persistActive()
 }
 
 onMounted(async () => {
@@ -408,7 +288,7 @@ onMounted(async () => {
     }
   } catch {
     selectedFolderId.value = null
-    error.value = "加载工作流数据失败，请检查网络连接"
+    error.value = '加载工作流数据失败，请检查网络连接'
   }
   lib.setActive(null)
   hydratedFlowId.value = null
@@ -448,23 +328,6 @@ watch(
   () => store.nodes,
   () => schedulePageFlowAutosave(),
   { deep: true }
-)
-
-watch(
-  () => [tcStore.caseName, tcStore.linkedCaseId] as const,
-  () => {
-    const cur = lib.activeNode
-    if (cur?.type !== 'test_case') return
-    if (tcStore.caseName && editDocName.value !== tcStore.caseName) {
-      editDocName.value = tcStore.caseName
-    }
-    if (tcStore.caseName && cur.name !== tcStore.caseName) {
-      lib.renameNode(cur.id, tcStore.caseName)
-    }
-    if (tcStore.linkedCaseId && cur.caseId !== tcStore.linkedCaseId) {
-      lib.setCaseId(cur.id, tcStore.linkedCaseId)
-    }
-  }
 )
 </script>
 
@@ -545,8 +408,6 @@ watch(
         @open="openFile"
         @create-folder="askCreateFolder"
         @create-flow="askCreateFlow"
-        @create-case="askCreateCase"
-        @import-cases="openImportCases"
         @export="exportFile"
       />
 
@@ -557,13 +418,12 @@ watch(
         :folder-name="folderName"
         @open="openFile"
         @create-flow="askCreateFlow()"
-        @create-case="askCreateCase()"
         @create-folder="askCreateFolder"
         @export="exportFile"
         @enter-folder="enterFolder"
       />
 
-      <!-- 打开文件：编辑区（无侧栏，元信息进编辑器工具栏） -->
+      <!-- 打开文件：编辑区（页面流 VueFlow） -->
       <main v-else-if="ready && editing" class="wb-main">
         <PageFlowVueFlow
           v-if="lib.activeNode?.type === 'page_flow'"
@@ -572,22 +432,9 @@ watch(
           :seed-demo="false"
           @back="browseFolder"
           @rename="applyDocRename"
-          @add-to-case="handleAddToCase"
-        />
-        <TestCaseBlockly
-          v-else-if="lib.activeNode?.type === 'test_case'"
-          :active="true"
-          :doc-id="lib.activeNode.id"
-          @back="browseFolder"
         />
       </main>
     </div>
-
-    <ImportCasesDialog
-      v-model="showImportCases"
-      :target-folder-id="importTargetFolderId"
-      @imported="onCasesImported"
-    />
   </div>
 </template>
 
@@ -609,6 +456,7 @@ watch(
   border-bottom: 1px solid var(--ink);
   
   flex-shrink: 0;
+  /* z-index 10 = 内容区之上（0 内容区 / 50 固定头部口径） */
   z-index: 10;
 }
 .brand {
@@ -704,7 +552,8 @@ watch(
 .wf-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 10000;
+  /* z-index 70 = 弹窗层（.claude/rules/frontend.md z-index 层级；原 10000 超界收敛） */
+  z-index: 70;
   display: flex;
   align-items: center;
   justify-content: center;

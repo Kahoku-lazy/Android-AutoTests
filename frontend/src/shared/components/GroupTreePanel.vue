@@ -195,17 +195,17 @@ const emit = defineEmits([
 /* ── Tree Panel ── */
 .tree-panel {
   width: 260px; min-width: 220px;
-  background: #fff; border: 3px solid var(--ink);
+  background: var(--app-bg-card); border: 3px solid var(--ink);
   border-radius: var(--app-radius-md); display: flex; flex-direction: column;
   overflow: hidden;
 }
 .tree-header {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: var(--app-space-sm);
+  padding: var(--app-space-sm) var(--app-space-md);
   border-bottom: 2px solid var(--ink);
-  background: #fff;
+  background: var(--app-bg-card);
   border-radius: 6px 10px 0 0;
   flex-shrink: 0;
 }
@@ -218,7 +218,7 @@ const emit = defineEmits([
   align-items: center;
 }
 .tree-header__actions :deep(.el-button) {
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   padding: 4px 8px;
 }
 .tree-body { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 6px 0; }
@@ -227,7 +227,7 @@ const emit = defineEmits([
 .tree-empty { text-align: center; padding: 30px 16px; }
 .tree-empty__icon { font-size: 32px; display: block; margin-bottom: 8px; }
 .tree-empty__text { color: var(--app-text-secondary); font-size: var(--app-size-sm); margin: 0; }
-.tree-empty__hint { color: #bbb; font-size: 11px; margin: 4px 0 0; }
+.tree-empty__hint { color: #bbb; font-size: var(--app-size-xs); margin: 4px 0 0; }
 
 /* ── Tree Node ── */
 .tree-node {
@@ -240,7 +240,7 @@ const emit = defineEmits([
 .tree-node--folder { font-weight: 600; }
 .tree-node__icon { font-size: 14px; flex-shrink: 0; }
 .tree-node__name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tree-node__meta { font-size: 11px; color: var(--app-text-secondary); flex-shrink: 0; padding-left: 4px; }
+.tree-node__meta { font-size: var(--app-size-xs); color: var(--app-text-secondary); flex-shrink: 0; padding-left: 4px; }
 
 .ungrouped-node { border-top: 1px dashed var(--app-border-lighter); margin-top: 4px; padding-top: 7px; }
 .ungrouped-node:hover { background: var(--app-highlight); }
@@ -248,9 +248,10 @@ const emit = defineEmits([
 
 /* ── Context Menu ── */
 .context-menu {
-  position: fixed; z-index: 80; background: #fff;
+  /* z-index 70 = 弹窗层（.claude/rules/frontend.md z-index 层级） */
+  position: fixed; z-index: 70; background: var(--app-bg-card);
   border: 2px solid var(--ink); border-radius: var(--app-radius-sm);
-  box-shadow: var(--app-shadow-lg); min-width: 160px; padding: 4px 0;
+  box-shadow: var(--app-shadow-lg); min-width: 160px; padding: var(--app-space-xs) 0;
 }
 .context-menu__item {
   padding: 8px 14px; font-size: 13px; cursor: pointer;

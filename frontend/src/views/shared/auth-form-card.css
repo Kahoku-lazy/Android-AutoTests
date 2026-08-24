@@ -59,7 +59,10 @@
 
 .form-submit {
   display: flex;
-  justify-content: flex-end;
+}
+
+.form-submit .el-button {
+  flex: 1;
 }
 
 /* 记住账号开关行（仅 LoginCard 使用） */

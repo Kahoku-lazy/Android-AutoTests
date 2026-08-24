@@ -9,6 +9,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { animate, stagger } from 'animejs'
 import PageHeader from '@/shared/components/PageHeader.vue'
 import KpiCard from '@/shared/components/KpiCard.vue'
+import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import { useExpandCollapse } from '@/shared/composables/useExpandCollapse'
 import { getRunReport, statusLabel, statusBadgeClass, iterBadgeClass, formatTime } from './api'
 
@@ -18,6 +19,7 @@ const runId = computed(() => String(route.params.runId))
 
 const report = ref(null)
 const loading = ref(false)
+const error = ref('')
 const activeTab = ref('cases')
 const { expandedIds: expandedFailCases, toggle: toggleFailExpand } = useExpandCollapse()
 const { expandedIds: expandedStepGroups, toggle: toggleStepGroupExpand } = useExpandCollapse()
@@ -38,10 +40,14 @@ watch(runId, () => {
 async function loadReport() {
   if (!runId.value || runId.value === 'undefined') return
   loading.value = true
+  error.value = ''
   try {
     const { data } = await getRunReport(runId.value)
     if (data.status) report.value = data.run
-  } catch (e) { console.error(e); }
+    else error.value = data.message || '加载报告失败'
+  } catch (e) {
+    error.value = e?.response?.data?.message || e?.message || '加载报告失败'
+  }
   loading.value = false
   await nextTick()
   animate('.detail-table tbody tr', { opacity: [0, 1], translateY: [12, 0], delay: stagger(30), duration: 350, ease: 'outCubic' })
@@ -163,6 +169,9 @@ function outcomeBadgeClass(outcome) {
     />
 
     <div class="doc-body">
+      <!-- Error state -->
+      <ErrorState v-if="error" :message="error" @retry="loadReport" />
+
       <!-- Back button + Run meta -->
       <div class="top-bar">
         <el-button size="small" @click="goBack">← 返回列表</el-button>

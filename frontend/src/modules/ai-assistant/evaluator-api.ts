@@ -58,15 +58,15 @@ export async function startRun(agentId: number, bankId: number, judgeModel?: str
   return data
 }
 
-export async function deleteRun(id: number): Promise<{ status: boolean; message?: string }> {
-  const { data } = await djangoClient.post<{ status: boolean; message?: string }>(`/evaluator/runs/${id}/delete`)
+export async function deleteRun(id: number): Promise<{ status: boolean }> {
+  const { data } = await djangoClient.post<{ status: boolean }>(`/evaluator/runs/${id}/delete`)
   return data
 }
 
 // ── Human Scoring ──
 
-export async function submitScore(resultId: number, scores: object): Promise<{ status: boolean; message?: string }> {
-  const { data } = await djangoClient.post<{ status: boolean; message?: string }>(`/evaluator/results/${resultId}/score`, scores)
+export async function submitScore(resultId: number, scores: object): Promise<{ status: boolean; data?: { result_id?: number; scored?: boolean }; message?: string }> {
+  const { data } = await djangoClient.post<{ status: boolean; data?: { result_id?: number; scored?: boolean }; message?: string }>(`/evaluator/results/${resultId}/score`, scores)
   return data
 }
 
@@ -86,7 +86,7 @@ export async function kbSearch(payload: object): Promise<{ status: boolean; resu
 
 // ── Agents (read-only from ai_assistant) ──
 
-export async function listAgents(): Promise<{ status: boolean; agents?: object[]; message?: string }> {
-  const { data } = await djangoClient.get<{ status: boolean; agents?: object[]; message?: string }>('/ai/agents')
+export async function listAgents(): Promise<{ status: boolean; data?: { agents?: object[] }; message?: string }> {
+  const { data } = await djangoClient.get<{ status: boolean; data?: { agents?: object[] }; message?: string }>('/ai/agents')
   return data
 }

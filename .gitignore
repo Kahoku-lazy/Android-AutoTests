@@ -8,6 +8,7 @@ build/
 .eggs/
 .venv/
 .pytest_cache/
+pytest-cache-files-*/
 .mypy_cache/
 .hypothesis/
 .tox/
@@ -53,6 +54,7 @@ result_*.json
 result_*.log
 
 # ── Frontend ──
+node_modules
 frontend/node_modules/
 frontend/dist/
 frontend/src/auto-imports.d.ts
@@ -178,3 +180,17 @@ frontend/.vite/
 
 # ── Superpowers SDD worktree ──
 .worktrees/
+
+# ── 本地缓存 / 调试截图 / 临时文件 ──
+.npm-cache/
+govee_report/
+.tmp_*
+
+# ── 实验脚本（不入库）──
+mobile_agent/
+
+# ── OpenSpec 本地工作流（自动生成，不入库）──
+openspec/
+plans/
+/package.json
+/package-lock.json

@@ -57,6 +57,7 @@ function makeTask(overrides = {}) {
     overallPass: 0, overallFail: 0,
     createdAt: '', creator: '',
     currentCaseTitle: '', currentIteration: 0, outcome: '', round: 0,
+    _connectionHealthy: true, _wsJustReconnected: false,
     ...overrides,
   }
 }

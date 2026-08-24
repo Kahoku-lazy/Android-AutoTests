@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 工作流只读工具 — 交付报告</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --teal: #19c8b9; --teal-hover: #3dd4c6; --teal-active: #11a89b;
+      --text-head: #794f27; --text-body: #725d42; --text-2nd: #9f927d; --text-muted: #8a7b66;
+      --bg-page: #f8f8f0; --bg-card: rgb(247,243,223); --bg-disabled: #f0ece2;
+      --border: #c4b89e; --border-hover: #a89878; --border-strong: #9f927d;
+      --ok: #6fba2c; --warn: #f5c31c; --err: #e05a5a; --focus: #ffcc00;
+      --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Nunito, 'Noto Sans SC', -apple-system, 'PingFang SC', sans-serif;
+      font-weight: 500; letter-spacing: 0.01em; background: var(--bg-page);
+      color: var(--text-body); line-height: 1.6;
+    }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 32px 56px; }
+    .ribbon { text-align: center; margin-bottom: 36px; }
+    .ribbon h1 {
+      display: inline-block; font-weight: 900; font-size: 26px; color: var(--text-head);
+      background: var(--bg-card); border: 2px solid var(--border-strong); border-radius: 24px;
+      padding: 10px 30px; letter-spacing: 0.02em; position: relative;
+    }
+    .ribbon h1::before, .ribbon h1::after {
+      content: ''; position: absolute; top: 50%; width: 14px; height: 14px;
+      background: var(--teal); border-radius: 50%; transform: translateY(-50%);
+    }
+    .ribbon h1::before { left: -7px; } .ribbon h1::after { right: -7px; }
+    .ribbon .sub { margin-top: 10px; color: var(--text-2nd); font-size: 14px; }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+    .kpi {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px;
+      padding: 18px 20px; border-left: 5px solid var(--teal); transition: transform 0.25s var(--ease);
+    }
+    .kpi:hover { transform: translateY(-2px); }
+    .kpi .num { font-size: 28px; font-weight: 800; color: var(--text-head); }
+    .kpi .lbl { font-size: 13px; color: var(--text-2nd); margin-top: 2px; }
+    .kpi.warn { border-left-color: var(--warn); } .kpi.ok { border-left-color: var(--ok); }
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px;
+      padding: 24px 26px; margin-bottom: 24px;
+    }
+    .card.conclusion { border-left: 6px solid var(--teal); }
+    h2 {
+      font-size: 18px; font-weight: 800; color: var(--text-head); letter-spacing: 0.02em;
+      margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+    }
+    h2::before { content: ''; width: 10px; height: 10px; background: var(--teal); border-radius: 50%; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th {
+      background: linear-gradient(180deg, #f3e7cf, #ecdfc2); color: var(--text-head);
+      font-weight: 700; text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--border);
+    }
+    td { padding: 9px 12px; border-bottom: 1px dashed var(--border); vertical-align: top; }
+    tr:nth-child(even) td { background: rgba(236, 223, 194, 0.35); }
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+      font-weight: 600; font-size: 13px; background: #f0ece2; border-radius: 6px; padding: 1px 6px;
+      color: var(--text-head);
+    }
+    .tag { display: inline-block; border-radius: 50px; padding: 2px 12px; font-size: 12px; font-weight: 700; }
+    .tag.ok { background: rgba(111,186,44,0.15); color: var(--ok); }
+    .tag.warn { background: rgba(245,195,28,0.18); color: #9a7a12; }
+    .tag.err { background: rgba(224,90,90,0.14); color: var(--err); }
+    .tag.fixed { background: rgba(25,200,185,0.16); color: var(--teal-active); }
+    ul.clean { list-style: none; padding-left: 0; }
+    ul.clean li { padding: 4px 0 4px 22px; position: relative; }
+    ul.clean li::before { content: '◆'; position: absolute; left: 2px; color: var(--teal); font-size: 11px; top: 7px; }
+    .path {
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace; font-weight: 600;
+      font-size: 13px; background: #f0ece2; border: 1px dashed var(--border); border-radius: 12px;
+      padding: 8px 12px; margin: 6px 0; color: var(--text-head); word-break: break-all;
+    }
+    footer { margin-top: 8px; border-top: 1px dashed var(--border-strong); padding-top: 14px; color: var(--text-muted); font-size: 13px; text-align: center; }
+    @media (max-width: 768px) {
+      .kpis { grid-template-columns: repeat(2, 1fr); }
+      .wrap { padding: 24px 16px 40px; }
+      th, td { padding: 8px; font-size: 13px; }
+    }
+    @media print {
+      body { background: #fff; } .card, .kpi { background: #fff; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="ribbon">
+      <h1>AI 工作流只读工具 — 交付报告</h1>
+      <div class="sub">ai-workflow-tools · Strict 档 · 2026-08-19 · 目标：AI 理解页面流的页面关系 / 跳转入口 / 页面下元素</div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="num">4</div><div class="lbl">新增/修改模块文件</div></div>
+      <div class="kpi"><div class="num">3</div><div class="lbl">新增/修改测试文件（36 例）</div></div>
+      <div class="kpi ok"><div class="num">111</div><div class="lbl">unit+integration 全过</div></div>
+      <div class="kpi ok"><div class="num">0</div><div class="lbl">P0 · 边界违规</div></div>
+    </div>
+
+    <div class="card conclusion">
+      <h2>结论：可关单</h2>
+      <ul class="clean">
+        <li>质量门禁四齿轮审查通过：唯一 P1（slot_index 类型不归一导致连线静默丢失）已修复并有回归测试</li>
+        <li>架构审查 2 项 P1 已消除：semantics.py 421 行超限 → 拆分 <code>semantics_paths.py</code>（现 358/82 行）；4 份 ARCH/PRD 文档已对齐代码真相（25 工具 / 7 分类）</li>
+        <li>真实网关端到端验证通过：25 工具注册、真实文档 digest 输出、坏 doc_id 返回 400</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>变更清单</h2>
+      <table>
+        <tr><th>文件</th><th>动作</th><th>内容</th></tr>
+        <tr><td><code>apps/workflow/semantics.py</code></td><td>新建（358 行）</td><td><code>build_graph_digest</code>：页面流 config → 语义摘要（节点分类/页面归属/元素合并与来源标注/跳转入口/弹窗语义/悬空警告）</td></tr>
+        <tr><td><code>apps/workflow/semantics_paths.py</code></td><td>新建（82 行）</td><td>路径摘要 DFS（防环 + 限深 32 + 限量 10）</td></tr>
+        <tr><td><code>apps/workflow/api_digest.py</code></td><td>新建（74 行）</td><td><code>get_document_digest</code> / <code>list_document_summaries</code> 只读数据出口</td></tr>
+        <tr><td><code>apps/workflow/api.py</code></td><td>修改（+4 行）</td><td><code>__all__</code> 再导出 2 个 AI 只读函数（存量超行未加重）</td></tr>
+        <tr><td><code>apps/ai_assistant/agent_scope/tool_registry.py</code></td><td>修改（+67 行）</td><td>「工作流」分类 + <code>list_page_flows</code> / <code>get_page_flow</code> 只读 schema 与 handler</td></tr>
+        <tr><td><code>tests/workflow/test_semantics.py</code></td><td>新建（26 例）</td><td>digest 纯函数单测（含 P1 回归/防御分支/路径边界）</td></tr>
+        <tr><td><code>tests/workflow/test_api_digest.py</code></td><td>新建（9 例）</td><td>数据出口伪 Manager 单测（错误路径 + 计数语义）</td></tr>
+        <tr><td><code>tests/ai_assistant/test_tools_workflow.py</code></td><td>新建（9 例）</td><td>schema 注册 / handler 参数透传与错误语义</td></tr>
+        <tr><td><code>tests/ai_assistant/test_tools_devices.py</code> · <code>test_tools_inspector.py</code></td><td>修改</td><td>存量工具计数断言 23→25 同步</td></tr>
+        <tr><td><code>PRD-08</code> · <code>ARCH-08</code> · <code>ARCH-00</code> · <code>ARCH-09</code></td><td>文档更新</td><td>25 工具 / 7 分类、workflow 依赖入图/白名单、变更记录 v6.9/v2.7/v2.2</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>质量门禁（四齿轮）与修复状态</h2>
+      <table>
+        <tr><th>齿轮</th><th>结果</th><th>说明</th></tr>
+        <tr><td>齿轮1 写法层</td><td><span class="tag ok">PASS</span></td><td>ruff 全过；DFS push/pop 状态无泄漏；主链路不吞错</td></tr>
+        <tr><td>齿轮2 契约层</td><td><span class="tag ok">PASS</span></td><td>schema 齐全；handler 只调 <code>workflow.api</code>；digest 与 <code>types/workflow.ts</code> 对齐；summary 已补 unknown 来源</td></tr>
+        <tr><td>齿轮3 白盒层</td><td><span class="tag ok">PASS</span></td><td>P1 已修复：槽位 int/str 归一（<code>_slot_int</code>），不可解析显式警告；重复警告消除；5 个防御分支补测试；<code>_count</code> 解析失败返回 None 不伪装 0</td></tr>
+        <tr><td>齿轮4 灰黑盒层</td><td><span class="tag ok">PASS</span></td><td>无新端点；网关 400 链路实测；坏 doc_id → HTTP 400</td></tr>
+      </table>
+      <p style="margin-top:12px;color:var(--text-2nd);font-size:13px">完整矩阵见 <code>tests/functional/workflow/reports/ai-workflow-tools-quality-gate.html</code>。P2 限负值→500 与平台既有工具同款行为，登记不修。</p>
+    </div>
+
+    <div class="card">
+      <h2>架构审查与修复状态</h2>
+      <ul class="clean">
+        <li><span class="tag fixed">已修复</span> semantics.py 421 行超 400 上限 → 拆 <code>semantics_paths.py</code>（延迟 import 规避循环依赖）</li>
+        <li><span class="tag fixed">已修复</span> 文档落后代码 → PRD-08（v6.9）/ARCH-08（v2.7）/ARCH-00（25 Tool 清单）/ARCH-09（v2.2，AI 只读消费）</li>
+        <li><span class="tag ok">PASS</span> 防火墙：ai_assistant → workflow 单向只读依赖，handler 只 import <code>workflow.api</code>，零违规（gen_arch_stats 实测）</li>
+        <li><span class="tag warn">登记</span> 存量债：<code>api.py</code>（470 行）与 <code>tool_registry.py</code>（906 行）超限为既有问题，本次未加重 api.py、tool_registry 仅 +67 行</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>测试与验证</h2>
+      <table>
+        <tr><th>层级</th><th>结果</th></tr>
+        <tr><td>单元 + 集成</td><td><span class="tag ok">111 passed</span>（新增 36 例；201 个 api/ui/e2e 因无专项环境 deselected）</td></tr>
+        <tr><td>静态门禁</td><td>ruff ✓ · <code>manage.py check</code> ✓ · <code>makemigrations --check</code> ✓ · <code>--check-boundaries</code> 零违规 ✓</td></tr>
+        <tr><td>真实网关 E2E</td><td>schemas 25 工具含 2 工作流工具 ✓；list_page_flows 返回 4 篇真实文档 ✓；get_page_flow 真实 digest（8 节点/7 连线/0 警告/5 路径）✓；web 元素归属 <code>web_snapshot</code>、「登录表单→模块导航」入口语义 ✓</td></tr>
+      </table>
+      <p style="margin:12px 0 4px;color:var(--text-2nd);font-size:13px">真实 digest 的路径示例：</p>
+      <div class="path">打开 URL → 登录页 → (点击「登录表单」) → 模块导航 → (点击「执行引擎入口卡片」) → 执行面板 → (无出边，终止)</div>
+    </div>
+
+    <div class="card">
+      <h2>交付物索引</h2>
+      <ul class="clean">
+        <li>实施计划：<code>plans/ai-workflow-tools/plan.md</code> · 状态：<code>plans/ai-workflow-tools/workflow-manifest.json</code></li>
+        <li>质量门禁报告：<code>tests/functional/workflow/reports/ai-workflow-tools-quality-gate.html</code></li>
+        <li>本交付报告：<code>tests/functional/workflow/reports/ai-workflow-tools-delivery.html</code></li>
+      </ul>
+    </div>
+
+    <footer>AI 工作流只读工具 · Strict 档交付 · 生成于 2026-08-19 · 所有 CSS 内联自包含</footer>
+  </div>
+</body>
+</html>

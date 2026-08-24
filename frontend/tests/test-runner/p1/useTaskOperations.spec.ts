@@ -84,10 +84,10 @@ describe('[P1] useTaskOperations', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
-    trApi.startRun.mockResolvedValue({ data: { status: true, runs: [{ run_id: 'r1' }] } })
-    trApi.stopRun.mockResolvedValue({ data: { status: true } })
-    trApi.deleteTask.mockResolvedValue({ data: { status: true } })
-    trApi.cancelQueue.mockResolvedValue({ data: { status: true } })
+    vi.mocked(trApi.startRun).mockResolvedValue({ data: { status: true, runs: [{ run_id: 'r1' }] } } as never)
+    vi.mocked(trApi.stopRun).mockResolvedValue({ data: { status: true } } as never)
+    vi.mocked(trApi.deleteTask).mockResolvedValue({ data: { status: true } } as never)
+    vi.mocked(trApi.cancelQueue).mockResolvedValue({ data: { status: true } } as never)
   })
 
   afterEach(() => {

@@ -10,8 +10,7 @@ import requests
 
 from tests.auth.conftest import REGISTER_URL
 
-# 加载 tests/e2e 下的共享 fixtures（非父目录，需显式注册）
-pytest_plugins = ["tests.e2e.conftest"]
+# 共享 fixtures 经 pytest_plugins 加载，声明已移至根 conftest.py（pytest ≥ 8.1 禁止在非顶层 conftest 声明）
 
 
 @pytest.fixture

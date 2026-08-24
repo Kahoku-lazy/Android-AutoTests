@@ -15,6 +15,10 @@ import requests
 BASE_URL = os.environ.get("TEST_BASE_URL", "http://localhost:8766")
 LOGIN_PATH = "/api/auth/login"
 
+# tests/e2e 是共享 fixtures 辅助包（无测试文件），已通过根 conftest 的 pytest_plugins 以插件形式加载；
+# 忽略其收集，避免 pytest 再把 tests/e2e/conftest.py 当 conftest 二次注册（Plugin already registered）。
+collect_ignore = ["e2e"]
+
 # ── Allure 元数据文件生成 ──
 
 

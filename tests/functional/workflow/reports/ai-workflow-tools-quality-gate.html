@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quality Gate — AI 工作流只读工具四齿轮审查</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --teal: #19c8b9; --teal-hover: #3dd4c6; --teal-active: #11a89b;
+      --heading: #794f27; --body: #725d42; --secondary: #9f927d; --muted: #8a7b66;
+      --bg: #f8f8f0; --card: rgb(247,243,223); --disabled: #f0ece2;
+      --border: #c4b89e; --border-hover: #a89878; --border-strong: #9f927d;
+      --success: #6fba2c; --warning: #f5c31c; --error: #e05a5a; --focus: #ffcc00;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Nunito, 'Noto Sans SC', -apple-system, 'PingFang SC', sans-serif;
+      font-weight: 500; letter-spacing: 0.01em;
+      background: var(--bg); color: var(--body); line-height: 1.7;
+    }
+    .page { max-width: 1160px; margin: 0 auto; padding: 40px 36px 64px; }
+    .ribbon {
+      display: inline-block; background: var(--heading); color: #fff8ec;
+      padding: 10px 26px; border-radius: 24px; font-weight: 900; font-size: 20px;
+      letter-spacing: 0.02em; margin-bottom: 6px;
+    }
+    .sub { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+    h2 { color: var(--heading); font-weight: 800; font-size: 19px; margin: 34px 0 12px; }
+    h3 { color: var(--heading); font-weight: 700; font-size: 15px; margin: 18px 0 8px; }
+    .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 8px; }
+    .kpi {
+      background: var(--card); border-radius: 18px; padding: 16px 18px;
+      border-left: 5px solid var(--teal); transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+    .kpi:hover { transform: translateY(-2px); }
+    .kpi.err { border-left-color: var(--error); }
+    .kpi.warn { border-left-color: var(--warning); }
+    .kpi.ok { border-left-color: var(--success); }
+    .kpi .n { font-size: 30px; font-weight: 900; color: var(--heading); }
+    .kpi .l { font-size: 13px; color: var(--muted); }
+    .card {
+      background: var(--card); border-radius: 18px; padding: 18px 22px; margin-bottom: 16px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th {
+      background: linear-gradient(180deg, #efe7d2, #e9dfc6); color: var(--heading);
+      font-weight: 800; text-align: left; padding: 10px 12px;
+      border-bottom: 2px solid var(--border-strong);
+    }
+    td { padding: 9px 12px; border-bottom: 1px dashed var(--border); vertical-align: top; }
+    tr:nth-child(even) td { background: rgba(255,255,255,0.35); }
+    .tag {
+      display: inline-block; border-radius: 50px; padding: 2px 12px; font-size: 12px;
+      font-weight: 800; color: #fff; letter-spacing: 0.03em;
+    }
+    .p0 { background: var(--error); }
+    .p1 { background: #e8853c; }
+    .p2 { background: #d9a441; }
+    .p3 { background: #8fa8a0; }
+    .pass { background: var(--success); }
+    .warn { background: #d9a441; }
+    .fail { background: var(--error); }
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+      font-weight: 600; font-size: 12.5px; background: #f0ead9;
+      padding: 1px 7px; border-radius: 12px; color: #6d5a3e;
+    }
+    .concl {
+      background: var(--card); border-radius: 18px; padding: 20px 24px;
+      border-left: 8px solid var(--error); margin-top: 10px;
+    }
+    .concl h2 { margin-top: 0; }
+    .note { color: var(--muted); font-size: 13px; }
+    ul { padding-left: 22px; }
+    li { margin-bottom: 5px; }
+    footer {
+      margin-top: 40px; padding-top: 14px; border-top: 2px dashed var(--border);
+      color: var(--muted); font-size: 12.5px;
+    }
+    @media (max-width: 768px) {
+      .page { padding: 20px 14px 40px; }
+      .kpis { grid-template-columns: repeat(2, 1fr); }
+      table { font-size: 12px; }
+    }
+    @media print { .kpi:hover { transform: none; } .card { background: #fff; } }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="ribbon">Quality Gate — 四齿轮审查</div>
+  <div class="sub">AI 工作流只读工具 · 审查对象 6 文件 · 结论：需修复（1 项 P1 必须）</div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="n">6</div><div class="l">审查文件</div></div>
+    <div class="kpi ok"><div class="n">27/27</div><div class="l">单测重跑通过（0.44s）</div></div>
+    <div class="kpi"><div class="n">0</div><div class="l">P0（安全/回归/崩溃）</div></div>
+    <div class="kpi err"><div class="n">1</div><div class="l">P1（必须修复）</div></div>
+    <div class="kpi warn"><div class="n">5+4</div><div class="l">P2 建议 / P3 备注</div></div>
+  </div>
+
+  <h2>四齿轮结论矩阵</h2>
+  <div class="card">
+    <table>
+      <tr><th style="width:130px">齿轮</th><th style="width:90px">结论</th><th>摘要</th></tr>
+      <tr>
+        <td><b>齿轮1 写法层</b></td>
+        <td><span class="tag pass">PASS</span></td>
+        <td>ruff 全过（重跑确认）。DFS push/pop 严格配对（含 MAX_PATHS 早退 / 超深截断 / 成环 / 无出边 / 目标缺失 / action 上下文 6 条路径实测无泄漏）；主链路不静默吞错（parse_warnings 显式化）。2 个 WARN：O(N×L) 全量扫描；<code>_count</code> 吞 JSONDecodeError 归 0。</td>
+      </tr>
+      <tr>
+        <td><b>齿轮2 契约层</b></td>
+        <td><span class="tag warn">WARN</span></td>
+        <td>schema 字段齐全、handler 只 import <code>apps.workflow.api</code>（防火墙 ✅）、PROTECTED→ValueError→网关 400 吻合、snake_case ✅、digest 与 types/workflow.ts 端口/前缀/domain 对齐 ✅。缺口：summary 未提 source 第 4 值 <code>unknown</code>；<code>directory_id</code> 无配套目录列举工具（AI 无法发现目录 ID）；「文档不存在」经网关返回 400（平台惯例，非新问题）。</td>
+      </tr>
+      <tr>
+        <td><b>齿轮3 白盒层</b></td>
+        <td><span class="tag warn">WARN</span></td>
+        <td>任务列出的 11 类输入逐一追踪：9 类有测试或实测覆盖，2 类有缺口。实测探针发现 <b>P1</b>：slot_index int/str 混合时连线被 <code>!=</code> 静默过滤、无任何警告（AI 会拿到缺失的 navigates_to）。另有 5 个防御分支未覆盖。</td>
+      </tr>
+      <tr>
+        <td><b>齿轮4 灰黑盒层</b></td>
+        <td><span class="tag pass">PASS</span></td>
+        <td>本改动无新 HTTP 端点。网关链路静态闭合：<code>handler(user_id, **kwargs)</code> 约定一致、resolve 注册正确（单测验证）、缺 doc_id → ValueError → 400（网关 164-173 行核对）。后端 8766 在运行：无 JWT 访问 <code>/api/tools/schemas</code> 返回 <b>401</b>（鉴权中间件生效 ✅）。带 token 的 E2E 未执行——无凭据，跳过原因明确。</td>
+      </tr>
+    </table>
+  </div>
+
+  <h2>审查发现分级表</h2>
+  <div class="card">
+    <table>
+      <tr><th style="width:70px">级别</th><th style="width:200px">位置</th><th>证据与建议</th></tr>
+      <tr>
+        <td><span class="tag p1">P1</span></td>
+        <td><code>semantics.py:84,93,118</code>（<code>_output_port</code>/<code>_input_port</code>/<code>_resolve_port_targets</code>）、<code>:225</code>（entry_points 的 trigger_element）</td>
+        <td><b>slot_index 类型不归一，静默丢边。</b>端口 <code>slot_index:0</code>(int) + 连线 <code>origin_slot:'0'</code>(str) 时 <code>0 != '0'</code> 成立 → 连线被跳过，<code>navigates_to</code> 整块消失且 <code>parse_warnings</code> 为空（探针 A 实测确认）。触发面：<code>import_document_envelope</code> 接受任意 JSON（用户手改/第三方导入）。平台前端产物恒为 int，故现有存量数据安全。<b>建议</b>：比较前统一 <code>int()</code> 归一（非数字则记 warning），三处同改。</td>
+      </tr>
+      <tr>
+        <td><span class="tag p2">P2</span></td>
+        <td><code>semantics.py:123</code> 与 <code>:395-396</code></td>
+        <td><b>悬空目标连线重复警告</b>：同一条连线产生「目标节点不存在」+「引用了不存在的节点」两条（探针 B 实测）。建议去重或合并为一条。</td>
+      </tr>
+      <tr>
+        <td><span class="tag p2">P2</span></td>
+        <td><code>api_digest.py:21-77</code></td>
+        <td><b>零直接单测</b>：27 个测试 = semantics 18 + tool handler 9；<code>get_document_digest</code> 的 DoesNotExist / JSONDecodeError / 非 dict / test_case 分支与 <code>_count</code> 均未覆盖（需 DB fixture）。<code>_count</code> 吞 JSONDecodeError 返回 0，损坏文档在列表里显示 node_count=0，AI 可能误判为空文档（详情接口会正确报错，风险有限）。</td>
+      </tr>
+      <tr>
+        <td><span class="tag p2">P2</span></td>
+        <td><code>tool_registry.py:409-423</code></td>
+        <td><b>directory_id 参数不可发现</b>：无「列工作流目录」工具（对比 search_cases 有 list_case_directories 先例），AI 拿不到目录 ID，该过滤实际不可用。建议补 <code>list_workflow_directories</code> 只读工具或从 schema desc 移除。</td>
+      </tr>
+      <tr>
+        <td><span class="tag p2">P2</span></td>
+        <td><code>semantics.py</code> 防御分支</td>
+        <td><b>5 个未覆盖分支</b>：nodes 列表含非 dict（「存在非对象节点」警告，实测可达）；origin 缺失连线（仅 target 缺失有测）；popup 无入边（实测 [][])；无 StartNode 图（实测 paths=[]）；MAX_PATHS 中途 break（探针实测=10，但菱形图用例未入库）。建议补 2-3 个参数化用例。</td>
+      </tr>
+      <tr>
+        <td><span class="tag p2">P2</span></td>
+        <td><code>api_digest.py:47-51</code></td>
+        <td><b>limit 负数 / directory_id 非整数 → 500</b>：Django 负索引抛 ValueError → 网关 500 而非 400。与平台既有工具（search_cases/search_elements 同款 <code>[:limit]</code>）一致模式，非本改动引入，建议统一 clamp，本次可不改。</td>
+      </tr>
+      <tr>
+        <td><span class="tag p3">P3</span></td>
+        <td><code>tool_registry.py:430</code></td>
+        <td>get_page_flow summary 列了 source 3 种取值，漏 <code>unknown</code>（契约文档小缺口）。</td>
+      </tr>
+      <tr>
+        <td><span class="tag p3">P3</span></td>
+        <td><code>semantics.py:109-232</code></td>
+        <td>入口/出口解析每节点全量扫 links，O(N×L)；PopupNode maxInstances=Infinity，超大图性能退化。AI 场景（≤数十节点）可接受。</td>
+      </tr>
+      <tr>
+        <td><span class="tag p3">P3</span></td>
+        <td><code>semantics.py:331-334</code></td>
+        <td>无 id 节点 → <code>node_id:""</code> 重复（探针 C 实测）。前端必生成 id，属防御性输入，可忽略或加警告。</td>
+      </tr>
+      <tr>
+        <td><span class="tag p3">P3</span></td>
+        <td>网关 400 vs 404</td>
+        <td>「文档不存在」经工具网关返回 400（网关仅区分 ValueError→400 / 其余→500）。平台所有工具同约定，不改。</td>
+      </tr>
+    </table>
+  </div>
+
+  <h2>齿轮3 覆盖映射（任务输入 → 代码路径 → 验证）</h2>
+  <div class="card">
+    <table>
+      <tr><th>输入</th><th>代码路径</th><th>验证</th></tr>
+      <tr><td>空 config {}</td><td><code>_parse_config</code> → nodes=[]</td><td>test_empty_and_invalid_inputs_no_crash ✅</td></tr>
+      <tr><td>config 为 JSON 字符串</td><td><code>json.loads</code> 兜底 {}</td><td>test_config_as_json_string_parsed ✅</td></tr>
+      <tr><td>nodes 含非 dict</td><td>「存在非对象节点，已跳过」</td><td>探针 1 实测 ✅（无正式用例）</td></tr>
+      <tr><td>links 悬空引用（target）</td><td>双处警告，不抛错</td><td>test_dangling_link_warns_not_crash ✅ + 探针 B（重复警告）</td></tr>
+      <tr><td>links 悬空引用（origin）</td><td>resolved_links 循环警告</td><td>探针 6 实测 ✅（无正式用例）</td></tr>
+      <tr><td>成环图</td><td>steps 判环 → 「(循环)」</td><td>test_paths_cycle_guard ✅</td></tr>
+      <tr><td>超深链（40 层）</td><td>depth&gt;32 → 「超深截断」</td><td>test_paths_depth_cap ✅</td></tr>
+      <tr><td>popup 无入边</td><td>triggered_by=[]</td><td>探针 4 实测 ✅（无正式用例）</td></tr>
+      <tr><td>start page 模式</td><td>page 块 + navigation_entries</td><td>test_start_page_mode_has_page_and_entries ✅</td></tr>
+      <tr><td>web_ 前缀</td><td>domain=web / web_snapshot</td><td>test_web_page_domain_and_source ✅</td></tr>
+      <tr><td>el_/pe_ 内置池</td><td>builtin_pool、无 page 块</td><td>test_builtin_pool_elements_have_no_page ✅</td></tr>
+      <tr><td>未知节点类型</td><td>unknown + 警告</td><td>test_unknown_node_type_warns ✅</td></tr>
+      <tr><td>无 StartNode 图</td><td>paths=[]</td><td>探针 3 实测 ✅（无正式用例）</td></tr>
+      <tr><td>MAX_PATHS&gt;10 路径</td><td>中途 break</td><td>探针 5 实测=10 ✅（无正式用例）</td></tr>
+      <tr><td>data 端口带 el</td><td>data_to 分组</td><td>探针 7 实测 ✅（原疑点排除）</td></tr>
+      <tr style="background:rgba(224,90,90,0.08)"><td>slot int/str 混合</td><td><code>!=</code> 静默过滤</td><td>探针 A 实测 ❌ → P1</td></tr>
+    </table>
+  </div>
+
+  <h2>齿轮4 验证记录</h2>
+  <div class="card">
+    <ul>
+      <li><b>无新 HTTP 端点</b>：工具经既有 <code>POST /api/tools/workflow/{action}</code> 网关分发，无 urls 变更 ✅</li>
+      <li><b>网关调用约定</b>：<code>tool_gateway.py:129-181</code> —— <code>handler(user_id=user_id, **body)</code> 与两个 handler 签名一致；ValueError→400、其余→500、成功→<code>{status,data}</code> 信封，digest 纯 dict 可被 <code>_serialize_result</code> 直通 ✅</li>
+      <li><b>缺 doc_id 链路</b>：PROTECTED 默认值 → ValueError("缺少必填参数: doc_id") → 400（单测 test_get_page_flow_handler_requires_doc_id ✅）</li>
+      <li><b>鉴权</b>：后端 8766 在运行；无 JWT 请求 <code>/api/tools/schemas</code> 返回 <b>401</b>，鉴权中间件生效 ✅</li>
+      <li><b>跳过项</b>：带 token 的 E2E 调用（get_page_flow 真实数据）未执行——本会话无登录凭据；已由 27 单测 + 纯函数实测探针替代，静态链路闭合。</li>
+      <li><b>权限边界（F3）</b>：wf_documents 无 owner 字段，工作流数据平台内全局可见——与用例/元素管理既有口径一致，非本改动引入，不判定为漏洞。</li>
+    </ul>
+  </div>
+
+  <h2>结论</h2>
+  <div class="concl">
+    <h2>需修复（1 项 P1 必须，修复后可关单）</h2>
+    <ul>
+      <li><b>必须</b>：<code>semantics.py</code> 三处 slot 比较（<code>_output_port:84</code>、<code>_input_port:93</code>、<code>_resolve_port_targets:118</code>，连同 <code>:225</code>）做类型归一 + 不可比时记 warning——否则混合 int/str 的导入 JSON 会让 AI 静默拿到缺失的跳转语义（P1 证据：探针 A，warnings 为空）。</li>
+      <li><b>建议随修</b>：P2-重复警告去重、P2-补 api_digest DB 测试、P2-directory_id 工具配套、P2-防御分支参数化用例。</li>
+      <li><b>可延后</b>：P2-limit 负值 500（平台同款模式）、P3 全部。</li>
+    </ul>
+    <p class="note" style="margin-top:10px">无 P0：无安全/权限漏洞（工具挂网关 JWT 中间件、只读无写）、无既有功能回归（api.py 仅 __all__+2 行 import；tool_registry 只增条目）、平台自有数据（前端产物恒 int）下语义正确、27 单测重跑全绿。</p>
+  </div>
+
+  <footer>
+    Quality Gate 四齿轮审查 · 审查对象：apps/workflow/semantics.py、apps/workflow/api_digest.py、apps/workflow/api.py、apps/ai_assistant/agent_scope/tool_registry.py、tests/workflow/test_semantics.py、tests/ai_assistant/test_tools_workflow.py · 生成时间：2026-08-19 · ruff: All checks passed · pytest: 27 passed
+  </footer>
+</div>
+</body>
+</html>

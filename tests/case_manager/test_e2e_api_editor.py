@@ -9,7 +9,7 @@ import pytest
 
 from tests.e2e.helpers import login_as
 
-API_LIST_URL = "http://localhost:5173/cases"
+API_LIST_URL = "http://localhost:5173/cases/api"
 API_EDITOR_NEW_URL = "http://localhost:5173/cases/api/new"
 
 
@@ -70,8 +70,8 @@ def test_create_case_appears_in_list(page):
     """TC-E2E-002: 填写用例信息 → 添加步骤 → 保存 → 列表页出现新用例"""
     _login(page)
 
-    # Navigate to the API case list with api tab active
-    page.goto(API_LIST_URL + "?tab=api")
+    # Navigate to the API case list（tab 由 path /cases/api 决定，query ?tab= 已废弃）
+    page.goto(API_LIST_URL)
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
 
@@ -91,10 +91,8 @@ def test_create_case_appears_in_list(page):
         add_step_btn.click()
         page.wait_for_timeout(500)
 
-    # Fill basic step fields
-    url_inputs = page.locator(
-        "input[placeholder*='URL'], input[placeholder*='url'], input[placeholder*='路径']"
-    )
+    # Fill basic step fields（当前 URL 输入框 placeholder 形如 /api/auth/login）
+    url_inputs = page.locator("input[placeholder*='/api/']")
     if url_inputs.count() > 0:
         url_inputs.first.fill("/api/test")
 
@@ -117,7 +115,7 @@ def test_edit_existing_case_saves_correctly(page):
     _login(page)
 
     # Go to list and find first API case
-    page.goto(API_LIST_URL + "?tab=api")
+    page.goto(API_LIST_URL)
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1500)
 
@@ -171,8 +169,8 @@ def test_add_test_data_row_preserves_on_save(page):
         add_step_btn.click()
         page.wait_for_timeout(500)
 
-    # Fill URL
-    url_inputs = page.locator("input[placeholder*='URL'], input[placeholder*='url']")
+    # Fill URL（当前 URL 输入框 placeholder 形如 /api/auth/login）
+    url_inputs = page.locator("input[placeholder*='/api/']")
     if url_inputs.count() > 0:
         url_inputs.first.fill("/api/data-test")
 
@@ -242,9 +240,17 @@ def test_back_button_returns_to_list(page):
     """TC-E2E-006: 编辑器"返回列表"按钮 → 回到用例列表页"""
     _login(page)
 
-    page.goto(API_EDITOR_NEW_URL)
+    # 先经列表页点「新建」进入编辑器——返回按钮实现是 router.back()，需浏览器历史里存在列表页
+    page.goto(API_LIST_URL)
     page.wait_for_load_state("networkidle")
     page.wait_for_timeout(1000)
+    new_btn = page.locator("button:has-text('新建')").first
+    if new_btn.is_visible():
+        new_btn.click()
+        page.wait_for_load_state("networkidle")
+        page.wait_for_timeout(1500)
+    else:
+        pytest.skip("列表页无「新建」按钮，无法进入编辑器")
 
     # Click "返回列表"
     back_btn = page.locator("button:has-text('返回列表'), button:has-text('返回')").first
@@ -252,6 +258,6 @@ def test_back_button_returns_to_list(page):
         back_btn.click()
         page.wait_for_timeout(1500)
 
-    assert "cases" in page.url or "api" not in page.url, (
-        f"Expected navigation back to list, got {page.url}"
+    assert page.url.rstrip("/").split("?")[0] == API_LIST_URL, (
+        f"Expected navigation back to list {API_LIST_URL}, got {page.url}"
     )

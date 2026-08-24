@@ -35,6 +35,7 @@ function makeTask(overrides = {}) {
     deviceSerial: 'S1', caseIds: [1], loopCount: 1, intervalSeconds: 5,
     running: false, runId: '', status: 'idle',
     caseItems: [], stepStates: [], logs: [],
+    failedSteps: [],
     overallPass: 0, overallFail: 0,
     createdAt: '', creator: '',
     currentCaseTitle: '', currentIteration: 0, outcome: '', round: 0,
@@ -86,10 +87,10 @@ describe('[P0] useTaskOperations', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
-    trApi.startRun.mockResolvedValue({ data: { status: true, runs: [{ run_id: 'r1' }] } })
-    trApi.stopRun.mockResolvedValue({ data: { status: true } })
-    trApi.deleteTask.mockResolvedValue({ data: { status: true } })
-    trApi.cancelQueue.mockResolvedValue({ data: { status: true } })
+    vi.mocked(trApi.startRun).mockResolvedValue({ data: { status: true, runs: [{ run_id: 'r1' }] } } as never)
+    vi.mocked(trApi.stopRun).mockResolvedValue({ data: { status: true } } as never)
+    vi.mocked(trApi.deleteTask).mockResolvedValue({ data: { status: true } } as never)
+    vi.mocked(trApi.cancelQueue).mockResolvedValue({ data: { status: true } } as never)
   })
 
   afterEach(() => {
@@ -114,7 +115,7 @@ describe('[P0] useTaskOperations', () => {
 
     it('设备忙入队 → 状态 queued 并启动队列轮询', async () => {
       const { ops, tasks, startQueuePolling, taskAddLog } = buildOps()
-      trApi.startRun.mockResolvedValue({ data: { status: true, queued: [{ client_task_id: 't1' }] } })
+      vi.mocked(trApi.startRun).mockResolvedValue({ data: { status: true, queued: [{ client_task_id: 't1' }] } } as never)
 
       await ops.doStartTask(tasks.value[0])
 
@@ -127,7 +128,7 @@ describe('[P0] useTaskOperations', () => {
 
     it('无 run 无 queue → 设备不可用提示，任务回落未运行', async () => {
       const { ops, tasks, taskAddLog, scheduleSave } = buildOps()
-      trApi.startRun.mockResolvedValue({ data: { status: true } })
+      vi.mocked(trApi.startRun).mockResolvedValue({ data: { status: true } } as never)
 
       await ops.doStartTask(tasks.value[0])
 
@@ -147,7 +148,7 @@ describe('[P0] useTaskOperations', () => {
     const task = tasks.value[0]
     task.running = true
     task.runId = 'r1'
-    trApi.stopRun.mockRejectedValue(new Error('网络异常'))
+    vi.mocked(trApi.stopRun).mockRejectedValue(new Error('网络异常'))
 
     await ops.doStopTask(task)
 
@@ -175,7 +176,7 @@ describe('[P0] useTaskOperations', () => {
     task.overallFail = 1
     task.failedSteps = [{ stepIndex: 1 }]
     task.logs = ['log1']
-    trApi.cancelQueue.mockRejectedValue({ response: { status: 404 } })
+    vi.mocked(trApi.cancelQueue).mockRejectedValue({ response: { status: 404 } })
 
     await ops.doCancelQueue(task)
 
@@ -194,7 +195,7 @@ describe('[P0] useTaskOperations', () => {
   it('doRemoveTask：deleteTask 失败不剔除本地任务', async () => {
     const { ops, tasks } = buildOps()
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    trApi.deleteTask.mockRejectedValue(new Error('后端错误'))
+    vi.mocked(trApi.deleteTask).mockRejectedValue(new Error('后端错误'))
 
     await ops.doRemoveTask(tasks.value[0])
 

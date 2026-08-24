@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 执行引擎状态打通 — 交付报告</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --teal: #19c8b9; --text-head: #794f27; --text-body: #725d42; --text-2nd: #9f927d; --text-muted: #8a7b66;
+      --bg-page: #f8f8f0; --bg-card: rgb(247,243,223); --border: #c4b89e; --border-strong: #9f927d;
+      --ok: #6fba2c; --warn: #f5c31c; --err: #e05a5a; --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Nunito, 'Noto Sans SC', -apple-system, 'PingFang SC', sans-serif; font-weight: 500; letter-spacing: 0.01em; background: var(--bg-page); color: var(--text-body); line-height: 1.6; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 32px 56px; }
+    .ribbon { text-align: center; margin-bottom: 36px; }
+    .ribbon h1 { display: inline-block; font-weight: 900; font-size: 26px; color: var(--text-head); background: var(--bg-card); border: 2px solid var(--border-strong); border-radius: 24px; padding: 10px 30px; letter-spacing: 0.02em; position: relative; }
+    .ribbon h1::before, .ribbon h1::after { content: ''; position: absolute; top: 50%; width: 14px; height: 14px; background: var(--teal); border-radius: 50%; transform: translateY(-50%); }
+    .ribbon h1::before { left: -7px; } .ribbon h1::after { right: -7px; }
+    .ribbon .sub { margin-top: 10px; color: var(--text-2nd); font-size: 14px; }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+    .kpi { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 18px 20px; border-left: 5px solid var(--teal); transition: transform 0.25s var(--ease); }
+    .kpi:hover { transform: translateY(-2px); }
+    .kpi .num { font-size: 28px; font-weight: 800; color: var(--text-head); }
+    .kpi .lbl { font-size: 13px; color: var(--text-2nd); margin-top: 2px; }
+    .kpi.ok { border-left-color: var(--ok); }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 24px 26px; margin-bottom: 24px; }
+    .card.conclusion { border-left: 6px solid var(--teal); }
+    h2 { font-size: 18px; font-weight: 800; color: var(--text-head); letter-spacing: 0.02em; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    h2::before { content: ''; width: 10px; height: 10px; background: var(--teal); border-radius: 50%; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { background: linear-gradient(180deg, #f3e7cf, #ecdfc2); color: var(--text-head); font-weight: 700; text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--border); }
+    td { padding: 9px 12px; border-bottom: 1px dashed var(--border); vertical-align: top; }
+    tr:nth-child(even) td { background: rgba(236, 223, 194, 0.35); }
+    code { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace; font-weight: 600; font-size: 13px; background: #f0ece2; border-radius: 6px; padding: 1px 6px; color: var(--text-head); }
+    .tag { display: inline-block; border-radius: 50px; padding: 2px 12px; font-size: 12px; font-weight: 700; }
+    .tag.ok { background: rgba(111,186,44,0.15); color: var(--ok); }
+    .tag.warn { background: rgba(245,195,28,0.18); color: #9a7a12; }
+    ul.clean { list-style: none; padding-left: 0; }
+    ul.clean li { padding: 4px 0 4px 22px; position: relative; }
+    ul.clean li::before { content: '◆'; position: absolute; left: 2px; color: var(--teal); font-size: 11px; top: 7px; }
+    footer { margin-top: 8px; border-top: 1px dashed var(--border-strong); padding-top: 14px; color: var(--text-muted); font-size: 13px; text-align: center; }
+    @media (max-width: 768px) { .kpis { grid-template-columns: repeat(2, 1fr); } .wrap { padding: 24px 16px 40px; } }
+    @media print { body { background: #fff; } .card, .kpi { background: #fff; box-shadow: none; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="ribbon">
+      <h1>AI 执行引擎状态打通 — 交付报告</h1>
+      <div class="sub">ai-runner-status-tools · 2026-08-20 · 目标：AI 可判断任务状态、区分"运行中/已完成/不存在"、读事后结果</div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="num">2</div><div class="lbl">模块文件修改</div></div>
+      <div class="kpi"><div class="num">11</div><div class="lbl">新增测试用例</div></div>
+      <div class="kpi ok"><div class="num">162</div><div class="lbl">unit+integration 全过</div></div>
+      <div class="kpi ok"><div class="num">26</div><div class="lbl">平台工具总数（25→26）</div></div>
+    </div>
+
+    <div class="card conclusion">
+      <h2>结论：可关单</h2>
+      <ul class="clean">
+        <li>新增只读工具 <code>get_run_status</code>：AI 可查 TestRunRecord 状态/设备/计划用例/结果计数/汇总/起止时间</li>
+        <li><code>get_run_results</code> 信封化：<code>{run_status, results}</code>，run 不存在返回 400 而非空列表，运行中与无结果可区分</li>
+        <li>真实网关 E2E：26 工具注册 ✓；真实 run 状态 COMPLETED + result_count=3 ✓；信封 results=3 ✓；坏 run_id 400 ✓</li>
+        <li>门禁全绿：ruff ✓ · manage.py check ✓ · boundaries 零违规 ✓ · 162 passed ✓</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>变更清单</h2>
+      <table>
+        <tr><th>文件</th><th>内容</th></tr>
+        <tr><td><code>apps/test_runner/api.py</code></td><td>新增 <code>get_run_status(run_id)</code> 只读数据出口（+<code>__all__</code>）：status（透传 DB 值）/device_serial/client_task_id/loop_count/selected_cases/result_count/summary/started_at/finished_at；不存在返回 None</td></tr>
+        <tr><td><code>apps/ai_assistant/agent_scope/tool_registry.py</code></td><td>新增 <code>get_run_status</code>（runner/get_run_status，只读，测试执行分类）；<code>get_run_results</code> handler 信封化（run_status + results，不存在 400）；schema summary 说明运行中 result_count=0 语义</td></tr>
+        <tr><td><code>tests/ai_assistant/test_tools_runner.py</code></td><td>新建（11 例）：schema 注册 / handler ok+缺参+不存在 / api.get_run_status 伪 ORM 字段与 None 兜底</td></tr>
+        <tr><td><code>tests/ai_assistant/test_tools_devices.py</code> · <code>test_tools_inspector.py</code></td><td>工具计数断言 25→26 同步</td></tr>
+        <tr><td><code>PRD-08</code>（v6.11）· <code>ARCH-08</code>（v2.9）· <code>ARCH-00</code> · <code>ARCH-00-附录</code></td><td>文档对齐 26 工具：计数/§4.1 表格（测试执行 2 读 2 写）/Tool 清单加 <code>get_run_status</code>/变更记录</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>AI 侧使用模式（打通后）</h2>
+      <ul class="clean">
+        <li><code>run_test</code> 创建 run 后 → 轮询 <code>get_run_status</code>：<code>status=RUNNING</code> 且 <code>result_count=0</code> 表示执行中；<code>completed/COMPLETED</code> 表示结束</li>
+        <li>结束后调 <code>get_run_results</code>：信封 <code>run_status.summary</code> 给出每用例通过率，<code>results</code> 给每轮明细（pass/fail/时长/详情/步骤详情）</li>
+        <li>异常 run_id → 400「run 不存在」；AI 可据此校验 run_id 是否拼错</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>已知边界（登记不修）</h2>
+      <ul class="clean">
+        <li><span class="tag warn">登记</span> 执行中实时进度（当前用例/轮次/步骤）仍只走 WebSocket，AI 无法订阅——<code>get_run_status</code> 运行中只能回答"还在跑"</li>
+        <li><span class="tag warn">登记</span> TaskCard（前端任务卡片）无 AI 工具；AI 的 run 与前端卡片体系不互通（run_test 未关联 client_task_id）</li>
+        <li><span class="tag warn">登记</span> <code>tr_test_runs.status</code> 历史值大小写混存（RUNNING/completed/stopped/FAILED），工具如实透传</li>
+        <li><span class="tag warn">登记</span> <code>run_test</code> 的 loop_count 恒 1、仅 UI 用例</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>交付物索引</h2>
+      <ul class="clean">
+        <li>实施计划：<code>plans/ai-runner-status-tools/plan.md</code> · 状态：<code>plans/ai-runner-status-tools/workflow-manifest.json</code></li>
+        <li>本交付报告：<code>tests/functional/test_runner/reports/ai-runner-status-tools-delivery.html</code></li>
+      </ul>
+    </div>
+
+    <footer>AI 执行引擎状态打通 · 生成于 2026-08-20 · 所有 CSS 内联自包含</footer>
+  </div>
+</body>
+</html>

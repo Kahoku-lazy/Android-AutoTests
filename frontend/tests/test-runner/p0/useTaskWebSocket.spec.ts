@@ -56,9 +56,12 @@ function makeTask(overrides = {}) {
       { id: 7, title: 'TC-7', status: 'waiting', pass: 0, fail: 0, total: 3, rate: 0 },
     ],
     stepStates: [], logs: [],
+    failedSteps: [],
     overallPass: 0, overallFail: 0,
     createdAt: '', creator: '',
     currentCaseTitle: '', currentIteration: 0, outcome: '', round: 0,
+    conclusion: '',
+    _connectionHealthy: true, _lastHeartbeat: 0,
     ...overrides,
   }
 }

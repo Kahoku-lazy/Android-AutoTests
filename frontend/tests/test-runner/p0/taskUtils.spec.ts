@@ -23,73 +23,38 @@ describe('[P0] taskUtils', () => {
     localStorage.clear()
   })
 
-  // ── deriveTaskStatus 全分支 ──
+  // ── deriveTaskStatus：Step 6 权威状态读取（判定收敛到后端 display_state）──
 
   describe('deriveTaskStatus', () => {
     it.each([
       {
-        name: 'running 置位，优先返回 running',
-        task: { running: true },
+        name: 'state=running，返回 running',
+        task: { state: 'running' },
         expected: 'running',
       },
       {
-        name: 'running 置位且 outcome 已终态，仍返回 running',
-        task: { running: true, status: 'queued', outcome: 'completed' },
-        expected: 'running',
-      },
-      {
-        name: 'queued 且 outcome=completed 漂移，修正为 done',
-        task: { status: 'queued', outcome: 'completed' },
-        expected: 'done',
-      },
-      {
-        name: 'queued 且 outcome=stopped 漂移，修正为 done',
-        task: { status: 'queued', outcome: 'stopped' },
-        expected: 'done',
-      },
-      {
-        name: 'queued 且 outcome=interrupted 漂移，修正为 done',
-        task: { status: 'queued', outcome: 'interrupted' },
-        expected: 'done',
-      },
-      {
-        name: 'queued 且 outcome=error 漂移，修正为 done',
-        task: { status: 'queued', outcome: 'error' },
-        expected: 'done',
-      },
-      {
-        name: 'queued 无终态 outcome，返回 queued',
-        task: { status: 'queued' },
+        name: 'state=queued，返回 queued',
+        task: { state: 'queued' },
         expected: 'queued',
       },
       {
-        name: 'outcome=completed，返回 done',
-        task: { outcome: 'completed' },
+        name: 'state=done（含漂移已由后端修正），返回 done',
+        task: { state: 'done', status: 'queued', outcome: 'completed' },
         expected: 'done',
       },
       {
-        name: 'outcome=stopped，返回 done',
-        task: { outcome: 'stopped' },
-        expected: 'done',
+        name: 'state=idle，返回 idle',
+        task: { state: 'idle' },
+        expected: 'idle',
       },
       {
-        name: 'outcome=interrupted，返回 done',
-        task: { outcome: 'interrupted' },
-        expected: 'done',
-      },
-      {
-        name: 'outcome=error，返回 done',
-        task: { outcome: 'error' },
-        expected: 'done',
+        name: '无 state（旧缓存/本地行），回退 idle（字段读取非推导）',
+        task: { running: true, status: 'running' },
+        expected: 'idle',
       },
       {
         name: '空任务对象，默认返回 idle',
         task: {},
-        expected: 'idle',
-      },
-      {
-        name: '非终态 outcome，回落 idle',
-        task: { status: 'finished', outcome: 'paused' },
         expected: 'idle',
       },
     ])('$name', ({ task, expected }) => {
@@ -206,48 +171,48 @@ describe('[P0] taskUtils', () => {
     })
   })
 
-  // ── taskBucket 四分类 ──
+  // ── taskBucket 四分类（Step 6：基于权威 state + outcome）──
 
   describe('taskBucket', () => {
     it.each([
       {
-        name: 'running 置位，归入 running',
-        task: { running: true },
+        name: 'state=running，归入 running',
+        task: { state: 'running' },
         expected: 'running',
       },
       {
-        name: '排队中，归入 waiting',
-        task: { status: 'queued' },
+        name: 'state=queued，归入 waiting',
+        task: { state: 'queued' },
         expected: 'waiting',
       },
       {
-        name: 'outcome=completed，归入 completed',
-        task: { outcome: 'completed' },
+        name: 'state=done 且 outcome=completed，归入 completed',
+        task: { state: 'done', outcome: 'completed' },
         expected: 'completed',
       },
       {
-        name: 'outcome=stopped，归入 incomplete',
-        task: { outcome: 'stopped' },
+        name: 'state=done 且 outcome=stopped，归入 incomplete',
+        task: { state: 'done', outcome: 'stopped' },
         expected: 'incomplete',
       },
       {
-        name: 'outcome=interrupted，归入 incomplete',
-        task: { outcome: 'interrupted' },
+        name: 'state=done 且 outcome=interrupted，归入 incomplete',
+        task: { state: 'done', outcome: 'interrupted' },
         expected: 'incomplete',
       },
       {
-        name: 'outcome=error，归入 incomplete',
-        task: { outcome: 'error' },
+        name: 'state=done 且 outcome=error，归入 incomplete',
+        task: { state: 'done', outcome: 'error' },
         expected: 'incomplete',
       },
       {
-        name: '无状态，默认归入 incomplete',
+        name: '无 state（idle），默认归入 incomplete（现状语义）',
         task: {},
         expected: 'incomplete',
       },
       {
-        name: 'queued 漂移且 outcome=completed，归入 completed',
-        task: { status: 'queued', outcome: 'completed' },
+        name: '漂移行（后端已下发 state=done + completed），归入 completed',
+        task: { state: 'done', status: 'queued', outcome: 'completed' },
         expected: 'completed',
       },
     ])('$name', ({ task, expected }) => {

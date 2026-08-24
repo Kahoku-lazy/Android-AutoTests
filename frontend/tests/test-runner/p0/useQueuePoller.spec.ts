@@ -46,7 +46,7 @@ describe('[P0] useQueuePoller', () => {
 
   it('无排队任务：轮询自动停止', async () => {
     // 首轮匹配后任务升级 running，队列排空 → 轮询自动停止，不再请求后端
-    const tasks = ref([{ id: 't1', status: 'queued', running: false }])
+    const tasks = ref([{ id: 't1', status: 'queued', running: false, runId: '' }])
     const getActiveRuns = vi.fn().mockResolvedValue({
       data: { status: true, active: [{ client_task_id: 't1', run_id: 'R-1' }] },
     })
@@ -63,7 +63,7 @@ describe('[P0] useQueuePoller', () => {
   })
 
   it('匹配 client_task_id：任务升级 running + 触发三个回调', async () => {
-    const tasks = ref([{ id: 't1', status: 'queued', running: false }])
+    const tasks = ref([{ id: 't1', status: 'queued', running: false, runId: '' }])
     const getActiveRuns = vi.fn().mockResolvedValue({
       data: { status: true, active: [{ client_task_id: 't1', run_id: 'R-9' }] },
     })
@@ -86,7 +86,7 @@ describe('[P0] useQueuePoller', () => {
   })
 
   it('已 running 的任务：跳过', async () => {
-    const tasks = ref([{ id: 't1', status: 'queued', running: true }])
+    const tasks = ref([{ id: 't1', status: 'queued', running: true, runId: undefined }])
     const getActiveRuns = vi.fn().mockResolvedValue({
       data: { status: true, active: [{ client_task_id: 't1', run_id: 'R-9' }] },
     })
@@ -106,7 +106,7 @@ describe('[P0] useQueuePoller', () => {
   })
 
   it('getActiveRuns 抛错：被吞不抛', async () => {
-    const tasks = ref([{ id: 't1', status: 'queued', running: false }])
+    const tasks = ref([{ id: 't1', status: 'queued', running: false, runId: '' }])
     const getActiveRuns = vi.fn().mockRejectedValue(new Error('后端不可用'))
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { poller } = buildPoller({ tasks, getActiveRuns })
@@ -124,7 +124,7 @@ describe('[P0] useQueuePoller', () => {
   })
 
   it('startQueuePolling：幂等不产生双定时器', async () => {
-    const tasks = ref([{ id: 't1', status: 'queued', running: false }])
+    const tasks = ref([{ id: 't1', status: 'queued', running: false, runId: '' }])
     // active 无匹配：任务保持排队，轮询持续 → 可观察每个 tick 的调用次数
     const getActiveRuns = vi.fn().mockResolvedValue({ data: { status: true, active: [] } })
     const { poller } = buildPoller({ tasks, getActiveRuns })

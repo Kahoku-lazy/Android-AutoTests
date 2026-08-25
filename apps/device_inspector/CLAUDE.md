@@ -15,7 +15,9 @@
 
 ## 本 App 契约（特例 + 真相源）
 
-真相源：`apps/device_inspector/urls.py`（6 端点：`capture` / `snapshots` / `snapshots/{id}` / `snapshots/{id}/delete` / `snapshots/{id}/save-elements` / `pages/{id}`）+ `views.py` + `api.py`。
+真相源：`apps/device_inspector/urls.py`（7 端点：`capture` / `snapshots` / `snapshots/{id}` / `snapshots/{id}/analyze` / `snapshots/{id}/delete` / `snapshots/{id}/save-elements` / `pages/{id}`）+ `views.py` + `api.py`。
+
+- `snapshots/{id}/analyze` 为纯规则结构分区（`algorithms/layout.classify_structure`），基于已存快照即时计算、不落库、无设备交互、无 LLM。
 
 - 信封走全局标准 `{status, data}`；快照文件落盘路径与前端拉取路径是双边契约。
 - `save-elements` 写元素资产必须经 `element_locator` 的 api 封装，禁止本 App 直接 ORM 写 `el_` 表（防火墙 #2）。

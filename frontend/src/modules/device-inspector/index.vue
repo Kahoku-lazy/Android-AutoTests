@@ -5,6 +5,7 @@ import { useElementStore } from './store'
 import CaptureForm from './components/CaptureForm.vue'
 import ScreenshotView from './components/ScreenshotView.vue'
 import PageElementsPanel from './components/PageElementsPanel.vue'
+import StructureAnalysisPanel from './components/StructureAnalysisPanel.vue'
 import SnapshotListDrawer from './components/SnapshotListDrawer.vue'
 import SaveToElementsDialog from './components/SaveToElementsDialog.vue'
 import SavedPagePicker from './components/SavedPagePicker.vue'
@@ -76,6 +77,23 @@ function onOcrClick(ocr) {
           >
             <IconSave :size="14" />保存到元素定位
           </button>
+          <button
+            v-if="store.viewMode === 'elements'"
+            class="action-btn"
+            :disabled="!store.snapshot?.snapshot_id || store.analyzing"
+            data-testid="analyze-btn"
+            @click="store.analyzeSnapshot()"
+          >
+            <IconLayers :size="14" />{{ store.analyzing ? '分析中...' : '结构分析' }}
+          </button>
+          <button
+            v-else
+            class="action-btn"
+            data-testid="back-elements-btn"
+            @click="store.viewMode = 'elements'"
+          >
+            <IconLayers :size="14" />返回元素列表
+          </button>
           <span v-if="store.elements.length" class="info">{{ store.filteredElements.length }}/{{ store.elements.length }} 元素</span>
           <ErrorState v-if="store.error" :message="store.error" @retry="store.clearError()" />
         </div>
@@ -109,11 +127,18 @@ function onOcrClick(ocr) {
           </section>
           <section class="col col-elements">
             <PageElementsPanel
+              v-if="store.viewMode === 'elements'"
               :rows="store.filteredRows"
               :selected="store.selected"
               :selected-ocr="store.selectedOcr"
               @select="onElementClick"
               @select-ocr="onOcrClick"
+            />
+            <StructureAnalysisPanel
+              v-else
+              :sections="store.analysis?.sections || []"
+              :elements="store.analysis?.elements || []"
+              :is-webview="store.analysis?.is_webview || false"
             />
           </section>
         </div>

@@ -93,6 +93,15 @@ def save_elements(request, snapshot_id: int):
 
 
 @api_view(["GET"])
+def snapshot_analyze(request, snapshot_id: int):
+    """GET /api/inspector/snapshots/{id}/analyze — 快照结构分析（纯规则，无设备交互）。"""
+    data = api.analyze_snapshot(snapshot_id)
+    if data is None:
+        return Response({"message": "快照不存在"}, status=404)
+    return Response(data)
+
+
+@api_view(["GET"])
 def page_view(request, page_id: int):
     """GET /api/inspector/pages/{page_id} — 元素定位已保存页面只读视图。"""
     data = api.get_page_view(page_id)

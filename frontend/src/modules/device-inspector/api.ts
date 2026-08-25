@@ -15,6 +15,9 @@ export function apiGetSnapshot(id) {
 export function apiDeleteSnapshot(id) {
   return client.delete(`/inspector/snapshots/${id}/delete`)
 }
+export function apiAnalyzeSnapshot(id) {
+  return client.get(`/inspector/snapshots/${id}/analyze`)
+}
 
 // ── Save to element locator ──
 

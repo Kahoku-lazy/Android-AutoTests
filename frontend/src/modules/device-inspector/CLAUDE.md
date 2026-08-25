@@ -14,7 +14,8 @@
 ## 本模块契约
 
 - 抓取：`POST /inspector/capture`（body snake_case：`serial` / `method`）
-- 快照：`GET /inspector/snapshots`（`offset` / `limit`）· `GET /inspector/snapshots/{id}` · `DELETE /inspector/snapshots/{id}/delete` · `POST /inspector/snapshots/{id}/save-elements`
+- 快照：`GET /inspector/snapshots`（`offset` / `limit`）· `GET /inspector/snapshots/{id}` · `GET /inspector/snapshots/{id}/analyze` · `DELETE /inspector/snapshots/{id}/delete` · `POST /inspector/snapshots/{id}/save-elements`
+- 结构分析（只读，纯规则分区）：`GET /inspector/snapshots/{id}/analyze`（展示层不碰 HTTP，经 store `analyzeSnapshot`）
 - 页面回看（只读）：`GET /inspector/pages/{pageId}`
 - 跨模块：`GET /devices`（device-pool 设备列表）
 

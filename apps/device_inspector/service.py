@@ -4,6 +4,7 @@ L1a 下沉（extract-algorithms-package）：XPath 纯算法已迁 `algorithms/x
 此处 re-export 仅保本 App 内部兼容；跨 App 复用请直接 import `algorithms.*`。
 """
 
+from algorithms.layout import classify_structure  # noqa: F401
 from algorithms.xpath import (  # noqa: F401
     _LAYOUT_VIEWGROUPS,
     _has_identity,
@@ -182,6 +183,21 @@ def capture_ocr_payload(device, ts: str) -> dict:
     return {
         "texts": texts,
         "ocr_count": len(texts),
+    }
+
+
+def analyze_snapshot_payload(snapshot) -> dict:
+    """基于已存快照 dump_json 计算结构分区（即时，不落库，无设备交互）。
+
+    复用 `algorithms.layout.classify_structure`（纯规则：位置/class/package）；
+    元素的 XPath 已在 capture 时生成并存于 dump_json，`dict(el)` 拷贝时原样保留。
+    """
+    elements = (snapshot.dump_json or {}).get("elements") or []
+    structure = classify_structure(elements, snapshot.screen_h or 0)
+    return {
+        "package": snapshot.package,
+        "activity": snapshot.activity,
+        **structure,
     }
 
 

@@ -7,10 +7,12 @@ import {
   apiGetSnapshots,
   apiGetSnapshot,
   apiDeleteSnapshot,
+  apiAnalyzeSnapshot,
   apiSaveToElements,
   apiGetPageView,
   apiGetDevices,
 } from './api'
+import { matchOcrToElements } from '@/shared/ocrMatch'
 
 // 执行引擎占用前缀：不可用于 capture（PRD-03 §4.1）
 const EXEC_PREFIXES = ['runner-', 'ai_agent', 'task-', 'run-']
@@ -61,21 +63,22 @@ export const useElementStore = defineStore('device-inspector', () => {
   const filterMode = ref('all')
   const searchText = ref('')
 
+  // ── 结构分析（纯规则分区，后端即时计算不落库）──
+  const analysis = ref(null)      // {is_webview, sections, elements}
+  const analyzing = ref(false)
+  const viewMode = ref('elements') // 'elements' | 'structure'
+
   /**
-   * 合并行：按坐标（x/y/width/height 全等）把 OCR 文本合并进 dump 元素行——
+   * 合并行：按「中心点包含 + 最小面积」把 OCR 文本合并进 dump 元素行——
    * 匹配行 _kind='dump' + _ocrMatched=true（附 ocr_text/ocr_confidence/ocr_thumbnail_path）；
-   * 未匹配的 OCR 独立成行（_kind='ocr'，_rowKey='o{idx}'）。
+   * 未匹配的 OCR 独立成行（_kind='ocr'，_rowKey='o{idx}'）。口径见 shared/ocrMatch.ts。
    */
   const mergedRows = computed(() => {
-    const usedOcr = new Set()
-    const rows = elements.value.map(e => {
+    const { byElement, matchedOcrIndexes } = matchOcrToElements(elements.value, ocrTexts.value)
+    const rows = elements.value.map((e, i) => {
       const base = { ...e, _kind: 'dump', _rowKey: `d${e._idx ?? e.__uid}` }
-      const match = ocrTexts.value.find(t =>
-        !usedOcr.has(t._idx) &&
-        t.x === e.x && t.y === e.y && t.width === e.width && t.height === e.height
-      )
+      const match = byElement.get(i)
       if (match) {
-        usedOcr.add(match._idx)
         return {
           ...base,
           _ocrMatched: true,
@@ -88,7 +91,7 @@ export const useElementStore = defineStore('device-inspector', () => {
       return base
     })
     const unmatched = ocrTexts.value
-      .filter(t => !usedOcr.has(t._idx))
+      .filter((t, i) => !matchedOcrIndexes.has(i))
       .map(t => ({ ...t, _kind: 'ocr', _rowKey: `o${t._idx ?? t.__uid}` }))
     return [...rows, ...unmatched]
   })
@@ -198,6 +201,8 @@ export const useElementStore = defineStore('device-inspector', () => {
     filterMode.value = 'all'
     searchText.value = ''
     clearChecked()
+    analysis.value = null
+    viewMode.value = 'elements'
   }
 
   async function fetchSnapshots() {
@@ -225,6 +230,28 @@ export const useElementStore = defineStore('device-inspector', () => {
       ElMessage.error(data.message || '快照加载失败')
     } catch (e) {
       ElMessage.error('快照加载失败')
+    }
+    return null
+  }
+
+  async function analyzeSnapshot() {
+    if (!snapshot.value?.snapshot_id) {
+      ElMessage.warning('请先获取或选择快照')
+      return
+    }
+    analyzing.value = true
+    try {
+      const { data } = await apiAnalyzeSnapshot(snapshot.value.snapshot_id)
+      if (data.status) {
+        analysis.value = data.data
+        viewMode.value = 'structure'
+        return data.data
+      }
+      ElMessage.error(data.message || '结构分析失败')
+    } catch (e) {
+      ElMessage.error('结构分析失败')
+    } finally {
+      analyzing.value = false
     }
     return null
   }
@@ -350,8 +377,9 @@ export const useElementStore = defineStore('device-inspector', () => {
     snapshot, snapshots, snapshotTotal, captLoading, error,
     elements, ocrTexts, selected, selectedOcr, filterMode, searchText, filteredElements,
     mergedRows, filteredRows, checkedIds,
+    analysis, analyzing, viewMode,
     drawerVisible, saveDialogVisible, pickerVisible, saving,
-    fetchDevices, capture, fetchSnapshots, viewSnapshot, deleteSnapshot,
+    fetchDevices, capture, fetchSnapshots, viewSnapshot, deleteSnapshot, analyzeSnapshot,
     saveToElements, viewSavedPage,
     toggleCheck, clearChecked,
     selectElement, selectOcr, clearError,

@@ -8,7 +8,7 @@
 
 - **架构四图**：架构全景图 · 模块包图 · 数据流图 · API 关系图（§1.2~1.5）
 - **后端架构**：capture 编排 + 快照持久化 + XPath 生成 + 缩略图落盘（§3）
-- **API 设计**：6 REST 端点（§4）
+- **API 设计**：7 REST 端点（§4）
 - **数据模型**：`di_snapshots` 快照表（§5）
 
 ## 你能从文档获取什么信息
@@ -197,7 +197,7 @@ flowchart TB
 
 ```
 apps/device_inspector/
-├── views.py           6 端点薄层（解析 → 调 api → 封信封，DRF 或 JsonResponse 统一 {status, data}）
+├── views.py           7 端点薄层（解析 → 调 api → 封信封，DRF 或 JsonResponse 统一 {status, data}）
 ├── api.py             跨模块白名单：capture_snapshot / get_snapshot / list_snapshots /
 │                      delete_snapshot / save_snapshot_to_elements / get_page_view
 ├── service.py         capture 编排（dump/OCR 方法级降级）· 缩略图裁剪落盘（XPath 已下沉 algorithms/xpath）
@@ -261,6 +261,7 @@ gen_xpath_candidates(el, all_els) -> list[dict]
 | `POST` | `/api/inspector/capture` | 一键获取（dump/OCR/both）→ 快照落库 | ✅ | ✅ capture_page |
 | `GET` | `/api/inspector/snapshots` | 快照列表（分页，倒序） | ✅ | — |
 | `GET` | `/api/inspector/snapshots/{id}` | 快照详情 JSON | ✅ | ✅ |
+| `GET` | `/api/inspector/snapshots/{id}/analyze` | 快照结构分析（纯规则分区，即时计算不落库） | ✅ | — |
 | `DELETE` | `/api/inspector/snapshots/{id}` | 删除快照 + 文件清理 | ✅ | — |
 | `POST` | `/api/inspector/snapshots/{id}/save-elements` | 筛减保存到元素定位 | ✅ | ✅ save_page_to_elements |
 | `GET` | `/api/inspector/pages/{page_id}` | 打开元素定位已保存页面（只读） | ✅ | — |
@@ -351,6 +352,7 @@ erDiagram
 ```python
 __all__ = [
     "capture_snapshot",          # (user_id, serial, method) -> dict  快照式抓取 + 落库
+    "analyze_snapshot",          # (snapshot_id) -> dict              快照结构分析（纯规则分区）
     "list_snapshots",            # (user_id, offset, limit) -> dict   快照列表
     "get_snapshot",              # (snapshot_id) -> dict              快照详情 JSON
     "delete_snapshot",           # (snapshot_id) -> bool              删除 + 文件清理
@@ -390,6 +392,7 @@ __all__ = [
 
 | 版本 | 日期 | 变更摘要 |
 |------|------|----------|
+| v1.9 | 2026-08-25 | **新增结构分析**：`algorithms/layout.py`（classify_structure/detect_webview/metrics 纯规则分区，位置/class/package 信号无 rid 硬编码）；service 增 analyze_snapshot_payload（复用已有 XPath，即时计算不落库）；api `__all__` 增 analyze_snapshot；6→7 端点（`GET /snapshots/{id}/analyze`）；前端新增 StructureAnalysisPanel + 结构/元素视图切换 |
 | v1.8 | 2026-08-21 | **五层口径回填**：§1.1 去"三层架构"改 L3 业务 App 层 + DeviceSession.lease(TRANSIENT) 目标态与 algorithms 下沉状态；§1.2 图设备接入层改会话入口（B/D 标签，去旧 L2/L3）；防火墙补 algorithms ✅ 与 engines ❌；§3.1 ocr.py 改 re-export 口径、service.py 去 XPath 生成；§3.3 标注下沉 algorithms/xpath（L1a 唯一落点）；关联指针改 §3.2/§4.4/§1.4/§二 L3 |
 | v1.0 | 2026-08-17 | 初始版本：从 ARCH-04-元素定位 迁出的实时检查能力（截图流/Dump/XPath 生成/元素操作）独立成模块；对齐代码真相（0 表 4 端点 + 1 WS；后端仅依赖 device_pool；元素保存走前端跨模块 api）；登记 2 处契约偏差（信封平铺 / page_id 缺失） |
 | v1.1 | 2026-08-17 | 四图前端节点抽象化（对齐 ARCH-01）：ScreenshotView/XPathCandidatePanel/PageElementsPanel/DeviceSelector → 截图栏/候选面板/元素列表/设备选择区 |

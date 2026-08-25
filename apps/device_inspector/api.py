@@ -5,6 +5,7 @@ Cross-app access: ai_assistant Tool handlers 与 views 只调本白名单函数�
 """
 
 __all__ = [
+    "analyze_snapshot",
     "capture_snapshot",
     "delete_snapshot",
     "get_page_view",
@@ -213,6 +214,17 @@ def save_snapshot_to_elements(
         snapshot_id=snapshot.id,
         elements=selected,
     )
+
+
+def analyze_snapshot(snapshot_id: int) -> dict | None:
+    """快照结构分析（纯规则分区，即时计算不落库）；不存在返回 None。"""
+    from .models import Snapshot
+    from .service import analyze_snapshot_payload
+
+    snapshot = Snapshot.objects.filter(id=snapshot_id).first()
+    if snapshot is None:
+        return None
+    return analyze_snapshot_payload(snapshot)
 
 
 def get_page_view(page_id: int) -> dict | None:

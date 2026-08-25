@@ -4,7 +4,8 @@ import client from '@/shared/api-client'
 import { ElMessage } from 'element-plus'
 import { streamChat } from '../api/sse'
 import { logError, logWarn } from '../helpers/logger'
-import type { ChatMessage, Conversation, ToolCall, ToolState, SSERound } from '@/shared/types/ai'
+import type { ChatMessage, Conversation, ToolCall, ToolState, SSERound, ContentBlock } from '@/shared/types/ai'
+import { toolResultImage } from '../helpers/message-normalizer'
 import {
   WORKSPACE_TOOL_NAMES,
   PLATFORM_TOOL_NAMES,
@@ -477,6 +478,8 @@ export function useSSE(opts: UseSSEOptions): UseSSEReturn {
           if (idx >= 0) {
             toolCalls.value[idx].state = (tr.state || 'success') as ToolState
             toolCalls.value[idx].output = tr.output
+            const img = toolResultImage(tr as unknown as ContentBlock)
+            if (img) (toolCalls.value[idx] as ToolCall & { resultImage?: string }).resultImage = img
             ;(toolCalls.value[idx] as ToolCall & { partialOutput?: string | null }).partialOutput = null
           }
           updateTaskCardProgress(tr)

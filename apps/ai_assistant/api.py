@@ -554,6 +554,8 @@ def save_message(
     reason: str = "normal",
     tokens: int = 0,
     input_tokens: int = 0,
+    cache_input_tokens: int = 0,
+    cache_creation_input_tokens: int = 0,
     model_name: str = "",
     flow: str = "",
 ) -> AIMessage:
@@ -566,6 +568,8 @@ def save_message(
         reason=reason,
         tokens=tokens,
         input_tokens=input_tokens,
+        cache_input_tokens=cache_input_tokens,
+        cache_creation_input_tokens=cache_creation_input_tokens,
         model_name=model_name,
         flow=flow if flow in ("sse", "fallback") else "",
     )

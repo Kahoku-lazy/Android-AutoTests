@@ -110,6 +110,58 @@ const {
         </div>
       </section>
 
+      <!-- 统计概览：AI 用量 -->
+      <section class="doc-section">
+        <h3 class="doc-section__title"><IconBrain :size="19" />AI 用量<span class="doc-tag">AI</span></h3>
+        <div class="doc-section__label">
+          累计 Token {{ stats.aiUsage.totalTokens.total.toLocaleString() }}
+          · 对话 {{ stats.aiUsage.conversationCount.total }}
+        </div>
+        <div class="dashboard__stats-grid">
+          <StatsAppCard
+            label="对话总数"
+            :value="stats.aiUsage.conversationCount.total"
+            color="gray"
+            path="/ai-assistant"
+            :loading="loading"
+            :desc="`今日 ${stats.aiUsage.conversationCount.today.toLocaleString()}`"
+          >
+            <template #icon><IconBrain :size="15" /></template>
+          </StatsAppCard>
+          <StatsAppCard
+            label="累计 Token"
+            :value="stats.aiUsage.totalTokens.total"
+            color="sage"
+            path="/ai-assistant"
+            :loading="loading"
+            :desc="`今日 ${stats.aiUsage.totalTokens.today.toLocaleString()}`"
+          >
+            <template #icon><IconTrendingUp :size="15" /></template>
+          </StatsAppCard>
+          <StatsAppCard
+            label="缓存命中率"
+            :value="stats.aiUsage.cacheHitRate.total"
+            suffix="%"
+            color="deep"
+            path="/ai-assistant"
+            :loading="loading"
+            :desc="`今日 ${stats.aiUsage.cacheHitRate.today}%`"
+          >
+            <template #icon><IconTarget :size="15" /></template>
+          </StatsAppCard>
+          <StatsAppCard
+            label="平均每对话 Token"
+            :value="stats.aiUsage.avgTokensPerConversation.total"
+            color="cream"
+            path="/ai-assistant"
+            :loading="loading"
+            :desc="`今日 ${stats.aiUsage.avgTokensPerConversation.today.toLocaleString()}`"
+          >
+            <template #icon><IconLayers :size="15" /></template>
+          </StatsAppCard>
+        </div>
+      </section>
+
       <!-- 统计概览：测试用例 -->
       <section class="doc-section">
         <h3 class="doc-section__title"><IconClipboardCheck :size="19" />测试用例<span class="doc-tag">Cases</span></h3>

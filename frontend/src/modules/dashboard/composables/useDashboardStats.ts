@@ -8,6 +8,8 @@ import type {
   RecentTask,
   ActivityItem,
   DashboardRawData,
+  AiUsage,
+  AiUsageMetric,
 } from '@/shared/types/dashboard'
 
 // ── 返回类型接口 ──
@@ -29,6 +31,19 @@ export interface UseDashboardStatsReturn {
 
 // ── 默认值 ──
 
+const zeroMetric = (): AiUsageMetric => ({ today: 0, total: 0 })
+const toMetric = (m?: AiUsageMetric): AiUsageMetric => m ?? zeroMetric()
+
+const DEFAULT_AI_USAGE: AiUsage = {
+  conversationCount: zeroMetric(),
+  inputTokens: zeroMetric(),
+  outputTokens: zeroMetric(),
+  totalTokens: zeroMetric(),
+  cacheHitTokens: zeroMetric(),
+  cacheHitRate: zeroMetric(),
+  avgTokensPerConversation: zeroMetric(),
+}
+
 const DEFAULT_STATS: DashboardStats = {
   devices: { online: 0, total: 0 },
   cases: { total: 0, enabled: 0, breakdown: [] },
@@ -36,6 +51,7 @@ const DEFAULT_STATS: DashboardStats = {
   runs: { total: 0, active: 0 },
   agents: { total: 0, active: 0 },
   workflow: { total: 0 },
+  aiUsage: DEFAULT_AI_USAGE,
 }
 
 const DEFAULT_CHART: ExecutionChart = { labels: [], success: [], failed: [] }
@@ -79,6 +95,15 @@ export function mapStatsResponse(raw: DashboardRawData): MappedData {
         active: raw.agents?.active ?? 0,
       },
       workflow: { total: raw.workflow?.total ?? 0 },
+      aiUsage: {
+        conversationCount: toMetric(raw.ai_usage?.conversation_count),
+        inputTokens: toMetric(raw.ai_usage?.input_tokens),
+        outputTokens: toMetric(raw.ai_usage?.output_tokens),
+        totalTokens: toMetric(raw.ai_usage?.total_tokens),
+        cacheHitTokens: toMetric(raw.ai_usage?.cache_hit_tokens),
+        cacheHitRate: toMetric(raw.ai_usage?.cache_hit_rate),
+        avgTokensPerConversation: toMetric(raw.ai_usage?.avg_tokens_per_conversation),
+      },
     },
     executionChart: raw.charts?.execution ?? DEFAULT_CHART,
     executionSummary: raw.execution_summary ?? DEFAULT_SUMMARY,

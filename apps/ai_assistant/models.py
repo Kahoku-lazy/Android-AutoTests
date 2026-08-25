@@ -169,6 +169,8 @@ class AIMessage(models.Model):
     reason = models.CharField(max_length=30, default="normal", blank=True)
     tokens = models.IntegerField(default=0)
     input_tokens = models.IntegerField(default=0)
+    cache_input_tokens = models.IntegerField(default=0)
+    cache_creation_input_tokens = models.IntegerField(default=0)
     model_name = models.CharField(max_length=100, default="", blank=True)
     # Transport used for this reply: 'sse' | 'fallback' | '' (legacy/unknown)
     flow = models.CharField(max_length=20, default="", blank=True)

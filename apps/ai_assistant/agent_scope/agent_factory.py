@@ -20,6 +20,12 @@ from agentscope.tool import Toolkit
 
 from apps.ai_assistant.agent_scope.in_process_tool import build_platform_tools
 from apps.ai_assistant.agent_scope.provider_registry import get_provider_config
+from apps.ai_assistant.agent_scope.usage_tracker import (
+    UsageCaptureMiddleware,
+)
+from apps.ai_assistant.agent_scope.usage_tracker import (
+    register as register_usage,
+)
 from apps.ai_assistant.api import decrypt_key
 
 logger = logging.getLogger("ai_assistant.factory")
@@ -78,6 +84,12 @@ def build_agent(
     # ── 4. System prompt ──
     system_prompt = agent_model.system_prompt or ""
 
+    # ── 4.5 用量捕获中间件（缓存命中/写入 token，按对话聚合）──
+    middlewares = []
+    if conversation_id is not None:
+        usage_acc = register_usage(int(conversation_id))
+        middlewares.append(UsageCaptureMiddleware(usage_acc))
+
     # ── 5. Create Agent ──
     agent = Agent(
         name=agent_model.name,
@@ -87,6 +99,7 @@ def build_agent(
         model_config=model_config,
         context_config=context_config,
         react_config=react_config,
+        middlewares=middlewares or None,
     )
 
     logger.info(
@@ -330,6 +343,9 @@ def _build_model_config(agent_model) -> ModelConfig:
 def _build_context_config(agent_model) -> ContextConfig:
     """Build ContextConfig from agent compression settings."""
     cfg = ContextConfig()
+    # 放宽工具结果上限以容纳截图图片：AgentScope 按 len(base64)//4 计 token，
+    # 默认 50000（≈150KB）会整体卸载截图 DataBlock；200000 可容纳降采样后的截图。
+    cfg.tool_result_limit = 200000
     if agent_model.compression_enabled:
         # ContextConfig 约束 trigger_ratio ∈ (0, 0.9)，阈值上限 100000 时夹到 0.89
         cfg.trigger_ratio = min((agent_model.compression_threshold or 10000) / 100000.0, 0.89)

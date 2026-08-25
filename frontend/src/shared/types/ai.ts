@@ -89,6 +89,7 @@ export interface ToolCall {
   input?: object
   inputRaw?: string
   output?: string
+  resultImage?: string
   partialOutput?: string | null
   roundIndex?: number
   source?: 'builtin' | 'platform' | 'mcp' | 'skill'

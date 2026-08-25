@@ -86,6 +86,14 @@ function formatOutput(output: unknown): string {
       <div v-if="tc.output && !tc.partialOutput" class="tool-step-output">
         {{ formatOutput(tc.output) }}
       </div>
+      <div v-if="tc.resultImage" class="tool-step-image">
+        <el-image
+          :src="tc.resultImage"
+          :preview-src-list="[tc.resultImage]"
+          fit="contain"
+          preview-teleported
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -182,6 +190,18 @@ function formatOutput(output: unknown): string {
 }
 .tool-step-output.streaming {
   color: var(--app-accent-purple, #b39ef3);
+}
+.tool-step-image {
+  margin: 6px 0 0;
+}
+.tool-step-image :deep(.el-image) {
+  display: block;
+  width: 100%;
+  max-width: 340px;
+  max-height: 420px;
+}
+.tool-step-image :deep(.el-image__inner) {
+  object-fit: contain;
 }
 .tool-streaming-dot {
   display: inline-block;

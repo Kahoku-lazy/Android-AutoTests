@@ -15,6 +15,21 @@ export interface ElementBreakdownItem {
 
 // ── 平台概览统计 ──
 
+export interface AiUsageMetric {
+  today: number
+  total: number
+}
+
+export interface AiUsage {
+  conversationCount: AiUsageMetric
+  inputTokens: AiUsageMetric
+  outputTokens: AiUsageMetric
+  totalTokens: AiUsageMetric
+  cacheHitTokens: AiUsageMetric
+  cacheHitRate: AiUsageMetric
+  avgTokensPerConversation: AiUsageMetric
+}
+
 export interface DashboardStats {
   devices: { online: number; total: number }
   cases: { total: number; enabled: number; breakdown: CaseBreakdownItem[] }
@@ -22,6 +37,7 @@ export interface DashboardStats {
   runs: { total: number; active: number }
   agents: { total: number; active: number }
   workflow: { total: number }
+  aiUsage: AiUsage
 }
 
 // ── 图表与摘要 ──
@@ -73,6 +89,15 @@ export interface DashboardRawData {
   runs: { total: number; active: number }
   agents: { total: number; active: number }
   workflow: { total: number }
+  ai_usage: {
+    conversation_count: AiUsageMetric
+    input_tokens: AiUsageMetric
+    output_tokens: AiUsageMetric
+    total_tokens: AiUsageMetric
+    cache_hit_tokens: AiUsageMetric
+    cache_hit_rate: AiUsageMetric
+    avg_tokens_per_conversation: AiUsageMetric
+  }
   charts: { execution: ExecutionChart }
   execution_summary: ExecutionSummary
   recent_tasks: RecentTask[]

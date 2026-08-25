@@ -225,6 +225,13 @@ async def _agent_stream(
     await _sta(_restore_context)(agent, conv)
 
     # ── 3. Register for HITL confirmations ──
+    from apps.ai_assistant.agent_scope.usage_tracker import (
+        get as get_usage,
+    )
+    from apps.ai_assistant.agent_scope.usage_tracker import (
+        unregister as unregister_usage,
+    )
+
     from .hitl_views import register_agent_session, unregister_agent_session
 
     confirm_queue: asyncio.Queue = asyncio.Queue(maxsize=1)
@@ -258,6 +265,8 @@ async def _agent_stream(
             next_input = UserMsg(name=user_id, content=user_message)
 
         accumulated_text = ""  # accumulated TEXT_BLOCK_DELTA text for backend persistence
+        accumulated_input_tokens = 0  # accumulated MODEL_CALL_END input tokens
+        accumulated_output_tokens = 0  # accumulated MODEL_CALL_END output tokens
         terminal_event = None  # ReplyEnd/ExceedMaxIters — forwarded after final Msg captured
 
         async def _persist_and_forward_terminal(
@@ -273,11 +282,17 @@ async def _agent_stream(
                     content = "⚠️ 已达最大推理次数，回答未完成，建议简化问题或分步提问。"
             if content or blocks:
                 try:
+                    usage = get_usage(conv.id)
                     msg = await _sta(save_message)(
                         conversation_id=conv.id,
                         role="assistant",
                         content=content,
                         blocks=json.dumps(blocks, ensure_ascii=False) if blocks else "",
+                        tokens=accumulated_output_tokens,
+                        input_tokens=accumulated_input_tokens,
+                        cache_input_tokens=usage["cache_input_tokens"],
+                        cache_creation_input_tokens=usage["cache_creation_input_tokens"],
+                        model_name=getattr(conv.agent, "model_name", "") or "",
                         flow="sse",
                     )
                     t_dict["_backend_msg_id"] = msg.id
@@ -296,6 +311,11 @@ async def _agent_stream(
                 # the browser is closed before the frontend saves it.
                 if event_dict.get("type") == "TEXT_BLOCK_DELTA":
                     accumulated_text += event_dict.get("delta", "")
+
+                # Accumulate token usage across model calls in this reply
+                if event_dict.get("type") == "MODEL_CALL_END":
+                    accumulated_input_tokens += int(event_dict.get("input_tokens") or 0)
+                    accumulated_output_tokens += int(event_dict.get("output_tokens") or 0)
 
                 # If agent requires user confirmation, wait for it via the queue
                 if isinstance(event, RequireUserConfirmEvent):
@@ -386,6 +406,7 @@ async def _agent_stream(
         await queue.put(f"data: {error_event}\n\n")
     finally:
         unregister_agent_session(conv.id)
+        unregister_usage(conv.id)
 
     # ── Sentinel ──
     await queue.put(None)
@@ -626,6 +647,10 @@ def _dicts_to_blocks(blocks_data: list[dict]) -> list:
                     "done",
                 }
                 kwargs = {k: v for k, v in b.items() if k in valid_fields and k != "type"}
+                # tool_result.output 可能是块列表（文本 + 图片），递归还原为块对象，
+                # 使视觉模型在后续轮次仍能引用截图图片。
+                if block_type == "tool_result" and isinstance(kwargs.get("output"), list):
+                    kwargs["output"] = _dicts_to_blocks(kwargs["output"])
                 if block_type == "data" and isinstance(kwargs.get("source"), dict):
                     src = kwargs["source"]
                     kwargs["source"] = Base64Source(

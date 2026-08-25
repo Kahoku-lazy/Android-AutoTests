@@ -13,7 +13,7 @@ import logging
 
 from typing import Any
 
-from agentscope.message import TextBlock, ToolResultState
+from agentscope.message import Base64Source, DataBlock, TextBlock, ToolResultState
 from agentscope.permission import PermissionBehavior, PermissionDecision
 from agentscope.tool import ToolBase, ToolChunk
 
@@ -47,6 +47,23 @@ def _make_chunk(text: str, state: ToolResultState = ToolResultState.SUCCESS) -> 
     The toolkit appends chunks and assembles the final ToolResponse itself.
     """
     return ToolChunk(content=[TextBlock(text=text)], state=state)
+
+
+# 工具 handler 返回 dict 里携带图片标记的保留键（值形如 {"media_type", "data"}）
+_IMAGE_KEY = "image"
+
+
+def _make_multimodal_chunk(text: str, data: str, media_type: str) -> ToolChunk:
+    """构造携带文本 + 图片块的 ToolChunk。
+
+    AgentScope formatter 会把 DataBlock(Base64Source) 提升给视觉模型
+    （OpenAI/DashScope 等均转 image_url）。
+    """
+    blocks: list = []
+    if text:
+        blocks.append(TextBlock(text=text))
+    blocks.append(DataBlock(source=Base64Source(data=data, media_type=media_type)))
+    return ToolChunk(content=blocks, state=ToolResultState.SUCCESS)
 
 
 _OUTPUT_LIMIT = 4000
@@ -89,6 +106,16 @@ def _format_result(result) -> ToolChunk:
     if isinstance(result, bool):
         return _make_chunk("操作成功。" if result else "操作失败。")
     if isinstance(result, dict):
+        img = result.get(_IMAGE_KEY)
+        if isinstance(img, dict) and img.get("data"):
+            media_type = img.get("media_type") or "image/png"
+            text_part = {k: v for k, v in result.items() if k != _IMAGE_KEY}
+            text = (
+                _truncate(json.dumps(text_part, ensure_ascii=False, default=str))
+                if text_part
+                else "截屏完成。"
+            )
+            return _make_multimodal_chunk(text, img["data"], media_type)
         return _make_chunk(_truncate(json.dumps(result, ensure_ascii=False, default=str)))
     if hasattr(result, "__dict__") and hasattr(result, "_meta"):
         # 单模型实例（如 get_case 等详情工具）— 序列化为字段 dict

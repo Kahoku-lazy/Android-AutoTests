@@ -21,31 +21,61 @@ function toolInputToDisplay(c: ContentBlock | {}): string {
   return typeof input === 'string' ? input : JSON.stringify(input)
 }
 
+/** 从 tool_result 块提取纯文本输出（persisted 的 output 为块列表时取 text 块拼接） */
+function toolResultText(result: ContentBlock | undefined): string {
+  if (!result) return ''
+  const output = (result as { output?: unknown }).output
+  if (typeof output === 'string') return output
+  if (Array.isArray(output)) {
+    return output
+      .filter((b) => (b as { type?: string })?.type === 'text')
+      .map((b) => (b as { text?: string })?.text || '')
+      .join('\n')
+  }
+  return ''
+}
+
+/** 从 tool_result 块提取图片 data URI（兼容 live 的 data/mediaType 与 persisted 的 output 列表两种形态） */
+export function toolResultImage(result: ContentBlock | undefined): string {
+  if (!result) return ''
+  const r = result as { data?: unknown; mediaType?: string; output?: unknown }
+  // live 形态：SSEMessageBuilder 累积的兄弟字段 data/mediaType（base64）
+  if (typeof r.data === 'string' && r.data) {
+    return `data:${r.mediaType || 'image/png'};base64,${r.data}`
+  }
+  // persisted 形态：output 为块列表，含 data 块
+  if (Array.isArray(r.output)) {
+    const dataBlock = r.output.find((b) => (b as { type?: string })?.type === 'data')
+    const src = (dataBlock as { source?: { data?: string; media_type?: string } })?.source
+    if (src?.data) return `data:${src.media_type || 'image/png'};base64,${src.data}`
+  }
+  return ''
+}
+
+/** 由 tool_call + tool_result 块组装一个 ToolCall UI 对象 */
+function buildToolCall(call: ContentBlock | {}, result?: ContentBlock): ToolCall {
+  const c = call as ContentBlock
+  const img = toolResultImage(result)
+  return {
+    id: (c.id as string) || '',
+    name: (c.name as string) || '',
+    displayArgs: toolInputToDisplay(call),
+    state: (result?.state as ToolState) || 'success',
+    output: toolResultText(result),
+    ...(img ? { resultImage: img } : {}),
+  }
+}
+
 /** 从 persisted blocks 重建 toolFlow 数组 */
 export function rebuildToolFlow(blocks: ContentBlock[]): ToolCall[] {
   if (!blocks.length) return []
   const pairs = blocks.filter(b => b.type === 'tool_pair')
   if (pairs.length) {
-    return pairs.map(p => ({
-      id: (p.call as ContentBlock)?.id as string || '',
-      name: (p.call as ContentBlock)?.name as string || '',
-      displayArgs: toolInputToDisplay((p.call as ContentBlock) || {}),
-      state: ((p.result as ContentBlock)?.state as ToolState) || 'success',
-      output: ((p.result as ContentBlock)?.output as string) || '',
-    }))
+    return pairs.map(p => buildToolCall((p.call as ContentBlock) || {}, (p.result as ContentBlock)))
   }
   const calls = blocks.filter(b => b.type === 'tool_call')
   const results = blocks.filter(b => b.type === 'tool_result')
-  return calls.map(c => {
-    const r = results.find(res => res.id === c.id)
-    return {
-      id: (c.id as string) || '',
-      name: (c.name as string) || '',
-      displayArgs: toolInputToDisplay(c),
-      state: (r?.state as ToolState) || 'success',
-      output: (r?.output as string) || '',
-    }
-  })
+  return calls.map(c => buildToolCall(c, results.find(res => res.id === c.id)))
 }
 
 /** 从 persisted content blocks 重建 per-round ReAct 分组 */
@@ -68,13 +98,7 @@ export function rebuildRoundsFromBlocks(blocks: ContentBlock[]): SSERound[] {
       const ri = (p.call as ContentBlock & { roundIndex?: number })?.roundIndex
       if (typeof ri !== 'number') continue
       if (!toolsByRound[ri]) toolsByRound[ri] = []
-      toolsByRound[ri].push({
-        id: (p.call as ContentBlock)?.id as string || '',
-        name: (p.call as ContentBlock)?.name as string || '',
-        displayArgs: toolInputToDisplay((p.call as ContentBlock) || {}),
-        state: ((p.result as ContentBlock)?.state as ToolState) || 'success',
-        output: ((p.result as ContentBlock)?.output as string) || '',
-      })
+      toolsByRound[ri].push(buildToolCall((p.call as ContentBlock) || {}, (p.result as ContentBlock)))
     }
   } else {
     const toolCalls = blocks.filter(b => b.type === 'tool_call')
@@ -84,13 +108,7 @@ export function rebuildRoundsFromBlocks(blocks: ContentBlock[]): SSERound[] {
       if (typeof ri !== 'number') continue
       const r = toolResults.find(res => res.id === c.id)
       if (!toolsByRound[ri]) toolsByRound[ri] = []
-      toolsByRound[ri].push({
-        id: (c.id as string) || '',
-        name: (c.name as string) || '',
-        displayArgs: toolInputToDisplay(c),
-        state: (r?.state as ToolState) || 'success',
-        output: (r?.output as string) || '',
-      })
+      toolsByRound[ri].push(buildToolCall(c, r))
     }
   }
 

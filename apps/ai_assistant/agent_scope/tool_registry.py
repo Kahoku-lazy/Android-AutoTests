@@ -140,6 +140,29 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         ],
         "read_only": False,
     },
+    {
+        "name": "screenshot_page",
+        "category": "设备检查器",
+        "icon": "📸",
+        "summary": "截取指定设备当前屏幕，返回截图图片（base64 PNG）供视觉模型直接查看，并落库检查器快照；执行引擎占用中的设备不可用",
+        "module": "inspector",
+        "action": "screenshot",
+        "params": [
+            {
+                "name": "serial",
+                "type": "string",
+                "required": True,
+                "desc": "设备序列号（先 list_devices 查询）",
+            },
+            {
+                "name": "method",
+                "type": "string",
+                "required": False,
+                "desc": "获取方法: dump（UI 层级）/ ocr（屏幕文字）/ both（两者，默认）",
+            },
+        ],
+        "read_only": True,
+    },
     # ── 元素定位 ──
     {
         "name": "search_elements",
@@ -626,6 +649,58 @@ def _inspector_save_elements(
         folder_path=folder_path,
         include_ocr=bool(include_ocr),
     )
+
+
+@_register("inspector", "screenshot")
+def _inspector_screenshot(
+    user_id: str, serial: str = PROTECTED, method: str = "both", **kwargs
+):
+    """截屏返回图片 + 摘要。复用检查器 capture 落库链路，读截图文件转 base64。
+
+    返回 `{"text": {...}, "image": {"media_type", "data"}}` 的图片标记结构，
+    由 in_process_tool._format_result 识别并构造多模态 ToolChunk。
+    """
+    if serial is PROTECTED:
+        raise ValueError("缺少必填参数: serial")
+    import base64
+    import io as _io
+
+    from pathlib import Path
+
+    from django.conf import settings
+    from PIL import Image
+
+    from apps.device_inspector.api import capture_snapshot
+
+    data = capture_snapshot(user_id=user_id, serial=serial, method=method or "both")
+    shot_rel = data.get("screenshot_path") or ""
+    if not shot_rel:
+        raise ValueError("截屏失败：未获取到截图路径")
+    shot_file = Path(settings.MEDIA_ROOT) / shot_rel
+    if not shot_file.is_file():
+        raise ValueError("截屏失败：截图文件不存在")
+    # 降采样 + JPEG 压缩控制体积：AgentScope 对 base64 图片按 len(data)//4 计 token，
+    # 默认 tool_result_limit=50000（≈150KB）会整体卸载原图（1440x3040 PNG 约 800KB）。
+    _img = Image.open(_io.BytesIO(shot_file.read_bytes()))
+    _img.thumbnail((1280, 1280))
+    if _img.mode not in ("RGB", "L"):
+        _img = _img.convert("RGB")
+    _buf = _io.BytesIO()
+    _img.save(_buf, format="JPEG", quality=85)
+    img_b64 = base64.b64encode(_buf.getvalue()).decode("ascii")
+    return {
+        "text": {
+            "snapshot_id": data.get("snapshot_id"),
+            "serial": data.get("serial"),
+            "package": data.get("package"),
+            "activity": data.get("activity"),
+            "screen_w": data.get("screen_w"),
+            "screen_h": data.get("screen_h"),
+            "element_count": data.get("element_count"),
+            "ocr_count": data.get("ocr_count"),
+        },
+        "image": {"media_type": "image/jpeg", "data": img_b64},
+    }
 
 
 def _trim_capture_for_ai(data: dict) -> dict:

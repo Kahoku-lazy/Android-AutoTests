@@ -5,13 +5,13 @@ import logging
 from datetime import timedelta
 
 from django.db import OperationalError, ProgrammingError
-from django.db.models import Count, Max, Q
+from django.db.models import Count, Max, Q, Sum
 from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.ai_assistant.api import filter_agents_for_user
-from apps.ai_assistant.models import AIAgent
+from apps.ai_assistant.models import AIAgent, AIConversation, AIMessage
 from apps.case_manager.models import ApiTestCase, StorageTestCase, TestDefinition
 from apps.case_manager.models_web import WebTestCase
 from apps.device_pool.models import Device
@@ -118,6 +118,62 @@ def _elements_breakdown():
 def _workflow_stats():
     """Return workflow document count."""
     return {"total": _safe_count(WorkflowDocument)}
+
+
+def _ai_usage_stats(user_id):
+    """AI 用量聚合（今日/累计）——按当前用户拥有的智能体过滤。
+
+    返回：对话数、输入/输出 token、缓存命中 token/命中率、平均每对话 token，
+    各指标分 today / total 两组口径。
+    """
+    today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    if user_id:
+        conv_qs = AIConversation.objects.filter(agent__owner_id=user_id)
+        msg_qs = AIMessage.objects.filter(
+            conversation__agent__owner_id=user_id, role="assistant"
+        )
+    else:
+        conv_qs = AIConversation.objects.none()
+        msg_qs = AIMessage.objects.none()
+
+    conv_total = _safe_count(conv_qs)
+    conv_today = _safe_count(conv_qs, {"created_at__gte": today_start})
+
+    def agg(qs):
+        """聚合输入/输出/缓存命中 token；表缺失时计 0。"""
+        try:
+            row = qs.aggregate(
+                inp=Sum("input_tokens"),
+                out=Sum("tokens"),
+                hit=Sum("cache_input_tokens"),
+            )
+        except (OperationalError, ProgrammingError):
+            return 0, 0, 0
+        return int(row["inp"] or 0), int(row["out"] or 0), int(row["hit"] or 0)
+
+    in_t, out_t, hit_t = agg(msg_qs)
+    in_d, out_d, hit_d = agg(msg_qs.filter(created_at__gte=today_start))
+
+    def rate(hit, inp):
+        # 缓存命中率 = 命中 token / 输入 token，返回百分比（0-100，1 位小数）
+        return round(hit / inp * 100, 1) if inp else 0.0
+
+    def avg(inp, out, conv):
+        return int((inp + out) / conv) if conv else 0
+
+    return {
+        "conversation_count": {"today": conv_today, "total": conv_total},
+        "input_tokens": {"today": in_d, "total": in_t},
+        "output_tokens": {"today": out_d, "total": out_t},
+        "total_tokens": {"today": in_d + out_d, "total": in_t + out_t},
+        "cache_hit_tokens": {"today": hit_d, "total": hit_t},
+        "cache_hit_rate": {"today": rate(hit_d, in_d), "total": rate(hit_t, in_t)},
+        "avg_tokens_per_conversation": {
+            "today": avg(in_d, out_d, conv_today),
+            "total": avg(in_t, out_t, conv_total),
+        },
+    }
 
 
 def _daily_bucket_counts(queryset, days=12):
@@ -298,6 +354,7 @@ class DashboardStatsAPIView(APIView):
                 "workflow": _workflow_stats(),
                 "runs": {"total": run_total, "active": run_active},
                 "agents": {"total": agent_total, "active": agent_active},
+                "ai_usage": _ai_usage_stats(user_id),
                 "charts": {"execution": _daily_execution_series()},
                 "execution_summary": {"passed": result_passed, "failed": result_failed},
                 "recent_tasks": _recent_tasks(),

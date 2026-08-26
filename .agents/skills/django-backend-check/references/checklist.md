@@ -63,6 +63,17 @@
 | 3 | 阻塞/超时 | async/WS/外部调用 | 有超时或线程边界 | 在 consumer 里同步长阻塞 |
 | 4 | Tool | Tool 实现 | 只调 api.py | Tool 直接 ORM 写 |
 
+### 五.1 并发 / 异步检查（执行器/后台任务类，改 test_runner 等必查）
+
+| # | 检查项 | 通过标准 | 常见反例 |
+|---|--------|----------|----------|
+| 1 | sync_to_async | 后台任务显式 `thread_sensitive=False`（请求上下文销毁后 CurrentThreadExecutor 失效） | 异步视图里 `@sync_to_async` 默认 thread_sensitive |
+| 2 | ORM 写后脏对象 | 状态迁移后 `refresh_from_db()` 或用 `select_for_update()` 新实例再传下游 | enqueue 写 DB 后仍用内存旧对象 → InvalidTransition |
+| 3 | check→act 原子性 | 每设备 `asyncio.Lock` 保护整个 check→dequeue→mark 序列 | `is_device_busy()` 与 `mark_busy()` 之间被其他协程插入 |
+| 4 | 资源释放 | 所有异常分支释放设备锁 + finally 无条件推进队列 | 用例加载失败泄漏设备锁、队列不前进 |
+| 5 | 后台任务引用 | `asyncio.create_task` 保存引用 + 异常日志（禁 fire-and-forget） | 不存 task 引用无法取消/监控 |
+| 6 | 静默吞异常 | 统一 `logger.exception`，禁 `except: pass` / `print(e)` | `except: pass` / `print(e)` |
+
 ## 六、测试层
 
 | # | 检查项 | 怎么扫 | 通过标准 | 常见反例 |

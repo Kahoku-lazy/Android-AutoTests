@@ -108,3 +108,22 @@
 | 3 | `<template v-else>` 包裹全部内容 | 每个 `<section>` 各自写 `v-if="!error"` |
 | 4 | 一个页面一个 ErrorState | 每个 tab slot 各放一个 |
 | 5 | `finally { loading = false }` | 只在 try 关 loading（catch 永远转圈） |
+
+## CSS 布局修复模式（高频踩坑，来源 memory/css-*）
+
+### 排查三步铁律（视觉问题先开 DevTools，不碰代码）
+
+1. **查 DOM**：目标元素是否存在？class 是否正确？animal-island-vue 用 BEM 双下划线（`.animal-tabs__list`），不要凭记忆猜内部类名
+2. **画高度链**：从 `<html>` 到目标逐层标 flex / min-height / overflow；`flex:1` 的父级必须有 `min-height:0`
+3. **选滚动策略**（二选一，不混用）：视口固定 + 内层滚动，或内容撑开 + 页面整体滚动
+
+### 高频修复模式
+
+| 症状 | 根因 | 修复 |
+|------|------|------|
+| 页面下半截被截断/无法滚动 | flex 中 `min-height:0` + 父级 `overflow:hidden` 锁死高度 | 内层滚动 `.inner-scroll{flex:1;min-height:0;overflow-y:auto}`；页面滚动 `.doc-body{min-height:auto;overflow:visible}` |
+| 布局错乱、装饰图被误匹配 | Vue scoped `:deep(> *)` 匹配所有直接子元素 | 改 `:deep(.具体class)`；禁止对通配符用 `:deep()` |
+| 表格右侧大片空白 | 固定 px 列宽合计超容器 | 列宽改百分比 + `table-layout:fixed` + `width:100%` + `text-overflow:ellipsis` |
+| Chart.js 横向滚动失效 / canvas 撑爆卡片 | `responsive:true` 按视口重算 canvas + Grid `min-width:auto` | `responsive:false` + 手动算像素宽 + Grid `minmax(0,1fr)` / `min-width:0` |
+
+> 全局 CSS 冲突（如 `.doc-body { flex-direction:column }` 覆盖子组件横向布局）必须看浏览器 Computed 面板的**来源文件**列，scoped 内看不出。CLI（curl/vite build）捕获不了纯 CSS 问题。

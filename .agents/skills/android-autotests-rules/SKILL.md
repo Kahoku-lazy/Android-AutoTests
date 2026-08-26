@@ -77,10 +77,10 @@ Django Admin → ORM（仅管理员）
 | `references/database.md` | 写操作铁律、设备状态机、表前缀 | 动 models / 写库前 |
 | `references/security.md` | 安全风险分类、AI 编码安全清单、敏感字段黑名单 | 安全自查、代码评审时 |
 | `references/python-code.md` | Python 命名/行数/import/类型注解/OOP/文件职责/异常/响应 | 写任何 Python 前 |
-| `references/frontend.md` | 前端命名/行数/样式工程/共享组件/数据加载三态/状态管理 | 写任何 Vue 前 |
+| `references/frontend.md` | 前端命名/行数/样式工程/共享组件/数据加载三态/状态管理/CSS 修复模式 | 写任何 Vue 前 |
 | `references/backend.md` | Django App 结构、中间件/鉴权、配置约定、异步处理 | 动后端结构前 |
 | `references/conventions.md` | 跨语言索引、设备测试步骤、XPath 策略、主题、JWT | 按需 |
-| `references/setup.md` | 启动/重启验证/格式化命令 | 启动、健康检查时 |
+| `references/setup.md` | 启动/重启验证/格式化命令/端口约定/跨平台启动 | 启动、健康检查时 |
 | `references/troubleshooting.md` | 报错诊断速查表 + 分模块排查流程 | 遇到报错诊断时 |
 | `references/agentscope-tools.md` | AgentScope 开发入口（指向 dev_docs/agentscope.md） | 开发 AgentScope 功能前 |
 

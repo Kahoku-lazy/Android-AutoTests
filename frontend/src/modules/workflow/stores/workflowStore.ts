@@ -483,6 +483,18 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     if (selectedId.value === 'l' + id) selectedId.value = null
   }
 
+  function renameLink(id: number, name: string): void {
+    const link = findLink(id)
+    if (!link) return
+    const trimmed = name.trim()
+    if (trimmed) {
+      link.name = trimmed
+    } else {
+      delete link.name
+    }
+    setStatus(trimmed ? `已重命名连线: ${trimmed}` : '已恢复连线默认名称')
+  }
+
   // ── Viewport ──
   function updateViewport(newScale: number, newPanX: number, newPanY: number): void {
     scale.value = newScale
@@ -795,6 +807,7 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     addInput,
     addLink,
     removeLink,
+    renameLink,
     updateViewport,
     resetViewport,
     select,

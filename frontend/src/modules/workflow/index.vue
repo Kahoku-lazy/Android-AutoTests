@@ -12,6 +12,7 @@ import PageFlowVueFlow from './components/vueflow/PageFlowVueFlow.vue'
 import WorkflowDirTree from './components/WorkflowDirTree.vue'
 import WorkflowFileBrowser from './components/WorkflowFileBrowser.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
+import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 
 const store = useWorkflowStore()
 const lib = useLibraryStore()
@@ -333,37 +334,30 @@ watch(
 
 <template>
   <div class="doc-page workflow-workbench">
-    <header class="wb-header">
-      <div class="brand">
-        <span
-          class="brand-mark brand-mark--lucide"
-          style="background: linear-gradient(135deg,#BDE0FE,#93c5fd)"
-        >
-          <i data-lucide="git-branch"></i>
-        </span>
-        <div>
-          <h1 class="brand-title">工作流工作台</h1>
-          <p class="brand-sub">{{ breadcrumb }}</p>
+    <WorkbenchHeader
+      title="工作流工作台"
+      :subtitle="breadcrumb"
+      icon="git-branch"
+    >
+      <template #actions>
+        <div class="wf-actions">
+          <label class="wf-btn">
+            导入 JSON
+            <input type="file" accept="application/json,.json" hidden @change="onImportPick" />
+          </label>
+          <label class="overwrite-lab">
+            <input v-model="overwriteImport" type="checkbox" />
+            同 ID 覆盖
+          </label>
+          <template v-if="editing">
+            <button type="button" class="wf-btn" @click="closeEditor">关闭编辑</button>
+            <button type="button" class="wf-btn" @click="exportCurrent">导出 JSON</button>
+            <button type="button" class="wf-btn wf-btn--primary" @click="saveCurrent">保存</button>
+          </template>
+          <span v-if="lib.status" class="status-pill" :title="lib.status">{{ lib.status }}</span>
         </div>
-      </div>
-
-      <div class="header-actions">
-        <label class="hdr-btn import-label">
-          导入 JSON
-          <input type="file" accept="application/json,.json" hidden @change="onImportPick" />
-        </label>
-        <label class="overwrite-lab">
-          <input v-model="overwriteImport" type="checkbox" />
-          同 ID 覆盖
-        </label>
-        <template v-if="editing">
-          <button type="button" class="hdr-btn" @click="closeEditor">关闭编辑</button>
-          <button type="button" class="hdr-btn" @click="exportCurrent">导出 JSON</button>
-          <button type="button" class="hdr-btn primary" @click="saveCurrent">保存</button>
-        </template>
-        <span v-if="lib.status" class="status-pill">{{ lib.status }}</span>
-      </div>
-    </header>
+      </template>
+    </WorkbenchHeader>
 
     <ErrorState v-if="error" :message="error" @retry="retryLoad" />
 
@@ -393,8 +387,8 @@ watch(
             @keydown.enter="confirmCreateFolder"
           />
           <div class="wf-modal-actions">
-            <button type="button" class="hdr-btn" @click="cancelCreate">取消</button>
-            <button type="button" class="hdr-btn primary" @click="confirmCreateFolder">确定</button>
+            <button type="button" class="wf-btn" @click="cancelCreate">取消</button>
+            <button type="button" class="wf-btn wf-btn--primary" @click="confirmCreateFolder">确定</button>
           </div>
         </div>
       </div>
@@ -412,16 +406,17 @@ watch(
       />
 
       <!-- 未打开文件：目录看板 -->
-      <WorkflowFileBrowser
-        v-if="ready && !editing"
-        :folder-id="selectedFolderId"
-        :folder-name="folderName"
-        @open="openFile"
-        @create-flow="askCreateFlow()"
-        @create-folder="askCreateFolder"
-        @export="exportFile"
-        @enter-folder="enterFolder"
-      />
+      <main v-if="ready && !editing" class="wb-main">
+        <WorkflowFileBrowser
+          :folder-id="selectedFolderId"
+          :folder-name="folderName"
+          @open="openFile"
+          @create-flow="askCreateFlow()"
+          @create-folder="askCreateFolder"
+          @export="exportFile"
+          @enter-folder="enterFolder"
+        />
+      </main>
 
       <!-- 打开文件：编辑区（页面流 VueFlow） -->
       <main v-else-if="ready && editing" class="wb-main">
@@ -447,96 +442,89 @@ watch(
   background: transparent;
   overflow: hidden;
 }
-.wb-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 18px;
-  background: rgba(255,255,255,0.52);
-  border-bottom: 1px solid var(--ink);
-  
-  flex-shrink: 0;
-  /* z-index 10 = 内容区之上（0 内容区 / 50 固定头部口径） */
-  z-index: 10;
-}
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.brand-mark {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  font-size: var(--app-size-xl);
-  border-radius: 14px;
-  box-shadow: var(--app-icon-shadow);
-}
-.brand-mark--lucide :deep(svg) {
-  width: 20px;
-  height: 20px;
-  color: var(--app-bg-card);
-  stroke: var(--app-bg-card);
-}
-.brand-title {
-  margin: 0;
-  font-size: var(--app-size-md);
-  font-weight: 800;
-  color: var(--ink);
-}
-.brand-sub {
-  margin: 2px 0 0;
-  font-size: var(--app-size-sm);
-  font-weight: 700;
-  color: var(--app-ink-muted);
-}
-.header-actions {
-  margin-left: auto;
+
+/* ── 顶栏动作区 ── */
+.wf-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
-.hdr-btn {
-  padding: 7px 14px;
-  border: 1.5px solid var(--ink);
-  border-radius: 999px;
+.wf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 2.5px solid var(--ink);
+  border-radius: var(--app-radius-sm);
   background: var(--app-bg-card);
+  color: var(--ink);
   font-size: var(--app-size-sm);
-  font-weight: 800;
+  font-weight: 700;
   font-family: inherit;
+  line-height: 1.4;
   cursor: pointer;
-  color: var(--ac-ink-muted);
+  box-shadow: var(--app-shadow-sm);
+  transition: background 0.12s var(--app-ease), box-shadow 0.12s var(--app-ease),
+    transform 0.12s var(--app-ease);
 }
-.import-label { display: inline-flex; align-items: center; }
+.wf-btn:hover {
+  background: var(--ac-accent-soft);
+  box-shadow: var(--app-shadow-md);
+}
+.wf-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.05);
+}
+.wf-btn:focus-visible {
+  outline: 2px solid var(--c-workflow);
+  outline-offset: 2px;
+}
+.wf-btn--primary {
+  background: var(--c-workflow);
+}
+.wf-btn--primary:hover {
+  background: var(--c-workflow);
+  filter: brightness(1.04);
+}
 .overwrite-lab {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: var(--app-size-xs);
+  gap: 6px;
+  padding: 6px 8px;
+  font-size: var(--app-size-sm);
   font-weight: 700;
-  color: var(--ac-ink-muted);
+  color: var(--app-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.overwrite-lab input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--c-workflow);
   cursor: pointer;
 }
-.hdr-btn.primary {
-  background: linear-gradient(135deg, var(--app-green-deep), var(--app-blue));
-  color: var(--app-bg-card);
-  border-color: var(--app-green-deep);
-}
-.hdr-btn:hover { filter: brightness(1.03); }
 .status-pill {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--app-size-xs);
   font-weight: 700;
-  color: var(--app-green-deep);
+  color: var(--ac-accent-deep);
   padding: 4px 10px;
-  background: rgba(162,210,255,0.16);
+  background: var(--ac-accent-soft);
+  border: 1.5px solid rgba(137, 207, 240, 0.4);
   border-radius: 999px;
 }
+
+/* ── 主体两栏卡片布局 ── */
 .wb-body {
   flex: 1;
   min-height: 0;
   display: flex;
+  gap: 12px;
+  padding: 12px;
 }
 .wb-main {
   flex: 1;
@@ -544,7 +532,11 @@ watch(
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 10px 12px 12px;
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  overflow: hidden;
+  box-shadow: var(--app-shadow-sm);
 }
 </style>
 
@@ -552,40 +544,40 @@ watch(
 .wf-modal-backdrop {
   position: fixed;
   inset: 0;
-  /* z-index 70 = 弹窗层（.claude/rules/frontend.md z-index 层级；原 10000 超界收敛） */
+  /* z-index 70 = 弹窗层（.agents/skills/android-autotests-rules/references/frontend.md z-index 层级） */
   z-index: 70;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: rgba(74,78,105,0.26);
+  background: var(--app-overlay);
 }
 .wf-modal {
   width: min(400px, 100%);
   padding: 22px 22px 18px;
   background: var(--app-bg-card);
-  border: 1px solid var(--ink);
-  border-radius: 18px;
+  border: 2.5px solid var(--ink);
+  border-radius: var(--app-radius-md);
   box-shadow: var(--app-shadow-lg);
   font-family: var(--app-font, 'Cascadia Mono', 'Noto Sans SC', sans-serif);
   color: var(--ink);
-  
 }
 .wf-modal-title {
   margin: 0;
-  font-size: var(--app-size-md);
+  font-size: var(--app-size-lg);
   font-weight: 800;
+  color: var(--ink);
 }
 .wf-modal-hint {
   margin: 6px 0 16px;
   font-size: var(--app-size-sm);
   font-weight: 600;
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
 }
 .wf-modal-label {
   display: block;
   font-size: var(--app-size-sm);
-  font-weight: 800;
+  font-weight: 700;
   color: var(--ink);
   margin-bottom: 6px;
 }
@@ -593,37 +585,50 @@ watch(
   width: 100%;
   box-sizing: border-box;
   padding: 10px 12px;
-  border: 1.5px solid var(--ink);
-  border-radius: 12px;
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
   background: #ffffff;
   color: var(--ink);
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: 600;
   font-family: inherit;
   outline: none;
+  transition: border-color 0.12s var(--app-ease);
 }
-.wf-modal-inp:focus { border-color: var(--app-blue); }
+.wf-modal-inp:focus {
+  border-color: var(--c-workflow);
+}
 .wf-modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 18px;
 }
-.wf-modal .hdr-btn {
-  padding: 8px 16px;
-  border: 1.5px solid var(--ink);
-  border-radius: 999px;
+.wf-modal .wf-btn {
+  padding: 7px 16px;
+  border: 2.5px solid var(--ink);
+  border-radius: var(--app-radius-sm);
   background: var(--app-bg-card);
   font-size: var(--app-size-sm);
-  font-weight: 800;
+  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  color: var(--app-ink-muted);
+  color: var(--ink);
+  box-shadow: var(--app-shadow-sm);
+  transition: background 0.12s var(--app-ease);
 }
-.wf-modal .hdr-btn.primary {
-  background: linear-gradient(135deg, var(--app-green-deep), var(--app-blue));
-  color: var(--app-bg-card);
-  border-color: var(--app-green-deep);
+.wf-modal .wf-btn:hover {
+  background: rgba(137, 207, 240, 0.16);
 }
-.wf-modal .hdr-btn:hover { filter: brightness(1.03); }
+.wf-modal .wf-btn--primary {
+  background: var(--c-workflow);
+}
+.wf-modal .wf-btn--primary:hover {
+  background: var(--c-workflow);
+  filter: brightness(1.04);
+}
+.wf-modal .wf-btn:focus-visible {
+  outline: 2px solid var(--c-workflow);
+  outline-offset: 2px;
+}
 </style>

@@ -208,29 +208,31 @@ onMounted(() => {
 <style scoped>
 .node-menu {
   position: fixed;
-  z-index: 400;
-  width: 280px;
-  max-height: 380px;
+  z-index: 60;
+  width: 288px;
+  max-height: 420px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: rgba(255,255,255,0.78);
-  border: 1px solid var(--ink);
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
   border-radius: var(--app-radius-md);
   box-shadow: var(--app-shadow-lg);
-  
   padding: 8px;
-  font-family: var(--ac-font, system-ui, sans-serif);
+  font-family: var(--app-font);
 }
 .menu-title {
   font-size: var(--app-size-sm);
   font-weight: 800;
   color: var(--ink);
   padding: 6px 8px 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .menu-hint {
   font-size: var(--app-size-xs);
-  color: var(--app-green-deep);
+  color: #2f6ea3;
   font-weight: 700;
   padding: 0 8px 8px;
 }
@@ -239,24 +241,23 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 10px 12px;
+  padding: 9px 12px;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   background: transparent;
-  color: var(--ac-ink-muted, #5c4a35);
+  color: var(--ink);
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   text-align: left;
   font-family: inherit;
+  transition: background 0.12s var(--app-ease);
 }
-.menu-item:hover {
-  background: rgba(162,210,255,0.16);
-  color: var(--app-green-deep);
-}
+.menu-item:hover { background: rgba(137, 207, 240, 0.16); }
+.menu-item.danger { color: var(--app-status-danger-text); }
 .menu-item.danger:hover {
-  background: rgba(232, 95, 95, 0.12);
-  color: #c44a4a;
+  background: var(--app-status-danger-bg);
+  color: var(--app-status-danger-text);
 }
 .menu-header {
   display: flex;
@@ -268,33 +269,28 @@ onMounted(() => {
   color: var(--ink);
 }
 .back {
-  border: 1.5px solid var(--ink);
-  background: rgba(255,255,255,0.44);
-  color: var(--ac-ink-muted, #5c4a35);
-  border-radius: 10px;
+  border: 2px solid var(--ink);
+  background: var(--app-bg-card);
+  color: var(--ink);
+  border-radius: 8px;
   width: 28px;
   height: 28px;
   cursor: pointer;
   font-weight: 700;
 }
+.back:hover { background: rgba(137, 207, 240, 0.16); }
 .search {
   margin: 0 4px 6px;
   padding: 8px 10px;
-  border: 1.5px solid var(--ink);
-  border-radius: 12px;
-  background: rgba(255,255,255,0.44);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-card);
   color: var(--ink);
   font-size: var(--app-size-sm);
   outline: none;
   font-family: inherit;
 }
-.search:focus { border-color: var(--app-blue); }
-.source-tag {
-  font-size: var(--app-size-xs);
-  color: var(--app-ink-muted);
-  font-weight: 600;
-  padding: 0 8px 6px;
-}
+.search:focus { border-color: var(--c-workflow); }
 .list {
   overflow-y: auto;
   max-height: 260px;
@@ -304,14 +300,14 @@ onMounted(() => {
   text-align: left;
   padding: 10px 12px;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   background: transparent;
   color: var(--ink);
   cursor: pointer;
   font-family: inherit;
 }
-.page-item:hover { background: rgba(162,210,255,0.12); }
-.page-item.active { background: rgba(162,210,255,0.18); }
+.page-item:hover { background: rgba(137, 207, 240, 0.16); }
+.page-item.active { background: rgba(137, 207, 240, 0.16); }
 .page-name {
   font-size: var(--app-size-sm);
   font-weight: 800;
@@ -321,15 +317,15 @@ onMounted(() => {
 }
 .badge {
   font-size: var(--app-size-xs);
-  color: var(--app-bg-card);
-  background: var(--app-green-deep);
+  color: #fff;
+  background: #2f6ea3;
   border-radius: 6px;
   padding: 1px 6px;
   font-weight: 700;
 }
 .page-meta {
   font-size: var(--app-size-xs);
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   margin-top: 3px;
   font-weight: 600;
 }
@@ -337,6 +333,6 @@ onMounted(() => {
   padding: 18px;
   text-align: center;
   font-size: var(--app-size-sm);
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
 }
 </style>

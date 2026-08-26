@@ -73,6 +73,8 @@ export interface Connection {
   target_id: string
   target_slot: number
   type: PortType
+  /** 连线自定义名称（可选；缺省时回退到源端口/元素名） */
+  name?: string
 }
 
 export interface NodeRegistryEntry {

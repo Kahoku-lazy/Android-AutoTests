@@ -230,36 +230,32 @@ watch(
 <style scoped>
 .pf-node {
   min-width: 228px;
-  background: rgba(255,255,255,0.58);
-  border: 1px solid var(--ink);
-  border-left: 5px solid var(--accent);
+  background: var(--app-bg-card);
+  border: 2px solid var(--ink);
+  border-left: 4px solid var(--accent);
   border-radius: var(--app-radius-md);
-  padding: 10px 12px 12px;
-  font-family: var(--ac-font, inherit);
+  padding: 11px 13px 13px;
+  font-family: var(--app-font);
   color: var(--ink);
   box-shadow: var(--app-shadow-sm);
-  
 }
 .pf-node.selected {
-  border-color: var(--app-blue);
-  box-shadow: 0 0 0 3px rgba(162,210,255,0.24), var(--app-shadow-md);
+  border-color: var(--c-workflow);
+  box-shadow: 0 0 0 3px rgba(137, 207, 240, 0.28), var(--app-shadow-md);
 }
 .pf-node.popup {
   border-style: dashed;
 }
 .pf-node.start {
   min-width: 240px;
-  border-radius: var(--app-radius-md) 16px 16px 28px;
 }
 .pf-node.end {
   min-width: 180px;
-  border-radius: var(--app-radius-md) 28px 16px 16px;
   opacity: 0.96;
 }
 .pf-node.api {
   min-width: 240px;
-  border-color: #f5a623;
-  box-shadow: 0 0 8px rgba(245, 166, 35, 0.15);
+  box-shadow: 0 0 8px rgba(245, 166, 35, 0.16);
 }
 .pf-api {
   display: flex;
@@ -276,15 +272,16 @@ watch(
   border-radius: 4px;
   font-size: var(--app-size-xs);
   font-weight: 800;
-  color: var(--app-bg-card);
+  color: #fff;
   flex-shrink: 0;
 }
 .api-url {
   font-size: var(--app-size-xs);
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--app-font-mono);
 }
 .pf-header {
   display: flex;
@@ -297,16 +294,9 @@ watch(
   height: 26px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
-  background: rgba(247, 205, 103, 0.35);
+  border-radius: 8px;
+  background: var(--app-bg-subtle);
   font-size: var(--app-size-sm);
-}
-.pf-node.start .pf-icon {
-  background: rgba(111, 186, 44, 0.28);
-  color: #3d7a12;
-}
-.pf-node.end .pf-icon {
-  background: rgba(138, 138, 150, 0.28);
 }
 .pf-title {
   flex: 1;
@@ -322,34 +312,39 @@ watch(
   font-family: inherit;
 }
 .pf-title:focus {
-  border-color: var(--app-blue);
-  background: rgba(162,210,255,0.10);
+  border-color: var(--c-workflow);
+  background: var(--ac-accent-soft);
 }
 .pf-kind {
   display: flex;
   gap: 4px;
   margin: 6px 0 4px;
   padding: 3px;
-  background: rgba(162,210,255,0.10);
-  border-radius: 999px;
-  border: 1px solid rgba(162,210,255,0.20);
+  background: var(--app-bg-subtle);
+  border-radius: 8px;
+  border: 1px solid var(--ac-border-soft);
 }
 .kind-btn {
   flex: 1;
   border: none;
-  border-radius: 999px;
+  border-radius: 6px;
   padding: 5px 8px;
   font-size: var(--app-size-xs);
-  font-weight: 800;
+  font-weight: 700;
   font-family: inherit;
   background: transparent;
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   cursor: pointer;
+  transition: background 0.12s var(--app-ease), color 0.12s var(--app-ease);
 }
 .kind-btn.active {
   background: var(--app-bg-card);
-  color: #3d7a12;
+  color: var(--ink);
   box-shadow: var(--app-shadow-sm);
+}
+.kind-btn:focus-visible {
+  outline: 2px solid var(--c-workflow);
+  outline-offset: 1px;
 }
 .pf-pkg {
   display: flex;
@@ -360,31 +355,32 @@ watch(
 }
 .pf-pkg label {
   font-size: var(--app-size-xs);
-  font-weight: 800;
-  color: var(--app-ink-muted);
+  font-weight: 700;
+  color: var(--app-text-secondary);
   flex-shrink: 0;
 }
 .pkg-input {
   flex: 1;
   min-width: 0;
-  padding: 4px 8px;
-  border: 1px solid var(--ink);
+  padding: 5px 9px;
+  border: 1.5px solid var(--ink);
   border-radius: 8px;
-  background: rgba(255,255,255,0.50);
+  background: var(--app-bg-card);
   color: var(--ink);
   font-size: var(--app-size-xs);
-  font-family: ui-monospace, monospace;
+  font-family: var(--app-font-mono);
   outline: none;
+  transition: border-color 0.12s var(--app-ease);
 }
 .pkg-input:focus {
   border-color: var(--c-workflow);
 }
 .pf-sub {
   font-size: var(--app-size-xs);
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   margin-bottom: 8px;
   padding-left: 4px;
-  line-height: 1.4;
+  line-height: 1.5;
   font-weight: 600;
 }
 .pf-row {
@@ -398,10 +394,10 @@ watch(
 }
 .pf-row.in { justify-content: flex-start; }
 .pf-row.out { justify-content: flex-end; }
-.pf-port-name { color: var(--ac-ink-muted, #5c4a35); font-weight: 600; }
+.pf-port-name { color: var(--ink); font-weight: 600; }
 .pf-port-type {
   font-size: var(--app-size-xs);
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   border: 1px solid var(--ink);
   border-radius: 6px;
   padding: 0 5px;
@@ -424,18 +420,18 @@ watch(
   flex-shrink: 0;
 }
 .pf-actions button {
-  background: rgba(255,255,255,0.42);
+  background: var(--app-bg-card);
   border: 1px solid var(--ink);
   border-radius: 8px;
-  color: var(--ac-ink-muted, #5c4a35);
+  color: var(--app-text-secondary);
   font-size: var(--app-size-xs);
   cursor: pointer;
   padding: 0 5px;
   line-height: 18px;
 }
 .pf-actions button:hover {
-  border-color: var(--app-blue);
-  color: var(--app-green-deep);
+  border-color: var(--c-workflow);
+  color: var(--ink);
 }
 
 .pf-handle {
@@ -449,20 +445,20 @@ watch(
   right: auto !important;
   transform: none !important;
   flex-shrink: 0;
-  box-shadow: 0 0 0 1px rgba(162,210,255,0.30);
+  box-shadow: 0 0 0 1px rgba(162, 210, 255, 0.3);
 }
 .pf-handle.target { margin-right: 2px; order: -1; }
 .pf-handle.source { margin-left: 2px; }
 .pf-handle:hover {
-  box-shadow: 0 0 0 4px rgba(162,210,255,0.30);
+  box-shadow: 0 0 0 4px rgba(162, 210, 255, 0.3);
 }
 
 .pf-empty-end {
   font-size: var(--app-size-xs);
-  color: var(--ac-ink-faint);
+  color: var(--app-text-secondary);
   text-align: center;
   padding: 8px 0 4px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .pf-add {
@@ -470,17 +466,20 @@ watch(
   margin-top: 8px;
   padding: 7px;
   border: 2px dashed var(--ink);
-  border-radius: 12px;
-  background: rgba(162,210,255,0.10);
-  color: var(--ac-ink-muted, #5c4a35);
-  font-size: var(--app-size-xs);
+  border-radius: 8px;
+  background: var(--ac-accent-soft);
+  color: var(--ac-accent-deep);
+  font-size: var(--app-size-sm);
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
+  transition: border-color 0.12s var(--app-ease);
 }
 .pf-add:hover {
-  border-color: var(--app-blue);
-  color: var(--app-green-deep);
-  background: rgba(162,210,255,0.16);
+  border-color: var(--c-workflow);
+}
+.pf-add:focus-visible {
+  outline: 2px solid var(--c-workflow);
+  outline-offset: 1px;
 }
 </style>

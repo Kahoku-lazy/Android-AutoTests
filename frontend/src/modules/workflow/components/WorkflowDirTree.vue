@@ -402,19 +402,22 @@ function onCreateRoot() {
 
 <style scoped>
 .dir-pane {
-  width: 248px;
+  width: 264px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
   background: var(--app-bg-card);
-  border-right: 1px solid var(--ink);
+  border: 2.5px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  overflow: hidden;
   position: relative;
   user-select: none;
+  box-shadow: var(--app-shadow-sm);
   transition: width 0.2s ease;
 }
 .dir-pane--collapsed {
-  width: 36px;
+  width: 40px;
 }
 .dir-rail {
   flex: 1;
@@ -422,23 +425,23 @@ function onCreateRoot() {
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 12px 4px;
+  padding: 14px 4px;
   border: none;
   background: transparent;
   cursor: pointer;
   font-family: inherit;
-  color: var(--app-green-deep);
+  color: var(--ac-accent-deep);
 }
-.dir-rail:hover { background: rgba(162,210,255,0.14); }
+.dir-rail:hover { background: var(--ac-accent-soft); }
 .rail-chev { font-size: var(--app-size-lg); font-weight: 800; }
 .rail-label {
   writing-mode: vertical-rl;
   font-size: var(--app-size-sm);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.12em;
 }
 .dir-head {
-  padding: 14px 12px 10px;
+  padding: 14px 14px 12px;
   border-bottom: 2px solid var(--ac-border-soft);
 }
 .dir-head-top {
@@ -450,98 +453,103 @@ function onCreateRoot() {
 .dir-toggle {
   width: 26px;
   height: 26px;
-  border: 1.5px solid var(--ac-border);
+  border: 2px solid var(--ink);
   border-radius: 8px;
   background: var(--app-bg-card);
   font-size: var(--app-size-sm);
   font-weight: 800;
   cursor: pointer;
-  color: var(--ac-ink-muted);
+  color: var(--app-text-secondary);
   line-height: 1;
   flex-shrink: 0;
 }
-.dir-toggle:hover { border-color: var(--app-blue); color: var(--app-green-deep); }
+.dir-toggle:hover { border-color: var(--c-workflow); color: var(--ink); }
 .dir-title {
   font-size: var(--app-size-md);
   font-weight: 800;
   color: var(--ink);
 }
 .dir-desc {
-  margin: 4px 0 10px;
-  font-size: var(--app-size-xs);
-  color: var(--ac-ink-faint);
+  margin: 4px 0 12px;
+  font-size: var(--app-size-sm);
+  color: var(--app-text-secondary);
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 .dir-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .mini {
-  padding: 5px 10px;
-  border: 1.5px solid var(--ac-border);
-  border-radius: 999px;
+  padding: 5px 11px;
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
   background: var(--app-bg-card);
-  font-size: var(--app-size-xs);
-  font-weight: 800;
-  font-family: inherit;
-  cursor: pointer;
-  color: var(--ac-ink-muted);
-}
-.mini:hover { border-color: var(--app-blue); color: var(--app-green-deep); }
-.dir-scroll { flex: 1; overflow: auto; padding: 8px 6px 12px; }
-.empty-hint {
-  margin: 12px 8px;
-  padding: 12px;
   font-size: var(--app-size-sm);
   font-weight: 700;
-  color: var(--ac-ink-faint);
-  line-height: 1.5;
-  background: rgba(247, 205, 103, 0.15);
-  border-radius: 12px;
-  border: 1px dashed var(--ac-border);
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--ink);
+  transition: background 0.12s var(--app-ease);
+}
+.mini:hover { background: var(--ac-accent-soft); }
+.mini:focus-visible { outline: 2px solid var(--c-workflow); outline-offset: 2px; }
+.dir-scroll { flex: 1; overflow: auto; padding: 8px 8px 12px; }
+.empty-state {
+  margin: 12px 8px;
+  padding: 16px 12px;
+  font-size: var(--app-size-sm);
+  font-weight: 600;
+  color: var(--app-text-secondary);
+  line-height: 1.6;
+  text-align: center;
+  background: var(--app-bg-subtle);
+  border-radius: var(--app-radius-sm);
+  border: 1px dashed var(--ac-border-soft);
 }
 .dir-row {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 4px;
-  min-height: 32px;
-  padding: 3px 8px;
+  gap: 6px;
+  min-height: 34px;
+  padding: 4px 8px;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   background: transparent;
   cursor: pointer;
   font-family: inherit;
   font-size: var(--app-size-sm);
-  font-weight: 700;
-  color: var(--ac-ink);
+  font-weight: 600;
+  color: var(--ink);
   text-align: left;
   box-sizing: border-box;
+  transition: background 0.12s var(--app-ease);
 }
-.dir-row:hover { background: rgba(162,210,255,0.14); }
+.dir-row:hover { background: var(--ac-accent-soft); }
 .dir-row.active {
-  background: rgba(162,210,255,0.22);
-  box-shadow: inset 3px 0 0 var(--app-green-deep);
-}
-.dir-row.file.active {
-  background: rgba(247, 205, 103, 0.28);
-  box-shadow: inset 3px 0 0 #e0b52e;
+  background: var(--ac-accent-soft);
+  box-shadow: inset 3px 0 0 var(--c-workflow);
 }
 .dir-row.drop-on {
-  outline: 2px dashed var(--app-green-deep);
-  background: rgba(162,210,255,0.18);
+  outline: 2px dashed var(--c-workflow);
+  outline-offset: -2px;
+  background: var(--ac-accent-soft);
 }
 .dir-row.dragging {
   opacity: 0.45;
 }
-.dir-row.root { margin-bottom: 4px; }
-.dir-row.flow .name { color: var(--app-green-deep); }
+.dir-row.root {
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+.dir-row.flow .name { color: var(--ac-accent-deep); }
 .chev {
   border: none;
   background: transparent;
   width: 16px;
   cursor: pointer;
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   padding: 0;
   flex-shrink: 0;
+  font-size: var(--app-size-xs);
 }
 .chev-sp { width: 16px; flex-shrink: 0; }
 .ico { font-size: var(--app-size-sm); flex-shrink: 0; }
@@ -554,46 +562,47 @@ function onCreateRoot() {
 }
 .badge {
   font-size: var(--app-size-xs);
-  font-weight: 800;
-  padding: 1px 6px;
+  font-weight: 700;
+  padding: 1px 7px;
   border-radius: 999px;
-  background: rgba(162,210,255,0.14);
-  color: var(--ac-ink-muted);
+  background: var(--ac-accent-soft);
+  color: var(--ac-accent-deep);
   flex-shrink: 0;
 }
 .rename-inp {
   flex: 1;
   min-width: 0;
-  padding: 2px 6px;
-  border: 2px solid var(--app-green-deep);
+  padding: 3px 7px;
+  border: 2px solid var(--c-workflow);
   border-radius: 8px;
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: 600;
   font-family: inherit;
+  color: var(--ink);
+  outline: none;
 }
 .drag-hint {
   padding: 8px 10px;
   font-size: var(--app-size-xs);
   font-weight: 700;
-  color: var(--app-green-deep);
-  background: rgba(162,210,255,0.16);
+  color: var(--ac-accent-deep);
+  background: var(--ac-accent-soft);
   border-top: 2px solid var(--ac-border-soft);
   text-align: center;
 }
 </style>
 
 <style>
-/* 右键菜单挂到 body，不用 scoped */
+/* 右键菜单挂到 body：用全局 token + 字面量，不能依赖 .workflow-workbench 作用域变量 */
 .wf-ctx {
   position: fixed;
-  z-index: 9999;
-  min-width: 160px;
+  z-index: 60;
+  min-width: 176px;
   padding: 6px;
   background: var(--app-bg-card);
-  border: 1px solid var(--ink);
-  border-radius: 12px;
-  box-shadow: var(--app-shadow-md);
-  
+  border: 2.5px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-lg);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -602,20 +611,21 @@ function onCreateRoot() {
   border: none;
   background: transparent;
   text-align: left;
-  padding: 8px 12px;
+  padding: 9px 12px;
   border-radius: 8px;
   font-size: var(--app-size-sm);
-  font-weight: 800;
+  font-weight: 600;
   font-family: inherit;
   color: var(--ink);
   cursor: pointer;
+  transition: background 0.12s var(--app-ease);
 }
-.wf-ctx button:hover { background: rgba(162,210,255,0.14); }
-.wf-ctx button.danger { color: #c44; }
-.wf-ctx button.danger:hover { background: rgba(232, 95, 95, 0.12); }
+.wf-ctx button:hover { background: rgba(137, 207, 240, 0.16); }
+.wf-ctx button.danger { color: var(--app-status-danger-text); }
+.wf-ctx button.danger:hover { background: var(--app-status-danger-bg); }
 .wf-ctx hr {
   border: none;
-  border-top: 1px solid rgba(162,210,255,0.18);
-  margin: 4px 0;
+  border-top: 1px solid var(--app-border-light);
+  margin: 4px 6px;
 }
 </style>

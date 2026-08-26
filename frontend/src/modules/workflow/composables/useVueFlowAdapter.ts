@@ -85,7 +85,7 @@ export function toVueFlowEdges(store: WorkflowStore): Edge[] {
       type: 'default',
       animated: l.type === 'popup_fixed',
       style: { stroke: color, strokeWidth: 2 },
-      label: origin?.outputs[l.origin_slot]?.name || '',
+      label: l.name || origin?.outputs[l.origin_slot]?.name || '',
       labelStyle: { fill: '#8a8a96', fontSize: 10 },
       labelBgStyle: { fill: '#1e1e24', fillOpacity: 0.85 },
       data: { linkId: l.id, portType: l.type },

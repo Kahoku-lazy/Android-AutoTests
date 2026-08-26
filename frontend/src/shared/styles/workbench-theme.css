@@ -15,6 +15,9 @@
   --ac-ink-faint:   #bbb;
   --ac-border:      var(--ink);
   --ac-border-soft: #e8e4d8;
+  --ac-accent:      var(--c-workflow);           /* 工作流天蓝 #89CFF0 */
+  --ac-accent-deep: #2f6ea3;                     /* 工作流深蓝（白底可读文字/强调） */
+  --ac-accent-soft: rgba(137, 207, 240, 0.16);   /* 工作流浅蓝（hover/选中底） */
   --ac-teal:        var(--c-workflow);
   --ac-green:       var(--c-device);
   --ac-blue:        var(--c-element);

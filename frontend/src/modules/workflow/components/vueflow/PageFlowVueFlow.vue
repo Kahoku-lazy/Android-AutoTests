@@ -16,6 +16,7 @@ import {
 } from '@/modules/workflow/composables/useVueFlowAdapter'
 import PageFlowNode from './PageFlowNode.vue'
 import NodeContextMenu from './NodeContextMenu.vue'
+import EdgeContextMenu from './EdgeContextMenu.vue'
 import { PAGE_ELEMENTS, POPUP_ELEMENTS, ELEMENT_ICONS } from '@/modules/workflow/types/workflow'
 import { NODE_REGISTRY } from '@/modules/workflow/registry/nodeRegistry'
 
@@ -46,7 +47,7 @@ const props = withDefaults(
 )
 
 const store = useWorkflowStore()
-const { onConnect, onNodeDragStop, onEdgesChange, fitView, updateNodeInternals } = useVueFlow()
+const { onConnect, onNodeDragStop, onEdgesChange, onEdgeContextMenu, fitView, updateNodeInternals } = useVueFlow()
 
 const nodeTypes = { pageFlow: markRaw(PageFlowNode) }
 const connectionMode = ConnectionMode.Loose
@@ -66,6 +67,15 @@ const ctxMenu = ref({
   canLinkPage: true,
   linkedPageId: undefined as string | undefined,
   linkedPageName: undefined as string | undefined,
+})
+
+const edgeMenu = ref({
+  show: false,
+  x: 0,
+  y: 0,
+  linkId: 0,
+  label: '',
+  customName: '',
 })
 
 function openNodeContext(e: MouseEvent | TouchEvent, nodeId: string) {
@@ -227,6 +237,45 @@ onEdgesChange((changes) => {
   }
   setTimeout(() => refreshFromStore(), 0)
 })
+
+// 右键连线 → 重命名 / 删除菜单
+onEdgeContextMenu(({ event, edge }) => {
+  const linkId = edge.data?.linkId as number | undefined
+  if (linkId == null) return
+  event.preventDefault()
+  const link = store.findLink(linkId)
+  const origin = link ? store.findNode(link.origin_id) : undefined
+  const clientX = 'clientX' in event ? (event as MouseEvent).clientX : 0
+  const clientY = 'clientY' in event ? (event as MouseEvent).clientY : 0
+  edgeMenu.value = {
+    show: true,
+    x: clientX,
+    y: clientY,
+    linkId,
+    label: origin?.outputs[link?.origin_slot ?? 0]?.name || '连线',
+    customName: link?.name || '',
+  }
+})
+
+function handleEdgeRename(id: number, name: string) {
+  store.renameLink(id, name)
+  refreshFromStore()
+  status.value = name ? `连线已重命名：${name}` : '连线名称已恢复默认'
+  edgeMenu.value.show = false
+}
+
+function handleEdgeDelete(id: number) {
+  const link = store.findLink(id)
+  if (!link) return
+  const origin = store.findNode(link.origin_id)
+  const target = store.findNode(link.target_id)
+  const fromLabel = origin?.widgets_values?.[0] || `Node#${link.origin_id}`
+  const toLabel = target?.widgets_values?.[0] || `Node#${link.target_id}`
+  store.removeLink(id)
+  refreshFromStore()
+  status.value = `已断开 ${fromLabel} → ${toLabel}`
+  edgeMenu.value.show = false
+}
 
 function addPage() {
   const n = store.createNode('PageNode', 180 + store.pageNodes.length * 40, 160 + store.pageNodes.length * 20)
@@ -504,6 +553,18 @@ watch(
       @resync-page="handleResyncPage"
       @delete-node="handleDeleteFromCtx"
     />
+
+    <EdgeContextMenu
+      :show="edgeMenu.show"
+      :x="edgeMenu.x"
+      :y="edgeMenu.y"
+      :link-id="edgeMenu.linkId"
+      :label="edgeMenu.label"
+      :custom-name="edgeMenu.customName"
+      @close="edgeMenu.show = false"
+      @rename="handleEdgeRename"
+      @delete="handleEdgeDelete"
+    />
   </div>
 </template>
 
@@ -513,19 +574,16 @@ watch(
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--ac-paper);
-  border: 2px solid var(--ac-border);
-  border-radius: var(--ac-radius);
-  box-shadow: var(--ac-shadow);
+  background: transparent;
   overflow: hidden;
 }
 .vf-toolbar {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
-  background: rgba(255,255,255,0.46);
-  border-bottom: 1px solid var(--ink);
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--app-bg-card);
+  border-bottom: 2px solid var(--ac-border-soft);
   flex-shrink: 0;
 }
 .vf-docbar {
@@ -543,137 +601,150 @@ watch(
 }
 .doc-name {
   flex: 1;
-  min-width: 120px;
-  max-width: 260px;
-  padding: 6px 10px;
-  border: 2px solid var(--ac-border);
-  border-radius: 10px;
+  min-width: 140px;
+  max-width: 300px;
+  padding: 7px 11px;
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
   background: var(--app-bg-card);
   font-size: var(--app-size-sm);
-  font-weight: 800;
+  font-weight: 700;
   font-family: inherit;
-  color: var(--ac-ink);
+  color: var(--ink);
   outline: none;
+  transition: border-color 0.12s var(--app-ease);
 }
-.doc-name:focus { border-color: var(--app-blue); }
+.doc-name:focus { border-color: var(--c-workflow); }
 .kind-chip {
   font-size: var(--app-size-xs);
-  font-weight: 800;
-  padding: 3px 8px;
+  font-weight: 700;
+  padding: 3px 9px;
   border-radius: 999px;
-  background: rgba(162,210,255,0.16);
-  color: var(--app-green-deep);
+  background: var(--ac-accent-soft);
+  color: var(--ac-accent-deep);
   flex-shrink: 0;
 }
 .id-chip {
   font-size: var(--app-size-xs);
-  font-weight: 700;
-  color: var(--app-green-deep);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 600;
+  color: var(--app-text-secondary);
+  font-family: var(--app-font-mono);
   max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: rgba(162,210,255,0.12);
-  padding: 3px 8px;
+  background: var(--app-bg-subtle);
+  padding: 3px 9px;
   border-radius: 8px;
 }
-.btn.back {
-  flex-shrink: 0;
-  background: var(--app-bg-card);
-  color: var(--app-green-deep);
-  border-color: rgba(162,210,255,0.42);
-}
 .btn {
-  padding: 7px 12px;
-  border: 2px solid var(--ac-border);
-  border-radius: 999px;
-  background: var(--ac-paper);
-  color: var(--ac-ink-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-card);
+  color: var(--ink);
   font-family: inherit;
   font-size: var(--app-size-sm);
   font-weight: 700;
   cursor: pointer;
   box-shadow: var(--app-shadow-sm);
-  transition: all 0.15s ease;
+  transition: background 0.12s var(--app-ease), box-shadow 0.12s var(--app-ease),
+    transform 0.12s var(--app-ease);
 }
 .btn:hover {
-  border-color: var(--ac-teal);
-  color: var(--app-green-deep);
-  transform: translateY(-1px);
+  background: var(--ac-accent-soft);
+  box-shadow: var(--app-shadow-md);
+}
+.btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.05);
+}
+.btn:focus-visible {
+  outline: 2px solid var(--c-workflow);
+  outline-offset: 2px;
+}
+.btn.back {
+  flex-shrink: 0;
+  color: var(--ac-accent-deep);
 }
 .btn.primary {
-  background: linear-gradient(135deg, var(--app-green-deep), var(--app-blue));
-  color: var(--app-bg-card);
-  border-color: var(--app-green-deep);
-}
-.btn.primary:hover { filter: brightness(1.05); color: var(--app-bg-card); }
-.btn.start {
   background: var(--c-workflow);
-  color: var(--app-bg-card);
-  border-color: #5a9a20;
 }
-.btn.start:hover { filter: brightness(1.05); color: var(--app-bg-card); }
-.btn.end {
-  background: #8a8a96;
-  color: var(--app-bg-card);
-  border-color: #6a6a76;
+.btn.primary:hover {
+  background: var(--c-workflow);
+  filter: brightness(1.04);
 }
-.btn.end:hover { filter: brightness(1.05); color: var(--app-bg-card); }
-.btn.api-btn { background: rgba(245, 166, 35, 0.12); color: #d4880f; border-color: rgba(245, 166, 35, 0.3); }
-.btn.api-btn:hover { filter: brightness(1.05); color: var(--app-bg-card); background: #f5a623; }
+.btn.start { color: var(--ac-accent-deep); }
+.btn.end { color: var(--app-text-secondary); }
+.btn.api-btn {
+  color: #b9770e;
+  border-color: rgba(245, 166, 35, 0.5);
+}
+.btn.api-btn:hover {
+  background: rgba(245, 166, 35, 0.12);
+  color: #b9770e;
+}
+.btn.danger { color: var(--app-status-danger-text); }
 .btn.danger:hover {
-  border-color: var(--ac-red);
-  color: var(--ac-red);
+  background: var(--app-status-danger-bg);
+  color: var(--app-status-danger-text);
 }
 .hint {
   font-size: var(--app-size-sm);
-  color: var(--app-green-deep);
+  color: var(--ac-accent-deep);
   font-weight: 600;
   margin-left: 4px;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .meta {
   font-size: var(--app-size-xs);
-  color: var(--ac-ink-faint);
+  color: var(--app-text-secondary);
   margin-left: auto;
   font-weight: 600;
+  white-space: nowrap;
 }
-.vf-canvas { flex: 1; min-height: 0; background: var(--ac-cream); }
+.vf-canvas { flex: 1; min-height: 0; background: var(--paper); }
 .vf-flow { width: 100%; height: 100%; }
 
 :deep(.vue-flow__controls) {
-  box-shadow: var(--ac-shadow);
-  border: 2px solid var(--ac-border);
-  border-radius: 12px;
+  box-shadow: var(--app-shadow-md);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
   overflow: hidden;
 }
 :deep(.vue-flow__controls-button) {
-  background: var(--ac-paper);
+  background: var(--app-bg-card);
   border-bottom: 1px solid var(--ac-border-soft);
-  fill: var(--ac-wood);
+  fill: var(--ink);
   width: 28px;
   height: 28px;
 }
 :deep(.vue-flow__controls-button:hover) {
-  background: var(--ac-cream-deep);
+  background: var(--ac-accent-soft);
 }
 :deep(.vue-flow__minimap) {
-  background: var(--ac-paper) !important;
-  border: 2px solid var(--ac-border) !important;
-  border-radius: 12px !important;
+  background: var(--app-bg-card) !important;
+  border: 2px solid var(--ink) !important;
+  border-radius: var(--app-radius-sm) !important;
 }
 :deep(.vue-flow__edge-path) {
   stroke-linecap: round;
 }
 :deep(.vue-flow__attribution) {
   background: transparent !important;
-  color: var(--ac-ink-faint) !important;
+  color: var(--app-text-muted) !important;
 }
 :deep(.vue-flow__edge-textbg) {
-  fill: var(--ac-paper);
+  fill: var(--app-bg-card);
 }
 :deep(.vue-flow__edge-text) {
-  fill: var(--ac-ink-muted);
+  fill: var(--app-text-secondary);
 }
 </style>
 

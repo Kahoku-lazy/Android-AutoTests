@@ -7,6 +7,7 @@ export function countUpFormatted(
   duration = 1500,
   prefix = "",
   suffix = "",
+  decimals = 0,
 ): void {
   const obj = { val: from }
   animate(obj, {
@@ -14,7 +15,10 @@ export function countUpFormatted(
     duration,
     ease: "outExpo",
     onUpdate: () => {
-      el.textContent = prefix + Math.round(obj.val).toLocaleString() + suffix
+      el.textContent = prefix + obj.val.toLocaleString(undefined, {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      }) + suffix
     },
   })
 }

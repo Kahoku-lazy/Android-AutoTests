@@ -1,5 +1,5 @@
 /** DashboardView 逻辑编排器 — 组合子 composable + 展示辅助 */
-import { onMounted } from 'vue'
+import { computed, onMounted, type ComputedRef } from 'vue'
 import { useDashboardStats, type UseDashboardStatsReturn } from './composables/useDashboardStats'
 import type {
   CaseBreakdownItem,
@@ -37,7 +37,25 @@ const ELEMENT_BREAKDOWN: ElementBreakdownDisplay[] = [
   { type: 'api', label: 'API接口', color: 'cream', icon: IconZap },
 ]
 
+// ── 数值格式化助手（单位换算：累计 token → 百万 M；平均每对话 token → 千 K）──
+
+/** 累计 token 展示数值：百万（M）单位，保留 2 位小数（供 StatsCard value 计数用） */
+export function toMillions(n: number): number {
+  return Number((n / 1_000_000).toFixed(2))
+}
+
+/** 平均每对话 token 展示数值：千（K）单位，保留 1 位小数 */
+export function toK(n: number): number {
+  return Number((n / 1_000).toFixed(1))
+}
+
 // ── 返回类型接口 ──
+
+interface SeriesDisplay {
+  name: string
+  data: number[]
+  color: string
+}
 
 export interface DashboardViewState extends UseDashboardStatsReturn {
   PAGE_HEADER: typeof PAGE_HEADER
@@ -45,6 +63,8 @@ export interface DashboardViewState extends UseDashboardStatsReturn {
   elementBreakdown: ElementBreakdownDisplay[]
   getBreakdownItem: (type: string) => CaseBreakdownItem
   getElementItem: (type: string) => ElementBreakdownItem
+  tokenSeries: ComputedRef<SeriesDisplay[]>
+  costSeries: ComputedRef<SeriesDisplay[]>
 }
 
 // ── Composable ──
@@ -60,6 +80,17 @@ export function useDashboardView(): DashboardViewState {
     return statsComposable.stats.value.elements.typeBreakdown?.find((b) => b.type === type) || { type, total: 0 }
   }
 
+  // ECharts Canvas 不解析 CSS 变量，系列色为字面量（与 tokens.css 同值）：
+  // 总 Token #4ECDC4=--c-case · 缓存命中 #A78BFA=--c-element · 费用 #F7C948=--c-dashboard
+  const tokenSeries = computed<SeriesDisplay[]>(() => [
+    { name: '总 Token', data: statsComposable.aiTokenChart.value.totalTokens, color: '#4ECDC4' },
+    { name: '缓存命中', data: statsComposable.aiTokenChart.value.cacheTokens, color: '#A78BFA' },
+  ])
+
+  const costSeries = computed<SeriesDisplay[]>(() => [
+    { name: '费用', data: statsComposable.deepseekCostChart.value.cost, color: '#F7C948' },
+  ])
+
   onMounted(() => {
     statsComposable.loadData()
   })
@@ -71,5 +102,7 @@ export function useDashboardView(): DashboardViewState {
     elementBreakdown: ELEMENT_BREAKDOWN,
     getBreakdownItem,
     getElementItem,
+    tokenSeries,
+    costSeries,
   }
 }

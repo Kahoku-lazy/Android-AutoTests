@@ -2,12 +2,13 @@
 
 > 关联模块：`apps/dashboard/` · 前端：`frontend/src/modules/dashboard/`
 > 关联全局：[`需求大纲.md`](./需求大纲.md) §5.1
-> 版本：v5.6 · 状态：评审中 · 日期：2026-08-21
+> 版本：v5.7 · 状态：评审中 · 日期：2026-08-21
 
 **修订记录**
 
 | 版本 | 日期 | 变更摘要 |
 |------|------|----------|
+| v5.7 | 2026-08-21 | AI 用量契约扩展：累计 token 前端以百万（M）、平均每对话 token 以千（K）展示；新增 DeepSeek 费用统计 `ai_usage.deepseek_cost`（官方价目可配置常量，高峰/空闲时段计费）；趋势数据新增 `charts.ai_tokens`（每日总 token + 缓存命中）与 `charts.deepseek_cost`（每日费用） |
 | v5.6 | 2026-08-21 | 组件契约校正：StatsCard props 补 prefix/suffix/live；最近动态 agent 圆点色改为 --c-dashboard（原「主题状态黄色」令牌不存在） |
 | v5.5 | 2026-08-19 | 设备口径统一（随 PRD-02 v6.2 两态化）：§4.1 在线/总数口径改「仅 ONLINE/BUSY 两态（离线即删），排除陈旧残留记录兜底」；§5.4 `offline`/`disconnected` 标注为 ⚠️ 兼容遗留字段（历史口径，通常为 0）；C-05 同步两态口径 |
 | v5.4 | 2026-08-14 | 契约清理完成：v5.0 拍板批已实施（后端查询 34→27；前端删除新建用例系列/本周新建标签/"本周新增"文字/设备卡趋势装饰）；口径存档补 4 字段 |
@@ -182,7 +183,7 @@
 
 ## 3. 布局与视觉设计
 
-> 全部颜色/字号引用 Doodle Craft 主题令牌（[`frontend/CLAUDE.md` §2](../../frontend/CLAUDE.md)），本节只标令牌名；趋势图柱子 2 色为 Canvas 字面量例外（见约束 C-03）。
+> 全部颜色/字号引用 Doodle Craft 主题令牌（[`frontend/AGENTS.md` §2](../../frontend/AGENTS.md)），本节只标令牌名；趋势图柱子 2 色为 Canvas 字面量例外（见约束 C-03）。
 
 ### 3.1 页面布局
 
@@ -322,7 +323,10 @@
 | `runs.active` | number | 是 | 整数 ≥0；`active ≤ total` | 业务 | 运行中任务数 |
 | `agents.total` | number | 是 | 整数 ≥0 | 业务 | 当前用户可见智能体总数 |
 | `agents.active` | number | 是 | 整数 ≥0；`active ≤ total` | 业务 | 活跃智能体数 |
-| `charts.execution` | object | 是 | 内部字段见子表③ | 业务 | 趋势图数据 |
+| `ai_usage` | object | 是 | 内部字段见子表⑤ | 业务 | AI 用量聚合（今日/累计，含 DeepSeek 费用） |
+| `charts.execution` | object | 是 | 内部字段见子表③ | 业务 | 执行趋势图数据 |
+| `charts.ai_tokens` | object | 是 | 内部字段见子表⑥ | 业务 | 每日 token 用量趋势图数据 |
+| `charts.deepseek_cost` | object | 是 | 内部字段见子表⑦ | 业务 | 每日 DeepSeek 费用趋势图数据 |
 | `execution_summary.passed` | number | 是 | 整数 ≥0 | 业务 | 执行结果成功总数 |
 | `execution_summary.failed` | number | 是 | 整数 ≥0 | 业务 | 执行结果失败总数 |
 | `recent_tasks[]` | array | 是 | 长度 0~8；running 任务排在最前；元素字段见子表④ | 业务 | 任务结果列表 |
@@ -366,6 +370,34 @@
 | `total` | number | 是 | 整数 ≥0；已完成任务 `total = passed + failed`；running 时为 0 | 总执行次数 |
 | `time` | string | 是 | 固定 16 字符，格式 `YYYY-MM-DD HH:MM` | 执行时间 |
 | `cases[]` | array | 是 | 长度 ≥1；元素含 `title`（string 必填，≤500 字符）、`status`（枚举同本表 status）、`passed`/`failed`（number 必填，≥0） | 用例明细（每项一个用例结果） |
+
+**子表⑤ `ai_usage` 内部字段**（每个指标均为 `{today, total}` 对象，`today`=今日、`total`=累计，均 ≥0）
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+|------|------|:--:|------|------|
+| `conversation_count` | object | 是 | `today`/`total` 整数 ≥0 | 对话总数 |
+| `input_tokens` | object | 是 | 整数 ≥0 | 输入 token 数 |
+| `output_tokens` | object | 是 | 整数 ≥0 | 输出 token 数 |
+| `total_tokens` | object | 是 | 整数 ≥0；`= input + output` | 总 token 数 |
+| `cache_hit_tokens` | object | 是 | 整数 ≥0；`≤ input_tokens` | 缓存命中 token 数 |
+| `cache_hit_rate` | object | 是 | 浮点 0~100，1 位小数；输入为 0 时 = 0 | 缓存命中率（%） |
+| `avg_tokens_per_conversation` | object | 是 | 整数 ≥0；对话为 0 时 = 0 | 平均每对话 token（前端按 K 单位展示） |
+| `deepseek_cost` | object | 是 | 浮点 ≥0，单位元；保留 4 位小数 | DeepSeek 模型累计/今日费用 |
+
+**子表⑥ `charts.ai_tokens` 内部字段**
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+|------|------|:--:|------|------|
+| `labels[]` | array | 是 | 恒 12 项；每项字符串固定 5 字符，格式 `MM/DD` | x 轴日期（近 12 天，旧 → 新，与 execution 同桶） |
+| `total_tokens[]` | array | 是 | 恒 12 项；整数 ≥0；无数据日期补 0 | 每日总 token 数（输入 + 输出） |
+| `cache_tokens[]` | array | 是 | 恒 12 项；整数 ≥0；无数据日期补 0 | 每日缓存命中 token 数 |
+
+**子表⑦ `charts.deepseek_cost` 内部字段**
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+|------|------|:--:|------|------|
+| `labels[]` | array | 是 | 恒 12 项；每项字符串固定 5 字符，格式 `MM/DD` | x 轴日期（近 12 天，旧 → 新） |
+| `cost[]` | array | 是 | 恒 12 项；浮点 ≥0，单位元；保留 4 位小数；无数据日期补 0 | 每日 DeepSeek 费用 |
 
 **响应示例**：
 
@@ -632,7 +664,7 @@
 | 前端 | `frontend/src/modules/dashboard/components/ActivityTimeline.vue` | 活动时间线 |
 | 前端 | `frontend/src/modules/dashboard/api.ts` | 数据层（2 端点） |
 | 前端 | `frontend/src/shared/types/dashboard.ts` | 前端类型契约 |
-| 前端 | `frontend/CLAUDE.md` §2 + `tokens.css` | Doodle Craft 主题令牌 |
+| 前端 | `frontend/AGENTS.md` §2 + `tokens.css` | Doodle Craft 主题令牌 |
 | 后端 | `apps/dashboard/views.py` | 4 个统计端点实现 |
 | 后端 | `apps/dashboard/urls.py` | 路由注册 |
 

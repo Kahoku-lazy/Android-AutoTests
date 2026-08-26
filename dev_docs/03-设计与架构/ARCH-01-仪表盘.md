@@ -1,6 +1,6 @@
 # ARCH-01 — 仪表盘 (Dashboard)
 
-> **版本**：v1.7 · **日期**：2026-08-21 · **关联模块**：`apps/dashboard/` · 前端 `frontend/src/modules/dashboard/`
+> **版本**：v1.8 · **日期**：2026-08-21 · **关联模块**：`apps/dashboard/` · 前端 `frontend/src/modules/dashboard/`
 
 ## 文档内容简述
 
@@ -225,19 +225,20 @@ flowchart TB
 
 ```
 apps/dashboard/
-├── views.py            386 行 · 4 APIView + 12 辅助函数（纯聚合）
+├── views.py            405 行 · 4 APIView + 聚合辅助函数（纯聚合）
+├── ai_usage.py         207 行 · AI 用量聚合（DeepSeek 计费 + 每日 token/缓存/费用序列）
 ├── urls.py             路由注册（4 端点 → APIView.as_view()）
 └── apps.py             verbose_name='仪表盘'
 
 注意: 无 models.py — dashboard 不创建数据库表
 ```
 
-> 行数说明：386 行 > views.py 300 行上限，处于 🟠 关注级（未超 1.5 倍 450），下个 PRD 评估拆分；聚合辅助函数亦可迁至 `service.py`。
+> 行数说明：views.py 405 行仍 > 300 行上限（🟠 关注级，未超 1.5 倍 450）；AI 用量聚合已拆至 `ai_usage.py`（207 行），后续可将其余聚合辅助函数继续下沉。
 
 ### 3.2 聚合查询设计
 
 ```python
-# dashboard/views.py — 核心结构（386 行）
+# dashboard/views.py — 核心结构（405 行，AI 用量聚合已拆至 ai_usage.py）
 
 class DashboardStatsAPIView(APIView):
     """GET /api/dashboard/stats/ — 平台级统计总览（实测 27 条 SQL · 进程内 ~30ms）"""
@@ -303,7 +304,21 @@ _safe_count(...)                       # 表缺失时计 0（降级规则）
     "workflow": { "total": 12 },
     "runs": { "total": 30, "active": 1 },
     "agents": { "total": 3, "active": 2 },
-    "charts": { "execution": { "labels": ["08/02"], "success": [0], "failed": [0] } },
+    "ai_usage": {
+      "conversation_count": { "today": 1, "total": 30 },
+      "input_tokens": { "today": 1200, "total": 45000 },
+      "output_tokens": { "today": 800, "total": 30000 },
+      "total_tokens": { "today": 2000, "total": 75000 },
+      "cache_hit_tokens": { "today": 300, "total": 9000 },
+      "cache_hit_rate": { "today": 25.0, "total": 20.0 },
+      "avg_tokens_per_conversation": { "today": 2000, "total": 2500 },
+      "deepseek_cost": { "today": 0.02, "total": 1.35 }
+    },
+    "charts": {
+      "execution": { "labels": ["08/02"], "success": [0], "failed": [0] },
+      "ai_tokens": { "labels": ["08/02"], "total_tokens": [0], "cache_tokens": [0] },
+      "deepseek_cost": { "labels": ["08/02"], "cost": [0.0] }
+    },
     "execution_summary": { "passed": 210, "failed": 32 },
     "recent_tasks": [],
     "last_updated": "2026-08-14 10:00",
@@ -358,6 +373,7 @@ _safe_count(...)                       # 表缺失时计 0（降级规则）
 
 | 版本 | 日期 | 变更摘要 |
 |------|------|----------|
+| v1.8 | 2026-08-21 | **AI 用量聚合拆分 + DeepSeek 计费**：新增 `apps/dashboard/ai_usage.py`（DeepSeek 官方价目常量 + 高峰/空闲时段计费 + 每日 token/缓存/费用序列），`_ai_usage_stats` 迁入；§4.2 响应新增 `ai_usage`（含 `deepseek_cost`）与 `charts.ai_tokens` / `charts.deepseek_cost`；§3.1 文件结构同步 |
 | v1.7 | 2026-08-21 | **五层口径回填 + 防火墙修复同步**：§1.2 图去旧 L2/L3 标签（AGG/SRC）；§1.3 包图 2 处 ⚠️ 改 ✅（2026-08-20 fix-cross-app-firewall：filter_agents_for_user→ai_assistant.api、resolve_username→shared/users.py）；防火墙 ASCII 同步；简述"边界与隐患"更新；关联指针改 §3.2/§4.1/§二 L3 |
 | v1.0 | 2026-07-16 | 初始版本：基于 `项目架构.md` 和 `PRD-01-仪表盘.md` 重构 |
 | v1.1 | 2026-07-16 | **代码对照审计**：API 路径修正为 `/api/dashboard/stats/` + `/api/devices/stats/` + `/api/cases/stats/`；函数名对齐实际 views.py |

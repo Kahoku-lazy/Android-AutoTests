@@ -87,6 +87,10 @@
   gap: var(--app-space-md);
   align-items: stretch;
 }
+.dashboard__trends--ai {
+  grid-template-columns: 1fr 1fr;
+  margin-top: var(--app-space-md);
+}
 @media (max-width: 960px) {
   .dashboard__trends { grid-template-columns: 1fr; }
 }

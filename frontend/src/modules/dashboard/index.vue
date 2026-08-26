@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { useDashboardView } from './DashboardView.logic'
+import { useDashboardView, toMillions, toK } from './DashboardView.logic'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import StatsAppCard from './components/StatsCard.vue'
 import TrendBarChart from './components/TrendBarChart.vue'
+import SeriesBarChart from './components/SeriesBarChart.vue'
 import TaskResultPanel from './components/TaskResultPanel.vue'
 import ActivityTimeline from './components/ActivityTimeline.vue'
 import {
@@ -18,6 +19,7 @@ import {
   IconTarget,
   IconTrendingUp,
   IconActivity,
+  IconZap,
 } from '@/shared/icons/index'
 
 const {
@@ -28,6 +30,8 @@ const {
   stats,
   executionChart,
   executionSummary,
+  aiTokenChart,
+  deepseekCostChart,
   recentTasks,
   lastUpdated,
   systemStatus,
@@ -38,6 +42,8 @@ const {
   elementBreakdown,
   getBreakdownItem,
   getElementItem,
+  tokenSeries,
+  costSeries,
 } = useDashboardView()
 </script>
 
@@ -114,8 +120,9 @@ const {
       <section class="doc-section">
         <h3 class="doc-section__title"><IconBrain :size="19" />AI 用量<span class="doc-tag">AI</span></h3>
         <div class="doc-section__label">
-          累计 Token {{ stats.aiUsage.totalTokens.total.toLocaleString() }}
+          累计 Token {{ (stats.aiUsage.totalTokens.total / 1000000).toFixed(2) }}M
           · 对话 {{ stats.aiUsage.conversationCount.total }}
+          · DeepSeek 费用 {{ stats.aiUsage.deepseekCost.total.toFixed(2) }} 元
         </div>
         <div class="dashboard__stats-grid">
           <StatsAppCard
@@ -130,11 +137,13 @@ const {
           </StatsAppCard>
           <StatsAppCard
             label="累计 Token"
-            :value="stats.aiUsage.totalTokens.total"
+            :value="toMillions(stats.aiUsage.totalTokens.total)"
+            suffix="M"
+            :decimals="2"
             color="sage"
             path="/ai-assistant"
             :loading="loading"
-            :desc="`今日 ${stats.aiUsage.totalTokens.today.toLocaleString()}`"
+            :desc="`今日 ${(stats.aiUsage.totalTokens.today / 1000000).toFixed(2)}M`"
           >
             <template #icon><IconTrendingUp :size="15" /></template>
           </StatsAppCard>
@@ -142,6 +151,7 @@ const {
             label="缓存命中率"
             :value="stats.aiUsage.cacheHitRate.total"
             suffix="%"
+            :decimals="1"
             color="deep"
             path="/ai-assistant"
             :loading="loading"
@@ -151,13 +161,27 @@ const {
           </StatsAppCard>
           <StatsAppCard
             label="平均每对话 Token"
-            :value="stats.aiUsage.avgTokensPerConversation.total"
+            :value="toK(stats.aiUsage.avgTokensPerConversation.total)"
+            suffix="K"
+            :decimals="1"
             color="cream"
             path="/ai-assistant"
             :loading="loading"
-            :desc="`今日 ${stats.aiUsage.avgTokensPerConversation.today.toLocaleString()}`"
+            :desc="`今日 ${(stats.aiUsage.avgTokensPerConversation.today / 1000).toFixed(1)}K`"
           >
             <template #icon><IconLayers :size="15" /></template>
+          </StatsAppCard>
+          <StatsAppCard
+            label="DeepSeek 费用"
+            :value="stats.aiUsage.deepseekCost.total"
+            suffix=" 元"
+            :decimals="2"
+            color="dust"
+            path="/ai-assistant"
+            :loading="loading"
+            :desc="`今日 ${stats.aiUsage.deepseekCost.today.toFixed(2)} 元`"
+          >
+            <template #icon><IconZap :size="15" /></template>
           </StatsAppCard>
         </div>
       </section>
@@ -216,7 +240,7 @@ const {
           <span class="doc-tag">Trends</span>
         </h3>
         <div class="doc-section__label">
-          近 12 期执行成功、失败与新建用例统计
+          近 12 期执行、AI Token 与费用趋势
         </div>
         <div class="dashboard__trends">
           <el-card class="trends-chart-card">
@@ -225,6 +249,16 @@ const {
           <el-card class="trends-tasks-card">
             <div class="trends-tasks-card__title">任务执行结果</div>
             <TaskResultPanel :tasks="recentTasks" :summary="executionSummary" />
+          </el-card>
+        </div>
+        <div class="dashboard__trends dashboard__trends--ai">
+          <el-card class="trends-chart-card">
+            <div class="trends-tasks-card__title">每日 Token 用量</div>
+            <SeriesBarChart :labels="aiTokenChart.labels" :series="tokenSeries" />
+          </el-card>
+          <el-card class="trends-chart-card">
+            <div class="trends-tasks-card__title">每日 DeepSeek 费用（元）</div>
+            <SeriesBarChart :labels="deepseekCostChart.labels" :series="costSeries" />
           </el-card>
         </div>
       </section>

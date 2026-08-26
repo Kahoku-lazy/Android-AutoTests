@@ -10,6 +10,8 @@ import type {
   DashboardRawData,
   AiUsage,
   AiUsageMetric,
+  AiTokenChart,
+  DeepSeekCostChart,
 } from '@/shared/types/dashboard'
 
 // ── 返回类型接口 ──
@@ -21,6 +23,8 @@ export interface UseDashboardStatsReturn {
   stats: Ref<DashboardStats>
   executionChart: Ref<ExecutionChart>
   executionSummary: Ref<ExecutionSummary>
+  aiTokenChart: Ref<AiTokenChart>
+  deepseekCostChart: Ref<DeepSeekCostChart>
   recentTasks: Ref<RecentTask[]>
   lastUpdated: Ref<string>
   systemStatus: Ref<string>
@@ -42,6 +46,7 @@ const DEFAULT_AI_USAGE: AiUsage = {
   cacheHitTokens: zeroMetric(),
   cacheHitRate: zeroMetric(),
   avgTokensPerConversation: zeroMetric(),
+  deepseekCost: zeroMetric(),
 }
 
 const DEFAULT_STATS: DashboardStats = {
@@ -56,6 +61,8 @@ const DEFAULT_STATS: DashboardStats = {
 
 const DEFAULT_CHART: ExecutionChart = { labels: [], success: [], failed: [] }
 const DEFAULT_SUMMARY: ExecutionSummary = { passed: 0, failed: 0 }
+const DEFAULT_AI_TOKEN_CHART: AiTokenChart = { labels: [], totalTokens: [], cacheTokens: [] }
+const DEFAULT_DEEPSEEK_COST_CHART: DeepSeekCostChart = { labels: [], cost: [] }
 
 // ── 映射函数 ──
 
@@ -63,6 +70,8 @@ interface MappedData {
   stats: DashboardStats
   executionChart: ExecutionChart
   executionSummary: ExecutionSummary
+  aiTokenChart: AiTokenChart
+  deepseekCostChart: DeepSeekCostChart
   recentTasks: RecentTask[]
   lastUpdated: string
   systemStatus: string
@@ -103,10 +112,13 @@ export function mapStatsResponse(raw: DashboardRawData): MappedData {
         cacheHitTokens: toMetric(raw.ai_usage?.cache_hit_tokens),
         cacheHitRate: toMetric(raw.ai_usage?.cache_hit_rate),
         avgTokensPerConversation: toMetric(raw.ai_usage?.avg_tokens_per_conversation),
+        deepseekCost: toMetric(raw.ai_usage?.deepseek_cost),
       },
     },
     executionChart: raw.charts?.execution ?? DEFAULT_CHART,
     executionSummary: raw.execution_summary ?? DEFAULT_SUMMARY,
+    aiTokenChart: raw.charts?.ai_tokens ?? DEFAULT_AI_TOKEN_CHART,
+    deepseekCostChart: raw.charts?.deepseek_cost ?? DEFAULT_DEEPSEEK_COST_CHART,
     recentTasks: raw.recent_tasks ?? [],
     lastUpdated: raw.last_updated ?? '',
     systemStatus: raw.system_status ?? 'normal',
@@ -123,6 +135,8 @@ export function useDashboardStats(): UseDashboardStatsReturn {
   const stats = ref<DashboardStats>({ ...DEFAULT_STATS })
   const executionChart = ref<ExecutionChart>({ ...DEFAULT_CHART })
   const executionSummary = ref<ExecutionSummary>({ ...DEFAULT_SUMMARY })
+  const aiTokenChart = ref<AiTokenChart>({ ...DEFAULT_AI_TOKEN_CHART })
+  const deepseekCostChart = ref<DeepSeekCostChart>({ ...DEFAULT_DEEPSEEK_COST_CHART })
   const recentTasks = ref<RecentTask[]>([])
   const lastUpdated = ref('')
   const systemStatus = ref('normal')
@@ -144,6 +158,8 @@ export function useDashboardStats(): UseDashboardStatsReturn {
           stats.value = mapped.stats
           executionChart.value = mapped.executionChart
           executionSummary.value = mapped.executionSummary
+          aiTokenChart.value = mapped.aiTokenChart
+          deepseekCostChart.value = mapped.deepseekCostChart
           recentTasks.value = mapped.recentTasks
           lastUpdated.value = mapped.lastUpdated
           systemStatus.value = mapped.systemStatus
@@ -184,6 +200,8 @@ export function useDashboardStats(): UseDashboardStatsReturn {
     stats,
     executionChart,
     executionSummary,
+    aiTokenChart,
+    deepseekCostChart,
     recentTasks,
     lastUpdated,
     systemStatus,

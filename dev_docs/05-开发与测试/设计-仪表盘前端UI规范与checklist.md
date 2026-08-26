@@ -3,7 +3,7 @@
 > 版本 v2 · 2026-08-15
 > 适用范围：`frontend/src/modules/dashboard/`（index.vue / DashboardView.logic.ts / api.ts / composables / components×4）及共享依赖（WorkbenchHeader / StatsCard / ActivityTimeline 等）
 > 设计语言：清新简洁风（暖纸底 · 模块色点缀 · 统一圆角 · 轻阴影），继承 Doodle Craft 的 paper 底纹与设计令牌，但**收敛装饰**（去四角十字/填充带/图钉/微旋转/手绘波浪线）
-> 唯一真相源：`frontend/src/shared/styles/tokens.css`（令牌）、`frontend/CLAUDE.md` §2（风格规则）
+> 唯一真相源：`frontend/src/shared/styles/tokens.css`（令牌）、`frontend/AGENTS.md` §2（风格规则）
 
 ---
 
@@ -14,7 +14,7 @@
 | 模块位置 | `frontend/src/modules/dashboard/` —— 路由 `/dashboard`（routes.ts，meta title「总览」） |
 | 页面骨架 | `index.vue`（薄组件，仅渲染）→ `DashboardView.logic.ts`（编排器，组合 composable + 展示配置） |
 | 数据层 | `composables/useDashboardStats.ts`（四态状态机 + 响应映射）→ `api.ts`（仅 2 个 GET） |
-| 业务组件 | `StatsCard`（纯净指标卡）、`TrendBarChart`（ECharts 趋势柱图）、`TaskResultPanel`（任务结果）、`ActivityTimeline`（最近动态） |
+| 业务组件 | `StatsCard`（纯净指标卡）、`TrendBarChart`（ECharts 执行趋势柱图）、`SeriesBarChart`（ECharts 通用多系列柱图，AI Token/费用）、`TaskResultPanel`（任务结果）、`ActivityTimeline`（最近动态） |
 | 共享依赖 | `WorkbenchHeader`（页面顶栏）、`ErrorState` / `SkeletonCard`（三态）、`shared/icons`、`shared/animations`（countUpFormatted / staggerReveal）、`shared/constants/module-colors`、`shared/composables/useECharts`、`shared/types/dashboard` |
 | 架构约束 | **dashboard 是纯聚合层**（architecture.md §四）：无自有数据表、**只读**——前端只允许 GET，禁止任何写操作入口 |
 
@@ -102,6 +102,9 @@
 | `#999`（轴标签） | `--app-ink-muted` |
 | `#6BCB77`（成功柱） | `--c-device` |
 | `#FFB5A7`（失败柱） | `--c-runner` |
+| `#4ECDC4`（总 Token 柱） | `--c-case` |
+| `#A78BFA`（缓存命中柱） | `--c-element` |
+| `#F7C948`（费用柱） | `--c-dashboard` |
 
 ### 3.3 时间线类型色
 
@@ -206,7 +209,7 @@
 
 | # | 位置 | 偏差 | 建议 |
 |---|------|------|------|
-| 1 | WorkbenchHeader `.brand-sub` 11px | CSS 字号 < 12px，违反最小字号规则（frontend/CLAUDE.md §2）（共享组件，非仅仪表盘） | 收敛为 `--app-size-xs` 12px |
+| 1 | WorkbenchHeader `.brand-sub` 11px | CSS 字号 < 12px，违反最小字号规则（frontend/AGENTS.md §2）（共享组件，非仅仪表盘） | 收敛为 `--app-size-xs` 12px |
 | 2 | ~~TrendBarChart 轴标签 10px / 图例 11px~~ | 画布字面量 < 12px（canvas 豁免存争议） | ✅ v2 已收敛为 12px，同步 §3.2 对照表 |
 | 3 | ~~TaskResultPanel `.task-row--clickable:hover` `rgba(78,205,196,0.12)`~~ | 硬编码交互色（青绿 12%） | ✅ v2 已改为 `--app-bg-subtle` + 边框，无硬编码交互色 |
 | 4 | WorkbenchHeader `#FFE066`/`#999`/`#fff` 字面量 | 与 token 同值未走变量（共享组件） | 与侧边栏终审同法收敛 |

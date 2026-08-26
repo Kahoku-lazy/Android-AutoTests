@@ -14,6 +14,8 @@ export interface StatsCardProps {
   color?: string
   path?: string
   loading?: boolean
+  /** 数值小数位（如 1.23M 传 2、2.5K 传 1） */
+  decimals?: number
   /** 右上角呼吸点（如「运行中任务」） */
   live?: boolean
   /** 趋势百分比（正负），与 trendLabel 一起显示在数值下方 */
@@ -29,6 +31,7 @@ const props = withDefaults(defineProps<StatsCardProps>(), {
   color: 'sage',
   path: '',
   loading: false,
+  decimals: 0,
   live: false,
   trend: undefined,
   trendLabel: '',
@@ -58,9 +61,16 @@ const trendText = computed(() => {
   return `${arrow}${Math.abs(props.trend)}% ${props.trendLabel}`.trim()
 })
 
+function displayValue(): string {
+  return props.value.toLocaleString(undefined, {
+    minimumFractionDigits: props.decimals,
+    maximumFractionDigits: props.decimals,
+  })
+}
+
 watch(() => props.value, (newVal) => {
   if (valueRef.value && displayed.value) {
-    countUpFormatted(valueRef.value, 0, newVal, 800, props.prefix, props.suffix)
+    countUpFormatted(valueRef.value, 0, newVal, 800, props.prefix, props.suffix, props.decimals)
   }
 })
 
@@ -69,7 +79,7 @@ function onCardEnter() {
     displayed.value = true
     setTimeout(() => {
       if (valueRef.value) {
-        countUpFormatted(valueRef.value, 0, props.value, 1200, props.prefix, props.suffix)
+        countUpFormatted(valueRef.value, 0, props.value, 1200, props.prefix, props.suffix, props.decimals)
       }
     }, 200)
   }
@@ -108,7 +118,7 @@ function navigate() {
 
       <!-- 数值区：居中 -->
       <div class="stats-card__stat">
-        <strong ref="valueRef">{{ prefix }}{{ value.toLocaleString() }}{{ suffix }}</strong>
+        <strong ref="valueRef">{{ prefix }}{{ displayValue() }}{{ suffix }}</strong>
         <small v-if="trendText">{{ trendText }}</small>
         <div class="stats-card__desc">{{ desc || '核心指标实时更新' }}</div>
       </div>

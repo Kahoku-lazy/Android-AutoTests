@@ -28,6 +28,7 @@ export interface AiUsage {
   cacheHitTokens: AiUsageMetric
   cacheHitRate: AiUsageMetric
   avgTokensPerConversation: AiUsageMetric
+  deepseekCost: AiUsageMetric
 }
 
 export interface DashboardStats {
@@ -46,6 +47,17 @@ export interface ExecutionChart {
   labels: string[]
   success: number[]
   failed: number[]
+}
+
+export interface AiTokenChart {
+  labels: string[]
+  totalTokens: number[]
+  cacheTokens: number[]
+}
+
+export interface DeepSeekCostChart {
+  labels: string[]
+  cost: number[]
 }
 
 export interface ExecutionSummary {
@@ -97,8 +109,13 @@ export interface DashboardRawData {
     cache_hit_tokens: AiUsageMetric
     cache_hit_rate: AiUsageMetric
     avg_tokens_per_conversation: AiUsageMetric
+    deepseek_cost: AiUsageMetric
   }
-  charts: { execution: ExecutionChart }
+  charts: {
+    execution: ExecutionChart
+    ai_tokens: AiTokenChart
+    deepseek_cost: DeepSeekCostChart
+  }
   execution_summary: ExecutionSummary
   recent_tasks: RecentTask[]
   last_updated: string

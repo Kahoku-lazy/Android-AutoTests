@@ -1,7 +1,7 @@
 ---
 name: android-autotests-rules
 description: |
-  Android-AutoTests 项目编码规则的唯一索引与常驻摘要（迁移自 .claude/rules/）。
+  Android-AutoTests 项目编码规则的唯一索引与常驻摘要。
   写 Python / Vue / Django 代码、改 API、动数据库、跨模块改动、安全自查前必查。
   Keywords: 项目规则, 编码规范, 防火墙, 模块边界, API 约定, 表前缀, 响应信封, 安全铁律, 通信通道, 红线, 启动, 排障, rules, conventions, api-conventions
   Trigger: 写/改代码、跨模块改动、新增 Django App、动 models/views/api、前端改动、安全自查、遇到报错诊断、启动/健康检查时。
@@ -10,7 +10,7 @@ description: |
 # Android-AutoTests 项目规则索引
 
 > 本文是 11 份规则文件的**唯一索引 + 常驻摘要**。细节按需读 `references/`。
-> 原 `.claude/rules/` 已整体迁移至此；`.claude/rules/` 保留为历史副本，规则变更只改本目录。
+> 本目录是项目规则的唯一现行落点，规则变更只改本目录。
 
 ## 常驻规则（每次写代码前必过一遍）
 

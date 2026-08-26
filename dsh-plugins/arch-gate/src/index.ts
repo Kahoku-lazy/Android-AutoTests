@@ -1,4 +1,4 @@
-// dsh-plugin-arch-gate — 移植自 .claude/hooks/check-boundary.sh
+// dsh-plugin-arch-gate — 移植自原 Claude 的 check-boundary 写后边界检查
 //
 // 在 tools/post-execute 观察文件写入：当写入目标匹配 apps/**/*.py 时，
 // 运行 `python tools/gen_arch_stats.py --check-boundaries`；

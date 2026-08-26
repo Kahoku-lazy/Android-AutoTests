@@ -10,7 +10,7 @@
 | 登录/注册/刷新/登出/me（`/api/auth/*`） | 其他模块放认证逻辑（全站唯一鉴权入口） |
 | JWT 签发/校验、Redis 黑名单维护 | 手写第二条鉴权通道 |
 
-- 公开路径列表以 `.claude/rules/backend.md` 与 JWTAuthenticationMiddleware 为唯一真相源，**两者必须一致**——改漏导致全站 401 或误放行。
+- 公开路径列表以 `.agents/skills/android-autotests-rules/references/backend.md` 与 JWTAuthenticationMiddleware 为唯一真相源，**两者必须一致**——改漏导致全站 401 或误放行。
 - Token 黑名单在 Redis（`shared/auth/jwt_auth.py`），服务重启不丢失；登出必须入黑名单而非仅前端删 token。
 - 认证接口是前端 `views/LoginView` 的唯一后端入口，无独立前端模块。
 

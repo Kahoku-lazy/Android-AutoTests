@@ -216,8 +216,8 @@ def scan_cross_app_imports():
 
 # 已知违规白名单加载
 def _load_boundary_whitelist():
-    """Load known-violation whitelist from .claude/boundary-whitelist.json."""
-    whitelist_path = PROJECT_ROOT / ".claude" / "boundary-whitelist.json"
+    """Load known-violation whitelist from tools/boundary-whitelist.json."""
+    whitelist_path = PROJECT_ROOT / "tools" / "boundary-whitelist.json"
     if not whitelist_path.exists():
         return []
     try:
@@ -870,7 +870,7 @@ if __name__ == "__main__":
                 print(f"  修复: 跨 App 只能 import api.py 或 models，禁止 import 内部实现")
                 print()
 
-            print(f"  如果是有意豁免，请添加到 .claude/boundary-whitelist.json")
+            print(f"  如果是有意豁免，请添加到 tools/boundary-whitelist.json")
             exit_code = 1
         else:
             if total_known:
@@ -888,7 +888,7 @@ if __name__ == "__main__":
             sys.exit(0)
 
         # Load frontend whitelist
-        fwl_path = PROJECT_ROOT / ".claude" / "frontend-whitelist.json"
+        fwl_path = PROJECT_ROOT / "tools" / "frontend-whitelist.json"
         whitelist = set()
         if fwl_path.exists():
             try:
@@ -905,7 +905,7 @@ if __name__ == "__main__":
             for v in new_violations[:10]:
                 print(f"  {v['file']}: {v['lines']}行 (+{v['excess']})")
             print(f"\n  修复: CSS外置 / composable提取 / 常量外提 / 子组件拆分")
-            print(f"  如需豁免: 添加到 .claude/frontend-whitelist.json")
+            print(f"  如需豁免: 添加到 tools/frontend-whitelist.json")
             sys.exit(1)
         else:
             known = len(vue_violations)

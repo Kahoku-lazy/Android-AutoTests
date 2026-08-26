@@ -1,2 +1,0 @@
-- [前端多文件修改必须先探索组件树](theme-modification-lesson.md) — Glob → Read → grep 残留 → 构建，不因目标"看起来简单"而跳过
-- [CSS 块注释禁嵌 `*/`](css-block-comment-star-slash.md) — `tokens.css` 注释里 `--foo-*/--bar` 会提前闭合，后续 `:root` 令牌全失效

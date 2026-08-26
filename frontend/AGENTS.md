@@ -11,8 +11,8 @@
 
 1. 需求模糊 → 列 3～5 种理解让用户选，禁止默默挑一种执行。
 2. 先读目标 `.vue` 的 **template + script + style 三块**；改 CSS 前提取全部 class，禁止凭印象重写漏 inner class。
-3. 编写细则与决策树 → `.claude/rules/frontend.md`；关单自检 → skill `vue-frontend-check`。
-4. **同步约定**：全局事项（后端 WS 事件表、响应信封、共享组件清单、端口/协议、分层纪律）变更时，必须同步 `.claude/rules/frontend.md` 与 skill `vue-frontend-check`（checklist/calibration 对应口径）。
+3. 编写细则与决策树 → `.agents/skills/android-autotests-rules/references/frontend.md`；关单自检 → skill `vue-frontend-check`。
+4. **同步约定**：全局事项（后端 WS 事件表、响应信封、共享组件清单、端口/协议、分层纪律）变更时，必须同步 `.agents/skills/android-autotests-rules/references/frontend.md` 与 skill `vue-frontend-check`（checklist/calibration 对应口径）。
 5. **模块专属约束**（红线/契约/协议特例/关单附加项）唯一落点为 `src/modules/{name}/AGENTS.md`，变更只改对应模块文件。
 
 ---
@@ -57,7 +57,7 @@
 | ai-assistant | ai_assistant + **evaluator（前端寄宿）** + 各业务 App（经 Tool 后端） | HTTP + **SSE** | 对话 UI + 唯一 SSE |
 | views/LoginView | accounts | HTTP | 登录/注册入口（accounts 唯一前端入口；认证经 `/api/auth/*`） |
 
-**Pinia 现状（唯一真相）**：全前端仅 3 个 store —— workflow `wf-workflow` / `wf-library` + device-inspector `device-inspector`；均模块内使用，禁止跨模块 import；新建 store 走 `.claude/rules/frontend.md` 状态管理决策树（先 ref → composable，不默认用 Pinia）。
+**Pinia 现状（唯一真相）**：全前端仅 3 个 store —— workflow `wf-workflow` / `wf-library` + device-inspector `device-inspector`；均模块内使用，禁止跨模块 import；新建 store 走 `.agents/skills/android-autotests-rules/references/frontend.md` 状态管理决策树（先 ref → composable，不默认用 Pinia）。
 
 **共享层边界（**`frontend/src/shared/`**）**：
 

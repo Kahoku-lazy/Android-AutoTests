@@ -8,7 +8,7 @@ import { ElMessage } from 'element-plus'
  * - Error toast via `ElMessage.error()` (suppressible with `silent: true`)
  * - Consistent return shape `{ status, ...data }`
  *
- * Rules (from .claude/rules/frontend.md):
+ * Rules (from .agents/skills/android-autotests-rules/references/frontend.md):
  * - 写操作: auto-toast on error (silent=false, default)
  * - 读操作: 可静默 (silent=true), 数据为空不报错
  *

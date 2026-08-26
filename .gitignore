@@ -106,7 +106,6 @@ dev_docs/_archive/
 docs/
 .superpowers/
 .workbuddy/
-.claude/*.diff
 
 # ── Legacy frontend (pre-Vue migration, contains hardcoded device IDs) ──
 frontend/_legacy/

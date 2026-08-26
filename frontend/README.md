@@ -11,10 +11,10 @@
 |-----------|-----------|
 | 新页面 / 新组件 / 改样式 | `AGENTS.md` §2（风格规则）→ `src/shared/styles/tokens.css`（值） |
 | 改前端前先了解规则 | `AGENTS.md`（本目录）→ 改前四步工作流 |
-| 了解架构红线 / 三层职责 / 文件上限 | `../.claude/rules/frontend.md` |
+| 了解架构红线 / 三层职责 / 文件上限 | `../.agents/skills/android-autotests-rules/references/frontend.md` |
 | 查前后端接口字段名 | `../dev_docs/03-设计与架构/工具-VUE_API_CONTRACT.md` |
 | 改完代码后自检质量 | `../dev_docs/DEVELOPMENT_CHECKLIST.md`（7 组 35 条） |
-| 排查前端故障 | `../.claude/rules/troubleshooting.md` → 速查表 → 对应章节 |
+| 排查前端故障 | `../.agents/skills/android-autotests-rules/references/troubleshooting.md` → 速查表 → 对应章节 |
 | 了解某个模块的功能与验收条件 | `../dev_docs/02-PRD需求/PRD-0X-模块名.md` |
 | 了解某个模块的架构与组件树 | `../dev_docs/03-设计与架构/ARCH-0X-模块名.md` |
 | 选主题 / 视觉风格 | `.agents/skills/doodle-craft/SKILL.md` |
@@ -34,9 +34,9 @@
 
 | 文件 | 说明 |
 |------|------|
-| `../.claude/rules/frontend.md` | 前端架构红线、三层职责、组件拆分信号、质量门禁 |
-| `../.claude/rules/conventions.md` | 命名规范、文件行数上限、Element Plus 陷阱 |
-| `../.claude/rules/api-conventions.md` | API 响应格式 `{ok, data/error}`、模块边界三道防火墙 |
+| `../.agents/skills/android-autotests-rules/references/frontend.md` | 前端架构红线、三层职责、组件拆分信号、质量门禁 |
+| `../.agents/skills/android-autotests-rules/references/conventions.md` | 命名规范、文件行数上限、Element Plus 陷阱 |
+| `../.agents/skills/android-autotests-rules/references/api-conventions.md` | API 响应格式 `{ok, data/error}`、模块边界三道防火墙 |
 
 ### 第三层：前端工作流 + 设计系统（3 个文件）
 
@@ -108,7 +108,7 @@
 | 删除 | 原因 |
 |------|------|
 | 4 个前端问题管理文档（Tabs滚动/图表滚动/页面滚动/表格列宽） | 修复方案已吸收至 `AGENTS.md` §2 与 `vue-frontend-check` skill |
-| `截图流故障手册.md` | 内容已吸收至 `.claude/rules/troubleshooting.md` §二 |
+| `截图流故障手册.md` | 内容已吸收至 `.agents/skills/android-autotests-rules/references/troubleshooting.md` §二 |
 | `前端笔记.md` | 结构化内容与 `AGENTS.md` + `frontend.md` 重复；文档清单由此 README 替代 |
 
 同时补强了：

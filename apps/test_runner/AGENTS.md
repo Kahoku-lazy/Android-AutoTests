@@ -32,7 +32,7 @@
 
 - 事件真相源 `callbacks.py`，**10 种 type 一个不能漏**：`log` / `heartbeat` / `case_started` / `step_started` / `step_result` / `iteration_result` / `case_finished` / `run_finished` / `device_error` / `run_started`（前端暂不消费 `run_started`，仍须推送）。
 - `heartbeat` 每 5s；前端 15s 无心跳判连接丢失——改间隔必须双边同步。
-- 新增/改事件 type 必须同步全局 `../AGENTS.md` §2 + 前端 `test-runner/AGENTS.md` + `.claude/rules/frontend.md` + skill `vue-frontend-check`（双边契约）。
+- 新增/改事件 type 必须同步全局 `../AGENTS.md` §2 + 前端 `test-runner/AGENTS.md` + `.agents/skills/android-autotests-rules/references/frontend.md` + skill `vue-frontend-check`（双边契约）。
 - 消费者只推送；写库仍走 `api.py`。
 
 ## 关单附加项（全局清单的 delta）

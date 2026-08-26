@@ -1,6 +1,6 @@
 # dsh-plugin-arch-gate
 
-DSH 原生 hooks 插件：把 `.claude/hooks/check-boundary.sh` 的职责移植为 **写后自动边界检查**。
+DSH 原生 hooks 插件：把原 Claude 的 check-boundary 写后边界检查职责移植为 **DSH 原生自动边界检查**。
 
 ## 功能
 

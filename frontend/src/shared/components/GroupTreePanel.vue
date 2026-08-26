@@ -248,7 +248,7 @@ const emit = defineEmits([
 
 /* ── Context Menu ── */
 .context-menu {
-  /* z-index 70 = 弹窗层（.claude/rules/frontend.md z-index 层级） */
+  /* z-index 70 = 弹窗层（.agents/skills/android-autotests-rules/references/frontend.md z-index 层级） */
   position: fixed; z-index: 70; background: var(--app-bg-card);
   border: 2px solid var(--ink); border-radius: var(--app-radius-sm);
   box-shadow: var(--app-shadow-lg); min-width: 160px; padding: var(--app-space-xs) 0;

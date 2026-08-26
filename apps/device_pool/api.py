@@ -7,11 +7,14 @@
 __all__ = [
     "acquire_device",
     "device",
+    "device_action",
     "ensure_device",
     "get_online_devices",
+    "list_apps",
     "list_devices",
     "release_device",
     "release_device_locks_for_device",
+    "use_device",
 ]
 
 from datetime import datetime
@@ -21,6 +24,9 @@ from django.db import transaction
 from .models import Device, DeviceLock
 from .pool import device
 from .service import release_internal
+
+# 执行引擎占用前缀：设备动作/抓取不与执行引擎抢设备（与 device_inspector.service 同口径）
+_EXECUTION_OCCUPY_PREFIXES = ("runner-", "ai_agent", "task-", "run-")
 
 
 def get_online_devices():
@@ -137,3 +143,93 @@ def release_device_locks_for_device(device_obj, reason="disconnect"):
         released_at=datetime.now(),
         release_reason=reason,
     )
+
+
+def use_device(serial: str) -> None:
+    """切到目标设备 + 可用性/执行引擎占用校验（跨 App 统一入口）。
+
+    与 device_inspector.service.ensure_current_device 同一口径：
+    未注册抛 ValueError；执行引擎占用抛 ValueError（上层转用户文案）。
+    """
+    if not serial:
+        raise ValueError("未选择设备，请先连接设备")
+    try:
+        dev = Device.objects.get(serial=serial)
+    except Device.DoesNotExist:
+        raise ValueError("设备未注册")
+
+    if dev.status == "BUSY" and dev.occupied_by:
+        for prefix in _EXECUTION_OCCUPY_PREFIXES:
+            if str(dev.occupied_by).startswith(prefix):
+                raise ValueError(f"设备正被执行引擎占用（{dev.occupied_by}），请等待执行完毕")
+
+    if device.current_serial != serial:
+        device.switch_to(serial, dev.connection_type or "USB", dev.connection_addr)
+
+
+def device_action(
+    serial: str,
+    action: str,
+    *,
+    package: str = "",
+    x=None,
+    y=None,
+    direction: str = "up",
+    distance: int = 500,
+    text: str = "",
+    clear_first: bool = True,
+) -> dict:
+    """对指定设备执行一个 UI 动作，返回当前前台 package/activity（供跳转判定）。
+
+    action: start_app / stop_app / click / long_click / swipe / back / input_text / current
+    """
+    use_device(serial)
+
+    if x is not None:
+        x = int(x)
+    if y is not None:
+        y = int(y)
+
+    if action == "start_app":
+        if not package:
+            raise ValueError("start_app 需要 package 参数")
+        device.action_start_app(package)
+    elif action == "stop_app":
+        if not package:
+            raise ValueError("stop_app 需要 package 参数")
+        device.action_stop_app(package)
+    elif action == "back":
+        device.action_press_key("back")
+    elif action == "click":
+        if x is None or y is None:
+            raise ValueError("click 需要 x/y 坐标")
+        device.action_click(x, y)
+    elif action == "long_click":
+        if x is None or y is None:
+            raise ValueError("long_click 需要 x/y 坐标")
+        device.action_longclick(x, y)
+    elif action == "swipe":
+        device.action_swipe(direction or "up", int(distance or 500))
+    elif action == "input_text":
+        device.action_input(text or "", x, y, clear_first=bool(clear_first))
+    elif action == "current":
+        pass
+    else:
+        raise ValueError(f"不支持的设备动作: {action}")
+
+    return device.app_current()
+
+
+def list_apps(serial: str, query: str = "") -> dict:
+    """列出设备已安装包名（可按 query 子串过滤），供 AI 获取被测 App 包名后 start_app。"""
+    use_device(serial)
+    raw = device.action_shell("pm list packages")
+    packages = []
+    for line in (raw or "").splitlines():
+        line = line.strip()
+        if not line.startswith("package:"):
+            continue
+        pkg = line[len("package:") :].strip()
+        if pkg and (not query or query.lower() in pkg.lower()):
+            packages.append(pkg)
+    return {"packages": packages, "count": len(packages)}

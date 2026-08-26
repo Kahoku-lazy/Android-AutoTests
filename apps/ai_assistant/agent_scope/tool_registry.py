@@ -81,6 +81,79 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         ],
         "read_only": False,
     },
+    {
+        "name": "device_action",
+        "category": "设备管理",
+        "icon": "🎮",
+        "summary": "控制指定 Android 设备执行 UI 动作：启动/停止 App、点击坐标、长按、滑动、返回、输入文本、读取当前前台；每次返回 package/activity 用于判断页面是否跳转",
+        "module": "devices",
+        "action": "action",
+        "params": [
+            {
+                "name": "serial",
+                "type": "string",
+                "required": True,
+                "desc": "设备序列号（先 list_devices 查询）",
+            },
+            {
+                "name": "action",
+                "type": "string",
+                "required": True,
+                "desc": "动作类型: start_app/stop_app/click/long_click/swipe/back/input_text/current",
+            },
+            {
+                "name": "package",
+                "type": "string",
+                "required": False,
+                "desc": "start_app/stop_app 时的包名",
+            },
+            {"name": "x", "type": "integer", "required": False, "desc": "点击/输入坐标 x（像素）"},
+            {"name": "y", "type": "integer", "required": False, "desc": "点击/输入坐标 y（像素）"},
+            {
+                "name": "direction",
+                "type": "string",
+                "required": False,
+                "desc": "swipe 方向: up/down/left/right，默认 up",
+            },
+            {
+                "name": "distance",
+                "type": "integer",
+                "required": False,
+                "desc": "swipe 距离像素，默认 500",
+            },
+            {"name": "text", "type": "string", "required": False, "desc": "input_text 的文本"},
+            {
+                "name": "clear_first",
+                "type": "boolean",
+                "required": False,
+                "desc": "input_text 前是否清空，默认 true",
+            },
+        ],
+        "read_only": False,
+    },
+    {
+        "name": "list_apps",
+        "category": "设备管理",
+        "icon": "📦",
+        "summary": "列出设备已安装的包名（可按关键词过滤），用于获取被测 App 包名后再用 device_action(start_app) 启动",
+        "module": "devices",
+        "action": "list_apps",
+        "params": [
+            {
+                "name": "serial",
+                "type": "string",
+                "required": True,
+                "desc": "设备序列号（先 list_devices 查询）",
+            },
+            {
+                "name": "query",
+                "type": "string",
+                "required": False,
+                "desc": "包名关键词过滤（如 govee），留空返回全部",
+            },
+        ],
+        "read_only": True,
+    },
     # ── 设备检查器 ──
     {
         "name": "capture_page",
@@ -671,6 +744,43 @@ def _devices_release(user_id: str, serial: str = PROTECTED, reason: str = "manua
     from apps.device_pool.api import release_device
 
     return release_device(serial, reason=reason)
+
+
+@_register("devices", "action")
+def _devices_action(user_id: str, serial: str = PROTECTED, action: str = PROTECTED, **kwargs):
+    """控制设备执行 UI 动作（写工具），返回当前前台 package/activity。"""
+    if serial is PROTECTED:
+        raise ValueError("缺少必填参数: serial")
+    if action is PROTECTED:
+        raise ValueError("缺少必填参数: action")
+    from apps.device_pool.api import device_action
+
+    clear_first = kwargs.get("clear_first", True)
+    if isinstance(clear_first, str):
+        # 网关/HTTP 直调可能传字符串布尔，防 "false"→True 误判
+        clear_first = clear_first.strip().lower() in ("1", "true", "yes")
+
+    return device_action(
+        serial=serial,
+        action=action,
+        package=kwargs.get("package", ""),
+        x=kwargs.get("x"),
+        y=kwargs.get("y"),
+        direction=kwargs.get("direction", "up"),
+        distance=kwargs.get("distance", 500),
+        text=kwargs.get("text", ""),
+        clear_first=bool(clear_first),
+    )
+
+
+@_register("devices", "list_apps")
+def _devices_list_apps(user_id: str, serial: str = PROTECTED, query: str = "", **kwargs):
+    """列出设备已安装包名（只读，供获取被测 App 包名）。"""
+    if serial is PROTECTED:
+        raise ValueError("缺少必填参数: serial")
+    from apps.device_pool.api import list_apps
+
+    return list_apps(serial=serial, query=query or "")
 
 
 # ── Inspector handlers ──

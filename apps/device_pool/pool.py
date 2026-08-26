@@ -185,5 +185,21 @@ class DevicePool:
             time.sleep(0.25)
         self._session().input_text(text, clear_first=clear_first)
 
+    def action_start_app(self, pkg: str):
+        """Start app by package name."""
+        self._session().start_app(pkg)
+
+    def action_stop_app(self, pkg: str):
+        """Stop app by package name."""
+        self._session().stop_app(pkg)
+
+    def action_press_key(self, key: str = "back"):
+        """Press a system key (default back)."""
+        self._session().press_key(key)
+
+    def action_shell(self, cmd: str) -> str:
+        """Run a shell command on the device, return stdout."""
+        return self._session().shell(cmd)
+
 
 device = DevicePool()

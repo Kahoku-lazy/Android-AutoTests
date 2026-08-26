@@ -28,8 +28,9 @@ export const PLATFORM_TOOL_NAMES: readonly string[] = [
 
 // ── Timing ──
 
-/** SSE reply watchdog timeout (ms). If no reply within this window, post a disconnect notice. */
-export const SSE_WATCHDOG_MS = 45_000
+/** SSE reply watchdog timeout (ms). If no reply within this window, post a disconnect notice.
+ *  思考模型 + 多步设备操作（抓屏/点击/导航）单轮可远超 45s，放宽避免误报「等待回复超时」。 */
+export const SSE_WATCHDOG_MS = 120_000
 
 /** Delay before resetting model status from "done" → "idle" (ms). */
 export const MODEL_STATUS_RESET_MS = 3_000

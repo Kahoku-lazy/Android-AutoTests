@@ -163,6 +163,64 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         ],
         "read_only": True,
     },
+    {
+        "name": "analyze_page",
+        "category": "设备检查器",
+        "icon": "📸",
+        "summary": "抓取并分析页面结构（纯规则，无 LLM）：6层分区 + XPath + 交互指标；可对已有快照分析（snapshot_id）或抓取新快照（serial）。语义命名请先看返回的元素，再用 save_page_semantic 提交",
+        "module": "inspector",
+        "action": "analyze",
+        "params": [
+            {
+                "name": "serial",
+                "type": "string",
+                "required": False,
+                "desc": "设备序列号（与 snapshot_id 二选一，先 list_devices 查询）",
+            },
+            {
+                "name": "snapshot_id",
+                "type": "integer",
+                "required": False,
+                "desc": "已有快照ID（与 serial 二选一，优先 snapshot_id）",
+            },
+        ],
+        "read_only": True,
+    },
+    {
+        "name": "save_page_semantic",
+        "category": "设备检查器",
+        "icon": "📸",
+        "summary": "提交页面结构分析的语义命名：给元素起中文功能名（func_name）、一句话页面意图（page_summary）、卡片角色（cards）；后端校验 resource_id 真实性防幻觉后合并到结构分析结果",
+        "module": "inspector",
+        "action": "save_semantic",
+        "params": [
+            {
+                "name": "snapshot_id",
+                "type": "integer",
+                "required": True,
+                "desc": "analyze_page 返回的 snapshot_id",
+            },
+            {
+                "name": "page_summary",
+                "type": "string",
+                "required": False,
+                "desc": "一句话页面意图总结",
+            },
+            {
+                "name": "elements",
+                "type": "array",
+                "required": True,
+                "desc": "元素语义命名列表，每项 {resource_id, func_name, metrics}；resource_id 必须来自 analyze_page 返回的元素，metrics 取值 可点击/可滚动/可勾选",
+            },
+            {
+                "name": "cards",
+                "type": "array",
+                "required": False,
+                "desc": "重复卡片结构列表，每项 {name, fields}",
+            },
+        ],
+        "read_only": False,
+    },
     # ── 元素定位 ──
     {
         "name": "search_elements",
@@ -652,9 +710,7 @@ def _inspector_save_elements(
 
 
 @_register("inspector", "screenshot")
-def _inspector_screenshot(
-    user_id: str, serial: str = PROTECTED, method: str = "both", **kwargs
-):
+def _inspector_screenshot(user_id: str, serial: str = PROTECTED, method: str = "both", **kwargs):
     """截屏返回图片 + 摘要。复用检查器 capture 落库链路，读截图文件转 base64。
 
     返回 `{"text": {...}, "image": {"media_type", "data"}}` 的图片标记结构，
@@ -723,6 +779,63 @@ def _trim_capture_for_ai(data: dict) -> dict:
         "texts": texts[:50],
         "screenshot_path": data.get("screenshot_path"),
     }
+
+
+@_register("inspector", "analyze")
+def _inspector_analyze(user_id: str, serial: str = "", snapshot_id=None, **kwargs):
+    """页面结构分析：纯规则分区（无 LLM）。语义命名由 Agent 经 save_semantic 提交。"""
+    if not serial and not snapshot_id:
+        raise ValueError("缺少必填参数: serial 或 snapshot_id")
+    from apps.device_inspector.api import analyze_snapshot, capture_snapshot
+
+    if snapshot_id:
+        sid = int(snapshot_id)
+        data = analyze_snapshot(sid)
+        if data is None:
+            raise ValueError(f"快照不存在: {snapshot_id}")
+    else:
+        cap = capture_snapshot(user_id=user_id, serial=serial, method="dump")
+        sid = cap["snapshot_id"]
+        data = analyze_snapshot(sid)
+    data["snapshot_id"] = sid
+    return data
+
+
+@_register("inspector", "save_semantic")
+def _inspector_save_semantic(
+    user_id: str,
+    snapshot_id=PROTECTED,
+    page_summary: str = "",
+    elements=None,
+    cards=None,
+    **kwargs,
+):
+    """提交页面语义命名：校验防幻觉 + 回填 func_name 到规则骨架元素。"""
+    if snapshot_id is PROTECTED:
+        raise ValueError("缺少必填参数: snapshot_id")
+    from apps.device_inspector.api import analyze_snapshot
+
+    from .llm_semantic import validate_semantic
+
+    sid = int(snapshot_id)
+    data = analyze_snapshot(sid)
+    if data is None:
+        raise ValueError(f"快照不存在: {snapshot_id}")
+
+    semantic = validate_semantic(
+        {"page_summary": page_summary, "elements": elements or [], "cards": cards or []},
+        data.get("elements", []),
+    )
+
+    by_rid = {e["resource_id"]: e.get("func_name", "") for e in semantic["elements"]}
+    for el in data.get("elements", []):
+        rid = el.get("resource_id", "")
+        if rid in by_rid:
+            el["func_name"] = by_rid[rid]
+    data["page_summary"] = semantic["page_summary"]
+    data["cards"] = semantic["cards"]
+    data["snapshot_id"] = sid
+    return data
 
 
 # ── Element handlers ──

@@ -24,6 +24,8 @@
 
 ## 本 App 协议要点
 
+**页面语义增强工具（工具入参 + handler 校验）**：`analyze_page`（inspector/analyze，read_only）纯规则分区，无 LLM；`save_page_semantic`（inspector/save_semantic，write）接收 Agent 在 ReAct 里自然产生的语义命名作为工具入参，handler 经 `llm_semantic.validate_semantic` 校验防幻觉（rid 必须在快照元素集合内）。对齐 `save_case` 的「工具入参 + handler 校验」模式，不依赖 `generate_structured_output`（强制 tool_choice，thinking 模型不支持）。
+
 **SSE（全项目唯一 SSE）**：`/api/ai/conversations/{id}/chat/stream`
 
 - 事件真相源：前端 `CLAUDE.md` §3 事件表（`REPLY_START` / `TEXT_BLOCK_DELTA` / `THINKING_*` / `TOOL_CALL_*` / `TOOL_RESULT_*` / `HINT_BLOCK` / `REQUIRE_USER_CONFIRM` / `REPLY_END` / `error`）；新增/改事件必须双边同步。

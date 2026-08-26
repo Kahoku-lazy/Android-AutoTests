@@ -29,9 +29,9 @@ def test_save_page_to_elements_schema_registered():
     }
 
 
-def test_schema_count_is_26():
-    """平台工具总数 26（25 + 执行状态 get_run_status）。"""
-    assert len(tool_registry.TOOL_SCHEMAS) == 26
+def test_schema_count_is_30():
+    """平台工具总数 30（26 + 执行状态 get_run_status + 页面结构分析 analyze_page/save_page_semantic + 预存新增 2 个）。"""
+    assert len(tool_registry.TOOL_SCHEMAS) == 30
 
 
 def test_inspector_category_registered():

@@ -14,7 +14,7 @@
 ## 你能从文档获取什么信息
 
 - **AgentScope 如何集成**：`agent_scope/` 作为 Django 进程内模块，`agent_factory.build_agent()` 直接构建 Agent，不再经 HTTP 注册
-- **工具如何编排**：`tool_registry.py` 的 26 平台工具单一真相源，`InProcessPlatformTool` 进程内直调 handler；能力开关决定 Toolkit 组装；MCP / Skill 统一由 AI 工具箱导入（智能体禁止自配置）
+- **工具如何编排**：`tool_registry.py` 的 30 平台工具单一真相源，`InProcessPlatformTool` 进程内直调 handler；能力开关决定 Toolkit 组装；MCP / Skill 统一由 AI 工具箱导入（智能体禁止自配置）
 - **SSE 流如何工作**：单请求 async view + asyncio.Queue，AgentScope `reply_stream` 直接消费逐 token 流式返回
 - **端点消费**：41 端点中前端消费 34，7 个后端保留（reveal-key / 任务历史 / 工具网关 / 手动加文档）
 
@@ -31,7 +31,7 @@
 
 AI 助手是平台的**自然语言交互中枢**（**L3 业务 App 层**），通过 AgentScope ReAct 推理引擎，让用户以对话方式驱动全流程测试。AgentScope 已从独立 FastAPI 服务迁移为 Django 进程内模块（`apps/ai_assistant/agent_scope/`），Agent 在 Django 进程内构建、运行、流式返回，不再有独立 `agentscope_service/` 目录与 :8000 端口——即 ARCH-00 部署形态的「AgentScope in-process」，非独立分层。
 
-模块在 L3 内承担智能体配置、对话记录与工具编排（26 个 Tool 单一真相源 `tool_registry.py`）；AI 引擎不直连设备、不直写数据库，一切通过 Tool 调用各业务模块 api.py。
+模块在 L3 内承担智能体配置、对话记录与工具编排（30 个 Tool 单一真相源 `tool_registry.py`）；AI 引擎不直连设备、不直写数据库，一切通过 Tool 调用各业务模块 api.py。
 
 ### 1.2 架构全景图
 
@@ -222,7 +222,7 @@ apps/ai_assistant/
 │   └── tool_gateway.py      HTTP 工具网关（schemas/agent-config/执行）— 豁免
 ├── agent_scope/            Django 进程内 AgentScope 模块
 │   ├── agent_factory.py     进程内构建 AgentScope Agent
-│   ├── tool_registry.py     26 平台工具单一真相源 + handler 注册
+│   ├── tool_registry.py     30 平台工具单一真相源 + handler 注册
 │   ├── in_process_tool.py   进程内工具封装（InProcessPlatformTool）
 │   ├── provider_registry.py 模型提供商 → base_url/credential 映射
 │   ├── rag_service.py       ChromaDB 知识库（唯一所有者）
@@ -252,7 +252,7 @@ build_agent(agent_model, user_id)  → AgentScope Agent
 ```
 _build_toolkit(agent_model, user_id)
   enable_workspace_tools → 6 内置文件工具（skills_config 逐工具过滤）
-  enable_business_tools  → 26 平台工具（AITool tool_type="platform" 逐工具过滤，无配置默认只读子集）
+  enable_business_tools  → 30 平台工具（AITool tool_type="platform" 逐工具过滤，无配置默认只读子集）
   enable_mcp_tools       → MCP 客户端（AITool tool_type="mcp"）
   enable_skills          → skill 目录（AITool tool_type="skill" 的 dir_path）
 ```
@@ -523,7 +523,7 @@ erDiagram
 |------|------|
 | AgentScope 进程内直连 | 构建 / 推理 / Tool 编排全在 Django 进程内，无独立服务 / 端口 |
 | AI 不直连设备 / 数据库 | 一切通过 Tool 调用各模块 api.py / 只读 ORM |
-| 工具单一真相源 | `tool_registry.py` `TOOL_SCHEMAS` 定义 26 平台工具 + handler 注册 |
+| 工具单一真相源 | `tool_registry.py` `TOOL_SCHEMAS` 定义 30 平台工具 + handler 注册 |
 | 写操作走 api.py | 跨模块写走目标 App 的 api.py，禁止直接 ORM 写 |
 | 工具箱集中管理 | skill 上传 / MCP 配置唯一入口是 AI 工具箱（`views_toolbox_drf.py`）；智能体只能 `import-from-toolbox` 导入副本，禁止自配置 |
 | 知识库唯一所有者 | ChromaDB 由 `rag_service.py` 独占，AgentScope 不直接接触；引用键 `doc:`（按文件）/ `dir:`（按目录，检索时动态展开为目录下当前全部文件） |
@@ -591,3 +591,4 @@ get_kb_doc_count() -> int
 | v2.7 | 2026-08-19 | 新增「工作流」工具分类与 2 只读工具——`list_page_flows`（workflow/list_page_flows）/`get_page_flow`（workflow/get_page_flow，返回页面流语义摘要）；平台工具 23→25、分类 6→7；包图/全景图/防火墙清单增 workflow 依赖（AI 只经 `workflow.api` 调 `get_document_digest`/`list_document_summaries`，语义编译在 `workflow/semantics.py` 纯函数）；正文工具计数 17→25 对齐代码真相 |
 | v2.8 | 2026-08-20 | 用例工具可执行性修复：case-manager 新增 `api_ai.py`（`get_case_digest` 结构化 digest / `save_ai_definition` 校验写入 / `validate_steps` 步骤白名单校验，api.py 门面再导出）；`get_case`/`save_case` handler 改走 api_ai（UI 步骤落 `steps_json`、Web 落 `steps_json` 字符串）；`in_process_tool._format_result` 新增 dict 与单模型实例 JSON 序列化分支（详情类工具不再 str() 化为标题；关系字段只输出原始外键 id，防事件循环线程懒加载 ORM 致 SynchronousOnlyOperation）；save_case schema 增 directory_id/package_name/enabled/priority；步骤白名单与语义沿用 `models/step_types.py` `STEP_TYPE_META` |
 | v2.9 | 2026-08-20 | 执行引擎状态打通：test_runner.api 新增 `get_run_status`（TestRunRecord 状态/设备/用例快照/结果计数/汇总）；新增只读工具 `get_run_status`（runner/get_run_status）；`get_run_results` handler 信封化（`{run_status, results}`，run 不存在 400）；平台工具 25→26 |
+| v3.0 | 2026-08-25 | 页面结构分析语义增强（工具入参 + handler 校验）：新增 `agent_scope/llm_semantic.py`（`validate_semantic` 纯校验，rid 真实性 + metrics 枚举防幻觉）；新增工具 `analyze_page`（inspector/analyze，纯规则分区，无 LLM）与 `save_page_semantic`（inspector/save_semantic，语义命名提交校验）；对齐 `save_case` 的「工具入参 + handler 校验」模式，不依赖 `generate_structured_output`（thinking 模型不支持强制 tool_choice）；平台工具 28→30 |

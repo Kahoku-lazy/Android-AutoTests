@@ -62,16 +62,16 @@
 
 1. 需求模糊 → 列 3～5 个具体理解让用户选，禁止默默挑一种执行。
 2. 读目标 `.vue` 的 **template + script + style 三块**；改 CSS 前提取模板中全部 class（防止漏 inner class，凭印象重写会漏 12+ 个 inner class 返工 5 轮）。
-3. 查约束：`.claude/rules/frontend.md`（本文）· `frontend/CLAUDE.md` §2（风格规则）· `frontend/src/shared/styles/tokens.css`（风格值：**先读头部「现行 / @deprecated / 待收敛」声明再取 token**）· 组件做法 `doodle-craft` skill。
+3. 查约束：`.claude/rules/frontend.md`（本文）· `frontend/AGENTS.md` §2（风格规则）· `frontend/src/shared/styles/tokens.css`（风格值：**先读头部「现行 / @deprecated / 待收敛」声明再取 token**）· 组件做法 `doodle-craft` skill。
 4. 判边界跳转：纯 UI/样式 → 只改 CSS 不改逻辑；数据/API → 对照 `dev_docs/03-设计与架构/工具-VUE_API_CONTRACT.md`；AI 对话 → SSE 事件契约；跨界按序执行。
 
 ## 模块专属约束
 
-> 已迁入各模块文件 `frontend/src/modules/{name}/CLAUDE.md`（唯一现行落点）。模块专属约束变更 → 只改对应模块文件，不再同步本文。
+> 已迁入各模块文件 `frontend/src/modules/{name}/AGENTS.md`（唯一现行落点）。模块专属约束变更 → 只改对应模块文件，不再同步本文。
 
 | 模块 | 落点 |
 |------|------|
-| dashboard / device-pool / device-inspector / element-locator / case-manager / test-runner / report-generator / workflow / ai-assistant | `frontend/src/modules/{name}/CLAUDE.md` |
+| dashboard / device-pool / device-inspector / element-locator / case-manager / test-runner / report-generator / workflow / ai-assistant | `frontend/src/modules/{name}/AGENTS.md` |
 
 ## 状态管理决策树
 

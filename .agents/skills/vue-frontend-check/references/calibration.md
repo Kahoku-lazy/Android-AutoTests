@@ -22,11 +22,11 @@
 
 | 严重度 | 必须归入的情形 |
 |--------|----------------|
-| 🔴 | 契约/信封/DRF 通道错误；**TS 类型与后端响应字段名不一致且运行时读错（如声明 `ok` 且按 `ok` 解包，后端返回 `status`）**；静默当成功；**假状态反馈（失败显示成功/成功显示失败，信封或字段读错所致）**；**写操作失败静默吞错（catch 仅 console/忽略、无任何用户提示——违反 frontend/CLAUDE.md 红线）**；锁态仍可写；主路径不可用（点了没反应/白屏）；DTO 污染致必现 400 |
-| 🟠 | `font-size` **&lt; 12px** 或未走 `--app-size-*`（见 `frontend/CLAUDE.md` §2 与 `tokens.css`）；**交互色**硬编码 `#hex`（非 `var(--x, fallback)` 的主值）；对称大圆角 `50px/16px/20px`；`backdrop-filter: blur()`；旧色值 `#4a4e69` `#9a8c98`；模块色用错 token；可点击非 button/a 且无键盘角色；错误文案含「后端/端口/Axios/status code」等技术词；三态缺失；视图互斥缺口；危险操作无确认；编辑锁可改；字段漏展影响主路径；**非响应式突变影响当前可见视图或主路径状态（如禁用态/可用性标记）**；**组件内直接 HTTP/重编排（五.1 薄组件红线，frontend/CLAUDE.md §1「展示不碰网」）**；**SSE 归一化层（SSEMessageBuilder）声明且后端/PRD 文档化产出的事件无 processEvent 分支，内容静默丢弃落 `unknown`（2026-08-21 协议层实测：`TOOL_RESULT_DATA_DELTA` 无分支，数据型工具结果丢失）**；**v-html 渲染未经清洗的内容且同组件其他分支已清洗（2026-08-21 组件层实测：MessageBubble 用户消息裸 `v-html`，assistant 侧走 DOMPurify，存在 XSS 面）** |
+| 🔴 | 契约/信封/DRF 通道错误；**TS 类型与后端响应字段名不一致且运行时读错（如声明 `ok` 且按 `ok` 解包，后端返回 `status`）**；静默当成功；**假状态反馈（失败显示成功/成功显示失败，信封或字段读错所致）**；**写操作失败静默吞错（catch 仅 console/忽略、无任何用户提示——违反 frontend/AGENTS.md 红线）**；锁态仍可写；主路径不可用（点了没反应/白屏）；DTO 污染致必现 400 |
+| 🟠 | `font-size` **&lt; 12px** 或未走 `--app-size-*`（见 `frontend/AGENTS.md` §2 与 `tokens.css`）；**交互色**硬编码 `#hex`（非 `var(--x, fallback)` 的主值）；对称大圆角 `50px/16px/20px`；`backdrop-filter: blur()`；旧色值 `#4a4e69` `#9a8c98`；模块色用错 token；可点击非 button/a 且无键盘角色；错误文案含「后端/端口/Axios/status code」等技术词；三态缺失；视图互斥缺口；危险操作无确认；编辑锁可改；字段漏展影响主路径；**非响应式突变影响当前可见视图或主路径状态（如禁用态/可用性标记）**；**组件内直接 HTTP/重编排（五.1 薄组件红线，frontend/AGENTS.md §1「展示不碰网」）**；**SSE 归一化层（SSEMessageBuilder）声明且后端/PRD 文档化产出的事件无 processEvent 分支，内容静默丢弃落 `unknown`（2026-08-21 协议层实测：`TOOL_RESULT_DATA_DELTA` 无分支，数据型工具结果丢失）**；**v-html 渲染未经清洗的内容且同组件其他分支已清洗（2026-08-21 组件层实测：MessageBubble 用户消息裸 `v-html`，assistant 侧走 DOMPurify，存在 XSS 面）** |
 | 🟡 | 装饰性 `rgba` text-shadow / 光晕；`var(--token, #fallback)` 的 fallback；`z-index` 无注释；间距裸 px；`@import` 共享 css（已暂缓项）；ESC 常驻；TS 收窄不完美；双错误工具函数并存；密码 trim 与后端微差；**仅 TS 类型声明与后端字段不符、运行时靠 `as` 强转侥幸正确（无用户可见故障）**；**读操作（GET）失败静默且页面有空态兜底；瞬态 in-flight 态（测试中/提交中）同卡编辑/删除未禁用；非响应式突变仅影响瞬时展示、下次重渲染即自愈**；**编辑器未接入编辑锁 acquire/release 且后端保存无编辑锁校验、乐观锁/409 兜底防静默覆盖（2026-08-21 组件层实测：ApiCaseEditor 无锁，`save_api_definition` 只校验乐观锁）**；**编辑态表单内行/步骤删除无确认（保存前不落库、可刷新放弃还原；写库级删除无确认仍 🟠）**；**表单操作类 span 可点无键盘角色（非导航/提交切换，calibration §5 边界外）** |
 
-**禁止**：把 `frontend/CLAUDE.md` §2 明确禁止的 `10px` 判成 🟡；禁止把未浏览器确认的布局直接 ✅。
+**禁止**：把 `frontend/AGENTS.md` §2 明确禁止的 `10px` 判成 🟡；禁止把未浏览器确认的布局直接 ✅。
 
 ## 3. `overflow: hidden` 例外（登录页争议专条）
 

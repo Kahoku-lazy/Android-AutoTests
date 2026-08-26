@@ -1,4 +1,4 @@
-# Frontend CLAUDE.md — AI 约束
+# Frontend AGENTS.md — AI 约束
 
 > 工作于 `frontend/` 时必须遵守
 
@@ -13,7 +13,7 @@
 2. 先读目标 `.vue` 的 **template + script + style 三块**；改 CSS 前提取全部 class，禁止凭印象重写漏 inner class。
 3. 编写细则与决策树 → `.claude/rules/frontend.md`；关单自检 → skill `vue-frontend-check`。
 4. **同步约定**：全局事项（后端 WS 事件表、响应信封、共享组件清单、端口/协议、分层纪律）变更时，必须同步 `.claude/rules/frontend.md` 与 skill `vue-frontend-check`（checklist/calibration 对应口径）。
-5. **模块专属约束**（红线/契约/协议特例/关单附加项）唯一落点为 `src/modules/{name}/CLAUDE.md`，变更只改对应模块文件。
+5. **模块专属约束**（红线/契约/协议特例/关单附加项）唯一落点为 `src/modules/{name}/AGENTS.md`，变更只改对应模块文件。
 
 ---
 
@@ -42,7 +42,7 @@
 | WS 通道（硬约束） | 仅 2 消费点：`/ws/test-run/{runId}`（执行进度）、`/ws/case-editing/{id}`（编辑锁）——**禁止新增**；截图流已快照化，禁止恢复 WS 截图流 |
 | SSE 通道（硬约束） | 仅 1 个：AI 对话流 |
 
-**模块边界与契约总表**（模块专属细节唯一落点 → `src/modules/{name}/CLAUDE.md`）：
+**模块边界与契约总表**（模块专属细节唯一落点 → `src/modules/{name}/AGENTS.md`）：
 
 | 前端模块 | 后端 App | 通道 | 一句话提示 |
 | --- | --- | --- | --- |
@@ -73,7 +73,7 @@
 
 ### 1.3 契约规则
 
-- 逻辑层接口与后端协议一致（路径、方法、字段、信封）；对照后端 `urls.py`、Serializer、`dev_docs/03-设计与架构/工具-VUE_API_CONTRACT.md`；模块级特例见各模块 `CLAUDE.md`。
+- 逻辑层接口与后端协议一致（路径、方法、字段、信封）；对照后端 `urls.py`、Serializer、`dev_docs/03-设计与架构/工具-VUE_API_CONTRACT.md`；模块级特例见各模块 `AGENTS.md`。
 - JSON：前端 camelCase，HTTP snake_case；响应 `{status, data|message}`（**特例**：test-runner `/runner/*`、report-generator `/reports/*`、workflow legacy、element_locator legacy（`/elements/pages|items|web*|api-*`）、case_manager legacy（`/cases/definitions|directories|lock|...`）、evaluator legacy（`/evaluator/banks|runs|frameworks|...`）为平铺 `{status, ...}` 信封，前端按端点结构读取；`step-types` 特例 `{status, data:{types}}`）。
 
 ---
@@ -93,9 +93,9 @@
 ## 3. 协议要点
 
 - **HTTP / DRF**：组件 emit → composable → 模块 `api` → `djangoClient` → `/api/...` DRF（唯一出口；禁止旁路直连后端端口或另起非约定 HTTP 客户端）。
-- **WS**：`wsUrl('/ws/...')` 经 Vite 代理，禁止直连端口。test-runner 事件 type 不可漏（9 种：`log` / `heartbeat` / `case_started` / `step_started` / `step_result` / `iteration_result` / `case_finished` / `run_finished` / `device_error`，见 `useTaskWebSocket.ts`；后端另发 `run_started`，前端暂不消费）。编辑锁见 `src/modules/case-manager/CLAUDE.md`。
+- **WS**：`wsUrl('/ws/...')` 经 Vite 代理，禁止直连端口。test-runner 事件 type 不可漏（9 种：`log` / `heartbeat` / `case_started` / `step_started` / `step_result` / `iteration_result` / `case_finished` / `run_finished` / `device_error`，见 `useTaskWebSocket.ts`；后端另发 `run_started`，前端暂不消费）。编辑锁见 `src/modules/case-manager/AGENTS.md`。
 - **报告下载**：FileResponse 用 `fetch().text()`，不用 JSON `api()`。
-- **SSE（AI）**：单请求流式对话；事件经 `SSEMessageBuilder` 归一化 phase 后按类型渲染（细节 → `src/modules/ai-assistant/CLAUDE.md`）：
+- **SSE（AI）**：单请求流式对话；事件经 `SSEMessageBuilder` 归一化 phase 后按类型渲染（细节 → `src/modules/ai-assistant/AGENTS.md`）：
 
 | 事件 | 前端渲染 |
 | --- | --- |
@@ -115,5 +115,5 @@
 
 ## 4. 关单前
 
-- 跑 skill `vue-frontend-check`（详细门禁）+ 本模块 `CLAUDE.md` 关单附加项。
+- 跑 skill `vue-frontend-check`（详细门禁）+ 本模块 `AGENTS.md` 关单附加项。
 - 非 skill 项：`diff` 每行可追溯到用户需求；真实页面验证（构建通过 ≠ 完成）。

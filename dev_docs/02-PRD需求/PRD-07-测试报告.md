@@ -175,7 +175,7 @@
 
 ## 3. 布局与视觉设计
 
-> 全部颜色/字号引用 Doodle Craft 主题令牌（[`frontend/CLAUDE.md` §2](../../frontend/CLAUDE.md)）。模块色 `--c-report`。
+> 全部颜色/字号引用 Doodle Craft 主题令牌（[`frontend/AGENTS.md` §2](../../frontend/AGENTS.md)）。模块色 `--c-report`。
 
 ### 3.1 主页布局
 

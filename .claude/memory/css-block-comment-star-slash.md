@@ -24,4 +24,4 @@ CSS 解析器在第一处 `*/` 结束注释，后面的 `:root { --ink: ... }` �
 2. 全站无样式、`--ink` 为空、字体退回 Times New Roman → 先查 `tokens.css` 注释是否提前闭合，不要先改登录页布局。
 3. 改完 `tokens.css` 必须在浏览器确认 `document.documentElement` 上 `--ink` 有值。
 
-落点：`frontend/CLAUDE.md` §2 · `.claude/rules/frontend.md` 样式工程约束。
+落点：`frontend/AGENTS.md` §2 · `.claude/rules/frontend.md` 样式工程约束。

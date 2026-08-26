@@ -29,7 +29,7 @@
 ## 二、目标架构设计文档族（已归档，2026-08-21）
 
 > 设备交互协议层 + 算法下沉 + 执行引擎统一管理三块设计的**目标态**文档族（总纲 + L0~L3 逐层详档 + 引擎可替换方案 + 重构落地实测 + 迁移 Checklist）已随七步重构主体落地而归档 → [`../_archive/`](../_archive/)（归档清单见其 README §G）。
-> 现行承接：五层模型与防火墙 → ARCH-00 §一/§二/§4；正式契约 → `openspec/specs/engine-protocol|device-session`；前端职责边界 → [`frontend/CLAUDE.md`](../../frontend/CLAUDE.md) §1.2（原 `设计-L4` 详档已归档并入）；迁移剩余待办 → ARCH-00 §1.6 #11/#12。
+> 现行承接：五层模型与防火墙 → ARCH-00 §一/§二/§4；正式契约 → `openspec/specs/engine-protocol|device-session`；前端职责边界 → [`frontend/AGENTS.md`](../../frontend/AGENTS.md) §1.2（原 `设计-L4` 详档已归档并入）；迁移剩余待办 → ARCH-00 §1.6 #11/#12。
 
 ## 三、参考
 

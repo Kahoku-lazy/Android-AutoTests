@@ -23,7 +23,7 @@
 
 | 严重度 | 必须归入的情形 |
 |--------|----------------|
-| 🔴 | `manage.py check` 失败（Error）；漏 migration 致模型与库不一致；跨 App ORM 写；跨 App import service/runner/state_machine/consumer；写操作空 except/pass 吞错；响应信封错误（缺 status / 假成功；**已登记 legacy 平铺特例除外**，见 `apps/CLAUDE.md` §1.3）；api 收 request 或对外返回 Model 导致封装破坏；dashboard 写库；主路径接口 500/契约字段名与调用方不一致且必现失败 |
+| 🔴 | `manage.py check` 失败（Error）；漏 migration 致模型与库不一致；跨 App ORM 写；跨 App import service/runner/state_machine/consumer；写操作空 except/pass 吞错；响应信封错误（缺 status / 假成功；**已登记 legacy 平铺特例除外**，见 `apps/AGENTS.md` §1.3）；api 收 request 或对外返回 Model 导致封装破坏；dashboard 写库；主路径接口 500/契约字段名与调用方不一致且必现失败 |
 | 🟠 | `ruff check` 失败；公开 api 无类型注解且为新增/改签名；views 明显超 300 行仍堆业务；错误文案含技术词（§5）；WS Consumer 未进 `gateway/routing.py`；Serializer 与 Model 字段不同步但尚未证必现挂；写库在 views 但同 App 未抽 api（收敛违规）；`makemigrations --check` 告警未处理 |
 | 🟡 | `ruff format` 未过；`var` 级风格债；文件接近上限未超 1.5 倍；docstring 缺失；测试覆盖不足但主路径有手工验证；`--check-boundaries` 历史债非本次引入（须注明） |
 

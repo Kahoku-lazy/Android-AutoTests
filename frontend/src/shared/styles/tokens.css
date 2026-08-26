@@ -2,7 +2,7 @@
    Doodle Craft 设计令牌
    极简 · 几何 · 粗线 · 涂鸦彩绘 · 卡通 · 手稿纸
    ═══════════════════════════════════════════
-   现行体系（frontend/CLAUDE.md §2 口径）：
+   现行体系（frontend/AGENTS.md §2 口径）：
      --c-* 模块色 · --app-status-* 状态色 · --app-size-* 字号 · --app-space-* 间距
      --app-radius-* 圆角 · --app-shadow-* 阴影 · --app-duration-*、--app-ease、--app-spring 动效
      --app-font* 字体 · --ink/--paper/--dot/--app-bg-subtle/--app-border-*、--app-highlight 核心色

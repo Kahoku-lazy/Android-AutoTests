@@ -59,7 +59,7 @@ Step -1.2: 快速探索（只读，定位根因）
   - grep 关键词 .claude/rules/troubleshooting.md → 匹配已知问题模式
   - grep ERROR logs/backend.log → 找相关错误日志
   - grep 关键词 apps/ → 找相关代码文件
-  - 检查 CLAUDE.md 历史高频问题表 → 是否是已知重复问题
+  - 检查 AGENTS.md 历史高频问题表 → 是否是已知重复问题
 
   ↓
 Step -1.3: 提炼为具体需求

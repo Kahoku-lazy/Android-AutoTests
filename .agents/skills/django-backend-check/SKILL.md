@@ -13,7 +13,7 @@ description: |
 **防漂移（必读）**: 同一 skill 两次结果不得凭感觉升降严重度 → 判罚必须以 [references/calibration.md](references/calibration.md) 为准。
 
 **关联**:
-- `apps/CLAUDE.md` / `dev_docs/项目笔记/后端claude笔记.md`
+- `apps/AGENTS.md` / `dev_docs/项目笔记/后端claude笔记.md`
 - `apps/自测与检测指令.md`（命令速查）
 - `.claude/rules/backend.md` / `api-conventions.md` / `python-code.md` / `database.md`
 - 检查细表 → [references/checklist.md](references/checklist.md)
@@ -90,7 +90,7 @@ description: |
 | # | 检查项 | 通过标准（要点） |
 |---|--------|------------------|
 | 1 | 路由注册 | `urls.py` + `config/urls.py` include 齐全 |
-| 2 | 响应信封 | `{status, data\|message}`；错误有 HTTP 状态码；**已登记特例除外**（test_runner `/runner/*`、report_generator `/reports/*`、workflow legacy 平铺，唯一登记 `apps/CLAUDE.md` §1.3，禁止新增） |
+| 2 | 响应信封 | `{status, data\|message}`；错误有 HTTP 状态码；**已登记特例除外**（test_runner `/runner/*`、report_generator `/reports/*`、workflow legacy 平铺，唯一登记 `apps/AGENTS.md` §1.3，禁止新增） |
 | 3 | Serializer↔Model↔前端 | 字段名/可选性一致（对照契约） |
 | 4 | 鉴权上下文 | 用 `request.user_id`；公开路径未误伤 |
 | 5 | 错误文案 | 用户可见；**禁技术词**（calibration §5） |
@@ -131,7 +131,7 @@ description: |
 |---------|------|----------|
 | DRF `Response` | APIView / ViewSet | `{status, data}`（经统一 renderer 则按其实现） |
 | `JsonResponse` | `@csrf_exempt` 手工返回 | 必须仍是 `{status, data\|message}` |
-| `JsonResponse` | 已登记特例（`/runner/*`、`/reports/*`、workflow legacy） | 平铺 `{status, ...}`；对照 `apps/CLAUDE.md` §1.3 与对应 App `CLAUDE.md` 契约段，不得新增同类特例 |
+| `JsonResponse` | 已登记特例（`/runner/*`、`/reports/*`、workflow legacy） | 平铺 `{status, ...}`；对照 `apps/AGENTS.md` §1.3 与对应 App `AGENTS.md` 契约段，不得新增同类特例 |
 
 **7.3 字段对照表**
 

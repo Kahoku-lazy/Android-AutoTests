@@ -361,7 +361,7 @@ erDiagram
 | doc_id 自然键 | 全局唯一业务主键（WF-/TC- 前缀），导入导出跨环境可识别，覆盖导入 409 拦截 |
 | 双路由共存 | legacy（前端消费）+ DRF ViewSet（未切换），收敛为待办技术债（信封差异登记 PRD-09 §4.1） |
 | envelope 版本兼容 | `workflow-doc-v1` 兼容 `testcase-scratch-v1` 与裸页面流快照，导入无损 |
-| 前端状态层 | Pinia 两层 Store（libraryStore / workflowStore）+ useVueFlowAdapter 桥接；元素素材经 api.ts 只读代理（全前端 Pinia 现状见全局 `frontend/CLAUDE.md` §1.2） |
+| 前端状态层 | Pinia 两层 Store（libraryStore / workflowStore）+ useVueFlowAdapter 桥接；元素素材经 api.ts 只读代理（全前端 Pinia 现状见全局 `frontend/AGENTS.md` §1.2） |
 | 目录树校验 | 移动防自身/防子孙，删除级联；同级名唯一 |
 | 模拟执行 | 前端随机 pass/fail 演示块流；真实运行时未实现（PRD-09 §4.3 已登记） |
 | AI 只读消费 | AI 助手经 `workflow.api` 的 `get_document_digest` / `list_document_summaries` 只读查阅页面流语义摘要（`semantics.py` 编译：节点/跳转 links/每页 navigation_entries 与 elements/路径；元素来源标注 snapshot/web_snapshot/builtin_pool/unknown）；AI 无写图工具 |

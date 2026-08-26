@@ -3,7 +3,7 @@
 > 版本 v2 · 2026-08-18
 > 适用范围：`frontend/src/modules/device-pool/`（index.vue / DevicePoolView.logic.ts / api.ts / constants.ts / helpers.ts / routes.ts / composables×3 / components×6）及共享依赖（WorkbenchHeader / KpiCard / FilterTabs / AppTable / EmptyState / ErrorState 等）
 > 设计语言：清新简洁风（暖纸底 · 模块色点缀 · 统一圆角 · 轻阴影），继承 Doodle Craft 的 paper 底纹与设计令牌，但**收敛装饰**（去图钉/微旋转/粗边/手绘波浪线）
-> 唯一真相源：`frontend/src/shared/styles/tokens.css`（令牌）、`frontend/CLAUDE.md` §2（风格规则）
+> 唯一真相源：`frontend/src/shared/styles/tokens.css`（令牌）、`frontend/AGENTS.md` §2（风格规则）
 
 ---
 

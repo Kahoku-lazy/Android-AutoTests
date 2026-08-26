@@ -1,6 +1,6 @@
-# case-manager 模块 CLAUDE.md
+# case-manager 模块 AGENTS.md
 
-> 全局边界 / 模板样式 / 协议要点 / 关单清单 → `../../CLAUDE.md`；本文只写本模块增量，冲突以全局为准。
+> 全局边界 / 模板样式 / 协议要点 / 关单清单 → `../../AGENTS.md`；本文只写本模块增量，冲突以全局为准。
 
 ## 红线（全局表 case-manager 行的展开）
 

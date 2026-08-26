@@ -270,7 +270,7 @@
 
 ## 3. 布局与视觉设计
 
-> 全部颜色/字号引用 Doodle Craft 主题令牌（[`frontend/CLAUDE.md` §2](../../frontend/CLAUDE.md)）。KPI 卡片颜色为 hex 字面量（见约束 C-03）。
+> 全部颜色/字号引用 Doodle Craft 主题令牌（[`frontend/AGENTS.md` §2](../../frontend/AGENTS.md)）。KPI 卡片颜色为 hex 字面量（见约束 C-03）。
 
 ### 3.1 页面布局
 

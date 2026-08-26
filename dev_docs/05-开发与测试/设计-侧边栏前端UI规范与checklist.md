@@ -3,7 +3,7 @@
 > 版本 v1 · 2026-08-14
 > 适用范围：`frontend/src/shared/components/AppSidebar.vue` 及配套（sidebarNavConfig.ts / useSidebarResize.ts）
 > 设计语言：Doodle Craft（手稿纸 · 粗线涂鸦 · 彩绘卡通），与主功能区同源
-> 唯一真相源：`frontend/src/shared/styles/tokens.css`（令牌）、`frontend/CLAUDE.md` §2（风格规则）
+> 唯一真相源：`frontend/src/shared/styles/tokens.css`（令牌）、`frontend/AGENTS.md` §2（风格规则）
 
 ---
 

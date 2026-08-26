@@ -1,6 +1,6 @@
-# ai_assistant App CLAUDE.md
+# ai_assistant App AGENTS.md
 
-> 全局边界 / 协议要点 / 关单清单 → `../CLAUDE.md`；本文只写本 App 增量，冲突以全局为准。
+> 全局边界 / 协议要点 / 关单清单 → `../AGENTS.md`；本文只写本 App 增量，冲突以全局为准。
 > 版本：v1.0 · 最后更新：2026-08-21 · v1.0：从已归档 `dev_docs/_archive/后端claude笔记.md` §0️⃣ 模块表迁出并展开。
 
 ## 红线（全局索引表 ai_assistant 行的展开）
@@ -12,7 +12,7 @@
 
 - **Tool 写库只经目标模块 api.py**——幻觉写库、绕过防火墙是本 App 头号红线；新增 Tool 必须走 `api.py` + `--check-boundaries` 验证。
 - AgentScope 同进程运行、依赖 Redis：Redis 不可用 → 前端降级阻塞模式 `POST /api/ai/chat/sync`（双边已约定，勿删降级路径）。
-- SSE 事件类型是双边契约（前端 §3 事件表），变更必须同步前端 `CLAUDE.md` §3 + 本文。
+- SSE 事件类型是双边契约（前端 §3 事件表），变更必须同步前端 `AGENTS.md` §3 + 本文。
 
 ## 本 App 契约（特例 + 真相源）
 
@@ -28,7 +28,7 @@
 
 **SSE（全项目唯一 SSE）**：`/api/ai/conversations/{id}/chat/stream`
 
-- 事件真相源：前端 `CLAUDE.md` §3 事件表（`REPLY_START` / `TEXT_BLOCK_DELTA` / `THINKING_*` / `TOOL_CALL_*` / `TOOL_RESULT_*` / `HINT_BLOCK` / `REQUIRE_USER_CONFIRM` / `REPLY_END` / `error`）；新增/改事件必须双边同步。
+- 事件真相源：前端 `AGENTS.md` §3 事件表（`REPLY_START` / `TEXT_BLOCK_DELTA` / `THINKING_*` / `TOOL_CALL_*` / `TOOL_RESULT_*` / `HINT_BLOCK` / `REQUIRE_USER_CONFIRM` / `REPLY_END` / `error`）；新增/改事件必须双边同步。
 - 停止生成 = 关闭 SSE 保留已生成内容；`reply_end` 与 `exceed_max_iters` 均为终端事件——未到终端断流前端会报错。
 
 ## 关单附加项（全局清单的 delta）

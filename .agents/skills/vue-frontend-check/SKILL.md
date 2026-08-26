@@ -13,7 +13,7 @@ description: |
 **防漂移（必读）**: 同一 skill 两次结果曾不一致 → 判罚必须以 [references/calibration.md](references/calibration.md) 为准，禁止凭感觉升降严重度。
 
 **关联**:
-- `frontend/CLAUDE.md` §2（风格约束，字号最小 **12px**，禁硬编码 px）+ `frontend/src/shared/styles/tokens.css`（风格值真相源）
+- `frontend/AGENTS.md` §2（风格约束，字号最小 **12px**，禁硬编码 px）+ `frontend/src/shared/styles/tokens.css`（风格值真相源）
 - `.claude/rules/frontend.md`
 - 检查细表 → [references/checklist.md](references/checklist.md)
 - **量规/例外/强制输出** → [references/calibration.md](references/calibration.md)
@@ -122,7 +122,7 @@ description: |
 |---|--------|---------|
 | 1 | 事件分派 | 每个 phase 在 `api/sse.ts` dispatch / `useSSE` 回调有消费分支；未知 phase 忽略不抛 |
 | 2 | 停止生成 | 停止仅断流，已生成内容保留；旧流回调经 stale 检查失效 |
-| 3 | 折叠规则 | `ThinkingBlock` / `ToolCallCard` 折叠状态独立（见 `frontend/CLAUDE.md` §3 SSE） |
+| 3 | 折叠规则 | `ThinkingBlock` / `ToolCallCard` 折叠状态独立（见 `frontend/AGENTS.md` §3 SSE） |
 | 4 | 终端事件 | `reply_end` 与 `exceed_max_iters` 均触发完成；未到终端断流要报错 |
 
 **6.6 文件下载对照**（报告/导出等 FileResponse 接口；细则见 checklist「SSE 与文件下载」）
@@ -137,7 +137,7 @@ description: |
 | # | 检查点 | 通过标准 |
 |---|--------|---------|
 | 1 | URL 构建 | 经 `wsUrl('/ws/...')`（Vite 代理），禁直连后端端口 |
-| 2 | 事件覆盖 | `/ws/test-run/{id}` 前端处理 9 种 type（`log` / `heartbeat` / `case_started` / `step_started` / `step_result` / `iteration_result` / `case_finished` / `run_finished` / `device_error`），每种在 `useTaskWebSocket.ts` switch 有分支；后端另发 `run_started`（前端暂不消费，新增消费时须同步 `frontend/CLAUDE.md`） |
+| 2 | 事件覆盖 | `/ws/test-run/{id}` 前端处理 9 种 type（`log` / `heartbeat` / `case_started` / `step_started` / `step_result` / `iteration_result` / `case_finished` / `run_finished` / `device_error`），每种在 `useTaskWebSocket.ts` switch 有分支；后端另发 `run_started`（前端暂不消费，新增消费时须同步 `frontend/AGENTS.md`） |
 | 3 | 编辑广播 | `/ws/case-editing/{id}` 消费 `case_updated`（`group_send` 推送） |
 | 4 | 断线重连 | 重连钩子生效，`_wsJustReconnected` 触发 `stepStates` 重置，无僵尸进度/重复首步 |
 

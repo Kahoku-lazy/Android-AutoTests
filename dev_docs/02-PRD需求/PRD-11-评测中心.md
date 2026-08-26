@@ -234,7 +234,7 @@
 
 ## 3. 布局与视觉设计
 
-> 颜色 / 字号引用 Doodle Craft 令牌（`frontend/CLAUDE.md` §2）；本页实际使用 ai-assistant 模块色令牌 `--ai-*` + 平台令牌 `--app-*`。字面量色值属例外，在 §9 C-09 登记。
+> 颜色 / 字号引用 Doodle Craft 令牌（`frontend/AGENTS.md` §2）；本页实际使用 ai-assistant 模块色令牌 `--ai-*` + 平台令牌 `--app-*`。字面量色值属例外，在 §9 C-09 登记。
 
 ### 3.1 页面布局（五区块）
 

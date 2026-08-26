@@ -239,7 +239,7 @@
 
 ## 3. 布局与视觉设计
 
-> 全部颜色/字号引用 Doodle Craft 主题令牌（[`frontend/CLAUDE.md` §2](../../frontend/CLAUDE.md)）。页面图标渐变为薰衣草紫 `linear-gradient(135deg,#C9B6F2,#a78bfa)`（与元素定位同色；字面量例外见 C-09）。
+> 全部颜色/字号引用 Doodle Craft 主题令牌（[`frontend/AGENTS.md` §2](../../frontend/AGENTS.md)）。页面图标渐变为薰衣草紫 `linear-gradient(135deg,#C9B6F2,#a78bfa)`（与元素定位同色；字面量例外见 C-09）。
 
 ### 3.1 页面布局（五模块）
 

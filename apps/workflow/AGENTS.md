@@ -1,6 +1,6 @@
-# workflow App CLAUDE.md
+# workflow App AGENTS.md
 
-> 全局边界 / 协议要点 / 关单清单 → `../CLAUDE.md`；本文只写本 App 增量，冲突以全局为准。
+> 全局边界 / 协议要点 / 关单清单 → `../AGENTS.md`；本文只写本 App 增量，冲突以全局为准。
 > 版本：v1.0 · 最后更新：2026-08-21 · v1.0：从已归档 `dev_docs/_archive/后端claude笔记.md` §0️⃣ 模块表迁出并展开；登记信封特例。
 
 ## 红线（全局索引表 workflow 行的展开）

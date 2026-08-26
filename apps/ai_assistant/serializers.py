@@ -1,6 +1,6 @@
 """ai-assistant serializers — DRF 入参校验与输出 DTO。
 
-分层约定（apps/CLAUDE.md）：serializers 只做校验与 DTO，写库副作用全部走 api.py。
+分层约定（apps/AGENTS.md）：serializers 只做校验与 DTO，写库副作用全部走 api.py。
 Batch 1/2 已全部迁移到 DRF；手写校验函数已随迁移移除。
 """
 

@@ -141,7 +141,7 @@ UI 类型多选用例导出为 YAML（ID/标题/步骤 JSON/优先级/包名）�
 
 ## 3. 布局与视觉设计
 
-> 颜色/字号引用 Doodle Craft 令牌（[`frontend/CLAUDE.md` §2](../../frontend/CLAUDE.md)）。模块色青绿 `--c-case` #4ECDC4。
+> 颜色/字号引用 Doodle Craft 令牌（[`frontend/AGENTS.md` §2](../../frontend/AGENTS.md)）。模块色青绿 `--c-case` #4ECDC4。
 
 ### 3.1 页面布局
 

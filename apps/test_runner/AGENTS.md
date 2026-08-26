@@ -1,6 +1,6 @@
-# test_runner App CLAUDE.md
+# test_runner App AGENTS.md
 
-> 全局边界 / 协议要点 / 关单清单 → `../CLAUDE.md`；本文只写本 App 增量，冲突以全局为准。
+> 全局边界 / 协议要点 / 关单清单 → `../AGENTS.md`；本文只写本 App 增量，冲突以全局为准。
 > 版本：v1.0 · 最后更新：2026-08-21 · v1.0：从已归档 `dev_docs/_archive/后端claude笔记.md` §0️⃣ 模块表迁出并展开；登记 WS 事件表（10 种）与信封特例。
 
 ## 红线（全局索引表 test_runner 行的展开）
@@ -18,7 +18,7 @@
 
 真相源：`apps/test_runner/urls.py`（13 端点：`run` / `active` / `queue/cancel` / `run/{id}/stop` / `run/{id}/status` / `runs` / `run-step` / `tasks` / `tasks/save` / `tasks/{id}` / `monitor/{id}` / `run/{id}/snapshot` / `step-screenshots/*`）+ `views/` + `api.py`。
 
-- **预留端点**：`monitor/{id}` / `run/{id}/snapshot` / `run/{id}/status` / `runs` 为 TREP v1.0 Phase 0 预留（2026-08-21 校验确认前端暂未消费），保留路由；前端新增消费时同步本文与前端 `test-runner/CLAUDE.md`。
+- **预留端点**：`monitor/{id}` / `run/{id}/snapshot` / `run/{id}/status` / `runs` 为 TREP v1.0 Phase 0 预留（2026-08-21 校验确认前端暂未消费），保留路由；前端新增消费时同步本文与前端 `test-runner/AGENTS.md`。
 
 **信封特例（legacy 平铺，禁止新增/改造，已登记 ARCH-06）**：
 
@@ -32,7 +32,7 @@
 
 - 事件真相源 `callbacks.py`，**10 种 type 一个不能漏**：`log` / `heartbeat` / `case_started` / `step_started` / `step_result` / `iteration_result` / `case_finished` / `run_finished` / `device_error` / `run_started`（前端暂不消费 `run_started`，仍须推送）。
 - `heartbeat` 每 5s；前端 15s 无心跳判连接丢失——改间隔必须双边同步。
-- 新增/改事件 type 必须同步全局 `../CLAUDE.md` §2 + 前端 `test-runner/CLAUDE.md` + `.claude/rules/frontend.md` + skill `vue-frontend-check`（双边契约）。
+- 新增/改事件 type 必须同步全局 `../AGENTS.md` §2 + 前端 `test-runner/AGENTS.md` + `.claude/rules/frontend.md` + skill `vue-frontend-check`（双边契约）。
 - 消费者只推送；写库仍走 `api.py`。
 
 ## 关单附加项（全局清单的 delta）

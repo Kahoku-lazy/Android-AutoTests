@@ -105,7 +105,7 @@ rg -n "const \{[^}]*ok," path/to/   # 视图数据流走查：解包字段名 vs
 |---|--------|--------|----------|----------|
 | 1 | 事件分派 | 读 `SSEMessageBuilder.ts`（phase 真相源）+ `api/sse.ts` dispatch + `useSSE` 各回调 | 每个 phase 组（`reply_*` / `model_call_*` / `thinking_*` / `text_*` / `data_*` / `tool_call_*` / `tool_result_*` / `hint` / `require_confirm` / `confirm_result` 等，完整清单以 SSEMessageBuilder.ts 为准）有消费分支；未知 phase 经可选链忽略不抛 | 只处理 `text_delta`，thinking/tool_call 内容落空 |
 | 2 | 停止生成 | abort 路径 + `_detached` / `_streamGen` stale 检查 | 停止仅断流，已生成 rounds/content 保留；旧流回调失效不写屏 | 停止即清空输入与回复；旧流迟到事件污染新对话 |
-| 3 | 折叠规则 | `ThinkingBlock` / `ToolCallCard` 折叠状态 | 各块折叠状态独立、初始态一致（见 `frontend/CLAUDE.md` §3 SSE） | 嵌套折叠串状态；默认展开 |
+| 3 | 折叠规则 | `ThinkingBlock` / `ToolCallCard` 折叠状态 | 各块折叠状态独立、初始态一致（见 `frontend/AGENTS.md` §3 SSE） | 嵌套折叠串状态；默认展开 |
 | 4 | 终端事件 | `reply_end` / `exceed_max_iters` 分支 | 两者都触发 `onDone` + status `done`；未到终端即断流报错（`REPLY_END` 前关闭） | 只认 `reply_end`，超限流永不结束 |
 
 ### 文件下载（FileResponse / 导出）
@@ -120,7 +120,7 @@ rg -n "const \{[^}]*ok," path/to/   # 视图数据流走查：解包字段名 vs
 | # | 检查项 | 怎么扫 | 通过标准 | 常见反例 |
 |---|--------|--------|----------|----------|
 | 1 | URL 构建 | 找 `new WebSocket` / `wsUrl` 调用 | 一律 `wsUrl('/ws/...')` 经 Vite 代理 | 直连 `:8766` 或硬拼完整 URL |
-| 2 | 事件覆盖 | 对照 `useTaskWebSocket.ts` switch ↔ 后端 `apps/test_runner/callbacks.py` | `/ws/test-run/{id}` 9 种 type（`log` / `heartbeat` / `case_started` / `step_started` / `step_result` / `iteration_result` / `case_finished` / `run_finished` / `device_error`）全覆盖；后端另发 `run_started`（前端暂不消费，消费时须同步 frontend/CLAUDE.md） | 缺 `heartbeat` / `step_started` 分支 |
+| 2 | 事件覆盖 | 对照 `useTaskWebSocket.ts` switch ↔ 后端 `apps/test_runner/callbacks.py` | `/ws/test-run/{id}` 9 种 type（`log` / `heartbeat` / `case_started` / `step_started` / `step_result` / `iteration_result` / `case_finished` / `run_finished` / `device_error`）全覆盖；后端另发 `run_started`（前端暂不消费，消费时须同步 frontend/AGENTS.md） | 缺 `heartbeat` / `step_started` 分支 |
 | 3 | 编辑广播 | `case-editing` 消费侧 | `/ws/case-editing/{id}` 收到 `case_updated` 触发刷新/锁提示 | 收到不处理 |
 | 4 | 断线重连 | 重连钩子 + `_wsJustReconnected` | 重连后 `stepStates` 重置逻辑生效，无僵尸进度/重复首步 | 重连后 stepStates 未清，进度错位 |
 

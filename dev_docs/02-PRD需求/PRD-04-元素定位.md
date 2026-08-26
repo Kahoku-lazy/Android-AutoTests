@@ -135,7 +135,7 @@ API 接口表格（name/method/url/headers/request_body_schema/response_body_sch
 
 ## 3. 布局与视觉设计
 
-> 颜色/字号引用 Doodle Craft 令牌（[`frontend/CLAUDE.md` §2](../../frontend/CLAUDE.md)）。页面图标渐变 `linear-gradient(135deg,#C9B6F2,#a78bfa)`（薰衣草紫）。
+> 颜色/字号引用 Doodle Craft 令牌（[`frontend/AGENTS.md` §2](../../frontend/AGENTS.md)）。页面图标渐变 `linear-gradient(135deg,#C9B6F2,#a78bfa)`（薰衣草紫）。
 
 ### 3.1 页面布局
 

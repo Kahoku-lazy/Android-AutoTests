@@ -9,8 +9,8 @@
 
 | 我要做什么 | 读这份文档 |
 |-----------|-----------|
-| 新页面 / 新组件 / 改样式 | `CLAUDE.md` §2（风格规则）→ `src/shared/styles/tokens.css`（值） |
-| 改前端前先了解规则 | `CLAUDE.md`（本目录）→ 改前四步工作流 |
+| 新页面 / 新组件 / 改样式 | `AGENTS.md` §2（风格规则）→ `src/shared/styles/tokens.css`（值） |
+| 改前端前先了解规则 | `AGENTS.md`（本目录）→ 改前四步工作流 |
 | 了解架构红线 / 三层职责 / 文件上限 | `../.claude/rules/frontend.md` |
 | 查前后端接口字段名 | `../dev_docs/03-设计与架构/工具-VUE_API_CONTRACT.md` |
 | 改完代码后自检质量 | `../dev_docs/DEVELOPMENT_CHECKLIST.md`（7 组 35 条） |
@@ -28,7 +28,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| `../CLAUDE.md`（项目根） | 全项目行为准则、开发铁律、模块防火墙 |
+| `../AGENTS.md`（项目根） | 全项目行为准则、开发铁律、模块防火墙 |
 
 ### 第二层：架构约束（3 个文件）
 
@@ -42,8 +42,8 @@
 
 | 文件 | 说明 |
 |------|------|
-| `CLAUDE.md` | 改前四步、CSS 替换流程、HTTP/WS/SSE 三协议、验证清单 |
-| **`CLAUDE.md` §2 + `src/shared/styles/tokens.css`** | Doodle Craft 主题：风格规则见 CLAUDE.md §2，值见 tokens.css |
+| `AGENTS.md` | 改前四步、CSS 替换流程、HTTP/WS/SSE 三协议、验证清单 |
+| **`AGENTS.md` §2 + `src/shared/styles/tokens.css`** | Doodle Craft 主题：风格规则见 AGENTS.md §2，值见 tokens.css |
 | `src/shared/styles/tokens.css` | CSS 变量唯一真相源（238 行） |
 
 ### 第四层：接口契约 + 质量门禁（2 个文件）
@@ -75,7 +75,7 @@
 |------|------|
 | `../dev_docs/_archive/问题管理/` | 2026-07 联调期问题 / 重构方案记录（6 份：AI 助手模块问题记录、AI 助手模块化重构方案、执行引擎模块问题记录等），2026-08-20 归档 |
 
-> 原「平台级/前端技术债清理SPEC.md」已于 2026-08-03 删除（修复方案已吸收进 `CLAUDE.md` §2 与 `vue-frontend-check` skill），可从 git 历史恢复。
+> 原「平台级/前端技术债清理SPEC.md」已于 2026-08-03 删除（修复方案已吸收进 `AGENTS.md` §2 与 `vue-frontend-check` skill），可从 git 历史恢复。
 
 ### 第七层：Skill 知识库（4 个 Skills）
 
@@ -91,8 +91,8 @@
 ## 变更前端代码的标准流程
 
 ```
-1. 读 frontend/CLAUDE.md → 改前四步
-2. 改样式 → 查 frontend/CLAUDE.md §2 + tokens.css
+1. 读 frontend/AGENTS.md → 改前四步
+2. 改样式 → 查 frontend/AGENTS.md §2 + tokens.css
 3. 改 API → 查 dev_docs/03-设计与架构/工具-VUE_API_CONTRACT.md
 4. 改完 → 跑 dev_docs/DEVELOPMENT_CHECKLIST.md 第 7 组（风格合规）
 5. 构建 → cd frontend && npx vite build --mode development
@@ -107,9 +107,9 @@
 
 | 删除 | 原因 |
 |------|------|
-| 4 个前端问题管理文档（Tabs滚动/图表滚动/页面滚动/表格列宽） | 修复方案已吸收至 `CLAUDE.md` §2 与 `vue-frontend-check` skill |
+| 4 个前端问题管理文档（Tabs滚动/图表滚动/页面滚动/表格列宽） | 修复方案已吸收至 `AGENTS.md` §2 与 `vue-frontend-check` skill |
 | `截图流故障手册.md` | 内容已吸收至 `.claude/rules/troubleshooting.md` §二 |
-| `前端笔记.md` | 结构化内容与 `CLAUDE.md` + `frontend.md` 重复；文档清单由此 README 替代 |
+| `前端笔记.md` | 结构化内容与 `AGENTS.md` + `frontend.md` 重复；文档清单由此 README 替代 |
 
 同时补强了：
 - `DEVELOPMENT_CHECKLIST.md` — 新增第 7 组（风格合规 7 项）

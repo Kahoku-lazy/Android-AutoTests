@@ -17,7 +17,7 @@ AgentScope Tool 只能通过 api.py 函数写数据 → 同进程直接调用
 {"status": false, "message": "..."}  // 失败
 ```
 
-> **legacy 平铺特例**（test_runner `/runner/*`、report_generator `/reports/*`、workflow legacy）唯一登记在 `apps/CLAUDE.md` §1.3，禁止新增；未收敛前禁止把特例改造成标准信封。
+> **legacy 平铺特例**（test_runner `/runner/*`、report_generator `/reports/*`、workflow legacy）唯一登记在 `apps/AGENTS.md` §1.3，禁止新增；未收敛前禁止把特例改造成标准信封。
 
 ## 鉴权
 
@@ -68,7 +68,7 @@ AgentScope Tool 只能通过 api.py 函数写数据 → 同进程直接调用
 [ ] config/settings.py INSTALLED_APPS 已注册
 [ ] config/urls.py include 已注册
 [ ] 若有 WS：gateway/routing.py 已注册
-[ ] apps/{name}/CLAUDE.md 已建（照既有 App 模板：红线/契约特例/协议/关单附加项）
+[ ] apps/{name}/AGENTS.md 已建（照既有 App 模板：红线/契约特例/协议/关单附加项）
 [ ] 前端：router.js + AppSidebar.vue 各 1 行（若暴露页面）
 [ ] python manage.py makemigrations && migrate
 [ ] python manage.py check 通过

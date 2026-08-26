@@ -346,7 +346,7 @@ Agent 执行写操作工具前，若需要用户确认，流中返回 `RequireUs
 
 ## 3. 布局与视觉设计
 
-> 全部颜色 / 字号引用 Doodle Craft 主题令牌（[`frontend/CLAUDE.md` §2](../../frontend/CLAUDE.md)）。
+> 全部颜色 / 字号引用 Doodle Craft 主题令牌（[`frontend/AGENTS.md` §2](../../frontend/AGENTS.md)）。
 
 ### 3.1 主工作台布局
 

@@ -144,7 +144,7 @@
 
 ### WS-3: AI 助手 SSE 流式 `/agentscope/chat`
 
-> 直连 AgentScope `:8000`，不经 Django。详见 `frontend/CLAUDE.md` ③。
+> 直连 AgentScope `:8000`，不经 Django。详见 `frontend/AGENTS.md` ③。
 
 | 方向 | SSE 事件 | 关键字段 | 触发时机 | Vue 消费 |
 |---|---|---|---|---|

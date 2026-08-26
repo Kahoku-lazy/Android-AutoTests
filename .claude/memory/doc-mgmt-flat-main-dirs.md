@@ -16,4 +16,4 @@ type: project
 5. **HTML 全功能规格例外**：允许 `02-PRD需求/html/` 存放**七模块**全功能 HTML 需求（`子PRD-01`～`07-*-全功能需求.html`），Markdown 主文件仍平铺；冲突以现网+HTML 为准。
 6. **03-设计与架构**：对齐 PRD——`当前实现架构方案.md` 为总设计真相；全部图册/审查/原型进 `html/`；同主题角色见 `html/对比-同主题文档差异.html`。
 7. **05-开发与测试例外**：允许按平台功能模块建子目录（`仪表盘/`…`AI助手/` + `平台级/`），不再用 `开发-{模块}-*` 平铺前缀；详见 `doc-mgmt-devtest-module-triad`。
-8. 不管：`.claude/`、`.agents/`、`tests/`、根目录 `CLAUDE.md`/`AGENTS.md`/`README.md`；`exports/*.yaml`、`logs/*.log`、`data/uploads` 不进文档库。
+8. 不管：`.claude/`、`.agents/`、`tests/`、根目录 `AGENTS.md`/`README.md`；`exports/*.yaml`、`logs/*.log`、`data/uploads` 不进文档库。

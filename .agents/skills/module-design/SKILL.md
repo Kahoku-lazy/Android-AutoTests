@@ -212,8 +212,8 @@ const { data } = await client.get('/devices')
 |------|---------|
 | `references/module-template.md` | 新建模块时加载，提供文件模板 |
 | `models/constants.py` | 定义状态 Enum 时引用 |
-| `.claude/rules/conventions.md` | 命名规范速查 |
-| `.claude/rules/api-conventions.md` | 跨模块通信规则 |
+| `android-autotests-rules/references/conventions.md` | 命名规范速查 |
+| `android-autotests-rules/references/api-conventions.md` | 跨模块通信规则 |
 
 ## 与 architecture-review 的配合
 

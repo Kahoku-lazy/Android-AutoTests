@@ -79,7 +79,7 @@ ARCH 答「怎么拼」；PRD 答「要什么 / 怎么验收」。沟通用「�
 | `dev_docs/03-设计与架构/ARCH-02-设备管理.md` | 有表同系 |
 | `dev_docs/03-设计与架构/ARCH-00-平台总体架构.md` | 总纲 / ARCH vs PRD |
 | `dev_docs/文档编号对照表.md` | 编号 |
-| `.claude/rules/api-conventions.md` | 防火墙 |
+| `android-autotests-rules/references/api-conventions.md` | 防火墙 |
 | `prd-writer` | 需求侧 |
 
 写完 → 可接 `architecture-review` / `boundary-check` / `auto-dev`。

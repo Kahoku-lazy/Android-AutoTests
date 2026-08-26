@@ -17,7 +17,7 @@ description: |
 
 | 场景 | 触发方式 |
 |------|---------|
-| 每次 Edit/Write 操作 | `.claude/hooks/check-boundary.sh` 自动运行 |
+| 每次 Edit/Write 操作 | check-boundary 门禁（原 Claude hook，DSH 事件门禁待建） |
 | 涉及 `apps/` 下文件的变更 | architect agent 调用此 skill |
 | 提交前的质量门禁 | developer agent 的 auto-dev 流程中调用 |
 | 架构审查 | `architecture-review` skill 的 Phase 2 调用 |
@@ -158,6 +158,6 @@ done
 
 | 文件 | 说明 |
 |------|------|
-| `.claude/rules/api-conventions.md` | 三道防火墙完整规则 |
-| `.claude/rules/conventions.md` | 文件行数上限 |
-| `.claude/hooks/check-boundary.sh` | 每次 Edit/Write 自动触发 |
+| `android-autotests-rules/references/api-conventions.md` | 三道防火墙完整规则 |
+| `android-autotests-rules/references/conventions.md` | 文件行数上限 |
+| check-boundary 门禁（原 Claude hook，DSH 事件门禁待建） | 每次 Edit/Write 自动触发 |

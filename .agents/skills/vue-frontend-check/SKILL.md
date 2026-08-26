@@ -14,7 +14,7 @@ description: |
 
 **关联**:
 - `frontend/AGENTS.md` §2（风格约束，字号最小 **12px**，禁硬编码 px）+ `frontend/src/shared/styles/tokens.css`（风格值真相源）
-- `.claude/rules/frontend.md`
+- `android-autotests-rules/references/frontend.md`
 - 检查细表 → [references/checklist.md](references/checklist.md)
 - **量规/例外/强制输出** → [references/calibration.md](references/calibration.md)
 

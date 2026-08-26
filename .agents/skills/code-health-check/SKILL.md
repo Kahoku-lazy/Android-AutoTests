@@ -179,5 +179,5 @@ ruff check --select PL,B,SIM,N,B,C90,RUF,ANN --output-format=grouped <target_fil
 |------|------|
 | `ruff.toml` | 自动化扫描规则配置 |
 | `html-report` skill | 生成 HTML 报告时加载 design token |
-| `.claude/rules/backend.md` | 后端编码规范 |
+| `android-autotests-rules/references/backend.md` | 后端编码规范 |
 | `models/constants.py` | 枚举定义（检查魔法字符串时对照） |

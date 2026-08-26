@@ -133,12 +133,12 @@ description: |
 | 文件 | 何时使用 |
 |------|---------|
 | `html-report` skill | 每次生成 HTML 前加载，获取 design token |
-| `.claude/rules/frontend.md` | 前端规范速查 |
-| `.claude/rules/backend.md` | 后端规范速查 |
-| `.claude/rules/database.md` | 表结构速查 |
-| `.claude/rules/api-conventions.md` | 防火墙规则速查 |
-| `.claude/rules/animal-island-ui.md` | 动森 UI 组件 API 速查 |
-| `.claude/rules/conventions.md` | 命名规范速查 |
+| `android-autotests-rules/references/frontend.md` | 前端规范速查 |
+| `android-autotests-rules/references/backend.md` | 后端规范速查 |
+| `android-autotests-rules/references/database.md` | 表结构速查 |
+| `android-autotests-rules/references/api-conventions.md` | 防火墙规则速查 |
+| `reviewer` skill §3 | 动森 UI 组件 API 陷阱速查（type=danger / Tabs 具名 slot / el-cascader emitPath） |
+| `android-autotests-rules/references/conventions.md` | 命名规范速查 |
 
 ## 与其他 skill 的配合
 

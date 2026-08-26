@@ -94,7 +94,7 @@ P0/P1 分期按需标在 F 或 Non-goals，**不强制**独立优先级清单章
 | `dev_docs/02-PRD需求/需求大纲.md` | 全局 |
 | `dev_docs/文档编号对照表.md` | 编号与文件名 |
 | `frontend/DESIGN_SYSTEM.md` | 设计令牌 |
-| `.claude/rules/{api-conventions,database,frontend,backend,conventions}.md` | 契约与命名 |
+| `android-autotests-rules/references/{api-conventions,database,frontend,backend,conventions}.md` | 契约与命名 |
 
 写完 → 可接 `feature-analysis` / `auto-dev`。类图与分层 → `arch-writer` 写 ARCH，不进 PRD。
 

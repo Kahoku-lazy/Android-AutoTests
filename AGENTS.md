@@ -28,9 +28,19 @@
 3. **提出验证计划**："下一步查什么来确认"
 
 
+## 工作偏好与经验教训
+
+1. **宣布修复前必须浏览器 UI 端到端验证**——API/curl 通过 ≠ 修好；模拟用户点击走完整链路（≥2 次）才算完成
+2. **命令/操作被拒 2 次即停**——不重复尝试第 3 次，直接告知用户手动执行
+3. **方案/分析/流程文档额外输出 HTML**——Markdown 之外再生成 HTML，放 `tests/functional/{module}/reports/`，风格对齐 `html-report` skill
+4. **每个任务结束输出执行摘要**——用了哪些 Skill/工具、走了什么流程
+5. **项目负责人思维**——发现问题 → 归类根因 → 提 ≥2 个方案 → 让用户决策；不假装知道、不猜测、不确定就问
+6. **创建了专用技能/子代理就必须用**——不手动绕过；表现不好就改进定义，而不是弃用
+
+
 ## 模块防火墙
 
-> 详细规则 → `.claude/rules/api-conventions.md`
+> 详细规则 → `android-autotests-rules` skill（`references/api-conventions.md` / `references/architecture.md`）
 
 ```
 ✅ 跨 App import Model（只读查询）
@@ -40,6 +50,27 @@
 ❌ 前端直连数据库
 ❌ 仪表盘做写操作
 ❌ 错误提示暴露技术术语给用户
+```
+
+## 架构红线
+
+```
+通信通道封闭集合（只这五条，禁止引入新协议 gRPC/MQTT/Kafka/RabbitMQ/GraphQL/WebRTC）：
+① 前端 ↔ Django：HTTP REST + JWT   ② Django → 前端：WebSocket + JWT
+③ 前端 → Django (AI)：SSE + JWT    ④ AgentScope → Django：进程内调用   ⑤ Django ↔ 设备：ADB
+
+依赖方向：上层 import 下层；device_pool 是唯一底层；dashboard/ai_assistant 是聚合层
+写操作铁律：任何写库（INSERT/UPDATE/DELETE）必须走目标模块 api.py，禁止直接 ORM 写
+```
+
+## 安全铁律
+
+```
+🔴 禁止硬编码密码/API Key/SECRET_KEY（用 os.environ.get()）
+🔴 禁止认证绕过（JWT 无 token 必须 401；WebSocket connect 必须验 JWT）
+🔴 禁止数据隔离缺失（列表/查询按 request.user_id 过滤）
+🔴 写操作 catch 禁止静默吞错（前端 ElMessage.error / 后端 logging）
+🔴 API 响应 api_key 必须脱敏（sk-***xxxx），日志不输出 Key
 ```
 
 ---

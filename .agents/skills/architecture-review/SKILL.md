@@ -144,7 +144,7 @@ done
 ### Phase 3: Report — 生成 HTML 报告
 
 ```bash
-python .claude/skills/architecture-review/scripts/report_generator.py \
+python .agents/skills/architecture-review/scripts/report_generator.py \
   --output dev_docs/03-设计与架构/架构审查报告.html
 ```
 

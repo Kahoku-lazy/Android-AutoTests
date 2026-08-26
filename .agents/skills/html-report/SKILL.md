@@ -194,4 +194,4 @@ html-report (本 skill)
 | 文件 | 用途 |
 |------|------|
 | `references/PROMPT.md` | 完整 design token + 26 组件样式规格 + self-contained HTML 生成提示词 |
-| `.claude/rules/animal-island-ui.md` | 动森 UI 组件 API 速查（项目内 npm 包用法） |
+| `reviewer` skill §3 | 动森 UI 组件 API 陷阱（type=danger→primary danger / Tabs 具名 slot / el-cascader emitPath） |

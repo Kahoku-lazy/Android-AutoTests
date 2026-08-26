@@ -15,7 +15,7 @@ description: |
 **关联**:
 - `apps/AGENTS.md` / `dev_docs/项目笔记/后端claude笔记.md`
 - `apps/自测与检测指令.md`（命令速查）
-- `.claude/rules/backend.md` / `api-conventions.md` / `python-code.md` / `database.md`
+- `android-autotests-rules/references/backend.md` / `api-conventions.md` / `python-code.md` / `database.md`
 - 检查细表 → [references/checklist.md](references/checklist.md)
 - **量规/例外/强制输出** → [references/calibration.md](references/calibration.md)
 

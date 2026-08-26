@@ -1,13 +1,16 @@
 ---
 name: doodle-craft
-description: Doodle Craft 主题前端 UI 开发与维护 — 做页面/组件/改样式。极简几何粗线涂鸦彩绘卡通风格，令牌唯一真相源 tokens.css，复制不发明、令牌不硬编码、四层不越界。Trigger: 做页面/做组件/改样式/Doodle Craft 主题迭代时。
+description: |
+  Doodle Craft 主题前端 UI 开发与维护 — 做页面/组件/改样式。极简几何粗线涂鸦彩绘卡通风格，令牌唯一真相源 tokens.css，复制不发明、令牌不硬编码、四层不越界。
+  Keywords: Doodle Craft, 主题, 前端 UI, 组件, 样式, 设计令牌, tokens.css, 卡通风格, doodle, theme, UI
+  Trigger: 做页面/做组件/改样式/Doodle Craft 主题迭代时。
 ---
 # Doodle Craft 主题 — 前端 UI 开发与维护迭代
 
 > 极简几何 · 粗线涂鸦 · 彩绘卡通 · 手稿纸
 > 令牌唯一真相源：`frontend/src/shared/styles/tokens.css`
 > 风格约束与验收：`frontend/DESIGN_SYSTEM.md`
-> 前端编码规范（嵌套深度 / z-index / 文件组织 / 脚手架）：`.claude/rules/frontend.md`
+> 前端编码规范（嵌套深度 / z-index / 文件组织 / 脚手架）：`android-autotests-rules/references/frontend.md`
 
 本技能用于**做页面 / 做组件 / 改样式**，以及**维护迭代 Doodle Craft 主题**。
 

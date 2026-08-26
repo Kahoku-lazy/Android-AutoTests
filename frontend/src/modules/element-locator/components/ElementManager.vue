@@ -10,6 +10,7 @@ import { animate, stagger } from 'animejs'
 import { apiAddElementToPage, apiUpdateElement } from '../api'
 import { useElementTree } from '../composables/useElementTree'
 import { usePagination } from '@/shared/composables/usePagination'
+import { matchOcrToElements } from '@/shared/ocrMatch'
 
 const {
   pages, selectedPage, elements, loading, maxDepth, treeRef,
@@ -88,12 +89,11 @@ const ocrTextsOfPage = computed(() => {
   return p?.ocr_json?.texts || []
 })
 
-/** 行数据：元素 + 坐标匹配的 OCR 字段（与设备检查器合并表格同口径） */
-const tableRows = computed(() =>
-  elements.value.map(e => {
-    const m = ocrTextsOfPage.value.find(t =>
-      t.x === e.x && t.y === e.y && t.width === e.width && t.height === e.height
-    )
+/** 行数据：元素 + 坐标匹配的 OCR 字段（中心点包含 + 最小面积，与设备检查器合并表格同口径） */
+const tableRows = computed(() => {
+  const { byElement } = matchOcrToElements(elements.value, ocrTextsOfPage.value)
+  return elements.value.map((e, i) => {
+    const m = byElement.get(i)
     if (!m) return e
     return {
       ...e,
@@ -103,7 +103,7 @@ const tableRows = computed(() =>
       _ocr_bounds: m.bounds || `[${m.x},${m.y}][${(m.x || 0) + (m.width || 0)},${(m.y || 0) + (m.height || 0)}]`,
     }
   })
-)
+})
 
 const filteredElements = computed(() =>
   filterMode.value === 'test_point' ? tableRows.value.filter((e) => e.is_test_point) : tableRows.value)
@@ -129,7 +129,12 @@ const columns = [
 async function updateEl(record, field, value) {
   try {
     const { data } = await apiUpdateElement(record.id, { [field]: value })
-    if (!data.status) ElMessage.error(data.message || '更新失败')
+    if (!data.status) { ElMessage.error(data.message || '更新失败'); return }
+    // 本地回写源数据：受控组件（el-switch 的 :model-value / input 的 :value）
+    // 依赖源对象变化才能反映新值。有 OCR 匹配时 record 是 tableRows 展开的副本，
+    // 必须回写 elements 源对象（而非 record 副本）才能触发重渲染。
+    const src = elements.value.find(x => x.id === record.id)
+    if (src) src[field] = value
   } catch (_) { ElMessage.error('更新失败，请检查网络') }
 }
 </script>
@@ -300,7 +305,7 @@ async function updateEl(record, field, value) {
                       </template>
 
                       <!-- Custom cell: thumb (dump 缩略图) -->
-                      <template #cell-thumb="{ record }">
+                      <template #cell-thumbnail_path="{ record }">
                         <img v-if="record.thumbnail_path" :src="thumbUrl(record.thumbnail_path)" class="cell-thumb" />
                         <span v-else class="text-muted">—</span>
                       </template>
@@ -328,19 +333,19 @@ async function updateEl(record, field, value) {
                       </template>
 
                       <!-- Custom cell: OCR 缩略图 -->
-                      <template #cell-ocr_thumb="{ record }">
+                      <template #cell-_ocr_thumb="{ record }">
                         <img v-if="record._ocr_thumb" :src="thumbUrl(record._ocr_thumb)" class="cell-thumb" />
                         <span v-else class="text-muted">—</span>
                       </template>
 
                       <!-- Custom cell: OCR 文字 -->
-                      <template #cell-ocr_text="{ record }">
+                      <template #cell-_ocr_text="{ record }">
                         <span v-if="record._ocr_text" class="cell-text">{{ record._ocr_text }}</span>
                         <span v-else class="text-muted">—</span>
                       </template>
 
                       <!-- Custom cell: OCR 置信度 -->
-                      <template #cell-ocr_conf="{ record }">
+                      <template #cell-_ocr_conf="{ record }">
                         <span v-if="record._ocr_conf != null" class="cell-conf">{{ (record._ocr_conf * 100).toFixed(1) }}%</span>
                         <span v-else class="text-muted">—</span>
                       </template>

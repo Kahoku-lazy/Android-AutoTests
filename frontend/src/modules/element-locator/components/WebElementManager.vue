@@ -80,7 +80,8 @@ const columns = [
 async function updateEl(record, field, value) {
   try {
     const { data } = await apiUpdateWebElement(record.id, { [field]: value });
-    if (!data.status) ElMessage.error(data.message || "更新失败");
+    if (!data.status) { ElMessage.error(data.message || "更新失败"); return; }
+    record[field] = value; // 本地回写，受控 el-switch / input 才能反映新值
   } catch (_) { ElMessage.error("更新失败，请检查网络"); }
 }
 

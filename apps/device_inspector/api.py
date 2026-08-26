@@ -173,6 +173,7 @@ def save_snapshot_to_elements(
     page_id: int | None = None,
     element_ids=None,
     include_ocr: bool = True,
+    aliases: dict | None = None,
 ) -> dict:
     """筛减保存快照到元素定位（经 element_locator.api，契约见 PRD-04 v7.2）。
 
@@ -180,6 +181,7 @@ def save_snapshot_to_elements(
         page_id: 目标已有页面 ID（与 page_label/folder_path 二选一：有 page_id
             为「保存到已有页面」，否则为「新建页面」）。
         element_ids: 勾选的元素索引列表（对应 dump_json.elements 的下标）；空 = 全部。
+        aliases: {resource_id: alias} 中文别名映射，按 resource_id 回填到元素。
     """
     from .models import Snapshot
 
@@ -196,10 +198,16 @@ def save_snapshot_to_elements(
 
     if element_ids:
         selected = [
-            elements[i] for i in element_ids if isinstance(i, int) and 0 <= i < len(elements)
+            dict(elements[i]) for i in element_ids if isinstance(i, int) and 0 <= i < len(elements)
         ]
     else:
-        selected = elements
+        selected = [dict(e) for e in elements]
+
+    aliases = aliases or {}
+    for e in selected:
+        rid = (e.get("resource_id") or "").strip()
+        if rid and rid in aliases:
+            e["alias"] = aliases[rid]
 
     from apps.element_locator.api import import_snapshot_page
 

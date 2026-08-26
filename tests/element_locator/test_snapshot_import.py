@@ -145,6 +145,27 @@ def test_import_snapshot_creates_folder_page_and_elements(monkeypatch):
     assert "xpath" in el["xpath_candidates"]
 
 
+def test_import_snapshot_uses_explicit_alias(monkeypatch):
+    """元素显式 alias 优先于 text/resource_id。"""
+    pages = _patch_pages(monkeypatch)
+    elements = _patch_elements(monkeypatch, pages)
+
+    api_snapshot.import_snapshot_page(
+        page_label="设备页",
+        elements=[
+            {
+                "class_name": "android.widget.TextView",
+                "text": "H705F",
+                "resource_id": "com.govee.home:id/tvName",
+                "alias": "设备名称",
+                "bounds": "[0,0][10,10]",
+            }
+        ],
+    )
+
+    assert elements.created[0]["alias"] == "设备名称"
+
+
 def test_import_snapshot_conflict_same_label(monkeypatch):
     pages = _patch_pages(monkeypatch)
     _patch_elements(monkeypatch, pages)

@@ -24,6 +24,7 @@ __all__ = [
     "upsert_element",
     "update_element",
     "create_flow",
+    "get_or_create_flow",
     "delete_flow",
     "clear_all",
     "create_web_group",
@@ -163,6 +164,24 @@ def create_flow(from_page_id, to_page_id, trigger_element_id=None, trigger_actio
         trigger_element_id=trigger_element_id,
         trigger_action=trigger_action,
     )
+
+
+def get_or_create_flow(from_page_id, to_page_id, trigger_element_id=None, trigger_action="click"):
+    """幂等建边：按 (from, to, trigger_element) 去重，复用已有记录。返回 (flow, created)。"""
+    existing = PageFlow.objects.filter(
+        from_page_id=from_page_id,
+        to_page_id=to_page_id,
+        trigger_element_id=trigger_element_id,
+    ).first()
+    if existing:
+        return existing, False
+    flow = PageFlow.objects.create(
+        from_page_id=from_page_id,
+        to_page_id=to_page_id,
+        trigger_element_id=trigger_element_id,
+        trigger_action=trigger_action,
+    )
+    return flow, True
 
 
 def delete_flow(flow_id):

@@ -120,7 +120,11 @@ def import_snapshot_page(
 
     saved = updated = skipped = 0
     for e in elements:
-        alias = (e.get("text") or "").strip() or (e.get("resource_id") or "").strip()
+        alias = (
+            (e.get("alias") or "").strip()
+            or (e.get("text") or "").strip()
+            or (e.get("resource_id") or "").strip()
+        )
         fields = {
             "class_name": e.get("class_name", ""),
             "text_val": e.get("text", ""),

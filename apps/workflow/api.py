@@ -4,6 +4,7 @@ from __future__ import annotations
 
 __all__ = [
     "build_export_envelope",
+    "build_page_flow_document",
     "create_directory",
     "delete_directory",
     "delete_document",
@@ -467,3 +468,43 @@ def export_document(doc_id: str) -> tuple[bool, Any]:
     if doc.doc_type == WorkflowDocument.TYPE_TEST_CASE:
         return False, "文档不存在"
     return True, build_export_envelope(doc)
+
+
+def build_page_flow_document(
+    *,
+    title: str,
+    start_package: str = "",
+    pages: list | None = None,
+    edges: list | None = None,
+    directory_id: int | None = None,
+) -> tuple[bool, Any, int]:
+    """AI 受控写图：结构化「页面关系」→ 编译 VueFlow config_json → 落库 wf_documents。
+
+    pages: [{page_id, label, elements:[{element_id, alias, type, xpath}]}]
+    edges: [{from_page_id, to_page_id, trigger_element_id}]
+    返回 (ok, payload_or_error, http_hint_status)。
+    """
+    from .page_flow_compiler import compile_page_flow_document
+
+    title = (title or "").strip()
+    if not title:
+        return False, "标题不能为空", 400
+    pages = pages or []
+    if not pages:
+        return False, "页面列表不能为空", 400
+    try:
+        config = compile_page_flow_document(
+            title=title,
+            start_package=start_package or "",
+            pages=pages,
+            edges=edges or [],
+        )
+    except Exception as e:
+        return False, f"页面流编译失败: {e}", 400
+    return upsert_document(
+        doc_id=None,
+        title=title,
+        doc_type=WorkflowDocument.TYPE_PAGE_FLOW,
+        config=config,
+        directory_id=directory_id,
+    )

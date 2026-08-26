@@ -210,6 +210,12 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                 "required": False,
                 "desc": "是否连同保存页面级 OCR 数据，默认 true",
             },
+            {
+                "name": "aliases",
+                "type": "object",
+                "required": False,
+                "desc": '元素中文别名映射 {resource_id: 别名}，如 {"com.govee.home:id/ivSwitch": "设备开关"}',
+            },
         ],
         "read_only": False,
     },
@@ -392,6 +398,31 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
             {"name": "limit", "type": "integer", "required": False, "desc": "最多返回条数"},
         ],
         "read_only": True,
+    },
+    {
+        "name": "create_page_flow",
+        "category": "元素定位",
+        "icon": "🔀",
+        "summary": "建立页面跳转关系（from_page → to_page，经触发元素；幂等，重复写入复用已有边）",
+        "module": "elements",
+        "action": "upsert_flow",
+        "params": [
+            {"name": "from_page_id", "type": "integer", "required": True, "desc": "起始页面 ID"},
+            {"name": "to_page_id", "type": "integer", "required": True, "desc": "目标页面 ID"},
+            {
+                "name": "trigger_element_id",
+                "type": "integer",
+                "required": False,
+                "desc": "触发跳转的元素 ID（可空）",
+            },
+            {
+                "name": "trigger_action",
+                "type": "string",
+                "required": False,
+                "desc": "触发动作，默认 click",
+            },
+        ],
+        "read_only": False,
     },
     # ── 用例管理 ──
     {
@@ -668,6 +699,42 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         ],
         "read_only": True,
     },
+    {
+        "name": "save_page_flow",
+        "category": "工作流",
+        "icon": "🧭",
+        "summary": "生成工作流页面流文档：提交起始包名 + 页面列表（含元素）+ 跳转边，系统编译为「启动App → 页面节点 + 跳转元素输出口」并落库，返回 doc_id",
+        "module": "workflow",
+        "action": "save_page_flow",
+        "params": [
+            {"name": "title", "type": "string", "required": True, "desc": "页面流标题"},
+            {
+                "name": "start_package",
+                "type": "string",
+                "required": False,
+                "desc": "被测 App 包名（起点「启动 App」用，如 com.govee.home）",
+            },
+            {
+                "name": "pages",
+                "type": "array",
+                "required": True,
+                "desc": "页面列表，每项 {page_id, label, elements:[{element_id, alias, type, xpath}]}；第一项为主页",
+            },
+            {
+                "name": "edges",
+                "type": "array",
+                "required": False,
+                "desc": "跳转边列表，每项 {from_page_id, to_page_id, trigger_element_id}",
+            },
+            {
+                "name": "directory_id",
+                "type": "integer",
+                "required": False,
+                "desc": "工作流目录 ID，留空为根目录",
+            },
+        ],
+        "read_only": False,
+    },
     # ── 知识库 ──
     {
         "name": "search_knowledge_base",
@@ -803,6 +870,7 @@ def _inspector_save_elements(
     page_label: str = PROTECTED,
     folder_path: str = "",
     include_ocr: bool = True,
+    aliases: dict | None = None,
     **kwargs,
 ):
     if snapshot_id is PROTECTED:
@@ -816,6 +884,7 @@ def _inspector_save_elements(
         page_label=page_label,
         folder_path=folder_path,
         include_ocr=bool(include_ocr),
+        aliases=aliases or None,
     )
 
 
@@ -1045,6 +1114,31 @@ def _elements_search_endpoints(
     if method:
         qs = qs.filter(method__iexact=method)
     return list(qs.order_by("name")[:limit])
+
+
+@_register("elements", "upsert_flow")
+def _elements_upsert_flow(
+    user_id: str,
+    from_page_id: int = PROTECTED,
+    to_page_id: int = PROTECTED,
+    trigger_element_id=None,
+    trigger_action: str = "click",
+    **kwargs,
+):
+    """幂等建立页面跳转关系（el_page_flows）。"""
+    if from_page_id is PROTECTED:
+        raise ValueError("缺少必填参数: from_page_id")
+    if to_page_id is PROTECTED:
+        raise ValueError("缺少必填参数: to_page_id")
+    from apps.element_locator.api import get_or_create_flow
+
+    flow, created = get_or_create_flow(
+        from_page_id=int(from_page_id),
+        to_page_id=int(to_page_id),
+        trigger_element_id=int(trigger_element_id) if trigger_element_id is not None else None,
+        trigger_action=trigger_action or "click",
+    )
+    return {"flow_id": flow.id, "created": created}
 
 
 # ── Case handlers ──
@@ -1294,6 +1388,35 @@ def _workflow_get_page_flow(user_id: str, doc_id: str = PROTECTED, **kwargs):
     if not ok:
         raise ValueError(data)
     return data
+
+
+@_register("workflow", "save_page_flow")
+def _workflow_save_page_flow(
+    user_id: str,
+    title: str = PROTECTED,
+    start_package: str = "",
+    pages=None,
+    edges=None,
+    directory_id=None,
+    **kwargs,
+):
+    """受控写图：结构化页面关系 → 生成 wf_documents 页面流文档。"""
+    if title is PROTECTED:
+        raise ValueError("缺少必填参数: title")
+    if not pages:
+        raise ValueError("缺少必填参数: pages")
+    from apps.workflow.api import build_page_flow_document
+
+    ok, payload, _status = build_page_flow_document(
+        title=title,
+        start_package=start_package or "",
+        pages=pages or [],
+        edges=edges or [],
+        directory_id=int(directory_id) if directory_id is not None else None,
+    )
+    if not ok:
+        raise ValueError(payload)
+    return payload
 
 
 # ── Knowledge handlers ──

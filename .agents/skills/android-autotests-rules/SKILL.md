@@ -9,80 +9,55 @@ description: |
 
 # Android-AutoTests 项目规则索引
 
-> 本文是 11 份规则文件的**唯一索引 + 常驻摘要**。细节按需读 `references/`。
 > 本目录是项目规则的唯一现行落点，规则变更只改本目录。
 
-## 常驻规则（每次写代码前必过一遍）
+## 通用规则速查（8 类）
 
-### 模块防火墙（三道）
+### 1. 全局架构约束
 
-```
-防火墙 #1: service.py 互不 import
-  ✅ 跨 App import Model（只读）+ api.py（复杂写）
-  ❌ 跨 App import service / runner / consumer / state_machine（内部实现）
-防火墙 #2: 读放开，写收敛
-  ✅ 跨 App 读（SELECT）直接 ORM
-  ❌ 跨 App 写（INSERT/UPDATE/DELETE）必须走目标模块 api.py
-防火墙 #3: 外部访问只走 API
-  Vue → HTTP → Django API → ORM → DB
-  AgentScope → Tool → api.py → run_sync → ORM（同进程）
-  Django Admin → ORM（仅管理员）
-```
+  - 详情查阅 `references/architecture.md`
 
-### 通信通道（封闭集合）
+### 2. 前端 UI 设计规则
 
-平台只有五条通道，**禁止引入新协议**（gRPC/MQTT/Kafka/RabbitMQ/GraphQL/WebRTC）：
+- 全局统一 **Doodle Craft 主题**；前端 UI 开发与维护 **必须使用** `doodle-craft` skill
+- 前端开发必须遵循`references/frontend.md` 编写规则
 
-| # | 通道 | 协议 |
-|:--:|------|------|
-| ① | 前端 ↔ Django | HTTP REST + JWT |
-| ② | Django → 前端 | WebSocket + JWT |
-| ③ | 前端 → Django (AI SSE) | SSE + JWT |
-| ④ | AgentScope → Django | 进程内直接调用 |
-| ⑤ | Django ↔ 设备 | ADB |
+### 3. 后端开发规则
 
-### 写操作铁律
+-- 详情查阅 `references/python-code.md`
+- 表前缀：`dp_` `el_` `cm_` `tr_` `rg_` `ai_` `wf_` `ev_` `di_`；设备状态机 `(new)→ONLINE⇄BUSY→OFFLINE/DISCONNECTED→ONLINE`
 
-```
-前端 HTTP → Django View → api.py → ORM
-AgentScope → Tool.call() → api.py → run_sync() → ORM
-Django Admin → ORM（仅管理员）
-❌ 任何组件直接 ORM INSERT/UPDATE/DELETE
-✅ 读操作放开（同模块/跨模块都可直接 ORM 查询）
-```
+### 4. 代码安全规则
 
-### 安全铁律
+- 🔴 禁止硬编码密码 / API Key / SECRET_KEY（用 `os.environ.get()`）
+- 🔴 禁止认证绕过（JWT 无 token 必须 401；WebSocket `connect()` 必须验 JWT）
+- 🔴 禁止数据隔离缺失（列表/查询按 `request.user_id` 过滤）
+- 🔴 写操作 catch 禁止静默吞错（前端 ElMessage.error / 后端 logging）
+- 🔴 API 响应 api_key 必须脱敏（`sk-***xxxx`），日志不输出 Key
+- API Key 生命周期：加密写 → 脱敏读 → 后端解密用 → 禁导出；解密失败禁止 fallback 返回明文
+- 错误响应不暴露堆栈 / 文件路径 / SQL；敏感字段黑名单（password / api_key / token / SECRET_KEY…）
 
-```
-🔴 禁止硬编码密码/API Key/SECRET_KEY（用 os.environ.get()）
-🔴 禁止认证绕过（JWT 无 token 必须 401；WebSocket connect 必须验 JWT）
-🔴 禁止数据隔离缺失（查询按 request.user_id 过滤）
-🔴 写操作 catch 禁止静默吞错（必须 ElMessage.error / logging）
-🔴 API 响应 api_key 必须脱敏（sk-***xxxx），日志不输出 Key
-```
+> 细节 → `references/security.md`（风险分级 / AI 编码安全检查清单 / 敏感字段黑名单）
 
-### 关键约定
 
-- API 响应统一 `{status: true, data}` / `{status: false, message}`（错误不暴露技术术语）
-- JSON 字段 snake_case，前端变量 camelCase
-- 数据库表前缀：`dp_` `el_` `cm_` `tr_` `rg_` `ai_` `wf_` `ev_` `di_`
-- 依赖方向：上层 import 下层；`device_pool` 是唯一底层；`dashboard`/`ai_assistant` 是聚合层
+### 5. 接口协议编写规范
 
-## 参考文件索引
+- 五条通信通道封闭集合，禁止引入新协议（gRPC/MQTT/Kafka/RabbitMQ/GraphQL/WebRTC）：① 前端↔Django HTTP REST+JWT ② Django→前端 WebSocket+JWT ③ 前端→Django(AI) SSE+JWT ④ AgentScope→Django 进程内 ⑤ Django↔设备 ADB
+- 响应信封：`{status: true, data}` / `{status: false, message}`（错误不暴露技术术语）
+- 三道防火墙：① service 互不 import（可跨 App import Model+api.py，禁内部实现）② 读放开写收敛（写必须走目标 api.py）③ 外部访问只走 API
+- 写操作铁律：前端→View→api.py→ORM；AgentScope→Tool→api.py→run_sync→ORM；禁任何组件直接 ORM 写
+- 鉴权：Bearer JWT（公开路径除外）；所有业务视图 `@csrf_exempt`
+- JSON 字段 snake_case，前端变量 camelCase；新增 App 必走检查清单
 
-| 文件 | 内容 | 何时读 |
-|------|------|--------|
-| `references/architecture.md` | 架构总纲：五通道、依赖方向、AgentScope 边界、dashboard 约束、模块增减、10 条红线 | 新增/删除模块、跨模块设计前 |
-| `references/api-conventions.md` | API 格式、三道防火墙、鉴权、分层交互、新 App 检查清单 | 动 API / 新增 App 前 |
-| `references/database.md` | 写操作铁律、设备状态机、表前缀 | 动 models / 写库前 |
-| `references/security.md` | 安全风险分类、AI 编码安全清单、敏感字段黑名单 | 安全自查、代码评审时 |
-| `references/python-code.md` | Python 命名/行数/import/类型注解/OOP/文件职责/异常/响应 | 写任何 Python 前 |
-| `references/frontend.md` | 前端命名/行数/样式工程/共享组件/数据加载三态/状态管理/CSS 修复模式 | 写任何 Vue 前 |
-| `references/backend.md` | Django App 结构、中间件/鉴权、配置约定、异步处理 | 动后端结构前 |
-| `references/conventions.md` | 跨语言索引、设备测试步骤、XPath 策略、主题、JWT | 按需 |
-| `references/setup.md` | 启动/重启验证/格式化命令/端口约定/跨平台启动 | 启动、健康检查时 |
-| `references/troubleshooting.md` | 报错诊断速查表 + 分模块排查流程 | 遇到报错诊断时 |
-| `references/agentscope-tools.md` | AgentScope 开发入口（指向 dev_docs/agentscope.md） | 开发 AgentScope 功能前 |
+> 细节 → `references/api-conventions.md`（响应格式/防火墙/鉴权/分层交互）· `references/architecture.md`（五通道）
+
+### 6. AgentScope 开发参考资料
+
+- AgentScope 已并入 Django 进程内模块 `apps/ai_assistant/agent_scope/`，无独立服务 / 端口
+- 边界：禁止 AgentScope 直连数据库 / 直连设备；数据一律经 Django ORM / api.py（同进程直接调用）
+- 依赖 Redis（不可用时 AI 对话降级阻塞模式）；桥接 `db_helper.run_sync()`，8s 超时
+- 红线：禁止在 `agent_scope/` 下新增 `adapters/` 或 `rag/`
+
 
 ## 关联技能
 

@@ -1,9 +1,9 @@
-/** useToolbox — 共享工具箱的 HTTP 编排（ToolboxPanel / AgentToolsPanel 只渲染，不碰网） */
+/** useToolbox — 共享工具箱的 HTTP 编排（ToolboxPanel 只渲染，不碰网） */
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   fetchSharedTools, createSharedTool, updateSharedTool, deleteSharedTool,
-  uploadSharedSkill, importFromToolbox as importFromToolboxApi,
+  uploadSharedSkill, toggleSharedTool,
 } from '../api/toolbox'
 
 export function useToolbox() {
@@ -113,25 +113,22 @@ export function useToolbox() {
     e.target.value = ''
   }
 
-  // ── Agent 工具箱导入（AgentToolsPanel Step4 使用）──
-  const importingIds = ref(new Set())
-  async function importFromToolbox(formId, item): Promise<boolean> {
-    if (!formId) {
-      ElMessage.warning('请先保存智能体，再导入工具箱项目')
-      return false
-    }
-    if (importingIds.value.has(item.id)) return false
-    importingIds.value.add(item.id)
+  // ── 启停共享项（直接决定平台唯一智能体是否使用） ──
+  const togglingId = ref<number | null>(null)
+  async function toggleItem(item): Promise<void> {
+    if (togglingId.value === item.id) return
+    const target = !item.enabled
+    togglingId.value = item.id
     try {
-      const data = await importFromToolboxApi(formId, item.id)
+      const data = await toggleSharedTool(item.id, target)
       if (data.status) {
-        ElMessage.success(`已导入: ${item.name}`)
-        return true
+        item.enabled = target
+        ElMessage.success(`${item.name} 已${target ? '启用' : '停用'}`)
+      } else {
+        ElMessage.error(data.message || '操作失败')
       }
-      ElMessage.warning(data.message || '导入失败')
-    } catch (e) { ElMessage.error('导入失败') }
-    finally { importingIds.value.delete(item.id) }
-    return false
+    } catch (e) { ElMessage.error('操作失败') }
+    finally { togglingId.value = null }
   }
 
   onMounted(() => loadItems())
@@ -139,6 +136,6 @@ export function useToolbox() {
   return {
     items, loading, activeFilter, filters, filteredItems, typeLabel, formatConfig, loadItems,
     dialogVisible, editingId, saving, form, openMcpDialog, editItem, saveItem, removeItem, onSkillFolderPicked,
-    importingIds, importFromToolbox,
+    togglingId, toggleItem,
   }
 }

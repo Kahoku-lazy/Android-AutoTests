@@ -1,38 +1,33 @@
-"""Toolbox / Knowledge / Uploads / Agent 工具管理组接口测试（live-server）。
+"""Toolbox / Knowledge / Uploads / 平台配置 组接口测试（live-server）。
 
-覆盖端点：toolbox 6 + knowledge 3 + uploads 2 + agent tools 7。
-断言当前实现契约；Batch 3 迁移 DRF 时同步改为 {status, data} 信封
-（已信封的端点：knowledge、upload-file、agent tools list 保持 data 形状不变）。
+覆盖端点：toolbox（含 toggle）+ knowledge 3 + uploads 2 + platform-config 2。
+断言当前实现契约；DRF 统一 {status, data} 信封。
 
 运行：pytest tests/ai_assistant/test_toolbox_knowledge_api.py -v
 """
 
 import base64
-import json
 
 import allure
 import pytest
 import requests
 
 from tests.ai_assistant.conftest import (
-    AGENT_TOOLS_URL,
-    IMPORT_FROM_TOOLBOX_URL,
     KB_ADD_DOC_URL,
     KB_DOCUMENTS_URL,
     KB_STATUS_URL,
+    PLATFORM_CONFIG_UPDATE_URL,
+    PLATFORM_CONFIG_URL,
     TIMEOUT,
-    TOOL_DELETE_URL,
-    TOOL_TOGGLE_URL,
     TOOLBOX_CREATE_URL,
     TOOLBOX_DELETE_URL,
+    TOOLBOX_TOGGLE_URL,
     TOOLBOX_UPDATE_URL,
     TOOLBOX_UPLOAD_SKILL_URL,
     TOOLBOX_URL,
     UPLOAD_AVATAR_URL,
     UPLOAD_FILE_URL,
-    create_agent,
     create_shared_tool,
-    import_tool,
 )
 
 pytestmark = [pytest.mark.api, pytest.mark.ai_assistant]
@@ -154,53 +149,24 @@ def test_toolbox_upload_skill_no_files_400(base_url, api_session, auth_headers):
 
 @allure.feature("AI 助手")
 @allure.story("AI 工具箱")
-def test_import_from_toolbox_success(base_url, api_session, auth_headers):
-    """导入共享项到 Agent → 200 {status, id}；Agent 工具列表可见。"""
-    agent = create_agent(api_session, base_url, auth_headers)
+def test_toolbox_toggle_success(base_url, api_session, auth_headers):
+    """启停共享项 → 200 {status, enabled}；列表含 enabled 状态。"""
     shared = create_shared_tool(api_session, base_url, auth_headers)
     resp = api_session.post(
-        f"{base_url}{IMPORT_FROM_TOOLBOX_URL.format(agent_id=agent['id'])}",
-        json={"toolbox_item_id": shared["id"]},
+        f"{base_url}{TOOLBOX_TOGGLE_URL.format(item_id=shared['id'])}",
+        json={"enabled": False},
         headers=auth_headers,
         timeout=TIMEOUT,
     )
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] is True
-    tools = api_session.get(
-        f"{base_url}{AGENT_TOOLS_URL.format(agent_id=agent['id'])}",
-        headers=auth_headers,
-        timeout=TIMEOUT,
+    assert body["data"]["enabled"] is False
+    listing = api_session.get(
+        f"{base_url}{TOOLBOX_URL}", headers=auth_headers, timeout=TIMEOUT
     ).json()
-    assert any(t["id"] == body["data"]["id"] for t in tools["data"]["mcp"])
-
-
-@allure.feature("AI 助手")
-@allure.story("AI 工具箱")
-def test_import_from_toolbox_duplicate_409(base_url, api_session, auth_headers):
-    """重复导入同名 → 409。"""
-    agent = create_agent(api_session, base_url, auth_headers)
-    shared = create_shared_tool(api_session, base_url, auth_headers)
-    url = f"{base_url}{IMPORT_FROM_TOOLBOX_URL.format(agent_id=agent['id'])}"
-    payload = json.dumps({"toolbox_item_id": shared["id"]})
-    first = api_session.post(url, data=payload, headers=auth_headers, timeout=TIMEOUT)
-    assert first.status_code == 200
-    second = api_session.post(url, data=payload, headers=auth_headers, timeout=TIMEOUT)
-    assert second.status_code == 409
-
-
-@allure.feature("AI 助手")
-@allure.story("AI 工具箱")
-def test_import_from_toolbox_404(base_url, api_session, auth_headers):
-    """共享项不存在 → 404。"""
-    agent = create_agent(api_session, base_url, auth_headers)
-    resp = api_session.post(
-        f"{base_url}{IMPORT_FROM_TOOLBOX_URL.format(agent_id=agent['id'])}",
-        json={"toolbox_item_id": 999999999},
-        headers=auth_headers,
-        timeout=TIMEOUT,
-    )
-    assert resp.status_code == 404
+    item = next(i for i in listing["data"]["items"] if i["id"] == shared["id"])
+    assert item["enabled"] is False
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -298,109 +264,47 @@ def test_upload_file_txt_success(base_url, auth_headers):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Agent 工具管理（MCP / Skill）
+# 平台配置（平台唯一智能体的工具/知识库配置）
 # ═══════════════════════════════════════════════════════════════════
 
 
 @allure.feature("AI 助手")
-@allure.story("Agent 工具")
-def test_agent_tools_list_success(base_url, api_session, auth_headers):
-    """工具列表 → 200 {status, data:{mcp, skills}}（已信封）。"""
-    agent = create_agent(api_session, base_url, auth_headers)
-    saved = import_tool(api_session, base_url, auth_headers, agent["id"])
+@allure.story("平台配置")
+def test_platform_config_read(base_url, api_session, auth_headers):
+    """读取平台唯一智能体配置 → 200 {status, data:{...}}。"""
     resp = api_session.get(
-        f"{base_url}{AGENT_TOOLS_URL.format(agent_id=agent['id'])}",
-        headers=auth_headers,
-        timeout=TIMEOUT,
+        f"{base_url}{PLATFORM_CONFIG_URL}", headers=auth_headers, timeout=TIMEOUT
     )
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] is True
-    assert any(t["id"] == saved["id"] for t in body["data"]["mcp"])
-    assert isinstance(body["data"]["skills"], list)
+    data = body["data"]
+    assert "enable_business_tools" in data
+    assert isinstance(data["knowledge_sources"], dict)
+    assert isinstance(data["skills_config"], dict)
 
 
 @allure.feature("AI 助手")
-@allure.story("Agent 工具")
-def test_agent_tools_list_403_other_user(base_url, api_session, auth_headers, other_auth_headers):
-    """非所有者 → 403。"""
-    agent = create_agent(api_session, base_url, auth_headers)
-    resp = api_session.get(
-        f"{base_url}{AGENT_TOOLS_URL.format(agent_id=agent['id'])}",
-        headers=other_auth_headers,
-        timeout=TIMEOUT,
-    )
-    assert resp.status_code == 403
-
-
-@allure.feature("AI 助手")
-@allure.story("Agent 工具")
-def test_toggle_tool_success(base_url, api_session, auth_headers):
-    """禁用工具 → 200 {status, enabled:false}；列表可见 enabled=false。"""
-    agent = create_agent(api_session, base_url, auth_headers)
-    saved = import_tool(api_session, base_url, auth_headers, agent["id"])
+@allure.story("平台配置")
+def test_platform_config_update(base_url, api_session, auth_headers):
+    """更新平台智能体配置 → 200；读回值一致并还原。"""
+    before = api_session.get(
+        f"{base_url}{PLATFORM_CONFIG_URL}", headers=auth_headers, timeout=TIMEOUT
+    ).json()["data"]
+    original = bool(before.get("enable_workspace_tools", False))
+    target = not original
     resp = api_session.post(
-        f"{base_url}{TOOL_TOGGLE_URL.format(agent_id=agent['id'], tool_id=saved['id'])}",
-        json={"enabled": False},
+        f"{base_url}{PLATFORM_CONFIG_UPDATE_URL}",
+        json={"enable_workspace_tools": target},
         headers=auth_headers,
         timeout=TIMEOUT,
     )
     assert resp.status_code == 200
-    body = resp.json()
-    assert body["status"] is True
-    assert body["data"]["enabled"] is False
-    tools = api_session.get(
-        f"{base_url}{AGENT_TOOLS_URL.format(agent_id=agent['id'])}",
-        headers=auth_headers,
-        timeout=TIMEOUT,
-    ).json()
-    item = next(t for t in tools["data"]["mcp"] if t["id"] == saved["id"])
-    assert item["enabled"] is False
-
-
-@allure.feature("AI 助手")
-@allure.story("Agent 工具")
-def test_toggle_tool_404(base_url, api_session, auth_headers):
-    """工具不存在 → 404。"""
-    agent = create_agent(api_session, base_url, auth_headers)
-    resp = api_session.post(
-        f"{base_url}{TOOL_TOGGLE_URL.format(agent_id=agent['id'], tool_id=999999999)}",
-        json={"enabled": False},
+    assert resp.json()["data"]["enable_workspace_tools"] is target
+    # 还原
+    api_session.post(
+        f"{base_url}{PLATFORM_CONFIG_UPDATE_URL}",
+        json={"enable_workspace_tools": original},
         headers=auth_headers,
         timeout=TIMEOUT,
     )
-    assert resp.status_code == 404
-
-
-@allure.feature("AI 助手")
-@allure.story("Agent 工具")
-def test_delete_tool_success(base_url, api_session, auth_headers):
-    """删除工具 → 200 {status}；列表不再可见。"""
-    agent = create_agent(api_session, base_url, auth_headers)
-    saved = import_tool(api_session, base_url, auth_headers, agent["id"])
-    resp = api_session.post(
-        f"{base_url}{TOOL_DELETE_URL.format(agent_id=agent['id'], tool_id=saved['id'])}",
-        headers=auth_headers,
-        timeout=TIMEOUT,
-    )
-    assert resp.status_code == 200
-    assert resp.json()["status"] is True
-    tools = api_session.get(
-        f"{base_url}{AGENT_TOOLS_URL.format(agent_id=agent['id'])}",
-        headers=auth_headers,
-        timeout=TIMEOUT,
-    ).json()
-    assert all(t["id"] != saved["id"] for t in tools["data"]["mcp"])
-
-
-@allure.feature("AI 助手")
-@allure.story("Agent 工具")
-def test_delete_tool_404(base_url, api_session, auth_headers):
-    """工具不存在 → 404。"""
-    agent = create_agent(api_session, base_url, auth_headers)
-    resp = api_session.post(
-        f"{base_url}{TOOL_DELETE_URL.format(agent_id=agent['id'], tool_id=999999999)}",
-        headers=auth_headers,
-        timeout=TIMEOUT,
-    )
-    assert resp.status_code == 404

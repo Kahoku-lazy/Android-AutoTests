@@ -55,6 +55,7 @@ result_*.log
 
 # ── Frontend ──
 node_modules
+.pnpm-store/
 frontend/node_modules/
 frontend/dist/
 frontend/src/auto-imports.d.ts
@@ -193,3 +194,7 @@ openspec/
 plans/
 /package.json
 /package-lock.json
+
+# ── 本地测试数据 ──
+dev_docs\05-开发与测试\govee
+temps/

@@ -62,6 +62,7 @@ export const useElementStore = defineStore('device-inspector', () => {
   const selectedOcr = ref(null)
   const filterMode = ref('all')
   const searchText = ref('')
+  const nameOverrides = ref<Record<string, string>>({})   // { [元素 _idx]: 自定义元素名称 }（结构分析表内联重命名）
 
   // ── 结构分析（纯规则分区，后端即时计算不落库）──
   const analysis = ref(null)      // {is_webview, sections, elements}
@@ -180,6 +181,8 @@ export const useElementStore = defineStore('device-inspector', () => {
         applySnapshot(data.data)
         ElMessage.success(`获取成功（元素 ${data.data?.element_count ?? 0} · OCR ${data.data?.ocr_count ?? 0}）`)
         await fetchSnapshots()
+        // 自动化结构化：获取成功后直接计算结构分区并切换到结构视图（PRD-03 结构分析）
+        await analyzeSnapshot()
         return data.data
       }
       error.value = data.message || '获取失败'
@@ -203,6 +206,7 @@ export const useElementStore = defineStore('device-inspector', () => {
     clearChecked()
     analysis.value = null
     viewMode.value = 'elements'
+    nameOverrides.value = {}
   }
 
   async function fetchSnapshots() {
@@ -244,6 +248,8 @@ export const useElementStore = defineStore('device-inspector', () => {
       const { data } = await apiAnalyzeSnapshot(snapshot.value.snapshot_id)
       if (data.status) {
         analysis.value = data.data
+        // 结构与快照元素同源同序（dump_json.elements），补 _idx 以联动左侧截图高亮
+        ;(analysis.value.elements || []).forEach((e, i) => { e._idx = i })
         viewMode.value = 'structure'
         return data.data
       }
@@ -285,15 +291,22 @@ export const useElementStore = defineStore('device-inspector', () => {
     try {
       const body: {
         page_label: string; folder_path: string; include_ocr: boolean;
-        element_ids?: number[]; page_id?: number;
+        element_ids?: number[]; page_id?: number; aliases?: Record<string, string>;
       } = {
         page_label: payload.pageLabel || '',
         folder_path: payload.folderPath || '',
         include_ocr: payload.includeOcr !== false,
       }
       if (payload.pageId) body.page_id = payload.pageId
-      // 勾选 = 筛减：dump 行（含坐标匹配行）按元素索引筛减；勾了纯 OCR 行自动携带页面级 OCR
+      // 结构分析表内联重命名的「元素名称」→ 按 resource_id 映射为别名写入元素定位
       const all = snapshot.value.elements || []
+      const aliases: Record<string, string> = {}
+      for (const [idx, name] of Object.entries(nameOverrides.value)) {
+        const rid = (all[Number(idx)]?.resource_id || '').trim()
+        if (rid && name) aliases[rid] = name
+      }
+      if (Object.keys(aliases).length) body.aliases = aliases
+      // 勾选 = 筛减：dump 行（含坐标匹配行）按元素索引筛减；勾了纯 OCR 行自动携带页面级 OCR
       const checkedDumpIdx = mergedRows.value
         .filter(r => r._kind === 'dump' && checkedIds.value.has(r._rowKey))
         .map(r => r._idx)
@@ -370,18 +383,27 @@ export const useElementStore = defineStore('device-inspector', () => {
     selectedOcr.value = item
     selected.value = null
   }
+  /** 结构分析表内联重命名：空值视为撤销自定义名（回退元素 text） */
+  function setElementName(idx, name) {
+    if (idx == null) return
+    const next = { ...nameOverrides.value }
+    const v = (name || '').trim()
+    if (v) next[idx] = v
+    else delete next[idx]
+    nameOverrides.value = next
+  }
   function clearError() { error.value = '' }
 
   return {
     devices, captureSerial, captureMethod, availableDevices,
     snapshot, snapshots, snapshotTotal, captLoading, error,
     elements, ocrTexts, selected, selectedOcr, filterMode, searchText, filteredElements,
-    mergedRows, filteredRows, checkedIds,
+    nameOverrides, mergedRows, filteredRows, checkedIds,
     analysis, analyzing, viewMode,
     drawerVisible, saveDialogVisible, pickerVisible, saving,
     fetchDevices, capture, fetchSnapshots, viewSnapshot, deleteSnapshot, analyzeSnapshot,
     saveToElements, viewSavedPage,
     toggleCheck, clearChecked,
-    selectElement, selectOcr, clearError,
+    selectElement, selectOcr, setElementName, clearError,
   }
 })

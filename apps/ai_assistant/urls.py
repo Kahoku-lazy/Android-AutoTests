@@ -10,16 +10,19 @@ router 使用 trailing_slash=False 以保持旧路径（无尾斜杠）原样匹
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .views import chat_stream
 from .views.tool_gateway import agent_config, tool_gateway, tool_schemas
 from .views_drf import (
     AgentHealthAPIView,
+    AgentTaskListAPIView,
     AgentViewSet,
     AvailableSkillsAPIView,
     AvailableToolsAPIView,
     ConversationViewSet,
     ModelDetectAPIView,
+    PlatformConfigAPIView,
+    PlatformToolToggleAPIView,
     TaskBoardAPIView,
+    TaskSubmitAPIView,
 )
 from .views_knowledge_drf import (
     KnowledgeAddDocAPIView,
@@ -44,8 +47,16 @@ special_patterns = [
     path("models/detect", ModelDetectAPIView.as_view(), name="models_detect"),
     path("available-tools", AvailableToolsAPIView.as_view(), name="available_tools"),
     path("available-skills", AvailableSkillsAPIView.as_view(), name="available_skills"),
+    path(
+        "platform-tools/toggle", PlatformToolToggleAPIView.as_view(), name="platform_tools_toggle"
+    ),
+    path("platform-config", PlatformConfigAPIView.as_view(), name="platform_config"),
+    path("platform-config/update", PlatformConfigAPIView.as_view(), name="platform_config_update"),
     # Workbench task board
     path("tasks", TaskBoardAPIView.as_view(), name="ai_tasks_list"),
+    # 任务发布（提交 + 列表）
+    path("tasks/submit", TaskSubmitAPIView.as_view(), name="ai_tasks_submit"),
+    path("agent-tasks", AgentTaskListAPIView.as_view(), name="ai_agent_tasks"),
     # Knowledge base
     path("knowledge/status", KnowledgeStatusAPIView.as_view(), name="kb_status"),
     path("knowledge/documents", KnowledgeDocumentsAPIView.as_view(), name="kb_documents"),
@@ -58,12 +69,6 @@ special_patterns = [
 
 # ── 豁免路径（不迁移）──
 legacy_patterns = [
-    # SSE streaming chat — Agent runs in-process
-    path(
-        "conversations/<int:conv_id>/chat/stream",
-        chat_stream,
-        name="conv_chat_stream",
-    ),
     # Tool gateway — 中间件白名单 + 动态分发
     path("tools/schemas", tool_schemas, name="tool_schemas"),
     path("tools/agent-config/<str:agent_id>", agent_config, name="tool_agent_config"),

@@ -47,8 +47,11 @@ TOOLBOX_URL = "/api/ai/toolbox"
 TOOLBOX_CREATE_URL = "/api/ai/toolbox/create"
 TOOLBOX_UPDATE_URL = "/api/ai/toolbox/{item_id}/update"
 TOOLBOX_DELETE_URL = "/api/ai/toolbox/{item_id}/delete"
+TOOLBOX_TOGGLE_URL = "/api/ai/toolbox/{item_id}/toggle"
 TOOLBOX_UPLOAD_SKILL_URL = "/api/ai/toolbox/upload-skill"
-IMPORT_FROM_TOOLBOX_URL = "/api/ai/agents/{agent_id}/tools/import-from-toolbox"
+PLATFORM_CONFIG_URL = "/api/ai/platform-config"
+PLATFORM_CONFIG_UPDATE_URL = "/api/ai/platform-config/update"
+PLATFORM_TOOLS_TOGGLE_URL = "/api/ai/platform-tools/toggle"
 
 KB_STATUS_URL = "/api/ai/knowledge/status"
 KB_DOCUMENTS_URL = "/api/ai/knowledge/documents"
@@ -56,10 +59,6 @@ KB_ADD_DOC_URL = "/api/ai/knowledge/documents/add"
 
 UPLOAD_AVATAR_URL = "/api/ai/upload-avatar"
 UPLOAD_FILE_URL = "/api/ai/upload-file"
-
-AGENT_TOOLS_URL = "/api/ai/agents/{agent_id}/tools"
-TOOL_TOGGLE_URL = "/api/ai/agents/{agent_id}/tools/{tool_id}/toggle"
-TOOL_DELETE_URL = "/api/ai/agents/{agent_id}/tools/{tool_id}/delete"
 
 TIMEOUT = 30
 
@@ -186,28 +185,6 @@ def create_shared_tool(
         timeout=TIMEOUT,
     )
     assert resp.status_code == 200, f"create shared tool failed: {resp.status_code} {resp.text}"
-    body = resp.json()
-    assert body.get("status") is True
-    return {"id": body["data"]["id"]}
-
-
-def import_tool(
-    api_session: requests.Session,
-    base_url: str,
-    headers: dict,
-    agent_id: int,
-    *,
-    name: str | None = None,
-) -> dict:
-    """经工具箱创建共享 MCP 并导入智能体，归一化返回 {"id": int}（per-agent AITool）。"""
-    shared = create_shared_tool(api_session, base_url, headers, name=name)
-    resp = api_session.post(
-        f"{base_url}{IMPORT_FROM_TOOLBOX_URL.format(agent_id=agent_id)}",
-        json={"toolbox_item_id": shared["id"]},
-        headers=headers,
-        timeout=TIMEOUT,
-    )
-    assert resp.status_code == 200, f"import tool failed: {resp.status_code} {resp.text}"
     body = resp.json()
     assert body.get("status") is True
     return {"id": body["data"]["id"]}

@@ -7,7 +7,7 @@
   POST /api/ai/agents/{id}/update        更新
   POST /api/ai/agents/{id}/delete        删除
   POST /api/ai/agents/{id}/reveal-key    一次性查看 Key
-  GET  /api/ai/agents/health             全部 Agent 健康检查
+  GET  /api/ai/agents/health             当前用户 Agent 健康检查
   POST /api/ai/agents/{id}/test          连接测试
   GET  /api/ai/agents/{id}/models        缓存模型列表
   POST /api/ai/models/detect             模型探测（GET 分支保持 400 语义）
@@ -33,10 +33,12 @@ from rest_framework.views import APIView
 
 from . import api
 from .agent_scope.provider_registry import get_provider_config
-from .models import AIAgent, AIConversation, AIMessage
+from .models import AIAgent, AIConversation, AIMessage, AITask
 from .permissions import (
     check_agent_owner,
+    check_agent_visible,
     check_can_create_agent,
+    check_can_update_agent,
     check_conversation_access,
     filter_agents_for_user,
     filter_conversations_for_user,
@@ -51,8 +53,8 @@ from .serializers import (
     MessageListSerializer,
     ModelDetectInputSerializer,
     RenameInputSerializer,
+    TaskSubmitInputSerializer,
 )
-from .views_toolbox_drf import AgentToolActionsMixin, Conflict
 
 logger = logging.getLogger("ai_assistant")
 
@@ -121,7 +123,6 @@ def call_model_api(agent, path, method="GET", body=None):
 
 
 class AgentViewSet(
-    AgentToolActionsMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
@@ -140,19 +141,38 @@ class AgentViewSet(
             raise PermissionDenied("Forbidden")
         return agent_id
 
+    def _require_visible(self, request) -> int:
+        """返回当前用户可见的 agent_id（owner 或共享智能体）；否则 403。"""
+        agent_id = _agent_pk(request)
+        if agent_id is None:
+            raise NotFound("not found")
+        if not check_agent_visible(_user_id(request), agent_id):
+            raise PermissionDenied("Forbidden")
+        return agent_id
+
+    def _require_admin(self, request) -> int:
+        """仅超级管理员可写：非超管 403；超管但资源不存在 404。"""
+        agent_id = _agent_pk(request)
+        if agent_id is None:
+            raise NotFound("not found")
+        if not check_can_update_agent(_user_id(request), agent_id):
+            raise PermissionDenied("Forbidden")
+        if not AIAgent.objects.filter(id=agent_id).exists():
+            raise NotFound("not found")
+        return agent_id
+
     # ── 列表 ──
 
     def list(self, request, *args, **kwargs):
         qs = filter_agents_for_user(AIAgent.objects.all(), _user_id(request))
-        qs = qs.prefetch_related("tools")
         return Response({"agents": AgentListSerializer(qs, many=True).data})
 
     # ── 详情 ──
 
     def retrieve(self, request, *args, **kwargs):
-        agent_id = self._require_owner(request)
-        a = AIAgent.objects.prefetch_related("tools").get(id=agent_id)
-        return Response({"agent": AgentDetailSerializer(a).data})
+        agent_id = self._require_visible(request)
+        a = AIAgent.objects.get(id=agent_id)
+        return Response({"agent": AgentDetailSerializer(a, context={"request": request}).data})
 
     # ── 创建 ──
 
@@ -169,7 +189,7 @@ class AgentViewSet(
 
     @action(detail=True, methods=["post"], url_path="update")
     def update_agent(self, request, *args, **kwargs):
-        agent_id = self._require_owner(request)
+        agent_id = self._require_admin(request)
         serializer = AgentInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         agent = api.update_agent(AIAgent.objects.get(id=agent_id), serializer.validated_data)
@@ -179,7 +199,7 @@ class AgentViewSet(
 
     @action(detail=True, methods=["post"], url_path="delete")
     def delete_agent(self, request, *args, **kwargs):
-        agent_id = self._require_owner(request)
+        agent_id = self._require_admin(request)
         api.delete_agent(AIAgent.objects.get(id=agent_id))
         return Response({})
 
@@ -187,7 +207,7 @@ class AgentViewSet(
 
     @action(detail=True, methods=["post"], url_path="reveal-key")
     def reveal_key(self, request, *args, **kwargs):
-        agent_id = self._require_owner(request)
+        agent_id = self._require_admin(request)
         a = AIAgent.objects.get(id=agent_id)
         try:
             payload = api.reveal_agent_key(a)
@@ -252,17 +272,12 @@ class AgentViewSet(
             }
         )
 
-    # ── 缓存模型列表（旧 GET /agents/{id}/models；无 owner 校验，保持原行为）──
+    # ── 缓存模型列表（旧 GET /agents/{id}/models；按 owner 校验，对齐其他详情动作）──
 
     @action(detail=True, methods=["get"], url_path="models")
     def models(self, request, *args, **kwargs):
-        agent_id = _agent_pk(request)
-        if agent_id is None:
-            raise NotFound("not found")
-        try:
-            a = AIAgent.objects.get(id=agent_id)
-        except AIAgent.DoesNotExist:
-            raise NotFound("not found")
+        agent_id = self._require_visible(request)
+        a = AIAgent.objects.get(id=agent_id)
         models = json.loads(a.available_models) if a.available_models else []
         return Response(
             {
@@ -276,7 +291,7 @@ class AgentViewSet(
 
     @action(detail=True, methods=["get"], url_path="conversations")
     def list_conversations(self, request, *args, **kwargs):
-        agent_id = self._require_owner(request)
+        agent_id = self._require_visible(request)
         convs = filter_conversations_for_user(
             AIConversation.objects.filter(agent_id=agent_id),
             _user_id(request),
@@ -285,7 +300,7 @@ class AgentViewSet(
 
     @action(detail=True, methods=["post"], url_path="conversations/create")
     def create_conversation(self, request, *args, **kwargs):
-        agent_id = self._require_owner(request)
+        agent_id = self._require_visible(request)
         serializer = ConversationCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         conv = api.create_conversation(
@@ -302,13 +317,13 @@ class AgentViewSet(
 
 
 class AgentHealthAPIView(APIView):
-    """GET /api/ai/agents/health — 遍历全部 active Agent（无 owner 过滤，保持原行为）。"""
+    """GET /api/ai/agents/health — 遍历当前用户 active Agent（按 owner 过滤）。"""
 
     def get(self, request):
         from datetime import timedelta
 
         results = []
-        for a in AIAgent.objects.filter(status="active"):
+        for a in filter_agents_for_user(AIAgent.objects.filter(status="active"), _user_id(request)):
             connected = a.is_connected
             if a.api_key:
                 needs_check = not a.last_checked_at or (
@@ -380,13 +395,14 @@ class ModelDetectAPIView(APIView):
 
 
 class AvailableToolsAPIView(APIView):
-    """GET /api/ai/available-tools — 平台业务工具（按分类）。"""
+    """GET /api/ai/available-tools — 平台业务工具（按分类，含全局启用状态）。"""
 
     def get(self, request):
-        from .agent_scope.tool_registry import TOOL_CATEGORIES, TOOL_SCHEMAS
+        from .agent_scope.tools import TOOL_CATEGORIES, list_tool_schemas
 
+        enabled_map = api.get_platform_tool_enabled_map()
         tools_by_category = {}
-        for t in TOOL_SCHEMAS:
+        for t in list_tool_schemas():
             cat = t.get("category", "其他")
             if cat not in tools_by_category:
                 tools_by_category[cat] = []
@@ -396,6 +412,7 @@ class AvailableToolsAPIView(APIView):
                     "summary": t.get("summary", ""),
                     "icon": t.get("icon", ""),
                     "read_only": t.get("read_only", True),
+                    "enabled": enabled_map.get(t["name"], True),
                 }
             )
 
@@ -414,22 +431,76 @@ class AvailableToolsAPIView(APIView):
         return Response({"categories": categories})
 
 
-class AvailableSkillsAPIView(APIView):
-    """GET /api/ai/available-skills — workspace 技能列表。"""
+class PlatformToolToggleAPIView(APIView):
+    """POST /api/ai/platform-tools/toggle — 平台业务工具全局启停（仅超级管理员）。
+
+    body 二选一：
+      {name: "list_devices", enabled: false}      单工具启停
+      {category: "设备管理", enabled: false}       整分类启停
+    """
+
+    def post(self, request):
+        from .agent_scope.tools import list_tool_schemas
+        from .permissions import _is_superuser
+
+        if not _is_superuser(_user_id(request)):
+            raise PermissionDenied("Forbidden")
+
+        schemas = list_tool_schemas()
+        name = (request.data.get("name") or "").strip()
+        category = (request.data.get("category") or "").strip()
+        enabled = bool(request.data.get("enabled", True))
+
+        if name:
+            names = [name] if any(t["name"] == name for t in schemas) else []
+            if not names:
+                raise NotFound("tool not found")
+        elif category:
+            names = [t["name"] for t in schemas if t.get("category") == category]
+            if not names:
+                raise NotFound("category not found")
+        else:
+            from rest_framework.exceptions import ValidationError
+
+            raise ValidationError("name 或 category 必填其一")
+
+        for n in names:
+            api.set_platform_tool_enabled(n, enabled)
+        return Response({"updated": names})
+
+
+class PlatformConfigAPIView(APIView):
+    """平台唯一智能体的工具/知识库配置（供 AI 工具箱 / 知识库页读写）。
+
+    GET  /api/ai/platform-config         读取配置
+    POST /api/ai/platform-config/update  更新（仅超级管理员）
+    """
+
+    def _get_agent_or_404(self):
+        agent = api.get_platform_agent()
+        if agent is None:
+            raise NotFound("platform agent not found")
+        return agent
 
     def get(self, request):
-        from .agent_scope.skill_registry import _SKILL_CLASS_MAP, ALL_SKILL_NAMES
+        agent = self._get_agent_or_404()
+        return Response(api.get_platform_config(agent))
 
-        skills = []
-        for name in ALL_SKILL_NAMES:
-            cls = _SKILL_CLASS_MAP.get(name)
-            skills.append(
-                {
-                    "name": name,
-                    "description": (cls.description or "").strip() if cls else "",
-                }
-            )
-        return Response({"skills": skills})
+    def post(self, request):
+        from .permissions import _is_superuser
+
+        if not _is_superuser(_user_id(request)):
+            raise PermissionDenied("Forbidden")
+        agent = self._get_agent_or_404()
+        api.update_platform_config(agent, request.data)
+        return Response(api.get_platform_config(agent))
+
+
+class AvailableSkillsAPIView(APIView):
+    """GET /api/ai/available-skills — workspace 技能列表（已移除，返回空）。"""
+
+    def get(self, request):
+        return Response({"skills": []})
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -505,37 +576,6 @@ class ConversationViewSet(viewsets.GenericViewSet):
     def delete(self, request, *args, **kwargs):
         conv_id = self._require_access(request)
         api.delete_conversation(AIConversation.objects.get(id=conv_id))
-        return Response({})
-
-    @action(detail=True, methods=["post"], url_path="confirm-result")
-    def confirm_result(self, request, *args, **kwargs):
-        from .views.hitl_views import deliver_confirm_result
-
-        conv_id = self._require_access(request)
-        try:
-            conv = AIConversation.objects.get(id=conv_id)
-        except AIConversation.DoesNotExist:
-            raise NotFound("conversation not found")
-        reply_id = request.data.get("reply_id", "")
-        confirm_results = request.data.get("confirm_results", [])
-
-        result = deliver_confirm_result(conv_id, reply_id, confirm_results)
-        if result is not None:
-            status_code, message = result
-            if status_code == 409:
-                raise Conflict(message)
-            from rest_framework.exceptions import ValidationError
-
-            raise ValidationError(message)
-
-        # Log the confirmation（审计写库走 api.py）
-        import json as _json
-
-        api.log_confirm_result(
-            conv.agent,
-            f"User confirm: {_json.dumps(confirm_results, ensure_ascii=False)}",
-            _json.dumps({"reply_id": reply_id, "conv_id": conv_id}),
-        )
         return Response({})
 
     @action(detail=True, methods=["get"], url_path="tasks")
@@ -707,3 +747,130 @@ def _serialize_ai_task(t, total=0, passed=0):
         "started_at": str(t.started_at) if t.started_at else None,
         "finished_at": str(t.finished_at) if t.finished_at else None,
     }
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 任务发布（POST /api/ai/tasks/submit · GET /api/ai/agent-tasks）
+# ═══════════════════════════════════════════════════════════════════
+
+
+def _resolve_device_serial() -> str:
+    """取第一台在线设备 serial；无设备返回空。"""
+    from apps.device_pool.api import get_online_devices
+
+    devices = get_online_devices()
+    if not devices:
+        return ""
+    return devices[0].serial or ""
+
+
+def _build_device_execution(agent: AIAgent, route: str):
+    """从 route_configs 的某条线路构建 DeviceExecution（三模型配置）。"""
+    from .agent_scope.config import DeviceExecutionConfig, ModelConfig
+    from .agent_scope.model import DeviceExecution
+
+    route_cfg = (agent.route_configs or {}).get(route) or {}
+
+    def _cfg(m: dict) -> ModelConfig:
+        return ModelConfig(
+            provider=m.get("provider", "deepseek"),
+            model_name=m.get("model_name", ""),
+            api_key=api.decrypt_key(m.get("api_key", "")),
+            base_url=m.get("base_url", ""),
+        )
+
+    config = DeviceExecutionConfig(
+        planner=_cfg(route_cfg.get("planner") or {}),
+        executor=_cfg(route_cfg.get("executor") or {}),
+        verifier=_cfg(route_cfg.get("verifier") or {}),
+        max_loops=int(agent.max_loops or 3),
+    )
+    return DeviceExecution(config, user_id=str(agent.owner_id or ""))
+
+
+def _run_device_control(agent: AIAgent, goal: str, serial: str = "") -> dict:
+    """控制设备线路：规划 → 执行 → 验收（三模型工作流，同步执行，后续可迁异步）。"""
+    import asyncio
+
+    from .agent_scope.workflow import DeviceExecutionWorkflow
+
+    dev = _build_device_execution(agent, "device_control")
+    workflow = DeviceExecutionWorkflow(dev, serial=serial or _resolve_device_serial())
+    return asyncio.run(workflow.run(goal))
+
+
+class TaskSubmitAPIView(APIView):
+    """POST /api/ai/tasks/submit — 提交任务并按线路分发执行。"""
+
+    def post(self, request):
+        serializer = TaskSubmitInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        agent = api.get_platform_agent()
+        if agent is None:
+            raise NotFound("platform agent not found")
+
+        goal = data["goal"]
+        route = data["route"]
+        device_serial = data.get("device_serial", "")
+        task = api.create_task(
+            agent,
+            title=goal[:100],
+            goal=goal,
+            requirements=data.get("requirements", ""),
+            attachment=data.get("attachment", ""),
+            route=route,
+            checklist=data.get("checklist", ""),
+            report_name=data.get("report_name", ""),
+            device_serial=device_serial,
+        )
+
+        if route == "platform_task":
+            task.result = "线路开发中"
+            task.save(update_fields=["result"])
+            return Response({"id": task.id, "status": task.status, "result": task.result})
+
+        try:
+            result = _run_device_control(agent, goal, serial=device_serial)
+        except Exception as exc:
+            logger.exception("device_control task failed id=%s", task.id)
+            task.status = "failed"
+            task.result = f"执行异常: {exc}"
+            task.finished_at = datetime.now()
+            task.save(update_fields=["status", "result", "finished_at"])
+            return Response({"id": task.id, "status": task.status, "result": task.result})
+
+        task.status = "completed" if result.get("status") == "success" else "failed"
+        task.result = result.get("assertion", "")
+        task.finished_at = datetime.now()
+        task.save(update_fields=["status", "result", "finished_at"])
+        return Response({"id": task.id, "status": task.status, "result": task.result})
+
+
+class AgentTaskListAPIView(APIView):
+    """GET /api/ai/agent-tasks — 任务发布列表（AITask）。"""
+
+    def get(self, request):
+        agent = api.get_platform_agent()
+        if agent is None:
+            return Response({"tasks": []})
+        tasks = AITask.objects.filter(agent=agent).order_by("-id")[:100]
+        return Response(
+            {
+                "tasks": [
+                    {
+                        "id": t.id,
+                        "title": t.title,
+                        "goal": t.goal,
+                        "route": t.route,
+                        "status": t.status,
+                        "result": t.result,
+                        "report_name": t.report_name,
+                        "device_serial": t.device_serial,
+                        "created_at": str(t.created_at),
+                    }
+                    for t in tasks
+                ]
+            }
+        )

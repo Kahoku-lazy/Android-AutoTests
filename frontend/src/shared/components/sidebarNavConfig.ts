@@ -19,6 +19,7 @@ export const NAV_CATEGORIES = [
           { path: "/elements/api", icon: "server", label: "API接口" },
         ],
       },
+      { path: "/workflow", icon: "git-branch", label: "工作流工作台" },
       {
         path: "/cases",
         icon: "layers",
@@ -42,13 +43,12 @@ export const NAV_CATEGORIES = [
         icon: "bot",
         label: "AI 助手",
         children: [
-          { path: "/ai-assistant/agents", icon: "sticky-note", label: "智能体看板" },
+          { path: "/ai-assistant/agents", icon: "sticky-note", label: "平台小助手" },
           { path: "/ai-assistant/toolbox", icon: "wrench", label: "AI工具箱" },
           { path: "/ai-assistant/knowledge", icon: "book-open", label: "知识库" },
           { path: "/ai-assistant/evaluator", icon: "activity", label: "评测中心" },
         ],
       },
-      { path: "/workflow", icon: "git-branch", label: "工作流工作台" },
     ],
   },
 ]

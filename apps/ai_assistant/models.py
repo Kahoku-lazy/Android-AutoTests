@@ -20,27 +20,19 @@ class AIAgent(models.Model):
     description = models.TextField(default="", blank=True)
     model_provider = models.CharField(max_length=50, default="dashscope")
     model_name = models.CharField(max_length=100, default="qwen-max")
+    # 视觉模型名：意图路由为 phone_control/workflow 时使用；空则回退 model_name（纯文本）
+    vision_model_name = models.CharField(max_length=100, default="", blank=True)
+    # 强模型名：强模型开关开启时使用；空则回退 vision_model_name（多模态强模型）
+    strong_model_name = models.CharField(max_length=100, default="", blank=True)
+    # 强模型短路开关：开启时跳过意图 1/2 选择，直接下发强模型 Harness
+    strong_enabled = models.BooleanField(default=False)
+    # 多线路模型配置：{"device_control": {"planner": {...}, "executor": {...}, "verifier": {...}}, "platform_task": {...}}
+    # 每条线路的 api_key 经 Fernet 加密；读取时脱敏。
+    route_configs = models.JSONField(default=dict, blank=True)
+    # 工作流循环次数：executor ↔ verifier 内层循环的最大重试次数
+    max_loops = models.IntegerField(default=3)
     api_key = models.CharField(max_length=500, default="", blank=True)
     base_url = models.CharField(max_length=500, default="", blank=True)
-    system_prompt = models.TextField(default="", blank=True)
-    temperature = models.FloatField(default=0.7)
-    max_tokens = models.IntegerField(default=4096)
-    # AgentScope 2.0 fields
-    formatter = models.CharField(max_length=50, default="dashscope")
-    max_iters = models.IntegerField(default=20)
-    parallel_tool_calls = models.BooleanField(default=True)
-    print_hint_msg = models.BooleanField(default=False)
-    memory_mode = models.CharField(max_length=20, default="inmemory")  # inmemory | longterm
-    long_term_memory_mode = models.CharField(max_length=20, default="both")
-    enable_meta_tool = models.BooleanField(default=False)
-    enable_rewrite_query = models.BooleanField(default=True)
-    generate_kwargs = models.TextField(default="{}", blank=True)
-    compression_enabled = models.BooleanField(default=False)
-    compression_threshold = models.IntegerField(default=10000)
-    compression_keep_recent = models.IntegerField(default=3)
-    compression_prompt = models.TextField(default="", blank=True)
-    compression_template = models.TextField(default="", blank=True)
-    tts_enabled = models.BooleanField(default=False)
     enable_knowledge_base = models.BooleanField(default=False)
     # Per-agent workspace skill toggles.
     # JSON object: {"Bash": true, "Read": true, "Write": false, ...}
@@ -65,9 +57,6 @@ class AIAgent(models.Model):
     available_models = models.TextField(default="", blank=True)  # JSON list of model names
     # AgentScope agent_id returned by POST /agent/ — needed to reference in chat/session calls
     agent_scope_id = models.CharField(max_length=100, default="", blank=True)
-    # Cached AgentScope credential — reused across sessions until API key / base_url changes
-    agent_scope_credential_id = models.CharField(max_length=100, default="", blank=True)
-    credential_hash = models.CharField(max_length=64, default="", blank=True)
     # Security: one-time API key reveal — set False on key change, True after first reveal
     key_revealed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -82,30 +71,11 @@ class AIAgent(models.Model):
         return self.name
 
 
-class AITool(models.Model):
-    """Tool / MCP / Skill config → ai_tools."""
-
-    agent = models.ForeignKey(AIAgent, on_delete=models.CASCADE, related_name="tools")
-    name = models.CharField(max_length=200)
-    tool_type = models.CharField(max_length=20, default="mcp")
-    config_json = models.TextField(default="{}")
-    enabled = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "ai_tools"
-        verbose_name = "工具配置"
-        verbose_name_plural = "工具配置"
-
-    def __str__(self):
-        return f"{self.name} [{self.tool_type}]"
-
-
 class AISharedTool(models.Model):
-    """Shared toolbox item — skills, tools, and extensions reusable across agents.
+    """共享工具箱项 — skill / mcp / extension，全局唯一，直接启用/停用。
 
-    Unlike AITool (which is per-agent), items here are global and can be
-    imported into any agent via POST /agents/{id}/tools/import-from-toolbox.
+    平台只用单一智能体：`enabled` 直接决定该智能体是否使用，
+    无需 per-agent 副本或「导入」步骤。
     """
 
     name = models.CharField(max_length=200)
@@ -123,6 +93,27 @@ class AISharedTool(models.Model):
 
     def __str__(self):
         return f"{self.name} [{self.item_type}]"
+
+
+class AIPlatformTool(models.Model):
+    """Global platform business tool enable/disable state → ai_platform_tools.
+
+    全局开关（所有智能体共享）：AI 工具箱统一决定启用/停用哪个平台业务工具，
+    智能体只保留 `enable_business_tools` 总开关。默认（无记录）＝启用；
+    停用 = 记录 enabled=False；启用 = 删除记录回默认。
+    """
+
+    name = models.CharField(max_length=200, unique=True)
+    enabled = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "ai_platform_tools"
+        verbose_name = "平台业务工具开关"
+        verbose_name_plural = "平台业务工具开关"
+
+    def __str__(self):
+        return f"{self.name} [{'启用' if self.enabled else '停用'}]"
 
 
 class AIConversation(models.Model):
@@ -192,6 +183,18 @@ class AITask(models.Model):
     agent = models.ForeignKey(AIAgent, on_delete=models.CASCADE, related_name="tasks")
     title = models.CharField(max_length=500)
     description = models.TextField(default="", blank=True)
+    # 任务发布字段
+    goal = models.TextField(default="", blank=True)  # 任务目标（必填）
+    requirements = models.TextField(default="", blank=True)  # 任务要求
+    attachment = models.CharField(max_length=500, default="", blank=True)  # 任务附件文件路径
+    route = models.CharField(
+        max_length=50, default="device_control"
+    )  # 线路：device_control/platform_task
+    checklist = models.TextField(default="", blank=True)  # 任务校验清单
+    report_name = models.CharField(max_length=200, default="", blank=True)  # 报告文件名
+    device_serial = models.CharField(
+        max_length=100, default="", blank=True
+    )  # 指定设备 serial（空则第一台在线）
     status = models.CharField(max_length=20, default="pending")
     result = models.TextField(default="", blank=True)
     scheduled_at = models.DateTimeField(null=True, blank=True)

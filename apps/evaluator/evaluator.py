@@ -225,8 +225,6 @@ def run_evaluation(
             model_name=agent.model_name,
             api_key=api_key,
             base_url=provider_cfg.get("base_url", ""),
-            system_prompt=agent.system_prompt or "",
-            temperature=agent.temperature,
         )
         answer_latency = round(time.time() - t0, 2)
 

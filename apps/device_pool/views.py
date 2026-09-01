@@ -106,6 +106,11 @@ def device_current(request):
     """GET /api/devices/current — 当前活动设备信息。"""
     info = device_pool.info()
     current_serial = device_pool.current_serial
+    try:
+        app = device_pool.app_current()
+    except Exception:
+        logger.warning("读取设备前台失败 serial=%s", current_serial)
+        app = {}
 
     try:
         dev = Device.objects.get(serial=current_serial)
@@ -114,7 +119,7 @@ def device_current(request):
                 "serial": current_serial,
                 "screen_w": dev.screen_w or info.get("displayWidth", 0),
                 "screen_h": dev.screen_h or info.get("displayHeight", 0),
-                "package": info.get("currentPackageName", ""),
+                "package": app.get("package", ""),
                 "model": dev.model,
                 "brand": dev.brand,
                 "connection_type": device_pool.get_connection_type(current_serial),
@@ -126,7 +131,7 @@ def device_current(request):
                 "serial": current_serial,
                 "screen_w": info.get("displayWidth", 0),
                 "screen_h": info.get("displayHeight", 0),
-                "package": info.get("currentPackageName", ""),
+                "package": app.get("package", ""),
             }
         )
 

@@ -26,18 +26,6 @@ export async function testAgent(agentId: number): Promise<AgentTestResponse> {
   return data
 }
 
-/** 删除 Agent */
-export async function deleteAgent(agentId: number): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>(`/ai/agents/${agentId}/delete`)
-  return data
-}
-
-/** 更新 Agent 模型名称（后端 update 契约强制 name 必填，由调用方传入） */
-export async function updateAgentModel(agentId: number, modelName: string, agentName: string): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>(`/ai/agents/${agentId}/update`, { name: agentName, model_name: modelName })
-  return data
-}
-
 /** 获取 Agent 详情 */
 export async function getAgentDetail(agentId: number): Promise<AgentDetailResponse> {
   const { data } = await djangoClient.get<AgentDetailResponse>(`/ai/agents/${agentId}`)

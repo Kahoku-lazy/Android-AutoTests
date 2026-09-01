@@ -1,16 +1,13 @@
 /** AI 助手看板页 — 逻辑编排器（从 index.vue 提取） */
 import { ref, onMounted, onActivated, onUnmounted, nextTick, type Ref } from 'vue'
-import { ElMessageBox, ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { animate } from 'animejs'
 import { selectPop, iconBounce } from '@/shared/animations'
 import {
   listAgents, checkAgentsHealth, testAgent,
-  deleteAgent as apiDeleteAgent, updateAgentModel,
 } from './api/agents'
 import type { AgentRecord, ViewMode } from '@/shared/types/ai'
-import { getModelOptions } from './helpers/model-config'
 import {
-  chatRoute,
   agentDetailRoute,
   HEALTH_CHECK_INTERVAL_MS,
 } from './constants'
@@ -37,23 +34,18 @@ export interface AgentBoardState {
   loading: Ref<boolean>
   agentsError: Ref<string>
   testingId: Ref<number | null>
-  confirmingId: Ref<number | null>
   healthResults: Ref<Record<number, { is_connected: boolean; last_checked?: string }>>
-  pendingModels: Ref<Record<number, string>>
   // helpers
   PAGE_HEADER: typeof PAGE_HEADER
   noteRotation: (agent: AgentRecord) => number
   tapeHue: (agent: AgentRecord) => string
   agentStatusText: (agent: AgentRecord) => string
   agentStatusClass: (agent: AgentRecord) => string
-  getModelOptions: (agent: AgentRecord, pendingModel?: string) => { label: string; value: string }[]
   // actions
   loadAgents: () => Promise<void>
   testConnection: (agent: AgentRecord) => Promise<void>
-  confirmModel: (agent: AgentRecord) => Promise<void>
-  deleteAgent: (agent: AgentRecord) => Promise<void>
   openAgent: (agent: AgentRecord) => void
-  editAgent: (id: number) => void
+  editAgent: (id: number, routeKey?: string) => void
   onAgentCardClick: (ev: Event) => void
 }
 
@@ -69,10 +61,8 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
   const agents = ref<AgentRecord[]>([])
   const loading = ref(false)
   const testingId = ref<number | null>(null)
-  const confirmingId = ref<number | null>(null)
   const healthTimer = ref<ReturnType<typeof setInterval> | null>(null)
   const healthResults = ref<Record<number, { is_connected: boolean; last_checked?: string }>>({})
-  const pendingModels = ref<Record<number, string>>({})
   const agentsError = ref('')
 
   // ── Derived ──
@@ -103,9 +93,6 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
     return '运行中'
   }
   function agentStatusClass(agent: AgentRecord): string { return `is-${agentStatusType(agent)}` }
-  function hasPendingModelChange(agent: AgentRecord): boolean {
-    return pendingModels.value[agent.id] !== agent.model_name
-  }
 
   // ── Animations ──
 
@@ -133,18 +120,12 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
 
   // ── Data loading ──
 
-  function syncPendingModels() {
-    const next: Record<number, string> = {}
-    for (const a of agents.value) next[a.id] = a.model_name || ''
-    pendingModels.value = next
-  }
-
   async function loadAgents() {
     loading.value = true
     agentsError.value = ''
     try {
       const data = await listAgents()
-      if (data.status && data.data) { agents.value = data.data.agents; syncPendingModels() }
+      if (data.status && data.data) { agents.value = data.data.agents }
       else { agentsError.value = data.message || '加载失败' }
     } catch { agentsError.value = '加载智能体列表失败，请检查网络连接' }
     loading.value = false
@@ -175,33 +156,10 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
     testingId.value = null
   }
 
-  async function confirmModel(agent: AgentRecord) {
-    const newModel = pendingModels.value[agent.id]
-    if (!newModel || newModel === agent.model_name) return
-    confirmingId.value = agent.id
-    try {
-      const data = await updateAgentModel(agent.id, newModel, agent.name)
-      if (!data.status) { pendingModels.value[agent.id] = agent.model_name || ''; ElMessage.error('模型切换失败') }
-      else { agent.model_name = newModel; ElMessage.success(`已确认使用 ${newModel}`) }
-    } catch { pendingModels.value[agent.id] = agent.model_name || ''; ElMessage.error('模型切换失败') }
-    confirmingId.value = null
+  function openAgent(_agent: AgentRecord) {
+    router.push('/ai-assistant/tasks')
   }
-
-  async function deleteAgent(agent: AgentRecord) {
-    try { await ElMessageBox.confirm(`确定要删除智能体「${agent.name}」吗？`, '确认删除', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }) }
-    catch { return }
-    try {
-      const data = await apiDeleteAgent(agent.id)
-      if (data.status) { agents.value = agents.value.filter(a => a.id !== agent.id); ElMessage.success(`已删除「${agent.name}」`) }
-      else ElMessage.error(data.message || '删除失败')
-    } catch { ElMessage.error('删除请求失败，请检查网络') }
-  }
-
-  function openAgent(agent: AgentRecord) {
-    if (hasPendingModelChange(agent)) { ElMessage.warning('请先点击「保存模型」确认模型'); return }
-    router.push(chatRoute(agent.id))
-  }
-  function editAgent(id: number) { router.push(agentDetailRoute(id)) }
+  function editAgent(id: number, routeKey?: string) { router.push({ path: agentDetailRoute(id), query: routeKey ? { route: routeKey } : {} }) }
 
   // ── Lifecycle ──
 
@@ -218,12 +176,11 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
   })
 
   return {
-    viewMode, agents, loading, agentsError, testingId, confirmingId, healthResults, pendingModels,
+    viewMode, agents, loading, agentsError, testingId, healthResults,
     PAGE_HEADER,
     noteRotation, tapeHue,
     agentStatusText, agentStatusClass,
-    getModelOptions,
-    loadAgents, testConnection, confirmModel, deleteAgent,
+    loadAgents, testConnection,
     openAgent, editAgent, onAgentCardClick,
   }
 }

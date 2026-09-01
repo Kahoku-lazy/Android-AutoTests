@@ -176,6 +176,10 @@ class DevicePool:
         x1, y1, x2, y2 = dirs.get(direction, (x, y, x, y - distance))
         self._session().swipe(x1, y1, x2, y2, duration=0.5)
 
+    def action_drag_coord(self, x1: int, y1: int, x2: int, y2: int, duration: float = 0.5):
+        """Coordinate drag from (x1,y1) to (x2,y2) — 拖动滑块/图标等。"""
+        self._session().swipe(x1, y1, x2, y2, duration=duration)
+
     def action_input(
         self, text: str, x: int | None = None, y: int | None = None, clear_first: bool = True
     ):

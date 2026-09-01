@@ -5,24 +5,32 @@ import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import WbLoader from './components/WbLoader.vue'
-import AgentStickyNote from './components/AgentStickyNote.vue'
+import AgentRouteCard from './components/AgentRouteCard.vue'
 import KnowledgeBase from './KnowledgeBase.vue'
 import EvaluatorTab from './EvaluatorTab.vue'
 import ToolboxPanel from './components/ToolboxPanel.vue'
+import TaskBoard from './components/TaskBoard.vue'
 import { useAgentBoard } from './index.logic'
-import { agentDetailRoute } from './constants'
+import { useAuthUser } from '@/shared/composables/useAuthUser'
 import type { ViewMode } from '@/shared/types/ai'
 
 const router = useRouter()
 const route = useRoute()
 const dutyRosterRef = ref<HTMLElement | null>(null)
 const {
-  agents, loading, agentsError, testingId, confirmingId, pendingModels,
-  PAGE_HEADER, noteRotation, tapeHue,
-  agentStatusClass, agentStatusText, getModelOptions,
-  loadAgents, confirmModel, deleteAgent, testConnection,
-  openAgent, editAgent, onAgentCardClick,
+  agents, loading, agentsError,
+  PAGE_HEADER, testingId,
+  loadAgents, editAgent, testConnection,
 } = useAgentBoard(dutyRosterRef)
+
+const { isSuperuser } = useAuthUser()
+const isAdmin = computed(() => isSuperuser.value === true)
+
+// 两条助手线路（从平台唯一智能体的 route_configs 读取）
+const routeCards = computed(() => [
+  { key: 'device_control', label: '控制设备', icon: '📱', config: agents.value[0]?.route_configs?.device_control },
+  { key: 'platform_task', label: '平台任务', icon: '🧭', config: agents.value[0]?.route_configs?.platform_task },
+])
 
 // ── 视图（侧边栏子项路由驱动，/ai-assistant/agents|toolbox|knowledge|evaluator）──
 const VIEW_BY_PATH: Record<string, ViewMode> = {
@@ -36,8 +44,8 @@ const viewMode = computed<ViewMode>(() => VIEW_BY_PATH[route.path] || 'agents')
 // ── 顶部 WorkbenchHeader 随侧边栏子项变化 ──
 const VIEW_META: Record<ViewMode, { title: string; subtitle: string }> = {
   agents: {
-    title: '智能体看板 Agent Board',
-    subtitle: '管理智能体：创建、编辑、连接测试与模型切换',
+    title: '平台小助手 Platform Assistant',
+    subtitle: '助手看板 + 任务卡片列表：配置两条线路、新建任务并下发执行',
   },
   toolbox: {
     title: 'AI工具箱 AI Toolbox',
@@ -62,46 +70,51 @@ const pageMeta = computed(() => VIEW_META[viewMode.value])
       :subtitle="pageMeta.subtitle"
       :icon="PAGE_HEADER.icon"
       :icon-gradient="PAGE_HEADER.iconGradient"
-    >
-      <template #actions>
-        <el-button class="wb-btn wb-btn--sky" type="primary" @click="router.push(agentDetailRoute('new'))">+ 新建智能体</el-button>
-      </template>
-    </WorkbenchHeader>
+    />
+
 
     <div class="doc-body">
       <template v-if="viewMode === 'agents'">
       <section class="doc-section duty-section">
         <div class="doc-section__header">
-          <h3 class="doc-section__title">智能体看板<span class="doc-tag">Agents</span></h3>
-          <span class="filter-count">{{ agents.length }} 张便签</span>
+          <h3 class="doc-section__title">平台小助手<span class="doc-tag">Assistant</span></h3>
+          <span class="filter-count">{{ routeCards.length }} 个助手</span>
         </div>
         <ErrorState v-if="agentsError" :message="agentsError" @retry="loadAgents" />
-        <div v-else ref="dutyRosterRef" class="dot-board duty-roster" v-loading="loading">
+        <div v-else class="route-card-grid" v-loading="loading">
           <div v-if="loading && !agents.length" class="ai-loading-wrap">
             <WbLoader /><span>正在加载智能体…</span>
           </div>
-          <AgentStickyNote
-            v-for="a in agents" :key="a.id" :agent="a"
-            :rotation="noteRotation(a)" :tape-hue="tapeHue(a)"
-            :pending-model="pendingModels[a.id]" :confirming="confirmingId === a.id"
-            :testing="testingId === a.id" :status-class="agentStatusClass(a)"
-            :status-text="agentStatusText(a)" :model-options="getModelOptions(a, pendingModels[a.id])"
-            @update:pending-model="pendingModels[a.id] = $event"
-            @confirm-model="confirmModel(a)" @chat="openAgent(a)"
-            @edit="editAgent(a.id)" @test="testConnection(a)"
-            @delete="deleteAgent(a)" @select="onAgentCardClick"
+          <AgentRouteCard
+            v-for="rc in routeCards" :key="rc.key"
+            :label="rc.label" :icon="rc.icon" :config="rc.config"
+            :can-manage="isAdmin"
+            :testing="testingId === agents[0]?.id"
+            @edit="editAgent(agents[0]?.id ?? 0, rc.key)"
+            @test="agents[0] && testConnection(agents[0])"
           />
-          <EmptyState v-if="!agents.length && !loading" icon="🤖" text="还没有智能体" hint="点击「+ 新建智能体」贴上第一张便签" />
+          <EmptyState v-if="!agents.length && !loading" icon="🤖" text="还没有智能体" :hint="'请联系管理员配置智能体'" />
         </div>
       </section>
 
+      <!-- 模块 2：任务卡片列表（新建任务弹窗 + 卡片式列表） -->
+      <TaskBoard />
       </template>
 
-      <ToolboxPanel v-if="viewMode === 'toolbox'" class="tb-host" />
-      <KnowledgeBase v-if="viewMode === 'knowledge'" class="kb-host" />
+      <ToolboxPanel v-if="viewMode === 'toolbox'" class="tb-host" :can-manage="isAdmin" />
+      <KnowledgeBase v-if="viewMode === 'knowledge'" class="kb-host" :can-manage="isAdmin" />
       <EvaluatorTab v-if="viewMode === 'evaluator'" class="eval-host" />
     </div>
   </div>
 </template>
 
 <style src="./index.style.css" scoped></style>
+
+<style scoped>
+.route-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+</style>

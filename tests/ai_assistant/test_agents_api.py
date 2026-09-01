@@ -1,8 +1,9 @@
-"""Agent 组接口测试（live-server）— 鉴权 / 列表 / CRUD / reveal-key / health / 模型检测。
+"""Agent 组接口测试（live-server）— 鉴权 / 列表 / 详情 / 更新 / 删除 / reveal-key / health / 模型检测。
 
 覆盖端点：/api/ai/agents*（Batch 1 已迁移 DRF）+ /api/ai/models/detect + available-tools/skills。
 断言 DRF 信封：成功 {status:true, data:{...}}，失败 {status:false, message}。
 行为契约（Batch 0 实测锁定）：权限检查先于存在性检查 → 不存在资源返回 403。
+注：平台已收敛为唯一智能体，「新增智能体」相关测试已移除（v6.15）。
 
 运行：pytest tests/ai_assistant/test_agents_api.py -v
 """
@@ -11,7 +12,6 @@ import allure
 import pytest
 
 from tests.ai_assistant.conftest import (
-    AGENT_CREATE_URL,
     AGENT_DELETE_URL,
     AGENT_DETAIL_URL,
     AGENT_HEALTH_URL,
@@ -51,74 +51,16 @@ def test_list_agents_unauthenticated_401(base_url, api_session):
 
 @allure.feature("AI 助手")
 @allure.story("Agent 列表")
-def test_list_agents_scoped_to_owner(base_url, api_session, auth_headers, other_auth_headers):
-    """列表只含当前用户的 Agent（{status, data:{agents}}）。"""
+def test_list_agents_shows_shared_agent(base_url, api_session, auth_headers, other_auth_headers):
+    """非超级管理员可见超级管理员配置的共享智能体（{status, data:{agents}}）。"""
     mine = create_agent(api_session, base_url, auth_headers)
-    theirs = create_agent(api_session, base_url, other_auth_headers)
 
-    resp = api_session.get(f"{base_url}{AGENTS_URL}", headers=auth_headers, timeout=TIMEOUT)
+    resp = api_session.get(f"{base_url}{AGENTS_URL}", headers=other_auth_headers, timeout=TIMEOUT)
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] is True
     ids = [a["id"] for a in body["data"]["agents"]]
     assert mine["id"] in ids
-    assert theirs["id"] not in ids
-
-
-# ═══════════════════════════════════════════════════════════════════
-# 创建
-# ═══════════════════════════════════════════════════════════════════
-
-
-@allure.feature("AI 助手")
-@allure.story("Agent 创建")
-def test_create_agent_success(base_url, api_session, auth_headers):
-    """创建 Agent → 200 {status, data:{id}}。"""
-    created = create_agent(api_session, base_url, auth_headers, name="新智能体")
-    assert isinstance(created["id"], int)
-
-
-@allure.feature("AI 助手")
-@allure.story("Agent 创建")
-def test_create_agent_missing_name_400(base_url, api_session, auth_headers):
-    """name 为空 → 400 {status:false, message}。"""
-    resp = api_session.post(
-        f"{base_url}{AGENT_CREATE_URL}",
-        json={"name": "  "},
-        headers=auth_headers,
-        timeout=TIMEOUT,
-    )
-    assert resp.status_code == 400
-    assert resp.json()["status"] is False
-    assert "message" in resp.json()
-
-
-@allure.feature("AI 助手")
-@allure.story("Agent 创建")
-def test_create_agent_invalid_provider_400(base_url, api_session, auth_headers):
-    """不支持的 model_provider → 400。"""
-    resp = api_session.post(
-        f"{base_url}{AGENT_CREATE_URL}",
-        json={"name": "x", "model_provider": "notexist"},
-        headers=auth_headers,
-        timeout=TIMEOUT,
-    )
-    assert resp.status_code == 400
-    assert resp.json()["status"] is False
-
-
-@allure.feature("AI 助手")
-@allure.story("Agent 创建")
-def test_create_agent_bad_json_400(base_url, api_session, auth_headers):
-    """非法 JSON → 400（DRF 解析器兜底，旧实现为 400"无效的 JSON"）。"""
-    resp = api_session.post(
-        f"{base_url}{AGENT_CREATE_URL}",
-        data="{bad",
-        headers=auth_headers,
-        timeout=TIMEOUT,
-    )
-    assert resp.status_code == 400
-    assert resp.json()["status"] is False
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -143,7 +85,7 @@ def test_agent_detail_success(base_url, api_session, auth_headers):
     assert agent["id"] == created["id"]
     assert "***" in agent["api_key"]  # 脱敏
     assert "sk-test-key-12345678" not in agent["api_key"]
-    for key in ("model_provider", "model_name", "status", "tools"):
+    for key in ("model_provider", "model_name", "status", "enable_business_tools"):
         assert key in agent
 
 
@@ -162,16 +104,23 @@ def test_agent_detail_403_nonexistent(base_url, api_session, auth_headers):
 
 @allure.feature("AI 助手")
 @allure.story("Agent 详情")
-def test_agent_detail_403_other_user(base_url, api_session, auth_headers, other_auth_headers):
-    """非所有者 → 403。"""
-    created = create_agent(api_session, base_url, auth_headers)
+def test_agent_detail_shared_visible_hides_sensitive(
+    base_url, api_session, auth_headers, other_auth_headers
+):
+    """非超级管理员可见共享智能体详情，但敏感字段（api_key/system_prompt/base_url）隐藏。"""
+    key = "fake-key"
+    created = create_agent(api_session, base_url, auth_headers, api_key=key)
     resp = api_session.get(
         f"{base_url}{AGENT_DETAIL_URL.format(agent_id=created['id'])}",
         headers=other_auth_headers,
         timeout=TIMEOUT,
     )
-    assert resp.status_code == 403
-    assert resp.json()["status"] is False
+    assert resp.status_code == 200
+    agent = resp.json()["data"]["agent"]
+    assert agent["id"] == created["id"]
+    assert agent["api_key"] == ""
+    assert agent["system_prompt"] == ""
+    assert agent["base_url"] == ""
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -261,14 +210,14 @@ def test_delete_agent_success(base_url, api_session, auth_headers):
 
 @allure.feature("AI 助手")
 @allure.story("Agent 删除")
-def test_delete_agent_403_nonexistent(base_url, api_session, auth_headers):
-    """不存在的 id → 403（权限检查先于存在性检查）。"""
+def test_delete_agent_404_nonexistent(base_url, api_session, auth_headers):
+    """超级管理员删除不存在的 id → 404。"""
     resp = api_session.post(
         f"{base_url}{AGENT_DELETE_URL.format(agent_id=999999999)}",
         headers=auth_headers,
         timeout=TIMEOUT,
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
 
 @allure.feature("AI 助手")
@@ -333,6 +282,20 @@ def test_reveal_key_no_key_400(base_url, api_session, auth_headers):
     assert resp.status_code == 400
 
 
+@allure.feature("AI 助手")
+@allure.story("API Key 一次性查看")
+def test_reveal_key_403_for_non_superuser(base_url, api_session, auth_headers, other_auth_headers):
+    """非超级管理员查看完整 Key → 403。"""
+    key = "fake-key"
+    created = create_agent(api_session, base_url, auth_headers, api_key=key)
+    resp = api_session.post(
+        f"{base_url}{AGENT_REVEAL_KEY_URL.format(agent_id=created['id'])}",
+        headers=other_auth_headers,
+        timeout=TIMEOUT,
+    )
+    assert resp.status_code == 403
+
+
 # ═══════════════════════════════════════════════════════════════════
 # health / models / available-*
 # ═══════════════════════════════════════════════════════════════════
@@ -354,6 +317,19 @@ def test_health_check_shape_no_network(base_url, api_session, auth_headers):
 
 
 @allure.feature("AI 助手")
+@allure.story("健康检查")
+def test_health_check_shows_shared_agent(base_url, api_session, auth_headers, other_auth_headers):
+    """健康检查对非超管返回超级管理员拥有的共享智能体。"""
+    created = create_agent(api_session, base_url, auth_headers)
+    resp = api_session.get(
+        f"{base_url}{AGENT_HEALTH_URL}", headers=other_auth_headers, timeout=TIMEOUT
+    )
+    assert resp.status_code == 200
+    ids = {a["id"] for a in resp.json()["data"]["agents"]}
+    assert created["id"] in ids
+
+
+@allure.feature("AI 助手")
 @allure.story("模型列表")
 def test_agent_models_get_success(base_url, api_session, auth_headers):
     """GET /agents/{id}/models 读缓存 → 200 {status, data:{models, is_connected, last_checked}}。"""
@@ -371,14 +347,28 @@ def test_agent_models_get_success(base_url, api_session, auth_headers):
 
 @allure.feature("AI 助手")
 @allure.story("模型列表")
-def test_agent_models_get_404(base_url, api_session, auth_headers):
-    """不存在的 agent → 404。"""
+def test_agent_models_get_403_nonexistent(base_url, api_session, auth_headers):
+    """不存在的 agent → 403（对齐其他详情动作：不存在/无权均 403）。"""
     resp = api_session.get(
         f"{base_url}{AGENT_MODELS_URL.format(agent_id=999999999)}",
         headers=auth_headers,
         timeout=TIMEOUT,
     )
-    assert resp.status_code == 404
+    assert resp.status_code == 403
+
+
+@allure.feature("AI 助手")
+@allure.story("模型列表")
+def test_agent_models_shared_visible(base_url, api_session, auth_headers, other_auth_headers):
+    """模型列表对共享智能体可见（非所有者可读缓存模型）。"""
+    created = create_agent(api_session, base_url, auth_headers)
+    resp = api_session.get(
+        f"{base_url}{AGENT_MODELS_URL.format(agent_id=created['id'])}",
+        headers=other_auth_headers,
+        timeout=TIMEOUT,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["data"]["models"] == []
 
 
 @allure.feature("AI 助手")
@@ -444,22 +434,3 @@ def test_available_skills_shape(base_url, api_session, auth_headers):
     body = resp.json()
     assert body["status"] is True
     assert isinstance(body["data"]["skills"], list)
-
-
-# ═══════════════════════════════════════════════════════════════════
-# 中间件身份注入（DRF 视图依赖 request.user_id 等价物）
-# ═══════════════════════════════════════════════════════════════════
-
-
-@allure.feature("AI 助手")
-@allure.story("Agent 创建")
-def test_create_agent_records_other_user_owner(base_url, api_session, other_auth_headers):
-    """其他用户 token 创建 Agent 后，创建者本人可读（owner 隔离生效）。"""
-    created = create_agent(api_session, base_url, other_auth_headers)
-    detail = api_session.get(
-        f"{base_url}{AGENT_DETAIL_URL.format(agent_id=created['id'])}",
-        headers=other_auth_headers,
-        timeout=TIMEOUT,
-    )
-    assert detail.status_code == 200
-    assert detail.json()["data"]["agent"]["id"] == created["id"]

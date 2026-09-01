@@ -6,14 +6,15 @@ import type {
   KnowledgeStatusResponse,
 } from '@/shared/types/ai'
 
-// ── Agent 已导入工具副本 / 知识库文档 DTO（类型跟着实现走，消费方从此处 import） ──
-export interface ToolItem {
-  id?: number
+// ── 共享工具箱项 / 知识库文档 DTO（类型跟着实现走，消费方从此处 import） ──
+export interface SharedToolItem {
+  id: number
   name: string
-  tool_type?: string
-  enabled?: boolean
+  item_type: string
+  description?: string
   config_json?: string
-  config?: object
+  enabled: boolean
+  created_at?: string
 }
 
 export interface KnowledgeDoc {
@@ -56,11 +57,8 @@ export async function deleteSharedTool(itemId: number): Promise<AgentOpResponse>
   return data
 }
 
-export async function importFromToolbox(agentId: number, toolboxItemId: number): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>(
-    `/ai/agents/${agentId}/tools/import-from-toolbox`,
-    { toolbox_item_id: toolboxItemId },
-  )
+export async function toggleSharedTool(itemId: number, enabled: boolean): Promise<AgentOpResponse> {
+  const { data } = await djangoClient.post<AgentOpResponse>(`/ai/toolbox/${itemId}/toggle`, { enabled })
   return data
 }
 
@@ -76,22 +74,58 @@ export async function uploadSharedSkill(files: File[], name: string): Promise<Ag
   return data
 }
 
-// ── Agent 已导入工具副本（来自工具箱） ──
+// ── 平台配置（平台唯一智能体的工具/知识库配置，AI 工具箱 / 知识库页读写） ──
 
-export async function fetchAgentTools(agentId: number): Promise<{ status: boolean; data?: { mcp?: ToolItem[]; skills?: ToolItem[] }; message?: string }> {
-  const { data } = await djangoClient.get(`/ai/agents/${agentId}/tools`)
+export interface PlatformConfig {
+  agent_id?: number
+  agent_name?: string
+  enable_workspace_tools: boolean
+  enable_business_tools: boolean
+  enable_mcp_tools: boolean
+  enable_skills: boolean
+  enable_knowledge_base: boolean
+  skills_config: Record<string, boolean>
+  knowledge_sources: Record<string, boolean>
+}
+
+export async function fetchPlatformConfig(): Promise<{ status: boolean; data?: PlatformConfig; message?: string }> {
+  const { data } = await djangoClient.get('/ai/platform-config')
   return data
 }
 
-export async function deleteToolById(agentId: number, toolId: number): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>(`/ai/agents/${agentId}/tools/${toolId}/delete`)
+export async function updatePlatformConfig(payload: Partial<PlatformConfig>): Promise<{ status: boolean; data?: PlatformConfig; message?: string }> {
+  const { data } = await djangoClient.post('/ai/platform-config/update', payload)
   return data
 }
 
 // ── Platform tools ──
 
-export async function fetchPlatformTools(): Promise<{ status: boolean; data?: { categories?: object[] }; message?: string }> {
+export interface PlatformToolItem {
+  name: string
+  summary: string
+  icon: string
+  read_only: boolean
+  enabled: boolean
+}
+
+export interface PlatformToolCategory {
+  key: string
+  icon: string
+  color: string
+  tools: PlatformToolItem[]
+}
+
+export async function fetchPlatformTools(): Promise<{ status: boolean; data?: { categories?: PlatformToolCategory[] }; message?: string }> {
   const { data } = await djangoClient.get('/ai/available-tools')
+  return data
+}
+
+export async function togglePlatformTool(payload: {
+  name?: string
+  category?: string
+  enabled: boolean
+}): Promise<{ status: boolean; data?: { updated?: string[] }; message?: string }> {
+  const { data } = await djangoClient.post('/ai/platform-tools/toggle', payload)
   return data
 }
 

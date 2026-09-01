@@ -49,14 +49,20 @@ export const HEALTH_CHECK_INTERVAL_MS = 30 * 60 * 1000
 export const ROUTE_AI_ASSISTANT = "/ai-assistant"
 export const ROUTE_LOGIN = "/login"
 
-/** Build the chat route for a specific agent. */
-export function chatRoute(agentId: number | string): string {
-  return `/ai-assistant/chat/${agentId}`
-}
-
 /** Build the agent detail/edit route. */
 export function agentDetailRoute(id: number | string): string {
   return `/ai-assistant/agent/${id}`
+}
+
+/** 智能体线路（任务卡片「智能体」下拉） */
+export const AGENT_ROUTES = [
+  { value: 'device_control', label: '控制设备' },
+  { value: 'platform_task', label: '平台任务' },
+] as const
+
+export const ROUTE_LABELS: Record<string, string> = {
+  device_control: '控制设备',
+  platform_task: '平台任务',
 }
 
 // ── Model Status Labels ──

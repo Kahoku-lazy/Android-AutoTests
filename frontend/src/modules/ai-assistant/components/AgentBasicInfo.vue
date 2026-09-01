@@ -11,10 +11,7 @@ const emit = defineEmits<{ 'trigger-upload': []; 'avatar-upload': [e: Event] }>(
 
 <template>
   <div class="doc-section step-panel">
-    <div class="section-title">
-      <span class="section-num">1</span>
-      <span>基本信息</span>
-    </div>
+    <div class="section-title"><span class="section-num">📋</span>基本信息</div>
     <el-form label-width="100px" class="agent-form">
       <el-form-item label="名称" required>
         <el-input v-model="form.name" placeholder="测试用例编写助手" />

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 助手前端 UI 与页面设计方案</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --teal: #19c8b9; --teal-hover: #3dd4c6; --heading: #794f27; --body: #725d42;
+      --secondary: #9f927d; --muted: #8a7b66; --page: #f8f8f0; --card: rgb(247,243,223);
+      --border: #c4b89e; --success: #6fba2c; --warning: #f5c31c; --error: #e05a5a; --focus: #ffcc00;
+      --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Nunito, 'Noto Sans SC', -apple-system, 'PingFang SC', sans-serif; font-weight: 500; letter-spacing: 0.01em; background: var(--page); color: var(--body); line-height: 1.65; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 40px 36px 64px; }
+    h1, h2, h3 { color: var(--heading); font-weight: 800; letter-spacing: 0.02em; }
+    h1 { font-size: 28px; margin-bottom: 6px; }
+    h2 { font-size: 21px; margin: 30px 0 12px; padding-left: 12px; border-left: 5px solid var(--teal); }
+    h3 { font-size: 17px; margin: 18px 0 8px; }
+    .meta { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 20px 22px; margin: 12px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; background: var(--card); border-radius: 18px; overflow: hidden; }
+    th, td { text-align: left; padding: 10px 13px; border-bottom: 1px dashed var(--border); font-size: 14px; vertical-align: top; }
+    th { background: linear-gradient(180deg, #f3e6c8, #eee0bd); color: var(--heading); font-weight: 800; }
+    tr:nth-child(even) td { background: #fbf7e8; }
+    tr:last-child td { border-bottom: none; }
+    code { font-family: 'SF Mono', 'Fira Code', Consolas, monospace; font-weight: 600; font-size: 13px; background: #f1ead6; padding: 1px 6px; border-radius: 12px; color: #6b5638; }
+    .tag { display: inline-block; padding: 3px 12px; border-radius: 50px; font-size: 12px; font-weight: 800; }
+    .tag-add { background: #d9f2ec; color: #0e8c80; }
+    .tag-del { background: #fbe2e2; color: #b53d3d; }
+    .tag-keep { background: #e6f3d3; color: #4d9418; }
+    .tree { font-family: 'SF Mono', Consolas, monospace; font-weight: 600; font-size: 13px; line-height: 1.9; color: #6b5638; }
+    .foot { margin-top: 36px; border-top: 1px dashed var(--border); padding-top: 14px; color: var(--muted); font-size: 12px; }
+    @media (max-width: 768px) { .wrap { padding: 24px 16px 48px; } th, td { font-size: 13px; padding: 9px 8px; } }
+    @media print { body { background: #fff; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>AI 助手前端 UI 与页面设计方案</h1>
+  <div class="meta">版本 v1.0 · 2026-08-28 · 范围 frontend/src/modules/ai-assistant/ · 对应「两条线路 + 任务发布 + 移除主对话」</div>
+
+  <h2>一、目标页面结构</h2>
+  <div class="card">
+    <div class="tree">
+      AI 助手<br>
+      ├── 智能体看板 /ai-assistant/agents &nbsp;<span class="tag tag-keep">保留改造</span><br>
+      ├── 任务发布 /ai-assistant/tasks &nbsp;<span class="tag tag-add">新增</span><br>
+      ├── AI工具箱 /ai-assistant/toolbox &nbsp;<span class="tag tag-keep">保留</span><br>
+      ├── 知识库 /ai-assistant/knowledge &nbsp;<span class="tag tag-keep">保留</span><br>
+      ├── 评测中心 /ai-assistant/evaluator &nbsp;<span class="tag tag-keep">保留</span><br>
+      ├── 智能体配置 /ai-assistant/agent/:agentId &nbsp;<span class="tag tag-keep">改造多线路</span><br>
+      └── 对话窗口 /ai-assistant/chat/:agentId &nbsp;<span class="tag tag-del">删除</span>
+    </div>
+  </div>
+
+  <h2>二、任务发布模块（新增）</h2>
+  <table>
+    <thead><tr><th>字段</th><th>控件</th><th>必填</th></tr></thead>
+    <tbody>
+      <tr><td>任务目标</td><td>el-input textarea</td><td>✅</td></tr>
+      <tr><td>任务要求</td><td>el-input textarea</td><td>—</td></tr>
+      <tr><td>任务附件文件</td><td>el-upload（文件）</td><td>—</td></tr>
+      <tr><td>智能体（线路）</td><td>el-select：控制设备 / 平台任务</td><td>✅</td></tr>
+      <tr><td>报告文件名</td><td>el-input</td><td>—</td></tr>
+      <tr><td>任务校验清单</td><td>el-input textarea</td><td>—</td></tr>
+    </tbody>
+  </table>
+  <p>任务列表复用 <code>AppTable</code>（任务ID / 目标 / 线路 / 状态 / 创建时间 / 报告名），空态 <code>EmptyState</code>，错误 <code>ErrorState</code>。</p>
+
+  <h2>三、智能体配置页改造（多线路）</h2>
+  <div class="card">
+    <div class="tree">
+      控制设备 device_control<br>
+      &nbsp;&nbsp;├─ 规划模型 planner &nbsp;{provider, model_name, api_key, base_url}<br>
+      &nbsp;&nbsp;└─ 执行模型 executor &nbsp;{…}<br>
+      平台任务 platform_task（仅入口，本期可只读/灰化）<br>
+      &nbsp;&nbsp;├─ 规划模型 planner &nbsp;{…}<br>
+      &nbsp;&nbsp;└─ 执行模型 executor &nbsp;{…}
+    </div>
+  </div>
+
+  <h2>四、路由与组件变更</h2>
+  <table>
+    <thead><tr><th>类型</th><th>内容</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag tag-add">新增</span></td><td>TaskPublishCard / TaskList / TaskDetail / AgentRouteConfig 组件；useTaskPublish / useTaskList composable；api/tasks.ts</td></tr>
+      <tr><td><span class="tag tag-keep">改造</span></td><td>index.vue（tasks 视图）、AgentDetail.vue（route_configs）、AgentModelConfig.vue（抽可复用块）、AgentStickyNote.vue（线路摘要）</td></tr>
+      <tr><td><span class="tag tag-del">删除</span></td><td>ChatView / ChatSidebar / ChatInput / MessageBubble / ThinkingBlock / ToolCallCard / HintCard / ConfirmDialog；api/sse.ts / api/conversations.ts；useSSE / useConversation / useMessageStore / useToolCalls / useToolConfirm</td></tr>
+    </tbody>
+  </table>
+
+  <div class="foot">AI 助手前端 UI 与页面设计方案 · 生成时间 2026-08-28 · animal-island-ui 规范</div>
+</div>
+</body>
+</html>

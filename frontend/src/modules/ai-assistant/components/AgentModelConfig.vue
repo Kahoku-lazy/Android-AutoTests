@@ -22,15 +22,34 @@ const emit = defineEmits<{ 'provider-change': []; 'detect-models': [] }>()
           <el-option v-for="p in providers" :key="p.value" :label="p.label" :value="p.value" />
         </el-select>
       </el-form-item>
-      <el-form-item label="模型名称">
+      <el-form-item label="主推理模型">
         <el-select v-if="form.model_provider !== 'custom'" v-model="form.model_name"
           style="width:100%" allow-create filterable>
           <el-option v-for="m in availableModels" :key="m" :label="m" :value="m" />
         </el-select>
         <el-input v-else v-model="form.model_name" placeholder="输入模型名称" />
+        <div class="form-hint" style="margin-top:4px">规划 / 推理任务使用，视觉模型留空时回退此模型</div>
         <div v-if="detectedModels.length" class="form-hint" style="margin-top:4px">
           已检测模型: {{ detectedModels.length }} 个
         </div>
+      </el-form-item>
+      <el-form-item label="视觉模型">
+        <el-select v-model="form.vision_model_name" style="width:100%" allow-create filterable clearable
+          placeholder="留空则使用文本模型">
+          <el-option v-for="m in availableModels" :key="m" :label="m" :value="m" />
+        </el-select>
+        <div class="form-hint" style="margin-top:4px">控制手机时使用，留空则回退文本模型</div>
+      </el-form-item>
+      <el-form-item label="强模型">
+        <el-switch v-model="form.strong_enabled" />
+        <div class="form-hint" style="margin-top:4px">开启后对话直接下发强模型 Harness 执行（短路视觉执行）</div>
+      </el-form-item>
+      <el-form-item v-if="form.strong_enabled" label="强模型名">
+        <el-select v-model="form.strong_model_name" style="width:100%" allow-create filterable clearable
+          placeholder="留空则回退视觉模型">
+          <el-option v-for="m in availableModels" :key="m" :label="m" :value="m" />
+        </el-select>
+        <div class="form-hint" style="margin-top:4px">强模型为空时回退使用视觉模型</div>
       </el-form-item>
       <el-form-item label="API Key">
         <el-input v-model="form.api_key" type="password" show-password placeholder="sk-..." />
@@ -40,24 +59,6 @@ const emit = defineEmits<{ 'provider-change': []; 'detect-models': [] }>()
       </el-form-item>
       <el-form-item v-if="form.model_provider === 'custom'" label="API 地址">
         <el-input v-model="form.base_url" placeholder="https://api.example.com/v1" />
-      </el-form-item>
-      <el-form-item>
-        <template #label>
-          <span class="label-with-help">温度 <el-tooltip content="控制输出随机性。0=确定性输出（适合查询事实），0.7=默认，越高越随机。值越低回复越稳定，值越高越有创造性。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
-        </template>
-        <el-slider v-model="form.temperature" :min="0" :max="2" :step="0.1" show-input />
-      </el-form-item>
-      <el-form-item>
-        <template #label>
-          <span class="label-with-help">最大Token <el-tooltip content="单次回复的硬上限。值太小回复会截断，值太大浪费 token。中文约 1 token=0.7 字。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
-        </template>
-        <el-input-number v-model="form.max_tokens" :min="256" :max="128000" :step="256" />
-      </el-form-item>
-      <el-form-item>
-        <template #label>
-          <span class="label-with-help">生成参数 <el-tooltip content="JSON 格式额外参数，合并到 API 请求中。常用: top_p(核采样), frequency_penalty(减少重复), presence_penalty(鼓励新话题)。不支持的参数会被静默忽略。" placement="top" effect="dark"><span class="help-icon">?</span></el-tooltip></span>
-        </template>
-        <el-input v-model="form.generate_kwargs" type="textarea" :rows="2" placeholder='{"parallel_tool_calls":true}' />
       </el-form-item>
     </el-form>
   </div>

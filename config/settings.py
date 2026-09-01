@@ -344,6 +344,7 @@ JAZZMIN_UI_TWEAKS = {
     "theme": "cosmo",
 }
 
+
 # ── Logging — 容器环境输出到 stdout，本地开发沿用文件日志 ──
 if os.environ.get("DOCKER_CONTAINER", "").lower() in ("true", "1", "yes"):
     LOGGING = {

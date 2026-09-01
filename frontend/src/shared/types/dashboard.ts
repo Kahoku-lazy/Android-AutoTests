@@ -60,6 +60,19 @@ export interface DeepSeekCostChart {
   cost: number[]
 }
 
+/** GET /api/dashboard/stats/ charts.ai_tokens 原始 snake_case 字段 */
+export interface AiTokenChartRaw {
+  labels: string[]
+  total_tokens: number[]
+  cache_tokens: number[]
+}
+
+/** GET /api/dashboard/stats/ charts.deepseek_cost 原始字段 */
+export interface DeepSeekCostChartRaw {
+  labels: string[]
+  cost: number[]
+}
+
 export interface ExecutionSummary {
   passed: number
   failed: number
@@ -113,8 +126,8 @@ export interface DashboardRawData {
   }
   charts: {
     execution: ExecutionChart
-    ai_tokens: AiTokenChart
-    deepseek_cost: DeepSeekCostChart
+    ai_tokens: AiTokenChartRaw
+    deepseek_cost: DeepSeekCostChartRaw
   }
   execution_summary: ExecutionSummary
   recent_tasks: RecentTask[]

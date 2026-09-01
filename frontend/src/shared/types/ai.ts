@@ -18,12 +18,71 @@ export interface AgentRecord {
   status: AgentStatus
   model_name?: string
   model_provider?: string
+  strong_model_name?: string
+  strong_enabled?: boolean
   available_models?: string[]
   tags?: string[]
   description?: string
   avatar_url?: string
   avatar?: string
   tool_count?: number
+  route_configs?: RouteConfigMap
+}
+
+// ── 多线路模型配置 ──
+export interface RouteModelConfig {
+  provider?: string
+  model_name?: string
+  api_key?: string
+  base_url?: string
+}
+
+export interface RouteConfig {
+  planner?: RouteModelConfig
+  executor?: RouteModelConfig
+  verifier?: RouteModelConfig
+}
+
+export interface RouteConfigMap {
+  device_control?: RouteConfig
+  platform_task?: RouteConfig
+}
+
+export type AgentRoute = 'device_control' | 'platform_task'
+
+// ── 任务发布 ──
+export interface TaskRecord {
+  id: number
+  title: string
+  goal: string
+  route: AgentRoute
+  status: string
+  result?: string
+  report_name?: string
+  device_serial?: string
+  created_at?: string
+}
+
+export interface TaskSubmitPayload {
+  goal: string
+  requirements?: string
+  attachment?: string
+  route: AgentRoute
+  report_name?: string
+  checklist?: string
+  device_serial?: string
+}
+
+export interface TaskListResponse {
+  status?: boolean
+  data?: { tasks: TaskRecord[] }
+  message?: string
+}
+
+export interface TaskSubmitResponse {
+  status?: boolean
+  data?: { id?: number; status?: string; result?: string }
+  message?: string
 }
 
 // ── Conversation ──

@@ -203,6 +203,32 @@ describe('[P0] mapStatsResponse（纯映射）', () => {
     expect(mapped.systemStatus).toBe('normal')
   })
 
+  it('ai_tokens / deepseek_cost：snake_case 映射为 camelCase', () => {
+    const mapped = mapStatsResponse({
+      charts: {
+        ai_tokens: {
+          labels: ['08/16', '08/17'],
+          total_tokens: [1000, 2000],
+          cache_tokens: [100, 200],
+        },
+        deepseek_cost: {
+          labels: ['08/16', '08/17'],
+          cost: [0.01, 0.02],
+        },
+      },
+    } as DashboardRawData)
+
+    expect(mapped.aiTokenChart).toEqual({
+      labels: ['08/16', '08/17'],
+      totalTokens: [1000, 2000],
+      cacheTokens: [100, 200],
+    })
+    expect(mapped.deepseekCostChart).toEqual({
+      labels: ['08/16', '08/17'],
+      cost: [0.01, 0.02],
+    })
+  })
+
   it('部分字段缺失：缺失项回退，存在项保留', () => {
     const mapped = mapStatsResponse({
       devices: { online: 2, total: 4 },

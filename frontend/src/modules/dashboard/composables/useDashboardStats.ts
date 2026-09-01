@@ -117,8 +117,15 @@ export function mapStatsResponse(raw: DashboardRawData): MappedData {
     },
     executionChart: raw.charts?.execution ?? DEFAULT_CHART,
     executionSummary: raw.execution_summary ?? DEFAULT_SUMMARY,
-    aiTokenChart: raw.charts?.ai_tokens ?? DEFAULT_AI_TOKEN_CHART,
-    deepseekCostChart: raw.charts?.deepseek_cost ?? DEFAULT_DEEPSEEK_COST_CHART,
+    aiTokenChart: {
+      labels: raw.charts?.ai_tokens?.labels ?? [],
+      totalTokens: raw.charts?.ai_tokens?.total_tokens ?? [],
+      cacheTokens: raw.charts?.ai_tokens?.cache_tokens ?? [],
+    },
+    deepseekCostChart: {
+      labels: raw.charts?.deepseek_cost?.labels ?? [],
+      cost: raw.charts?.deepseek_cost?.cost ?? [],
+    },
     recentTasks: raw.recent_tasks ?? [],
     lastUpdated: raw.last_updated ?? '',
     systemStatus: raw.system_status ?? 'normal',

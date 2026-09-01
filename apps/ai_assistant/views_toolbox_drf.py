@@ -1,17 +1,14 @@
-"""ai-assistant DRF views — 工具箱与 Agent 工具管理（Batch 3 迁移）。
+"""ai-assistant DRF views — 工具箱（Batch 3 迁移）。
 
 路径与方法保持旧契约不变（等行为迁移）：
-  GET  /api/ai/toolbox                          共享工具箱列表
+  GET  /api/ai/toolbox                          共享工具箱列表（含 enabled 状态）
   POST /api/ai/toolbox/create                   新增 mcp/extension 项
   POST /api/ai/toolbox/{id}/update              更新
   POST /api/ai/toolbox/{id}/delete              删除（skill 同步清目录）
+  POST /api/ai/toolbox/{id}/toggle              启停（直接决定平台唯一智能体是否使用）
   POST /api/ai/toolbox/upload-skill             上传共享 skill 文件夹
-  GET  /api/ai/agents/{id}/tools                已导入副本列表（已信封）
-  POST /api/ai/agents/{id}/tools/{tid}/toggle   启停副本
-  POST /api/ai/agents/{id}/tools/{tid}/delete   删除副本（skill 同步清目录）
-  POST /api/ai/agents/{id}/tools/import-from-toolbox  导入共享项
 
-写库全部经 api.py。import_from_toolbox 保持无 owner 校验（存量缺口，见方案 D9）。
+写库全部经 api.py。平台唯一智能体：MCP/Skill 直接启用/停用，无 per-agent 副本与导入。
 """
 
 import json
@@ -24,7 +21,7 @@ from rest_framework.exceptions import APIException, NotFound, ValidationError
 from rest_framework.response import Response
 
 from . import api
-from .models import AISharedTool, AITool
+from .models import AISharedTool
 
 logger = logging.getLogger("ai_assistant")
 
@@ -80,88 +77,6 @@ def _detect_skill_features(file_names: list[str]) -> str:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Agent 工具管理（挂到 AgentViewSet 的 actions）
-# ═══════════════════════════════════════════════════════════════════
-
-
-class AgentToolActionsMixin:
-    """AgentViewSet 的工具副本 actions — 权限语义与旧 tool_views 一致。"""
-
-    @action(detail=True, methods=["get"], url_path="tools")
-    def tools_list(self, request, *args, **kwargs):
-        agent_id = self._require_owner(request)
-        try:
-            agent = self.get_queryset().get(id=agent_id)
-        except self.get_queryset().model.DoesNotExist:
-            raise NotFound("agent not found")
-
-        mcp_list = []
-        skill_list = []
-        for t in AITool.objects.filter(agent=agent):
-            item = {
-                "id": t.id,
-                "name": t.name,
-                "tool_type": t.tool_type,
-                "config_json": t.config_json,
-                "enabled": t.enabled,
-                "created_at": str(t.created_at),
-            }
-            try:
-                item["config"] = json.loads(t.config_json)
-            except (json.JSONDecodeError, TypeError):
-                item["config"] = {}
-            if t.tool_type == "skill":
-                skill_list.append(item)
-            else:
-                mcp_list.append(item)
-        return Response({"mcp": mcp_list, "skills": skill_list})
-
-    @action(detail=True, methods=["post"], url_path=r"tools/(?P<tool_id>[^/.]+)/toggle")
-    def toggle_tool(self, request, *args, **kwargs):
-        agent_id = self._require_owner(request)
-        tool_id = kwargs.get("tool_id", "")
-        try:
-            tool = AITool.objects.get(id=int(tool_id), agent_id=agent_id)
-        except (ValueError, AITool.DoesNotExist):
-            raise NotFound("tool not found")
-        enabled = request.data.get("enabled", True)
-        api.set_tool_enabled(tool, enabled)
-        return Response({"enabled": tool.enabled})
-
-    @action(detail=True, methods=["post"], url_path=r"tools/(?P<tool_id>[^/.]+)/delete")
-    def delete_tool(self, request, *args, **kwargs):
-        agent_id = self._require_owner(request)
-        tool_id = kwargs.get("tool_id", "")
-        try:
-            tool = AITool.objects.get(id=int(tool_id), agent_id=agent_id)
-        except (ValueError, AITool.DoesNotExist):
-            raise NotFound("tool not found")
-        api.delete_agent_tool(tool)
-        return Response({})
-
-    @action(detail=True, methods=["post"], url_path="tools/import-from-toolbox")
-    def import_from_toolbox(self, request, *args, **kwargs):
-        # 与旧实现一致：不校验 agent owner（存量缺口，见方案 D9）
-        try:
-            agent_id = int(kwargs.get("pk"))
-        except (TypeError, ValueError):
-            raise NotFound("toolbox item not found")
-        toolbox_item_id = request.data.get("toolbox_item_id")
-        if not toolbox_item_id:
-            raise ValidationError("toolbox_item_id is required")
-
-        try:
-            shared = AISharedTool.objects.get(id=toolbox_item_id, enabled=True)
-        except AISharedTool.DoesNotExist:
-            raise NotFound("toolbox item not found")
-
-        tool = api.import_shared_tool(agent_id, shared)
-        if tool is None:
-            raise Conflict(f"'{shared.name}' 已存在于当前智能体")
-        return Response({"id": tool.id})
-
-
-# ═══════════════════════════════════════════════════════════════════
 # 共享工具箱 ViewSet
 # ═══════════════════════════════════════════════════════════════════
 
@@ -176,7 +91,7 @@ class ToolboxViewSet(
     serializer_class = None
 
     def list(self, request, *args, **kwargs):
-        items = AISharedTool.objects.filter(enabled=True).order_by("-updated_at")
+        items = AISharedTool.objects.order_by("-updated_at")
         return Response(
             {
                 "items": [
@@ -186,6 +101,7 @@ class ToolboxViewSet(
                         "item_type": item.item_type,
                         "description": item.description,
                         "config_json": item.config_json,
+                        "enabled": item.enabled,
                         "created_at": str(item.created_at),
                     }
                     for item in items
@@ -246,6 +162,17 @@ class ToolboxViewSet(
             raise NotFound("not found")
         api.delete_shared_tool(item)
         return Response({})
+
+    @action(detail=True, methods=["post"], url_path="toggle")
+    def toggle_item(self, request, *args, **kwargs):
+        item_id = kwargs.get("pk", "")
+        try:
+            item = AISharedTool.objects.get(id=int(item_id))
+        except (ValueError, AISharedTool.DoesNotExist):
+            raise NotFound("not found")
+        enabled = bool(request.data.get("enabled", True))
+        api.set_shared_tool_enabled(item, enabled)
+        return Response({"enabled": item.enabled})
 
     @action(detail=False, methods=["post"], url_path="upload-skill")
     def upload_skill(self, request, *args, **kwargs):

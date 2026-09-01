@@ -24,40 +24,21 @@ class AgentInputSerializer(serializers.Serializer):
     description = serializers.CharField(required=False, allow_blank=True)
     model_provider = serializers.CharField(required=False, allow_blank=True)
     model_name = serializers.CharField(required=False, allow_blank=True)
+    vision_model_name = serializers.CharField(required=False, allow_blank=True)
+    strong_model_name = serializers.CharField(required=False, allow_blank=True)
+    strong_enabled = serializers.BooleanField(required=False)
     api_key = serializers.CharField(required=False, allow_blank=True)
     base_url = serializers.CharField(required=False, allow_blank=True)
-    system_prompt = serializers.CharField(required=False, allow_blank=True)
-    temperature = serializers.FloatField(required=False)
-    max_tokens = serializers.IntegerField(required=False)
-    formatter = serializers.CharField(required=False, allow_blank=True)
-    max_iters = serializers.IntegerField(required=False)
-    parallel_tool_calls = serializers.BooleanField(required=False)
-    print_hint_msg = serializers.BooleanField(required=False)
-    memory_mode = serializers.CharField(required=False, allow_blank=True)
-    long_term_memory_mode = serializers.CharField(required=False, allow_blank=True)
-    enable_meta_tool = serializers.BooleanField(required=False)
-    enable_rewrite_query = serializers.BooleanField(required=False)
     enable_knowledge_base = serializers.BooleanField(required=False)
     enable_workspace_tools = serializers.BooleanField(required=False)
     enable_business_tools = serializers.BooleanField(required=False)
     enable_mcp_tools = serializers.BooleanField(required=False)
     enable_skills = serializers.BooleanField(required=False)
-    generate_kwargs = serializers.CharField(required=False, allow_blank=True)
-    compression_enabled = serializers.BooleanField(required=False)
-    compression_threshold = serializers.IntegerField(required=False)
-    compression_keep_recent = serializers.IntegerField(required=False)
-    compression_prompt = serializers.CharField(required=False, allow_blank=True)
-    compression_template = serializers.CharField(required=False, allow_blank=True)
-    tts_enabled = serializers.BooleanField(required=False)
     status = serializers.CharField(required=False, allow_blank=True)
     skills_config = serializers.JSONField(required=False)
     knowledge_sources = serializers.JSONField(required=False)
-    tools = serializers.ListField(
-        child=serializers.DictField(), required=False, default=list, allow_empty=True
-    )
-    platform_tools = serializers.ListField(
-        child=serializers.CharField(), required=False, allow_empty=True
-    )
+    route_configs = serializers.JSONField(required=False)
+    max_loops = serializers.IntegerField(required=False)
 
     def validate_name(self, value):
         name = (value or "").strip()
@@ -80,25 +61,6 @@ class AgentInputSerializer(serializers.Serializer):
                 raise serializers.ValidationError(msg)
             return base_url.rstrip("/")
         return ""
-
-    def validate_temperature(self, value):
-        if not (0 <= value <= 2):
-            raise serializers.ValidationError("温度必须在 0-2 之间")
-        return value
-
-    def validate_max_tokens(self, value):
-        if not (1 <= value <= 128000):
-            raise serializers.ValidationError("max_tokens 必须在 1-128000 之间")
-        return value
-
-    def validate_generate_kwargs(self, value):
-        gk = (value or "{}").strip()
-        if gk and gk != "{}":
-            try:
-                json.loads(gk)
-            except (json.JSONDecodeError, TypeError):
-                raise serializers.ValidationError("generate_kwargs 必须是合法的 JSON 字符串")
-        return gk
 
 
 class ModelDetectInputSerializer(serializers.Serializer):
@@ -135,14 +97,6 @@ class ModelDetectInputSerializer(serializers.Serializer):
 # ═══════════════════════════════════════════════════════════════════
 
 
-class AgentToolOutputSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
-    name = serializers.CharField()
-    tool_type = serializers.CharField()
-    config_json = serializers.CharField()
-    enabled = serializers.BooleanField()
-
-
 class AgentListSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
@@ -152,12 +106,7 @@ class AgentListSerializer(serializers.Serializer):
     model_provider = serializers.CharField()
     model_name = serializers.CharField()
     status = serializers.CharField()
-    tool_count = serializers.SerializerMethodField()
     created_at = serializers.CharField()
-
-    def get_tool_count(self, obj):
-        tools = obj.tools.all() if hasattr(obj, "tools") else []
-        return sum(1 for t in tools if t.enabled)
 
 
 class AgentDetailSerializer(serializers.Serializer):
@@ -168,50 +117,53 @@ class AgentDetailSerializer(serializers.Serializer):
     description = serializers.CharField()
     model_provider = serializers.CharField()
     model_name = serializers.CharField()
+    vision_model_name = serializers.CharField()
+    strong_model_name = serializers.CharField()
+    strong_enabled = serializers.BooleanField()
     api_key = serializers.SerializerMethodField()
-    base_url = serializers.CharField()
-    system_prompt = serializers.CharField()
-    temperature = serializers.FloatField()
-    max_tokens = serializers.IntegerField()
-    formatter = serializers.CharField()
-    max_iters = serializers.IntegerField()
-    parallel_tool_calls = serializers.BooleanField()
-    print_hint_msg = serializers.BooleanField()
-    memory_mode = serializers.CharField()
-    long_term_memory_mode = serializers.CharField()
-    enable_meta_tool = serializers.BooleanField()
-    enable_rewrite_query = serializers.BooleanField()
+    base_url = serializers.SerializerMethodField()
     enable_knowledge_base = serializers.BooleanField()
     enable_workspace_tools = serializers.BooleanField()
     enable_business_tools = serializers.BooleanField()
     enable_mcp_tools = serializers.BooleanField()
     enable_skills = serializers.BooleanField()
-    generate_kwargs = serializers.CharField()
     skills_config = serializers.JSONField()
     knowledge_sources = serializers.JSONField()
-    compression_enabled = serializers.BooleanField()
-    compression_threshold = serializers.IntegerField()
-    compression_keep_recent = serializers.IntegerField()
-    compression_prompt = serializers.CharField()
-    compression_template = serializers.CharField()
-    tts_enabled = serializers.BooleanField()
+    route_configs = serializers.SerializerMethodField()
+    max_loops = serializers.IntegerField()
     status = serializers.CharField()
-    tools = AgentToolOutputSerializer(many=True, source="tools.all")
     is_connected = serializers.BooleanField()
     last_checked_at = serializers.SerializerMethodField()
     available_models = serializers.SerializerMethodField()
     created_at = serializers.CharField()
 
+    def _is_superuser(self):
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request else None
+        return bool(user is not None and getattr(user, "is_superuser", False))
+
     def get_api_key(self, obj):
+        if not self._is_superuser():
+            return ""
         from .api import decrypt_key, mask_key
 
         return mask_key(decrypt_key(obj.api_key) if obj.api_key else "")
+
+    def get_base_url(self, obj):
+        return obj.base_url if self._is_superuser() else ""
 
     def get_last_checked_at(self, obj):
         return str(obj.last_checked_at) if obj.last_checked_at else None
 
     def get_available_models(self, obj):
         return json.loads(obj.available_models) if obj.available_models else []
+
+    def get_route_configs(self, obj):
+        if not self._is_superuser():
+            return {}
+        from .api import decrypt_route_configs, mask_route_configs
+
+        return mask_route_configs(decrypt_route_configs(obj.route_configs or {}))
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -304,3 +256,21 @@ class MessageListSerializer(serializers.Serializer):
 
     def get_flow(self, obj):
         return obj.flow or ""
+
+
+class TaskSubmitInputSerializer(serializers.Serializer):
+    """任务提交入参 — goal 必填、route 枚举（device_control/platform_task）。"""
+
+    goal = serializers.CharField(required=True, allow_blank=False)
+    requirements = serializers.CharField(required=False, allow_blank=True, default="")
+    attachment = serializers.CharField(required=False, allow_blank=True, default="")
+    route = serializers.ChoiceField(choices=["device_control", "platform_task"], required=True)
+    report_name = serializers.CharField(required=False, allow_blank=True, default="")
+    checklist = serializers.CharField(required=False, allow_blank=True, default="")
+    device_serial = serializers.CharField(required=False, allow_blank=True, default="")
+
+    def validate_goal(self, value):
+        goal = (value or "").strip()
+        if not goal:
+            raise serializers.ValidationError("任务目标不能为空")
+        return goal

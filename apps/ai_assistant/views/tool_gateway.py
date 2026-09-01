@@ -15,12 +15,13 @@ from django.db.models.query import QuerySet
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from apps.ai_assistant.agent_scope.tool_registry import TOOL_CATEGORIES, TOOL_SCHEMAS, resolve
+from apps.ai_assistant.agent_scope.tools import (
+    TOOL_CATEGORIES,
+    list_tool_schemas,
+    resolve_by_module_action,
+)
 
 logger = logging.getLogger("ai_assistant.tools")
-
-# Pre-build a name→schema lookup for the agent_config view
-TOOL_SCHEMAS_BY_NAME = {t["name"]: t for t in TOOL_SCHEMAS}
 
 
 @csrf_exempt
@@ -35,7 +36,7 @@ def tool_schemas(request):
             "status": True,
             "data": {
                 "categories": TOOL_CATEGORIES,
-                "tools": TOOL_SCHEMAS,
+                "tools": list_tool_schemas(),
             },
         }
     )
@@ -57,23 +58,19 @@ def agent_config(request, agent_id: str):
     # Try Django PK first (int), then AgentScope UUID (str)
     if agent_id.isdigit():
         try:
-            agent = AIAgent.objects.prefetch_related("tools").get(id=int(agent_id))
+            agent = AIAgent.objects.get(id=int(agent_id))
         except AIAgent.DoesNotExist:
             pass
     if agent is None:
         try:
-            agent = AIAgent.objects.prefetch_related("tools").get(agent_scope_id=str(agent_id))
+            agent = AIAgent.objects.get(agent_scope_id=str(agent_id))
         except AIAgent.DoesNotExist:
             return JsonResponse({"status": False, "message": "agent not found"}, status=404)
 
-    # Resolve enabled platform tool names from AITool records
-    platform_tools = agent.tools.all()
-    platform_names = {t.name for t in platform_tools}
-    if platform_names:
-        enabled_tools = [t for t in platform_names if t in TOOL_SCHEMAS_BY_NAME]
-    else:
-        # No AITool config → expose all read-only tools as safety fallback
-        enabled_tools = [t["name"] for t in TOOL_SCHEMAS if t.get("read_only", True)]
+    # Resolve enabled platform tool names from the global switchboard (AI 工具箱)
+    from apps.ai_assistant.api import get_platform_tool_enabled_map
+
+    enabled_tools = [name for name, on in get_platform_tool_enabled_map().items() if on]
 
     # If business tools are disabled at the capability level, clear them
     if not agent.enable_business_tools:
@@ -87,11 +84,9 @@ def agent_config(request, agent_id: str):
     skills_config = agent.skills_config or {}
     disabled_skills = [name for name, enabled in skills_config.items() if enabled is False]
 
-    # If workspace tools are disabled at the capability level, disable all 6
+    # workspace 技能已移除，恒为空
     if not agent.enable_workspace_tools:
-        from apps.ai_assistant.agent_scope.skill_registry import ALL_SKILL_NAMES
-
-        disabled_skills = list(ALL_SKILL_NAMES)
+        disabled_skills = []
 
     # Resolve enabled knowledge sources (dict → list of enabled IDs)
     sources_raw = agent.knowledge_sources or {}
@@ -135,7 +130,7 @@ def tool_gateway(request, module: str, action: str):
     Returns {"status": True, "data": ...} or {"status": False, "message": "..."}.
     """
     # ── Resolve handler ──
-    handler = resolve(module, action)
+    handler = resolve_by_module_action(module, action)
     if handler is None:
         return JsonResponse(
             {
@@ -183,7 +178,7 @@ def tool_gateway(request, module: str, action: str):
 
     # ── Serialize ──
     # Django model instances → dict; lists stay as lists; primitive types pass through
-    result = _serialize_result(result)
+    result = _serialize_result(_normalize_tool_result(result))
 
     return JsonResponse(
         {
@@ -191,6 +186,24 @@ def tool_gateway(request, module: str, action: str):
             "data": result,
         }
     )
+
+
+def _normalize_tool_result(result):
+    """新 tools.py 函数返回 str(JSON) 或 ToolChunk，统一成 dict/list/str。"""
+    from agentscope.tool import ToolChunk
+
+    if isinstance(result, ToolChunk):
+        text = "".join(getattr(b, "text", "") for b in result.content)
+        try:
+            return json.loads(text) if text else ""
+        except (json.JSONDecodeError, TypeError):
+            return text
+    if isinstance(result, str):
+        try:
+            return json.loads(result)
+        except (json.JSONDecodeError, TypeError):
+            return result
+    return result
 
 
 def _serialize_result(obj):

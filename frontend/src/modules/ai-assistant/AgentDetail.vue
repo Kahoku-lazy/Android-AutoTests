@@ -1,31 +1,31 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { getAgentDetail, detectModels as apiDetectModels, uploadAvatar, saveAgent } from "./api/agents";
+import { getAgentDetail, uploadAvatar, saveAgent, testAgent } from "./api/agents";
 import { formatApiError } from "@/shared/api-client";
 import { ElMessage, ElMessageBox } from "element-plus";
 import ErrorState from "@/shared/components/patterns/ErrorState.vue";
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
 import { IconArrowLeft } from "@/shared/icons/index";
 import { ROUTE_AI_ASSISTANT } from "./constants";
-import { useAgentTools } from "./composables/useAgentTools";
 import AgentBasicInfo from "./components/AgentBasicInfo.vue";
-import AgentModelConfig from "./components/AgentModelConfig.vue";
-import AgentPromptEditor from "./components/AgentPromptEditor.vue";
-import AgentToolsPanel from "./components/AgentToolsPanel.vue";
-import AgentAdvancedConfig from "./components/AgentAdvancedConfig.vue";
+import AgentRouteConfig from "./components/AgentRouteConfig.vue";
 import AgentFormFooter from "./components/AgentFormFooter.vue";
-import KnowledgeImportDialog from "./components/KnowledgeImportDialog.vue";
 
 const route = useRoute();
 const router = useRouter();
 const agentId = computed(() => route.params.agentId);
 const isNew = computed(() => agentId.value === "new");
+const activeRoute = computed(() => {
+  const r = route.query.route;
+  return r === "device_control" || r === "platform_task" ? r : null;
+});
 const agent = ref(null);
 const loading = ref(false);
 const loadError = ref("");
 const uploading = ref(false);
 const fileInput = ref(null);
+const testing = ref(false);
 
 const form = ref({
   name: "",
@@ -34,34 +34,24 @@ const form = ref({
   description: "",
   model_provider: "dashscope",
   model_name: "qwen-max",
+  vision_model_name: "",
+  strong_model_name: "",
+  strong_enabled: false,
   api_key: "",
   base_url: "",
-  system_prompt: "",
-  temperature: 0.7,
-  max_tokens: 4096,
-  generate_kwargs: "{}",
-  formatter: "dashscope",
-  max_iters: 20,
-  parallel_tool_calls: true,
-  print_hint_msg: false,
-  memory_mode: "inmemory",
-  long_term_memory_mode: "both",
-  enable_meta_tool: false,
-  enable_rewrite_query: true,
   enable_knowledge_base: false,
   enable_workspace_tools: false,
   enable_business_tools: false,
   enable_mcp_tools: false,
   enable_skills: false,
   tools: [],
-  compression_enabled: false,
-  compression_threshold: 10000,
-  compression_keep_recent: 3,
-  compression_prompt: "",
-  compression_template: "",
-  tts_enabled: false,
   skills_config: {},
   knowledge_sources: {},
+  max_loops: 3,
+  route_configs: {
+    device_control: { planner: {}, executor: {}, verifier: {} },
+    platform_task: { planner: {}, executor: {}, verifier: {} },
+  },
 });
 
 async function loadAgentDetail() {
@@ -73,26 +63,19 @@ async function loadAgentDetail() {
     loading.value = true;
   }
   try {
-    await Promise.all([
-      loadPlatformTools(),
-      loadAvailableSkills(),
-      loadKnowledgeDocs(),
-      loadAgentTools(),
-      isNew.value
-        ? Promise.resolve()  // New agents start with empty prompt — no default.
-        : getAgentDetail(agentId.value).then((data) => {
-            if (data?.status && data.data?.agent) {
-              const agentPayload = data.data.agent;
-              const allTools = agentPayload.tools || [];
-              const platformNames = allTools
-                .filter((t) => t.tool_type === "platform" && t.enabled)
-                .map((t) => t.name);
-              selectedPlatformTools.value = new Set(platformNames);
-              form.value = { ...form.value, ...agentPayload, tools: [] };
-              agent.value = agentPayload;
-            }
-          }),
-    ]);
+    if (!isNew.value) {
+      const data = await getAgentDetail(agentId.value)
+      if (data?.status && data.data?.agent) {
+        const agentPayload = data.data.agent;
+        form.value = { ...form.value, ...agentPayload, tools: [] };
+        form.value.route_configs = {
+          device_control: { planner: {}, executor: {}, verifier: {}, ...(agentPayload.route_configs?.device_control || {}) },
+          platform_task: { planner: {}, executor: {}, verifier: {}, ...(agentPayload.route_configs?.platform_task || {}) },
+        };
+        form.value.max_loops = agentPayload.max_loops ?? 3;
+        agent.value = agentPayload;
+      }
+    }
   } catch (err) {
     if (!isNew.value) {
       loadError.value = "加载智能体详情失败，请检查网络连接";
@@ -103,124 +86,6 @@ async function loadAgentDetail() {
 }
 
 onMounted(() => { loadAgentDetail() });
-
-const providers = [
-  {
-    value: "dashscope",
-    label: "阿里百炼 (DashScope)",
-    formatter: "dashscope",
-    models: ["qwen-max", "qwen-plus", "qwen-turbo", "qwen3-235b"],
-  },
-  {
-    value: "openai",
-    label: "OpenAI",
-    formatter: "openai",
-    models: ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo", "o4-mini"],
-  },
-  {
-    value: "anthropic",
-    label: "Anthropic (Claude)",
-    formatter: "anthropic",
-    models: ["claude-fable-5", "claude-opus-4-8", "claude-sonnet-4-6"],
-  },
-  {
-    value: "deepseek",
-    label: "DeepSeek",
-    formatter: "openai",
-    models: [
-      "deepseek-v4-flash",
-      "deepseek-v4-flash-vision-exp",
-      "deepseek-v4-pro",
-      "deepseek-chat",
-      "deepseek-reasoner",
-    ],
-  },
-  {
-    value: "custom",
-    label: "自定义 (OpenAI 兼容)",
-    formatter: "openai",
-    models: [],
-  },
-];
-
-const detectingModels = ref(false);
-const detectedModels = ref([]);
-
-
-	// ── Tools / Skills / MCP / Knowledge ── composable replaces ~400 lines
-	const tools = useAgentTools(form, isNew, agentId)
-	const {
-	  toolCategories, selectedPlatformTools, loadingPlatformTools,
-	  loadPlatformTools, togglePlatformTool, isPlatformToolSelected,
-	  toggleCategory, isCategorySelected,
-	  availableSkills, enabledSkills, loadingSkills,
-	  loadAvailableSkills, isSkillEnabled, toggleSkill,
-	  selectAllSkills, deselectAllSkills,
-	  knowledgeDocs, loadingDocs, showImportDialog,
-	  loadKnowledgeDocs, isDocEnabled, toggleDocEnabled, importDocs, removeDoc,
-	  openImportDialog, closeImportDialog, importedDocIds,
-	  agentImportedTools, loadAgentTools, removeImportedTool,
-	  formatSkillSize,
-	  platformToolSelectedCount, wsSkillEnabledCount, kbDocSelectedCount,
-	} = tools
-
-	// Step 4 collapse panel — default expand memory + platform
-	const memoryToolActive = ref(["memory", "platform"])
-
-// 合并内置模型 + API 检测到的模型，去重
-const availableModels = computed(() => {
-  const builtin =
-    providers.find((p) => p.value === form.value.model_provider)?.models || [];
-  const all = [...new Set([...builtin, ...detectedModels.value])];
-  // 如果当前选择的模型不在列表中，追加
-  if (form.value.model_name && !all.includes(form.value.model_name)) {
-    all.push(form.value.model_name);
-  }
-  return all;
-});
-
-async function detectModels() {
-  if (!form.value.api_key) {
-    ElMessage.warning("请先填写 API Key");
-    return;
-  }
-  detectingModels.value = true;
-  try {
-    const data = await apiDetectModels({
-      model_provider: form.value.model_provider,
-      api_key: form.value.api_key,
-      base_url: form.value.base_url,
-    });
-    if (data.status && data.data) {
-      const models = data.data.models || [];
-      detectedModels.value = models;
-      if (models.length) {
-        ElMessage.success(`检测到 ${models.length} 个可用模型`);
-        // 如果当前模型不在列表中，自动选择第一个
-        if (
-          !models.includes(form.value.model_name) &&
-          models.length
-        ) {
-          form.value.model_name = models[0];
-        }
-      } else {
-        ElMessage.warning("未能检测到可用模型，请检查 API Key 和地址");
-      }
-    }
-  } catch (e) {
-    ElMessage.error("模型检测请求失败");
-  }
-  detectingModels.value = false;
-}
-
-function onProviderChange(p) {
-  const prov = providers.find((x) => x.value === p);
-  if (prov) {
-    form.value.formatter = prov.formatter;
-    form.value.model_name = prov.models[0] || "";
-  }
-  detectedModels.value = [];
-}
 
 function triggerUpload() {
   fileInput.value?.click();
@@ -243,37 +108,14 @@ async function handleAvatarUpload(e) {
 }
 
 async function save() {
-  // In create mode, include MCP tools in payload. In edit mode, tools are managed via API.
-  let allTools = [];
-  if (isNew.value) {
-    const platformToolRecords = [...selectedPlatformTools.value].map(
-      (name) => ({
-        name,
-        tool_type: "platform",
-        enabled: true,
-        config_json: "{}",
-      }),
-    );
-    allTools = [
-      ...form.value.tools.map((t) => ({
-        name: t.name || "",
-        tool_type: t.tool_type || "mcp",
-        enabled: t.enabled !== false,
-        config_json:
-          typeof t.config_json === "string"
-            ? t.config_json
-            : JSON.stringify(t.config_json || {}),
-      })),
-      ...platformToolRecords,
-    ];
-  }
   const payload = { ...form.value };
-  // 编辑模式：平台工具勾选经 platform_tools 单独同步（后端只 diff platform 类型记录）；
-  // 携带 tools 会被后端视为「清空全部工具」（含 MCP/Skill 副本）
-  if (isNew.value) payload.tools = allTools;
-  else {
-    delete payload.tools;
-    payload.platform_tools = [...selectedPlatformTools.value];
+  // 工具/知识库配置已移到 AI 工具箱 / 知识库页（platform-config），此处不随智能体提交
+  for (const k of [
+    'tools', 'enable_workspace_tools', 'enable_business_tools',
+    'enable_mcp_tools', 'enable_skills', 'enable_knowledge_base',
+    'skills_config', 'knowledge_sources',
+  ]) {
+    delete payload[k];
   }
   try {
     const data = await saveAgent(isNew.value, agentId.value, payload);
@@ -286,6 +128,24 @@ async function save() {
   } catch (err) {
     ElMessage.error("保存失败: " + formatApiError(err));
   }
+}
+
+async function testConnection() {
+  if (testing.value) return;
+  testing.value = true;
+  try {
+    const data = await testAgent(agentId.value);
+    if (data.status && data.data) {
+      const connected = data.data.connected;
+      if (connected) ElMessage.success("连接成功");
+      else ElMessage.warning("连接失败：" + (data.data.message || "未知错误"));
+    } else {
+      ElMessage.error(data.message || "校验失败");
+    }
+  } catch (err) {
+    ElMessage.error("校验请求失败，请检查网络连接");
+  }
+  testing.value = false;
 }
 </script>
 
@@ -323,36 +183,28 @@ async function save() {
       <AgentBasicInfo :form="form" :is-new="isNew" :uploading="uploading"
         @trigger-upload="triggerUpload" @avatar-upload="handleAvatarUpload" />
 
-      <AgentModelConfig :form="form" :is-new="isNew"
-        :providers="providers" :available-models="availableModels"
-        :detected-models="detectedModels" :detecting-models="detectingModels"
-        @provider-change="onProviderChange" @detect-models="detectModels" />
+      <section class="doc-section step-panel">
+        <div class="section-title"><span class="section-num">🔄</span>循环次数</div>
+        <el-form label-width="110px" class="agent-form">
+          <el-form-item label="max_loops">
+            <el-input-number v-model="form.max_loops" :min="1" :max="10" />
+          </el-form-item>
+        </el-form>
+      </section>
 
-      <AgentPromptEditor :form="form" :is-new="isNew" />
+      <AgentRouteConfig v-if="!activeRoute || activeRoute === 'device_control'" label="控制设备 Device Control"
+        v-model:planner="form.route_configs.device_control.planner"
+        v-model:executor="form.route_configs.device_control.executor"
+        v-model:verifier="form.route_configs.device_control.verifier" />
+      <AgentRouteConfig v-if="!activeRoute || activeRoute === 'platform_task'" label="平台任务 Platform Task（仅入口）"
+        v-model:planner="form.route_configs.platform_task.planner"
+        v-model:executor="form.route_configs.platform_task.executor"
+        v-model:verifier="form.route_configs.platform_task.verifier" />
 
-      <AgentToolsPanel :form="form" :is-new="isNew"
-        :tool-categories="toolCategories" :loading-platform-tools="loadingPlatformTools"
-        :selected-platform-tools="selectedPlatformTools" :platform-tool-selected-count="platformToolSelectedCount"
-        :is-category-selected="isCategorySelected"
-        :available-skills="availableSkills" :loading-skills="loadingSkills"
-        :enabled-skills="enabledSkills" :ws-skill-enabled-count="wsSkillEnabledCount"
-        :knowledge-docs="knowledgeDocs" :loading-docs="loadingDocs"
-        :show-import-dialog="showImportDialog" :imported-doc-ids="importedDocIds" :kb-doc-selected-count="kbDocSelectedCount"
-        :agent-imported-tools="agentImportedTools"
-        @toggle-platform-tool="togglePlatformTool" @toggle-category="toggleCategory"
-        @toggle-skill="toggleSkill"
-        @toggle-doc-enabled="toggleDocEnabled"
-        @select-all-skills="selectAllSkills" @deselect-all-skills="deselectAllSkills"
-        @open-import-dialog="openImportDialog" @remove-doc="removeDoc"
-        @toolbox-imported="loadAgentTools" @remove-imported="removeImportedTool" />
-
-      <KnowledgeImportDialog
-        :visible="showImportDialog"
-        :all-docs="knowledgeDocs"
-        :imported-doc-ids="importedDocIds"
-        @import="importDocs" @close="closeImportDialog" />
-
-      <AgentAdvancedConfig :form="form" :is-new="isNew" />
+      <section class="doc-section step-panel">
+        <div class="section-title"><span class="section-num">✅</span>模型校验</div>
+        <el-button :loading="testing" :disabled="isNew" @click="testConnection">校验模型连接</el-button>
+      </section>
 
       <AgentFormFooter :is-new="isNew" @save="save" />
     </div>
@@ -375,13 +227,13 @@ async function save() {
 }
 .back-btn:hover { background: var(--ai-teal); color: var(--app-bg-card); box-shadow: var(--app-shadow-md); transform: translateY(-1px); }
 
-/* ── Shared step panel (used by all 5 sub-components) ── */
-.step-panel { padding: 28px 32px; }
-.section-title {
+/* ── Shared step panel（:deep 才能作用到子组件标题） ── */
+:deep(.step-panel) { padding: 28px 32px; }
+:deep(.section-title) {
   display: flex; align-items: center; gap: 12px; font-size: var(--app-size-lg); font-weight: 700;
   color: var(--ai-ink-soft); margin-bottom: 24px; padding-bottom: 14px; border-bottom: 2px solid var(--ai-bg-subtle);
 }
-.section-num {
+:deep(.section-num) {
   display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;
   border-radius: 10px; background: linear-gradient(135deg,var(--ai-teal),var(--ai-teal-hover));
   color: var(--app-bg-card); font-size: var(--app-size-md); font-weight: 700; box-shadow: var(--app-shadow-sm);

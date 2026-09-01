@@ -9,9 +9,8 @@ The two authentication paths coexist during the DRF migration:
   - This class: protects new DRF ViewSets (opt-in via DEFAULT_AUTHENTICATION_CLASSES)
 """
 
-from types import SimpleNamespace
-
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication
 
@@ -28,9 +27,9 @@ class JWTAuthentication(BaseAuthentication):
       - Token type (must be "access")
       - Blacklist status (Redis-backed jti revocation)
 
-    Returns a lightweight user object (SimpleNamespace) rather than a
-    Django User model instance — the project identifies users by integer
-    ``user_id``, not by ``auth.User`` rows.
+    Returns the real ``auth.User`` resolved by the token's ``sub`` claim so
+    DRF permission classes (``IsAdminUser``) and ``request.user.is_superuser``
+    work. ``User.DoesNotExist`` (deleted user) is raised as 401.
     """
 
     keyword = "Bearer"
@@ -56,10 +55,11 @@ class JWTAuthentication(BaseAuthentication):
             msg = str(exc) if str(exc) else "Invalid or expired token"
             raise exceptions.AuthenticationFailed(msg)
 
-        user = SimpleNamespace(
-            id=int(payload["sub"]),
-            is_authenticated=True,
-        )
+        User = get_user_model()
+        try:
+            user = User.objects.get(pk=int(payload["sub"]))
+        except (User.DoesNotExist, ValueError, TypeError):
+            raise exceptions.AuthenticationFailed("用户不存在或已删除")
         return (user, token)
 
     def authenticate_header(self, request):

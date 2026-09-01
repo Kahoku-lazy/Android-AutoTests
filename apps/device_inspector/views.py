@@ -72,6 +72,7 @@ def save_elements(request, snapshot_id: int):
     page_id = body.get("page_id")
     element_ids = body.get("element_ids")
     include_ocr = bool(body.get("include_ocr", True))
+    aliases = body.get("aliases") or None
     try:
         return Response(
             api.save_snapshot_to_elements(
@@ -81,6 +82,7 @@ def save_elements(request, snapshot_id: int):
                 page_id=int(page_id) if page_id else None,
                 element_ids=element_ids,
                 include_ocr=include_ocr,
+                aliases=aliases,
             )
         )
     except ImportConflictError as e:

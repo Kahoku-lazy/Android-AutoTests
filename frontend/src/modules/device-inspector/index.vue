@@ -1,6 +1,6 @@
 <script setup>
 /** Device Inspector — v1.7 快照化：一键 dump/OCR 获取 → 快照落库回看 → 筛减导入元素定位 → 页面回看。 */
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
 import { useElementStore } from './store'
 import CaptureForm from './components/CaptureForm.vue'
 import ScreenshotView from './components/ScreenshotView.vue'
@@ -15,6 +15,11 @@ import FilterTabs from '@/shared/components/FilterTabs.vue'
 import { IconClock, IconLayers, IconSave } from '@/shared/icons'
 
 const store = useElementStore()
+
+/** 结构视图下左侧截图展示全量元素（分区表展示全量，行选中高亮需与全量对齐） */
+const screenshotElements = computed(() =>
+  store.viewMode === 'structure' ? store.elements : store.filteredElements
+)
 
 const filterOptions = [
   { key: 'all', label: '全部' },
@@ -116,7 +121,7 @@ function onOcrClick(ocr) {
             <ScreenshotView
               :screen-w="store.snapshot?.screen_w || 1440"
               :screen-h="store.snapshot?.screen_h || 3040"
-              :elements="store.filteredElements"
+              :elements="screenshotElements"
               :selected="store.selected"
               :ocr-results="store.ocrTexts"
               :selected-ocr="store.selectedOcr"
@@ -139,6 +144,8 @@ function onOcrClick(ocr) {
               :sections="store.analysis?.sections || []"
               :elements="store.analysis?.elements || []"
               :is-webview="store.analysis?.is_webview || false"
+              :selected="store.selected"
+              @select="onElementClick"
             />
           </section>
         </div>

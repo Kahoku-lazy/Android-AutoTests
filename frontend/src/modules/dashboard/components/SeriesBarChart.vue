@@ -72,7 +72,7 @@ function buildOption() {
   }
 }
 
-const { container } = useECharts(buildOption, () => props.series)
+const { container } = useECharts(buildOption, () => [props.labels, props.series])
 </script>
 
 <template>

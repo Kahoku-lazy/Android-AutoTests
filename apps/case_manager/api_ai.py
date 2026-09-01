@@ -182,6 +182,7 @@ def save_ai_definition(
     package_name: str = "",
     enabled: bool = True,
     priority: str = "P1",
+    created_by: str = "",
     **extra: Any,
 ) -> tuple[bool, Any]:
     """AI 写用例入口：校验 steps 后经各类型 save_* 落库。
@@ -218,6 +219,7 @@ def save_ai_definition(
                 directory_id=directory_id,
                 priority=priority,
                 enabled=enabled,
+                created_by=created_by,
             )
         except ValueError as e:
             return False, str(e)
@@ -239,6 +241,7 @@ def save_ai_definition(
                 priority=priority,
                 enabled=enabled,
                 url=extra.get("url", ""),
+                created_by=created_by,
             )
         else:
             from .api_ui import save_definition
@@ -252,6 +255,7 @@ def save_ai_definition(
                 package_name=package_name,
                 priority=priority,
                 enabled=enabled,
+                created_by=created_by,
             )
     except ValueError as e:
         return False, str(e)

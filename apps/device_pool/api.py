@@ -174,14 +174,17 @@ def device_action(
     package: str = "",
     x=None,
     y=None,
+    x2=None,
+    y2=None,
     direction: str = "up",
     distance: int = 500,
     text: str = "",
     clear_first: bool = True,
+    duration: float = 0.5,
 ) -> dict:
     """对指定设备执行一个 UI 动作，返回当前前台 package/activity（供跳转判定）。
 
-    action: start_app / stop_app / click / long_click / swipe / back / input_text / current
+    action: start_app / stop_app / click / long_click / swipe / drag / back / input_text / current
     """
     use_device(serial)
 
@@ -189,6 +192,10 @@ def device_action(
         x = int(x)
     if y is not None:
         y = int(y)
+    if x2 is not None:
+        x2 = int(x2)
+    if y2 is not None:
+        y2 = int(y2)
 
     if action == "start_app":
         if not package:
@@ -210,6 +217,10 @@ def device_action(
         device.action_longclick(x, y)
     elif action == "swipe":
         device.action_swipe(direction or "up", int(distance or 500))
+    elif action == "drag":
+        if x is None or y is None or x2 is None or y2 is None:
+            raise ValueError("drag 需要 x/y（起点）与 x2/y2（终点）坐标")
+        device.action_drag_coord(x, y, x2, y2, duration=float(duration))
     elif action == "input_text":
         device.action_input(text or "", x, y, clear_first=bool(clear_first))
     elif action == "current":

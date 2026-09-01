@@ -1,6 +1,6 @@
 # ARCH-08 — AI 助手 (AI Assistant)
 
-> **版本**：v3.0 · **日期**：2026-08-21 · **关联模块**：`apps/ai_assistant/` · 前端 `frontend/src/modules/ai-assistant/`
+> **版本**：v3.3 · **日期**：2026-08-21 · **关联模块**：`apps/ai_assistant/` · 前端 `frontend/src/modules/ai-assistant/`
 
 ## 文档内容简述
 
@@ -172,6 +172,7 @@ flowchart TB
     A -->|"详情/创建/更新"| DETAIL
     C -->|"会话/消息/流式/HITL"| CHAT
     T -->|"工具/技能/MCP 配置"| DETAIL
+    T -->|"平台业务工具目录"| TOOLBOX
     K -->|"状态/文档/重建"| KB
     TB -->|"列表/创建/导入"| TOOLBOX
     U -->|"头像/文件"| DETAIL
@@ -206,7 +207,7 @@ flowchart TB
 
 ```
 apps/ai_assistant/
-├── models.py              7 表（ai_ 前缀）：AIAgent/AITool/AISharedTool/AIConversation/AIMessage/AITask/AIExecutionLog
+├── models.py              7 表（ai_ 前缀）：AIAgent/AISharedTool/AIPlatformTool/AIConversation/AIMessage/AITask/AIExecutionLog
 ├── api.py                 跨模块 __all__ 白名单 + 写操作（Agent/对话 CRUD）+ 加密工具 + evaluator 接口
 ├── serializers.py         DRF 入参校验与输出 DTO（Agent/对话/消息组）
 ├── views_drf.py           DRF 视图：AgentViewSet + ConversationViewSet + health/detect/available/tasks APIView
@@ -227,7 +228,7 @@ apps/ai_assistant/
 │   ├── provider_registry.py 模型提供商 → base_url/credential 映射
 │   ├── rag_service.py       ChromaDB 知识库（唯一所有者）
 │   └── skill_registry.py    workspace 技能（Bash/Edit/Glob/Grep/Read/Write）映射
-├── management/commands/    init_knowledge_base · migrate_platform_tools · cleanup_uploads
+├── management/commands/    init_knowledge_base · cleanup_uploads
 ├── migrations/             21 迁移（0001~0021）
 ├── admin.py                Django Admin 注册
 └── apps.py                 verbose_name="AI 助手"
@@ -252,9 +253,9 @@ build_agent(agent_model, user_id)  → AgentScope Agent
 ```
 _build_toolkit(agent_model, user_id)
   enable_workspace_tools → 6 内置文件工具（skills_config 逐工具过滤）
-  enable_business_tools  → 30 平台工具（AITool tool_type="platform" 逐工具过滤，无配置默认只读子集）
-  enable_mcp_tools       → MCP 客户端（AITool tool_type="mcp"）
-  enable_skills          → skill 目录（AITool tool_type="skill" 的 dir_path）
+  enable_business_tools  → 30 平台工具（ai_platform_tools 全局开关过滤，默认全启用）
+  enable_mcp_tools       → MCP 客户端（AISharedTool item_type="mcp" enabled=True）
+  enable_skills          → skill 目录（AISharedTool item_type="skill" enabled=True → data/shared_skills/{id}）
 ```
 
 ### 3.3 核心设计：单请求 SSE 流
@@ -327,9 +328,9 @@ send_confirm_result（sync view，Daphne 线程池）
 | 模型 | GET | `/api/ai/agents/health` | ✅ |
 | 工具 | GET | `/api/ai/available-tools` | ✅ |
 | 工具 | GET | `/api/ai/available-skills` | ✅ |
-| 工具 | GET | `/api/ai/agents/{id}/tools` | ✅ |
-| 工具 | POST | `/api/ai/agents/{id}/tools/{tid}/toggle` | ✅ |
-| 工具 | POST | `/api/ai/agents/{id}/tools/{tid}/delete` | ✅ |
+| 工具 | POST | `/api/ai/platform-tools/toggle` | ✅ |
+| 工具 | GET | `/api/ai/platform-config` | ✅ |
+| 工具 | POST | `/api/ai/platform-config/update` | ✅ |
 | 任务 | GET | `/api/ai/conversations/{id}/tasks` | ❌ |
 | 任务 | GET | `/api/ai/conversations/{id}/tasks/{run_id}` | ❌ |
 | 任务 | GET | `/api/ai/tasks` | ❌ |
@@ -346,8 +347,8 @@ send_confirm_result（sync view，Daphne 线程池）
 | 工具箱 | POST | `/api/ai/toolbox/create` | ✅ |
 | 工具箱 | POST | `/api/ai/toolbox/{id}/update` | ✅ |
 | 工具箱 | POST | `/api/ai/toolbox/{id}/delete` | ✅ |
+| 工具箱 | POST | `/api/ai/toolbox/{id}/toggle` | ✅ |
 | 工具箱 | POST | `/api/ai/toolbox/upload-skill` | ✅ |
-| 工具箱 | POST | `/api/ai/agents/{id}/tools/import-from-toolbox` | ✅ |
 
 ### 4.2 响应格式（Agent 详情，Batch 1 起 DRF 信封）
 
@@ -360,6 +361,9 @@ send_confirm_result（sync view，Daphne 线程池）
       "name": "测试助手",
       "model_provider": "dashscope",
       "model_name": "qwen-max",
+      "vision_model_name": "",
+      "strong_model_name": "",
+      "strong_enabled": false,
       "api_key": "sk-***abcd",
       "enable_workspace_tools": false,
       "enable_business_tools": true,
@@ -391,7 +395,6 @@ erDiagram
     auth_user ||--o{ ai_agents : "owner (SET_NULL)"
     auth_user ||--o{ ai_conversations : "owner (SET_NULL)"
 
-    ai_agents ||--o{ ai_tools : "agent (CASCADE)"
     ai_agents ||--o{ ai_conversations : "agent (CASCADE)"
     ai_agents ||--o{ ai_tasks : "agent (CASCADE)"
     ai_agents ||--o{ ai_execution_logs : "agent (CASCADE)"
@@ -413,14 +416,14 @@ erDiagram
         text system_prompt
         float temperature
         int max_tokens
-        string formatter
         int max_iters
         bool parallel_tool_calls
-        string memory_mode "inmemory/longterm"
         text generate_kwargs
         bool compression_enabled
         int compression_threshold
-        bool tts_enabled
+        int compression_keep_recent
+        text compression_prompt
+        text compression_template
         bool enable_knowledge_base
         bool enable_workspace_tools
         bool enable_business_tools
@@ -432,22 +435,10 @@ erDiagram
         bool is_connected
         text available_models "JSON 列表"
         string agent_scope_id
-        string agent_scope_credential_id
-        string credential_hash
         bool key_revealed
         datetime last_checked_at
         datetime created_at
         datetime updated_at
-    }
-
-    ai_tools {
-        int id PK
-        int agent_id FK
-        string name
-        string tool_type "platform/mcp/skill"
-        text config_json
-        bool enabled
-        datetime created_at
     }
 
     ai_shared_tools {
@@ -458,6 +449,13 @@ erDiagram
         text config_json
         bool enabled
         datetime created_at
+        datetime updated_at
+    }
+
+    ai_platform_tools {
+        int id PK
+        string name UK "平台工具名（TOOL_SCHEMAS）"
+        bool enabled "仅存停用记录 False，默认全启用"
         datetime updated_at
     }
 
@@ -567,8 +565,10 @@ get_kb_doc_count() -> int
 | 工具双通道 | 进程内直调为主，HTTP `tool_gateway` 保留供外部 AgentScope；共享 `tool_registry` 单一真相源 |
 | HITL 线程安全 | in-memory registry + `call_soon_threadsafe` 跨线程投递确认结果 |
 | 安全闭环 | Key 加密 + 脱敏 + 一次性 reveal + base_url 白名单防 SSRF |
-| 知识库隔离 | ChromaDB 由 `rag_service.py` 独占，`knowledge_sources` 逐智能体过滤文档 |
-| 工具箱集中管理 | 智能体配置页仅保留「从 AI 工具箱选取」导入面板；MCP/Skill 自配置 UI 与端点（`mcp/save`、`mcp/test`、`skill/upload`）已移除 |
+| 知识库隔离 | ChromaDB 由 `rag_service.py` 独占，`knowledge_sources` 全局过滤文档（知识库页配置） |
+| 工具箱集中管理 | MCP/Skill 在工具箱**直接启用/停用**（`AISharedTool.enabled`），`agent_factory` 直接读 `AISharedTool`，无 per-agent 副本与「导入」；`import-from-toolbox` 与 `agents/{id}/tools*` 端点已移除 |
+| 平台业务工具全局启停 | AI 工具箱经 `GET /ai/available-tools` 按 7 分类展开展示平台工具并说明功能，且每个工具「启用/停用」、每个分类「全部启用/全部关闭」写 `POST /ai/platform-tools/toggle`（仅超管）；状态落 `ai_platform_tools`（默认全启用，停用=记录 enabled=False）；`agent_factory._resolve_enabled_tools` / `agent_config` 改读全局 |
+| 单智能体 + 配置下沉 | 平台只用唯一智能体（去掉「新建」）；工具/知识库配置从智能体配置页下沉到 AI 工具箱 / 知识库页，经 `GET/POST /ai/platform-config` 读写（`get_platform_agent` 解析唯一智能体），保存智能体不覆盖这些字段 |
 
 ---
 
@@ -576,6 +576,10 @@ get_kb_doc_count() -> int
 
 | 版本 | 日期 | 变更摘要 |
 |------|------|----------|
+| v3.4 | 2026-08-28 | **两条线路 + 任务发布 + 移除主对话**：智能体从「自由对话」改为「控制设备 / 平台任务」两条能力线路；`AIAgent` 增 `route_configs`（每条线路 planner/executor 模型配置，api_key Fernet 加密）；`AITask` 增 goal/requirements/attachment/route/checklist/report_name；新增 `POST /ai/tasks/submit`（按 route 分发：device_control → `plan()`+`vision`，platform_task 占位）+ `GET /ai/agent-tasks`；删除 SSE 对话（`chat_views.py`/`hitl_views.py`/`chat/stream` 端点）+ 前端聊天窗口；`Harness` 增 per-harness api_key/base_url；前端新增任务发布模块（`TaskPublishCard`/`TaskList`）+ 多线路配置（`AgentRouteConfig`）；删除对话接口测试 `test_conversations_api.py` |
+| v3.3 | 2026-08-21 | **单智能体 + 配置下沉 + 去 AITool**：删除 `AITool` 模型与 `ai_tools` 表（8→7 表），MCP/Skill 由 `agent_factory._build_mcp_clients`/`_resolve_skill_paths` 直接读 `AISharedTool(enabled=True)`；移除 `import-from-toolbox` 与 `agents/{id}/tools*` 端点、`AgentToolActionsMixin`、`sync_agent_tools`/`import_shared_tool`/`set_tool_enabled`/`delete_agent_tool`；新增 `get_platform_agent` + `GET/POST /ai/platform-config`（读/写唯一智能体配置）与 `POST /ai/toolbox/{id}/toggle`（42→41 端点、16→15 path）；§1.5/§4.1/§5.1 ER 同步；前端删「新建智能体」、删 `AgentToolsPanel`/`useAgentTools`，知识库开关/文档范围移 `KnowledgeBase.vue`，能力开关/工作区 Skills/MCP-Skill 启停移 `ToolboxPanel.vue` |
+| v3.2 | 2026-08-21 | 平台业务工具启停改**全局**：新增表 `ai_platform_tools`（8 表）+ 数据迁移删除 `AITool(tool_type=platform)` 遗留并下线 `migrate_platform_tools` 命令；§5.1 ER 补 `ai_platform_tools`、`ai_tools.tool_type` 收敛为 mcp/skill；§4.1 补端点 `POST /ai/platform-tools/toggle`（41→42 端点、15→16 path）；§3.1 models 7→8 表；`_resolve_enabled_tools` / `agent_config` 改读全局；§7 设计要点「平台业务工具目录」改「全局启停」；智能体配置页删除逐工具勾选只留 `enable_business_tools` 总开关 |
+| v3.1 | 2026-08-21 | AI 工具箱扩展「平台业务工具目录」：§1.5 API 关系图补 `available-tools` → AI 工具箱（平台业务工具目录）消费边；§7 设计要点补「平台业务工具目录」——`ToolboxPanel.vue` + `composables/usePlatformTools.ts` 经 `GET /ai/available-tools` 按 7 分类展开展示并说明功能（默认全展开，纯只读目录），智能体配置页仍按模块卡片只展示数量不展开 |
 | v3.0 | 2026-08-21 | **五层口径回填 + 事实同步**：§1.1 去「横跨后端层与 AI 引擎层」改 L3 业务 App + in-process 说明（非独立分层）；§1.2 图去旧 L2 标签（BE）、views/ 收敛 3 文件；§6.1 工具箱落点改 `views_toolbox_drf.py`；§6.3 dashboard/evaluator 违规改 ✅（2026-08-20 fix-cross-app-firewall：filter_agents_for_user→api、require_auth→shared/auth/）；§4.1 补端点口径（41 方法端点 = 15 path + DRF 生成）；关联指针改 §3.2/§4.5/A.3 |
 | v1.0 | 2026-07-16 | 初始版本：基于 `项目架构.md` 与旧 PRD 重构 |
 | v1.1 | 2026-07-16 | 代码对照审计：端点 32→37，views 文件 5→9 |

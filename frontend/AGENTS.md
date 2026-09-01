@@ -14,6 +14,7 @@
 3. 编写细则与决策树 → `.agents/skills/android-autotests-rules/references/frontend.md`；关单自检 → skill `vue-frontend-check`。
 4. **同步约定**：全局事项（后端 WS 事件表、响应信封、共享组件清单、端口/协议、分层纪律）变更时，必须同步 `.agents/skills/android-autotests-rules/references/frontend.md` 与 skill `vue-frontend-check`（checklist/calibration 对应口径）。
 5. **模块专属约束**（红线/契约/协议特例/关单附加项）唯一落点为 `src/modules/{name}/AGENTS.md`，变更只改对应模块文件。
+6. **包管理器（硬约束）**：`frontend/` 用 **npm**（存在 `package-lock.json`），**禁用 pnpm**——误用 pnpm 会把 npm 已装的依赖迁到 `node_modules/.ignored` 并触发重装，破坏依赖/正在运行的 dev server。前端命令一律 `npm install` / `npm run dev` / `npm run typecheck` / `npm run build:check` 等。
 
 ---
 

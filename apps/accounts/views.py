@@ -141,7 +141,15 @@ class MeView(APIView):
                 {"detail": "用户不存在"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        return Response({"user": {"id": user.id, "username": user.username}})
+        return Response(
+            {
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "is_superuser": user.is_superuser,
+                }
+            }
+        )
 
 
 def _first_error(errors) -> str:

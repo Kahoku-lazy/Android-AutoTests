@@ -27,3 +27,15 @@ export async function logout(): Promise<AuthResponse> {
   const { data } = await djangoClient.post<AuthResponse>("/auth/logout")
   return data
 }
+
+/** 当前登录用户身份（含 is_superuser，供前端判断管理入口可见性）。 */
+export interface MeUser {
+  id: number
+  username: string
+  is_superuser: boolean
+}
+
+export async function me(): Promise<MeUser> {
+  const { data } = await djangoClient.get<{ status: boolean; data: { user: MeUser } }>("/auth/me")
+  return data.data.user
+}

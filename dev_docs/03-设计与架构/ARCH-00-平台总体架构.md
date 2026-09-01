@@ -692,7 +692,7 @@ Android-AutoTests/
 
 | 前缀 | App | 表名 |
 |------|-----|------|
-| `ai_` | ai_assistant | `ai_agents` · `ai_tools` · `ai_shared_tools` · `ai_conversations` · `ai_messages` · `ai_tasks` · `ai_execution_logs` |
+| `ai_` | ai_assistant | `ai_agents` · `ai_shared_tools` · `ai_platform_tools` · `ai_conversations` · `ai_messages` · `ai_tasks` · `ai_execution_logs` |
 | `cm_` | case_manager | `cm_case_directories` · `cm_test_definitions` · `cm_api_testcases` · `cm_web_testcases` · `cm_storage_testcases` |
 | `di_` | device_inspector | `di_snapshots`（v1.7 快照化：dump/OCR 解析 JSON + 截图路径 + 统计） |
 | `dp_` | device_pool | `dp_devices` · `dp_device_locks` |

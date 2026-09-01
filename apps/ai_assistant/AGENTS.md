@@ -1,41 +1,45 @@
-# ai_assistant App AGENTS.md
+# AI Agent
 
-> 全局边界 / 协议要点 / 关单清单 → `../AGENTS.md`；本文只写本 App 增量，冲突以全局为准。
-> 版本：v1.0 · 最后更新：2026-08-21 · v1.0：从已归档 `dev_docs/_archive/后端claude笔记.md` §0️⃣ 模块表迁出并展开。
+> 涉及平台 AI助手模块变动时 **必须** 阅读此文档
 
-## 红线（全局索引表 ai_assistant 行的展开）
+## 技术栈
 
-| 只做 | 禁止 |
-|------|------|
-| 对话（唯一 SSE 流）、Agent/Toolbox/知识库 CRUD、上传 | 直接调模型以外的业务写库（写库走各模块 api） |
-| Tool 只调各模块 `api.py`（同进程直调） | import 其他 App 的 service/runner/内部实现 |
+1. Agent框架当前版本： AgentScope 2.0.7.post1
 
-- **Tool 写库只经目标模块 api.py**——幻觉写库、绕过防火墙是本 App 头号红线；新增 Tool 必须走 `api.py` + `--check-boundaries` 验证。
-- AgentScope 同进程运行、依赖 Redis：Redis 不可用 → 前端降级阻塞模式 `POST /api/ai/chat/sync`（双边已约定，勿删降级路径）。
-- SSE 事件类型是双边契约（前端 §3 事件表），变更必须同步前端 `AGENTS.md` §3 + 本文。
+## 职责划分
 
-## 本 App 契约（特例 + 真相源）
+- **Django 外层**：只调用 `agent_scope/` + 保存对话记录，不写智能体逻辑
+- **agent_scope**：负责智能体配置、智能体工具配置、智能体逻辑
 
-真相源：`apps/ai_assistant/urls.py`（router 无尾斜杠：`agents` / `conversations` / `toolbox` + special：`agents/health` / `models/detect` / `available-tools` / `available-skills` / `tasks` / `knowledge/*` / `upload-*` + **豁免 legacy**：SSE `conversations/{id}/chat/stream` + 工具网关 `tools/schemas` / `tools/agent-config/{id}` / `tools/{module}/{action}`）。
+## AgentScope 开发文档
 
-- **router `trailing_slash=False`**：保持旧路径无尾斜杠匹配——新增路由必须延续无尾斜杠约定，否则旧前端 404。
-- SSE 与工具网关两条 legacy 路径是「豁免不迁移」：改签名必须同步前端 + Tool 注册表。
-- 工具网关 `tools/{module}/{action}` 经中间件白名单动态分发，新增 action 必须同时更新白名单与 Tool schema。
+1. 参考文档路径： `dev_docs/项目笔记/AgentScope`
+1. 模型配置文件统一放在 `agent_scope/config.py`
+2. Agent实例化统一放在 `agent_scope/model.py`
+3. 构建的工作流统一放在 `agent_scope/workflow.py`
+4. 模型的工具统一放在 `agent_scope/tools.py`
 
-## 本 App 协议要点
+## 代码规范
 
-**页面语义增强工具（工具入参 + handler 校验）**：`analyze_page`（inspector/analyze，read_only）纯规则分区，无 LLM；`save_page_semantic`（inspector/save_semantic，write）接收 Agent 在 ReAct 里自然产生的语义命名作为工具入参，handler 经 `llm_semantic.validate_semantic` 校验防幻觉（rid 必须在快照元素集合内）。对齐 `save_case` 的「工具入参 + handler 校验」模式，不依赖 `generate_structured_output`（强制 tool_choice，thinking 模型不支持）。
+1. 是通过 get_provider_config(provider, base_url) 解析出默认的模型地址。
+2. 不允许修改非项目本地的代码，例如 import 导入的模块 `import os`, `from agentscope.message import UserMsg`
 
-**SSE（全项目唯一 SSE）**：`/api/ai/conversations/{id}/chat/stream`
 
-- 事件真相源：前端 `AGENTS.md` §3 事件表（`REPLY_START` / `TEXT_BLOCK_DELTA` / `THINKING_*` / `TOOL_CALL_*` / `TOOL_RESULT_*` / `HINT_BLOCK` / `REQUIRE_USER_CONFIRM` / `REPLY_END` / `error`）；新增/改事件必须双边同步。
-- 停止生成 = 关闭 SSE 保留已生成内容；`reply_end` 与 `exceed_max_iters` 均为终端事件——未到终端断流前端会报错。
+## 测试
 
-## 关单附加项（全局清单的 delta）
+>代码修改后先检查是否需要执行迁移指令： `python manage.py migrate ai_assistant`,
 
-```
-[ ] 新 Tool：参数校验/权限 + 只走各模块 api.py（--check-boundaries 通过）
-[ ] SSE 事件变更已同步前端 §3 事件表
-[ ] 无尾斜杠路由约定未破坏（旧路径 curl 验证）
-[ ] 降级路径 POST /api/ai/chat/sync 仍可用（Redis 关闭时）
+1. 模型测试指令文件：`apps/ai_assistant/management/commands/model_test.py`
+``` bash
+# 1. 规划模型：输入用户需求 → 输出 plans（目标/步骤/验收标准）
+python manage.py model_test planner "启动 govee 应用并进入设备列表"
+
+# 2. 执行模型：输入步骤 → 在设备上执行 → 输出结果（需设备）
+python manage.py model_test executor "1. 确认 govee 包名 2. 启动 govee" --serial RF8N21MSW7A
+
+# 3. 验收模型：输入验收标准 → 截图二次确认 → 输出 pass/fail + completed/failed
+python manage.py model_test verifier "前台 package 应为 govee 包名" --serial RF8N21MSW7A
+
+# 4. 测试模型：输入用户需求 → 输出结果（需设备）
+python manage.py model_test full "启动 govee 应用并进入设备列表" --serial RF8N21MSW7A
 ```

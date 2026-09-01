@@ -81,8 +81,8 @@ def scan_django_apps():
 
 
 def scan_tools():
-    """扫描 tool_registry.py 的 TOOL_SCHEMAS（AgentScope 工具的唯一事实源）。"""
-    registry_path = PROJECT_ROOT / "apps" / "ai_assistant" / "agent_scope" / "tool_registry.py"
+    """扫描 tools.py 的 TOOLS 注册表（AgentScope 工具的唯一事实源）。"""
+    registry_path = PROJECT_ROOT / "apps" / "ai_assistant" / "agent_scope" / "tools.py"
     if not registry_path.exists():
         return []
     tree = ast.parse(registry_path.read_text(encoding="utf-8"))
@@ -93,16 +93,23 @@ def scan_tools():
             target, value = node.target, node.value
         else:
             continue
-        if isinstance(target, ast.Name) and target.id == "TOOL_SCHEMAS" and value is not None:
-            return [
-                {
-                    "name": s["name"],
-                    "class": f"{s['module']}.{s['action']}",
-                    "file": str(registry_path.relative_to(PROJECT_ROOT)).replace("\\", "/"),
-                    "is_read_only": bool(s.get("read_only", False)),
-                }
-                for s in ast.literal_eval(value)
-            ]
+        if isinstance(target, ast.Name) and target.id == "TOOLS" and isinstance(value, ast.Dict):
+            tools = []
+            for key, val in zip(value.keys, value.values):
+                name = ast.literal_eval(key)
+                # val 是 (func_ref, is_read_only_bool) 元组
+                read_only = False
+                if isinstance(val, ast.Tuple) and len(val.elts) == 2:
+                    read_only = bool(ast.literal_eval(val.elts[1]))
+                tools.append(
+                    {
+                        "name": name,
+                        "class": name,
+                        "file": str(registry_path.relative_to(PROJECT_ROOT)).replace("\\", "/"),
+                        "is_read_only": read_only,
+                    }
+                )
+            return tools
     return []
 
 

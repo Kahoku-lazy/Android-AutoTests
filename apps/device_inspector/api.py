@@ -6,6 +6,7 @@ Cross-app access: ai_assistant Tool handlers 与 views 只调本白名单函数�
 
 __all__ = [
     "analyze_snapshot",
+    "capture_screen",
     "capture_snapshot",
     "delete_snapshot",
     "get_page_view",
@@ -101,6 +102,36 @@ def capture_snapshot(user_id: str, serial: str, method: str = "both") -> dict:
         logger.debug("快照关联设备失败 serial=%s", serial)
 
     return snapshot_to_dict(snapshot)
+
+
+def capture_screen(serial: str) -> dict:
+    """轻量截屏：仅校验设备可用 + 切换 + 截图落盘，不做 dump/OCR/快照落库。
+
+    供 AI 视觉点击链路（screenshot_page）调用——只取当前屏幕图，不产生快照记录。
+    """
+    from apps.device_pool.api import device
+
+    from .service import (
+        _check_device_available,
+        capture_page_screenshot,
+        ensure_current_device,
+    )
+
+    _check_device_available(serial)
+    ensure_current_device(serial)
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    screenshot_path = capture_page_screenshot(device, ts)
+    info = device.info()
+    current = device.app_current() or {}
+    return {
+        "screenshot_path": screenshot_path,
+        "serial": serial,
+        "package": current.get("package", ""),
+        "activity": current.get("activity", ""),
+        "screen_w": info.get("displayWidth", 0) or 0,
+        "screen_h": info.get("displayHeight", 0) or 0,
+    }
 
 
 def list_snapshots(user_id: str, offset: int = 0, limit: int = 100) -> dict:

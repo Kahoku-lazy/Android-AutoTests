@@ -35,7 +35,8 @@ jsonschema>=4.0
 pytest-playwright>=0.5.0
 
 # ── AgentScope 2.0 AI ──
-agentscope>=2.0.0
+# ≥2.0.7.post1 才包含 pipeline 模块（GoalPipeline）；main 分支当前版本号仍为 2.0.7.post1
+agentscope>=2.0.7.post1
 fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 pyjwt>=2.8.0

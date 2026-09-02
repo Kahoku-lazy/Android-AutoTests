@@ -16,6 +16,7 @@ description: |
 ### 1. 全局架构约束
 
   - 详情查阅 `references/architecture.md`
+  - 🔴 **引擎边界（L1c engines/）**：`engines/` 是唯一可触碰第三方引擎库（airtest/uiautomator2）的层；上层（apps/gateway）禁直接 import 引擎库、禁 import `engines.android.*` 具体实现、禁访问裸句柄（`.airtest`/`.u2`），只经 `engines.base.UiEngine` 协议 + `engines.registry` 工厂消费设备能力。校验：`python tools/gen_arch_stats.py --check-boundaries`
 
 ### 2. 前端 UI 设计规则
 
@@ -42,26 +43,26 @@ description: |
 
 ### 5. 接口协议编写规范
 
-- 五条通信通道封闭集合，禁止引入新协议（gRPC/MQTT/Kafka/RabbitMQ/GraphQL/WebRTC）：① 前端↔Django HTTP REST+JWT ② Django→前端 WebSocket+JWT ③ 前端→Django(AI) SSE+JWT ④ AgentScope→Django 进程内 ⑤ Django↔设备 ADB
+- 通信通道封闭集合（四条内部通道 + 禁止新协议 + Redis/外部 LLM 边界 + SSE 已移除）→ 唯一真相源 `references/architecture.md` §一，勿在其他文件复制
 - 响应信封：`{status: true, data}` / `{status: false, message}`（错误不暴露技术术语）
 - 三道防火墙：① service 互不 import（可跨 App import Model+api.py，禁内部实现）② 读放开写收敛（写必须走目标 api.py）③ 外部访问只走 API
-- 写操作铁律：前端→View→api.py→ORM；AgentScope→Tool→api.py→run_sync→ORM；禁任何组件直接 ORM 写
+- 写操作铁律：前端→View→api.py→ORM；AgentScope→Tool→api.py→ORM；禁任何组件直接 ORM 写
 - 鉴权：Bearer JWT（公开路径除外）；所有业务视图 `@csrf_exempt`
 - JSON 字段 snake_case，前端变量 camelCase；新增 App 必走检查清单
 
-> 细节 → `references/api-conventions.md`（响应格式/防火墙/鉴权/分层交互）· `references/architecture.md`（五通道）
+> 细节 → `references/api-conventions.md`（响应格式/防火墙/鉴权/分层交互）· `references/architecture.md`（通道）
 
 ### 6. AgentScope 开发参考资料
 
 - AgentScope 已并入 Django 进程内模块 `apps/ai_assistant/agent_scope/`，无独立服务 / 端口
 - 边界：禁止 AgentScope 直连数据库 / 直连设备；数据一律经 Django ORM / api.py（同进程直接调用）
-- 依赖 Redis（不可用时 AI 对话降级阻塞模式）；桥接 `db_helper.run_sync()`，8s 超时
+- 依赖 Redis（JWT 黑名单 / Django Channels 层 / AgentScope 存储；不可用时降级）
 - 红线：禁止在 `agent_scope/` 下新增 `adapters/` 或 `rag/`
 
 
 ## 关联技能
 
-- 边界/防火墙自动检查 → `boundary-check` skill
+- 项目边界统一检查（模块边界/引擎边界/通信通道边界）→ `boundary-check` skill
 - 后端关单门禁 → `django-backend-check` skill
 - 前端关单门禁 → `vue-frontend-check` skill
 - 代码健康/审查 → `code-health-check` / `quality-gate` skill

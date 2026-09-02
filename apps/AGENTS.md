@@ -1,7 +1,7 @@
 # Backend AGENTS.md — AI 约束
 
 > 工作于 `apps/` / Django 后端时必须遵守。编写细则与决策树见 `.agents/skills/android-autotests-rules/references/*`（backend/python-code/api-conventions/database/security）；自测命令见 `apps/自测与检测指令.md`；关单自检用 skill `django-backend-check`。
-> 版本：v1.1 · 最后更新：2026-08-21 · **同步约定**：全局事项（后端 WS 事件表、响应信封与特例、通道收敛、分层纪律、表前缀、契约总表）变更时，必须同步 `.agents/skills/android-autotests-rules/references/api-conventions.md`（+ 相关 rules）与 skill `django-backend-check`（checklist/calibration 对应口径），并镜像登记 `frontend/AGENTS.md`（信封特例 / WS 事件表 / 通道为双边契约）；**App 专属约束**（红线/契约特例/协议/关单附加项）唯一落点为 `apps/{app}/AGENTS.md`，变更只改对应 App 文件。v1.0：对齐前端 CLAUDE 体系（三分类 §1 + 契约总表 + 信封特例登记 + 通道收敛），App 专属约束下沉 11 份 App 级文件；修正过期 WS 清单（`ws/screenshot` 已删除，截图流已快照化 REST、禁止恢复）。v1.1：吸收已归档 `dev_docs/_archive/后端claude笔记.md`（职责分层决策树→`python-code.md` §6、新 App 清单与防火墙反例→`api-conventions.md`、断裂点表→skill checklist、自评 3 问→§3、反面教材→§0.2），引用改指 rules/自测指令/skill。
+> 版本：v1.1 · 最后更新：2026-08-21 · **同步约定**：全局事项（后端 WS 事件表、响应信封与特例、分层纪律、表前缀、契约总表）变更时，必须同步 `.agents/skills/android-autotests-rules/references/api-conventions.md`（+ 相关 rules）与 skill `django-backend-check`（checklist/calibration 对应口径），并镜像登记 `frontend/AGENTS.md`（信封特例 / WS 事件表为双边契约；通道 SSOT 见 `architecture.md` §一）；**App 专属约束**（红线/契约特例/协议/关单附加项）唯一落点为 `apps/{app}/AGENTS.md`，变更只改对应 App 文件。v1.0：对齐前端 CLAUDE 体系（三分类 §1 + 契约总表 + 信封特例登记 + 通道收敛），App 专属约束下沉 11 份 App 级文件；修正过期 WS 清单（`ws/screenshot` 已删除，截图流已快照化 REST、禁止恢复）。v1.1：吸收已归档 `dev_docs/_archive/后端claude笔记.md`（职责分层决策树→`python-code.md` §6、新 App 清单与防火墙反例→`api-conventions.md`、断裂点表→skill checklist、自评 3 问→§3、反面教材→§0.2），引用改指 rules/自测指令/skill。
 
 **口诀**：View 只分发，写库走 api，跨模块不碰内部实现，JSON snake_case，错误要上报，重构先问值不值。  
 **完成定义**：`manage.py check` + ruff 通过 ≠ 完成；相关单测/集成测与契约要对齐。
@@ -13,7 +13,7 @@
 1. 需求模糊 → 列 3～5 种理解让用户选，禁止默默挑一种执行。
 2. 先读调用链：**urls → views/serializers → api.py → models**；有 WS 再读 `consumers` + `gateway/routing.py`。跨模块写先搜对方 api 白名单：`rg "__all__" apps/{other}/api.py`。**为什么先读 urls**：凭印象改 view 函数名前端仍打旧路径、漏 DRF router 注册则本地通而前端 404——路径以 urls.py 为真相源。
 3. 查：`.agents/skills/android-autotests-rules/references/backend.md`（架构/中间件/端口/公开路径）、`api-conventions.md`（防火墙/信封/新 App 清单）、`python-code.md`（写法/行数上限/职责分层决策树）、`database.md`（表前缀/写路径）、`security.md`（Key 加密）；契约字段对照 → `dev_docs/03-设计与架构/工具-VUE_API_CONTRACT.md`；边界扫描 → `python tools/gen_arch_stats.py --check-boundaries`；**本 App 专属约束 → `apps/{app}/AGENTS.md`**。
-4. 判边界：纯逻辑→①；Model/api 写库→②；HTTP/DRF→③；WS→④；AI Tool/SSE→⑤；跨界按序做。新 App 按 `api-conventions.md`「新 App 检查清单」落地。
+4. 判边界：纯逻辑→①；Model/api 写库→②；HTTP/DRF→③；WS→④；AI Tool→⑤；跨界按序做。新 App 按 `api-conventions.md`「新 App 检查清单」落地。
 
 ---
 
@@ -52,10 +52,10 @@
 | 静默吞错 | 写操作 except 必须日志 + 对用户友好 `message` |
 | 技术术语给用户 | 错误文案不暴露堆栈/SQL/内部路径/Key |
 
-**通道收敛（全项目硬约束）**：
+**通道收敛（全项目硬约束，唯一真相源 → `architecture.md` §一）**：
 
-- WS 仅 2 个生产点：`/ws/test-run/{runId}`（执行进度）、`/ws/case-editing/{id}`（编辑锁）——**禁止新增**；截图流已快照化（v1.7 REST：`/api/inspector/snapshots`），**禁止恢复 WS 截图流**。
-- SSE 仅 1 个：AI 对话流（`/api/ai/conversations/{id}/chat/stream`）。
+- 通道封闭集合（四条内部通道 + 禁止新协议 + SSE 已移除 + Redis/外部 LLM 边界）以 `architecture.md` §一 为准，本文不复制。
+- WS 生产点唯一真相源 = `gateway/routing.py`（当前 2 个，**禁止新增**）；截图流已快照化，禁止恢复 WS 截图流。
 - 所有 Consumer 必须在 `gateway/routing.py` 注册。
 
 **App 边界索引（App 专属边界/契约/协议/关单项的唯一落点 → 各 `apps/{app}/AGENTS.md`）**：
@@ -71,7 +71,7 @@
 | test_runner | `apps/test_runner/AGENTS.md` | 执行状态机 + 进度 WS（10 事件） |
 | report_generator | `apps/report_generator/AGENTS.md` | 报告只读 + FileResponse 下载 |
 | workflow | `apps/workflow/AGENTS.md` | 编排文档 CRUD（legacy 平铺信封） |
-| ai_assistant | `apps/ai_assistant/AGENTS.md` | 对话 + 唯一 SSE + Tool 网关 |
+| ai_assistant | `apps/ai_assistant/AGENTS.md` | 任务发布 + Tool 网关 |
 | evaluator | `apps/evaluator/AGENTS.md` | 评估题库/运行/框架适配（前端 ai-assistant 寄宿） |
 
 - 表前缀：`dp_` `el_` `cm_` `tr_` `rg_` `ai_` `wf_` `ev_` `di_`；`db_table` 显式指定。
@@ -101,7 +101,7 @@
 | test_runner | test-runner | HTTP + **WS**（进度） |
 | report_generator | report-generator | HTTP（下载走 FileResponse） |
 | workflow | workflow | HTTP |
-| ai_assistant | ai-assistant + 各业务 App（经 Tool） | HTTP + **SSE** |
+| ai_assistant | ai-assistant + 各业务 App（经 Tool） | HTTP |
 | evaluator | ai-assistant（寄宿） | HTTP |
 
 ---
@@ -115,7 +115,7 @@
 
 **WS**：Consumer 必须在 `gateway/routing.py` 注册；事件 `type` 与前端一致；写库仍走 api。仅 2 生产点（§1.2 通道收敛）；事件表见 `apps/test_runner/AGENTS.md`（10 种）与 `apps/case_manager/AGENTS.md`（`case_updated`）。
 
-**AI**：Tool 只调各模块 `api.py`；SSE 事件变更同步前端 `AGENTS.md` §3；依赖 Redis（见 `backend.md`）。
+**AI**：Tool 只调各模块 `api.py`（同进程直调，无 SSE）；依赖 Redis（见 `backend.md`）。
 
 ---
 

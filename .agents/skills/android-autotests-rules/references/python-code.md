@@ -337,7 +337,7 @@ urlpatterns = [
 
 ```
 前端 HTTP → Django View → api.py → ORM
-AgentScope → Tool.call() → api.py → run_sync() → ORM
+AgentScope → Tool.call() → api.py → ORM
 Django Admin → ORM（仅管理员）
 
 ❌ 禁止任何组件直接 ORM INSERT/UPDATE/DELETE

@@ -47,7 +47,7 @@ AgentScope Tool 只能通过 api.py 函数写数据 → 同进程直接调用
 ❌ case_manager import test_runner.service / state_machine
 ❌ api.py 返回 Model 实例给跨模块调用方
 ✅ View → api.create_xxx(...) → ORM
-✅ AgentScope Tool → api.create_xxx(...) → run_sync → ORM
+✅ AgentScope Tool → api.create_xxx(...) → ORM
 ```
 
 ## 各层交互协议
@@ -55,9 +55,8 @@ AgentScope Tool 只能通过 api.py 函数写数据 → 同进程直接调用
 | 层 | 协议 | 鉴权 |
 |----|------|------|
 | 前端 → 后端 | HTTP REST + WebSocket | JWT Bearer |
-| 前端 → AI | SSE 流式 | JWT（共享 SECRET_KEY） |
 | AI ↔ 后端 | 同进程直接调用 | Tool 调用前 AgentScope 已验证 |
-| 后端 → 设备 | ADB + uiautomator2 | — |
+| 后端 → 设备 | UiEngine 协议（引擎中转，引擎内部 ADB/u2） | — |
 
 ## 新 App 检查清单（新增 Django App 必走）
 

@@ -35,13 +35,13 @@
 
 | 禁止 | 说明 |
 | --- | --- |
-| 数据库直连 | 一切数据来自 REST / WS / SSE |
+| 数据库直连 | 一切数据来自 REST / WS |
 | 业务状态判定 | 消费后端权威 `state` 字段，禁止自行推导（`deriveTaskStatus` 已删，taskUtils 只读 `state` + `running`；禁止新增推导逻辑） |
 | 设备 / 引擎直连 | 不碰 ADB / u2 / Airtest / Playwright；设备交互全经后端 API |
-| AI 推理 | 只消费 SSE 事件流，禁止前端调用模型 |
+| AI 推理 | 经后端 HTTP API（任务发布），禁止前端调用模型 |
 | 文件 I/O | 报告 / 截图 / 日志落盘全由后端完成 |
-| WS 通道（硬约束） | 仅 2 消费点：`/ws/test-run/{runId}`（执行进度）、`/ws/case-editing/{id}`（编辑锁）——**禁止新增**；截图流已快照化，禁止恢复 WS 截图流 |
-| SSE 通道（硬约束） | 仅 1 个：AI 对话流 |
+| WS 通道（硬约束） | 仅 2 消费点，路由真相源 `gateway/routing.py`（**禁止新增**）；截图流已快照化，禁止恢复 WS 截图流 |
+| SSE 通道（硬约束） | 已移除（主对话删除）——禁止恢复；通道封闭集合以 `architecture.md` §一 为准 |
 
 **模块边界与契约总表**（模块专属细节唯一落点 → `src/modules/{name}/AGENTS.md`）：
 
@@ -55,7 +55,7 @@
 | test-runner | test_runner + case_manager/device_pool（只读） | HTTP + **WS**（进度） | 执行看板 |
 | report-generator | report_generator | HTTP（下载走 FileResponse） | 报告只读 |
 | workflow | workflow + element_locator（素材） | HTTP | VueFlow 编排（Pinia 用户之一） |
-| ai-assistant | ai_assistant + **evaluator（前端寄宿）** + 各业务 App（经 Tool 后端） | HTTP + **SSE** | 对话 UI + 唯一 SSE |
+| ai-assistant | ai_assistant + **evaluator（前端寄宿）** + 各业务 App（经 Tool 后端） | HTTP | 任务发布 + 多线路配置 |
 | views/LoginView | accounts | HTTP | 登录/注册入口（accounts 唯一前端入口；认证经 `/api/auth/*`） |
 
 **Pinia 现状（唯一真相）**：全前端仅 3 个 store —— workflow `wf-workflow` / `wf-library` + device-inspector `device-inspector`；均模块内使用，禁止跨模块 import；新建 store 走 `.agents/skills/android-autotests-rules/references/frontend.md` 状态管理决策树（先 ref → composable，不默认用 Pinia）。
@@ -96,21 +96,7 @@
 - **HTTP / DRF**：组件 emit → composable → 模块 `api` → `djangoClient` → `/api/...` DRF（唯一出口；禁止旁路直连后端端口或另起非约定 HTTP 客户端）。
 - **WS**：`wsUrl('/ws/...')` 经 Vite 代理，禁止直连端口。test-runner 事件 type 不可漏（9 种：`log` / `heartbeat` / `case_started` / `step_started` / `step_result` / `iteration_result` / `case_finished` / `run_finished` / `device_error`，见 `useTaskWebSocket.ts`；后端另发 `run_started`，前端暂不消费）。编辑锁见 `src/modules/case-manager/AGENTS.md`。
 - **报告下载**：FileResponse 用 `fetch().text()`，不用 JSON `api()`。
-- **SSE（AI）**：单请求流式对话；事件经 `SSEMessageBuilder` 归一化 phase 后按类型渲染（细节 → `src/modules/ai-assistant/AGENTS.md`）：
-
-| 事件 | 前端渲染 |
-| --- | --- |
-| `REPLY_START` | 消息气泡出现，开始新回复 |
-| `TEXT_BLOCK_DELTA` | 追加文本到消息气泡（逐字打字效果） |
-| `THINKING_BLOCK_START/DELTA/END` | ThinkingBlock 可折叠推理过程 |
-| `TOOL_CALL_START/DELTA` | ToolCallCard（loading 态 + 参数 JSON） |
-| `TOOL_RESULT_START/DELTA/END` | 更新 ToolCallCard 结果摘要 |
-| `HINT_BLOCK` | SOP 状态卡片 / 任务卡片 |
-| `REQUIRE_USER_CONFIRM` | HITL 确认弹窗 |
-| `REPLY_END` | 消息完成 → `save-message` 持久化 |
-| `error` | 错误提示，允许重试 |
-
-- 停止生成：断流保留已生成内容，旧流回调经 stale 检查失效；断线重连最多 3 次（1s/2s/4s），AI 不可用降级阻塞模式 `POST /api/ai/chat/sync`；终端 `reply_end` 与 `exceed_max_iters` 均触发完成，未到终端断流须报错；`ThinkingBlock` 默认折叠、`ToolCallCard` 默认展开。
+- **SSE（AI）**：已移除（主对话删除，ARCH-08 v3.4）——任务改走 HTTP 任务发布 `POST /api/ai/tasks/submit`，**禁止恢复 SSE 流**。
 
 ---
 

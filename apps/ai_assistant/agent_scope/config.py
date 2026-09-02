@@ -25,6 +25,16 @@ class DeviceExecutionConfig:
     max_loops: int = 3
 
 
+@dataclass
+class PlatformTaskConfig:
+    """平台任务专用配置（三模型：规划 / 执行 / 验收，与控制设备隔离）。"""
+
+    planner: ModelConfig = field(default_factory=ModelConfig)
+    executor: ModelConfig = field(default_factory=ModelConfig)
+    verifier: ModelConfig = field(default_factory=ModelConfig)
+    max_loops: int = 3
+
+
 # ── 智能体提示词 ──
 
 PLANNER_PROMPT = """你是任务规划器。把用户需求拆解成一个或多个目标，每个目标给出：目标、执行步骤、验收标准。
@@ -61,6 +71,39 @@ VERIFIER_PROMPT = """你是验收员。根据验收标准，通过截图对比�
 
 验收时：
 - 用 screenshot_page(serial) 截图查看当前页面真实状态，不要只凭执行描述判断。
+- completed：列出已完成的步骤 / 已满足的验收点。
+- failed：列出未通过的步骤 / 未满足的验收点，每条给出具体原因（缺什么、在哪）。
+- result=pass 表示目标全部达成；result=fail 表示仍有未通过项。"""
+
+PLATFORM_PLANNER_PROMPT = """你是平台任务规划器。先判断用户要做的属于哪类职责，再为每个职责产出「目标 + 步骤 + 验收标准」。
+
+平台任务四类职责（可单独或组合）：
+- ① 探索定位：探索手机抓取页面元素，标记可点击/可滑动，取 XPath，保存到元素定位。
+- ② 页面图谱：绘制页面跳转关系，关联元素定位中的页面，标注每页元素数。
+- ③ 用例生成：阅读元素定位与页面图谱，编写自动化测试用例脚本，保存到用例管理。
+- ④ 用例执行：执行用例管理中的用例，用平台执行引擎跑并汇总结果。
+
+规划要求：
+- 目标：一句话说明达成什么，并明确属于哪类职责（①~④）。
+- 步骤：按职责的固定工具序列逐条列出（每步写明工具名与参数对象）。
+  - ① 探索定位：capture_page 抓页面 → analyze_page 分析分区/功能名/XPath → save_page_semantic 标记功能名 → save_page_to_elements 写元素定位。
+  - ② 页面图谱：list_pages 列页面 → fetch_page_elements 数每页元素 → create_page_flow 建跳转边 → save_page_flow 生成图谱文档。
+  - ③ 用例生成：get_page_flow 读图谱 → fetch_page_elements/search_elements 读元素 → save_case 写用例。
+  - ④ 用例执行：run_test 下发执行 → get_run_status/get_run_results 轮询结果（必要时 stop_run 中止）。
+- 验收标准：明确怎么判断产物已落库 / 结果正确（如「fetch_page_elements 能查到新元素」「get_run_results 状态为 passed」）。"""
+
+PLATFORM_EXECUTOR_PROMPT = """你是平台任务执行器。用平台工具真实完成规划给出的步骤，持续调用工具直到产物落库或结果产出，不要只输出计划文本。
+
+执行要求：
+- 严格按步骤的工具序列调用，上一步的返回（如 snapshot_id / page_id / flow_id / case_id / run_id）作为下一步入参。
+- 写操作后必须用查询工具确认落库（如 save_case 后用 get_case/search_cases 确认）。
+- 运行用例（run_test）后主动轮询 get_run_status/get_run_results 直到结束。
+- 每一步返回的 JSON 要读懂并用于下一步，不要臆造 id。"""
+
+PLATFORM_VERIFIER_PROMPT = """你是平台任务验收员。根据验收标准，用查询工具二次确认产物是否真实落库、结果是否正确，输出验收结果。
+
+验收时：
+- 用查询工具核实，不要只凭执行描述判断：元素用 fetch_page_elements/search_elements，用例用 get_case/search_cases，图谱用 get_page_flow/list_page_flows，执行用 get_run_results/get_run_status。
 - completed：列出已完成的步骤 / 已满足的验收点。
 - failed：列出未通过的步骤 / 未满足的验收点，每条给出具体原因（缺什么、在哪）。
 - result=pass 表示目标全部达成；result=fail 表示仍有未通过项。"""

@@ -23,7 +23,7 @@
 import json
 import logging
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
@@ -96,15 +96,10 @@ def _extract_model_ids(resp_json: dict) -> list:
     return []
 
 
-def call_model_api(agent, path, method="GET", body=None):
-    """Call the model provider's API with the agent's credentials."""
+def _call_config_api(base, api_key, path, method="GET", body=None):
+    """按显式 base_url + api_key 调用模型 API（返回 (resp, err)）。"""
     import requests
 
-    api_key = api.decrypt_key(agent.api_key) if agent.api_key else ""
-    provider_cfg = get_provider_config(agent.model_provider, agent.base_url)
-    base = provider_cfg["base_url"]
-    if not base:
-        return None, "No base_url configured"
     url = f"{base}{path}"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     try:
@@ -115,6 +110,140 @@ def call_model_api(agent, path, method="GET", body=None):
         return resp, None
     except requests.RequestException as e:
         return None, str(e)
+
+
+def call_model_api(agent, path, method="GET", body=None):
+    """Call the model provider's API with the agent's credentials."""
+    api_key = api.decrypt_key(agent.api_key) if agent.api_key else ""
+    provider_cfg = get_provider_config(agent.model_provider, agent.base_url)
+    base = provider_cfg["base_url"]
+    if not base:
+        return None, "No base_url configured"
+    return _call_config_api(base, api_key, path, method, body)
+
+
+def _test_model_config(provider, api_key, base_url, model_name):
+    """按显式模型配置测连通；返回 (connected, available_models, last_error)。"""
+    provider_cfg = get_provider_config(provider, base_url)
+    base = provider_cfg["base_url"]
+    if not base:
+        return False, [], "No base_url configured"
+
+    available_models = []
+    connected = False
+    last_error = ""
+
+    for path in _MODEL_LIST_PATHS:
+        resp, err = _call_config_api(base, api_key, path)
+        if err:
+            last_error = err
+            continue
+        if resp is not None and 200 <= resp.status_code < 300:
+            connected = True
+            data = resp.json()
+            available_models = _extract_model_ids(data)
+            if available_models:
+                available_models.sort(key=lambda x: (x != model_name, x))
+            break
+        else:
+            last_error = f"HTTP {resp.status_code}"
+
+    if not connected and not last_error:
+        chat_body = {
+            "model": model_name,
+            "messages": [{"role": "user", "content": "hi"}],
+            "max_tokens": 5,
+        }
+        resp, err = _call_config_api(base, api_key, "/chat/completions", "POST", chat_body)
+        if err:
+            last_error = err
+        elif resp and 200 <= resp.status_code < 300:
+            connected = True
+        elif resp:
+            last_error = f"HTTP {resp.status_code}: {resp.text[:200]}"
+
+    return connected, available_models, last_error
+
+
+_ROUTE_KEYS = ("device_control", "platform_task")
+_ROUTE_ROLES = ("planner", "executor", "verifier")
+_HEALTH_TTL = timedelta(minutes=30)
+
+
+def _parse_checked_at(raw) -> datetime | None:
+    """解析 health.last_checked_at（datetime 或 ISO 字符串）。"""
+    if not raw:
+        return None
+    if isinstance(raw, datetime):
+        return raw.replace(tzinfo=None)
+    try:
+        return datetime.fromisoformat(str(raw).replace("Z", "+00:00")).replace(tzinfo=None)
+    except ValueError:
+        return None
+
+
+def _health_is_stale(health: dict | None) -> bool:
+    """超过 30 分钟或从未检测则视为过期。"""
+    checked = _parse_checked_at((health or {}).get("last_checked_at"))
+    if not checked:
+        return True
+    return (datetime.now() - checked) > _HEALTH_TTL
+
+
+def _route_has_model(agent, route: str) -> bool:
+    """线路是否配置了任一角色的模型名或 Key。"""
+    for role in _ROUTE_ROLES:
+        cfg = api.get_route_model_config(agent, route, role)
+        if (cfg.get("model_name") or "").strip() or (cfg.get("api_key") or "").strip():
+            return True
+    return False
+
+
+def _public_route_health(health: dict | None) -> dict:
+    """健康检查对外字段（不含密钥）。"""
+    if not isinstance(health, dict) or not health.get("last_checked_at"):
+        return {"is_connected": None, "last_checked": None, "results": None}
+    return {
+        "is_connected": bool(health.get("is_connected")),
+        "last_checked": health.get("last_checked_at"),
+        "results": health.get("results") or {},
+    }
+
+
+def _test_agent_route(agent, route: str) -> tuple[bool, dict]:
+    """校验一条线路的规划/执行/校验模型；返回 (overall, results)。"""
+    results = {}
+    for role in _ROUTE_ROLES:
+        cfg = api.get_route_model_config(agent, route, role)
+        provider = (cfg.get("provider") or "").strip()
+        model_name = (cfg.get("model_name") or "").strip()
+        api_key = (cfg.get("api_key") or "").strip()
+        base_url = (cfg.get("base_url") or "").strip()
+        if not model_name:
+            results[role] = {"connected": False, "model_name": "", "message": "未配置模型名"}
+            continue
+        if not provider:
+            results[role] = {
+                "connected": False,
+                "model_name": model_name,
+                "message": "未配置模型服务",
+            }
+            continue
+        if not api_key:
+            results[role] = {
+                "connected": False,
+                "model_name": model_name,
+                "message": "未配置 API Key",
+            }
+            continue
+        connected, _, err = _test_model_config(provider, api_key, base_url, model_name)
+        results[role] = {
+            "connected": connected,
+            "model_name": model_name,
+            "message": err if not connected else "",
+        }
+    overall = all(r["connected"] for r in results.values()) if results else False
+    return overall, results
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -224,39 +353,37 @@ class AgentViewSet(
         agent_id = self._require_owner(request)
         a = AIAgent.objects.get(id=agent_id)
 
-        available_models = []
-        connected = False
-        last_error = ""
+        route = (request.data or {}).get("route")
 
-        for path in _MODEL_LIST_PATHS:
-            resp, err = call_model_api(a, path)
-            if err:
-                last_error = err
-                continue
-            if resp is not None and 200 <= resp.status_code < 300:
-                connected = True
-                data = resp.json()
-                available_models = _extract_model_ids(data)
-                if available_models:
-                    cur = a.model_name
-                    available_models.sort(key=lambda x: (x != cur, x))
-                break
-            else:
-                last_error = f"HTTP {resp.status_code}"
+        if route:
+            # 按线路校验：只测该线路自己的配置，禁止回退到智能体顶层模型
+            overall, results = _test_agent_route(a, route)
+            now = datetime.now()
+            api.update_route_connectivity(
+                a, route, connected=overall, checked_at=now, results=results
+            )
+            fail_msgs = [
+                f"{role}:{r['message']}"
+                for role, r in results.items()
+                if not r["connected"] and r.get("message")
+            ]
+            return Response(
+                {
+                    "connected": overall,
+                    "results": results,
+                    "last_checked": now.isoformat(sep=" ", timespec="seconds"),
+                    "message": "" if overall else ("；".join(fail_msgs) or "存在未连通的模型"),
+                }
+            )
 
-        if not connected and not last_error:
-            chat_body = {
-                "model": a.model_name,
-                "messages": [{"role": "user", "content": "hi"}],
-                "max_tokens": 5,
-            }
-            resp, err = call_model_api(a, "/chat/completions", "POST", chat_body)
-            if err:
-                last_error = err
-            elif resp and 200 <= resp.status_code < 300:
-                connected = True
-            elif resp:
-                last_error = f"HTTP {resp.status_code}: {resp.text[:200]}"
+        provider = a.model_provider
+        model_name = a.model_name
+        api_key = api.decrypt_key(a.api_key) if a.api_key else ""
+        base_url = a.base_url
+
+        connected, available_models, last_error = _test_model_config(
+            provider, api_key, base_url, model_name
+        )
 
         api.update_agent_connectivity(
             a,
@@ -320,30 +447,38 @@ class AgentHealthAPIView(APIView):
     """GET /api/ai/agents/health — 遍历当前用户 active Agent（按 owner 过滤）。"""
 
     def get(self, request):
-        from datetime import timedelta
-
         results = []
+        now = datetime.now()
         for a in filter_agents_for_user(AIAgent.objects.filter(status="active"), _user_id(request)):
+            routes_out = {}
+            for route in _ROUTE_KEYS:
+                stored = ((a.route_configs or {}).get(route) or {}).get("health")
+                if not _route_has_model(a, route):
+                    routes_out[route] = _public_route_health(
+                        stored if isinstance(stored, dict) else None
+                    )
+                    continue
+                if isinstance(stored, dict) and not _health_is_stale(stored):
+                    routes_out[route] = _public_route_health(stored)
+                    continue
+                overall, role_results = _test_agent_route(a, route)
+                api.update_route_connectivity(
+                    a, route, connected=overall, checked_at=now, results=role_results
+                )
+                routes_out[route] = {
+                    "is_connected": overall,
+                    "last_checked": now.isoformat(sep=" ", timespec="seconds"),
+                    "results": role_results,
+                }
+            a.refresh_from_db(fields=["is_connected", "last_checked_at"])
             connected = a.is_connected
-            if a.api_key:
-                needs_check = not a.last_checked_at or (
-                    datetime.now() - a.last_checked_at.replace(tzinfo=None)
-                ) > timedelta(minutes=30)
-                if needs_check:
-                    chat_body = {
-                        "model": a.model_name,
-                        "messages": [{"role": "user", "content": "ping"}],
-                        "max_tokens": 2,
-                    }
-                    resp, err = call_model_api(a, "/chat/completions", "POST", chat_body)
-                    connected = not err and resp is not None and 200 <= resp.status_code < 300
-                    api.update_agent_connectivity(a, connected=connected, checked_at=datetime.now())
             results.append(
                 {
                     "id": a.id,
                     "name": a.name,
                     "is_connected": connected,
                     "last_checked": str(a.last_checked_at) if a.last_checked_at else None,
+                    "routes": routes_out,
                 }
             )
         return Response({"agents": results})
@@ -799,6 +934,50 @@ def _run_device_control(agent: AIAgent, goal: str, serial: str = "") -> dict:
     return asyncio.run(workflow.run(goal))
 
 
+def _build_platform_task(agent: AIAgent, route: str):
+    """从 route_configs 的某条线路构建 PlatformTask（三模型配置）。"""
+    from .agent_scope.config import ModelConfig, PlatformTaskConfig
+    from .agent_scope.model import PlatformTask
+
+    route_cfg = (agent.route_configs or {}).get(route) or {}
+
+    def _cfg(m: dict) -> ModelConfig:
+        return ModelConfig(
+            provider=m.get("provider", "deepseek"),
+            model_name=m.get("model_name", ""),
+            api_key=api.decrypt_key(m.get("api_key", "")),
+            base_url=m.get("base_url", ""),
+        )
+
+    config = PlatformTaskConfig(
+        planner=_cfg(route_cfg.get("planner") or {}),
+        executor=_cfg(route_cfg.get("executor") or {}),
+        verifier=_cfg(route_cfg.get("verifier") or {}),
+        max_loops=int(agent.max_loops or 3),
+    )
+    return PlatformTask(config, user_id=str(agent.owner_id or ""))
+
+
+def _run_platform_task(
+    agent: AIAgent,
+    goal: str,
+    requirements: str = "",
+    checklist: str = "",
+    report_name: str = "",
+    serial: str = "",
+) -> dict:
+    """平台任务线路：规划 → 执行 → 验收（三模型工作流，同步执行，后续可迁异步）。"""
+    import asyncio
+
+    from .agent_scope.workflow import PlatformTaskWorkflow
+
+    pt = _build_platform_task(agent, "platform_task")
+    workflow = PlatformTaskWorkflow(pt, serial=serial or _resolve_device_serial())
+    return asyncio.run(
+        workflow.run(goal, requirements=requirements, checklist=checklist, report_name=report_name)
+    )
+
+
 class TaskSubmitAPIView(APIView):
     """POST /api/ai/tasks/submit — 提交任务并按线路分发执行。"""
 
@@ -827,24 +1006,43 @@ class TaskSubmitAPIView(APIView):
         )
 
         if route == "platform_task":
-            task.result = "线路开发中"
-            task.save(update_fields=["result"])
+            try:
+                result = _run_platform_task(
+                    agent,
+                    goal,
+                    requirements=data.get("requirements", ""),
+                    checklist=data.get("checklist", ""),
+                    report_name=data.get("report_name", ""),
+                    serial=device_serial,
+                )
+            except Exception as exc:
+                logger.exception("platform_task failed id=%s", task.id)
+                api.finalize_task(task, status="failed", result=f"执行异常: {exc}")
+                return Response({"id": task.id, "status": task.status, "result": task.result})
+
+            status = "completed" if result.get("status") == "success" else "failed"
+            api.finalize_task(
+                task,
+                status=status,
+                result=json.dumps(result, ensure_ascii=False),
+                usage=result.get("usage"),
+            )
             return Response({"id": task.id, "status": task.status, "result": task.result})
 
         try:
             result = _run_device_control(agent, goal, serial=device_serial)
         except Exception as exc:
             logger.exception("device_control task failed id=%s", task.id)
-            task.status = "failed"
-            task.result = f"执行异常: {exc}"
-            task.finished_at = datetime.now()
-            task.save(update_fields=["status", "result", "finished_at"])
+            api.finalize_task(task, status="failed", result=f"执行异常: {exc}")
             return Response({"id": task.id, "status": task.status, "result": task.result})
 
-        task.status = "completed" if result.get("status") == "success" else "failed"
-        task.result = result.get("assertion", "")
-        task.finished_at = datetime.now()
-        task.save(update_fields=["status", "result", "finished_at"])
+        status = "completed" if result.get("status") == "success" else "failed"
+        api.finalize_task(
+            task,
+            status=status,
+            result=result.get("assertion", ""),
+            usage=result.get("usage"),
+        )
         return Response({"id": task.id, "status": task.status, "result": task.result})
 
 

@@ -20,9 +20,9 @@ export async function checkAgentsHealth(): Promise<AgentHealthResponse> {
   return data
 }
 
-/** 测试 Agent 连接 */
-export async function testAgent(agentId: number): Promise<AgentTestResponse> {
-  const { data } = await djangoClient.post<AgentTestResponse>(`/ai/agents/${agentId}/test`)
+/** 测试 Agent 连接（可选按线路 route + 角色 role 校验 route_configs 内模型） */
+export async function testAgent(agentId: number, opts?: { route?: string; role?: string }): Promise<AgentTestResponse> {
+  const { data } = await djangoClient.post<AgentTestResponse>(`/ai/agents/${agentId}/test`, opts || {})
   return data
 }
 

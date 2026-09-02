@@ -1,10 +1,11 @@
-"""Tool gateway views — the SINGLE HTTP entry point for AgentScope tool calls.
+"""Tool gateway views — HTTP 工具入口（工具执行 / schemas / agent-config）。
 
 GET  /api/tools/schemas                    → return all tool definitions (JSON)
 GET  /api/tools/agent-config/<agent_id>    → per-agent tool/skill/phase config
 POST /api/tools/{module}/{action}           → execute a tool, return result (JSON)
 
-AgentScope calls these endpoints via HTTP (httpx), never via in-process import.
+AgentScope 已并入进程内模块：工具经 `agent_scope/tools.py` 进程内直调各 App api.py；
+本网关为 HTTP 工具入口（历史/外部调用方），handler 同样 resolve 到 `agent_scope.tools`。
 JWT authentication is enforced by the global middleware.
 """
 

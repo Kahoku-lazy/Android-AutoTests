@@ -37,10 +37,20 @@ export interface RouteModelConfig {
   base_url?: string
 }
 
+export interface RouteHealth {
+  is_connected?: boolean | null
+  last_checked_at?: string
+  last_checked?: string
+  results?: Record<string, RouteModelTestResult>
+}
+
 export interface RouteConfig {
+  name?: string
+  avatar?: string
   planner?: RouteModelConfig
   executor?: RouteModelConfig
   verifier?: RouteModelConfig
+  health?: RouteHealth
 }
 
 export interface RouteConfigMap {
@@ -218,15 +228,34 @@ export interface AgentOpResponse {
   message?: string
 }
 
+export interface RouteModelTestResult {
+  connected?: boolean
+  model_name?: string
+  message?: string
+}
+
 export interface AgentTestResponse {
   status?: boolean
-  data?: { connected?: boolean; available_models?: string[]; message?: string }
+  data?: {
+    connected?: boolean
+    available_models?: string[]
+    message?: string
+    results?: Record<string, RouteModelTestResult>
+    last_checked?: string
+  }
   message?: string
 }
 
 export interface AgentHealthResponse {
   status?: boolean
-  data?: { agents: { id: number; is_connected: boolean; last_checked?: string }[] }
+  data?: {
+    agents: {
+      id: number
+      is_connected: boolean
+      last_checked?: string
+      routes?: Record<string, RouteHealth>
+    }[]
+  }
   message?: string
 }
 

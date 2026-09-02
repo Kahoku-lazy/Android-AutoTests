@@ -105,8 +105,36 @@ class AgentListSerializer(serializers.Serializer):
     description = serializers.CharField()
     model_provider = serializers.CharField()
     model_name = serializers.CharField()
+    route_configs = serializers.SerializerMethodField()
     status = serializers.CharField()
     created_at = serializers.CharField()
+
+    def get_route_configs(self, obj):
+        """看板展示用：线路 name/avatar + 各角色 model_name/provider，不含 api_key。"""
+        result = {}
+        for route, route_data in (obj.route_configs or {}).items():
+            if not isinstance(route_data, dict):
+                continue
+            entry = {
+                "name": route_data.get("name") or "",
+                "avatar": route_data.get("avatar") or "",
+            }
+            for role in ("planner", "executor", "verifier"):
+                cfg = route_data.get(role)
+                if isinstance(cfg, dict):
+                    entry[role] = {
+                        "model_name": cfg.get("model_name") or "",
+                        "provider": cfg.get("provider") or "",
+                    }
+            health = route_data.get("health")
+            if isinstance(health, dict):
+                entry["health"] = {
+                    "is_connected": bool(health.get("is_connected")),
+                    "last_checked_at": health.get("last_checked_at") or "",
+                    "results": health.get("results") or {},
+                }
+            result[route] = entry
+        return result
 
 
 class AgentDetailSerializer(serializers.Serializer):

@@ -851,12 +851,22 @@ def save_page_flow(
 
 # 设备管理类工具自动放行（不走 HITL）：acquire/release 是占用记账、device_action
 # 是用户明确要求"控制设备"时的核心动作，均非需要逐次确认的危险操作。
+# 平台写工具也自动放行：用户下发平台任务即授权（保存用例/元素/图谱/执行测试）。
 AUTO_ALLOW_TOOLS = {
     "acquire_device",
     "release_device",
     "device_action",
     "click_ratio",
     "drag_ratio",
+    # 平台任务写工具
+    "save_page_semantic",
+    "save_page_to_elements",
+    "create_page_flow",
+    "save_page_flow",
+    "save_case",
+    "save_api_test_case",
+    "run_test",
+    "stop_run",
 }
 
 TOOLS: dict[str, tuple] = {
@@ -1025,6 +1035,20 @@ VISION_TOOLS = [
 
 # 验收模型工具：截图二次确认 + 页面分析
 VERIFIER_TOOLS = ["screenshot_page", "analyze_page"]
+
+# 平台任务验收模型工具：只读查询子集，二次确认产物已落库 / 结果正确
+PLATFORM_VERIFIER_TOOLS = [
+    "get_case",
+    "search_cases",
+    "debug_case",
+    "fetch_page_elements",
+    "list_pages",
+    "search_elements",
+    "get_page_flow",
+    "list_page_flows",
+    "get_run_results",
+    "get_run_status",
+]
 
 REASONING_TOOLS = [
     # 元素定位

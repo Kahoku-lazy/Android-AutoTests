@@ -19,18 +19,38 @@ const route = useRoute()
 const dutyRosterRef = ref<HTMLElement | null>(null)
 const {
   agents, loading, agentsError,
-  PAGE_HEADER, testingId,
+  PAGE_HEADER, testingRoute, routeTestResults,
   loadAgents, editAgent, testConnection,
 } = useAgentBoard(dutyRosterRef)
 
 const { isSuperuser } = useAuthUser()
 const isAdmin = computed(() => isSuperuser.value === true)
 
-// 两条助手线路（从平台唯一智能体的 route_configs 读取）
-const routeCards = computed(() => [
-  { key: 'device_control', label: '控制设备', icon: '📱', config: agents.value[0]?.route_configs?.device_control },
-  { key: 'platform_task', label: '平台任务', icon: '🧭', config: agents.value[0]?.route_configs?.platform_task },
-])
+// 两条助手线路（每条线路独立 name/avatar，存于 route_configs）
+const routeCards = computed(() => {
+  const agent = agents.value[0]
+  const configs = agent?.route_configs || {}
+  const fallbackName = agent?.name || '未命名助手'
+  const fallbackAvatar = agent?.avatar || agent?.avatar_url || '🤖'
+  return [
+    {
+      key: 'device_control',
+      label: '控制设备',
+      icon: '📱',
+      config: configs.device_control,
+      agentName: configs.device_control?.name || fallbackName,
+      agentAvatar: configs.device_control?.avatar || fallbackAvatar,
+    },
+    {
+      key: 'platform_task',
+      label: '平台任务',
+      icon: '🧭',
+      config: configs.platform_task,
+      agentName: configs.platform_task?.name || fallbackName,
+      agentAvatar: configs.platform_task?.avatar || fallbackAvatar,
+    },
+  ]
+})
 
 // ── 视图（侧边栏子项路由驱动，/ai-assistant/agents|toolbox|knowledge|evaluator）──
 const VIEW_BY_PATH: Record<string, ViewMode> = {
@@ -88,10 +108,13 @@ const pageMeta = computed(() => VIEW_META[viewMode.value])
           <AgentRouteCard
             v-for="rc in routeCards" :key="rc.key"
             :label="rc.label" :icon="rc.icon" :config="rc.config"
+            :agent-name="rc.agentName"
+            :agent-avatar="rc.agentAvatar"
             :can-manage="isAdmin"
-            :testing="testingId === agents[0]?.id"
+            :testing="testingRoute === rc.key"
+            :test-results="routeTestResults[rc.key]"
             @edit="editAgent(agents[0]?.id ?? 0, rc.key)"
-            @test="agents[0] && testConnection(agents[0])"
+            @test="agents[0] && testConnection(agents[0], rc.key)"
           />
           <EmptyState v-if="!agents.length && !loading" icon="🤖" text="还没有智能体" :hint="'请联系管理员配置智能体'" />
         </div>
@@ -113,7 +136,7 @@ const pageMeta = computed(() => VIEW_META[viewMode.value])
 <style scoped>
 .route-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
   align-items: start;
 }

@@ -6,7 +6,7 @@ import { selectPop, iconBounce } from '@/shared/animations'
 import {
   listAgents, checkAgentsHealth, testAgent,
 } from './api/agents'
-import type { AgentRecord, ViewMode } from '@/shared/types/ai'
+import type { AgentRecord, RouteModelTestResult, ViewMode } from '@/shared/types/ai'
 import {
   agentDetailRoute,
   HEALTH_CHECK_INTERVAL_MS,
@@ -33,8 +33,9 @@ export interface AgentBoardState {
   agents: Ref<AgentRecord[]>
   loading: Ref<boolean>
   agentsError: Ref<string>
-  testingId: Ref<number | null>
+  testingRoute: Ref<string | null>
   healthResults: Ref<Record<number, { is_connected: boolean; last_checked?: string }>>
+  routeTestResults: Ref<Record<string, Record<string, RouteModelTestResult>>>
   // helpers
   PAGE_HEADER: typeof PAGE_HEADER
   noteRotation: (agent: AgentRecord) => number
@@ -43,7 +44,7 @@ export interface AgentBoardState {
   agentStatusClass: (agent: AgentRecord) => string
   // actions
   loadAgents: () => Promise<void>
-  testConnection: (agent: AgentRecord) => Promise<void>
+  testConnection: (agent: AgentRecord, routeKey?: string) => Promise<void>
   openAgent: (agent: AgentRecord) => void
   editAgent: (id: number, routeKey?: string) => void
   onAgentCardClick: (ev: Event) => void
@@ -60,9 +61,10 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
   const viewMode = ref<ViewMode>('agents')
   const agents = ref<AgentRecord[]>([])
   const loading = ref(false)
-  const testingId = ref<number | null>(null)
+  const testingRoute = ref<string | null>(null)
   const healthTimer = ref<ReturnType<typeof setInterval> | null>(null)
   const healthResults = ref<Record<number, { is_connected: boolean; last_checked?: string }>>({})
+  const routeTestResults = ref<Record<string, Record<string, RouteModelTestResult>>>({})
   const agentsError = ref('')
 
   // ── Derived ──
@@ -125,35 +127,65 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
     agentsError.value = ''
     try {
       const data = await listAgents()
-      if (data.status && data.data) { agents.value = data.data.agents }
+      if (data.status && data.data) {
+        agents.value = data.data.agents
+        hydrateRouteTests(agents.value)
+      }
       else { agentsError.value = data.message || '加载失败' }
     } catch { agentsError.value = '加载智能体列表失败，请检查网络连接' }
     loading.value = false
     nextTick(() => animateStatusBubbles())
   }
 
+  function hydrateRouteTests(list: AgentRecord[]) {
+    const configs = list[0]?.route_configs || {}
+    for (const key of ['device_control', 'platform_task'] as const) {
+      const results = configs[key]?.health?.results
+      if (results && Object.keys(results).length) {
+        routeTestResults.value[key] = results
+      }
+    }
+  }
+
+  function applyHealthRoutes(
+    routes?: Record<string, { results?: Record<string, RouteModelTestResult> }>,
+  ) {
+    if (!routes) return
+    for (const [key, payload] of Object.entries(routes)) {
+      if (payload?.results && Object.keys(payload.results).length) {
+        routeTestResults.value[key] = payload.results
+      }
+    }
+  }
+
   async function checkAllHealth() {
     try {
       const data = await checkAgentsHealth()
       if (data.status && data.data?.agents) {
-        for (const h of data.data.agents) healthResults.value[h.id] = { is_connected: h.is_connected, last_checked: h.last_checked }
+        for (const h of data.data.agents) {
+          healthResults.value[h.id] = { is_connected: h.is_connected, last_checked: h.last_checked }
+          applyHealthRoutes(h.routes)
+        }
         nextTick(() => animateStatusBubbles())
       }
     } catch { ElMessage.error('健康检查失败') }
   }
 
-  async function testConnection(agent: AgentRecord) {
-    testingId.value = agent.id
+  async function testConnection(agent: AgentRecord, routeKey?: string) {
+    testingRoute.value = routeKey || '__all__'
     try {
-      const data = await testAgent(agent.id)
+      const data = await testAgent(agent.id, routeKey ? { route: routeKey } : {})
       const payload = data.data
       if (data.status && payload) {
         healthResults.value[agent.id] = { is_connected: payload.connected ?? false, last_checked: new Date().toISOString() }
-        if (payload.connected) { ElMessage.success(`${agent.name} 连接成功`); loadAgents() }
-        else ElMessage.warning(`${agent.name} 连接失败: ${payload.message || '未知错误'}`)
+        if (routeKey && payload.results) {
+          routeTestResults.value[routeKey] = payload.results
+        }
+        if (payload.connected) { ElMessage.success(`${agent.name} 连接成功`) }
+        else ElMessage.warning(`${agent.name} 连接失败: ${payload.message || '存在未连通的模型'}`)
       }
     } catch { ElMessage.error(`${agent.name} 检测请求失败`) }
-    testingId.value = null
+    testingRoute.value = null
   }
 
   function openAgent(_agent: AgentRecord) {
@@ -176,7 +208,7 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
   })
 
   return {
-    viewMode, agents, loading, agentsError, testingId, healthResults,
+    viewMode, agents, loading, agentsError, testingRoute, healthResults, routeTestResults,
     PAGE_HEADER,
     noteRotation, tapeHue,
     agentStatusText, agentStatusClass,

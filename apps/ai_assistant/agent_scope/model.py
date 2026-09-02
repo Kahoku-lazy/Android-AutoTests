@@ -8,12 +8,22 @@ from agentscope.model import DeepSeekChatModel, OpenAIChatModel
 
 from .config import (
     PLANNER_PROMPT,
+    PLATFORM_EXECUTOR_PROMPT,
+    PLATFORM_PLANNER_PROMPT,
+    PLATFORM_VERIFIER_PROMPT,
     VERIFIER_PROMPT,
     VISION_PROMPT,
     DeviceExecutionConfig,
     ModelConfig,
+    PlatformTaskConfig,
 )
-from .tools import VERIFIER_TOOLS, VISION_TOOLS, build_toolkit
+from .tools import (
+    PLATFORM_VERIFIER_TOOLS,
+    REASONING_TOOLS,
+    VERIFIER_TOOLS,
+    VISION_TOOLS,
+    build_toolkit,
+)
 
 
 def create_model(config: ModelConfig, stream: bool = True, vision: bool = False):
@@ -110,4 +120,35 @@ class DeviceExecution:
             user_id,
             name="verifier",
             context_config={"max_image_num": 5},
+        )
+
+
+class PlatformTask:
+    """平台任务：读三模型配置 → 通用创建 + 包装 → 持有三个文本 Agent。"""
+
+    def __init__(self, config: PlatformTaskConfig, user_id: str = ""):
+        self.config = config
+        self.user_id = user_id
+        # 三模型全文本（平台工具返回 JSON/文本，无图），不走 vision
+        self.planner_agent = build_agent(
+            create_model(config.planner, stream=False, vision=False),
+            PLATFORM_PLANNER_PROMPT,
+            [],
+            user_id,
+            name="planner",
+        )
+        self.executor_agent = build_agent(
+            create_model(config.executor, stream=False, vision=False),
+            PLATFORM_EXECUTOR_PROMPT,
+            REASONING_TOOLS,
+            user_id,
+            name="executor",
+            react_config={"max_iters": 12},
+        )
+        self.verifier_agent = build_agent(
+            create_model(config.verifier, stream=False, vision=False),
+            PLATFORM_VERIFIER_PROMPT,
+            PLATFORM_VERIFIER_TOOLS,
+            user_id,
+            name="verifier",
         )

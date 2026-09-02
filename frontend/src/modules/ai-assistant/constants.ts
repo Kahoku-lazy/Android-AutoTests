@@ -65,6 +65,45 @@ export const ROUTE_LABELS: Record<string, string> = {
   platform_task: '平台任务',
 }
 
+export const ROUTE_ICONS: Record<string, string> = {
+  device_control: '📱',
+  platform_task: '🧭',
+}
+
+/** 任务卡片列表筛选（顺序：全部 → 平台任务 → 控制设备） */
+export const TASK_FILTER_TABS = {
+  all: { label: '全部任务' },
+  platform_task: { label: '平台任务' },
+  device_control: { label: '控制设备' },
+} as const
+
+/** 任务卡片六态（PRD-08-01：待执行 / 执行中 / 任务成功 / 任务失败 / 任务取消 / 任务暂停） */
+export const TASK_STATUS_LABELS: Record<string, string> = {
+  pending: '待执行',
+  running: '执行中',
+  completed: '任务成功',
+  success: '任务成功',
+  failed: '任务失败',
+  cancelled: '任务取消',
+  paused: '任务暂停',
+}
+
+export type TaskStatusTone = 'pending' | 'running' | 'success' | 'failed' | 'cancelled' | 'paused'
+
+export function taskStatusTone(status: string): TaskStatusTone {
+  const key = (status || '').toLowerCase()
+  if (key === 'running') return 'running'
+  if (key === 'completed' || key === 'success') return 'success'
+  if (key === 'failed') return 'failed'
+  if (key === 'paused') return 'paused'
+  if (key === 'cancelled') return 'cancelled'
+  return 'pending'
+}
+
+export function taskStatusLabel(status: string): string {
+  return TASK_STATUS_LABELS[(status || '').toLowerCase()] || status || '待执行'
+}
+
 // ── Model Status Labels ──
 
 /** Mapping from SSE model status → { label, icon }. */

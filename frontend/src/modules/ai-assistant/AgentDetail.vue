@@ -25,7 +25,10 @@ const loading = ref(false);
 const loadError = ref("");
 const uploading = ref(false);
 const fileInput = ref(null);
+const uploadTargetRoute = ref(null);
 const testing = ref(false);
+const testResults = ref(null);
+const ROLE_LABELS = { planner: "规划模型", executor: "执行模型", verifier: "校验模型" };
 
 const form = ref({
   name: "",
@@ -49,8 +52,8 @@ const form = ref({
   knowledge_sources: {},
   max_loops: 3,
   route_configs: {
-    device_control: { planner: {}, executor: {}, verifier: {} },
-    platform_task: { planner: {}, executor: {}, verifier: {} },
+    device_control: { name: "", avatar: "📱", planner: {}, executor: {}, verifier: {} },
+    platform_task: { name: "", avatar: "🧭", planner: {}, executor: {}, verifier: {} },
   },
 });
 
@@ -69,8 +72,8 @@ async function loadAgentDetail() {
         const agentPayload = data.data.agent;
         form.value = { ...form.value, ...agentPayload, tools: [] };
         form.value.route_configs = {
-          device_control: { planner: {}, executor: {}, verifier: {}, ...(agentPayload.route_configs?.device_control || {}) },
-          platform_task: { planner: {}, executor: {}, verifier: {}, ...(agentPayload.route_configs?.platform_task || {}) },
+          device_control: { name: "", avatar: "📱", planner: {}, executor: {}, verifier: {}, ...(agentPayload.route_configs?.device_control || {}) },
+          platform_task: { name: "", avatar: "🧭", planner: {}, executor: {}, verifier: {}, ...(agentPayload.route_configs?.platform_task || {}) },
         };
         form.value.max_loops = agentPayload.max_loops ?? 3;
         agent.value = agentPayload;
@@ -87,7 +90,8 @@ async function loadAgentDetail() {
 
 onMounted(() => { loadAgentDetail() });
 
-function triggerUpload() {
+function triggerUpload(routeKey) {
+  uploadTargetRoute.value = routeKey;
   fileInput.value?.click();
 }
 async function handleAvatarUpload(e) {
@@ -100,15 +104,31 @@ async function handleAvatarUpload(e) {
       const data = await uploadAvatar( {
         image: reader.result,
       });
-      if (data.status) form.value.avatar = data.data?.url || '';
+      if (data.status) {
+        const url = data.data?.url || '';
+        const routeKey = uploadTargetRoute.value || activeRoute.value;
+        if (routeKey && form.value.route_configs[routeKey]) {
+          form.value.route_configs[routeKey].avatar = url;
+        } else {
+          form.value.avatar = url;
+        }
+      }
     } catch (err) { console.error('Failed to upload avatar:', err); ElMessage.error('头像上传失败，请稍后重试') }
     uploading.value = false;
+    uploadTargetRoute.value = null;
   };
   reader.readAsDataURL(file);
 }
 
 async function save() {
   const payload = { ...form.value };
+  if (!payload.name?.trim()) {
+    const routeKey = activeRoute.value;
+    const routeName = routeKey
+      ? payload.route_configs?.[routeKey]?.name
+      : payload.route_configs?.device_control?.name || payload.route_configs?.platform_task?.name;
+    payload.name = (routeName || '').trim() || '平台小助手';
+  }
   // 工具/知识库配置已移到 AI 工具箱 / 知识库页（platform-config），此处不随智能体提交
   for (const k of [
     'tools', 'enable_workspace_tools', 'enable_business_tools',
@@ -133,12 +153,14 @@ async function save() {
 async function testConnection() {
   if (testing.value) return;
   testing.value = true;
+  testResults.value = null;
   try {
-    const data = await testAgent(agentId.value);
+    const data = await testAgent(agentId.value, { route: activeRoute.value });
     if (data.status && data.data) {
+      if (data.data.results) testResults.value = data.data.results;
       const connected = data.data.connected;
       if (connected) ElMessage.success("连接成功");
-      else ElMessage.warning("连接失败：" + (data.data.message || "未知错误"));
+      else ElMessage.warning("存在未连通的模型");
     } else {
       ElMessage.error(data.message || "校验失败");
     }
@@ -180,8 +202,14 @@ async function testConnection() {
         style="display:none"
         @change="handleAvatarUpload"
       />
-      <AgentBasicInfo :form="form" :is-new="isNew" :uploading="uploading"
-        @trigger-upload="triggerUpload" @avatar-upload="handleAvatarUpload" />
+      <AgentBasicInfo
+        v-if="activeRoute"
+        :form="form.route_configs[activeRoute]"
+        :uploading="uploading && uploadTargetRoute === activeRoute"
+        route-mode
+        @trigger-upload="triggerUpload(activeRoute)"
+      />
+      <AgentBasicInfo v-if="!activeRoute" :form="form" :is-new="isNew" />
 
       <section class="doc-section step-panel">
         <div class="section-title"><span class="section-num">🔄</span>循环次数</div>
@@ -192,18 +220,39 @@ async function testConnection() {
         </el-form>
       </section>
 
-      <AgentRouteConfig v-if="!activeRoute || activeRoute === 'device_control'" label="控制设备 Device Control"
-        v-model:planner="form.route_configs.device_control.planner"
-        v-model:executor="form.route_configs.device_control.executor"
-        v-model:verifier="form.route_configs.device_control.verifier" />
-      <AgentRouteConfig v-if="!activeRoute || activeRoute === 'platform_task'" label="平台任务 Platform Task（仅入口）"
-        v-model:planner="form.route_configs.platform_task.planner"
-        v-model:executor="form.route_configs.platform_task.executor"
-        v-model:verifier="form.route_configs.platform_task.verifier" />
+      <template v-if="!activeRoute || activeRoute === 'device_control'">
+        <AgentBasicInfo
+          v-if="!activeRoute"
+          :form="form.route_configs.device_control"
+          :uploading="uploading && uploadTargetRoute === 'device_control'"
+          route-mode
+          @trigger-upload="triggerUpload('device_control')"
+        />
+        <AgentRouteConfig label="控制设备 Device Control" v-model="form.route_configs.device_control" />
+      </template>
+
+      <template v-if="!activeRoute || activeRoute === 'platform_task'">
+        <AgentBasicInfo
+          v-if="!activeRoute"
+          :form="form.route_configs.platform_task"
+          :uploading="uploading && uploadTargetRoute === 'platform_task'"
+          route-mode
+          @trigger-upload="triggerUpload('platform_task')"
+        />
+        <AgentRouteConfig label="平台任务 Platform Task（仅入口）" v-model="form.route_configs.platform_task" />
+      </template>
 
       <section class="doc-section step-panel">
         <div class="section-title"><span class="section-num">✅</span>模型校验</div>
         <el-button :loading="testing" :disabled="isNew" @click="testConnection">校验模型连接</el-button>
+        <div v-if="testResults" class="test-results">
+          <div v-for="(r, role) in testResults" :key="role" class="test-row">
+            <span class="test-role">{{ ROLE_LABELS[role] || role }}</span>
+            <span class="test-state" :class="r.connected ? 'ok' : 'fail'">
+              {{ r.connected ? '✓ 已连通' : '✗ ' + (r.message || '未连通') }}
+            </span>
+          </div>
+        </div>
       </section>
 
       <AgentFormFooter :is-new="isNew" @save="save" />
@@ -242,5 +291,10 @@ async function testConnection() {
 .agent-form :deep(.el-input__wrapper),
 .agent-form :deep(.el-textarea__inner) { border-radius: 10px; font-size: var(--app-size-md); }
 .form-hint { font-size: var(--app-size-sm); color: var(--ai-ink-muted); margin-left: 10px; }
+.test-results { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.test-row { display: flex; align-items: center; gap: 12px; font-size: var(--app-size-sm); }
+.test-role { font-weight: 700; color: var(--ai-ink-muted); min-width: 72px; }
+.test-state.ok { color: var(--ai-teal-text); font-weight: 700; }
+.test-state.fail { color: var(--el-color-danger); font-weight: 700; }
 </style>
 

@@ -200,6 +200,13 @@ class AITask(models.Model):
     scheduled_at = models.DateTimeField(null=True, blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
+    # ── token 用量（任务完成时由工作流采集落库）──
+    input_tokens = models.IntegerField(default=0)
+    output_tokens = models.IntegerField(default=0)
+    cache_input_tokens = models.IntegerField(default=0)
+    # 按模型拆分：{model_name: {"input_tokens", "output_tokens", "cache_input_tokens"}}
+    # DeepSeek 费用按模型单价计价，故需保留分模型用量。
+    model_usage = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

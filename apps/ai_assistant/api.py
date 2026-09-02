@@ -12,6 +12,7 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.utils import timezone
 
 from apps.ai_assistant.models import (
     AIAgent,
@@ -36,6 +37,7 @@ __all__ = [
     "delete_agent",
     "reveal_agent_key",
     "update_agent_connectivity",
+    "update_route_connectivity",
     # 平台唯一智能体 / 全局配置
     "get_platform_agent",
     "get_platform_config",
@@ -60,6 +62,7 @@ __all__ = [
     "save_message",
     # 任务操作
     "create_task",
+    "finalize_task",
     # 加密工具
     "encrypt_key",
     "decrypt_key",
@@ -244,6 +247,35 @@ def update_agent_connectivity(
 
         agent.available_models = json.dumps(available_models)
     agent.save()
+
+
+def update_route_connectivity(
+    agent: AIAgent, route: str, *, connected: bool, checked_at, results: dict
+) -> None:
+    """把某条线路的校验结果写入 route_configs.health，并同步智能体级连通字段。"""
+    agent.refresh_from_db(fields=["route_configs"])
+    configs = dict(agent.route_configs or {})
+    current = dict(configs.get(route) or {})
+    stamp = (
+        checked_at.isoformat(sep=" ", timespec="seconds")
+        if hasattr(checked_at, "isoformat")
+        else str(checked_at)
+    )
+    current["health"] = {
+        "is_connected": bool(connected),
+        "last_checked_at": stamp,
+        "results": results or {},
+    }
+    configs[route] = current
+    agent.route_configs = configs
+    healths = []
+    for key in ("device_control", "platform_task"):
+        health = (configs.get(key) or {}).get("health")
+        if isinstance(health, dict) and "is_connected" in health:
+            healths.append(bool(health["is_connected"]))
+    agent.is_connected = all(healths) if healths else bool(connected)
+    agent.last_checked_at = checked_at
+    agent.save(update_fields=["route_configs", "is_connected", "last_checked_at", "updated_at"])
 
 
 def get_platform_agent() -> AIAgent | None:
@@ -507,6 +539,31 @@ def create_task(
     )
 
 
+def finalize_task(
+    task: AITask,
+    *,
+    status: str,
+    result: str = "",
+    usage: dict | None = None,
+) -> AITask:
+    """完成任务：状态/结果/完成时间 + 累计 token 用量（任务发布完成时调用）。
+
+    usage 为工作流返回的任务级 token 累加器（含按模型拆分），空则只落状态/结果。
+    """
+    task.status = status
+    task.result = result
+    task.finished_at = timezone.now()
+    fields = ["status", "result", "finished_at"]
+    if usage:
+        task.input_tokens = int(usage.get("input_tokens") or 0)
+        task.output_tokens = int(usage.get("output_tokens") or 0)
+        task.cache_input_tokens = int(usage.get("cache_input_tokens") or 0)
+        task.model_usage = usage.get("models") or {}
+        fields += ["input_tokens", "output_tokens", "cache_input_tokens", "model_usage"]
+    task.save(update_fields=fields)
+    return task
+
+
 # ── 加密工具（与 views.py 共享实现）──
 
 
@@ -540,6 +597,16 @@ def mask_key(key: str) -> str:
     return key[:3] + "***" + key[-4:]
 
 
+ROUTE_MODEL_ROLES = ("planner", "executor", "verifier")
+
+
+def _copy_route_meta(src: dict, dest: dict) -> None:
+    """保留线路级展示字段（name/avatar 等），不进入模型角色加密逻辑。"""
+    for key, val in src.items():
+        if key not in ROUTE_MODEL_ROLES:
+            dest[key] = val
+
+
 def _transform_route_configs(route_configs: dict, transform) -> dict:
     """对 route_configs 内每条线路模型的 api_key 应用 transform。"""
     result = {}
@@ -547,7 +614,9 @@ def _transform_route_configs(route_configs: dict, transform) -> dict:
         if not isinstance(models, dict):
             continue
         result[route] = {}
-        for role, cfg in models.items():
+        _copy_route_meta(models, result[route])
+        for role in ROUTE_MODEL_ROLES:
+            cfg = models.get(role)
             if not isinstance(cfg, dict):
                 continue
             new_cfg = dict(cfg)
@@ -564,9 +633,12 @@ def encrypt_route_configs(route_configs: dict, old: dict | None = None) -> dict:
     for route, models in (route_configs or {}).items():
         if not isinstance(models, dict):
             continue
-        result[route] = {}
         old_models = old.get(route) or {}
-        for role, cfg in models.items():
+        result[route] = {}
+        _copy_route_meta(old_models, result[route])
+        _copy_route_meta(models, result[route])
+        for role in ROUTE_MODEL_ROLES:
+            cfg = models.get(role)
             if not isinstance(cfg, dict):
                 continue
             new_cfg = dict(cfg)

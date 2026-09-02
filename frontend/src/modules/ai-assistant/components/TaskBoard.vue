@@ -1,24 +1,44 @@
 <script setup lang="ts">
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import { AGENT_ROUTES, ROUTE_LABELS } from '../constants'
+import FilterTabs from '@/shared/components/FilterTabs.vue'
+import {
+  AGENT_ROUTES, ROUTE_ICONS, ROUTE_LABELS, taskStatusLabel, taskStatusTone,
+} from '../constants'
 import { useTaskPublish } from '../composables/useTaskPublish'
 import { useTaskList } from '../composables/useTaskList'
 
 const { form, submitting, devices, dialogVisible, openDialog, closeDialog, submit } = useTaskPublish()
-const { tasks, loading, error, load } = useTaskList()
+const {
+  loading, error, load,
+  activeFilter, filterTabs, filteredItems, emptyCopy,
+} = useTaskList()
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: '待执行',
-  running: '执行中',
-  completed: '成功',
-  failed: '失败',
-  cancelled: '取消',
-  paused: '暂停',
+function formatTime(raw?: string): string {
+  if (!raw) return ''
+  return raw.replace('T', ' ').slice(0, 16)
 }
 
-function statusLabel(s: string): string {
-  return STATUS_LABELS[s] ?? s
+function resultSummary(raw?: string): string {
+  if (!raw) return ''
+  const text = raw.trim()
+  const clamp = (s: string) => {
+    const t = s.replace(/\s+/g, ' ').trim()
+    return t.length > 120 ? `${t.slice(0, 120)}…` : t
+  }
+  try {
+    const obj = JSON.parse(text)
+    if (typeof obj === 'string') return clamp(obj)
+    if (obj && typeof obj === 'object') {
+      const summary = obj.summary || obj.message || obj.reason
+      if (typeof summary === 'string' && summary) return clamp(summary)
+      if (Array.isArray(obj.completed) && obj.completed.length) {
+        return clamp(`已完成 ${obj.completed.length} 项`)
+      }
+      if (obj.status) return clamp(String(obj.status))
+    }
+  } catch { /* 非 JSON，走原文截断 */ }
+  return clamp(text)
 }
 
 async function onSubmit() {
@@ -33,7 +53,10 @@ async function onSubmit() {
   <section class="doc-section step-panel">
     <div class="doc-section__header">
       <h3 class="doc-section__title">任务卡片<span class="doc-tag">Task</span></h3>
-      <el-button type="primary" @click="openDialog">新建任务</el-button>
+      <div class="task-board__actions">
+        <FilterTabs :tabs="filterTabs" v-model="activeFilter" />
+        <el-button type="primary" @click="openDialog">新建任务</el-button>
+      </div>
     </div>
 
     <!-- 新建任务弹窗 -->
@@ -80,48 +103,116 @@ async function onSubmit() {
     <ErrorState v-if="error" :message="error" @retry="load" />
     <template v-else>
       <div v-loading="loading" class="task-card-grid">
-        <article v-for="t in tasks" :key="t.id" class="task-card">
+        <article v-for="t in filteredItems" :key="t.id" class="task-card">
           <div class="task-card__head">
-            <h4 class="task-card__title">{{ t.title }}</h4>
-            <span class="task-card__status">{{ statusLabel(t.status) }}</span>
+            <h4 class="task-card__title">{{ t.title || t.goal }}</h4>
+            <div class="task-card__badges">
+              <span class="task-card__kind" :class="`is-${t.route}`">
+                {{ ROUTE_ICONS[t.route] || '' }} {{ ROUTE_LABELS[t.route] || t.route }}
+              </span>
+              <span class="task-card__status" :class="`is-${taskStatusTone(t.status)}`">
+                {{ taskStatusLabel(t.status) }}
+              </span>
+            </div>
           </div>
           <p class="task-card__goal">{{ t.goal }}</p>
           <div class="task-card__meta">
-            <span class="task-card__tag">{{ ROUTE_LABELS[t.route] || t.route }}</span>
             <span v-if="t.device_serial" class="task-card__tag">{{ t.device_serial }}</span>
-            <span class="task-card__time">{{ t.created_at }}</span>
+            <span class="task-card__time">{{ formatTime(t.created_at) }}</span>
           </div>
-          <p v-if="t.result" class="task-card__result">{{ t.result }}</p>
+          <p v-if="t.result" class="task-card__result">{{ resultSummary(t.result) }}</p>
         </article>
       </div>
-      <EmptyState v-if="!tasks.length && !loading" icon="📋" text="还没有任务" hint="点击「新建任务」创建" />
+      <EmptyState
+        v-if="!filteredItems.length && !loading"
+        icon="📋"
+        :text="emptyCopy.text"
+        :hint="emptyCopy.hint"
+      />
     </template>
   </section>
 </template>
 
 <style scoped>
+.task-board__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--app-space-sm);
+}
 .task-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
 }
 .task-card {
-  background: var(--ai-sticky-bg, rgb(247, 243, 223));
-  border: 1px solid rgba(196, 181, 160, 0.35);
-  border-radius: 18px;
-  padding: 16px;
+  background: var(--ai-sticky-bg);
+  border: 2.5px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  padding: var(--app-space-md);
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: var(--app-space-sm);
+  box-shadow: var(--app-shadow-sm);
+  transition: transform var(--app-duration) var(--app-ease);
 }
 .task-card:hover { transform: translateY(-2px); }
-.task-card__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.task-card__title { margin: 0; font-size: var(--app-size-md); font-weight: 800; color: var(--doodle-ink, #2d2d2d); }
-.task-card__status { font-size: var(--app-size-xs); font-weight: 800; padding: 2px 10px; border-radius: 999px; background: rgba(139, 115, 85, 0.1); color: var(--ai-ink-soft); white-space: nowrap; }
-.task-card__goal { margin: 0; font-size: var(--app-size-sm); color: var(--ai-ink-soft); line-height: 1.5; }
+.task-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--app-space-sm); }
+.task-card__title {
+  margin: 0; font-size: var(--app-size-md); font-weight: 800; color: var(--ai-ink-soft);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.task-card__badges {
+  display: flex; flex-shrink: 0; flex-wrap: wrap; gap: 6px; justify-content: flex-end;
+}
+.task-card__kind {
+  font-size: var(--app-size-xs); font-weight: 700; padding: 2px 7px;
+  border-radius: 3px 6px 3px 6px; border: 1.5px solid var(--ink); white-space: nowrap;
+}
+.task-card__kind.is-platform_task {
+  background: var(--ai-status-purple-bg); color: var(--ai-status-purple-text);
+  border-color: var(--ai-status-purple-border);
+}
+.task-card__kind.is-device_control {
+  background: var(--ai-status-blue-bg); color: var(--ai-status-blue-text);
+  border-color: var(--ai-status-blue-border);
+}
+.task-card__status {
+  flex-shrink: 0;
+  font-size: var(--app-size-xs); font-weight: 700; padding: 2px 7px;
+  border-radius: 3px 6px 3px 6px; border: 1.5px solid var(--ink); white-space: nowrap;
+}
+.task-card__status.is-pending {
+  background: var(--ai-bg-neutral); color: var(--app-timeline-dot); border-color: var(--app-offline);
+}
+.task-card__status.is-running {
+  background: var(--ai-status-blue-bg); color: var(--ai-status-blue-text); border-color: var(--ai-status-blue-border);
+}
+.task-card__status.is-success {
+  background: var(--app-status-success-bg); color: var(--app-status-success-text); border-color: var(--app-status-success);
+}
+.task-card__status.is-failed {
+  background: var(--app-status-danger-bg); color: var(--app-status-danger-text); border-color: var(--app-status-danger);
+}
+.task-card__status.is-cancelled {
+  background: var(--ai-bg-neutral); color: var(--ai-ink-muted); border-color: var(--app-offline);
+}
+.task-card__status.is-paused {
+  background: var(--app-status-warning-bg); color: var(--ai-hint-orange); border-color: var(--app-highlight);
+}
+.task-card__goal {
+  margin: 0; font-size: var(--app-size-sm); color: var(--ai-ink-soft); line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
 .task-card__meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.task-card__tag { font-size: var(--app-size-xs); font-weight: 700; padding: 1px 8px; border-radius: 999px; background: rgba(139, 115, 85, 0.08); color: var(--ai-ink-muted); }
-.task-card__time { font-size: var(--app-size-xs); color: var(--app-ink-muted, #999); margin-left: auto; }
-.task-card__result { margin: 0; font-size: var(--app-size-sm); color: var(--ai-ink-muted); line-height: 1.5; }
+.task-card__tag {
+  font-size: var(--app-size-xs); font-weight: 700; padding: 2px 7px;
+  border-radius: 3px 6px 3px 6px; border: 1.5px solid var(--ai-warm-border);
+  background: var(--ai-warm-bg); color: var(--ai-ink-muted);
+}
+.task-card__time { font-size: var(--app-size-xs); color: var(--ai-ink-muted); margin-left: auto; }
+.task-card__result {
+  margin: 0; font-size: var(--app-size-xs); color: var(--ai-ink-muted); line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
 </style>

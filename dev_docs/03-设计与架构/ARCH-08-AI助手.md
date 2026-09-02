@@ -495,6 +495,10 @@ erDiagram
         datetime scheduled_at
         datetime started_at
         datetime finished_at
+        int input_tokens
+        int output_tokens
+        int cache_input_tokens
+        json model_usage
         datetime created_at
     }
 
@@ -576,6 +580,8 @@ get_kb_doc_count() -> int
 
 | 版本 | 日期 | 变更摘要 |
 |------|------|----------|
+| v3.6 | 2026-09-01 | **任务 token 用量落库**：`AITask` 增 `input_tokens` / `output_tokens` / `cache_input_tokens` / `model_usage`（分模型拆分）；工作流（`DeviceExecutionWorkflow` / `PlatformTaskWorkflow`）采集每次 `reply` 的 `msg.usage` 聚合为任务级用量；`TaskSubmitAPIView` 改走 `api.finalize_task`（状态/结果/完成时间 + token 落库）；供 dashboard AI 用量按任务统计（`task_count` / `avg_tokens_per_task` / 分模型费用） |
+| v3.5 | 2026-08-31 | **平台任务线路落地**：新增 `PlatformTaskConfig`（config.py）/ `PlatformTask`（model.py）/ `PlatformTaskWorkflow`（workflow.py）三个类，复用三模型骨架（planner → executor ↔ verifier）；平台任务全用文本模型，executor 装 `REASONING_TOOLS`（22 平台工具），verifier 装新增 `PLATFORM_VERIFIER_TOOLS`（10 只读查询工具）；新增三套平台提示词（`PLATFORM_PLANNER/EXECUTOR/VERIFIER_PROMPT`，planner 先判断职责①~④再编排）；`AUTO_ALLOW_TOOLS` 扩 8 个平台写工具（save_case/run_test/save_page_flow 等自动放行）；`TaskSubmitAPIView` 的 platform_task 分支从「线路开发中」改为 `_run_platform_task` → `PlatformTaskWorkflow.run`（注入 requirements/checklist/report_name，可选 serial 借道设备），AITask.result 落 JSON |
 | v3.4 | 2026-08-28 | **两条线路 + 任务发布 + 移除主对话**：智能体从「自由对话」改为「控制设备 / 平台任务」两条能力线路；`AIAgent` 增 `route_configs`（每条线路 planner/executor 模型配置，api_key Fernet 加密）；`AITask` 增 goal/requirements/attachment/route/checklist/report_name；新增 `POST /ai/tasks/submit`（按 route 分发：device_control → `plan()`+`vision`，platform_task 占位）+ `GET /ai/agent-tasks`；删除 SSE 对话（`chat_views.py`/`hitl_views.py`/`chat/stream` 端点）+ 前端聊天窗口；`Harness` 增 per-harness api_key/base_url；前端新增任务发布模块（`TaskPublishCard`/`TaskList`）+ 多线路配置（`AgentRouteConfig`）；删除对话接口测试 `test_conversations_api.py` |
 | v3.3 | 2026-08-21 | **单智能体 + 配置下沉 + 去 AITool**：删除 `AITool` 模型与 `ai_tools` 表（8→7 表），MCP/Skill 由 `agent_factory._build_mcp_clients`/`_resolve_skill_paths` 直接读 `AISharedTool(enabled=True)`；移除 `import-from-toolbox` 与 `agents/{id}/tools*` 端点、`AgentToolActionsMixin`、`sync_agent_tools`/`import_shared_tool`/`set_tool_enabled`/`delete_agent_tool`；新增 `get_platform_agent` + `GET/POST /ai/platform-config`（读/写唯一智能体配置）与 `POST /ai/toolbox/{id}/toggle`（42→41 端点、16→15 path）；§1.5/§4.1/§5.1 ER 同步；前端删「新建智能体」、删 `AgentToolsPanel`/`useAgentTools`，知识库开关/文档范围移 `KnowledgeBase.vue`，能力开关/工作区 Skills/MCP-Skill 启停移 `ToolboxPanel.vue` |
 | v3.2 | 2026-08-21 | 平台业务工具启停改**全局**：新增表 `ai_platform_tools`（8 表）+ 数据迁移删除 `AITool(tool_type=platform)` 遗留并下线 `migrate_platform_tools` 命令；§5.1 ER 补 `ai_platform_tools`、`ai_tools.tool_type` 收敛为 mcp/skill；§4.1 补端点 `POST /ai/platform-tools/toggle`（41→42 端点、15→16 path）；§3.1 models 7→8 表；`_resolve_enabled_tools` / `agent_config` 改读全局；§7 设计要点「平台业务工具目录」改「全局启停」；智能体配置页删除逐工具勾选只留 `enable_business_tools` 总开关 |

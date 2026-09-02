@@ -121,17 +121,17 @@ const {
         <h3 class="doc-section__title"><IconBrain :size="19" />AI 用量<span class="doc-tag">AI</span></h3>
         <div class="doc-section__label">
           累计 Token {{ (stats.aiUsage.totalTokens.total / 1000000).toFixed(2) }}M
-          · 对话 {{ stats.aiUsage.conversationCount.total }}
+          · 任务 {{ stats.aiUsage.taskCount.total }}
           · DeepSeek 费用 {{ stats.aiUsage.deepseekCost.total.toFixed(2) }} 元
         </div>
         <div class="dashboard__stats-grid">
           <StatsAppCard
-            label="对话总数"
-            :value="stats.aiUsage.conversationCount.total"
+            label="任务数量"
+            :value="stats.aiUsage.taskCount.total"
             color="gray"
             path="/ai-assistant"
             :loading="loading"
-            :desc="`今日 ${stats.aiUsage.conversationCount.today.toLocaleString()}`"
+            :desc="`今日 ${stats.aiUsage.taskCount.today.toLocaleString()}`"
           >
             <template #icon><IconBrain :size="15" /></template>
           </StatsAppCard>
@@ -160,14 +160,14 @@ const {
             <template #icon><IconTarget :size="15" /></template>
           </StatsAppCard>
           <StatsAppCard
-            label="平均每对话 Token"
-            :value="toK(stats.aiUsage.avgTokensPerConversation.total)"
+            label="平均每任务 Token"
+            :value="toK(stats.aiUsage.avgTokensPerTask.total)"
             suffix="K"
             :decimals="1"
             color="cream"
             path="/ai-assistant"
             :loading="loading"
-            :desc="`今日 ${(stats.aiUsage.avgTokensPerConversation.today / 1000).toFixed(1)}K`"
+            :desc="`今日 ${(stats.aiUsage.avgTokensPerTask.today / 1000).toFixed(1)}K`"
           >
             <template #icon><IconLayers :size="15" /></template>
           </StatsAppCard>

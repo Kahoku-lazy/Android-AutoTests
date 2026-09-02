@@ -21,13 +21,13 @@ export interface AiUsageMetric {
 }
 
 export interface AiUsage {
-  conversationCount: AiUsageMetric
+  taskCount: AiUsageMetric
   inputTokens: AiUsageMetric
   outputTokens: AiUsageMetric
   totalTokens: AiUsageMetric
   cacheHitTokens: AiUsageMetric
   cacheHitRate: AiUsageMetric
-  avgTokensPerConversation: AiUsageMetric
+  avgTokensPerTask: AiUsageMetric
   deepseekCost: AiUsageMetric
 }
 
@@ -115,13 +115,13 @@ export interface DashboardRawData {
   agents: { total: number; active: number }
   workflow: { total: number }
   ai_usage: {
-    conversation_count: AiUsageMetric
+    task_count: AiUsageMetric
     input_tokens: AiUsageMetric
     output_tokens: AiUsageMetric
     total_tokens: AiUsageMetric
     cache_hit_tokens: AiUsageMetric
     cache_hit_rate: AiUsageMetric
-    avg_tokens_per_conversation: AiUsageMetric
+    avg_tokens_per_task: AiUsageMetric
     deepseek_cost: AiUsageMetric
   }
   charts: {

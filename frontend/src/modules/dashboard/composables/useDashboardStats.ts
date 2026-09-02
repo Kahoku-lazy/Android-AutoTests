@@ -39,13 +39,13 @@ const zeroMetric = (): AiUsageMetric => ({ today: 0, total: 0 })
 const toMetric = (m?: AiUsageMetric): AiUsageMetric => m ?? zeroMetric()
 
 const DEFAULT_AI_USAGE: AiUsage = {
-  conversationCount: zeroMetric(),
+  taskCount: zeroMetric(),
   inputTokens: zeroMetric(),
   outputTokens: zeroMetric(),
   totalTokens: zeroMetric(),
   cacheHitTokens: zeroMetric(),
   cacheHitRate: zeroMetric(),
-  avgTokensPerConversation: zeroMetric(),
+  avgTokensPerTask: zeroMetric(),
   deepseekCost: zeroMetric(),
 }
 
@@ -105,13 +105,13 @@ export function mapStatsResponse(raw: DashboardRawData): MappedData {
       },
       workflow: { total: raw.workflow?.total ?? 0 },
       aiUsage: {
-        conversationCount: toMetric(raw.ai_usage?.conversation_count),
+        taskCount: toMetric(raw.ai_usage?.task_count),
         inputTokens: toMetric(raw.ai_usage?.input_tokens),
         outputTokens: toMetric(raw.ai_usage?.output_tokens),
         totalTokens: toMetric(raw.ai_usage?.total_tokens),
         cacheHitTokens: toMetric(raw.ai_usage?.cache_hit_tokens),
         cacheHitRate: toMetric(raw.ai_usage?.cache_hit_rate),
-        avgTokensPerConversation: toMetric(raw.ai_usage?.avg_tokens_per_conversation),
+        avgTokensPerTask: toMetric(raw.ai_usage?.avg_tokens_per_task),
         deepseekCost: toMetric(raw.ai_usage?.deepseek_cost),
       },
     },

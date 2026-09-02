@@ -226,14 +226,14 @@ flowchart TB
 ```
 apps/dashboard/
 ├── views.py            405 行 · 4 APIView + 聚合辅助函数（纯聚合）
-├── ai_usage.py         207 行 · AI 用量聚合（DeepSeek 计费 + 每日 token/缓存/费用序列）
+├── ai_usage.py         222 行 · AI 用量聚合（任务统计 + DeepSeek 计费 + 每日 token/缓存/费用序列）
 ├── urls.py             路由注册（4 端点 → APIView.as_view()）
 └── apps.py             verbose_name='仪表盘'
 
 注意: 无 models.py — dashboard 不创建数据库表
 ```
 
-> 行数说明：views.py 405 行仍 > 300 行上限（🟠 关注级，未超 1.5 倍 450）；AI 用量聚合已拆至 `ai_usage.py`（207 行），后续可将其余聚合辅助函数继续下沉。
+> 行数说明：views.py 405 行仍 > 300 行上限（🟠 关注级，未超 1.5 倍 450）；AI 用量聚合已拆至 `ai_usage.py`（222 行），后续可将其余聚合辅助函数继续下沉。
 
 ### 3.2 聚合查询设计
 
@@ -305,13 +305,13 @@ _safe_count(...)                       # 表缺失时计 0（降级规则）
     "runs": { "total": 30, "active": 1 },
     "agents": { "total": 3, "active": 2 },
     "ai_usage": {
-      "conversation_count": { "today": 1, "total": 30 },
+      "task_count": { "today": 1, "total": 30 },
       "input_tokens": { "today": 1200, "total": 45000 },
       "output_tokens": { "today": 800, "total": 30000 },
       "total_tokens": { "today": 2000, "total": 75000 },
       "cache_hit_tokens": { "today": 300, "total": 9000 },
       "cache_hit_rate": { "today": 25.0, "total": 20.0 },
-      "avg_tokens_per_conversation": { "today": 2000, "total": 2500 },
+      "avg_tokens_per_task": { "today": 2000, "total": 2500 },
       "deepseek_cost": { "today": 0.02, "total": 1.35 }
     },
     "charts": {
@@ -373,6 +373,7 @@ _safe_count(...)                       # 表缺失时计 0（降级规则）
 
 | 版本 | 日期 | 变更摘要 |
 |------|------|----------|
+| v1.9 | 2026-09-01 | **AI 用量口径改「任务」**：对话模式已移除（ARCH v3.4），`ai_usage.py` 改读 `AITask`（`task_count` / `avg_tokens_per_task` / 分模型 `model_usage` 计费）；`ai_usage.conversation_count` → `task_count`、`avg_tokens_per_conversation` → `avg_tokens_per_task`；§4.2 响应示例同步 |
 | v1.8 | 2026-08-21 | **AI 用量聚合拆分 + DeepSeek 计费**：新增 `apps/dashboard/ai_usage.py`（DeepSeek 官方价目常量 + 高峰/空闲时段计费 + 每日 token/缓存/费用序列），`_ai_usage_stats` 迁入；§4.2 响应新增 `ai_usage`（含 `deepseek_cost`）与 `charts.ai_tokens` / `charts.deepseek_cost`；§3.1 文件结构同步 |
 | v1.7 | 2026-08-21 | **五层口径回填 + 防火墙修复同步**：§1.2 图去旧 L2/L3 标签（AGG/SRC）；§1.3 包图 2 处 ⚠️ 改 ✅（2026-08-20 fix-cross-app-firewall：filter_agents_for_user→ai_assistant.api、resolve_username→shared/users.py）；防火墙 ASCII 同步；简述"边界与隐患"更新；关联指针改 §3.2/§4.1/§二 L3 |
 | v1.0 | 2026-07-16 | 初始版本：基于 `项目架构.md` 和 `PRD-01-仪表盘.md` 重构 |

@@ -37,14 +37,14 @@ const ELEMENT_BREAKDOWN: ElementBreakdownDisplay[] = [
   { type: 'api', label: 'API接口', color: 'cream', icon: IconZap },
 ]
 
-// ── 数值格式化助手（单位换算：累计 token → 百万 M；平均每对话 token → 千 K）──
+// ── 数值格式化助手（单位换算：累计 token → 百万 M；平均每任务 token → 千 K）──
 
 /** 累计 token 展示数值：百万（M）单位，保留 2 位小数（供 StatsCard value 计数用） */
 export function toMillions(n: number): number {
   return Number((n / 1_000_000).toFixed(2))
 }
 
-/** 平均每对话 token 展示数值：千（K）单位，保留 1 位小数 */
+/** 平均每任务 token 展示数值：千（K）单位，保留 1 位小数 */
 export function toK(n: number): number {
   return Number((n / 1_000).toFixed(1))
 }

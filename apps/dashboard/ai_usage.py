@@ -1,6 +1,8 @@
-"""Dashboard AI 用量聚合 — 对话 / token / 缓存命中 + DeepSeek 费用。
+"""Dashboard AI 用量聚合 — 任务 / token / 缓存命中 + DeepSeek 费用。
 
-从 views.py 抽出以控制文件体量（views.py 已超 300 行上限）。纯只读聚合，无任何写操作。
+对话模式已移除（ARCH v3.4），AI 用量改按「任务」（AITask）统计：任务数量、
+每任务累计 token（工作流采集落库）与 DeepSeek 费用。从 views.py 抽出以控制文件体量。
+纯只读聚合，无任何写操作。
 """
 
 from datetime import timedelta
@@ -9,7 +11,8 @@ from django.db import OperationalError, ProgrammingError
 from django.db.models import Sum
 from django.utils import timezone
 
-from apps.ai_assistant.models import AIConversation, AIMessage
+from apps.ai_assistant.api import filter_agents_for_user
+from apps.ai_assistant.models import AIAgent, AITask
 
 # ── DeepSeek 计费单价（元 / 百万 tokens）─────────────────────────────────
 # 参考官方定价：https://api-docs.deepseek.com/zh-cn/quick_start/pricing
@@ -88,89 +91,95 @@ def deepseek_cost(input_tokens, output_tokens, cache_hit_tokens, model_name, cre
     )
 
 
-def _assistant_msgs(user_id):
-    """当前用户拥有的智能体产生的 assistant 消息（token 用量只统计 assistant）。"""
-    if user_id:
-        return AIMessage.objects.filter(conversation__agent__owner_id=user_id, role="assistant")
-    return AIMessage.objects.none()
+def _task_qs(user_id):
+    """当前用户可见智能体产生的任务（任务数 / token / 费用统一口径）。"""
+    agents = filter_agents_for_user(AIAgent.objects.all(), user_id)
+    return AITask.objects.filter(agent__in=agents)
 
 
-def _sum_cost(queryset):
-    """对 queryset 内的 DeepSeek 消息逐条计费并累加（元，保留 4 位小数）。"""
-    try:
-        rows = queryset.filter(model_name__istartswith="deepseek").values_list(
-            "created_at", "input_tokens", "tokens", "cache_input_tokens", "model_name"
+def _task_cost(task) -> float:
+    """单任务 DeepSeek 费用：遍历 model_usage 按模型单价计费（仅 DeepSeek 模型）。"""
+    mu = task.model_usage
+    if not isinstance(mu, dict):
+        return 0.0
+    ts = task.finished_at or task.created_at
+    total = 0.0
+    for model, m in mu.items():
+        if not _is_deepseek_model(model) or not isinstance(m, dict):
+            continue
+        total += deepseek_cost(
+            m.get("input_tokens") or 0,
+            m.get("output_tokens") or 0,
+            m.get("cache_input_tokens") or 0,
+            model,
+            ts,
         )
+    return round(total, 4)
+
+
+def _qs_cost(queryset):
+    """对任务 queryset 逐条计费并累加（元，保留 4 位小数）。"""
+    try:
+        tasks = list(queryset.only("finished_at", "created_at", "model_usage"))
     except (OperationalError, ProgrammingError):
         return 0.0
-    total = 0.0
-    for created_at, inp, out, hit, model in rows:
-        total += deepseek_cost(inp, out, hit, model, created_at)
-    return round(total, 4)
+    return round(sum(_task_cost(t) for t in tasks), 4)
 
 
 def ai_usage_stats(user_id):
     """AI 用量聚合（今日/累计），含 DeepSeek 费用。
 
-    返回：对话数、输入/输出 token、缓存命中 token/命中率、平均每对话 token、
+    返回：任务数量、输入/输出 token、缓存命中 token/命中率、平均每任务 token、
     DeepSeek 费用，各指标分 today / total 两组口径。
     """
     today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    task_qs = _task_qs(user_id)
 
-    conv_qs = (
-        AIConversation.objects.filter(agent__owner_id=user_id)
-        if user_id
-        else AIConversation.objects.none()
-    )
-    msg_qs = _assistant_msgs(user_id)
-
-    def safe_count(qs, filter_kwargs=None):
+    def safe_count(qs):
         try:
-            if filter_kwargs:
-                qs = qs.filter(**filter_kwargs)
             return qs.count()
         except (OperationalError, ProgrammingError):
             return 0
 
-    conv_total = safe_count(conv_qs)
-    conv_today = safe_count(conv_qs, {"created_at__gte": today_start})
+    task_total = safe_count(task_qs)
+    task_today = safe_count(task_qs.filter(created_at__gte=today_start))
 
     def agg(qs):
         """聚合输入/输出/缓存命中 token；表缺失时计 0。"""
         try:
             row = qs.aggregate(
                 inp=Sum("input_tokens"),
-                out=Sum("tokens"),
+                out=Sum("output_tokens"),
                 hit=Sum("cache_input_tokens"),
             )
         except (OperationalError, ProgrammingError):
             return 0, 0, 0
         return int(row["inp"] or 0), int(row["out"] or 0), int(row["hit"] or 0)
 
-    in_t, out_t, hit_t = agg(msg_qs)
-    in_d, out_d, hit_d = agg(msg_qs.filter(created_at__gte=today_start))
+    in_t, out_t, hit_t = agg(task_qs)
+    in_d, out_d, hit_d = agg(task_qs.filter(created_at__gte=today_start))
 
     def rate(hit, inp):
         # 缓存命中率 = 命中 token / 输入 token，返回百分比（0-100，1 位小数）
         return round(hit / inp * 100, 1) if inp else 0.0
 
-    def avg(inp, out, conv):
-        return int((inp + out) / conv) if conv else 0
+    def avg(inp, out, cnt):
+        return int((inp + out) / cnt) if cnt else 0
 
     return {
-        "conversation_count": {"today": conv_today, "total": conv_total},
+        "task_count": {"today": task_today, "total": task_total},
         "input_tokens": {"today": in_d, "total": in_t},
         "output_tokens": {"today": out_d, "total": out_t},
         "total_tokens": {"today": in_d + out_d, "total": in_t + out_t},
         "cache_hit_tokens": {"today": hit_d, "total": hit_t},
         "cache_hit_rate": {"today": rate(hit_d, in_d), "total": rate(hit_t, in_t)},
-        "avg_tokens_per_conversation": {
-            "today": avg(in_d, out_d, conv_today),
-            "total": avg(in_t, out_t, conv_total),
+        "avg_tokens_per_task": {
+            "today": avg(in_d, out_d, task_today),
+            "total": avg(in_t, out_t, task_total),
         },
         "deepseek_cost": {
-            "today": _sum_cost(msg_qs.filter(created_at__gte=today_start)),
-            "total": _sum_cost(msg_qs),
+            "today": _qs_cost(task_qs.filter(created_at__gte=today_start)),
+            "total": _qs_cost(task_qs),
         },
     }
 
@@ -192,10 +201,17 @@ def ai_daily_series(user_id, days=12):
     cost = [0.0] * days
 
     try:
-        rows = (
-            _assistant_msgs(user_id)
+        tasks = list(
+            _task_qs(user_id)
             .filter(created_at__gte=first_day)
-            .values_list("created_at", "input_tokens", "tokens", "cache_input_tokens", "model_name")
+            .only(
+                "created_at",
+                "input_tokens",
+                "output_tokens",
+                "cache_input_tokens",
+                "finished_at",
+                "model_usage",
+            )
         )
     except (OperationalError, ProgrammingError):
         return {
@@ -206,14 +222,15 @@ def ai_daily_series(user_id, days=12):
         }
 
     start_date = first_day.date()
-    for created_at, inp, out, hit, model in rows:
-        idx = (created_at.date() - start_date).days
+    for t in tasks:
+        idx = (t.created_at.date() - start_date).days
         if not 0 <= idx < days:
             continue
-        total_tokens[idx] += (inp or 0) + (out or 0)
-        cache_tokens[idx] += hit or 0
-        if _is_deepseek_model(model):
-            cost[idx] += deepseek_cost(inp, out, hit, model, created_at)
+        inp = t.input_tokens or 0
+        out = t.output_tokens or 0
+        total_tokens[idx] += inp + out
+        cache_tokens[idx] += t.cache_input_tokens or 0
+        cost[idx] += _task_cost(t)
 
     return {
         "labels": labels,

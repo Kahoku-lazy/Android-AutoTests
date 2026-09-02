@@ -2,12 +2,13 @@
 
 > 关联模块：`apps/dashboard/` · 前端：`frontend/src/modules/dashboard/`
 > 关联全局：[`需求大纲.md`](./需求大纲.md) §5.1
-> 版本：v5.7 · 状态：评审中 · 日期：2026-08-21
+> 版本：v5.8 · 状态：评审中 · 日期：2026-09-01
 
 **修订记录**
 
 | 版本 | 日期 | 变更摘要 |
 |------|------|----------|
+| v5.8 | 2026-09-01 | AI 用量口径由「对话」改为「任务」：对话模式已移除（ARCH v3.4），`conversation_count` → `task_count`、`avg_tokens_per_conversation` → `avg_tokens_per_task`；token/缓存/费用改按 `AITask` 统计（任务完成时工作流采集落库，`model_usage` 分模型计价） |
 | v5.7 | 2026-08-21 | AI 用量契约扩展：累计 token 前端以百万（M）、平均每对话 token 以千（K）展示；新增 DeepSeek 费用统计 `ai_usage.deepseek_cost`（官方价目可配置常量，高峰/空闲时段计费）；趋势数据新增 `charts.ai_tokens`（每日总 token + 缓存命中）与 `charts.deepseek_cost`（每日费用） |
 | v5.6 | 2026-08-21 | 组件契约校正：StatsCard props 补 prefix/suffix/live；最近动态 agent 圆点色改为 --c-dashboard（原「主题状态黄色」令牌不存在） |
 | v5.5 | 2026-08-19 | 设备口径统一（随 PRD-02 v6.2 两态化）：§4.1 在线/总数口径改「仅 ONLINE/BUSY 两态（离线即删），排除陈旧残留记录兜底」；§5.4 `offline`/`disconnected` 标注为 ⚠️ 兼容遗留字段（历史口径，通常为 0）；C-05 同步两态口径 |
@@ -375,13 +376,13 @@
 
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 |------|------|:--:|------|------|
-| `conversation_count` | object | 是 | `today`/`total` 整数 ≥0 | 对话总数 |
+| `task_count` | object | 是 | `today`/`total` 整数 ≥0 | 任务数量 |
 | `input_tokens` | object | 是 | 整数 ≥0 | 输入 token 数 |
 | `output_tokens` | object | 是 | 整数 ≥0 | 输出 token 数 |
 | `total_tokens` | object | 是 | 整数 ≥0；`= input + output` | 总 token 数 |
 | `cache_hit_tokens` | object | 是 | 整数 ≥0；`≤ input_tokens` | 缓存命中 token 数 |
 | `cache_hit_rate` | object | 是 | 浮点 0~100，1 位小数；输入为 0 时 = 0 | 缓存命中率（%） |
-| `avg_tokens_per_conversation` | object | 是 | 整数 ≥0；对话为 0 时 = 0 | 平均每对话 token（前端按 K 单位展示） |
+| `avg_tokens_per_task` | object | 是 | 整数 ≥0；任务为 0 时 = 0 | 平均每任务 token（前端按 K 单位展示） |
 | `deepseek_cost` | object | 是 | 浮点 ≥0，单位元；保留 4 位小数 | DeepSeek 模型累计/今日费用 |
 
 **子表⑥ `charts.ai_tokens` 内部字段**

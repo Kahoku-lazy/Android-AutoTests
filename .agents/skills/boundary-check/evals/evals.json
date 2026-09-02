@@ -1,0 +1,23 @@
+{
+  "skill_name": "boundary-check",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我在 apps/device_pool/service.py 里加了设备状态同步逻辑，图省事直接 import 了 airtest 拿设备信息，还直接改了 Device 表的 status 字段。帮我检查下有没有越界、该怎么改。",
+      "expected_output": "检测到两类违规：① 上层 import airtest 违反引擎边界（应走 engines 的 UiEngine 协议）；② 直接 ORM 改 Device.status 违反防火墙 #2（写库应走 device_pool.api）。给出 gen_arch_stats --check-boundaries 的 engine_leak 命中 + 修复方向。",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "前端新写了个组件，图省事直接 import axios from 'axios' 发请求拿数据了。这样是不是不行？前端正确的请求链路和校验方式是什么？",
+      "expected_output": "指出前端必须走「组件 → 模块 api.ts → shared/api-client.ts（唯一 HTTP 出口）→ /api/...」，给出校验命令 cd frontend && npm run lint && npm run depcruise（ESLint no-restricted-imports + dependency-cruiser 依赖图）。",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "改完这批代码要提交了，涉及 test_runner 和 case_manager 的跨模块改动，帮我扫一遍有没有跨模块 import 内部实现、直接写别人表、或者新增 WS 的问题。",
+      "expected_output": "执行 gen_arch_stats --check-boundaries（防火墙 #1/#2 + 引擎边界）和 pytest tests/arch/test_channels.py（四通道结构不变量），报告三类边界是否违规、给出白名单技术债与新增违规清单。",
+      "files": []
+    }
+  ]
+}

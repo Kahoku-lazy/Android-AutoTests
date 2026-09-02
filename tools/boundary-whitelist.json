@@ -1,6 +1,6 @@
 {
   "_comment": "已知模块边界违规白名单 — CI 只拦截新增违规，不拦截此列表中的条目。修复一条就从此列表删除一条。",
-  "_last_updated": "2026-07-15",
+  "_last_updated": "2026-09-01",
   "whitelist": [
     {
       "file": "apps/test_runner/state_machine.py",
@@ -96,6 +96,132 @@
       "td": "TD-04",
       "note": "AgentScope Tool import test_runner 内部实现 TestRunner（AgentScope 迁移到 ai_assistant/agent_scope 后路径更新）",
       "added": "2026-08-13"
+    },
+    {
+      "file": "apps/device_pool/pool.py",
+      "line": 47,
+      "pattern": "engine-leak",
+      "category": "raw_handle",
+      "td": "TD-06",
+      "note": "pool.u2d 兼容属性转发 engine.u2 裸句柄，应改为经 UiEngine 协议",
+      "added": "2026-09-01"
+    },
+    {
+      "file": "apps/device_pool/pool.py",
+      "line": 52,
+      "pattern": "engine-leak",
+      "category": "raw_handle",
+      "td": "TD-06",
+      "note": "pool.ad 兼容属性转发 engine.airtest 裸句柄，应改为经 UiEngine 协议",
+      "added": "2026-09-01"
+    },
+    {
+      "file": "apps/device_pool/service.py",
+      "line": 18,
+      "pattern": "engine-leak",
+      "category": "engine_impl",
+      "td": "TD-06",
+      "note": "直接 import 具体引擎实现 AirtestU2Engine，应经 engines.registry 工厂",
+      "added": "2026-09-01"
+    },
+    {
+      "file": "apps/device_pool/session.py",
+      "line": 15,
+      "pattern": "engine-leak",
+      "category": "engine_impl",
+      "td": "TD-06",
+      "note": "直接 import 具体引擎异常 EngineConnectError，应下沉到 engines.base 协议层",
+      "added": "2026-09-01"
+    },
+    {
+      "file": "apps/device_pool/views.py",
+      "line": 15,
+      "pattern": "engine-leak",
+      "category": "engine_impl",
+      "td": "TD-06",
+      "note": "直接 import 具体引擎实现 AirtestU2Engine，应经 engines.registry 工厂",
+      "added": "2026-09-01"
+    },
+    {
+      "file": "apps/test_runner/executors/ui/adapter.py",
+      "line": 41,
+      "pattern": "engine-leak",
+      "category": "raw_handle",
+      "td": "TD-06",
+      "note": "DeviceAdapter 直接持有 u2 裸句柄，应改依赖 UiEngine 协议",
+      "added": "2026-09-01"
+    },
+    {
+      "file": "apps/test_runner/executors/ui/adapter.py",
+      "line": 42,
+      "pattern": "engine-leak",
+      "category": "raw_handle",
+      "td": "TD-06",
+      "note": "DeviceAdapter 直接持有 airtest 裸句柄，应改依赖 UiEngine 协议",
+      "added": "2026-09-01"
+    },
+    {
+      "file": "apps/test_runner/executors/ui/connect.py",
+      "line": 16,
+      "pattern": "engine-leak",
+      "category": "engine_impl",
+      "td": "TD-06",
+      "note": "直接 import 具体引擎实现 AirtestU2Engine，应经 engines.registry 工厂",
+      "added": "2026-09-01"
+    },
+    {
+      "file": "apps/test_runner/executors/ui/connect.py",
+      "line": 117,
+      "pattern": "engine-leak",
+      "category": "raw_handle",
+      "td": "TD-06",
+      "note": "DeviceConnection 组装时取 engine.airtest/u2 裸句柄，应改存 UiEngine 协议",
+      "added": "2026-09-01"
+    },
+    {
+      "file": "apps/test_runner/executors/ui/connect.py",
+      "line": 129,
+      "pattern": "engine-leak",
+      "category": "raw_handle",
+      "td": "TD-06",
+      "note": "DeviceConnection 组装时取 engine.airtest/u2 裸句柄，应改存 UiEngine 协议",
+      "added": "2026-09-01"
+    },
+    {
+      "file": "apps/test_runner/executors/ui/recovery.py",
+      "line": 11,
+      "pattern": "engine-leak",
+      "category": "engine_impl",
+      "td": "TD-06",
+      "note": "直接 import 具体引擎实现 AirtestU2Engine，应经 engines.registry 工厂",
+      "added": "2026-09-01"
+    },
+    {
+      "file": "apps/test_runner/executors/ui/recovery.py",
+      "line": 106,
+      "pattern": "engine-leak",
+      "category": "raw_handle",
+      "td": "TD-06",
+      "note": "恢复检测直触 device_conn.airtest.display_info，应改经 UiEngine 协议",
+      "added": "2026-09-01"
+    },
+    {
+      "file": "apps/test_runner/executors/ui/recovery.py",
+      "line": 119,
+      "pattern": "engine-leak",
+      "category": "raw_handle",
+      "td": "TD-06",
+      "note": "恢复重建直触 engine.u2 裸句柄，应改经 UiEngine 协议",
+      "added": "2026-09-01"
+    },
+    {
+      "file": "apps/test_runner/executors/ui/recovery.py",
+      "line": 133,
+      "pattern": "engine-leak",
+      "category": "raw_handle",
+      "td": "TD-06",
+      "note": "DeviceConnection 组装时取 engine.airtest/u2 裸句柄，应改存 UiEngine 协议",
+      "added": "2026-09-01"
     }
   ]
 }

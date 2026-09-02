@@ -15,6 +15,7 @@ Architecture stats generator — 扫描代码库，输出当前架构的可度�
 
 import ast
 import json
+import logging
 import re
 import sys
 
@@ -428,6 +429,132 @@ def scan_cross_app_internal_imports():
     return new, known
 
 
+def _iter_code_line_nos(content):
+    """返回含真实代码的行号集合（跳过注释/字符串/docstring）。
+
+    tokenize 失败时返回 None（调用方退化为所有行皆代码）。
+    """
+    import io
+    import tokenize as _tokenize
+
+    code_lines = set()
+    try:
+        for tok in _tokenize.generate_tokens(io.StringIO(content).readline):
+            if tok.type not in (
+                _tokenize.COMMENT,
+                _tokenize.STRING,
+                _tokenize.NL,
+                _tokenize.NEWLINE,
+                _tokenize.INDENT,
+                _tokenize.DEDENT,
+                _tokenize.ENDMARKER,
+            ):
+                code_lines.add(tok.start[0])
+    except Exception:
+        return None
+    return code_lines
+
+
+def scan_engine_leak_violations():
+    """Detect engine capability leak to upper layers (L1c boundary).
+
+    Rule (architecture.md §七 引擎边界): only `engines/` may import third-party
+    engine libs (airtest/uiautomator2) or touch concrete engine implementations.
+    Upper layers (apps/, gateway/) must consume device capability ONLY via
+    `engines.base.UiEngine` protocol (obtained through `engines.registry`).
+
+    Detects 3 leak categories:
+      - engine_lib:  apps/gateway importing airtest/uiautomator2 directly
+      - engine_impl: apps/gateway importing engines.android concrete implementation
+      - raw_handle:  apps/gateway accessing .airtest / .u2 raw engine handles（仅代码行）
+
+    Returns (new_violations, known_violations) — new violations fail CI.
+    """
+    scan_dirs = [PROJECT_ROOT / "apps", PROJECT_ROOT / "gateway"]
+    whitelist = _load_boundary_whitelist()
+
+    # 行首 import 模式：[ \t] 而非 \s，避免 \s 跨空行吞换行导致行号偏移
+    import_patterns = [
+        (
+            "engine_lib",
+            re.compile(r"^[ \t]*(?:import|from)[ \t]+(airtest|uiautomator2)\b", re.MULTILINE),
+        ),
+        (
+            "engine_impl",
+            re.compile(r"^[ \t]*(?:import|from)[ \t]+engines\.android\b", re.MULTILINE),
+        ),
+    ]
+    raw_handle_re = re.compile(r"\.(?:airtest|u2)\b")
+
+    violations = []
+    for scan_dir in scan_dirs:
+        if not scan_dir.exists():
+            continue
+        for py_file in scan_dir.rglob("*.py"):
+            if "migrations" in str(py_file) or "__pycache__" in str(py_file):
+                continue
+            rel_path = str(py_file.relative_to(PROJECT_ROOT)).replace("\\", "/")
+            try:
+                content = py_file.read_text(encoding="utf-8")
+            except Exception:
+                continue
+            lines = content.split("\n")
+
+            for category, compiled in import_patterns:
+                for m in compiled.finditer(content):
+                    line_no = content[: m.start()].count("\n") + 1
+                    violations.append(
+                        {
+                            "file": rel_path,
+                            "line": line_no,
+                            "category": category,
+                            "snippet": lines[line_no - 1].strip()[:120],
+                        }
+                    )
+
+            code_lines = _iter_code_line_nos(content)
+            seen_raw = set()
+            for m in raw_handle_re.finditer(content):
+                line_no = content[: m.start()].count("\n") + 1
+                if code_lines is not None and line_no not in code_lines:
+                    continue
+                # 同一行同时访问 .airtest 与 .u2 只计一次（按行去重）
+                key = (rel_path, line_no)
+                if key in seen_raw:
+                    continue
+                seen_raw.add(key)
+                violations.append(
+                    {
+                        "file": rel_path,
+                        "line": line_no,
+                        "category": "raw_handle",
+                        "snippet": lines[line_no - 1].strip()[:120],
+                    }
+                )
+
+    # Match against whitelist（pattern == "engine-leak" 的条目）
+    def _key(v):
+        return f"{v['file']}:{v['line']}:engine-leak:{v['category']}"
+
+    known = []
+    new = []
+    whitelist_keys = set()
+    for w in whitelist:
+        if w.get("pattern") != "engine-leak":
+            continue
+        whitelist_keys.add(
+            f"{w.get('file', '')}:{w.get('line', 0)}:engine-leak:{w.get('category', '')}"
+        )
+
+    for v in violations:
+        if _key(v) in whitelist_keys:
+            known.append(v)
+        else:
+            new.append(v)
+
+    return new, known
+
+
 # ── 6. 步骤类型与设备状态 ──
 
 
@@ -622,6 +749,7 @@ def generate_markdown():
 def generate_json():
     """输出 JSON 格式（供 CI/hook 消费）。"""
     new_violations, known_violations = scan_orm_write_violations()
+    eng_new, eng_known = scan_engine_leak_violations()
     return json.dumps(
         {
             "django_apps": scan_django_apps(),
@@ -633,6 +761,10 @@ def generate_json():
                 "new": new_violations,
                 "known": known_violations,
             },
+            "engine_leak_violations": {
+                "new": eng_new,
+                "known": eng_known,
+            },
             "summary": {
                 "app_count": len(scan_django_apps()),
                 "table_count": sum(a["table_count"] for a in scan_django_apps()),
@@ -642,6 +774,8 @@ def generate_json():
                 "file_size_violation_count": len(scan_file_size_violations()),
                 "orm_write_violation_new": len(new_violations),
                 "orm_write_violation_known": len(known_violations),
+                "engine_leak_violation_new": len(eng_new),
+                "engine_leak_violation_known": len(eng_known),
             },
         },
         indent=2,
@@ -839,52 +973,163 @@ def update_agents_md():
 
 # ── CLI ──
 
+
+def _setup_boundary_logger():
+    """配置边界检查日志到 logs/boundary-check.log，返回 (logger, log_path)。"""
+    log_dir = PROJECT_ROOT / "logs"
+    log_dir.mkdir(exist_ok=True)
+    log_path = log_dir / "boundary-check.log"
+    logger = logging.getLogger("boundary-check")
+    for h in list(logger.handlers):
+        logger.removeHandler(h)
+        h.close()
+    handler = logging.FileHandler(log_path, encoding="utf-8")
+    handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    return logger, str(log_path)
+
+
+def _known_debt_lines(orm_known, imp_known, eng_known):
+    """返回已知技术债明细的文本行列表（--verbose 时打印 + 写日志）。"""
+    notes = {}
+    for w in _load_boundary_whitelist():
+        notes.setdefault((w.get("file", ""), w.get("line", 0)), w.get("note", ""))
+
+    def _note(v):
+        return notes.get((v["file"], v["line"]), "")
+
+    sections = []
+    if orm_known:
+        sections.append(
+            (
+                "防火墙 #2: 跨模块 ORM 写入",
+                [
+                    (
+                        f"  {v['file']}:{v['line']}  {v['model']}.{v['pattern']}",
+                        v["snippet"],
+                        _note(v),
+                    )
+                    for v in orm_known
+                ],
+            )
+        )
+    if imp_known:
+        sections.append(
+            (
+                "防火墙 #1: 跨模块内部实现 import",
+                [
+                    (
+                        f"  {v['file']}:{v['line']}  from apps.{v['source_app']}.{v['module']} import {v['imports']}",
+                        v["snippet"],
+                        _note(v),
+                    )
+                    for v in imp_known
+                ],
+            )
+        )
+    if eng_known:
+        sections.append(
+            (
+                "L1c 引擎边界: 引擎能力泄露上层",
+                [
+                    (f"  {v['file']}:{v['line']}  [{v['category']}]", v["snippet"], _note(v))
+                    for v in eng_known
+                ],
+            )
+        )
+
+    if not sections:
+        return []
+    lines = ["── 已知技术债明细（白名单，不阻塞）──"]
+    for title, items in sections:
+        lines.append(f"【{title}】")
+        for head, snippet, note in items:
+            lines.append(head)
+            if snippet:
+                lines.append(f"    → {snippet}")
+            if note:
+                lines.append(f"    ✎ {note}")
+        lines.append("")
+    return lines
+
+
 if __name__ == "__main__":
     if "--json" in sys.argv:
         print(generate_json())
     elif "--check-boundaries" in sys.argv:
+        verbose = "--verbose" in sys.argv or "-v" in sys.argv
+        logger, log_path = _setup_boundary_logger()
         exit_code = 0
 
         # Firewall #2: ORM write violations
         orm_new, orm_known = scan_orm_write_violations()
         # Firewall #1: Internal import violations
         imp_new, imp_known = scan_cross_app_internal_imports()
+        # L1c 引擎边界: 引擎能力泄露上层
+        eng_new, eng_known = scan_engine_leak_violations()
 
-        total_new = len(orm_new) + len(imp_new)
-        total_known = len(orm_known) + len(imp_known)
+        total_new = len(orm_new) + len(imp_new) + len(eng_new)
+        total_known = len(orm_known) + len(imp_known) + len(eng_known)
+
+        out = []  # 报告行（控制台打印 + 日志落盘）
 
         if total_new > 0:
-            print(f"╔══════════════════════════════════════════╗")
-            print(f"║  🔴 模块边界违规 — {total_new} 个新违规（已知 {total_known} 条技术债）║")
-            print(f"╚══════════════════════════════════════════╝")
-            print()
+            out.append("╔══════════════════════════════════════════╗")
+            out.append(f"║  🔴 模块边界违规 — {total_new} 个新违规（已知 {total_known} 条技术债）║")
+            out.append("╚══════════════════════════════════════════╝")
+            out.append("")
 
             if orm_new:
-                print(f"── 防火墙 #2: 跨模块 ORM 写入 ──")
+                out.append("── 防火墙 #2: 跨模块 ORM 写入 ──")
                 for v in orm_new:
-                    print(f"  {v['file']}:{v['line']}  {v['model']}.{v['pattern']}")
-                    print(f"    → {v['snippet']}")
-                print(f"  修复: 跨 App 写操作必须走目标 App 的 api.py")
-                print()
+                    out.append(f"  {v['file']}:{v['line']}  {v['model']}.{v['pattern']}")
+                    out.append(f"    → {v['snippet']}")
+                out.append("  修复: 跨 App 写操作必须走目标 App 的 api.py")
+                out.append("")
 
             if imp_new:
-                print(f"── 防火墙 #1: 跨模块内部实现 import ──")
+                out.append("── 防火墙 #1: 跨模块内部实现 import ──")
                 for v in imp_new:
-                    print(
+                    out.append(
                         f"  {v['file']}:{v['line']}  from apps.{v['source_app']}.{v['module']} import {v['imports']}"
                     )
-                    print(f"    → {v['snippet']}")
-                print(f"  修复: 跨 App 只能 import api.py 或 models，禁止 import 内部实现")
-                print()
+                    out.append(f"    → {v['snippet']}")
+                out.append("  修复: 跨 App 只能 import api.py 或 models，禁止 import 内部实现")
+                out.append("")
 
-            print(f"  如果是有意豁免，请添加到 tools/boundary-whitelist.json")
+            if eng_new:
+                out.append("── L1c 引擎边界: 引擎能力泄露上层 ──")
+                for v in eng_new:
+                    out.append(f"  {v['file']}:{v['line']}  [{v['category']}]")
+                    out.append(f"    → {v['snippet']}")
+                out.append(
+                    "  修复: 上层只经 engines.base.UiEngine 协议 / engines.registry 工厂消费设备能力"
+                )
+                out.append("")
+
+            out.append("  如果是有意豁免，请添加到 tools/boundary-whitelist.json")
+            if verbose and total_known:
+                out.extend(_known_debt_lines(orm_known, imp_known, eng_known))
             exit_code = 1
         else:
             if total_known:
-                print(f"✅ 模块边界检查通过（已知 {total_known} 条技术债已登记）")
+                out.append(f"✅ 模块边界检查通过（已知 {total_known} 条技术债已登记）")
+                if verbose:
+                    out.extend(_known_debt_lines(orm_known, imp_known, eng_known))
             else:
-                print(f"✅ 模块边界检查通过 — 零违规")
+                out.append("✅ 模块边界检查通过 — 零违规")
             exit_code = 0
+
+        # 写日志（整份报告一次落盘，带时间戳前缀）
+        logger.info("\n".join(out))
+
+        # 控制台：首行说明日志路径，再打印明细
+        print(f"📝 详细日志: {log_path}")
+        print()
+        for line in out:
+            print(line)
 
         sys.exit(exit_code)
     elif "--check-frontend" in sys.argv:

@@ -62,6 +62,7 @@ __all__ = [
     "save_message",
     # 任务操作
     "create_task",
+    "start_task",
     "finalize_task",
     # 加密工具
     "encrypt_key",
@@ -335,7 +336,7 @@ def get_platform_tool_enabled_map() -> dict[str, bool]:
 
     默认（无记录）＝启用；`ai_platform_tools` 仅存停用记录（enabled=False）。
     """
-    from apps.ai_assistant.agent_scope.tools import TOOLS
+    from apps.ai_assistant.tools import TOOLS
 
     disabled = set(AIPlatformTool.objects.filter(enabled=False).values_list("name", flat=True))
     return {name: name not in disabled for name in TOOLS}
@@ -539,6 +540,14 @@ def create_task(
     )
 
 
+def start_task(task: AITask) -> AITask:
+    """标记任务开始执行（异步执行线程启动时调用）。"""
+    task.status = "running"
+    task.started_at = timezone.now()
+    task.save(update_fields=["status", "started_at"])
+    return task
+
+
 def finalize_task(
     task: AITask,
     *,
@@ -677,7 +686,7 @@ def get_provider_config(provider: str, base_url: str = "", model_name: str = "")
     """获取模型 provider 的 API 配置（base_url + api_key 模式）。
     供 evaluator 等跨模块调用，避免直接导入 agent_scope.provider_registry。
     """
-    from apps.ai_assistant.agent_scope.provider_registry import get_provider_config as _get
+    from apps.ai_assistant.provider_registry import get_provider_config as _get
 
     return _get(provider, base_url)
 

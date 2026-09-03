@@ -22,17 +22,20 @@
 
 import json
 import logging
+import threading
 
 from datetime import datetime, timedelta
 
+from django.conf import settings
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import api
-from .agent_scope.provider_registry import get_provider_config
+from engines.ai.registry import get_ai_engine
+
+from . import api, engine_adapter
 from .models import AIAgent, AIConversation, AIMessage, AITask
 from .permissions import (
     check_agent_owner,
@@ -43,6 +46,7 @@ from .permissions import (
     filter_agents_for_user,
     filter_conversations_for_user,
 )
+from .provider_registry import get_provider_config
 from .serializers import (
     AgentDetailSerializer,
     AgentInputSerializer,
@@ -533,7 +537,7 @@ class AvailableToolsAPIView(APIView):
     """GET /api/ai/available-tools — 平台业务工具（按分类，含全局启用状态）。"""
 
     def get(self, request):
-        from .agent_scope.tools import TOOL_CATEGORIES, list_tool_schemas
+        from .tools import TOOL_CATEGORIES, list_tool_schemas
 
         enabled_map = api.get_platform_tool_enabled_map()
         tools_by_category = {}
@@ -575,8 +579,8 @@ class PlatformToolToggleAPIView(APIView):
     """
 
     def post(self, request):
-        from .agent_scope.tools import list_tool_schemas
         from .permissions import _is_superuser
+        from .tools import list_tool_schemas
 
         if not _is_superuser(_user_id(request)):
             raise PermissionDenied("Forbidden")
@@ -889,97 +893,32 @@ def _serialize_ai_task(t, total=0, passed=0):
 # ═══════════════════════════════════════════════════════════════════
 
 
-def _resolve_device_serial() -> str:
-    """取第一台在线设备 serial；无设备返回空。"""
-    from apps.device_pool.api import get_online_devices
-
-    devices = get_online_devices()
-    if not devices:
-        return ""
-    return devices[0].serial or ""
-
-
-def _build_device_execution(agent: AIAgent, route: str):
-    """从 route_configs 的某条线路构建 DeviceExecution（三模型配置）。"""
-    from .agent_scope.config import DeviceExecutionConfig, ModelConfig
-    from .agent_scope.model import DeviceExecution
-
-    route_cfg = (agent.route_configs or {}).get(route) or {}
-
-    def _cfg(m: dict) -> ModelConfig:
-        return ModelConfig(
-            provider=m.get("provider", "deepseek"),
-            model_name=m.get("model_name", ""),
-            api_key=api.decrypt_key(m.get("api_key", "")),
-            base_url=m.get("base_url", ""),
+def _run_task_async(task_id: int, agent_id: int) -> None:
+    """后台线程入口：经引擎工厂执行并落终态（completed/failed + result + usage）。"""
+    try:
+        agent = AIAgent.objects.get(id=agent_id)
+        task = AITask.objects.get(id=task_id)
+        req = engine_adapter.build_request(task, agent)
+        result = get_ai_engine(settings.AI_ENGINE).run(req)
+        status = "completed" if result.status == "success" else "failed"
+        api.finalize_task(
+            task,
+            status=status,
+            result=result.summary,
+            usage=result.usage,
         )
-
-    config = DeviceExecutionConfig(
-        planner=_cfg(route_cfg.get("planner") or {}),
-        executor=_cfg(route_cfg.get("executor") or {}),
-        verifier=_cfg(route_cfg.get("verifier") or {}),
-        max_loops=int(agent.max_loops or 3),
-    )
-    return DeviceExecution(config, user_id=str(agent.owner_id or ""))
-
-
-def _run_device_control(agent: AIAgent, goal: str, serial: str = "") -> dict:
-    """控制设备线路：规划 → 执行 → 验收（三模型工作流，同步执行，后续可迁异步）。"""
-    import asyncio
-
-    from .agent_scope.workflow import DeviceExecutionWorkflow
-
-    dev = _build_device_execution(agent, "device_control")
-    workflow = DeviceExecutionWorkflow(dev, serial=serial or _resolve_device_serial())
-    return asyncio.run(workflow.run(goal))
-
-
-def _build_platform_task(agent: AIAgent, route: str):
-    """从 route_configs 的某条线路构建 PlatformTask（三模型配置）。"""
-    from .agent_scope.config import ModelConfig, PlatformTaskConfig
-    from .agent_scope.model import PlatformTask
-
-    route_cfg = (agent.route_configs or {}).get(route) or {}
-
-    def _cfg(m: dict) -> ModelConfig:
-        return ModelConfig(
-            provider=m.get("provider", "deepseek"),
-            model_name=m.get("model_name", ""),
-            api_key=api.decrypt_key(m.get("api_key", "")),
-            base_url=m.get("base_url", ""),
-        )
-
-    config = PlatformTaskConfig(
-        planner=_cfg(route_cfg.get("planner") or {}),
-        executor=_cfg(route_cfg.get("executor") or {}),
-        verifier=_cfg(route_cfg.get("verifier") or {}),
-        max_loops=int(agent.max_loops or 3),
-    )
-    return PlatformTask(config, user_id=str(agent.owner_id or ""))
-
-
-def _run_platform_task(
-    agent: AIAgent,
-    goal: str,
-    requirements: str = "",
-    checklist: str = "",
-    report_name: str = "",
-    serial: str = "",
-) -> dict:
-    """平台任务线路：规划 → 执行 → 验收（三模型工作流，同步执行，后续可迁异步）。"""
-    import asyncio
-
-    from .agent_scope.workflow import PlatformTaskWorkflow
-
-    pt = _build_platform_task(agent, "platform_task")
-    workflow = PlatformTaskWorkflow(pt, serial=serial or _resolve_device_serial())
-    return asyncio.run(
-        workflow.run(goal, requirements=requirements, checklist=checklist, report_name=report_name)
-    )
+    except Exception as exc:
+        logger.exception("async task failed id=%s", task_id)
+        try:
+            api.finalize_task(
+                AITask.objects.get(id=task_id), status="failed", result=f"执行异常: {exc}"
+            )
+        except Exception:
+            logger.exception("finalize async task failed id=%s", task_id)
 
 
 class TaskSubmitAPIView(APIView):
-    """POST /api/ai/tasks/submit — 提交任务并按线路分发执行。"""
+    """POST /api/ai/tasks/submit — 提交任务并异步执行（后台线程，立即返回）。"""
 
     def post(self, request):
         serializer = TaskSubmitInputSerializer(data=request.data)
@@ -1004,46 +943,15 @@ class TaskSubmitAPIView(APIView):
             report_name=data.get("report_name", ""),
             device_serial=device_serial,
         )
+        api.start_task(task)
 
-        if route == "platform_task":
-            try:
-                result = _run_platform_task(
-                    agent,
-                    goal,
-                    requirements=data.get("requirements", ""),
-                    checklist=data.get("checklist", ""),
-                    report_name=data.get("report_name", ""),
-                    serial=device_serial,
-                )
-            except Exception as exc:
-                logger.exception("platform_task failed id=%s", task.id)
-                api.finalize_task(task, status="failed", result=f"执行异常: {exc}")
-                return Response({"id": task.id, "status": task.status, "result": task.result})
+        threading.Thread(
+            target=_run_task_async,
+            args=(task.id, agent.id),
+            daemon=True,
+        ).start()
 
-            status = "completed" if result.get("status") == "success" else "failed"
-            api.finalize_task(
-                task,
-                status=status,
-                result=json.dumps(result, ensure_ascii=False),
-                usage=result.get("usage"),
-            )
-            return Response({"id": task.id, "status": task.status, "result": task.result})
-
-        try:
-            result = _run_device_control(agent, goal, serial=device_serial)
-        except Exception as exc:
-            logger.exception("device_control task failed id=%s", task.id)
-            api.finalize_task(task, status="failed", result=f"执行异常: {exc}")
-            return Response({"id": task.id, "status": task.status, "result": task.result})
-
-        status = "completed" if result.get("status") == "success" else "failed"
-        api.finalize_task(
-            task,
-            status=status,
-            result=result.get("assertion", ""),
-            usage=result.get("usage"),
-        )
-        return Response({"id": task.id, "status": task.status, "result": task.result})
+        return Response({"id": task.id, "status": task.status, "result": ""})
 
 
 class AgentTaskListAPIView(APIView):

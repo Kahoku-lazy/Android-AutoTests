@@ -8,7 +8,7 @@ import json
 
 from rest_framework import serializers
 
-from apps.ai_assistant.agent_scope.provider_registry import VALID_PROVIDERS, validate_base_url
+from apps.ai_assistant.provider_registry import VALID_PROVIDERS, validate_base_url
 
 # ═══════════════════════════════════════════════════════════════════
 # Agent 输入（创建/更新共用；业务默认值仍在 api.py 应用，与旧视图一致）

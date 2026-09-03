@@ -1,18 +1,13 @@
-"""平台工具 — 普通 Python 函数 + FunctionTool 包装（框架能力，不重写）。
+"""平台工具 — 框架无关的纯函数 + 工具注册表（Django 层）。
 
-工具 = 普通函数（类型注解 + docstring 自动推导 schema），经 `PlatformFunctionTool`
-包装。`user_id` 由工具构造时注入，不出现在 LLM 可见的 input_schema 里。
+工具 = 普通函数（类型注解 + docstring 自动推导 schema），只调各 App api.py。
+框架包装（PlatformFunctionTool / build_toolkit）在 `engines.ai.agentscope.tool_wrapper`，
+经 `TaskRequest.tools` 注入引擎；`user_id` 由包装层构造时注入。
 """
 
 from __future__ import annotations
 
-import asyncio
-import inspect
 import json
-
-from agentscope.message import Base64Source, DataBlock, TextBlock
-from agentscope.permission import PermissionBehavior, PermissionDecision
-from agentscope.tool import FunctionTool, ToolChunk, Toolkit
 
 # ═══════════════════════════════════════════════════════════════════
 # 结果序列化辅助
@@ -38,55 +33,6 @@ def _jsonable(obj) -> str:
     if isinstance(obj, (dict, str, int, float, bool)):
         return obj if isinstance(obj, str) else json.dumps(obj, ensure_ascii=False, default=str)
     return json.dumps(obj, ensure_ascii=False, default=str)
-
-
-# ═══════════════════════════════════════════════════════════════════
-# 权限子类：user_id 注入 + 只读自动放行
-# ═══════════════════════════════════════════════════════════════════
-
-
-class PlatformFunctionTool(FunctionTool):
-    """平台工具：构造时绑定 user_id，只读/内部锁自动放行、其余写操作 ASK。"""
-
-    def __init__(
-        self,
-        func,
-        user_id: str = "",
-        is_read_only: bool = False,
-        auto_allow: bool = False,
-        is_concurrency_safe: bool = True,
-    ):
-        # 写工具（is_read_only=False）必须串行执行，否则模型一次返回多个 tool_call
-        # 时 device_action/click_ratio 等会并发执行，破坏设备动作顺序。
-        super().__init__(
-            func,
-            is_read_only=is_read_only,
-            is_concurrency_safe=is_concurrency_safe,
-        )
-        self._user_id = user_id
-        self._auto_allow = auto_allow
-        # 从 LLM 可见 schema 中移除 user_id（运行时注入，不暴露给模型）
-        props = self.input_schema.get("properties", {})
-        props.pop("user_id", None)
-        required = self.input_schema.get("required", [])
-        if "user_id" in required:
-            required.remove("user_id")
-
-    async def call(self, **kwargs):
-        kwargs.setdefault("user_id", self._user_id)
-        # 同步 handler 转线程执行，避免 async 上下文直调同步 Django ORM 触发
-        # SynchronousOnlyOperation（平台 handler 均为同步函数，返回 JSON 字符串）。
-        if inspect.iscoroutinefunction(self._func):
-            return await super().call(**kwargs)
-        result = await asyncio.to_thread(self._func, **kwargs)
-        return self._convert_func_result_to_chunk(result)
-
-    async def check_permissions(self, tool_input, context):
-        if self.is_read_only:
-            return PermissionDecision(PermissionBehavior.ALLOW, "只读工具直接放行")
-        if self._auto_allow:
-            return PermissionDecision(PermissionBehavior.ALLOW, "平台内部锁，自动放行")
-        return PermissionDecision(PermissionBehavior.ASK, "写工具需确认")
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -154,21 +100,43 @@ def device_action(
         text: input_text 的文本
         clear_first: input_text 前是否清空，默认 True
     """
-    from apps.device_pool.api import device_action as _f
+    from apps.device_pool.api import use_device
+    from apps.device_pool.models import Device
+    from engines.device.registry import close_engine, open_engine
 
-    return _jsonable(
-        _f(
-            serial=serial,
-            action=action,
-            package=package,
-            x=x or None,
-            y=y or None,
-            direction=direction,
-            distance=distance,
-            text=text,
-            clear_first=bool(clear_first),
-        )
-    )
+    use_device(serial)
+    dev = Device.objects.get(serial=serial)
+    engine = open_engine(serial, dev.connection_addr or serial)
+    try:
+        if action == "start_app":
+            if not package:
+                raise ValueError("start_app 需要 package 参数")
+            engine.start_app(package)
+        elif action == "stop_app":
+            if not package:
+                raise ValueError("stop_app 需要 package 参数")
+            engine.stop_app(package)
+        elif action == "back":
+            engine.press_key("back")
+        elif action == "click":
+            if not x or not y:
+                raise ValueError("click 需要 x/y 坐标")
+            engine.click(x, y)
+        elif action == "long_click":
+            if not x or not y:
+                raise ValueError("long_click 需要 x/y 坐标")
+            engine.long_click(x, y)
+        elif action == "swipe":
+            engine.swipe_direction(direction or "up", int(distance or 500))
+        elif action == "input_text":
+            engine.input_text(text or "", clear_first=bool(clear_first))
+        elif action == "current":
+            pass
+        else:
+            raise ValueError(f"不支持的设备动作: {action}")
+        return _jsonable(engine.app_current())
+    finally:
+        close_engine(engine)
 
 
 def click_ratio(serial: str, nx: float, ny: float, user_id: str = "") -> str:
@@ -178,17 +146,18 @@ def click_ratio(serial: str, nx: float, ny: float, user_id: str = "") -> str:
         nx: 横向相对位置 0~1（0=最左，1=最右）
         ny: 纵向相对位置 0~1（0=最上，1=最下）
     """
-    from apps.device_pool.api import device_action as _action
     from apps.device_pool.api import use_device
-    from apps.device_pool.pool import device as _device
+    from apps.device_pool.models import Device
+    from engines.device.registry import close_engine, open_engine
 
     use_device(serial)
-    info = _device.info()
-    w = int(info.get("displayWidth", 0) or 1440)
-    h = int(info.get("displayHeight", 0) or 3040)
-    x = int(float(nx) * w)
-    y = int(float(ny) * h)
-    return _jsonable(_action(serial=serial, action="click", x=x, y=y))
+    dev = Device.objects.get(serial=serial)
+    engine = open_engine(serial, dev.connection_addr or serial)
+    try:
+        engine.click_ratio(nx, ny)
+        return _jsonable(engine.app_current())
+    finally:
+        close_engine(engine)
 
 
 def drag_ratio(
@@ -207,19 +176,18 @@ def drag_ratio(
         nx2: 终点横向相对位置 0~1
         ny2: 终点纵向相对位置 0~1
     """
-    from apps.device_pool.api import device_action as _action
     from apps.device_pool.api import use_device
-    from apps.device_pool.pool import device as _device
+    from apps.device_pool.models import Device
+    from engines.device.registry import close_engine, open_engine
 
     use_device(serial)
-    info = _device.info()
-    w = int(info.get("displayWidth", 0) or 1440)
-    h = int(info.get("displayHeight", 0) or 3040)
-    x1 = int(float(nx1) * w)
-    y1 = int(float(ny1) * h)
-    x2 = int(float(nx2) * w)
-    y2 = int(float(ny2) * h)
-    return _jsonable(_action(serial=serial, action="drag", x=x1, y=y1, x2=x2, y2=y2))
+    dev = Device.objects.get(serial=serial)
+    engine = open_engine(serial, dev.connection_addr or serial)
+    try:
+        engine.drag_ratio(nx1, ny1, nx2, ny2)
+        return _jsonable(engine.app_current())
+    finally:
+        close_engine(engine)
 
 
 def list_apps(serial: str, query: str = "", user_id: str = "") -> str:
@@ -228,9 +196,27 @@ def list_apps(serial: str, query: str = "", user_id: str = "") -> str:
         serial: 设备序列号
         query: 包名关键词过滤
     """
-    from apps.device_pool.api import list_apps as _f
+    from apps.device_pool.api import use_device
+    from apps.device_pool.models import Device
+    from engines.device.registry import close_engine, open_engine
 
-    return _jsonable(_f(serial=serial, query=query or ""))
+    use_device(serial)
+    dev = Device.objects.get(serial=serial)
+    engine = open_engine(serial, dev.connection_addr or serial)
+    try:
+        raw = engine.shell("pm list packages")
+    finally:
+        close_engine(engine)
+
+    packages = []
+    for line in (raw or "").splitlines():
+        line = line.strip()
+        if not line.startswith("package:"):
+            continue
+        pkg = line[len("package:") :].strip()
+        if pkg and (not query or query.lower() in pkg.lower()):
+            packages.append(pkg)
+    return _jsonable({"packages": packages, "count": len(packages)})
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -297,7 +283,7 @@ def save_page_to_elements(
     )
 
 
-def screenshot_page(serial: str, user_id: str = "") -> ToolChunk:
+def screenshot_page(serial: str, user_id: str = "") -> dict:
     """截取设备当前屏幕并返回图片（给视觉模型看图）。轻量：仅校验设备 + 截图，不 dump/OCR/落库。
     Args:
         serial: 设备序列号
@@ -334,12 +320,10 @@ def screenshot_page(serial: str, user_id: str = "") -> ToolChunk:
         "screen_w": data.get("screen_w"),
         "screen_h": data.get("screen_h"),
     }
-    return ToolChunk(
-        content=[
-            TextBlock(text=json.dumps(summary, ensure_ascii=False, default=str)),
-            DataBlock(source=Base64Source(data=img_b64, media_type="image/jpeg")),
-        ]
-    )
+    return {
+        "image": {"base64": img_b64, "media_type": "image/jpeg"},
+        "summary": summary,
+    }
 
 
 def analyze_page(serial: str = "", snapshot_id: int = 0, user_id: str = "") -> str:
@@ -914,23 +898,6 @@ TOOLS: dict[str, tuple] = {
 }
 
 
-def build_toolkit(tool_names: list[str], user_id: str = "") -> Toolkit:
-    """按工具名子集，从注册表取函数 → PlatformFunctionTool → Toolkit。"""
-    tools = []
-    for name in tool_names:
-        func, read_only = TOOLS[name]
-        tools.append(
-            PlatformFunctionTool(
-                func,
-                user_id=user_id,
-                is_read_only=read_only,
-                auto_allow=name in AUTO_ALLOW_TOOLS,
-                is_concurrency_safe=read_only,
-            )
-        )
-    return Toolkit(tools=tools)
-
-
 # ═══════════════════════════════════════════════════════════════════
 # 工具分类元数据（供管理端 available-tools / 工具箱 / HTTP 网关）
 # ═══════════════════════════════════════════════════════════════════
@@ -1011,70 +978,3 @@ def resolve_by_module_action(module: str, action: str):
         if m == module and a == action:
             return TOOLS[name][0]
     return None
-
-
-# ── 工具子集（供各智能体装配）──
-
-VISION_TOOLS = [
-    # 设备管理
-    "get_online_devices",
-    "list_devices",
-    "acquire_device",
-    "release_device",
-    "device_action",
-    "click_ratio",
-    "drag_ratio",
-    "list_apps",
-    # 设备检查器
-    "capture_page",
-    "screenshot_page",
-    "analyze_page",
-    "save_page_to_elements",
-    "save_page_semantic",
-]
-
-# 验收模型工具：截图二次确认 + 页面分析
-VERIFIER_TOOLS = ["screenshot_page", "analyze_page"]
-
-# 平台任务验收模型工具：只读查询子集，二次确认产物已落库 / 结果正确
-PLATFORM_VERIFIER_TOOLS = [
-    "get_case",
-    "search_cases",
-    "debug_case",
-    "fetch_page_elements",
-    "list_pages",
-    "search_elements",
-    "get_page_flow",
-    "list_page_flows",
-    "get_run_results",
-    "get_run_status",
-]
-
-REASONING_TOOLS = [
-    # 元素定位
-    "search_elements",
-    "list_pages",
-    "fetch_page_elements",
-    "list_web_groups",
-    "search_web_elements",
-    "list_api_groups",
-    "search_api_endpoints",
-    "create_page_flow",
-    # 用例管理
-    "save_case",
-    "get_case",
-    "save_api_test_case",
-    "debug_case",
-    "list_case_directories",
-    "search_cases",
-    # 测试执行
-    "run_test",
-    "get_run_results",
-    "get_run_status",
-    "stop_run",
-    "sleep",
-    # 工作流
-    "list_page_flows",
-    "get_page_flow",
-    "save_page_flow",
-]

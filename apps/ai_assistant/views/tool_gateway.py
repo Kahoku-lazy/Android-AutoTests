@@ -16,7 +16,7 @@ from django.db.models.query import QuerySet
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from apps.ai_assistant.agent_scope.tools import (
+from apps.ai_assistant.tools import (
     TOOL_CATEGORIES,
     list_tool_schemas,
     resolve_by_module_action,

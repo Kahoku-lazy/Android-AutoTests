@@ -22,14 +22,21 @@ from pathlib import Path
 from agentscope.message import UserMsg
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.ai_assistant.agent_scope.config import DeviceExecutionConfig, ModelConfig
-from apps.ai_assistant.agent_scope.model import DeviceExecution
-from apps.ai_assistant.agent_scope.workflow import (
+from apps.ai_assistant.api import (
+    create_task,
+    decrypt_key,
+    finalize_task,
+    get_platform_agent,
+    get_provider_config,
+)
+from apps.ai_assistant.engine_adapter import build_tool_specs
+from engines.ai.agentscope.config import DeviceExecutionConfig, ModelConfig
+from engines.ai.agentscope.model import DeviceExecution
+from engines.ai.agentscope.workflow import (
     DeviceExecutionWorkflow,
     PlannerOutput,
     VerificationResult,
 )
-from apps.ai_assistant.api import create_task, decrypt_key, finalize_task, get_platform_agent
 
 logger = logging.getLogger("ai_assistant.model_test")
 
@@ -60,7 +67,7 @@ def _build_device_execution(agent) -> DeviceExecution:
             provider=m.get("provider", "deepseek"),
             model_name=m.get("model_name", ""),
             api_key=decrypt_key(m.get("api_key", "")),
-            base_url=m.get("base_url", ""),
+            base_url=get_provider_config(m.get("provider", "deepseek"), m.get("base_url", ""))["base_url"],
         )
 
     config = DeviceExecutionConfig(
@@ -69,7 +76,7 @@ def _build_device_execution(agent) -> DeviceExecution:
         verifier=_cfg(route_cfg.get("verifier") or {}),
         max_loops=int(agent.max_loops or 3),
     )
-    return DeviceExecution(config, user_id=str(agent.owner_id or ""))
+    return DeviceExecution(config, tools=build_tool_specs(), user_id=str(agent.owner_id or ""))
 
 
 def _resolve_serial(specified: str) -> str:

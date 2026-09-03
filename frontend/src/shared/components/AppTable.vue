@@ -11,6 +11,8 @@ const props = defineProps({
   emptyText: { type: String, default: '暂无数据' },
   /** fixed 时弹性列会吃掉剩余宽度，适合需要铺满容器的列表 */
   tableLayout: { type: String, default: 'auto' },
+  /** el-table row-class-name，可传函数或字符串 */
+  rowClassName: { type: [Function, String], default: undefined },
 })
 
 /** 单元格插槽类型 — record 透传行数据，消费方自行窄化 */
@@ -40,6 +42,7 @@ const elColumns = computed(() =>
       width,
       minWidth,
       align: col.align,
+      headerAlign: col.headerAlign || col.align,
       fixed: col.fixed,
       sortable: col.sortable,
       showOverflowTooltip: col.showOverflowTooltip ?? true,
@@ -59,6 +62,7 @@ const elColumns = computed(() =>
     style="width: 100%"
     :table-layout="tableLayout as any"
     :empty-text="emptyText"
+    :row-class-name="rowClassName as any"
   >
     <el-table-column
       v-for="col in elColumns"
@@ -68,6 +72,7 @@ const elColumns = computed(() =>
       :width="col.width"
       :min-width="col.minWidth"
       :align="col.align"
+      :header-align="col.headerAlign"
       :fixed="col.fixed"
       :sortable="col.sortable"
       :show-overflow-tooltip="col.showOverflowTooltip"

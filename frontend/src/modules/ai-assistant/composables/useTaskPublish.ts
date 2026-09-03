@@ -73,7 +73,7 @@ export function useTaskPublish() {
       }
       const data = await submitTask(payload)
       if (data.status) {
-        ElMessage.success('任务已提交')
+        ElMessage.success('任务已提交，正在后台执行')
         form.value = emptyForm()
         onSuccess?.()
       } else {

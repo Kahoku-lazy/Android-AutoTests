@@ -66,6 +66,8 @@ export type ConnectionTypeLabelMap = Record<string, string>
 export interface FilterTabConfig {
   key: DeviceFilterKey
   label: string
+  /** 可选数量角标（如全部 / 在线 / 使用中） */
+  count?: number
 }
 
 export interface ColumnConfig {
@@ -74,7 +76,10 @@ export interface ColumnConfig {
   minWidth?: number
   width?: number
   align?: string
+  /** 表头对齐；缺省跟 align */
+  headerAlign?: string
   fixed?: string
+  showOverflowTooltip?: boolean
 }
 
 export interface DevicePageHeader {

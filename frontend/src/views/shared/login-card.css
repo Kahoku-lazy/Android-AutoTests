@@ -1,7 +1,7 @@
 /* 登录卡片共享尺寸 — LoginCard / RegisterCard / AccountSwitchPrompt 共用（便签纸风格） */
 
 .login-card {
-  width: 380px;
+  width: var(--login-panel-width, 380px);
   box-sizing: border-box;
   position: relative;
   overflow: visible !important;

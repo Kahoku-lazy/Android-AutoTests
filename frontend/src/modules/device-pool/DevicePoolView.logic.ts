@@ -19,6 +19,10 @@ import {
   PAGE_SIZE_OPTIONS,
   CARD_GROUPS,
   EMPTY_TEXT,
+  TABLE_HEADER_HEIGHT_PX,
+  TABLE_ROW_HEIGHT_PX,
+  TABLE_MIN_WIDTH_PX,
+  DEFAULT_PAGE_SIZE,
 } from './constants'
 import {
   displayModel,
@@ -28,6 +32,7 @@ import {
   formatRelativeTime,
   statusTag,
 } from './helpers'
+import { useTableDragScroll } from './composables/useTableDragScroll'
 
 // ── 返回类型接口 ──
 
@@ -78,6 +83,7 @@ export interface DevicePoolViewState {
   cancelDisconnectDialog: () => void
   // helpers
   isRowSelected: (record: DeviceRecord) => boolean
+  deviceRowClassName: (data: { row: DeviceRecord }) => string
   displayModel: typeof displayModel
   connectionLabel: typeof connectionLabel
   deviceAddress: typeof deviceAddress
@@ -87,9 +93,15 @@ export interface DevicePoolViewState {
   // constants
   PAGE_HEADER: typeof PAGE_HEADER
   FILTER_TABS: typeof FILTER_TABS
+  filterTabs: ComputedRef<Array<{ key: DeviceFilterKey; label: string; count: number }>>
   COLUMNS: typeof COLUMNS
   CARD_GROUPS: typeof CARD_GROUPS
   EMPTY_TEXT: typeof EMPTY_TEXT
+  /** 表格区域最小高度（跟随显示行数：5→5 行高，10→10 行高） */
+  tableMinHeightPx: ComputedRef<number>
+  tableMinWidthPx: number
+  tableWrapRef: Ref<HTMLElement | null>
+  onTablePointerDown: (e: PointerEvent) => void
 }
 
 // ── Composable ──
@@ -108,7 +120,7 @@ export function useDevicePoolView(): DevicePoolViewState {
   const viewMode = ref<DeviceViewMode>('table')
   const activeFilter = ref<DeviceFilterKey>('all')
 
-  // 5. KPI computed
+  // 5. KPI computed（供筛选 Tab 数量，不再单独展示 Overview）
   const kpiStats = computed<DeviceKpiStats>(() => {
     const devs = pool.devices.value
     return {
@@ -117,6 +129,18 @@ export function useDevicePoolView(): DevicePoolViewState {
       total: devs.length,
     }
   })
+
+  const filterTabs = computed(() =>
+    FILTER_TABS.map((tab) => ({
+      ...tab,
+      count:
+        tab.key === 'all'
+          ? kpiStats.value.total
+          : tab.key === 'online'
+            ? kpiStats.value.online
+            : kpiStats.value.busy,
+    })),
+  )
 
   // 6. Filter
   const filteredDevices = computed<DeviceRecord[]>(() => {
@@ -134,7 +158,17 @@ export function useDevicePoolView(): DevicePoolViewState {
     pagedItems: pagedDevices,
     setPageSize,
     goPage,
-  } = usePagination(filteredDevices, { options: [5, 10, 20] })
+  } = usePagination(filteredDevices, {
+    pageSize: DEFAULT_PAGE_SIZE,
+    options: PAGE_SIZE_OPTIONS,
+  })
+
+  /** 有无设备都按当前「显示行数」撑开表格高度 */
+  const tableMinHeightPx = computed(
+    () => TABLE_HEADER_HEIGHT_PX + pageSize.value * TABLE_ROW_HEIGHT_PX,
+  )
+
+  const { tableWrapRef, onTablePointerDown } = useTableDragScroll()
 
   // 8. Watch filter changes → reset page
   watch([activeFilter], () => {
@@ -160,6 +194,12 @@ export function useDevicePoolView(): DevicePoolViewState {
   // 11. Row selection helper
   function isRowSelected(record: DeviceRecord): boolean {
     return record && record.serial === pool.selectedSerial.value
+  }
+
+  function deviceRowClassName({ row }: { row: DeviceRecord }): string {
+    if (row?.status === 'ONLINE') return 'row-online'
+    if (row?.status === 'BUSY') return 'row-busy'
+    return ''
   }
 
   // 12. Lifecycle
@@ -194,6 +234,10 @@ export function useDevicePoolView(): DevicePoolViewState {
     PAGE_SIZE_OPTIONS,
     setPageSize,
     goPage,
+    tableMinHeightPx,
+    tableMinWidthPx: TABLE_MIN_WIDTH_PX,
+    tableWrapRef,
+    onTablePointerDown,
     // grouped
     groupedDevices,
     // dialogs + actions
@@ -212,6 +256,7 @@ export function useDevicePoolView(): DevicePoolViewState {
     cancelDisconnectDialog: actions.cancelDisconnectDialog,
     // helpers
     isRowSelected,
+    deviceRowClassName,
     displayModel,
     connectionLabel,
     deviceAddress,
@@ -221,6 +266,7 @@ export function useDevicePoolView(): DevicePoolViewState {
     // constants
     PAGE_HEADER,
     FILTER_TABS,
+    filterTabs,
     COLUMNS,
     CARD_GROUPS,
     EMPTY_TEXT,

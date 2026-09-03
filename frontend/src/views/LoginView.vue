@@ -97,25 +97,27 @@ const {
 
           <aside class="hero__brand" aria-hidden="true">
             <div class="hero__brand-featured">
-              <AnimalFace variant="robot" :size="72" color="var(--c-ai)" />
-              <span class="featured-label">AI助手</span>
-            </div>
-            <div class="hero__brand-tags">
-              <div class="sticker sticker--device">
-                <AnimalFace variant="owl" :size="34" color="var(--c-device)" />
-                <span class="sticker__label">设备管理</span>
+              <div class="hero__brand-lead">
+                <AnimalFace variant="robot" :size="72" color="var(--c-ai)" />
+                <span class="featured-label">AI助手</span>
               </div>
-              <div class="sticker sticker--case">
-                <AnimalFace variant="fox" :size="34" color="var(--c-case)" />
-                <span class="sticker__label">用例编排</span>
-              </div>
-              <div class="sticker sticker--runner">
-                <AnimalFace variant="rabbit" :size="34" color="var(--c-runner)" />
-                <span class="sticker__label">用例执行</span>
-              </div>
-              <div class="sticker sticker--report">
-                <AnimalFace variant="squirrel" :size="34" color="var(--c-report)" />
-                <span class="sticker__label">报告生成</span>
+              <div class="hero__brand-tags">
+                <div class="sticker sticker--device">
+                  <AnimalFace variant="owl" :size="34" color="var(--c-device)" />
+                  <span class="sticker__label">设备管理</span>
+                </div>
+                <div class="sticker sticker--case">
+                  <AnimalFace variant="fox" :size="34" color="var(--c-case)" />
+                  <span class="sticker__label">用例编排</span>
+                </div>
+                <div class="sticker sticker--runner">
+                  <AnimalFace variant="rabbit" :size="34" color="var(--c-runner)" />
+                  <span class="sticker__label">用例执行</span>
+                </div>
+                <div class="sticker sticker--report">
+                  <AnimalFace variant="squirrel" :size="34" color="var(--c-report)" />
+                  <span class="sticker__label">报告生成</span>
+                </div>
               </div>
             </div>
           </aside>

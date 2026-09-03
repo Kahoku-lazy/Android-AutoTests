@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** 拍立得设备卡片 — 彩色边框 + 图钉 + 微旋转；标题=序列号，字段逐项「列名：内容」 */
+/** 设备卡片 — 极简几何（侧栏色条 + 型号主标题 + 名片式信息） */
 import { computed } from 'vue'
 import { statusTag, displayModel, deviceAddress, formatRelativeTime } from '../helpers'
 import { RUNNER_OCCUPIED_PREFIXES } from '../constants'
@@ -26,164 +26,302 @@ const status = computed(() => {
 
 const statusText = computed(() => statusTag(props.device.status).text)
 
+const isWifi = computed(() => props.device.connection_type === 'WIFI')
+
 const isRunnerOccupied = computed(
   () =>
     !!props.device.occupied_by &&
     RUNNER_OCCUPIED_PREFIXES.some((p) => props.device.occupied_by!.startsWith(p)),
 )
 
-function go() { emit('click', props.device) }
+function go() {
+  emit('click', props.device)
+}
 </script>
 
 <template>
-  <div class="device-card" :class="status" role="button" tabindex="0" @click="go" @keydown.enter.prevent="go" @keydown.space.prevent="go">
-    <div class="card-title" :class="status">
-      <span class="card-title-text">{{ device.serial }}</span>
+  <div
+    class="device-card"
+    :class="status"
+    role="button"
+    tabindex="0"
+    @click="go"
+    @keydown.enter.prevent="go"
+    @keydown.space.prevent="go"
+  >
+    <div class="card-head">
+      <div class="card-head-main">
+        <p class="card-model">{{ displayModel(device) }}</p>
+        <code class="card-serial" :title="device.serial">{{ device.serial }}</code>
+      </div>
+      <span class="status-chip" :class="status">
+        <span class="geo" :class="status === 'busy' ? 'geo--triangle' : 'geo--diamond'" aria-hidden="true" />
+        {{ statusText }}
+      </span>
     </div>
-    <div class="card-fields">
-      <div class="card-field">
-        <span class="card-field-label">设备地址</span>
-        <span class="card-field-value card-field-value--mono" :title="deviceAddress(device)">{{ deviceAddress(device) }}</span>
+
+    <div class="card-meta">
+      <div class="meta-cell">
+        <span class="meta-k">地址</span>
+        <span class="meta-v meta-v--mono" :title="deviceAddress(device)">{{ deviceAddress(device) }}</span>
       </div>
-      <div class="card-field">
-        <span class="card-field-label">型号</span>
-        <span class="card-field-value">{{ displayModel(device) }}</span>
+      <div class="meta-cell">
+        <span class="meta-k">分辨率</span>
+        <span class="meta-v meta-v--mono">{{ device.screen || '—' }}</span>
       </div>
-      <div class="card-field">
-        <span class="card-field-label">分辨率</span>
-        <span class="card-field-value">{{ device.screen || '—' }}</span>
+      <div class="meta-cell">
+        <span class="meta-k">连接</span>
+        <span class="meta-v">{{ isWifi ? 'Wi‑Fi' : 'USB' }}</span>
       </div>
-      <div class="card-field">
-        <span class="card-field-label">状态</span>
-        <span class="card-field-value">{{ statusText }}</span>
-      </div>
-      <div class="card-field">
-        <span class="card-field-label">最后在线</span>
-        <span class="card-field-value">{{ formatRelativeTime(device.last_seen) }}</span>
+      <div class="meta-cell">
+        <span class="meta-k">活跃</span>
+        <span class="meta-v">{{ formatRelativeTime(device.last_seen) }}</span>
       </div>
     </div>
-    <div class="card-actions">
-      <button
-        v-if="device.connection_type === 'WIFI'"
-        class="card-btn"
-        @click.stop="emit('lock', device)"
-      >{{ device.locked ? '已锁定' : '公开' }}</button>
-      <button
-        v-if="device.occupied_by && !isRunnerOccupied"
-        class="card-btn unlock"
-        @click.stop="emit('release', device)"
-      >强制释放</button>
-      <button
-        v-if="device.connection_type === 'WIFI'"
-        class="card-btn disconnect"
-        :disabled="device.status === 'BUSY'"
-        @click.stop="emit('disconnect', device)"
-      >删除</button>
+
+    <div class="card-foot">
+      <span class="tag" :class="isWifi ? 'tag--wifi' : 'tag--usb'">{{ isWifi ? 'Wi‑Fi' : 'USB' }}</span>
+      <span
+        v-if="device.locked_by"
+        class="tag tag--lock"
+        :title="`锁定者: ${device.locked_by}`"
+      >锁定 · {{ device.locked_by }}</span>
+      <span v-else class="tag tag--open">公开</span>
+
+      <div class="card-actions">
+        <button
+          v-if="isWifi"
+          type="button"
+          class="card-btn"
+          @click.stop="emit('lock', device)"
+        >{{ device.locked ? '解锁' : '锁定' }}</button>
+        <button
+          v-if="device.occupied_by && !isRunnerOccupied"
+          type="button"
+          class="card-btn card-btn--warn"
+          @click.stop="emit('release', device)"
+        >释放</button>
+        <button
+          v-if="isWifi"
+          type="button"
+          class="card-btn card-btn--ghost"
+          :disabled="device.status === 'BUSY'"
+          @click.stop="emit('disconnect', device)"
+        >删除</button>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* ── 设备卡（轻边 + 状态色点缀） ── */
 .device-card {
+  --card-accent: var(--c-device);
   background: var(--app-bg-card);
+  border: 2px solid var(--ink);
   border-radius: var(--app-radius-md);
-  padding: 12px;
+  box-shadow: var(--app-shadow-sm);
+  padding: 0;
+  overflow: hidden;
   cursor: pointer;
   position: relative;
-  border: 1px solid var(--app-border-light);
-  box-shadow: var(--app-shadow-sm);
-  transition: transform var(--app-duration) var(--app-ease),
-    box-shadow var(--app-duration) var(--app-ease),
-    border-color var(--app-duration) var(--app-ease);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  transition: transform var(--app-duration) var(--app-ease);
 }
-/* 状态色：顶部 4px 点缀条 + 标题底 */
-.device-card.online::before { background: var(--app-status-success); }
-.device-card.busy::before   { background: var(--app-status-danger); }
-.device-card.offline::before{ background: var(--app-offline); }
+.device-card.busy { --card-accent: var(--c-dashboard); }
+.device-card.offline { --card-accent: var(--app-border-light); }
+
 .device-card::before {
   content: '';
   position: absolute;
-  top: 0;
   left: 0;
-  right: 0;
-  height: 4px;
-  border-radius: var(--app-radius-md) var(--app-radius-md) 0 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--card-accent);
 }
 
-.device-card:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: var(--app-shadow-lg);
-  border-color: var(--app-border-lighter);
-}
+.device-card:hover { z-index: 2; }
 .device-card:focus-visible {
   outline: 2px solid var(--app-status-purple);
   outline-offset: 3px;
 }
 
-/* 标题区（序列号） */
-.card-title {
-  height: 42px;
-  border-radius: var(--app-radius-sm);
+.card-head {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 10px;
-  margin-bottom: 10px;
-  border: 1px solid;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 10px 8px 14px;
 }
-.card-title.online { background: var(--app-status-success-bg); border-color: var(--app-status-success); }
-.card-title.busy   { background: var(--app-status-danger-bg); border-color: var(--app-status-danger); }
-.card-title.offline{ background: var(--app-bg-subtle); border-color: var(--app-border-light); }
-
-.card-title-text {
-  font-family: var(--app-font-mono);
+.card-head-main { min-width: 0; }
+.card-model {
+  margin: 0;
   font-size: var(--app-size-sm);
-  font-weight: 600;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
   color: var(--ink);
-  word-break: break-all;
-  text-align: center;
 }
-
-/* 字段列表 */
-.card-fields { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
-.card-field { display: flex; align-items: baseline; gap: 6px; }
-.card-field-label { flex-shrink: 0; font-size: var(--app-size-xs); color: var(--app-ink-muted); }
-.card-field-label::after { content: '：'; }
-.card-field-value {
-  flex: 1;
-  text-align: right;
-  font-size: var(--app-size-xs);
-  font-weight: 600;
-  color: var(--ink);
-  word-break: break-all;
-}
-.card-field-value--mono { font-family: var(--app-font-mono); }
-
-/* 操作按钮 */
-.card-actions { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
-.card-btn {
+.card-serial {
+  margin: 4px 0 0;
+  font-family: var(--app-font-mono);
   font-size: var(--app-size-xs);
   font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--app-border-light);
+  color: var(--app-nav-text);
+  background: var(--app-bg-subtle);
+  border: 1px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  padding: 1px 5px;
+  display: inline-block;
+  max-width: 100%;
+  word-break: break-all;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 1px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  font-size: var(--app-size-xs);
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.status-chip.online {
+  background: var(--app-status-success-bg);
+  color: var(--app-status-success-text);
+}
+.status-chip.busy {
+  background: var(--app-status-warning-bg);
+  color: var(--app-warning-text);
+}
+.status-chip.offline {
+  background: var(--app-bg-subtle);
+  color: var(--app-ink-muted);
+}
+
+.geo {
+  flex-shrink: 0;
+  display: inline-block;
+}
+.geo--diamond {
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--ink);
+  background: var(--c-device);
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+.geo--triangle {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 9px solid var(--c-dashboard);
+}
+
+/* 名片式信息：无粗框、无填充底 */
+.card-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 10px;
+  row-gap: 6px;
+  margin: 0 10px 0 14px;
+  padding: 8px 0 2px;
+  border-top: 1px solid var(--app-border-light);
+  background: transparent;
+}
+.meta-k {
+  display: block;
+  font-size: var(--app-size-xs);
+  font-weight: 500;
+  color: var(--app-ink-muted);
+  letter-spacing: 0.02em;
+  margin-bottom: 2px;
+}
+.meta-v {
+  font-size: var(--app-size-xs);
+  font-weight: 500;
+  color: var(--ink);
+  word-break: break-all;
+  line-height: 1.35;
+}
+.meta-v--mono {
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  font-weight: 500;
+}
+
+.card-foot {
+  margin-top: auto;
+  padding: 8px 10px 10px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  border-top: 1px solid var(--app-border-light);
+}
+.tag {
+  font-size: var(--app-size-xs);
+  font-weight: 800;
+  padding: 1px 5px;
+  border: 1px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+}
+.tag--wifi {
+  background: color-mix(in srgb, var(--c-workflow) 40%, white);
+  color: var(--ink);
+}
+.tag--usb {
+  background: color-mix(in srgb, var(--c-device) 35%, white);
+  color: var(--ink);
+}
+.tag--lock {
+  background: var(--app-status-purple-bg);
+  color: var(--app-status-purple-text);
+  border-color: var(--app-status-purple-border);
+}
+.tag--open {
+  background: var(--app-bg-subtle);
+  color: var(--app-ink-muted);
+  border-color: var(--app-border-light);
+}
+
+.card-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.card-btn {
+  border: 1.5px solid var(--ink);
   background: var(--app-bg-card);
+  border-radius: var(--app-radius-sm);
+  padding: 2px 8px;
+  font: inherit;
+  font-size: var(--app-size-xs);
+  font-weight: 800;
   color: var(--ink);
   cursor: pointer;
-  font-family: inherit;
-  transition: all 0.12s;
+  transition: background 0.12s, transform 0.12s;
 }
-.card-btn:hover { background: var(--app-bg-subtle); }
-.card-btn.unlock:hover { background: var(--app-status-purple-bg); border-color: var(--app-status-purple-border); }
-.card-btn.queue { color: var(--app-queue-text); border-color: var(--app-queue-text); }
-.card-btn.queue:hover { background: var(--app-status-warning-bg); }
-.card-btn.disconnect { color: var(--app-disconnect-text); border-color: var(--app-disconnect-text); }
-.card-btn.disconnect:hover { background: var(--app-status-danger-bg); }
-.card-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.card-btn:hover {
+  background: var(--app-highlight);
+  transform: translate(1px, 1px);
+}
+.card-btn--ghost { border-style: dashed; }
+.card-btn--warn { background: var(--app-status-warning-bg); }
+.card-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .device-card { transition: none; }
-  .device-card:hover { transform: none; }
 }
 </style>

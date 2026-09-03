@@ -1,4 +1,4 @@
-"""Execution pre-flight device check — 经 AirtestU2Engine 建立双栈连接。
+"""Execution pre-flight device check — 经 U2Engine 建立 uiautomator2 连接。
 
 L1c 收敛（consolidate-airtest-u2-engine）：连接细节（adb connect / Airtest / u2 /
 超时调优 / display 验证）已迁入 engines/android/airtest_u2.py，本模块保留执行编排
@@ -10,38 +10,24 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, Optional
 
-from engines.android.airtest_u2 import AirtestU2Engine, EngineConnectError
+from engines.device.base import EngineConnectError
+from engines.device.registry import get_device_engine
 
 logger = logging.getLogger(__name__)
 
 # adb connect(10s) + Android init(5s) + u2.connect(15s) + display_info + margin
 DEVICE_CHECK_TIMEOUT = 45
 
-# 会话模式登记（executor-session-toggle：DEVICE_SESSION_ENABLED=True 时使用）
-_sessions: dict[str, object] = {}
-
-
-def release_session(serial: str) -> None:
-    """释放该 serial 的 EXCLUSIVE 会话（未使用会话模式时 no-op，幂等）。"""
-    session = _sessions.pop(serial, None)
-    if session is not None:
-        try:
-            session.release()
-        except Exception:
-            logger.debug("release_session(%s) failed, continuing", serial)
-
 
 @dataclass
 class DeviceConnection:
-    """Holds both Airtest and uiautomator2 device references for a single serial."""
+    """Holds the UiEngine reference for a single serial."""
 
     serial: str
-    airtest: object
-    u2: object
-    info: dict = field(default_factory=dict)
+    engine: object
 
 
 class DeviceCheckError(Exception):
@@ -69,17 +55,13 @@ def _query_pool_device(serial: str):
 def check_and_connect(
     serial: str,
     on_log: Optional[Callable[[str], None]] = None,
-    use_session: bool = False,
 ) -> DeviceConnection:
-    """Synchronous dual-connection (Airtest ops + u2 XPath).
-
-    use_session=True（DEVICE_SESSION_ENABLED 开关）时经 DeviceSession.lease(EXCLUSIVE)
-    取引擎；会话登记进程内，由 _cleanup_device → release_session 释放。
+    """Synchronous device connection (u2).
 
     Runs in thread pool. on_log must not block the event loop (string collection only).
 
     Returns:
-        DeviceConnection with both airtest and u2 references
+        DeviceConnection with a u2 reference
 
     Raises:
         DeviceCheckError: Any step fails
@@ -98,36 +80,15 @@ def check_and_connect(
     name = dev.name or dev.model or serial
     log(f"  ✓ Pool: {dev.status} · {conn} · {name}")
 
-    if use_session:
-        from apps.device_pool.session import DeviceSession, LeaseConflict, LeaseError, LeaseMode
-
-        try:
-            session = DeviceSession.lease(
-                serial, LeaseMode.EXCLUSIVE, addr=dev.connection_addr or serial
-            )
-        except LeaseConflict as e:
-            raise DeviceCheckError(str(e)) from e
-        except LeaseError as e:
-            raise DeviceCheckError(str(e)) from e
-        _sessions[serial] = session
-        engine = session.engine  # 惰性连接在首操作；此处主动触发以完成预检
-        engine.connect(serial, dev.connection_addr or serial)
-        log("✅ Pre-flight check passed (session mode), starting test execution")
-        return DeviceConnection(
-            serial=serial, airtest=engine.airtest, u2=engine.u2, info=engine.device_info
-        )
-
     # ②~⑤ 连接细节由引擎完成（进度日志经 on_log 回传）
-    engine = AirtestU2Engine()
+    engine = get_device_engine()
     try:
         engine.connect(serial, dev.connection_addr or serial, on_log=log)
     except EngineConnectError as e:
         raise DeviceCheckError(str(e)) from e
 
     log("✅ Pre-flight check passed, starting test execution")
-    return DeviceConnection(
-        serial=serial, airtest=engine.airtest, u2=engine.u2, info=engine.device_info
-    )
+    return DeviceConnection(serial=serial, engine=engine)
 
 
 async def _flush_check_logs(run_id: str, callbacks, messages: list[str]):
@@ -142,14 +103,13 @@ async def check_and_connect_async(
     callbacks,
     executor,
     timeout: float = DEVICE_CHECK_TIMEOUT,
-    use_session: bool = False,
 ) -> DeviceConnection:
     """Async wrapper: run dual-connection check in thread pool, push logs via WebSocket."""
     loop = asyncio.get_event_loop()
     collected: list[str] = []
 
     def do_check():
-        return check_and_connect(serial, on_log=collected.append, use_session=use_session)
+        return check_and_connect(serial, on_log=collected.append)
 
     err: Optional[BaseException] = None
     device_conn = None

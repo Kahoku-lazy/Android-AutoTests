@@ -74,15 +74,16 @@ def run_single_step(request):
 
     try:
         from apps.device_pool.api import device
+        from apps.device_pool.models import Device as PoolDevice
+        from engines.device.registry import close_engine, open_engine
 
         from ..executors.ui.adapter import DeviceAdapter
         from ..executors.ui.connect import DeviceConnection
         from ..executors.ui.executor import StepExecutor
 
         target_serial = data.get("device_serial", "").strip()
-        if target_serial:
-            device.switch_to(target_serial)
-        elif not device.current_serial:
+        serial = target_serial or device.current_serial
+        if not serial:
             return JsonResponse({"status": False, "message": "请先在用例编辑页顶部选择调试设备"})
 
         step = TestStep(
@@ -98,11 +99,11 @@ def run_single_step(request):
         )
 
         logs: list[str] = []
+        dev = PoolDevice.objects.get(serial=serial)
+        engine = open_engine(serial, dev.connection_addr or serial)
         conn = DeviceConnection(
-            serial=device.current_serial,
-            airtest=device.ad,
-            u2=device.u2d,
-            info=device.info(),
+            serial=serial,
+            engine=engine,
         )
         adapter = DeviceAdapter(
             conn,
@@ -113,6 +114,7 @@ def run_single_step(request):
         )
         executor = StepExecutor(adapter)
         result = executor.execute(step)
+        close_engine(engine)
 
         if result == "pass":
             return JsonResponse(

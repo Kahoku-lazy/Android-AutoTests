@@ -1,6 +1,6 @@
 """uiautomator2 + Airtest crash detection, health check, and reconnection.
 
-L1c 收敛（consolidate-airtest-u2-engine）：重连实现迁入 engines/android/airtest_u2.py
+L1c 收敛（consolidate-airtest-u2-engine）：重连实现迁入 engines/device/android/u2.py
 （AirtestU2Engine.reconnect），本模块保留纯检测函数与常量，并保留
 reconnect_* 兼容入口（签名不变，内部经引擎）。
 """
@@ -8,7 +8,7 @@ reconnect_* 兼容入口（签名不变，内部经引擎）。
 import logging
 import time
 
-from engines.android.airtest_u2 import AirtestU2Engine
+from engines.device.registry import get_device_engine
 
 logger = logging.getLogger(__name__)
 
@@ -72,41 +72,22 @@ def is_device_crash(exc: BaseException) -> bool:
     ):
         return True
     msg = str(exc).lower()
-    airtest_keywords = (
-        "airtest",
-        "minicap",
-        "minitouch",
-        "yosemite",
+    device_keywords = (
         "adb connection",
         "device not found",
         "screen record",
     )
-    return any(k in msg for k in airtest_keywords)
+    return any(k in msg for k in device_keywords)
 
 
 # ── Health Check ──
 
 
-def check_u2_alive(device) -> bool:
-    """Quick probe: u2 service is responsive."""
-    if device is None:
-        return False
-    try:
-        device.info
-        return True
-    except Exception:
-        return False
-
-
 def check_device_alive(device_conn) -> bool:
-    """Quick probe: Airtest device is responsive."""
+    """Quick probe: device engine is responsive."""
     if device_conn is None:
         return False
-    try:
-        device_conn.airtest.display_info
-        return True
-    except Exception:
-        return False
+    return device_conn.engine.is_alive()
 
 
 # ── Reconnection（兼容入口，内部经引擎）──
@@ -114,9 +95,9 @@ def check_device_alive(device_conn) -> bool:
 
 def reconnect_u2(serial: str):
     """Re-establish u2 connection. Raises on failure."""
-    engine = AirtestU2Engine()
+    engine = get_device_engine()
     engine.connect(serial)
-    return engine.u2
+    return engine
 
 
 def reconnect_device(serial: str):
@@ -127,10 +108,10 @@ def reconnect_device(serial: str):
     # Lazy import to avoid circular dependency
     from .connect import DeviceConnection
 
-    engine = AirtestU2Engine()
+    engine = get_device_engine()
     engine.connect(serial)
     return DeviceConnection(
-        serial=serial, airtest=engine.airtest, u2=engine.u2, info=engine.device_info
+        serial=serial, engine=engine
     )
 
 

@@ -6,7 +6,6 @@ import json
 from datetime import datetime
 from urllib.parse import urlparse
 
-from django.conf import settings
 from django.http import JsonResponse
 
 from apps.case_manager.models import TestDefinition
@@ -326,7 +325,6 @@ async def start_test_run(request):
                         rid,
                         test_callbacks,
                         _u2_executor,
-                        use_session=getattr(settings, "DEVICE_SESSION_ENABLED", False),
                     )
                 except DeviceCheckError as e:
                     await _abort_run_before_execute(rid, _serial, _ctid, f"手机连接不上: {e}")
@@ -508,7 +506,6 @@ async def _start_next_queued(serial: str):
                 run_id,
                 test_callbacks,
                 _u2_executor,
-                use_session=getattr(settings, "DEVICE_SESSION_ENABLED", False),
             )
         except DeviceCheckError as e:
             await _abort_run_before_execute(run_id, serial, client_task_id, str(e))

@@ -47,23 +47,25 @@ def _check_device_available(serial: str) -> None:
         raise CaptureError("设备未注册")
 
 
-def ensure_current_device(serial: str) -> None:
-    """将 DevicePool 单例切换到目标设备（capture 作用于池当前设备）。
+def open_inspector_engine(serial: str):
+    """校验设备可用 + 打开引擎连接（短连接，调用方用完需 close_engine）。
 
-    pool 的 dump/screenshot 不接收 serial 参数，只操作 current_serial 指向的
-    连接；capture 支持按 serial 指定设备，故抓取前需切换（与设备管理
-    activate_device 同一机制）。已为当前设备时跳过。
+    替代原 ensure_current_device：不再切换「当前设备」，直接按 serial 打开引擎。
     """
-    from apps.device_pool.api import device
     from apps.device_pool.models import Device
+    from engines.device.registry import open_engine
 
-    dev = Device.objects.get(serial=serial)
+    if not serial:
+        raise CaptureError("未选择设备，请先连接设备")
+    try:
+        dev = Device.objects.get(serial=serial)
+    except Device.DoesNotExist:
+        raise CaptureError("设备未注册")
     if dev.status == "BUSY" and dev.occupied_by:
         for prefix in _EXECUTION_OCCUPY_PREFIXES:
             if dev.occupied_by.startswith(prefix):
                 raise CaptureError(f"设备正被执行引擎占用（{dev.occupied_by}），请等待执行完毕")
-    if device.current_serial != serial:
-        device.switch_to(serial, dev.connection_type or "USB", dev.connection_addr)
+    return open_engine(serial, dev.connection_addr or serial)
 
 
 def _shot_dir():
@@ -75,14 +77,14 @@ def _shot_dir():
     return Path(settings.MEDIA_ROOT) / "inspector"
 
 
-def capture_page_screenshot(device, ts: str) -> str:
+def capture_page_screenshot(engine, ts: str) -> str:
     """截图落盘，返回相对路径（media 目录内）。"""
 
     base = _shot_dir()
     shots = base / "shots"
     shots.mkdir(parents=True, exist_ok=True)
     shot_file = shots / f"capture_{ts}.png"
-    device.screenshot_file(str(shot_file))
+    engine.screenshot_file(str(shot_file))
     return f"inspector/shots/capture_{ts}.png"
 
 
@@ -101,9 +103,9 @@ def _crop_thumbnail(source: str, box: tuple[int, int, int, int], dest: str) -> b
         return False
 
 
-def capture_dump_payload(device, ts: str) -> dict:
+def capture_dump_payload(engine, ts: str) -> dict:
     """抓取 UI 层级 + XPath 候选 + 元素缩略图落盘，返回 dump_json。"""
-    nodes = device.dump_hierarchy()
+    nodes = engine.dump_hierarchy()
 
     # 生成 XPath 候选（用完整层级算 count，保证定位语义准确）
     for e in nodes:
@@ -137,7 +139,7 @@ def capture_dump_payload(device, ts: str) -> dict:
     package = ""
     activity = ""
     try:
-        cur = device.app_current()
+        cur = engine.app_current()
         package = cur.get("package", "")
         activity = cur.get("activity", "")
     except Exception:
@@ -153,7 +155,7 @@ def capture_dump_payload(device, ts: str) -> dict:
     }
 
 
-def capture_ocr_payload(device, ts: str) -> dict:
+def capture_ocr_payload(ts: str) -> dict:
     """截屏 OCR 识别 + OCR 缩略图落盘，返回 ocr_json（不含 base64）。"""
     from .ocr import recognize
 

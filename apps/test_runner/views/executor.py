@@ -54,11 +54,6 @@ async def _cleanup_device(effective_serial: str) -> None:
     if effective_serial in _VIRTUAL_SERIALS:
         return
 
-    # executor-session-toggle：会话模式先还会话（默认路径 no-op）
-    from ..executors.ui.connect import release_session
-
-    release_session(effective_serial)
-
     mark_device_idle(effective_serial)
     try:
         await sync_to_async(dp_release_device)(effective_serial, reason="manual")

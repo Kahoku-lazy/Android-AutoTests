@@ -28,34 +28,32 @@ def capture_snapshot(user_id: str, serial: str, method: str = "both") -> dict:
     方法级降级：both 时单方法失败以成功方法落库（method 记实际值）；
     dump 与 OCR 全部失败不落库（CaptureError 500）。
     """
-    from apps.device_pool.api import device
+    from engines.device.registry import close_engine
 
     from .models import Snapshot
     from .service import (
         CaptureError,
-        _check_device_available,
         capture_dump_payload,
         capture_ocr_payload,
         capture_page_screenshot,
-        ensure_current_device,
+        open_inspector_engine,
     )
 
     if method not in ("dump", "ocr", "both"):
         raise CaptureError("无效的获取方法", status_code=400)
-    _check_device_available(serial)
-    ensure_current_device(serial)
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
 
+    engine = open_inspector_engine(serial)
     # 页面截图先行：OCR 识别与元素缩略图裁剪均依赖截图文件
-    screenshot_path = capture_page_screenshot(device, ts)
+    screenshot_path = capture_page_screenshot(engine, ts)
 
     dump_data = None
     ocr_data = None
 
     if method in ("dump", "both"):
         try:
-            dump_data = capture_dump_payload(device, ts)
+            dump_data = capture_dump_payload(engine, ts)
         except Exception:
             logger.exception("capture dump failed serial=%s", serial)
             if method == "dump":
@@ -64,7 +62,7 @@ def capture_snapshot(user_id: str, serial: str, method: str = "both") -> dict:
 
     if method in ("ocr", "both"):
         try:
-            ocr_data = capture_ocr_payload(device, ts)
+            ocr_data = capture_ocr_payload(ts)
         except Exception:
             logger.exception("capture ocr failed serial=%s", serial)
             if method == "ocr":
@@ -75,7 +73,8 @@ def capture_snapshot(user_id: str, serial: str, method: str = "both") -> dict:
         _cleanup_capture_files(ts)
         raise CaptureError("获取失败", status_code=500)
 
-    info = device.info()
+    info = engine.device_info
+    close_engine(engine)
     effective = "both" if (dump_data and ocr_data) else ("dump" if dump_data else "ocr")
     snapshot = Snapshot.objects.create(
         device_id=None,
@@ -109,21 +108,16 @@ def capture_screen(serial: str) -> dict:
 
     供 AI 视觉点击链路（screenshot_page）调用——只取当前屏幕图，不产生快照记录。
     """
-    from apps.device_pool.api import device
+    from engines.device.registry import close_engine
 
-    from .service import (
-        _check_device_available,
-        capture_page_screenshot,
-        ensure_current_device,
-    )
-
-    _check_device_available(serial)
-    ensure_current_device(serial)
+    from .service import capture_page_screenshot, open_inspector_engine
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    screenshot_path = capture_page_screenshot(device, ts)
-    info = device.info()
-    current = device.app_current() or {}
+    engine = open_inspector_engine(serial)
+    screenshot_path = capture_page_screenshot(engine, ts)
+    info = engine.device_info
+    current = engine.app_current() or {}
+    close_engine(engine)
     return {
         "screenshot_path": screenshot_path,
         "serial": serial,

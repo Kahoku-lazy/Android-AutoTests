@@ -9,9 +9,9 @@ import django
 
 django.setup()
 
-from apps.ai_assistant.agent_scope.provider_registry import get_provider_config
 from apps.ai_assistant.api import decrypt_key
 from apps.ai_assistant.models import AIAgent
+from apps.ai_assistant.provider_registry import get_provider_config
 
 AGENTSCOPE_URL = "http://127.0.0.1:8000"
 

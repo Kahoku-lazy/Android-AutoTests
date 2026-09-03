@@ -1,14 +1,13 @@
-"""AirtestU2Engine — 组合双栈引擎（L1c 实现，契约见 engines/base.py）。
+"""U2Engine — uiautomator2 单栈引擎（L1c 实现，契约见 engines/device/base.py）。
 
-Airtest（airtest.core.android.Android）负责操作：screenshot/click/swipe/app 生命周期/shell/文本输入。
-uiautomator2（u2.Device）只负责 dump_hierarchy 与 XPath 查询。
+uiautomator2（u2.Device）负责全部设备能力：screenshot/click/swipe/app 生命周期/shell/
+文本输入/dump_hierarchy/XPath/toast。
 能力声明：xpath_locate=True / toast_wait=True / ocr=False。
 
 错误语义：连接类失败抛 EngineConnectError（技术语义，由上层转业务文案）。
 
-⚠️ 契约出入（consolidate-airtest-u2-engine 登记）：本模块 import `algorithms.hierarchy`
-（纯解析函数，零 apps 依赖），总纲 §三 字面禁令为"engines ❌ algorithms.*"——
-此处按"纯函数复用优于内联"执行，Step 4 评审一并裁决。
+⚠️ 契约出入：本模块 import `algorithms.hierarchy`（纯解析函数，零 apps 依赖），
+总纲 §三 字面禁令为"engines ❌ algorithms.*"——按"纯函数复用优于内联"执行，待评审裁决。
 """
 
 import base64
@@ -19,11 +18,8 @@ import time
 
 import uiautomator2 as u2
 
-from airtest.core.android.android import Android
-from PIL import Image
-
 from algorithms.hierarchy import parse_hierarchy_xml
-from engines.base import EngineCapabilities
+from engines.device.base import EngineCapabilities, EngineConnectError
 from models.ui_nodes import Node
 
 logger = logging.getLogger(__name__)
@@ -32,10 +28,6 @@ logger = logging.getLogger(__name__)
 U2_OP_TIMEOUT = 20
 
 _CONNECTED_KEYWORDS = ("connected", "already", "已连接", "已经连接", "成功")
-
-
-class EngineConnectError(RuntimeError):
-    """引擎连接失败（技术语义）。"""
 
 
 def _to_node(d: dict) -> Node:
@@ -63,23 +55,18 @@ def _to_node(d: dict) -> Node:
     )
 
 
-class AirtestU2Engine:
-    """组合双栈引擎 — 实现 engines/base.py::UiEngine 协议。"""
+class U2Engine:
+    """uiautomator2 单栈引擎 — 实现 engines/device/base.py::UiEngine 协议。"""
 
     capabilities = EngineCapabilities(xpath_locate=True, toast_wait=True, ocr=False)
 
     def __init__(self):
-        self._airtest = None
         self._u2 = None
         self._serial = ""
         self._addr = ""
         self._info: dict = {}
 
     # ── 原始句柄（过渡期：DeviceConnection 兼容壳与 pool 属性经此取值）──
-
-    @property
-    def airtest(self):
-        return self._airtest
 
     @property
     def u2(self):
@@ -130,9 +117,9 @@ class AirtestU2Engine:
             logger.debug("u2 HTTP timeout tuning failed, continuing")
 
     def _verify_display(self, log=None) -> dict:
-        """经 Airtest display_info 验证连接，失败抛 EngineConnectError（ATX 消息映射）。"""
+        """u2 info 验证连接，失败抛 EngineConnectError（ATX 消息映射）。"""
         try:
-            info = dict(self._airtest.display_info)
+            info = dict(self._u2.info)
         except Exception as e:
             msg = str(e)
             if "atx-agent" in msg.lower() or "offline" in msg.lower():
@@ -140,13 +127,6 @@ class AirtestU2Engine:
                     "ATX Agent not running. Start uiautomator2 service on device."
                 ) from e
             raise EngineConnectError(f"Device verification failed: {e}") from e
-        try:
-            u2_info = self._u2.info
-            for k in ("productName", "brand", "sdkInt", "displayWidth", "displayHeight"):
-                if k not in info and k in u2_info:
-                    info[k] = u2_info[k]
-        except Exception:
-            logger.debug("Failed to read extra device info via u2")
         if log:
             w = info.get("displayWidth", "?")
             h = info.get("displayHeight", "?")
@@ -169,37 +149,26 @@ class AirtestU2Engine:
             self._adb_connect(target, log)
         else:
             log("  ② USB device, skip adb connect")
-        log("  ③ Establish Airtest connection…")
-        try:
-            self._airtest = Android(serialno=target)
-        except Exception as e:
-            raise EngineConnectError(f"Airtest connection failed: {e}") from e
-        log("  ✓ Airtest session established")
-        log("  ④ Establish uiautomator2 connection (XPath)…")
+        log("  ③ Establish uiautomator2 connection…")
         self._u2 = self._connect_u2(target)
         log("  ✓ u2 session established")
         self._tune_u2_http_timeout()
-        log("  ⑤ Verify Airtest connection (display_info)…")
+        log("  ④ Verify u2 connection (info)…")
         self._info = self._verify_display(log)
         self._serial = serial
         self._addr = target
         return self
 
     def disconnect(self) -> None:
-        self._airtest = None
         self._u2 = None
         self._info = {}
 
     def is_alive(self) -> bool:
         """快速探测双栈响应（recovery 语义）。"""
-        if self._u2 is None or self._airtest is None:
+        if self._u2 is None:
             return False
         try:
             _ = self._u2.info
-        except Exception:
-            return False
-        try:
-            _ = self._airtest.display_info
         except Exception:
             return False
         return True
@@ -217,16 +186,14 @@ class AirtestU2Engine:
     # ── 感知（标准化输出）──
 
     def screenshot(self) -> bytes:
-        """Airtest snapshot（BGR numpy）→ JPEG bytes。"""
-        arr = self._airtest.snapshot()
-        img = Image.fromarray(arr[..., ::-1])
+        """u2 截图（PIL RGB Image）→ JPEG bytes。"""
+        img = self._u2.screenshot()
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=55, optimize=True)
         return buf.getvalue()
 
     def screenshot_b64(self, quality: int = 55, max_width: int = 0) -> str:
-        arr = self._airtest.snapshot(quality=quality)
-        img = Image.fromarray(arr[..., ::-1])
+        img = self._u2.screenshot()
         if max_width and img.width > max_width:
             ratio = max_width / img.width
             new_h = max(1, int(img.height * ratio))
@@ -236,8 +203,7 @@ class AirtestU2Engine:
         return base64.b64encode(buf.getvalue()).decode("ascii")
 
     def screenshot_file(self, path: str) -> None:
-        arr = self._airtest.snapshot()
-        Image.fromarray(arr[..., ::-1]).save(path)
+        self._u2.screenshot().save(path)
 
     def dump_hierarchy(self) -> list[Node]:
         """u2 XML dump（3 层 fallback）→ algorithms.hierarchy 解析 → Node 列表。"""
@@ -264,42 +230,71 @@ class AirtestU2Engine:
     def app_current(self) -> dict:
         return self._u2.app_current()
 
-    # ── 操作原语（Airtest）──
+    # ── 操作原语（u2）──
 
     def click(self, x: int, y: int) -> None:
-        self._airtest.touch((x, y))
+        self._u2.click(x, y)
 
     def long_click(self, x: int, y: int, duration: float = 0.8) -> None:
-        self._airtest.touch((x, y), duration=duration)
+        self._u2.long_click(x, y, duration=duration)
 
     def swipe(self, x1: int, y1: int, x2: int, y2: int, duration: float = 0.5) -> None:
-        self._airtest.swipe((x1, y1), (x2, y2), duration=duration)
+        self._u2.swipe(x1, y1, x2, y2, duration=duration)
+
+    def swipe_direction(self, direction: str = "up", distance: int = 500) -> None:
+        """按方向滑动（方向→起终点坐标换算在引擎内完成）。"""
+        w, h = self.get_resolution()
+        cx, cy = w // 2, h // 2
+        dirs = {
+            "up": (cx, h * 3 // 4, cx, h * 3 // 4 - distance),
+            "down": (cx, h // 4, cx, h // 4 + distance),
+            "left": (w * 3 // 4, cy, w * 3 // 4 - distance, cy),
+            "right": (w // 4, cy, w // 4 + distance, cy),
+        }
+        x1, y1, x2, y2 = dirs.get(direction, (cx, h * 3 // 4, cx, h // 4))
+        self.swipe(x1, y1, x2, y2)
+
+    def click_ratio(self, nx: float, ny: float) -> None:
+        """按归一化坐标点击（0~1 → 像素坐标换算在引擎内）。"""
+        w, h = self.get_resolution()
+        x = int(float(nx) * w)
+        y = int(float(ny) * h)
+        self.click(x, y)
+
+    def drag_ratio(self, nx1: float, ny1: float, nx2: float, ny2: float) -> None:
+        """按归一化坐标拖动（0~1 → 像素坐标换算在引擎内）。"""
+        w, h = self.get_resolution()
+        x1 = int(float(nx1) * w)
+        y1 = int(float(ny1) * h)
+        x2 = int(float(nx2) * w)
+        y2 = int(float(ny2) * h)
+        self.swipe(x1, y1, x2, y2, duration=0.5)
 
     def input_text(self, text: str, clear_first: bool = True) -> None:
         if clear_first:
             try:
-                self._airtest.shell("input keyevent KEYCODE_MOVE_END")
-                self._airtest.shell("input keyevent KEYCODE_CLEAR")
+                self._u2.shell("input keyevent KEYCODE_MOVE_END")
+                self._u2.shell("input keyevent KEYCODE_CLEAR")
                 time.sleep(0.1)
             except Exception:
                 logger.debug("Shell keyevent failed, continuing")
         try:
-            self._airtest.text(text)
+            self._u2.send_keys(text)
         except Exception:
             safe = text.replace(" ", "%s").replace("'", "\\'")
-            self._airtest.shell(f"input text '{safe}'")
+            self._u2.shell(f"input text '{safe}'")
 
     def press_key(self, key: str) -> None:
-        self._airtest.shell(f"input keyevent {key}")
+        self._u2.shell(f"input keyevent {key}")
 
     def shell(self, cmd: str) -> str:
-        return self._airtest.shell(cmd)
+        return self._u2.shell(cmd)
 
     def start_app(self, pkg: str) -> None:
-        self._airtest.start_app(pkg)
+        self._u2.app_start(pkg)
 
     def stop_app(self, pkg: str) -> None:
-        self._airtest.stop_app(pkg)
+        self._u2.app_stop(pkg)
 
     # ── XPath 能力（u2，capabilities.xpath_locate 门控）──
 
@@ -317,6 +312,45 @@ class AirtestU2Engine:
             return el.attrib.get("text", "") if el is not None else ""
         except Exception:
             return ""
+
+    def click_xpath(self, xpath: str, index: int = 0) -> bool:
+        try:
+            elements = self._u2.xpath(xpath).all()
+            if len(elements) > index:
+                elements[index].click()
+                return True
+            return False
+        except Exception:
+            return False
+
+    def long_click_xpath(self, xpath: str, index: int = 0, duration: float = 0.8) -> bool:
+        try:
+            elements = self._u2.xpath(xpath).all()
+            if len(elements) > index:
+                elements[index].long_click(duration=duration)
+                return True
+            return False
+        except Exception:
+            return False
+
+    def get_toast_message(self) -> str:
+        try:
+            msg = self._u2.toast.get_message(0)
+            return str(msg) if msg else ""
+        except Exception:
+            return ""
+
+    def reset_toast(self) -> None:
+        try:
+            self._u2.toast.reset()
+        except Exception:
+            logger.debug("Toast reset failed, continuing")
+
+    def get_resolution(self) -> tuple[int, int]:
+        info = self._u2.info
+        w = int(info.get("displayWidth", 0) or 0)
+        h = int(info.get("displayHeight", 0) or 0)
+        return w, h
 
     def wait_toast(self, expected_text: str, timeout: float = 15) -> bool:
         """轮询 toast（u2 toast API + XPath 探测，移植自 adapter.wait_for_toast）。"""
@@ -339,20 +373,3 @@ class AirtestU2Engine:
                 logger.debug("Toast probe failed, continuing")
             time.sleep(0.3)
         return False
-
-    # ── 静态辅助（设备管理链路复用）──
-
-    @staticmethod
-    def probe_u2(addr: str) -> None:
-        """u2 连接 + info 验证（设备连接入口的轻量探活）。失败抛 EngineConnectError。"""
-        try:
-            d = u2.connect(addr)
-            _ = d.info
-        except Exception as e:
-            raise EngineConnectError(str(e)) from e
-
-    @staticmethod
-    def fetch_device_info(addr: str) -> dict:
-        """经 u2 采集设备元信息（productName/displayWidth/displayHeight/sdkInt…）。"""
-        d = u2.connect(addr)
-        return dict(d.info)

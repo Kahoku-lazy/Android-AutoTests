@@ -141,17 +141,13 @@ CORS_ALLOW_CREDENTIALS = True
 DB_ENGINE = os.environ.get("DB_ENGINE", "mysql")
 
 # ── 设备引擎（L1c 可替换插槽）──
-# 调用方（DeviceSession）经 engines.registry 取引擎；换引擎只改此配置。
-DEVICE_ENGINE = os.environ.get("DEVICE_ENGINE", "airtest_u2")
+# 调用方（DeviceSession）经 engines.device.registry 取引擎；换引擎只改此配置。
+DEVICE_ENGINE = os.environ.get("DEVICE_ENGINE", "u2")
 
-# ── 执行链路会话化开关（executor-session-toggle）──
-# True：执行链路经 DeviceSession.lease(EXCLUSIVE)（业务锁前置 + 会话释放）；
-# 默认 False 走旧路径。真机验证开关后另行删除旧路径。
-DEVICE_SESSION_ENABLED = os.environ.get("DEVICE_SESSION_ENABLED", "False").lower() in (
-    "1",
-    "true",
-    "yes",
-)
+# ── AI 引擎（L1c 可替换插槽，对齐 DEVICE_ENGINE）──
+# 调用方（engine_adapter）经 engines.ai.registry 取引擎；换 AI 框架只改此配置。
+AI_ENGINE = os.environ.get("AI_ENGINE", "agentscope")
+
 
 if DB_ENGINE == "mysql":
     DATABASES = {

@@ -10,6 +10,7 @@
 """
 
 import re
+
 from pathlib import Path
 
 import pytest
@@ -71,10 +72,10 @@ class TestAgentScopeChannel:
 
     def test_agent_scope_no_adapters_or_rag(self):
         """AgentScope 引擎不得自建数据库适配器（adapters/）或检索增强（rag/）。"""
-        scope = ROOT / "apps" / "ai_assistant" / "agent_scope"
-        assert scope.is_dir(), "agent_scope 目录不存在"
-        assert not (scope / "adapters").exists(), "agent_scope 下禁止新增 adapters/"
-        assert not (scope / "rag").exists(), "agent_scope 下禁止新增 rag/"
+        scope = ROOT / "engines" / "ai" / "agentscope"
+        assert scope.is_dir(), "engines/ai/agentscope 目录不存在"
+        assert not (scope / "adapters").exists(), "engines/ai/agentscope 下禁止新增 adapters/"
+        assert not (scope / "rag").exists(), "engines/ai/agentscope 下禁止新增 rag/"
 
 
 class TestEngineChannel:
@@ -83,12 +84,10 @@ class TestEngineChannel:
     def test_upper_layers_do_not_import_engine_libs(self):
         """上层（apps/gateway）不得直触引擎库或具体引擎实现。"""
         forbidden = (
-            "import airtest",
-            "from airtest",
             "import uiautomator2",
             "from uiautomator2",
-            "from engines.android",
-            "import engines.android",
+            "from engines.device.android",
+            "import engines.device.android",
         )
         for scan_dir in ("apps", "gateway"):
             for py in (ROOT / scan_dir).rglob("*.py"):

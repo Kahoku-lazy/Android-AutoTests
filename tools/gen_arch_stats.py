@@ -83,7 +83,7 @@ def scan_django_apps():
 
 def scan_tools():
     """扫描 tools.py 的 TOOLS 注册表（AgentScope 工具的唯一事实源）。"""
-    registry_path = PROJECT_ROOT / "apps" / "ai_assistant" / "agent_scope" / "tools.py"
+    registry_path = PROJECT_ROOT / "apps" / "ai_assistant" / "tools.py"
     if not registry_path.exists():
         return []
     tree = ast.parse(registry_path.read_text(encoding="utf-8"))
@@ -459,14 +459,14 @@ def scan_engine_leak_violations():
     """Detect engine capability leak to upper layers (L1c boundary).
 
     Rule (architecture.md §七 引擎边界): only `engines/` may import third-party
-    engine libs (airtest/uiautomator2) or touch concrete engine implementations.
+    engine libs (uiautomator2) or touch concrete engine implementations.
     Upper layers (apps/, gateway/) must consume device capability ONLY via
-    `engines.base.UiEngine` protocol (obtained through `engines.registry`).
+    `engines.device.base.UiEngine` protocol (obtained through `engines.device.registry`).
 
     Detects 3 leak categories:
-      - engine_lib:  apps/gateway importing airtest/uiautomator2 directly
-      - engine_impl: apps/gateway importing engines.android concrete implementation
-      - raw_handle:  apps/gateway accessing .airtest / .u2 raw engine handles（仅代码行）
+      - engine_lib:  apps/gateway importing uiautomator2 directly
+      - engine_impl: apps/gateway importing engines.device.android concrete implementation
+      - raw_handle:  apps/gateway accessing .u2 raw engine handles（仅代码行）
 
     Returns (new_violations, known_violations) — new violations fail CI.
     """
@@ -477,14 +477,14 @@ def scan_engine_leak_violations():
     import_patterns = [
         (
             "engine_lib",
-            re.compile(r"^[ \t]*(?:import|from)[ \t]+(airtest|uiautomator2)\b", re.MULTILINE),
+            re.compile(r"^[ \t]*(?:import|from)[ \t]+(uiautomator2)\b", re.MULTILINE),
         ),
         (
             "engine_impl",
-            re.compile(r"^[ \t]*(?:import|from)[ \t]+engines\.android\b", re.MULTILINE),
+            re.compile(r"^[ \t]*(?:import|from)[ \t]+engines\.device\.android\b", re.MULTILINE),
         ),
     ]
-    raw_handle_re = re.compile(r"\.(?:airtest|u2)\b")
+    raw_handle_re = re.compile(r"\.u2\b")
 
     violations = []
     for scan_dir in scan_dirs:
@@ -518,7 +518,7 @@ def scan_engine_leak_violations():
                 line_no = content[: m.start()].count("\n") + 1
                 if code_lines is not None and line_no not in code_lines:
                     continue
-                # 同一行同时访问 .airtest 与 .u2 只计一次（按行去重）
+                # 同一行访问 .u2 只计一次（按行去重）
                 key = (rel_path, line_no)
                 if key in seen_raw:
                     continue
@@ -1105,7 +1105,7 @@ if __name__ == "__main__":
                     out.append(f"  {v['file']}:{v['line']}  [{v['category']}]")
                     out.append(f"    → {v['snippet']}")
                 out.append(
-                    "  修复: 上层只经 engines.base.UiEngine 协议 / engines.registry 工厂消费设备能力"
+                    "  修复: 上层只经 engines.device.base.UiEngine 协议 / engines.device.registry 工厂消费设备能力"
                 )
                 out.append("")
 

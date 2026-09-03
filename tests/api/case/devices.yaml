@@ -1,0 +1,119 @@
+# 设备管理单接口用例（黑盒，保持约定：鉴权 / 响应结构 / 404 错误路径）
+# 扫描/连接成功等需真实设备、400/409 需设备记录的路径，留给集成测试与真机验证
+# 字段：id / name / title / point / method|path / body / auth(none=无token, required=带token) / expect(status|schema|check)
+
+- id: "TC-DEV-001"
+  name: "list-no-token"
+  title: "设备列表未登录"
+  point: "无 Bearer token 访问列表，返回 401 请先登录"
+  auth: "none"
+  method: "GET"
+  path: "/api/devices/"
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "请先登录"
+
+- id: "TC-DEV-002"
+  name: "lock-no-token"
+  title: "设备锁定未登录"
+  point: "无 Bearer token 访问锁定，返回 401 请先登录"
+  auth: "none"
+  method: "POST"
+  path: "/api/devices/no_such_serial/lock"
+  body:
+    locked: true
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "请先登录"
+
+- id: "TC-DEV-010"
+  name: "list-success"
+  title: "设备列表正常返回"
+  point: "登录后访问列表，返回 devices/current 结构"
+  auth: "required"
+  method: "GET"
+  path: "/api/devices/"
+  expect:
+    status: 200
+    schema: "device_list"
+
+- id: "TC-DEV-020"
+  name: "heartbeat-success"
+  title: "心跳正常返回"
+  point: "登录后访问心跳，返回 7 字段状态计数结构"
+  auth: "required"
+  method: "GET"
+  path: "/api/devices/heartbeat"
+  expect:
+    status: 200
+    schema: "heartbeat"
+
+- id: "TC-DEV-030"
+  name: "current-success"
+  title: "当前设备正常返回"
+  point: "登录后访问当前设备，返回 serial/screen/package 结构"
+  auth: "required"
+  method: "GET"
+  path: "/api/devices/current"
+  expect:
+    status: 200
+    schema: "device_current"
+
+- id: "TC-DEV-040"
+  name: "connect-not-exist"
+  title: "连接未注册设备"
+  point: "serial 不存在时返回 404 设备未注册"
+  auth: "required"
+  method: "POST"
+  path: "/api/devices/no_such_serial_xyz"
+  body: {}
+  expect:
+    status: 404
+    schema: "error"
+    check:
+      message: "设备 no_such_serial_xyz 未注册"
+
+- id: "TC-DEV-041"
+  name: "disconnect-not-exist"
+  title: "断开未注册设备"
+  point: "serial 不存在时返回 404 设备未注册"
+  auth: "required"
+  method: "POST"
+  path: "/api/devices/no_such_serial_xyz/disconnect"
+  expect:
+    status: 404
+    schema: "error"
+    check:
+      message: "设备 no_such_serial_xyz 未注册"
+
+- id: "TC-DEV-042"
+  name: "lock-not-exist"
+  title: "锁定未注册设备"
+  point: "serial 不存在时返回 404 设备未注册"
+  auth: "required"
+  method: "POST"
+  path: "/api/devices/no_such_serial_xyz/lock"
+  body:
+    locked: true
+  expect:
+    status: 404
+    schema: "error"
+    check:
+      message: "设备 no_such_serial_xyz 未注册"
+
+- id: "TC-DEV-043"
+  name: "release-not-exist"
+  title: "释放未注册设备"
+  point: "serial 不存在时返回 404 设备未注册"
+  auth: "required"
+  method: "POST"
+  path: "/api/devices/no_such_serial_xyz/release"
+  expect:
+    status: 404
+    schema: "error"
+    check:
+      message: "设备 no_such_serial_xyz 未注册"

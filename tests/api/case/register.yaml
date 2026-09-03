@@ -1,0 +1,189 @@
+# POST /api/auth/register 单接口用例
+# 字段：id 编号 / name 英文短名(node id) / title 测试标题 / point 测试点 / method|path 请求 / body 请求体 / expect 期望(status|schema|check)
+- id: "TC-REG-001"
+  name: "register-success"
+  title: "正常注册"
+  point: "唯一用户名 + 合法密码/邮箱，返回访问/刷新令牌对与用户信息"
+  method: "POST"
+  path: "/api/auth/register"
+  body:
+    username: "{{unique_username}}"
+    password: "Test123456"
+    password2: "Test123456"
+    email: "{{unique_username}}@test.local"
+  expect:
+    status: 200
+    schema: "register_success"
+    check:
+      data.user.username: "{{unique_username}}"
+      data.user.email: "{{unique_username}}@test.local"
+
+- id: "TC-REG-004"
+  name: "empty-username-and-password"
+  title: "用户名和密码均为空"
+  point: "两者都为空时后端拦截，返回 400 与提示文案"
+  method: "POST"
+  path: "/api/auth/register"
+  body:
+    username: ""
+    password: ""
+    password2: ""
+    email: ""
+  expect:
+    status: 400
+    schema: "error"
+    check:
+      message: "请输入用户名和密码"
+
+- id: "TC-REG-005"
+  name: "empty-username"
+  title: "用户名为空"
+  point: "用户名为空、密码非空时，返回 400 提示请输入用户名"
+  method: "POST"
+  path: "/api/auth/register"
+  body:
+    username: ""
+    password: "pass123"
+    password2: "pass123"
+    email: "a@b.com"
+  expect:
+    status: 400
+    schema: "error"
+    check:
+      message: "请输入用户名"
+
+- id: "TC-REG-006"
+  name: "empty-password"
+  title: "密码为空"
+  point: "用户名非空、密码为空时，返回 400 提示请输入密码"
+  method: "POST"
+  path: "/api/auth/register"
+  body:
+    username: "{{unique_username}}"
+    password: ""
+    password2: ""
+    email: "a@b.com"
+  expect:
+    status: 400
+    schema: "error"
+    check:
+      message: "请输入密码"
+
+- id: "TC-REG-007"
+  name: "username-too-short"
+  title: "用户名少于3字符"
+  point: "用户名长度 < 3 时，返回 400 提示用户名至少 3 个字符"
+  method: "POST"
+  path: "/api/auth/register"
+  body:
+    username: "ab"
+    password: "pass123"
+    password2: "pass123"
+    email: "a@b.com"
+  expect:
+    status: 400
+    schema: "error"
+    check:
+      message: "用户名至少 3 个字符"
+
+- id: "TC-REG-009"
+  name: "username-too-long"
+  title: "用户名超过20字符"
+  point: "用户名长度 > 20 时，返回 400 提示用户名最多 20 个字符"
+  method: "POST"
+  path: "/api/auth/register"
+  body:
+    username: "aaaaaaaaaaaaaaaaaaaaa"
+    password: "pass123"
+    password2: "pass123"
+    email: "a@b.com"
+  expect:
+    status: 400
+    schema: "error"
+    check:
+      message: "用户名最多 20 个字符"
+
+- id: "TC-REG-019"
+  name: "password-too-short"
+  title: "密码少于6位"
+  point: "密码长度 < 6 时，返回 400 提示密码至少 6 位"
+  method: "POST"
+  path: "/api/auth/register"
+  body:
+    username: "{{unique_username}}"
+    password: "12345"
+    password2: "12345"
+    email: "a@b.com"
+  expect:
+    status: 400
+    schema: "error"
+    check:
+      message: "密码至少 6 位"
+
+- id: "TC-REG-011"
+  name: "password-mismatch"
+  title: "两次密码不一致"
+  point: "password 与 password2 不一致时，返回 400 提示两次密码不一致"
+  method: "POST"
+  path: "/api/auth/register"
+  body:
+    username: "{{unique_username}}"
+    password: "pass123"
+    password2: "pass456"
+    email: "a@b.com"
+  expect:
+    status: 400
+    schema: "error"
+    check:
+      message: "两次密码不一致"
+
+- id: "TC-REG-012"
+  name: "empty-email"
+  title: "邮箱为空"
+  point: "邮箱为空时，返回 400 提示请输入邮箱"
+  method: "POST"
+  path: "/api/auth/register"
+  body:
+    username: "{{unique_username}}"
+    password: "pass123"
+    password2: "pass123"
+    email: ""
+  expect:
+    status: 400
+    schema: "error"
+    check:
+      message: "请输入邮箱"
+
+- id: "TC-REG-013"
+  name: "invalid-email"
+  title: "邮箱格式不正确"
+  point: "邮箱不含 @ 时，返回 400 提示邮箱格式不正确"
+  method: "POST"
+  path: "/api/auth/register"
+  body:
+    username: "{{unique_username}}"
+    password: "pass123"
+    password2: "pass123"
+    email: "notanemail"
+  expect:
+    status: 400
+    schema: "error"
+    check:
+      message: "邮箱格式不正确"
+
+- id: "TC-REG-020"
+  name: "username-exists"
+  title: "用户名已存在"
+  point: "用户名已被占用时，返回 409 提示用户名已存在"
+  method: "POST"
+  path: "/api/auth/register"
+  body:
+    username: "admin"
+    password: "pass123"
+    password2: "pass123"
+    email: "a@b.com"
+  expect:
+    status: 409
+    schema: "error"
+    check:
+      message: "用户名已存在"

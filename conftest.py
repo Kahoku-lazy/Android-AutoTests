@@ -1,7 +1,5 @@
-"""Root conftest — pytest_plugins 只能声明在 rootdir 顶层 conftest（pytest ≥ 8.1 起强制）。
+"""项目根 conftest — 保留给跨层全局钩子。
 
-tests/auth/e2e/conftest.py 需要加载 tests/e2e 的共享 fixtures（非父目录、不会自动加载），
-因此在此顶层文件统一注册插件。
+三层测试框架（api / graybox / e2e / arch）的共享 fixture 定义在各自目录的 conftest.py 中，
+pytest 按目录层级自动加载，无需 pytest_plugins 手动注册。
 """
-
-pytest_plugins = ["tests.e2e.conftest"]

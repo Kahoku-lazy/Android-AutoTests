@@ -9,7 +9,6 @@ import { useSidebarResize } from '../composables/useSidebarResize'
 import { useAuthPool } from '@/shared/composables/useAuthPool'
 import { logout as logoutApi } from '@/shared/api/auth'
 import AnimatedMascot from './AnimatedMascot.vue'
-import AnimatedMenuIcon from './AnimatedMenuIcon.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -158,6 +157,10 @@ onUnmounted(() => {
     <!-- 导航菜单 -->
     <nav class="sidebar__nav">
       <div v-for="cat in categories" :key="cat.key" class="sidebar__group">
+        <div
+          v-if="cat.label && !collapsed"
+          class="sidebar__group-label"
+        >{{ cat.label }}</div>
         <div class="nav-section-items">
           <template v-for="item in cat.items" :key="item.path">
             <!-- 可展开分组：父项（展开/收起） + 子项 -->

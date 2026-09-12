@@ -105,8 +105,8 @@ description: |
 ### ② Django → 前端 — WebSocket + JWT
 
 ```
-规则: 仅 2 个 WS 生产点（执行进度 + 编辑锁），Consumer 必须在 gateway/routing.py 注册
-校验: pytest tests/arch/test_channels.py::TestWebSocketChannel（len(websocket_urlpatterns) == 2）
+规则: 仅 1 个 WS 生产点（编辑锁），Consumer 必须在 gateway/routing.py 注册
+校验: pytest tests/arch/test_channels.py::TestWebSocketChannel（len(websocket_urlpatterns) == 1）
 ```
 
 ### ③ AgentScope → Django — 进程内直接调用

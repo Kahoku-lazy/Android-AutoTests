@@ -17,7 +17,7 @@ AgentScope Tool 只能通过 api.py 函数写数据 → 同进程直接调用
 {"status": false, "message": "..."}  // 失败
 ```
 
-> **legacy 平铺特例**（test_runner `/runner/*`、report_generator `/reports/*`、workflow legacy）唯一登记在 `apps/AGENTS.md` §1.3，禁止新增；未收敛前禁止把特例改造成标准信封。
+> **legacy 平铺特例**（report_generator `/reports/*`、workflow legacy）唯一登记在 `apps/AGENTS.md` §1.3，禁止新增；未收敛前禁止把特例改造成标准信封。
 
 ## 鉴权
 

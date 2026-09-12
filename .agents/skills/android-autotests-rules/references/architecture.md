@@ -45,10 +45,10 @@
 
 #### ② Django → 前端 — WebSocket + JWT
 
-- **链路**：Consumer（在 `gateway/routing.py` 注册）→ 前端 `ws-url.ts` + `useTaskWebSocket` / `useCaseEditingSocket`。
-- **能做**：推送执行进度、编辑锁通知。
-- **不能做**：新增第 3 个 WS 生产点；恢复 WS 截图流（已快照化 REST）；Consumer 不在 `routing.py` 注册。
-- **校验**：`gateway/routing.py` 恒 2 个路由；事件 type 与前端一致。
+- **链路**：Consumer（在 `gateway/routing.py` 注册）→ 前端 `ws-url.ts` + `useCaseEditingSocket`。
+- **能做**：推送编辑锁通知。
+- **不能做**：新增第 2 个 WS 生产点；恢复执行进度 WS / WS 截图流（已快照化 REST）；Consumer 不在 `routing.py` 注册。
+- **校验**：`gateway/routing.py` 恒 1 个路由（编辑锁）；事件 type 与前端一致。
 
 #### ③ AgentScope → Django — 进程内直接调用
 

@@ -35,7 +35,7 @@
 /* 加载三点 */
 .wb-loader {
   display: inline-flex; align-items: center;
-  gap: 6px; padding: 4px 2px;
+  gap: 6px; padding: var(--app-space-xs) 2px;
 }
 .wb-loader .dot {
   width: 8px; height: 8px; border-radius: 50%;

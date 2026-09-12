@@ -143,7 +143,7 @@ function stepTypeColor(type) {
 .case-group__id { font-family: var(--app-font-mono); font-size: var(--app-size-xs); color: var(--app-text-secondary); background: var(--app-bg-subtle); padding: 2px 6px; border-radius: var(--app-radius-sm); }
 .case-group__title { font-weight: 600; font-size: var(--app-size-sm); color: var(--ink); flex: 1; }
 .case-group__stats { display: flex; gap: var(--app-space-sm); }
-.cg-stat { font-size: var(--app-size-xs); padding: 2px 8px; border-radius: var(--app-radius-sm); font-weight: 600; }
+.cg-stat { font-size: var(--app-size-xs); padding: 2px var(--app-space-sm); border-radius: var(--app-radius-sm); font-weight: 600; }
 .cg-stat--total { background: var(--app-bg-subtle); color: var(--app-text-secondary); }
 .cg-stat--pass { background: var(--app-pass); color: var(--app-pass-text); }
 .cg-stat--fail { background: var(--app-fail); color: var(--app-fail-text); }
@@ -192,7 +192,7 @@ function stepTypeColor(type) {
 .ss-desc { font-size: var(--app-size-xs); color: var(--ink); line-height: 1.4; margin-bottom: 3px; }
 .ss-selector { font-size: var(--app-size-xs); color: var(--app-text-secondary); font-family: var(--app-font-mono); word-break: break-all; }
 .ss-error {
-  margin-top: 5px; padding: 5px 8px; background: var(--app-fail);
+  margin-top: 5px; padding: 5px var(--app-space-sm); background: var(--app-fail);
   border-radius: 5px; color: var(--app-fail-text); font-size: var(--app-size-xs); line-height: 1.4;
 }
 </style>

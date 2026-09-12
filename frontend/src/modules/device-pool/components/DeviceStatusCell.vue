@@ -51,7 +51,7 @@ defineProps<{
 .status-cell :deep(.el-tag--danger)  { background: var(--app-status-danger-bg) !important; color: var(--app-status-danger-text) !important; border-color: var(--app-status-danger) !important; }
 .badge {
   font-size: var(--app-size-xs);
-  padding: 1px 8px;
+  padding: 1px var(--app-space-sm);
   border-radius: 999px;
   font-weight: 700;
   max-width: 130px;

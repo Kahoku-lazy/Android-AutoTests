@@ -52,5 +52,5 @@ const modelOptions = computed(() => {
 
 <style scoped>
 .role-block { margin-bottom: 18px; }
-.role-label { font-size: var(--app-size-md); font-weight: 700; color: var(--ai-ink-soft); margin-bottom: 8px; }
+.role-label { font-size: var(--app-size-md); font-weight: 700; color: var(--ai-ink-soft); margin-bottom: var(--app-space-sm); }
 </style>

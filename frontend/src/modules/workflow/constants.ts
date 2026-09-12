@@ -4,15 +4,28 @@
  * 提取自 index.vue 和各 store，避免魔法值散落。
  */
 
-// ── 节点类型 ──
+// ── 资源节点类型 ──
 export const NODE_TYPES = {
   FOLDER: 'folder',
   PAGE_FLOW: 'page_flow',
+  API_FLOW: 'api_flow',
+} as const
+
+export type FlowDocType = typeof NODE_TYPES.PAGE_FLOW | typeof NODE_TYPES.API_FLOW
+
+export const FLOW_DOC_TYPES: readonly FlowDocType[] = [
+  NODE_TYPES.PAGE_FLOW,
+  NODE_TYPES.API_FLOW,
+]
+
+export function isFlowDocType(t: string | null | undefined): t is FlowDocType {
+  return t === NODE_TYPES.PAGE_FLOW || t === NODE_TYPES.API_FLOW
 }
 
 // ── 节点类型中文标签 ──
-export const NODE_TYPE_LABELS = {
+export const NODE_TYPE_LABELS: Record<string, string> = {
   [NODE_TYPES.PAGE_FLOW]: '页面流',
+  [NODE_TYPES.API_FLOW]: '接口流',
 }
 
 // ── 默认名称 ──
@@ -21,6 +34,7 @@ export const DEFAULT_NAMES = {
   ROOT_FOLDER: '新建目录',
   CHILD_FOLDER: '新建子目录',
   PAGE_FLOW: '未命名页面流',
+  API_FLOW: '未命名接口流',
 }
 
 // ── 表单限制 ──
@@ -32,11 +46,12 @@ export const MESSAGES = {
   IMPORT_JSON_FAILED: 'JSON 解析失败',
   ENTER_FOLDER_NAME: '请输入目录名称',
   ROOT_HINT: '将创建在资源树根级',
-  CHILD_HINT: (name) => `将创建为子目录：${name}`,
-  PARENT_HINT: (name) => `父目录：${name}`,
-  SAVED: (name, parent, id) => `已保存「${name}」→ ${parent} · ${id}`,
-  FLOW_CREATED: (id) => `已创建页面流（${id}）`,
-  EXPORTED: (id) => `已导出 ${id}`,
+  CHILD_HINT: (name: string) => `将创建为子目录：${name}`,
+  PARENT_HINT: (name: string) => `父目录：${name}`,
+  SAVED: (name: string, parent: string, id: string) => `已保存「${name}」→ ${parent} · ${id}`,
+  FLOW_CREATED: (id: string) => `已创建页面流（${id}）`,
+  API_FLOW_CREATED: (id: string) => `已创建接口流（${id}）`,
+  EXPORTED: (id: string) => `已导出 ${id}`,
 }
 
 // ── 面包屑 ──

@@ -28,7 +28,7 @@ const emit = defineEmits(['update:modelValue'])
 </template>
 
 <style scoped>
-.filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.filter-tabs { display: flex; gap: var(--app-space-xs); flex-wrap: wrap; }
 .filter-tab {
   display: inline-flex;
   align-items: center;
@@ -44,7 +44,7 @@ const emit = defineEmits(['update:modelValue'])
 }
 .filter-tab-count {
   font-family: var(--app-font-mono);
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   min-width: 18px;
   height: 18px;
   padding: 0 5px;

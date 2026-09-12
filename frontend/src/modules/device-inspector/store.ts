@@ -40,7 +40,7 @@ export const useElementStore = defineStore('device-inspector', () => {
   // ── Device ──
   const devices = ref([])
   const captureSerial = ref('')
-  const captureMethod = ref('both') // 'dump' | 'ocr' | 'both'
+  const captureMethod = ref('dump') // 'dump' | 'ocr'
 
   const availableDevices = computed(() =>
     devices.value.filter(d =>

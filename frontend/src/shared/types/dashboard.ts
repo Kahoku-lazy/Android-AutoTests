@@ -20,6 +20,17 @@ export interface AiUsageMetric {
   total: number
 }
 
+export interface RoleTokenUsage {
+  input_tokens: number
+  output_tokens: number
+  cache_input_tokens: number
+}
+
+export interface ByRoleMetric {
+  today: Record<string, RoleTokenUsage>
+  total: Record<string, RoleTokenUsage>
+}
+
 export interface AiUsage {
   taskCount: AiUsageMetric
   inputTokens: AiUsageMetric
@@ -29,6 +40,7 @@ export interface AiUsage {
   cacheHitRate: AiUsageMetric
   avgTokensPerTask: AiUsageMetric
   deepseekCost: AiUsageMetric
+  byRole: ByRoleMetric
 }
 
 export interface DashboardStats {
@@ -123,6 +135,7 @@ export interface DashboardRawData {
     cache_hit_rate: AiUsageMetric
     avg_tokens_per_task: AiUsageMetric
     deepseek_cost: AiUsageMetric
+    by_role: ByRoleMetric
   }
   charts: {
     execution: ExecutionChart

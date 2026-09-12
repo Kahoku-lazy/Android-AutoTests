@@ -1,33 +1,40 @@
-import type { RouteRecordRaw } from "vue-router"
+import type { RouteRecordRaw } from 'vue-router'
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/elements',
-    redirect: '/elements/android',
+    name: 'element-locator-projects',
+    component: () => import('@/modules/element-locator/ProjectList.vue'),
+    meta: { title: '元素定位' },
+  },
+  {
+    path: '/elements/projects/:code',
+    name: 'element-locator-workspace',
+    component: () => import('@/modules/element-locator/ProjectWorkspace.vue'),
+    meta: { title: '元素项目' },
+  },
+  {
+    path: '/elements/projects/:code/files/:fileId',
+    name: 'element-locator-file',
+    component: () => import('@/modules/element-locator/LocatorFileView.vue'),
+    meta: { title: '元素详情' },
   },
   {
     path: '/elements/android',
-    name: 'element-locator-android',
-    component: () => import('@/modules/element-locator/index.vue'),
-    meta: { title: 'Android元素管理' },
+    redirect: '/elements/projects/android',
   },
   {
     path: '/elements/web',
-    name: 'element-locator-web',
-    component: () => import('@/modules/element-locator/index.vue'),
-    meta: { title: 'Web端元素' },
+    redirect: '/elements/projects/web',
   },
   {
     path: '/elements/api',
-    name: 'element-locator-api',
-    component: () => import('@/modules/element-locator/index.vue'),
-    meta: { title: 'API接口' },
+    redirect: '/elements/projects/api',
   },
   {
     path: '/element-mgr',
-    name: 'ElementManager',
-    component: () => import('@/modules/element-locator/components/ElementManager.vue'),
-    meta: { title: 'Android元素管理' },
+    redirect: '/elements/projects/android',
   },
 ]
+
 export default routes

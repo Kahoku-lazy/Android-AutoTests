@@ -1,8 +1,15 @@
 /** 任务列表 — 加载 / 刷新 / 按线路筛选 / 运行态轮询 */
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { listTasks } from '../api/tasks'
+import { ElMessage } from 'element-plus'
+import { listTasks, deleteTask, clearTasks } from '../api/tasks'
 import { useFilterTabs } from '@/shared/composables/useFilterTabs'
-import { TASK_FILTER_TABS } from '../constants'
+import {
+  TASK_FILTER_TABS,
+  TASK_STATUS_GROUPS,
+  TASK_STATUS_GROUPS_DEFAULT_OPEN,
+  taskStatusTone,
+  type TaskStatusTone,
+} from '../constants'
 import type { TaskRecord } from '@/shared/types/ai'
 
 /** 运行态轮询间隔：任务执行中每 5s 刷新，全部终态后自动停止 */
@@ -19,8 +26,21 @@ export function useTaskList() {
   const { activeFilter, filterTabs, filteredItems } = useFilterTabs(
     tasks,
     TASK_FILTER_TABS,
-    (item: TaskRecord, key: string) => item.route === key,
+    () => true,
   )
+
+  const groupedByStatus = computed(() =>
+    TASK_STATUS_GROUPS
+      .map((group) => ({
+        ...group,
+        items: filteredItems.value.filter(
+          (t: TaskRecord) => taskStatusTone(t.status) === group.key,
+        ),
+      }))
+      .filter((group) => group.items.length > 0),
+  )
+
+  const expandedGroups = ref<TaskStatusTone[]>([...TASK_STATUS_GROUPS_DEFAULT_OPEN])
 
   const emptyCopy = computed(() => {
     if (!tasks.value.length) {
@@ -63,11 +83,42 @@ export function useTaskList() {
     loading.value = false
   }
 
+  async function remove(task: TaskRecord) {
+    try {
+      const data = await deleteTask(task.id)
+      if (data.status) {
+        tasks.value = tasks.value.filter((t) => t.id !== task.id)
+        schedulePoll()
+        ElMessage.success('已删除')
+      } else {
+        ElMessage.error(data.message || '删除失败')
+      }
+    } catch {
+      ElMessage.error('删除失败，请检查网络连接')
+    }
+  }
+
+  async function clearAll() {
+    try {
+      const data = await clearTasks()
+      if (data.status) {
+        tasks.value = []
+        stopPoll()
+        ElMessage.success('已清空任务卡片')
+      } else {
+        ElMessage.error(data.message || '清空失败')
+      }
+    } catch {
+      ElMessage.error('清空失败，请检查网络连接')
+    }
+  }
+
   onMounted(load)
   onUnmounted(stopPoll)
 
   return {
     tasks, loading, error, load,
-    activeFilter, filterTabs, filteredItems, emptyCopy,
+    activeFilter, filterTabs, filteredItems, groupedByStatus, expandedGroups, emptyCopy,
+    remove, clearAll,
   }
 }

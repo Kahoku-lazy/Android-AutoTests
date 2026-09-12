@@ -44,11 +44,12 @@ const {
   getElementItem,
   tokenSeries,
   costSeries,
+  roleBreakdown,
 } = useDashboardView()
 </script>
 
 <template>
-  <div class="doc-page wb-shell">
+  <div class="doc-page doc-page--fixed wb-shell">
     <WorkbenchHeader
       :title="PAGE_HEADER.title"
       :subtitle="PAGE_HEADER.subtitle"
@@ -98,7 +99,7 @@ const {
             label="运行中任务"
             :value="stats.runs.active"
             color="rose"
-            path="/runner"
+            path="/reports"
             :loading="loading"
             :live="stats.runs.active > 0"
           >
@@ -124,6 +125,8 @@ const {
           · 任务 {{ stats.aiUsage.taskCount.total }}
           · DeepSeek 费用 {{ stats.aiUsage.deepseekCost.total.toFixed(2) }} 元
         </div>
+        <div class="doc-section__label">分角色 Token（累计）：{{ roleBreakdown.total }}</div>
+        <div class="doc-section__label">分角色 Token（今日）：{{ roleBreakdown.today }}</div>
         <div class="dashboard__stats-grid">
           <StatsAppCard
             label="任务数量"

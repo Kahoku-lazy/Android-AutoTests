@@ -15,11 +15,39 @@ export interface SharedToolItem {
   config_json?: string
   enabled: boolean
   created_at?: string
+  origin?: 'local' | 'uploaded'
+  missing?: boolean
+}
+
+export interface SkillTreeNode {
+  name: string
+  path: string
+  is_dir: boolean
+  children?: SkillTreeNode[]
+}
+
+export interface SkillFilePayload {
+  path: string
+  name: string
+  kind: 'markdown' | 'text' | 'unsupported' | 'too_large'
+  content: string
 }
 
 export interface KnowledgeDoc {
   id: number | string
   name?: string
+  source?: string
+  type?: string
+  size?: number
+  ext?: string
+}
+
+export interface KnowledgePreviewPayload {
+  path: string
+  name: string
+  kind: 'markdown' | 'text'
+  content: string
+  converted?: boolean
 }
 
 // ── Toolbox (shared tools / skills / extensions) ──
@@ -70,6 +98,23 @@ export async function uploadSharedSkill(files: File[], name: string): Promise<Ag
   }
   const { data } = await djangoClient.post<AgentOpResponse>('/ai/toolbox/upload-skill', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
+export async function fetchSharedSkillTree(
+  name: string,
+): Promise<{ status: boolean; data?: { name?: string; tree?: SkillTreeNode[] }; message?: string }> {
+  const { data } = await djangoClient.get(`/ai/toolbox/skills/${encodeURIComponent(name)}/tree`)
+  return data
+}
+
+export async function fetchSharedSkillFile(
+  name: string,
+  path: string,
+): Promise<{ status: boolean; data?: SkillFilePayload; message?: string }> {
+  const { data } = await djangoClient.get(`/ai/toolbox/skills/${encodeURIComponent(name)}/file`, {
+    params: { path },
   })
   return data
 }
@@ -148,5 +193,25 @@ export async function getKnowledgeDocuments(): Promise<{ status: boolean; data?:
 
 export async function reindexKnowledge(): Promise<AgentOpResponse> {
   const { data } = await djangoClient.post<AgentOpResponse>('/ai/knowledge/reindex')
+  return data
+}
+
+export async function addKnowledgeDocument(
+  file: File,
+  subdir = '',
+): Promise<{ status: boolean; data?: KnowledgeDoc; message?: string }> {
+  const formData = new FormData()
+  formData.append('file', file)
+  if (subdir) formData.append('subdir', subdir)
+  const { data } = await djangoClient.post('/ai/knowledge/documents/add', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
+export async function previewKnowledgeDocument(
+  path: string,
+): Promise<{ status: boolean; data?: KnowledgePreviewPayload; message?: string }> {
+  const { data } = await djangoClient.get('/ai/knowledge/documents/preview', { params: { path } })
   return data
 }

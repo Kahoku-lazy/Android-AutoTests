@@ -14,6 +14,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'toggle-select': [key: string]
   'toggle-expand': [key: string]
+  open: [node: KbTreeNode]
 }>()
 
 const expanded = ref(new Set<string>())
@@ -43,6 +44,11 @@ function onToggle(node: KbTreeNode) {
   emit('toggle-expand', key)
 }
 
+function onFileActivate(node: KbTreeNode) {
+  if (props.selectable) emit('toggle-select', node.key)
+  else emit('open', node)
+}
+
 function formatSize(bytes?: number) {
   if (!bytes) return '0 B'
   if (bytes < 1024) return `${bytes} B`
@@ -64,9 +70,9 @@ const typeLabel = (type?: string) => {
         :class="{ 'has-children': node.type !== 'file', selected: selectable && isSelected(node) }"
         role="button"
         tabindex="0"
-        @click="node.type === 'file' ? (selectable && emit('toggle-select', node.key)) : onToggle(node)"
-        @keydown.enter.prevent="node.type === 'file' ? (selectable && emit('toggle-select', node.key)) : onToggle(node)"
-        @keydown.space.prevent="node.type === 'file' ? (selectable && emit('toggle-select', node.key)) : onToggle(node)"
+        @click="node.type === 'file' ? onFileActivate(node) : onToggle(node)"
+        @keydown.enter.prevent="node.type === 'file' ? onFileActivate(node) : onToggle(node)"
+        @keydown.space.prevent="node.type === 'file' ? onFileActivate(node) : onToggle(node)"
       >
         <span v-if="selectable" class="kb-tree-check" @click.stop>
           <el-checkbox
@@ -92,6 +98,7 @@ const typeLabel = (type?: string) => {
         :show-meta="showMeta"
         :depth="(depth || 0) + 1"
         @toggle-select="emit('toggle-select', $event)"
+        @open="emit('open', $event)"
       />
     </div>
   </div>
@@ -101,7 +108,7 @@ const typeLabel = (type?: string) => {
 .kb-tree-level { display: flex; flex-direction: column; gap: 2px; }
 .kb-tree-node { display: flex; flex-direction: column; }
 .kb-tree-row {
-  display: flex; align-items: center; gap: 6px; padding: 8px 10px;
+  display: flex; align-items: center; gap: 6px; padding: var(--app-space-sm) 10px;
   border-radius: 8px; cursor: pointer; transition: background .12s;
   border: 1.5px solid transparent;
 }
@@ -115,7 +122,7 @@ const typeLabel = (type?: string) => {
 .kb-tree-dir-hint {
   flex-shrink: 0; font-size: var(--app-size-xs); font-weight: 600;
   color: var(--ai-teal, #0fa89b); background: var(--ai-teal-bg, rgba(25,200,185,.12));
-  padding: 1px 8px; border-radius: 6px;
+  padding: 1px var(--app-space-sm); border-radius: 6px;
 }
 .kb-tree-check { display: inline-flex; flex-shrink: 0; }
 </style>

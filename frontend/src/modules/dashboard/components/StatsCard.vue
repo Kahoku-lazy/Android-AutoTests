@@ -237,7 +237,7 @@ function navigate() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: var(--app-space-xs);
   padding: 0 14px;
 }
 .stats-card__stat strong {
@@ -264,14 +264,14 @@ function navigate() {
 
 .stats-card__enter {
   align-self: center;
-  margin: 8px 0 14px;
+  margin: var(--app-space-sm) 0 14px;
   font-size: var(--app-size-xs);
   font-weight: 800;
   color: var(--ink);
   background: var(--app-bg-subtle);
   border: 1px solid var(--app-border-light);
   border-radius: 999px;
-  padding: 4px 12px;
+  padding: var(--app-space-xs) 12px;
   cursor: pointer;
   font-family: inherit;
   line-height: 1.2;

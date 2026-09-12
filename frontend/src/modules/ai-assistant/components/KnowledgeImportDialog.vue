@@ -1,137 +1,119 @@
 <script setup lang="ts">
-/** KnowledgeImportDialog — 知识库导入弹窗：目录（dir:）与文件（doc:）混选 */
-import { ref, computed } from 'vue'
+/** KnowledgeImportDialog — 上传文件到 data/rag_datas */
+import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import KbTreeView from './KbTreeView.vue'
-import { buildKbTree, dirKeyToPath, type KbDoc } from '../helpers/kb-tree'
+import { addKnowledgeDocument } from '../api/toolbox'
+import { KB_UPLOAD_ACCEPT, KB_UPLOAD_SUBDIRS } from '../constants'
 
 const props = defineProps<{
   visible?: boolean
-  allDocs?: KbDoc[]
-  importedDocIds?: (string | number)[]
 }>()
 
-const emit = defineEmits<{ import: [keys: string[]]; close: [] }>()
+const emit = defineEmits<{
+  imported: [ids: string[]]
+  close: []
+}>()
 
-const searchText = ref('')
-const selectedKeys = ref(new Set<string>())
+const files = ref<File[]>([])
+const subdir = ref('')
+const uploading = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
 
-const importedKeys = computed(() => new Set<string>((props.importedDocIds || []).map(String)))
-
-/** 文档是否已被导入覆盖（文件键或某个目录键命中） */
-function isCovered(doc: KbDoc): boolean {
-  const keys = importedKeys.value
-  if (keys.has(String(doc.id))) return true
-  const src = doc.source || ''
-  for (const k of keys) {
-    if (k.startsWith('dir:')) {
-      const dirPath = dirKeyToPath(k)
-      if (src === dirPath || src.startsWith(dirPath + '/')) return true
+watch(
+  () => props.visible,
+  (open) => {
+    if (!open) {
+      files.value = []
+      subdir.value = ''
+      uploading.value = false
     }
-  }
-  return false
-}
+  },
+)
 
-const availableDocs = computed(() => {
-  const query = searchText.value.trim().toLowerCase()
-  const docs = (props.allDocs || []).filter(d => !isCovered(d))
-  if (!query) return docs
-  return docs.filter(d =>
-    String(d.source || '').toLowerCase().includes(query) ||
-    String(d.id).toLowerCase().includes(query) ||
-    (d.type || '').toLowerCase().includes(query),
-  )
-})
-
-const tree = computed(() => buildKbTree(availableDocs.value))
-
-const selectedCount = computed(() => selectedKeys.value.size)
-
-function toggleSelect(key: string) {
-  const next = new Set(selectedKeys.value)
-  next.has(key) ? next.delete(key) : next.add(key)
-  selectedKeys.value = next
-}
-
-/** 全选 = 全部顶层节点键（目录保持 dir: 动态引用语义） */
-function selectAll() {
-  selectedKeys.value = new Set(tree.value.map(n => n.key))
-}
-
-function deselectAll() {
-  selectedKeys.value = new Set()
-}
-
-function handleImport() {
-  if (selectedKeys.value.size === 0) {
-    ElMessage.warning('请至少选择一个文档或目录')
-    return
-  }
-  emit('import', [...selectedKeys.value])
-  selectedKeys.value = new Set()
-  searchText.value = ''
+function onPick(event: Event) {
+  const input = event.target as HTMLInputElement
+  files.value = input.files ? [...input.files] : []
 }
 
 function handleClose() {
-  selectedKeys.value = new Set()
-  searchText.value = ''
   emit('close')
+}
+
+async function handleImport() {
+  if (!files.value.length) {
+    ElMessage.warning('请选择要导入的文件')
+    return
+  }
+  uploading.value = true
+  const ids: string[] = []
+  try {
+    for (const file of files.value) {
+      const data = await addKnowledgeDocument(file, subdir.value)
+      if (!data.status || !data.data?.id) {
+        ElMessage.error(data.message || `${file.name} 导入失败`)
+        return
+      }
+      ids.push(String(data.data.id))
+    }
+    ElMessage.success(`已导入 ${ids.length} 个文件`)
+    emit('imported', ids)
+  } catch {
+    ElMessage.error('导入失败')
+  } finally {
+    uploading.value = false
+  }
 }
 </script>
 
 <template>
   <el-dialog
     :model-value="visible"
-    title="从知识库导入文档 / 目录"
-    width="650px"
+    title="导入文档到知识库"
+    width="520px"
     :close-on-click-modal="false"
     @update:model-value="val => { if (!val) handleClose() }"
   >
     <div class="import-dialog-body">
-      <div class="import-search">
-        <input
-          v-model="searchText"
-          class="import-search-input"
-          placeholder="搜索文档..."
-        />
+      <p class="import-hint">文件保存到 data/rag_datas，支持 md / txt / Word / PDF。</p>
+      <div class="import-row">
+        <span class="import-label">目标目录</span>
+        <el-select v-model="subdir" style="width: 200px">
+          <el-option
+            v-for="opt in KB_UPLOAD_SUBDIRS"
+            :key="opt.value || 'root'"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </el-select>
       </div>
-      <div class="import-select-row">
-        <el-button size="small" text type="primary" @click="selectAll">全选</el-button>
-        <el-button size="small" text type="primary" @click="deselectAll">全部取消</el-button>
-        <span class="import-count">已选 {{ selectedCount }} 项</span>
-        <span class="import-hint">勾选目录 = 动态引用该目录下全部文件</span>
-      </div>
-      <div class="import-doc-list">
-        <div v-if="!tree.length" class="import-empty">没有可导入的文档</div>
-        <KbTreeView
-          v-else
-          :nodes="tree"
-          selectable
-          :selected-keys="selectedKeys"
-          @toggle-select="toggleSelect"
-        />
-      </div>
+      <input
+        ref="fileInput"
+        type="file"
+        multiple
+        :accept="KB_UPLOAD_ACCEPT"
+        class="import-file"
+        @change="onPick"
+      />
+      <ul v-if="files.length" class="import-files">
+        <li v-for="f in files" :key="f.name">{{ f.name }}</li>
+      </ul>
     </div>
     <template #footer>
       <el-button @click="handleClose">取消</el-button>
-      <el-button type="primary" @click="handleImport">确认导入 ({{ selectedCount }})</el-button>
+      <el-button type="primary" :loading="uploading" @click="handleImport">
+        确认导入{{ files.length ? ` (${files.length})` : '' }}
+      </el-button>
     </template>
   </el-dialog>
 </template>
 
 <style scoped>
 .import-dialog-body { display: flex; flex-direction: column; gap: 12px; }
-.import-search { margin-bottom: 4px; }
-.import-search-input {
-  width: 100%; padding: 10px 14px; border: 1.5px solid var(--ai-warm-border);
-  border-radius: 10px; font-size: var(--app-size-sm); font-family: inherit;
-  background: var(--ai-warm-bg); color: var(--ink); outline: none;
-  box-sizing: border-box;
+.import-hint { margin: 0; font-size: var(--app-size-sm); color: var(--app-ink-muted); }
+.import-row { display: flex; align-items: center; gap: 10px; }
+.import-label { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); }
+.import-file { font-size: var(--app-size-sm); }
+.import-files {
+  margin: 0; padding-left: 18px; font-size: var(--app-size-sm); color: var(--ink);
 }
-.import-search-input:focus { border-color: var(--ai-teal); }
-.import-select-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.import-count { font-size: var(--app-size-xs); color: var(--ai-ink-muted); margin-left: auto; }
-.import-hint { font-size: var(--app-size-xs); color: var(--ai-ink-muted); }
-.import-doc-list { max-height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
-.import-empty { padding: 24px; text-align: center; color: var(--ai-ink-muted); font-size: var(--app-size-sm); }
 </style>

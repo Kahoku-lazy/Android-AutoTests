@@ -36,7 +36,7 @@ export interface UseDevicePoolStateReturn {
   fetchDevices: () => Promise<void>
   /** 开发调试：开关模拟设备（60 条），开关时刷新列表 */
   toggleDevMock: (enabled: boolean) => Promise<void>
-  doScan: (target?: string) => Promise<ScanResponse>
+  doScan: (target?: string, extra?: { pair_port?: string; pair_code?: string }) => Promise<ScanResponse>
   doConnect: (serial: string, opts?: { activate?: boolean }) => Promise<DeviceOpResponse>
   doActivate: (serial: string) => Promise<DeviceOpResponse>
   doLock: (serial: string, locked: boolean) => Promise<DeviceOpResponse>
@@ -126,10 +126,16 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
     await fetchDevices()
   }
 
-  async function doScan(target?: string): Promise<ScanResponse> {
+  async function doScan(
+    target?: string,
+    extra?: { pair_port?: string; pair_code?: string },
+  ): Promise<ScanResponse> {
     scanning.value = true
     try {
-      const { data } = await apiScanDevices(target)
+      const body = extra
+        ? { target, pair_port: extra.pair_port, pair_code: extra.pair_code }
+        : target
+      const { data } = await apiScanDevices(body)
       if (data.status) {
         devices.value = data.data?.devices || []
         if (data.data?.devices?.length && !currentSerial.value) {

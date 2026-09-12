@@ -79,12 +79,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   max-width: 400px;
   width: 100%;
   max-height: min(80vh, 480px);
-  padding: 32px 28px 24px;
+  padding: var(--app-space-xl) 28px var(--app-space-lg);
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: var(--app-space-md);
   overflow: hidden;
 }
 
@@ -118,8 +118,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 }
 
 .error-card__btn {
-  margin-top: 4px;
-  padding: 8px 28px;
+  margin-top: var(--app-space-xs);
+  padding: var(--app-space-sm) 28px;
   font-size: var(--app-size-xs);
   font-weight: 700;
   font-family: var(--app-font);

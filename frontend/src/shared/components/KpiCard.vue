@@ -64,7 +64,7 @@ defineEmits(['click'])
   border: none; width: 24px; height: 20px;
 }
 .kpi-card__shape--triangle .kpi-card__shape-inner {
-  width: 5px; height: 5px; margin-top: 4px;
+  width: 5px; height: 5px; margin-top: var(--app-space-xs);
 }
 /* 方块 */
 .kpi-card__shape--square { border-radius: 3px 6px 3px 6px; }

@@ -50,9 +50,9 @@ function handleCancel() {
 </template>
 
 <style scoped>
-.disconnect-body { margin-bottom: 16px; }
+.disconnect-body { margin-bottom: var(--app-space-md); }
 .disconnect-warning {
   background: var(--el-color-warning-light-9);
-  padding: 10px; border-radius: 6px; margin-top: 8px;
+  padding: 10px; border-radius: 6px; margin-top: var(--app-space-sm);
 }
 </style>

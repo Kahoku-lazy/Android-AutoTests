@@ -19,6 +19,7 @@ import NodeContextMenu from './NodeContextMenu.vue'
 import EdgeContextMenu from './EdgeContextMenu.vue'
 import { PAGE_ELEMENTS, POPUP_ELEMENTS, ELEMENT_ICONS } from '@/modules/workflow/types/workflow'
 import { NODE_REGISTRY } from '@/modules/workflow/registry/nodeRegistry'
+import { NODE_TYPES, NODE_TYPE_LABELS, type FlowDocType } from '@/modules/workflow/constants'
 
 /** 元素卡片 xpath 展示 — 兼容可选字段 */
 function elXpath(el: { xpath?: string; type: string }): string {
@@ -42,9 +43,14 @@ const props = withDefaults(
     seedDemo?: boolean
     docName?: string
     docId?: string
+    /** 页面流 / 接口流 — 决定工具栏与可添加节点 */
+    flowKind?: FlowDocType
   }>(),
-  { seedDemo: true, docName: '', docId: '' }
+  { seedDemo: true, docName: '', docId: '', flowKind: NODE_TYPES.PAGE_FLOW }
 )
+
+const isApiFlow = computed(() => props.flowKind === NODE_TYPES.API_FLOW)
+const kindLabel = computed(() => NODE_TYPE_LABELS[props.flowKind] || '页面流')
 
 const store = useWorkflowStore()
 const { onConnect, onNodeDragStop, onEdgesChange, onEdgeContextMenu, fitView, updateNodeInternals } = useVueFlow()
@@ -54,7 +60,7 @@ const connectionMode = ConnectionMode.Loose
 
 const nodes = ref(toVueFlowNodes(store))
 const edges = ref(toVueFlowEdges(store))
-const status = ref('入口支持多连入：多条 navigation / popup_close 可同时连到同一 entry')
+const status = ref('')
 
 const picker = ref({ show: false, nodeId: '', search: '', x: 200, y: 120 })
 
@@ -278,6 +284,7 @@ function handleEdgeDelete(id: number) {
 }
 
 function addPage() {
+  if (isApiFlow.value) return
   const n = store.createNode('PageNode', 180 + store.pageNodes.length * 40, 160 + store.pageNodes.length * 20)
   if (n) {
     n.widgets_values = [`页面${store.pageNodes.length}`, 'teal']
@@ -286,11 +293,13 @@ function addPage() {
 }
 
 function addPopup() {
+  if (isApiFlow.value) return
   store.createNode('PopupNode', 420, 320)
   refreshFromStore()
 }
 
 function addApi() {
+  if (!isApiFlow.value) return
   const count = store.nodes.filter(n => n.type === 'ApiNode').length
   const n = store.createNode('ApiNode', 300, 80 + count * 60)
   if (n) {
@@ -300,6 +309,7 @@ function addApi() {
 }
 
 function addStart() {
+  if (isApiFlow.value) return
   const n = store.createNode('StartNode', 60, 200)
   if (n) {
     refreshFromStore()
@@ -310,6 +320,7 @@ function addStart() {
 }
 
 function addEnd() {
+  if (isApiFlow.value) return
   const n = store.createNode('EndNode', 780 + store.endNodes.length * 40, 220)
   if (n) {
     refreshFromStore()
@@ -393,29 +404,6 @@ function doFit() {
   fitView({ padding: 0.2 })
 }
 
-function rewireSearchDemo() {
-  // Ensure 搜索图标 (slot0 on 首页) → 搜索结果页 entry
-  const home = store.pageNodes.find(n => n.widgets_values[0] === '首页') || store.pageNodes[0]
-  const results = store.pageNodes.find(n => n.widgets_values[0] === '搜索结果页') || store.pageNodes[1]
-  if (!home || !results) {
-    status.value = '缺少首页或搜索结果页，请先创建节点'
-    return
-  }
-  const searchSlot = home.outputs.findIndex(p => p.el?.id === 'el_001' || p.name.includes('搜索'))
-  if (searchSlot < 0) {
-    store.addPort(home.id, 'el_001')
-  }
-  const slot = home.outputs.findIndex(p => p.el?.id === 'el_001' || p.name.includes('搜索'))
-  if (slot >= 0 && home.outputs[slot].type !== 'navigation') {
-    home.outputs[slot].type = 'navigation' as any
-  }
-  const ok = store.addLink(home.id, slot >= 0 ? slot : 0, results.id, 0)
-  refreshFromStore()
-  status.value = ok
-    ? '已自动连接：搜索图标 → 搜索结果页入口'
-    : store.statusMessage
-}
-
 onMounted(async () => {
   if (props.seedDemo) ensureWorkflowSeed(store)
   await refreshFromStore()
@@ -433,7 +421,7 @@ watch(
   <div class="vf-root">
     <div class="vf-toolbar">
       <div class="vf-docbar">
-        <button type="button" class="btn back" @click="emit('back')">← 看板</button>
+        <button type="button" class="btn back" @click="emit('back')">返回上一级</button>
         <input
           class="doc-name"
           :value="docName"
@@ -442,20 +430,23 @@ watch(
           @change="emit('rename')"
           @blur="emit('rename')"
         />
-        <span class="kind-chip">页面流</span>
+        <span class="kind-chip">{{ kindLabel }}</span>
         <span v-if="docId" class="id-chip" :title="docId">{{ docId }}</span>
       </div>
       <div class="vf-actions">
-        <button class="btn start" @click="addStart" title="最多 1 个 · 无入口">+ 起点</button>
-        <button class="btn primary" @click="addPage">+ 页面</button>
-        <button class="btn" @click="addPopup">+ 弹窗</button>
-        <button class="btn end" @click="addEnd" title="无输出 · 可多终点">+ 终点</button>
-        <button class="btn api-btn" @click="addApi" title="数据流节点 · 关联接口后生成端口">+ API</button>
-        <button class="btn" @click="rewireSearchDemo" title="强制连接 搜索图标→搜索结果页入口">连搜索示例</button>
+        <template v-if="!isApiFlow">
+          <button class="btn start" @click="addStart" title="最多 1 个 · 无入口">+ 起点</button>
+          <button class="btn primary" @click="addPage">+ 页面</button>
+          <button class="btn" @click="addPopup">+ 弹窗</button>
+          <button class="btn end" @click="addEnd" title="无输出 · 可多终点">+ 终点</button>
+        </template>
+        <template v-else>
+          <button class="btn api-btn" @click="addApi" title="接口串行 · 关联接口后生成数据端口">+ API</button>
+        </template>
         <button class="btn" @click="doFit">适配视图</button>
         <button class="btn" @click="refreshFromStore">刷新</button>
         <button class="btn danger" @click="clearAll">清空</button>
-        <span class="hint">{{ status }}</span>
+        <span v-if="status" class="hint">{{ status }}</span>
         <span class="meta">节点 {{ store.nodes.length }} · 连线 {{ store.links.length }} · 桥接 {{ store.bridgedElements.length }}</span>
       </div>
     </div>
@@ -589,7 +580,7 @@ watch(
 .vf-docbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-sm);
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -597,7 +588,7 @@ watch(
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--app-space-sm);
 }
 .doc-name {
   flex: 1;
@@ -696,7 +687,7 @@ watch(
   font-size: var(--app-size-sm);
   color: var(--ac-accent-deep);
   font-weight: 600;
-  margin-left: 4px;
+  margin-left: var(--app-space-xs);
   max-width: 40%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -775,7 +766,7 @@ watch(
 .el-picker-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-sm);
   padding: 12px 14px;
   background: var(--app-bg-card);
   border-bottom: 1px solid rgba(162,210,255,0.24);
@@ -789,7 +780,7 @@ watch(
   font-weight: 700;
   color: #6f9fd8;
   background: rgba(162,210,255,0.16);
-  padding: 2px 8px;
+  padding: 2px var(--app-space-sm);
   border-radius: 999px;
 }
 .el-picker-close {
@@ -820,7 +811,7 @@ watch(
 .el-picker-list {
   flex: 1;
   overflow: auto;
-  padding: 6px 8px 12px;
+  padding: 6px var(--app-space-sm) 12px;
   max-height: 300px;
   background: var(--app-bg-card);
 }
@@ -830,7 +821,7 @@ watch(
   align-items: flex-start;
   gap: 10px;
   padding: 10px 10px;
-  margin-bottom: 4px;
+  margin-bottom: var(--app-space-xs);
   border: 1.5px solid rgba(162,210,255,0.22);
   border-radius: 12px;
   background: #ffffff;
@@ -877,7 +868,7 @@ watch(
   flex-shrink: 0;
   font-size: var(--app-size-xs);
   font-weight: 800;
-  padding: 3px 8px;
+  padding: 3px var(--app-space-sm);
   border-radius: 999px;
   background: rgba(162,210,255,0.14);
   color: var(--app-ink-muted);
@@ -888,7 +879,7 @@ watch(
   color: #6f9fd8;
 }
 .el-picker-empty {
-  padding: 24px 12px;
+  padding: var(--app-space-lg) 12px;
   text-align: center;
   font-size: var(--app-size-sm);
   font-weight: 700;

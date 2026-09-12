@@ -47,7 +47,7 @@ const isRunnerOccupied = computed(() =>
 .action-bar :deep(.el-button) {
   margin: 0 !important;
   min-height: 26px;
-  padding: 4px 10px;
+  padding: var(--app-space-xs) 10px;
   font-size: var(--app-size-xs);
   font-weight: 700;
   line-height: 1.2;

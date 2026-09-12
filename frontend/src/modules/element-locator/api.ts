@@ -1,11 +1,76 @@
 /** element-locator API client functions — persistent element repository CRUD */
 import client from '@/shared/api-client'
+import type { DjangoResponse } from '@/shared/api-client'
+import type {
+  ApiEndpointDetail,
+  LocatorFileKind,
+  LocatorProject,
+  LocatorTreePayload,
+  WebElementDetail,
+} from './types'
+
+type Envelope<T> = Promise<{ data: DjangoResponse<T> }>
+
+// ── Projects / directories / move（标准 {status,data} 信封）──
+
+export function listLocatorProjects(): Envelope<LocatorProject[]> {
+  return client.get<DjangoResponse<LocatorProject[]>>('/elements/projects/')
+}
+
+export function getLocatorProjectTree(code: string): Envelope<LocatorTreePayload> {
+  return client.get<DjangoResponse<LocatorTreePayload>>(`/elements/projects/${code}/tree/`)
+}
+
+export function createLocatorDirectory(body: {
+  project_code: string
+  name: string
+  parent_id?: number | null
+}): Envelope<Record<string, unknown>> {
+  return client.post<DjangoResponse<Record<string, unknown>>>('/elements/directories/', body)
+}
+
+export function updateLocatorDirectory(
+  id: number,
+  body: { name?: string; sort_order?: number },
+): Envelope<Record<string, unknown>> {
+  return client.patch<DjangoResponse<Record<string, unknown>>>(`/elements/directories/${id}/`, body)
+}
+
+export function deleteLocatorDirectory(id: number): Envelope<{ id: number }> {
+  return client.delete<DjangoResponse<{ id: number }>>(`/elements/directories/${id}/`)
+}
+
+export function moveLocatorItem(body: {
+  kind: 'directory' | LocatorFileKind
+  id: number
+  parent_directory_id?: number | null
+}): Envelope<Record<string, unknown>> {
+  return client.post<DjangoResponse<Record<string, unknown>>>('/elements/move/', body)
+}
+
+export function batchDeleteLocatorFiles(body: {
+  kind: LocatorFileKind
+  ids: number[]
+}): Envelope<{ kind: string; deleted: number }> {
+  return client.post<DjangoResponse<{ kind: string; deleted: number }>>(
+    '/elements/files/batch-delete/',
+    body,
+  )
+}
+
+export function apiGetWebElement(id: number): Envelope<WebElementDetail> {
+  return client.get<DjangoResponse<WebElementDetail>>(`/elements/web/${id}/`)
+}
+
+export function apiGetApiEndpoint(id: number): Envelope<ApiEndpointDetail> {
+  return client.get<DjangoResponse<ApiEndpointDetail>>(`/elements/api-endpoints/${id}/`)
+}
 
 // ── Pages ──
 
 export function apiPages()        { return client.get('/elements/pages') }
 export function apiUpdatePage(id,label) { return client.put(`/elements/pages/${id}`,{label}) }
-export function apiPageItems(id,f) { return client.get(`/elements/pages/${id}/items`,{params:{filter:f}}) }
+export function apiPageItems(id,f,limit=500) { return client.get(`/elements/pages/${id}/items`,{params:{filter:f,limit}}) }
 
 // ── Elements ──
 

@@ -6,7 +6,8 @@ import KpiCard from "@/shared/components/KpiCard.vue";
 import ErrorState from "@/shared/components/patterns/ErrorState.vue";
 import KbTreeView from "./components/KbTreeView.vue";
 import KnowledgeImportDialog from "./components/KnowledgeImportDialog.vue";
-import { buildKbTree } from "./helpers/kb-tree";
+import KnowledgePreviewDrawer from "./components/KnowledgePreviewDrawer.vue";
+import { buildKbTree, type KbTreeNode } from "./helpers/kb-tree";
 import {
   getKnowledgeStatus, getKnowledgeDocuments, reindexKnowledge,
   fetchPlatformConfig, updatePlatformConfig,
@@ -25,6 +26,7 @@ const activeFilter = ref('all')
 const kbEnabled = ref(false)
 const knowledgeSources = ref({})
 const showImportDialog = ref(false)
+const previewPath = ref('')
 
 const filters = computed(() => [
   { key: 'all', label: `全部 (${documents.value.length})` },
@@ -38,7 +40,7 @@ const filteredDocs = computed(() => {
   return documents.value.filter(d => d.type === activeFilter.value)
 })
 
-/** 按 dev_docs/ 本地目录层级构建折叠树 */
+/** 按 data/rag_datas 相对路径构建折叠树 */
 const docTree = computed(() => buildKbTree(filteredDocs.value))
 
 /** 已导入的引用范围（knowledge_sources → 展示项） */
@@ -52,8 +54,6 @@ const importedDocs = computed(() => {
     return doc ? { ...doc, enabled: sources[id] === true } : null
   }).filter(Boolean)
 })
-
-const importedDocIds = computed(() => Object.keys(knowledgeSources.value || {}))
 
 function formatSize(bytes) {
   if (!bytes) return '0 B'
@@ -135,7 +135,7 @@ function removeDoc(id) {
   }).catch(() => ElMessage.error('操作失败'))
 }
 
-function importDocs(keys) {
+function importDocs(keys: string[]) {
   const sources = { ...knowledgeSources.value }
   for (const id of keys) {
     if (!(id in sources)) sources[id] = true
@@ -145,6 +145,15 @@ function importDocs(keys) {
     if (!data.status) ElMessage.error(data.message || '操作失败')
   }).catch(() => ElMessage.error('操作失败'))
   showImportDialog.value = false
+}
+
+function onImported(ids: string[]) {
+  importDocs(ids)
+  void fetchDocuments()
+}
+
+function onOpenFile(node: KbTreeNode) {
+  if (node.type === 'file' && node.path) previewPath.value = node.path
 }
 
 onMounted(() => { loadAll() })
@@ -168,7 +177,7 @@ onMounted(() => { loadAll() })
         <el-button type="primary" :loading="reindexing" @click="reindex">
           {{ reindexing ? '重建中…' : '🔄 重建索引' }}
         </el-button>
-        <span class="kb-hint">扫描 dev_docs/ 下所有 .md 文件并向量化索引</span>
+        <span class="kb-hint">扫描 data/rag_datas 下的 Markdown 并向量化索引</span>
         <div class="kb-switch">
           <span class="kb-switch-label">知识库开关</span>
           <el-switch :model-value="kbEnabled" :disabled="!props.canManage" @update:model-value="toggleKb" />
@@ -185,7 +194,7 @@ onMounted(() => { loadAll() })
         <el-button v-if="props.canManage" size="small" type="primary" @click="showImportDialog = true">📥 导入文档</el-button>
       </div>
       <div v-if="!importedDocs.length" class="kb-empty">
-        暂未导入文档{{ props.canManage ? '，点击「导入文档」从知识库选取' : '' }}
+        暂未导入文档{{ props.canManage ? '，点击「导入文档」上传到 data/rag_datas' : '' }}
       </div>
       <div v-else class="kb-imported-list">
         <div v-for="doc in importedDocs" :key="doc.id" class="kb-doc-card">
@@ -224,16 +233,19 @@ onMounted(() => { loadAll() })
       </div>
       <div class="kb-table-wrap">
         <div v-if="loading" class="kb-empty">加载中...</div>
-        <div v-else-if="!docTree.length" class="kb-empty">暂无文档，请先点击「重建索引」</div>
-        <KbTreeView v-else :nodes="docTree" show-meta />
+        <div v-else-if="!docTree.length" class="kb-empty">暂无文档，请先点击「导入文档」</div>
+        <KbTreeView v-else :nodes="docTree" show-meta @open="onOpenFile" />
       </div>
     </AppCard>
 
     <KnowledgeImportDialog
       :visible="showImportDialog"
-      :all-docs="documents"
-      :imported-doc-ids="importedDocIds"
-      @import="importDocs" @close="showImportDialog = false"
+      @imported="onImported" @close="showImportDialog = false"
+    />
+    <KnowledgePreviewDrawer
+      v-if="previewPath"
+      :path="previewPath"
+      @close="previewPath = ''"
     />
   </div>
 </template>
@@ -246,13 +258,19 @@ onMounted(() => { loadAll() })
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--app-space-md);
   padding: 0;
 }
 .kb-view > :first-child {
   flex-shrink: 0;
 }
-.kpi-row { display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px }
+.kpi-row { display:grid;grid-template-columns:var(--layout-kpi-cols);gap:var(--app-space-md);margin-bottom:var(--app-space-md) }
+.kpi-row :deep(.kpi-card__value) {
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+}
 @media (max-width: 768px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
 .kb-actions {
   display: flex;
@@ -264,7 +282,7 @@ onMounted(() => { loadAll() })
   font-size: var(--app-size-sm);
   color: var(--app-ink-muted);
 }
-.kb-switch { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
+.kb-switch { margin-left: auto; display: inline-flex; align-items: center; gap: var(--app-space-sm); }
 .kb-switch-label { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); }
 
 .kb-range-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
@@ -272,17 +290,17 @@ onMounted(() => { loadAll() })
 .kb-range-count { font-size: var(--app-size-xs); color: var(--app-ink-muted); }
 .kb-range-head .el-button { margin-left: auto; }
 
-.kb-imported-list { display: flex; flex-direction: column; gap: 8px; }
+.kb-imported-list { display: flex; flex-direction: column; gap: var(--app-space-sm); }
 .kb-doc-card {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 16px; border: 1.5px solid var(--ai-warm-border);
+  padding: 12px var(--app-space-md); border: 1.5px solid var(--ai-warm-border);
   border-radius: 12px; background: var(--app-bg-card); transition: border-color .15s;
 }
 .kb-doc-card:hover { border-color: var(--ai-teal); }
 .kb-doc-card-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .kb-doc-card-name { font-weight: 600; font-size: var(--app-size-sm); color: var(--ink); }
 .kb-doc-card-meta { font-size: var(--app-size-xs); color: var(--app-ink-muted); }
-.kb-doc-card-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.kb-doc-card-right { display: flex; align-items: center; gap: var(--app-space-sm); flex-shrink: 0; }
 .kb-doc-toggle { font-size:var(--app-size-md); cursor: pointer; opacity: 0.5; transition: opacity .15s; }
 .kb-doc-toggle.on { opacity: 1; }
 .kb-doc-toggle:hover { opacity: 0.8; }
@@ -307,7 +325,7 @@ onMounted(() => { loadAll() })
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 20px 24px;
+  padding: 20px var(--app-space-lg);
   overflow: hidden;
 }
 .kb-table-wrap {
@@ -318,7 +336,7 @@ onMounted(() => { loadAll() })
   overflow: auto;
 }
 .kb-empty {
-  padding: 32px;
+  padding: var(--app-space-xl);
   text-align: center;
   color: var(--ai-ink-muted);
   font-size: var(--app-size-sm);
@@ -330,7 +348,7 @@ onMounted(() => { loadAll() })
   margin-bottom: 14px;
 }
 .kb-filter-btn {
-  padding: 6px 16px;
+  padding: 6px var(--app-space-md);
   border: none;
   border-radius: 8px;
   background: rgba(121, 79, 39, 0.05);

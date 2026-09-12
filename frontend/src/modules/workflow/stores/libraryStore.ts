@@ -1,9 +1,15 @@
 /**
- * 工作流资源库 — 目录 / 页面流（Django JSON 持久化，doc_id 权威）
+ * 工作流资源库 — 目录 / 页面流 / 接口流（Django JSON 持久化，doc_id 权威）
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { WorkflowSaveData } from '@/modules/workflow/types/workflow'
+import {
+  NODE_TYPES,
+  DEFAULT_NAMES,
+  isFlowDocType,
+  type FlowDocType,
+} from '@/modules/workflow/constants'
 import {
   listWorkflowDirectories,
   createWorkflowDirectory,
@@ -20,7 +26,7 @@ import {
   moveWorkflowDirectory,
 } from '@/modules/workflow/api'
 
-export type LibNodeType = 'folder' | 'page_flow'
+export type LibNodeType = 'folder' | FlowDocType
 
 export interface LibNode {
   id: string
@@ -59,8 +65,26 @@ export const useLibraryStore = defineStore('wf-library', () => {
   const status = ref('')
   const expanded = ref<Record<string, boolean>>({})
   const loading = ref(false)
+  /** 当前原型作用域（进入工作台时设置） */
+  const currentPrototypeId = ref<number | null>(null)
   /** doc_id → 已拉取的 config（缓存，避免每次打开都打 GET） */
   const configCache = ref<Record<string, unknown>>({})
+
+  function requirePrototypeId(): number {
+    if (currentPrototypeId.value == null) {
+      throw new Error('未选择原型')
+    }
+    return currentPrototypeId.value
+  }
+
+  function setPrototypeId(id: number | null): void {
+    if (currentPrototypeId.value !== id) {
+      nodes.value = []
+      activeId.value = null
+      configCache.value = {}
+    }
+    currentPrototypeId.value = id
+  }
 
   const activeNode = computed(() => nodes.value.find(n => n.id === activeId.value) || null)
 
@@ -73,8 +97,12 @@ export const useLibraryStore = defineStore('wf-library', () => {
     }
     for (const list of byParent.values()) {
       list.sort((a, b) => {
-        const order = { folder: 0, page_flow: 1 }
-        return (order[a.type] - order[b.type]) || a.name.localeCompare(b.name, 'zh')
+        const order: Record<string, number> = {
+          folder: 0,
+          [NODE_TYPES.PAGE_FLOW]: 1,
+          [NODE_TYPES.API_FLOW]: 2,
+        }
+        return (order[a.type] ?? 9) - (order[b.type] ?? 9) || a.name.localeCompare(b.name, 'zh')
       })
     }
     function build(parentId: string | null): (LibNode & { children: any[] })[] {
@@ -137,11 +165,11 @@ export const useLibraryStore = defineStore('wf-library', () => {
     created_at?: string
     updated_at?: string
   }): LibNode | null {
-    if (d.doc_type === 'test_case') return null
+    if (!isFlowDocType(d.doc_type)) return null
     return {
       id: d.doc_id,
       name: d.title,
-      type: 'page_flow',
+      type: d.doc_type,
       parentId: d.directory_id != null ? folderId(d.directory_id) : null,
       createdAt: d.created_at || '',
       updatedAt: d.updated_at || '',
@@ -149,15 +177,16 @@ export const useLibraryStore = defineStore('wf-library', () => {
   }
 
   async function refreshFromServer(): Promise<void> {
+    const prototypeId = requirePrototypeId()
     loading.value = true
     try {
       const [dirRes, docRes] = await Promise.all([
-        listWorkflowDirectories(),
-        listWorkflowDocuments(),
+        listWorkflowDirectories({ prototype_id: prototypeId }),
+        listWorkflowDocuments({ prototype_id: prototypeId }),
       ])
       const dirs = dirRes.data?.directories || []
       const docs = (docRes.data?.documents || []).filter(
-        (d: { doc_type?: string }) => d.doc_type !== 'test_case'
+        (d: { doc_type?: string }) => !d.doc_type || isFlowDocType(d.doc_type)
       )
       const folderNodes = dirs.map(mapDir)
       const docNodes = docs
@@ -184,6 +213,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       const res = await createWorkflowDirectory({
         name: title,
         parent_id: parentToDirectoryId(parentId),
+        prototype_id: requirePrototypeId(),
       })
       if (!res.data?.status) throw new Error(res.data?.message || '创建目录失败')
       const node = mapDir(res.data.directory)
@@ -199,8 +229,14 @@ export const useLibraryStore = defineStore('wf-library', () => {
     }
   }
 
-  async function createPageFlow(name: string, parentId: string | null = null): Promise<LibNode> {
-    const title = name.trim() || '未命名页面流'
+  async function createFlowDoc(
+    docType: FlowDocType,
+    name: string,
+    parentId: string | null = null
+  ): Promise<LibNode> {
+    const title =
+      name.trim() ||
+      (docType === NODE_TYPES.API_FLOW ? DEFAULT_NAMES.API_FLOW : DEFAULT_NAMES.PAGE_FLOW)
     const empty: WorkflowSaveData = {
       name: title,
       version: '1.0',
@@ -208,11 +244,13 @@ export const useLibraryStore = defineStore('wf-library', () => {
       nodes: [],
       links: [],
     }
+    const label = docType === NODE_TYPES.API_FLOW ? '接口流' : '页面流'
     try {
       const res = await saveWorkflowDocument({
         title,
-        doc_type: 'page_flow',
+        doc_type: docType,
         directory_id: parentToDirectoryId(parentId),
+        prototype_id: requirePrototypeId(),
         config: empty,
       })
       if (!res.data?.status) throw new Error(res.data?.message || '创建失败')
@@ -223,13 +261,21 @@ export const useLibraryStore = defineStore('wf-library', () => {
       nodes.value.push(node)
       if (parentId) expanded.value[parentId] = true
       persistUi()
-      status.value = `已创建页面流「${title}」（${node.id}）`
+      status.value = `已创建${label}「${title}」（${node.id}）`
       return node
     } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || '创建页面流失败'
+      const msg = e?.response?.data?.message || e?.message || `创建${label}失败`
       throw new Error(msg)
       throw e
     }
+  }
+
+  async function createPageFlow(name: string, parentId: string | null = null): Promise<LibNode> {
+    return createFlowDoc(NODE_TYPES.PAGE_FLOW, name, parentId)
+  }
+
+  async function createApiFlow(name: string, parentId: string | null = null): Promise<LibNode> {
+    return createFlowDoc(NODE_TYPES.API_FLOW, name, parentId)
   }
 
   async function renameNode(id: string, name: string): Promise<void> {
@@ -247,7 +293,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
         // 一旦 PUT 会把未落库的画布数据洗成空（多端/改名失焦时尤其易发）。
         const res = await updateWorkflowDocument(id, {
           title,
-          doc_type: 'page_flow',
+          doc_type: n.type,
           directory_id: parentToDirectoryId(n.parentId),
         })
         if (!res.data?.status) throw new Error(res.data?.message || '重命名失败')
@@ -348,7 +394,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
     opts?: { confirmEmptyOverwrite?: boolean; skipEmptyOverwrite?: boolean }
   ): Promise<void> {
     const n = findNode(id)
-    if (!n || n.type !== 'page_flow') return
+    if (!n || !isFlowDocType(n.type)) return
     data.name = n.name
     data.savedAt = nowIso()
     const incomingEmpty = !((data.nodes && data.nodes.length) || (data.links && data.links.length))
@@ -378,7 +424,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
     try {
       const res = await updateWorkflowDocument(id, {
         title: n.name,
-        doc_type: 'page_flow',
+        doc_type: n.type,
         directory_id: parentToDirectoryId(n.parentId),
         config: data,
       })
@@ -388,7 +434,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       configCache.value[id] = saved
       n.updatedAt = res.data.document?.updated_at || nowIso()
     } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || '保存页面流失败'
+      const msg = e?.response?.data?.message || e?.message || '保存失败'
       throw new Error(msg)
       throw e
     }
@@ -442,7 +488,10 @@ export const useLibraryStore = defineStore('wf-library', () => {
     opts?: { overwrite?: boolean; directoryId?: string | null }
   ): Promise<LibNode | null> {
     try {
-      const payload = { ...envelope }
+      const payload: Record<string, unknown> = {
+        ...envelope,
+        prototype_id: requirePrototypeId(),
+      }
       if (opts?.directoryId !== undefined) {
         payload.directory_id = parentToDirectoryId(opts.directoryId)
       }
@@ -483,7 +532,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
     expanded.value[folder.id] = true
     activeId.value = folder.id
     persistUi()
-    status.value = '已创建「默认目录」，可在右侧新建页面流'
+    status.value = '已创建「默认目录」，可新建页面流或接口流'
     return { folder }
   }
 
@@ -500,6 +549,8 @@ export const useLibraryStore = defineStore('wf-library', () => {
     status,
     expanded,
     loading,
+    currentPrototypeId,
+    setPrototypeId,
     tree,
     loadMeta,
     refreshFromServer,
@@ -507,6 +558,8 @@ export const useLibraryStore = defineStore('wf-library', () => {
     childrenOf,
     createFolder,
     createPageFlow,
+    createApiFlow,
+    createFlowDoc,
     configCache,
     renameNode,
     deleteNode,

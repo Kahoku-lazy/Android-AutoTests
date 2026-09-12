@@ -1,12 +1,11 @@
 <script setup lang="ts">
-/** 助手线路卡片 — 功能标题 + 头像/名称 + 规划/执行/校验模型 */
+/** 助手线路卡片 — 功能标题 + 头像/名称 + 连通状态；模型明细在配置弹层 */
 import { computed } from 'vue'
 import type { RouteConfig } from '@/shared/types/ai'
 import { isImageAvatar } from '../constants'
 
 const props = defineProps<{
   label: string
-  icon: string
   agentName?: string
   agentAvatar?: string
   config?: RouteConfig
@@ -18,17 +17,7 @@ const emit = defineEmits<{ edit: []; test: [] }>()
 
 const ROLES = ['planner', 'executor', 'verifier'] as const
 
-function modelName(cfg?: { model_name?: string }): string {
-  return cfg?.model_name || '未配置'
-}
-
 const results = computed(() => props.testResults || props.config?.health?.results)
-
-function roleTestState(role: string): 'ok' | 'fail' | 'unknown' {
-  const r = results.value?.[role]
-  if (!r) return 'unknown'
-  return r.connected ? 'ok' : 'fail'
-}
 
 const displayName = computed(() => props.config?.name || props.agentName || '未命名助手')
 const displayAvatar = computed(() => props.config?.avatar || props.agentAvatar || '🤖')
@@ -47,7 +36,6 @@ const routeConnState = computed(() => {
 <template>
   <article class="route-card">
     <div class="route-func">
-      <span class="route-func-icon">{{ icon }}</span>
       <h4 class="route-func-title">{{ label }}</h4>
     </div>
 
@@ -67,36 +55,6 @@ const routeConnState = computed(() => {
           <template v-if="routeConnState === 'connected'">✅ 已连通</template>
           <template v-else-if="routeConnState === 'disconnected'">❌ 已断开</template>
           <template v-else>🔍 未检测</template>
-        </span>
-      </div>
-    </div>
-
-    <div class="route-config">
-      <div class="cfg-row">
-        <span class="cfg-role">规划模型</span>
-        <span class="cfg-val">
-          {{ modelName(config?.planner) }}
-          <span v-if="roleTestState('planner') === 'ok'" class="cfg-status ok">✓</span>
-          <span v-else-if="roleTestState('planner') === 'fail'" class="cfg-status fail">✗</span>
-          <span v-else class="cfg-status unknown">🔍未检测</span>
-        </span>
-      </div>
-      <div class="cfg-row">
-        <span class="cfg-role">执行模型</span>
-        <span class="cfg-val">
-          {{ modelName(config?.executor) }}
-          <span v-if="roleTestState('executor') === 'ok'" class="cfg-status ok">✓</span>
-          <span v-else-if="roleTestState('executor') === 'fail'" class="cfg-status fail">✗</span>
-          <span v-else class="cfg-status unknown">🔍未检测</span>
-        </span>
-      </div>
-      <div class="cfg-row">
-        <span class="cfg-role">校验模型</span>
-        <span class="cfg-val">
-          {{ modelName(config?.verifier) }}
-          <span v-if="roleTestState('verifier') === 'ok'" class="cfg-status ok">✓</span>
-          <span v-else-if="roleTestState('verifier') === 'fail'" class="cfg-status fail">✗</span>
-          <span v-else class="cfg-status unknown">🔍未检测</span>
         </span>
       </div>
     </div>
@@ -125,13 +83,13 @@ const routeConnState = computed(() => {
 .route-card:hover { transform: translateY(-2px); }
 
 .route-func {
-  display: flex; align-items: center; gap: var(--app-space-sm);
+  display: flex; align-items: center; justify-content: center;
   padding-bottom: var(--app-space-sm);
   border-bottom: 2px dashed var(--ai-warm-border);
 }
-.route-func-icon { font-size: var(--app-size-xl); line-height: 1; }
 .route-func-title {
   margin: 0; font-size: var(--app-size-lg); font-weight: 800; color: var(--ai-ink-soft);
+  text-align: center; width: 100%;
 }
 
 .route-identity { display: flex; align-items: center; gap: 12px; }
@@ -144,7 +102,7 @@ const routeConnState = computed(() => {
   box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.04);
 }
 .route-identity-text {
-  min-width: 0; display: flex; flex-direction: column; gap: 4px;
+  min-width: 0; display: flex; flex-direction: column; gap: var(--app-space-xs);
 }
 .route-agent-name {
   font-size: var(--app-size-md); font-weight: 800; color: var(--ai-ink-soft);
@@ -166,21 +124,6 @@ const routeConnState = computed(() => {
 .route-conn-badge.is-unknown {
   background: var(--ai-bg-neutral); color: var(--ai-ink-muted); border-color: var(--app-offline);
 }
-
-.route-config { display: flex; flex-direction: column; gap: var(--app-space-sm); }
-.cfg-row {
-  display: flex; justify-content: space-between; align-items: center; gap: var(--app-space-sm);
-  padding: var(--app-space-sm) 12px; background: rgba(139, 115, 85, 0.06);
-  border-radius: 8px 12px 6px 10px;
-}
-.cfg-role { font-size: var(--app-size-sm); font-weight: 700; color: var(--ai-ink-muted); flex-shrink: 0; }
-.cfg-val {
-  font-size: var(--app-size-sm); font-weight: 700; color: var(--ai-ink-soft);
-  text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.cfg-status.ok { color: var(--ai-teal-text); font-weight: 800; margin-left: 6px; }
-.cfg-status.fail { color: var(--el-color-danger); font-weight: 800; margin-left: 6px; }
-.cfg-status.unknown { color: var(--ai-ink-muted); font-weight: 700; margin-left: 6px; }
 
 .route-actions { display: flex; gap: var(--app-space-sm); align-self: flex-end; }
 .route-edit, .route-test {

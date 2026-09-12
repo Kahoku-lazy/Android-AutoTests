@@ -39,13 +39,7 @@ function taskId(task: RecentTask): string | number | null {
 function openTask(task: RecentTask) {
   const id = taskId(task)
   if (!id) return
-  // 只有执行中任务有 client_task_id 能定位详情页
-  // 已完成任务跳转列表页（后端 ID 与前端 ID 不兼容）
-  if (task.status === 'running') {
-    router.push(`/runner/task/${id}`)
-  } else {
-    router.push('/runner')
-  }
+  router.push('/reports')
 }
 </script>
 
@@ -113,7 +107,7 @@ function openTask(task: RecentTask) {
 .task-result-panel__summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--app-space-sm);
   flex-shrink: 0;
 }
 
@@ -150,7 +144,7 @@ function openTask(task: RecentTask) {
 .summary-chip__value { font-size: var(--app-size-md); font-weight: 800; }
 
 .task-result-panel__list {
-  display: flex; flex-direction: column; gap: 8px;
+  display: flex; flex-direction: column; gap: var(--app-space-sm);
   flex: 1; min-height: 0; overflow-y: auto;
   --task-row-height: 68px;
   max-height: calc(var(--task-row-height) * 4 + 8px * 3);
@@ -182,7 +176,7 @@ function openTask(task: RecentTask) {
 .task-row__body { flex: 1; min-width: 0; }
 .task-row__title { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); margin-bottom: 3px; }
 
-.task-row__cases { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 3px; }
+.task-row__cases { display: flex; flex-wrap: wrap; gap: var(--app-space-xs); margin-bottom: 3px; }
 .case-icon {
   width: 20px; height: 20px; border-radius: 6px;
   display: inline-flex; align-items: center; justify-content: center;

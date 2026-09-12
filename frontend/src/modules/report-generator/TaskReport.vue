@@ -120,7 +120,6 @@ function runStatusClass(s) {
 }
 
 function goBack() { router.push('/reports') }
-function goRunner() { router.push('/runner') }
 </script>
 
 <template>
@@ -144,7 +143,6 @@ function goRunner() { router.push('/runner') }
       <!-- Top bar -->
       <div class="top-bar">
         <el-button size="small" @click="goBack">← 报告列表</el-button>
-        <el-button size="small" @click="goRunner">← 执行引擎</el-button>
         <span class="badge" :class="outcomeBadgeClass(taskMeta.outcome)" style="margin-left:auto;">
           {{ outcomeLabel(taskMeta.outcome) }}
         </span>
@@ -333,10 +331,10 @@ function goRunner() { router.push('/runner') }
 
 <style scoped>
 .doc-page{display:flex;flex-direction:column;height:100%;overflow-y:auto}
-.doc-body{padding:16px 24px 48px;display:flex;flex-direction:column;gap:16px;width:100%}
-.top-bar{display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap}.run-meta{display:flex;align-items:center;gap:10px;font-size:var(--app-size-xs);color:var(--app-ink-muted);flex-wrap:wrap}
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px}
-.task-meta-card{display:flex;flex-wrap:wrap;gap:10px;padding:12px 16px;background:var(--app-bg-card);border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;margin-bottom:4px;font-size:var(--app-size-xs)}.meta-item{display:flex;align-items:center;gap:6px}.meta-label{opacity:0.5;font-weight:600}.meta-value{font-weight:700}
-.detail-tabs :deep(.el-tabs__header){margin-bottom:0}.detail-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:4px}.detail-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:var(--app-ink-muted);height:auto;line-height:1.4}.detail-tabs :deep(.el-tabs__item:hover){color:var(--ink)}.detail-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-dashboard);border-color:var(--ink)}.detail-tabs :deep(.el-tabs__active-bar){display:none}
+.doc-body{padding:var(--app-space-md) var(--app-space-lg) var(--app-space-2xl);display:flex;flex-direction:column;gap:var(--app-space-md);width:100%}
+.top-bar{display:flex;align-items:center;gap:12px;margin-bottom:var(--app-space-xs);flex-wrap:wrap}.run-meta{display:flex;align-items:center;gap:10px;font-size:var(--app-size-xs);color:var(--app-ink-muted);flex-wrap:wrap}
+.kpi-row{display:grid;grid-template-columns:var(--layout-kpi-cols);gap:12px;margin-bottom:var(--app-space-xs)}
+.task-meta-card{display:flex;flex-wrap:wrap;gap:10px;padding:12px var(--app-space-md);background:var(--app-bg-card);border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;margin-bottom:var(--app-space-xs);font-size:var(--app-size-xs)}.meta-item{display:flex;align-items:center;gap:6px}.meta-label{opacity:0.5;font-weight:600}.meta-value{font-weight:700}
+.detail-tabs :deep(.el-tabs__header){margin-bottom:0}.detail-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:var(--app-space-xs)}.detail-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:var(--app-ink-muted);height:auto;line-height:1.4}.detail-tabs :deep(.el-tabs__item:hover){color:var(--ink)}.detail-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-dashboard);border-color:var(--ink)}.detail-tabs :deep(.el-tabs__active-bar){display:none}
 .badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);display:inline-block}.badge-pass{background:var(--app-status-success-bg);color:var(--app-status-success-text)}.badge-fail{background:var(--app-status-danger-bg);color:var(--app-status-danger-text)}.badge-stopped{background:var(--app-offline);color:var(--app-text-secondary)}
 </style>

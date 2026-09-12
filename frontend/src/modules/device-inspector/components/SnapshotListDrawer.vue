@@ -62,7 +62,7 @@ async function onDelete(snap) {
 <style scoped>
 .snap-list { display: flex; flex-direction: column; gap: 10px; }
 .snap-item {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--app-space-sm);
   padding: 10px 12px; border: 2px solid var(--app-ink, #2d2d2d);
   border-radius: 4px 8px 4px 8px; background: var(--app-bg-card);
   cursor: pointer; transition: all 0.12s;

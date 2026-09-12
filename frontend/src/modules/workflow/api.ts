@@ -1,5 +1,5 @@
 /**
- * 工作流工作台 API — 元素 + Django workflow JSON 持久化
+ * 工作流工作台 API — 原型 + 目录/文档 + 元素素材
  */
 import client from '@/shared/api-client'
 
@@ -13,7 +13,7 @@ export function listPageElements(pageId, filter = 'all') {
   return client.get(`/elements/pages/${pageId}/items`, { params: { filter } })
 }
 
-/** 列出 Web 元素分组（项目管理） */
+/** 列出 Web 元素分组 */
 export function listWebGroups() {
   return client.get('/elements/web-groups')
 }
@@ -23,10 +23,32 @@ export function listWebGroupElements(groupId) {
   return client.get('/elements/web', { params: { group_id: groupId } })
 }
 
+// ── 原型 ──
+
+export function listWorkflowPrototypes() {
+  return client.get('/workflow/prototypes')
+}
+
+export function getWorkflowPrototype(id) {
+  return client.get(`/workflow/prototypes/${id}`)
+}
+
+export function createWorkflowPrototype(payload) {
+  return client.post('/workflow/prototypes/create', payload)
+}
+
+export function updateWorkflowPrototype(id, payload) {
+  return client.post(`/workflow/prototypes/${id}`, payload)
+}
+
+export function deleteWorkflowPrototype(id) {
+  return client.delete(`/workflow/prototypes/${id}`)
+}
+
 // ── Workflow 目录 / JSON 文档 ──
 
-export function listWorkflowDirectories() {
-  return client.get('/workflow/directories')
+export function listWorkflowDirectories(params = {}) {
+  return client.get('/workflow/directories', { params })
 }
 
 export function createWorkflowDirectory(payload) {

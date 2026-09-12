@@ -15,9 +15,9 @@ const emit = defineEmits<{ save: [] }>()
 </template>
 
 <style scoped>
-.step-nav { display: flex; justify-content: center; gap: 16px; padding: 20px 0; }
+.step-nav { display: flex; justify-content: center; gap: var(--app-space-md); padding: 20px 0; }
 .nav-btn {
-  display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px;
+  display: inline-flex; align-items: center; gap: var(--app-space-sm); padding: 12px 28px;
   border: 2px solid var(--ink); border-radius: 12px; font-size: var(--app-size-md); font-weight: 700;
   font-family: inherit; cursor: pointer; transition: all 0.2s ease;
 }

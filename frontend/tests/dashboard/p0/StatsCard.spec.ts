@@ -91,10 +91,10 @@ describe('[P0] StatsCard', () => {
   })
 
   it('键盘 Enter：触发跳转', async () => {
-    const wrapper = mountCard({ value: 3, path: '/runner' })
+    const wrapper = mountCard({ value: 3, path: '/reports' })
 
     await wrapper.trigger('keydown', { key: 'Enter' })
 
-    expect(pushMock).toHaveBeenCalledWith('/runner')
+    expect(pushMock).toHaveBeenCalledWith('/reports')
   })
 })

@@ -6,7 +6,6 @@ const store = useElementStore()
 const emit = defineEmits(['capture'])
 
 const METHODS = [
-  { value: 'both', label: 'Dump + OCR' },
   { value: 'dump', label: '仅 Dump' },
   { value: 'ocr', label: '仅 OCR' },
 ]
@@ -47,8 +46,8 @@ const METHODS = [
 .cap-device { width: 280px; }
 .cap-method { flex-shrink: 0; }
 .action-btn {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: var(--app-size-xs); font-weight: 700; padding: 4px 12px;
+  display: inline-flex; align-items: center; gap: var(--app-space-xs);
+  font-size: var(--app-size-xs); font-weight: 700; padding: var(--app-space-xs) 12px;
   border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px 8px 4px 8px;
   background: var(--app-bg-card); color: var(--app-ink, #2d2d2d);
   cursor: pointer; font-family: inherit; transition: all 0.12s; white-space: nowrap; flex-shrink: 0;

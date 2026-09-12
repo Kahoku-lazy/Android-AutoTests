@@ -115,7 +115,7 @@ function doDelete() {
   font-size: var(--app-size-sm);
   font-weight: 800;
   color: var(--ink);
-  padding: 6px 8px 2px;
+  padding: 6px var(--app-space-sm) 2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -123,7 +123,7 @@ function doDelete() {
 .edge-menu__item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-sm);
   padding: 9px 12px;
   border: none;
   border-radius: 8px;
@@ -143,7 +143,7 @@ function doDelete() {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 6px 8px;
+  padding: var(--app-space-xs) 6px var(--app-space-sm);
   font-size: var(--app-size-sm);
   font-weight: 800;
   color: var(--ink);
@@ -161,8 +161,8 @@ function doDelete() {
 }
 .edge-menu__back:hover { background: rgba(137, 207, 240, 0.16); }
 .edge-menu__input {
-  margin: 0 4px 6px;
-  padding: 8px 10px;
+  margin: 0 var(--app-space-xs) 6px;
+  padding: var(--app-space-sm) 10px;
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-sm);
   background: var(--app-bg-card);
@@ -175,7 +175,7 @@ function doDelete() {
 .edge-menu__hint {
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
-  padding: 0 8px 6px;
+  padding: 0 var(--app-space-sm) 6px;
   font-weight: 600;
 }
 </style>

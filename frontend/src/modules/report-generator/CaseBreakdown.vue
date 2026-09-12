@@ -420,7 +420,7 @@ function stepTypeLabel(type) {
 }
 
 /* ── KPI cards ── */
-.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 4px; }
+.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: var(--app-space-xs); }
 
 /* ── Case list ── */
 .case-list { display: flex; flex-direction: column; gap: 10px; }
@@ -444,7 +444,7 @@ function stepTypeLabel(type) {
 .expand-icon.open { transform: rotate(90deg); }
 .expand-icon--sm { font-size:var(--app-size-xs); }
 
-.case-title-wrap { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.case-title-wrap { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--app-space-sm); flex-wrap: wrap; }
 .case-title { font-weight: 800; font-size:var(--app-size-sm); display: flex; align-items: center; gap: 6px; }
 .case-title .case-icon { font-size:var(--app-size-md); }
 .case-id { font-family: var(--app-font-mono); font-size: var(--app-size-xs); background: var(--app-bg-subtle); padding: 2px 7px; border-radius: var(--app-radius-sm); color: var(--app-text-secondary); }
@@ -462,21 +462,21 @@ function stepTypeLabel(type) {
 .task-meta { font-size:var(--app-size-xs); color: var(--app-text-muted); white-space: nowrap; }
 
 /* ── Step rows ── */
-.step-list { padding: 8px 12px 4px; }
+.step-list { padding: var(--app-space-sm) 12px var(--app-space-xs); }
 .step-row {
   margin-bottom: var(--app-space-sm); padding: var(--app-space-sm); background: var(--app-bg-card);
   border: 2px solid var(--app-fail); border-radius: var(--app-radius-sm);
 }
-.step-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.step-head { display: flex; align-items: center; gap: var(--app-space-sm); margin-bottom: 6px; }
 .step-meta { font-size:var(--app-size-xs); color: var(--app-text-secondary); }
-.step-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.step-detail { display: grid; grid-template-columns: 1fr 1fr; gap: var(--app-space-sm); }
 .detail-item { display: flex; flex-direction: column; gap: 2px; }
 .detail-label { font-size:var(--app-size-xs); font-weight: 700; opacity: 0.5; text-transform: uppercase; letter-spacing: 0.5px; }
 .detail-value { font-size:var(--app-size-xs); font-weight: 600; }
 .detail-error { color: var(--app-status-danger-text); }
 
 /* ── Badge ── */
-.badge { font-size:var(--app-size-xs); font-weight: 700; padding: 2px 8px; border-radius: 4px; display: inline-block; }
+.badge { font-size:var(--app-size-xs); font-weight: 700; padding: 2px var(--app-space-sm); border-radius: 4px; display: inline-block; }
 .badge-fail { background: var(--app-fail); color: var(--app-status-danger-text); border: 1.5px solid var(--app-status-danger); }
 .badge-pass { background: var(--app-pass); color: var(--app-status-success-text); border: 1.5px solid var(--app-status-success); }
 
@@ -489,7 +489,7 @@ function stepTypeLabel(type) {
 }
 .bug-case-group :deep(.el-card) { border: none !important; box-shadow: none !important; border-radius: 0 !important; }
 
-.issue-list { display: flex; flex-direction: column; gap: 8px; padding: 8px 0; }
+.issue-list { display: flex; flex-direction: column; gap: var(--app-space-sm); padding: var(--app-space-sm) 0; }
 .issue-row {
   background: var(--app-bg-card); border: 2px solid var(--app-status-danger-bg);
   border-radius: var(--app-radius-sm); overflow: hidden; margin: 0 var(--app-space-md);
@@ -502,14 +502,14 @@ function stepTypeLabel(type) {
 .issue-count-badge {
   font-family: var(--app-font-mono); font-size: var(--app-size-xs); font-weight: 700;
   background: var(--app-bg-card); color: #c0392b;
-  padding: 2px 8px; border-radius: 4px; border: 1.5px solid #e8b0b0;
+  padding: 2px var(--app-space-sm); border-radius: 4px; border: 1.5px solid #e8b0b0;
 }
 .issue-type { font-size:var(--app-size-sm); font-weight: 700; color: var(--ink); }
 .issue-body { padding: 12px 14px; }
 .task-id-inline {
   font-family: var(--app-font-mono); font-size: var(--app-size-xs); font-weight: 600;
   background: var(--app-bg-subtle); padding: 1px 6px; border-radius: 3px;
-  border: 1px solid #e8e4d8; margin-left: 4px;
+  border: 1px solid #e8e4d8; margin-left: var(--app-space-xs);
 }
 
 /* ── Misc ── */

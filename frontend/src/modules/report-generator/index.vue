@@ -181,7 +181,7 @@ function openCaseBreakdown(type, tab = 'detail') {
 </script>
 
 <template>
-  <div class="doc-page wb-shell">
+  <div class="doc-page doc-page--fixed wb-shell">
     <WorkbenchHeader
       title="测试报告"
       subtitle="查看历史测试执行记录，点击 Run ID 进入详细报告"
@@ -366,57 +366,57 @@ function openCaseBreakdown(type, tab = 'detail') {
 <style scoped>
 /* Doodle Craft — 测试报告 */
 .doc-page{display:flex;flex-direction:column;height:100%;overflow:hidden!important}
-.doc-body{flex:1 1 0;min-height:0;overflow-y:auto!important;padding:16px 20px 32px;display:flex;flex-direction:column;gap:14px}
+.doc-body{flex:1 1 0;min-height:0;overflow-y:auto!important;padding:var(--app-space-md) 20px var(--app-space-xl);display:flex;flex-direction:column;gap:14px}
 
 /* 分区卡片 — doc-section 统一样式 */
-.doc-section{background:var(--app-bg-card);border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:16px 18px;box-shadow:2px 3px 0 rgba(0,0,0,0.04)}
+.doc-section{background:var(--app-bg-card);border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:var(--app-space-md) 18px;box-shadow:2px 3px 0 rgba(0,0,0,0.04)}
 .doc-section__header{margin-bottom:12px}
 .doc-section__title{font-family:var(--app-font-display);font-size:var(--app-size-xl);font-weight:700;display:inline-block;position:relative;margin-bottom:6px}
 .doc-section__title::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2.5px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%231e1e24' stroke-width='2' fill='none'/%3E%3C/svg%3E")repeat-x;background-size:40px 3px}
-.doc-section__title .doc-tag{font-size:var(--app-size-xs);padding:1px 8px;border-radius:4px 8px 4px 8px;background:var(--app-bg-card);color:var(--app-ink-muted);border:1.5px solid #e8ecf1;font-weight:700;margin-left:8px}
+.doc-section__title .doc-tag{font-size:var(--app-size-xs);padding:1px var(--app-space-sm);border-radius:4px 8px 4px 8px;background:var(--app-bg-card);color:var(--app-ink-muted);border:1.5px solid #e8ecf1;font-weight:700;margin-left:var(--app-space-sm)}
 .doc-section__label{color:var(--app-ink-muted);font-size:var(--app-size-xs);margin-top:2px}
 
 /* KPI 网格 — 渲染由 shared/KpiCard.vue 接管 */
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:8px}
+.kpi-row{display:grid;grid-template-columns:var(--layout-kpi-cols);gap:12px;margin-bottom:var(--app-space-sm)}
 @media(max-width:800px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
 
 /* 筛选栏 */
 .filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .filter-date{width:220px}.filter-input{width:140px}
 .filter-summary{font-size:var(--app-size-xs);color:var(--app-ink-muted);font-weight:600;white-space:nowrap;margin-left:auto}
-.btn-sm{padding:4px 10px;font-size:var(--app-size-xs);font-weight:700;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;background:var(--app-bg-card);color:var(--ink);cursor:pointer;font-family:inherit;transition:all 0.12s}
+.btn-sm{padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;background:var(--app-bg-card);color:var(--ink);cursor:pointer;font-family:inherit;transition:all 0.12s}
 .btn-sm:hover{background:var(--c-report)}
 
 /* 图表 */
 .chart-section{display:flex;flex-direction:column;gap:12px}
 .chart-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .toolbar-label{font-size:var(--app-size-xs);font-weight:700;color:var(--app-ink-muted)}
-.page-size-btns{display:flex;gap:4px}
-.page-size-btn{padding:4px 10px;font-size:var(--app-size-xs);font-weight:700;color:var(--app-ink-muted);background:var(--app-bg-card);border:2px solid #e8ecf1;border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all 0.12s}
+.page-size-btns{display:flex;gap:var(--app-space-xs)}
+.page-size-btn{padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;color:var(--app-ink-muted);background:var(--app-bg-card);border:2px solid #e8ecf1;border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all 0.12s}
 .page-size-btn:hover{border-color:var(--ink);color:var(--ink)}
 .page-size-btn.active{background:var(--app-bg-subtle);border-color:var(--ink);color:var(--ink)}
-.chart-row{display:grid;grid-template-columns:1.5fr 1fr;gap:14px}
+.chart-row{display:grid;grid-template-columns:var(--layout-ratio-chart);gap:14px}
 @media(max-width:900px){.chart-row{grid-template-columns:1fr}}
-.chart-card{padding:0}.chart-title{font-size:var(--app-size-sm);font-weight:700;margin-bottom:8px}
+.chart-card{padding:0}.chart-title{font-size:var(--app-size-sm);font-weight:700;margin-bottom:var(--app-space-sm)}
 
 /* 表格工具栏（单行） */
-.table-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 16px 0}
+.table-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:var(--app-space-sm) var(--app-space-md) 0}
 .page-info{font-size:var(--app-size-xs);color:var(--app-ink-muted);font-weight:600;white-space:nowrap;margin-left:auto}
-.page-nav{display:flex;gap:6px;margin-left:8px}
-.page-nav-btn{padding:4px 10px;font-size:var(--app-size-xs);font-weight:700;color:var(--ink);background:var(--app-bg-card);border:2px solid var(--ink);border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all 0.12s}
+.page-nav{display:flex;gap:6px;margin-left:var(--app-space-sm)}
+.page-nav-btn{padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;color:var(--ink);background:var(--app-bg-card);border:2px solid var(--ink);border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all 0.12s}
 .page-nav-btn:hover{background:var(--c-report)}
 .page-nav-btn:disabled{opacity:0.3;cursor:default}
 
 /* 报告表格 */
 .report-tabs{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
-.report-tabs :deep(.el-tabs__header){margin-bottom:0;padding:0 16px}
-.report-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:4px}
+.report-tabs :deep(.el-tabs__header){margin-bottom:0;padding:0 var(--app-space-md)}
+.report-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:var(--app-space-xs)}
 .report-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:var(--app-ink-muted);height:auto;line-height:1.4}
 .report-tabs :deep(.el-tabs__item:hover){color:var(--ink)}
 .report-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-report);border-color:var(--ink)}
 .report-tabs :deep(.el-tabs__active-bar){display:none}
 .report-tabs :deep(.el-tabs__content){flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:12px 0 0}
-.table-card{background:var(--app-bg-card);border:2.5px solid var(--c-report);border-radius:6px 10px 6px 10px;overflow:hidden;margin:0 16px 14px}
+.table-card{background:var(--app-bg-card);border:2.5px solid var(--c-report);border-radius:6px 10px 6px 10px;overflow:hidden;margin:0 var(--app-space-md) 14px}
 
 .report-table{width:100%}
 .report-table :deep(.el-table__header th){background:var(--app-bg-subtle)!important;color:var(--ink)!important;font-weight:700!important;font-size:var(--app-size-xs)!important;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2.5px solid var(--ink)!important}

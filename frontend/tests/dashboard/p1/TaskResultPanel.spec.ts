@@ -96,17 +96,17 @@ describe('[P1] TaskResultPanel', () => {
 
     await wrapper.find('.task-row').trigger('click')
 
-    expect(pushMock).toHaveBeenCalledWith('/runner/task/client-123')
+    expect(pushMock).toHaveBeenCalledWith('/reports')
   })
 
-  it('已完成任务点击：跳转执行引擎列表页', async () => {
+  it('已完成任务点击：跳转测试报告页', async () => {
     const wrapper = mountPanel({
       tasks: [{ run_id: 'run-9', status: 'success', title: '已完成任务' }],
     })
 
     await wrapper.find('.task-row').trigger('click')
 
-    expect(pushMock).toHaveBeenCalledWith('/runner')
+    expect(pushMock).toHaveBeenCalledWith('/reports')
   })
 
   it('无任何 ID 的任务：不可点击，点击不跳转', async () => {

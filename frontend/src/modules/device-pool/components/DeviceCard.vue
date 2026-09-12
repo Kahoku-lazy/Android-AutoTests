@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** 设备卡片 — 极简几何（侧栏色条 + 型号主标题 + 名片式信息） */
+/** 设备卡片 — 横向长方形极简几何 */
 import { computed } from 'vue'
 import { statusTag, displayModel, deviceAddress, formatRelativeTime } from '../helpers'
 import { RUNNER_OCCUPIED_PREFIXES } from '../constants'
@@ -49,33 +49,35 @@ function go() {
     @keydown.enter.prevent="go"
     @keydown.space.prevent="go"
   >
-    <div class="card-head">
-      <div class="card-head-main">
-        <p class="card-model">{{ displayModel(device) }}</p>
+    <div class="card-main">
+      <div class="card-identity">
+        <div class="card-title-row">
+          <p class="card-model">{{ displayModel(device) }}</p>
+          <span class="status-chip" :class="status">
+            <span class="geo" :class="status === 'busy' ? 'geo--triangle' : 'geo--diamond'" aria-hidden="true" />
+            {{ statusText }}
+          </span>
+        </div>
         <code class="card-serial" :title="device.serial">{{ device.serial }}</code>
       </div>
-      <span class="status-chip" :class="status">
-        <span class="geo" :class="status === 'busy' ? 'geo--triangle' : 'geo--diamond'" aria-hidden="true" />
-        {{ statusText }}
-      </span>
-    </div>
 
-    <div class="card-meta">
-      <div class="meta-cell">
-        <span class="meta-k">地址</span>
-        <span class="meta-v meta-v--mono" :title="deviceAddress(device)">{{ deviceAddress(device) }}</span>
-      </div>
-      <div class="meta-cell">
-        <span class="meta-k">分辨率</span>
-        <span class="meta-v meta-v--mono">{{ device.screen || '—' }}</span>
-      </div>
-      <div class="meta-cell">
-        <span class="meta-k">连接</span>
-        <span class="meta-v">{{ isWifi ? 'Wi‑Fi' : 'USB' }}</span>
-      </div>
-      <div class="meta-cell">
-        <span class="meta-k">活跃</span>
-        <span class="meta-v">{{ formatRelativeTime(device.last_seen) }}</span>
+      <div class="card-meta">
+        <div class="meta-cell">
+          <span class="meta-k">地址</span>
+          <span class="meta-v meta-v--mono" :title="deviceAddress(device)">{{ deviceAddress(device) }}</span>
+        </div>
+        <div class="meta-cell">
+          <span class="meta-k">分辨率</span>
+          <span class="meta-v meta-v--mono">{{ device.screen || '—' }}</span>
+        </div>
+        <div class="meta-cell">
+          <span class="meta-k">连接</span>
+          <span class="meta-v">{{ isWifi ? 'Wi‑Fi' : 'USB' }}</span>
+        </div>
+        <div class="meta-cell">
+          <span class="meta-k">活跃</span>
+          <span class="meta-v">{{ formatRelativeTime(device.last_seen) }}</span>
+        </div>
       </div>
     </div>
 
@@ -126,7 +128,11 @@ function go() {
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  width: 100%;
+  /* 横向长方形：宽 > 高 */
+  aspect-ratio: 2.2 / 1;
+  min-height: 132px;
+  max-height: 168px;
   transition: transform var(--app-duration) var(--app-ease);
 }
 .device-card.busy { --card-accent: var(--c-dashboard); }
@@ -148,24 +154,36 @@ function go() {
   outline-offset: 3px;
 }
 
-.card-head {
+.card-main {
+  flex: 1;
+  min-height: 0;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px 10px 8px 14px;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--app-space-sm);
+  padding: 10px 12px 6px 14px;
 }
-.card-head-main { min-width: 0; }
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-sm);
+  min-width: 0;
+}
 .card-model {
   margin: 0;
   font-size: var(--app-size-sm);
   font-weight: 800;
-  line-height: 1.25;
-  letter-spacing: 0.01em;
+  line-height: 1.2;
   color: var(--ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .card-serial {
-  margin: 4px 0 0;
+  margin: var(--app-space-xs) 0 0;
   font-family: var(--app-font-mono);
   font-size: var(--app-size-xs);
   font-weight: 700;
@@ -176,13 +194,15 @@ function go() {
   padding: 1px 5px;
   display: inline-block;
   max-width: 100%;
-  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--app-space-xs);
   padding: 2px 6px;
   border: 1px solid var(--ink);
   border-radius: var(--app-radius-sm);
@@ -204,10 +224,7 @@ function go() {
   color: var(--app-ink-muted);
 }
 
-.geo {
-  flex-shrink: 0;
-  display: inline-block;
-}
+.geo { flex-shrink: 0; display: inline-block; }
 .geo--diamond {
   width: 8px;
   height: 8px;
@@ -224,14 +241,12 @@ function go() {
   border-bottom: 9px solid var(--c-dashboard);
 }
 
-/* 名片式信息：无粗框、无填充底 */
+/* 四字段横排，压低纵向高度 */
 .card-meta {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 10px;
-  row-gap: 6px;
-  margin: 0 10px 0 14px;
-  padding: 8px 0 2px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--app-space-sm);
+  padding-top: 6px;
   border-top: 1px solid var(--app-border-light);
   background: transparent;
 }
@@ -240,30 +255,28 @@ function go() {
   font-size: var(--app-size-xs);
   font-weight: 500;
   color: var(--app-ink-muted);
-  letter-spacing: 0.02em;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 .meta-v {
   font-size: var(--app-size-xs);
   font-weight: 500;
   color: var(--ink);
-  word-break: break-all;
-  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
 }
-.meta-v--mono {
-  font-family: var(--app-font-mono);
-  font-size: var(--app-size-xs);
-  font-weight: 500;
-}
+.meta-v--mono { font-family: var(--app-font-mono); }
 
 .card-foot {
-  margin-top: auto;
-  padding: 8px 10px 10px 14px;
+  flex-shrink: 0;
+  padding: 6px 12px var(--app-space-sm) 14px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  flex-wrap: nowrap;
+  gap: var(--app-space-xs);
   align-items: center;
   border-top: 1px solid var(--app-border-light);
+  min-height: 0;
 }
 .tag {
   font-size: var(--app-size-xs);
@@ -271,6 +284,7 @@ function go() {
   padding: 1px 5px;
   border: 1px solid var(--ink);
   border-radius: var(--app-radius-sm);
+  white-space: nowrap;
 }
 .tag--wifi {
   background: color-mix(in srgb, var(--c-workflow) 40%, white);
@@ -284,6 +298,9 @@ function go() {
   background: var(--app-status-purple-bg);
   color: var(--app-status-purple-text);
   border-color: var(--app-status-purple-border);
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .tag--open {
   background: var(--app-bg-subtle);
@@ -294,14 +311,14 @@ function go() {
 .card-actions {
   margin-left: auto;
   display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
+  gap: var(--app-space-xs);
+  flex-shrink: 0;
 }
 .card-btn {
   border: 1.5px solid var(--ink);
   background: var(--app-bg-card);
   border-radius: var(--app-radius-sm);
-  padding: 2px 8px;
+  padding: 2px var(--app-space-sm);
   font: inherit;
   font-size: var(--app-size-xs);
   font-weight: 800;
@@ -319,6 +336,17 @@ function go() {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
+}
+
+@media (max-width: 720px) {
+  .device-card {
+    aspect-ratio: 1.6 / 1;
+    max-height: none;
+  }
+  .card-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: var(--app-space-xs);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

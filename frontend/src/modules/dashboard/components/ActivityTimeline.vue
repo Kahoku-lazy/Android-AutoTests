@@ -66,13 +66,13 @@ watch(() => props.items.length, revealItems)
   font-size: var(--app-size-md);
   font-weight: 700;
   color: var(--ink);
-  margin: 0 0 16px;
+  margin: 0 0 var(--app-space-md);
 }
 
 .timeline__list {
   flex: 1;
   overflow-y: auto;
-  padding-right: 8px;
+  padding-right: var(--app-space-sm);
 }
 
 .timeline__empty {
@@ -135,7 +135,7 @@ watch(() => props.items.length, revealItems)
 .timeline-item__content {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--app-space-xs);
 }
 
 .timeline-item__header {
@@ -172,7 +172,7 @@ watch(() => props.items.length, revealItems)
 
 .timeline-item__tag {
   font-size: var(--app-size-xs);
-  padding: 2px 8px;
+  padding: 2px var(--app-space-sm);
   border-radius: 999px;
   background: var(--app-bg-subtle);
   border: 1px solid var(--app-border-light);

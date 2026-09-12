@@ -16,7 +16,7 @@ export function usePlatformTools() {
   const categories = ref<PlatformToolCategory[]>([])
   const loading = ref(false)
   const toggling = ref(false)
-  // 默认全部展开（AI 工具箱职责 = 展开工具 + 说明功能）
+  // 装配台：默认折叠，避免首屏被业务工具挤满
   const expanded = ref<string[]>([])
 
   async function loadPlatformTools() {
@@ -25,7 +25,9 @@ export function usePlatformTools() {
       const data = await fetchPlatformTools()
       if (data.status) {
         categories.value = data.data?.categories || []
-        expanded.value = categories.value.map((c) => c.key)
+        // 仅保留用户已展开的模块；初次加载保持折叠
+        const keys = new Set(categories.value.map((c) => c.key))
+        expanded.value = expanded.value.filter((k) => keys.has(k))
       }
     } catch (e) {
       console.error('Failed to load platform tools:', e)

@@ -2,7 +2,7 @@
  * [P0] 必测 — device-pool API 端点封装（表驱动，mock api-client，不断真网络）
  * 目录：tests/device-pool/p0/
  *
- * api.ts 8 个端点函数（10 条表驱动用例）：断言 client 方法、URL、body 透传，且恰好调用一次。
+ * api.ts 端点函数（表驱动）：断言 client 方法、URL、body 透传，且恰好调用一次。
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import client from '@/shared/api-client'
@@ -42,6 +42,17 @@ const cases: ApiCase[] = [
     method: 'post',
     url: '/devices/scan',
     body: { target: '10.0.0.1' },
+  },
+  {
+    name: 'apiScanDevices：透传配对字段',
+    invoke: () => dpApi.apiScanDevices({
+      target: '10.162.95.96:43523',
+      pair_port: '41395',
+      pair_code: '387429',
+    }),
+    method: 'post',
+    url: '/devices/scan',
+    body: { target: '10.162.95.96:43523', pair_port: '41395', pair_code: '387429' },
   },
   {
     name: 'apiConnectDevice：透传 activate',

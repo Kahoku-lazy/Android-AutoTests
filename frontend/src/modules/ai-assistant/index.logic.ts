@@ -139,7 +139,7 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
 
   function hydrateRouteTests(list: AgentRecord[]) {
     const configs = list[0]?.route_configs || {}
-    for (const key of ['device_control', 'platform_task'] as const) {
+    for (const key of ['device_control'] as const) {
       const results = configs[key]?.health?.results
       if (results && Object.keys(results).length) {
         routeTestResults.value[key] = results

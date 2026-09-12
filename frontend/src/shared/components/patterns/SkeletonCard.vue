@@ -23,7 +23,7 @@ defineProps({
 <style scoped>
 .skeleton-card {
   display: flex; flex-direction: column; gap: 10px;
-  padding: 4px 0;
+  padding: var(--app-space-xs) 0;
 }
 .skeleton-card__bar {
   background: linear-gradient(

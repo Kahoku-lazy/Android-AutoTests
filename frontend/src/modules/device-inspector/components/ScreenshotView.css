@@ -75,9 +75,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--app-space-sm);
   text-align: center;
-  padding: 24px;
+  padding: var(--app-space-lg);
   color: var(--app-ink-muted);
 }
 .no-signal__icon {
@@ -105,7 +105,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--app-space-sm);
   position: relative;
 }
 .no-device-rings {

@@ -261,10 +261,10 @@ watch(
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 8px;
+  padding: 6px var(--app-space-sm);
   background: rgba(245, 166, 35, 0.08);
   border-radius: 8px;
-  margin-bottom: 4px;
+  margin-bottom: var(--app-space-xs);
 }
 .api-method {
   display: inline-block;
@@ -317,8 +317,8 @@ watch(
 }
 .pf-kind {
   display: flex;
-  gap: 4px;
-  margin: 6px 0 4px;
+  gap: var(--app-space-xs);
+  margin: 6px 0 var(--app-space-xs);
   padding: 3px;
   background: var(--app-bg-subtle);
   border-radius: 8px;
@@ -328,7 +328,7 @@ watch(
   flex: 1;
   border: none;
   border-radius: 6px;
-  padding: 5px 8px;
+  padding: 5px var(--app-space-sm);
   font-size: var(--app-size-xs);
   font-weight: 700;
   font-family: inherit;
@@ -378,8 +378,8 @@ watch(
 .pf-sub {
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
-  margin-bottom: 8px;
-  padding-left: 4px;
+  margin-bottom: var(--app-space-sm);
+  padding-left: var(--app-space-xs);
   line-height: 1.5;
   font-weight: 600;
 }
@@ -457,13 +457,13 @@ watch(
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
   text-align: center;
-  padding: 8px 0 4px;
+  padding: var(--app-space-sm) 0 var(--app-space-xs);
   font-weight: 600;
 }
 
 .pf-add {
   width: 100%;
-  margin-top: 8px;
+  margin-top: var(--app-space-sm);
   padding: 7px;
   border: 2px dashed var(--ink);
   border-radius: 8px;

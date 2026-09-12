@@ -224,8 +224,8 @@ function rowBounds(row) {
 .pep-thumb { width: 48px; height: 48px; object-fit: contain; border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px; display: block; }
 .pep-badge {
   position: absolute; left: 0; bottom: 0;
-  font-size: 9px; font-weight: 700; line-height: 1;
-  padding: 2px 4px; border-radius: 0 4px 0 0;
+  font-size: var(--app-size-xs); font-weight: 700; line-height: 1;
+  padding: 2px var(--app-space-xs); border-radius: 0 4px 0 0;
   color: #fff;
 }
 .pep-badge--dump { background: #409eff; }
@@ -240,12 +240,12 @@ function rowBounds(row) {
   display: flex; align-items: center; justify-content: center;
 }
 .pep-enlarge {
-  display: flex; gap: 16px; align-items: flex-start;
+  display: flex; gap: var(--app-space-md); align-items: flex-start;
   background: var(--app-bg-card, #fff);
   border: 3px solid var(--app-ink, #2d2d2d);
   border-radius: 6px 10px 6px 10px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  padding: 16px;
+  padding: var(--app-space-md);
   max-width: 90vw;
 }
 .pep-enlarge-img {
@@ -259,7 +259,7 @@ function rowBounds(row) {
   min-width: 220px; max-width: 320px;
 }
 .pep-enlarge-field {
-  display: flex; gap: 8px; align-items: baseline;
+  display: flex; gap: var(--app-space-sm); align-items: baseline;
   word-break: break-all;
 }
 .pep-enlarge-field span {

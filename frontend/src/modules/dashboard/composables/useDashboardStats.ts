@@ -47,6 +47,7 @@ const DEFAULT_AI_USAGE: AiUsage = {
   cacheHitRate: zeroMetric(),
   avgTokensPerTask: zeroMetric(),
   deepseekCost: zeroMetric(),
+  byRole: { today: {}, total: {} },
 }
 
 const DEFAULT_STATS: DashboardStats = {
@@ -113,6 +114,7 @@ export function mapStatsResponse(raw: DashboardRawData): MappedData {
         cacheHitRate: toMetric(raw.ai_usage?.cache_hit_rate),
         avgTokensPerTask: toMetric(raw.ai_usage?.avg_tokens_per_task),
         deepseekCost: toMetric(raw.ai_usage?.deepseek_cost),
+        byRole: raw.ai_usage?.by_role ?? { today: {}, total: {} },
       },
     },
     executionChart: raw.charts?.execution ?? DEFAULT_CHART,

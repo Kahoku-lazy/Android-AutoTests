@@ -36,18 +36,9 @@ const routeCards = computed(() => {
     {
       key: 'device_control',
       label: '控制设备',
-      icon: '📱',
       config: configs.device_control,
       agentName: configs.device_control?.name || fallbackName,
       agentAvatar: configs.device_control?.avatar || fallbackAvatar,
-    },
-    {
-      key: 'platform_task',
-      label: '平台任务',
-      icon: '🧭',
-      config: configs.platform_task,
-      agentName: configs.platform_task?.name || fallbackName,
-      agentAvatar: configs.platform_task?.avatar || fallbackAvatar,
     },
   ]
 })
@@ -69,7 +60,7 @@ const VIEW_META: Record<ViewMode, { title: string; subtitle: string }> = {
   },
   toolbox: {
     title: 'AI工具箱 AI Toolbox',
-    subtitle: '集中管理跨智能体复用的 Skill、MCP 与扩展',
+    subtitle: '先看助手此刻能用什么，再按来源开关目录 · 两条线路共用同一套装配',
   },
   knowledge: {
     title: '知识库 Knowledge Base',
@@ -84,7 +75,7 @@ const pageMeta = computed(() => VIEW_META[viewMode.value])
 </script>
 
 <template>
-  <div class="doc-page wb-shell ai-workbench">
+  <div class="doc-page doc-page--fixed wb-shell ai-workbench">
     <WorkbenchHeader
       :title="pageMeta.title"
       :subtitle="pageMeta.subtitle"
@@ -107,7 +98,7 @@ const pageMeta = computed(() => VIEW_META[viewMode.value])
           </div>
           <AgentRouteCard
             v-for="rc in routeCards" :key="rc.key"
-            :label="rc.label" :icon="rc.icon" :config="rc.config"
+            :label="rc.label" :config="rc.config"
             :agent-name="rc.agentName"
             :agent-avatar="rc.agentAvatar"
             :can-manage="isAdmin"
@@ -137,7 +128,7 @@ const pageMeta = computed(() => VIEW_META[viewMode.value])
 .route-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
+  gap: var(--app-space-md);
   align-items: start;
 }
 </style>

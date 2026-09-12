@@ -259,7 +259,7 @@ function fmtTime(iso: string) {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 20px 24px 24px;
+  padding: 20px var(--app-space-lg) var(--app-space-lg);
   overflow: auto;
   background: transparent;
 }
@@ -267,9 +267,9 @@ function fmtTime(iso: string) {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--app-space-md);
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  margin-bottom: var(--app-space-md);
 }
 .board-title {
   margin: 0;
@@ -278,12 +278,12 @@ function fmtTime(iso: string) {
   color: var(--ink);
 }
 .board-sub {
-  margin: 4px 0 0;
+  margin: var(--app-space-xs) 0 0;
   font-size: var(--app-size-sm);
   font-weight: 600;
   color: var(--app-text-secondary);
 }
-.board-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.board-actions { display: flex; gap: var(--app-space-sm); flex-wrap: wrap; }
 .btn {
   display: inline-flex;
   align-items: center;
@@ -323,7 +323,7 @@ function fmtTime(iso: string) {
   background: var(--c-workflow);
   filter: brightness(1.04);
 }
-.filters { display: flex; gap: 8px; margin-bottom: 16px; }
+.filters { display: flex; gap: var(--app-space-sm); margin-bottom: var(--app-space-md); }
 .chip {
   padding: 5px 13px;
   border-radius: 999px;
@@ -348,7 +348,7 @@ function fmtTime(iso: string) {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 48px 20px;
+  padding: var(--app-space-2xl) 20px;
   color: var(--app-text-secondary);
   font-weight: 600;
 }
@@ -359,7 +359,7 @@ function fmtTime(iso: string) {
   color: var(--app-text-secondary);
   font-weight: 600;
   line-height: 1.6;
-  margin: 8px 0 18px;
+  margin: var(--app-space-sm) 0 18px;
 }
 .empty-btns { display: flex; gap: 10px; }
 .section { margin-bottom: 22px; }
@@ -367,7 +367,7 @@ function fmtTime(iso: string) {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-sm);
   padding: 11px 14px;
   border: 2.5px solid var(--ink);
   border-radius: var(--app-radius-sm);
@@ -395,7 +395,7 @@ function fmtTime(iso: string) {
 .sec-count {
   font-size: var(--app-size-xs);
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 2px var(--app-space-sm);
   border-radius: 999px;
   background: var(--ac-accent-soft);
   color: var(--ac-accent-deep);
@@ -404,11 +404,11 @@ function fmtTime(iso: string) {
   font-size: var(--app-size-sm);
   font-weight: 700;
   color: var(--ac-accent-deep);
-  padding: 2px 8px;
+  padding: 2px var(--app-space-sm);
   border-radius: 8px;
 }
 .enter:hover { background: var(--ac-accent-soft); }
-.section-body { padding: 14px 2px 0 8px; }
+.section-body { padding: 14px 2px 0 var(--app-space-sm); }
 .sec-empty {
   padding: 12px 14px;
   font-size: var(--app-size-sm);
@@ -430,7 +430,7 @@ function fmtTime(iso: string) {
 /* 本目录文件：标题与卡片之间留白（对齐子目录 section-body） */
 .section > .file-grid {
   margin-top: 14px;
-  padding-left: 8px;
+  padding-left: var(--app-space-sm);
 }
 .file-grid {
   display: grid;
@@ -463,7 +463,7 @@ function fmtTime(iso: string) {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 8px;
+  margin-bottom: var(--app-space-sm);
 }
 .file-ico { font-size: var(--app-size-lg); }
 .file-type {
@@ -502,7 +502,7 @@ function fmtTime(iso: string) {
   font-size: var(--app-size-xs);
   font-weight: 600;
   color: var(--ac-accent-deep);
-  margin-bottom: 8px;
+  margin-bottom: var(--app-space-sm);
   word-break: break-all;
   font-family: var(--app-font-mono);
   line-height: 1.4;

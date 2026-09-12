@@ -3,26 +3,18 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { listDevices, submitTask } from '../api/tasks'
 import type { DeviceRecord } from '@/shared/types/device'
-import type { AgentRoute, TaskSubmitPayload } from '@/shared/types/ai'
+import type { TaskSubmitPayload } from '@/shared/types/ai'
 
 export interface TaskFormState {
   goal: string
-  requirements: string
   attachment: string
-  route: AgentRoute
-  report_name: string
-  checklist: string
   device_serial: string
 }
 
 function emptyForm(): TaskFormState {
   return {
     goal: '',
-    requirements: '',
     attachment: '',
-    route: 'device_control',
-    report_name: '',
-    checklist: '',
     device_serial: '',
   }
 }
@@ -64,11 +56,7 @@ export function useTaskPublish() {
     try {
       const payload: TaskSubmitPayload = {
         goal: form.value.goal.trim(),
-        requirements: form.value.requirements.trim(),
         attachment: form.value.attachment.trim(),
-        route: form.value.route,
-        report_name: form.value.report_name.trim(),
-        checklist: form.value.checklist.trim(),
         device_serial: form.value.device_serial,
       }
       const data = await submitTask(payload)

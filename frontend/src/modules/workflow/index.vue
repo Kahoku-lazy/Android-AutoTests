@@ -1,31 +1,39 @@
 <script setup lang="ts">
 /**
  * 工作流工作台
- * 左：目录+文件树（右键/长按移动）
- * 右：点击文件后直接编辑内容（页面流 VueFlow）
+ * 资源态：仅目录树；点击页面流后整页进入绘制
+ * 绘制态：VueFlow 全宽；「返回上一级」保存后回到目录树
  */
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useWorkflowStore } from '@/modules/workflow/stores/workflowStore'
 import { useLibraryStore, type LibNode } from '@/modules/workflow/stores/libraryStore'
+import { getWorkflowPrototype } from '@/modules/workflow/api'
+import {
+  NODE_TYPE_LABELS,
+  DEFAULT_NAMES,
+  isFlowDocType,
+} from '@/modules/workflow/constants'
 import PageFlowVueFlow from './components/vueflow/PageFlowVueFlow.vue'
 import WorkflowDirTree from './components/WorkflowDirTree.vue'
-import WorkflowFileBrowser from './components/WorkflowFileBrowser.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 
+const route = useRoute()
+const router = useRouter()
 const store = useWorkflowStore()
 const lib = useLibraryStore()
 
+const prototypeId = computed(() => Number(route.params.prototypeId))
+const prototypeName = ref('')
 const selectedFolderId = ref<string | null>(null)
 const ready = ref(false)
 const error = ref('')
 function retryLoad() {
   error.value = ''
   ready.value = false
-  lib.bootstrapIfEmpty()
-    .then(() => { ready.value = true })
-    .catch(() => { error.value = '加载工作流数据失败，请检查网络连接' })
+  void bootWorkbench()
 }
 const createName = ref('')
 const creatingKind = ref<'folder' | null>(null)
@@ -54,19 +62,62 @@ const folderName = computed(() => {
 })
 
 const breadcrumb = computed(() => {
+  const root = prototypeName.value || '原型'
   const cur = lib.activeNode
   if (!editing.value) {
     return selectedFolderId.value
-      ? `资源 / ${folderName.value}`
-      : '资源 / 全部'
+      ? `${root} / ${folderName.value}`
+      : `${root} / 全部`
   }
-  if (!cur) return '编辑'
+  if (!cur) return `${root} / 编辑`
   const parent = cur.parentId ? lib.findNode(cur.parentId) : null
   const title = editDocName.value || cur.name
+  const kind = NODE_TYPE_LABELS[cur.type] || '文档'
   return parent
-    ? `${parent.name} / 页面流「${title}」`
-    : `页面流「${title}」`
+    ? `${root} / ${parent.name} / ${kind}「${title}」`
+    : `${root} / ${kind}「${title}」`
 })
+
+function goBackToList() {
+  clearAutosaveTimer()
+  void persistActive().finally(() => {
+    router.push('/workflow')
+  })
+}
+
+async function bootWorkbench() {
+  if (!Number.isFinite(prototypeId.value) || prototypeId.value <= 0) {
+    error.value = '无效的原型 ID'
+    return
+  }
+  lib.setPrototypeId(prototypeId.value)
+  try {
+    const { data } = await getWorkflowPrototype(prototypeId.value)
+    if (!data.status || !data.prototype) {
+      error.value = data.message || '原型不存在'
+      return
+    }
+    prototypeName.value = data.prototype.name || ''
+    const boot = await lib.bootstrapIfEmpty()
+    const remembered = lib.activeId ? lib.findNode(lib.activeId) : null
+    if (boot) {
+      selectedFolderId.value = boot.folder.id
+    } else {
+      const folders = lib.nodes.filter(n => n.type === 'folder')
+      selectedFolderId.value =
+        (remembered?.type === 'folder' && remembered.id) ||
+        remembered?.parentId ||
+        folders[0]?.id ||
+        null
+    }
+    lib.setActive(null)
+    hydratedFlowId.value = null
+    ready.value = true
+  } catch {
+    selectedFolderId.value = null
+    error.value = '加载工作流数据失败，请检查网络连接'
+  }
+}
 
 function clearAutosaveTimer() {
   if (autosaveTimer) {
@@ -77,7 +128,7 @@ function clearAutosaveTimer() {
 
 async function persistPageFlow(opts?: { confirmEmptyOverwrite?: boolean }) {
   const cur = lib.activeNode
-  if (!cur || cur.type !== 'page_flow') return
+  if (!cur || !isFlowDocType(cur.type)) return
   if (hydratedFlowId.value !== cur.id) return
   await lib.savePageFlowPayload(cur.id, store.snapshotGraph(cur.name), {
     confirmEmptyOverwrite: opts?.confirmEmptyOverwrite,
@@ -89,13 +140,13 @@ async function persistPageFlow(opts?: { confirmEmptyOverwrite?: boolean }) {
 async function persistActive() {
   await applyDocRename()
   const cur = lib.activeNode
-  if (!cur || cur.type !== 'page_flow') return
+  if (!cur || !isFlowDocType(cur.type)) return
   await persistPageFlow()
 }
 
 function schedulePageFlowAutosave() {
   const cur = lib.activeNode
-  if (!cur || cur.type !== 'page_flow') return
+  if (!cur || !isFlowDocType(cur.type)) return
   if (hydratedFlowId.value !== cur.id) return
   clearAutosaveTimer()
   autosaveTimer = setTimeout(async () => {
@@ -113,15 +164,7 @@ function schedulePageFlowAutosave() {
   }, 500)
 }
 
-async function closeEditor() {
-  clearAutosaveTimer()
-  await persistActive()
-  lib.setActive(null)
-  hydratedFlowId.value = null
-  lib.status = '已关闭编辑'
-}
-
-/** 点左侧目录 → 回到看板（保存并关闭编辑） */
+/** 关闭绘制 → 回到资源目录树 */
 async function browseFolder() {
   clearAutosaveTimer()
   if (editing.value) await persistActive()
@@ -129,18 +172,11 @@ async function browseFolder() {
   hydratedFlowId.value = null
 }
 
-function enterFolder(folderId: string) {
-  selectedFolderId.value = folderId
-  lib.expanded[folderId] = true
-  lib.persistMeta()
-  browseFolder()
-}
-
 async function saveCurrent() {
   clearAutosaveTimer()
   await applyDocRename()
   const cur = lib.activeNode
-  if (!cur || cur.type !== 'page_flow') return
+  if (!cur || !isFlowDocType(cur.type)) return
   await persistPageFlow({ confirmEmptyOverwrite: true })
   const parentName = cur.parentId
     ? lib.findNode(cur.parentId)?.name || '…'
@@ -162,7 +198,7 @@ async function ensureParentFolder(preferred?: string | null): Promise<string> {
 
 async function openFile(node: LibNode) {
   if (node.type === 'folder') return
-  if (node.type !== 'page_flow') return
+  if (!isFlowDocType(node.type)) return
   if (lib.activeNode?.id === node.id && editing.value && hydratedFlowId.value === node.id) return
   clearAutosaveTimer()
   await persistActive()
@@ -198,7 +234,7 @@ const folderDialogTitle = computed(() =>
 )
 
 const folderDialogHint = computed(() => {
-  if (!createParentId.value) return '将创建在资源树根级'
+  if (!createParentId.value) return '将创建在当前原型根级'
   const p = lib.findNode(createParentId.value)
   return p ? `父目录：${p.name}` : '将创建为子目录'
 })
@@ -225,9 +261,16 @@ function cancelCreate() {
 
 async function askCreateFlow(parentId?: string | null) {
   const pid = await ensureParentFolder(parentId ?? selectedFolderId.value)
-  const flow = await lib.createPageFlow('未命名页面流', pid)
+  const flow = await lib.createPageFlow(DEFAULT_NAMES.PAGE_FLOW, pid)
   await openFile(flow)
   lib.status = `已创建页面流（${flow.id}）`
+}
+
+async function askCreateApiFlow(parentId?: string | null) {
+  const pid = await ensureParentFolder(parentId ?? selectedFolderId.value)
+  const flow = await lib.createApiFlow(DEFAULT_NAMES.API_FLOW, pid)
+  await openFile(flow)
+  lib.status = `已创建接口流（${flow.id}）`
 }
 
 async function exportCurrent() {
@@ -257,7 +300,7 @@ async function importJsonFile(file: File) {
       overwrite: overwriteImport.value,
       directoryId: selectedFolderId.value,
     })
-    if (node && node.type === 'page_flow') await openFile(node)
+    if (node && isFlowDocType(node.type)) await openFile(node)
   } catch (e: any) {
     ElMessage.error(e?.message || 'JSON 解析失败')
   }
@@ -273,27 +316,7 @@ function onImportPick(ev: Event) {
 onMounted(async () => {
   await nextTick()
   if ((window as any).lucide) (window as any).lucide.createIcons()
-  try {
-    const boot = await lib.bootstrapIfEmpty()
-    // bootstrap 内 loadUi 会恢复上次 activeId；只用来定位目录，绝不带着空 store 进入编辑
-    const remembered = lib.activeId ? lib.findNode(lib.activeId) : null
-    if (boot) {
-      selectedFolderId.value = boot.folder.id
-    } else {
-      const folders = lib.nodes.filter(n => n.type === 'folder')
-      selectedFolderId.value =
-        (remembered?.type === 'folder' && remembered.id) ||
-        remembered?.parentId ||
-        folders[0]?.id ||
-        null
-    }
-  } catch {
-    selectedFolderId.value = null
-    error.value = '加载工作流数据失败，请检查网络连接'
-  }
-  lib.setActive(null)
-  hydratedFlowId.value = null
-  ready.value = true
+  await bootWorkbench()
   document.addEventListener('visibilitychange', onVisibilitySave)
   window.addEventListener('pagehide', onVisibilitySave)
 })
@@ -335,25 +358,37 @@ watch(
 <template>
   <div class="doc-page workflow-workbench">
     <WorkbenchHeader
-      title="工作流工作台"
+      :title="prototypeName || '原型工作台'"
       :subtitle="breadcrumb"
       icon="git-branch"
     >
       <template #actions>
         <div class="wf-actions">
+          <button type="button" class="wf-btn" @click="goBackToList">← 返回原型列表</button>
           <label class="wf-btn">
             导入 JSON
             <input type="file" accept="application/json,.json" hidden @change="onImportPick" />
           </label>
+          <button
+            v-if="editing"
+            type="button"
+            class="wf-btn"
+            @click="exportCurrent"
+          >
+            导出 JSON
+          </button>
           <label class="overwrite-lab">
             <input v-model="overwriteImport" type="checkbox" />
             同 ID 覆盖
           </label>
-          <template v-if="editing">
-            <button type="button" class="wf-btn" @click="closeEditor">关闭编辑</button>
-            <button type="button" class="wf-btn" @click="exportCurrent">导出 JSON</button>
-            <button type="button" class="wf-btn wf-btn--primary" @click="saveCurrent">保存</button>
-          </template>
+          <button
+            v-if="editing"
+            type="button"
+            class="wf-btn wf-btn--primary"
+            @click="saveCurrent"
+          >
+            保存
+          </button>
           <span v-if="lib.status" class="status-pill" :title="lib.status">{{ lib.status }}</span>
         </div>
       </template>
@@ -394,36 +429,28 @@ watch(
       </div>
     </Teleport>
 
-    <div class="wb-body">
+    <div class="wb-body" :class="{ 'wb-body--editing': editing }">
+      <!-- 资源态：仅目录树 -->
       <WorkflowDirTree
+        v-if="ready && !editing"
         v-model:selected-folder-id="selectedFolderId"
-        :active-file-id="editing ? lib.activeId : null"
+        solo
+        :active-file-id="null"
         @browse="browseFolder"
         @open="openFile"
         @create-folder="askCreateFolder"
         @create-flow="askCreateFlow"
+        @create-api-flow="askCreateApiFlow"
         @export="exportFile"
       />
 
-      <!-- 未打开文件：目录看板 -->
-      <main v-if="ready && !editing" class="wb-main">
-        <WorkflowFileBrowser
-          :folder-id="selectedFolderId"
-          :folder-name="folderName"
-          @open="openFile"
-          @create-flow="askCreateFlow()"
-          @create-folder="askCreateFolder"
-          @export="exportFile"
-          @enter-folder="enterFolder"
-        />
-      </main>
-
-      <!-- 打开文件：编辑区（页面流 VueFlow） -->
-      <main v-else-if="ready && editing" class="wb-main">
+      <!-- 绘制态：整页 VueFlow -->
+      <main v-else-if="ready && editing" class="wb-main wb-main--canvas">
         <PageFlowVueFlow
-          v-if="lib.activeNode?.type === 'page_flow'"
+          v-if="lib.activeNode && isFlowDocType(lib.activeNode.type)"
           v-model:doc-name="editDocName"
           :doc-id="lib.activeNode.id"
+          :flow-kind="lib.activeNode.type"
           :seed-demo="false"
           @back="browseFolder"
           @rename="applyDocRename"
@@ -447,7 +474,7 @@ watch(
 .wf-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-sm);
   flex-wrap: wrap;
 }
 .wf-btn {
@@ -491,7 +518,7 @@ watch(
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 8px;
+  padding: 6px var(--app-space-sm);
   font-size: var(--app-size-sm);
   font-weight: 700;
   color: var(--app-text-secondary);
@@ -512,19 +539,22 @@ watch(
   font-size: var(--app-size-xs);
   font-weight: 700;
   color: var(--ac-accent-deep);
-  padding: 4px 10px;
+  padding: var(--app-space-xs) 10px;
   background: var(--ac-accent-soft);
   border: 1.5px solid rgba(137, 207, 240, 0.4);
   border-radius: 999px;
 }
 
-/* ── 主体两栏卡片布局 ── */
+/* ── 主体：资源两栏 / 绘制全宽 ── */
 .wb-body {
   flex: 1;
   min-height: 0;
   display: flex;
   gap: 12px;
   padding: 12px;
+}
+.wb-body--editing {
+  gap: 0;
 }
 .wb-main {
   flex: 1;
@@ -537,6 +567,10 @@ watch(
   border-radius: var(--app-radius-md);
   overflow: hidden;
   box-shadow: var(--app-shadow-sm);
+}
+.wb-main--canvas {
+  /* 绘制态占满 wb-body，无侧栏挤占 */
+  width: 100%;
 }
 </style>
 
@@ -569,7 +603,7 @@ watch(
   color: var(--ink);
 }
 .wf-modal-hint {
-  margin: 6px 0 16px;
+  margin: 6px 0 var(--app-space-md);
   font-size: var(--app-size-sm);
   font-weight: 600;
   color: var(--app-text-secondary);
@@ -605,7 +639,7 @@ watch(
   margin-top: 18px;
 }
 .wf-modal .wf-btn {
-  padding: 7px 16px;
+  padding: 7px var(--app-space-md);
   border: 2.5px solid var(--ink);
   border-radius: var(--app-radius-sm);
   background: var(--app-bg-card);

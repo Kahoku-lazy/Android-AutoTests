@@ -84,7 +84,7 @@ describe('[P1] ModuleNavigator', () => {
     const wrapper = mountNav()
     const cards = wrapper.findAll('.module-card')
 
-    await cards.find((c) => c.text().includes('工作流工作台'))!.trigger('keydown', { key: 'Enter' })
+    await cards.find((c) => c.text().includes('页面流'))!.trigger('keydown', { key: 'Enter' })
 
     expect(pushMock).toHaveBeenCalledWith('/workflow')
   })

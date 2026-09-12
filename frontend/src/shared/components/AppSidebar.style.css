@@ -26,7 +26,7 @@
   flex-shrink: 0;
   width: 28px;
   height: 28px;
-  margin: 4px 10px 10px;
+  margin: var(--app-space-xs) 10px 10px;
   align-self: flex-start;
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-sm);
@@ -54,7 +54,7 @@
 }
 .sidebar--collapsed .sidebar-menu__item {
   justify-content: center;
-  padding: 10px 8px;
+  padding: 10px var(--app-space-sm);
 }
 .sidebar--collapsed .sidebar__footer {
   flex-direction: column;
@@ -64,7 +64,7 @@
 }
 .sidebar--collapsed .sidebar__toggle {
   align-self: center;
-  margin: 4px auto 8px;
+  margin: var(--app-space-xs) auto var(--app-space-sm);
 }
 .sidebar__icon-logout {
   border: 2px solid var(--ink);
@@ -73,7 +73,7 @@
   font-family: var(--app-font); /* button 不继承父级字体，需显式声明 */
   font-size: var(--app-size-md);
   color: var(--ink);
-  padding: 4px;
+  padding: var(--app-space-xs);
   border-radius: var(--app-radius-sm);
   box-shadow: var(--app-shadow-sm);
 }
@@ -129,7 +129,7 @@
   height: var(--app-topbar-h, 96px);
   box-sizing: border-box;
   min-width: 0;
-  padding: 0 16px;
+  padding: 0 var(--app-space-md);
   border-bottom: 1.5px solid var(--dot);
   letter-spacing: -0.3px;
   color: var(--ink);
@@ -205,6 +205,18 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+.sidebar__group + .sidebar__group {
+  margin-top: var(--app-space-sm);
+}
+.sidebar__group-label {
+  padding: var(--app-space-xs) 12px 2px;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--app-ink-muted);
+  line-height: 1.2;
+  user-select: none;
 }
 
 /* ── 菜单项 — 纸签 ── */
@@ -356,7 +368,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin: 2px 0 4px 17px;
+  margin: 2px 0 var(--app-space-xs) 17px;
   padding-left: 10px;
   border-left: 2px solid var(--dot);
 }
@@ -434,7 +446,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 4px;
+  margin-top: var(--app-space-xs);
 }
 .sidebar__user-name {
   display: inline-block;
@@ -475,7 +487,7 @@
   bottom: 100%;
   left: 6px;
   right: 6px;
-  margin-bottom: 4px;
+  margin-bottom: var(--app-space-xs);
   background: #fff;
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-sm);
@@ -520,5 +532,5 @@
 .account-menu__divider {
   height: 1px;
   background: var(--dot);
-  margin: 0 8px;
+  margin: 0 var(--app-space-sm);
 }

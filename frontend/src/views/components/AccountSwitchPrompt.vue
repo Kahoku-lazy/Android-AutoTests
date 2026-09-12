@@ -64,7 +64,7 @@ const emit = defineEmits<{
   flex-direction: column;
   gap: var(--app-space-sm);
   width: 100%;
-  margin-top: 8px;
+  margin-top: var(--app-space-sm);
 }
 
 </style>

@@ -65,6 +65,7 @@ export interface DashboardViewState extends UseDashboardStatsReturn {
   getElementItem: (type: string) => ElementBreakdownItem
   tokenSeries: ComputedRef<SeriesDisplay[]>
   costSeries: ComputedRef<SeriesDisplay[]>
+  roleBreakdown: ComputedRef<{ today: string; total: string }>
 }
 
 // ── Composable ──
@@ -91,6 +92,21 @@ export function useDashboardView(): DashboardViewState {
     { name: '费用', data: statsComposable.deepseekCostChart.value.cost, color: '#F7C948' },
   ])
 
+  const ROLE_LABELS: Record<string, string> = { planner: '规划', executor: '执行', verifier: '验证' }
+
+  const roleBreakdown = computed(() => {
+    const byRole = statsComposable.stats.value.aiUsage.byRole ?? { today: {}, total: {} }
+    const fmt = (metric: Record<string, { input_tokens?: number }>) =>
+      ['planner', 'executor', 'verifier']
+        .map((role) => {
+          const v = metric[role]
+          const m = ((v?.input_tokens ?? 0) / 1000000).toFixed(2)
+          return `${ROLE_LABELS[role] || role} ${m}M`
+        })
+        .join(' · ')
+    return { today: fmt(byRole.today ?? {}), total: fmt(byRole.total ?? {}) }
+  })
+
   onMounted(() => {
     statsComposable.loadData()
   })
@@ -104,5 +120,6 @@ export function useDashboardView(): DashboardViewState {
     getElementItem,
     tokenSeries,
     costSeries,
+    roleBreakdown,
   }
 }

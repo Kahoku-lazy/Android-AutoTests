@@ -6,8 +6,21 @@ export function apiListDevices() {
   return client.get<DeviceListResponse>('/devices')
 }
 
-export function apiScanDevices(target?: string) {
-  return client.post<ScanResponse>('/devices/scan', target ? { target } : {})
+export type DeviceScanBody = {
+  target?: string
+  pair_port?: string
+  pair_code?: string
+}
+
+export function apiScanDevices(body?: string | DeviceScanBody) {
+  if (typeof body === 'string') {
+    return client.post<ScanResponse>('/devices/scan', body ? { target: body } : {})
+  }
+  const payload: DeviceScanBody = {}
+  if (body?.target) payload.target = body.target
+  if (body?.pair_port) payload.pair_port = body.pair_port
+  if (body?.pair_code) payload.pair_code = body.pair_code
+  return client.post<ScanResponse>('/devices/scan', payload)
 }
 
 export function apiConnectDevice(serial: string, { activate = true }: { activate?: boolean } = {}) {

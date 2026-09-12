@@ -73,4 +73,23 @@ describe('[P0] useDeviceActions', () => {
     expect(actions.networkDialog.value.loading).toBe(false)
     expect(vi.mocked(ElMessage.error)).not.toHaveBeenCalled()
   })
+
+  it('handleNetworkConnect：带配对字段时透传 doScan extra', async () => {
+    const pool = makePool()
+    vi.mocked(pool.doScan).mockResolvedValue({ status: true, data: { count: 1 } } as never)
+    const actions = useDeviceActions(pool)
+    actions.networkDialog.value.visible = true
+
+    await actions.handleNetworkConnect({
+      target: '10.162.95.96:43523',
+      pair_port: '41395',
+      pair_code: '387429',
+    })
+
+    expect(pool.doScan).toHaveBeenCalledWith('10.162.95.96:43523', {
+      pair_port: '41395',
+      pair_code: '387429',
+    })
+    expect(actions.networkDialog.value.visible).toBe(false)
+  })
 })

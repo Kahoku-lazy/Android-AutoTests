@@ -66,7 +66,7 @@ const emit = defineEmits<{ 'provider-change': []; 'detect-models': [] }>()
 
 <style scoped>
 .form-hint { font-size: var(--app-size-sm); color: var(--ai-ink-muted); margin-left: 10px; }
-.label-with-help { display: inline-flex; align-items: center; gap: 4px; }
+.label-with-help { display: inline-flex; align-items: center; gap: var(--app-space-xs); }
 .help-icon {
   display: inline-flex; align-items: center; justify-content: center;
   width: 16px; height: 16px; border-radius: 50%;

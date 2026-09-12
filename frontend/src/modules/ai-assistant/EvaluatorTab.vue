@@ -535,7 +535,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 </template>
 
 <style scoped>
-.evaluator-host { padding: 4px 0; }
+.evaluator-host { padding: var(--app-space-xs) 0; }
 .bank-question-list { max-height: 45vh; overflow-y: auto; }
 .view-tab {
   padding: 10px 22px; border: 2px solid var(--ai-warm-border); border-radius: 12px;
@@ -547,7 +547,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 
 /* Mode toggle */
 .mode-btn {
-  padding: 8px 18px; border: 1.5px solid var(--ai-warm-border); border-radius: 8px;
+  padding: var(--app-space-sm) 18px; border: 1.5px solid var(--ai-warm-border); border-radius: 8px;
   background: var(--app-bg-card); color: #8a7b66; font-size: var(--app-size-sm); font-weight: 600;
   font-family: inherit; cursor: pointer; transition: all 0.2s ease;
 }
@@ -556,17 +556,17 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 
 /* Benchmark cards */
 .bench-card {
-  padding: 12px 16px; border: 1.5px solid var(--ai-warm-border); border-radius: 10px;
+  padding: 12px var(--app-space-md); border: 1.5px solid var(--ai-warm-border); border-radius: 10px;
   background: var(--ai-warm-bg); cursor: pointer; min-width: 140px; transition: all 0.2s ease;
 }
 .bench-card:hover { border-color: var(--app-accent-purple, #b39ef3); background: var(--app-icon-purple-bg, #f3f0ff); }
 .bench-card.selected { border-color: var(--app-accent-purple, #b39ef3); background: var(--app-icon-purple-bg, #f3f0ff); box-shadow: var(--app-shadow-sm); }
 .bench-name { font-size: var(--app-size-sm); font-weight: 700; color: var(--ai-ink-soft); }
-.bench-desc { font-size: var(--app-size-xs); color: var(--ai-ink-muted); margin-top: 4px; }
+.bench-desc { font-size: var(--app-size-xs); color: var(--ai-ink-muted); margin-top: var(--app-space-xs); }
 
 .doc-section { background: var(--app-bg-card); border-radius: var(--app-radius-md); padding: var(--app-space-lg); margin-bottom: var(--app-space-lg); border: 1px solid var(--ai-bg-subtle); box-shadow: var(--app-shadow-sm); }
-.doc-section__title { font-family: var(--app-font-display); font-size: var(--app-size-lg); font-weight: 700; color: var(--ink); margin-bottom: 16px }
+.doc-section__title { font-family: var(--app-font-display); font-size: var(--app-size-lg); font-weight: 700; color: var(--ink); margin-bottom: var(--app-space-md) }
 .score-badge { background: var(--ai-warm-bg); border-radius: 12px; padding: 14px 22px; text-align: center; border: 1px solid var(--ai-warm-border); min-width: 80px; }
 .score-num { font-size: var(--app-size-2xl); font-weight: 800; }
-.score-label { font-size: var(--app-size-sm); color: var(--ai-ink-muted); margin-top: 4px; }
+.score-label { font-size: var(--app-size-sm); color: var(--ai-ink-muted); margin-top: var(--app-space-xs); }
 </style>

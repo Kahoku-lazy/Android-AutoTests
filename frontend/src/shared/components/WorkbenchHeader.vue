@@ -122,7 +122,7 @@ watch(() => props.icon, async () => {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-sm);
   flex-wrap: wrap;
 }
 /* Override .wb-btn in this header context */

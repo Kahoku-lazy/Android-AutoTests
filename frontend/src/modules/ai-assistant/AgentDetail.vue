@@ -18,7 +18,7 @@ const agentId = computed(() => route.params.agentId);
 const isNew = computed(() => agentId.value === "new");
 const activeRoute = computed(() => {
   const r = route.query.route;
-  return r === "device_control" || r === "platform_task" ? r : null;
+  return r === "device_control" ? r : null;
 });
 const agent = ref(null);
 const loading = ref(false);
@@ -53,7 +53,6 @@ const form = ref({
   max_loops: 3,
   route_configs: {
     device_control: { name: "", avatar: "📱", planner: {}, executor: {}, verifier: {} },
-    platform_task: { name: "", avatar: "🧭", planner: {}, executor: {}, verifier: {} },
   },
 });
 
@@ -73,7 +72,6 @@ async function loadAgentDetail() {
         form.value = { ...form.value, ...agentPayload, tools: [] };
         form.value.route_configs = {
           device_control: { name: "", avatar: "📱", planner: {}, executor: {}, verifier: {}, ...(agentPayload.route_configs?.device_control || {}) },
-          platform_task: { name: "", avatar: "🧭", planner: {}, executor: {}, verifier: {}, ...(agentPayload.route_configs?.platform_task || {}) },
         };
         form.value.max_loops = agentPayload.max_loops ?? 3;
         agent.value = agentPayload;
@@ -126,7 +124,7 @@ async function save() {
     const routeKey = activeRoute.value;
     const routeName = routeKey
       ? payload.route_configs?.[routeKey]?.name
-      : payload.route_configs?.device_control?.name || payload.route_configs?.platform_task?.name;
+      : payload.route_configs?.device_control?.name;
     payload.name = (routeName || '').trim() || '平台小助手';
   }
   // 工具/知识库配置已移到 AI 工具箱 / 知识库页（platform-config），此处不随智能体提交
@@ -172,7 +170,7 @@ async function testConnection() {
 </script>
 
 <template>
-  <div class="doc-page wb-shell ai-workbench" v-loading="loading">
+  <div class="doc-page doc-page--fixed wb-shell ai-workbench" v-loading="loading">
     <WorkbenchHeader
       :title="isNew ? '新建智能体' : '编辑智能体'"
       :subtitle="
@@ -231,16 +229,6 @@ async function testConnection() {
         <AgentRouteConfig label="控制设备 Device Control" v-model="form.route_configs.device_control" />
       </template>
 
-      <template v-if="!activeRoute || activeRoute === 'platform_task'">
-        <AgentBasicInfo
-          v-if="!activeRoute"
-          :form="form.route_configs.platform_task"
-          :uploading="uploading && uploadTargetRoute === 'platform_task'"
-          route-mode
-          @trigger-upload="triggerUpload('platform_task')"
-        />
-        <AgentRouteConfig label="平台任务 Platform Task（仅入口）" v-model="form.route_configs.platform_task" />
-      </template>
 
       <section class="doc-section step-panel">
         <div class="section-title"><span class="section-num">✅</span>模型校验</div>
@@ -269,7 +257,7 @@ async function testConnection() {
 
 /* ── Back button ── */
 .back-btn {
-  display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;
+  display: inline-flex; align-items: center; gap: var(--app-space-sm); padding: 10px 20px;
   border: 2px solid var(--ai-teal); border-radius: 12px; background: var(--ai-teal-bg);
   color: var(--ai-teal-text); font-size: var(--app-size-md); font-weight: 700; font-family: inherit;
   cursor: pointer; transition: all 0.2s ease; align-self: flex-start;
@@ -277,10 +265,10 @@ async function testConnection() {
 .back-btn:hover { background: var(--ai-teal); color: var(--app-bg-card); box-shadow: var(--app-shadow-md); transform: translateY(-1px); }
 
 /* ── Shared step panel（:deep 才能作用到子组件标题） ── */
-:deep(.step-panel) { padding: 28px 32px; }
+:deep(.step-panel) { padding: 28px var(--app-space-xl); }
 :deep(.section-title) {
   display: flex; align-items: center; gap: 12px; font-size: var(--app-size-lg); font-weight: 700;
-  color: var(--ai-ink-soft); margin-bottom: 24px; padding-bottom: 14px; border-bottom: 2px solid var(--ai-bg-subtle);
+  color: var(--ai-ink-soft); margin-bottom: var(--app-space-lg); padding-bottom: 14px; border-bottom: 2px solid var(--ai-bg-subtle);
 }
 :deep(.section-num) {
   display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;
@@ -291,7 +279,7 @@ async function testConnection() {
 .agent-form :deep(.el-input__wrapper),
 .agent-form :deep(.el-textarea__inner) { border-radius: 10px; font-size: var(--app-size-md); }
 .form-hint { font-size: var(--app-size-sm); color: var(--ai-ink-muted); margin-left: 10px; }
-.test-results { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.test-results { display: flex; flex-direction: column; gap: var(--app-space-sm); margin-top: var(--app-space-md); }
 .test-row { display: flex; align-items: center; gap: 12px; font-size: var(--app-size-sm); }
 .test-role { font-weight: 700; color: var(--ai-ink-muted); min-width: 72px; }
 .test-state.ok { color: var(--ai-teal-text); font-weight: 700; }

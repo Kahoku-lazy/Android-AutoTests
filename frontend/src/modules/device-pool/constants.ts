@@ -24,22 +24,22 @@ export const FILTER_TABS: FilterTabConfig[] = [
   { key: 'busy', label: '使用中' },
 ]
 
-// ── 表格列（定宽，避免 el-table auto + max-content 把列撑爆）──
+// ── 表格列（全列 minWidth：宽屏按比例均摊，避免只拉大「设备」列）──
 export const COLUMNS: ColumnConfig[] = [
-  { dataIndex: 'device', title: '设备', minWidth: 260, align: 'left', headerAlign: 'center', showOverflowTooltip: false },
-  { dataIndex: 'status', title: '状态', width: 150, align: 'center', headerAlign: 'center', showOverflowTooltip: false },
-  { dataIndex: 'connection_type', title: '连接', width: 100, align: 'center', headerAlign: 'center', showOverflowTooltip: false },
-  { dataIndex: 'lock_status', title: '可见性', width: 120, align: 'center', headerAlign: 'center', showOverflowTooltip: false },
-  { dataIndex: 'screen', title: '分辨率', width: 130, align: 'center', headerAlign: 'center' },
-  { dataIndex: 'last_seen', title: '活跃', width: 150, align: 'center', headerAlign: 'center', showOverflowTooltip: false },
-  { dataIndex: 'actions', title: '操作', width: 220, align: 'center', headerAlign: 'center', showOverflowTooltip: false },
+  { dataIndex: 'device', title: '设备', minWidth: 220, align: 'left', headerAlign: 'center', showOverflowTooltip: false },
+  { dataIndex: 'status', title: '状态', minWidth: 120, align: 'center', headerAlign: 'center', showOverflowTooltip: false },
+  { dataIndex: 'connection_type', title: '连接', minWidth: 90, align: 'center', headerAlign: 'center', showOverflowTooltip: false },
+  { dataIndex: 'lock_status', title: '可见性', minWidth: 110, align: 'center', headerAlign: 'center', showOverflowTooltip: false },
+  { dataIndex: 'screen', title: '分辨率', minWidth: 120, align: 'center', headerAlign: 'center' },
+  { dataIndex: 'last_seen', title: '活跃', minWidth: 140, align: 'center', headerAlign: 'center', showOverflowTooltip: false },
+  { dataIndex: 'actions', title: '操作', minWidth: 180, align: 'center', headerAlign: 'center', showOverflowTooltip: false },
 ]
 
 /** 表格最小可视行数说明：高度跟随 pageSize（默认 5） */
 export const TABLE_HEADER_HEIGHT_PX = 54
 export const TABLE_ROW_HEIGHT_PX = 64
-/** 表格内容最小宽度，窄屏时可横向滚动 */
-export const TABLE_MIN_WIDTH_PX = 1130
+/** 表格内容最小宽度（≈ 各列 minWidth 之和） */
+export const TABLE_MIN_WIDTH_PX = 980
 
 // ── 分页配置（默认 5；去掉 20）──
 export const PAGE_SIZE_OPTIONS: number[] = [5, 10]
@@ -73,6 +73,11 @@ export const EMPTY_TEXT = {
 }
 
 // ── 对话框默认值 ──
+export const IPV4_RE =
+  /^((25[0-5]|2[0-4]\d|[01]?\d?\d)\.){3}(25[0-5]|2[0-4]\d|[01]?\d?\d)$/
+export const ADB_PORT_MIN = 1024
+export const ADB_PORT_MAX = 65535
+
 export const DEFAULT_DIALOGS = {
   disconnect: { visible: false, serial: '', model: '', status: '', lockedBy: '', isBusyOthers: false } as DisconnectDialogState,
   network: { visible: false, loading: false } as NetworkDialogState,

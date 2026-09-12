@@ -55,37 +55,149 @@ export interface RouteConfig {
 
 export interface RouteConfigMap {
   device_control?: RouteConfig
-  platform_task?: RouteConfig
 }
 
-export type AgentRoute = 'device_control' | 'platform_task'
+export type AgentRoute = 'device_control'
 
 // ── 任务发布 ──
 export interface TaskRecord {
   id: number
   title: string
   goal: string
-  route: AgentRoute
   status: string
   result?: string
-  report_name?: string
   device_serial?: string
   created_at?: string
 }
 
 export interface TaskSubmitPayload {
   goal: string
-  requirements?: string
   attachment?: string
-  route: AgentRoute
-  report_name?: string
-  checklist?: string
   device_serial?: string
 }
 
 export interface TaskListResponse {
   status?: boolean
   data?: { tasks: TaskRecord[] }
+  message?: string
+}
+
+export interface TaskFailedItem {
+  item?: string
+  reason?: string
+  action?: string
+  assert?: string
+  actual?: string
+}
+
+/** 规划步骤：一步一操作 + 一步一断言 */
+export interface TaskRunStep {
+  action: string
+  assert: string
+}
+
+export interface TaskRunToolTrace {
+  type: string
+  name?: string
+  input?: string
+  /** 工具返回摘要（已脱敏，截图仅路径） */
+  output?: string
+  state?: string
+  media_type?: string
+  /** screenshot_page 落盘相对路径 */
+  screenshot_path?: string
+}
+
+export interface TaskRunRoleTrace {
+  /** 发给该角色的输入 prompt */
+  input?: string
+  thinking?: string[]
+  tools?: TaskRunToolTrace[]
+  /** 角色最终文本输出 */
+  text?: string
+}
+
+export interface TaskRunExecutorOut {
+  action?: string
+  result?: string
+  message?: string
+}
+
+export interface TaskRunVerifierOut {
+  action?: string
+  assert?: string
+  actual?: string
+  /** 新协议为 boolean；旧协议为 pass/fail 字符串 */
+  result?: boolean | string
+  summary?: string
+  completed?: string[]
+  failed?: TaskFailedItem[]
+}
+
+/** 过程日志：一步一次重试 */
+export interface TaskRunLogEntry {
+  action?: string
+  assert?: string
+  loop: number
+  executor?: string | TaskRunExecutorOut
+  verifier?: TaskRunVerifierOut
+  /** 验收证据截图（相对 MEDIA，如 ai_tasks/12/s2_l1.jpg） */
+  screenshot?: string
+  executor_trace?: TaskRunRoleTrace
+  verifier_trace?: TaskRunRoleTrace
+  /** @deprecated 旧协议按目标聚合 */
+  goal?: string
+  steps?: Array<string | TaskRunStep>
+  verification?: string
+  result?: string
+}
+
+export interface TaskRunPlan {
+  goal: string
+  steps?: Array<string | TaskRunStep>
+  /** @deprecated 旧协议目标级验收 */
+  verification?: string
+}
+
+export interface TaskRunPayload {
+  status?: string
+  summary?: string
+  reason?: string
+  message?: string
+  completed?: string[]
+  failed?: TaskFailedItem[]
+  plans?: TaskRunPlan[]
+  log?: TaskRunLogEntry[]
+  usage?: Record<string, unknown>
+  models?: { planner?: string; executor?: string; verifier?: string; max_loops?: number }
+  max_loops?: number
+}
+
+export interface TaskDetail {
+  id: number
+  title: string
+  goal: string
+  status: string
+  device_serial?: string
+  created_at?: string
+  started_at?: string
+  finished_at?: string
+  input_tokens?: number
+  output_tokens?: number
+  cache_input_tokens?: number
+  model_usage?: Record<string, { input_tokens?: number; output_tokens?: number; cache_input_tokens?: number }>
+  deepseek_cost?: number
+  run?: TaskRunPayload
+}
+
+export interface TaskDetailResponse {
+  status?: boolean
+  data?: TaskDetail
+  message?: string
+}
+
+export interface TaskDeleteResponse {
+  status?: boolean
   message?: string
 }
 

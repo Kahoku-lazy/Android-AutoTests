@@ -63,7 +63,7 @@ const {
 </script>
 
 <template>
-  <div class="doc-page wb-shell device-workbench">
+  <div class="doc-page doc-page--fixed wb-shell device-workbench">
     <WorkbenchHeader
       :title="PAGE_HEADER.title"
       :subtitle="PAGE_HEADER.subtitle"

@@ -1,17 +1,21 @@
 <script setup lang="ts">
 /**
- * 左侧资源树：目录 + 文件
- * - 点击文件 → 右侧打开编辑
- * - 右键目录 → 新建子目录 / 页面流
+ * 资源树：目录 + 文件
+ * - 点击文件 → 进入对应画布（页面流 / 接口流）
+ * - 右键目录 → 新建子目录 / 页面流 / 接口流
  * - 右键文件 → 打开 / 重命名 / 导出 / 删除
  * - 长按拖拽 → 移入目录
+ * - solo：资源态独占整页（非侧栏窄条）
  */
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useLibraryStore, type LibNode } from '@/modules/workflow/stores/libraryStore'
+import { NODE_TYPES, NODE_TYPE_LABELS } from '@/modules/workflow/constants'
 
 const props = defineProps<{
   selectedFolderId: string | null
   activeFileId?: string | null
+  /** 独占整页时铺满，隐藏折叠轨 */
+  solo?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -20,6 +24,7 @@ const emit = defineEmits<{
   open: [node: LibNode]
   createFolder: [parentId: string | null]
   createFlow: [parentId: string | null]
+  createApiFlow: [parentId: string | null]
   export: [node: LibNode]
 }>()
 
@@ -58,8 +63,12 @@ const treeRows = computed(() => {
       .filter(n => n.parentId === parentId)
       .slice()
       .sort((a, b) => {
-        const order = { folder: 0, page_flow: 1 }
-        return (order[a.type] - order[b.type]) || a.name.localeCompare(b.name, 'zh')
+        const order: Record<string, number> = {
+          folder: 0,
+          [NODE_TYPES.PAGE_FLOW]: 1,
+          [NODE_TYPES.API_FLOW]: 2,
+        }
+        return (order[a.type] ?? 9) - (order[b.type] ?? 9) || a.name.localeCompare(b.name, 'zh')
       })
     for (const n of kids) {
       rows.push({ node: n, depth })
@@ -72,7 +81,7 @@ const treeRows = computed(() => {
 
 function fileCount(folderId: string): number {
   return lib.nodes.filter(
-    n => n.parentId === folderId && n.type === 'page_flow'
+    n => n.parentId === folderId && n.type !== 'folder'
   ).length
 }
 
@@ -98,7 +107,7 @@ function setFolderId(id: string | null) {
   emit('update:selectedFolderId', id)
 }
 
-/** 点击目录 / 根 → 切看板 */
+/** 点击目录 / 根 → 选中并关闭绘制（若有） */
 function selectFolder(id: string | null) {
   setFolderId(id)
   emit('browse')
@@ -136,7 +145,7 @@ async function confirmRename() {
 async function removeNode(n: LibNode) {
   const tip =
     n.type === 'folder'
-      ? `删除目录「${n.name}」？其中的页面流也会删除。`
+      ? `删除目录「${n.name}」？其中的页面流与接口流也会删除。`
       : `删除「${n.name}」？\n${n.id}`
   if (!confirm(tip)) return
   await lib.deleteNode(n.id)
@@ -161,6 +170,15 @@ function ctxCreateFlow() {
       ? ctx.value.node?.id ?? null
       : props.selectedFolderId
   emit('createFlow', parent)
+  closeCtx()
+}
+
+function ctxCreateApiFlow() {
+  const parent =
+    ctx.value?.kind === 'folder'
+      ? ctx.value.node?.id ?? null
+      : props.selectedFolderId
+  emit('createApiFlow', parent)
   closeCtx()
 }
 
@@ -240,13 +258,16 @@ function onCreateRoot() {
 <template>
   <aside
     class="dir-pane"
-    :class="{ 'dir-pane--collapsed': paneCollapsed }"
+    :class="{
+      'dir-pane--collapsed': !solo && paneCollapsed,
+      'dir-pane--solo': solo,
+    }"
     @pointerup="onPointerUp"
     @pointercancel="onPointerCancel"
   >
-    <!-- 折叠态：细条 -->
+    <!-- 折叠态：细条（solo 独占页不折叠） -->
     <button
-      v-if="paneCollapsed"
+      v-if="!solo && paneCollapsed"
       type="button"
       class="dir-rail"
       title="展开资源树"
@@ -261,6 +282,7 @@ function onCreateRoot() {
         <div class="dir-head-top">
           <div class="dir-title">资源</div>
           <button
+            v-if="!solo"
             type="button"
             class="dir-toggle"
             title="收起资源树"
@@ -278,6 +300,13 @@ function onCreateRoot() {
             @click="emit('createFlow', selectedFolderId)"
           >
             + 页面流
+          </button>
+          <button
+            type="button"
+            class="mini"
+            @click="emit('createApiFlow', selectedFolderId)"
+          >
+            + 接口流
           </button>
         </div>
       </div>
@@ -312,7 +341,8 @@ function onCreateRoot() {
                 ? selectedFolderId === row.node.id && !activeFileId
                 : activeFileId === row.node.id,
             file: row.node.type !== 'folder',
-            flow: row.node.type === 'page_flow',
+            flow: row.node.type === NODE_TYPES.PAGE_FLOW,
+            api: row.node.type === NODE_TYPES.API_FLOW,
             dragging: dragId === row.node.id,
             'drop-on':
               dragging &&
@@ -346,6 +376,7 @@ function onCreateRoot() {
             <template v-if="row.node.type === 'folder'">
               {{ lib.expanded[row.node.id] ? '📂' : '📁' }}
             </template>
+            <template v-else-if="row.node.type === NODE_TYPES.API_FLOW">📡</template>
             <template v-else>🗺️</template>
           </span>
           <input
@@ -358,6 +389,9 @@ function onCreateRoot() {
           />
           <span v-else class="name" :title="row.node.type !== 'folder' ? row.node.id : ''">
             {{ row.node.name }}
+            <span v-if="row.node.type !== 'folder'" class="type-tag">
+              {{ NODE_TYPE_LABELS[row.node.type] || '' }}
+            </span>
           </span>
           <span v-if="row.node.type === 'folder'" class="badge">
             {{ fileCount(row.node.id) }}
@@ -382,6 +416,7 @@ function onCreateRoot() {
         <template v-if="ctx.kind === 'root' || ctx.kind === 'folder'">
           <button type="button" @click="ctxCreateFolder">新建子目录</button>
           <button type="button" @click="ctxCreateFlow">新建页面流</button>
+          <button type="button" @click="ctxCreateApiFlow">新建接口流</button>
           <template v-if="ctx.kind === 'folder' && ctx.node">
             <hr />
             <button type="button" @click="ctxRename">重命名</button>
@@ -419,13 +454,18 @@ function onCreateRoot() {
 .dir-pane--collapsed {
   width: 40px;
 }
+.dir-pane--solo {
+  width: 100%;
+  flex: 1;
+  min-width: 0;
+}
 .dir-rail {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 14px 4px;
+  padding: 14px var(--app-space-xs);
   border: none;
   background: transparent;
   cursor: pointer;
@@ -448,7 +488,7 @@ function onCreateRoot() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--app-space-sm);
 }
 .dir-toggle {
   width: 26px;
@@ -470,7 +510,7 @@ function onCreateRoot() {
   color: var(--ink);
 }
 .dir-desc {
-  margin: 4px 0 12px;
+  margin: var(--app-space-xs) 0 12px;
   font-size: var(--app-size-sm);
   color: var(--app-text-secondary);
   font-weight: 600;
@@ -491,10 +531,10 @@ function onCreateRoot() {
 }
 .mini:hover { background: var(--ac-accent-soft); }
 .mini:focus-visible { outline: 2px solid var(--c-workflow); outline-offset: 2px; }
-.dir-scroll { flex: 1; overflow: auto; padding: 8px 8px 12px; }
+.dir-scroll { flex: 1; overflow: auto; padding: var(--app-space-sm) var(--app-space-sm) 12px; }
 .empty-state {
-  margin: 12px 8px;
-  padding: 16px 12px;
+  margin: 12px var(--app-space-sm);
+  padding: var(--app-space-md) 12px;
   font-size: var(--app-size-sm);
   font-weight: 600;
   color: var(--app-text-secondary);
@@ -510,7 +550,7 @@ function onCreateRoot() {
   align-items: center;
   gap: 6px;
   min-height: 34px;
-  padding: 4px 8px;
+  padding: var(--app-space-xs) var(--app-space-sm);
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -537,10 +577,18 @@ function onCreateRoot() {
   opacity: 0.45;
 }
 .dir-row.root {
-  margin-bottom: 4px;
+  margin-bottom: var(--app-space-xs);
   font-weight: 700;
 }
 .dir-row.flow .name { color: var(--ac-accent-deep); }
+.dir-row.api .name { color: var(--c-workflow); }
+.type-tag {
+  margin-left: 6px;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--app-text-secondary);
+  opacity: 0.85;
+}
 .chev {
   border: none;
   background: transparent;
@@ -582,7 +630,7 @@ function onCreateRoot() {
   outline: none;
 }
 .drag-hint {
-  padding: 8px 10px;
+  padding: var(--app-space-sm) 10px;
   font-size: var(--app-size-xs);
   font-weight: 700;
   color: var(--ac-accent-deep);
@@ -626,6 +674,6 @@ function onCreateRoot() {
 .wf-ctx hr {
   border: none;
   border-top: 1px solid var(--app-border-light);
-  margin: 4px 6px;
+  margin: var(--app-space-xs) 6px;
 }
 </style>

@@ -214,24 +214,24 @@ const emit = defineEmits([
 .tree-header__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--app-space-xs);
   align-items: center;
 }
 .tree-header__actions :deep(.el-button) {
   font-size: var(--app-size-xs);
-  padding: 4px 8px;
+  padding: var(--app-space-xs) var(--app-space-sm);
 }
 .tree-body { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 6px 0; }
 .tree-body.drag-mode-active { background: rgba(255,224,102,0.15); }
 .tree-loading { text-align: center; padding: 20px; color: var(--app-text-secondary); font-size: var(--app-size-sm); }
-.tree-empty { text-align: center; padding: 30px 16px; }
-.tree-empty__icon { font-size: 32px; display: block; margin-bottom: 8px; }
+.tree-empty { text-align: center; padding: 30px var(--app-space-md); }
+.tree-empty__icon { font-size: 32px; display: block; margin-bottom: var(--app-space-sm); }
 .tree-empty__text { color: var(--app-text-secondary); font-size: var(--app-size-sm); margin: 0; }
-.tree-empty__hint { color: #bbb; font-size: var(--app-size-xs); margin: 4px 0 0; }
+.tree-empty__hint { color: #bbb; font-size: var(--app-size-xs); margin: var(--app-space-xs) 0 0; }
 
 /* ── Tree Node ── */
 .tree-node {
-  display: flex; align-items: center; gap: 4px; padding: 3px 8px;
+  display: flex; align-items: center; gap: var(--app-space-xs); padding: 3px var(--app-space-sm);
   font-size: 13px; cursor: pointer; border-radius: 4px;
   transition: background var(--app-duration-fast) var(--app-ease);
 }
@@ -240,9 +240,9 @@ const emit = defineEmits([
 .tree-node--folder { font-weight: 600; }
 .tree-node__icon { font-size: 14px; flex-shrink: 0; }
 .tree-node__name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tree-node__meta { font-size: var(--app-size-xs); color: var(--app-text-secondary); flex-shrink: 0; padding-left: 4px; }
+.tree-node__meta { font-size: var(--app-size-xs); color: var(--app-text-secondary); flex-shrink: 0; padding-left: var(--app-space-xs); }
 
-.ungrouped-node { border-top: 1px dashed var(--app-border-lighter); margin-top: 4px; padding-top: 7px; }
+.ungrouped-node { border-top: 1px dashed var(--app-border-lighter); margin-top: var(--app-space-xs); padding-top: 7px; }
 .ungrouped-node:hover { background: var(--app-highlight); }
 .ungrouped-node.tree-node--active { background: var(--app-highlight); }
 
@@ -254,16 +254,16 @@ const emit = defineEmits([
   box-shadow: var(--app-shadow-lg); min-width: 160px; padding: var(--app-space-xs) 0;
 }
 .context-menu__item {
-  padding: 8px 14px; font-size: 13px; cursor: pointer;
+  padding: var(--app-space-sm) 14px; font-size: 13px; cursor: pointer;
   transition: background var(--app-duration-fast) var(--app-ease);
 }
 .context-menu__item:hover { background: var(--app-highlight); }
 .context-menu__item--danger { color: var(--app-status-danger-text); }
 .context-menu__item--danger:hover { background: var(--app-status-danger-bg); }
-.context-menu__divider { height: 1px; background: var(--app-border-lighter); margin: 4px 0; }
+.context-menu__divider { height: 1px; background: var(--app-border-lighter); margin: var(--app-space-xs) 0; }
 
 /* ── Form Grid ── */
-.form-grid { display: flex; flex-direction: column; gap: 8px; }
+.form-grid { display: flex; flex-direction: column; gap: var(--app-space-sm); }
 .form-label { font-weight: 600; font-size: var(--app-size-sm); color: var(--ink); }
 .form-label.required::after { content: ' *'; color: var(--app-status-danger); }
 </style>

@@ -47,7 +47,7 @@ function onOcrClick(ocr) {
 </script>
 
 <template>
-  <div class="doc-page wb-shell">
+  <div class="doc-page doc-page--fixed wb-shell">
     <WorkbenchHeader
       title="设备检查器 Device Inspector"
       subtitle="选择设备一键获取页面元素与 OCR 快照，回看、筛减并保存到元素管理"
@@ -191,7 +191,7 @@ function onOcrClick(ocr) {
   min-height: 0;
   width: 100%;
   box-sizing: border-box;
-  padding: 24px 28px 28px;
+  padding: var(--app-space-lg) 28px 28px;
   overflow: hidden;
 }
 
@@ -199,7 +199,7 @@ function onOcrClick(ocr) {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: var(--app-space-md);
   flex-shrink: 0;
   flex-wrap: wrap;
 }
@@ -208,7 +208,7 @@ function onOcrClick(ocr) {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: var(--app-space-md);
   flex-shrink: 0;
   flex-wrap: wrap;
   padding: 10px 14px;
@@ -228,7 +228,7 @@ function onOcrClick(ocr) {
   width: 100%;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
-  gap: 24px;
+  gap: var(--app-space-lg);
   overflow: hidden;
 }
 
@@ -252,18 +252,18 @@ function onOcrClick(ocr) {
 }
 
 .inspector-footer {
-  display: flex; align-items: center; justify-content: center; gap: 24px;
+  display: flex; align-items: center; justify-content: center; gap: var(--app-space-lg);
   padding: 10px 20px; background: var(--app-highlight, #FFE066);
   border-top: 2.5px solid var(--app-ink, #2d2d2d);
   font-size: var(--app-size-sm); font-weight: 700;
   color: var(--app-footer-yellow-text); font-family: var(--app-font-display);
   flex-shrink: 0;
 }
-.inspector-footer span { display: flex; align-items: center; gap: 4px; font-size: var(--app-size-sm); }
+.inspector-footer span { display: flex; align-items: center; gap: var(--app-space-xs); font-size: var(--app-size-sm); }
 
 .action-btn {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: var(--app-size-xs); font-weight: 700; padding: 4px 12px;
+  display: inline-flex; align-items: center; gap: var(--app-space-xs);
+  font-size: var(--app-size-xs); font-weight: 700; padding: var(--app-space-xs) 12px;
   border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px 8px 4px 8px;
   background: var(--app-bg-card); color: var(--app-ink, #2d2d2d);
   cursor: pointer; font-family: inherit; transition: all 0.12s; white-space: nowrap; flex-shrink: 0;

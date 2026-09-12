@@ -1,68 +1,148 @@
-/**
- * case-manager API — backward-compatible re-export facade.
- * Real implementations in api/ sub-directory.
- */
-import client from "@/shared/api-client";
+/** case-manager API — 项目 / 目录 / 文件 / 文档用例（DRF {status,data} 信封） */
+import client from '@/shared/api-client'
+import type { DjangoResponse } from '@/shared/api-client'
+import type {
+  CaseDefinition,
+  CaseFileMeta,
+  CaseFileSheet,
+  CaseProject,
+  ProjectTreePayload,
+  BusinessType,
+  TestType,
+} from './types'
 
-// ── 操作类型（跨平台统一）──
+type Envelope<T> = Promise<{ data: DjangoResponse<T> }>
 
-export function fetchStepTypes(target) {
-  return client.get(`/cases/step-types?target=${target}`);
+// ── Projects ──
+
+export function listProjects(): Envelope<CaseProject[]> {
+  return client.get<DjangoResponse<CaseProject[]>>('/cases/projects/')
 }
 
-// Directories
-export {
-  fetchDirectories,
-  createDirectory,
-  updateDirectory,
-  deleteDirectory,
-  batchMoveItems,
-  setDirectoryPermission,
-} from "./api/directories.js";
+export function createProject(body: { name: string; description?: string }): Envelope<CaseProject> {
+  return client.post<DjangoResponse<CaseProject>>('/cases/projects/', body)
+}
 
-// UI Automation
-export {
-  listDefinitions,
-  getDefinition,
-  saveDefinition,
-  deleteDefinition,
-  batchImportDefinitions,
-  exportYaml,
-  listExports,
-  acquireEditLock,
-  releaseEditLock,
-  caseLock,
-  caseUnlock,
-  setVisibility,
-  listDevices,
-  listPages,
-  getPageElements,
-  runStep,
-} from "./api/uiAutomation.js";
+export function updateProject(
+  id: number,
+  body: { name?: string; description?: string },
+): Envelope<CaseProject> {
+  return client.patch<DjangoResponse<CaseProject>>(`/cases/projects/${id}/`, body)
+}
 
-// Storage
-export {
-  listStorageDefinitions,
-  getStorageDefinition,
-  saveStorageDefinition,
-  deleteStorageDefinition,
-  batchImportStorageDefinitions,
-} from "./api/storage.js";
+export function deleteProject(id: number): Envelope<{ id: number }> {
+  return client.delete<DjangoResponse<{ id: number }>>(`/cases/projects/${id}/`)
+}
 
-// API Testing
-export {
-  listApiDefinitions,
-  getApiDefinition,
-  saveApiDefinition,
-  deleteApiDefinition,
-  batchImportApiDefinitions,
-} from "./api/apiTesting.js";
+export function getProjectTree(projectId: number): Envelope<ProjectTreePayload> {
+  return client.get<DjangoResponse<ProjectTreePayload>>(`/cases/projects/${projectId}/tree/`)
+}
 
-// Web Automation
-export {
-  listWebDefinitions,
-  getWebDefinition,
-  saveWebDefinition,
-  deleteWebDefinition,
-  batchImportWebDefinitions,
-} from "./api/webAutomation.js";
+// ── Directories ──
+
+export function createDirectory(body: {
+  project_id: number
+  name: string
+  parent_id?: number | null
+  sort_order?: number
+}): Envelope<Record<string, unknown>> {
+  return client.post<DjangoResponse<Record<string, unknown>>>('/cases/directories/', body)
+}
+
+export function updateDirectory(
+  id: number,
+  body: { name?: string; sort_order?: number },
+): Envelope<Record<string, unknown>> {
+  return client.patch<DjangoResponse<Record<string, unknown>>>(`/cases/directories/${id}/`, body)
+}
+
+export function deleteDirectory(id: number): Envelope<{ id: number }> {
+  return client.delete<DjangoResponse<{ id: number }>>(`/cases/directories/${id}/`)
+}
+
+// ── Files (Excel sheets) ──
+
+export function createFile(body: {
+  project_id: number
+  name: string
+  directory_id?: number | null
+  sort_order?: number
+}): Envelope<CaseFileMeta> {
+  return client.post<DjangoResponse<CaseFileMeta>>('/cases/files/', body)
+}
+
+export function getFileSheet(fileId: number): Envelope<CaseFileSheet> {
+  return client.get<DjangoResponse<CaseFileSheet>>(`/cases/files/${fileId}/`)
+}
+
+export function updateFile(
+  id: number,
+  body: { name?: string; sort_order?: number },
+): Envelope<CaseFileMeta> {
+  return client.patch<DjangoResponse<CaseFileMeta>>(`/cases/files/${id}/`, body)
+}
+
+export function deleteFile(id: number): Envelope<{ id: number }> {
+  return client.delete<DjangoResponse<{ id: number }>>(`/cases/files/${id}/`)
+}
+
+// ── Definitions (rows) ──
+
+export function createDefinition(body: {
+  project_id: number
+  file_id: number
+  title?: string
+  test_type?: TestType
+  business_type?: BusinessType
+  module?: string
+  precondition?: string
+  steps?: string
+  expected_result?: string
+  sort_order?: number
+  require_fields?: boolean
+}): Envelope<CaseDefinition> {
+  return client.post<DjangoResponse<CaseDefinition>>('/cases/definitions/', body)
+}
+
+export function getDefinition(id: string): Envelope<CaseDefinition> {
+  return client.get<DjangoResponse<CaseDefinition>>(`/cases/definitions/${id}/`)
+}
+
+export function updateDefinition(
+  id: string,
+  body: Partial<{
+    title: string
+    test_type: TestType
+    business_type: BusinessType
+    module: string
+    precondition: string
+    steps: string
+    expected_result: string
+    sort_order: number
+    require_fields: boolean
+  }>,
+): Envelope<CaseDefinition> {
+  return client.patch<DjangoResponse<CaseDefinition>>(`/cases/definitions/${id}/`, body)
+}
+
+export function deleteDefinition(id: string): Envelope<{ id: string }> {
+  return client.delete<DjangoResponse<{ id: string }>>(`/cases/definitions/${id}/`)
+}
+
+export function batchDeleteDefinitions(ids: string[]): Envelope<{ deleted: number }> {
+  return client.post<DjangoResponse<{ deleted: number }>>('/cases/definitions/batch-delete/', {
+    ids,
+  })
+}
+
+// ── Move ──
+
+export function moveItem(body: {
+  project_id: number
+  item_type: 'directory' | 'file'
+  item_id: number | string
+  target_directory_id?: number | null
+  sort_order?: number
+}): Envelope<Record<string, unknown>> {
+  return client.post<DjangoResponse<Record<string, unknown>>>('/cases/move/', body)
+}

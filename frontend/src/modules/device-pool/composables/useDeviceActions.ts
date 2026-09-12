@@ -28,7 +28,7 @@ export interface UseDeviceActionsReturn {
   loadDevices: () => Promise<void>
   handleRefresh: () => Promise<void>
   openNetworkDialog: () => void
-  handleNetworkConnect: (opts: { target: string }) => Promise<void>
+  handleNetworkConnect: (opts: { target: string; pair_port?: string; pair_code?: string }) => Promise<void>
   cancelNetworkDialog: () => void
   handleRowClick: (record: DeviceRecord) => void
   handleLockClick: (device: DeviceRecord) => Promise<void>
@@ -90,13 +90,21 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
     networkDialog.value = { visible: true, loading: false }
   }
 
-  async function handleNetworkConnect({ target }: { target: string }) {
-    if (!target) return
+  async function handleNetworkConnect(opts: {
+    target: string
+    pair_port?: string
+    pair_code?: string
+  }) {
+    if (!opts.target) return
     networkDialog.value.loading = true
-    const result = await pool.doScan(target)
+    const extra =
+      opts.pair_port && opts.pair_code
+        ? { pair_port: opts.pair_port, pair_code: opts.pair_code }
+        : undefined
+    const result = await pool.doScan(opts.target, extra)
     networkDialog.value.loading = false
     if (result && result.status) {
-      ElMessage.success(`已连接 ${target}`)
+      ElMessage.success(`已连接 ${opts.target}`)
       networkDialog.value.visible = false
       await loadDevices()
     } else {

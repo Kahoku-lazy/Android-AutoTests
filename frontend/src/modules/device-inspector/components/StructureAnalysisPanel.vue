@@ -234,7 +234,7 @@ const METRIC_TAG = { 可点击: 'success', 可滚动: 'info', 可勾选: 'warnin
 .sap-webview-hint {
   flex-shrink: 0;
   margin-bottom: 10px;
-  padding: 8px 12px;
+  padding: var(--app-space-sm) 12px;
   font-size: var(--app-size-xs);
   font-weight: 700;
   color: var(--app-footer-yellow-text);
@@ -255,7 +255,7 @@ const METRIC_TAG = { 可点击: 'success', 可滚动: 'info', 可勾选: 'warnin
 .sap-sections {
   min-height: 0;
   overflow-y: auto;
-  padding: 8px;
+  padding: var(--app-space-sm);
   background: var(--app-bg-card);
   border: 2px solid var(--app-ink, #2d2d2d);
   border-radius: 6px 10px 6px 10px;
@@ -272,8 +272,8 @@ const METRIC_TAG = { 可点击: 'success', 可滚动: 'info', 可勾选: 'warnin
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 6px 8px;
+  gap: var(--app-space-sm);
+  padding: 6px var(--app-space-sm);
   font-size: var(--app-size-xs);
   border-radius: 4px;
   cursor: pointer;
@@ -293,7 +293,7 @@ const METRIC_TAG = { 可点击: 'success', 可滚动: 'info', 可勾选: 'warnin
 
 .sap-table { min-height: 0; min-width: 0; overflow: hidden; }
 
-.sap-tag { margin-right: 4px; }
+.sap-tag { margin-right: var(--app-space-xs); }
 
 :deep(.sap-row--selected) { background: rgba(167, 139, 250, 0.18); }
 
@@ -307,7 +307,7 @@ const METRIC_TAG = { 可点击: 'success', 可滚动: 'info', 可勾选: 'warnin
 
 /* ── 元素名称内联编辑 ── */
 .sap-name-cell {
-  display: inline-flex; align-items: center; gap: 4px;
+  display: inline-flex; align-items: center; gap: var(--app-space-xs);
   max-width: 100%; cursor: text; min-width: 0;
 }
 .sap-name-text {
@@ -332,12 +332,12 @@ const METRIC_TAG = { 可点击: 'success', 可滚动: 'info', 可勾选: 'warnin
   display: flex; align-items: center; justify-content: center;
 }
 .sap-enlarge {
-  display: flex; gap: 16px; align-items: flex-start;
+  display: flex; gap: var(--app-space-md); align-items: flex-start;
   background: var(--app-bg-card, #fff);
   border: 3px solid var(--app-ink, #2d2d2d);
   border-radius: 6px 10px 6px 10px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  padding: 16px;
+  padding: var(--app-space-md);
   max-width: 90vw;
 }
 .sap-enlarge-img {
@@ -351,7 +351,7 @@ const METRIC_TAG = { 可点击: 'success', 可滚动: 'info', 可勾选: 'warnin
   min-width: 220px; max-width: 320px;
 }
 .sap-enlarge-field {
-  display: flex; gap: 8px; align-items: baseline;
+  display: flex; gap: var(--app-space-sm); align-items: baseline;
   word-break: break-all;
 }
 .sap-enlarge-field span {

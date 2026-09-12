@@ -13,7 +13,7 @@
 .chat-layout {
   flex: 1;
   display: grid;
-  grid-template-columns: 300px 1fr;
+  grid-template-columns: var(--layout-pane-left) 1fr;
   gap: 20px;
   min-height: 0;
   height: 100%;
@@ -67,7 +67,7 @@
 .chat-header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-sm);
   min-width: 0;
 }
 .chat-header-title {
@@ -78,13 +78,13 @@
 .chat-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-sm);
   flex-shrink: 0;
 }
 .msg-count {
   font-size:var(--app-size-sm);
   color: var(--app-ink-muted);
-  padding: 2px 8px;
+  padding: 2px var(--app-space-sm);
   background: rgba(162, 210, 255, 0.18);
   border-radius: 8px;
   font-weight: 600;
@@ -117,7 +117,7 @@
 /* Model status badge — shows live model activity (thinking / calling / streaming / done) */
 .model-status-badge {
   font-size:var(--app-size-sm);
-  padding: 3px 10px 3px 8px;
+  padding: 3px 10px 3px var(--app-space-sm);
   border-radius: 8px;
   font-weight: 600;
   display: inline-flex;
@@ -182,12 +182,12 @@
 /* Connection indicator — always visible in header */
 .connection-indicator {
   font-size:var(--app-size-sm);
-  padding: 4px 12px;
+  padding: var(--app-space-xs) 12px;
   border-radius: 10px;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--app-space-xs);
   white-space: nowrap;
 }
 .connection-indicator.sse {
@@ -210,7 +210,7 @@
 .stop-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--app-space-xs);
   padding: 6px 14px;
   border: 1.5px solid var(--ai-status-danger);
   border-radius: 10px;
@@ -273,7 +273,7 @@
   padding: 0 6px;
 }
 .typing-row .msg-text {
-  padding: 16px 20px;
+  padding: var(--app-space-md) 20px;
   border-radius: 18px;
   background: var(--app-bg-card);
   border: 1px solid var(--doodle-bg, #faf5ee);

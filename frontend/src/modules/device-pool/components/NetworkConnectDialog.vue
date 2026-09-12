@@ -1,6 +1,7 @@
 <script setup lang="ts">
-/** NetworkConnectDialog — 局域网连接设备弹窗 per PRD §3.7 F-07 */
-import { ref, watch } from 'vue'
+/** NetworkConnectDialog — 局域网连接：已配对/已在 adb devices 可直连；首次选填配对 */
+import { computed, ref, watch } from 'vue'
+import { validateLanConnect, type LanConnectPayload } from '../helpers'
 
 const props = withDefaults(defineProps<{
   visible?: boolean
@@ -11,94 +12,83 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-  confirm: [payload: { target: string }]
+  confirm: [payload: LanConnectPayload]
   cancel: []
 }>()
 
-const ip = ref("");
-const port = ref("5555");
-const ipError = ref("");
-const portError = ref("");
+const ip = ref('')
+const connectPort = ref('')
+const pairPort = ref('')
+const pairCode = ref('')
+const ipError = ref('')
+const connectPortError = ref('')
+const pairPortError = ref('')
+const pairCodeError = ref('')
 
-// 每字段 wrapper 引用，用于聚焦第一个非法字段（AC-7）
-const ipWrap = ref(null);
-const portWrap = ref(null);
+const ipWrap = ref<HTMLElement | null>(null)
+const connectPortWrap = ref<HTMLElement | null>(null)
+const pairPortWrap = ref<HTMLElement | null>(null)
+const pairCodeWrap = ref<HTMLElement | null>(null)
 
-// IPv4 点分十进制，每段 0-255（PRD §3.7 校验规则）
-const IPV4_RE =
-  /^((25[0-5]|2[0-4]\d|[01]?\d?\d)\.){3}(25[0-5]|2[0-4]\d|[01]?\d?\d)$/;
+const willPair = computed(() => Boolean(pairPort.value.trim() || pairCode.value.trim()))
 
 watch(
   () => props.visible,
   (v) => {
     if (v) {
-      ip.value = "";
-      port.value = "5555";
-      ipError.value = "";
-      portError.value = "";
+      ip.value = ''
+      connectPort.value = ''
+      pairPort.value = ''
+      pairCode.value = ''
+      ipError.value = ''
+      connectPortError.value = ''
+      pairPortError.value = ''
+      pairCodeError.value = ''
     }
   },
-);
+)
 
-function validateIp() {
-  const val = ip.value.trim();
-  if (!val) {
-    ipError.value = "请输入 IP 地址";
-    return false;
-  }
-  if (!IPV4_RE.test(val)) {
-    ipError.value = "请输入合法的 IPv4 地址（如 192.168.1.100）";
-    return false;
-  }
-  ipError.value = "";
-  return true;
+function applyErrors(errors: {
+  ip: string
+  connectPort: string
+  pairPort: string
+  pairCode: string
+}) {
+  ipError.value = errors.ip
+  connectPortError.value = errors.connectPort
+  pairPortError.value = errors.pairPort
+  pairCodeError.value = errors.pairCode
 }
 
-function validatePort() {
-  const val = String(port.value).trim();
-  if (!val) {
-    portError.value = "请输入端口";
-    return false;
-  }
-  if (!/^\d+$/.test(val)) {
-    portError.value = "端口需为 1-65535 之间的整数";
-    return false;
-  }
-  const num = Number(val);
-  if (num < 1 || num > 65535) {
-    portError.value = "端口需为 1-65535 之间的整数";
-    return false;
-  }
-  portError.value = "";
-  return true;
-}
-
-function focusField(wrap) {
-  // Element Plus input wrapper — focus the native input element directly
-  wrap?.querySelector?.("input")?.focus?.();
+function focusField(wrap: HTMLElement | null) {
+  wrap?.querySelector?.('input')?.focus?.()
 }
 
 function handleConfirm() {
-  if (props.loading) return; // 提交中防重复（AC-9）
-  const ipOk = validateIp();
-  const portOk = validatePort();
-  // 任一不通过则不发请求，聚焦第一个非法字段（AC-5/6/7）
-  if (!ipOk) {
-    focusField(ipWrap.value);
-    return;
+  if (props.loading) return
+  const result = validateLanConnect({
+    ip: ip.value,
+    connectPort: connectPort.value,
+    pairPort: pairPort.value,
+    pairCode: pairCode.value,
+  })
+  applyErrors(result.errors)
+  if (!result.ok) {
+    const map = {
+      ip: ipWrap.value,
+      connectPort: connectPortWrap.value,
+      pairPort: pairPortWrap.value,
+      pairCode: pairCodeWrap.value,
+    }
+    if (result.firstError) focusField(map[result.firstError])
+    return
   }
-  if (!portOk) {
-    focusField(portWrap.value);
-    return;
-  }
-  emit("confirm", {
-    target: `${ip.value.trim()}:${String(port.value).trim()}`,
-  });
+  if (result.payload) emit('confirm', result.payload)
 }
 
 function handleCancel() {
-  if (props.loading) return;
-  emit("cancel");
+  if (props.loading) return
+  emit('cancel')
 }
 </script>
 
@@ -106,57 +96,74 @@ function handleCancel() {
   <el-dialog
     :model-value="visible"
     title="局域网连接设备"
-    width="440px"
+    width="520px"
     :close-on-click-modal="false"
     @close="handleCancel"
   >
     <div class="net-form">
+      <p class="net-hint">
+        手机打开「开发者选项 → 无线调试」，并与电脑同一局域网。
+        若本机 <code>adb devices</code> 已出现 <code>IP:端口</code>
+        或 <code>adb-序列号-…._adb-tls-connect._tcp</code>，说明已配对/已发现，只需填连接端口。
+      </p>
+
       <div class="net-form-item">
         <label class="net-label">IP 地址 *</label>
-        <div
-          ref="ipWrap"
-          class="net-field"
-          :class="{ 'has-error': ipError }"
-          @focusout="validateIp"
-        >
-          <el-input
-            v-model="ip"
-            placeholder="如 192.168.1.100"
-            :maxlength="15"
-            @keyup.enter="handleConfirm"
-          />
+        <div ref="ipWrap" class="net-field" :class="{ 'has-error': ipError }">
+          <el-input v-model="ip" placeholder="如 10.162.95.96" :maxlength="15" @keyup.enter="handleConfirm" />
         </div>
         <p v-if="ipError" class="net-error">{{ ipError }}</p>
       </div>
 
       <div class="net-form-item">
-        <label class="net-label">端口 *</label>
-        <div
-          ref="portWrap"
-          class="net-field"
-          :class="{ 'has-error': portError }"
-          @focusout="validatePort"
-        >
+        <label class="net-label">连接端口 *</label>
+        <div ref="connectPortWrap" class="net-field" :class="{ 'has-error': connectPortError }">
           <el-input
-            v-model="port"
-            placeholder="默认 5555"
+            v-model="connectPort"
+            placeholder="无线调试主页上的端口，如 43523"
             :maxlength="5"
             @keyup.enter="handleConfirm"
           />
         </div>
-        <p v-if="portError" class="net-error">{{ portError }}</p>
+        <p v-if="connectPortError" class="net-error">{{ connectPortError }}</p>
       </div>
 
-      <p class="net-hint">请确保设备已开启无线调试，且与本机处于同一局域网。</p>
+      <p class="net-hint">
+        首次连接才需要配对（配对端口 ≠ 连接端口）。已配对可留空下面两项。
+      </p>
+
+      <div class="net-form-item">
+        <label class="net-label">配对端口（可选）</label>
+        <div ref="pairPortWrap" class="net-field" :class="{ 'has-error': pairPortError }">
+          <el-input
+            v-model="pairPort"
+            placeholder="配对弹窗上的端口，如 41395"
+            :maxlength="5"
+            @keyup.enter="handleConfirm"
+          />
+        </div>
+        <p v-if="pairPortError" class="net-error">{{ pairPortError }}</p>
+      </div>
+
+      <div class="net-form-item">
+        <label class="net-label">配对码（可选）</label>
+        <div ref="pairCodeWrap" class="net-field" :class="{ 'has-error': pairCodeError }">
+          <el-input
+            v-model="pairCode"
+            placeholder="如 387429"
+            :maxlength="16"
+            @keyup.enter="handleConfirm"
+          />
+        </div>
+        <p v-if="pairCodeError" class="net-error">{{ pairCodeError }}</p>
+      </div>
     </div>
 
     <template #footer>
-      <el-button :disabled="loading" @click="handleCancel"
-        >取消</el-button
-      >
-      <el-button type="primary" :loading="loading" @click="handleConfirm"
-        >连接</el-button
-      >
+      <el-button :disabled="loading" @click="handleCancel">取消</el-button>
+      <el-button type="primary" :loading="loading" @click="handleConfirm">
+        {{ willPair ? '配对并连接' : '连接' }}
+      </el-button>
     </template>
   </el-dialog>
 </template>
@@ -165,8 +172,8 @@ function handleCancel() {
 .net-form {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 8px 0;
+  gap: var(--app-space-md);
+  padding: var(--app-space-sm) 0;
 }
 
 .net-form-item {
@@ -182,13 +189,12 @@ function handleCancel() {
 }
 
 .net-field.has-error :deep(input) {
-  border-color: var(--ac-red, #e8998a);
-  box-shadow: 0 0 0 3px rgba(232,153,138,0.14);
+  border-color: var(--app-status-danger);
 }
 
 .net-error {
   font-size: var(--app-size-sm);
-  color: var(--ac-red, #e8998a);
+  color: var(--app-status-danger-text);
   margin: 0;
   line-height: 1.4;
 }
@@ -196,7 +202,14 @@ function handleCancel() {
 .net-hint {
   font-size: var(--app-size-sm);
   color: var(--app-ink-muted);
-  margin: 4px 0 0;
+  margin: 0;
   line-height: 1.5;
+}
+
+.net-hint code {
+  font-size: var(--app-size-xs);
+  padding: 0 var(--app-space-xs);
+  border-radius: 3px;
+  background: var(--ai-bg-neutral, rgba(0, 0, 0, 0.04));
 }
 </style>

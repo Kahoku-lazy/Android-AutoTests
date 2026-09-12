@@ -1,0 +1,192 @@
+/* SkillViewerPage — 左目录右内容 */
+
+.skill-viewer-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.sv-page {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: var(--layout-pane-left) minmax(0, 1fr);
+  gap: var(--app-space-md);
+  padding: var(--app-space-lg);
+}
+
+@media (max-width: 960px) {
+  .sv-page {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+}
+
+.panel {
+  background: var(--app-bg-card);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-sm, 2px 2px 0 var(--ink));
+}
+
+.sv-tree {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: var(--app-space-md);
+}
+
+.sv-tree-label {
+  font-size: var(--app-size-xs);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--app-text-secondary);
+  padding: 2px var(--app-space-xs) var(--app-space-sm);
+}
+
+.sv-tree-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.sv-node {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  min-width: 0;
+}
+
+.sv-node-icon { flex-shrink: 0; }
+.sv-node-name {
+  font-size: var(--app-size-xs);
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sv-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sv-content-head {
+  padding: var(--app-space-md) var(--app-space-lg);
+  border-bottom: 1.5px dashed var(--dot);
+  flex-shrink: 0;
+}
+
+.sv-content-title {
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.sv-content-path {
+  margin: var(--app-space-xs) 0 0;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+  font-family: var(--app-font-mono);
+}
+
+.sv-content-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--app-space-lg);
+}
+
+.sv-code {
+  margin: 0;
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.sv-md {
+  max-width: 900px;
+  font-size: var(--app-size-sm);
+  line-height: 1.65;
+  color: var(--ink);
+}
+
+.sv-md :deep(h1),
+.sv-md :deep(h2),
+.sv-md :deep(h3) {
+  margin: var(--app-space-md) 0 var(--app-space-sm);
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.sv-md :deep(h1) { font-size: var(--app-size-lg); }
+.sv-md :deep(h2) { font-size: var(--app-size-md); }
+.sv-md :deep(h3) { font-size: var(--app-size-sm); }
+
+.sv-md :deep(p),
+.sv-md :deep(ul),
+.sv-md :deep(ol) {
+  margin: 0 0 var(--app-space-sm);
+}
+
+.sv-md :deep(code) {
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  background: var(--app-bg-subtle);
+  padding: 1px 6px;
+  border-radius: var(--app-radius-sm);
+}
+
+.sv-md :deep(pre) {
+  background: var(--app-bg-subtle);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  padding: var(--app-space-md);
+  overflow-x: auto;
+}
+
+.sv-md :deep(pre code) {
+  background: transparent;
+  padding: 0;
+}
+
+.sv-md :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 var(--app-space-md);
+  font-size: var(--app-size-xs);
+}
+
+.sv-md :deep(th),
+.sv-md :deep(td) {
+  border: 1.5px solid var(--ink);
+  padding: 6px var(--app-space-sm);
+  text-align: left;
+}
+
+.sv-md :deep(th) {
+  background: var(--app-bg-subtle);
+  font-weight: 800;
+}
+
+.sv-md :deep(blockquote) {
+  margin: 0 0 var(--app-space-sm);
+  padding-left: var(--app-space-md);
+  border-left: 3px solid var(--c-ai);
+  color: var(--app-text-secondary);
+}
+
+.sv-md :deep(a) {
+  color: var(--c-ai);
+  font-weight: 700;
+}

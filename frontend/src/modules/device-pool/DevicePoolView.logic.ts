@@ -73,7 +73,7 @@ export interface DevicePoolViewState {
   currentUser: string
   handleRefresh: () => Promise<void>
   openNetworkDialog: () => void
-  handleNetworkConnect: (opts: { target: string }) => Promise<void>
+  handleNetworkConnect: (opts: { target: string; pair_port?: string; pair_code?: string }) => Promise<void>
   cancelNetworkDialog: () => void
   handleRowClick: (record: DeviceRecord) => void
   handleLockClick: (device: DeviceRecord) => Promise<void>

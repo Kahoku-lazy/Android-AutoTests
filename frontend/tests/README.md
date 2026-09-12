@@ -23,7 +23,6 @@ tests/<module>/
 | device-inspector | — | ⬜ 未开始 | 0 | 0 | 待开测（src: device-inspector） |
 | element-locator | `tests/element-locator/` | ✅ P0+P1 | 4 | 3 | 元素端点 / 元素树 / 分组树 |
 | case-manager | — | ⬜ 未开始 | 0 | 0 | 待开测（src: case-manager） |
-| test-runner | `tests/test-runner/` | ✅ P0+P1 | 6 | 2 | 任务端点 / 队列轮询 / 任务操作 / WS 消息 / 防抖保存 |
 | report-generator | — | ⬜ 未开始 | 0 | 0 | 待开测（src: report-generator） |
 | ai-assistant | — | ⬜ 未开始 | 0 | 0 | 待开测 |
 | workflow | — | ⬜ 未开始 | 0 | 0 | 待开测 |

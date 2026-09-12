@@ -1,0 +1,231 @@
+# 设备检查器接口用例（黑盒，保持约定：鉴权 / 参数校验 / 404/400 错误路径）
+# 抓取成功等需真实设备的路径，留给集成测试与真机验证
+# 字段：id / name / title / point / method|path / body / auth(none=无token, required=带token) / expect(status|schema|check)
+
+# ── 鉴权：7 端点无 token → 401 ──
+
+- id: "TC-INS-001"
+  name: "capture-no-token"
+  title: "快照抓取未登录"
+  point: "无 Bearer token 访问 capture，返回 401 请先登录"
+  auth: "none"
+  method: "POST"
+  path: "/api/inspector/capture"
+  body:
+    serial: "emulator-5554"
+    method: "dump"
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "请先登录"
+
+- id: "TC-INS-002"
+  name: "snapshots-no-token"
+  title: "快照列表未登录"
+  point: "无 Bearer token 访问 snapshots，返回 401 请先登录"
+  auth: "none"
+  method: "GET"
+  path: "/api/inspector/snapshots"
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "请先登录"
+
+- id: "TC-INS-003"
+  name: "snapshot-detail-no-token"
+  title: "快照详情未登录"
+  point: "无 Bearer token 访问详情，返回 401 请先登录"
+  auth: "none"
+  method: "GET"
+  path: "/api/inspector/snapshots/1"
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "请先登录"
+
+- id: "TC-INS-004"
+  name: "snapshot-analyze-no-token"
+  title: "快照结构分析未登录"
+  point: "无 Bearer token 访问 analyze，返回 401 请先登录"
+  auth: "none"
+  method: "GET"
+  path: "/api/inspector/snapshots/1/analyze"
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "请先登录"
+
+- id: "TC-INS-005"
+  name: "snapshot-delete-no-token"
+  title: "快照删除未登录"
+  point: "无 Bearer token 访问 delete，返回 401 请先登录"
+  auth: "none"
+  method: "DELETE"
+  path: "/api/inspector/snapshots/1/delete"
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "请先登录"
+
+- id: "TC-INS-006"
+  name: "save-elements-no-token"
+  title: "保存到元素定位未登录"
+  point: "无 Bearer token 访问 save-elements，返回 401 请先登录"
+  auth: "none"
+  method: "POST"
+  path: "/api/inspector/snapshots/1/save-elements"
+  body:
+    page_label: "测试页"
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "请先登录"
+
+- id: "TC-INS-007"
+  name: "page-view-no-token"
+  title: "页面只读回看未登录"
+  point: "无 Bearer token 访问 pages，返回 401 请先登录"
+  auth: "none"
+  method: "GET"
+  path: "/api/inspector/pages/1"
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "请先登录"
+
+# ── 参数校验：capture 非法 method / 空 serial / 未注册 serial ──
+
+- id: "TC-INS-010"
+  name: "capture-invalid-method"
+  title: "抓取非法 method"
+  point: "method=both（已废弃）返回 400 无效的获取方法"
+  auth: "required"
+  method: "POST"
+  path: "/api/inspector/capture"
+  body:
+    serial: "emulator-5554"
+    method: "both"
+  expect:
+    status: 400
+    schema: "error"
+    check:
+      message: "无效的获取方法"
+
+- id: "TC-INS-011"
+  name: "capture-empty-serial"
+  title: "抓取未选设备"
+  point: "serial 为空返回 409 未选择设备，请先连接设备"
+  auth: "required"
+  method: "POST"
+  path: "/api/inspector/capture"
+  body:
+    serial: ""
+    method: "dump"
+  expect:
+    status: 409
+    schema: "error"
+    check:
+      message: "未选择设备，请先连接设备"
+
+- id: "TC-INS-012"
+  name: "capture-unregistered-serial"
+  title: "抓取未注册设备"
+  point: "serial 不在设备池返回 409 设备未注册"
+  auth: "required"
+  method: "POST"
+  path: "/api/inspector/capture"
+  body:
+    serial: "no_such_serial_xyz"
+    method: "dump"
+  expect:
+    status: 409
+    schema: "error"
+    check:
+      message: "设备未注册"
+
+# ── 正常 / 错误路径 ──
+
+- id: "TC-INS-020"
+  name: "snapshots-list-success"
+  title: "快照列表正常返回"
+  point: "登录后访问列表，返回 total/items 结构"
+  auth: "required"
+  method: "GET"
+  path: "/api/inspector/snapshots"
+  expect:
+    status: 200
+    schema: "snapshot_list"
+
+- id: "TC-INS-030"
+  name: "snapshot-detail-not-exist"
+  title: "快照详情不存在"
+  point: "快照 ID 不存在返回 404 快照不存在"
+  auth: "required"
+  method: "GET"
+  path: "/api/inspector/snapshots/999999999"
+  expect:
+    status: 404
+    schema: "error"
+    check:
+      message: "快照不存在"
+
+- id: "TC-INS-040"
+  name: "snapshot-analyze-not-exist"
+  title: "快照结构分析不存在"
+  point: "快照 ID 不存在返回 404 快照不存在"
+  auth: "required"
+  method: "GET"
+  path: "/api/inspector/snapshots/999999999/analyze"
+  expect:
+    status: 404
+    schema: "error"
+    check:
+      message: "快照不存在"
+
+- id: "TC-INS-050"
+  name: "snapshot-delete-not-exist"
+  title: "快照删除不存在"
+  point: "快照 ID 不存在返回 404 快照不存在"
+  auth: "required"
+  method: "DELETE"
+  path: "/api/inspector/snapshots/999999999/delete"
+  expect:
+    status: 404
+    schema: "error"
+    check:
+      message: "快照不存在"
+
+- id: "TC-INS-060"
+  name: "save-elements-not-exist"
+  title: "保存到元素定位快照不存在"
+  point: "快照 ID 不存在返回 400 快照不存在"
+  auth: "required"
+  method: "POST"
+  path: "/api/inspector/snapshots/999999999/save-elements"
+  body:
+    page_label: "测试页"
+  expect:
+    status: 400
+    schema: "error"
+    check:
+      message: "快照不存在"
+
+- id: "TC-INS-070"
+  name: "page-view-not-exist"
+  title: "页面只读回看不存在"
+  point: "页面 ID 不存在返回 404 页面不存在"
+  auth: "required"
+  method: "GET"
+  path: "/api/inspector/pages/999999999"
+  expect:
+    status: 404
+    schema: "error"
+    check:
+      message: "页面不存在"

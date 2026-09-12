@@ -2,7 +2,7 @@
 
 校验「四条内部通信通道」的结构不变量（architecture.md §一 逐通道规则）：
   - ① HTTP REST + JWT：前端唯一出口 baseURL、后端业务路由挂 /api/、JWT 白名单无业务路由
-  - ② WebSocket + JWT：路由真相源恒 2 个生产点
+  - ② WebSocket + JWT：路由真相源当前 0 个生产点（编辑锁已下线）
   - ③ AgentScope 进程内：无 adapters/、rag/
   - ④ 引擎中转：上层（apps/gateway）不直触引擎库/具体实现
 
@@ -58,12 +58,12 @@ class TestHttpChannel:
 class TestWebSocketChannel:
     """② Django → 前端 — WebSocket + JWT"""
 
-    def test_ws_routing_has_exactly_two(self):
-        """WS 路由真相源恒 2 个生产点（执行进度 + 编辑锁），禁止新增。"""
+    def test_ws_routing_has_no_case_editing(self):
+        """用例编辑锁 WS 已下线；当前无 WS 生产点，禁止擅自新增。"""
         from gateway.routing import websocket_urlpatterns
 
-        assert len(websocket_urlpatterns) == 2, (
-            f"WS 生产点应为 2 个，实际 {len(websocket_urlpatterns)}"
+        assert len(websocket_urlpatterns) == 0, (
+            f"WS 生产点应为 0 个，实际 {len(websocket_urlpatterns)}"
         )
 
 

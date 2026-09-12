@@ -805,6 +805,7 @@ create_endpoint(
 g_kb = create_group("知识库", parent=f_ai, sort=6)
 create_endpoint(g_kb, "GET", "知识库状态", "/api/ai/knowledge/status", "查询知识库状态")
 create_endpoint(g_kb, "GET", "文档列表", "/api/ai/knowledge/documents", "列出知识库文档")
+create_endpoint(g_kb, "GET", "文档预览", "/api/ai/knowledge/documents/preview", "预览知识库文档")
 create_endpoint(g_kb, "POST", "重建索引", "/api/ai/knowledge/reindex", "重建知识库索引")
 create_endpoint(g_kb, "POST", "添加文档", "/api/ai/knowledge/documents/add", "添加文档到知识库")
 

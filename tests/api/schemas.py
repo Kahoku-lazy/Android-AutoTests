@@ -151,6 +151,25 @@ DEVICE_CURRENT_SCHEMA = {
 }
 
 
+SNAPSHOT_LIST_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "status": {"const": True},
+        "data": {
+            "type": "object",
+            "properties": {
+                "total": {"type": "integer"},
+                "items": {"type": "array"},
+            },
+            "required": ["total", "items"],
+            "additionalProperties": False,
+        },
+    },
+    "required": ["status", "data"],
+    "additionalProperties": False,
+}
+
+
 # YAML expect.schema 引用名 -> schema 对象
 SCHEMAS = {
     "auth_success": AUTH_SUCCESS_SCHEMA,
@@ -159,4 +178,5 @@ SCHEMAS = {
     "device_list": DEVICE_LIST_SCHEMA,
     "heartbeat": HEARTBEAT_SCHEMA,
     "device_current": DEVICE_CURRENT_SCHEMA,
+    "snapshot_list": SNAPSHOT_LIST_SCHEMA,
 }

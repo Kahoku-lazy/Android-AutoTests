@@ -92,9 +92,46 @@ def test_detect_returns_contract_list(detector):
 
 @pytest.mark.unit
 @pytest.mark.device_pool
+def test_parse_mdns_serial(detector):
+    """mDNS 名拆出真实序列号。"""
+    assert (
+        detector.parse_mdns_serial("adb-R5CT62RH88F-chgdtV._adb-tls-connect._tcp") == "R5CT62RH88F"
+    )
+    assert detector.parse_mdns_serial("RF8N21MSW7A") == ""
+
+
+@pytest.mark.unit
+@pytest.mark.device_pool
+def test_wireless_ready_hint_from_adb_devices(detector):
+    """adb devices 出现 IP:port 或 tls-connect mDNS → 可跳过 pair。"""
+    listed = {
+        "10.162.95.96:43523",
+        "adb-R5CT62RH88F-chgdtV._adb-tls-connect._tcp",
+        "USBONLY",
+    }
+    with patch.object(detector, "adb_device_serials", return_value=listed):
+        hint = detector.wireless_ready_hint("10.162.95.96")
+    assert hint["ip_connected"] is True
+    assert hint["can_skip_pair"] is True
+    assert "R5CT62RH88F" in hint["mdns_serials"]
+
+
+@pytest.mark.unit
+@pytest.mark.device_pool
+def test_connect_skips_adb_when_already_listed(detector):
+    """已在 adb devices 的 IP:port 不再调 adb connect，只探活。"""
+    with patch.object(detector, "is_adb_listed", return_value=True), patch(
+        "apps.device_pool.manager.probe_u2"
+    ), patch("apps.device_pool.manager.subprocess.run") as mock_run:
+        detector.connect("10.162.95.96:43523")
+    mock_run.assert_not_called()
+
+
+@pytest.mark.unit
+@pytest.mark.device_pool
 def test_connect_wireless_success(detector):
     """无线 IP:port 连接成功（adb connect + u2 探活均成功，不抛错）。"""
-    with patch(
+    with patch.object(detector, "is_adb_listed", return_value=False), patch(
         "apps.device_pool.manager.subprocess.run",
         return_value=Mock(stdout="connected to 192.168.1.5:5555\n", stderr=""),
     ), patch("apps.device_pool.manager.probe_u2"):
@@ -104,10 +141,10 @@ def test_connect_wireless_success(detector):
 @pytest.mark.unit
 @pytest.mark.device_pool
 def test_connect_wireless_adb_fail(detector):
-    """无线 adb connect 失败（输出无 connected/already）→ 504 连接超时。"""
+    """无线 adb connect 失败（输出无 connected/already）→ 504。"""
     from apps.device_pool.manager import DeviceError
 
-    with patch(
+    with patch.object(detector, "is_adb_listed", return_value=False), patch(
         "apps.device_pool.manager.subprocess.run",
         return_value=Mock(stdout="failed to connect\n", stderr=""),
     ):
@@ -118,12 +155,28 @@ def test_connect_wireless_adb_fail(detector):
 
 @pytest.mark.unit
 @pytest.mark.device_pool
+def test_connect_unauthorized_needs_pair(detector):
+    """unauthorized → 提示填写配对。"""
+    from apps.device_pool.manager import DeviceError
+
+    with patch.object(detector, "is_adb_listed", return_value=False), patch(
+        "apps.device_pool.manager.subprocess.run",
+        return_value=Mock(stdout="", stderr="error: device unauthorized\n"),
+    ):
+        with pytest.raises(DeviceError) as e:
+            detector.connect("10.162.95.96:43523")
+    assert e.value.status_code == 400
+    assert "配对" in str(e.value)
+
+
+@pytest.mark.unit
+@pytest.mark.device_pool
 def test_connect_atx_agent_not_running(detector):
     """u2 探活报 atx-agent → 502 ATX Agent 未运行。"""
     from apps.device_pool.manager import DeviceError
     from engines.device.base import EngineConnectError
 
-    with patch(
+    with patch.object(detector, "is_adb_listed", return_value=False), patch(
         "apps.device_pool.manager.subprocess.run",
         return_value=Mock(stdout="connected\n", stderr=""),
     ), patch(
@@ -144,3 +197,40 @@ def test_connect_usb_skips_adb_connect(detector):
     ) as mock_run:
         detector.connect("RF8N21MSW7A")
     mock_run.assert_not_called()  # USB 不触发 adb connect
+
+
+@pytest.mark.unit
+@pytest.mark.device_pool
+def test_pair_success(detector):
+    """adb pair 输出 Successfully paired 不抛错。"""
+    with patch(
+        "apps.device_pool.manager.subprocess.run",
+        return_value=Mock(stdout="Successfully paired to 10.0.0.1:41395\n", stderr=""),
+    ):
+        detector.pair("10.0.0.1", "41395", "387429")
+
+
+@pytest.mark.unit
+@pytest.mark.device_pool
+def test_pair_already_paired_ok(detector):
+    """已配对视为成功。"""
+    with patch(
+        "apps.device_pool.manager.subprocess.run",
+        return_value=Mock(stdout="", stderr="error: already paired\n"),
+    ):
+        detector.pair("10.0.0.1", "41395", "387429")
+
+
+@pytest.mark.unit
+@pytest.mark.device_pool
+def test_pair_wrong_code(detector):
+    """配对失败 → 400。"""
+    from apps.device_pool.manager import DeviceError
+
+    with patch(
+        "apps.device_pool.manager.subprocess.run",
+        return_value=Mock(stdout="", stderr="failed to pair device\n"),
+    ):
+        with pytest.raises(DeviceError) as e:
+            detector.pair("10.0.0.1", "41395", "000000")
+    assert e.value.status_code == 400

@@ -8,12 +8,6 @@
       "added": "2026-07-15"
     },
     {
-      "file": "frontend/src/modules/test-runner/index.vue",
-      "lines": 1156,
-      "plan": "待拆分",
-      "added": "2026-07-15"
-    },
-    {
       "file": "frontend/src/modules/ai-assistant/ChatView.vue",
       "lines": 1133,
       "plan": "待拆分",
@@ -40,12 +34,6 @@
     {
       "file": "frontend/src/modules/device-pool/index.vue",
       "lines": 911,
-      "plan": "待拆分",
-      "added": "2026-07-15"
-    },
-    {
-      "file": "frontend/src/modules/test-runner/components/TaskDetail.vue",
-      "lines": 885,
       "plan": "待拆分",
       "added": "2026-07-15"
     },

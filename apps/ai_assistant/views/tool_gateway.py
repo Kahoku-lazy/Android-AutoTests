@@ -77,10 +77,6 @@ def agent_config(request, agent_id: str):
     if not agent.enable_business_tools:
         enabled_tools = []
 
-    # 知识库开关未开启时，配置视图同步剔除知识库检索工具（与 agent_factory 装配逻辑一致）
-    if not agent.enable_knowledge_base:
-        enabled_tools = [t for t in enabled_tools if t != "search_knowledge_base"]
-
     # Resolve disabled workspace skills
     skills_config = agent.skills_config or {}
     disabled_skills = [name for name, enabled in skills_config.items() if enabled is False]

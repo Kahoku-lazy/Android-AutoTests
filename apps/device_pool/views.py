@@ -168,6 +168,13 @@ def scan_device(request):
                 if not (_ip_ok and _port_ok):
                     return Response({"message": "无效的 IP 或端口"}, status=400)
 
+                pair_port = (request.data.get("pair_port") or "").strip()
+                pair_code = (request.data.get("pair_code") or "").strip()
+                if pair_port or pair_code:
+                    if not (pair_port and pair_code):
+                        return Response({"message": "请同时填写配对端口和配对码"}, status=400)
+                    detector.pair(_ip, pair_port, pair_code)
+
                 detector.connect(target)
                 dev, created = registry.register_device(target, user_id)
                 state_machine.claim_wireless_device(dev, user_id)

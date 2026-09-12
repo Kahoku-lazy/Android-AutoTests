@@ -24,7 +24,7 @@
 ## AI 用量聚合与 DeepSeek 计费（`ai_usage.py`）
 
 - **文件**：`apps/dashboard/ai_usage.py`（纯只读，无任何写操作），承载 `ai_usage_stats()`（今日/累计）与 `ai_daily_series()`（近 12 天逐日），读 `ai_assistant` 的 `AITask`（`input_tokens` / `output_tokens` / `cache_input_tokens` / `model_usage`）。任务 token 由工作流采集落库（`agent_scope/workflow.py` 采集 → `api.finalize_task` 落库）。
-- **DeepSeek 官方价目 = 可配置常量 `DEEPSEEK_PRICING`**（`ai_usage.py` 顶部，元 / 百万 tokens）：`deepseek-v4-flash` / `deepseek-v4-flash-vision-exp`（命中 0.05 / 未命中 1.5 / 输出 4.5）、`deepseek-v4-pro`（0.15 / 4.5 / 13.5）。**官方调价只改此常量，聚合逻辑不变**（参考 https://api-docs.deepseek.com/zh-cn/quick_start/pricing）。
+- **DeepSeek 官方价目 = `apps.ai_assistant.deepseek_billing.DEEPSEEK_PRICING`**（经 `api.task_deepseek_cost` 消费，元 / 百万 tokens）：`deepseek-v4-flash` / `deepseek-v4-flash-vision-exp`（命中 0.05 / 未命中 1.5 / 输出 4.5）、`deepseek-v4-pro`（0.15 / 4.5 / 13.5）。**官方调价只改此常量**（参考 https://api-docs.deepseek.com/zh-cn/quick_start/pricing）。任务详情 `deepseek_cost` 与仪表盘聚合同一口径。
 - **高峰/空闲时段计费**：高峰时段 = 北京时间周一至五 9:00–12:00、14:00–18:00，单价 ×2（`_is_peak_time`）。**依赖 `config/settings.py` 的 `TIME_ZONE=Asia/Shanghai` + `USE_TZ=False`**（`created_at` 即北京时间 naive datetime，直接取 `weekday/hour`）；改时区必须同步 `_is_peak_time`，否则计费错峰。
 - **旧模型别名** `_DEEPSEEK_MODEL_ALIASES`：`deepseek-chat`→flash 档、`deepseek-reasoner`→pro 档（官方定价页已下线旧名仍可计费）。
 - **费用口径**：`命中×命中价 + (输入−命中)×未命中价 + 输出×输出价`，再按高峰 ×2；结果保留 4 位小数。

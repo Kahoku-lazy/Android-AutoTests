@@ -5,8 +5,10 @@
 
 import base64
 import hashlib
+import json
 import logging
 import os
+import shutil
 
 from cryptography.fernet import Fernet
 from django.conf import settings
@@ -14,6 +16,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.utils import timezone
 
+from apps.ai_assistant.deepseek_billing import task_deepseek_cost
 from apps.ai_assistant.models import (
     AIAgent,
     AIConversation,
@@ -23,6 +26,7 @@ from apps.ai_assistant.models import (
     AISharedTool,
     AITask,
 )
+from apps.ai_assistant.skills_catalog import SHARED_SKILLS_DIR, scan_skill_folders, skill_origin
 
 logger = logging.getLogger("ai_assistant")
 
@@ -52,6 +56,7 @@ __all__ = [
     # 工具箱 / 工具操作
     "create_shared_tool",
     "create_shared_skill",
+    "ensure_disk_skills",
     "update_shared_tool",
     "delete_shared_tool",
     "set_shared_tool_enabled",
@@ -63,7 +68,16 @@ __all__ = [
     # 任务操作
     "create_task",
     "start_task",
+    "patch_task_progress",
     "finalize_task",
+    "delete_task",
+    "clear_agent_tasks",
+    "parse_task_result",
+    "task_result_preview",
+    "serialize_agent_task_row",
+    "serialize_agent_task_detail",
+    "dump_task_run_payload",
+    "task_deepseek_cost",
     # 加密工具
     "encrypt_key",
     "decrypt_key",
@@ -270,7 +284,7 @@ def update_route_connectivity(
     configs[route] = current
     agent.route_configs = configs
     healths = []
-    for key in ("device_control", "platform_task"):
+    for key in ("device_control",):
         health = (configs.get(key) or {}).get("health")
         if isinstance(health, dict) and "is_connected" in health:
             healths.append(bool(health["is_connected"]))
@@ -409,8 +423,6 @@ def log_confirm_result(agent: AIAgent, message: str, metadata: str) -> None:
 
 # ── 工具箱 / 工具写操作（Batch 3 起从 views 下沉）──
 
-_SHARED_SKILLS_DIR = os.path.join("data", "shared_skills")
-
 
 def create_shared_tool(
     name: str, item_type: str, description: str = "", config_json: str = "{}"
@@ -424,22 +436,49 @@ def create_shared_tool(
     )
 
 
-def create_shared_skill(name: str, file_count: int, size_bytes: int, features: str) -> AISharedTool:
-    """新增共享 skill 项（文件内容由调用方写入 data/shared_skills/{id}/）。"""
-    import json as _json
-
+def create_shared_skill(
+    name: str,
+    file_count: int,
+    size_bytes: int,
+    features: str,
+    *,
+    origin: str = "uploaded",
+    description: str | None = None,
+) -> AISharedTool:
+    """新增共享 skill 项（文件内容由调用方写入 engines/ai/skills/{name}/）。"""
+    desc = description if description is not None else f"{file_count} 个文件 — {features}"
     return AISharedTool.objects.create(
         name=name,
         item_type="skill",
-        description=f"{file_count} 个文件 — {features}",
-        config_json=_json.dumps(
+        description=desc,
+        config_json=json.dumps(
             {
                 "file_count": file_count,
                 "size_bytes": size_bytes,
                 "features": features,
+                "origin": origin,
             }
         ),
     )
+
+
+def ensure_disk_skills() -> None:
+    """磁盘上有 SKILL.md 的文件夹若无库记录则补一条（origin=local）。"""
+    existing = set(
+        AISharedTool.objects.filter(item_type="skill").values_list("name", flat=True)
+    )
+    for folder in scan_skill_folders():
+        name = folder["folder"]
+        if name in existing:
+            continue
+        create_shared_skill(
+            name,
+            folder["file_count"],
+            folder["size_bytes"],
+            "local",
+            origin="local",
+            description=folder["description"] or name,
+        )
 
 
 def update_shared_tool(
@@ -461,12 +500,12 @@ def update_shared_tool(
 
 
 def delete_shared_tool(item: AISharedTool) -> None:
-    """删除共享工具箱项；skill 类型同步清理上传目录。"""
+    """删除共享工具箱项；仅上传 skill 可删并清目录。本地 skill 拒绝删除。"""
     if item.item_type == "skill":
-        skill_dir = os.path.join(_SHARED_SKILLS_DIR, str(item.id))
+        if skill_origin(item) == "local":
+            raise ValueError("仓库内置 Skill 不能删除")
+        skill_dir = os.path.join(SHARED_SKILLS_DIR, item.name)
         if os.path.isdir(skill_dir):
-            import shutil
-
             shutil.rmtree(skill_dir, ignore_errors=True)
     item.delete()
 
@@ -518,11 +557,7 @@ def create_task(
     *,
     title: str,
     goal: str,
-    requirements: str = "",
     attachment: str = "",
-    route: str = "device_control",
-    checklist: str = "",
-    report_name: str = "",
     device_serial: str = "",
 ) -> AITask:
     """创建任务（任务发布）。"""
@@ -530,11 +565,7 @@ def create_task(
         agent=agent,
         title=title,
         goal=goal,
-        requirements=requirements,
         attachment=attachment,
-        route=route,
-        checklist=checklist,
-        report_name=report_name,
         device_serial=device_serial,
         status="pending",
     )
@@ -545,6 +576,26 @@ def start_task(task: AITask) -> AITask:
     task.status = "running"
     task.started_at = timezone.now()
     task.save(update_fields=["status", "started_at"])
+    return task
+
+
+def patch_task_progress(
+    task: AITask,
+    *,
+    result: str,
+    usage: dict | None = None,
+) -> AITask:
+    """运行中增量写入过程 JSON，不改 status / finished_at。"""
+    task.result = result
+    fields = ["result"]
+    if usage:
+        task.input_tokens = int(usage.get("input_tokens") or 0)
+        task.output_tokens = int(usage.get("output_tokens") or 0)
+        task.cache_input_tokens = int(usage.get("cache_input_tokens") or 0)
+        task.model_usage = usage.get("models") or {}
+        task.by_role = usage.get("by_role") or {}
+        fields += ["input_tokens", "output_tokens", "cache_input_tokens", "model_usage", "by_role"]
+    task.save(update_fields=fields)
     return task
 
 
@@ -568,9 +619,87 @@ def finalize_task(
         task.output_tokens = int(usage.get("output_tokens") or 0)
         task.cache_input_tokens = int(usage.get("cache_input_tokens") or 0)
         task.model_usage = usage.get("models") or {}
-        fields += ["input_tokens", "output_tokens", "cache_input_tokens", "model_usage"]
+        task.by_role = usage.get("by_role") or {}
+        fields += ["input_tokens", "output_tokens", "cache_input_tokens", "model_usage", "by_role"]
     task.save(update_fields=fields)
     return task
+
+
+def delete_task(task: AITask) -> None:
+    """删除任务发布记录。"""
+    task.delete()
+
+
+def clear_agent_tasks(agent: AIAgent) -> int:
+    """调试：清空该智能体下全部任务发布记录，返回删除条数。"""
+    deleted, _ = AITask.objects.filter(agent=agent).delete()
+    return deleted
+
+
+def parse_task_result(raw: str) -> dict:
+    """解析任务 result 文本：JSON 对象原样返回，纯文本包成 {summary}。"""
+    text = (raw or "").strip()
+    if not text:
+        return {}
+    try:
+        obj = json.loads(text)
+    except json.JSONDecodeError:
+        return {"summary": text}
+    if isinstance(obj, dict):
+        return obj
+    return {"summary": str(obj)}
+
+
+def task_result_preview(raw: str, limit: int = 120) -> str:
+    """列表卡片用的短摘要，避免把整份过程 JSON 下发。"""
+    obj = parse_task_result(raw)
+    summary = obj.get("summary") or obj.get("message") or obj.get("reason") or ""
+    if not summary and isinstance(obj.get("completed"), list) and obj["completed"]:
+        summary = f"已完成 {len(obj['completed'])} 项"
+    if not summary:
+        summary = (raw or "").strip()
+    summary = " ".join(str(summary).split())
+    if len(summary) > limit:
+        return summary[:limit] + "…"
+    return summary
+
+
+def serialize_agent_task_row(task: AITask) -> dict:
+    """任务发布列表行。"""
+    return {
+        "id": task.id,
+        "title": task.title,
+        "goal": task.goal,
+        "status": task.status,
+        "result": task_result_preview(task.result),
+        "device_serial": task.device_serial,
+        "created_at": str(task.created_at) if task.created_at else "",
+    }
+
+
+def serialize_agent_task_detail(task: AITask) -> dict:
+    """任务发布详情（含过程日志）。"""
+    return {
+        "id": task.id,
+        "title": task.title,
+        "goal": task.goal,
+        "status": task.status,
+        "device_serial": task.device_serial,
+        "created_at": str(task.created_at) if task.created_at else "",
+        "started_at": str(task.started_at) if task.started_at else "",
+        "finished_at": str(task.finished_at) if task.finished_at else "",
+        "input_tokens": task.input_tokens,
+        "output_tokens": task.output_tokens,
+        "cache_input_tokens": task.cache_input_tokens,
+        "model_usage": task.model_usage or {},
+        "deepseek_cost": task_deepseek_cost(task),
+        "run": parse_task_result(task.result),
+    }
+
+
+def dump_task_run_payload(payload: dict) -> str:
+    """过程结果落库为 JSON 文本。"""
+    return json.dumps(payload, ensure_ascii=False)
 
 
 # ── 加密工具（与 views.py 共享实现）──
@@ -692,10 +821,28 @@ def get_provider_config(provider: str, base_url: str = "", model_name: str = "")
 
 
 def search_knowledge(query: str, top_k: int = 5, sources: list[str] | None = None) -> list[dict]:
-    """搜索知识库（已移除，返回空列表）。"""
-    return []
+    """搜索知识库（AgentScope RAG + chromadb 向量检索）。"""
+    from . import rag_service
+
+    return rag_service.search(query, top_k)
 
 
 def get_kb_doc_count() -> int:
-    """获取知识库文档总数（已移除，返回 0）。"""
-    return 0
+    """获取知识库文档总数。"""
+    from . import rag_service
+
+    return rag_service.kb_doc_count()
+
+
+def list_kb_documents() -> list[dict]:
+    """列出 data/rag_datas 下的文档（磁盘层级，非向量库 UUID）。"""
+    from . import kb_files
+
+    return kb_files.list_rag_files()
+
+
+def reindex_knowledge() -> dict:
+    """重新索引 data/rag_datas 下的文档。"""
+    from . import rag_service
+
+    return rag_service.index_rag_directory()

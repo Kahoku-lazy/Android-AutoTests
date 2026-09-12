@@ -23,7 +23,7 @@ def _user_id(request) -> str:
 def capture(request):
     """POST /api/inspector/capture — 一键获取（serial + method）→ 快照落库。"""
     serial = (request.data.get("serial") or "").strip()
-    method = request.data.get("method") or "both"
+    method = request.data.get("method") or "dump"
     try:
         return Response(api.capture_snapshot(_user_id(request), serial, method))
     except CaptureError as e:
@@ -47,7 +47,7 @@ def snapshots(request):
 @api_view(["GET"])
 def snapshot_detail(request, snapshot_id: int):
     """GET /api/inspector/snapshots/{id} — 快照详情 JSON。"""
-    data = api.get_snapshot(snapshot_id)
+    data = api.get_snapshot(snapshot_id, _user_id(request))
     if data is None:
         return Response({"message": "快照不存在"}, status=404)
     return Response(data)
@@ -56,7 +56,7 @@ def snapshot_detail(request, snapshot_id: int):
 @api_view(["DELETE"])
 def snapshot_delete(request, snapshot_id: int):
     """DELETE /api/inspector/snapshots/{id} — 删除快照 + 文件清理。"""
-    if not api.delete_snapshot(snapshot_id):
+    if not api.delete_snapshot(snapshot_id, _user_id(request)):
         return Response({"message": "快照不存在"}, status=404)
     return Response({"deleted": True})
 
@@ -77,6 +77,7 @@ def save_elements(request, snapshot_id: int):
         return Response(
             api.save_snapshot_to_elements(
                 snapshot_id,
+                user_id=_user_id(request),
                 page_label=page_label,
                 folder_path=folder_path,
                 page_id=int(page_id) if page_id else None,
@@ -97,7 +98,7 @@ def save_elements(request, snapshot_id: int):
 @api_view(["GET"])
 def snapshot_analyze(request, snapshot_id: int):
     """GET /api/inspector/snapshots/{id}/analyze — 快照结构分析（纯规则，无设备交互）。"""
-    data = api.analyze_snapshot(snapshot_id)
+    data = api.analyze_snapshot(snapshot_id, _user_id(request))
     if data is None:
         return Response({"message": "快照不存在"}, status=404)
     return Response(data)

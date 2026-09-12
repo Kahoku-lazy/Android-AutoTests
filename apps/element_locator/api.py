@@ -44,8 +44,37 @@ __all__ = [
     "create_api_endpoint",
     "update_api_endpoint",
     "delete_api_endpoint",
+    # projects / directories
+    "ConflictError",
+    "ensure_system_projects",
+    "list_projects",
+    "get_project_by_code",
+    "get_project_tree",
+    "serialize_project",
+    "create_directory",
+    "update_directory",
+    "delete_directory",
+    "move_item",
+    "batch_delete_files",
+    "serialize_directory",
 ]
 
+from .api_directories import (
+    batch_delete_files,
+    create_directory,
+    delete_directory,
+    move_item,
+    serialize_directory,
+    update_directory,
+)
+from .api_projects import (
+    ConflictError,
+    ensure_system_projects,
+    get_project_by_code,
+    get_project_tree,
+    list_projects,
+    serialize_project,
+)
 from .api_snapshot import ImportConflictError, get_page_full, import_snapshot_page
 from .models import Element, Page, PageFlow
 from .service import simple_yaml_dump
@@ -99,8 +128,19 @@ def create_page(device, package="", activity="", screenshot_path="", element_cou
     )
 
 
-def create_page_manually(device, parent_id, is_folder, label, package="", activity=""):
-    """Create a page or folder manually (distinct from snapshot create_page)."""
+def create_page_manually(
+    device,
+    parent_id,
+    is_folder,
+    label,
+    package="",
+    activity="",
+    directory_id=None,
+):
+    """Create a page or folder manually (distinct from snapshot create_page).
+
+    项目化后：工作台新建页面传 directory_id，is_folder 应为 False。
+    """
     return Page.objects.create(
         device=device,
         parent_id=parent_id,
@@ -108,6 +148,7 @@ def create_page_manually(device, parent_id, is_folder, label, package="", activi
         label=label,
         package=package,
         activity=activity,
+        directory_id=directory_id,
     )
 
 
@@ -253,12 +294,14 @@ def create_web_element(
     description="",
     tags="",
     is_test_point=False,
+    directory_id=None,
 ):
     """Create a web element."""
     from .models import WebElement
 
     return WebElement.objects.create(
         group=group,
+        directory_id=directory_id,
         name=name,
         locator_type=locator_type,
         locator_value=locator_value,
@@ -415,12 +458,14 @@ def create_api_endpoint(
     description="",
     tags="",
     is_test_point=False,
+    directory_id=None,
 ):
     """Create an api endpoint."""
     from .models import ApiEndpoint
 
     return ApiEndpoint.objects.create(
         group=group,
+        directory_id=directory_id,
         name=name,
         method=method,
         url=url,

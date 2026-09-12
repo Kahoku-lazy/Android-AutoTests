@@ -1,18 +1,12 @@
-"""device_inspector 服务 — capture 编排 + XPath 算法 re-export。
+"""device_inspector 服务 — capture 编排 + 结构分析。
 
-L1a 下沉（extract-algorithms-package）：XPath 纯算法已迁 `algorithms/xpath.py`，
-此处 re-export 仅保本 App 内部兼容；跨 App 复用请直接 import `algorithms.*`。
+XPath / OCR / 布局算法已下沉 `algorithms/`，本模块按需 import。
 """
 
-from algorithms.layout import classify_structure  # noqa: F401
-from algorithms.xpath import (  # noqa: F401
-    _LAYOUT_VIEWGROUPS,
-    _has_identity,
-    _simple_class,
-    _specificity,
-    gen_xpath_candidates,
-    trim_hierarchy,
-)
+from dataclasses import asdict
+
+from algorithms.layout import classify_structure
+from algorithms.xpath import gen_xpath_candidates, trim_hierarchy
 
 # ═══════════════════════════════════════════════
 # v1.7 快照化 — capture 编排（设备可用性 / 截图 / 缩略图落盘）
@@ -29,22 +23,6 @@ class CaptureError(Exception):
     def __init__(self, message: str, status_code: int = 409):
         super().__init__(message)
         self.status_code = status_code
-
-
-def _check_device_available(serial: str) -> None:
-    """capture 前可用性校验（PRD-03 §4.1 口径）。
-
-    Raises:
-        CaptureError: serial 空 / 设备未注册 / 执行引擎占用（409）。
-    """
-    if not serial:
-        raise CaptureError("未选择设备，请先连接设备")
-    from apps.device_pool.models import Device
-
-    try:
-        Device.objects.get(serial=serial)
-    except Device.DoesNotExist:
-        raise CaptureError("设备未注册")
 
 
 def open_inspector_engine(serial: str):
@@ -105,7 +83,9 @@ def _crop_thumbnail(source: str, box: tuple[int, int, int, int], dest: str) -> b
 
 def capture_dump_payload(engine, ts: str) -> dict:
     """抓取 UI 层级 + XPath 候选 + 元素缩略图落盘，返回 dump_json。"""
-    nodes = engine.dump_hierarchy()
+    # dump_hierarchy 返回 models.ui_nodes.Node（dataclass），下方 XPath/裁剪算法按 dict 消费，
+    # 这里统一转 dict（Node 字段与 parse_hierarchy_xml 的 dict 一一对应，多出 xpaths 默认空表）。
+    nodes = [asdict(n) for n in engine.dump_hierarchy()]
 
     # 生成 XPath 候选（用完整层级算 count，保证定位语义准确）
     for e in nodes:
@@ -157,7 +137,7 @@ def capture_dump_payload(engine, ts: str) -> dict:
 
 def capture_ocr_payload(ts: str) -> dict:
     """截屏 OCR 识别 + OCR 缩略图落盘，返回 ocr_json（不含 base64）。"""
-    from .ocr import recognize
+    from algorithms.vision.ocr import recognize
 
     shot_abs = str(_shot_dir() / "shots" / f"capture_{ts}.png")
     texts = recognize(shot_abs)

@@ -10,7 +10,7 @@ from django.db import models
 class Snapshot(models.Model):
     """One-shot page capture snapshot → di_snapshots.
 
-    method: dump | ocr | both（both 时单方法失败降级为实际成功的方法）。
+    method: dump | ocr（二选一，不支持同时进行）。
     dump_json / ocr_json 存解析结果；缩略图仅存相对路径，文件落盘媒体目录。
     """
 
@@ -22,7 +22,7 @@ class Snapshot(models.Model):
         related_name="inspector_snapshots",
     )
     serial = models.CharField(max_length=100, default="", blank=True)
-    method = models.CharField(max_length=10, default="both")  # dump | ocr | both
+    method = models.CharField(max_length=10, default="dump")  # dump | ocr
     dump_json = models.JSONField(default=dict, blank=True)
     ocr_json = models.JSONField(default=dict, blank=True)
     screenshot_path = models.CharField(max_length=1000, default="", blank=True)

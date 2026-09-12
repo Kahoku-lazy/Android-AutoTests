@@ -67,7 +67,7 @@ class DeviceDetector:
         return detected
 
     def adb_device_serials(self) -> set:
-        """返回当前 adb 可见设备的地址集合（USB 串号 / 无线 IP:port）。"""
+        """返回当前 adb 可见设备的地址集合（USB 串号 / 无线 IP:port / mDNS）。"""
         try:
             result = subprocess.run(["adb", "devices"], capture_output=True, text=True, timeout=5)
             serials = set()
@@ -82,6 +82,39 @@ class DeviceDetector:
     def is_wireless(self, addr: str) -> bool:
         """判断是否无线设备（IP:port 或 mDNS transport）。"""
         return ":" in addr or addr.startswith("adb-")
+
+    @staticmethod
+    def parse_mdns_serial(addr: str) -> str:
+        """从 mDNS 名拆真实序列号：adb-<serial>-<随机>._adb-tls-connect._tcp。"""
+        if not addr.startswith("adb-"):
+            return ""
+        # adb-R5CT62RH88F-chgdtV._adb-tls-connect._tcp → R5CT62RH88F
+        body = addr[4:]
+        serial = body.split("-", 1)[0]
+        return serial.strip() if serial else ""
+
+    def is_adb_listed(self, addr: str) -> bool:
+        """addr 是否已在 adb devices 为 device（含 IP:port / mDNS / USB）。"""
+        return addr in self.adb_device_serials()
+
+    def wireless_ready_hint(self, ip: str) -> dict:
+        """根据 adb devices 判断该 IP 是否已可直连（无需再 pair）。
+
+        口径：
+        - 已出现 `IP:任意端口` → 已 TCP 连接，可直连/注册
+        - 已出现 `adb-<serial>-…._adb-tls-connect._tcp` → 无线调试 mDNS 已发现（通常已配对）
+        """
+        listed = self.adb_device_serials()
+        ip_addrs = [a for a in listed if a.startswith(f"{ip}:")]
+        mdns = [a for a in listed if a.startswith("adb-") and "_adb-tls-connect" in a]
+        mdns_serials = [s for a in mdns if (s := self.parse_mdns_serial(a))]
+        return {
+            "ip_connected": bool(ip_addrs),
+            "connection_addrs": ip_addrs,
+            "mdns_addrs": mdns,
+            "mdns_serials": mdns_serials,
+            "can_skip_pair": bool(ip_addrs or mdns),
+        }
 
     def fetch_serial_no(self, addr: str) -> str:
         """获取设备真实序列号 ro.serialno（无线设备连接后需短暂等待，带重试）。"""
@@ -124,9 +157,7 @@ class DeviceDetector:
         if self.is_wireless(addr):
             serial = self.fetch_serial_no(addr)
             if not serial and addr.startswith("adb-"):
-                # mDNS 名称内嵌序列号：adb-<serial>-<random>._adb...
-                parts = addr.split("-")
-                serial = parts[1] if len(parts) > 1 else ""
+                serial = self.parse_mdns_serial(addr)
             return serial, addr
         return addr, ""
 
@@ -146,19 +177,31 @@ class DeviceDetector:
         )
 
     def connect(self, addr: str) -> None:
-        """连接设备：无线 IP:port 先 adb connect，随后 u2 探活验证。
+        """连接设备：无线 IP:port 先 adb connect（已在 adb devices 则跳过），再 u2 探活。
 
         Raises:
-            DeviceError: 连接失败（超时 / ATX Agent 未运行 / 无法连接）。
+            DeviceError: 连接失败（超时 / ATX Agent 未运行 / 无法连接 / 需配对）。
         """
         try:
-            if ":" in addr:
+            if ":" in addr and not self.is_adb_listed(addr):
                 result = subprocess.run(
                     ["adb", "connect", addr], capture_output=True, text=True, timeout=10
                 )
-                output = result.stdout + result.stderr
-                if "connected" not in output.lower() and "already" not in output.lower():
-                    raise DeviceError("连接超时，请检查设备 USB/WiFi 连接", status_code=504)
+                output = (result.stdout or "") + (result.stderr or "")
+                lower = output.lower()
+                if "connected" not in lower and "already" not in lower:
+                    if any(
+                        k in lower
+                        for k in ("unauthorized", "failed to authenticate", "not authorized")
+                    ):
+                        raise DeviceError(
+                            "设备未配对或授权失效，请填写配对端口和配对码后重试",
+                            status_code=400,
+                        )
+                    raise DeviceError(
+                        "连接失败，请确认无线调试已开启；首次连接需填写配对端口和配对码",
+                        status_code=504,
+                    )
             probe_u2(addr)
         except subprocess.TimeoutExpired:
             raise DeviceError("连接超时，请检查设备 USB/WiFi 连接", status_code=504)
@@ -169,6 +212,29 @@ class DeviceDetector:
                     "设备 ATX Agent 未运行，请在设备端启动 uiautomator2 服务", status_code=502
                 )
             raise DeviceError("连接超时，请检查设备 USB/WiFi 连接", status_code=504)
+
+    def pair(self, ip: str, pair_port: str, pair_code: str) -> None:
+        """首次无线调试：adb pair IP:配对端口 配对码。已配对视为成功。"""
+        port = (pair_port or "").strip()
+        code = (pair_code or "").strip()
+        if not port.isdigit() or not (1024 <= int(port) <= 65535):
+            raise DeviceError("无效的配对端口", status_code=400)
+        if not code.isdigit() or not (4 <= len(code) <= 16):
+            raise DeviceError("请输入无线调试显示的配对码", status_code=400)
+        addr = f"{ip}:{port}"
+        try:
+            result = subprocess.run(
+                ["adb", "pair", addr, code],
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+        except subprocess.TimeoutExpired:
+            raise DeviceError("配对超时，请确认手机配对页仍打开", status_code=504) from None
+        output = ((result.stdout or "") + (result.stderr or "")).lower()
+        if "successfully paired" in output or "already paired" in output:
+            return
+        raise DeviceError("配对失败，请核对配对端口和配对码", status_code=400)
 
 
 class DeviceRegistry:

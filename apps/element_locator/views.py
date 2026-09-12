@@ -25,6 +25,22 @@ from .page_tree import (
 logger = logging.getLogger(__name__)
 
 
+def _optional_directory_id(data: dict, *, project_code: str) -> int | None:
+    """Parse directory_id from body; validate it belongs to project_code."""
+    raw = data.get("directory_id")
+    if raw in (None, "", 0, "0"):
+        return None
+    from .models import LocatorDirectory
+
+    try:
+        dir_id = int(raw)
+    except (TypeError, ValueError):
+        return None
+    if not LocatorDirectory.objects.filter(id=dir_id, project__code=project_code).exists():
+        raise ValueError("目录不存在或不属于当前项目")
+    return dir_id
+
+
 # ── Page CRUD ──
 
 
@@ -97,9 +113,10 @@ def page_detail(request, page_id):
 
 @csrf_exempt
 def create_page(request):
-    """POST /api/elements/pages/create — Manually create a page or folder.
+    """POST /api/elements/pages/create — Manually create a page (or legacy folder).
 
-    Body: { label, parent_id?, is_folder?, package?, activity? }
+    Body: { label, directory_id?, parent_id?, is_folder?, package?, activity? }
+    项目化：传 directory_id 时创建页面文件（is_folder 强制 False）。
     """
     if request.method != "POST":
         return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
@@ -108,10 +125,55 @@ def create_page(request):
     if not label:
         return JsonResponse({"status": False, "message": "名称(label)必填"})
 
+    directory_id = data.get("directory_id", "__missing__")
+    # 工作台：显式传 directory_id（含 null=项目根）则走目录挂接，不建旧文件夹树
+    if directory_id != "__missing__":
+        if directory_id in ("", 0, "0"):
+            directory_id = None
+        elif directory_id is not None:
+            directory_id = int(directory_id)
+            from .models import LocatorDirectory
+
+            if not LocatorDirectory.objects.filter(
+                id=directory_id, project__code="android"
+            ).exists():
+                return JsonResponse({"status": False, "message": "目录不存在"}, status=404)
+        if Page.objects.filter(label=label, directory_id=directory_id, is_folder=False).exists():
+            return JsonResponse({"status": False, "message": f"同级名称「{label}」已存在"}, status=409)
+        try:
+            page = api.create_page_manually(
+                None,
+                None,
+                False,
+                label,
+                package=data.get("package", ""),
+                activity=data.get("activity", ""),
+                directory_id=directory_id,
+            )
+        except IntegrityError:
+            return JsonResponse(
+                {"status": False, "message": f"创建失败，名称「{label}」可能已存在"}, status=409
+            )
+        return JsonResponse(
+            {
+                "status": True,
+                "page": {
+                    "id": page.id,
+                    "label": page.label,
+                    "directory_id": page.directory_id,
+                },
+            }
+        )
+
     parent_id = data.get("parent_id")
     if parent_id in ("", 0, "0"):
         parent_id = None
     is_folder = bool(data.get("is_folder", False))
+    if is_folder:
+        return JsonResponse(
+            {"status": False, "message": "请改用项目目录 API 新建目录"},
+            status=410,
+        )
 
     try:
         validate_parent_and_depth(parent_id, is_folder=is_folder)
@@ -138,6 +200,7 @@ def create_page(request):
             label,
             package=data.get("package", ""),
             activity=data.get("activity", ""),
+            directory_id=None,
         )
     except IntegrityError:
         return JsonResponse(
@@ -410,6 +473,10 @@ def page_elements(request, page_id):
     offset = max(0, offset)
     limit = max(1, min(limit, 500))  # cap at 500 to prevent oversized responses
 
+    page = Page.objects.filter(pk=page_id).only("screenshot_path").first()
+    if page is None:
+        return JsonResponse({"status": False, "message": "page not found"}, status=404)
+
     qs = Element.objects.filter(page_id=page_id)
     if filter_type == "clickable":
         qs = qs.filter(clickable=True)
@@ -450,8 +517,14 @@ def page_elements(request, page_id):
         }
         for e in qs
     ]
-    return JsonResponse({"status": True, "elements": result, "total": total})
-
+    return JsonResponse(
+        {
+            "status": True,
+            "elements": result,
+            "total": total,
+            "screenshot_path": page.screenshot_path or "",
+        }
+    )
 
 @csrf_exempt
 def update_element(request, el_id):
@@ -639,6 +712,7 @@ def create_web_element(request):
             description=data.get("description", ""),
             tags=data.get("tags", ""),
             is_test_point=bool(data.get("is_test_point", False)),
+            directory_id=_optional_directory_id(data, project_code="web"),
         )
     except Exception as e:
         return JsonResponse({"status": False, "message": f"创建失败: {e}"}, status=500)
@@ -824,32 +898,22 @@ def create_web_group(request):
 
 @csrf_exempt
 def web_group_detail(request, group_id):
-    """PUT/DELETE /api/elements/web-groups/{id}/ — Rename or delete a group."""
+    """GET keep; PUT/DELETE → 410."""
     from .models import WebGroup
+
+    if request.method in ("PUT", "PATCH", "DELETE"):
+        return JsonResponse(
+            {"status": False, "message": "分组树写接口已停用，请改用项目目录 API"},
+            status=410,
+        )
 
     try:
         g = WebGroup.objects.get(id=group_id)
     except WebGroup.DoesNotExist:
         return JsonResponse({"status": False, "message": "分组不存在"}, status=404)
 
-    if request.method == "PUT":
-        try:
-            data = json.loads(request.body)
-        except Exception:
-            return JsonResponse({"status": False, "message": "invalid JSON"}, status=400)
-
-        if "name" in data:
-            name = data["name"].strip()
-            if not name:
-                return JsonResponse({"status": False, "message": "名称不能为空"}, status=400)
-            api.rename_web_group(group_id, name)
-            g.name = name
-
+    if request.method == "GET":
         return JsonResponse({"status": True, "group": _web_group_payload(g)})
-
-    elif request.method == "DELETE":
-        api.delete_web_group(group_id)
-        return JsonResponse({"status": True})
 
     return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
@@ -1053,32 +1117,22 @@ def create_api_group(request):
 
 @csrf_exempt
 def api_group_detail(request, group_id):
-    """PUT/DELETE /api/elements/api-groups/{id}/ — Rename or delete a group."""
+    """GET keep; PUT/DELETE → 410."""
     from .models import ApiGroup
+
+    if request.method in ("PUT", "PATCH", "DELETE"):
+        return JsonResponse(
+            {"status": False, "message": "分组树写接口已停用，请改用项目目录 API"},
+            status=410,
+        )
 
     try:
         g = ApiGroup.objects.get(id=group_id)
     except ApiGroup.DoesNotExist:
         return JsonResponse({"status": False, "message": "分组不存在"}, status=404)
 
-    if request.method == "PUT":
-        try:
-            data = json.loads(request.body)
-        except Exception:
-            return JsonResponse({"status": False, "message": "invalid JSON"}, status=400)
-
-        if "name" in data:
-            name = data["name"].strip()
-            if not name:
-                return JsonResponse({"status": False, "message": "名称不能为空"}, status=400)
-            api.rename_api_group(group_id, name)
-            g.name = name
-
+    if request.method == "GET":
         return JsonResponse({"status": True, "group": _api_group_payload(g)})
-
-    elif request.method == "DELETE":
-        api.delete_api_group(group_id)
-        return JsonResponse({"status": True})
 
     return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
 
@@ -1216,6 +1270,7 @@ def create_api_endpoint(request):
             description=data.get("description", ""),
             tags=data.get("tags", ""),
             is_test_point=bool(data.get("is_test_point", False)),
+            directory_id=_optional_directory_id(data, project_code="api"),
         )
     except Exception as e:
         return JsonResponse({"status": False, "message": str(e)}, status=500)

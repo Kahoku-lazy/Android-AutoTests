@@ -1,4 +1,4 @@
-"""workflow HTTP — /api/workflow/*"""
+"""workflow HTTP — /api/workflow/*（legacy 平铺信封）."""
 
 import json
 
@@ -14,15 +14,87 @@ def _body(request) -> dict:
     return json.loads(request.body)
 
 
-def directory_list(request):
-    """GET /api/workflow/directories — flat + tree."""
+def _prototype_id(request, data: dict | None = None):
+    raw = None
+    if data is not None:
+        raw = data.get("prototype_id")
+    if raw in (None, ""):
+        raw = request.GET.get("prototype_id")
+    if raw in (None, "", "null"):
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def prototypes_list(request):
+    """GET /api/workflow/prototypes — 列表."""
     if request.method != "GET":
         return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
+    return JsonResponse({"status": True, "prototypes": wf_api.list_prototypes()})
+
+
+@csrf_exempt
+def prototypes_create(request):
+    """POST /api/workflow/prototypes/create"""
+    if request.method != "POST":
+        return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
+    data = _body(request)
+    ok, result, status = wf_api.create_prototype(
+        name=data.get("name", ""),
+        description=data.get("description") or "",
+    )
+    if ok:
+        return JsonResponse({"status": True, "prototype": result}, status=status)
+    return JsonResponse({"status": False, "message": result}, status=status)
+
+
+@csrf_exempt
+def prototype_detail(request, prototype_id: int):
+    """GET / PUT|PATCH / DELETE /api/workflow/prototypes/<id>"""
+    if request.method == "GET":
+        proto = wf_api.get_prototype(prototype_id)
+        if not proto:
+            return JsonResponse({"status": False, "message": "原型不存在"}, status=404)
+        return JsonResponse({"status": True, "prototype": proto})
+
+    if request.method in ("PUT", "PATCH", "POST"):
+        data = _body(request)
+        action = data.get("action")
+        if action == "delete" or request.method == "DELETE":
+            ok, result, status = wf_api.delete_prototype(prototype_id)
+            if ok:
+                return JsonResponse({"status": True})
+            return JsonResponse({"status": False, "message": result}, status=status)
+        ok, result, status = wf_api.update_prototype(
+            prototype_id,
+            name=data.get("name"),
+            description=data.get("description"),
+        )
+        if ok:
+            return JsonResponse({"status": True, "prototype": result})
+        return JsonResponse({"status": False, "message": result}, status=status)
+
+    if request.method == "DELETE":
+        ok, result, status = wf_api.delete_prototype(prototype_id)
+        if ok:
+            return JsonResponse({"status": True})
+        return JsonResponse({"status": False, "message": result}, status=status)
+
+    return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
+
+
+def directory_list(request):
+    """GET /api/workflow/directories?prototype_id= — flat + tree."""
+    if request.method != "GET":
+        return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
+    proto_id = _prototype_id(request)
     return JsonResponse(
         {
             "status": True,
-            "directories": wf_api.list_directories_flat(),
-            "tree": wf_api.get_directory_tree(),
+            "directories": wf_api.list_directories_flat(prototype_id=proto_id),
+            "tree": wf_api.get_directory_tree(prototype_id=proto_id),
         }
     )
 
@@ -37,6 +109,7 @@ def directory_create(request):
         name=data.get("name", ""),
         parent_id=data.get("parent_id"),
         sort_order=data.get("sort_order", 0),
+        prototype_id=_prototype_id(request, data),
     )
     if ok:
         return JsonResponse({"status": True, "directory": result}, status=201)
@@ -66,14 +139,17 @@ def directory_detail(request, dir_id: int):
 
 
 def documents_list(request):
-    """GET /api/workflow/documents?directory_id=&doc_type="""
+    """GET /api/workflow/documents?prototype_id=&directory_id=&doc_type="""
     if request.method != "GET":
         return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
     directory_id = request.GET.get("directory_id")
     doc_type = request.GET.get("doc_type") or None
     dir_pk = int(directory_id) if directory_id and directory_id.isdigit() else None
-    # directory_id= null means all; special all=1 for orphans too (default)
-    docs = wf_api.list_documents(directory_id=dir_pk, doc_type=doc_type)
+    docs = wf_api.list_documents(
+        prototype_id=_prototype_id(request),
+        directory_id=dir_pk,
+        doc_type=doc_type,
+    )
     return JsonResponse({"status": True, "documents": docs})
 
 
@@ -90,6 +166,7 @@ def documents_create(request):
         config=data.get("config"),
         directory_id=data.get("directory_id"),
         description=data.get("description") or "",
+        prototype_id=_prototype_id(request, data),
     )
     if ok:
         return JsonResponse({"status": True, "document": result}, status=status)
@@ -126,6 +203,7 @@ def document_detail(request, doc_id: str):
             description=data.get("description", existing.get("description") or ""),
             allow_create=False,
             clear_directory=clear_dir,
+            prototype_id=existing.get("prototype_id"),
         )
         if ok:
             return JsonResponse({"status": True, "document": result})
@@ -147,8 +225,11 @@ def documents_import(request):
         return JsonResponse({"status": False, "message": "method not allowed"}, status=405)
     data = _body(request)
     overwrite = request.GET.get("overwrite") in ("1", "true", "True") or bool(data.get("overwrite"))
-    # 允许 { envelope: {...} } 或直接 envelope
     payload = data.get("envelope") if isinstance(data.get("envelope"), dict) else data
+    if isinstance(payload, dict) and not payload.get("prototype_id"):
+        pid = _prototype_id(request, data)
+        if pid is not None:
+            payload = {**payload, "prototype_id": pid}
     ok, result, status = wf_api.import_document_envelope(payload, overwrite=overwrite)
     if ok:
         return JsonResponse({"status": True, "document": result}, status=status)

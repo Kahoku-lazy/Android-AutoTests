@@ -28,8 +28,8 @@ def get_document_digest(doc_id: str) -> tuple[bool, Any]:
         doc = WorkflowDocument.objects.get(doc_id=doc_id)
     except WorkflowDocument.DoesNotExist:
         return False, f"文档不存在: {doc_id}"
-    if doc.doc_type == WorkflowDocument.TYPE_TEST_CASE:
-        return False, "文档类型不支持（仅 page_flow）"
+    if doc.doc_type not in WorkflowDocument.SUPPORTED_TYPES:
+        return False, "文档类型不支持（仅 page_flow / api_flow）"
     try:
         cfg = json.loads(doc.config_json) if doc.config_json else {}
     except json.JSONDecodeError as e:
@@ -40,15 +40,21 @@ def get_document_digest(doc_id: str) -> tuple[bool, Any]:
 
 
 def list_document_summaries(
-    *, query: str = "", directory_id: int | None = None, limit: int = 20
+    *,
+    query: str = "",
+    directory_id: int | None = None,
+    prototype_id: int | None = None,
+    limit: int = 20,
 ) -> list[dict]:
     """AI 列表工具数据出口：文档摘要（含节点/连线数，不含 config）。"""
-    qs = WorkflowDocument.objects.filter(doc_type=WorkflowDocument.TYPE_PAGE_FLOW)
+    qs = WorkflowDocument.objects.filter(doc_type__in=WorkflowDocument.SUPPORTED_TYPES)
+    if prototype_id is not None:
+        qs = qs.filter(prototype_id=prototype_id)
     if directory_id is not None:
         qs = qs.filter(directory_id=directory_id)
     if query:
         qs = qs.filter(Q(title__icontains=query) | Q(doc_id__icontains=query))
-    qs = qs.select_related("directory").order_by("-updated_at")[:limit]
+    qs = qs.select_related("directory", "prototype").order_by("-updated_at")[:limit]
 
     rows: list[dict] = []
     for d in qs:
@@ -56,6 +62,8 @@ def list_document_summaries(
             {
                 "doc_id": d.doc_id,
                 "title": d.title,
+                "prototype_id": d.prototype_id,
+                "prototype_name": d.prototype.name if d.prototype else "",
                 "directory_id": d.directory_id,
                 "directory_name": d.directory.name if d.directory else "",
                 "node_count": _count(d.config_json, "nodes"),

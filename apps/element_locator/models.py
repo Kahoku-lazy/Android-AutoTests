@@ -2,12 +2,82 @@
 
 from django.db import models
 
+PROJECT_CODE_CHOICES = [
+    ("android", "Android"),
+    ("web", "Web"),
+    ("api", "API"),
+]
+
+SYSTEM_PROJECTS = (
+    ("android", "Android"),
+    ("web", "Web"),
+    ("api", "API"),
+)
+
+
+class LocatorProject(models.Model):
+    """System-locked locator project → el_locator_projects (exactly three rows)."""
+
+    code = models.CharField(max_length=20, unique=True, choices=PROJECT_CODE_CHOICES)
+    name = models.CharField(max_length=100)
+    description = models.TextField(default="", blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "el_locator_projects"
+        verbose_name = "定位项目"
+        verbose_name_plural = "定位项目"
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.code})"
+
+
+class LocatorDirectory(models.Model):
+    """Unlimited-depth directory inside a locator project → el_locator_directories."""
+
+    project = models.ForeignKey(
+        LocatorProject,
+        on_delete=models.CASCADE,
+        related_name="directories",
+    )
+    name = models.CharField(max_length=200)
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="children",
+    )
+    sort_order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "el_locator_directories"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "parent", "name"],
+                name="uq_el_directory_project_parent_name",
+            ),
+        ]
+        verbose_name = "定位目录"
+        verbose_name_plural = "定位目录"
+        indexes = [
+            models.Index(fields=["project", "parent", "sort_order"], name="idx_el_dir_proj_parent"),
+        ]
+
+    def __str__(self) -> str:
+        prefix = f"{self.parent.name} / " if self.parent_id else ""
+        return f"{prefix}{self.name}"
+
 
 class Page(models.Model):
     """Recorded UI page snapshot or folder node → el_pages.
 
     v7.2：快照导入时页面携带截图、页面级 OCR JSON（ocr_json）与快照溯源
     （snapshot_id）；手动创建的页面两者为空。
+    项目化后：工作台文件挂 directory；parent/is_folder 仅兼容旧数据。
     """
 
     device = models.ForeignKey(
@@ -16,6 +86,13 @@ class Page(models.Model):
         null=True,
         blank=True,
         related_name="element_locator_pages",
+    )
+    directory = models.ForeignKey(
+        LocatorDirectory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pages",
     )
     parent = models.ForeignKey(
         "self",
@@ -141,6 +218,14 @@ class WebGroup(models.Model):
 class WebElement(models.Model):
     """Manually managed web page element with multiple locator strategies → el_web_elements."""
 
+    directory = models.ForeignKey(
+        LocatorDirectory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="web_elements",
+        verbose_name="所属目录",
+    )
     group = models.ForeignKey(
         WebGroup,
         on_delete=models.SET_NULL,
@@ -213,6 +298,14 @@ class ApiGroup(models.Model):
 class ApiEndpoint(models.Model):
     """Manually managed API endpoint definition → el_api_endpoints."""
 
+    directory = models.ForeignKey(
+        LocatorDirectory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="api_endpoints",
+        verbose_name="所属目录",
+    )
     group = models.ForeignKey(
         ApiGroup,
         on_delete=models.SET_NULL,

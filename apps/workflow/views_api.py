@@ -1,8 +1,9 @@
-"""workflow DRF ViewSets — directory + document CRUD, import/export, move."""
+"""workflow DRF ViewSets — prototype + directory + document CRUD."""
 
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.viewsets import ViewSet
 
 from . import api as wf_api
 from .models import WorkflowDirectory, WorkflowDocument
@@ -13,6 +14,56 @@ from .serializers import (
 )
 
 
+def _q_prototype_id(request) -> int | None:
+    raw = request.query_params.get("prototype_id")
+    if raw in (None, "", "null"):
+        return None
+    if str(raw).isdigit():
+        return int(raw)
+    return None
+
+
+class WorkflowPrototypeViewSet(ViewSet):
+    """原型 CRUD — 标准信封由 EnvelopeJSONRenderer 包裹."""
+
+    def list(self, request):
+        return Response(wf_api.list_prototypes())
+
+    def create(self, request):
+        ok, result, status = wf_api.create_prototype(
+            name=request.data.get("name", ""),
+            description=request.data.get("description") or "",
+        )
+        if not ok:
+            return Response({"message": result}, status=status)
+        return Response(result, status=status)
+
+    def retrieve(self, request, pk=None):
+        proto = wf_api.get_prototype(int(pk))
+        if not proto:
+            return Response({"message": "原型不存在"}, status=404)
+        return Response(proto)
+
+    def partial_update(self, request, pk=None):
+        ok, result, status = wf_api.update_prototype(
+            int(pk),
+            name=request.data.get("name"),
+            description=request.data.get("description"),
+        )
+        if not ok:
+            return Response({"message": result}, status=status)
+        return Response(result)
+
+    def update(self, request, pk=None):
+        return self.partial_update(request, pk=pk)
+
+    def destroy(self, request, pk=None):
+        ok, result, status = wf_api.delete_prototype(int(pk))
+        if not ok:
+            return Response({"message": result}, status=status)
+        return Response({"id": int(pk)})
+
+
 class WorkflowDirectoryViewSet(viewsets.ModelViewSet):
     """目录 CRUD — list 同时返回 flat + tree，move 为 @action."""
 
@@ -20,23 +71,18 @@ class WorkflowDirectoryViewSet(viewsets.ModelViewSet):
     serializer_class = WorkflowDirectorySerializer
 
     def list(self, request, *args, **kwargs):
-        """GET /directories/ — 同时返回 flat 列表和递归 tree."""
-        flat = wf_api.list_directories_flat()
-        tree = wf_api.get_directory_tree()
-        return Response(
-            {
-                "directories": flat,
-                "tree": tree,
-            }
-        )
+        proto_id = _q_prototype_id(request)
+        flat = wf_api.list_directories_flat(prototype_id=proto_id)
+        tree = wf_api.get_directory_tree(prototype_id=proto_id)
+        return Response({"directories": flat, "tree": tree})
 
     def perform_create(self, serializer):
-        """POST /directories/ — 委托 api.py 校验（同名冲突等）."""
         data = serializer.validated_data
         ok, result = wf_api.create_directory(
             name=data["name"],
             parent_id=data.get("parent_id"),
             sort_order=data.get("sort_order", 0),
+            prototype_id=self.request.data.get("prototype_id"),
         )
         if not ok:
             from rest_framework.exceptions import ValidationError
@@ -45,10 +91,8 @@ class WorkflowDirectoryViewSet(viewsets.ModelViewSet):
         serializer.instance = WorkflowDirectory.objects.get(id=result["id"])
 
     def perform_update(self, serializer):
-        """PUT/PATCH /directories/{id}/ — 委托 api.py."""
         data = serializer.validated_data
         parent_id = data.pop("parent_id", None) if "parent_id" in data else None
-        # save() handles name/sort_order via serializer
         instance = serializer.save()
         if parent_id is not None:
             ok, result = wf_api.update_directory(
@@ -62,12 +106,10 @@ class WorkflowDirectoryViewSet(viewsets.ModelViewSet):
                 raise ValidationError({"parent_id": result})
 
     def perform_destroy(self, instance):
-        """DELETE /directories/{id}/ — 级联删除子目录内文档."""
         wf_api.delete_directory(instance.id)
 
     @action(detail=True, methods=["post"])
     def move(self, request, pk=None):
-        """POST /directories/{id}/move/ — 移动目录."""
         dir_id = self.get_object().id
         parent_id = request.data.get("parent_id")
         if parent_id not in (None, "", "null"):
@@ -92,21 +134,23 @@ class WorkflowDocumentViewSet(viewsets.ModelViewSet):
         return WorkflowDocumentDetailSerializer
 
     def get_queryset(self):
-        qs = WorkflowDocument.objects.filter(doc_type=WorkflowDocument.TYPE_PAGE_FLOW).order_by(
-            "-updated_at"
-        )
+        qs = WorkflowDocument.objects.filter(
+            doc_type__in=WorkflowDocument.SUPPORTED_TYPES
+        ).order_by("-updated_at")
+        proto_id = _q_prototype_id(self.request)
+        if proto_id is not None:
+            qs = qs.filter(prototype_id=proto_id)
         directory_id = self.request.query_params.get("directory_id")
         doc_type = self.request.query_params.get("doc_type")
         if directory_id and directory_id.isdigit():
             qs = qs.filter(directory_id=int(directory_id))
-        if doc_type == WorkflowDocument.TYPE_TEST_CASE:
-            return qs.none()
-        if doc_type and doc_type != WorkflowDocument.TYPE_PAGE_FLOW:
-            return qs.none()
+        if doc_type:
+            if doc_type not in WorkflowDocument.SUPPORTED_TYPES:
+                return qs.none()
+            qs = qs.filter(doc_type=doc_type)
         return qs
 
     def perform_create(self, serializer):
-        """POST /documents/ — 委托 api.py upsert（自动生成 doc_id）."""
         data = serializer.validated_data
         ok, result, status = wf_api.upsert_document(
             doc_id=None,
@@ -115,6 +159,7 @@ class WorkflowDocumentViewSet(viewsets.ModelViewSet):
             config=data.get("config_json", {}),
             directory_id=data.get("directory_id"),
             description=data.get("description", ""),
+            prototype_id=self.request.data.get("prototype_id"),
         )
         if not ok:
             from rest_framework.exceptions import ValidationError
@@ -123,9 +168,9 @@ class WorkflowDocumentViewSet(viewsets.ModelViewSet):
         serializer.instance = WorkflowDocument.objects.get(doc_id=result["doc_id"])
 
     def perform_update(self, serializer):
-        """PUT/PATCH /documents/{doc_id}/ — upsert by doc_id."""
         data = serializer.validated_data
         doc_id = self.kwargs["doc_id"]
+        existing = wf_api.get_document(doc_id) or {}
         ok, result, status = wf_api.upsert_document(
             doc_id=doc_id,
             title=data.get("title"),
@@ -134,6 +179,7 @@ class WorkflowDocumentViewSet(viewsets.ModelViewSet):
             directory_id=data.get("directory_id"),
             description=data.get("description", ""),
             allow_create=False,
+            prototype_id=existing.get("prototype_id"),
         )
         if not ok:
             if status == 404:
@@ -146,18 +192,20 @@ class WorkflowDocumentViewSet(viewsets.ModelViewSet):
         serializer.instance = WorkflowDocument.objects.get(doc_id=doc_id)
 
     def perform_destroy(self, instance):
-        """DELETE /documents/{doc_id}/ — 委托 api.py."""
         wf_api.delete_document(instance.doc_id)
 
     @action(detail=False, methods=["post"])
     def _import(self, request):
-        """POST /documents/import/ — 导入 envelope JSON."""
         overwrite = request.query_params.get("overwrite") in ("1", "true", "True")
         payload = (
             request.data.get("envelope")
             if isinstance(request.data.get("envelope"), dict)
             else request.data
         )
+        if isinstance(payload, dict) and not payload.get("prototype_id"):
+            pid = request.data.get("prototype_id") or _q_prototype_id(request)
+            if pid is not None:
+                payload = {**payload, "prototype_id": pid}
         ok, result, status = wf_api.import_document_envelope(payload, overwrite=overwrite)
         if not ok:
             return Response({"message": result}, status=status)
@@ -165,7 +213,6 @@ class WorkflowDocumentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"])
     def export(self, request, doc_id=None):
-        """GET /documents/{doc_id}/export/ — 导出为 envelope JSON."""
         download = request.query_params.get("download") in ("1", "true", "True")
         ok, result = wf_api.export_document(doc_id)
         if not ok:
@@ -183,7 +230,6 @@ class WorkflowDocumentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def move(self, request, doc_id=None):
-        """POST /documents/{doc_id}/move/ — 移动文档到目录."""
         raw = request.data.get("directory_id", request.data.get("parent_id"))
         dir_id = None if raw in (None, "", "null") else int(raw)
         ok, result = wf_api.move_document(doc_id, dir_id)

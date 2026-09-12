@@ -20,29 +20,52 @@ class ImportConflictError(Exception):
     """快照导入冲突（同级重名 / 目录层级超限）→ 调用方映射 HTTP 409。"""
 
 
-def _resolve_folder(folder_path: str) -> int | None:
-    """按「/」切段逐级查找或创建目录节点；返回目录 ID（None = 根目录）。
+def _resolve_folder(folder_path: str, *, directory_id: int | None = None) -> int | None:
+    """按「/」切段在 Android 项目下查找或创建 LocatorDirectory；返回目录 ID。
+
+    若传入 directory_id，以其为起点继续解析相对路径；二者皆空则挂项目根。
 
     Raises:
-        ImportConflictError: 目录层级超 5 层 / 同名节点为页面（非目录）。
+        ImportConflictError: 目录层级超限
     """
-    from .page_tree import MAX_PAGE_TREE_DEPTH, page_depth
+    from .api_projects import ensure_system_projects, get_project_by_code
+    from .models import LocatorDirectory
+
+    ensure_system_projects()
+    project = get_project_by_code(code="android")
+    if project is None:
+        raise ImportConflictError("Android 项目不存在")
+
+    parent_id = directory_id
+    if parent_id is not None:
+        parent = LocatorDirectory.objects.filter(id=parent_id, project=project).first()
+        if parent is None:
+            raise ImportConflictError("目标目录不存在")
 
     if not folder_path:
-        return None
-    parent_id = None
+        return parent_id
+
+    MAX_DEPTH = 20
+    depth = 0
+    if parent_id is not None:
+        cur = parent_id
+        while cur is not None:
+            depth += 1
+            cur = (
+                LocatorDirectory.objects.filter(id=cur).values_list("parent_id", flat=True).first()
+            )
+
     for segment in [s.strip() for s in folder_path.split("/") if s.strip()]:
-        node = Page.objects.filter(label=segment, parent_id=parent_id).first()
+        depth += 1
+        if depth > MAX_DEPTH:
+            raise ImportConflictError(f"目录最多嵌套 {MAX_DEPTH} 层")
+        node = LocatorDirectory.objects.filter(
+            project=project, name=segment, parent_id=parent_id
+        ).first()
         if node is None:
-            if parent_id is None:
-                depth = 1
-            else:
-                depth = page_depth(Page.objects.get(pk=parent_id)) + 1
-            if depth > MAX_PAGE_TREE_DEPTH:
-                raise ImportConflictError(f"目录最多嵌套 {MAX_PAGE_TREE_DEPTH} 层")
-            node = Page.objects.create(label=segment, parent_id=parent_id, is_folder=True)
-        elif not node.is_folder:
-            raise ImportConflictError(f"同名节点「{segment}」不是目录")
+            node = LocatorDirectory.objects.create(
+                project=project, name=segment, parent_id=parent_id
+            )
         parent_id = node.id
     return parent_id
 
@@ -51,6 +74,7 @@ def import_snapshot_page(
     *,
     page_label: str = "",
     folder_path: str = "",
+    directory_id: int | None = None,
     page_id: int | None = None,
     package: str = "",
     activity: str = "",
@@ -63,7 +87,7 @@ def import_snapshot_page(
     """快照导入：新建页面（自动建目录 + 页面）或写入已有页面（page_id）+ 元素 upsert。
 
     两种模式：
-      - 新建：page_label + folder_path（目录按「/」逐级查找或创建）
+      - 新建：page_label + folder_path / directory_id（目录按 LocatorDirectory）
       - 已有：page_id（页面已存在，元素 upsert 追加；截图/OCR/溯源仅在页面为空时补全）
 
     元素按 (page, resource_id, bounds) upsert（同现有去重口径）。
@@ -71,7 +95,7 @@ def import_snapshot_page(
 
     Raises:
         ValueError: page_label 空（新建模式）/ elements 空 / page_id 无效
-        ImportConflictError: 同级重名 / 目录层级超限 / 同名节点非目录
+        ImportConflictError: 同级重名 / 目录层级超限
     """
     elements = elements or []
     if not elements:
@@ -97,17 +121,18 @@ def import_snapshot_page(
     else:
         if not page_label:
             raise ValueError("页面名称不能为空")
-        parent_id = _resolve_folder(folder_path)
+        dir_id = _resolve_folder(folder_path, directory_id=directory_id)
 
         existing = Page.objects.filter(
-            label=page_label, parent_id=parent_id, is_folder=False
+            label=page_label, directory_id=dir_id, is_folder=False
         ).first()
         if existing:
             raise ImportConflictError(f"同级页面「{page_label}」已存在")
 
         page = Page.objects.create(
             device=device,
-            parent_id=parent_id,
+            parent_id=None,
+            directory_id=dir_id,
             is_folder=False,
             label=page_label,
             package=package,

@@ -1,8 +1,26 @@
-"""workflow DRF serializers — WorkflowDirectory, WorkflowDocument."""
+"""workflow DRF serializers — WorkflowPrototype, WorkflowDirectory, WorkflowDocument."""
 
 from rest_framework import serializers
 
-from .models import WorkflowDirectory, WorkflowDocument
+from .models import WorkflowDirectory, WorkflowDocument, WorkflowPrototype
+
+
+class WorkflowPrototypeSerializer(serializers.ModelSerializer):
+    """原型序列化器 — 含文档数量."""
+
+    doc_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = WorkflowPrototype
+        fields = [
+            "id",
+            "name",
+            "description",
+            "doc_count",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
 
 
 class WorkflowDirectorySerializer(serializers.ModelSerializer):
@@ -16,6 +34,7 @@ class WorkflowDirectorySerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "prototype_id",
             "parent_id",
             "parent_name",
             "sort_order",
@@ -37,6 +56,7 @@ class WorkflowDirectoryTreeSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "prototype_id",
             "parent_id",
             "sort_order",
             "doc_count",
@@ -55,12 +75,14 @@ class WorkflowDirectoryTreeSerializer(serializers.ModelSerializer):
 
     def get_documents(self, obj):
         if not hasattr(obj, "_prefetched_documents"):
-            docs = obj.documents.filter(doc_type=WorkflowDocument.TYPE_PAGE_FLOW).order_by("title")
+            docs = obj.documents.filter(
+                doc_type__in=WorkflowDocument.SUPPORTED_TYPES
+            ).order_by("title")
         else:
             docs = [
                 d
                 for d in obj._prefetched_documents
-                if d.doc_type == WorkflowDocument.TYPE_PAGE_FLOW
+                if d.doc_type in WorkflowDocument.SUPPORTED_TYPES
             ]
         return [
             {
@@ -83,6 +105,7 @@ class WorkflowDocumentListSerializer(serializers.ModelSerializer):
             "doc_id",
             "title",
             "doc_type",
+            "prototype_id",
             "directory_id",
             "description",
             "created_at",
@@ -92,11 +115,7 @@ class WorkflowDocumentListSerializer(serializers.ModelSerializer):
 
 
 class WorkflowDocumentDetailSerializer(serializers.ModelSerializer):
-    """文档详情 — 含 config_json（前端字段名 config，读写均支持）.
-
-    ``config_json`` 在数据库中为 TextField（JSON 字符串），
-    前端使用 ``config`` 字段（JSON 对象）。读写双向自动转换。
-    """
+    """文档详情 — 含 config_json（前端字段名 config，读写均支持）."""
 
     config = serializers.JSONField(source="config_json")
 
@@ -107,6 +126,7 @@ class WorkflowDocumentDetailSerializer(serializers.ModelSerializer):
             "doc_id",
             "title",
             "doc_type",
+            "prototype_id",
             "directory_id",
             "description",
             "config",
@@ -117,7 +137,6 @@ class WorkflowDocumentDetailSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
-        # 兜底：如果 DRF JSONField 未能解析 TextField 中的 JSON 字符串
         if isinstance(ret.get("config"), str):
             import json
 

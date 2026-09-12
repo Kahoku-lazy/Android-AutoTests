@@ -8,22 +8,10 @@
 
 ---
 
-## 0. 动手前
-
-1. 需求模糊 → 列 3～5 种理解让用户选，禁止默默挑一种执行。
-2. 先读调用链：**urls → views/serializers → api.py → models**；有 WS 再读 `consumers` + `gateway/routing.py`。跨模块写先搜对方 api 白名单：`rg "__all__" apps/{other}/api.py`。**为什么先读 urls**：凭印象改 view 函数名前端仍打旧路径、漏 DRF router 注册则本地通而前端 404——路径以 urls.py 为真相源。
-3. 查：`.agents/skills/android-autotests-rules/references/backend.md`（架构/中间件/端口/公开路径）、`api-conventions.md`（防火墙/信封/新 App 清单）、`python-code.md`（写法/行数上限/职责分层决策树）、`database.md`（表前缀/写路径）、`security.md`（Key 加密）；契约字段对照 → `dev_docs/03-设计与架构/工具-VUE_API_CONTRACT.md`；边界扫描 → `python tools/gen_arch_stats.py --check-boundaries`；**本 App 专属约束 → `apps/{app}/AGENTS.md`**。
-4. 判边界：纯逻辑→①；Model/api 写库→②；HTTP/DRF→③；WS→④；AI Tool→⑤；跨界按序做。新 App 按 `api-conventions.md`「新 App 检查清单」落地。
-
----
-
 ## 1. 职责与红线
 
 > 按执行时机分三类：**编写规范**（怎么写）· **分层与模块边界**（不许碰什么）· **契约规则**（接口必须长什么样）。
 
-### 1.1 编写规范
-
-> 命名/行数上限/类型注解/迁移纪律等代码编写规范统一收录于 **`.agents/skills/android-autotests-rules/references/python-code.md`**（架构与配置 → `backend.md`，表与写库 → `database.md`，安全 → `security.md`）；行为决策（改前四步 → 本文件 §0；职责分层决策树 → `python-code.md` §6）。本文件只保留分层边界与契约约束。
 
 ### 1.2 分层与模块边界
 
@@ -55,7 +43,7 @@
 **通道收敛（全项目硬约束，唯一真相源 → `architecture.md` §一）**：
 
 - 通道封闭集合（四条内部通道 + 禁止新协议 + SSE 已移除 + Redis/外部 LLM 边界）以 `architecture.md` §一 为准，本文不复制。
-- WS 生产点唯一真相源 = `gateway/routing.py`（当前 2 个，**禁止新增**）；截图流已快照化，禁止恢复 WS 截图流。
+- WS 生产点唯一真相源 = `gateway/routing.py`（当前 1 个：编辑锁，**禁止新增**）；截图流已快照化，禁止恢复 WS 截图流。
 - 所有 Consumer 必须在 `gateway/routing.py` 注册。
 
 **App 边界索引（App 专属边界/契约/协议/关单项的唯一落点 → 各 `apps/{app}/AGENTS.md`）**：
@@ -68,7 +56,7 @@
 | device_inspector | `apps/device_inspector/AGENTS.md` | 快照抓取回看（REST），无 WS |
 | element_locator | `apps/element_locator/AGENTS.md` | 三域资产 CRUD |
 | case_manager | `apps/case_manager/AGENTS.md` | 用例定义编排 + 编辑锁 WS |
-| test_runner | `apps/test_runner/AGENTS.md` | 执行状态机 + 进度 WS（10 事件） |
+| test_runner | `apps/test_runner/AGENTS.md` | 已下线（仅卸表迁移） |
 | report_generator | `apps/report_generator/AGENTS.md` | 报告只读 + FileResponse 下载 |
 | workflow | `apps/workflow/AGENTS.md` | 编排文档 CRUD（legacy 平铺信封） |
 | ai_assistant | `apps/ai_assistant/AGENTS.md` | 任务发布 + Tool 网关 |
@@ -83,7 +71,6 @@
 
 - 响应信封 `{status, data}` / `{status, message}`；HTTP JSON **snake_case**（前端 camelCase 转换在前端侧）。
 - **信封特例（legacy 平铺，已登记 ARCH-06/07/09 与前端 `AGENTS.md` §1.3，禁止新增，未收敛前禁止改造成信封式）**：
-  - test_runner `/runner/*`：平铺 `{status, runs|tasks|active, ...}`；`GET /tasks` 列表字段为 **camelCase**（全平台唯一）。
   - report_generator `/reports/*`：平铺 + `FileResponse` 下载。
   - workflow legacy 路径（非 router 路径）：平铺 `{status, directory|document|documents|...}`。
 - 契约对照：前端 api 层、`dev_docs/03-设计与架构/工具-VUE_API_CONTRACT.md`、本 App Serializer；改路径/字段必须双边同步。
@@ -97,8 +84,7 @@
 | device_pool | device-pool + device-inspector（设备列表） | HTTP |
 | device_inspector | device-inspector | HTTP（无 WS） |
 | element_locator | element-locator + case-manager/workflow（素材） | HTTP |
-| case_manager | case-manager + test_runner（只读用例） | HTTP + **WS**（编辑锁） |
-| test_runner | test-runner | HTTP + **WS**（进度） |
+| case_manager | case-manager | HTTP + **WS**（编辑锁） |
 | report_generator | report-generator | HTTP（下载走 FileResponse） |
 | workflow | workflow | HTTP |
 | ai_assistant | ai-assistant + 各业务 App（经 Tool） | HTTP |
@@ -113,7 +99,7 @@
 - 错误带 HTTP 状态码（400/401/403/404/409/500）。  
 - 契约对照：前端 api、`dev_docs/03-设计与架构/工具-VUE_API_CONTRACT.md`、本 App Serializer。
 
-**WS**：Consumer 必须在 `gateway/routing.py` 注册；事件 `type` 与前端一致；写库仍走 api。仅 2 生产点（§1.2 通道收敛）；事件表见 `apps/test_runner/AGENTS.md`（10 种）与 `apps/case_manager/AGENTS.md`（`case_updated`）。
+**WS**：Consumer 必须在 `gateway/routing.py` 注册；事件 `type` 与前端一致；写库仍走 api。仅 1 生产点（§1.2 通道收敛）；事件表见 `apps/case_manager/AGENTS.md`（`case_updated`）。
 
 **AI**：Tool 只调各模块 `api.py`（同进程直调，无 SSE）；依赖 Redis（见 `backend.md`）。
 

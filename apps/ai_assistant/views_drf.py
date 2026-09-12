@@ -27,6 +27,7 @@ import threading
 from datetime import datetime, timedelta
 
 from django.conf import settings
+from django.db import close_old_connections
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, PermissionDenied
@@ -169,7 +170,7 @@ def _test_model_config(provider, api_key, base_url, model_name):
     return connected, available_models, last_error
 
 
-_ROUTE_KEYS = ("device_control", "platform_task")
+_ROUTE_KEYS = ("device_control",)
 _ROUTE_ROLES = ("planner", "executor", "verifier")
 _HEALTH_TTL = timedelta(minutes=30)
 
@@ -727,67 +728,11 @@ class ConversationViewSet(viewsets.GenericViewSet):
         except AIConversation.DoesNotExist:
             raise NotFound("conversation not found")
 
-        try:
-            from django.db.models import Q
-
-            from apps.test_runner.models import TestRunRecord, TestSOP
-
-            # Resolve run_ids linked to this conversation via TestSOP
-            sop_run_ids = list(
-                TestSOP.objects.filter(conv_id=conv_id)
-                .exclude(run_id="")
-                .values_list("run_id", flat=True)
-            )
-            if sop_run_ids:
-                qs = TestRunRecord.objects.filter(
-                    Q(run_id__startswith="ai-task-", run_id__in=sop_run_ids)
-                    | Q(run_id__startswith="case-gen-")
-                )
-            else:
-                qs = TestRunRecord.objects.filter(
-                    Q(run_id__startswith="ai-task-") | Q(run_id__startswith="case-gen-")
-                )
-            tasks = qs.order_by("-id")[:50]
-            return Response({"tasks": [_serialize_ai_task(t) for t in tasks]})
-        except Exception:
-            logger.exception("list_conv_tasks failed")
-            from rest_framework.exceptions import APIException
-
-            raise APIException(detail="查询任务历史失败", code=500)
+        return Response({"tasks": []})
 
     @action(detail=True, methods=["get"], url_path=r"tasks/(?P<run_id>[^/.]+)")
     def task_detail(self, request, *args, **kwargs):
-        run_id = kwargs.get("run_id", "")
-        try:
-            from apps.test_runner.models import TestRunRecord
-
-            task = TestRunRecord.objects.filter(run_id=run_id).first()
-            if not task:
-                raise NotFound("task not found")
-
-            return Response(
-                {
-                    "task": {
-                        "run_id": task.run_id,
-                        "status": task.status,
-                        "device_serial": task.device_serial,
-                        "cases": task.selected_cases or [],
-                        "loop_count": task.loop_count or 1,
-                        "started_at": str(task.started_at) if task.started_at else None,
-                        "completed_at": str(task.completed_at)
-                        if getattr(task, "completed_at", None)
-                        else None,
-                        "summary": task.summary or "",
-                    }
-                }
-            )
-        except NotFound:
-            raise
-        except Exception:
-            logger.exception("get_conv_task failed for run_id=%s", run_id)
-            from rest_framework.exceptions import APIException
-
-            raise APIException(detail="查询任务详情失败", code=500)
+        raise NotFound("task not found")
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -799,112 +744,73 @@ class TaskBoardAPIView(APIView):
     """GET /api/ai/tasks — 工作台任务便签看板（ai-task-* + case-gen-*）。"""
 
     def get(self, request):
+        return Response({"tasks": []})
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 任务发布（POST /api/ai/tasks/submit · GET /api/ai/agent-tasks · POST /api/ai/agent-tasks/{id}/delete）
+# ═══════════════════════════════════════════════════════════════════
+
+
+def persist_task_progress_safe(task_id: int, payload: dict) -> None:
+    """运行中增量写 result。必须可从 asyncio 事件循环线程安全调用。
+
+    工作流在 ``asyncio.run`` 内同步回调本函数；若在此线程直接 ORM，
+    Django 会抛 ``SynchronousOnlyOperation``，详情页一直空。
+    """
+    result_snapshot = api.dump_task_run_payload(payload)
+    usage = payload.get("usage") if isinstance(payload.get("usage"), dict) else None
+
+    def _persist() -> None:
+        close_old_connections()
         try:
-            from django.db.models import Count, Q
-
-            from apps.test_runner.models import TestRunRecord
-
-            status_q = (request.query_params.get("status") or "all").strip().lower()
-            qs = (
-                TestRunRecord.objects.filter(
-                    Q(run_id__startswith="ai-task-") | Q(run_id__startswith="case-gen-")
-                )
-                .annotate(
-                    total=Count("results"),
-                )
-                .order_by("-id")
+            api.patch_task_progress(
+                AITask.objects.get(id=task_id),
+                result=result_snapshot,
+                usage=usage,
             )
-
-            status_map = {
-                "pending": ["PENDING"],
-                "running": ["RUNNING"],
-                "completed": ["COMPLETED", "SUCCESS"],
-                "failed": ["FAILED", "ERROR"],
-                "stopped": ["STOPPED", "CANCELLED"],
-            }
-            if status_q in status_map:
-                qs = qs.filter(status__in=status_map[status_q])
-
-            tasks = [_serialize_ai_task(t, total=t.total) for t in qs[:80]]
-            return Response({"tasks": tasks})
         except Exception:
-            logger.exception("list_ai_tasks failed")
-            from rest_framework.exceptions import APIException
+            logger.exception("task progress persist failed id=%s", task_id)
+        finally:
+            close_old_connections()
 
-            raise APIException(detail="查询 AI 任务列表失败", code=500)
-
-
-# ── 任务序列化（自 conversation_views 迁入，等行为）──
-
-
-def _parse_summary(summary):
-    if isinstance(summary, dict):
-        return summary
-    if isinstance(summary, str) and summary.strip():
-        try:
-            import json as _json
-
-            data = _json.loads(summary)
-            return data if isinstance(data, dict) else {}
-        except Exception:
-            return {"title": summary}
-    return {}
-
-
-def _serialize_ai_task(t, total=0, passed=0):
-    meta = _parse_summary(t.summary)
-    cases = t.selected_cases or []
-    loop = t.loop_count or 1
-    progress = meta.get("progress") or {}
-    if not isinstance(progress, dict):
-        progress = {}
-    prog_total = int(progress.get("total") or 0) or max(
-        1, (len(cases) if isinstance(cases, list) else 0) * loop
-    )
-    prog_current = int(total) if total else int(progress.get("current") or 0)
-    status = (t.status or "PENDING").upper()
-    # Detect task type: case-gen-* = case_generation, ai-task-* = execution
-    task_type = meta.get("task_type") or (
-        "case_generation" if str(t.run_id).startswith("case-gen-") else "execution"
-    )
-    return {
-        "run_id": t.run_id,
-        "title": meta.get("title") or t.run_id,
-        "status": status,
-        "task_type": task_type,
-        "case_type": meta.get("case_type") or "",
-        "case_type_label": meta.get("case_type_label") or "",
-        "agent_id": str(meta.get("agent_id") or ""),
-        "agent_name": meta.get("agent_name") or "未知智能体",
-        "device_serial": t.device_serial or "",
-        "device_model": meta.get("device_model") or "",
-        "cases": cases if isinstance(cases, list) else [],
-        "case_titles": meta.get("case_titles") or [],
-        "case_ids": meta.get("case_ids") or [],
-        "loop_count": loop,
-        "progress": {"current": prog_current, "total": prog_total},
-        "started_at": str(t.started_at) if t.started_at else None,
-        "finished_at": str(t.finished_at) if t.finished_at else None,
-    }
-
-
-# ═══════════════════════════════════════════════════════════════════
-# 任务发布（POST /api/ai/tasks/submit · GET /api/ai/agent-tasks）
-# ═══════════════════════════════════════════════════════════════════
+    t = threading.Thread(target=_persist, daemon=True)
+    t.start()
+    t.join(timeout=30)
+    if t.is_alive():
+        logger.error("task progress persist timed out id=%s", task_id)
 
 
 def _run_task_async(task_id: int, agent_id: int) -> None:
     """后台线程入口：经引擎工厂执行并落终态（completed/failed + result + usage）。"""
+
+    def _on_progress(payload: dict) -> None:
+        persist_task_progress_safe(task_id, payload)
+
     try:
         agent = AIAgent.objects.get(id=agent_id)
         task = AITask.objects.get(id=task_id)
         req = engine_adapter.build_request(task, agent)
+        req.on_progress = _on_progress
         result = get_ai_engine(settings.AI_ENGINE).run(req)
         status = "completed" if result.status == "success" else "failed"
+        payload = {
+            "status": result.status,
+            "summary": result.summary,
+            "reason": result.reason,
+            "completed": result.completed or [],
+            "failed": result.failed or [],
+            "plans": result.plans or [],
+            "log": result.log or [],
+            "usage": result.usage or {},
+            "models": result.models
+            or {role: getattr(spec, "model_name", "") for role, spec in (req.models or {}).items()},
+            "max_loops": req.max_loops,
+        }
         api.finalize_task(
             task,
             status=status,
-            result=result.summary,
+            result=api.dump_task_run_payload(payload),
             usage=result.usage,
         )
     except Exception as exc:
@@ -930,17 +836,12 @@ class TaskSubmitAPIView(APIView):
             raise NotFound("platform agent not found")
 
         goal = data["goal"]
-        route = data["route"]
         device_serial = data.get("device_serial", "")
         task = api.create_task(
             agent,
             title=goal[:100],
             goal=goal,
-            requirements=data.get("requirements", ""),
             attachment=data.get("attachment", ""),
-            route=route,
-            checklist=data.get("checklist", ""),
-            report_name=data.get("report_name", ""),
             device_serial=device_serial,
         )
         api.start_task(task)
@@ -962,21 +863,44 @@ class AgentTaskListAPIView(APIView):
         if agent is None:
             return Response({"tasks": []})
         tasks = AITask.objects.filter(agent=agent).order_by("-id")[:100]
-        return Response(
-            {
-                "tasks": [
-                    {
-                        "id": t.id,
-                        "title": t.title,
-                        "goal": t.goal,
-                        "route": t.route,
-                        "status": t.status,
-                        "result": t.result,
-                        "report_name": t.report_name,
-                        "device_serial": t.device_serial,
-                        "created_at": str(t.created_at),
-                    }
-                    for t in tasks
-                ]
-            }
-        )
+        return Response({"tasks": [api.serialize_agent_task_row(t) for t in tasks]})
+
+
+class AgentTaskDeleteAPIView(APIView):
+    """POST /api/ai/agent-tasks/{task_id}/delete — 删除任务发布记录。"""
+
+    def post(self, request, task_id: int):
+        agent = api.get_platform_agent()
+        if agent is None:
+            raise NotFound("任务不存在")
+        try:
+            task = AITask.objects.get(id=task_id, agent=agent)
+        except AITask.DoesNotExist:
+            raise NotFound("任务不存在")
+        api.delete_task(task)
+        return Response({})
+
+
+class AgentTaskClearAPIView(APIView):
+    """POST /api/ai/agent-tasks/clear — 调试：清空全部任务发布记录。"""
+
+    def post(self, request):
+        agent = api.get_platform_agent()
+        if agent is None:
+            return Response({"deleted": 0})
+        deleted = api.clear_agent_tasks(agent)
+        return Response({"deleted": deleted})
+
+
+class AgentTaskDetailAPIView(APIView):
+    """GET /api/ai/agent-tasks/{task_id} — 任务发布详情（过程日志）。"""
+
+    def get(self, request, task_id: int):
+        agent = api.get_platform_agent()
+        if agent is None:
+            raise NotFound("任务不存在")
+        try:
+            task = AITask.objects.get(id=task_id, agent=agent)
+        except AITask.DoesNotExist:
+            raise NotFound("任务不存在")
+        return Response(api.serialize_agent_task_detail(task))

@@ -287,14 +287,10 @@ class MessageListSerializer(serializers.Serializer):
 
 
 class TaskSubmitInputSerializer(serializers.Serializer):
-    """任务提交入参 — goal 必填、route 枚举（device_control/platform_task）。"""
+    """任务提交入参 — goal 必填。"""
 
     goal = serializers.CharField(required=True, allow_blank=False)
-    requirements = serializers.CharField(required=False, allow_blank=True, default="")
     attachment = serializers.CharField(required=False, allow_blank=True, default="")
-    route = serializers.ChoiceField(choices=["device_control", "platform_task"], required=True)
-    report_name = serializers.CharField(required=False, allow_blank=True, default="")
-    checklist = serializers.CharField(required=False, allow_blank=True, default="")
     device_serial = serializers.CharField(required=False, allow_blank=True, default="")
 
     def validate_goal(self, value):

@@ -1,93 +1,72 @@
-"""case-manager public API — backward-compatible facade.
+"""case-manager public API — write-path facade for cross-app / View / Tool callers."""
 
-All real implementations live in api_directories.py / api_ui.py / api_storage.py / api_api.py / api_lock.py.
-This file re-exports everything so existing cross-app consumers (test_runner, dashboard, agentscope_service)
-continue to work without changes.
-"""
+from .api_definitions import (
+    batch_delete_definitions,
+    create_definition,
+    delete_definition,
+    get_definition,
+    serialize_definition,
+    update_definition,
+)
+from .api_directories import (
+    create_directory,
+    delete_directory,
+    move_item,
+    serialize_directory,
+    update_directory,
+)
+from .api_files import (
+    create_file,
+    delete_file,
+    get_file,
+    get_file_sheet,
+    list_file_cases,
+    serialize_file,
+    update_file,
+)
+from .api_ids import next_case_id
+from .api_projects import (
+    ConflictError,
+    create_project,
+    delete_project,
+    get_project,
+    get_project_tree,
+    list_projects,
+    serialize_project,
+    update_project,
+)
+from .models import CaseDirectory, CaseFile, CaseProject, TestDefinition
 
 __all__ = [
     "CaseDirectory",
+    "CaseFile",
+    "CaseProject",
     "ConflictError",
     "TestDefinition",
-    "batch_move_items",
-    "batch_save_api_definitions",
-    "batch_save_definitions",
-    "batch_save_storage_definitions",
-    "batch_save_web_definitions",
+    "batch_delete_definitions",
+    "create_definition",
     "create_directory",
+    "create_file",
+    "create_project",
+    "delete_definition",
     "delete_directory",
-    "find_case_across_types",
-    "get_api_definition",
-    "get_api_definitions",
-    "get_case_digest",
-    "get_case_for_lock",
+    "delete_file",
+    "delete_project",
     "get_definition",
-    "get_directory_tree",
-    "get_enabled_definitions",
-    "get_storage_definition",
-    "get_storage_definitions",
-    "get_web_definition",
-    "get_web_definitions",
-    "save_ai_definition",
-    "save_api_definition",
-    "save_definition",
-    "save_storage_definition",
-    "save_web_definition",
+    "get_file",
+    "get_file_sheet",
+    "get_project",
+    "get_project_tree",
+    "list_file_cases",
+    "list_projects",
+    "move_item",
+    "next_case_id",
+    "serialize_definition",
+    "serialize_directory",
+    "serialize_file",
+    "serialize_project",
+    "update_definition",
     "update_directory",
-    "validate_steps",
+    "update_file",
+    "update_project",
 ]
-
-# API test case API
-# AI tool data exits (digest + validated write)
-from .api_ai import (  # noqa: E402
-    get_case_digest,
-    save_ai_definition,
-    validate_steps,
-)
-from .api_api import (  # noqa: E402
-    batch_save_api_definitions,
-    get_api_definition,
-    get_api_definitions,
-    save_api_definition,
-)
-
-# Directory API
-from .api_directories import (  # noqa: E402
-    batch_move_items,
-    create_directory,
-    delete_directory,
-    get_directory_tree,
-    update_directory,
-)
-
-# Lock helpers (generalized cross-type)
-from .api_lock import (  # noqa: E402
-    find_case_across_types,
-    get_case_for_lock,
-)
-
-# Storage case API
-from .api_storage import (  # noqa: E402
-    batch_save_storage_definitions,
-    get_storage_definition,
-    get_storage_definitions,
-    save_storage_definition,
-)
-
-# UI automation case API
-from .api_ui import (  # noqa: E402
-    ConflictError,
-    batch_save_definitions,
-    get_definition,
-    get_enabled_definitions,
-    save_definition,
-)
-
-# Web automation case API
-from .api_web import (  # noqa: E402
-    batch_save_web_definitions,
-    get_web_definition,
-    get_web_definitions,
-    save_web_definition,
-)
-from .models import CaseDirectory, TestDefinition

@@ -9,6 +9,7 @@ from engines.ai.base import ModelSpec, TaskRequest, ToolSpec
 
 from . import api
 from .provider_registry import get_provider_config
+from .skills_catalog import list_enabled_skill_dirs
 from .tools import AUTO_ALLOW_TOOLS, TOOLS
 
 __all__ = ["build_request", "build_tool_specs"]
@@ -50,8 +51,9 @@ def _resolve_device_serial() -> str:
 
 def build_request(task, agent) -> TaskRequest:
     """AITask + AIAgent → TaskRequest（任务表单 + 三角色模型 + 工具清单）。"""
-    route = task.route
-    route_cfg = (agent.route_configs or {}).get(route) or {}
+    from django.conf import settings
+
+    route_cfg = (agent.route_configs or {}).get("device_control") or {}
     models = {
         "planner": _model_spec(route_cfg.get("planner") or {}),
         "executor": _model_spec(route_cfg.get("executor") or {}),
@@ -59,13 +61,12 @@ def build_request(task, agent) -> TaskRequest:
     }
     return TaskRequest(
         goal=task.goal,
-        route=route,
         models=models,
         tools=build_tool_specs(),
         max_loops=int(agent.max_loops or 3),
-        requirements=task.requirements or "",
-        checklist=task.checklist or "",
-        report_name=task.report_name or "",
         device_serial=task.device_serial or _resolve_device_serial(),
         user_id=str(agent.owner_id or ""),
+        task_id=int(getattr(task, "id", 0) or 0),
+        media_root=str(getattr(settings, "MEDIA_ROOT", "") or ""),
+        skill_dirs=list_enabled_skill_dirs() if agent.enable_skills else [],
     )

@@ -1,28 +1,32 @@
-from __future__ import annotations
+"""workflow public API — 原型 + 目录 + JSON 文档 CRUD / 导入导出."""
 
-"""workflow public API — 目录 + JSON 文档 CRUD / 导入导出."""
+from __future__ import annotations
 
 __all__ = [
     "build_export_envelope",
-    "build_page_flow_document",
     "create_directory",
+    "create_prototype",
     "delete_directory",
     "delete_document",
+    "delete_prototype",
     "export_document",
     "gen_doc_id",
     "get_directory_tree",
     "get_document",
     "get_document_digest",
+    "get_prototype",
     "import_document_envelope",
     "list_directories_flat",
     "list_documents",
     "list_document_summaries",
+    "list_prototypes",
     "move_directory",
     "move_document",
-    "purge_test_case_documents",
     "serialize_directory",
     "serialize_document",
+    "serialize_prototype",
     "update_directory",
+    "update_prototype",
     "upsert_document",
 ]
 
@@ -33,35 +37,30 @@ import string
 from datetime import datetime
 from typing import Any
 
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 
 from .api_digest import get_document_digest, list_document_summaries
-from .models import WorkflowDirectory, WorkflowDocument
+from .models import WorkflowDirectory, WorkflowDocument, WorkflowPrototype
 
 FORMAT_V1 = "workflow-doc-v1"
 
 
 def gen_doc_id(doc_type: str) -> str:
-    """WF-PF-YYYYMMDD-HHMMSS-XXXX — 全局唯一（仅 page_flow）."""
-    if doc_type != WorkflowDocument.TYPE_PAGE_FLOW:
+    """WF-{PF|AF}-YYYYMMDD-HHMMSS-XXXX — 按文档类型生成全局唯一 ID."""
+    if doc_type == WorkflowDocument.TYPE_API_FLOW:
+        prefix = "AF"
+    else:
+        prefix = "PF"
         doc_type = WorkflowDocument.TYPE_PAGE_FLOW
-    prefix = "PF"
     now = datetime.now()
     suffix = "".join(random.choices(string.ascii_uppercase + string.digits, k=4))
     candidate = f"WF-{prefix}-{now.strftime('%Y%m%d')}-{now.strftime('%H%M%S')}-{suffix}"
-    # 极低概率碰撞时重试
     for _ in range(8):
         if not WorkflowDocument.objects.filter(doc_id=candidate).exists():
             return candidate
         suffix = "".join(random.choices(string.ascii_uppercase + string.digits, k=4))
         candidate = f"WF-{prefix}-{now.strftime('%Y%m%d')}-{now.strftime('%H%M%S')}-{suffix}"
     return f"WF-{prefix}-{now.strftime('%Y%m%d%H%M%S%f')}-{suffix}"
-
-
-def purge_test_case_documents() -> int:
-    """删除全部积木用例文档（doc_type=test_case），返回删除条数。"""
-    deleted, _ = WorkflowDocument.objects.filter(doc_type=WorkflowDocument.TYPE_TEST_CASE).delete()
-    return int(deleted)
 
 
 def _parse_config(raw: str | dict | list | None) -> Any:
@@ -75,10 +74,85 @@ def _parse_config(raw: str | dict | list | None) -> Any:
         return {}
 
 
+def serialize_prototype(p: WorkflowPrototype) -> dict:
+    return {
+        "id": p.id,
+        "name": p.name,
+        "description": p.description or "",
+        "created_at": p.created_at.isoformat() if p.created_at else "",
+        "updated_at": p.updated_at.isoformat() if p.updated_at else "",
+        "doc_count": WorkflowDocument.objects.filter(
+            prototype_id=p.id,
+            doc_type__in=WorkflowDocument.SUPPORTED_TYPES,
+        ).count(),
+    }
+
+
+def list_prototypes() -> list[dict]:
+    return [
+        serialize_prototype(p)
+        for p in WorkflowPrototype.objects.order_by("-updated_at", "-id")
+    ]
+
+
+def get_prototype(prototype_id: int) -> dict | None:
+    try:
+        p = WorkflowPrototype.objects.get(id=prototype_id)
+    except WorkflowPrototype.DoesNotExist:
+        return None
+    return serialize_prototype(p)
+
+
+def create_prototype(*, name: str, description: str = "") -> tuple[bool, Any, int]:
+    name = (name or "").strip()
+    if not name:
+        return False, "原型名称不能为空", 400
+    try:
+        with transaction.atomic():
+            p = WorkflowPrototype.objects.create(
+                name=name,
+                description=(description or "").strip(),
+            )
+    except IntegrityError:
+        return False, "同名原型已存在", 409
+    return True, serialize_prototype(p), 201
+
+
+def update_prototype(
+    prototype_id: int, *, name: str | None = None, description: str | None = None
+) -> tuple[bool, Any, int]:
+    try:
+        p = WorkflowPrototype.objects.get(id=prototype_id)
+    except WorkflowPrototype.DoesNotExist:
+        return False, "原型不存在", 404
+    if name is not None:
+        name = name.strip()
+        if not name:
+            return False, "原型名称不能为空", 400
+        p.name = name
+    if description is not None:
+        p.description = description.strip()
+    try:
+        p.save()
+    except IntegrityError:
+        return False, "同名原型已存在", 409
+    return True, serialize_prototype(p), 200
+
+
+def delete_prototype(prototype_id: int) -> tuple[bool, str, int]:
+    try:
+        p = WorkflowPrototype.objects.get(id=prototype_id)
+    except WorkflowPrototype.DoesNotExist:
+        return False, "原型不存在", 404
+    p.delete()
+    return True, "ok", 200
+
+
 def serialize_directory(d: WorkflowDirectory) -> dict:
     return {
         "id": d.id,
         "name": d.name,
+        "prototype_id": d.prototype_id,
         "parent_id": d.parent_id,
         "sort_order": d.sort_order,
         "created_at": d.created_at.isoformat() if d.created_at else "",
@@ -93,6 +167,7 @@ def serialize_document(doc: WorkflowDocument, *, include_config: bool = True) ->
         "doc_id": doc.doc_id,
         "title": doc.title,
         "doc_type": doc.doc_type,
+        "prototype_id": doc.prototype_id,
         "directory_id": doc.directory_id,
         "description": doc.description or "",
         "created_at": doc.created_at.isoformat() if doc.created_at else "",
@@ -110,20 +185,41 @@ def build_export_envelope(doc: WorkflowDocument) -> dict:
         "doc_type": doc.doc_type,
         "title": doc.title,
         "description": doc.description or "",
+        "prototype_id": doc.prototype_id,
         "directory_id": doc.directory_id,
         "exported_at": datetime.now().isoformat(),
         "config": _parse_config(doc.config_json),
     }
 
 
+def _resolve_prototype_id(
+    *,
+    prototype_id: int | None,
+    parent: WorkflowDirectory | None = None,
+    directory: WorkflowDirectory | None = None,
+) -> tuple[int | None, str | None]:
+    if parent is not None:
+        return parent.prototype_id, None
+    if directory is not None:
+        return directory.prototype_id, None
+    if prototype_id is None:
+        return None, "prototype_id 不能为空"
+    if not WorkflowPrototype.objects.filter(id=prototype_id).exists():
+        return None, "原型不存在"
+    return int(prototype_id), None
+
+
 # ── Directories ──
 
 
-def list_directories_flat() -> list[dict]:
-    return [serialize_directory(d) for d in WorkflowDirectory.objects.order_by("sort_order", "id")]
+def list_directories_flat(*, prototype_id: int | None = None) -> list[dict]:
+    qs = WorkflowDirectory.objects.order_by("sort_order", "id")
+    if prototype_id is not None:
+        qs = qs.filter(prototype_id=prototype_id)
+    return [serialize_directory(d) for d in qs]
 
 
-def get_directory_tree() -> list[dict]:
+def get_directory_tree(*, prototype_id: int | None = None) -> list[dict]:
     def build(node: WorkflowDirectory) -> dict:
         children = [build(c) for c in node.children.all().order_by("sort_order", "id")]
         docs = [
@@ -133,9 +229,9 @@ def get_directory_tree() -> list[dict]:
                 "doc_type": x.doc_type,
                 "updated_at": x.updated_at.isoformat() if x.updated_at else "",
             }
-            for x in node.documents.filter(doc_type=WorkflowDocument.TYPE_PAGE_FLOW).order_by(
-                "title"
-            )
+            for x in node.documents.filter(
+                doc_type__in=WorkflowDocument.SUPPORTED_TYPES
+            ).order_by("title")
         ]
         return {
             **serialize_directory(node),
@@ -144,10 +240,18 @@ def get_directory_tree() -> list[dict]:
         }
 
     roots = WorkflowDirectory.objects.filter(parent__isnull=True).order_by("sort_order", "id")
+    if prototype_id is not None:
+        roots = roots.filter(prototype_id=prototype_id)
     return [build(r) for r in roots]
 
 
-def create_directory(name: str, parent_id: int | None = None, sort_order: int = 0):
+def create_directory(
+    name: str,
+    parent_id: int | None = None,
+    sort_order: int = 0,
+    *,
+    prototype_id: int | None = None,
+):
     name = (name or "").strip()
     if not name:
         return False, "目录名不能为空"
@@ -157,9 +261,19 @@ def create_directory(name: str, parent_id: int | None = None, sort_order: int = 
             parent = WorkflowDirectory.objects.get(id=parent_id)
         except WorkflowDirectory.DoesNotExist:
             return False, "父目录不存在"
-    if WorkflowDirectory.objects.filter(parent=parent, name=name).exists():
+    proto_id, err = _resolve_prototype_id(prototype_id=prototype_id, parent=parent)
+    if err:
+        return False, err
+    if parent is not None and prototype_id is not None and parent.prototype_id != int(prototype_id):
+        return False, "父目录不属于该原型"
+    if WorkflowDirectory.objects.filter(prototype_id=proto_id, parent=parent, name=name).exists():
         return False, f"同级已存在目录「{name}」"
-    d = WorkflowDirectory.objects.create(name=name, parent=parent, sort_order=sort_order)
+    d = WorkflowDirectory.objects.create(
+        prototype_id=proto_id,
+        name=name,
+        parent=parent,
+        sort_order=sort_order,
+    )
     return True, serialize_directory(d)
 
 
@@ -178,9 +292,12 @@ def update_directory(dir_id: int, name: str | None = None, parent_id=None):
             d.parent = None
         else:
             try:
-                d.parent = WorkflowDirectory.objects.get(id=int(parent_id))
+                parent = WorkflowDirectory.objects.get(id=int(parent_id))
             except (WorkflowDirectory.DoesNotExist, ValueError, TypeError):
                 return False, "父目录不存在"
+            if parent.prototype_id != d.prototype_id:
+                return False, "不能跨原型移动目录"
+            d.parent = parent
     try:
         d.save()
     except IntegrityError:
@@ -194,7 +311,6 @@ def delete_directory(dir_id: int):
     except WorkflowDirectory.DoesNotExist:
         return False, "目录不存在"
 
-    # 级联删除子目录内文档（避免 SET_NULL 孤儿残留）
     def collect_ids(node: WorkflowDirectory) -> list[int]:
         ids = [node.id]
         for c in node.children.all():
@@ -212,20 +328,20 @@ def delete_directory(dir_id: int):
 
 def list_documents(
     *,
+    prototype_id: int | None = None,
     directory_id: int | None = None,
     doc_type: str | None = None,
     include_orphans: bool = True,
 ) -> list[dict]:
-    # 积木用例已下线：默认只返回 page_flow；显式请求 test_case 返回空列表
-    qs = WorkflowDocument.objects.filter(doc_type=WorkflowDocument.TYPE_PAGE_FLOW).order_by(
-        "-updated_at"
-    )
-    if doc_type == WorkflowDocument.TYPE_TEST_CASE:
-        return []
-    if doc_type and doc_type != WorkflowDocument.TYPE_PAGE_FLOW:
-        qs = qs.none()
-    elif doc_type:
+    qs = WorkflowDocument.objects.filter(
+        doc_type__in=WorkflowDocument.SUPPORTED_TYPES
+    ).order_by("-updated_at")
+    if doc_type:
+        if doc_type not in WorkflowDocument.SUPPORTED_TYPES:
+            return []
         qs = qs.filter(doc_type=doc_type)
+    if prototype_id is not None:
+        qs = qs.filter(prototype_id=prototype_id)
     if directory_id is not None:
         qs = qs.filter(directory_id=directory_id)
     elif not include_orphans:
@@ -238,7 +354,7 @@ def get_document(doc_id: str) -> dict | None:
         doc = WorkflowDocument.objects.get(doc_id=doc_id)
     except WorkflowDocument.DoesNotExist:
         return None
-    if doc.doc_type == WorkflowDocument.TYPE_TEST_CASE:
+    if doc.doc_type not in WorkflowDocument.SUPPORTED_TYPES:
         return None
     return serialize_document(doc, include_config=True)
 
@@ -253,19 +369,14 @@ def upsert_document(
     description: str = "",
     allow_create: bool = True,
     clear_directory: bool = False,
+    prototype_id: int | None = None,
 ) -> tuple[bool, Any, int]:
-    """Returns (ok, payload_or_error, http_hint_status).
-
-    clear_directory=True → 显式移到根（directory=None）。
-    否则 directory_id=None 且 clear_directory=False 时保持原目录（仅更新场景由 view 传已有 id）。
-    """
+    """Returns (ok, payload_or_error, http_hint_status)."""
     title = (title or "").strip()
     if not title:
         return False, "标题不能为空", 400
-    if doc_type == WorkflowDocument.TYPE_TEST_CASE:
-        return False, "工作流已不再支持积木测试用例，请使用用例管理模块", 400
-    if doc_type != WorkflowDocument.TYPE_PAGE_FLOW:
-        return False, "doc_type 必须是 page_flow", 400
+    if doc_type not in WorkflowDocument.SUPPORTED_TYPES:
+        return False, "doc_type 必须是 page_flow 或 api_flow", 400
 
     directory = None
     set_directory = clear_directory or directory_id is not None
@@ -285,16 +396,24 @@ def upsert_document(
             existing.doc_type = doc_type
             existing.config_json = config_str
             if set_directory:
+                if directory is not None and directory.prototype_id != existing.prototype_id:
+                    return False, "目录不属于该文档所属原型", 400
                 existing.directory = directory
             existing.description = description or ""
             existing.save()
             return True, serialize_document(existing), 200
         if not allow_create:
             return False, f"文档不存在: {doc_id}", 404
-        if WorkflowDocument.objects.filter(doc_id=doc_id).exists():
-            return False, f"doc_id 已存在: {doc_id}", 409
+        proto_id, err = _resolve_prototype_id(prototype_id=prototype_id, directory=directory)
+        if err:
+            return False, err, 400
+        if directory is not None and prototype_id is not None and directory.prototype_id != int(
+            prototype_id
+        ):
+            return False, "目录不属于该原型", 400
         try:
             doc = WorkflowDocument.objects.create(
+                prototype_id=proto_id,
                 doc_id=doc_id,
                 title=title,
                 doc_type=doc_type,
@@ -306,9 +425,16 @@ def upsert_document(
             return False, f"doc_id 已存在: {doc_id}", 409
         return True, serialize_document(doc), 201
 
-    # auto id
+    proto_id, err = _resolve_prototype_id(prototype_id=prototype_id, directory=directory)
+    if err:
+        return False, err, 400
+    if directory is not None and prototype_id is not None and directory.prototype_id != int(
+        prototype_id
+    ):
+        return False, "目录不属于该原型", 400
     new_id = gen_doc_id(doc_type)
     doc = WorkflowDocument.objects.create(
+        prototype_id=proto_id,
         doc_id=new_id,
         title=title,
         doc_type=doc_type,
@@ -320,7 +446,7 @@ def upsert_document(
 
 
 def move_document(doc_id: str, directory_id: int | None) -> tuple[bool, Any]:
-    """将文档移入目录（directory_id=None 表示根/未分类）。"""
+    """将文档移入目录（directory_id=None 表示原型根/未分类）。"""
     try:
         doc = WorkflowDocument.objects.get(doc_id=doc_id)
     except WorkflowDocument.DoesNotExist:
@@ -331,13 +457,15 @@ def move_document(doc_id: str, directory_id: int | None) -> tuple[bool, Any]:
             directory = WorkflowDirectory.objects.get(id=directory_id)
         except WorkflowDirectory.DoesNotExist:
             return False, "目录不存在"
+        if directory.prototype_id != doc.prototype_id:
+            return False, "不能跨原型移动文档"
     doc.directory = directory
     doc.save(update_fields=["directory", "updated_at"])
     return True, serialize_document(doc, include_config=False)
 
 
 def move_directory(dir_id: int, parent_id: int | None) -> tuple[bool, Any]:
-    """移动目录；禁止移入自身或子孙。"""
+    """移动目录；禁止移入自身或子孙；禁止跨原型."""
     try:
         d = WorkflowDirectory.objects.get(id=dir_id)
     except WorkflowDirectory.DoesNotExist:
@@ -349,7 +477,8 @@ def move_directory(dir_id: int, parent_id: int | None) -> tuple[bool, Any]:
             parent = WorkflowDirectory.objects.get(id=parent_id)
         except WorkflowDirectory.DoesNotExist:
             return False, "目标目录不存在"
-        # 禁止移入子孙
+        if parent.prototype_id != d.prototype_id:
+            return False, "不能跨原型移动目录"
         cur: WorkflowDirectory | None = parent
         while cur:
             if cur.id == dir_id:
@@ -373,33 +502,18 @@ def delete_document(doc_id: str) -> tuple[bool, str]:
 
 
 def import_document_envelope(payload: dict, *, overwrite: bool = False) -> tuple[bool, Any, int]:
-    """
-    Import workflow-doc-v1 JSON.
-    - doc_id 为空 → 自动生成
-    - doc_id 已存在且 overwrite=False → 409
-    - overwrite=True → 更新同 id
-    """
+    """Import workflow-doc-v1 JSON."""
     if not isinstance(payload, dict):
         return False, "导入内容必须是 JSON 对象", 400
 
     fmt = payload.get("format") or FORMAT_V1
     if fmt not in (FORMAT_V1,):
-        # 仍允许无 format 的裸对象（需有 doc_type + config）
         pass
 
     doc_type = payload.get("doc_type")
     config = payload.get("config")
     title = payload.get("title") or payload.get("name") or ""
 
-    # 积木用例导入已下线
-    if (
-        fmt == "testcase-scratch-v1"
-        or doc_type == WorkflowDocument.TYPE_TEST_CASE
-        or (not doc_type and isinstance(payload.get("blocks"), list))
-    ):
-        return False, "工作流已不再支持积木测试用例导入，请使用用例管理模块", 400
-
-    # 兼容页面流裸 snapshot
     if not doc_type and ("nodes" in payload or (isinstance(config, dict) and "nodes" in config)):
         doc_type = WorkflowDocument.TYPE_PAGE_FLOW
         if config is None:
@@ -410,8 +524,8 @@ def import_document_envelope(payload: dict, *, overwrite: bool = False) -> tuple
                 "links": payload.get("links") or [],
             }
 
-    if doc_type != WorkflowDocument.TYPE_PAGE_FLOW:
-        return False, "无法识别 doc_type（仅支持 page_flow）", 400
+    if doc_type not in WorkflowDocument.SUPPORTED_TYPES:
+        return False, "无法识别 doc_type（仅支持 page_flow / api_flow）", 400
     if config is None:
         config = {}
     if not title:
@@ -420,44 +534,28 @@ def import_document_envelope(payload: dict, *, overwrite: bool = False) -> tuple
     doc_id = (payload.get("doc_id") or "").strip() or None
     directory_id = payload.get("directory_id")
     description = payload.get("description") or ""
+    prototype_id = payload.get("prototype_id")
+    if prototype_id in ("", None):
+        prototype_id = None
+    else:
+        try:
+            prototype_id = int(prototype_id)
+        except (TypeError, ValueError):
+            return False, "prototype_id 无效", 400
 
     if doc_id and WorkflowDocument.objects.filter(doc_id=doc_id).exists() and not overwrite:
         return False, f"doc_id 已存在，禁止重复导入: {doc_id}", 409
 
-    if doc_id and overwrite:
-        ok, result, status = upsert_document(
-            doc_id=doc_id,
-            title=title,
-            doc_type=doc_type,
-            config=config,
-            directory_id=directory_id,
-            description=description,
-            allow_create=True,
-        )
-        return ok, result, status
-
-    if doc_id:
-        # create only if unique
-        ok, result, status = upsert_document(
-            doc_id=doc_id,
-            title=title,
-            doc_type=doc_type,
-            config=config,
-            directory_id=directory_id,
-            description=description,
-            allow_create=True,
-        )
-        return ok, result, status
-
-    ok, result, status = upsert_document(
-        doc_id=None,
+    return upsert_document(
+        doc_id=doc_id,
         title=title,
         doc_type=doc_type,
         config=config,
         directory_id=directory_id,
         description=description,
+        allow_create=True,
+        prototype_id=prototype_id,
     )
-    return ok, result, status
 
 
 def export_document(doc_id: str) -> tuple[bool, Any]:
@@ -465,46 +563,6 @@ def export_document(doc_id: str) -> tuple[bool, Any]:
         doc = WorkflowDocument.objects.get(doc_id=doc_id)
     except WorkflowDocument.DoesNotExist:
         return False, "文档不存在"
-    if doc.doc_type == WorkflowDocument.TYPE_TEST_CASE:
+    if doc.doc_type not in WorkflowDocument.SUPPORTED_TYPES:
         return False, "文档不存在"
     return True, build_export_envelope(doc)
-
-
-def build_page_flow_document(
-    *,
-    title: str,
-    start_package: str = "",
-    pages: list | None = None,
-    edges: list | None = None,
-    directory_id: int | None = None,
-) -> tuple[bool, Any, int]:
-    """AI 受控写图：结构化「页面关系」→ 编译 VueFlow config_json → 落库 wf_documents。
-
-    pages: [{page_id, label, elements:[{element_id, alias, type, xpath}]}]
-    edges: [{from_page_id, to_page_id, trigger_element_id}]
-    返回 (ok, payload_or_error, http_hint_status)。
-    """
-    from .page_flow_compiler import compile_page_flow_document
-
-    title = (title or "").strip()
-    if not title:
-        return False, "标题不能为空", 400
-    pages = pages or []
-    if not pages:
-        return False, "页面列表不能为空", 400
-    try:
-        config = compile_page_flow_document(
-            title=title,
-            start_package=start_package or "",
-            pages=pages,
-            edges=edges or [],
-        )
-    except Exception as e:
-        return False, f"页面流编译失败: {e}", 400
-    return upsert_document(
-        doc_id=None,
-        title=title,
-        doc_type=WorkflowDocument.TYPE_PAGE_FLOW,
-        config=config,
-        directory_id=directory_id,
-    )

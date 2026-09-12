@@ -4,17 +4,23 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from . import views
-from .views_api import WorkflowDirectoryViewSet, WorkflowDocumentViewSet
+from .views_api import (
+    WorkflowDirectoryViewSet,
+    WorkflowDocumentViewSet,
+    WorkflowPrototypeViewSet,
+)
 
 app_name = "workflow"
 
-# ── DRF router (new standard REST endpoints) ──
 router = DefaultRouter()
+router.register(r"prototypes", WorkflowPrototypeViewSet, basename="wf_proto")
 router.register(r"directories", WorkflowDirectoryViewSet, basename="wf_dir")
 router.register(r"documents", WorkflowDocumentViewSet, basename="wf_doc")
 
-# ── Legacy paths (保留，旧前端继续工作) ──
 legacy_patterns = [
+    path("prototypes", views.prototypes_list, name="wf_proto_list"),
+    path("prototypes/create", views.prototypes_create, name="wf_proto_create"),
+    path("prototypes/<int:prototype_id>", views.prototype_detail, name="wf_proto_detail"),
     path("directories", views.directory_list, name="wf_dir_list"),
     path("directories/create", views.directory_create, name="wf_dir_create"),
     path("directories/<int:dir_id>/move", views.directory_move, name="wf_dir_move"),

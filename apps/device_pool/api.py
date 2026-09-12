@@ -1,6 +1,6 @@
 """device-pool 跨模块写操作白名单。
 
-共享给其他模块（test_runner / ai_assistant / element_locator / device_inspector）。
+共享给其他模块（ai_assistant / element_locator / device_inspector）。
 遵循防火墙 #2：跨 App 写操作必须走本 api；本模块写逻辑下沉到 service.py。
 """
 
@@ -69,7 +69,7 @@ def ensure_device(serial, name=""):
 
 @transaction.atomic
 def acquire_device(serial, user_id, timeout=300):
-    """锁定设备（进程占用，供 test_runner / AgentScope 调用）。
+    """锁定设备（进程占用，供 AgentScope 调用）。
 
     select_for_update() 保证多进程并发下不重复通过 BUSY 检查。
     """

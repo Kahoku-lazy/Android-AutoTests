@@ -46,27 +46,28 @@ class WebGroupViewSet(viewsets.ModelViewSet):
         qs = self.get_queryset().filter(parent__isnull=True)
         return Response(WebGroupSerializer(qs, many=True).data)
 
+    def perform_create(self, serializer):
+        raise ValidationError({"detail": "分组树写接口已停用，请改用项目目录 API"})
+
+    def perform_update(self, serializer):
+        raise ValidationError({"detail": "分组树写接口已停用，请改用项目目录 API"})
+
     def perform_destroy(self, instance):
-        api.delete_web_group(instance.id)
+        from rest_framework.exceptions import APIException
+
+        class Gone(APIException):
+            status_code = 410
+            default_detail = "分组树写接口已停用，请改用项目目录 API"
+
+        raise Gone()
 
     @action(detail=False, methods=["post"], url_path="batch-move")
     def batch_move(self, request):
-        """POST /web-groups/batch-move/ — batch move groups to a new parent."""
-        group_ids = request.data.get("group_ids", [])
-        target_parent_id = request.data.get("target_parent_id")
-
-        if not group_ids:
-            return Response({"message": "group_ids is required"}, status=400)
-
-        parent = None
-        if target_parent_id:
-            try:
-                parent = WebGroup.objects.get(id=target_parent_id)
-            except WebGroup.DoesNotExist:
-                return Response({"message": "目标分组不存在"}, status=400)
-
-        api.batch_move_web_groups(group_ids, parent.id if parent else None)
-        return Response({"moved": len(group_ids)})
+        """POST /web-groups/batch-move/ — retired."""
+        return Response(
+            {"message": "分组树写接口已停用，请改用项目目录 API"},
+            status=410,
+        )
 
 
 # ═══════════════════════════════════════════════════════
@@ -161,25 +162,26 @@ class ApiGroupViewSet(viewsets.ModelViewSet):
         return Response(ApiGroupSerializer(qs, many=True).data)
 
     def perform_destroy(self, instance):
-        api.delete_api_group(instance.id)
+        from rest_framework.exceptions import APIException
+
+        class Gone(APIException):
+            status_code = 410
+            default_detail = "分组树写接口已停用，请改用项目目录 API"
+
+        raise Gone()
+
+    def perform_create(self, serializer):
+        raise ValidationError({"detail": "分组树写接口已停用，请改用项目目录 API"})
+
+    def perform_update(self, serializer):
+        raise ValidationError({"detail": "分组树写接口已停用，请改用项目目录 API"})
 
     @action(detail=False, methods=["post"], url_path="batch-move")
     def batch_move(self, request):
-        group_ids = request.data.get("group_ids", [])
-        target_parent_id = request.data.get("target_parent_id")
-
-        if not group_ids:
-            return Response({"message": "group_ids is required"}, status=400)
-
-        parent = None
-        if target_parent_id:
-            try:
-                parent = ApiGroup.objects.get(id=target_parent_id)
-            except ApiGroup.DoesNotExist:
-                return Response({"message": "目标分组不存在"}, status=400)
-
-        api.batch_move_api_groups(group_ids, parent.id if parent else None)
-        return Response({"moved": len(group_ids)})
+        return Response(
+            {"message": "分组树写接口已停用，请改用项目目录 API"},
+            status=410,
+        )
 
 
 # ═══════════════════════════════════════════════════════

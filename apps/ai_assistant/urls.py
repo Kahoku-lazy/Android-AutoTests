@@ -13,6 +13,9 @@ from rest_framework.routers import DefaultRouter
 from .views.tool_gateway import agent_config, tool_gateway, tool_schemas
 from .views_drf import (
     AgentHealthAPIView,
+    AgentTaskClearAPIView,
+    AgentTaskDeleteAPIView,
+    AgentTaskDetailAPIView,
     AgentTaskListAPIView,
     AgentViewSet,
     AvailableSkillsAPIView,
@@ -27,10 +30,11 @@ from .views_drf import (
 from .views_knowledge_drf import (
     KnowledgeAddDocAPIView,
     KnowledgeDocumentsAPIView,
+    KnowledgePreviewAPIView,
     KnowledgeReindexAPIView,
     KnowledgeStatusAPIView,
 )
-from .views_toolbox_drf import ToolboxViewSet
+from .views_toolbox_drf import SkillFileAPIView, SkillTreeAPIView, ToolboxViewSet
 from .views_upload_drf import UploadAvatarAPIView, UploadFileAPIView
 
 app_name = "ai"
@@ -52,14 +56,32 @@ special_patterns = [
     ),
     path("platform-config", PlatformConfigAPIView.as_view(), name="platform_config"),
     path("platform-config/update", PlatformConfigAPIView.as_view(), name="platform_config_update"),
+    path("toolbox/skills/<str:name>/tree", SkillTreeAPIView.as_view(), name="toolbox_skill_tree"),
+    path("toolbox/skills/<str:name>/file", SkillFileAPIView.as_view(), name="toolbox_skill_file"),
     # Workbench task board
     path("tasks", TaskBoardAPIView.as_view(), name="ai_tasks_list"),
     # 任务发布（提交 + 列表）
     path("tasks/submit", TaskSubmitAPIView.as_view(), name="ai_tasks_submit"),
     path("agent-tasks", AgentTaskListAPIView.as_view(), name="ai_agent_tasks"),
+    path("agent-tasks/clear", AgentTaskClearAPIView.as_view(), name="ai_agent_tasks_clear"),
+    path(
+        "agent-tasks/<int:task_id>",
+        AgentTaskDetailAPIView.as_view(),
+        name="ai_agent_task_detail",
+    ),
+    path(
+        "agent-tasks/<int:task_id>/delete",
+        AgentTaskDeleteAPIView.as_view(),
+        name="ai_agent_task_delete",
+    ),
     # Knowledge base
     path("knowledge/status", KnowledgeStatusAPIView.as_view(), name="kb_status"),
     path("knowledge/documents", KnowledgeDocumentsAPIView.as_view(), name="kb_documents"),
+    path(
+        "knowledge/documents/preview",
+        KnowledgePreviewAPIView.as_view(),
+        name="kb_preview",
+    ),
     path("knowledge/reindex", KnowledgeReindexAPIView.as_view(), name="kb_reindex"),
     path("knowledge/documents/add", KnowledgeAddDocAPIView.as_view(), name="kb_add_doc"),
     # Uploads

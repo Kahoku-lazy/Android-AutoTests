@@ -22,12 +22,8 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 
-def capture_snapshot(user_id: str, serial: str, method: str = "both") -> dict:
-    """一键获取（dump/OCR/both）→ 快照落库，返回快照全量 JSON。
-
-    方法级降级：both 时单方法失败以成功方法落库（method 记实际值）；
-    dump 与 OCR 全部失败不落库（CaptureError 500）。
-    """
+def capture_snapshot(user_id: str, serial: str, method: str = "dump") -> dict:
+    """一键获取（dump 或 OCR，二选一）→ 快照落库，返回快照全量 JSON。"""
     from engines.device.registry import close_engine
 
     from .models import Snapshot
@@ -39,7 +35,7 @@ def capture_snapshot(user_id: str, serial: str, method: str = "both") -> dict:
         open_inspector_engine,
     )
 
-    if method not in ("dump", "ocr", "both"):
+    if method not in ("dump", "ocr"):
         raise CaptureError("无效的获取方法", status_code=400)
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
@@ -48,38 +44,31 @@ def capture_snapshot(user_id: str, serial: str, method: str = "both") -> dict:
     # 页面截图先行：OCR 识别与元素缩略图裁剪均依赖截图文件
     screenshot_path = capture_page_screenshot(engine, ts)
 
-    dump_data = None
-    ocr_data = None
-
-    if method in ("dump", "both"):
+    if method == "dump":
         try:
             dump_data = capture_dump_payload(engine, ts)
         except Exception:
             logger.exception("capture dump failed serial=%s", serial)
-            if method == "dump":
-                _cleanup_capture_files(ts)
-                raise CaptureError("获取失败", status_code=500)
-
-    if method in ("ocr", "both"):
+            _cleanup_capture_files(ts)
+            raise CaptureError("获取失败", status_code=500)
+        ocr_data = None
+    else:  # method == "ocr"
         try:
             ocr_data = capture_ocr_payload(ts)
         except Exception:
             logger.exception("capture ocr failed serial=%s", serial)
-            if method == "ocr":
-                _cleanup_capture_files(ts)
-                raise CaptureError("OCR 识别失败，请稍后重试", status_code=500)
-
-    if dump_data is None and ocr_data is None:
-        _cleanup_capture_files(ts)
-        raise CaptureError("获取失败", status_code=500)
+            _cleanup_capture_files(ts)
+            raise CaptureError("OCR 识别失败，请稍后重试", status_code=500)
+        dump_data = None
 
     info = engine.device_info
     close_engine(engine)
-    effective = "both" if (dump_data and ocr_data) else ("dump" if dump_data else "ocr")
+    from apps.device_pool.models import Device
+
     snapshot = Snapshot.objects.create(
-        device_id=None,
+        device=Device.objects.filter(serial=serial).first(),
         serial=serial,
-        method=effective,
+        method=method,
         dump_json=dump_data or {},
         ocr_json=ocr_data or {},
         screenshot_path=screenshot_path,
@@ -92,13 +81,16 @@ def capture_snapshot(user_id: str, serial: str, method: str = "both") -> dict:
         ocr_count=(ocr_data or {}).get("ocr_count", 0),
         created_by=user_id,
     )
-    try:
-        from apps.device_pool.models import Device
-
-        snapshot.device = Device.objects.filter(serial=serial).first()
-        snapshot.save(update_fields=["device"])
-    except Exception:
-        logger.debug("快照关联设备失败 serial=%s", serial)
+    # 数据带截图 ID（复用 snapshot_id）：dump/OCR 结果内嵌 screenshot_id，标识此次结果对应哪张图
+    _shot_fields = []
+    if dump_data is not None:
+        snapshot.dump_json = {**snapshot.dump_json, "screenshot_id": snapshot.id}
+        _shot_fields.append("dump_json")
+    if ocr_data is not None:
+        snapshot.ocr_json = {**snapshot.ocr_json, "screenshot_id": snapshot.id}
+        _shot_fields.append("ocr_json")
+    if _shot_fields:
+        snapshot.save(update_fields=_shot_fields)
 
     return snapshot_to_dict(snapshot)
 
@@ -138,22 +130,22 @@ def list_snapshots(user_id: str, offset: int = 0, limit: int = 100) -> dict:
     return {"total": total, "items": items}
 
 
-def get_snapshot(snapshot_id: int) -> dict | None:
-    """快照详情全量 JSON；不存在返回 None。"""
+def get_snapshot(snapshot_id: int, user_id: str = "") -> dict | None:
+    """快照详情全量 JSON（仅本人快照）；不存在返回 None。"""
     from .models import Snapshot
 
-    snapshot = Snapshot.objects.filter(id=snapshot_id).first()
+    snapshot = Snapshot.objects.filter(id=snapshot_id, created_by=user_id).first()
     if snapshot is None:
         return None
     return snapshot_to_dict(snapshot)
 
 
-def delete_snapshot(snapshot_id: int) -> bool:
-    """删除快照记录 + 截图/缩略图文件；不存在返回 False。"""
+def delete_snapshot(snapshot_id: int, user_id: str = "") -> bool:
+    """删除本人快照记录 + 截图/缩略图文件；不存在返回 False。"""
     from .models import Snapshot
     from .service import delete_snapshot_files
 
-    snapshot = Snapshot.objects.filter(id=snapshot_id).first()
+    snapshot = Snapshot.objects.filter(id=snapshot_id, created_by=user_id).first()
     if snapshot is None:
         return False
 
@@ -193,6 +185,7 @@ def delete_snapshot(snapshot_id: int) -> bool:
 
 def save_snapshot_to_elements(
     snapshot_id: int,
+    user_id: str = "",
     page_label: str = "",
     folder_path: str = "",
     page_id: int | None = None,
@@ -210,7 +203,7 @@ def save_snapshot_to_elements(
     """
     from .models import Snapshot
 
-    snapshot = Snapshot.objects.filter(id=snapshot_id).first()
+    snapshot = Snapshot.objects.filter(id=snapshot_id, created_by=user_id).first()
     if snapshot is None:
         raise ValueError("快照不存在")
     if not page_id and not page_label:
@@ -249,12 +242,12 @@ def save_snapshot_to_elements(
     )
 
 
-def analyze_snapshot(snapshot_id: int) -> dict | None:
-    """快照结构分析（纯规则分区，即时计算不落库）；不存在返回 None。"""
+def analyze_snapshot(snapshot_id: int, user_id: str = "") -> dict | None:
+    """本人快照结构分析（纯规则分区，即时计算不落库）；不存在返回 None。"""
     from .models import Snapshot
     from .service import analyze_snapshot_payload
 
-    snapshot = Snapshot.objects.filter(id=snapshot_id).first()
+    snapshot = Snapshot.objects.filter(id=snapshot_id, created_by=user_id).first()
     if snapshot is None:
         return None
     return analyze_snapshot_payload(snapshot)

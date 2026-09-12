@@ -4,7 +4,7 @@ stage ∈ {planner, executor, verifier, full}：
 
   planner   规划模型：输入用户需求 → 输出 plans（目标 / 步骤 / 验收标准）
   executor  执行模型：输入步骤 → 在设备上执行 → 输出执行结果
-  verifier  验收模型：输入验收标准 → 截图二次确认 → 输出 pass/fail + completed/failed
+  verifier  验收模型：输入验收标准 → 截图二次确认 → 输出 pass/fail
   full      完整流程：新建任务 → 规划 → 执行 ↔ 验收（三模型完整跑一遍，结果落库）
 
 示例：
@@ -19,7 +19,6 @@ import logging
 
 from pathlib import Path
 
-from agentscope.message import UserMsg
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.ai_assistant.api import (
@@ -30,12 +29,12 @@ from apps.ai_assistant.api import (
     get_provider_config,
 )
 from apps.ai_assistant.engine_adapter import build_tool_specs
+from apps.ai_assistant.skills_catalog import list_enabled_skill_dirs
 from engines.ai.agentscope.config import DeviceExecutionConfig, ModelConfig
-from engines.ai.agentscope.model import DeviceExecution
+from engines.ai.agentscope.model import build_device_models
 from engines.ai.agentscope.workflow import (
     DeviceExecutionWorkflow,
-    PlannerOutput,
-    VerificationResult,
+    _parse_json,
 )
 
 logger = logging.getLogger("ai_assistant.model_test")
@@ -59,7 +58,8 @@ def _setup_logging() -> None:
     root.propagate = False
 
 
-def _build_device_execution(agent) -> DeviceExecution:
+def _build_device_models(agent):
+    """按智能体配置装配三个角色模型，返回 (config, planner, executor, verifier)。"""
     route_cfg = (agent.route_configs or {}).get("device_control") or {}
 
     def _cfg(m: dict) -> ModelConfig:
@@ -67,7 +67,9 @@ def _build_device_execution(agent) -> DeviceExecution:
             provider=m.get("provider", "deepseek"),
             model_name=m.get("model_name", ""),
             api_key=decrypt_key(m.get("api_key", "")),
-            base_url=get_provider_config(m.get("provider", "deepseek"), m.get("base_url", ""))["base_url"],
+            base_url=get_provider_config(m.get("provider", "deepseek"), m.get("base_url", ""))[
+                "base_url"
+            ],
         )
 
     config = DeviceExecutionConfig(
@@ -76,7 +78,13 @@ def _build_device_execution(agent) -> DeviceExecution:
         verifier=_cfg(route_cfg.get("verifier") or {}),
         max_loops=int(agent.max_loops or 3),
     )
-    return DeviceExecution(config, tools=build_tool_specs(), user_id=str(agent.owner_id or ""))
+    planner, executor, verifier = build_device_models(
+        config,
+        tools=build_tool_specs(),
+        user_id=str(agent.owner_id or ""),
+        skill_dirs=list_enabled_skill_dirs() if agent.enable_skills else [],
+    )
+    return config, planner, executor, verifier
 
 
 def _resolve_serial(specified: str) -> str:
@@ -101,13 +109,6 @@ def _check_model(cfg: ModelConfig, name: str) -> None:
         raise CommandError(f"「{name}」的 api_key 未配置，请到智能体配置页填写 API Key")
 
 
-def _msg_text(msg) -> str:
-    content = msg.content
-    if isinstance(content, str):
-        return content
-    return "".join(getattr(b, "text", "") for b in (content or []))
-
-
 class Command(BaseCommand):
     help = "三模型分阶段测试：验证规划/执行/验收模型的输入输出。"
 
@@ -129,20 +130,20 @@ class Command(BaseCommand):
         if agent is None:
             raise CommandError("未找到平台智能体")
 
-        dev = _build_device_execution(agent)
+        config, planner, executor, verifier = _build_device_models(agent)
         serial = _resolve_serial(options["serial"])
 
         # 前置校验：仅校验本次要测的那个模型，避免跑到 deepseek 才报 400
         if stage == "planner":
-            _check_model(dev.config.planner, "规划模型(planner)")
+            _check_model(config.planner, "规划模型(planner)")
         elif stage == "executor":
-            _check_model(dev.config.executor, "执行模型(executor)")
+            _check_model(config.executor, "执行模型(executor)")
         elif stage == "verifier":
-            _check_model(dev.config.verifier, "校验模型(verifier)")
+            _check_model(config.verifier, "校验模型(verifier)")
         elif stage == "full":
-            _check_model(dev.config.planner, "规划模型(planner)")
-            _check_model(dev.config.executor, "执行模型(executor)")
-            _check_model(dev.config.verifier, "校验模型(verifier)")
+            _check_model(config.planner, "规划模型(planner)")
+            _check_model(config.executor, "执行模型(executor)")
+            _check_model(config.verifier, "校验模型(verifier)")
 
         if stage == "planner":
             logger.info("【planner 阶段】输入 user_input=%r", text)
@@ -150,13 +151,8 @@ class Command(BaseCommand):
             self.stdout.write("【规划模型】输入：")
             self.stdout.write(text)
             self.stdout.write("-" * 60)
-            msg = asyncio.run(
-                dev.planner_agent.reply(
-                    UserMsg(name="user", content=text),
-                    structured_schema=PlannerOutput,
-                )
-            )
-            out = msg.structured_output
+            result = asyncio.run(planner.run(text))
+            out = _parse_json(result.output)
             logger.info(
                 "【planner 阶段】输出 plans=%s",
                 json.dumps(out, ensure_ascii=False) if out else "未返回结构化输出",
@@ -172,12 +168,16 @@ class Command(BaseCommand):
             self.stdout.write(f"【执行模型】serial={serial or '（未指定/无在线设备）'} 输入步骤：")
             self.stdout.write(text)
             self.stdout.write("-" * 60)
-            prompt = f"当前设备 serial：{serial}\n请按以下步骤在设备上真实执行：\n{text}"
-            msg = asyncio.run(dev.executor_agent.reply(UserMsg(name="user", content=prompt)))
-            result = _msg_text(msg)
-            logger.info("【executor 阶段】输出 result=%s", result or "（无文本输出）")
+            result = asyncio.run(executor.run(serial, text, 1, 1))
+            out = _parse_json(result.output)
+            logger.info(
+                "【executor 阶段】输出 %s",
+                json.dumps(out, ensure_ascii=False) if out else "未返回结构化输出",
+            )
             self.stdout.write("输出（执行结果）：")
-            self.stdout.write(result or "（无文本输出）")
+            self.stdout.write(
+                json.dumps(out, ensure_ascii=False, indent=2) if out else "未返回结构化输出"
+            )
 
         elif stage == "verifier":
             logger.info("【verifier 阶段】serial=%s 输入 verification=%r", serial, text)
@@ -187,16 +187,8 @@ class Command(BaseCommand):
             )
             self.stdout.write(text)
             self.stdout.write("-" * 60)
-            prompt = (
-                f"当前设备 serial：{serial}\n验收标准：{text}\n请截图二次确认是否达成验收标准。"
-            )
-            msg = asyncio.run(
-                dev.verifier_agent.reply(
-                    UserMsg(name="user", content=prompt),
-                    structured_schema=VerificationResult,
-                )
-            )
-            out = msg.structured_output
+            result = asyncio.run(verifier.run(serial, text, 1, 1, "", ""))
+            out = _parse_json(result.output)
             logger.info(
                 "【verifier 阶段】输出 %s",
                 json.dumps(out, ensure_ascii=False) if out else "未返回结构化输出",
@@ -218,13 +210,12 @@ class Command(BaseCommand):
                 agent,
                 title=text[:100],
                 goal=text,
-                route="device_control",
                 device_serial=serial,
             )
             self.stdout.write(f"已新建任务 id={task.id}")
 
             # 跑完整工作流：规划 → 执行 ↔ 验收
-            workflow = DeviceExecutionWorkflow(dev, serial=serial)
+            workflow = DeviceExecutionWorkflow(planner, executor, verifier, config, serial=serial)
             result = asyncio.run(workflow.run(text))
             logger.info("【full 阶段】最终结果 status=%s", result.get("status"))
 

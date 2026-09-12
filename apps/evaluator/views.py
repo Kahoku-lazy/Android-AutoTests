@@ -410,7 +410,7 @@ def kb_search(request):
             "total": len(docs),
             "documents": [
                 {
-                    "source": d.get("metadata", {}).get("source", "?"),
+                    "source": d.get("source", "?"),
                     "score": round(d.get("score", 0), 4),
                     "content": d.get("content", "")[:800],
                 }
@@ -431,8 +431,7 @@ def kb_self_test(request):
         # Verify each retrieved fragment against its claimed source file
         verified_docs = []
         for d in docs:
-            meta = d.get("metadata", {})
-            source = meta.get("source", "")
+            source = d.get("source", "")
             # Truncated content check — ChromaDB stores truncated content
             # so exact match isn't possible; we do a partial match
             verified_docs.append(

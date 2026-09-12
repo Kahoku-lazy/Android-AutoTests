@@ -26,7 +26,7 @@ class AIAgent(models.Model):
     strong_model_name = models.CharField(max_length=100, default="", blank=True)
     # 强模型短路开关：开启时跳过意图 1/2 选择，直接下发强模型 Harness
     strong_enabled = models.BooleanField(default=False)
-    # 多线路模型配置：{"device_control": {"planner": {...}, "executor": {...}, "verifier": {...}}, "platform_task": {...}}
+    # 设备控制线路模型配置：{"device_control": {"planner": {...}, "executor": {...}, "verifier": {...}}}
     # 每条线路的 api_key 经 Fernet 加密；读取时脱敏。
     route_configs = models.JSONField(default=dict, blank=True)
     # 工作流循环次数：executor ↔ verifier 内层循环的最大重试次数
@@ -185,13 +185,7 @@ class AITask(models.Model):
     description = models.TextField(default="", blank=True)
     # 任务发布字段
     goal = models.TextField(default="", blank=True)  # 任务目标（必填）
-    requirements = models.TextField(default="", blank=True)  # 任务要求
     attachment = models.CharField(max_length=500, default="", blank=True)  # 任务附件文件路径
-    route = models.CharField(
-        max_length=50, default="device_control"
-    )  # 线路：device_control/platform_task
-    checklist = models.TextField(default="", blank=True)  # 任务校验清单
-    report_name = models.CharField(max_length=200, default="", blank=True)  # 报告文件名
     device_serial = models.CharField(
         max_length=100, default="", blank=True
     )  # 指定设备 serial（空则第一台在线）
@@ -207,6 +201,8 @@ class AITask(models.Model):
     # 按模型拆分：{model_name: {"input_tokens", "output_tokens", "cache_input_tokens"}}
     # DeepSeek 费用按模型单价计价，故需保留分模型用量。
     model_usage = models.JSONField(default=dict, blank=True)
+    # 按角色拆分：{"planner"/"executor"/"verifier": {"input_tokens", "output_tokens", "cache_input_tokens"}}
+    by_role = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

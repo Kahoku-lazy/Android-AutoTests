@@ -7,6 +7,8 @@
   POST /api/ai/toolbox/{id}/delete              删除（skill 同步清目录）
   POST /api/ai/toolbox/{id}/toggle              启停（直接决定平台唯一智能体是否使用）
   POST /api/ai/toolbox/upload-skill             上传共享 skill 文件夹
+  GET  /api/ai/toolbox/skills/{name}/tree       skill 目录树
+  GET  /api/ai/toolbox/skills/{name}/file       读 skill 内文件（query path）
 
 写库全部经 api.py。平台唯一智能体：MCP/Skill 直接启用/停用，无 per-agent 副本与导入。
 """
@@ -19,9 +21,17 @@ from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, NotFound, ValidationError
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from . import api
 from .models import AISharedTool
+from .skills_catalog import (
+    SHARED_SKILLS_DIR,
+    SkillFsError,
+    build_skill_tree,
+    read_skill_file,
+    skill_origin,
+)
 
 logger = logging.getLogger("ai_assistant")
 
@@ -34,8 +44,6 @@ class Conflict(APIException):
     default_code = "conflict"
 
 
-# Shared skill uploads land in data/shared_skills/{tool_id}/
-_SHARED_SKILLS_DIR = os.path.join("data", "shared_skills")
 _SHARED_SKILL_MAX_MB = 50
 _SKILL_EXTENSIONS = {
     ".py",
@@ -91,23 +99,26 @@ class ToolboxViewSet(
     serializer_class = None
 
     def list(self, request, *args, **kwargs):
+        api.ensure_disk_skills()
         items = AISharedTool.objects.order_by("-updated_at")
-        return Response(
-            {
-                "items": [
-                    {
-                        "id": item.id,
-                        "name": item.name,
-                        "item_type": item.item_type,
-                        "description": item.description,
-                        "config_json": item.config_json,
-                        "enabled": item.enabled,
-                        "created_at": str(item.created_at),
-                    }
-                    for item in items
-                ]
+        payload = []
+        for item in items:
+            row = {
+                "id": item.id,
+                "name": item.name,
+                "item_type": item.item_type,
+                "description": item.description,
+                "config_json": item.config_json,
+                "enabled": item.enabled,
+                "created_at": str(item.created_at),
             }
-        )
+            if item.item_type == "skill":
+                row["origin"] = skill_origin(item)
+                row["missing"] = not os.path.isdir(
+                    os.path.join(SHARED_SKILLS_DIR, item.name)
+                )
+            payload.append(row)
+        return Response({"items": payload})
 
     @action(detail=False, methods=["post"], url_path="create")
     def create_item(self, request, *args, **kwargs):
@@ -160,7 +171,10 @@ class ToolboxViewSet(
             item = AISharedTool.objects.get(id=int(item_id))
         except (ValueError, AISharedTool.DoesNotExist):
             raise NotFound("not found")
-        api.delete_shared_tool(item)
+        try:
+            api.delete_shared_tool(item)
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
         return Response({})
 
     @action(detail=True, methods=["post"], url_path="toggle")
@@ -176,41 +190,103 @@ class ToolboxViewSet(
 
     @action(detail=False, methods=["post"], url_path="upload-skill")
     def upload_skill(self, request, *args, **kwargs):
+        import frontmatter
+
         files = request.FILES.getlist("files")
-        skill_name = (request.data.get("name") or "").strip()
         if not files:
             raise ValidationError("no files uploaded")
-        if not skill_name:
-            raise ValidationError("name is required")
 
-        # Validate files
+        # 只接受文件夹上传：webkitRelativePath 带路径分隔，取第一段为文件夹名
+        first_rel = files[0].name.replace("\\", "/")
+        if "/" not in first_rel:
+            raise ValidationError("只接受文件夹上传，请选择包含 SKILL.md 的文件夹")
+        folder_name = first_rel.split("/", 1)[0].strip()
+        if not folder_name or ".." in folder_name:
+            raise ValidationError(f"非法文件夹名: {folder_name}")
+
+        # 所有文件必须在同一文件夹下，且无路径穿越
+        for f in files:
+            rel = f.name.replace("\\", "/")
+            if not rel.startswith(folder_name + "/") or ".." in rel:
+                raise ValidationError(f"非法文件名: {f.name}")
+
+        # 校验根目录 SKILL.md 的 frontmatter（name / description 必填）
+        skill_md_file = next(
+            (f for f in files if f.name.replace("\\", "/") == f"{folder_name}/SKILL.md"), None
+        )
+        if skill_md_file is None:
+            raise ValidationError("文件夹根目录缺少 SKILL.md")
+        skill_md_raw = skill_md_file.read().decode("utf-8")
+        skill_md_file.seek(0)
+        try:
+            parsed = frontmatter.loads(skill_md_raw)
+        except Exception as e:
+            raise ValidationError(f"SKILL.md 解析失败: {e}")
+        if not str(parsed.get("name") or "").strip():
+            raise ValidationError("SKILL.md 缺少 frontmatter 的 name 字段")
+        if not str(parsed.get("description") or "").strip():
+            raise ValidationError("SKILL.md 缺少 frontmatter 的 description 字段")
+
+        # 文件类型 + 大小校验
         total_size = 0
         file_names = []
         for f in files:
-            if ".." in f.name or f.name.startswith("/"):
-                raise ValidationError(f"非法文件名: {f.name}")
             _, ext = os.path.splitext(f.name)
             if ext.lower() not in _SKILL_EXTENSIONS:
                 raise ValidationError(f"不支持的文件类型: {ext or '无后缀'}")
             total_size += f.size
             file_names.append(f.name)
-
         size_mb = total_size / (1024 * 1024)
         if size_mb > _SHARED_SKILL_MAX_MB:
             raise ValidationError(f"总大小 {size_mb:.1f}MB 超过 {_SHARED_SKILL_MAX_MB}MB 限制")
 
-        # Create DB record first (so we have an ID for the directory)
-        features = _detect_skill_features(file_names)
-        item = api.create_shared_skill(skill_name, len(files), total_size, features)
+        # 目录 = engines/ai/skills/{文件夹名}/，重名拒绝
+        skill_dir = os.path.join(SHARED_SKILLS_DIR, folder_name)
+        if os.path.isdir(skill_dir):
+            raise ValidationError(f"已存在同名 skill 文件夹: {folder_name}")
 
-        # Save files to data/shared_skills/{id}/
-        skill_dir = os.path.join(_SHARED_SKILLS_DIR, str(item.id))
+        # DB 记录（name = 文件夹名）
+        features = _detect_skill_features(file_names)
+        item = api.create_shared_skill(
+            folder_name, len(files), total_size, features, origin="uploaded"
+        )
+
+        # 写文件到 engines/ai/skills/{folder_name}/（去掉文件夹名前缀）
         os.makedirs(skill_dir, exist_ok=True)
         for f in files:
-            dest = os.path.join(skill_dir, f.name)
+            rel = f.name.replace("\\", "/")
+            rel = rel[len(folder_name) + 1 :]
+            dest = os.path.join(skill_dir, rel)
             os.makedirs(os.path.dirname(dest) or skill_dir, exist_ok=True)
             with open(dest, "wb") as dst:
                 for chunk in f.chunks():
                     dst.write(chunk)
 
         return Response({"id": item.id})
+
+
+class SkillTreeAPIView(APIView):
+    """GET /api/ai/toolbox/skills/<name>/tree — skill 目录树。"""
+
+    def get(self, request, *args, **kwargs):
+        name = kwargs.get("name") or ""
+        try:
+            tree = build_skill_tree(name)
+        except SkillFsError:
+            raise NotFound("找不到该 Skill")
+        return Response({"name": name, "tree": tree})
+
+
+class SkillFileAPIView(APIView):
+    """GET /api/ai/toolbox/skills/<name>/file?path= — 读 skill 内文本文件。"""
+
+    def get(self, request, *args, **kwargs):
+        name = kwargs.get("name") or ""
+        rel = (request.query_params.get("path") or "").strip()
+        if not rel:
+            raise ValidationError("缺少文件路径")
+        try:
+            data = read_skill_file(name, rel)
+        except SkillFsError:
+            raise NotFound("找不到该文件")
+        return Response(data)

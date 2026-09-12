@@ -10,12 +10,14 @@ from django.core.management.base import BaseCommand, CommandError
 
 from apps.ai_assistant.api import decrypt_key, get_platform_agent, get_provider_config
 from apps.ai_assistant.engine_adapter import build_tool_specs
+from apps.ai_assistant.skills_catalog import list_enabled_skill_dirs
 from engines.ai.agentscope.config import DeviceExecutionConfig, ModelConfig
-from engines.ai.agentscope.model import DeviceExecution
+from engines.ai.agentscope.model import build_device_models
 from engines.ai.agentscope.workflow import DeviceExecutionWorkflow
 
 
-def _build_device_execution(agent) -> DeviceExecution:
+def _build_device_models(agent):
+    """按智能体配置装配三个角色模型，返回 (config, planner, executor, verifier)。"""
     route_cfg = (agent.route_configs or {}).get("device_control") or {}
 
     def _cfg(m: dict) -> ModelConfig:
@@ -23,7 +25,9 @@ def _build_device_execution(agent) -> DeviceExecution:
             provider=m.get("provider", "deepseek"),
             model_name=m.get("model_name", ""),
             api_key=decrypt_key(m.get("api_key", "")),
-            base_url=get_provider_config(m.get("provider", "deepseek"), m.get("base_url", ""))["base_url"],
+            base_url=get_provider_config(m.get("provider", "deepseek"), m.get("base_url", ""))[
+                "base_url"
+            ],
         )
 
     config = DeviceExecutionConfig(
@@ -32,7 +36,13 @@ def _build_device_execution(agent) -> DeviceExecution:
         verifier=_cfg(route_cfg.get("verifier") or {}),
         max_loops=int(agent.max_loops or 3),
     )
-    return DeviceExecution(config, tools=build_tool_specs(), user_id=str(agent.owner_id or ""))
+    planner, executor, verifier = build_device_models(
+        config,
+        tools=build_tool_specs(),
+        user_id=str(agent.owner_id or ""),
+        skill_dirs=list_enabled_skill_dirs() if agent.enable_skills else [],
+    )
+    return config, planner, executor, verifier
 
 
 def _resolve_serial(specified: str) -> str:
@@ -68,8 +78,8 @@ class Command(BaseCommand):
             raise CommandError("未找到平台智能体")
 
         serial = _resolve_serial(options["serial"])
-        dev = _build_device_execution(agent)
-        workflow = DeviceExecutionWorkflow(dev, serial=serial)
+        config, planner, executor, verifier = _build_device_models(agent)
+        workflow = DeviceExecutionWorkflow(planner, executor, verifier, config, serial=serial)
 
         self.stdout.write(f"设备 serial：{serial}")
         self.stdout.write(f"输入请求：{message}")

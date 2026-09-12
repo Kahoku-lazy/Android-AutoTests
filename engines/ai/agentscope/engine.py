@@ -1,4 +1,4 @@
-"""AgentScope 引擎实现 — 把 TaskRequest 装配成三模型工作流并返回归一化 TaskResult。"""
+"""AgentScope 引擎实现 — 把 TaskRequest 装配成设备执行工作流并返回归一化 TaskResult。"""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ import asyncio
 
 from engines.ai.base import ModelSpec, TaskRequest, TaskResult
 
-from .config import DeviceExecutionConfig, ModelConfig, PlatformTaskConfig
-from .model import DeviceExecution, PlatformTask
-from .workflow import DeviceExecutionWorkflow, PlatformTaskWorkflow
+from .config import DeviceExecutionConfig, ModelConfig
+from .model import build_device_models
+from .workflow import DeviceExecutionWorkflow
 
 __all__ = ["AgentScopeEngine"]
 
@@ -24,7 +24,7 @@ def _to_model_config(spec: ModelSpec) -> ModelConfig:
 
 
 def _workflow_result_to_task_result(result: dict) -> TaskResult:
-    """松散 workflow dict → 归一化 TaskResult（两条线路同构）。"""
+    """松散 workflow dict → 归一化 TaskResult。"""
     ok = result.get("status") == "success"
     completed = result.get("completed") or []
     failed = result.get("failed") or []
@@ -37,41 +37,36 @@ def _workflow_result_to_task_result(result: dict) -> TaskResult:
         summary=summary,
         completed=completed,
         failed=failed,
+        plans=result.get("plans") or [],
         log=result.get("log") or [],
         usage=result.get("usage") or {},
+        models=result.get("models") or {},
         reason=result.get("reason") or result.get("message") or "",
     )
 
 
 class AgentScopeEngine:
-    """AgentScope 引擎：阻塞 run()，内部 asyncio.run 跑三模型工作流。"""
+    """AgentScope 引擎：阻塞 run()，内部 asyncio.run 跑设备执行工作流。"""
 
     def run(self, req: TaskRequest) -> TaskResult:
-        if req.route == "platform_task":
-            config = PlatformTaskConfig(
-                planner=_to_model_config(req.models["planner"]),
-                executor=_to_model_config(req.models["executor"]),
-                verifier=_to_model_config(req.models["verifier"]),
-                max_loops=req.max_loops,
-            )
-            pt = PlatformTask(config, tools=req.tools, user_id=req.user_id)
-            wf = PlatformTaskWorkflow(pt, serial=req.device_serial)
-            result = asyncio.run(
-                wf.run(
-                    req.goal,
-                    requirements=req.requirements,
-                    checklist=req.checklist,
-                    report_name=req.report_name,
-                )
-            )
-        else:
-            config = DeviceExecutionConfig(
-                planner=_to_model_config(req.models["planner"]),
-                executor=_to_model_config(req.models["executor"]),
-                verifier=_to_model_config(req.models["verifier"]),
-                max_loops=req.max_loops,
-            )
-            dev = DeviceExecution(config, tools=req.tools, user_id=req.user_id)
-            wf = DeviceExecutionWorkflow(dev, serial=req.device_serial)
-            result = asyncio.run(wf.run(req.goal))
+        config = DeviceExecutionConfig(
+            planner=_to_model_config(req.models["planner"]),
+            executor=_to_model_config(req.models["executor"]),
+            verifier=_to_model_config(req.models["verifier"]),
+            max_loops=req.max_loops,
+        )
+        planner, executor, verifier = build_device_models(
+            config, req.tools, req.user_id, skill_dirs=req.skill_dirs
+        )
+        wf = DeviceExecutionWorkflow(
+            planner,
+            executor,
+            verifier,
+            config,
+            serial=req.device_serial,
+            on_progress=req.on_progress,
+            task_id=req.task_id,
+            media_root=req.media_root,
+        )
+        result = asyncio.run(wf.run(req.goal))
         return _workflow_result_to_task_result(result)

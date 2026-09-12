@@ -12,9 +12,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Literal, Protocol
 
+ProgressCallback = Callable[[dict], None]
+
 __all__ = [
     "AiEngine",
     "ModelSpec",
+    "ProgressCallback",
     "TaskRequest",
     "TaskResult",
     "ToolSpec",
@@ -46,27 +49,29 @@ class TaskRequest:
     """任务表单 + 模型 + 工具 —— Django 传给引擎的唯一入参。"""
 
     goal: str
-    route: str  # "device_control" | "platform_task"
     models: dict[str, ModelSpec]  # {"planner","executor","verifier"}
     tools: list[ToolSpec] = field(default_factory=list)
     max_loops: int = 3
-    requirements: str = ""
-    checklist: str = ""
-    report_name: str = ""
     device_serial: str = ""
     user_id: str = ""
+    task_id: int = 0  # 验收截图落盘目录 ai_tasks/{task_id}/
+    media_root: str = ""  # 绝对路径；空则跳过截图落盘
+    on_progress: ProgressCallback | None = None  # 规划/每轮/每目标检查点；引擎不写库
+    skill_dirs: list[str] = field(default_factory=list)  # enable_skills 打开时注入的 skill 目录
 
 
 @dataclass
 class TaskResult:
-    """归一化结果 —— 引擎唯一返回（device_control / platform_task 两条线路同构）。"""
+    """归一化结果 —— 引擎唯一返回（设备控制）。"""
 
     status: Literal["success", "fail"]
     summary: str = ""
     completed: list[str] = field(default_factory=list)
     failed: list[dict] = field(default_factory=list)
+    plans: list[dict] = field(default_factory=list)
     log: list[dict] = field(default_factory=list)
     usage: dict = field(default_factory=dict)  # token 用量（计费），含 models 拆分
+    models: dict = field(default_factory=dict)  # planner/executor/verifier 模型名
     reason: str = ""
 
 

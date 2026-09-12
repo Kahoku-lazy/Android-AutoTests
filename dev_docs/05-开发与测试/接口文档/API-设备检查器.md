@@ -7,7 +7,7 @@
 
 | 接口 | 方法 | 鉴权 | 说明 |
 |---|---|---|---|
-| 快照抓取接口 | POST /api/inspector/capture | 需登录(Bearer) | 一键抓取（dump/OCR/both）→ 快照落库 |
+| 快照抓取接口 | POST /api/inspector/capture | 需登录(Bearer) | 一键抓取（dump/OCR）→ 快照落库 |
 | 快照列表接口 | GET /api/inspector/snapshots | 需登录(Bearer) | 快照列表（offset/limit，倒序） |
 | 快照详情接口 | GET /api/inspector/snapshots/{id} | 需登录(Bearer) | 快照全量 JSON |
 | 快照结构分析接口 | GET /api/inspector/snapshots/{id}/analyze | 需登录(Bearer) | 纯规则结构分区，不落库、无设备交互 |
@@ -37,10 +37,9 @@
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | serial | string | 是 | 目标设备序列号；空串 → 409「未选择设备，请先连接设备」 |
-| method | string | 否 | 抓取方式：`dump` / `ocr` / `both`，默认 `both`；取值非法 → 400 |
+| method | string | 否 | 抓取方式：`dump` / `ocr`，默认 `dump`；取值非法 → 400 |
 
-> 抓取流程：先截图落盘 → 按 method 抓 dump（UI 层级+XPath+元素缩略图）/ OCR（截图识别+OCR 缩略图）→ 落库 `di_snapshots`。
-> `both` 时单方法失败以成功方法落库（`method` 记实际值）；dump 与 OCR **全部失败不落库**（500）。
+> 抓取流程：先截图落盘 → 按 method 抓 dump（UI 层级+XPath+元素缩略图）/ OCR（截图识别+OCR 缩略图）→ 落库 `di_snapshots`；抓取失败不落库（500，清理本批文件）。
 
 ### 成功响应（200）
 
@@ -50,7 +49,7 @@
   "data": {
     "snapshot_id": 1,                            # 快照 ID
     "serial": "emulator-5554",                   # 设备序列号
-    "method": "both",                            # 实际抓取方式：dump / ocr / both（both 降级后记实际值）
+    "method": "dump",                            # 抓取方式：dump / ocr
     "package": "com.example.app",                # 前台应用包名
     "activity": "com.example.app.MainActivity",  # 前台 Activity 名
     "screen_w": 1080,                            # 屏幕宽（px）
@@ -110,7 +109,7 @@
       }
     ],
     "ocr_count": 10,                              # OCR 识别文本条数
-    "texts": [                                    # OCR 文本列表（ocr 方法 / both 时非空）
+    "texts": [                                    # OCR 文本列表（ocr 方法时非空）
       {
         "text": "登录",                            # 识别文本
         "x": 0,                                   # 左上角 x（px）
@@ -130,13 +129,13 @@
 
 | HTTP | message | 触发条件 |
 |---|---|---|
-| 400 | 无效的获取方法 | method 不在 dump/ocr/both 之内 |
+| 400 | 无效的获取方法 | method 不在 dump/ocr 之内 |
 | 409 | 未选择设备，请先连接设备 | serial 为空 |
 | 409 | 设备未注册 | serial 不在设备池 |
 | 409 | 设备正被执行引擎占用（{occupied_by}），请等待执行完毕 | 设备 BUSY 且被执行引擎（runner-/ai_agent/task-/run-）占用 |
-| 500 | 获取失败 | method=dump 时 dump 抓取失败（已清理本批文件） |
-| 500 | OCR 识别失败，请稍后重试 | method=ocr 时 OCR 识别失败（已清理本批文件） |
-| 500 | 获取失败 | both 时 dump 与 OCR 全部失败 / 其他未捕获异常 |
+| 500 | 获取失败 | dump 抓取失败（已清理本批文件） |
+| 500 | OCR 识别失败，请稍后重试 | OCR 识别失败（已清理本批文件） |
+| 500 | 获取失败 | 其他未捕获异常 |
 
 ---
 
@@ -166,7 +165,7 @@
       {
         "id": 2,                      # 快照 ID
         "serial": "emulator-5554",    # 设备序列号
-        "method": "dump",             # 抓取方式：dump / ocr / both
+        "method": "dump",             # 抓取方式：dump / ocr
         "package": "com.example.app", # 前台应用包名
         "element_count": 42,          # 元素总数
         "ocr_count": 0,               # OCR 文本条数
@@ -204,7 +203,7 @@
   "data": {                         # 快照全量 JSON（字段与第 3 节 capture 成功响应一致）
     "snapshot_id": 1,
     "serial": "emulator-5554",
-    "method": "both",
+    "method": "dump",
     "package": "com.example.app",
     "activity": "com.example.app.MainActivity",
     "screen_w": 1080,
@@ -225,7 +224,7 @@
 
 | HTTP | message | 触发条件 |
 |---|---|---|
-| 404 | 快照不存在 | 快照 ID 不存在 |
+| 404 | 快照不存在 | 快照 ID 不存在或非本人快照 |
 
 ---
 
@@ -293,7 +292,7 @@
 
 | HTTP | message | 触发条件 |
 |---|---|---|
-| 404 | 快照不存在 | 快照 ID 不存在 |
+| 404 | 快照不存在 | 快照 ID 不存在或非本人快照 |
 
 ---
 
@@ -324,7 +323,7 @@
 
 | HTTP | message | 触发条件 |
 |---|---|---|
-| 404 | 快照不存在 | 快照 ID 不存在 |
+| 404 | 快照不存在 | 快照 ID 不存在或非本人快照 |
 
 ---
 
@@ -367,7 +366,7 @@
 
 | HTTP | message | 触发条件 |
 |---|---|---|
-| 400 | 快照不存在 | 快照 ID 不存在 |
+| 400 | 快照不存在 | 快照 ID 不存在或非本人快照 |
 | 400 | 页面名称不能为空 | 未传 page_id 且 page_label 为空 |
 | 400 | 该快照无元素数据 | 快照 dump_json.elements 为空 |
 | 400 | 元素数据不能为空 | 筛减后元素列表为空 |

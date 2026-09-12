@@ -1,8 +1,24 @@
 # API-元素定位 — /api/elements/*
 
-> 元素定位模块：三域资产 CRUD（UI 页面/元素、Web 元素/组、API 组/端点）+ 页面流/Web 流 + 快照导入。
-> 真相源：`apps/element_locator/urls.py` + `views.py` + `views_drf.py` + `serializers.py` + `models.py` + `api.py`。
-> 实际端点共 **71** 个：DRF router 标准端点 **35** 个 + legacy 平铺端点 **36** 个。
+> 元素定位模块：系统三项目（Android / Web / API）→ 目录树 → 按域文件；另保留 legacy 叶子只读与部分平铺路径。
+> 真相源：`apps/element_locator/urls.py` + `views*.py` + `models.py` + `api*.py`。
+> 方案：`dev_docs/05-开发与测试/设计方案与报告/设计方案-元素定位项目化重构.md`
+
+## 0. 项目化工作台（标准信封，优先）
+
+| 接口 | 方法 | 说明 |
+|---|---|---|
+| `/api/elements/projects/` | GET | 固定三项目（缺则 seed） |
+| `/api/elements/projects/{code}/` | GET | code=`android\|web\|api` |
+| `/api/elements/projects/{code}/tree/` | GET | 目录+文件树（file.kind） |
+| `/api/elements/directories/` | POST | `{project_code,name,parent_id?}` |
+| `/api/elements/directories/{id}/` | PATCH/DELETE | 改名 / 级联删 |
+| `/api/elements/move/` | POST | `{kind,id,parent_directory_id?}` |
+| `/api/elements/files/batch-delete/` | POST | `{kind,ids}` |
+
+- 项目 `POST/PATCH/DELETE` → **405**
+- 分组写（web-groups / api-groups 创建改删/batch-move）→ **410**
+- 叶子创建仍走 pages/web/api-endpoints，body 带 `directory_id`
 
 ## 1. 总览
 

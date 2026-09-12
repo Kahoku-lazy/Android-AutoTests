@@ -103,7 +103,9 @@
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| target | string | 否 | 扫描目标；空 = 全量扫描 ADB 可见设备；含 `:` 按 WIFI（IP:port）连接；否则按 USB 序列号查找 |
+| target | string | 否 | 扫描目标；空 = 全量扫描 ADB 可见设备；含 `:` 按 WIFI（IP:连接端口）连接；否则按 USB 序列号查找 |
+| pair_port | string | 否 | 首次无线调试配对端口（与连接端口不同）；须与 `pair_code` 成对出现 |
+| pair_code | string | 否 | 无线调试配对码；与 `pair_port` 成对出现。服务端先 `adb pair` 再 `adb connect` |
 
 ### 成功响应（200）
 
@@ -125,10 +127,16 @@
 | HTTP | message | 触发条件 |
 |---|---|---|
 | 400 | 无效的 IP 或端口 | WIFI target 的 IP 不合法或端口不在 1024~65535 |
+| 400 | 请同时填写配对端口和配对码 | 只传了 `pair_port` / `pair_code` 其中一项 |
+| 400 | 无效的配对端口 | 配对端口不在 1024~65535 |
+| 400 | 请输入无线调试显示的配对码 | 配对码非 4~16 位数字 |
+| 400 | 配对失败，请核对配对端口和配对码 | `adb pair` 未成功（已配对除外） |
+| 504 | 配对超时，请确认手机配对页仍打开 | `adb pair` 超时 |
 | 400 | device {target} not found | USB target 不在 `adb devices` 可见列表 |
 | 502 | 无法解析设备 {addr} 的序列号，请确认设备在线后重试 | 无线设备连上后仍取不到 ro.serialno |
 | 502 | 设备 ATX Agent 未运行，请在设备端启动 uiautomator2 服务 | u2 探测报错含 atx-agent / offline |
-| 504 | 连接超时，请检查设备 USB/WiFi 连接 | adb connect 失败/超时 / u2 探测其他连接错误 |
+| 504 | 连接失败，请确认无线调试已开启；首次连接需填写配对端口和配对码 | adb connect 失败/超时（非 unauthorized） |
+| 400 | 设备未配对或授权失效，请填写配对端口和配对码后重试 | adb connect 报 unauthorized / authenticate |
 | 500 | 扫描失败 | 其他未捕获异常 |
 
 ---

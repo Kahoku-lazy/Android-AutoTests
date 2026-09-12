@@ -1,6 +1,6 @@
 # API-工作流 — /api/workflow/*
 
-> 工作流模块（apps/workflow）REST 接口文档：编排目录 / 文档（VueFlow 画布数据）CRUD、导入导出、移动。
+> 工作流模块（apps/workflow）REST 接口文档：原型 / 编排目录 / 文档（VueFlow 画布数据）CRUD、导入导出、移动。
 > 真相源：`apps/workflow/urls.py` + `views.py`（legacy 平铺）+ `views_api.py`（DRF router）+ `serializers.py` + `api.py` + `models.py`。
 > 本模块无 `views_drf.py`；DRF 端点集中在 `views_api.py`，legacy 端点集中在 `views.py`。
 
@@ -8,28 +8,36 @@
 
 | 接口 | 方法 | 鉴权 | 说明 |
 |---|---|---|---|
-| 目录列表接口 | GET /api/workflow/directories/ | 需登录(Bearer) | 同时返回 flat 列表 + 递归树 |
-| 目录创建接口 | POST /api/workflow/directories/ | 需登录(Bearer) | 新建目录 |
+| 原型列表接口 | GET /api/workflow/prototypes/ | 需登录(Bearer) | 原型列表（含 doc_count） |
+| 原型创建接口 | POST /api/workflow/prototypes/ | 需登录(Bearer) | 新建原型 |
+| 原型详情接口 | GET /api/workflow/prototypes/{id}/ | 需登录(Bearer) | 原型详情 |
+| 原型更新接口 | PUT/PATCH /api/workflow/prototypes/{id}/ | 需登录(Bearer) | 更新名称/描述 |
+| 原型删除接口 | DELETE /api/workflow/prototypes/{id}/ | 需登录(Bearer) | 级联删除其下目录与文档 |
+| 目录列表接口 | GET /api/workflow/directories/ | 需登录(Bearer) | flat + tree；可 `?prototype_id=` |
+| 目录创建接口 | POST /api/workflow/directories/ | 需登录(Bearer) | 新建目录（须 `prototype_id` 或 `parent_id`） |
 | 目录详情接口 | GET /api/workflow/directories/{id}/ | 需登录(Bearer) | 目录详情 |
 | 目录更新接口 | PUT/PATCH /api/workflow/directories/{id}/ | 需登录(Bearer) | 更新目录 |
 | 目录删除接口 | DELETE /api/workflow/directories/{id}/ | 需登录(Bearer) | 级联删除目录及其文档 |
-| 目录移动接口 | POST /api/workflow/directories/{id}/move/ | 需登录(Bearer) | 移动目录（禁止移入自身/子孙） |
-| 文档列表接口 | GET /api/workflow/documents/ | 需登录(Bearer) | 页面流文档列表（不含 config） |
-| 文档创建接口 | POST /api/workflow/documents/ | 需登录(Bearer) | 新建文档（自动生成 doc_id） |
-| 文档导入接口 | POST /api/workflow/documents/_import/ | 需登录(Bearer) | 导入 envelope JSON（注意下划线路径） |
+| 目录移动接口 | POST /api/workflow/directories/{id}/move/ | 需登录(Bearer) | 移动目录（禁止跨原型/自身/子孙） |
+| 文档列表接口 | GET /api/workflow/documents/ | 需登录(Bearer) | 可 `?prototype_id=&directory_id=` |
+| 文档创建接口 | POST /api/workflow/documents/ | 需登录(Bearer) | 须 `prototype_id`（或目录归属） |
+| 文档导入接口 | POST /api/workflow/documents/_import/ | 需登录(Bearer) | envelope 含 `prototype_id` |
 | 文档详情接口 | GET /api/workflow/documents/{doc_id}/ | 需登录(Bearer) | 文档详情（含 config） |
 | 文档更新接口 | PUT/PATCH /api/workflow/documents/{doc_id}/ | 需登录(Bearer) | 更新文档 |
 | 文档删除接口 | DELETE /api/workflow/documents/{doc_id}/ | 需登录(Bearer) | 删除文档 |
-| 文档导出接口 | GET /api/workflow/documents/{doc_id}/export/ | 需登录(Bearer) | 导出 envelope JSON，可附件下载 |
-| 文档移动接口 | POST /api/workflow/documents/{doc_id}/move/ | 需登录(Bearer) | 移动文档到目录 |
-| 目录列表接口(legacy) | GET /api/workflow/directories | 需登录(Bearer) | 平铺信封，flat + tree |
-| 目录创建接口(legacy) | POST /api/workflow/directories/create | 需登录(Bearer) | 平铺信封 |
+| 文档导出接口 | GET /api/workflow/documents/{doc_id}/export/ | 需登录(Bearer) | envelope 含 `prototype_id` |
+| 文档移动接口 | POST /api/workflow/documents/{doc_id}/move/ | 需登录(Bearer) | 同原型内移动 |
+| 原型列表接口(legacy) | GET /api/workflow/prototypes | 需登录(Bearer) | 平铺 `{status, prototypes}` |
+| 原型创建接口(legacy) | POST /api/workflow/prototypes/create | 需登录(Bearer) | 平铺 `{status, prototype}` |
+| 原型详情/更新/删除(legacy) | GET/POST/DELETE /api/workflow/prototypes/{id} | 需登录(Bearer) | 平铺信封 |
+| 目录列表接口(legacy) | GET /api/workflow/directories | 需登录(Bearer) | `?prototype_id=`；平铺 flat + tree |
+| 目录创建接口(legacy) | POST /api/workflow/directories/create | 需登录(Bearer) | body 含 `prototype_id` |
 | 目录移动接口(legacy) | POST /api/workflow/directories/{dir_id}/move | 需登录(Bearer) | 平铺信封 |
-| 目录更新/删除接口(legacy) | POST /api/workflow/directories/{dir_id} | 需登录(Bearer) | 平铺信封，action=update/delete |
-| 文档列表接口(legacy) | GET /api/workflow/documents | 需登录(Bearer) | 平铺信封，?directory_id=&doc_type= |
-| 文档创建/更新接口(legacy) | POST /api/workflow/documents/create | 需登录(Bearer) | 平铺信封，传 doc_id 且存在则更新 |
-| 文档导入接口(legacy) | POST /api/workflow/documents/import | 需登录(Bearer) | 平铺信封，?overwrite=1 |
-| 文档导出接口(legacy) | GET /api/workflow/documents/{doc_id}/export | 需登录(Bearer) | 平铺信封 / 附件下载 |
+| 目录更新/删除接口(legacy) | POST /api/workflow/directories/{dir_id} | 需登录(Bearer) | action=update/delete |
+| 文档列表接口(legacy) | GET /api/workflow/documents | 需登录(Bearer) | `?prototype_id=&directory_id=&doc_type=` |
+| 文档创建/更新接口(legacy) | POST /api/workflow/documents/create | 需登录(Bearer) | body 含 `prototype_id` |
+| 文档导入接口(legacy) | POST /api/workflow/documents/import | 需登录(Bearer) | envelope/`prototype_id` |
+| 文档导出接口(legacy) | GET /api/workflow/documents/{doc_id}/export | 需登录(Bearer) | 平铺 / 附件下载 |
 | 文档移动接口(legacy) | POST /api/workflow/documents/{doc_id}/move | 需登录(Bearer) | 平铺信封 |
 | 文档详情接口(legacy) | GET /api/workflow/documents/{doc_id} | 需登录(Bearer) | 平铺信封 |
 | 文档更新接口(legacy) | PUT /api/workflow/documents/{doc_id} | 需登录(Bearer) | 平铺信封 |
@@ -38,14 +46,44 @@
 ## 2. 通用约定
 
 - **基础路径**：`/api/workflow/`（`config/urls.py` 挂载 `apps.workflow.urls`）。
-- **尾斜杠**：DRF router 路径**带尾斜杠**（如 `/directories/`、`/documents/{doc_id}/`）；legacy 路径**不带尾斜杠**（如 `/directories`、`/documents/{doc_id}`）。二者并存、行为一致（见 `apps/workflow/AGENTS.md`）。
+- **层级**：`WorkflowPrototype`（原型）→ `WorkflowDirectory`（目录）→ `WorkflowDocument`（页面流）。
+- **尾斜杠**：DRF router 路径**带尾斜杠**；legacy 路径**不带尾斜杠**。二者并存、行为一致。
 - **响应信封（双口径，本模块特例 ARCH-09）**：
-  - router 路径（`directories` / `documents` ViewSet）走全局标准信封：成功 `{status: true, data}`，失败 `{status: false, message}`（`EnvelopeJSONRenderer` 包裹，错误取 DRF `detail` 或首个字段错误）。
-  - legacy 平铺路径为**平铺**信封：`{status, directory|document|documents|directories|tree|envelope, ...}`，**无 `data` 层**。禁止新增/改造（已登记 ARCH-09）。
-- **鉴权**：全部端点需登录。`JWTAuthenticationMiddleware` 校验 `Authorization: Bearer <access_token>`；未带/无效令牌返回 401 `{status: false, message: "请先登录"}` 或 `{status: false, message: "登录已过期或令牌无效"}`。DRF 层另有 `IsAuthenticated` + `shared.auth.drf_auth.JWTAuthentication`。
-- **无分页**：`REST_FRAMEWORK` 未配置分页，router 列表返回完整数组。
-- **doc_type 仅支持 `page_flow`**：`test_case` 已下线（历史值，常量仅供清库/兼容）；新建/导入 `test_case` 被拒绝，`GET /documents` 显式请求 `doc_type=test_case` 返回空列表。
-- **Content-Type**：`application/json`；请求体为 JSON。
+  - router 路径走全局标准信封：成功 `{status: true, data}`，失败 `{status: false, message}`。
+  - legacy 平铺路径：`{status, prototype|prototypes|directory|document|documents|directories|tree|envelope, ...}`，**无 `data` 层**。
+- **鉴权**：全部端点需登录。
+- **无分页**：列表返回完整数组。
+- **doc_type 仅支持 `page_flow`**。
+- **Content-Type**：`application/json`。
+
+---
+
+## 2.1 原型（router：`/api/workflow/prototypes/`）
+
+### 列表：GET /api/workflow/prototypes/
+
+成功 `data` 为数组，元素字段：`id` / `name` / `description` / `doc_count` / `created_at` / `updated_at`。
+
+### 创建：POST /api/workflow/prototypes/
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| name | string | 是 | 原型名称（全局唯一） |
+| description | string | 否 | 描述 |
+
+错误：400 原型名称不能为空；409 同名原型已存在。
+
+### 详情 / 更新 / 删除
+
+- GET `/api/workflow/prototypes/{id}/`
+- PUT/PATCH：可改 `name` / `description`
+- DELETE：级联删除该原型下全部目录与文档
+
+### Legacy
+
+- GET `/api/workflow/prototypes` → `{status, prototypes}`
+- POST `/api/workflow/prototypes/create` → `{status, prototype}`
+- GET/POST/DELETE `/api/workflow/prototypes/{id}` → 平铺信封（POST 可 `action=delete`）
 
 ---
 
@@ -58,6 +96,11 @@
 | 鉴权 | 需登录(Bearer) |
 | Content-Type | 无需请求体 |
 
+#### 查询参数
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| prototype_id | int | 否 | 按原型过滤；缺省返回全部（迁移兼容） |
 无请求体。同时返回 `directories`（flat 列表）与 `tree`（递归树）。
 
 #### 成功响应（200）
@@ -310,7 +353,7 @@
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | directory_id | int | 否 | 目录 ID；缺省返回全部（含孤儿） |
-| doc_type | string | 否 | 仅 `page_flow`；传 `test_case` 或其他值返回空列表 |
+| doc_type | string | 否 | 仅 `page_flow`；其它值返回空列表 |
 
 #### 成功响应（200）
 
@@ -386,7 +429,6 @@
 | HTTP | message | 触发条件 |
 |---|---|---|
 | 400 | 标题不能为空 | title 去空格后为空（api.py） |
-| 400 | 工作流已不再支持积木测试用例，请使用用例管理模块 | doc_type=test_case |
 | 400 | doc_type 必须是 page_flow | doc_type 非 page_flow |
 | 400 | 目录不存在 | directory_id 对应目录不存在 |
 
@@ -426,7 +468,7 @@
 
 | HTTP | message | 触发条件 |
 |---|---|---|
-| 404 | 没有找到。 | 文档不存在或 doc_type=test_case（get_object） |
+| 404 | 没有找到。 | 文档不存在 |
 
 ---
 
@@ -457,7 +499,6 @@
 |---|---|---|
 | 404 | 没有找到。 | 文档不存在（get_object） |
 | 400 | 标题不能为空 | title 为空 |
-| 400 | 工作流已不再支持积木测试用例，请使用用例管理模块 | doc_type=test_case |
 | 400 | doc_type 必须是 page_flow | doc_type 非 page_flow |
 | 400 | 目录不存在 | directory_id 对应目录不存在 |
 
@@ -542,8 +583,7 @@ envelope 对象字段：
 | HTTP | message | 触发条件 |
 |---|---|---|
 | 400 | 导入内容必须是 JSON 对象 | 请求体非 JSON 对象 |
-| 400 | 工作流已不再支持积木测试用例导入，请使用用例管理模块 | 积木用例导入（format=testcase-scratch-v1 / doc_type=test_case / 含 blocks） |
-| 400 | 无法识别 doc_type（仅支持 page_flow） | doc_type 缺失且无法识别 |
+| 400 | 无法识别 doc_type（仅支持 page_flow） | doc_type 缺失且无法识别为页面流 |
 | 400 | 标题不能为空 | title 为空 |
 | 400 | 目录不存在 | directory_id 对应目录不存在 |
 | 409 | doc_id 已存在，禁止重复导入: {doc_id} | doc_id 已存在且 overwrite=false |
@@ -591,7 +631,7 @@ envelope 对象字段：
 
 | HTTP | message | 触发条件 |
 |---|---|---|
-| 404 | 文档不存在 | 文档不存在或 doc_type=test_case |
+| 404 | 文档不存在 | 文档不存在或非 page_flow |
 
 ---
 
@@ -749,9 +789,10 @@ envelope 对象字段：
 1. **router 导入路径带下划线**：`/documents/_import/`（方法名 `_import` 直接成为 URL 段），与 `views_api.py` docstring 中的 `/documents/import/` 不符，以 URL 注册为准。
 2. **`doc_count` 字段不一致**：`WorkflowDirectorySerializer` 声明了 `doc_count`，但 `WorkflowDirectory` 模型无该属性且查询未 `annotate`，故 router 目录 create/retrieve/update 响应**实际不返回** `doc_count`；而列表/树/移动（走 `serialize_directory`）**返回** `doc_count`。
 3. **信封双口径**：router 走 `{status, data}`；legacy 平铺（无 `data`）。两套路径并存，行为一致（ARCH-09）。
-4. **非 HTTP 数据出口（不入本文档端点表）**：`api.py` 导出的 `build_page_flow_document`、`get_document_digest`、`list_document_summaries` 仅供 AI 工具进程内直调（同进程无 SSE/WS），未在 `urls.py` 注册，故无 HTTP 端点。
+4. **非 HTTP 数据出口（不入本文档端点表）**：`api.py` 导出的 `get_document_digest`、`list_document_summaries` 仅供 AI 工具进程内只读直调；`list_document_summaries` 支持 `prototype_id` 过滤。
 5. **本模块无 WS/SSE**（见 `apps/workflow/AGENTS.md`）。
-6. **`test_case` 已下线**：新建/导入/读取均被拒绝或返回空，`doc_type` 仅 `page_flow`。
+6. **`doc_type` 仅 `page_flow`**：其它类型新建/导入 400，列表查询返回空。
+7. **原型作用域**：目录/文档须归属 `prototype_id`；禁止跨原型移动；历史数据已迁入「默认原型」。
 
 ---
 
@@ -763,8 +804,10 @@ envelope 对象字段：
 | 目录引用 | 目录不存在 / 父目录不存在 / 目标目录不存在 |
 | 目录移动 | 不能将目录移入自身 / 不能将目录移入其子目录 |
 | 文档标题 | 标题不能为空 |
-| 文档类型 | doc_type 必须是 page_flow / 工作流已不再支持积木测试用例，请使用用例管理模块 |
+| 文档类型 | doc_type 必须是 page_flow |
+| 原型 | 原型名称不能为空 / 同名原型已存在 / 原型不存在 / prototype_id 不能为空 / 原型不存在 |
 | 文档引用 | 文档不存在 / 文档不存在: {doc_id} / doc_id 已存在: {doc_id} |
-| 导入 | 导入内容必须是 JSON 对象 / 工作流已不再支持积木测试用例导入，请使用用例管理模块 / 无法识别 doc_type（仅支持 page_flow） / doc_id 已存在，禁止重复导入: {doc_id} |
+| 导入 | 导入内容必须是 JSON 对象 / 无法识别 doc_type（仅支持 page_flow） / doc_id 已存在，禁止重复导入: {doc_id} / prototype_id 无效 |
+| 跨原型 | 不能跨原型移动目录 / 不能跨原型移动文档 / 父目录不属于该原型 / 目录不属于该原型 |
 | 通用(legacy) | method not allowed（405） |
 | 鉴权 | 请先登录 / 登录已过期或令牌无效（401，中间件） |

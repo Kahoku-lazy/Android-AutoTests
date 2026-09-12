@@ -35,7 +35,10 @@
 | **tasks 组** | | | |
 | 任务便签看板 | GET /api/ai/tasks | 需登录(Bearer) | 工作台 ai-task-*/case-gen-* 看板 |
 | 任务提交 | POST /api/ai/tasks/submit | 需登录(Bearer) | 提交并异步执行 |
-| 任务发布列表 | GET /api/ai/agent-tasks | 需登录(Bearer) | AITask 任务发布列表 |
+| 任务发布列表 | GET /api/ai/agent-tasks | 需登录(Bearer) | AITask 任务发布列表（result 为短摘要） |
+| 任务发布详情 | GET /api/ai/agent-tasks/{id} | 需登录(Bearer) | 过程日志（plans / log / usage） |
+| 任务发布删除 | POST /api/ai/agent-tasks/{id}/delete | 需登录(Bearer) | 删除任务发布记录 |
+| 任务发布清空 | POST /api/ai/agent-tasks/clear | 需登录(Bearer) | 调试：清空全部任务 |
 | **toolbox 组** | | | |
 | 工具箱列表 | GET /api/ai/toolbox | 需登录(Bearer) | 共享工具箱项（含 enabled） |
 | 工具箱新增 | POST /api/ai/toolbox/create | 需登录(Bearer) | 新增 mcp/extension |
@@ -44,10 +47,11 @@
 | 工具箱启停 | POST /api/ai/toolbox/{id}/toggle | 需登录(Bearer) | 启停共享项 |
 | 上传共享 Skill | POST /api/ai/toolbox/upload-skill | 需登录(Bearer) | multipart 上传 skill 文件夹 |
 | **knowledge 组** | | | |
-| 知识库状态 | GET /api/ai/knowledge/status | 需登录(Bearer) | 空壳（知识库已移除） |
-| 知识库文档列表 | GET /api/ai/knowledge/documents | 需登录(Bearer) | 空壳 |
-| 知识库重建索引 | POST /api/ai/knowledge/reindex | 需登录(Bearer) | 空壳 |
-| 知识库添加文档 | POST /api/ai/knowledge/documents/add | 需登录(Bearer) | 空壳 |
+| 知识库状态 | GET /api/ai/knowledge/status | 需登录(Bearer) | 已索引文档数（向量库） |
+| 知识库文档列表 | GET /api/ai/knowledge/documents | 需登录(Bearer) | 扫描 data/rag_datas |
+| 知识库文档预览 | GET /api/ai/knowledge/documents/preview | 需登录(Bearer) | md/txt 原文；docx/pdf 旁路转 md |
+| 知识库重建索引 | POST /api/ai/knowledge/reindex | 需登录(Bearer) | 索引 data/rag_datas/**/*.md |
+| 知识库添加文档 | POST /api/ai/knowledge/documents/add | 需登录(Bearer) | multipart 上传到 data/rag_datas |
 | **uploads 组** | | | |
 | 头像上传 | POST /api/ai/upload-avatar | 需登录(Bearer) | base64 → data URI |
 | 文件上传 | POST /api/ai/upload-file | 需登录(Bearer) | multipart 上传并解析 |
@@ -350,7 +354,7 @@
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| route | string | 否 | 线路 device_control/platform_task；传则按线路校验，不传则测智能体顶层模型 |
+| route | string | 否 | 线路 device_control；传则按线路校验，不传则测智能体顶层模型 |
 
 #### 成功响应（200，无 route）
 
@@ -939,11 +943,7 @@
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | goal | string | 是 | 任务目标（非空） |
-| requirements | string | 否 | 任务要求，缺省空串 |
 | attachment | string | 否 | 附件文件路径 |
-| route | string | 是 | 线路：device_control / platform_task |
-| report_name | string | 否 | 报告文件名 |
-| checklist | string | 否 | 校验清单 |
 | device_serial | string | 否 | 指定设备 serial（空则第一台在线） |
 
 #### 成功响应（200）
@@ -954,7 +954,7 @@
   "data": {
     "id": 1,                            # 任务 ID
     "status": "running",                # 已标记 running（后台线程异步执行）
-    "result": ""                        # 初始为空，终态经 agent-tasks 查询
+    "result": ""                        # 初始为空；运行中经 agent-tasks 详情读增量过程 JSON
   }
 }
 ```
@@ -965,10 +965,9 @@
 |---|---|---|
 | 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
 | 400 | 任务目标不能为空 | goal 缺失或空 |
-| 400 | （route 非法，DRF ChoiceField 默认文案） | route 非 device_control/platform_task |
 | 404 | platform agent not found | 平台唯一智能体不存在 |
 
-> 提交后立即返回，执行在后台线程完成，终态（completed/failed + result + token 用量）由 `finalize_task` 落库。
+> 提交后立即返回。运行中工作流在「规划完成 / 每一轮执行+验收 / 每一个目标完成」检查点把与终态同构的 JSON 写入 `result`（`run.status=running`），不改任务 `status`。终态仍由 `finalize_task` 落 completed/failed + 全量 result + token 用量。
 
 ---
 
@@ -990,10 +989,8 @@
         "id": 1,                        # 任务 ID
         "title": "任务标题",            # 标题（goal 前 100 字符）
         "goal": "任务目标",
-        "route": "device_control",      # 线路
         "status": "completed",          # pending/running/completed/failed
-        "result": "执行结果摘要",
-        "report_name": "",
+        "result": "已完成 3 项",       # 短摘要，非整份过程 JSON
         "device_serial": "",
         "created_at": "2026-01-01 12:00:00"
       }
@@ -1009,6 +1006,120 @@
 | 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
 
 > 无平台智能体时返回 `{tasks: []}`（不报错）。
+
+---
+
+### 5.4 任务发布删除接口：POST /api/ai/agent-tasks/{id}/delete
+
+| 项 | 值 |
+|---|---|
+| 鉴权 | 需登录(Bearer) |
+| 请求 | 无请求体；路径参数 `id` 为任务 ID |
+
+#### 成功响应（200）
+
+```json
+{
+  "status": true,
+  "data": {}
+}
+```
+
+#### 错误码与文案
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
+| 404 | 任务不存在 | 无平台智能体，或任务不属于平台智能体 |
+
+---
+
+### 5.5 任务发布详情接口：GET /api/ai/agent-tasks/{id}
+
+| 项 | 值 |
+|---|---|
+| 鉴权 | 需登录(Bearer) |
+| 请求 | 无请求体；路径参数 `id` 为任务 ID |
+
+#### 成功响应（200）
+
+```json
+{
+  "status": true,
+  "data": {
+    "id": 1,
+    "title": "打开 govee APP",
+    "goal": "打开 govee APP",
+    "status": "completed",
+    "device_serial": "RF8N21MSW7A",
+    "created_at": "2026-09-08 10:17:00",
+    "started_at": "2026-09-08 10:17:01",
+    "finished_at": "2026-09-08 10:18:20",
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "cache_input_tokens": 0,
+    "model_usage": {},
+    "deepseek_cost": 0.0,
+    "run": {
+      "status": "success",
+      "summary": "完成 …",
+      "plans": [{
+        "goal": "启动应用并进入设备页",
+        "steps": [
+          { "action": "启动 govee", "assert": "前台应用为 govee 首页" },
+          { "action": "点击设备入口", "assert": "进入设备列表页" }
+        ]
+      }],
+      "log": [{
+        "action": "启动 govee",
+        "assert": "前台应用为 govee 首页",
+        "loop": 1,
+        "executor": { "action": "启动 govee", "result": "PASS", "message": "已启动" },
+        "verifier": { "action": "启动 govee", "assert": "前台应用为 govee 首页", "actual": "已在首页", "result": true }
+      }],
+      "usage": {},
+      "models": { "planner": "…", "executor": "…", "verifier": "…", "max_loops": 3 }
+    }
+  }
+}
+```
+
+> 运行中即可读到增量 `run.plans` / `run.log` / `run.summary`（如「已规划 N 个步骤」）；`data.status` 仍为 `running`，`run.status` 为 `running`。终态把全量过程写入 `ai_tasks.result`。
+> 新协议：`plans[].steps` 为 `{action, assert}`；`log[]` 按步骤重试记录 `executor` / `verifier`（`verifier.result` 为 boolean）。旧任务可能仍是字符串 steps + goal 级 log，前端详情页兼容折叠展示。
+> `deepseek_cost` 为 DeepSeek 官方价目（命中/未命中输入 + 输出，高峰 ×2）估算费用（元，4 位小数）。无分模型用量时按 `deepseek-v4-flash` 对任务总量计费；非 DeepSeek 模型不计。
+
+#### 错误码与文案
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
+| 404 | 任务不存在 | 无平台智能体，或任务 ID 不存在 |
+
+---
+
+### 5.6 任务发布清空接口：POST /api/ai/agent-tasks/clear
+
+| 项 | 值 |
+|---|---|
+| 鉴权 | 需登录(Bearer) |
+| 请求 | 无请求体 |
+
+调试用：删除平台智能体下全部 `AITask`。
+
+#### 成功响应（200）
+
+```json
+{
+  "status": true,
+  "data": { "deleted": 8 }
+}
+```
+
+#### 错误码与文案
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
 
 ---
 
@@ -1141,7 +1252,7 @@
 | 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
 | 404 | not found | `{id}` 非整数或不存在 |
 
-> skill 类型删除时同步清理 `data/shared_skills/{id}/` 目录。
+> skill 类型删除时同步清理 `engines/ai/skills/{id}/` 目录。
 
 ---
 
@@ -1195,7 +1306,7 @@
 ```json
 {
   "status": true,
-  "data": { "id": 1 }                   # 新 skill 项 ID（文件存 data/shared_skills/{id}/）
+  "data": { "id": 1 }                   # 新 skill 项 ID（文件存 engines/ai/skills/{id}/）
 }
 ```
 
@@ -1214,7 +1325,7 @@
 
 ## 7. knowledge 组
 
-> 知识库后端已移除，以下四个端点为**空壳**（保留路径与响应形状，供前端兼容）。
+> 文档根目录：`data/rag_datas`。列表/上传走磁盘；检索与重建索引走向量库（仅 `*.md`）。
 
 ### 7.1 知识库状态接口：GET /api/ai/knowledge/status
 
@@ -1228,14 +1339,14 @@
 {
   "status": true,
   "data": {
-    "doc_count": 0,                     # 文档数（恒 0）
-    "db_size_bytes": 0,                 # 库字节大小
-    "db_size_mb": 0.0,                  # 库 MB 大小
-    "collection_name": "project_knowledge",  # 集合名（占位）
+    "doc_count": 3,
+    "db_size_bytes": 0,
+    "db_size_mb": 0.0,
+    "collection_name": "project_knowledge",
     "reindex": {
-      "running": false,                 # 是否重建中（恒 false）
-      "last_indexed": null,             # 最近索引时间
-      "message": ""                     # 消息
+      "running": false,
+      "last_indexed": null,
+      "message": ""
     }
   }
 }
@@ -1260,9 +1371,23 @@
 ```json
 {
   "status": true,
-  "data": { "documents": [], "total": 0 }  # 恒空
+  "data": {
+    "documents": [
+      {
+        "id": "项目文档/a.md",
+        "name": "a.md",
+        "source": "项目文档/a.md",
+        "type": "project_doc",
+        "size": 12,
+        "ext": "md"
+      }
+    ],
+    "total": 1
+  }
 }
 ```
+
+`type`：一级目录 `项目文档` → `project_doc`，`参考` → `reference`，`手动` → `manual`，其余为空字符串。
 
 #### 错误码与文案
 
@@ -1272,7 +1397,41 @@
 
 ---
 
-### 7.3 知识库重建索引接口：POST /api/ai/knowledge/reindex
+### 7.3 知识库文档预览接口：GET /api/ai/knowledge/documents/preview
+
+| 项 | 值 |
+|---|---|
+| 鉴权 | 需登录(Bearer) |
+| Query | `path` 相对 `data/rag_datas` 的路径（禁止 `..`） |
+
+#### 成功响应（200）
+
+```json
+{
+  "status": true,
+  "data": {
+    "path": "说明.md",
+    "name": "说明.md",
+    "kind": "markdown",
+    "content": "# 说明正文",
+    "converted": true
+  }
+}
+```
+
+Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再返回 Markdown；已有同名 `.md` 则直接读取。
+
+#### 错误码与文案
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 400 | 缺少文件路径 / 非法文件路径 / 不支持预览该类型 / 文档转换失败 | 参数或转换错误 |
+| 404 | 找不到该文档 | 文件不存在 |
+| 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
+
+---
+
+### 7.4 知识库重建索引接口：POST /api/ai/knowledge/reindex
 
 | 项 | 值 |
 |---|---|
@@ -1284,7 +1443,11 @@
 ```json
 {
   "status": true,
-  "data": { "message": "知识库已移除" }    # 空壳固定文案
+  "data": {
+    "message": "已索引 2 个文档",
+    "indexed": [{"doc_id": "...", "source": "data/rag_datas/a.md"}],
+    "failed": []
+  }
 }
 ```
 
@@ -1296,19 +1459,27 @@
 
 ---
 
-### 7.4 知识库添加文档接口：POST /api/ai/knowledge/documents/add
+### 7.5 知识库添加文档接口：POST /api/ai/knowledge/documents/add
 
 | 项 | 值 |
 |---|---|
 | 鉴权 | 需登录(Bearer) |
-| 请求 | 无请求体 |
+| Content-Type | multipart/form-data |
+| 请求 | `file` 必填；`subdir` 可选（`项目文档` / `参考` / `手动`） |
 
 #### 成功响应（200）
 
 ```json
 {
   "status": true,
-  "data": { "id": "", "source": "" }      # 空壳固定返回
+  "data": {
+    "id": "手册.md",
+    "name": "手册.md",
+    "source": "手册.md",
+    "type": "",
+    "size": 12,
+    "ext": "md"
+  }
 }
 ```
 
@@ -1316,6 +1487,7 @@
 
 | HTTP | message | 触发条件 |
 |---|---|---|
+| 400 | 请选择要导入的文件 / 非法文件名 / 不支持的文件类型 / 文件过大 / 不支持的目标目录 / 文档保存失败 | 校验或写盘失败 |
 | 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
 
 ---

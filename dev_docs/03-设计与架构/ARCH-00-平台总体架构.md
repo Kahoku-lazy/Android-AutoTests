@@ -244,7 +244,7 @@ flowchart LR
 | # | 通道 | 方向 | 协议 | 鉴权方式 | 用途 |
 |:--:|------|------|------|------|------|
 | ① | 前端 → Django | 双向 | HTTP REST | JWT Bearer Header | 业务 CRUD（11 App） |
-| ② | Django → 前端 | 单向推送 | WebSocket | JWT query string | 执行进度（`ws/test-run/`）+ 用例编辑锁（`ws/case-editing/`） |
+| ② | Django → 前端 | 单向推送 | WebSocket | JWT query string | 当前无生产点（用例编辑锁已随文档用例重构下线；执行引擎 WS 另案恢复） |
 | ③ | 前端 → AI | 单向流 | SSE | JWT（共享 SECRET_KEY） | AI 流式对话（单请求 + asyncio.Queue） |
 | ④ | AgentScope → Django | 单向调用 | Python import | 上下文注入 | Tool 执行业务逻辑（零网络开销） |
 | ⑤ | Django → 设备 | 双向 | ADB | — | 截屏 / dump / 手势（仅经 engines 层） |
@@ -661,7 +661,7 @@ Android-AutoTests/
 | 端点 | Consumer | 用途 |
 |------|----------|------|
 | `ws/test-run/{run_id}` | `TestRunConsumer`（test_runner） | 执行进度推送（10 种下行消息 + seq + 心跳） |
-| `ws/case-editing/{case_id}` | `CaseEditingConsumer`（case_manager） | 用例编辑锁 |
+| `ws/case-editing/{case_id}` | （已移除） | 文档用例重构后下线 |
 
 ---
 
@@ -693,7 +693,7 @@ Android-AutoTests/
 | 前缀 | App | 表名 |
 |------|-----|------|
 | `ai_` | ai_assistant | `ai_agents` · `ai_shared_tools` · `ai_platform_tools` · `ai_conversations` · `ai_messages` · `ai_tasks` · `ai_execution_logs` |
-| `cm_` | case_manager | `cm_case_directories` · `cm_test_definitions` · `cm_api_testcases` · `cm_web_testcases` · `cm_storage_testcases` |
+| `cm_` | case_manager | `cm_case_projects` · `cm_case_directories` · `cm_test_definitions` |
 | `di_` | device_inspector | `di_snapshots`（v1.7 快照化：dump/OCR 解析 JSON + 截图路径 + 统计） |
 | `dp_` | device_pool | `dp_devices` · `dp_device_locks` |
 | `el_` | element_locator | `el_pages` · `el_elements` · `el_page_flows` · `el_web_groups` · `el_web_elements` · `el_api_groups` · `el_api_endpoints` · `el_web_page_flows` |

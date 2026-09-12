@@ -2,33 +2,30 @@
    Doodle Craft 设计令牌
    极简 · 几何 · 粗线 · 涂鸦彩绘 · 卡通 · 手稿纸
    ═══════════════════════════════════════════
+   按皮肤维度分类：颜色 → 字体/字号 → 间距 → 圆角 → 阴影 → 动效 → 布局尺寸
+   （独立区：Crayon Doodle 待收敛家族 · Element Plus 原子层映射）
+
    现行体系（frontend/AGENTS.md §2 口径）：
      --c-* 模块色 · --app-status-* 状态色 · --app-size-* 字号 · --app-space-* 间距
      --app-radius-* 圆角 · --app-shadow-* 阴影 · --app-duration-*、--app-ease、--app-spring 动效
      --app-font* 字体 · --ink/--paper/--dot/--app-bg-subtle/--app-border-*、--app-highlight 核心色
    @deprecated（新代码禁用，旧代码保留兼容）：
-     --app-module-*（值同 --c-*）· --app-font-size-* · --app-glass-* · 兼容别名块 · 自然背景块
+     --app-module-*（值同 --c-*）· --app-font-size-* · 兼容别名块 · 自然背景块
    ⚠️ 待收敛：--doodle-* 主题家族与 --ink/--paper 两套并存；
      --app-green 实为 workflow 蓝、--app-blue 实为 element 紫（名字误导，慎用）
    ═══════════════════════════════════════════ */
 
 :root, [data-theme="light"] {
-  /* ── 核心色 ── */
+  /* ═══════════════════════════════════════════
+     皮肤维度一 · 颜色 Color
+     ═══════════════════════════════════════════ */
+
+  /* ── 核心色（纸面三原色）── */
   --ink:              #1e1e24;
   --paper:            #fefcf5;
   --dot:              #d8d2c4;
 
-  /* ── @deprecated 模块强调色（旧命名，值同下方 --c-*；新代码用 --c-*）── */
-  --app-module-green:   #6BCB77;   /* device-pool — 薄荷绿 */
-  --app-module-teal:    #4ECDC4;   /* case-manager — 青绿 */
-  --app-module-purple:  #A78BFA;   /* element-locator — 薰衣草紫 */
-  --app-module-pink:    #FFB5A7;   /* test-runner — 桃粉 */
-  --app-module-brown:   #7C6F83;   /* report-generator — 灰紫 */
-  --app-module-orange:  #E879F9;   /* ai-assistant — 柔粉 */
-  --app-module-yellow:  #F7C948;   /* dashboard — 柠黄 */
-  --app-module-blue:    #89CFF0;   /* workflow — 天蓝 */
-
-  /* ── 语义色 ── */
+  /* ── 模块色（现行）── */
   --c-dashboard: #F7C948;
   --c-device:    #6BCB77;
   --c-element:   #A78BFA;
@@ -38,126 +35,17 @@
   --c-ai:        #E879F9;
   --c-workflow:  #89CFF0;
 
-  /* ── 表面/背景 ── */
-  --app-bg:           var(--paper);
-  --app-bg-warm:      var(--paper);
-  --app-bg-card:      #ffffff;
-  --app-bg-input:     #ffffff;
+  /* ── 模块色（@deprecated 旧命名，值同 --c-*；新代码用 --c-*）── */
+  --app-module-green:   #6BCB77;   /* device-pool — 薄荷绿 */
+  --app-module-teal:    #4ECDC4;   /* case-manager — 青绿 */
+  --app-module-purple:  #A78BFA;   /* element-locator — 薰衣草紫 */
+  --app-module-pink:    #FFB5A7;   /* test-runner — 桃粉 */
+  --app-module-brown:   #7C6F83;   /* report-generator — 灰紫 */
+  --app-module-orange:  #E879F9;   /* ai-assistant — 柔粉 */
+  --app-module-yellow:  #F7C948;   /* dashboard — 柠黄 */
+  --app-module-blue:    #89CFF0;   /* workflow — 天蓝 */
 
-  /* ── 文字 ── */
-  --app-text:           var(--ink);
-  --app-text-secondary: #999;
-  --app-text-muted:     #bbb;
-  --app-text-inverse:   #ffffff;
-  --app-nav-text:       #5a5547;  /* 侧边栏导航未激活文字（暖灰，纸面语言） */
-
-  /* ── @deprecated 兼容别名（新代码用上方现行 token；--app-green/--app-blue 名字误导，慎用）── */
-  --text-primary:       var(--ink);
-  --text-secondary:     #999;
-  --font-display:       'Cascadia Mono', 'Noto Sans SC', sans-serif;
-  --side-w:             228px;
-  /* 侧栏品牌区与主区 wb-header 底边对齐 */
-  --app-topbar-h:       96px;
-  --accent-blue:        var(--c-workflow);
-  --accent-pink:        var(--c-runner);
-  --accent-green:       var(--c-device);
-  --app-green:          var(--c-workflow);
-  --app-green-deep:     var(--c-workflow);
-  --app-green-light:    #D4E8FF;
-  --app-green-mint:     #e0f7fa;
-  --app-blue:           var(--c-element);
-  --app-blue-light:     #f3e5f5;
-  --app-blue-sky:       #e8f5e9;
-  --app-white:          #fdfbfb;
-
-  /* ── @deprecated 自然背景（保留兼容）── */
-  --app-sky:         #e0f7fa;
-  --app-sky-cloud:   rgba(255,255,255,0.82);
-  --app-ocean:       #a2d2ff;
-  --app-ocean-soft:  #bde0fe;
-  --app-forest:      #95D5B2;
-  --app-forest-soft: #d8f3dc;
-  --app-moss:        #d8f3dc;
-  --app-leaf:        #BDE0FE;
-  --app-bark:        #9a8c98;
-
-  /* ── legacy 玻璃变量（已全部清零/透明化，保留向后兼容）── */
-  --app-glass:         transparent;
-  --app-glass-heavy:   #fff;
-  --app-glass-card:    #fff;
-  --app-glass-border:  var(--ink);
-  --app-glass-blur:    0px;
-
-  /* ── 圆角（几何不对称）── */
-  --app-radius-sm:     4px 8px;
-  --app-radius-md:     6px 10px;
-  --app-radius-lg:     8px 14px;
-  --app-radius-pill:   4px 10px 6px 8px;
-  --app-border-width:  3px;
-
-  /* ── 间距 ── */
-  --app-space-xs:      4px;
-  --app-space-sm:      8px;
-  --app-space-md:      16px;
-  --app-space-lg:      24px;
-  --app-space-xl:      32px;
-  --app-space-2xl:     48px;
-
-  /* ── 卡片交互 ── */
-  --app-card-hover-lift:     -2px;
-  --app-card-hover-elevation: none;
-
-  /* ── 阴影（扁平化）── */
-  --app-shadow-sm:     2px 2px 0 rgba(0,0,0,0.04);
-  --app-shadow-md:     2px 3px 0 rgba(0,0,0,0.05);
-  --app-shadow-lg:     3px 4px 0 rgba(0,0,0,0.06);
-  --app-icon-shadow:       2px 2px 0 rgba(0,0,0,0.06);
-  --app-icon-border:       var(--ink);
-  --app-overlay:           rgba(0, 0, 0, 0.38);
-  --app-text-shadow-light: 0 1px 0 rgba(255, 255, 255, 0.45);
-  /* 登录页装饰光晕（仅氛围，非交互色） */
-  --app-glow-sky:          rgba(162, 210, 255, 0.5);
-  --app-glow-ocean:        rgba(63, 158, 216, 0.42);
-  --app-glow-forest:       rgba(111, 185, 141, 0.42);
-
-  /* ── 状态色 ── */
-  --app-pass:          #C8F5D0;
-  --app-pass-text:     #1a5c2a;
-  --app-fail:          #FFE0DB;
-  --app-fail-text:     #7a1c1c;
-  --app-pending:       #D4E8FF;
-  --app-pending-text:  #1a3a6a;
-
-  /* ── 字体 ──
-     英文 Cascadia Mono（等宽）+ 中文思源黑体 Noto Sans SC；品牌文字例外用 --app-font-brand */
-  --app-font:          'Cascadia Mono', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', monospace, sans-serif;
-  --app-font-display:  'Cascadia Mono', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', monospace, sans-serif;
-  --app-font-mono:     'Cascadia Mono', 'Consolas', monospace;
-  --app-font-brand:    'Ziku FeiYang', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;  /* 品牌手写体，仅 400 字重 */
-
-  /* ── 字号刻度（6 档，最小 12px，禁止硬编码 font-size 字面量）── */
-  --app-size-xs:  12px;  /* 按钮文字、表格列头、标签、时间戳、Badge */
-  --app-size-sm:  14px;  /* UI 正文（默认阅读字号） */
-  --app-size-md:  16px;  /* 卡片标题、表单标签、模块标题 */
-  --app-size-lg:  20px;  /* 段落标题、弹窗标题 */
-  --app-size-xl:  24px;  /* 页面标题 */
-  --app-size-2xl: 32px;  /* KPI 数字、Hero 数字 */
-
-  /* @deprecated legacy aliases — 统一用 --app-size-*（xs=12/sm=14/md=16/lg=20/xl=24/2xl=32） */
-  --app-font-size-sm:   var(--app-size-xs);   /* ⚠️ 旧代码中的 sm=12px，新代码用 --app-size-xs */
-  --app-font-size-base: var(--app-size-sm);   /* ⚠️ 旧代码中的 base=14px，新代码用 --app-size-sm */
-  --app-font-size-lg:   var(--app-size-md);   /* ⚠️ 旧代码中的 lg=16px，新代码用 --app-size-md */
-
-  /* ── Paper × Polaroid 主题色（--app-ink/--app-paper 等旧主题值与上方 --ink/--paper 并存待收敛；其中 --app-status-* 为现行状态色）── */
-  --app-ink:                #2d2d2d;
-  --app-ink-muted:          #999;
-  --app-paper:              #fefcf6;
-  --app-paper-dot:          #d4cdc0;
-  --app-border-light:       #e8ecf1;
-  --app-border-lighter:     #f0ede8;
-  --app-bg-subtle:          #f8f6f2;
-  --app-highlight:          #FFE066;
-  --app-live:               #f87171;
+  /* ── 状态色（现行 --app-status-*）── */
   --app-status-success:     #6BCB77;
   --app-status-success-bg:  #C8F5D0;
   --app-status-success-text:#2d7a2d;
@@ -169,18 +57,48 @@
   --app-status-purple-text: #5a3fa0;
   --app-status-purple-border:#A78BFA;
   --app-status-warning-bg:  #FFF9E0;
-  --app-accent-blue:        #89CFF0;
-  --app-accent-purple:      #b39ef3;
-  --app-accent-purple-dark: #8275c2;
+
+  /* ── 状态色（旧 pass/fail/pending + live/offline/error）── */
+  --app-pass:          #C8F5D0;
+  --app-pass-text:     #1a5c2a;
+  --app-fail:          #FFE0DB;
+  --app-fail-text:     #7a1c1c;
+  --app-pending:       #D4E8FF;
+  --app-pending-text:  #1a3a6a;
+  --app-live:               #f87171;
   --app-offline:            #d4d8dc;
-  --app-shadow-ink:         rgba(0,0,0,0.05);
   --app-error:              #e85f5f;
   --app-error-bg:           #fff0f0;
-  --app-footer-yellow:      #FFE066;
-  --app-footer-yellow-text: #5a4e20;
-  --app-pushpin-light:      #e8e0d5;
-  --app-pushpin-dark:       #a09080;
-  --app-pushpin-mid:        #c0b8a8;
+
+  /* ── 中性色 · 背景/表面 ── */
+  --app-bg:           var(--paper);
+  --app-bg-warm:      var(--paper);
+  --app-bg-card:      #ffffff;
+  --app-bg-input:     #ffffff;
+  --app-bg-subtle:          #f8f6f2;
+
+  /* ── 中性色 · 文字 ── */
+  --app-text:           var(--ink);
+  --app-text-secondary: #999;
+  --app-text-muted:     #bbb;
+  --app-text-inverse:   #ffffff;
+  --app-nav-text:       #5a5547;  /* 侧边栏导航未激活文字（暖灰，纸面语言） */
+
+  /* ── 中性色 · 边框/高亮/激活 ── */
+  --app-border-light:       #e8ecf1;
+  --app-border-lighter:     #f0ede8;
+  --app-highlight:          #FFE066;
+  --app-icon-border:       var(--ink);
+
+  /* ── 阴影/遮罩/光晕（rgba 色值）── */
+  --app-overlay:           rgba(0, 0, 0, 0.38);
+  --app-shadow-ink:         rgba(0,0,0,0.05);
+  /* 登录页装饰光晕（仅氛围，非交互色） */
+  --app-glow-sky:          rgba(162, 210, 255, 0.5);
+  --app-glow-ocean:        rgba(63, 158, 216, 0.42);
+  --app-glow-forest:       rgba(111, 185, 141, 0.42);
+
+  /* ── 辅助/图标/杂项色 ── */
   --app-icon-teal-bg:       #D4F5F0;
   --app-icon-purple-bg:     #F0E8FF;
   --app-icon-orange-bg:     #FFE8D0;
@@ -192,52 +110,13 @@
   --app-btn-hover-danger:   #FFD0C8;
   --app-btn-disabled-color: #ccc;
   --app-page-active-bg:     #E8F4FD;
+  --app-footer-yellow:      #FFE066;
+  --app-footer-yellow-text: #5a4e20;
+  --app-pushpin-light:      #e8e0d5;
+  --app-pushpin-dark:       #a09080;
+  --app-pushpin-mid:        #c0b8a8;
 
-  /* ── Crayon Doodle 主题 ── */
-  --doodle-ink:             #2d2d2d;
-  --doodle-bg:              #faf5ee;
-  --doodle-card:            #fffbf5;
-  --doodle-border:          3px;
-  --doodle-radius:          4px 10px 4px 10px;
-  --doodle-radius-sm:       4px 8px 4px 8px;
-  --doodle-shadow:          2px 2px 0 rgba(0,0,0,0.06);
-  --doodle-font-title:      var(--app-font-display);
-  --doodle-font-ui:         var(--app-font);
-  --doodle-font-hand:       var(--app-font-brand);
-  --doodle-font-mono:       var(--app-font-mono);
-  --doodle-texture-cross:   linear-gradient(45deg,rgba(0,0,0,0.02) 25%,transparent 25%,transparent 75%,rgba(0,0,0,0.02) 75%);
-  --doodle-texture-dots:    radial-gradient(circle,rgba(0,0,0,0.03) 1px,transparent 1px);
-  --doodle-texture-stripe:  repeating-linear-gradient(-45deg,transparent,transparent 3px,rgba(0,0,0,0.015) 3px,rgba(0,0,0,0.015) 6px);
-
-  /* ── 侧边栏 ── */
-  --app-sidebar-w:        228px;
-  --app-sidebar-collapsed:64px;
-  --app-sidebar-bg:       var(--paper);
-  --app-sidebar-active:   var(--c-dashboard);
-
-  /* ── 仪表盘统计卡（奶油低饱和 · 参考图配色） ── */
-  --app-stat-line:          #7a7874;   /* 卡片软灰线条（描边/十字/图标） */
-  --app-stat-line-soft:     #9e9994;   /* 辅助文字 */
-  --app-stat-text:          #5f5d59;   /* 卡片主文字 */
-  --app-stat-hover:         #f5eecf;   /* hover 奶油黄 */
-  --app-stat-shadow:        rgba(122, 120, 116, 0.14);
-  --app-stat-shadow-hover:  rgba(122, 120, 116, 0.22);
-  --app-stat-sage:          #e6f0ea;   /* 薄荷淡绿 */
-  --app-stat-gray:          #dedfdc;   /* 柔灰 */
-  --app-stat-rose:          #f4e8e1;   /* 浅粉 */
-  --app-stat-pale:          #f0f6e7;   /* 淡青柠奶油 */
-  --app-stat-deep:          #cdd9d3;   /* 深一档薄荷 */
-  --app-stat-cream:         #fdf7ed;   /* 米白 */
-  --app-stat-dust:          #d0c5c1;   /* 灰粉 */
-
-  /* ── 动效 ── */
-  --app-ease:          cubic-bezier(0.25,0.1,0.25,1);
-  --app-spring:        cubic-bezier(0.34,1.56,0.64,1);
-  --app-duration-fast: 0.12s;
-  --app-duration:      0.15s;
-  --app-duration-slow: 0.25s;
-
-  /* ── AI Assistant 模块令牌 ── */
+  /* ── 模块专属色 · AI Assistant ── */
   --ai-teal:            #19c8b9;
   --ai-teal-bg:         #e6f9f6;
   --ai-teal-text:       #158a80;
@@ -271,7 +150,7 @@
   --ai-hint-yellow-bg:  #fff8e7;
   --ai-hint-yellow-border: #f7cd67;
 
-  /* ── AI 状态色（ChatView 状态徽章/连接指示/停止按钮，值迁移自原硬编码）── */
+  /* ── 模块专属色 · AI 状态（状态徽章/连接指示/停止按钮）── */
   --ai-status-blue-bg:     #f0f4ff;
   --ai-status-blue-text:   #4256b8;
   --ai-status-blue-border: #6c80d4;
@@ -295,7 +174,7 @@
   --ai-status-danger-text: #c43f3f;
   --ai-status-danger-hover: #fde0e0;
 
-  /* ── Case Manager 模块令牌 ── */
+  /* ── 模块专属色 · Case Manager ── */
   --case-border-subtle:     rgba(162, 210, 255, 0.18);
   --case-border:            rgba(162, 210, 255, 0.24);
   --case-border-dashed:     rgba(162, 210, 255, 0.30);
@@ -337,9 +216,141 @@
   --case-watcher-badge-text:#ffffff;
   --case-divider-line:      rgba(162, 210, 255, 0.24);
 
-  /* ═══════════════════════════════════════
-     Element Plus 变量覆盖 — Doodle
-     ═══════════════════════════════════════ */
+  /* ── 模块专属色 · 仪表盘统计卡（奶油低饱和）── */
+  --app-stat-line:          #7a7874;   /* 卡片软灰线条（描边/十字/图标） */
+  --app-stat-line-soft:     #9e9994;   /* 辅助文字 */
+  --app-stat-text:          #5f5d59;   /* 卡片主文字 */
+  --app-stat-hover:         #f5eecf;   /* hover 奶油黄 */
+  --app-stat-shadow:        rgba(122, 120, 116, 0.14);
+  --app-stat-shadow-hover:  rgba(122, 120, 116, 0.22);
+  --app-stat-sage:          #e6f0ea;   /* 薄荷淡绿 */
+  --app-stat-gray:          #dedfdc;   /* 柔灰 */
+  --app-stat-rose:          #f4e8e1;   /* 浅粉 */
+  --app-stat-pale:          #f0f6e7;   /* 淡青柠奶油 */
+  --app-stat-deep:          #cdd9d3;   /* 深一档薄荷 */
+  --app-stat-cream:         #fdf7ed;   /* 米白 */
+  --app-stat-dust:          #d0c5c1;   /* 灰粉 */
+
+  /* ── @deprecated 旧色（待收敛，新代码禁用）── */
+  /* 兼容别名（--app-green 实为 workflow 蓝、--app-blue 实为 element 紫，名字误导，慎用） */
+  --accent-blue:        var(--c-workflow);
+  --accent-pink:        var(--c-runner);
+  --accent-green:       var(--c-device);
+  --app-green:          var(--c-workflow);
+  --app-green-deep:     var(--c-workflow);
+  --app-green-light:    #D4E8FF;
+  --app-green-mint:     #e0f7fa;
+  --app-blue:           var(--c-element);
+  --app-blue-light:     #f3e5f5;
+  --app-blue-sky:       #e8f5e9;
+  --app-white:          #fdfbfb;
+  --text-primary:       var(--ink);
+  --text-secondary:     #999;
+  --app-accent-blue:        #89CFF0;
+  --app-accent-purple:      #b39ef3;
+  --app-accent-purple-dark: #8275c2;
+  /* 旧主题 Paper × Polaroid（与 --ink/--paper 并存待收敛） */
+  --app-ink:                #2d2d2d;
+  --app-ink-muted:          #999;
+  --app-paper:              #fefcf6;
+  --app-paper-dot:          #d4cdc0;
+  /* 自然背景 */
+  --app-sky:         #e0f7fa;
+  --app-sky-cloud:   rgba(255,255,255,0.82);
+  --app-ocean:       #a2d2ff;
+  --app-ocean-soft:  #bde0fe;
+  --app-forest:      #95D5B2;
+  --app-forest-soft: #d8f3dc;
+  --app-moss:        #d8f3dc;
+  --app-leaf:        #BDE0FE;
+  --app-bark:        #9a8c98;
+
+  /* ═══════════════════════════════════════════
+     皮肤维度二 · 字体与字号 Typography
+     ═══════════════════════════════════════════ */
+
+  /* ── 字体（英文 Cascadia Mono 等宽 + 中文思源黑体 Noto Sans SC；品牌文字例外用 --app-font-brand）── */
+  --app-font:          'Cascadia Mono', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', monospace, sans-serif;
+  --app-font-display:  'Cascadia Mono', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', monospace, sans-serif;
+  --app-font-mono:     'Cascadia Mono', 'Consolas', monospace;
+  --app-font-brand:    'Ziku FeiYang', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;  /* 品牌手写体，仅 400 字重 */
+
+  /* ── 字号刻度（6 档，最小 12px，禁止硬编码 font-size 字面量）── */
+  --app-size-xs:  12px;  /* 按钮文字、表格列头、标签、时间戳、Badge */
+  --app-size-sm:  14px;  /* UI 正文（默认阅读字号） */
+  --app-size-md:  16px;  /* 卡片标题、表单标签、模块标题 */
+  --app-size-lg:  20px;  /* 段落标题、弹窗标题 */
+  --app-size-xl:  24px;  /* 页面标题 */
+  --app-size-2xl: 32px;  /* KPI 数字、Hero 数字 */
+
+  /* @deprecated legacy aliases — 统一用 --app-size-*（xs=12/sm=14/md=16/lg=20/xl=24/2xl=32） */
+  --app-font-size-sm:   var(--app-size-xs);   /* ⚠️ 旧代码中的 sm=12px，新代码用 --app-size-xs */
+  --app-font-size-base: var(--app-size-sm);   /* ⚠️ 旧代码中的 base=14px，新代码用 --app-size-sm */
+  --app-font-size-lg:   var(--app-size-md);   /* ⚠️ 旧代码中的 lg=16px，新代码用 --app-size-md */
+  --font-display:       'Cascadia Mono', 'Noto Sans SC', sans-serif;
+
+  /* ═══════════════════════════════════════════
+     皮肤维度三 · 间距 Spacing
+     ═══════════════════════════════════════════ */
+  --app-space-xs:      4px;
+  --app-space-sm:      8px;
+  --app-space-md:      16px;
+  --app-space-lg:      24px;
+  --app-space-xl:      32px;
+  --app-space-2xl:     48px;
+
+  /* ═══════════════════════════════════════════
+     皮肤维度四 · 圆角 Radius（几何不对称）
+     ═══════════════════════════════════════════ */
+  --app-radius-sm:     4px 8px;
+  --app-radius-md:     6px 10px;
+  --app-radius-lg:     8px 14px;
+  --app-radius-pill:   4px 10px 6px 8px;
+
+  /* ═══════════════════════════════════════════
+     皮肤维度五 · 阴影 Shadow（扁平化，0 模糊）
+     ═══════════════════════════════════════════ */
+  --app-shadow-sm:     2px 2px 0 rgba(0,0,0,0.04);
+  --app-shadow-md:     2px 3px 0 rgba(0,0,0,0.05);
+  --app-shadow-lg:     3px 4px 0 rgba(0,0,0,0.06);
+  --app-icon-shadow:       2px 2px 0 rgba(0,0,0,0.06);
+  --app-text-shadow-light: 0 1px 0 rgba(255, 255, 255, 0.45);
+  --app-card-hover-elevation: none;
+
+  /* ═══════════════════════════════════════════
+     皮肤维度六 · 动效 Motion
+     ═══════════════════════════════════════════ */
+  --app-ease:          cubic-bezier(0.25,0.1,0.25,1);
+  --app-spring:        cubic-bezier(0.34,1.56,0.64,1);
+  --app-duration-fast: 0.12s;
+  --app-duration:      0.15s;
+  --app-duration-slow: 0.25s;
+
+  /* ═══════════════════════════════════════════
+     皮肤维度七 · 布局尺寸 Layout（骨架，非皮肤）
+     ═══════════════════════════════════════════ */
+  --app-border-width:  3px;
+  --app-card-hover-lift:     -2px;
+  --app-topbar-h:       96px;
+  --side-w:             228px;
+
+  /* ═══════════════════════════════════════════
+     独立区 · Crayon Doodle 待收敛主题家族
+     ═══════════════════════════════════════════ */
+  --doodle-ink:             #2d2d2d;
+  --doodle-bg:              #faf5ee;
+  --doodle-card:            #fffbf5;
+  --doodle-border:          3px;
+  --doodle-radius:          4px 10px 4px 10px;
+  --doodle-radius-sm:       4px 8px 4px 8px;
+  --doodle-shadow:          2px 2px 0 rgba(0,0,0,0.06);
+  --doodle-texture-cross:   linear-gradient(45deg,rgba(0,0,0,0.02) 25%,transparent 25%,transparent 75%,rgba(0,0,0,0.02) 75%);
+  --doodle-texture-dots:    radial-gradient(circle,rgba(0,0,0,0.03) 1px,transparent 1px);
+  --doodle-texture-stripe:  repeating-linear-gradient(-45deg,transparent,transparent 3px,rgba(0,0,0,0.015) 3px,rgba(0,0,0,0.015) 6px);
+
+  /* ═══════════════════════════════════════════
+     独立区 · Element Plus 变量覆盖 — Doodle
+     ═══════════════════════════════════════════ */
   --el-color-primary:           #F7C948;
   --el-color-primary-light-3:   #F9D870;
   --el-color-primary-light-5:   #FBE898;
@@ -375,6 +386,27 @@
   --el-box-shadow-dark:         3px 4px 0 rgba(0,0,0,0.06);
 
   --el-font-family:             var(--app-font);
+
+  /* ═══════════════════════════════════════════
+     皮肤维度六 · 布局 Layout
+     ═══════════════════════════════════════════ */
+
+  /* ── split 左栏宽度（统一档位）── */
+  --layout-pane-left:       280px;
+
+  /* ── 主/副图表行比例 ── */
+  --layout-ratio-chart:     1.5fr 1fr;
+
+  /* ── KPI 指标行（统一用 minmax(0,1fr) 防内容撑破；3 项行用 auto-fit 自适应，属登记例外）── */
+  --layout-kpi-cols:        repeat(4, minmax(0, 1fr));
+
+  /* ── 断点规范（⚠️ media query 内不能用 var()，故此处只登记档位与迁移映射）
+       档位（桌面优先，max-width）：
+         sm  768px   组件级降级（KPI 4→2 列、登录页留白）
+         md  1024px  工作台双栏 → 单列
+         lg  1200px  宽屏双栏切换
+       现状 → 档位映射（待迁移，改值会改变折叠时机，需视觉确认）：
+         1200 → lg ｜ 1100 / 960 / 900 → md ｜ 800 / 768 → sm ── */
 }
 
 /* ── AI 助手 scope ── */

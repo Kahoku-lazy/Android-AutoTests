@@ -33,6 +33,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body, #app { height: 100%; overflow: hidden; }
 
+/* #app 滚动兜底：页面若忘记套 .doc-page，退化为"可滚动"而不是"内容被裁"。
+   （正常路径下 .app-shell 恰好 100vh，不会触发本行。
+     滚动策略的两种口径见下方「文档站风格页面布局」一节） */
+#app { overflow: auto; }
+
 body {
   font-family: var(--app-font);
   font-size: var(--app-size-sm);
@@ -217,10 +222,17 @@ h4 { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); font-fa
 
 /* ═══════════════════════════════════════════════
    文档站风格页面布局
+
+   滚动策略（二选一，禁止混用 —— 见 frontend.md CSS 铁律第 3 条）：
+     ① 页面整体滚动（普通列表/详情页）：.doc-page 作为页面根，内容自然撑开
+     ② 视口固定 + 内层滚动（工作台类页面）：.doc-page--fixed + .doc-body 承担滚动
+   新增页面时先明确选哪一种，不要依赖"外层也会滚"的巧合。
    ═══════════════════════════════════════════════ */
 .doc-page {
+  /* 页面根只负责纵向排版：定高与滚动由外壳的 .main-content 承担。
+     App.vue 的 .main-content :deep(.doc-page) 会覆盖本层的 height/overflow，
+     故此处不再声明 height:100% / overflow-y:auto —— 那是失效声明（读完 CSS 会误判滚动归属）。 */
   display: flex; flex-direction: column;
-  height: 100%; overflow-y: auto;
 }
 
 .doc-body {
@@ -240,7 +252,7 @@ h4 { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); font-fa
 
 .doc-section__header {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 4px; flex-wrap: wrap; gap: 12px;
+  margin-bottom: var(--app-space-xs); flex-wrap: wrap; gap: 12px;
 }
 
 .doc-section__title {
@@ -256,42 +268,44 @@ h4 { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); font-fa
 }
 
 .doc-tag {
-  font-size: var(--app-size-xs); padding: 2px 8px; border-radius: 3px 6px 3px 6px;
+  font-size: var(--app-size-xs); padding: 2px var(--app-space-sm); border-radius: 3px 6px 3px 6px;
   background: #fff; color: var(--ink); font-weight: 700;
   border: 1.5px solid var(--ink); opacity: 0.6;
 }
 
 /* ═══════════════════════════════════════════════
-   工作台壳层
+   工作台壳层 = 滚动策略 ② 的显式开关
+   .doc-page--fixed  → 视口固定 + 内层滚动
+   .wb-shell         → 只做主题作用域（见 workbench-theme.css），不再兼任滚动开关
    ═══════════════════════════════════════════════ */
-.doc-page.wb-shell {
+.doc-page--fixed {
   background: transparent; overflow: hidden;
 }
 
-.doc-page.wb-shell .doc-body {
+.doc-page--fixed .doc-body {
   background:
     radial-gradient(circle, var(--app-paper-dot) 0.8px, transparent 0.8px);
   background-size: 14px 14px;
   background-color: var(--doodle-bg, #faf5ee);
-  padding: 16px 18px 28px;
-  gap: 16px; overflow-y: auto;
+  padding: var(--app-space-md) 18px 28px;
+  gap: var(--app-space-md); overflow-y: auto;
 }
 
-.doc-page.wb-shell .doc-section {
+.doc-page--fixed .doc-section {
   background: #fff;
   border: 2.5px solid var(--ink);
   border-radius: var(--app-radius-md);
   box-shadow: var(--app-shadow-sm);
   padding: 18px 20px;
 }
-.doc-page.wb-shell .doc-section__title { color: var(--ink); font-weight: 800; }
-.doc-page.wb-shell .doc-section__label { color: #999; font-weight: 600; }
-.doc-page.wb-shell .doc-tag {
+.doc-page--fixed .doc-section__title { color: var(--ink); font-weight: 800; }
+.doc-page--fixed .doc-section__label { color: #999; font-weight: 600; }
+.doc-page--fixed .doc-tag {
   background: #fff; color: var(--ink); opacity: 0.6;
   border: 1.5px solid var(--ink);
 }
 
 @media (max-width: 768px) {
-  .doc-body { padding: 18px 16px 48px; }
+  .doc-body { padding: 18px var(--app-space-md) var(--app-space-2xl); }
   .doc-section { padding: 18px; }
 }

@@ -198,3 +198,6 @@ plans/
 # ── 本地测试数据 ──
 dev_docs\05-开发与测试\govee
 temps/
+
+# ── 测试产物（Allure / JUnit 报告，自动生成）──
+tests/reports/

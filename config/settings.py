@@ -231,6 +231,13 @@ AGENTSCOPE_WORKSPACE_DIR = BASE_DIR / "data" / "agentscope_workspaces"
 AGENTSCOPE_SERVICE_TITLE = "Android-AutoTests Agent Service"
 AGENTSCOPE_SERVICE_VERSION = "2.0.0"
 
+# ── 知识库 RAG 嵌入模型（ollama 本地 / openai 兼容 API）──
+EMBEDDING_PROVIDER = os.environ.get("EMBEDDING_PROVIDER", "ollama")
+EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "nomic-embed-text")
+EMBEDDING_API_KEY = os.environ.get("EMBEDDING_API_KEY", "")
+EMBEDDING_BASE_URL = os.environ.get("EMBEDDING_BASE_URL", "")
+EMBEDDING_DIMENSIONS = os.environ.get("EMBEDDING_DIMENSIONS", "")
+
 # ── JWT ──
 JWT_ACCESS_TTL = int(os.environ.get("JWT_ACCESS_TTL", "3600"))  # 1 hour
 JWT_REFRESH_TTL = int(os.environ.get("JWT_REFRESH_TTL", "604800"))  # 7 days
@@ -321,8 +328,7 @@ JAZZMIN_SETTINGS = {
         "apps.element_locator": "fas fa-search",
         "apps.device_pool": "fas fa-mobile-alt",
         "apps.case_manager": "fas fa-clipboard-list",
-        "apps.test_runner": "fas fa-play-circle",
-        "apps.report_generator": "fas fa-chart-bar",
+    "apps.report_generator": "fas fa-chart-bar",
     },
     "default_icon_parents": "fas fa-chevron-circle-right",
     "default_icon_children": "fas fa-circle",

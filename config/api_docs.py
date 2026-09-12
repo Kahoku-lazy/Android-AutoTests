@@ -360,73 +360,6 @@ ENDPOINTS = [
             },
         ],
     },
-    # ── test-runner (4 endpoints) ──
-    {
-        "module": "test-runner",
-        "prefix": "/api/runner",
-        "desc": "执行引擎：异步测试执行、14种步骤类型、WebSocket 实时进度、CSV/MD报告",
-        "items": [
-            {
-                "method": "POST",
-                "path": "/api/runner/run",
-                "desc": "启动测试执行(异步)",
-                "body": {
-                    "case_ids": "list[str]",
-                    "loop_count": "int(默认10)",
-                    "package_name": "str",
-                },
-                "response": {
-                    "status": "bool",
-                    "run_id": "str",
-                    "case_count": "int",
-                    "loop_count": "int",
-                    "ws_url": "str",
-                },
-                "errors": [
-                    {"code": 400, "msg": "case_ids 为空"},
-                    {"code": 404, "msg": "无启用的用例"},
-                ],
-                "note": "核心端点。后台 asyncio.create_task() 异步执行，立即返回 run_id。通过 ws_url 建立 WebSocket 接收实时进度",
-            },
-            {
-                "method": "POST",
-                "path": "/api/runner/run/{run_id}/stop",
-                "desc": "停止运行中的测试",
-                "body": None,
-                "response": {"status": "bool", "message": "str"},
-                "errors": [{"code": 404, "msg": "run_id 不存在或已结束"}],
-                "note": "优雅停止：当前步骤完成后终止",
-            },
-            {
-                "method": "GET",
-                "path": "/api/runner/run/{run_id}/status",
-                "desc": "查询测试执行进度",
-                "body": None,
-                "response": {
-                    "status": "bool",
-                    "status": "str(pending|running|stopped|completed)",
-                    "is_running": "bool",
-                    "selected_cases": "list",
-                    "loop_count": "int",
-                    "started_at": "str",
-                },
-                "errors": [{"code": 404, "msg": "运行记录未找到"}],
-                "note": "优先查活跃运行(内存)，其次查历史 DB",
-            },
-            {
-                "method": "GET",
-                "path": "/api/runner/runs",
-                "desc": "执行历史列表(最近50条)",
-                "body": None,
-                "response": {
-                    "status": "bool",
-                    "runs": "list[{run_id,total,passed,failed,last_time}]",
-                },
-                "errors": [],
-                "note": "从 tr_test_results 表聚合统计",
-            },
-        ],
-    },
     # ── report-generator (2 endpoints) ──
     {
         "module": "report-generator",
@@ -546,7 +479,7 @@ ENDPOINTS = [
             },
         ],
     },
-    # ── WebSocket (2 endpoints) ──
+    # ── WebSocket (1 endpoint) ──
     {
         "module": "websocket",
         "prefix": "/ws",
@@ -560,15 +493,6 @@ ENDPOINTS = [
                 "response": 'S→C: {"type":"screenshot","image":"<base64 PNG>"}',
                 "errors": [],
                 "note": "连接后自动开始推送。无客户端时停止截图。Vite proxy 已配置",
-            },
-            {
-                "method": "WS",
-                "path": "/ws/test-run/{run_id}",
-                "desc": "测试执行实时进度",
-                "body": None,
-                "response": "6 种消息: log|case_started|iteration_result|case_finished|run_finished|device_error",
-                "errors": [],
-                "note": "run_id 来自 POST /api/runner/run 返回值。断开连接后回调自动清理",
             },
         ],
     },

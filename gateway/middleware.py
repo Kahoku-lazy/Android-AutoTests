@@ -22,7 +22,6 @@ PUBLIC_PREFIXES = [
     "/api/auth/login",
     "/api/auth/register",
     "/api/auth/refresh",
-    "/api/runner/step-screenshots/",  # img src cannot send Authorization header
     "/api/ai/tools/",  # AgentScope internal service-to-service
     "/admin/",
     "/static/",

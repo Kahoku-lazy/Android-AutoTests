@@ -9,5 +9,4 @@ WebSocket routing remains in gateway/routing.py.
 #   config/urls.py → include('apps.element_locator.urls')
 #   config/urls.py → include('apps.device_pool.urls')
 #   config/urls.py → include('apps.case_manager.urls')
-#   config/urls.py → include('apps.test_runner.urls')
 #   config/urls.py → include('apps.report_generator.urls')

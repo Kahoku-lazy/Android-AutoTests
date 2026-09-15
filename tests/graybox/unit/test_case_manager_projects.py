@@ -20,9 +20,7 @@ def test_create_project_and_empty_tree():
 def test_directory_file_move_and_cycle_forbidden():
     p = case_api.create_project(name="P", user_id="42")["id"]
     d1 = case_api.create_directory(project_id=p, name="根目录", user_id="42")["id"]
-    d2 = case_api.create_directory(project_id=p, name="子目录", user_id="42", parent_id=d1)[
-        "id"
-    ]
+    d2 = case_api.create_directory(project_id=p, name="子目录", user_id="42", parent_id=d1)["id"]
     with pytest.raises(ConflictError):
         case_api.move_item(
             user_id="42",
@@ -30,9 +28,7 @@ def test_directory_file_move_and_cycle_forbidden():
             item_id=d1,
             target_directory_id=d2,
         )
-    file_data = case_api.create_file(
-        project_id=p, name="冒烟表", user_id="42", directory_id=d1
-    )
+    file_data = case_api.create_file(project_id=p, name="冒烟表", user_id="42", directory_id=d1)
     case = case_api.create_definition(
         project_id=p, file_id=file_data["id"], user_id="42", title="用例A"
     )

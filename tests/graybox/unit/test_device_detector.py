@@ -73,12 +73,15 @@ def test_adb_device_serials_returns_empty_on_error(detector):
 @pytest.mark.device_pool
 def test_detect_returns_contract_list(detector):
     """detect 组装契约：USB 与无线分别落 connection_type / connection_addr。"""
-    with patch.object(
-        detector, "adb_device_serials", return_value={"RF8N21MSW7A", "192.168.1.5:5555"}
-    ), patch.object(
-        detector,
-        "resolve_serial",
-        side_effect=lambda addr: (addr, "" if ":" not in addr else addr),
+    with (
+        patch.object(
+            detector, "adb_device_serials", return_value={"RF8N21MSW7A", "192.168.1.5:5555"}
+        ),
+        patch.object(
+            detector,
+            "resolve_serial",
+            side_effect=lambda addr: (addr, "" if ":" not in addr else addr),
+        ),
     ):
         devices = detector.detect()
 
@@ -120,9 +123,11 @@ def test_wireless_ready_hint_from_adb_devices(detector):
 @pytest.mark.device_pool
 def test_connect_skips_adb_when_already_listed(detector):
     """已在 adb devices 的 IP:port 不再调 adb connect，只探活。"""
-    with patch.object(detector, "is_adb_listed", return_value=True), patch(
-        "apps.device_pool.manager.probe_u2"
-    ), patch("apps.device_pool.manager.subprocess.run") as mock_run:
+    with (
+        patch.object(detector, "is_adb_listed", return_value=True),
+        patch("apps.device_pool.manager.probe_u2"),
+        patch("apps.device_pool.manager.subprocess.run") as mock_run,
+    ):
         detector.connect("10.162.95.96:43523")
     mock_run.assert_not_called()
 
@@ -131,10 +136,14 @@ def test_connect_skips_adb_when_already_listed(detector):
 @pytest.mark.device_pool
 def test_connect_wireless_success(detector):
     """无线 IP:port 连接成功（adb connect + u2 探活均成功，不抛错）。"""
-    with patch.object(detector, "is_adb_listed", return_value=False), patch(
-        "apps.device_pool.manager.subprocess.run",
-        return_value=Mock(stdout="connected to 192.168.1.5:5555\n", stderr=""),
-    ), patch("apps.device_pool.manager.probe_u2"):
+    with (
+        patch.object(detector, "is_adb_listed", return_value=False),
+        patch(
+            "apps.device_pool.manager.subprocess.run",
+            return_value=Mock(stdout="connected to 192.168.1.5:5555\n", stderr=""),
+        ),
+        patch("apps.device_pool.manager.probe_u2"),
+    ):
         detector.connect("192.168.1.5:5555")  # 不抛错
 
 
@@ -144,9 +153,12 @@ def test_connect_wireless_adb_fail(detector):
     """无线 adb connect 失败（输出无 connected/already）→ 504。"""
     from apps.device_pool.manager import DeviceError
 
-    with patch.object(detector, "is_adb_listed", return_value=False), patch(
-        "apps.device_pool.manager.subprocess.run",
-        return_value=Mock(stdout="failed to connect\n", stderr=""),
+    with (
+        patch.object(detector, "is_adb_listed", return_value=False),
+        patch(
+            "apps.device_pool.manager.subprocess.run",
+            return_value=Mock(stdout="failed to connect\n", stderr=""),
+        ),
     ):
         with pytest.raises(DeviceError) as e:
             detector.connect("192.168.1.5:5555")
@@ -159,9 +171,12 @@ def test_connect_unauthorized_needs_pair(detector):
     """unauthorized → 提示填写配对。"""
     from apps.device_pool.manager import DeviceError
 
-    with patch.object(detector, "is_adb_listed", return_value=False), patch(
-        "apps.device_pool.manager.subprocess.run",
-        return_value=Mock(stdout="", stderr="error: device unauthorized\n"),
+    with (
+        patch.object(detector, "is_adb_listed", return_value=False),
+        patch(
+            "apps.device_pool.manager.subprocess.run",
+            return_value=Mock(stdout="", stderr="error: device unauthorized\n"),
+        ),
     ):
         with pytest.raises(DeviceError) as e:
             detector.connect("10.162.95.96:43523")
@@ -176,12 +191,16 @@ def test_connect_atx_agent_not_running(detector):
     from apps.device_pool.manager import DeviceError
     from engines.device.base import EngineConnectError
 
-    with patch.object(detector, "is_adb_listed", return_value=False), patch(
-        "apps.device_pool.manager.subprocess.run",
-        return_value=Mock(stdout="connected\n", stderr=""),
-    ), patch(
-        "apps.device_pool.manager.probe_u2",
-        side_effect=EngineConnectError("atx-agent not running"),
+    with (
+        patch.object(detector, "is_adb_listed", return_value=False),
+        patch(
+            "apps.device_pool.manager.subprocess.run",
+            return_value=Mock(stdout="connected\n", stderr=""),
+        ),
+        patch(
+            "apps.device_pool.manager.probe_u2",
+            side_effect=EngineConnectError("atx-agent not running"),
+        ),
     ):
         with pytest.raises(DeviceError) as e:
             detector.connect("192.168.1.5:5555")
@@ -192,9 +211,10 @@ def test_connect_atx_agent_not_running(detector):
 @pytest.mark.device_pool
 def test_connect_usb_skips_adb_connect(detector):
     """USB 设备跳过 adb connect，直接 u2 探活。"""
-    with patch("apps.device_pool.manager.probe_u2"), patch(
-        "apps.device_pool.manager.subprocess.run"
-    ) as mock_run:
+    with (
+        patch("apps.device_pool.manager.probe_u2"),
+        patch("apps.device_pool.manager.subprocess.run") as mock_run,
+    ):
         detector.connect("RF8N21MSW7A")
     mock_run.assert_not_called()  # USB 不触发 adb connect
 

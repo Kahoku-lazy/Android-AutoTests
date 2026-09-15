@@ -6,6 +6,7 @@ import asyncio
 import json
 
 import pytest
+
 from django.core.exceptions import SynchronousOnlyOperation
 
 from apps.ai_assistant.models import AIAgent, AITask

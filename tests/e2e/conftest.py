@@ -61,7 +61,11 @@ def pytest_runtest_makereport(item, call):
         return
     try:
         png = page.screenshot(full_page=True)
-        allure.attach(png, name=f"失败截图 · {item.name}", attachment_type=allure.attachment_type.PNG)
-        allure.attach(getattr(page, "url", ""), name="失败时 URL", attachment_type=allure.attachment_type.TEXT)
+        allure.attach(
+            png, name=f"失败截图 · {item.name}", attachment_type=allure.attachment_type.PNG
+        )
+        allure.attach(
+            getattr(page, "url", ""), name="失败时 URL", attachment_type=allure.attachment_type.TEXT
+        )
     except Exception:  # noqa: BLE001 — 截图失败不掩盖原失败
         pass

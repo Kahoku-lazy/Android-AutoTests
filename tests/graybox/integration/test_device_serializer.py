@@ -28,9 +28,7 @@ def test_usb_device_visible_to_all(serializer):
 @pytest.mark.device_pool
 def test_wifi_device_locked_visible_only_owner(serializer):
     """无线设备锁定后仅锁定者可见，他人不可见。"""
-    dev = Device.objects.create(
-        serial="WIFI1", connection_type="WIFI", locked_by="1", added_by="1"
-    )
+    dev = Device.objects.create(serial="WIFI1", connection_type="WIFI", locked_by="1", added_by="1")
     assert serializer.is_device_visible(dev, "1", set()) is True
     assert serializer.is_device_visible(dev, "2", set()) is False
 
@@ -49,9 +47,7 @@ def test_wifi_device_unlocked_visible_to_all(serializer):
 @pytest.mark.device_pool
 def test_admin_sees_all(serializer):
     """管理员全局可见。"""
-    dev = Device.objects.create(
-        serial="WIFI3", connection_type="WIFI", locked_by="1", added_by="1"
-    )
+    dev = Device.objects.create(serial="WIFI3", connection_type="WIFI", locked_by="1", added_by="1")
     assert serializer.is_device_visible(dev, "999", {"999"}) is True
 
 

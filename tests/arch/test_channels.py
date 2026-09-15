@@ -1,6 +1,6 @@
 """通信通道架构契约测试 — 单文件，按类区分四条通道。
 
-校验「四条内部通信通道」的结构不变量（architecture.md §一 逐通道规则）：
+校验「四条内部通信通道」的结构不变量（dev_docs/03-设计与架构/ARCH-00-平台总体架构.md §1.4 五条通信通道）：
   - ① HTTP REST + JWT：前端唯一出口 baseURL、后端业务路由挂 /api/、JWT 白名单无业务路由
   - ② WebSocket + JWT：路由真相源当前 0 个生产点（编辑锁已下线）
   - ③ AgentScope 进程内：无 adapters/、rag/

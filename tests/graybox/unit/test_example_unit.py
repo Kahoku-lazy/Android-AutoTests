@@ -10,7 +10,12 @@ from models import test_models
 
 @pytest.mark.unit
 def test_task_outcome_terminal_values():
-    assert test_models.TaskOutcome.terminal_values() == ["completed", "stopped", "interrupted", "error"]
+    assert test_models.TaskOutcome.terminal_values() == [
+        "completed",
+        "stopped",
+        "interrupted",
+        "error",
+    ]
 
 
 @pytest.mark.unit

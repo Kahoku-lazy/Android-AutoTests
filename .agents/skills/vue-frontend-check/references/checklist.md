@@ -21,7 +21,7 @@
 | # | 检查项 | 怎么扫 | 通过标准 | 常见反例 |
 |---|--------|--------|----------|----------|
 | 1 | font-size | `rg "font-size:\\s*\\d+px"` | `--app-size-*`；**&lt;12px→🟠** | `10px` |
-| 2 | 颜色 | calibration §4 | 交互 hex/遮罩→🟠；装饰 shadow→🟡；`var(--t,#fb)` 主值 token→✅ | `color:#fff` |
+| 2 | 颜色 | calibration §4 | 交互 hex/遮罩→🟠；装饰 shadow→🟡；`var(--t,#fb)` 主值 token→✅；ECharts option 画布色✅ | `color:#fff` |
 | 3 | 行内 style | 搜 `style=` | 静态进 class | 可 class 化却行内 |
 | 4 | 独立 CSS / z-index | 查 `@import` / z-index | 共享 css 可记债；z-index 有注释 | `9999` 无说明 |
 | 5 | 圆角 | `rg "border-radius"` | 不对称；对称大圆角 `50px/16px/20px` → 🟠 | `border-radius:16px` |

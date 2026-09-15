@@ -16,6 +16,7 @@
 | `--app-highlight` | `#FFE066` | hover 高亮背景 |
 | `--app-text-secondary` | `#999` | 辅助文字、占位符、禁用态 |
 | `--app-nav-text` | `#5a5547` | 侧边栏导航未激活文字（暖灰，纸面语言） |
+| `--app-marker-red` | `#ff6b6b` | doodle 马克笔红，仅用于危险 CTA（侧栏退出） |
 
 ## 1.2 8 模块色
 
@@ -86,7 +87,6 @@
 | sm | `2px 2px 0 rgba(0,0,0,0.04)` | `--app-shadow-sm` | 卡片默认、纸艺卡片 |
 | md | `2px 3px 0 rgba(0,0,0,0.05)` | `--app-shadow-md` | 拍立得卡片、KPI 卡 |
 | lg | `3px 4px 0 rgba(0,0,0,0.06)` | `--app-shadow-lg` | 弹窗 |
-| icon | `2px 2px 0 rgba(0,0,0,0.06)` | `--app-icon-shadow` | 图标装饰 |
 
 阴影统一扁平投影（0 模糊半径），禁止模糊阴影或大扩散。
 
@@ -113,6 +113,8 @@
 
 easing：`--app-ease: cubic-bezier(0.25,0.1,0.25,1)`、`--app-spring: cubic-bezier(0.34,1.56,0.64,1)`。
 
+`prefers-reduced-motion: reduce` 时：`.fade-slide-*` 路由过渡 `transition: none` 直接切页；`shared/animations.ts` 的 JS 编排跳过过程、落到终态（void 函数写终值；返回句柄的函数 `duration: 0`）。
+
 ## 1.10 颜色使用规则
 
 | 颜色 | 允许用途 | 禁止用途 |
@@ -129,15 +131,4 @@ easing：`--app-ease: cubic-bezier(0.25,0.1,0.25,1)`、`--app-spring: cubic-bezi
 
 | CSS 变量 | 色值 | 用途 |
 |----------|------|------|
-| `--app-stat-line` | `#7a7874` | 卡片软灰线条（描边/十字收角/图标） |
-| `--app-stat-line-soft` | `#9e9994` | 辅助文字 |
 | `--app-stat-text` | `#5f5d59` | 卡片主文字 |
-| `--app-stat-hover` | `#f5eecf` | hover 奶油黄 |
-| `--app-stat-shadow` / `-hover` | `rgba(122,120,116,.14)` / `.22` | 扁平投影 |
-| `--app-stat-sage` | `#e6f0ea` | 薄荷淡绿填充 |
-| `--app-stat-gray` | `#dedfdc` | 柔灰填充 |
-| `--app-stat-rose` | `#f4e8e1` | 浅粉填充 |
-| `--app-stat-pale` | `#f0f6e7` | 淡青柠奶油填充 |
-| `--app-stat-deep` | `#cdd9d3` | 深一档薄荷填充 |
-| `--app-stat-cream` | `#fdf7ed` | 米白填充 |
-| `--app-stat-dust` | `#d0c5c1` | 灰粉填充 |

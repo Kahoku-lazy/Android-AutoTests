@@ -138,17 +138,29 @@ hover: translate(1px,1px)，阴影收窄
 
 ### 13. KPI 统计卡 `.kpi-card`
 
+共享组件：`frontend/src/shared/components/KpiCard.vue`  
+视觉 DNA 对齐侧栏色板卡（`temps/hand-drawn-doodle-sidebar.html` Yellow Marker）：**虚线边 + 硬偏移色阴影 + 近直角**。
+
 ```
-边框:  3px solid var(--ink)
-背景:  #fff
-数字:  Caveat 30px / 700（标签 Quicksand 13px）
-圆角:  4px 10px 6px 8px
-阴影:  2px 3px 0 rgba(0,0,0,0.04)
-装饰:  顶部菱形色块（10×10，rotate 45°，2px solid var(--ink)）
-       底部 "~" 水印（Caveat 17px，opacity 0.12）
+公共壳:
+  边框:  2.5px dashed var(--ink)
+  背景:  #fff
+  圆角:  ≈2px（近直角）
+  阴影:  4px 4px 0 0 var(--kpi-accent)（硬偏移，无模糊；accent = 模块色）
+  微倾:  rotate(-0.8deg~1.2deg)；hover 回正并 translate(-1px,-1px)
+  装饰:  deco = none | pin | tape（pointer-events: none，不挡点击）
+  a11y:  可点击时 role=button + Enter/Space；prefers-reduced-motion 下关闭微倾/位移动效与 live 动画
+
+variant="kpi"（默认，报告/AI 等紧凑指标）:
+  布局:  居中；顶部 shape（diamond|triangle|square|circle）+ label + value
+  兼容:  label / value / color / shape / @click 与旧调用一致
+
+variant="entry"（仪表盘入口）:
+  布局:  图标槽 + 标题 + 可选 live；主数值；描述；「进入」按钮
+  用途:  仪表盘 StatsCard 薄包装此变体（count-up / path 逻辑留在 StatsCard）
 ```
 
-**用途**：仪表盘统计数字、操作区摘要条。
+**用途**：仪表盘入口统计、报告/AI 指标行。禁止再为同场景私造第二套清新风统计卡样式。
 
 ### 14. 状态 Badge `.badge`
 
@@ -216,3 +228,79 @@ hover: 背景 var(--app-bg-subtle)
 ```
 
 **用途**：设置项、配置列表（表格行和卡片之外的第三种展示模式）。
+
+### 21. 撕纸入口卡 `.sketch-card`（SketchCard）
+
+共享组件：`frontend/src/shared/components/SketchCard.vue`  
+cycle：`frontend/src/shared/helpers/sketchCard.ts`  
+视觉 DNA 对齐 `temps/hand-drawn-doodle-sidebar.html` `#page-principles` article[1]。
+
+```
+壳:    2.5px dashed var(--ink)；白底；圆角 2px
+阴影:  4px 4px 0 0 var(--sketch-accent)（硬偏移，无模糊）
+微倾:  父级 sketchTiltAt(index)；hover 回正并 translate(-1px,-1px)
+图标:  34×34 墨线方块，背景 = accent
+字段:  title / description（空则「暂无描述」）/ 右下角 meta
+删除:  可选；stopPropagation，不进入
+cycle: sketchToneAt(index) 轮转 8 个 --c-*
+a11y:  role=button + Enter/Space；prefers-reduced-motion 关微倾
+```
+
+**用途**：用例 / 元素 / 页面流资源网格。禁止再为同场景写顶条 `__accent` 卡。不替代 KpiCard。
+
+### 22. 涂鸦内容卡 `.doodle-note`（DoodleNote）
+
+共享组件：`frontend/src/shared/components/DoodleNote.vue`
+
+```
+variant="note"（胶带 deco-card · 小助手线路卡）:
+  壳:    2.5px dashed var(--ink)；纸色底；圆角 2px
+  阴影:  4px 4px 0 0 accent（硬偏移）
+  装饰:  顶中半透明胶带（pointer-events: none）；默认微倾 -0.8deg
+  插槽:  header / default / actions
+
+variant="sticky"（Do/Dont 便利贴 · 任务卡）:
+  status=ok:   青绿浅底 + 青绿阴影（Do）
+  status=fail: 浅红底 + 红阴影（Dont）
+  status=run:  浅蓝底 + 天蓝阴影
+  status=wait: 纸色底 + 灰阴影
+  微倾:  ok -1.2deg / fail +1.4deg；reduce 时无倾角动画
+```
+
+**用途**：列表内容卡（助手线路、任务条目）。不替代 KpiCard / SketchCard / AppCard。
+
+### 22b. 钉板内容块 `.ac-card`（AppCard）
+
+共享组件：`frontend/src/shared/components/AppCard.vue`  
+视觉 DNA 对齐 `#page-typography` `.panel`（`temps/hand-drawn-doodle-sidebar.html`）。
+
+```
+公共壳:
+  边框:  2.5px dashed var(--ink)
+  背景:  var(--app-bg-card)
+  圆角:  ≈2px（近直角）
+  阴影:  4px 4px 0 0 var(--ac-accent)（硬偏移，无模糊）
+  微倾:  rotate(var(--ac-tilt))；hover/focus-within 回正 + 阴影略抬
+  装饰:  .ac-card__pin 居中置顶圆钉（可用 pin=false 关闭）
+  props: tone / tilt / pin；旧 color 名映射到 --c-* 作回退
+  cycle: 同排由父级 sketchToneAt(i) / sketchTiltAt(i) 注入
+```
+
+**用途**：L3 可复用数据块（图表卡 / 表格卡 / 指标组）。不替代 SketchCard（入口撕纸）/ KpiCard（指标格）。  
+**ECharts**：壳用令牌；option 内画布配色独立设计，允许硬编码。
+
+### 23. 涂鸦按钮 `.doodle-btn`（DoodleBtn）
+
+共享组件：`frontend/src/shared/components/DoodleBtn.vue`
+
+```
+tone=danger:  红底白字（删除）→ var(--app-marker-red)
+tone=teal:    青绿底（校验 / 详情）→ var(--c-case)，禁止冷蓝
+tone=yellow:  黄底（配置）→ var(--c-dashboard)
+tone=paper:   纸色中性
+壳:    2.5px solid var(--ink)；圆角 2px；硬阴影 3px 3px 0 0 var(--ink)
+hover: translate(-1px,-1px) + 阴影加深；disabled 灰底不可点
+a11y:  prefers-reduced-motion 关闭位移
+```
+
+**用途**：内容卡操作区。页头 `wb-btn` / EP 表单主按钮不改。删除确认仍走 `ConfirmButton`（`doodle` 外观接 danger）。

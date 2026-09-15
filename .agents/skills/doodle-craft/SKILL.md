@@ -10,7 +10,7 @@ description: |
 > 极简几何 · 粗线涂鸦 · 彩绘卡通 · 手稿纸
 > 令牌唯一真相源：`frontend/src/shared/styles/tokens.css`
 > 风格约束与验收：`frontend/DESIGN_SYSTEM.md`
-> 前端编码规范（嵌套深度 / z-index / 文件组织 / 脚手架）：`android-autotests-rules/references/frontend.md`
+> 前端编码规范（嵌套深度 / z-index / 文件组织 / 脚手架）：`frontend/AGENTS.md`（Vue 代码编写规范 + L0–L3 速查）
 
 本技能用于**做页面 / 做组件 / 改样式**，以及**维护迭代 Doodle Craft 主题**。
 
@@ -39,11 +39,11 @@ description: |
 | 新建页面 | `references/layout.md` §4.7 页面变体 | 复制骨架变体，改字段 |
 | 加卡片 / 做数据展示 | `references/components.md` §二 业务组件 | 复制组件规格 |
 | 改按钮/表格/弹窗/表单/输入框 | `references/components.md` §一 基础原子 | 复制 `:deep()` 块，只调色/尺寸 |
-| 改颜色/字体/间距/圆角/阴影/动效 | `references/tokens.md` | `tokens.css` 对应 `--app-*` / `--el-*` 变量 |
+| 改颜色/字体/间距/圆角/阴影/动效 | `references/tokens.md` | `tokens.css` 的 **T0 主 token**：颜色 `--color-*`（按颜色命名，同值只登记一次）· 字号 `--font-size-*` · 间距 `--space-*` · 圆角 `--radius-*` · 阴影 `--shadow-*` · 通用组件 `--comp-*`；`--app-*` / `--el-*` 为兼容别名（= `var(原子)`）|
 | 改页面布局 / 排查不可滚动 | `references/layout.md` | 组件 `scoped CSS`（用 `var(--*)`） |
 | 新增设计规则 | — | 同步 `DESIGN_SYSTEM.md` + `tokens.css` |
 
-**验证**：改完确认 `tokens.css ↔ DESIGN_SYSTEM.md ↔ 组件` 三者一致，无硬编码色值/字号残留。
+**验证**：`cd frontend && npm run lint:styles`（批 2 硬门禁：颜色原子唯一 + 非原子声明无纯色字面量 + 引用完整）· 确认 `tokens.css ↔ 组件` 一致，无硬编码色值/字号残留。
 
 ## 8 模块色（主题一部分，勿随意改动）
 
@@ -57,8 +57,6 @@ description: |
 | report-generator | `--c-report` | `#7C6F83` 灰紫 |
 | ai-assistant | `--c-ai` | `#E879F9` 柔粉紫 |
 | workflow | `--c-workflow` | `#89CFF0` 天蓝 |
-
-> 另有语义色 `--app-module-*` 系列与上述 8 色对应（如 `--app-module-green` = device-pool）。改模块色时两处同步。
 
 ## 平台图标映射（侧边栏 Lucide）
 
@@ -84,7 +82,7 @@ const NAV_ICONS = {
 
 ```
 [ ] 构建通过  cd frontend && npx vite build --mode development
-[ ] 颜色全用 var(--xxx)，无硬编码色值
+[ ] 颜色全用 var(--xxx)，无硬编码色值（ECharts option 画布色除外）
 [ ] 字号只用 6 档（--app-size-*），无 10px/11px
 [ ] 圆角不对称（无 50px/16px/20px 对称圆角）
 [ ] 阴影扁平（无模糊 shadow）

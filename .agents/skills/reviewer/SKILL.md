@@ -33,20 +33,20 @@ description: |
 - 认证绕过（中间件放行、WebSocket 无验证）
 - 数据隔离（跨用户查询未按 user_id 过滤）
 - 敏感字段泄露（api_key 未脱敏）
-- 详细规则 → `android-autotests-rules` skill `references/security.md`
+- 详细规则 → `apps/AGENTS.md` §1.2 / §1.3（后端红线与契约）· `config/env.py` 与 `config/settings.py`（凭据与安全配置真相源）· `frontend/AGENTS.md`（前端清洗 / XSS 口径）
 
 ### 3. 前端规范
 - 组件 API 正确性（animal-island-vue 陷阱：`type="danger"`→`type="primary" danger`、Tabs 必须具名 slot、el-cascader 必须 `emitPath: false`）
 - 数据来源铁律：展示数据必须来自 API，禁止硬编码假数据
 - 写操作 catch 是否报错（禁止静默吞错）
 - CSS 全局冲突风险
-- 详细规则 → `references/frontend.md`
+- 详细规则 → `frontend/AGENTS.md`
 
 ### 4. 后端规范
 - API 响应格式 `{status: true/false, data/message}`
 - 错误状态码匹配（400/401/403/404/409/500）
 - 跨模块调用是否走 api.py 白名单
-- 详细规则 → `references/backend.md`、`references/api-conventions.md`
+- 详细规则 → `apps/AGENTS.md` §1.2 / §1.3 · `ruff.toml` · `.agents/skills/boundary-check/SKILL.md`
 
 ### 5. 数据流一致性（case-manager 教训专项）
 

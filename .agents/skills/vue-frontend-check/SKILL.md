@@ -13,8 +13,8 @@ description: |
 **防漂移（必读）**: 同一 skill 两次结果曾不一致 → 判罚必须以 [references/calibration.md](references/calibration.md) 为准，禁止凭感觉升降严重度。
 
 **关联**:
-- `frontend/AGENTS.md` §2（风格约束，字号最小 **12px**，禁硬编码 px）+ `frontend/src/shared/styles/tokens.css`（风格值真相源）
-- `android-autotests-rules/references/frontend.md`
+- `frontend/AGENTS.md` 硬性规范 §1.14（字号最小 **12px**、必须走 `--app-size-*`；图形/展示级字号例外）+ `frontend/src/shared/styles/tokens.css`（风格值真相源，字号刻度注释）
+- `frontend/AGENTS.md`（前端约束与规范：L0–L3 速查 + Vue 代码编写规范 + 共享件清单）
 - 检查细表 → [references/checklist.md](references/checklist.md)
 - **量规/例外/强制输出** → [references/calibration.md](references/calibration.md)
 

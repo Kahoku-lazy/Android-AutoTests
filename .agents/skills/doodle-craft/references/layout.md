@@ -21,15 +21,19 @@
 
 自上而下五段：侧边栏+顶栏 → 操作区 → 筛选区 → 主内容区（唯一纵向滚动）→ 页脚。
 
-## 4.2 页面背景（点阵纸纹）
+## 4.2 页面背景（暖白纸面 + 主区涂鸦）
 
 ```css
-background: radial-gradient(circle, var(--dot) 0.6px, transparent 0.6px);
-background-size: 15px 15px;
-background-color: var(--paper);
+/* L0 / 壳层：纯暖白纸面，禁止点阵与横线本 */
+background-color: var(--paper); /* #fffef5 */
+
+/* 主区稀疏涂鸦：shared/components/PaperDoodles.vue
+   position:absolute; inset:0; pointer-events:none; 挂在 .main-content 内 */
 ```
 
-所有页面统一点阵纸纹，**禁止纯色背景**。
+全站统一暖白纸面 + 主内容区稀疏 SVG 涂鸦（对齐 `temps/hand-drawn-doodle-sidebar.html`）。
+**禁止**点阵纸纹、横线本作为全站/工作台背景；**禁止**在 `.doc-page--fixed .doc-body` 再叠第二套纸纹。
+侧栏保持干净，不挂涂鸦层。
 
 ## 4.3 卡片网格微旋转
 

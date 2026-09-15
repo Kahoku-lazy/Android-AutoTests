@@ -15,7 +15,7 @@ description: |
 **关联**:
 - `apps/AGENTS.md` / `dev_docs/项目笔记/后端claude笔记.md`
 - `apps/自测与检测指令.md`（命令速查）
-- `android-autotests-rules/references/backend.md` / `api-conventions.md` / `python-code.md` / `database.md`
+- `apps/AGENTS.md`（后端约束与契约唯一落点）· `ruff.toml`（Python 代码规范配置真相源）· `.agents/skills/boundary-check/SKILL.md`（防火墙 #1–#4）
 - 检查细表 → [references/checklist.md](references/checklist.md)
 - **量规/例外/强制输出** → [references/calibration.md](references/calibration.md)
 

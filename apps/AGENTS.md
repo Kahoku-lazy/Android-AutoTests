@@ -1,8 +1,5 @@
 # Backend AGENTS.md — AI 约束
 
-> 工作于 `apps/` / Django 后端时必须遵守。编写细则与决策树见 `.agents/skills/android-autotests-rules/references/*`（backend/python-code/api-conventions/database/security）；自测命令见 `apps/自测与检测指令.md`；关单自检用 skill `django-backend-check`。
-> 版本：v1.1 · 最后更新：2026-08-21 · **同步约定**：全局事项（后端 WS 事件表、响应信封与特例、分层纪律、表前缀、契约总表）变更时，必须同步 `.agents/skills/android-autotests-rules/references/api-conventions.md`（+ 相关 rules）与 skill `django-backend-check`（checklist/calibration 对应口径），并镜像登记 `frontend/AGENTS.md`（信封特例 / WS 事件表为双边契约；通道 SSOT 见 `architecture.md` §一）；**App 专属约束**（红线/契约特例/协议/关单附加项）唯一落点为 `apps/{app}/AGENTS.md`，变更只改对应 App 文件。v1.0：对齐前端 CLAUDE 体系（三分类 §1 + 契约总表 + 信封特例登记 + 通道收敛），App 专属约束下沉 11 份 App 级文件；修正过期 WS 清单（`ws/screenshot` 已删除，截图流已快照化 REST、禁止恢复）。v1.1：吸收已归档 `dev_docs/_archive/后端claude笔记.md`（职责分层决策树→`python-code.md` §6、新 App 清单与防火墙反例→`api-conventions.md`、断裂点表→skill checklist、自评 3 问→§3、反面教材→§0.2），引用改指 rules/自测指令/skill。
-
 **口诀**：View 只分发，写库走 api，跨模块不碰内部实现，JSON snake_case，错误要上报，重构先问值不值。  
 **完成定义**：`manage.py check` + ruff 通过 ≠ 完成；相关单测/集成测与契约要对齐。
 
@@ -40,9 +37,9 @@
 | 静默吞错 | 写操作 except 必须日志 + 对用户友好 `message` |
 | 技术术语给用户 | 错误文案不暴露堆栈/SQL/内部路径/Key |
 
-**通道收敛（全项目硬约束，唯一真相源 → `architecture.md` §一）**：
+**通道收敛（全项目硬约束，唯一真相源 → `dev_docs/03-设计与架构/ARCH-00-平台总体架构.md` §1.4 五条通信通道）**：
 
-- 通道封闭集合（四条内部通道 + 禁止新协议 + SSE 已移除 + Redis/外部 LLM 边界）以 `architecture.md` §一 为准，本文不复制。
+- 通道封闭集合（四条内部通道 + 禁止新协议 + SSE 已移除 + Redis/外部 LLM 边界）以 `ARCH-00-平台总体架构.md` §1.4 为准，本文不复制。
 - WS 生产点唯一真相源 = `gateway/routing.py`（当前 1 个：编辑锁，**禁止新增**）；截图流已快照化，禁止恢复 WS 截图流。
 - 所有 Consumer 必须在 `gateway/routing.py` 注册。
 
@@ -73,7 +70,7 @@
 - **信封特例（legacy 平铺，已登记 ARCH-06/07/09 与前端 `AGENTS.md` §1.3，禁止新增，未收敛前禁止改造成信封式）**：
   - report_generator `/reports/*`：平铺 + `FileResponse` 下载。
   - workflow legacy 路径（非 router 路径）：平铺 `{status, directory|document|documents|...}`。
-- 契约对照：前端 api 层、`dev_docs/03-设计与架构/工具-VUE_API_CONTRACT.md`、本 App Serializer；改路径/字段必须双边同步。
+- 契约对照：前端 api 层、`dev_docs/05-开发与测试/接口文档/API-*.md`、本 App Serializer；改路径/字段必须双边同步。
 
 **前后端契约总表（后端 App ↔ 前端模块 ↔ 通道）**：
 
@@ -95,13 +92,13 @@
 ## 2. 协议要点
 
 **HTTP / DRF**：`urls.py` 为路径真相源 → View/ViewSet → Serializer → `api.py`。  
-- 身份：`request.user_id`（JWTAuthenticationMiddleware 注入）；公开路径 `/api/ai/auth/*` `/admin/` `/static/`（与 `backend.md` 列表一致）。  
+- 身份：`request.user_id`（JWTAuthenticationMiddleware 注入）；公开路径 `/api/ai/auth/*` `/admin/` `/static/`（真相源：`gateway/middleware.py` 的 `_is_public()`）。  
 - 错误带 HTTP 状态码（400/401/403/404/409/500）。  
-- 契约对照：前端 api、`dev_docs/03-设计与架构/工具-VUE_API_CONTRACT.md`、本 App Serializer。
+- 契约对照：前端 api、`dev_docs/05-开发与测试/接口文档/API-*.md`、本 App Serializer。
 
 **WS**：Consumer 必须在 `gateway/routing.py` 注册；事件 `type` 与前端一致；写库仍走 api。仅 1 生产点（§1.2 通道收敛）；事件表见 `apps/case_manager/AGENTS.md`（`case_updated`）。
 
-**AI**：Tool 只调各模块 `api.py`（同进程直调，无 SSE）；依赖 Redis（见 `backend.md`）。
+**AI**：Tool 只调各模块 `api.py`（同进程直调，无 SSE）；依赖 Redis（见 `config/env.py` / `config/settings.py`）。
 
 ---
 

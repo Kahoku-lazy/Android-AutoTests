@@ -79,7 +79,9 @@ def get_project(*, project_id: int) -> LocatorProject | None:
     return LocatorProject.objects.filter(id=project_id).first()
 
 
-def _serialize_file_node(*, kind: str, file_id: int, name: str, sort_order: int = 0) -> dict[str, Any]:
+def _serialize_file_node(
+    *, kind: str, file_id: int, name: str, sort_order: int = 0
+) -> dict[str, Any]:
     return {
         "type": "file",
         "kind": kind,
@@ -129,7 +131,9 @@ def get_project_tree(*, code: str) -> dict[str, Any]:
     elif project.code == "web":
         for el in WebElement.objects.all().order_by("id"):
             files_by_dir.setdefault(el.directory_id, []).append(
-                _serialize_file_node(kind="web_element", file_id=el.id, name=el.name or f"元素 #{el.id}")
+                _serialize_file_node(
+                    kind="web_element", file_id=el.id, name=el.name or f"元素 #{el.id}"
+                )
             )
     else:
         for ep in ApiEndpoint.objects.all().order_by("id"):
@@ -143,11 +147,7 @@ def get_project_tree(*, code: str) -> dict[str, Any]:
 
     # Only include root files that belong to this project's directories or null
     dir_ids = {d.id for d in directories}
-    root_files = [
-        f
-        for f in files_by_dir.get(None, [])
-        if True
-    ]
+    root_files = [f for f in files_by_dir.get(None, []) if True]
     # Files hanging on directories of other projects should not appear — directory FK is project-scoped
     scoped_files_by_dir: dict[int | None, list] = {None: root_files}
     for dir_id, items in files_by_dir.items():

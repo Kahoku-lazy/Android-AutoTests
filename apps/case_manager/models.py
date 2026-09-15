@@ -109,7 +109,10 @@ class CaseFile(models.Model):
         verbose_name = "用例文件"
         verbose_name_plural = "用例文件"
         indexes = [
-            models.Index(fields=["project", "directory", "sort_order"]),
+            models.Index(
+                fields=["project", "directory", "sort_order"],
+                name="cm_case_fil_project_9a1b2c_idx",
+            ),
         ]
 
     def __str__(self) -> str:
@@ -155,8 +158,14 @@ class TestDefinition(models.Model):
         verbose_name = "用例定义"
         verbose_name_plural = "用例定义"
         indexes = [
-            models.Index(fields=["project", "file", "sort_order"]),
-            models.Index(fields=["project", "directory", "sort_order"]),
+            models.Index(
+                fields=["project", "file", "sort_order"],
+                name="cm_test_def_project_file_idx",
+            ),
+            models.Index(
+                fields=["project", "directory", "sort_order"],
+                name="cm_test_def_project_032175_idx",
+            ),
         ]
 
     def __str__(self) -> str:

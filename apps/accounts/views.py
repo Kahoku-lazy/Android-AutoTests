@@ -3,6 +3,7 @@
 from typing import ClassVar
 
 from django.contrib.auth.models import User
+from drf_spectacular.utils import OpenApiTypes, extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -24,6 +25,10 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
     authentication_classes: ClassVar[list] = []
 
+    @extend_schema(
+        request=LoginSerializer,
+        responses=OpenApiTypes.OBJECT,
+    )
     def post(self, request):
         ser = LoginSerializer(data=request.data)
         if not ser.is_valid():
@@ -50,6 +55,10 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
     authentication_classes: ClassVar[list] = []
 
+    @extend_schema(
+        request=RegisterSerializer,
+        responses=OpenApiTypes.OBJECT,
+    )
     def post(self, request):
         ser = RegisterSerializer(data=request.data)
         if not ser.is_valid():
@@ -82,6 +91,10 @@ class RefreshView(APIView):
     permission_classes = [AllowAny]
     authentication_classes: ClassVar[list] = []
 
+    @extend_schema(
+        request=RefreshSerializer,
+        responses=OpenApiTypes.OBJECT,
+    )
     def post(self, request):
         ser = RefreshSerializer(data=request.data)
         ser.is_valid(raise_exception=False)
@@ -112,6 +125,8 @@ class RefreshView(APIView):
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
+    # 仅读取 Authorization 头完成登出，不接收请求体
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         auth_header = request.META.get("HTTP_AUTHORIZATION", "")
         if auth_header.startswith("Bearer "):
@@ -128,6 +143,7 @@ class LogoutView(APIView):
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         user_id = getattr(request.user, "id", None)
         if not user_id:

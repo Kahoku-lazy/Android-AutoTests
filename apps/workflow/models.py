@@ -96,7 +96,10 @@ class WorkflowDocument(models.Model):
         verbose_name = "工作流文档"
         verbose_name_plural = "工作流文档"
         indexes = [
-            models.Index(fields=["prototype", "doc_type", "directory"]),
+            models.Index(
+                fields=["prototype", "doc_type", "directory"],
+                name="wf_document_prototy_idx",
+            ),
         ]
 
     def __str__(self):

@@ -6,22 +6,21 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
 
+# 枚举唯一真相源在 models/（D4 契约：设计方案-Django设计系统分层 行 269/331/375）；
+# 本模块只转发导出，不重复定义，避免同值枚举出现第二份。
+from models.constants import ConnectionType, DeviceStatus, LockReleaseReason, LockStatus
 
-class DeviceStatus(str, Enum):
-    """设备权威状态（状态机只有两态：离线即删，无墓碑态）。"""
-
-    ONLINE = "ONLINE"  # 在线可激活
-    BUSY = "BUSY"  # 使用中（进程/观察占用）
-
-
-class ConnectionType(str, Enum):
-    """设备连接方式。"""
-
-    USB = "USB"
-    WIFI = "WIFI"
-
+# 本模块是设备域「数据契约」的唯一进口：显式声明对外转发面，
+# 既让 F401 不把未在本文件使用的转发名当死 import 删掉，也说明这些名字是契约的一部分。
+__all__ = [
+    "RUNNER_OCCUPIED_PREFIXES",
+    "ConnectionType",
+    "DeviceInfo",
+    "DeviceStatus",
+    "LockReleaseReason",
+    "LockStatus",
+]
 
 # 执行引擎占用前缀：强制释放/设备动作受保护，不与执行引擎抢设备（与 device_inspector 同口径）
 RUNNER_OCCUPIED_PREFIXES = ("ai_agent", "runner-", "task-", "run-")

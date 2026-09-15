@@ -3,32 +3,12 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .views import (
-    add_element_to_page,
+from .views_api_assets import (
     api_endpoint_detail,
     api_group_detail,
-    batch_add_elements,
-    batch_import_web_elements,
-    clear_pages,
     create_api_endpoint,
-    create_page,
-    create_web_element,
-    delete_flow,
-    delete_web_flow,
-    flows_handler,
-    import_snapshot,
     list_api_endpoints,
     list_api_groups,
-    list_pages,
-    list_web_elements,
-    list_web_groups,
-    page_detail,
-    page_elements,
-    pages_batch_move,
-    update_element,
-    web_element_detail,
-    web_flows_handler,
-    web_group_detail,
 )
 from .views_drf import (
     ApiEndpointViewSet,
@@ -38,6 +18,14 @@ from .views_drf import (
     WebGroupViewSet,
     WebPageFlowViewSet,
 )
+from .views_flows import delete_flow, delete_web_flow, flows_handler, web_flows_handler
+from .views_page_element_batch import batch_add_elements
+from .views_page_elements import (
+    add_element_to_page,
+    page_elements,
+    update_element,
+)
+from .views_pages import clear_pages, create_page, list_pages, page_detail, pages_batch_move
 from .views_projects_drf import (
     LocatorDirectoryViewSet,
     LocatorProjectViewSet,
@@ -45,6 +33,14 @@ from .views_projects_drf import (
     group_write_gone,
     move_items,
 )
+from .views_snapshot import import_snapshot
+from .views_web import (
+    batch_import_web_elements,
+    create_web_element,
+    list_web_elements,
+    web_element_detail,
+)
+from .views_web_groups import list_web_groups, web_group_detail
 
 app_name = "elements"
 

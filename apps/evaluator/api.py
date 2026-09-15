@@ -6,6 +6,10 @@
 __all__ 白名单，供 views.py / views_api.py / AgentScope Tool 调用。
 """
 
+import json
+
+from datetime import datetime
+
 from .models import EvalResult, EvalRun, Question, QuestionBank
 
 __all__ = [
@@ -15,6 +19,8 @@ __all__ = [
     "seed_default_bank",
     "create_eval_run",
     "delete_eval_run",
+    "finish_external_eval_run",
+    "mark_eval_run_failed",
     "submit_human_score",
 ]
 
@@ -124,6 +130,37 @@ def create_eval_run(agent, bank, framework: str, judge_provider: str, judge_mode
 def delete_eval_run(run_id: int) -> None:
     """删除评测运行记录。"""
     EvalRun.objects.filter(id=run_id).delete()
+
+
+def mark_eval_run_failed(run_id: int, message: str) -> None:
+    """把评测运行标记为失败（后台线程异常 / 未知框架）。
+
+    只落 status 与 report_json —— 与收敛前的失败分支一致：失败路径不写 finished_at。
+    """
+    run = EvalRun.objects.get(id=run_id)
+    run.status = "failed"
+    run.report_json = json.dumps({"message": message}, ensure_ascii=False)
+    run.save()
+
+
+def finish_external_eval_run(
+    run_id: int,
+    *,
+    status: str,
+    total_score: float,
+    total_questions: int,
+    completed_questions: int,
+    report: dict,
+) -> None:
+    """外部框架跑完后的终态落库（status / 分数 / 题数 / 报告 / finished_at）。"""
+    run = EvalRun.objects.get(id=run_id)
+    run.status = status
+    run.total_score = total_score
+    run.total_questions = total_questions
+    run.completed_questions = completed_questions
+    run.report_json = json.dumps(report, ensure_ascii=False, indent=2)
+    run.finished_at = datetime.now()
+    run.save()
 
 
 def submit_human_score(result_id: int, scores: dict) -> dict:

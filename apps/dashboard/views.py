@@ -2,18 +2,23 @@
 
 import logging
 
-from datetime import timedelta
-
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Q
 from django.utils import timezone
+from drf_spectacular.utils import OpenApiTypes, extend_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.ai_assistant.api import filter_agents_for_user
 from apps.ai_assistant.models import AIAgent
 from apps.case_manager.models import CaseProject, TestDefinition
-from apps.dashboard.ai_usage import ai_daily_series, ai_usage_stats
+from apps.dashboard.ai_usage import (
+    ai_daily_series,
+    ai_recent_tasks,
+    ai_task_daily_execution,
+    ai_task_execution_summary,
+    ai_usage_stats,
+)
 from apps.device_pool.models import Device
 from apps.element_locator.models import ApiEndpoint, Element, Page, WebElement
 from apps.workflow.models import WorkflowDocument
@@ -89,20 +94,7 @@ def _workflow_stats():
     return {"total": _safe_count(WorkflowDocument)}
 
 
-def _daily_execution_series(days=12):
-    """Daily success / failed executions. Execution engine removed — always zeros."""
-    labels = [
-        (timezone.now() - timedelta(days=days - 1 - i)).strftime("%m/%d") for i in range(days)
-    ]
-    zeros = [0] * days
-    return {"labels": labels, "success": zeros, "failed": zeros}
-
-
-def _recent_tasks(_limit=8):
-    """Recent case execution summaries. Execution engine removed — always empty."""
-    return []
-
-
+@extend_schema(responses=OpenApiTypes.OBJECT)
 class DashboardStatsAPIView(APIView):
     """GET /api/dashboard/stats/ — platform-level statistics."""
 
@@ -120,10 +112,6 @@ class DashboardStatsAPIView(APIView):
         agent_active = (
             filter_agents_for_user(AIAgent.objects.all(), user_id).filter(status="active").count()
         )
-
-        # Pass/fail totals from test results (field is 'result', not 'status')
-        result_passed = 0
-        result_failed = 0
 
         # ── Elements: totals + page count ──
         elements_breakdown = _elements_breakdown()
@@ -151,7 +139,7 @@ class DashboardStatsAPIView(APIView):
                 "agents": {"total": agent_total, "active": agent_active},
                 "ai_usage": ai_usage_stats(user_id),
                 "charts": {
-                    "execution": _daily_execution_series(),
+                    "execution": ai_task_daily_execution(user_id),
                     "ai_tokens": {
                         "labels": daily_ai["labels"],
                         "total_tokens": daily_ai["total_tokens"],
@@ -162,8 +150,8 @@ class DashboardStatsAPIView(APIView):
                         "cost": daily_ai["deepseek_cost"],
                     },
                 },
-                "execution_summary": {"passed": result_passed, "failed": result_failed},
-                "recent_tasks": _recent_tasks(),
+                "execution_summary": ai_task_execution_summary(user_id),
+                "recent_tasks": ai_recent_tasks(user_id),
                 "last_updated": timezone.now().strftime("%Y-%m-%d %H:%M"),
                 "system_status": "normal"
                 if device_online > 0 or device_total == 0
@@ -172,6 +160,8 @@ class DashboardStatsAPIView(APIView):
         )
 
 
+# 该视图直接返回 list（活动条目数组），故用 ANY 描述，避免声明成 object
+@extend_schema(responses=OpenApiTypes.ANY)
 class DashboardActivitiesAPIView(APIView):
     """GET /api/dashboard/activities/ — recent events across the platform."""
 
@@ -196,6 +186,7 @@ class DashboardActivitiesAPIView(APIView):
         return Response(items[:10])
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 class DeviceStatsAPIView(APIView):
     """GET /api/devices/stats/ — device pool summary."""
 
@@ -212,6 +203,7 @@ class DeviceStatsAPIView(APIView):
         )
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 class CaseStatsAPIView(APIView):
     """GET /api/cases/stats/ — document case summary."""
 

@@ -23,7 +23,14 @@ from rest_framework.exceptions import APIException
 from engines.device.base import EngineConnectError
 from engines.device.connection import fetch_device_info, probe_u2
 
-from .contracts import RUNNER_OCCUPIED_PREFIXES, ConnectionType, DeviceInfo, DeviceStatus
+from .contracts import (
+    RUNNER_OCCUPIED_PREFIXES,
+    ConnectionType,
+    DeviceInfo,
+    DeviceStatus,
+    LockReleaseReason,
+    LockStatus,
+)
 from .models import Device, DeviceLock
 from .pool import device as device_pool
 
@@ -254,12 +261,12 @@ class DeviceRegistry:
             raise DeviceError(
                 f"无法解析设备 {addr} 的序列号，请确认设备在线后重试", status_code=502
             )
-        ct = "WIFI" if self._detector.is_wireless(addr) else "USB"
+        ct = ConnectionType.WIFI if self._detector.is_wireless(addr) else ConnectionType.USB
         now = datetime.now()
         dev, created = Device.objects.update_or_create(
             serial=serial,
             defaults={
-                "status": "ONLINE",
+                "status": DeviceStatus.ONLINE,
                 "connection_type": ct,
                 "connection_addr": conn_addr,
             },
@@ -297,13 +304,13 @@ class DeviceRegistry:
         except Exception as e:
             logger.warning("采集设备信息失败 %s: %s", addr, e)
 
-    def delete_device_record(self, dev: Device, reason: str = "disconnect") -> None:
+    def delete_device_record(self, dev: Device, reason: str = LockReleaseReason.DISCONNECT) -> None:
         """删除设备行并清理连接缓存（不保留离线/DISCONNECTED 墓碑）。
 
         标记活跃锁为 released（保留审计）。
         """
-        DeviceLock.objects.filter(device=dev, status="active").update(
-            status="released",
+        DeviceLock.objects.filter(device=dev, status=LockStatus.ACTIVE).update(
+            status=LockStatus.RELEASED,
             released_at=datetime.now(),
             release_reason=reason,
         )
@@ -322,7 +329,7 @@ class DeviceRegistry:
     def set_connection_state(self, dev: Device, connection_type: str) -> None:
         """设置连接类型 + 状态 ONLINE 并落库（连接成功后调用）。"""
         dev.connection_type = connection_type
-        dev.status = "ONLINE"
+        dev.status = DeviceStatus.ONLINE
         dev.save(update_fields=["connection_type", "status"])
 
     def touch_last_seen(self, dev: Device) -> None:
@@ -343,9 +350,9 @@ class DeviceStateMachine:
 
         只读判定、不写库；锁过期回收动作由 update_device_status 执行。
         """
-        if dev.status == "BUSY":
+        if dev.status == DeviceStatus.BUSY:
             active_lock = (
-                DeviceLock.objects.filter(device=dev, lock_type="process", status="active")
+                DeviceLock.objects.filter(device=dev, lock_type="process", status=LockStatus.ACTIVE)
                 .order_by("-locked_at")
                 .first()
             )
@@ -376,8 +383,10 @@ class DeviceStateMachine:
             dev, created = Device.objects.get_or_create(
                 serial=serial,
                 defaults={
-                    "status": "ONLINE",
-                    "connection_type": "WIFI" if self._detector.is_wireless(addr) else "USB",
+                    "status": DeviceStatus.ONLINE,
+                    "connection_type": ConnectionType.WIFI
+                    if self._detector.is_wireless(addr)
+                    else ConnectionType.USB,
                     "connection_addr": conn_addr,
                 },
             )
@@ -398,27 +407,31 @@ class DeviceStateMachine:
             )
             if visible:
                 # USB 设备恒公开，清理历史锁定数据
-                if dev.connection_type != "WIFI" and (dev.locked_by or dev.locked_at):
+                if dev.connection_type != ConnectionType.WIFI and (dev.locked_by or dev.locked_at):
                     dev.locked_by = ""
                     dev.locked_at = None
                     dev.save(update_fields=["locked_by", "locked_at"])
-                if dev.status == "BUSY":
+                if dev.status == DeviceStatus.BUSY:
                     active_lock = (
-                        DeviceLock.objects.filter(device=dev, lock_type="process", status="active")
+                        DeviceLock.objects.filter(
+                            device=dev, lock_type="process", status=LockStatus.ACTIVE
+                        )
                         .order_by("-locked_at")
                         .first()
                     )
                     if active_lock and active_lock.is_expired:
-                        self.release_internal(dev, reason="timeout")
+                        self.release_internal(dev, reason=LockReleaseReason.TIMEOUT)
                         updated += 1
                     elif active_lock:
                         dev.last_seen = now
                         dev.save(update_fields=["last_seen"])
             else:
                 # 不在 adb：BUSY 保护进行中任务；非 BUSY 删除记录
-                if dev.status == "BUSY":
+                if dev.status == DeviceStatus.BUSY:
                     active_lock = (
-                        DeviceLock.objects.filter(device=dev, lock_type="process", status="active")
+                        DeviceLock.objects.filter(
+                            device=dev, lock_type="process", status=LockStatus.ACTIVE
+                        )
                         .order_by("-locked_at")
                         .first()
                     )
@@ -433,7 +446,7 @@ class DeviceStateMachine:
 
     def set_device_lock(self, dev: Device, locked: bool, user_id: str) -> dict:
         """锁定 / 公开切换（可见性）。USB 设备无锁定能力。"""
-        if dev.connection_type != "WIFI":
+        if dev.connection_type != ConnectionType.WIFI:
             raise DeviceError("USB 设备不支持锁定", status_code=400)
 
         now = datetime.now()
@@ -444,14 +457,16 @@ class DeviceStateMachine:
             dev.locked_at = now
             dev.save(update_fields=["locked_by", "locked_at"])
             DeviceLock.objects.create(
-                device=dev, user_id=user_id, lock_type="user", status="active"
+                device=dev, user_id=user_id, lock_type="user", status=LockStatus.ACTIVE
             )
         else:
             dev.locked_by = ""
             dev.locked_at = None
             dev.save(update_fields=["locked_by", "locked_at"])
-            DeviceLock.objects.filter(device=dev, lock_type="user", status="active").update(
-                status="released", released_at=now, release_reason="manual"
+            DeviceLock.objects.filter(
+                device=dev, lock_type="user", status=LockStatus.ACTIVE
+            ).update(
+                status=LockStatus.RELEASED, released_at=now, release_reason=LockReleaseReason.MANUAL
             )
         return {"serial": dev.serial, "locked": locked}
 
@@ -461,7 +476,7 @@ class DeviceStateMachine:
         仅 WIFI 且 user_id 非空时生效：未锁定则锁定（复用 set_device_lock 写审计），
         未记录配置者则补记（added_by）。
         """
-        if dev.connection_type != "WIFI" or not user_id:
+        if dev.connection_type != ConnectionType.WIFI or not user_id:
             return
         if not dev.locked_by:
             self.set_device_lock(dev, True, user_id)
@@ -470,13 +485,13 @@ class DeviceStateMachine:
             dev.save(update_fields=["added_by"])
 
     def release_internal(
-        self, dev: Device, reason: str = "manual", clear_lock: bool = False
+        self, dev: Device, reason: str = LockReleaseReason.MANUAL, clear_lock: bool = False
     ) -> None:
         """释放占用：清空 occupied_by + 恢复 ONLINE，锁记录标记 released（不删除）。"""
         now = datetime.now()
 
-        DeviceLock.objects.filter(device=dev, status="active").update(
-            status="released",
+        DeviceLock.objects.filter(device=dev, status=LockStatus.ACTIVE).update(
+            status=LockStatus.RELEASED,
             released_at=now,
             release_reason=reason,
         )
@@ -484,8 +499,8 @@ class DeviceStateMachine:
         dev.occupied_by = ""
         dev.occupied_at = None
         update_fields = ["occupied_by", "occupied_at"]
-        if dev.status == "BUSY":
-            dev.status = "ONLINE"
+        if dev.status == DeviceStatus.BUSY:
+            dev.status = DeviceStatus.ONLINE
             update_fields.append("status")
         if clear_lock:
             dev.locked_by = ""
@@ -503,7 +518,7 @@ class DeviceStateMachine:
         if not occupied_by:
             raise DeviceError("设备未被占用，无需操作", status_code=400)
 
-        self.release_internal(dev, reason="manual")
+        self.release_internal(dev, reason=LockReleaseReason.MANUAL)
         return {"serial": dev.serial, "released": True}
 
     def occupy_observe(self, dev: Device, user_id: str) -> None:
@@ -512,7 +527,7 @@ class DeviceStateMachine:
         fix-observe-leak：原实现不建锁（无超时回收，关页/崩溃后设备永久 BUSY），
         现建 lock_type="observe" 锁，由 heartbeat_sync 过期回收。
         """
-        dev.status = "BUSY"
+        dev.status = DeviceStatus.BUSY
         dev.occupied_by = user_id or "observe"
         dev.occupied_at = datetime.now()
         dev.save(update_fields=["status", "occupied_by", "occupied_at"])
@@ -521,7 +536,7 @@ class DeviceStateMachine:
             user_id=user_id or "observe",
             lock_type="observe",
             timeout_seconds=OBSERVE_LOCK_TTL,
-            status="active",
+            status=LockStatus.ACTIVE,
         )
 
     def release_observe(self, dev: Device) -> None:
@@ -529,23 +544,23 @@ class DeviceStateMachine:
         occupied = dev.occupied_by or ""
         if occupied.startswith(RUNNER_OCCUPIED_PREFIXES):
             return
-        self.release_internal(dev, reason="disconnect")
+        self.release_internal(dev, reason=LockReleaseReason.DISCONNECT)
 
     def heartbeat_sync(self) -> dict:
         """心跳同步：状态同步 + 刷新活跃锁心跳 + 回收过期 observe 锁，返回各状态计数。"""
         updated, removed = self.update_device_status()
-        DeviceLock.objects.filter(status="active").update(last_heartbeat=timezone.now())
+        DeviceLock.objects.filter(status=LockStatus.ACTIVE).update(last_heartbeat=timezone.now())
 
         # fix-observe-leak：过期 observe 锁（关页/崩溃无释放）→ 自动释放占用
-        for lock in DeviceLock.objects.filter(lock_type="observe", status="active"):
+        for lock in DeviceLock.objects.filter(lock_type="observe", status=LockStatus.ACTIVE):
             if lock.is_expired:
                 try:
                     self.release_observe(lock.device)
                 except Exception:
                     logger.warning("过期 observe 锁回收失败: device=%s", lock.device_id)
 
-        online = Device.objects.filter(status="ONLINE").count()
-        busy = Device.objects.filter(status="BUSY").count()
+        online = Device.objects.filter(status=DeviceStatus.ONLINE).count()
+        busy = Device.objects.filter(status=DeviceStatus.BUSY).count()
 
         return {
             "updated": updated,
@@ -579,7 +594,7 @@ class DeviceSerializer:
         """
         if user_id in admin_ids:
             return True
-        if dev.connection_type != "WIFI":
+        if dev.connection_type != ConnectionType.WIFI:
             return True
         if not dev.locked_by:
             return True
@@ -609,11 +624,12 @@ class DeviceSerializer:
             "brand": dev.brand,
             "screen": f"{dev.screen_w}x{dev.screen_h}" if dev.screen_w else "",
             "status": dev.status,
-            "connection_type": dev.connection_type or ("WIFI" if ":" in dev.serial else "USB"),
+            "connection_type": dev.connection_type
+            or (ConnectionType.WIFI if ":" in dev.serial else ConnectionType.USB),
             "connection_addr": dev.connection_addr,
-            "locked": bool(dev.locked_by) and dev.connection_type == "WIFI",
+            "locked": bool(dev.locked_by) and dev.connection_type == ConnectionType.WIFI,
             "locked_by": name_of.get(dev.locked_by, dev.locked_by)
-            if dev.connection_type == "WIFI"
+            if dev.connection_type == ConnectionType.WIFI
             else "",
             "locked_at": dev.locked_at.isoformat() if dev.locked_at else None,
             "occupied_by": name_of.get(dev.occupied_by, dev.occupied_by),
@@ -624,9 +640,9 @@ class DeviceSerializer:
             "is_current": dev.serial == current_serial,
         }
 
-        if dev.status == "BUSY" and dev.occupied_by:
+        if dev.status == DeviceStatus.BUSY and dev.occupied_by:
             active_lock = (
-                DeviceLock.objects.filter(device=dev, status="active")
+                DeviceLock.objects.filter(device=dev, status=LockStatus.ACTIVE)
                 .order_by("-locked_at")
                 .first()
             )

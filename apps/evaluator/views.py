@@ -269,16 +269,10 @@ def start_eval_run(request):
         from .frameworks import get_adapter
 
         def _bg():
-            run = EvalRun.objects.get(id=run_id)
             try:
                 adapter = get_adapter(framework)
                 if adapter is None:
-                    run.status = "failed"
-                    run.report_json = json.dumps(
-                        {"message": f"Unknown framework: {framework}"},
-                        ensure_ascii=False,
-                    )
-                    run.save()
+                    api.mark_eval_run_failed(run_id, f"Unknown framework: {framework}")
                     return
                 # Call agent directly using the adapter
                 import asyncio
@@ -303,12 +297,13 @@ def start_eval_run(request):
                     for q in bank.questions.all().order_by("order", "id")
                 ]
                 result = asyncio.run(adapter.run(agent_config, questions_list))
-                run.status = "completed" if result.ok else "failed"
-                run.total_score = result.total_score
-                run.total_questions = len(questions_list)
-                run.completed_questions = len(result.items)
-                run.report_json = json.dumps(
-                    {
+                api.finish_external_eval_run(
+                    run_id,
+                    status="completed" if result.ok else "failed",
+                    total_score=result.total_score,
+                    total_questions=len(questions_list),
+                    completed_questions=len(result.items),
+                    report={
                         "framework": framework,
                         "total_score": result.total_score,
                         "scores": result.scores,
@@ -316,17 +311,9 @@ def start_eval_run(request):
                         "raw": result.raw,
                         "message": result.error if not result.ok else "",
                     },
-                    ensure_ascii=False,
-                    indent=2,
                 )
-                from datetime import datetime
-
-                run.finished_at = datetime.now()
-                run.save()
             except Exception as e:
-                run.status = "failed"
-                run.report_json = json.dumps({"message": str(e)}, ensure_ascii=False)
-                run.save()
+                api.mark_eval_run_failed(run_id, str(e))
     else:
         # Built-in self evaluator (LLM-as-Judge)
         from .evaluator import run_evaluation
@@ -335,10 +322,7 @@ def start_eval_run(request):
             try:
                 run_evaluation(run_id, judge_provider, judge_model)
             except Exception as e:
-                run = EvalRun.objects.get(id=run_id)
-                run.status = "failed"
-                run.report_json = json.dumps({"message": str(e)}, ensure_ascii=False)
-                run.save()
+                api.mark_eval_run_failed(run_id, str(e))
 
     t = threading.Thread(target=_bg, daemon=True)
     t.start()

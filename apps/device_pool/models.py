@@ -46,7 +46,10 @@ class Device(models.Model):
         verbose_name = "设备"
         verbose_name_plural = "设备"
         indexes = [
-            models.Index(fields=["status"]),
+            models.Index(
+                fields=["status"],
+                name="dp_devices_status_47e1d0_idx",
+            ),
         ]
 
     def __str__(self):
@@ -77,7 +80,10 @@ class DeviceLock(models.Model):
         verbose_name = "设备锁"
         verbose_name_plural = "设备锁"
         indexes = [
-            models.Index(fields=["device", "status"]),
+            models.Index(
+                fields=["device", "status"],
+                name="dp_device_l_device__4b3c95_idx",
+            ),
         ]
         constraints = [
             # 同一设备同时最多一个活跃锁（数据库级并发控制）

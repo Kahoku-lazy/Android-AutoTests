@@ -2,6 +2,7 @@
 
 from rest_framework import serializers
 
+from . import api
 from .models import EvalResult, EvalRun, Question, QuestionBank
 
 
@@ -38,28 +39,22 @@ class QuestionBankSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "question_count", "created_at", "updated_at"]
 
     def create(self, validated_data):
+        # 写库经 api.py（与 legacy 路径同一实现）；api 不返回 ORM，故按 id 只读回取
         questions_data = validated_data.pop("questions", [])
-        bank = QuestionBank.objects.create(**validated_data)
-        for i, q in enumerate(questions_data):
-            Question.objects.create(
-                bank=bank,
-                order=q.get("order", i),
-                **{k: v for k, v in q.items() if k != "order"},
-            )
-        return bank
+        result = api.create_question_bank(
+            name=validated_data["name"],
+            description=validated_data.get("description", ""),
+            questions_data=questions_data,
+        )
+        return QuestionBank.objects.get(id=result["id"])
 
     def update(self, instance, validated_data):
         questions_data = validated_data.pop("questions", None)
-        instance = super().update(instance, validated_data)
+        data = dict(validated_data)
         if questions_data is not None:
-            instance.questions.all().delete()
-            for i, q in enumerate(questions_data):
-                Question.objects.create(
-                    bank=instance,
-                    order=q.get("order", i),
-                    **{k: v for k, v in q.items() if k != "order"},
-                )
-        return instance
+            data["questions"] = questions_data
+        api.update_question_bank(instance.id, data)
+        return QuestionBank.objects.get(id=instance.id)
 
 
 class EvalRunSerializer(serializers.ModelSerializer):
@@ -68,6 +63,11 @@ class EvalRunSerializer(serializers.ModelSerializer):
     agent_name = serializers.CharField(source="agent.name", read_only=True)
     bank_name = serializers.CharField(source="bank.name", read_only=True)
     results = serializers.SerializerMethodField()
+    # agent_id / bank_id 必须显式声明：DRF 会把 FK 的 `*_id` attname 建成 ReadOnlyField，
+    # 于是 POST /runs/ 会静默丢弃这两个字段（API-评估器.md §4.2 登记为「可写、非必填」）。
+    # 用裸 IntegerField 兑现契约；存在性校验在 EvalRunViewSet.perform_create。
+    agent_id = serializers.IntegerField(allow_null=True, required=False)
+    bank_id = serializers.IntegerField(allow_null=True, required=False)
 
     class Meta:
         model = EvalRun
@@ -94,7 +94,7 @@ class EvalRunSerializer(serializers.ModelSerializer):
             "results",
         ]
 
-    def get_results(self, obj):
+    def get_results(self, obj) -> list[dict]:
         if not hasattr(obj, "_prefetched_results"):
             return []
         return EvalResultSerializer(obj._prefetched_results, many=True).data
@@ -159,18 +159,18 @@ class EvalResultSerializer(serializers.ModelSerializer):
             "judge_reasoning",
         ]
 
-    def get_effective_relevance(self, obj):
+    def get_effective_relevance(self, obj) -> float:
         eff = obj.effective_scores()
         return eff["relevance"]
 
-    def get_effective_accuracy(self, obj):
+    def get_effective_accuracy(self, obj) -> float:
         eff = obj.effective_scores()
         return eff["accuracy"]
 
-    def get_effective_completeness(self, obj):
+    def get_effective_completeness(self, obj) -> float:
         eff = obj.effective_scores()
         return eff["completeness"]
 
-    def get_effective_conciseness(self, obj):
+    def get_effective_conciseness(self, obj) -> float:
         eff = obj.effective_scores()
         return eff["conciseness"]

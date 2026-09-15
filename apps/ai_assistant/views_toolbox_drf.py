@@ -17,6 +17,8 @@ import json
 import logging
 import os
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, NotFound, ValidationError
@@ -98,6 +100,7 @@ class ToolboxViewSet(
     queryset = AISharedTool.objects.all()
     serializer_class = None
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def list(self, request, *args, **kwargs):
         api.ensure_disk_skills()
         items = AISharedTool.objects.order_by("-updated_at")
@@ -114,12 +117,11 @@ class ToolboxViewSet(
             }
             if item.item_type == "skill":
                 row["origin"] = skill_origin(item)
-                row["missing"] = not os.path.isdir(
-                    os.path.join(SHARED_SKILLS_DIR, item.name)
-                )
+                row["missing"] = not os.path.isdir(os.path.join(SHARED_SKILLS_DIR, item.name))
             payload.append(row)
         return Response({"items": payload})
 
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     @action(detail=False, methods=["post"], url_path="create")
     def create_item(self, request, *args, **kwargs):
         name = (request.data.get("name") or "").strip()
@@ -142,6 +144,7 @@ class ToolboxViewSet(
         )
         return Response({"id": item.id})
 
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     @action(detail=True, methods=["post"], url_path="update")
     def update_item(self, request, *args, **kwargs):
         item_id = kwargs.get("pk", "")
@@ -164,6 +167,7 @@ class ToolboxViewSet(
         api.update_shared_tool(item, name, description, config_json)
         return Response({})
 
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     @action(detail=True, methods=["post"], url_path="delete")
     def delete_item(self, request, *args, **kwargs):
         item_id = kwargs.get("pk", "")
@@ -177,6 +181,7 @@ class ToolboxViewSet(
             raise ValidationError(str(exc)) from exc
         return Response({})
 
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     @action(detail=True, methods=["post"], url_path="toggle")
     def toggle_item(self, request, *args, **kwargs):
         item_id = kwargs.get("pk", "")
@@ -188,6 +193,7 @@ class ToolboxViewSet(
         api.set_shared_tool_enabled(item, enabled)
         return Response({"enabled": item.enabled})
 
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     @action(detail=False, methods=["post"], url_path="upload-skill")
     def upload_skill(self, request, *args, **kwargs):
         import frontmatter
@@ -268,6 +274,7 @@ class ToolboxViewSet(
 class SkillTreeAPIView(APIView):
     """GET /api/ai/toolbox/skills/<name>/tree — skill 目录树。"""
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request, *args, **kwargs):
         name = kwargs.get("name") or ""
         try:
@@ -280,6 +287,7 @@ class SkillTreeAPIView(APIView):
 class SkillFileAPIView(APIView):
     """GET /api/ai/toolbox/skills/<name>/file?path= — 读 skill 内文本文件。"""
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request, *args, **kwargs):
         name = kwargs.get("name") or ""
         rel = (request.query_params.get("path") or "").strip()

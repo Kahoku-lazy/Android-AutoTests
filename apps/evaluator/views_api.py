@@ -1,10 +1,10 @@
 """evaluator DRF ViewSets — bank CRUD, run lifecycle, human scoring."""
 
-import json
 import threading
 
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
 from apps.ai_assistant.models import AIAgent
@@ -39,6 +39,10 @@ class QuestionBankViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return QuestionBank.objects.prefetch_related("questions").order_by("-updated_at")
 
+    def perform_destroy(self, instance):
+        """DELETE /banks/{id}/ —— 写经 api.py（题目由 FK 级联删除）。"""
+        api.delete_question_bank(instance.id)
+
     @action(detail=False, methods=["post"])
     def seed(self, request):
         """POST /banks/seed/ — create the default 30-question bank."""
@@ -59,10 +63,11 @@ class QuestionBankViewSet(viewsets.ModelViewSet):
 
 
 class EvalRunViewSet(viewsets.ModelViewSet):
-    """Evaluation run lifecycle — list, retrieve, destroy, start.
+    """Evaluation run lifecycle — list, create, retrieve, destroy, start.
 
     Endpoints:
         GET    /runs/          → list (summary)
+        POST   /runs/          → create (record only, does not start an evaluation)
         GET    /runs/{id}/     → retrieve (with results)
         DELETE /runs/{id}/     → destroy
 
@@ -79,9 +84,51 @@ class EvalRunViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = EvalRun.objects.select_related("agent", "bank")
+        if self.action == "list":
+            # 列表最多 50 条（API-评估器.md §4.1）；切片只限 list ——
+            # 详情动作若拿到已切片查询集，按 pk 过滤会抛 TypeError，被 DRF 转成 404。
+            return qs.order_by("-created_at")[:50]
         if self.action == "retrieve":
             return qs.prefetch_related("results__question")
-        return qs.order_by("-created_at")[:50]
+        return qs
+
+    def perform_create(self, serializer):
+        """POST /runs/ —— 只落库一条 EvalRun 记录，不触发评估；写经 api.py。
+
+        agent_id / bank_id 可选（EvalRun.agent / bank 可空，见 API-评估器.md §4.2）；
+        给定但不存在时报 404（文案与 start 动作一致），不静默落 NULL。
+        """
+        data = dict(serializer.validated_data)
+
+        agent_id = data.get("agent_id")
+        agent = None
+        if agent_id:
+            try:
+                agent = AIAgent.objects.get(id=agent_id)
+            except AIAgent.DoesNotExist:
+                raise NotFound("agent not found")
+
+        bank_id = data.get("bank_id")
+        bank = None
+        if bank_id:
+            try:
+                bank = QuestionBank.objects.get(id=bank_id)
+            except QuestionBank.DoesNotExist:
+                raise NotFound("question bank not found")
+
+        result = api.create_eval_run(
+            agent=agent,
+            bank=bank,
+            framework=data.get("framework", "self"),
+            judge_provider=data.get("judge_provider", "dashscope"),
+            judge_model=data.get("judge_model", "qwen-max"),
+        )
+        # api 不返回 ORM（calibration §6 规则 4），故按 id 只读回取供响应序列化
+        serializer.instance = EvalRun.objects.get(id=result["id"])
+
+    def perform_destroy(self, instance):
+        """DELETE /runs/{id}/ —— 写经 api.py（逐题结果由 FK 级联删除）。"""
+        api.delete_eval_run(instance.id)
 
     @action(detail=False, methods=["post"])
     def start(self, request):
@@ -133,16 +180,10 @@ class EvalRunViewSet(viewsets.ModelViewSet):
         from .frameworks import get_adapter
 
         def _bg():
-            run = EvalRun.objects.get(id=run_id)
             try:
                 adapter = get_adapter(framework)
                 if adapter is None:
-                    run.status = "failed"
-                    run.report_json = json.dumps(
-                        {"message": f"Unknown framework: {framework}"},
-                        ensure_ascii=False,
-                    )
-                    run.save()
+                    api.mark_eval_run_failed(run_id, f"Unknown framework: {framework}")
                     return
 
                 import asyncio
@@ -167,12 +208,13 @@ class EvalRunViewSet(viewsets.ModelViewSet):
                     for q in bank.questions.all().order_by("order", "id")
                 ]
                 result = asyncio.run(adapter.run(agent_config, questions_list))
-                run.status = "completed" if result.ok else "failed"
-                run.total_score = result.total_score
-                run.total_questions = len(questions_list)
-                run.completed_questions = len(result.items)
-                run.report_json = json.dumps(
-                    {
+                api.finish_external_eval_run(
+                    run_id,
+                    status="completed" if result.ok else "failed",
+                    total_score=result.total_score,
+                    total_questions=len(questions_list),
+                    completed_questions=len(result.items),
+                    report={
                         "framework": framework,
                         "total_score": result.total_score,
                         "scores": result.scores,
@@ -180,17 +222,9 @@ class EvalRunViewSet(viewsets.ModelViewSet):
                         "raw": result.raw,
                         "message": result.error if not result.ok else "",
                     },
-                    ensure_ascii=False,
-                    indent=2,
                 )
-                from datetime import datetime
-
-                run.finished_at = datetime.now()
-                run.save()
             except Exception as e:
-                run.status = "failed"
-                run.report_json = json.dumps({"message": str(e)}, ensure_ascii=False)
-                run.save()
+                api.mark_eval_run_failed(run_id, str(e))
 
         t = threading.Thread(target=_bg, daemon=True)
         t.start()
@@ -203,10 +237,7 @@ class EvalRunViewSet(viewsets.ModelViewSet):
             try:
                 run_evaluation(run_id, judge_provider, judge_model)
             except Exception as e:
-                run = EvalRun.objects.get(id=run_id)
-                run.status = "failed"
-                run.report_json = json.dumps({"message": str(e)}, ensure_ascii=False)
-                run.save()
+                api.mark_eval_run_failed(run_id, str(e))
 
         t = threading.Thread(target=_bg, daemon=True)
         t.start()

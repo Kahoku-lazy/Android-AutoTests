@@ -35,20 +35,15 @@ class AiAssistantConfig(AppConfig):
         ).start()
 
     def _run_startup_recovery(self) -> None:
-        """后台执行启动恢复：把上次进程遗留的 running 任务置为 failed。"""
+        """后台执行启动恢复：把上次进程遗留的 running 任务置为 failed（写库经 api.py）。"""
         from django.apps import apps as django_apps
-        from django.utils import timezone
 
         django_apps.ready_event.wait()
 
         try:
-            from .models import AITask
+            from . import api
 
-            recovered = AITask.objects.filter(status="running").update(
-                status="failed",
-                result="执行中断：服务重启导致任务线程终止",
-                finished_at=timezone.now(),
-            )
+            recovered = api.recover_orphaned_tasks()
             if recovered:
                 _log.info("Startup recovery: %d orphaned running task(s) → failed", recovered)
         except Exception as e:

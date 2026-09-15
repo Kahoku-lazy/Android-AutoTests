@@ -14,6 +14,7 @@ __all__ = [
     "create_directory",
     "delete_directory",
     "move_item",
+    "optional_directory_id",
     "serialize_directory",
     "update_directory",
 ]
@@ -30,6 +31,24 @@ def serialize_directory(obj: LocatorDirectory) -> dict[str, Any]:
         "created_at": obj.created_at.isoformat() if obj.created_at else "",
         "updated_at": obj.updated_at.isoformat() if obj.updated_at else "",
     }
+
+
+def optional_directory_id(data: dict, *, project_code: str) -> int | None:
+    """从请求体解析可选的 directory_id，并校验它属于 project_code。
+
+    返回 None 表示未提供（含 "" / 0 / "0"）；目录不存在或不属于该项目时抛 ValueError。
+    （自 views.py 迁入：web 元素与 API 端点两处创建共用，故归目录域而非任一张视图片。）
+    """
+    raw = data.get("directory_id")
+    if raw in (None, "", 0, "0"):
+        return None
+    try:
+        dir_id = int(raw)
+    except (TypeError, ValueError):
+        return None
+    if not LocatorDirectory.objects.filter(id=dir_id, project__code=project_code).exists():
+        raise ValueError("目录不存在或不属于当前项目")
+    return dir_id
 
 
 def _get_directory(*, directory_id: int) -> LocatorDirectory:
@@ -106,12 +125,16 @@ def _is_descendant(*, ancestor_id: int, candidate_id: int) -> bool:
             return True
         seen.add(current_id)
         current_id = (
-            LocatorDirectory.objects.filter(id=current_id).values_list("parent_id", flat=True).first()
+            LocatorDirectory.objects.filter(id=current_id)
+            .values_list("parent_id", flat=True)
+            .first()
         )
     return False
 
 
-def _resolve_target_directory(*, project_id: int, target_directory_id: int | None) -> LocatorDirectory | None:
+def _resolve_target_directory(
+    *, project_id: int, target_directory_id: int | None
+) -> LocatorDirectory | None:
     if target_directory_id is None:
         return None
     target = _get_directory(directory_id=target_directory_id)

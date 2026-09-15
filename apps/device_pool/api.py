@@ -20,7 +20,13 @@ from datetime import datetime
 from django.conf import settings
 from django.db import transaction
 
-from .contracts import RUNNER_OCCUPIED_PREFIXES
+from .contracts import (
+    RUNNER_OCCUPIED_PREFIXES,
+    ConnectionType,
+    DeviceStatus,
+    LockReleaseReason,
+    LockStatus,
+)
 from .manager import serializer, state_machine
 from .models import Device, DeviceLock
 from .pool import device
@@ -28,7 +34,7 @@ from .pool import device
 
 def get_online_devices():
     """返回所有在线设备（status=ONLINE）。"""
-    return list(Device.objects.filter(status="ONLINE"))
+    return list(Device.objects.filter(status=DeviceStatus.ONLINE))
 
 
 def list_devices(user_id: str = "") -> list[dict]:
@@ -43,7 +49,7 @@ def list_devices(user_id: str = "") -> list[dict]:
     devices = [
         d for d in Device.objects.all() if serializer.is_device_visible(d, user_id, admin_ids)
     ]
-    status_order = {"ONLINE": 0, "BUSY": 1}
+    status_order = {DeviceStatus.ONLINE: 0, DeviceStatus.BUSY: 1}
     devices.sort(key=lambda d: status_order.get(d.status, 99))
 
     owner_ids = (
@@ -61,7 +67,7 @@ def ensure_device(serial, name=""):
         serial=serial,
         defaults={
             "name": name,
-            "connection_type": "WIFI" if ":" in serial else "USB",
+            "connection_type": ConnectionType.WIFI if ":" in serial else ConnectionType.USB,
         },
     )
     return obj
@@ -75,9 +81,11 @@ def acquire_device(serial, user_id, timeout=300):
     """
     device_obj = Device.objects.select_for_update().get(serial=serial)
 
-    if device_obj.status == "BUSY":
+    if device_obj.status == DeviceStatus.BUSY:
         active_lock = (
-            DeviceLock.objects.filter(device=device_obj, lock_type="process", status="active")
+            DeviceLock.objects.filter(
+                device=device_obj, lock_type="process", status=LockStatus.ACTIVE
+            )
             .order_by("-locked_at")
             .first()
         )
@@ -91,7 +99,7 @@ def acquire_device(serial, user_id, timeout=300):
                 )
 
     now = datetime.now()
-    device_obj.status = "BUSY"
+    device_obj.status = DeviceStatus.BUSY
     device_obj.occupied_by = user_id
     device_obj.occupied_at = now
     device_obj.save(update_fields=["status", "occupied_by", "occupied_at"])
@@ -101,7 +109,7 @@ def acquire_device(serial, user_id, timeout=300):
         user_id=user_id,
         lock_type="process",
         timeout_seconds=timeout,
-        status="active",
+        status=LockStatus.ACTIVE,
     )
 
     return {
@@ -112,11 +120,11 @@ def acquire_device(serial, user_id, timeout=300):
     }
 
 
-def release_device(serial, reason="manual"):
+def release_device(serial, reason=LockReleaseReason.MANUAL):
     """释放锁定设备（保留锁审计，触发队列自动分配）。"""
     try:
         dev = Device.objects.get(serial=serial)
-        if dev.status == "BUSY":
+        if dev.status == DeviceStatus.BUSY:
             state_machine.release_internal(dev, reason=reason)
             return True
     except Device.DoesNotExist:
@@ -124,12 +132,12 @@ def release_device(serial, reason="manual"):
     return False
 
 
-def release_device_locks_for_device(device_obj, reason="disconnect"):
+def release_device_locks_for_device(device_obj, reason=LockReleaseReason.DISCONNECT):
     """批量释放设备的活跃进程锁（崩溃恢复 / 孤儿清理入口）。"""
     return DeviceLock.objects.filter(
-        device=device_obj, lock_type="process", status="active"
+        device=device_obj, lock_type="process", status=LockStatus.ACTIVE
     ).update(
-        status="released",
+        status=LockStatus.RELEASED,
         released_at=datetime.now(),
         release_reason=reason,
     )
@@ -144,7 +152,7 @@ def _resolve_device(serial: str) -> Device:
     except Device.DoesNotExist:
         raise ValueError("设备未注册")
 
-    if dev.status == "BUSY" and dev.occupied_by:
+    if dev.status == DeviceStatus.BUSY and dev.occupied_by:
         for prefix in RUNNER_OCCUPIED_PREFIXES:
             if str(dev.occupied_by).startswith(prefix):
                 raise ValueError(f"设备正被执行引擎占用（{dev.occupied_by}），请等待执行完毕")

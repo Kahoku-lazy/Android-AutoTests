@@ -29,6 +29,7 @@
 - **旧模型别名** `_DEEPSEEK_MODEL_ALIASES`：`deepseek-chat`→flash 档、`deepseek-reasoner`→pro 档（官方定价页已下线旧名仍可计费）。
 - **费用口径**：`命中×命中价 + (输入−命中)×未命中价 + 输出×输出价`，再按高峰 ×2；结果保留 4 位小数。
 - **契约字段**：`ai_usage` 含 `task_count` / `input_tokens` / `output_tokens` / `total_tokens` / `cache_hit_tokens` / `cache_hit_rate` / `avg_tokens_per_task` / `deepseek_cost`（均 `{today,total}`）；`charts.ai_tokens`（`{labels,total_tokens,cache_tokens}`）、`charts.deepseek_cost`（`{labels,cost}`）。字段改动须同步 PRD-01 §5.2 与前端 `dashboard` 模块。
+- **助手任务卡趋势**：`charts.execution` / `execution_summary` / `recent_tasks` 只读聚合 `AITask`（与用量同一 `_task_qs`）。成功 = `completed`/`success`，失败 = `failed`；按 `created_at` 近 12 日分桶。不再绑定已下线的执行引擎。
 
 ## 本 App 协议要点
 

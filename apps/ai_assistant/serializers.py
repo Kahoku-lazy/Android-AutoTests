@@ -6,9 +6,12 @@ Batch 1/2 已全部迁移到 DRF；手写校验函数已随迁移移除。
 
 import json
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.ai_assistant.provider_registry import VALID_PROVIDERS, validate_base_url
+from models.constants import MessageRole
 
 # ═══════════════════════════════════════════════════════════════════
 # Agent 输入（创建/更新共用；业务默认值仍在 api.py 应用，与旧视图一致）
@@ -170,6 +173,7 @@ class AgentDetailSerializer(serializers.Serializer):
         user = getattr(request, "user", None) if request else None
         return bool(user is not None and getattr(user, "is_superuser", False))
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_api_key(self, obj):
         if not self._is_superuser():
             return ""
@@ -177,15 +181,19 @@ class AgentDetailSerializer(serializers.Serializer):
 
         return mask_key(decrypt_key(obj.api_key) if obj.api_key else "")
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_base_url(self, obj):
         return obj.base_url if self._is_superuser() else ""
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_last_checked_at(self, obj):
         return str(obj.last_checked_at) if obj.last_checked_at else None
 
+    @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_available_models(self, obj):
         return json.loads(obj.available_models) if obj.available_models else []
 
+    @extend_schema_field(OpenApiTypes.OBJECT)
     def get_route_configs(self, obj):
         if not self._is_superuser():
             return {}
@@ -223,7 +231,7 @@ class RenameInputSerializer(serializers.Serializer):
 class MessageInputSerializer(serializers.Serializer):
     """保存消息入参 — 规则对齐旧 validate_message_input。"""
 
-    role = serializers.CharField(required=False, allow_blank=True, default="assistant")
+    role = serializers.CharField(required=False, allow_blank=True, default=MessageRole.ASSISTANT)
     content = serializers.CharField(required=False, allow_blank=True, default="")
     blocks = serializers.ListField(required=False, default=list, allow_empty=True)
     reason = serializers.CharField(required=False, allow_blank=True, default="normal")
@@ -233,14 +241,14 @@ class MessageInputSerializer(serializers.Serializer):
     flow = serializers.CharField(required=False, allow_blank=True, default="")
 
     def validate(self, attrs):
-        role = attrs.get("role", "assistant")
+        role = attrs.get("role", MessageRole.ASSISTANT)
         content = (attrs.get("content") or "").strip()
         blocks = attrs.get("blocks") or []
-        if role not in ("user", "assistant", "system"):
+        if role not in (MessageRole.USER, MessageRole.ASSISTANT, MessageRole.SYSTEM):
             raise serializers.ValidationError({"role": "无效的角色类型"})
-        if role == "user" and not content and not blocks:
+        if role == MessageRole.USER and not content and not blocks:
             raise serializers.ValidationError({"content": "消息内容不能为空"})
-        if role == "assistant" and not content and not blocks:
+        if role == MessageRole.ASSISTANT and not content and not blocks:
             raise serializers.ValidationError({"content": "assistant 消息需要 content 或 blocks"})
         return attrs
 

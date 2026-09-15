@@ -9,6 +9,8 @@ POST /api/ai/knowledge/documents/add     上传文件到 data/rag_datas
 
 import logging
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,6 +23,7 @@ logger = logging.getLogger("ai_assistant")
 class KnowledgeStatusAPIView(APIView):
     """GET /api/ai/knowledge/status — 知识库状态。"""
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         return Response(
             {
@@ -40,6 +43,7 @@ class KnowledgeStatusAPIView(APIView):
 class KnowledgeDocumentsAPIView(APIView):
     """GET /api/ai/knowledge/documents — data/rag_datas 文件列表。"""
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         documents = api.list_kb_documents()
         return Response({"documents": documents, "total": len(documents)})
@@ -48,6 +52,7 @@ class KnowledgeDocumentsAPIView(APIView):
 class KnowledgePreviewAPIView(APIView):
     """GET /api/ai/knowledge/documents/preview?path=相对路径 — 预览文档。"""
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         rel = (request.query_params.get("path") or "").strip()
         if not rel:
@@ -64,6 +69,7 @@ class KnowledgePreviewAPIView(APIView):
 class KnowledgeReindexAPIView(APIView):
     """POST /api/ai/knowledge/reindex — 重新索引 data/rag_datas。"""
 
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         result = api.reindex_knowledge()
         indexed = result.get("indexed") or []
@@ -77,6 +83,7 @@ class KnowledgeReindexAPIView(APIView):
 class KnowledgeAddDocAPIView(APIView):
     """POST /api/ai/knowledge/documents/add — 上传到 data/rag_datas。"""
 
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         uploaded = request.FILES.get("file")
         if not uploaded:

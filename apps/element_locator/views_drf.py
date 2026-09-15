@@ -1,7 +1,7 @@
 """element_locator DRF ViewSets — WebGroup, ApiGroup, WebElement, ApiEndpoint, flows.
 
 Page tree + Page elements (device-dependent, complex validation) remain
-as plain Django views in views.py.
+as plain Django views in views_pages.py / views_page_elements.py.
 """
 
 from django.db import models as db_models
@@ -104,14 +104,10 @@ class WebElementViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_update(self, serializer):
-        allowed = {"alias", "tags", "is_test_point", "notes"}
-        actual = set(serializer.validated_data.keys())
-        extra = (
-            actual
-            - allowed
-            - {"name", "locator_type", "locator_value", "page_url", "description", "group"}
-        )
-        serializer.save()
+        # 写库经 api.py（D3 契约）；api 不返回 ORM，故按 id 只读回取
+        instance = serializer.instance
+        api.update_web_element(instance.id, dict(serializer.validated_data))
+        serializer.instance = WebElement.objects.get(id=instance.id)
 
     @action(detail=False, methods=["post"], url_path="batch")
     def batch_import(self, request):
@@ -245,10 +241,18 @@ class WebPageFlowViewSet(viewsets.ModelViewSet):
         return WebPageFlow.objects.select_related("from_group", "to_group").order_by("-created_at")
 
     def perform_create(self, serializer):
-        from_group = serializer.validated_data.get("from_group")
-        to_group = serializer.validated_data.get("to_group")
+        data = serializer.validated_data
+        from_group = WebGroup.objects.filter(pk=data.get("from_group_id")).first()
+        to_group = WebGroup.objects.filter(pk=data.get("to_group_id")).first()
         if from_group and from_group.is_folder:
-            raise ValidationError({"from_group": "源节点不能是目录"})
+            raise ValidationError({"from_group_id": "源节点不能是目录"})
         if to_group and to_group.is_folder:
-            raise ValidationError({"to_group": "目标节点不能是目录"})
-        serializer.save()
+            raise ValidationError({"to_group_id": "目标节点不能是目录"})
+        # 写库经 api.py（D3 契约）；api 不返回 ORM，故按 id 只读回取
+        result = api.create_web_page_flow(
+            from_group,
+            to_group,
+            trigger_element_id=data.get("trigger_element_id"),
+            trigger_action=data.get("trigger_action", "click"),
+        )
+        serializer.instance = WebPageFlow.objects.get(id=result["id"])

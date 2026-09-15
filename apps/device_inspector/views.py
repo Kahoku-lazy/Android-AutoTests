@@ -6,6 +6,7 @@
 
 import logging
 
+from drf_spectacular.utils import OpenApiTypes, extend_schema
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -14,11 +15,15 @@ from .service import CaptureError
 
 logger = logging.getLogger(__name__)
 
+# 下列 @extend_schema 仅声明 OpenAPI 文档中的 JSON 入参/响应形态，
+# 属于 drf-spectacular 元数据，不改变运行时的请求解析与响应行为。
+
 
 def _user_id(request) -> str:
     return str(getattr(request, "user_id", "") or "")
 
 
+@extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def capture(request):
     """POST /api/inspector/capture — 一键获取（serial + method）→ 快照落库。"""
@@ -33,6 +38,7 @@ def capture(request):
         return Response({"message": "获取失败"}, status=500)
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 @api_view(["GET"])
 def snapshots(request):
     """GET /api/inspector/snapshots — 快照列表（offset/limit，倒序）。"""
@@ -44,6 +50,7 @@ def snapshots(request):
     return Response(api.list_snapshots(_user_id(request), offset, limit))
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT, operation_id="inspector_snapshot_detail")
 @api_view(["GET"])
 def snapshot_detail(request, snapshot_id: int):
     """GET /api/inspector/snapshots/{id} — 快照详情 JSON。"""
@@ -53,6 +60,7 @@ def snapshot_detail(request, snapshot_id: int):
     return Response(data)
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 @api_view(["DELETE"])
 def snapshot_delete(request, snapshot_id: int):
     """DELETE /api/inspector/snapshots/{id} — 删除快照 + 文件清理。"""
@@ -61,6 +69,7 @@ def snapshot_delete(request, snapshot_id: int):
     return Response({"deleted": True})
 
 
+@extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def save_elements(request, snapshot_id: int):
     """POST /api/inspector/snapshots/{id}/save-elements — 筛减保存到元素定位。"""
@@ -95,6 +104,7 @@ def save_elements(request, snapshot_id: int):
         return Response({"message": "保存失败"}, status=500)
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 @api_view(["GET"])
 def snapshot_analyze(request, snapshot_id: int):
     """GET /api/inspector/snapshots/{id}/analyze — 快照结构分析（纯规则，无设备交互）。"""
@@ -104,6 +114,7 @@ def snapshot_analyze(request, snapshot_id: int):
     return Response(data)
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 @api_view(["GET"])
 def page_view(request, page_id: int):
     """GET /api/inspector/pages/{page_id} — 元素定位已保存页面只读视图。"""

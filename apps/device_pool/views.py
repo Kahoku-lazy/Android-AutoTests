@@ -8,11 +8,13 @@ import logging
 import re
 
 from django.conf import settings
+from drf_spectacular.utils import OpenApiTypes, extend_schema
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from engines.device.registry import close_engine, open_engine
 
+from .contracts import ConnectionType, DeviceStatus, LockReleaseReason
 from .manager import DeviceError, detector, registry, serializer, state_machine
 from .models import Device
 from .pool import device as device_pool
@@ -33,6 +35,7 @@ def _device(serial: str) -> Device:
 # ═══════════════════════════════════════════════
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 @api_view(["GET"])
 def list_devices(request):
     """GET /api/devices/ — 设备列表 + 当前设备（含状态同步 + 可见性过滤）。"""
@@ -44,12 +47,12 @@ def list_devices(request):
         devices = [
             d for d in Device.objects.all() if serializer.is_device_visible(d, user_id, admin_ids)
         ]
-        status_order = {"ONLINE": 0, "BUSY": 1}
+        status_order = {DeviceStatus.ONLINE: 0, DeviceStatus.BUSY: 1}
         devices.sort(key=lambda d: status_order.get(d.status, 99))
 
         current_serial = device_pool.current_serial
         if not current_serial:
-            online = [d for d in devices if d.status in ("ONLINE", "BUSY")]
+            online = [d for d in devices if d.status in (DeviceStatus.ONLINE, DeviceStatus.BUSY)]
             if online:
                 first = online[0]
                 device_pool.switch_to(first.serial)
@@ -80,6 +83,7 @@ def list_devices(request):
         return Response({"message": "设备列表加载失败"}, status=500)
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 @api_view(["GET"])
 def device_current(request):
     """GET /api/devices/current — 当前活动设备信息。"""
@@ -113,7 +117,7 @@ def device_current(request):
                 "model": dev.model,
                 "brand": dev.brand,
                 "connection_type": dev.connection_type
-                or ("WIFI" if ":" in current_serial else "USB"),
+                or (ConnectionType.WIFI if ":" in current_serial else ConnectionType.USB),
             }
         )
     return Response(
@@ -126,6 +130,7 @@ def device_current(request):
     )
 
 
+@extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def activate_device(request, serial):
     """POST /api/devices/{serial}/activate — 切换当前活动设备。"""
@@ -134,7 +139,7 @@ def activate_device(request, serial):
     except Device.DoesNotExist:
         dev, _ = registry.register_device(serial, getattr(request, "user_id", ""))
 
-    if dev.status == "BUSY":
+    if dev.status == DeviceStatus.BUSY:
         raise DeviceError("设备正在使用中，无法激活", status_code=400)
 
     device_pool.switch_to(serial)
@@ -148,6 +153,7 @@ def activate_device(request, serial):
 # ═══════════════════════════════════════════════
 
 
+@extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def scan_device(request):
     """POST /api/devices/scan — ADB 扫描注册（全量 / USB / WiFi）。"""
@@ -227,6 +233,7 @@ def scan_device(request):
         return Response({"message": "扫描失败"}, status=500)
 
 
+@extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def connect_device(request, serial):
     """POST /api/devices/{serial} — 连接 + 采集信息 + 自动激活（observe 模式置使用中）。"""
@@ -235,12 +242,12 @@ def connect_device(request, serial):
     user_id = getattr(request, "user_id", "") or ""
 
     dev = _device(serial)
-    if dev.status == "BUSY":
+    if dev.status == DeviceStatus.BUSY:
         raise DeviceError("设备正在使用中，无法连接", status_code=409)
 
     # 连接地址：无线设备用 connection_addr（IP:port / mDNS），USB 用序列号本身
     addr = dev.connection_addr or serial
-    ct = "WIFI" if detector.is_wireless(addr) else "USB"
+    ct = ConnectionType.WIFI if detector.is_wireless(addr) else ConnectionType.USB
 
     # 连接设备（无线 adb connect + u2 探活，逻辑在 detector.connect）
     detector.connect(addr)
@@ -266,22 +273,24 @@ def connect_device(request, serial):
     )
 
 
+@extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def disconnect_device(request, serial):
     """POST /api/devices/{serial}/disconnect — 删除设备（在线可删、使用中置灰、USB 无删除键）。"""
     dev = _device(serial)
 
-    if dev.connection_type != "WIFI":
+    if dev.connection_type != ConnectionType.WIFI:
         raise DeviceError("USB 设备无删除键", status_code=400)
-    if dev.status == "BUSY":
+    if dev.status == DeviceStatus.BUSY:
         raise DeviceError("设备使用中，无法删除", status_code=409)
 
-    registry.delete_device_record(dev, reason="disconnect")
+    registry.delete_device_record(dev, reason=LockReleaseReason.DISCONNECT)
     logger.warning("设备 %s 已删除", serial)
 
     return Response({"serial": serial, "deleted": True})
 
 
+@extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def disconnect_observe(request, serial):
     """POST /api/devices/{serial}/disconnect-observe — 轻量断开（不删记录，释放观察占用为 ONLINE）。"""
@@ -299,6 +308,7 @@ def disconnect_observe(request, serial):
 # ═══════════════════════════════════════════════
 
 
+@extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def lock_device(request, serial):
     """POST /api/devices/{serial}/lock — 锁定 / 公开切换（可见性）。"""
@@ -309,6 +319,7 @@ def lock_device(request, serial):
     return Response(state_machine.set_device_lock(dev, bool(locked), user_id))
 
 
+@extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def release_device(request, serial):
     """POST /api/devices/{serial}/release — 释放设备检查器占用。"""
@@ -316,6 +327,7 @@ def release_device(request, serial):
     return Response(state_machine.release_occupy(dev))
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
 @api_view(["GET"])
 def heartbeat(request):
     """GET /api/devices/heartbeat — 心跳同步。"""

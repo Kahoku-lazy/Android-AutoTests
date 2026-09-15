@@ -27,6 +27,7 @@ from apps.ai_assistant.models import (
     AITask,
 )
 from apps.ai_assistant.skills_catalog import SHARED_SKILLS_DIR, scan_skill_folders, skill_origin
+from models.constants import AgentStatus, TaskStatus
 
 logger = logging.getLogger("ai_assistant")
 
@@ -72,6 +73,7 @@ __all__ = [
     "finalize_task",
     "delete_task",
     "clear_agent_tasks",
+    "recover_orphaned_tasks",
     "parse_task_result",
     "task_result_preview",
     "serialize_agent_task_row",
@@ -137,7 +139,9 @@ def get_agent_by_scope_id(scope_id: str):
 def list_active_agents():
     """获取所有活跃的 Agent。"""
     return list(
-        AIAgent.objects.filter(status="active").values("id", "name", "model_provider", "model_name")
+        AIAgent.objects.filter(status=AgentStatus.ACTIVE).values(
+            "id", "name", "model_provider", "model_name"
+        )
     )
 
 
@@ -297,7 +301,7 @@ def get_platform_agent() -> AIAgent | None:
     """返回平台唯一智能体（超级管理员拥有的活跃共享智能体，无则回退首个活跃智能体）。"""
     from django.contrib.auth import get_user_model
 
-    qs = AIAgent.objects.filter(status="active")
+    qs = AIAgent.objects.filter(status=AgentStatus.ACTIVE)
     superuser_ids = list(
         get_user_model().objects.filter(is_superuser=True).values_list("id", flat=True)
     )
@@ -383,7 +387,7 @@ def get_or_create_conversation(agent: AIAgent, title: str = "新对话"):
     return AIConversation.objects.get_or_create(
         agent=agent,
         title=title,
-        defaults={"status": "active"},
+        defaults={"status": AgentStatus.ACTIVE},
     )
 
 
@@ -464,9 +468,7 @@ def create_shared_skill(
 
 def ensure_disk_skills() -> None:
     """磁盘上有 SKILL.md 的文件夹若无库记录则补一条（origin=local）。"""
-    existing = set(
-        AISharedTool.objects.filter(item_type="skill").values_list("name", flat=True)
-    )
+    existing = set(AISharedTool.objects.filter(item_type="skill").values_list("name", flat=True))
     for folder in scan_skill_folders():
         name = folder["folder"]
         if name in existing:
@@ -552,6 +554,19 @@ def save_message(
 # ── 任务操作（任务发布）──
 
 
+def recover_orphaned_tasks() -> int:
+    """启动恢复：把上次进程遗留的 running 任务置为 failed，返回受影响行数。
+
+    仅服务进程启动时调用（见 apps.AiAssistantConfig._run_startup_recovery）；管理命令不触发。
+    写库归口本模块（D3 契约：写操作只经 api.py）。
+    """
+    return AITask.objects.filter(status=TaskStatus.RUNNING).update(
+        status=TaskStatus.FAILED,
+        result="执行中断：服务重启导致任务线程终止",
+        finished_at=timezone.now(),
+    )
+
+
 def create_task(
     agent: AIAgent,
     *,
@@ -567,13 +582,13 @@ def create_task(
         goal=goal,
         attachment=attachment,
         device_serial=device_serial,
-        status="pending",
+        status=TaskStatus.PENDING,
     )
 
 
 def start_task(task: AITask) -> AITask:
     """标记任务开始执行（异步执行线程启动时调用）。"""
-    task.status = "running"
+    task.status = TaskStatus.RUNNING
     task.started_at = timezone.now()
     task.save(update_fields=["status", "started_at"])
     return task

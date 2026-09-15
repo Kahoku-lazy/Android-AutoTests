@@ -1,5 +1,6 @@
 """case_manager DRF ViewSets — projects, directories, document definitions."""
 
+from drf_spectacular.utils import OpenApiTypes, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.exceptions import NotFound, ValidationError
@@ -7,6 +8,10 @@ from rest_framework.response import Response
 
 from . import api as case_api
 from .api_projects import ConflictError
+from .models import CaseDirectory, CaseFile, CaseProject, TestDefinition
+
+# 下列 @extend_schema / @extend_schema_view 仅声明 OpenAPI 文档中的 JSON 入参/响应形态，
+# queryset 仅用于让 drf-spectacular 从模型推导路径参数类型，运行时不会被查询。
 
 
 def _user_id(request) -> str:
@@ -29,8 +34,19 @@ def _raise_or_conflict(exc: Exception) -> Response:
     raise exc
 
 
+@extend_schema_view(
+    # list 返回 JSON 数组（case_api.list_projects），元素结构不固定，故用 ANY
+    list=extend_schema(responses=OpenApiTypes.ANY, operation_id="cases_projects_list"),
+    create=extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT),
+    retrieve=extend_schema(responses=OpenApiTypes.OBJECT),
+    partial_update=extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT),
+    destroy=extend_schema(responses=OpenApiTypes.OBJECT),
+    tree=extend_schema(responses=OpenApiTypes.OBJECT),
+)
 class CaseProjectViewSet(viewsets.ViewSet):
     """Project list / create / detail / update / delete / tree."""
+
+    queryset = CaseProject.objects.none()
 
     def list(self, request):
         return Response(case_api.list_projects(user_id=_user_id(request)))
@@ -86,8 +102,15 @@ class CaseProjectViewSet(viewsets.ViewSet):
         return Response(data)
 
 
+@extend_schema_view(
+    create=extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT),
+    partial_update=extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT),
+    destroy=extend_schema(responses=OpenApiTypes.OBJECT),
+)
 class CaseDirectoryViewSet(viewsets.ViewSet):
     """Directory create / update / delete."""
+
+    queryset = CaseDirectory.objects.none()
 
     def create(self, request):
         body = request.data or {}
@@ -125,8 +148,16 @@ class CaseDirectoryViewSet(viewsets.ViewSet):
         return Response({"id": int(pk)})
 
 
+@extend_schema_view(
+    create=extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT),
+    retrieve=extend_schema(responses=OpenApiTypes.OBJECT),
+    partial_update=extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT),
+    destroy=extend_schema(responses=OpenApiTypes.OBJECT),
+)
 class CaseFileViewSet(viewsets.ViewSet):
     """Case sheet (tree file) CRUD + Excel rows payload."""
+
+    queryset = CaseFile.objects.none()
 
     def create(self, request):
         body = request.data or {}
@@ -171,8 +202,17 @@ class CaseFileViewSet(viewsets.ViewSet):
         return Response({"id": int(pk)})
 
 
+@extend_schema_view(
+    create=extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT),
+    retrieve=extend_schema(responses=OpenApiTypes.OBJECT),
+    partial_update=extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT),
+    destroy=extend_schema(responses=OpenApiTypes.OBJECT),
+    batch_delete=extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT),
+)
 class TestDefinitionViewSet(viewsets.ViewSet):
     """Document case CRUD + batch-delete."""
+
+    queryset = TestDefinition.objects.none()
 
     def create(self, request):
         body = request.data or {}
@@ -251,6 +291,7 @@ class TestDefinitionViewSet(viewsets.ViewSet):
         return Response(data)
 
 
+@extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def move_items(request):
     """Move directory or file within a project tree."""

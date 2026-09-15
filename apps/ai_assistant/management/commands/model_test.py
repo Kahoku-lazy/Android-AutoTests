@@ -36,6 +36,7 @@ from engines.ai.agentscope.workflow import (
     DeviceExecutionWorkflow,
     _parse_json,
 )
+from models.constants import TaskStatus
 
 logger = logging.getLogger("ai_assistant.model_test")
 
@@ -220,7 +221,9 @@ class Command(BaseCommand):
             logger.info("【full 阶段】最终结果 status=%s", result.get("status"))
 
             # 更新任务状态 + 结果 + token 用量（走 api，与任务发布同口径）
-            status = "completed" if result.get("status") == "success" else "failed"
+            status = (
+                TaskStatus.COMPLETED if result.get("status") == "success" else TaskStatus.FAILED
+            )
             finalize_task(
                 task,
                 status=status,

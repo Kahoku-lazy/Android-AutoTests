@@ -180,3 +180,97 @@ def ai_daily_series(user_id, days=12):
         "cache_tokens": cache_tokens,
         "deepseek_cost": [round(c, 4) for c in cost],
     }
+
+
+# 助手任务卡：成功 / 失败（与前端 TaskBoard taskStatusTone 对齐）
+_TASK_SUCCESS = ("completed", "success")
+_TASK_FAILED = ("failed",)
+
+
+def _panel_status(raw: str) -> str:
+    """列表 status → 仪表盘结果面板图标档。"""
+    key = (raw or "").lower()
+    if key in _TASK_SUCCESS:
+        return "success"
+    if key in _TASK_FAILED:
+        return "failed"
+    if key == "running":
+        return "running"
+    return "idle"
+
+
+def _day_labels(days: int):
+    """近 N 日标签与首日 00:00（与 ai_daily_series 同口径）。"""
+    first_day = (timezone.now() - timedelta(days=days - 1)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    labels = [
+        (timezone.now() - timedelta(days=days - 1 - i)).strftime("%m/%d") for i in range(days)
+    ]
+    return first_day, labels
+
+
+def ai_task_daily_execution(user_id, days=12):
+    """近 N 日按 created_at 分桶的助手任务卡成功 / 失败柱。"""
+    first_day, labels = _day_labels(days)
+    success = [0] * days
+    failed = [0] * days
+    try:
+        tasks = list(
+            _task_qs(user_id).filter(created_at__gte=first_day).only("created_at", "status")
+        )
+    except (OperationalError, ProgrammingError):
+        return {"labels": labels, "success": success, "failed": failed}
+
+    start_date = first_day.date()
+    for t in tasks:
+        idx = (t.created_at.date() - start_date).days
+        if not 0 <= idx < days:
+            continue
+        key = (t.status or "").lower()
+        if key in _TASK_SUCCESS:
+            success[idx] += 1
+        elif key in _TASK_FAILED:
+            failed[idx] += 1
+    return {"labels": labels, "success": success, "failed": failed}
+
+
+def ai_task_execution_summary(user_id):
+    """可见助手任务卡的成功 / 失败总数。"""
+    qs = _task_qs(user_id)
+
+    def safe_count(filtered):
+        try:
+            return filtered.count()
+        except (OperationalError, ProgrammingError):
+            return 0
+
+    return {
+        "passed": safe_count(qs.filter(status__in=_TASK_SUCCESS)),
+        "failed": safe_count(qs.filter(status__in=_TASK_FAILED)),
+    }
+
+
+def ai_recent_tasks(user_id, limit=8):
+    """最近助手任务卡（结果面板行）。"""
+    try:
+        rows = list(
+            _task_qs(user_id)
+            .order_by("-created_at")
+            .only("id", "title", "goal", "status", "created_at")[:limit]
+        )
+    except (OperationalError, ProgrammingError):
+        return []
+
+    items = []
+    for t in rows:
+        created = t.created_at.strftime("%Y-%m-%d %H:%M") if t.created_at else ""
+        items.append(
+            {
+                "id": t.id,
+                "title": t.title or t.goal or "未命名任务",
+                "status": _panel_status(t.status),
+                "time": created,
+            }
+        )
+    return items

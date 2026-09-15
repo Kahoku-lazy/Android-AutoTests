@@ -41,8 +41,14 @@ class Snapshot(models.Model):
         verbose_name = "检查器快照"
         verbose_name_plural = "检查器快照"
         indexes = [
-            models.Index(fields=["created_at"]),
-            models.Index(fields=["device_id"]),
+            models.Index(
+                fields=["created_at"],
+                name="di_snapshot_created_7e4a98_idx",
+            ),
+            models.Index(
+                fields=["device_id"],
+                name="di_snapshot_device__9cbb1d_idx",
+            ),
         ]
 
     def __str__(self):

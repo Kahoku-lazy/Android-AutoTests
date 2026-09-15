@@ -6,11 +6,12 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
 from . import api as wf_api
-from .models import WorkflowDirectory, WorkflowDocument
+from .models import WorkflowDirectory, WorkflowDocument, WorkflowPrototype
 from .serializers import (
     WorkflowDirectorySerializer,
     WorkflowDocumentDetailSerializer,
     WorkflowDocumentListSerializer,
+    WorkflowPrototypeSerializer,
 )
 
 
@@ -25,6 +26,11 @@ def _q_prototype_id(request) -> int | None:
 
 class WorkflowPrototypeViewSet(ViewSet):
     """原型 CRUD — 标准信封由 EnvelopeJSONRenderer 包裹."""
+
+    # 仅作 schema 元数据：本 ViewSet 直接调 wf_api，不经 get_queryset / get_serializer。
+    # 声明后 drf-spectacular 才能推导 {id} 路径参数类型与原型响应结构，消除告警。
+    serializer_class = WorkflowPrototypeSerializer
+    queryset = WorkflowPrototype.objects.none()
 
     def list(self, request):
         return Response(wf_api.list_prototypes())
@@ -92,18 +98,23 @@ class WorkflowDirectoryViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         data = serializer.validated_data
-        parent_id = data.pop("parent_id", None) if "parent_id" in data else None
-        instance = serializer.save()
-        if parent_id is not None:
-            ok, result = wf_api.update_directory(
-                instance.id,
-                name=data.get("name"),
-                parent_id=parent_id,
-            )
-            if not ok:
-                from rest_framework.exceptions import ValidationError
+        instance = serializer.instance
+        # 显式 parent_id=null 表示「移到根」；api 约定用空串表达（api 内 "" → parent=None）
+        parent_id = data.get("parent_id") if "parent_id" in data else None
+        if parent_id is None and "parent_id" in data:
+            parent_id = ""
+        # 单一写路径：校验全在 api 内完成，失败时不产生任何写入
+        ok, result = wf_api.update_directory(
+            instance.id,
+            name=data.get("name"),
+            parent_id=parent_id,
+            sort_order=data.get("sort_order"),
+        )
+        if not ok:
+            from rest_framework.exceptions import ValidationError
 
-                raise ValidationError({"parent_id": result})
+            raise ValidationError({"detail": result})
+        serializer.instance = WorkflowDirectory.objects.get(id=instance.id)
 
     def perform_destroy(self, instance):
         wf_api.delete_directory(instance.id)

@@ -1,12 +1,15 @@
 """Tool gateway views — HTTP 工具入口（工具执行 / schemas / agent-config）。
 
-GET  /api/tools/schemas                    → return all tool definitions (JSON)
-GET  /api/tools/agent-config/<agent_id>    → per-agent tool/skill/phase config
-POST /api/tools/{module}/{action}           → execute a tool, return result (JSON)
+GET  /api/ai/tools/schemas                  → return all tool definitions (JSON)
+GET  /api/ai/tools/agent-config/<agent_id>  → per-agent tool/skill/phase config
+POST /api/ai/tools/<module>/<action>        → execute a tool, return result (JSON)
 
-AgentScope 已并入进程内模块：工具经 `agent_scope/tools.py` 进程内直调各 App api.py；
-本网关为 HTTP 工具入口（历史/外部调用方），handler 同样 resolve 到 `agent_scope.tools`。
-JWT authentication is enforced by the global middleware.
+工具实现真相源：`apps/ai_assistant/tools.py`（`TOOLS` + `TOOL_META`）；本网关 handler 亦 resolve 到该处。
+本网关为 HTTP 工具入口（历史/外部调用方）；AgentScope 已并入进程内，正常链路不经此网关。
+
+鉴权：该前缀在 JWT 中间件中豁免（服务间调用不持有用户令牌），由
+`gateway.internal_token.InternalToolTokenMiddleware` 校验请求头 `X-Internal-Token`；
+令牌（`settings.AI_TOOL_GATEWAY_TOKEN`）未配置时一律 401。
 """
 
 import json
@@ -27,10 +30,9 @@ logger = logging.getLogger("ai_assistant.tools")
 
 @csrf_exempt
 def tool_schemas(request):
-    """Return all tool schema definitions to AgentScope.
+    """Return all tool schema definitions (服务间调用).
 
-    Called once at AgentScope startup. No authentication required
-    (internal service-to-service, Django dev mode passes through).
+    Requires the internal token header (`X-Internal-Token`); JWT is exempt for this prefix.
     """
     return JsonResponse(
         {
@@ -119,10 +121,11 @@ def agent_config(request, agent_id: str):
 
 @csrf_exempt
 def tool_gateway(request, module: str, action: str):
-    """Execute a business tool on behalf of AgentScope.
+    """Execute a business tool on behalf of a service caller.
 
-    AgentScope POSTs {params} in JSON body. User identity comes from JWT
-    (injected by middleware as request.user_id).
+    Requires the internal token header (`X-Internal-Token`); JWT is exempt for this prefix.
+    The caller POSTs {params} in the JSON body. `request.user_id` is only present when the
+    caller also sends a JWT — service callers have no user identity, so it falls back to "".
 
     Returns {"status": True, "data": ...} or {"status": False, "message": "..."}.
     """

@@ -90,8 +90,7 @@ def serialize_prototype(p: WorkflowPrototype) -> dict:
 
 def list_prototypes() -> list[dict]:
     return [
-        serialize_prototype(p)
-        for p in WorkflowPrototype.objects.order_by("-updated_at", "-id")
+        serialize_prototype(p) for p in WorkflowPrototype.objects.order_by("-updated_at", "-id")
     ]
 
 
@@ -229,9 +228,9 @@ def get_directory_tree(*, prototype_id: int | None = None) -> list[dict]:
                 "doc_type": x.doc_type,
                 "updated_at": x.updated_at.isoformat() if x.updated_at else "",
             }
-            for x in node.documents.filter(
-                doc_type__in=WorkflowDocument.SUPPORTED_TYPES
-            ).order_by("title")
+            for x in node.documents.filter(doc_type__in=WorkflowDocument.SUPPORTED_TYPES).order_by(
+                "title"
+            )
         ]
         return {
             **serialize_directory(node),
@@ -277,7 +276,12 @@ def create_directory(
     return True, serialize_directory(d)
 
 
-def update_directory(dir_id: int, name: str | None = None, parent_id=None):
+def update_directory(
+    dir_id: int,
+    name: str | None = None,
+    parent_id=None,
+    sort_order: int | None = None,
+):
     try:
         d = WorkflowDirectory.objects.get(id=dir_id)
     except WorkflowDirectory.DoesNotExist:
@@ -298,6 +302,9 @@ def update_directory(dir_id: int, name: str | None = None, parent_id=None):
             if parent.prototype_id != d.prototype_id:
                 return False, "不能跨原型移动目录"
             d.parent = parent
+    # 与上面各项校验同属「先全部校验、再一次性落库」：必须在 d.save() 之前，失败即零写库
+    if sort_order is not None:
+        d.sort_order = sort_order
     try:
         d.save()
     except IntegrityError:
@@ -333,9 +340,9 @@ def list_documents(
     doc_type: str | None = None,
     include_orphans: bool = True,
 ) -> list[dict]:
-    qs = WorkflowDocument.objects.filter(
-        doc_type__in=WorkflowDocument.SUPPORTED_TYPES
-    ).order_by("-updated_at")
+    qs = WorkflowDocument.objects.filter(doc_type__in=WorkflowDocument.SUPPORTED_TYPES).order_by(
+        "-updated_at"
+    )
     if doc_type:
         if doc_type not in WorkflowDocument.SUPPORTED_TYPES:
             return []
@@ -407,8 +414,10 @@ def upsert_document(
         proto_id, err = _resolve_prototype_id(prototype_id=prototype_id, directory=directory)
         if err:
             return False, err, 400
-        if directory is not None and prototype_id is not None and directory.prototype_id != int(
-            prototype_id
+        if (
+            directory is not None
+            and prototype_id is not None
+            and directory.prototype_id != int(prototype_id)
         ):
             return False, "目录不属于该原型", 400
         try:
@@ -428,8 +437,10 @@ def upsert_document(
     proto_id, err = _resolve_prototype_id(prototype_id=prototype_id, directory=directory)
     if err:
         return False, err, 400
-    if directory is not None and prototype_id is not None and directory.prototype_id != int(
-        prototype_id
+    if (
+        directory is not None
+        and prototype_id is not None
+        and directory.prototype_id != int(prototype_id)
     ):
         return False, "目录不属于该原型", 400
     new_id = gen_doc_id(doc_type)

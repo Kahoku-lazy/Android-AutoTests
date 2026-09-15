@@ -28,7 +28,15 @@ class LocatorDirectoryAdmin(admin.ModelAdmin):
 
 @admin.register(Page)
 class PageAdmin(admin.ModelAdmin):
-    list_display = ("id", "label", "package", "activity", "directory", "element_count", "created_at")
+    list_display = (
+        "id",
+        "label",
+        "package",
+        "activity",
+        "directory",
+        "element_count",
+        "created_at",
+    )
     search_fields = ("label", "package")
 
 

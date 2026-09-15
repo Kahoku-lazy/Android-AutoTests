@@ -152,7 +152,11 @@ class ChromaVectorStore(VectorStoreBase):
             if not doc_id:
                 continue
             if doc_id not in agg:
-                agg[doc_id] = {"source": str(meta.get("source", "")), "chunk_count": 0, "metadata": meta}
+                agg[doc_id] = {
+                    "source": str(meta.get("source", "")),
+                    "chunk_count": 0,
+                    "metadata": meta,
+                }
             agg[doc_id]["chunk_count"] += 1
         return [
             DocumentSummary(
@@ -187,7 +191,11 @@ class ChromaVectorStore(VectorStoreBase):
                     source=str(meta.get("source", "")),
                     chunk_index=int(meta.get("chunk_index", 0)),
                     total_chunks=0,
-                    metadata={k: v for k, v in meta.items() if k not in ("document_id", "chunk_index", "source")},
+                    metadata={
+                        k: v
+                        for k, v in meta.items()
+                        if k not in ("document_id", "chunk_index", "source")
+                    },
                 )
             )
         chunks.sort(key=lambda c: c.chunk_index)

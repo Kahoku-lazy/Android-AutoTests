@@ -32,10 +32,10 @@ class WebGroupSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at"]
 
-    def get_element_count(self, obj):
+    def get_element_count(self, obj) -> int:
         return getattr(obj, "element_count", obj.elements.count())
 
-    def get_children(self, obj):
+    def get_children(self, obj) -> list[dict]:
         children = (
             obj._prefetched_children
             if hasattr(obj, "_prefetched_children")
@@ -90,10 +90,10 @@ class ApiGroupSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at"]
 
-    def get_endpoint_count(self, obj):
+    def get_endpoint_count(self, obj) -> int:
         return getattr(obj, "endpoint_count", obj.endpoints.count())
 
-    def get_children(self, obj):
+    def get_children(self, obj) -> list[dict]:
         children = (
             obj._prefetched_children
             if hasattr(obj, "_prefetched_children")
@@ -159,6 +159,11 @@ class PageFlowSerializer(serializers.ModelSerializer):
 class WebPageFlowSerializer(serializers.ModelSerializer):
     from_name = serializers.CharField(source="from_group.name", read_only=True)
     to_name = serializers.CharField(source="to_group.name", read_only=True)
+    # FK 用裸 id 而非 PrimaryKeyRelatedField：存在性与业务规则（目录判定）归 view / api.py，
+    # 且 DRF 会把 FK 的 `*_id` attname 建成只读字段 —— 不改则 create 必现 NOT NULL 500。
+    from_group_id = serializers.IntegerField()
+    to_group_id = serializers.IntegerField()
+    trigger_element_id = serializers.IntegerField(allow_null=True, required=False)
 
     class Meta:
         model = WebPageFlow

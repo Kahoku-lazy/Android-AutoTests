@@ -27,20 +27,12 @@ __all__ = [
     "get_or_create_flow",
     "delete_flow",
     "clear_all",
-    "create_web_group",
-    "rename_web_group",
-    "delete_web_group",
-    "batch_move_web_groups",
     "create_web_element",
     "update_web_element",
     "delete_web_element",
     "batch_import_web_elements",
     "create_web_page_flow",
     "delete_web_page_flow",
-    "create_api_group",
-    "rename_api_group",
-    "delete_api_group",
-    "batch_move_api_groups",
     "create_api_endpoint",
     "update_api_endpoint",
     "delete_api_endpoint",
@@ -237,51 +229,6 @@ def clear_all():
     Page.objects.all().delete()
 
 
-# ── WebGroup 写操作 ──
-
-
-def create_web_group(name, parent_id=None, is_folder=False, sort_order=0):
-    """Create a web group or folder."""
-    from .models import WebGroup
-
-    return WebGroup.objects.create(
-        name=name,
-        parent_id=parent_id,
-        is_folder=is_folder,
-        sort_order=sort_order,
-    )
-
-
-def rename_web_group(group_id, name):
-    """Rename a web group."""
-    from .models import WebGroup
-
-    WebGroup.objects.filter(id=group_id).update(name=name)
-
-
-def delete_web_group(group_id):
-    """Delete a web group; descendant elements become unclassified (group=None)."""
-    from .models import WebElement, WebGroup
-
-    ids = {group_id}
-
-    def _descendant_ids(node_id):
-        for child in WebGroup.objects.filter(parent_id=node_id):
-            ids.add(child.id)
-            _descendant_ids(child.id)
-
-    _descendant_ids(group_id)
-    WebElement.objects.filter(group_id__in=ids).update(group=None)
-    WebGroup.objects.filter(id=group_id).delete()
-
-
-def batch_move_web_groups(group_ids, parent_id):
-    """Batch move web groups to a target parent."""
-    from .models import WebGroup
-
-    WebGroup.objects.filter(id__in=group_ids).update(parent_id=parent_id)
-
-
 # ── WebElement 写操作 ──
 
 
@@ -381,15 +328,20 @@ def batch_import_web_elements(items):
 
 
 def create_web_page_flow(from_group, to_group, trigger_element_id=None, trigger_action="click"):
-    """Create a web page flow."""
+    """Create a web page flow.
+
+    Returns:
+        dict: {"id": int} —— api 不返回 ORM（apps/AGENTS.md §6 规则 4）。
+    """
     from .models import WebPageFlow
 
-    return WebPageFlow.objects.create(
+    flow = WebPageFlow.objects.create(
         from_group=from_group,
         to_group=to_group,
         trigger_element_id=trigger_element_id,
         trigger_action=trigger_action,
     )
+    return {"id": flow.id}
 
 
 def delete_web_page_flow(flow_id):
@@ -397,51 +349,6 @@ def delete_web_page_flow(flow_id):
     from .models import WebPageFlow
 
     WebPageFlow.objects.filter(id=flow_id).delete()
-
-
-# ── ApiGroup 写操作 ──
-
-
-def create_api_group(name, parent_id=None, is_folder=False, sort_order=0):
-    """Create an api group or folder."""
-    from .models import ApiGroup
-
-    return ApiGroup.objects.create(
-        name=name,
-        parent_id=parent_id,
-        is_folder=is_folder,
-        sort_order=sort_order,
-    )
-
-
-def rename_api_group(group_id, name):
-    """Rename an api group."""
-    from .models import ApiGroup
-
-    ApiGroup.objects.filter(id=group_id).update(name=name)
-
-
-def delete_api_group(group_id):
-    """Delete an api group; descendant endpoints become unclassified (group=None)."""
-    from .models import ApiEndpoint, ApiGroup
-
-    ids = {group_id}
-
-    def _descendant_ids(node_id):
-        for child in ApiGroup.objects.filter(parent_id=node_id):
-            ids.add(child.id)
-            _descendant_ids(child.id)
-
-    _descendant_ids(group_id)
-    ApiEndpoint.objects.filter(group_id__in=ids).update(group=None)
-    ApiGroup.objects.filter(id=group_id).delete()
-
-
-def batch_move_api_groups(group_ids, parent_id):
-    """Batch move api groups to a target parent."""
-    from .models import ApiGroup
-
-    ApiGroup.objects.filter(id__in=group_ids).update(parent_id=parent_id)
 
 
 # ── ApiEndpoint 写操作 ──

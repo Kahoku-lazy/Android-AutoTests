@@ -1,5 +1,11 @@
 """element_locator DRF views — locator projects / directories / move / batch-delete."""
 
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiTypes,
+    extend_schema,
+    extend_schema_view,
+)
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.exceptions import MethodNotAllowed, NotFound, ValidationError
@@ -21,6 +27,19 @@ def _raise_or_conflict(exc: Exception) -> Response:
     raise exc
 
 
+@extend_schema_view(
+    list=extend_schema(
+        request=None,
+        responses=OpenApiTypes.OBJECT,
+        operation_id="elements_projects_list",
+    ),
+    retrieve=extend_schema(
+        request=None,
+        responses=OpenApiTypes.OBJECT,
+        operation_id="elements_project_detail",
+    ),
+)
+@extend_schema(request=None, responses=OpenApiTypes.OBJECT)
 class LocatorProjectViewSet(viewsets.ViewSet):
     """System-locked projects: list / retrieve / tree. Mutations → 405."""
 
@@ -57,6 +76,7 @@ class LocatorProjectViewSet(viewsets.ViewSet):
 class LocatorDirectoryViewSet(viewsets.ViewSet):
     """Directory create / update / delete."""
 
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     def create(self, request):
         body = request.data or {}
         parent_id = body.get("parent_id")
@@ -71,6 +91,12 @@ class LocatorDirectoryViewSet(viewsets.ViewSet):
             return _raise_or_conflict(exc)
         return Response(data, status=status.HTTP_201_CREATED)
 
+    @extend_schema(
+        request=OpenApiTypes.OBJECT,
+        responses=OpenApiTypes.OBJECT,
+        # 路径参数在 schema 中被 pk→id 归一化，显式声明其类型
+        parameters=[OpenApiParameter("id", int, location=OpenApiParameter.PATH)],
+    )
     def partial_update(self, request, pk=None):
         body = request.data or {}
         try:
@@ -83,6 +109,10 @@ class LocatorDirectoryViewSet(viewsets.ViewSet):
             return _raise_or_conflict(exc)
         return Response(data)
 
+    @extend_schema(
+        responses=OpenApiTypes.OBJECT,
+        parameters=[OpenApiParameter("id", int, location=OpenApiParameter.PATH)],
+    )
     def destroy(self, request, pk=None):
         try:
             el_api.delete_directory(directory_id=int(pk))
@@ -91,6 +121,7 @@ class LocatorDirectoryViewSet(viewsets.ViewSet):
         return Response({"id": int(pk)})
 
 
+@extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def move_items(request):
     body = request.data or {}
@@ -107,17 +138,29 @@ def move_items(request):
     return Response(data)
 
 
+@extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def batch_delete_files(request):
     body = request.data or {}
     ids = body.get("ids") or []
     try:
-        data = el_api.batch_delete_files(kind=str(body.get("kind") or ""), ids=[int(i) for i in ids])
+        data = el_api.batch_delete_files(
+            kind=str(body.get("kind") or ""), ids=[int(i) for i in ids]
+        )
     except Exception as exc:
         return _raise_or_conflict(exc)
     return Response(data)
 
 
+@extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+@api_view(["POST"])
 def group_write_gone(_request, *args, **kwargs):
-    """410 Gone for legacy group write endpoints."""
+    """410 Gone for legacy group write endpoints.
+
+    必须是 DRF 视图（`@api_view`）：本函数返回 DRF `Response`，而 `Response` 是
+    `SimpleTemplateResponse`，由 Django 的 template-response 中间件调用 `.render()`；
+    未经 DRF dispatch 的裸视图没有 `accepted_renderer`，会以
+    `AssertionError: .accepted_renderer not set on Response` 变成 **500**（实测 2026-09-15），
+    与 AGENTS.md 登记的「分组写 → HTTP 410」契约不符。
+    """
     return Response({"status": False, "message": _GONE_MSG}, status=status.HTTP_410_GONE)

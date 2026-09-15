@@ -28,6 +28,8 @@ from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.db import close_old_connections
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, PermissionDenied
@@ -35,6 +37,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from engines.ai.registry import get_ai_engine
+from models.constants import AgentStatus, MessageRole, TaskStatus
 
 from . import api, engine_adapter
 from .models import AIAgent, AIConversation, AIMessage, AITask
@@ -156,7 +159,7 @@ def _test_model_config(provider, api_key, base_url, model_name):
     if not connected and not last_error:
         chat_body = {
             "model": model_name,
-            "messages": [{"role": "user", "content": "hi"}],
+            "messages": [{"role": MessageRole.USER, "content": "hi"}],
             "max_tokens": 5,
         }
         resp, err = _call_config_api(base, api_key, "/chat/completions", "POST", chat_body)
@@ -451,10 +454,13 @@ class AgentViewSet(
 class AgentHealthAPIView(APIView):
     """GET /api/ai/agents/health — 遍历当前用户 active Agent（按 owner 过滤）。"""
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         results = []
         now = datetime.now()
-        for a in filter_agents_for_user(AIAgent.objects.filter(status="active"), _user_id(request)):
+        for a in filter_agents_for_user(
+            AIAgent.objects.filter(status=AgentStatus.ACTIVE), _user_id(request)
+        ):
             routes_out = {}
             for route in _ROUTE_KEYS:
                 stored = ((a.route_configs or {}).get(route) or {}).get("health")
@@ -497,11 +503,13 @@ class AgentHealthAPIView(APIView):
 class ModelDetectAPIView(APIView):
     """POST /api/ai/models/detect — 按 provider/base_url/api_key 探测模型列表。"""
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         from rest_framework.exceptions import ValidationError
 
         raise ValidationError("agent_id required")
 
+    @extend_schema(request=ModelDetectInputSerializer, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         serializer = ModelDetectInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -537,6 +545,7 @@ class ModelDetectAPIView(APIView):
 class AvailableToolsAPIView(APIView):
     """GET /api/ai/available-tools — 平台业务工具（按分类，含全局启用状态）。"""
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         from .tools import TOOL_CATEGORIES, list_tool_schemas
 
@@ -579,6 +588,7 @@ class PlatformToolToggleAPIView(APIView):
       {category: "设备管理", enabled: false}       整分类启停
     """
 
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         from .permissions import _is_superuser
         from .tools import list_tool_schemas
@@ -622,10 +632,12 @@ class PlatformConfigAPIView(APIView):
             raise NotFound("platform agent not found")
         return agent
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         agent = self._get_agent_or_404()
         return Response(api.get_platform_config(agent))
 
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         from .permissions import _is_superuser
 
@@ -639,6 +651,7 @@ class PlatformConfigAPIView(APIView):
 class AvailableSkillsAPIView(APIView):
     """GET /api/ai/available-skills — workspace 技能列表（已移除，返回空）。"""
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         return Response({"skills": []})
 
@@ -666,19 +679,21 @@ class ConversationViewSet(viewsets.GenericViewSet):
             raise PermissionDenied("Forbidden")
         return conv_id
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     @action(detail=True, methods=["get"], url_path="messages")
     def messages(self, request, *args, **kwargs):
         conv_id = self._require_access(request)
         msgs = AIMessage.objects.filter(conversation_id=conv_id)
         return Response({"messages": MessageListSerializer(msgs, many=True).data})
 
+    @extend_schema(request=MessageInputSerializer, responses=OpenApiTypes.OBJECT)
     @action(detail=True, methods=["post"], url_path="save-message")
     def save_message(self, request, *args, **kwargs):
         conv_id = self._require_access(request)
         serializer = MessageInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        role = data.get("role", "assistant")
+        role = data.get("role", MessageRole.ASSISTANT)
         content = data.get("content", "")
         tokens = data.get("tokens", 0)
         blocks = data.get("blocks", [])
@@ -702,6 +717,7 @@ class ConversationViewSet(viewsets.GenericViewSet):
         )
         return Response({"id": msg.id})
 
+    @extend_schema(request=RenameInputSerializer, responses=OpenApiTypes.OBJECT)
     @action(detail=True, methods=["post"], url_path="rename")
     def rename(self, request, *args, **kwargs):
         conv_id = self._require_access(request)
@@ -712,12 +728,14 @@ class ConversationViewSet(viewsets.GenericViewSet):
         )
         return Response({"title": conv.title})
 
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     @action(detail=True, methods=["post"], url_path="delete")
     def delete(self, request, *args, **kwargs):
         conv_id = self._require_access(request)
         api.delete_conversation(AIConversation.objects.get(id=conv_id))
         return Response({})
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     @action(detail=True, methods=["get"], url_path="tasks")
     def tasks(self, request, *args, **kwargs):
         conv_id = _conv_pk(request)
@@ -730,6 +748,11 @@ class ConversationViewSet(viewsets.GenericViewSet):
 
         return Response({"tasks": []})
 
+    @extend_schema(
+        parameters=[OpenApiParameter("run_id", str, OpenApiParameter.PATH)],
+        responses=OpenApiTypes.OBJECT,
+        operation_id="ai_conversation_task_detail",
+    )
     @action(detail=True, methods=["get"], url_path=r"tasks/(?P<run_id>[^/.]+)")
     def task_detail(self, request, *args, **kwargs):
         raise NotFound("task not found")
@@ -743,6 +766,7 @@ class ConversationViewSet(viewsets.GenericViewSet):
 class TaskBoardAPIView(APIView):
     """GET /api/ai/tasks — 工作台任务便签看板（ai-task-* + case-gen-*）。"""
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         return Response({"tasks": []})
 
@@ -793,7 +817,7 @@ def _run_task_async(task_id: int, agent_id: int) -> None:
         req = engine_adapter.build_request(task, agent)
         req.on_progress = _on_progress
         result = get_ai_engine(settings.AI_ENGINE).run(req)
-        status = "completed" if result.status == "success" else "failed"
+        status = TaskStatus.COMPLETED if result.status == "success" else TaskStatus.FAILED
         payload = {
             "status": result.status,
             "summary": result.summary,
@@ -817,7 +841,7 @@ def _run_task_async(task_id: int, agent_id: int) -> None:
         logger.exception("async task failed id=%s", task_id)
         try:
             api.finalize_task(
-                AITask.objects.get(id=task_id), status="failed", result=f"执行异常: {exc}"
+                AITask.objects.get(id=task_id), status=TaskStatus.FAILED, result=f"执行异常: {exc}"
             )
         except Exception:
             logger.exception("finalize async task failed id=%s", task_id)
@@ -826,6 +850,7 @@ def _run_task_async(task_id: int, agent_id: int) -> None:
 class TaskSubmitAPIView(APIView):
     """POST /api/ai/tasks/submit — 提交任务并异步执行（后台线程，立即返回）。"""
 
+    @extend_schema(request=TaskSubmitInputSerializer, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         serializer = TaskSubmitInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -858,6 +883,7 @@ class TaskSubmitAPIView(APIView):
 class AgentTaskListAPIView(APIView):
     """GET /api/ai/agent-tasks — 任务发布列表（AITask）。"""
 
+    @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         agent = api.get_platform_agent()
         if agent is None:
@@ -869,6 +895,7 @@ class AgentTaskListAPIView(APIView):
 class AgentTaskDeleteAPIView(APIView):
     """POST /api/ai/agent-tasks/{task_id}/delete — 删除任务发布记录。"""
 
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def post(self, request, task_id: int):
         agent = api.get_platform_agent()
         if agent is None:
@@ -884,6 +911,7 @@ class AgentTaskDeleteAPIView(APIView):
 class AgentTaskClearAPIView(APIView):
     """POST /api/ai/agent-tasks/clear — 调试：清空全部任务发布记录。"""
 
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         agent = api.get_platform_agent()
         if agent is None:
@@ -895,6 +923,7 @@ class AgentTaskClearAPIView(APIView):
 class AgentTaskDetailAPIView(APIView):
     """GET /api/ai/agent-tasks/{task_id} — 任务发布详情（过程日志）。"""
 
+    @extend_schema(responses=OpenApiTypes.OBJECT, operation_id="ai_agent_task_detail")
     def get(self, request, task_id: int):
         agent = api.get_platform_agent()
         if agent is None:

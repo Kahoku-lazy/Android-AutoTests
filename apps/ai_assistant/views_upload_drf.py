@@ -11,6 +11,8 @@ import base64
 import logging
 import uuid
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -101,6 +103,7 @@ def _parse_markdown(filepath: str) -> str:
 class UploadAvatarAPIView(APIView):
     """POST /api/ai/upload-avatar — base64 头像 → data URI。"""
 
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         img_b64 = request.data.get("image") or ""
         if not img_b64:
@@ -120,6 +123,7 @@ class UploadAvatarAPIView(APIView):
 class UploadFileAPIView(APIView):
     """POST /api/ai/upload-file — multipart 文件上传并解析。"""
 
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         uploaded = request.FILES.get("file")
         if not uploaded:

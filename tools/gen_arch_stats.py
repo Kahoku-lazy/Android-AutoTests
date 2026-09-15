@@ -22,6 +22,16 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+# 控制台输出统一 UTF-8：本脚本会打印 emoji（📝 / ✅ / 🔴）。
+# Windows 中文环境下 stdout 默认是 GBK，被管道/重定向捕获时 print 会抛
+# UnicodeEncodeError 并以退出码 1 结束——与「发现边界违规」无法区分，会让
+# CI 与 dsh-plugins/arch-gate（execFile 捕获 + passMarker "零违规"）误判失败。
+# 修复放在脚本内而非要求调用方设 PYTHONIOENCODING：单点覆盖所有输出路径。
+# 被 pytest 等捕获时 stdout 可能不是 TextIOWrapper，故用 hasattr 守卫。
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -41,7 +51,10 @@ def scan_django_apps():
         app = {
             "name": d.name,
             "has_models": (d / "models.py").exists(),
-            "has_views": (d / "views.py").exists() or (d / "views").is_dir(),
+            # 视图可拆成多片（views_pages.py / views_drf.py ...），故按前缀识别
+            "has_views": (d / "views.py").exists()
+            or any(d.glob("views*.py"))
+            or (d / "views").is_dir(),
             "has_api": (d / "api.py").exists(),
             "has_urls": (d / "urls.py").exists(),
         }
@@ -458,7 +471,7 @@ def _iter_code_line_nos(content):
 def scan_engine_leak_violations():
     """Detect engine capability leak to upper layers (L1c boundary).
 
-    Rule (architecture.md §七 引擎边界): only `engines/` may import third-party
+    Rule (.agents/skills/boundary-check/SKILL.md §二 引擎边界): only `engines/` may import third-party
     engine libs (uiautomator2) or touch concrete engine implementations.
     Upper layers (apps/, gateway/) must consume device capability ONLY via
     `engines.device.base.UiEngine` protocol (obtained through `engines.device.registry`).

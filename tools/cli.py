@@ -17,11 +17,7 @@ CLI 工具 — 元素定位 + 用例管理 CRUD
 import argparse
 import json
 import os
-import random
-import string
 import sys
-
-from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")

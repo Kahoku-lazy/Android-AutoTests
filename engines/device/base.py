@@ -1,7 +1,7 @@
 """L1c 引擎层 — Android 执行引擎统一契约（可替换）。
 
 导入边界：零 `apps.*`、零 `django.*`；只依赖 `models.*` 与第三方引擎库。
-上层经 DeviceSession（L2）消费本协议，不直接触碰引擎实现。
+上层经引擎工厂（`open_engine` / `close_engine`）消费本协议，不直接触碰引擎实现。
 """
 
 from dataclasses import dataclass

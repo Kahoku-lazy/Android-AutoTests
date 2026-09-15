@@ -610,9 +610,7 @@ class DeviceExecutionWorkflow:
                 max_loops,
             )
             # 执行 → 验收；证据路径优先用 verifier 工具回传的真实落盘路径
-            exec_out, screenshot, exec_role = await self._execute_step(
-                step, idx, total, retry_hint
-            )
+            exec_out, screenshot, exec_role = await self._execute_step(step, idx, total, retry_hint)
             verdict, verifier_shot, ver_role = await self._verify_step(
                 step, idx, total, exec_out, screenshot
             )

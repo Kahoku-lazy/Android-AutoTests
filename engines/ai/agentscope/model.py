@@ -93,9 +93,8 @@ def _sanitize_tool_output_text(output, *, limit: int = 800) -> str:
         cleaned = {
             k: v
             for k, v in obj.items()
-            if k not in ("base64", "image", "data") and not (
-                isinstance(v, str) and len(v) > 500 and k.endswith("_b64")
-            )
+            if k not in ("base64", "image", "data")
+            and not (isinstance(v, str) and len(v) > 500 and k.endswith("_b64"))
         }
         # screenshot_page：优先只留可读摘要 + 路径
         if "screenshot_path" in cleaned or "screenshot_name" in cleaned:
@@ -172,7 +171,9 @@ class RoleResult(BaseModel):
     role: str = Field(default="", description="本角色：planner / executor / verifier")
     model_name: str = Field(default="", description="底层模型名（用量按此聚合）")
     output: str = Field(default="", description="输出结果文本（TextBlock 拼接，供 JSON 解析）")
-    input_text: str = Field(default="", description="本轮发给 Agent 的用户输入文本（详情页「输入」）")
+    input_text: str = Field(
+        default="", description="本轮发给 Agent 的用户输入文本（详情页「输入」）"
+    )
     thinking: list[str] = Field(default_factory=list, description="思考过程（ThinkingBlock 逐个）")
     tool_usage: list[dict] = Field(
         default_factory=list,
@@ -375,9 +376,7 @@ class AgentRole:
             if isinstance(block, ThinkingBlock) and block.thinking:
                 thinking.append(block.thinking)
             elif isinstance(block, ToolCallBlock):
-                tool_usage.append(
-                    {"type": "call", "name": block.name, "input": block.input}
-                )
+                tool_usage.append({"type": "call", "name": block.name, "input": block.input})
             elif isinstance(block, ToolResultBlock):
                 row: dict = {
                     "type": "result",

@@ -3,8 +3,8 @@
 失败策略与 provider_registry 不同：引擎**未知名/未实现即 fail-fast**
 （抛 ConfigurationError），不做静默回退。
 
-层纯度：不 import django settings——引擎名由调用方（未来 DeviceSession）
-从 settings 解析后传入。
+层纯度：不 import django settings——引擎名由调用方
+（`apps/device_pool`）从 settings 解析后传入。
 """
 
 import importlib

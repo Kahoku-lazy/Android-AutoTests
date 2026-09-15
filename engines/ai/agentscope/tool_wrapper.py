@@ -36,7 +36,9 @@ def _image_result_to_chunk(result) -> ToolChunk | None:
         img = result["image"]
         return ToolChunk(
             content=[
-                TextBlock(text=json.dumps(result.get("summary") or {}, ensure_ascii=False, default=str)),
+                TextBlock(
+                    text=json.dumps(result.get("summary") or {}, ensure_ascii=False, default=str)
+                ),
                 DataBlock(source=Base64Source(data=img["base64"], media_type=img["media_type"])),
             ]
         )
@@ -91,9 +93,7 @@ def build_toolkit(
     specs: list[ToolSpec], user_id: str = "", skill_dirs: list[str] | None = None
 ) -> Toolkit:
     """把 ToolSpec 列表包装成 AgentScope Toolkit；skill_dirs 为空则不挂 Skill。"""
-    loaders = [
-        LocalSkillLoader(directory=d, scan_subdir=False) for d in (skill_dirs or []) if d
-    ]
+    loaders = [LocalSkillLoader(directory=d, scan_subdir=False) for d in (skill_dirs or []) if d]
     return Toolkit(
         tools=[PlatformFunctionTool(s, user_id=user_id) for s in specs],
         skills_or_loaders=loaders,

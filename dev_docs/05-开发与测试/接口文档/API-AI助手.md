@@ -60,9 +60,9 @@
 | 平台配置更新 | POST /api/ai/platform-config/update | 需登录(Bearer) | 更新（仅超管） |
 | 平台工具启停 | POST /api/ai/platform-tools/toggle | 需登录(Bearer) | 全局启停（仅超管） |
 | **legacy tool gateway** | | | |
-| 工具 schema | GET /api/ai/tools/schemas | 公开 | 全部工具定义（服务间） |
-| Agent 工具配置 | GET /api/ai/tools/agent-config/{agent_id} | 公开 | per-agent 工具/技能/知识配置 |
-| 工具执行 | POST /api/ai/tools/{module}/{action} | 公开 | 执行业务工具（服务间） |
+| 工具 schema | GET /api/ai/tools/schemas | 内部令牌 | 全部工具定义（服务间） |
+| Agent 工具配置 | GET /api/ai/tools/agent-config/{agent_id} | 内部令牌 | per-agent 工具/技能/知识配置 |
+| 工具执行 | POST /api/ai/tools/{module}/{action} | 内部令牌 | 执行业务工具（服务间） |
 
 ## 2. 通用约定
 
@@ -70,7 +70,7 @@
 - **信封分两类**：
   - **DRF 迁移端点**（§3~§9，ViewSet / APIView 返回 `Response`）：经全局 `EnvelopeJSONRenderer` 包裹，成功 `{status: true, data: {...}}`，失败（4xx/5xx）`{status: false, message: "..."}`。
   - **legacy 工具网关**（§10，函数视图返回 `JsonResponse`）：不走 `EnvelopeJSONRenderer`，视图内手动返回 `{status: true, data}` / `{status: false, message}`（外层形状相同，但 `data` 已是最终结果，不再二次包裹）。
-- **鉴权**：除 `/api/ai/tools/*`（JWT 中间件 `PUBLIC_PREFIXES` 豁免，供 AgentScope 服务间直调）外，其余全部需 `Authorization: Bearer <access_token>`。中间件先行校验并注入 `request.user_id`，DRF 全局 `IsAuthenticated` 兜底。
+- **鉴权**：全部需 `Authorization: Bearer <access_token>`，**唯一例外**是 `/api/ai/tools/*` 工具网关 —— 该前缀免 JWT（服务间调用不持有用户令牌），改由 `gateway.internal_token.InternalToolTokenMiddleware` 校验请求头 `X-Internal-Token`（= `settings.AI_TOOL_GATEWAY_TOKEN`）；令牌未配置时该前缀一律 `401`。JWT 中间件先行校验并注入 `request.user_id`，DRF 全局 `IsAuthenticated` 兜底。
 - **对象级权限**：Agent 写操作仅超管；读操作「权限检查先于存在性检查 → 不存在资源返回 403」（`Forbidden`）。对话访问按 owner。
 - **错误响应**：DRF 端点错误由 `EnvelopeJSONRenderer` 从 `detail`/字段错误抽取成 `{status: false, message}`。字段级校验错误取第一个字段的第一个错误文案。
 - 字段命名 **snake_case**；`api_key` 落库 Fernet 加密，读接口按权限脱敏。
@@ -1694,14 +1694,28 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 ## 10. legacy tool gateway（豁免路径）
 
 > Django 函数视图 + `JsonResponse`（`@csrf_exempt`），不走 `EnvelopeJSONRenderer`；
-> JWT 中间件对 `/api/ai/tools/` 前缀豁免鉴权（AgentScope 服务间直调），故鉴权标「公开」。
 > 响应为视图内手动信封 `{status: true, data}` / `{status: false, message}`（与 DRF 信封形状相同，但 `data` 已是最终结果）。
+>
+> **鉴权（内部令牌）**：JWT 中间件对该前缀豁免（服务间调用不持有用户令牌），改由
+> `gateway.internal_token.InternalToolTokenMiddleware` 校验请求头 —— **本节 3 个端点全部要求**：
+>
+> ```http
+> X-Internal-Token: <settings.AI_TOOL_GATEWAY_TOKEN>
+> ```
+>
+> 令牌未配置（`AI_TOOL_GATEWAY_TOKEN` 为空）或请求头缺失/不匹配时，一律返回：
+>
+> ```json
+> { "status": false, "message": "内部令牌无效" }
+> ```
+>
+> 状态码 `401`。CORS 预检（`OPTIONS`）不校验令牌。
 
 ### 10.1 工具 schema 接口：GET /api/ai/tools/schemas
 
 | 项 | 值 |
 |---|---|
-| 鉴权 | 公开（服务间） |
+| 鉴权 | 内部令牌（`X-Internal-Token`） |
 | 请求 | 无请求体 |
 
 #### 成功响应（200）
@@ -1734,7 +1748,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 | 项 | 值 |
 |---|---|
-| 鉴权 | 公开（服务间） |
+| 鉴权 | 内部令牌（`X-Internal-Token`） |
 | 请求 | 无请求体；`{agent_id}` 为 Django 主键（int）或 AgentScope UUID |
 
 #### 成功响应（200）
@@ -1769,7 +1783,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 | 项 | 值 |
 |---|---|
-| 鉴权 | 公开（服务间） |
+| 鉴权 | 内部令牌（`X-Internal-Token`） |
 | Content-Type | application/json |
 
 #### 请求体

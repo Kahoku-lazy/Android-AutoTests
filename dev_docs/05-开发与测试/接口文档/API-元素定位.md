@@ -111,7 +111,7 @@
 - **鉴权**：本模块**全部端点均需登录（Bearer）**，无公开路径。`gateway.middleware.JWTAuthenticationMiddleware` 拦截所有 `/api/` 受保护路径并注入 `request.user_id`；DRF 端点另由 `JWTAuthentication` + `IsAuthenticated` 兜底。请求头：`Authorization: Bearer <access_token>`。
 - **信封双口径**：
   - router 路径（带尾斜杠）→ `shared.renderers.EnvelopeJSONRenderer` 包裹：成功 `{status: true, data}`；失败（≥400）`{status: false, message}`。
-  - legacy 路径（无尾斜杠）→ `views.py` 的 `JsonResponse` 平铺：`{status, pages|elements|groups|flows|endpoints|...}`。例外：`pages/import-snapshot` 为新端点，采用标准 `{status, data}` 信封（见 4.1）。
+  - legacy 路径（无尾斜杠）→ `views_pages.py` / `views_page_elements.py` / `views_flows.py` / `views_web.py` / `views_web_groups.py` / `views_api_assets.py` 的 `JsonResponse` 平铺：`{status, pages|elements|groups|flows|endpoints|...}`。例外：`pages/import-snapshot` 为新端点，采用标准 `{status, data}` 信封（见 4.1）。
 - **尾斜杠**：router 端点带尾斜杠；legacy 端点不带。二者路径字符串不同、可共存（`gateway.normalize_slash.NormalizeTrailingSlashMiddleware` 保证无尾斜杠请求命中 legacy 原样、带尾斜杠命中 router）。
 - **Content-Type**：`application/json`（写操作）；字段名 snake_case。
 - **DRF 删除**：`DELETE` 成功返回 `204 No Content`（无响应体）。
@@ -727,7 +727,7 @@
 
 ## 4. Legacy 平铺端点（平铺信封）
 
-> 以下端点由 `views.py` 的 `JsonResponse` 直接返回平铺结构；成功 `status` 为 `true`，失败为 `false` + `message`。均需登录（Bearer）。
+> 以下端点由 `views_pages.py` / `views_page_elements.py` / `views_flows.py` / `views_web.py` / `views_web_groups.py` / `views_api_assets.py` / `views_snapshot.py` 的 `JsonResponse` 直接返回平铺结构；成功 `status` 为 `true`，失败为 `false` + `message`。均需登录（Bearer）。
 
 ### 4.1 页面 pages
 
@@ -1644,4 +1644,4 @@
 | 分组列表形态 | 顶层树（children 递归） | 平铺数组 |
 | 快照导入 | —（无此端点） | 标准 {status, data} 信封（新端点特例） |
 
-> 本文以实际代码为准：字段名、文案均取自 `views.py`/`views_drf.py`/`serializers.py`/`api.py`/`page_tree.py`/`api_snapshot.py` 原文。
+> 本文以实际代码为准：字段名、文案均取自 `views_*.py`（拆分自原 `views.py`）/`views_drf.py`/`serializers.py`/`api.py`/`page_tree.py`/`api_snapshot.py` 原文。

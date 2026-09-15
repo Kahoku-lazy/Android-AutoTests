@@ -212,6 +212,8 @@
 |---|---|
 | 鉴权 | 需登录(Bearer) |
 
+> 说明：50 条上限只作用于**本列表**；详情（4.3）与删除（4.4）走未切片查询集，按 id 精确定位。
+
 **成功响应（200）** — `data` 为摘要数组（无嵌套 results，最多 50 条）：
 
 ```json
@@ -248,19 +250,28 @@
 | Content-Type | application/json |
 
 > 说明：这是 ModelViewSet 自动生成的 create（因 `http_method_names` 含 post 而暴露），**仅落库一条 EvalRun 记录，不触发评估**。正常启动评估请用 `POST /runs/start/`（4.5）。
+> `agent_id` / `bank_id` 可缺省（模型 `EvalRun.agent` / `bank` 均 `null=True`），但**给定且不存在时返回 404，不会静默落 NULL**。
 
 **请求体字段**（可写字段，均非必填）
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| agent_id | integer | 被评估 Agent ID |
-| bank_id | integer | 题库 ID |
+| agent_id | integer | 被评估 Agent ID；缺省或 `null` 表示不关联 Agent |
+| bank_id | integer | 题库 ID；缺省或 `null` 表示不关联题库 |
 | framework | string | 框架（默认 "self"） |
 | status | string | 状态（默认 "pending"） |
 | judge_provider | string | 判卷 LLM 提供商（默认 "dashscope"） |
 | judge_model | string | 判卷模型（默认 "qwen-max"） |
 
 **成功响应（201）** — `data` 为创建的运行对象（含 `id` 等全部字段）。
+
+**错误码与文案**
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 400 | （DRF 字段校验文案） | agent_id / bank_id 不是整数 |
+| 404 | agent not found | agent_id 给定但 Agent 不存在 |
+| 404 | question bank not found | bank_id 给定但题库不存在 |
 
 ### 4.3 运行详情接口：GET /api/evaluator/runs/{id}/
 
@@ -332,6 +343,8 @@
 |---|---|
 | 鉴权 | 需登录(Bearer) |
 | 路径参数 | id — 运行 ID |
+
+> 说明：本端点与详情（4.3）使用未切片查询集 —— 列表的 50 条上限不作用于它们（见 4.1）。
 
 **成功响应（204）** — 无响应体（级联删除逐题结果）。
 
@@ -899,3 +912,7 @@
 5. **legacy create/update 无 JSON 容错**：`create_bank`/`update_bank` 的 `json.loads` 未捕获 JSONDecodeError（与 `kb-search` 不同），非法 JSON 会 500。
 6. **`report_json` 为字符串**：接口返回的是 JSON 字符串而非对象，前端需自行 `JSON.parse`。
 7. **DRF 字段校验文案依赖 locale**：DRF 默认字段错误文案（如「该字段是必填项。」）随 `LANGUAGE_CODE=zh-hans` 生效，本文以中文标注，不同部署环境可能不同。
+8. **`GET /runs/{id}/` 的 `results` 恒为空数组（2026-09-15 实测登记，未修）**：`EvalRunSerializer.get_results` 读 `obj._prefetched_results`，
+   而该属性在 `apps/` 内**从无写入点**（全仓仅 `apps/evaluator/serializers.py:98,100` 两处引用）→ 即使该运行已有逐题结果，详情仍返回 `"results": []`；
+   §4.3 的示例因此与实现不符，`get_queryset` 的 `prefetch_related("results__question")` 也是死代码。
+   前端走 legacy `GET /runs/{id}`（自带 results 组装），故暂无消费方受影响。**修复前需先定夺 `results` 的取数口径**，故未在本轮改动。

@@ -17,15 +17,20 @@ RETIRED_AUTH_PATHS = {
     "/api/ai/auth/me",
 }
 
-# Paths that do NOT require authentication
+# Paths that do NOT require JWT authentication
 PUBLIC_PREFIXES = [
+    # 登录类：必须公开
     "/api/auth/login",
     "/api/auth/register",
     "/api/auth/refresh",
-    "/api/ai/tools/",  # AgentScope internal service-to-service
+    # 工具网关：免 JWT（服务间），由 gateway.internal_token.InternalToolTokenMiddleware
+    # 校验 X-Internal-Token；令牌未配置时一律 401（fail-closed）
+    "/api/ai/tools/",
+    # 后台与静态资源
     "/admin/",
     "/static/",
     "/media/",
+    # API 文档面：有意公开（便于外部联调），无敏感数据
     "/api/docs",
     "/api/schema/",  # drf-spectacular OpenAPI schema
     "/api/swagger/",  # drf-spectacular Swagger UI
@@ -80,5 +85,9 @@ class JWTAuthenticationMiddleware:
                 {"status": False, "message": "登录已过期或令牌无效"},
                 status=401,
             )
+
+        # 有效 JWT 的请求豁免 CSRF：浏览器无法跨站携带自定义 Authorization 头，
+        # 因而不存在 CSRF 场景；CsrfViewMiddleware（排在本中间件之后）读取此标记。
+        request._dont_enforce_csrf_checks = True
 
         return self.get_response(request)

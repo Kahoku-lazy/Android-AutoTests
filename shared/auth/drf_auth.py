@@ -9,7 +9,6 @@ The two authentication paths coexist during the DRF migration:
   - This class: protects new DRF ViewSets (opt-in via DEFAULT_AUTHENTICATION_CLASSES)
 """
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication
@@ -63,4 +62,5 @@ class JWTAuthentication(BaseAuthentication):
         return (user, token)
 
     def authenticate_header(self, request):
-        return f'{self.keyword} realm="{settings.SECRET_KEY[:8]}…"'
+        # realm 只作协议保护域标识（RFC 6750），禁止携带任何密钥材料
+        return f'{self.keyword} realm="api"'

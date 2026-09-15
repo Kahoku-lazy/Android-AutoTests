@@ -9,7 +9,6 @@
 from config.settings import *  # noqa: F403
 
 # ── 数据库：SQLite 内存库 ──
-DB_ENGINE = "sqlite"  # noqa: F405
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",

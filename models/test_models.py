@@ -4,7 +4,7 @@ Migrated and extended from sku_stress_test.
 """
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 from .step_types import TestStep
 
@@ -23,7 +23,7 @@ _TASK_CARD_STATUS_LABELS = {
 }
 
 
-class TestRunStatus(str, Enum):
+class TestRunStatus(StrEnum):
     """测试执行状态 — tr_test_runs.status 唯一真相源（L1b 收敛后）。
 
     值口径统一小写，与 TaskCard.outcome（TaskOutcome）语义对齐：
@@ -39,7 +39,7 @@ class TestRunStatus(str, Enum):
     FAILED = "failed"
 
 
-class TaskOutcome(str, Enum):
+class TaskOutcome(StrEnum):
     """任务卡终态 — tr_task_cards.outcome 唯一真相源（L1b 收敛后新增）。
 
     仅当 TaskCard.status = done 时有意义；空串表示未终态。
@@ -66,7 +66,7 @@ class TaskOutcome(str, Enum):
         return [(e.value, _TASK_OUTCOME_LABELS.get(e.value, e.value)) for e in cls]
 
 
-class TaskCardStatus(str, Enum):
+class TaskCardStatus(StrEnum):
     """任务卡状态 — tr_task_cards.status 唯一真相源（L1b 收敛后新增）。
 
     与 TestRunStatus（run 态）不同，这是 task 态的 4 值状态机；

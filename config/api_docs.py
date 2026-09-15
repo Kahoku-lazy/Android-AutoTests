@@ -1,4 +1,13 @@
-"""API documentation — structured endpoint definitions + interactive HTML."""
+"""API documentation — structured endpoint definitions + interactive HTML.
+
+⚠️ 本文档是**人工维护的公开文档快照**（渲染 `/api/docs` 与 `/api/docs.html`）：
+
+- 真相源：各 App `urls.py`（路径与端点）+ `config/urls.py`（挂载）；`/api/schema` 是自动生成的 OpenAPI。
+- 本文件只收录**主要业务端点**（含中文说明与请求/响应示例），并非全量清单：
+  DRF `DefaultRouter` 展开的 ViewSet 路由、`admin/`、`static/`、`media/` 均不在收录范围。
+- 一致性由 `tests/graybox/unit/test_api_docs_consistency.py` 看守：**文档里记录的路径必须真实存在**（严格断言），
+  且文档不得整体缩水（模块数与端点数下限）。修改路由时请同步本文件。
+"""
 
 import json
 
@@ -13,42 +22,8 @@ ENDPOINTS = [
     {
         "module": "element-locator",
         "prefix": "/api/elements",
-        "desc": "元素定位：UI dump、8种XPath策略、截图叠加层、页面跳转",
+        "desc": "元素定位：页面/元素资产、Web 与 API 分组、8 种 XPath 策略、页面跳转（抓取类端点已迁至 inspector 模块）",
         "items": [
-            {
-                "method": "POST",
-                "path": "/api/elements/dump",
-                "desc": "Dump 当前 UI 层级并持久化到数据库",
-                "body": {"action": "dump"},
-                "body_desc": "空 JSON 对象即可",
-                "response": {
-                    "status": "bool",
-                    "page_id": "int",
-                    "package": "str",
-                    "activity": "str",
-                    "element_count": "int",
-                    "actionable_count": "int",
-                    "elements": "list[dict]",
-                    "actionable": "list[dict]",
-                },
-                "errors": [{"code": 500, "msg": "设备未连接或 uiautomator2 异常"}],
-                "note": "核心操作，每次切换页面后需要调用。自动截图保存到 data/screenshots/，为每个可定位元素生成8种XPath候选",
-            },
-            {
-                "method": "POST",
-                "path": "/api/elements/action",
-                "desc": "执行点击或输入操作",
-                "body": {
-                    "action": "click|input",
-                    "x": "int",
-                    "y": "int",
-                    "text": "str(输入时)",
-                    "clear_first": "bool",
-                },
-                "response": {"status": "bool"},
-                "errors": [{"code": 500, "msg": "设备未连接或操作失败"}],
-                "note": "click 只需 x,y；input 需要 x,y,text,clear_first",
-            },
             {
                 "method": "GET",
                 "path": "/api/elements/pages",
@@ -322,42 +297,6 @@ ENDPOINTS = [
                 "errors": [],
                 "note": "",
             },
-            {
-                "method": "POST",
-                "path": "/api/cases/export/yaml",
-                "desc": "导出测试点为 YAML 文件",
-                "body": {"test_case_name": "str", "page_ids": "list[int]"},
-                "response": {"status": "bool", "filename": "str", "yaml": "str"},
-                "errors": [],
-                "note": "收集标记为 is_test_point 的元素，生成 YAML 格式测试用例。同时缓存在 cm_test_cases 表",
-            },
-            {
-                "method": "GET",
-                "path": "/api/cases/exports",
-                "desc": "已导出的 YAML 文件列表",
-                "body": None,
-                "response": {"status": "bool", "files": "list[{name,size,time}]"},
-                "errors": [],
-                "note": "按时间倒序",
-            },
-            {
-                "method": "GET",
-                "path": "/api/cases/exports/{filename}",
-                "desc": "下载 YAML 导出文件",
-                "body": None,
-                "response": "FileResponse (application/x-yaml)",
-                "errors": [{"code": 404, "msg": "文件不存在"}],
-                "note": "不是 JSON 响应，前端需用 fetch().then(r=>r.text())",
-            },
-            {
-                "method": "POST",
-                "path": "/api/cases/suites",
-                "desc": "创建测试套件 (v2)",
-                "body": "待定义",
-                "response": "待定义",
-                "errors": [],
-                "note": "⏳ v2 计划",
-            },
         ],
     },
     # ── report-generator (2 endpoints) ──
@@ -436,7 +375,7 @@ ENDPOINTS = [
                     },
                 },
                 "errors": [],
-                "note": "跨 7 个模块聚合：device_pool、case_manager、element_locator、test_runner、ai_assistant、report_generator、workflow",
+                "note": "跨 6 个模块聚合：device_pool、case_manager、element_locator、ai_assistant、report_generator、workflow",
             },
             {
                 "method": "GET",
@@ -479,24 +418,10 @@ ENDPOINTS = [
             },
         ],
     },
-    # ── WebSocket (1 endpoint) ──
-    {
-        "module": "websocket",
-        "prefix": "/ws",
-        "desc": "WebSocket 实时推送",
-        "items": [
-            {
-                "method": "WS",
-                "path": "/ws/screenshot",
-                "desc": "实时截图流 2fps",
-                "body": None,
-                "response": 'S→C: {"type":"screenshot","image":"<base64 PNG>"}',
-                "errors": [],
-                "note": "连接后自动开始推送。无客户端时停止截图。Vite proxy 已配置",
-            },
-        ],
-    },
 ]
+
+# 注：WebSocket 通道已于 v1.7（截图流快照化）与后续执行引擎下线中全部移除，
+# 当前 `gateway/routing.py` 的 `websocket_urlpatterns` 为空表（0 生产点），故不再收录。
 
 
 def api_docs_json(request):
@@ -506,10 +431,10 @@ def api_docs_json(request):
             "status": True,
             "service": "Android-AutoTests API",
             "version": "v2.0",
-            "base_url": "http://localhost:8765",
-            "modules": 6,
-            "endpoints": 39,
-            "websockets": 2,
+            "base_url": "http://localhost:8766",
+            "modules": 5,
+            "endpoints": 29,
+            "websockets": 0,
             "conventions": {
                 "wrapper": '{"status": true/false, ...}',
                 "field_style": "snake_case",
@@ -561,7 +486,6 @@ def api_docs_html(request):
   .m-POST{{background:rgba(162,210,255,0.6);color:#1c4a7a}}
   .m-PUT{{background:rgba(255,218,185,0.6);color:#7a4c1c}}
   .m-DELETE{{background:rgba(255,192,203,0.6);color:#7a1c2b}}
-  .m-WS{{background:rgba(200,180,255,0.6);color:#3a1c7a}}
   .path{{font-family:var(--font-mono);color:var(--text);font-weight:500;flex:1;font-size:13px}}
   .ep-desc{{color:var(--sub);font-size:12px;font-family:var(--font-sans)}}
   .ep-detail{{display:none;padding:0 20px 16px 84px;font-size:12px}}
@@ -582,7 +506,7 @@ def api_docs_html(request):
 <div class="container">
   <div class="header">
     <h1>Android-AutoTests API</h1>
-    <p class="sub">v2.0 · 6 个模块 · 39 个 REST 端点 + 2 个 WebSocket · 所有响应: {"status": true/false, ...}</p>
+    <p class="sub">v2.0 · 5 个模块 · 29 个已文档化 REST 端点 · 0 个 WebSocket · 所有响应: {"status": true/false, ...}</p>
   </div>
   <div class="toolbar">
     <button class="active" onclick="expandAll()">展开全部</button>
@@ -592,10 +516,9 @@ def api_docs_html(request):
     <button onclick="filterMethod('POST')">POST</button>
     <button onclick="filterMethod('PUT')">PUT</button>
     <button onclick="filterMethod('DELETE')">DELETE</button>
-    <button onclick="filterMethod('WS')">WebSocket</button>
   </div>
   <div id="modules"></div>
-  <div class="footer">Android-AutoTests v2.0 · <a href="/api/docs">JSON Docs</a> · <a href="/admin/">Django Admin</a> · VUE_API_CONTRACT.md</div>
+  <div class="footer">Android-AutoTests v2.0 · <a href="/api/docs">JSON Docs</a> · <a href="/admin/">Django Admin</a></div>
 </div>
 <script>
 const DATA = __DOCS_JSON__;

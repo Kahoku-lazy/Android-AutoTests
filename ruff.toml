@@ -1,5 +1,5 @@
 # Ruff configuration — Android-AutoTests
-# Encodes .claude/rules/python-code.md as automated checks.
+# Encodes the team Python conventions (apps/AGENTS.md §1) as automated checks.
 # Run: ruff check .        (lint)
 # Run: ruff format .       (format)
 # Run: ruff check --fix .  (auto-fix)
@@ -8,7 +8,16 @@ line-length = 100
 target-version = "py313"
 
 # ── File scope ──────────────────────────────────────────
-exclude = ["**/migrations/*", "**/__pycache__/*", ".venv/*", "node_modules/*"]
+exclude = [
+    "**/migrations/*",
+    "**/__pycache__/*",
+    ".venv/*",
+    "node_modules/*",
+    # vendored skill-creator 脚手架（.agents/skills 与 engines/ai/skills 各一份拷贝）：
+    # 供应商产物，不适用本项目 lint 规范，改了会在下次 skill 更新时丢失
+    ".agents/skills/skill-creator/**",
+    "engines/ai/skills/skill-creator/**",
+]
 
 # ── Formatter ──────────────────────────────────────────
 [format]
@@ -47,10 +56,9 @@ section-order = ["future", "standard-library", "third-party", "first-party", "lo
 [lint.per-file-ignores]
 # ─ management/commands: 允许 print() 输出
 "**/management/commands/*.py" = ["T201"]
-# ─ CLI 入口 / 种子脚本 / skill driver: 允许 print() 输出
+# ─ CLI 入口 / 种子脚本: 允许 print() 输出
 "run.py" = ["T201"]
 "tools/**/*.py" = ["T201"]
-".claude/skills/**/*.py" = ["T201"]
 # ─ tests/: 放宽限制
 "tests/**/*.py" = ["T201"]
 # ─ __init__.py: 允许未使用 import (re-export)

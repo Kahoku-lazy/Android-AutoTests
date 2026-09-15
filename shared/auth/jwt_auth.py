@@ -167,35 +167,30 @@ def create_token_pair(user_id: str) -> dict:
     }
 
 
-def decode_token(token: str) -> dict:
-    """Decode and return the payload without verifying expiry (for inspection)."""
-    cfg = get_config()
-    return jwt.decode(token, cfg.secret, algorithms=[cfg.algorithm], options={"verify_exp": False})
-
-
 def verify_token(token: str, expected_type: Optional[str] = None) -> dict:
     """Verify and decode a JWT token. Raises on invalid/expired/blacklisted."""
     cfg = get_config()
 
-    try:
-        unverified = jwt.decode(
-            token, cfg.secret, algorithms=[cfg.algorithm], options={"verify_exp": False}
-        )
-        jti = unverified.get("jti", "")
-        if jti and _blacklist_contains(jti):
-            raise jwt.InvalidTokenError("Token has been revoked")
-        if expected_type and unverified.get("type") != expected_type:
-            raise jwt.InvalidTokenError(f"Invalid token type: expected {expected_type}")
-    except jwt.InvalidTokenError:
-        raise
-    except Exception:
-        pass
+    # 预检：吊销（jti 黑名单）与类型。此处**不再兜底吞异常**——任何意外异常都上抛，
+    # 由上游（gateway 中间件 / DRF 认证类）统一转 401（fail-closed）。
+    unverified = jwt.decode(
+        token, cfg.secret, algorithms=[cfg.algorithm], options={"verify_exp": False}
+    )
+    jti = unverified.get("jti", "")
+    if jti and _blacklist_contains(jti):
+        raise jwt.InvalidTokenError("Token has been revoked")
+    if expected_type and unverified.get("type") != expected_type:
+        raise jwt.InvalidTokenError(f"Invalid token type: expected {expected_type}")
 
     payload = jwt.decode(
         token, cfg.secret, algorithms=[cfg.algorithm], options={"verify_exp": True}
     )
     if expected_type and payload.get("type") != expected_type:
         raise jwt.InvalidTokenError(f"Invalid token type: expected {expected_type}")
+    if not payload.get("sub"):
+        # 不变量：通过校验的令牌必有 sub —— 四个调用点（中间件 / DRF 认证 / RefreshView /
+        # get_user_id_from_token）都用 payload["sub"] 取值，缺 sub 必须 401 而不是 500
+        raise jwt.InvalidTokenError("Token missing sub claim")
     return payload
 
 
@@ -222,12 +217,3 @@ def blacklist_token(token: str):
     exp = payload.get("exp", 0)
     ttl = max(exp - int(time.time()), 60)
     _blacklist_add(jti, ttl)
-
-
-def is_blacklisted(token: str) -> bool:
-    """Check if a token's jti is in the blacklist."""
-    try:
-        payload = decode_token(token)
-        return _blacklist_contains(payload.get("jti", ""))
-    except Exception:
-        return False

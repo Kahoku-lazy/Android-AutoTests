@@ -21,29 +21,17 @@ import urllib.request
 
 from pathlib import Path
 
+from config.env import load_dotenv
+
 ROOT = Path(__file__).parent
 LOG_DIR = ROOT / "logs"
 IS_WIN = sys.platform == "win32"
 SERVICE_ORDER = ("redis", "backend", "frontend")
 
 
-# ── .env（凭据只从这里来，BASE_ENV 不硬编码 DB_USER/DB_PASSWORD）──
-def _load_env() -> None:
-    env_file = ROOT / ".env"
-    if not env_file.exists():
-        return
-    with open(env_file, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, value = line.partition("=")
-            key, value = key.strip(), value.strip().strip("\"'")
-            if key and key not in os.environ:
-                os.environ[key] = value
-
-
-_load_env()
+# ── .env（凭据只从这里来，BASE_ENV 不硬编码 DB_USER/DB_PASSWORD）；
+# 单一实现在 config/env.py，与 config.settings 共用 ──
+load_dotenv()
 
 SERVICES = {
     "redis": 6379,
@@ -113,6 +101,7 @@ def _kill(pid: str, force: bool = False) -> None:
     try:
         _run(cmd)
     except Exception:
+        # 进程可能已自行退出（stop 与自然退出的竞态）→ 杀不到属预期；调用方用 _pid_alive() 复核
         pass
 
 
@@ -206,13 +195,15 @@ def cleanup_mysql_connections() -> None:
             try:
                 cur.execute(f"KILL {pid}")
             except Exception:
+                # 连接可能在 SELECT 与 KILL 之间自行关闭：跳过这一条，不影响其余清理
                 pass
         if ids:
             print(f"  MySQL cleanup: closed {len(ids)} idle connection(s)")
         cur.close()
         conn.close()
-    except Exception:
-        pass
+    except Exception as exc:
+        # 清理是 best-effort：MySQL 未启动/凭据不足不该让 stop 失败，但必须留下可诊断线索
+        print(f"  MySQL cleanup skipped: {exc}")
 
 
 # ── 各服务启停 ────────────────────────────────────────────────

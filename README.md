@@ -186,7 +186,7 @@ python run.py logs       # 查看日志
 |------|------|------|
 | 需求大纲 | `dev_docs/02-PRD需求/需求大纲.md` | 项目定位 · 用户 · 状态机 · 模块边界 |
 | 子模块 PRD（9 份） | `dev_docs/02-PRD需求/PRD-0*.md` | 各模块详细功能规格 |
-| 开发验收清单 | `dev_docs/DEVELOPMENT_CHECKLIST.md` | AI 开发结果唯一验收守门员 |
+| 开发验收门禁 | `.agents/skills/vue-frontend-check` · `django-backend-check` · `boundary-check` | 关单门禁（按改动层选）：逐项量规 + 强制输出 |
 | 项目架构 | `dev_docs/03-设计与架构/ARCH-00-平台总体架构.md` | 架构总纲 · 11 App 全景 · 设计决策 |
 | 技术栈参考 | `dev_docs/03-设计与架构/技术栈参考.md` | 技术选型 · 命名统一标准 |
 | 文档编号对照 | `dev_docs/文档编号对照表.md` | ARCH/PRD/API 编号唯一真相源 |

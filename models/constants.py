@@ -9,17 +9,17 @@
         ...
 """
 
-from enum import Enum
+from enum import StrEnum
 
 
-class DeviceStatus(str, Enum):
+class DeviceStatus(StrEnum):
     """设备状态 — dp_devices.status（L1b 收敛：仅两态，离线即删除记录）"""
 
     ONLINE = "ONLINE"
     BUSY = "BUSY"
 
 
-class LockStatus(str, Enum):
+class LockStatus(StrEnum):
     """设备锁状态 — dp_device_locks.status"""
 
     ACTIVE = "active"
@@ -27,7 +27,7 @@ class LockStatus(str, Enum):
     EXPIRED = "expired"
 
 
-class LockReleaseReason(str, Enum):
+class LockReleaseReason(StrEnum):
     """锁释放原因 — dp_device_locks.release_reason"""
 
     MANUAL = "manual"
@@ -36,28 +36,28 @@ class LockReleaseReason(str, Enum):
     FORCE = "force"
 
 
-class ConnectionType(str, Enum):
+class ConnectionType(StrEnum):
     """设备连接类型 — dp_devices.connection_type"""
 
     USB = "USB"
     WIFI = "WIFI"
 
 
-class AgentStatus(str, Enum):
+class AgentStatus(StrEnum):
     """Agent 状态 — ai_agents.status"""
 
     ACTIVE = "active"
     INACTIVE = "inactive"
 
 
-class ConversationStatus(str, Enum):
+class ConversationStatus(StrEnum):
     """对话状态 — ai_conversations.status"""
 
     ACTIVE = "active"
     ARCHIVED = "archived"
 
 
-class MessageRole(str, Enum):
+class MessageRole(StrEnum):
     """消息角色 — ai_messages.role"""
 
     USER = "user"
@@ -65,7 +65,7 @@ class MessageRole(str, Enum):
     SYSTEM = "system"
 
 
-class SOPStatus(str, Enum):
+class SOPStatus(StrEnum):
     """SOP 工作流状态 — tr_test_sop.status"""
 
     ACTIVE = "active"
@@ -73,7 +73,7 @@ class SOPStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class TaskStatus(str, Enum):
+class TaskStatus(StrEnum):
     """任务状态 — ai_tasks.status"""
 
     PENDING = "pending"
@@ -82,14 +82,14 @@ class TaskStatus(str, Enum):
     FAILED = "failed"
 
 
-class MemoryMode(str, Enum):
+class MemoryMode(StrEnum):
     """Agent 记忆模式 — ai_agents.memory_mode"""
 
     INMEMORY = "inmemory"
     LONGTERM = "longterm"
 
 
-class ModelProvider(str, Enum):
+class ModelProvider(StrEnum):
     """AI 模型提供商"""
 
     DASHSCOPE = "dashscope"

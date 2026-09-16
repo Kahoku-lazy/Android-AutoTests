@@ -18,6 +18,8 @@ import DailyPassFailChart from './components/DailyPassFailChart.vue'
 import {
   CHART_RANGE_OPTIONS,
   CHART_VISIBLE_DAYS,
+  PAGE_HEADER,
+  PAGE_SIZE_OPTIONS,
 } from './constants'
 
 const router = useRouter()
@@ -115,8 +117,8 @@ const filteredRuns = computed(() => {
 })
 
 const {
-  PAGE_SIZE_OPTIONS, pageSize, currentPage, totalPages, pagedItems: pagedRuns, setPageSize, goPage
-} = usePagination(filteredRuns, { options: [10, 50, 100] })
+  pageSize, currentPage, totalPages, pagedItems: pagedRuns, setPageSize, goPage
+} = usePagination(filteredRuns, { options: PAGE_SIZE_OPTIONS })
 
 // ── AppTable columns（报告表 11 列，使用最小宽度避免数据挤压）──
 const columns = [
@@ -181,12 +183,12 @@ function openCaseBreakdown(type, tab = 'detail') {
 </script>
 
 <template>
-  <div class="doc-page doc-page--fixed wb-shell">
+  <div class="doc-page doc-page--fixed wb-shell report-workbench">
     <WorkbenchHeader
-      title="测试报告"
-      subtitle="查看历史测试执行记录，点击 Run ID 进入详细报告"
-      icon="file-bar-chart"
-      icon-gradient="linear-gradient(135deg,#999,#8b7f8f)"
+      :title="PAGE_HEADER.title"
+      :subtitle="PAGE_HEADER.subtitle"
+      :icon="PAGE_HEADER.icon"
+      :icon-gradient="PAGE_HEADER.iconGradient"
     />
 
     <div class="doc-body">
@@ -211,10 +213,10 @@ function openCaseBreakdown(type, tab = 'detail') {
         <KpiCard :value="summary.total_runs" label="总执行次数" color="var(--c-workflow)" shape="diamond" />
         <KpiCard :value="summary.total_pass" label="通过" color="var(--c-device)" shape="triangle" @click="openCaseBreakdown('pass')" />
         <KpiCard :value="summary.total_fail" label="失败" color="var(--c-runner)" shape="square" @click="openCaseBreakdown('fail','bugs')">
-          <div v-if="bugSummary" style="font-size:var(--app-size-xs);color:var(--app-ink-muted);margin-top:4px">{{ bugSummary.unique_issues }} 类 · {{ bugSummary.total_occurrences }} 次 · {{ bugSummary.affected_cases }} 用例</div>
+          <div v-if="bugSummary" style="font-size:var(--app-size-xs);color:var(--app-text-secondary);margin-top:4px">{{ bugSummary.unique_issues }} 类 · {{ bugSummary.total_occurrences }} 次 · {{ bugSummary.affected_cases }} 用例</div>
         </KpiCard>
         <KpiCard :value="`${summary.pass_rate}%`" label="通过率" color="var(--c-dashboard)" shape="circle">
-          <div style="font-size:var(--app-size-xs);color:var(--app-ink-muted);margin-top:4px">{{ summary.total_iterations }} 次迭代</div>
+          <div style="font-size:var(--app-size-xs);color:var(--app-text-secondary);margin-top:4px">{{ summary.total_iterations }} 次迭代</div>
         </KpiCard>
       </div>
       <div style="font-size:var(--app-size-xs);opacity:0.3;text-align:right">最近更新: {{ lastUpdated || '暂无数据' }}</div>
@@ -273,8 +275,6 @@ function openCaseBreakdown(type, tab = 'detail') {
         class="report-tabs"
         :items="statusAppTabs"
         v-model="activeFilter"
-        :leaf-animation="true"
-        :shadow="true"
       >
         <template v-for="tab in statusAppTabs" #[tab.key] :key="tab.key">
           <AppCard class="table-card">
@@ -297,6 +297,7 @@ function openCaseBreakdown(type, tab = 'detail') {
               :border="true"
               :loading="loading"
               empty-text="暂无执行记录，请先执行测试"
+              accent="var(--c-report)"
               class="report-table report-table--flow"
             >
               <!-- Run ID — clickable link -->
@@ -365,16 +366,18 @@ function openCaseBreakdown(type, tab = 'detail') {
 
 <style scoped>
 /* Doodle Craft — 测试报告 */
-.doc-page{display:flex;flex-direction:column;height:100%;overflow:hidden!important}
-.doc-body{flex:1 1 0;min-height:0;overflow-y:auto!important;padding:var(--app-space-md) 20px var(--app-space-xl);display:flex;flex-direction:column;gap:14px}
+.doc-page{display:flex;flex-direction:column;overflow:hidden!important} /* height 由外壳 :deep(.doc-page) 承担；overflow:hidden 带 !important 且实际生效，保留 */
+.report-workbench .doc-body{flex:1 1 0;min-height:0;overflow-y:auto!important;padding:var(--app-space-md) var(--app-space-lg) var(--app-space-xl);display:flex;flex-direction:column;gap:var(--app-space-md)}
+/* 模块私有色值登记（tokens.css 未登记该值）：表格行 hover 底色 · 分区卡阴影色 */
+.report-workbench{--rg-hover-bg:var(--color-white) /* -> --color-white */;--rg-shadow-soft:var(--color-ink-05-a05)}
 
 /* 分区卡片 — doc-section 统一样式 */
-.doc-section{background:var(--app-bg-card);border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:var(--app-space-md) 18px;box-shadow:2px 3px 0 rgba(0,0,0,0.04)}
+.doc-section{background:var(--app-bg-card);border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:var(--app-space-md) 18px;box-shadow:2px 3px 0 var(--rg-shadow-soft)}
 .doc-section__header{margin-bottom:12px}
 .doc-section__title{font-family:var(--app-font-display);font-size:var(--app-size-xl);font-weight:700;display:inline-block;position:relative;margin-bottom:6px}
 .doc-section__title::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2.5px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%231e1e24' stroke-width='2' fill='none'/%3E%3C/svg%3E")repeat-x;background-size:40px 3px}
-.doc-section__title .doc-tag{font-size:var(--app-size-xs);padding:1px var(--app-space-sm);border-radius:4px 8px 4px 8px;background:var(--app-bg-card);color:var(--app-ink-muted);border:1.5px solid #e8ecf1;font-weight:700;margin-left:var(--app-space-sm)}
-.doc-section__label{color:var(--app-ink-muted);font-size:var(--app-size-xs);margin-top:2px}
+.doc-section__title .doc-tag{font-size:var(--app-size-xs);padding:1px var(--app-space-sm);border-radius:4px 8px 4px 8px;background:var(--app-bg-card);color:var(--app-text-secondary);border:1.5px solid var(--app-border-light);font-weight:700;margin-left:var(--app-space-sm)}
+.doc-section__label{color:var(--app-text-secondary);font-size:var(--app-size-xs);margin-top:2px}
 
 /* KPI 网格 — 渲染由 shared/KpiCard.vue 接管 */
 .kpi-row{display:grid;grid-template-columns:var(--layout-kpi-cols);gap:12px;margin-bottom:var(--app-space-sm)}
@@ -383,25 +386,25 @@ function openCaseBreakdown(type, tab = 'detail') {
 /* 筛选栏 */
 .filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .filter-date{width:220px}.filter-input{width:140px}
-.filter-summary{font-size:var(--app-size-xs);color:var(--app-ink-muted);font-weight:600;white-space:nowrap;margin-left:auto}
+.filter-summary{font-size:var(--app-size-xs);color:var(--app-text-secondary);font-weight:600;white-space:nowrap;margin-left:auto}
 .btn-sm{padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;background:var(--app-bg-card);color:var(--ink);cursor:pointer;font-family:inherit;transition:all 0.12s}
 .btn-sm:hover{background:var(--c-report)}
 
 /* 图表 */
 .chart-section{display:flex;flex-direction:column;gap:12px}
 .chart-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.toolbar-label{font-size:var(--app-size-xs);font-weight:700;color:var(--app-ink-muted)}
+.toolbar-label{font-size:var(--app-size-xs);font-weight:700;color:var(--app-text-secondary)}
 .page-size-btns{display:flex;gap:var(--app-space-xs)}
-.page-size-btn{padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;color:var(--app-ink-muted);background:var(--app-bg-card);border:2px solid #e8ecf1;border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all 0.12s}
+.page-size-btn{padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;color:var(--app-text-secondary);background:var(--app-bg-card);border:2px solid var(--app-border-light);border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all 0.12s}
 .page-size-btn:hover{border-color:var(--ink);color:var(--ink)}
 .page-size-btn.active{background:var(--app-bg-subtle);border-color:var(--ink);color:var(--ink)}
-.chart-row{display:grid;grid-template-columns:var(--layout-ratio-chart);gap:14px}
+.chart-row{display:grid;grid-template-columns:var(--layout-ratio-chart);gap:var(--app-space-md)}
 @media(max-width:900px){.chart-row{grid-template-columns:1fr}}
 .chart-card{padding:0}.chart-title{font-size:var(--app-size-sm);font-weight:700;margin-bottom:var(--app-space-sm)}
 
 /* 表格工具栏（单行） */
 .table-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:var(--app-space-sm) var(--app-space-md) 0}
-.page-info{font-size:var(--app-size-xs);color:var(--app-ink-muted);font-weight:600;white-space:nowrap;margin-left:auto}
+.page-info{font-size:var(--app-size-xs);color:var(--app-text-secondary);font-weight:600;white-space:nowrap;margin-left:auto}
 .page-nav{display:flex;gap:6px;margin-left:var(--app-space-sm)}
 .page-nav-btn{padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;color:var(--ink);background:var(--app-bg-card);border:2px solid var(--ink);border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all 0.12s}
 .page-nav-btn:hover{background:var(--c-report)}
@@ -411,7 +414,7 @@ function openCaseBreakdown(type, tab = 'detail') {
 .report-tabs{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
 .report-tabs :deep(.el-tabs__header){margin-bottom:0;padding:0 var(--app-space-md)}
 .report-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:var(--app-space-xs)}
-.report-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:var(--app-ink-muted);height:auto;line-height:1.4}
+.report-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:var(--app-text-secondary);height:auto;line-height:1.4}
 .report-tabs :deep(.el-tabs__item:hover){color:var(--ink)}
 .report-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-report);border-color:var(--ink)}
 .report-tabs :deep(.el-tabs__active-bar){display:none}
@@ -420,8 +423,8 @@ function openCaseBreakdown(type, tab = 'detail') {
 
 .report-table{width:100%}
 .report-table :deep(.el-table__header th){background:var(--app-bg-subtle)!important;color:var(--ink)!important;font-weight:700!important;font-size:var(--app-size-xs)!important;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2.5px solid var(--ink)!important}
-.report-table :deep(.el-table__body td){border-bottom:1px solid #e8e4d8!important;color:var(--ink)}
-.report-table :deep(.el-table__body tr:hover td){background:#fefdfb!important}
+.report-table :deep(.el-table__body td){border-bottom:1px solid var(--el-border-color-light)!important;color:var(--ink)}
+.report-table :deep(.el-table__body tr:hover td){background:var(--rg-hover-bg)!important}
 
 .run-link{cursor:pointer;text-decoration:none;color:var(--ink)}
 .cell-run-id{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600;text-decoration:underline}

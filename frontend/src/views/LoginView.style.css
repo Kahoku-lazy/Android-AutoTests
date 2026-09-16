@@ -4,7 +4,7 @@
 .login-page {
   --login-panel-width: 380px;
   width: 100%;
-  min-height: 100vh;
+  min-height: 100%; /* 父级 .main-content 高度确定；用 100vh 会在移动端撑出滚动条 */
   background: radial-gradient(circle, var(--dot) 0.6px, transparent 0.6px);
   background-size: 15px 15px;
   background-color: var(--paper);

@@ -1,6 +1,9 @@
 /* ToolboxPanel — 装配台布局（Doodle Craft 令牌） */
 
 .toolbox-host {
+  /* 未武装态虚线边（冷灰，原字面量，与 --app-offline 同值但本处语义独立）；
+     同时被 .tb-unarmed-btn 与 .tb-sources 内的 .tb-badge-off 消费，故声明在共同根上 */
+  --tb-unarmed-border: var(--color-ink-79) /* -> --color-ink-79 */;
   padding: var(--app-space-lg) 20px var(--app-space-xl);
   height: 100%;
   overflow-y: auto;
@@ -50,7 +53,7 @@
   background: var(--app-bg-subtle);
 }
 .tb-stat strong { font-size: var(--app-size-sm); }
-.tb-stat.on { background: color-mix(in srgb, var(--c-ai) 18%, white); }
+.tb-stat.on { background: color-mix(in srgb, var(--c-ai) 18%, var(--app-bg-card)); }
 .tb-stat.off { opacity: 0.55; background: var(--app-bg-subtle); }
 
 .tb-chips { display: flex; flex-wrap: wrap; gap: var(--app-space-sm); }
@@ -106,7 +109,7 @@
   font-size: var(--app-size-xs);
   font-weight: 600;
   color: var(--app-text-secondary);
-  border: 2px dashed var(--app-offline, #d4d8dc);
+  border: 2px dashed var(--tb-unarmed-border);
   border-radius: 3px 6px 3px 6px;
   padding: var(--app-space-xs) 10px;
   background: var(--app-bg-subtle);
@@ -162,7 +165,7 @@
 .tb-source:nth-child(5) { transform: rotate(0.25deg); }
 .tb-source:hover { transform: rotate(0) scale(1.02); z-index: 2; }
 .tb-source.active {
-  background: color-mix(in srgb, var(--c-ai) 16%, white);
+  background: color-mix(in srgb, var(--c-ai) 16%, var(--app-bg-card));
   box-shadow: 2px 2px 0 var(--ink);
   transform: rotate(0);
 }
@@ -177,7 +180,7 @@
 .tb-source-name { font-weight: 800; font-size: var(--app-size-sm); }
 .tb-badge-off {
   background: var(--app-bg-subtle);
-  border: 1.5px solid var(--app-offline, #d4d8dc);
+  border: 1.5px solid var(--tb-unarmed-border);
   color: var(--app-text-secondary);
   border-radius: 3px 6px 3px 6px;
   padding: 1px 6px;
@@ -334,7 +337,7 @@
   font-weight: 700;
   white-space: nowrap;
   color: var(--ink);
-  background: color-mix(in srgb, var(--mc-color, var(--c-ai)) 22%, white);
+  background: color-mix(in srgb, var(--mc-color, var(--c-ai)) 22%, var(--app-bg-card));
   border: 1.5px solid var(--ink);
   border-radius: 3px 6px 3px 6px;
 }
@@ -445,8 +448,8 @@
   border: 1.5px solid var(--ink);
 }
 .tb-type-mcp { background: var(--app-status-success-bg); color: var(--app-status-success-text); }
-.tb-type-skill { background: color-mix(in srgb, var(--c-element) 22%, white); color: var(--ink); }
-.tb-type-local { background: color-mix(in srgb, var(--c-device) 22%, white); color: var(--ink); }
+.tb-type-skill { background: color-mix(in srgb, var(--c-element) 22%, var(--app-bg-card)); color: var(--ink); }
+.tb-type-local { background: color-mix(in srgb, var(--c-device) 22%, var(--app-bg-card)); color: var(--ink); }
 .tb-type-extension { background: var(--app-status-warning-bg); color: var(--ink); }
 .tb-card-desc {
   font-size: var(--app-size-xs);

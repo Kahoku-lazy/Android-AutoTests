@@ -20,12 +20,12 @@ export const TABLE_COLUMNS = [
 ]
 
 // ── 分页配置 ──
-export const PAGE_SIZE_OPTIONS = [10, 50, 100]
+export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 
 // ── 表格布局尺寸 (px) ──
 export const TABLE_TOOLBAR_HEIGHT = 52
-export const TABLE_HEADER_HEIGHT = 54
-export const TABLE_ROW_HEIGHT = 50
+export const TABLE_HEADER_HEIGHT = 45
+export const TABLE_ROW_HEIGHT = 41
 export const TABLE_EMPTY_ROWS = 3
 export const TABLE_TAB_OFFSET = 88
 
@@ -100,6 +100,12 @@ export const CHART_COLORS = {
     fill: 'rgba(224,90,90,0.75)',
     stroke: '#e05a5a',
   },
+  /** 轴文字 / 轴标题 / 滑块手柄：原散落在两个图表组件 script 内的字面量，2026-09-15 集中于此（画布例外，见 frontend/AGENTS.md L4 §③.7）*/
+  axis: {
+    labelText: '#9f927d',
+    titleText: '#725d42',
+    handle: '#19c8b9',
+  },
 }
 
 // ── 图表样式参数 ──
@@ -136,11 +142,16 @@ export const ROUTES = {
   caseBreakdown: (type) => `/reports/cases/${type}`,
 }
 
-// ── 页面 Hero header ──
+// ── 页头配置 ──
+// 列表页与三个详情页共用同一图标与底纹，避免同一串颜色/图标名在四处硬编码
+export const REPORT_HEADER_ICON = 'file-bar-chart'
+export const REPORT_HEADER_GRADIENT = 'linear-gradient(135deg,#999,#8b7f8f)'
+
 export const PAGE_HEADER = {
   title: '测试报告',
   subtitle: '查看历史测试执行记录，点击 Run ID 进入详细报告',
-  mark: '📊',
+  icon: REPORT_HEADER_ICON,
+  iconGradient: REPORT_HEADER_GRADIENT,
 }
 
 // ── 空状态文案 ──

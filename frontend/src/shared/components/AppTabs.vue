@@ -2,19 +2,13 @@
 defineProps({
   items: { type: Array, required: true },
   modelValue: { type: String, default: '' },
-  leafAnimation: { type: Boolean, default: false },
-  shadow: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:modelValue'])
 </script>
 <template>
   <el-tabs
     :model-value="modelValue"
-    :class="[
-      'ac-tabs',
-      leafAnimation ? 'ac-tabs--leaf' : '',
-      shadow ? 'ac-tabs--shadow' : '',
-    ]"
+    class="ac-tabs"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <el-tab-pane

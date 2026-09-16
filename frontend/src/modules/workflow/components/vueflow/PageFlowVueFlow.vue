@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, provide, onMounted, onUnmounted, markRaw, nextTick } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import { VueFlow, useVueFlow, ConnectionMode } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
@@ -343,8 +344,7 @@ function onEdgeClick({ edge }: EdgeMouseEvent) {
   if (linkId != null) store.select('l' + linkId)
 }
 
-// Double-click edge to delete with confirmation
-function onEdgeDoubleClick({ edge }: EdgeMouseEvent) {
+async function onEdgeDoubleClick({ edge }: EdgeMouseEvent) {
   const linkId = edge.data?.linkId
   if (linkId == null) return
   const link = store.findLink(linkId)
@@ -353,17 +353,25 @@ function onEdgeDoubleClick({ edge }: EdgeMouseEvent) {
   const targetNode = store.findNode(link.target_id)
   const fromLabel = originNode?.widgets_values?.[0] || `Node#${link.origin_id}`
   const toLabel = targetNode?.widgets_values?.[0] || `Node#${link.target_id}`
-  if (confirm(`断开「${fromLabel} → ${toLabel}」的连接？`)) {
-    store.removeLink(linkId)
-    refreshFromStore()
-    status.value = `已断开 ${fromLabel} → ${toLabel}`
+  try {
+    await ElMessageBox.confirm(`断开「${fromLabel} → ${toLabel}」的连接？`, '断开连接', {
+      confirmButtonText: '断开',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    // 用户取消断开：ElMessageBox 以 reject 表示取消，不修改画布（非静默吞错）
+    return
   }
+  store.removeLink(linkId)
+  refreshFromStore()
+  status.value = `已断开 ${fromLabel} → ${toLabel}`
 }
 
 // Keyboard: Delete/Backspace to remove selected link or node
-function onKeyDown(e: KeyboardEvent) {
+async function onKeyDown(e: KeyboardEvent) {
   if (e.key !== 'Delete' && e.key !== 'Backspace') return
-  // Ignore if user is typing in an input
+  // Ignore if you are typing in an input
   const tag = (e.target as HTMLElement)?.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
 
@@ -381,21 +389,37 @@ function onKeyDown(e: KeyboardEvent) {
   } else if (sel.startsWith('n')) {
     // Selected a node
     const nodeId = sel.slice(1)
-    if (store.findNode(nodeId)) {
-      if (confirm(`删除节点「${store.findNode(nodeId)?.widgets_values?.[0] || nodeId}」及其所有连线？`)) {
-        store.removeNode(nodeId)
-        refreshFromStore()
-        status.value = '已删除节点'
-      }
+    if (!store.findNode(nodeId)) return
+    try {
+      await ElMessageBox.confirm(
+        `删除节点「${store.findNode(nodeId)?.widgets_values?.[0] || nodeId}」及其所有连线？`,
+        '删除确认',
+        { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' },
+      )
+    } catch {
+      // 用户取消删除：ElMessageBox 以 reject 表示取消，不修改画布（非静默吞错）
+      return
     }
+    store.removeNode(nodeId)
+    refreshFromStore()
+    status.value = '已删除节点'
   }
 }
 
 onMounted(() => window.addEventListener('keydown', onKeyDown))
 onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
 
-function clearAll() {
-  if (!confirm('清空 Vue Flow 画布？')) return
+async function clearAll() {
+  try {
+    await ElMessageBox.confirm('清空 Vue Flow 画布？', '清空确认', {
+      confirmButtonText: '清空',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    // 用户取消清空：ElMessageBox 以 reject 表示取消，不修改画布（非静默吞错）
+    return
+  }
   store.clearAll()
   refreshFromStore()
 }
@@ -567,6 +591,11 @@ watch(
   min-height: 0;
   background: transparent;
   overflow: hidden;
+  /* ── 本模块私有色：tokens.css 未登记，登记在组件根作用域（工具栏消费者均在其内）── */
+  --wf-btn-press-shadow: var(--color-ink-05-a05) /* -> --color-ink-05-a05 */;      /* 按钮按下硬阴影 */
+  --wf-api-btn-fg: var(--color-orange-37) /* -> --color-orange-37 */;                        /* API 按钮文字（琥珀） */
+  --wf-api-btn-border: var(--color-orange-55-a60) /* -> --color-orange-55-a60 */;    /* API 按钮描边（橙 50%） */
+  --wf-api-btn-hover-bg: var(--color-orange-55-a10) /* -> --color-orange-55-a10 */; /* API 按钮悬停底（橙 12%） */
 }
 .vf-toolbar {
   display: flex;
@@ -651,7 +680,7 @@ watch(
 }
 .btn:active {
   transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.05);
+  box-shadow: 1px 1px 0 var(--wf-btn-press-shadow);
 }
 .btn:focus-visible {
   outline: 2px solid var(--c-workflow);
@@ -671,12 +700,12 @@ watch(
 .btn.start { color: var(--ac-accent-deep); }
 .btn.end { color: var(--app-text-secondary); }
 .btn.api-btn {
-  color: #b9770e;
-  border-color: rgba(245, 166, 35, 0.5);
+  color: var(--wf-api-btn-fg);
+  border-color: var(--wf-api-btn-border);
 }
 .btn.api-btn:hover {
-  background: rgba(245, 166, 35, 0.12);
-  color: #b9770e;
+  background: var(--wf-api-btn-hover-bg);
+  color: var(--wf-api-btn-fg);
 }
 .btn.danger { color: var(--app-status-danger-text); }
 .btn.danger:hover {
@@ -741,11 +770,29 @@ watch(
 
 <style>
 /* Teleport 到 body：必须实色，不能靠 .workflow-workbench 作用域变量 */
+/* ── 选择器私有色：tokens.css 未登记，登记在选择器自身根类（Teleport 到 body 后变量仍可达）── */
+.el-picker-backdrop {
+  --wf-picker-mask: var(--color-indigo-35-a30) /* -> --color-indigo-35-a30 */; /* 遮罩（墨蓝 26%） */
+}
+.el-picker {
+  --wf-picker-border: var(--color-white-a60) /* -> --color-white-a60 */;        /* 亮边（浮层 / 搜索框描边） */
+  --wf-picker-shadow: var(--color-indigo-35-a10) /* -> --color-indigo-35-a10 */;          /* 浮层投影（墨蓝 12%） */
+  --wf-picker-head-border: var(--color-blue-82-a30) /* -> --color-blue-82-a30 */;   /* 头部底边分隔 */
+  --wf-picker-accent: var(--color-blue-64) /* -> --color-blue-64 */;                          /* 强调文字（计数 / 可添加标签，工作流深蓝） */
+  --wf-picker-count-bg: var(--color-blue-82-a18) /* -> --color-blue-82-a18 */;      /* 计数底 */
+  --wf-picker-tint-soft: var(--color-blue-82-a18) /* -> --color-blue-82-a18 */;     /* 关闭键悬停底 / 标签底 */
+  --wf-picker-focus: var(--color-blue-82) /* -> --color-blue-82 */;                           /* 聚焦描边（浅蓝） */
+  --wf-picker-item-border: var(--color-blue-82-a18) /* -> --color-blue-82-a18 */;   /* 条目描边 */
+  --wf-picker-item-hover-bg: var(--color-blue-82-a10) /* -> --color-blue-82-a10 */; /* 条目悬停底 */
+  --wf-picker-used-bg: var(--color-white-a60) /* -> --color-white-a60 */;       /* 已使用条目底（灰） */
+  --wf-picker-xpath: var(--color-orange-44) /* -> --color-orange-44 */;                           /* xpath 次要文字（暖灰） */
+  --wf-picker-add-bg: var(--color-blue-82-a18) /* -> --color-blue-82-a18 */;        /* 可添加标签底 */
+}
 .el-picker-backdrop {
   position: fixed;
   inset: 0;
   z-index: 9990;
-  background: rgba(74,78,105,0.26);
+  background: var(--wf-picker-mask);
 }
 .el-picker {
   position: fixed;
@@ -755,9 +802,9 @@ watch(
   display: flex;
   flex-direction: column;
   background: var(--app-bg-card);
-  border: 1px solid rgba(255,255,255,0.68);
+  border: 1px solid var(--wf-picker-border);
   border-radius: 14px;
-  box-shadow: 0 18px 48px rgba(74,78,105,0.12);
+  box-shadow: 0 18px 48px var(--wf-picker-shadow);
   overflow: hidden;
   font-family: var(--app-font, 'Cascadia Mono', 'Noto Sans SC', sans-serif);
   color: var(--ink);
@@ -769,7 +816,7 @@ watch(
   gap: var(--app-space-sm);
   padding: 12px 14px;
   background: var(--app-bg-card);
-  border-bottom: 1px solid rgba(162,210,255,0.24);
+  border-bottom: 1px solid var(--wf-picker-head-border);
 }
 .el-picker-head strong {
   font-size: var(--app-size-sm);
@@ -778,8 +825,8 @@ watch(
 .el-picker-count {
   font-size: var(--app-size-xs);
   font-weight: 700;
-  color: #6f9fd8;
-  background: rgba(162,210,255,0.16);
+  color: var(--wf-picker-accent);
+  background: var(--wf-picker-count-bg);
   padding: 2px var(--app-space-sm);
   border-radius: 999px;
 }
@@ -789,25 +836,25 @@ watch(
   background: transparent;
   font-size: var(--app-size-lg);
   cursor: pointer;
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   line-height: 1;
   padding: 2px 6px;
   border-radius: 8px;
 }
-.el-picker-close:hover { background: rgba(162,210,255,0.14); color: var(--ink); }
+.el-picker-close:hover { background: var(--wf-picker-tint-soft); color: var(--ink); }
 .el-picker-search {
   margin: 10px 12px 6px;
   padding: 9px 12px;
-  border: 1.5px solid rgba(255,255,255,0.68);
+  border: 1.5px solid var(--wf-picker-border);
   border-radius: 10px;
-  background: #ffffff;
+  background: var(--app-bg-card);
   color: var(--ink);
   font-size: var(--app-size-sm);
   font-weight: 600;
   font-family: inherit;
   outline: none;
 }
-.el-picker-search:focus { border-color: #a2d2ff; }
+.el-picker-search:focus { border-color: var(--wf-picker-focus); }
 .el-picker-list {
   flex: 1;
   overflow: auto;
@@ -822,21 +869,21 @@ watch(
   gap: 10px;
   padding: 10px 10px;
   margin-bottom: var(--app-space-xs);
-  border: 1.5px solid rgba(162,210,255,0.22);
+  border: 1.5px solid var(--wf-picker-item-border);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--app-bg-card);
   text-align: left;
   cursor: pointer;
   font-family: inherit;
   color: var(--ink);
 }
 .el-picker-item:hover:not(:disabled) {
-  border-color: #a2d2ff;
-  background: rgba(162,210,255,0.12);
+  border-color: var(--wf-picker-focus);
+  background: var(--wf-picker-item-hover-bg);
 }
 .el-picker-item.used {
   opacity: 0.55;
-  background: rgba(235,237,238,0.58);
+  background: var(--wf-picker-used-bg);
   cursor: not-allowed;
 }
 .el-ico {
@@ -859,7 +906,7 @@ watch(
 .el-xpath {
   font-size: var(--app-size-xs);
   font-weight: 600;
-  color: #7a6b5a;
+  color: var(--wf-picker-xpath);
   word-break: break-all;
   line-height: 1.35;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -870,19 +917,19 @@ watch(
   font-weight: 800;
   padding: 3px var(--app-space-sm);
   border-radius: 999px;
-  background: rgba(162,210,255,0.14);
-  color: var(--app-ink-muted);
+  background: var(--wf-picker-tint-soft);
+  color: var(--app-text-secondary);
   align-self: center;
 }
 .el-tag.add {
-  background: rgba(162,210,255,0.18);
-  color: #6f9fd8;
+  background: var(--wf-picker-add-bg);
+  color: var(--wf-picker-accent);
 }
 .el-picker-empty {
   padding: var(--app-space-lg) 12px;
   text-align: center;
   font-size: var(--app-size-sm);
   font-weight: 700;
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
 }
 </style>

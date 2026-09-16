@@ -1,4 +1,4 @@
-"""Unified LLM provider → base URL / credential mapping.
+"""Unified LLM provider → base URL mapping.
 
 Migrated from agentscope_service/provider_registry.py.
 Owned by Django — importable by both Django views and AgentScope (via system_prompt).
@@ -8,34 +8,17 @@ from urllib.parse import urlparse
 
 from django.conf import settings
 
+# provider → 默认 base_url（唯一真相源；调用方传入的自定义 base_url 覆盖此值）
 PROVIDER_DEFAULTS = {
-    "dashscope": {
-        "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        "credential": "dashscope_credential",
-    },
-    "openai": {
-        "base_url": "https://api.openai.com/v1",
-        "credential": "openai_credential",
-    },
-    "anthropic": {
-        "base_url": "https://api.anthropic.com/v1",
-        "credential": "openai_credential",
-    },
-    "deepseek": {
-        "base_url": "https://api.deepseek.com/v1",
-        "credential": "openai_credential",
-    },
-    "gemini": {
-        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
-        "credential": "openai_credential",
-    },
-    "custom": {
-        "base_url": "",
-        "credential": "openai_credential",
-    },
+    "dashscope": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "openai": "https://api.openai.com/v1",
+    "anthropic": "https://api.anthropic.com/v1",
+    "deepseek": "https://api.deepseek.com/v1",
+    "gemini": "https://generativelanguage.googleapis.com/v1beta/openai",
+    "custom": "",
 }
 
-VALID_PROVIDERS = frozenset(PROVIDER_DEFAULTS.keys())
+VALID_PROVIDERS = frozenset(PROVIDER_DEFAULTS)
 
 _PROVIDER_HOSTS = {
     "dashscope": {"dashscope.aliyuncs.com"},
@@ -49,14 +32,10 @@ _BLOCKED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
 
 
 def get_provider_config(provider: str, base_url_override: str = "") -> dict:
-    """Resolve base_url and AgentScope credential type for a provider."""
-    defaults = PROVIDER_DEFAULTS.get(provider, PROVIDER_DEFAULTS["custom"])
+    """解析某 provider 的 base_url：自定义值优先，否则用 PROVIDER_DEFAULTS 默认值。"""
+    default_base_url = PROVIDER_DEFAULTS.get(provider, PROVIDER_DEFAULTS["custom"])
     override = (base_url_override or "").strip().rstrip("/")
-    base_url = override or defaults.get("base_url", "")
-    return {
-        "base_url": base_url.rstrip("/"),
-        "credential_type": defaults.get("credential", "openai_credential"),
-    }
+    return {"base_url": (override or default_base_url).rstrip("/")}
 
 
 def validate_base_url(provider: str, base_url: str) -> tuple[bool, str]:

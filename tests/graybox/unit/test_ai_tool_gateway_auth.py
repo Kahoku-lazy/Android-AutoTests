@@ -65,8 +65,8 @@ def test_business_endpoint_still_requires_jwt(client):
 
 @override_settings(AI_TOOL_GATEWAY_TOKEN=TOKEN)
 def test_public_doc_endpoints_stay_public(client):
-    assert client.get("/api/docs").status_code == 200
     assert client.get("/api/schema/").status_code == 200
+    assert client.get("/api/swagger/").status_code == 200
 
 
 @override_settings(AI_TOOL_GATEWAY_TOKEN=TOKEN)

@@ -11,7 +11,7 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-UPLOAD_DIR = settings.BASE_DIR / "data" / "uploads"
+UPLOAD_DIR = Path(settings.MEDIA_ROOT)
 DEFAULT_MAX_AGE_SECONDS = int(getattr(settings, "UPLOAD_CLEANUP_MAX_AGE_DAYS", 7) * 24 * 3600)
 
 

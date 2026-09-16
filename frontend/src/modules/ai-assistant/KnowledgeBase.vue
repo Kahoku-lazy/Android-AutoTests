@@ -252,6 +252,8 @@ onMounted(() => { loadAll() })
 
 <style scoped>
 .kb-view {
+  /* 筛选按钮未激活底色（暖棕低透明叠加） */
+  --kb-filter-bg: var(--color-orange-32-a05) /* -> --color-orange-32-a05 */;
   flex: 1;
   min-height: 0;
   min-width: 0;
@@ -280,14 +282,14 @@ onMounted(() => { loadAll() })
 }
 .kb-hint {
   font-size: var(--app-size-sm);
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
 }
 .kb-switch { margin-left: auto; display: inline-flex; align-items: center; gap: var(--app-space-sm); }
 .kb-switch-label { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); }
 
 .kb-range-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .kb-range-title { font-size: var(--app-size-md); font-weight: 700; color: var(--ink); }
-.kb-range-count { font-size: var(--app-size-xs); color: var(--app-ink-muted); }
+.kb-range-count { font-size: var(--app-size-xs); color: var(--app-text-secondary); }
 .kb-range-head .el-button { margin-left: auto; }
 
 .kb-imported-list { display: flex; flex-direction: column; gap: var(--app-space-sm); }
@@ -299,17 +301,17 @@ onMounted(() => { loadAll() })
 .kb-doc-card:hover { border-color: var(--ai-teal); }
 .kb-doc-card-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .kb-doc-card-name { font-weight: 600; font-size: var(--app-size-sm); color: var(--ink); }
-.kb-doc-card-meta { font-size: var(--app-size-xs); color: var(--app-ink-muted); }
+.kb-doc-card-meta { font-size: var(--app-size-xs); color: var(--app-text-secondary); }
 .kb-doc-card-right { display: flex; align-items: center; gap: var(--app-space-sm); flex-shrink: 0; }
 .kb-doc-toggle { font-size:var(--app-size-md); cursor: pointer; opacity: 0.5; transition: opacity .15s; }
 .kb-doc-toggle.on { opacity: 1; }
 .kb-doc-toggle:hover { opacity: 0.8; }
 .kb-doc-remove-btn {
-  background: none; border: none; color: var(--app-ink-muted);
+  background: none; border: none; color: var(--app-text-secondary);
   font-size:var(--app-size-sm); cursor: pointer; padding: 2px 6px; border-radius: 4px;
   transition: all .15s;
 }
-.kb-doc-remove-btn:hover { color: #e74c3c; background: #fef0ef; }
+.kb-doc-remove-btn:hover { color: var(--app-status-danger-text); background: var(--app-status-danger-bg); }
 
 .kb-table-card {
   flex: 1;
@@ -351,16 +353,16 @@ onMounted(() => { loadAll() })
   padding: 6px var(--app-space-md);
   border: none;
   border-radius: 8px;
-  background: rgba(121, 79, 39, 0.05);
+  background: var(--kb-filter-bg);
   font-size: var(--app-size-sm);
   font-weight: 700;
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   cursor: pointer;
   font-family: inherit;
 }
-.kb-filter-btn:hover { color: var(--app-text, #3D4A3B); }
+.kb-filter-btn:hover { color: var(--app-text); }
 .kb-filter-btn.active {
-  background: var(--app-text, #3D4A3B);
+  background: var(--app-text);
   color: var(--app-bg-card);
 }
 @media (max-width: 700px) {

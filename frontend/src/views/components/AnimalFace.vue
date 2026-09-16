@@ -120,9 +120,9 @@ const props = withDefaults(
 <style scoped>
 .animal-face {
   /* 让父级可覆盖的面部/腮红色；与动物岛 paper/danger 一致 */
-  --af-face: var(--app-bg-card);
-  --af-ink: var(--app-stat-text);
-  --af-blush: var(--app-status-danger);
+  --af-face: var(--color-white);
+  --af-ink: var(--color-ink-34);
+  --af-blush: var(--color-red-83);
   display: block;
   overflow: visible;
 }

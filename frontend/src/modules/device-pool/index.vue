@@ -139,17 +139,16 @@ const {
             </div>
           </div>
 
-          <el-card class="table-card" shadow="never">
-            <div
-              ref="tableWrapRef"
-              class="device-table-wrapper"
-              :style="{
-                minHeight: `${tableMinHeightPx}px`,
-                '--device-table-body-rows': String(pageSize),
-                '--device-table-min-width': `${tableMinWidthPx}px`,
-              }"
-              @pointerdown="onTablePointerDown"
-            >
+          <div
+            ref="tableWrapRef"
+            class="device-table-wrapper"
+            :style="{
+              minHeight: `${tableMinHeightPx}px`,
+              '--device-table-body-rows': String(pageSize),
+              '--device-table-min-width': `${tableMinWidthPx}px`,
+            }"
+            @pointerdown="onTablePointerDown"
+          >
               <AppTable
                 :columns="COLUMNS"
                 :data-source="pagedDevices"
@@ -159,6 +158,7 @@ const {
                 table-layout="fixed"
                 empty-text="还没有可用设备"
                 :row-class-name="deviceRowClassName"
+                accent="var(--c-device)"
                 @row-click="handleRowClick"
               >
                 <template #cell-device="{ record }">
@@ -214,8 +214,7 @@ const {
                   />
                 </template>
               </AppTable>
-            </div>
-          </el-card>
+          </div>
         </template>
 
         <div v-if="viewMode === 'cards'" class="card-grid-grouped">

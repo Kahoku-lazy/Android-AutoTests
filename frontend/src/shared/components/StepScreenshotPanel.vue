@@ -51,12 +51,12 @@ function openPreview(step) {
 }
 
 function stepTypeColor(type) {
-  if (/click|long_click/.test(type)) return '#e85f5f'
-  if (/fill|type/.test(type)) return '#5fa8e8'
-  if (/assert/.test(type)) return '#6fba2c'
-  if (/navigate/.test(type)) return '#9e9e9e'
-  if (/wait|sleep/.test(type)) return '#f0a050'
-  return '#8e8e8e'
+  if (/click|long_click/.test(type)) return 'var(--ss-type-gesture)'
+  if (/fill|type/.test(type)) return 'var(--ss-type-input)'
+  if (/assert/.test(type)) return 'var(--ss-type-assert)'
+  if (/navigate/.test(type)) return 'var(--ss-type-nav)'
+  if (/wait|sleep/.test(type)) return 'var(--ss-type-wait)'
+  return 'var(--ss-type-other)'
 }
 </script>
 
@@ -125,20 +125,29 @@ function stepTypeColor(type) {
 
 <style scoped>
 /* ── Section ── */
-.section-block { margin-top: var(--app-space-lg); }
+.section-block {
+  /* 步骤类型色板（数据编码型分类色板；色相登记例外，集中声明一次） */
+  --ss-type-gesture: var(--comp-ss-type-gesture);   /* click / long_click */
+  --ss-type-input: var(--comp-ss-type-input);              /* fill / type */
+  --ss-type-assert: var(--comp-ss-type-assert);             /* assert */
+  --ss-type-nav: var(--comp-ss-type-nav);                /* navigate */
+  --ss-type-wait: var(--comp-ss-type-wait);               /* wait / sleep */
+  --ss-type-other: var(--comp-ss-type-other);              /* 其它类型 */
+  margin-top: var(--app-space-lg);
+}
 .sec-title { font-size: var(--app-size-md); font-weight: 700; margin: 0 0 var(--app-space-xs); display: flex; align-items: center; gap: var(--app-space-sm); }
 .sec-badge { font-size: var(--app-size-xs); background: var(--app-pending); padding: 2px 10px; border-radius: var(--app-radius-sm); font-weight: 600; color: var(--app-pending-text); }
 .sec-sub { font-size: var(--app-size-xs); color: var(--app-text-secondary); margin: 0 0 var(--app-space-md); }
 
 /* ── Case group ── */
-.case-group { border: 1.5px solid var(--app-border-light, #e0e0e0); border-radius: var(--app-radius-md); margin-bottom: var(--app-space-sm); overflow: hidden; }
-.case-group--expanded { border-color: var(--app-accent-blue, #5fa8e8); }
+.case-group { border: 1.5px solid var(--app-border-light); border-radius: var(--app-radius-md); margin-bottom: var(--app-space-sm); overflow: hidden; }
+.case-group--expanded { border-color: var(--c-workflow); }
 .case-group__header {
   display: flex; align-items: center; gap: var(--app-space-sm); padding: 10px 14px;
-  background: var(--app-bg-subtle, #f8f8f8); cursor: pointer;
+  background: var(--app-bg-subtle); cursor: pointer;
   user-select: none; transition: background var(--app-duration-fast) var(--app-ease);
 }
-.case-group__header:hover { background: var(--app-page-active-bg, #eef4fb); }
+.case-group__header:hover { background: var(--app-page-active-bg); }
 .case-group__arrow { font-size: var(--app-size-xs); color: var(--app-text-secondary); width: 14px; flex-shrink: 0; }
 .case-group__id { font-family: var(--app-font-mono); font-size: var(--app-size-xs); color: var(--app-text-secondary); background: var(--app-bg-subtle); padding: 2px 6px; border-radius: var(--app-radius-sm); }
 .case-group__title { font-weight: 600; font-size: var(--app-size-sm); color: var(--ink); flex: 1; }
@@ -158,7 +167,7 @@ function stepTypeColor(type) {
   gap: var(--app-space-md);
 }
 .ss-card {
-  border: 1.5px solid var(--app-border-light, #e0e0e0); border-radius: var(--app-radius-md); overflow: hidden;
+  border: 1.5px solid var(--app-border-light); border-radius: var(--app-radius-md); overflow: hidden;
   background: var(--app-bg-card); transition: box-shadow var(--app-duration-fast) var(--app-ease);
 }
 .ss-card:hover { box-shadow: var(--app-shadow-sm); }
@@ -183,7 +192,7 @@ function stepTypeColor(type) {
 .ss-no-img { color: var(--app-text-muted); font-size: var(--app-size-xs); padding: var(--app-space-xl); }
 .ss-img-overlay {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: var(--app-overlay, rgba(0,0,0,0.35)); opacity: 0; transition: opacity var(--app-duration-fast) var(--app-ease);
+  background: var(--app-overlay); opacity: 0; transition: opacity var(--app-duration-fast) var(--app-ease);
   color: var(--app-text-inverse); font-size: var(--app-size-sm); font-weight: 600;
 }
 .ss-img-wrap:hover .ss-img-overlay { opacity: 1; }

@@ -36,6 +36,7 @@
     "dompurify": "^3.4.12",
     "echarts": "^5.5.0",
     "element-plus": "^2.7.0",
+    "lucide": "^1.45.0",
     "marked": "^18.0.5",
     "mermaid": "^11.16.0",
     "mitt": "^3.0.0",

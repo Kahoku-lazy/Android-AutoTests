@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
+import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import { useCaseSheet } from './composables/useCaseSheet'
@@ -12,7 +13,6 @@ type TextField = 'title' | 'module' | 'precondition' | 'steps' | 'expected_resul
 type TagKind = 'test_type' | 'business_type'
 
 const route = useRoute()
-const router = useRouter()
 
 const projectId = computed(() => Number(route.params.projectId))
 const fileId = computed(() => Number(route.params.fileId))
@@ -24,7 +24,6 @@ const {
   saving,
   error,
   dirtyCount,
-  skipGuard,
   loadSheet,
   markDirty,
   addRow,
@@ -146,25 +145,30 @@ function onDocClick(e: MouseEvent) {
   if (!t?.closest('.sheet-tag-wrap')) openTagKey.value = null
 }
 
-async function goBack() {
-  skipGuard.value = true
-  await router.push(`/cases/projects/${projectId.value}`)
-}
-
 onMounted(() => document.addEventListener('click', onDocClick))
 onUnmounted(() => document.removeEventListener('click', onDocClick))
 </script>
 
 <template>
-  <div class="case-sheet">
+  <div class="doc-page doc-page--fixed wb-shell case-workbench case-sheet">
     <WorkbenchHeader
       :title="pageTitle"
       subtitle="双击单元格编辑；类型标签可点击切换"
       icon="layers"
-      :icon-gradient="'linear-gradient(135deg,var(--c-case),#6ee7d8)'"
+      :icon-gradient="'linear-gradient(135deg,var(--c-case),var(--case-icon-accent))'"
     >
+      <template #nav>
+        <WorkbenchCrumbs
+          :back-to="`/cases/projects/${projectId}`"
+          back-label="返回目录"
+          :items="[
+            { label: '用例管理', to: '/cases' },
+            { label: '项目工作台', to: `/cases/projects/${projectId}` },
+            { label: pageTitle },
+          ]"
+        />
+      </template>
       <template #actions>
-        <el-button class="wb-btn" @click="goBack">← 返回目录</el-button>
         <el-button class="wb-btn" @click="startRename">重命名</el-button>
         <el-button class="wb-btn" :loading="saving" type="primary" @click="saveAll">
           保存{{ dirtyCount ? ` (${dirtyCount})` : '' }}
@@ -175,7 +179,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
 
     <ErrorState v-if="error && !rows.length && !loading" :message="error" @retry="loadSheet" />
 
-    <div v-else class="case-sheet__body" v-loading="loading">
+    <div v-else class="doc-body" v-loading="loading">
       <EmptyState
         v-if="!loading && !rows.length"
         icon="📊"
@@ -400,19 +404,17 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
 </template>
 
 <style scoped>
-.case-sheet {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
+/* 模块作用域色板：登记本页用到的非全局色值（消费点都在页面根之内；页面根即组件根） */
+.case-workbench {
+  --case-icon-accent: var(--color-teal-67) /* -> --color-teal-67 */;  /* 页头图标渐变收尾色（与 --c-case 组成模块标识渐变） */
 }
-.case-sheet__body {
-  flex: 1;
-  min-height: 0;
+
+/* 页面根/主体骨架由 .doc-page / .doc-body 提供；表格区域仍由本页接管滚动 */
+.case-sheet .doc-body {
   overflow: auto;
   border-top: 2px solid var(--case-border-subtle);
   background: var(--paper);
-  padding: 12px;
+  padding: var(--app-space-lg);
 }
 .case-sheet__table-wrap {
   overflow: auto;
@@ -422,32 +424,37 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
   padding: var(--app-space-sm);
 }
 .case-sheet__table {
+  /* 用例表网格与表头配色：本表专用（消费点为本表 th/td），在此集中登记一次 */
+  --case-sheet-grid: var(--color-orange-76) /* -> --color-orange-76 */;         /* 单元格网格线 */
+  --case-sheet-head-bg: var(--color-blue-89) /* -> --color-blue-89 */;      /* 表头底色 */
+  --case-sheet-head-fg: var(--color-blue-27) /* -> --color-blue-27 */;      /* 表头文字 */
+  --case-sheet-head-border: var(--color-blue-82) /* -> --color-blue-82 */;  /* 表头描边 */
   width: 100%;
   min-width: 1280px;
   border-collapse: collapse;
   table-layout: fixed;
   font-size: var(--app-size-sm);
-  background: #fff;
+  background: var(--app-bg-card);
 }
 .case-sheet__table th,
 .case-sheet__table td {
-  border: 1.5px solid #cfc9bb;
+  border: 1.5px solid var(--case-sheet-grid);
   padding: 0;
   vertical-align: middle;
 }
 .case-sheet__table th {
-  background: #d6ebff;
-  color: #1a4a73;
+  background: var(--case-sheet-head-bg);
+  color: var(--case-sheet-head-fg);
   font-weight: 700;
   position: sticky;
   top: 0;
   z-index: 1;
   text-align: center;
   padding: 10px var(--app-space-sm);
-  border-color: #9ec9f0;
+  border-color: var(--case-sheet-head-border);
 }
 .case-sheet__table tr.is-dirty td {
-  background: color-mix(in srgb, var(--c-case) 10%, white);
+  background: color-mix(in srgb, var(--c-case) 10%, var(--app-bg-card));
 }
 .col-id { width: 150px; }
 .col-type { width: 110px; }
@@ -487,13 +494,13 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
   outline-offset: -2px;
 }
 .sheet-cell--editable.is-empty {
-  color: #c0bbb0;
+  color: var(--app-text-muted);
 }
 .sheet-cell--editing {
   padding: var(--app-space-xs);
   outline: 2px solid var(--c-case);
   outline-offset: -2px;
-  background: #fff;
+  background: var(--app-bg-card);
 }
 .sheet-editor {
   width: 100%;
@@ -517,19 +524,28 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
   padding: var(--app-space-sm) 10px;
 }
 .sheet-tag {
+  /* 测试类型分类色板：7 类是数据编码色（非状态语义），色相为登记例外，
+     在此集中声明一次，消费规则只用变量（口径见 frontend-l0-design-tokens） */
+  --tag-app-bg: var(--color-lime-94) /* -> --color-lime-94 */; --tag-app-fg: var(--color-teal-30) /* -> --color-teal-30 */;
+  --tag-web-bg: var(--color-white) /* -> --color-white */; --tag-web-fg: var(--color-cyan-40) /* -> --color-cyan-40 */;
+  --tag-api-bg: var(--color-violet-96) /* -> --color-violet-96 */; --tag-api-fg: var(--color-indigo-46) /* -> --color-indigo-46 */;
+  --tag-func-bg: var(--color-yellow-94) /* -> --color-yellow-94 */; --tag-func-fg: var(--color-yellow-27) /* -> --color-yellow-27 */;
+  --tag-appliance-bg: var(--color-lime-94) /* -> --color-lime-94 */; --tag-appliance-fg: var(--color-green-33) /* -> --color-green-33 */;
+  --tag-lighting-bg: var(--color-red-95) /* -> --color-red-95 */; --tag-lighting-fg: var(--color-red-49) /* -> --color-red-49 */;
+  --tag-biz-app-bg: var(--color-violet-96) /* -> --color-violet-96 */; --tag-biz-app-fg: var(--color-purple-47) /* -> --color-purple-47 */;
   display: inline-flex;
   align-items: center;
   gap: var(--app-space-xs);
   border: 2px solid var(--ink);
   border-radius: 999px;
   padding: var(--app-space-xs) 10px;
-  font-size: 12px;
+  font-size: var(--app-size-xs);
   font-weight: 700;
   line-height: 1.2;
   cursor: pointer;
   font-family: inherit;
-  background: #e6faf8;
-  color: #1a7a74;
+  background: var(--tag-app-bg);
+  color: var(--tag-app-fg);
 }
 .sheet-tag--sm {
   cursor: default;
@@ -541,13 +557,13 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
   font-size: var(--app-size-xs);
   opacity: 0.75;
 }
-.sheet-tag--app { background: #e6faf8; color: #1a7a74; }
-.sheet-tag--web { background: #e8f6fc; color: #2a6f96; }
-.sheet-tag--api { background: #f1ebff; color: #5b4aa8; }
-.sheet-tag--func { background: #fff8db; color: #8a6a00; }
-.sheet-tag--appliance { background: #e9f8ec; color: #2f7a3d; }
-.sheet-tag--lighting { background: #fff0ec; color: #b35a48; }
-.sheet-tag--biz-app { background: #fce8ff; color: #9a3aad; }
+.sheet-tag--app { background: var(--tag-app-bg); color: var(--tag-app-fg); }
+.sheet-tag--web { background: var(--tag-web-bg); color: var(--tag-web-fg); }
+.sheet-tag--api { background: var(--tag-api-bg); color: var(--tag-api-fg); }
+.sheet-tag--func { background: var(--tag-func-bg); color: var(--tag-func-fg); }
+.sheet-tag--appliance { background: var(--tag-appliance-bg); color: var(--tag-appliance-fg); }
+.sheet-tag--lighting { background: var(--tag-lighting-bg); color: var(--tag-lighting-fg); }
+.sheet-tag--biz-app { background: var(--tag-biz-app-bg); color: var(--tag-biz-app-fg); }
 
 .sheet-tag-menu {
   position: absolute;
@@ -555,11 +571,13 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
   left: 10px;
   z-index: 20;
   min-width: 128px;
-  background: #fff;
+  /* 浮层硬阴影墨色（rgb(30,30,36) 即 --ink），本弹层自身登记 */
+  --case-menu-shadow: var(--color-indigo-13-a18) /* -> --color-indigo-13-a18 */;
+  background: var(--app-bg-card);
   border: 2px solid var(--ink);
   border-radius: 12px;
   padding: 6px;
-  box-shadow: 4px 4px 0 rgba(30, 30, 36, 0.15);
+  box-shadow: 4px 4px 0 var(--case-menu-shadow);
 }
 .sheet-tag-menu__item {
   display: block;
@@ -586,16 +604,16 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
   padding: 0 12px;
   border-radius: 12px;
   border: 2px solid var(--ink);
-  background: #fff;
-  color: #e85d5d;
+  background: var(--app-bg-card);
+  color: var(--app-status-danger-text);
   font-weight: 700;
-  font-size: 12px;
+  font-size: var(--app-size-xs);
   cursor: pointer;
   font-family: inherit;
   box-shadow: 2px 2px 0 var(--ink);
 }
 .sheet-del-btn:hover {
-  background: #ffe8e8;
+  background: var(--app-status-danger-bg);
   transform: translate(1px, 1px);
   box-shadow: 1px 1px 0 var(--ink);
 }

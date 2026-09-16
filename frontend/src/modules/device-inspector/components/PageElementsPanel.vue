@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useElementStore, mediaUrl } from '../store'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
+import AppTable from '@/shared/components/AppTable.vue'
 
 const store = useElementStore()
 
@@ -27,6 +28,32 @@ function toggleAll() {
     store.checkedIds = new Set(props.rows.map(r => r._rowKey))
   }
 }
+
+/** 元素表列定义：dump / OCR 两级分组 + 选择列（列名即插槽名） */
+const ELEMENT_COLUMNS = [
+  { key: '_select', width: 40, label: '', showOverflowTooltip: false },
+  {
+    key: 'dump',
+    label: 'dump',
+    children: [
+      { key: 'dump_thumb', width: 66, label: '缩略图', showOverflowTooltip: false },
+      { key: 'dump_text', minWidth: 110, label: 'text' },
+      { key: 'resource_id', minWidth: 150, label: 'resource-id' },
+      { key: 'dump_xpath', minWidth: 180, label: 'XPath' },
+      { key: 'dump_bounds', width: 140, label: '坐标', showOverflowTooltip: false },
+    ],
+  },
+  {
+    key: 'ocr',
+    label: 'OCR',
+    children: [
+      { key: 'ocr_thumb', width: 66, label: '缩略图', showOverflowTooltip: false },
+      { key: 'ocr_text', minWidth: 110, label: '文字' },
+      { key: 'ocr_bounds', width: 140, label: '坐标', showOverflowTooltip: false },
+      { key: 'ocr_confidence', width: 80, label: '置信度', showOverflowTooltip: false },
+    ],
+  },
+]
 
 function onRowClick(row) {
   if (row._kind === 'ocr') emit('select-ocr', row)
@@ -75,10 +102,10 @@ function closeEnlarge() {
   enlargeRow.value = null
 }
 
-/** 表头分组着色（dump 蓝 / OCR 紫） */
+/** 表头分组着色（dump 用模块色 / OCR 用元素色；色值一律走令牌，见 frontend-l0-design-tokens） */
 function headerCellStyle({ column }) {
-  if (column.label === 'dump') return { background: '#e8f4fd', color: '#409eff', fontWeight: 700 }
-  if (column.label === 'OCR') return { background: '#f3efff', color: '#a78bfa', fontWeight: 700 }
+  if (column.label === 'dump') return { background: 'var(--app-page-active-bg)', color: 'var(--c-device)', fontWeight: 700 }
+  if (column.label === 'OCR') return { background: 'var(--app-icon-purple-bg)', color: 'var(--c-element)', fontWeight: 700 }
   return {}
 }
 
@@ -103,155 +130,133 @@ function rowBounds(row) {
 
 <template>
   <div class="pep">
-    <el-table
+    <AppTable
       v-if="rows.length"
-      :data="rows"
+      :columns="ELEMENT_COLUMNS"
+      :data-source="rows"
+      row-key="_rowKey"
       size="small"
       height="100%"
-      row-key="_rowKey"
       :header-cell-style="headerCellStyle"
       @row-click="onRowClick"
       :row-class-name="({ row }) => (isRowSelected(row) ? 'pep-row--selected' : '')"
     >
-      <el-table-column width="40">
-        <template #header>
-          <el-checkbox :model-value="allChecked" @change="toggleAll" />
-        </template>
-        <template #default="{ row }">
-          <el-checkbox
-            :model-value="store.checkedIds.has(row._rowKey)"
-            @change="() => store.toggleCheck(row)"
-            @click.stop
-          />
-        </template>
-      </el-table-column>
+      <template #header-_select>
+        <el-checkbox :model-value="allChecked" @change="toggleAll" />
+      </template>
+      <template #cell-_select="{ row }">
+        <el-checkbox
+          :model-value="store.checkedIds.has(row._rowKey)"
+          @change="() => store.toggleCheck(row)"
+          @click.stop
+        />
+      </template>
 
-      <!-- dump 组列 -->
-      <el-table-column label="dump">
-        <el-table-column width="66" label="缩略图">
-          <template #default="{ row }">
-            <div v-if="dumpThumb(row)" class="pep-thumb-wrap" role="button" tabindex="0"
-              @click.stop="openEnlarge(row, 'dump')"
-              @keydown.enter.prevent="openEnlarge(row, 'dump')"
-              @keydown.space.prevent="openEnlarge(row, 'dump')">
-              <img :src="mediaUrl(dumpThumb(row))" class="pep-thumb" />
-              <span class="pep-badge pep-badge--dump">dump</span>
-            </div>
-            <span v-else class="pep-thumb-pep--empty">—</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="text" min-width="110" show-overflow-tooltip>
-          <template #default="{ row }">{{ dumpText(row) || '—' }}</template>
-        </el-table-column>
-        <el-table-column label="resource-id" min-width="150" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.resource_id || '—' }}</template>
-        </el-table-column>
-        <el-table-column label="XPath" min-width="180" show-overflow-tooltip>
-          <template #default="{ row }">{{ dumpXPath(row) || '—' }}</template>
-        </el-table-column>
-        <el-table-column label="坐标" width="140">
-          <template #default="{ row }">{{ dumpBounds(row) || '—' }}</template>
-        </el-table-column>
-      </el-table-column>
+      <template #cell-dump_thumb="{ row }">
+        <div v-if="dumpThumb(row)" class="pep-thumb-wrap" role="button" tabindex="0"
+          @click.stop="openEnlarge(row, 'dump')"
+          @keydown.enter.prevent="openEnlarge(row, 'dump')"
+          @keydown.space.prevent="openEnlarge(row, 'dump')">
+          <img :src="mediaUrl(dumpThumb(row))" class="pep-thumb" />
+          <span class="pep-badge pep-badge--dump">dump</span>
+        </div>
+        <span v-else class="pep-thumb-pep--empty">—</span>
+      </template>
+      <template #cell-dump_text="{ row }">{{ dumpText(row) || '—' }}</template>
+      <template #cell-resource_id="{ row }">{{ row.resource_id || '—' }}</template>
+      <template #cell-dump_xpath="{ row }">{{ dumpXPath(row) || '—' }}</template>
+      <template #cell-dump_bounds="{ row }">{{ dumpBounds(row) || '—' }}</template>
 
-      <!-- OCR 组列 -->
-      <el-table-column label="OCR">
-        <el-table-column width="66" label="缩略图">
-          <template #default="{ row }">
-            <div v-if="ocrThumb(row)" class="pep-thumb-wrap" role="button" tabindex="0"
-              @click.stop="openEnlarge(row, 'ocr')"
-              @keydown.enter.prevent="openEnlarge(row, 'ocr')"
-              @keydown.space.prevent="openEnlarge(row, 'ocr')">
-              <img :src="mediaUrl(ocrThumb(row))" class="pep-thumb" />
-              <span class="pep-badge pep-badge--ocr">ocr</span>
-            </div>
-            <span v-else class="pep-thumb-pep--empty">—</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="文字" min-width="110" show-overflow-tooltip>
-          <template #default="{ row }">{{ ocrText(row) || '—' }}</template>
-        </el-table-column>
-        <el-table-column label="坐标" width="140">
-          <template #default="{ row }">{{ ocrBounds(row) || '—' }}</template>
-        </el-table-column>
-        <el-table-column label="置信度" width="80">
-          <template #default="{ row }">
-            {{ ocrConfidence(row) != null ? (ocrConfidence(row) * 100).toFixed(1) + '%' : '—' }}
-          </template>
-        </el-table-column>
-      </el-table-column>
-    </el-table>
+      <template #cell-ocr_thumb="{ row }">
+        <div v-if="ocrThumb(row)" class="pep-thumb-wrap" role="button" tabindex="0"
+          @click.stop="openEnlarge(row, 'ocr')"
+          @keydown.enter.prevent="openEnlarge(row, 'ocr')"
+          @keydown.space.prevent="openEnlarge(row, 'ocr')">
+          <img :src="mediaUrl(ocrThumb(row))" class="pep-thumb" />
+          <span class="pep-badge pep-badge--ocr">ocr</span>
+        </div>
+        <span v-else class="pep-thumb-pep--empty">—</span>
+      </template>
+      <template #cell-ocr_text="{ row }">{{ ocrText(row) || '—' }}</template>
+      <template #cell-ocr_bounds="{ row }">{{ ocrBounds(row) || '—' }}</template>
+      <template #cell-ocr_confidence="{ row }">
+        {{ ocrConfidence(row) != null ? (ocrConfidence(row) * 100).toFixed(1) + '%' : '—' }}
+      </template>
+    </AppTable>
     <EmptyState v-else text="暂无数据" hint="获取 Dump/OCR 快照后显示页面数据" />
 
-    <!-- 缩略图放大浮层（按 dump/ocr 聚焦渲染） -->
-    <Teleport to="body">
-      <div v-if="enlargeVisible && enlargeRow" class="pep-enlarge-mask" @click="closeEnlarge">
-        <div class="pep-enlarge" @click.stop>
-          <img
-            v-if="enlargeKind === 'dump'"
-            :src="mediaUrl(dumpThumb(enlargeRow))"
-            class="pep-enlarge-img"
-          />
-          <img
-            v-else
-            :src="mediaUrl(ocrThumb(enlargeRow))"
-            class="pep-enlarge-img"
-          />
-          <div class="pep-enlarge-detail">
-            <template v-if="enlargeKind === 'dump'">
-              <div class="pep-enlarge-field"><span>Class</span>{{ enlargeRow.class_name || '—' }}</div>
-              <div class="pep-enlarge-field"><span>Text</span>{{ enlargeRow.text || '—' }}</div>
-              <div class="pep-enlarge-field"><span>ID</span>{{ enlargeRow.resource_id || '—' }}</div>
-              <div class="pep-enlarge-field"><span>Desc</span>{{ enlargeRow.content_desc || '—' }}</div>
-              <div class="pep-enlarge-field"><span>Bounds</span>{{ enlargeRow.bounds || '—' }}</div>
-              <div class="pep-enlarge-field"><span>Clickable</span>{{ enlargeRow.clickable ? '是' : '否' }}</div>
-            </template>
-            <template v-else>
-              <div class="pep-enlarge-field"><span>文字</span>{{ ocrText(enlargeRow) || '—' }}</div>
-              <div class="pep-enlarge-field"><span>置信度</span>{{ ocrConfidence(enlargeRow) != null ? (ocrConfidence(enlargeRow) * 100).toFixed(1) + '%' : '—' }}</div>
-              <div class="pep-enlarge-field"><span>Bounds</span>{{ rowBounds(enlargeRow) }}</div>
-            </template>
-          </div>
+    <!-- 缩略图放大预览（覆盖层统一走 EP，见 frontend/AGENTS.md「L5 覆盖层」） -->
+    <el-dialog
+      :model-value="enlargeVisible"
+      title="缩略图预览"
+      width="auto"
+      @update:model-value="(v) => { if (!v) closeEnlarge() }"
+    >
+      <div v-if="enlargeRow" class="pep-enlarge">
+        <img
+          v-if="enlargeKind === 'dump'"
+          :src="mediaUrl(dumpThumb(enlargeRow))"
+          class="pep-enlarge-img"
+        />
+        <img
+          v-else
+          :src="mediaUrl(ocrThumb(enlargeRow))"
+          class="pep-enlarge-img"
+        />
+        <div class="pep-enlarge-detail">
+          <template v-if="enlargeKind === 'dump'">
+            <div class="pep-enlarge-field"><span>Class</span>{{ enlargeRow.class_name || '—' }}</div>
+            <div class="pep-enlarge-field"><span>Text</span>{{ enlargeRow.text || '—' }}</div>
+            <div class="pep-enlarge-field"><span>ID</span>{{ enlargeRow.resource_id || '—' }}</div>
+            <div class="pep-enlarge-field"><span>Desc</span>{{ enlargeRow.content_desc || '—' }}</div>
+            <div class="pep-enlarge-field"><span>Bounds</span>{{ enlargeRow.bounds || '—' }}</div>
+            <div class="pep-enlarge-field"><span>Clickable</span>{{ enlargeRow.clickable ? '是' : '否' }}</div>
+          </template>
+          <template v-else>
+            <div class="pep-enlarge-field"><span>文字</span>{{ ocrText(enlargeRow) || '—' }}</div>
+            <div class="pep-enlarge-field"><span>置信度</span>{{ ocrConfidence(enlargeRow) != null ? (ocrConfidence(enlargeRow) * 100).toFixed(1) + '%' : '—' }}</div>
+            <div class="pep-enlarge-field"><span>Bounds</span>{{ rowBounds(enlargeRow) }}</div>
+          </template>
         </div>
       </div>
-    </Teleport>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.pep { height: 100%; min-height: 0; overflow: hidden; }
+.pep {
+  /* 本组件私有色值登记：放大预览的浮动阴影（消费者在本根类之内） */
+  --pep-enlarge-shadow-color: var(--color-ink-05-a30) /* -> --color-ink-05-a30 */;  /* 放大预览面板的落影 */
+  height: 100%; min-height: 0; overflow: hidden;
+}
 .pep-thumb-wrap { position: relative; display: inline-flex; cursor: zoom-in; }
-.pep-thumb { width: 48px; height: 48px; object-fit: contain; border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px; display: block; }
+.pep-thumb { width: 48px; height: 48px; object-fit: contain; border: 2px solid var(--ink); border-radius: 4px; display: block; }
 .pep-badge {
   position: absolute; left: 0; bottom: 0;
   font-size: var(--app-size-xs); font-weight: 700; line-height: 1;
   padding: 2px var(--app-space-xs); border-radius: 0 4px 0 0;
-  color: #fff;
+  color: var(--app-text-inverse);
 }
-.pep-badge--dump { background: #409eff; }
-.pep-badge--ocr { background: #a78bfa; }
+.pep-badge--dump { background: var(--c-device); }
+.pep-badge--ocr { background: var(--c-element); }
 .pep-thumb-pep--empty { color: var(--app-text-secondary); }
-:deep(.pep-row--selected) { background: rgba(167, 139, 250, 0.18); }
+:deep(.pep-row--selected) { background: color-mix(in srgb, var(--c-element) 18%, transparent); }
 
 /* ── 放大浮层 ── */
-.pep-enlarge-mask {
-  position: fixed; inset: 0; z-index: 2000;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex; align-items: center; justify-content: center;
-}
+/* ── 放大预览内容（外壳由 el-dialog 提供） ── */
 .pep-enlarge {
   display: flex; gap: var(--app-space-md); align-items: flex-start;
-  background: var(--app-bg-card, #fff);
-  border: 3px solid var(--app-ink, #2d2d2d);
+  background: var(--app-bg-card);
+  border: 3px solid var(--ink);
   border-radius: 6px 10px 6px 10px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8px 32px var(--pep-enlarge-shadow-color);
   padding: var(--app-space-md);
   max-width: 90vw;
 }
 .pep-enlarge-img {
   width: 240px; height: 240px; object-fit: contain;
-  border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px;
-  background: var(--doodle-bg, #faf5ee);
+  border: 2px solid var(--ink); border-radius: 4px;
+  background: var(--paper);
 }
 .pep-enlarge-detail {
   display: flex; flex-direction: column; gap: 6px;

@@ -4,9 +4,11 @@ import AppCard from "@/shared/components/AppCard.vue";
 import AppTabs from "@/shared/components/AppTabs.vue";
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import PageHeader from '@/shared/components/PageHeader.vue'
+import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
+import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
 import KpiCard from '@/shared/components/KpiCard.vue'
 import { getCaseBreakdown } from './api'
+import { REPORT_HEADER_GRADIENT, REPORT_HEADER_ICON } from './constants'
 
 const route = useRoute()
 const router = useRouter()
@@ -133,16 +135,27 @@ function stepTypeLabel(type) {
 </script>
 
 <template>
-  <div class="doc-page detail-page">
-    <PageHeader
+  <div class="doc-page wb-shell case-breakdown-page">
+    <WorkbenchHeader
       :title="pageTitle"
       :subtitle="pageSubtitle"
-      color="app-yellow"
-    />
+      :icon="REPORT_HEADER_ICON"
+      :icon-gradient="REPORT_HEADER_GRADIENT"
+    >
+      <template #nav>
+        <WorkbenchCrumbs
+          back-to="/reports"
+          back-label="报告列表"
+          :items="[
+            { label: '测试报告', to: '/reports' },
+            { label: pageTitle },
+          ]"
+        />
+      </template>
+    </WorkbenchHeader>
 
     <div class="doc-body">
       <div class="top-bar">
-        <el-button size="small" @click="goBack">← 报告列表</el-button>
         <div v-if="data" class="summary-pill">
           <span :class="isPass ? 'num-pass' : 'num-fail'">{{ totalCount }}</span>
           次{{ isPass ? '通过' : '失败' }}
@@ -408,8 +421,8 @@ function stepTypeLabel(type) {
 </template>
 
 <style scoped>
-.doc-page { display: flex; flex-direction: column; height: 100%; overflow-y: auto; }
-.doc-body { padding: var(--app-space-md) var(--app-space-lg) var(--app-space-2xl); display: flex; flex-direction: column; gap: var(--app-space-md); width: 100%; }
+.doc-page { display: flex; flex-direction: column; } /* height / overflow 由外壳 :deep(.doc-page) 承担 */
+.case-breakdown-page .doc-body { padding: var(--app-space-md) var(--app-space-lg) var(--app-space-2xl); display: flex; flex-direction: column; gap: var(--app-space-md); width: 100%; }
 
 /* ── Top bar ── */
 .top-bar { display: flex; align-items: center; gap: var(--app-space-sm); margin-bottom: var(--app-space-xs); flex-wrap: wrap; }
@@ -448,7 +461,7 @@ function stepTypeLabel(type) {
 .case-title { font-weight: 800; font-size:var(--app-size-sm); display: flex; align-items: center; gap: 6px; }
 .case-title .case-icon { font-size:var(--app-size-md); }
 .case-id { font-family: var(--app-font-mono); font-size: var(--app-size-xs); background: var(--app-bg-subtle); padding: 2px 7px; border-radius: var(--app-radius-sm); color: var(--app-text-secondary); }
-.case-meta { font-size:var(--app-size-xs); color: var(--app-ink-muted); white-space: nowrap; font-weight: 600; }
+.case-meta { font-size:var(--app-size-xs); color: var(--app-text-secondary); white-space: nowrap; font-weight: 600; }
 
 /* ── Task list ── */
 .task-list { padding: 0 var(--app-space-md) var(--app-space-sm); border-top: 1.5px solid var(--app-border-lighter); }
@@ -495,27 +508,31 @@ function stepTypeLabel(type) {
   border-radius: var(--app-radius-sm); overflow: hidden; margin: 0 var(--app-space-md);
 }
 .issue-head {
+  /* 模块私有色值登记（tokens.css 未登记该值）：问题条头部分隔线 */
+  --rg-issue-head-border: var(--color-red-85) /* -> --color-red-85 */;
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px; background: #fff0ee;
-  border-bottom: 1.5px solid #f0c0c0;
+  padding: 10px 14px; background: var(--app-status-danger-bg);
+  border-bottom: 1.5px solid var(--rg-issue-head-border);
 }
 .issue-count-badge {
+  /* 模块私有色值登记（tokens.css 未登记该值）：问题计数徽章描边 */
+  --rg-issue-badge-border: var(--color-red-85) /* -> --color-red-85 */;
   font-family: var(--app-font-mono); font-size: var(--app-size-xs); font-weight: 700;
-  background: var(--app-bg-card); color: #c0392b;
-  padding: 2px var(--app-space-sm); border-radius: 4px; border: 1.5px solid #e8b0b0;
+  background: var(--app-bg-card); color: var(--app-status-danger-text);
+  padding: 2px var(--app-space-sm); border-radius: 4px; border: 1.5px solid var(--rg-issue-badge-border);
 }
 .issue-type { font-size:var(--app-size-sm); font-weight: 700; color: var(--ink); }
 .issue-body { padding: 12px 14px; }
 .task-id-inline {
   font-family: var(--app-font-mono); font-size: var(--app-size-xs); font-weight: 600;
   background: var(--app-bg-subtle); padding: 1px 6px; border-radius: 3px;
-  border: 1px solid #e8e4d8; margin-left: var(--app-space-xs);
+  border: 1px solid var(--el-border-color-light); margin-left: var(--app-space-xs);
 }
 
 /* ── Misc ── */
-.empty-state { text-align: center; padding: 60px 20px; color: var(--app-ink-muted); }
+.empty-state { text-align: center; padding: 60px 20px; color: var(--app-text-secondary); }
 .empty-state span { font-size:var(--app-size-2xl); display: block; margin-bottom: 12px; }
-.loading-state { text-align: center; padding: 40px; color: var(--app-ink-muted); }
-.num-pass { color: #4a9a20; font-weight: 800; }
-.num-fail { color: #c0392b; font-weight: 800; }
+.loading-state { text-align: center; padding: 40px; color: var(--app-text-secondary); }
+.num-pass { color: var(--app-status-success-text); font-weight: 800; }
+.num-fail { color: var(--app-status-danger-text); font-weight: 800; }
 </style>

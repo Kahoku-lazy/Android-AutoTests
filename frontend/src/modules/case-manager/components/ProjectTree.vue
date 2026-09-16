@@ -525,12 +525,12 @@ function rowClass(data: UiTreeNode) {
   gap: var(--app-space-sm);
   padding: 10px 14px;
   border-bottom: 2px solid var(--case-border-subtle);
-  background: color-mix(in srgb, #fff 70%, transparent);
+  background: color-mix(in srgb, var(--app-bg-card) 70%, transparent);
   flex-shrink: 0;
   flex-wrap: wrap;
 }
 .explorer-toolbar--select {
-  background: color-mix(in srgb, var(--c-case) 12%, white);
+  background: color-mix(in srgb, var(--c-case) 12%, var(--app-bg-card));
 }
 .explorer-crumbs {
   font-size: var(--app-size-sm);
@@ -556,18 +556,18 @@ function rowClass(data: UiTreeNode) {
 
 .ex-btn {
   border: 2px solid var(--ink);
-  background: #fff;
+  background: var(--app-bg-card);
   border-radius: 10px;
   padding: 7px 12px;
   font-weight: 700;
-  font-size: 12px;
+  font-size: var(--app-size-xs);
   cursor: pointer;
   font-family: inherit;
   color: var(--ink);
   line-height: 1.2;
 }
 .ex-btn:hover:not(:disabled) {
-  background: var(--app-highlight, #ffe066);
+  background: var(--app-highlight);
 }
 .ex-btn:disabled {
   opacity: 0.45;
@@ -577,7 +577,7 @@ function rowClass(data: UiTreeNode) {
   background: var(--c-case);
 }
 .ex-btn--danger {
-  color: #e85d5d;
+  color: var(--app-status-danger-text);
 }
 
 .explorer-body {
@@ -618,23 +618,23 @@ function rowClass(data: UiTreeNode) {
   gap: var(--app-space-sm);
   width: 100%;
   border: 2px solid var(--ink);
-  background: #fff;
+  background: var(--app-bg-card);
   border-radius: 14px;
   padding: var(--app-space-sm) 12px;
   min-height: 44px;
 }
 .explorer-row--dir {
-  background: #fffdf6;
+  background: var(--paper);
 }
 .explorer-row--file:hover {
-  background: #f3fffd;
+  background: color-mix(in srgb, var(--c-case) 8%, var(--app-bg-card));
 }
 .explorer-row--dir:hover {
-  background: #fff8db;
+  background: color-mix(in srgb, var(--c-dashboard) 16%, var(--app-bg-card));
 }
 .explorer-row--active {
   box-shadow: 3px 3px 0 var(--ink);
-  background: #f3fffd;
+  background: color-mix(in srgb, var(--c-case) 8%, var(--app-bg-card));
 }
 .explorer-row__ico {
   font-size: 18px;
@@ -643,7 +643,7 @@ function rowClass(data: UiTreeNode) {
 }
 .explorer-row__name {
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--app-size-sm);
   color: var(--ink);
   min-width: 0;
   overflow: hidden;
@@ -660,14 +660,14 @@ function rowClass(data: UiTreeNode) {
   line-height: 1.3;
 }
 .explorer-row__kind--dir {
-  background: #fff8db;
+  background: color-mix(in srgb, var(--c-dashboard) 16%, var(--app-bg-card));
 }
 .explorer-row__kind--file {
-  background: #e6faf8;
+  background: color-mix(in srgb, var(--c-case) 12%, var(--app-bg-card));
 }
 .explorer-row__meta,
 .explorer-row__hint {
-  font-size: 12px;
+  font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
   white-space: nowrap;
 }
@@ -676,18 +676,20 @@ function rowClass(data: UiTreeNode) {
   font-weight: 600;
 }
 .explorer-row--file .explorer-row__hint {
-  color: #1a7a74;
+  color: color-mix(in srgb, var(--c-case) 55%, var(--ink));
 }
 
 .context-menu {
   position: fixed;
   z-index: var(--case-z-context);
-  background: #fff;
+  background: var(--app-bg-card);
   border: 2px solid var(--ink);
   border-radius: 14px;
   padding: 6px 0;
   min-width: 168px;
-  box-shadow: 4px 4px 0 rgba(30, 30, 36, 0.15);
+  /* 浮层硬阴影墨色（rgb(30,30,36) 即 --ink），本弹层自身登记 */
+  --case-menu-shadow: var(--color-indigo-13-a18) /* -> --color-indigo-13-a18 */;
+  box-shadow: 4px 4px 0 var(--case-menu-shadow);
 }
 .context-menu__item {
   padding: var(--app-space-sm) var(--app-space-md);
@@ -695,12 +697,12 @@ function rowClass(data: UiTreeNode) {
   cursor: pointer;
 }
 .context-menu__item:hover {
-  background: #e6faf8;
-  color: #1a7a74;
+  background: color-mix(in srgb, var(--c-case) 12%, var(--app-bg-card));
+  color: color-mix(in srgb, var(--c-case) 55%, var(--ink));
 }
 .context-menu__item--danger:hover {
-  background: #ffe8e8;
-  color: #e85d5d;
+  background: var(--app-status-danger-bg);
+  color: var(--app-status-danger-text);
 }
 .context-menu__divider {
   height: 1px;

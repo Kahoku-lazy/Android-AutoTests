@@ -105,23 +105,28 @@ const typeLabel = (type?: string) => {
 </template>
 
 <style scoped>
-.kb-tree-level { display: flex; flex-direction: column; gap: 2px; }
+.kb-tree-level {
+  display: flex; flex-direction: column; gap: 2px;
+  /* 行悬停底色（中性浅灰）与目录提示字色（暖灰） */
+  --kb-tree-row-tint: var(--ai-bg-neutral);
+  --kb-tree-dir-ink: var(--color-orange-44) /* -> --color-orange-44 */;
+}
 .kb-tree-node { display: flex; flex-direction: column; }
 .kb-tree-row {
   display: flex; align-items: center; gap: 6px; padding: var(--app-space-sm) 10px;
   border-radius: 8px; cursor: pointer; transition: background .12s;
   border: 1.5px solid transparent;
 }
-.kb-tree-row:hover { background: var(--ai-teal-bg, rgba(25,200,185,.08)); }
+.kb-tree-row:hover { background: var(--kb-tree-row-tint); }
 .kb-tree-row.has-children { font-weight: 600; }
-.kb-tree-row.selected { border-color: var(--ai-teal, #19c8b9); background: var(--ai-teal-bg, rgba(25,200,185,.08)); }
-.kb-tree-arrow { width: 14px; font-size: var(--app-size-xs); color: var(--ai-ink-muted, #8a7b66); flex-shrink: 0; }
+.kb-tree-row.selected { border-color: var(--ai-teal); background: var(--ai-teal-bg); }
+.kb-tree-arrow { width: 14px; font-size: var(--app-size-xs); color: var(--ai-ink-muted); flex-shrink: 0; }
 .kb-tree-icon { flex-shrink: 0; }
-.kb-tree-label { flex: 1; min-width: 0; font-size: var(--app-size-sm); color: var(--ink, #3d3428); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.kb-tree-meta { flex-shrink: 0; font-size: var(--app-size-xs); color: var(--ai-ink-muted, #8a7b66); }
+.kb-tree-label { flex: 1; min-width: 0; font-size: var(--app-size-sm); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kb-tree-meta { flex-shrink: 0; font-size: var(--app-size-xs); color: var(--ai-ink-muted); }
 .kb-tree-dir-hint {
   flex-shrink: 0; font-size: var(--app-size-xs); font-weight: 600;
-  color: var(--ai-teal, #0fa89b); background: var(--ai-teal-bg, rgba(25,200,185,.12));
+  color: var(--kb-tree-dir-ink); background: var(--ai-teal-bg);
   padding: 1px var(--app-space-sm); border-radius: 6px;
 }
 .kb-tree-check { display: inline-flex; flex-shrink: 0; }

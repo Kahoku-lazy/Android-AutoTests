@@ -4,33 +4,6 @@
  */
 .wb-shell,
 .workflow-workbench {
-  --ac-cream:       var(--paper);
-  --ac-cream-deep:  var(--paper);
-  --ac-paper:       #fff;
-  --ac-wood:        var(--ink);
-  --ac-wood-light:  #999;
-  --ac-wood-soft:   #bbb;
-  --ac-ink:         var(--ink);
-  --ac-ink-muted:   #999;
-  --ac-ink-faint:   #bbb;
-  --ac-border:      var(--ink);
-  --ac-border-soft: #e8e4d8;
-  --ac-accent:      var(--c-workflow);           /* 工作流天蓝 #89CFF0 */
-  --ac-accent-deep: #2f6ea3;                     /* 工作流深蓝（白底可读文字/强调） */
-  --ac-accent-soft: rgba(137, 207, 240, 0.16);   /* 工作流浅蓝（hover/选中底） */
-  --ac-teal:        var(--c-workflow);
-  --ac-green:       var(--c-device);
-  --ac-blue:        var(--c-element);
-  --ac-yellow:      var(--c-dashboard);
-  --ac-purple:      var(--c-element);
-  --ac-pink:        var(--c-runner);
-  --ac-red:         #e8998a;
-  --ac-orange:      var(--c-dashboard);
-  --ac-radius:      var(--app-radius-md);
-  --ac-radius-sm:   var(--app-radius-sm);
-  --ac-shadow:      var(--app-shadow-sm);
-  --ac-shadow-lg:   var(--app-shadow-lg);
-  --ac-font:        var(--app-font);
   font-family: var(--ac-font);
   color: var(--ac-ink);
 }
@@ -72,47 +45,66 @@
   background: var(--app-status-danger-bg); color: var(--app-status-danger-text); border-color: var(--c-runner);
 }
 .wb-shell .wb-btn.el-button--danger:hover {
-  background: var(--app-btn-hover-danger, #FFD0C8);
+  background: var(--app-btn-hover-danger);
 }
 .wb-shell .wb-btn.el-button--success {
   background: var(--c-device); color: var(--ink); border-color: var(--ink);
 }
 
-/* 筛选 chip */
-.wb-shell .wb-chip {
-  display: inline-flex; align-items: center;
-  padding: 5px 12px; border-radius: var(--app-radius-sm);
-  border: 2px solid transparent; background: transparent;
-  font-size: var(--app-size-xs); font-weight: 700; font-family: inherit; cursor: pointer;
-  color: var(--app-text-secondary);
-}
-.wb-shell .wb-chip.is-active,
-.wb-shell .wb-chip.on {
-  background: var(--c-dashboard); border-color: var(--ink); color: var(--ink);
-}
-.wb-shell .wb-status-pill {
-  font-size: var(--app-size-xs); font-weight: 700; padding: var(--app-space-xs) 10px;
-  background: var(--app-bg-card); border: 1.5px solid var(--ink);
-  border-radius: 3px 6px 3px 6px;
-}
-
-/* AppCard */
+/* AppCard — 钉板壳（对齐 #page-typography .panel） */
 .wb-shell .ac-card,
 .workflow-workbench .ac-card {
+  position: relative;
+  overflow: visible !important;
   background: var(--app-bg-card) !important;
-  border: 2.5px solid var(--ink) !important;
-  border-radius: var(--app-radius-md) !important;
-  box-shadow: var(--app-shadow-md) !important;
-  transition: all 0.15s;
+  border: 2.5px dashed var(--ink) !important;
+  border-radius: 2px !important;
+  box-shadow: 4px 4px 0 0 var(--ac-accent) !important;
+  transform: rotate(var(--ac-tilt));
+  transition:
+    transform var(--app-duration, 0.2s) var(--app-ease, ease),
+    box-shadow var(--app-duration, 0.2s) var(--app-ease, ease);
 }
 .wb-shell .ac-card:hover,
-.workflow-workbench .ac-card:hover {
-  border-color: var(--c-dashboard) !important;
-  box-shadow: 2px 3px 0 rgba(0,0,0,0.08) !important;
+.workflow-workbench .ac-card:hover,
+.wb-shell .ac-card:focus-within,
+.workflow-workbench .ac-card:focus-within {
+  transform: rotate(0deg) translate(-1px, -1px);
+  box-shadow: 5px 5px 0 0 var(--ac-accent) !important;
 }
 .wb-shell .ac-card--dashed,
 .workflow-workbench .ac-card--dashed {
   border-style: dashed !important;
+}
+.wb-shell .ac-card .ac-card__pin,
+.workflow-workbench .ac-card .ac-card__pin {
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  background: var(--ac-accent);
+  transform: translateX(-50%);
+  z-index: 3;
+  box-shadow: 1px 2px 0 0 var(--ac-pin-shadow);
+  pointer-events: none;
+}
+.wb-shell .ac-card .el-card__body,
+.workflow-workbench .ac-card .el-card__body {
+  padding: var(--app-space-md);
+}
+@media (prefers-reduced-motion: reduce) {
+  .wb-shell .ac-card,
+  .workflow-workbench .ac-card {
+    transform: none;
+    transition: none;
+  }
+  .wb-shell .ac-card:hover,
+  .workflow-workbench .ac-card:hover {
+    transform: none;
+  }
 }
 
 /* AppTabs */
@@ -142,4 +134,23 @@
 }
 .wb-shell .ac-table td.el-table__cell {
   color: var(--ink); border-bottom: 1px solid var(--app-border-lighter);
+}
+
+/* SketchTable 表纸皮肤（AppTable accent）：虚线纸 + 模块色硬阴影，表体不旋转 */
+.wb-shell .sketch-sheet {
+  border: var(--comp-sheet-border);
+  background: var(--comp-sheet-bg);
+  border-radius: var(--comp-sheet-radius);
+  box-shadow:
+    var(--comp-sheet-shadow-x) var(--comp-sheet-shadow-y) 0 0
+    var(--sketch-accent, var(--comp-sheet-accent-fallback));
+  overflow: hidden;
+  transform: none;
+}
+.wb-shell .sketch-sheet .ac-table {
+  transform: none;
+}
+.wb-shell .sketch-sheet .el-table {
+  --el-table-border-color: transparent;
+  background: transparent;
 }

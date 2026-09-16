@@ -80,7 +80,7 @@ watch(() => props.items.length, revealItems)
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   font-size: var(--app-size-sm);
 }
 
@@ -153,13 +153,13 @@ watch(() => props.items.length, revealItems)
 
 .timeline-item__time {
   font-size: var(--app-size-xs);
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   flex-shrink: 0;
 }
 
 .timeline-item__detail {
   font-size: var(--app-size-sm);
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   margin: 0;
   line-height: 1.5;
 }
@@ -176,7 +176,7 @@ watch(() => props.items.length, revealItems)
   border-radius: 999px;
   background: var(--app-bg-subtle);
   border: 1px solid var(--app-border-light);
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   font-weight: 600;
 }
 </style>

@@ -1,6 +1,8 @@
 /* SkillViewerPage — 左目录右内容 */
 
 .skill-viewer-page {
+  /* 页头图标渐变终点（柔紫，原字面量） */
+  --sv-icon-grad-end: var(--color-violet-75) /* -> --color-violet-75 */;
   display: flex;
   flex-direction: column;
   min-height: 0;

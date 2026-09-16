@@ -1,9 +1,9 @@
 # Doodle Craft 组件规格（像素级）
 
-> 唯一真相源：`frontend/DESIGN_SYSTEM.md`（设计系统）+ `frontend/src/shared/styles/tokens.css`（令牌）。
+> 唯一真相源：`vue-frontend-check/references/checklist.md`（组件规格验收）+ `frontend/src/shared/styles/tokens.css`（令牌）。
 > **令牌值以 tokens.css 为准**；新增/修改组件时同步更新本文件。
 
-共 20 个组件：基础 UI 原子层（Element Plus 覆盖）10 个 + 组件层（业务组件）10 个。
+共 23 个组件：基础 UI 原子层（Element Plus 覆盖）10 个 + 组件层（业务组件）13 个。
 
 ## 状态色（Tag / Badge / 时间线 / 状态图标共用）
 
@@ -47,8 +47,9 @@
 | 空态 | 居中：图标 + "暂无数据" |
 | 加载 | `v-loading` + 骨架行 |
 | 边框 | 无外框，内部虚线分隔 |
+| 表纸皮肤 | `AppTable` 传 `accent`（模块 `--c-*`）→ 外层 `.sketch-sheet`；边 `--comp-sheet-border`；阴影 `4px 4px 0 0 accent`；表体不旋转 |
 
-**约束**：只在页面主内容区/Tab 面板；需 `max-height` + 固定表头；禁止嵌在卡片里。
+**约束**：只在页面主内容区/Tab 面板；需 `max-height` + 固定表头；禁止嵌在卡片里；禁止新建 `SketchTable.vue`。
 
 ### 3. Dialog / Modal 弹窗
 
@@ -59,9 +60,10 @@
 | 内容区 | padding `--app-space-md`，无内部滚动 |
 | 底部按钮 | 右对齐，取消左 / 确认右 |
 | 遮罩 | `rgba(0,0,0,0.3)`，无模糊 |
-| 圆角 | `--app-radius-md` |
+| 圆角 | `--comp-dialog-radius`（回退 `--app-radius-md`） |
+| 纸面 | 边 `--comp-dialog-border`；阴影 `--comp-dialog-shadow`；底 `--comp-dialog-bg`（`style.css` 全局 `.el-dialog`） |
 
-**约束**：弹窗内不放表格；弹窗内表单宽度 ≤520px。
+**约束**：弹窗内不放表格；弹窗内表单宽度 ≤520px；禁止自建 backdrop / 第二套 dialog 皮肤文件。
 
 ### 4. Form / Input 表单与输入
 
@@ -304,3 +306,21 @@ a11y:  prefers-reduced-motion 关闭位移
 ```
 
 **用途**：内容卡操作区。页头 `wb-btn` / EP 表单主按钮不改。删除确认仍走 `ConfirmButton`（`doodle` 外观接 danger）。
+
+### 24. 子页面包屑 `.wb-crumbs`（WorkbenchCrumbs）
+
+共享组件：`frontend/src/shared/components/WorkbenchCrumbs.vue`  
+挂载：`WorkbenchHeader` 的 `#nav` 槽（不新建第二套页头）。
+
+```
+返回芯片 .wb-crumbs__back:
+  边框 2px solid --comp-crumb-ink；近直角；硬阴影 --comp-crumb-back-shadow
+  hover 微抬；active 按下；prefers-reduced-motion 取消 transform
+波浪链 .wb-crumbs__link:
+  祖先可点；underline wavy = --comp-crumb-wave
+当前项 .wb-crumbs__here:
+  马克笔底 --comp-crumb-marker；aria-current=page；不可点
+令牌: --comp-crumb-*（tokens.css）
+```
+
+**用途**：Hub→台→叶 / 列表→详情 / AI 子项深链的可见回退。禁止正文 `.back-btn`。

@@ -1,0 +1,38 @@
+/* workflow 模块令牌（T1）
+   作用域：.workflow-workbench（模块页面根类）——消费点都在该根类内，弹层为原地渲染
+   口径：值 MUST 引用 T0 主 token 原子；本文件不得出现字面量色值
+   来源：变更 module-token-files（自 shared/styles/tokens.css 迁出）
+*/
+
+.workflow-workbench {
+  --ac-cream:       var(--paper);
+  --ac-cream-deep:  var(--paper);
+  --ac-paper:       var(--color-white) /* -> --color-white */;
+  --ac-wood:        var(--ink);
+  --ac-wood-light:  var(--color-ink-57) /* -> --color-ink-57 */;
+  --ac-wood-soft:   var(--color-ink-79) /* -> --color-ink-79 */;
+  --ac-ink:         var(--ink);
+  --ac-ink-muted:   var(--color-ink-57) /* -> --color-ink-57 */;
+  --ac-ink-faint:   var(--color-ink-79) /* -> --color-ink-79 */;
+  --ac-border:      var(--ink);
+  --ac-border-soft: var(--color-lime-94) /* -> --color-lime-94 */;
+  --ac-accent:      var(--c-workflow);           /* 工作流天蓝 #89CFF0 */
+  --ac-accent-deep: var(--color-cyan-40) /* -> --color-cyan-40 */;                     /* 工作流深蓝（白底可读文字/强调） */
+  --ac-accent-soft: var(--color-cyan-74-a18) /* -> --color-cyan-74-a18 */;   /* 工作流浅蓝（hover/选中底） */
+  --ac-teal:        var(--c-workflow);
+  --ac-green:       var(--c-device);
+  --ac-blue:        var(--c-element);
+  --ac-yellow:      var(--c-dashboard);
+  --ac-purple:      var(--c-element);
+  --ac-pink:        var(--c-runner);
+  --ac-red:         var(--color-red-73) /* -> --color-red-73 */;
+  --ac-orange:      var(--c-dashboard);
+  --ac-radius:      var(--app-radius-md);
+  --ac-radius-sm:   var(--app-radius-sm);
+  --ac-shadow:      var(--app-shadow-sm);
+  --ac-shadow-lg:   var(--app-shadow-lg);
+  --ac-pin-shadow:  var(--color-ink-05-a18) /* -> --color-ink-05-a18 */;   /* 图钉硬阴影（rgba 绘制色登记处） */
+  --ac-font:        var(--app-font);
+  --ac-accent: var(--c-dashboard);
+  --ac-tilt: 0.3deg;
+}

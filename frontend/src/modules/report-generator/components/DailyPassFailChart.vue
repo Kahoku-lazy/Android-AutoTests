@@ -32,7 +32,7 @@ function buildOption() {
     },
     legend: {
       bottom: 22, itemWidth: 10, itemHeight: 10, itemGap: 18,
-      textStyle: { fontSize: 12, color: '#725d42', fontWeight: 600 },
+      textStyle: { fontSize: 12, color: CHART_COLORS.axis.titleText, fontWeight: 600 },
     },
     grid: { top: 12, right: 12, bottom: 72, left: 36 },
     dataZoom: [
@@ -41,8 +41,8 @@ function buildOption() {
         height: 16, bottom: 4,
         borderColor: 'rgba(121,79,39,0.15)',
         fillerColor: 'rgba(25,200,185,0.18)',
-        handleStyle: { color: '#19c8b9' },
-        textStyle: { fontSize: 10, color: '#9f927d' },
+        handleStyle: { color: CHART_COLORS.axis.handle },
+        textStyle: { fontSize: 10, color: CHART_COLORS.axis.labelText },
       },
       { type: 'inside', start: zoomStart.value, end: 100 },
     ],
@@ -50,11 +50,11 @@ function buildOption() {
       type: 'category', data: props.labels,
       axisLine: { lineStyle: { color: 'rgba(121,79,39,0.15)' } },
       axisTick: { show: false },
-      axisLabel: { fontSize: 10, color: '#9f927d', fontWeight: 600 },
+      axisLabel: { fontSize: 10, color: CHART_COLORS.axis.labelText, fontWeight: 600 },
     },
     yAxis: {
       type: 'value', minInterval: 1,
-      axisLabel: { fontSize: 10, color: '#9f927d' },
+      axisLabel: { fontSize: 10, color: CHART_COLORS.axis.labelText },
       splitLine: { lineStyle: { color: 'rgba(121,79,39,0.08)' } },
     },
     series: [

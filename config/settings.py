@@ -68,6 +68,8 @@ INSTALLED_APPS = [
     "channels",
     "rest_framework",
     "drf_spectacular",
+    # Swagger UI 静态资产（SIDECAR 来源；离线/内网环境不依赖 CDN）
+    "drf_spectacular_sidecar",
     # Framework
     "gateway",
     "shared",
@@ -300,6 +302,28 @@ SPECTACULAR_SETTINGS = {
         "测试执行、AI 助手、评测、报告生成全流程。"
     ),
     "VERSION": "2.0.0",
+    # 文档页资产随包分发（drf-spectacular-sidecar）：断网环境仍可渲染
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    # 分组中文说明：取代原手写文档的模块描述（顺序即 Swagger 分组顺序）
+    "TAGS": [
+        {"name": "dashboard", "description": "仪表盘：全平台只读聚合统计"},
+        {"name": "devices", "description": "设备管理：扫描 / 连接 / 断开 / 激活 / 心跳 / 占用释放"},
+        {
+            "name": "inspector",
+            "description": "设备检查器：快照抓取与页面回看（快照化，无 WS 截图流）",
+        },
+        {
+            "name": "elements",
+            "description": "元素定位：Android 页面 / Web 元素 / API 端点三类资产与目录",
+        },
+        {"name": "cases", "description": "用例管理：项目 → 目录 → 文件 → 用例行"},
+        {"name": "workflow", "description": "工作流：编排文档 CRUD 与导入导出"},
+        {"name": "auth", "description": "登录鉴权：登录 / 注册 / 刷新 / 登出 / 当前用户"},
+        {"name": "ai", "description": "AI 助手：智能体、会话、知识库与任务发布"},
+        {"name": "evaluator", "description": "评估器：评估题库 / 运行 / 框架适配"},
+        {"name": "schema", "description": "OpenAPI schema 端点（drf-spectacular 自带）"},
+    ],
 }
 
 # Chat upload temp files — cleanup_uploads management command
@@ -317,7 +341,13 @@ SERVER_PORT = int(os.environ.get("SERVER_PORT", "8766"))
 # uiautomator2 生效（两者原生读取该环境变量），无需在 settings 里二次转发。
 
 # Paths
-DATA_DIR = BASE_DIR / "data"
+# 数据根目录：.env 的 DATA_DIR 可指向外部盘/卷（如 D:\Govee\data）；留空用项目内 data/。
+# 相对值按 BASE_DIR 解析，避免随进程 CWD 漂移。
+_data_dir_env = os.environ.get("DATA_DIR", "").strip()
+DATA_DIR = Path(_data_dir_env) if _data_dir_env else BASE_DIR / "data"
+if not DATA_DIR.is_absolute():
+    DATA_DIR = BASE_DIR / DATA_DIR
+
 SCREENSHOT_DIR = DATA_DIR / "screenshots"
 EXPORT_DIR = BASE_DIR / "exports"
 LOG_DIR = BASE_DIR / "logs"
@@ -337,7 +367,7 @@ STATICFILES_DIRS = [BASE_DIR / "static"]  # 项目自定义静态文件源目录
 
 # ── Media files (uploads) ──
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "data" / "uploads"
+MEDIA_ROOT = DATA_DIR / "uploads"
 
 # ── Jazzmin Admin Theme ──
 JAZZMIN_SETTINGS = {

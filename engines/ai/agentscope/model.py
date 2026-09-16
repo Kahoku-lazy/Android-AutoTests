@@ -29,6 +29,7 @@ from agentscope.model import DashScopeChatModel, DeepSeekChatModel, OpenAIChatMo
 from pydantic import BaseModel, Field
 
 from engines.ai.base import ToolSpec
+from engines.ai.registry import ConfigurationError
 
 from .billing import model_cost
 from .config import (
@@ -198,6 +199,15 @@ class RoleResult(BaseModel):
     cost: float = Field(default=0.0, description="本轮费用（元，仅 DeepSeek 计费，其余 0）")
 
 
+# ── provider 兼容分支 ──
+
+# OpenAI 兼容类可承接的 provider（其余走各自专用 SDK 类）
+OPENAI_COMPATIBLE_PROVIDERS = frozenset({"openai", "anthropic", "gemini", "custom"})
+
+# 引擎可处理的全部 provider：必须与 Django 侧 VALID_PROVIDERS 相等（一致性测试守护）
+SUPPORTED_PROVIDERS = frozenset({"deepseek", "dashscope"}) | OPENAI_COMPATIBLE_PROVIDERS
+
+
 # ── 模型连接创建（通用工厂，与角色无关）──
 
 
@@ -211,6 +221,9 @@ def create_model(config: ModelConfig, stream: bool = True, vision: bool = False)
 
     Returns:
         对应 provider 的 ChatModel 实例。
+
+    Raises:
+        ConfigurationError: provider 不在 SUPPORTED_PROVIDERS 内（不再静默降级）。
     """
     api_key = config.api_key or ""
     base_url = config.base_url
@@ -231,15 +244,25 @@ def create_model(config: ModelConfig, stream: bool = True, vision: bool = False)
             stream=stream,
         )
     if config.provider == "dashscope":
+        # base_url 为空时交给框架默认值，避免用空串覆盖默认端点
+        credential = (
+            DashScopeCredential(api_key=api_key, base_url=base_url)
+            if base_url
+            else DashScopeCredential(api_key=api_key)
+        )
         return DashScopeChatModel(
-            credential=DashScopeCredential(api_key=api_key),
+            credential=credential,
             model=config.model_name,
             stream=stream,
         )
-    return OpenAIChatModel(
-        credential=OpenAICredential(api_key=api_key, base_url=base_url),
-        model=config.model_name,
-        stream=stream,
+    if config.provider in OPENAI_COMPATIBLE_PROVIDERS:
+        return OpenAIChatModel(
+            credential=OpenAICredential(api_key=api_key, base_url=base_url),
+            model=config.model_name,
+            stream=stream,
+        )
+    raise ConfigurationError(
+        f"Unsupported provider {config.provider!r}; supported: {sorted(SUPPORTED_PROVIDERS)}"
     )
 
 

@@ -50,6 +50,11 @@ async function loadBanks() {
 const showBankEditor = ref(false)
 const editingBank = ref(null)
 const bankForm = ref({ name: '', description: '', questions: [] })
+const bankFormRef = ref(null)
+/** 试卷名称必填（按 L4 口径走 EP :rules，取代原 Toast 空值守卫） */
+const bankRules = {
+  name: [{ required: true, message: '请输入试卷名称', trigger: 'blur' }],
+}
 async function openBankEditor(bank) {
   if (bank) {
     editingBank.value = bank; bankForm.value = { name: bank.name, description: bank.description || '', questions: [] }
@@ -64,7 +69,12 @@ async function openBankEditor(bank) {
 function addQuestionRow() { bankForm.value.questions.push({ content: '', expected_keywords: '', category: 'general' }) }
 function removeQuestionRow(i) { bankForm.value.questions.splice(i, 1) }
 async function saveBank() {
-  if (!bankForm.value.name.trim()) { ElMessage.warning('请输入试卷名称'); return }
+  try {
+    await bankFormRef.value?.validate()
+  } catch {
+    // 校验失败：EP 的 validate 以 reject 表示，交由字段内联提示（非静默吞错）
+    return
+  }
   try {
     if (editingBank.value) await updateBank(editingBank.value.id, bankForm.value)
     else await createBank(bankForm.value)
@@ -244,7 +254,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
       </div>
 
       <!-- Not installed warning -->
-      <div v-if="!curTab.available" style="padding:12px 16px;background:var(--app-status-warning-bg, #FFF9E0);border-radius:8px;margin-bottom:16px;font-size:var(--app-size-sm);color:var(--app-warning-text, #7a5a10)">
+      <div v-if="!curTab.available" style="padding:12px 16px;background:var(--app-status-warning-bg);border-radius:8px;margin-bottom:16px;font-size:var(--app-size-sm);color:var(--app-warning-text)">
         ⚠️ {{ curTab.label }} 尚未安装，请联系管理员启用后使用。
       </div>
 
@@ -447,7 +457,7 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
       <h3 class="doc-section__title">评测记录 ({{ filteredRuns.length }})</h3>
       <div v-if="!filteredRuns.length" class="empty-state">暂无评测记录</div>
       <div v-for="r in filteredRuns" :key="r.id" class="run-card"
-           style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--ai-warm-bg);border-radius:10px;margin-bottom:8px;border:1px solid var(--ai-warm-border)">
+           style="display:flex;align-items:center;gap:var(--app-space-md);padding:12px 16px;background:var(--ai-warm-bg);border-radius:10px;margin-bottom:8px;border:1px solid var(--ai-warm-border)">
         <el-tag :type="r.status==='completed'?'success':r.status==='running'?'warning':r.status==='failed'?'danger':'info'" size="small">{{ r.status }}</el-tag>
         <span style="font-weight:600;min-width:100px">{{ r.agent_name }}</span>
         <el-tag size="small" type="info">{{ fwLabel(r) }}</el-tag>
@@ -507,9 +517,9 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
     </div>
 
     <!-- ═══════════════ BANK EDITOR ═══════════════ -->
-    <el-dialog v-model="showBankEditor" :title="editingBank?'编辑试卷':'新建试卷'" width="680px" destroy-on-close>
-      <el-form label-width="80px">
-        <el-form-item label="名称" required><el-input v-model="bankForm.name" placeholder="试卷名称" /></el-form-item>
+    <el-dialog v-model="showBankEditor" :title="editingBank?'编辑试卷':'新建试卷'" width="680px" destroy-on-close :close-on-click-modal="false">
+      <el-form ref="bankFormRef" :model="bankForm" :rules="bankRules" label-width="80px">
+        <el-form-item label="名称" prop="name"><el-input v-model="bankForm.name" placeholder="试卷名称" /></el-form-item>
         <el-form-item label="描述"><el-input v-model="bankForm.description" type="textarea" :rows="2" /></el-form-item>
       </el-form>
       <el-divider>题目列表 ({{ bankForm.questions.length }})</el-divider>
@@ -535,11 +545,15 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 </template>
 
 <style scoped>
-.evaluator-host { padding: var(--app-space-xs) 0; }
+.evaluator-host {
+  padding: var(--app-space-xs) 0;
+  /* 未激活标签 / 模式按钮的静默墨色（暖灰，原字面量） */
+  --eval-quiet-ink: var(--color-orange-44) /* -> --color-orange-44 */;
+}
 .bank-question-list { max-height: 45vh; overflow-y: auto; }
 .view-tab {
   padding: 10px 22px; border: 2px solid var(--ai-warm-border); border-radius: 12px;
-  background: var(--ai-warm-bg); color: #8a7b66; font-size: var(--app-size-md); font-weight: 700;
+  background: var(--ai-warm-bg); color: var(--eval-quiet-ink); font-size: var(--app-size-md); font-weight: 700;
   font-family: inherit; cursor: pointer; transition: all 0.2s ease;
 }
 .view-tab:hover { border-color: var(--ai-teal); background: var(--ai-teal-bg); color: var(--ai-teal-text); }
@@ -548,19 +562,19 @@ function prettyJson(raw) { try { return JSON.stringify(JSON.parse(raw), null, 2)
 /* Mode toggle */
 .mode-btn {
   padding: var(--app-space-sm) 18px; border: 1.5px solid var(--ai-warm-border); border-radius: 8px;
-  background: var(--app-bg-card); color: #8a7b66; font-size: var(--app-size-sm); font-weight: 600;
+  background: var(--app-bg-card); color: var(--eval-quiet-ink); font-size: var(--app-size-sm); font-weight: 600;
   font-family: inherit; cursor: pointer; transition: all 0.2s ease;
 }
-.mode-btn:hover { border-color: var(--app-accent-purple, #b39ef3); background: var(--app-icon-purple-bg, #f3f0ff); color: var(--app-status-purple-text, #5b4aa8); }
-.mode-btn.active { background: var(--app-accent-purple, #b39ef3); color: var(--app-bg-card); border-color: var(--app-accent-purple, #b39ef3); }
+.mode-btn:hover { border-color: var(--app-status-purple); background: var(--app-icon-purple-bg); color: var(--app-status-purple-text); }
+.mode-btn.active { background: var(--app-status-purple); color: var(--app-bg-card); border-color: var(--app-status-purple); }
 
 /* Benchmark cards */
 .bench-card {
   padding: 12px var(--app-space-md); border: 1.5px solid var(--ai-warm-border); border-radius: 10px;
   background: var(--ai-warm-bg); cursor: pointer; min-width: 140px; transition: all 0.2s ease;
 }
-.bench-card:hover { border-color: var(--app-accent-purple, #b39ef3); background: var(--app-icon-purple-bg, #f3f0ff); }
-.bench-card.selected { border-color: var(--app-accent-purple, #b39ef3); background: var(--app-icon-purple-bg, #f3f0ff); box-shadow: var(--app-shadow-sm); }
+.bench-card:hover { border-color: var(--app-status-purple); background: var(--app-icon-purple-bg); }
+.bench-card.selected { border-color: var(--app-status-purple); background: var(--app-icon-purple-bg); box-shadow: var(--app-shadow-sm); }
 .bench-name { font-size: var(--app-size-sm); font-weight: 700; color: var(--ai-ink-soft); }
 .bench-desc { font-size: var(--app-size-xs); color: var(--ai-ink-muted); margin-top: var(--app-space-xs); }
 

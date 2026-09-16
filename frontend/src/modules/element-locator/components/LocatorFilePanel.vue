@@ -4,7 +4,7 @@
  * 页面：左表右截图联动；Web/API：简易表单编辑。
  */
 import { computed, ref, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import { formatApiError } from '@/shared/api-client'
 import {
@@ -38,6 +38,19 @@ const emit = defineEmits<{
 const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
+
+const webFormRef = ref<FormInstance>()
+const apiFormRef = ref<FormInstance>()
+/** Web 元素表单的字段级校验（按 L4 口径走 EP :rules，取代原 Toast 空值守卫） */
+const webRules = {
+  name: [{ required: true, message: '请填写名称', trigger: 'blur' }],
+  locator_value: [{ required: true, message: '请填写定位值', trigger: 'blur' }],
+}
+/** API 端点表单的字段级校验 */
+const apiRules = {
+  name: [{ required: true, message: '请填写名称', trigger: 'blur' }],
+  url: [{ required: true, message: '请填写 URL', trigger: 'blur' }],
+}
 
 const webForm = ref<WebElementDetail>({
   id: 0,
@@ -119,12 +132,14 @@ watch(
 )
 
 async function saveWeb() {
-  const name = webForm.value.name.trim()
-  const locatorValue = webForm.value.locator_value.trim()
-  if (!name || !locatorValue) {
-    ElMessage.warning('请填写名称和定位值')
+  try {
+    await webFormRef.value?.validate()
+  } catch {
+    // 校验失败：EP 的 validate 以 reject 表示，交由字段内联提示（非静默吞错）
     return
   }
+  const name = webForm.value.name.trim()
+  const locatorValue = webForm.value.locator_value.trim()
   saving.value = true
   try {
     const { data } = await apiUpdateWebElement(props.file.id, {
@@ -145,12 +160,14 @@ async function saveWeb() {
 }
 
 async function saveApi() {
-  const name = apiForm.value.name.trim()
-  const url = apiForm.value.url.trim()
-  if (!name || !url) {
-    ElMessage.warning('请填写名称和 URL')
+  try {
+    await apiFormRef.value?.validate()
+  } catch {
+    // 校验失败：EP 的 validate 以 reject 表示，交由字段内联提示（非静默吞错）
     return
   }
+  const name = apiForm.value.name.trim()
+  const url = apiForm.value.url.trim()
   saving.value = true
   try {
     const { data } = await apiUpdateApiEndpoint(props.file.id, {
@@ -207,10 +224,13 @@ async function confirmDelete() {
     <div v-else class="file-panel__body">
       <el-form
         v-if="file.kind === 'web_element'"
+        ref="webFormRef"
+        :model="webForm"
+        :rules="webRules"
         label-position="top"
         class="file-panel__form"
       >
-        <el-form-item label="名称" required>
+        <el-form-item label="名称" prop="name">
           <el-input v-model="webForm.name" maxlength="200" />
         </el-form-item>
         <el-form-item label="定位方式">
@@ -223,14 +243,14 @@ async function confirmDelete() {
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="定位值" required>
+        <el-form-item label="定位值" prop="locator_value">
           <el-input v-model="webForm.locator_value" type="textarea" :rows="3" />
         </el-form-item>
         <el-button type="primary" :loading="saving" @click="saveWeb">保存</el-button>
       </el-form>
 
-      <el-form v-else label-position="top" class="file-panel__form">
-        <el-form-item label="名称" required>
+      <el-form v-else ref="apiFormRef" :model="apiForm" :rules="apiRules" label-position="top" class="file-panel__form">
+        <el-form-item label="名称" prop="name">
           <el-input v-model="apiForm.name" maxlength="200" />
         </el-form-item>
         <el-form-item label="方法">
@@ -243,7 +263,7 @@ async function confirmDelete() {
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="URL" required>
+        <el-form-item label="URL" prop="url">
           <el-input v-model="apiForm.url" />
         </el-form-item>
         <el-button type="primary" :loading="saving" @click="saveApi">保存</el-button>

@@ -148,8 +148,8 @@ onUnmounted(() => {
   >
     <!-- 头部品牌（高度与主区 wb-header 底边对齐） -->
     <router-link to="/dashboard" class="sidebar__header" :title="collapsed ? 'AI 自动化测试平台' : ''">
+      <span class="brand-mark" aria-hidden="true">AI</span>
       <div v-show="!collapsed" class="sidebar__brand">
-        <span class="brand-ai">AI</span>
         <span class="brand-title">自动化测试平台</span>
       </div>
     </router-link>
@@ -174,7 +174,7 @@ onUnmounted(() => {
                 :title="collapsed ? item.label : ''"
                 @click="onGroupClick(item)"
               >
-                <i :data-lucide="item.icon" class="nav-lucide-icon"></i>
+                <span class="nav-ico"><i :data-lucide="item.icon" class="nav-lucide-icon"></i></span>
                 <span v-show="!collapsed" class="sidebar-menu__label">{{ item.label }}</span>
                 <span v-show="!collapsed" class="sidebar-menu__chevron" :class="{ open: isGroupExpanded(item) }">▾</span>
               </button>
@@ -186,7 +186,7 @@ onUnmounted(() => {
                   :class="['sidebar-menu__item', 'sidebar-menu__item--sub', { active: isActive(sub.path) }]"
                   :style="{ '--mod-color': MOD_COLORS[sub.path] || MOD_COLORS[item.path] || 'var(--c-workflow)' }"
                 >
-                  <i :data-lucide="sub.icon" class="nav-lucide-icon nav-lucide-icon--sub"></i>
+                  <span class="nav-ico nav-ico--sub"><i :data-lucide="sub.icon" class="nav-lucide-icon nav-lucide-icon--sub"></i></span>
                   <span class="sidebar-menu__label">{{ sub.label }}</span>
                 </router-link>
               </div>
@@ -200,7 +200,7 @@ onUnmounted(() => {
               :style="{ '--mod-color': MOD_COLORS[item.path] || 'var(--c-workflow)' }"
               :title="collapsed ? item.label : ''"
             >
-              <i :data-lucide="item.icon" class="nav-lucide-icon"></i>
+              <span class="nav-ico"><i :data-lucide="item.icon" class="nav-lucide-icon"></i></span>
               <span v-show="!collapsed" class="sidebar-menu__label">{{ item.label }}</span>
               <span
                 v-if="(item.isDev || item.badge) && !collapsed"
@@ -215,7 +215,6 @@ onUnmounted(() => {
     <!-- 底部用户区 / 账号切换器 -->
     <div class="sidebar__footer">
       <div class="sidebar__user-card">
-        <div class="sidebar__user-label">Digital Human</div>
         <button
           type="button"
           class="sidebar__user-display has-menu"
@@ -231,9 +230,7 @@ onUnmounted(() => {
         <div v-show="!collapsed" class="sidebar__user-row">
           <div class="sidebar__user-status">● 在线</div>
           <el-button
-            link
             size="small"
-            danger
             class="logout-btn"
             data-testid="sidebar-logout"
             @click.stop="logout"

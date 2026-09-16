@@ -201,7 +201,7 @@ function handleCancel() {
 
 .net-hint {
   font-size: var(--app-size-sm);
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   margin: 0;
   line-height: 1.5;
 }
@@ -210,6 +210,6 @@ function handleCancel() {
   font-size: var(--app-size-xs);
   padding: 0 var(--app-space-xs);
   border-radius: 3px;
-  background: var(--ai-bg-neutral, rgba(0, 0, 0, 0.04));
+  background: var(--app-bg-subtle);
 }
 </style>

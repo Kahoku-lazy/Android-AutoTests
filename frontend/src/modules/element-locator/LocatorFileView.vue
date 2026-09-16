@@ -6,6 +6,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
+import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import LocatorFilePanel from './components/LocatorFilePanel.vue'
 import { useLocatorTree } from './composables/useLocatorTree'
@@ -110,23 +111,31 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="file-view">
+  <div class="doc-page doc-page--fixed wb-shell file-view">
     <WorkbenchHeader
       :title="headerTitle"
       :subtitle="headerSubtitle"
       icon="crosshair"
-      :icon-gradient="'linear-gradient(135deg,var(--c-element),#c4b5fd)'"
+      :icon-gradient="'linear-gradient(135deg,var(--c-element),var(--locator-header-icon-end))'"
     >
-      <template #actions>
-        <el-button class="wb-btn" @click="goBackToTree">← 返回目录</el-button>
+      <template #nav>
+        <WorkbenchCrumbs
+          :back-to="`/elements/projects/${projectCode}`"
+          back-label="返回目录"
+          :items="[
+            { label: '元素定位', to: '/elements' },
+            { label: projectName || projectCode, to: `/elements/projects/${projectCode}` },
+            { label: headerTitle },
+          ]"
+        />
       </template>
     </WorkbenchHeader>
 
-    <div v-if="loading" class="file-view__body">
+    <div v-if="loading" class="doc-body">
       <el-skeleton :rows="6" animated />
     </div>
     <ErrorState v-else-if="error" :message="error" @retry="loadFileMeta" />
-    <div v-else-if="file" class="file-view__body">
+    <div v-else-if="file" class="doc-body">
       <LocatorFilePanel
         :key="`${file.kind}-${file.id}`"
         :file="file"
@@ -139,19 +148,14 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* 页面根/主体骨架由 .doc-page / .doc-body 提供；本页主体自带分隔线（纸面纯色，禁自绘点阵） */
+/* 页头图标渐变末端色：tokens.css 未登记 #c4b5fd，登记在本页根作用域，随根元素继承给页头图标块 */
 .file-view {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
+  --locator-header-icon-end: var(--color-indigo-84) /* -> --color-indigo-84 */;
 }
-.file-view__body {
-  flex: 1 1 0;
-  min-height: 0;
+.file-view .doc-body {
   overflow: hidden;
   border-top: 2px solid var(--app-border-light);
   background-color: var(--paper);
-  background-image: radial-gradient(circle, var(--dot) 0.6px, transparent 0.6px);
-  background-size: 15px 15px;
 }
 </style>

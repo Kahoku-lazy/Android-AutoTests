@@ -1,0 +1,10 @@
+/* case-manager 模块令牌（T1）
+   作用域：.case-workbench（模块页面根类）——消费点都在该根类内，弹层为原地渲染
+   口径：值 MUST 引用 T0 主 token 原子；本文件不得出现字面量色值
+   来源：变更 module-token-files（自 shared/styles/tokens.css 迁出）
+*/
+
+.case-workbench {
+  --case-border-subtle:     var(--color-blue-82-a18) /* alias -> --color-blue-82-a18 */;
+  --case-border:            var(--color-blue-82-a30) /* alias -> --color-blue-82-a30 */;
+}

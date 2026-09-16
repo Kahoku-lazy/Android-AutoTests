@@ -5,13 +5,22 @@ import AppTabs from "@/shared/components/AppTabs.vue";
 import AppTable from "@/shared/components/AppTable.vue";
 import StepScreenshotPanel from "@/shared/components/StepScreenshotPanel.vue";
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { usePagination } from '@/shared/composables/usePagination'
 import { useRoute, useRouter } from 'vue-router'
 import { animate, stagger } from 'animejs'
-import PageHeader from '@/shared/components/PageHeader.vue'
+import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
+import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
 import KpiCard from '@/shared/components/KpiCard.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import { useExpandCollapse } from '@/shared/composables/useExpandCollapse'
 import { getRunReport, statusLabel, statusBadgeClass, iterBadgeClass, formatTime } from './api'
+import {
+  PAGE_SIZE_OPTIONS,
+  REPORT_HEADER_GRADIENT,
+  REPORT_HEADER_ICON,
+  TABLE_HEADER_HEIGHT,
+  TABLE_ROW_HEIGHT,
+} from './constants'
 
 const route = useRoute()
 const router = useRouter()
@@ -23,12 +32,6 @@ const error = ref('')
 const activeTab = ref('cases')
 const { expandedIds: expandedFailCases, toggle: toggleFailExpand } = useExpandCollapse()
 const { expandedIds: expandedStepGroups, toggle: toggleStepGroupExpand } = useExpandCollapse()
-
-const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
-const TABLE_HEADER_HEIGHT = 45
-const TABLE_ROW_HEIGHT = 41
-const pageSize = ref(20)
-const currentPage = ref(1)
 
 onMounted(() => loadReport())
 watch(runId, () => {
@@ -71,12 +74,16 @@ const allCases = computed(() => {
   return report.value.cases || []
 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(allCases.value.length / pageSize.value)))
-
-const pagedCases = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  return allCases.value.slice(start, start + pageSize.value)
-})
+// 分页统一走共享 composable（L4 契约：分页实现唯一，见 frontend-l4-data-surface spec）。
+// options 传本页既有选项集，保持默认 20 行与 10 / 20 / 50 / 100 可选，行为不变。
+const {
+  pageSize,
+  currentPage,
+  totalPages,
+  pagedItems: pagedCases,
+  setPageSize,
+  goPage,
+} = usePagination(allCases, { pageSize: 20, options: PAGE_SIZE_OPTIONS })
 
 const tableScrollY = computed(() => TABLE_HEADER_HEIGHT + pageSize.value * TABLE_ROW_HEIGHT)
 
@@ -125,15 +132,6 @@ const kpiPassRate = computed(() => {
 
 function goBack() { router.push('/reports') }
 
-function setPageSize(size) {
-  pageSize.value = size
-  currentPage.value = 1
-}
-
-function goPage(page) {
-  currentPage.value = Math.min(Math.max(1, page), totalPages.value)
-}
-
 function failedIterations(c) {
   return (c.iterations || []).filter(i => i.result !== 'pass')
 }
@@ -160,21 +158,32 @@ function outcomeBadgeClass(outcome) {
 </script>
 
 <template>
-  <div class="doc-page">
+  <div class="doc-page wb-shell report-detail-page">
     <!-- Header -->
-    <PageHeader
+    <WorkbenchHeader
       title="测试执行报告"
       :subtitle="`Run: ${runMeta.run_id || '加载中...'}`"
-      color="app-yellow"
-    />
+      :icon="REPORT_HEADER_ICON"
+      :icon-gradient="REPORT_HEADER_GRADIENT"
+    >
+      <template #nav>
+        <WorkbenchCrumbs
+          back-to="/reports"
+          back-label="返回列表"
+          :items="[
+            { label: '测试报告', to: '/reports' },
+            { label: runMeta.run_id || '详情' },
+          ]"
+        />
+      </template>
+    </WorkbenchHeader>
 
     <div class="doc-body">
       <!-- Error state -->
       <ErrorState v-if="error" :message="error" @retry="loadReport" />
 
-      <!-- Back button + Run meta -->
+      <!-- Run meta -->
       <div class="top-bar">
-        <el-button size="small" @click="goBack">← 返回列表</el-button>
         <div class="run-meta">
           <span v-if="runMeta.device_serial">📱 {{ runMeta.device_serial }}</span>
           <span v-if="runMeta.loop_count">🔄 {{ runMeta.loop_count }} 轮</span>
@@ -186,7 +195,7 @@ function outcomeBadgeClass(outcome) {
       <!-- KPI Cards -->
       <div class="kpi-row">
         <KpiCard :value="runMeta.case_count || 0" label="执行用例" color="var(--c-workflow)" shape="diamond">
-          <div style="font-size:var(--app-size-xs);color:var(--app-ink-muted);margin-top:4px">{{ runMeta.loop_count || 0 }} 轮 × {{ runMeta.case_count || 0 }} 用例 = {{ runMeta.total_iterations || 0 }} 次迭代</div>
+          <div style="font-size:var(--app-size-xs);color:var(--app-text-secondary);margin-top:4px">{{ runMeta.loop_count || 0 }} 轮 × {{ runMeta.case_count || 0 }} 用例 = {{ runMeta.total_iterations || 0 }} 次迭代</div>
         </KpiCard>
         <KpiCard :value="runMeta.total_pass || 0" label="通过" color="var(--c-device)" shape="triangle" />
         <KpiCard :value="runMeta.total_fail || 0" label="失败" color="var(--c-runner)" shape="square" />
@@ -315,7 +324,7 @@ function outcomeBadgeClass(outcome) {
           <div v-if="failedStepsByCase.length > 0" class="section-block">
             <h3 class="sec-title">
               🔍 步骤级失败详情
-              <span class="sec-badge" style="background:var(--app-status-danger-text, #a03030);">{{ failedSteps.length }} 条</span>
+              <span class="sec-badge" style="background:var(--app-status-danger-text);">{{ failedSteps.length }} 条</span>
               <span class="sec-badge sec-badge--muted">{{ failedStepsByCase.length }} 用例</span>
             </h3>
             <p class="sec-sub">按用例标题分类，点击展开查看具体失败步骤</p>
@@ -371,7 +380,7 @@ function outcomeBadgeClass(outcome) {
           <div v-if="failedCases.length > 0">
             <h3 class="sec-title" :style="failedSteps.length > 0 ? { marginTop: '16px' } : undefined">
               📋 迭代失败汇总
-              <span class="sec-badge" style="background:var(--app-status-danger-text, #a03030);">{{ failedCases.length }} 用例</span>
+              <span class="sec-badge" style="background:var(--app-status-danger-text);">{{ failedCases.length }} 用例</span>
             </h3>
             <p class="sec-sub">点击用例展开查看迭代失败详情</p>
             <div v-for="(c, idx) in failedCases" :key="'fail-' + c.case_id" class="fail-card">
@@ -433,23 +442,25 @@ function outcomeBadgeClass(outcome) {
 </template>
 
 <style scoped>
-.doc-page{display:flex;flex-direction:column;height:100%;overflow-y:auto}
-.doc-body{padding:var(--app-space-md) var(--app-space-lg) var(--app-space-2xl);display:flex;flex-direction:column;gap:var(--app-space-md);width:100%}
+.doc-page{display:flex;flex-direction:column} /* height / overflow 由外壳 :deep(.doc-page) 承担 */
+.report-detail-page .doc-body{padding:var(--app-space-md) var(--app-space-lg) var(--app-space-2xl);display:flex;flex-direction:column;gap:var(--app-space-md);width:100%}
+/* 模块私有色值登记（tokens.css 未登记该值）：表格行 / 失败卡 hover 底色 · 失败卡阴影色 */
+.report-detail-page{--rg-hover-bg:var(--color-white) /* -> --color-white */;--rg-shadow-soft:var(--color-ink-05-a05)}
 .top-bar{display:flex;align-items:center;gap:12px;margin-bottom:var(--app-space-xs);flex-wrap:wrap}
-.run-meta{display:flex;align-items:center;gap:10px;font-size:var(--app-size-xs);color:var(--app-ink-muted);flex-wrap:wrap}
+.run-meta{display:flex;align-items:center;gap:10px;font-size:var(--app-size-xs);color:var(--app-text-secondary);flex-wrap:wrap}
 .kpi-row{display:grid;grid-template-columns:var(--layout-kpi-cols);gap:12px;margin-bottom:var(--app-space-xs)}
-.kpi-sub{font-size:var(--app-size-xs);color:var(--app-ink-muted);margin-top:2px}
+.kpi-sub{font-size:var(--app-size-xs);color:var(--app-text-secondary);margin-top:2px}
 .task-meta-bar{display:flex;flex-wrap:wrap;gap:10px;padding:12px var(--app-space-md);background:var(--app-bg-card);border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;margin-bottom:var(--app-space-xs);font-size:var(--app-size-xs)}.task-meta-item{display:flex;align-items:center;gap:6px}.meta-label{opacity:0.5;font-weight:600}.meta-value{font-weight:700}.full-width{width:100%}.conclusion-text{font-style:italic}
-.detail-tabs :deep(.el-tabs__header){margin-bottom:0;padding:0 var(--app-space-sm)}.detail-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:var(--app-space-xs)}.detail-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:var(--app-ink-muted);height:auto;line-height:1.4}.detail-tabs :deep(.el-tabs__item:hover){color:var(--ink)}.detail-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-dashboard);border-color:var(--ink)}.detail-tabs :deep(.el-tabs__active-bar){display:none}.detail-tabs :deep(.el-tabs__content){padding:12px 0 0}
-.table-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:var(--app-space-sm) var(--app-space-md) 0}.page-size-btns{display:flex;gap:var(--app-space-xs)}.toolbar-label{font-size:var(--app-size-xs);font-weight:700;color:var(--app-ink-muted)}.page-size-btn{padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;color:var(--app-ink-muted);background:var(--app-bg-card);border:2px solid #e8ecf1;border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit}.page-size-btn:hover{border-color:var(--ink);color:var(--ink)}.page-size-btn.active{background:var(--app-bg-subtle);border-color:var(--ink);color:var(--ink)}.page-info{font-size:var(--app-size-xs);color:var(--app-ink-muted);font-weight:600;white-space:nowrap;margin-left:auto}.page-nav{display:flex;gap:6px;margin-left:var(--app-space-sm)}.page-nav :deep(.el-button){padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;border:2px solid var(--ink)!important;border-radius:4px 8px 4px 8px!important;background:var(--app-bg-card);color:var(--ink)}.page-nav :deep(.el-button:hover){background:var(--c-dashboard)}
-.detail-table :deep(th){background:var(--app-bg-subtle)!important;color:var(--ink)!important;font-weight:700!important;font-size:var(--app-size-xs)!important;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2.5px solid var(--ink)!important}.detail-table :deep(td){border-bottom:1px solid #e8e4d8!important;color:var(--ink)}.detail-table :deep(tr:hover td){background:#fefdfb!important}
-.mono{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600}.num-pass{color:var(--app-status-success-text);font-weight:700}.num-fail{color:#a03030;font-weight:700}
-.rate-cell{display:flex;align-items:center;gap:var(--app-space-sm)}.progress-bar{flex:1;height:8px;background:var(--app-border-lighter);border-radius:4px;overflow:hidden;border:1px solid var(--ink)}.p-pass{height:100%;background:var(--c-device);border-radius:3px}.p-fail{height:100%;background:var(--c-runner);border-radius:3px}.rate-text{font-size:var(--app-size-xs);font-weight:700;min-width:36px}.rate-ok{color:var(--app-status-success-text)}.rate-warn{color:var(--app-queue-text)}.rate-bad{color:#a03030}
+.detail-tabs :deep(.el-tabs__header){margin-bottom:0;padding:0 var(--app-space-sm)}.detail-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:var(--app-space-xs)}.detail-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:var(--app-text-secondary);height:auto;line-height:1.4}.detail-tabs :deep(.el-tabs__item:hover){color:var(--ink)}.detail-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-dashboard);border-color:var(--ink)}.detail-tabs :deep(.el-tabs__active-bar){display:none}.detail-tabs :deep(.el-tabs__content){padding:12px 0 0}
+.table-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:var(--app-space-sm) var(--app-space-md) 0}.page-size-btns{display:flex;gap:var(--app-space-xs)}.toolbar-label{font-size:var(--app-size-xs);font-weight:700;color:var(--app-text-secondary)}.page-size-btn{padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;color:var(--app-text-secondary);background:var(--app-bg-card);border:2px solid var(--app-border-light);border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit}.page-size-btn:hover{border-color:var(--ink);color:var(--ink)}.page-size-btn.active{background:var(--app-bg-subtle);border-color:var(--ink);color:var(--ink)}.page-info{font-size:var(--app-size-xs);color:var(--app-text-secondary);font-weight:600;white-space:nowrap;margin-left:auto}.page-nav{display:flex;gap:6px;margin-left:var(--app-space-sm)}.page-nav :deep(.el-button){padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;border:2px solid var(--ink)!important;border-radius:4px 8px 4px 8px!important;background:var(--app-bg-card);color:var(--ink)}.page-nav :deep(.el-button:hover){background:var(--c-dashboard)}
+.detail-table :deep(th){background:var(--app-bg-subtle)!important;color:var(--ink)!important;font-weight:700!important;font-size:var(--app-size-xs)!important;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2.5px solid var(--ink)!important}.detail-table :deep(td){border-bottom:1px solid var(--el-border-color-light)!important;color:var(--ink)}.detail-table :deep(tr:hover td){background:var(--rg-hover-bg)!important}
+.mono{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600}.num-pass{color:var(--app-status-success-text);font-weight:700}.num-fail{color:var(--app-status-danger-text);font-weight:700}
+.rate-cell{display:flex;align-items:center;gap:var(--app-space-sm)}.progress-bar{flex:1;height:8px;background:var(--app-border-lighter);border-radius:4px;overflow:hidden;border:1px solid var(--ink)}.p-pass{height:100%;background:var(--c-device);border-radius:3px}.p-fail{height:100%;background:var(--c-runner);border-radius:3px}.rate-text{font-size:var(--app-size-xs);font-weight:700;min-width:36px}.rate-ok{color:var(--app-status-success-text)}.rate-warn{color:var(--app-queue-text)}.rate-bad{color:var(--app-status-danger-text)}
 .badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);display:inline-block}.badge-pass{background:var(--app-status-success-bg);color:var(--app-status-success-text)}.badge-fail{background:var(--app-status-danger-bg);color:var(--app-status-danger-text)}.badge-stopped{background:var(--app-offline);color:var(--app-text-secondary)}.badge-warn{background:var(--app-status-warning-bg);color:var(--app-warning-text)}
 /* 失败分析卡片 */
-.fail-card{background:var(--app-bg-card);border:2.5px solid var(--c-runner);border-radius:6px 10px 6px 10px;margin-bottom:10px;overflow:hidden;box-shadow:2px 3px 0 rgba(0,0,0,0.04)}.fail-card :deep(.el-card){border:none!important;box-shadow:none!important;border-radius:0!important}.fail-card-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;font-size:var(--app-size-xs);font-weight:600;border-bottom:1.5px solid #e8e4d8}.fail-card-header:hover{background:#fefdfb}.expand-icon{font-size:var(--app-size-xs);transition:transform 0.2s;color:var(--ink);opacity:0.5}.expand-icon.open{transform:rotate(90deg)}.fail-case-title-wrap{flex:1;min-width:0}.fail-case-title{display:block;font-weight:700}.fail-case-id{font-family:var(--app-font-mono);font-size:var(--app-size-xs);color:var(--app-ink-muted)}.fail-card-meta{font-size:var(--app-size-xs);color:var(--app-ink-muted);white-space:nowrap}.fail-expand-hint{font-size:var(--app-size-xs);color:var(--c-workflow);white-space:nowrap}
-.expand-panel{padding:14px var(--app-space-md);border-top:1.5px solid #e8e4d8}.expand-header{font-weight:700;font-size:var(--app-size-xs);margin-bottom:10px;color:var(--ink)}.fail-step-row{margin-bottom:10px;padding:10px 12px;background:#fefdfb;border:1.5px solid #e8e4d8;border-radius:4px 8px 4px 8px}
-.fail-detail-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:var(--app-space-sm)}.fd-label{font-size:var(--app-size-xs);font-weight:700;opacity:0.4;text-transform:uppercase}.fd-value{font-size:var(--app-size-xs);font-weight:600}.fd-error{color:#a03030}.fail-step-row__head{display:flex;align-items:center;gap:var(--app-space-sm);margin-bottom:var(--app-space-xs)}.fail-step-row__meta{font-size:var(--app-size-xs);color:var(--app-ink-muted)}
-.mini-table{width:100%;border-collapse:collapse;font-size:var(--app-size-xs);margin:var(--app-space-sm) 0}.mini-table th{background:var(--app-bg-subtle);font-weight:700;font-size:var(--app-size-xs);text-transform:uppercase;letter-spacing:0.04em;padding:6px 10px;text-align:left;border-bottom:2px solid var(--ink)}.mini-table td{padding:6px 10px;border-bottom:1px solid #e8e4d8}.row-fail td{color:#a03030}
-.sec-title{font-family:var(--app-font-display);font-size:var(--app-size-md);font-weight:700;margin-top:12px;margin-bottom:8px;display:inline-block;position:relative}.sec-title::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%231e1e24' stroke-width='2' fill='none'/%3E%3C/svg%3E")repeat-x;background-size:40px 3px}.sec-badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 8px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);margin-left:6px}.sec-sub{font-size:var(--app-size-xs);color:var(--app-ink-muted);margin-bottom:10px}
+.fail-card{background:var(--app-bg-card);border:2.5px solid var(--c-runner);border-radius:6px 10px 6px 10px;margin-bottom:10px;overflow:hidden;box-shadow:2px 3px 0 var(--rg-shadow-soft)}.fail-card :deep(.el-card){border:none!important;box-shadow:none!important;border-radius:0!important}.fail-card-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;font-size:var(--app-size-xs);font-weight:600;border-bottom:1.5px solid var(--el-border-color-light)}.fail-card-header:hover{background:var(--rg-hover-bg)}.expand-icon{font-size:var(--app-size-xs);transition:transform 0.2s;color:var(--ink);opacity:0.5}.expand-icon.open{transform:rotate(90deg)}.fail-case-title-wrap{flex:1;min-width:0}.fail-case-title{display:block;font-weight:700}.fail-case-id{font-family:var(--app-font-mono);font-size:var(--app-size-xs);color:var(--app-text-secondary)}.fail-card-meta{font-size:var(--app-size-xs);color:var(--app-text-secondary);white-space:nowrap}.fail-expand-hint{font-size:var(--app-size-xs);color:var(--c-workflow);white-space:nowrap}
+.expand-panel{padding:14px var(--app-space-md);border-top:1.5px solid var(--el-border-color-light)}.expand-header{font-weight:700;font-size:var(--app-size-xs);margin-bottom:10px;color:var(--ink)}.fail-step-row{margin-bottom:10px;padding:10px 12px;background:var(--rg-hover-bg);border:1.5px solid var(--el-border-color-light);border-radius:4px 8px 4px 8px}
+.fail-detail-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:var(--app-space-sm)}.fd-label{font-size:var(--app-size-xs);font-weight:700;opacity:0.4;text-transform:uppercase}.fd-value{font-size:var(--app-size-xs);font-weight:600}.fd-error{color:var(--app-status-danger-text)}.fail-step-row__head{display:flex;align-items:center;gap:var(--app-space-sm);margin-bottom:var(--app-space-xs)}.fail-step-row__meta{font-size:var(--app-size-xs);color:var(--app-text-secondary)}
+.mini-table{width:100%;border-collapse:collapse;font-size:var(--app-size-xs);margin:var(--app-space-sm) 0}.mini-table th{background:var(--app-bg-subtle);font-weight:700;font-size:var(--app-size-xs);text-transform:uppercase;letter-spacing:0.04em;padding:6px 10px;text-align:left;border-bottom:2px solid var(--ink)}.mini-table td{padding:6px 10px;border-bottom:1px solid var(--el-border-color-light)}.row-fail td{color:var(--app-status-danger-text)}
+.sec-title{font-family:var(--app-font-display);font-size:var(--app-size-md);font-weight:700;margin-top:12px;margin-bottom:8px;display:inline-block;position:relative}.sec-title::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%231e1e24' stroke-width='2' fill='none'/%3E%3C/svg%3E")repeat-x;background-size:40px 3px}.sec-badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 8px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);margin-left:6px}.sec-sub{font-size:var(--app-size-xs);color:var(--app-text-secondary);margin-bottom:10px}
 </style>

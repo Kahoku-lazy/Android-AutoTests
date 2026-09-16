@@ -28,8 +28,17 @@ const statusMeta: Record<string, StatusMetaItem> = {
   idle: { icon: '○', label: '未执行', cls: 'is-idle' },
 }
 
+function panelStatus(raw?: string): string {
+  const key = (raw || '').toLowerCase()
+  if (key === 'completed' || key === 'success') return 'success'
+  if (key === 'failed') return 'failed'
+  if (key === 'running') return 'running'
+  if (key === 'partial') return 'partial'
+  return statusMeta[key] ? key : 'idle'
+}
+
 function meta(status: string): StatusMetaItem {
-  return statusMeta[status] || statusMeta['idle']
+  return statusMeta[panelStatus(status)] || statusMeta['idle']
 }
 
 function taskId(task: RecentTask): string | number | null {
@@ -39,7 +48,7 @@ function taskId(task: RecentTask): string | number | null {
 function openTask(task: RecentTask) {
   const id = taskId(task)
   if (!id) return
-  router.push('/reports')
+  router.push(`/ai-assistant/tasks/${id}`)
 }
 </script>
 
@@ -90,7 +99,7 @@ function openTask(task: RecentTask) {
         <div class="task-row__time">{{ task.time }}</div>
       </div>
     </div>
-    <div v-else class="task-result-panel__empty">暂无执行记录，前往执行引擎启动任务</div>
+    <div v-else class="task-result-panel__empty">暂无任务卡片，前往平台小助手新建</div>
   </div>
 </template>
 
@@ -171,7 +180,7 @@ function openTask(task: RecentTask) {
 .task-row__status.is-failed  { background: var(--app-status-danger-bg); color: var(--app-status-danger-text); }
 .task-row__status.is-partial { background: var(--app-status-warning-bg); color: var(--app-warning-text); }
 .task-row__status.is-running { background: var(--app-status-purple-bg); color: var(--app-status-purple-text); animation: pulse 1.5s ease-in-out infinite; }
-.task-row__status.is-idle    { background: var(--app-bg-subtle); color: var(--app-ink-muted); }
+.task-row__status.is-idle    { background: var(--app-bg-subtle); color: var(--app-text-secondary); }
 
 .task-row__body { flex: 1; min-width: 0; }
 .task-row__title { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); margin-bottom: 3px; }
@@ -187,10 +196,10 @@ function openTask(task: RecentTask) {
 .case-icon.is-partial { background: var(--app-status-warning-bg); color: var(--app-warning-text); }
 .case-icon.is-running { background: var(--app-status-purple-bg); color: var(--app-status-purple-text); }
 
-.task-row__stats { font-size: var(--app-size-xs); color: var(--app-ink-muted); font-weight: 600; }
-.task-row__time { font-size: var(--app-size-xs); color: var(--app-ink-muted); white-space: nowrap; flex-shrink: 0; padding-top: 3px; }
+.task-row__stats { font-size: var(--app-size-xs); color: var(--app-text-secondary); font-weight: 600; }
+.task-row__time { font-size: var(--app-size-xs); color: var(--app-text-secondary); white-space: nowrap; flex-shrink: 0; padding-top: 3px; }
 
-.task-result-panel__empty { text-align: center; color: var(--app-ink-muted); font-size: var(--app-size-sm); padding: 20px 0; }
+.task-result-panel__empty { text-align: center; color: var(--app-text-secondary); font-size: var(--app-size-sm); padding: 20px 0; }
 
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 

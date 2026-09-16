@@ -1,53 +1,54 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import type { FormInstance } from 'element-plus'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import FilterTabs from '@/shared/components/FilterTabs.vue'
 import ConfirmButton from '@/shared/components/patterns/ConfirmButton.vue'
-import { taskDetailRoute, taskStatusLabel, taskStatusTone } from '../constants'
+import DoodleNote from '@/shared/components/DoodleNote.vue'
+import DoodleBtn from '@/shared/components/DoodleBtn.vue'
+import {
+  taskDetailRoute,
+  taskStatusTone,
+  type TaskStatusTone,
+} from '../constants'
 import { useTaskPublish } from '../composables/useTaskPublish'
 import { useTaskList } from '../composables/useTaskList'
 
+/** 任务态 → sticky 底色：成功 Do / 失败 Dont / 执行中 / 等待 */
+function stickyStatus(tone: TaskStatusTone): 'ok' | 'run' | 'fail' | 'wait' {
+  if (tone === 'success') return 'ok'
+  if (tone === 'failed') return 'fail'
+  if (tone === 'running') return 'run'
+  return 'wait'
+}
+
 const router = useRouter()
 const { form, submitting, devices, dialogVisible, openDialog, closeDialog, submit } = useTaskPublish()
+
+const taskFormRef = ref<FormInstance>()
+/** 任务目标必填（EP 字段级校验；原由提交按钮 :disabled 兜底） */
+const taskRules = {
+  goal: [{ required: true, message: '请填写任务目标', trigger: 'blur' }],
+}
 const {
   tasks, loading, error, load,
   activeFilter, filterTabs, filteredItems, groupedByStatus, expandedGroups, emptyCopy,
-  remove, clearAll,
+  clearAll,
 } = useTaskList()
 
 function openDetail(taskId: number) {
   router.push(taskDetailRoute(taskId))
 }
 
-function formatTime(raw?: string): string {
-  if (!raw) return ''
-  return raw.replace('T', ' ').slice(0, 16)
-}
-
-function resultSummary(raw?: string): string {
-  if (!raw) return ''
-  const text = raw.trim()
-  const clamp = (s: string) => {
-    const t = s.replace(/\s+/g, ' ').trim()
-    return t.length > 120 ? `${t.slice(0, 120)}…` : t
-  }
-  try {
-    const obj = JSON.parse(text)
-    if (typeof obj === 'string') return clamp(obj)
-    if (obj && typeof obj === 'object') {
-      const summary = obj.summary || obj.message || obj.reason
-      if (typeof summary === 'string' && summary) return clamp(summary)
-      if (Array.isArray(obj.completed) && obj.completed.length) {
-        return clamp(`已完成 ${obj.completed.length} 项`)
-      }
-      if (obj.status) return clamp(String(obj.status))
-    }
-  } catch { /* 非 JSON，走原文截断 */ }
-  return clamp(text)
-}
-
 async function onSubmit() {
+  try {
+    await taskFormRef.value?.validate()
+  } catch {
+    // 校验失败：EP 的 validate 以 reject 表示，交由字段内联提示（非静默吞错）
+    return
+  }
   await submit(() => {
     closeDialog()
     load()
@@ -76,9 +77,9 @@ async function onSubmit() {
     </div>
 
     <!-- 新建任务弹窗 -->
-    <el-dialog v-model="dialogVisible" title="新建任务" width="640px">
-      <el-form label-width="120px" @submit.prevent>
-        <el-form-item label="任务目标" required>
+    <el-dialog v-model="dialogVisible" title="新建任务" width="640px" :close-on-click-modal="false">
+      <el-form ref="taskFormRef" :model="form" :rules="taskRules" label-width="120px" @submit.prevent>
+        <el-form-item label="任务目标" prop="goal">
           <el-input v-model="form.goal" type="textarea" :rows="2" placeholder="例如：拖动 H705F 的色温滑块到最左端" />
         </el-form-item>
         <el-form-item label="任务附件文件">
@@ -123,35 +124,21 @@ async function onSubmit() {
             </div>
           </template>
           <div class="task-card-grid">
-            <article v-for="t in group.items" :key="t.id" class="task-card">
-              <div class="task-card__head">
+            <DoodleNote
+              v-for="t in group.items"
+              :key="t.id"
+              class="task-card"
+              variant="sticky"
+              :status="stickyStatus(taskStatusTone(t.status))"
+              :tilt="taskStatusTone(t.status) === 'failed' ? 1.2 : -1.1"
+            >
+              <template #header>
                 <h4 class="task-card__title">{{ t.title || t.goal }}</h4>
-                <div class="task-card__badges">
-                  <span class="task-card__status" :class="`is-${taskStatusTone(t.status)}`">
-                    {{ taskStatusLabel(t.status) }}
-                  </span>
-                </div>
-              </div>
-              <p class="task-card__goal">{{ t.goal }}</p>
-              <div class="task-card__meta">
-                <span v-if="t.device_serial" class="task-card__tag">{{ t.device_serial }}</span>
-                <span class="task-card__time">{{ formatTime(t.created_at) }}</span>
-              </div>
-              <p v-if="t.result" class="task-card__result">{{ resultSummary(t.result) }}</p>
-              <div class="task-card__actions">
-                <el-button size="small" @click="openDetail(t.id)">详情</el-button>
-                <ConfirmButton
-                  size="small"
-                  type="warning"
-                  danger
-                  plain
-                  :message="`删除任务「${t.title || t.goal}」？`"
-                  title="确认删除"
-                  confirm-text="删除"
-                  @confirm="remove(t)"
-                >删除</ConfirmButton>
-              </div>
-            </article>
+              </template>
+              <template #actions>
+                <DoodleBtn tone="teal" @click="openDetail(t.id)">详情</DoodleBtn>
+              </template>
+            </DoodleNote>
           </div>
         </el-collapse-item>
       </el-collapse>
@@ -180,7 +167,8 @@ async function onSubmit() {
   border: 2px solid var(--ai-warm-border);
   border-radius: var(--app-radius-lg);
   margin-bottom: var(--app-space-sm);
-  overflow: hidden;
+  /* 可见：sticky 胶带 / 硬阴影 / 微倾不被裁切 */
+  overflow: visible;
 }
 .task-status-collapse :deep(.el-collapse-item__header) {
   height: var(--el-collapse-header-height);
@@ -237,79 +225,35 @@ async function onSubmit() {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: var(--app-space-md);
+  /* 胶带探出与微倾留白 */
+  padding-top: var(--app-space-sm);
 }
-.task-card {
-  background: var(--ai-sticky-bg);
-  border: 2.5px solid var(--ink);
-  border-radius: var(--app-radius-md);
-  padding: var(--app-space-md);
-  display: flex;
-  flex-direction: column;
-  gap: var(--app-space-sm);
-  box-shadow: var(--app-shadow-sm);
-  transition: transform var(--app-duration) var(--app-ease);
-}
-.task-card:hover { transform: translateY(-2px); }
-.task-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--app-space-sm); }
 .task-card__title {
   margin: 0; font-size: var(--app-size-md); font-weight: 800; color: var(--ai-ink-soft);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.task-card__badges {
-  display: flex; flex-shrink: 0; flex-wrap: wrap; gap: 6px; justify-content: flex-end;
-}
-.task-status-head__label,
-.task-card__status {
+.task-status-head__label {
   flex-shrink: 0;
   font-size: var(--app-size-xs); font-weight: 700; padding: 2px 7px;
   border-radius: 3px 6px 3px 6px; border: 1.5px solid var(--ink); white-space: nowrap;
   line-height: 1.2;
 }
-.task-status-head__label.is-pending,
-.task-card__status.is-pending {
+.task-status-head__label.is-pending {
   background: var(--ai-bg-neutral); color: var(--app-timeline-dot); border-color: var(--app-offline);
 }
-.task-status-head__label.is-running,
-.task-card__status.is-running {
+.task-status-head__label.is-running {
   background: var(--ai-status-blue-bg); color: var(--ai-status-blue-text); border-color: var(--ai-status-blue-border);
 }
-.task-status-head__label.is-success,
-.task-card__status.is-success {
+.task-status-head__label.is-success {
   background: var(--app-status-success-bg); color: var(--app-status-success-text); border-color: var(--app-status-success);
 }
-.task-status-head__label.is-failed,
-.task-card__status.is-failed {
+.task-status-head__label.is-failed {
   background: var(--app-status-danger-bg); color: var(--app-status-danger-text); border-color: var(--app-status-danger);
 }
-.task-status-head__label.is-cancelled,
-.task-card__status.is-cancelled {
+.task-status-head__label.is-cancelled {
   background: var(--ai-bg-neutral); color: var(--ai-ink-muted); border-color: var(--app-offline);
 }
-.task-status-head__label.is-paused,
-.task-card__status.is-paused {
+.task-status-head__label.is-paused {
   background: var(--app-status-warning-bg); color: var(--ai-hint-orange); border-color: var(--app-highlight);
-}
-.task-card__goal {
-  margin: 0; font-size: var(--app-size-sm); color: var(--ai-ink-soft); line-height: 1.5;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-}
-.task-card__meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.task-card__tag {
-  font-size: var(--app-size-xs); font-weight: 700; padding: 2px 7px;
-  border-radius: 3px 6px 3px 6px; border: 1.5px solid var(--ai-warm-border);
-  background: var(--ai-warm-bg); color: var(--ai-ink-muted);
-}
-.task-card__time { font-size: var(--app-size-xs); color: var(--ai-ink-muted); margin-left: auto; }
-.task-card__result {
-  margin: 0; font-size: var(--app-size-xs); color: var(--ai-ink-muted); line-height: 1.5;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-}
-.task-card__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--app-space-sm);
-  margin-top: auto;
-  padding-top: var(--app-space-sm);
-  border-top: 1.5px dashed var(--ai-warm-border);
 }
 </style>

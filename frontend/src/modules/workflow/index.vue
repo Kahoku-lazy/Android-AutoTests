@@ -6,7 +6,7 @@
  */
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox, type InputInstance } from 'element-plus'
 import { useWorkflowStore } from '@/modules/workflow/stores/workflowStore'
 import { useLibraryStore, type LibNode } from '@/modules/workflow/stores/libraryStore'
 import { getWorkflowPrototype } from '@/modules/workflow/api'
@@ -131,10 +131,26 @@ async function persistPageFlow(opts?: { confirmEmptyOverwrite?: boolean }) {
   if (!cur || !isFlowDocType(cur.type)) return
   if (hydratedFlowId.value !== cur.id) return
   await lib.savePageFlowPayload(cur.id, store.snapshotGraph(cur.name), {
-    confirmEmptyOverwrite: opts?.confirmEmptyOverwrite,
+    // 空图覆盖确认由 UI 层实现（依赖倒置：store 不再依赖 Element Plus）
+    confirmEmptyOverwrite: opts?.confirmEmptyOverwrite ? confirmEmptyOverwriteDialog : undefined,
     // 自动/切页保存：绝不用空图静默覆盖服务器已有数据
     skipEmptyOverwrite: !opts?.confirmEmptyOverwrite,
   })
+}
+
+/** 空图覆盖确认（UI 层职责；store 只消费它的返回值） */
+async function confirmEmptyOverwriteDialog(remoteNodes: number): Promise<boolean> {
+  try {
+    await ElMessageBox.confirm(
+      `服务器上已有 ${remoteNodes} 个节点，当前画布为空。确定要用空图覆盖吗？`,
+      '覆盖确认',
+      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' },
+    )
+    return true
+  } catch {
+    // 用户取消：ElMessageBox 以 reject 表示取消（非静默吞错）
+    return false
+  }
 }
 
 async function persistActive() {
@@ -257,6 +273,12 @@ async function confirmCreateFolder() {
 
 function cancelCreate() {
   creatingKind.value = null
+}
+
+/** 名称输入框：EP 对话框不保证原生 autofocus 生效，打开后主动聚焦并全选 */
+const folderNameInputRef = ref<InputInstance | null>(null)
+function onFolderDialogOpened() {
+  folderNameInputRef.value?.select?.()
 }
 
 async function askCreateFlow(parentId?: string | null) {
@@ -396,39 +418,31 @@ watch(
 
     <ErrorState v-if="error" :message="error" @retry="retryLoad" />
 
-    <Teleport to="body">
-      <div
-        v-if="creatingKind === 'folder'"
-        class="wf-modal-backdrop"
-        @click.self="cancelCreate"
-      >
-        <div
-          class="wf-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="wf-folder-dialog-title"
-          @keydown.esc="cancelCreate"
-        >
-          <h3 id="wf-folder-dialog-title" class="wf-modal-title">{{ folderDialogTitle }}</h3>
-          <p class="wf-modal-hint">{{ folderDialogHint }}</p>
-          <label class="wf-modal-label" for="wf-folder-name">目录名称</label>
-          <input
-            id="wf-folder-name"
-            v-model="createName"
-            class="wf-modal-inp"
-            maxlength="80"
-            autofocus
-            @focus="($event.target as HTMLInputElement).select()"
-            @keydown.enter="confirmCreateFolder"
-          />
-          <div class="wf-modal-actions">
-            <button type="button" class="wf-btn" @click="cancelCreate">取消</button>
-            <button type="button" class="wf-btn wf-btn--primary" @click="confirmCreateFolder">确定</button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <el-dialog
+      :model-value="creatingKind === 'folder'"
+      :title="folderDialogTitle"
+      width="400px"
+      :close-on-click-modal="false"
+      @update:model-value="(v: boolean) => { if (!v) cancelCreate() }"
+      @opened="onFolderDialogOpened"
+    >
+      <p class="wf-modal-hint">{{ folderDialogHint }}</p>
+      <label class="wf-modal-label" for="wf-folder-name">目录名称</label>
+      <el-input
+        id="wf-folder-name"
+        ref="folderNameInputRef"
+        v-model="createName"
+        maxlength="80"
+        @keyup.enter="confirmCreateFolder"
+      />
+      <template #footer>
+        <el-button @click="cancelCreate">取消</el-button>
+        <el-button type="primary" @click="confirmCreateFolder">确定</el-button>
+      </template>
+    </el-dialog>
 
+    <!-- L3 容器登记例外：本页主体是自由布局画布（资源态目录树 / 绘制态 VueFlow），不适用 .doc-body。
+         例外判据见 openspec/specs/frontend-l3-container/spec.md 与 frontend/AGENTS.md L2 速查 §⑥ -->
     <div class="wb-body" :class="{ 'wb-body--editing': editing }">
       <!-- 资源态：仅目录树 -->
       <WorkflowDirTree
@@ -468,6 +482,9 @@ watch(
   min-height: 0;
   background: transparent;
   overflow: hidden;
+  /* ── 本模块私有色：tokens.css 未登记，登记在页面根作用域（消费者 .wf-btn / .status-pill 均在其内）── */
+  --wf-btn-press-shadow: var(--color-ink-05-a05) /* -> --color-ink-05-a05 */;        /* 按钮按下硬阴影 */
+  --wf-status-pill-border: var(--color-cyan-74-a30) /* -> --color-cyan-74-a30 */; /* 状态胶囊描边（工作流蓝 40%） */
 }
 
 /* ── 顶栏动作区 ── */
@@ -501,7 +518,7 @@ watch(
 }
 .wf-btn:active {
   transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.05);
+  box-shadow: 1px 1px 0 var(--wf-btn-press-shadow);
 }
 .wf-btn:focus-visible {
   outline: 2px solid var(--c-workflow);
@@ -541,7 +558,7 @@ watch(
   color: var(--ac-accent-deep);
   padding: var(--app-space-xs) 10px;
   background: var(--ac-accent-soft);
-  border: 1.5px solid rgba(137, 207, 240, 0.4);
+  border: 1.5px solid var(--wf-status-pill-border);
   border-radius: 999px;
 }
 
@@ -575,33 +592,6 @@ watch(
 </style>
 
 <style>
-.wf-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  /* z-index 70 = 弹窗层（.agents/skills/android-autotests-rules/references/frontend.md z-index 层级） */
-  z-index: 70;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: var(--app-overlay);
-}
-.wf-modal {
-  width: min(400px, 100%);
-  padding: 22px 22px 18px;
-  background: var(--app-bg-card);
-  border: 2.5px solid var(--ink);
-  border-radius: var(--app-radius-md);
-  box-shadow: var(--app-shadow-lg);
-  font-family: var(--app-font, 'Cascadia Mono', 'Noto Sans SC', sans-serif);
-  color: var(--ink);
-}
-.wf-modal-title {
-  margin: 0;
-  font-size: var(--app-size-lg);
-  font-weight: 800;
-  color: var(--ink);
-}
 .wf-modal-hint {
   margin: 6px 0 var(--app-space-md);
   font-size: var(--app-size-sm);
@@ -614,55 +604,5 @@ watch(
   font-weight: 700;
   color: var(--ink);
   margin-bottom: 6px;
-}
-.wf-modal-inp {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  border: 2px solid var(--ink);
-  border-radius: var(--app-radius-sm);
-  background: #ffffff;
-  color: var(--ink);
-  font-size: var(--app-size-sm);
-  font-weight: 600;
-  font-family: inherit;
-  outline: none;
-  transition: border-color 0.12s var(--app-ease);
-}
-.wf-modal-inp:focus {
-  border-color: var(--c-workflow);
-}
-.wf-modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 18px;
-}
-.wf-modal .wf-btn {
-  padding: 7px var(--app-space-md);
-  border: 2.5px solid var(--ink);
-  border-radius: var(--app-radius-sm);
-  background: var(--app-bg-card);
-  font-size: var(--app-size-sm);
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  color: var(--ink);
-  box-shadow: var(--app-shadow-sm);
-  transition: background 0.12s var(--app-ease);
-}
-.wf-modal .wf-btn:hover {
-  background: rgba(137, 207, 240, 0.16);
-}
-.wf-modal .wf-btn--primary {
-  background: var(--c-workflow);
-}
-.wf-modal .wf-btn--primary:hover {
-  background: var(--c-workflow);
-  filter: brightness(1.04);
-}
-.wf-modal .wf-btn:focus-visible {
-  outline: 2px solid var(--c-workflow);
-  outline-offset: 2px;
 }
 </style>

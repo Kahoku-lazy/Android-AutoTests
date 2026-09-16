@@ -201,3 +201,6 @@ temps/
 
 # ── 测试产物（Allure / JUnit 报告，自动生成）──
 tests/reports/
+
+# Cursor
+.git/cursor/

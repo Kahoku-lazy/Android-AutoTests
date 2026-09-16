@@ -65,7 +65,7 @@
 .dev-mock-toggle__label {
   font-size: var(--app-size-xs);
   font-weight: 700;
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   white-space: nowrap;
 }
 
@@ -82,7 +82,7 @@
   font-size: var(--app-size-xs);
   font-weight: 700;
   background: transparent;
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   border: none;
   cursor: pointer;
   font-family: inherit;
@@ -137,7 +137,7 @@
 .card-group-count {
   font-family: var(--app-font-mono);
   font-size: var(--app-size-xs);
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   background: var(--app-bg-subtle);
   padding: 2px 9px;
   border-radius: 999px;
@@ -175,7 +175,7 @@
 .toolbar-label {
   font-size: var(--app-size-xs);
   font-weight: 700;
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   white-space: nowrap;
 }
 .page-size-btns { display: flex; gap: 6px; }
@@ -185,7 +185,7 @@
   border-radius: var(--app-radius-sm);
   border: 1px solid var(--app-border-light);
   background: var(--app-bg-card);
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   font-size: var(--app-size-sm);
   font-weight: 700;
   cursor: pointer;
@@ -193,7 +193,7 @@
 }
 .page-size-btn:hover { border-color: var(--app-border-lighter); color: var(--ink); }
 .page-size-btn.active {
-  background: color-mix(in srgb, var(--c-device) 22%, white);
+  background: color-mix(in srgb, var(--c-device) 22%, var(--app-bg-card));
   border-color: var(--ink);
   color: var(--ink);
 }
@@ -206,7 +206,7 @@
 }
 .page-info {
   font-size: var(--app-size-sm);
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -293,7 +293,7 @@
 
 /* ── 表头：大字号居中 + 分色底边 ── */
 .device-table-wrapper :deep(.el-table th.el-table__cell) {
-  background: linear-gradient(180deg, var(--app-bg-subtle), rgba(248, 246, 242, 0.4)) !important;
+  background: linear-gradient(180deg, var(--app-bg-subtle), color-mix(in srgb, var(--app-bg-subtle) 40%, transparent)) !important;
   color: var(--ink) !important;
   font-size: var(--app-size-md) !important;
   font-weight: 800 !important;
@@ -340,16 +340,16 @@
   position: relative;
 }
 .device-table-wrapper :deep(.el-table__body tr:nth-child(3n+1) td.el-table__cell) {
-  border-bottom-color: color-mix(in srgb, var(--c-device) 45%, white) !important;
+  border-bottom-color: color-mix(in srgb, var(--c-device) 45%, var(--app-bg-card)) !important;
 }
 .device-table-wrapper :deep(.el-table__body tr:nth-child(3n+2) td.el-table__cell) {
-  border-bottom-color: color-mix(in srgb, var(--c-dashboard) 55%, white) !important;
+  border-bottom-color: color-mix(in srgb, var(--c-dashboard) 55%, var(--app-bg-card)) !important;
 }
 .device-table-wrapper :deep(.el-table__body tr:nth-child(3n) td.el-table__cell) {
-  border-bottom-color: color-mix(in srgb, var(--c-element) 50%, white) !important;
+  border-bottom-color: color-mix(in srgb, var(--c-element) 50%, var(--app-bg-card)) !important;
 }
 .device-table-wrapper :deep(.el-table__body tr:hover > td.el-table__cell) {
-  background: color-mix(in srgb, var(--c-device) 12%, white) !important;
+  background: color-mix(in srgb, var(--c-device) 12%, var(--app-bg-card)) !important;
 }
 
 /* 左侧状态色条 */
@@ -401,7 +401,7 @@
   gap: 6px 10px;
   font-size: var(--app-size-xs);
   font-weight: 600;
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
 }
 .dev-meta code {
   font-family: var(--app-font-mono);
@@ -429,11 +429,11 @@
   white-space: nowrap;
 }
 .conn-chip--wifi {
-  background: color-mix(in srgb, var(--c-workflow) 35%, white);
+  background: color-mix(in srgb, var(--c-workflow) 35%, var(--app-bg-card));
   color: var(--app-nav-text);
 }
 .conn-chip--usb {
-  background: color-mix(in srgb, var(--c-device) 30%, white);
+  background: color-mix(in srgb, var(--c-device) 30%, var(--app-bg-card));
   color: var(--app-status-success-text);
 }
 .vis-chip--locked {
@@ -443,7 +443,7 @@
 }
 .vis-chip--open {
   background: var(--app-bg-subtle);
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   border-color: var(--app-border-light);
 }
 
@@ -467,10 +467,10 @@
 .time-abs {
   font-size: var(--app-size-xs);
   font-weight: 600;
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
 }
 
 .text-muted {
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   font-size: var(--app-size-sm);
 }

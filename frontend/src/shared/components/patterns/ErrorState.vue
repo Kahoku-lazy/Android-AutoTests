@@ -24,7 +24,7 @@ defineEmits(['retry'])
 .error-state {
   display: flex; align-items: center; justify-content: center;
   gap: var(--app-space-md); padding: var(--app-space-sm) var(--app-space-lg); margin: 0 var(--app-space-lg);
-  background: var(--app-error-bg, #fff0f0); border: 2px solid var(--app-status-danger);
+  background: var(--app-error-bg); border: 2px solid var(--app-status-danger);
   border-radius: var(--app-radius-md);
   font-size: var(--app-size-sm); color: var(--app-status-danger-text);
   font-weight: 600;

@@ -6,6 +6,7 @@ import { ref, computed, nextTick } from 'vue'
 import { useElementStore, mediaUrl } from '../store'
 import { IconEdit } from '@/shared/icons'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
+import AppTable from '@/shared/components/AppTable.vue'
 
 const store = useElementStore()
 
@@ -34,6 +35,17 @@ const activeElements = computed(() =>
     ? props.elements.filter(e => e.role === activeRole.value)
     : props.elements
 )
+
+/** 元素档案表列定义（缩略图 / 名称 / 标识 / 元素 / 指标 / XPath / bounds） */
+const ELEMENT_COLUMNS = [
+  { dataIndex: 'thumbnail', width: 66, label: '缩略图', showOverflowTooltip: false },
+  { dataIndex: 'name', minWidth: 120, label: '元素名称', showOverflowTooltip: false },
+  { dataIndex: 'label', minWidth: 140, label: '标识' },
+  { dataIndex: 'resource_id', minWidth: 120, label: '元素' },
+  { dataIndex: 'metrics', width: 150, label: '指标', showOverflowTooltip: false },
+  { dataIndex: 'xpath', minWidth: 200, label: 'XPath' },
+  { dataIndex: 'bounds', width: 150, label: 'bounds' },
+]
 
 function selectSection(section) {
   activeRole.value = activeRole.value === section.role ? null : section.role
@@ -134,102 +146,97 @@ const METRIC_TAG = { 可点击: 'success', 可滚动: 'info', 可勾选: 'warnin
 
       <!-- 右：元素档案表 -->
       <section class="sap-table">
-        <el-table
-          :data="activeElements"
+        <AppTable
+          :columns="ELEMENT_COLUMNS"
+          :data-source="activeElements"
+          row-key="_idx"
           size="small"
           height="100%"
-          row-key="_idx"
-          @row-click="onRowClick"
           :row-class-name="({ row }) => (isRowSelected(row) ? 'sap-row--selected' : '')"
+          @row-click="onRowClick"
         >
-          <el-table-column width="66" label="缩略图">
-            <template #default="{ row }">
-              <div v-if="row.thumbnail_path" class="sap-thumb-wrap" role="button" tabindex="0"
-                @click.stop="openEnlarge(row)"
-                @keydown.enter.prevent="openEnlarge(row)"
-                @keydown.space.prevent="openEnlarge(row)">
-                <img :src="mediaUrl(row.thumbnail_path)" class="sap-thumb" />
-              </div>
-              <span v-else class="sap-thumb-empty">—</span>
+          <template #cell-thumbnail="{ row }">
+            <div v-if="row.thumbnail_path" class="sap-thumb-wrap" role="button" tabindex="0"
+              @click.stop="openEnlarge(row)"
+              @keydown.enter.prevent="openEnlarge(row)"
+              @keydown.space.prevent="openEnlarge(row)">
+              <img :src="mediaUrl(row.thumbnail_path)" class="sap-thumb" />
+            </div>
+            <span v-else class="sap-thumb-empty">—</span>
+          </template>
+          <template #cell-name="{ row }">
+            <input
+              v-if="editingIdx === row._idx"
+              :ref="setNameInputRef"
+              v-model="editDraft"
+              class="sap-name-input"
+              @click.stop
+              @keydown.enter.prevent="commitName(row)"
+              @blur="commitName(row)"
+            />
+            <div v-else class="sap-name-cell" role="button" tabindex="0"
+              @click.stop="startEdit(row)"
+              @keydown.enter.prevent="startEdit(row)">
+              <span class="sap-name-text" :class="{ 'sap-name--empty': !nameValue(row) }">
+                {{ nameValue(row) || '点击命名' }}
+              </span>
+              <IconEdit :size="12" class="sap-name-icon" />
+            </div>
+          </template>
+          <template #cell-label="{ row }">{{ elLabel(row) }}</template>
+          <template #cell-resource_id="{ row }">{{ row.resource_id || '—' }}</template>
+          <template #cell-metrics="{ row }">
+            <template v-if="(row.metrics || []).length">
+              <el-tag
+                v-for="m in row.metrics"
+                :key="m"
+                size="small"
+                :type="METRIC_TAG[m] || 'info'"
+                class="sap-tag"
+              >{{ m }}</el-tag>
             </template>
-          </el-table-column>
-          <el-table-column label="元素名称" min-width="120">
-            <template #default="{ row }">
-              <input
-                v-if="editingIdx === row._idx"
-                :ref="setNameInputRef"
-                v-model="editDraft"
-                class="sap-name-input"
-                @click.stop
-                @keydown.enter.prevent="commitName(row)"
-                @blur="commitName(row)"
-              />
-              <div v-else class="sap-name-cell" role="button" tabindex="0"
-                @click.stop="startEdit(row)"
-                @keydown.enter.prevent="startEdit(row)">
-                <span class="sap-name-text" :class="{ 'sap-name--empty': !nameValue(row) }">
-                  {{ nameValue(row) || '点击命名' }}
-                </span>
-                <IconEdit :size="12" class="sap-name-icon" />
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column label="标识" min-width="140" show-overflow-tooltip>
-            <template #default="{ row }">{{ elLabel(row) }}</template>
-          </el-table-column>
-          <el-table-column label="元素" min-width="120" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.resource_id || '—' }}</template>
-          </el-table-column>
-          <el-table-column label="指标" width="150">
-            <template #default="{ row }">
-              <template v-if="(row.metrics || []).length">
-                <el-tag
-                  v-for="m in row.metrics"
-                  :key="m"
-                  size="small"
-                  :type="METRIC_TAG[m] || 'info'"
-                  class="sap-tag"
-                >{{ m }}</el-tag>
-              </template>
-              <span v-else>—</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="XPath" min-width="200" show-overflow-tooltip>
-            <template #default="{ row }">{{ bestXPath(row) || '—' }}</template>
-          </el-table-column>
-          <el-table-column label="bounds" width="150" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.bounds || '—' }}</template>
-          </el-table-column>
-        </el-table>
+            <span v-else>—</span>
+          </template>
+          <template #cell-xpath="{ row }">{{ bestXPath(row) || '—' }}</template>
+          <template #cell-bounds="{ row }">{{ row.bounds || '—' }}</template>
+        </AppTable>
       </section>
     </div>
 
     <EmptyState v-else text="暂无结构数据" hint="点击工具栏「结构分析」生成页面分区" />
 
-    <!-- 缩略图放大浮层 -->
-    <Teleport to="body">
-      <div v-if="enlargeVisible && enlargeRow" class="sap-enlarge-mask" @click="closeEnlarge">
-        <div class="sap-enlarge" @click.stop>
-          <img :src="mediaUrl(enlargeRow.thumbnail_path)" class="sap-enlarge-img" />
-          <div class="sap-enlarge-detail">
-            <div class="sap-enlarge-field"><span>名称</span>{{ nameValue(enlargeRow) || '—' }}</div>
-            <div class="sap-enlarge-field"><span>Class</span>{{ enlargeRow.class_name || '—' }}</div>
-            <div class="sap-enlarge-field"><span>ID</span>{{ enlargeRow.resource_id || '—' }}</div>
-            <div class="sap-enlarge-field"><span>Desc</span>{{ enlargeRow.content_desc || '—' }}</div>
-            <div class="sap-enlarge-field"><span>Bounds</span>{{ enlargeRow.bounds || '—' }}</div>
-            <div class="sap-enlarge-field"><span>分区</span>{{ roleName(enlargeRow.role) }}</div>
-            <div class="sap-enlarge-field">
-              <span>指标</span>{{ (enlargeRow.metrics || []).join(' · ') || '—' }}
-            </div>
+    <!-- 缩略图放大预览（覆盖层统一走 EP，见 frontend/AGENTS.md「L5 覆盖层」） -->
+    <el-dialog
+      :model-value="enlargeVisible"
+      title="缩略图预览"
+      width="auto"
+      @update:model-value="(v) => { if (!v) closeEnlarge() }"
+    >
+      <div v-if="enlargeRow" class="sap-enlarge">
+        <img :src="mediaUrl(enlargeRow.thumbnail_path)" class="sap-enlarge-img" />
+        <div class="sap-enlarge-detail">
+          <div class="sap-enlarge-field"><span>名称</span>{{ nameValue(enlargeRow) || '—' }}</div>
+          <div class="sap-enlarge-field"><span>Class</span>{{ enlargeRow.class_name || '—' }}</div>
+          <div class="sap-enlarge-field"><span>ID</span>{{ enlargeRow.resource_id || '—' }}</div>
+          <div class="sap-enlarge-field"><span>Desc</span>{{ enlargeRow.content_desc || '—' }}</div>
+          <div class="sap-enlarge-field"><span>Bounds</span>{{ enlargeRow.bounds || '—' }}</div>
+          <div class="sap-enlarge-field"><span>分区</span>{{ roleName(enlargeRow.role) }}</div>
+          <div class="sap-enlarge-field">
+            <span>指标</span>{{ (enlargeRow.metrics || []).join(' · ') || '—' }}
           </div>
         </div>
       </div>
-    </Teleport>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.sap { height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.sap {
+  /* 本组件私有色值登记：选中行元素色淡底与放大预览落影（消费者都在本根类之内） */
+  --sap-row-selected-bg: var(--color-indigo-76-a18) /* -> --color-indigo-76-a18 */;  /* 表格选中行的元素色淡底 */
+  --sap-enlarge-shadow-color: var(--color-ink-05-a30) /* -> --color-ink-05-a30 */;   /* 放大预览面板的落影 */
+  height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+}
 
 .sap-webview-hint {
   flex-shrink: 0;
@@ -238,8 +245,8 @@ const METRIC_TAG = { 可点击: 'success', 可滚动: 'info', 可勾选: 'warnin
   font-size: var(--app-size-xs);
   font-weight: 700;
   color: var(--app-footer-yellow-text);
-  background: var(--app-highlight, #FFE066);
-  border: 2px solid var(--app-ink, #2d2d2d);
+  background: var(--app-highlight);
+  border: 2px solid var(--ink);
   border-radius: 4px 8px 4px 8px;
 }
 
@@ -257,7 +264,7 @@ const METRIC_TAG = { 可点击: 'success', 可滚动: 'info', 可勾选: 'warnin
   overflow-y: auto;
   padding: var(--app-space-sm);
   background: var(--app-bg-card);
-  border: 2px solid var(--app-ink, #2d2d2d);
+  border: 2px solid var(--ink);
   border-radius: 6px 10px 6px 10px;
 }
 
@@ -279,9 +286,9 @@ const METRIC_TAG = { 可点击: 'success', 可滚动: 'info', 可勾选: 'warnin
   cursor: pointer;
 }
 
-.sap-section:hover { background: var(--app-highlight, #FFE066); }
+.sap-section:hover { background: var(--app-highlight); }
 .sap-section--active {
-  background: var(--app-highlight, #FFE066);
+  background: var(--app-highlight);
   font-weight: 700;
 }
 
@@ -295,13 +302,13 @@ const METRIC_TAG = { 可点击: 'success', 可滚动: 'info', 可勾选: 'warnin
 
 .sap-tag { margin-right: var(--app-space-xs); }
 
-:deep(.sap-row--selected) { background: rgba(167, 139, 250, 0.18); }
+:deep(.sap-row--selected) { background: var(--sap-row-selected-bg); }
 
 /* ── 缩略图 ── */
 .sap-thumb-wrap { position: relative; display: inline-flex; cursor: zoom-in; }
 .sap-thumb {
   width: 48px; height: 48px; object-fit: contain;
-  border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px; display: block;
+  border: 2px solid var(--ink); border-radius: 4px; display: block;
 }
 .sap-thumb-empty { color: var(--app-text-secondary); }
 
@@ -321,29 +328,25 @@ const METRIC_TAG = { 可点击: 'success', 可滚动: 'info', 可勾选: 'warnin
   width: 100%; box-sizing: border-box;
   font-size: var(--app-size-xs); font-family: inherit;
   padding: 2px 6px;
-  border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px;
-  background: var(--app-bg-card); color: var(--app-ink, #2d2d2d);
+  border: 2px solid var(--ink); border-radius: 4px;
+  background: var(--app-bg-card); color: var(--ink);
 }
 
 /* ── 放大浮层 ── */
-.sap-enlarge-mask {
-  position: fixed; inset: 0; z-index: 2000;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex; align-items: center; justify-content: center;
-}
+/* ── 放大预览内容（外壳由 el-dialog 提供） ── */
 .sap-enlarge {
   display: flex; gap: var(--app-space-md); align-items: flex-start;
-  background: var(--app-bg-card, #fff);
-  border: 3px solid var(--app-ink, #2d2d2d);
+  background: var(--app-bg-card);
+  border: 3px solid var(--ink);
   border-radius: 6px 10px 6px 10px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8px 32px var(--sap-enlarge-shadow-color);
   padding: var(--app-space-md);
   max-width: 90vw;
 }
 .sap-enlarge-img {
   width: 240px; height: 240px; object-fit: contain;
-  border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px;
-  background: var(--doodle-bg, #faf5ee);
+  border: 2px solid var(--ink); border-radius: 4px;
+  background: var(--paper);
 }
 .sap-enlarge-detail {
   display: flex; flex-direction: column; gap: 6px;

@@ -3,6 +3,8 @@ import { useDashboardView, toMillions, toK } from './DashboardView.logic'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import StatsAppCard from './components/StatsCard.vue'
+import AppCard from '@/shared/components/AppCard.vue'
+import { sketchToneAt, sketchTiltAt } from '@/shared/helpers/sketchCard'
 import TrendBarChart from './components/TrendBarChart.vue'
 import SeriesBarChart from './components/SeriesBarChart.vue'
 import TaskResultPanel from './components/TaskResultPanel.vue'
@@ -15,7 +17,6 @@ import {
   IconAlertCircle,
   IconLayers,
   IconMonitor,
-  IconClipboardCheck,
   IconTarget,
   IconTrendingUp,
   IconActivity,
@@ -49,7 +50,7 @@ const {
 </script>
 
 <template>
-  <div class="doc-page doc-page--fixed wb-shell">
+  <div class="doc-page doc-page--fixed wb-shell dashboard-workbench">
     <WorkbenchHeader
       :title="PAGE_HEADER.title"
       :subtitle="PAGE_HEADER.subtitle"
@@ -65,17 +66,25 @@ const {
 
     <ErrorState v-if="error" :message="error" @retry="loadData" />
 
-    <!-- 内容区 -->
     <div class="doc-body">
-      <!-- 统计概览：平台运营 -->
-      <section class="doc-section">
-        <h3 class="doc-section__title"><IconMonitor :size="19" />平台运营<span class="doc-tag">Platform</span></h3>
-        <div class="doc-section__label">
-          设备 {{ stats.devices.total }}
-          · 智能体 {{ stats.agents.total }}
-          · 任务 {{ stats.runs.total }}
-          · 工作流 {{ stats.workflow.total }}
-        </div>
+      <!-- ① 平台运营 -->
+      <section class="doc-section doc-section--board ch-ops">
+        <header class="chapter-head">
+          <div class="chapter-head__left">
+            <div class="chapter-mark"><IconMonitor :size="16" /></div>
+            <div>
+              <div class="chapter-eyebrow">Platform Ops</div>
+              <h3 class="chapter-title"><span class="marker">平台运营</span></h3>
+              <p class="chapter-desc">核心入口指标 · 实时状态可点进模块</p>
+            </div>
+          </div>
+          <div class="chip-row">
+            <span class="chip chip--teal">设备 <b>{{ stats.devices.total }}</b></span>
+            <span class="chip">智能体 <b>{{ stats.agents.total }}</b></span>
+            <span class="chip chip--rose">任务 <b>{{ stats.runs.total }}</b></span>
+            <span class="chip chip--yellow">工作流 <b>{{ stats.workflow.total }}</b></span>
+          </div>
+        </header>
         <div class="dashboard__stats-grid">
           <StatsAppCard
             label="在线设备"
@@ -117,16 +126,29 @@ const {
         </div>
       </section>
 
-      <!-- 统计概览：AI 用量 -->
-      <section class="doc-section">
-        <h3 class="doc-section__title"><IconBrain :size="19" />AI 用量<span class="doc-tag">AI</span></h3>
-        <div class="doc-section__label">
-          累计 Token {{ (stats.aiUsage.totalTokens.total / 1000000).toFixed(2) }}M
-          · 任务 {{ stats.aiUsage.taskCount.total }}
-          · DeepSeek 费用 {{ stats.aiUsage.deepseekCost.total.toFixed(2) }} 元
-        </div>
-        <div class="doc-section__label">分角色 Token（累计）：{{ roleBreakdown.total }}</div>
-        <div class="doc-section__label">分角色 Token（今日）：{{ roleBreakdown.today }}</div>
+      <!-- ② AI 用量 -->
+      <section class="doc-section doc-section--board ch-ai">
+        <header class="chapter-head">
+          <div class="chapter-head__left">
+            <div class="chapter-mark"><IconBrain :size="16" /></div>
+            <div>
+              <div class="chapter-eyebrow">AI Usage</div>
+              <h3 class="chapter-title"><span class="marker">AI 用量</span></h3>
+              <p class="chapter-desc">Token · 缓存 · DeepSeek 费用</p>
+            </div>
+          </div>
+          <div class="chip-row">
+            <span class="chip chip--pink">
+              累计 Token <b>{{ (stats.aiUsage.totalTokens.total / 1000000).toFixed(2) }}M</b>
+            </span>
+            <span class="chip">任务 <b>{{ stats.aiUsage.taskCount.total }}</b></span>
+            <span class="chip chip--yellow">
+              费用 <b>{{ stats.aiUsage.deepseekCost.total.toFixed(2) }}</b> 元
+            </span>
+            <span class="chip chip--violet">角色·累计 {{ roleBreakdown.total }}</span>
+            <span class="chip chip--violet">角色·今日 {{ roleBreakdown.today }}</span>
+          </div>
+        </header>
         <div class="dashboard__stats-grid">
           <StatsAppCard
             label="任务数量"
@@ -189,94 +211,117 @@ const {
         </div>
       </section>
 
-      <!-- 统计概览：测试用例 -->
-      <section class="doc-section">
-        <h3 class="doc-section__title"><IconClipboardCheck :size="19" />测试用例<span class="doc-tag">Cases</span></h3>
-        <div class="doc-section__label">
-          共 {{ stats.cases.total }} 个
-        </div>
-        <div class="dashboard__stats-grid">
-          <StatsAppCard
-            v-for="item in caseBreakdown"
-            :key="item.type"
-            :label="item.label"
-            :value="getBreakdownItem(item.type).total"
-            :color="item.color"
-            path="/cases"
-            :loading="loading"
-          >
-            <template #icon>
-              <component :is="item.icon" :size="15" />
-            </template>
-          </StatsAppCard>
+      <!-- ③ 测试资产：用例 + 元素 -->
+      <section class="doc-section doc-section--board ch-asset">
+        <header class="chapter-head">
+          <div class="chapter-head__left">
+            <div class="chapter-mark"><IconLayers :size="16" /></div>
+            <div>
+              <div class="chapter-eyebrow">Test Assets</div>
+              <h3 class="chapter-title"><span class="marker">测试资产</span></h3>
+              <p class="chapter-desc">用例库 + 元素库 · 同一存量视角</p>
+            </div>
+          </div>
+          <div class="chip-row">
+            <span class="chip chip--teal">用例 <b>{{ stats.cases.total }}</b></span>
+            <span class="chip chip--violet">元素 <b>{{ stats.elements.total }}</b></span>
+            <span class="chip">页面 <b>{{ stats.elements.pages }}</b></span>
+          </div>
+        </header>
+        <div class="asset-cols">
+          <div>
+            <div class="subhead">测试用例 <span class="subhead__tag">Cases</span></div>
+            <div class="dashboard__stats-grid">
+              <StatsAppCard
+                v-for="item in caseBreakdown"
+                :key="item.type"
+                :label="item.label"
+                :value="getBreakdownItem(item.type).total"
+                :color="item.color"
+                path="/cases"
+                :loading="loading"
+              >
+                <template #icon>
+                  <component :is="item.icon" :size="15" />
+                </template>
+              </StatsAppCard>
+            </div>
+          </div>
+          <div>
+            <div class="subhead">元素定位 <span class="subhead__tag">Elements</span></div>
+            <div class="dashboard__stats-grid">
+              <StatsAppCard
+                v-for="item in elementBreakdown"
+                :key="'el-' + item.type"
+                :label="item.label"
+                :value="getElementItem(item.type).total"
+                :color="item.color"
+                path="/elements"
+                :loading="loading"
+              >
+                <template #icon>
+                  <component :is="item.icon" :size="15" />
+                </template>
+              </StatsAppCard>
+            </div>
+          </div>
         </div>
       </section>
 
-      <!-- 统计概览：元素定位 -->
-      <section class="doc-section">
-        <h3 class="doc-section__title"><IconTarget :size="19" />元素定位<span class="doc-tag">Elements</span></h3>
-        <div class="doc-section__label">
-          共 {{ stats.elements.total }} 个 · {{ stats.elements.pages }} 个页面
-        </div>
-        <div class="dashboard__stats-grid">
-          <StatsAppCard
-            v-for="item in elementBreakdown"
-            :key="'el-' + item.type"
-            :label="item.label"
-            :value="getElementItem(item.type).total"
-            :color="item.color"
-            path="/elements"
-            :loading="loading"
-          >
-            <template #icon>
-              <component :is="item.icon" :size="15" />
-            </template>
-          </StatsAppCard>
-        </div>
-      </section>
+      <!-- ④ 趋势与动态 -->
+      <section class="doc-section doc-section--board ch-trend">
+        <header class="chapter-head">
+          <div class="chapter-head__left">
+            <div class="chapter-mark"><IconActivity :size="16" /></div>
+            <div>
+              <div class="chapter-eyebrow">Trends &amp; Activity</div>
+              <h3 class="chapter-title"><span class="marker">趋势与动态</span></h3>
+              <p class="chapter-desc">近 12 日任务卡 · Token · 费用 · 活动流</p>
+            </div>
+          </div>
+        </header>
 
-      <!-- 趋势图表 -->
-      <section class="doc-section">
-        <h3 class="doc-section__title">
-          <IconTrendingUp :size="19" />
-          趋势数据
-          <span class="doc-tag">Trends</span>
-        </h3>
-        <div class="doc-section__label">
-          近 12 期执行、AI Token 与费用趋势
-        </div>
         <div class="dashboard__trends">
-          <el-card class="trends-chart-card">
+          <AppCard
+            class="trends-chart-card"
+            :tone="sketchToneAt(0)"
+            :tilt="sketchTiltAt(0)"
+          >
+            <div class="trends-tasks-card__title">助手任务卡</div>
             <TrendBarChart :chart="executionChart" />
-          </el-card>
-          <el-card class="trends-tasks-card">
+          </AppCard>
+          <AppCard
+            class="trends-tasks-card"
+            :tone="sketchToneAt(1)"
+            :tilt="sketchTiltAt(1)"
+          >
             <div class="trends-tasks-card__title">任务执行结果</div>
             <TaskResultPanel :tasks="recentTasks" :summary="executionSummary" />
-          </el-card>
+          </AppCard>
         </div>
         <div class="dashboard__trends dashboard__trends--ai">
-          <el-card class="trends-chart-card">
+          <AppCard
+            class="trends-chart-card"
+            :tone="sketchToneAt(2)"
+            :tilt="sketchTiltAt(2)"
+          >
             <div class="trends-tasks-card__title">每日 Token 用量</div>
             <SeriesBarChart :labels="aiTokenChart.labels" :series="tokenSeries" />
-          </el-card>
-          <el-card class="trends-chart-card">
+          </AppCard>
+          <AppCard
+            class="trends-chart-card"
+            :tone="sketchToneAt(3)"
+            :tilt="sketchTiltAt(3)"
+          >
             <div class="trends-tasks-card__title">每日 DeepSeek 费用（元）</div>
             <SeriesBarChart :labels="deepseekCostChart.labels" :series="costSeries" />
-          </el-card>
+          </AppCard>
         </div>
-      </section>
 
-      <!-- 最近动态 -->
-      <section class="doc-section">
-        <h3 class="doc-section__title">
-          <IconActivity :size="19" />
-          最近动态
-          <span class="doc-tag">Activity</span>
-        </h3>
+        <div class="subhead">最近动态 <span class="subhead__tag">Activity</span></div>
         <ActivityTimeline :items="activities" />
       </section>
 
-      <!-- 页脚信息 -->
       <footer class="dashboard__footer">
         <div class="dashboard__footer-item">
           <IconClock :size="14" />

@@ -27,7 +27,7 @@
 | 5 | 圆角 | `rg "border-radius"` | 不对称；对称大圆角 `50px/16px/20px` → 🟠 | `border-radius:16px` |
 | 6 | 阴影 | `rg "box-shadow"` | 扁平 `2px 2px 0`；模糊/大扩散 → 🟡 | `0 8px 24px rgba(...)` |
 | 7 | 间距 | `rg "padding\|gap\|margin"` | `--app-space-*`；裸 px → 🟡 | `gap:20px` |
-| 8 | 模块色 | 对照 DESIGN_SYSTEM §1.2/1.3 | 用对应 `--c-*`/`--app-status-*`；用错 → 🟠 | 设备用 `--c-dashboard` |
+| 8 | 模块色 | 对照本文件「组件规格验收」 | 用对应 `--c-*`/`--app-status-*`；用错 → 🟠 | 设备用 `--c-dashboard` |
 | 9 | 禁止事项 | `rg "backdrop-filter\|#4a4e69\|#9a8c98"` | 无玻璃态/旧色值 → 🟠 | `backdrop-filter:blur(2px)` |
 
 ## 三、逻辑层（P2）

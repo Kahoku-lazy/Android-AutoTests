@@ -50,10 +50,9 @@ function onNodeClick(node) {
 
 <template>
   <el-dialog
-    :model-value="store.pickerVisible"
+    v-model="store.pickerVisible"
     title="打开元素定位已保存页面（只读）"
     width="560px"
-    @update:model-value="(v) => (store.pickerVisible = v)"
   >
     <div v-loading="loading" class="picker">
       <EmptyState

@@ -221,7 +221,7 @@ function go() {
 }
 .status-chip.offline {
   background: var(--app-bg-subtle);
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
 }
 
 .geo { flex-shrink: 0; display: inline-block; }
@@ -254,7 +254,7 @@ function go() {
   display: block;
   font-size: var(--app-size-xs);
   font-weight: 500;
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   margin-bottom: 1px;
 }
 .meta-v {
@@ -287,11 +287,11 @@ function go() {
   white-space: nowrap;
 }
 .tag--wifi {
-  background: color-mix(in srgb, var(--c-workflow) 40%, white);
+  background: color-mix(in srgb, var(--c-workflow) 40%, var(--app-bg-card));
   color: var(--ink);
 }
 .tag--usb {
-  background: color-mix(in srgb, var(--c-device) 35%, white);
+  background: color-mix(in srgb, var(--c-device) 35%, var(--app-bg-card));
   color: var(--ink);
 }
 .tag--lock {
@@ -304,7 +304,7 @@ function go() {
 }
 .tag--open {
   background: var(--app-bg-subtle);
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
   border-color: var(--app-border-light);
 }
 

@@ -6,9 +6,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     {% if favicon_href %}<link rel="icon" href="{{ favicon_href }}">{% endif %}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- 字体不引外链：离线环境无 Google Fonts，交由下方 font-family 回退到系统字体 -->
     <link rel="stylesheet" href="{{ swagger_ui_css }}">
     <style>
       html { box-sizing: border-box; overflow-y: scroll; }

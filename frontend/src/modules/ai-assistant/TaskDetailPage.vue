@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import KpiCard from '@/shared/components/KpiCard.vue'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
+import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
 import TaskAttemptCard from './components/TaskAttemptCard.vue'
-import { ROUTE_AI_ASSISTANT, taskStatusLabel, taskStatusTone } from './constants'
+import { taskStatusLabel, taskStatusTone } from './constants'
 import { useTaskDetail } from './composables/useTaskDetail'
 import {
   currentStepLabel,
@@ -21,7 +22,6 @@ import {
 } from './helpers/task-detail'
 
 const route = useRoute()
-const router = useRouter()
 const { loading, error, detail, retry, bindRouteId } = useTaskDetail()
 
 const taskId = computed(() => Number(route.params.taskId))
@@ -59,10 +59,6 @@ function pickStep(i: number) {
   selectedIndex.value = i
 }
 
-function goBack() {
-  router.push(`${ROUTE_AI_ASSISTANT}/agents`)
-}
-
 const finalToneClass = computed(() => {
   const tone = taskStatusTone(detail.value?.status || '')
   if (tone === 'success') return 'is-ok'
@@ -77,10 +73,17 @@ const finalToneClass = computed(() => {
       title="任务详情"
       :subtitle="detail?.title || detail?.goal || '逐步执行过程'"
       icon="clipboard-list"
-      icon-gradient="linear-gradient(135deg, var(--c-ai), #c084fc)"
+      icon-gradient="linear-gradient(135deg, var(--c-ai), var(--td-icon-grad-end))"
     >
-      <template #actions>
-        <el-button class="wb-btn" @click="goBack">返回任务列表</el-button>
+      <template #nav>
+        <WorkbenchCrumbs
+          back-to="/ai-assistant/agents"
+          back-label="返回任务列表"
+          :items="[
+            { label: '平台小助手', to: '/ai-assistant/agents' },
+            { label: '任务详情' },
+          ]"
+        />
       </template>
     </WorkbenchHeader>
 
@@ -253,11 +256,11 @@ const finalToneClass = computed(() => {
   flex-direction: column;
   gap: var(--app-space-sm);
   padding-top: var(--app-space-xs);
-  border-top: 1.5px dashed var(--ai-warm-border, var(--app-border));
-  background: var(--doodle-bg, var(--paper));
+  border-top: 1.5px dashed var(--ai-warm-border);
+  background: var(--paper);
 }
 .td-top {
-  background: var(--ai-sticky-bg, var(--app-bg-card));
+  background: var(--ai-sticky-bg);
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-md);
   padding: var(--app-space-md);
@@ -278,7 +281,7 @@ const finalToneClass = computed(() => {
 .td-top__meta {
   margin: var(--app-space-xs) 0 0;
   font-size: var(--app-size-xs);
-  color: var(--ai-ink-muted, var(--app-text-secondary));
+  color: var(--ai-ink-muted);
 }
 .td-kpi {
   display: grid;
@@ -300,6 +303,12 @@ const finalToneClass = computed(() => {
   font-weight: 800;
   color: var(--ink);
   flex-shrink: 0;
+}
+.task-detail-page {
+  /* 中性/取消标签字色（冷灰）、运行态与等待态流色（冷静蓝）、页头图标渐变终点（柔紫） */
+  --td-neutral-ink: var(--color-ink-46) /* -> --color-ink-46 */;
+  --td-flow-blue: var(--color-blue-60) /* -> --color-blue-60 */;
+  --td-icon-grad-end: var(--color-violet-75) /* -> --color-violet-75 */;
 }
 .td-steps,
 .td-panel {
@@ -325,7 +334,7 @@ const finalToneClass = computed(() => {
   text-align: left;
   padding: var(--app-space-sm) var(--app-space-md);
   border: 2px solid transparent;
-  border-left: 6px solid var(--app-offline, #999);
+  border-left: 6px solid var(--app-offline);
   border-radius: var(--app-radius-md);
   background: var(--app-bg-card);
   cursor: pointer;
@@ -337,12 +346,12 @@ const finalToneClass = computed(() => {
 .td-step-item.is-running { border-left-color: var(--ai-status-blue-border, var(--c-device)); }
 .td-step-item.is-active {
   border-color: var(--ink);
-  background: var(--ai-warm-bg, var(--app-bg-muted));
+  background: var(--ai-warm-bg);
 }
 .td-step-item__idx {
   font-size: var(--app-size-xs);
   font-weight: 800;
-  color: var(--ai-ink-muted, var(--app-text-secondary));
+  color: var(--ai-ink-muted);
 }
 .td-step-item__action {
   font-size: var(--app-size-sm);
@@ -354,15 +363,15 @@ const finalToneClass = computed(() => {
 .td-panel__card {
   margin-bottom: var(--app-space-md);
   padding: var(--app-space-md);
-  background: var(--ai-sticky-bg, var(--app-bg-muted));
-  border: 1.5px dashed var(--ai-warm-border, var(--app-border));
+  background: var(--ai-sticky-bg);
+  border: 1.5px dashed var(--ai-warm-border);
   border-radius: var(--app-radius-md);
   flex-shrink: 0;
 }
 .td-panel__card p {
   margin: 0 0 var(--app-space-xs);
   font-size: var(--app-size-sm);
-  color: var(--ai-ink-soft, var(--app-text-secondary));
+  color: var(--ai-ink-soft);
   line-height: 1.5;
 }
 .td-panel__card p:last-child { margin-bottom: 0; }
@@ -382,8 +391,8 @@ const finalToneClass = computed(() => {
 }
 .td-tag--pass { background: var(--app-status-success-bg); color: var(--app-status-success-text); }
 .td-tag--fail { background: var(--app-status-danger-bg); color: var(--app-status-danger-text); }
-.td-tag--run { background: var(--ai-status-blue-bg, #e8f4ff); color: var(--ai-status-blue-text, #1d4ed8); }
-.td-tag--wait { background: var(--ai-bg-neutral, #f3f4f6); color: var(--ai-ink-muted, #6b7280); }
+.td-tag--run { background: var(--ai-status-blue-bg); color: var(--ai-status-blue-text); }
+.td-tag--wait { background: var(--ai-bg-neutral); color: var(--td-neutral-ink); }
 .td-h {
   margin: 0;
   padding-left: var(--app-space-sm);
@@ -393,7 +402,7 @@ const finalToneClass = computed(() => {
   color: var(--ink);
 }
 .td-final {
-  background: var(--ai-sticky-bg, var(--app-bg-card));
+  background: var(--ai-sticky-bg);
   border: 2px solid var(--ink);
   border-left: 6px solid var(--c-device);
   border-radius: var(--app-radius-md);
@@ -404,11 +413,11 @@ const finalToneClass = computed(() => {
 .td-final p {
   margin: 0 0 var(--app-space-xs);
   font-size: var(--app-size-sm);
-  color: var(--ai-ink-soft, var(--app-text-secondary));
+  color: var(--ai-ink-soft);
   line-height: 1.5;
 }
 .td-final p:last-child { margin-bottom: 0; }
-.td-meta { font-size: var(--app-size-xs); color: var(--ai-ink-muted, var(--app-text-secondary)); }
+.td-meta { font-size: var(--app-size-xs); color: var(--ai-ink-muted); }
 .td-final .is-ok { color: var(--app-status-success-text); font-weight: 800; }
 .td-final .is-bad { color: var(--app-status-danger-text); font-weight: 800; }
 .task-card__status {
@@ -421,14 +430,14 @@ const finalToneClass = computed(() => {
   white-space: nowrap;
 }
 .task-card__status.is-pending {
-  background: var(--ai-bg-neutral, #f3f4f6);
-  color: var(--app-timeline-dot, #6b7280);
-  border-color: var(--app-offline, #999);
+  background: var(--ai-bg-neutral);
+  color: var(--td-neutral-ink);
+  border-color: var(--app-offline);
 }
 .task-card__status.is-running {
-  background: var(--ai-status-blue-bg, #e8f4ff);
-  color: var(--ai-status-blue-text, #1d4ed8);
-  border-color: var(--ai-status-blue-border, #3b82f6);
+  background: var(--ai-status-blue-bg);
+  color: var(--ai-status-blue-text);
+  border-color: var(--td-flow-blue);
 }
 .task-card__status.is-success {
   background: var(--app-status-success-bg);
@@ -441,14 +450,14 @@ const finalToneClass = computed(() => {
   border-color: var(--app-status-danger);
 }
 .task-card__status.is-cancelled {
-  background: var(--ai-bg-neutral, #f3f4f6);
-  color: var(--ai-ink-muted, #6b7280);
-  border-color: var(--app-offline, #999);
+  background: var(--ai-bg-neutral);
+  color: var(--td-neutral-ink);
+  border-color: var(--app-offline);
 }
 .task-card__status.is-paused {
   background: var(--app-status-warning-bg);
-  color: var(--ai-hint-orange, #c2410c);
-  border-color: var(--app-highlight, #f59e0b);
+  color: var(--ai-hint-orange);
+  border-color: var(--app-highlight);
 }
 @media (max-width: 768px) {
   .td-kpi { grid-template-columns: 1fr 1fr; }

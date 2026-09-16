@@ -29,12 +29,7 @@ router.afterEach((to) => {
 // ── Auth guard — all pages require login except /login itself ──
 router.beforeEach((to) => {
   const token = getToken()
-  // 登录路由下禁用 body 背景动画（性能优化：避免空转）
-  if (to.path === '/login') {
-    document.body?.classList.add('no-bg-anim')
-  } else {
-    document.body?.classList.remove('no-bg-anim')
-  }
+
   if (!token && to.path !== '/login') {
     return '/login'
   }

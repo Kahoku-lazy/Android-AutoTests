@@ -47,7 +47,7 @@ defineProps<{
 }
 .status-cell :deep(.el-tag--success) { background: var(--app-status-success-bg) !important; color: var(--app-status-success-text) !important; border-color: var(--app-status-success) !important; }
 .status-cell :deep(.el-tag--warning) { background: var(--app-status-danger-bg) !important; color: var(--app-status-danger-text) !important; border-color: var(--app-status-danger) !important; }
-.status-cell :deep(.el-tag--info)    { background: var(--app-bg-subtle) !important; color: var(--app-ink-muted) !important; border-color: var(--app-border-light) !important; }
+.status-cell :deep(.el-tag--info)    { background: var(--app-bg-subtle) !important; color: var(--app-text-secondary) !important; border-color: var(--app-border-light) !important; }
 .status-cell :deep(.el-tag--danger)  { background: var(--app-status-danger-bg) !important; color: var(--app-status-danger-text) !important; border-color: var(--app-status-danger) !important; }
 .badge {
   font-size: var(--app-size-xs);

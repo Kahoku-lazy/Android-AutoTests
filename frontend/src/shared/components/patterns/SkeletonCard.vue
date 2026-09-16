@@ -26,11 +26,14 @@ defineProps({
   padding: var(--app-space-xs) 0;
 }
 .skeleton-card__bar {
+  /* 骨架屏 shimmer 灰阶（rgba 装饰绘制色登记处） */
+  --skeleton-shimmer-faint: var(--comp-skeleton-shimmer-faint);
+  --skeleton-shimmer-base: var(--comp-skeleton-shimmer-base);
   background: linear-gradient(
     90deg,
-    rgba(0, 0, 0, 0.03) 25%,
-    rgba(0, 0, 0, 0.06) 50%,
-    rgba(0, 0, 0, 0.03) 75%
+    var(--skeleton-shimmer-faint) 25%,
+    var(--skeleton-shimmer-base) 50%,
+    var(--skeleton-shimmer-faint) 75%
   );
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.4s linear infinite;

@@ -14,10 +14,9 @@ async function onDelete(snap) {
 
 <template>
   <el-drawer
-    :model-value="store.drawerVisible"
+    v-model="store.drawerVisible"
     title="检查器快照"
     size="380px"
-    @update:model-value="(v) => (store.drawerVisible = v)"
   >
     <div class="snap-list">
       <EmptyState
@@ -63,11 +62,11 @@ async function onDelete(snap) {
 .snap-list { display: flex; flex-direction: column; gap: 10px; }
 .snap-item {
   display: flex; align-items: center; justify-content: space-between; gap: var(--app-space-sm);
-  padding: 10px 12px; border: 2px solid var(--app-ink, #2d2d2d);
+  padding: 10px 12px; border: 2px solid var(--ink);
   border-radius: 4px 8px 4px 8px; background: var(--app-bg-card);
   cursor: pointer; transition: all 0.12s;
 }
-.snap-item:hover { background: var(--app-highlight, #FFE066); }
+.snap-item:hover { background: var(--app-highlight); }
 .snap-main { min-width: 0; }
 .snap-title { font-weight: 700; font-size: var(--app-size-sm); }
 .snap-sub { font-size: var(--app-size-xs); color: var(--app-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

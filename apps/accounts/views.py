@@ -22,6 +22,8 @@ from .serializers import LoginSerializer, RefreshSerializer, RegisterSerializer
 
 
 class LoginView(APIView):
+    """POST /api/auth/login — 用户名密码登录，签发 access / refresh 令牌。"""
+
     permission_classes = [AllowAny]
     authentication_classes: ClassVar[list] = []
 
@@ -52,6 +54,8 @@ class LoginView(APIView):
 
 
 class RegisterView(APIView):
+    """POST /api/auth/register — 注册新用户并直接签发令牌。"""
+
     permission_classes = [AllowAny]
     authentication_classes: ClassVar[list] = []
 
@@ -88,6 +92,8 @@ class RegisterView(APIView):
 
 
 class RefreshView(APIView):
+    """POST /api/auth/refresh — 用 refresh 令牌换取新的 access 令牌。"""
+
     permission_classes = [AllowAny]
     authentication_classes: ClassVar[list] = []
 
@@ -123,6 +129,8 @@ class RefreshView(APIView):
 
 
 class LogoutView(APIView):
+    """POST /api/auth/logout — 登出：把当前 access 令牌写入 Redis 黑名单。"""
+
     permission_classes = [IsAuthenticated]
 
     # 仅读取 Authorization 头完成登出，不接收请求体
@@ -141,6 +149,8 @@ class LogoutView(APIView):
 
 
 class MeView(APIView):
+    """GET /api/auth/me — 当前登录用户信息。"""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(responses=OpenApiTypes.OBJECT)

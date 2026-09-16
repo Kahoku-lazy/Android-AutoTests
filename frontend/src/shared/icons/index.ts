@@ -1,6 +1,6 @@
 /**
  * 自定义 SVG 图标库 — Android-AutoTests
- * 24 个图标覆盖：设备管理、测试执行、元素定位、AI 助手、报告、用例等场景
+ * 45 个图标覆盖：设备管理、测试执行、元素定位、AI 助手、报告、用例等场景
  * 使用 Vue 3 defineComponent + h() 渲染函数，确保跨构建工具兼容
  */
 import { defineComponent, h } from 'vue'

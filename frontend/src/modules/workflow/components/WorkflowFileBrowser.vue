@@ -3,6 +3,7 @@
  * 目录看板：当前目录下的文件（卡片）+ 子目录（可折叠标题区）
  */
 import { computed, ref, watch } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import { useLibraryStore, type LibNode } from '@/modules/workflow/stores/libraryStore'
 
 const props = defineProps<{
@@ -81,7 +82,16 @@ async function confirmRename() {
 }
 
 async function removeFile(n: LibNode) {
-  if (!confirm(`删除「${n.name}」？\nID: ${n.id}`)) return
+  try {
+    await ElMessageBox.confirm(`删除「${n.name}」？\nID: ${n.id}`, '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    // 用户取消删除：ElMessageBox 以 reject 表示取消，不执行删除（非静默吞错）
+    return
+  }
   await lib.deleteNode(n.id)
 }
 
@@ -262,6 +272,8 @@ function fmtTime(iso: string) {
   padding: 20px var(--app-space-lg) var(--app-space-lg);
   overflow: auto;
   background: transparent;
+  /* 本模块私有色：tokens.css 未登记，登记在组件根作用域（消费者 .btn 在其内） */
+  --wf-btn-press-shadow: var(--color-ink-05-a05) /* -> --color-ink-05-a05 */; /* 按钮按下硬阴影 */
 }
 .board-head {
   display: flex;
@@ -308,7 +320,7 @@ function fmtTime(iso: string) {
 }
 .btn:active {
   transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.05);
+  box-shadow: 1px 1px 0 var(--wf-btn-press-shadow);
 }
 .btn:focus-visible {
   outline: 2px solid var(--c-workflow);
@@ -435,7 +447,7 @@ function fmtTime(iso: string) {
 .file-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 14px;
+  gap: var(--app-space-md);
 }
 .file-card {
   text-align: left;

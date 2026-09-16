@@ -109,7 +109,7 @@ async function handleImport() {
 
 <style scoped>
 .import-dialog-body { display: flex; flex-direction: column; gap: 12px; }
-.import-hint { margin: 0; font-size: var(--app-size-sm); color: var(--app-ink-muted); }
+.import-hint { margin: 0; font-size: var(--app-size-sm); color: var(--app-text-secondary); }
 .import-row { display: flex; align-items: center; gap: 10px; }
 .import-label { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); }
 .import-file { font-size: var(--app-size-sm); }

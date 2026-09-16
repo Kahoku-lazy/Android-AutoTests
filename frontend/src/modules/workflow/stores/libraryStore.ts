@@ -391,7 +391,11 @@ export const useLibraryStore = defineStore('wf-library', () => {
   async function savePageFlowPayload(
     id: string,
     data: WorkflowSaveData,
-    opts?: { confirmEmptyOverwrite?: boolean; skipEmptyOverwrite?: boolean }
+    opts?: {
+      /** 空图覆盖确认：由调用方（UI 层）提供弹窗实现，store 自身不依赖 Element Plus */
+      confirmEmptyOverwrite?: (remoteNodes: number) => Promise<boolean>
+      skipEmptyOverwrite?: boolean
+    }
   ): Promise<void> {
     const n = findNode(id)
     if (!n || !isFlowDocType(n.type)) return
@@ -406,17 +410,13 @@ export const useLibraryStore = defineStore('wf-library', () => {
           // 自动保存/切页：拒绝空覆盖，保留服务器数据
           return
         }
-        if (opts?.confirmEmptyOverwrite) {
-          const ok = window.confirm(
-            `服务器上已有 ${remoteNodes} 个节点，当前画布为空。确定要用空图覆盖吗？`
-          )
-          if (!ok) {
-            // 已取消保存，未覆盖服务器数据（调用方处理提示）
-            return
-          }
-        } else {
-          // 默认保护：不覆盖
-          // 画布为空，已跳过保存（调用方处理提示）
+        if (!opts?.confirmEmptyOverwrite) {
+          // 默认保护：不覆盖（画布为空，已跳过保存，调用方处理提示）
+          return
+        }
+        const confirmed = await opts.confirmEmptyOverwrite(remoteNodes)
+        if (!confirmed) {
+          // 用户在 UI 层取消了覆盖：此处不写服务器数据
           return
         }
       }

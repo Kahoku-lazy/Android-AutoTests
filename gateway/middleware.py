@@ -31,7 +31,6 @@ PUBLIC_PREFIXES = [
     "/static/",
     "/media/",
     # API 文档面：有意公开（便于外部联调），无敏感数据
-    "/api/docs",
     "/api/schema/",  # drf-spectacular OpenAPI schema
     "/api/swagger/",  # drf-spectacular Swagger UI
 ]

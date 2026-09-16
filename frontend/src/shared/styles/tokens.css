@@ -2,393 +2,490 @@
    Doodle Craft 设计令牌
    极简 · 几何 · 粗线 · 涂鸦彩绘 · 卡通 · 手稿纸
    ═══════════════════════════════════════════
-   按皮肤维度分类：颜色 → 字体/字号 → 间距 → 圆角 → 阴影 → 动效 → 布局尺寸
+   按皮肤维度分类：颜色 → 字体/字号 → 间距 → 圆角 → 阴影 → 动效 → 布局尺寸 → 布局（分栏 / 比例 / 断点）
    （独立区：Crayon Doodle 待收敛家族 · Element Plus 原子层映射）
 
    现行体系（frontend/AGENTS.md §2 口径）：
      --c-* 模块色 · --app-status-* 状态色 · --app-size-* 字号 · --app-space-* 间距
      --app-radius-* 圆角 · --app-shadow-* 阴影 · --app-duration-*、--app-ease、--app-spring 动效
      --app-font* 字体 · --ink/--paper/--dot/--app-bg-subtle/--app-border-*、--app-highlight 核心色
-   @deprecated（新代码禁用，旧代码保留兼容）：
-     --app-module-*（值同 --c-*）· --app-font-size-* · 兼容别名块 · 自然背景块
-   ⚠️ 待收敛：--doodle-* 主题家族与 --ink/--paper 两套并存；
-     --app-green 实为 workflow 蓝、--app-blue 实为 element 紫（名字误导，慎用）
+   模块家族令牌不在 :root：--ai-* / --case-* 声明在各自模块页面根作用域（文末「模块作用域色板」段）
+   ✅ 2026-09-15 收敛：@deprecated 旧色别名与 --doodle-* 家族已退役（land-module-color-registry）
    ═══════════════════════════════════════════ */
 
 :root, [data-theme="light"] {
+  /* ═══════════════════════════════════════════
+     T0 主 token · 一、颜色原子（全部字面量色值的唯一登记处）
+     命名：--color-<色相>-<明度>[-s<饱和>][-a<透明度>]；中性 --color-white / --color-black / --color-ink-<明度>
+     口径：openspec/specs/frontend-l0-design-tokens「主 token 是颜色与规格的唯一登记处」
+     ═══════════════════════════════════════════ */
+
+  /* ── white ── */
+  /* ═══════════════════════════════════════════
+     颜色原子 · 调色板（13 族 · 98 条 = 73 基色 × 6 档 alpha）
+     变更 consolidate-color-palette：旧 198 → 新 98（感知聚类 ΔE≤8 + 最小间隔≥4）
+     ═══════════════════════════════════════════ */
+
+  /* ── white ── */
+  /* ═══════════════════════════════════════════
+     颜色原子 · 调色板（13 族 · 98 条 = 73 基色 × 6 档 alpha）
+     变更 consolidate-color-palette：旧 198 → 新 98（感知聚类 ΔE≤8 + 最小间隔≥4）
+     ═══════════════════════════════════════════ */
+
+  /* ── white ── */
+  --color-white: #ffffff;
+  --color-white-a30: rgba(255, 255, 255, 0.3);
+  --color-white-a60: rgba(255, 255, 255, 0.6);
+
+  /* ── ink ── */
+  --color-ink-79: #c9cacc;
+  --color-ink-57: #96918c;
+  --color-ink-47: #7c6f83;
+  --color-ink-46: #6b7280;
+  --color-ink-34: #5d5950;
+  --color-ink-05-a05: rgba(0, 0, 0, 0.05);
+  --color-ink-05-a10: rgba(0, 0, 0, 0.1);
+  --color-ink-05-a18: rgba(0, 0, 0, 0.18);
+  --color-ink-05-a30: rgba(0, 0, 0, 0.3);
+
+  /* ── red ── */
+  --color-red-95: #ffe9e8;
+  --color-red-85: #f2c0bd;
+  --color-red-83: #ffb5a7;
+  --color-red-73: #e8998a;
+  --color-red-69: #f56b6a;
+  --color-red-69-a05: rgba(245, 107, 106, 0.05);
+  --color-red-69-a10: rgba(245, 107, 106, 0.1);
+  --color-red-69-a30: rgba(245, 107, 106, 0.3);
+  --color-red-49: #b35a48;
+  --color-red-46: #b23838;
+  --color-red-29: #7a1c1c;
+
+  /* ── orange ── */
+  --color-orange-77: #f3c798;
+  --color-orange-76: #d8d2c4;
+  --color-orange-64: #d8a870;
+  --color-orange-63: #f0a050;
+  --color-orange-55-a10: rgba(245, 166, 35, 0.1);
+  --color-orange-55-a18: rgba(245, 166, 35, 0.18);
+  --color-orange-55-a60: rgba(245, 166, 35, 0.6);
+  --color-orange-53: #daa535;
+  --color-orange-44: #827360;
+  --color-orange-37: #b2710c;
+  --color-orange-32: #794f29;
+  --color-orange-32-a05: rgba(121, 79, 41, 0.05);
+  --color-orange-26: #534330;
+
+  /* ── yellow ── */
+  --color-yellow-94: #fff8e0;
+  --color-yellow-87: #fdf0c0;
+  --color-yellow-79: #fbe898;
+  --color-yellow-70: #fcdc6b;
+  --color-yellow-63: #f7c948;
+  --color-yellow-62: #ffd93d;
+  --color-yellow-53: #a0936e;
+  --color-yellow-35: #b08800;
+  --color-yellow-27: #826208;
+  --color-yellow-24: #5a4e20;
+
+  /* ── lime ── */
+  --color-lime-94: #fffef5;
+  --color-lime-45: #6fba2c;
+  --color-lime-45-a10: rgba(111, 186, 44, 0.1);
+
+  /* ── green ── */
+  --color-green-87: #c8f5d0;
+  --color-green-61: #6bcb77;
+  --color-green-60-a60: rgba(122, 184, 141, 0.6);
+  --color-green-49: #4caf50;
+  --color-green-33: #2d7a31;
+  --color-green-23: #1a5c2a;
+
+  /* ── teal ── */
+  --color-teal-67: #6ee7d8;
+  --color-teal-49: #4ecdc4;
+  --color-teal-49-a30: rgba(78, 205, 196, 0.3);
+  --color-teal-38: #16aea1;
+  --color-teal-30: #14857c;
+  --color-teal-29: #1a7a5c;
+
+  /* ── cyan ── */
+  --color-cyan-74: #89cff0;
+  --color-cyan-74-a10: rgba(137, 207, 240, 0.1);
+  --color-cyan-74-a18: rgba(137, 207, 240, 0.18);
+  --color-cyan-74-a30: rgba(137, 207, 240, 0.3);
+  --color-cyan-40: #2d6f9d;
+
+  /* ── blue ── */
+  --color-blue-89: #cbe8fd;
+  --color-blue-82: #a2d1fe;
+  --color-blue-82-a10: rgba(162, 209, 254, 0.1);
+  --color-blue-82-a18: rgba(162, 209, 254, 0.18);
+  --color-blue-82-a30: rgba(162, 209, 254, 0.3);
+  --color-blue-82-a60: rgba(162, 209, 254, 0.6);
+  --color-blue-68: #60a5fa;
+  --color-blue-68-s64: #7a8fe2;
+  --color-blue-68-s64-a18: rgba(122, 143, 226, 0.18);
+  --color-blue-64: #67a4e0;
+  --color-blue-62: #7889c4;
+  --color-blue-60: #3b82f6;
+  --color-blue-53: #4660c6;
+  --color-blue-42: #4a5a8a;
+  --color-blue-27: #1a426f;
+
+  /* ── indigo ── */
+  --color-indigo-84: #c7b6f8;
+  --color-indigo-76: #a78bfa;
+  --color-indigo-76-a18: rgba(167, 139, 250, 0.18);
+  --color-indigo-46: #5b45a4;
+  --color-indigo-35-a10: rgba(74, 78, 105, 0.1);
+  --color-indigo-35-a30: rgba(74, 78, 105, 0.3);
+  --color-indigo-13: #1e1e24;
+  --color-indigo-13-a18: rgba(30, 30, 36, 0.18);
+  --color-indigo-13-a30: rgba(30, 30, 36, 0.3);
+
+  /* ── violet ── */
+  --color-violet-96: #f6eafe;
+  --color-violet-89: #e7d0f6;
+  --color-violet-75: #c084fc;
+
+  /* ── purple ── */
+  --color-purple-87: #f5c0fb;
+  --color-purple-74: #dd8deb;
+  --color-purple-73: #e879f9;
+  --color-purple-56: #c050d0;
+  --color-purple-47: #9741b0;
+
+
+
+  /* ═══════════════════════════════════════════
+     T0 主 token · 二、排版原子（字体族 + 字号刻度）
+     ═══════════════════════════════════════════ */
+
+  /* ── 字体族 ── */
+  --font-body: 'Cascadia Mono', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', monospace, sans-serif;
+  --font-mono: 'Cascadia Mono', 'Consolas', monospace;
+  --font-brand: 'Ziku FeiYang', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
+  /* ── 字号 ── */
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 20px;
+  --font-size-xl: 24px;
+  --font-size-2xl: 32px;
+
+  /* ═══════════════════════════════════════════
+     T0 主 token · 三、基础量原子（间距 / 圆角 / 阴影 / 动效 / 尺寸）
+     ═══════════════════════════════════════════ */
+
+  /* ── 间距 ── */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  /* ── 圆角 ── */
+  --radius-sm: 4px 8px;
+  --radius-md: 6px 10px;
+  --radius-lg: 8px 14px;
+  --radius-pill: 4px 10px 6px 8px;
+  --radius-table: 4px 10px;
+
+  /* ── 阴影 ── */
+  --shadow-sm: 2px 2px 0 rgba(0,0,0,0.04);
+  --shadow-md: 2px 3px 0 rgba(0,0,0,0.05);
+  --shadow-lg: 3px 4px 0 rgba(0,0,0,0.06);
+
+  /* ── 动效 ── */
+  --duration-fast: 0.12s;
+  --duration-base: 0.15s;
+  --duration-slow: 0.25s;
+  --ease: cubic-bezier(0.25,0.1,0.25,1);
+  --spring: cubic-bezier(0.34,1.56,0.64,1);
+
+  /* ── 尺寸 ── */
+  --size-border-width: 3px;
+  --size-topbar-h: 96px;
+  --size-sidebar-w: 228px;
+
+  /* ═══════════════════════════════════════════
+     T0 主 token · 四、通用组件配色（shared/components/** 跨模块复用）
+     命名：--comp-<组件>-<场景>；纯色值 MUST 引用颜色原子，复合值（阴影/渐变）本期保留字面量并登记
+     ═══════════════════════════════════════════ */
+  --comp-dbtn-disabled-bg: var(--color-lime-94);
+  --comp-dbtn-disabled-ink: var(--color-ink-57);
+  --comp-kpi-accent: var(--color-yellow-63);
+  --comp-kpi-icon-shadow: var(--color-indigo-13-a18);
+  --comp-kpi-live-pulse: var(--color-red-69-a30);
+  --comp-kpi-live-pulse-fade: var(--color-red-69-a05);
+  --comp-kpi-pin-shadow: var(--color-ink-05-a10);
+  --comp-kpi-radius: 2px;
+  --comp-kpi-shape-border: var(--color-white);
+  --comp-kpi-tape-border: var(--color-indigo-13-a30);
+  --comp-kpi-tilt: -0.8deg;
+  --comp-mascot-antenna-tip: var(--color-red-69);
+  --comp-mascot-ink: var(--color-orange-26);
+  --comp-mascot-screen: var(--color-lime-94);
+  --comp-mascot-stroke: var(--color-teal-38);
+  --comp-mascot-teal: var(--color-teal-49);
+  --comp-mascot-teal-light: var(--color-teal-49);
+  --comp-note-accent: var(--color-teal-49);
+  --comp-note-radius: 2px;
+  --comp-note-status-fail-bg: var(--color-red-95);
+  --comp-note-status-ok-bg: var(--color-lime-94);
+  --comp-note-status-run-bg: var(--color-white);
+  --comp-note-tape: var(--color-teal-49);
+  --comp-note-tape-border: var(--color-indigo-13-a30);
+  --comp-note-tilt: -0.8deg;
+  --comp-paper-mark-brown: var(--color-orange-32);
+  --comp-paper-mark-red: var(--color-red-69);
+  --comp-paper-mark-teal: var(--color-teal-49);
+  --comp-paper-mark-yellow: var(--color-yellow-62);
+  --comp-sidebar-dash: 2.5px dashed var(--ink);
+  --comp-sidebar-red: var(--color-red-69);
+  --comp-sidebar-teal: var(--color-teal-49);
+  --comp-sidebar-yellow: var(--app-highlight, var(--c-dashboard));
+  --comp-skeleton-shimmer-base: var(--color-ink-05-a05);
+  --comp-skeleton-shimmer-faint: var(--color-ink-05-a05);
+  --comp-sketch-accent: var(--color-yellow-63);
+  --comp-sketch-tilt: -1.2deg;
+  /* 子页导航：波浪面包屑 + 返回芯片（adopt-subpages-doodle-p0） */
+  --comp-crumb-gap: var(--space-sm);
+  --comp-crumb-wave: var(--color-teal-49);
+  --comp-crumb-marker: var(--color-yellow-62);
+  --comp-crumb-ink: var(--color-indigo-13);
+  --comp-crumb-muted: var(--color-ink-57);
+  --comp-crumb-back-bg: var(--color-white);
+  --comp-crumb-back-shadow: 2px 2px 0 0 var(--color-indigo-13);
+  /* AppTable 表纸皮肤 */
+  --comp-sheet-border: 2.5px dashed var(--color-indigo-13);
+  --comp-sheet-bg: var(--color-white);
+  --comp-sheet-radius: 2px 6px 2px 4px;
+  --comp-sheet-shadow-x: 4px;
+  --comp-sheet-shadow-y: 4px;
+  --comp-sheet-accent-fallback: var(--color-indigo-13);
+  /* L5 对话框纸面补缺 */
+  --comp-dialog-border: 2.5px dashed var(--color-indigo-13);
+  --comp-dialog-shadow: 4px 4px 0 0 var(--color-indigo-13);
+  --comp-dialog-radius: 6px 10px 6px 10px;
+  --comp-dialog-bg: var(--color-white);
+  --comp-ss-type-assert: var(--color-lime-45);
+  --comp-ss-type-gesture: var(--color-red-69);
+  --comp-ss-type-input: var(--color-blue-64);
+  --comp-ss-type-nav: var(--color-ink-57);
+  --comp-ss-type-other: var(--color-ink-57);
+  --comp-ss-type-wait: var(--color-orange-63);
+  --comp-wb-icon-gradient-end: var(--color-blue-68);
+
+  /* ═══════════════════════════════════════════
+     兼容别名层：以下声明名保留（消费点零改动），值 = var(主 token 原子)
+     归位与删除由变更 B（模块 token 文件化）承担；本条层结束后 T0 之外的声明不得再出现字面量色值
+     ═══════════════════════════════════════════ */
+
   /* ═══════════════════════════════════════════
      皮肤维度一 · 颜色 Color
      ═══════════════════════════════════════════ */
 
   /* ── 核心色（纸面三原色）── */
-  --ink:              #1e1e24;
-  --paper:            #fefcf5;
-  --dot:              #d8d2c4;
+  --ink:              var(--color-indigo-13) /* alias -> --color-indigo-13 */;
+  --paper:            var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --dot:              var(--color-orange-76) /* alias -> --color-orange-76 */;
 
   /* ── 模块色（现行）── */
-  --c-dashboard: #F7C948;
-  --c-device:    #6BCB77;
-  --c-element:   #A78BFA;
-  --c-case:      #4ECDC4;
-  --c-runner:    #FFB5A7;
-  --c-report:    #7C6F83;
-  --c-ai:        #E879F9;
-  --c-workflow:  #89CFF0;
-
-  /* ── 模块色（@deprecated 旧命名，值同 --c-*；新代码用 --c-*）── */
-  --app-module-green:   #6BCB77;   /* device-pool — 薄荷绿 */
-  --app-module-teal:    #4ECDC4;   /* case-manager — 青绿 */
-  --app-module-purple:  #A78BFA;   /* element-locator — 薰衣草紫 */
-  --app-module-pink:    #FFB5A7;   /* test-runner — 桃粉 */
-  --app-module-brown:   #7C6F83;   /* report-generator — 灰紫 */
-  --app-module-orange:  #E879F9;   /* ai-assistant — 柔粉 */
-  --app-module-yellow:  #F7C948;   /* dashboard — 柠黄 */
-  --app-module-blue:    #89CFF0;   /* workflow — 天蓝 */
+  --c-dashboard: var(--color-yellow-63) /* alias -> --color-yellow-63 */;
+  --c-device:    var(--color-green-61) /* alias -> --color-green-61 */;
+  --c-element:   var(--color-indigo-76) /* alias -> --color-indigo-76 */;
+  --c-case:      var(--color-teal-49) /* alias -> --color-teal-49 */;
+  --c-runner:    var(--color-red-83) /* alias -> --color-red-83 */;
+  --c-report:    var(--color-ink-47) /* alias -> --color-ink-47 */;
+  --c-ai:        var(--color-purple-73) /* alias -> --color-purple-73 */;
+  --c-workflow:  var(--color-cyan-74) /* alias -> --color-cyan-74 */;
 
   /* ── 状态色（现行 --app-status-*）── */
-  --app-status-success:     #6BCB77;
-  --app-status-success-bg:  #C8F5D0;
-  --app-status-success-text:#2d7a2d;
-  --app-status-danger:      #FFB5A7;
-  --app-status-danger-bg:   #FFE0DB;
-  --app-status-danger-text: #a03030;
-  --app-status-purple:      #C9B6F2;
-  --app-status-purple-bg:   #E8DDF8;
-  --app-status-purple-text: #5a3fa0;
-  --app-status-purple-border:#A78BFA;
-  --app-status-warning-bg:  #FFF9E0;
+  --app-status-success:     var(--color-green-61) /* alias -> --color-green-61 */;
+  --app-status-success-bg:  var(--color-green-87) /* alias -> --color-green-87 */;
+  --app-status-success-text:var(--color-green-33) /* alias -> --color-green-33 */;
+  --app-status-danger:      var(--color-red-83) /* alias -> --color-red-83 */;
+  --app-status-danger-bg:   var(--color-red-95) /* alias -> --color-red-95 */;
+  --app-status-danger-text: var(--color-red-46) /* alias -> --color-red-46 */;
+  --app-status-purple:      var(--color-indigo-84) /* alias -> --color-indigo-84 */;
+  --app-status-purple-bg:   var(--color-violet-96) /* alias -> --color-violet-96 */;
+  --app-status-purple-text: var(--color-indigo-46) /* alias -> --color-indigo-46 */;
+  --app-status-purple-border:var(--color-indigo-76) /* alias -> --color-indigo-76 */;
+  --app-status-warning-bg:  var(--color-yellow-94) /* alias -> --color-yellow-94 */;
+  /* doodle 马克笔红：侧栏危险 CTA（退出），对齐 hand-drawn-doodle --red */
+  --app-marker-red:         var(--color-red-69) /* alias -> --color-red-69 */;
 
   /* ── 状态色（旧 pass/fail/pending + live/offline/error）── */
-  --app-pass:          #C8F5D0;
-  --app-pass-text:     #1a5c2a;
-  --app-fail:          #FFE0DB;
-  --app-fail-text:     #7a1c1c;
-  --app-pending:       #D4E8FF;
-  --app-pending-text:  #1a3a6a;
-  --app-live:               #f87171;
-  --app-offline:            #d4d8dc;
-  --app-error:              #e85f5f;
-  --app-error-bg:           #fff0f0;
+  --app-pass:          var(--color-green-87) /* alias -> --color-green-87 */;
+  --app-pass-text:     var(--color-green-23) /* alias -> --color-green-23 */;
+  --app-fail:          var(--color-red-95) /* alias -> --color-red-95 */;
+  --app-fail-text:     var(--color-red-29) /* alias -> --color-red-29 */;
+  --app-pending:       var(--color-blue-89) /* alias -> --color-blue-89 */;
+  --app-pending-text:  var(--color-blue-27) /* alias -> --color-blue-27 */;
+  --app-live:               var(--color-red-69) /* alias -> --color-red-69 */;
+  --app-offline:            var(--color-ink-79) /* alias -> --color-ink-79 */;
+  --app-error:              var(--color-red-69) /* alias -> --color-red-69 */;
+  --app-error-bg:           var(--color-red-95) /* alias -> --color-red-95 */;
 
   /* ── 中性色 · 背景/表面 ── */
-  --app-bg:           var(--paper);
-  --app-bg-warm:      var(--paper);
-  --app-bg-card:      #ffffff;
-  --app-bg-input:     #ffffff;
-  --app-bg-subtle:          #f8f6f2;
+  --app-bg-card:      var(--color-white) /* alias -> --color-white */;
+  --app-bg-input:     var(--color-white) /* alias -> --color-white */;
+  --app-bg-subtle:          var(--color-lime-94) /* alias -> --color-lime-94 */;
 
   /* ── 中性色 · 文字 ── */
   --app-text:           var(--ink);
-  --app-text-secondary: #999;
-  --app-text-muted:     #bbb;
-  --app-text-inverse:   #ffffff;
-  --app-nav-text:       #5a5547;  /* 侧边栏导航未激活文字（暖灰，纸面语言） */
+  --app-text-secondary: var(--color-ink-57) /* alias -> --color-ink-57 */;
+  --app-text-muted:     var(--color-ink-79) /* alias -> --color-ink-79 */;
+  --app-text-inverse:   var(--color-white) /* alias -> --color-white */;
+  --app-nav-text:       var(--color-ink-34) /* alias -> --color-ink-34 */;  /* 侧边栏导航未激活文字（暖灰，纸面语言） */
 
   /* ── 中性色 · 边框/高亮/激活 ── */
-  --app-border-light:       #e8ecf1;
-  --app-border-lighter:     #f0ede8;
-  --app-highlight:          #FFE066;
-  --app-icon-border:       var(--ink);
+  --app-border-light:       var(--color-white) /* alias -> --color-white */;
+  --app-border-lighter:     var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --app-highlight:          var(--color-yellow-70) /* alias -> --color-yellow-70 */;
 
-  /* ── 阴影/遮罩/光晕（rgba 色值）── */
-  --app-overlay:           rgba(0, 0, 0, 0.38);
-  --app-shadow-ink:         rgba(0,0,0,0.05);
-  /* 登录页装饰光晕（仅氛围，非交互色） */
-  --app-glow-sky:          rgba(162, 210, 255, 0.5);
-  --app-glow-ocean:        rgba(63, 158, 216, 0.42);
-  --app-glow-forest:       rgba(111, 185, 141, 0.42);
+  /* ── 阴影/遮罩（rgba 色值）── */
+  --app-overlay:           var(--color-ink-05-a30) /* alias -> --color-ink-05-a30 */;
 
   /* ── 辅助/图标/杂项色 ── */
-  --app-icon-teal-bg:       #D4F5F0;
-  --app-icon-purple-bg:     #F0E8FF;
-  --app-icon-orange-bg:     #FFE8D0;
-  --app-timeline-dot:       #999;
-  --app-warning-text:       #7a5a10;
-  --app-queue-text:         #b08800;
-  --app-disconnect-text:    #c53030;
-  --app-btn-hover-purple:   #D4C8F0;
-  --app-btn-hover-danger:   #FFD0C8;
-  --app-btn-disabled-color: #ccc;
-  --app-page-active-bg:     #E8F4FD;
-  --app-footer-yellow:      #FFE066;
-  --app-footer-yellow-text: #5a4e20;
-  --app-pushpin-light:      #e8e0d5;
-  --app-pushpin-dark:       #a09080;
-  --app-pushpin-mid:        #c0b8a8;
+  --app-icon-purple-bg:     var(--color-violet-96) /* alias -> --color-violet-96 */;
+  --app-timeline-dot:       var(--color-ink-57) /* alias -> --color-ink-57 */;
+  --app-warning-text:       var(--color-yellow-27) /* alias -> --color-yellow-27 */;
+  --app-queue-text:         var(--color-yellow-35) /* alias -> --color-yellow-35 */;
+  --app-btn-hover-purple:   var(--color-violet-89) /* alias -> --color-violet-89 */;
+  --app-btn-hover-danger:   var(--color-red-85) /* alias -> --color-red-85 */;
+  --app-btn-disabled-color: var(--color-ink-79) /* alias -> --color-ink-79 */;
+  --app-page-active-bg:     var(--color-white) /* alias -> --color-white */;
+  --app-footer-yellow-text: var(--color-yellow-24) /* alias -> --color-yellow-24 */;
+  --app-pushpin-light:      var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --app-pushpin-dark:       var(--color-ink-57) /* alias -> --color-ink-57 */;
+  --app-pushpin-mid:        var(--color-orange-76) /* alias -> --color-orange-76 */;
 
-  /* ── 模块专属色 · AI Assistant ── */
-  --ai-teal:            #19c8b9;
-  --ai-teal-bg:         #e6f9f6;
-  --ai-teal-text:       #158a80;
-  --ai-teal-hover:      #15a89c;
-  --ai-warm-bg:         #faf9f4;
-  --ai-warm-border:     #e8e2d6;
-  --ai-ink-soft:        #4a3a28;
-  --ai-ink-muted:       #a0936e;
-  --ai-ink-subtle:      #5c4b38;
-  --ai-sticky-bg:       #fffef8;
-  --ai-sticky-cream:    #fffbf5;
-  --ai-bg-subtle:       #f0ebe0;
-  --ai-bg-success:      #e8f5e9;
-  --ai-bg-success-hover:#c8e6c9;
-  --ai-bg-error:        #ffebee;
-  --ai-bg-error-hover:  #ffcdd2;
-  --ai-bg-neutral:      #f5f5f5;
-  --ai-bg-neutral-hover:#eeeeee;
-  --ai-bg-teal-hover:   #b2dfdb;
-  /* HintCard 类型色 */
-  --ai-hint-purple:     #534ab7;
-  --ai-hint-blue:       #378add;
-  --ai-hint-green:      #1d9e75;
-  --ai-hint-orange:     #ba7517;
-  --ai-hint-red:        #d85a30;
-  --ai-hint-purple-bg:  #e3f2fd;
-  --ai-hint-green-bg:   var(--ai-bg-success);      /* alias */
-  --ai-hint-orange-bg:  #fff3e0;
-  --ai-hint-red-bg:     var(--ai-bg-error);        /* alias */
-  --ai-hint-neutral-bg: var(--ai-bg-neutral);      /* alias */
-  --ai-hint-yellow-bg:  #fff8e7;
-  --ai-hint-yellow-border: #f7cd67;
+  /* ── 模块专属色板 · AI（--ai-* 35 个）已迁出 :root ──
+     声明在 .ai-workbench 作用域内（见文件末尾「模块作用域色板」段）；
+     迁移依据：消费点全在带 .ai-workbench 的 4 个 AI 页面内，且 EP 2.7 弹层默认不 Teleport，作用域变量可达。
+     口径：openspec/specs/frontend-l0-design-tokens「模块令牌家族作用域于模块根」 */
 
-  /* ── 模块专属色 · AI 状态（状态徽章/连接指示/停止按钮）── */
-  --ai-status-blue-bg:     #f0f4ff;
-  --ai-status-blue-text:   #4256b8;
-  --ai-status-blue-border: #6c80d4;
-  --ai-status-purple-bg:   #fef0ff;
-  --ai-status-purple-text: #9448b3;
-  --ai-status-purple-border: #c97adb;
-  --ai-status-orange-bg:   #fff5e6;
-  --ai-status-orange-text: #a36600;
-  --ai-status-orange-border: #e0a13a;
-  --ai-status-green-bg:    #e6f5e6;
-  --ai-status-green-text:  #2a7a2a;
-  --ai-status-green-border: #4caf50;
-  --ai-status-conn-bg:     #eef0f7;
-  --ai-status-conn-text:   #4a5a8a;
-  --ai-status-conn-border: #7889c4;
-  --ai-status-warm-bg:     #f5f3ed;
-  --ai-status-warm-text:   #988b7a;
-  --ai-status-warm-border: #d0c8b8;
-  --ai-status-danger:      #e85f5f;
-  --ai-status-danger-bg:   #fef0f0;
-  --ai-status-danger-text: #c43f3f;
-  --ai-status-danger-hover: #fde0e0;
+  /* ── 模块专属色板 · Case Manager（--case-*）已迁出 :root ──
+     声明在 .case-workbench 作用域内（见文件末尾「模块作用域色板」段） */
 
-  /* ── 模块专属色 · Case Manager ── */
-  --case-border-subtle:     rgba(162, 210, 255, 0.18);
-  --case-border:            rgba(162, 210, 255, 0.24);
-  --case-border-dashed:     rgba(162, 210, 255, 0.30);
-  --case-border-divider:    rgba(162, 210, 255, 0.38);
-  --case-bg-hover:          rgba(162, 210, 255, 0.12);
-  --case-bg-active:         rgba(162, 210, 255, 0.18);
-  --case-bg-subtle:         rgba(162, 210, 255, 0.06);
-  --case-bg-drag:           rgba(162, 210, 255, 0.08);
-  --case-bg-dragover:       rgba(162, 210, 255, 0.14);
-  --case-bg-code:           rgba(162, 210, 255, 0.12);
-  --case-bg-code-hover:     rgba(162, 210, 255, 0.16);
-  --case-bg-skeleton:       rgba(162, 210, 255, 0.03);
-  --case-bg-card:           rgba(255, 255, 255, 0.38);
-  --case-warn-bg:           rgba(247, 205, 103, 0.06);
-  --case-warn-bg-strong:    rgba(247, 205, 103, 0.18);
-  --case-warn-border:       rgba(247, 170, 60, 0.30);
-  --case-warn-border-dashed:rgba(247, 205, 103, 0.45);
-  --case-warn-text:         #8a6d14;
-  --case-warn-text-strong:  #6b4c00;
-  --case-warn-accent:       #f7cd67;
-  --case-warn-accent-text:  #b8860b;
-  --case-step-success:      #27ae60;
-  --case-step-error:        #e05a5a;
-  --case-badge-danger-bg:   rgba(224, 90, 90, 0.12);
-  --case-badge-danger-text: #c0392b;
-  --case-badge-warn-bg:     rgba(245, 195, 28, 0.15);
-  --case-badge-warn-text:   #8b6914;
-  --case-badge-editing-bg:  rgba(255, 214, 165, 0.28);
-  --case-badge-editing-text:#9a6a1f;
-  --case-btn-count-bg:      rgba(111, 186, 44, 0.15);
-  --case-btn-count-text:    #4a8a1a;
-  --case-purple-bg:         rgba(136, 157, 240, 0.08);
-  --case-purple-text:       #889df0;
-  --case-purple-bg-light:   rgba(136, 157, 240, 0.06);
-  --case-purple-bg-strong:  rgba(136, 157, 240, 0.15);
-  --case-purple-bg-heavy:   rgba(136, 157, 240, 0.30);
-  --case-context-menu-bg:   #ffffff;
-  --case-watcher-badge-bg:  #f7cd67;
-  --case-watcher-badge-text:#ffffff;
-  --case-divider-line:      rgba(162, 210, 255, 0.24);
+  /* ── 仪表盘统计卡主文字（奶油低饱和；views/components/AnimalFace.vue 亦消费，属全局令牌而非模块私有）── */
+  --app-stat-text:          var(--color-ink-34) /* alias -> --color-ink-34 */;   /* 卡片主文字 */
 
-  /* ── 模块专属色 · 仪表盘统计卡（奶油低饱和）── */
-  --app-stat-line:          #7a7874;   /* 卡片软灰线条（描边/十字/图标） */
-  --app-stat-line-soft:     #9e9994;   /* 辅助文字 */
-  --app-stat-text:          #5f5d59;   /* 卡片主文字 */
-  --app-stat-hover:         #f5eecf;   /* hover 奶油黄 */
-  --app-stat-shadow:        rgba(122, 120, 116, 0.14);
-  --app-stat-shadow-hover:  rgba(122, 120, 116, 0.22);
-  --app-stat-sage:          #e6f0ea;   /* 薄荷淡绿 */
-  --app-stat-gray:          #dedfdc;   /* 柔灰 */
-  --app-stat-rose:          #f4e8e1;   /* 浅粉 */
-  --app-stat-pale:          #f0f6e7;   /* 淡青柠奶油 */
-  --app-stat-deep:          #cdd9d3;   /* 深一档薄荷 */
-  --app-stat-cream:         #fdf7ed;   /* 米白 */
-  --app-stat-dust:          #d0c5c1;   /* 灰粉 */
-
-  /* ── @deprecated 旧色（待收敛，新代码禁用）── */
-  /* 兼容别名（--app-green 实为 workflow 蓝、--app-blue 实为 element 紫，名字误导，慎用） */
-  --accent-blue:        var(--c-workflow);
-  --accent-pink:        var(--c-runner);
-  --accent-green:       var(--c-device);
-  --app-green:          var(--c-workflow);
-  --app-green-deep:     var(--c-workflow);
-  --app-green-light:    #D4E8FF;
-  --app-green-mint:     #e0f7fa;
-  --app-blue:           var(--c-element);
-  --app-blue-light:     #f3e5f5;
-  --app-blue-sky:       #e8f5e9;
-  --app-white:          #fdfbfb;
-  --text-primary:       var(--ink);
-  --text-secondary:     #999;
-  --app-accent-blue:        #89CFF0;
-  --app-accent-purple:      #b39ef3;
-  --app-accent-purple-dark: #8275c2;
-  /* 旧主题 Paper × Polaroid（与 --ink/--paper 并存待收敛） */
-  --app-ink:                #2d2d2d;
-  --app-ink-muted:          #999;
-  --app-paper:              #fefcf6;
-  --app-paper-dot:          #d4cdc0;
-  /* 自然背景 */
-  --app-sky:         #e0f7fa;
-  --app-sky-cloud:   rgba(255,255,255,0.82);
-  --app-ocean:       #a2d2ff;
-  --app-ocean-soft:  #bde0fe;
-  --app-forest:      #95D5B2;
-  --app-forest-soft: #d8f3dc;
-  --app-moss:        #d8f3dc;
-  --app-leaf:        #BDE0FE;
-  --app-bark:        #9a8c98;
+  /* ── @deprecated 旧色别名已于 2026-09-15 随 land-module-color-registry 退役 ──
+     映射：--app-ink→--ink · --app-ink-muted→--app-text-secondary（#999 同值）· --app-accent-blue / --app-green→--c-workflow
+           · --app-blue→--c-element · --app-accent-purple→--app-status-purple；用法已全部迁移，声明一并删除 */
 
   /* ═══════════════════════════════════════════
      皮肤维度二 · 字体与字号 Typography
      ═══════════════════════════════════════════ */
 
   /* ── 字体（英文 Cascadia Mono 等宽 + 中文思源黑体 Noto Sans SC；品牌文字例外用 --app-font-brand）── */
-  --app-font:          'Cascadia Mono', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', monospace, sans-serif;
-  --app-font-display:  'Cascadia Mono', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', monospace, sans-serif;
-  --app-font-mono:     'Cascadia Mono', 'Consolas', monospace;
-  --app-font-brand:    'Ziku FeiYang', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;  /* 品牌手写体，仅 400 字重 */
+  --app-font:          var(--font-body) /* alias -> --font-body */;
+  --app-font-display:  var(--font-body) /* alias -> --font-body */;
+  --app-font-mono:     var(--font-mono) /* alias -> --font-mono */;
+  --app-font-brand:    var(--font-brand) /* alias -> --font-brand */;  /* 品牌手写体，仅 400 字重 */
 
-  /* ── 字号刻度（6 档，最小 12px，禁止硬编码 font-size 字面量）── */
-  --app-size-xs:  12px;  /* 按钮文字、表格列头、标签、时间戳、Badge */
-  --app-size-sm:  14px;  /* UI 正文（默认阅读字号） */
-  --app-size-md:  16px;  /* 卡片标题、表单标签、模块标题 */
-  --app-size-lg:  20px;  /* 段落标题、弹窗标题 */
-  --app-size-xl:  24px;  /* 页面标题 */
-  --app-size-2xl: 32px;  /* KPI 数字、Hero 数字 */
-
-  /* @deprecated legacy aliases — 统一用 --app-size-*（xs=12/sm=14/md=16/lg=20/xl=24/2xl=32） */
-  --app-font-size-sm:   var(--app-size-xs);   /* ⚠️ 旧代码中的 sm=12px，新代码用 --app-size-xs */
-  --app-font-size-base: var(--app-size-sm);   /* ⚠️ 旧代码中的 base=14px，新代码用 --app-size-sm */
-  --app-font-size-lg:   var(--app-size-md);   /* ⚠️ 旧代码中的 lg=16px，新代码用 --app-size-md */
-  --font-display:       'Cascadia Mono', 'Noto Sans SC', sans-serif;
+  /* ── 字号刻度（6 档，最小 12px；**文本字号必须取本刻度**，禁止硬编码字面量）── */
+  /* 例外：图形/展示级字号可用字面量（树节点图标 18px · 空态 emoji 40px · 404 数字 96px）
+     判定语：表达图形尺寸而非文本层级；口径见 frontend/AGENTS.md 硬性规范 §1.14 */
+  --app-size-xs:  var(--font-size-xs) /* alias -> --font-size-xs */;  /* 按钮文字、表格列头、标签、时间戳、Badge */
+  --app-size-sm:  var(--font-size-sm) /* alias -> --font-size-sm */;  /* UI 正文（默认阅读字号） */
+  --app-size-md:  var(--font-size-md) /* alias -> --font-size-md */;  /* 卡片标题、表单标签、模块标题 */
+  --app-size-lg:  var(--font-size-lg) /* alias -> --font-size-lg */;  /* 段落标题、弹窗标题 */
+  --app-size-xl:  var(--font-size-xl) /* alias -> --font-size-xl */;  /* 页面标题 */
+  --app-size-2xl: var(--font-size-2xl) /* alias -> --font-size-2xl */;  /* KPI 数字、Hero 数字 */
 
   /* ═══════════════════════════════════════════
      皮肤维度三 · 间距 Spacing
      ═══════════════════════════════════════════ */
-  --app-space-xs:      4px;
-  --app-space-sm:      8px;
-  --app-space-md:      16px;
-  --app-space-lg:      24px;
-  --app-space-xl:      32px;
-  --app-space-2xl:     48px;
+  --app-space-xs:      var(--space-xs) /* alias -> --space-xs */;
+  --app-space-sm:      var(--space-sm) /* alias -> --space-sm */;
+  --app-space-md:      var(--space-md) /* alias -> --space-md */;
+  --app-space-lg:      var(--space-lg) /* alias -> --space-lg */;
+  --app-space-xl:      var(--space-xl) /* alias -> --space-xl */;
+  --app-space-2xl:     var(--space-2xl) /* alias -> --space-2xl */;
 
   /* ═══════════════════════════════════════════
      皮肤维度四 · 圆角 Radius（几何不对称）
      ═══════════════════════════════════════════ */
-  --app-radius-sm:     4px 8px;
-  --app-radius-md:     6px 10px;
-  --app-radius-lg:     8px 14px;
-  --app-radius-pill:   4px 10px 6px 8px;
+  --app-radius-sm:     var(--radius-sm) /* alias -> --radius-sm */;
+  --app-radius-md:     var(--radius-md) /* alias -> --radius-md */;
+  --app-radius-lg:     var(--radius-lg) /* alias -> --radius-lg */;
+  --app-radius-pill:   var(--radius-pill) /* alias -> --radius-pill */;
+  --app-radius-table:  var(--radius-table) /* alias -> --radius-table */;   /* 全局 .el-table 皮肤（原 --doodle-radius，2026-09-15 转为正式令牌）*/
 
   /* ═══════════════════════════════════════════
      皮肤维度五 · 阴影 Shadow（扁平化，0 模糊）
      ═══════════════════════════════════════════ */
-  --app-shadow-sm:     2px 2px 0 rgba(0,0,0,0.04);
-  --app-shadow-md:     2px 3px 0 rgba(0,0,0,0.05);
-  --app-shadow-lg:     3px 4px 0 rgba(0,0,0,0.06);
-  --app-icon-shadow:       2px 2px 0 rgba(0,0,0,0.06);
-  --app-text-shadow-light: 0 1px 0 rgba(255, 255, 255, 0.45);
-  --app-card-hover-elevation: none;
+  --app-shadow-sm:     var(--shadow-sm) /* alias -> --shadow-sm */;
+  --app-shadow-md:     var(--shadow-md) /* alias -> --shadow-md */;
+  --app-shadow-lg:     var(--shadow-lg) /* alias -> --shadow-lg */;
 
   /* ═══════════════════════════════════════════
      皮肤维度六 · 动效 Motion
      ═══════════════════════════════════════════ */
-  --app-ease:          cubic-bezier(0.25,0.1,0.25,1);
-  --app-spring:        cubic-bezier(0.34,1.56,0.64,1);
-  --app-duration-fast: 0.12s;
-  --app-duration:      0.15s;
-  --app-duration-slow: 0.25s;
+  --app-ease:          var(--ease) /* alias -> --ease */;
+  --app-spring:        var(--spring) /* alias -> --spring */;
+  --app-duration-fast: var(--duration-fast) /* alias -> --duration-fast */;
+  --app-duration:      var(--duration-base) /* alias -> --duration-base */;
+  --app-duration-slow: var(--duration-slow) /* alias -> --duration-slow */;
 
   /* ═══════════════════════════════════════════
      皮肤维度七 · 布局尺寸 Layout（骨架，非皮肤）
      ═══════════════════════════════════════════ */
-  --app-border-width:  3px;
-  --app-card-hover-lift:     -2px;
-  --app-topbar-h:       96px;
-  --side-w:             228px;
+  --app-border-width:  var(--size-border-width) /* alias -> --size-border-width */;
+  --app-topbar-h:       var(--size-topbar-h) /* alias -> --size-topbar-h */;
+  --side-w:             var(--size-sidebar-w) /* alias -> --size-sidebar-w */;
 
-  /* ═══════════════════════════════════════════
-     独立区 · Crayon Doodle 待收敛主题家族
-     ═══════════════════════════════════════════ */
-  --doodle-ink:             #2d2d2d;
-  --doodle-bg:              #faf5ee;
-  --doodle-card:            #fffbf5;
-  --doodle-border:          3px;
-  --doodle-radius:          4px 10px 4px 10px;
-  --doodle-radius-sm:       4px 8px 4px 8px;
-  --doodle-shadow:          2px 2px 0 rgba(0,0,0,0.06);
-  --doodle-texture-cross:   linear-gradient(45deg,rgba(0,0,0,0.02) 25%,transparent 25%,transparent 75%,rgba(0,0,0,0.02) 75%);
-  --doodle-texture-dots:    radial-gradient(circle,rgba(0,0,0,0.03) 1px,transparent 1px);
-  --doodle-texture-stripe:  repeating-linear-gradient(-45deg,transparent,transparent 3px,rgba(0,0,0,0.015) 3px,rgba(0,0,0,0.015) 6px);
+  /* ── 原「Crayon Doodle 待收敛家族」（--doodle-*）已于 2026-09-15 退役 ──
+     映射：--doodle-bg→--paper（同值）· --doodle-ink→--ink · --doodle-radius→--app-radius-table · --doodle-shadow→--app-shadow-sm */
 
   /* ═══════════════════════════════════════════
      独立区 · Element Plus 变量覆盖 — Doodle
      ═══════════════════════════════════════════ */
-  --el-color-primary:           #F7C948;
-  --el-color-primary-light-3:   #F9D870;
-  --el-color-primary-light-5:   #FBE898;
-  --el-color-primary-light-7:   #FDF0C0;
-  --el-color-primary-light-8:   #FEF6D8;
-  --el-color-primary-light-9:   #FFFBE8;
-  --el-color-primary-dark-2:    #D4A830;
+  --el-color-primary:           var(--color-yellow-63) /* alias -> --color-yellow-63 */;
+  --el-color-primary-light-3:   var(--color-yellow-70) /* alias -> --color-yellow-70 */;
+  --el-color-primary-light-5:   var(--color-yellow-79) /* alias -> --color-yellow-79 */;
+  --el-color-primary-light-7:   var(--color-yellow-87) /* alias -> --color-yellow-87 */;
+  --el-color-primary-light-8:   var(--color-yellow-94) /* alias -> --color-yellow-94 */;
+  --el-color-primary-light-9:   var(--color-yellow-94) /* alias -> --color-yellow-94 */;
+  --el-color-primary-dark-2:    var(--color-orange-53) /* alias -> --color-orange-53 */;
 
-  --el-color-success:           #6BCB77;
-  --el-color-warning:           #F7C948;
-  --el-color-danger:            #FFB5A7;
-  --el-color-info:              #89CFF0;
+  --el-color-success:           var(--color-green-61) /* alias -> --color-green-61 */;
+  --el-color-warning:           var(--color-yellow-63) /* alias -> --color-yellow-63 */;
+  --el-color-danger:            var(--color-red-83) /* alias -> --color-red-83 */;
+  --el-color-info:              var(--color-cyan-74) /* alias -> --color-cyan-74 */;
 
   --el-bg-color:                var(--paper);
-  --el-bg-color-overlay:        #fff;
+  --el-bg-color-overlay:        var(--color-white) /* alias -> --color-white */;
   --el-bg-color-page:           var(--paper);
-  --el-fill-color-blank:        #fff;
-  --el-fill-color-light:        #f8f6f2;
+  --el-fill-color-blank:        var(--color-white) /* alias -> --color-white */;
+  --el-fill-color-light:        var(--color-lime-94) /* alias -> --color-lime-94 */;
 
   --el-text-color-primary:      var(--ink);
   --el-text-color-regular:      var(--ink);
-  --el-text-color-secondary:    #999;
+  --el-text-color-secondary:    var(--color-ink-57) /* alias -> --color-ink-57 */;
 
   --el-border-radius-base:      4px 8px;
   --el-border-radius-small:     3px 6px;
   --el-border-radius-round:     4px 10px 6px 8px;
 
   --el-border-color:            var(--ink);
-  --el-border-color-light:      #e8e4d8;
+  --el-border-color-light:      var(--color-lime-94) /* alias -> --color-lime-94 */;
 
-  --el-box-shadow-light:        2px 2px 0 rgba(0,0,0,0.04);
-  --el-box-shadow:              2px 3px 0 rgba(0,0,0,0.05);
-  --el-box-shadow-dark:         3px 4px 0 rgba(0,0,0,0.06);
+  --el-box-shadow-light:        var(--shadow-sm);
+  --el-box-shadow:              var(--shadow-md);
+  --el-box-shadow-dark:         var(--shadow-lg);
 
   --el-font-family:             var(--app-font);
 
   /* ═══════════════════════════════════════════
-     皮肤维度六 · 布局 Layout
+     皮肤维度八 · 布局 Layout（分栏 / 比例 / 断点）
      ═══════════════════════════════════════════ */
 
   /* ── split 左栏宽度（统一档位）── */
@@ -409,20 +506,21 @@
          1200 → lg ｜ 1100 / 960 / 900 → md ｜ 800 / 768 → sm ── */
 }
 
+/* ═══════════════════════════════════════
+   模块作用域色板（不在 :root；声明在模块页面根类内）
+   依据 openspec/specs/frontend-l0-design-tokens「模块令牌家族作用域于模块根」：
+   作用域安全前提 = 消费点都在该根类之内；若某弹层显式 append-to-body（Teleport 到 body），
+   作用域变量会丢失，此时才允许退化为全局声明并在此注释原因。
+   ═══════════════════════════════════════ */
+
 /* ── AI 助手 scope ── */
-.ai-workbench {
-  --el-color-primary:           #E879F9;
-  --el-color-primary-light-3:   #F0A0FA;
-  --el-color-primary-light-5:   #F5C0FB;
-  --el-color-primary-light-7:   #FAD8FC;
-  --el-color-primary-light-8:   #FCE8FD;
-  --el-color-primary-light-9:   #FEF4FE;
-  --el-color-primary-dark-2:    #C050D0;
-}
+
+/* ── case-manager scope（--case-* 自 :root 迁入，2026-09-15）── */
+/* 页面根类 case-workbench 挂在 ProjectList / ProjectWorkspace / CaseFileSheet 三个页面上 */
 
 /* ═══════════════════════════════════════
    全局工具类
    ═══════════════════════════════════════ */
 .empty-state { text-align:center;padding:60px 20px;color:var(--app-text-secondary); }
 .empty-state p { margin:var(--app-space-md) 0;font-size:var(--app-size-sm); }
-.empty-state__icon { font-size:64px;opacity:0.5;margin-bottom:var(--app-space-sm); }
+.empty-state__icon { opacity:0.5;margin-bottom:var(--app-space-sm); }

@@ -1,6 +1,6 @@
 # Doodle Craft 视觉皮肤层 — 全局主题变量使用指南
 
-> 来源：`frontend/DESIGN_SYSTEM.md` §一。令牌值唯一真相源：`frontend/src/shared/styles/tokens.css`。
+> 来源：本文件；令牌值唯一真相源：`frontend/src/shared/styles/tokens.css`。
 > 令牌值以 tokens.css 为准；改令牌时同步更新本文件与 tokens.css。
 
 ## 1.1 色板

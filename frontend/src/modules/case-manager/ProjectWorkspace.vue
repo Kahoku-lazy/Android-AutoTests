@@ -2,6 +2,7 @@
 import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
+import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import ProjectTree from './components/ProjectTree.vue'
 import { useProjectTree } from './composables/useProjectTree'
@@ -68,31 +69,34 @@ async function onMoveItem(payload: {
   await moveTreeItem(payload.itemType, payload.itemId, payload.targetDirectoryId)
 }
 
-function goBack() {
-  router.push('/cases')
-}
-
 onMounted(async () => {
   await loadTree()
 })
 </script>
 
 <template>
-  <div class="project-workspace">
+  <div class="doc-page doc-page--fixed wb-shell case-workbench project-workspace">
     <WorkbenchHeader
       :title="pageTitle"
       subtitle="目录与文件 · 点文件进入表格编辑"
       icon="layers"
-      :icon-gradient="'linear-gradient(135deg,var(--c-case),#6ee7d8)'"
+      :icon-gradient="'linear-gradient(135deg,var(--c-case),var(--case-icon-accent))'"
     >
-      <template #actions>
-        <el-button class="wb-btn" @click="goBack">← 返回项目列表</el-button>
+      <template #nav>
+        <WorkbenchCrumbs
+          back-to="/cases"
+          back-label="返回项目列表"
+          :items="[
+            { label: '用例管理', to: '/cases' },
+            { label: pageTitle },
+          ]"
+        />
       </template>
     </WorkbenchHeader>
 
     <ErrorState v-if="treeError && !tree.length" :message="treeError" @retry="refreshTree" />
 
-    <div v-else class="project-workspace__main">
+    <div v-else class="doc-body">
       <ProjectTree
         :tree-data="tree"
         :active-file-id="null"
@@ -111,20 +115,16 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.project-workspace {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
+/* 模块作用域色板：登记本页用到的非全局色值（消费点都在页面根之内；页面根即组件根） */
+.case-workbench {
+  --case-icon-accent: var(--color-teal-67) /* -> --color-teal-67 */;  /* 页头图标渐变收尾色（与 --c-case 组成模块标识渐变） */
 }
-.project-workspace__main {
-  flex: 1;
-  min-height: 0;
+
+/* 页面根/主体骨架由 .doc-page / .doc-body 提供；本页主体自带分隔线（纸面纯色，禁自绘点阵） */
+.project-workspace .doc-body {
   width: 100%;
   border-top: 2px solid var(--case-border-subtle);
   background-color: var(--paper);
-  background-image: radial-gradient(circle, var(--dot) 0.6px, transparent 0.6px);
-  background-size: 15px 15px;
   overflow: hidden;
 }
 </style>

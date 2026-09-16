@@ -15,6 +15,13 @@ const selectedPageId = ref(null)        // 已有页面
 const newPageLabel = ref('')
 const includeOcr = ref(true)
 
+const saveFormRef = ref(null)
+/** 保存目标的必填校验（按 L4 口径走 EP :rules，取代原 Toast 空值守卫） */
+const saveRules = {
+  selectedPageId: [{ required: true, message: '请选择要保存到的页面', trigger: 'change' }],
+  newPageLabel: [{ required: true, message: '请填写新页面名称', trigger: 'blur' }],
+}
+
 // ── 页面树 → 级联目录 options（仅目录节点，逐层嵌套）──
 function buildTree(pid) {
   return pages.value
@@ -56,12 +63,14 @@ watch(() => store.saveDialogVisible, async (v) => {
   }
 })
 
-function confirm() {
+async function confirm() {
+  try {
+    await saveFormRef.value?.validate()
+  } catch {
+    // 校验失败：EP 的 validate 以 reject 表示，交由字段内联提示（非静默吞错）
+    return
+  }
   if (mode.value === 'existing') {
-    if (!selectedPageId.value) {
-      ElMessage.warning('请选择要保存到的页面')
-      return
-    }
     store.saveToElements({
       pageId: selectedPageId.value,
       pageLabel: '',
@@ -69,10 +78,6 @@ function confirm() {
       includeOcr: includeOcr.value,
     })
   } else {
-    if (!newPageLabel.value.trim()) {
-      ElMessage.warning('请填写新页面名称')
-      return
-    }
     store.saveToElements({
       pageLabel: newPageLabel.value.trim(),
       folderPath: folderPathText.value,
@@ -84,13 +89,13 @@ function confirm() {
 
 <template>
   <el-dialog
-    :model-value="store.saveDialogVisible"
+    v-model="store.saveDialogVisible"
     title="保存到元素定位"
     width="520px"
-    @update:model-value="(v) => (store.saveDialogVisible = v)"
+    :close-on-click-modal="false"
   >
     <div v-loading="loading" class="save-dlg">
-      <el-form label-width="90px" @submit.prevent>
+      <el-form ref="saveFormRef" :model="{ selectedPageId, newPageLabel }" :rules="saveRules" label-width="90px" @submit.prevent>
         <el-form-item label="目录路径">
           <el-cascader
             v-model="folderPath"
@@ -110,7 +115,7 @@ function confirm() {
           </el-radio-group>
         </el-form-item>
 
-        <el-form-item v-if="mode === 'existing'" label="选择页面" required>
+        <el-form-item v-if="mode === 'existing'" label="选择页面" prop="selectedPageId">
           <el-select
             v-model="selectedPageId"
             placeholder="选择该目录下的页面"
@@ -126,7 +131,7 @@ function confirm() {
           </el-select>
         </el-form-item>
 
-        <el-form-item v-else label="页面名称" required>
+        <el-form-item v-else label="页面名称" prop="newPageLabel">
           <el-input v-model="newPageLabel" placeholder="新页面名称" data-testid="save-label-input" />
         </el-form-item>
 

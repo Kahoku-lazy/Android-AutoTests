@@ -48,11 +48,11 @@ const METHODS = [
 .action-btn {
   display: inline-flex; align-items: center; gap: var(--app-space-xs);
   font-size: var(--app-size-xs); font-weight: 700; padding: var(--app-space-xs) 12px;
-  border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px 8px 4px 8px;
-  background: var(--app-bg-card); color: var(--app-ink, #2d2d2d);
+  border: 2px solid var(--ink); border-radius: 4px 8px 4px 8px;
+  background: var(--app-bg-card); color: var(--ink);
   cursor: pointer; font-family: inherit; transition: all 0.12s; white-space: nowrap; flex-shrink: 0;
 }
-.action-btn:hover:not(:disabled) { background: var(--app-highlight, #FFE066); }
+.action-btn:hover:not(:disabled) { background: var(--app-highlight); }
 .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.action-btn--primary { background: var(--app-ink, #2d2d2d); color: var(--app-bg-card); }
+.action-btn--primary { background: var(--ink); color: var(--app-bg-card); }
 </style>

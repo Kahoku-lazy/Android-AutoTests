@@ -74,3 +74,13 @@ export const COLOR_STYLES: Record<string, { bg: string; border: string; fill: st
   green: { bg: 'rgba(111,186,44,0.08)', border: '#6fba2c', fill: '#6fba2c' },
   slate: { bg: 'rgba(138,138,150,0.08)', border: '#8a8a96', fill: '#8a8a96' },
 }
+
+// HTTP 方法色（数据编码分类色板：API 节点徽标与接口选择列表共用，在此集中声明一次，2026-09-15 由两处字面量副本收敛）
+export const METHOD_COLORS: Record<string, string> = {
+  GET: '#6fba2c',
+  POST: '#889df0',
+  PUT: '#f7cd67',
+  DELETE: '#e85f5f',
+  PATCH: '#b39ef3',
+}
+export const METHOD_COLOR_FALLBACK = '#8b7355'

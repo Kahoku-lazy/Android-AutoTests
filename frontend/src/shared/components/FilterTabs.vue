@@ -34,7 +34,7 @@ const emit = defineEmits(['update:modelValue'])
   align-items: center;
   gap: 6px;
   padding: 5px 14px; font-size: var(--app-size-xs); font-weight: 700;
-  color: var(--app-ink-muted); background: var(--app-bg-card);
+  color: var(--app-text-secondary); background: var(--app-bg-card);
   border: 1px solid var(--app-border-light); border-radius: 999px;
   cursor: pointer; font-family: inherit; transition: all 0.15s;
 }

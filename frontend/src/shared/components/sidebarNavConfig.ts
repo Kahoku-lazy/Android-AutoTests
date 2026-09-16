@@ -2,7 +2,20 @@ export const NAV_CATEGORIES = [
   {
     key: "main",
     label: "",
-    items: [{ path: "/dashboard", icon: "layout-dashboard", label: "仪表盘" }],
+    items: [
+      { path: "/dashboard", icon: "layout-dashboard", label: "仪表盘" },
+      {
+        path: "/ai-assistant",
+        icon: "bot",
+        label: "AI 助手",
+        children: [
+          { path: "/ai-assistant/agents", icon: "sticky-note", label: "平台小助手" },
+          { path: "/ai-assistant/toolbox", icon: "wrench", label: "AI工具箱" },
+          { path: "/ai-assistant/knowledge", icon: "book-open", label: "知识库" },
+          { path: "/ai-assistant/evaluator", icon: "activity", label: "评测中心" },
+        ],
+      },
+    ],
   },
   {
     key: "data",
@@ -20,23 +33,6 @@ export const NAV_CATEGORIES = [
     items: [
       { path: "/cases", icon: "layers", label: "用例管理" },
       { path: "/reports", icon: "file-bar-chart", label: "测试报告" },
-    ],
-  },
-  {
-    key: "ai-tools",
-    label: "AI助手",
-    items: [
-      {
-        path: "/ai-assistant",
-        icon: "bot",
-        label: "AI 助手",
-        children: [
-          { path: "/ai-assistant/agents", icon: "sticky-note", label: "平台小助手" },
-          { path: "/ai-assistant/toolbox", icon: "wrench", label: "AI工具箱" },
-          { path: "/ai-assistant/knowledge", icon: "book-open", label: "知识库" },
-          { path: "/ai-assistant/evaluator", icon: "activity", label: "评测中心" },
-        ],
-      },
     ],
   },
 ]

@@ -7,10 +7,12 @@ import StepScreenshotPanel from "@/shared/components/StepScreenshotPanel.vue";
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { animate, stagger } from 'animejs'
-import PageHeader from '@/shared/components/PageHeader.vue'
+import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
+import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
 import KpiCard from '@/shared/components/KpiCard.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import { getTaskReport, formatTime } from './api'
+import { REPORT_HEADER_GRADIENT, REPORT_HEADER_ICON } from './constants'
 
 const route = useRoute()
 const router = useRouter()
@@ -123,26 +125,38 @@ function goBack() { router.push('/reports') }
 </script>
 
 <template>
-  <div v-if="error" class="doc-page detail-page">
-    <PageHeader
+  <div v-if="error" class="doc-page wb-shell task-report-page">
+    <WorkbenchHeader
       title="任务报告 Task Report"
-      color="app-yellow"
+      :icon="REPORT_HEADER_ICON"
+      :icon-gradient="REPORT_HEADER_GRADIENT"
     />
     <div class="doc-body">
       <ErrorState :message="error" @retry="loadReport" />
     </div>
   </div>
-  <div v-else-if="task" class="doc-page detail-page">
-    <PageHeader
+  <div v-else-if="task" class="doc-page wb-shell task-report-page">
+    <WorkbenchHeader
       title="任务报告 Task Report"
       :subtitle="`${taskMeta.name || taskMeta.task_id} · ${taskMeta.device_serial || '未知设备'}`"
-      color="app-yellow"
-    />
+      :icon="REPORT_HEADER_ICON"
+      :icon-gradient="REPORT_HEADER_GRADIENT"
+    >
+      <template #nav>
+        <WorkbenchCrumbs
+          back-to="/reports"
+          back-label="报告列表"
+          :items="[
+            { label: '测试报告', to: '/reports' },
+            { label: taskMeta.name || taskMeta.task_id || '任务报告' },
+          ]"
+        />
+      </template>
+    </WorkbenchHeader>
 
     <div class="doc-body">
       <!-- Top bar -->
       <div class="top-bar">
-        <el-button size="small" @click="goBack">← 报告列表</el-button>
         <span class="badge" :class="outcomeBadgeClass(taskMeta.outcome)" style="margin-left:auto;">
           {{ outcomeLabel(taskMeta.outcome) }}
         </span>
@@ -219,7 +233,7 @@ function goBack() { router.push('/reports') }
                 <div class="case-title-area">
                   <span class="case-title-text">{{ ci.title }}</span>
                 </div>
-                <span class="case-status-text" :style="{ color: ci.fail > 0 ? '#e85f5f' : 'var(--c-workflow)', background: ci.fail > 0 ? 'rgba(232,95,95,0.12)' : 'rgba(111,186,44,0.1)' }">
+                <span class="case-status-text" :style="{ color: ci.fail > 0 ? 'var(--app-error)' : 'var(--c-workflow)', background: ci.fail > 0 ? 'var(--rg-status-fail-bg)' : 'var(--rg-status-pass-bg)' }">
                   {{ ci.fail > 0 ? '🔴 有失败' : '✅ 全部通过' }}
                 </span>
                 <div class="case-stats">
@@ -255,12 +269,12 @@ function goBack() { router.push('/reports') }
           <div v-for="entry in bugEntries" :key="entry.key" class="case-card bug-card" :class="{ expanded: expandedBugs.has(entry.key) }">
             <div class="case-header" role="button" tabindex="0" @click="toggleBug(entry.key)" @keydown.enter.prevent="toggleBug(entry.key)" @keydown.space.prevent="toggleBug(entry.key)">
               <span class="case-expand-icon">▶</span>
-              <span class="case-id-badge" style="background:var(--app-status-danger-text, #a03030);">BUG-{{ String(entry.bugNum).padStart(3, '0') }}</span>
+              <span class="case-id-badge" style="background:var(--app-status-danger-text);">BUG-{{ String(entry.bugNum).padStart(3, '0') }}</span>
               <div class="case-title-area">
                 <span class="case-title-text">{{ entry.caseTitle }}</span>
                 <div class="bug-header-sub">第 {{ entry.iteration }} 轮 · 步骤 {{ entry.stepIndex + 1 }} 失败</div>
               </div>
-              <span class="case-status-text" style="color:var(--app-status-danger-text, #a03030);background:rgba(232,95,95,0.12);">🔴 执行失败</span>
+              <span class="case-status-text" style="color:var(--app-status-danger-text);background:var(--rg-status-fail-bg);">🔴 执行失败</span>
             </div>
             <div v-if="expandedBugs.has(entry.key)" class="case-body">
               <div class="bug-meta">
@@ -330,11 +344,13 @@ function goBack() { router.push('/reports') }
 </template>
 
 <style scoped>
-.doc-page{display:flex;flex-direction:column;height:100%;overflow-y:auto}
-.doc-body{padding:var(--app-space-md) var(--app-space-lg) var(--app-space-2xl);display:flex;flex-direction:column;gap:var(--app-space-md);width:100%}
-.top-bar{display:flex;align-items:center;gap:12px;margin-bottom:var(--app-space-xs);flex-wrap:wrap}.run-meta{display:flex;align-items:center;gap:10px;font-size:var(--app-size-xs);color:var(--app-ink-muted);flex-wrap:wrap}
+.doc-page{display:flex;flex-direction:column} /* height / overflow 由外壳 :deep(.doc-page) 承担 */
+.task-report-page .doc-body{padding:var(--app-space-md) var(--app-space-lg) var(--app-space-2xl);display:flex;flex-direction:column;gap:var(--app-space-md);width:100%}
+/* 模块私有色值登记（tokens.css 未登记该值）：用例状态标签的通过/失败底色 */
+.case-status-text{--rg-status-pass-bg:var(--color-lime-45-a10) /* -> --color-lime-45-a10 */;--rg-status-fail-bg:var(--color-red-69-a10)}
+.top-bar{display:flex;align-items:center;gap:12px;margin-bottom:var(--app-space-xs);flex-wrap:wrap}.run-meta{display:flex;align-items:center;gap:10px;font-size:var(--app-size-xs);color:var(--app-text-secondary);flex-wrap:wrap}
 .kpi-row{display:grid;grid-template-columns:var(--layout-kpi-cols);gap:12px;margin-bottom:var(--app-space-xs)}
 .task-meta-card{display:flex;flex-wrap:wrap;gap:10px;padding:12px var(--app-space-md);background:var(--app-bg-card);border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;margin-bottom:var(--app-space-xs);font-size:var(--app-size-xs)}.meta-item{display:flex;align-items:center;gap:6px}.meta-label{opacity:0.5;font-weight:600}.meta-value{font-weight:700}
-.detail-tabs :deep(.el-tabs__header){margin-bottom:0}.detail-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:var(--app-space-xs)}.detail-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:var(--app-ink-muted);height:auto;line-height:1.4}.detail-tabs :deep(.el-tabs__item:hover){color:var(--ink)}.detail-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-dashboard);border-color:var(--ink)}.detail-tabs :deep(.el-tabs__active-bar){display:none}
+.detail-tabs :deep(.el-tabs__header){margin-bottom:0}.detail-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:var(--app-space-xs)}.detail-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:var(--app-text-secondary);height:auto;line-height:1.4}.detail-tabs :deep(.el-tabs__item:hover){color:var(--ink)}.detail-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-dashboard);border-color:var(--ink)}.detail-tabs :deep(.el-tabs__active-bar){display:none}
 .badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);display:inline-block}.badge-pass{background:var(--app-status-success-bg);color:var(--app-status-success-text)}.badge-fail{background:var(--app-status-danger-bg);color:var(--app-status-danger-text)}.badge-stopped{background:var(--app-offline);color:var(--app-text-secondary)}
 </style>

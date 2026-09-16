@@ -49,14 +49,14 @@ const rateClass = computed(() => {
 
 .rate-bar__pass {
   height: 100%;
-  background: var(--c-device, #6BCB77);
+  background: var(--c-device);
   border-radius: 2px;
   transition: width 0.3s var(--app-ease);
 }
 
 .rate-bar__fail {
   height: 100%;
-  background: var(--c-runner, #FFB5A7);
+  background: var(--c-runner);
   transition: width 0.3s var(--app-ease);
 }
 
@@ -72,7 +72,7 @@ const rateClass = computed(() => {
 }
 
 .rate-bar__label--warn {
-  color: var(--app-queue-text, #b08800);
+  color: var(--app-queue-text);
 }
 
 .rate-bar__label--bad {

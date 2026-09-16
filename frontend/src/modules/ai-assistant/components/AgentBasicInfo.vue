@@ -19,7 +19,7 @@ const emit = defineEmits<{ 'trigger-upload': [] }>()
     </div>
     <el-form label-width="100px" class="agent-form">
       <template v-if="routeMode">
-        <el-form-item label="名称" required>
+        <el-form-item label="名称">
           <el-input v-model="form.name" placeholder="例如：控制设备助手" />
         </el-form-item>
         <el-form-item label="头像">
@@ -56,12 +56,16 @@ const emit = defineEmits<{ 'trigger-upload': [] }>()
 </template>
 
 <style scoped>
-.avatar-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.avatar-row {
+  display: flex; align-items: center; gap: var(--app-space-md); flex-wrap: wrap;
+  /* 头像预览卡投影（暖墨低透明） */
+  --avatar-shadow: 0 2px 8px rgba(61, 52, 40, 0.08);
+}
 .avatar-preview {
   width: 64px; height: 64px; border-radius: 14px; background-size: cover;
   background-position: center; background-color: var(--ai-warm-bg);
   display: flex; align-items: center; justify-content: center;
   font-size: var(--app-size-2xl); border: 2px solid var(--ai-warm-border); flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(61,52,40,0.08);
+  box-shadow: var(--avatar-shadow);
 }
 </style>

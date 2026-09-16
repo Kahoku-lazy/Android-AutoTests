@@ -74,5 +74,5 @@ const emit = defineEmits<{ 'provider-change': []; 'detect-models': [] }>()
   font-size:var(--app-size-xs); font-weight: 700; cursor: help;
   opacity: 0.5; transition: opacity 0.15s;
 }
-.help-icon:hover { opacity: 1; background: var(--app-accent-purple, #b39ef3); }
+.help-icon:hover { opacity: 1; background: var(--app-status-purple); }
 </style>

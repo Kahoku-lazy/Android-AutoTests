@@ -14,12 +14,15 @@ export default defineConfig({
     // 单测用 stub 替换 el-*，避免 Element Plus 按需 CSS 拖垮 Vitest
     ...(!isTest
       ? [
+          // importStyle: false —— EP 样式统一由 main.ts 全量引入（原因见 main.ts 注释：
+          // 显式 import 的 ElMessageBox 等函数式 API 拿不到 resolver 注入的按需样式），
+          // 关掉按需注入后组件样式只下发一份，不会与全量样式重复。
           AutoImport({
-            resolvers: [ElementPlusResolver()],
+            resolvers: [ElementPlusResolver({ importStyle: false })],
             dts: 'src/auto-imports.d.ts',
           }),
           Components({
-            resolvers: [ElementPlusResolver()],
+            resolvers: [ElementPlusResolver({ importStyle: false })],
             dts: 'src/components.d.ts',
           }),
         ]

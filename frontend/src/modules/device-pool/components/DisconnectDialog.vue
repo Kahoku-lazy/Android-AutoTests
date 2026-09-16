@@ -52,7 +52,11 @@ function handleCancel() {
 <style scoped>
 .disconnect-body { margin-bottom: var(--app-space-md); }
 .disconnect-warning {
-  background: var(--el-color-warning-light-9);
-  padding: 10px; border-radius: 6px; margin-top: var(--app-space-sm);
+  background: var(--app-status-warning-bg);
+  color: var(--app-warning-text);
+  padding: 10px;
+  border-radius: var(--app-radius-sm);
+  margin-top: var(--app-space-sm);
+  border: 1.5px dashed var(--ink);
 }
 </style>

@@ -2,11 +2,8 @@
  * anime.js 动效配套样式 — Doodle Craft 主题
  */
 /* 按钮颜色变体 */
-.wb-shell .wb-btn.wb-btn--teal.el-button--primary,
-.wb-shell .el-button.wb-btn.wb-btn--teal {
-  --el-button-bg-color: var(--app-green);
-  --el-button-border-color: var(--app-green-deep);
-}
+/* 变体必须直接声明颜色：基础皮肤 .wb-shell .wb-btn.el-button 已显式设置 background，
+   只写 Element Plus 自定义属性（--el-button-*）会被它盖住，变体色永远不生效。 */
 .wb-shell .wb-btn.wb-btn--sunset.el-button,
 .wb-shell .el-button.wb-btn.wb-btn--sunset {
   --el-button-bg-color: #F0C090;
@@ -14,26 +11,21 @@
   --el-button-text-color: #fff;
   --el-button-hover-bg-color: #f5cda0;
   --el-button-hover-text-color: #fff;
+  background: var(--el-button-bg-color);
+  border-color: var(--el-button-border-color);
+  color: var(--el-button-text-color);
 }
-.wb-shell .wb-btn.wb-btn--berry.el-button,
-.wb-shell .el-button.wb-btn.wb-btn--berry {
-  --el-button-bg-color: #B0A8E0;
-  --el-button-border-color: #988dd0;
-  --el-button-text-color: #fff;
-  --el-button-hover-bg-color: #c4bdf0;
-  --el-button-hover-text-color: #fff;
-}
-.wb-shell .wb-btn.wb-btn--sky.el-button,
-.wb-shell .el-button.wb-btn.wb-btn--sky {
-  --el-button-bg-color: var(--app-blue);
-  --el-button-border-color: #80b8e8;
-  --el-button-text-color: #fff;
-  --el-button-hover-bg-color: #b8d8ff;
-  --el-button-hover-text-color: #fff;
+.wb-shell .wb-btn.wb-btn--sunset.el-button:hover,
+.wb-shell .el-button.wb-btn.wb-btn--sunset:hover {
+  background: var(--el-button-hover-bg-color);
+  border-color: var(--el-button-border-color);
+  color: var(--el-button-hover-text-color);
 }
 
 /* 加载三点 */
 .wb-loader {
+  /* 加载三点第三点灰绿（本组件专用色值登记处；tokens.css 无同值令牌） */
+  --wb-loader-dot-3: #e2ece9;
   display: inline-flex; align-items: center;
   gap: 6px; padding: var(--app-space-xs) 2px;
 }
@@ -41,42 +33,48 @@
   width: 8px; height: 8px; border-radius: 50%;
   display: block;
 }
-.wb-loader .dot:nth-child(1) { background: var(--app-green); }
-.wb-loader .dot:nth-child(2) { background: var(--app-blue); }
-.wb-loader .dot:nth-child(3) { background: #e2ece9; }
-
-/* 旋转环 */
-.wb-spinner {
-  width: 28px; height: 28px; border-radius: 50%;
-  border: 3px solid rgba(162,210,255,0.18);
-  border-top-color: var(--app-green);
-  border-right-color: var(--app-blue);
-  display: inline-block;
-}
+.wb-loader .dot:nth-child(1) { background: var(--c-workflow); }
+.wb-loader .dot:nth-child(2) { background: var(--c-element); }
+.wb-loader .dot:nth-child(3) { background: var(--wb-loader-dot-3); }
 
 /* 选中描边 */
 .wb-select-ring {
-  outline: 2px solid rgba(162,210,255,0.72) !important;
+  /* 选中态描边（rgba 绘制色登记处；tokens.css 无同值令牌） */
+  --wb-select-ring-color: rgba(162, 210, 255, 0.72);
+  outline: 2px solid var(--wb-select-ring-color) !important;
   outline-offset: 3px;
   transition: outline-color var(--app-duration) ease;
 }
 
-/* 路由切换淡入 */
+/* 路由切换淡入：时长/缓动/位移全部走设计令牌 */
 .fade-slide-enter-active,
 .fade-slide-leave-active {
-  transition: opacity 0.28s ease, transform 0.28s ease;
+  transition:
+    opacity var(--app-duration-slow) var(--app-ease),
+    transform var(--app-duration-slow) var(--app-ease);
 }
-.fade-slide-enter-from { opacity: 0; transform: translateY(16px); }
-.fade-slide-leave-to   { opacity: 0; transform: translateY(-10px); }
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(var(--app-space-md));
+}
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(calc(var(--app-space-sm) * -1));
+}
 
-/* 卡片悬浮 */
-.wb-shell .agent-card,
-.wb-shell .el-card {
+@media (prefers-reduced-motion: reduce) {
+  .fade-slide-enter-active,
+  .fade-slide-leave-active {
+    transition: none;
+  }
+}
+
+/* 卡片悬浮（排除 AppCard 钉板：.ac-card 自管硬阴影/微倾） */
+.wb-shell .el-card:not(.ac-card) {
   transition: transform 0.22s var(--app-spring), box-shadow 0.22s ease;
   will-change: transform;
 }
-.wb-shell .agent-card:hover,
-.wb-shell .el-card:hover {
+.wb-shell .el-card:not(.ac-card):hover {
   transform: translateY(-3px);
   box-shadow: var(--app-shadow-lg);
 }

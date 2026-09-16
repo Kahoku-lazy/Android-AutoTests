@@ -124,6 +124,8 @@ class LocatorDirectoryViewSet(viewsets.ViewSet):
 @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def move_items(request):
+    """POST /api/elements/move — 把目录 / 文件 / 叶子资产移动到目标目录。"""
+
     body = request.data or {}
     parent_id = body.get("parent_directory_id", body.get("parent_id"))
     try:
@@ -141,6 +143,8 @@ def move_items(request):
 @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def batch_delete_files(request):
+    """POST /api/elements/files/batch-delete — 按 kind 批量删除文件。"""
+
     body = request.data or {}
     ids = body.get("ids") or []
     try:

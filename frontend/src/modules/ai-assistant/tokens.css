@@ -1,0 +1,54 @@
+/* ai-assistant 模块令牌（T1）
+   作用域：.ai-workbench（模块页面根类）——消费点都在该根类内，弹层为原地渲染
+   口径：值 MUST 引用 T0 主 token 原子；本文件不得出现字面量色值
+   来源：变更 module-token-files（自 shared/styles/tokens.css 迁出）
+*/
+
+.ai-workbench {
+  --el-color-primary:           var(--color-purple-73) /* alias -> --color-purple-73 */;
+  --el-color-primary-light-3:   var(--color-purple-74) /* alias -> --color-purple-74 */;
+  --el-color-primary-light-5:   var(--color-purple-87) /* alias -> --color-purple-87 */;
+  --el-color-primary-light-7:   var(--color-violet-89) /* alias -> --color-violet-89 */;
+  --el-color-primary-light-8:   var(--color-violet-96) /* alias -> --color-violet-96 */;
+  --el-color-primary-light-9:   var(--color-violet-96) /* alias -> --color-violet-96 */;
+  --el-color-primary-dark-2:    var(--color-purple-56) /* alias -> --color-purple-56 */;
+
+  /* ── AI 专属色板（自 :root 迁入，2026-09-15）── */
+  --ai-teal:            var(--color-teal-49) /* alias -> --color-teal-49 */;
+  --ai-teal-bg:         var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --ai-teal-text:       var(--color-teal-30) /* alias -> --color-teal-30 */;
+  --ai-teal-hover:      var(--color-teal-38) /* alias -> --color-teal-38 */;
+  --ai-warm-bg:         var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --ai-warm-border:     var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --ai-ink-soft:        var(--color-orange-26) /* alias -> --color-orange-26 */;
+  --ai-ink-muted:       var(--color-yellow-53) /* alias -> --color-yellow-53 */;
+  --ai-ink-subtle:      var(--color-orange-26) /* alias -> --color-orange-26 */;
+  --ai-sticky-bg:       var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --ai-bg-subtle:       var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --ai-bg-neutral:      var(--color-white) /* alias -> --color-white */;
+  --ai-hint-orange:     var(--color-orange-37) /* alias -> --color-orange-37 */;
+
+  /* ── AI 状态（状态徽章 / 连接指示 / 停止按钮）── */
+  --ai-status-blue-bg:     var(--color-white) /* alias -> --color-white */;
+  --ai-status-blue-text:   var(--color-blue-53) /* alias -> --color-blue-53 */;
+  --ai-status-blue-border: var(--color-blue-68-s64) /* alias -> --color-blue-68-s64 */;
+  --ai-status-purple-bg:   var(--color-violet-96) /* alias -> --color-violet-96 */;
+  --ai-status-purple-text: var(--color-purple-47) /* alias -> --color-purple-47 */;
+  --ai-status-purple-border: var(--color-purple-74) /* alias -> --color-purple-74 */;
+  --ai-status-orange-bg:   var(--color-yellow-94) /* alias -> --color-yellow-94 */;
+  --ai-status-orange-text: var(--color-orange-37) /* alias -> --color-orange-37 */;
+  --ai-status-orange-border: var(--color-orange-53) /* alias -> --color-orange-53 */;
+  --ai-status-green-bg:    var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --ai-status-green-text:  var(--color-green-33) /* alias -> --color-green-33 */;
+  --ai-status-green-border: var(--color-green-49) /* alias -> --color-green-49 */;
+  --ai-status-conn-bg:     var(--color-white) /* alias -> --color-white */;
+  --ai-status-conn-text:   var(--color-blue-42) /* alias -> --color-blue-42 */;
+  --ai-status-conn-border: var(--color-blue-62) /* alias -> --color-blue-62 */;
+  --ai-status-warm-bg:     var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --ai-status-warm-text:   var(--color-ink-57) /* alias -> --color-ink-57 */;
+  --ai-status-warm-border: var(--color-orange-76) /* alias -> --color-orange-76 */;
+  --ai-status-danger:      var(--color-red-69) /* alias -> --color-red-69 */;
+  --ai-status-danger-bg:   var(--color-red-95) /* alias -> --color-red-95 */;
+  --ai-status-danger-text: var(--color-red-46) /* alias -> --color-red-46 */;
+  --ai-status-danger-hover: var(--color-red-95) /* alias -> --color-red-95 */;
+}

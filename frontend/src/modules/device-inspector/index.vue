@@ -47,12 +47,12 @@ function onOcrClick(ocr) {
 </script>
 
 <template>
-  <div class="doc-page doc-page--fixed wb-shell">
+  <div class="doc-page doc-page--fixed wb-shell inspector-workbench">
     <WorkbenchHeader
       title="设备检查器 Device Inspector"
       subtitle="选择设备一键获取页面元素与 OCR 快照，回看、筛减并保存到元素管理"
       icon="crosshair"
-      icon-gradient="linear-gradient(135deg,#C9B6F2,#a78bfa)"
+      icon-gradient="linear-gradient(135deg,var(--app-status-purple),var(--c-element))"
     />
 
     <div class="doc-body">
@@ -166,13 +166,13 @@ function onOcrClick(ocr) {
 
 <style scoped>
 .doc-page {
-  display: flex; flex-direction: column; height: 100%; overflow: hidden;
-  background: radial-gradient(circle, var(--app-paper-dot, #d4cdc0) 0.8px, transparent 0.8px);
-  background-size: 14px 14px;
-  background-color: var(--doodle-bg, #faf5ee);
+  display: flex; flex-direction: column;
+  /* 纸面为纯色：装饰只由 PaperDoodles 提供，禁自绘点阵（frontend-l3-container） */
+  background-color: var(--paper);
+  /* 注：height / overflow 由外壳 .main-content__body :deep(.doc-page)（权重 3）承担，本层不再声明 */
 }
 
-.doc-body {
+.inspector-workbench .doc-body {
   flex: 1;
   min-height: 0;
   width: 100%;
@@ -191,7 +191,7 @@ function onOcrClick(ocr) {
   min-height: 0;
   width: 100%;
   box-sizing: border-box;
-  padding: var(--app-space-lg) 28px 28px;
+  padding: var(--app-space-lg);
   overflow: hidden;
 }
 
@@ -213,9 +213,9 @@ function onOcrClick(ocr) {
   flex-wrap: wrap;
   padding: 10px 14px;
   background: var(--app-bg-card);
-  border: 3px solid var(--doodle-ink, #2d2d2d);
+  border: 3px solid var(--ink);
   border-radius: 6px 10px 6px 10px;
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.04);
+  box-shadow: var(--app-shadow-sm);
 }
 
 .filter-search { width: 260px; }
@@ -253,8 +253,8 @@ function onOcrClick(ocr) {
 
 .inspector-footer {
   display: flex; align-items: center; justify-content: center; gap: var(--app-space-lg);
-  padding: 10px 20px; background: var(--app-highlight, #FFE066);
-  border-top: 2.5px solid var(--app-ink, #2d2d2d);
+  padding: 10px 20px; background: var(--app-highlight);
+  border-top: 2.5px solid var(--ink);
   font-size: var(--app-size-sm); font-weight: 700;
   color: var(--app-footer-yellow-text); font-family: var(--app-font-display);
   flex-shrink: 0;
@@ -264,10 +264,10 @@ function onOcrClick(ocr) {
 .action-btn {
   display: inline-flex; align-items: center; gap: var(--app-space-xs);
   font-size: var(--app-size-xs); font-weight: 700; padding: var(--app-space-xs) 12px;
-  border: 2px solid var(--app-ink, #2d2d2d); border-radius: 4px 8px 4px 8px;
-  background: var(--app-bg-card); color: var(--app-ink, #2d2d2d);
+  border: 2px solid var(--ink); border-radius: 4px 8px 4px 8px;
+  background: var(--app-bg-card); color: var(--ink);
   cursor: pointer; font-family: inherit; transition: all 0.12s; white-space: nowrap; flex-shrink: 0;
 }
-.action-btn:hover:not(:disabled) { background: var(--app-highlight, #FFE066); }
+.action-btn:hover:not(:disabled) { background: var(--app-highlight); }
 .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>

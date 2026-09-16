@@ -69,5 +69,5 @@ const emit = defineEmits<{
 
 </style>
 <style>
-@import '@/views/shared/login-card.css';
+@import '@/views/styles/login-card.css';
 </style>

@@ -300,7 +300,7 @@ flowchart TB
     subgraph GW["API 网关 · config/urls.py"]
         ROOT["/api/ 根 · dashboard"]
         APPS["/api/{app}/ × 10<br/>inspector · elements · devices · cases · workflow<br/>reports · auth · ai · evaluator"]
-        DOC["/api/schema · /api/swagger · /api/docs"]
+        DOC["/api/schema · /api/swagger"]
     end
     subgraph WSR["WebSocket · gateway/routing.py"]
         W0["websocket_urlpatterns = []（0 生产点，禁止新增）"]

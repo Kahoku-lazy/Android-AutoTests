@@ -1,10 +1,12 @@
 /**
  * [P0] 必测 — 仪表盘统计卡主交互（数值展示 / 趋势文案 / loading 骨架 / 点击跳转）
  * 目录：tests/dashboard/p0/
+ * StatsCard 现为 KpiCard entry 薄包装，交互节点落在 .kpi-card / .kpi-card__enter。
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import StatsCard from '@/modules/dashboard/components/StatsCard.vue'
+import type { StatsCardProps } from '@/modules/dashboard/components/StatsCard.vue'
 
 const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }))
 
@@ -12,9 +14,9 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ push: pushMock }),
 }))
 
-function mountCard(props: Record<string, unknown> = {}) {
+function mountCard(props: Partial<StatsCardProps> = {}) {
   return mount(StatsCard, {
-    props,
+    props: { label: props.label ?? '指标', ...props },
     global: { stubs: { 'el-button': true } },
   })
 }
@@ -52,7 +54,7 @@ describe('[P0] StatsCard', () => {
 
   it('desc 缺省时：显示默认描述', () => {
     const wrapper = mountCard({})
-    expect(wrapper.find('.stats-card__desc').text()).toBe('核心指标实时更新')
+    expect(wrapper.find('.kpi-card__desc').text()).toBe('核心指标实时更新')
   })
 
   it('loading=true：显示骨架屏，不显示数值', () => {
@@ -63,9 +65,10 @@ describe('[P0] StatsCard', () => {
 
   it('有 path：卡片可点，点击跳转目标路由', async () => {
     const wrapper = mountCard({ value: 3, path: '/devices' })
-    expect(wrapper.attributes('role')).toBe('button')
+    const card = wrapper.find('.kpi-card')
+    expect(card.attributes('role')).toBe('button')
 
-    await wrapper.trigger('click')
+    await card.trigger('click')
 
     expect(pushMock).toHaveBeenCalledTimes(1)
     expect(pushMock).toHaveBeenCalledWith('/devices')
@@ -74,7 +77,7 @@ describe('[P0] StatsCard', () => {
   it('点击「进入」按钮：同样跳转且不重复触发', async () => {
     const wrapper = mountCard({ value: 3, path: '/devices' })
 
-    await wrapper.find('.stats-card__enter').trigger('click')
+    await wrapper.find('.kpi-card__enter').trigger('click')
 
     expect(pushMock).toHaveBeenCalledTimes(1)
     expect(pushMock).toHaveBeenCalledWith('/devices')
@@ -82,18 +85,20 @@ describe('[P0] StatsCard', () => {
 
   it('无 path：不可点、无进入按钮，点击不跳转', async () => {
     const wrapper = mountCard({ value: 3 })
-    expect(wrapper.attributes('role')).toBeUndefined()
-    expect(wrapper.find('.stats-card__enter').exists()).toBe(false)
+    const card = wrapper.find('.kpi-card')
+    expect(card.attributes('role')).toBeUndefined()
+    expect(wrapper.find('.kpi-card__enter').exists()).toBe(false)
 
-    await wrapper.trigger('click')
+    await card.trigger('click')
 
     expect(pushMock).not.toHaveBeenCalled()
   })
 
   it('键盘 Enter：触发跳转', async () => {
     const wrapper = mountCard({ value: 3, path: '/reports' })
+    const card = wrapper.find('.kpi-card')
 
-    await wrapper.trigger('keydown', { key: 'Enter' })
+    await card.trigger('keydown', { key: 'Enter' })
 
     expect(pushMock).toHaveBeenCalledWith('/reports')
   })

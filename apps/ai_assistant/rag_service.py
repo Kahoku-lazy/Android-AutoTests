@@ -28,10 +28,13 @@ from agentscope.rag import (
     VectorSearchResult,
     VectorStoreBase,
 )
+from django.conf import settings
 
 # ── 向量库：chromadb 实现的 VectorStoreBase ──
 
-_VECTOR_DIR = "data/rag_vector"
+# 数据目录统一取自 config/settings.py 的 DATA_DIR（缺省项目内 data/），避免 CWD 相对路径漂移
+_VECTOR_DIR = str(settings.DATA_DIR / "rag_vector")
+_RAG_DATAS_DIR = str(settings.DATA_DIR / "rag_datas")
 _COLLECTION = "project_knowledge"  # chromadb collection name 需 ≥3 字符且仅 [a-zA-Z0-9._-]
 
 
@@ -276,7 +279,7 @@ def get_knowledge_base():
 # ── 对外操作 ──
 
 
-async def _index_rag_directory(dir_path: str = "data/rag_datas") -> dict:
+async def _index_rag_directory(dir_path: str = _RAG_DATAS_DIR) -> dict:
     from agentscope.rag import ApproxTokenChunker, TextParser
 
     kb = get_knowledge_base()
@@ -347,7 +350,7 @@ def kb_doc_count() -> int:
     return asyncio.run(_kb_doc_count())
 
 
-def index_rag_directory(dir_path: str = "data/rag_datas") -> dict:
+def index_rag_directory(dir_path: str = _RAG_DATAS_DIR) -> dict:
     """同步索引入口。"""
     return asyncio.run(_index_rag_directory(dir_path))
 

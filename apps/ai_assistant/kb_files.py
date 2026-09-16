@@ -11,7 +11,7 @@ from django.conf import settings
 
 logger = logging.getLogger("ai_assistant")
 
-RAG_DATAS_DIR = Path(settings.BASE_DIR) / "data" / "rag_datas"
+RAG_DATAS_DIR = settings.DATA_DIR / "rag_datas"
 
 LIST_EXTENSIONS = {".md", ".markdown", ".txt", ".docx", ".pdf"}
 TEXT_EXTENSIONS = {".md", ".markdown", ".txt"}

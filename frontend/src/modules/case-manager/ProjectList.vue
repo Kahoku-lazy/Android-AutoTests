@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox, type FormInstance } from 'element-plus'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
+import SketchCard from '@/shared/components/SketchCard.vue'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
+import { sketchTiltAt, sketchToneAt } from '@/shared/helpers/sketchCard'
 import { useProjects } from './composables/useProjects'
 
 const router = useRouter()
@@ -14,6 +16,12 @@ const { projects, loading, creating, error, isEmpty, loadProjects, addProject, r
 const createDialogVisible = ref(false)
 const newProjectName = ref('')
 const newProjectDesc = ref('')
+
+const createFormRef = ref<FormInstance>()
+/** 新建项目的字段级校验（按 L4 口径走 EP :rules，取代原 Toast 空值守卫） */
+const createRules = {
+  name: [{ required: true, message: '请输入项目名称', trigger: 'blur' }],
+}
 
 onMounted(() => {
   loadProjects()
@@ -26,6 +34,12 @@ function openCreateDialog() {
 }
 
 async function confirmCreate() {
+  try {
+    await createFormRef.value?.validate()
+  } catch {
+    // 校验失败：EP 的 validate 以 reject 表示，交由字段内联提示（非静默吞错）
+    return
+  }
   const created = await addProject(newProjectName.value, newProjectDesc.value)
   if (created) {
     createDialogVisible.value = false
@@ -37,8 +51,7 @@ function enterProject(id: number) {
   router.push(`/cases/projects/${id}`)
 }
 
-async function onDeleteProject(id: number, name: string, event: Event) {
-  event.stopPropagation()
+async function onDeleteProject(id: number, name: string) {
   try {
     await ElMessageBox.confirm(
       `删除项目「${name}」将同时删除其下全部目录与用例，此操作不可恢复。`,
@@ -53,25 +66,25 @@ async function onDeleteProject(id: number, name: string, event: Event) {
 </script>
 
 <template>
-  <div class="project-list-page">
+  <div class="doc-page doc-page--fixed wb-shell case-workbench project-list-page">
     <WorkbenchHeader
       title="用例管理"
       subtitle="按项目组织文档型测试用例，维护目录结构与用例表单"
       icon="layers"
-      :icon-gradient="'linear-gradient(135deg,var(--c-case),#6ee7d8)'"
+      :icon-gradient="'linear-gradient(135deg,var(--c-case),var(--case-icon-accent))'"
     >
       <template #actions>
         <el-button type="primary" class="wb-btn" @click="openCreateDialog">+ 新建项目</el-button>
       </template>
     </WorkbenchHeader>
 
-    <div v-if="loading" class="project-list-page__body project-list-page__body--loading">
+    <div v-if="loading" class="doc-body project-list-page__loading">
       <el-skeleton :rows="4" animated />
     </div>
 
     <ErrorState v-else-if="error" :message="error" @retry="loadProjects" />
 
-    <div v-else class="project-list-page__body">
+    <div v-else class="doc-body">
       <EmptyState
         v-if="isEmpty"
         icon="📁"
@@ -82,34 +95,20 @@ async function onDeleteProject(id: number, name: string, event: Event) {
       </EmptyState>
 
       <div v-else class="project-grid">
-        <article
-          v-for="item in projects"
+        <SketchCard
+          v-for="(item, index) in projects"
           :key="item.id"
-          class="project-card"
-          role="button"
-          tabindex="0"
-          @click="enterProject(item.id)"
-          @keydown.enter.prevent="enterProject(item.id)"
-        >
-          <div class="project-card__accent" />
-          <div class="project-card__body">
-            <h3 class="project-card__title">{{ item.name }}</h3>
-            <p v-if="item.description" class="project-card__desc">{{ item.description }}</p>
-            <p v-else class="project-card__desc project-card__desc--muted">暂无描述</p>
-            <div class="project-card__meta">
-              <span>{{ item.case_count }} 条用例</span>
-              <span>{{ item.updated_at?.slice(0, 10) || '—' }}</span>
-            </div>
-          </div>
-          <button
-            type="button"
-            class="project-card__delete"
-            title="删除项目"
-            @click="onDeleteProject(item.id, item.name, $event)"
-          >
-            删除
-          </button>
-        </article>
+          :title="item.name"
+          :description="item.description"
+          :meta="`${item.case_count} 条用例 · ${item.updated_at?.slice(0, 10) || '—'}`"
+          icon="layers"
+          :tone="sketchToneAt(index)"
+          :tilt="sketchTiltAt(index)"
+          deletable
+          delete-label="删除项目"
+          @activate="enterProject(item.id)"
+          @delete="onDeleteProject(item.id, item.name)"
+        />
       </div>
     </div>
 
@@ -119,8 +118,8 @@ async function onDeleteProject(id: number, name: string, event: Event) {
       width="440px"
       :close-on-click-modal="false"
     >
-      <el-form label-position="top">
-        <el-form-item label="项目名称" required>
+      <el-form ref="createFormRef" :model="{ name: newProjectName }" :rules="createRules" label-position="top">
+        <el-form-item label="项目名称" prop="name">
           <el-input
             v-model="newProjectName"
             maxlength="200"
@@ -147,91 +146,22 @@ async function onDeleteProject(id: number, name: string, event: Event) {
 </template>
 
 <style scoped>
-.project-list-page {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
+/* 模块作用域色板：登记本页用到的非全局色值（消费点都在页面根之内；页面根即组件根） */
+.case-workbench {
+  --case-icon-accent: var(--color-teal-67) /* -> --color-teal-67 */;  /* 页头图标渐变收尾色（与 --c-case 组成模块标识渐变） */
 }
-.project-list-page__body {
-  flex: 1;
-  min-height: 0;
+
+/* 页面根/主体骨架由 .doc-page / .doc-body 提供，这里只留本页增量 */
+.project-list-page .doc-body {
   overflow-y: auto;
   padding: var(--app-space-lg);
 }
-.project-list-page__body--loading {
+.project-list-page__loading {
   max-width: 720px;
 }
 .project-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: var(--app-space-md);
-}
-.project-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  border: 2px solid var(--case-border-subtle);
-  border-radius: var(--app-radius-lg);
-  background: var(--case-bg-card);
-  cursor: pointer;
-  transition: border-color var(--app-duration) var(--app-ease),
-    box-shadow var(--app-duration) var(--app-ease);
-  overflow: hidden;
-}
-.project-card:hover,
-.project-card:focus-visible {
-  border-color: var(--c-case);
-  box-shadow: var(--app-shadow-sm);
-  outline: none;
-}
-.project-card__accent {
-  height: 4px;
-  background: var(--c-case);
-}
-.project-card__body {
-  padding: var(--app-space-md);
-  flex: 1;
-}
-.project-card__title {
-  margin: 0 0 var(--app-space-xs);
-  font-size: var(--app-size-md);
-  font-weight: 700;
-  color: var(--ink);
-}
-.project-card__desc {
-  margin: 0 0 var(--app-space-sm);
-  font-size: var(--app-size-sm);
-  color: var(--app-text-secondary);
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.project-card__desc--muted {
-  font-style: italic;
-}
-.project-card__meta {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--app-space-sm);
-  font-size: var(--app-size-xs);
-  color: var(--app-text-secondary);
-}
-.project-card__delete {
-  position: absolute;
-  top: var(--app-space-sm);
-  right: var(--app-space-sm);
-  border: 1px solid var(--case-border);
-  background: var(--case-bg-subtle);
-  color: var(--case-step-error);
-  font-size: var(--app-size-xs);
-  padding: 2px var(--app-space-sm);
-  border-radius: var(--app-radius-sm);
-  cursor: pointer;
-}
-.project-card__delete:hover {
-  background: var(--case-badge-danger-bg);
 }
 </style>

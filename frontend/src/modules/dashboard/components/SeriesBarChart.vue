@@ -20,7 +20,7 @@ const props = withDefaults(
 
 // ⚠️ ECharts 渲染在 Canvas 上，不支持 CSS 变量，此处保留色值字面量。
 //    token 对照：#1e1e24=--ink · #e8ecf1=--app-border-light · #f0ede8=--app-border-lighter
-//    #999=--app-ink-muted；系列色由调用方按 token 同值传入。
+//    #999=--app-text-secondary；系列色由调用方按 token 同值传入。
 function compactNumber(v: number): string {
   if (v >= 1_000_000) return (v / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M'
   if (v >= 1_000) return (v / 1_000).toFixed(1).replace(/\.0$/, '') + 'K'

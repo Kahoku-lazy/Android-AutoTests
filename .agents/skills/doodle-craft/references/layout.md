@@ -1,6 +1,6 @@
 # Doodle Craft 页面层 — 布局骨架与滚动规则
 
-> 来源：`frontend/DESIGN_SYSTEM.md` §四（已瘦身，页面规则现以此文件为准）。令牌值以 tokens.css 为准。
+> 来源：本文件（页面规则以此为准；原 `DESIGN_SYSTEM.md` §四已并入）。令牌值以 tokens.css 为准。
 
 ## 4.1 标准页面骨架
 

@@ -8,6 +8,7 @@
  * - solo：资源态独占整页（非侧栏窄条）
  */
 import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import { useLibraryStore, type LibNode } from '@/modules/workflow/stores/libraryStore'
 import { NODE_TYPES, NODE_TYPE_LABELS } from '@/modules/workflow/constants'
 
@@ -147,7 +148,16 @@ async function removeNode(n: LibNode) {
     n.type === 'folder'
       ? `删除目录「${n.name}」？其中的页面流与接口流也会删除。`
       : `删除「${n.name}」？\n${n.id}`
-  if (!confirm(tip)) return
+  try {
+    await ElMessageBox.confirm(tip, '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    // 用户取消删除：ElMessageBox 以 reject 表示取消，不执行删除（非静默吞错）
+    return
+  }
   await lib.deleteNode(n.id)
   if (props.selectedFolderId === n.id) emit('update:selectedFolderId', null)
   closeCtx()
@@ -654,6 +664,8 @@ function onCreateRoot() {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  /* 本模块私有色：tokens.css 未登记，登记在菜单自身根类（Teleport 到 body 后变量仍可达） */
+  --wf-ctx-hover-bg: var(--color-cyan-74-a18) /* -> --color-cyan-74-a18 */; /* 菜单项悬停底（工作流蓝 16%） */
 }
 .wf-ctx button {
   border: none;
@@ -668,7 +680,7 @@ function onCreateRoot() {
   cursor: pointer;
   transition: background 0.12s var(--app-ease);
 }
-.wf-ctx button:hover { background: rgba(137, 207, 240, 0.16); }
+.wf-ctx button:hover { background: var(--wf-ctx-hover-bg); }
 .wf-ctx button.danger { color: var(--app-status-danger-text); }
 .wf-ctx button.danger:hover { background: var(--app-status-danger-bg); }
 .wf-ctx hr {

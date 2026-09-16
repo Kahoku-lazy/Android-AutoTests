@@ -7,6 +7,7 @@ import { portHandleColor } from '@/modules/workflow/composables/useVueFlowAdapte
 import { useWorkflowStore } from '@/modules/workflow/stores/workflowStore'
 import { ELEMENT_ICONS, MULTI_IN_PORT_TYPES } from '@/modules/workflow/types/workflow'
 import type { StartKind } from '@/modules/workflow/types/workflow'
+import { METHOD_COLORS, METHOD_COLOR_FALLBACK } from '@/modules/workflow/registry/nodeRegistry'
 
 const props = defineProps<NodeProps<PageFlowNodeData>>()
 const store = useWorkflowStore()
@@ -37,9 +38,9 @@ const icon = computed(() => {
   return '📱'
 })
 
+/** HTTP 方法徽标色：取自节点注册表的集中方法色板（原为本地字面量副本） */
 function methodColor(m?: string): string {
-  const map: Record<string, string> = { GET: '#6fba2c', POST: '#889df0', PUT: '#f7cd67', DELETE: '#e85f5f', PATCH: '#b39ef3' }
-  return map[m || 'GET'] || '#8b7355'
+  return METHOD_COLORS[m || 'GET'] || METHOD_COLOR_FALLBACK
 }
 
 function onRename(e: Event) {
@@ -238,10 +239,17 @@ watch(
   font-family: var(--app-font);
   color: var(--ink);
   box-shadow: var(--app-shadow-sm);
+  /* ── 本模块私有色：tokens.css 未登记，登记在节点自身根类 ── */
+  --wf-node-selected-ring: var(--color-cyan-74-a30) /* -> --color-cyan-74-a30 */; /* 选中态外发光（工作流蓝 28%） */
+  --wf-node-api-glow: var(--color-orange-55-a18) /* -> --color-orange-55-a18 */;       /* API 节点外发光（橙 16%） */
+  --wf-node-api-bg: var(--color-orange-55-a10) /* -> --color-orange-55-a10 */;         /* API 行底色（橙 8%） */
+  --wf-node-in-count-fg: var(--color-blue-53) /* -> --color-blue-53 */;                     /* 入端口计数文字（蓝紫） */
+  --wf-node-in-count-bg: var(--color-blue-68-s64-a18) /* -> --color-blue-68-s64-a18 */;    /* 入端口计数底（蓝紫 20%） */
+  --wf-node-handle-ring: var(--color-blue-82-a30) /* -> --color-blue-82-a30 */;    /* 端口圆点描边光晕 */
 }
 .pf-node.selected {
   border-color: var(--c-workflow);
-  box-shadow: 0 0 0 3px rgba(137, 207, 240, 0.28), var(--app-shadow-md);
+  box-shadow: 0 0 0 3px var(--wf-node-selected-ring), var(--app-shadow-md);
 }
 .pf-node.popup {
   border-style: dashed;
@@ -255,14 +263,14 @@ watch(
 }
 .pf-node.api {
   min-width: 240px;
-  box-shadow: 0 0 8px rgba(245, 166, 35, 0.16);
+  box-shadow: 0 0 8px var(--wf-node-api-glow);
 }
 .pf-api {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 6px var(--app-space-sm);
-  background: rgba(245, 166, 35, 0.08);
+  background: var(--wf-node-api-bg);
   border-radius: 8px;
   margin-bottom: var(--app-space-xs);
 }
@@ -272,7 +280,7 @@ watch(
   border-radius: 4px;
   font-size: var(--app-size-xs);
   font-weight: 800;
-  color: #fff;
+  color: var(--app-text-inverse);
   flex-shrink: 0;
 }
 .api-url {
@@ -408,8 +416,8 @@ watch(
 .pf-in-count {
   font-size: var(--app-size-xs);
   font-weight: 800;
-  color: #4a6ad4;
-  background: rgba(136, 157, 240, 0.2);
+  color: var(--wf-node-in-count-fg);
+  background: var(--wf-node-in-count-bg);
   border-radius: 8px;
   padding: 0 6px;
   line-height: 16px;
@@ -437,7 +445,7 @@ watch(
 .pf-handle {
   width: 12px !important;
   height: 12px !important;
-  border: 2px solid #fff !important;
+  border: 2px solid var(--app-bg-card) !important;
   border-radius: 50% !important;
   position: relative !important;
   top: auto !important;
@@ -445,12 +453,12 @@ watch(
   right: auto !important;
   transform: none !important;
   flex-shrink: 0;
-  box-shadow: 0 0 0 1px rgba(162, 210, 255, 0.3);
+  box-shadow: 0 0 0 1px var(--wf-node-handle-ring);
 }
 .pf-handle.target { margin-right: 2px; order: -1; }
 .pf-handle.source { margin-left: 2px; }
 .pf-handle:hover {
-  box-shadow: 0 0 0 4px rgba(162, 210, 255, 0.3);
+  box-shadow: 0 0 0 4px var(--wf-node-handle-ring);
 }
 
 .pf-empty-end {

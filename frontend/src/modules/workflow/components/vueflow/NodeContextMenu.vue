@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import type { CatalogPage, ApiEndpointRef } from '@/modules/workflow/data/pageCatalog'
 import { fetchCatalogPages, fetchApiEndpoints } from '@/modules/workflow/data/pageCatalog'
+import { METHOD_COLORS, METHOD_COLOR_FALLBACK } from '@/modules/workflow/registry/nodeRegistry'
 
 const props = defineProps<{
   show: boolean
@@ -98,8 +100,17 @@ function apiFiltered() {
   )
 }
 
-function doDelete() {
-  if (!confirm(`确定删除节点「${props.nodeLabel}」？相关连线也会删除。`)) return
+async function doDelete() {
+  try {
+    await ElMessageBox.confirm(`确定删除节点「${props.nodeLabel}」？相关连线也会删除。`, '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    // 用户取消删除：ElMessageBox 以 reject 表示取消，不触发删除（非静默吞错）
+    return
+  }
   emit('deleteNode')
   emit('close')
 }
@@ -164,7 +175,7 @@ onMounted(() => {
           <button v-for="ep in apiFiltered()" :key="ep.id" class="page-item" @click="selectApi(ep)">
             <div class="page-name">{{ ep.name }}</div>
             <div class="page-meta">
-              <span :style="'display:inline-block;padding:1px 6px;border-radius:4px;font-size:var(--app-size-xs);font-weight:700;color:var(--app-bg-card);background:' + (ep.method === 'GET' ? '#6fba2c' : ep.method === 'POST' ? '#889df0' : '#8b7355')">{{ ep.method }}</span>
+              <span :style="'display:inline-block;padding:1px 6px;border-radius:4px;font-size:var(--app-size-xs);font-weight:700;color:var(--app-bg-card);background:' + (ep.method === 'GET' ? METHOD_COLORS.GET : ep.method === 'POST' ? METHOD_COLORS.POST : METHOD_COLOR_FALLBACK)">{{ ep.method }}</span>
               {{ ep.url }}
             </div>
           </button>
@@ -220,6 +231,9 @@ onMounted(() => {
   box-shadow: var(--app-shadow-lg);
   padding: var(--app-space-sm);
   font-family: var(--app-font);
+  /* 本模块私有色：tokens.css 未登记，登记在菜单自身根类（Teleport 到 body 后变量仍可达） */
+  --wf-nodemenu-hover-bg: var(--color-cyan-74-a18) /* -> --color-cyan-74-a18 */; /* 菜单项/页项悬停底（工作流蓝 16%） */
+  --wf-nodemenu-hint: var(--color-cyan-40) /* -> --color-cyan-40 */;                       /* 已关联提示文字与「当前」徽章底（深蓝） */
 }
 .menu-title {
   font-size: var(--app-size-sm);
@@ -232,7 +246,7 @@ onMounted(() => {
 }
 .menu-hint {
   font-size: var(--app-size-xs);
-  color: #2f6ea3;
+  color: var(--wf-nodemenu-hint);
   font-weight: 700;
   padding: 0 var(--app-space-sm) var(--app-space-sm);
 }
@@ -253,7 +267,7 @@ onMounted(() => {
   font-family: inherit;
   transition: background 0.12s var(--app-ease);
 }
-.menu-item:hover { background: rgba(137, 207, 240, 0.16); }
+.menu-item:hover { background: var(--wf-nodemenu-hover-bg); }
 .menu-item.danger { color: var(--app-status-danger-text); }
 .menu-item.danger:hover {
   background: var(--app-status-danger-bg);
@@ -278,7 +292,7 @@ onMounted(() => {
   cursor: pointer;
   font-weight: 700;
 }
-.back:hover { background: rgba(137, 207, 240, 0.16); }
+.back:hover { background: var(--wf-nodemenu-hover-bg); }
 .search {
   margin: 0 var(--app-space-xs) 6px;
   padding: var(--app-space-sm) 10px;
@@ -306,8 +320,8 @@ onMounted(() => {
   cursor: pointer;
   font-family: inherit;
 }
-.page-item:hover { background: rgba(137, 207, 240, 0.16); }
-.page-item.active { background: rgba(137, 207, 240, 0.16); }
+.page-item:hover { background: var(--wf-nodemenu-hover-bg); }
+.page-item.active { background: var(--wf-nodemenu-hover-bg); }
 .page-name {
   font-size: var(--app-size-sm);
   font-weight: 800;
@@ -317,8 +331,8 @@ onMounted(() => {
 }
 .badge {
   font-size: var(--app-size-xs);
-  color: #fff;
-  background: #2f6ea3;
+  color: var(--app-text-inverse);
+  background: var(--wf-nodemenu-hint);
   border-radius: 6px;
   padding: 1px 6px;
   font-weight: 700;

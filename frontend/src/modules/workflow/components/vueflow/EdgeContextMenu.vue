@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { ElMessageBox } from 'element-plus'
 
 const props = defineProps<{
   show: boolean
@@ -51,8 +52,17 @@ function confirmRename() {
   emit('rename', props.linkId, name.value.trim())
 }
 
-function doDelete() {
-  if (!confirm(`删除连线「${props.customName || props.label}」？`)) return
+async function doDelete() {
+  try {
+    await ElMessageBox.confirm(`删除连线「${props.customName || props.label}」？`, '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    // 用户取消删除：ElMessageBox 以 reject 表示取消，不触发删除（非静默吞错）
+    return
+  }
   emit('delete', props.linkId)
 }
 </script>
@@ -110,6 +120,8 @@ function doDelete() {
   flex-direction: column;
   gap: 2px;
   font-family: var(--app-font);
+  /* 本模块私有色：tokens.css 未登记，登记在菜单自身根类（Teleport 到 body 后变量仍可达） */
+  --wf-edge-hover-bg: var(--color-cyan-74-a18) /* -> --color-cyan-74-a18 */; /* 菜单项/返回键悬停底（工作流蓝 16%） */
 }
 .edge-menu__title {
   font-size: var(--app-size-sm);
@@ -136,7 +148,7 @@ function doDelete() {
   font-family: inherit;
   transition: background 0.12s var(--app-ease);
 }
-.edge-menu__item:hover { background: rgba(137, 207, 240, 0.16); }
+.edge-menu__item:hover { background: var(--wf-edge-hover-bg); }
 .edge-menu__item.danger { color: var(--app-status-danger-text); }
 .edge-menu__item.danger:hover { background: var(--app-status-danger-bg); }
 .edge-menu__header {
@@ -159,7 +171,7 @@ function doDelete() {
   font-weight: 700;
   line-height: 1;
 }
-.edge-menu__back:hover { background: rgba(137, 207, 240, 0.16); }
+.edge-menu__back:hover { background: var(--wf-edge-hover-bg); }
 .edge-menu__input {
   margin: 0 var(--app-space-xs) 6px;
   padding: var(--app-space-sm) 10px;

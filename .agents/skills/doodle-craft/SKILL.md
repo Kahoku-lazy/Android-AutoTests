@@ -9,7 +9,7 @@ description: |
 
 > 极简几何 · 粗线涂鸦 · 彩绘卡通 · 手稿纸
 > 令牌唯一真相源：`frontend/src/shared/styles/tokens.css`
-> 风格约束与验收：`frontend/DESIGN_SYSTEM.md`
+> 风格约束与验收：`.agents/skills/vue-frontend-check/references/checklist.md`（组件规格验收；原 `frontend/DESIGN_SYSTEM.md` 已并入该文件）
 > 前端编码规范（嵌套深度 / z-index / 文件组织 / 脚手架）：`frontend/AGENTS.md`（Vue 代码编写规范 + L0–L3 速查）
 
 本技能用于**做页面 / 做组件 / 改样式**，以及**维护迭代 Doodle Craft 主题**。
@@ -25,7 +25,7 @@ description: |
 | 文件 | 内容 | 何时用 |
 |------|------|--------|
 | `frontend/src/shared/styles/tokens.css` | 设计令牌唯一真相源 | 改令牌值 |
-| `frontend/DESIGN_SYSTEM.md` | 风格约束（硬编码值）+ 验收前端设计 | 验收 / 查约束 |
+| `references/tokens.md` + `vue-frontend-check/references/checklist.md` | 风格约束（硬编码值）+ 验收前端设计 | 验收 / 查约束 |
 | `references/tokens.md`（本技能） | 视觉皮肤层：色板 / 模块色 / 状态色 / 字号 / 字体 / 圆角 / 阴影 / 间距 / 动效 / 颜色使用规则 | 改视觉属性时查精确值 |
 | `references/components.md`（本技能） | 20 个组件像素级规格（Element Plus 原子 10 + 业务组件 10） | 做/改组件时查精确值 |
 | `references/layout.md`（本技能） | 页面层：骨架 / 点阵背景 / 微旋转 / 滚动规则 / flex 规则 / 宽度规则 / 页面变体 | 改布局时查规则 |
@@ -41,7 +41,7 @@ description: |
 | 改按钮/表格/弹窗/表单/输入框 | `references/components.md` §一 基础原子 | 复制 `:deep()` 块，只调色/尺寸 |
 | 改颜色/字体/间距/圆角/阴影/动效 | `references/tokens.md` | `tokens.css` 的 **T0 主 token**：颜色 `--color-*`（按颜色命名，同值只登记一次）· 字号 `--font-size-*` · 间距 `--space-*` · 圆角 `--radius-*` · 阴影 `--shadow-*` · 通用组件 `--comp-*`；`--app-*` / `--el-*` 为兼容别名（= `var(原子)`）|
 | 改页面布局 / 排查不可滚动 | `references/layout.md` | 组件 `scoped CSS`（用 `var(--*)`） |
-| 新增设计规则 | — | 同步 `DESIGN_SYSTEM.md` + `tokens.css` |
+| 新增设计规则 | — | 同步 `references/tokens.md` + `tokens.css` |
 
 **验证**：`cd frontend && npm run lint:styles`（批 2 硬门禁：颜色原子唯一 + 非原子声明无纯色字面量 + 引用完整）· 确认 `tokens.css ↔ 组件` 一致，无硬编码色值/字号残留。
 
@@ -96,4 +96,4 @@ const NAV_ICONS = {
 [ ] 新 .vue 文件 ≤ 500 行
 ```
 
-> 完整分组验收标准见 `DESIGN_SYSTEM.md` §二；工程门禁（布局/契约/可达性/四态）用 `vue-frontend-check` skill。
+> 完整分组验收标准见 `vue-frontend-check/references/checklist.md`；工程门禁（布局/契约/可达性/四态）用 `vue-frontend-check` skill。

@@ -47,13 +47,16 @@
 
 .filter-count {
   font-size: var(--app-size-sm);
-  color: var(--app-text-secondary, #999);
+  color: var(--app-text-secondary);
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .dot-board {
+  /* 点阵纸纹色（AI 蓝低透明）与卡片内描边高光（白低透明） */
+  --ai-dot-grid: var(--color-cyan-74-a10) /* -> --color-cyan-74-a10 */;
+  --dot-board-inner-glow: var(--color-white-a60) /* -> --color-white-a60 */;
   display: flex;
   flex-wrap: wrap;
   gap: 28px var(--app-space-xl);
@@ -62,10 +65,10 @@
   padding: 28px 22px var(--app-space-lg);
   border-radius: 18px;
   background-color: var(--app-bg-card);
-  background-image: radial-gradient(rgba(137,207,240,0.12) 1.1px, transparent 1.1px);
+  background-image: radial-gradient(var(--ai-dot-grid) 1.1px, transparent 1.1px);
   background-size: 18px 18px;
   border: 1.5px solid var(--ink);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 1px 0 var(--dot-board-inner-glow);
 }
 .duty-roster {
   min-height: 680px;
@@ -81,7 +84,7 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: var(--app-text-secondary, #999);
+  color: var(--app-text-secondary);
   font-size: var(--app-size-sm);
   font-weight: 700;
 }

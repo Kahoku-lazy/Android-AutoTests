@@ -4,7 +4,7 @@
  */
 import { computed, nextTick, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import type { TableInstance } from 'element-plus'
+import AppTable from '@/shared/components/AppTable.vue'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import { formatApiError } from '@/shared/api-client'
 import { apiPageItems, apiUpdateElement } from '../api'
@@ -36,7 +36,7 @@ const pageElements = ref<PageElementRow[]>([])
 const screenshotPath = ref('')
 const elementFilter = ref<'all' | 'clickable' | 'text' | 'testpoint'>('all')
 const selectedId = ref<number | null>(null)
-const tableRef = ref<TableInstance>()
+const appTableRef = ref<InstanceType<typeof AppTable> | null>(null)
 
 const elementCount = computed(() => pageElements.value.length)
 
@@ -133,9 +133,19 @@ function rowClassName({ row }: { row: PageElementRow }) {
   return row.id === selectedId.value ? 'page-row--active' : ''
 }
 
+/** 页面元素表列定义（别名 / 文本 / resource-id / XPath / 坐标 / 测试点） */
+const ELEMENT_COLUMNS = [
+  { dataIndex: 'alias', minWidth: 120, label: '别名', showOverflowTooltip: false },
+  { dataIndex: 'text_val', minWidth: 100, label: '文本' },
+  { dataIndex: 'resource_id', minWidth: 140, label: 'resource-id' },
+  { dataIndex: 'xpath', minWidth: 180, label: 'XPath' },
+  { dataIndex: 'bounds', minWidth: 120, label: '坐标' },
+  { dataIndex: 'test_point', width: 88, align: 'center', label: '测试点', showOverflowTooltip: false },
+]
+
 async function scrollRowIntoView(id: number) {
   await nextTick()
-  const root = tableRef.value?.$el as HTMLElement | undefined
+  const root = appTableRef.value?.tableRef?.$el as HTMLElement | undefined
   if (!root) return
   const tr = root.querySelector(
     `.el-table__body tr[data-row-key="${id}"]`,
@@ -146,7 +156,7 @@ async function scrollRowIntoView(id: number) {
 async function selectElement(id: number, source: 'table' | 'shot') {
   selectedId.value = id
   const row = pageElements.value.find((item) => item.id === id)
-  if (row) tableRef.value?.setCurrentRow(row)
+  if (row) appTableRef.value?.tableRef?.setCurrentRow(row)
   if (source === 'shot') await scrollRowIntoView(id)
 }
 
@@ -226,10 +236,11 @@ defineExpose({ reload: loadElements })
           text="该页面暂无元素"
           hint="可从设备检查器导入快照"
         />
-        <el-table
+        <AppTable
           v-else
-          ref="tableRef"
-          :data="pageElements"
+          ref="appTableRef"
+          :columns="ELEMENT_COLUMNS"
+          :data-source="pageElements"
           border
           stripe
           height="100%"
@@ -240,41 +251,27 @@ defineExpose({ reload: loadElements })
           :row-class-name="rowClassName"
           @row-click="onRowClick"
         >
-          <el-table-column label="别名" min-width="120">
-            <template #default="{ row }">
-              <el-input
-                :model-value="row.alias"
-                size="small"
-                placeholder="未命名"
-                @click.stop
-                @change="(v: string) => onAliasChange(row, v)"
-              />
-            </template>
-          </el-table-column>
-          <el-table-column prop="text_val" label="文本" min-width="100" show-overflow-tooltip />
-          <el-table-column
-            prop="resource_id"
-            label="resource-id"
-            min-width="140"
-            show-overflow-tooltip
-          />
-          <el-table-column label="XPath" min-width="180" show-overflow-tooltip>
-            <template #default="{ row }">
-              <code v-if="row._first_xpath" class="cell-code">{{ row._first_xpath }}</code>
-              <span v-else class="cell-muted">—</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="bounds" label="坐标" min-width="120" show-overflow-tooltip />
-          <el-table-column label="测试点" width="88" align="center">
-            <template #default="{ row }">
-              <el-switch
-                :model-value="row.is_test_point"
-                @click.stop
-                @change="(v: string | number | boolean) => onTestPointChange(row, v)"
-              />
-            </template>
-          </el-table-column>
-        </el-table>
+          <template #cell-alias="{ row }">
+            <el-input
+              :model-value="row.alias"
+              size="small"
+              placeholder="未命名"
+              @click.stop
+              @change="(v: string) => onAliasChange(row, v)"
+            />
+          </template>
+          <template #cell-xpath="{ row }">
+            <code v-if="row._first_xpath" class="cell-code">{{ row._first_xpath }}</code>
+            <span v-else class="cell-muted">—</span>
+          </template>
+          <template #cell-test_point="{ row }">
+            <el-switch
+              :model-value="row.is_test_point"
+              @click.stop
+              @change="(v: string | number | boolean) => onTestPointChange(row, v)"
+            />
+          </template>
+        </AppTable>
       </section>
     </div>
   </div>

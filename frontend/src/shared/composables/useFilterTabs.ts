@@ -24,7 +24,7 @@ import { ref, computed } from 'vue'
  *
  * @example
  *   // In template:
- *   <Tabs :items="filterTabs" v-model="activeFilter" :leaf-animation="true" :shadow="true">
+ *   <Tabs :items="filterTabs" v-model="activeFilter">
  *     <template v-for="tab in filterTabs" #[tab.key] :key="tab.key">
  *       ...
  *     </template>

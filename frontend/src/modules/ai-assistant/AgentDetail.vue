@@ -5,8 +5,8 @@ import { getAgentDetail, uploadAvatar, saveAgent, testAgent } from "./api/agents
 import { formatApiError } from "@/shared/api-client";
 import { ElMessage, ElMessageBox } from "element-plus";
 import ErrorState from "@/shared/components/patterns/ErrorState.vue";
-import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue";
-import { IconArrowLeft } from "@/shared/icons/index";
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue';
 import { ROUTE_AI_ASSISTANT } from "./constants";
 import AgentBasicInfo from "./components/AgentBasicInfo.vue";
 import AgentRouteConfig from "./components/AgentRouteConfig.vue";
@@ -182,17 +182,22 @@ async function testConnection() {
       "
       icon="settings"
       icon-gradient="linear-gradient(135deg, var(--ai-teal), var(--ai-teal-hover))"
-    />
+    >
+      <template #nav>
+        <WorkbenchCrumbs
+          back-to="/ai-assistant/agents"
+          back-label="返回智能体列表"
+          :items="[
+            { label: '平台小助手', to: '/ai-assistant/agents' },
+            { label: isNew ? '新建智能体' : (agent?.name || '编辑智能体') },
+          ]"
+        />
+      </template>
+    </WorkbenchHeader>
 
     <ErrorState v-if="loadError" :message="loadError" @retry="loadAgentDetail" />
 
     <div class="doc-body agent-body">
-      <!-- Back button -->
-      <button class="back-btn" @click="router.push(ROUTE_AI_ASSISTANT)">
-        <IconArrowLeft :size="18" />
-        <span>返回智能体列表</span>
-      </button>
-
       <input
         type="file"
         ref="fileInput"
@@ -256,20 +261,6 @@ async function testConnection() {
 }
 
 /* ── Back button ── */
-.back-btn {
-  display: inline-flex; align-items: center; gap: var(--app-space-sm); padding: 10px 20px;
-  border: 2px solid var(--ai-teal); border-radius: 12px; background: var(--ai-teal-bg);
-  color: var(--ai-teal-text); font-size: var(--app-size-md); font-weight: 700; font-family: inherit;
-  cursor: pointer; transition: all 0.2s ease; align-self: flex-start;
-}
-.back-btn:hover { background: var(--ai-teal); color: var(--app-bg-card); box-shadow: var(--app-shadow-md); transform: translateY(-1px); }
-
-/* ── Shared step panel（:deep 才能作用到子组件标题） ── */
-:deep(.step-panel) { padding: 28px var(--app-space-xl); }
-:deep(.section-title) {
-  display: flex; align-items: center; gap: 12px; font-size: var(--app-size-lg); font-weight: 700;
-  color: var(--ai-ink-soft); margin-bottom: var(--app-space-lg); padding-bottom: 14px; border-bottom: 2px solid var(--ai-bg-subtle);
-}
 :deep(.section-num) {
   display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;
   border-radius: 10px; background: linear-gradient(135deg,var(--ai-teal),var(--ai-teal-hover));

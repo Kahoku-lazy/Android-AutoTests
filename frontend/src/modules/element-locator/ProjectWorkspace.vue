@@ -6,6 +6,7 @@
 import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
+import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import LocatorTree from './components/LocatorTree.vue'
 import { useLocatorTree } from './composables/useLocatorTree'
@@ -55,10 +56,6 @@ async function onDeleteFile(payload: { fileId: number; kind: LocatorFileKind }) 
   await removeFile(payload.fileId, payload.kind)
 }
 
-function goProjectList() {
-  router.push('/elements')
-}
-
 watch(projectCode, () => {
   loadTree()
 })
@@ -69,21 +66,28 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="project-workspace">
+  <div class="doc-page doc-page--fixed wb-shell project-workspace">
     <WorkbenchHeader
       :title="pageTitle"
       subtitle="目录树 · 点击文件进入详情查看元素"
       icon="crosshair"
-      :icon-gradient="'linear-gradient(135deg,var(--c-element),#c4b5fd)'"
+      :icon-gradient="'linear-gradient(135deg,var(--c-element),var(--locator-header-icon-end))'"
     >
-      <template #actions>
-        <el-button class="wb-btn" @click="goProjectList">← 返回项目列表</el-button>
+      <template #nav>
+        <WorkbenchCrumbs
+          back-to="/elements"
+          back-label="返回项目列表"
+          :items="[
+            { label: '元素定位', to: '/elements' },
+            { label: pageTitle },
+          ]"
+        />
       </template>
     </WorkbenchHeader>
 
     <ErrorState v-if="treeError && !tree.length" :message="treeError" @retry="loadTree" />
 
-    <div v-else class="project-workspace__main">
+    <div v-else class="doc-body">
       <LocatorTree
         :tree-data="tree"
         :active-file-id="null"
@@ -100,20 +104,15 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+/* 页面根/主体骨架由 .doc-page / .doc-body 提供；本页主体自带分隔线（纸面纯色，禁自绘点阵） */
+/* 页头图标渐变末端色：tokens.css 未登记 #c4b5fd，登记在本页根作用域，随根元素继承给页头图标块 */
 .project-workspace {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
+  --locator-header-icon-end: var(--color-indigo-84) /* -> --color-indigo-84 */;
 }
-.project-workspace__main {
-  flex: 1 1 0;
-  min-height: 0;
+.project-workspace .doc-body {
   width: 100%;
   overflow: hidden;
   border-top: 2px solid var(--app-border-light);
   background-color: var(--paper);
-  background-image: radial-gradient(circle, var(--dot) 0.6px, transparent 0.6px);
-  background-size: 15px 15px;
 }
 </style>

@@ -57,8 +57,20 @@ g_root = create_group("根路径 & 文档", parent=f_platform, sort=0)
 create_endpoint(
     g_root, "GET", "服务健康检查", "/", '返回 {"status":true,"service":"Android-AutoTests API"}'
 )
-create_endpoint(g_root, "GET", "API 文档 JSON", "/api/docs", "完整 JSON 格式的 API 文档")
-create_endpoint(g_root, "GET", "API 文档 HTML", "/api/docs.html", "交互式 HTML API 文档页面")
+create_endpoint(
+    g_root,
+    "GET",
+    "API 文档（OpenAPI）",
+    "/api/schema/",
+    "drf-spectacular 生成的 OpenAPI 3.0 文档",
+)
+create_endpoint(
+    g_root,
+    "GET",
+    "API 文档（Swagger UI）",
+    "/api/swagger/",
+    "Swagger UI 交互式文档页，静态资产离线自托管",
+)
 
 # ── 1. Dashboard ──
 f_dashboard = create_folder("仪表盘", parent=ROOT, sort=1)

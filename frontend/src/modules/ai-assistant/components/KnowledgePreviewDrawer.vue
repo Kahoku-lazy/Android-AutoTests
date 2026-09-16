@@ -55,11 +55,15 @@ watch(() => props.path, loadPreview, { immediate: true })
 </template>
 
 <style scoped>
-.kb-preview-body { min-height: 200px; }
+.kb-preview-body {
+  min-height: 200px;
+  /* Markdown 代码块底色（暖棕低透明叠加） */
+  --kb-md-code-bg: var(--color-orange-32-a05) /* -> --color-orange-32-a05 */;
+}
 .kb-preview-note {
   margin: 0 0 12px;
   font-size: var(--app-size-xs);
-  color: var(--app-ink-muted);
+  color: var(--app-text-secondary);
 }
 .kb-preview-md {
   font-size: var(--app-size-sm);
@@ -74,7 +78,7 @@ watch(() => props.path, loadPreview, { immediate: true })
   overflow: auto;
   padding: 10px 12px;
   border-radius: 8px;
-  background: rgba(121, 79, 39, 0.06);
+  background: var(--kb-md-code-bg);
 }
 .kb-preview-text {
   margin: 0;

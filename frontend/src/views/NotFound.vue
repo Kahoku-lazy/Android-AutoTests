@@ -36,7 +36,7 @@ function goBack() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 60px);
+  min-height: calc(100% - 60px); /* 父级 .main-content 高度确定；100vh 在移动端会撑出滚动条 */
   padding: 40px 20px;
 }
 

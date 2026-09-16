@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
+import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
 import { useSkillViewer } from './composables/useSkillViewer'
 import { renderSkillMarkdown } from './helpers/skill-markdown'
 import type { SkillTreeNode } from './api/toolbox'
 
 const route = useRoute()
-const router = useRouter()
 const skillName = computed(() => String(route.params.skillName || ''))
 const {
   tree, treeLoading, treeError, selectedPath, file, fileLoading, fileError, loadTree, loadFile,
@@ -29,9 +29,6 @@ function retryFile() {
   if (selectedPath.value) void loadFile(selectedPath.value)
 }
 
-function goBack() {
-  router.push('/ai-assistant/toolbox')
-}
 </script>
 
 <template>
@@ -40,10 +37,17 @@ function goBack() {
       :title="skillName || 'Skill'"
       subtitle="查看 Skill 目录与文件内容"
       icon="book-open"
-      icon-gradient="linear-gradient(135deg, var(--c-ai), #c084fc)"
+      icon-gradient="linear-gradient(135deg, var(--c-ai), var(--sv-icon-grad-end))"
     >
-      <template #actions>
-        <el-button class="wb-btn" @click="goBack">返回工具箱</el-button>
+      <template #nav>
+        <WorkbenchCrumbs
+          back-to="/ai-assistant/toolbox"
+          back-label="返回工具箱"
+          :items="[
+            { label: 'AI工具箱', to: '/ai-assistant/toolbox' },
+            { label: skillName || 'Skill' },
+          ]"
+        />
       </template>
     </WorkbenchHeader>
 

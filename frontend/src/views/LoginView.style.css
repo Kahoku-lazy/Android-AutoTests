@@ -229,6 +229,9 @@
   border: var(--login-dash);
   background: var(--app-bg-card);
   box-shadow: 4px 4px 0 0 var(--c-case);
+  /* 手绘倾斜。注意：带 transform 的祖先会成为 position: fixed 后代的包含块 ——
+     本卡内挂的 el-dialog 必须 append-to-body，否则遮罩只盖住本卡而非视口
+     （见 frontend-l5-overlay「Blocking overlays escape transformed ancestors」）。 */
   transform: rotate(1.2deg);
   animation: meeting-settle var(--app-duration-slow) var(--app-spring) both;
 }

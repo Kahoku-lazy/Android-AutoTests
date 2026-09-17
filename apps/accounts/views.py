@@ -14,6 +14,8 @@ from shared.auth.jwt_auth import (
     blacklist_token,
     create_access_token,
     create_token_pair,
+    revoke_session,
+    session_id_of,
     verify_token,
 )
 
@@ -114,7 +116,8 @@ class RefreshView(APIView):
                     {"detail": "令牌类型错误，需要刷新令牌"},
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
-            new_access = create_access_token(payload["sub"])
+            # 透传 sid：续期后的 access 仍属同一会话，登出时一并失效
+            new_access = create_access_token(payload["sub"], sid=payload.get("sid"))
             return Response({"access_token": new_access, "token_type": "bearer"})
         except Exception as exc:
             msg = str(exc) or ""
@@ -129,7 +132,7 @@ class RefreshView(APIView):
 
 
 class LogoutView(APIView):
-    """POST /api/auth/logout — 登出：把当前 access 令牌写入 Redis 黑名单。"""
+    """POST /api/auth/logout — 登出：吊销本次登录的整个会话（access + refresh）。"""
 
     permission_classes = [IsAuthenticated]
 
@@ -137,14 +140,22 @@ class LogoutView(APIView):
     @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         auth_header = request.META.get("HTTP_AUTHORIZATION", "")
-        if auth_header.startswith("Bearer "):
-            try:
-                blacklist_token(auth_header[7:])
-            except BlacklistUnavailableError:
-                return Response(
-                    {"detail": "Redis 不可用，无法撤销令牌", "retry": True},
-                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
-                )
+        if not auth_header.startswith("Bearer "):
+            return Response({})
+
+        token = auth_header[7:]
+        try:
+            # 会话粒度：同一 sid 的 access 与 refresh 一起失效
+            sid = session_id_of(token)
+            if sid:
+                revoke_session(sid)
+            # 兜底：本变更部署前签发的令牌没有 sid，只能按 jti 吊销
+            blacklist_token(token)
+        except BlacklistUnavailableError:
+            return Response(
+                {"detail": "Redis 不可用，无法撤销令牌", "retry": True},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         return Response({})
 
 

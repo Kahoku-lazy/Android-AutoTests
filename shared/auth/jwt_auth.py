@@ -14,6 +14,8 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 _BLACKLIST_PREFIX = "jwt:blacklist:"
+# 会话级吊销：一次登录签发的 access 与 refresh 共享一个 sid，登出按 sid 整组作废
+_SESSION_PREFIX = "jwt:session_revoked:"
 
 # Redis client — cached after first successful connection.
 # Never caches failures, so it auto-recovers when Redis comes back.
@@ -86,19 +88,28 @@ def _get_redis():
         return None
 
 
-def _blacklist_contains(jti: str) -> bool:
-    """Check whether *jti* is in the blacklist.
+def _is_revoked(jti: str = "", sid: str = "") -> bool:
+    """Check whether this token's *jti*, or its session *sid*, has been revoked.
+
+    Both keys go into a single ``EXISTS`` round trip, so session-level revocation
+    costs nothing extra on the hot path (``verify_token`` runs on every
+    authenticated request).
 
     When Redis is unavailable we log an error and return ``False``
     (allow the token).  This is the safer default: rejecting every
-    token when the blacklist is unreachable would lock all users out.
+    token when the revocation store is unreachable would lock all users out.
     """
-    if not jti:
+    keys = []
+    if jti:
+        keys.append(f"{_BLACKLIST_PREFIX}{jti}")
+    if sid:
+        keys.append(f"{_SESSION_PREFIX}{sid}")
+    if not keys:
         return False
     client = _get_redis()
     if client:
         try:
-            return bool(client.exists(f"{_BLACKLIST_PREFIX}{jti}"))
+            return bool(client.exists(*keys))
         except Exception as exc:
             logger.error("JWT blacklist: exists() 失败: %s", exc)
             return False
@@ -106,20 +117,21 @@ def _blacklist_contains(jti: str) -> bool:
     return False
 
 
-def _blacklist_add(jti: str, ttl_seconds: int):
-    """Add *jti* to the blacklist with the given TTL.
+def _revocation_add(key: str, ttl_seconds: int):
+    """Record one revocation entry with the given TTL.
 
     Raises :class:`BlacklistUnavailableError` when Redis is
     unavailable — we refuse to perform a logout that would be silently
     undone on the next service restart.
     """
-    if not jti:
+    if not key:
         return
     ttl_seconds = max(int(ttl_seconds), 1)
     client = _get_redis()
     if client:
         try:
-            client.setex(f"{_BLACKLIST_PREFIX}{jti}", ttl_seconds, "1")
+            # set(..., ex=) 取代已废弃的 setex（redis-py 标记 deprecated 起）
+            client.set(key, "1", ex=ttl_seconds)
         except Exception as exc:
             raise BlacklistUnavailableError(f"Redis 写入黑名单失败: {exc}") from exc
     else:
@@ -128,8 +140,28 @@ def _blacklist_add(jti: str, ttl_seconds: int):
         )
 
 
-def create_access_token(user_id: str, extra: Optional[dict] = None) -> str:
-    """Create a JWT access token for the given user_id."""
+def _blacklist_add(jti: str, ttl_seconds: int):
+    """按单个令牌（jti）吊销 —— 供没有 sid 的历史令牌兜底。"""
+    if not jti:
+        return
+    _revocation_add(f"{_BLACKLIST_PREFIX}{jti}", ttl_seconds)
+
+
+def _session_add(sid: str, ttl_seconds: int):
+    """按会话（sid）吊销 —— 同一次登录的 access 与 refresh 一起失效。"""
+    if not sid:
+        return
+    _revocation_add(f"{_SESSION_PREFIX}{sid}", ttl_seconds)
+
+
+def create_access_token(
+    user_id: str, extra: Optional[dict] = None, sid: Optional[str] = None
+) -> str:
+    """Create a JWT access token for the given user_id.
+
+    *sid* is the session id: when present, this token is revoked together with
+    the rest of its session (see :func:`revoke_session`).
+    """
     cfg = get_config()
     now = int(time.time())
     payload = {
@@ -139,13 +171,15 @@ def create_access_token(user_id: str, extra: Optional[dict] = None) -> str:
         "exp": now + cfg.access_ttl,
         "type": "access",
     }
+    if sid:
+        payload["sid"] = sid
     if extra:
         payload.update(extra)
     return jwt.encode(payload, cfg.secret, algorithm=cfg.algorithm)
 
 
-def create_refresh_token(user_id: str) -> str:
-    """Create a JWT refresh token for the given user_id."""
+def create_refresh_token(user_id: str, sid: Optional[str] = None) -> str:
+    """Create a JWT refresh token for the given user_id, sharing its session *sid*."""
     cfg = get_config()
     now = int(time.time())
     payload = {
@@ -155,14 +189,21 @@ def create_refresh_token(user_id: str) -> str:
         "exp": now + cfg.refresh_ttl,
         "type": "refresh",
     }
+    if sid:
+        payload["sid"] = sid
     return jwt.encode(payload, cfg.secret, algorithm=cfg.algorithm)
 
 
 def create_token_pair(user_id: str) -> dict:
-    """Generate both access and refresh tokens."""
+    """Generate both access and refresh tokens sharing one session id.
+
+    The returned keys are deliberately unchanged: *sid* lives inside the tokens
+    only, so the API response shape (and the frontend) stay untouched.
+    """
+    sid = str(uuid.uuid4())
     return {
-        "access_token": create_access_token(user_id),
-        "refresh_token": create_refresh_token(user_id),
+        "access_token": create_access_token(user_id, sid=sid),
+        "refresh_token": create_refresh_token(user_id, sid=sid),
         "token_type": "bearer",
     }
 
@@ -171,13 +212,14 @@ def verify_token(token: str, expected_type: Optional[str] = None) -> dict:
     """Verify and decode a JWT token. Raises on invalid/expired/blacklisted."""
     cfg = get_config()
 
-    # 预检：吊销（jti 黑名单）与类型。此处**不再兜底吞异常**——任何意外异常都上抛，
+    # 预检：吊销（jti 单令牌 / sid 整会话）与类型。此处**不再兜底吞异常**——任何意外异常都上抛，
     # 由上游（gateway 中间件 / DRF 认证类）统一转 401（fail-closed）。
     unverified = jwt.decode(
         token, cfg.secret, algorithms=[cfg.algorithm], options={"verify_exp": False}
     )
     jti = unverified.get("jti", "")
-    if jti and _blacklist_contains(jti):
+    sid = unverified.get("sid", "")
+    if _is_revoked(jti, sid):
         raise jwt.InvalidTokenError("Token has been revoked")
     if expected_type and unverified.get("type") != expected_type:
         raise jwt.InvalidTokenError(f"Invalid token type: expected {expected_type}")
@@ -198,6 +240,39 @@ def get_user_id_from_token(token: str) -> str:
     """Extract user_id from a verified access token."""
     payload = verify_token(token, expected_type="access")
     return payload["sub"]
+
+
+def revoke_session(sid: str, ttl_seconds: Optional[int] = None):
+    """Revoke a whole login session: its access *and* its refresh token.
+
+    The TTL defaults to ``JWT_REFRESH_TTL`` rather than the access token's
+    remaining life.  Logout is called with an access token (1h), but the same
+    session's refresh token lives up to ``refresh_ttl`` (7d); a shorter TTL would
+    let the refresh token become usable again once the entry expires.
+
+    Raises :class:`BlacklistUnavailableError` when Redis is unavailable.
+    """
+    if not sid:
+        return
+    ttl = get_config().refresh_ttl if ttl_seconds is None else ttl_seconds
+    _session_add(sid, ttl)
+
+
+def session_id_of(token: str) -> str:
+    """Read the ``sid`` claim without verifying signature or expiry.
+
+    Callers (logout) sit behind an authentication layer that already verified
+    the token; this only needs to extract the session id, and returns "" when
+    the token is unreadable or predates session ids.
+    """
+    cfg = get_config()
+    try:
+        payload = jwt.decode(
+            token, cfg.secret, algorithms=[cfg.algorithm], options={"verify_exp": False}
+        )
+    except Exception:
+        return ""
+    return payload.get("sid", "")
 
 
 def blacklist_token(token: str):

@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import AppCard from '@/shared/components/AppCard.vue'
 import { IconUser, IconLock, IconMail } from '@/shared/icons/index'
 import type { FieldErrors } from '@/shared/types/auth'
 
-export interface RegisterCardProps {
+interface RegisterCardProps {
   username: string
   email: string
   password: string
@@ -28,7 +27,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <AppCard color="app-teal" class="login-card">
+  <div class="auth-panel">
     <form class="auth-form" @submit.prevent="emit('submit')">
       <div class="form-field" data-testid="register-username">
         <IconUser :size="18" class="form-icon" />
@@ -100,7 +99,7 @@ const emit = defineEmits<{
     <button class="form-toggle" data-testid="register-to-login" @click="emit('switchToLogin')">
       已有账号？<span class="form-link">去登录 →</span>
     </button>
-  </AppCard>
+  </div>
 </template>
 
 <style>

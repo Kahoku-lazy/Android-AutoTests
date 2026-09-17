@@ -26,7 +26,6 @@ const emit = defineEmits<{
     <template #footer>
       <el-button
         type="primary"
-        class="wb-btn"
         data-testid="login-error-dismiss"
         @click="emit('close')"
       >

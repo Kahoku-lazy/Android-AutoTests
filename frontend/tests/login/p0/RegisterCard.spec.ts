@@ -11,9 +11,9 @@ import { mount } from '@vue/test-utils'
 import RegisterCard from '@/views/components/RegisterCard.vue'
 
 const stubs = {
-  AppCard: { template: '<div class="app-card"><slot /></div>' },
   IconUser: true,
   IconLock: true,
+  IconMail: true,
   'el-input': {
     props: ['modelValue'],
     emits: ['update:modelValue'],

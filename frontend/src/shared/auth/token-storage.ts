@@ -88,7 +88,3 @@ export function getRefreshToken(): string {
   const active = getActive()
   return pool[active]?.refresh_token || ""
 }
-
-export function getActiveUsername(): string {
-  return sessionStorage.getItem(ACTIVE_KEY) || ""
-}

@@ -1,5 +1,5 @@
 /** 单个账号的 token 对（localStorage.auth_accounts 的 value） */
-export interface AccountTokens {
+interface AccountTokens {
   access_token: string
   refresh_token: string
 }
@@ -8,7 +8,7 @@ export interface AccountTokens {
 export type AuthPool = Record<string, AccountTokens>
 
 /** 登录/注册成功时 data 载荷 */
-export interface AuthTokenData {
+interface AuthTokenData {
   access_token: string
   refresh_token: string
   token_type?: string
@@ -16,7 +16,7 @@ export interface AuthTokenData {
 }
 
 /** refresh 成功时 data 载荷 */
-export interface AuthRefreshData {
+interface AuthRefreshData {
   access_token: string
   token_type?: string
 }

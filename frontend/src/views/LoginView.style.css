@@ -1,86 +1,114 @@
-/* LoginView 样式层 — 手稿纸实验台（方向 A）：点阵纸纹 + 拍立得主卡 + 便签表单 + 贴纸板 */
+/* LoginView 样式层 — hand-drawn Hero：横线本（仅本页）+ 左文案/CTA + 右 Meeting doodle */
 
-/* ── 页面背景（点阵纸纹，doodle-craft layout §4.2 模板）── */
 .login-page {
-  --login-panel-width: 380px;
+  --login-rule: var(--color-blue-82-a30);
+  --login-margin-line: var(--color-red-69-a30);
+  --login-dash: var(--comp-sidebar-dash);
+
+  position: relative;
   width: 100%;
-  min-height: 100%; /* 父级 .main-content 高度确定；用 100vh 会在移动端撑出滚动条 */
-  background: radial-gradient(circle, var(--dot) 0.6px, transparent 0.6px);
-  background-size: 15px 15px;
+  min-height: 100%;
   background-color: var(--paper);
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 31px,
+    var(--login-rule) 31px,
+    var(--login-rule) 32px
+  );
   display: flex;
   flex-direction: column;
   font-family: var(--app-font);
+  overflow-x: hidden;
 }
 
-/* ── Hero 布局 ── */
+/* 笔记本左侧粉红边线（仅登录页） */
+.login-page::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--app-space-2xl);
+  width: 1px;
+  background: var(--login-margin-line);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.login-page__doodles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.login-doodle {
+  position: absolute;
+}
+
+.login-doodle--swirl {
+  top: var(--app-space-xl);
+  left: var(--app-space-xl);
+}
+
+.login-doodle--ring {
+  top: 18%;
+  left: 8%;
+}
+
+.login-doodle--star-a {
+  top: var(--app-space-lg);
+  right: 22%;
+  transform: rotate(-12deg);
+  opacity: 0.7;
+}
+
+.login-doodle--star-b {
+  top: 12%;
+  right: 16%;
+  transform: rotate(8deg);
+  opacity: 0.65;
+}
+
+/* ── Hero 双栏 ── */
 .hero {
+  position: relative;
+  z-index: 1;
   flex: 1;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: var(--app-space-2xl);
   align-items: center;
-  justify-content: center;
+  width: min(1120px, 100%);
+  margin: 0 auto;
   padding: var(--app-space-2xl) var(--app-space-xl);
 }
 
-.hero__content {
-  position: relative;
+.hero__intro {
   display: flex;
   flex-direction: column;
-  gap: var(--app-space-xl);
-  max-width: 1020px;
-  width: 100%;
-  padding: var(--app-space-2xl);
-  border: var(--app-border-width) solid var(--ink);
-  border-radius: var(--app-radius-lg);
-  background: var(--app-bg-card);
-  box-shadow: var(--app-shadow-lg);
-  transform: rotate(-0.6deg);
-  animation: card-settle var(--app-duration-slow) var(--app-spring) both;
+  gap: var(--app-space-lg);
+  min-width: 0;
 }
 
-/* 胶带贴角（签名记忆点） */
-.hero__content::before,
-.hero__content::after {
-  content: '';
-  position: absolute;
-  top: calc(-1 * var(--app-space-sm));
-  width: 112px;
-  height: var(--app-space-lg);
-  border: var(--app-border-width) solid var(--ink);
-  border-radius: var(--app-radius-sm);
-  opacity: 0.9;
+.hero__eyebrow {
+  margin: 0;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-case);
+  transform: rotate(-1.5deg);
+  align-self: flex-start;
 }
 
-.hero__content::before {
-  left: var(--app-space-lg);
-  transform: rotate(-2.5deg);
-  background: var(--c-dashboard);
-}
-
-.hero__content::after {
-  right: var(--app-space-lg);
-  transform: rotate(2deg);
-  background: var(--c-device);
-}
-
-@keyframes card-settle {
-  from { opacity: 0; transform: rotate(-2.4deg) translateY(var(--app-space-md)); }
-  to { opacity: 1; transform: rotate(-0.6deg) translateY(0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero__content { animation: none; }
-}
-
-/* ── 头部 ── */
 .hero__header {
-  text-align: center;
+  text-align: left;
 }
 
 .hero__title-row {
   display: flex;
   align-items: flex-start;
-  justify-content: center;
   gap: var(--app-space-sm);
   margin-bottom: var(--app-space-md);
 }
@@ -91,7 +119,9 @@
   font-family: var(--app-font-brand);
   font-weight: 400;
   color: var(--ink);
-  line-height: 1.2;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  transform: rotate(-1.2deg);
 }
 
 .hero__version {
@@ -112,7 +142,7 @@
   font-family: var(--app-font-brand);
   color: var(--app-text-secondary);
   line-height: 1.7;
-  margin: 0 auto;
+  margin: 0;
   max-width: 520px;
 }
 
@@ -120,152 +150,256 @@
   display: block;
 }
 
-/* ── 主体：贴纸板 + 表单卡 ── */
-.hero__body {
+/* ── CTA（对齐 showcase primary / ghost）── */
+.hero__cta {
   display: flex;
-  align-items: stretch;
-  justify-content: center;
-  gap: var(--app-space-2xl);
-}
-
-/* ── 功能贴纸板（动物岛化身）── */
-.hero__brand {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  width: var(--login-panel-width);
-  flex-shrink: 0;
-}
-
-.hero__brand-featured {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-evenly;
+  flex-wrap: wrap;
   gap: var(--app-space-md);
-  box-sizing: border-box;
-  width: 100%;
-  flex: 1;
-  padding: var(--app-space-lg) var(--app-space-md);
-  background: var(--app-bg-card);
-  border: var(--app-border-width) solid var(--ink);
-  border-radius: 18px 26px 18px 26px;
-  box-shadow: var(--app-shadow-md);
-  transform: rotate(-0.5deg);
 }
 
-.hero__brand-lead {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--app-space-sm);
-  flex-shrink: 0;
-}
-.hero__brand-lead .animal-face {
-  width: 72px;
-  height: 72px;
-  filter: drop-shadow(0 3px 0 color-mix(in srgb, var(--ink) 12%, transparent));
-}
-
-.hero__brand-tags {
-  display: flex;
-  flex-direction: column;
-  gap: var(--app-space-sm);
-}
-
-.sticker {
+.hero-cta {
   display: inline-flex;
   align-items: center;
-  gap: var(--app-space-sm);
-  width: 148px;
-  padding: var(--app-space-sm) var(--app-space-md);
-  background: var(--app-bg-card);
-  border: var(--app-border-width) solid var(--ink);
-  border-radius: 14px 20px 14px 20px;
-  box-shadow: var(--app-shadow-sm);
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 var(--app-space-lg);
+  border: 2.5px solid var(--ink);
+  border-radius: 2px;
   font-family: var(--app-font);
-  color: var(--ink);
-  cursor: default;
-  transition: transform var(--app-duration) var(--app-spring),
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    transform var(--app-duration) var(--app-ease),
     box-shadow var(--app-duration) var(--app-ease);
 }
-.sticker .animal-face {
-  flex-shrink: 0;
-}
-.sticker__label {
-  font-family: var(--app-font-brand);
-  font-size: var(--app-size-sm);
-  font-weight: 400;
-  line-height: 1.3;
+
+.hero-cta--primary {
+  background: var(--app-marker-red);
+  color: var(--app-text-inverse);
+  box-shadow: 3px 3px 0 0 var(--ink);
 }
 
-.sticker--device { border-color: var(--c-device); transform: rotate(1.5deg); }
-.sticker--case { border-color: var(--c-case); transform: rotate(-1.2deg); }
-.sticker--runner { border-color: var(--c-runner); transform: rotate(1deg); }
-.sticker--report { border-color: var(--c-report); transform: rotate(-1.8deg); }
-
-.sticker:hover {
-  transform: rotate(0deg) translateY(-3px);
-  box-shadow: var(--app-shadow-lg);
-}
-.sticker:active {
-  transform: rotate(0deg) translateY(-1px);
-}
-
-.featured-label {
-  font-family: var(--app-font-brand);
-  font-size: var(--app-size-lg);
-  font-weight: 400;
+.hero-cta--ghost {
+  background: transparent;
   color: var(--ink);
-  text-align: center;
-  line-height: 1.2;
+  border-style: dashed;
+  box-shadow: none;
 }
 
-/* ── Footer ── */
+.hero-cta:hover {
+  transform: translate(-1px, -1px) rotate(-0.5deg);
+}
+
+.hero-cta--primary:hover {
+  box-shadow: 4px 4px 0 0 var(--ink);
+}
+
+.hero-cta--ghost:hover {
+  box-shadow: 3px 3px 0 0 var(--c-case);
+}
+
+.hero-cta:active {
+  transform: translate(2px, 2px);
+}
+
+.hero-cta--primary:active {
+  box-shadow: 1px 1px 0 0 var(--ink);
+}
+
+.hero-cta--ghost.is-active {
+  background: color-mix(in srgb, var(--c-case) 18%, transparent);
+}
+
+/* ── Meeting doodle ── */
+.hero-sketch {
+  position: relative;
+  min-height: 340px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.meeting-doodle {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  padding: var(--app-space-lg);
+  border: var(--login-dash);
+  background: var(--app-bg-card);
+  box-shadow: 4px 4px 0 0 var(--c-case);
+  transform: rotate(1.2deg);
+  animation: meeting-settle var(--app-duration-slow) var(--app-spring) both;
+}
+
+.meeting-doodle__tape {
+  position: absolute;
+  top: calc(-1 * var(--app-space-sm));
+  left: 50%;
+  transform: translateX(-50%) rotate(-2deg);
+  width: 72px;
+  height: var(--app-space-md);
+  background: var(--c-dashboard);
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  z-index: 2;
+}
+
+.meeting-doodle__tape::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--c-case);
+  border: 1.5px solid var(--ink);
+  transform: translate(-50%, -50%);
+}
+
+.meeting-doodle__title {
+  margin: var(--app-space-sm) 0 0;
+  font-size: var(--app-size-lg);
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.meeting-doodle__lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+  margin: var(--app-space-md) 0 var(--app-space-lg);
+}
+
+.doodle-line {
+  display: block;
+  height: 3px;
+  width: 70%;
+  background: var(--ink);
+  border-radius: 2px;
+  opacity: 0.85;
+}
+
+.doodle-line--teal {
+  width: 55%;
+  background: var(--c-case);
+}
+
+.doodle-line--short {
+  width: 42%;
+  opacity: 0.45;
+}
+
+.doodle-line--red {
+  width: 35%;
+  background: var(--app-marker-red);
+}
+
+.meeting-doodle__body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+@keyframes meeting-settle {
+  from {
+    opacity: 0;
+    transform: rotate(3deg) translateY(var(--app-space-md));
+  }
+  to {
+    opacity: 1;
+    transform: rotate(1.2deg) translateY(0);
+  }
+}
+
 .login-footer {
+  position: relative;
+  z-index: 1;
   padding: var(--app-space-lg) var(--app-space-xl);
   text-align: center;
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
 }
 
-/* ── 动效降级 ── */
 @media (prefers-reduced-motion: reduce) {
-  .sticker,
-  .sticker:hover,
-  .sticker:active {
+  .meeting-doodle {
+    animation: none;
+  }
+
+  .hero-cta,
+  .hero-cta:hover,
+  .hero-cta:active {
     transition: none;
     transform: none;
   }
 }
 
-/* ── 响应式 ── */
 @media (max-width: 768px) {
-  .hero { padding: var(--app-space-lg) var(--app-space-md); }
-  .hero__content { gap: var(--app-space-lg); padding: var(--app-space-xl) var(--app-space-md); transform: none; }
-  .hero__content::before,
-  .hero__content::after { display: none; }
-  .hero-title { font-size: var(--app-size-xl); }
-  .hero__desc { font-size: var(--app-size-sm); }
-  .hero__body { flex-direction: column; gap: var(--app-space-lg); align-items: center; }
-  .hero__brand { width: 100%; max-width: 360px; }
+  .login-page::before {
+    left: var(--app-space-lg);
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+    gap: var(--app-space-xl);
+    padding: var(--app-space-xl) var(--app-space-md);
+  }
+
+  .hero__header {
+    text-align: center;
+  }
+
+  .hero__title-row {
+    justify-content: center;
+  }
+
+  .hero__eyebrow {
+    align-self: center;
+  }
+
+  .hero__desc {
+    margin-left: auto;
+    margin-right: auto;
+    font-size: var(--app-size-sm);
+  }
+
+  .hero__cta {
+    justify-content: center;
+  }
+
+  .hero-title {
+    font-size: var(--app-size-xl);
+    transform: none;
+  }
+
+  .hero-sketch {
+    min-height: 0;
+  }
+
+  .meeting-doodle {
+    max-width: 360px;
+    margin: 0 auto;
+    transform: none;
+  }
 }
 
 @media (max-width: 480px) {
-  .hero { padding: var(--app-space-md) var(--app-space-sm); }
-  .hero__content { gap: var(--app-space-md); padding: var(--app-space-lg) var(--app-space-sm); }
-  .hero-title { font-size: var(--app-size-lg); }
-  .hero__desc { font-size: var(--app-size-xs); }
-  .hero__version { padding: var(--app-space-xs) var(--app-space-sm); margin-top: var(--app-space-xs); }
-  .hero__brand { flex-direction: row; gap: var(--app-space-sm); }
-  .hero__brand-featured {
-    padding: var(--app-space-md);
-    transform: rotate(-1deg);
+  .hero {
+    padding: var(--app-space-lg) var(--app-space-sm);
   }
-  .hero__brand-lead .animal-face { width: 48px; height: 48px; }
-  .featured-label { font-size: var(--app-size-sm); }
-  .hero__brand-tags { flex-direction: row; flex-wrap: wrap; gap: var(--app-space-sm); justify-content: center; }
-  .sticker { width: auto; padding: var(--app-space-sm) var(--app-space-md); }
-  .login-footer { padding: var(--app-space-md) var(--app-space-sm); }
+
+  .hero-title {
+    font-size: var(--app-size-lg);
+  }
+
+  .hero__desc {
+    font-size: var(--app-size-xs);
+  }
+
+  .login-footer {
+    padding: var(--app-space-md) var(--app-space-sm);
+  }
 }

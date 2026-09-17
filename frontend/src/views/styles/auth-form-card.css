@@ -63,6 +63,30 @@
 
 .form-submit .el-button {
   flex: 1;
+  min-height: 42px;
+  border: 2.5px solid var(--ink) !important;
+  border-radius: 2px !important;
+  background: var(--app-marker-red) !important;
+  color: var(--app-text-inverse) !important;
+  font-weight: 700;
+  box-shadow: 3px 3px 0 0 var(--ink);
+}
+
+.form-submit .el-button:hover:not(:disabled) {
+  background: var(--app-marker-red) !important;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 0 var(--ink);
+}
+
+.form-submit .el-button:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 0 var(--ink);
+}
+
+.form-submit .el-button.is-disabled,
+.form-submit .el-button:disabled {
+  opacity: 0.55;
+  box-shadow: 3px 3px 0 0 var(--ink);
 }
 
 /* 记住账号开关行（仅 LoginCard 使用） */

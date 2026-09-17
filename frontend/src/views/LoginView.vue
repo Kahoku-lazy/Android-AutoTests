@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 
 import LoginErrorOverlay from '@/views/components/LoginErrorOverlay.vue'
 import { useLoginView } from './LoginView.logic'
 import AccountSwitchPrompt from '@/views/components/AccountSwitchPrompt.vue'
 import LoginCard from '@/views/components/LoginCard.vue'
 import RegisterCard from '@/views/components/RegisterCard.vue'
-import AnimalFace from '@/views/components/AnimalFace.vue'
 
 const {
   // ── 账号 & 视图状态 ──
@@ -35,16 +35,50 @@ const {
   onSwitchToExisting,
   onAddNewAccount,
 } = useLoginView()
+
+/** Meeting doodle 标题：登录 / 注册（切换提示态仍显示「登录」） */
+const meetingTitle = computed(() => (viewState.value === 'register' ? '注册' : '登录'))
 </script>
 
 <template>
   <div class="login-page" data-testid="login-page">
-    <div class="login-page__bg" aria-hidden="true">
-      <span class="login-page__glow login-page__glow--forest"></span>
+    <div class="login-page__doodles" aria-hidden="true">
+      <svg class="login-doodle login-doodle--swirl" width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <path
+          d="M16 16 Q16 10 22 10 Q28 10 28 16 Q28 24 20 24 Q10 24 10 14 Q10 6 20 6 Q30 6 30 16"
+          stroke="var(--ink)"
+          stroke-width="2"
+          stroke-linecap="round"
+          opacity="0.28"
+        />
+      </svg>
+      <svg class="login-doodle login-doodle--ring" width="56" height="56" viewBox="0 0 60 60" fill="none">
+        <circle cx="30" cy="30" r="28" stroke="var(--comp-paper-mark-brown)" stroke-width="6" fill="none" opacity="0.12" />
+        <circle cx="30" cy="30" r="22" stroke="var(--comp-paper-mark-brown)" stroke-width="1.5" fill="none" opacity="0.12" />
+      </svg>
+      <svg class="login-doodle login-doodle--star-a" width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M12 2 L13.5 9 L20 9 L14.5 13.5 L16.5 20.5 L12 16.5 L7.5 20.5 L9.5 13.5 L4 9 L10.5 9 Z"
+          fill="var(--comp-paper-mark-yellow)"
+          stroke="var(--comp-paper-mark-yellow)"
+          stroke-width="1"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <svg class="login-doodle login-doodle--star-b" width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M12 2 L13.5 9 L20 9 L14.5 13.5 L16.5 20.5 L12 16.5 L7.5 20.5 L9.5 13.5 L4 9 L10.5 9 Z"
+          fill="var(--comp-paper-mark-red)"
+          stroke="var(--comp-paper-mark-red)"
+          stroke-width="1"
+          stroke-linejoin="round"
+        />
+      </svg>
     </div>
 
     <div class="hero">
-      <div class="hero__content">
+      <div class="hero__intro">
+        <p class="hero__eyebrow">AI 自动化测试</p>
         <header class="hero__header">
           <div class="hero__title-row">
             <h1 class="hero-title">AI 自动化测试平台</h1>
@@ -56,72 +90,86 @@ const {
           </p>
         </header>
 
-        <main class="hero__body">
-          <LoginErrorOverlay
-            :visible="!!serverError"
-            :message="serverError"
-            @close="clearServerError"
-          />
+        <div
+          v-if="viewState !== 'switchPrompt'"
+          class="hero__cta"
+          role="group"
+          aria-label="登录或注册"
+        >
+          <button
+            type="button"
+            class="hero-cta hero-cta--primary"
+            :class="{ 'is-active': viewState === 'login' }"
+            data-testid="login-mode-login"
+            :aria-pressed="viewState === 'login'"
+            @click="switchMode('login')"
+          >
+            登录
+          </button>
+          <button
+            type="button"
+            class="hero-cta hero-cta--ghost"
+            :class="{ 'is-active': viewState === 'register' }"
+            data-testid="login-mode-register"
+            :aria-pressed="viewState === 'register'"
+            @click="switchMode('register')"
+          >
+            注册 →
+          </button>
+        </div>
+      </div>
 
-          <AccountSwitchPrompt
-            v-if="viewState === 'switchPrompt'"
-            :existing-username="activeAccount"
-            @switch-to="onSwitchToExisting"
-            @add-new="onAddNewAccount"
-          />
+      <div class="hero-sketch">
+        <div class="meeting-doodle" data-testid="meeting-doodle">
+          <div class="meeting-doodle__tape" aria-hidden="true"></div>
+          <h2 class="meeting-doodle__title" data-testid="meeting-title">{{ meetingTitle }}</h2>
+          <div class="meeting-doodle__lines" aria-hidden="true">
+            <span class="doodle-line"></span>
+            <span class="doodle-line doodle-line--teal"></span>
+            <span class="doodle-line doodle-line--short"></span>
+            <span class="doodle-line doodle-line--red"></span>
+          </div>
 
-          <LoginCard
-            v-else-if="viewState === 'login'"
-            v-model:username="loginUsername"
-            v-model:password="loginPassword"
-            v-model:remember-me="rememberMe"
-            :loading="loading"
-            :errors="loginErrors"
-            :can-submit="canLogin"
-            @submit="handleLogin"
-            @switch-to-register="switchMode('register')"
-          />
+          <div class="meeting-doodle__body">
+            <LoginErrorOverlay
+              :visible="!!serverError"
+              :message="serverError"
+              @close="clearServerError"
+            />
 
-          <RegisterCard
-            v-else-if="viewState === 'register'"
-            v-model:username="regUsername"
-            v-model:email="regEmail"
-            v-model:password="regPassword"
-            v-model:password2="regPassword2"
-            :loading="loading"
-            :errors="regErrors"
-            :can-submit="canRegister"
-            @submit="handleRegister"
-            @switch-to-login="switchMode('login')"
-          />
+            <AccountSwitchPrompt
+              v-if="viewState === 'switchPrompt'"
+              :existing-username="activeAccount"
+              @switch-to="onSwitchToExisting"
+              @add-new="onAddNewAccount"
+            />
 
-          <aside class="hero__brand" aria-hidden="true">
-            <div class="hero__brand-featured">
-              <div class="hero__brand-lead">
-                <AnimalFace variant="robot" :size="72" color="var(--c-ai)" />
-                <span class="featured-label">AI助手</span>
-              </div>
-              <div class="hero__brand-tags">
-                <div class="sticker sticker--device">
-                  <AnimalFace variant="owl" :size="34" color="var(--c-device)" />
-                  <span class="sticker__label">设备管理</span>
-                </div>
-                <div class="sticker sticker--case">
-                  <AnimalFace variant="fox" :size="34" color="var(--c-case)" />
-                  <span class="sticker__label">用例编排</span>
-                </div>
-                <div class="sticker sticker--runner">
-                  <AnimalFace variant="rabbit" :size="34" color="var(--c-runner)" />
-                  <span class="sticker__label">用例执行</span>
-                </div>
-                <div class="sticker sticker--report">
-                  <AnimalFace variant="squirrel" :size="34" color="var(--c-report)" />
-                  <span class="sticker__label">报告生成</span>
-                </div>
-              </div>
-            </div>
-          </aside>
-        </main>
+            <LoginCard
+              v-else-if="viewState === 'login'"
+              v-model:username="loginUsername"
+              v-model:password="loginPassword"
+              v-model:remember-me="rememberMe"
+              :loading="loading"
+              :errors="loginErrors"
+              :can-submit="canLogin"
+              @submit="handleLogin"
+              @switch-to-register="switchMode('register')"
+            />
+
+            <RegisterCard
+              v-else-if="viewState === 'register'"
+              v-model:username="regUsername"
+              v-model:email="regEmail"
+              v-model:password="regPassword"
+              v-model:password2="regPassword2"
+              :loading="loading"
+              :errors="regErrors"
+              :can-submit="canRegister"
+              @submit="handleRegister"
+              @switch-to-login="switchMode('login')"
+            />
+          </div>
+        </div>
       </div>
     </div>
 

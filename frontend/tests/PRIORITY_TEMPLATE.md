@@ -98,7 +98,6 @@ it('<场景>：<预期>')            // 一条用例只测一个行为；多预�
 | P1 | useLoginView 切模式清表单 | `login/p1/LoginView.logic.spec.ts` |
 | P1 | AccountSwitchPrompt | `login/p1/AccountSwitchPrompt.spec.ts` |
 | P1 | LoginErrorOverlay | `login/p1/LoginErrorOverlay.spec.ts` |
-| P2 | LoginView.vue / useHeroImage / 真后端 | `login/p2/README.md`（不写用例） |
 | E2E | 真登录/注册/鉴权跳转 | 另册 |
 
 ## E2E 候选（不进 Vitest）

@@ -16,7 +16,6 @@ import { useAuthFlow } from "./composables/useAuthFlow"
 
 export interface LoginViewState {
   activeAccount: Ref<string>
-  accountList: ComputedRef<string[]>
   viewState: Ref<ViewState>
   loginUsername: Ref<string>
   loginPassword: Ref<string>
@@ -120,7 +119,6 @@ export function useLoginView(): LoginViewState {
 
   return {
     activeAccount: auth.activeAccount,
-    accountList: auth.accountList,
     viewState,
     loginUsername,
     loginPassword,

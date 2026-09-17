@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getToken, getActiveUsername } from '@/shared/auth/token-storage'
+import { getToken } from '@/shared/auth/token-storage'
 import dbRoutes  from '@/modules/dashboard/routes'
 import elRoutes   from '@/modules/element-locator/routes'
 import diRoutes   from '@/modules/device-inspector/routes'

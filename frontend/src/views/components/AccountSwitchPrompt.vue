@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import AppCard from '@/shared/components/AppCard.vue'
 import { IconUser, IconPlus } from '@/shared/icons/index'
 
-export interface AccountSwitchPromptProps {
+interface AccountSwitchPromptProps {
   existingUsername: string
 }
 
@@ -15,7 +14,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <AppCard color="app-blue" class="login-card" data-testid="account-switch-prompt">
+  <div class="auth-panel" data-testid="account-switch-prompt">
     <div class="switch-prompt">
       <p class="switch-prompt__title">检测到已登录账号</p>
       <p class="switch-prompt__user">{{ existingUsername }}</p>
@@ -34,7 +33,7 @@ const emit = defineEmits<{
         </div>
       </div>
     </div>
-  </AppCard>
+  </div>
 </template>
 
 <style scoped>

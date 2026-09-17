@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import AppCard from '@/shared/components/AppCard.vue'
 import { IconUser, IconLock } from '@/shared/icons/index'
 import type { FieldErrors } from '@/shared/types/auth'
 
-export interface LoginCardProps {
+interface LoginCardProps {
   username: string
   password: string
   rememberMe?: boolean
@@ -27,7 +26,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <AppCard color="app-blue" class="login-card">
+  <div class="auth-panel">
     <form class="auth-form" @submit.prevent="emit('submit')">
       <!-- testid 挂在原生包裹层：Element Plus 组件不一定透传 data-testid -->
       <div class="form-field" data-testid="login-username">
@@ -81,7 +80,7 @@ const emit = defineEmits<{
     <button class="form-toggle" data-testid="login-to-register" @click="emit('switchToRegister')">
       没有账号？<span class="form-link">去注册 →</span>
     </button>
-  </AppCard>
+  </div>
 </template>
 
 <style>

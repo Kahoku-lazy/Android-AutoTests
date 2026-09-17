@@ -11,7 +11,6 @@ import { mount } from '@vue/test-utils'
 import LoginCard from '@/views/components/LoginCard.vue'
 
 const stubs = {
-  AppCard: { template: '<div class="app-card"><slot /></div>' },
   IconUser: true,
   IconLock: true,
   'el-input': {

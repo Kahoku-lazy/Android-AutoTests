@@ -7,7 +7,6 @@ import { mount } from '@vue/test-utils'
 import AccountSwitchPrompt from '@/views/components/AccountSwitchPrompt.vue'
 
 const stubs = {
-  AppCard: { template: '<div class="app-card"><slot /></div>' },
   IconUser: true,
   IconPlus: true,
   // 不要在 stub 里再 $emit('click')，否则会与父级 @click 叠成两次

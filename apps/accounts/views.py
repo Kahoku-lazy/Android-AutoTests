@@ -68,18 +68,20 @@ class RegisterView(APIView):
     def post(self, request):
         ser = RegisterSerializer(data=request.data)
         if not ser.is_valid():
-            msg = _first_error(ser.errors)
-            code = (
-                status.HTTP_409_CONFLICT if msg == "用户名已存在" else status.HTTP_400_BAD_REQUEST
+            # 409 只由写口的 ConflictError 产生（唯一性由写口保证），输入校验一律 400
+            return Response(
+                {"detail": _first_error(ser.errors)}, status=status.HTTP_400_BAD_REQUEST
             )
-            return Response({"detail": msg}, status=code)
 
         data = ser.validated_data
-        user = api.create_user(
-            username=data["username"],
-            password=data["password"],
-            email=data["email"],
-        )
+        try:
+            user = api.create_user(
+                username=data["username"],
+                password=data["password"],
+                email=data["email"],
+            )
+        except api.ConflictError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
         tokens = create_token_pair(str(user["id"]))
         return Response(
             {

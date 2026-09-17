@@ -1,7 +1,6 @@
 """Auth serializers — login / register / refresh input validation."""
 
 from django.contrib.auth import authenticate
-from django.contrib.auth.models import User
 from rest_framework import serializers
 
 
@@ -67,9 +66,8 @@ class RegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError("请输入邮箱")
         if "@" not in email:
             raise serializers.ValidationError("邮箱格式不正确")
-        if User.objects.filter(username=username).exists():
-            raise serializers.ValidationError("用户名已存在")
 
+        # 唯一性不在此校验：它是数据不变量，由写口按数据库唯一约束保证（见 api.py）
         attrs["username"] = username
         attrs["password"] = password
         attrs["email"] = email

@@ -9,14 +9,13 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import LoginView from '@/views/LoginView.vue'
 import { clearAuthStorage } from '../../helpers/mountComposable'
 
-const viewState = ref<'login' | 'register' | 'switchPrompt'>('login')
-const switchMode = vi.fn((m: 'login' | 'register' | 'switchPrompt') => {
+const viewState = ref<'login' | 'register'>('login')
+const switchMode = vi.fn((m: 'login' | 'register') => {
   viewState.value = m
 })
 
 vi.mock('@/views/LoginView.logic', () => ({
   useLoginView: () => ({
-    activeAccount: ref(''),
     viewState,
     loginUsername: ref(''),
     loginPassword: ref(''),
@@ -35,15 +34,12 @@ vi.mock('@/views/LoginView.logic', () => ({
     handleLogin: vi.fn(),
     handleRegister: vi.fn(),
     switchMode,
-    onSwitchToExisting: vi.fn(),
-    onAddNewAccount: vi.fn(),
   }),
 }))
 
 const stubs = {
   LoginCard: { template: '<div data-testid="stub-login-card">登录卡</div>' },
   RegisterCard: { template: '<div data-testid="stub-register-card">注册卡</div>' },
-  AccountSwitchPrompt: { template: '<div data-testid="stub-switch-prompt">切换账号</div>' },
   LoginErrorOverlay: { template: '<div />', props: ['visible', 'message'] },
 }
 
@@ -107,12 +103,17 @@ describe('[P0] LoginView Hero', () => {
     expect(wrapper.find('[data-testid="stub-login-card"]').exists()).toBe(true)
   })
 
-  it('switchPrompt 态：隐藏模式 CTA，显示账号切换提示', async () => {
-    viewState.value = 'switchPrompt'
+  it('两个模式 CTA 恒可见，且不再有账号切换提示', async () => {
     const wrapper = await mountLogin()
-    expect(wrapper.find('[data-testid="login-mode-login"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="login-mode-register"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="stub-switch-prompt"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="meeting-title"]').text()).toBe('登录')
+    expect(wrapper.find('[data-testid="login-mode-login"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="login-mode-register"]').exists()).toBe(true)
+    // 登录页只有 login / register 两态：切换提示卡的内容不应再出现
+    expect(wrapper.text()).not.toContain('检测到已登录账号')
+    expect(wrapper.text()).not.toContain('添加新账号')
+
+    viewState.value = 'register'
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="login-mode-login"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="login-mode-register"]').exists()).toBe(true)
   })
 })

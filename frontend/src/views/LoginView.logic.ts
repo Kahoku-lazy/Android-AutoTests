@@ -15,7 +15,6 @@ import { useSavedUsername } from "./composables/useSavedUsername"
 import { useAuthFlow } from "./composables/useAuthFlow"
 
 export interface LoginViewState {
-  activeAccount: Ref<string>
   viewState: Ref<ViewState>
   loginUsername: Ref<string>
   loginPassword: Ref<string>
@@ -34,8 +33,6 @@ export interface LoginViewState {
   handleLogin: () => Promise<void>
   handleRegister: () => Promise<void>
   switchMode: (m: ViewState) => void
-  onSwitchToExisting: () => void
-  onAddNewAccount: () => void
 }
 
 export function useLoginView(): LoginViewState {
@@ -67,8 +64,7 @@ export function useLoginView(): LoginViewState {
     saveUsername,
   })
 
-  const { viewState, switchMode: baseSwitchMode, onSwitchToExisting, onAddNewAccount } =
-    useViewStateMachine(auth.accountList, clearServerError)
+  const { viewState, switchMode: baseSwitchMode } = useViewStateMachine(clearServerError)
 
   /** 切换登录/注册时清空目标表单 */
   function switchMode(m: ViewState) {
@@ -118,7 +114,6 @@ export function useLoginView(): LoginViewState {
   }
 
   return {
-    activeAccount: auth.activeAccount,
     viewState,
     loginUsername,
     loginPassword,
@@ -137,7 +132,5 @@ export function useLoginView(): LoginViewState {
     handleLogin,
     handleRegister,
     switchMode,
-    onSwitchToExisting,
-    onAddNewAccount,
   }
 }

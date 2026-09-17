@@ -2,7 +2,6 @@
 
 .login-page {
   --login-rule: var(--color-blue-82-a30);
-  --login-margin-line: var(--color-red-69-a30);
   --login-dash: var(--comp-sidebar-dash);
 
   position: relative;
@@ -19,19 +18,6 @@
   flex-direction: column;
   font-family: var(--app-font);
   overflow-x: hidden;
-}
-
-/* 笔记本左侧粉红边线（仅登录页） */
-.login-page::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: var(--app-space-2xl);
-  width: 1px;
-  background: var(--login-margin-line);
-  pointer-events: none;
-  z-index: 0;
 }
 
 .login-page__doodles {
@@ -341,10 +327,6 @@
 }
 
 @media (max-width: 768px) {
-  .login-page::before {
-    left: var(--app-space-lg);
-  }
-
   .hero {
     grid-template-columns: 1fr;
     gap: var(--app-space-xl);

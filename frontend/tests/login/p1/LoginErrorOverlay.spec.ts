@@ -4,7 +4,7 @@
  * 目录：tests/login/p1/
  *
  * stub 口径：不注册真实 Element Plus（vite.config.js「单测用 stub 替换 el-*」），
- * 由本 spec 自带内联 stub（与 LoginCard.spec.ts / AccountSwitchPrompt.spec.ts 一致），
+ * 由本 spec 自带内联 stub（与 LoginCard.spec.ts 一致），
  * 模型化组件真正依赖的 EP 契约：.el-overlay（遮罩）> .el-dialog、
  * 默认插槽 + footer 具名插槽、ESC 与点遮罩均关闭。
  * 缺少 el-dialog stub 时既不产生这两个类名，footer 具名插槽也不渲染。
@@ -42,7 +42,7 @@ const stubs = {
     },
   },
   // 不在 stub 里再 $emit('click')：父级 @click 会随属性透传到这个 button，
-  // 再 emit 一次就会叠成两次（同 AccountSwitchPrompt.spec.ts 的既有注释）
+  // 再 emit 一次就会叠成两次
   'el-button': {
     template: '<button type="button" class="el-button"><slot /></button>',
   },

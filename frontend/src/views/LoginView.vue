@@ -3,13 +3,11 @@ import { computed } from 'vue'
 
 import LoginErrorOverlay from '@/views/components/LoginErrorOverlay.vue'
 import { useLoginView } from './LoginView.logic'
-import AccountSwitchPrompt from '@/views/components/AccountSwitchPrompt.vue'
 import LoginCard from '@/views/components/LoginCard.vue'
 import RegisterCard from '@/views/components/RegisterCard.vue'
 
 const {
-  // ── 账号 & 视图状态 ──
-  activeAccount,
+  // ── 视图状态 ──
   viewState,
   // ── 登录表单 ──
   loginUsername,
@@ -31,12 +29,9 @@ const {
   handleLogin,
   handleRegister,
   switchMode,
-  // ── 账号切换 ──
-  onSwitchToExisting,
-  onAddNewAccount,
 } = useLoginView()
 
-/** Meeting doodle 标题：登录 / 注册（切换提示态仍显示「登录」） */
+/** Meeting doodle 标题：登录 / 注册 */
 const meetingTitle = computed(() => (viewState.value === 'register' ? '注册' : '登录'))
 </script>
 
@@ -91,7 +86,6 @@ const meetingTitle = computed(() => (viewState.value === 'register' ? '注册' :
         </header>
 
         <div
-          v-if="viewState !== 'switchPrompt'"
           class="hero__cta"
           role="group"
           aria-label="登录或注册"
@@ -137,15 +131,8 @@ const meetingTitle = computed(() => (viewState.value === 'register' ? '注册' :
               @close="clearServerError"
             />
 
-            <AccountSwitchPrompt
-              v-if="viewState === 'switchPrompt'"
-              :existing-username="activeAccount"
-              @switch-to="onSwitchToExisting"
-              @add-new="onAddNewAccount"
-            />
-
             <LoginCard
-              v-else-if="viewState === 'login'"
+              v-if="viewState === 'login'"
               v-model:username="loginUsername"
               v-model:password="loginPassword"
               v-model:remember-me="rememberMe"

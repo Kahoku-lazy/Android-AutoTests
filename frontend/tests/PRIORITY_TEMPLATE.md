@@ -96,7 +96,6 @@ it('<场景>：<预期>')            // 一条用例只测一个行为；多预�
 | P0 | useAuthPool | `login/p0/useAuthPool.spec.ts` |
 | P0 | LoginCard / RegisterCard | `login/p0/LoginCard.spec.ts` 等 |
 | P1 | useLoginView 切模式清表单 | `login/p1/LoginView.logic.spec.ts` |
-| P1 | AccountSwitchPrompt | `login/p1/AccountSwitchPrompt.spec.ts` |
 | P1 | LoginErrorOverlay | `login/p1/LoginErrorOverlay.spec.ts` |
 | E2E | 真登录/注册/鉴权跳转 | 另册 |
 
@@ -105,6 +104,5 @@ it('<场景>：<预期>')            // 一条用例只测一个行为；多预�
 - 登录/注册成功进业务页
 - 错误账号密码 / 后端宕机文案
 - 记住账号刷新仍预填
-- 多账号 switchPrompt 全流程
 - 未登录访问受保护路由
 - 跨 tab 账号同步（可选）

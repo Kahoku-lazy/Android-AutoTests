@@ -30,7 +30,7 @@ export interface AuthResponse {
 }
 
 /** 登录页视图状态机 */
-export type ViewState = "switchPrompt" | "login" | "register"
+export type ViewState = "login" | "register"
 
 /** 表单字段校验错误（key 为字段名） */
 export interface FieldErrors {

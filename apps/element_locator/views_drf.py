@@ -7,7 +7,7 @@ as plain Django views in views_pages.py / views_page_elements.py.
 from django.db import models as db_models
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.response import Response
 
 from . import api
@@ -33,8 +33,35 @@ from .serializers import (
 # ═══════════════════════════════════════════════════════
 
 
-class WebGroupViewSet(viewsets.ModelViewSet):
-    """Web element grouping tree — CRUD + batch-move."""
+class GroupWriteRetired(APIException):
+    """分组树写接口已停用 —— 产品决策：所有写操作一律 410 Gone。
+
+    必须覆盖 create/update/partial_update/destroy **本身**，而不是 perform_* 钩子：
+    perform_* 在序列化校验之后才跑，空 body 会先变成 400，就丢掉了"接口已停用"的语义。
+    """
+
+    status_code = 410
+    default_detail = "分组树写接口已停用，请改用项目目录 API"
+
+
+class GroupWriteRetiredMixin:
+    """分组树的写操作一律 410（list / retrieve 不受影响）。"""
+
+    def create(self, request, *args, **kwargs):
+        raise GroupWriteRetired()
+
+    def update(self, request, *args, **kwargs):
+        raise GroupWriteRetired()
+
+    def partial_update(self, request, *args, **kwargs):
+        raise GroupWriteRetired()
+
+    def destroy(self, request, *args, **kwargs):
+        raise GroupWriteRetired()
+
+
+class WebGroupViewSet(GroupWriteRetiredMixin, viewsets.ModelViewSet):
+    """Web element grouping tree — 只读 + batch-move 410."""
 
     serializer_class = WebGroupSerializer
     http_method_names = ["get", "post", "put", "patch", "delete", "head", "options"]
@@ -45,21 +72,6 @@ class WebGroupViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         qs = self.get_queryset().filter(parent__isnull=True)
         return Response(WebGroupSerializer(qs, many=True).data)
-
-    def perform_create(self, serializer):
-        raise ValidationError({"detail": "分组树写接口已停用，请改用项目目录 API"})
-
-    def perform_update(self, serializer):
-        raise ValidationError({"detail": "分组树写接口已停用，请改用项目目录 API"})
-
-    def perform_destroy(self, instance):
-        from rest_framework.exceptions import APIException
-
-        class Gone(APIException):
-            status_code = 410
-            default_detail = "分组树写接口已停用，请改用项目目录 API"
-
-        raise Gone()
 
     @action(detail=False, methods=["post"], url_path="batch-move")
     def batch_move(self, request):
@@ -144,8 +156,8 @@ class WebElementViewSet(viewsets.ModelViewSet):
 # ═══════════════════════════════════════════════════════
 
 
-class ApiGroupViewSet(viewsets.ModelViewSet):
-    """API endpoint grouping tree — CRUD + batch-move."""
+class ApiGroupViewSet(GroupWriteRetiredMixin, viewsets.ModelViewSet):
+    """API endpoint grouping tree — 只读 + batch-move 410."""
 
     serializer_class = ApiGroupSerializer
     http_method_names = ["get", "post", "put", "patch", "delete", "head", "options"]
@@ -156,21 +168,6 @@ class ApiGroupViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         qs = self.get_queryset().filter(parent__isnull=True)
         return Response(ApiGroupSerializer(qs, many=True).data)
-
-    def perform_destroy(self, instance):
-        from rest_framework.exceptions import APIException
-
-        class Gone(APIException):
-            status_code = 410
-            default_detail = "分组树写接口已停用，请改用项目目录 API"
-
-        raise Gone()
-
-    def perform_create(self, serializer):
-        raise ValidationError({"detail": "分组树写接口已停用，请改用项目目录 API"})
-
-    def perform_update(self, serializer):
-        raise ValidationError({"detail": "分组树写接口已停用，请改用项目目录 API"})
 
     @action(detail=False, methods=["post"], url_path="batch-move")
     def batch_move(self, request):

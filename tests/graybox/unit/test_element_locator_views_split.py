@@ -21,39 +21,23 @@ MOUNT = "/api/elements/"
 APP_DIR = pathlib.Path(__file__).resolve().parents[3] / "apps" / "element_locator"
 
 # (相对路径, url_name, 预期视图函数名 | None) —— 与 urls.py 逐条对齐。
-# func_name 为 None 的条目其视图是 `@api_view` 装饰器产物（`__name__` 恒为 'view'，
-# 且不在本次拆分之列，见 views_projects_drf.py），故只校验路由契约。
+# 只覆盖**没有 router 对应**的手写路径：pages / items / move / files。
+# web、web-groups、api-groups、api-endpoints、flows、web-flows 的 legacy 手写实现
+# 已随尾斜杠约定统一而删除（原先靠"无斜杠→legacy / 带斜杠→router"并存），
+# 那些路径改由下方的 ROUTER_ROUTES 守护。
+# func_name 为 None 的条目其视图是 `@api_view` 装饰器产物（`__name__` 恒为 'view'），
+# 故只校验路由契约。
 LEGACY_ROUTES = [
-    ("pages", "pages_list", "list_pages"),
-    ("pages/create", "page_create", "create_page"),
-    ("pages/import-snapshot", "pages_import_snapshot", "import_snapshot"),
-    ("pages/clear", "pages_clear", "clear_pages"),
-    ("pages/batch-move", "pages_batch_move", "pages_batch_move"),
-    ("pages/1", "page_detail", "page_detail"),
-    ("pages/1/items", "page_items", "page_elements"),
-    ("pages/1/elements", "page_add_element", "add_element_to_page"),
-    ("pages/1/elements/batch", "page_batch_add_elements", "batch_add_elements"),
-    ("items/1", "item_update", "update_element"),
-    ("flows", "flows", "flows_handler"),
-    ("flows/1", "flow_delete", "delete_flow"),
-    ("web", "web_elements_list", "list_web_elements"),
-    ("web/create", "web_element_create", "create_web_element"),
-    ("web/batch", "web_elements_batch", "batch_import_web_elements"),
-    ("web/1", "web_element_detail", "web_element_detail"),
-    ("web-groups", "web_groups_list", "list_web_groups"),
-    # group_write_gone 是 `@api_view` 产物（`__name__` 恒为 'view'），只校验路由契约
-    ("web-groups/create", "web_group_create", None),
-    ("web-groups/batch-move", "web_groups_batch_move", None),
-    ("web-groups/1", "web_group_detail", "web_group_detail"),
-    ("web-flows", "web_flows_list", "web_flows_handler"),
-    ("web-flows/1", "web_flow_delete", "delete_web_flow"),
-    ("api-groups", "api_groups_list", "list_api_groups"),
-    ("api-groups/create", "api_group_create", None),
-    ("api-groups/batch-move", "api_groups_batch_move", None),
-    ("api-groups/1", "api_group_detail", "api_group_detail"),
-    ("api-endpoints", "api_endpoints_list", "list_api_endpoints"),
-    ("api-endpoints/create", "api_endpoint_create", "create_api_endpoint"),
-    ("api-endpoints/1", "api_endpoint_detail", "api_endpoint_detail"),
+    ("pages/", "pages_list", "list_pages"),
+    ("pages/create/", "page_create", "create_page"),
+    ("pages/import-snapshot/", "pages_import_snapshot", "import_snapshot"),
+    ("pages/clear/", "pages_clear", "clear_pages"),
+    ("pages/batch-move/", "pages_batch_move", "pages_batch_move"),
+    ("pages/1/", "page_detail", "page_detail"),
+    ("pages/1/items/", "page_items", "page_elements"),
+    ("pages/1/elements/", "page_add_element", "add_element_to_page"),
+    ("pages/1/elements/batch/", "page_batch_add_elements", "batch_add_elements"),
+    ("items/1/", "item_update", "update_element"),
     ("move/", "el_move", None),
     ("files/batch-delete/", "el_files_batch_delete", None),
 ]
@@ -67,6 +51,17 @@ ROUTER_ROUTES = [
     ("api-endpoints/", "ApiEndpointViewSet"),
     ("flows/", "PageFlowViewSet"),
     ("web-flows/", "WebPageFlowViewSet"),
+    # 以下路径原先由 legacy 手写实现服务（与 router 靠尾斜杠差异并存），现收敛到 router：
+    # 它们必须仍然可达，且由对应 ViewSet 处理 —— 这是"删 legacy 没删掉能力"的护栏。
+    ("web/batch/", "WebElementViewSet"),
+    ("web/1/", "WebElementViewSet"),
+    ("web-groups/batch-move/", "WebGroupViewSet"),
+    ("web-groups/1/", "WebGroupViewSet"),
+    ("api-groups/batch-move/", "ApiGroupViewSet"),
+    ("api-groups/1/", "ApiGroupViewSet"),
+    ("api-endpoints/1/", "ApiEndpointViewSet"),
+    ("flows/1/", "PageFlowViewSet"),
+    ("web-flows/1/", "WebPageFlowViewSet"),
 ]
 
 VIEWS_LINE_LIMIT = 300

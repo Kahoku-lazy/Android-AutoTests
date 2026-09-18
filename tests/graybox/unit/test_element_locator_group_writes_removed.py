@@ -30,11 +30,13 @@ REMOVED_VIEWS = [
 ]
 REMOVED_API_ONLY = ["rename_web_group", "delete_web_group", "rename_api_group", "delete_api_group"]
 
+# 分组写已停用 → 410。路径用 router 形式：legacy 手写路由（无尾斜杠）已随尾斜杠约定统一
+# 而删除，写路径现由 WebGroupViewSet / ApiGroupViewSet 的 perform_create 承接（同样 410）。
 WRITE_PATHS = [
-    "/api/elements/web-groups/create",
-    "/api/elements/web-groups/batch-move",
-    "/api/elements/api-groups/create",
-    "/api/elements/api-groups/batch-move",
+    "/api/elements/web-groups/",  # POST = create
+    "/api/elements/web-groups/batch-move/",
+    "/api/elements/api-groups/",  # POST = create
+    "/api/elements/api-groups/batch-move/",
 ]
 
 
@@ -72,6 +74,6 @@ def test_group_write_paths_still_return_410(path: str):
 
 def test_group_read_paths_still_work():
     """读路径（list）不受死代码清除影响。"""
-    resp = _client().get("/api/elements/web-groups")
+    resp = _client().get("/api/elements/web-groups/")
     assert resp.status_code == 200, resp.content[:200]
     assert resp.json()["status"] is True

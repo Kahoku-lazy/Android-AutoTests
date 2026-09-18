@@ -1,0 +1,4 @@
+schema: android-autotests
+created: 2026-09-14
+# 只补 OpenAPI schema 元数据（serializer_class / @extend_schema / 认证扩展），不改 API 行为与响应契约
+skip_specs: true

@@ -1,0 +1,4 @@
+schema: android-autotests
+created: 2026-09-14
+# 纯删除零消费配置：不改任何可观测行为，且 openspec/specs 无引用
+skip_specs: true

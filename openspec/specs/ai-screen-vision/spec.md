@@ -1,0 +1,42 @@
+# ai-screen-vision Specification
+
+## Purpose
+TBD - created by archiving change add-ai-screen-vision-capture. Update Purpose after archive.
+## Requirements
+### Requirement: 智能体可截取手机屏幕并返回图片
+
+系统 SHALL 提供一只读平台工具，使 AI 智能体可对指定在线设备截取当前屏幕，并将截图以图片（而非仅文本）形式返回给模型与对话。
+
+#### Scenario: 视觉模型读取屏幕截图
+
+- **WHEN** 用户要求智能体查看某在线设备的当前页面
+- **THEN** 智能体调用截屏工具，截图图片作为多模态输入喂给视觉模型，模型基于像素内容作答
+
+#### Scenario: 截图回显在对话
+
+- **WHEN** 截屏工具返回结果
+- **THEN** 该工具调用卡片内展示截图图片，用户可直接查看
+
+#### Scenario: 非视觉模型降级
+
+- **WHEN** 智能体使用不支持图片输入的模型
+- **THEN** 截图仍回显在对话，模型按文本/本地路径降级理解，且不报错中断
+
+### Requirement: 截屏复用检查器链路并受设备可用性约束
+
+系统 SHALL 复用设备检查器的截屏落库链路，并遵守目标设备在线且未被执行引擎占用的约束。
+
+#### Scenario: 设备不可用
+
+- **WHEN** 目标设备离线或被执行引擎占用
+- **THEN** 工具返回错误，不产生截图，不落库快照
+
+### Requirement: 截图在对话历史中持久化
+
+系统 SHALL 将 assistant 消息中工具结果的截图图片持久化，并在历史加载时还原为图片块。
+
+#### Scenario: 历史消息还原截图
+
+- **WHEN** 用户重新打开含截屏结果的对话
+- **THEN** 截图图片随工具调用卡片还原展示，视觉模型后续轮次可继续引用
+

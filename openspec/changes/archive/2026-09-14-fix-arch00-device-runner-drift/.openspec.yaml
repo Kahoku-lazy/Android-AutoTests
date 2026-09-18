@@ -1,0 +1,4 @@
+schema: android-autotests
+created: 2026-09-14
+# 纯文档同步：仅修正 ARCH-00 的失真陈述，无代码行为与 spec 级变化
+skip_specs: true

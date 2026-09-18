@@ -1,0 +1,4 @@
+schema: android-autotests
+created: 2026-09-14
+# 纯文档变更：把已收敛并归档的 L2 契约沉淀为接手入口，不改变任何系统行为
+skip_specs: true

@@ -1,0 +1,4 @@
+schema: android-autotests
+created: 2026-09-14
+# 纯文档计数同步：只回填经工具实测的数字与清单，无代码/行为/spec 级变化
+skip_specs: true

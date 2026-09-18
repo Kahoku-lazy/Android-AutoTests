@@ -1,0 +1,6 @@
+schema: android-autotests
+created: 2026-09-17
+# 本变更移除了 api-path-normalization 的最后一条需求（容错中间件已删），
+# 因此需要退役该能力并删除其主规格。缺少本标记时 archive 会报
+# archive_spec_validation_failed 并不修改任何文件。
+retire_capabilities: true

@@ -1,0 +1,4 @@
+schema: android-autotests
+created: 2026-09-14
+# 纯一致性清理（注释/格式/空转代码/渲染器分档），无 spec 级变化
+skip_specs: true

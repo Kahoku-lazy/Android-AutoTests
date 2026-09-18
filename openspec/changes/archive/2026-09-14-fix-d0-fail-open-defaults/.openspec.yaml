@@ -1,0 +1,4 @@
+schema: android-autotests
+created: 2026-09-14
+# 无配置/安全类 capability spec 可改（openspec/specs/ 下无此类能力）；不变量记入 design.md + ARCH-00 §七
+skip_specs: true

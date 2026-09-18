@@ -1,0 +1,4 @@
+schema: android-autotests
+created: 2026-09-14
+# 工具链编码修复：不改扫描规则与退出码语义，无 spec 级行为变化
+skip_specs: true

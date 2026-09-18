@@ -1,0 +1,4 @@
+schema: android-autotests
+created: 2026-09-14
+# 无 spec 覆盖工具网关 HTTP 契约（openspec/specs/ 零命中）；契约真相源为 dev_docs/.../API-AI助手.md §10，本次同步该文档
+skip_specs: true

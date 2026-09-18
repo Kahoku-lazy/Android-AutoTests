@@ -1,0 +1,4 @@
+schema: android-autotests
+created: 2026-09-15
+# 纯配置/基础设施变更：数据根换盘，不改任何 spec 级可观察行为
+skip_specs: true

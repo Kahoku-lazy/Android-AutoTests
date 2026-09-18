@@ -30,7 +30,7 @@ attachAuthInterceptors(client, {
   clearToken,
   getRefreshToken,
   getActive,
-  refreshRequest: (body) => axios.post("/api/auth/refresh", body),
+  refreshRequest: (body) => axios.post("/api/auth/refresh/", body),
   redirectToLogin: () => {
     window.location.href = "/login"
   },

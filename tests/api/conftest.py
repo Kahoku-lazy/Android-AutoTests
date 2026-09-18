@@ -32,7 +32,7 @@ def auth_session(base_url) -> requests.Session:
     session = requests.Session()
     session.headers.update({"Content-Type": "application/json"})
     resp = session.post(
-        f"{base_url}/api/auth/login", json={"username": "admin", "password": "admin123"}
+        f"{base_url}/api/auth/login/", json={"username": "admin", "password": "admin123"}
     )
     assert resp.status_code == 200, f"登录失败: {resp.text}"
     token = resp.json()["data"]["access_token"]

@@ -23,20 +23,20 @@
 | 结果列表接口（DRF） | GET /api/evaluator/results/ | 需登录(Bearer) | 逐题评分结果列表（只读） |
 | 结果详情接口（DRF） | GET /api/evaluator/results/{id}/ | 需登录(Bearer) | 单条评分结果详情（只读） |
 | 人工评分接口（DRF） | POST /api/evaluator/results/{id}/score/ | 需登录(Bearer) | 提交人工评分 |
-| 题库列表接口（legacy） | GET /api/evaluator/banks | 需登录(Bearer) | 题库列表（平铺信封） |
-| 创建题库接口（legacy） | POST /api/evaluator/banks/create | 需登录(Bearer) | 创建题库（平铺信封） |
-| 初始化默认题库接口（legacy） | POST /api/evaluator/banks/seed | 需登录(Bearer) | 创建默认 30 题试卷（平铺信封） |
+| 题库列表接口（legacy） | GET /api/evaluator/banks/ | 需登录(Bearer) | 题库列表（平铺信封） |
+| 创建题库接口（legacy） | POST /api/evaluator/banks/create/ | 需登录(Bearer) | 创建题库（平铺信封） |
+| 初始化默认题库接口（legacy） | POST /api/evaluator/banks/seed/ | 需登录(Bearer) | 创建默认 30 题试卷（平铺信封） |
 | 题库详情接口（legacy） | GET /api/evaluator/banks/{id} | 需登录(Bearer) | 单题库详情（平铺信封） |
 | 更新题库接口（legacy） | POST /api/evaluator/banks/{id}/update | 需登录(Bearer) | 更新题库（平铺信封） |
 | 删除题库接口（legacy） | POST /api/evaluator/banks/{id}/delete | 需登录(Bearer) | 删除题库（POST 触发，平铺信封） |
-| 运行列表接口（legacy） | GET /api/evaluator/runs | 需登录(Bearer) | 运行摘要列表（平铺信封） |
-| 启动评测接口（legacy） | POST /api/evaluator/runs/start | 需登录(Bearer) | 启动后台评估（平铺信封） |
+| 运行列表接口（legacy） | GET /api/evaluator/runs/ | 需登录(Bearer) | 运行摘要列表（平铺信封） |
+| 启动评测接口（legacy） | POST /api/evaluator/runs/start/ | 需登录(Bearer) | 启动后台评估（平铺信封） |
 | 运行详情接口（legacy） | GET /api/evaluator/runs/{id} | 需登录(Bearer) | 运行详情含逐题结果（平铺信封） |
 | 删除运行接口（legacy） | POST /api/evaluator/runs/{id}/delete | 需登录(Bearer) | 删除运行（POST 触发，平铺信封） |
 | 人工评分接口（legacy） | POST /api/evaluator/results/{id}/score | 需登录(Bearer) | 提交人工评分（平铺信封） |
-| 框架列表接口 | GET /api/evaluator/frameworks | 需登录(Bearer) | 可用评估框架列表（平铺信封） |
-| KB 检索接口 | POST /api/evaluator/kb-search | 需登录(Bearer) | 知识库检索测试（平铺信封） |
-| KB 自测接口 | POST /api/evaluator/kb-self-test | 需登录(Bearer) | 知识库检索质量自测（平铺信封） |
+| 框架列表接口 | GET /api/evaluator/frameworks/ | 需登录(Bearer) | 可用评估框架列表（平铺信封） |
+| KB 检索接口 | POST /api/evaluator/kb-search/ | 需登录(Bearer) | 知识库检索测试（平铺信封） |
+| KB 自测接口 | POST /api/evaluator/kb-self-test/ | 需登录(Bearer) | 知识库检索质量自测（平铺信封） |
 
 ## 2. 通用约定
 
@@ -494,7 +494,7 @@
 
 > 以下端点均返回**平铺信封**（无 `data` 包裹），由旧前端 `evaluator-api.ts` 消费。方法取自行内文档与前端实际调用。
 
-### 6.1 题库列表接口：GET /api/evaluator/banks
+### 6.1 题库列表接口：GET /api/evaluator/banks/
 
 | 项 | 值 |
 |---|---|
@@ -517,7 +517,7 @@
 }
 ```
 
-### 6.2 创建题库接口：POST /api/evaluator/banks/create
+### 6.2 创建题库接口：POST /api/evaluator/banks/create/
 
 | 项 | 值 |
 |---|---|
@@ -550,7 +550,7 @@
 
 > 说明：请求体须为合法 JSON，否则 `json.loads` 抛 JSONDecodeError（未捕获，返回 500）。
 
-### 6.3 初始化默认题库接口：POST /api/evaluator/banks/seed
+### 6.3 初始化默认题库接口：POST /api/evaluator/banks/seed/
 
 | 项 | 值 |
 |---|---|
@@ -641,7 +641,7 @@
 }
 ```
 
-### 6.7 运行列表接口：GET /api/evaluator/runs
+### 6.7 运行列表接口：GET /api/evaluator/runs/
 
 | 项 | 值 |
 |---|---|
@@ -675,7 +675,7 @@
 }
 ```
 
-### 6.8 启动评测接口：POST /api/evaluator/runs/start
+### 6.8 启动评测接口：POST /api/evaluator/runs/start/
 
 | 项 | 值 |
 |---|---|
@@ -794,7 +794,7 @@
 |---|---|---|
 | 404 | not found | 结果不存在 |
 
-### 6.12 框架列表接口：GET /api/evaluator/frameworks
+### 6.12 框架列表接口：GET /api/evaluator/frameworks/
 
 | 项 | 值 |
 |---|---|
@@ -828,7 +828,7 @@
 }
 ```
 
-### 6.13 KB 检索接口：POST /api/evaluator/kb-search
+### 6.13 KB 检索接口：POST /api/evaluator/kb-search/
 
 | 项 | 值 |
 |---|---|
@@ -866,7 +866,7 @@
 | 400 | 无效的 JSON | 请求体非合法 JSON |
 | 400 | query required | query 缺失或 strip 后为空 |
 
-### 6.14 KB 自测接口：POST /api/evaluator/kb-self-test
+### 6.14 KB 自测接口：POST /api/evaluator/kb-self-test/
 
 | 项 | 值 |
 |---|---|

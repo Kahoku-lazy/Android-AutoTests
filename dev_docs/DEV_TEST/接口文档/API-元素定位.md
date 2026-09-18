@@ -68,40 +68,40 @@
 
 | 接口 | 方法 | 鉴权 | 说明 |
 |---|---|---|---|
-| 页面列表 | GET /api/elements/pages | 需登录(Bearer) | 页面/目录平铺列表 |
-| 创建页面 | POST /api/elements/pages/create | 需登录(Bearer) | 手动创建页面/目录 |
-| 快照导入 | POST /api/elements/pages/import-snapshot | 需登录(Bearer) | 检查器/AI 保存（新端点，标准 {status,data} 信封） |
-| 清空页面 | POST /api/elements/pages/clear | 需登录(Bearer) | 清空全部页面/元素/流 |
-| 批量移动页面 | POST /api/elements/pages/batch-move | 需登录(Bearer) | 页面/目录批量移动 |
+| 页面列表 | GET /api/elements/pages/ | 需登录(Bearer) | 页面/目录平铺列表 |
+| 创建页面 | POST /api/elements/pages/create/ | 需登录(Bearer) | 手动创建页面/目录 |
+| 快照导入 | POST /api/elements/pages/import-snapshot/ | 需登录(Bearer) | 检查器/AI 保存（新端点，标准 {status,data} 信封） |
+| 清空页面 | POST /api/elements/pages/clear/ | 需登录(Bearer) | 清空全部页面/元素/流 |
+| 批量移动页面 | POST /api/elements/pages/batch-move/ | 需登录(Bearer) | 页面/目录批量移动 |
 | 重命名页面 | PUT /api/elements/pages/{page_id} | 需登录(Bearer) | 重命名页面/目录 |
 | 删除页面 | DELETE /api/elements/pages/{page_id} | 需登录(Bearer) | 删除页面 |
 | 页面元素列表 | GET /api/elements/pages/{page_id}/items | 需登录(Bearer) | 页面元素（filter/分页） |
 | 添加元素 | POST /api/elements/pages/{page_id}/elements | 需登录(Bearer) | 手动添加元素（upsert） |
 | 批量保存元素 | POST /api/elements/pages/{page_id}/elements/batch | 需登录(Bearer) | 批量保存元素 |
 | 更新元素 | PUT /api/elements/items/{el_id} | 需登录(Bearer) | 更新元素元数据 |
-| 页面流列表 | GET /api/elements/flows | 需登录(Bearer) | 页面流列表（legacy） |
-| 创建页面流 | POST /api/elements/flows | 需登录(Bearer) | 创建页面流（legacy） |
+| 页面流列表 | GET /api/elements/flows/ | 需登录(Bearer) | 页面流列表（legacy） |
+| 创建页面流 | POST /api/elements/flows/ | 需登录(Bearer) | 创建页面流（legacy） |
 | 删除页面流 | DELETE /api/elements/flows/{flow_id} | 需登录(Bearer) | 删除页面流（legacy） |
-| Web 元素列表 | GET /api/elements/web | 需登录(Bearer) | Web 元素列表（legacy） |
-| 创建 Web 元素 | POST /api/elements/web/create | 需登录(Bearer) | 创建 Web 元素（legacy） |
-| 批量导入 Web 元素 | POST /api/elements/web/batch | 需登录(Bearer) | 批量导入（legacy，写入 tags） |
+| Web 元素列表 | GET /api/elements/web/ | 需登录(Bearer) | Web 元素列表（legacy） |
+| 创建 Web 元素 | POST /api/elements/web/create/ | 需登录(Bearer) | 创建 Web 元素（legacy） |
+| 批量导入 Web 元素 | POST /api/elements/web/batch/ | 需登录(Bearer) | 批量导入（legacy，写入 tags） |
 | 更新 Web 元素 | PUT /api/elements/web/{el_id} | 需登录(Bearer) | 更新 Web 元素（legacy） |
 | 删除 Web 元素 | DELETE /api/elements/web/{el_id} | 需登录(Bearer) | 删除 Web 元素（legacy） |
-| Web 分组列表 | GET /api/elements/web-groups | 需登录(Bearer) | Web 分组平铺列表（legacy） |
-| 创建 Web 分组 | POST /api/elements/web-groups/create | 需登录(Bearer) | 创建 Web 分组（legacy） |
-| 批量移动 Web 分组 | POST /api/elements/web-groups/batch-move | 需登录(Bearer) | 批量移动（legacy） |
+| Web 分组列表 | GET /api/elements/web-groups/ | 需登录(Bearer) | Web 分组平铺列表（legacy） |
+| 创建 Web 分组 | POST /api/elements/web-groups/create/ | 需登录(Bearer) | 创建 Web 分组（legacy） |
+| 批量移动 Web 分组 | POST /api/elements/web-groups/batch-move/ | 需登录(Bearer) | 批量移动（legacy） |
 | 重命名 Web 分组 | PUT /api/elements/web-groups/{group_id} | 需登录(Bearer) | 重命名（legacy） |
 | 删除 Web 分组 | DELETE /api/elements/web-groups/{group_id} | 需登录(Bearer) | 删除（legacy） |
-| Web 流列表 | GET /api/elements/web-flows | 需登录(Bearer) | Web 流列表（legacy） |
-| 创建 Web 流 | POST /api/elements/web-flows | 需登录(Bearer) | 创建 Web 流（legacy） |
+| Web 流列表 | GET /api/elements/web-flows/ | 需登录(Bearer) | Web 流列表（legacy） |
+| 创建 Web 流 | POST /api/elements/web-flows/ | 需登录(Bearer) | 创建 Web 流（legacy） |
 | 删除 Web 流 | DELETE /api/elements/web-flows/{flow_id} | 需登录(Bearer) | 删除 Web 流（legacy） |
-| API 分组列表 | GET /api/elements/api-groups | 需登录(Bearer) | API 分组平铺列表（legacy） |
-| 创建 API 分组 | POST /api/elements/api-groups/create | 需登录(Bearer) | 创建 API 分组（legacy） |
-| 批量移动 API 分组 | POST /api/elements/api-groups/batch-move | 需登录(Bearer) | 批量移动（legacy） |
+| API 分组列表 | GET /api/elements/api-groups/ | 需登录(Bearer) | API 分组平铺列表（legacy） |
+| 创建 API 分组 | POST /api/elements/api-groups/create/ | 需登录(Bearer) | 创建 API 分组（legacy） |
+| 批量移动 API 分组 | POST /api/elements/api-groups/batch-move/ | 需登录(Bearer) | 批量移动（legacy） |
 | 重命名 API 分组 | PUT /api/elements/api-groups/{group_id} | 需登录(Bearer) | 重命名（legacy） |
 | 删除 API 分组 | DELETE /api/elements/api-groups/{group_id} | 需登录(Bearer) | 删除（legacy） |
-| API 端点列表 | GET /api/elements/api-endpoints | 需登录(Bearer) | API 端点列表（legacy） |
-| 创建 API 端点 | POST /api/elements/api-endpoints/create | 需登录(Bearer) | 创建 API 端点（legacy） |
+| API 端点列表 | GET /api/elements/api-endpoints/ | 需登录(Bearer) | API 端点列表（legacy） |
+| 创建 API 端点 | POST /api/elements/api-endpoints/create/ | 需登录(Bearer) | 创建 API 端点（legacy） |
 | 更新 API 端点 | PUT /api/elements/api-endpoints/{el_id} | 需登录(Bearer) | 更新 API 端点（legacy） |
 | 删除 API 端点 | DELETE /api/elements/api-endpoints/{el_id} | 需登录(Bearer) | 删除 API 端点（legacy） |
 
@@ -541,7 +541,7 @@
     "group_id": 1,
     "group_name": "用户中心",
     "method": "POST",
-    "url": "/api/user",
+    "url": "/api/user/",
     "headers": {},
     "request_body_schema": {},
     "response_body_schema": {},
@@ -1593,7 +1593,7 @@
     "id": 10,
     "name": "创建用户",
     "method": "POST",
-    "url": "/api/user",
+    "url": "/api/user/",
     "headers": {},
     "request_body_schema": {},
     "response_body_schema": {},

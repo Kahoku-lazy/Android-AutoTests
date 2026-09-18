@@ -11,8 +11,8 @@
 | 接口 | 方法 | 鉴权 | 说明 |
 |---|---|---|---|
 | **agents 组** | | | |
-| Agent 列表 | GET /api/ai/agents | 需登录(Bearer) | 当前用户可见的智能体列表 |
-| Agent 创建 | POST /api/ai/agents/create | 需登录(Bearer) | 新建智能体（仅超管） |
+| Agent 列表 | GET /api/ai/agents/ | 需登录(Bearer) | 当前用户可见的智能体列表 |
+| Agent 创建 | POST /api/ai/agents/create/ | 需登录(Bearer) | 新建智能体（仅超管） |
 | Agent 详情 | GET /api/ai/agents/{id} | 需登录(Bearer) | 单智能体详情（api_key 脱敏） |
 | Agent 更新 | POST /api/ai/agents/{id}/update | 需登录(Bearer) | 更新配置（仅超管） |
 | Agent 删除 | POST /api/ai/agents/{id}/delete | 需登录(Bearer) | 删除（仅超管，级联） |
@@ -21,10 +21,10 @@
 | 缓存模型列表 | GET /api/ai/agents/{id}/models | 需登录(Bearer) | 缓存可用模型列表 |
 | Agent 对话列表 | GET /api/ai/agents/{id}/conversations | 需登录(Bearer) | 某智能体下对话 |
 | Agent 创建对话 | POST /api/ai/agents/{id}/conversations/create | 需登录(Bearer) | 新建对话 |
-| Agent 健康检查 | GET /api/ai/agents/health | 需登录(Bearer) | 当前用户 active Agent 健康 |
-| 模型探测 | POST /api/ai/models/detect | 需登录(Bearer) | 按 provider/base_url/key 探测模型 |
-| 平台工具列表 | GET /api/ai/available-tools | 需登录(Bearer) | 平台业务工具（按分类含启停态） |
-| workspace 技能列表 | GET /api/ai/available-skills | 需登录(Bearer) | 已移除，返回空 |
+| Agent 健康检查 | GET /api/ai/agents/health/ | 需登录(Bearer) | 当前用户 active Agent 健康 |
+| 模型探测 | POST /api/ai/models/detect/ | 需登录(Bearer) | 按 provider/base_url/key 探测模型 |
+| 平台工具列表 | GET /api/ai/available-tools/ | 需登录(Bearer) | 平台业务工具（按分类含启停态） |
+| workspace 技能列表 | GET /api/ai/available-skills/ | 需登录(Bearer) | 已移除，返回空 |
 | **conversations 组** | | | |
 | 消息列表 | GET /api/ai/conversations/{id}/messages | 需登录(Bearer) | 对话消息 |
 | 保存消息 | POST /api/ai/conversations/{id}/save-message | 需登录(Bearer) | 写入一条消息 |
@@ -33,34 +33,38 @@
 | 对话任务历史 | GET /api/ai/conversations/{id}/tasks | 需登录(Bearer) | ai-task-*/case-gen-* 运行记录 |
 | 对话任务详情 | GET /api/ai/conversations/{id}/tasks/{run_id} | 需登录(Bearer) | 单条运行详情 |
 | **tasks 组** | | | |
-| 任务便签看板 | GET /api/ai/tasks | 需登录(Bearer) | 工作台 ai-task-*/case-gen-* 看板 |
-| 任务提交 | POST /api/ai/tasks/submit | 需登录(Bearer) | 提交并异步执行 |
-| 任务发布列表 | GET /api/ai/agent-tasks | 需登录(Bearer) | AITask 任务发布列表（result 为短摘要） |
+| 任务便签看板 | GET /api/ai/tasks/ | 需登录(Bearer) | 工作台 ai-task-*/case-gen-* 看板 |
+| 任务提交 | POST /api/ai/tasks/submit/ | 需登录(Bearer) | 提交并异步执行 |
+| 任务发布列表 | GET /api/ai/agent-tasks/ | 需登录(Bearer) | AITask 任务发布列表（result 为短摘要） |
 | 任务发布详情 | GET /api/ai/agent-tasks/{id} | 需登录(Bearer) | 过程日志（plans / log / usage） |
 | 任务发布删除 | POST /api/ai/agent-tasks/{id}/delete | 需登录(Bearer) | 删除任务发布记录 |
-| 任务发布清空 | POST /api/ai/agent-tasks/clear | 需登录(Bearer) | 调试：清空全部任务 |
+| 任务发布清空 | POST /api/ai/agent-tasks/clear/ | 需登录(Bearer) | 调试：清空全部任务 |
 | **toolbox 组** | | | |
-| 工具箱列表 | GET /api/ai/toolbox | 需登录(Bearer) | 共享工具箱项（含 enabled） |
-| 工具箱新增 | POST /api/ai/toolbox/create | 需登录(Bearer) | 新增 mcp/extension |
+| 工具箱列表 | GET /api/ai/toolbox/ | 需登录(Bearer) | 共享工具箱项（含 enabled） |
+| 工具箱新增 | POST /api/ai/toolbox/create/ | 需登录(Bearer) | 新增 mcp/extension |
 | 工具箱更新 | POST /api/ai/toolbox/{id}/update | 需登录(Bearer) | 部分更新 |
 | 工具箱删除 | POST /api/ai/toolbox/{id}/delete | 需登录(Bearer) | 删除（skill 清目录） |
 | 工具箱启停 | POST /api/ai/toolbox/{id}/toggle | 需登录(Bearer) | 启停共享项 |
-| 上传共享 Skill | POST /api/ai/toolbox/upload-skill | 需登录(Bearer) | multipart 上传 skill 文件夹 |
+| 上传共享 Skill | POST /api/ai/toolbox/upload-skill/ | 需登录(Bearer) | multipart 上传 skill 文件夹 |
 | **knowledge 组** | | | |
-| 知识库状态 | GET /api/ai/knowledge/status | 需登录(Bearer) | 已索引文档数（向量库） |
-| 知识库文档列表 | GET /api/ai/knowledge/documents | 需登录(Bearer) | 扫描 data/rag_datas |
-| 知识库文档预览 | GET /api/ai/knowledge/documents/preview | 需登录(Bearer) | md/txt 原文；docx/pdf 旁路转 md |
-| 知识库重建索引 | POST /api/ai/knowledge/reindex | 需登录(Bearer) | 索引 data/rag_datas/**/*.md |
-| 知识库添加文档 | POST /api/ai/knowledge/documents/add | 需登录(Bearer) | multipart 上传到 data/rag_datas |
+| 知识库状态 | GET /api/ai/knowledge/status/ | 需登录(Bearer) | 已索引文档数（向量库） |
+| 知识库文档列表 | GET /api/ai/knowledge/documents/ | 需登录(Bearer) | 扫描 data/rag_datas |
+| 知识库文档预览 | GET /api/ai/knowledge/documents/preview/ | 需登录(Bearer) | md/txt 原文；docx/pdf 旁路转 md |
+| 知识库重建索引 | POST /api/ai/knowledge/reindex/ | 需登录(Bearer) | 索引 data/rag_datas/**/*.md |
+| 知识库添加文档 | POST /api/ai/knowledge/documents/add/ | 需登录(Bearer) | multipart 上传到 data/rag_datas |
 | **uploads 组** | | | |
-| 头像上传 | POST /api/ai/upload-avatar | 需登录(Bearer) | base64 → data URI |
-| 文件上传 | POST /api/ai/upload-file | 需登录(Bearer) | multipart 上传并解析 |
+| 头像上传 | POST /api/ai/upload-avatar/ | 需登录(Bearer) | base64 → data URI |
+| 文件上传 | POST /api/ai/upload-file/ | 需登录(Bearer) | multipart 上传并解析 |
 | **platform 组** | | | |
-| 平台配置读取 | GET /api/ai/platform-config | 需登录(Bearer) | 平台唯一智能体能力配置 |
-| 平台配置更新 | POST /api/ai/platform-config/update | 需登录(Bearer) | 更新（仅超管） |
-| 平台工具启停 | POST /api/ai/platform-tools/toggle | 需登录(Bearer) | 全局启停（仅超管） |
+| 平台配置读取 | GET /api/ai/platform-config/ | 需登录(Bearer) | 平台唯一智能体能力配置 |
+| 平台配置更新 | POST /api/ai/platform-config/update/ | 需登录(Bearer) | 更新（仅超管） |
+| 设备提示词读取 | GET /api/ai/device-prompts/ | 需登录(Bearer) | 规划/执行/验收系统提示词 |
+| 设备提示词更新 | POST /api/ai/device-prompts/update/ | 需登录(Bearer) | 更新三份提示词（仅超管） |
+| 平台工具启停 | POST /api/ai/platform-tools/toggle/ | 需登录(Bearer) | 全局启停（仅超管） |
+| 平台工具调试 schema | GET /api/ai/platform-tools/{name} | 需登录(Bearer) | 入参 schema（剥 user_id） |
+| 平台工具调试调用 | POST /api/ai/platform-tools/{name}/invoke | 需登录(Bearer) | 真实调用；写工具仅超管 |
 | **legacy tool gateway** | | | |
-| 工具 schema | GET /api/ai/tools/schemas | 内部令牌 | 全部工具定义（服务间） |
+| 工具 schema | GET /api/ai/tools/schemas/ | 内部令牌 | 全部工具定义（服务间） |
 | Agent 工具配置 | GET /api/ai/tools/agent-config/{agent_id} | 内部令牌 | per-agent 工具/技能/知识配置 |
 | 工具执行 | POST /api/ai/tools/{module}/{action} | 内部令牌 | 执行业务工具（服务间） |
 
@@ -80,7 +84,7 @@
 
 ## 3. agents 组
 
-### 3.1 Agent 列表接口：GET /api/ai/agents
+### 3.1 Agent 列表接口：GET /api/ai/agents/
 
 | 项 | 值 |
 |---|---|
@@ -134,7 +138,7 @@
 
 ---
 
-### 3.2 Agent 创建接口：POST /api/ai/agents/create
+### 3.2 Agent 创建接口：POST /api/ai/agents/create/
 
 | 项 | 值 |
 |---|---|
@@ -502,7 +506,7 @@
 
 ---
 
-### 3.11 Agent 健康检查接口：GET /api/ai/agents/health
+### 3.11 Agent 健康检查接口：GET /api/ai/agents/health/
 
 | 项 | 值 |
 |---|---|
@@ -544,7 +548,7 @@
 
 ---
 
-### 3.12 模型探测接口：POST /api/ai/models/detect
+### 3.12 模型探测接口：POST /api/ai/models/detect/
 
 | 项 | 值 |
 |---|---|
@@ -579,11 +583,11 @@
 | 400 | 不支持的模型提供商: {provider} | provider 非法 |
 | 400 | base_url 必须使用 http 或 https / base_url 无效 / ... | base_url 校验（仅在 provider 提供时） |
 
-> 历史说明：`GET /api/ai/models/detect` 保持旧 400 语义，返回 `{status: false, message: "agent_id required"}`。
+> 历史说明：`GET /api/ai/models/detect/` 保持旧 400 语义，返回 `{status: false, message: "agent_id required"}`。
 
 ---
 
-### 3.13 平台工具列表接口：GET /api/ai/available-tools
+### 3.13 平台工具列表接口：GET /api/ai/available-tools/
 
 | 项 | 值 |
 |---|---|
@@ -624,7 +628,7 @@
 
 ---
 
-### 3.14 workspace 技能列表接口：GET /api/ai/available-skills
+### 3.14 workspace 技能列表接口：GET /api/ai/available-skills/
 
 | 项 | 值 |
 |---|---|
@@ -884,7 +888,7 @@
 
 ## 5. tasks 组
 
-### 5.1 任务便签看板接口：GET /api/ai/tasks
+### 5.1 任务便签看板接口：GET /api/ai/tasks/
 
 | 项 | 值 |
 |---|---|
@@ -931,7 +935,7 @@
 
 ---
 
-### 5.2 任务提交接口：POST /api/ai/tasks/submit
+### 5.2 任务提交接口：POST /api/ai/tasks/submit/
 
 | 项 | 值 |
 |---|---|
@@ -971,7 +975,7 @@
 
 ---
 
-### 5.3 任务发布列表接口：GET /api/ai/agent-tasks
+### 5.3 任务发布列表接口：GET /api/ai/agent-tasks/
 
 | 项 | 值 |
 |---|---|
@@ -1097,7 +1101,7 @@
 
 ---
 
-### 5.6 任务发布清空接口：POST /api/ai/agent-tasks/clear
+### 5.6 任务发布清空接口：POST /api/ai/agent-tasks/clear/
 
 | 项 | 值 |
 |---|---|
@@ -1125,7 +1129,7 @@
 
 ## 6. toolbox 组
 
-### 6.1 工具箱列表接口：GET /api/ai/toolbox
+### 6.1 工具箱列表接口：GET /api/ai/toolbox/
 
 | 项 | 值 |
 |---|---|
@@ -1161,7 +1165,7 @@
 
 ---
 
-### 6.2 工具箱新增接口：POST /api/ai/toolbox/create
+### 6.2 工具箱新增接口：POST /api/ai/toolbox/create/
 
 | 项 | 值 |
 |---|---|
@@ -1287,7 +1291,7 @@
 
 ---
 
-### 6.6 上传共享 Skill 接口：POST /api/ai/toolbox/upload-skill
+### 6.6 上传共享 Skill 接口：POST /api/ai/toolbox/upload-skill/
 
 | 项 | 值 |
 |---|---|
@@ -1327,7 +1331,7 @@
 
 > 文档根目录：`data/rag_datas`。列表/上传走磁盘；检索与重建索引走向量库（仅 `*.md`）。
 
-### 7.1 知识库状态接口：GET /api/ai/knowledge/status
+### 7.1 知识库状态接口：GET /api/ai/knowledge/status/
 
 | 项 | 值 |
 |---|---|
@@ -1360,7 +1364,7 @@
 
 ---
 
-### 7.2 知识库文档列表接口：GET /api/ai/knowledge/documents
+### 7.2 知识库文档列表接口：GET /api/ai/knowledge/documents/
 
 | 项 | 值 |
 |---|---|
@@ -1397,7 +1401,7 @@
 
 ---
 
-### 7.3 知识库文档预览接口：GET /api/ai/knowledge/documents/preview
+### 7.3 知识库文档预览接口：GET /api/ai/knowledge/documents/preview/
 
 | 项 | 值 |
 |---|---|
@@ -1431,7 +1435,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 7.4 知识库重建索引接口：POST /api/ai/knowledge/reindex
+### 7.4 知识库重建索引接口：POST /api/ai/knowledge/reindex/
 
 | 项 | 值 |
 |---|---|
@@ -1459,7 +1463,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 7.5 知识库添加文档接口：POST /api/ai/knowledge/documents/add
+### 7.5 知识库添加文档接口：POST /api/ai/knowledge/documents/add/
 
 | 项 | 值 |
 |---|---|
@@ -1494,7 +1498,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ## 8. uploads 组
 
-### 8.1 头像上传接口：POST /api/ai/upload-avatar
+### 8.1 头像上传接口：POST /api/ai/upload-avatar/
 
 | 项 | 值 |
 |---|---|
@@ -1528,7 +1532,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 8.2 文件上传接口：POST /api/ai/upload-file
+### 8.2 文件上传接口：POST /api/ai/upload-file/
 
 | 项 | 值 |
 |---|---|
@@ -1585,7 +1589,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ## 9. platform 组
 
-### 9.1 平台配置读取接口：GET /api/ai/platform-config
+### 9.1 平台配置读取接口：GET /api/ai/platform-config/
 
 | 项 | 值 |
 |---|---|
@@ -1620,7 +1624,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 9.2 平台配置更新接口：POST /api/ai/platform-config/update
+### 9.2 平台配置更新接口：POST /api/ai/platform-config/update/
 
 | 项 | 值 |
 |---|---|
@@ -1653,7 +1657,73 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 9.3 平台工具启停接口：POST /api/ai/platform-tools/toggle
+### 9.2a 设备提示词读取接口：GET /api/ai/device-prompts/
+
+| 项 | 值 |
+|---|---|
+| 鉴权 | 需登录(Bearer) |
+
+#### 成功响应（200）
+
+```json
+{
+  "status": true,
+  "data": {
+    "agent_id": 1,
+    "planner": "## 角色\n...",
+    "executor": "## 角色\n...",
+    "verifier": "## 角色\n..."
+  }
+}
+```
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| agent_id | int | 平台唯一智能体 ID |
+| planner | string | 规划模型系统提示词（Markdown） |
+| executor | string | 执行模型系统提示词（Markdown） |
+| verifier | string | 验收模型系统提示词（Markdown） |
+
+#### 错误码与文案
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
+| 404 | platform agent not found | 平台唯一智能体不存在 |
+
+---
+
+### 9.2b 设备提示词更新接口：POST /api/ai/device-prompts/update/
+
+| 项 | 值 |
+|---|---|
+| 鉴权 | 需登录(Bearer)，仅超级管理员 |
+| Content-Type | application/json |
+
+#### 请求体（三份必填，一次全写）
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| planner | string | 是 | 规划模型系统提示词（去空白后不可空） |
+| executor | string | 是 | 执行模型系统提示词（去空白后不可空） |
+| verifier | string | 是 | 验收模型系统提示词（去空白后不可空） |
+
+#### 成功响应（200）
+
+与 §9.2a 相同（返回更新后的完整提示词）。
+
+#### 错误码与文案
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 400 | planner/executor/verifier 系统提示词不能为空 等 | 任一份去空白后为空，或缺少字段 |
+| 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
+| 403 | Forbidden | 非超级管理员 |
+| 404 | platform agent not found | 平台唯一智能体不存在 |
+
+---
+
+### 9.3 平台工具启停接口：POST /api/ai/platform-tools/toggle/
 
 | 项 | 值 |
 |---|---|
@@ -1691,6 +1761,76 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
+### 9.4 平台工具调试 schema：GET /api/ai/platform-tools/{name}
+
+| 项 | 值 |
+|---|---|
+| 鉴权 | 需登录(Bearer) |
+| 请求 | 无请求体 |
+
+#### 成功响应（200）
+
+```json
+{
+  "status": true,
+  "data": {
+    "name": "acquire_device",
+    "summary": "锁定一台在线设备用于独占测试。",
+    "read_only": false,
+    "parameters": [
+      { "name": "serial", "type": "str", "required": true },
+      { "name": "timeout", "type": "int", "required": false, "default": 300 }
+    ]
+  }
+}
+```
+
+> `parameters` **不含** `user_id`（由服务端从 JWT 注入）。停用工具仍可查询 schema。
+
+#### 错误码与文案
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
+| 404 | tool not found | name 不在平台工具表 |
+
+---
+
+### 9.5 平台工具调试调用：POST /api/ai/platform-tools/{name}/invoke
+
+| 项 | 值 |
+|---|---|
+| 鉴权 | 需登录(Bearer)；**写工具**（`read_only=false`）仅超级管理员 |
+| Content-Type | application/json |
+
+#### 请求体
+
+工具 kwargs 的 JSON 对象（可 `{}`）。若含 `user_id` 字段，服务端**丢弃**并用 JWT 身份注入。未知键返回 400。
+
+#### 成功响应（200）
+
+```json
+{
+  "status": true,
+  "data": {
+    "result": [ { "serial": "RF8..." } ]
+  }
+}
+```
+
+> `result` 形状与智能体调用同一工具一致（如 `screenshot_page` 含 `image.base64` + `summary`）。本接口走 JWT，**不得**使用 `/api/ai/tools/{module}/{action}` 内部令牌网关。
+
+#### 错误码与文案
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
+| 403 | Forbidden | 非超管调用写工具 |
+| 400 | 未知参数 / 缺少必填参数 / 工具执行失败… | 入参或执行错误 |
+| 404 | tool not found | name 不在平台工具表 |
+
+---
+
 ## 10. legacy tool gateway（豁免路径）
 
 > Django 函数视图 + `JsonResponse`（`@csrf_exempt`），不走 `EnvelopeJSONRenderer`；
@@ -1711,7 +1851,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 >
 > 状态码 `401`。CORS 预检（`OPTIONS`）不校验令牌。
 
-### 10.1 工具 schema 接口：GET /api/ai/tools/schemas
+### 10.1 工具 schema 接口：GET /api/ai/tools/schemas/
 
 | 项 | 值 |
 |---|---|

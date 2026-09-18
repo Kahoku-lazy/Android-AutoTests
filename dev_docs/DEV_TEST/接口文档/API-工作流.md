@@ -27,16 +27,16 @@
 | 文档删除接口 | DELETE /api/workflow/documents/{doc_id}/ | 需登录(Bearer) | 删除文档 |
 | 文档导出接口 | GET /api/workflow/documents/{doc_id}/export/ | 需登录(Bearer) | envelope 含 `prototype_id` |
 | 文档移动接口 | POST /api/workflow/documents/{doc_id}/move/ | 需登录(Bearer) | 同原型内移动 |
-| 原型列表接口(legacy) | GET /api/workflow/prototypes | 需登录(Bearer) | 平铺 `{status, prototypes}` |
-| 原型创建接口(legacy) | POST /api/workflow/prototypes/create | 需登录(Bearer) | 平铺 `{status, prototype}` |
+| 原型列表接口(legacy) | GET /api/workflow/prototypes/ | 需登录(Bearer) | 平铺 `{status, prototypes}` |
+| 原型创建接口(legacy) | POST /api/workflow/prototypes/create/ | 需登录(Bearer) | 平铺 `{status, prototype}` |
 | 原型详情/更新/删除(legacy) | GET/POST/DELETE /api/workflow/prototypes/{id} | 需登录(Bearer) | 平铺信封 |
-| 目录列表接口(legacy) | GET /api/workflow/directories | 需登录(Bearer) | `?prototype_id=`；平铺 flat + tree |
-| 目录创建接口(legacy) | POST /api/workflow/directories/create | 需登录(Bearer) | body 含 `prototype_id` |
+| 目录列表接口(legacy) | GET /api/workflow/directories/ | 需登录(Bearer) | `?prototype_id=`；平铺 flat + tree |
+| 目录创建接口(legacy) | POST /api/workflow/directories/create/ | 需登录(Bearer) | body 含 `prototype_id` |
 | 目录移动接口(legacy) | POST /api/workflow/directories/{dir_id}/move | 需登录(Bearer) | 平铺信封 |
 | 目录更新/删除接口(legacy) | POST /api/workflow/directories/{dir_id} | 需登录(Bearer) | action=update/delete |
-| 文档列表接口(legacy) | GET /api/workflow/documents | 需登录(Bearer) | `?prototype_id=&directory_id=&doc_type=` |
-| 文档创建/更新接口(legacy) | POST /api/workflow/documents/create | 需登录(Bearer) | body 含 `prototype_id` |
-| 文档导入接口(legacy) | POST /api/workflow/documents/import | 需登录(Bearer) | envelope/`prototype_id` |
+| 文档列表接口(legacy) | GET /api/workflow/documents/ | 需登录(Bearer) | `?prototype_id=&directory_id=&doc_type=` |
+| 文档创建/更新接口(legacy) | POST /api/workflow/documents/create/ | 需登录(Bearer) | body 含 `prototype_id` |
+| 文档导入接口(legacy) | POST /api/workflow/documents/import/ | 需登录(Bearer) | envelope/`prototype_id` |
 | 文档导出接口(legacy) | GET /api/workflow/documents/{doc_id}/export | 需登录(Bearer) | 平铺 / 附件下载 |
 | 文档移动接口(legacy) | POST /api/workflow/documents/{doc_id}/move | 需登录(Bearer) | 平铺信封 |
 | 文档详情接口(legacy) | GET /api/workflow/documents/{doc_id} | 需登录(Bearer) | 平铺信封 |
@@ -81,8 +81,8 @@
 
 ### Legacy
 
-- GET `/api/workflow/prototypes` → `{status, prototypes}`
-- POST `/api/workflow/prototypes/create` → `{status, prototype}`
+- GET `/api/workflow/prototypes/` → `{status, prototypes}`
+- POST `/api/workflow/prototypes/create/` → `{status, prototype}`
 - GET/POST/DELETE `/api/workflow/prototypes/{id}` → 平铺信封（POST 可 `action=delete`）
 
 ---
@@ -682,7 +682,7 @@ envelope 对象字段：
 
 > 平铺信封 `{status, directory|directories|tree, ...}`，**无 `data` 层**；路径**不带尾斜杠**。行为与 router 对应端点一致。
 
-### 5.1 目录列表：GET /api/workflow/directories
+### 5.1 目录列表：GET /api/workflow/directories/
 
 同 §3.1，但信封平铺：
 
@@ -698,7 +698,7 @@ envelope 对象字段：
 |---|---|---|
 | 405 | method not allowed | 方法非 GET |
 
-### 5.2 目录创建：POST /api/workflow/directories/create
+### 5.2 目录创建：POST /api/workflow/directories/create/
 
 请求体同 §3.2（`name` / `parent_id` / `sort_order`）。
 
@@ -737,7 +737,7 @@ envelope 对象字段：
 
 ## 6. legacy 平铺端点（文档）
 
-### 6.1 文档列表：GET /api/workflow/documents
+### 6.1 文档列表：GET /api/workflow/documents/
 
 查询参数 `directory_id` / `doc_type` 同 §4.1。
 
@@ -748,7 +748,7 @@ envelope 对象字段：
 }
 ```
 
-### 6.2 文档创建/更新：POST /api/workflow/documents/create
+### 6.2 文档创建/更新：POST /api/workflow/documents/create/
 
 请求体：`doc_id`（可选，存在则更新）/ `title`（或 `name`）/ `doc_type` / `config` / `directory_id` / `description`。
 
@@ -758,7 +758,7 @@ envelope 对象字段：
 
 > 成功状态码 200（更新）/ 201（新建）；失败 `{ "status": false, "message": ... }`，状态码随 `upsert_document`（400/404/409），文案同 §4.2/§4.4。
 
-### 6.3 文档导入：POST /api/workflow/documents/import
+### 6.3 文档导入：POST /api/workflow/documents/import/
 
 查询参数 `overwrite`、请求体（`{envelope:{...}}` 或直接平铺）同 §4.6。
 

@@ -9,9 +9,9 @@
 | 接口 | 方法 | 鉴权 | 说明 |
 |---|---|---|---|
 | 设备列表接口 | GET /api/devices/ | 需登录(Bearer) | 设备列表 + 内嵌 `current` 字段（含状态同步 + 可见性过滤） |
-| 设备扫描接口 | POST /api/devices/scan | 需登录(Bearer) | ADB 扫描注册（全量 / USB / WiFi） |
-| 当前设备接口 | GET /api/devices/current | 需登录(Bearer) | 当前活动设备信息（预留，前端暂未消费） |
-| 设备心跳接口 | GET /api/devices/heartbeat | 需登录(Bearer) | 心跳同步 + 各状态计数（前端 30s 轮询） |
+| 设备扫描接口 | POST /api/devices/scan/ | 需登录(Bearer) | ADB 扫描注册（全量 / USB / WiFi） |
+| 当前设备接口 | GET /api/devices/current/ | 需登录(Bearer) | 当前活动设备信息（预留，前端暂未消费） |
+| 设备心跳接口 | GET /api/devices/heartbeat/ | 需登录(Bearer) | 心跳同步 + 各状态计数（前端 30s 轮询） |
 | 设备连接接口 | POST /api/devices/{serial} | 需登录(Bearer) | 连接 + 采集信息 + 自动激活（observe 模式置使用中） |
 | 设备断开接口 | POST /api/devices/{serial}/disconnect | 需登录(Bearer) | 删除无线设备记录（USB 无删除键） |
 | 观察断开接口 | POST /api/devices/{serial}/disconnect-observe | 需登录(Bearer) | 轻量断开（不删记录，释放观察占用为 ONLINE） |
@@ -92,7 +92,7 @@
 
 ---
 
-## 4. 设备扫描接口：POST /api/devices/scan
+## 4. 设备扫描接口：POST /api/devices/scan/
 
 | 项 | 值 |
 |---|---|
@@ -141,7 +141,7 @@
 
 ---
 
-## 5. 当前设备接口：GET /api/devices/current
+## 5. 当前设备接口：GET /api/devices/current/
 
 | 项 | 值 |
 |---|---|
@@ -179,7 +179,7 @@
 
 ---
 
-## 6. 设备心跳接口：GET /api/devices/heartbeat
+## 6. 设备心跳接口：GET /api/devices/heartbeat/
 
 | 项 | 值 |
 |---|---|

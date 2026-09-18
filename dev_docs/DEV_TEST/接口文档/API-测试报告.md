@@ -9,7 +9,7 @@
 | 接口 | 方法 | 鉴权 | 说明 |
 |---|---|---|---|
 | 报告列表接口 | GET /api/reports/ | 需登录(Bearer) | 执行运行列表 + KPI 汇总 + 趋势，支持多条件过滤 |
-| 用例分解接口 | GET /api/reports/cases | 需登录(Bearer) | 当前过滤条件下按用例聚合 pass/fail 分解 |
+| 用例分解接口 | GET /api/reports/cases/ | 需登录(Bearer) | 当前过滤条件下按用例聚合 pass/fail 分解 |
 | 运行报告接口 | GET /api/reports/run/{run_id} | 需登录(Bearer) | 单次执行（run）的完整聚合报告 |
 | 任务报告接口 | GET /api/reports/task/{task_id} | 需登录(Bearer) | 任务卡（TaskCard）视角的综合报告 |
 | 报告内容查看接口 | GET /api/reports/{filename}/content | 需登录(Bearer) | 返回报告文件原始文本，供前端内联查看 |
@@ -113,7 +113,7 @@
 
 ---
 
-## 4. 用例分解接口：GET /api/reports/cases
+## 4. 用例分解接口：GET /api/reports/cases/
 
 | 项 | 值 |
 |---|---|

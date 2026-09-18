@@ -7,8 +7,8 @@
 
 | 接口 | 方法 | 鉴权 | 说明 |
 |---|---|---|---|
-| 快照抓取接口 | POST /api/inspector/capture | 需登录(Bearer) | 一键抓取（dump/OCR）→ 快照落库 |
-| 快照列表接口 | GET /api/inspector/snapshots | 需登录(Bearer) | 快照列表（offset/limit，倒序） |
+| 快照抓取接口 | POST /api/inspector/capture/ | 需登录(Bearer) | 一键抓取（dump/OCR）→ 快照落库 |
+| 快照列表接口 | GET /api/inspector/snapshots/ | 需登录(Bearer) | 快照列表（offset/limit，倒序） |
 | 快照详情接口 | GET /api/inspector/snapshots/{id} | 需登录(Bearer) | 快照全量 JSON |
 | 快照结构分析接口 | GET /api/inspector/snapshots/{id}/analyze | 需登录(Bearer) | 纯规则结构分区，不落库、无设备交互 |
 | 快照删除接口 | DELETE /api/inspector/snapshots/{id}/delete | 需登录(Bearer) | 删除快照记录 + 截图/缩略图文件 |
@@ -25,7 +25,7 @@
 
 ---
 
-## 3. 快照抓取接口：POST /api/inspector/capture
+## 3. 快照抓取接口：POST /api/inspector/capture/
 
 | 项 | 值 |
 |---|---|
@@ -139,7 +139,7 @@
 
 ---
 
-## 4. 快照列表接口：GET /api/inspector/snapshots
+## 4. 快照列表接口：GET /api/inspector/snapshots/
 
 | 项 | 值 |
 |---|---|
@@ -336,6 +336,8 @@
 
 > 筛减保存快照到元素定位（写元素资产经 `element_locator.api.import_snapshot_page`，禁止本模块直接 ORM 写 `el_` 表）。
 > 两种模式：传 `page_id` = 保存到已有页面（元素 upsert 追加）；否则传 `page_label`（+ `folder_path`）= 新建页面。
+> 页面级 OCR 不再随保存写入（变更 `rework-inspector-view`）：快照自身 OCR 仍存于 `di_snapshots.ocr_json`，
+> 元素定位页面 `ocr_json` 恒为空。
 
 ### 请求体
 
@@ -345,7 +347,6 @@
 | folder_path | string | 否 | 目录路径，按 `/` 逐级查找或创建（空 = 根目录） |
 | page_id | int | 否 | 已有页面 ID（须为整数字符串）；与 page_label/folder_path 二选一 |
 | element_ids | array[int] | 否 | 勾选元素下标列表（对应 dump_json.elements 的下标）；空 = 全部 |
-| include_ocr | bool | 否 | 是否一并写入 OCR，默认 true |
 | aliases | object | 否 | `{resource_id: 中文别名}` 映射，按 resource_id 回填到元素 alias |
 
 ### 成功响应（200）

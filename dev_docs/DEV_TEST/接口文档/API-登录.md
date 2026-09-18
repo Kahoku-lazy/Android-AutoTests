@@ -7,11 +7,11 @@
 
 | 接口 | 方法 | 鉴权 | 说明 |
 |---|---|---|---|
-| 登录接口 | POST /api/auth/login | 公开 | 登录，签发访问/刷新令牌对 |
-| 注册接口 | POST /api/auth/register | 公开 | 注册，签发访问/刷新令牌对 |
-| 刷新令牌接口 | POST /api/auth/refresh | 公开 | 用 refresh_token 换新 access_token |
-| 登出接口 | POST /api/auth/logout | 需登录 | access_token 加入 Redis 黑名单 |
-| 当前用户接口 | GET /api/auth/me | 需登录 | 当前登录用户信息 |
+| 登录接口 | POST /api/auth/login/ | 公开 | 登录，签发访问/刷新令牌对 |
+| 注册接口 | POST /api/auth/register/ | 公开 | 注册，签发访问/刷新令牌对 |
+| 刷新令牌接口 | POST /api/auth/refresh/ | 公开 | 用 refresh_token 换新 access_token |
+| 登出接口 | POST /api/auth/logout/ | 需登录 | access_token 加入 Redis 黑名单 |
+| 当前用户接口 | GET /api/auth/me/ | 需登录 | 当前登录用户信息 |
 
 ## 2. 通用约定
 
@@ -22,7 +22,7 @@
 
 ---
 
-## 3. 登录接口：POST /api/auth/login
+## 3. 登录接口：POST /api/auth/login/
 
 | 项 | 值 |
 |---|---|
@@ -76,7 +76,7 @@
 
 ---
 
-## 4. 注册接口：POST /api/auth/register
+## 4. 注册接口：POST /api/auth/register/
 
 | 项 | 值 |
 |---|---|
@@ -127,7 +127,7 @@
 
 ---
 
-## 5. 刷新令牌接口：POST /api/auth/refresh
+## 5. 刷新令牌接口：POST /api/auth/refresh/
 
 | 项 | 值 |
 |---|---|
@@ -163,7 +163,7 @@
 
 ---
 
-## 6. 登出接口：POST /api/auth/logout
+## 6. 登出接口：POST /api/auth/logout/
 
 | 项 | 值 |
 |---|---|
@@ -196,7 +196,7 @@
 
 ---
 
-## 7. 当前用户接口：GET /api/auth/me
+## 7. 当前用户接口：GET /api/auth/me/
 
 | 项 | 值 |
 |---|---|

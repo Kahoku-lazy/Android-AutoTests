@@ -41,7 +41,7 @@
 ## 2. 通用约定
 
 - **基础路径**：`/api/evaluator/`（`config/urls.py` 第 31 行 `include("apps.evaluator.urls")`）。
-- **尾斜杠**：DRF router 端点**带尾斜杠**（`/banks/`、`/runs/start/`）；legacy 平铺端点**不带尾斜杠**（`/banks`、`/runs/start`）。网关 `NormalizeTrailingSlashMiddleware` 会规范化尾斜杠，但本文以 urls.py 注册路径为准。
+- **尾斜杠**：**全部**端点一律带尾斜杠，缺失即 404（`APPEND_SLASH=False`；容错中间件已删除，见 `openspec/specs/api-path-convention`）。
 - **鉴权**：本模块**全部端点均需登录**。`/api/evaluator/*` 不在网关 `PUBLIC_PREFIXES` 白名单内，`JWTAuthenticationMiddleware` 对 `/api/*` 全局拦截；DRF ViewSet 另设 `IsAuthenticated`；部分 legacy 视图再加 `@require_auth` 防御性二次校验。携带 `Authorization: Bearer <access_token>`。
 - **鉴权失败文案（网关层，gateway/middleware.py）**：无/格式错 Bearer → 401 `"请先登录"`；令牌无效或过期 → 401 `"登录已过期或令牌无效"`。
 - **信封双口径**（区分要点）：

@@ -14,8 +14,6 @@ from rest_framework.response import Response
 from . import api as el_api
 from .api_projects import ConflictError
 
-_GONE_MSG = "分组树写接口已停用，请改用项目目录 API"
-
 
 def _raise_or_conflict(exc: Exception) -> Response:
     if isinstance(exc, LookupError):
@@ -154,17 +152,3 @@ def batch_delete_files(request):
     except Exception as exc:
         return _raise_or_conflict(exc)
     return Response(data)
-
-
-@extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
-@api_view(["POST"])
-def group_write_gone(_request, *args, **kwargs):
-    """410 Gone for legacy group write endpoints.
-
-    必须是 DRF 视图（`@api_view`）：本函数返回 DRF `Response`，而 `Response` 是
-    `SimpleTemplateResponse`，由 Django 的 template-response 中间件调用 `.render()`；
-    未经 DRF dispatch 的裸视图没有 `accepted_renderer`，会以
-    `AssertionError: .accepted_renderer not set on Response` 变成 **500**（实测 2026-09-15），
-    与 AGENTS.md 登记的「分组写 → HTTP 410」契约不符。
-    """
-    return Response({"status": False, "message": _GONE_MSG}, status=status.HTTP_410_GONE)

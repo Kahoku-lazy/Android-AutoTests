@@ -15,7 +15,7 @@
 ## 2. 通用约定
 
 - **路由前缀特例**：本 App 是唯一挂载在 `/api/` 根下而非 `/api/{app}/` 的 App（`config/urls.py` 第 18 行 `path("api/", include("apps.dashboard.urls"))`）。故路径为 `/api/dashboard/stats/`、`/api/dashboard/activities/`、`/api/devices/stats/`、`/api/cases/stats/`。
-- **尾斜杠**：urls.py 中路径**均带尾斜杠**（保留尾斜杠）。无尾斜杠请求由 `NormalizeTrailingSlashMiddleware` 自动补斜杠（不触发 301、不丢 Authorization 头），二者均可访问。
+- **尾斜杠**：urls.py 中路径**均带尾斜杠**，缺失即 404（`APPEND_SLASH=False`；容错中间件已删除，见 `openspec/specs/api-path-convention`）。
 - **响应信封**：标准 `{status, data}`。成功 2xx → `{status: true, data}`；失败 ≥400 → `{status: false, message}`（`EnvelopeJSONRenderer` 统一包裹）。**特例**：`activities` 端点的 `data` 是**数组**而非对象。
 - **鉴权**：全部端点「需登录(Bearer)」。视图未覆盖 `permission_classes`，继承 DRF 全局默认 `IsAuthenticated` + `shared.auth.drf_auth.JWTAuthentication`；同时路径不在中间件 `PUBLIC_PREFIXES` 内，由 `JWTAuthenticationMiddleware` 先行拦截。
 - **纯只读**：本 App 无 models、无 api.py，聚合各 App 数据只读查询，不产生任何写操作。

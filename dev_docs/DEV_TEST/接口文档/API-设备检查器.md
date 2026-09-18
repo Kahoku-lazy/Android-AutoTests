@@ -17,7 +17,7 @@
 
 ## 2. 通用约定
 
-- 路径**无尾斜杠**（尾斜杠经 `NormalizeTrailingSlashMiddleware` 规范化）。
+- 路径**必须带尾斜杠**，缺失即 404（`APPEND_SLASH=False`；容错中间件已删除，见 `openspec/specs/api-path-convention`）。
 - 响应信封：成功 `{status: true, data}`，失败 `{status: false, message}`（`EnvelopeJSONRenderer` 统一包裹）。
 - **全部 7 个端点均需登录**，携带 `Authorization: Bearer <access_token>`（DRF 默认 `IsAuthenticated`，无 AllowAny 覆盖；未登录统一返回 401）。
 - 快照截图/缩略图以**相对路径字符串**落库并返回（`inspector/shots/…`、`inspector/thumbs/…`），前端经 `/media/` 拉取文件，**不是** JSON 内嵌 base64，也不是 FileResponse。

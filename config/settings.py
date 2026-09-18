@@ -88,8 +88,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    # 尾斜杠规范化必须最先（真机发现 #1：301 丢 Authorization 头 → 401）
-    "gateway.normalize_slash.NormalizeTrailingSlashMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     # 工具网关内部令牌（JWT 豁免前缀的替代凭据；只在 /api/ai/tools/ 上生效）
     "gateway.internal_token.InternalToolTokenMiddleware",
@@ -108,6 +106,11 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "config.urls"
+
+# 路径约定：全部 /api/ 路由以 / 结尾（openspec/specs/api-path-convention）。
+# 关闭 APPEND_SLASH，使缺失尾斜杠得到**确定的 404**，而不是 CommonMiddleware 的 301
+# （301 会丢 Authorization 头 → 误报 401；可能把 POST 降级为 GET；且被浏览器长期缓存）。
+APPEND_SLASH = False
 
 ASGI_APPLICATION = "config.asgi.application"
 

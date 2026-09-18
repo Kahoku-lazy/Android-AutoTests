@@ -21,7 +21,7 @@
   point: "无 Bearer token 访问锁定，返回 401 请先登录"
   auth: "none"
   method: "POST"
-  path: "/api/devices/no_such_serial/lock"
+  path: "/api/devices/no_such_serial/lock/"
   body:
     locked: true
   expect:
@@ -47,7 +47,7 @@
   point: "登录后访问心跳，返回 7 字段状态计数结构"
   auth: "required"
   method: "GET"
-  path: "/api/devices/heartbeat"
+  path: "/api/devices/heartbeat/"
   expect:
     status: 200
     schema: "heartbeat"
@@ -58,7 +58,7 @@
   point: "登录后访问当前设备，返回 serial/screen/package 结构"
   auth: "required"
   method: "GET"
-  path: "/api/devices/current"
+  path: "/api/devices/current/"
   expect:
     status: 200
     schema: "device_current"
@@ -69,7 +69,7 @@
   point: "serial 不存在时返回 404 设备未注册"
   auth: "required"
   method: "POST"
-  path: "/api/devices/no_such_serial_xyz"
+  path: "/api/devices/no_such_serial_xyz/"
   body: {}
   expect:
     status: 404
@@ -83,7 +83,7 @@
   point: "serial 不存在时返回 404 设备未注册"
   auth: "required"
   method: "POST"
-  path: "/api/devices/no_such_serial_xyz/disconnect"
+  path: "/api/devices/no_such_serial_xyz/disconnect/"
   expect:
     status: 404
     schema: "error"
@@ -96,7 +96,7 @@
   point: "serial 不存在时返回 404 设备未注册"
   auth: "required"
   method: "POST"
-  path: "/api/devices/no_such_serial_xyz/lock"
+  path: "/api/devices/no_such_serial_xyz/lock/"
   body:
     locked: true
   expect:
@@ -111,7 +111,7 @@
   point: "serial 不存在时返回 404 设备未注册"
   auth: "required"
   method: "POST"
-  path: "/api/devices/no_such_serial_xyz/release"
+  path: "/api/devices/no_such_serial_xyz/release/"
   expect:
     status: 404
     schema: "error"

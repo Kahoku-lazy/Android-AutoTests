@@ -38,7 +38,7 @@ def user():
 
 
 def _login(c, username="logout_probe"):
-    r = _post(c, "/api/auth/login", {"username": username, "password": PASSWORD})
+    r = _post(c, "/api/auth/login/", {"username": username, "password": PASSWORD})
     assert r.status_code == 200, r.content
     return r.json()["data"]
 
@@ -58,9 +58,9 @@ def test_logout_kills_refresh_token(user):
     c = Client()
     tokens = _login(c)
 
-    assert _post(c, "/api/auth/logout", None, **_auth(tokens["access_token"])).status_code == 200
+    assert _post(c, "/api/auth/logout/", None, **_auth(tokens["access_token"])).status_code == 200
 
-    r = _post(c, "/api/auth/refresh", {"refresh_token": tokens["refresh_token"]})
+    r = _post(c, "/api/auth/refresh/", {"refresh_token": tokens["refresh_token"]})
     assert r.status_code == 401, r.content
 
 
@@ -69,9 +69,9 @@ def test_logout_kills_access_token(user):
     c = Client()
     tokens = _login(c)
 
-    _post(c, "/api/auth/logout", None, **_auth(tokens["access_token"]))
+    _post(c, "/api/auth/logout/", None, **_auth(tokens["access_token"]))
 
-    assert c.get("/api/auth/me", **_auth(tokens["access_token"])).status_code == 401
+    assert c.get("/api/auth/me/", **_auth(tokens["access_token"])).status_code == 401
 
 
 def test_refresh_keeps_session_ownership(user):
@@ -79,19 +79,20 @@ def test_refresh_keeps_session_ownership(user):
     c = Client()
     tokens = _login(c)
 
-    r = _post(c, "/api/auth/refresh", {"refresh_token": tokens["refresh_token"]})
+    r = _post(c, "/api/auth/refresh/", {"refresh_token": tokens["refresh_token"]})
     assert r.status_code == 200, r.content
     new_access = r.json()["data"]["access_token"]
 
     # 续期前后属同一会话
     assert session_id_of(new_access) == session_id_of(tokens["access_token"])
-    assert c.get("/api/auth/me", **_auth(new_access)).status_code == 200
+    assert c.get("/api/auth/me/", **_auth(new_access)).status_code == 200
 
     # 用续期后的 access 登出，则该会话的原 refresh 也应失效
-    _post(c, "/api/auth/logout", None, **_auth(new_access))
-    assert c.get("/api/auth/me", **_auth(new_access)).status_code == 401
+    _post(c, "/api/auth/logout/", None, **_auth(new_access))
+    assert c.get("/api/auth/me/", **_auth(new_access)).status_code == 401
     assert (
-        _post(c, "/api/auth/refresh", {"refresh_token": tokens["refresh_token"]}).status_code == 401
+        _post(c, "/api/auth/refresh/", {"refresh_token": tokens["refresh_token"]}).status_code
+        == 401
     )
 
 
@@ -101,11 +102,11 @@ def test_other_session_is_unaffected(user):
     ta, tb = _login(a), _login(b)
     assert session_id_of(ta["access_token"]) != session_id_of(tb["access_token"])
 
-    _post(a, "/api/auth/logout", None, **_auth(ta["access_token"]))
+    _post(a, "/api/auth/logout/", None, **_auth(ta["access_token"]))
 
-    assert a.get("/api/auth/me", **_auth(ta["access_token"])).status_code == 401
-    assert b.get("/api/auth/me", **_auth(tb["access_token"])).status_code == 200
-    assert _post(b, "/api/auth/refresh", {"refresh_token": tb["refresh_token"]}).status_code == 200
+    assert a.get("/api/auth/me/", **_auth(ta["access_token"])).status_code == 401
+    assert b.get("/api/auth/me/", **_auth(tb["access_token"])).status_code == 200
+    assert _post(b, "/api/auth/refresh/", {"refresh_token": tb["refresh_token"]}).status_code == 200
 
 
 def test_logout_fails_closed_when_redis_unavailable(user, monkeypatch):
@@ -114,14 +115,14 @@ def test_logout_fails_closed_when_redis_unavailable(user, monkeypatch):
     tokens = _login(c)
 
     monkeypatch.setattr(jwt_auth, "_get_redis", lambda: None)
-    r = _post(c, "/api/auth/logout", None, **_auth(tokens["access_token"]))
+    r = _post(c, "/api/auth/logout/", None, **_auth(tokens["access_token"]))
 
     assert r.status_code == 503, r.content
     assert r.json()["retry"] is True
 
     # 未成功吊销 —— 会话仍然可用（fail-closed 的语义是「拒绝」而不是「假装成功」）
     monkeypatch.undo()
-    assert c.get("/api/auth/me", **_auth(tokens["access_token"])).status_code == 200
+    assert c.get("/api/auth/me/", **_auth(tokens["access_token"])).status_code == 200
 
 
 def test_legacy_token_without_sid_still_logs_out(user):
@@ -131,8 +132,8 @@ def test_legacy_token_without_sid_still_logs_out(user):
     assert verify_token(legacy, expected_type="access")["sub"] == str(user.id)
 
     c = Client()
-    assert _post(c, "/api/auth/logout", None, **_auth(legacy)).status_code == 200
-    assert c.get("/api/auth/me", **_auth(legacy)).status_code == 401
+    assert _post(c, "/api/auth/logout/", None, **_auth(legacy)).status_code == 200
+    assert c.get("/api/auth/me/", **_auth(legacy)).status_code == 401
 
 
 def test_verify_token_rejects_revoked_session(user):

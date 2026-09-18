@@ -362,7 +362,7 @@ def schema_for(name, method, url):
 
     # Test execution
     if (
-        url_lower == "/api/runner/run"
+        url_lower == "/api/runner/run/"
         or "start_test_run" in name_lower
         or ("run" in url_lower and "start" not in url_lower and url_lower.endswith("run"))
     ):

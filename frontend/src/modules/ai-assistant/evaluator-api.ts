@@ -4,51 +4,51 @@ import djangoClient from '@/shared/api-client'
 // ── Question Banks ──
 
 export async function listBanks(): Promise<{ status: boolean; banks?: object[]; message?: string }> {
-  const { data } = await djangoClient.get<{ status: boolean; banks?: object[]; message?: string }>('/evaluator/banks')
+  const { data } = await djangoClient.get<{ status: boolean; banks?: object[]; message?: string }>('/evaluator/banks/')
   return data
 }
 
 export async function getBank(id: number): Promise<{ status: boolean; bank?: object; message?: string }> {
-  const { data } = await djangoClient.get<{ status: boolean; bank?: object; message?: string }>(`/evaluator/banks/${id}`)
+  const { data } = await djangoClient.get<{ status: boolean; bank?: object; message?: string }>(`/evaluator/banks/${id}/`)
   return data
 }
 
 export async function createBank(payload: object): Promise<{ status: boolean; bank?: object; message?: string }> {
-  const { data } = await djangoClient.post<{ status: boolean; bank?: object; message?: string }>('/evaluator/banks/create', payload)
+  const { data } = await djangoClient.post<{ status: boolean; bank?: object; message?: string }>('/evaluator/banks/create/', payload)
   return data
 }
 
 export async function updateBank(id: number, payload: object): Promise<{ status: boolean; bank?: object; message?: string }> {
-  const { data } = await djangoClient.post<{ status: boolean; bank?: object; message?: string }>(`/evaluator/banks/${id}/update`, payload)
+  const { data } = await djangoClient.post<{ status: boolean; bank?: object; message?: string }>(`/evaluator/banks/${id}/update/`, payload)
   return data
 }
 
 export async function seedDefaultBank(): Promise<{ status: boolean; bank?: object; message?: string }> {
-  const { data } = await djangoClient.post<{ status: boolean; bank?: object; message?: string }>('/evaluator/banks/seed')
+  const { data } = await djangoClient.post<{ status: boolean; bank?: object; message?: string }>('/evaluator/banks/seed/')
   return data
 }
 
 // ── Frameworks ──
 
 export async function listFrameworks(): Promise<{ status: boolean; frameworks?: object[]; message?: string }> {
-  const { data } = await djangoClient.get<{ status: boolean; frameworks?: object[]; message?: string }>('/evaluator/frameworks')
+  const { data } = await djangoClient.get<{ status: boolean; frameworks?: object[]; message?: string }>('/evaluator/frameworks/')
   return data
 }
 
 // ── Eval Runs ──
 
 export async function listRuns(): Promise<{ status: boolean; runs?: object[]; message?: string }> {
-  const { data } = await djangoClient.get<{ status: boolean; runs?: object[]; message?: string }>('/evaluator/runs')
+  const { data } = await djangoClient.get<{ status: boolean; runs?: object[]; message?: string }>('/evaluator/runs/')
   return data
 }
 
 export async function getRun(id: number): Promise<{ status: boolean; run?: object; message?: string }> {
-  const { data } = await djangoClient.get<{ status: boolean; run?: object; message?: string }>(`/evaluator/runs/${id}`)
+  const { data } = await djangoClient.get<{ status: boolean; run?: object; message?: string }>(`/evaluator/runs/${id}/`)
   return data
 }
 
 export async function startRun(agentId: number, bankId: number, judgeModel?: string, framework?: string, extra?: object): Promise<{ status: boolean; run?: object; message?: string }> {
-  const { data } = await djangoClient.post<{ status: boolean; run?: object; message?: string }>('/evaluator/runs/start', {
+  const { data } = await djangoClient.post<{ status: boolean; run?: object; message?: string }>('/evaluator/runs/start/', {
     agent_id: agentId,
     bank_id: bankId,
     judge_model: judgeModel || 'qwen-max',
@@ -59,34 +59,34 @@ export async function startRun(agentId: number, bankId: number, judgeModel?: str
 }
 
 export async function deleteRun(id: number): Promise<{ status: boolean }> {
-  const { data } = await djangoClient.post<{ status: boolean }>(`/evaluator/runs/${id}/delete`)
+  const { data } = await djangoClient.post<{ status: boolean }>(`/evaluator/runs/${id}/delete/`)
   return data
 }
 
 // ── Human Scoring ──
 
 export async function submitScore(resultId: number, scores: object): Promise<{ status: boolean; data?: { result_id?: number; scored?: boolean }; message?: string }> {
-  const { data } = await djangoClient.post<{ status: boolean; data?: { result_id?: number; scored?: boolean }; message?: string }>(`/evaluator/results/${resultId}/score`, scores)
+  const { data } = await djangoClient.post<{ status: boolean; data?: { result_id?: number; scored?: boolean }; message?: string }>(`/evaluator/results/${resultId}/score/`, scores)
   return data
 }
 
 // ── KB Self-Test ──
 
 export async function kbSelfTest(): Promise<{ status: boolean; result?: object; message?: string }> {
-  const { data } = await djangoClient.post<{ status: boolean; result?: object; message?: string }>('/evaluator/kb-self-test')
+  const { data } = await djangoClient.post<{ status: boolean; result?: object; message?: string }>('/evaluator/kb-self-test/')
   return data
 }
 
 // ── KB Search ──
 
 export async function kbSearch(payload: object): Promise<{ status: boolean; results?: object[]; message?: string }> {
-  const { data } = await djangoClient.post<{ status: boolean; results?: object[]; message?: string }>('/evaluator/kb-search', payload)
+  const { data } = await djangoClient.post<{ status: boolean; results?: object[]; message?: string }>('/evaluator/kb-search/', payload)
   return data
 }
 
 // ── Agents (read-only from ai_assistant) ──
 
 export async function listAgents(): Promise<{ status: boolean; data?: { agents?: object[] }; message?: string }> {
-  const { data } = await djangoClient.get<{ status: boolean; data?: { agents?: object[] }; message?: string }>('/ai/agents')
+  const { data } = await djangoClient.get<{ status: boolean; data?: { agents?: object[] }; message?: string }>('/ai/agents/')
   return data
 }

@@ -19,13 +19,13 @@ app_name = "devices"
 
 urlpatterns = [
     path("", list_devices, name="list"),
-    path("scan", scan_device, name="scan"),
-    path("current", device_current, name="current"),
-    path("heartbeat", heartbeat, name="heartbeat"),
-    path("<str:serial>", connect_device, name="connect"),
-    path("<str:serial>/disconnect", disconnect_device, name="disconnect"),
-    path("<str:serial>/disconnect-observe", disconnect_observe, name="disconnect_observe"),
-    path("<str:serial>/activate", activate_device, name="activate"),
-    path("<str:serial>/lock", lock_device, name="lock"),
-    path("<str:serial>/release", release_device, name="release"),
+    path("scan/", scan_device, name="scan"),
+    path("current/", device_current, name="current"),
+    path("heartbeat/", heartbeat, name="heartbeat"),
+    path("<str:serial>/", connect_device, name="connect"),
+    path("<str:serial>/disconnect/", disconnect_device, name="disconnect"),
+    path("<str:serial>/disconnect-observe/", disconnect_observe, name="disconnect_observe"),
+    path("<str:serial>/activate/", activate_device, name="activate"),
+    path("<str:serial>/lock/", lock_device, name="lock"),
+    path("<str:serial>/release/", release_device, name="release"),
 ]

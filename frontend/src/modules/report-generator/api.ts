@@ -6,29 +6,29 @@ import client from '@/shared/api-client'
 // ── 执行记录（报告列表）──
 
 export function listRuns(params = {}) {
-  return client.get('/reports', { params })
+  return client.get('/reports/', { params })
 }
 
 export function getCaseBreakdown(result, params = {}) {
-  return client.get('/reports/cases', { params: { result, ...params } })
+  return client.get('/reports/cases/', { params: { result, ...params } })
 }
 
 // ── 报告详情 ──
 
 export function getRunReport(runId) {
-  return client.get(`/reports/run/${encodeURIComponent(runId)}`)
+  return client.get(`/reports/run/${encodeURIComponent(runId)}/`)
 }
 
 // ── 任务视角报告 ──
 
 export function getTaskReport(taskId) {
-  return client.get(`/reports/task/${encodeURIComponent(taskId)}`)
+  return client.get(`/reports/task/${encodeURIComponent(taskId)}/`)
 }
 
 // ── 文件下载 ──
 
 export function getReportContent(filename) {
-  return client.get(`/reports/${encodeURIComponent(filename)}/content`)
+  return client.get(`/reports/${encodeURIComponent(filename)}/content/`)
 }
 
 export function getReportDownloadUrl(filename) {
@@ -39,6 +39,7 @@ export function getReportDownloadUrl(filename) {
 
 const STATUS_LABEL_MAP = {
   completed: '通过',
+  success: '通过',
   failed: '失败',
   running: '运行中',
   stopped: '已停止',
@@ -50,7 +51,7 @@ export function statusLabel(status) {
 }
 
 export function statusBadgeClass(status) {
-  if (status === 'completed') return 'badge-pass'
+  if (status === 'completed' || status === 'success') return 'badge-pass'
   if (status === 'failed') return 'badge-fail'
   if (status === 'running') return 'badge-running'
   return 'badge-stopped'

@@ -24,6 +24,7 @@ from shared.auth.jwt_auth import create_access_token
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 
+# 基址：派生路径形如 f"{DIRECTORIES_PATH}/{id}/"，故此处不带尾斜杠
 DIRECTORIES_PATH = "/api/workflow/directories"
 
 

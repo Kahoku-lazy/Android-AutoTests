@@ -15,9 +15,9 @@ app_name = "reports"
 
 urlpatterns = [
     path("", list_reports, name="list"),
-    path("cases", case_breakdown, name="case_breakdown"),
-    path("run/<str:run_id>", run_report, name="run_report"),
-    path("task/<str:task_id>", task_report, name="task_report"),
-    path("<str:filename>/content", view_report, name="view"),
-    path("<str:filename>", download_report, name="download"),
+    path("cases/", case_breakdown, name="case_breakdown"),
+    path("run/<str:run_id>/", run_report, name="run_report"),
+    path("task/<str:task_id>/", task_report, name="task_report"),
+    path("<str:filename>/content/", view_report, name="view"),
+    path("<str:filename>/", download_report, name="download"),
 ]

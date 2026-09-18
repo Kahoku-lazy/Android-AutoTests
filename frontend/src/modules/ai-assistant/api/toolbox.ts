@@ -53,14 +53,14 @@ export interface KnowledgePreviewPayload {
 // ── Toolbox (shared tools / skills / extensions) ──
 
 export async function fetchSharedTools(): Promise<ToolboxListResponse> {
-  const { data } = await djangoClient.get<ToolboxListResponse>('/ai/toolbox')
+  const { data } = await djangoClient.get<ToolboxListResponse>('/ai/toolbox/')
   return data
 }
 
 export async function createSharedTool(payload: {
   name: string; item_type: string; description?: string; config_json?: object | string
 }): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>('/ai/toolbox/create', {
+  const { data } = await djangoClient.post<AgentOpResponse>('/ai/toolbox/create/', {
     name: payload.name,
     item_type: payload.item_type,
     description: payload.description,
@@ -72,7 +72,7 @@ export async function createSharedTool(payload: {
 export async function updateSharedTool(itemId: number, payload: {
   name?: string; item_type?: string; description?: string; config_json?: object | string
 }): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>(`/ai/toolbox/${itemId}/update`, {
+  const { data } = await djangoClient.post<AgentOpResponse>(`/ai/toolbox/${itemId}/update/`, {
     name: payload.name,
     description: payload.description,
     config_json: payload.config_json,
@@ -81,12 +81,12 @@ export async function updateSharedTool(itemId: number, payload: {
 }
 
 export async function deleteSharedTool(itemId: number): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>(`/ai/toolbox/${itemId}/delete`)
+  const { data } = await djangoClient.post<AgentOpResponse>(`/ai/toolbox/${itemId}/delete/`)
   return data
 }
 
 export async function toggleSharedTool(itemId: number, enabled: boolean): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>(`/ai/toolbox/${itemId}/toggle`, { enabled })
+  const { data } = await djangoClient.post<AgentOpResponse>(`/ai/toolbox/${itemId}/toggle/`, { enabled })
   return data
 }
 
@@ -96,7 +96,7 @@ export async function uploadSharedSkill(files: File[], name: string): Promise<Ag
   for (const file of files) {
     formData.append('files', file, (file as unknown as { webkitRelativePath?: string }).webkitRelativePath || file.name)
   }
-  const { data } = await djangoClient.post<AgentOpResponse>('/ai/toolbox/upload-skill', formData, {
+  const { data } = await djangoClient.post<AgentOpResponse>('/ai/toolbox/upload-skill/', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
   return data
@@ -105,7 +105,7 @@ export async function uploadSharedSkill(files: File[], name: string): Promise<Ag
 export async function fetchSharedSkillTree(
   name: string,
 ): Promise<{ status: boolean; data?: { name?: string; tree?: SkillTreeNode[] }; message?: string }> {
-  const { data } = await djangoClient.get(`/ai/toolbox/skills/${encodeURIComponent(name)}/tree`)
+  const { data } = await djangoClient.get(`/ai/toolbox/skills/${encodeURIComponent(name)}/tree/`)
   return data
 }
 
@@ -113,7 +113,7 @@ export async function fetchSharedSkillFile(
   name: string,
   path: string,
 ): Promise<{ status: boolean; data?: SkillFilePayload; message?: string }> {
-  const { data } = await djangoClient.get(`/ai/toolbox/skills/${encodeURIComponent(name)}/file`, {
+  const { data } = await djangoClient.get(`/ai/toolbox/skills/${encodeURIComponent(name)}/file/`, {
     params: { path },
   })
   return data
@@ -134,12 +134,35 @@ export interface PlatformConfig {
 }
 
 export async function fetchPlatformConfig(): Promise<{ status: boolean; data?: PlatformConfig; message?: string }> {
-  const { data } = await djangoClient.get('/ai/platform-config')
+  const { data } = await djangoClient.get('/ai/platform-config/')
   return data
 }
 
 export async function updatePlatformConfig(payload: Partial<PlatformConfig>): Promise<{ status: boolean; data?: PlatformConfig; message?: string }> {
-  const { data } = await djangoClient.post('/ai/platform-config/update', payload)
+  const { data } = await djangoClient.post('/ai/platform-config/update/', payload)
+  return data
+}
+
+// ── 设备控制三角色系统提示词 ──
+
+export interface DevicePrompts {
+  agent_id?: number
+  planner: string
+  executor: string
+  verifier: string
+}
+
+export async function fetchDevicePrompts(): Promise<{ status: boolean; data?: DevicePrompts; message?: string }> {
+  const { data } = await djangoClient.get('/ai/device-prompts/')
+  return data
+}
+
+export async function updateDevicePrompts(payload: {
+  planner: string
+  executor: string
+  verifier: string
+}): Promise<{ status: boolean; data?: DevicePrompts; message?: string }> {
+  const { data } = await djangoClient.post('/ai/device-prompts/update/', payload)
   return data
 }
 
@@ -161,7 +184,7 @@ export interface PlatformToolCategory {
 }
 
 export async function fetchPlatformTools(): Promise<{ status: boolean; data?: { categories?: PlatformToolCategory[] }; message?: string }> {
-  const { data } = await djangoClient.get('/ai/available-tools')
+  const { data } = await djangoClient.get('/ai/available-tools/')
   return data
 }
 
@@ -170,29 +193,65 @@ export async function togglePlatformTool(payload: {
   category?: string
   enabled: boolean
 }): Promise<{ status: boolean; data?: { updated?: string[] }; message?: string }> {
-  const { data } = await djangoClient.post('/ai/platform-tools/toggle', payload)
+  const { data } = await djangoClient.post('/ai/platform-tools/toggle/', payload)
+  return data
+}
+
+// ── 平台工具调试（JWT schema + invoke，禁止走 /ai/tools/ 内部网关）──
+
+export interface PlatformToolParamSchema {
+  name: string
+  type: 'str' | 'int' | 'float' | 'bool' | string
+  required: boolean
+  default?: unknown
+}
+
+export interface PlatformToolDebugSchema {
+  name: string
+  summary: string
+  read_only: boolean
+  parameters: PlatformToolParamSchema[]
+}
+
+export async function fetchPlatformToolSchema(
+  name: string,
+): Promise<{ status: boolean; data?: PlatformToolDebugSchema; message?: string }> {
+  const { data } = await djangoClient.get(
+    `/ai/platform-tools/${encodeURIComponent(name)}/`,
+  )
+  return data
+}
+
+export async function invokePlatformTool(
+  name: string,
+  params: Record<string, unknown> = {},
+): Promise<{ status: boolean; data?: { result?: unknown }; message?: string }> {
+  const { data } = await djangoClient.post(
+    `/ai/platform-tools/${encodeURIComponent(name)}/invoke/`,
+    params,
+  )
   return data
 }
 
 export async function fetchAvailableSkills(): Promise<{ status: boolean; data?: { skills?: object[] }; message?: string }> {
-  const { data } = await djangoClient.get('/ai/available-skills')
+  const { data } = await djangoClient.get('/ai/available-skills/')
   return data
 }
 
 // ── Knowledge Base ──
 
 export async function getKnowledgeStatus(): Promise<KnowledgeStatusResponse> {
-  const { data } = await djangoClient.get<KnowledgeStatusResponse>('/ai/knowledge/status')
+  const { data } = await djangoClient.get<KnowledgeStatusResponse>('/ai/knowledge/status/')
   return data
 }
 
 export async function getKnowledgeDocuments(): Promise<{ status: boolean; data?: { documents?: KnowledgeDoc[]; total?: number }; message?: string }> {
-  const { data } = await djangoClient.get('/ai/knowledge/documents')
+  const { data } = await djangoClient.get('/ai/knowledge/documents/')
   return data
 }
 
 export async function reindexKnowledge(): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>('/ai/knowledge/reindex')
+  const { data } = await djangoClient.post<AgentOpResponse>('/ai/knowledge/reindex/')
   return data
 }
 
@@ -203,7 +262,7 @@ export async function addKnowledgeDocument(
   const formData = new FormData()
   formData.append('file', file)
   if (subdir) formData.append('subdir', subdir)
-  const { data } = await djangoClient.post('/ai/knowledge/documents/add', formData, {
+  const { data } = await djangoClient.post('/ai/knowledge/documents/add/', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
   return data
@@ -212,6 +271,6 @@ export async function addKnowledgeDocument(
 export async function previewKnowledgeDocument(
   path: string,
 ): Promise<{ status: boolean; data?: KnowledgePreviewPayload; message?: string }> {
-  const { data } = await djangoClient.get('/ai/knowledge/documents/preview', { params: { path } })
+  const { data } = await djangoClient.get('/ai/knowledge/documents/preview/', { params: { path } })
   return data
 }

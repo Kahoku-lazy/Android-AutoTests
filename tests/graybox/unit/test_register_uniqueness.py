@@ -31,7 +31,7 @@ def _register(c, username, **over):
         "email": f"{username}@test.local",
     }
     body.update(over)
-    return c.post("/api/auth/register", data=json.dumps(body), content_type="application/json")
+    return c.post("/api/auth/register/", data=json.dumps(body), content_type="application/json")
 
 
 def test_sequential_duplicate_returns_409():

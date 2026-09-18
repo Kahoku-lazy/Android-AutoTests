@@ -10,43 +10,43 @@ import type {
 
 /** 获取所有 Agent 列表 */
 export async function listAgents(): Promise<AgentListResponse> {
-  const { data } = await djangoClient.get<AgentListResponse>('/ai/agents')
+  const { data } = await djangoClient.get<AgentListResponse>('/ai/agents/')
   return data
 }
 
 /** 获取 Agent 健康状态 */
 export async function checkAgentsHealth(): Promise<AgentHealthResponse> {
-  const { data } = await djangoClient.get<AgentHealthResponse>('/ai/agents/health')
+  const { data } = await djangoClient.get<AgentHealthResponse>('/ai/agents/health/')
   return data
 }
 
 /** 测试 Agent 连接（可选按线路 route + 角色 role 校验 route_configs 内模型） */
 export async function testAgent(agentId: number, opts?: { route?: string; role?: string }): Promise<AgentTestResponse> {
-  const { data } = await djangoClient.post<AgentTestResponse>(`/ai/agents/${agentId}/test`, opts || {})
+  const { data } = await djangoClient.post<AgentTestResponse>(`/ai/agents/${agentId}/test/`, opts || {})
   return data
 }
 
 /** 获取 Agent 详情 */
 export async function getAgentDetail(agentId: number): Promise<AgentDetailResponse> {
-  const { data } = await djangoClient.get<AgentDetailResponse>(`/ai/agents/${agentId}`)
+  const { data } = await djangoClient.get<AgentDetailResponse>(`/ai/agents/${agentId}/`)
   return data
 }
 
 /** 检测可用模型 */
 export async function detectModels(payload: object): Promise<{ status?: boolean; data?: { models?: string[] }; message?: string }> {
-  const { data } = await djangoClient.post('/ai/models/detect', payload)
+  const { data } = await djangoClient.post('/ai/models/detect/', payload)
   return data
 }
 
 /** 上传头像 */
 export async function uploadAvatar(formData: FormData): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>('/ai/upload-avatar', formData)
+  const { data } = await djangoClient.post<AgentOpResponse>('/ai/upload-avatar/', formData)
   return data
 }
 
 /** 上传文件 / 图片（multipart；勿带默认 application/json） */
 export async function uploadFile(formData: FormData): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>('/ai/upload-file', formData, {
+  const { data } = await djangoClient.post<AgentOpResponse>('/ai/upload-file/', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
   return data

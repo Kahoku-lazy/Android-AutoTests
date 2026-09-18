@@ -238,7 +238,7 @@ export interface ApiEndpointRef {
 export async function fetchApiEndpoints(): Promise<ApiEndpointRef[]> {
   try {
     const client = (await import('@/shared/api-client.js')).default
-    const res = await client.get('/elements/api-endpoints')
+    const res = await client.get('/elements/api-endpoints/')
     const data = res.data
     if (data?.status && Array.isArray(data.endpoints)) {
       return data.endpoints.map((e: any) => ({

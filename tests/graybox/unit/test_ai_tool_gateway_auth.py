@@ -9,7 +9,7 @@ from django.test import Client, override_settings
 pytestmark = [pytest.mark.django_db, pytest.mark.unit, pytest.mark.ai_assistant]
 
 TOKEN = "unit-test-internal-token"
-GATEWAY_PATH = "/api/ai/tools/devices/list_all"
+GATEWAY_PATH = "/api/ai/tools/devices/list_all/"
 
 
 @pytest.fixture

@@ -148,45 +148,10 @@ g_dev_queue = create_group("设备队列", parent=f_device, sort=2)
 create_endpoint(
     g_dev_queue, "GET", "队列状态", "/api/devices/queue/", "当前排队状态（活跃锁列表，FIFO 排序）"
 )
-create_endpoint(
-    g_dev_queue, "POST", "加入等待队列", "/api/devices/{serial}/queue/", "加入设备使用等待队列"
-)
-create_endpoint(
-    g_dev_queue,
-    "POST",
-    "离开等待队列",
-    "/api/devices/{serial}/queue/leave/",
-    "离开设备使用等待队列",
-)
 
 # ── 3. Element Locator ──
 f_element = create_folder("元素定位", parent=ROOT, sort=3)
 
-g_el_device = create_group("设备交互", parent=f_element, sort=0)
-create_endpoint(
-    g_el_device,
-    "POST",
-    "Dump UI 层级",
-    "/api/elements/dump/",
-    "从连接设备实时获取 UI 层级结构（不持久化）",
-)
-create_endpoint(
-    g_el_device,
-    "POST",
-    "执行设备操作",
-    "/api/elements/action/",
-    "在设备上执行 click / input / swipe / drag",
-)
-create_endpoint(
-    g_el_device,
-    "GET",
-    "设备信息",
-    "/api/elements/device-info/",
-    "当前设备信息：型号、分辨率、包名、占用状态",
-)
-create_endpoint(
-    g_el_device, "GET", "快速截图", "/api/elements/screenshot/", "单帧 JPEG 截图，用于首屏快速渲染"
-)
 
 g_el_page = create_group("页面管理", parent=f_element, sort=1)
 create_endpoint(
@@ -387,13 +352,6 @@ create_endpoint(
 create_endpoint(
     g_case_dir, "POST", "批量移动目录", "/api/cases/directories/batch-move/", "批量移动目录及内容"
 )
-create_endpoint(
-    g_case_dir,
-    "POST",
-    "设置目录权限",
-    "/api/cases/directories/{dir_id}/permission/",
-    "设置目录访问权限",
-)
 
 g_case_ui = create_group("UI 测试用例", parent=f_case, sort=1)
 create_endpoint(
@@ -431,175 +389,6 @@ create_endpoint(
     g_case_ui, "DELETE", "删除 UI 用例", "/api/cases/definitions/{case_id}/", "删除单个 UI 测试用例"
 )
 
-g_case_storage = create_group("存储测试用例", parent=f_case, sort=2)
-create_endpoint(
-    g_case_storage,
-    "GET",
-    "存储用例列表",
-    "/api/cases/storage/definitions/",
-    "列出存储/业务功能测试用例",
-)
-create_endpoint(
-    g_case_storage,
-    "POST",
-    "创建/更新存储用例",
-    "/api/cases/storage/definitions/",
-    "创建或更新存储测试用例",
-)
-create_endpoint(
-    g_case_storage,
-    "POST",
-    "批量保存存储用例",
-    "/api/cases/storage/definitions/batch/",
-    "批量保存存储测试用例",
-)
-create_endpoint(
-    g_case_storage,
-    "GET",
-    "存储用例详情",
-    "/api/cases/storage/definitions/{case_id}/",
-    "获取单个存储用例详情",
-)
-create_endpoint(
-    g_case_storage,
-    "PUT",
-    "更新单个存储用例",
-    "/api/cases/storage/definitions/{case_id}/",
-    "更新单个存储测试用例",
-)
-create_endpoint(
-    g_case_storage,
-    "DELETE",
-    "删除存储用例",
-    "/api/cases/storage/definitions/{case_id}/",
-    "删除单个存储测试用例",
-)
-
-g_case_api = create_group("API 测试用例", parent=f_case, sort=3)
-create_endpoint(
-    g_case_api,
-    "GET",
-    "API 测试用例列表",
-    "/api/cases/api-testing/definitions/",
-    "列出 API 接口测试用例",
-)
-create_endpoint(
-    g_case_api,
-    "POST",
-    "创建/更新 API 测试用例",
-    "/api/cases/api-testing/definitions/",
-    "创建或更新 API 测试用例",
-)
-create_endpoint(
-    g_case_api,
-    "POST",
-    "批量保存 API 测试用例",
-    "/api/cases/api-testing/definitions/batch/",
-    "批量保存 API 测试用例",
-)
-create_endpoint(
-    g_case_api,
-    "GET",
-    "API 测试用例详情",
-    "/api/cases/api-testing/definitions/{case_id}/",
-    "获取单个 API 测试用例详情",
-)
-create_endpoint(
-    g_case_api,
-    "PUT",
-    "更新单个 API 测试用例",
-    "/api/cases/api-testing/definitions/{case_id}/",
-    "更新单个 API 测试用例",
-)
-create_endpoint(
-    g_case_api,
-    "DELETE",
-    "删除 API 测试用例",
-    "/api/cases/api-testing/definitions/{case_id}/",
-    "删除单个 API 测试用例",
-)
-
-g_case_web = create_group("Web 测试用例", parent=f_case, sort=4)
-create_endpoint(
-    g_case_web, "GET", "Web 测试用例列表", "/api/cases/web/definitions/", "列出 Web 自动化测试用例"
-)
-create_endpoint(
-    g_case_web,
-    "POST",
-    "创建/更新 Web 测试用例",
-    "/api/cases/web/definitions/",
-    "创建或更新 Web 自动化测试用例",
-)
-create_endpoint(
-    g_case_web,
-    "POST",
-    "批量保存 Web 测试用例",
-    "/api/cases/web/definitions/batch/",
-    "批量保存 Web 自动化测试用例",
-)
-create_endpoint(
-    g_case_web,
-    "GET",
-    "Web 测试用例详情",
-    "/api/cases/web/definitions/{case_id}/",
-    "获取单个 Web 测试用例详情",
-)
-create_endpoint(
-    g_case_web,
-    "PUT",
-    "更新单个 Web 测试用例",
-    "/api/cases/web/definitions/{case_id}/",
-    "更新单个 Web 测试用例",
-)
-create_endpoint(
-    g_case_web,
-    "DELETE",
-    "删除 Web 测试用例",
-    "/api/cases/web/definitions/{case_id}/",
-    "删除单个 Web 测试用例",
-)
-
-g_case_lock = create_group("编辑锁与权限", parent=f_case, sort=5)
-create_endpoint(
-    g_case_lock,
-    "POST",
-    "获取编辑锁",
-    "/api/cases/definitions/{case_id}/lock/",
-    "获取用例编辑锁（30 分钟超时）",
-)
-create_endpoint(
-    g_case_lock, "POST", "释放编辑锁", "/api/cases/definitions/{case_id}/unlock/", "释放用例编辑锁"
-)
-create_endpoint(
-    g_case_lock,
-    "POST",
-    "锁定用例",
-    "/api/cases/definitions/{case_id}/case-lock/",
-    "锁定用例（备用锁机制）",
-)
-create_endpoint(
-    g_case_lock,
-    "POST",
-    "解锁用例",
-    "/api/cases/definitions/{case_id}/case-unlock/",
-    "解锁用例（备用解锁机制）",
-)
-create_endpoint(
-    g_case_lock,
-    "POST",
-    "设置可见性",
-    "/api/cases/definitions/{case_id}/visibility/",
-    "设置用例可见性（public/private/restricted）",
-)
-
-g_case_export = create_group("YAML 导出", parent=f_case, sort=6)
-create_endpoint(
-    g_case_export, "POST", "导出 YAML", "/api/cases/export/yaml/", "导出测试点到 YAML 文件"
-)
-create_endpoint(g_case_export, "GET", "导出列表", "/api/cases/exports/", "列出已导出 YAML 文件")
-create_endpoint(
-    g_case_export, "GET", "下载导出文件", "/api/cases/exports/{filename}/", "下载 YAML 导出文件"
-)
 
 # ── 5. Workflow ──
 f_workflow = create_folder("工作流", parent=ROOT, sort=5)
@@ -657,49 +446,7 @@ create_endpoint(
 )
 
 # ── 6. Test Runner ──
-f_runner = create_folder("执行引擎", parent=ROOT, sort=6)
 
-g_run_mgmt = create_group("运行管理", parent=f_runner, sort=0)
-create_endpoint(
-    g_run_mgmt,
-    "POST",
-    "启动测试执行",
-    "/api/runner/run/",
-    "启动异步测试执行（返回 run_id + ws_url）",
-)
-create_endpoint(g_run_mgmt, "GET", "活跃运行列表", "/api/runner/active/", "当前活跃的测试运行列表")
-create_endpoint(
-    g_run_mgmt, "POST", "取消排队任务", "/api/runner/queue/cancel/", "移除设备队列中的排队任务"
-)
-create_endpoint(
-    g_run_mgmt, "POST", "停止运行", "/api/runner/run/{run_id}/stop/", "优雅停止正在运行的测试"
-)
-create_endpoint(
-    g_run_mgmt, "GET", "运行状态", "/api/runner/run/{run_id}/status/", "查询测试执行进度"
-)
-create_endpoint(
-    g_run_mgmt, "GET", "运行历史", "/api/runner/runs/", "执行历史列表（最近 50 条，可分页）"
-)
-create_endpoint(
-    g_run_mgmt,
-    "POST",
-    "运行单个步骤",
-    "/api/runner/run-step/",
-    "在当前设备上执行单个步骤（调试用）",
-)
-
-g_task = create_group("任务卡片", parent=f_runner, sort=1)
-create_endpoint(g_task, "GET", "任务卡片列表", "/api/runner/tasks/", "列出所有任务卡片")
-create_endpoint(g_task, "POST", "保存任务卡片", "/api/runner/tasks/save/", "创建或更新任务卡片")
-create_endpoint(g_task, "DELETE", "删除任务卡片", "/api/runner/tasks/{task_id}/", "删除任务卡片")
-
-g_monitor = create_group("监控与快照", parent=f_runner, sort=2)
-create_endpoint(
-    g_monitor, "GET", "运行监控", "/api/runner/monitor/{run_id}/", "运行监控流（TREP Phase 0）"
-)
-create_endpoint(
-    g_monitor, "GET", "运行快照", "/api/runner/run/{run_id}/snapshot/", "获取指定运行的详细快照"
-)
 
 # ── 7. Report Generator ──
 f_report = create_folder("报告生成", parent=ROOT, sort=7)
@@ -728,11 +475,11 @@ create_endpoint(
 f_ai = create_folder("AI 助手", parent=ROOT, sort=8)
 
 g_auth = create_group("认证", parent=f_ai, sort=0)
-create_endpoint(g_auth, "POST", "用户登录", "/api/ai/auth/login/", "用户登录获取 JWT")
-create_endpoint(g_auth, "POST", "用户注册", "/api/ai/auth/register/", "新用户注册")
-create_endpoint(g_auth, "POST", "刷新 Token", "/api/ai/auth/refresh/", "刷新 JWT Token")
-create_endpoint(g_auth, "POST", "用户登出", "/api/ai/auth/logout/", "用户登出（Token 加入黑名单）")
-create_endpoint(g_auth, "GET", "当前用户信息", "/api/ai/auth/me/", "获取当前登录用户信息")
+create_endpoint(g_auth, "POST", "用户登录", "/api/auth/login/", "用户登录获取 JWT")
+create_endpoint(g_auth, "POST", "用户注册", "/api/auth/register/", "新用户注册")
+create_endpoint(g_auth, "POST", "刷新 Token", "/api/auth/refresh/", "刷新 JWT Token")
+create_endpoint(g_auth, "POST", "用户登出", "/api/auth/logout/", "用户登出（Token 加入黑名单）")
+create_endpoint(g_auth, "GET", "当前用户信息", "/api/auth/me/", "获取当前登录用户信息")
 
 g_agent = create_group("Agent 管理", parent=f_ai, sort=1)
 create_endpoint(g_agent, "GET", "Agent 列表", "/api/ai/agents/", "列出所有 AI Agent")
@@ -751,13 +498,6 @@ create_endpoint(
 create_endpoint(
     g_agent, "GET", "可用模型列表", "/api/ai/agents/{agent_id}/models/", "获取 Agent 可用模型列表"
 )
-create_endpoint(
-    g_agent,
-    "POST",
-    "注册到 AgentScope",
-    "/api/ai/agents/{agent_id}/register-scope/",
-    "在 AgentScope 框架中注册 Agent",
-)
 create_endpoint(g_agent, "GET", "健康检查", "/api/ai/agents/health/", "所有 Agent 健康检查")
 
 g_conv = create_group("会话管理", parent=f_ai, sort=2)
@@ -771,31 +511,11 @@ create_endpoint(
     g_conv, "GET", "消息列表", "/api/ai/conversations/{conv_id}/messages/", "列出对话中的消息"
 )
 create_endpoint(
-    g_conv, "POST", "发送消息", "/api/ai/conversations/{conv_id}/send/", "向 Agent 发送消息"
-)
-create_endpoint(
     g_conv,
     "POST",
     "保存消息",
     "/api/ai/conversations/{conv_id}/save-message/",
     "持久化保存消息到 DB",
-)
-create_endpoint(
-    g_conv, "GET", "SSE 流式对话", "/api/ai/conversations/{conv_id}/stream/", "SSE 流式聊天端点"
-)
-create_endpoint(
-    g_conv,
-    "POST",
-    "HITL 确认结果",
-    "/api/ai/conversations/{conv_id}/confirm-result/",
-    "提交人工确认结果",
-)
-create_endpoint(
-    g_conv,
-    "POST",
-    "创建 Scope 会话",
-    "/api/ai/conversations/{conv_id}/create-scope-session/",
-    "创建 AgentScope SSE 会话",
 )
 create_endpoint(
     g_conv, "POST", "重命名会话", "/api/ai/conversations/{conv_id}/rename/", "重命名一个对话"
@@ -806,32 +526,11 @@ create_endpoint(
 
 g_model = create_group("模型与平台工具", parent=f_ai, sort=3)
 create_endpoint(g_model, "GET", "探测模型列表", "/api/ai/models/detect/", "探测并列出可用 LLM 模型")
-create_endpoint(
-    g_model, "GET", "默认系统提示词", "/api/ai/default-system-prompt/", "获取默认系统提示词模板"
-)
 create_endpoint(g_model, "GET", "可用平台工具", "/api/ai/available-tools/", "列出可用平台工具")
 create_endpoint(
     g_model, "GET", "可用技能列表", "/api/ai/available-skills/", "列出所有可用 Agent 技能"
 )
 
-g_mcp = create_group("工具副本管理", parent=f_ai, sort=4)
-create_endpoint(
-    g_mcp,
-    "GET",
-    "Agent 工具列表",
-    "/api/ai/agents/{agent_id}/tools/",
-    "列出 Agent 已导入的工具副本",
-)
-create_endpoint(
-    g_mcp, "POST", "开关工具", "/api/ai/agents/{agent_id}/tools/{tool_id}/toggle/", "启用或禁用工具"
-)
-create_endpoint(
-    g_mcp,
-    "DELETE",
-    "删除工具",
-    "/api/ai/agents/{agent_id}/tools/{tool_id}/delete/",
-    "从 Agent 删除工具",
-)
 
 g_conv_task = create_group("对话任务", parent=f_ai, sort=5)
 create_endpoint(
@@ -861,9 +560,7 @@ create_endpoint(g_kb, "POST", "添加文档", "/api/ai/knowledge/documents/add/"
 
 g_file = create_group("文件与健康检查", parent=f_ai, sort=7)
 create_endpoint(g_file, "POST", "上传头像", "/api/ai/upload-avatar/", "上传用户头像")
-create_endpoint(g_file, "GET", "获取头像", "/api/ai/avatars/{filename}/", "获取已上传头像文件")
 create_endpoint(g_file, "POST", "上传解析文件", "/api/ai/upload-file/", "上传并解析文件")
-create_endpoint(g_file, "GET", "健康检查", "/api/ai/health/", "AI 模块健康检查")
 
 # ── 9. Evaluator ──
 f_eval = create_folder("评估器", parent=ROOT, sort=9)

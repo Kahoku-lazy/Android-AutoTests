@@ -24,6 +24,23 @@ interface RetryableRequest extends InternalAxiosRequestConfig {
   _retry?: boolean
 }
 
+/**
+ * 公开认证端点（相对 baseURL=/api 的写法）。
+ *
+ * 这些端点的 401 表示「凭证或令牌本身无效」，不是「access 已过期」—— 因此不得触发令牌刷新，
+ * 否则一次密码错误会先白走一次刷新并换掉本地令牌。
+ *
+ * 该清单必须与网关 PUBLIC_PREFIXES 中的 /api/auth/* 部分一致，
+ * 由 tests/graybox/unit/test_auth_frontend_contract.py 对拍。
+ */
+export const PUBLIC_AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/refresh'] as const
+
+/** 该请求是否指向公开认证端点（兼容相对写法与带 /api 前缀的完整写法）。 */
+function isPublicAuthRequest(config: InternalAxiosRequestConfig | undefined): boolean {
+  const url = config?.url ?? ''
+  return PUBLIC_AUTH_PATHS.some((path) => url.startsWith(path) || url.startsWith('/api' + path))
+}
+
 export interface AuthInterceptors {
   authRequestInterceptor: (config: InternalAxiosRequestConfig) => InternalAxiosRequestConfig
   authErrorInterceptor: (err: AxiosError) => Promise<unknown>
@@ -46,7 +63,12 @@ export function createAuthInterceptors(deps: AuthInterceptorDeps): AuthIntercept
 
   async function authErrorInterceptor(err: AxiosError): Promise<unknown> {
     const originalRequest = err.config as RetryableRequest | undefined
-    if (err.response?.status === 401 && originalRequest && !originalRequest._retry) {
+    if (
+      err.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !isPublicAuthRequest(originalRequest)
+    ) {
       const currentRefreshToken = deps.getRefreshToken()
       if (currentRefreshToken) {
         originalRequest._retry = true

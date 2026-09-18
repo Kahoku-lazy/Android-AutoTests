@@ -12,7 +12,6 @@ interface AuthTokenData {
   access_token: string
   refresh_token: string
   token_type?: string
-  user?: { id: number; username: string; email?: string }
 }
 
 /** refresh 成功时 data 载荷 */

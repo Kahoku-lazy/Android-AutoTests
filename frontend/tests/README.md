@@ -17,10 +17,10 @@ tests/<module>/
 
 | 模块 | 目录 | 状态 | P0 文件 | P1 文件 | 说明 |
 |------|------|------|---------|---------|------|
-| dashboard | `tests/dashboard/` | ✅ P0+P1 | 2 | 4 | 数据编排 / 统计卡 / 导航 / 任务面板 / 活动线 |
-| login | `tests/login/` | ✅ P0+P1 | 8 | 3 | 表单校验 / 账号池 / 认证流程 / 卡片 |
+| dashboard | `tests/dashboard/` | ✅ P0+P1 | 2 | 3 | 数据编排 / 统计卡 / 任务面板 / 活动线 |
+| login | `tests/login/` | ✅ P0+P1 | 8 | 3 | 表单校验 / 会话存储 / 认证流程 / 卡片 |
 | device-pool | `tests/device-pool/` | ✅ P0+P1 | 5 | 3 | 设备端点 / 心跳轮询 / 设备操作 / KPI 统计 |
-| device-inspector | — | ⬜ 未开始 | 0 | 0 | 待开测（src: device-inspector） |
+| device-inspector | `tests/device-inspector/` | 🚧 P0 | 1 | 0 | 失败原因呈现 / 重试重发 / 删除当前快照后状态复位 |
 | element-locator | `tests/element-locator/` | ✅ P0+P1 | 4 | 3 | 元素端点 / 元素树 / 分组树 |
 | case-manager | — | ⬜ 未开始 | 0 | 0 | 待开测（src: case-manager） |
 | report-generator | — | ⬜ 未开始 | 0 | 0 | 待开测（src: report-generator） |

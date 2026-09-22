@@ -15,30 +15,43 @@ vi.mock('@/modules/dashboard/api', () => ({
   fetchRecentActivities: vi.fn(),
 }))
 
+/** AI 用量本文件不参与断言：零值补齐 DashboardRawData 的必填字段 */
+const ZERO_METRIC = { today: 0, total: 0 }
+const ZERO_AI_USAGE: DashboardRawData['ai_usage'] = {
+  task_count: ZERO_METRIC,
+  input_tokens: ZERO_METRIC,
+  output_tokens: ZERO_METRIC,
+  total_tokens: ZERO_METRIC,
+  cache_hit_tokens: ZERO_METRIC,
+  cache_hit_rate: ZERO_METRIC,
+  avg_tokens_per_task: ZERO_METRIC,
+  deepseek_cost: ZERO_METRIC,
+  by_role: { today: {}, total: {} },
+}
+
 function makeRaw(): DashboardRawData {
   return {
-    devices: { online: 3, total: 5, trend: 12 },
+    devices: { online: 3, total: 5 },
     cases: {
       total: 20,
       enabled: 18,
-      trend: 4,
       breakdown: [{ type: 'ui_automation', total: 8, enabled: 7 }],
     },
     elements: {
       total: 42,
       pages: 6,
-      breakdown: [{ type: 'android', total: 30 }],
       type_breakdown: [{ type: 'android', total: 30 }],
     },
-    runs: { total: 100, active: 2, trend: -5 },
-    agents: { total: 4, active: 1, trend: 0 },
-    reports: { total: 9 },
-    workflow: { total: 7, page_flows: 3, test_cases: 4 },
-    pass_rate: 0.95,
+    runs: { total: 100, active: 2 },
+    agents: { total: 4, active: 1 },
+    workflow: { total: 7 },
+    ai_usage: ZERO_AI_USAGE,
     charts: {
-      execution: { labels: ['W1'], success: [10], failed: [2], new_cases: [5] },
+      execution: { labels: ['W1'], success: [10], failed: [2] },
+      ai_tokens: { labels: [], total_tokens: [], cache_tokens: [] },
+      deepseek_cost: { labels: [], cost: [] },
     },
-    execution_summary: { passed: 50, failed: 3, new_cases_week: 6 },
+    execution_summary: { passed: 50, failed: 3 },
     recent_tasks: [{ id: 'r1', status: 'success', title: '冒烟' }],
     last_updated: '2026-08-13 10:00',
     system_status: 'no_device',
@@ -69,15 +82,14 @@ describe('[P0] useDashboardStats', () => {
 
     expect(s.loading.value).toBe(false)
     expect(s.error.value).toBeNull()
-    expect(s.stats.value.devices).toEqual({ online: 3, total: 5, trend: 12 })
+    expect(s.stats.value.devices).toEqual({ online: 3, total: 5 })
     expect(s.stats.value.cases.breakdown).toHaveLength(1)
     expect(s.stats.value.elements.typeBreakdown).toEqual([{ type: 'android', total: 30 }])
     expect(s.stats.value.runs.active).toBe(2)
     expect(s.stats.value.agents.total).toBe(4)
-    expect(s.stats.value.reports.total).toBe(9)
-    expect(s.stats.value.workflow).toEqual({ total: 7, page_flows: 3, test_cases: 4 })
+    expect(s.stats.value.workflow).toEqual({ total: 7 })
     expect(s.executionChart.value.labels).toEqual(['W1'])
-    expect(s.executionSummary.value).toEqual({ passed: 50, failed: 3, new_cases_week: 6 })
+    expect(s.executionSummary.value).toEqual({ passed: 50, failed: 3 })
     expect(s.recentTasks.value).toHaveLength(1)
     expect(s.lastUpdated.value).toBe('2026-08-13 10:00')
     expect(s.systemStatus.value).toBe('no_device')
@@ -173,15 +185,14 @@ describe('[P0] mapStatsResponse（纯映射）', () => {
   it('完整数据逐字段映射', () => {
     const mapped = mapStatsResponse(makeRaw())
 
-    expect(mapped.stats.devices).toEqual({ online: 3, total: 5, trend: 12 })
+    expect(mapped.stats.devices).toEqual({ online: 3, total: 5 })
     expect(mapped.stats.cases).toEqual({
       total: 20,
       enabled: 18,
-      trend: 4,
       breakdown: [{ type: 'ui_automation', total: 8, enabled: 7 }],
     })
     expect(mapped.stats.elements.typeBreakdown).toEqual([{ type: 'android', total: 30 }])
-    expect(mapped.stats.workflow).toEqual({ total: 7, page_flows: 3, test_cases: 4 })
+    expect(mapped.stats.workflow).toEqual({ total: 7 })
     expect(mapped.executionChart.success).toEqual([10])
     expect(mapped.executionSummary.passed).toBe(50)
     expect(mapped.recentTasks).toHaveLength(1)
@@ -192,12 +203,12 @@ describe('[P0] mapStatsResponse（纯映射）', () => {
   it('空对象：全部回退默认值', () => {
     const mapped = mapStatsResponse({} as DashboardRawData)
 
-    expect(mapped.stats.devices).toEqual({ online: 0, total: 0, trend: 0 })
+    expect(mapped.stats.devices).toEqual({ online: 0, total: 0 })
     expect(mapped.stats.cases.breakdown).toEqual([])
     expect(mapped.stats.elements.typeBreakdown).toEqual([])
-    expect(mapped.stats.workflow).toEqual({ total: 0, page_flows: 0, test_cases: 0 })
-    expect(mapped.executionChart).toEqual({ labels: [], success: [], failed: [], new_cases: [] })
-    expect(mapped.executionSummary).toEqual({ passed: 0, failed: 0, new_cases_week: 0 })
+    expect(mapped.stats.workflow).toEqual({ total: 0 })
+    expect(mapped.executionChart).toEqual({ labels: [], success: [], failed: [] })
+    expect(mapped.executionSummary).toEqual({ passed: 0, failed: 0 })
     expect(mapped.recentTasks).toEqual([])
     expect(mapped.lastUpdated).toBe('')
     expect(mapped.systemStatus).toBe('normal')
@@ -230,16 +241,17 @@ describe('[P0] mapStatsResponse（纯映射）', () => {
   })
 
   it('部分字段缺失：缺失项回退，存在项保留', () => {
+    // 故意只给两个分区：验证缺失分区回退默认值、已给分区原样保留
     const mapped = mapStatsResponse({
       devices: { online: 2, total: 4 },
-      runs: { total: 10, active: 1, trend: 3 },
-    } as DashboardRawData)
+      runs: { total: 10, active: 1 },
+    } as unknown as DashboardRawData)
 
-    expect(mapped.stats.devices.trend).toBe(0)
     expect(mapped.stats.devices.online).toBe(2)
-    expect(mapped.stats.runs.trend).toBe(3)
+    expect(mapped.stats.devices.total).toBe(4)
+    expect(mapped.stats.runs.active).toBe(1)
     expect(mapped.stats.cases).toEqual({
-      total: 0, enabled: 0, trend: 0, breakdown: [],
+      total: 0, enabled: 0, breakdown: [],
     })
     expect(mapped.executionChart.labels).toEqual([])
     expect(mapped.systemStatus).toBe('normal')

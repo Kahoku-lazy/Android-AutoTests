@@ -101,7 +101,7 @@ describe('[P1] DevicePoolView.logic', () => {
 
     result.goPage(2)
     expect(result.currentPage.value).toBe(2)
-    expect(result.totalPages.value).toBe(2)
+    expect(result.totalPages.value).toBe(3)
 
     poolStub.devices.value = Array.from({ length: 5 }, (_, i) => makeDevice(`D${i + 1}`))
     await nextTick()

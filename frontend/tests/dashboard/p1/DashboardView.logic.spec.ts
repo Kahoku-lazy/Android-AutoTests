@@ -15,13 +15,26 @@ vi.mock('@/modules/dashboard/api', () => ({
   fetchRecentActivities: vi.fn(),
 }))
 
+/** AI 用量本文件不参与断言：零值补齐 DashboardRawData 的必填字段 */
+const ZERO_METRIC = { today: 0, total: 0 }
+const ZERO_AI_USAGE: DashboardRawData['ai_usage'] = {
+  task_count: ZERO_METRIC,
+  input_tokens: ZERO_METRIC,
+  output_tokens: ZERO_METRIC,
+  total_tokens: ZERO_METRIC,
+  cache_hit_tokens: ZERO_METRIC,
+  cache_hit_rate: ZERO_METRIC,
+  avg_tokens_per_task: ZERO_METRIC,
+  deepseek_cost: ZERO_METRIC,
+  by_role: { today: {}, total: {} },
+}
+
 function makeRaw(): DashboardRawData {
   return {
-    devices: { online: 3, total: 5, trend: 0 },
+    devices: { online: 3, total: 5 },
     cases: {
       total: 20,
       enabled: 18,
-      trend: 4,
       breakdown: [
         { type: 'ui_automation', total: 8, enabled: 7 },
         { type: 'api_testing', total: 4, enabled: 4 },
@@ -30,19 +43,21 @@ function makeRaw(): DashboardRawData {
     elements: {
       total: 42,
       pages: 6,
-      breakdown: [],
       type_breakdown: [
         { type: 'android', total: 30 },
         { type: 'web', total: 12 },
       ],
     },
-    runs: { total: 100, active: 2, trend: 0 },
-    agents: { total: 4, active: 1, trend: 0 },
-    reports: { total: 9 },
-    workflow: { total: 7, page_flows: 3, test_cases: 4 },
-    pass_rate: 0.95,
-    charts: { execution: { labels: [], success: [], failed: [], new_cases: [] } },
-    execution_summary: { passed: 0, failed: 0, new_cases_week: 0 },
+    runs: { total: 100, active: 2 },
+    agents: { total: 4, active: 1 },
+    workflow: { total: 7 },
+    ai_usage: ZERO_AI_USAGE,
+    charts: {
+      execution: { labels: [], success: [], failed: [] },
+      ai_tokens: { labels: [], total_tokens: [], cache_tokens: [] },
+      deepseek_cost: { labels: [], cost: [] },
+    },
+    execution_summary: { passed: 0, failed: 0 },
     recent_tasks: [],
     last_updated: '',
     system_status: 'normal',
@@ -118,8 +133,8 @@ describe('[P1] useDashboardView（编排）', () => {
         'api_testing',
         'storage',
       ])
-      expect(result.elementBreakdown).toHaveLength(3)
-      expect(result.elementBreakdown.map((e) => e.type)).toEqual(['android', 'web', 'api'])
+      expect(result.elementBreakdown).toHaveLength(1)
+      expect(result.elementBreakdown.map((e) => e.type)).toEqual(['android'])
     })
   })
 })

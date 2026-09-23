@@ -137,6 +137,7 @@ class DeviceDetector:
                 if serial:
                     return serial
             except Exception:
+                # 明确忽略：本轮 adb 取值失败，交由下方重试；重试耗尽由调用方按空值处理
                 pass
             if attempt < 2:
                 time.sleep(1)

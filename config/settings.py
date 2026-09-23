@@ -14,6 +14,7 @@ try:
 
     django_stubs_ext.monkeypatch()
 except ImportError:
+    # 明确忽略：django-stubs-ext 为可选开发期依赖，未安装不影响运行
     pass
 
 BASE_DIR = Path(__file__).resolve().parent.parent

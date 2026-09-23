@@ -161,6 +161,7 @@ def capture_dump_payload(engine, ts: str) -> dict:
         package = cur.get("package", "")
         activity = cur.get("activity", "")
     except Exception:
+        # 明确忽略：取不到前台应用信息时 package/activity 保持空串（可选元数据）
         pass
 
     # 全量节点索引：未裁剪节点 + 保留标记，不含 XPath 候选（候选是派生数据，查询时按需生成）

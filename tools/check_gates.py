@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import ast
 import os
 import re
 import subprocess
@@ -142,6 +143,71 @@ def grep_gate(
         return not hits, hits
 
     return Gate(name, desc, blocking, _run, always_show)
+
+
+# ── 静默吞异常（AST 检查，非 CI 内联项） ─────────────────────
+
+LOG_METHODS = {"debug", "info", "warning", "warn", "error", "exception", "critical", "log"}
+# 供应商产物：与 ruff.toml 的 exclude 一致，改了会在下次 skill 更新时丢失
+VENDORED = ("engines/ai/skills/skill-creator",)
+
+
+def _has_log_call(node: ast.AST) -> bool:
+    for child in ast.walk(node):
+        if isinstance(child, ast.Call):
+            func = child.func
+            if isinstance(func, ast.Attribute) and func.attr in LOG_METHODS:
+                return True
+    return False
+
+
+def _handler_has_comment(lines: list[str], node: ast.ExceptHandler) -> bool:
+    ends = [n.end_lineno for n in ast.walk(node) if getattr(n, "end_lineno", None)]
+    start = node.lineno - 1
+    end = max(ends) if ends else start + 1
+    return any("#" in line for line in lines[start:end])
+
+
+def silent_except_gate() -> Gate:
+    """禁止「捕获后什么都不做」：处理器体只有 pass/continue/break，且无 raise、无日志、无注释。
+
+    明确选择忽略的情形以注释表达（见 AGENTS.md：错误不应默默忽略，除非明确地选择忽略）。
+    """
+
+    def _run() -> tuple[bool, list[str]]:
+        findings: list[str] = []
+        for path in _iter_files(["apps", "config", "gateway", "shared", "engines"], {".py"}):
+            rel = path.relative_to(ROOT).as_posix()
+            if rel.startswith(VENDORED):
+                continue
+            if "migrations" in path.parts:
+                # 历史迁移不可改（与 ruff.toml 的 exclude 一致）
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+            lines = text.splitlines()
+            try:
+                tree = ast.parse(text)
+            except SyntaxError as exc:
+                findings.append(f"{rel}: 解析失败 {exc}")
+                continue
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.ExceptHandler):
+                    continue
+                if not all(isinstance(s, (ast.Pass, ast.Continue, ast.Break)) for s in node.body):
+                    continue
+                if any(isinstance(n, ast.Raise) for n in ast.walk(node)):
+                    continue
+                if _has_log_call(node) or _handler_has_comment(lines, node):
+                    continue
+                findings.append(f"{rel}:{node.lineno}: {lines[node.lineno - 1].strip()}")
+        return not findings, findings
+
+    return Gate(
+        "silent-except",
+        "静默吞异常（捕获后什么都不做且无注释说明）",
+        blocking=False,
+        run=_run,
+    )
 
 
 def inline_style_gate() -> Gate:
@@ -306,6 +372,8 @@ def build_gates() -> list[Gate]:
             r"ref\(\s*\[\s*\{[^}]*id:",
         ),
         inline_style_gate(),
+        # 本次新增（不在 CI 内联项中）
+        silent_except_gate(),
     ]
 
 

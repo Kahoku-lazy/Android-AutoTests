@@ -50,6 +50,7 @@ def _screenshot_path_from_tool_output(output) -> str:
         try:
             obj = json.loads(text)
         except json.JSONDecodeError:
+            # 明确忽略：本函数遍历多段文本，非 JSON 片段跳过即可
             continue
         if not isinstance(obj, dict):
             continue

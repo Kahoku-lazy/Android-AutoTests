@@ -63,6 +63,7 @@ def agent_config(request, agent_id: str):
         try:
             agent = AIAgent.objects.get(id=int(agent_id))
         except AIAgent.DoesNotExist:
+            # 预期未命中：先按 Django PK 查，落空后继续按 AgentScope UUID 查
             pass
     if agent is None:
         try:

@@ -68,6 +68,7 @@ class ChromaVectorStore(VectorStoreBase):
         try:
             self._client.delete_collection(name)
         except Exception:
+            # 明确忽略：删除为幂等操作，集合不存在或后端不可用时无后续影响
             pass
 
     async def has_collection(self, name: str) -> bool:

@@ -55,6 +55,7 @@ def scan_skill_folders() -> list[dict]:
                 try:
                     size_bytes += os.path.getsize(fpath)
                 except OSError:
+                    # 明确忽略：单个文件取不到大小时跳过，目录体积统计按尽力而为处理
                     pass
         results.append(
             {

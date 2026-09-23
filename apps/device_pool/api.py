@@ -128,6 +128,7 @@ def release_device(serial, reason=LockReleaseReason.MANUAL):
             state_machine.release_internal(dev, reason=reason)
             return True
     except Device.DoesNotExist:
+        # 明确忽略：设备不存在即视为释放失败并返回 False，属契约内的正常分支
         pass
     return False
 

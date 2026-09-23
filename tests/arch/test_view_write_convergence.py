@@ -113,9 +113,9 @@ def test_detector_flags_known_violations():
     snippet = (
         "instance.delete()\n"
         "serializer.save()\n"
-        'WebElement.objects.create(name="x")\n'
+        'Element.objects.create(alias="x")\n'
         "EvalRun.objects.filter(id=1).delete()\n"
-        'WebElement.objects.filter(id=1).update(name="y")\n'
+        'Element.objects.filter(id=1).update(alias="y")\n'
         "request.data.update({'a': 1})\n"
         "# Model.objects.create() 只出现在注释里，不应命中\n"
     )
@@ -124,8 +124,8 @@ def test_detector_flags_known_violations():
 
     assert "instance.delete" in names
     assert "serializer.save" in names
-    assert "WebElement.objects.create" in names
+    assert "Element.objects.create" in names
     assert "EvalRun.objects.filter.delete" in names
-    assert "WebElement.objects.filter.update" in names
+    assert "Element.objects.filter.update" in names
     # 判据 2 的边界：没有 objects 的 .update() 是 dict 的合法方法，不得误报
     assert "request.data.update" not in names

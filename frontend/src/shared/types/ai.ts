@@ -76,6 +76,8 @@ export interface TaskRecord {
   device_label?: string
   /** 当前线路助手名（实时派生，随改名同步） */
   assistant_name?: string
+  /** 附件原始文件名（仅文件名，正文只在详情下发） */
+  attachment_filename?: string
   created_at?: string
   started_at?: string
   finished_at?: string
@@ -195,6 +197,10 @@ export interface TaskDetail {
   device_label?: string
   assistant_name?: string
   attachment_filename?: string
+  /** 附件解析后的 Markdown 正文全文；无附件为空串 */
+  attachment?: string
+  /** 引擎实际交给规划模型的四键 JSON 原文（与装配同源派生） */
+  planner_input?: string
   created_at?: string
   started_at?: string
   finished_at?: string

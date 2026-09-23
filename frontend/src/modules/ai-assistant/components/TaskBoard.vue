@@ -209,6 +209,10 @@ async function onSubmit() {
                 <li><span class="task-card__meta-k">助手</span>{{ t.assistant_name || '—' }}</li>
                 <li><span class="task-card__meta-k">费用</span>{{ formatTaskCost(t.deepseek_cost) }}</li>
                 <li><span class="task-card__meta-k">耗时</span>{{ formatTaskDuration(t.started_at, t.finished_at) }}</li>
+                <li class="task-card__meta-row">
+                  <span class="task-card__meta-k">附件</span>
+                  <span class="task-card__meta-v">{{ t.attachment_filename || '—' }}</span>
+                </li>
               </ul>
               <template #actions>
                 <DoodleBtn
@@ -265,6 +269,18 @@ async function onSubmit() {
   margin-right: var(--app-space-xs);
   font-weight: 700;
   color: var(--ai-ink-muted);
+}
+/* 附件行：文件名过长时单行省略，不撑高便签卡片 */
+.task-card__meta-row {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+}
+.task-card__meta-v {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .task-status-collapse { --el-collapse-border-color: transparent; --el-collapse-header-height: 36px; }
 .task-status-collapse :deep(.el-collapse-item) {

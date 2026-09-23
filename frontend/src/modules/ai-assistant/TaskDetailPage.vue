@@ -7,6 +7,7 @@ import KpiCard from '@/shared/components/KpiCard.vue'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
 import TaskAttemptCard from './components/TaskAttemptCard.vue'
+import TaskInputPanel from './components/TaskInputPanel.vue'
 import { taskStatusLabel, taskStatusTone } from './constants'
 import { useTaskDetail } from './composables/useTaskDetail'
 import {
@@ -122,6 +123,12 @@ const finalToneClass = computed(() => {
               shape="circle"
             />
           </div>
+
+          <TaskInputPanel
+            :planner-input="detail.planner_input"
+            :attachment="detail.attachment"
+            :attachment-filename="detail.attachment_filename"
+          />
 
           <div v-if="blocks.length" class="td-split">
             <aside class="td-steps">

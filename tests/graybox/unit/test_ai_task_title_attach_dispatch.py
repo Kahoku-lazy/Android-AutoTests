@@ -199,3 +199,83 @@ def test_serialize_row_includes_device_label(platform_agent):
     billed = api.serialize_agent_task_row(task)
     assert isinstance(billed["deepseek_cost"], float)
     assert billed["deepseek_cost"] > 0
+
+
+# ── 入模可观察性：详情可见规划输入与附件正文，列表只给附件名 ──
+
+
+def _agent_stub() -> SimpleNamespace:
+    """带三角色线路与系统提示词的智能体桩（供 build_request 派生规划输入）。"""
+    return SimpleNamespace(
+        route_configs={
+            engine_adapter.ROUTE_KEY: {
+                role: {
+                    "provider": "deepseek",
+                    "model_name": "m",
+                    "api_key": api.encrypt_key("sk"),
+                    "base_url": "",
+                }
+                for role in engine_adapter.ROUTE_ROLES
+            }
+        },
+        max_loops=3,
+        owner_id="1",
+        enable_skills=False,
+        prompt_planner="## p",
+        prompt_executor="## e",
+        prompt_verifier="## v",
+    )
+
+
+def test_detail_exposes_planner_input_and_attachment(platform_agent):
+    task = api.create_task(
+        platform_agent,
+        title="校准色温",
+        goal="拖动滑块到最左",
+        attachment="## 第 1 页\n\n关掉自动亮度",
+        attachment_filename="steps.pdf",
+        device_serial="SER-1",
+    )
+    detail = api.serialize_agent_task_detail(task)
+    payload = json.loads(detail["planner_input"])
+    assert set(payload) == {"任务标题", "任务目标", "附件文本内容", "设备ID"}
+    assert payload["附件文本内容"] == "## 第 1 页\n\n关掉自动亮度"
+    assert detail["attachment"] == payload["附件文本内容"]
+    assert detail["attachment_filename"] == "steps.pdf"
+
+
+def test_detail_empty_attachment_is_blank_string(platform_agent):
+    task = api.create_task(platform_agent, title="t", goal="g", device_serial="SER-1")
+    detail = api.serialize_agent_task_detail(task)
+    payload = json.loads(detail["planner_input"])
+    assert payload["附件文本内容"] == ""
+    assert detail["attachment"] == ""
+    assert detail["attachment_filename"] == ""
+
+
+def test_row_exposes_attachment_filename_without_body(platform_agent):
+    task = api.create_task(
+        platform_agent,
+        title="t",
+        goal="g",
+        attachment="## 正文\n\n不应出现在列表行",
+        attachment_filename="a.docx",
+        device_serial="SER",
+    )
+    row = api.serialize_agent_task_row(task)
+    assert row["attachment_filename"] == "a.docx"
+    assert "attachment" not in row
+
+
+def test_detail_planner_input_matches_engine_request(platform_agent):
+    """展示值与实际入模值必须逐字一致（同一派生函数，无第二份实现）。"""
+    task = api.create_task(
+        platform_agent,
+        title="进详情",
+        goal="打开应用",
+        attachment="## 页",
+        attachment_filename="p.pdf",
+        device_serial="SER-X",
+    )
+    req = engine_adapter.build_request(task, _agent_stub())
+    assert api.serialize_agent_task_detail(task)["planner_input"] == req.goal

@@ -962,6 +962,7 @@ def serialize_agent_task_row(task: AITask) -> dict:
         "result": task_result_preview(task.result),
         "device_serial": task.device_serial,
         "device_label": task.device_label or "",
+        "attachment_filename": task.attachment_filename or "",
         "assistant_name": resolve_assistant_name(getattr(task, "agent", None)),
         "created_at": str(task.created_at) if task.created_at else "",
         "started_at": str(task.started_at) if task.started_at else "",
@@ -971,7 +972,11 @@ def serialize_agent_task_row(task: AITask) -> dict:
 
 
 def serialize_agent_task_detail(task: AITask) -> dict:
-    """任务发布详情（含过程日志）。"""
+    """任务发布详情（含过程日志 + 入模可观察性字段）。
+
+    planner_input 与引擎装配共用 build_planner_user_input，故展示值即实际入模值；
+    attachment 下发解析后的 Markdown 全文（不截断），空附件为空字符串。
+    """
     return {
         "id": task.id,
         "title": task.title,
@@ -981,6 +986,8 @@ def serialize_agent_task_detail(task: AITask) -> dict:
         "device_label": task.device_label or "",
         "assistant_name": resolve_assistant_name(getattr(task, "agent", None)),
         "attachment_filename": task.attachment_filename or "",
+        "attachment": task.attachment or "",
+        "planner_input": build_planner_user_input(task),
         "created_at": str(task.created_at) if task.created_at else "",
         "started_at": str(task.started_at) if task.started_at else "",
         "finished_at": str(task.finished_at) if task.finished_at else "",

@@ -1,62 +1,31 @@
 """report-generator HTTP routes — endpoints under /api/reports/*.
 
-Execution-engine tables are gone; list/detail endpoints return empty shells.
+列表只读聚合可见 AITask；run/task/cases 详情仍为空壳。
 File download/view still read LOG_DIR if files exist.
 """
 
-from datetime import date, timedelta
 from pathlib import Path
 
 from django.conf import settings
 from django.http import FileResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-
-def _empty_trend(range_days=30):
-    end = date.today()
-    start = end - timedelta(days=range_days - 1)
-    dates = []
-    labels = []
-    zeros = []
-    d = start
-    while d <= end:
-        dates.append(d.isoformat())
-        labels.append(f"{d.month:02d}-{d.day:02d}")
-        zeros.append(0)
-        d += timedelta(days=1)
-    return {
-        "range_days": range_days,
-        "dates": dates,
-        "labels": labels,
-        "pass": list(zeros),
-        "fail": list(zeros),
-        "rate": list(zeros),
-    }
+from apps.report_generator.ai_task_reports import build_report_list, parse_chart_range
 
 
 def list_reports(request):
-    """GET /api/reports — empty list after execution engine removal."""
-    chart_range = request.GET.get("chart_range", "30").strip()
-    try:
-        range_days = int(chart_range)
-    except ValueError:
-        range_days = 30
-    if range_days not in (7, 30, 90):
-        range_days = 30
+    """GET /api/reports — 当前用户可见的助手任务卡列表 / KPI / 趋势。"""
     return JsonResponse(
-        {
-            "status": True,
-            "summary": {
-                "total_runs": 0,
-                "total_iterations": 0,
-                "total_pass": 0,
-                "total_fail": 0,
-                "pass_rate": 0.0,
-            },
-            "bug_summary": {},
-            "trend": _empty_trend(range_days),
-            "runs": [],
-        }
+        build_report_list(
+            getattr(request, "user_id", None),
+            range_days=parse_chart_range(request.GET.get("chart_range")),
+            start_date=(request.GET.get("start_date") or "").strip(),
+            end_date=(request.GET.get("end_date") or "").strip(),
+            run_id=(request.GET.get("run_id") or "").strip(),
+            task_name=(request.GET.get("task_name") or "").strip(),
+            device_serial=(request.GET.get("device_serial") or "").strip(),
+            creator=(request.GET.get("creator") or "").strip(),
+        )
     )
 
 

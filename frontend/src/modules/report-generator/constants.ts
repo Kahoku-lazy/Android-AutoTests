@@ -6,17 +6,13 @@
 
 // ── 表格列定义 ──
 export const TABLE_COLUMNS = [
-  { title: 'Run ID', dataIndex: 'run_id', width: '13%' },
-  { title: '设备', dataIndex: 'device_serial', width: '9%' },
-  { title: '任务名称', dataIndex: 'task_name', width: '20%' },
-  { title: '创建人', dataIndex: 'creator', width: '7%' },
-  { title: '用例数', dataIndex: 'case_count', width: '5%', align: 'center' },
-  { title: '通过', dataIndex: 'passed', width: '5%', align: 'center' },
-  { title: '失败', dataIndex: 'failed', width: '5%', align: 'center' },
-  { title: '通过率', dataIndex: 'rate', width: '11%' },
-  { title: '状态', dataIndex: 'status', width: '7%', align: 'center' },
-  { title: '耗时', dataIndex: 'duration', width: '6%', align: 'center' },
-  { title: '时间', dataIndex: 'started_at', width: '12%' },
+  { title: '任务 ID', dataIndex: 'run_id', minWidth: 120 },
+  { title: '设备', dataIndex: 'device_serial', minWidth: 140 },
+  { title: '任务名称', dataIndex: 'task_name', minWidth: 220 },
+  { title: '创建人', dataIndex: 'creator', minWidth: 100 },
+  { title: '状态', dataIndex: 'status', minWidth: 100, align: 'center' },
+  { title: '耗时', dataIndex: 'duration', minWidth: 90, align: 'center' },
+  { title: '时间', dataIndex: 'started_at', minWidth: 150 },
 ]
 
 // ── 分页配置 ──
@@ -68,6 +64,7 @@ export const STATUS_TAB_LABELS = {
 // ── 状态标签映射（小写口径）──
 export const STATUS_LABEL_MAP = {
   completed: '通过',
+  success: '通过',
   failed: '失败',
   running: '运行中',
   stopped: '已停止',
@@ -77,6 +74,7 @@ export const STATUS_LABEL_MAP = {
 // ── 状态 CSS 类映射（小写口径）──
 export const STATUS_BADGE_CLASS = {
   completed: 'badge-pass',
+  success: 'badge-pass',
   passed: 'badge-pass',
   failed: 'badge-fail',
   running: 'badge-running',
@@ -149,14 +147,14 @@ export const REPORT_HEADER_GRADIENT = 'linear-gradient(135deg,#999,#8b7f8f)'
 
 export const PAGE_HEADER = {
   title: '测试报告',
-  subtitle: '查看历史测试执行记录，点击 Run ID 进入详细报告',
+  subtitle: '查看 AI 助手任务执行记录',
   icon: REPORT_HEADER_ICON,
   iconGradient: REPORT_HEADER_GRADIENT,
 }
 
 // ── 空状态文案 ──
 export const EMPTY_TEXT = {
-  noData: '暂无执行记录，请先执行测试',
+  noData: '暂无执行记录，请先在 AI 助手发布任务',
   noRecords: '暂无执行记录',
-  hint: '请先在执行引擎中运行测试，完成后将自动生成报告',
+  hint: '请先在 AI 助手发布任务，完成后将自动出现在此列表',
 }

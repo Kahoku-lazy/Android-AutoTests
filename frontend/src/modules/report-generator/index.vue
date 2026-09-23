@@ -1,8 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { animate, stagger } from 'animejs'
-// Card/Table/AppTabs → AppCard/AppTable/AppTabs
 import AppCard from "@/shared/components/AppCard.vue";
 import AppTable from "@/shared/components/AppTable.vue";
 import AppTabs from "@/shared/components/AppTabs.vue";
@@ -11,22 +9,20 @@ import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import KpiCard from '@/shared/components/KpiCard.vue'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import RateBar from '@/shared/components/RateBar.vue'
 import { listRuns, statusLabel, statusBadgeClass, formatTime } from './api'
 import PassRateTrendChart from './components/PassRateTrendChart.vue'
 import DailyPassFailChart from './components/DailyPassFailChart.vue'
 import {
   CHART_RANGE_OPTIONS,
   CHART_VISIBLE_DAYS,
+  EMPTY_TEXT,
   PAGE_HEADER,
   PAGE_SIZE_OPTIONS,
+  TABLE_COLUMNS,
 } from './constants'
-
-const router = useRouter()
 
 const runs = ref([])
 const summary = ref(null)
-const bugSummary = ref(null)
 const loading = ref(false)
 const error = ref(null)
 const lastUpdated = computed(() => {
@@ -91,7 +87,6 @@ async function fetchReports() {
     if (data.status) {
       runs.value = data.runs || []
       summary.value = data.summary || null
-      bugSummary.value = data.bug_summary || null
       trend.value = data.trend || null
     }
   } catch (e) {
@@ -103,7 +98,6 @@ async function fetchReports() {
   animate('.report-table tbody tr', { opacity: [0, 1], translateY: [16, 0], delay: stagger(40), duration: 380, ease: 'outCubic' })
 }
 
-// ── Filter tabs（Step 1 后端小写收敛后单口径）──
 const statusAppTabs = computed(() => [
   { key: 'all', label: `全部 (${runs.value.length})` },
   { key: 'completed', label: '已完成' },
@@ -113,6 +107,9 @@ const statusAppTabs = computed(() => [
 
 const filteredRuns = computed(() => {
   if (activeFilter.value === 'all') return runs.value
+  if (activeFilter.value === 'completed') {
+    return runs.value.filter(r => r.status === 'completed' || r.status === 'success')
+  }
   return runs.value.filter(r => r.status === activeFilter.value)
 })
 
@@ -120,24 +117,7 @@ const {
   pageSize, currentPage, totalPages, pagedItems: pagedRuns, setPageSize, goPage
 } = usePagination(filteredRuns, { options: PAGE_SIZE_OPTIONS })
 
-// ── AppTable columns（报告表 11 列，使用最小宽度避免数据挤压）──
-const columns = [
-  { title: 'Run ID', dataIndex: 'run_id', minWidth: 220 },
-  { title: '设备', dataIndex: 'device_serial', minWidth: 140 },
-  { title: '任务名称', dataIndex: 'task_name', minWidth: 220 },
-  { title: '创建人', dataIndex: 'creator', minWidth: 100 },
-  { title: '用例数', dataIndex: 'case_count', minWidth: 78, align: 'center' },
-  { title: '通过', dataIndex: 'passed', minWidth: 70, align: 'center' },
-  { title: '失败', dataIndex: 'failed', minWidth: 70, align: 'center' },
-  { title: '通过率', dataIndex: 'rate', minWidth: 160 },
-  { title: '状态', dataIndex: 'status', minWidth: 100, align: 'center' },
-  { title: '耗时', dataIndex: 'duration', minWidth: 90, align: 'center' },
-  { title: '时间', dataIndex: 'started_at', minWidth: 150 },
-]
-
-function openReport(run) {
-  router.push(`/reports/${encodeURIComponent(run.run_id)}`)
-}
+const columns = TABLE_COLUMNS
 
 const hasActiveFilters = computed(() => (
   (dateRange.value && dateRange.value.length === 2)
@@ -155,30 +135,6 @@ function clearFilters() {
   filterCreator.value = ''
   currentPage.value = 1
   fetchReports()
-}
-
-function buildFilterQuery() {
-  const query = {}
-  if (dateRange.value && dateRange.value.length === 2) {
-    query.start_date = dateRange.value[0]
-    query.end_date = dateRange.value[1]
-  }
-  const runId = filterRunId.value.trim()
-  const taskName = filterTaskName.value.trim()
-  const device = filterDevice.value.trim()
-  const creator = filterCreator.value.trim()
-  if (runId) query.run_id = runId
-  if (taskName) query.task_name = taskName
-  if (device) query.device_serial = device
-  if (creator) query.creator = creator
-  return query
-}
-
-function openCaseBreakdown(type, tab = 'detail') {
-  router.push({
-    path: `/reports/cases/${type}`,
-    query: { ...buildFilterQuery(), ...(tab !== 'detail' ? { tab } : {}) },
-  })
 }
 </script>
 
@@ -200,24 +156,20 @@ function openCaseBreakdown(type, tab = 'detail') {
         </div>
         <div class="filter-bar">
           <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" value-format="YYYY-MM-DD" :clearable="true" :unlink-panels="true" class="filter-date" />
-          <el-input v-model="filterRunId" placeholder="Run ID" clearable class="filter-input" />
+          <el-input v-model="filterRunId" placeholder="任务 ID" clearable class="filter-input" />
           <el-input v-model="filterTaskName" placeholder="任务名称" clearable class="filter-input" />
           <el-input v-model="filterDevice" placeholder="设备" clearable class="filter-input" />
           <el-input v-model="filterCreator" placeholder="创建人" clearable class="filter-input" />
           <el-button class="btn-sm" v-if="hasActiveFilters" size="small" @click="clearFilters">清空条件</el-button>
-          <span v-if="summary" class="filter-summary">共 {{ summary.total_runs }} 次执行 · {{ summary.total_iterations }} 次迭代</span>
+          <span v-if="summary" class="filter-summary">共 {{ summary.total_runs }} 次执行</span>
         </div>
 
       <!-- KPI -->
       <div v-if="summary" class="kpi-row">
         <KpiCard :value="summary.total_runs" label="总执行次数" color="var(--c-workflow)" shape="diamond" />
-        <KpiCard :value="summary.total_pass" label="通过" color="var(--c-device)" shape="triangle" @click="openCaseBreakdown('pass')" />
-        <KpiCard :value="summary.total_fail" label="失败" color="var(--c-runner)" shape="square" @click="openCaseBreakdown('fail','bugs')">
-          <div v-if="bugSummary" style="font-size:var(--app-size-xs);color:var(--app-text-secondary);margin-top:4px">{{ bugSummary.unique_issues }} 类 · {{ bugSummary.total_occurrences }} 次 · {{ bugSummary.affected_cases }} 用例</div>
-        </KpiCard>
-        <KpiCard :value="`${summary.pass_rate}%`" label="通过率" color="var(--c-dashboard)" shape="circle">
-          <div style="font-size:var(--app-size-xs);color:var(--app-text-secondary);margin-top:4px">{{ summary.total_iterations }} 次迭代</div>
-        </KpiCard>
+        <KpiCard :value="summary.total_pass" label="通过" color="var(--c-device)" shape="triangle" />
+        <KpiCard :value="summary.total_fail" label="失败" color="var(--c-runner)" shape="square" />
+        <KpiCard :value="`${summary.pass_rate}%`" label="通过率" color="var(--c-dashboard)" shape="circle" />
       </div>
       <div style="font-size:var(--app-size-xs);opacity:0.3;text-align:right">最近更新: {{ lastUpdated || '暂无数据' }}</div>
       </section>
@@ -266,8 +218,8 @@ function openCaseBreakdown(type, tab = 'detail') {
       </section>
 
       <!-- 测试报告 -->
-      <section class="doc-section report-table-section" style="padding:0">
-        <div class="doc-section__header" style="padding:14px 16px 0">
+      <section class="doc-section report-table-section">
+        <div class="doc-section__header">
           <h3 class="doc-section__title">测试报告 <span class="doc-tag">Reports</span></h3>
         </div>
         <ErrorState v-if="error && !loading" :message="error" @retry="fetchReports" />
@@ -296,15 +248,12 @@ function openCaseBreakdown(type, tab = 'detail') {
               :striped="false"
               :border="true"
               :loading="loading"
-              empty-text="暂无执行记录，请先执行测试"
+              :empty-text="EMPTY_TEXT.noData"
               accent="var(--c-report)"
               class="report-table report-table--flow"
             >
-              <!-- Run ID — clickable link -->
               <template #cell-run_id="{ record }">
-                <a class="run-link" @click.prevent="openReport(record)" href="#">
-                  <code class="cell-run-id">{{ record.run_id }}</code>
-                </a>
+                <code class="cell-run-id">{{ record.run_id }}</code>
               </template>
 
               <template #cell-device_serial="{ value }">
@@ -317,25 +266,6 @@ function openCaseBreakdown(type, tab = 'detail') {
 
               <template #cell-creator="{ record }">
                 <span class="cell-creator">{{ record.creator || '—' }}</span>
-              </template>
-
-              <template #cell-case_count="{ value }">
-                <span class="cell-count">{{ value }}</span>
-              </template>
-
-              <!-- Passed count — green -->
-              <template #cell-passed="{ record }">
-                <span class="num-pass">{{ record.passed }}</span>
-              </template>
-
-              <!-- Failed count — red -->
-              <template #cell-failed="{ record }">
-                <span :class="record.failed > 0 ? 'num-fail' : ''">{{ record.failed }}</span>
-              </template>
-
-              <!-- Pass rate with progress bar -->
-              <template #cell-rate="{ record }">
-                <RateBar :rate="record.rate ?? 0" :show-fail="record.failed > 0" />
               </template>
 
               <!-- Status badge -->
@@ -353,7 +283,7 @@ function openCaseBreakdown(type, tab = 'detail') {
 
               <!-- Empty state -->
               <template #empty>
-                <EmptyState icon="📋" text="暂无执行记录" hint="请先在执行引擎中运行测试，完成后将自动生成报告" />
+                <EmptyState icon="📋" :text="EMPTY_TEXT.noRecords" :hint="EMPTY_TEXT.hint" />
               </template>
             </AppTable>
           </AppCard>
@@ -368,16 +298,19 @@ function openCaseBreakdown(type, tab = 'detail') {
 /* Doodle Craft — 测试报告 */
 .doc-page{display:flex;flex-direction:column;overflow:hidden!important} /* height 由外壳 :deep(.doc-page) 承担；overflow:hidden 带 !important 且实际生效，保留 */
 .report-workbench .doc-body{flex:1 1 0;min-height:0;overflow-y:auto!important;padding:var(--app-space-md) var(--app-space-lg) var(--app-space-xl);display:flex;flex-direction:column;gap:var(--app-space-md)}
-/* 模块私有色值登记（tokens.css 未登记该值）：表格行 hover 底色 · 分区卡阴影色 */
-.report-workbench{--rg-hover-bg:var(--color-white) /* -> --color-white */;--rg-shadow-soft:var(--color-ink-05-a05)}
+/* 模块私有色值登记（tokens.css 未登记该值）：表格行 hover 底色
+   （原 --rg-shadow-soft 随分区卡皮肤收敛到全局 .doc-section 而成为零消费方，已删除） */
+.report-workbench{--rg-hover-bg:var(--color-white) /* -> --color-white */}
 
-/* 分区卡片 — doc-section 统一样式 */
-.doc-section{background:var(--app-bg-card);border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;padding:var(--app-space-md) 18px;box-shadow:2px 3px 0 var(--rg-shadow-soft)}
-.doc-section__header{margin-bottom:12px}
-.doc-section__title{font-family:var(--app-font-display);font-size:var(--app-size-xl);font-weight:700;display:inline-block;position:relative;margin-bottom:6px}
-.doc-section__title::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2.5px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%231e1e24' stroke-width='2' fill='none'/%3E%3C/svg%3E")repeat-x;background-size:40px 3px}
-.doc-section__title .doc-tag{font-size:var(--app-size-xs);padding:1px var(--app-space-sm);border-radius:4px 8px 4px 8px;background:var(--app-bg-card);color:var(--app-text-secondary);border:1.5px solid var(--app-border-light);font-weight:700;margin-left:var(--app-space-sm)}
-.doc-section__label{color:var(--app-text-secondary);font-size:var(--app-size-xs);margin-top:2px}
+/* 分区卡片：皮肤全取全局 .doc-section（背景/描边/圆角/阴影/内边距/标题字号字重，见 style.css:207-271）
+   本页只保留真实差异 —— 标题的手绘波浪下划线装饰；覆写一律限定在 .report-workbench 作用域内
+   （frontend-l3-container「共享骨架块不得无作用域重定义」） */
+.report-workbench .doc-section__title{display:inline-block;position:relative}
+.report-workbench .doc-section__title::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2.5px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%231e1e24' stroke-width='2' fill='none'/%3E%3C/svg%3E")repeat-x;background-size:40px 3px}
+
+/* 测试报告分区：表格贴边，内边距由本页类表达（不再用行内 style 覆写骨架块） */
+.report-workbench .report-table-section{padding:0}
+.report-workbench .report-table-section .doc-section__header{padding:var(--app-space-sm) var(--app-space-md) 0;margin-bottom:0}
 
 /* KPI 网格 — 渲染由 shared/KpiCard.vue 接管 */
 .kpi-row{display:grid;grid-template-columns:var(--layout-kpi-cols);gap:12px;margin-bottom:var(--app-space-sm)}
@@ -387,7 +320,7 @@ function openCaseBreakdown(type, tab = 'detail') {
 .filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .filter-date{width:220px}.filter-input{width:140px}
 .filter-summary{font-size:var(--app-size-xs);color:var(--app-text-secondary);font-weight:600;white-space:nowrap;margin-left:auto}
-.btn-sm{padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;border:2px solid var(--ink);border-radius:4px 8px 4px 8px;background:var(--app-bg-card);color:var(--ink);cursor:pointer;font-family:inherit;transition:all 0.12s}
+.btn-sm{padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;border:2px solid var(--ink);border-radius: var(--app-radius-sm);background:var(--app-bg-card);color:var(--ink);cursor:pointer;font-family:inherit;transition:all var(--app-duration-fast)}
 .btn-sm:hover{background:var(--c-report)}
 
 /* 图表 */
@@ -395,7 +328,7 @@ function openCaseBreakdown(type, tab = 'detail') {
 .chart-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .toolbar-label{font-size:var(--app-size-xs);font-weight:700;color:var(--app-text-secondary)}
 .page-size-btns{display:flex;gap:var(--app-space-xs)}
-.page-size-btn{padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;color:var(--app-text-secondary);background:var(--app-bg-card);border:2px solid var(--app-border-light);border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all 0.12s}
+.page-size-btn{padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;color:var(--app-text-secondary);background:var(--app-bg-card);border:2px solid var(--app-border-light);border-radius: var(--app-radius-sm);cursor:pointer;font-family:inherit;transition:all var(--app-duration-fast)}
 .page-size-btn:hover{border-color:var(--ink);color:var(--ink)}
 .page-size-btn.active{background:var(--app-bg-subtle);border-color:var(--ink);color:var(--ink)}
 .chart-row{display:grid;grid-template-columns:var(--layout-ratio-chart);gap:var(--app-space-md)}
@@ -406,7 +339,7 @@ function openCaseBreakdown(type, tab = 'detail') {
 .table-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:var(--app-space-sm) var(--app-space-md) 0}
 .page-info{font-size:var(--app-size-xs);color:var(--app-text-secondary);font-weight:600;white-space:nowrap;margin-left:auto}
 .page-nav{display:flex;gap:6px;margin-left:var(--app-space-sm)}
-.page-nav-btn{padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;color:var(--ink);background:var(--app-bg-card);border:2px solid var(--ink);border-radius:4px 8px 4px 8px;cursor:pointer;font-family:inherit;transition:all 0.12s}
+.page-nav-btn{padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;color:var(--ink);background:var(--app-bg-card);border:2px solid var(--ink);border-radius: var(--app-radius-sm);cursor:pointer;font-family:inherit;transition:all var(--app-duration-fast)}
 .page-nav-btn:hover{background:var(--c-report)}
 .page-nav-btn:disabled{opacity:0.3;cursor:default}
 
@@ -414,21 +347,20 @@ function openCaseBreakdown(type, tab = 'detail') {
 .report-tabs{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
 .report-tabs :deep(.el-tabs__header){margin-bottom:0;padding:0 var(--app-space-md)}
 .report-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:var(--app-space-xs)}
-.report-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:var(--app-text-secondary);height:auto;line-height:1.4}
+.report-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius: var(--app-radius-sm);border:2px solid transparent;color:var(--app-text-secondary);height:auto;line-height:1.4}
 .report-tabs :deep(.el-tabs__item:hover){color:var(--ink)}
 .report-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-report);border-color:var(--ink)}
 .report-tabs :deep(.el-tabs__active-bar){display:none}
 .report-tabs :deep(.el-tabs__content){flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:12px 0 0}
-.table-card{background:var(--app-bg-card);border:2.5px solid var(--c-report);border-radius:6px 10px 6px 10px;overflow:hidden;margin:0 var(--app-space-md) 14px}
+.table-card{background:var(--app-bg-card);border:2.5px solid var(--c-report);border-radius: var(--app-radius-md);overflow:hidden;margin:0 var(--app-space-md) 14px}
 
 .report-table{width:100%}
 .report-table :deep(.el-table__header th){background:var(--app-bg-subtle)!important;color:var(--ink)!important;font-weight:700!important;font-size:var(--app-size-xs)!important;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2.5px solid var(--ink)!important}
 .report-table :deep(.el-table__body td){border-bottom:1px solid var(--el-border-color-light)!important;color:var(--ink)}
 .report-table :deep(.el-table__body tr:hover td){background:var(--rg-hover-bg)!important}
 
-.run-link{cursor:pointer;text-decoration:none;color:var(--ink)}
-.cell-run-id{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600;text-decoration:underline}
-.badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);display:inline-block}
+.cell-run-id{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600}
+.badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius: var(--el-border-radius-small);border:1.5px solid var(--ink);display:inline-block}
 .badge-pass{background:var(--app-status-success-bg);color:var(--app-status-success-text)}
 .badge-fail{background:var(--app-status-danger-bg);color:var(--app-status-danger-text)}
 .badge-running{background:var(--app-pending);color:var(--app-pending-text)}

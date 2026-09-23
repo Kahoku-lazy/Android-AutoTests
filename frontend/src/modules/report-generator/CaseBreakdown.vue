@@ -141,20 +141,17 @@ function stepTypeLabel(type) {
       :subtitle="pageSubtitle"
       :icon="REPORT_HEADER_ICON"
       :icon-gradient="REPORT_HEADER_GRADIENT"
-    >
-      <template #nav>
-        <WorkbenchCrumbs
-          back-to="/reports"
-          back-label="报告列表"
-          :items="[
-            { label: '测试报告', to: '/reports' },
-            { label: pageTitle },
-          ]"
-        />
-      </template>
-    </WorkbenchHeader>
+    />
 
     <div class="doc-body">
+      <WorkbenchCrumbs
+        back-to="/reports"
+        back-label="报告列表"
+        :items="[
+          { label: '测试报告', to: '/reports' },
+          { label: pageTitle },
+        ]"
+      />
       <div class="top-bar">
         <div v-if="data" class="summary-pill">
           <span :class="isPass ? 'num-pass' : 'num-fail'">{{ totalCount }}</span>
@@ -438,22 +435,15 @@ function stepTypeLabel(type) {
 /* ── Case list ── */
 .case-list { display: flex; flex-direction: column; gap: 10px; }
 
-.case-group {
-  background: var(--app-bg-card); border: 2.5px solid var(--ink);
-  border-radius: var(--app-radius-lg); overflow: hidden;
-  box-shadow: var(--app-shadow-lg);
-  transition: box-shadow 0.2s, transform 0.15s;
-}
-.case-group:hover { box-shadow: var(--app-shadow-lg); transform: translateY(-1px); }
-.case-group :deep(.el-card) { border: none !important; box-shadow: none !important; border-radius: 0 !important; }
+/* 卡片壳由 AppCard 的 .ac-card 钉板壳承担：不再叠加自建实线大圆角壳，也不再剥离内层壳 */
 
 .case-group .case-header {
   display: flex; align-items: center; gap: var(--app-space-sm); cursor: pointer;
-  padding: var(--app-space-sm) var(--app-space-md); transition: background 0.15s;
+  padding: var(--app-space-sm) var(--app-space-md); transition: background var(--app-duration);
 }
 .case-group .case-header:hover { background: var(--paper); }
 
-.expand-icon { font-size:var(--app-size-xs); transition: transform 0.2s; color: var(--ink); opacity: 0.5; width: 14px; text-align: center; }
+.expand-icon { font-size:var(--app-size-xs); transition: transform var(--app-duration-slow); color: var(--ink); opacity: 0.5; width: 14px; text-align: center; }
 .expand-icon.open { transform: rotate(90deg); }
 .expand-icon--sm { font-size:var(--app-size-xs); }
 
@@ -489,18 +479,13 @@ function stepTypeLabel(type) {
 .detail-error { color: var(--app-status-danger-text); }
 
 /* ── Badge ── */
-.badge { font-size:var(--app-size-xs); font-weight: 700; padding: 2px var(--app-space-sm); border-radius: 4px; display: inline-block; }
+.badge { font-size:var(--app-size-xs); font-weight: 700; padding: 2px var(--app-space-sm); border-radius: var(--app-radius-sm); display: inline-block; }
 .badge-fail { background: var(--app-fail); color: var(--app-status-danger-text); border: 1.5px solid var(--app-status-danger); }
 .badge-pass { background: var(--app-pass); color: var(--app-status-success-text); border: 1.5px solid var(--app-status-success); }
 
 /* ── BUG list ── */
 .bug-list { display: flex; flex-direction: column; gap: 10px; }
-.bug-case-group {
-  background: var(--app-bg-card); border: 2.5px solid var(--app-status-danger);
-  border-radius: var(--app-radius-lg); overflow: hidden;
-  box-shadow: var(--app-shadow-lg);
-}
-.bug-case-group :deep(.el-card) { border: none !important; box-shadow: none !important; border-radius: 0 !important; }
+/* BUG 卡片的红色身份由 AppCard 的 accent 承担，壳同样交给 .ac-card */
 
 .issue-list { display: flex; flex-direction: column; gap: var(--app-space-sm); padding: var(--app-space-sm) 0; }
 .issue-row {
@@ -519,7 +504,7 @@ function stepTypeLabel(type) {
   --rg-issue-badge-border: var(--color-red-85) /* -> --color-red-85 */;
   font-family: var(--app-font-mono); font-size: var(--app-size-xs); font-weight: 700;
   background: var(--app-bg-card); color: var(--app-status-danger-text);
-  padding: 2px var(--app-space-sm); border-radius: 4px; border: 1.5px solid var(--rg-issue-badge-border);
+  padding: 2px var(--app-space-sm); border-radius: var(--app-radius-sm); border: 1.5px solid var(--rg-issue-badge-border);
 }
 .issue-type { font-size:var(--app-size-sm); font-weight: 700; color: var(--ink); }
 .issue-body { padding: 12px 14px; }
@@ -535,4 +520,9 @@ function stepTypeLabel(type) {
 .loading-state { text-align: center; padding: 40px; color: var(--app-text-secondary); }
 .num-pass { color: var(--app-status-success-text); font-weight: 800; }
 .num-fail { color: var(--app-status-danger-text); font-weight: 800; }
+
+/* 减少动效：关闭位移 / 旋转 / 缩放（颜色过渡不受影响） */
+@media (prefers-reduced-motion: reduce) {
+  .case-group, .expand-icon { transition: none; }
+}
 </style>

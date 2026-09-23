@@ -10,7 +10,9 @@ import { animate, stagger } from 'animejs'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
 import KpiCard from '@/shared/components/KpiCard.vue'
+import RateBar from '@/shared/components/RateBar.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
+import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import { getTaskReport, formatTime } from './api'
 import { REPORT_HEADER_GRADIENT, REPORT_HEADER_ICON } from './constants'
 
@@ -132,6 +134,14 @@ function goBack() { router.push('/reports') }
       :icon-gradient="REPORT_HEADER_GRADIENT"
     />
     <div class="doc-body">
+      <WorkbenchCrumbs
+        back-to="/reports"
+        back-label="报告列表"
+        :items="[
+          { label: '测试报告', to: '/reports' },
+          { label: '任务报告' },
+        ]"
+      />
       <ErrorState :message="error" @retry="loadReport" />
     </div>
   </div>
@@ -141,20 +151,17 @@ function goBack() { router.push('/reports') }
       :subtitle="`${taskMeta.name || taskMeta.task_id} · ${taskMeta.device_serial || '未知设备'}`"
       :icon="REPORT_HEADER_ICON"
       :icon-gradient="REPORT_HEADER_GRADIENT"
-    >
-      <template #nav>
-        <WorkbenchCrumbs
-          back-to="/reports"
-          back-label="报告列表"
-          :items="[
-            { label: '测试报告', to: '/reports' },
-            { label: taskMeta.name || taskMeta.task_id || '任务报告' },
-          ]"
-        />
-      </template>
-    </WorkbenchHeader>
+    />
 
     <div class="doc-body">
+      <WorkbenchCrumbs
+        back-to="/reports"
+        back-label="报告列表"
+        :items="[
+          { label: '测试报告', to: '/reports' },
+          { label: taskMeta.name || taskMeta.task_id || '任务报告' },
+        ]"
+      />
       <!-- Top bar -->
       <div class="top-bar">
         <span class="badge" :class="outcomeBadgeClass(taskMeta.outcome)" style="margin-left:auto;">
@@ -176,43 +183,23 @@ function goBack() { router.push('/reports') }
       <div v-if="perfStats" class="perf-stats-section">
         <div class="perf-stats-title">⏱️ APP性能 — 等待元素出现耗时</div>
         <div class="perf-stats-grid">
-          <div class="kpi-card perf-stat-item">
-            <div class="kpi-dot"></div>
-            <div class="kpi-value">{{ perfStats.count }}</div>
-            <div class="kpi-label">🔢 测量次数</div>
-          </div>
-          <div class="kpi-card perf-stat-item">
-            <div class="kpi-dot"></div>
-            <div class="kpi-value num-fail">{{ perfStats.max }}s</div>
-            <div class="kpi-label">⬆ 最大耗时</div>
-          </div>
-          <div class="kpi-card perf-stat-item">
-            <div class="kpi-dot"></div>
-            <div class="kpi-value num-pass">{{ perfStats.min }}s</div>
-            <div class="kpi-label">⬇ 最小耗时</div>
-          </div>
-          <div class="kpi-card perf-stat-item">
-            <div class="kpi-dot"></div>
-            <div class="kpi-value">{{ perfStats.avg }}s</div>
-            <div class="kpi-label">📊 平均耗时</div>
-          </div>
-          <div class="kpi-card perf-stat-item">
-            <div class="kpi-dot"></div>
-            <div class="kpi-value">{{ perfStats.median }}s</div>
-            <div class="kpi-label">🎯 中位数</div>
-          </div>
+          <KpiCard :value="perfStats.count" label="🔢 测量次数" color="var(--c-workflow)" shape="square" />
+          <KpiCard :value="`${perfStats.max}s`" label="⬆ 最大耗时" color="var(--c-runner)" shape="triangle" />
+          <KpiCard :value="`${perfStats.min}s`" label="⬇ 最小耗时" color="var(--c-device)" shape="triangle" />
+          <KpiCard :value="`${perfStats.avg}s`" label="📊 平均耗时" color="var(--c-element)" shape="diamond" />
+          <KpiCard :value="`${perfStats.median}s`" label="🎯 中位数" color="var(--c-dashboard)" shape="circle" />
         </div>
       </div>
 
       <!-- Task info -->
-      <div class="task-meta-bar">
-        <div class="task-meta-item"><span class="meta-label">📋 任务名称</span><span class="meta-value">{{ taskMeta.name }}</span></div>
-        <div class="task-meta-item"><span class="meta-label">👤 创建人</span><span class="meta-value">{{ taskMeta.creator }}</span></div>
-        <div class="task-meta-item"><span class="meta-label">📱 设备</span><span class="meta-value">{{ taskMeta.device_serial }}</span></div>
-        <div class="task-meta-item"><span class="meta-label">⚙ 模式</span><span class="meta-value">{{ taskMeta.mode === 'scheduled' ? '定时' : '即时' }}</span></div>
-        <div class="task-meta-item"><span class="meta-label">🔁 轮次</span><span class="meta-value">{{ taskMeta.loop_count }} 轮 · 间隔 {{ taskMeta.interval_seconds || 5 }}s</span></div>
-        <div v-if="taskMeta.round" class="task-meta-item"><span class="meta-label">🔄 重试</span><span class="meta-value">第 {{ taskMeta.round }} 轮</span></div>
-        <div v-if="taskMeta.conclusion" class="task-meta-item full-width">
+      <div class="task-meta-card">
+        <div class="meta-item"><span class="meta-label">📋 任务名称</span><span class="meta-value">{{ taskMeta.name }}</span></div>
+        <div class="meta-item"><span class="meta-label">👤 创建人</span><span class="meta-value">{{ taskMeta.creator }}</span></div>
+        <div class="meta-item"><span class="meta-label">📱 设备</span><span class="meta-value">{{ taskMeta.device_serial }}</span></div>
+        <div class="meta-item"><span class="meta-label">⚙ 模式</span><span class="meta-value">{{ taskMeta.mode === 'scheduled' ? '定时' : '即时' }}</span></div>
+        <div class="meta-item"><span class="meta-label">🔁 轮次</span><span class="meta-value">{{ taskMeta.loop_count }} 轮 · 间隔 {{ taskMeta.interval_seconds || 5 }}s</span></div>
+        <div v-if="taskMeta.round" class="meta-item"><span class="meta-label">🔄 重试</span><span class="meta-value">第 {{ taskMeta.round }} 轮</span></div>
+        <div v-if="taskMeta.conclusion" class="meta-item full-width">
           <span class="meta-label">📝 结论</span>
           <span class="meta-value conclusion-text">{{ taskMeta.conclusion }}</span>
         </div>
@@ -261,7 +248,7 @@ function goBack() { router.push('/reports') }
               </div>
             </div>
           </div>
-          <div v-else class="empty-note"><span>📋</span><p>暂无用例数据</p></div>
+          <EmptyState v-else icon="📋" text="暂无用例数据" />
         </template>
 
         <!-- ═══ TAB: 失败分析 ═══ -->
@@ -283,7 +270,7 @@ function goBack() { router.push('/reports') }
                 <span><span class="bug-meta-label">🔁 失败轮次</span> <span class="bug-meta-value">第 {{ entry.iteration }} 轮</span></span>
                 <span><span class="bug-meta-label">❌ 失败步骤</span> <span class="bug-meta-value">步骤 {{ entry.stepIndex + 1 }} · {{ entry.stepType }}</span></span>
               </div>
-              <div class="step-fail-reason" style="margin: 0 22px 12px; padding: 8px 12px;">
+              <div class="step-fail-reason">
                 <strong>🔍 失败原因：</strong>{{ entry.result || '步骤执行失败' }}
               </div>
             </div>
@@ -317,13 +304,7 @@ function goBack() { router.push('/reports') }
                 <code class="mono">{{ record.run_id }}</code>
               </template>
               <template #cell-rate_bar="{ record }">
-                <div class="rate-cell">
-                  <div class="progress-bar">
-                    <div class="p-pass" :style="{ width: (record.rate ?? 0) + '%' }"></div>
-                    <div v-if="record.failed > 0" class="p-fail" :style="{ width: (100 - (record.rate ?? 0)) + '%' }"></div>
-                  </div>
-                  <span class="rate-text" :class="{ 'rate-ok': (record.rate ?? 0) >= 95, 'rate-warn': (record.rate ?? 0) >= 80 && record.rate < 95, 'rate-bad': (record.rate ?? 0) < 80 }">{{ (record.rate ?? 0) }}%</span>
-                </div>
+                <RateBar :rate="record.rate ?? 0" :show-fail="(record.failed ?? 0) > 0" />
               </template>
               <template #cell-status_badge="{ record }">
                 <span class="badge" :class="runStatusClass(record.status)">{{ runStatusLabel(record.status) }}</span>
@@ -337,9 +318,25 @@ function goBack() { router.push('/reports') }
       </AppTabs>
     </div>
   </div>
-  <div v-else class="not-found">
-    <p>任务未找到</p>
-    <el-button @click="router.push('/reports')">← 返回报告列表</el-button>
+  <div v-else class="doc-page wb-shell task-report-page">
+    <WorkbenchHeader
+      title="任务报告 Task Report"
+      :icon="REPORT_HEADER_ICON"
+      :icon-gradient="REPORT_HEADER_GRADIENT"
+    />
+    <div class="doc-body">
+      <WorkbenchCrumbs
+        back-to="/reports"
+        back-label="报告列表"
+        :items="[
+          { label: '测试报告', to: '/reports' },
+          { label: '任务报告' },
+        ]"
+      />
+      <EmptyState icon="🔍" text="任务未找到" hint="该任务可能已删除，或链接已失效">
+        <el-button class="wb-btn" @click="router.push('/reports')">← 返回报告列表</el-button>
+      </EmptyState>
+    </div>
   </div>
 </template>
 
@@ -348,9 +345,64 @@ function goBack() { router.push('/reports') }
 .task-report-page .doc-body{padding:var(--app-space-md) var(--app-space-lg) var(--app-space-2xl);display:flex;flex-direction:column;gap:var(--app-space-md);width:100%}
 /* 模块私有色值登记（tokens.css 未登记该值）：用例状态标签的通过/失败底色 */
 .case-status-text{--rg-status-pass-bg:var(--color-lime-45-a10) /* -> --color-lime-45-a10 */;--rg-status-fail-bg:var(--color-red-69-a10)}
-.top-bar{display:flex;align-items:center;gap:12px;margin-bottom:var(--app-space-xs);flex-wrap:wrap}.run-meta{display:flex;align-items:center;gap:10px;font-size:var(--app-size-xs);color:var(--app-text-secondary);flex-wrap:wrap}
+.top-bar{display:flex;align-items:center;gap:12px;margin-bottom:var(--app-space-xs);flex-wrap:wrap}
 .kpi-row{display:grid;grid-template-columns:var(--layout-kpi-cols);gap:12px;margin-bottom:var(--app-space-xs)}
-.task-meta-card{display:flex;flex-wrap:wrap;gap:10px;padding:12px var(--app-space-md);background:var(--app-bg-card);border:2.5px solid var(--ink);border-radius:6px 10px 6px 10px;margin-bottom:var(--app-space-xs);font-size:var(--app-size-xs)}.meta-item{display:flex;align-items:center;gap:6px}.meta-label{opacity:0.5;font-weight:600}.meta-value{font-weight:700}
-.detail-tabs :deep(.el-tabs__header){margin-bottom:0}.detail-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:var(--app-space-xs)}.detail-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius:4px 8px 4px 8px;border:2px solid transparent;color:var(--app-text-secondary);height:auto;line-height:1.4}.detail-tabs :deep(.el-tabs__item:hover){color:var(--ink)}.detail-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-dashboard);border-color:var(--ink)}.detail-tabs :deep(.el-tabs__active-bar){display:none}
-.badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius:3px 6px 3px 6px;border:1.5px solid var(--ink);display:inline-block}.badge-pass{background:var(--app-status-success-bg);color:var(--app-status-success-text)}.badge-fail{background:var(--app-status-danger-bg);color:var(--app-status-danger-text)}.badge-stopped{background:var(--app-offline);color:var(--app-text-secondary)}
+.task-meta-card{display:flex;flex-wrap:wrap;gap:10px;padding:12px var(--app-space-md);background:var(--app-bg-card);border:2.5px solid var(--ink);border-radius: var(--app-radius-md);margin-bottom:var(--app-space-xs);font-size:var(--app-size-xs)}.meta-item{display:flex;align-items:center;gap:6px}.meta-label{opacity:0.5;font-weight:600}.meta-value{font-weight:700}
+.detail-tabs :deep(.el-tabs__header){margin-bottom:0}.detail-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:var(--app-space-xs)}.detail-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius: var(--app-radius-sm);border:2px solid transparent;color:var(--app-text-secondary);height:auto;line-height:1.4}.detail-tabs :deep(.el-tabs__item:hover){color:var(--ink)}.detail-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-dashboard);border-color:var(--ink)}.detail-tabs :deep(.el-tabs__active-bar){display:none}
+.badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius: var(--el-border-radius-small);border:1.5px solid var(--ink);display:inline-block}.badge-pass{background:var(--app-status-success-bg);color:var(--app-status-success-text)}.badge-fail{background:var(--app-status-danger-bg);color:var(--app-status-danger-text)}.badge-stopped{background:var(--app-offline);color:var(--app-text-secondary)}
+/* ── 用例明细 / 失败分析：卡片、步骤与失败原因
+   frontend-l2-page-region「No L2 declaration without a consumer」：
+   模板引用的每个类都必须有本作用域（[data-v-*]）的规则，兄弟组件的 scoped 规则作用不到本组件 ── */
+.kpi-sub { font-size: var(--app-size-xs); color: var(--app-text-secondary); margin-top: var(--app-space-xs); }
+.perf-stats-section { display: flex; flex-direction: column; gap: var(--app-space-sm); }
+.perf-stats-title { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); }
+.perf-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--app-space-md); }
+.table-card, .task-report-table { width: 100%; min-width: 0; }
+
+.case-list { display: flex; flex-direction: column; gap: var(--app-space-sm); }
+.case-card { background: var(--app-bg-card); border: 2px solid var(--ink); border-radius: var(--app-radius-md); overflow: hidden; }
+.case-card.expanded { box-shadow: var(--app-shadow-sm); }
+.case-header { display: flex; align-items: center; gap: var(--app-space-sm); padding: var(--app-space-sm) var(--app-space-md); cursor: pointer; border-left: 4px solid var(--c-workflow); }
+.case-card.bug-card .case-header { border-left-color: var(--app-status-danger); }
+.case-header:hover { background: var(--app-bg-subtle); }
+.case-expand-icon { font-size: var(--app-size-xs); color: var(--app-text-secondary); transition: transform var(--app-duration) var(--app-ease); }
+.case-card.expanded .case-expand-icon { transform: rotate(90deg); }
+.case-id-badge { font-family: var(--app-font-mono); font-size: var(--app-size-xs); font-weight: 700; color: var(--app-text-inverse); background: var(--c-element); padding: 2px var(--app-space-sm); border-radius: var(--app-radius-sm); }
+.case-title-area { display: flex; flex-direction: column; gap: var(--app-space-xs); flex: 1; min-width: 0; }
+.case-title-text { font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.case-status-text { font-size: var(--app-size-xs); font-weight: 700; padding: 2px var(--app-space-sm); border-radius: var(--app-radius-sm); white-space: nowrap; }
+.case-stats { display: flex; gap: var(--app-space-sm); font-size: var(--app-size-xs); font-weight: 700; color: var(--app-text-secondary); white-space: nowrap; }
+.stat-total { color: var(--ink); }
+.stat-pass { color: var(--app-status-success-text); }
+.stat-fail { color: var(--app-status-danger-text); }
+.case-body { border-top: 1.5px solid var(--app-border-light); padding: var(--app-space-md); background: var(--paper); }
+
+.step-list { display: flex; flex-direction: column; gap: var(--app-space-sm); }
+.step-card { display: flex; gap: var(--app-space-sm); background: var(--app-bg-card); border: 1.5px solid var(--app-border-light); border-radius: var(--app-radius-sm); padding: var(--app-space-sm) var(--app-space-md); }
+.step-strip { width: 4px; flex: 0 0 4px; background: var(--c-workflow); border-radius: var(--app-radius-sm); }
+.step-card.step-done .step-strip { background: var(--c-device); }
+.step-body { display: flex; flex-direction: column; gap: var(--app-space-xs); min-width: 0; }
+.step-header-row { display: flex; align-items: center; gap: var(--app-space-sm); }
+.step-index { font-size: var(--app-size-xs); font-weight: 700; color: var(--ink); }
+.step-type-tag { font-size: var(--app-size-xs); font-weight: 700; padding: 2px var(--app-space-sm); border: 1.5px solid var(--ink); border-radius: var(--app-radius-sm); background: var(--app-bg-subtle); }
+.step-desc { font-size: var(--app-size-sm); color: var(--ink); }
+.step-xpath { font-family: var(--app-font-mono); font-size: var(--app-size-xs); color: var(--app-text-secondary); word-break: break-all; }
+.step-empty { font-size: var(--app-size-xs); color: var(--app-text-secondary); }
+
+.bug-card { border-color: var(--app-status-danger); }
+.bug-header-sub { font-size: var(--app-size-xs); color: var(--app-text-secondary); }
+.bug-meta { display: flex; flex-wrap: wrap; gap: var(--app-space-sm) var(--app-space-lg); font-size: var(--app-size-xs); color: var(--ink); margin-bottom: var(--app-space-sm); }
+.bug-meta-label { color: var(--app-text-secondary); font-weight: 600; }
+.bug-meta-value { font-weight: 700; }
+.step-fail-reason { background: var(--app-status-danger-bg); border: 1.5px solid var(--app-status-danger); border-radius: var(--app-radius-sm); color: var(--app-status-danger-text); font-size: var(--app-size-xs); padding: var(--app-space-sm) var(--app-space-md); }
+
+.mono { font-family: var(--app-font-mono); font-size: var(--app-size-xs); }
+.time-text { font-size: var(--app-size-xs); color: var(--app-text-secondary); }
+.full-width { flex-basis: 100%; }
+.conclusion-text { font-weight: 700; white-space: pre-wrap; }
+
+/* 减少动效：关闭位移 / 旋转 / 缩放（颜色过渡不受影响） */
+@media (prefers-reduced-motion: reduce) {
+  .case-expand-icon { transition: none; }
+}
 </style>

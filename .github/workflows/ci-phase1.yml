@@ -240,7 +240,8 @@ jobs:
           FRONTEND_MATCHES=$(grep -rnE \
             "(api_key|password|token|secret)\s*[=:]\s*['\"]\\w{8,}" \
             frontend/src/ --include="*.js" --include="*.vue" 2>/dev/null \
-            | grep -v "node_modules" | grep -v ".test." || true)
+            | grep -v "node_modules" | grep -v ".test." \
+            | grep -vE "[:.\-](api_key|password|token|secret)\s*[=:]" || true)
           if [ -n "$FRONTEND_MATCHES" ]; then
             echo "❌ 前端发现疑似硬编码凭据："
             echo "$FRONTEND_MATCHES"

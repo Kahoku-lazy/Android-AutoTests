@@ -111,12 +111,18 @@ def grep_gate(
     suffixes: set[str],
     pattern: str,
     excludes: tuple[str, ...] = (),
+    exclude_patterns: tuple[str, ...] = (),
     blocking: bool = True,
     always_show: bool = False,
 ) -> Gate:
-    """按 CI 内联 grep -rnE 的口径走查：命中且不在排除清单中即为违规。"""
+    """按 CI 内联 grep -rnE 的口径走查：命中且不在排除清单中即为违规。
+
+    excludes 为子串排除（对应 CI 的 `grep -v "xxx"`）；
+    exclude_patterns 为行级正则排除（对应 CI 的 `grep -vE "xxx"`）。
+    """
 
     rx = re.compile(pattern, re.ASCII)
+    exclude_rx = [re.compile(p, re.ASCII) for p in exclude_patterns]
 
     def _run() -> tuple[bool, list[str]]:
         hits: list[str] = []
@@ -126,6 +132,8 @@ def grep_gate(
                 if not rx.search(line):
                     continue
                 if any(token in line for token in excludes):
+                    continue
+                if any(r.search(line) for r in exclude_rx):
                     continue
                 hits.append(f"{path.relative_to(ROOT).as_posix()}:{lineno}:{line.strip()}")
         if always_show:
@@ -271,6 +279,9 @@ def build_gates() -> list[Gate]:
             {".js", ".vue"},
             r"(api_key|password|token|secret)\s*[=:]\s*['\"]\w{8,}",
             excludes=("node_modules", ".test."),
+            # 排除 Vue 属性绑定（v-model:password / :token）与属性访问、连字符命名前缀，
+            # 与 CI security-scan 规则 5 的 `grep -vE` 保持同一口径
+            exclude_patterns=(r"[:.\-](api_key|password|token|secret)\s*[=:]",),
         ),
         # Job 4 boundary-check
         cmd_gate(

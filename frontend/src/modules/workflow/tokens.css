@@ -11,7 +11,6 @@
   --ac-wood:        var(--ink);
   --ac-wood-light:  var(--color-ink-57) /* -> --color-ink-57 */;
   --ac-wood-soft:   var(--color-ink-79) /* -> --color-ink-79 */;
-  --ac-ink:         var(--ink);
   --ac-ink-muted:   var(--color-ink-57) /* -> --color-ink-57 */;
   --ac-ink-faint:   var(--color-ink-79) /* -> --color-ink-79 */;
   --ac-border:      var(--ink);
@@ -31,8 +30,5 @@
   --ac-radius-sm:   var(--app-radius-sm);
   --ac-shadow:      var(--app-shadow-sm);
   --ac-shadow-lg:   var(--app-shadow-lg);
-  --ac-pin-shadow:  var(--color-ink-05-a18) /* -> --color-ink-05-a18 */;   /* 图钉硬阴影（rgba 绘制色登记处） */
-  --ac-font:        var(--app-font);
-  --ac-accent: var(--c-dashboard);
   --ac-tilt: 0.3deg;
 }

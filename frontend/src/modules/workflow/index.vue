@@ -93,11 +93,12 @@ async function bootWorkbench() {
   lib.setPrototypeId(prototypeId.value)
   try {
     const { data } = await getWorkflowPrototype(prototypeId.value)
-    if (!data.status || !data.prototype) {
+    const proto = data.data
+    if (!data.status || !proto) {
       error.value = data.message || '原型不存在'
       return
     }
-    prototypeName.value = data.prototype.name || ''
+    prototypeName.value = proto.name || ''
     const boot = await lib.bootstrapIfEmpty()
     const remembered = lib.activeId ? lib.findNode(lib.activeId) : null
     if (boot) {
@@ -288,13 +289,6 @@ async function askCreateFlow(parentId?: string | null) {
   lib.status = `已创建页面流（${flow.id}）`
 }
 
-async function askCreateApiFlow(parentId?: string | null) {
-  const pid = await ensureParentFolder(parentId ?? selectedFolderId.value)
-  const flow = await lib.createApiFlow(DEFAULT_NAMES.API_FLOW, pid)
-  await openFile(flow)
-  lib.status = `已创建接口流（${flow.id}）`
-}
-
 async function exportCurrent() {
   const cur = lib.activeNode
   if (!cur || cur.type === 'folder') return
@@ -378,7 +372,7 @@ watch(
 </script>
 
 <template>
-  <div class="doc-page workflow-workbench">
+  <div class="doc-page doc-page--fixed wb-shell workflow-workbench">
     <WorkbenchHeader
       :title="prototypeName || '原型工作台'"
       :subtitle="breadcrumb"
@@ -436,8 +430,8 @@ watch(
         @keyup.enter="confirmCreateFolder"
       />
       <template #footer>
-        <el-button @click="cancelCreate">取消</el-button>
-        <el-button type="primary" @click="confirmCreateFolder">确定</el-button>
+        <el-button class="wb-btn" @click="cancelCreate">取消</el-button>
+        <el-button class="wb-btn" type="primary" @click="confirmCreateFolder">确定</el-button>
       </template>
     </el-dialog>
 
@@ -454,7 +448,6 @@ watch(
         @open="openFile"
         @create-folder="askCreateFolder"
         @create-flow="askCreateFlow"
-        @create-api-flow="askCreateApiFlow"
         @export="exportFile"
       />
 
@@ -478,10 +471,11 @@ watch(
 .workflow-workbench {
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
   background: transparent;
-  overflow: hidden;
+  /* height / overflow 不再由此声明：外壳 App.vue 的 .main-content__body :deep(.doc-page)
+     以更高特异性（0,2,0）覆盖为 height:auto / overflow:visible，故原声明属失效声明（见 style.css 顶部说明）。
+     本页高度由 flex 链（flex:1 + min-height:0）给出，滚动由 .wb-body 内层容器承担。 */
   /* ── 本模块私有色：tokens.css 未登记，登记在页面根作用域（消费者 .wf-btn / .status-pill 均在其内）── */
   --wf-btn-press-shadow: var(--color-ink-05-a05) /* -> --color-ink-05-a05 */;        /* 按钮按下硬阴影 */
   --wf-status-pill-border: var(--color-cyan-74-a30) /* -> --color-cyan-74-a30 */; /* 状态胶囊描边（工作流蓝 40%） */
@@ -509,7 +503,7 @@ watch(
   line-height: 1.4;
   cursor: pointer;
   box-shadow: var(--app-shadow-sm);
-  transition: background 0.12s var(--app-ease), box-shadow 0.12s var(--app-ease),
+  transition: background var(--app-duration-fast) var(--app-ease), box-shadow var(--app-duration-fast) var(--app-ease),
     transform 0.12s var(--app-ease);
 }
 .wf-btn:hover {
@@ -559,7 +553,7 @@ watch(
   padding: var(--app-space-xs) 10px;
   background: var(--ac-accent-soft);
   border: 1.5px solid var(--wf-status-pill-border);
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
 }
 
 /* ── 主体：资源两栏 / 绘制全宽 ── */

@@ -6,6 +6,7 @@ import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import SketchCard from '@/shared/components/SketchCard.vue'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
+import SkeletonCard from '@/shared/components/patterns/SkeletonCard.vue'
 import { sketchTiltAt, sketchToneAt } from '@/shared/helpers/sketchCard'
 import { usePrototypes } from './composables/usePrototypes'
 
@@ -78,8 +79,8 @@ async function onDelete(id: number, name: string) {
       </template>
     </WorkbenchHeader>
 
-    <div v-if="loading" class="doc-body proto-list-page__loading">
-      <el-skeleton :rows="4" animated />
+    <div v-if="loading" class="doc-body">
+      <SkeletonCard variant="list" :lines="4" />
     </div>
 
     <ErrorState v-else-if="error" :message="error" @retry="loadPrototypes" />
@@ -154,9 +155,6 @@ async function onDelete(id: number, name: string) {
 .proto-list-page .doc-body {
   overflow-y: auto;
   padding: var(--app-space-lg);
-}
-.proto-list-page__loading {
-  max-width: 720px;
 }
 .proto-grid {
   display: grid;

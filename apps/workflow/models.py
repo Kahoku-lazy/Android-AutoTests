@@ -63,12 +63,10 @@ class WorkflowDocument(models.Model):
     """工作流 JSON 文档 → wf_documents（归属某原型）."""
 
     TYPE_PAGE_FLOW = "page_flow"
-    TYPE_API_FLOW = "api_flow"
     TYPE_CHOICES = [
         (TYPE_PAGE_FLOW, "页面流"),
-        (TYPE_API_FLOW, "接口流"),
     ]
-    SUPPORTED_TYPES = frozenset({TYPE_PAGE_FLOW, TYPE_API_FLOW})
+    SUPPORTED_TYPES = frozenset({TYPE_PAGE_FLOW})
 
     prototype = models.ForeignKey(
         WorkflowPrototype,

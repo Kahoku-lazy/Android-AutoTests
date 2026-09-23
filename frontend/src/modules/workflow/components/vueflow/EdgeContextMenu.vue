@@ -109,7 +109,7 @@ async function doDelete() {
 /* Teleport 到 body：用全局 token + 字面量，不能依赖 .workflow-workbench 作用域变量 */
 .edge-menu {
   position: fixed;
-  z-index: 60;
+  z-index: var(--z-popup);
   width: 248px;
   padding: 6px;
   background: var(--app-bg-card);
@@ -138,7 +138,7 @@ async function doDelete() {
   gap: var(--app-space-sm);
   padding: 9px 12px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   background: transparent;
   color: var(--ink);
   font-size: var(--app-size-sm);
@@ -146,7 +146,7 @@ async function doDelete() {
   cursor: pointer;
   text-align: left;
   font-family: inherit;
-  transition: background 0.12s var(--app-ease);
+  transition: background var(--app-duration-fast) var(--app-ease);
 }
 .edge-menu__item:hover { background: var(--wf-edge-hover-bg); }
 .edge-menu__item.danger { color: var(--app-status-danger-text); }
@@ -164,7 +164,7 @@ async function doDelete() {
   border: 2px solid var(--ink);
   background: var(--app-bg-card);
   color: var(--ink);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   width: 28px;
   height: 28px;
   cursor: pointer;

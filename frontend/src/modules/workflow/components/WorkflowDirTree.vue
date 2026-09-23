@@ -8,7 +8,7 @@
  * - solo：资源态独占整页（非侧栏窄条）
  */
 import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useLibraryStore, type LibNode } from '@/modules/workflow/stores/libraryStore'
 import { NODE_TYPES, NODE_TYPE_LABELS } from '@/modules/workflow/constants'
 
@@ -25,7 +25,6 @@ const emit = defineEmits<{
   open: [node: LibNode]
   createFolder: [parentId: string | null]
   createFlow: [parentId: string | null]
-  createApiFlow: [parentId: string | null]
   export: [node: LibNode]
 }>()
 
@@ -67,7 +66,6 @@ const treeRows = computed(() => {
         const order: Record<string, number> = {
           folder: 0,
           [NODE_TYPES.PAGE_FLOW]: 1,
-          [NODE_TYPES.API_FLOW]: 2,
         }
         return (order[a.type] ?? 9) - (order[b.type] ?? 9) || a.name.localeCompare(b.name, 'zh')
       })
@@ -158,9 +156,15 @@ async function removeNode(n: LibNode) {
     // 用户取消删除：ElMessageBox 以 reject 表示取消，不执行删除（非静默吞错）
     return
   }
-  await lib.deleteNode(n.id)
-  if (props.selectedFolderId === n.id) emit('update:selectedFolderId', null)
-  closeCtx()
+  try {
+    await lib.deleteNode(n.id)
+    if (props.selectedFolderId === n.id) emit('update:selectedFolderId', null)
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : '删除失败'
+    ElMessage.error(msg)
+  } finally {
+    closeCtx()
+  }
 }
 
 function ctxCreateFolder() {
@@ -180,15 +184,6 @@ function ctxCreateFlow() {
       ? ctx.value.node?.id ?? null
       : props.selectedFolderId
   emit('createFlow', parent)
-  closeCtx()
-}
-
-function ctxCreateApiFlow() {
-  const parent =
-    ctx.value?.kind === 'folder'
-      ? ctx.value.node?.id ?? null
-      : props.selectedFolderId
-  emit('createApiFlow', parent)
   closeCtx()
 }
 
@@ -311,13 +306,6 @@ function onCreateRoot() {
           >
             + 页面流
           </button>
-          <button
-            type="button"
-            class="mini"
-            @click="emit('createApiFlow', selectedFolderId)"
-          >
-            + 接口流
-          </button>
         </div>
       </div>
 
@@ -352,7 +340,6 @@ function onCreateRoot() {
                 : activeFileId === row.node.id,
             file: row.node.type !== 'folder',
             flow: row.node.type === NODE_TYPES.PAGE_FLOW,
-            api: row.node.type === NODE_TYPES.API_FLOW,
             dragging: dragId === row.node.id,
             'drop-on':
               dragging &&
@@ -386,7 +373,6 @@ function onCreateRoot() {
             <template v-if="row.node.type === 'folder'">
               {{ lib.expanded[row.node.id] ? '📂' : '📁' }}
             </template>
-            <template v-else-if="row.node.type === NODE_TYPES.API_FLOW">📡</template>
             <template v-else>🗺️</template>
           </span>
           <input
@@ -426,7 +412,6 @@ function onCreateRoot() {
         <template v-if="ctx.kind === 'root' || ctx.kind === 'folder'">
           <button type="button" @click="ctxCreateFolder">新建子目录</button>
           <button type="button" @click="ctxCreateFlow">新建页面流</button>
-          <button type="button" @click="ctxCreateApiFlow">新建接口流</button>
           <template v-if="ctx.kind === 'folder' && ctx.node">
             <hr />
             <button type="button" @click="ctxRename">重命名</button>
@@ -459,7 +444,7 @@ function onCreateRoot() {
   position: relative;
   user-select: none;
   box-shadow: var(--app-shadow-sm);
-  transition: width 0.2s ease;
+  transition: width var(--app-duration-slow) var(--app-ease);
 }
 .dir-pane--collapsed {
   width: 40px;
@@ -504,7 +489,7 @@ function onCreateRoot() {
   width: 26px;
   height: 26px;
   border: 2px solid var(--ink);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   background: var(--app-bg-card);
   font-size: var(--app-size-sm);
   font-weight: 800;
@@ -537,7 +522,7 @@ function onCreateRoot() {
   font-family: inherit;
   cursor: pointer;
   color: var(--ink);
-  transition: background 0.12s var(--app-ease);
+  transition: background var(--app-duration-fast) var(--app-ease);
 }
 .mini:hover { background: var(--ac-accent-soft); }
 .mini:focus-visible { outline: 2px solid var(--c-workflow); outline-offset: 2px; }
@@ -562,7 +547,7 @@ function onCreateRoot() {
   min-height: 34px;
   padding: var(--app-space-xs) var(--app-space-sm);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   background: transparent;
   cursor: pointer;
   font-family: inherit;
@@ -571,7 +556,7 @@ function onCreateRoot() {
   color: var(--ink);
   text-align: left;
   box-sizing: border-box;
-  transition: background 0.12s var(--app-ease);
+  transition: background var(--app-duration-fast) var(--app-ease);
 }
 .dir-row:hover { background: var(--ac-accent-soft); }
 .dir-row.active {
@@ -591,7 +576,6 @@ function onCreateRoot() {
   font-weight: 700;
 }
 .dir-row.flow .name { color: var(--ac-accent-deep); }
-.dir-row.api .name { color: var(--c-workflow); }
 .type-tag {
   margin-left: 6px;
   font-size: var(--app-size-xs);
@@ -622,7 +606,7 @@ function onCreateRoot() {
   font-size: var(--app-size-xs);
   font-weight: 700;
   padding: 1px 7px;
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   background: var(--ac-accent-soft);
   color: var(--ac-accent-deep);
   flex-shrink: 0;
@@ -632,7 +616,7 @@ function onCreateRoot() {
   min-width: 0;
   padding: 3px 7px;
   border: 2px solid var(--c-workflow);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   font-size: var(--app-size-sm);
   font-weight: 600;
   font-family: inherit;
@@ -654,7 +638,7 @@ function onCreateRoot() {
 /* 右键菜单挂到 body：用全局 token + 字面量，不能依赖 .workflow-workbench 作用域变量 */
 .wf-ctx {
   position: fixed;
-  z-index: 60;
+  z-index: var(--z-popup);
   min-width: 176px;
   padding: 6px;
   background: var(--app-bg-card);
@@ -672,13 +656,13 @@ function onCreateRoot() {
   background: transparent;
   text-align: left;
   padding: 9px 12px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   font-size: var(--app-size-sm);
   font-weight: 600;
   font-family: inherit;
   color: var(--ink);
   cursor: pointer;
-  transition: background 0.12s var(--app-ease);
+  transition: background var(--app-duration-fast) var(--app-ease);
 }
 .wf-ctx button:hover { background: var(--wf-ctx-hover-bg); }
 .wf-ctx button.danger { color: var(--app-status-danger-text); }

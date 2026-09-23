@@ -205,6 +205,12 @@ class WorkflowDocumentViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         wf_api.delete_document(instance.doc_id)
 
+    def destroy(self, request, *args, **kwargs):
+        """返回 200 + 空 data，走信封 {status:true}；避免默认 204 空体让前端判失败。"""
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response({})
+
     @action(detail=False, methods=["post"])
     def _import(self, request):
         overwrite = request.query_params.get("overwrite") in ("1", "true", "True")

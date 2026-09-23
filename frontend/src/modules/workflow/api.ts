@@ -2,6 +2,37 @@
  * 工作流工作台 API — 原型 + 目录/文档 + 元素素材
  */
 import client from '@/shared/api-client'
+import type { DjangoResponse } from '@/shared/api-client'
+
+type Envelope<T> = Promise<{ data: DjangoResponse<T> }>
+
+export interface WorkflowPrototype {
+  id: number
+  name: string
+  description: string
+  doc_count: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface WorkflowDirectoryRow {
+  id: number
+  name: string
+  parent_id: number | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface WorkflowDocumentRow {
+  doc_id: string
+  title: string
+  doc_type: string
+  directory_id: number | null
+  description?: string
+  config?: unknown
+  created_at?: string
+  updated_at?: string
+}
 
 /** 列出元素管理中的页面树 */
 export function listPages() {
@@ -13,23 +44,13 @@ export function listPageElements(pageId, filter = 'all') {
   return client.get(`/elements/pages/${pageId}/items/`, { params: { filter } })
 }
 
-/** 列出 Web 元素分组 */
-export function listWebGroups() {
-  return client.get('/elements/web-groups/')
-}
-
-/** 列出某分组下的 Web 元素 */
-export function listWebGroupElements(groupId) {
-  return client.get('/elements/web/', { params: { group_id: groupId } })
-}
-
 // ── 原型 ──
 
-export function listWorkflowPrototypes() {
+export function listWorkflowPrototypes(): Envelope<WorkflowPrototype[]> {
   return client.get('/workflow/prototypes/')
 }
 
-export function getWorkflowPrototype(id) {
+export function getWorkflowPrototype(id: number): Envelope<WorkflowPrototype> {
   return client.get(`/workflow/prototypes/${id}/`)
 }
 
@@ -47,7 +68,10 @@ export function deleteWorkflowPrototype(id) {
 
 // ── Workflow 目录 / JSON 文档 ──
 
-export function listWorkflowDirectories(params = {}) {
+export function listWorkflowDirectories(params = {}): Envelope<{
+  directories: WorkflowDirectoryRow[]
+  tree: unknown[]
+}> {
   return client.get('/workflow/directories/', { params })
 }
 
@@ -63,11 +87,11 @@ export function deleteWorkflowDirectory(dirId) {
   return client.post(`/workflow/directories/${dirId}/`, { action: 'delete' })
 }
 
-export function listWorkflowDocuments(params = {}) {
+export function listWorkflowDocuments(params = {}): Envelope<WorkflowDocumentRow[]> {
   return client.get('/workflow/documents/', { params })
 }
 
-export function getWorkflowDocument(docId) {
+export function getWorkflowDocument(docId: string): Envelope<WorkflowDocumentRow> {
   return client.get(`/workflow/documents/${encodeURIComponent(docId)}/`)
 }
 
@@ -91,7 +115,9 @@ export function importWorkflowDocument(envelope, { overwrite = false } = {}) {
   })
 }
 
-export function exportWorkflowDocument(docId) {
+export function exportWorkflowDocument(
+  docId: string,
+): Envelope<{ envelope: Record<string, unknown> }> {
   return client.get(`/workflow/documents/${encodeURIComponent(docId)}/export/`)
 }
 

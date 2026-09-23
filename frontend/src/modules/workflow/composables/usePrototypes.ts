@@ -6,16 +6,10 @@ import {
   createWorkflowPrototype,
   deleteWorkflowPrototype,
   listWorkflowPrototypes,
+  type WorkflowPrototype,
 } from '../api'
 
-export interface WorkflowPrototype {
-  id: number
-  name: string
-  description: string
-  doc_count: number
-  created_at?: string
-  updated_at?: string
-}
+export type { WorkflowPrototype }
 
 export function usePrototypes() {
   const prototypes = ref<WorkflowPrototype[]>([])
@@ -30,8 +24,8 @@ export function usePrototypes() {
     error.value = null
     try {
       const { data } = await listWorkflowPrototypes()
-      if (data.status && Array.isArray(data.prototypes)) {
-        prototypes.value = data.prototypes
+      if (data.status && Array.isArray(data.data)) {
+        prototypes.value = data.data
       } else {
         prototypes.value = []
         error.value = data.message || '原型列表加载失败'

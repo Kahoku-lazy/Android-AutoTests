@@ -26,7 +26,7 @@ import { NODE_TYPES, NODE_TYPE_LABELS, type FlowDocType } from '@/modules/workfl
 function elXpath(el: { xpath?: string; type: string }): string {
   return el.xpath || el.type
 }
-import type { CatalogPage, ApiEndpointRef } from '@/modules/workflow/data/pageCatalog'
+import type { CatalogPage } from '@/modules/workflow/data/pageCatalog'
 
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
@@ -50,7 +50,6 @@ const props = withDefaults(
   { seedDemo: true, docName: '', docId: '', flowKind: NODE_TYPES.PAGE_FLOW }
 )
 
-const isApiFlow = computed(() => props.flowKind === NODE_TYPES.API_FLOW)
 const kindLabel = computed(() => NODE_TYPE_LABELS[props.flowKind] || '页面流')
 
 const store = useWorkflowStore()
@@ -119,13 +118,6 @@ function handleLinkPage(page: CatalogPage) {
   status.value = store.statusMessage || `已关联「${page.name}」，请添加元素`
 }
 
-function handleLinkApi(endpoint: ApiEndpointRef) {
-  if (!ctxMenu.value.nodeId) return
-  store.linkApiEndpoint(ctxMenu.value.nodeId, endpoint)
-  refreshFromStore()
-  status.value = store.statusMessage || `已关联 API「${endpoint.name}」`
-}
-
 async function handleResyncPage() {
   if (!ctxMenu.value.nodeId) return
   const ok = await store.resyncLinkedPage(ctxMenu.value.nodeId)
@@ -160,15 +152,6 @@ const pickerPool = computed(() => {
   const node = store.findNode(picker.value.nodeId)
   if (!node) return []
 
-  // API 节点：从关联端点的 response_body_schema 生成虚拟池
-  if (node.type === 'ApiNode') {
-    const schema = (node.properties?.response_body_schema as Record<string, any>) || {}
-    const fields = flattenSchemaFields(schema).map(key => ({
-      id: key, label: key, type: 'data', used: node.outputs.some(p => p.name === key)
-    }))
-    return fields.length ? fields : PAGE_ELEMENTS
-  }
-
   const linked = node.properties?.linked_elements as typeof PAGE_ELEMENTS | undefined
   if (linked?.length) return linked
   return NODE_REGISTRY[node.type]?.elementPool === 'popup' ? POPUP_ELEMENTS : PAGE_ELEMENTS
@@ -183,29 +166,11 @@ const filteredPicker = computed(() => {
     .map(e => ({ ...e, used: used.has(e.id) }))
 })
 
-function flattenSchemaFields(obj: Record<string, any>, prefix = 'resp'): string[] {
-  const keys: string[] = []
-  for (const [key, val] of Object.entries(obj)) {
-    const fullKey = `${prefix}.${key}`
-    if (val && typeof val === 'object' && !Array.isArray(val)) {
-      keys.push(...flattenSchemaFields(val, fullKey))
-    } else {
-      keys.push(fullKey)
-    }
-  }
-  return keys
-}
-
 function selectElement(elId: string) {
   const item = filteredPicker.value.find(x => x.id === elId)
   if (!item || item.used) return
 
-  const node = store.findNode(picker.value.nodeId)
-  if (node?.type === 'ApiNode') {
-    store.addApiPort(picker.value.nodeId, elId)
-  } else {
-    store.addPort(picker.value.nodeId, elId)
-  }
+  store.addPort(picker.value.nodeId, elId)
   picker.value.show = false
   refreshFromStore()
   status.value = '已添加端口: ' + item.label
@@ -285,7 +250,6 @@ function handleEdgeDelete(id: number) {
 }
 
 function addPage() {
-  if (isApiFlow.value) return
   const n = store.createNode('PageNode', 180 + store.pageNodes.length * 40, 160 + store.pageNodes.length * 20)
   if (n) {
     n.widgets_values = [`页面${store.pageNodes.length}`, 'teal']
@@ -294,23 +258,11 @@ function addPage() {
 }
 
 function addPopup() {
-  if (isApiFlow.value) return
   store.createNode('PopupNode', 420, 320)
   refreshFromStore()
 }
 
-function addApi() {
-  if (!isApiFlow.value) return
-  const count = store.nodes.filter(n => n.type === 'ApiNode').length
-  const n = store.createNode('ApiNode', 300, 80 + count * 60)
-  if (n) {
-    n.widgets_values = [`API 接口${count + 1}`, 'orange']
-    refreshFromStore()
-  }
-}
-
 function addStart() {
-  if (isApiFlow.value) return
   const n = store.createNode('StartNode', 60, 200)
   if (n) {
     refreshFromStore()
@@ -321,7 +273,6 @@ function addStart() {
 }
 
 function addEnd() {
-  if (isApiFlow.value) return
   const n = store.createNode('EndNode', 780 + store.endNodes.length * 40, 220)
   if (n) {
     refreshFromStore()
@@ -458,15 +409,10 @@ watch(
         <span v-if="docId" class="id-chip" :title="docId">{{ docId }}</span>
       </div>
       <div class="vf-actions">
-        <template v-if="!isApiFlow">
-          <button class="btn start" @click="addStart" title="最多 1 个 · 无入口">+ 起点</button>
-          <button class="btn primary" @click="addPage">+ 页面</button>
-          <button class="btn" @click="addPopup">+ 弹窗</button>
-          <button class="btn end" @click="addEnd" title="无输出 · 可多终点">+ 终点</button>
-        </template>
-        <template v-else>
-          <button class="btn api-btn" @click="addApi" title="接口串行 · 关联接口后生成数据端口">+ API</button>
-        </template>
+        <button class="btn start" @click="addStart" title="最多 1 个 · 无入口">+ 起点</button>
+        <button class="btn primary" @click="addPage">+ 页面</button>
+        <button class="btn" @click="addPopup">+ 弹窗</button>
+        <button class="btn end" @click="addEnd" title="无输出 · 可多终点">+ 终点</button>
         <button class="btn" @click="doFit">适配视图</button>
         <button class="btn" @click="refreshFromStore">刷新</button>
         <button class="btn danger" @click="clearAll">清空</button>
@@ -558,13 +504,11 @@ watch(
       :y="ctxMenu.y"
       :node-id="ctxMenu.nodeId"
       :node-label="ctxMenu.nodeLabel"
-      :node-type="store.findNode(ctxMenu.nodeId)?.type"
       :can-link-page="ctxMenu.canLinkPage"
       :linked-page-id="ctxMenu.linkedPageId"
       :linked-page-name="ctxMenu.linkedPageName"
       @close="ctxMenu.show = false"
       @link-page="handleLinkPage"
-      @link-api="handleLinkApi"
       @resync-page="handleResyncPage"
       @delete-node="handleDeleteFromCtx"
     />
@@ -593,9 +537,6 @@ watch(
   overflow: hidden;
   /* ── 本模块私有色：tokens.css 未登记，登记在组件根作用域（工具栏消费者均在其内）── */
   --wf-btn-press-shadow: var(--color-ink-05-a05) /* -> --color-ink-05-a05 */;      /* 按钮按下硬阴影 */
-  --wf-api-btn-fg: var(--color-orange-37) /* -> --color-orange-37 */;                        /* API 按钮文字（琥珀） */
-  --wf-api-btn-border: var(--color-orange-55-a60) /* -> --color-orange-55-a60 */;    /* API 按钮描边（橙 50%） */
-  --wf-api-btn-hover-bg: var(--color-orange-55-a10) /* -> --color-orange-55-a10 */; /* API 按钮悬停底（橙 12%） */
 }
 .vf-toolbar {
   display: flex;
@@ -632,14 +573,14 @@ watch(
   font-family: inherit;
   color: var(--ink);
   outline: none;
-  transition: border-color 0.12s var(--app-ease);
+  transition: border-color var(--app-duration-fast) var(--app-ease);
 }
 .doc-name:focus { border-color: var(--c-workflow); }
 .kind-chip {
   font-size: var(--app-size-xs);
   font-weight: 700;
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   background: var(--ac-accent-soft);
   color: var(--ac-accent-deep);
   flex-shrink: 0;
@@ -655,7 +596,7 @@ watch(
   white-space: nowrap;
   background: var(--app-bg-subtle);
   padding: 3px 9px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
 }
 .btn {
   display: inline-flex;
@@ -671,7 +612,7 @@ watch(
   font-weight: 700;
   cursor: pointer;
   box-shadow: var(--app-shadow-sm);
-  transition: background 0.12s var(--app-ease), box-shadow 0.12s var(--app-ease),
+  transition: background var(--app-duration-fast) var(--app-ease), box-shadow var(--app-duration-fast) var(--app-ease),
     transform 0.12s var(--app-ease);
 }
 .btn:hover {
@@ -699,14 +640,6 @@ watch(
 }
 .btn.start { color: var(--ac-accent-deep); }
 .btn.end { color: var(--app-text-secondary); }
-.btn.api-btn {
-  color: var(--wf-api-btn-fg);
-  border-color: var(--wf-api-btn-border);
-}
-.btn.api-btn:hover {
-  background: var(--wf-api-btn-hover-bg);
-  color: var(--wf-api-btn-fg);
-}
 .btn.danger { color: var(--app-status-danger-text); }
 .btn.danger:hover {
   background: var(--app-status-danger-bg);
@@ -791,20 +724,20 @@ watch(
 .el-picker-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 9990;
+  z-index: var(--z-modal-backdrop);
   background: var(--wf-picker-mask);
 }
 .el-picker {
   position: fixed;
-  z-index: 9991;
+  z-index: var(--z-modal);
   width: 340px;
   max-height: 420px;
   display: flex;
   flex-direction: column;
   background: var(--app-bg-card);
   border: 1px solid var(--wf-picker-border);
-  border-radius: 14px;
-  box-shadow: 0 18px 48px var(--wf-picker-shadow);
+  border-radius: var(--app-radius-lg);
+  box-shadow: 4px 4px 0 0 var(--wf-picker-shadow);
   overflow: hidden;
   font-family: var(--app-font, 'Cascadia Mono', 'Noto Sans SC', sans-serif);
   color: var(--ink);
@@ -828,7 +761,7 @@ watch(
   color: var(--wf-picker-accent);
   background: var(--wf-picker-count-bg);
   padding: 2px var(--app-space-sm);
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
 }
 .el-picker-close {
   margin-left: auto;
@@ -839,14 +772,14 @@ watch(
   color: var(--app-text-secondary);
   line-height: 1;
   padding: 2px 6px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
 }
 .el-picker-close:hover { background: var(--wf-picker-tint-soft); color: var(--ink); }
 .el-picker-search {
   margin: 10px 12px 6px;
   padding: 9px 12px;
   border: 1.5px solid var(--wf-picker-border);
-  border-radius: 10px;
+  border-radius: var(--app-radius-md);
   background: var(--app-bg-card);
   color: var(--ink);
   font-size: var(--app-size-sm);
@@ -870,7 +803,7 @@ watch(
   padding: 10px 10px;
   margin-bottom: var(--app-space-xs);
   border: 1.5px solid var(--wf-picker-item-border);
-  border-radius: 12px;
+  border-radius: var(--app-radius-md);
   background: var(--app-bg-card);
   text-align: left;
   cursor: pointer;
@@ -916,7 +849,7 @@ watch(
   font-size: var(--app-size-xs);
   font-weight: 800;
   padding: 3px var(--app-space-sm);
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   background: var(--wf-picker-tint-soft);
   color: var(--app-text-secondary);
   align-self: center;

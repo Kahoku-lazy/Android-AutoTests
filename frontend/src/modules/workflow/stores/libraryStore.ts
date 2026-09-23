@@ -100,7 +100,6 @@ export const useLibraryStore = defineStore('wf-library', () => {
         const order: Record<string, number> = {
           folder: 0,
           [NODE_TYPES.PAGE_FLOW]: 1,
-          [NODE_TYPES.API_FLOW]: 2,
         }
         return (order[a.type] ?? 9) - (order[b.type] ?? 9) || a.name.localeCompare(b.name, 'zh')
       })
@@ -184,8 +183,9 @@ export const useLibraryStore = defineStore('wf-library', () => {
         listWorkflowDirectories({ prototype_id: prototypeId }),
         listWorkflowDocuments({ prototype_id: prototypeId }),
       ])
-      const dirs = dirRes.data?.directories || []
-      const docs = (docRes.data?.documents || []).filter(
+      const dirs = dirRes.data.data?.directories ?? []
+      const rawDocs = Array.isArray(docRes.data.data) ? docRes.data.data : []
+      const docs = rawDocs.filter(
         (d: { doc_type?: string }) => !d.doc_type || isFlowDocType(d.doc_type)
       )
       const folderNodes = dirs.map(mapDir)
@@ -234,9 +234,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
     name: string,
     parentId: string | null = null
   ): Promise<LibNode> {
-    const title =
-      name.trim() ||
-      (docType === NODE_TYPES.API_FLOW ? DEFAULT_NAMES.API_FLOW : DEFAULT_NAMES.PAGE_FLOW)
+    const title = name.trim() || DEFAULT_NAMES.PAGE_FLOW
     const empty: WorkflowSaveData = {
       name: title,
       version: '1.0',
@@ -244,7 +242,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       nodes: [],
       links: [],
     }
-    const label = docType === NODE_TYPES.API_FLOW ? '接口流' : '页面流'
+    const label = '页面流'
     try {
       const res = await saveWorkflowDocument({
         title,
@@ -272,10 +270,6 @@ export const useLibraryStore = defineStore('wf-library', () => {
 
   async function createPageFlow(name: string, parentId: string | null = null): Promise<LibNode> {
     return createFlowDoc(NODE_TYPES.PAGE_FLOW, name, parentId)
-  }
-
-  async function createApiFlow(name: string, parentId: string | null = null): Promise<LibNode> {
-    return createFlowDoc(NODE_TYPES.API_FLOW, name, parentId)
   }
 
   async function renameNode(id: string, name: string): Promise<void> {
@@ -320,7 +314,13 @@ export const useLibraryStore = defineStore('wf-library', () => {
         await refreshFromServer()
       } else {
         const res = await deleteWorkflowDocument(id)
-        if (!res.data?.status) throw new Error(res.data?.message || '删除失败')
+        // DRF ModelViewSet.destroy 默认 204 空体；信封 {status:true} 或空体 2xx 都算成功
+        if (res.status < 200 || res.status >= 300) {
+          throw new Error(res.data?.message || '删除失败')
+        }
+        if (res.data && typeof res.data === 'object' && res.data.status === false) {
+          throw new Error(res.data.message || '删除失败')
+        }
         delete configCache.value[id]
         nodes.value = nodes.value.filter(n => n.id !== id)
         if (activeId.value === id) activeId.value = null
@@ -330,7 +330,6 @@ export const useLibraryStore = defineStore('wf-library', () => {
     } catch (e: any) {
       const msg = e?.response?.data?.message || e?.message || '删除失败'
       throw new Error(msg)
-      throw e
     }
   }
 
@@ -453,11 +452,12 @@ export const useLibraryStore = defineStore('wf-library', () => {
     try {
       const res = await getWorkflowDocument(docId)
       if (!res.data?.status) return null
-      const cfg = res.data.document?.config ?? {}
+      const doc = res.data.data
+      const cfg = doc?.config ?? {}
       configCache.value[docId] = cfg
       const n = findNode(docId)
-      if (n && res.data.document?.title) n.name = res.data.document.title
-      if (n && res.data.document?.updated_at) n.updatedAt = res.data.document.updated_at
+      if (n && doc?.title) n.name = doc.title
+      if (n && doc?.updated_at) n.updatedAt = doc.updated_at
       return cfg
     } catch (e: any) {
       throw new Error(e?.response?.data?.message || e?.message || '加载文档失败')
@@ -476,7 +476,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
     try {
       const res = await exportWorkflowDocument(docId)
       if (!res.data?.status) throw new Error(res.data?.message || '导出失败')
-      return res.data.envelope
+      return res.data.data?.envelope ?? null
     } catch (e: any) {
       throw new Error(e?.response?.data?.message || e?.message || '导出失败')
       return null
@@ -558,7 +558,6 @@ export const useLibraryStore = defineStore('wf-library', () => {
     childrenOf,
     createFolder,
     createPageFlow,
-    createApiFlow,
     createFlowDoc,
     configCache,
     renameNode,

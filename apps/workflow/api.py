@@ -45,13 +45,9 @@ from .models import WorkflowDirectory, WorkflowDocument, WorkflowPrototype
 FORMAT_V1 = "workflow-doc-v1"
 
 
-def gen_doc_id(doc_type: str) -> str:
-    """WF-{PF|AF}-YYYYMMDD-HHMMSS-XXXX — 按文档类型生成全局唯一 ID."""
-    if doc_type == WorkflowDocument.TYPE_API_FLOW:
-        prefix = "AF"
-    else:
-        prefix = "PF"
-        doc_type = WorkflowDocument.TYPE_PAGE_FLOW
+def gen_doc_id() -> str:
+    """WF-PF-YYYYMMDD-HHMMSS-XXXX — 生成全局唯一文档 ID（接口流下线后仅剩页面流）。"""
+    prefix = "PF"
     now = datetime.now()
     suffix = "".join(random.choices(string.ascii_uppercase + string.digits, k=4))
     candidate = f"WF-{prefix}-{now.strftime('%Y%m%d')}-{now.strftime('%H%M%S')}-{suffix}"
@@ -383,7 +379,7 @@ def upsert_document(
     if not title:
         return False, "标题不能为空", 400
     if doc_type not in WorkflowDocument.SUPPORTED_TYPES:
-        return False, "doc_type 必须是 page_flow 或 api_flow", 400
+        return False, "doc_type 必须是 page_flow", 400
 
     directory = None
     set_directory = clear_directory or directory_id is not None
@@ -443,7 +439,7 @@ def upsert_document(
         and directory.prototype_id != int(prototype_id)
     ):
         return False, "目录不属于该原型", 400
-    new_id = gen_doc_id(doc_type)
+    new_id = gen_doc_id()
     doc = WorkflowDocument.objects.create(
         prototype_id=proto_id,
         doc_id=new_id,
@@ -536,7 +532,7 @@ def import_document_envelope(payload: dict, *, overwrite: bool = False) -> tuple
             }
 
     if doc_type not in WorkflowDocument.SUPPORTED_TYPES:
-        return False, "无法识别 doc_type（仅支持 page_flow / api_flow）", 400
+        return False, "无法识别 doc_type（仅支持 page_flow）", 400
     if config is None:
         config = {}
     if not title:

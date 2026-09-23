@@ -18,6 +18,17 @@ interface UiTreeNode {
   children?: UiTreeNode[]
 }
 
+// el-tree 把节点数据的类型标为宽松的 TreeNodeData；本组件的树数据恒由 toUiNodes() 构造，
+// 因此在这一个收窄点把库的宽松入参还原为 UiTreeNode，避免每个回调各自断言。
+type ElTreeNode = { data?: unknown }
+
+function uiDataOf(node: ElTreeNode | undefined): UiTreeNode | null {
+  const data = node?.data
+  if (!data || typeof data !== 'object') return null
+  const candidate = data as Partial<UiTreeNode>
+  return candidate.type && candidate.key ? (candidate as UiTreeNode) : null
+}
+
 const props = defineProps<{
   treeData: TreeNode[]
   activeFileId: number | null
@@ -311,28 +322,24 @@ function handleNodeClick(data: UiTreeNode) {
   if (data.type === 'file') emit('selectFile', data.id)
 }
 
-function allowDrag(node: { data?: UiTreeNode }) {
-  return !selectMode.value && !!node?.data
+function allowDrag(node: ElTreeNode) {
+  return !selectMode.value && !!uiDataOf(node)
 }
 
-function allowDrop(
-  _draggingNode: unknown,
-  dropNode: { data?: UiTreeNode },
-  type: string,
-) {
-  const target = dropNode?.data
+function allowDrop(_draggingNode: ElTreeNode, dropNode: ElTreeNode, type: string) {
+  const target = uiDataOf(dropNode)
   if (!target) return false
   if (type === 'inner' && target.type !== 'directory') return false
   return true
 }
 
 async function handleNodeDrop(
-  draggingNode: { data?: UiTreeNode },
-  dropNode: { data?: UiTreeNode },
+  draggingNode: ElTreeNode,
+  dropNode: ElTreeNode,
   dropType: 'before' | 'after' | 'inner',
 ) {
-  const source = draggingNode?.data
-  const dropData = dropNode?.data
+  const source = uiDataOf(draggingNode)
+  const dropData = uiDataOf(dropNode)
   if (!source || !dropData) return
   let targetDirectoryId: number | null = null
   if (dropType === 'inner' && dropData.type === 'directory') {

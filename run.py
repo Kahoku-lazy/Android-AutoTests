@@ -1,5 +1,5 @@
 """
-Android-AutoTests platform manager — start / stop / restart / status / logs.
+Android-AutoTests platform manager — start / stop / restart / status / logs / check.
 
 Usage:
     python run.py start [redis|backend|frontend ...]
@@ -7,6 +7,7 @@ Usage:
     python run.py restart [...]
     python run.py status
     python run.py logs [redis|backend|frontend ...]
+    python run.py check          # 本地质量门禁（实现见 tools/check_gates.py）
 """
 
 from __future__ import annotations
@@ -365,9 +366,15 @@ def cmd_logs(services: list[str]) -> None:
             print("  (empty)")
 
 
+def cmd_check() -> None:
+    """跑本地质量门禁；检查内容与 CI 一一对应，见 tools/check_gates.py。"""
+    result = subprocess.run([sys.executable, str(ROOT / "tools" / "check_gates.py")], cwd=str(ROOT))
+    sys.exit(result.returncode)
+
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Android-AutoTests platform manager")
-    p.add_argument("cmd", choices=["start", "stop", "restart", "status", "logs"])
+    p.add_argument("cmd", choices=["start", "stop", "restart", "status", "logs", "check"])
     p.add_argument("services", nargs="*", default=[], help="redis backend frontend (default: all)")
     args = p.parse_args()
 
@@ -377,4 +384,5 @@ if __name__ == "__main__":
         "restart": lambda: cmd_restart(args.services),
         "status": cmd_status,
         "logs": lambda: cmd_logs(args.services),
+        "check": cmd_check,
     }[args.cmd]()

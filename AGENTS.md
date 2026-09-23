@@ -89,4 +89,5 @@
 
 ### 项目工具
 
-1. 启动/停止/检查平台： `python run.py start / stop / status`  
+1. 启动/停止/检查平台： `python run.py start / stop / status`
+2. 本地质量门禁： `python run.py check` — 跑完与 CI 同一批检查（阻塞项 + 告警项）。阻塞项失败退出码为 1，告警项不影响退出码。检查清单与判定口径以 `tools/check_gates.py` 为唯一真相源。

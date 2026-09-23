@@ -8,7 +8,7 @@
 | 接口 | 方法 | 鉴权 | 说明 |
 |---|---|---|---|
 | 平台统计接口 | GET /api/dashboard/stats/ | 需登录(Bearer) | 平台级聚合：设备/用例/元素/工作流/运行/智能体/AI 用量/趋势图/最近任务 |
-| 平台活动接口 | GET /api/dashboard/activities/ | 需登录(Bearer) | 平台最近动态（测试执行 + 智能体更新），最多 10 条 |
+| 平台活动接口 | GET /api/dashboard/activities/ | 需登录(Bearer) | 助手任务卡 + 智能体更新；缺省最新 10 条，支持 `limit`/`offset` |
 | 设备统计接口 | GET /api/devices/stats/ | 需登录(Bearer) | 设备池在线/忙碌/离线/断开汇总 |
 | 用例统计接口 | GET /api/cases/stats/ | 需登录(Bearer) | 用例总数/启用/禁用（含可见性过滤） |
 
@@ -159,21 +159,26 @@
 
 ### 请求
 
-无请求体、无查询参数；携带 `Authorization: Bearer <access_token>`。
+无请求体；携带 `Authorization: Bearer <access_token>`。可选查询参数：
+
+| 参数 | 类型 | 缺省 | 说明 |
+|---|---|---|---|
+| `limit` | int | `10` | 本页条数，合法范围 **1–50** |
+| `offset` | int | `0` | 跳过条数，须为非负整数 |
+
+> **信封特例**：本端点 `data` 为**数组**（其余端点为对象）。活动由当前用户可见的助手任务卡（`type=run`）与智能体更新（`type=agent`）合并，按 `time` 倒序；合并窗口上限 100 条，分页在该窗口内切片。缺省 `limit=10` 对应仪表盘主屏十条。
 
 ### 成功响应（200）
-
-> **信封特例**：本端点 `data` 为**数组**（其余端点为对象）。数组元素为最近 5 条执行记录 + 最近 3 个智能体，按 `time` 倒序后取前 10 条。
 
 ```json
 {
   "status": true,                       # 请求是否成功，恒为 true
-  "data": [                             # 活动数组（最多 10 条）
+  "data": [                             # 活动数组（长度 ≤ limit）
     {
-      "type": "run",                    # 活动类型：run=测试执行 / agent=智能体更新
-      "action": "测试执行: run_abc123",   # 动作描述
-      "detail": "设备: SERIAL001 · 状态: RUNNING",  # 明细
-      "time": "2026-01-12 14:50"        # 时间（归一化为 YYYY-MM-DD HH:MM，16 字符）
+      "type": "run",                    # 活动类型：run=助手任务卡 / agent=智能体更新
+      "action": "助手任务: 校准色温",     # 动作描述（含任务标题；无标题则用目标或「未命名任务」）
+      "detail": "状态: success",         # 明细（可省略）
+      "time": "2026-01-12 14:50"        # 时间（YYYY-MM-DD HH:MM）
     },
     {
       "type": "agent",                  # 智能体更新
@@ -185,12 +190,13 @@
 }
 ```
 
-> 说明：`run` 条目取 `TestRunRecord` 按 `-id` 倒序前 5 条；`agent` 条目取当前用户可见智能体按 `-updated_at` 倒序前 3 条；最终按 `time` 字符串倒序排序并截断前 10 条。
+> 说明：`run` 取可见智能体下的 `AITask` 按 `-created_at`；`agent` 取可见智能体按 `-updated_at`；各源最多 100 条，合并排序后再截 100，最后按 `offset`/`limit` 切片。不查询已删除的测试执行表。
 
 ### 错误码与文案
 
 | HTTP | message | 触发条件 |
 |---|---|---|
+| 400 | limit 必须是整数 / limit 须为 1–50 的整数 / offset 必须是非负整数 | `limit`/`offset` 非法 |
 | 401 | 请先登录 | 未携带 `Authorization: Bearer` 头（中间件拦截） |
 | 401 | 登录已过期或令牌无效 | 令牌无效 / 过期 / 已进黑名单（中间件拦截） |
 | 401 | 用户不存在或已删除 | 令牌有效但对应用户已被删除（DRF 认证） |

@@ -190,7 +190,7 @@ govee_report/
 mobile_agent/
 
 # ── OpenSpec 本地工作流（自动生成，不入库）──
-openspec/
+# openspec/
 plans/
 /package.json
 /package-lock.json

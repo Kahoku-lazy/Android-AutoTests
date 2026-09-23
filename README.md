@@ -76,7 +76,6 @@ Django ──uiautomator2──→  Android 设备
 | **执行引擎** | `tr_` (4表) | asyncio 异步 · TREP v1.0 监控 · 循环压测 · 中途停止 |
 | **测试报告** | `rg_` (2表) | CSV/Markdown/JSON · 步骤级诊断 · HTML 在线预览 |
 | **AI 助手** | `ai_` (7表) | SSE 流式对话 · 17 平台 Tool · HITL 确认 · 共享工具箱 · ChromaDB RAG |
-| **评测中心** | `ev_` (4表) | 题库管理 · 智能出题 · 评测运行 · 人工评分 |
 | **仪表盘** | 无（聚合） | ECharts 趋势图 · KPI 卡片 · 实时统计 |
 | **工作流工作台** | `wf_` (2表) | JSON 持久化 · 目录管理 · VueFlow 页面流编排 |
 
@@ -184,12 +183,8 @@ python run.py logs       # 查看日志
 
 | 文档 | 路径 | 说明 |
 |------|------|------|
-| 需求大纲 | `dev_docs/02-PRD需求/需求大纲.md` | 项目定位 · 用户 · 状态机 · 模块边界 |
-| 子模块 PRD（9 份） | `dev_docs/02-PRD需求/PRD-0*.md` | 各模块详细功能规格 |
+| 开发文档索引 | `DEV_DOCS_README.md` | 需求 / 架构 / 接口 / 测试文档去哪找，改了代码要同步哪些文档 |
 | 开发验收门禁 | `.agents/skills/vue-frontend-check` · `django-backend-check` · `boundary-check` | 关单门禁（按改动层选）：逐项量规 + 强制输出 |
-| 项目架构 | `dev_docs/03-设计与架构/ARCH-00-平台总体架构.md` | 架构总纲 · 11 App 全景 · 设计决策 |
-| 技术栈参考 | `dev_docs/03-设计与架构/技术栈参考.md` | 技术选型 · 命名统一标准 |
-| 文档编号对照 | `dev_docs/文档编号对照表.md` | ARCH/PRD/API 编号唯一真相源 |
 | AI 助手指令 | `AGENTS.md` | 行为准则 · 模块防火墙 · 项目工具 · 关键约定 |
 
 ### 外部引用

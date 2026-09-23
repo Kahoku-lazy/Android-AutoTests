@@ -11,13 +11,13 @@
  * - fail：浅红 Dont
  * - run / wait：纸色偏暖 / 中性
  */
-import { computed } from 'vue'
+import { computed } from "vue"
 
 const props = withDefaults(
   defineProps<{
-    variant?: 'note' | 'sticky'
+    variant?: "note" | "sticky"
     /** sticky 状态底色 */
-    status?: 'ok' | 'run' | 'fail' | 'wait'
+    status?: "ok" | "run" | "fail" | "wait"
     /** 硬阴影强调色；不传则按 variant/status 默认 */
     accent?: string
     /** 顶中胶带 */
@@ -27,16 +27,16 @@ const props = withDefaults(
     /** 微倾角度（deg） */
     tilt?: number
     /** 根节点标签 */
-    as?: 'article' | 'div' | 'section'
+    as?: "article" | "div" | "section"
   }>(),
   {
-    variant: 'note',
-    status: 'ok',
+    variant: "note",
+    status: "ok",
     accent: undefined,
     tape: true,
     tapeColor: undefined,
     tilt: undefined,
-    as: 'article',
+    as: "article",
   },
 )
 
@@ -45,30 +45,30 @@ const rootStyle = computed(() => {
 
   const accent =
     props.accent ||
-    (props.variant === 'sticky'
-      ? props.status === 'fail'
-        ? 'var(--app-marker-red)'
-        : props.status === 'ok'
-          ? 'var(--c-case)'
-          : props.status === 'run'
-            ? 'var(--c-workflow)'
-            : 'var(--app-offline)'
-      : 'var(--c-case)')
+    (props.variant === "sticky"
+      ? props.status === "fail"
+        ? "var(--app-marker-red)"
+        : props.status === "ok"
+          ? "var(--c-case)"
+          : props.status === "run"
+            ? "var(--c-workflow)"
+            : "var(--app-offline)"
+      : "var(--c-case)")
 
-  style['--note-accent'] = accent
+  style["--note-accent"] = accent
 
   if (props.tapeColor) {
-    style['--note-tape'] = props.tapeColor
+    style["--note-tape"] = props.tapeColor
   } else {
-    style['--note-tape'] = accent
+    style["--note-tape"] = accent
   }
 
   if (props.tilt !== undefined) {
-    style['--note-tilt'] = `${props.tilt}deg`
-  } else if (props.variant === 'sticky') {
-    style['--note-tilt'] = props.status === 'fail' ? '1.4deg' : '-1.2deg'
+    style["--note-tilt"] = `${props.tilt}deg`
+  } else if (props.variant === "sticky") {
+    style["--note-tilt"] = props.status === "fail" ? "1.4deg" : "-1.2deg"
   } else {
-    style['--note-tilt'] = '-0.8deg'
+    style["--note-tilt"] = "-0.8deg"
   }
 
   return style

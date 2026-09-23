@@ -1,26 +1,26 @@
 /** 任务列表 — 加载 / 刷新 / 按线路筛选 / 运行态轮询 */
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { listTasks, deleteTask, clearTasks, rerunTask } from '../api/tasks'
-import { useFilterTabs } from '@/shared/composables/useFilterTabs'
+import { ref, computed, onMounted, onUnmounted } from "vue"
+import { ElMessage } from "element-plus"
+import { listTasks, deleteTask, clearTasks, rerunTask } from "../api/tasks"
+import { useFilterTabs } from "@/shared/composables/useFilterTabs"
 import {
   TASK_FILTER_TABS,
   TASK_STATUS_GROUPS,
   TASK_STATUS_GROUPS_DEFAULT_OPEN,
   taskStatusTone,
   type TaskStatusTone,
-} from '../constants'
-import type { TaskRecord } from '@/shared/types/ai'
+} from "../constants"
+import type { TaskRecord } from "@/shared/types/ai"
 
 /** 运行态轮询间隔：任务执行中每 5s 刷新，全部终态后自动停止 */
 const POLL_INTERVAL_MS = 5000
 
-const TERMINAL_STATUSES = new Set(['completed', 'success', 'failed', 'cancelled', 'paused'])
+const TERMINAL_STATUSES = new Set(["completed", "success", "failed", "cancelled", "paused"])
 
 export function useTaskList() {
   const tasks = ref<TaskRecord[]>([])
   const loading = ref(false)
-  const error = ref('')
+  const error = ref("")
   const rerunningId = ref<number | null>(null)
   let pollTimer: ReturnType<typeof setInterval> | null = null
 
@@ -31,23 +31,19 @@ export function useTaskList() {
   )
 
   const groupedByStatus = computed(() =>
-    TASK_STATUS_GROUPS
-      .map((group) => ({
-        ...group,
-        items: filteredItems.value.filter(
-          (t: TaskRecord) => taskStatusTone(t.status) === group.key,
-        ),
-      }))
-      .filter((group) => group.items.length > 0),
+    TASK_STATUS_GROUPS.map((group) => ({
+      ...group,
+      items: filteredItems.value.filter((t: TaskRecord) => taskStatusTone(t.status) === group.key),
+    })).filter((group) => group.items.length > 0),
   )
 
   const expandedGroups = ref<TaskStatusTone[]>([...TASK_STATUS_GROUPS_DEFAULT_OPEN])
 
   const emptyCopy = computed(() => {
     if (!tasks.value.length) {
-      return { text: '还没有任务', hint: '点击「新建任务」创建' }
+      return { text: "还没有任务", hint: "点击「新建任务」创建" }
     }
-    return { text: '该分类下还没有任务', hint: '切换分类或新建对应线路的任务' }
+    return { text: "该分类下还没有任务", hint: "切换分类或新建对应线路的任务" }
   })
 
   function stopPoll() {
@@ -60,7 +56,7 @@ export function useTaskList() {
   function schedulePoll() {
     stopPoll()
     const hasActive = tasks.value.some(
-      (t) => !TERMINAL_STATUSES.has((t.status || '').toLowerCase()),
+      (t) => !TERMINAL_STATUSES.has((t.status || "").toLowerCase()),
     )
     if (hasActive) {
       pollTimer = setInterval(() => load(true), POLL_INTERVAL_MS)
@@ -69,17 +65,17 @@ export function useTaskList() {
 
   async function load(silent = false) {
     if (!silent) loading.value = true
-    error.value = ''
+    error.value = ""
     try {
       const data = await listTasks()
       if (data.status && data.data) {
         tasks.value = data.data.tasks
         schedulePoll()
       } else {
-        error.value = data.message || '加载失败'
+        error.value = data.message || "加载失败"
       }
     } catch {
-      error.value = '加载任务列表失败，请检查网络连接'
+      error.value = "加载任务列表失败，请检查网络连接"
     }
     loading.value = false
   }
@@ -90,12 +86,12 @@ export function useTaskList() {
       if (data.status) {
         tasks.value = tasks.value.filter((t) => t.id !== task.id)
         schedulePoll()
-        ElMessage.success('已删除')
+        ElMessage.success("已删除")
       } else {
-        ElMessage.error(data.message || '删除失败')
+        ElMessage.error(data.message || "删除失败")
       }
     } catch {
-      ElMessage.error('删除失败，请检查网络连接')
+      ElMessage.error("删除失败，请检查网络连接")
     }
   }
 
@@ -105,32 +101,32 @@ export function useTaskList() {
       if (data.status) {
         tasks.value = []
         stopPoll()
-        ElMessage.success('已清空任务卡片')
+        ElMessage.success("已清空任务卡片")
       } else {
-        ElMessage.error(data.message || '清空失败')
+        ElMessage.error(data.message || "清空失败")
       }
     } catch {
-      ElMessage.error('清空失败，请检查网络连接')
+      ElMessage.error("清空失败，请检查网络连接")
     }
   }
 
   async function rerun(task: TaskRecord) {
     if (rerunningId.value != null) return
-    if (taskStatusTone(task.status) !== 'failed') {
-      ElMessage.warning('仅失败任务可重新执行')
+    if (taskStatusTone(task.status) !== "failed") {
+      ElMessage.warning("仅失败任务可重新执行")
       return
     }
     rerunningId.value = task.id
     try {
       const data = await rerunTask(task.id)
       if (data.status) {
-        ElMessage.success('已新建任务并重新执行')
+        ElMessage.success("已新建任务并重新执行")
         await load(true)
       } else {
-        ElMessage.error(data.message || '重新执行失败')
+        ElMessage.error(data.message || "重新执行失败")
       }
     } catch {
-      ElMessage.error('重新执行失败，请检查网络连接')
+      ElMessage.error("重新执行失败，请检查网络连接")
     }
     rerunningId.value = null
   }
@@ -139,8 +135,19 @@ export function useTaskList() {
   onUnmounted(stopPoll)
 
   return {
-    tasks, loading, error, load, rerunningId,
-    activeFilter, filterTabs, filteredItems, groupedByStatus, expandedGroups, emptyCopy,
-    remove, clearAll, rerun,
+    tasks,
+    loading,
+    error,
+    load,
+    rerunningId,
+    activeFilter,
+    filterTabs,
+    filteredItems,
+    groupedByStatus,
+    expandedGroups,
+    emptyCopy,
+    remove,
+    clearAll,
+    rerun,
   }
 }

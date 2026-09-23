@@ -1,29 +1,32 @@
 <script setup lang="ts">
 /** NetworkConnectDialog — 局域网连接：已配对/已在 adb devices 可直连；首次选填配对 */
-import { computed, ref, watch } from 'vue'
-import { validateLanConnect, type LanConnectPayload } from '../helpers'
+import { computed, ref, watch } from "vue"
+import { validateLanConnect, type LanConnectPayload } from "../helpers"
 
-const props = withDefaults(defineProps<{
-  visible?: boolean
-  loading?: boolean
-}>(), {
-  visible: false,
-  loading: false,
-})
+const props = withDefaults(
+  defineProps<{
+    visible?: boolean
+    loading?: boolean
+  }>(),
+  {
+    visible: false,
+    loading: false,
+  },
+)
 
 const emit = defineEmits<{
   confirm: [payload: LanConnectPayload]
   cancel: []
 }>()
 
-const ip = ref('')
-const connectPort = ref('')
-const pairPort = ref('')
-const pairCode = ref('')
-const ipError = ref('')
-const connectPortError = ref('')
-const pairPortError = ref('')
-const pairCodeError = ref('')
+const ip = ref("")
+const connectPort = ref("")
+const pairPort = ref("")
+const pairCode = ref("")
+const ipError = ref("")
+const connectPortError = ref("")
+const pairPortError = ref("")
+const pairCodeError = ref("")
 
 const ipWrap = ref<HTMLElement | null>(null)
 const connectPortWrap = ref<HTMLElement | null>(null)
@@ -36,14 +39,14 @@ watch(
   () => props.visible,
   (v) => {
     if (v) {
-      ip.value = ''
-      connectPort.value = ''
-      pairPort.value = ''
-      pairCode.value = ''
-      ipError.value = ''
-      connectPortError.value = ''
-      pairPortError.value = ''
-      pairCodeError.value = ''
+      ip.value = ""
+      connectPort.value = ""
+      pairPort.value = ""
+      pairCode.value = ""
+      ipError.value = ""
+      connectPortError.value = ""
+      pairPortError.value = ""
+      pairCodeError.value = ""
     }
   },
 )
@@ -61,7 +64,7 @@ function applyErrors(errors: {
 }
 
 function focusField(wrap: HTMLElement | null) {
-  wrap?.querySelector?.('input')?.focus?.()
+  wrap?.querySelector?.("input")?.focus?.()
 }
 
 function handleConfirm() {
@@ -83,12 +86,12 @@ function handleConfirm() {
     if (result.firstError) focusField(map[result.firstError])
     return
   }
-  if (result.payload) emit('confirm', result.payload)
+  if (result.payload) emit("confirm", result.payload)
 }
 
 function handleCancel() {
   if (props.loading) return
-  emit('cancel')
+  emit("cancel")
 }
 </script>
 
@@ -102,15 +105,20 @@ function handleCancel() {
   >
     <div class="net-form">
       <p class="net-hint">
-        手机打开「开发者选项 → 无线调试」，并与电脑同一局域网。
-        若本机 <code>adb devices</code> 已出现 <code>IP:端口</code>
-        或 <code>adb-序列号-…._adb-tls-connect._tcp</code>，说明已配对/已发现，只需填连接端口。
+        手机打开「开发者选项 → 无线调试」，并与电脑同一局域网。 若本机
+        <code>adb devices</code> 已出现 <code>IP:端口</code> 或
+        <code>adb-序列号-…._adb-tls-connect._tcp</code>，说明已配对/已发现，只需填连接端口。
       </p>
 
       <div class="net-form-item">
         <label class="net-label">IP 地址 *</label>
         <div ref="ipWrap" class="net-field" :class="{ 'has-error': ipError }">
-          <el-input v-model="ip" placeholder="如 10.162.95.96" :maxlength="15" @keyup.enter="handleConfirm" />
+          <el-input
+            v-model="ip"
+            placeholder="如 10.162.95.96"
+            :maxlength="15"
+            @keyup.enter="handleConfirm"
+          />
         </div>
         <p v-if="ipError" class="net-error">{{ ipError }}</p>
       </div>
@@ -128,9 +136,7 @@ function handleCancel() {
         <p v-if="connectPortError" class="net-error">{{ connectPortError }}</p>
       </div>
 
-      <p class="net-hint">
-        首次连接才需要配对（配对端口 ≠ 连接端口）。已配对可留空下面两项。
-      </p>
+      <p class="net-hint">首次连接才需要配对（配对端口 ≠ 连接端口）。已配对可留空下面两项。</p>
 
       <div class="net-form-item">
         <label class="net-label">配对端口（可选）</label>
@@ -162,7 +168,7 @@ function handleCancel() {
     <template #footer>
       <el-button :disabled="loading" @click="handleCancel">取消</el-button>
       <el-button type="primary" :loading="loading" @click="handleConfirm">
-        {{ willPair ? '配对并连接' : '连接' }}
+        {{ willPair ? "配对并连接" : "连接" }}
       </el-button>
     </template>
   </el-dialog>

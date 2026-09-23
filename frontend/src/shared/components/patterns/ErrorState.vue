@@ -5,10 +5,10 @@
  * 替代每个模块手写的 <div v-if="error" class="xxx__error"> 模式。
  */
 defineProps({
-  message: { type: String, default: '加载失败' },
+  message: { type: String, default: "加载失败" },
 })
 
-defineEmits(['retry'])
+defineEmits(["retry"])
 </script>
 
 <template>
@@ -22,21 +22,33 @@ defineEmits(['retry'])
 
 <style scoped>
 .error-state {
-  display: flex; align-items: center; justify-content: center;
-  gap: var(--app-space-md); padding: var(--app-space-sm) var(--app-space-lg); margin: 0 var(--app-space-lg);
-  background: var(--app-error-bg); border: 2px solid var(--app-status-danger);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--app-space-md);
+  padding: var(--app-space-sm) var(--app-space-lg);
+  margin: 0 var(--app-space-lg);
+  background: var(--app-error-bg);
+  border: 2px solid var(--app-status-danger);
   border-radius: var(--app-radius-md);
-  font-size: var(--app-size-sm); color: var(--app-status-danger-text);
+  font-size: var(--app-size-sm);
+  color: var(--app-status-danger-text);
   font-weight: 600;
 }
 .error-state__btn {
-  font-size: var(--app-size-xs); font-weight: 700; padding: var(--app-space-xs) var(--app-space-md);
-  border: 2px solid var(--ink); border-radius: var(--app-radius-sm);
-  background: var(--app-bg-card); color: var(--ink); cursor: pointer;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  padding: var(--app-space-xs) var(--app-space-md);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-card);
+  color: var(--ink);
+  cursor: pointer;
   transition: all var(--app-duration-fast) var(--app-ease);
   font-family: var(--app-font);
 }
 .error-state__btn:hover {
-  background: var(--app-highlight); transform: translate(1px,1px);
+  background: var(--app-highlight);
+  transform: translate(1px, 1px);
 }
 </style>

@@ -4,13 +4,9 @@
  * 启停写 POST /api/ai/platform-tools/toggle（仅超级管理员）。
  * 智能体配置页不再逐工具勾选，只保留「业务工具」总开关——选用哪个由 AI 工具箱全局决定。
  */
-import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import {
-  fetchPlatformTools,
-  togglePlatformTool,
-  type PlatformToolCategory,
-} from '../api/toolbox'
+import { ref, onMounted } from "vue"
+import { ElMessage } from "element-plus"
+import { fetchPlatformTools, togglePlatformTool, type PlatformToolCategory } from "../api/toolbox"
 
 export function usePlatformTools() {
   const categories = ref<PlatformToolCategory[]>([])
@@ -30,7 +26,7 @@ export function usePlatformTools() {
         expanded.value = expanded.value.filter((k) => keys.has(k))
       }
     } catch (e) {
-      console.error('Failed to load platform tools:', e)
+      console.error("Failed to load platform tools:", e)
     }
     loading.value = false
   }
@@ -53,16 +49,16 @@ export function usePlatformTools() {
   async function toggleTool(name: string, enabled: boolean) {
     if (toggling.value) return
     toggling.value = true
-    applyEnabled(name, enabled)  // 乐观更新
+    applyEnabled(name, enabled) // 乐观更新
     try {
       const data = await togglePlatformTool({ name, enabled })
       if (!data.status) {
         applyEnabled(name, !enabled)
-        ElMessage.error(data.message || '操作失败')
+        ElMessage.error(data.message || "操作失败")
       }
     } catch (e) {
       applyEnabled(name, !enabled)
-      ElMessage.error('操作失败')
+      ElMessage.error("操作失败")
     } finally {
       toggling.value = false
     }
@@ -72,16 +68,16 @@ export function usePlatformTools() {
     if (toggling.value) return
     const names = cat.tools.map((t) => t.name)
     toggling.value = true
-    names.forEach((n) => applyEnabled(n, enabled))  // 乐观更新
+    names.forEach((n) => applyEnabled(n, enabled)) // 乐观更新
     try {
       const data = await togglePlatformTool({ category: cat.key, enabled })
       if (!data.status) {
         names.forEach((n) => applyEnabled(n, !enabled))
-        ElMessage.error(data.message || '操作失败')
+        ElMessage.error(data.message || "操作失败")
       }
     } catch (e) {
       names.forEach((n) => applyEnabled(n, !enabled))
-      ElMessage.error('操作失败')
+      ElMessage.error("操作失败")
     } finally {
       toggling.value = false
     }
@@ -90,7 +86,14 @@ export function usePlatformTools() {
   onMounted(() => loadPlatformTools())
 
   return {
-    categories, loading, toggling, expanded, loadPlatformTools,
-    enabledCount, allEnabled, toggleTool, toggleCategory,
+    categories,
+    loading,
+    toggling,
+    expanded,
+    loadPlatformTools,
+    enabledCount,
+    allEnabled,
+    toggleTool,
+    toggleCategory,
   }
 }

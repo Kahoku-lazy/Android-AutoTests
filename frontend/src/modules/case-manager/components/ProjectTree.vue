@@ -3,14 +3,14 @@
  * ProjectTree — Doodle Craft 资源管理器（方案 A）
  * 全宽卡片行：目录展开 / 点文件进表格；保留右键、拖拽、多选。
  */
-import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import EmptyState from '@/shared/components/patterns/EmptyState.vue'
-import type { TreeNode } from '../types'
+import { ref, computed, nextTick, onMounted, onUnmounted } from "vue"
+import { ElMessage, ElMessageBox } from "element-plus"
+import EmptyState from "@/shared/components/patterns/EmptyState.vue"
+import type { TreeNode } from "../types"
 
 interface UiTreeNode {
   key: string
-  type: 'directory' | 'file'
+  type: "directory" | "file"
   id: number
   name: string
   sort_order: number
@@ -24,7 +24,7 @@ type ElTreeNode = { data?: unknown }
 
 function uiDataOf(node: ElTreeNode | undefined): UiTreeNode | null {
   const data = node?.data
-  if (!data || typeof data !== 'object') return null
+  if (!data || typeof data !== "object") return null
   const candidate = data as Partial<UiTreeNode>
   return candidate.type && candidate.key ? (candidate as UiTreeNode) : null
 }
@@ -43,11 +43,13 @@ const emit = defineEmits<{
   createFile: [payload: { name: string; directoryId: number | null }]
   renameFile: [payload: { id: number; name: string }]
   deleteFile: [fileId: number]
-  moveItem: [payload: {
-    itemType: 'directory' | 'file'
-    itemId: number
-    targetDirectoryId: number | null
-  }]
+  moveItem: [
+    payload: {
+      itemType: "directory" | "file"
+      itemId: number
+      targetDirectoryId: number | null
+    },
+  ]
 }>()
 
 const treeRef = ref<{
@@ -58,10 +60,10 @@ const treeRef = ref<{
 
 function toUiNodes(nodes: TreeNode[]): UiTreeNode[] {
   return nodes.map((node) => {
-    if (node.type === 'directory') {
+    if (node.type === "directory") {
       return {
         key: `d-${node.id}`,
-        type: 'directory',
+        type: "directory",
         id: node.id,
         name: node.name,
         sort_order: node.sort_order,
@@ -70,7 +72,7 @@ function toUiNodes(nodes: TreeNode[]): UiTreeNode[] {
     }
     return {
       key: `f-${node.id}`,
-      type: 'file',
+      type: "file",
       id: node.id,
       name: node.name,
       sort_order: node.sort_order,
@@ -81,8 +83,8 @@ function toUiNodes(nodes: TreeNode[]): UiTreeNode[] {
 
 function collectFileKeys(nodes: UiTreeNode[], result: string[] = []): string[] {
   for (const node of nodes) {
-    if (node.type === 'file') result.push(node.key)
-    if (node.type === 'directory' && node.children?.length) collectFileKeys(node.children, result)
+    if (node.type === "file") result.push(node.key)
+    if (node.type === "directory" && node.children?.length) collectFileKeys(node.children, result)
   }
   return result
 }
@@ -103,18 +105,20 @@ function childCount(data: UiTreeNode): number {
 }
 
 function formatTime(iso?: string): string {
-  if (!iso) return '—'
+  if (!iso) return "—"
   const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso.slice(0, 16).replace('T', ' ')
-  const p = (n: number) => String(n).padStart(2, '0')
+  if (Number.isNaN(d.getTime())) return iso.slice(0, 16).replace("T", " ")
+  const p = (n: number) => String(n).padStart(2, "0")
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
 const elTreeData = computed(() => toUiNodes(props.treeData))
 const allFileKeys = computed(() => collectFileKeys(elTreeData.value))
-const activeKey = computed(() => (props.activeFileId != null ? `f-${props.activeFileId}` : undefined))
+const activeKey = computed(() =>
+  props.activeFileId != null ? `f-${props.activeFileId}` : undefined,
+)
 const defaultExpanded = computed(() =>
-  elTreeData.value.filter((n) => n.type === 'directory').map((n) => n.key),
+  elTreeData.value.filter((n) => n.type === "directory").map((n) => n.key),
 )
 
 // ── Select mode ──
@@ -134,7 +138,7 @@ function toggleSelectMode() {
 function handleCheck() {
   nextTick(() => {
     const keys = (treeRef.value?.getCheckedKeys() || []).map(String)
-    const fileKeys = keys.filter((k) => k.startsWith('f-'))
+    const fileKeys = keys.filter((k) => k.startsWith("f-"))
     checkedCount.value = fileKeys.length
     selectAll.value = fileKeys.length > 0 && fileKeys.length === allFileKeys.value.length
   })
@@ -156,23 +160,23 @@ async function confirmBatchDelete() {
   const keys = (treeRef.value?.getCheckedKeys() || []).map(String)
   const fileIds = keys
     .map((k) => findUiByKey(elTreeData.value, k))
-    .filter((n): n is UiTreeNode => !!n && n.type === 'file')
+    .filter((n): n is UiTreeNode => !!n && n.type === "file")
     .map((n) => n.id)
   if (!fileIds.length) {
-    ElMessage.warning('请勾选要删除的文件')
+    ElMessage.warning("请勾选要删除的文件")
     return
   }
   try {
-    await ElMessageBox.confirm(`确认删除选中的 ${fileIds.length} 个文件？`, '批量删除', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
+    await ElMessageBox.confirm(`确认删除选中的 ${fileIds.length} 个文件？`, "批量删除", {
+      confirmButtonText: "删除",
+      cancelButtonText: "取消",
+      type: "warning",
     })
   } catch {
     return
   }
   for (const id of fileIds) {
-    emit('deleteFile', id)
+    emit("deleteFile", id)
   }
   toggleSelectMode()
 }
@@ -196,51 +200,51 @@ function closeMenu() {
   menuNode.value = null
 }
 
-onMounted(() => document.addEventListener('click', closeMenu))
-onUnmounted(() => document.removeEventListener('click', closeMenu))
+onMounted(() => document.addEventListener("click", closeMenu))
+onUnmounted(() => document.removeEventListener("click", closeMenu))
 
 // ── Dialogs ──
 const dialogVisible = ref(false)
-const dialogKind = ref<'dir-create' | 'dir-rename' | 'file-create' | 'file-rename'>('dir-create')
-const dialogName = ref('')
+const dialogKind = ref<"dir-create" | "dir-rename" | "file-create" | "file-rename">("dir-create")
+const dialogName = ref("")
 const dialogParentId = ref<number | null>(null)
 const dialogNodeId = ref<number | null>(null)
 
 const dialogTitle = computed(() => {
   switch (dialogKind.value) {
-    case 'dir-create':
-      return '新建目录'
-    case 'dir-rename':
-      return '重命名目录'
-    case 'file-create':
-      return '新建文件'
-    case 'file-rename':
-      return '重命名文件'
+    case "dir-create":
+      return "新建目录"
+    case "dir-rename":
+      return "重命名目录"
+    case "file-create":
+      return "新建文件"
+    case "file-rename":
+      return "重命名文件"
     default:
-      return ''
+      return ""
   }
 })
 
 function openCreateRootDir() {
-  dialogKind.value = 'dir-create'
-  dialogName.value = ''
+  dialogKind.value = "dir-create"
+  dialogName.value = ""
   dialogParentId.value = null
   dialogNodeId.value = null
   dialogVisible.value = true
 }
 
 function openCreateRootFile() {
-  dialogKind.value = 'file-create'
-  dialogName.value = ''
+  dialogKind.value = "file-create"
+  dialogName.value = ""
   dialogParentId.value = null
   dialogNodeId.value = null
   dialogVisible.value = true
 }
 
 function openCreateSubDir() {
-  if (!menuNode.value || menuNode.value.type !== 'directory') return
-  dialogKind.value = 'dir-create'
-  dialogName.value = ''
+  if (!menuNode.value || menuNode.value.type !== "directory") return
+  dialogKind.value = "dir-create"
+  dialogName.value = ""
   dialogParentId.value = menuNode.value.id
   dialogNodeId.value = null
   dialogVisible.value = true
@@ -248,9 +252,9 @@ function openCreateSubDir() {
 }
 
 function openCreateFile() {
-  const dirId = menuNode.value?.type === 'directory' ? menuNode.value.id : null
-  dialogKind.value = 'file-create'
-  dialogName.value = ''
+  const dirId = menuNode.value?.type === "directory" ? menuNode.value.id : null
+  dialogKind.value = "file-create"
+  dialogName.value = ""
   dialogParentId.value = dirId
   dialogNodeId.value = null
   dialogVisible.value = true
@@ -259,7 +263,7 @@ function openCreateFile() {
 
 function openRename() {
   if (!menuNode.value) return
-  dialogKind.value = menuNode.value.type === 'directory' ? 'dir-rename' : 'file-rename'
+  dialogKind.value = menuNode.value.type === "directory" ? "dir-rename" : "file-rename"
   dialogName.value = menuNode.value.name
   dialogNodeId.value = menuNode.value.id
   dialogVisible.value = true
@@ -269,57 +273,57 @@ function openRename() {
 function confirmDialog() {
   const name = dialogName.value.trim()
   if (!name) {
-    ElMessage.warning(dialogKind.value.startsWith('file') ? '请输入文件名称' : '请输入目录名称')
+    ElMessage.warning(dialogKind.value.startsWith("file") ? "请输入文件名称" : "请输入目录名称")
     return
   }
-  if (dialogKind.value === 'dir-create') {
-    emit('createDirectory', { name, parentId: dialogParentId.value })
-  } else if (dialogKind.value === 'dir-rename' && dialogNodeId.value != null) {
-    emit('renameDirectory', { id: dialogNodeId.value, name })
-  } else if (dialogKind.value === 'file-create') {
-    emit('createFile', { name, directoryId: dialogParentId.value })
-  } else if (dialogKind.value === 'file-rename' && dialogNodeId.value != null) {
-    emit('renameFile', { id: dialogNodeId.value, name })
+  if (dialogKind.value === "dir-create") {
+    emit("createDirectory", { name, parentId: dialogParentId.value })
+  } else if (dialogKind.value === "dir-rename" && dialogNodeId.value != null) {
+    emit("renameDirectory", { id: dialogNodeId.value, name })
+  } else if (dialogKind.value === "file-create") {
+    emit("createFile", { name, directoryId: dialogParentId.value })
+  } else if (dialogKind.value === "file-rename" && dialogNodeId.value != null) {
+    emit("renameFile", { id: dialogNodeId.value, name })
   }
   dialogVisible.value = false
 }
 
 async function onDeleteDirectory() {
-  if (!menuNode.value || menuNode.value.type !== 'directory') return
+  if (!menuNode.value || menuNode.value.type !== "directory") return
   const id = menuNode.value.id
   closeMenu()
   try {
-    await ElMessageBox.confirm('删除目录将同时删除其下全部子目录与文件，是否继续？', '确认删除', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
+    await ElMessageBox.confirm("删除目录将同时删除其下全部子目录与文件，是否继续？", "确认删除", {
+      confirmButtonText: "删除",
+      cancelButtonText: "取消",
+      type: "warning",
     })
   } catch {
     return
   }
-  emit('deleteDirectory', id)
+  emit("deleteDirectory", id)
 }
 
 async function onDeleteFile() {
-  if (!menuNode.value || menuNode.value.type !== 'file') return
+  if (!menuNode.value || menuNode.value.type !== "file") return
   const fileId = menuNode.value.id
   const name = menuNode.value.name
   closeMenu()
   try {
-    await ElMessageBox.confirm(`确认删除文件「${name}」及其全部用例行？`, '确认删除', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
+    await ElMessageBox.confirm(`确认删除文件「${name}」及其全部用例行？`, "确认删除", {
+      confirmButtonText: "删除",
+      cancelButtonText: "取消",
+      type: "warning",
     })
   } catch {
     return
   }
-  emit('deleteFile', fileId)
+  emit("deleteFile", fileId)
 }
 
 function handleNodeClick(data: UiTreeNode) {
   if (selectMode.value) return
-  if (data.type === 'file') emit('selectFile', data.id)
+  if (data.type === "file") emit("selectFile", data.id)
 }
 
 function allowDrag(node: ElTreeNode) {
@@ -329,40 +333,40 @@ function allowDrag(node: ElTreeNode) {
 function allowDrop(_draggingNode: ElTreeNode, dropNode: ElTreeNode, type: string) {
   const target = uiDataOf(dropNode)
   if (!target) return false
-  if (type === 'inner' && target.type !== 'directory') return false
+  if (type === "inner" && target.type !== "directory") return false
   return true
 }
 
 async function handleNodeDrop(
   draggingNode: ElTreeNode,
   dropNode: ElTreeNode,
-  dropType: 'before' | 'after' | 'inner',
+  dropType: "before" | "after" | "inner",
 ) {
   const source = uiDataOf(draggingNode)
   const dropData = uiDataOf(dropNode)
   if (!source || !dropData) return
   let targetDirectoryId: number | null = null
-  if (dropType === 'inner' && dropData.type === 'directory') {
+  if (dropType === "inner" && dropData.type === "directory") {
     targetDirectoryId = dropData.id
-  } else if (dropData.type === 'directory') {
+  } else if (dropData.type === "directory") {
     targetDirectoryId = dropData.id
   } else {
-    ElMessage.warning('请拖拽到目录节点内')
+    ElMessage.warning("请拖拽到目录节点内")
     return
   }
 
-  const typeLabel = source.type === 'file' ? '文件' : '目录'
+  const typeLabel = source.type === "file" ? "文件" : "目录"
   try {
-    await ElMessageBox.confirm(`将${typeLabel}「${source.name}」移动到目标位置？`, '确认移动', {
-      confirmButtonText: '确认移动',
-      cancelButtonText: '取消',
-      type: 'warning',
+    await ElMessageBox.confirm(`将${typeLabel}「${source.name}」移动到目标位置？`, "确认移动", {
+      confirmButtonText: "确认移动",
+      cancelButtonText: "取消",
+      type: "warning",
     })
   } catch {
     return
   }
 
-  emit('moveItem', {
+  emit("moveItem", {
     itemType: source.type,
     itemId: source.id,
     targetDirectoryId,
@@ -371,10 +375,10 @@ async function handleNodeDrop(
 
 function rowClass(data: UiTreeNode) {
   return {
-    'explorer-row': true,
-    'explorer-row--dir': data.type === 'directory',
-    'explorer-row--file': data.type === 'file',
-    'explorer-row--active': data.type === 'file' && data.id === props.activeFileId,
+    "explorer-row": true,
+    "explorer-row--dir": data.type === "directory",
+    "explorer-row--file": data.type === "file",
+    "explorer-row--active": data.type === "file" && data.id === props.activeFileId,
   }
 }
 </script>
@@ -389,7 +393,9 @@ function rowClass(data: UiTreeNode) {
       </div>
       <div class="explorer-toolbar__actions">
         <button type="button" class="ex-btn" @click="openCreateRootDir">+ 新建目录</button>
-        <button type="button" class="ex-btn ex-btn--primary" @click="openCreateRootFile">+ 新建文件</button>
+        <button type="button" class="ex-btn ex-btn--primary" @click="openCreateRootFile">
+          + 新建文件
+        </button>
         <button type="button" class="ex-btn" @click="toggleSelectMode">选择</button>
       </div>
     </div>
@@ -397,7 +403,7 @@ function rowClass(data: UiTreeNode) {
       <div class="explorer-crumbs">已选 {{ checkedCount }} 个文件</div>
       <div class="explorer-toolbar__actions">
         <button type="button" class="ex-btn" @click="handleSelectAll">
-          {{ selectAll ? '取消全选' : '全选' }}
+          {{ selectAll ? "取消全选" : "全选" }}
         </button>
         <button
           type="button"
@@ -444,24 +450,24 @@ function rowClass(data: UiTreeNode) {
         <template #default="{ data, node }">
           <div :class="rowClass(data)">
             <span class="explorer-row__ico" aria-hidden="true">
-              {{ data.type === 'file' ? '📄' : node.expanded ? '📂' : '📁' }}
+              {{ data.type === "file" ? "📄" : node.expanded ? "📂" : "📁" }}
             </span>
             <span class="explorer-row__name" :title="data.name">{{ data.name }}</span>
             <span
               class="explorer-row__kind"
-              :class="data.type === 'directory' ? 'explorer-row__kind--dir' : 'explorer-row__kind--file'"
+              :class="
+                data.type === 'directory' ? 'explorer-row__kind--dir' : 'explorer-row__kind--file'
+              "
             >
-              {{ data.type === 'directory' ? '目录' : '文件' }}
+              {{ data.type === "directory" ? "目录" : "文件" }}
             </span>
             <span class="explorer-row__meta">
               {{
-                data.type === 'directory'
-                  ? `${childCount(data)} 项`
-                  : formatTime(data.updated_at)
+                data.type === "directory" ? `${childCount(data)} 项` : formatTime(data.updated_at)
               }}
             </span>
             <span class="explorer-row__hint">
-              {{ data.type === 'directory' ? '展开 / 收起' : '进入表格 →' }}
+              {{ data.type === "directory" ? "展开 / 收起" : "进入表格 →" }}
             </span>
           </div>
         </template>
@@ -475,7 +481,11 @@ function rowClass(data: UiTreeNode) {
       @click.stop
     >
       <template v-if="!menuNode || menuNode.type === 'directory'">
-        <div v-if="menuNode?.type === 'directory'" class="context-menu__item" @click="openCreateSubDir">
+        <div
+          v-if="menuNode?.type === 'directory'"
+          class="context-menu__item"
+          @click="openCreateSubDir"
+        >
           + 新建子目录
         </div>
         <div class="context-menu__item" @click="openCreateFile">+ 新建文件</div>
@@ -493,7 +503,9 @@ function rowClass(data: UiTreeNode) {
       </template>
       <template v-else>
         <div class="context-menu__item" @click="openRename">重命名</div>
-        <div class="context-menu__item context-menu__item--danger" @click="onDeleteFile">删除文件</div>
+        <div class="context-menu__item context-menu__item--danger" @click="onDeleteFile">
+          删除文件
+        </div>
       </template>
     </div>
 

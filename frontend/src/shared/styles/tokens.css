@@ -13,7 +13,8 @@
    ✅ 2026-09-15 收敛：@deprecated 旧色别名与 --doodle-* 家族已退役（land-module-color-registry）
    ═══════════════════════════════════════════ */
 
-:root, [data-theme="light"] {
+:root,
+[data-theme="light"] {
   /* ═══════════════════════════════════════════
      T0 主 token · 一、颜色原子（全部字面量色值的唯一登记处）
      命名：--color-<色相>-<明度>[-s<饱和>][-a<透明度>]；中性 --color-white / --color-black / --color-ink-<明度>
@@ -156,16 +157,15 @@
   --color-purple-56: #c050d0;
   --color-purple-47: #9741b0;
 
-
-
   /* ═══════════════════════════════════════════
      T0 主 token · 二、排版原子（字体族 + 字号刻度）
      ═══════════════════════════════════════════ */
 
   /* ── 字体族 ── */
-  --font-body: 'Cascadia Mono', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', monospace, sans-serif;
-  --font-mono: 'Cascadia Mono', 'Consolas', monospace;
-  --font-brand: 'Ziku FeiYang', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-body:
+    "Cascadia Mono", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", monospace, sans-serif;
+  --font-mono: "Cascadia Mono", "Consolas", monospace;
+  --font-brand: "Ziku FeiYang", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 
   /* ── 字号 ── */
   --font-size-xs: 12px;
@@ -196,16 +196,16 @@
   --radius-table: 4px 10px;
 
   /* ── 阴影 ── */
-  --shadow-sm: 2px 2px 0 rgba(0,0,0,0.04);
-  --shadow-md: 2px 3px 0 rgba(0,0,0,0.05);
-  --shadow-lg: 3px 4px 0 rgba(0,0,0,0.06);
+  --shadow-sm: 2px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow-md: 2px 3px 0 rgba(0, 0, 0, 0.05);
+  --shadow-lg: 3px 4px 0 rgba(0, 0, 0, 0.06);
 
   /* ── 动效 ── */
   --duration-fast: 0.12s;
   --duration-base: 0.15s;
   --duration-slow: 0.25s;
-  --ease: cubic-bezier(0.25,0.1,0.25,1);
-  --spring: cubic-bezier(0.34,1.56,0.64,1);
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* ── 尺寸 ── */
   /* ── 层叠 z-index（变更 establish-zindex-and-name-scope）：取值与登记前逐一相同，只做登记 ──
@@ -287,7 +287,11 @@
   --comp-sheet-accent-fallback: var(--color-indigo-13);
   /* 表格行选中态（frontend-l4-data-surface）：行状态底色必须画在单元格上，模块可覆写 accent */
   --comp-table-row-accent: var(--c-element);
-  --comp-table-row-selected-bg: color-mix(in srgb, var(--comp-table-row-accent) 18%, var(--app-bg-card));
+  --comp-table-row-selected-bg: color-mix(
+    in srgb,
+    var(--comp-table-row-accent) 18%,
+    var(--app-bg-card)
+  );
   /* 表格斑马纹底色：暖色纸面族派生（EP 默认的 --el-fill-color-lighter 是冷灰 #fafafa） */
   --comp-table-row-striped-bg: color-mix(in srgb, var(--color-orange-76) 25%, var(--app-bg-card));
   /* L5 对话框纸面补缺 */
@@ -313,80 +317,80 @@
      ═══════════════════════════════════════════ */
 
   /* ── 核心色（纸面三原色）── */
-  --ink:              var(--color-indigo-13) /* alias -> --color-indigo-13 */;
-  --paper:            var(--color-lime-94) /* alias -> --color-lime-94 */;
-  --dot:              var(--color-orange-76) /* alias -> --color-orange-76 */;
+  --ink: var(--color-indigo-13) /* alias -> --color-indigo-13 */;
+  --paper: var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --dot: var(--color-orange-76) /* alias -> --color-orange-76 */;
 
   /* ── 模块色（现行）── */
   --c-dashboard: var(--color-yellow-63) /* alias -> --color-yellow-63 */;
-  --c-device:    var(--color-green-61) /* alias -> --color-green-61 */;
-  --c-element:   var(--color-indigo-76) /* alias -> --color-indigo-76 */;
-  --c-case:      var(--color-teal-49) /* alias -> --color-teal-49 */;
-  --c-runner:    var(--color-red-83) /* alias -> --color-red-83 */;
-  --c-report:    var(--color-ink-47) /* alias -> --color-ink-47 */;
-  --c-ai:        var(--color-purple-73) /* alias -> --color-purple-73 */;
-  --c-workflow:  var(--color-cyan-74) /* alias -> --color-cyan-74 */;
+  --c-device: var(--color-green-61) /* alias -> --color-green-61 */;
+  --c-element: var(--color-indigo-76) /* alias -> --color-indigo-76 */;
+  --c-case: var(--color-teal-49) /* alias -> --color-teal-49 */;
+  --c-runner: var(--color-red-83) /* alias -> --color-red-83 */;
+  --c-report: var(--color-ink-47) /* alias -> --color-ink-47 */;
+  --c-ai: var(--color-purple-73) /* alias -> --color-purple-73 */;
+  --c-workflow: var(--color-cyan-74) /* alias -> --color-cyan-74 */;
 
   /* ── 状态色（现行 --app-status-*）── */
-  --app-status-success:     var(--color-green-61) /* alias -> --color-green-61 */;
-  --app-status-success-bg:  var(--color-green-87) /* alias -> --color-green-87 */;
-  --app-status-success-text:var(--color-green-33) /* alias -> --color-green-33 */;
-  --app-status-danger:      var(--color-red-83) /* alias -> --color-red-83 */;
-  --app-status-danger-bg:   var(--color-red-95) /* alias -> --color-red-95 */;
+  --app-status-success: var(--color-green-61) /* alias -> --color-green-61 */;
+  --app-status-success-bg: var(--color-green-87) /* alias -> --color-green-87 */;
+  --app-status-success-text: var(--color-green-33) /* alias -> --color-green-33 */;
+  --app-status-danger: var(--color-red-83) /* alias -> --color-red-83 */;
+  --app-status-danger-bg: var(--color-red-95) /* alias -> --color-red-95 */;
   --app-status-danger-text: var(--color-red-46) /* alias -> --color-red-46 */;
-  --app-status-purple:      var(--color-indigo-84) /* alias -> --color-indigo-84 */;
-  --app-status-purple-bg:   var(--color-violet-96) /* alias -> --color-violet-96 */;
+  --app-status-purple: var(--color-indigo-84) /* alias -> --color-indigo-84 */;
+  --app-status-purple-bg: var(--color-violet-96) /* alias -> --color-violet-96 */;
   --app-status-purple-text: var(--color-indigo-46) /* alias -> --color-indigo-46 */;
-  --app-status-purple-border:var(--color-indigo-76) /* alias -> --color-indigo-76 */;
-  --app-status-warning-bg:  var(--color-yellow-94) /* alias -> --color-yellow-94 */;
+  --app-status-purple-border: var(--color-indigo-76) /* alias -> --color-indigo-76 */;
+  --app-status-warning-bg: var(--color-yellow-94) /* alias -> --color-yellow-94 */;
   /* doodle 马克笔红：侧栏危险 CTA（退出），对齐 hand-drawn-doodle --red */
-  --app-marker-red:         var(--color-red-69) /* alias -> --color-red-69 */;
+  --app-marker-red: var(--color-red-69) /* alias -> --color-red-69 */;
 
   /* ── 状态色（旧 pass/fail/pending + live/offline/error）── */
-  --app-pass:          var(--color-green-87) /* alias -> --color-green-87 */;
-  --app-pass-text:     var(--color-green-23) /* alias -> --color-green-23 */;
-  --app-fail:          var(--color-red-95) /* alias -> --color-red-95 */;
-  --app-fail-text:     var(--color-red-29) /* alias -> --color-red-29 */;
-  --app-pending:       var(--color-blue-89) /* alias -> --color-blue-89 */;
-  --app-pending-text:  var(--color-blue-27) /* alias -> --color-blue-27 */;
-  --app-live:               var(--color-red-69) /* alias -> --color-red-69 */;
-  --app-offline:            var(--color-ink-79) /* alias -> --color-ink-79 */;
-  --app-error:              var(--color-red-69) /* alias -> --color-red-69 */;
-  --app-error-bg:           var(--color-red-95) /* alias -> --color-red-95 */;
+  --app-pass: var(--color-green-87) /* alias -> --color-green-87 */;
+  --app-pass-text: var(--color-green-23) /* alias -> --color-green-23 */;
+  --app-fail: var(--color-red-95) /* alias -> --color-red-95 */;
+  --app-fail-text: var(--color-red-29) /* alias -> --color-red-29 */;
+  --app-pending: var(--color-blue-89) /* alias -> --color-blue-89 */;
+  --app-pending-text: var(--color-blue-27) /* alias -> --color-blue-27 */;
+  --app-live: var(--color-red-69) /* alias -> --color-red-69 */;
+  --app-offline: var(--color-ink-79) /* alias -> --color-ink-79 */;
+  --app-error: var(--color-red-69) /* alias -> --color-red-69 */;
+  --app-error-bg: var(--color-red-95) /* alias -> --color-red-95 */;
 
   /* ── 中性色 · 背景/表面 ── */
-  --app-bg-card:      var(--color-white) /* alias -> --color-white */;
-  --app-bg-input:     var(--color-white) /* alias -> --color-white */;
-  --app-bg-subtle:          var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --app-bg-card: var(--color-white) /* alias -> --color-white */;
+  --app-bg-input: var(--color-white) /* alias -> --color-white */;
+  --app-bg-subtle: var(--color-lime-94) /* alias -> --color-lime-94 */;
 
   /* ── 中性色 · 文字 ── */
-  --app-text:           var(--ink);
+  --app-text: var(--ink);
   --app-text-secondary: var(--color-ink-57) /* alias -> --color-ink-57 */;
-  --app-text-muted:     var(--color-ink-79) /* alias -> --color-ink-79 */;
-  --app-text-inverse:   var(--color-white) /* alias -> --color-white */;
-  --app-nav-text:       var(--color-ink-34) /* alias -> --color-ink-34 */;  /* 侧边栏导航未激活文字（暖灰，纸面语言） */
+  --app-text-muted: var(--color-ink-79) /* alias -> --color-ink-79 */;
+  --app-text-inverse: var(--color-white) /* alias -> --color-white */;
+  --app-nav-text: var(--color-ink-34) /* alias -> --color-ink-34 */; /* 侧边栏导航未激活文字（暖灰，纸面语言） */
 
   /* ── 中性色 · 边框/高亮/激活 ── */
-  --app-border-light:       var(--color-white) /* alias -> --color-white */;
-  --app-border-lighter:     var(--color-lime-94) /* alias -> --color-lime-94 */;
-  --app-highlight:          var(--color-yellow-70) /* alias -> --color-yellow-70 */;
+  --app-border-light: var(--color-white) /* alias -> --color-white */;
+  --app-border-lighter: var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --app-highlight: var(--color-yellow-70) /* alias -> --color-yellow-70 */;
 
   /* ── 阴影/遮罩（rgba 色值）── */
-  --app-overlay:           var(--color-ink-05-a30) /* alias -> --color-ink-05-a30 */;
+  --app-overlay: var(--color-ink-05-a30) /* alias -> --color-ink-05-a30 */;
 
   /* ── 辅助/图标/杂项色 ── */
-  --app-icon-purple-bg:     var(--color-violet-96) /* alias -> --color-violet-96 */;
-  --app-timeline-dot:       var(--color-ink-57) /* alias -> --color-ink-57 */;
-  --app-warning-text:       var(--color-yellow-27) /* alias -> --color-yellow-27 */;
-  --app-queue-text:         var(--color-yellow-35) /* alias -> --color-yellow-35 */;
-  --app-btn-hover-purple:   var(--color-violet-89) /* alias -> --color-violet-89 */;
-  --app-btn-hover-danger:   var(--color-red-85) /* alias -> --color-red-85 */;
+  --app-icon-purple-bg: var(--color-violet-96) /* alias -> --color-violet-96 */;
+  --app-timeline-dot: var(--color-ink-57) /* alias -> --color-ink-57 */;
+  --app-warning-text: var(--color-yellow-27) /* alias -> --color-yellow-27 */;
+  --app-queue-text: var(--color-yellow-35) /* alias -> --color-yellow-35 */;
+  --app-btn-hover-purple: var(--color-violet-89) /* alias -> --color-violet-89 */;
+  --app-btn-hover-danger: var(--color-red-85) /* alias -> --color-red-85 */;
   --app-btn-disabled-color: var(--color-ink-79) /* alias -> --color-ink-79 */;
-  --app-page-active-bg:     var(--color-white) /* alias -> --color-white */;
+  --app-page-active-bg: var(--color-white) /* alias -> --color-white */;
   --app-footer-yellow-text: var(--color-yellow-24) /* alias -> --color-yellow-24 */;
-  --app-pushpin-light:      var(--color-lime-94) /* alias -> --color-lime-94 */;
-  --app-pushpin-dark:       var(--color-ink-57) /* alias -> --color-ink-57 */;
-  --app-pushpin-mid:        var(--color-orange-76) /* alias -> --color-orange-76 */;
+  --app-pushpin-light: var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --app-pushpin-dark: var(--color-ink-57) /* alias -> --color-ink-57 */;
+  --app-pushpin-mid: var(--color-orange-76) /* alias -> --color-orange-76 */;
 
   /* ── 模块专属色板 · AI（--ai-* 35 个）已迁出 :root ──
      声明在 .ai-workbench 作用域内（见文件末尾「模块作用域色板」段）；
@@ -397,7 +401,7 @@
      声明在 .case-workbench 作用域内（见文件末尾「模块作用域色板」段） */
 
   /* ── 仪表盘统计卡主文字（奶油低饱和；views/components/AnimalFace.vue 亦消费，属全局令牌而非模块私有）── */
-  --app-stat-text:          var(--color-ink-34) /* alias -> --color-ink-34 */;   /* 卡片主文字 */
+  --app-stat-text: var(--color-ink-34) /* alias -> --color-ink-34 */; /* 卡片主文字 */
 
   /* ── @deprecated 旧色别名已于 2026-09-15 随 land-module-color-registry 退役 ──
      映射：--app-ink→--ink · --app-ink-muted→--app-text-secondary（#999 同值）· --app-accent-blue / --app-green→--c-workflow
@@ -408,63 +412,63 @@
      ═══════════════════════════════════════════ */
 
   /* ── 字体（英文 Cascadia Mono 等宽 + 中文思源黑体 Noto Sans SC；品牌文字例外用 --app-font-brand）── */
-  --app-font:          var(--font-body) /* alias -> --font-body */;
-  --app-font-display:  var(--font-body) /* alias -> --font-body */;
-  --app-font-mono:     var(--font-mono) /* alias -> --font-mono */;
-  --app-font-brand:    var(--font-brand) /* alias -> --font-brand */;  /* 品牌手写体，仅 400 字重 */
+  --app-font: var(--font-body) /* alias -> --font-body */;
+  --app-font-display: var(--font-body) /* alias -> --font-body */;
+  --app-font-mono: var(--font-mono) /* alias -> --font-mono */;
+  --app-font-brand: var(--font-brand) /* alias -> --font-brand */; /* 品牌手写体，仅 400 字重 */
 
   /* ── 字号刻度（7 档，最小 12px；**文本字号必须取本刻度**，禁止硬编码字面量）── */
   /* 例外：图形/展示级字号可用字面量（树节点图标 18px · 空态 emoji 40px · 404 数字 96px）
      判定语：表达图形尺寸而非文本层级；口径见 frontend/AGENTS.md 硬性规范 §1.7 */
-  --app-size-xs:  var(--font-size-xs) /* alias -> --font-size-xs */;  /* 按钮文字、表格列头、标签、时间戳、Badge */
-  --app-size-sm:  var(--font-size-sm) /* alias -> --font-size-sm */;  /* UI 正文（默认阅读字号） */
-  --app-size-md:  var(--font-size-md) /* alias -> --font-size-md */;  /* 卡片标题、表单标签、模块标题 */
-  --app-size-lg:  var(--font-size-lg) /* alias -> --font-size-lg */;  /* 段落标题、弹窗标题 */
-  --app-size-xl:  var(--font-size-xl) /* alias -> --font-size-xl */;  /* 页面标题 */
-  --app-size-2xl: var(--font-size-2xl) /* alias -> --font-size-2xl */;  /* KPI 数字、Hero 数字 */
-  --app-size-3xl: var(--font-size-3xl) /* alias -> --font-size-3xl */;  /* 品牌展示级：仅首屏品牌标题（当前唯一消费点：登录页 Hero 标题）*/
+  --app-size-xs: var(--font-size-xs) /* alias -> --font-size-xs */; /* 按钮文字、表格列头、标签、时间戳、Badge */
+  --app-size-sm: var(--font-size-sm) /* alias -> --font-size-sm */; /* UI 正文（默认阅读字号） */
+  --app-size-md: var(--font-size-md) /* alias -> --font-size-md */; /* 卡片标题、表单标签、模块标题 */
+  --app-size-lg: var(--font-size-lg) /* alias -> --font-size-lg */; /* 段落标题、弹窗标题 */
+  --app-size-xl: var(--font-size-xl) /* alias -> --font-size-xl */; /* 页面标题 */
+  --app-size-2xl: var(--font-size-2xl) /* alias -> --font-size-2xl */; /* KPI 数字、Hero 数字 */
+  --app-size-3xl: var(--font-size-3xl) /* alias -> --font-size-3xl */; /* 品牌展示级：仅首屏品牌标题（当前唯一消费点：登录页 Hero 标题）*/
 
   /* ═══════════════════════════════════════════
      皮肤维度三 · 间距 Spacing
      ═══════════════════════════════════════════ */
-  --app-space-xs:      var(--space-xs) /* alias -> --space-xs */;
-  --app-space-sm:      var(--space-sm) /* alias -> --space-sm */;
-  --app-space-md:      var(--space-md) /* alias -> --space-md */;
-  --app-space-lg:      var(--space-lg) /* alias -> --space-lg */;
-  --app-space-xl:      var(--space-xl) /* alias -> --space-xl */;
-  --app-space-2xl:     var(--space-2xl) /* alias -> --space-2xl */;
+  --app-space-xs: var(--space-xs) /* alias -> --space-xs */;
+  --app-space-sm: var(--space-sm) /* alias -> --space-sm */;
+  --app-space-md: var(--space-md) /* alias -> --space-md */;
+  --app-space-lg: var(--space-lg) /* alias -> --space-lg */;
+  --app-space-xl: var(--space-xl) /* alias -> --space-xl */;
+  --app-space-2xl: var(--space-2xl) /* alias -> --space-2xl */;
 
   /* ═══════════════════════════════════════════
      皮肤维度四 · 圆角 Radius（几何不对称）
      ═══════════════════════════════════════════ */
-  --app-radius-sm:     var(--radius-sm) /* alias -> --radius-sm */;
-  --app-radius-md:     var(--radius-md) /* alias -> --radius-md */;
-  --app-radius-lg:     var(--radius-lg) /* alias -> --radius-lg */;
-  --app-radius-pill:   var(--radius-pill) /* alias -> --radius-pill */;
-  --app-radius-table:  var(--radius-table) /* alias -> --radius-table */;   /* 全局 .el-table 皮肤（原 --doodle-radius，2026-09-15 转为正式令牌）*/
+  --app-radius-sm: var(--radius-sm) /* alias -> --radius-sm */;
+  --app-radius-md: var(--radius-md) /* alias -> --radius-md */;
+  --app-radius-lg: var(--radius-lg) /* alias -> --radius-lg */;
+  --app-radius-pill: var(--radius-pill) /* alias -> --radius-pill */;
+  --app-radius-table: var(--radius-table) /* alias -> --radius-table */; /* 全局 .el-table 皮肤（原 --doodle-radius，2026-09-15 转为正式令牌）*/
 
   /* ═══════════════════════════════════════════
      皮肤维度五 · 阴影 Shadow（扁平化，0 模糊）
      ═══════════════════════════════════════════ */
-  --app-shadow-sm:     var(--shadow-sm) /* alias -> --shadow-sm */;
-  --app-shadow-md:     var(--shadow-md) /* alias -> --shadow-md */;
-  --app-shadow-lg:     var(--shadow-lg) /* alias -> --shadow-lg */;
+  --app-shadow-sm: var(--shadow-sm) /* alias -> --shadow-sm */;
+  --app-shadow-md: var(--shadow-md) /* alias -> --shadow-md */;
+  --app-shadow-lg: var(--shadow-lg) /* alias -> --shadow-lg */;
 
   /* ═══════════════════════════════════════════
      皮肤维度六 · 动效 Motion
      ═══════════════════════════════════════════ */
-  --app-ease:          var(--ease) /* alias -> --ease */;
-  --app-spring:        var(--spring) /* alias -> --spring */;
+  --app-ease: var(--ease) /* alias -> --ease */;
+  --app-spring: var(--spring) /* alias -> --spring */;
   --app-duration-fast: var(--duration-fast) /* alias -> --duration-fast */;
-  --app-duration:      var(--duration-base) /* alias -> --duration-base */;
+  --app-duration: var(--duration-base) /* alias -> --duration-base */;
   --app-duration-slow: var(--duration-slow) /* alias -> --duration-slow */;
 
   /* ═══════════════════════════════════════════
      皮肤维度七 · 布局尺寸 Layout（骨架，非皮肤）
      ═══════════════════════════════════════════ */
-  --app-border-width:  var(--size-border-width) /* alias -> --size-border-width */;
-  --app-topbar-h:       var(--size-topbar-h) /* alias -> --size-topbar-h */;
-  --side-w:             var(--size-sidebar-w) /* alias -> --size-sidebar-w */;
+  --app-border-width: var(--size-border-width) /* alias -> --size-border-width */;
+  --app-topbar-h: var(--size-topbar-h) /* alias -> --size-topbar-h */;
+  --side-w: var(--size-sidebar-w) /* alias -> --size-sidebar-w */;
 
   /* ── 原「Crayon Doodle 待收敛家族」（--doodle-*）已于 2026-09-15 退役 ──
      映射：--doodle-bg→--paper（同值）· --doodle-ink→--ink · --doodle-radius→--app-radius-table · --doodle-shadow→--app-shadow-sm */
@@ -472,74 +476,74 @@
   /* ═══════════════════════════════════════════
      独立区 · Element Plus 变量覆盖 — Doodle
      ═══════════════════════════════════════════ */
-  --el-color-primary:           var(--color-yellow-63) /* alias -> --color-yellow-63 */;
-  --el-color-primary-light-3:   var(--color-yellow-70) /* alias -> --color-yellow-70 */;
-  --el-color-primary-light-5:   var(--color-yellow-79) /* alias -> --color-yellow-79 */;
-  --el-color-primary-light-7:   var(--color-yellow-87) /* alias -> --color-yellow-87 */;
-  --el-color-primary-light-8:   var(--color-yellow-94) /* alias -> --color-yellow-94 */;
-  --el-color-primary-light-9:   var(--color-yellow-94) /* alias -> --color-yellow-94 */;
-  --el-color-primary-dark-2:    var(--color-orange-53) /* alias -> --color-orange-53 */;
+  --el-color-primary: var(--color-yellow-63) /* alias -> --color-yellow-63 */;
+  --el-color-primary-light-3: var(--color-yellow-70) /* alias -> --color-yellow-70 */;
+  --el-color-primary-light-5: var(--color-yellow-79) /* alias -> --color-yellow-79 */;
+  --el-color-primary-light-7: var(--color-yellow-87) /* alias -> --color-yellow-87 */;
+  --el-color-primary-light-8: var(--color-yellow-94) /* alias -> --color-yellow-94 */;
+  --el-color-primary-light-9: var(--color-yellow-94) /* alias -> --color-yellow-94 */;
+  --el-color-primary-dark-2: var(--color-orange-53) /* alias -> --color-orange-53 */;
 
-  --el-color-success:           var(--color-green-61) /* alias -> --color-green-61 */;
-  --el-color-warning:           var(--color-yellow-63) /* alias -> --color-yellow-63 */;
+  --el-color-success: var(--color-green-61) /* alias -> --color-green-61 */;
+  --el-color-warning: var(--color-yellow-63) /* alias -> --color-yellow-63 */;
   /* danger 同时承担「实心底色」与「表单校验错误文字色」：取项目危险文字色，使各态对比度 ≥4.5:1 */
-  --el-color-danger:            var(--color-red-46) /* alias -> --color-red-46 */;
-  --el-color-danger-light-3:    var(--color-red-49) /* alias -> --color-red-49 */;   /* solid hover 底（白字仍可读） */
-  --el-color-danger-light-5:    var(--color-red-85) /* alias -> --color-red-85 */;   /* plain 描边 */
-  --el-color-danger-light-7:    var(--color-red-95) /* alias -> --color-red-95 */;
-  --el-color-danger-light-8:    var(--color-red-95) /* alias -> --color-red-95 */;
-  --el-color-danger-light-9:    var(--color-red-95) /* alias -> --color-red-95 */;   /* plain 底 */
-  --el-color-danger-dark-2:     var(--color-red-29) /* alias -> --color-red-29 */;   /* active 底 */
-  --el-color-info:              var(--color-cyan-74) /* alias -> --color-cyan-74 */;
+  --el-color-danger: var(--color-red-46) /* alias -> --color-red-46 */;
+  --el-color-danger-light-3: var(--color-red-49) /* alias -> --color-red-49 */; /* solid hover 底（白字仍可读） */
+  --el-color-danger-light-5: var(--color-red-85) /* alias -> --color-red-85 */; /* plain 描边 */
+  --el-color-danger-light-7: var(--color-red-95) /* alias -> --color-red-95 */;
+  --el-color-danger-light-8: var(--color-red-95) /* alias -> --color-red-95 */;
+  --el-color-danger-light-9: var(--color-red-95) /* alias -> --color-red-95 */; /* plain 底 */
+  --el-color-danger-dark-2: var(--color-red-29) /* alias -> --color-red-29 */; /* active 底 */
+  --el-color-info: var(--color-cyan-74) /* alias -> --color-cyan-74 */;
   /* error 面（el-alert / el-message）同样落到已登记红色族，替代 EP 离板 #f56c6c / #fef0f0 */
-  --el-color-error:             var(--color-red-46) /* alias -> --color-red-46 */;
-  --el-color-error-light-3:     var(--color-red-49) /* alias -> --color-red-49 */;
-  --el-color-error-light-5:     var(--color-red-85) /* alias -> --color-red-85 */;
-  --el-color-error-light-7:     var(--color-red-95) /* alias -> --color-red-95 */;
-  --el-color-error-light-8:     var(--color-red-95) /* alias -> --color-red-95 */;
-  --el-color-error-light-9:     var(--color-red-95) /* alias -> --color-red-95 */;
+  --el-color-error: var(--color-red-46) /* alias -> --color-red-46 */;
+  --el-color-error-light-3: var(--color-red-49) /* alias -> --color-red-49 */;
+  --el-color-error-light-5: var(--color-red-85) /* alias -> --color-red-85 */;
+  --el-color-error-light-7: var(--color-red-95) /* alias -> --color-red-95 */;
+  --el-color-error-light-8: var(--color-red-95) /* alias -> --color-red-95 */;
+  --el-color-error-light-9: var(--color-red-95) /* alias -> --color-red-95 */;
 
-  --el-bg-color:                var(--paper);
-  --el-bg-color-overlay:        var(--color-white) /* alias -> --color-white */;
-  --el-bg-color-page:           var(--paper);
-  --el-fill-color:              var(--color-orange-76) /* alias -> --color-orange-76 */;  /* 骨架/浅底：暖灰，替代 EP 冷灰 #f0f2f5 */
-  --el-fill-color-darker:       var(--color-orange-76) /* alias -> --color-orange-76 */;
-  --el-fill-color-blank:        var(--color-white) /* alias -> --color-white */;
-  --el-fill-color-light:        var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --el-bg-color: var(--paper);
+  --el-bg-color-overlay: var(--color-white) /* alias -> --color-white */;
+  --el-bg-color-page: var(--paper);
+  --el-fill-color: var(--color-orange-76) /* alias -> --color-orange-76 */; /* 骨架/浅底：暖灰，替代 EP 冷灰 #f0f2f5 */
+  --el-fill-color-darker: var(--color-orange-76) /* alias -> --color-orange-76 */;
+  --el-fill-color-blank: var(--color-white) /* alias -> --color-white */;
+  --el-fill-color-light: var(--color-lime-94) /* alias -> --color-lime-94 */;
 
-  --el-text-color-primary:      var(--ink);
-  --el-text-color-regular:      var(--ink);
-  --el-text-color-secondary:    var(--color-ink-57) /* alias -> --color-ink-57 */;
+  --el-text-color-primary: var(--ink);
+  --el-text-color-regular: var(--ink);
+  --el-text-color-secondary: var(--color-ink-57) /* alias -> --color-ink-57 */;
 
-  --el-border-radius-base:      4px 8px;
-  --el-border-radius-small:     3px 6px;
-  --el-border-radius-round:     4px 10px 6px 8px;
+  --el-border-radius-base: 4px 8px;
+  --el-border-radius-small: 3px 6px;
+  --el-border-radius-round: 4px 10px 6px 8px;
 
-  --el-border-color:            var(--ink);
-  --el-border-color-light:      var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --el-border-color: var(--ink);
+  --el-border-color-light: var(--color-lime-94) /* alias -> --color-lime-94 */;
 
   /* 开关：开=成功色、关=离线灰（替代 EP 默认的 开=primary / 关=border-color(墨色)） */
-  --el-switch-on-color:         var(--app-status-success);
-  --el-switch-off-color:        var(--app-offline);
+  --el-switch-on-color: var(--app-status-success);
+  --el-switch-off-color: var(--app-offline);
 
-  --el-box-shadow-light:        var(--shadow-sm);
-  --el-box-shadow:              var(--shadow-md);
-  --el-box-shadow-dark:         var(--shadow-lg);
+  --el-box-shadow-light: var(--shadow-sm);
+  --el-box-shadow: var(--shadow-md);
+  --el-box-shadow-dark: var(--shadow-lg);
 
-  --el-font-family:             var(--app-font);
+  --el-font-family: var(--app-font);
 
   /* ═══════════════════════════════════════════
      皮肤维度八 · 布局 Layout（分栏 / 比例 / 断点）
      ═══════════════════════════════════════════ */
 
   /* ── split 左栏宽度（统一档位）── */
-  --layout-pane-left:       280px;
+  --layout-pane-left: 280px;
 
   /* ── 主/副图表行比例 ── */
-  --layout-ratio-chart:     1.5fr 1fr;
+  --layout-ratio-chart: 1.5fr 1fr;
 
   /* ── KPI 指标行（统一用 minmax(0,1fr) 防内容撑破；3 项行用 auto-fit 自适应，属登记例外）── */
-  --layout-kpi-cols:        repeat(4, minmax(0, 1fr));
+  --layout-kpi-cols: repeat(4, minmax(0, 1fr));
 
   /* ── 断点规范（⚠️ media query 内不能用 var()，故此处只登记档位与迁移映射）
        档位（桌面优先，max-width）：
@@ -565,6 +569,16 @@
 /* ═══════════════════════════════════════
    全局工具类
    ═══════════════════════════════════════ */
-.empty-state { text-align:center;padding:60px 20px;color:var(--app-text-secondary); }
-.empty-state p { margin:var(--app-space-md) 0;font-size:var(--app-size-sm); }
-.empty-state__icon { opacity:0.5;margin-bottom:var(--app-space-sm); }
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--app-text-secondary);
+}
+.empty-state p {
+  margin: var(--app-space-md) 0;
+  font-size: var(--app-size-sm);
+}
+.empty-state__icon {
+  opacity: 0.5;
+  margin-bottom: var(--app-space-sm);
+}

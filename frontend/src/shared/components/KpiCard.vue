@@ -8,7 +8,7 @@
  *
  * 视觉 DNA：虚线边 / 近直角 / 硬偏移色阴影 / 可选微倾与图钉胶带
  */
-import { computed } from 'vue'
+import { computed } from "vue"
 
 const props = withDefaults(
   defineProps<{
@@ -16,8 +16,8 @@ const props = withDefaults(
     label?: string
     color?: string
     /** kpi 变体几何点缀 */
-    shape?: 'diamond' | 'triangle' | 'square' | 'circle'
-    variant?: 'kpi' | 'entry'
+    shape?: "diamond" | "triangle" | "square" | "circle"
+    variant?: "kpi" | "entry"
     /** entry：描述文案 */
     desc?: string
     /** entry：显示「进入」并允许整卡激活 */
@@ -25,22 +25,22 @@ const props = withDefaults(
     /** entry：live 指示点 */
     live?: boolean
     /** 装饰：无 / 图钉 / 胶带 */
-    deco?: 'none' | 'pin' | 'tape'
+    deco?: "none" | "pin" | "tape"
     /** 微倾角度（deg）；不传则用 CSS 默认 */
     tilt?: number
     /** 是否可点击（kpi 默认可点；entry 在有 enterLabel 或显式 true 时可点） */
     clickable?: boolean
   }>(),
   {
-    value: '',
-    label: '',
-    color: 'var(--c-dashboard)',
-    shape: 'diamond',
-    variant: 'kpi',
-    desc: '',
-    enterLabel: '进入',
+    value: "",
+    label: "",
+    color: "var(--c-dashboard)",
+    shape: "diamond",
+    variant: "kpi",
+    desc: "",
+    enterLabel: "进入",
     live: false,
-    deco: 'none',
+    deco: "none",
     tilt: undefined,
     clickable: undefined,
   },
@@ -50,7 +50,7 @@ const emit = defineEmits<{
   click: [e: MouseEvent | KeyboardEvent]
 }>()
 
-const isEntry = computed(() => props.variant === 'entry')
+const isEntry = computed(() => props.variant === "entry")
 
 const isClickable = computed(() => {
   if (props.clickable !== undefined) return props.clickable
@@ -59,22 +59,22 @@ const isClickable = computed(() => {
 
 const rootStyle = computed(() => {
   const style: Record<string, string> = {
-    '--kpi-accent': props.color,
+    "--kpi-accent": props.color,
   }
   if (props.tilt !== undefined) {
-    style['--kpi-tilt'] = `${props.tilt}deg`
+    style["--kpi-tilt"] = `${props.tilt}deg`
   }
   return style
 })
 
 function onActivate(e: MouseEvent | KeyboardEvent) {
   if (!isClickable.value) return
-  emit('click', e)
+  emit("click", e)
 }
 
 function onKeydown(e: KeyboardEvent) {
   if (!isClickable.value) return
-  if (e.key === 'Enter' || e.key === ' ') {
+  if (e.key === "Enter" || e.key === " ") {
     e.preventDefault()
     onActivate(e)
   }
@@ -84,10 +84,7 @@ function onKeydown(e: KeyboardEvent) {
 <template>
   <div
     class="kpi-card"
-    :class="[
-      `kpi-card--${variant}`,
-      { 'is-clickable': isClickable, 'has-deco': deco !== 'none' },
-    ]"
+    :class="[`kpi-card--${variant}`, { 'is-clickable': isClickable, 'has-deco': deco !== 'none' }]"
     :style="rootStyle"
     :role="isClickable ? 'button' : undefined"
     :tabindex="isClickable ? 0 : undefined"

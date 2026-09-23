@@ -1,9 +1,9 @@
 <script setup>
 defineProps({
   items: { type: Array, required: true },
-  modelValue: { type: String, default: '' },
+  modelValue: { type: String, default: "" },
 })
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(["update:modelValue"])
 </script>
 <template>
   <el-tabs
@@ -11,12 +11,7 @@ const emit = defineEmits(['update:modelValue'])
     class="ac-tabs"
     @update:model-value="emit('update:modelValue', $event)"
   >
-    <el-tab-pane
-      v-for="item in items"
-      :key="item.key"
-      :label="item.label"
-      :name="item.key"
-    >
+    <el-tab-pane v-for="item in items" :key="item.key" :label="item.label" :name="item.key">
       <slot :name="item.key" />
     </el-tab-pane>
   </el-tabs>

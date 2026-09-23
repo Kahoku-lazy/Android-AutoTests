@@ -1,18 +1,17 @@
 /** element-locator 项目化类型（wire snake_case） */
 
-export type LocatorProjectCode = 'android'
-export type LocatorFileKind = 'page'
+export type LocatorProjectCode = "android"
+export type LocatorFileKind = "page"
 
-export const LOCATOR_PROJECT_CODES: LocatorProjectCode[] = ['android']
+export const LOCATOR_PROJECT_CODES: LocatorProjectCode[] = ["android"]
 
 export const FILE_KIND_BY_CODE: Record<LocatorProjectCode, LocatorFileKind> = {
-  android: 'page',
+  android: "page",
 }
 
 export const PROJECT_HINTS: Record<LocatorProjectCode, string> = {
-  android: 'Android 页面与控件定位库',
+  android: "Android 页面与控件定位库",
 }
-
 
 export interface LocatorProject {
   id: number
@@ -26,7 +25,7 @@ export interface LocatorProject {
 }
 
 export interface LocatorDirNode {
-  type: 'directory'
+  type: "directory"
   id: number
   name: string
   sort_order: number
@@ -34,7 +33,7 @@ export interface LocatorDirNode {
 }
 
 export interface LocatorFileNode {
-  type: 'file'
+  type: "file"
   kind: LocatorFileKind
   id: number
   name: string

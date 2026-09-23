@@ -12,14 +12,14 @@
  */
 const props = withDefaults(
   defineProps<{
-    tone?: 'danger' | 'teal' | 'yellow' | 'paper'
+    tone?: "danger" | "teal" | "yellow" | "paper"
     disabled?: boolean
-    type?: 'button' | 'submit' | 'reset'
+    type?: "button" | "submit" | "reset"
   }>(),
   {
-    tone: 'paper',
+    tone: "paper",
     disabled: false,
-    type: 'button',
+    type: "button",
   },
 )
 
@@ -29,7 +29,7 @@ const emit = defineEmits<{
 
 function onClick(e: MouseEvent) {
   if (props.disabled || e.defaultPrevented) return
-  emit('click', e)
+  emit("click", e)
 }
 </script>
 

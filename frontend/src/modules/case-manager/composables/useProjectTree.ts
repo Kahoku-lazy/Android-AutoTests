@@ -1,7 +1,7 @@
 /** useProjectTree — 项目目录树加载与节点操作（目录 + 文件） */
-import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { formatApiError } from '@/shared/api-client'
+import { ref } from "vue"
+import { ElMessage } from "element-plus"
+import { formatApiError } from "@/shared/api-client"
 import {
   createDirectory,
   createFile,
@@ -11,8 +11,8 @@ import {
   moveItem,
   updateDirectory,
   updateFile,
-} from '../api'
-import type { CaseProject, TreeNode } from '../types'
+} from "../api"
+import type { CaseProject, TreeNode } from "../types"
 
 export function useProjectTree(projectId: () => number) {
   const project = ref<CaseProject | null>(null)
@@ -31,10 +31,10 @@ export function useProjectTree(projectId: () => number) {
         project.value = data.data.project
         tree.value = data.data.tree || []
       } else {
-        error.value = data.message || '目录树加载失败'
+        error.value = data.message || "目录树加载失败"
       }
     } catch (e: unknown) {
-      error.value = formatApiError(e, '目录树加载失败')
+      error.value = formatApiError(e, "目录树加载失败")
     } finally {
       loading.value = false
     }
@@ -49,14 +49,14 @@ export function useProjectTree(projectId: () => number) {
         parent_id: parentId,
       })
       if (data.status) {
-        ElMessage.success('目录已创建')
+        ElMessage.success("目录已创建")
         await loadTree()
         return true
       }
-      ElMessage.error(data.message || '创建目录失败')
+      ElMessage.error(data.message || "创建目录失败")
       return false
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '创建目录失败'))
+      ElMessage.error(formatApiError(e, "创建目录失败"))
       return false
     }
   }
@@ -65,14 +65,14 @@ export function useProjectTree(projectId: () => number) {
     try {
       const { data } = await updateDirectory(dirId, { name: name.trim() })
       if (data.status) {
-        ElMessage.success('目录已更新')
+        ElMessage.success("目录已更新")
         await loadTree()
         return true
       }
-      ElMessage.error(data.message || '更新失败')
+      ElMessage.error(data.message || "更新失败")
       return false
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '更新失败'))
+      ElMessage.error(formatApiError(e, "更新失败"))
       return false
     }
   }
@@ -81,14 +81,14 @@ export function useProjectTree(projectId: () => number) {
     try {
       const { data } = await deleteDirectory(dirId)
       if (data.status) {
-        ElMessage.success('目录已删除')
+        ElMessage.success("目录已删除")
         await loadTree()
         return true
       }
-      ElMessage.error(data.message || '删除失败')
+      ElMessage.error(data.message || "删除失败")
       return false
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '删除失败'))
+      ElMessage.error(formatApiError(e, "删除失败"))
       return false
     }
   }
@@ -102,14 +102,14 @@ export function useProjectTree(projectId: () => number) {
         directory_id: directoryId,
       })
       if (data.status && data.data) {
-        ElMessage.success('文件已创建')
+        ElMessage.success("文件已创建")
         await loadTree()
         return data.data.id
       }
-      ElMessage.error(data.message || '创建文件失败')
+      ElMessage.error(data.message || "创建文件失败")
       return null
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '创建文件失败'))
+      ElMessage.error(formatApiError(e, "创建文件失败"))
       return null
     }
   }
@@ -118,14 +118,14 @@ export function useProjectTree(projectId: () => number) {
     try {
       const { data } = await updateFile(fileId, { name: name.trim() })
       if (data.status) {
-        ElMessage.success('文件已重命名')
+        ElMessage.success("文件已重命名")
         await loadTree()
         return true
       }
-      ElMessage.error(data.message || '重命名失败')
+      ElMessage.error(data.message || "重命名失败")
       return false
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '重命名失败'))
+      ElMessage.error(formatApiError(e, "重命名失败"))
       return false
     }
   }
@@ -134,20 +134,20 @@ export function useProjectTree(projectId: () => number) {
     try {
       const { data } = await deleteFile(fileId)
       if (data.status) {
-        ElMessage.success('文件已删除')
+        ElMessage.success("文件已删除")
         await loadTree()
         return true
       }
-      ElMessage.error(data.message || '删除失败')
+      ElMessage.error(data.message || "删除失败")
       return false
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '删除失败'))
+      ElMessage.error(formatApiError(e, "删除失败"))
       return false
     }
   }
 
   async function moveTreeItem(
-    itemType: 'directory' | 'file',
+    itemType: "directory" | "file",
     itemId: number | string,
     targetDirectoryId: number | null,
   ) {
@@ -163,10 +163,10 @@ export function useProjectTree(projectId: () => number) {
         await loadTree()
         return true
       }
-      ElMessage.error(data.message || '移动失败')
+      ElMessage.error(data.message || "移动失败")
       return false
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '移动失败'))
+      ElMessage.error(formatApiError(e, "移动失败"))
       return false
     }
   }

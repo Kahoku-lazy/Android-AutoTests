@@ -7,10 +7,10 @@
  * - 长按拖拽 → 移入目录
  * - solo：资源态独占整页（非侧栏窄条）
  */
-import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { useLibraryStore, type LibNode } from '@/modules/workflow/stores/libraryStore'
-import { NODE_TYPES, NODE_TYPE_LABELS } from '@/modules/workflow/constants'
+import { computed, ref, onMounted, onUnmounted } from "vue"
+import { ElMessage, ElMessageBox } from "element-plus"
+import { useLibraryStore, type LibNode } from "@/modules/workflow/stores/libraryStore"
+import { NODE_TYPES, NODE_TYPE_LABELS } from "@/modules/workflow/constants"
 
 const props = defineProps<{
   selectedFolderId: string | null
@@ -20,24 +20,24 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update:selectedFolderId': [id: string | null]
-  browse: []
-  open: [node: LibNode]
-  createFolder: [parentId: string | null]
-  createFlow: [parentId: string | null]
-  export: [node: LibNode]
+  "update:selectedFolderId": [id: string | null]
+  "browse": []
+  "open": [node: LibNode]
+  "createFolder": [parentId: string | null]
+  "createFlow": [parentId: string | null]
+  "export": [node: LibNode]
 }>()
 
 const lib = useLibraryStore()
 const renamingId = ref<string | null>(null)
-const renameValue = ref('')
+const renameValue = ref("")
 
 /** 右键菜单 */
 const ctx = ref<{
   x: number
   y: number
   node: LibNode | null
-  kind: 'root' | 'folder' | 'file'
+  kind: "root" | "folder" | "file"
 } | null>(null)
 
 /** 长按拖拽 */
@@ -46,12 +46,12 @@ const dragId = ref<string | null>(null)
 const dropTargetId = ref<string | null | undefined>(undefined) // null=root
 const pressTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 const dragging = ref(false)
-const DIR_COLLAPSE_KEY = 'wf_dir_pane_collapsed'
-const paneCollapsed = ref(localStorage.getItem(DIR_COLLAPSE_KEY) === '1')
+const DIR_COLLAPSE_KEY = "wf_dir_pane_collapsed"
+const paneCollapsed = ref(localStorage.getItem(DIR_COLLAPSE_KEY) === "1")
 
 function togglePane() {
   paneCollapsed.value = !paneCollapsed.value
-  localStorage.setItem(DIR_COLLAPSE_KEY, paneCollapsed.value ? '1' : '0')
+  localStorage.setItem(DIR_COLLAPSE_KEY, paneCollapsed.value ? "1" : "0")
 }
 
 type TreeRow = { node: LibNode; depth: number }
@@ -60,18 +60,18 @@ const treeRows = computed(() => {
   const rows: TreeRow[] = []
   function walk(parentId: string | null, depth: number) {
     const kids = lib.nodes
-      .filter(n => n.parentId === parentId)
+      .filter((n) => n.parentId === parentId)
       .slice()
       .sort((a, b) => {
         const order: Record<string, number> = {
           folder: 0,
           [NODE_TYPES.PAGE_FLOW]: 1,
         }
-        return (order[a.type] ?? 9) - (order[b.type] ?? 9) || a.name.localeCompare(b.name, 'zh')
+        return (order[a.type] ?? 9) - (order[b.type] ?? 9) || a.name.localeCompare(b.name, "zh")
       })
     for (const n of kids) {
       rows.push({ node: n, depth })
-      if (n.type === 'folder' && lib.expanded[n.id]) walk(n.id, depth + 1)
+      if (n.type === "folder" && lib.expanded[n.id]) walk(n.id, depth + 1)
     }
   }
   walk(null, 0)
@@ -79,9 +79,7 @@ const treeRows = computed(() => {
 })
 
 function fileCount(folderId: string): number {
-  return lib.nodes.filter(
-    n => n.parentId === folderId && n.type !== 'folder'
-  ).length
+  return lib.nodes.filter((n) => n.parentId === folderId && n.type !== "folder").length
 }
 
 function closeCtx() {
@@ -92,9 +90,9 @@ function onDocClick() {
   closeCtx()
 }
 
-onMounted(() => document.addEventListener('click', onDocClick))
+onMounted(() => document.addEventListener("click", onDocClick))
 onUnmounted(() => {
-  document.removeEventListener('click', onDocClick)
+  document.removeEventListener("click", onDocClick)
   clearPress()
 })
 
@@ -103,26 +101,26 @@ function setFolderId(id: string | null) {
     lib.expanded[id] = true
     lib.persistMeta()
   }
-  emit('update:selectedFolderId', id)
+  emit("update:selectedFolderId", id)
 }
 
 /** 点击目录 / 根 → 选中并关闭绘制（若有） */
 function selectFolder(id: string | null) {
   setFolderId(id)
-  emit('browse')
+  emit("browse")
 }
 
 function onRowClick(n: LibNode) {
   if (dragging.value) return
-  if (n.type === 'folder') {
+  if (n.type === "folder") {
     selectFolder(n.id)
     return
   }
   setFolderId(n.parentId)
-  emit('open', n)
+  emit("open", n)
 }
 
-function onCtxMenu(e: MouseEvent, n: LibNode | null, kind: 'root' | 'folder' | 'file') {
+function onCtxMenu(e: MouseEvent, n: LibNode | null, kind: "root" | "folder" | "file") {
   e.preventDefault()
   e.stopPropagation()
   ctx.value = { x: e.clientX, y: e.clientY, node: n, kind }
@@ -143,14 +141,14 @@ async function confirmRename() {
 
 async function removeNode(n: LibNode) {
   const tip =
-    n.type === 'folder'
+    n.type === "folder"
       ? `删除目录「${n.name}」？其中的页面流与接口流也会删除。`
       : `删除「${n.name}」？\n${n.id}`
   try {
-    await ElMessageBox.confirm(tip, '删除确认', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
+    await ElMessageBox.confirm(tip, "删除确认", {
+      confirmButtonText: "删除",
+      cancelButtonText: "取消",
+      type: "warning",
     })
   } catch {
     // 用户取消删除：ElMessageBox 以 reject 表示取消，不执行删除（非静默吞错）
@@ -158,9 +156,9 @@ async function removeNode(n: LibNode) {
   }
   try {
     await lib.deleteNode(n.id)
-    if (props.selectedFolderId === n.id) emit('update:selectedFolderId', null)
+    if (props.selectedFolderId === n.id) emit("update:selectedFolderId", null)
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : '删除失败'
+    const msg = e instanceof Error ? e.message : "删除失败"
     ElMessage.error(msg)
   } finally {
     closeCtx()
@@ -168,9 +166,8 @@ async function removeNode(n: LibNode) {
 }
 
 function ctxCreateFolder() {
-  const parent =
-    ctx.value?.kind === 'folder' ? ctx.value.node?.id ?? null : null
-  emit('createFolder', parent)
+  const parent = ctx.value?.kind === "folder" ? (ctx.value.node?.id ?? null) : null
+  emit("createFolder", parent)
   if (parent) {
     lib.expanded[parent] = true
     selectFolder(parent)
@@ -180,22 +177,20 @@ function ctxCreateFolder() {
 
 function ctxCreateFlow() {
   const parent =
-    ctx.value?.kind === 'folder'
-      ? ctx.value.node?.id ?? null
-      : props.selectedFolderId
-  emit('createFlow', parent)
+    ctx.value?.kind === "folder" ? (ctx.value.node?.id ?? null) : props.selectedFolderId
+  emit("createFlow", parent)
   closeCtx()
 }
 
 function ctxOpen() {
   const n = ctx.value?.node
-  if (n && n.type !== 'folder') emit('open', n)
+  if (n && n.type !== "folder") emit("open", n)
   closeCtx()
 }
 
 function ctxExport() {
   const n = ctx.value?.node
-  if (n && n.type !== 'folder') emit('export', n)
+  if (n && n.type !== "folder") emit("export", n)
   closeCtx()
 }
 
@@ -222,7 +217,7 @@ function onPointerDown(e: PointerEvent, n: LibNode) {
     dragging.value = true
     dragId.value = n.id
     dropTargetId.value = undefined
-    window.addEventListener('pointerup', onPointerUp, { once: true })
+    window.addEventListener("pointerup", onPointerUp, { once: true })
   }, LONG_MS)
 }
 
@@ -256,7 +251,7 @@ function onPointerCancel() {
 }
 
 function onCreateRoot() {
-  emit('createFolder', null)
+  emit("createFolder", null)
 }
 </script>
 
@@ -299,11 +294,7 @@ function onCreateRoot() {
         <p class="dir-desc">右键新建 · 长按拖入目录 · 点文件编辑</p>
         <div class="dir-actions">
           <button type="button" class="mini" @click="onCreateRoot">+ 根目录</button>
-          <button
-            type="button"
-            class="mini"
-            @click="emit('createFlow', selectedFolderId)"
-          >
+          <button type="button" class="mini" @click="emit('createFlow', selectedFolderId)">
             + 页面流
           </button>
         </div>
@@ -313,7 +304,7 @@ function onCreateRoot() {
         <div
           class="dir-row root"
           :class="{
-            active: selectedFolderId === null && !activeFileId,
+            'active': selectedFolderId === null && !activeFileId,
             'drop-on': dragging && dropTargetId === null,
           }"
           @click="selectFolder(null)"
@@ -322,7 +313,7 @@ function onCreateRoot() {
         >
           <span class="ico">🗂</span>
           <span class="name">全部 / 根</span>
-          <span class="badge">{{ lib.nodes.filter(n => n.type !== 'folder').length }}</span>
+          <span class="badge">{{ lib.nodes.filter((n) => n.type !== "folder").length }}</span>
         </div>
 
         <div v-if="!treeRows.length" class="empty-state">
@@ -334,31 +325,20 @@ function onCreateRoot() {
           :key="row.node.id"
           class="dir-row"
           :class="{
-            active:
+            'active':
               row.node.type === 'folder'
                 ? selectedFolderId === row.node.id && !activeFileId
                 : activeFileId === row.node.id,
-            file: row.node.type !== 'folder',
-            flow: row.node.type === NODE_TYPES.PAGE_FLOW,
-            dragging: dragId === row.node.id,
-            'drop-on':
-              dragging &&
-              row.node.type === 'folder' &&
-              dropTargetId === row.node.id,
+            'file': row.node.type !== 'folder',
+            'flow': row.node.type === NODE_TYPES.PAGE_FLOW,
+            'dragging': dragId === row.node.id,
+            'drop-on': dragging && row.node.type === 'folder' && dropTargetId === row.node.id,
           }"
           :style="{ paddingLeft: `${10 + row.depth * 14}px` }"
           @click="onRowClick(row.node)"
-          @contextmenu="
-            onCtxMenu(
-              $event,
-              row.node,
-              row.node.type === 'folder' ? 'folder' : 'file'
-            )
-          "
+          @contextmenu="onCtxMenu($event, row.node, row.node.type === 'folder' ? 'folder' : 'file')"
           @pointerdown="onPointerDown($event, row.node)"
-          @pointerenter="
-            row.node.type === 'folder' && onPointerEnterDrop(row.node.id)
-          "
+          @pointerenter="row.node.type === 'folder' && onPointerEnterDrop(row.node.id)"
         >
           <button
             v-if="row.node.type === 'folder'"
@@ -366,12 +346,12 @@ function onCreateRoot() {
             class="chev"
             @click.stop="lib.toggleExpand(row.node.id)"
           >
-            {{ lib.expanded[row.node.id] ? '▾' : '▸' }}
+            {{ lib.expanded[row.node.id] ? "▾" : "▸" }}
           </button>
           <span v-else class="chev-sp" />
           <span class="ico">
             <template v-if="row.node.type === 'folder'">
-              {{ lib.expanded[row.node.id] ? '📂' : '📁' }}
+              {{ lib.expanded[row.node.id] ? "📂" : "📁" }}
             </template>
             <template v-else>🗺️</template>
           </span>
@@ -386,7 +366,7 @@ function onCreateRoot() {
           <span v-else class="name" :title="row.node.type !== 'folder' ? row.node.id : ''">
             {{ row.node.name }}
             <span v-if="row.node.type !== 'folder'" class="type-tag">
-              {{ NODE_TYPE_LABELS[row.node.type] || '' }}
+              {{ NODE_TYPE_LABELS[row.node.type] || "" }}
             </span>
           </span>
           <span v-if="row.node.type === 'folder'" class="badge">
@@ -395,9 +375,7 @@ function onCreateRoot() {
         </div>
       </div>
 
-      <div v-if="dragging" class="drag-hint">
-        拖到目标目录后松手 · 可放到「全部 / 根」
-      </div>
+      <div v-if="dragging" class="drag-hint">拖到目标目录后松手 · 可放到「全部 / 根」</div>
     </template>
 
     <!-- 右键菜单 -->
@@ -467,8 +445,13 @@ function onCreateRoot() {
   font-family: inherit;
   color: var(--ac-accent-deep);
 }
-.dir-rail:hover { background: var(--ac-accent-soft); }
-.rail-chev { font-size: var(--app-size-lg); font-weight: 800; }
+.dir-rail:hover {
+  background: var(--ac-accent-soft);
+}
+.rail-chev {
+  font-size: var(--app-size-lg);
+  font-weight: 800;
+}
 .rail-label {
   writing-mode: vertical-rl;
   font-size: var(--app-size-sm);
@@ -498,7 +481,10 @@ function onCreateRoot() {
   line-height: 1;
   flex-shrink: 0;
 }
-.dir-toggle:hover { border-color: var(--c-workflow); color: var(--ink); }
+.dir-toggle:hover {
+  border-color: var(--c-workflow);
+  color: var(--ink);
+}
 .dir-title {
   font-size: var(--app-size-md);
   font-weight: 800;
@@ -511,7 +497,11 @@ function onCreateRoot() {
   font-weight: 600;
   line-height: 1.5;
 }
-.dir-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.dir-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
 .mini {
   padding: 5px 11px;
   border: 2px solid var(--ink);
@@ -524,9 +514,18 @@ function onCreateRoot() {
   color: var(--ink);
   transition: background var(--app-duration-fast) var(--app-ease);
 }
-.mini:hover { background: var(--ac-accent-soft); }
-.mini:focus-visible { outline: 2px solid var(--c-workflow); outline-offset: 2px; }
-.dir-scroll { flex: 1; overflow: auto; padding: var(--app-space-sm) var(--app-space-sm) 12px; }
+.mini:hover {
+  background: var(--ac-accent-soft);
+}
+.mini:focus-visible {
+  outline: 2px solid var(--c-workflow);
+  outline-offset: 2px;
+}
+.dir-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: var(--app-space-sm) var(--app-space-sm) 12px;
+}
 .empty-state {
   margin: 12px var(--app-space-sm);
   padding: var(--app-space-md) 12px;
@@ -558,7 +557,9 @@ function onCreateRoot() {
   box-sizing: border-box;
   transition: background var(--app-duration-fast) var(--app-ease);
 }
-.dir-row:hover { background: var(--ac-accent-soft); }
+.dir-row:hover {
+  background: var(--ac-accent-soft);
+}
 .dir-row.active {
   background: var(--ac-accent-soft);
   box-shadow: inset 3px 0 0 var(--c-workflow);
@@ -575,7 +576,9 @@ function onCreateRoot() {
   margin-bottom: var(--app-space-xs);
   font-weight: 700;
 }
-.dir-row.flow .name { color: var(--ac-accent-deep); }
+.dir-row.flow .name {
+  color: var(--ac-accent-deep);
+}
 .type-tag {
   margin-left: 6px;
   font-size: var(--app-size-xs);
@@ -593,8 +596,14 @@ function onCreateRoot() {
   flex-shrink: 0;
   font-size: var(--app-size-xs);
 }
-.chev-sp { width: 16px; flex-shrink: 0; }
-.ico { font-size: var(--app-size-sm); flex-shrink: 0; }
+.chev-sp {
+  width: 16px;
+  flex-shrink: 0;
+}
+.ico {
+  font-size: var(--app-size-sm);
+  flex-shrink: 0;
+}
 .name {
   flex: 1;
   min-width: 0;
@@ -664,9 +673,15 @@ function onCreateRoot() {
   cursor: pointer;
   transition: background var(--app-duration-fast) var(--app-ease);
 }
-.wf-ctx button:hover { background: var(--wf-ctx-hover-bg); }
-.wf-ctx button.danger { color: var(--app-status-danger-text); }
-.wf-ctx button.danger:hover { background: var(--app-status-danger-bg); }
+.wf-ctx button:hover {
+  background: var(--wf-ctx-hover-bg);
+}
+.wf-ctx button.danger {
+  color: var(--app-status-danger-text);
+}
+.wf-ctx button.danger:hover {
+  background: var(--app-status-danger-bg);
+}
 .wf-ctx hr {
   border: none;
   border-top: 1px solid var(--app-border-light);

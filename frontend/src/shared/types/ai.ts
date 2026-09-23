@@ -2,14 +2,15 @@
 
 // ── 字面量联合类型 ──
 
-export type ViewMode = 'agents' | 'toolbox' | 'knowledge'
-export type AgentStatus = 'active' | 'paused' | 'error'
-export type ConnectionMode = 'sse' | 'django' | 'connecting' | 'unknown'
-export type ModelStatus = 'idle' | 'streaming' | 'thinking' | 'tool_calling' | 'calling_model' | 'done'
-export type MessageRole = 'user' | 'assistant'
-export type DeliveryStatus = 'sending' | 'sent' | 'error'
-export type StreamReason = 'normal' | 'exceed_max_iters' | 'stopped' | 'error' | 'detached'
-export type ToolState = 'calling' | 'submitted' | 'running' | 'success' | 'error' | 'denied'
+export type ViewMode = "agents" | "toolbox" | "knowledge"
+export type AgentStatus = "active" | "paused" | "error"
+export type ConnectionMode = "sse" | "django" | "connecting" | "unknown"
+export type ModelStatus =
+  "idle" | "streaming" | "thinking" | "tool_calling" | "calling_model" | "done"
+export type MessageRole = "user" | "assistant"
+export type DeliveryStatus = "sending" | "sent" | "error"
+export type StreamReason = "normal" | "exceed_max_iters" | "stopped" | "error" | "detached"
+export type ToolState = "calling" | "submitted" | "running" | "success" | "error" | "denied"
 
 // ── Agent ──
 export interface AgentRecord {
@@ -38,7 +39,7 @@ export interface RouteModelConfig {
 }
 
 /** 线路连通三态：可执行 / 密钥通但不可用 / 断线 */
-export type RouteConnStatus = 'ready' | 'unusable' | 'offline'
+export type RouteConnStatus = "ready" | "unusable" | "offline"
 
 export interface RouteHealth {
   is_connected?: boolean | null
@@ -62,7 +63,7 @@ export interface RouteConfigMap {
   device_control?: RouteConfig
 }
 
-export type AgentRoute = 'device_control'
+export type AgentRoute = "device_control"
 
 // ── 任务发布 ──
 export interface TaskRecord {
@@ -207,7 +208,10 @@ export interface TaskDetail {
   input_tokens?: number
   output_tokens?: number
   cache_input_tokens?: number
-  model_usage?: Record<string, { input_tokens?: number; output_tokens?: number; cache_input_tokens?: number }>
+  model_usage?: Record<
+    string,
+    { input_tokens?: number; output_tokens?: number; cache_input_tokens?: number }
+  >
   deepseek_cost?: number
   run?: TaskRunPayload
 }
@@ -244,19 +248,19 @@ export interface ContentBlock {
 }
 
 export interface TextBlock extends ContentBlock {
-  type: 'text'
+  type: "text"
   text: string
 }
 
 export interface ThinkingBlock extends ContentBlock {
-  type: 'thinking'
+  type: "thinking"
   thinking: string
   done?: boolean
   roundIndex?: number
 }
 
 export interface ToolCallBlock extends ContentBlock {
-  type: 'tool_call'
+  type: "tool_call"
   name: string
   input?: object
   inputRaw?: string
@@ -265,20 +269,20 @@ export interface ToolCallBlock extends ContentBlock {
 }
 
 export interface ToolResultBlock extends ContentBlock {
-  type: 'tool_result'
+  type: "tool_result"
   name: string
   output: string
   state: string
 }
 
 export interface ToolPairBlock extends ContentBlock {
-  type: 'tool_pair'
+  type: "tool_pair"
   call: ToolCallBlock
   result: ToolResultBlock
 }
 
 export interface HintBlock extends ContentBlock {
-  type: 'hint'
+  type: "hint"
   hint: string | object
   source?: string
 }
@@ -295,7 +299,7 @@ export interface ToolCall {
   resultImage?: string
   partialOutput?: string | null
   roundIndex?: number
-  source?: 'builtin' | 'platform' | 'mcp' | 'skill'
+  source?: "builtin" | "platform" | "mcp" | "skill"
   startedAt?: number
 }
 

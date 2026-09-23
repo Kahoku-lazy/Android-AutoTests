@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
-import SketchCard from '@/shared/components/SketchCard.vue'
-import EmptyState from '@/shared/components/patterns/EmptyState.vue'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import SkeletonCard from '@/shared/components/patterns/SkeletonCard.vue'
-import { sketchTiltAt, sketchToneAt } from '@/shared/helpers/sketchCard'
-import { useLocatorProjects } from './composables/useLocatorProjects'
-import { PROJECT_HINTS, isLocatorProjectCode } from './types'
+import { onMounted } from "vue"
+import { useRouter } from "vue-router"
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import SketchCard from "@/shared/components/SketchCard.vue"
+import EmptyState from "@/shared/components/patterns/EmptyState.vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
+import { sketchTiltAt, sketchToneAt } from "@/shared/helpers/sketchCard"
+import { useLocatorProjects } from "./composables/useLocatorProjects"
+import { PROJECT_HINTS, isLocatorProjectCode } from "./types"
 
 const router = useRouter()
 const { projects, loading, error, isEmpty, loadProjects } = useLocatorProjects()
@@ -19,7 +19,7 @@ onMounted(() => {
 
 function hintOf(code: string, description: string) {
   if (description) return description
-  return isLocatorProjectCode(code) ? PROJECT_HINTS[code] : '暂无描述'
+  return isLocatorProjectCode(code) ? PROJECT_HINTS[code] : "暂无描述"
 }
 
 function enterProject(code: string) {

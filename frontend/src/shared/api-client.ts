@@ -1,12 +1,7 @@
 import axios from "axios"
 import { formatApiError } from "@/shared/types/api-error"
 import type { ApiError } from "@/shared/types/api-error"
-import {
-  getToken,
-  setToken,
-  clearToken,
-  getRefreshToken,
-} from "@/shared/auth/token-storage"
+import { getToken, setToken, clearToken, getRefreshToken } from "@/shared/auth/token-storage"
 import { attachAuthInterceptors } from "@/shared/api-auth-interceptors"
 
 /** 后端统一响应信封 — 所有 Django API 返回此格式 */

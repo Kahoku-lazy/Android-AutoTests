@@ -1,14 +1,17 @@
 <script setup lang="ts">
 /** DisconnectDialog — 删除局域网设备确认弹窗 */
-const props = withDefaults(defineProps<{
-  visible?: boolean
-  serial?: string
-  model?: string
-}>(), {
-  visible: false,
-  serial: '',
-  model: '',
-})
+const props = withDefaults(
+  defineProps<{
+    visible?: boolean
+    serial?: string
+    model?: string
+  }>(),
+  {
+    visible: false,
+    serial: "",
+    model: "",
+  },
+)
 
 const emit = defineEmits<{
   confirm: []
@@ -16,11 +19,11 @@ const emit = defineEmits<{
 }>()
 
 function handleConfirm() {
-  emit('confirm')
+  emit("confirm")
 }
 
 function handleCancel() {
-  emit('cancel')
+  emit("cancel")
 }
 </script>
 
@@ -50,7 +53,9 @@ function handleCancel() {
 </template>
 
 <style scoped>
-.disconnect-body { margin-bottom: var(--app-space-md); }
+.disconnect-body {
+  margin-bottom: var(--app-space-md);
+}
 .disconnect-warning {
   background: var(--app-status-warning-bg);
   color: var(--app-warning-text);

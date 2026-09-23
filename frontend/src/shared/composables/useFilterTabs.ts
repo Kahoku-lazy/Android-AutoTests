@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed } from "vue"
 
 /**
  * Standard Tabs-based filter for a reactive list.
@@ -31,7 +31,7 @@ import { ref, computed } from 'vue'
  *   </Tabs>
  */
 export function useFilterTabs(source, tabDefs: Record<string, any>, matchFn) {
-  const activeFilter = ref('all')
+  const activeFilter = ref("all")
 
   const filterTabs = Object.entries(tabDefs).map(([key, def]) => ({
     key,
@@ -40,7 +40,7 @@ export function useFilterTabs(source, tabDefs: Record<string, any>, matchFn) {
   }))
 
   const filteredItems = computed(() => {
-    if (activeFilter.value === 'all') return source.value
+    if (activeFilter.value === "all") return source.value
     return source.value.filter((item) => matchFn(item, activeFilter.value))
   })
 

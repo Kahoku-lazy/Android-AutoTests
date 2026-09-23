@@ -1,9 +1,9 @@
 /** Dashboard API — 仪表盘统计数据 HTTP 调用 */
-import client, { type DjangoResponse } from '@/shared/api-client'
-import type { DashboardRawData, ActivityItem } from '@/shared/types/dashboard'
+import client, { type DjangoResponse } from "@/shared/api-client"
+import type { DashboardRawData, ActivityItem } from "@/shared/types/dashboard"
 
 export function fetchDashboardStats() {
-  return client.get<DjangoResponse<DashboardRawData>>('/dashboard/stats/')
+  return client.get<DjangoResponse<DashboardRawData>>("/dashboard/stats/")
 }
 
 export interface ActivityQuery {
@@ -12,7 +12,7 @@ export interface ActivityQuery {
 }
 
 export function fetchRecentActivities(params?: ActivityQuery) {
-  return client.get<DjangoResponse<ActivityItem[]>>('/dashboard/activities/', {
+  return client.get<DjangoResponse<ActivityItem[]>>("/dashboard/activities/", {
     params: params ?? {},
   })
 }

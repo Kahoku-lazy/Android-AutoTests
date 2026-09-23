@@ -1,9 +1,9 @@
 /** 任务发布 — 表单状态 + 提交前校验 + 提交（multipart） */
-import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import { listDevices, submitTask } from '../api/tasks'
-import { TASK_DEVICE_POLL_INTERVAL_MS } from '../constants'
-import type { DeviceRecord } from '@/shared/types/device'
+import { ref, onMounted, onUnmounted, watch } from "vue"
+import { ElMessage } from "element-plus"
+import { listDevices, submitTask } from "../api/tasks"
+import { TASK_DEVICE_POLL_INTERVAL_MS } from "../constants"
+import type { DeviceRecord } from "@/shared/types/device"
 
 export interface TaskFormState {
   title: string
@@ -13,19 +13,19 @@ export interface TaskFormState {
   device_serial: string
 }
 
-const ATTACH_ACCEPT = '.docx,.pdf'
+const ATTACH_ACCEPT = ".docx,.pdf"
 
 function emptyForm(): TaskFormState {
   return {
-    title: '',
-    goal: '',
+    title: "",
+    goal: "",
     attachmentFile: null,
-    device_serial: '',
+    device_serial: "",
   }
 }
 
 function deviceLabelOf(d: DeviceRecord): string {
-  return (d.model || d.name || '').trim()
+  return (d.model || d.name || "").trim()
 }
 
 export function useTaskPublish() {
@@ -77,7 +77,7 @@ export function useTaskPublish() {
   onUnmounted(stopDevicePoll)
 
   function canSubmit(): boolean {
-    return form.value.title.trim() !== '' && form.value.goal.trim() !== ''
+    return form.value.title.trim() !== "" && form.value.goal.trim() !== ""
   }
 
   function onAttachChange(file: File | null) {
@@ -90,38 +90,40 @@ export function useTaskPublish() {
 
   async function submit(onSuccess?: () => void) {
     if (!canSubmit()) {
-      ElMessage.warning('请填写任务标题与任务目标')
+      ElMessage.warning("请填写任务标题与任务目标")
       return
     }
     submitting.value = true
     try {
       const fd = new FormData()
-      fd.append('title', form.value.title.trim())
-      fd.append('goal', form.value.goal.trim())
+      fd.append("title", form.value.title.trim())
+      fd.append("goal", form.value.goal.trim())
       const serial = form.value.device_serial
       if (serial) {
-        fd.append('device_serial', serial)
+        fd.append("device_serial", serial)
         const hit = devices.value.find((d) => d.serial === serial)
-        const label = hit ? deviceLabelOf(hit) : ''
-        if (label) fd.append('device_label', label)
+        const label = hit ? deviceLabelOf(hit) : ""
+        if (label) fd.append("device_label", label)
       }
       if (form.value.attachmentFile) {
-        fd.append('attachment', form.value.attachmentFile)
+        fd.append("attachment", form.value.attachmentFile)
       }
       const data = await submitTask(fd)
       if (data.status) {
-        ElMessage.success('任务已提交')
+        ElMessage.success("任务已提交")
         form.value = emptyForm()
         onSuccess?.()
       } else {
-        ElMessage.error(data.message || '提交失败')
+        ElMessage.error(data.message || "提交失败")
       }
     } catch (err: unknown) {
       const msg =
-        err && typeof err === 'object' && 'response' in err
-          ? String((err as { response?: { data?: { message?: string } } }).response?.data?.message || '')
-          : ''
-      ElMessage.error(msg || '提交请求失败，请检查网络连接')
+        err && typeof err === "object" && "response" in err
+          ? String(
+              (err as { response?: { data?: { message?: string } } }).response?.data?.message || "",
+            )
+          : ""
+      ElMessage.error(msg || "提交请求失败，请检查网络连接")
     }
     submitting.value = false
   }

@@ -1,11 +1,11 @@
 <script setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import AppSidebar from '@/shared/components/AppSidebar.vue'
-import PaperDoodles from '@/shared/components/PaperDoodles.vue'
+import { computed } from "vue"
+import { useRoute } from "vue-router"
+import AppSidebar from "@/shared/components/AppSidebar.vue"
+import PaperDoodles from "@/shared/components/PaperDoodles.vue"
 
 const route = useRoute()
-const showSidebar = computed(() => route.path !== '/login')
+const showSidebar = computed(() => route.path !== "/login")
 </script>
 
 <template>

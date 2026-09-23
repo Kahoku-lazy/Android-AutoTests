@@ -2,13 +2,9 @@
 /**
  * 单轮尝试卡片：执行结果常显；Agent 过程可折叠（默认收起）。
  */
-import { computed } from 'vue'
-import type { TaskStepAttempt } from '../helpers/task-detail'
-import {
-  attemptTraceSides,
-  toolScreenshotUrl,
-  toolTraceLine,
-} from '../helpers/task-detail'
+import { computed } from "vue"
+import type { TaskStepAttempt } from "../helpers/task-detail"
+import { attemptTraceSides, toolScreenshotUrl, toolTraceLine } from "../helpers/task-detail"
 
 const props = defineProps<{
   attempt: TaskStepAttempt
@@ -19,17 +15,11 @@ const sides = computed(() => attemptTraceSides(props.attempt))
 </script>
 
 <template>
-  <article
-    class="tac"
-    :class="attempt.verifierResult === 'pass' ? 'is-pass' : 'is-fail'"
-  >
+  <article class="tac" :class="attempt.verifierResult === 'pass' ? 'is-pass' : 'is-fail'">
     <header class="tac__head">
       <h4 class="tac__title">尝试 {{ attempt.loop }}/{{ maxLoops }}</h4>
-      <span
-        class="tac__badge"
-        :class="attempt.verifierResult === 'pass' ? 'is-ok' : 'is-bad'"
-      >
-        验收 {{ attempt.verifierResult || '—' }}
+      <span class="tac__badge" :class="attempt.verifierResult === 'pass' ? 'is-ok' : 'is-bad'">
+        验收 {{ attempt.verifierResult || "—" }}
       </span>
     </header>
 
@@ -40,9 +30,15 @@ const sides = computed(() => attemptTraceSides(props.attempt))
         <span class="tac-result__label">执行</span>
         <span
           class="tac-result__value"
-          :class="attempt.executorResult === 'pass' ? 'is-ok' : attempt.executorResult === 'fail' ? 'is-bad' : ''"
+          :class="
+            attempt.executorResult === 'pass'
+              ? 'is-ok'
+              : attempt.executorResult === 'fail'
+                ? 'is-bad'
+                : ''
+          "
         >
-          {{ attempt.executorResult || '—' }}
+          {{ attempt.executorResult || "—" }}
         </span>
         <span v-if="attempt.executorMessage" class="tac-result__msg">
           · {{ attempt.executorMessage }}
@@ -54,11 +50,9 @@ const sides = computed(() => attemptTraceSides(props.attempt))
           class="tac-result__value"
           :class="attempt.verifierResult === 'pass' ? 'is-ok' : 'is-bad'"
         >
-          {{ attempt.verifierResult || '—' }}
+          {{ attempt.verifierResult || "—" }}
         </span>
-        <span v-if="attempt.actual" class="tac-result__msg">
-          · {{ attempt.actual }}
-        </span>
+        <span v-if="attempt.actual" class="tac-result__msg"> · {{ attempt.actual }} </span>
       </p>
       <div v-if="attempt.screenshotUrl" class="tac-result__shot">
         <span class="tac-result__shot-label">验证截图</span>
@@ -75,18 +69,9 @@ const sides = computed(() => attemptTraceSides(props.attempt))
 
     <!-- Agent 过程：默认全部收起 -->
     <el-collapse v-if="sides.length" class="tac-trace">
-      <el-collapse-item
-        v-for="side in sides"
-        :key="side.key"
-        :name="side.key"
-        :title="side.label"
-      >
+      <el-collapse-item v-for="side in sides" :key="side.key" :name="side.key" :title="side.label">
         <el-collapse class="tac-trace tac-trace--nested">
-          <el-collapse-item
-            v-if="side.trace.input"
-            :name="`${side.key}-input`"
-            title="输入"
-          >
+          <el-collapse-item v-if="side.trace.input" :name="`${side.key}-input`" title="输入">
             <p class="tac-trace__body">{{ side.trace.input }}</p>
           </el-collapse-item>
           <el-collapse-item
@@ -94,11 +79,7 @@ const sides = computed(() => attemptTraceSides(props.attempt))
             :name="`${side.key}-think`"
             title="思考过程"
           >
-            <p
-              v-for="(t, ti) in side.trace.thinking"
-              :key="ti"
-              class="tac-trace__body"
-            >{{ t }}</p>
+            <p v-for="(t, ti) in side.trace.thinking" :key="ti" class="tac-trace__body">{{ t }}</p>
           </el-collapse-item>
           <el-collapse-item
             v-if="side.trace.tools?.length"
@@ -119,11 +100,7 @@ const sides = computed(() => attemptTraceSides(props.attempt))
               </li>
             </ul>
           </el-collapse-item>
-          <el-collapse-item
-            v-if="side.trace.text"
-            :name="`${side.key}-text`"
-            title="文本"
-          >
+          <el-collapse-item v-if="side.trace.text" :name="`${side.key}-text`" title="文本">
             <p class="tac-trace__body">{{ side.trace.text }}</p>
           </el-collapse-item>
         </el-collapse>
@@ -190,13 +167,17 @@ const sides = computed(() => attemptTraceSides(props.attempt))
   align-items: baseline;
   gap: var(--app-space-xs);
 }
-.tac-result__row:last-of-type { margin-bottom: 0; }
+.tac-result__row:last-of-type {
+  margin-bottom: 0;
+}
 .tac-result__label {
   font-weight: 700;
   color: var(--ai-ink-muted, var(--app-text-muted));
   min-width: 2em;
 }
-.tac-result__value { font-weight: 800; }
+.tac-result__value {
+  font-weight: 800;
+}
 .tac-result__msg {
   color: var(--ai-ink-soft, var(--app-text-secondary));
   white-space: pre-wrap;
@@ -268,6 +249,12 @@ const sides = computed(() => attemptTraceSides(props.attempt))
   color: var(--ai-ink-soft, var(--app-text-secondary));
   line-height: 1.5;
 }
-.is-ok { color: var(--app-status-success-text); font-weight: 800; }
-.is-bad { color: var(--app-status-danger-text); font-weight: 800; }
+.is-ok {
+  color: var(--app-status-success-text);
+  font-weight: 800;
+}
+.is-bad {
+  color: var(--app-status-danger-text);
+  font-weight: 800;
+}
 </style>

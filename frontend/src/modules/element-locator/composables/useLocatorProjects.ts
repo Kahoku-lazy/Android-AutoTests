@@ -1,8 +1,8 @@
 /** useLocatorProjects — 系统锁定的三项目列表（不可新建/删除） */
-import { computed, ref } from 'vue'
-import { formatApiError } from '@/shared/api-client'
-import { listLocatorProjects } from '../api'
-import type { LocatorProject } from '../types'
+import { computed, ref } from "vue"
+import { formatApiError } from "@/shared/api-client"
+import { listLocatorProjects } from "../api"
+import type { LocatorProject } from "../types"
 
 export function useLocatorProjects() {
   const projects = ref<LocatorProject[]>([])
@@ -16,15 +16,15 @@ export function useLocatorProjects() {
     try {
       const { data } = await listLocatorProjects()
       if (data.status && Array.isArray(data.data)) {
-        error.value = ''
+        error.value = ""
         projects.value = data.data
       } else {
         projects.value = []
-        error.value = data.message || '项目列表加载失败'
+        error.value = data.message || "项目列表加载失败"
       }
     } catch (e: unknown) {
       projects.value = []
-      error.value = formatApiError(e, '项目列表加载失败')
+      error.value = formatApiError(e, "项目列表加载失败")
     } finally {
       loading.value = false
     }

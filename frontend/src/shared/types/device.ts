@@ -2,10 +2,10 @@
 
 // ── 枚举类型 ──
 
-export type DeviceStatus = 'ONLINE' | 'BUSY' | 'OFFLINE' | 'DISCONNECTED'
-export type ConnectionType = 'USB' | 'WIFI'
-export type DeviceFilterKey = 'all' | 'online' | 'busy'
-export type DeviceViewMode = 'table' | 'cards'
+export type DeviceStatus = "ONLINE" | "BUSY" | "OFFLINE" | "DISCONNECTED"
+export type ConnectionType = "USB" | "WIFI"
+export type DeviceFilterKey = "all" | "online" | "busy"
+export type DeviceViewMode = "table" | "cards"
 
 // ── 核心数据 ──
 
@@ -51,7 +51,7 @@ export interface NetworkDialogState {
 // ── 显示辅助 ──
 
 export interface DeviceStatusMeta {
-  type: 'success' | 'warning' | 'info' | 'danger'
+  type: "success" | "warning" | "info" | "danger"
   text: string
 }
 

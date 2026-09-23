@@ -14,7 +14,7 @@ export interface KbTreeNode {
   /** 唯一键：目录 dir:相对路径；文件 doc id */
   key: string
   label: string
-  type: 'dir' | 'file' | 'group'
+  type: "dir" | "file" | "group"
   /** dir → 相对路径；file → source */
   path: string
   children?: KbTreeNode[]
@@ -26,18 +26,18 @@ export type KbTreeSelectKey = string
 // ── 树构建 ──
 
 export function isDirKey(key: string): boolean {
-  return key.startsWith('dir:')
+  return key.startsWith("dir:")
 }
 
 export function dirKeyToPath(key: string): string {
-  return key.replace(/^dir:/, '')
+  return key.replace(/^dir:/, "")
 }
 
 const _sortNodes = (nodes: KbTreeNode[]) => {
   const order = { group: 0, dir: 1, file: 2 } as const
   nodes.sort((a, b) => {
     if (order[a.type] !== order[b.type]) return order[a.type] - order[b.type]
-    return (a.label || '').localeCompare(b.label || '', 'zh')
+    return (a.label || "").localeCompare(b.label || "", "zh")
   })
   for (const n of nodes) {
     if (n.children) _sortNodes(n.children)
@@ -49,12 +49,14 @@ export function buildKbTree(docs: KbDoc[]): KbTreeNode[] {
   const roots: KbTreeNode[] = []
   const dirMap = new Map<string, KbTreeNode>()
 
-  for (const doc of [...docs].sort((a, b) => (a.source || '').localeCompare(b.source || '', 'zh'))) {
-    const src = String(doc.source || doc.id || '').replace(/\\/g, '/')
-    const parts = src.split('/').filter(Boolean)
+  for (const doc of [...docs].sort((a, b) =>
+    (a.source || "").localeCompare(b.source || "", "zh"),
+  )) {
+    const src = String(doc.source || doc.id || "").replace(/\\/g, "/")
+    const parts = src.split("/").filter(Boolean)
     if (!parts.length) continue
     let parentChildren = roots
-    let currentPath = ''
+    let currentPath = ""
     for (let i = 0; i < parts.length - 1; i++) {
       currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i]
       let node = dirMap.get(currentPath)
@@ -62,7 +64,7 @@ export function buildKbTree(docs: KbDoc[]): KbTreeNode[] {
         node = {
           key: `dir:${currentPath}`,
           label: parts[i],
-          type: 'dir',
+          type: "dir",
           path: currentPath,
           children: [],
         }
@@ -74,7 +76,7 @@ export function buildKbTree(docs: KbDoc[]): KbTreeNode[] {
     parentChildren.push({
       key: String(doc.id),
       label: parts[parts.length - 1],
-      type: 'file',
+      type: "file",
       path: src,
       doc,
     })
@@ -89,7 +91,7 @@ export function collectFileKeys(nodes: KbTreeNode[]): string[] {
   const keys: string[] = []
   const walk = (list: KbTreeNode[]) => {
     for (const n of list) {
-      if (n.type === 'file') keys.push(n.key)
+      if (n.type === "file") keys.push(n.key)
       else if (n.children) walk(n.children)
     }
   }

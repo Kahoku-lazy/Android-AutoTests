@@ -3,9 +3,9 @@
  * 文件详情面板（只被文件详情页使用）。
  * 元素定位收敛为单一 Android 项目后，叶子类型只有「页面」：直接渲染页面元素工作台。
  */
-import { ElMessageBox } from 'element-plus'
-import type { LocatorFileNode } from '../types'
-import PageElementsWorkbench from './PageElementsWorkbench.vue'
+import { ElMessageBox } from "element-plus"
+import type { LocatorFileNode } from "../types"
+import PageElementsWorkbench from "./PageElementsWorkbench.vue"
 
 const props = defineProps<{
   file: LocatorFileNode
@@ -17,15 +17,15 @@ const emit = defineEmits<{
 
 async function confirmDelete() {
   try {
-    await ElMessageBox.confirm(`确认删除「${props.file.name}」？`, '确认删除', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
+    await ElMessageBox.confirm(`确认删除「${props.file.name}」？`, "确认删除", {
+      confirmButtonText: "删除",
+      cancelButtonText: "取消",
+      type: "warning",
     })
   } catch {
     return
   }
-  emit('deleteFile', { fileId: props.file.id })
+  emit("deleteFile", { fileId: props.file.id })
 }
 </script>
 

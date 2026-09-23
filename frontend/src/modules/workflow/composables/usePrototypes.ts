@@ -1,13 +1,13 @@
 /** usePrototypes — 页面流原型列表与创建 */
-import { ref, computed } from 'vue'
-import { ElMessage } from 'element-plus'
-import { formatApiError } from '@/shared/api-client'
+import { ref, computed } from "vue"
+import { ElMessage } from "element-plus"
+import { formatApiError } from "@/shared/api-client"
 import {
   createWorkflowPrototype,
   deleteWorkflowPrototype,
   listWorkflowPrototypes,
   type WorkflowPrototype,
-} from '../api'
+} from "../api"
 
 export type { WorkflowPrototype }
 
@@ -28,20 +28,20 @@ export function usePrototypes() {
         prototypes.value = data.data
       } else {
         prototypes.value = []
-        error.value = data.message || '原型列表加载失败'
+        error.value = data.message || "原型列表加载失败"
       }
     } catch (e: unknown) {
       prototypes.value = []
-      error.value = formatApiError(e, '原型列表加载失败')
+      error.value = formatApiError(e, "原型列表加载失败")
     } finally {
       loading.value = false
     }
   }
 
-  async function addPrototype(name: string, description = '') {
+  async function addPrototype(name: string, description = "") {
     const trimmed = name.trim()
     if (!trimmed) {
-      ElMessage.warning('请输入原型名称')
+      ElMessage.warning("请输入原型名称")
       return null
     }
     creating.value = true
@@ -53,13 +53,13 @@ export function usePrototypes() {
       // 集合路由返回标准信封 {status, data: 原型}
       if (data.status && data.data) {
         prototypes.value = [data.data, ...prototypes.value]
-        ElMessage.success('原型已创建')
+        ElMessage.success("原型已创建")
         return data.data as WorkflowPrototype
       }
-      ElMessage.error(data.message || '创建失败')
+      ElMessage.error(data.message || "创建失败")
       return null
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '创建失败'))
+      ElMessage.error(formatApiError(e, "创建失败"))
       return null
     } finally {
       creating.value = false
@@ -71,13 +71,13 @@ export function usePrototypes() {
       const { data } = await deleteWorkflowPrototype(id)
       if (data.status) {
         prototypes.value = prototypes.value.filter((p) => p.id !== id)
-        ElMessage.success('原型已删除')
+        ElMessage.success("原型已删除")
         return true
       }
-      ElMessage.error(data.message || '删除失败')
+      ElMessage.error(data.message || "删除失败")
       return false
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '删除失败'))
+      ElMessage.error(formatApiError(e, "删除失败"))
       return false
     }
   }

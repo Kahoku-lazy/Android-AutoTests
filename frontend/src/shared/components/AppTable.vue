@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, h, ref, useSlots } from 'vue'
-import { ElTableColumn } from 'element-plus'
-import type { TableInstance } from 'element-plus'
+import { computed, h, ref, useSlots } from "vue"
+import { ElTableColumn } from "element-plus"
+import type { TableInstance } from "element-plus"
 
 /** 属性直接透传到 el-table（height / header-cell-style / @row-click 等 EP 原生能力） */
 defineOptions({ inheritAttrs: false })
@@ -9,29 +9,35 @@ defineOptions({ inheritAttrs: false })
 const props = defineProps({
   columns: { type: Array as () => any[], required: true },
   dataSource: { type: Array as () => any[], required: true },
-  rowKey: { type: String, default: 'id' },
+  rowKey: { type: String, default: "id" },
   striped: { type: Boolean, default: false },
   border: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
-  emptyText: { type: String, default: '暂无数据' },
+  emptyText: { type: String, default: "暂无数据" },
   /** fixed 时弹性列会吃掉剩余宽度，适合需要铺满容器的列表 */
-  tableLayout: { type: String, default: 'auto' },
+  tableLayout: { type: String, default: "auto" },
   /** el-table row-class-name，可传函数或字符串 */
   rowClassName: { type: [Function, String], default: undefined },
   /**
    * 表纸皮肤强调色（SketchTable 视觉名，非第二组件）。
    * 传入 CSS 色或 var(--c-*)；有值时外套虚线纸 + 模块色硬阴影，表体不旋转。
    */
-  accent: { type: String, default: '' },
+  accent: { type: String, default: "" },
 })
 
 const sheetStyle = computed(() =>
-  props.accent ? ({ '--sketch-accent': props.accent } as Record<string, string>) : undefined,
+  props.accent ? ({ "--sketch-accent": props.accent } as Record<string, string>) : undefined,
 )
 
 defineSlots<{
   empty: () => any
-  [key: `cell-${string}`]: (props: { record: any; row: any; value: any; column: any; index: number }) => any
+  [key: `cell-${string}`]: (props: {
+    record: any
+    row: any
+    value: any
+    column: any
+    index: number
+  }) => any
   /** 表头覆写：列名与单元格插槽同源，如 #header-_select 放全选复选框 */
   [key: `header-${string}`]: () => any
 }>()
@@ -44,10 +50,10 @@ defineExpose({ tableRef })
 
 /** Element Plus 列宽只认 px 数字/字符串，百分比会导致列塌缩挤成一团 */
 function normalizeSize(value: any) {
-  if (value == null || value === '') return undefined
-  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (value == null || value === "") return undefined
+  if (typeof value === "number" && Number.isFinite(value)) return value
   const raw = String(value).trim()
-  if (!raw || raw.endsWith('%')) return undefined
+  if (!raw || raw.endsWith("%")) return undefined
   const num = Number(raw)
   return Number.isFinite(num) ? num : raw
 }
@@ -97,7 +103,7 @@ function buildColumns(cols: any[]): any[] {
                 column: scope.column,
                 index: scope.$index,
               })
-            : scope.row?.[prop] ?? '',
+            : (scope.row?.[prop] ?? ""),
       },
     )
   })
@@ -108,11 +114,7 @@ const elColumns = computed(() => buildColumns(props.columns))
 </script>
 
 <template>
-  <div
-    class="ac-table-wrap"
-    :class="{ 'sketch-sheet': !!accent }"
-    :style="sheetStyle"
-  >
+  <div class="ac-table-wrap" :class="{ 'sketch-sheet': !!accent }" :style="sheetStyle">
     <el-table
       ref="tableRef"
       v-bind="$attrs"

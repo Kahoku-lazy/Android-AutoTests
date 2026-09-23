@@ -26,7 +26,7 @@ import {
   Smartphone,
   StickyNote,
   Wrench,
-} from 'lucide'
+} from "lucide"
 
 /** lucide 按 PascalCase 查表：data-lucide="layout-dashboard" → LayoutDashboard */
 export const lucideIconSubset = {

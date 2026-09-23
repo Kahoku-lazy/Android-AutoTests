@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
-import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import SkeletonCard from '@/shared/components/patterns/SkeletonCard.vue'
-import ProjectTree from './components/ProjectTree.vue'
-import { useProjectTree } from './composables/useProjectTree'
+import { computed, onMounted } from "vue"
+import { useRoute, useRouter } from "vue-router"
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
+import ProjectTree from "./components/ProjectTree.vue"
+import { useProjectTree } from "./composables/useProjectTree"
 
 const route = useRoute()
 const router = useRouter()
@@ -28,7 +28,7 @@ const {
   moveTreeItem,
 } = useProjectTree(() => projectId.value)
 
-const pageTitle = computed(() => project.value?.name || '项目工作台')
+const pageTitle = computed(() => project.value?.name || "项目工作台")
 
 async function refreshTree() {
   await loadTree()
@@ -64,7 +64,7 @@ async function onDeleteFile(fileId: number) {
 }
 
 async function onMoveItem(payload: {
-  itemType: 'directory' | 'file'
+  itemType: "directory" | "file"
   itemId: number
   targetDirectoryId: number | null
 }) {
@@ -89,10 +89,7 @@ onMounted(async () => {
       <WorkbenchCrumbs
         back-to="/cases"
         back-label="返回项目列表"
-        :items="[
-          { label: '用例管理', to: '/cases' },
-          { label: pageTitle },
-        ]"
+        :items="[{ label: '用例管理', to: '/cases' }, { label: pageTitle }]"
       />
       <div class="case-workspace-main">
         <SkeletonCard v-if="loading" variant="list" :lines="6" />

@@ -5,7 +5,7 @@
  *   const expanded = ref(new Set())
  *   function toggle(id) { const s = new Set(expanded.value); ... }
  */
-import { ref } from 'vue'
+import { ref } from "vue"
 
 export function useExpandCollapse(initialOpen = []) {
   const expandedIds = ref(new Set(initialOpen))

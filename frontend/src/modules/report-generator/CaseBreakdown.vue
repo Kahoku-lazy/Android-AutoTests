@@ -1,47 +1,46 @@
 <script setup>
-
-import AppCard from "@/shared/components/AppCard.vue";
-import AppTabs from "@/shared/components/AppTabs.vue";
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
-import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
-import KpiCard from '@/shared/components/KpiCard.vue'
-import { getCaseBreakdown } from './api'
-import { REPORT_HEADER_GRADIENT, REPORT_HEADER_ICON } from './constants'
+import AppCard from "@/shared/components/AppCard.vue"
+import AppTabs from "@/shared/components/AppTabs.vue"
+import { ref, computed, onMounted, watch } from "vue"
+import { useRoute, useRouter } from "vue-router"
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
+import KpiCard from "@/shared/components/KpiCard.vue"
+import { getCaseBreakdown } from "./api"
+import { REPORT_HEADER_GRADIENT, REPORT_HEADER_ICON } from "./constants"
 
 const route = useRoute()
 const router = useRouter()
 
-const resultType = computed(() => String(route.params.resultType || 'pass'))
-const isPass = computed(() => resultType.value === 'pass')
+const resultType = computed(() => String(route.params.resultType || "pass"))
+const isPass = computed(() => resultType.value === "pass")
 
 const loading = ref(false)
 const data = ref(null)
 const expandedCases = ref(new Set())
 const expandedTasks = ref(new Set())
 const expandedBugCases = ref(new Set())
-const activeTab = ref('detail')
+const activeTab = ref("detail")
 
 const pageTitle = computed(() => {
-  if (!isPass.value && activeTab.value === 'bugs') return 'BUG 问题汇总'
-  return isPass.value ? '已通过用例' : '执行失败用例'
+  if (!isPass.value && activeTab.value === "bugs") return "BUG 问题汇总"
+  return isPass.value ? "已通过用例" : "执行失败用例"
 })
 const pageSubtitle = computed(() => {
-  if (!isPass.value && activeTab.value === 'bugs') {
-    return '相同用例的失败问题合并统计，相同问题记录次数，不同问题分别罗列'
+  if (!isPass.value && activeTab.value === "bugs") {
+    return "相同用例的失败问题合并统计，相同问题记录次数，不同问题分别罗列"
   }
   return isPass.value
-    ? '按用例名称 → 任务 ID 查看通过记录'
-    : '按用例名称 → 任务 ID → 步骤失败详情查看'
+    ? "按用例名称 → 任务 ID 查看通过记录"
+    : "按用例名称 → 任务 ID → 步骤失败详情查看"
 })
 
 const viewAppTabs = computed(() => {
   if (isPass.value) return []
   const bugs = bugSummary.value?.unique_issues || 0
   return [
-    { key: 'bugs', label: `BUG 问题汇总 (${bugs})` },
-    { key: 'detail', label: '失败明细' },
+    { key: "bugs", label: `BUG 问题汇总 (${bugs})` },
+    { key: "detail", label: "失败明细" },
   ]
 })
 
@@ -63,12 +62,12 @@ function filterParamsFromQuery() {
 }
 
 async function loadData() {
-  if (!['pass', 'fail'].includes(resultType.value)) {
-    router.replace('/reports')
+  if (!["pass", "fail"].includes(resultType.value)) {
+    router.replace("/reports")
     return
   }
   const tab = route.query.tab
-  activeTab.value = (tab === 'bugs' && resultType.value === 'fail') ? 'bugs' : 'detail'
+  activeTab.value = tab === "bugs" && resultType.value === "fail" ? "bugs" : "detail"
   loading.value = true
   expandedCases.value = new Set()
   expandedTasks.value = new Set()
@@ -77,14 +76,14 @@ async function loadData() {
     const { data: resp } = await getCaseBreakdown(resultType.value, filterParamsFromQuery())
     if (resp.status) {
       data.value = resp
-      expandedCases.value = new Set((resp.groups || []).map(g => g.case_title))
-      expandedBugCases.value = new Set((resp.bug_summary?.cases || []).map(c => c.case_title))
+      expandedCases.value = new Set((resp.groups || []).map((g) => g.case_title))
+      expandedBugCases.value = new Set((resp.bug_summary?.cases || []).map((c) => c.case_title))
     } else {
       data.value = null
     }
   } catch (e) {
     data.value = null
-    console.error(e);
+    console.error(e)
   }
   loading.value = false
 }
@@ -92,7 +91,9 @@ async function loadData() {
 onMounted(loadData)
 watch(() => [route.params.resultType, route.query], loadData, { deep: true })
 
-function goBack() { router.push('/reports') }
+function goBack() {
+  router.push("/reports")
+}
 
 function toggleCase(key) {
   const s = new Set(expandedCases.value)
@@ -121,16 +122,25 @@ function toggleBugCase(key) {
 
 function stepTypeLabel(type) {
   const map = {
-    click: '点击', long_click: '长按', swipe: '滑动',
-    wait: '等待出现', wait_disappear: '等待消失',
-    verify_text: '校验文字', poll_text: '轮询文本',
-    start_app: '启动应用', kill_app: '关闭应用', sleep: '暂停',
-    perf_element_time: '等待元素出现耗时',
-    wait_toast: '等待Toast', if_element_appear: '如果出现', if_element_disappear: '如果消失',
-    loop_n: '循环N次', loop_elements: '遍历元素',
-    iteration: '迭代失败',
+    click: "点击",
+    long_click: "长按",
+    swipe: "滑动",
+    wait: "等待出现",
+    wait_disappear: "等待消失",
+    verify_text: "校验文字",
+    poll_text: "轮询文本",
+    start_app: "启动应用",
+    kill_app: "关闭应用",
+    sleep: "暂停",
+    perf_element_time: "等待元素出现耗时",
+    wait_toast: "等待Toast",
+    if_element_appear: "如果出现",
+    if_element_disappear: "如果消失",
+    loop_n: "循环N次",
+    loop_elements: "遍历元素",
+    iteration: "迭代失败",
   }
-  return map[type] || type || '—'
+  return map[type] || type || "—"
 }
 </script>
 
@@ -147,33 +157,37 @@ function stepTypeLabel(type) {
       <WorkbenchCrumbs
         back-to="/reports"
         back-label="报告列表"
-        :items="[
-          { label: '测试报告', to: '/reports' },
-          { label: pageTitle },
-        ]"
+        :items="[{ label: '测试报告', to: '/reports' }, { label: pageTitle }]"
       />
       <div class="top-bar">
         <div v-if="data" class="summary-pill">
           <span :class="isPass ? 'num-pass' : 'num-fail'">{{ totalCount }}</span>
-          次{{ isPass ? '通过' : '失败' }}
-          · {{ groups.length }} 个用例
+          次{{ isPass ? "通过" : "失败" }} · {{ groups.length }} 个用例
         </div>
       </div>
 
-      <div v-if="data && !isPass" class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
-        <KpiCard :value="bugSummary?.unique_issues || 0" label="独立问题数" color="var(--c-runner)" shape="diamond" />
-        <KpiCard :value="bugSummary?.total_occurrences || 0" label="问题出现次数" color="var(--c-dashboard)" shape="triangle" />
-        <KpiCard :value="bugSummary?.affected_cases || 0" label="涉及用例" color="var(--c-workflow)" shape="square" />
+      <div v-if="data && !isPass" class="kpi-row" style="grid-template-columns: repeat(3, 1fr)">
+        <KpiCard
+          :value="bugSummary?.unique_issues || 0"
+          label="独立问题数"
+          color="var(--c-runner)"
+          shape="diamond"
+        />
+        <KpiCard
+          :value="bugSummary?.total_occurrences || 0"
+          label="问题出现次数"
+          color="var(--c-dashboard)"
+          shape="triangle"
+        />
+        <KpiCard
+          :value="bugSummary?.affected_cases || 0"
+          label="涉及用例"
+          color="var(--c-workflow)"
+          shape="square"
+        />
       </div>
 
-      <AppTabs
-        v-if="viewAppTabs.length"
-        class="view-tabs"
-        :items="viewAppTabs"
-        v-model="activeTab"
-        
-        
-      >
+      <AppTabs v-if="viewAppTabs.length" class="view-tabs" :items="viewAppTabs" v-model="activeTab">
         <template #bugs>
           <div v-if="loading" class="loading-state">加载中…</div>
           <div v-else-if="!bugCases.length" class="empty-state">
@@ -190,12 +204,18 @@ function stepTypeLabel(type) {
                   @click="toggleBugCase(bc.case_title)"
                   @keyup.enter="toggleBugCase(bc.case_title)"
                 >
-                  <span class="expand-icon" :class="{ open: expandedBugCases.has(bc.case_title) }">▶</span>
+                  <span class="expand-icon" :class="{ open: expandedBugCases.has(bc.case_title) }"
+                    >▶</span
+                  >
                   <div class="case-title-wrap">
                     <strong class="case-title">{{ bc.case_title }}</strong>
-                    <code v-if="bc.case_id && bc.case_id !== bc.case_title" class="case-id">{{ bc.case_id }}</code>
+                    <code v-if="bc.case_id && bc.case_id !== bc.case_title" class="case-id">{{
+                      bc.case_id
+                    }}</code>
                   </div>
-                  <span class="case-meta">{{ bc.issue_count }} 类问题 · {{ bc.total_occurrences }} 次</span>
+                  <span class="case-meta"
+                    >{{ bc.issue_count }} 类问题 · {{ bc.total_occurrences }} 次</span
+                  >
                 </div>
                 <div v-if="expandedBugCases.has(bc.case_title)" class="issue-list">
                   <div v-for="(issue, ii) in bc.issues" :key="ii" class="issue-row">
@@ -207,17 +227,21 @@ function stepTypeLabel(type) {
                     <div class="issue-body">
                       <div class="detail-item">
                         <span class="detail-label">问题描述</span>
-                        <span class="detail-value">{{ issue.description || '—' }}</span>
+                        <span class="detail-value">{{ issue.description || "—" }}</span>
                       </div>
                       <div class="detail-item">
                         <span class="detail-label">失败原因</span>
-                        <span class="detail-value detail-error">{{ issue.result || '未知错误' }}</span>
+                        <span class="detail-value detail-error">{{
+                          issue.result || "未知错误"
+                        }}</span>
                       </div>
                       <div class="detail-item">
                         <span class="detail-label">关联任务</span>
                         <span class="detail-value">
                           {{ issue.task_count }} 个任务
-                          <code v-for="tid in issue.task_ids" :key="tid" class="task-id-inline">{{ tid }}</code>
+                          <code v-for="tid in issue.task_ids" :key="tid" class="task-id-inline">{{
+                            tid
+                          }}</code>
                         </span>
                       </div>
                     </div>
@@ -244,12 +268,20 @@ function stepTypeLabel(type) {
                   @click="toggleCase(group.case_title)"
                   @keyup.enter="toggleCase(group.case_title)"
                 >
-                  <span class="expand-icon" :class="{ open: expandedCases.has(group.case_title) }">▶</span>
+                  <span class="expand-icon" :class="{ open: expandedCases.has(group.case_title) }"
+                    >▶</span
+                  >
                   <div class="case-title-wrap">
                     <strong class="case-title">{{ group.case_title }}</strong>
-                    <code v-if="group.case_id && group.case_id !== group.case_title" class="case-id">{{ group.case_id }}</code>
+                    <code
+                      v-if="group.case_id && group.case_id !== group.case_title"
+                      class="case-id"
+                      >{{ group.case_id }}</code
+                    >
                   </div>
-                  <span class="case-meta">{{ group.count }} 次 · {{ group.tasks.length }} 个任务</span>
+                  <span class="case-meta"
+                    >{{ group.count }} 次 · {{ group.tasks.length }} 个任务</span
+                  >
                 </div>
 
                 <div v-if="expandedCases.has(group.case_title)" class="task-list">
@@ -263,17 +295,30 @@ function stepTypeLabel(type) {
                       :class="{ 'task-header--clickable': task.failed_steps?.length }"
                       :role="task.failed_steps?.length ? 'button' : undefined"
                       :tabindex="task.failed_steps?.length ? 0 : undefined"
-                      @click="task.failed_steps?.length && toggleTask(taskKey(group.case_title, task.task_id))"
-                      @keyup.enter="task.failed_steps?.length && toggleTask(taskKey(group.case_title, task.task_id))"
+                      @click="
+                        task.failed_steps?.length &&
+                        toggleTask(taskKey(group.case_title, task.task_id))
+                      "
+                      @keyup.enter="
+                        task.failed_steps?.length &&
+                        toggleTask(taskKey(group.case_title, task.task_id))
+                      "
                     >
                       <span
                         v-if="task.failed_steps?.length"
                         class="expand-icon expand-icon--sm"
-                        :class="{ open: expandedTasks.has(taskKey(group.case_title, task.task_id)) }"
-                      >▶</span>
+                        :class="{
+                          open: expandedTasks.has(taskKey(group.case_title, task.task_id)),
+                        }"
+                        >▶</span
+                      >
                       <div class="task-info">
                         <code class="task-id">{{ task.task_id }}</code>
-                        <span v-if="task.task_name && task.task_name !== task.task_id" class="task-name">{{ task.task_name }}</span>
+                        <span
+                          v-if="task.task_name && task.task_name !== task.task_id"
+                          class="task-name"
+                          >{{ task.task_name }}</span
+                        >
                       </div>
                       <span class="task-meta">
                         {{ task.count }} 次失败
@@ -284,7 +329,10 @@ function stepTypeLabel(type) {
                     </div>
 
                     <div
-                      v-if="expandedTasks.has(taskKey(group.case_title, task.task_id)) && task.failed_steps?.length"
+                      v-if="
+                        expandedTasks.has(taskKey(group.case_title, task.task_id)) &&
+                        task.failed_steps?.length
+                      "
                       class="step-list"
                     >
                       <div
@@ -296,18 +344,22 @@ function stepTypeLabel(type) {
                           <span class="badge badge-fail">FAIL</span>
                           <span class="step-meta">
                             第 {{ step.iteration }} 轮
-                            <template v-if="step.stepIndex >= 0"> · 步骤 {{ step.stepIndex + 1 }}</template>
+                            <template v-if="step.stepIndex >= 0">
+                              · 步骤 {{ step.stepIndex + 1 }}</template
+                            >
                             · {{ stepTypeLabel(step.stepType) }}
                           </span>
                         </div>
                         <div class="step-detail">
                           <div class="detail-item">
                             <span class="detail-label">步骤描述</span>
-                            <span class="detail-value">{{ step.description || '—' }}</span>
+                            <span class="detail-value">{{ step.description || "—" }}</span>
                           </div>
                           <div class="detail-item">
                             <span class="detail-label">失败原因</span>
-                            <span class="detail-value detail-error">{{ step.result || '未知错误' }}</span>
+                            <span class="detail-value detail-error">{{
+                              step.result || "未知错误"
+                            }}</span>
                           </div>
                         </div>
                       </div>
@@ -321,208 +373,444 @@ function stepTypeLabel(type) {
       </AppTabs>
 
       <template v-else>
-      <div v-if="loading" class="loading-state">加载中…</div>
+        <div v-if="loading" class="loading-state">加载中…</div>
 
-      <div v-else-if="groups.length === 0" class="empty-state">
-        <span>{{ isPass ? '✅' : '❌' }}</span>
-        <p>当前筛选条件下暂无{{ isPass ? '通过' : '失败' }}记录</p>
-        <el-button size="small" @click="goBack">返回报告列表</el-button>
-      </div>
+        <div v-else-if="groups.length === 0" class="empty-state">
+          <span>{{ isPass ? "✅" : "❌" }}</span>
+          <p>当前筛选条件下暂无{{ isPass ? "通过" : "失败" }}记录</p>
+          <el-button size="small" @click="goBack">返回报告列表</el-button>
+        </div>
 
-      <div v-else class="case-list">
-        <div v-for="(group, idx) in groups" :key="group.case_id + '-' + idx" class="case-group">
-          <AppCard :color="isPass ? 'green' : 'red'">
-            <div
-              class="case-header"
-              role="button"
-              tabindex="0"
-              @click="toggleCase(group.case_title)"
-              @keyup.enter="toggleCase(group.case_title)"
-            >
-              <span class="expand-icon" :class="{ open: expandedCases.has(group.case_title) }">▶</span>
-              <div class="case-title-wrap">
-                <strong class="case-title">{{ group.case_title }}</strong>
-                <code v-if="group.case_id && group.case_id !== group.case_title" class="case-id">{{ group.case_id }}</code>
-              </div>
-              <span class="case-meta">{{ group.count }} 次 · {{ group.tasks.length }} 个任务</span>
-            </div>
-
-            <div v-if="expandedCases.has(group.case_title)" class="task-list">
+        <div v-else class="case-list">
+          <div v-for="(group, idx) in groups" :key="group.case_id + '-' + idx" class="case-group">
+            <AppCard :color="isPass ? 'green' : 'red'">
               <div
-                v-for="task in group.tasks"
-                :key="taskKey(group.case_title, task.task_id)"
-                class="task-block"
+                class="case-header"
+                role="button"
+                tabindex="0"
+                @click="toggleCase(group.case_title)"
+                @keyup.enter="toggleCase(group.case_title)"
               >
-                <div
-                  class="task-header"
-                  :class="{ 'task-header--clickable': !isPass && task.failed_steps?.length }"
-                  :role="!isPass && task.failed_steps?.length ? 'button' : undefined"
-                  :tabindex="!isPass && task.failed_steps?.length ? 0 : undefined"
-                  @click="!isPass && task.failed_steps?.length && toggleTask(taskKey(group.case_title, task.task_id))"
-                  @keyup.enter="!isPass && task.failed_steps?.length && toggleTask(taskKey(group.case_title, task.task_id))"
+                <span class="expand-icon" :class="{ open: expandedCases.has(group.case_title) }"
+                  >▶</span
                 >
-                  <span
-                    v-if="!isPass && task.failed_steps?.length"
-                    class="expand-icon expand-icon--sm"
-                    :class="{ open: expandedTasks.has(taskKey(group.case_title, task.task_id)) }"
-                  >▶</span>
-                  <div class="task-info">
-                    <code class="task-id">{{ task.task_id }}</code>
-                    <span v-if="task.task_name && task.task_name !== task.task_id" class="task-name">{{ task.task_name }}</span>
-                  </div>
-                  <span class="task-meta">
-                    {{ task.count }} 次{{ isPass ? '通过' : '失败' }}
-                    <template v-if="!isPass && task.failed_steps?.length">
-                      · {{ task.failed_steps.length }} 条步骤
-                    </template>
-                  </span>
+                <div class="case-title-wrap">
+                  <strong class="case-title">{{ group.case_title }}</strong>
+                  <code
+                    v-if="group.case_id && group.case_id !== group.case_title"
+                    class="case-id"
+                    >{{ group.case_id }}</code
+                  >
                 </div>
+                <span class="case-meta"
+                  >{{ group.count }} 次 · {{ group.tasks.length }} 个任务</span
+                >
+              </div>
 
+              <div v-if="expandedCases.has(group.case_title)" class="task-list">
                 <div
-                  v-if="!isPass && expandedTasks.has(taskKey(group.case_title, task.task_id)) && task.failed_steps?.length"
-                  class="step-list"
+                  v-for="task in group.tasks"
+                  :key="taskKey(group.case_title, task.task_id)"
+                  class="task-block"
                 >
                   <div
-                    v-for="(step, si) in task.failed_steps"
-                    :key="taskKey(group.case_title, task.task_id) + '-s-' + si"
-                    class="step-row"
+                    class="task-header"
+                    :class="{ 'task-header--clickable': !isPass && task.failed_steps?.length }"
+                    :role="!isPass && task.failed_steps?.length ? 'button' : undefined"
+                    :tabindex="!isPass && task.failed_steps?.length ? 0 : undefined"
+                    @click="
+                      !isPass &&
+                      task.failed_steps?.length &&
+                      toggleTask(taskKey(group.case_title, task.task_id))
+                    "
+                    @keyup.enter="
+                      !isPass &&
+                      task.failed_steps?.length &&
+                      toggleTask(taskKey(group.case_title, task.task_id))
+                    "
                   >
-                    <div class="step-head">
-                      <span class="badge badge-fail">FAIL</span>
-                      <span class="step-meta">
-                        第 {{ step.iteration }} 轮
-                        <template v-if="step.stepIndex >= 0"> · 步骤 {{ step.stepIndex + 1 }}</template>
-                        · {{ stepTypeLabel(step.stepType) }}
-                      </span>
+                    <span
+                      v-if="!isPass && task.failed_steps?.length"
+                      class="expand-icon expand-icon--sm"
+                      :class="{ open: expandedTasks.has(taskKey(group.case_title, task.task_id)) }"
+                      >▶</span
+                    >
+                    <div class="task-info">
+                      <code class="task-id">{{ task.task_id }}</code>
+                      <span
+                        v-if="task.task_name && task.task_name !== task.task_id"
+                        class="task-name"
+                        >{{ task.task_name }}</span
+                      >
                     </div>
-                    <div class="step-detail">
-                      <div class="detail-item">
-                        <span class="detail-label">步骤描述</span>
-                        <span class="detail-value">{{ step.description || '—' }}</span>
+                    <span class="task-meta">
+                      {{ task.count }} 次{{ isPass ? "通过" : "失败" }}
+                      <template v-if="!isPass && task.failed_steps?.length">
+                        · {{ task.failed_steps.length }} 条步骤
+                      </template>
+                    </span>
+                  </div>
+
+                  <div
+                    v-if="
+                      !isPass &&
+                      expandedTasks.has(taskKey(group.case_title, task.task_id)) &&
+                      task.failed_steps?.length
+                    "
+                    class="step-list"
+                  >
+                    <div
+                      v-for="(step, si) in task.failed_steps"
+                      :key="taskKey(group.case_title, task.task_id) + '-s-' + si"
+                      class="step-row"
+                    >
+                      <div class="step-head">
+                        <span class="badge badge-fail">FAIL</span>
+                        <span class="step-meta">
+                          第 {{ step.iteration }} 轮
+                          <template v-if="step.stepIndex >= 0">
+                            · 步骤 {{ step.stepIndex + 1 }}</template
+                          >
+                          · {{ stepTypeLabel(step.stepType) }}
+                        </span>
                       </div>
-                      <div class="detail-item">
-                        <span class="detail-label">失败原因</span>
-                        <span class="detail-value detail-error">{{ step.result || '未知错误' }}</span>
+                      <div class="step-detail">
+                        <div class="detail-item">
+                          <span class="detail-label">步骤描述</span>
+                          <span class="detail-value">{{ step.description || "—" }}</span>
+                        </div>
+                        <div class="detail-item">
+                          <span class="detail-label">失败原因</span>
+                          <span class="detail-value detail-error">{{
+                            step.result || "未知错误"
+                          }}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </AppCard>
+            </AppCard>
+          </div>
         </div>
-      </div>
       </template>
     </div>
   </div>
 </template>
 
 <style scoped>
-.doc-page { display: flex; flex-direction: column; } /* height / overflow 由外壳 :deep(.doc-page) 承担 */
-.case-breakdown-page .doc-body { padding: var(--app-space-md) var(--app-space-lg) var(--app-space-2xl); display: flex; flex-direction: column; gap: var(--app-space-md); width: 100%; }
+.doc-page {
+  display: flex;
+  flex-direction: column;
+} /* height / overflow 由外壳 :deep(.doc-page) 承担 */
+.case-breakdown-page .doc-body {
+  padding: var(--app-space-md) var(--app-space-lg) var(--app-space-2xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-md);
+  width: 100%;
+}
 
 /* ── Top bar ── */
-.top-bar { display: flex; align-items: center; gap: var(--app-space-sm); margin-bottom: var(--app-space-xs); flex-wrap: wrap; }
+.top-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  margin-bottom: var(--app-space-xs);
+  flex-wrap: wrap;
+}
 .summary-pill {
-  font-size:var(--app-size-sm); font-weight: 600; color: var(--ink);
-  background: var(--app-bg-card); border: 2px solid var(--ink); border-radius: var(--app-radius-md);
+  font-size: var(--app-size-sm);
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--app-bg-card);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-md);
   padding: var(--app-space-xs) var(--app-space-sm);
 }
 
 /* ── KPI cards ── */
-.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: var(--app-space-xs); }
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: var(--app-space-xs);
+}
 
 /* ── Case list ── */
-.case-list { display: flex; flex-direction: column; gap: 10px; }
+.case-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
 /* 卡片壳由 AppCard 的 .ac-card 钉板壳承担：不再叠加自建实线大圆角壳，也不再剥离内层壳 */
 
 .case-group .case-header {
-  display: flex; align-items: center; gap: var(--app-space-sm); cursor: pointer;
-  padding: var(--app-space-sm) var(--app-space-md); transition: background var(--app-duration);
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  cursor: pointer;
+  padding: var(--app-space-sm) var(--app-space-md);
+  transition: background var(--app-duration);
 }
-.case-group .case-header:hover { background: var(--paper); }
+.case-group .case-header:hover {
+  background: var(--paper);
+}
 
-.expand-icon { font-size:var(--app-size-xs); transition: transform var(--app-duration-slow); color: var(--ink); opacity: 0.5; width: 14px; text-align: center; }
-.expand-icon.open { transform: rotate(90deg); }
-.expand-icon--sm { font-size:var(--app-size-xs); }
+.expand-icon {
+  font-size: var(--app-size-xs);
+  transition: transform var(--app-duration-slow);
+  color: var(--ink);
+  opacity: 0.5;
+  width: 14px;
+  text-align: center;
+}
+.expand-icon.open {
+  transform: rotate(90deg);
+}
+.expand-icon--sm {
+  font-size: var(--app-size-xs);
+}
 
-.case-title-wrap { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--app-space-sm); flex-wrap: wrap; }
-.case-title { font-weight: 800; font-size:var(--app-size-sm); display: flex; align-items: center; gap: 6px; }
-.case-title .case-icon { font-size:var(--app-size-md); }
-.case-id { font-family: var(--app-font-mono); font-size: var(--app-size-xs); background: var(--app-bg-subtle); padding: 2px 7px; border-radius: var(--app-radius-sm); color: var(--app-text-secondary); }
-.case-meta { font-size:var(--app-size-xs); color: var(--app-text-secondary); white-space: nowrap; font-weight: 600; }
+.case-title-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  flex-wrap: wrap;
+}
+.case-title {
+  font-weight: 800;
+  font-size: var(--app-size-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.case-title .case-icon {
+  font-size: var(--app-size-md);
+}
+.case-id {
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  background: var(--app-bg-subtle);
+  padding: 2px 7px;
+  border-radius: var(--app-radius-sm);
+  color: var(--app-text-secondary);
+}
+.case-meta {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+  white-space: nowrap;
+  font-weight: 600;
+}
 
 /* ── Task list ── */
-.task-list { padding: 0 var(--app-space-md) var(--app-space-sm); border-top: 1.5px solid var(--app-border-lighter); }
-.task-block { margin-top: var(--app-space-sm); border: 1.5px solid var(--app-border-light); border-radius: var(--app-radius-sm); overflow: hidden; background: var(--paper); }
-.task-header { display: flex; align-items: center; gap: var(--app-space-sm); padding: var(--app-space-sm); font-size:var(--app-size-xs); }
-.task-header--clickable { cursor: pointer; }
-.task-header:hover { background: var(--app-bg-subtle); }
-.task-info { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
-.task-id { font-family: var(--app-font-mono); font-size: var(--app-size-xs); font-weight: 700; color: var(--ink); }
-.task-name { font-size:var(--app-size-xs); color: var(--app-text-secondary); }
-.task-meta { font-size:var(--app-size-xs); color: var(--app-text-muted); white-space: nowrap; }
+.task-list {
+  padding: 0 var(--app-space-md) var(--app-space-sm);
+  border-top: 1.5px solid var(--app-border-lighter);
+}
+.task-block {
+  margin-top: var(--app-space-sm);
+  border: 1.5px solid var(--app-border-light);
+  border-radius: var(--app-radius-sm);
+  overflow: hidden;
+  background: var(--paper);
+}
+.task-header {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  padding: var(--app-space-sm);
+  font-size: var(--app-size-xs);
+}
+.task-header--clickable {
+  cursor: pointer;
+}
+.task-header:hover {
+  background: var(--app-bg-subtle);
+}
+.task-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.task-id {
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--ink);
+}
+.task-name {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+.task-meta {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-muted);
+  white-space: nowrap;
+}
 
 /* ── Step rows ── */
-.step-list { padding: var(--app-space-sm) 12px var(--app-space-xs); }
-.step-row {
-  margin-bottom: var(--app-space-sm); padding: var(--app-space-sm); background: var(--app-bg-card);
-  border: 2px solid var(--app-fail); border-radius: var(--app-radius-sm);
+.step-list {
+  padding: var(--app-space-sm) 12px var(--app-space-xs);
 }
-.step-head { display: flex; align-items: center; gap: var(--app-space-sm); margin-bottom: 6px; }
-.step-meta { font-size:var(--app-size-xs); color: var(--app-text-secondary); }
-.step-detail { display: grid; grid-template-columns: 1fr 1fr; gap: var(--app-space-sm); }
-.detail-item { display: flex; flex-direction: column; gap: 2px; }
-.detail-label { font-size:var(--app-size-xs); font-weight: 700; opacity: 0.5; text-transform: uppercase; letter-spacing: 0.5px; }
-.detail-value { font-size:var(--app-size-xs); font-weight: 600; }
-.detail-error { color: var(--app-status-danger-text); }
+.step-row {
+  margin-bottom: var(--app-space-sm);
+  padding: var(--app-space-sm);
+  background: var(--app-bg-card);
+  border: 2px solid var(--app-fail);
+  border-radius: var(--app-radius-sm);
+}
+.step-head {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  margin-bottom: 6px;
+}
+.step-meta {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+.step-detail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--app-space-sm);
+}
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.detail-label {
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  opacity: 0.5;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.detail-value {
+  font-size: var(--app-size-xs);
+  font-weight: 600;
+}
+.detail-error {
+  color: var(--app-status-danger-text);
+}
 
 /* ── Badge ── */
-.badge { font-size:var(--app-size-xs); font-weight: 700; padding: 2px var(--app-space-sm); border-radius: var(--app-radius-sm); display: inline-block; }
-.badge-fail { background: var(--app-fail); color: var(--app-status-danger-text); border: 1.5px solid var(--app-status-danger); }
-.badge-pass { background: var(--app-pass); color: var(--app-status-success-text); border: 1.5px solid var(--app-status-success); }
+.badge {
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  padding: 2px var(--app-space-sm);
+  border-radius: var(--app-radius-sm);
+  display: inline-block;
+}
+.badge-fail {
+  background: var(--app-fail);
+  color: var(--app-status-danger-text);
+  border: 1.5px solid var(--app-status-danger);
+}
+.badge-pass {
+  background: var(--app-pass);
+  color: var(--app-status-success-text);
+  border: 1.5px solid var(--app-status-success);
+}
 
 /* ── BUG list ── */
-.bug-list { display: flex; flex-direction: column; gap: 10px; }
+.bug-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 /* BUG 卡片的红色身份由 AppCard 的 accent 承担，壳同样交给 .ac-card */
 
-.issue-list { display: flex; flex-direction: column; gap: var(--app-space-sm); padding: var(--app-space-sm) 0; }
+.issue-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+  padding: var(--app-space-sm) 0;
+}
 .issue-row {
-  background: var(--app-bg-card); border: 2px solid var(--app-status-danger-bg);
-  border-radius: var(--app-radius-sm); overflow: hidden; margin: 0 var(--app-space-md);
+  background: var(--app-bg-card);
+  border: 2px solid var(--app-status-danger-bg);
+  border-radius: var(--app-radius-sm);
+  overflow: hidden;
+  margin: 0 var(--app-space-md);
 }
 .issue-head {
   /* 模块私有色值登记（tokens.css 未登记该值）：问题条头部分隔线 */
   --rg-issue-head-border: var(--color-red-85) /* -> --color-red-85 */;
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px; background: var(--app-status-danger-bg);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--app-status-danger-bg);
   border-bottom: 1.5px solid var(--rg-issue-head-border);
 }
 .issue-count-badge {
   /* 模块私有色值登记（tokens.css 未登记该值）：问题计数徽章描边 */
   --rg-issue-badge-border: var(--color-red-85) /* -> --color-red-85 */;
-  font-family: var(--app-font-mono); font-size: var(--app-size-xs); font-weight: 700;
-  background: var(--app-bg-card); color: var(--app-status-danger-text);
-  padding: 2px var(--app-space-sm); border-radius: var(--app-radius-sm); border: 1.5px solid var(--rg-issue-badge-border);
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  background: var(--app-bg-card);
+  color: var(--app-status-danger-text);
+  padding: 2px var(--app-space-sm);
+  border-radius: var(--app-radius-sm);
+  border: 1.5px solid var(--rg-issue-badge-border);
 }
-.issue-type { font-size:var(--app-size-sm); font-weight: 700; color: var(--ink); }
-.issue-body { padding: 12px 14px; }
+.issue-type {
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  color: var(--ink);
+}
+.issue-body {
+  padding: 12px 14px;
+}
 .task-id-inline {
-  font-family: var(--app-font-mono); font-size: var(--app-size-xs); font-weight: 600;
-  background: var(--app-bg-subtle); padding: 1px 6px; border-radius: 3px;
-  border: 1px solid var(--el-border-color-light); margin-left: var(--app-space-xs);
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  font-weight: 600;
+  background: var(--app-bg-subtle);
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--el-border-color-light);
+  margin-left: var(--app-space-xs);
 }
 
 /* ── Misc ── */
-.empty-state { text-align: center; padding: 60px 20px; color: var(--app-text-secondary); }
-.empty-state span { font-size:var(--app-size-2xl); display: block; margin-bottom: 12px; }
-.loading-state { text-align: center; padding: 40px; color: var(--app-text-secondary); }
-.num-pass { color: var(--app-status-success-text); font-weight: 800; }
-.num-fail { color: var(--app-status-danger-text); font-weight: 800; }
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--app-text-secondary);
+}
+.empty-state span {
+  font-size: var(--app-size-2xl);
+  display: block;
+  margin-bottom: 12px;
+}
+.loading-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--app-text-secondary);
+}
+.num-pass {
+  color: var(--app-status-success-text);
+  font-weight: 800;
+}
+.num-fail {
+  color: var(--app-status-danger-text);
+  font-weight: 800;
+}
 
 /* 减少动效：关闭位移 / 旋转 / 缩放（颜色过渡不受影响） */
 @media (prefers-reduced-motion: reduce) {
-  .case-group, .expand-icon { transition: none; }
+  .case-group,
+  .expand-icon {
+    transition: none;
+  }
 }
 </style>

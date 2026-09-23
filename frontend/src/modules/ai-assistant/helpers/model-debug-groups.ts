@@ -1,5 +1,5 @@
 /** 模型调试页：把角色工具按后端给出的 category 分组（保持后端下发顺序） */
-import type { ModelDebugTool } from '../api/toolbox'
+import type { ModelDebugTool } from "../api/toolbox"
 
 export interface ModelDebugToolGroup {
   category: string

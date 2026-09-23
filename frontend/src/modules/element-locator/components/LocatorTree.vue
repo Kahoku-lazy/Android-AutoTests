@@ -3,13 +3,13 @@
  * 元素定位目录树：新建 / 重命名 / 删除之外，还支持拖动移动与批量勾选移动。
  * 拖动与勾选的判定逻辑在 composables/useLocatorTreeMove.ts，本组件只做渲染与事件绑定。
  */
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import EmptyState from '@/shared/components/patterns/EmptyState.vue'
-import type { LocatorMoveItem } from '../api'
-import type { LocatorTreeNode } from '../types'
-import { useLocatorTreeMove, type UiTreeNode } from '../composables/useLocatorTreeMove'
-import MoveToDirectoryDialog from './MoveToDirectoryDialog.vue'
+import { computed, onMounted, onUnmounted, ref } from "vue"
+import { ElMessage, ElMessageBox } from "element-plus"
+import EmptyState from "@/shared/components/patterns/EmptyState.vue"
+import type { LocatorMoveItem } from "../api"
+import type { LocatorTreeNode } from "../types"
+import { useLocatorTreeMove, type UiTreeNode } from "../composables/useLocatorTreeMove"
+import MoveToDirectoryDialog from "./MoveToDirectoryDialog.vue"
 
 const props = defineProps<{
   treeData: LocatorTreeNode[]
@@ -55,9 +55,11 @@ const {
   moveItems: (items, directoryId) => props.moveItems(items, directoryId),
 })
 
-const activeKey = computed(() => (props.activeFileId != null ? `f-${props.activeFileId}` : undefined))
+const activeKey = computed(() =>
+  props.activeFileId != null ? `f-${props.activeFileId}` : undefined,
+)
 const defaultExpanded = computed(() =>
-  elTreeData.value.filter((n) => n.type === 'directory').map((n) => n.key),
+  elTreeData.value.filter((n) => n.type === "directory").map((n) => n.key),
 )
 
 function childCount(data: UiTreeNode): number {
@@ -76,8 +78,8 @@ async function confirmDeleteChecked() {
   try {
     await ElMessageBox.confirm(
       `确认删除选中的 ${checkedItems.value.length} 项？目录将连同其下全部页面一并删除。`,
-      '确认批量删除',
-      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' },
+      "确认批量删除",
+      { confirmButtonText: "删除", cancelButtonText: "取消", type: "warning" },
     )
   } catch {
     return
@@ -105,59 +107,59 @@ function closeMenu() {
   menuNode.value = null
 }
 
-onMounted(() => document.addEventListener('click', closeMenu))
-onUnmounted(() => document.removeEventListener('click', closeMenu))
+onMounted(() => document.addEventListener("click", closeMenu))
+onUnmounted(() => document.removeEventListener("click", closeMenu))
 
 // ── 新建 / 重命名弹窗 ──
 const dialogVisible = ref(false)
-const dialogKind = ref<'dir-create' | 'dir-rename' | 'file-create'>('dir-create')
-const dialogName = ref('')
+const dialogKind = ref<"dir-create" | "dir-rename" | "file-create">("dir-create")
+const dialogName = ref("")
 const dialogParentId = ref<number | null>(null)
 const dialogNodeId = ref<number | null>(null)
 
 const dialogTitle = computed(() => {
-  if (dialogKind.value === 'dir-create') return '新建目录'
-  if (dialogKind.value === 'dir-rename') return '重命名目录'
-  return '新建页面'
+  if (dialogKind.value === "dir-create") return "新建目录"
+  if (dialogKind.value === "dir-rename") return "重命名目录"
+  return "新建页面"
 })
 
 function openCreateRootDir() {
-  dialogKind.value = 'dir-create'
-  dialogName.value = ''
+  dialogKind.value = "dir-create"
+  dialogName.value = ""
   dialogParentId.value = null
   dialogNodeId.value = null
   dialogVisible.value = true
 }
 
 function openCreateRootFile() {
-  dialogKind.value = 'file-create'
-  dialogName.value = ''
+  dialogKind.value = "file-create"
+  dialogName.value = ""
   dialogParentId.value = null
   dialogNodeId.value = null
   dialogVisible.value = true
 }
 
 function openCreateSubDir() {
-  if (!menuNode.value || menuNode.value.type !== 'directory') return
-  dialogKind.value = 'dir-create'
-  dialogName.value = ''
+  if (!menuNode.value || menuNode.value.type !== "directory") return
+  dialogKind.value = "dir-create"
+  dialogName.value = ""
   dialogParentId.value = menuNode.value.id
   dialogVisible.value = true
   closeMenu()
 }
 
 function openCreateFile() {
-  const dirId = menuNode.value?.type === 'directory' ? menuNode.value.id : null
-  dialogKind.value = 'file-create'
-  dialogName.value = ''
+  const dirId = menuNode.value?.type === "directory" ? menuNode.value.id : null
+  dialogKind.value = "file-create"
+  dialogName.value = ""
   dialogParentId.value = dirId
   dialogVisible.value = true
   closeMenu()
 }
 
 function openRename() {
-  if (!menuNode.value || menuNode.value.type !== 'directory') return
-  dialogKind.value = 'dir-rename'
+  if (!menuNode.value || menuNode.value.type !== "directory") return
+  dialogKind.value = "dir-rename"
   dialogName.value = menuNode.value.name
   dialogNodeId.value = menuNode.value.id
   dialogVisible.value = true
@@ -167,66 +169,66 @@ function openRename() {
 function confirmDialog() {
   const name = dialogName.value.trim()
   if (!name) {
-    ElMessage.warning(dialogKind.value === 'file-create' ? '请输入名称' : '请输入目录名称')
+    ElMessage.warning(dialogKind.value === "file-create" ? "请输入名称" : "请输入目录名称")
     return
   }
-  if (dialogKind.value === 'dir-create') {
-    emit('createDirectory', { name, parentId: dialogParentId.value })
-  } else if (dialogKind.value === 'dir-rename' && dialogNodeId.value != null) {
-    emit('renameDirectory', { id: dialogNodeId.value, name })
-  } else if (dialogKind.value === 'file-create') {
-    emit('createFile', { name, directoryId: dialogParentId.value })
+  if (dialogKind.value === "dir-create") {
+    emit("createDirectory", { name, parentId: dialogParentId.value })
+  } else if (dialogKind.value === "dir-rename" && dialogNodeId.value != null) {
+    emit("renameDirectory", { id: dialogNodeId.value, name })
+  } else if (dialogKind.value === "file-create") {
+    emit("createFile", { name, directoryId: dialogParentId.value })
   }
   dialogVisible.value = false
 }
 
 async function onDeleteDirectory() {
-  if (!menuNode.value || menuNode.value.type !== 'directory') return
+  if (!menuNode.value || menuNode.value.type !== "directory") return
   const id = menuNode.value.id
   closeMenu()
   try {
-    await ElMessageBox.confirm('删除目录将同时删除其下全部内容，是否继续？', '确认删除', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
+    await ElMessageBox.confirm("删除目录将同时删除其下全部内容，是否继续？", "确认删除", {
+      confirmButtonText: "删除",
+      cancelButtonText: "取消",
+      type: "warning",
     })
   } catch {
     return
   }
-  emit('deleteDirectory', id)
+  emit("deleteDirectory", id)
 }
 
 async function onDeleteFile() {
-  if (!menuNode.value || menuNode.value.type !== 'file') return
+  if (!menuNode.value || menuNode.value.type !== "file") return
   const fileId = menuNode.value.id
   const name = menuNode.value.name
   closeMenu()
   try {
-    await ElMessageBox.confirm(`确认删除「${name}」？`, '确认删除', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
+    await ElMessageBox.confirm(`确认删除「${name}」？`, "确认删除", {
+      confirmButtonText: "删除",
+      cancelButtonText: "取消",
+      type: "warning",
     })
   } catch {
     return
   }
-  emit('deleteFile', { fileId })
+  emit("deleteFile", { fileId })
 }
 
 function handleNodeClick(data: UiTreeNode) {
   // 批量选择模式下点击只用于勾选，不进入页面详情
   if (selectMode.value) return
-  if (data.type === 'file') emit('selectFile', data.id)
+  if (data.type === "file") emit("selectFile", data.id)
 }
 
 function rowClass(data: UiTreeNode) {
   return {
-    'locator-row': true,
-    'locator-row--dir': data.type === 'directory',
-    'locator-row--file': data.type === 'file',
-    'locator-row--active': data.type === 'file' && data.id === props.activeFileId,
-    'locator-row--drop-target': data.type === 'directory' && data.id === touchTargetId.value,
-    'locator-row--dragging': data.key === touchSourceKey.value,
+    "locator-row": true,
+    "locator-row--dir": data.type === "directory",
+    "locator-row--file": data.type === "file",
+    "locator-row--active": data.type === "file" && data.id === props.activeFileId,
+    "locator-row--drop-target": data.type === "directory" && data.id === touchTargetId.value,
+    "locator-row--dragging": data.key === touchSourceKey.value,
   }
 }
 </script>
@@ -244,14 +246,24 @@ function rowClass(data: UiTreeNode) {
         :class="{ 'ex-btn--active': selectMode }"
         @click="toggleSelectMode"
       >
-        {{ selectMode ? '退出批量选择' : '批量选择' }}
+        {{ selectMode ? "退出批量选择" : "批量选择" }}
       </button>
       <template v-if="selectMode">
         <span class="locator-tree__count">已选 {{ checkedCount }} 项</span>
-        <button type="button" class="ex-btn" :disabled="!checkedCount" @click="moveDialogVisible = true">
+        <button
+          type="button"
+          class="ex-btn"
+          :disabled="!checkedCount"
+          @click="moveDialogVisible = true"
+        >
           移动到…
         </button>
-        <button type="button" class="ex-btn ex-btn--danger" :disabled="!checkedCount" @click="confirmDeleteChecked">
+        <button
+          type="button"
+          class="ex-btn ex-btn--danger"
+          :disabled="!checkedCount"
+          @click="confirmDeleteChecked"
+        >
           删除
         </button>
       </template>
@@ -309,7 +321,7 @@ function rowClass(data: UiTreeNode) {
         <template #default="{ data, node }">
           <div :class="rowClass(data)" :data-node-key="data.key" :data-node-type="data.type">
             <span class="locator-row__ico" aria-hidden="true">
-              {{ data.type === 'file' ? '📄' : node.expanded ? '📂' : '📁' }}
+              {{ data.type === "file" ? "📄" : node.expanded ? "📂" : "📁" }}
             </span>
             <span class="locator-row__name" :title="data.name">{{ data.name }}</span>
             <span v-if="data.type === 'directory'" class="locator-row__meta">
@@ -337,7 +349,9 @@ function rowClass(data: UiTreeNode) {
         </div>
       </template>
       <template v-else>
-        <div class="context-menu__item context-menu__item--danger" @click="onDeleteFile">删除文件</div>
+        <div class="context-menu__item context-menu__item--danger" @click="onDeleteFile">
+          删除文件
+        </div>
       </template>
     </div>
 

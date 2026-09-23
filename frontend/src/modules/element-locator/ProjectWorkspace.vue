@@ -3,19 +3,19 @@
  * 项目目录工作台：只负责目录树。
  * 点击文件后路由跳转到独立详情页查看/编辑元素（对齐用例管理）。
  */
-import { computed, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
-import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import SkeletonCard from '@/shared/components/patterns/SkeletonCard.vue'
-import LocatorTree from './components/LocatorTree.vue'
-import { useLocatorTree } from './composables/useLocatorTree'
+import { computed, onMounted, watch } from "vue"
+import { useRoute, useRouter } from "vue-router"
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
+import LocatorTree from "./components/LocatorTree.vue"
+import { useLocatorTree } from "./composables/useLocatorTree"
 
 const route = useRoute()
 const router = useRouter()
 
-const projectCode = computed(() => String(route.params.code || ''))
+const projectCode = computed(() => String(route.params.code || ""))
 
 const {
   project,
@@ -32,7 +32,7 @@ const {
   deleteItems,
 } = useLocatorTree(() => projectCode.value)
 
-const pageTitle = computed(() => project.value?.name || '元素项目')
+const pageTitle = computed(() => project.value?.name || "元素项目")
 
 async function selectFile(id: number) {
   await router.push(`/elements/projects/${projectCode.value}/files/${id}`)
@@ -81,18 +81,11 @@ onMounted(async () => {
       <WorkbenchCrumbs
         back-to="/elements"
         back-label="返回项目列表"
-        :items="[
-          { label: '元素定位', to: '/elements' },
-          { label: pageTitle },
-        ]"
+        :items="[{ label: '元素定位', to: '/elements' }, { label: pageTitle }]"
       />
       <div class="locator-workspace-main">
         <SkeletonCard v-if="loading" variant="list" :lines="6" />
-        <ErrorState
-          v-else-if="treeError && !tree.length"
-          :message="treeError"
-          @retry="loadTree"
-        />
+        <ErrorState v-else-if="treeError && !tree.length" :message="treeError" @retry="loadTree" />
         <LocatorTree
           v-else
           :tree-data="tree"

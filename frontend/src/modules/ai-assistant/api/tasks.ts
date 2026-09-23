@@ -1,24 +1,24 @@
 /** Task publishing API — TypeScript */
-import djangoClient from '@/shared/api-client'
-import type { DeviceListResponse } from '@/shared/types/device'
+import djangoClient from "@/shared/api-client"
+import type { DeviceListResponse } from "@/shared/types/device"
 import type {
   TaskDeleteResponse,
   TaskDetailResponse,
   TaskListResponse,
   TaskSubmitResponse,
-} from '@/shared/types/ai'
+} from "@/shared/types/ai"
 
 /** 提交任务（multipart：title/goal/可选 attachment 文件/device_*） */
 export async function submitTask(payload: FormData): Promise<TaskSubmitResponse> {
-  const { data } = await djangoClient.post<TaskSubmitResponse>('/ai/tasks/submit/', payload, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+  const { data } = await djangoClient.post<TaskSubmitResponse>("/ai/tasks/submit/", payload, {
+    headers: { "Content-Type": "multipart/form-data" },
   })
   return data
 }
 
 /** 任务列表 */
 export async function listTasks(): Promise<TaskListResponse> {
-  const { data } = await djangoClient.get<TaskListResponse>('/ai/agent-tasks/')
+  const { data } = await djangoClient.get<TaskListResponse>("/ai/agent-tasks/")
   return data
 }
 
@@ -37,7 +37,7 @@ export async function rerunTask(taskId: number): Promise<TaskSubmitResponse> {
 /** 调试：清空全部任务卡片 */
 export async function clearTasks(): Promise<TaskDeleteResponse & { data?: { deleted?: number } }> {
   const { data } = await djangoClient.post<TaskDeleteResponse & { data?: { deleted?: number } }>(
-    '/ai/agent-tasks/clear/',
+    "/ai/agent-tasks/clear/",
   )
   return data
 }
@@ -50,6 +50,6 @@ export async function getTask(taskId: number): Promise<TaskDetailResponse> {
 
 /** 设备列表（供任务卡片选设备） */
 export async function listDevices(): Promise<DeviceListResponse> {
-  const { data } = await djangoClient.get<DeviceListResponse>('/devices/')
+  const { data } = await djangoClient.get<DeviceListResponse>("/devices/")
   return data
 }

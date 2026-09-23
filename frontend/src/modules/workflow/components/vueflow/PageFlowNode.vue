@@ -1,37 +1,37 @@
 <script setup lang="ts">
-import { computed, inject, nextTick, watch } from 'vue'
-import { Handle, Position, useVueFlow } from '@vue-flow/core'
-import type { NodeProps } from '@vue-flow/core'
-import type { PageFlowNodeData } from '@/modules/workflow/composables/useVueFlowAdapter'
-import { portHandleColor } from '@/modules/workflow/composables/useVueFlowAdapter'
-import { useWorkflowStore } from '@/modules/workflow/stores/workflowStore'
-import { ELEMENT_ICONS, MULTI_IN_PORT_TYPES } from '@/modules/workflow/types/workflow'
-import type { StartKind } from '@/modules/workflow/types/workflow'
+import { computed, inject, nextTick, watch } from "vue"
+import { Handle, Position, useVueFlow } from "@vue-flow/core"
+import type { NodeProps } from "@vue-flow/core"
+import type { PageFlowNodeData } from "@/modules/workflow/composables/useVueFlowAdapter"
+import { portHandleColor } from "@/modules/workflow/composables/useVueFlowAdapter"
+import { useWorkflowStore } from "@/modules/workflow/stores/workflowStore"
+import { ELEMENT_ICONS, MULTI_IN_PORT_TYPES } from "@/modules/workflow/types/workflow"
+import type { StartKind } from "@/modules/workflow/types/workflow"
 
 const props = defineProps<NodeProps<PageFlowNodeData>>()
 const store = useWorkflowStore()
 const { updateNodeInternals } = useVueFlow()
 
-const openPicker = inject<(nodeId: string) => void>('vfOpenPicker', () => {})
-const refreshFlow = inject<() => void>('vfRefresh', () => {})
+const openPicker = inject<(nodeId: string) => void>("vfOpenPicker", () => {})
+const refreshFlow = inject<() => void>("vfRefresh", () => {})
 
-const isPopup = computed(() => props.data.nodeType === 'PopupNode')
-const isStart = computed(() => props.data.nodeType === 'StartNode')
-const isEnd = computed(() => props.data.nodeType === 'EndNode')
-const startKind = computed<StartKind>(() => props.data.startKind || 'app')
+const isPopup = computed(() => props.data.nodeType === "PopupNode")
+const isStart = computed(() => props.data.nodeType === "StartNode")
+const isEnd = computed(() => props.data.nodeType === "EndNode")
+const startKind = computed<StartKind>(() => props.data.startKind || "app")
 
 const accent = computed(() => {
-  if (isStart.value) return 'var(--c-workflow)'
-  if (isEnd.value) return '#8a8a96'
-  if (isPopup.value) return '#e85f5f'
-  return '#6f9fd8'
+  if (isStart.value) return "var(--c-workflow)"
+  if (isEnd.value) return "#8a8a96"
+  if (isPopup.value) return "#e85f5f"
+  return "#6f9fd8"
 })
 
 const icon = computed(() => {
-  if (isStart.value) return '▶'
-  if (isEnd.value) return '⏹'
-  if (isPopup.value) return '⚠️'
-  return '📱'
+  if (isStart.value) return "▶"
+  if (isEnd.value) return "⏹"
+  if (isPopup.value) return "⚠️"
+  return "📱"
 })
 
 function onRename(e: Event) {
@@ -54,10 +54,10 @@ function onRemovePort(slot: number) {
 }
 
 function onTogglePortType(slot: number) {
-  if (isStart.value && startKind.value === 'app') return
+  if (isStart.value && startKind.value === "app") return
   store.togglePortType(props.id, slot)
   store.setStatus(
-    '已切换端口类型（navigation↔popup_fixed）。连「入口」必须是 navigation；连弹窗「触发」用 popup_fixed'
+    "已切换端口类型（navigation↔popup_fixed）。连「入口」必须是 navigation；连弹窗「触发」用 popup_fixed",
   )
   refreshFlow()
 }
@@ -74,7 +74,9 @@ function onPackageChange(e: Event) {
 
 watch(
   () => [props.data.inputs.length, props.data.outputs.length, props.data.startKind],
-  () => { refreshHandles() }
+  () => {
+    refreshHandles()
+  },
 )
 </script>
 
@@ -91,56 +93,59 @@ watch(
   >
     <div class="pf-header">
       <span class="pf-icon">{{ icon }}</span>
-      <input
-        class="pf-title nodrag"
-        :value="data.label"
-        @change="onRename"
-        @mousedown.stop
-      />
+      <input class="pf-title nodrag" :value="data.label" @change="onRename" @mousedown.stop />
     </div>
 
     <!-- Start: app / page -->
     <div v-if="isStart" class="pf-kind nodrag" @mousedown.stop>
-      <button type="button" class="kind-btn" :class="{ active: startKind === 'app' }"
-        @click.stop="onStartKind('app')">启动 App</button>
-      <button type="button" class="kind-btn" :class="{ active: startKind === 'page' }"
-        @click.stop="onStartKind('page')">页面</button>
+      <button
+        type="button"
+        class="kind-btn"
+        :class="{ active: startKind === 'app' }"
+        @click.stop="onStartKind('app')"
+      >
+        启动 App
+      </button>
+      <button
+        type="button"
+        class="kind-btn"
+        :class="{ active: startKind === 'page' }"
+        @click.stop="onStartKind('page')"
+      >
+        页面
+      </button>
     </div>
 
     <div v-if="isStart && startKind === 'app'" class="pf-pkg nodrag" @mousedown.stop>
       <label>包名</label>
-      <input class="pkg-input" :value="data.packageName" placeholder="com.example.app" @change="onPackageChange" />
+      <input
+        class="pkg-input"
+        :value="data.packageName"
+        placeholder="com.example.app"
+        @change="onPackageChange"
+      />
     </div>
 
     <div class="pf-sub">
-      <template v-if="isStart && startKind === 'app'">
-        无入口 · 从「启动」连到页面入口
-      </template>
+      <template v-if="isStart && startKind === 'app'"> 无入口 · 从「启动」连到页面入口 </template>
       <template v-else-if="isStart && startKind === 'page'">
         <template v-if="data.linkedPageName">
-          关联: {{ data.linkedPageName }} · 已选 {{ data.outputs.filter(o => o.el).length }} 个元素
+          关联: {{ data.linkedPageName }} · 已选
+          {{ data.outputs.filter((o) => o.el).length }} 个元素
         </template>
-        <template v-else>
-          无入口 · 右键关联页面后添加元素
-        </template>
+        <template v-else> 无入口 · 右键关联页面后添加元素 </template>
       </template>
-      <template v-else-if="isEnd">
-        无输出 · 接收 navigation / popup_close
-      </template>
+      <template v-else-if="isEnd"> 无输出 · 接收 navigation / popup_close </template>
       <template v-else-if="isPopup && !data.canCreateOutput">需要先连接触发</template>
       <template v-else-if="data.linkedPageName">
-        关联: {{ data.linkedPageName }} · 已选 {{ data.outputs.filter(o => o.el).length }} 个元素
+        关联: {{ data.linkedPageName }} · 已选 {{ data.outputs.filter((o) => o.el).length }} 个元素
       </template>
       <template v-else>
-        {{ data.outputs.filter(o => o.el).length }} 个元素 · 右键关联页面后添加
+        {{ data.outputs.filter((o) => o.el).length }} 个元素 · 右键关联页面后添加
       </template>
     </div>
 
-    <div
-      v-for="port in data.inputs"
-      :key="'in-' + port.slot_index"
-      class="pf-row in"
-    >
+    <div v-for="port in data.inputs" :key="'in-' + port.slot_index" class="pf-row in">
       <Handle
         :id="'in-' + port.slot_index"
         type="target"
@@ -156,17 +161,18 @@ watch(
       </span>
     </div>
 
-    <div
-      v-for="port in data.outputs"
-      :key="'out-' + port.slot_index"
-      class="pf-row out"
-    >
+    <div v-for="port in data.outputs" :key="'out-' + port.slot_index" class="pf-row out">
       <span class="pf-port-name">
-        {{ ELEMENT_ICONS[port.el?.type || ''] || (isStart && !port.el ? '▶' : '◆') }} {{ port.name }}
+        {{ ELEMENT_ICONS[port.el?.type || ""] || (isStart && !port.el ? "▶" : "◆") }}
+        {{ port.name }}
       </span>
       <span
         class="pf-port-type nodrag"
-        :title="isStart && startKind === 'app' ? '启动输出固定为 navigation' : '双击切换 navigation ↔ popup_fixed'"
+        :title="
+          isStart && startKind === 'app'
+            ? '启动输出固定为 navigation'
+            : '双击切换 navigation ↔ popup_fixed'
+        "
         @dblclick.stop="onTogglePortType(port.slot_index)"
       >
         {{ port.type }}
@@ -184,9 +190,7 @@ watch(
       />
     </div>
 
-    <div v-if="isEnd && data.inputs.length === 0" class="pf-empty-end">
-      （终节点）
-    </div>
+    <div v-if="isEnd && data.inputs.length === 0" class="pf-empty-end">（终节点）</div>
 
     <button
       v-if="data.canCreateOutput"
@@ -213,13 +217,15 @@ watch(
   box-shadow: var(--app-shadow-sm);
   /* ── 本模块私有色：tokens.css 未登记，登记在节点自身根类 ── */
   --wf-node-selected-ring: var(--color-cyan-74-a30) /* -> --color-cyan-74-a30 */; /* 选中态外发光（工作流蓝 28%） */
-  --wf-node-in-count-fg: var(--color-blue-53) /* -> --color-blue-53 */;                     /* 入端口计数文字（蓝紫） */
-  --wf-node-in-count-bg: var(--color-blue-68-s64-a18) /* -> --color-blue-68-s64-a18 */;    /* 入端口计数底（蓝紫 20%） */
-  --wf-node-handle-ring: var(--color-blue-82-a30) /* -> --color-blue-82-a30 */;    /* 端口圆点描边光晕 */
+  --wf-node-in-count-fg: var(--color-blue-53) /* -> --color-blue-53 */; /* 入端口计数文字（蓝紫） */
+  --wf-node-in-count-bg: var(--color-blue-68-s64-a18) /* -> --color-blue-68-s64-a18 */; /* 入端口计数底（蓝紫 20%） */
+  --wf-node-handle-ring: var(--color-blue-82-a30) /* -> --color-blue-82-a30 */; /* 端口圆点描边光晕 */
 }
 .pf-node.selected {
   border-color: var(--c-workflow);
-  box-shadow: 0 0 0 3px var(--wf-node-selected-ring), var(--app-shadow-md);
+  box-shadow:
+    0 0 0 3px var(--wf-node-selected-ring),
+    var(--app-shadow-md);
 }
 .pf-node.popup {
   border-style: dashed;
@@ -287,7 +293,9 @@ watch(
   background: transparent;
   color: var(--app-text-secondary);
   cursor: pointer;
-  transition: background var(--app-duration-fast) var(--app-ease), color var(--app-duration-fast) var(--app-ease);
+  transition:
+    background var(--app-duration-fast) var(--app-ease),
+    color var(--app-duration-fast) var(--app-ease);
 }
 .kind-btn.active {
   background: var(--app-bg-card);
@@ -344,9 +352,16 @@ watch(
   margin: 2px 0;
   font-size: var(--app-size-xs);
 }
-.pf-row.in { justify-content: flex-start; }
-.pf-row.out { justify-content: flex-end; }
-.pf-port-name { color: var(--ink); font-weight: 600; }
+.pf-row.in {
+  justify-content: flex-start;
+}
+.pf-row.out {
+  justify-content: flex-end;
+}
+.pf-port-name {
+  color: var(--ink);
+  font-weight: 600;
+}
 .pf-port-type {
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
@@ -399,8 +414,13 @@ watch(
   flex-shrink: 0;
   box-shadow: 0 0 0 1px var(--wf-node-handle-ring);
 }
-.pf-handle.target { margin-right: 2px; order: -1; }
-.pf-handle.source { margin-left: 2px; }
+.pf-handle.target {
+  margin-right: 2px;
+  order: -1;
+}
+.pf-handle.source {
+  margin-left: 2px;
+}
 .pf-handle:hover {
   box-shadow: 0 0 0 4px var(--wf-node-handle-ring);
 }

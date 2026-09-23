@@ -1,13 +1,13 @@
 /** element-locator API client functions — persistent element repository CRUD */
-import client from '@/shared/api-client'
-import type { DjangoResponse } from '@/shared/api-client'
+import client from "@/shared/api-client"
+import type { DjangoResponse } from "@/shared/api-client"
 import type {
   CreatePagePayload,
   ElementWritePayload,
   LocatorProject,
   LocatorTreePayload,
   PageElementsPayload,
-} from './types'
+} from "./types"
 
 type Envelope<T> = Promise<{ data: DjangoResponse<T> }>
 
@@ -21,7 +21,7 @@ type FlatResponse<T> = Promise<{ data: T }>
 // ── Projects / directories（标准 {status,data} 信封）──
 
 export function listLocatorProjects(): Envelope<LocatorProject[]> {
-  return client.get<DjangoResponse<LocatorProject[]>>('/elements/projects/')
+  return client.get<DjangoResponse<LocatorProject[]>>("/elements/projects/")
 }
 
 export function getLocatorProjectTree(code: string): Envelope<LocatorTreePayload> {
@@ -33,7 +33,7 @@ export function createLocatorDirectory(body: {
   name: string
   parent_id?: number | null
 }): Envelope<Record<string, unknown>> {
-  return client.post<DjangoResponse<Record<string, unknown>>>('/elements/directories/', body)
+  return client.post<DjangoResponse<Record<string, unknown>>>("/elements/directories/", body)
 }
 
 export function updateLocatorDirectory(
@@ -92,7 +92,7 @@ export function createPageElement(
 
 /** 批量删除元素行（原子） */
 export function batchDeleteElements(ids: number[]) {
-  return client.post('/elements/items/batch-delete/', { ids })
+  return client.post("/elements/items/batch-delete/", { ids })
 }
 
 // ── Page CRUD ──
@@ -101,7 +101,7 @@ export function apiCreatePage(data: {
   label: string
   directory_id?: number | null
 }): FlatResponse<CreatePagePayload> {
-  return client.post<CreatePagePayload>('/elements/pages/create/', data)
+  return client.post<CreatePagePayload>("/elements/pages/create/", data)
 }
 
 export function apiDeletePage(id: number): FlatResponse<ElementWritePayload> {
@@ -111,7 +111,7 @@ export function apiDeletePage(id: number): FlatResponse<ElementWritePayload> {
 // ── Move ──
 
 export interface LocatorMoveItem {
-  kind: 'directory' | 'page'
+  kind: "directory" | "page"
   id: number
 }
 
@@ -121,7 +121,7 @@ export function moveLocatorItems(body: {
   parent_directory_id: number | null
 }): Envelope<{ moved: number; skipped: number }> {
   return client.post<DjangoResponse<{ moved: number; skipped: number }>>(
-    '/elements/batch-move/',
+    "/elements/batch-move/",
     body,
   )
 }
@@ -131,7 +131,7 @@ export function deleteLocatorItems(body: {
   items: LocatorMoveItem[]
 }): Envelope<{ deleted: number; pages: number; elements: number }> {
   return client.post<DjangoResponse<{ deleted: number; pages: number; elements: number }>>(
-    '/elements/batch-delete/',
+    "/elements/batch-delete/",
     body,
   )
 }

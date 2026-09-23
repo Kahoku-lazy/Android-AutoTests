@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
-import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
-import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
-import EmptyState from '@/shared/components/patterns/EmptyState.vue'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import { useCaseSheet } from './composables/useCaseSheet'
-import { BUSINESS_TYPE_OPTIONS, TEST_TYPE_OPTIONS } from './types'
-import type { BusinessType, SheetRowDraft, TestType } from './types'
+import { computed, nextTick, onMounted, onUnmounted, ref } from "vue"
+import { useRoute } from "vue-router"
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
+import EmptyState from "@/shared/components/patterns/EmptyState.vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import { useCaseSheet } from "./composables/useCaseSheet"
+import { BUSINESS_TYPE_OPTIONS, TEST_TYPE_OPTIONS } from "./types"
+import type { BusinessType, SheetRowDraft, TestType } from "./types"
 
-type TextField = 'title' | 'module' | 'precondition' | 'steps' | 'expected_result'
-type TagKind = 'test_type' | 'business_type'
+type TextField = "title" | "module" | "precondition" | "steps" | "expected_result"
+type TagKind = "test_type" | "business_type"
 
 const route = useRoute()
 
@@ -30,38 +30,41 @@ const {
   saveAll,
   removeRow,
   renameSheet,
-} = useCaseSheet(() => projectId.value, () => fileId.value)
+} = useCaseSheet(
+  () => projectId.value,
+  () => fileId.value,
+)
 
-const pageTitle = computed(() => fileMeta.value?.name || '用例表格')
+const pageTitle = computed(() => fileMeta.value?.name || "用例表格")
 const renaming = ref(false)
-const renameDraft = ref('')
+const renameDraft = ref("")
 
 /** `${rowId}:${field}` */
 const editingKey = ref<string | null>(null)
-const editDraft = ref('')
+const editDraft = ref("")
 const openTagKey = ref<string | null>(null)
 
 const TEST_TAG_CLASS: Record<TestType, string> = {
-  app: 'sheet-tag--app',
-  web: 'sheet-tag--web',
-  api: 'sheet-tag--api',
-  func: 'sheet-tag--func',
+  app: "sheet-tag--app",
+  web: "sheet-tag--web",
+  api: "sheet-tag--api",
+  func: "sheet-tag--func",
 }
 
 const BIZ_TAG_CLASS: Record<BusinessType, string> = {
-  appliance: 'sheet-tag--appliance',
-  lighting: 'sheet-tag--lighting',
-  app: 'sheet-tag--biz-app',
+  appliance: "sheet-tag--appliance",
+  lighting: "sheet-tag--lighting",
+  app: "sheet-tag--biz-app",
 }
 
 function labelOf(kind: TagKind, value: string): string {
-  const opts = kind === 'test_type' ? TEST_TYPE_OPTIONS : BUSINESS_TYPE_OPTIONS
+  const opts = kind === "test_type" ? TEST_TYPE_OPTIONS : BUSINESS_TYPE_OPTIONS
   return opts.find((o) => o.value === value)?.label || value
 }
 
 function tagClass(kind: TagKind, value: string): string {
-  if (kind === 'test_type') return TEST_TAG_CLASS[value as TestType] || 'sheet-tag--app'
-  return BIZ_TAG_CLASS[value as BusinessType] || 'sheet-tag--appliance'
+  if (kind === "test_type") return TEST_TAG_CLASS[value as TestType] || "sheet-tag--app"
+  return BIZ_TAG_CLASS[value as BusinessType] || "sheet-tag--appliance"
 }
 
 function cellKey(rowId: string, field: TextField | TagKind): string {
@@ -73,11 +76,11 @@ function isEditing(rowId: string, field: TextField): boolean {
 }
 
 function displayText(value: string): string {
-  return (value || '').trim()
+  return (value || "").trim()
 }
 
 function startRename() {
-  renameDraft.value = fileMeta.value?.name || ''
+  renameDraft.value = fileMeta.value?.name || ""
   renaming.value = true
 }
 
@@ -94,7 +97,7 @@ function toggleTagMenu(rowId: string, kind: TagKind) {
 }
 
 function pickTag(row: SheetRowDraft, kind: TagKind, value: string) {
-  if (kind === 'test_type') row.test_type = value as TestType
+  if (kind === "test_type") row.test_type = value as TestType
   else row.business_type = value as BusinessType
   markDirty(row)
   openTagKey.value = null
@@ -103,7 +106,7 @@ function pickTag(row: SheetRowDraft, kind: TagKind, value: string) {
 async function beginEdit(row: SheetRowDraft, field: TextField) {
   openTagKey.value = null
   editingKey.value = cellKey(row.id, field)
-  editDraft.value = row[field] || ''
+  editDraft.value = row[field] || ""
   await nextTick()
   const el = document.querySelector<HTMLTextAreaElement | HTMLInputElement>(
     `[data-edit-key="${editingKey.value}"]`,
@@ -120,21 +123,21 @@ function commitEdit(row: SheetRowDraft, field: TextField) {
     markDirty(row)
   }
   editingKey.value = null
-  editDraft.value = ''
+  editDraft.value = ""
 }
 
 function cancelEdit() {
   editingKey.value = null
-  editDraft.value = ''
+  editDraft.value = ""
 }
 
 function onEditKeydown(e: KeyboardEvent, row: SheetRowDraft, field: TextField, multiline: boolean) {
-  if (e.key === 'Escape') {
+  if (e.key === "Escape") {
     e.preventDefault()
     cancelEdit()
     return
   }
-  if (e.key === 'Enter' && !multiline && !e.shiftKey) {
+  if (e.key === "Enter" && !multiline && !e.shiftKey) {
     e.preventDefault()
     commitEdit(row, field)
   }
@@ -142,11 +145,11 @@ function onEditKeydown(e: KeyboardEvent, row: SheetRowDraft, field: TextField, m
 
 function onDocClick(e: MouseEvent) {
   const t = e.target as HTMLElement | null
-  if (!t?.closest('.sheet-tag-wrap')) openTagKey.value = null
+  if (!t?.closest(".sheet-tag-wrap")) openTagKey.value = null
 }
 
-onMounted(() => document.addEventListener('click', onDocClick))
-onUnmounted(() => document.removeEventListener('click', onDocClick))
+onMounted(() => document.addEventListener("click", onDocClick))
+onUnmounted(() => document.removeEventListener("click", onDocClick))
 </script>
 
 <template>
@@ -160,7 +163,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
       <template #actions>
         <el-button class="wb-btn" @click="startRename">重命名</el-button>
         <el-button class="wb-btn" :loading="saving" type="primary" @click="saveAll">
-          保存{{ dirtyCount ? ` (${dirtyCount})` : '' }}
+          保存{{ dirtyCount ? ` (${dirtyCount})` : "" }}
         </el-button>
         <el-button class="wb-btn" type="success" @click="addRow">+ 新建行</el-button>
       </template>
@@ -204,7 +207,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
             <tr v-for="row in rows" :key="row.id" :class="{ 'is-dirty': row.dirty }">
               <td class="col-id">
                 <div class="sheet-cell sheet-cell--muted">
-                  {{ row.isNew ? '（新建）' : row.id }}
+                  {{ row.isNew ? "（新建）" : row.id }}
                 </div>
               </td>
 
@@ -216,13 +219,10 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
                     :class="tagClass('test_type', row.test_type)"
                     @click="toggleTagMenu(row.id, 'test_type')"
                   >
-                    {{ labelOf('test_type', row.test_type) }}
+                    {{ labelOf("test_type", row.test_type) }}
                     <span class="sheet-tag__caret">▾</span>
                   </button>
-                  <div
-                    v-if="openTagKey === cellKey(row.id, 'test_type')"
-                    class="sheet-tag-menu"
-                  >
+                  <div v-if="openTagKey === cellKey(row.id, 'test_type')" class="sheet-tag-menu">
                     <button
                       v-for="opt in TEST_TYPE_OPTIONS"
                       :key="opt.value"
@@ -230,7 +230,10 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
                       class="sheet-tag-menu__item"
                       @click="pickTag(row, 'test_type', opt.value)"
                     >
-                      <span class="sheet-tag sheet-tag--sm" :class="tagClass('test_type', opt.value)">
+                      <span
+                        class="sheet-tag sheet-tag--sm"
+                        :class="tagClass('test_type', opt.value)"
+                      >
                         {{ opt.label }}
                       </span>
                     </button>
@@ -246,7 +249,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
                     :class="tagClass('business_type', row.business_type)"
                     @click="toggleTagMenu(row.id, 'business_type')"
                   >
-                    {{ labelOf('business_type', row.business_type) }}
+                    {{ labelOf("business_type", row.business_type) }}
                     <span class="sheet-tag__caret">▾</span>
                   </button>
                   <div
@@ -273,14 +276,11 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
 
               <td class="col-time">
                 <div class="sheet-cell sheet-cell--muted sheet-cell--center">
-                  {{ row.updated_at || '—' }}
+                  {{ row.updated_at || "—" }}
                 </div>
               </td>
 
-              <td
-                class="col-title"
-                @dblclick="beginEdit(row, 'title')"
-              >
+              <td class="col-title" @dblclick="beginEdit(row, 'title')">
                 <div v-if="isEditing(row.id, 'title')" class="sheet-cell sheet-cell--editing">
                   <input
                     :data-edit-key="cellKey(row.id, 'title')"
@@ -295,7 +295,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
                   class="sheet-cell sheet-cell--editable"
                   :class="{ 'is-empty': !displayText(row.title) }"
                 >
-                  {{ displayText(row.title) || '双击填写' }}
+                  {{ displayText(row.title) || "双击填写" }}
                 </div>
               </td>
 
@@ -314,12 +314,15 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
                   class="sheet-cell sheet-cell--editable"
                   :class="{ 'is-empty': !displayText(row.module) }"
                 >
-                  {{ displayText(row.module) || '双击填写' }}
+                  {{ displayText(row.module) || "双击填写" }}
                 </div>
               </td>
 
               <td class="col-pre" @dblclick="beginEdit(row, 'precondition')">
-                <div v-if="isEditing(row.id, 'precondition')" class="sheet-cell sheet-cell--editing">
+                <div
+                  v-if="isEditing(row.id, 'precondition')"
+                  class="sheet-cell sheet-cell--editing"
+                >
                   <textarea
                     :data-edit-key="cellKey(row.id, 'precondition')"
                     v-model="editDraft"
@@ -334,7 +337,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
                   class="sheet-cell sheet-cell--editable sheet-cell--pre"
                   :class="{ 'is-empty': !displayText(row.precondition) }"
                 >
-                  {{ displayText(row.precondition) || '双击填写' }}
+                  {{ displayText(row.precondition) || "双击填写" }}
                 </div>
               </td>
 
@@ -354,7 +357,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
                   class="sheet-cell sheet-cell--editable sheet-cell--pre"
                   :class="{ 'is-empty': !displayText(row.steps) }"
                 >
-                  {{ displayText(row.steps) || '双击填写' }}
+                  {{ displayText(row.steps) || "双击填写" }}
                 </div>
               </td>
 
@@ -377,7 +380,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
                   class="sheet-cell sheet-cell--editable sheet-cell--pre"
                   :class="{ 'is-empty': !displayText(row.expected_result) }"
                 >
-                  {{ displayText(row.expected_result) || '双击填写' }}
+                  {{ displayText(row.expected_result) || "双击填写" }}
                 </div>
               </td>
 
@@ -418,10 +421,10 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
 }
 .case-sheet__table {
   /* 用例表网格与表头配色：本表专用（消费点为本表 th/td），在此集中登记一次 */
-  --case-sheet-grid: var(--color-orange-76) /* -> --color-orange-76 */;         /* 单元格网格线 */
-  --case-sheet-head-bg: var(--color-blue-89) /* -> --color-blue-89 */;      /* 表头底色 */
-  --case-sheet-head-fg: var(--color-blue-27) /* -> --color-blue-27 */;      /* 表头文字 */
-  --case-sheet-head-border: var(--color-blue-82) /* -> --color-blue-82 */;  /* 表头描边 */
+  --case-sheet-grid: var(--color-orange-76) /* -> --color-orange-76 */; /* 单元格网格线 */
+  --case-sheet-head-bg: var(--color-blue-89) /* -> --color-blue-89 */; /* 表头底色 */
+  --case-sheet-head-fg: var(--color-blue-27) /* -> --color-blue-27 */; /* 表头文字 */
+  --case-sheet-head-border: var(--color-blue-82) /* -> --color-blue-82 */; /* 表头描边 */
   width: 100%;
   min-width: 1280px;
   border-collapse: collapse;
@@ -449,15 +452,33 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
 .case-sheet__table tr.is-dirty td {
   background: color-mix(in srgb, var(--c-case) 10%, var(--app-bg-card));
 }
-.col-id { width: 150px; }
-.col-type { width: 110px; }
-.col-biz { width: 110px; }
-.col-time { width: 150px; }
-.col-title { width: 160px; }
-.col-module { width: 120px; }
-.col-pre { width: 180px; }
-.col-steps { width: 220px; }
-.col-expect { width: 220px; }
+.col-id {
+  width: 150px;
+}
+.col-type {
+  width: 110px;
+}
+.col-biz {
+  width: 110px;
+}
+.col-time {
+  width: 150px;
+}
+.col-title {
+  width: 160px;
+}
+.col-module {
+  width: 120px;
+}
+.col-pre {
+  width: 180px;
+}
+.col-steps {
+  width: 220px;
+}
+.col-expect {
+  width: 220px;
+}
 .col-ops {
   width: 88px;
   text-align: center;
@@ -519,13 +540,20 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
 .sheet-tag {
   /* 测试类型分类色板：7 类是数据编码色（非状态语义），色相为登记例外，
      在此集中声明一次，消费规则只用变量（口径见 frontend-l0-design-tokens） */
-  --tag-app-bg: var(--color-lime-94) /* -> --color-lime-94 */; --tag-app-fg: var(--color-teal-30) /* -> --color-teal-30 */;
-  --tag-web-bg: var(--color-white) /* -> --color-white */; --tag-web-fg: var(--color-cyan-40) /* -> --color-cyan-40 */;
-  --tag-api-bg: var(--color-violet-96) /* -> --color-violet-96 */; --tag-api-fg: var(--color-indigo-46) /* -> --color-indigo-46 */;
-  --tag-func-bg: var(--color-yellow-94) /* -> --color-yellow-94 */; --tag-func-fg: var(--color-yellow-27) /* -> --color-yellow-27 */;
-  --tag-appliance-bg: var(--color-lime-94) /* -> --color-lime-94 */; --tag-appliance-fg: var(--color-green-33) /* -> --color-green-33 */;
-  --tag-lighting-bg: var(--color-red-95) /* -> --color-red-95 */; --tag-lighting-fg: var(--color-red-49) /* -> --color-red-49 */;
-  --tag-biz-app-bg: var(--color-violet-96) /* -> --color-violet-96 */; --tag-biz-app-fg: var(--color-purple-47) /* -> --color-purple-47 */;
+  --tag-app-bg: var(--color-lime-94) /* -> --color-lime-94 */;
+  --tag-app-fg: var(--color-teal-30) /* -> --color-teal-30 */;
+  --tag-web-bg: var(--color-white) /* -> --color-white */;
+  --tag-web-fg: var(--color-cyan-40) /* -> --color-cyan-40 */;
+  --tag-api-bg: var(--color-violet-96) /* -> --color-violet-96 */;
+  --tag-api-fg: var(--color-indigo-46) /* -> --color-indigo-46 */;
+  --tag-func-bg: var(--color-yellow-94) /* -> --color-yellow-94 */;
+  --tag-func-fg: var(--color-yellow-27) /* -> --color-yellow-27 */;
+  --tag-appliance-bg: var(--color-lime-94) /* -> --color-lime-94 */;
+  --tag-appliance-fg: var(--color-green-33) /* -> --color-green-33 */;
+  --tag-lighting-bg: var(--color-red-95) /* -> --color-red-95 */;
+  --tag-lighting-fg: var(--color-red-49) /* -> --color-red-49 */;
+  --tag-biz-app-bg: var(--color-violet-96) /* -> --color-violet-96 */;
+  --tag-biz-app-fg: var(--color-purple-47) /* -> --color-purple-47 */;
   display: inline-flex;
   align-items: center;
   gap: var(--app-space-xs);
@@ -550,13 +578,34 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
   font-size: var(--app-size-xs);
   opacity: 0.75;
 }
-.sheet-tag--app { background: var(--tag-app-bg); color: var(--tag-app-fg); }
-.sheet-tag--web { background: var(--tag-web-bg); color: var(--tag-web-fg); }
-.sheet-tag--api { background: var(--tag-api-bg); color: var(--tag-api-fg); }
-.sheet-tag--func { background: var(--tag-func-bg); color: var(--tag-func-fg); }
-.sheet-tag--appliance { background: var(--tag-appliance-bg); color: var(--tag-appliance-fg); }
-.sheet-tag--lighting { background: var(--tag-lighting-bg); color: var(--tag-lighting-fg); }
-.sheet-tag--biz-app { background: var(--tag-biz-app-bg); color: var(--tag-biz-app-fg); }
+.sheet-tag--app {
+  background: var(--tag-app-bg);
+  color: var(--tag-app-fg);
+}
+.sheet-tag--web {
+  background: var(--tag-web-bg);
+  color: var(--tag-web-fg);
+}
+.sheet-tag--api {
+  background: var(--tag-api-bg);
+  color: var(--tag-api-fg);
+}
+.sheet-tag--func {
+  background: var(--tag-func-bg);
+  color: var(--tag-func-fg);
+}
+.sheet-tag--appliance {
+  background: var(--tag-appliance-bg);
+  color: var(--tag-appliance-fg);
+}
+.sheet-tag--lighting {
+  background: var(--tag-lighting-bg);
+  color: var(--tag-lighting-fg);
+}
+.sheet-tag--biz-app {
+  background: var(--tag-biz-app-bg);
+  color: var(--tag-biz-app-fg);
+}
 
 .sheet-tag-menu {
   position: absolute;

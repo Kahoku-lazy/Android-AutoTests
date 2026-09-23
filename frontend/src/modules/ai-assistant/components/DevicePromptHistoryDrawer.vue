@@ -40,7 +40,9 @@
                 type="button"
                 class="tb-btn danger"
                 @click="emit('remove', item.id)"
-              >删除</button>
+              >
+                删除
+              </button>
             </span>
           </div>
         </li>
@@ -58,10 +60,10 @@
 </template>
 
 <script setup lang="ts">
-import EmptyState from '@/shared/components/patterns/EmptyState.vue'
-import { renderSkillMarkdown } from '../helpers/skill-markdown'
-import { PROMPT_ARCHIVE_KIND_LABELS, PROMPT_AUTO_ARCHIVE_KEEP } from '../constants'
-import type { DevicePromptArchive, DevicePromptArchiveKind } from '../api/toolbox'
+import EmptyState from "@/shared/components/patterns/EmptyState.vue"
+import { renderSkillMarkdown } from "../helpers/skill-markdown"
+import { PROMPT_ARCHIVE_KIND_LABELS, PROMPT_AUTO_ARCHIVE_KEEP } from "../constants"
+import type { DevicePromptArchive, DevicePromptArchiveKind } from "../api/toolbox"
 
 const props = defineProps<{
   modelValue: boolean
@@ -71,22 +73,22 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: boolean): void
-  (e: 'preview', id: number): void
-  (e: 'restore', id: number): void
-  (e: 'remove', id: number): void
+  (e: "update:modelValue", value: boolean): void
+  (e: "preview", id: number): void
+  (e: "restore", id: number): void
+  (e: "remove", id: number): void
 }>()
 
 const PROMPT_ROLES = [
-  { key: 'planner' as const, label: '规划模型 Planner' },
-  { key: 'executor' as const, label: '执行模型 Executor' },
-  { key: 'verifier' as const, label: '验收模型 Verifier' },
+  { key: "planner" as const, label: "规划模型 Planner" },
+  { key: "executor" as const, label: "执行模型 Executor" },
+  { key: "verifier" as const, label: "验收模型 Verifier" },
 ]
 
 const keep = PROMPT_AUTO_ARCHIVE_KEEP
 
 function onVisibleChange(value: boolean): void {
-  emit('update:modelValue', value)
+  emit("update:modelValue", value)
 }
 
 function kindLabel(kind: DevicePromptArchiveKind): string {
@@ -94,22 +96,22 @@ function kindLabel(kind: DevicePromptArchiveKind): string {
 }
 
 function formatTime(item: DevicePromptArchive): string {
-  const raw = item.updated_at || item.created_at || ''
-  return raw ? raw.replace('T', ' ').slice(0, 16) : '—'
+  const raw = item.updated_at || item.created_at || ""
+  return raw ? raw.replace("T", " ").slice(0, 16) : "—"
 }
 
 function sizeSummary(item: DevicePromptArchive): string {
   const total =
     (item.planner_length || 0) + (item.executor_length || 0) + (item.verifier_length || 0)
-  return total ? '三份共 ' + total + ' 字' : '—'
+  return total ? "三份共 " + total + " 字" : "—"
 }
 
-function roleText(key: 'planner' | 'executor' | 'verifier'): string {
-  return (props.preview && props.preview[key]) || ''
+function roleText(key: "planner" | "executor" | "verifier"): string {
+  return (props.preview && props.preview[key]) || ""
 }
 
 function renderMd(src: string): string {
-  return renderSkillMarkdown(src || '_（空）_')
+  return renderSkillMarkdown(src || "_（空）_")
 }
 </script>
 

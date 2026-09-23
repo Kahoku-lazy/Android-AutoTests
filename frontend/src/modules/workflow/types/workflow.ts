@@ -3,31 +3,31 @@
 // ═══════════════════════════════════════════
 
 export const PORT_TYPE = {
-  ENTRY: 'entry',
-  POPUP_TRIGGER: 'popup_trigger',
-  NAVIGATION: 'navigation',
-  POPUP_FIXED: 'popup_fixed',
-  POPUP_CLOSE: 'popup_close',
-  DATA: 'data',
+  ENTRY: "entry",
+  POPUP_TRIGGER: "popup_trigger",
+  NAVIGATION: "navigation",
+  POPUP_FIXED: "popup_fixed",
+  POPUP_CLOSE: "popup_close",
+  DATA: "data",
 } as const
 
 export type PortType = (typeof PORT_TYPE)[keyof typeof PORT_TYPE]
 
 // 连线类型校验规则表
 export const LINK_RULES: Record<string, string[]> = {
-  navigation: ['entry'],
-  popup_fixed: ['popup_trigger'],
-  popup_close: ['entry'],
-  data: ['data'],
+  navigation: ["entry"],
+  popup_fixed: ["popup_trigger"],
+  popup_close: ["entry"],
+  data: ["data"],
 }
 
 // 端口类型 → 显示颜色
 export const PORT_COLORS: Record<string, string> = {
-  entry: '#5b9cf5',
-  popup_trigger: '#f87171',
-  navigation: '#a78bfa',
-  popup_fixed: '#f87171',
-  popup_close: '#8a8a96',
+  entry: "#5b9cf5",
+  popup_trigger: "#f87171",
+  navigation: "#a78bfa",
+  popup_fixed: "#f87171",
+  popup_close: "#8a8a96",
 }
 
 // ═══════════════════════════════════════════
@@ -48,11 +48,10 @@ export interface PortDefinition {
 /** Ports that accept multiple inbound connections */
 export const MULTI_IN_PORT_TYPES: ReadonlySet<string> = new Set([PORT_TYPE.ENTRY])
 
-
-export type WorkflowNodeType = 'PageNode' | 'PopupNode' | 'StartNode' | 'EndNode'
-export type WorkflowCategory = 'page' | 'popup' | 'start' | 'end'
+export type WorkflowNodeType = "PageNode" | "PopupNode" | "StartNode" | "EndNode"
+export type WorkflowCategory = "page" | "popup" | "start" | "end"
 /** StartNode: launch app / page-as-entry */
-export type StartKind = 'app' | 'page'
+export type StartKind = "app" | "page"
 
 export interface WorkflowNode {
   id: string
@@ -86,7 +85,7 @@ export interface NodeRegistryEntry {
   icon: string
   maxInstances: number
   size: [number, number]
-  elementPool?: 'page' | 'popup'
+  elementPool?: "page" | "popup"
 }
 
 // ═══════════════════════════════════════════
@@ -102,48 +101,73 @@ export interface ElementDef {
 }
 
 export const PAGE_ELEMENTS: ElementDef[] = [
-  { id: 'el_001', label: '搜索图标', type: 'icon', xpath: '//*[@resource-id="com.taobao.taobao:id/search_btn"]' },
-  { id: 'el_002', label: '我的按钮', type: 'button', xpath: '//*[@text="我的"]' },
-  { id: 'el_003', label: '设置按钮', type: 'button', xpath: '//*[@resource-id="com.taobao.taobao:id/settings"]' },
-  { id: 'el_004', label: '购物车图标', type: 'icon', xpath: '//*[@resource-id="com.taobao.taobao:id/cart"]' },
-  { id: 'el_005', label: '返回按钮', type: 'button', xpath: '//*[@content-desc="返回"]' },
-  { id: 'el_006', label: '首页Banner', type: 'image', xpath: '//*[@resource-id="com.taobao.taobao:id/banner"]' },
-  { id: 'el_007', label: '推荐位1', type: 'link', xpath: '//*[@resource-id="recommend"][1]' },
-  { id: 'el_008', label: '推荐位2', type: 'link', xpath: '//*[@resource-id="recommend"][2]' },
-  { id: 'el_009', label: '分类Tab', type: 'tab', xpath: '//*[@text="分类"]' },
-  { id: 'el_010', label: '商品卡片', type: 'card', xpath: '//*[@resource-id="result_item"]' },
-  { id: 'el_011', label: '底部导航-首页', type: 'nav', xpath: '//*[@text="首页"]' },
-  { id: 'el_012', label: '底部导航-我的', type: 'nav', xpath: '//android.widget.TextView[@text="我的"]' },
-  { id: 'el_013', label: '确认按钮', type: 'button', xpath: '//*[@text="确认"]' },
-  { id: 'el_014', label: '分享按钮', type: 'button', xpath: '//*[@content-desc="分享"]' },
+  {
+    id: "el_001",
+    label: "搜索图标",
+    type: "icon",
+    xpath: '//*[@resource-id="com.taobao.taobao:id/search_btn"]',
+  },
+  { id: "el_002", label: "我的按钮", type: "button", xpath: '//*[@text="我的"]' },
+  {
+    id: "el_003",
+    label: "设置按钮",
+    type: "button",
+    xpath: '//*[@resource-id="com.taobao.taobao:id/settings"]',
+  },
+  {
+    id: "el_004",
+    label: "购物车图标",
+    type: "icon",
+    xpath: '//*[@resource-id="com.taobao.taobao:id/cart"]',
+  },
+  { id: "el_005", label: "返回按钮", type: "button", xpath: '//*[@content-desc="返回"]' },
+  {
+    id: "el_006",
+    label: "首页Banner",
+    type: "image",
+    xpath: '//*[@resource-id="com.taobao.taobao:id/banner"]',
+  },
+  { id: "el_007", label: "推荐位1", type: "link", xpath: '//*[@resource-id="recommend"][1]' },
+  { id: "el_008", label: "推荐位2", type: "link", xpath: '//*[@resource-id="recommend"][2]' },
+  { id: "el_009", label: "分类Tab", type: "tab", xpath: '//*[@text="分类"]' },
+  { id: "el_010", label: "商品卡片", type: "card", xpath: '//*[@resource-id="result_item"]' },
+  { id: "el_011", label: "底部导航-首页", type: "nav", xpath: '//*[@text="首页"]' },
+  {
+    id: "el_012",
+    label: "底部导航-我的",
+    type: "nav",
+    xpath: '//android.widget.TextView[@text="我的"]',
+  },
+  { id: "el_013", label: "确认按钮", type: "button", xpath: '//*[@text="确认"]' },
+  { id: "el_014", label: "分享按钮", type: "button", xpath: '//*[@content-desc="分享"]' },
 ]
 
 export const POPUP_ELEMENTS: ElementDef[] = [
-  { id: 'pe_001', label: '关闭按钮', type: 'button', xpath: '//*[@resource-id="dialog_close"]' },
-  { id: 'pe_002', label: '确认按钮', type: 'button', xpath: '//*[@text="确认"]' },
-  { id: 'pe_003', label: '取消按钮', type: 'button', xpath: '//*[@text="取消"]' },
-  { id: 'pe_004', label: '弹窗标题', type: 'text', xpath: '//*[@resource-id="dialog_title"]' },
-  { id: 'pe_005', label: '弹窗描述', type: 'text', xpath: '//*[@resource-id="dialog_msg"]' },
-  { id: 'pe_006', label: '我知道了按钮', type: 'button', xpath: '//*[@text="我知道了"]' },
-  { id: 'pe_007', label: '不再提示', type: 'checkbox', xpath: '//*[@text="不再提示"]' },
-  { id: 'pe_008', label: '前往设置', type: 'link', xpath: '//*[@text="前往设置"]' },
+  { id: "pe_001", label: "关闭按钮", type: "button", xpath: '//*[@resource-id="dialog_close"]' },
+  { id: "pe_002", label: "确认按钮", type: "button", xpath: '//*[@text="确认"]' },
+  { id: "pe_003", label: "取消按钮", type: "button", xpath: '//*[@text="取消"]' },
+  { id: "pe_004", label: "弹窗标题", type: "text", xpath: '//*[@resource-id="dialog_title"]' },
+  { id: "pe_005", label: "弹窗描述", type: "text", xpath: '//*[@resource-id="dialog_msg"]' },
+  { id: "pe_006", label: "我知道了按钮", type: "button", xpath: '//*[@text="我知道了"]' },
+  { id: "pe_007", label: "不再提示", type: "checkbox", xpath: '//*[@text="不再提示"]' },
+  { id: "pe_008", label: "前往设置", type: "link", xpath: '//*[@text="前往设置"]' },
 ]
 
 export const ELEMENT_ICONS: Record<string, string> = {
-  icon: '◆',
-  button: '●',
-  image: '▣',
-  link: '→',
-  tab: '≡',
-  card: '▨',
-  nav: '■',
-  text: '¶',
-  checkbox: '☑',
+  icon: "◆",
+  button: "●",
+  image: "▣",
+  link: "→",
+  tab: "≡",
+  card: "▨",
+  nav: "■",
+  text: "¶",
+  checkbox: "☑",
 }
 
 /** Look up element definition by id across both pools */
 export function findElementDef(elId: string): ElementDef | undefined {
-  return PAGE_ELEMENTS.find(e => e.id === elId) || POPUP_ELEMENTS.find(e => e.id === elId)
+  return PAGE_ELEMENTS.find((e) => e.id === elId) || POPUP_ELEMENTS.find((e) => e.id === elId)
 }
 
 // ═══════════════════════════════════════════

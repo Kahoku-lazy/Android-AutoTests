@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, watch, provide, onMounted, onUnmounted, markRaw, nextTick } from 'vue'
-import { ElMessageBox } from 'element-plus'
-import { VueFlow, useVueFlow, ConnectionMode } from '@vue-flow/core'
-import { Background } from '@vue-flow/background'
-import { Controls } from '@vue-flow/controls'
-import { MiniMap } from '@vue-flow/minimap'
-import type { Connection, NodeMouseEvent, EdgeMouseEvent } from '@vue-flow/core'
-import { useWorkflowStore } from '@/modules/workflow/stores/workflowStore'
+import { ref, computed, watch, provide, onMounted, onUnmounted, markRaw, nextTick } from "vue"
+import { ElMessageBox } from "element-plus"
+import { VueFlow, useVueFlow, ConnectionMode } from "@vue-flow/core"
+import { Background } from "@vue-flow/background"
+import { Controls } from "@vue-flow/controls"
+import { MiniMap } from "@vue-flow/minimap"
+import type { Connection, NodeMouseEvent, EdgeMouseEvent } from "@vue-flow/core"
+import { useWorkflowStore } from "@/modules/workflow/stores/workflowStore"
 import {
   toVueFlowNodes,
   toVueFlowEdges,
@@ -14,29 +14,29 @@ import {
   applyVueFlowConnect,
   syncNodePositionFromVueFlow,
   ensureWorkflowSeed,
-} from '@/modules/workflow/composables/useVueFlowAdapter'
-import PageFlowNode from './PageFlowNode.vue'
-import NodeContextMenu from './NodeContextMenu.vue'
-import EdgeContextMenu from './EdgeContextMenu.vue'
-import { PAGE_ELEMENTS, POPUP_ELEMENTS, ELEMENT_ICONS } from '@/modules/workflow/types/workflow'
-import { NODE_REGISTRY } from '@/modules/workflow/registry/nodeRegistry'
-import { NODE_TYPES, NODE_TYPE_LABELS, type FlowDocType } from '@/modules/workflow/constants'
+} from "@/modules/workflow/composables/useVueFlowAdapter"
+import PageFlowNode from "./PageFlowNode.vue"
+import NodeContextMenu from "./NodeContextMenu.vue"
+import EdgeContextMenu from "./EdgeContextMenu.vue"
+import { PAGE_ELEMENTS, POPUP_ELEMENTS, ELEMENT_ICONS } from "@/modules/workflow/types/workflow"
+import { NODE_REGISTRY } from "@/modules/workflow/registry/nodeRegistry"
+import { NODE_TYPES, NODE_TYPE_LABELS, type FlowDocType } from "@/modules/workflow/constants"
 
 /** 元素卡片 xpath 展示 — 兼容可选字段 */
 function elXpath(el: { xpath?: string; type: string }): string {
   return el.xpath || el.type
 }
-import type { CatalogPage } from '@/modules/workflow/data/pageCatalog'
+import type { CatalogPage } from "@/modules/workflow/data/pageCatalog"
 
-import '@vue-flow/core/dist/style.css'
-import '@vue-flow/core/dist/theme-default.css'
-import '@vue-flow/controls/dist/style.css'
-import '@vue-flow/minimap/dist/style.css'
+import "@vue-flow/core/dist/style.css"
+import "@vue-flow/core/dist/theme-default.css"
+import "@vue-flow/controls/dist/style.css"
+import "@vue-flow/minimap/dist/style.css"
 
 const emit = defineEmits<{
-  'update:docName': [name: string]
-  back: []
-  rename: []
+  "update:docName": [name: string]
+  "back": []
+  "rename": []
 }>()
 
 const props = withDefaults(
@@ -47,29 +47,36 @@ const props = withDefaults(
     /** 页面流 / 接口流 — 决定工具栏与可添加节点 */
     flowKind?: FlowDocType
   }>(),
-  { seedDemo: true, docName: '', docId: '', flowKind: NODE_TYPES.PAGE_FLOW }
+  { seedDemo: true, docName: "", docId: "", flowKind: NODE_TYPES.PAGE_FLOW },
 )
 
-const kindLabel = computed(() => NODE_TYPE_LABELS[props.flowKind] || '页面流')
+const kindLabel = computed(() => NODE_TYPE_LABELS[props.flowKind] || "页面流")
 
 const store = useWorkflowStore()
-const { onConnect, onNodeDragStop, onEdgesChange, onEdgeContextMenu, fitView, updateNodeInternals } = useVueFlow()
+const {
+  onConnect,
+  onNodeDragStop,
+  onEdgesChange,
+  onEdgeContextMenu,
+  fitView,
+  updateNodeInternals,
+} = useVueFlow()
 
 const nodeTypes = { pageFlow: markRaw(PageFlowNode) }
 const connectionMode = ConnectionMode.Loose
 
 const nodes = ref(toVueFlowNodes(store))
 const edges = ref(toVueFlowEdges(store))
-const status = ref('')
+const status = ref("")
 
-const picker = ref({ show: false, nodeId: '', search: '', x: 200, y: 120 })
+const picker = ref({ show: false, nodeId: "", search: "", x: 200, y: 120 })
 
 const ctxMenu = ref({
   show: false,
   x: 0,
   y: 0,
-  nodeId: '',
-  nodeLabel: '',
+  nodeId: "",
+  nodeLabel: "",
   canLinkPage: true,
   linkedPageId: undefined as string | undefined,
   linkedPageName: undefined as string | undefined,
@@ -80,8 +87,8 @@ const edgeMenu = ref({
   x: 0,
   y: 0,
   linkId: 0,
-  label: '',
-  customName: '',
+  label: "",
+  customName: "",
 })
 
 function openNodeContext(e: MouseEvent | TouchEvent, nodeId: string) {
@@ -89,12 +96,12 @@ function openNodeContext(e: MouseEvent | TouchEvent, nodeId: string) {
   const node = store.findNode(nodeId)
   if (!node) return
   store.select(nodeId)
-  const clientX = 'clientX' in e ? e.clientX : (e.touches?.[0]?.clientX ?? 0)
-  const clientY = 'clientY' in e ? e.clientY : (e.touches?.[0]?.clientY ?? 0)
+  const clientX = "clientX" in e ? e.clientX : (e.touches?.[0]?.clientX ?? 0)
+  const clientY = "clientY" in e ? e.clientY : (e.touches?.[0]?.clientY ?? 0)
   const canLink =
-    node.type === 'PageNode' ||
-    node.type === 'PopupNode' ||
-    (node.type === 'StartNode' && node.properties?.start_kind !== 'app')
+    node.type === "PageNode" ||
+    node.type === "PopupNode" ||
+    (node.type === "StartNode" && node.properties?.start_kind !== "app")
   ctxMenu.value = {
     show: true,
     x: clientX,
@@ -122,29 +129,29 @@ async function handleResyncPage() {
   if (!ctxMenu.value.nodeId) return
   const ok = await store.resyncLinkedPage(ctxMenu.value.nodeId)
   refreshFromStore()
-  status.value = store.statusMessage || (ok ? '元素已刷新' : '刷新失败')
+  status.value = store.statusMessage || (ok ? "元素已刷新" : "刷新失败")
 }
 
 function handleDeleteFromCtx() {
   if (!ctxMenu.value.nodeId) return
   store.removeNode(ctxMenu.value.nodeId)
   refreshFromStore()
-  status.value = '节点已删除'
+  status.value = "节点已删除"
 }
 
 async function refreshFromStore() {
   nodes.value = toVueFlowNodes(store)
   edges.value = toVueFlowEdges(store)
   await nextTick()
-  const ids = store.nodes.map(n => n.id)
+  const ids = store.nodes.map((n) => n.id)
   if (ids.length) updateNodeInternals(ids)
 }
 
-provide('vfOpenPicker', (nodeId: string) => {
-  picker.value = { show: true, nodeId, search: '', x: 280, y: 140 }
+provide("vfOpenPicker", (nodeId: string) => {
+  picker.value = { show: true, nodeId, search: "", x: 280, y: 140 }
 })
 
-provide('vfRefresh', () => {
+provide("vfRefresh", () => {
   refreshFromStore()
 })
 
@@ -154,26 +161,26 @@ const pickerPool = computed(() => {
 
   const linked = node.properties?.linked_elements as typeof PAGE_ELEMENTS | undefined
   if (linked?.length) return linked
-  return NODE_REGISTRY[node.type]?.elementPool === 'popup' ? POPUP_ELEMENTS : PAGE_ELEMENTS
+  return NODE_REGISTRY[node.type]?.elementPool === "popup" ? POPUP_ELEMENTS : PAGE_ELEMENTS
 })
 
 const filteredPicker = computed(() => {
   const q = picker.value.search.toLowerCase()
   const node = store.findNode(picker.value.nodeId)
-  const used = new Set(node?.outputs.map(p => p.el?.id).filter(Boolean))
+  const used = new Set(node?.outputs.map((p) => p.el?.id).filter(Boolean))
   return pickerPool.value
-    .filter(e => !q || e.label.toLowerCase().includes(q) || e.type.includes(q))
-    .map(e => ({ ...e, used: used.has(e.id) }))
+    .filter((e) => !q || e.label.toLowerCase().includes(q) || e.type.includes(q))
+    .map((e) => ({ ...e, used: used.has(e.id) }))
 })
 
 function selectElement(elId: string) {
-  const item = filteredPicker.value.find(x => x.id === elId)
+  const item = filteredPicker.value.find((x) => x.id === elId)
   if (!item || item.used) return
 
   store.addPort(picker.value.nodeId, elId)
   picker.value.show = false
   refreshFromStore()
-  status.value = '已添加端口: ' + item.label
+  status.value = "已添加端口: " + item.label
 }
 
 function isValidConnection(connection: Connection) {
@@ -189,9 +196,9 @@ onConnect((connection) => {
   const ok = applyVueFlowConnect(store, explained.normalized)
   if (ok) {
     refreshFromStore()
-    status.value = '连线成功 ✓ navigation → entry'
+    status.value = "连线成功 ✓ navigation → entry"
   } else {
-    status.value = store.statusMessage || '连线失败'
+    status.value = store.statusMessage || "连线失败"
   }
 })
 
@@ -201,8 +208,8 @@ onNodeDragStop(({ node }) => {
 
 onEdgesChange((changes) => {
   for (const ch of changes) {
-    if (ch.type === 'remove') {
-      const edge = edges.value.find(e => e.id === ch.id)
+    if (ch.type === "remove") {
+      const edge = edges.value.find((e) => e.id === ch.id)
       const linkId = edge?.data?.linkId as number | undefined
       if (linkId != null) store.removeLink(linkId)
     }
@@ -217,22 +224,22 @@ onEdgeContextMenu(({ event, edge }) => {
   event.preventDefault()
   const link = store.findLink(linkId)
   const origin = link ? store.findNode(link.origin_id) : undefined
-  const clientX = 'clientX' in event ? (event as MouseEvent).clientX : 0
-  const clientY = 'clientY' in event ? (event as MouseEvent).clientY : 0
+  const clientX = "clientX" in event ? (event as MouseEvent).clientX : 0
+  const clientY = "clientY" in event ? (event as MouseEvent).clientY : 0
   edgeMenu.value = {
     show: true,
     x: clientX,
     y: clientY,
     linkId,
-    label: origin?.outputs[link?.origin_slot ?? 0]?.name || '连线',
-    customName: link?.name || '',
+    label: origin?.outputs[link?.origin_slot ?? 0]?.name || "连线",
+    customName: link?.name || "",
   }
 })
 
 function handleEdgeRename(id: number, name: string) {
   store.renameLink(id, name)
   refreshFromStore()
-  status.value = name ? `连线已重命名：${name}` : '连线名称已恢复默认'
+  status.value = name ? `连线已重命名：${name}` : "连线名称已恢复默认"
   edgeMenu.value.show = false
 }
 
@@ -250,35 +257,39 @@ function handleEdgeDelete(id: number) {
 }
 
 function addPage() {
-  const n = store.createNode('PageNode', 180 + store.pageNodes.length * 40, 160 + store.pageNodes.length * 20)
+  const n = store.createNode(
+    "PageNode",
+    180 + store.pageNodes.length * 40,
+    160 + store.pageNodes.length * 20,
+  )
   if (n) {
-    n.widgets_values = [`页面${store.pageNodes.length}`, 'teal']
+    n.widgets_values = [`页面${store.pageNodes.length}`, "teal"]
     refreshFromStore()
   }
 }
 
 function addPopup() {
-  store.createNode('PopupNode', 420, 320)
+  store.createNode("PopupNode", 420, 320)
   refreshFromStore()
 }
 
 function addStart() {
-  const n = store.createNode('StartNode', 60, 200)
+  const n = store.createNode("StartNode", 60, 200)
   if (n) {
     refreshFromStore()
-    status.value = '已添加起点（无入口）· 可切换「启动 App / 页面」'
+    status.value = "已添加起点（无入口）· 可切换「启动 App / 页面」"
   } else {
-    status.value = store.statusMessage || '起点已存在（最多 1 个）'
+    status.value = store.statusMessage || "起点已存在（最多 1 个）"
   }
 }
 
 function addEnd() {
-  const n = store.createNode('EndNode', 780 + store.endNodes.length * 40, 220)
+  const n = store.createNode("EndNode", 780 + store.endNodes.length * 40, 220)
   if (n) {
     refreshFromStore()
-    status.value = '已添加终点（无输出）· 将 navigation 连入其入口'
+    status.value = "已添加终点（无输出）· 将 navigation 连入其入口"
   } else {
-    status.value = store.statusMessage || '终点数量已达上限'
+    status.value = store.statusMessage || "终点数量已达上限"
   }
 }
 
@@ -292,7 +303,7 @@ function onNodeClick({ node }: NodeMouseEvent) {
 
 function onEdgeClick({ edge }: EdgeMouseEvent) {
   const linkId = edge.data?.linkId
-  if (linkId != null) store.select('l' + linkId)
+  if (linkId != null) store.select("l" + linkId)
 }
 
 async function onEdgeDoubleClick({ edge }: EdgeMouseEvent) {
@@ -305,10 +316,10 @@ async function onEdgeDoubleClick({ edge }: EdgeMouseEvent) {
   const fromLabel = originNode?.widgets_values?.[0] || `Node#${link.origin_id}`
   const toLabel = targetNode?.widgets_values?.[0] || `Node#${link.target_id}`
   try {
-    await ElMessageBox.confirm(`断开「${fromLabel} → ${toLabel}」的连接？`, '断开连接', {
-      confirmButtonText: '断开',
-      cancelButtonText: '取消',
-      type: 'warning',
+    await ElMessageBox.confirm(`断开「${fromLabel} → ${toLabel}」的连接？`, "断开连接", {
+      confirmButtonText: "断开",
+      cancelButtonText: "取消",
+      type: "warning",
     })
   } catch {
     // 用户取消断开：ElMessageBox 以 reject 表示取消，不修改画布（非静默吞错）
@@ -321,31 +332,31 @@ async function onEdgeDoubleClick({ edge }: EdgeMouseEvent) {
 
 // Keyboard: Delete/Backspace to remove selected link or node
 async function onKeyDown(e: KeyboardEvent) {
-  if (e.key !== 'Delete' && e.key !== 'Backspace') return
+  if (e.key !== "Delete" && e.key !== "Backspace") return
   // Ignore if you are typing in an input
   const tag = (e.target as HTMLElement)?.tagName
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return
 
   const sel = store.selectedId
   if (!sel) return
 
-  if (sel.startsWith('l')) {
+  if (sel.startsWith("l")) {
     // Selected a link
     const linkId = parseInt(sel.slice(1))
     if (!isNaN(linkId) && store.findLink(linkId)) {
       store.removeLink(linkId)
       refreshFromStore()
-      status.value = '已断开连线'
+      status.value = "已断开连线"
     }
-  } else if (sel.startsWith('n')) {
+  } else if (sel.startsWith("n")) {
     // Selected a node
     const nodeId = sel.slice(1)
     if (!store.findNode(nodeId)) return
     try {
       await ElMessageBox.confirm(
         `删除节点「${store.findNode(nodeId)?.widgets_values?.[0] || nodeId}」及其所有连线？`,
-        '删除确认',
-        { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' },
+        "删除确认",
+        { confirmButtonText: "删除", cancelButtonText: "取消", type: "warning" },
       )
     } catch {
       // 用户取消删除：ElMessageBox 以 reject 表示取消，不修改画布（非静默吞错）
@@ -353,19 +364,19 @@ async function onKeyDown(e: KeyboardEvent) {
     }
     store.removeNode(nodeId)
     refreshFromStore()
-    status.value = '已删除节点'
+    status.value = "已删除节点"
   }
 }
 
-onMounted(() => window.addEventListener('keydown', onKeyDown))
-onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
+onMounted(() => window.addEventListener("keydown", onKeyDown))
+onUnmounted(() => window.removeEventListener("keydown", onKeyDown))
 
 async function clearAll() {
   try {
-    await ElMessageBox.confirm('清空 Vue Flow 画布？', '清空确认', {
-      confirmButtonText: '清空',
-      cancelButtonText: '取消',
-      type: 'warning',
+    await ElMessageBox.confirm("清空 Vue Flow 画布？", "清空确认", {
+      confirmButtonText: "清空",
+      cancelButtonText: "取消",
+      type: "warning",
     })
   } catch {
     // 用户取消清空：ElMessageBox 以 reject 表示取消，不修改画布（非静默吞错）
@@ -387,9 +398,10 @@ onMounted(async () => {
 
 watch(
   () => [store.nodes.length, store.links.length, store.bridgedElements.length] as const,
-  () => { refreshFromStore() }
+  () => {
+    refreshFromStore()
+  },
 )
-
 </script>
 
 <template>
@@ -417,7 +429,10 @@ watch(
         <button class="btn" @click="refreshFromStore">刷新</button>
         <button class="btn danger" @click="clearAll">清空</button>
         <span v-if="status" class="hint">{{ status }}</span>
-        <span class="meta">节点 {{ store.nodes.length }} · 连线 {{ store.links.length }} · 桥接 {{ store.bridgedElements.length }}</span>
+        <span class="meta"
+          >节点 {{ store.nodes.length }} · 连线 {{ store.links.length }} · 桥接
+          {{ store.bridgedElements.length }}</span
+        >
       </div>
     </div>
 
@@ -441,7 +456,12 @@ watch(
         @edge-dblclick="onEdgeDoubleClick"
         @node-context-menu="onNodeContextMenu"
       >
-        <Background pattern-color="#a2d2ff" :gap="18" :size="1.2" bg-color="rgba(255,255,255,0.28)" />
+        <Background
+          pattern-color="#a2d2ff"
+          :gap="18"
+          :size="1.2"
+          bg-color="rgba(255,255,255,0.28)"
+        />
         <Controls position="bottom-left" />
         <MiniMap
           position="bottom-right"
@@ -463,8 +483,10 @@ watch(
         @click.stop
       >
         <div class="el-picker-head">
-          <strong>{{ pickerPool[0]?.type === 'data' ? '添加响应字段' : '添加元素' }}</strong>
-          <span class="el-picker-count">{{ filteredPicker.filter(e => !e.used).length }} 可选</span>
+          <strong>{{ pickerPool[0]?.type === "data" ? "添加响应字段" : "添加元素" }}</strong>
+          <span class="el-picker-count"
+            >{{ filteredPicker.filter((e) => !e.used).length }} 可选</span
+          >
           <button type="button" class="el-picker-close" @click="picker.show = false">×</button>
         </div>
         <input
@@ -483,7 +505,7 @@ watch(
             :disabled="el.used"
             @click="!el.used && selectElement(el.id)"
           >
-            <span class="el-ico">{{ ELEMENT_ICONS[el.type] || '◆' }}</span>
+            <span class="el-ico">{{ ELEMENT_ICONS[el.type] || "◆" }}</span>
             <span class="el-body">
               <span class="el-label">{{ el.label }}</span>
               <span class="el-xpath">{{ elXpath(el) }}</span>
@@ -492,7 +514,7 @@ watch(
             <span v-else class="el-tag add">+ 添加</span>
           </button>
           <div v-if="!filteredPicker.length" class="el-picker-empty">
-            {{ pickerPool.length ? '无匹配结果' : '请先右键关联元素管理页面' }}
+            {{ pickerPool.length ? "无匹配结果" : "请先右键关联元素管理页面" }}
           </div>
         </div>
       </div>
@@ -536,7 +558,7 @@ watch(
   background: transparent;
   overflow: hidden;
   /* ── 本模块私有色：tokens.css 未登记，登记在组件根作用域（工具栏消费者均在其内）── */
-  --wf-btn-press-shadow: var(--color-ink-05-a05) /* -> --color-ink-05-a05 */;      /* 按钮按下硬阴影 */
+  --wf-btn-press-shadow: var(--color-ink-05-a05) /* -> --color-ink-05-a05 */; /* 按钮按下硬阴影 */
 }
 .vf-toolbar {
   display: flex;
@@ -575,7 +597,9 @@ watch(
   outline: none;
   transition: border-color var(--app-duration-fast) var(--app-ease);
 }
-.doc-name:focus { border-color: var(--c-workflow); }
+.doc-name:focus {
+  border-color: var(--c-workflow);
+}
 .kind-chip {
   font-size: var(--app-size-xs);
   font-weight: 700;
@@ -612,7 +636,9 @@ watch(
   font-weight: 700;
   cursor: pointer;
   box-shadow: var(--app-shadow-sm);
-  transition: background var(--app-duration-fast) var(--app-ease), box-shadow var(--app-duration-fast) var(--app-ease),
+  transition:
+    background var(--app-duration-fast) var(--app-ease),
+    box-shadow var(--app-duration-fast) var(--app-ease),
     transform 0.12s var(--app-ease);
 }
 .btn:hover {
@@ -638,9 +664,15 @@ watch(
   background: var(--c-workflow);
   filter: brightness(1.04);
 }
-.btn.start { color: var(--ac-accent-deep); }
-.btn.end { color: var(--app-text-secondary); }
-.btn.danger { color: var(--app-status-danger-text); }
+.btn.start {
+  color: var(--ac-accent-deep);
+}
+.btn.end {
+  color: var(--app-text-secondary);
+}
+.btn.danger {
+  color: var(--app-status-danger-text);
+}
 .btn.danger:hover {
   background: var(--app-status-danger-bg);
   color: var(--app-status-danger-text);
@@ -662,8 +694,15 @@ watch(
   font-weight: 600;
   white-space: nowrap;
 }
-.vf-canvas { flex: 1; min-height: 0; background: var(--paper); }
-.vf-flow { width: 100%; height: 100%; }
+.vf-canvas {
+  flex: 1;
+  min-height: 0;
+  background: var(--paper);
+}
+.vf-flow {
+  width: 100%;
+  height: 100%;
+}
 
 :deep(.vue-flow__controls) {
   box-shadow: var(--app-shadow-md);
@@ -708,18 +747,18 @@ watch(
   --wf-picker-mask: var(--color-indigo-35-a30) /* -> --color-indigo-35-a30 */; /* 遮罩（墨蓝 26%） */
 }
 .el-picker {
-  --wf-picker-border: var(--color-white-a60) /* -> --color-white-a60 */;        /* 亮边（浮层 / 搜索框描边） */
-  --wf-picker-shadow: var(--color-indigo-35-a10) /* -> --color-indigo-35-a10 */;          /* 浮层投影（墨蓝 12%） */
-  --wf-picker-head-border: var(--color-blue-82-a30) /* -> --color-blue-82-a30 */;   /* 头部底边分隔 */
-  --wf-picker-accent: var(--color-blue-64) /* -> --color-blue-64 */;                          /* 强调文字（计数 / 可添加标签，工作流深蓝） */
-  --wf-picker-count-bg: var(--color-blue-82-a18) /* -> --color-blue-82-a18 */;      /* 计数底 */
-  --wf-picker-tint-soft: var(--color-blue-82-a18) /* -> --color-blue-82-a18 */;     /* 关闭键悬停底 / 标签底 */
-  --wf-picker-focus: var(--color-blue-82) /* -> --color-blue-82 */;                           /* 聚焦描边（浅蓝） */
-  --wf-picker-item-border: var(--color-blue-82-a18) /* -> --color-blue-82-a18 */;   /* 条目描边 */
+  --wf-picker-border: var(--color-white-a60) /* -> --color-white-a60 */; /* 亮边（浮层 / 搜索框描边） */
+  --wf-picker-shadow: var(--color-indigo-35-a10) /* -> --color-indigo-35-a10 */; /* 浮层投影（墨蓝 12%） */
+  --wf-picker-head-border: var(--color-blue-82-a30) /* -> --color-blue-82-a30 */; /* 头部底边分隔 */
+  --wf-picker-accent: var(--color-blue-64) /* -> --color-blue-64 */; /* 强调文字（计数 / 可添加标签，工作流深蓝） */
+  --wf-picker-count-bg: var(--color-blue-82-a18) /* -> --color-blue-82-a18 */; /* 计数底 */
+  --wf-picker-tint-soft: var(--color-blue-82-a18) /* -> --color-blue-82-a18 */; /* 关闭键悬停底 / 标签底 */
+  --wf-picker-focus: var(--color-blue-82) /* -> --color-blue-82 */; /* 聚焦描边（浅蓝） */
+  --wf-picker-item-border: var(--color-blue-82-a18) /* -> --color-blue-82-a18 */; /* 条目描边 */
   --wf-picker-item-hover-bg: var(--color-blue-82-a10) /* -> --color-blue-82-a10 */; /* 条目悬停底 */
-  --wf-picker-used-bg: var(--color-white-a60) /* -> --color-white-a60 */;       /* 已使用条目底（灰） */
-  --wf-picker-xpath: var(--color-orange-44) /* -> --color-orange-44 */;                           /* xpath 次要文字（暖灰） */
-  --wf-picker-add-bg: var(--color-blue-82-a18) /* -> --color-blue-82-a18 */;        /* 可添加标签底 */
+  --wf-picker-used-bg: var(--color-white-a60) /* -> --color-white-a60 */; /* 已使用条目底（灰） */
+  --wf-picker-xpath: var(--color-orange-44) /* -> --color-orange-44 */; /* xpath 次要文字（暖灰） */
+  --wf-picker-add-bg: var(--color-blue-82-a18) /* -> --color-blue-82-a18 */; /* 可添加标签底 */
 }
 .el-picker-backdrop {
   position: fixed;
@@ -739,9 +778,8 @@ watch(
   border-radius: var(--app-radius-lg);
   box-shadow: 4px 4px 0 0 var(--wf-picker-shadow);
   overflow: hidden;
-  font-family: var(--app-font, 'Cascadia Mono', 'Noto Sans SC', sans-serif);
+  font-family: var(--app-font, "Cascadia Mono", "Noto Sans SC", sans-serif);
   color: var(--ink);
-  
 }
 .el-picker-head {
   display: flex;
@@ -774,7 +812,10 @@ watch(
   padding: 2px 6px;
   border-radius: var(--app-radius-md);
 }
-.el-picker-close:hover { background: var(--wf-picker-tint-soft); color: var(--ink); }
+.el-picker-close:hover {
+  background: var(--wf-picker-tint-soft);
+  color: var(--ink);
+}
 .el-picker-search {
   margin: 10px 12px 6px;
   padding: 9px 12px;
@@ -787,7 +828,9 @@ watch(
   font-family: inherit;
   outline: none;
 }
-.el-picker-search:focus { border-color: var(--wf-picker-focus); }
+.el-picker-search:focus {
+  border-color: var(--wf-picker-focus);
+}
 .el-picker-list {
   flex: 1;
   overflow: auto;

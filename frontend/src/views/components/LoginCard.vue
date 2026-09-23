@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { IconUser, IconLock } from '@/shared/icons/index'
-import type { FieldErrors } from '@/shared/types/auth'
+import { IconUser, IconLock } from "@/shared/icons/index"
+import type { FieldErrors } from "@/shared/types/auth"
 
 interface LoginCardProps {
   username: string
@@ -17,11 +17,11 @@ withDefaults(defineProps<LoginCardProps>(), {
 })
 
 const emit = defineEmits<{
-  'update:username': [value: string]
-  'update:password': [value: string]
-  'update:rememberMe': [value: boolean]
-  submit: []
-  switchToRegister: []
+  "update:username": [value: string]
+  "update:password": [value: string]
+  "update:rememberMe": [value: boolean]
+  "submit": []
+  "switchToRegister": []
 }>()
 </script>
 
@@ -73,7 +73,8 @@ const emit = defineEmits<{
           :loading="loading"
           :disabled="!canSubmit"
           @click="emit('submit')"
-        >登录</el-button>
+          >登录</el-button
+        >
       </div>
     </form>
 
@@ -84,6 +85,6 @@ const emit = defineEmits<{
 </template>
 
 <style>
-@import '@/views/styles/login-card.css';
-@import '@/views/styles/auth-form-card.css';
+@import "@/views/styles/login-card.css";
+@import "@/views/styles/auth-form-card.css";
 </style>

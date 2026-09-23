@@ -1,5 +1,5 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { defineStore } from "pinia"
+import { ref, computed } from "vue"
 import type {
   WorkflowNode,
   Connection,
@@ -8,15 +8,22 @@ import type {
   BridgedElement,
   StartKind,
   WorkflowCategory,
-} from '@/modules/workflow/types/workflow'
-import { PORT_TYPE, LINK_RULES, PAGE_ELEMENTS, POPUP_ELEMENTS, findElementDef, MULTI_IN_PORT_TYPES } from '@/modules/workflow/types/workflow'
-import { NODE_REGISTRY } from '@/modules/workflow/registry/nodeRegistry'
+} from "@/modules/workflow/types/workflow"
+import {
+  PORT_TYPE,
+  LINK_RULES,
+  PAGE_ELEMENTS,
+  POPUP_ELEMENTS,
+  findElementDef,
+  MULTI_IN_PORT_TYPES,
+} from "@/modules/workflow/types/workflow"
+import { NODE_REGISTRY } from "@/modules/workflow/registry/nodeRegistry"
 
 // ═══════════════════════════════════════════
 // PINIA STORE — ComfyUI 工作流状态管理
 // ═══════════════════════════════════════════
 
-export const useWorkflowStore = defineStore('wf-workflow', () => {
+export const useWorkflowStore = defineStore("wf-workflow", () => {
   // ── State ──
   const nodes = ref<WorkflowNode[]>([])
   const links = ref<Connection[]>([])
@@ -24,14 +31,14 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
   const panX = ref(0)
   const panY = ref(0)
   const selectedId = ref<string | null>(null)
-  const statusMessage = ref('双击画布或按 N 创建页面节点')
+  const statusMessage = ref("双击画布或按 N 创建页面节点")
   let nextId = 1
 
   // ── Getters ──
-  const pageNodes = computed(() => nodes.value.filter(n => n.type === 'PageNode'))
-  const popupNodes = computed(() => nodes.value.filter(n => n.type === 'PopupNode'))
-  const startNodes = computed(() => nodes.value.filter(n => n.type === 'StartNode'))
-  const endNodes = computed(() => nodes.value.filter(n => n.type === 'EndNode'))
+  const pageNodes = computed(() => nodes.value.filter((n) => n.type === "PageNode"))
+  const popupNodes = computed(() => nodes.value.filter((n) => n.type === "PopupNode"))
+  const startNodes = computed(() => nodes.value.filter((n) => n.type === "StartNode"))
+  const endNodes = computed(() => nodes.value.filter((n) => n.type === "EndNode"))
 
   /** Elements currently attached as output ports — bridge to test-case editor */
   const bridgedElements = computed((): BridgedElement[] => {
@@ -44,7 +51,7 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
           element_id: port.el.id,
           label: port.name,
           type: port.el.type,
-          xpath: port.el.xpath || def?.xpath || '',
+          xpath: port.el.xpath || def?.xpath || "",
           page_node_id: node.id,
           page_name: node.widgets_values[0] || node.id,
           port_slot: port.slot_index,
@@ -58,15 +65,15 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     const node = findNode(id)
     if (!node || !name.trim()) return
     node.widgets_values[0] = name.trim()
-    setStatus('已重命名: ' + name.trim())
+    setStatus("已重命名: " + name.trim())
   }
 
   function findNode(id: string): WorkflowNode | undefined {
-    return nodes.value.find(n => n.id === id)
+    return nodes.value.find((n) => n.id === id)
   }
 
   function findLink(id: number): Connection | undefined {
-    return links.value.find(l => l.id === id)
+    return links.value.find((l) => l.id === id)
   }
 
   // ── Node Factory ──
@@ -74,17 +81,17 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     const registry = NODE_REGISTRY[type]
     if (!registry) return null
 
-    const existing = nodes.value.filter(n => n.type === type).length
+    const existing = nodes.value.filter((n) => n.type === type).length
     if (Number.isFinite(registry.maxInstances) && existing >= registry.maxInstances) {
       setStatus(`最多 ${registry.maxInstances} 个「${registry.displayName}」`)
       return null
     }
 
-    const id = 'n' + nextId++
+    const id = "n" + nextId++
     const properties: Record<string, any> = {}
-    if (type === 'StartNode') {
-      properties.start_kind = 'app' as StartKind
-      properties.package_name = 'com.example.app'
+    if (type === "StartNode") {
+      properties.start_kind = "app" as StartKind
+      properties.package_name = "com.example.app"
     }
 
     const node: WorkflowNode = {
@@ -108,7 +115,7 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
         links: [],
       })),
       widgets_values: [
-        type === 'StartNode' ? '启动 App' : type === 'EndNode' ? '结束' : registry.displayName,
+        type === "StartNode" ? "启动 App" : type === "EndNode" ? "结束" : registry.displayName,
         registry.color,
       ],
       properties,
@@ -121,40 +128,42 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
   /** Switch StartNode mode: app | page */
   function setStartKind(nodeId: string, kind: StartKind): void {
     const node = findNode(nodeId)
-    if (!node || node.type !== 'StartNode') return
+    if (!node || node.type !== "StartNode") return
 
-    const outIds = links.value.filter(l => l.origin_id === nodeId).map(l => l.id)
+    const outIds = links.value.filter((l) => l.origin_id === nodeId).map((l) => l.id)
     for (const lid of outIds) removeLink(lid)
 
     node.properties = {
       ...node.properties,
       start_kind: kind,
-      package_name: (node.properties?.package_name as string) || 'com.example.app',
+      package_name: (node.properties?.package_name as string) || "com.example.app",
     }
 
-    const labelMap: Record<string, string> = { app: '启动 App', page: '起始页面' }
+    const labelMap: Record<string, string> = { app: "启动 App", page: "起始页面" }
     const statusMap: Record<string, string> = {
-      app: '起点已设为：启动 App（包名启动）',
-      page: '起点已设为：页面（关联页面+元素）',
+      app: "起点已设为：启动 App（包名启动）",
+      page: "起点已设为：页面（关联页面+元素）",
     }
 
-    if (kind === 'app') {
+    if (kind === "app") {
       clearElementOutputs(nodeId)
-      node.outputs = [{ name: '启动', type: PORT_TYPE.NAVIGATION, slot_index: 0, link: null, links: [] }]
+      node.outputs = [
+        { name: "启动", type: PORT_TYPE.NAVIGATION, slot_index: 0, link: null, links: [] },
+      ]
     } else {
       node.outputs = []
       delete node.properties.linked_page_id
       delete node.properties.linked_page_name
       delete node.properties.linked_elements
     }
-    node.widgets_values[0] = labelMap[kind] || '起点'
-    setStatus(statusMap[kind] || '起点模式已切换')
+    node.widgets_values[0] = labelMap[kind] || "起点"
+    setStatus(statusMap[kind] || "起点模式已切换")
   }
 
   function setStartPackage(nodeId: string, pkg: string): void {
     const node = findNode(nodeId)
-    if (!node || node.type !== 'StartNode') return
-    node.properties = { ...node.properties, package_name: pkg.trim() || 'com.example.app' }
+    if (!node || node.type !== "StartNode") return
+    node.properties = { ...node.properties, package_name: pkg.trim() || "com.example.app" }
   }
 
   function removeNode(id: string): void {
@@ -162,8 +171,8 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     if (!node) return
     // Collect link ids attached to this node, then detach port refs on surviving nodes
     const linkIds = links.value
-      .filter(l => l.origin_id === id || l.target_id === id)
-      .map(l => l.id)
+      .filter((l) => l.origin_id === id || l.target_id === id)
+      .map((l) => l.id)
     for (const lid of linkIds) {
       const link = findLink(lid)
       if (!link) continue
@@ -171,19 +180,19 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
       if (link.origin_id !== id) {
         const originNode = findNode(link.origin_id)
         const op = originNode?.outputs[link.origin_slot]
-        if (op) op.links = op.links.filter(x => x !== lid)
+        if (op) op.links = op.links.filter((x) => x !== lid)
       }
       if (link.target_id !== id) {
         const targetNode = findNode(link.target_id)
         const tp = targetNode?.inputs[link.target_slot]
         if (tp) {
-          tp.links = (tp.links || []).filter(x => x !== lid)
+          tp.links = (tp.links || []).filter((x) => x !== lid)
           tp.link = tp.links[0] ?? null
         }
       }
     }
-    links.value = links.value.filter(l => l.origin_id !== id && l.target_id !== id)
-    nodes.value = nodes.value.filter(n => n.id !== id)
+    links.value = links.value.filter((l) => l.origin_id !== id && l.target_id !== id)
+    nodes.value = nodes.value.filter((n) => n.id !== id)
     if (selectedId.value === id) selectedId.value = null
     setStatus(`已删除: ${node.widgets_values[0]}`)
   }
@@ -199,10 +208,10 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     if (!node) return
 
     const registry = NODE_REGISTRY[node.type]
-    const pool = registry?.elementPool === 'popup' ? POPUP_ELEMENTS : PAGE_ELEMENTS
+    const pool = registry?.elementPool === "popup" ? POPUP_ELEMENTS : PAGE_ELEMENTS
     // Prefer elements from linked page catalog snapshot
     const linkedPool = (node.properties?.linked_elements as typeof PAGE_ELEMENTS | undefined) || []
-    const el = linkedPool.find(e => e.id === elId) || pool.find(e => e.id === elId)
+    const el = linkedPool.find((e) => e.id === elId) || pool.find((e) => e.id === elId)
     if (!el) return
 
     addPortFromElement(nodeId, el, portType)
@@ -211,11 +220,11 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
   function addPortFromElement(
     nodeId: string,
     el: { id: string; label: string; type: string; xpath?: string },
-    portType?: string
+    portType?: string,
   ): void {
     const node = findNode(nodeId)
     if (!node) return
-    if (node.outputs.some(p => p.el?.id === el.id)) return
+    if (node.outputs.some((p) => p.el?.id === el.id)) return
 
     const si = node.outputs.length
     node.outputs.push({
@@ -235,7 +244,7 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     if (!node) return
     // Remove links that originate from this node's current outputs
     const outLinkIds = new Set<number>()
-    node.outputs.forEach(p => (p.links || []).forEach(id => outLinkIds.add(id)))
+    node.outputs.forEach((p) => (p.links || []).forEach((id) => outLinkIds.add(id)))
     for (const lid of outLinkIds) removeLink(lid)
     node.outputs = []
   }
@@ -246,16 +255,21 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
    */
   function linkPage(
     nodeId: string,
-    page: { id: string; name: string; domain?: string; elements: { id: string; label: string; type: string; xpath?: string }[] }
+    page: {
+      id: string
+      name: string
+      domain?: string
+      elements: { id: string; label: string; type: string; xpath?: string }[]
+    },
   ): void {
     const node = findNode(nodeId)
     if (!node) return
     const isPageLike =
-      node.type === 'PageNode' ||
-      node.type === 'PopupNode' ||
-      (node.type === 'StartNode' && node.properties?.start_kind !== 'app')
+      node.type === "PageNode" ||
+      node.type === "PopupNode" ||
+      (node.type === "StartNode" && node.properties?.start_kind !== "app")
     if (!isPageLike) {
-      setStatus('当前节点不能关联页面（起点请先切到「页面」模式）')
+      setStatus("当前节点不能关联页面（起点请先切到「页面」模式）")
       return
     }
 
@@ -271,10 +285,10 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
       linked_page_name: page.name,
       linked_elements: page.elements,
     }
-    node.widgets_values = [page.name, node.widgets_values[1] || 'teal']
+    node.widgets_values = [page.name, node.widgets_values[1] || "teal"]
 
     setStatus(
-      `已关联「${page.name}」（${page.elements.length} 个可选元素）。请点「+ 添加元素」挑选端口`
+      `已关联「${page.name}」（${page.elements.length} 个可选元素）。请点「+ 添加元素」挑选端口`,
     )
   }
 
@@ -282,16 +296,16 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
   async function resyncLinkedPage(nodeId: string): Promise<boolean> {
     const node = findNode(nodeId)
     if (!node?.properties?.linked_page_id) {
-      setStatus('该节点未关联页面')
+      setStatus("该节点未关联页面")
       return false
     }
-    const { fetchCatalogPageById } = await import('@/modules/workflow/data/pageCatalog')
+    const { fetchCatalogPageById } = await import("@/modules/workflow/data/pageCatalog")
     const page = await fetchCatalogPageById(String(node.properties.linked_page_id))
     if (!page) {
-      setStatus('刷新失败：元素管理中找不到该页面')
+      setStatus("刷新失败：元素管理中找不到该页面")
       return false
     }
-    const ids = new Set(page.elements.map(e => e.id))
+    const ids = new Set(page.elements.map((e) => e.id))
     // 更新目录
     node.properties = {
       ...node.properties,
@@ -299,17 +313,15 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
       linked_page_name: page.name,
       linked_elements: page.elements,
     }
-    node.widgets_values = [page.name, node.widgets_values[1] || 'teal']
+    node.widgets_values = [page.name, node.widgets_values[1] || "teal"]
     // 移除已不存在于页面的端口（不自动添加新元素）
     const toRemove = node.outputs
-      .filter(p => p.el && !ids.has(p.el.id))
-      .map(p => p.slot_index)
+      .filter((p) => p.el && !ids.has(p.el.id))
+      .map((p) => p.slot_index)
       .sort((a, b) => b - a)
     for (const slot of toRemove) removePort(nodeId, slot)
 
-    setStatus(
-      `已刷新「${page.name}」元素目录（${page.elements.length} 个可选）；已有端口保留`
-    )
+    setStatus(`已刷新「${page.name}」元素目录（${page.elements.length} 个可选）；已有端口保留`)
     return true
   }
 
@@ -319,14 +331,14 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
 
     // 清理该端口的所有连线
     links.value = links.value.filter(
-      l => !(l.origin_id === nodeId && l.origin_slot === slotIndex)
+      (l) => !(l.origin_id === nodeId && l.origin_slot === slotIndex),
     )
     // 移除端口
-    node.outputs = node.outputs.filter(p => p.slot_index !== slotIndex)
+    node.outputs = node.outputs.filter((p) => p.slot_index !== slotIndex)
     // 重新索引
     node.outputs.forEach((p, i) => (p.slot_index = i))
     // 更新剩余连线的 slot 引用
-    links.value.forEach(l => {
+    links.value.forEach((l) => {
       if (l.origin_id === nodeId && l.origin_slot > slotIndex) {
         l.origin_slot--
       }
@@ -348,7 +360,7 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     const si = node.inputs.length
     node.inputs.push({
       name: `入口${si + 1}`,
-      type: PORT_TYPE.ENTRY as 'entry',
+      type: PORT_TYPE.ENTRY as "entry",
       slot_index: si,
       link: null,
       links: [],
@@ -360,7 +372,7 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     origin_id: string,
     origin_slot: number,
     target_id: string,
-    target_slot: number
+    target_slot: number,
   ): Connection | null {
     const originNode = findNode(origin_id)
     const targetNode = findNode(target_id)
@@ -374,7 +386,7 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     const allowed = LINK_RULES[originPort.type] || []
     if (!allowed.includes(targetPort.type)) {
       setStatus(
-        `连线类型不匹配: ${originPort.name} (${originPort.type}) 不能连接到 ${targetPort.name} (${targetPort.type})`
+        `连线类型不匹配: ${originPort.name} (${originPort.type}) 不能连接到 ${targetPort.name} (${targetPort.type})`,
       )
       return null
     }
@@ -385,11 +397,11 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
 
     // Duplicate same edge → no-op success
     const dup = links.value.find(
-      l =>
+      (l) =>
         l.origin_id === origin_id &&
         l.origin_slot === origin_slot &&
         l.target_id === target_id &&
-        l.target_slot === target_slot
+        l.target_slot === target_slot,
     )
     if (dup) {
       setStatus(`连线已存在: ${originPort.name} → ${targetNode.widgets_values[0]}`)
@@ -421,7 +433,7 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     setStatus(
       MULTI_IN_PORT_TYPES.has(targetPort.type)
         ? `连线成功: ${originPort.name} → ${targetNode.widgets_values[0]}（入口共 ${inCount} 条）`
-        : `连线成功: ${originPort.name} → ${targetNode.widgets_values[0]}`
+        : `连线成功: ${originPort.name} → ${targetNode.widgets_values[0]}`,
     )
     return link
   }
@@ -434,17 +446,17 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     const targetNode = findNode(link.target_id)
     if (originNode) {
       const op = originNode.outputs[link.origin_slot]
-      if (op) op.links = (op.links || []).filter(lid => lid !== id)
+      if (op) op.links = (op.links || []).filter((lid) => lid !== id)
     }
     if (targetNode) {
       const tp = targetNode.inputs[link.target_slot]
       if (tp) {
-        tp.links = (tp.links || []).filter(lid => lid !== id)
+        tp.links = (tp.links || []).filter((lid) => lid !== id)
         tp.link = tp.links[0] ?? null
       }
     }
-    links.value = links.value.filter(l => l.id !== id)
-    if (selectedId.value === 'l' + id) selectedId.value = null
+    links.value = links.value.filter((l) => l.id !== id)
+    if (selectedId.value === "l" + id) selectedId.value = null
   }
 
   function renameLink(id: number, name: string): void {
@@ -456,7 +468,7 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     } else {
       delete link.name
     }
-    setStatus(trimmed ? `已重命名连线: ${trimmed}` : '已恢复连线默认名称')
+    setStatus(trimmed ? `已重命名连线: ${trimmed}` : "已恢复连线默认名称")
   }
 
   // ── Viewport ──
@@ -486,10 +498,10 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
   }
 
   // ── Persistence ──
-  function snapshotGraph(name = 'untitled'): WorkflowSaveData {
+  function snapshotGraph(name = "untitled"): WorkflowSaveData {
     return {
       name,
-      version: '1.0',
+      version: "1.0",
       savedAt: new Date().toISOString(),
       nodes: JSON.parse(JSON.stringify(nodes.value)),
       links: JSON.parse(JSON.stringify(links.value)),
@@ -502,15 +514,15 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     selectedId.value = null
     normalizePortLinks()
     let max = 0
-    nodes.value.forEach(n => {
+    nodes.value.forEach((n) => {
       const m = parseInt(n.id.slice(1), 10)
       if (!Number.isNaN(m) && m > max) max = m
     })
-    links.value.forEach(l => {
+    links.value.forEach((l) => {
       if (l.id > max) max = l.id
     })
     nextId = max + 1
-    setStatus('已加载图: ' + (data.name || ''))
+    setStatus("已加载图: " + (data.name || ""))
   }
 
   function clearGraph(): void {
@@ -518,24 +530,24 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     links.value = []
     selectedId.value = null
     nextId = 1
-    setStatus('画布已清空')
+    setStatus("画布已清空")
   }
 
   function saveToLocal(name: string): void {
     const data = snapshotGraph(name)
-    localStorage.setItem('wf_vue_' + name, JSON.stringify(data))
-    const idx = JSON.parse(localStorage.getItem('wf_vue_idx') || '[]')
+    localStorage.setItem("wf_vue_" + name, JSON.stringify(data))
+    const idx = JSON.parse(localStorage.getItem("wf_vue_idx") || "[]")
     if (!idx.includes(name)) idx.push(name)
-    localStorage.setItem('wf_vue_idx', JSON.stringify(idx))
-    setStatus('已保存: ' + name)
+    localStorage.setItem("wf_vue_idx", JSON.stringify(idx))
+    setStatus("已保存: " + name)
   }
 
   function loadFromLocal(name: string): boolean {
-    const raw = localStorage.getItem('wf_vue_' + name)
+    const raw = localStorage.getItem("wf_vue_" + name)
     if (!raw) return false
     const data: WorkflowSaveData = JSON.parse(raw)
     applySnapshot(data)
-    setStatus('已加载: ' + name)
+    setStatus("已加载: " + name)
     return true
   }
 
@@ -548,39 +560,39 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
       for (const p of n.inputs) {
         // Rebuild inbound from links table (source of truth)
         p.links = links.value
-          .filter(l => l.target_id === n.id && l.target_slot === p.slot_index)
-          .map(l => l.id)
+          .filter((l) => l.target_id === n.id && l.target_slot === p.slot_index)
+          .map((l) => l.id)
         p.link = p.links[0] ?? null
       }
       for (const p of n.outputs) {
         p.links = links.value
-          .filter(l => l.origin_id === n.id && l.origin_slot === p.slot_index)
-          .map(l => l.id)
+          .filter((l) => l.origin_id === n.id && l.origin_slot === p.slot_index)
+          .map((l) => l.id)
         p.link = null
       }
     }
   }
 
   function getSavedList(): string[] {
-    return JSON.parse(localStorage.getItem('wf_vue_idx') || '[]')
+    return JSON.parse(localStorage.getItem("wf_vue_idx") || "[]")
   }
 
   function deleteSaved(name: string): void {
-    localStorage.removeItem('wf_vue_' + name)
-    const idx = getSavedList().filter(n => n !== name)
-    localStorage.setItem('wf_vue_idx', JSON.stringify(idx))
+    localStorage.removeItem("wf_vue_" + name)
+    const idx = getSavedList().filter((n) => n !== name)
+    localStorage.setItem("wf_vue_idx", JSON.stringify(idx))
   }
 
   function exportAPI(): string {
     const api: Record<string, any> = {}
-    nodes.value.forEach(n => {
+    nodes.value.forEach((n) => {
       const inputs: Record<string, any> = {}
-      n.inputs.forEach(p => {
+      n.inputs.forEach((p) => {
         inputs[p.name] = null
       })
-      n.outputs.forEach(p => {
+      n.outputs.forEach((p) => {
         if (p.links && p.links.length) {
-          const l = links.value.find(x => x.id === p.links[0])
+          const l = links.value.find((x) => x.id === p.links[0])
           if (l) inputs[p.name] = [l.target_id, l.target_slot]
         }
       })
@@ -596,17 +608,17 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     scale.value = 1
     panX.value = 0
     panY.value = 0
-    setStatus('画布已清空')
+    setStatus("画布已清空")
   }
 
   // ── Business Rules (Component Registry style) ──
   function canCreateOutput(node: WorkflowNode): boolean {
-    if (node.type === 'EndNode') return false
-    if (node.type === 'StartNode') {
-      return node.properties?.start_kind !== 'app'
+    if (node.type === "EndNode") return false
+    if (node.type === "StartNode") {
+      return node.properties?.start_kind !== "app"
     }
-    if (node.type === 'PopupNode') {
-      return links.value.some(l => l.target_id === node.id)
+    if (node.type === "PopupNode") {
+      return links.value.some((l) => l.target_id === node.id)
     }
     return true // PageNode 始终可以
   }
@@ -617,19 +629,22 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
 
   // ── Helpers ──
   function screenToCanvas(sx: number, sy: number, svgRect: DOMRect): [number, number] {
-    return [(sx - svgRect.left - panX.value) / scale.value, (sy - svgRect.top - panY.value) / scale.value]
+    return [
+      (sx - svgRect.left - panX.value) / scale.value,
+      (sy - svgRect.top - panY.value) / scale.value,
+    ]
   }
 
   function portPosition(
     node: WorkflowNode,
     port: PortDefinition,
-    side: 'left' | 'right'
+    side: "left" | "right",
   ): { x: number; y: number } {
-    const ports = side === 'left' ? node.inputs : node.outputs
+    const ports = side === "left" ? node.inputs : node.outputs
     const idx = ports.indexOf(port)
     const nodeHeight = computeNodeHeight(node)
     return {
-      x: side === 'left' ? node.pos[0] : node.pos[0] + node.size[0],
+      x: side === "left" ? node.pos[0] : node.pos[0] + node.size[0],
       y: node.pos[1] + 44 + (idx + 0.5) * 26,
     }
   }
@@ -644,33 +659,33 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
   function initDemo(): void {
     if (nodes.value.length > 0) return // 已有数据不重复初始化
 
-    const start = createNode('StartNode', 40, 200)
+    const start = createNode("StartNode", 40, 200)
 
-    const d1 = createNode('PageNode', 300, 180)
+    const d1 = createNode("PageNode", 300, 180)
     if (d1) {
-      d1.widgets_values = ['首页', 'teal']
-      addPort(d1.id, 'el_001', PORT_TYPE.NAVIGATION)
-      addPort(d1.id, 'el_003', PORT_TYPE.POPUP_FIXED)
+      d1.widgets_values = ["首页", "teal"]
+      addPort(d1.id, "el_001", PORT_TYPE.NAVIGATION)
+      addPort(d1.id, "el_003", PORT_TYPE.POPUP_FIXED)
     }
 
-    const d2 = createNode('PageNode', 620, 160)
+    const d2 = createNode("PageNode", 620, 160)
     if (d2) {
-      d2.widgets_values = ['搜索结果页', 'teal']
-      addPort(d2.id, 'el_010', PORT_TYPE.NAVIGATION)
-      addPort(d2.id, 'el_002', PORT_TYPE.NAVIGATION)
+      d2.widgets_values = ["搜索结果页", "teal"]
+      addPort(d2.id, "el_010", PORT_TYPE.NAVIGATION)
+      addPort(d2.id, "el_002", PORT_TYPE.NAVIGATION)
     }
 
-    const d3 = createNode('PopupNode', 640, 380)
-    if (d3) d3.widgets_values = ['设置弹窗', 'red']
+    const d3 = createNode("PopupNode", 640, 380)
+    if (d3) d3.widgets_values = ["设置弹窗", "red"]
 
-    const end = createNode('EndNode', 940, 200)
+    const end = createNode("EndNode", 940, 200)
 
     if (start && d1) addLink(start.id, 0, d1.id, 0)
     if (d1 && d2) addLink(d1.id, 0, d2.id, 0)
     if (d1 && d3) addLink(d1.id, 1, d3.id, 0)
     if (d2 && end) addLink(d2.id, 0, end.id, 0)
 
-    setStatus('起点无入口 · 终点无输出 · 从「启动」连到页面入口')
+    setStatus("起点无入口 · 终点无输出 · 从「启动」连到页面入口")
   }
 
   return {

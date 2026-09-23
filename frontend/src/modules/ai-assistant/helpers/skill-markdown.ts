@@ -1,7 +1,7 @@
 /** skill-markdown — Markdown 渲染（DOMPurify 清洗） */
-import DOMPurify from 'dompurify'
-import { marked } from 'marked'
-import type { SkillTreeNode } from '../api/toolbox'
+import DOMPurify from "dompurify"
+import { marked } from "marked"
+import type { SkillTreeNode } from "../api/toolbox"
 
 marked.setOptions({ gfm: true })
 
@@ -12,7 +12,7 @@ export function renderSkillMarkdown(src: string): string {
 
 export function firstSkillFilePath(nodes: SkillTreeNode[]): string {
   for (const node of nodes) {
-    if (!node.is_dir && node.name.toLowerCase() === 'skill.md') return node.path
+    if (!node.is_dir && node.name.toLowerCase() === "skill.md") return node.path
   }
   for (const node of nodes) {
     if (node.is_dir) {
@@ -23,5 +23,5 @@ export function firstSkillFilePath(nodes: SkillTreeNode[]): string {
   for (const node of nodes) {
     if (!node.is_dir) return node.path
   }
-  return ''
+  return ""
 }

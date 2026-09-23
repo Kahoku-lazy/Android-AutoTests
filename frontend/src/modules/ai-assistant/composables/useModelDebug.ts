@@ -1,7 +1,7 @@
 /** useModelDebug — 单模型调试台（角色只读配置 + 设备候选 + 单角色对话；挂真实工具、不落库） */
-import { computed, ref, watch } from 'vue'
-import type { Ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { computed, ref, watch } from "vue"
+import type { Ref } from "vue"
+import { ElMessage } from "element-plus"
 import {
   fetchModelDebugConfig,
   chatWithModelDebug,
@@ -9,17 +9,17 @@ import {
   type ModelDebugRole,
   type ModelDebugRoleConfig,
   type ModelDebugToolCall,
-} from '../api/toolbox'
-import { listDevices } from '../api/tasks'
-import { MODEL_DEBUG_DEVICE_REQUIRED_HINT } from '../constants'
-import { formatApiError } from '@/shared/api-client'
-import type { DeviceRecord } from '@/shared/types/device'
+} from "../api/toolbox"
+import { listDevices } from "../api/tasks"
+import { MODEL_DEBUG_DEVICE_REQUIRED_HINT } from "../constants"
+import { formatApiError } from "@/shared/api-client"
+import type { DeviceRecord } from "@/shared/types/device"
 
-export const MODEL_DEBUG_ROLES: ModelDebugRole[] = ['planner', 'executor', 'verifier']
+export const MODEL_DEBUG_ROLES: ModelDebugRole[] = ["planner", "executor", "verifier"]
 
 export interface ModelDebugMessage {
   id: number
-  role: 'user' | 'assistant'
+  role: "user" | "assistant"
   content: string
   model_name?: string
   thinking?: string[]
@@ -32,14 +32,14 @@ export interface ModelDebugMessage {
 export function useModelDebug(role: Ref<string>) {
   const config = ref<ModelDebugConfig | null>(null)
   const loading = ref(false)
-  const error = ref('')
-  const question = ref('')
+  const error = ref("")
+  const question = ref("")
   const sending = ref(false)
   const messages = ref<ModelDebugMessage[]>([])
   /** 调试设备候选：对请求者可见 + 状态在线 + 未被占用（与平台工具调试页同口径） */
   const devices = ref<DeviceRecord[]>([])
   const devicesLoading = ref(false)
-  const serial = ref('')
+  const serial = ref("")
   let seq = 0
 
   const needsDevice = computed(() => config.value?.role.needs_device === true)
@@ -52,13 +52,13 @@ export function useModelDebug(role: Ref<string>) {
 
   async function load(): Promise<void> {
     loading.value = true
-    error.value = ''
+    error.value = ""
     try {
       const data = await fetchModelDebugConfig(role.value)
       if (data.status && data.data) config.value = data.data
-      else error.value = data.message || '调试配置加载失败'
+      else error.value = data.message || "调试配置加载失败"
     } catch (e) {
-      error.value = formatApiError(e, '调试配置加载失败')
+      error.value = formatApiError(e, "调试配置加载失败")
     }
     loading.value = false
   }
@@ -68,10 +68,10 @@ export function useModelDebug(role: Ref<string>) {
     try {
       const data = await listDevices()
       const rows = data.status && data.data ? data.data.devices || [] : []
-      devices.value = rows.filter((item) => item.status === 'ONLINE' && !item.occupied_by)
+      devices.value = rows.filter((item) => item.status === "ONLINE" && !item.occupied_by)
     } catch (e) {
       devices.value = []
-      ElMessage.error(formatApiError(e, '调试设备候选加载失败'))
+      ElMessage.error(formatApiError(e, "调试设备候选加载失败"))
     }
     devicesLoading.value = false
   }
@@ -84,16 +84,16 @@ export function useModelDebug(role: Ref<string>) {
       ElMessage.warning(MODEL_DEBUG_DEVICE_REQUIRED_HINT)
       return
     }
-    messages.value.push({ id: ++seq, role: 'user', content: text })
-    question.value = ''
+    messages.value.push({ id: ++seq, role: "user", content: text })
+    question.value = ""
     sending.value = true
     try {
       const data = await chatWithModelDebug(role.value, text, serial.value)
       if (data.status && data.data) {
         messages.value.push({
           id: ++seq,
-          role: 'assistant',
-          content: data.data.reply || '（空回复）',
+          role: "assistant",
+          content: data.data.reply || "（空回复）",
           model_name: data.data.model_name,
           thinking: data.data.thinking || [],
           tool_usage: data.data.tool_usage || [],
@@ -102,16 +102,16 @@ export function useModelDebug(role: Ref<string>) {
       } else {
         messages.value.push({
           id: ++seq,
-          role: 'assistant',
-          content: data.message || '调用失败',
+          role: "assistant",
+          content: data.message || "调用失败",
           error: true,
         })
       }
     } catch (e) {
       messages.value.push({
         id: ++seq,
-        role: 'assistant',
-        content: formatApiError(e, '调试对话失败'),
+        role: "assistant",
+        content: formatApiError(e, "调试对话失败"),
         error: true,
       })
     }
@@ -167,7 +167,7 @@ export function useModelDebugRoles() {
         .map((res) => (res.status && res.data ? res.data.role : null))
         .filter((item): item is ModelDebugRoleConfig => Boolean(item))
     } catch (e) {
-      ElMessage.error(formatApiError(e, '模型调试配置加载失败'))
+      ElMessage.error(formatApiError(e, "模型调试配置加载失败"))
     }
     loading.value = false
   }

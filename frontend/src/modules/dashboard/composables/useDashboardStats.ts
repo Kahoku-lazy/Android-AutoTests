@@ -1,6 +1,6 @@
 /** useDashboardStats — 仪表盘数据获取与状态管理 composable */
-import { ref, type Ref } from 'vue'
-import { fetchDashboardStats, fetchRecentActivities } from '../api'
+import { ref, type Ref } from "vue"
+import { fetchDashboardStats, fetchRecentActivities } from "../api"
 import type {
   DashboardStats,
   ExecutionChart,
@@ -12,7 +12,7 @@ import type {
   AiUsageMetric,
   AiTokenChart,
   DeepSeekCostChart,
-} from '@/shared/types/dashboard'
+} from "@/shared/types/dashboard"
 
 // ── 返回类型接口 ──
 
@@ -129,8 +129,8 @@ export function mapStatsResponse(raw: DashboardRawData): MappedData {
       cost: raw.charts?.deepseek_cost?.cost ?? [],
     },
     recentTasks: raw.recent_tasks ?? [],
-    lastUpdated: raw.last_updated ?? '',
-    systemStatus: raw.system_status ?? 'normal',
+    lastUpdated: raw.last_updated ?? "",
+    systemStatus: raw.system_status ?? "normal",
   }
 }
 
@@ -147,8 +147,8 @@ export function useDashboardStats(): UseDashboardStatsReturn {
   const aiTokenChart = ref<AiTokenChart>({ ...DEFAULT_AI_TOKEN_CHART })
   const deepseekCostChart = ref<DeepSeekCostChart>({ ...DEFAULT_DEEPSEEK_COST_CHART })
   const recentTasks = ref<RecentTask[]>([])
-  const lastUpdated = ref('')
-  const systemStatus = ref('normal')
+  const lastUpdated = ref("")
+  const systemStatus = ref("normal")
   const activities = ref<ActivityItem[]>([])
 
   async function _fetchAndMap(setLoadingFlag: (v: boolean) => void) {
@@ -160,7 +160,7 @@ export function useDashboardStats(): UseDashboardStatsReturn {
         fetchRecentActivities(),
       ])
 
-      if (statsRes.status === 'fulfilled') {
+      if (statsRes.status === "fulfilled") {
         const body = statsRes.value.data
         if (body?.status && body.data) {
           const mapped = mapStatsResponse(body.data)
@@ -173,33 +173,37 @@ export function useDashboardStats(): UseDashboardStatsReturn {
           lastUpdated.value = mapped.lastUpdated
           systemStatus.value = mapped.systemStatus
         } else {
-          error.value = body?.message || '统计数据加载失败，请检查网络连接'
+          error.value = body?.message || "统计数据加载失败，请检查网络连接"
         }
       } else {
-        error.value = '统计数据加载失败，请检查网络连接'
+        error.value = "统计数据加载失败，请检查网络连接"
       }
 
-      if (activitiesRes.status === 'fulfilled') {
+      if (activitiesRes.status === "fulfilled") {
         const body = activitiesRes.value.data
         if (body?.status) {
           activities.value = body.data || []
         }
       } else {
-        if (!error.value) error.value = '活动记录加载失败，请检查网络连接'
+        if (!error.value) error.value = "活动记录加载失败，请检查网络连接"
       }
     } catch (e: unknown) {
-      error.value = '仪表盘数据加载失败，请稍后重试'
+      error.value = "仪表盘数据加载失败，请稍后重试"
     } finally {
       setLoadingFlag(false)
     }
   }
 
   async function loadData() {
-    await _fetchAndMap((v) => { loading.value = v })
+    await _fetchAndMap((v) => {
+      loading.value = v
+    })
   }
 
   async function refreshData() {
-    await _fetchAndMap((v) => { refreshing.value = v })
+    await _fetchAndMap((v) => {
+      refreshing.value = v
+    })
   }
 
   return {

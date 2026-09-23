@@ -6,24 +6,28 @@
  * 只有元素名称、文本、主定位与测试点可改（校验见 helpers/elementRowValidation.ts）；
  * 支持新增一行与勾选多行批量删除；状态与编排见 composables/usePageElements.ts。
  */
-import { computed, ref } from 'vue'
-import { ElMessageBox } from 'element-plus'
-import AppTable from '@/shared/components/AppTable.vue'
-import EmptyState from '@/shared/components/patterns/EmptyState.vue'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import SkeletonCard from '@/shared/components/patterns/SkeletonCard.vue'
-import { mediaUrl } from '@/shared/helpers/mediaUrl'
-import EditableCell from './EditableCell.vue'
-import PageElementFormDialog from './PageElementFormDialog.vue'
-import type { PageElementFields } from '../api'
-import { usePageElements, type EditableField, type PageElementRow } from '../composables/usePageElements'
+import { computed, ref } from "vue"
+import { ElMessageBox } from "element-plus"
+import AppTable from "@/shared/components/AppTable.vue"
+import EmptyState from "@/shared/components/patterns/EmptyState.vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
+import { mediaUrl } from "@/shared/helpers/mediaUrl"
+import EditableCell from "./EditableCell.vue"
+import PageElementFormDialog from "./PageElementFormDialog.vue"
+import type { PageElementFields } from "../api"
+import {
+  usePageElements,
+  type EditableField,
+  type PageElementRow,
+} from "../composables/usePageElements"
 import {
   validateAliasCell,
   validatePrimaryXPath,
   validateText,
   type TextField,
-} from '../helpers/elementRowValidation'
-import { interactionLabels } from '../helpers/elementPresentation'
+} from "../helpers/elementRowValidation"
+import { interactionLabels } from "../helpers/elementPresentation"
 
 const props = defineProps<{ pageId: number }>()
 
@@ -55,27 +59,33 @@ const brokenThumbs = ref(new Set<number>())
 
 /** 列定义：收敛后的七列（顺序即展示顺序） */
 const ELEMENT_COLUMNS = [
-  { key: '_select', width: 44, align: 'center', label: '', showOverflowTooltip: false },
-  { dataIndex: 'thumbnail_path', width: 66, label: '缩略图', showOverflowTooltip: false },
-  { dataIndex: 'alias', minWidth: 120, label: '元素名称', showOverflowTooltip: false },
-  { dataIndex: 'seq', width: 64, align: 'center', label: '序号', showOverflowTooltip: false },
-  { dataIndex: 'text_val', minWidth: 120, label: '文本', showOverflowTooltip: false },
-  { dataIndex: 'primary_xpath', minWidth: 220, label: '主定位', showOverflowTooltip: false },
-  { dataIndex: 'flags', minWidth: 200, label: '交互标注', showOverflowTooltip: false },
-  { dataIndex: 'is_test_point', width: 88, align: 'center', label: '测试点', showOverflowTooltip: false },
+  { key: "_select", width: 44, align: "center", label: "", showOverflowTooltip: false },
+  { dataIndex: "thumbnail_path", width: 66, label: "缩略图", showOverflowTooltip: false },
+  { dataIndex: "alias", minWidth: 120, label: "元素名称", showOverflowTooltip: false },
+  { dataIndex: "seq", width: 64, align: "center", label: "序号", showOverflowTooltip: false },
+  { dataIndex: "text_val", minWidth: 120, label: "文本", showOverflowTooltip: false },
+  { dataIndex: "primary_xpath", minWidth: 220, label: "主定位", showOverflowTooltip: false },
+  { dataIndex: "flags", minWidth: 200, label: "交互标注", showOverflowTooltip: false },
+  {
+    dataIndex: "is_test_point",
+    width: 88,
+    align: "center",
+    label: "测试点",
+    showOverflowTooltip: false,
+  },
 ]
 
 /** 行内可编辑的文本列（元素名称 / 文本 / 主定位） */
 const TEXT_FIELDS: Array<[string, TextField]> = [
-  ['alias', 'alias'],
-  ['text_val', 'text_val'],
-  ['primary_xpath', 'primary_xpath'],
+  ["alias", "alias"],
+  ["text_val", "text_val"],
+  ["primary_xpath", "primary_xpath"],
 ]
 
 /** 每列的校验函数；返回 undefined 表示该列不做前端校验 */
 function validateFor(field: string): ((value: string) => string | null) | undefined {
-  if (field === 'alias') return validateAliasCell
-  if (field === 'primary_xpath') return validatePrimaryXPath
+  if (field === "alias") return validateAliasCell
+  if (field === "primary_xpath") return validatePrimaryXPath
   const entry = TEXT_FIELDS.find(([key]) => key === field)
   return entry ? (value: string) => validateText(entry[1], value) : undefined
 }
@@ -89,7 +99,7 @@ function onEdit(row: PageElementRow, field: EditableField, value: string) {
 }
 
 function onTestPointChange(row: PageElementRow, value: string | number | boolean) {
-  void updateField(row, 'is_test_point', Boolean(value))
+  void updateField(row, "is_test_point", Boolean(value))
 }
 
 function onToggleAll(value: string | number | boolean) {
@@ -104,11 +114,11 @@ async function onCreate(fields: PageElementFields) {
 async function onRemoveSelected() {
   if (!selectedCount.value) return
   try {
-    await ElMessageBox.confirm(
-      `确认删除选中的 ${selectedCount.value} 行元素？`,
-      '确认批量删除',
-      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' },
-    )
+    await ElMessageBox.confirm(`确认删除选中的 ${selectedCount.value} 行元素？`, "确认批量删除", {
+      confirmButtonText: "删除",
+      cancelButtonText: "取消",
+      type: "warning",
+    })
   } catch {
     return
   }
@@ -116,7 +126,7 @@ async function onRemoveSelected() {
 }
 
 function rowClassName({ row }: { row: PageElementRow }) {
-  return isSelected(row.id) ? 'is-selected' : ''
+  return isSelected(row.id) ? "is-selected" : ""
 }
 
 defineExpose({ reload: load })
@@ -128,7 +138,7 @@ defineExpose({ reload: load })
       <span class="page-workbench__count">共 {{ total }} 个元素</span>
       <el-button size="small" @click="formVisible = true">+ 新增一行</el-button>
       <el-button size="small" type="danger" :disabled="!selectedCount" @click="onRemoveSelected">
-        删除选中{{ selectedCount ? `（${selectedCount}）` : '' }}
+        删除选中{{ selectedCount ? `（${selectedCount}）` : "" }}
       </el-button>
       <span v-if="truncated" class="page-workbench__hint">
         接口一次最多取回 {{ rows.length }} 条，当前仅显示这些（共 {{ total }} 条）
@@ -164,7 +174,11 @@ defineExpose({ reload: load })
             <el-checkbox :model-value="allSelectedOnPage" @change="onToggleAll" />
           </template>
           <template #cell-_select="{ row }">
-            <el-checkbox :model-value="isSelected(row.id)" @click.stop @change="() => toggleRow(row.id)" />
+            <el-checkbox
+              :model-value="isSelected(row.id)"
+              @click.stop
+              @change="() => toggleRow(row.id)"
+            />
           </template>
           <template #cell-thumbnail_path="{ row }">
             <img
@@ -185,7 +199,7 @@ defineExpose({ reload: load })
             />
           </template>
           <template #cell-seq="{ row }">
-            <span class="page-elements-seq">{{ row.seq || '—' }}</span>
+            <span class="page-elements-seq">{{ row.seq || "—" }}</span>
           </template>
           <template #cell-text_val="{ row }">
             <EditableCell
@@ -209,7 +223,8 @@ defineExpose({ reload: load })
                   v-for="label in interactionLabels(row)"
                   :key="label"
                   class="page-elements-flag"
-                >{{ label }}</span>
+                  >{{ label }}</span
+                >
               </template>
               <span v-else class="page-elements-empty">—</span>
             </div>
@@ -228,7 +243,11 @@ defineExpose({ reload: load })
         <el-button size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">
           上一页
         </el-button>
-        <el-button size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">
+        <el-button
+          size="small"
+          :disabled="currentPage >= totalPages"
+          @click="goPage(currentPage + 1)"
+        >
           下一页
         </el-button>
       </div>

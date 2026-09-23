@@ -1,10 +1,10 @@
 /**
  * 页面目录 — 与「元素定位 → Android 页面」同步
  */
-import type { ElementDef } from '@/modules/workflow/types/workflow'
-import { listPages, listPageElements } from '@/modules/workflow/api'
+import type { ElementDef } from "@/modules/workflow/types/workflow"
+import { listPages, listPageElements } from "@/modules/workflow/api"
 
-export type PageDomain = 'android'
+export type PageDomain = "android"
 
 export interface CatalogPage {
   id: string
@@ -13,24 +13,24 @@ export interface CatalogPage {
   description?: string
   elements: ElementDef[]
   /** 来自 API 时为数字页 id 字符串 */
-  source?: 'api' | 'mock'
+  source?: "api" | "mock"
   /** 页面所属域：元素定位收敛为单一 android 项目后只有 android */
   domain: PageDomain
 }
 
 /** xpath_candidates 可能是 JSON 字符串或数组 */
 export function parseXpathCandidates(raw: unknown): string {
-  if (!raw) return ''
+  if (!raw) return ""
   if (Array.isArray(raw)) {
     const first = raw[0]
-    if (!first) return ''
-    if (typeof first === 'string') return first
-    return (first as { xpath?: string }).xpath || ''
+    if (!first) return ""
+    if (typeof first === "string") return first
+    return (first as { xpath?: string }).xpath || ""
   }
-  if (typeof raw === 'string') {
+  if (typeof raw === "string") {
     const t = raw.trim()
-    if (!t) return ''
-    if (t.startsWith('[') || t.startsWith('{')) {
+    if (!t) return ""
+    if (t.startsWith("[") || t.startsWith("{")) {
       try {
         return parseXpathCandidates(JSON.parse(t))
       } catch {
@@ -39,16 +39,15 @@ export function parseXpathCandidates(raw: unknown): string {
     }
     return t
   }
-  return ''
+  return ""
 }
 
 function mapApiElement(e: Record<string, any>): ElementDef {
-  const label =
-    e.alias || e.text_val || e.content_desc || e.resource_id || `元素#${e.id}`
-  let type = 'text'
-  if (e.clickable) type = 'button'
-  else if (e.class_name?.includes('Image')) type = 'icon'
-  else if (e.class_name?.includes('Edit')) type = 'text'
+  const label = e.alias || e.text_val || e.content_desc || e.resource_id || `元素#${e.id}`
+  let type = "text"
+  if (e.clickable) type = "button"
+  else if (e.class_name?.includes("Image")) type = "icon"
+  else if (e.class_name?.includes("Edit")) type = "text"
   return {
     id: String(e.id),
     label: String(label),
@@ -57,50 +56,47 @@ function mapApiElement(e: Record<string, any>): ElementDef {
   }
 }
 
-function mapApiPage(
-  p: Record<string, any>,
-  elements: ElementDef[]
-): CatalogPage {
+function mapApiPage(p: Record<string, any>, elements: ElementDef[]): CatalogPage {
   return {
     id: String(p.id),
     name: p.label || `页面${p.id}`,
-    package: p.package || '',
-    description: p.activity || '',
+    package: p.package || "",
+    description: p.activity || "",
     elements,
-    source: 'api',
-    domain: 'android',
+    source: "api",
+    domain: "android",
   }
 }
 
 /** Demo 回退（仅 API 失败时） */
 export const MOCK_PAGES: CatalogPage[] = [
   {
-    id: 'mock_home',
-    name: '首页（Mock）',
-    package: 'com.example.app',
-    description: 'API 不可用时的示例页',
-    source: 'mock',
-    domain: 'android',
+    id: "mock_home",
+    name: "首页（Mock）",
+    package: "com.example.app",
+    description: "API 不可用时的示例页",
+    source: "mock",
+    domain: "android",
     elements: [
-      { id: 'el_001', label: '搜索图标', type: 'icon', xpath: '//*[@content-desc="搜索"]' },
-      { id: 'el_003', label: '设置按钮', type: 'button', xpath: '//*[@text="设置"]' },
+      { id: "el_001", label: "搜索图标", type: "icon", xpath: '//*[@content-desc="搜索"]' },
+      { id: "el_003", label: "设置按钮", type: "button", xpath: '//*[@text="设置"]' },
     ],
   },
 ]
 
 export function getMockPage(id: string): CatalogPage | undefined {
-  return MOCK_PAGES.find(p => p.id === id)
+  return MOCK_PAGES.find((p) => p.id === id)
 }
 
 /** 拉取元素定位的全部 Android 页面 + 元素 */
 export async function fetchCatalogPages(): Promise<{
   pages: CatalogPage[]
-  source: 'api' | 'mock'
+  source: "api" | "mock"
   error?: string
   message?: string
 }> {
   const pages: CatalogPage[] = []
-  let source: 'api' | 'mock' = 'api'
+  let source: "api" | "mock" = "api"
 
   try {
     const res = await listPages()
@@ -115,23 +111,25 @@ export async function fetchCatalogPages(): Promise<{
           if (elData?.status && Array.isArray(elData.elements)) {
             elements = elData.elements.map(mapApiElement)
           }
-        } catch { elements = [] }
+        } catch {
+          elements = []
+        }
         pages.push(mapApiPage(p, elements))
       }
     }
   } catch {
-    source = 'mock'
+    source = "mock"
   }
 
   if (pages.length === 0) {
-    return { pages: MOCK_PAGES, source: 'mock', error: '无可用页面数据', message: '无可用页面数据' }
+    return { pages: MOCK_PAGES, source: "mock", error: "无可用页面数据", message: "无可用页面数据" }
   }
   return { pages, source }
 }
 
 /** 按页 id 重新拉取（用于「刷新关联元素」） */
 export async function fetchCatalogPageById(pageId: string): Promise<CatalogPage | null> {
-  if (!pageId || pageId.startsWith('mock_')) {
+  if (!pageId || pageId.startsWith("mock_")) {
     return getMockPage(pageId) || null
   }
 
@@ -144,9 +142,7 @@ export async function fetchCatalogPageById(pageId: string): Promise<CatalogPage 
     const elRes = await listPageElements(p.id)
     const elData = elRes.data
     const elements =
-      elData?.status && Array.isArray(elData.elements)
-        ? elData.elements.map(mapApiElement)
-        : []
+      elData?.status && Array.isArray(elData.elements) ? elData.elements.map(mapApiElement) : []
     return mapApiPage(p, elements)
   } catch {
     return null

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useECharts } from '@/shared/composables/useECharts'
+import { useECharts } from "@/shared/composables/useECharts"
 
 export interface SeriesBarSeries {
   name: string
@@ -22,8 +22,8 @@ const props = withDefaults(
 //    token 对照：#1e1e24=--ink · #e8ecf1=--app-border-light · #f0ede8=--app-border-lighter
 //    #999=--app-text-secondary；系列色由调用方按 token 同值传入。
 function compactNumber(v: number): string {
-  if (v >= 1_000_000) return (v / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M'
-  if (v >= 1_000) return (v / 1_000).toFixed(1).replace(/\.0$/, '') + 'K'
+  if (v >= 1_000_000) return (v / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M"
+  if (v >= 1_000) return (v / 1_000).toFixed(1).replace(/\.0$/, "") + "K"
   return String(v)
 }
 
@@ -31,12 +31,12 @@ function buildOption() {
   return {
     animation: true,
     animationDuration: 800,
-    animationEasing: 'cubicOut',
+    animationEasing: "cubicOut",
     animationDurationUpdate: 450,
     tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      textStyle: { fontSize: 12, color: '#1e1e24' },
+      trigger: "axis",
+      axisPointer: { type: "shadow" },
+      textStyle: { fontSize: 12, color: "#1e1e24" },
       valueFormatter: compactNumber,
     },
     legend: {
@@ -44,24 +44,24 @@ function buildOption() {
       itemWidth: 12,
       itemHeight: 12,
       itemGap: 20,
-      textStyle: { fontSize: 12, color: '#1e1e24', fontWeight: 700 },
+      textStyle: { fontSize: 12, color: "#1e1e24", fontWeight: 700 },
     },
     grid: { top: 16, right: 8, bottom: 36, left: 8, containLabel: true },
     xAxis: {
-      type: 'category',
+      type: "category",
       data: props.labels || [],
-      axisLine: { lineStyle: { color: '#e8ecf1' } },
+      axisLine: { lineStyle: { color: "#e8ecf1" } },
       axisTick: { show: false },
-      axisLabel: { fontSize: 12, color: '#999', fontWeight: 600 },
+      axisLabel: { fontSize: 12, color: "#999", fontWeight: 600 },
     },
     yAxis: {
-      type: 'value',
-      splitLine: { lineStyle: { color: '#f0ede8' } },
-      axisLabel: { fontSize: 12, color: '#999', formatter: compactNumber },
+      type: "value",
+      splitLine: { lineStyle: { color: "#f0ede8" } },
+      axisLabel: { fontSize: 12, color: "#999", formatter: compactNumber },
     },
     series: (props.series || []).map((it, i) => ({
       name: it.name,
-      type: 'bar',
+      type: "bar",
       data: it.data || [],
       color: it.color,
       barMaxWidth: 16,

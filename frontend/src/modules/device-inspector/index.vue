@@ -1,25 +1,25 @@
 <script setup>
 /** Device Inspector — 一键 Dump 获取 → 快照落库回看 → 按五分组查看全量元素 → 图上按分组圈选。 */
-import { onMounted, computed } from 'vue'
-import { useElementStore } from './store'
-import { KEY_DISABLED_MESSAGE, NO_SELECTION_MESSAGE } from './constants'
-import CaptureForm from './components/CaptureForm.vue'
-import ScreenshotView from './components/ScreenshotView.vue'
-import StructureAnalysisPanel from './components/StructureAnalysisPanel.vue'
-import SnapshotListDrawer from './components/SnapshotListDrawer.vue'
-import SaveToElementsDialog from './components/SaveToElementsDialog.vue'
-import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import { IconClock, IconLayers, IconSave } from '@/shared/icons'
+import { onMounted, computed } from "vue"
+import { useElementStore } from "./store"
+import { KEY_DISABLED_MESSAGE, NO_SELECTION_MESSAGE } from "./constants"
+import CaptureForm from "./components/CaptureForm.vue"
+import ScreenshotView from "./components/ScreenshotView.vue"
+import StructureAnalysisPanel from "./components/StructureAnalysisPanel.vue"
+import SnapshotListDrawer from "./components/SnapshotListDrawer.vue"
+import SaveToElementsDialog from "./components/SaveToElementsDialog.vue"
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import { IconClock, IconLayers, IconSave } from "@/shared/icons"
 
 const store = useElementStore()
 
 /** 历史快照没有全量节点索引（降级为保留集）时如实提示，避免用户以为元素变少了 */
-const isLegacySource = computed(() => store.layerSource === 'legacy')
+const isLegacySource = computed(() => store.layerSource === "legacy")
 
 /** 页脚序列号来自快照列表（分层响应不含 serial，不为此加后端字段） */
 const snapshotSerial = computed(
-  () => store.snapshots.find(s => s.id === store.snapshot?.snapshot_id)?.serial || ''
+  () => store.snapshots.find((s) => s.id === store.snapshot?.snapshot_id)?.serial || "",
 )
 
 onMounted(async () => {
@@ -118,7 +118,9 @@ function onSaveToElementsClick() {
     <footer class="inspector-footer">
       <span><IconClock :size="14" />就绪</span>
       <span><IconLayers :size="14" />{{ store.elements.length }} 元素</span>
-      <span v-if="snapshotSerial || store.snapshot?.package">{{ snapshotSerial || '—' }} · {{ store.snapshot?.package || '—' }}</span>
+      <span v-if="snapshotSerial || store.snapshot?.package"
+        >{{ snapshotSerial || "—" }} · {{ store.snapshot?.package || "—" }}</span
+      >
     </footer>
 
     <SnapshotListDrawer />
@@ -161,7 +163,11 @@ function onSaveToElementsClick() {
   flex-wrap: wrap;
 }
 
-.info { font-size: var(--app-size-sm); color: var(--app-text-secondary); white-space: nowrap; }
+.info {
+  font-size: var(--app-size-sm);
+  color: var(--app-text-secondary);
+  white-space: nowrap;
+}
 
 .workspace {
   flex: 1;
@@ -184,7 +190,9 @@ function onSaveToElementsClick() {
 }
 
 /* 结构面板自带内部滚动（分区列滚动、表格定高），外层不再叠加滚动条 */
-.col-structure { overflow: hidden; }
+.col-structure {
+  overflow: hidden;
+}
 
 @media (max-width: 1200px) {
   .workspace {
@@ -195,14 +203,25 @@ function onSaveToElementsClick() {
 }
 
 .inspector-footer {
-  display: flex; align-items: center; justify-content: center; gap: var(--app-space-lg);
-  padding: var(--insp-pad-footer); background: var(--app-highlight);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--app-space-lg);
+  padding: var(--insp-pad-footer);
+  background: var(--app-highlight);
   border-top: 2.5px solid var(--ink);
-  font-size: var(--app-size-sm); font-weight: 700;
-  color: var(--app-footer-yellow-text); font-family: var(--app-font-display);
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  color: var(--app-footer-yellow-text);
+  font-family: var(--app-font-display);
   flex-shrink: 0;
 }
-.inspector-footer span { display: flex; align-items: center; gap: var(--app-space-xs); font-size: var(--app-size-sm); }
+.inspector-footer span {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+  font-size: var(--app-size-sm);
+}
 
 /* ═══════════════════════════════════════════
    硬边按键皮肤（作用域：本页）
@@ -220,9 +239,15 @@ function onSaveToElementsClick() {
 
 /* 原生工具条按键：布局（唯一定义处，CaptureForm 不再声明） */
 .inspector-workbench :deep(.action-btn) {
-  display: inline-flex; align-items: center; gap: var(--app-space-xs);
-  font-size: var(--app-size-xs); padding: var(--app-space-xs) 12px;
-  cursor: pointer; font-family: inherit; white-space: nowrap; flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+  font-size: var(--app-size-xs);
+  padding: var(--app-space-xs) 12px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* 几何与状态：原生按键与弹窗按键共用 */
@@ -246,7 +271,9 @@ function onSaveToElementsClick() {
 
 /* 表纸线型登记（frontend-doodle-sketch-table）：设备管理页与检查器均为实线，
    宽度与颜色仍取共享令牌 --comp-sheet-border，这里只覆写 border-style */
-.inspector-workbench :deep(.sketch-sheet) { border-style: solid; }
+.inspector-workbench :deep(.sketch-sheet) {
+  border-style: solid;
+}
 
 /* 设备选择框：触发键与下拉浮层都是白底、无阴影。边框仍用墨线。
    浮层默认传送到 body，用 popper-class 才能打到；选项文案由 CaptureForm 的 label 提供。 */
@@ -269,7 +296,9 @@ function onSaveToElementsClick() {
 }
 
 /* 可用按键：统一天蓝底（可点击） —— 布局规则已在前，这里只补底色 */
-.inspector-workbench :deep(.action-btn) { background: var(--c-workflow); }
+.inspector-workbench :deep(.action-btn) {
+  background: var(--c-workflow);
+}
 
 /* 不可用按键（灰键）：灰底 + 撤掉位移阴影 + opacity 保持 1，与可用态仅靠底色区分。
    注意必须带与皮肤同源的 :not() 守卫：否则本规则特异性 (0,3,0) 低于皮肤的 (0,4,0)，

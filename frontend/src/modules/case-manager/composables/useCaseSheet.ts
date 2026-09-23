@@ -1,22 +1,16 @@
 /** useCaseSheet — Excel 多行用例加载 / 新建行 / 保存 / 删除 */
-import { computed, ref, watch } from 'vue'
-import { onBeforeRouteLeave } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { formatApiError } from '@/shared/api-client'
+import { computed, ref, watch } from "vue"
+import { onBeforeRouteLeave } from "vue-router"
+import { ElMessage, ElMessageBox } from "element-plus"
+import { formatApiError } from "@/shared/api-client"
 import {
   createDefinition,
   deleteDefinition,
   getFileSheet,
   updateDefinition,
   updateFile,
-} from '../api'
-import type {
-  BusinessType,
-  CaseDefinition,
-  CaseFileMeta,
-  SheetRowDraft,
-  TestType,
-} from '../types'
+} from "../api"
+import type { BusinessType, CaseDefinition, CaseFileMeta, SheetRowDraft, TestType } from "../types"
 
 let tempSeq = 0
 
@@ -24,14 +18,14 @@ export function emptySheetRow(): SheetRowDraft {
   tempSeq += 1
   return {
     id: `temp-${Date.now()}-${tempSeq}`,
-    title: '',
-    test_type: 'app',
-    business_type: 'appliance',
-    module: '',
-    precondition: '',
-    steps: '',
-    expected_result: '',
-    updated_at: '',
+    title: "",
+    test_type: "app",
+    business_type: "appliance",
+    module: "",
+    precondition: "",
+    steps: "",
+    expected_result: "",
+    updated_at: "",
     dirty: true,
     isNew: true,
   }
@@ -54,9 +48,9 @@ function toDraft(row: CaseDefinition): SheetRowDraft {
 }
 
 function validateRow(row: SheetRowDraft): string | null {
-  if (!row.title.trim()) return '测试标题不能为空'
-  if (!row.steps.trim()) return '执行步骤不能为空'
-  if (!row.expected_result.trim()) return '预期结果不能为空'
+  if (!row.title.trim()) return "测试标题不能为空"
+  if (!row.steps.trim()) return "执行步骤不能为空"
+  if (!row.expected_result.trim()) return "预期结果不能为空"
   return null
 }
 
@@ -82,10 +76,10 @@ export function useCaseSheet(projectId: () => number, fileId: () => number) {
         fileMeta.value = data.data.file
         rows.value = (data.data.rows || []).map(toDraft)
       } else {
-        error.value = data.message || '表格加载失败'
+        error.value = data.message || "表格加载失败"
       }
     } catch (e: unknown) {
-      error.value = formatApiError(e, '表格加载失败')
+      error.value = formatApiError(e, "表格加载失败")
     } finally {
       loading.value = false
     }
@@ -105,13 +99,13 @@ export function useCaseSheet(projectId: () => number, fileId: () => number) {
       const { data } = await updateFile(fid, { name: name.trim() })
       if (data.status && data.data) {
         fileMeta.value = data.data
-        ElMessage.success('文件名已更新')
+        ElMessage.success("文件名已更新")
         return true
       }
-      ElMessage.error(data.message || '重命名失败')
+      ElMessage.error(data.message || "重命名失败")
       return false
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '重命名失败'))
+      ElMessage.error(formatApiError(e, "重命名失败"))
       return false
     }
   }
@@ -119,7 +113,7 @@ export function useCaseSheet(projectId: () => number, fileId: () => number) {
   async function saveAll() {
     const dirtyRows = rows.value.filter((r) => r.dirty)
     if (!dirtyRows.length) {
-      ElMessage.info('没有需要保存的修改')
+      ElMessage.info("没有需要保存的修改")
       return true
     }
     for (const row of dirtyRows) {
@@ -154,7 +148,7 @@ export function useCaseSheet(projectId: () => number, fileId: () => number) {
             sort_order: rows.value.indexOf(row),
           })
           if (!data.status || !data.data) {
-            ElMessage.error(data.message || '新建行失败')
+            ElMessage.error(data.message || "新建行失败")
             return false
           }
           const idx = rows.value.findIndex((r) => r.id === row.id)
@@ -162,17 +156,17 @@ export function useCaseSheet(projectId: () => number, fileId: () => number) {
         } else {
           const { data } = await updateDefinition(row.id, body)
           if (!data.status || !data.data) {
-            ElMessage.error(data.message || '保存失败')
+            ElMessage.error(data.message || "保存失败")
             return false
           }
           const idx = rows.value.findIndex((r) => r.id === row.id)
           if (idx >= 0) rows.value[idx] = toDraft(data.data)
         }
       }
-      ElMessage.success('已保存')
+      ElMessage.success("已保存")
       return true
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '保存失败'))
+      ElMessage.error(formatApiError(e, "保存失败"))
       return false
     } finally {
       saving.value = false
@@ -185,10 +179,10 @@ export function useCaseSheet(projectId: () => number, fileId: () => number) {
       return
     }
     try {
-      await ElMessageBox.confirm(`确认删除用例「${row.title || row.id}」？`, '确认删除', {
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
-        type: 'warning',
+      await ElMessageBox.confirm(`确认删除用例「${row.title || row.id}」？`, "确认删除", {
+        confirmButtonText: "删除",
+        cancelButtonText: "取消",
+        type: "warning",
       })
     } catch {
       return
@@ -197,22 +191,22 @@ export function useCaseSheet(projectId: () => number, fileId: () => number) {
       const { data } = await deleteDefinition(row.id)
       if (data.status) {
         rows.value = rows.value.filter((r) => r.id !== row.id)
-        ElMessage.success('已删除')
+        ElMessage.success("已删除")
       } else {
-        ElMessage.error(data.message || '删除失败')
+        ElMessage.error(data.message || "删除失败")
       }
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '删除失败'))
+      ElMessage.error(formatApiError(e, "删除失败"))
     }
   }
 
   onBeforeRouteLeave(async () => {
     if (skipGuard.value || !isDirty.value) return true
     try {
-      await ElMessageBox.confirm('有未保存的修改，确定离开？', '提示', {
-        confirmButtonText: '离开',
-        cancelButtonText: '留下',
-        type: 'warning',
+      await ElMessageBox.confirm("有未保存的修改，确定离开？", "提示", {
+        confirmButtonText: "离开",
+        cancelButtonText: "留下",
+        type: "warning",
       })
       return true
     } catch {

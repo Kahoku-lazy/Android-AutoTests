@@ -6,9 +6,9 @@
  */
 defineProps({
   tabs: { type: Array, required: true },
-  modelValue: { type: String, default: 'all' },
+  modelValue: { type: String, default: "all" },
 })
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(["update:modelValue"])
 </script>
 
 <template>
@@ -28,19 +28,34 @@ const emit = defineEmits(['update:modelValue'])
 </template>
 
 <style scoped>
-.filter-tabs { display: flex; gap: var(--app-space-xs); flex-wrap: wrap; }
+.filter-tabs {
+  display: flex;
+  gap: var(--app-space-xs);
+  flex-wrap: wrap;
+}
 .filter-tab {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 14px; font-size: var(--app-size-xs); font-weight: 700;
-  color: var(--app-text-secondary); background: var(--app-bg-card);
-  border: 1px solid var(--app-border-light); border-radius: var(--app-radius-pill);
-  cursor: pointer; font-family: inherit; transition: all var(--app-duration);
+  padding: 5px 14px;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--app-text-secondary);
+  background: var(--app-bg-card);
+  border: 1px solid var(--app-border-light);
+  border-radius: var(--app-radius-pill);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all var(--app-duration);
 }
-.filter-tab:hover { color: var(--ink); border-color: var(--app-border-lighter); }
+.filter-tab:hover {
+  color: var(--ink);
+  border-color: var(--app-border-lighter);
+}
 .filter-tab.active {
-  color: var(--ink); background: var(--app-bg-subtle); border-color: var(--ink);
+  color: var(--ink);
+  background: var(--app-bg-subtle);
+  border-color: var(--ink);
 }
 .filter-tab-count {
   font-family: var(--app-font-mono);

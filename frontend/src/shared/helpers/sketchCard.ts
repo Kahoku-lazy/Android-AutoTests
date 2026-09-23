@@ -3,14 +3,14 @@
  * 令牌来自 tokens.css 的 8 个 --c-*，不写字面量色。
  */
 export const SKETCH_TONES = [
-  'var(--c-dashboard)',
-  'var(--c-device)',
-  'var(--c-element)',
-  'var(--c-case)',
-  'var(--c-runner)',
-  'var(--c-report)',
-  'var(--c-ai)',
-  'var(--c-workflow)',
+  "var(--c-dashboard)",
+  "var(--c-device)",
+  "var(--c-element)",
+  "var(--c-case)",
+  "var(--c-runner)",
+  "var(--c-report)",
+  "var(--c-ai)",
+  "var(--c-workflow)",
 ] as const
 
 /** 对齐 principles 卡的 ±0.6°~1.5° 倾角循环 */

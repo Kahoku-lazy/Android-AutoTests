@@ -7,15 +7,15 @@
  *
  * 组件只做渲染与事件绑定，本文件承载状态与判定，避免 LocatorTree.vue 超过 500 行。
  */
-import { computed, onBeforeUnmount, ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import type { LocatorFileKind, LocatorTreeNode } from '../types'
-import type { LocatorMoveItem } from '../api'
+import { computed, onBeforeUnmount, ref } from "vue"
+import { ElMessage } from "element-plus"
+import type { LocatorFileKind, LocatorTreeNode } from "../types"
+import type { LocatorMoveItem } from "../api"
 
 /** el-tree 需要的扁平节点（key 稳定，与后端 id 解耦） */
 export interface UiTreeNode {
   key: string
-  type: 'directory' | 'file'
+  type: "directory" | "file"
   id: number
   name: string
   kind?: LocatorFileKind
@@ -29,26 +29,26 @@ export const TOUCH_LONG_PRESS_MS = 1000
 const TOUCH_SCROLL_TOLERANCE_PX = 8
 
 /** 命中测试用的 DOM 标记：行 / 项目根落点 */
-const NODE_ROW_SELECTOR = '[data-node-key]'
-const ROOT_DROP_SELECTOR = '[data-root-drop]'
-const NODE_ATTR = 'data-node-key'
+const NODE_ROW_SELECTOR = "[data-node-key]"
+const ROOT_DROP_SELECTOR = "[data-root-drop]"
+const NODE_ATTR = "data-node-key"
 
 /** el-tree 的落点类型：只接受 inner（放进目录） */
-const DROP_TYPE_INNER = 'inner'
+const DROP_TYPE_INNER = "inner"
 
 export function toUiNodes(nodes: LocatorTreeNode[]): UiTreeNode[] {
   return nodes.map((node) =>
-    node.type === 'directory'
+    node.type === "directory"
       ? {
           key: `d-${node.id}`,
-          type: 'directory' as const,
+          type: "directory" as const,
           id: node.id,
           name: node.name,
           children: toUiNodes(node.children || []),
         }
       : {
           key: `f-${node.id}`,
-          type: 'file' as const,
+          type: "file" as const,
           id: node.id,
           name: node.name,
           kind: node.kind,
@@ -57,7 +57,7 @@ export function toUiNodes(nodes: LocatorTreeNode[]): UiTreeNode[] {
 }
 
 function moveItemOf(node: UiTreeNode): LocatorMoveItem {
-  return { kind: node.type === 'directory' ? 'directory' : 'page', id: node.id }
+  return { kind: node.type === "directory" ? "directory" : "page", id: node.id }
 }
 
 /**
@@ -141,7 +141,7 @@ export function useLocatorTreeMove(options: {
   }
 
   function allowDrop(_dragging: ElDragNode | null, drop: ElDragNode | null, type: string) {
-    return type === DROP_TYPE_INNER && asUiNode(drop)?.type === 'directory'
+    return type === DROP_TYPE_INNER && asUiNode(drop)?.type === "directory"
   }
 
   function onNodeDragStart(node: ElDragNode | null) {
@@ -156,8 +156,8 @@ export function useLocatorTreeMove(options: {
       return
     }
     // allow-drop 已挡下文件落点，node-drop 不会触发；这里补一句可操作提示
-    if (asUiNode(drop)?.type === 'file' && type === DROP_TYPE_INNER) {
-      ElMessage.warning('只能放到目录或项目根')
+    if (asUiNode(drop)?.type === "file" && type === DROP_TYPE_INNER) {
+      ElMessage.warning("只能放到目录或项目根")
     }
   }
 
@@ -165,7 +165,7 @@ export function useLocatorTreeMove(options: {
     const target = asUiNode(drop)
     const source = asUiNode(dragging) ?? draggingNode
     draggingNode = null
-    if (!source || !target || type !== DROP_TYPE_INNER || target.type !== 'directory') return
+    if (!source || !target || type !== DROP_TYPE_INNER || target.type !== "directory") return
     await submit(itemsForDrag(source), target.id)
   }
 
@@ -226,9 +226,9 @@ export function useLocatorTreeMove(options: {
       return
     }
     const row = hit?.closest(NODE_ROW_SELECTOR) ?? null
-    const node = row ? nodeIndex.value.get(row.getAttribute(NODE_ATTR) || '') : undefined
+    const node = row ? nodeIndex.value.get(row.getAttribute(NODE_ATTR) || "") : undefined
     touchOnRoot.value = false
-    touchTargetId.value = node?.type === 'directory' ? node.id : null
+    touchTargetId.value = node?.type === "directory" ? node.id : null
   }
 
   function onTouchMove(event: TouchEvent) {
@@ -265,7 +265,7 @@ export function useLocatorTreeMove(options: {
     touchOnRoot.value = false
     if (!source) return
     if (!onRoot && targetId == null) {
-      ElMessage.warning('只能放到目录或项目根')
+      ElMessage.warning("只能放到目录或项目根")
       return
     }
     await submit(itemsForDrag(source), onRoot ? null : targetId)

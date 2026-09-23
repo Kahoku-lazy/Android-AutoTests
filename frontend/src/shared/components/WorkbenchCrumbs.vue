@@ -3,8 +3,8 @@
  * WorkbenchCrumbs — L2 子页可见回退（返回芯片 + 波浪面包屑）
  * 挂在 L2 子页 `.doc-body` 顶部；祖先可点，末级马克笔且不可点。
  */
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed } from "vue"
+import { useRouter } from "vue-router"
 
 export type CrumbItem = {
   label: string
@@ -21,8 +21,8 @@ const props = withDefaults(
   }>(),
   {
     items: () => [],
-    backTo: '',
-    backLabel: '返回',
+    backTo: "",
+    backLabel: "返回",
   },
 )
 
@@ -38,13 +38,13 @@ const showBack = computed(() => Boolean(props.backTo))
 
 function goBack() {
   if (!props.backTo) return
-  emit('back')
+  emit("back")
   void router.push(props.backTo)
 }
 
 function goCrumb(item: CrumbItem) {
   if (!item.to) return
-  emit('navigate', item.to)
+  emit("navigate", item.to)
   void router.push(item.to)
 }
 </script>
@@ -52,33 +52,15 @@ function goCrumb(item: CrumbItem) {
 <template>
   <nav class="wb-crumbs" aria-label="面包屑">
     <ol v-if="crumbs.length" class="wb-crumbs__list">
-      <li
-        v-for="(item, idx) in crumbs"
-        :key="`${item.label}-${idx}`"
-        class="wb-crumbs__item"
-      >
+      <li v-for="(item, idx) in crumbs" :key="`${item.label}-${idx}`" class="wb-crumbs__item">
         <span v-if="idx > 0" class="wb-crumbs__sep" aria-hidden="true">/</span>
-        <button
-          v-if="item.to"
-          type="button"
-          class="wb-crumbs__link"
-          @click="goCrumb(item)"
-        >
+        <button v-if="item.to" type="button" class="wb-crumbs__link" @click="goCrumb(item)">
           {{ item.label }}
         </button>
-        <span
-          v-else
-          class="wb-crumbs__here"
-          aria-current="page"
-        >{{ item.label }}</span>
+        <span v-else class="wb-crumbs__here" aria-current="page">{{ item.label }}</span>
       </li>
     </ol>
-    <button
-      v-if="showBack"
-      type="button"
-      class="wb-crumbs__back"
-      @click="goBack"
-    >
+    <button v-if="showBack" type="button" class="wb-crumbs__back" @click="goBack">
       ← {{ backLabel }}
     </button>
   </nav>

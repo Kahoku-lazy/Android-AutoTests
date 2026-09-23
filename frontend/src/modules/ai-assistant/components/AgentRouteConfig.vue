@@ -1,17 +1,21 @@
 <script setup lang="ts">
-import { watch } from 'vue'
-import type { RouteConfig } from '@/shared/types/ai'
-import ModelConfigField from './ModelConfigField.vue'
+import { watch } from "vue"
+import type { RouteConfig } from "@/shared/types/ai"
+import ModelConfigField from "./ModelConfigField.vue"
 
 defineProps<{ label: string; disabled?: boolean }>()
 const config = defineModel<RouteConfig>({ required: true })
 
-watch(config, (c) => {
-  if (!c) return
-  if (!c.planner) c.planner = {}
-  if (!c.executor) c.executor = {}
-  if (!c.verifier) c.verifier = {}
-}, { immediate: true, deep: true })
+watch(
+  config,
+  (c) => {
+    if (!c) return
+    if (!c.planner) c.planner = {}
+    if (!c.executor) c.executor = {}
+    if (!c.verifier) c.verifier = {}
+  },
+  { immediate: true, deep: true },
+)
 </script>
 
 <template>
@@ -24,5 +28,7 @@ watch(config, (c) => {
 </template>
 
 <style scoped>
-.route-config { gap: 18px; }
+.route-config {
+  gap: 18px;
+}
 </style>

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
-import { staggerReveal } from '@/shared/animations'
-import DoodleBtn from '@/shared/components/DoodleBtn.vue'
-import { fetchRecentActivities } from '../api'
-import type { ActivityItem } from '@/shared/types/dashboard'
+import { ref, computed, onMounted, nextTick, watch } from "vue"
+import { staggerReveal } from "@/shared/animations"
+import DoodleBtn from "@/shared/components/DoodleBtn.vue"
+import { fetchRecentActivities } from "../api"
+import type { ActivityItem } from "@/shared/types/dashboard"
 
 /** 主屏最多展示条数；与后端缺省 limit、十条槽位一致 */
 const BOARD_LIMIT = 10
@@ -22,7 +22,7 @@ const boardItems = computed(() => props.items.slice(0, BOARD_LIMIT))
 async function revealItems() {
   await nextTick()
   if (!listRef.value) return
-  const children = listRef.value.querySelectorAll('.timeline-item')
+  const children = listRef.value.querySelectorAll(".timeline-item")
   if (children.length) staggerReveal(children, 100, 0.95)
 }
 
@@ -49,7 +49,7 @@ async function loadHistoryPage(reset: boolean) {
     if (seq !== historyReqSeq) return
     const body = res.data
     if (!body?.status) {
-      historyError.value = body?.message || '历史活动加载失败'
+      historyError.value = body?.message || "历史活动加载失败"
       if (reset) historyItems.value = []
       historyHasMore.value = false
       return
@@ -60,7 +60,7 @@ async function loadHistoryPage(reset: boolean) {
     historyHasMore.value = page.length >= HISTORY_PAGE
   } catch {
     if (seq !== historyReqSeq) return
-    historyError.value = '历史活动加载失败，请稍后重试'
+    historyError.value = "历史活动加载失败，请稍后重试"
     if (reset) historyItems.value = []
     historyHasMore.value = false
   } finally {
@@ -108,7 +108,9 @@ defineExpose({ openHistory, loadMoreHistory, historyItems, historyHasMore })
           </div>
           <p v-if="item.detail" class="timeline-item__detail">{{ item.detail }}</p>
           <div v-if="item.tags" class="timeline-item__tags">
-            <span v-for="(tag, ti) in item.tags" :key="ti" class="timeline-item__tag">{{ tag }}</span>
+            <span v-for="(tag, ti) in item.tags" :key="ti" class="timeline-item__tag">{{
+              tag
+            }}</span>
           </div>
         </div>
         <div v-if="i < boardItems.length - 1" class="timeline-item__line"></div>
@@ -119,13 +121,7 @@ defineExpose({ openHistory, loadMoreHistory, historyItems, historyHasMore })
       </div>
     </div>
 
-    <el-dialog
-      v-model="historyOpen"
-      title="活动历史"
-      width="560px"
-      append-to-body
-      destroy-on-close
-    >
+    <el-dialog v-model="historyOpen" title="活动历史" width="560px" append-to-body destroy-on-close>
       <div v-if="historyError" class="timeline-history__error">{{ historyError }}</div>
       <div v-else-if="!historyItems.length && !historyLoading" class="timeline-history__empty">
         没有更多历史记录
@@ -208,7 +204,9 @@ defineExpose({ openHistory, loadMoreHistory, historyItems, historyHasMore })
   opacity: 0;
 }
 
-.timeline-item:last-child { padding-bottom: 0; }
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
 
 .timeline-item__dot {
   position: absolute;
@@ -226,8 +224,12 @@ defineExpose({ openHistory, loadMoreHistory, historyItems, historyHasMore })
 }
 
 /* 事件类型样式（PRD §2.3）：run=测试执行→紫，agent=智能体更新→黄；枚举外值用默认灰 */
-.timeline-item--run .timeline-item__dot { border-color: var(--app-status-purple); }
-.timeline-item--agent .timeline-item__dot { border-color: var(--c-dashboard); }
+.timeline-item--run .timeline-item__dot {
+  border-color: var(--app-status-purple);
+}
+.timeline-item--agent .timeline-item__dot {
+  border-color: var(--c-dashboard);
+}
 
 .timeline-item__dot-inner {
   width: 5px;
@@ -235,8 +237,12 @@ defineExpose({ openHistory, loadMoreHistory, historyItems, historyHasMore })
   border-radius: 50%;
   background: var(--app-timeline-dot);
 }
-.timeline-item--run .timeline-item__dot-inner { background: var(--app-status-purple); }
-.timeline-item--agent .timeline-item__dot-inner { background: var(--c-dashboard); }
+.timeline-item--run .timeline-item__dot-inner {
+  background: var(--app-status-purple);
+}
+.timeline-item--agent .timeline-item__dot-inner {
+  background: var(--c-dashboard);
+}
 
 .timeline-item__line {
   position: absolute;
@@ -245,7 +251,13 @@ defineExpose({ openHistory, loadMoreHistory, historyItems, historyHasMore })
   bottom: 0;
   width: 2px;
   border-radius: 2px;
-  background: repeating-linear-gradient(0deg, var(--app-border-light) 0px, var(--app-border-light) 3px, transparent 3px, transparent 6px);
+  background: repeating-linear-gradient(
+    0deg,
+    var(--app-border-light) 0px,
+    var(--app-border-light) 3px,
+    transparent 3px,
+    transparent 6px
+  );
 }
 
 .timeline-item__content {

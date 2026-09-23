@@ -1,9 +1,9 @@
 /** Device-Pool API — 设备管理 HTTP 调用（8 端点，DRF {status,data} 信封） */
-import client from '@/shared/api-client'
-import type { DeviceListResponse, ScanResponse, DeviceOpResponse } from '@/shared/types/device'
+import client from "@/shared/api-client"
+import type { DeviceListResponse, ScanResponse, DeviceOpResponse } from "@/shared/types/device"
 
 export function apiListDevices() {
-  return client.get<DeviceListResponse>('/devices/')
+  return client.get<DeviceListResponse>("/devices/")
 }
 
 export type DeviceScanBody = {
@@ -13,14 +13,14 @@ export type DeviceScanBody = {
 }
 
 export function apiScanDevices(body?: string | DeviceScanBody) {
-  if (typeof body === 'string') {
-    return client.post<ScanResponse>('/devices/scan/', body ? { target: body } : {})
+  if (typeof body === "string") {
+    return client.post<ScanResponse>("/devices/scan/", body ? { target: body } : {})
   }
   const payload: DeviceScanBody = {}
   if (body?.target) payload.target = body.target
   if (body?.pair_port) payload.pair_port = body.pair_port
   if (body?.pair_code) payload.pair_code = body.pair_code
-  return client.post<ScanResponse>('/devices/scan/', payload)
+  return client.post<ScanResponse>("/devices/scan/", payload)
 }
 
 export function apiConnectDevice(serial: string, { activate = true }: { activate?: boolean } = {}) {
@@ -44,5 +44,5 @@ export function apiDisconnect(serial: string) {
 }
 
 export function apiHeartbeat() {
-  return client.get('/devices/heartbeat/')
+  return client.get("/devices/heartbeat/")
 }

@@ -3,41 +3,41 @@
  * 文件详情页：从目录树点进后全屏查看/编辑。
  * Android 页面 → 元素表；Web/API → 表单。
  */
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
-import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import SkeletonCard from '@/shared/components/patterns/SkeletonCard.vue'
-import LocatorFilePanel from './components/LocatorFilePanel.vue'
-import { apiDeletePage, getLocatorProjectTree } from './api'
-import { formatApiError } from '@/shared/api-client'
+import { computed, onMounted, ref, watch } from "vue"
+import { useRoute, useRouter } from "vue-router"
+import { ElMessage } from "element-plus"
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
+import LocatorFilePanel from "./components/LocatorFilePanel.vue"
+import { apiDeletePage, getLocatorProjectTree } from "./api"
+import { formatApiError } from "@/shared/api-client"
 import {
   FILE_KIND_BY_CODE,
   isLocatorProjectCode,
   type LocatorFileNode,
   type LocatorTreeNode,
-} from './types'
+} from "./types"
 
 const route = useRoute()
 const router = useRouter()
 
-const projectCode = computed(() => String(route.params.code || ''))
+const projectCode = computed(() => String(route.params.code || ""))
 const fileId = computed(() => {
   const raw = Number(route.params.fileId)
   return Number.isFinite(raw) && raw > 0 ? raw : null
 })
 
 const loading = ref(false)
-const error = ref('')
-const projectName = ref('')
+const error = ref("")
+const projectName = ref("")
 const file = ref<LocatorFileNode | null>(null)
 
 function findFile(nodes: LocatorTreeNode[], id: number): LocatorFileNode | null {
   for (const node of nodes) {
-    if (node.type === 'file' && node.id === id) return node
-    if (node.type === 'directory' && node.children?.length) {
+    if (node.type === "file" && node.id === id) return node
+    if (node.type === "directory" && node.children?.length) {
       const found = findFile(node.children, id)
       if (found) return found
     }
@@ -47,16 +47,16 @@ function findFile(nodes: LocatorTreeNode[], id: number): LocatorFileNode | null 
 
 async function loadFileMeta() {
   if (fileId.value == null || !isLocatorProjectCode(projectCode.value)) {
-    error.value = '无效的文件地址'
+    error.value = "无效的文件地址"
     file.value = null
     return
   }
   loading.value = true
-  error.value = ''
+  error.value = ""
   try {
     const { data } = await getLocatorProjectTree(projectCode.value)
     if (!data.status || !data.data) {
-      error.value = data.message || '加载失败'
+      error.value = data.message || "加载失败"
       file.value = null
       return
     }
@@ -67,7 +67,7 @@ async function loadFileMeta() {
     } else {
       // 树里暂时找不到时，用项目默认 kind 兜底，面板仍可按 id 拉详情
       file.value = {
-        type: 'file',
+        type: "file",
         id: fileId.value,
         name: `文件 #${fileId.value}`,
         kind: FILE_KIND_BY_CODE[projectCode.value],
@@ -75,7 +75,7 @@ async function loadFileMeta() {
       }
     }
   } catch (e: unknown) {
-    error.value = formatApiError(e as never, '加载失败')
+    error.value = formatApiError(e as never, "加载失败")
     file.value = null
   } finally {
     loading.value = false
@@ -90,19 +90,19 @@ async function onDeleteFile(payload: { fileId: number }) {
   try {
     const { data } = await apiDeletePage(payload.fileId)
     if (!data.status) {
-      ElMessage.error(data.message || '删除失败')
+      ElMessage.error(data.message || "删除失败")
       return
     }
-    ElMessage.success('文件已删除')
+    ElMessage.success("文件已删除")
     await goBackToTree()
   } catch (e: unknown) {
-    ElMessage.error(formatApiError(e as never, '删除失败'))
+    ElMessage.error(formatApiError(e as never, "删除失败"))
   }
 }
 
-const headerTitle = computed(() => file.value?.name || '文件详情')
+const headerTitle = computed(() => file.value?.name || "文件详情")
 const headerSubtitle = computed(() =>
-  projectName.value ? `${projectName.value} · 元素详情` : '元素详情',
+  projectName.value ? `${projectName.value} · 元素详情` : "元素详情",
 )
 
 watch(

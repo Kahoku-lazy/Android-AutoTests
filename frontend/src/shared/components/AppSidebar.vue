@@ -1,14 +1,14 @@
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { animate } from 'animejs'
-import { sidebarNavEnter } from '../animations'
-import { NAV_CATEGORIES, MOD_COLORS } from './sidebarNavConfig'
-import { useSidebarResize } from '../composables/useSidebarResize'
-import { clearSession, getUsername } from '@/shared/auth/token-storage'
-import { logout as logoutApi } from '@/shared/api/auth'
-import AnimatedMascot from './AnimatedMascot.vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from "vue"
+import { useRouter, useRoute } from "vue-router"
+import { ElMessage } from "element-plus"
+import { animate } from "animejs"
+import { sidebarNavEnter } from "../animations"
+import { NAV_CATEGORIES, MOD_COLORS } from "./sidebarNavConfig"
+import { useSidebarResize } from "../composables/useSidebarResize"
+import { clearSession, getUsername } from "@/shared/auth/token-storage"
+import { logout as logoutApi } from "@/shared/api/auth"
+import AnimatedMascot from "./AnimatedMascot.vue"
 
 const router = useRouter()
 const route = useRoute()
@@ -24,21 +24,27 @@ async function logout() {
     const data = e?.response?.data
     // Redis 不可用：保留本地登录态，提示稍后重试
     if (e?.response?.status === 503 && data?.retry) {
-      ElMessage.warning(data.message || '服务暂时异常，请稍后重试')
+      ElMessage.warning(data.message || "服务暂时异常，请稍后重试")
       return
     }
     // 其它失败（网络/已失效）：仍清本地，避免用户卡在已失效会话
   }
   clearSession()
-  router.push('/login')
+  router.push("/login")
 }
 
 const {
-  sidebarWidth, isResizing, collapsed,
-  applySidebarWidth, toggleCollapsed,
-  onSidebarResizeStart, onSidebarResizeMove, onSidebarResizeEnd,
-  resetSidebarWidth, initSidebarWidth,
-} = useSidebarResize();
+  sidebarWidth,
+  isResizing,
+  collapsed,
+  applySidebarWidth,
+  toggleCollapsed,
+  onSidebarResizeStart,
+  onSidebarResizeMove,
+  onSidebarResizeEnd,
+  resetSidebarWidth,
+  initSidebarWidth,
+} = useSidebarResize()
 
 const categories = NAV_CATEGORIES
 
@@ -46,7 +52,7 @@ const categories = NAV_CATEGORIES
 const expandedGroups = ref(new Set())
 
 function isActive(path) {
-  return route.path === path || route.path.startsWith(path + '/')
+  return route.path === path || route.path.startsWith(path + "/")
 }
 
 function isGroupActive(item) {
@@ -101,26 +107,26 @@ watch(
 
 onMounted(async () => {
   initSidebarWidth()
-  window.addEventListener('mousemove', onSidebarResizeMove)
-  window.addEventListener('mouseup', onSidebarResizeEnd)
+  window.addEventListener("mousemove", onSidebarResizeMove)
+  window.addEventListener("mouseup", onSidebarResizeEnd)
   await nextTick()
   // Lucide icons render
   if (window.lucide) window.lucide.createIcons()
-  sidebarNavEnter('.sidebar-menu__item')
+  sidebarNavEnter(".sidebar-menu__item")
 
   // Brand entrance — restrained geometric reveal
-  animate('.sidebar__brand', {
+  animate(".sidebar__brand", {
     opacity: [0, 1],
     duration: 400,
-    ease: 'outCubic',
+    ease: "outCubic",
   })
 })
 
 onUnmounted(() => {
-  window.removeEventListener('mousemove', onSidebarResizeMove)
-  window.removeEventListener('mouseup', onSidebarResizeEnd)
-  document.body.style.cursor = ''
-  document.body.style.userSelect = ''
+  window.removeEventListener("mousemove", onSidebarResizeMove)
+  window.removeEventListener("mouseup", onSidebarResizeEnd)
+  document.body.style.cursor = ""
+  document.body.style.userSelect = ""
 })
 </script>
 
@@ -131,7 +137,11 @@ onUnmounted(() => {
     :class="{ 'sidebar--resizing': isResizing, 'sidebar--collapsed': collapsed }"
   >
     <!-- 头部品牌（高度与主区 wb-header 底边对齐） -->
-    <router-link to="/dashboard" class="sidebar__header" :title="collapsed ? 'AI 自动化测试平台' : ''">
+    <router-link
+      to="/dashboard"
+      class="sidebar__header"
+      :title="collapsed ? 'AI 自动化测试平台' : ''"
+    >
       <span class="brand-mark" aria-hidden="true">AI</span>
       <div v-show="!collapsed" class="sidebar__brand">
         <span class="brand-title">自动化测试平台</span>
@@ -141,10 +151,7 @@ onUnmounted(() => {
     <!-- 导航菜单 -->
     <nav class="sidebar__nav">
       <div v-for="cat in categories" :key="cat.key" class="sidebar__group">
-        <div
-          v-if="cat.label && !collapsed"
-          class="sidebar__group-label"
-        >{{ cat.label }}</div>
+        <div v-if="cat.label && !collapsed" class="sidebar__group-label">{{ cat.label }}</div>
         <div class="nav-section-items">
           <template v-for="item in cat.items" :key="item.path">
             <!-- 可展开分组：父项（展开/收起） + 子项 -->
@@ -158,19 +165,35 @@ onUnmounted(() => {
                 :title="collapsed ? item.label : ''"
                 @click="onGroupClick(item)"
               >
-                <span class="nav-ico"><i :data-lucide="item.icon" class="nav-lucide-icon"></i></span>
+                <span class="nav-ico"
+                  ><i :data-lucide="item.icon" class="nav-lucide-icon"></i
+                ></span>
                 <span v-show="!collapsed" class="sidebar-menu__label">{{ item.label }}</span>
-                <span v-show="!collapsed" class="sidebar-menu__chevron" :class="{ open: isGroupExpanded(item) }">▾</span>
+                <span
+                  v-show="!collapsed"
+                  class="sidebar-menu__chevron"
+                  :class="{ open: isGroupExpanded(item) }"
+                  >▾</span
+                >
               </button>
               <div v-show="isGroupExpanded(item) && !collapsed" class="sidebar-menu__sub">
                 <router-link
                   v-for="sub in item.children"
                   :key="sub.path"
                   :to="sub.path"
-                  :class="['sidebar-menu__item', 'sidebar-menu__item--sub', { active: isActive(sub.path) }]"
-                  :style="{ '--mod-color': MOD_COLORS[sub.path] || MOD_COLORS[item.path] || 'var(--c-workflow)' }"
+                  :class="[
+                    'sidebar-menu__item',
+                    'sidebar-menu__item--sub',
+                    { active: isActive(sub.path) },
+                  ]"
+                  :style="{
+                    '--mod-color':
+                      MOD_COLORS[sub.path] || MOD_COLORS[item.path] || 'var(--c-workflow)',
+                  }"
                 >
-                  <span class="nav-ico nav-ico--sub"><i :data-lucide="sub.icon" class="nav-lucide-icon nav-lucide-icon--sub"></i></span>
+                  <span class="nav-ico nav-ico--sub"
+                    ><i :data-lucide="sub.icon" class="nav-lucide-icon nav-lucide-icon--sub"></i
+                  ></span>
                   <span class="sidebar-menu__label">{{ sub.label }}</span>
                 </router-link>
               </div>
@@ -189,7 +212,8 @@ onUnmounted(() => {
               <span
                 v-if="(item.isDev || item.badge) && !collapsed"
                 :class="['sidebar-menu__badge', item.badgeClass || 'sidebar-menu__badge--dev']"
-              >{{ item.badge || '开发中' }}</span>
+                >{{ item.badge || "开发中" }}</span
+              >
             </router-link>
           </template>
         </div>
@@ -201,7 +225,12 @@ onUnmounted(() => {
       <div class="sidebar__user-card">
         <div class="sidebar__user-display" :title="collapsed ? activeAccount : ''">
           <AnimatedMascot :size="18" />
-          <span v-show="!collapsed" class="sidebar__user-name" data-testid="sidebar-active-account">{{ activeAccount }}</span>
+          <span
+            v-show="!collapsed"
+            class="sidebar__user-name"
+            data-testid="sidebar-active-account"
+            >{{ activeAccount }}</span
+          >
         </div>
         <div v-show="!collapsed" class="sidebar__user-row">
           <div class="sidebar__user-status">● 在线</div>
@@ -232,7 +261,7 @@ onUnmounted(() => {
         :title="collapsed ? '展开侧边栏' : '收起侧边栏'"
         @click.stop="toggleCollapsed"
       >
-        {{ collapsed ? '›' : '‹' }}
+        {{ collapsed ? "›" : "‹" }}
       </button>
     </div>
 

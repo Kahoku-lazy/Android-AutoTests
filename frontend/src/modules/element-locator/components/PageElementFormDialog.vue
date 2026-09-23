@@ -4,31 +4,31 @@
  * 另加去重键 resource-id 与坐标（至少填一个）。
  * 校验规则与后端 element_fields.py 同口径，见 helpers/elementRowValidation.ts。
  */
-import { reactive, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import type { PageElementFields } from '../api'
+import { reactive, watch } from "vue"
+import { ElMessage } from "element-plus"
+import type { PageElementFields } from "../api"
 import {
   validateAlias,
   validateBounds,
   validateText,
   type TextField,
-} from '../helpers/elementRowValidation'
+} from "../helpers/elementRowValidation"
 
 const props = defineProps<{ modelValue: boolean }>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
-  confirm: [fields: PageElementFields]
+  "update:modelValue": [value: boolean]
+  "confirm": [fields: PageElementFields]
 }>()
 
 function emptyForm() {
   return {
-    alias: '',
-    resource_id: '',
-    bounds: '',
-    text_val: '',
-    primary_xpath: '',
-    notes: '',
+    alias: "",
+    resource_id: "",
+    bounds: "",
+    text_val: "",
+    primary_xpath: "",
+    notes: "",
     is_test_point: false,
   }
 }
@@ -51,10 +51,10 @@ function clearErrors() {
 
 function limitedTextPairs(): Array<[TextField, string]> {
   return [
-    ['alias', form.alias],
-    ['text_val', form.text_val],
-    ['primary_xpath', form.primary_xpath],
-    ['resource_id', form.resource_id],
+    ["alias", form.alias],
+    ["text_val", form.text_val],
+    ["primary_xpath", form.primary_xpath],
+    ["resource_id", form.resource_id],
   ]
 }
 
@@ -63,7 +63,7 @@ function validate(): boolean {
   const aliasReason = validateAlias(form.alias)
   if (aliasReason) errors.alias = aliasReason
   if (!form.resource_id.trim() && !form.bounds.trim()) {
-    errors.resource_id = 'resource-id 与坐标至少填一个'
+    errors.resource_id = "resource-id 与坐标至少填一个"
   }
   if (form.bounds.trim()) {
     const reason = validateBounds(form.bounds)
@@ -78,12 +78,12 @@ function validate(): boolean {
 }
 
 function close() {
-  emit('update:modelValue', false)
+  emit("update:modelValue", false)
 }
 
 function confirm() {
   if (!validate()) {
-    ElMessage.warning('请先修正标红的字段')
+    ElMessage.warning("请先修正标红的字段")
     return
   }
   const fields: PageElementFields = { is_test_point: form.is_test_point }
@@ -93,7 +93,7 @@ function confirm() {
   if (form.resource_id.trim()) fields.resource_id = form.resource_id.trim()
   if (form.bounds.trim()) fields.bounds = form.bounds.trim()
   if (form.notes) fields.notes = form.notes
-  emit('confirm', fields)
+  emit("confirm", fields)
 }
 </script>
 
@@ -105,7 +105,9 @@ function confirm() {
     :close-on-click-modal="false"
     @update:model-value="emit('update:modelValue', $event)"
   >
-    <p class="element-form__hint">元素名称必填；resource-id 与坐标至少填一个（二者用于识别同一元素）。</p>
+    <p class="element-form__hint">
+      元素名称必填；resource-id 与坐标至少填一个（二者用于识别同一元素）。
+    </p>
     <el-form label-position="top" class="element-form">
       <el-form-item label="元素名称" required :error="errors.alias">
         <el-input v-model="form.alias" maxlength="500" placeholder="元素名称" />
@@ -120,7 +122,10 @@ function confirm() {
         <el-input v-model="form.text_val" maxlength="2000" />
       </el-form-item>
       <el-form-item label="主定位" class="element-form__wide" :error="errors.primary_xpath">
-        <el-input v-model="form.primary_xpath" placeholder="//android.widget.TextView[@text='登录']" />
+        <el-input
+          v-model="form.primary_xpath"
+          placeholder="//android.widget.TextView[@text='登录']"
+        />
       </el-form-item>
       <el-form-item label="备注" class="element-form__wide">
         <el-input v-model="form.notes" type="textarea" :rows="2" />

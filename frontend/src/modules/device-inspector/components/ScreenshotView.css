@@ -4,9 +4,9 @@
   width: 100%;
   background: var(--app-bg-card);
   /* 本组件私有色值登记：图钉落影与快照图片阴影（消费元素都在本根类之内） */
-  --screenshot-pin-shadow-color: var(--color-ink-05-a10) /* -> --color-ink-05-a10 */;  /* 顶部图钉的落影 */
-  --screenshot-img-shadow-color: var(--color-ink-05-a10) /* -> --color-ink-05-a10 */;  /* 快照图片的浮动阴影 */
-  
+  --screenshot-pin-shadow-color: var(--color-ink-05-a10) /* -> --color-ink-05-a10 */; /* 顶部图钉的落影 */
+  --screenshot-img-shadow-color: var(--color-ink-05-a10) /* -> --color-ink-05-a10 */; /* 快照图片的浮动阴影 */
+
   border-radius: var(--app-radius-md);
   border: 1px solid var(--ink);
   display: flex;
@@ -16,11 +16,19 @@
   padding-top: 6px;
 }
 .screenshot-panel::before {
-  content: '';
+  content: "";
   position: absolute;
-  top: 4px; left: 50%; transform: translateX(-50%);
-  width: 9px; height: 9px;
-  background: radial-gradient(circle, var(--app-pushpin-light) 30%, var(--app-pushpin-mid) 60%, var(--app-pushpin-dark) 100%);
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 9px;
+  height: 9px;
+  background: radial-gradient(
+    circle,
+    var(--app-pushpin-light) 30%,
+    var(--app-pushpin-mid) 60%,
+    var(--app-pushpin-dark) 100%
+  );
   border-radius: 50%;
   box-shadow: 1px 2px 0 0 var(--screenshot-pin-shadow-color);
   z-index: var(--z-header);

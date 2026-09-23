@@ -29,10 +29,13 @@ export function countUpFormatted(
   decimals = 0,
 ): void {
   if (prefersReducedMotion()) {
-    el.textContent = prefix + to.toLocaleString(undefined, {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-    }) + suffix
+    el.textContent =
+      prefix +
+      to.toLocaleString(undefined, {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      }) +
+      suffix
     return
   }
   const obj = { val: from }
@@ -41,36 +44,74 @@ export function countUpFormatted(
     duration,
     ease: "outExpo",
     onUpdate: () => {
-      el.textContent = prefix + obj.val.toLocaleString(undefined, {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-      }) + suffix
+      el.textContent =
+        prefix +
+        obj.val.toLocaleString(undefined, {
+          minimumFractionDigits: decimals,
+          maximumFractionDigits: decimals,
+        }) +
+        suffix
     },
   })
 }
 
-export function sidebarNavEnter(targets: string | HTMLElement | NodeList): ReturnType<typeof animate> {
-  return runMotion(targets, { translateX: [-16, 0], opacity: [0, 1], delay: stagger(50), duration: 450, ease: "outCubic" })
+export function sidebarNavEnter(
+  targets: string | HTMLElement | NodeList,
+): ReturnType<typeof animate> {
+  return runMotion(targets, {
+    translateX: [-16, 0],
+    opacity: [0, 1],
+    delay: stagger(50),
+    duration: 450,
+    ease: "outCubic",
+  })
 }
 
-export function staggerReveal(targets: string | HTMLElement | HTMLElement[] | NodeList, delay = 80, fromScale = 0.85): ReturnType<typeof animate> {
-  return runMotion(targets, { opacity: [0, 1], scale: [fromScale, 1], translateY: [24, 0], delay: stagger(delay), duration: 600, ease: "outBack(1.5)" })
+export function staggerReveal(
+  targets: string | HTMLElement | HTMLElement[] | NodeList,
+  delay = 80,
+  fromScale = 0.85,
+): ReturnType<typeof animate> {
+  return runMotion(targets, {
+    opacity: [0, 1],
+    scale: [fromScale, 1],
+    translateY: [24, 0],
+    delay: stagger(delay),
+    duration: 600,
+    ease: "outBack(1.5)",
+  })
 }
 
 export function selectPop(el: HTMLElement): ReturnType<typeof animate> | undefined {
   if (!el) return
   el.classList.add("wb-select-ring")
   return runMotion(el, {
-    scale: [1, 1.03, 1], duration: 380, ease: "outBack(1.6)",
-    onComplete: () => { setTimeout(() => el.classList.remove("wb-select-ring"), 280) },
+    scale: [1, 1.03, 1],
+    duration: 380,
+    ease: "outBack(1.6)",
+    onComplete: () => {
+      setTimeout(() => el.classList.remove("wb-select-ring"), 280)
+    },
   })
 }
 
 export function iconBounce(el: HTMLElement): ReturnType<typeof animate> | undefined {
   if (!el) return
-  return runMotion(el, { scale: [1, 1.18, 0.92, 1.06, 1], rotate: [0, -8, 6, -3, 0], duration: 520, ease: "outCubic" })
+  return runMotion(el, {
+    scale: [1, 1.18, 0.92, 1.06, 1],
+    rotate: [0, -8, 6, -3, 0],
+    duration: 520,
+    ease: "outCubic",
+  })
 }
 
 export function loadingDots(targets: string | HTMLElement | NodeList): ReturnType<typeof animate> {
-  return runMotion(targets, { scale: [1, 1.35, 1], opacity: [0.55, 1, 0.55], delay: stagger(120), duration: 720, loop: true, ease: "inOutSine" })
+  return runMotion(targets, {
+    scale: [1, 1.35, 1],
+    opacity: [0.55, 1, 0.55],
+    delay: stagger(120),
+    duration: 720,
+    loop: true,
+    ease: "inOutSine",
+  })
 }

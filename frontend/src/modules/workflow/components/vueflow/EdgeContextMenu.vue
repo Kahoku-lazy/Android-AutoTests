@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { ElMessageBox } from 'element-plus'
+import { ref, watch } from "vue"
+import { ElMessageBox } from "element-plus"
 
 const props = defineProps<{
   show: boolean
@@ -20,7 +20,7 @@ const emit = defineEmits<{
 }>()
 
 const renaming = ref(false)
-const name = ref('')
+const name = ref("")
 const menuRef = ref<HTMLDivElement | null>(null)
 
 watch(
@@ -29,16 +29,16 @@ watch(
     if (v) {
       renaming.value = false
       name.value = props.customName
-      setTimeout(() => document.addEventListener('click', onOutside), 0)
+      setTimeout(() => document.addEventListener("click", onOutside), 0)
     } else {
-      document.removeEventListener('click', onOutside)
+      document.removeEventListener("click", onOutside)
     }
-  }
+  },
 )
 
 function onOutside(e: MouseEvent) {
   if (menuRef.value && !menuRef.value.contains(e.target as Node)) {
-    emit('close')
+    emit("close")
   }
 }
 
@@ -49,21 +49,21 @@ function startRename() {
 
 function confirmRename() {
   renaming.value = false
-  emit('rename', props.linkId, name.value.trim())
+  emit("rename", props.linkId, name.value.trim())
 }
 
 async function doDelete() {
   try {
-    await ElMessageBox.confirm(`删除连线「${props.customName || props.label}」？`, '删除确认', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
+    await ElMessageBox.confirm(`删除连线「${props.customName || props.label}」？`, "删除确认", {
+      confirmButtonText: "删除",
+      cancelButtonText: "取消",
+      type: "warning",
     })
   } catch {
     // 用户取消删除：ElMessageBox 以 reject 表示取消，不触发删除（非静默吞错）
     return
   }
-  emit('delete', props.linkId)
+  emit("delete", props.linkId)
 }
 </script>
 
@@ -148,9 +148,15 @@ async function doDelete() {
   font-family: inherit;
   transition: background var(--app-duration-fast) var(--app-ease);
 }
-.edge-menu__item:hover { background: var(--wf-edge-hover-bg); }
-.edge-menu__item.danger { color: var(--app-status-danger-text); }
-.edge-menu__item.danger:hover { background: var(--app-status-danger-bg); }
+.edge-menu__item:hover {
+  background: var(--wf-edge-hover-bg);
+}
+.edge-menu__item.danger {
+  color: var(--app-status-danger-text);
+}
+.edge-menu__item.danger:hover {
+  background: var(--app-status-danger-bg);
+}
 .edge-menu__header {
   display: flex;
   align-items: center;
@@ -171,7 +177,9 @@ async function doDelete() {
   font-weight: 700;
   line-height: 1;
 }
-.edge-menu__back:hover { background: var(--wf-edge-hover-bg); }
+.edge-menu__back:hover {
+  background: var(--wf-edge-hover-bg);
+}
 .edge-menu__input {
   margin: 0 var(--app-space-xs) 6px;
   padding: var(--app-space-sm) 10px;
@@ -183,7 +191,9 @@ async function doDelete() {
   outline: none;
   font-family: inherit;
 }
-.edge-menu__input:focus { border-color: var(--c-workflow); }
+.edge-menu__input:focus {
+  border-color: var(--c-workflow);
+}
 .edge-menu__hint {
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);

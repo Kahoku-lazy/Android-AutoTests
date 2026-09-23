@@ -12,13 +12,13 @@
  * 的祖先，就 console.warn 报出来。生产构建不加载（main.ts 里按 import.meta.env.DEV 动态 import）。
  */
 
-import type { Router } from 'vue-router'
+import type { Router } from "vue-router"
 
 /** 能滚动的 overflow 取值（overlay 为老 WebKit 写法，一并认下） */
-const SCROLLABLE_OVERFLOW = new Set(['auto', 'scroll', 'overlay'])
+const SCROLLABLE_OVERFLOW = new Set(["auto", "scroll", "overlay"])
 
 /** 会把溢出内容裁掉且自身不可滚的取值：到了这一层，内容就够不着了 */
-const CLIPPING_OVERFLOW = new Set(['hidden', 'clip'])
+const CLIPPING_OVERFLOW = new Set(["hidden", "clip"])
 
 /** 亚像素误差容忍：scrollHeight 与 clientHeight 常有 1px 内的取整差 */
 const PIXEL_TOLERANCE = 1
@@ -50,7 +50,7 @@ export interface ScrollIssue {
 function defaultGetPageRoot(): HTMLElement | null {
   // App.vue：.main-content 内是涂鸦层 + .main-content__body（策略①滚动容器），
   // 页面根是滚动容器的第一个子元素
-  return document.querySelector<HTMLElement>('.main-content__body > *')
+  return document.querySelector<HTMLElement>(".main-content__body > *")
 }
 
 function defaultGetOverflowY(element: HTMLElement): string {
@@ -64,12 +64,12 @@ function overflows(element: HTMLElement): boolean {
 
 /** 把元素写成 <div#id.a.b> 便于在控制台里一眼认出 */
 function describe(element: HTMLElement): string {
-  const id = element.id ? '#' + element.id : ''
+  const id = element.id ? "#" + element.id : ""
   const classes = Array.from(element.classList)
     .slice(0, 3)
-    .map((name) => '.' + name)
-    .join('')
-  return '<' + element.tagName.toLowerCase() + id + classes + '>'
+    .map((name) => "." + name)
+    .join("")
+  return "<" + element.tagName.toLowerCase() + id + classes + ">"
 }
 
 /**
@@ -81,7 +81,7 @@ function describe(element: HTMLElement): string {
  */
 export function detectClippedChain(
   pageRoot: HTMLElement,
-  deps: Pick<ScrollGuardDeps, 'getOverflowY'> = {},
+  deps: Pick<ScrollGuardDeps, "getOverflowY"> = {},
 ): ScrollIssue | null {
   const getOverflowY = deps.getOverflowY ?? defaultGetOverflowY
   const describeAt = (element: HTMLElement): ScrollIssue => ({
@@ -110,14 +110,23 @@ export function detectClippedChain(
 }
 
 function formatIssue(issue: ScrollIssue): string {
-  const whose = issue.isPageRoot ? '页面根' : '中间容器'
+  const whose = issue.isPageRoot ? "页面根" : "中间容器"
   return (
-    '[scroll-guard] L0 契约被破：' + whose + ' ' + describe(issue.element) +
-    ' 内容高 ' + issue.scrollHeight + 'px，超出可视区 ' + issue.clientHeight + 'px，' +
-    '而 overflow-y 是 ' + issue.overflowY + '（不可滚）；祖先链上也没有滚动容器' +
-    '（html / body / #app 均为 overflow: hidden），超出一屏的部分会被静默裁掉。' +
-    '修法：让页面落在 .main-content__body（策略①）或 .doc-page--fixed 的 .doc-body（策略②）内，' +
-    '并给链上每个 flex:1 补 min-height:0。'
+    "[scroll-guard] L0 契约被破：" +
+    whose +
+    " " +
+    describe(issue.element) +
+    " 内容高 " +
+    issue.scrollHeight +
+    "px，超出可视区 " +
+    issue.clientHeight +
+    "px，" +
+    "而 overflow-y 是 " +
+    issue.overflowY +
+    "（不可滚）；祖先链上也没有滚动容器" +
+    "（html / body / #app 均为 overflow: hidden），超出一屏的部分会被静默裁掉。" +
+    "修法：让页面落在 .main-content__body（策略①）或 .doc-page--fixed 的 .doc-body（策略②）内，" +
+    "并给链上每个 flex:1 补 min-height:0。"
   )
 }
 
@@ -128,7 +137,7 @@ let installed = false
  * 同一层重复命中只告警一次，避免刷屏。
  */
 export function installScrollGuard(options: ScrollGuardOptions = {}): void {
-  if (!import.meta.env.DEV || typeof window === 'undefined') return
+  if (!import.meta.env.DEV || typeof window === "undefined") return
   if (installed) return // HMR 下 main.ts 会重复执行，装一次就够
   installed = true
 
@@ -158,7 +167,7 @@ export function installScrollGuard(options: ScrollGuardOptions = {}): void {
   }
 
   let resizeTimer: ReturnType<typeof setTimeout> | undefined
-  window.addEventListener('resize', () => {
+  window.addEventListener("resize", () => {
     clearTimeout(resizeTimer)
     resizeTimer = setTimeout(run, 300)
   })

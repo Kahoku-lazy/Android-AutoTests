@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { useDashboardView, toMillions, toK } from './DashboardView.logic'
-import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import StatsAppCard from './components/StatsCard.vue'
-import AppCard from '@/shared/components/AppCard.vue'
-import { sketchToneAt, sketchTiltAt } from '@/shared/helpers/sketchCard'
-import TrendBarChart from './components/TrendBarChart.vue'
-import SeriesBarChart from './components/SeriesBarChart.vue'
-import TaskResultPanel from './components/TaskResultPanel.vue'
-import ActivityTimeline from './components/ActivityTimeline.vue'
+import { useDashboardView, toMillions, toK } from "./DashboardView.logic"
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import StatsAppCard from "./components/StatsCard.vue"
+import AppCard from "@/shared/components/AppCard.vue"
+import { sketchToneAt, sketchTiltAt } from "@/shared/helpers/sketchCard"
+import TrendBarChart from "./components/TrendBarChart.vue"
+import SeriesBarChart from "./components/SeriesBarChart.vue"
+import TaskResultPanel from "./components/TaskResultPanel.vue"
+import ActivityTimeline from "./components/ActivityTimeline.vue"
 import {
   IconDevice,
   IconPlay,
@@ -21,7 +21,7 @@ import {
   IconTrendingUp,
   IconActivity,
   IconZap,
-} from '@/shared/icons/index'
+} from "@/shared/icons/index"
 
 const {
   loading,
@@ -57,7 +57,12 @@ const {
       :icon-gradient="PAGE_HEADER.iconGradient"
     >
       <template #actions>
-        <el-button class="wb-btn wb-btn--sunset" size="small" :loading="refreshing" @click="refreshData">
+        <el-button
+          class="wb-btn wb-btn--sunset"
+          size="small"
+          :loading="refreshing"
+          @click="refreshData"
+        >
           刷新
         </el-button>
       </template>
@@ -78,10 +83,18 @@ const {
             </div>
           </div>
           <div class="chip-row">
-            <span class="chip chip--teal">设备 <b>{{ stats.devices.total }}</b></span>
-            <span class="chip">智能体 <b>{{ stats.agents.total }}</b></span>
-            <span class="chip chip--rose">任务 <b>{{ stats.runs.total }}</b></span>
-            <span class="chip chip--yellow">工作流 <b>{{ stats.workflow.total }}</b></span>
+            <span class="chip chip--teal"
+              >设备 <b>{{ stats.devices.total }}</b></span
+            >
+            <span class="chip"
+              >智能体 <b>{{ stats.agents.total }}</b></span
+            >
+            <span class="chip chip--rose"
+              >任务 <b>{{ stats.runs.total }}</b></span
+            >
+            <span class="chip chip--yellow"
+              >工作流 <b>{{ stats.workflow.total }}</b></span
+            >
           </div>
         </header>
         <div class="dashboard__stats-grid">
@@ -220,9 +233,15 @@ const {
             </div>
           </div>
           <div class="chip-row">
-            <span class="chip chip--teal">用例 <b>{{ stats.cases.total }}</b></span>
-            <span class="chip chip--violet">元素 <b>{{ stats.elements.total }}</b></span>
-            <span class="chip">页面 <b>{{ stats.elements.pages }}</b></span>
+            <span class="chip chip--teal"
+              >用例 <b>{{ stats.cases.total }}</b></span
+            >
+            <span class="chip chip--violet"
+              >元素 <b>{{ stats.elements.total }}</b></span
+            >
+            <span class="chip"
+              >页面 <b>{{ stats.elements.pages }}</b></span
+            >
           </div>
         </header>
         <div class="asset-cols">
@@ -283,37 +302,21 @@ const {
         </header>
 
         <div class="dashboard__trends">
-          <AppCard
-            class="trends-chart-card"
-            :tone="sketchToneAt(0)"
-            :tilt="sketchTiltAt(0)"
-          >
+          <AppCard class="trends-chart-card" :tone="sketchToneAt(0)" :tilt="sketchTiltAt(0)">
             <div class="trends-tasks-card__title">助手任务卡</div>
             <TrendBarChart :chart="executionChart" />
           </AppCard>
-          <AppCard
-            class="trends-tasks-card"
-            :tone="sketchToneAt(1)"
-            :tilt="sketchTiltAt(1)"
-          >
+          <AppCard class="trends-tasks-card" :tone="sketchToneAt(1)" :tilt="sketchTiltAt(1)">
             <div class="trends-tasks-card__title">任务执行结果</div>
             <TaskResultPanel :tasks="recentTasks" :summary="executionSummary" />
           </AppCard>
         </div>
         <div class="dashboard__trends dashboard__trends--ai">
-          <AppCard
-            class="trends-chart-card"
-            :tone="sketchToneAt(2)"
-            :tilt="sketchTiltAt(2)"
-          >
+          <AppCard class="trends-chart-card" :tone="sketchToneAt(2)" :tilt="sketchTiltAt(2)">
             <div class="trends-tasks-card__title">每日 Token 用量</div>
             <SeriesBarChart :labels="aiTokenChart.labels" :series="tokenSeries" />
           </AppCard>
-          <AppCard
-            class="trends-chart-card"
-            :tone="sketchToneAt(3)"
-            :tilt="sketchTiltAt(3)"
-          >
+          <AppCard class="trends-chart-card" :tone="sketchToneAt(3)" :tilt="sketchTiltAt(3)">
             <div class="trends-tasks-card__title">每日 DeepSeek 费用（元）</div>
             <SeriesBarChart :labels="deepseekCostChart.labels" :series="costSeries" />
           </AppCard>
@@ -330,10 +333,7 @@ const {
         </div>
         <div class="dashboard__footer-item">
           <IconAlertCircle :size="14" />
-          <span
-            >系统状态:
-            {{ systemStatus === "normal" ? "正常运行" : "无设备连接" }}</span
-          >
+          <span>系统状态: {{ systemStatus === "normal" ? "正常运行" : "无设备连接" }}</span>
         </div>
       </footer>
     </div>

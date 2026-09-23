@@ -73,7 +73,9 @@
   min-width: 0;
 }
 
-.sv-node-icon { flex-shrink: 0; }
+.sv-node-icon {
+  flex-shrink: 0;
+}
 .sv-node-name {
   font-size: var(--app-size-xs);
   font-weight: 600;
@@ -142,9 +144,15 @@
   color: var(--ink);
 }
 
-.sv-md :deep(h1) { font-size: var(--app-size-lg); }
-.sv-md :deep(h2) { font-size: var(--app-size-md); }
-.sv-md :deep(h3) { font-size: var(--app-size-sm); }
+.sv-md :deep(h1) {
+  font-size: var(--app-size-lg);
+}
+.sv-md :deep(h2) {
+  font-size: var(--app-size-md);
+}
+.sv-md :deep(h3) {
+  font-size: var(--app-size-sm);
+}
 
 .sv-md :deep(p),
 .sv-md :deep(ul),

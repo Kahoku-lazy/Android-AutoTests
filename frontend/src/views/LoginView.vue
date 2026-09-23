@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from "vue"
 
-import LoginErrorOverlay from '@/views/components/LoginErrorOverlay.vue'
-import { useLoginView } from './LoginView.logic'
-import LoginCard from '@/views/components/LoginCard.vue'
-import RegisterCard from '@/views/components/RegisterCard.vue'
+import LoginErrorOverlay from "@/views/components/LoginErrorOverlay.vue"
+import { useLoginView } from "./LoginView.logic"
+import LoginCard from "@/views/components/LoginCard.vue"
+import RegisterCard from "@/views/components/RegisterCard.vue"
 
 const {
   // ── 视图状态 ──
@@ -32,13 +32,19 @@ const {
 } = useLoginView()
 
 /** Meeting doodle 标题：登录 / 注册 */
-const meetingTitle = computed(() => (viewState.value === 'register' ? '注册' : '登录'))
+const meetingTitle = computed(() => (viewState.value === "register" ? "注册" : "登录"))
 </script>
 
 <template>
   <div class="login-page" data-testid="login-page">
     <div class="login-page__doodles" aria-hidden="true">
-      <svg class="login-doodle login-doodle--swirl" width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <svg
+        class="login-doodle login-doodle--swirl"
+        width="32"
+        height="32"
+        viewBox="0 0 32 32"
+        fill="none"
+      >
         <path
           d="M16 16 Q16 10 22 10 Q28 10 28 16 Q28 24 20 24 Q10 24 10 14 Q10 6 20 6 Q30 6 30 16"
           stroke="var(--ink)"
@@ -47,11 +53,39 @@ const meetingTitle = computed(() => (viewState.value === 'register' ? '注册' :
           opacity="0.28"
         />
       </svg>
-      <svg class="login-doodle login-doodle--ring" width="56" height="56" viewBox="0 0 60 60" fill="none">
-        <circle cx="30" cy="30" r="28" stroke="var(--comp-paper-mark-brown)" stroke-width="6" fill="none" opacity="0.12" />
-        <circle cx="30" cy="30" r="22" stroke="var(--comp-paper-mark-brown)" stroke-width="1.5" fill="none" opacity="0.12" />
+      <svg
+        class="login-doodle login-doodle--ring"
+        width="56"
+        height="56"
+        viewBox="0 0 60 60"
+        fill="none"
+      >
+        <circle
+          cx="30"
+          cy="30"
+          r="28"
+          stroke="var(--comp-paper-mark-brown)"
+          stroke-width="6"
+          fill="none"
+          opacity="0.12"
+        />
+        <circle
+          cx="30"
+          cy="30"
+          r="22"
+          stroke="var(--comp-paper-mark-brown)"
+          stroke-width="1.5"
+          fill="none"
+          opacity="0.12"
+        />
       </svg>
-      <svg class="login-doodle login-doodle--star-a" width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <svg
+        class="login-doodle login-doodle--star-a"
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+      >
         <path
           d="M12 2 L13.5 9 L20 9 L14.5 13.5 L16.5 20.5 L12 16.5 L7.5 20.5 L9.5 13.5 L4 9 L10.5 9 Z"
           fill="var(--comp-paper-mark-yellow)"
@@ -60,7 +94,13 @@ const meetingTitle = computed(() => (viewState.value === 'register' ? '注册' :
           stroke-linejoin="round"
         />
       </svg>
-      <svg class="login-doodle login-doodle--star-b" width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <svg
+        class="login-doodle login-doodle--star-b"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+      >
         <path
           d="M12 2 L13.5 9 L20 9 L14.5 13.5 L16.5 20.5 L12 16.5 L7.5 20.5 L9.5 13.5 L4 9 L10.5 9 Z"
           fill="var(--comp-paper-mark-red)"
@@ -83,11 +123,7 @@ const meetingTitle = computed(() => (viewState.value === 'register' ? '注册' :
           <p class="hero__tagline">专注于创造价值</p>
         </header>
 
-        <div
-          class="hero__cta"
-          role="group"
-          aria-label="登录或注册"
-        >
+        <div class="hero__cta" role="group" aria-label="登录或注册">
           <button
             type="button"
             class="hero-cta hero-cta--primary"

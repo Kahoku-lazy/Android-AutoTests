@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import AppCard from "@/shared/components/AppCard.vue";
-import KpiCard from "@/shared/components/KpiCard.vue";
-import ErrorState from "@/shared/components/patterns/ErrorState.vue";
-import KbTreeView from "./components/KbTreeView.vue";
-import KnowledgeImportDialog from "./components/KnowledgeImportDialog.vue";
-import KnowledgePreviewDrawer from "./components/KnowledgePreviewDrawer.vue";
-import { buildKbTree, type KbTreeNode } from "./helpers/kb-tree";
+import { ref, computed, onMounted } from "vue"
+import { ElMessage } from "element-plus"
+import AppCard from "@/shared/components/AppCard.vue"
+import KpiCard from "@/shared/components/KpiCard.vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import KbTreeView from "./components/KbTreeView.vue"
+import KnowledgeImportDialog from "./components/KnowledgeImportDialog.vue"
+import KnowledgePreviewDrawer from "./components/KnowledgePreviewDrawer.vue"
+import { buildKbTree, type KbTreeNode } from "./helpers/kb-tree"
 import {
-  getKnowledgeStatus, getKnowledgeDocuments, reindexKnowledge,
-  fetchPlatformConfig, updatePlatformConfig,
-} from './api/toolbox'
+  getKnowledgeStatus,
+  getKnowledgeDocuments,
+  reindexKnowledge,
+  fetchPlatformConfig,
+  updatePlatformConfig,
+} from "./api/toolbox"
 
 const props = defineProps<{ canManage?: boolean }>()
 
@@ -20,24 +23,30 @@ const documents = ref<any[]>([])
 const loading = ref(false)
 const loadError = ref("")
 const reindexing = ref(false)
-const activeFilter = ref('all')
+const activeFilter = ref("all")
 
 // ── 平台唯一智能体的知识库配置 ──
 const kbEnabled = ref(false)
 const knowledgeSources = ref({})
 const showImportDialog = ref(false)
-const previewPath = ref('')
+const previewPath = ref("")
 
 const filters = computed(() => [
-  { key: 'all', label: `全部 (${documents.value.length})` },
-  { key: 'project_doc', label: `项目文档 (${documents.value.filter(d => d.type === 'project_doc').length})` },
-  { key: 'reference', label: `参考 (${documents.value.filter(d => d.type === 'reference').length})` },
-  { key: 'manual', label: `手动 (${documents.value.filter(d => d.type === 'manual').length})` },
+  { key: "all", label: `全部 (${documents.value.length})` },
+  {
+    key: "project_doc",
+    label: `项目文档 (${documents.value.filter((d) => d.type === "project_doc").length})`,
+  },
+  {
+    key: "reference",
+    label: `参考 (${documents.value.filter((d) => d.type === "reference").length})`,
+  },
+  { key: "manual", label: `手动 (${documents.value.filter((d) => d.type === "manual").length})` },
 ])
 
 const filteredDocs = computed(() => {
-  if (activeFilter.value === 'all') return documents.value
-  return documents.value.filter(d => d.type === activeFilter.value)
+  if (activeFilter.value === "all") return documents.value
+  return documents.value.filter((d) => d.type === activeFilter.value)
 })
 
 /** 按 data/rag_datas 相对路径构建折叠树 */
@@ -46,25 +55,33 @@ const docTree = computed(() => buildKbTree(filteredDocs.value))
 /** 已导入的引用范围（knowledge_sources → 展示项） */
 const importedDocs = computed(() => {
   const sources = knowledgeSources.value || {}
-  return Object.keys(sources).map(id => {
-    if (id.startsWith('dir:')) {
-      return { id, dirPath: id.slice(4), type: 'directory', enabled: sources[id] === true }
-    }
-    const doc = documents.value.find(d => d.id === id)
-    return doc ? { ...doc, enabled: sources[id] === true } : null
-  }).filter(Boolean)
+  return Object.keys(sources)
+    .map((id) => {
+      if (id.startsWith("dir:")) {
+        return { id, dirPath: id.slice(4), type: "directory", enabled: sources[id] === true }
+      }
+      const doc = documents.value.find((d) => d.id === id)
+      return doc ? { ...doc, enabled: sources[id] === true } : null
+    })
+    .filter(Boolean)
 })
 
 function formatSize(bytes) {
-  if (!bytes) return '0 B'
-  return bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1048576).toFixed(1)} MB`
+  if (!bytes) return "0 B"
+  return bytes < 1024
+    ? `${bytes} B`
+    : bytes < 1048576
+      ? `${(bytes / 1024).toFixed(1)} KB`
+      : `${(bytes / 1048576).toFixed(1)} MB`
 }
 
 async function fetchStatus() {
   try {
     const data = await getKnowledgeStatus()
     if (data.status) status.value = data.data
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 async function fetchDocuments() {
@@ -74,7 +91,9 @@ async function fetchDocuments() {
     if (data.status) documents.value = data.data?.documents || []
   } catch (e) {
     loadError.value = "加载文档列表失败"
-  } finally { loading.value = false }
+  } finally {
+    loading.value = false
+  }
 }
 
 async function fetchConfig() {
@@ -84,7 +103,9 @@ async function fetchConfig() {
       kbEnabled.value = !!data.data.enable_knowledge_base
       knowledgeSources.value = data.data.knowledge_sources || {}
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 async function loadAll() {
@@ -97,14 +118,19 @@ async function reindex() {
   try {
     const data = await reindexKnowledge()
     if (data.status) {
-      ElMessage.success('索引重建已开始，请稍后刷新')
-      setTimeout(() => { fetchStatus(); fetchDocuments() }, 3000)
+      ElMessage.success("索引重建已开始，请稍后刷新")
+      setTimeout(() => {
+        fetchStatus()
+        fetchDocuments()
+      }, 3000)
     } else {
-      ElMessage.error(data.message || '索引重建失败')
+      ElMessage.error(data.message || "索引重建失败")
     }
   } catch (e) {
-    ElMessage.error('索引重建请求失败')
-  } finally { reindexing.value = false }
+    ElMessage.error("索引重建请求失败")
+  } finally {
+    reindexing.value = false
+  }
 }
 
 // ── 知识库配置写操作（乐观更新 + 失败回滚） ──
@@ -112,27 +138,39 @@ async function reindex() {
 function toggleKb(val) {
   const prev = kbEnabled.value
   kbEnabled.value = val
-  updatePlatformConfig({ enable_knowledge_base: val }).then((data) => {
-    if (!data.status) { kbEnabled.value = prev; ElMessage.error(data.message || '操作失败') }
-  }).catch(() => { kbEnabled.value = prev; ElMessage.error('操作失败') })
+  updatePlatformConfig({ enable_knowledge_base: val })
+    .then((data) => {
+      if (!data.status) {
+        kbEnabled.value = prev
+        ElMessage.error(data.message || "操作失败")
+      }
+    })
+    .catch(() => {
+      kbEnabled.value = prev
+      ElMessage.error("操作失败")
+    })
 }
 
 function toggleDocEnabled(id) {
   const sources = { ...knowledgeSources.value }
   sources[id] = !(sources[id] === true)
   knowledgeSources.value = sources
-  updatePlatformConfig({ knowledge_sources: sources }).then((data) => {
-    if (!data.status) ElMessage.error(data.message || '操作失败')
-  }).catch(() => ElMessage.error('操作失败'))
+  updatePlatformConfig({ knowledge_sources: sources })
+    .then((data) => {
+      if (!data.status) ElMessage.error(data.message || "操作失败")
+    })
+    .catch(() => ElMessage.error("操作失败"))
 }
 
 function removeDoc(id) {
   const sources = { ...knowledgeSources.value }
   delete sources[id]
   knowledgeSources.value = sources
-  updatePlatformConfig({ knowledge_sources: sources }).then((data) => {
-    if (!data.status) ElMessage.error(data.message || '操作失败')
-  }).catch(() => ElMessage.error('操作失败'))
+  updatePlatformConfig({ knowledge_sources: sources })
+    .then((data) => {
+      if (!data.status) ElMessage.error(data.message || "操作失败")
+    })
+    .catch(() => ElMessage.error("操作失败"))
 }
 
 function importDocs(keys: string[]) {
@@ -141,9 +179,11 @@ function importDocs(keys: string[]) {
     if (!(id in sources)) sources[id] = true
   }
   knowledgeSources.value = sources
-  updatePlatformConfig({ knowledge_sources: sources }).then((data) => {
-    if (!data.status) ElMessage.error(data.message || '操作失败')
-  }).catch(() => ElMessage.error('操作失败'))
+  updatePlatformConfig({ knowledge_sources: sources })
+    .then((data) => {
+      if (!data.status) ElMessage.error(data.message || "操作失败")
+    })
+    .catch(() => ElMessage.error("操作失败"))
   showImportDialog.value = false
 }
 
@@ -153,10 +193,12 @@ function onImported(ids: string[]) {
 }
 
 function onOpenFile(node: KbTreeNode) {
-  if (node.type === 'file' && node.path) previewPath.value = node.path
+  if (node.type === "file" && node.path) previewPath.value = node.path
 }
 
-onMounted(() => { loadAll() })
+onMounted(() => {
+  loadAll()
+})
 </script>
 
 <template>
@@ -166,24 +208,52 @@ onMounted(() => { loadAll() })
     <!-- 状态卡片 -->
     <AppCard color="app-blue">
       <div class="kpi-row">
-        <KpiCard :value="status.doc_count ?? '—'" label="已索引文档" color="var(--c-ai)" shape="diamond" />
-        <KpiCard :value="`${status.db_size_mb ?? '—'} MB`" label="数据库大小" color="var(--c-case)" shape="triangle" />
-        <KpiCard :value="status.reindex?.last_indexed || '从未'" label="最后索引时间" color="var(--c-workflow)" shape="square">
-          <span style="font-size:var(--app-size-xs);color:var(--app-text-secondary)">YYYY-MM-DD HH:mm</span>
+        <KpiCard
+          :value="status.doc_count ?? '—'"
+          label="已索引文档"
+          color="var(--c-ai)"
+          shape="diamond"
+        />
+        <KpiCard
+          :value="`${status.db_size_mb ?? '—'} MB`"
+          label="数据库大小"
+          color="var(--c-case)"
+          shape="triangle"
+        />
+        <KpiCard
+          :value="status.reindex?.last_indexed || '从未'"
+          label="最后索引时间"
+          color="var(--c-workflow)"
+          shape="square"
+        >
+          <span style="font-size: var(--app-size-xs); color: var(--app-text-secondary)"
+            >YYYY-MM-DD HH:mm</span
+          >
         </KpiCard>
-        <KpiCard :value="status.reindex?.running ? '重建中' : '就绪'" label="状态" :color="status.reindex?.running ? 'var(--c-runner)' : 'var(--c-device)'" shape="circle" />
+        <KpiCard
+          :value="status.reindex?.running ? '重建中' : '就绪'"
+          label="状态"
+          :color="status.reindex?.running ? 'var(--c-runner)' : 'var(--c-device)'"
+          shape="circle"
+        />
       </div>
       <div class="kb-actions">
         <el-button type="primary" :loading="reindexing" @click="reindex">
-          {{ reindexing ? '重建中…' : '🔄 重建索引' }}
+          {{ reindexing ? "重建中…" : "🔄 重建索引" }}
         </el-button>
         <span class="kb-hint">扫描 data/rag_datas 下的 Markdown 并向量化索引</span>
         <div class="kb-switch">
           <span class="kb-switch-label">知识库开关</span>
-          <el-switch :model-value="kbEnabled" :disabled="!props.canManage" @update:model-value="toggleKb" />
+          <el-switch
+            :model-value="kbEnabled"
+            :disabled="!props.canManage"
+            @update:model-value="toggleKb"
+          />
         </div>
       </div>
-      <p class="kb-hint" style="margin:8px 0 0">开启后 AI 回答问题时自动检索「引用范围」内已启用的文档 / 目录。</p>
+      <p class="kb-hint" style="margin: 8px 0 0">
+        开启后 AI 回答问题时自动检索「引用范围」内已启用的文档 / 目录。
+      </p>
     </AppCard>
 
     <!-- 引用范围（平台唯一智能体的知识库文档范围） -->
@@ -191,31 +261,52 @@ onMounted(() => { loadAll() })
       <div class="kb-range-head">
         <span class="kb-range-title">引用范围</span>
         <span class="kb-range-count">{{ importedDocs.length }} 项</span>
-        <el-button v-if="props.canManage" size="small" type="primary" @click="showImportDialog = true">📥 导入文档</el-button>
+        <el-button
+          v-if="props.canManage"
+          size="small"
+          type="primary"
+          @click="showImportDialog = true"
+          >📥 导入文档</el-button
+        >
       </div>
       <div v-if="!importedDocs.length" class="kb-empty">
-        暂未导入文档{{ props.canManage ? '，点击「导入文档」上传到 data/rag_datas' : '' }}
+        暂未导入文档{{ props.canManage ? "，点击「导入文档」上传到 data/rag_datas" : "" }}
       </div>
       <div v-else class="kb-imported-list">
         <div v-for="doc in importedDocs" :key="doc.id" class="kb-doc-card">
           <div class="kb-doc-card-left">
             <span class="kb-doc-card-name">
-              {{ doc.type === 'directory' ? '📁' : '📄' }} {{ doc.type === 'directory' ? doc.dirPath : (doc.source || doc.id) }}
+              {{ doc.type === "directory" ? "📁" : "📄" }}
+              {{ doc.type === "directory" ? doc.dirPath : doc.source || doc.id }}
             </span>
             <span class="kb-doc-card-meta">
-              {{ doc.type === 'directory' ? '目录引用（动态包含其下全部文件）' : `${doc.type} · ${formatSize(doc.size)}` }}
+              {{
+                doc.type === "directory"
+                  ? "目录引用（动态包含其下全部文件）"
+                  : `${doc.type} · ${formatSize(doc.size)}`
+              }}
             </span>
           </div>
           <div class="kb-doc-card-right">
-            <span :class="['kb-doc-toggle', { on: doc.enabled }]"
-                  role="button" tabindex="0"
-                  :title="doc.enabled ? '已启用索引' : '已禁用索引'"
-                  @click="props.canManage && toggleDocEnabled(doc.id)"
-                  @keydown.enter.prevent="props.canManage && toggleDocEnabled(doc.id)"
-                  @keydown.space.prevent="props.canManage && toggleDocEnabled(doc.id)">
-              {{ doc.enabled ? '🔛' : '🔘' }}
+            <span
+              :class="['kb-doc-toggle', { on: doc.enabled }]"
+              role="button"
+              tabindex="0"
+              :title="doc.enabled ? '已启用索引' : '已禁用索引'"
+              @click="props.canManage && toggleDocEnabled(doc.id)"
+              @keydown.enter.prevent="props.canManage && toggleDocEnabled(doc.id)"
+              @keydown.space.prevent="props.canManage && toggleDocEnabled(doc.id)"
+            >
+              {{ doc.enabled ? "🔛" : "🔘" }}
             </span>
-            <button v-if="props.canManage" class="kb-doc-remove-btn" @click="removeDoc(doc.id)" title="移除引用">✕</button>
+            <button
+              v-if="props.canManage"
+              class="kb-doc-remove-btn"
+              @click="removeDoc(doc.id)"
+              title="移除引用"
+            >
+              ✕
+            </button>
           </div>
         </div>
       </div>
@@ -229,7 +320,9 @@ onMounted(() => { loadAll() })
           :key="tab.key"
           :class="['kb-filter-btn', { active: activeFilter === tab.key }]"
           @click="activeFilter = tab.key"
-        >{{ tab.label }}</button>
+        >
+          {{ tab.label }}
+        </button>
       </div>
       <div class="kb-table-wrap">
         <div v-if="loading" class="kb-empty">加载中...</div>
@@ -240,13 +333,10 @@ onMounted(() => { loadAll() })
 
     <KnowledgeImportDialog
       :visible="showImportDialog"
-      @imported="onImported" @close="showImportDialog = false"
+      @imported="onImported"
+      @close="showImportDialog = false"
     />
-    <KnowledgePreviewDrawer
-      v-if="previewPath"
-      :path="previewPath"
-      @close="previewPath = ''"
-    />
+    <KnowledgePreviewDrawer v-if="previewPath" :path="previewPath" @close="previewPath = ''" />
   </div>
 </template>
 
@@ -266,14 +356,23 @@ onMounted(() => { loadAll() })
 .kb-view > :first-child {
   flex-shrink: 0;
 }
-.kpi-row { display:grid;grid-template-columns:var(--layout-kpi-cols);gap:var(--app-space-md);margin-bottom:var(--app-space-md) }
+.kpi-row {
+  display: grid;
+  grid-template-columns: var(--layout-kpi-cols);
+  gap: var(--app-space-md);
+  margin-bottom: var(--app-space-md);
+}
 .kpi-row :deep(.kpi-card__value) {
   font-size: var(--app-size-sm);
   font-weight: 700;
   letter-spacing: 0.04em;
   line-height: 1.4;
 }
-@media (max-width: 768px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px) {
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 .kb-actions {
   display: flex;
   align-items: center;
@@ -284,34 +383,102 @@ onMounted(() => { loadAll() })
   font-size: var(--app-size-sm);
   color: var(--app-text-secondary);
 }
-.kb-switch { margin-left: auto; display: inline-flex; align-items: center; gap: var(--app-space-sm); }
-.kb-switch-label { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); }
-
-.kb-range-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.kb-range-title { font-size: var(--app-size-md); font-weight: 700; color: var(--ink); }
-.kb-range-count { font-size: var(--app-size-xs); color: var(--app-text-secondary); }
-.kb-range-head .el-button { margin-left: auto; }
-
-.kb-imported-list { display: flex; flex-direction: column; gap: var(--app-space-sm); }
-.kb-doc-card {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px var(--app-space-md); border: 1.5px solid var(--ai-warm-border);
-  border-radius: var(--app-radius-md); background: var(--app-bg-card); transition: border-color var(--app-duration);
+.kb-switch {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-sm);
 }
-.kb-doc-card:hover { border-color: var(--ai-teal); }
-.kb-doc-card-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.kb-doc-card-name { font-weight: 600; font-size: var(--app-size-sm); color: var(--ink); }
-.kb-doc-card-meta { font-size: var(--app-size-xs); color: var(--app-text-secondary); }
-.kb-doc-card-right { display: flex; align-items: center; gap: var(--app-space-sm); flex-shrink: 0; }
-.kb-doc-toggle { font-size:var(--app-size-md); cursor: pointer; opacity: 0.5; transition: opacity var(--app-duration); }
-.kb-doc-toggle.on { opacity: 1; }
-.kb-doc-toggle:hover { opacity: 0.8; }
+.kb-switch-label {
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.kb-range-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.kb-range-title {
+  font-size: var(--app-size-md);
+  font-weight: 700;
+  color: var(--ink);
+}
+.kb-range-count {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+.kb-range-head .el-button {
+  margin-left: auto;
+}
+
+.kb-imported-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+}
+.kb-doc-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px var(--app-space-md);
+  border: 1.5px solid var(--ai-warm-border);
+  border-radius: var(--app-radius-md);
+  background: var(--app-bg-card);
+  transition: border-color var(--app-duration);
+}
+.kb-doc-card:hover {
+  border-color: var(--ai-teal);
+}
+.kb-doc-card-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.kb-doc-card-name {
+  font-weight: 600;
+  font-size: var(--app-size-sm);
+  color: var(--ink);
+}
+.kb-doc-card-meta {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+.kb-doc-card-right {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  flex-shrink: 0;
+}
+.kb-doc-toggle {
+  font-size: var(--app-size-md);
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity var(--app-duration);
+}
+.kb-doc-toggle.on {
+  opacity: 1;
+}
+.kb-doc-toggle:hover {
+  opacity: 0.8;
+}
 .kb-doc-remove-btn {
-  background: none; border: none; color: var(--app-text-secondary);
-  font-size:var(--app-size-sm); cursor: pointer; padding: 2px 6px; border-radius: var(--app-radius-sm);
+  background: none;
+  border: none;
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-sm);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--app-radius-sm);
   transition: all var(--app-duration);
 }
-.kb-doc-remove-btn:hover { color: var(--app-status-danger-text); background: var(--app-status-danger-bg); }
+.kb-doc-remove-btn:hover {
+  color: var(--app-status-danger-text);
+  background: var(--app-status-danger-bg);
+}
 
 .kb-table-card {
   flex: 1;
@@ -360,12 +527,16 @@ onMounted(() => { loadAll() })
   cursor: pointer;
   font-family: inherit;
 }
-.kb-filter-btn:hover { color: var(--app-text); }
+.kb-filter-btn:hover {
+  color: var(--app-text);
+}
 .kb-filter-btn.active {
   background: var(--app-text);
   color: var(--app-bg-card);
 }
 @media (max-width: 700px) {
-  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>

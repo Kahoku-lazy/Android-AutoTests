@@ -23,34 +23,41 @@
 .wb-shell .wb-btn.el-button,
 .wb-shell .el-button.wb-btn {
   border-radius: var(--app-radius-sm);
-  font-weight: 700; font-family: inherit;
+  font-weight: 700;
+  font-family: inherit;
   border: 2px solid var(--ink);
-  background: var(--app-bg-card); color: var(--ink);
+  background: var(--app-bg-card);
+  color: var(--ink);
   box-shadow: var(--app-shadow-sm);
   transition: all var(--app-duration-fast);
 }
 .wb-shell .wb-btn.el-button:hover,
 .wb-shell .el-button.wb-btn:hover {
   background: var(--c-dashboard);
-  transform: translate(1px,1px);
-  box-shadow: 1px 1px 0 rgba(0,0,0,0.06);
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.06);
 }
 
 .wb-shell .wb-btn.el-button--primary,
 .wb-shell .el-button.wb-btn.el-button--primary {
-  background: var(--c-dashboard); color: var(--ink);
+  background: var(--c-dashboard);
+  color: var(--ink);
   border-color: var(--ink);
 }
 
 .wb-shell .wb-btn.el-button--danger,
 .wb-shell .el-button.wb-btn.el-button--danger {
-  background: var(--app-status-danger-bg); color: var(--app-status-danger-text); border-color: var(--c-runner);
+  background: var(--app-status-danger-bg);
+  color: var(--app-status-danger-text);
+  border-color: var(--c-runner);
 }
 .wb-shell .wb-btn.el-button--danger:hover {
   background: var(--app-btn-hover-danger);
 }
 .wb-shell .wb-btn.el-button--success {
-  background: var(--c-device); color: var(--ink); border-color: var(--ink);
+  background: var(--c-device);
+  color: var(--ink);
+  border-color: var(--ink);
 }
 
 /* AppCard — 钉板壳（对齐 #page-typography .panel） */
@@ -110,28 +117,48 @@
 }
 
 /* AppTabs */
-.wb-shell .ac-tabs .el-tabs__header { margin-bottom: var(--app-space-md); }
-.wb-shell .ac-tabs .el-tabs__nav-wrap::after { display: none; }
-.wb-shell .ac-tabs .el-tabs__active-bar { display: none; }
+.wb-shell .ac-tabs .el-tabs__header {
+  margin-bottom: var(--app-space-md);
+}
+.wb-shell .ac-tabs .el-tabs__nav-wrap::after {
+  display: none;
+}
+.wb-shell .ac-tabs .el-tabs__active-bar {
+  display: none;
+}
 .wb-shell .ac-tabs .el-tabs__nav {
-  display: flex; gap: var(--app-space-xs); border: none; padding: 0;
+  display: flex;
+  gap: var(--app-space-xs);
+  border: none;
+  padding: 0;
 }
 .wb-shell .ac-tabs .el-tabs__item {
-  padding: 5px 14px; font-size: var(--app-size-xs); font-weight: 700;
-  border-radius: var(--app-radius-sm); border: 2px solid transparent;
-  color: var(--app-text-secondary); height: auto; line-height: 1.4;
+  padding: 5px 14px;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  border-radius: var(--app-radius-sm);
+  border: 2px solid transparent;
+  color: var(--app-text-secondary);
+  height: auto;
+  line-height: 1.4;
   transition: all var(--app-duration-fast);
 }
-.wb-shell .ac-tabs .el-tabs__item:hover { color: var(--ink); }
+.wb-shell .ac-tabs .el-tabs__item:hover {
+  color: var(--ink);
+}
 .wb-shell .ac-tabs .el-tabs__item.is-active {
-  color: var(--ink); background: var(--c-dashboard);
+  color: var(--ink);
+  background: var(--c-dashboard);
   border-color: var(--ink);
 }
 
 /* AppTable */
 .wb-shell .ac-table th.el-table__cell {
-  background: var(--app-bg-subtle); color: var(--ink);
-  font-weight: 700; font-size: var(--app-size-xs); text-transform: uppercase;
+  background: var(--app-bg-subtle);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: var(--app-size-xs);
+  text-transform: uppercase;
   letter-spacing: 0.04em;
   /* 纸面风格不画网格线；表头底线由全局 .el-table th 的 2px 墨线（!important）接管 */
   border-bottom: 1px solid transparent;
@@ -146,8 +173,16 @@
    注意本选择器特异性 (0,8,2) 高于选中行规则 (0,5,2)，两者同为 !important 时按特异性决胜，
    故用 :not(.is-selected):not(.current-row) 显式排除选中行，让选中态优先（而非依赖来源顺序）。
    （frontend-l4-data-surface「Table zebra striping is visible when requested」） */
-.wb-shell .ac-table.el-table--striped .el-table__body tr.el-table__row--striped:not(.is-selected):not(.current-row) > td.el-table__cell,
-.workflow-workbench .ac-table.el-table--striped .el-table__body tr.el-table__row--striped:not(.is-selected):not(.current-row) > td.el-table__cell {
+.wb-shell
+  .ac-table.el-table--striped
+  .el-table__body
+  tr.el-table__row--striped:not(.is-selected):not(.current-row)
+  > td.el-table__cell,
+.workflow-workbench
+  .ac-table.el-table--striped
+  .el-table__body
+  tr.el-table__row--striped:not(.is-selected):not(.current-row)
+  > td.el-table__cell {
   background: var(--comp-table-row-striped-bg) !important;
 }
 
@@ -165,8 +200,7 @@
   border: var(--comp-sheet-border);
   background: var(--comp-sheet-bg);
   border-radius: var(--comp-sheet-radius);
-  box-shadow:
-    var(--comp-sheet-shadow-x) var(--comp-sheet-shadow-y) 0 0
+  box-shadow: var(--comp-sheet-shadow-x) var(--comp-sheet-shadow-y) 0 0
     var(--sketch-accent, var(--comp-sheet-accent-fallback));
   overflow: hidden;
   transform: none;

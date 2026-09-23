@@ -1,14 +1,14 @@
-import { onUnmounted, ref, watch, type Ref } from 'vue'
-import { getTask } from '../api/tasks'
-import { isTaskTerminal } from '../helpers/task-detail'
-import type { TaskDetail } from '@/shared/types/ai'
+import { onUnmounted, ref, watch, type Ref } from "vue"
+import { getTask } from "../api/tasks"
+import { isTaskTerminal } from "../helpers/task-detail"
+import type { TaskDetail } from "@/shared/types/ai"
 
 /** 详情页打开且任务未终态时轮询过程 JSON */
 const POLL_INTERVAL_MS = 3000
 
 export function useTaskDetail() {
   const loading = ref(false)
-  const error = ref('')
+  const error = ref("")
   const detail = ref<TaskDetail | null>(null)
   const lastId = ref<number | null>(null)
   let pollTimer: ReturnType<typeof setInterval> | null = null
@@ -34,7 +34,7 @@ export function useTaskDetail() {
       const data = await getTask(lastId.value)
       if (data.status && data.data) {
         detail.value = data.data
-        error.value = ''
+        error.value = ""
         schedulePoll()
       }
     } catch {
@@ -45,7 +45,7 @@ export function useTaskDetail() {
   async function load(taskId: number) {
     lastId.value = taskId
     loading.value = true
-    error.value = ''
+    error.value = ""
     detail.value = null
     stopPoll()
     try {
@@ -54,10 +54,10 @@ export function useTaskDetail() {
         detail.value = data.data
         schedulePoll()
       } else {
-        error.value = data.message || '加载失败'
+        error.value = data.message || "加载失败"
       }
     } catch {
-      error.value = '加载任务详情失败，请检查网络连接'
+      error.value = "加载任务详情失败，请检查网络连接"
     }
     loading.value = false
   }

@@ -25,15 +25,15 @@ const emit = defineEmits<{
     title="提示"
     width="420px"
     append-to-body
-    @update:model-value="(v: boolean) => { if (!v) emit('close') }"
+    @update:model-value="
+      (v: boolean) => {
+        if (!v) emit('close')
+      }
+    "
   >
     <p class="error-message" data-testid="login-error-message">{{ message }}</p>
     <template #footer>
-      <el-button
-        type="primary"
-        data-testid="login-error-dismiss"
-        @click="emit('close')"
-      >
+      <el-button type="primary" data-testid="login-error-dismiss" @click="emit('close')">
         知道了
       </el-button>
     </template>

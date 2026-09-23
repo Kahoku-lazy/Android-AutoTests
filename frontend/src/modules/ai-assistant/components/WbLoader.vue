@@ -2,19 +2,23 @@
 /**
  * anime.js 三点彩色加载指示器
  */
-import { onMounted, onBeforeUnmount, ref } from 'vue'
-import { loadingDots } from '@/shared/animations'
+import { onMounted, onBeforeUnmount, ref } from "vue"
+import { loadingDots } from "@/shared/animations"
 
 const root = ref<HTMLElement | null>(null)
 let anim: ReturnType<typeof loadingDots> | null = null
 
 onMounted(() => {
-  const dots = root.value?.querySelectorAll('.dot')
+  const dots = root.value?.querySelectorAll(".dot")
   if (dots?.length) anim = loadingDots(dots)
 })
 
 onBeforeUnmount(() => {
-  try { anim?.pause?.() } catch { /* noop */ }
+  try {
+    anim?.pause?.()
+  } catch {
+    /* noop */
+  }
   anim = null
 })
 </script>

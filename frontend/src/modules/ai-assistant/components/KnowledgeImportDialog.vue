@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /** KnowledgeImportDialog — 上传文件到 data/rag_datas */
-import { ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import { addKnowledgeDocument } from '../api/toolbox'
-import { KB_UPLOAD_ACCEPT, KB_UPLOAD_SUBDIRS } from '../constants'
+import { ref, watch } from "vue"
+import { ElMessage } from "element-plus"
+import { addKnowledgeDocument } from "../api/toolbox"
+import { KB_UPLOAD_ACCEPT, KB_UPLOAD_SUBDIRS } from "../constants"
 
 const props = defineProps<{
   visible?: boolean
@@ -15,7 +15,7 @@ const emit = defineEmits<{
 }>()
 
 const files = ref<File[]>([])
-const subdir = ref('')
+const subdir = ref("")
 const uploading = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 
@@ -24,7 +24,7 @@ watch(
   (open) => {
     if (!open) {
       files.value = []
-      subdir.value = ''
+      subdir.value = ""
       uploading.value = false
     }
   },
@@ -36,12 +36,12 @@ function onPick(event: Event) {
 }
 
 function handleClose() {
-  emit('close')
+  emit("close")
 }
 
 async function handleImport() {
   if (!files.value.length) {
-    ElMessage.warning('请选择要导入的文件')
+    ElMessage.warning("请选择要导入的文件")
     return
   }
   uploading.value = true
@@ -56,9 +56,9 @@ async function handleImport() {
       ids.push(String(data.data.id))
     }
     ElMessage.success(`已导入 ${ids.length} 个文件`)
-    emit('imported', ids)
+    emit("imported", ids)
   } catch {
-    ElMessage.error('导入失败')
+    ElMessage.error("导入失败")
   } finally {
     uploading.value = false
   }
@@ -71,7 +71,11 @@ async function handleImport() {
     title="导入文档到知识库"
     width="520px"
     :close-on-click-modal="false"
-    @update:model-value="val => { if (!val) handleClose() }"
+    @update:model-value="
+      (val) => {
+        if (!val) handleClose()
+      }
+    "
   >
     <div class="import-dialog-body">
       <p class="import-hint">文件保存到 data/rag_datas，支持 md / txt / Word / PDF。</p>
@@ -101,19 +105,40 @@ async function handleImport() {
     <template #footer>
       <el-button @click="handleClose">取消</el-button>
       <el-button type="primary" :loading="uploading" @click="handleImport">
-        确认导入{{ files.length ? ` (${files.length})` : '' }}
+        确认导入{{ files.length ? ` (${files.length})` : "" }}
       </el-button>
     </template>
   </el-dialog>
 </template>
 
 <style scoped>
-.import-dialog-body { display: flex; flex-direction: column; gap: 12px; }
-.import-hint { margin: 0; font-size: var(--app-size-sm); color: var(--app-text-secondary); }
-.import-row { display: flex; align-items: center; gap: 10px; }
-.import-label { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); }
-.import-file { font-size: var(--app-size-sm); }
+.import-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.import-hint {
+  margin: 0;
+  font-size: var(--app-size-sm);
+  color: var(--app-text-secondary);
+}
+.import-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.import-label {
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  color: var(--ink);
+}
+.import-file {
+  font-size: var(--app-size-sm);
+}
 .import-files {
-  margin: 0; padding-left: 18px; font-size: var(--app-size-sm); color: var(--ink);
+  margin: 0;
+  padding-left: 18px;
+  font-size: var(--app-size-sm);
+  color: var(--ink);
 }
 </style>

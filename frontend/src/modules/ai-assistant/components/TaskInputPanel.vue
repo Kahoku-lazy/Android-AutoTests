@@ -5,7 +5,7 @@
  * 数据来自任务详情接口（planner_input / attachment / attachment_filename），
  * 本组件只负责展示：两个默认收起的折叠区块，正文区块内部定高滚动。
  */
-import EmptyState from '@/shared/components/patterns/EmptyState.vue'
+import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 
 defineProps<{
   /** 引擎实际交给规划模型的四键 JSON 原文 */

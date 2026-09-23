@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import EmptyState from '@/shared/components/patterns/EmptyState.vue'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
-import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
-import { useAuthUser } from '@/shared/composables/useAuthUser'
-import { useToolDebug } from './composables/useToolDebug'
+import { computed } from "vue"
+import { useRoute } from "vue-router"
+import EmptyState from "@/shared/components/patterns/EmptyState.vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
+import { useAuthUser } from "@/shared/composables/useAuthUser"
+import { useToolDebug } from "./composables/useToolDebug"
 
 const route = useRoute()
-const toolName = computed(() => String(route.params.toolName || ''))
+const toolName = computed(() => String(route.params.toolName || ""))
 const { isSuperuser } = useAuthUser()
 const canExecuteWrite = computed(() => isSuperuser.value === true)
 
@@ -58,7 +58,7 @@ const {
             <div class="td-form-head">
               <h3 class="td-title">{{ schema.name }}</h3>
               <span class="td-badge" :class="schema.read_only ? 'ro' : 'wr'">
-                {{ schema.read_only ? '只读' : '写' }}
+                {{ schema.read_only ? "只读" : "写" }}
               </span>
             </div>
             <p class="td-summary">{{ schema.summary }}</p>
@@ -72,11 +72,7 @@ const {
                 icon="∅"
                 text="无需额外参数，可直接执行"
               />
-              <label
-                v-for="p in schema.parameters"
-                :key="p.name"
-                class="td-field"
-              >
+              <label v-for="p in schema.parameters" :key="p.name" class="td-field">
                 <span class="td-field-label">
                   {{ p.name }}
                   <em v-if="p.required">必填</em>
@@ -105,13 +101,8 @@ const {
                   class="td-input"
                   :type="p.type === 'int' || p.type === 'float' ? 'number' : 'text'"
                   :step="p.type === 'float' ? 'any' : undefined"
-                >
-                <input
-                  v-else
-                  v-model="form[p.name]"
-                  class="td-check"
-                  type="checkbox"
-                >
+                />
+                <input v-else v-model="form[p.name]" class="td-check" type="checkbox" />
                 <em v-if="p.options && !p.options.length" class="td-field-note">
                   当前没有在线且未被占用的设备，可手动填写
                 </em>
@@ -125,7 +116,7 @@ const {
                 :disabled="!canExecute || invoking"
                 @click="runInvoke"
               >
-                {{ invoking ? '执行中…' : '执行' }}
+                {{ invoking ? "执行中…" : "执行" }}
               </button>
             </div>
           </aside>
@@ -142,7 +133,7 @@ const {
             />
             <div v-else-if="result != null" class="td-result-body">
               <figure v-if="screenshot" class="td-shot">
-                <img :src="screenshot.dataUrl" alt="工具截图预览">
+                <img :src="screenshot.dataUrl" alt="工具截图预览" />
                 <figcaption>截图预览（编码已折叠，下方为 summary）</figcaption>
               </figure>
               <pre class="td-json">{{ resultText }}</pre>

@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import EmptyState from '@/shared/components/patterns/EmptyState.vue'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import KpiCard from '@/shared/components/KpiCard.vue'
-import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
-import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
-import TaskAttemptCard from './components/TaskAttemptCard.vue'
-import TaskInputPanel from './components/TaskInputPanel.vue'
-import { taskStatusLabel, taskStatusTone } from './constants'
-import { useTaskDetail } from './composables/useTaskDetail'
+import { computed, ref, watch } from "vue"
+import { useRoute } from "vue-router"
+import EmptyState from "@/shared/components/patterns/EmptyState.vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import KpiCard from "@/shared/components/KpiCard.vue"
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
+import TaskAttemptCard from "./components/TaskAttemptCard.vue"
+import TaskInputPanel from "./components/TaskInputPanel.vue"
+import { taskStatusLabel, taskStatusTone } from "./constants"
+import { useTaskDetail } from "./composables/useTaskDetail"
 import {
   currentStepLabel,
   defaultStepIndex,
@@ -20,7 +20,7 @@ import {
   stepTagClass,
   taskPassCount,
   taskStepBlocks,
-} from './helpers/task-detail'
+} from "./helpers/task-detail"
 
 const route = useRoute()
 const { loading, error, detail, retry, bindRouteId } = useTaskDetail()
@@ -61,10 +61,10 @@ function pickStep(i: number) {
 }
 
 const finalToneClass = computed(() => {
-  const tone = taskStatusTone(detail.value?.status || '')
-  if (tone === 'success') return 'is-ok'
-  if (tone === 'failed') return 'is-bad'
-  return ''
+  const tone = taskStatusTone(detail.value?.status || "")
+  if (tone === "success") return "is-ok"
+  if (tone === "failed") return "is-bad"
+  return ""
 })
 </script>
 
@@ -81,10 +81,7 @@ const finalToneClass = computed(() => {
       <WorkbenchCrumbs
         back-to="/ai-assistant/agents"
         back-label="返回任务列表"
-        :items="[
-          { label: '平台小助手', to: '/ai-assistant/agents' },
-          { label: '任务详情' },
-        ]"
+        :items="[{ label: '平台小助手', to: '/ai-assistant/agents' }, { label: '任务详情' }]"
       />
       <ErrorState v-if="error" :message="error" @retry="retry" />
       <template v-else-if="detail">
@@ -102,14 +99,25 @@ const finalToneClass = computed(() => {
               <span v-if="detail.started_at"> · {{ formatTaskTime(detail.started_at) }}</span>
               <span v-if="detail.finished_at"> → {{ formatTaskTime(detail.finished_at) }}</span>
               <span v-if="models.planner || models.executor || models.verifier">
-                · {{ models.planner || '—' }} / {{ models.executor || '—' }} / {{ models.verifier || '—' }}
+                · {{ models.planner || "—" }} / {{ models.executor || "—" }} /
+                {{ models.verifier || "—" }}
               </span>
             </p>
           </div>
 
           <div class="td-kpi">
-            <KpiCard :value="taskPassCount(blocks)" label="步骤进度" color="var(--c-ai)" shape="diamond" />
-            <KpiCard :value="currentStepLabel(blocks)" label="当前步骤" color="var(--c-device)" shape="square" />
+            <KpiCard
+              :value="taskPassCount(blocks)"
+              label="步骤进度"
+              color="var(--c-ai)"
+              shape="diamond"
+            />
+            <KpiCard
+              :value="currentStepLabel(blocks)"
+              label="当前步骤"
+              color="var(--c-device)"
+              shape="square"
+            />
             <KpiCard
               :value="formatTaskDuration(detail.started_at, detail.finished_at)"
               label="总耗时"
@@ -154,7 +162,7 @@ const finalToneClass = computed(() => {
               <template v-if="selected">
                 <div class="td-panel__card">
                   <p><b>操作</b>：{{ selected.action }}</p>
-                  <p><b>断言</b>：{{ selected.assert || '—' }}</p>
+                  <p><b>断言</b>：{{ selected.assert || "—" }}</p>
                   <p class="td-panel__status">
                     状态
                     <span class="td-tag" :class="stepTagClass(selected.phase)">
@@ -190,7 +198,11 @@ const finalToneClass = computed(() => {
             v-else
             icon="📋"
             :text="detail.status === 'running' ? '规划进行中' : '暂无步骤'"
-            :hint="detail.status === 'running' ? '规划完成后会列出逐步清单' : '旧任务可能只有摘要，新任务会记录逐步日志'"
+            :hint="
+              detail.status === 'running'
+                ? '规划完成后会列出逐步清单'
+                : '旧任务可能只有摘要，新任务会记录逐步日志'
+            "
           />
         </div>
 
@@ -198,19 +210,25 @@ const finalToneClass = computed(() => {
         <footer class="td-footer">
           <h4 class="td-h">最终结果</h4>
           <div class="td-final">
-            <p :class="finalToneClass">{{ run.summary || run.reason || run.message || '暂无摘要' }}</p>
-            <p v-if="run.completed?.length" class="td-meta is-ok">已完成 {{ run.completed.length }} 项</p>
+            <p :class="finalToneClass">
+              {{ run.summary || run.reason || run.message || "暂无摘要" }}
+            </p>
+            <p v-if="run.completed?.length" class="td-meta is-ok">
+              已完成 {{ run.completed.length }} 项
+            </p>
             <p v-if="run.failed?.length" class="td-meta is-bad">
               失败：
               <template v-for="(f, i) in run.failed" :key="i">
-                {{ f.action || f.item || '步骤' }}
+                {{ f.action || f.item || "步骤" }}
                 <template v-if="f.actual || f.reason">（{{ f.actual || f.reason }}）</template>
                 <template v-if="i < (run.failed?.length || 0) - 1">；</template>
               </template>
             </p>
             <p v-if="detail.input_tokens || detail.output_tokens" class="td-meta">
               token 输入 {{ detail.input_tokens || 0 }} · 输出 {{ detail.output_tokens || 0 }}
-              <template v-if="detail.cache_input_tokens"> · 缓存命中 {{ detail.cache_input_tokens }}</template>
+              <template v-if="detail.cache_input_tokens">
+                · 缓存命中 {{ detail.cache_input_tokens }}</template
+              >
               <template v-if="detail.deepseek_cost != null">
                 · 费用 {{ Number(detail.deepseek_cost).toFixed(4) }} 元
               </template>
@@ -347,9 +365,15 @@ const finalToneClass = computed(() => {
   font-family: inherit;
   flex-shrink: 0;
 }
-.td-step-item.is-pass { border-left-color: var(--app-status-success); }
-.td-step-item.is-fail { border-left-color: var(--app-status-danger); }
-.td-step-item.is-running { border-left-color: var(--ai-status-blue-border, var(--c-device)); }
+.td-step-item.is-pass {
+  border-left-color: var(--app-status-success);
+}
+.td-step-item.is-fail {
+  border-left-color: var(--app-status-danger);
+}
+.td-step-item.is-running {
+  border-left-color: var(--ai-status-blue-border, var(--c-device));
+}
 .td-step-item.is-active {
   border-color: var(--ink);
   background: var(--ai-warm-bg);
@@ -380,11 +404,27 @@ const finalToneClass = computed(() => {
   color: var(--ai-ink-soft);
   line-height: 1.5;
 }
-.td-panel__card p:last-child { margin-bottom: 0; }
-.td-panel__status { display: flex; align-items: center; gap: var(--app-space-sm); }
-.td-attempts { display: flex; flex-direction: column; gap: var(--app-space-sm); }
-.is-ok { color: var(--app-status-success-text); font-weight: 800; }
-.is-bad { color: var(--app-status-danger-text); font-weight: 800; }
+.td-panel__card p:last-child {
+  margin-bottom: 0;
+}
+.td-panel__status {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+}
+.td-attempts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+}
+.is-ok {
+  color: var(--app-status-success-text);
+  font-weight: 800;
+}
+.is-bad {
+  color: var(--app-status-danger-text);
+  font-weight: 800;
+}
 .td-tag {
   display: inline-block;
   flex-shrink: 0;
@@ -395,10 +435,22 @@ const finalToneClass = computed(() => {
   border-radius: var(--el-border-radius-small);
   white-space: nowrap;
 }
-.td-tag--pass { background: var(--app-status-success-bg); color: var(--app-status-success-text); }
-.td-tag--fail { background: var(--app-status-danger-bg); color: var(--app-status-danger-text); }
-.td-tag--run { background: var(--ai-status-blue-bg); color: var(--ai-status-blue-text); }
-.td-tag--wait { background: var(--ai-bg-neutral); color: var(--td-neutral-ink); }
+.td-tag--pass {
+  background: var(--app-status-success-bg);
+  color: var(--app-status-success-text);
+}
+.td-tag--fail {
+  background: var(--app-status-danger-bg);
+  color: var(--app-status-danger-text);
+}
+.td-tag--run {
+  background: var(--ai-status-blue-bg);
+  color: var(--ai-status-blue-text);
+}
+.td-tag--wait {
+  background: var(--ai-bg-neutral);
+  color: var(--td-neutral-ink);
+}
 .td-h {
   margin: 0;
   padding-left: var(--app-space-sm);
@@ -422,10 +474,21 @@ const finalToneClass = computed(() => {
   color: var(--ai-ink-soft);
   line-height: 1.5;
 }
-.td-final p:last-child { margin-bottom: 0; }
-.td-meta { font-size: var(--app-size-xs); color: var(--ai-ink-muted); }
-.td-final .is-ok { color: var(--app-status-success-text); font-weight: 800; }
-.td-final .is-bad { color: var(--app-status-danger-text); font-weight: 800; }
+.td-final p:last-child {
+  margin-bottom: 0;
+}
+.td-meta {
+  font-size: var(--app-size-xs);
+  color: var(--ai-ink-muted);
+}
+.td-final .is-ok {
+  color: var(--app-status-success-text);
+  font-weight: 800;
+}
+.td-final .is-bad {
+  color: var(--app-status-danger-text);
+  font-weight: 800;
+}
 .task-card__status {
   flex-shrink: 0;
   font-size: var(--app-size-xs);
@@ -466,12 +529,18 @@ const finalToneClass = computed(() => {
   border-color: var(--app-highlight);
 }
 @media (max-width: 768px) {
-  .td-kpi { grid-template-columns: 1fr 1fr; }
+  .td-kpi {
+    grid-template-columns: 1fr 1fr;
+  }
   .td-split {
     grid-template-columns: 1fr;
     min-height: 0;
   }
-  .td-steps { max-height: 220px; }
-  .td-final { max-height: 30vh; }
+  .td-steps {
+    max-height: 220px;
+  }
+  .td-final {
+    max-height: 30vh;
+  }
 }
 </style>

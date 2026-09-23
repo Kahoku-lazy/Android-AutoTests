@@ -24,7 +24,11 @@
   box-shadow: none;
   color: var(--ink);
   font-family: var(--app-font);
-  transition: width var(--app-duration-slow) var(--app-ease), min-width var(--app-duration-slow) var(--app-ease), max-width var(--app-duration-slow) var(--app-ease), flex-basis var(--app-duration-slow) var(--app-ease);
+  transition:
+    width var(--app-duration-slow) var(--app-ease),
+    min-width var(--app-duration-slow) var(--app-ease),
+    max-width var(--app-duration-slow) var(--app-ease),
+    flex-basis var(--app-duration-slow) var(--app-ease);
   border-radius: 0;
 }
 
@@ -58,7 +62,10 @@
   line-height: 1;
   display: grid;
   place-items: center;
-  transition: transform var(--app-duration-fast) var(--app-ease), box-shadow var(--app-duration-fast) var(--app-ease), background var(--app-duration-fast) var(--app-ease);
+  transition:
+    transform var(--app-duration-fast) var(--app-ease),
+    box-shadow var(--app-duration-fast) var(--app-ease),
+    background var(--app-duration-fast) var(--app-ease);
 }
 .sidebar__toggle:hover {
   background: var(--sidebar-yellow);
@@ -114,7 +121,7 @@
   transform: translateX(50%);
 }
 .sidebar__resizer::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 12px;
   bottom: 12px;
@@ -123,7 +130,9 @@
   transform: translateX(-50%);
   border-radius: 1px;
   background: var(--dot);
-  transition: background var(--app-duration) var(--app-ease), width var(--app-duration) var(--app-ease);
+  transition:
+    background var(--app-duration) var(--app-ease),
+    width var(--app-duration) var(--app-ease);
 }
 .sidebar__resizer:hover::before,
 .sidebar__resizer.is-dragging::before {
@@ -234,7 +243,11 @@
   border: 2.5px solid transparent;
   border-radius: 2px;
   cursor: pointer;
-  transition: transform var(--app-duration-fast) var(--app-ease), box-shadow var(--app-duration-fast) var(--app-ease), background var(--app-duration-fast) var(--app-ease), border-color var(--app-duration-fast) var(--app-ease);
+  transition:
+    transform var(--app-duration-fast) var(--app-ease),
+    box-shadow var(--app-duration-fast) var(--app-ease),
+    background var(--app-duration-fast) var(--app-ease),
+    border-color var(--app-duration-fast) var(--app-ease);
   position: relative;
 }
 
@@ -447,5 +460,9 @@
 
 /* 减少动效：关闭位移 / 旋转 / 缩放（颜色过渡不受影响） */
 @media (prefers-reduced-motion: reduce) {
-  .sidebar__toggle, .sidebar-menu__item, .sidebar-menu__chevron { transition: none; }
+  .sidebar__toggle,
+  .sidebar-menu__item,
+  .sidebar-menu__chevron {
+    transition: none;
+  }
 }

@@ -1,16 +1,16 @@
 /**
  * report-generator API & shared helpers — 测试报告模块
  */
-import client from '@/shared/api-client'
+import client from "@/shared/api-client"
 
 // ── 执行记录（报告列表）──
 
 export function listRuns(params = {}) {
-  return client.get('/reports/', { params })
+  return client.get("/reports/", { params })
 }
 
 export function getCaseBreakdown(result, params = {}) {
-  return client.get('/reports/cases/', { params: { result, ...params } })
+  return client.get("/reports/cases/", { params: { result, ...params } })
 }
 
 // ── 报告详情 ──
@@ -38,12 +38,12 @@ export function getReportDownloadUrl(filename) {
 // ── 共享工具函数 ──
 
 const STATUS_LABEL_MAP = {
-  completed: '通过',
-  success: '通过',
-  failed: '失败',
-  running: '运行中',
-  stopped: '已停止',
-  pending: '排队中',
+  completed: "通过",
+  success: "通过",
+  failed: "失败",
+  running: "运行中",
+  stopped: "已停止",
+  pending: "排队中",
 }
 
 export function statusLabel(status) {
@@ -51,23 +51,25 @@ export function statusLabel(status) {
 }
 
 export function statusBadgeClass(status) {
-  if (status === 'completed' || status === 'success') return 'badge-pass'
-  if (status === 'failed') return 'badge-fail'
-  if (status === 'running') return 'badge-running'
-  return 'badge-stopped'
+  if (status === "completed" || status === "success") return "badge-pass"
+  if (status === "failed") return "badge-fail"
+  if (status === "running") return "badge-running"
+  return "badge-stopped"
 }
 
 export function iterBadgeClass(result) {
-  if (result === 'pass') return 'badge-pass'
-  if (result === 'fail' || result === 'stopped') return 'badge-fail'
-  return 'badge-stopped'
+  if (result === "pass") return "badge-pass"
+  if (result === "fail" || result === "stopped") return "badge-fail"
+  return "badge-stopped"
 }
 
 export function formatTime(iso) {
-  if (!iso) return '—'
+  if (!iso) return "—"
   try {
     const d = new Date(iso)
-    const pad = n => String(n).padStart(2, '0')
+    const pad = (n) => String(n).padStart(2, "0")
     return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-  } catch (_) { return iso }
+  } catch (_) {
+    return iso
+  }
 }

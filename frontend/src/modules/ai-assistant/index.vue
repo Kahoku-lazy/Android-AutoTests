@@ -1,25 +1,31 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
-import EmptyState from '@/shared/components/patterns/EmptyState.vue'
-import WbLoader from './components/WbLoader.vue'
-import AgentRouteCard from './components/AgentRouteCard.vue'
-import KnowledgeBase from './KnowledgeBase.vue'
-import ToolboxPanel from './components/ToolboxPanel.vue'
-import TaskBoard from './components/TaskBoard.vue'
-import { useAgentBoard } from './index.logic'
-import { useAuthUser } from '@/shared/composables/useAuthUser'
-import type { ViewMode } from '@/shared/types/ai'
+import { ref, computed } from "vue"
+import { useRouter, useRoute } from "vue-router"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import EmptyState from "@/shared/components/patterns/EmptyState.vue"
+import WbLoader from "./components/WbLoader.vue"
+import AgentRouteCard from "./components/AgentRouteCard.vue"
+import KnowledgeBase from "./KnowledgeBase.vue"
+import ToolboxPanel from "./components/ToolboxPanel.vue"
+import TaskBoard from "./components/TaskBoard.vue"
+import { useAgentBoard } from "./index.logic"
+import { useAuthUser } from "@/shared/composables/useAuthUser"
+import type { ViewMode } from "@/shared/types/ai"
 
 const router = useRouter()
 const route = useRoute()
 const dutyRosterRef = ref<HTMLElement | null>(null)
 const {
-  agents, loading, agentsError,
-  PAGE_HEADER, testingRoute, routeConnStatus,
-  loadAgents, editAgent, testConnection,
+  agents,
+  loading,
+  agentsError,
+  PAGE_HEADER,
+  testingRoute,
+  routeConnStatus,
+  loadAgents,
+  editAgent,
+  testConnection,
 } = useAgentBoard(dutyRosterRef)
 
 const { isSuperuser } = useAuthUser()
@@ -29,11 +35,11 @@ const isAdmin = computed(() => isSuperuser.value === true)
 const routeCards = computed(() => {
   const agent = agents.value[0]
   const configs = agent?.route_configs || {}
-  const fallbackName = agent?.name || '未命名助手'
-  const fallbackAvatar = agent?.avatar || agent?.avatar_url || '🤖'
+  const fallbackName = agent?.name || "未命名助手"
+  const fallbackAvatar = agent?.avatar || agent?.avatar_url || "🤖"
   return [
     {
-      key: 'device_control',
+      key: "device_control",
       config: configs.device_control,
       agentName: configs.device_control?.name || fallbackName,
       agentAvatar: configs.device_control?.avatar || fallbackAvatar,
@@ -43,25 +49,25 @@ const routeCards = computed(() => {
 
 // ── 视图（侧边栏子项路由驱动，/ai-assistant/agents|toolbox|knowledge）──
 const VIEW_BY_PATH: Record<string, ViewMode> = {
-  '/ai-assistant/agents': 'agents',
-  '/ai-assistant/toolbox': 'toolbox',
-  '/ai-assistant/knowledge': 'knowledge',
+  "/ai-assistant/agents": "agents",
+  "/ai-assistant/toolbox": "toolbox",
+  "/ai-assistant/knowledge": "knowledge",
 }
-const viewMode = computed<ViewMode>(() => VIEW_BY_PATH[route.path] || 'agents')
+const viewMode = computed<ViewMode>(() => VIEW_BY_PATH[route.path] || "agents")
 
 // ── 顶部 WorkbenchHeader 随侧边栏子项变化 ──
 const VIEW_META: Record<ViewMode, { title: string; subtitle: string }> = {
   agents: {
-    title: '平台小助手',
-    subtitle: '助手看板 + 任务卡片列表：配置两条线路、新建任务并下发执行',
+    title: "平台小助手",
+    subtitle: "助手看板 + 任务卡片列表：配置两条线路、新建任务并下发执行",
   },
   toolbox: {
-    title: 'AI工具箱',
-    subtitle: '先看助手此刻能用什么，再按来源开关目录 · 两条线路共用同一套装配',
+    title: "AI工具箱",
+    subtitle: "先看助手此刻能用什么，再按来源开关目录 · 两条线路共用同一套装配",
   },
   knowledge: {
-    title: '知识库',
-    subtitle: 'ChromaDB 向量库状态与可索引文档，支持重建索引',
+    title: "知识库",
+    subtitle: "ChromaDB 向量库状态与可索引文档，支持重建索引",
   },
 }
 const pageMeta = computed(() => VIEW_META[viewMode.value])
@@ -76,36 +82,41 @@ const pageMeta = computed(() => VIEW_META[viewMode.value])
       :icon-gradient="PAGE_HEADER.iconGradient"
     />
 
-
     <div class="doc-body">
       <template v-if="viewMode === 'agents'">
-      <section class="doc-section duty-section">
-        <div class="doc-section__header">
-          <h3 class="doc-section__title">平台小助手<span class="doc-tag">Assistant</span></h3>
-          <span class="filter-count">{{ routeCards.length }} 个助手</span>
-        </div>
-        <ErrorState v-if="agentsError" :message="agentsError" @retry="loadAgents" />
-        <div v-else class="route-card-grid" v-loading="loading">
-          <div v-if="loading && !agents.length" class="ai-loading-wrap">
-            <WbLoader /><span>正在加载智能体…</span>
+        <section class="doc-section duty-section">
+          <div class="doc-section__header">
+            <h3 class="doc-section__title">平台小助手<span class="doc-tag">Assistant</span></h3>
+            <span class="filter-count">{{ routeCards.length }} 个助手</span>
           </div>
-          <AgentRouteCard
-            v-for="rc in routeCards" :key="rc.key"
-            :config="rc.config"
-            :agent-name="rc.agentName"
-            :agent-avatar="rc.agentAvatar"
-            :can-manage="isAdmin"
-            :testing="testingRoute === rc.key"
-            :route-status="routeConnStatus[rc.key]"
-            @edit="editAgent(agents[0]?.id ?? 0, rc.key)"
-            @test="agents[0] && testConnection(agents[0], rc.key)"
-          />
-          <EmptyState v-if="!agents.length && !loading" icon="🤖" text="还没有智能体" :hint="'请联系管理员配置智能体'" />
-        </div>
-      </section>
+          <ErrorState v-if="agentsError" :message="agentsError" @retry="loadAgents" />
+          <div v-else class="route-card-grid" v-loading="loading">
+            <div v-if="loading && !agents.length" class="ai-loading-wrap">
+              <WbLoader /><span>正在加载智能体…</span>
+            </div>
+            <AgentRouteCard
+              v-for="rc in routeCards"
+              :key="rc.key"
+              :config="rc.config"
+              :agent-name="rc.agentName"
+              :agent-avatar="rc.agentAvatar"
+              :can-manage="isAdmin"
+              :testing="testingRoute === rc.key"
+              :route-status="routeConnStatus[rc.key]"
+              @edit="editAgent(agents[0]?.id ?? 0, rc.key)"
+              @test="agents[0] && testConnection(agents[0], rc.key)"
+            />
+            <EmptyState
+              v-if="!agents.length && !loading"
+              icon="🤖"
+              text="还没有智能体"
+              :hint="'请联系管理员配置智能体'"
+            />
+          </div>
+        </section>
 
-      <!-- 模块 2：任务卡片列表（新建任务弹窗 + 卡片式列表） -->
-      <TaskBoard />
+        <!-- 模块 2：任务卡片列表（新建任务弹窗 + 卡片式列表） -->
+        <TaskBoard />
       </template>
 
       <ToolboxPanel v-if="viewMode === 'toolbox'" class="tb-host" :can-manage="isAdmin" />

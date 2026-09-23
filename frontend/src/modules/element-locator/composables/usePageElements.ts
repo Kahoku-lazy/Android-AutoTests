@@ -5,13 +5,13 @@
  * 行字段按收敛口径（缩略图 / 元素名称 / 序号 / 文本 / 主定位 / 交互标注 / 测试点）：
  * 只有元素名称、文本、主定位与测试点可写，其余为采集产物（只读）。
  */
-import { computed, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import { formatApiError } from '@/shared/api-client'
-import { usePagination } from '@/shared/composables/usePagination'
-import { apiPageItems, apiUpdateElement, batchDeleteElements, createPageElement } from '../api'
-import type { PageElementFields } from '../api'
-import type { PageElementPayload } from '../types'
+import { computed, ref, watch } from "vue"
+import { ElMessage } from "element-plus"
+import { formatApiError } from "@/shared/api-client"
+import { usePagination } from "@/shared/composables/usePagination"
+import { apiPageItems, apiUpdateElement, batchDeleteElements, createPageElement } from "../api"
+import type { PageElementFields } from "../api"
+import type { PageElementPayload } from "../types"
 
 /** 接口一次取回上限（后端既有约束）；本地分页在这份集合上切页 */
 const FETCH_LIMIT = 500
@@ -19,7 +19,7 @@ const FETCH_LIMIT = 500
 const PAGE_SIZE = 10
 
 /** 行内可编辑字段（与后端 UPDATE_FIELDS 同源） */
-export type EditableField = 'alias' | 'text_val' | 'primary_xpath' | 'is_test_point'
+export type EditableField = "alias" | "text_val" | "primary_xpath" | "is_test_point"
 
 export interface PageElementRow {
   id: number
@@ -41,11 +41,11 @@ export interface PageElementRow {
 function toRow(raw: PageElementPayload): PageElementRow {
   return {
     id: Number(raw.id),
-    alias: String(raw.alias || ''),
+    alias: String(raw.alias || ""),
     seq: Number(raw.seq) || 0,
-    text_val: String(raw.text_val || ''),
-    primary_xpath: String(raw.primary_xpath || ''),
-    thumbnail_path: String(raw.thumbnail_path || ''),
+    text_val: String(raw.text_val || ""),
+    primary_xpath: String(raw.primary_xpath || ""),
+    thumbnail_path: String(raw.thumbnail_path || ""),
     is_test_point: Boolean(raw.is_test_point),
     clickable: Boolean(raw.clickable),
     long_clickable: Boolean(raw.long_clickable),
@@ -59,7 +59,7 @@ function toRow(raw: PageElementPayload): PageElementRow {
 
 export function usePageElements(pageId: () => number) {
   const loading = ref(false)
-  const error = ref('')
+  const error = ref("")
   const rows = ref<PageElementRow[]>([])
   const total = ref(0)
   const selectedIds = ref<number[]>([])
@@ -98,9 +98,9 @@ export function usePageElements(pageId: () => number) {
    */
   async function load(options: { keepSelection?: boolean } = {}) {
     loading.value = true
-    error.value = ''
+    error.value = ""
     try {
-      const { data } = await apiPageItems(pageId(), 'all', FETCH_LIMIT)
+      const { data } = await apiPageItems(pageId(), "all", FETCH_LIMIT)
       if (data.status) {
         rows.value = (data.elements || []).map(toRow)
         total.value = Number(data.total ?? rows.value.length)
@@ -111,12 +111,12 @@ export function usePageElements(pageId: () => number) {
           selectedIds.value = []
         }
       } else {
-        error.value = data.message || '页面元素加载失败'
+        error.value = data.message || "页面元素加载失败"
         rows.value = []
         total.value = 0
       }
     } catch (e: unknown) {
-      error.value = formatApiError(e as never, '加载失败')
+      error.value = formatApiError(e as never, "加载失败")
       rows.value = []
       total.value = 0
     } finally {
@@ -125,7 +125,7 @@ export function usePageElements(pageId: () => number) {
   }
 
   function applyLocal(row: PageElementRow, field: EditableField, value: string | boolean) {
-    if (field === 'is_test_point') {
+    if (field === "is_test_point") {
       row.is_test_point = Boolean(value)
       return
     }
@@ -139,20 +139,20 @@ export function usePageElements(pageId: () => number) {
     value: string | boolean,
   ): Promise<boolean> {
     const payload: PageElementFields = {}
-    if (field === 'is_test_point') payload.is_test_point = Boolean(value)
+    if (field === "is_test_point") payload.is_test_point = Boolean(value)
     else payload[field] = String(value)
 
     try {
       const { data } = await apiUpdateElement(row.id, payload)
       if (!data.status) {
-        ElMessage.error(data.message || '更新失败')
+        ElMessage.error(data.message || "更新失败")
         await load({ keepSelection: true })
         return false
       }
       applyLocal(row, field, value)
       return true
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e as never, '更新失败'))
+      ElMessage.error(formatApiError(e as never, "更新失败"))
       await load({ keepSelection: true })
       return false
     }
@@ -162,28 +162,28 @@ export function usePageElements(pageId: () => number) {
     try {
       const { data } = await createPageElement(pageId(), fields)
       if (!data.status) {
-        ElMessage.error(data.message || '新增失败')
+        ElMessage.error(data.message || "新增失败")
         return false
       }
-      ElMessage.success('已新增一行')
+      ElMessage.success("已新增一行")
       await load()
       goPage(totalPages.value)
       return true
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e as never, '新增失败'))
+      ElMessage.error(formatApiError(e as never, "新增失败"))
       return false
     }
   }
 
   async function removeSelected(): Promise<boolean> {
     if (!selectedIds.value.length) {
-      ElMessage.warning('请先勾选要删除的行')
+      ElMessage.warning("请先勾选要删除的行")
       return false
     }
     try {
       const { data } = await batchDeleteElements(selectedIds.value)
       if (!data.status) {
-        ElMessage.error(data.message || '删除失败')
+        ElMessage.error(data.message || "删除失败")
         return false
       }
       ElMessage.success(`已删除 ${data.data?.deleted ?? selectedIds.value.length} 行`)
@@ -191,14 +191,18 @@ export function usePageElements(pageId: () => number) {
       await load()
       return true
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e as never, '删除失败'))
+      ElMessage.error(formatApiError(e as never, "删除失败"))
       return false
     }
   }
 
-  watch(pageId, () => {
-    void load()
-  }, { immediate: true })
+  watch(
+    pageId,
+    () => {
+      void load()
+    },
+    { immediate: true },
+  )
 
   return {
     loading,

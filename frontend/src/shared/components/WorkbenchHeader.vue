@@ -4,17 +4,17 @@
  * actions 槽请放 el-button.wb-btn，勿用 animal Button
  * icon: Lucide 图标名（与 ModuleNavigator / 侧栏同步），必须传；无 emoji 回退
  */
-import { onMounted, nextTick, watch } from 'vue'
+import { onMounted, nextTick, watch } from "vue"
 
 const props = defineProps({
   title: { type: String, required: true },
-  subtitle: { type: String, default: '' },
+  subtitle: { type: String, default: "" },
   /** Lucide 图标名，如 layout-dashboard；必须传（图标是页头的唯一标识块） */
-  icon: { type: String, default: '' },
+  icon: { type: String, default: "" },
   /** 图标底色渐变，与 module-nav 卡片一致 */
   iconGradient: {
     type: String,
-    default: 'linear-gradient(135deg,var(--c-workflow),var(--wb-icon-gradient-end))',
+    default: "linear-gradient(135deg,var(--c-workflow),var(--wb-icon-gradient-end))",
   },
 })
 
@@ -27,10 +27,13 @@ onMounted(async () => {
   refreshIcons()
 })
 
-watch(() => props.icon, async () => {
-  await nextTick()
-  refreshIcons()
-})
+watch(
+  () => props.icon,
+  async () => {
+    await nextTick()
+    refreshIcons()
+  },
+)
 </script>
 
 <template>
@@ -115,7 +118,9 @@ watch(() => props.icon, async () => {
   color: var(--ink);
   stroke: var(--ink);
 }
-.brand-text { min-width: 0; }
+.brand-text {
+  min-width: 0;
+}
 .brand-title {
   margin: 0;
   font-family: var(--app-font-display);

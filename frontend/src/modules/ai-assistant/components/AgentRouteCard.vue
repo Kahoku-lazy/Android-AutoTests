@@ -1,13 +1,13 @@
 <script setup lang="ts">
 /** 助手线路卡片 — 左头像 + 右三行（名称 / 职责 / 状态）；底栏校验与配置 */
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import type { RouteConfig, RouteConnStatus } from '@/shared/types/ai'
-import DoodleNote from '@/shared/components/DoodleNote.vue'
-import DoodleBtn from '@/shared/components/DoodleBtn.vue'
-import { isImageAvatar } from '../constants'
+import { computed, onMounted, onUnmounted, ref } from "vue"
+import type { RouteConfig, RouteConnStatus } from "@/shared/types/ai"
+import DoodleNote from "@/shared/components/DoodleNote.vue"
+import DoodleBtn from "@/shared/components/DoodleBtn.vue"
+import { isImageAvatar } from "../constants"
 
 /** 控制设备线路职责（看板唯一线路，写死） */
-const DUTY_LABEL = '职责：UI自动化'
+const DUTY_LABEL = "职责：UI自动化"
 /** 测量前占位，避免首帧 0×0 */
 const AVATAR_FALLBACK_PX = 64
 
@@ -22,8 +22,8 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ edit: []; test: [] }>()
 
-const displayName = computed(() => props.config?.name || props.agentName || '未命名助手')
-const displayAvatar = computed(() => props.config?.avatar || props.agentAvatar || '🤖')
+const displayName = computed(() => props.config?.name || props.agentName || "未命名助手")
+const displayAvatar = computed(() => props.config?.avatar || props.agentAvatar || "🤖")
 const avatarIsImage = computed(() => isImageAvatar(displayAvatar.value))
 
 /** 头像边长 = 右三行自然总高（含边框；flex+aspect-ratio 会压成 0 宽） */
@@ -43,7 +43,7 @@ onMounted(() => {
   const el = textRef.value
   if (!el) return
   syncAvatarSize()
-  if (typeof ResizeObserver === 'undefined') return
+  if (typeof ResizeObserver === "undefined") return
   textRo = new ResizeObserver(() => syncAvatarSize())
   textRo.observe(el)
 })
@@ -57,33 +57,33 @@ const avatarBoxStyle = computed(() => {
   const style: Record<string, string> = {
     width: size,
     height: size,
-    boxSizing: 'border-box',
+    boxSizing: "border-box",
   }
   if (avatarIsImage.value) style.backgroundImage = `url(${displayAvatar.value})`
   return style
 })
 
 /** 业务三态；探测中不算第四业务态 */
-const routeConnState = computed<'ready' | 'unusable' | 'offline' | 'checking'>(() => {
-  if (props.testing) return 'checking'
+const routeConnState = computed<"ready" | "unusable" | "offline" | "checking">(() => {
+  if (props.testing) return "checking"
   const status = props.routeStatus ?? props.config?.health?.status ?? null
-  if (status === 'ready' || status === 'unusable' || status === 'offline') return status
+  if (status === "ready" || status === "unusable" || status === "offline") return status
   // 进页 health 尚未返回：过程态
-  return 'checking'
+  return "checking"
 })
 
 /** 胶带/阴影强调色：ready 青绿、unusable 暖黄、offline 红、探测中暖黄 */
 const noteAccent = computed(() => {
-  if (routeConnState.value === 'ready') return 'var(--c-case)'
-  if (routeConnState.value === 'offline') return 'var(--app-marker-red)'
-  return 'var(--c-dashboard)'
+  if (routeConnState.value === "ready") return "var(--c-case)"
+  if (routeConnState.value === "offline") return "var(--app-marker-red)"
+  return "var(--c-dashboard)"
 })
 
 const badgeClass = computed(() => {
-  if (routeConnState.value === 'ready') return 'is-ready'
-  if (routeConnState.value === 'unusable') return 'is-unusable'
-  if (routeConnState.value === 'offline') return 'is-offline'
-  return 'is-checking'
+  if (routeConnState.value === "ready") return "is-ready"
+  if (routeConnState.value === "unusable") return "is-unusable"
+  if (routeConnState.value === "offline") return "is-offline"
+  return "is-checking"
 })
 </script>
 
@@ -113,7 +113,7 @@ const badgeClass = computed(() => {
 
     <template v-if="canManage" #actions>
       <DoodleBtn tone="teal" :disabled="testing" @click="emit('test')">
-        {{ testing ? '校验中…' : '校验' }}
+        {{ testing ? "校验中…" : "校验" }}
       </DoodleBtn>
       <DoodleBtn tone="yellow" @click="emit('edit')">配置</DoodleBtn>
     </template>

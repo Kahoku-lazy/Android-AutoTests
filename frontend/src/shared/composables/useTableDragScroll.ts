@@ -4,9 +4,9 @@
  * 该容器需 CSS `overflow-x: auto`，并关掉 el-table 自身的横向滚动，避免双滚动条。
  * 当前消费方：设备管理页（.device-table-wrapper）与设备检查器（.sap-table-body）。
  */
-import { ref, onBeforeUnmount, type Ref } from 'vue'
+import { ref, onBeforeUnmount, type Ref } from "vue"
 
-const INTERACTIVE = 'button, a, input, textarea, select, .el-button, .el-switch, .el-checkbox'
+const INTERACTIVE = "button, a, input, textarea, select, .el-button, .el-switch, .el-checkbox"
 const LONG_PRESS_MS = 180
 const MOVE_ACTIVATE_PX = 6
 
@@ -33,9 +33,9 @@ export function useTableDragScroll(external?: Ref<HTMLElement | null>): {
   }
 
   function cleanupWindow() {
-    window.removeEventListener('pointermove', onMove)
-    window.removeEventListener('pointerup', onUp)
-    window.removeEventListener('pointercancel', onUp)
+    window.removeEventListener("pointermove", onMove)
+    window.removeEventListener("pointerup", onUp)
+    window.removeEventListener("pointercancel", onUp)
   }
 
   function reset(el: HTMLElement | null) {
@@ -43,15 +43,15 @@ export function useTableDragScroll(external?: Ref<HTMLElement | null>): {
     cleanupWindow()
     pointerId = null
     panReady = false
-    el?.classList.remove('is-dragging', 'is-pan-ready')
+    el?.classList.remove("is-dragging", "is-pan-ready")
     if (didPan) {
       const swallow = (ev: MouseEvent) => {
         ev.stopPropagation()
         ev.preventDefault()
-        window.removeEventListener('click', swallow, true)
+        window.removeEventListener("click", swallow, true)
       }
-      window.addEventListener('click', swallow, true)
-      window.setTimeout(() => window.removeEventListener('click', swallow, true), 0)
+      window.addEventListener("click", swallow, true)
+      window.setTimeout(() => window.removeEventListener("click", swallow, true), 0)
     }
     didPan = false
   }
@@ -59,7 +59,7 @@ export function useTableDragScroll(external?: Ref<HTMLElement | null>): {
   function activatePan(el: HTMLElement) {
     if (panReady) return
     panReady = true
-    el.classList.add('is-dragging', 'is-pan-ready')
+    el.classList.add("is-dragging", "is-pan-ready")
   }
 
   /** 只有真正开始横移才捕获指针：
@@ -100,7 +100,7 @@ export function useTableDragScroll(external?: Ref<HTMLElement | null>): {
 
   function onTablePointerDown(e: PointerEvent) {
     // 仅鼠标左键 / 触控主指针
-    if (e.pointerType === 'mouse' && e.button !== 0) return
+    if (e.pointerType === "mouse" && e.button !== 0) return
     const el = tableWrapRef.value
     if (!el) return
     const target = e.target as HTMLElement | null
@@ -119,9 +119,9 @@ export function useTableDragScroll(external?: Ref<HTMLElement | null>): {
       activatePan(tableWrapRef.value)
     }, LONG_PRESS_MS)
 
-    window.addEventListener('pointermove', onMove, { passive: false })
-    window.addEventListener('pointerup', onUp)
-    window.addEventListener('pointercancel', onUp)
+    window.addEventListener("pointermove", onMove, { passive: false })
+    window.addEventListener("pointerup", onUp)
+    window.addEventListener("pointercancel", onUp)
   }
 
   onBeforeUnmount(() => reset(tableWrapRef.value))

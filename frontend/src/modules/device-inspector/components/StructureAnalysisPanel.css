@@ -1,9 +1,12 @@
 .sap {
   /* 本组件私有色值登记：放大预览落影（消费者在本根类之内；行选中底色已收归 --comp-table-row-selected-bg） */
-  --sap-enlarge-shadow-color: var(--color-ink-05-a30) /* -> --color-ink-05-a30 */;   /* 放大预览面板的落影 */
-  height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+  --sap-enlarge-shadow-color: var(--color-ink-05-a30) /* -> --color-ink-05-a30 */; /* 放大预览面板的落影 */
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
-
 
 .sap-body {
   flex: 1;
@@ -58,10 +61,18 @@
   box-shadow: 3px 3px 0 0 var(--ink);
 }
 
-.sap-chip--on { background: var(--c-dashboard); }
+.sap-chip--on {
+  background: var(--c-dashboard);
+}
 
-.sap-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sap-chip-count { flex-shrink: 0; }
+.sap-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sap-chip-count {
+  flex-shrink: 0;
+}
 
 .sap-sections-empty {
   padding: var(--insp-pad-tight);
@@ -69,18 +80,33 @@
   color: var(--app-text-secondary);
 }
 
-.sap-table { min-height: 0; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.sap-table {
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
 /* 分页栏：与设备管理页 .table-toolbar 同口径，只保留右半段（本页不渲染「显示行数」） */
 .sap-pager {
   flex-shrink: 0;
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--insp-gap-row);
   padding-bottom: var(--insp-pager-pad-b);
   min-height: var(--insp-pager-min-h);
 }
-.sap-page-info { font-size: var(--app-size-sm); font-weight: 600; color: var(--app-text-secondary); }
-.sap-page-nav { display: flex; gap: var(--app-space-sm); }
+.sap-page-info {
+  font-size: var(--app-size-sm);
+  font-weight: 600;
+  color: var(--app-text-secondary);
+}
+.sap-page-nav {
+  display: flex;
+  gap: var(--app-space-sm);
+}
 /* ── 元素表横向滚动 ──
    横向滚动由 el-table 自身承载：表头由 Element Plus 同步，前 3 列由 EP 的 fixed 冻结
    （sticky 方案无法穿透 el-table 自身的 overflow 容器，故不用），外层容器只负责定高。
@@ -112,7 +138,9 @@
 }
 /* 内层表格保证不小于列宽合计（EP 的横向滚动与固定列都依赖它比容器宽） */
 .sap-table-body :deep(.el-table__body),
-.sap-table-body :deep(.el-table__header) { min-width: var(--insp-table-min-width, 986px); }
+.sap-table-body :deep(.el-table__header) {
+  min-width: var(--insp-table-min-width, 986px);
+}
 
 /* 拖拽平移：作用在 el-table 的横向滚动容器（.el-scrollbar__wrap）上，
    composable 给该元素挂 is-pan-ready / is-dragging */
@@ -124,7 +152,9 @@
   scrollbar-color: var(--c-workflow) transparent;
 }
 .sap-table-body :deep(.is-pan-ready),
-.sap-table-body :deep(.is-dragging) { cursor: grabbing; }
+.sap-table-body :deep(.is-dragging) {
+  cursor: grabbing;
+}
 .sap-table-body :deep(.is-dragging *) {
   cursor: grabbing !important;
   pointer-events: none;
@@ -137,12 +167,17 @@
   cursor: pointer;
   pointer-events: auto;
 }
-.sap-table-body :deep(.el-scrollbar__wrap)::-webkit-scrollbar { width: 8px; height: 8px; }
+.sap-table-body :deep(.el-scrollbar__wrap)::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
 .sap-table-body :deep(.el-scrollbar__wrap)::-webkit-scrollbar-thumb {
   background: var(--c-workflow);
   border-radius: var(--app-radius-sm);
 }
-.sap-table-body :deep(.el-scrollbar__wrap)::-webkit-scrollbar-track { background: var(--app-bg-subtle); }
+.sap-table-body :deep(.el-scrollbar__wrap)::-webkit-scrollbar-track {
+  background: var(--app-bg-subtle);
+}
 
 /* 缩略图列的定位层铺满整格，故其所在单元格必须作为定位基准 */
 .sap-table-body :deep(.el-table__body td.el-table__cell:has(.sap-thumb-cell)) {
@@ -159,12 +194,21 @@
   justify-content: center;
   cursor: pointer;
 }
-.sap-thumb-wrap { position: relative; display: inline-flex; }
-.sap-thumb {
-  width: 48px; height: 48px; object-fit: contain;
-  border: 2px solid var(--ink); border-radius: var(--app-radius-sm); display: block;
+.sap-thumb-wrap {
+  position: relative;
+  display: inline-flex;
 }
-.sap-thumb-empty { color: var(--app-text-secondary); }
+.sap-thumb {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  display: block;
+}
+.sap-thumb-empty {
+  color: var(--app-text-secondary);
+}
 
 /* ── 元素名称内联编辑 ── */
 .sap-name-cell {
@@ -178,26 +222,46 @@
   cursor: text;
   min-width: 0;
 }
-.sap-name-cell--readonly { cursor: default; }
+.sap-name-cell--readonly {
+  cursor: default;
+}
 .sap-name-text {
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--app-size-xs);
 }
-.sap-name--empty { color: var(--app-text-secondary); font-style: italic; }
-.sap-name-icon { flex-shrink: 0; color: var(--app-text-secondary); opacity: 0; transition: opacity var(--app-duration-fast); }
-.sap-name-cell:hover .sap-name-icon { opacity: 1; }
+.sap-name--empty {
+  color: var(--app-text-secondary);
+  font-style: italic;
+}
+.sap-name-icon {
+  flex-shrink: 0;
+  color: var(--app-text-secondary);
+  opacity: 0;
+  transition: opacity var(--app-duration-fast);
+}
+.sap-name-cell:hover .sap-name-icon {
+  opacity: 1;
+}
 .sap-name-input {
-  width: 100%; box-sizing: border-box;
-  font-size: var(--app-size-xs); font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: var(--app-size-xs);
+  font-family: inherit;
   padding: var(--insp-name-input-pad);
-  border: 2px solid var(--ink); border-radius: var(--app-radius-sm);
-  background: var(--app-bg-card); color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-card);
+  color: var(--ink);
 }
 
 /* ── 放大浮层 ── */
 /* ── 放大预览内容（外壳由 el-dialog 提供） ── */
 .sap-enlarge {
-  display: flex; gap: var(--app-space-md); align-items: flex-start;
+  display: flex;
+  gap: var(--app-space-md);
+  align-items: flex-start;
   background: var(--app-bg-card);
   border: 3px solid var(--ink);
   border-radius: var(--app-radius-md);
@@ -206,25 +270,42 @@
   max-width: 90vw;
 }
 .sap-enlarge-img {
-  width: 240px; height: 240px; object-fit: contain;
-  border: 2px solid var(--ink); border-radius: var(--app-radius-sm);
+  width: 240px;
+  height: 240px;
+  object-fit: contain;
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
   background: var(--paper);
 }
 /* 缩略图文件已失效时的占位块（与图片同尺寸，保持弹窗布局稳定） */
 .sap-enlarge-missing {
-  width: 240px; height: 240px; display: flex; align-items: center; justify-content: center;
-  border: 2px dashed var(--ink); border-radius: var(--app-radius-sm);
-  color: var(--app-text-secondary); font-size: var(--app-size-xs);
+  width: 240px;
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--ink);
+  border-radius: var(--app-radius-sm);
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
 }
 .sap-enlarge-detail {
-  display: flex; flex-direction: column; gap: var(--insp-gap-tight);
+  display: flex;
+  flex-direction: column;
+  gap: var(--insp-gap-tight);
   font-size: var(--app-size-xs);
-  min-width: 220px; max-width: 320px;
+  min-width: 220px;
+  max-width: 320px;
 }
 .sap-enlarge-field {
-  display: flex; gap: var(--app-space-sm); align-items: baseline;
+  display: flex;
+  gap: var(--app-space-sm);
+  align-items: baseline;
   word-break: break-all;
 }
 .sap-enlarge-field span {
-  flex-shrink: 0; width: 64px; font-weight: 700; color: var(--app-text-secondary);
+  flex-shrink: 0;
+  width: 64px;
+  font-weight: 700;
+  color: var(--app-text-secondary);
 }

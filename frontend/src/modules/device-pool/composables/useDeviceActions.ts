@@ -4,20 +4,13 @@
  * 从 index.vue 提取所有设备操作 handler、数据加载和动画逻辑。
  * 依赖 useDevicePoolState composable（替代原 Pinia store）。
  */
-import { ref, nextTick, type Ref } from 'vue'
-import { animate, stagger } from 'animejs'
-import { ElMessage } from 'element-plus'
-import { getUsername } from '@/shared/auth/token-storage'
-import {
-  DEFAULT_DIALOGS,
-  LIST_ANIMATION,
-} from '../constants'
-import type {
-  DeviceRecord,
-  DisconnectDialogState,
-  NetworkDialogState,
-} from '@/shared/types/device'
-import type { UseDevicePoolStateReturn } from './useDevicePoolState'
+import { ref, nextTick, type Ref } from "vue"
+import { animate, stagger } from "animejs"
+import { ElMessage } from "element-plus"
+import { getUsername } from "@/shared/auth/token-storage"
+import { DEFAULT_DIALOGS, LIST_ANIMATION } from "../constants"
+import type { DeviceRecord, DisconnectDialogState, NetworkDialogState } from "@/shared/types/device"
+import type { UseDevicePoolStateReturn } from "./useDevicePoolState"
 
 // ── 返回类型接口 ──
 
@@ -28,7 +21,11 @@ export interface UseDeviceActionsReturn {
   loadDevices: () => Promise<void>
   handleRefresh: () => Promise<void>
   openNetworkDialog: () => void
-  handleNetworkConnect: (opts: { target: string; pair_port?: string; pair_code?: string }) => Promise<void>
+  handleNetworkConnect: (opts: {
+    target: string
+    pair_port?: string
+    pair_code?: string
+  }) => Promise<void>
   cancelNetworkDialog: () => void
   handleRowClick: (record: DeviceRecord) => void
   handleLockClick: (device: DeviceRecord) => Promise<void>
@@ -46,7 +43,7 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
   const networkDialog = ref<NetworkDialogState>({ ...DEFAULT_DIALOGS.network })
 
   // ── Internal state ──
-  let prevDevicesJson = ''
+  let prevDevicesJson = ""
 
   // ── Current user ──
   const currentUser = getUsername()
@@ -80,7 +77,7 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
     if (result && result.status) {
       ElMessage.success(`扫描完成，发现 ${result.data?.count || 0} 台设备`)
     } else if (result && !result.status) {
-      ElMessage.error(result.message || '扫描失败')
+      ElMessage.error(result.message || "扫描失败")
     }
     await loadDevices()
   }
@@ -108,7 +105,7 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
       networkDialog.value.visible = false
       await loadDevices()
     } else {
-      ElMessage.error((result && result.message) || '连接失败')
+      ElMessage.error((result && result.message) || "连接失败")
     }
   }
 
@@ -119,7 +116,7 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
   // ── Row click ──
   function handleRowClick(record: DeviceRecord) {
     if (!record || !record.serial) return
-    if (record.status !== 'ONLINE' && record.status !== 'BUSY') return
+    if (record.status !== "ONLINE" && record.status !== "BUSY") return
     pool.selectDevice(record.serial)
   }
 
@@ -130,7 +127,7 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
     if (result.status) {
       ElMessage.success(nextLocked ? `已锁定 ${device.serial}` : `${device.serial} 已公开`)
     } else {
-      ElMessage.error(result.message || '操作失败')
+      ElMessage.error(result.message || "操作失败")
     }
   }
 
@@ -140,7 +137,7 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
     if (result.status) {
       ElMessage.success(`${serial} 已解除占用`)
     } else {
-      ElMessage.error(result.message || '释放失败')
+      ElMessage.error(result.message || "释放失败")
     }
   }
 
@@ -151,9 +148,9 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
     disconnectDialog.value = {
       visible: true,
       serial,
-      model: dev.model || dev.name || '',
+      model: dev.model || dev.name || "",
       status: dev.status,
-      lockedBy: dev.locked_by || '',
+      lockedBy: dev.locked_by || "",
       isBusyOthers: false,
     }
   }
@@ -165,7 +162,7 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
       ElMessage.success(`${serial} 已删除`)
       disconnectDialog.value.visible = false
     } else {
-      ElMessage.error(result.message || '删除失败')
+      ElMessage.error(result.message || "删除失败")
     }
   }
 

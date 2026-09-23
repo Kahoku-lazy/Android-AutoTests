@@ -3,11 +3,11 @@
  * StatsCard — 仪表盘统计入口（薄包装共享 KpiCard entry）
  * 保留 count-up / loading / path 路由 / live / trend；视觉壳交给 KpiCard。
  */
-import { ref, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { countUpFormatted } from '@/shared/animations'
-import SkeletonCard from '@/shared/components/patterns/SkeletonCard.vue'
-import KpiCard from '@/shared/components/KpiCard.vue'
+import { ref, computed, watch } from "vue"
+import { useRouter } from "vue-router"
+import { countUpFormatted } from "@/shared/animations"
+import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
+import KpiCard from "@/shared/components/KpiCard.vue"
 
 export interface StatsCardProps {
   label: string
@@ -23,7 +23,7 @@ export interface StatsCardProps {
   live?: boolean
   trend?: number
   trendLabel?: string
-  deco?: 'none' | 'pin' | 'tape'
+  deco?: "none" | "pin" | "tape"
   tilt?: number
   /** entry：是否显示「进入」；有 path 时整卡仍可点 */
   showEnter?: boolean
@@ -31,17 +31,17 @@ export interface StatsCardProps {
 
 const props = withDefaults(defineProps<StatsCardProps>(), {
   value: 0,
-  prefix: '',
-  suffix: '',
-  desc: '',
-  color: 'sage',
-  path: '',
+  prefix: "",
+  suffix: "",
+  desc: "",
+  color: "sage",
+  path: "",
   loading: false,
   decimals: 0,
   live: false,
   trend: undefined,
-  trendLabel: '',
-  deco: 'pin',
+  trendLabel: "",
+  deco: "pin",
   tilt: undefined,
   showEnter: true,
 })
@@ -51,23 +51,23 @@ const valueRef = ref<HTMLElement | null>(null)
 const displayed = ref(false)
 
 const COLOR_ACCENTS: Record<string, string> = {
-  sage: 'var(--c-device)',
-  gray: 'var(--c-ai)',
-  rose: 'var(--c-runner)',
-  pale: 'var(--c-workflow)',
-  deep: 'var(--c-case)',
-  cream: 'var(--c-element)',
-  dust: 'var(--c-report)',
+  sage: "var(--c-device)",
+  gray: "var(--c-ai)",
+  rose: "var(--c-runner)",
+  pale: "var(--c-workflow)",
+  deep: "var(--c-case)",
+  cream: "var(--c-element)",
+  dust: "var(--c-report)",
 }
 
 const fill = computed(() => COLOR_ACCENTS[props.color] || COLOR_ACCENTS.sage)
 
-const descText = computed(() => props.desc || '核心指标实时更新')
+const descText = computed(() => props.desc || "核心指标实时更新")
 
 const trendText = computed(() => {
-  if (props.trend === undefined) return ''
-  if (props.trend === 0) return props.trendLabel || '0%'
-  const arrow = props.trend > 0 ? '↑' : '↓'
+  if (props.trend === undefined) return ""
+  if (props.trend === 0) return props.trendLabel || "0%"
+  const arrow = props.trend > 0 ? "↑" : "↓"
   return `${arrow}${Math.abs(props.trend)}% ${props.trendLabel}`.trim()
 })
 
@@ -92,7 +92,15 @@ function onCardEnter() {
     displayed.value = true
     setTimeout(() => {
       if (valueRef.value) {
-        countUpFormatted(valueRef.value, 0, props.value, 1200, props.prefix, props.suffix, props.decimals)
+        countUpFormatted(
+          valueRef.value,
+          0,
+          props.value,
+          1200,
+          props.prefix,
+          props.suffix,
+          props.decimals,
+        )
       }
     }, 200)
   }

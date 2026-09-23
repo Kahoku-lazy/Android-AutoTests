@@ -12,11 +12,11 @@
 <script setup>
 defineProps({
   /** Emoji icon (e.g. "📁" "📋" "🔍") */
-  icon: { type: String, default: '' },
+  icon: { type: String, default: "" },
   /** Primary text (e.g. "暂无页面" "没有匹配的结果") */
   text: { type: String, required: true },
   /** Secondary hint text */
-  hint: { type: String, default: '' },
+  hint: { type: String, default: "" },
 })
 </script>
 
@@ -31,8 +31,21 @@ defineProps({
   text-align: center;
   gap: var(--app-space-sm);
 }
-.empty-state__icon { font-size: 40px; line-height: 1.2; }
-.empty-state__text { font-size: var(--app-size-md); font-weight: 700; color: var(--ink); margin: 0; }
-.empty-state__hint { font-size: var(--app-size-sm); margin: 0; }
-.empty-state__cta { margin-top: var(--app-space-md); }
+.empty-state__icon {
+  font-size: 40px;
+  line-height: 1.2;
+}
+.empty-state__text {
+  font-size: var(--app-size-md);
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+.empty-state__hint {
+  font-size: var(--app-size-sm);
+  margin: 0;
+}
+.empty-state__cta {
+  margin-top: var(--app-space-md);
+}
 </style>

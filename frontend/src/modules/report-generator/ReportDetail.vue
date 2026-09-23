@@ -1,26 +1,25 @@
 <script setup>
-
-import AppCard from "@/shared/components/AppCard.vue";
-import AppTabs from "@/shared/components/AppTabs.vue";
-import AppTable from "@/shared/components/AppTable.vue";
-import StepScreenshotPanel from "@/shared/components/StepScreenshotPanel.vue";
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
-import { usePagination } from '@/shared/composables/usePagination'
-import { useRoute, useRouter } from 'vue-router'
-import { animate, stagger } from 'animejs'
-import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
-import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
-import KpiCard from '@/shared/components/KpiCard.vue'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import { useExpandCollapse } from '@/shared/composables/useExpandCollapse'
-import { getRunReport, statusLabel, statusBadgeClass, iterBadgeClass, formatTime } from './api'
+import AppCard from "@/shared/components/AppCard.vue"
+import AppTabs from "@/shared/components/AppTabs.vue"
+import AppTable from "@/shared/components/AppTable.vue"
+import StepScreenshotPanel from "@/shared/components/StepScreenshotPanel.vue"
+import { ref, computed, onMounted, nextTick, watch } from "vue"
+import { usePagination } from "@/shared/composables/usePagination"
+import { useRoute, useRouter } from "vue-router"
+import { animate, stagger } from "animejs"
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
+import KpiCard from "@/shared/components/KpiCard.vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import { useExpandCollapse } from "@/shared/composables/useExpandCollapse"
+import { getRunReport, statusLabel, statusBadgeClass, iterBadgeClass, formatTime } from "./api"
 import {
   PAGE_SIZE_OPTIONS,
   REPORT_HEADER_GRADIENT,
   REPORT_HEADER_ICON,
   TABLE_HEADER_HEIGHT,
   TABLE_ROW_HEIGHT,
-} from './constants'
+} from "./constants"
 
 const route = useRoute()
 const router = useRouter()
@@ -28,8 +27,8 @@ const runId = computed(() => String(route.params.runId))
 
 const report = ref(null)
 const loading = ref(false)
-const error = ref('')
-const activeTab = ref('cases')
+const error = ref("")
+const activeTab = ref("cases")
 const { expandedIds: expandedFailCases, toggle: toggleFailExpand } = useExpandCollapse()
 const { expandedIds: expandedStepGroups, toggle: toggleStepGroupExpand } = useExpandCollapse()
 
@@ -41,26 +40,32 @@ watch(runId, () => {
 })
 
 async function loadReport() {
-  if (!runId.value || runId.value === 'undefined') return
+  if (!runId.value || runId.value === "undefined") return
   loading.value = true
-  error.value = ''
+  error.value = ""
   try {
     const { data } = await getRunReport(runId.value)
     if (data.status) report.value = data.run
-    else error.value = data.message || '加载报告失败'
+    else error.value = data.message || "加载报告失败"
   } catch (e) {
-    error.value = e?.response?.data?.message || e?.message || '加载报告失败'
+    error.value = e?.response?.data?.message || e?.message || "加载报告失败"
   }
   loading.value = false
   await nextTick()
-  animate('.detail-table tbody tr', { opacity: [0, 1], translateY: [12, 0], delay: stagger(30), duration: 350, ease: 'outCubic' })
+  animate(".detail-table tbody tr", {
+    opacity: [0, 1],
+    translateY: [12, 0],
+    delay: stagger(30),
+    duration: 350,
+    ease: "outCubic",
+  })
 }
 
 // ── AppTabs ──
 const tabs = computed(() => {
-  const items = [{ key: 'cases', label: '用例执行明细' }]
+  const items = [{ key: "cases", label: "用例执行明细" }]
   const failCount = failedSteps.value.length || failedCases.value.length
-  if (failCount > 0) items.push({ key: 'failures', label: `失败分析 (${failCount})` })
+  if (failCount > 0) items.push({ key: "failures", label: `失败分析 (${failCount})` })
   return items
 })
 
@@ -87,7 +92,7 @@ const {
 
 const tableScrollY = computed(() => TABLE_HEADER_HEIGHT + pageSize.value * TABLE_ROW_HEIGHT)
 
-const failedCases = computed(() => allCases.value.filter(c => c.fail > 0))
+const failedCases = computed(() => allCases.value.filter((c) => c.fail > 0))
 
 // TaskAppCard failed_steps — detailed step-level failure records
 const failedSteps = computed(() => {
@@ -96,13 +101,11 @@ const failedSteps = computed(() => {
 })
 
 const failedStepsByCase = computed(() => {
-  const caseIdByTitle = Object.fromEntries(
-    allCases.value.map(c => [c.case_title, c.case_id]),
-  )
+  const caseIdByTitle = Object.fromEntries(allCases.value.map((c) => [c.case_title, c.case_id]))
   const groups = new Map()
 
   for (const fs of failedSteps.value) {
-    const caseTitle = fs.caseTitle || fs.caseId || '未知用例'
+    const caseTitle = fs.caseTitle || fs.caseId || "未知用例"
     const caseId = fs.caseId || caseIdByTitle[caseTitle] || caseTitle
     if (!groups.has(caseId)) {
       groups.set(caseId, {
@@ -116,13 +119,13 @@ const failedStepsByCase = computed(() => {
   }
 
   return [...groups.values()]
-    .map(group => ({
+    .map((group) => ({
       ...group,
       steps: [...group.steps].sort(
         (a, b) => a.iteration - b.iteration || a.stepIndex - b.stepIndex,
       ),
     }))
-    .sort((a, b) => a.caseTitle.localeCompare(b.caseTitle, 'zh-CN'))
+    .sort((a, b) => a.caseTitle.localeCompare(b.caseTitle, "zh-CN"))
 })
 
 const kpiPassRate = computed(() => {
@@ -130,31 +133,32 @@ const kpiPassRate = computed(() => {
   return report.value.pass_rate || 0
 })
 
-function goBack() { router.push('/reports') }
+function goBack() {
+  router.push("/reports")
+}
 
 function failedIterations(c) {
-  return (c.iterations || []).filter(i => i.result !== 'pass')
+  return (c.iterations || []).filter((i) => i.result !== "pass")
 }
 
 function failStepsForCase(c) {
   const group = failedStepsByCase.value.find(
-    g => g.caseId === c.case_id || g.caseTitle === c.case_title,
+    (g) => g.caseId === c.case_id || g.caseTitle === c.case_title,
   )
   return group?.steps || []
 }
 
 // ── TaskAppCard outcome helpers ──
 function outcomeLabel(outcome) {
-  const map = { completed: '已完成', stopped: '已停止', interrupted: '运行中断', error: '异常终止' }
-  return map[outcome] || outcome || '—'
+  const map = { completed: "已完成", stopped: "已停止", interrupted: "运行中断", error: "异常终止" }
+  return map[outcome] || outcome || "—"
 }
 function outcomeBadgeClass(outcome) {
-  if (outcome === 'completed') return 'badge-pass'
-  if (outcome === 'stopped' || outcome === 'interrupted') return 'badge-stopped'
-  if (outcome === 'error') return 'badge-fail'
-  return 'badge-stopped'
+  if (outcome === "completed") return "badge-pass"
+  if (outcome === "stopped" || outcome === "interrupted") return "badge-stopped"
+  if (outcome === "error") return "badge-fail"
+  return "badge-stopped"
 }
-
 </script>
 
 <template>
@@ -171,10 +175,7 @@ function outcomeBadgeClass(outcome) {
       <WorkbenchCrumbs
         back-to="/reports"
         back-label="返回列表"
-        :items="[
-          { label: '测试报告', to: '/reports' },
-          { label: runMeta.run_id || '详情' },
-        ]"
+        :items="[{ label: '测试报告', to: '/reports' }, { label: runMeta.run_id || '详情' }]"
       />
       <!-- Error state -->
       <ErrorState v-if="error" :message="error" @retry="loadReport" />
@@ -185,29 +186,56 @@ function outcomeBadgeClass(outcome) {
           <span v-if="runMeta.device_serial">📱 {{ runMeta.device_serial }}</span>
           <span v-if="runMeta.loop_count">🔄 {{ runMeta.loop_count }} 轮</span>
           <span v-if="runMeta.duration">⏱ {{ runMeta.duration }}</span>
-          <span :class="statusBadgeClass(runMeta.status)" class="badge">{{ statusLabel(runMeta.status) }}</span>
+          <span :class="statusBadgeClass(runMeta.status)" class="badge">{{
+            statusLabel(runMeta.status)
+          }}</span>
         </div>
       </div>
 
       <!-- KPI Cards -->
       <div class="kpi-row">
-        <KpiCard :value="runMeta.case_count || 0" label="执行用例" color="var(--c-workflow)" shape="diamond">
-          <div style="font-size:var(--app-size-xs);color:var(--app-text-secondary);margin-top:4px">{{ runMeta.loop_count || 0 }} 轮 × {{ runMeta.case_count || 0 }} 用例 = {{ runMeta.total_iterations || 0 }} 次迭代</div>
+        <KpiCard
+          :value="runMeta.case_count || 0"
+          label="执行用例"
+          color="var(--c-workflow)"
+          shape="diamond"
+        >
+          <div
+            style="font-size: var(--app-size-xs); color: var(--app-text-secondary); margin-top: 4px"
+          >
+            {{ runMeta.loop_count || 0 }} 轮 × {{ runMeta.case_count || 0 }} 用例 =
+            {{ runMeta.total_iterations || 0 }} 次迭代
+          </div>
         </KpiCard>
-        <KpiCard :value="runMeta.total_pass || 0" label="通过" color="var(--c-device)" shape="triangle" />
-        <KpiCard :value="runMeta.total_fail || 0" label="失败" color="var(--c-runner)" shape="square" />
-        <KpiCard :value="`${kpiPassRate}%`" label="通过率" color="var(--c-dashboard)" shape="circle" />
+        <KpiCard
+          :value="runMeta.total_pass || 0"
+          label="通过"
+          color="var(--c-device)"
+          shape="triangle"
+        />
+        <KpiCard
+          :value="runMeta.total_fail || 0"
+          label="失败"
+          color="var(--c-runner)"
+          shape="square"
+        />
+        <KpiCard
+          :value="`${kpiPassRate}%`"
+          label="通过率"
+          color="var(--c-dashboard)"
+          shape="circle"
+        />
       </div>
 
       <!-- TaskAppCard Metadata (conditional) -->
       <div v-if="runMeta.client_task_id" class="task-meta-bar">
         <div class="task-meta-item">
           <span class="meta-label">📋 任务名称</span>
-          <span class="meta-value">{{ runMeta.task_name || '—' }}</span>
+          <span class="meta-value">{{ runMeta.task_name || "—" }}</span>
         </div>
         <div class="task-meta-item">
           <span class="meta-label">👤 创建人</span>
-          <span class="meta-value">{{ runMeta.task_creator || '—' }}</span>
+          <span class="meta-value">{{ runMeta.task_creator || "—" }}</span>
         </div>
         <div class="task-meta-item">
           <span class="meta-label">🏷 执行结果</span>
@@ -222,13 +250,7 @@ function outcomeBadgeClass(outcome) {
       </div>
 
       <!-- AppTabs -->
-      <AppTabs
-        class="detail-tabs"
-        :items="tabs"
-        v-model="activeTab"
-        
-        
-      >
+      <AppTabs class="detail-tabs" :items="tabs" v-model="activeTab">
         <!-- ═══ TAB: 用例执行明细 ═══ -->
         <template #cases>
           <AppCard color="" class="table-card">
@@ -243,7 +265,9 @@ function outcomeBadgeClass(outcome) {
                     class="page-size-btn"
                     :class="{ active: pageSize === n }"
                     @click="setPageSize(n)"
-                  >{{ n }}</button>
+                  >
+                    {{ n }}
+                  </button>
                 </div>
               </div>
               <div v-if="allCases.length > 0" class="table-toolbar-right">
@@ -251,8 +275,18 @@ function outcomeBadgeClass(outcome) {
                   第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ allCases.length }} 条
                 </span>
                 <div v-if="totalPages > 1" class="page-nav">
-                  <el-button size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</el-button>
-                  <el-button size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</el-button>
+                  <el-button
+                    size="small"
+                    :disabled="currentPage <= 1"
+                    @click="goPage(currentPage - 1)"
+                    >上一页</el-button
+                  >
+                  <el-button
+                    size="small"
+                    :disabled="currentPage >= totalPages"
+                    @click="goPage(currentPage + 1)"
+                    >下一页</el-button
+                  >
                 </div>
               </div>
             </div>
@@ -296,16 +330,28 @@ function outcomeBadgeClass(outcome) {
                 <div class="rate-cell">
                   <div class="progress-bar">
                     <div class="p-pass" :style="{ width: record.rate + '%' }"></div>
-                    <div v-if="record.fail > 0" class="p-fail" :style="{ width: (100 - record.rate) + '%' }"></div>
+                    <div
+                      v-if="record.fail > 0"
+                      class="p-fail"
+                      :style="{ width: 100 - record.rate + '%' }"
+                    ></div>
                   </div>
-                  <span class="rate-text" :class="{ 'rate-ok': record.rate >= 95, 'rate-warn': record.rate >= 80 && record.rate < 95, 'rate-bad': record.rate < 80 }">{{ record.rate }}%</span>
+                  <span
+                    class="rate-text"
+                    :class="{
+                      'rate-ok': record.rate >= 95,
+                      'rate-warn': record.rate >= 80 && record.rate < 95,
+                      'rate-bad': record.rate < 80,
+                    }"
+                    >{{ record.rate }}%</span
+                  >
                 </div>
               </template>
 
               <!-- Status badge -->
               <template #cell-status_badge="{ record }">
                 <span :class="record.fail > 0 ? 'badge badge-fail' : 'badge badge-pass'">
-                  {{ record.fail > 0 ? 'FAIL' : 'PASS' }}
+                  {{ record.fail > 0 ? "FAIL" : "PASS" }}
                 </span>
               </template>
             </AppTable>
@@ -321,148 +367,582 @@ function outcomeBadgeClass(outcome) {
           <div v-if="failedStepsByCase.length > 0" class="section-block">
             <h3 class="sec-title">
               🔍 步骤级失败详情
-              <span class="sec-badge" style="background:var(--app-status-danger-text);">{{ failedSteps.length }} 条</span>
+              <span class="sec-badge" style="background: var(--app-status-danger-text)"
+                >{{ failedSteps.length }} 条</span
+              >
               <span class="sec-badge sec-badge--muted">{{ failedStepsByCase.length }} 用例</span>
             </h3>
             <p class="sec-sub">按用例标题分类，点击展开查看具体失败步骤</p>
-            <div v-for="(group, idx) in failedStepsByCase" :key="'fsg-' + group.key" class="fail-card">
-                <div
-                  class="fail-card-header fail-card-header--clickable"
-                  role="button"
-                  tabindex="0"
-                  @click="toggleStepGroupExpand(group.key)"
-                  @keyup.enter="toggleStepGroupExpand(group.key)"
+            <div
+              v-for="(group, idx) in failedStepsByCase"
+              :key="'fsg-' + group.key"
+              class="fail-card"
+            >
+              <div
+                class="fail-card-header fail-card-header--clickable"
+                role="button"
+                tabindex="0"
+                @click="toggleStepGroupExpand(group.key)"
+                @keyup.enter="toggleStepGroupExpand(group.key)"
+              >
+                <span class="expand-icon" :class="{ open: expandedStepGroups.has(group.key) }"
+                  >▶</span
                 >
-                  <span class="expand-icon" :class="{ open: expandedStepGroups.has(group.key) }">▶</span>
-                  <span class="badge badge-fail">FAIL</span>
-                  <div class="fail-case-title-wrap">
-                    <strong class="fail-case-title">{{ group.caseTitle }}</strong>
-                    <code v-if="group.caseId && group.caseId !== group.caseTitle" class="fail-case-id">{{ group.caseId }}</code>
-                  </div>
-                  <span class="fail-card-meta">{{ group.steps.length }} 条步骤失败</span>
-                  <span class="fail-expand-hint">
-                    {{ expandedStepGroups.has(group.key) ? '收起' : `展开 ${group.steps.length} 条` }}
-                  </span>
-                </div>
-
-                <div v-if="expandedStepGroups.has(group.key)" class="expand-panel">
-                  <div class="expand-header">{{ group.caseTitle }} — 步骤失败明细</div>
-                  <div
-                    v-for="(fs, i) in group.steps"
-                    :key="'fs-' + group.key + '-' + i"
-                    class="fail-step-row"
+                <span class="badge badge-fail">FAIL</span>
+                <div class="fail-case-title-wrap">
+                  <strong class="fail-case-title">{{ group.caseTitle }}</strong>
+                  <code
+                    v-if="group.caseId && group.caseId !== group.caseTitle"
+                    class="fail-case-id"
+                    >{{ group.caseId }}</code
                   >
-                    <div class="fail-step-row__head">
-                      <span class="badge badge-fail">FAIL</span>
-                      <span class="fail-step-row__meta">
-                        第 {{ fs.iteration }} 轮 · 步骤 {{ fs.stepIndex + 1 }} · {{ fs.stepType }}
-                      </span>
+                </div>
+                <span class="fail-card-meta">{{ group.steps.length }} 条步骤失败</span>
+                <span class="fail-expand-hint">
+                  {{ expandedStepGroups.has(group.key) ? "收起" : `展开 ${group.steps.length} 条` }}
+                </span>
+              </div>
+
+              <div v-if="expandedStepGroups.has(group.key)" class="expand-panel">
+                <div class="expand-header">{{ group.caseTitle }} — 步骤失败明细</div>
+                <div
+                  v-for="(fs, i) in group.steps"
+                  :key="'fs-' + group.key + '-' + i"
+                  class="fail-step-row"
+                >
+                  <div class="fail-step-row__head">
+                    <span class="badge badge-fail">FAIL</span>
+                    <span class="fail-step-row__meta">
+                      第 {{ fs.iteration }} 轮 · 步骤 {{ fs.stepIndex + 1 }} · {{ fs.stepType }}
+                    </span>
+                  </div>
+                  <div class="fail-detail-row fail-detail-row--nested">
+                    <div class="fail-detail-item">
+                      <span class="fd-label">步骤描述</span>
+                      <span class="fd-value">{{ fs.description || "—" }}</span>
                     </div>
-                    <div class="fail-detail-row fail-detail-row--nested">
-                      <div class="fail-detail-item">
-                        <span class="fd-label">步骤描述</span>
-                        <span class="fd-value">{{ fs.description || '—' }}</span>
-                      </div>
-                      <div class="fail-detail-item">
-                        <span class="fd-label">失败原因</span>
-                        <span class="fd-value fd-error">{{ fs.result || '未知错误' }}</span>
-                      </div>
+                    <div class="fail-detail-item">
+                      <span class="fd-label">失败原因</span>
+                      <span class="fd-value fd-error">{{ fs.result || "未知错误" }}</span>
                     </div>
                   </div>
                 </div>
+              </div>
             </div>
           </div>
 
           <!-- Iteration-level failures (from TestResult) -->
           <div v-if="failedCases.length > 0">
-            <h3 class="sec-title" :style="failedSteps.length > 0 ? { marginTop: '16px' } : undefined">
+            <h3
+              class="sec-title"
+              :style="failedSteps.length > 0 ? { marginTop: '16px' } : undefined"
+            >
               📋 迭代失败汇总
-              <span class="sec-badge" style="background:var(--app-status-danger-text);">{{ failedCases.length }} 用例</span>
+              <span class="sec-badge" style="background: var(--app-status-danger-text)"
+                >{{ failedCases.length }} 用例</span
+              >
             </h3>
             <p class="sec-sub">点击用例展开查看迭代失败详情</p>
             <div v-for="(c, idx) in failedCases" :key="'fail-' + c.case_id" class="fail-card">
-              
-                <div
-                  class="fail-card-header fail-card-header--clickable"
-                  role="button"
-                  tabindex="0"
-                  @click="toggleFailExpand(c.case_id)"
-                  @keyup.enter="toggleFailExpand(c.case_id)"
+              <div
+                class="fail-card-header fail-card-header--clickable"
+                role="button"
+                tabindex="0"
+                @click="toggleFailExpand(c.case_id)"
+                @keyup.enter="toggleFailExpand(c.case_id)"
+              >
+                <span class="expand-icon" :class="{ open: expandedFailCases.has(c.case_id) }"
+                  >▶</span
                 >
-                  <span class="expand-icon" :class="{ open: expandedFailCases.has(c.case_id) }">▶</span>
-                  <span class="badge badge-fail">FAIL</span>
-                  <strong>{{ c.case_title }}</strong>
-                  <span class="fail-card-meta">{{ c.fail }}/{{ c.actual }} 次失败 · 成功率 {{ c.rate }}%</span>
-                  <span class="fail-expand-hint">
-                    {{ expandedFailCases.has(c.case_id) ? '收起' : `展开 ${failedIterations(c).length || failStepsForCase(c).length || c.fail} 条失败` }}
-                  </span>
+                <span class="badge badge-fail">FAIL</span>
+                <strong>{{ c.case_title }}</strong>
+                <span class="fail-card-meta"
+                  >{{ c.fail }}/{{ c.actual }} 次失败 · 成功率 {{ c.rate }}%</span
+                >
+                <span class="fail-expand-hint">
+                  {{
+                    expandedFailCases.has(c.case_id)
+                      ? "收起"
+                      : `展开 ${failedIterations(c).length || failStepsForCase(c).length || c.fail} 条失败`
+                  }}
+                </span>
+              </div>
+
+              <div v-if="expandedFailCases.has(c.case_id)" class="expand-panel">
+                <div class="expand-header">{{ c.case_title }} — 迭代失败详情</div>
+
+                <table v-if="failedIterations(c).length > 0" class="mini-table">
+                  <thead>
+                    <tr>
+                      <th>迭代</th>
+                      <th>结果</th>
+                      <th>耗时</th>
+                      <th>详情</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="it in failedIterations(c)" :key="it.iteration" class="row-fail">
+                      <td>#{{ it.iteration }}</td>
+                      <td>
+                        <span class="badge" :class="iterBadgeClass(it.result)">{{
+                          it.result === "pass" ? "PASS" : "FAIL"
+                        }}</span>
+                      </td>
+                      <td>{{ it.duration_ms ? (it.duration_ms / 1000).toFixed(1) + "s" : "—" }}</td>
+                      <td class="fail-detail-text">{{ it.detail || "无详情" }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div v-else-if="failStepsForCase(c).length > 0" class="fail-step-fallback">
+                  <p class="fail-step-fallback__title">步骤级失败记录（迭代明细未持久化）</p>
+                  <div
+                    v-for="(fs, i) in failStepsForCase(c)"
+                    :key="'fsc-' + c.case_id + '-' + i"
+                    class="fail-step-row"
+                  >
+                    <span class="fail-step-row__meta"
+                      >第 {{ fs.iteration }} 轮 · 步骤 {{ fs.stepIndex + 1 }} ·
+                      {{ fs.stepType }}</span
+                    >
+                    <span class="fail-step-row__desc">{{ fs.description || "—" }}</span>
+                    <span class="fail-step-row__error">{{ fs.result || "未知错误" }}</span>
+                  </div>
                 </div>
 
-                <div v-if="expandedFailCases.has(c.case_id)" class="expand-panel">
-                  <div class="expand-header">{{ c.case_title }} — 迭代失败详情</div>
-
-                  <table v-if="failedIterations(c).length > 0" class="mini-table">
-                    <thead><tr>
-                      <th>迭代</th><th>结果</th><th>耗时</th><th>详情</th>
-                    </tr></thead>
-                    <tbody>
-                      <tr v-for="it in failedIterations(c)" :key="it.iteration" class="row-fail">
-                        <td>#{{ it.iteration }}</td>
-                        <td><span class="badge" :class="iterBadgeClass(it.result)">{{ it.result === 'pass' ? 'PASS' : 'FAIL' }}</span></td>
-                        <td>{{ it.duration_ms ? (it.duration_ms / 1000).toFixed(1) + 's' : '—' }}</td>
-                        <td class="fail-detail-text">{{ it.detail || '无详情' }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-
-                  <div v-else-if="failStepsForCase(c).length > 0" class="fail-step-fallback">
-                    <p class="fail-step-fallback__title">步骤级失败记录（迭代明细未持久化）</p>
-                    <div v-for="(fs, i) in failStepsForCase(c)" :key="'fsc-' + c.case_id + '-' + i" class="fail-step-row">
-                      <span class="fail-step-row__meta">第 {{ fs.iteration }} 轮 · 步骤 {{ fs.stepIndex + 1 }} · {{ fs.stepType }}</span>
-                      <span class="fail-step-row__desc">{{ fs.description || '—' }}</span>
-                      <span class="fail-step-row__error">{{ fs.result || '未知错误' }}</span>
-                    </div>
-                  </div>
-
-                  <div v-else class="fail-no-iterations">
-                    迭代详情暂不可用（TestResult 未持久化），请查看上方步骤级失败详情
-                  </div>
+                <div v-else class="fail-no-iterations">
+                  迭代详情暂不可用（TestResult 未持久化），请查看上方步骤级失败详情
                 </div>
-              
+              </div>
             </div>
           </div>
         </template>
-
       </AppTabs>
     </div>
   </div>
 </template>
 
 <style scoped>
-.doc-page{display:flex;flex-direction:column} /* height / overflow 由外壳 :deep(.doc-page) 承担 */
-.report-detail-page .doc-body{padding:var(--app-space-md) var(--app-space-lg) var(--app-space-2xl);display:flex;flex-direction:column;gap:var(--app-space-md);width:100%}
+.doc-page {
+  display: flex;
+  flex-direction: column;
+} /* height / overflow 由外壳 :deep(.doc-page) 承担 */
+.report-detail-page .doc-body {
+  padding: var(--app-space-md) var(--app-space-lg) var(--app-space-2xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-md);
+  width: 100%;
+}
 /* 模块私有色值登记（tokens.css 未登记该值）：表格行 / 失败卡 hover 底色 · 失败卡阴影色 */
-.report-detail-page{--rg-hover-bg:var(--color-white) /* -> --color-white */;--rg-shadow-soft:var(--color-ink-05-a05)}
-.top-bar{display:flex;align-items:center;gap:12px;margin-bottom:var(--app-space-xs);flex-wrap:wrap}
-.run-meta{display:flex;align-items:center;gap:10px;font-size:var(--app-size-xs);color:var(--app-text-secondary);flex-wrap:wrap}
-.kpi-row{display:grid;grid-template-columns:var(--layout-kpi-cols);gap:12px;margin-bottom:var(--app-space-xs)}
-.kpi-sub{font-size:var(--app-size-xs);color:var(--app-text-secondary);margin-top:2px}
-.task-meta-bar{display:flex;flex-wrap:wrap;gap:10px;padding:12px var(--app-space-md);background:var(--app-bg-card);border:2.5px solid var(--ink);border-radius: var(--app-radius-md);margin-bottom:var(--app-space-xs);font-size:var(--app-size-xs)}.task-meta-item{display:flex;align-items:center;gap:6px}.meta-label{opacity:0.5;font-weight:600}.meta-value{font-weight:700}.full-width{width:100%}.conclusion-text{font-style:italic}
-.detail-tabs :deep(.el-tabs__header){margin-bottom:0;padding:0 var(--app-space-sm)}.detail-tabs :deep(.el-tabs__nav){border:none!important;display:flex;gap:var(--app-space-xs)}.detail-tabs :deep(.el-tabs__item){padding:5px 14px;font-size:var(--app-size-xs);font-weight:700;border-radius: var(--app-radius-sm);border:2px solid transparent;color:var(--app-text-secondary);height:auto;line-height:1.4}.detail-tabs :deep(.el-tabs__item:hover){color:var(--ink)}.detail-tabs :deep(.el-tabs__item.is-active){color:var(--ink);background:var(--c-dashboard);border-color:var(--ink)}.detail-tabs :deep(.el-tabs__active-bar){display:none}.detail-tabs :deep(.el-tabs__content){padding:12px 0 0}
-.table-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:var(--app-space-sm) var(--app-space-md) 0}.page-size-btns{display:flex;gap:var(--app-space-xs)}.toolbar-label{font-size:var(--app-size-xs);font-weight:700;color:var(--app-text-secondary)}.page-size-btn{padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;color:var(--app-text-secondary);background:var(--app-bg-card);border:2px solid var(--app-border-light);border-radius: var(--app-radius-sm);cursor:pointer;font-family:inherit}.page-size-btn:hover{border-color:var(--ink);color:var(--ink)}.page-size-btn.active{background:var(--app-bg-subtle);border-color:var(--ink);color:var(--ink)}.page-info{font-size:var(--app-size-xs);color:var(--app-text-secondary);font-weight:600;white-space:nowrap;margin-left:auto}.page-nav{display:flex;gap:6px;margin-left:var(--app-space-sm)}.page-nav :deep(.el-button){padding:var(--app-space-xs) 10px;font-size:var(--app-size-xs);font-weight:700;border:2px solid var(--ink)!important;border-radius: var(--app-radius-sm) !important;background:var(--app-bg-card);color:var(--ink)}.page-nav :deep(.el-button:hover){background:var(--c-dashboard)}
-.detail-table :deep(th){background:var(--app-bg-subtle)!important;color:var(--ink)!important;font-weight:700!important;font-size:var(--app-size-xs)!important;text-transform:uppercase;letter-spacing:0.04em;border-bottom:2.5px solid var(--ink)!important}.detail-table :deep(td){border-bottom:1px solid var(--el-border-color-light)!important;color:var(--ink)}.detail-table :deep(tr:hover td){background:var(--rg-hover-bg)!important}
-.mono{font-family:var(--app-font-mono);font-size:var(--app-size-xs);font-weight:600}.num-pass{color:var(--app-status-success-text);font-weight:700}.num-fail{color:var(--app-status-danger-text);font-weight:700}
-.rate-cell{display:flex;align-items:center;gap:var(--app-space-sm)}.progress-bar{flex:1;height:8px;background:var(--app-border-lighter);border-radius: var(--app-radius-sm);overflow:hidden;border:1px solid var(--ink)}.p-pass{height:100%;background:var(--c-device);border-radius:3px}.p-fail{height:100%;background:var(--c-runner);border-radius:3px}.rate-text{font-size:var(--app-size-xs);font-weight:700;min-width:36px}.rate-ok{color:var(--app-status-success-text)}.rate-warn{color:var(--app-queue-text)}.rate-bad{color:var(--app-status-danger-text)}
-.badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 7px;border-radius: var(--el-border-radius-small);border:1.5px solid var(--ink);display:inline-block}.badge-pass{background:var(--app-status-success-bg);color:var(--app-status-success-text)}.badge-fail{background:var(--app-status-danger-bg);color:var(--app-status-danger-text)}.badge-stopped{background:var(--app-offline);color:var(--app-text-secondary)}.badge-warn{background:var(--app-status-warning-bg);color:var(--app-warning-text)}
+.report-detail-page {
+  --rg-hover-bg: var(--color-white) /* -> --color-white */;
+  --rg-shadow-soft: var(--color-ink-05-a05);
+}
+.top-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: var(--app-space-xs);
+  flex-wrap: wrap;
+}
+.run-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+  flex-wrap: wrap;
+}
+.kpi-row {
+  display: grid;
+  grid-template-columns: var(--layout-kpi-cols);
+  gap: 12px;
+  margin-bottom: var(--app-space-xs);
+}
+.kpi-sub {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+  margin-top: 2px;
+}
+.task-meta-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px var(--app-space-md);
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  margin-bottom: var(--app-space-xs);
+  font-size: var(--app-size-xs);
+}
+.task-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.meta-label {
+  opacity: 0.5;
+  font-weight: 600;
+}
+.meta-value {
+  font-weight: 700;
+}
+.full-width {
+  width: 100%;
+}
+.conclusion-text {
+  font-style: italic;
+}
+.detail-tabs :deep(.el-tabs__header) {
+  margin-bottom: 0;
+  padding: 0 var(--app-space-sm);
+}
+.detail-tabs :deep(.el-tabs__nav) {
+  border: none !important;
+  display: flex;
+  gap: var(--app-space-xs);
+}
+.detail-tabs :deep(.el-tabs__item) {
+  padding: 5px 14px;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  border-radius: var(--app-radius-sm);
+  border: 2px solid transparent;
+  color: var(--app-text-secondary);
+  height: auto;
+  line-height: 1.4;
+}
+.detail-tabs :deep(.el-tabs__item:hover) {
+  color: var(--ink);
+}
+.detail-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--ink);
+  background: var(--c-dashboard);
+  border-color: var(--ink);
+}
+.detail-tabs :deep(.el-tabs__active-bar) {
+  display: none;
+}
+.detail-tabs :deep(.el-tabs__content) {
+  padding: 12px 0 0;
+}
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: var(--app-space-sm) var(--app-space-md) 0;
+}
+.page-size-btns {
+  display: flex;
+  gap: var(--app-space-xs);
+}
+.toolbar-label {
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--app-text-secondary);
+}
+.page-size-btn {
+  padding: var(--app-space-xs) 10px;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--app-text-secondary);
+  background: var(--app-bg-card);
+  border: 2px solid var(--app-border-light);
+  border-radius: var(--app-radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+}
+.page-size-btn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.page-size-btn.active {
+  background: var(--app-bg-subtle);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.page-info {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+  margin-left: auto;
+}
+.page-nav {
+  display: flex;
+  gap: 6px;
+  margin-left: var(--app-space-sm);
+}
+.page-nav :deep(.el-button) {
+  padding: var(--app-space-xs) 10px;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  border: 2px solid var(--ink) !important;
+  border-radius: var(--app-radius-sm) !important;
+  background: var(--app-bg-card);
+  color: var(--ink);
+}
+.page-nav :deep(.el-button:hover) {
+  background: var(--c-dashboard);
+}
+.detail-table :deep(th) {
+  background: var(--app-bg-subtle) !important;
+  color: var(--ink) !important;
+  font-weight: 700 !important;
+  font-size: var(--app-size-xs) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 2.5px solid var(--ink) !important;
+}
+.detail-table :deep(td) {
+  border-bottom: 1px solid var(--el-border-color-light) !important;
+  color: var(--ink);
+}
+.detail-table :deep(tr:hover td) {
+  background: var(--rg-hover-bg) !important;
+}
+.mono {
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  font-weight: 600;
+}
+.num-pass {
+  color: var(--app-status-success-text);
+  font-weight: 700;
+}
+.num-fail {
+  color: var(--app-status-danger-text);
+  font-weight: 700;
+}
+.rate-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+}
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--app-border-lighter);
+  border-radius: var(--app-radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--ink);
+}
+.p-pass {
+  height: 100%;
+  background: var(--c-device);
+  border-radius: 3px;
+}
+.p-fail {
+  height: 100%;
+  background: var(--c-runner);
+  border-radius: 3px;
+}
+.rate-text {
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  min-width: 36px;
+}
+.rate-ok {
+  color: var(--app-status-success-text);
+}
+.rate-warn {
+  color: var(--app-queue-text);
+}
+.rate-bad {
+  color: var(--app-status-danger-text);
+}
+.badge {
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--el-border-radius-small);
+  border: 1.5px solid var(--ink);
+  display: inline-block;
+}
+.badge-pass {
+  background: var(--app-status-success-bg);
+  color: var(--app-status-success-text);
+}
+.badge-fail {
+  background: var(--app-status-danger-bg);
+  color: var(--app-status-danger-text);
+}
+.badge-stopped {
+  background: var(--app-offline);
+  color: var(--app-text-secondary);
+}
+.badge-warn {
+  background: var(--app-status-warning-bg);
+  color: var(--app-warning-text);
+}
 /* 失败分析卡片 */
-.fail-card{background:var(--app-bg-card);border:2.5px solid var(--c-runner);border-radius: var(--app-radius-md);margin-bottom:10px;overflow:hidden;box-shadow:2px 3px 0 var(--rg-shadow-soft)}.fail-card :deep(.el-card){border:none!important;box-shadow:none!important;border-radius:0!important}.fail-card-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;font-size:var(--app-size-xs);font-weight:600;border-bottom:1.5px solid var(--el-border-color-light)}.fail-card-header:hover{background:var(--rg-hover-bg)}.expand-icon{font-size:var(--app-size-xs);transition:transform var(--app-duration-slow);color:var(--ink);opacity:0.5}.expand-icon.open{transform:rotate(90deg)}.fail-case-title-wrap{flex:1;min-width:0}.fail-case-title{display:block;font-weight:700}.fail-case-id{font-family:var(--app-font-mono);font-size:var(--app-size-xs);color:var(--app-text-secondary)}.fail-card-meta{font-size:var(--app-size-xs);color:var(--app-text-secondary);white-space:nowrap}.fail-expand-hint{font-size:var(--app-size-xs);color:var(--c-workflow);white-space:nowrap}
-.expand-panel{padding:14px var(--app-space-md);border-top:1.5px solid var(--el-border-color-light)}.expand-header{font-weight:700;font-size:var(--app-size-xs);margin-bottom:10px;color:var(--ink)}.fail-step-row{margin-bottom:10px;padding:10px 12px;background:var(--rg-hover-bg);border:1.5px solid var(--el-border-color-light);border-radius: var(--app-radius-sm)}
-.fail-detail-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:var(--app-space-sm)}.fd-label{font-size:var(--app-size-xs);font-weight:700;opacity:0.4;text-transform:uppercase}.fd-value{font-size:var(--app-size-xs);font-weight:600}.fd-error{color:var(--app-status-danger-text)}.fail-step-row__head{display:flex;align-items:center;gap:var(--app-space-sm);margin-bottom:var(--app-space-xs)}.fail-step-row__meta{font-size:var(--app-size-xs);color:var(--app-text-secondary)}
-.mini-table{width:100%;border-collapse:collapse;font-size:var(--app-size-xs);margin:var(--app-space-sm) 0}.mini-table th{background:var(--app-bg-subtle);font-weight:700;font-size:var(--app-size-xs);text-transform:uppercase;letter-spacing:0.04em;padding:6px 10px;text-align:left;border-bottom:2px solid var(--ink)}.mini-table td{padding:6px 10px;border-bottom:1px solid var(--el-border-color-light)}.row-fail td{color:var(--app-status-danger-text)}
-.sec-title{font-family:var(--app-font-display);font-size:var(--app-size-md);font-weight:700;margin-top:12px;margin-bottom:8px;display:inline-block;position:relative}.sec-title::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:2px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%231e1e24' stroke-width='2' fill='none'/%3E%3C/svg%3E")repeat-x;background-size:40px 3px}.sec-badge{font-size:var(--app-size-xs);font-weight:700;padding:2px 8px;border-radius: var(--el-border-radius-small);border:1.5px solid var(--ink);margin-left:6px}.sec-sub{font-size:var(--app-size-xs);color:var(--app-text-secondary);margin-bottom:10px}
+.fail-card {
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--c-runner);
+  border-radius: var(--app-radius-md);
+  margin-bottom: 10px;
+  overflow: hidden;
+  box-shadow: 2px 3px 0 var(--rg-shadow-soft);
+}
+.fail-card :deep(.el-card) {
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+.fail-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-size: var(--app-size-xs);
+  font-weight: 600;
+  border-bottom: 1.5px solid var(--el-border-color-light);
+}
+.fail-card-header:hover {
+  background: var(--rg-hover-bg);
+}
+.expand-icon {
+  font-size: var(--app-size-xs);
+  transition: transform var(--app-duration-slow);
+  color: var(--ink);
+  opacity: 0.5;
+}
+.expand-icon.open {
+  transform: rotate(90deg);
+}
+.fail-case-title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+.fail-case-title {
+  display: block;
+  font-weight: 700;
+}
+.fail-case-id {
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+.fail-card-meta {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+  white-space: nowrap;
+}
+.fail-expand-hint {
+  font-size: var(--app-size-xs);
+  color: var(--c-workflow);
+  white-space: nowrap;
+}
+.expand-panel {
+  padding: 14px var(--app-space-md);
+  border-top: 1.5px solid var(--el-border-color-light);
+}
+.expand-header {
+  font-weight: 700;
+  font-size: var(--app-size-xs);
+  margin-bottom: 10px;
+  color: var(--ink);
+}
+.fail-step-row {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  background: var(--rg-hover-bg);
+  border: 1.5px solid var(--el-border-color-light);
+  border-radius: var(--app-radius-sm);
+}
+.fail-detail-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: var(--app-space-sm);
+}
+.fd-label {
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  opacity: 0.4;
+  text-transform: uppercase;
+}
+.fd-value {
+  font-size: var(--app-size-xs);
+  font-weight: 600;
+}
+.fd-error {
+  color: var(--app-status-danger-text);
+}
+.fail-step-row__head {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  margin-bottom: var(--app-space-xs);
+}
+.fail-step-row__meta {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+.mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--app-size-xs);
+  margin: var(--app-space-sm) 0;
+}
+.mini-table th {
+  background: var(--app-bg-subtle);
+  font-weight: 700;
+  font-size: var(--app-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 2px solid var(--ink);
+}
+.mini-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--el-border-color-light);
+}
+.row-fail td {
+  color: var(--app-status-danger-text);
+}
+.sec-title {
+  font-family: var(--app-font-display);
+  font-size: var(--app-size-md);
+  font-weight: 700;
+  margin-top: 12px;
+  margin-bottom: 8px;
+  display: inline-block;
+  position: relative;
+}
+.sec-title::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%231e1e24' stroke-width='2' fill='none'/%3E%3C/svg%3E")
+    repeat-x;
+  background-size: 40px 3px;
+}
+.sec-badge {
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--el-border-radius-small);
+  border: 1.5px solid var(--ink);
+  margin-left: 6px;
+}
+.sec-sub {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+  margin-bottom: 10px;
+}
 
 /* 减少动效：关闭位移 / 旋转 / 缩放（颜色过渡不受影响） */
 @media (prefers-reduced-motion: reduce) {
-  .expand-icon { transition: none; }
+  .expand-icon {
+    transition: none;
+  }
 }
 </style>

@@ -11,53 +11,57 @@
  * @param {String}  opts.group — echarts.connect 的组名（可选）
  * @param {Number}  opts.devicePixelRatio — 默认取 window.devicePixelRatio
  */
-import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
-import * as echarts from 'echarts';
+import { ref, watch, onMounted, onUnmounted, nextTick } from "vue"
+import * as echarts from "echarts"
 
-export function useECharts(buildOption, watchSource, opts: { group?: string; devicePixelRatio?: number } = {}) {
-  const container = ref(null);
-  let instance = null;
-  let resizeObserver = null;
+export function useECharts(
+  buildOption,
+  watchSource,
+  opts: { group?: string; devicePixelRatio?: number } = {},
+) {
+  const container = ref(null)
+  let instance = null
+  let resizeObserver = null
 
   function renderChart() {
-    if (!instance || instance.isDisposed()) return;
-    instance.setOption(buildOption(), { notMerge: true, lazyUpdate: false });
+    if (!instance || instance.isDisposed()) return
+    instance.setOption(buildOption(), { notMerge: true, lazyUpdate: false })
   }
 
   function initChart() {
-    if (!container.value) return;
+    if (!container.value) return
 
-    const existing = echarts.getInstanceByDom(container.value);
-    if (existing) existing.dispose();
+    const existing = echarts.getInstanceByDom(container.value)
+    if (existing) existing.dispose()
 
     instance = echarts.init(container.value, null, {
       devicePixelRatio: opts.devicePixelRatio || window.devicePixelRatio || 2,
-    });
+    })
 
     if (opts.group) {
-      instance.group = opts.group;
-      echarts.connect(opts.group);
+      instance.group = opts.group
+      echarts.connect(opts.group)
     }
 
-    renderChart();
+    renderChart()
 
     resizeObserver = new ResizeObserver(() => {
-      if (instance && !instance.isDisposed()) instance.resize();
-    });
-    resizeObserver.observe(container.value);
+      if (instance && !instance.isDisposed()) instance.resize()
+    })
+    resizeObserver.observe(container.value)
   }
 
-  onMounted(() => nextTick(initChart));
+  onMounted(() => nextTick(initChart))
 
-  watch(watchSource, () => nextTick(renderChart), { deep: true });
+  watch(watchSource, () => nextTick(renderChart), { deep: true })
 
   onUnmounted(() => {
-    resizeObserver?.disconnect();
+    resizeObserver?.disconnect()
     if (instance && !instance.isDisposed()) {
-      instance.dispose();
+      instance.dispose()
     }
-    instance = null;
-  });
+    instance = null
+  })
 
-  return { container };
+  return { container }
 }

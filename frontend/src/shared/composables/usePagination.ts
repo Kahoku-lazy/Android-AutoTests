@@ -1,4 +1,4 @@
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch } from "vue"
 
 /**
  * Standard pagination for a filtered reactive list.
@@ -33,9 +33,7 @@ export function usePagination(source, { pageSize = 10, options = [10, 30, 50] } 
   const size = ref(pageSize)
   const current = ref(1)
 
-  const totalPages = computed(() =>
-    Math.max(1, Math.ceil(source.value.length / size.value)),
-  )
+  const totalPages = computed(() => Math.max(1, Math.ceil(source.value.length / size.value)))
 
   const pagedItems = computed(() => {
     const start = (current.value - 1) * size.value

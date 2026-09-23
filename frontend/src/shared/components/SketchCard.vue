@@ -5,7 +5,7 @@
  * 对齐 page-principles 撕纸卡：虚线边 / 近直角 / 硬偏移色阴影 / 色块图标 / 微倾。
  * accent 与 tilt 由父级按列表 index 注入（cycle），组件自身不猜配色。
  */
-import { computed, nextTick, onMounted, onUpdated } from 'vue'
+import { computed, nextTick, onMounted, onUpdated } from "vue"
 
 const props = withDefaults(
   defineProps<{
@@ -22,13 +22,13 @@ const props = withDefaults(
     deleteLabel?: string
   }>(),
   {
-    description: '',
-    meta: '',
-    icon: 'layers',
-    tone: 'var(--c-dashboard)',
+    description: "",
+    meta: "",
+    icon: "layers",
+    tone: "var(--c-dashboard)",
     tilt: -1.2,
     deletable: false,
-    deleteLabel: '删除',
+    deleteLabel: "删除",
   },
 )
 
@@ -38,8 +38,8 @@ const emit = defineEmits<{
 }>()
 
 const rootStyle = computed(() => ({
-  '--sketch-accent': props.tone,
-  '--sketch-tilt': `${props.tilt}deg`,
+  "--sketch-accent": props.tone,
+  "--sketch-tilt": `${props.tilt}deg`,
 }))
 
 function refreshIcons() {
@@ -57,11 +57,11 @@ onUpdated(async () => {
 })
 
 function onActivate(e: MouseEvent | KeyboardEvent) {
-  emit('activate', e)
+  emit("activate", e)
 }
 
 function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Enter' || e.key === ' ') {
+  if (e.key === "Enter" || e.key === " ") {
     e.preventDefault()
     onActivate(e)
   }
@@ -69,7 +69,7 @@ function onKeydown(e: KeyboardEvent) {
 
 function onDelete(e: MouseEvent) {
   e.stopPropagation()
-  emit('delete', e)
+  emit("delete", e)
 }
 </script>
 

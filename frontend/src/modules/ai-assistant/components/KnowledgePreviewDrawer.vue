@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import { previewKnowledgeDocument, type KnowledgePreviewPayload } from '../api/toolbox'
-import { renderSkillMarkdown } from '../helpers/skill-markdown'
+import { computed, ref, watch } from "vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import { previewKnowledgeDocument, type KnowledgePreviewPayload } from "../api/toolbox"
+import { renderSkillMarkdown } from "../helpers/skill-markdown"
 
 const props = defineProps<{
   path: string
@@ -11,25 +11,25 @@ const props = defineProps<{
 const emit = defineEmits<{ close: [] }>()
 
 const loading = ref(false)
-const loadError = ref('')
+const loadError = ref("")
 const file = ref<KnowledgePreviewPayload | null>(null)
 
 const markdownHtml = computed(() => {
-  if (file.value?.kind !== 'markdown' || !file.value.content) return ''
+  if (file.value?.kind !== "markdown" || !file.value.content) return ""
   return renderSkillMarkdown(file.value.content)
 })
 
 async function loadPreview() {
   if (!props.path) return
   loading.value = true
-  loadError.value = ''
+  loadError.value = ""
   file.value = null
   try {
     const data = await previewKnowledgeDocument(props.path)
     if (data.status && data.data) file.value = data.data
-    else loadError.value = data.message || '无法预览该文档'
+    else loadError.value = data.message || "无法预览该文档"
   } catch {
-    loadError.value = '无法预览该文档'
+    loadError.value = "无法预览该文档"
   } finally {
     loading.value = false
   }
@@ -39,12 +39,7 @@ watch(() => props.path, loadPreview, { immediate: true })
 </script>
 
 <template>
-  <el-drawer
-    :model-value="true"
-    :title="file?.name || path"
-    size="48%"
-    @close="emit('close')"
-  >
+  <el-drawer :model-value="true" :title="file?.name || path" size="48%" @close="emit('close')">
     <ErrorState v-if="loadError" :message="loadError" @retry="loadPreview" />
     <div v-else v-loading="loading" class="kb-preview-body">
       <p v-if="file?.converted" class="kb-preview-note">已转换为 Markdown 并保存在原文件旁</p>
@@ -72,8 +67,12 @@ watch(() => props.path, loadPreview, { immediate: true })
 }
 .kb-preview-md :deep(h1),
 .kb-preview-md :deep(h2),
-.kb-preview-md :deep(h3) { margin: 0.8em 0 0.4em; }
-.kb-preview-md :deep(p) { margin: 0.4em 0; }
+.kb-preview-md :deep(h3) {
+  margin: 0.8em 0 0.4em;
+}
+.kb-preview-md :deep(p) {
+  margin: 0.4em 0;
+}
 .kb-preview-md :deep(pre) {
   overflow: auto;
   padding: 10px 12px;

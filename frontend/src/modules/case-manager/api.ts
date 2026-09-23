@@ -1,6 +1,6 @@
 /** case-manager API — 项目 / 目录 / 文件 / 文档用例（DRF {status,data} 信封） */
-import client from '@/shared/api-client'
-import type { DjangoResponse } from '@/shared/api-client'
+import client from "@/shared/api-client"
+import type { DjangoResponse } from "@/shared/api-client"
 import type {
   CaseDefinition,
   CaseFileMeta,
@@ -9,18 +9,18 @@ import type {
   ProjectTreePayload,
   BusinessType,
   TestType,
-} from './types'
+} from "./types"
 
 type Envelope<T> = Promise<{ data: DjangoResponse<T> }>
 
 // ── Projects ──
 
 export function listProjects(): Envelope<CaseProject[]> {
-  return client.get<DjangoResponse<CaseProject[]>>('/cases/projects/')
+  return client.get<DjangoResponse<CaseProject[]>>("/cases/projects/")
 }
 
 export function createProject(body: { name: string; description?: string }): Envelope<CaseProject> {
-  return client.post<DjangoResponse<CaseProject>>('/cases/projects/', body)
+  return client.post<DjangoResponse<CaseProject>>("/cases/projects/", body)
 }
 
 export function updateProject(
@@ -46,7 +46,7 @@ export function createDirectory(body: {
   parent_id?: number | null
   sort_order?: number
 }): Envelope<Record<string, unknown>> {
-  return client.post<DjangoResponse<Record<string, unknown>>>('/cases/directories/', body)
+  return client.post<DjangoResponse<Record<string, unknown>>>("/cases/directories/", body)
 }
 
 export function updateDirectory(
@@ -68,7 +68,7 @@ export function createFile(body: {
   directory_id?: number | null
   sort_order?: number
 }): Envelope<CaseFileMeta> {
-  return client.post<DjangoResponse<CaseFileMeta>>('/cases/files/', body)
+  return client.post<DjangoResponse<CaseFileMeta>>("/cases/files/", body)
 }
 
 export function getFileSheet(fileId: number): Envelope<CaseFileSheet> {
@@ -101,7 +101,7 @@ export function createDefinition(body: {
   sort_order?: number
   require_fields?: boolean
 }): Envelope<CaseDefinition> {
-  return client.post<DjangoResponse<CaseDefinition>>('/cases/definitions/', body)
+  return client.post<DjangoResponse<CaseDefinition>>("/cases/definitions/", body)
 }
 
 export function getDefinition(id: string): Envelope<CaseDefinition> {
@@ -130,7 +130,7 @@ export function deleteDefinition(id: string): Envelope<{ id: string }> {
 }
 
 export function batchDeleteDefinitions(ids: string[]): Envelope<{ deleted: number }> {
-  return client.post<DjangoResponse<{ deleted: number }>>('/cases/definitions/batch-delete/', {
+  return client.post<DjangoResponse<{ deleted: number }>>("/cases/definitions/batch-delete/", {
     ids,
   })
 }
@@ -139,10 +139,10 @@ export function batchDeleteDefinitions(ids: string[]): Envelope<{ deleted: numbe
 
 export function moveItem(body: {
   project_id: number
-  item_type: 'directory' | 'file'
+  item_type: "directory" | "file"
   item_id: number | string
   target_directory_id?: number | null
   sort_order?: number
 }): Envelope<Record<string, unknown>> {
-  return client.post<DjangoResponse<Record<string, unknown>>>('/cases/move/', body)
+  return client.post<DjangoResponse<Record<string, unknown>>>("/cases/move/", body)
 }

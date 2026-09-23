@@ -1,8 +1,8 @@
 /** toolbox-assembly — 装配台来源定义与生效清单（纯函数，无 HTTP） */
-import type { PlatformToolCategory } from '../api/toolbox'
-import type { SharedToolItem } from '../api/toolbox'
+import type { PlatformToolCategory } from "../api/toolbox"
+import type { SharedToolItem } from "../api/toolbox"
 
-export type AssemblySourceKey = 'biz' | 'skill' | 'prompt' | 'debug'
+export type AssemblySourceKey = "biz" | "skill" | "prompt" | "debug"
 
 export interface AssemblySourceDef {
   key: AssemblySourceKey
@@ -15,32 +15,32 @@ export interface AssemblySourceDef {
 
 export const ASSEMBLY_SOURCES: AssemblySourceDef[] = [
   {
-    key: 'biz',
-    name: '平台业务',
-    desc: '设备 / 用例 / 报告等平台 Tool',
-    gateKey: 'enable_business_tools',
-    accent: 'var(--c-device)',
+    key: "biz",
+    name: "平台业务",
+    desc: "设备 / 用例 / 报告等平台 Tool",
+    gateKey: "enable_business_tools",
+    accent: "var(--c-device)",
   },
   {
-    key: 'skill',
-    name: '自定义 Skill',
-    desc: 'engines/ai/skills 下的本地与上传 Skill',
-    gateKey: 'enable_skills',
-    accent: 'var(--c-runner)',
+    key: "skill",
+    name: "自定义 Skill",
+    desc: "engines/ai/skills 下的本地与上传 Skill",
+    gateKey: "enable_skills",
+    accent: "var(--c-runner)",
   },
   {
-    key: 'prompt',
-    name: '设备提示词',
-    desc: '规划 / 执行 / 验收三角色系统提示词（Markdown）',
-    gateKey: '',
-    accent: 'var(--c-ai)',
+    key: "prompt",
+    name: "设备提示词",
+    desc: "规划 / 执行 / 验收三角色系统提示词（Markdown）",
+    gateKey: "",
+    accent: "var(--c-ai)",
   },
   {
-    key: 'debug',
-    name: '模型调试',
-    desc: '单模型调试台：提示词 / 工具 / Skill / 知识库 + 对话验证',
-    gateKey: '',
-    accent: 'var(--c-ai)',
+    key: "debug",
+    name: "模型调试",
+    desc: "单模型调试台：提示词 / 工具 / Skill / 知识库 + 对话验证",
+    gateKey: "",
+    accent: "var(--c-ai)",
   },
 ]
 
@@ -62,14 +62,14 @@ export function buildLiveChips(input: {
   if (input.gates.enable_business_tools) {
     for (const cat of input.categories) {
       for (const tool of cat.tools) {
-        if (tool.enabled) chips.push({ name: tool.name, source: 'biz', moduleKey: cat.key })
+        if (tool.enabled) chips.push({ name: tool.name, source: "biz", moduleKey: cat.key })
       }
     }
   }
   if (input.gates.enable_skills) {
     for (const item of input.sharedItems) {
-      if (item.enabled && item.item_type === 'skill' && !item.missing) {
-        chips.push({ name: item.name, source: 'skill' })
+      if (item.enabled && item.item_type === "skill" && !item.missing) {
+        chips.push({ name: item.name, source: "skill" })
       }
     }
   }

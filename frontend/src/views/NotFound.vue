@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { useRouter } from "vue-router"
 
 const router = useRouter()
 
 function goHome() {
-  router.push('/dashboard')
+  router.push("/dashboard")
 }
 
 function goBack() {
   if (window.history.length > 1) {
     router.back()
   } else {
-    router.push('/dashboard')
+    router.push("/dashboard")
   }
 }
 </script>

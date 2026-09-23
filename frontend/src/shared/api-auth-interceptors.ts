@@ -32,12 +32,12 @@ interface RetryableRequest extends InternalAxiosRequestConfig {
  * 该清单必须与网关 PUBLIC_PREFIXES 中的 /api/auth/* 部分一致，
  * 由 tests/graybox/unit/test_auth_frontend_contract.py 对拍。
  */
-export const PUBLIC_AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/refresh'] as const
+export const PUBLIC_AUTH_PATHS = ["/auth/login", "/auth/register", "/auth/refresh"] as const
 
 /** 该请求是否指向公开认证端点（兼容相对写法与带 /api 前缀的完整写法）。 */
 function isPublicAuthRequest(config: InternalAxiosRequestConfig | undefined): boolean {
-  const url = config?.url ?? ''
-  return PUBLIC_AUTH_PATHS.some((path) => url.startsWith(path) || url.startsWith('/api' + path))
+  const url = config?.url ?? ""
+  return PUBLIC_AUTH_PATHS.some((path) => url.startsWith(path) || url.startsWith("/api" + path))
 }
 
 export interface AuthInterceptors {

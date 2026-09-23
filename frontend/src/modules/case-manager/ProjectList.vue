@@ -1,27 +1,27 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessageBox, type FormInstance } from 'element-plus'
-import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
-import SketchCard from '@/shared/components/SketchCard.vue'
-import EmptyState from '@/shared/components/patterns/EmptyState.vue'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import SkeletonCard from '@/shared/components/patterns/SkeletonCard.vue'
-import { sketchTiltAt, sketchToneAt } from '@/shared/helpers/sketchCard'
-import { useProjects } from './composables/useProjects'
+import { onMounted, ref } from "vue"
+import { useRouter } from "vue-router"
+import { ElMessageBox, type FormInstance } from "element-plus"
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import SketchCard from "@/shared/components/SketchCard.vue"
+import EmptyState from "@/shared/components/patterns/EmptyState.vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
+import { sketchTiltAt, sketchToneAt } from "@/shared/helpers/sketchCard"
+import { useProjects } from "./composables/useProjects"
 
 const router = useRouter()
 const { projects, loading, creating, error, isEmpty, loadProjects, addProject, removeProject } =
   useProjects()
 
 const createDialogVisible = ref(false)
-const newProjectName = ref('')
-const newProjectDesc = ref('')
+const newProjectName = ref("")
+const newProjectDesc = ref("")
 
 const createFormRef = ref<FormInstance>()
 /** 新建项目的字段级校验（按 L4 口径走 EP :rules，取代原 Toast 空值守卫） */
 const createRules = {
-  name: [{ required: true, message: '请输入项目名称', trigger: 'blur' }],
+  name: [{ required: true, message: "请输入项目名称", trigger: "blur" }],
 }
 
 onMounted(() => {
@@ -29,8 +29,8 @@ onMounted(() => {
 })
 
 function openCreateDialog() {
-  newProjectName.value = ''
-  newProjectDesc.value = ''
+  newProjectName.value = ""
+  newProjectDesc.value = ""
   createDialogVisible.value = true
 }
 
@@ -56,8 +56,8 @@ async function onDeleteProject(id: number, name: string) {
   try {
     await ElMessageBox.confirm(
       `删除项目「${name}」将同时删除其下全部目录与用例，此操作不可恢复。`,
-      '确认删除项目',
-      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' },
+      "确认删除项目",
+      { confirmButtonText: "删除", cancelButtonText: "取消", type: "warning" },
     )
   } catch {
     return
@@ -119,7 +119,12 @@ async function onDeleteProject(id: number, name: string) {
       width="440px"
       :close-on-click-modal="false"
     >
-      <el-form ref="createFormRef" :model="{ name: newProjectName }" :rules="createRules" label-position="top">
+      <el-form
+        ref="createFormRef"
+        :model="{ name: newProjectName }"
+        :rules="createRules"
+        label-position="top"
+      >
         <el-form-item label="项目名称" prop="name">
           <el-input
             v-model="newProjectName"

@@ -1,12 +1,12 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { animate } from 'animejs'
-import { mediaUrl } from '@/shared/helpers/mediaUrl'
-import { IconDevice } from '@/shared/icons'
-import { boxOf, pickElementAt } from '../helpers/screenshotGeometry'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue"
+import { animate } from "animejs"
+import { mediaUrl } from "@/shared/helpers/mediaUrl"
+import { IconDevice } from "@/shared/icons"
+import { boxOf, pickElementAt } from "../helpers/screenshotGeometry"
 
 /** groupColor 未传或非法时的兜底色（沿用历史分组框的蓝，避免整屏无框线） */
-const FALLBACK_GROUP_COLOR = '#409eff'
+const FALLBACK_GROUP_COLOR = "#409eff"
 /** 被展示裁剪丢弃的元素用虚线描边（画布坐标系下的短划长度） */
 const DASH_PATTERN = [6, 4]
 
@@ -15,11 +15,11 @@ const props = defineProps({
   screenH: { type: Number, default: 3040 },
   elements: { type: Array, default: () => [] },
   selected: { type: Object, default: null },
-  screenshotPath: { type: String, default: '' },
+  screenshotPath: { type: String, default: "" },
   /** 当前分组色（#rgb / #rrggbb）；缺省时用兜底色 */
-  groupColor: { type: String, default: '' },
+  groupColor: { type: String, default: "" },
 })
-const emit = defineEmits(['click-element'])
+const emit = defineEmits(["click-element"])
 
 const imgRef = ref(null)
 const overlayRef = ref(null)
@@ -52,28 +52,66 @@ function startNoDeviceAnimation() {
   stopNoDeviceAnimation()
   nextTick(() => {
     const targets = [
-      { el: noDeviceIconRef.value, key: 'icon' },
-      { el: noDeviceTitleRef.value, key: 'title' },
-      { el: ringOuterRef.value, key: 'ringOuter' },
-      { el: ringInnerRef.value, key: 'ringInner' },
+      { el: noDeviceIconRef.value, key: "icon" },
+      { el: noDeviceTitleRef.value, key: "title" },
+      { el: ringOuterRef.value, key: "ringOuter" },
+      { el: ringInnerRef.value, key: "ringInner" },
     ]
     for (const { el, key } of targets) {
       if (!el) continue
-      if (key === 'icon') {
-        noDeviceAnimeInstances.push(animate(el, { translateY: [-8, 8], duration: 2500, loop: true, ease: 'inOutSine', direction: 'alternate' }))
-      } else if (key === 'title') {
-        noDeviceAnimeInstances.push(animate(el, { opacity: [0.55, 1], duration: 2500, loop: true, ease: 'inOutSine', direction: 'alternate' }))
-      } else if (key === 'ringOuter') {
-        noDeviceAnimeInstances.push(animate(el, { scale: [0.85, 1.2], opacity: [0.28, 0.04], duration: 3000, loop: true, ease: 'inOutSine', direction: 'alternate' }))
-      } else if (key === 'ringInner') {
-        noDeviceAnimeInstances.push(animate(el, { scale: [0.9, 1.3], opacity: [0.22, 0.04], duration: 2200, loop: true, ease: 'inOutSine', direction: 'alternate' }))
+      if (key === "icon") {
+        noDeviceAnimeInstances.push(
+          animate(el, {
+            translateY: [-8, 8],
+            duration: 2500,
+            loop: true,
+            ease: "inOutSine",
+            direction: "alternate",
+          }),
+        )
+      } else if (key === "title") {
+        noDeviceAnimeInstances.push(
+          animate(el, {
+            opacity: [0.55, 1],
+            duration: 2500,
+            loop: true,
+            ease: "inOutSine",
+            direction: "alternate",
+          }),
+        )
+      } else if (key === "ringOuter") {
+        noDeviceAnimeInstances.push(
+          animate(el, {
+            scale: [0.85, 1.2],
+            opacity: [0.28, 0.04],
+            duration: 3000,
+            loop: true,
+            ease: "inOutSine",
+            direction: "alternate",
+          }),
+        )
+      } else if (key === "ringInner") {
+        noDeviceAnimeInstances.push(
+          animate(el, {
+            scale: [0.9, 1.3],
+            opacity: [0.22, 0.04],
+            duration: 2200,
+            loop: true,
+            ease: "inOutSine",
+            direction: "alternate",
+          }),
+        )
       }
     }
   })
 }
 
 function stopNoDeviceAnimation() {
-  noDeviceAnimeInstances.forEach(inst => { try { inst.pause() } catch (_) {} })
+  noDeviceAnimeInstances.forEach((inst) => {
+    try {
+      inst.pause()
+    } catch (_) {}
+  })
   noDeviceAnimeInstances = []
 }
 
@@ -109,15 +147,18 @@ onUnmounted(() => {
   stopNoDeviceAnimation()
 })
 
-watch(() => props.screenshotPath, (val) => {
-  shotFailed.value = false   // 换了一份快照就重置失效标记
-  if (val) stopNoDeviceAnimation()
-  else startNoDeviceAnimation()
-  nextTick(() => {
-    fitBox()
-    scheduleGroupDraw()
-  })
-})
+watch(
+  () => props.screenshotPath,
+  (val) => {
+    shotFailed.value = false // 换了一份快照就重置失效标记
+    if (val) stopNoDeviceAnimation()
+    else startNoDeviceAnimation()
+    nextTick(() => {
+      fitBox()
+      scheduleGroupDraw()
+    })
+  },
+)
 
 /** 坐标与比例的唯一基准：已加载截图的真实像素（截图就是整屏图）。
  *  截图未就绪（或历史快照缺屏幕尺寸）时，用传入的 screen_w / screen_h 兜底。 */
@@ -146,17 +187,20 @@ function scrollToRow(el) {
   const viewTop = frame.scrollTop
   const viewBottom = frame.scrollTop + frame.clientHeight
   if (centerY < viewTop || centerY > viewBottom) {
-    frame.scrollTo({ top: Math.max(0, centerY - frame.clientHeight / 2), behavior: 'smooth' })
+    frame.scrollTo({ top: Math.max(0, centerY - frame.clientHeight / 2), behavior: "smooth" })
   }
 }
 
 /** 选中联动：选中即重绘高亮并在视区外滚动过去；清空选中同样要重绘（擦掉旧高亮），
  *  故重绘不设守卫、只有滚动才要求有选中元素。选中只影响可见层，不动底层缓存。 */
-watch(() => props.selected, (el) => {
-  scheduleDraw()
-  if (!el) return
-  nextTick(() => scrollToRow(el))
-})
+watch(
+  () => props.selected,
+  (el) => {
+    scheduleDraw()
+    if (!el) return
+    nextTick(() => scrollToRow(el))
+  },
+)
 // ── 图片盒按屏幕比例精确适配容器（JS 计算，避免 aspect-ratio 双约束变形）──
 
 function fitBox() {
@@ -164,7 +208,7 @@ function fitBox() {
   const box = imgBoxRef.value
   const size = sourceSize()
   if (!frame || !box || !size) return
-  const cw = frame.clientWidth - 24   // 减去 phone-frame padding（12×2）
+  const cw = frame.clientWidth - 24 // 减去 phone-frame padding（12×2）
   const ch = frame.clientHeight - 24
   if (cw < 10 || ch < 10) return
   const scale = Math.min(cw / size.w, ch / size.h)
@@ -209,21 +253,25 @@ function elKey(el) {
 
 function strokeBox(ctx, box, scale) {
   ctx.strokeRect(
-    Math.round(box.x * scale), Math.round(box.y * scale),
-    Math.round(box.w * scale), Math.round(box.h * scale),
+    Math.round(box.x * scale),
+    Math.round(box.y * scale),
+    Math.round(box.w * scale),
+    Math.round(box.h * scale),
   )
 }
 
 function fillBox(ctx, box, scale) {
   ctx.fillRect(
-    Math.round(box.x * scale), Math.round(box.y * scale),
-    Math.round(box.w * scale), Math.round(box.h * scale),
+    Math.round(box.x * scale),
+    Math.round(box.y * scale),
+    Math.round(box.w * scale),
+    Math.round(box.h * scale),
   )
 }
 
 /** 分组色归一化为 #rrggbb；空值或非法值回落兜底色 */
 function normalizeColor(raw) {
-  const value = String(raw || '').trim()
+  const value = String(raw || "").trim()
   const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(value)
   if (short) return `#${short[1]}${short[1]}${short[2]}${short[2]}${short[3]}${short[3]}`
   if (/^#[0-9a-f]{6}$/i.test(value)) return value
@@ -253,10 +301,10 @@ function drawGroupLayer() {
   const size = canvasSize()
   const source = sourceSize()
   if (!size || !source || !props.screenshotPath) return
-  if (!groupLayer) groupLayer = document.createElement('canvas')
+  if (!groupLayer) groupLayer = document.createElement("canvas")
   groupLayer.width = size.w
   groupLayer.height = size.h
-  const ctx = groupLayer.getContext('2d')
+  const ctx = groupLayer.getContext("2d")
   ctx.clearRect(0, 0, size.w, size.h)
   const scale = size.w / source.w
   ctx.fillStyle = withAlpha(props.groupColor, 0.12)
@@ -279,7 +327,12 @@ function drawVisible() {
   const canvas = overlayRef.value
   if (!size || !canvas || !props.screenshotPath) return
 
-  if (groupLayerDirty || !groupLayer || groupLayer.width !== size.w || groupLayer.height !== size.h) {
+  if (
+    groupLayerDirty ||
+    !groupLayer ||
+    groupLayer.width !== size.w ||
+    groupLayer.height !== size.h
+  ) {
     drawGroupLayer()
   }
   if (canvas.width !== size.w || canvas.height !== size.h) {
@@ -287,7 +340,7 @@ function drawVisible() {
     canvas.height = size.h
   }
 
-  const ctx = canvas.getContext('2d')
+  const ctx = canvas.getContext("2d")
   ctx.clearRect(0, 0, size.w, size.h)
   ctx.setLineDash([])
   if (groupLayer) ctx.drawImage(groupLayer, 0, 0)
@@ -297,16 +350,16 @@ function drawVisible() {
   const selected = props.selected
   const selectedKey = elKey(selected)
   const selectedEl = selected
-    ? (props.elements.find(el => elKey(el) === selectedKey) || selected)
+    ? props.elements.find((el) => elKey(el) === selectedKey) || selected
     : null
   const hoveredKey = elKey(hovered.value)
 
   if (scale && hovered.value && hoveredKey !== selectedKey) {
     const box = boxOf(hovered.value)
     if (box && box.w > 0 && box.h > 0) {
-      ctx.fillStyle = 'rgba(255,193,7,0.18)'
+      ctx.fillStyle = "rgba(255,193,7,0.18)"
       fillBox(ctx, box, scale)
-      ctx.strokeStyle = '#ff9800'
+      ctx.strokeStyle = "#ff9800"
       ctx.lineWidth = 2
       strokeBox(ctx, box, scale)
     }
@@ -314,9 +367,9 @@ function drawVisible() {
 
   const selectedBox = selectedEl ? boxOf(selectedEl) : null
   if (scale && selectedBox && selectedBox.w > 0 && selectedBox.h > 0) {
-    ctx.fillStyle = 'rgba(231,76,60,0.4)'
+    ctx.fillStyle = "rgba(231,76,60,0.4)"
     fillBox(ctx, selectedBox, scale)
-    ctx.strokeStyle = '#e74c3c'
+    ctx.strokeStyle = "#e74c3c"
     ctx.lineWidth = 3
     strokeBox(ctx, selectedBox, scale)
   }
@@ -334,8 +387,14 @@ function onShotError() {
 }
 
 // 底层缓存的三类失效源：元素集、分组色、兜底尺寸
-watch(() => props.elements, () => scheduleGroupDraw())
-watch(() => props.groupColor, () => scheduleGroupDraw())
+watch(
+  () => props.elements,
+  () => scheduleGroupDraw(),
+)
+watch(
+  () => props.groupColor,
+  () => scheduleGroupDraw(),
+)
 watch([() => props.screenW, () => props.screenH], () => scheduleGroupDraw())
 
 /** 鼠标位置 → 画布坐标（DOM 基准换算留在这里），命中取舍交给纯函数 */
@@ -352,10 +411,13 @@ function hitTest(clientX, clientY) {
 
 function onScreenClick(e) {
   const hit = hitTest(e.clientX, e.clientY)
-  if (hit) emit('click-element', hit)
+  if (hit) emit("click-element", hit)
 }
 
-function onScreenContextMenu(e) { e.preventDefault(); onScreenClick(e) }
+function onScreenContextMenu(e) {
+  e.preventDefault()
+  onScreenClick(e)
+}
 
 let mousemoveRaf = null
 
@@ -369,7 +431,7 @@ function onMouseMove(e) {
       scheduleDraw()
     }
     if (overlayRef.value) {
-      overlayRef.value.style.cursor = hit ? 'pointer' : 'crosshair'
+      overlayRef.value.style.cursor = hit ? "pointer" : "crosshair"
     }
   })
 }
@@ -378,10 +440,9 @@ function onMouseLeave() {
   if (hovered.value) {
     hovered.value = null
     scheduleDraw()
-    if (overlayRef.value) overlayRef.value.style.cursor = 'crosshair'
+    if (overlayRef.value) overlayRef.value.style.cursor = "crosshair"
   }
 }
-
 </script>
 
 <template>
@@ -420,12 +481,14 @@ function onMouseLeave() {
           </div>
           <span ref="noDeviceIconRef" class="no-signal__icon"><IconDevice :size="32" /></span>
           <p ref="noDeviceTitleRef" class="no-signal__title">
-            {{ shotFailed ? '截图已失效' : '暂无页面快照' }}
+            {{ shotFailed ? "截图已失效" : "暂无页面快照" }}
           </p>
           <p class="no-signal__hint">
-            {{ shotFailed
-              ? '该页面的截图文件已不存在，请重新获取或换一份快照回看'
-              : '选择设备后点击「获取」，或从快照列表回看' }}
+            {{
+              shotFailed
+                ? "该页面的截图文件已不存在，请重新获取或换一份快照回看"
+                : "选择设备后点击「获取」，或从快照列表回看"
+            }}
           </p>
         </div>
       </div>

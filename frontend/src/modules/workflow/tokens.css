@@ -5,30 +5,30 @@
 */
 
 .workflow-workbench {
-  --ac-cream:       var(--paper);
-  --ac-cream-deep:  var(--paper);
-  --ac-paper:       var(--color-white) /* -> --color-white */;
-  --ac-wood:        var(--ink);
-  --ac-wood-light:  var(--color-ink-57) /* -> --color-ink-57 */;
-  --ac-wood-soft:   var(--color-ink-79) /* -> --color-ink-79 */;
-  --ac-ink-muted:   var(--color-ink-57) /* -> --color-ink-57 */;
-  --ac-ink-faint:   var(--color-ink-79) /* -> --color-ink-79 */;
-  --ac-border:      var(--ink);
+  --ac-cream: var(--paper);
+  --ac-cream-deep: var(--paper);
+  --ac-paper: var(--color-white) /* -> --color-white */;
+  --ac-wood: var(--ink);
+  --ac-wood-light: var(--color-ink-57) /* -> --color-ink-57 */;
+  --ac-wood-soft: var(--color-ink-79) /* -> --color-ink-79 */;
+  --ac-ink-muted: var(--color-ink-57) /* -> --color-ink-57 */;
+  --ac-ink-faint: var(--color-ink-79) /* -> --color-ink-79 */;
+  --ac-border: var(--ink);
   --ac-border-soft: var(--color-lime-94) /* -> --color-lime-94 */;
-  --ac-accent:      var(--c-workflow);           /* 工作流天蓝 #89CFF0 */
-  --ac-accent-deep: var(--color-cyan-40) /* -> --color-cyan-40 */;                     /* 工作流深蓝（白底可读文字/强调） */
-  --ac-accent-soft: var(--color-cyan-74-a18) /* -> --color-cyan-74-a18 */;   /* 工作流浅蓝（hover/选中底） */
-  --ac-teal:        var(--c-workflow);
-  --ac-green:       var(--c-device);
-  --ac-blue:        var(--c-element);
-  --ac-yellow:      var(--c-dashboard);
-  --ac-purple:      var(--c-element);
-  --ac-pink:        var(--c-runner);
-  --ac-red:         var(--color-red-73) /* -> --color-red-73 */;
-  --ac-orange:      var(--c-dashboard);
-  --ac-radius:      var(--app-radius-md);
-  --ac-radius-sm:   var(--app-radius-sm);
-  --ac-shadow:      var(--app-shadow-sm);
-  --ac-shadow-lg:   var(--app-shadow-lg);
+  --ac-accent: var(--c-workflow); /* 工作流天蓝 #89CFF0 */
+  --ac-accent-deep: var(--color-cyan-40) /* -> --color-cyan-40 */; /* 工作流深蓝（白底可读文字/强调） */
+  --ac-accent-soft: var(--color-cyan-74-a18) /* -> --color-cyan-74-a18 */; /* 工作流浅蓝（hover/选中底） */
+  --ac-teal: var(--c-workflow);
+  --ac-green: var(--c-device);
+  --ac-blue: var(--c-element);
+  --ac-yellow: var(--c-dashboard);
+  --ac-purple: var(--c-element);
+  --ac-pink: var(--c-runner);
+  --ac-red: var(--color-red-73) /* -> --color-red-73 */;
+  --ac-orange: var(--c-dashboard);
+  --ac-radius: var(--app-radius-md);
+  --ac-radius-sm: var(--app-radius-sm);
+  --ac-shadow: var(--app-shadow-sm);
+  --ac-shadow-lg: var(--app-shadow-lg);
   --ac-tilt: 0.3deg;
 }

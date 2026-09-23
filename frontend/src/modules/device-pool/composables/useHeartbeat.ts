@@ -1,6 +1,6 @@
 /** useHeartbeat — 设备列表心跳轮询管理（从 useDeviceActions 提取） */
-import { ref, onUnmounted, type Ref } from 'vue'
-import { HEARTBEAT_INTERVAL } from '../constants'
+import { ref, onUnmounted, type Ref } from "vue"
+import { HEARTBEAT_INTERVAL } from "../constants"
 
 export interface UseHeartbeatReturn {
   heartbeatActive: Ref<boolean>

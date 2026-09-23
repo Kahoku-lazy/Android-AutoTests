@@ -34,7 +34,7 @@ export function boxOf(el: unknown): ElementBox | null {
   let y = Number(record.y)
   let w = Number(record.width)
   let h = Number(record.height)
-  if (![x, y, w, h].every(Number.isFinite) && typeof record.bounds === 'string') {
+  if (![x, y, w, h].every(Number.isFinite) && typeof record.bounds === "string") {
     const matched = BOUNDS_RE.exec(record.bounds)
     if (matched) {
       x = Number(matched[1])

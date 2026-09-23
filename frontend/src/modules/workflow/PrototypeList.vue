@@ -1,27 +1,35 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessageBox, type FormInstance } from 'element-plus'
-import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
-import SketchCard from '@/shared/components/SketchCard.vue'
-import EmptyState from '@/shared/components/patterns/EmptyState.vue'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import SkeletonCard from '@/shared/components/patterns/SkeletonCard.vue'
-import { sketchTiltAt, sketchToneAt } from '@/shared/helpers/sketchCard'
-import { usePrototypes } from './composables/usePrototypes'
+import { onMounted, ref } from "vue"
+import { useRouter } from "vue-router"
+import { ElMessageBox, type FormInstance } from "element-plus"
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import SketchCard from "@/shared/components/SketchCard.vue"
+import EmptyState from "@/shared/components/patterns/EmptyState.vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
+import { sketchTiltAt, sketchToneAt } from "@/shared/helpers/sketchCard"
+import { usePrototypes } from "./composables/usePrototypes"
 
 const router = useRouter()
-const { prototypes, loading, creating, error, isEmpty, loadPrototypes, addPrototype, removePrototype } =
-  usePrototypes()
+const {
+  prototypes,
+  loading,
+  creating,
+  error,
+  isEmpty,
+  loadPrototypes,
+  addPrototype,
+  removePrototype,
+} = usePrototypes()
 
 const createDialogVisible = ref(false)
-const newName = ref('')
-const newDesc = ref('')
+const newName = ref("")
+const newDesc = ref("")
 
 const createFormRef = ref<FormInstance>()
 /** 新建原型的字段级校验（按 L4 口径走 EP :rules，取代原 Toast 空值守卫） */
 const createRules = {
-  name: [{ required: true, message: '请输入原型名称', trigger: 'blur' }],
+  name: [{ required: true, message: "请输入原型名称", trigger: "blur" }],
 }
 
 onMounted(() => {
@@ -29,8 +37,8 @@ onMounted(() => {
 })
 
 function openCreateDialog() {
-  newName.value = ''
-  newDesc.value = ''
+  newName.value = ""
+  newDesc.value = ""
   createDialogVisible.value = true
 }
 
@@ -56,8 +64,8 @@ async function onDelete(id: number, name: string) {
   try {
     await ElMessageBox.confirm(
       `删除原型「${name}」将同时删除其下全部目录与页面流，此操作不可恢复。`,
-      '确认删除原型',
-      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' },
+      "确认删除原型",
+      { confirmButtonText: "删除", cancelButtonText: "取消", type: "warning" },
     )
   } catch {
     return
@@ -119,7 +127,12 @@ async function onDelete(id: number, name: string) {
       width="440px"
       :close-on-click-modal="false"
     >
-      <el-form ref="createFormRef" :model="{ name: newName }" :rules="createRules" label-position="top">
+      <el-form
+        ref="createFormRef"
+        :model="{ name: newName }"
+        :rules="createRules"
+        label-position="top"
+      >
         <el-form-item label="原型名称" prop="name">
           <el-input
             v-model="newName"

@@ -4,21 +4,17 @@
  * 资源态：仅目录树；点击页面流后整页进入绘制
  * 绘制态：VueFlow 全宽；「返回上一级」保存后回到目录树
  */
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox, type InputInstance } from 'element-plus'
-import { useWorkflowStore } from '@/modules/workflow/stores/workflowStore'
-import { useLibraryStore, type LibNode } from '@/modules/workflow/stores/libraryStore'
-import { getWorkflowPrototype } from '@/modules/workflow/api'
-import {
-  NODE_TYPE_LABELS,
-  DEFAULT_NAMES,
-  isFlowDocType,
-} from '@/modules/workflow/constants'
-import PageFlowVueFlow from './components/vueflow/PageFlowVueFlow.vue'
-import WorkflowDirTree from './components/WorkflowDirTree.vue'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from "vue"
+import { useRoute, useRouter } from "vue-router"
+import { ElMessage, ElMessageBox, type InputInstance } from "element-plus"
+import { useWorkflowStore } from "@/modules/workflow/stores/workflowStore"
+import { useLibraryStore, type LibNode } from "@/modules/workflow/stores/libraryStore"
+import { getWorkflowPrototype } from "@/modules/workflow/api"
+import { NODE_TYPE_LABELS, DEFAULT_NAMES, isFlowDocType } from "@/modules/workflow/constants"
+import PageFlowVueFlow from "./components/vueflow/PageFlowVueFlow.vue"
+import WorkflowDirTree from "./components/WorkflowDirTree.vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 
 const route = useRoute()
 const router = useRouter()
@@ -26,19 +22,19 @@ const store = useWorkflowStore()
 const lib = useLibraryStore()
 
 const prototypeId = computed(() => Number(route.params.prototypeId))
-const prototypeName = ref('')
+const prototypeName = ref("")
 const selectedFolderId = ref<string | null>(null)
 const ready = ref(false)
-const error = ref('')
+const error = ref("")
 function retryLoad() {
-  error.value = ''
+  error.value = ""
   ready.value = false
   void bootWorkbench()
 }
-const createName = ref('')
-const creatingKind = ref<'folder' | null>(null)
+const createName = ref("")
+const creatingKind = ref<"folder" | null>(null)
 const createParentId = ref<string | null>(null)
-const editDocName = ref('')
+const editDocName = ref("")
 const overwriteImport = ref(false)
 /**
  * 当前画布已从服务端 hydrate 的页面流 doc_id。
@@ -53,41 +49,37 @@ let autosaveInFlight = false
 /** 右侧是否打开文件编辑器 */
 const editing = computed(() => {
   const n = lib.activeNode
-  return !!(n && n.type !== 'folder')
+  return !!(n && n.type !== "folder")
 })
 
 const folderName = computed(() => {
-  if (selectedFolderId.value === null) return '根目录'
-  return lib.findNode(selectedFolderId.value)?.name || '目录'
+  if (selectedFolderId.value === null) return "根目录"
+  return lib.findNode(selectedFolderId.value)?.name || "目录"
 })
 
 const breadcrumb = computed(() => {
-  const root = prototypeName.value || '原型'
+  const root = prototypeName.value || "原型"
   const cur = lib.activeNode
   if (!editing.value) {
-    return selectedFolderId.value
-      ? `${root} / ${folderName.value}`
-      : `${root} / 全部`
+    return selectedFolderId.value ? `${root} / ${folderName.value}` : `${root} / 全部`
   }
   if (!cur) return `${root} / 编辑`
   const parent = cur.parentId ? lib.findNode(cur.parentId) : null
   const title = editDocName.value || cur.name
-  const kind = NODE_TYPE_LABELS[cur.type] || '文档'
-  return parent
-    ? `${root} / ${parent.name} / ${kind}「${title}」`
-    : `${root} / ${kind}「${title}」`
+  const kind = NODE_TYPE_LABELS[cur.type] || "文档"
+  return parent ? `${root} / ${parent.name} / ${kind}「${title}」` : `${root} / ${kind}「${title}」`
 })
 
 function goBackToList() {
   clearAutosaveTimer()
   void persistActive().finally(() => {
-    router.push('/workflow')
+    router.push("/workflow")
   })
 }
 
 async function bootWorkbench() {
   if (!Number.isFinite(prototypeId.value) || prototypeId.value <= 0) {
-    error.value = '无效的原型 ID'
+    error.value = "无效的原型 ID"
     return
   }
   lib.setPrototypeId(prototypeId.value)
@@ -95,18 +87,18 @@ async function bootWorkbench() {
     const { data } = await getWorkflowPrototype(prototypeId.value)
     const proto = data.data
     if (!data.status || !proto) {
-      error.value = data.message || '原型不存在'
+      error.value = data.message || "原型不存在"
       return
     }
-    prototypeName.value = proto.name || ''
+    prototypeName.value = proto.name || ""
     const boot = await lib.bootstrapIfEmpty()
     const remembered = lib.activeId ? lib.findNode(lib.activeId) : null
     if (boot) {
       selectedFolderId.value = boot.folder.id
     } else {
-      const folders = lib.nodes.filter(n => n.type === 'folder')
+      const folders = lib.nodes.filter((n) => n.type === "folder")
       selectedFolderId.value =
-        (remembered?.type === 'folder' && remembered.id) ||
+        (remembered?.type === "folder" && remembered.id) ||
         remembered?.parentId ||
         folders[0]?.id ||
         null
@@ -116,7 +108,7 @@ async function bootWorkbench() {
     ready.value = true
   } catch {
     selectedFolderId.value = null
-    error.value = '加载工作流数据失败，请检查网络连接'
+    error.value = "加载工作流数据失败，请检查网络连接"
   }
 }
 
@@ -144,8 +136,8 @@ async function confirmEmptyOverwriteDialog(remoteNodes: number): Promise<boolean
   try {
     await ElMessageBox.confirm(
       `服务器上已有 ${remoteNodes} 个节点，当前画布为空。确定要用空图覆盖吗？`,
-      '覆盖确认',
-      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' },
+      "覆盖确认",
+      { confirmButtonText: "确定", cancelButtonText: "取消", type: "warning" },
     )
     return true
   } catch {
@@ -195,18 +187,16 @@ async function saveCurrent() {
   const cur = lib.activeNode
   if (!cur || !isFlowDocType(cur.type)) return
   await persistPageFlow({ confirmEmptyOverwrite: true })
-  const parentName = cur.parentId
-    ? lib.findNode(cur.parentId)?.name || '…'
-    : folderName.value
+  const parentName = cur.parentId ? lib.findNode(cur.parentId)?.name || "…" : folderName.value
   lib.status = `已保存「${editDocName.value || cur.name}」→ ${parentName} · ${cur.id}`
-  ElMessage.success('已保存到服务器')
+  ElMessage.success("已保存到服务器")
 }
 
 async function ensureParentFolder(preferred?: string | null): Promise<string> {
   let parentId = preferred ?? selectedFolderId.value
-  if (parentId === null || (parentId && lib.findNode(parentId)?.type !== 'folder')) {
-    let def = lib.nodes.find(n => n.type === 'folder' && n.name === '默认目录')
-    if (!def) def = await lib.createFolder('默认目录', null)
+  if (parentId === null || (parentId && lib.findNode(parentId)?.type !== "folder")) {
+    let def = lib.nodes.find((n) => n.type === "folder" && n.name === "默认目录")
+    if (!def) def = await lib.createFolder("默认目录", null)
     parentId = def.id
     selectedFolderId.value = def.id
   }
@@ -214,7 +204,7 @@ async function ensureParentFolder(preferred?: string | null): Promise<string> {
 }
 
 async function openFile(node: LibNode) {
-  if (node.type === 'folder') return
+  if (node.type === "folder") return
   if (!isFlowDocType(node.type)) return
   if (lib.activeNode?.id === node.id && editing.value && hydratedFlowId.value === node.id) return
   clearAutosaveTimer()
@@ -236,31 +226,29 @@ async function openFile(node: LibNode) {
 async function applyDocRename() {
   const cur = lib.activeNode
   const name = editDocName.value.trim()
-  if (!cur || !name || cur.type === 'folder') return
+  if (!cur || !name || cur.type === "folder") return
   if (cur.name !== name) await lib.renameNode(cur.id, name)
 }
 
 function askCreateFolder(parentId: string | null) {
-  creatingKind.value = 'folder'
+  creatingKind.value = "folder"
   createParentId.value = parentId
-  createName.value = parentId ? '新建子目录' : '新建目录'
+  createName.value = parentId ? "新建子目录" : "新建目录"
 }
 
-const folderDialogTitle = computed(() =>
-  createParentId.value ? '新建子目录' : '新建根目录'
-)
+const folderDialogTitle = computed(() => (createParentId.value ? "新建子目录" : "新建根目录"))
 
 const folderDialogHint = computed(() => {
-  if (!createParentId.value) return '将创建在当前原型根级'
+  if (!createParentId.value) return "将创建在当前原型根级"
   const p = lib.findNode(createParentId.value)
-  return p ? `父目录：${p.name}` : '将创建为子目录'
+  return p ? `父目录：${p.name}` : "将创建为子目录"
 })
 
 async function confirmCreateFolder() {
-  if (creatingKind.value !== 'folder') return
+  if (creatingKind.value !== "folder") return
   const name = createName.value.trim()
   if (!name) {
-    ElMessage.warning('请输入目录名称')
+    ElMessage.warning("请输入目录名称")
     return
   }
   try {
@@ -291,7 +279,7 @@ async function askCreateFlow(parentId?: string | null) {
 
 async function exportCurrent() {
   const cur = lib.activeNode
-  if (!cur || cur.type === 'folder') return
+  if (!cur || cur.type === "folder") return
   await persistActive()
   await exportFile(cur)
 }
@@ -299,8 +287,8 @@ async function exportCurrent() {
 async function exportFile(node: LibNode) {
   const envelope = await lib.exportDoc(node.id)
   if (!envelope) return
-  const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: 'application/json' })
-  const a = document.createElement('a')
+  const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: "application/json" })
+  const a = document.createElement("a")
   a.href = URL.createObjectURL(blob)
   a.download = `${node.id}.json`
   a.click()
@@ -318,14 +306,14 @@ async function importJsonFile(file: File) {
     })
     if (node && isFlowDocType(node.type)) await openFile(node)
   } catch (e: any) {
-    ElMessage.error(e?.message || 'JSON 解析失败')
+    ElMessage.error(e?.message || "JSON 解析失败")
   }
 }
 
 function onImportPick(ev: Event) {
   const input = ev.target as HTMLInputElement
   const file = input.files?.[0]
-  input.value = ''
+  input.value = ""
   if (file) importJsonFile(file)
 }
 
@@ -333,12 +321,12 @@ onMounted(async () => {
   await nextTick()
   if ((window as any).lucide) (window as any).lucide.createIcons()
   await bootWorkbench()
-  document.addEventListener('visibilitychange', onVisibilitySave)
-  window.addEventListener('pagehide', onVisibilitySave)
+  document.addEventListener("visibilitychange", onVisibilitySave)
+  window.addEventListener("pagehide", onVisibilitySave)
 })
 
 function onVisibilitySave() {
-  if (document.visibilityState === 'hidden' || document.visibilityState === undefined) {
+  if (document.visibilityState === "hidden" || document.visibilityState === undefined) {
     clearAutosaveTimer()
     // fire-and-forget：切走/刷新前尽量落盘
     void persistActive()
@@ -346,8 +334,8 @@ function onVisibilitySave() {
 }
 
 onBeforeUnmount(() => {
-  document.removeEventListener('visibilitychange', onVisibilitySave)
-  window.removeEventListener('pagehide', onVisibilitySave)
+  document.removeEventListener("visibilitychange", onVisibilitySave)
+  window.removeEventListener("pagehide", onVisibilitySave)
   clearAutosaveTimer()
   void persistActive()
 })
@@ -360,14 +348,14 @@ watch(
     hid: hydratedFlowId.value,
     aid: lib.activeId,
   }),
-  () => schedulePageFlowAutosave()
+  () => schedulePageFlowAutosave(),
 )
 
 // 深监听节点内容（改名、端口、属性）
 watch(
   () => store.nodes,
   () => schedulePageFlowAutosave(),
-  { deep: true }
+  { deep: true },
 )
 </script>
 
@@ -385,24 +373,14 @@ watch(
             导入 JSON
             <input type="file" accept="application/json,.json" hidden @change="onImportPick" />
           </label>
-          <button
-            v-if="editing"
-            type="button"
-            class="wf-btn"
-            @click="exportCurrent"
-          >
+          <button v-if="editing" type="button" class="wf-btn" @click="exportCurrent">
             导出 JSON
           </button>
           <label class="overwrite-lab">
             <input v-model="overwriteImport" type="checkbox" />
             同 ID 覆盖
           </label>
-          <button
-            v-if="editing"
-            type="button"
-            class="wf-btn wf-btn--primary"
-            @click="saveCurrent"
-          >
+          <button v-if="editing" type="button" class="wf-btn wf-btn--primary" @click="saveCurrent">
             保存
           </button>
           <span v-if="lib.status" class="status-pill" :title="lib.status">{{ lib.status }}</span>
@@ -417,7 +395,11 @@ watch(
       :title="folderDialogTitle"
       width="400px"
       :close-on-click-modal="false"
-      @update:model-value="(v: boolean) => { if (!v) cancelCreate() }"
+      @update:model-value="
+        (v: boolean) => {
+          if (!v) cancelCreate()
+        }
+      "
       @opened="onFolderDialogOpened"
     >
       <p class="wf-modal-hint">{{ folderDialogHint }}</p>
@@ -477,7 +459,7 @@ watch(
      以更高特异性（0,2,0）覆盖为 height:auto / overflow:visible，故原声明属失效声明（见 style.css 顶部说明）。
      本页高度由 flex 链（flex:1 + min-height:0）给出，滚动由 .wb-body 内层容器承担。 */
   /* ── 本模块私有色：tokens.css 未登记，登记在页面根作用域（消费者 .wf-btn / .status-pill 均在其内）── */
-  --wf-btn-press-shadow: var(--color-ink-05-a05) /* -> --color-ink-05-a05 */;        /* 按钮按下硬阴影 */
+  --wf-btn-press-shadow: var(--color-ink-05-a05) /* -> --color-ink-05-a05 */; /* 按钮按下硬阴影 */
   --wf-status-pill-border: var(--color-cyan-74-a30) /* -> --color-cyan-74-a30 */; /* 状态胶囊描边（工作流蓝 40%） */
 }
 
@@ -503,7 +485,9 @@ watch(
   line-height: 1.4;
   cursor: pointer;
   box-shadow: var(--app-shadow-sm);
-  transition: background var(--app-duration-fast) var(--app-ease), box-shadow var(--app-duration-fast) var(--app-ease),
+  transition:
+    background var(--app-duration-fast) var(--app-ease),
+    box-shadow var(--app-duration-fast) var(--app-ease),
     transform 0.12s var(--app-ease);
 }
 .wf-btn:hover {

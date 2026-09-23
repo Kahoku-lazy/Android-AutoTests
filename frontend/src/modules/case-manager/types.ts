@@ -1,7 +1,7 @@
 /** case-manager 项目化文档用例类型（wire snake_case） */
 
-export type TestType = 'app' | 'web' | 'api' | 'func'
-export type BusinessType = 'appliance' | 'lighting' | 'app'
+export type TestType = "app" | "web" | "api" | "func"
+export type BusinessType = "appliance" | "lighting" | "app"
 
 export interface CaseProject {
   id: number
@@ -14,7 +14,7 @@ export interface CaseProject {
 }
 
 export interface TreeDirectoryNode {
-  type: 'directory'
+  type: "directory"
   id: number
   name: string
   sort_order: number
@@ -22,7 +22,7 @@ export interface TreeDirectoryNode {
 }
 
 export interface TreeFileNode {
-  type: 'file'
+  type: "file"
   id: number
   name: string
   sort_order: number
@@ -88,14 +88,14 @@ export interface SheetRowDraft {
 }
 
 export const TEST_TYPE_OPTIONS = [
-  { value: 'app' as const, label: 'APP' },
-  { value: 'web' as const, label: 'WEB' },
-  { value: 'api' as const, label: 'API' },
-  { value: 'func' as const, label: 'FUNC' },
+  { value: "app" as const, label: "APP" },
+  { value: "web" as const, label: "WEB" },
+  { value: "api" as const, label: "API" },
+  { value: "func" as const, label: "FUNC" },
 ]
 
 export const BUSINESS_TYPE_OPTIONS = [
-  { value: 'appliance' as const, label: '家电' },
-  { value: 'lighting' as const, label: '照明' },
-  { value: 'app' as const, label: 'APP' },
+  { value: "appliance" as const, label: "家电" },
+  { value: "lighting" as const, label: "照明" },
+  { value: "app" as const, label: "APP" },
 ]

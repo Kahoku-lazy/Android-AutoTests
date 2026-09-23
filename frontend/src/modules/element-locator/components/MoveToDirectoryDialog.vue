@@ -2,10 +2,10 @@
 /**
  * 「移动到…」目标目录选择弹窗：只列目录（含「项目根」选项），供批量勾选后整批移动。
  */
-import { computed, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import type { LocatorTreeNode } from '../types'
-import { toUiNodes, type UiTreeNode } from '../composables/useLocatorTreeMove'
+import { computed, ref, watch } from "vue"
+import { ElMessage } from "element-plus"
+import type { LocatorTreeNode } from "../types"
+import { toUiNodes, type UiTreeNode } from "../composables/useLocatorTreeMove"
 
 interface DirOption {
   key: string
@@ -15,8 +15,8 @@ interface DirOption {
 }
 
 /** 「项目根」不是目录节点，用固定 key 与 null id 表达 */
-const ROOT_KEY = 'locator-root'
-const ROOT_OPTION: DirOption = { key: ROOT_KEY, name: '项目根', id: null }
+const ROOT_KEY = "locator-root"
+const ROOT_OPTION: DirOption = { key: ROOT_KEY, name: "项目根", id: null }
 
 const props = defineProps<{
   modelValue: boolean
@@ -24,13 +24,13 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
-  confirm: [directoryId: number | null]
+  "update:modelValue": [value: boolean]
+  "confirm": [directoryId: number | null]
 }>()
 
 function toDirOptions(nodes: UiTreeNode[]): DirOption[] {
   return nodes
-    .filter((node) => node.type === 'directory')
+    .filter((node) => node.type === "directory")
     .map((node) => ({
       key: node.key,
       name: node.name,
@@ -39,7 +39,10 @@ function toDirOptions(nodes: UiTreeNode[]): DirOption[] {
     }))
 }
 
-const options = computed<DirOption[]>(() => [ROOT_OPTION, ...toDirOptions(toUiNodes(props.treeData))])
+const options = computed<DirOption[]>(() => [
+  ROOT_OPTION,
+  ...toDirOptions(toUiNodes(props.treeData)),
+])
 const selectedKey = ref(ROOT_KEY)
 
 watch(
@@ -63,16 +66,16 @@ function selectOption(data: DirOption) {
 }
 
 function close() {
-  emit('update:modelValue', false)
+  emit("update:modelValue", false)
 }
 
 function confirm() {
   const target = findOption(options.value, selectedKey.value)
   if (!target) {
-    ElMessage.warning('请选择目标目录')
+    ElMessage.warning("请选择目标目录")
     return
   }
-  emit('confirm', target.id)
+  emit("confirm", target.id)
   close()
 }
 </script>

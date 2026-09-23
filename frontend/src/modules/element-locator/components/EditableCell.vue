@@ -3,8 +3,8 @@
  * 可编辑单元格：默认只渲染纯文本，双击才进入编辑态（挂载 el-input 并自动聚焦）。
  * Enter 提交、Esc 取消、失焦提交；校验不通过时就地提示并恢复原值。
  */
-import { nextTick, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { nextTick, ref } from "vue"
+import { ElMessage } from "element-plus"
 
 const props = defineProps<{
   value: string
@@ -43,7 +43,7 @@ function commit() {
     return
   }
   editing.value = false
-  emit('commit', draft.value)
+  emit("commit", draft.value)
 }
 </script>
 
@@ -58,13 +58,8 @@ function commit() {
     @keyup.enter="commit"
     @keyup.esc="cancel"
   />
-  <span
-    v-else
-    class="editable-cell"
-    :title="value || placeholder"
-    @dblclick.stop="startEdit"
-  >
-    {{ value || '—' }}
+  <span v-else class="editable-cell" :title="value || placeholder" @dblclick.stop="startEdit">
+    {{ value || "—" }}
   </span>
 </template>
 

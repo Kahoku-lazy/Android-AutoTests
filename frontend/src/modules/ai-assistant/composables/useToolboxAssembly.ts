@@ -1,6 +1,6 @@
 /** useToolboxAssembly — 装配台 UI 状态（来源切换 / 生效芯片 / 搜索 / 跳转） */
-import { computed, nextTick, ref, watch, type Ref } from 'vue'
-import type { PlatformToolCategory, PlatformToolItem, SharedToolItem } from '../api/toolbox'
+import { computed, nextTick, ref, watch, type Ref } from "vue"
+import type { PlatformToolCategory, PlatformToolItem, SharedToolItem } from "../api/toolbox"
 import {
   ASSEMBLY_SOURCES,
   LIVE_CHIP_PREVIEW,
@@ -10,7 +10,7 @@ import {
   type AssemblySourceDef,
   type AssemblySourceKey,
   type LiveChip,
-} from '../helpers/toolbox-assembly'
+} from "../helpers/toolbox-assembly"
 
 export function useToolboxAssembly(deps: {
   platformConfig: Ref<Record<string, unknown>>
@@ -18,10 +18,10 @@ export function useToolboxAssembly(deps: {
   platformExpanded: Ref<string[]>
   sharedItems: Ref<SharedToolItem[]>
 }) {
-  const activeSource = ref<AssemblySourceKey>('biz')
-  const searchQuery = ref('')
+  const activeSource = ref<AssemblySourceKey>("biz")
+  const searchQuery = ref("")
   const chipsExpanded = ref(false)
-  const highlightName = ref('')
+  const highlightName = ref("")
   let highlightTimer: ReturnType<typeof setTimeout> | null = null
 
   const activeSourceDef = computed(
@@ -33,38 +33,40 @@ export function useToolboxAssembly(deps: {
     return Boolean(deps.platformConfig.value[gateKey])
   }
 
-  const liveChips = computed(() => buildLiveChips({
-    gates: {
-      enable_business_tools: isGateOn('enable_business_tools'),
-      enable_skills: isGateOn('enable_skills'),
-    },
-    categories: deps.platformCategories.value,
-    sharedItems: deps.sharedItems.value,
-  }))
+  const liveChips = computed(() =>
+    buildLiveChips({
+      gates: {
+        enable_business_tools: isGateOn("enable_business_tools"),
+        enable_skills: isGateOn("enable_skills"),
+      },
+      categories: deps.platformCategories.value,
+      sharedItems: deps.sharedItems.value,
+    }),
+  )
 
-  const visibleChips = computed(() => (
-    chipsExpanded.value ? liveChips.value : liveChips.value.slice(0, LIVE_CHIP_PREVIEW)
-  ))
+  const visibleChips = computed(() =>
+    chipsExpanded.value ? liveChips.value : liveChips.value.slice(0, LIVE_CHIP_PREVIEW),
+  )
 
   const unarmedSources = computed(() => gatedSources().filter((s) => !isGateOn(s.gateKey)))
 
   function sourceLiveCount(src: AssemblySourceDef): number {
-    if (src.key === 'prompt') return 3
+    if (src.key === "prompt") return 3
     if (!isGateOn(src.gateKey)) return 0
     return liveChips.value.filter((c) => c.source === src.key).length
   }
 
   function sourceCatalogTotal(src: AssemblySourceDef): number {
-    if (src.key === 'prompt') return 3
-    if (src.key === 'biz') {
+    if (src.key === "prompt") return 3
+    if (src.key === "biz") {
       return deps.platformCategories.value.reduce((n, c) => n + c.tools.length, 0)
     }
-    return deps.sharedItems.value.filter((i) => i.item_type === 'skill').length
+    return deps.sharedItems.value.filter((i) => i.item_type === "skill").length
   }
 
   function sourceMeta(src: AssemblySourceDef): string {
-    if (src.key === 'prompt') return '规划 / 执行 / 验收 · 始终交给助手'
-    if (!isGateOn(src.gateKey)) return '总闸关闭 · 目录启停不会进入运行时'
+    if (src.key === "prompt") return "规划 / 执行 / 验收 · 始终交给助手"
+    if (!isGateOn(src.gateKey)) return "总闸关闭 · 目录启停不会进入运行时"
     return `${sourceLiveCount(src)}/${sourceCatalogTotal(src)} 生效`
   }
 
@@ -74,17 +76,20 @@ export function useToolboxAssembly(deps: {
 
   async function jumpToChip(chip: LiveChip) {
     activeSource.value = chip.source
-    if (chip.source === 'biz' && chip.moduleKey) {
+    if (chip.source === "biz" && chip.moduleKey) {
       if (!deps.platformExpanded.value.includes(chip.moduleKey)) {
         deps.platformExpanded.value = [...deps.platformExpanded.value, chip.moduleKey]
       }
     }
     highlightName.value = chip.name
     if (highlightTimer) clearTimeout(highlightTimer)
-    highlightTimer = setTimeout(() => { highlightName.value = '' }, 1400)
+    highlightTimer = setTimeout(() => {
+      highlightName.value = ""
+    }, 1400)
     await nextTick()
-    document.getElementById(toolDomId(chip.source, chip.name))
-      ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    document
+      .getElementById(toolDomId(chip.source, chip.name))
+      ?.scrollIntoView({ block: "nearest", behavior: "smooth" })
   }
 
   function filterTools(tools: PlatformToolItem[]) {
@@ -97,15 +102,16 @@ export function useToolboxAssembly(deps: {
     return deps.platformCategories.value.filter((cat) => filterTools(cat.tools).length > 0)
   })
 
-  const filteredSkillItems = computed(() => (
-    deps.sharedItems.value.filter((i) => (
-      i.item_type === 'skill'
-      && matchQuery(`${i.name} ${i.description || ''}`, searchQuery.value)
-    ))
-  ))
+  const filteredSkillItems = computed(() =>
+    deps.sharedItems.value.filter(
+      (i) =>
+        i.item_type === "skill" &&
+        matchQuery(`${i.name} ${i.description || ""}`, searchQuery.value),
+    ),
+  )
 
   watch(searchQuery, (q) => {
-    if (!q.trim() || activeSource.value !== 'biz') return
+    if (!q.trim() || activeSource.value !== "biz") return
     const keys = filteredCategories.value.map((c) => c.key)
     deps.platformExpanded.value = Array.from(new Set([...deps.platformExpanded.value, ...keys]))
   })

@@ -18,27 +18,45 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: local("Cascadia Mono"),
-       url("https://cdn.jsdelivr.net/npm/@fontsource/cascadia-mono@5.3.0/files/cascadia-mono-latin-400-normal.woff2") format("woff2");
+  src:
+    local("Cascadia Mono"),
+    url("https://cdn.jsdelivr.net/npm/@fontsource/cascadia-mono@5.3.0/files/cascadia-mono-latin-400-normal.woff2")
+      format("woff2");
 }
 @font-face {
   font-family: "Cascadia Mono";
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: local("Cascadia Mono Bold"), local("Cascadia Mono"),
-       url("https://cdn.jsdelivr.net/npm/@fontsource/cascadia-mono@5.3.0/files/cascadia-mono-latin-700-normal.woff2") format("woff2");
+  src:
+    local("Cascadia Mono Bold"),
+    local("Cascadia Mono"),
+    url("https://cdn.jsdelivr.net/npm/@fontsource/cascadia-mono@5.3.0/files/cascadia-mono-latin-700-normal.woff2")
+      format("woff2");
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html, body, #app { height: 100%; overflow: hidden; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+html,
+body,
+#app {
+  height: 100%;
+  overflow: hidden;
+}
 /* 主题恒为浅色：避免深色系统下原生滚动条/表单控件渲染成深色 */
-html { color-scheme: light; }
+html {
+  color-scheme: light;
+}
 
 /* #app 滚动兜底：页面若忘记套 .doc-page，退化为"可滚动"而不是"内容被裁"。
    （正常路径下 .app-shell 是 height:100%，与 #app 等高，不会触发本行。
      滚动策略的两种口径见下方「文档站风格页面布局」一节） */
-#app { overflow: auto; }
+#app {
+  overflow: auto;
+}
 
 body {
   font-family: var(--app-font);
@@ -87,10 +105,12 @@ body {
   background: var(--c-dashboard) !important;
   border: 2.5px solid var(--ink) !important;
   color: var(--ink) !important;
-  box-shadow: 2px 2px 0 rgba(0,0,0,0.06);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.06);
   font-weight: 700 !important;
 }
-.el-button--primary:hover { background: var(--app-highlight) !important; }
+.el-button--primary:hover {
+  background: var(--app-highlight) !important;
+}
 
 .el-table {
   border-radius: var(--app-radius-table) !important;
@@ -102,19 +122,28 @@ body {
   color: var(--ink) !important;
   font-weight: 700 !important;
   border-bottom: 2px solid var(--ink) !important;
-  font-size: var(--app-size-xs); text-transform: uppercase; letter-spacing: 0.04em;
+  font-size: var(--app-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 .el-table td {
   background: var(--app-bg-card) !important;
   /* 纸面风格不画行网格线：保留 1px 占位以维持行高，故用 transparent 而非删除声明 */
   border-bottom: 1px solid transparent !important;
 }
-.el-table tbody tr:hover > td { background: var(--paper) !important; }
+.el-table tbody tr:hover > td {
+  background: var(--paper) !important;
+}
 
-.el-tag { border-radius: var(--el-border-radius-small) !important; font-weight: 700 !important; }
+.el-tag {
+  border-radius: var(--el-border-radius-small) !important;
+  font-weight: 700 !important;
+}
 
 /* ── 表单校验错误文字：与按钮底色解耦，取项目危险文字色保证可读 ── */
-.el-form-item__error { color: var(--app-status-danger-text); }
+.el-form-item__error {
+  color: var(--app-status-danger-text);
+}
 
 /* ── 分段控件（el-radio-button）：显式不对称圆角 + 黄底墨字选中态
        --el-border-radius-base 是两个值（4px 8px），EP 把它与额外值组合会生成 6 值非法声明，
@@ -126,7 +155,9 @@ body {
 .el-radio-button__original-radio:not(:disabled) + .el-radio-button__inner:hover {
   color: var(--ink);
 }
-.el-radio-button.is-active .el-radio-button__original-radio:not(:disabled) + .el-radio-button__inner {
+.el-radio-button.is-active
+  .el-radio-button__original-radio:not(:disabled)
+  + .el-radio-button__inner {
   color: var(--ink);
   background-color: var(--c-dashboard);
   border-color: var(--ink);
@@ -148,7 +179,9 @@ body {
   transition: border-color var(--app-duration-fast);
 }
 .el-input__wrapper:hover,
-.el-select .el-input__wrapper:hover { border-color: var(--c-dashboard) !important; }
+.el-select .el-input__wrapper:hover {
+  border-color: var(--c-dashboard) !important;
+}
 .el-input__wrapper:focus-within,
 .el-select .el-input__wrapper:focus-within {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-dashboard) 20%, transparent) !important;
@@ -162,20 +195,49 @@ body {
 }
 
 /* ── 代码字体 ── */
-pre, code, kbd, samp { font-family: var(--app-font-mono) !important; }
+pre,
+code,
+kbd,
+samp {
+  font-family: var(--app-font-mono) !important;
+}
 
 /* ── 标题 ── */
-h1 { font-size: var(--app-size-xl); font-weight: 800; color: var(--ink); font-family: var(--app-font-display); line-height: 1.3; }
-h2 { font-size: var(--app-size-lg); font-weight: 700; color: var(--ink); font-family: var(--app-font-display); line-height: 1.35; }
-h3 { font-size: var(--app-size-md); font-weight: 700; color: var(--ink); font-family: var(--app-font-display); line-height: 1.4; }
-h4 { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); font-family: var(--app-font-display); line-height: 1.4; }
+h1 {
+  font-size: var(--app-size-xl);
+  font-weight: 800;
+  color: var(--ink);
+  font-family: var(--app-font-display);
+  line-height: 1.3;
+}
+h2 {
+  font-size: var(--app-size-lg);
+  font-weight: 700;
+  color: var(--ink);
+  font-family: var(--app-font-display);
+  line-height: 1.35;
+}
+h3 {
+  font-size: var(--app-size-md);
+  font-weight: 700;
+  color: var(--ink);
+  font-family: var(--app-font-display);
+  line-height: 1.4;
+}
+h4 {
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  color: var(--ink);
+  font-family: var(--app-font-display);
+  line-height: 1.4;
+}
 
 /* ── Toast ── */
 .el-message {
   background: var(--app-bg-card) !important;
   border-radius: var(--app-radius-sm) !important;
   border: 2.5px solid var(--ink) !important;
-  box-shadow: 2px 3px 0 rgba(0,0,0,0.06) !important;
+  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.06) !important;
 }
 
 /* ═══════════════════════════════════════════════
@@ -190,45 +252,66 @@ h4 { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); font-fa
   /* 页面根只负责纵向排版：定高与滚动由外壳的 .main-content__body 承担。
      App.vue 的 .main-content__body :deep(.doc-page) 会覆盖本层的 height/overflow，
      故此处不再声明 height:100% / overflow-y:auto —— 那是失效声明（读完 CSS 会误判滚动归属）。 */
-  display: flex; flex-direction: column;
+  display: flex;
+  flex-direction: column;
 }
 
 .doc-body {
   flex: 1;
-  padding: var(--app-space-lg) var(--app-space-lg) 60px; width: 100%; /* 水平内边距与 .wb-header 同值 24px（frontend-l3-container） */
-  display: flex; flex-direction: column;
-  gap: var(--app-space-lg); min-height: 0;
+  padding: var(--app-space-lg) var(--app-space-lg) 60px;
+  width: 100%; /* 水平内边距与 .wb-header 同值 24px（frontend-l3-container） */
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-lg);
+  min-height: 0;
 }
 
 .doc-section {
   background: #fff;
   border-radius: var(--app-radius-md);
   border: 2.5px solid var(--ink);
-  padding: var(--app-space-lg); position: relative; z-index: var(--z-base);
+  padding: var(--app-space-lg);
+  position: relative;
+  z-index: var(--z-base);
   box-shadow: var(--app-shadow-sm);
 }
 
 .doc-section__header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: var(--app-space-xs); flex-wrap: wrap; gap: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--app-space-xs);
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .doc-section__title {
   font-family: var(--app-font-display);
-  font-size: var(--app-size-md); font-weight: 700;
-  color: var(--app-text); margin: 0;
-  display: flex; align-items: center; gap: var(--app-space-sm);
+  font-size: var(--app-size-md);
+  font-weight: 700;
+  color: var(--app-text);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
 }
 
 .doc-section__label {
-  font-size: var(--app-size-sm); color: var(--app-text-secondary);
-  margin: var(--app-space-sm) 0 var(--app-space-lg); font-weight: 500;
+  font-size: var(--app-size-sm);
+  color: var(--app-text-secondary);
+  margin: var(--app-space-sm) 0 var(--app-space-lg);
+  font-weight: 500;
 }
 
 .doc-tag {
-  font-size: var(--app-size-xs); padding: 2px var(--app-space-sm); border-radius: var(--el-border-radius-small);
-  background: #fff; color: var(--ink); font-weight: 700;
-  border: 1.5px solid var(--ink); opacity: 0.6;
+  font-size: var(--app-size-xs);
+  padding: 2px var(--app-space-sm);
+  border-radius: var(--el-border-radius-small);
+  background: #fff;
+  color: var(--ink);
+  font-weight: 700;
+  border: 1.5px solid var(--ink);
+  opacity: 0.6;
 }
 
 /* ═══════════════════════════════════════════════
@@ -237,7 +320,8 @@ h4 { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); font-fa
    .wb-shell         → 只做主题作用域（见 workbench-theme.css），不再兼任滚动开关
    ═══════════════════════════════════════════════ */
 .doc-page--fixed {
-  background: transparent; overflow: hidden;
+  background: transparent;
+  overflow: hidden;
 }
 
 .doc-page--fixed .doc-body {
@@ -245,7 +329,8 @@ h4 { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); font-fa
   background: transparent;
   /* 水平内边距必须与页头 (.wb-header) 同值：L2 统一 24px */
   padding: var(--app-space-md) var(--app-space-lg) 28px;
-  gap: var(--app-space-md); overflow-y: auto;
+  gap: var(--app-space-md);
+  overflow-y: auto;
 }
 
 .doc-page--fixed .doc-section {
@@ -255,20 +340,33 @@ h4 { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); font-fa
   box-shadow: var(--app-shadow-sm);
   padding: 18px 20px;
 }
-.doc-page--fixed .doc-section__title { color: var(--ink); font-weight: 800; }
-.doc-page--fixed .doc-section__label { color: #999; font-weight: 600; }
+.doc-page--fixed .doc-section__title {
+  color: var(--ink);
+  font-weight: 800;
+}
+.doc-page--fixed .doc-section__label {
+  color: #999;
+  font-weight: 600;
+}
 .doc-page--fixed .doc-tag {
-  background: #fff; color: var(--ink); opacity: 0.6;
+  background: #fff;
+  color: var(--ink);
+  opacity: 0.6;
   border: 1.5px solid var(--ink);
 }
 
 @media (max-width: 768px) {
-  .doc-body { padding: 18px var(--app-space-md) var(--app-space-2xl); }
-  .doc-section { padding: 18px; }
+  .doc-body {
+    padding: 18px var(--app-space-md) var(--app-space-2xl);
+  }
+  .doc-section {
+    padding: 18px;
+  }
 }
 
 /* 减少动效：关闭位移 / 旋转 / 缩放（颜色过渡不受影响） */
 @media (prefers-reduced-motion: reduce) {
-  .el-button:active { transform: none; }
+  .el-button:active {
+    transform: none;
+  }
 }
-

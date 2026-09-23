@@ -6,7 +6,7 @@
    只写 Element Plus 自定义属性（--el-button-*）会被它盖住，变体色永远不生效。 */
 .wb-shell .wb-btn.wb-btn--sunset.el-button,
 .wb-shell .el-button.wb-btn.wb-btn--sunset {
-  --el-button-bg-color: #F0C090;
+  --el-button-bg-color: #f0c090;
   --el-button-border-color: #d8a870;
   --el-button-text-color: #fff;
   --el-button-hover-bg-color: #f5cda0;
@@ -26,16 +26,26 @@
 .wb-loader {
   /* 加载三点第三点灰绿（本组件专用色值登记处；tokens.css 无同值令牌） */
   --wb-loader-dot-3: #e2ece9;
-  display: inline-flex; align-items: center;
-  gap: 6px; padding: var(--app-space-xs) 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--app-space-xs) 2px;
 }
 .wb-loader .dot {
-  width: 8px; height: 8px; border-radius: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   display: block;
 }
-.wb-loader .dot:nth-child(1) { background: var(--c-workflow); }
-.wb-loader .dot:nth-child(2) { background: var(--c-element); }
-.wb-loader .dot:nth-child(3) { background: var(--wb-loader-dot-3); }
+.wb-loader .dot:nth-child(1) {
+  background: var(--c-workflow);
+}
+.wb-loader .dot:nth-child(2) {
+  background: var(--c-element);
+}
+.wb-loader .dot:nth-child(3) {
+  background: var(--wb-loader-dot-3);
+}
 
 /* 选中描边 */
 .wb-select-ring {
@@ -71,7 +81,9 @@
 
 /* 卡片悬浮（排除 AppCard 钉板：.ac-card 自管硬阴影/微倾） */
 .wb-shell .el-card:not(.ac-card) {
-  transition: transform var(--app-duration-slow) var(--app-spring), box-shadow var(--app-duration-slow) var(--app-ease);
+  transition:
+    transform var(--app-duration-slow) var(--app-spring),
+    box-shadow var(--app-duration-slow) var(--app-ease);
   will-change: transform;
 }
 .wb-shell .el-card:not(.ac-card):hover {
@@ -81,7 +93,8 @@
 
 /* 顶栏 brand-mark */
 .wb-header .brand-mark {
-  cursor: default; transform-origin: center;
+  cursor: default;
+  transform-origin: center;
   transition: box-shadow var(--app-duration-slow) var(--app-ease);
 }
 .wb-header .brand-mark:hover {

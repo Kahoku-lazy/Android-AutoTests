@@ -1,7 +1,7 @@
 /** useLocatorTree — 按项目 code 加载目录树并维护目录/叶子 */
-import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { formatApiError } from '@/shared/api-client'
+import { ref } from "vue"
+import { ElMessage } from "element-plus"
+import { formatApiError } from "@/shared/api-client"
 import {
   apiCreatePage,
   apiDeletePage,
@@ -11,14 +11,14 @@ import {
   getLocatorProjectTree,
   moveLocatorItems,
   updateLocatorDirectory,
-} from '../api'
-import type { LocatorMoveItem } from '../api'
+} from "../api"
+import type { LocatorMoveItem } from "../api"
 import {
   isLocatorProjectCode,
   type LocatorProject,
   type LocatorProjectCode,
   type LocatorTreeNode,
-} from '../types'
+} from "../types"
 
 export function useLocatorTree(projectCode: () => string) {
   const project = ref<LocatorProject | null>(null)
@@ -34,7 +34,7 @@ export function useLocatorTree(projectCode: () => string) {
   async function loadTree() {
     const code = resolvedCode()
     if (!code) {
-      error.value = '未知项目'
+      error.value = "未知项目"
       project.value = null
       tree.value = []
       return
@@ -43,14 +43,14 @@ export function useLocatorTree(projectCode: () => string) {
     try {
       const { data } = await getLocatorProjectTree(code)
       if (data.status && data.data) {
-        error.value = ''
+        error.value = ""
         project.value = data.data.project
         tree.value = data.data.tree || []
       } else {
-        error.value = data.message || '目录树加载失败'
+        error.value = data.message || "目录树加载失败"
       }
     } catch (e: unknown) {
-      error.value = formatApiError(e, '目录树加载失败')
+      error.value = formatApiError(e, "目录树加载失败")
     } finally {
       loading.value = false
     }
@@ -66,14 +66,14 @@ export function useLocatorTree(projectCode: () => string) {
         parent_id: parentId,
       })
       if (data.status) {
-        ElMessage.success('目录已创建')
+        ElMessage.success("目录已创建")
         await loadTree()
         return true
       }
-      ElMessage.error(data.message || '创建目录失败')
+      ElMessage.error(data.message || "创建目录失败")
       return false
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '创建目录失败'))
+      ElMessage.error(formatApiError(e, "创建目录失败"))
       return false
     }
   }
@@ -82,14 +82,14 @@ export function useLocatorTree(projectCode: () => string) {
     try {
       const { data } = await updateLocatorDirectory(dirId, { name: name.trim() })
       if (data.status) {
-        ElMessage.success('目录已更新')
+        ElMessage.success("目录已更新")
         await loadTree()
         return true
       }
-      ElMessage.error(data.message || '更新失败')
+      ElMessage.error(data.message || "更新失败")
       return false
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '更新失败'))
+      ElMessage.error(formatApiError(e, "更新失败"))
       return false
     }
   }
@@ -98,14 +98,14 @@ export function useLocatorTree(projectCode: () => string) {
     try {
       const { data } = await deleteLocatorDirectory(dirId)
       if (data.status) {
-        ElMessage.success('目录已删除')
+        ElMessage.success("目录已删除")
         await loadTree()
         return true
       }
-      ElMessage.error(data.message || '删除失败')
+      ElMessage.error(data.message || "删除失败")
       return false
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '删除失败'))
+      ElMessage.error(formatApiError(e, "删除失败"))
       return false
     }
   }
@@ -117,14 +117,14 @@ export function useLocatorTree(projectCode: () => string) {
     try {
       const { data } = await apiCreatePage({ label: trimmed, directory_id: directoryId })
       if (data.status) {
-        ElMessage.success('文件已创建')
+        ElMessage.success("文件已创建")
         await loadTree()
         return data.page?.id ?? null
       }
-      ElMessage.error(data.message || '创建文件失败')
+      ElMessage.error(data.message || "创建文件失败")
       return null
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '创建文件失败'))
+      ElMessage.error(formatApiError(e, "创建文件失败"))
       return null
     }
   }
@@ -133,14 +133,14 @@ export function useLocatorTree(projectCode: () => string) {
     try {
       const { data } = await apiDeletePage(fileId)
       if (data.status) {
-        ElMessage.success('文件已删除')
+        ElMessage.success("文件已删除")
         await loadTree()
         return true
       }
-      ElMessage.error(data.message || '删除失败')
+      ElMessage.error(data.message || "删除失败")
       return false
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '删除失败'))
+      ElMessage.error(formatApiError(e, "删除失败"))
       return false
     }
   }
@@ -148,7 +148,7 @@ export function useLocatorTree(projectCode: () => string) {
   /** 批量删除节点（目录连同其下页面与元素一并删除）。成功后重载目录树。 */
   async function deleteItems(items: LocatorMoveItem[]): Promise<boolean> {
     if (!items.length) {
-      ElMessage.warning('请先选择要删除的节点')
+      ElMessage.warning("请先选择要删除的节点")
       return false
     }
     try {
@@ -158,10 +158,10 @@ export function useLocatorTree(projectCode: () => string) {
         await loadTree()
         return true
       }
-      ElMessage.error(data.message || '删除失败')
+      ElMessage.error(data.message || "删除失败")
       return false
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '删除失败'))
+      ElMessage.error(formatApiError(e, "删除失败"))
       return false
     }
   }
@@ -172,7 +172,7 @@ export function useLocatorTree(projectCode: () => string) {
     parentDirectoryId: number | null,
   ): Promise<boolean> {
     if (!items.length) {
-      ElMessage.warning('请先选择要移动的节点')
+      ElMessage.warning("请先选择要移动的节点")
       return false
     }
     try {
@@ -182,10 +182,10 @@ export function useLocatorTree(projectCode: () => string) {
         await loadTree()
         return true
       }
-      ElMessage.error(data.message || '移动失败')
+      ElMessage.error(data.message || "移动失败")
       return false
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '移动失败'))
+      ElMessage.error(formatApiError(e, "移动失败"))
       return false
     }
   }

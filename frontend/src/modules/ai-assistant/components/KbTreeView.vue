@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /** KbTreeView — 知识库目录折叠树（展示 / 勾选两种模式，可自递归） */
-import { ref, computed, watch } from 'vue'
-import type { KbTreeNode } from '../helpers/kb-tree'
+import { ref, computed, watch } from "vue"
+import type { KbTreeNode } from "../helpers/kb-tree"
 
 const props = defineProps<{
   nodes: KbTreeNode[]
@@ -12,9 +12,9 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'toggle-select': [key: string]
-  'toggle-expand': [key: string]
-  open: [node: KbTreeNode]
+  "toggle-select": [key: string]
+  "toggle-expand": [key: string]
+  "open": [node: KbTreeNode]
 }>()
 
 const expanded = ref(new Set<string>())
@@ -24,7 +24,7 @@ watch(
   () => props.nodes,
   (nodes) => {
     for (const n of nodes) {
-      if (n.type !== 'file' && !expanded.value.has(n.key)) expanded.value.add(n.key)
+      if (n.type !== "file" && !expanded.value.has(n.key)) expanded.value.add(n.key)
     }
   },
   { immediate: true },
@@ -32,42 +32,59 @@ watch(
 
 const selectedSet = computed(() => new Set<string>(props.selectedKeys || []))
 
-function isExpanded(node: KbTreeNode) { return expanded.value.has(node.key) }
-function isSelected(node: KbTreeNode) { return selectedSet.value.has(node.key) }
+function isExpanded(node: KbTreeNode) {
+  return expanded.value.has(node.key)
+}
+function isSelected(node: KbTreeNode) {
+  return selectedSet.value.has(node.key)
+}
 
 function onToggle(node: KbTreeNode) {
-  if (node.type === 'file') return
+  if (node.type === "file") return
   const key = node.key
   if (expanded.value.has(key)) expanded.value.delete(key)
   else expanded.value.add(key)
   expanded.value = new Set(expanded.value)
-  emit('toggle-expand', key)
+  emit("toggle-expand", key)
 }
 
 function onFileActivate(node: KbTreeNode) {
-  if (props.selectable) emit('toggle-select', node.key)
-  else emit('open', node)
+  if (props.selectable) emit("toggle-select", node.key)
+  else emit("open", node)
 }
 
 function formatSize(bytes?: number) {
-  if (!bytes) return '0 B'
+  if (!bytes) return "0 B"
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
 const typeLabel = (type?: string) => {
-  const map: Record<string, string> = { project_doc: '项目文档', reference: '参考', manual: '手动', generated: '自动' }
-  return map[type || ''] || type || ''
+  const map: Record<string, string> = {
+    project_doc: "项目文档",
+    reference: "参考",
+    manual: "手动",
+    generated: "自动",
+  }
+  return map[type || ""] || type || ""
 }
 </script>
 
 <template>
   <div class="kb-tree-level">
-    <div v-for="node in nodes" :key="node.key" class="kb-tree-node" :style="{ paddingLeft: `${(depth || 0) * 16}px` }">
+    <div
+      v-for="node in nodes"
+      :key="node.key"
+      class="kb-tree-node"
+      :style="{ paddingLeft: `${(depth || 0) * 16}px` }"
+    >
       <div
         class="kb-tree-row"
-        :class="{ 'has-children': node.type !== 'file', selected: selectable && isSelected(node) }"
+        :class="{
+          'has-children': node.type !== 'file',
+          'selected': selectable && isSelected(node),
+        }"
         role="button"
         tabindex="0"
         @click="node.type === 'file' ? onFileActivate(node) : onToggle(node)"
@@ -75,14 +92,13 @@ const typeLabel = (type?: string) => {
         @keydown.space.prevent="node.type === 'file' ? onFileActivate(node) : onToggle(node)"
       >
         <span v-if="selectable" class="kb-tree-check" @click.stop>
-          <el-checkbox
-            :model-value="isSelected(node)"
-            @change="emit('toggle-select', node.key)"
-          />
+          <el-checkbox :model-value="isSelected(node)" @change="emit('toggle-select', node.key)" />
         </span>
-        <span class="kb-tree-arrow">{{ node.type === 'file' ? '　' : (isExpanded(node) ? '▾' : '▸') }}</span>
+        <span class="kb-tree-arrow">{{
+          node.type === "file" ? "　" : isExpanded(node) ? "▾" : "▸"
+        }}</span>
         <span class="kb-tree-icon">
-          {{ node.type === 'dir' ? '📁' : node.type === 'group' ? '🗂️' : '📄' }}
+          {{ node.type === "dir" ? "📁" : node.type === "group" ? "🗂️" : "📄" }}
         </span>
         <span class="kb-tree-label">{{ node.label }}</span>
         <span v-if="showMeta && node.type === 'file'" class="kb-tree-meta">
@@ -106,28 +122,71 @@ const typeLabel = (type?: string) => {
 
 <style scoped>
 .kb-tree-level {
-  display: flex; flex-direction: column; gap: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   /* 行悬停底色（中性浅灰）与目录提示字色（暖灰） */
   --kb-tree-row-tint: var(--ai-bg-neutral);
   --kb-tree-dir-ink: var(--color-orange-44) /* -> --color-orange-44 */;
 }
-.kb-tree-node { display: flex; flex-direction: column; }
+.kb-tree-node {
+  display: flex;
+  flex-direction: column;
+}
 .kb-tree-row {
-  display: flex; align-items: center; gap: 6px; padding: var(--app-space-sm) 10px;
-  border-radius: var(--app-radius-md); cursor: pointer; transition: background var(--app-duration-fast);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--app-space-sm) 10px;
+  border-radius: var(--app-radius-md);
+  cursor: pointer;
+  transition: background var(--app-duration-fast);
   border: 1.5px solid transparent;
 }
-.kb-tree-row:hover { background: var(--kb-tree-row-tint); }
-.kb-tree-row.has-children { font-weight: 600; }
-.kb-tree-row.selected { border-color: var(--ai-teal); background: var(--ai-teal-bg); }
-.kb-tree-arrow { width: 14px; font-size: var(--app-size-xs); color: var(--ai-ink-muted); flex-shrink: 0; }
-.kb-tree-icon { flex-shrink: 0; }
-.kb-tree-label { flex: 1; min-width: 0; font-size: var(--app-size-sm); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.kb-tree-meta { flex-shrink: 0; font-size: var(--app-size-xs); color: var(--ai-ink-muted); }
-.kb-tree-dir-hint {
-  flex-shrink: 0; font-size: var(--app-size-xs); font-weight: 600;
-  color: var(--kb-tree-dir-ink); background: var(--ai-teal-bg);
-  padding: 1px var(--app-space-sm); border-radius: var(--app-radius-sm);
+.kb-tree-row:hover {
+  background: var(--kb-tree-row-tint);
 }
-.kb-tree-check { display: inline-flex; flex-shrink: 0; }
+.kb-tree-row.has-children {
+  font-weight: 600;
+}
+.kb-tree-row.selected {
+  border-color: var(--ai-teal);
+  background: var(--ai-teal-bg);
+}
+.kb-tree-arrow {
+  width: 14px;
+  font-size: var(--app-size-xs);
+  color: var(--ai-ink-muted);
+  flex-shrink: 0;
+}
+.kb-tree-icon {
+  flex-shrink: 0;
+}
+.kb-tree-label {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--app-size-sm);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kb-tree-meta {
+  flex-shrink: 0;
+  font-size: var(--app-size-xs);
+  color: var(--ai-ink-muted);
+}
+.kb-tree-dir-hint {
+  flex-shrink: 0;
+  font-size: var(--app-size-xs);
+  font-weight: 600;
+  color: var(--kb-tree-dir-ink);
+  background: var(--ai-teal-bg);
+  padding: 1px var(--app-space-sm);
+  border-radius: var(--app-radius-sm);
+}
+.kb-tree-check {
+  display: inline-flex;
+  flex-shrink: 0;
+}
 </style>

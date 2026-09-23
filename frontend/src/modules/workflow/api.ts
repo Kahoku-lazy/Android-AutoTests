@@ -1,8 +1,8 @@
 /**
  * 工作流工作台 API — 原型 + 目录/文档 + 元素素材
  */
-import client from '@/shared/api-client'
-import type { DjangoResponse } from '@/shared/api-client'
+import client from "@/shared/api-client"
+import type { DjangoResponse } from "@/shared/api-client"
 
 type Envelope<T> = Promise<{ data: DjangoResponse<T> }>
 
@@ -36,18 +36,18 @@ export interface WorkflowDocumentRow {
 
 /** 列出元素管理中的页面树 */
 export function listPages() {
-  return client.get('/elements/pages/')
+  return client.get("/elements/pages/")
 }
 
 /** 列出某页下的元素 */
-export function listPageElements(pageId, filter = 'all') {
+export function listPageElements(pageId, filter = "all") {
   return client.get(`/elements/pages/${pageId}/items/`, { params: { filter } })
 }
 
 // ── 原型 ──
 
 export function listWorkflowPrototypes(): Envelope<WorkflowPrototype[]> {
-  return client.get('/workflow/prototypes/')
+  return client.get("/workflow/prototypes/")
 }
 
 export function getWorkflowPrototype(id: number): Envelope<WorkflowPrototype> {
@@ -55,7 +55,7 @@ export function getWorkflowPrototype(id: number): Envelope<WorkflowPrototype> {
 }
 
 export function createWorkflowPrototype(payload) {
-  return client.post('/workflow/prototypes/', payload)
+  return client.post("/workflow/prototypes/", payload)
 }
 
 export function updateWorkflowPrototype(id, payload) {
@@ -72,11 +72,11 @@ export function listWorkflowDirectories(params = {}): Envelope<{
   directories: WorkflowDirectoryRow[]
   tree: unknown[]
 }> {
-  return client.get('/workflow/directories/', { params })
+  return client.get("/workflow/directories/", { params })
 }
 
 export function createWorkflowDirectory(payload) {
-  return client.post('/workflow/directories/', payload)
+  return client.post("/workflow/directories/", payload)
 }
 
 export function updateWorkflowDirectory(dirId, payload) {
@@ -88,7 +88,7 @@ export function deleteWorkflowDirectory(dirId) {
 }
 
 export function listWorkflowDocuments(params = {}): Envelope<WorkflowDocumentRow[]> {
-  return client.get('/workflow/documents/', { params })
+  return client.get("/workflow/documents/", { params })
 }
 
 export function getWorkflowDocument(docId: string): Envelope<WorkflowDocumentRow> {
@@ -97,7 +97,7 @@ export function getWorkflowDocument(docId: string): Envelope<WorkflowDocumentRow
 
 /** 创建文档（集合路由）；更新走 updateWorkflowDocument */
 export function saveWorkflowDocument(payload) {
-  return client.post('/workflow/documents/', payload)
+  return client.post("/workflow/documents/", payload)
 }
 
 export function updateWorkflowDocument(docId, payload) {
@@ -110,7 +110,7 @@ export function deleteWorkflowDocument(docId) {
 
 /** 导入 envelope（router 动作路由）；overwrite=true 覆盖同 doc_id */
 export function importWorkflowDocument(envelope, { overwrite = false } = {}) {
-  return client.post('/workflow/documents/import/', envelope, {
+  return client.post("/workflow/documents/import/", envelope, {
     params: { overwrite: overwrite ? 1 : 0 },
   })
 }

@@ -2,14 +2,18 @@
   <div class="rate-bar">
     <div class="rate-bar__track">
       <div class="rate-bar__pass" :style="{ width: rate + '%' }" />
-      <div v-if="showFail && failRate > 0" class="rate-bar__fail" :style="{ width: failRate + '%' }" />
+      <div
+        v-if="showFail && failRate > 0"
+        class="rate-bar__fail"
+        :style="{ width: failRate + '%' }"
+      />
     </div>
     <span v-if="showLabel" class="rate-bar__label" :class="rateClass">{{ rate }}%</span>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed } from "vue"
 
 const props = defineProps({
   /** 通过率 0-100 */
@@ -23,9 +27,9 @@ const props = defineProps({
 const failRate = computed(() => Math.max(0, 100 - props.rate))
 
 const rateClass = computed(() => {
-  if (props.rate >= 95) return 'rate-bar__label--ok'
-  if (props.rate >= 80) return 'rate-bar__label--warn'
-  return 'rate-bar__label--bad'
+  if (props.rate >= 95) return "rate-bar__label--ok"
+  if (props.rate >= 80) return "rate-bar__label--warn"
+  return "rate-bar__label--bad"
 })
 </script>
 

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 /** 设备卡片 — 横向长方形极简几何 */
-import { computed } from 'vue'
-import { statusTag, displayModel, deviceAddress, formatRelativeTime } from '../helpers'
-import { isRunnerOccupied } from '@/shared/helpers/deviceOccupancy'
-import type { DeviceRecord } from '@/shared/types/device'
-import AppCard from '@/shared/components/AppCard.vue'
+import { computed } from "vue"
+import { statusTag, displayModel, deviceAddress, formatRelativeTime } from "../helpers"
+import { isRunnerOccupied } from "@/shared/helpers/deviceOccupancy"
+import type { DeviceRecord } from "@/shared/types/device"
+import AppCard from "@/shared/components/AppCard.vue"
 
 const props = defineProps<{
   device: DeviceRecord
@@ -24,19 +24,19 @@ const emit = defineEmits<{
 
 const status = computed(() => {
   const s = props.device.status
-  if (s === 'ONLINE') return 'online'
-  if (s === 'BUSY') return 'busy'
-  return 'offline'
+  if (s === "ONLINE") return "online"
+  if (s === "BUSY") return "busy"
+  return "offline"
 })
 
 const statusText = computed(() => statusTag(props.device.status).text)
 
-const isWifi = computed(() => props.device.connection_type === 'WIFI')
+const isWifi = computed(() => props.device.connection_type === "WIFI")
 
 const runnerOccupied = computed(() => isRunnerOccupied(props.device.occupied_by))
 
 function go() {
-  emit('click', props.device)
+  emit("click", props.device)
 }
 </script>
 
@@ -56,7 +56,11 @@ function go() {
         <div class="card-title-row">
           <p class="card-model">{{ displayModel(device) }}</p>
           <span class="status-chip" :class="status">
-            <span class="geo" :class="status === 'busy' ? 'geo--triangle' : 'geo--diamond'" aria-hidden="true" />
+            <span
+              class="geo"
+              :class="status === 'busy' ? 'geo--triangle' : 'geo--diamond'"
+              aria-hidden="true"
+            />
             {{ statusText }}
           </span>
         </div>
@@ -66,15 +70,17 @@ function go() {
       <div class="card-meta">
         <div class="meta-cell">
           <span class="meta-k">地址</span>
-          <span class="meta-v meta-v--mono" :title="deviceAddress(device)">{{ deviceAddress(device) }}</span>
+          <span class="meta-v meta-v--mono" :title="deviceAddress(device)">{{
+            deviceAddress(device)
+          }}</span>
         </div>
         <div class="meta-cell">
           <span class="meta-k">分辨率</span>
-          <span class="meta-v meta-v--mono">{{ device.screen || '—' }}</span>
+          <span class="meta-v meta-v--mono">{{ device.screen || "—" }}</span>
         </div>
         <div class="meta-cell">
           <span class="meta-k">连接</span>
-          <span class="meta-v">{{ isWifi ? 'Wi‑Fi' : 'USB' }}</span>
+          <span class="meta-v">{{ isWifi ? "Wi‑Fi" : "USB" }}</span>
         </div>
         <div class="meta-cell">
           <span class="meta-k">活跃</span>
@@ -84,34 +90,35 @@ function go() {
     </div>
 
     <div class="card-foot">
-      <span class="tag" :class="isWifi ? 'tag--wifi' : 'tag--usb'">{{ isWifi ? 'Wi‑Fi' : 'USB' }}</span>
-      <span
-        v-if="device.locked_by"
-        class="tag tag--lock"
-        :title="`锁定者: ${device.locked_by}`"
-      >锁定 · {{ device.locked_by }}</span>
+      <span class="tag" :class="isWifi ? 'tag--wifi' : 'tag--usb'">{{
+        isWifi ? "Wi‑Fi" : "USB"
+      }}</span>
+      <span v-if="device.locked_by" class="tag tag--lock" :title="`锁定者: ${device.locked_by}`"
+        >锁定 · {{ device.locked_by }}</span
+      >
       <span v-else class="tag tag--open">公开</span>
 
       <div class="card-actions">
-        <button
-          v-if="isWifi"
-          type="button"
-          class="card-btn"
-          @click.stop="emit('lock', device)"
-        >{{ device.locked ? '解锁' : '锁定' }}</button>
+        <button v-if="isWifi" type="button" class="card-btn" @click.stop="emit('lock', device)">
+          {{ device.locked ? "解锁" : "锁定" }}
+        </button>
         <button
           v-if="device.occupied_by && !runnerOccupied"
           type="button"
           class="card-btn card-btn--warn"
           @click.stop="emit('release', device)"
-        >释放</button>
+        >
+          释放
+        </button>
         <button
           v-if="isWifi"
           type="button"
           class="card-btn"
           :disabled="device.status === 'BUSY'"
           @click.stop="emit('disconnect', device)"
-        >删除</button>
+        >
+          删除
+        </button>
       </div>
     </div>
   </AppCard>
@@ -145,7 +152,9 @@ function go() {
   padding: 0 !important;
 }
 
-.device-card:hover { z-index: var(--z-raised); }
+.device-card:hover {
+  z-index: var(--z-raised);
+}
 .device-card:focus-visible {
   outline: 2px solid var(--app-status-purple);
   outline-offset: 3px;
@@ -221,7 +230,10 @@ function go() {
   color: var(--app-text-secondary);
 }
 
-.geo { flex-shrink: 0; display: inline-block; }
+.geo {
+  flex-shrink: 0;
+  display: inline-block;
+}
 .geo--diamond {
   width: 8px;
   height: 8px;
@@ -263,7 +275,9 @@ function go() {
   white-space: nowrap;
   line-height: 1.3;
 }
-.meta-v--mono { font-family: var(--app-font-mono); }
+.meta-v--mono {
+  font-family: var(--app-font-mono);
+}
 
 .card-foot {
   flex-shrink: 0;
@@ -322,7 +336,9 @@ function go() {
 .card-btn:hover {
   background: var(--app-highlight);
 }
-.card-btn--warn { background: var(--app-status-warning-bg); }
+.card-btn--warn {
+  background: var(--app-status-warning-bg);
+}
 .card-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -340,6 +356,8 @@ function go() {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .device-card { transition: none; }
+  .device-card {
+    transition: none;
+  }
 }
 </style>

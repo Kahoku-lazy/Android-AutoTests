@@ -1,9 +1,9 @@
 /** DevicePoolView 逻辑编排器 — 组合子 composable + UI 状态管理 */
-import { ref, computed, watch, onMounted, type Ref, type ComputedRef } from 'vue'
-import { useDevicePoolState, type UseDevicePoolStateReturn } from './composables/useDevicePoolState'
-import { useDeviceActions, type UseDeviceActionsReturn } from './composables/useDeviceActions'
-import { useHeartbeat } from './composables/useHeartbeat'
-import { usePagination } from '@/shared/composables/usePagination'
+import { ref, computed, watch, onMounted, type Ref, type ComputedRef } from "vue"
+import { useDevicePoolState, type UseDevicePoolStateReturn } from "./composables/useDevicePoolState"
+import { useDeviceActions, type UseDeviceActionsReturn } from "./composables/useDeviceActions"
+import { useHeartbeat } from "./composables/useHeartbeat"
+import { usePagination } from "@/shared/composables/usePagination"
 import type {
   DeviceRecord,
   DeviceFilterKey,
@@ -11,7 +11,7 @@ import type {
   DeviceKpiStats,
   DisconnectDialogState,
   NetworkDialogState,
-} from '@/shared/types/device'
+} from "@/shared/types/device"
 import {
   PAGE_HEADER,
   FILTER_TABS,
@@ -23,7 +23,7 @@ import {
   TABLE_ROW_HEIGHT_PX,
   TABLE_MIN_WIDTH_PX,
   DEFAULT_PAGE_SIZE,
-} from './constants'
+} from "./constants"
 import {
   displayModel,
   connectionLabel,
@@ -31,8 +31,8 @@ import {
   formatDateTime,
   formatRelativeTime,
   statusTag,
-} from './helpers'
-import { useTableDragScroll } from '@/shared/composables/useTableDragScroll'
+} from "./helpers"
+import { useTableDragScroll } from "@/shared/composables/useTableDragScroll"
 
 // ── 返回类型接口 ──
 
@@ -73,7 +73,11 @@ export interface DevicePoolViewState {
   currentUser: string
   handleRefresh: () => Promise<void>
   openNetworkDialog: () => void
-  handleNetworkConnect: (opts: { target: string; pair_port?: string; pair_code?: string }) => Promise<void>
+  handleNetworkConnect: (opts: {
+    target: string
+    pair_port?: string
+    pair_code?: string
+  }) => Promise<void>
   cancelNetworkDialog: () => void
   handleRowClick: (record: DeviceRecord) => void
   handleLockClick: (device: DeviceRecord) => Promise<void>
@@ -116,15 +120,15 @@ export function useDevicePoolView(): DevicePoolViewState {
   const actions = useDeviceActions(pool)
 
   // 4. Local UI state
-  const viewMode = ref<DeviceViewMode>('table')
-  const activeFilter = ref<DeviceFilterKey>('all')
+  const viewMode = ref<DeviceViewMode>("table")
+  const activeFilter = ref<DeviceFilterKey>("all")
 
   // 5. KPI computed（供筛选 Tab 数量，不再单独展示 Overview）
   const kpiStats = computed<DeviceKpiStats>(() => {
     const devs = pool.devices.value
     return {
-      online: devs.filter((d) => d.status === 'ONLINE').length,
-      busy: devs.filter((d) => d.status === 'BUSY').length,
+      online: devs.filter((d) => d.status === "ONLINE").length,
+      busy: devs.filter((d) => d.status === "BUSY").length,
       total: devs.length,
     }
   })
@@ -133,9 +137,9 @@ export function useDevicePoolView(): DevicePoolViewState {
     FILTER_TABS.map((tab) => ({
       ...tab,
       count:
-        tab.key === 'all'
+        tab.key === "all"
           ? kpiStats.value.total
-          : tab.key === 'online'
+          : tab.key === "online"
             ? kpiStats.value.online
             : kpiStats.value.busy,
     })),
@@ -143,10 +147,8 @@ export function useDevicePoolView(): DevicePoolViewState {
 
   // 6. Filter
   const filteredDevices = computed<DeviceRecord[]>(() => {
-    if (activeFilter.value === 'all') return pool.devices.value
-    return pool.devices.value.filter(
-      (d) => d.status === activeFilter.value.toUpperCase(),
-    )
+    if (activeFilter.value === "all") return pool.devices.value
+    return pool.devices.value.filter((d) => d.status === activeFilter.value.toUpperCase())
   })
 
   // 7. Pagination (shared composable, still JS)
@@ -181,8 +183,8 @@ export function useDevicePoolView(): DevicePoolViewState {
 
   // 9. Grouped for card view
   const groupedDevices = computed(() => ({
-    online: filteredDevices.value.filter((d) => d.status === 'ONLINE'),
-    busy: filteredDevices.value.filter((d) => d.status === 'BUSY'),
+    online: filteredDevices.value.filter((d) => d.status === "ONLINE"),
+    busy: filteredDevices.value.filter((d) => d.status === "BUSY"),
   }))
 
   // 10. View mode toggle

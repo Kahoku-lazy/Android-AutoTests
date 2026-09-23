@@ -1,5 +1,5 @@
 /** useDevicePoolState — 设备池状态管理 composable（替代 Pinia store） */
-import { ref, computed, type Ref, type ComputedRef } from 'vue'
+import { ref, computed, type Ref, type ComputedRef } from "vue"
 import {
   apiListDevices,
   apiScanDevices,
@@ -9,12 +9,8 @@ import {
   apiReleaseDevice,
   apiDisconnect,
   apiHeartbeat,
-} from '../api'
-import type {
-  DeviceRecord,
-  ScanResponse,
-  DeviceOpResponse,
-} from '@/shared/types/device'
+} from "../api"
+import type { DeviceRecord, ScanResponse, DeviceOpResponse } from "@/shared/types/device"
 
 // ── 返回类型接口 ──
 
@@ -36,7 +32,10 @@ export interface UseDevicePoolStateReturn {
   fetchDevices: () => Promise<void>
   /** 开发调试：开关模拟设备（60 条），开关时刷新列表 */
   toggleDevMock: (enabled: boolean) => Promise<void>
-  doScan: (target?: string, extra?: { pair_port?: string; pair_code?: string }) => Promise<ScanResponse>
+  doScan: (
+    target?: string,
+    extra?: { pair_port?: string; pair_code?: string },
+  ) => Promise<ScanResponse>
   doConnect: (serial: string, opts?: { activate?: boolean }) => Promise<DeviceOpResponse>
   doActivate: (serial: string) => Promise<DeviceOpResponse>
   doLock: (serial: string, locked: boolean) => Promise<DeviceOpResponse>
@@ -51,7 +50,7 @@ export interface UseDevicePoolStateReturn {
 export function useDevicePoolState(): UseDevicePoolStateReturn {
   // ── State ──
   const devices = ref<DeviceRecord[]>([])
-  const currentSerial = ref('')
+  const currentSerial = ref("")
   const loading = ref(false)
   const selectedSerial = ref<string | null>(null)
   const scanning = ref(false)
@@ -62,35 +61,33 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
   const selectedDevice = computed(() =>
     devices.value.find((d) => d.serial === selectedSerial.value),
   )
-  const onlineDevices = computed(() =>
-    devices.value.filter((d) => d.status === 'ONLINE'),
-  )
+  const onlineDevices = computed(() => devices.value.filter((d) => d.status === "ONLINE"))
   const hasDevices = computed(() => devices.value.length > 0)
 
   // ── Actions ──
 
   /** 开发调试：生成 N 条模拟设备，验证分页/横向滚动。由 VITE_DEVICE_MOCK='1' 开启，生产可关 */
   function makeMockDevices(count: number): DeviceRecord[] {
-    const models = ['SM-G973F', 'PIXEL_7', 'MI-13', 'ONE_PLUS_11', 'HONOR_90', 'VIVO_X90']
-    const brands = ['samsung', 'google', 'xiaomi', 'oneplus', 'honor', 'vivo']
-    const screens = ['1080x2400', '1440x3200', '1170x2532', '1220x2400']
+    const models = ["SM-G973F", "PIXEL_7", "MI-13", "ONE_PLUS_11", "HONOR_90", "VIVO_X90"]
+    const brands = ["samsung", "google", "xiaomi", "oneplus", "honor", "vivo"]
+    const screens = ["1080x2400", "1440x3200", "1170x2532", "1220x2400"]
     const out: DeviceRecord[] = []
     for (let i = 1; i <= count; i++) {
       const idx = i % models.length
       const isBusy = i % 3 === 0
       const isWifi = i % 2 === 0
       out.push({
-        serial: `MOCK-${String(i).padStart(4, '0')}`,
+        serial: `MOCK-${String(i).padStart(4, "0")}`,
         model: models[idx],
         brand: brands[idx],
         name: `${brands[idx]} ${models[idx]}`,
         screen: screens[i % screens.length],
-        status: isBusy ? 'BUSY' : 'ONLINE',
-        connection_type: isWifi ? 'WIFI' : 'USB',
+        status: isBusy ? "BUSY" : "ONLINE",
+        connection_type: isWifi ? "WIFI" : "USB",
         connection_addr: isWifi ? `192.168.1.${10 + i}` : undefined,
         locked: isWifi ? i % 2 === 0 : false,
-        locked_by: isWifi && i % 2 === 0 ? 'admin' : undefined,
-        occupied_by: isBusy ? (i % 2 === 0 ? 'ai_agent' : 'runner-1') : undefined,
+        locked_by: isWifi && i % 2 === 0 ? "admin" : undefined,
+        occupied_by: isBusy ? (i % 2 === 0 ? "ai_agent" : "runner-1") : undefined,
         connected_at: new Date(Date.now() - i * 60000).toISOString(),
         last_seen: new Date(Date.now() - i * 30000).toISOString(),
       })
@@ -104,7 +101,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
     // 开发调试开关开启时注入模拟设备（测分页/横向滚动），否则拉取真实后端
     if (devMockEnabled.value) {
       devices.value = makeMockDevices(60)
-      currentSerial.value = devices.value[0]?.serial || ''
+      currentSerial.value = devices.value[0]?.serial || ""
       loading.value = false
       return
     }
@@ -112,11 +109,11 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
       const { data } = await apiListDevices()
       if (data.status && data.data) {
         devices.value = data.data.devices || []
-        currentSerial.value = data.data.current || ''
+        currentSerial.value = data.data.current || ""
       }
     } catch (e: unknown) {
-      error.value = '设备列表加载失败，请稍后重试'
-      console.warn('[device-pool] fetchDevices failed:', (e as { message?: string })?.message || e)
+      error.value = "设备列表加载失败，请稍后重试"
+      console.warn("[device-pool] fetchDevices failed:", (e as { message?: string })?.message || e)
     }
     loading.value = false
   }
@@ -146,13 +143,16 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
       return data
     } catch (e: unknown) {
       const errData = (e as { response?: { data?: ScanResponse } })?.response?.data
-      return errData || { status: false, message: '扫描失败' }
+      return errData || { status: false, message: "扫描失败" }
     } finally {
       scanning.value = false
     }
   }
 
-  async function doConnect(serial: string, opts: { activate?: boolean } = {}): Promise<DeviceOpResponse> {
+  async function doConnect(
+    serial: string,
+    opts: { activate?: boolean } = {},
+  ): Promise<DeviceOpResponse> {
     try {
       const { data } = await apiConnectDevice(serial, opts)
       if (data.status) {
@@ -161,7 +161,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
       return data
     } catch (e: unknown) {
       const errData = (e as { response?: { data?: DeviceOpResponse } })?.response?.data
-      return errData || { status: false, message: '连接失败' }
+      return errData || { status: false, message: "连接失败" }
     }
   }
 
@@ -174,8 +174,8 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
       }
       return data
     } catch (e: unknown) {
-      console.error('[device-pool] doActivate failed:', e)
-      return { status: false, message: '激活失败' }
+      console.error("[device-pool] doActivate failed:", e)
+      return { status: false, message: "激活失败" }
     }
   }
 
@@ -188,7 +188,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
       return data
     } catch (e: unknown) {
       const errData = (e as { response?: { data?: DeviceOpResponse } })?.response?.data
-      return errData || { status: false, message: '操作失败' }
+      return errData || { status: false, message: "操作失败" }
     }
   }
 
@@ -200,8 +200,8 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
       }
       return data
     } catch (e: unknown) {
-      console.error('[device-pool] doRelease failed:', e)
-      return { status: false, message: '释放失败' }
+      console.error("[device-pool] doRelease failed:", e)
+      return { status: false, message: "释放失败" }
     }
   }
 
@@ -214,7 +214,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
       return data
     } catch (e: unknown) {
       const errData = (e as { response?: { data?: DeviceOpResponse } })?.response?.data
-      return errData || { status: false, message: '删除失败' }
+      return errData || { status: false, message: "删除失败" }
     }
   }
 
@@ -222,7 +222,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
     try {
       await apiHeartbeat()
     } catch (e: unknown) {
-      console.debug('[device-pool] heartbeat:', (e as { message?: string })?.message || e)
+      console.debug("[device-pool] heartbeat:", (e as { message?: string })?.message || e)
     }
   }
 

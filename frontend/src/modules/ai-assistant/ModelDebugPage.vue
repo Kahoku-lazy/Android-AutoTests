@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
-import EmptyState from '@/shared/components/patterns/EmptyState.vue'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
-import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
-import { renderSkillMarkdown } from './helpers/skill-markdown'
-import { groupToolsByCategory } from './helpers/model-debug-groups'
-import { useModelDebug } from './composables/useModelDebug'
+import { computed, ref, watch } from "vue"
+import { useRoute, useRouter } from "vue-router"
+import { ElMessageBox } from "element-plus"
+import EmptyState from "@/shared/components/patterns/EmptyState.vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
+import { renderSkillMarkdown } from "./helpers/skill-markdown"
+import { groupToolsByCategory } from "./helpers/model-debug-groups"
+import { useModelDebug } from "./composables/useModelDebug"
 import {
   KNOWLEDGE_RAG_NOTE,
   MODEL_DEBUG_ANSWER_ERROR_LABEL,
@@ -22,12 +22,12 @@ import {
   SKILL_SHARED_NOTE,
   modelDebugDeviceConfirmText,
   modelDebugRoute,
-} from './constants'
-import type { ModelDebugToolCall } from './api/toolbox'
+} from "./constants"
+import type { ModelDebugToolCall } from "./api/toolbox"
 
 const route = useRoute()
 const router = useRouter()
-const role = computed(() => String(route.params.role || ''))
+const role = computed(() => String(route.params.role || ""))
 
 const {
   config,
@@ -52,13 +52,17 @@ const promptOpen = ref(false)
 /** 思考过程默认展开：只记「被收起」的消息 id，因此折叠态逐条独立 */
 const thinkingCollapsed = ref<number[]>([])
 
+/** 工具分组展开态：只记「已展开」的分类（白名单），因此默认全部收起 */
+const openToolGroups = ref<string[]>([])
+
 watch(role, () => {
   promptOpen.value = false
   thinkingCollapsed.value = []
+  openToolGroups.value = []
 })
 
-const promptHtml = computed(() => renderSkillMarkdown(config.value?.role.prompt || '_（空）_'))
-const promptChars = computed(() => (config.value?.role.prompt || '').length)
+const promptHtml = computed(() => renderSkillMarkdown(config.value?.role.prompt || "_（空）_"))
+const promptChars = computed(() => (config.value?.role.prompt || "").length)
 const toolGroups = computed(() => groupToolsByCategory(config.value?.role.tools || []))
 const enabledTools = computed(
   () => (config.value?.role.tools || []).filter((item) => item.enabled).length,
@@ -71,7 +75,7 @@ function goRole(next: string): void {
 }
 
 function thinkingOf(item: { thinking?: string[] }): string {
-  return (item.thinking || []).join('\n\n')
+  return (item.thinking || []).join("\n\n")
 }
 
 /** 思考过程字数（与展示文本同口径） */
@@ -95,6 +99,17 @@ function clearConversation(): void {
   clearMessages()
 }
 
+function isToolGroupOpen(category: string): boolean {
+  return openToolGroups.value.includes(category)
+}
+
+/** 工具分组逐组独立开合：展开项按分类名记在 openToolGroups 里 */
+function toggleToolGroup(category: string): void {
+  openToolGroups.value = isToolGroupOpen(category)
+    ? openToolGroups.value.filter((item) => item !== category)
+    : [...openToolGroups.value, category]
+}
+
 const writeToolCount = computed(
   () => (config.value?.role.tools || []).filter((item) => !item.read_only).length,
 )
@@ -110,7 +125,7 @@ async function onSend(): Promise<void> {
       await ElMessageBox.confirm(
         modelDebugDeviceConfirmText(selectedDeviceLabel.value, writeToolCount.value),
         MODEL_DEBUG_DEVICE_CONFIRM_TITLE,
-        { confirmButtonText: '确认并发送', cancelButtonText: '取消', type: 'warning' },
+        { confirmButtonText: "确认并发送", cancelButtonText: "取消", type: "warning" },
       )
     } catch {
       return // 用户取消：不发请求
@@ -131,9 +146,9 @@ function toolReadOnly(name: string): boolean | undefined {
 }
 
 function traceDetail(call: ModelDebugToolCall): string {
-  const raw = call.type === 'call' ? JSON.stringify(call.input ?? {}) : call.output || ''
+  const raw = call.type === "call" ? JSON.stringify(call.input ?? {}) : call.output || ""
   return raw.length > MODEL_DEBUG_TRACE_DETAIL_MAX
-    ? raw.slice(0, MODEL_DEBUG_TRACE_DETAIL_MAX) + '…'
+    ? raw.slice(0, MODEL_DEBUG_TRACE_DETAIL_MAX) + "…"
     : raw
 }
 </script>
@@ -176,20 +191,22 @@ function traceDetail(call: ModelDebugToolCall): string {
                   :class="{ active: tab.role === role }"
                   :aria-selected="tab.role === role"
                   @click="goRole(tab.role)"
-                >{{ tab.label }}</button>
+                >
+                  {{ tab.label }}
+                </button>
               </div>
 
               <div class="md-role-head">
                 <h2 class="md-role-name">{{ config.role.label }}</h2>
                 <span class="md-badge" :class="config.role.model.configured ? 'on' : 'off'">
-                  {{ config.role.model.configured ? '已配置' : '缺 API Key' }}
+                  {{ config.role.model.configured ? "已配置" : "缺 API Key" }}
                 </span>
               </div>
 
               <dl class="md-facts">
                 <div class="md-fact">
                   <dt>模型</dt>
-                  <dd>{{ config.role.model.model_name || '（未配置）' }}</dd>
+                  <dd>{{ config.role.model.model_name || "（未配置）" }}</dd>
                 </div>
                 <div class="md-fact">
                   <dt>Provider</dt>
@@ -197,7 +214,7 @@ function traceDetail(call: ModelDebugToolCall): string {
                 </div>
                 <div class="md-fact">
                   <dt>模态</dt>
-                  <dd>{{ config.role.vision ? '多模态（可读截图）' : '纯文本' }}</dd>
+                  <dd>{{ config.role.vision ? "多模态（可读截图）" : "纯文本" }}</dd>
                 </div>
                 <div class="md-fact">
                   <dt>工具</dt>
@@ -221,23 +238,34 @@ function traceDetail(call: ModelDebugToolCall): string {
               <div class="md-panel">
                 <div class="md-group-head">
                   <span class="md-group-title">工具（{{ toolGroups.length }} 类）</span>
-                  <span class="md-badge" :class="enabledTools === config.role.tools.length ? 'on' : 'off'">
+                  <span
+                    class="md-badge"
+                    :class="enabledTools === config.role.tools.length ? 'on' : 'off'"
+                  >
                     {{ enabledTools }}/{{ config.role.tools.length }} 启用
                   </span>
                 </div>
 
                 <div v-for="group in toolGroups" :key="group.category" class="md-group">
-                  <p class="md-group-sub">
-                    {{ group.category }} · {{ group.enabled }}/{{ group.total }} 启用
-                  </p>
-                  <ul class="md-tools">
+                  <button
+                    type="button"
+                    class="md-group-sub md-group-sub--toggle"
+                    :aria-expanded="isToolGroupOpen(group.category)"
+                    @click="toggleToolGroup(group.category)"
+                  >
+                    <span class="md-caret" aria-hidden="true">{{
+                      isToolGroupOpen(group.category) ? "▾" : "▸"
+                    }}</span>
+                    <span>{{ group.category }} · {{ group.enabled }}/{{ group.total }} 启用</span>
+                  </button>
+                  <ul v-if="isToolGroupOpen(group.category)" class="md-tools">
                     <li v-for="item in group.items" :key="item.name" class="md-tool">
                       <span class="md-tool-name">{{ item.name }}</span>
                       <span class="md-badge" :class="item.read_only ? 'ro' : 'wr'">
-                        {{ item.read_only ? '只读' : '写' }}
+                        {{ item.read_only ? "只读" : "写" }}
                       </span>
                       <span class="md-badge" :class="item.enabled ? 'on' : 'off'">
-                        {{ item.enabled ? '已启用' : '已停用' }}
+                        {{ item.enabled ? "已启用" : "已停用" }}
                       </span>
                     </li>
                   </ul>
@@ -258,7 +286,11 @@ function traceDetail(call: ModelDebugToolCall): string {
                   <li v-for="item in config.skills.items" :key="item.path">{{ item.name }}</li>
                 </ul>
                 <p v-else class="md-empty">
-                  {{ config.skills.gate_on ? '总闸已开，但目录下没有可用 Skill' : '「自定义 Skill」总闸未开' }}
+                  {{
+                    config.skills.gate_on
+                      ? "总闸已开，但目录下没有可用 Skill"
+                      : "「自定义 Skill」总闸未开"
+                  }}
                 </p>
               </div>
             </section>
@@ -269,7 +301,9 @@ function traceDetail(call: ModelDebugToolCall): string {
 
               <div class="md-panel">
                 <div class="md-group-head">
-                  <span class="md-group-title">知识库（{{ config.knowledge.file_count }} 份文档）</span>
+                  <span class="md-group-title"
+                    >知识库（{{ config.knowledge.file_count }} 份文档）</span
+                  >
                   <span class="md-badge warn">{{ KNOWLEDGE_RAG_NOTE }}</span>
                 </div>
                 <ul v-if="config.knowledge.files.length" class="md-list">
@@ -285,7 +319,7 @@ function traceDetail(call: ModelDebugToolCall): string {
                   :aria-expanded="promptOpen"
                   @click="promptOpen = !promptOpen"
                 >
-                  <span class="md-caret" aria-hidden="true">{{ promptOpen ? '▾' : '▸' }}</span>
+                  <span class="md-caret" aria-hidden="true">{{ promptOpen ? "▾" : "▸" }}</span>
                   <span class="md-group-title">系统提示词</span>
                   <span class="md-prompt-meta">{{ promptChars }} 字 · 库中当前值</span>
                 </button>
@@ -299,9 +333,11 @@ function traceDetail(call: ModelDebugToolCall): string {
             <h3 class="md-section-title">③ 调试对话 · 常驻右栏</h3>
             <p class="md-note">{{ MODEL_DEBUG_SCOPE_NOTE }}</p>
 
-            <ul v-if="messages.length" class="md-msgs">
+            <ul v-if="messages.length" class="md-msgs md-chat-body">
               <li v-for="item in messages" :key="item.id" class="md-msg" :class="item.role">
-                <p class="md-msg-role">{{ item.role === 'user' ? '我' : item.model_name || '模型' }}</p>
+                <p class="md-msg-role">
+                  {{ item.role === "user" ? "我" : item.model_name || "模型" }}
+                </p>
 
                 <!-- 返回结果：与思考过程分成两个区块 -->
                 <div class="md-answer">
@@ -319,7 +355,9 @@ function traceDetail(call: ModelDebugToolCall): string {
                     :aria-expanded="isThinkingOpen(item.id)"
                     @click="toggleThinking(item.id)"
                   >
-                    <span class="md-caret" aria-hidden="true">{{ isThinkingOpen(item.id) ? '▾' : '▸' }}</span>
+                    <span class="md-caret" aria-hidden="true">{{
+                      isThinkingOpen(item.id) ? "▾" : "▸"
+                    }}</span>
                     <span class="md-think-title">{{ MODEL_DEBUG_THINKING_LABEL }}</span>
                     <span class="md-think-meta">{{ thinkingCharsOf(item) }} 字</span>
                   </button>
@@ -334,13 +372,16 @@ function traceDetail(call: ModelDebugToolCall): string {
                   </p>
                   <ul class="md-trace-list">
                     <li v-for="(call, idx) in item.tool_usage" :key="idx" class="md-trace-item">
-                      <span class="md-trace-kind">{{ call.type === 'call' ? '调用' : '返回' }}</span>
+                      <span class="md-trace-kind">{{
+                        call.type === "call" ? "调用" : "返回"
+                      }}</span>
                       <span class="md-trace-name">{{ call.name }}</span>
                       <span
                         v-if="toolReadOnly(call.name) !== undefined"
                         class="md-badge"
                         :class="toolReadOnly(call.name) ? 'ro' : 'wr'"
-                      >{{ toolReadOnly(call.name) ? '只读' : '写' }}</span>
+                        >{{ toolReadOnly(call.name) ? "只读" : "写" }}</span
+                      >
                       <span v-if="call.state" class="md-trace-state">{{ call.state }}</span>
                       <span class="md-trace-detail">{{ traceDetail(call) }}</span>
                     </li>
@@ -348,7 +389,7 @@ function traceDetail(call: ModelDebugToolCall): string {
                 </div>
               </li>
             </ul>
-            <div v-else class="md-empty">
+            <div v-else class="md-empty md-chat-body">
               <p class="md-empty-title">还没有对话，试试这样问：</p>
               <ul class="md-examples">
                 <li>把「打开 govee 并进入设备列表」拆成步骤</li>
@@ -394,13 +435,17 @@ function traceDetail(call: ModelDebugToolCall): string {
                   class="md-btn"
                   :disabled="sending || !messages.length"
                   @click="clearConversation"
-                >清空</button>
+                >
+                  清空
+                </button>
                 <button
                   type="button"
                   class="md-btn md-btn--primary"
                   :disabled="!canSend"
                   @click="onSend"
-                >{{ sending ? '模型运行中…' : '发送' }}</button>
+                >
+                  {{ sending ? "模型运行中…" : "发送" }}
+                </button>
               </div>
             </div>
           </aside>

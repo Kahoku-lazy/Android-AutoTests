@@ -173,7 +173,7 @@
   margin-bottom: 10px;
 }
 .card-group-title::after {
-  content: '';
+  content: "";
   flex: 1;
   height: 1px;
   background: var(--app-border-light);
@@ -206,14 +206,21 @@
   padding: 0 0 10px;
   flex-shrink: 0;
 }
-.page-size-control { display: flex; align-items: center; gap: var(--app-space-sm); }
+.page-size-control {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+}
 .toolbar-label {
   font-size: var(--app-size-xs);
   font-weight: 700;
   color: var(--app-text-secondary);
   white-space: nowrap;
 }
-.page-size-btns { display: flex; gap: 6px; }
+.page-size-btns {
+  display: flex;
+  gap: 6px;
+}
 .page-size-btn {
   min-width: 36px;
   padding: var(--app-space-xs) 10px;
@@ -233,7 +240,10 @@
   font-weight: 600;
   white-space: nowrap;
 }
-.page-nav { display: flex; gap: var(--app-space-sm); }
+.page-nav {
+  display: flex;
+  gap: var(--app-space-sm);
+}
 
 /* ── 表格卡片 ── */
 .table-card {
@@ -307,12 +317,17 @@
   cursor: pointer;
   pointer-events: auto;
 }
-.device-table-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
+.device-table-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
 .device-table-wrapper::-webkit-scrollbar-thumb {
   background: var(--c-workflow);
   border-radius: var(--app-radius-sm);
 }
-.device-table-wrapper::-webkit-scrollbar-track { background: var(--app-bg-subtle); }
+.device-table-wrapper::-webkit-scrollbar-track {
+  background: var(--app-bg-subtle);
+}
 
 /* ── 表纸外框线型：虚线 → 实线（本页登记的线型；宽度与颜色仍取共享令牌 --comp-sheet-border，
       不改令牌本身，故 /reports、/elements 的表纸仍为虚线） ── */
@@ -322,7 +337,11 @@
 
 /* ── 表头：居中 + 浅底（排版单一来源：全局 .el-table th 的 --app-size-xs / 700 / uppercase） ── */
 .device-table-wrapper :deep(.el-table th.el-table__cell) {
-  background: linear-gradient(180deg, var(--app-bg-subtle), color-mix(in srgb, var(--app-bg-subtle) 40%, transparent)) !important;
+  background: linear-gradient(
+    180deg,
+    var(--app-bg-subtle),
+    color-mix(in srgb, var(--app-bg-subtle) 40%, transparent)
+  ) !important;
   color: var(--ink) !important;
   padding: 14px 12px !important;
 }
@@ -354,7 +373,7 @@
   text-align: left;
 }
 .dev-id.is-selected .dev-model::before {
-  content: '● ';
+  content: "● ";
   color: var(--c-device);
 }
 .dev-model {

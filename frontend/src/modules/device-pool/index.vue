@@ -1,18 +1,18 @@
 <script setup lang="ts">
 /** Device Pool — 单页工作台（无独立 Overview，数量挂筛选 Tab） */
-import AppTable from '@/shared/components/AppTable.vue'
-import FilterTabs from '@/shared/components/FilterTabs.vue'
-import DeviceCard from './components/DeviceCard.vue'
-import DeviceStatusCell from './components/DeviceStatusCell.vue'
-import DeviceActionsCell from './components/DeviceActionsCell.vue'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import EmptyState from '@/shared/components/patterns/EmptyState.vue'
-import DisconnectDialog from './components/DisconnectDialog.vue'
-import NetworkConnectDialog from './components/NetworkConnectDialog.vue'
-import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
-import { IconWifi, IconRefresh } from '@/shared/icons/index'
-import { sketchToneAt, sketchTiltAt } from '@/shared/helpers/sketchCard'
-import { useDevicePoolView } from './DevicePoolView.logic'
+import AppTable from "@/shared/components/AppTable.vue"
+import FilterTabs from "@/shared/components/FilterTabs.vue"
+import DeviceCard from "./components/DeviceCard.vue"
+import DeviceStatusCell from "./components/DeviceStatusCell.vue"
+import DeviceActionsCell from "./components/DeviceActionsCell.vue"
+import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import EmptyState from "@/shared/components/patterns/EmptyState.vue"
+import DisconnectDialog from "./components/DisconnectDialog.vue"
+import NetworkConnectDialog from "./components/NetworkConnectDialog.vue"
+import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import { IconWifi, IconRefresh } from "@/shared/icons/index"
+import { sketchToneAt, sketchTiltAt } from "@/shared/helpers/sketchCard"
+import { useDevicePoolView } from "./DevicePoolView.logic"
 
 const {
   scanning,
@@ -84,24 +84,28 @@ const {
                 class="view-btn"
                 :class="{ active: viewMode === 'table' }"
                 @click="switchViewMode('table')"
-              >表格</button>
+              >
+                表格
+              </button>
               <button
                 type="button"
                 class="view-btn"
                 :class="{ active: viewMode === 'cards' }"
                 @click="switchViewMode('cards')"
-              >卡片</button>
+              >
+                卡片
+              </button>
             </div>
             <span class="filter-count">{{ filteredDevices.length }} 台</span>
             <div class="dev-mock-toggle" title="开发调试：注入 60 条模拟设备">
               <span class="dev-mock-toggle__label">开发调试</span>
-              <el-switch
-                :model-value="devMockEnabled"
-                size="small"
-                @change="toggleDevMock"
-              />
+              <el-switch :model-value="devMockEnabled" size="small" @change="toggleDevMock" />
             </div>
-            <el-button class="action-bar-btn action-bar-btn--network" size="small" @click="openNetworkDialog">
+            <el-button
+              class="action-bar-btn action-bar-btn--network"
+              size="small"
+              @click="openNetworkDialog"
+            >
               <IconWifi :size="14" /> 局域网
             </el-button>
             <el-button
@@ -127,14 +131,31 @@ const {
                   class="page-size-btn"
                   :class="{ active: pageSize === n }"
                   @click="setPageSize(n)"
-                >{{ n }}</button>
+                >
+                  {{ n }}
+                </button>
               </div>
             </div>
             <div v-if="filteredDevices.length > 0" class="table-toolbar-right">
-              <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ filteredDevices.length }} 台</span>
+              <span class="page-info"
+                >第 {{ currentPage }} / {{ totalPages }} 页 · 共
+                {{ filteredDevices.length }} 台</span
+              >
               <div v-if="totalPages > 1" class="page-nav">
-                <el-button class="wb-btn" size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</el-button>
-                <el-button class="wb-btn" size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</el-button>
+                <el-button
+                  class="wb-btn"
+                  size="small"
+                  :disabled="currentPage <= 1"
+                  @click="goPage(currentPage - 1)"
+                  >上一页</el-button
+                >
+                <el-button
+                  class="wb-btn"
+                  size="small"
+                  :disabled="currentPage >= totalPages"
+                  @click="goPage(currentPage + 1)"
+                  >下一页</el-button
+                >
               </div>
             </div>
           </div>
@@ -143,76 +164,78 @@ const {
             ref="tableWrapRef"
             class="device-table-wrapper"
             :style="{
-              minHeight: `${tableMinHeightPx}px`,
+              'minHeight': `${tableMinHeightPx}px`,
               '--device-table-body-rows': String(pageSize),
               '--device-table-min-width': `${tableMinWidthPx}px`,
             }"
             @pointerdown="onTablePointerDown"
           >
-              <AppTable
-                :columns="COLUMNS"
-                :data-source="pagedDevices"
-                row-key="serial"
-                :striped="true"
-                :loading="loading"
-                table-layout="fixed"
-                empty-text="还没有可用设备"
-                accent="var(--c-device)"
-                @row-click="handleRowClick"
-              >
-                <template #cell-device="{ record }">
-                  <div class="dev-id" :class="{ 'is-selected': isRowSelected(record) }">
-                    <p class="dev-model">{{ displayModel(record) }}</p>
-                    <div class="dev-meta">
-                      <code :title="record.serial">{{ record.serial }}</code>
-                      <span :title="deviceAddress(record)">{{ deviceAddress(record) }}</span>
-                    </div>
+            <AppTable
+              :columns="COLUMNS"
+              :data-source="pagedDevices"
+              row-key="serial"
+              :striped="true"
+              :loading="loading"
+              table-layout="fixed"
+              empty-text="还没有可用设备"
+              accent="var(--c-device)"
+              @row-click="handleRowClick"
+            >
+              <template #cell-device="{ record }">
+                <div class="dev-id" :class="{ 'is-selected': isRowSelected(record) }">
+                  <p class="dev-model">{{ displayModel(record) }}</p>
+                  <div class="dev-meta">
+                    <code :title="record.serial">{{ record.serial }}</code>
+                    <span :title="deviceAddress(record)">{{ deviceAddress(record) }}</span>
                   </div>
-                </template>
-                <template #cell-status="{ record }">
-                  <DeviceStatusCell :device="record" />
-                </template>
-                <template #cell-connection_type="{ record }">
-                  <span
-                    class="conn-chip"
-                    :class="record.connection_type === 'WIFI' ? 'conn-chip--wifi' : 'conn-chip--usb'"
-                  >{{ record.connection_type === 'WIFI' ? 'Wi‑Fi' : 'USB' }}</span>
-                </template>
-                <template #cell-lock_status="{ record }">
-                  <span
-                    v-if="record.locked_by"
-                    class="vis-chip vis-chip--locked"
-                    :title="`锁定者: ${record.locked_by}`"
-                  >🔒 {{ record.locked_by }}</span>
-                  <span v-else class="vis-chip vis-chip--open">公开</span>
-                </template>
-                <template #cell-screen="{ record }">
-                  <span v-if="record.screen" class="screen-cell">{{ record.screen }}</span>
-                  <span v-else class="text-muted">—</span>
-                </template>
-                <template #cell-last_seen="{ record }">
-                  <div class="time-cell">
-                    <span class="time-rel">{{ formatRelativeTime(record.last_seen) }}</span>
-                    <span class="time-abs">接入 {{ formatDateTime(record.connected_at) }}</span>
-                  </div>
-                </template>
-                <template #cell-actions="{ record }">
-                  <DeviceActionsCell
-                    :device="record"
-                    :current-user="currentUser"
-                    @lock="handleLockClick"
-                    @release="(d) => handleRelease(d.serial)"
-                    @disconnect="(d) => openDisconnectDialog(d.serial)"
-                  />
-                </template>
-                <template #empty>
-                  <EmptyState
-                    icon="📱"
-                    :text="activeFilter === 'all' ? EMPTY_TEXT.noDevices : EMPTY_TEXT.noMatch"
-                    :hint="activeFilter === 'all' ? EMPTY_TEXT.hintRefresh : '尝试切换筛选条件'"
-                  />
-                </template>
-              </AppTable>
+                </div>
+              </template>
+              <template #cell-status="{ record }">
+                <DeviceStatusCell :device="record" />
+              </template>
+              <template #cell-connection_type="{ record }">
+                <span
+                  class="conn-chip"
+                  :class="record.connection_type === 'WIFI' ? 'conn-chip--wifi' : 'conn-chip--usb'"
+                  >{{ record.connection_type === "WIFI" ? "Wi‑Fi" : "USB" }}</span
+                >
+              </template>
+              <template #cell-lock_status="{ record }">
+                <span
+                  v-if="record.locked_by"
+                  class="vis-chip vis-chip--locked"
+                  :title="`锁定者: ${record.locked_by}`"
+                  >🔒 {{ record.locked_by }}</span
+                >
+                <span v-else class="vis-chip vis-chip--open">公开</span>
+              </template>
+              <template #cell-screen="{ record }">
+                <span v-if="record.screen" class="screen-cell">{{ record.screen }}</span>
+                <span v-else class="text-muted">—</span>
+              </template>
+              <template #cell-last_seen="{ record }">
+                <div class="time-cell">
+                  <span class="time-rel">{{ formatRelativeTime(record.last_seen) }}</span>
+                  <span class="time-abs">接入 {{ formatDateTime(record.connected_at) }}</span>
+                </div>
+              </template>
+              <template #cell-actions="{ record }">
+                <DeviceActionsCell
+                  :device="record"
+                  :current-user="currentUser"
+                  @lock="handleLockClick"
+                  @release="(d) => handleRelease(d.serial)"
+                  @disconnect="(d) => openDisconnectDialog(d.serial)"
+                />
+              </template>
+              <template #empty>
+                <EmptyState
+                  icon="📱"
+                  :text="activeFilter === 'all' ? EMPTY_TEXT.noDevices : EMPTY_TEXT.noMatch"
+                  :hint="activeFilter === 'all' ? EMPTY_TEXT.hintRefresh : '尝试切换筛选条件'"
+                />
+              </template>
+            </AppTable>
           </div>
         </template>
 

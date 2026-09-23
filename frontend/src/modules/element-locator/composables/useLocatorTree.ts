@@ -20,22 +20,6 @@ import {
   type LocatorTreeNode,
 } from '../types'
 
-function createdLeafId(payload: Record<string, unknown>): number | null {
-  const nested = payload.data
-  if (nested && typeof nested === 'object' && nested !== null && 'id' in nested) {
-    const id = (nested as { id: unknown }).id
-    if (typeof id === 'number') return id
-  }
-  for (const key of ['page'] as const) {
-    const node = payload[key]
-    if (node && typeof node === 'object' && node !== null && 'id' in node) {
-      const id = (node as { id: unknown }).id
-      if (typeof id === 'number') return id
-    }
-  }
-  return null
-}
-
 export function useLocatorTree(projectCode: () => string) {
   const project = ref<LocatorProject | null>(null)
   const tree = ref<LocatorTreeNode[]>([])
@@ -132,13 +116,12 @@ export function useLocatorTree(projectCode: () => string) {
     const trimmed = name.trim()
     try {
       const { data } = await apiCreatePage({ label: trimmed, directory_id: directoryId })
-      const payload = data as Record<string, unknown>
-      if (payload.status) {
+      if (data.status) {
         ElMessage.success('文件已创建')
         await loadTree()
-        return createdLeafId(payload)
+        return data.page?.id ?? null
       }
-      ElMessage.error((payload.message as string) || '创建文件失败')
+      ElMessage.error(data.message || '创建文件失败')
       return null
     } catch (e: unknown) {
       ElMessage.error(formatApiError(e, '创建文件失败'))
@@ -149,13 +132,12 @@ export function useLocatorTree(projectCode: () => string) {
   async function removeFile(fileId: number) {
     try {
       const { data } = await apiDeletePage(fileId)
-      const ok = Boolean((data as { status?: boolean }).status)
-      if (ok) {
+      if (data.status) {
         ElMessage.success('文件已删除')
         await loadTree()
         return true
       }
-      ElMessage.error('删除失败')
+      ElMessage.error(data.message || '删除失败')
       return false
     } catch (e: unknown) {
       ElMessage.error(formatApiError(e, '删除失败'))

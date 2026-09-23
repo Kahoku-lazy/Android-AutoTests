@@ -4,6 +4,8 @@
  */
 import { describe, expect, it } from 'vitest'
 import {
+  validateAlias,
+  validateAliasCell,
   validateBounds,
   validatePrimaryXPath,
   validateText,
@@ -24,6 +26,14 @@ describe('[P0] elementRowValidation', () => {
   it('validatePrimaryXPath：空表达式被拒（主定位是单条表达式）', () => {
     expect(validatePrimaryXPath('   ')).toBe('主定位表达式不能为空')
     expect(validatePrimaryXPath('//a')).toBeNull()
+  })
+
+  it('validateAlias / validateAliasCell：元素名称必填，且仍受列宽约束', () => {
+    expect(validateAlias('   ')).toBe('元素名称不能为空')
+    expect(validateAlias('登录')).toBeNull()
+    expect(validateAliasCell(' ')).toBe('元素名称不能为空')
+    expect(validateAliasCell('a'.repeat(501))).toBe('alias 最长 500 个字符')
+    expect(validateAliasCell('a'.repeat(500))).toBeNull()
   })
 
   it('validateText：只对收敛后的可写列做长度校验，边界值通过', () => {

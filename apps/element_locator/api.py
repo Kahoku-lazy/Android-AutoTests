@@ -169,20 +169,27 @@ def create_element(page, fields):
     """仅新增一条元素（不做 upsert）。
 
     必填口径：`alias` 非空，且 `resource_id` 与 `bounds` 至少一个非空——两者皆空时
-    多行会撞 `(page, resource_id, bounds)` 唯一约束。命中同页既有时抛 ConflictError。
+    多行会撞 `(page, resource_id, bounds)` 唯一约束。命中同页既有时抛 ConflictError，
+    文案指认既有元素（名称 + id），便于用户核对是哪一行。
     """
     normalized = normalize_element_fields(fields, CREATE_FIELDS)
     if not normalized.get("alias"):
         raise ValueError("元素名称(alias)必填")
     if not normalized.get("resource_id") and not normalized.get("bounds"):
         raise ValueError("resource-id 与坐标至少填一个")
-    duplicated = Element.objects.filter(
-        page=page,
-        resource_id=normalized.get("resource_id", ""),
-        bounds=normalized.get("bounds", ""),
-    ).exists()
-    if duplicated:
-        raise ConflictError("该元素已在当前页面中（相同 resource-id 与位置）")
+    existing = (
+        Element.objects.filter(
+            page=page,
+            resource_id=normalized.get("resource_id", ""),
+            bounds=normalized.get("bounds", ""),
+        )
+        .only("id", "alias")
+        .first()
+    )
+    if existing is not None:
+        name = existing.alias.strip()
+        label = f"{name}（id={existing.id}）" if name else f"id={existing.id}"
+        raise ConflictError(f"该元素已在当前页面中：{label}")
     element = Element.objects.create(page=page, **normalized)
     page.element_count = Element.objects.filter(page=page).count()
     page.save(update_fields=["element_count"])

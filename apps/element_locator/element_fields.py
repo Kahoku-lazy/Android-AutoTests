@@ -5,8 +5,8 @@
 
 口径（rework-save-to-elements）：呈现与写入收敛为「缩略图 / 元素名称 / 序号 / 文本 / 主定位 /
 交互标注 / 测试点」。更新只接受呈现列里可编辑的四项；新增额外接受备注与去重键
-（resource_id 与 bounds 至少一个）。类名、内容描述、坐标分量、层级、父内序号与候选 XPath
-列表不再由工作台写入。
+（resource_id 与 bounds 至少一个）。元素名称与主定位在新增、更新两条入口都 MUST 非空；类名、
+内容描述、坐标分量、层级、父内序号与候选 XPath 列表不再由工作台写入。
 """
 
 from __future__ import annotations
@@ -75,6 +75,10 @@ def normalize_element_fields(raw: dict[str, Any], allowed: tuple[str, ...]) -> d
         if limit is not None and len(text) > limit:
             raise ValueError(f"{key} 最长 {limit} 个字符")
         normalized[key] = text
+
+    # 元素名称与主定位都是不可为空的标识字段：空值会让该行在表里无法辨认 / 无法定位
+    if "alias" in normalized and not normalized["alias"].strip():
+        raise ValueError("元素名称不能为空")
 
     # 人工写入的主定位是单条表达式，无法判定「同页唯一匹配」→ 一律标记为不稳定
     if "primary_xpath" in normalized:

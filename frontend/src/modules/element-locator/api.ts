@@ -1,9 +1,18 @@
 /** element-locator API client functions — persistent element repository CRUD */
 import client from '@/shared/api-client'
 import type { DjangoResponse } from '@/shared/api-client'
-import type { LocatorProject, LocatorTreePayload } from './types'
+import type {
+  CreatePagePayload,
+  ElementWritePayload,
+  LocatorProject,
+  LocatorTreePayload,
+  PageElementsPayload,
+} from './types'
 
 type Envelope<T> = Promise<{ data: DjangoResponse<T> }>
+
+/** legacy 平铺响应：只取 axios 响应的 `data`（登记特例：非 {status,data} 信封） */
+type FlatResponse<T> = Promise<{ data: T }>
 
 // 路径约定：全平台 /api/ 路径以 / 结尾（见 openspec/specs/api-path-convention）。
 // Web 元素与 API 接口两组封装随元素定位的 Web、API 两域整体下线而移除
@@ -40,7 +49,15 @@ export function deleteLocatorDirectory(id: number): Envelope<{ id: number }> {
 
 // ── Pages ──
 
-export function apiPageItems(id,f,limit=500) { return client.get(`/elements/pages/${id}/items/`,{params:{filter:f,limit}}) }
+export function apiPageItems(
+  id: number,
+  filter: string,
+  limit = 500,
+): FlatResponse<PageElementsPayload> {
+  return client.get<PageElementsPayload>(`/elements/pages/${id}/items/`, {
+    params: { filter, limit },
+  })
+}
 
 // ── Elements ──
 
@@ -58,13 +75,19 @@ export interface PageElementFields {
   bounds?: string
 }
 
-export function apiUpdateElement(id: number, data: PageElementFields) {
-  return client.put(`/elements/items/${id}/`, data)
+export function apiUpdateElement(
+  id: number,
+  data: PageElementFields,
+): FlatResponse<ElementWritePayload> {
+  return client.put<ElementWritePayload>(`/elements/items/${id}/`, data)
 }
 
 /** 新增一条元素行（create-only：撞同页既有的 resource-id + bounds 会返回 409） */
-export function createPageElement(pageId: number, data: PageElementFields) {
-  return client.post(`/elements/pages/${pageId}/elements/`, data)
+export function createPageElement(
+  pageId: number,
+  data: PageElementFields,
+): FlatResponse<ElementWritePayload> {
+  return client.post<ElementWritePayload>(`/elements/pages/${pageId}/elements/`, data)
 }
 
 /** 批量删除元素行（原子） */
@@ -72,11 +95,18 @@ export function batchDeleteElements(ids: number[]) {
   return client.post('/elements/items/batch-delete/', { ids })
 }
 
-// ── Element Manager (page & element CRUD) ──
+// ── Page CRUD ──
 
-export function apiGetPages()          { return client.get('/elements/pages/') }
-export function apiCreatePage(data)    { return client.post('/elements/pages/create/', data) }
-export function apiDeletePage(id)      { return client.delete(`/elements/pages/${id}/`) }
+export function apiCreatePage(data: {
+  label: string
+  directory_id?: number | null
+}): FlatResponse<CreatePagePayload> {
+  return client.post<CreatePagePayload>('/elements/pages/create/', data)
+}
+
+export function apiDeletePage(id: number): FlatResponse<ElementWritePayload> {
+  return client.delete<ElementWritePayload>(`/elements/pages/${id}/`)
+}
 
 // ── Move ──
 

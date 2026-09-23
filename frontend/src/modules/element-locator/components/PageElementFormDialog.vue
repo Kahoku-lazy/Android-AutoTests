@@ -8,8 +8,8 @@ import { reactive, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { PageElementFields } from '../api'
 import {
+  validateAlias,
   validateBounds,
-  validatePrimaryXPath,
   validateText,
   type TextField,
 } from '../helpers/elementRowValidation'
@@ -60,17 +60,14 @@ function limitedTextPairs(): Array<[TextField, string]> {
 
 function validate(): boolean {
   clearErrors()
-  if (!form.alias.trim()) errors.alias = '元素名称必填'
+  const aliasReason = validateAlias(form.alias)
+  if (aliasReason) errors.alias = aliasReason
   if (!form.resource_id.trim() && !form.bounds.trim()) {
     errors.resource_id = 'resource-id 与坐标至少填一个'
   }
   if (form.bounds.trim()) {
     const reason = validateBounds(form.bounds)
     if (reason) errors.bounds = reason
-  }
-  if (form.primary_xpath.trim()) {
-    const reason = validatePrimaryXPath(form.primary_xpath)
-    if (reason) errors.primary_xpath = reason
   }
   for (const [field, value] of limitedTextPairs()) {
     if (!value) continue

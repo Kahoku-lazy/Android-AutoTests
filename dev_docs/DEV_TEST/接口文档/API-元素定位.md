@@ -1048,13 +1048,14 @@
 |---|---|---|
 | 404 | 页面不存在 | page_id 不存在 |
 | 400 | 目录节点不能添加元素，请选择子页面 | 目标节点是目录 |
-| 400 | 元素名称(alias)必填 | alias 为空 |
+| 400 | 元素名称(alias)必填 | 请求体缺 `alias` 键 |
+| 400 | 元素名称不能为空 | `alias` 为空白 |
 | 400 | resource-id 与坐标至少填一个 | resource_id 与 bounds 都为空 |
 | 400 | 坐标格式应为 [x1,y1][x2,y2] / 坐标右下角不能小于左上角 | bounds 非法 |
 | 400 | 不支持修改字段 &lt;key&gt; | 传了可写白名单外的字段 |
-| 409 | 该元素已在当前页面中（相同 resource-id 与位置）| 同页已有相同 (resource_id, bounds) |
+| 409 | 该元素已在当前页面中：{既有元素名称}（id={n}） | 同页已有相同 (resource_id, bounds)；既有元素名为空时文案退化为 `该元素已在当前页面中：id={n}` |
 
-> 注：本端点**仅新增**，不再 upsert（变更 element-locator-element-table-editing）。
+> 注：本端点**仅新增**，不再 upsert（变更 element-locator-element-table-editing）；撞车文案指认既有元素，便于用户核对是哪一行（变更 fix-locator-workbench-contract-and-cleanup）。
 
 ---
 
@@ -1114,10 +1115,13 @@
 | HTTP | message | 触发条件 |
 |---|---|---|
 | 400 | 无效的 JSON 请求体 | body 非 JSON |
+| 400 | 元素名称不能为空 | `alias` 为空白 |
 | 400 | 主定位表达式不能为空 | `primary_xpath` 为空白 |
 | 400 | &lt;field&gt; 最长 N 个字符 | 超模型列宽 |
 | 400 | 不支持修改字段 &lt;key&gt; | 白名单外字段（含 content-desc / class / resource-id / bounds / 候选列表） |
 | 404 | 元素不存在 | el_id 不存在 |
+
+> 注：元素名称与主定位都是不可为空的标识字段，清空任一个都会被拒；本次未提交的字段保持原值（变更 fix-locator-workbench-contract-and-cleanup）。
 
 ---
 

@@ -11,6 +11,7 @@ import { formatApiError } from '@/shared/api-client'
 import { usePagination } from '@/shared/composables/usePagination'
 import { apiPageItems, apiUpdateElement, batchDeleteElements, createPageElement } from '../api'
 import type { PageElementFields } from '../api'
+import type { PageElementPayload } from '../types'
 
 /** 接口一次取回上限（后端既有约束）；本地分页在这份集合上切页 */
 const FETCH_LIMIT = 500
@@ -26,7 +27,6 @@ export interface PageElementRow {
   seq: number
   text_val: string
   primary_xpath: string
-  primary_stable: boolean
   thumbnail_path: string
   is_test_point: boolean
   clickable: boolean
@@ -38,14 +38,13 @@ export interface PageElementRow {
   focusable: boolean
 }
 
-function toRow(raw: Record<string, unknown>): PageElementRow {
+function toRow(raw: PageElementPayload): PageElementRow {
   return {
     id: Number(raw.id),
     alias: String(raw.alias || ''),
     seq: Number(raw.seq) || 0,
     text_val: String(raw.text_val || ''),
     primary_xpath: String(raw.primary_xpath || ''),
-    primary_stable: Boolean(raw.primary_stable),
     thumbnail_path: String(raw.thumbnail_path || ''),
     is_test_point: Boolean(raw.is_test_point),
     clickable: Boolean(raw.clickable),
@@ -93,23 +92,26 @@ export function usePageElements(pageId: () => number) {
       : selectedIds.value.filter((id) => !pageIds.includes(id))
   }
 
-  async function load() {
+  /**
+   * 拉取该页元素。`keepSelection` 只用于「更新失败后用服务端数据对齐」：
+   * 那次重载与用户的勾选意图无关，不能连带把勾选清掉（只保留仍然存在的 id）。
+   */
+  async function load(options: { keepSelection?: boolean } = {}) {
     loading.value = true
     error.value = ''
     try {
       const { data } = await apiPageItems(pageId(), 'all', FETCH_LIMIT)
-      const payload = data as {
-        status?: boolean
-        elements?: Record<string, unknown>[]
-        total?: number
-        message?: string
-      }
-      if (payload.status) {
-        rows.value = (payload.elements || []).map(toRow)
-        total.value = Number(payload.total ?? rows.value.length)
-        selectedIds.value = []
+      if (data.status) {
+        rows.value = (data.elements || []).map(toRow)
+        total.value = Number(data.total ?? rows.value.length)
+        if (options.keepSelection) {
+          const alive = new Set(rows.value.map((row) => row.id))
+          selectedIds.value = selectedIds.value.filter((id) => alive.has(id))
+        } else {
+          selectedIds.value = []
+        }
       } else {
-        error.value = payload.message || '页面元素加载失败'
+        error.value = data.message || '页面元素加载失败'
         rows.value = []
         total.value = 0
       }
@@ -142,16 +144,16 @@ export function usePageElements(pageId: () => number) {
 
     try {
       const { data } = await apiUpdateElement(row.id, payload)
-      if (!(data as { status?: boolean }).status) {
-        ElMessage.error((data as { message?: string }).message || '更新失败')
-        await load()
+      if (!data.status) {
+        ElMessage.error(data.message || '更新失败')
+        await load({ keepSelection: true })
         return false
       }
       applyLocal(row, field, value)
       return true
     } catch (e: unknown) {
       ElMessage.error(formatApiError(e as never, '更新失败'))
-      await load()
+      await load({ keepSelection: true })
       return false
     }
   }
@@ -159,8 +161,8 @@ export function usePageElements(pageId: () => number) {
   async function createRow(fields: PageElementFields): Promise<boolean> {
     try {
       const { data } = await createPageElement(pageId(), fields)
-      if (!(data as { status?: boolean }).status) {
-        ElMessage.error((data as { message?: string }).message || '新增失败')
+      if (!data.status) {
+        ElMessage.error(data.message || '新增失败')
         return false
       }
       ElMessage.success('已新增一行')
@@ -180,16 +182,11 @@ export function usePageElements(pageId: () => number) {
     }
     try {
       const { data } = await batchDeleteElements(selectedIds.value)
-      const payload = data as {
-        status?: boolean
-        data?: { deleted?: number }
-        message?: string
-      }
-      if (!payload.status) {
-        ElMessage.error(payload.message || '删除失败')
+      if (!data.status) {
+        ElMessage.error(data.message || '删除失败')
         return false
       }
-      ElMessage.success(`已删除 ${payload.data?.deleted ?? selectedIds.value.length} 行`)
+      ElMessage.success(`已删除 ${data.data?.deleted ?? selectedIds.value.length} 行`)
       selectedIds.value = []
       await load()
       return true

@@ -2,7 +2,7 @@
  * [P0] 必测 — element-locator API 端点封装（表驱动，mock api-client，不断真网络）
  * 目录：tests/element-locator/p0/
  *
- * api.ts 现存 14 个端点函数：断言 client 方法、URL、body 透传，且恰好调用一次。
+ * api.ts 现存 13 个端点函数：断言 client 方法、URL、body 透传，且恰好调用一次。
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import client from '@/shared/api-client'
@@ -42,7 +42,6 @@ const cases: ApiCase[] = [
   // ── Elements ──
   { name: 'apiUpdateElement：PUT /elements/items/:id', invoke: () => elApi.apiUpdateElement(1, { alias: '改后名称' }), method: 'put', url: '/elements/items/1/', hasPayload: true },
   // ── Element Manager (page CRUD) ──
-  { name: 'apiGetPages：GET /elements/pages', invoke: () => elApi.apiGetPages(), method: 'get', url: '/elements/pages/' },
   { name: 'apiCreatePage：POST /elements/pages/create', invoke: () => elApi.apiCreatePage({ label: 'p1' }), method: 'post', url: '/elements/pages/create/', hasPayload: true },
   { name: 'apiDeletePage：DELETE /elements/pages/:id', invoke: () => elApi.apiDeletePage(1), method: 'delete', url: '/elements/pages/1/' },
   // ── Move ──

@@ -5,5 +5,5 @@
 */
 
 .locator-workbench {
-  --locator-header-icon-end: var(--color-indigo-84) /* -> --color-indigo-84 */;  /* 页头图标渐变收尾色 */
+  --locator-header-icon-end: var(--color-indigo-84);  /* 页头图标渐变收尾色 */
 }

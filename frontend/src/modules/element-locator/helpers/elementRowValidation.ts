@@ -31,6 +31,11 @@ export function validateBounds(value: string): string | null {
   return null
 }
 
+/** 校验元素名称列：返回中文原因或 null（与后端 alias 非空校验同口径）。 */
+export function validateAlias(value: string): string | null {
+  return (value ?? '').trim() ? null : '元素名称不能为空'
+}
+
 /** 校验主定位列：返回中文原因或 null。 */
 export function validatePrimaryXPath(value: string): string | null {
   return (value ?? '').trim() ? null : '主定位表达式不能为空'
@@ -41,4 +46,9 @@ export function validateText(field: TextField, value: string): string | null {
   const limit = TEXT_MAX_LENGTH[field]
   if (limit != null && (value ?? '').length > limit) return `${field} 最长 ${limit} 个字符`
   return null
+}
+
+/** 元素名称单元格：必填 + 不超模型列宽（表格行内编辑的口径） */
+export function validateAliasCell(value: string): string | null {
+  return validateAlias(value) ?? validateText('alias', value)
 }

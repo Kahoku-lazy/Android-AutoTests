@@ -7,7 +7,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import type { LocatorMoveItem } from '../api'
-import { type LocatorFileKind, type LocatorTreeNode } from '../types'
+import type { LocatorTreeNode } from '../types'
 import { useLocatorTreeMove, type UiTreeNode } from '../composables/useLocatorTreeMove'
 import MoveToDirectoryDialog from './MoveToDirectoryDialog.vue'
 
@@ -24,7 +24,7 @@ const emit = defineEmits<{
   renameDirectory: [payload: { id: number; name: string }]
   deleteDirectory: [id: number]
   createFile: [payload: { name: string; directoryId: number | null }]
-  deleteFile: [payload: { fileId: number; kind: LocatorFileKind }]
+  deleteFile: [payload: { fileId: number }]
 }>()
 
 const {
@@ -199,7 +199,6 @@ async function onDeleteDirectory() {
 async function onDeleteFile() {
   if (!menuNode.value || menuNode.value.type !== 'file') return
   const fileId = menuNode.value.id
-  const kind: LocatorFileKind = 'page'
   const name = menuNode.value.name
   closeMenu()
   try {
@@ -211,7 +210,7 @@ async function onDeleteFile() {
   } catch {
     return
   }
-  emit('deleteFile', { fileId, kind })
+  emit('deleteFile', { fileId })
 }
 
 function handleNodeClick(data: UiTreeNode) {

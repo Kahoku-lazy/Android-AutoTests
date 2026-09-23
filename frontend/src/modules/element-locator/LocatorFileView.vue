@@ -5,13 +5,13 @@
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import SkeletonCard from '@/shared/components/patterns/SkeletonCard.vue'
 import LocatorFilePanel from './components/LocatorFilePanel.vue'
-import { useLocatorTree } from './composables/useLocatorTree'
-import { getLocatorProjectTree } from './api'
+import { apiDeletePage, getLocatorProjectTree } from './api'
 import { formatApiError } from '@/shared/api-client'
 import {
   FILE_KIND_BY_CODE,
@@ -28,8 +28,6 @@ const fileId = computed(() => {
   const raw = Number(route.params.fileId)
   return Number.isFinite(raw) && raw > 0 ? raw : null
 })
-
-const { removeFile } = useLocatorTree(() => projectCode.value)
 
 const loading = ref(false)
 const error = ref('')
@@ -89,8 +87,17 @@ async function goBackToTree() {
 }
 
 async function onDeleteFile(payload: { fileId: number }) {
-  const ok = await removeFile(payload.fileId)
-  if (ok) await goBackToTree()
+  try {
+    const { data } = await apiDeletePage(payload.fileId)
+    if (!data.status) {
+      ElMessage.error(data.message || '删除失败')
+      return
+    }
+    ElMessage.success('文件已删除')
+    await goBackToTree()
+  } catch (e: unknown) {
+    ElMessage.error(formatApiError(e as never, '删除失败'))
+  }
 }
 
 const headerTitle = computed(() => file.value?.name || '文件详情')
@@ -136,9 +143,7 @@ onMounted(() => {
           v-else-if="file"
           :key="`${file.kind}-${file.id}`"
           :file="file"
-          hide-identity
           @delete-file="onDeleteFile"
-          @back="goBackToTree"
         />
       </div>
     </div>

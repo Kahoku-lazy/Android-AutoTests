@@ -16,7 +16,12 @@ import EditableCell from './EditableCell.vue'
 import PageElementFormDialog from './PageElementFormDialog.vue'
 import type { PageElementFields } from '../api'
 import { usePageElements, type EditableField, type PageElementRow } from '../composables/usePageElements'
-import { validatePrimaryXPath, validateText, type TextField } from '../helpers/elementRowValidation'
+import {
+  validateAliasCell,
+  validatePrimaryXPath,
+  validateText,
+  type TextField,
+} from '../helpers/elementRowValidation'
 import { elementThumbnailUrl, interactionLabels } from '../helpers/elementPresentation'
 
 const props = defineProps<{ pageId: number }>()
@@ -68,6 +73,7 @@ const TEXT_FIELDS: Array<[string, TextField]> = [
 
 /** 每列的校验函数；返回 undefined 表示该列不做前端校验 */
 function validateFor(field: string): ((value: string) => string | null) | undefined {
+  if (field === 'alias') return validateAliasCell
   if (field === 'primary_xpath') return validatePrimaryXPath
   const entry = TEXT_FIELDS.find(([key]) => key === field)
   return entry ? (value: string) => validateText(entry[1], value) : undefined

@@ -1,0 +1,230 @@
+.sap {
+  /* 本组件私有色值登记：放大预览落影（消费者在本根类之内；行选中底色已收归 --comp-table-row-selected-bg） */
+  --sap-enlarge-shadow-color: var(--color-ink-05-a30) /* -> --color-ink-05-a30 */;   /* 放大预览面板的落影 */
+  height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+}
+
+
+.sap-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 2fr);
+  gap: var(--insp-gap-panel);
+  overflow: hidden;
+}
+
+.sap-sections {
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--app-space-sm);
+  background: var(--app-bg-card);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-md);
+}
+
+.sap-sections-title {
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--app-text-secondary);
+  margin-bottom: var(--insp-gap-tight);
+}
+
+/* 分区筹码（变体 A）：硬边几何 + 切换类配色（未选中天蓝 / 选中柠黄） */
+.sap-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-sm);
+  width: 100%;
+  margin-bottom: var(--insp-gap-tight);
+  padding: var(--insp-pad-tight);
+  font-family: inherit;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--c-workflow);
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: 2px 2px 0 0 var(--ink);
+  cursor: pointer;
+  transition:
+    transform var(--app-duration-fast) var(--app-ease),
+    box-shadow var(--app-duration-fast) var(--app-ease);
+}
+
+.sap-chip:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 0 var(--ink);
+}
+
+.sap-chip--on { background: var(--c-dashboard); }
+
+.sap-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sap-chip-count { flex-shrink: 0; }
+
+.sap-sections-empty {
+  padding: var(--insp-pad-tight);
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+.sap-table { min-height: 0; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+/* 分页栏：与设备管理页 .table-toolbar 同口径，只保留右半段（本页不渲染「显示行数」） */
+.sap-pager {
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--insp-gap-row);
+  padding-bottom: var(--insp-pager-pad-b);
+  min-height: var(--insp-pager-min-h);
+}
+.sap-page-info { font-size: var(--app-size-sm); font-weight: 600; color: var(--app-text-secondary); }
+.sap-page-nav { display: flex; gap: var(--app-space-sm); }
+/* ── 元素表横向滚动 ──
+   横向滚动由 el-table 自身承载：表头由 Element Plus 同步，前 3 列由 EP 的 fixed 冻结
+   （sticky 方案无法穿透 el-table 自身的 overflow 容器，故不用），外层容器只负责定高。
+   表格最小宽 = 列宽合计（登记在 constants.ts），由内联 --insp-table-min-width 下发。 */
+.sap-table-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+/* 空数据时 EP 把 .el-table__empty-block 的 inline height 设成表格 scrollHeight，
+   下一次测量又把这块高度算进去，表纸会一直长出屏幕。锁在本容器内，并盖掉那条 inline height。 */
+.sap-table-body :deep(.ac-table-wrap) {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+.sap-table-body :deep(.el-table),
+.sap-table-body :deep(.el-table__inner-wrapper) {
+  height: 100% !important;
+  max-height: 100%;
+}
+.sap-table-body :deep(.el-table__empty-block) {
+  height: 100% !important;
+  max-height: 100%;
+}
+/* 内层表格保证不小于列宽合计（EP 的横向滚动与固定列都依赖它比容器宽） */
+.sap-table-body :deep(.el-table__body),
+.sap-table-body :deep(.el-table__header) { min-width: var(--insp-table-min-width, 986px); }
+
+/* 拖拽平移：作用在 el-table 的横向滚动容器（.el-scrollbar__wrap）上，
+   composable 给该元素挂 is-pan-ready / is-dragging */
+.sap-table-body :deep(.el-scrollbar__wrap) {
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-y;
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-workflow) transparent;
+}
+.sap-table-body :deep(.is-pan-ready),
+.sap-table-body :deep(.is-dragging) { cursor: grabbing; }
+.sap-table-body :deep(.is-dragging *) {
+  cursor: grabbing !important;
+  pointer-events: none;
+}
+.sap-table-body :deep(.el-checkbox),
+.sap-table-body :deep(button),
+.sap-table-body :deep(input),
+.sap-table-body :deep(a) {
+  user-select: auto;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.sap-table-body :deep(.el-scrollbar__wrap)::-webkit-scrollbar { width: 8px; height: 8px; }
+.sap-table-body :deep(.el-scrollbar__wrap)::-webkit-scrollbar-thumb {
+  background: var(--c-workflow);
+  border-radius: var(--app-radius-sm);
+}
+.sap-table-body :deep(.el-scrollbar__wrap)::-webkit-scrollbar-track { background: var(--app-bg-subtle); }
+
+/* 缩略图列的定位层铺满整格，故其所在单元格必须作为定位基准 */
+.sap-table-body :deep(.el-table__body td.el-table__cell:has(.sap-thumb-cell)) {
+  position: relative;
+}
+
+/* ── 缩略图 ── */
+/* 定位层：单击该格即在手机画面上高亮对应矩形框（点击目标是整格，不只是图片） */
+.sap-thumb-cell {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.sap-thumb-wrap { position: relative; display: inline-flex; }
+.sap-thumb {
+  width: 48px; height: 48px; object-fit: contain;
+  border: 2px solid var(--ink); border-radius: var(--app-radius-sm); display: block;
+}
+.sap-thumb-empty { color: var(--app-text-secondary); }
+
+/* ── 元素名称内联编辑 ── */
+.sap-name-cell {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+  padding: 0 var(--app-space-sm);
+  box-sizing: border-box;
+  cursor: text;
+  min-width: 0;
+}
+.sap-name-cell--readonly { cursor: default; }
+.sap-name-text {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--app-size-xs);
+}
+.sap-name--empty { color: var(--app-text-secondary); font-style: italic; }
+.sap-name-icon { flex-shrink: 0; color: var(--app-text-secondary); opacity: 0; transition: opacity var(--app-duration-fast); }
+.sap-name-cell:hover .sap-name-icon { opacity: 1; }
+.sap-name-input {
+  width: 100%; box-sizing: border-box;
+  font-size: var(--app-size-xs); font-family: inherit;
+  padding: var(--insp-name-input-pad);
+  border: 2px solid var(--ink); border-radius: var(--app-radius-sm);
+  background: var(--app-bg-card); color: var(--ink);
+}
+
+/* ── 放大浮层 ── */
+/* ── 放大预览内容（外壳由 el-dialog 提供） ── */
+.sap-enlarge {
+  display: flex; gap: var(--app-space-md); align-items: flex-start;
+  background: var(--app-bg-card);
+  border: 3px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  box-shadow: 4px 4px 0 0 var(--sap-enlarge-shadow-color);
+  padding: var(--app-space-md);
+  max-width: 90vw;
+}
+.sap-enlarge-img {
+  width: 240px; height: 240px; object-fit: contain;
+  border: 2px solid var(--ink); border-radius: var(--app-radius-sm);
+  background: var(--paper);
+}
+/* 缩略图文件已失效时的占位块（与图片同尺寸，保持弹窗布局稳定） */
+.sap-enlarge-missing {
+  width: 240px; height: 240px; display: flex; align-items: center; justify-content: center;
+  border: 2px dashed var(--ink); border-radius: var(--app-radius-sm);
+  color: var(--app-text-secondary); font-size: var(--app-size-xs);
+}
+.sap-enlarge-detail {
+  display: flex; flex-direction: column; gap: var(--insp-gap-tight);
+  font-size: var(--app-size-xs);
+  min-width: 220px; max-width: 320px;
+}
+.sap-enlarge-field {
+  display: flex; gap: var(--app-space-sm); align-items: baseline;
+  word-break: break-all;
+}
+.sap-enlarge-field span {
+  flex-shrink: 0; width: 64px; font-weight: 700; color: var(--app-text-secondary);
+}

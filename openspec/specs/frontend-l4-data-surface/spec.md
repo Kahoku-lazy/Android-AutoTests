@@ -45,8 +45,9 @@ L4 分页 MUST 由共享 `usePagination` composable 提供（`currentPage` / `to
 
 #### Scenario: Fixed page size still comes from module constants
 
-- **WHEN** 设备检查器元素表格固定每页 8 行且不渲染「显示行数」选择器
-- **THEN** 其 `PAGE_SIZE_OPTIONS=[8]` 与默认行数仍声明在 `device-inspector/constants.ts`，页面内不出现行数字面量
+- **WHEN** 设备检查器元素表格固定单一每页行数且不渲染「显示行数」选择器
+- **THEN** 其 `PAGE_SIZE_OPTIONS` 只登记单一取值，该取值与默认行数相等，且两者均声明在 `device-inspector/constants.ts`
+- **AND** 页面内不出现行数字面量；该 capability 不钉具体行数——具体行数由 `device-inspector-page` 定义，避免同一数字在两份规格里各登记一次
 
 #### Scenario: Shrinking source never leaves an empty page
 
@@ -56,7 +57,7 @@ L4 分页 MUST 由共享 `usePagination` composable 提供（`currentPage` / `to
 
 ### Requirement: Form validation uses Element Plus rules
 
-需要校验的表单 MUST 使用 Element Plus 表单校验（`el-form` 的 `:model` + `:rules`，配 `el-form-item` 的 `prop` 与 `formRef.validate()`）；`el-form-item` 的 `required` MUST NOT 在缺少 `:rules` 时单独使用——此时它只渲染必填星号而不触发任何校验，属误导性 UI。字段若**实际非必填**（空值有默认兜底或后端可推导），MUST NOT 标注 `required` 星号。校验失败文案与 `ElMessage` 提示 MUST 由调用方处理（`frontend/AGENTS.md` 硬性规范 §1.5）。
+需要校验的表单 MUST 使用 Element Plus 表单校验（`el-form` 的 `:model` + `:rules`，配 `el-form-item` 的 `prop` 与 `formRef.validate()`）；`el-form-item` 的 `required` MUST NOT 在缺少 `:rules` 时单独使用——此时它只渲染必填星号而不触发任何校验，属误导性 UI。字段若**实际非必填**（空值有默认兜底或后端可推导），MUST NOT 标注 `required` 星号。校验失败文案与 `ElMessage` 提示 MUST 由调用方处理。
 
 #### Scenario: Required field actually validates
 
@@ -92,7 +93,7 @@ L4 分页 MUST 由共享 `usePagination` composable 提供（`currentPage` / `to
 
 #### Scenario: Selected row is highlighted
 
-- **WHEN** 用户在 `/inspector` 的结构表格（页面分区 + 元素表格唯一视图）点击一行
+- **WHEN** `/inspector` 的结构表格（页面分区 + 元素表格唯一视图）中某一行处于选中态（把该行置为选中的手势由该页自有要求定义，本 capability 不约定手势）
 - **THEN** 该行单元格呈现选中底色，且与未选中行可区分
 - **AND** 该底色不是声明在 `tr` 上
 

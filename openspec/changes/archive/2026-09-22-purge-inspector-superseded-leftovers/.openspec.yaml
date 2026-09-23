@@ -1,0 +1,4 @@
+schema: android-autotests
+created: 2026-09-22
+# 纯清理：删除零消费者的样式 / 令牌 / 测试钩子，运行时行为零变化 —— 声明 skip_specs。
+skip_specs: true

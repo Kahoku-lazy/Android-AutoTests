@@ -1,6 +1,6 @@
 """device-inspector ORM models — di_ prefix tables.
 
-v1.7 snapshot schema per PRD-03 §6:
+v1.7 snapshot schema:
   di_snapshots — capture 快照（dump/OCR 解析 JSON + 截图路径 + 统计）
 """
 
@@ -11,7 +11,8 @@ class Snapshot(models.Model):
     """One-shot page capture snapshot → di_snapshots.
 
     method: dump | ocr（二选一，不支持同时进行）。
-    dump_json / ocr_json 存解析结果；缩略图仅存相对路径，文件落盘媒体目录。
+    dump_json / ocr_json 存解析结果（dump_json.elements 为**展示裁剪后**的元素）；
+    nodes_json 存**未裁剪**的全量节点索引（供分层查询显示被裁元素）；缩略图仅存相对路径，文件落盘媒体目录。
     """
 
     device = models.ForeignKey(
@@ -24,6 +25,8 @@ class Snapshot(models.Model):
     serial = models.CharField(max_length=100, default="", blank=True)
     method = models.CharField(max_length=10, default="dump")  # dump | ocr
     dump_json = models.JSONField(default=dict, blank=True)
+    # 未裁剪的全量节点索引（含展示裁剪丢弃的节点；不含 XPath 候选——候选按需即时生成）
+    nodes_json = models.JSONField(default=list, blank=True)
     ocr_json = models.JSONField(default=dict, blank=True)
     screenshot_path = models.CharField(max_length=1000, default="", blank=True)
     package = models.CharField(max_length=500, default="", blank=True)

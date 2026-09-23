@@ -13,7 +13,6 @@ const mode = ref('existing')            // 'existing' | 'create'
 const folderPath = ref([])              // 级联目录 label 路径（逐层选择）
 const selectedPageId = ref(null)        // 已有页面
 const newPageLabel = ref('')
-const includeOcr = ref(true)
 
 const saveFormRef = ref(null)
 /** 保存目标的必填校验（按 L4 口径走 EP :rules，取代原 Toast 空值守卫） */
@@ -54,7 +53,6 @@ watch(() => store.saveDialogVisible, async (v) => {
   folderPath.value = []
   selectedPageId.value = null
   newPageLabel.value = store.snapshot?.package || ''
-  includeOcr.value = true
   try {
     const { data } = await apiGetPages()
     if (data.status) pages.value = data.pages || []
@@ -75,13 +73,11 @@ async function confirm() {
       pageId: selectedPageId.value,
       pageLabel: '',
       folderPath: '',
-      includeOcr: includeOcr.value,
     })
   } else {
     store.saveToElements({
       pageLabel: newPageLabel.value.trim(),
       folderPath: folderPathText.value,
-      includeOcr: includeOcr.value,
     })
   }
 }
@@ -97,15 +93,16 @@ async function confirm() {
     <div v-loading="loading" class="save-dlg">
       <el-form ref="saveFormRef" :model="{ selectedPageId, newPageLabel }" :rules="saveRules" label-width="90px" @submit.prevent>
         <el-form-item label="目录路径">
-          <el-cascader
-            v-model="folderPath"
-            :options="folderOptions"
-            :props="{ checkStrictly: false }"
-            placeholder="逐层选择目录（不选 = 根目录）"
-            clearable
-            class="save-folder"
-            data-testid="save-folder-cascader"
-          />
+          <!-- el-cascader 不把 data-* 透传到 DOM，测试钩子必须挂在普通元素上才真实可达 -->
+          <div class="save-folder-field" data-testid="save-folder-cascader">
+            <el-cascader
+              v-model="folderPath"
+              :options="folderOptions"
+              :props="{ checkStrictly: false }"
+              placeholder="逐层选择目录（不选 = 根目录）"
+              clearable
+            />
+          </div>
         </el-form-item>
 
         <el-form-item label="保存目标">
@@ -134,11 +131,6 @@ async function confirm() {
         <el-form-item v-else label="页面名称" prop="newPageLabel">
           <el-input v-model="newPageLabel" placeholder="新页面名称" data-testid="save-label-input" />
         </el-form-item>
-
-        <el-form-item label="OCR 数据">
-          <el-switch v-model="includeOcr" :disabled="!store.ocrTexts.length" />
-          <span class="save-hint">连同保存页面级 OCR 数据</span>
-        </el-form-item>
       </el-form>
     </div>
     <template #footer>
@@ -152,6 +144,9 @@ async function confirm() {
 
 <style scoped>
 .save-dlg { min-height: 200px; }
-.save-folder, .save-page-select { width: 100%; }
-.save-hint { margin-left: 10px; font-size: var(--app-size-xs); color: var(--app-text-secondary); }
+/* el-cascader 的根节点不携带作用域属性，直接写 .save-folder 打不中；
+   包裹层自己撑满，再用 :deep() 把宽度透传到子组件内部 */
+.save-folder-field { width: 100%; }
+.save-folder-field :deep(.el-cascader),
+.save-page-select { width: 100%; }
 </style>

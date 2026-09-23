@@ -5,10 +5,15 @@ import { IconZap } from '@/shared/icons'
 const store = useElementStore()
 const emit = defineEmits(['capture'])
 
-const METHODS = [
-  { value: 'dump', label: '仅 Dump' },
-  { value: 'ocr', label: '仅 OCR' },
-]
+/** 未选设备时按键为灰（不可用）：不发请求、只提示原因；
+ *  请求进行中仍用原生 disabled 表达忙碌态（区别于「未选设备」） */
+function onCaptureClick() {
+  if (!store.captureSerial) {
+    store.notifyKeyUnavailable()
+    return
+  }
+  emit('capture')
+}
 </script>
 
 <template>
@@ -18,22 +23,22 @@ const METHODS = [
       placeholder="选择设备"
       size="small"
       class="cap-device"
+      popper-class="cap-device-popper"
       data-testid="capture-device-select"
     >
       <el-option
         v-for="d in store.availableDevices"
         :key="d.serial"
         :value="d.serial"
-        :label="`${d.model || d.brand || ''} (${d.serial})${d.status === 'BUSY' ? ' · 使用中' : ''}`"
+        :label="`${d.model || d.brand || ''} (${d.serial}) · ${d.status === 'BUSY' ? '使用中' : '在线'}`"
       />
     </el-select>
-    <el-radio-group v-model="store.captureMethod" size="small" class="cap-method">
-      <el-radio-button v-for="m in METHODS" :key="m.value" :value="m.value">{{ m.label }}</el-radio-button>
-    </el-radio-group>
     <button
-      class="action-btn action-btn--primary"
-      :disabled="store.captLoading || !store.captureSerial"
-      @click="emit('capture')"
+      class="action-btn"
+      :class="{ 'action-btn--unavailable': !store.captureSerial }"
+      :aria-disabled="!store.captureSerial"
+      :disabled="store.captLoading"
+      @click="onCaptureClick"
       data-testid="capture-btn"
     >
       <IconZap :size="14" />{{ store.captLoading ? '获取中...' : '获取' }}
@@ -42,17 +47,8 @@ const METHODS = [
 </template>
 
 <style scoped>
-.cap-form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cap-form { display: flex; align-items: center; gap: var(--insp-gap-row); flex-wrap: wrap; }
 .cap-device { width: 280px; }
-.cap-method { flex-shrink: 0; }
-.action-btn {
-  display: inline-flex; align-items: center; gap: var(--app-space-xs);
-  font-size: var(--app-size-xs); font-weight: 700; padding: var(--app-space-xs) 12px;
-  border: 2px solid var(--ink); border-radius: 4px 8px 4px 8px;
-  background: var(--app-bg-card); color: var(--ink);
-  cursor: pointer; font-family: inherit; transition: all 0.12s; white-space: nowrap; flex-shrink: 0;
-}
-.action-btn:hover:not(:disabled) { background: var(--app-highlight); }
-.action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.action-btn--primary { background: var(--ink); color: var(--app-bg-card); }
+/* .action-btn 的布局、底色与灰键状态，以及 .cap-device 触发键的白底无阴影皮肤，
+   均由页面作用域（.inspector-workbench）统一承担，本组件不再声明，避免同一几何在两处重复维护 */
 </style>

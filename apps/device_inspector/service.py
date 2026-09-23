@@ -1,11 +1,9 @@
-"""device_inspector 服务 — capture 编排 + 结构分析。
+"""device_inspector 服务 — capture 编排。
 
-XPath / OCR / 布局算法已下沉 `algorithms/`，本模块按需 import。
+XPath / OCR 算法已下沉 `algorithms/`，本模块按需 import。
 """
 
-from dataclasses import asdict
-
-from algorithms.layout import classify_structure
+from algorithms.hierarchy import parse_hierarchy_xml
 from algorithms.xpath import gen_xpath_candidates, trim_hierarchy
 
 # ═══════════════════════════════════════════════
@@ -13,7 +11,7 @@ from algorithms.xpath import gen_xpath_candidates, trim_hierarchy
 # ═══════════════════════════════════════════════
 
 
-# 执行引擎占用前缀：检查器不与执行引擎抢设备（PRD-03 §4.1）
+# 执行引擎占用前缀：检查器不与执行引擎抢设备
 _EXECUTION_OCCUPY_PREFIXES = ("runner-", "ai_agent", "task-", "run-")
 
 
@@ -83,9 +81,8 @@ def _crop_thumbnail(source: str, box: tuple[int, int, int, int], dest: str) -> b
 
 def capture_dump_payload(engine, ts: str) -> dict:
     """抓取 UI 层级 + XPath 候选 + 元素缩略图落盘，返回 dump_json。"""
-    # dump_hierarchy 返回 models.ui_nodes.Node（dataclass），下方 XPath/裁剪算法按 dict 消费，
-    # 这里统一转 dict（Node 字段与 parse_hierarchy_xml 的 dict 一一对应，多出 xpaths 默认空表）。
-    nodes = [asdict(n) for n in engine.dump_hierarchy()]
+    # 引擎只给层级原始 XML，解析归算法层（引擎不 import algorithms）
+    nodes = parse_hierarchy_xml(engine.dump_hierarchy_xml())
 
     # 生成 XPath 候选（用完整层级算 count，保证定位语义准确）
     for e in nodes:
@@ -125,6 +122,33 @@ def capture_dump_payload(engine, ts: str) -> dict:
     except Exception:
         pass
 
+    # 全量节点索引：未裁剪节点 + 保留标记，不含 XPath 候选（候选是派生数据，查询时按需生成）
+    kept_ids = {id(e) for e in elements}
+    node_index = [
+        {
+            "depth": e["depth"],
+            "class_name": e["class_name"],
+            "text": e["text"],
+            "content_desc": e["content_desc"],
+            "resource_id": e["resource_id"],
+            "index": e["index"],
+            "bounds": e["bounds"],
+            "x": e["x"],
+            "y": e["y"],
+            "width": e["width"],
+            "height": e["height"],
+            "clickable": e["clickable"],
+            "enabled": e["enabled"],
+            "scrollable": e["scrollable"],
+            "checkable": e["checkable"],
+            "checked": e["checked"],
+            "focusable": e["focusable"],
+            "long_clickable": e["long_clickable"],
+            "kept_in_snapshot": id(e) in kept_ids,
+        }
+        for e in nodes
+    ]
+
     return {
         "elements": elements,
         "actionable": actionable,
@@ -132,11 +156,12 @@ def capture_dump_payload(engine, ts: str) -> dict:
         "actionable_count": len(actionable),
         "package": package,
         "activity": activity,
+        "nodes": node_index,
     }
 
 
 def capture_ocr_payload(ts: str) -> dict:
-    """截屏 OCR 识别 + OCR 缩略图落盘，返回 ocr_json（不含 base64）。"""
+    """截屏 OCR 识别 + OCR 缩略图落盘，返回 ocr_json。"""
     from algorithms.vision.ocr import recognize
 
     shot_abs = str(_shot_dir() / "shots" / f"capture_{ts}.png")
@@ -144,9 +169,6 @@ def capture_ocr_payload(ts: str) -> dict:
 
     thumb_dir = _shot_dir() / "thumbs" / ts
     for i, t in enumerate(texts):
-        # 丢弃 base64 缩略图，改为文件落盘 + 路径（PRD-03 C-07）
-        t.pop("thumbnail", None)
-        t.pop("thumbnail_format", None)
         w, h = t.get("width", 0), t.get("height", 0)
         if w > 0 and h > 0:
             thumb_dir.mkdir(parents=True, exist_ok=True)
@@ -168,19 +190,61 @@ def capture_ocr_payload(ts: str) -> dict:
     }
 
 
-def analyze_snapshot_payload(snapshot) -> dict:
-    """基于已存快照 dump_json 计算结构分区（即时，不落库，无设备交互）。
+def _parse_text_filters(raw: str) -> list[str]:
+    """「多文本」入参 → 关键词表（英文/中文逗号、顿号、换行分隔；忽略大小写去重）。"""
+    keywords: list[str] = []
+    normalized = raw.replace("，", ",").replace("、", ",").replace("\n", ",")
+    for chunk in normalized.split(","):
+        word = chunk.strip().casefold()
+        if word and word not in keywords:
+            keywords.append(word)
+    return keywords
 
-    复用 `algorithms.layout.classify_structure`（纯规则：位置/class/package）；
-    元素的 XPath 已在 capture 时生成并存于 dump_json，`dict(el)` 拷贝时原样保留。
+
+def ocr_page_payload(screenshot_path: str, texts: str = "") -> dict:
+    """OCR 识别截图文本 → 文本 + 原始角点 + 归一化中心点（纯函数，无设备交互）。
+
+    Args:
+        screenshot_path: 截图文件路径。
+        texts: 可选的多文本过滤，命中任一关键词即保留（忽略大小写的子串匹配）；
+            英文/中文逗号、顿号、换行都可作分隔符；留空返回整页全部文本。
+
+    `center` 的归一化分母取**截图自身像素尺寸**，与 OCR 坐标处于同一像素空间；
+    因此即使截图被缩放，「坐标」与「中心点」仍自洽。
     """
-    elements = (snapshot.dump_json or {}).get("elements") or []
-    structure = classify_structure(elements, snapshot.screen_h or 0)
-    return {
-        "package": snapshot.package,
-        "activity": snapshot.activity,
-        **structure,
-    }
+    from PIL import Image
+
+    from algorithms.vision.ocr import recognize
+
+    with Image.open(screenshot_path) as img:
+        screen_w, screen_h = img.size
+    if screen_w <= 0 or screen_h <= 0:
+        raise CaptureError("截图尺寸无效，无法计算归一化中心点", status_code=500)
+
+    keywords = _parse_text_filters(texts)
+
+    regions = []
+    for item in recognize(screenshot_path):
+        if keywords and not any(word in item["text"].casefold() for word in keywords):
+            continue
+        coords = item.get("coordinates") or []
+        if len(coords) < 2:
+            raise CaptureError("OCR 结果缺少角点坐标，无法计算中心点", status_code=500)
+        xs = [p[0] for p in coords]
+        ys = [p[1] for p in coords]
+        regions.append(
+            {
+                "text": item["text"],
+                "confidence": item["confidence"],
+                "coordinates": coords,
+                "center": [
+                    round((min(xs) + max(xs)) / 2 / screen_w, 4),
+                    round((min(ys) + max(ys)) / 2 / screen_h, 4),
+                ],
+            }
+        )
+
+    return {"screen_w": screen_w, "screen_h": screen_h, "texts": regions}
 
 
 def delete_snapshot_files(screenshot_path: str, thumb_dir_rel: str) -> None:

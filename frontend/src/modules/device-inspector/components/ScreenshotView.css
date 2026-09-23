@@ -22,8 +22,8 @@
   width: 9px; height: 9px;
   background: radial-gradient(circle, var(--app-pushpin-light) 30%, var(--app-pushpin-mid) 60%, var(--app-pushpin-dark) 100%);
   border-radius: 50%;
-  box-shadow: 0 1px 1px var(--screenshot-pin-shadow-color);
-  z-index: 10;
+  box-shadow: 1px 2px 0 0 var(--screenshot-pin-shadow-color);
+  z-index: var(--z-header);
 }
 .phone-frame {
   flex: 1;
@@ -63,8 +63,8 @@
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: 6px 10px 6px 10px;
-  box-shadow: 0 4px 24px var(--screenshot-img-shadow-color);
+  border-radius: var(--app-radius-md);
+  box-shadow: 4px 4px 0 0 var(--screenshot-img-shadow-color);
 }
 .overlay {
   position: absolute;
@@ -84,7 +84,6 @@
   color: var(--app-text-secondary);
 }
 .no-signal__icon {
-  font-size: var(--app-size-2xl);
   opacity: 0.7;
 }
 .no-signal__title {
@@ -100,7 +99,6 @@
   max-width: 220px;
   line-height: 1.5;
 }
-.no-signal--error .no-signal__title { color: var(--app-status-danger-text); }
 
 /* ── No-device idle animation ── */
 .no-device-animation {

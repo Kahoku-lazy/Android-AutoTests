@@ -50,6 +50,17 @@ def snapshots(request):
     return Response(api.list_snapshots(_user_id(request), offset, limit))
 
 
+@extend_schema(responses=OpenApiTypes.OBJECT)
+@api_view(["DELETE"])
+def snapshots_clear(request):
+    """DELETE /api/inspector/snapshots/clear — 一键清空本人的历史快照（返回删除条数）。
+
+    只清当前调用者自己的记录；媒体文件按「仍被元素定位引用则保留」的既有判定处理。
+    没有快照时成功返回 0（幂等）。
+    """
+    return Response({"deleted": api.clear_snapshots(_user_id(request))})
+
+
 @extend_schema(responses=OpenApiTypes.OBJECT, operation_id="inspector_snapshot_detail")
 @api_view(["GET"])
 def snapshot_detail(request, snapshot_id: int):
@@ -80,8 +91,8 @@ def save_elements(request, snapshot_id: int):
     folder_path = (body.get("folder_path") or "").strip()
     page_id = body.get("page_id")
     element_ids = body.get("element_ids")
-    include_ocr = bool(body.get("include_ocr", True))
     aliases = body.get("aliases") or None
+    element_aliases = body.get("element_aliases") or None
     try:
         return Response(
             api.save_snapshot_to_elements(
@@ -91,8 +102,8 @@ def save_elements(request, snapshot_id: int):
                 folder_path=folder_path,
                 page_id=int(page_id) if page_id else None,
                 element_ids=element_ids,
-                include_ocr=include_ocr,
                 aliases=aliases,
+                element_aliases=element_aliases,
             )
         )
     except ImportConflictError as e:
@@ -106,9 +117,38 @@ def save_elements(request, snapshot_id: int):
 
 @extend_schema(responses=OpenApiTypes.OBJECT)
 @api_view(["GET"])
-def snapshot_analyze(request, snapshot_id: int):
-    """GET /api/inspector/snapshots/{id}/analyze — 快照结构分析（纯规则，无设备交互）。"""
-    data = api.analyze_snapshot(snapshot_id, _user_id(request))
+def snapshot_layers(request, snapshot_id: int):
+    """GET /api/inspector/snapshots/{id}/layers — 两级分组 + 筛减分页（分层即时计算）。
+
+    查询参数：group / sub / flag（可重复）/ q / only_kept / only_stable / offset / limit。
+    非法分组或分页参数 400；快照不存在或非本人 404。
+
+    limit 缺省即不截断（返回全部命中）：隐式上限会让分组计数与返回条目分叉。
+    """
+    raw_limit = request.query_params.get("limit")
+    try:
+        offset = int(request.query_params.get("offset", 0))
+        limit = int(raw_limit) if raw_limit is not None else None
+    except ValueError:
+        return Response({"message": "无效的分页参数"}, status=400)
+    if offset < 0 or (limit is not None and limit <= 0):
+        return Response({"message": "无效的分页参数"}, status=400)
+
+    try:
+        data = api.list_layers(
+            snapshot_id,
+            _user_id(request),
+            group=(request.query_params.get("group") or "").strip(),
+            sub=(request.query_params.get("sub") or "").strip(),
+            flags=[f.strip() for f in request.query_params.getlist("flag") if f.strip()],
+            query=(request.query_params.get("q") or "").strip(),
+            only_kept=request.query_params.get("only_kept") == "1",
+            only_stable=request.query_params.get("only_stable") == "1",
+            offset=offset,
+            limit=None if limit is None else min(limit, 500),
+        )
+    except ValueError as e:
+        return Response({"message": str(e)}, status=400)
     if data is None:
         return Response({"message": "快照不存在"}, status=404)
     return Response(data)

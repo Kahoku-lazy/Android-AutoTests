@@ -1,4 +1,4 @@
-/** device-inspector API client functions — v1.7 快照化 6 端点 + 设备列表 */
+/** device-inspector API client functions — 快照化端点 + 分层查询 + 设备列表 */
 import client from '@/shared/api-client'
 
 // ── Capture & snapshots ──
@@ -9,14 +9,16 @@ export function apiCapture(serial, method) {
 export function apiGetSnapshots(offset = 0, limit = 100) {
   return client.get('/inspector/snapshots/', { params: { offset, limit } })
 }
-export function apiGetSnapshot(id) {
-  return client.get(`/inspector/snapshots/${id}/`)
+/** 分层查询：分组摘要 + 全量元素条目（含被展示裁剪丢弃的），支持服务端筛减兜底 */
+export function apiGetLayers(id, params = {}) {
+  return client.get(`/inspector/snapshots/${id}/layers/`, { params })
 }
 export function apiDeleteSnapshot(id) {
   return client.delete(`/inspector/snapshots/${id}/delete/`)
 }
-export function apiAnalyzeSnapshot(id) {
-  return client.get(`/inspector/snapshots/${id}/analyze/`)
+/** 一键清空本人的全部历史快照（返回删除条数）；只清自己，媒体按引用判定保留 */
+export function apiClearSnapshots() {
+  return client.delete('/inspector/snapshots/clear/')
 }
 
 // ── Save to element locator ──

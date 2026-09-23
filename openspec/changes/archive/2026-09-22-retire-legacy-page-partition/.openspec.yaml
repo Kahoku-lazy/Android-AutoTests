@@ -1,0 +1,5 @@
+schema: android-autotests
+created: 2026-09-22
+# page-analysis-semantic 能力整体退役（其 5 条需求随第一代分区算法与孤儿语义层一并移除）——
+# 经用户确认「一并退役（删端点 + 改规格）」，此处声明该 marker 以允许归档删除主 spec。
+retire_capabilities: true

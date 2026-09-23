@@ -1,0 +1,4 @@
+schema: android-autotests
+created: 2026-09-22
+# 纯文档变更（把 PRD-03 刷新为当前实现口径），无需求级行为变化：声明 skip_specs。
+skip_specs: true

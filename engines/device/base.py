@@ -1,15 +1,14 @@
 """L1c 引擎层 — Android 执行引擎统一契约（可替换）。
 
-导入边界：零 `apps.*`、零 `django.*`；只依赖 `models.*` 与第三方引擎库。
+导入边界：零 `apps.*`、零 `django.*`、零 `algorithms.*`；只依赖第三方引擎库。
+层级只给原始 XML，解析归算法层（见 engine-protocol 的「感知标准化」）。
 上层经引擎工厂（`open_engine` / `close_engine`）消费本协议，不直接触碰引擎实现。
 """
 
 from dataclasses import dataclass
 from typing import Protocol
 
-from models.ui_nodes import Node
-
-__all__ = ["EngineCapabilities", "EngineConnectError", "Node", "UiEngine"]
+__all__ = ["EngineCapabilities", "EngineConnectError", "UiEngine"]
 
 
 @dataclass
@@ -39,7 +38,7 @@ class UiEngine(Protocol):
 
     # ── 感知（返回标准化数据，不泄漏引擎格式）──
     def screenshot(self) -> bytes: ...
-    def dump_hierarchy(self) -> list[Node]: ...
+    def dump_hierarchy_xml(self) -> str: ...
     def app_current(self) -> dict: ...
 
     # ── 操作原语（用户语义："点击这些 UI 操作还是存在的"）──

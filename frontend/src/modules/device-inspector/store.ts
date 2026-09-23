@@ -1,33 +1,26 @@
-/** device-inspector Pinia store — v1.7 快照中心：设备列表 / capture / 快照回看删除 / 保存到元素定位 / 页面回看 */
+/** device-inspector Pinia store — 快照中心：设备列表 / capture / 五分组分层视图 / 快照回看删除 */
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { ElMessage } from 'element-plus'
+import { formatApiError } from '@/shared/api-client'
+import { FROZEN_REASONS, LAYER_GROUPS, elementInGroup, groupCount } from './constants'
 import {
   apiCapture,
   apiGetSnapshots,
-  apiGetSnapshot,
+  apiGetLayers,
   apiDeleteSnapshot,
-  apiAnalyzeSnapshot,
+  apiClearSnapshots,
   apiSaveToElements,
   apiGetPageView,
   apiGetDevices,
 } from './api'
-import { matchOcrToElements } from '@/shared/ocrMatch'
 
-// 执行引擎占用前缀：不可用于 capture（PRD-03 §4.1）
+// 执行引擎占用前缀：不可用于 capture
 const EXEC_PREFIXES = ['runner-', 'ai_agent', 'task-', 'run-']
 
 function isExecutionOccupied(device) {
   return device.status === 'BUSY' && device.occupied_by &&
     EXEC_PREFIXES.some(p => device.occupied_by.startsWith(p))
-}
-
-const INPUT_CLASS_KEYWORDS = ['edittext', 'autocomplete', 'searchview']
-
-function isInputClass(className) {
-  if (!className) return false
-  const c = className.toLowerCase()
-  return INPUT_CLASS_KEYWORDS.some(k => c.includes(k))
 }
 
 /** 缩略图 / 截图相对路径 → 媒体 URL */
@@ -36,11 +29,24 @@ export function mediaUrl(path) {
   return `/media/${path}`
 }
 
+/** 不可用（灰底）按键的统一提示文案：index.vue 与 CaptureForm.vue 共用，避免同一文案两处硬编码 */
+const KEY_DISABLED_MESSAGE = '按键不可用，请先选择设备'
+
+/**
+ * 「保存到元素定位」冻结开关。
+ * 原因：本页改为展示全量元素（含被展示裁剪丢弃的），行序不再是 snapshot 的展示元素下标，
+ * 而保存链路按展示元素下标收参 —— 口径冲突，入口保留但冻结，待后续变更对齐前端下标口径。
+ * 解冻时：去掉此开关与该守卫，并按新下标口径重写 saveToElements 的 element_ids 组装。
+ */
+const SAVE_TO_ELEMENTS_FROZEN = true
+
+/** 「已保存页面」冻结开关：存量数据已作废，入口保留但冻结使用 */
+const SAVED_PAGE_FROZEN = true
+
 export const useElementStore = defineStore('device-inspector', () => {
   // ── Device ──
   const devices = ref([])
   const captureSerial = ref('')
-  const captureMethod = ref('dump') // 'dump' | 'ocr'
 
   const availableDevices = computed(() =>
     devices.value.filter(d =>
@@ -48,98 +54,45 @@ export const useElementStore = defineStore('device-inspector', () => {
     )
   )
 
-  // ── Snapshot state ──
-  const snapshot = ref(null)      // 当前展示的快照全量 JSON
+  // ── Snapshot / layers state ──
+  /** 分层响应全量：{snapshot_id, source, package, activity, screen, screenshot_path, summary, total_matched, elements} */
+  const layers = ref(null)
+  /** 视图元信息（模板只消费这几个字段，与响应形状解耦） */
+  const snapshot = ref(null)
   const snapshots = ref([])       // 快照列表 items
   const snapshotTotal = ref(0)
   const captLoading = ref(false)
-  const error = ref('')
+  /** 失败记录：message 为经共享净化的可读原因；source 供「重试」重发对应请求 */
+  const error = ref(null)
+  const lastFailedSnapshotId = ref(null)
 
-  // ── 展示（合并表格：dump 元素 + OCR 文本，_kind 区分）──
-  const elements = computed(() => snapshot.value?.elements || [])
-  const ocrTexts = computed(() => snapshot.value?.texts || [])
+  // ── 分组（五个，固定顺序；切分组只改本地展示范围，不发请求）──
+  const activeGroupId = ref(LAYER_GROUPS[0].id)
+  const activeGroup = computed(
+    () => LAYER_GROUPS.find(g => g.id === activeGroupId.value) || LAYER_GROUPS[0]
+  )
+  /** 分组徽标（计数来自后端摘要，切分组时保持不变） */
+  const groupBadges = computed(() =>
+    LAYER_GROUPS.map(g => ({ ...g, count: groupCount(layers.value?.summary, g) }))
+  )
+
+  /** 全量元素（坐标顺序由后端给定，含被展示裁剪丢弃的） */
+  const elements = computed(() => layers.value?.elements || [])
+  /** 当前分组的元素（同一批对象引用，截图联动与表格共用） */
+  const groupElements = computed(() =>
+    elements.value.filter(el => elementInGroup(el, activeGroup.value))
+  )
+  /** 数据来源：index=全量节点索引；legacy=历史快照降级为保留集；saved-page=已保存页面（冻结入口） */
+  const layerSource = computed(() => layers.value?.source || '')
+
   const selected = ref(null)      // 选中元素（截图联动）
-  const selectedOcr = ref(null)
-  const filterMode = ref('all')
-  const searchText = ref('')
-  const nameOverrides = ref<Record<string, string>>({})   // { [元素 _idx]: 自定义元素名称 }（结构分析表内联重命名）
-
-  // ── 结构分析（纯规则分区，后端即时计算不落库）──
-  const analysis = ref(null)      // {is_webview, sections, elements}
-  const analyzing = ref(false)
-  const viewMode = ref('elements') // 'elements' | 'structure'
-
-  /**
-   * 合并行：按「中心点包含 + 最小面积」把 OCR 文本合并进 dump 元素行——
-   * 匹配行 _kind='dump' + _ocrMatched=true（附 ocr_text/ocr_confidence/ocr_thumbnail_path）；
-   * 未匹配的 OCR 独立成行（_kind='ocr'，_rowKey='o{idx}'）。口径见 shared/ocrMatch.ts。
-   */
-  const mergedRows = computed(() => {
-    const { byElement, matchedOcrIndexes } = matchOcrToElements(elements.value, ocrTexts.value)
-    const rows = elements.value.map((e, i) => {
-      const base = { ...e, _kind: 'dump', _rowKey: `d${e._idx ?? e.__uid}` }
-      const match = byElement.get(i)
-      if (match) {
-        return {
-          ...base,
-          _ocrMatched: true,
-          ocr_text: match.text,
-          ocr_confidence: match.confidence,
-          ocr_thumbnail_path: match.thumbnail_path,
-          ocr_idx: match._idx,
-        }
-      }
-      return base
-    })
-    const unmatched = ocrTexts.value
-      .filter((t, i) => !matchedOcrIndexes.has(i))
-      .map(t => ({ ...t, _kind: 'ocr', _rowKey: `o${t._idx ?? t.__uid}` }))
-    return [...rows, ...unmatched]
-  })
-
-  const filteredElements = computed(() => {
-    let els = elements.value || []
-    switch (filterMode.value) {
-      case 'clickable': els = els.filter(e => e.clickable); break
-      case 'text': els = els.filter(e => e.text); break
-      case 'rid': els = els.filter(e => e.resource_id); break
-      case 'clickable_text': els = els.filter(e => e.clickable && e.text); break
-      case 'clickable_no_text': els = els.filter(e => e.clickable && !e.text); break
-      case 'input': els = els.filter(e => isInputClass(e.class_name)); break
-      case 'scrollable': els = els.filter(e => e.scrollable); break
-    }
-    const q = searchText.value.trim().toLowerCase()
-    if (q) {
-      els = els.filter(e =>
-        (e.text || '').toLowerCase().includes(q) ||
-        (e.resource_id || '').toLowerCase().includes(q) ||
-        (e.content_desc || '').toLowerCase().includes(q) ||
-        (e.class_name || '').toLowerCase().includes(q)
-      )
-    }
-    return els
-  })
-
-  /** 合并表格行：筛选模式作用于 dump 行（非 all 时隐藏纯 OCR 行），搜索对两类都生效 */
-  const filteredRows = computed(() => {
-    const q = searchText.value.trim().toLowerCase()
-    const elKeys = new Set(filteredElements.value.map(e => `d${e._idx ?? e.__uid}`))
-    return mergedRows.value.filter(row => {
-      if (row._kind === 'ocr' && filterMode.value !== 'all') return false
-      if (row._kind === 'dump' && !elKeys.has(row._rowKey)) return false
-      if (q) {
-        const hay = `${row.text || ''} ${row.ocr_text || ''} ${row.resource_id || ''} ${row.content_desc || ''} ${row.class_name || ''}`.toLowerCase()
-        if (!hay.includes(q)) return false
-      }
-      return true
-    })
-  })
+  const nameOverrides = ref<Record<string, string>>({})   // { [元素 seq]: 自定义元素名称 }（表格内联重命名）
 
   // ── 勾选（保存到元素定位的筛减；key = _rowKey）──
   const checkedIds = ref(new Set())
   function toggleCheck(row) {
     if (!row || typeof row !== 'object') return
-    const id = row._rowKey ?? row._idx ?? row.__uid
+    const id = row._rowKey ?? row._idx
     if (id == null) return
     const next = new Set(checkedIds.value)
     if (next.has(id)) next.delete(id)
@@ -158,55 +111,112 @@ export const useElementStore = defineStore('device-inspector', () => {
 
   // ── Actions ──
 
+  /** 统一失败出口：字符串直接作为原因（异常 2xx 的后端 message），错误对象经共享净化取原因 */
+  function setError(source, reason, fallback) {
+    const message = typeof reason === 'string' ? (reason || fallback) : formatApiError(reason, fallback)
+    error.value = { message, source }
+    return message
+  }
+
+  /** 同一来源的请求成功即撤掉该来源的失败提示，避免旧错误常驻 */
+  function clearErrorFor(source) {
+    if (error.value?.source === source) error.value = null
+  }
+
+  /** 「重试」按失败来源重发对应请求，而不是只清提示 */
+  async function retry() {
+    const source = error.value?.source
+    if (!source) return
+    if (source === 'devices') return fetchDevices()
+    if (source === 'snapshots') return fetchSnapshots()
+    if (source === 'capture') return capture()
+    const id = lastFailedSnapshotId.value
+    if (id == null) return
+    if (source === 'layers') return fetchLayers(id)
+    if (snapshot.value?.snapshot_id === id) return fetchLayers(id)
+    return null
+  }
+
   async function fetchDevices() {
     try {
       const { data } = await apiGetDevices()
-      if (data.status) devices.value = data.data?.devices || []
-      else error.value = data.message || '设备列表加载失败'
+      if (data.status) {
+        devices.value = data.data?.devices || []
+        clearErrorFor('devices')
+      } else {
+        setError('devices', data.message, '设备列表加载失败')
+      }
     } catch (e) {
-      error.value = '设备列表加载失败，请稍后重试'
+      setError('devices', e, '设备列表加载失败')
     }
   }
 
   async function capture() {
     if (!captureSerial.value) {
-      ElMessage.warning('请先选择设备')
+      notifyKeyUnavailable()
       return
     }
     captLoading.value = true
-    error.value = ''
+    error.value = null
     try {
-      const { data } = await apiCapture(captureSerial.value, captureMethod.value)
+      // 抓取方式恒为 dump（OCR 链路已下线，后端 method 入参保留但前端不再发 ocr）
+      const { data } = await apiCapture(captureSerial.value, 'dump')
       if (data.status) {
-        applySnapshot(data.data)
-        ElMessage.success(`获取成功（元素 ${data.data?.element_count ?? 0} · OCR ${data.data?.ocr_count ?? 0}）`)
+        ElMessage.success(`获取成功（元素 ${data.data?.element_count ?? 0}）`)
         await fetchSnapshots()
-        // 自动化结构化：获取成功后直接计算结构分区并切换到结构视图（PRD-03 结构分析）
-        await analyzeSnapshot()
+        // 分层数据与快照同源：拿到 id 后立即拉分层（含被展示裁剪丢弃的元素）
+        await fetchLayers(data.data?.snapshot_id)
         return data.data
       }
-      error.value = data.message || '获取失败'
-      ElMessage.error(data.message || '获取失败')
+      ElMessage.error(setError('capture', data.message, '获取失败'))
     } catch (e) {
-      ElMessage.error('获取失败')
+      ElMessage.error(setError('capture', e, '获取失败'))
     } finally {
       captLoading.value = false
     }
     return null
   }
 
-  function applySnapshot(data) {
-    ;(data.elements || []).forEach((e, i) => { e._idx = i })
-    ;(data.texts || []).forEach((t, i) => { t._idx = i })
-    snapshot.value = data
+  /** 分层响应 → 视图状态：元素逐个补行键与联动下标，并默认选中第一个非空分组 */
+  function applyLayers(data) {
+    const list = data?.elements || []
+    list.forEach(el => {
+      el._idx = el.seq
+      el._rowKey = `s${el.seq}`
+    })
+    layers.value = { ...data, elements: list }
+    snapshot.value = {
+      snapshot_id: data?.snapshot_id ?? null,
+      serial: '',
+      package: data?.package || '',
+      activity: data?.activity || '',
+      screen_w: data?.screen?.w || 0,
+      screen_h: data?.screen?.h || 0,
+      screenshot_path: data?.screenshot_path || '',
+      element_count: data?.summary?.total || list.length,
+    }
     selected.value = null
-    selectedOcr.value = null
-    filterMode.value = 'all'
-    searchText.value = ''
     clearChecked()
-    analysis.value = null
-    viewMode.value = 'elements'
     nameOverrides.value = {}
+    const firstNonEmpty = groupBadges.value.find(g => g.count > 0)
+    activeGroupId.value = (firstNonEmpty || groupBadges.value[0]).id
+  }
+
+  async function fetchLayers(id) {
+    if (!id) return null
+    lastFailedSnapshotId.value = id
+    try {
+      const { data } = await apiGetLayers(id)
+      if (data.status) {
+        applyLayers(data.data)
+        clearErrorFor('layers')
+        return data.data
+      }
+      ElMessage.error(setError('layers', data.message, '元素数据加载失败'))
+    } catch (e) {
+      ElMessage.error(setError('layers', e, '元素数据加载失败'))
+    }
+    return null
   }
 
   async function fetchSnapshots() {
@@ -215,51 +225,19 @@ export const useElementStore = defineStore('device-inspector', () => {
       if (data.status) {
         snapshots.value = data.data?.items || []
         snapshotTotal.value = data.data?.total || 0
+        clearErrorFor('snapshots')
       } else {
-        error.value = data.message || '快照列表加载失败'
+        setError('snapshots', data.message, '快照列表加载失败')
       }
     } catch (e) {
-      error.value = '快照列表加载失败，请稍后重试'
+      setError('snapshots', e, '快照列表加载失败')
     }
   }
 
   async function viewSnapshot(id) {
-    try {
-      const { data } = await apiGetSnapshot(id)
-      if (data.status) {
-        applySnapshot(data.data)
-        drawerVisible.value = false
-        return data.data
-      }
-      ElMessage.error(data.message || '快照加载失败')
-    } catch (e) {
-      ElMessage.error('快照加载失败')
-    }
-    return null
-  }
-
-  async function analyzeSnapshot() {
-    if (!snapshot.value?.snapshot_id) {
-      ElMessage.warning('请先获取或选择快照')
-      return
-    }
-    analyzing.value = true
-    try {
-      const { data } = await apiAnalyzeSnapshot(snapshot.value.snapshot_id)
-      if (data.status) {
-        analysis.value = data.data
-        // 结构与快照元素同源同序（dump_json.elements），补 _idx 以联动左侧截图高亮
-        ;(analysis.value.elements || []).forEach((e, i) => { e._idx = i })
-        viewMode.value = 'structure'
-        return data.data
-      }
-      ElMessage.error(data.message || '结构分析失败')
-    } catch (e) {
-      ElMessage.error('结构分析失败')
-    } finally {
-      analyzing.value = false
-    }
-    return null
+    const data = await fetchLayers(id)
+    if (data) drawerVisible.value = false
+    return data
   }
 
   async function deleteSnapshot(id) {
@@ -268,7 +246,11 @@ export const useElementStore = defineStore('device-inspector', () => {
       if (data.status) {
         ElMessage.success('快照已删除')
         if (snapshot.value?.snapshot_id === id) {
+          // 回到与 applyLayers 一致的空态：分层数据、元信息与选中元素一起清，
+          // 否则表格会继续渲染已删快照的元素
+          layers.value = null
           snapshot.value = null
+          selected.value = null
           clearChecked()
         }
         await fetchSnapshots()
@@ -276,12 +258,39 @@ export const useElementStore = defineStore('device-inspector', () => {
       }
       ElMessage.error(data.message || '删除失败')
     } catch (e) {
-      ElMessage.error('删除失败')
+      ElMessage.error(formatApiError(e, '删除失败'))
     }
     return false
   }
 
+  /** 一键清空：删除本人全部历史快照；成功后列表与分层状态一起复位（正在展示的那份也已被删） */
+  async function clearSnapshots() {
+    try {
+      const { data } = await apiClearSnapshots()
+      if (data.status) {
+        const deleted = data.data?.deleted ?? 0
+        ElMessage.success(`已清空 ${deleted} 条历史快照`)
+        // 全部记录已删除，直接回到与 applyLayers 一致的无快照空态，无需再逐条判断
+        layers.value = null
+        snapshot.value = null
+        selected.value = null
+        clearChecked()
+        nameOverrides.value = {}
+        await fetchSnapshots()
+        return deleted
+      }
+      ElMessage.error(data.message || '清空失败')
+    } catch (e) {
+      ElMessage.error(formatApiError(e, '清空失败'))
+    }
+    return null
+  }
+
   async function saveToElements(payload) {
+    if (SAVE_TO_ELEMENTS_FROZEN) {
+      ElMessage.warning(FROZEN_REASONS.saveToElements)
+      return null
+    }
     if (!snapshot.value) return null
     if (checkedIds.value.size === 0) {
       ElMessage.warning('请先勾选要保存的数据')
@@ -290,35 +299,24 @@ export const useElementStore = defineStore('device-inspector', () => {
     saving.value = true
     try {
       const body: {
-        page_label: string; folder_path: string; include_ocr: boolean;
-        element_ids?: number[]; page_id?: number; aliases?: Record<string, string>;
+        page_label: string; folder_path: string;
+        element_ids?: number[]; page_id?: number;
+        element_aliases?: { index: number; name: string }[];
       } = {
         page_label: payload.pageLabel || '',
         folder_path: payload.folderPath || '',
-        include_ocr: payload.includeOcr !== false,
       }
       if (payload.pageId) body.page_id = payload.pageId
-      // 结构分析表内联重命名的「元素名称」→ 按 resource_id 映射为别名写入元素定位
-      const all = snapshot.value.elements || []
-      const aliases: Record<string, string> = {}
-      for (const [idx, name] of Object.entries(nameOverrides.value)) {
-        const rid = (all[Number(idx)]?.resource_id || '').trim()
-        if (rid && name) aliases[rid] = name
+      // 表格内联重命名的「元素名称」→ 按元素行键逐元素回填；
+      // 不能再按 resource_id 组装（同名 rid 的多个元素会被同一个名字覆盖）
+      const all = elements.value
+      const elementAliases: { index: number; name: string }[] = []
+      for (const [seq, name] of Object.entries(nameOverrides.value)) {
+        const i = Number(seq)
+        const v = (name || '').trim()
+        if (Number.isInteger(i) && i >= 0 && i < all.length && v) elementAliases.push({ index: i, name: v })
       }
-      if (Object.keys(aliases).length) body.aliases = aliases
-      // 勾选 = 筛减：dump 行（含坐标匹配行）按元素索引筛减；勾了纯 OCR 行自动携带页面级 OCR
-      const checkedDumpIdx = mergedRows.value
-        .filter(r => r._kind === 'dump' && checkedIds.value.has(r._rowKey))
-        .map(r => r._idx)
-      const hasOcrChecked = mergedRows.value.some(r =>
-        (r._kind === 'ocr' || r._ocrMatched) && checkedIds.value.has(r._rowKey)
-      )
-      if (checkedDumpIdx.length > 0 && checkedDumpIdx.length < all.length) {
-        body.element_ids = checkedDumpIdx
-      }
-      if (payload.includeOcr !== false && hasOcrChecked) {
-        body.include_ocr = true
-      }
+      if (elementAliases.length) body.element_aliases = elementAliases
       const { data } = await apiSaveToElements(snapshot.value.snapshot_id, body)
       if (data.status) {
         const r = data.data || {}
@@ -329,61 +327,61 @@ export const useElementStore = defineStore('device-inspector', () => {
       }
       ElMessage.error(data.message || '保存失败')
     } catch (e) {
-      ElMessage.error('保存失败')
+      ElMessage.error(formatApiError(e, '保存失败'))
     } finally {
       saving.value = false
     }
     return null
   }
 
+  /**
+   * 已保存页面回看 —— 入口已冻结（存量数据作废），代码路径保留以便解冻。
+   * 这里不再伪造页面分区：直接把元素挂进分层视图，分组摘要留空。
+   */
   async function viewSavedPage(pageId) {
+    if (SAVED_PAGE_FROZEN) {
+      ElMessage.warning(FROZEN_REASONS.savedPage)
+      return null
+    }
     try {
       const { data } = await apiGetPageView(pageId)
       if (data.status) {
-        applySnapshot({
+        const pageElements = (data.data?.elements || []).map((e, i) => ({
+          seq: i + 1,
+          level1: '',
+          level2: null,
+          content_kind: '',
+          class_name: e.class_name, class_simple: e.class_name, text: e.text_val, alias: e.alias,
+          content_desc: e.content_desc, resource_id: e.resource_id, bounds: e.bounds,
+          xpaths: e.xpaths || [], coords: { x: e.x, y: e.y, w: e.width, h: e.height, bounds: e.bounds },
+          clickable: e.clickable, enabled: e.enabled, scrollable: e.scrollable, checked: e.checked,
+          thumbnail_path: e.thumbnail_path, kept_in_snapshot: true, primary: { xpath: '', stable: false },
+          _idx: i + 1, _rowKey: `s${i + 1}`,
+        }))
+        applyLayers({
           snapshot_id: null,
-          serial: '',
-          method: 'saved',
+          source: 'saved-page',
           package: data.data?.package || '',
           activity: data.data?.activity || '',
-          element_count: data.data?.element_count || 0,
-          actionable_count: 0,
-          elements: (data.data?.elements || []).map(e => ({
-            class_name: e.class_name, text: e.text_val, content_desc: e.content_desc,
-            resource_id: e.resource_id, bounds: e.bounds, xpaths: e.xpaths || [],
-            x: e.x, y: e.y, width: e.width, height: e.height,
-            clickable: e.clickable, enabled: e.enabled, scrollable: e.scrollable,
-            checked: e.checked, thumbnail_path: e.thumbnail_path,
-          })),
-          ocr_count: data.data?.ocr_json?.ocr_count || 0,
-          texts: (data.data?.ocr_json?.texts || []).map(t => ({
-            text: t.text, confidence: t.confidence, x: t.x, y: t.y,
-            width: t.width, height: t.height,
-            bounds: t.bounds || `[${t.x},${t.y}][${(t.x || 0) + (t.width || 0)},${(t.y || 0) + (t.height || 0)}]`,
-            thumbnail_path: t.thumbnail_path || '',
-          })),
+          screen: { w: 0, h: 0 },
           screenshot_path: data.data?.screenshot_path || '',
-          created_at: null,
+          summary: { total: pageElements.length, groups: [] },
+          elements: pageElements,
         })
         pickerVisible.value = false
         return data.data
       }
       ElMessage.error(data.message || '页面加载失败')
     } catch (e) {
-      ElMessage.error('页面加载失败')
+      ElMessage.error(formatApiError(e, '页面加载失败'))
     }
     return null
   }
 
   function selectElement(el) {
     selected.value = el
-    selectedOcr.value = null
   }
-  function selectOcr(item) {
-    selectedOcr.value = item
-    selected.value = null
-  }
-  /** 结构分析表内联重命名：空值视为撤销自定义名（回退元素 text） */
+  /** 表格内联重命名：空值视为撤销自定义名（回退元素 text） */
   function setElementName(idx, name) {
     if (idx == null) return
     const next = { ...nameOverrides.value }
@@ -392,18 +390,24 @@ export const useElementStore = defineStore('device-inspector', () => {
     else delete next[idx]
     nameOverrides.value = next
   }
-  function clearError() { error.value = '' }
+  /** 统一提示出口：冻结入口与不可用按键都走它，避免提示在两处各写一遍 */
+  function notify(message) {
+    if (message) ElMessage.warning(message)
+  }
+  /** 点击不可用（灰底）按键：不发请求，只说明不可用原因 */
+  function notifyKeyUnavailable() {
+    notify(KEY_DISABLED_MESSAGE)
+  }
 
   return {
-    devices, captureSerial, captureMethod, availableDevices,
-    snapshot, snapshots, snapshotTotal, captLoading, error,
-    elements, ocrTexts, selected, selectedOcr, filterMode, searchText, filteredElements,
-    nameOverrides, mergedRows, filteredRows, checkedIds,
-    analysis, analyzing, viewMode,
+    captureSerial, availableDevices,
+    layers, snapshot, layerSource, groupBadges, activeGroup, activeGroupId, groupElements, elements,
+    snapshots, snapshotTotal, captLoading, error,
+    selected, nameOverrides, checkedIds,
     drawerVisible, saveDialogVisible, pickerVisible, saving,
-    fetchDevices, capture, fetchSnapshots, viewSnapshot, deleteSnapshot, analyzeSnapshot,
-    saveToElements, viewSavedPage,
-    toggleCheck, clearChecked,
-    selectElement, selectOcr, setElementName, clearError,
+    fetchDevices, capture, fetchSnapshots, fetchLayers, viewSnapshot, deleteSnapshot,
+    clearSnapshots, saveToElements, viewSavedPage,
+    toggleCheck,
+    selectElement, setElementName, retry, notify, notifyKeyUnavailable,
   }
 })

@@ -1,0 +1,27 @@
+/* device-inspector 模块令牌（T1）
+   作用域：.inspector-workbench（模块页面根类）——消费点（页面 / 结构面板 / 捕获表单 / 快照抽屉）都在该根类内
+   口径：本模块的间距与固定尺寸唯一登记处；值与原裸字面量逐一相等（登记前后视觉零变化）
+   说明：这些值不在 T0 间距刻度（4/8/16/24/32/48）上，故登记为模块令牌而非硬编码字面量；
+        颜色 / 字号 / 圆角 / 阴影仍走 shared/styles/tokens.css 的共享令牌。
+   导入：frontend/src/main.ts（与其它模块 tokens.css 同处，全局注入一次）
+*/
+
+.inspector-workbench {
+  /* 行内间距（工具条 / 分页栏 / 快照抽屉） */
+  --insp-gap-row: 10px;
+  /* 页脚内边距 */
+  --insp-pad-footer: 10px 20px;
+  /* 结构面板两列间距 */
+  --insp-gap-panel: 12px;
+  /* 紧凑间距（筹码纵向间距 / 明细字段间距） */
+  --insp-gap-tight: 6px;
+  /* 紧凑内边距（分区筹码 / 分区空态提示） */
+  --insp-pad-tight: 6px 8px;
+  /* 快照抽屉条目内边距 */
+  --insp-pad-snap: 10px 12px;
+  /* 分页栏最小高度与下内边距 */
+  --insp-pager-min-h: 38px;
+  --insp-pager-pad-b: 10px;
+  /* 名称内联编辑输入框内边距 */
+  --insp-name-input-pad: 2px 6px;
+}

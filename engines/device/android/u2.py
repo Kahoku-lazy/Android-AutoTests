@@ -1,13 +1,13 @@
 """U2Engine — uiautomator2 单栈引擎（L1c 实现，契约见 engines/device/base.py）。
 
 uiautomator2（u2.Device）负责全部设备能力：screenshot/click/swipe/app 生命周期/shell/
-文本输入/dump_hierarchy/XPath/toast。
+文本输入/层级取数/XPath/toast。
 能力声明：xpath_locate=True / toast_wait=True / ocr=False。
 
-错误语义：连接类失败抛 EngineConnectError（技术语义，由上层转业务文案）。
+层级只产出原始 XML 文本，不解析（解析归算法层，见 engine-protocol 的「感知标准化」）——
+因此本模块不 import `algorithms.*`，只依赖 uiautomator2 与 `engines.device.base`。
 
-⚠️ 契约出入：本模块 import `algorithms.hierarchy`（纯解析函数，零 apps 依赖），
-总纲 §三 字面禁令为"engines ❌ algorithms.*"——按"纯函数复用优于内联"执行，待评审裁决。
+错误语义：连接类失败抛 EngineConnectError（技术语义，由上层转业务文案）。
 """
 
 import base64
@@ -18,9 +18,7 @@ import time
 
 import uiautomator2 as u2
 
-from algorithms.hierarchy import parse_hierarchy_xml
 from engines.device.base import EngineCapabilities, EngineConnectError
-from models.ui_nodes import Node
 
 logger = logging.getLogger(__name__)
 
@@ -28,31 +26,6 @@ logger = logging.getLogger(__name__)
 U2_OP_TIMEOUT = 20
 
 _CONNECTED_KEYWORDS = ("connected", "already", "已连接", "已经连接", "成功")
-
-
-def _to_node(d: dict) -> Node:
-    """algorithms.hierarchy 的 dict 节点 → models.ui_nodes.Node。"""
-    return Node(
-        depth=d["depth"],
-        class_name=d["class_name"],
-        text=d["text"],
-        content_desc=d["content_desc"],
-        resource_id=d["resource_id"],
-        package=d["package"],
-        index=d["index"],
-        bounds=d["bounds"],
-        x=d["x"],
-        y=d["y"],
-        width=d["width"],
-        height=d["height"],
-        clickable=d["clickable"],
-        enabled=d["enabled"],
-        scrollable=d["scrollable"],
-        checkable=d["checkable"],
-        checked=d["checked"],
-        focusable=d["focusable"],
-        long_clickable=d["long_clickable"],
-    )
 
 
 class U2Engine:
@@ -205,27 +178,23 @@ class U2Engine:
     def screenshot_file(self, path: str) -> None:
         self._u2.screenshot().save(path)
 
-    def dump_hierarchy(self) -> list[Node]:
-        """u2 XML dump（3 层 fallback）→ algorithms.hierarchy 解析 → Node 列表。"""
-        raw = None
+    def dump_hierarchy_xml(self) -> str:
+        """层级原始 XML 文本（3 层 fallback：默认 / 不压缩 / 不压缩且美化）。
+
+        只取数不解析：解析由调用方经 `algorithms.hierarchy` 完成，本模块不 import 算法层。
+        全部策略失败时抛错，不保留空串等假数据。
+        """
         last_error = None
-        try:
-            raw = self._u2.dump_hierarchy()
-        except Exception as e:
-            last_error = e
-        if raw is None:
+        for kwargs in ({}, {"compressed": False}, {"compressed": False, "pretty": True}):
             try:
-                raw = self._u2.dump_hierarchy(compressed=False)
+                raw = self._u2.dump_hierarchy(**kwargs)
             except Exception as e:
-                last_error = last_error or e
-        if raw is None:
-            try:
-                raw = self._u2.dump_hierarchy(compressed=False, pretty=True)
-            except Exception as e:
-                last_error = last_error or e
-        if raw is None:
-            raise RuntimeError(f"dump_hierarchy all strategies failed: {last_error}")
-        return [_to_node(d) for d in parse_hierarchy_xml(raw)]
+                last_error = e
+                continue
+            if not raw:
+                continue
+            return raw.decode("utf-8") if isinstance(raw, bytes) else raw
+        raise RuntimeError(f"dump_hierarchy all strategies failed: {last_error}")
 
     def app_current(self) -> dict:
         return self._u2.app_current()
@@ -288,7 +257,8 @@ class U2Engine:
         self._u2.shell(f"input keyevent {key}")
 
     def shell(self, cmd: str) -> str:
-        return self._u2.shell(cmd)
+        """命令标准输出（取 u2 原生响应的 output，不泄漏原生对象）。"""
+        return self._u2.shell(cmd).output
 
     def start_app(self, pkg: str) -> None:
         self._u2.app_start(pkg)

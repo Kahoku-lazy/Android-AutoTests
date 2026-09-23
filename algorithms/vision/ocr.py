@@ -4,13 +4,10 @@
 双检锁惰性加载保持。cnocr 重依赖惰性导入：不碰 OCR 的模块零代价。
 """
 
-import base64
-import io
 import logging
 import threading
 
 from cnocr import CnOcr
-from PIL import Image
 
 logger = logging.getLogger(__name__)
 
@@ -30,31 +27,25 @@ def _get_engine() -> CnOcr:
     return _engine
 
 
-def _pil_to_b64(img: Image.Image) -> str:
-    """Encode a PIL image as base64 JPEG (compact thumbnail)."""
-    buf = io.BytesIO()
-    img.convert("RGB").save(buf, format="JPEG", quality=50)
-    return base64.b64encode(buf.getvalue()).decode("ascii")
-
-
 def recognize(screenshot_path: str) -> list[dict]:
     """Run OCR on a full-resolution screenshot.
 
-    Returns a list of text regions, each with an axis-aligned bounding box
-    (device pixels, matching dump element x/y/width/height) and a cropped
-    base64 thumbnail. `bounds` 与 dump 元素同格式（[x,y][r,b]），坐标口径统一。
+    Returns a list of text regions, each with an axis-aligned bounding box in
+    device pixels (matching dump element x/y/width/height). `bounds` 与 dump
+    元素同格式（[x,y][r,b]），坐标口径统一。
 
     Args:
         screenshot_path: Path to a PNG screenshot file.
 
     Returns:
-        list[dict]: [{text, confidence, x, y, width, height, bounds,
-                      thumbnail, thumbnail_format}]
+        list[dict]: [{text, confidence, x, y, width, height, bounds, coordinates}]
+
+        `coordinates` 是文本框的**左上与右下两个对角点** `[[x, y], [x2, y2]]`
+        （设备像素）；`bounds` 是同一包围盒的字符串形式。
     """
     engine = _get_engine()
     # cnocr returns [{text, score, position}] — position is a (N,2) array of corner points.
     results = engine.ocr(screenshot_path)
-    img = Image.open(screenshot_path)
 
     texts = []
     for r in results:
@@ -67,7 +58,6 @@ def recognize(screenshot_path: str) -> list[dict]:
         width, height = int(max(xs) - x), int(max(ys) - y)
         if width <= 0 or height <= 0:
             continue
-        thumbnail = _pil_to_b64(img.crop((x, y, x + width, y + height)))
         texts.append(
             {
                 "text": r.get("text", ""),
@@ -77,8 +67,7 @@ def recognize(screenshot_path: str) -> list[dict]:
                 "width": width,
                 "height": height,
                 "bounds": f"[{x},{y}][{x + width},{y + height}]",
-                "thumbnail": thumbnail,
-                "thumbnail_format": "jpeg",
+                "coordinates": [[x, y], [x + width, y + height]],
             }
         )
     return texts

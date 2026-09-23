@@ -3,7 +3,7 @@
 ## Purpose
 
 `/api/` 路由与它的全部调用方共用**一种**写法：路径以 `/` 结尾，缺失即 404。
-本能力规定路由定义、网关重定向策略，以及端到端调用面（前端 API 层、测试用例、端点资产目录）
+本能力规定路由定义、网关重定向策略，以及端到端调用面（前端 API 层、测试用例）
 与该约定的一致性要求，使"路径写错"表现为确定的 404，而不是被网关静默纠正成另一种写法。
 
 ## Requirements
@@ -34,13 +34,12 @@
 - **WHEN** 遍历 `get_resolver()` 的全部 `/api/` 路由
 - **THEN** 每一条都以 `/` 结尾
 
-### Requirement: 端到端调用方遵循唯一写法
+### Requirement: 前端与测试调用面遵循唯一写法
 
 全部调用方的 `/api/` 路径 SHALL 带尾斜杠，且 SHALL 能在 Django 路由表中解析命中：
 
 - **前端 API 层**：`frontend/src` 中作为 HTTP 调用参数的路径字面量
 - **测试调用面**：`tests/` 中的 HTTP 调用字面量，以及 `tests/api/case/*.yaml` 的 `path:` 字段
-- **端点资产目录**：`tools/seed_api_endpoints.py` 中的端点路径
 
 该一致性 SHALL 由 `tests/graybox/unit` 下的默认单元测试断言，MUST NOT 依赖运行中的服务，
 MUST NOT 依赖需要显式开启的环境变量或凭据。
@@ -57,12 +56,6 @@ MUST NOT 依赖需要显式开启的环境变量或凭据。
 - **WHEN** 检查 `tests/` 中的 HTTP 调用字面量与 `tests/api/case/*.yaml` 的 `path:` 字段
 - **THEN** 每条 `/api/` 路径均以 `/` 结尾，且能命中后端路由
 - **AND** 该检查由默认单元套件执行，不需要启动前后端服务
-
-#### Scenario: 端点资产目录
-
-- **WHEN** 检查 `tools/seed_api_endpoints.py` 中的端点路径
-- **THEN** 每条都带尾斜杠，且能命中后端路由
-- **AND** 该面与其余三个面由同一个默认单元测试守护
 
 #### Scenario: 负向用例显式登记
 

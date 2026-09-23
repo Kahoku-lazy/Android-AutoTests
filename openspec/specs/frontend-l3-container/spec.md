@@ -49,7 +49,7 @@ L3 内容容器（`.doc-body`）与页面根（`.doc-page`）的纸面 SHALL 为
 
 #### Scenario: Section skin is single-sourced
 
-- **WHEN** 比较 `/reports` 与 `/ai-assistant/evaluator` 的 `.doc-section` 计算样式
+- **WHEN** 比较 `/reports` 与 `/ai-assistant/knowledge` 的 `.doc-section` 计算样式
 - **THEN** 背景、描边宽度与颜色、圆角、阴影、内边距同源（同为墨色实线描边，而非 `1px` 近白线）
 - **AND** 标题字号同为全局 `--app-size-md`
 

@@ -8,10 +8,8 @@
 
 ## 关联文档
 
-<!-- 必填：关联的项目文档编号，对照 dev_docs/文档编号对照表.md
-     - PRD：dev_docs/02-PRD需求/PRD-xx-xxx.md（需求与验收条件来源）
-     - ARCH：dev_docs/03-设计与架构/ARCH-xx-xxx.md（模块职责与设计约束）
-     - UI 规范：dev_docs/05-开发与测试/设计-xxx前端UI规范与checklist.md
+<!-- 必填：关联的需求编号。
+     需求入口一律从 PRD 开始，只写编号，不写文档文件路径。
      无关联文档时写明原因（如纯重构 / 工具链 / 文档类变更）。 -->
 
 ## Capabilities

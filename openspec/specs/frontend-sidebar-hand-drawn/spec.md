@@ -36,9 +36,22 @@
 - **WHEN** 侧栏展开
 - **THEN** 用户仍能读到「AI」与「自动化测试平台」（或等价现有品牌文案）
 
-### Requirement: Interaction behavior unchanged
-折叠、拖拽调宽、账号切换菜单、退出登录的行为 MUST 保持可用；本变更 MUST NOT 改变路由 path 或鉴权流程。
+### Requirement: Sidebar interactions preserved without account switching
 
-#### Scenario: Collapse and account menu still work
-- **WHEN** 用户折叠侧栏或打开账号菜单并退出
-- **THEN** 行为与改前一致（可折叠、可切换/退出），仅外观变化
+侧栏的折叠、拖拽调宽与退出登录行为 MUST 保持可用；侧栏 MUST NOT 再提供账号切换菜单或「添加账号」入口，底部账号区 SHALL 只呈现当前账号名。本变更 MUST NOT 改变路由 path 或鉴权流程。
+
+#### Scenario: Collapse and resize still work
+
+- **WHEN** 用户折叠侧栏并拖拽调整宽度
+- **THEN** 侧栏可折叠、宽度可调整，行为与改前一致
+
+#### Scenario: Logout returns to login page
+
+- **WHEN** 用户点击侧栏的「退出」
+- **THEN** 登出后回到 `/login`，不再停留在工作台
+
+#### Scenario: No account switch menu remains
+
+- **WHEN** 用户点击侧栏底部的当前账号名
+- **THEN** 不展开任何账号列表，也不出现「添加账号」入口
+- **AND** 界面只显示当前账号名（折叠态下通过 title 提示）

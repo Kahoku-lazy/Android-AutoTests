@@ -55,14 +55,17 @@
 
 本文件不放具体语言细节。与具体语言、具体模块有关的要求，写在对应层级的 `AGENTS.md`（分级见上）：后端 Python 与模块边界 → `apps/AGENTS.md`；前端 Vue / TS、版式与设计令牌 → `frontend/AGENTS.md`；测试 → `tests/AGENTS.md`；引擎 → `engines/ai/AGENTS.md`。
 
-**已知盲区登记（2026-09-23）**：以下四道检查已接入 CI，但当前**仅警告、不拦截**——违反不阻断构建，只落在日志里：
+**门禁清单（2026-09-23 更新）**：以下检查已接入本地门禁（`python run.py check`）与 CI，且均为**拦截型**——违反即失败：
 
-- 前端 `eslint`（范围 `frontend/src/`）
-- 前端类型检查 `vue-tsc`（范围 `frontend/src/`，当前 `tsconfig` 未开严格模式）
+- 前端 `eslint`（范围 `frontend/src/`；当前 **69 条 warning、0 error**，脚本退出码为 0）
+- 前端类型检查 `vue-tsc`（范围 `frontend/src/`；`tsconfig` 未开严格模式）
 - `prettier` 的 `.ts` 覆盖（CI 既有的 prettier 步骤只查 `.vue/.js/.css`）
 - 后端 `ruff` 的 `engines/` 覆盖（CI 既有的 ruff 步骤只查 `apps/ config/ gateway/ shared/ models/`）
+- 静默吞异常（`tools/check_gates.py` 的 `silent-except`：处理器体只有 `pass`/`continue`/`break`，且无 `raise`、无日志、无注释即失败；明确选择忽略请写注释说明）
 
-存量基线（本地实测）：`.ts` 格式 **98 个文件**不合规、类型报错 **3 处**、eslint **69 条警告（0 报错）**、`engines/` 后端检查 **0 问题**。存量清理后由独立变更把这四道转为拦截。
+上述检查的存量已清零：`.ts` 格式 98 → 0 · 类型报错 3 → 0 · 静默吞异常 8 → 0 · `engines/` 本就 0。
+
+**仍红的一项**：Vue 文件体积（6 个文件超 500 行，最大 868 行）——既有拦截型门禁，属尚未清算的存量，另立变更处理。
 
 
 

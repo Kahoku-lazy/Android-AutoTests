@@ -82,11 +82,12 @@ jobs:
         run: cd frontend && npx prettier --check "src/**/*.{vue,js,css}"
 
   # ═══════════════════════════════════════════
-  # Job 6: 建议性检查（仅警告，不影响运行结论）
-  #   覆盖既有门禁未触及的范围：engines/、.ts、eslint、vue-tsc
+  # Job 6: 静态检查（拦截型）
+  #   覆盖既有 job 未触及的范围：engines/、.ts、eslint、vue-tsc、静默吞异常
   #   独立成 job，避免被前面拦截型步骤的失败跳过
+  #   2026-09-23 由「仅警告」转为「拦截」：存量已清零
   # ═══════════════════════════════════════════
-  advisory-checks:
+  static-checks:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -102,25 +103,17 @@ jobs:
       - name: Install ruff
         run: python -m pip install --upgrade pip ruff
 
-      # A1. Python 格式（engines/）
-      - name: Ruff format check engines (warning only)
-        run: |
-          ruff format --check engines/ > /tmp/ruff-format-engines.log 2>&1 || {
-            echo "::warning::ruff format 在 engines/ 发现问题（仅警告，不拦截）"
-            tail -n 40 /tmp/ruff-format-engines.log
-            exit 0
-          }
-          tail -n 5 /tmp/ruff-format-engines.log
+      # S1. Python 格式（engines/）
+      - name: Ruff format check engines
+        run: ruff format --check engines/
 
-      # A2. Python lint（engines/）
-      - name: Ruff lint engines (warning only)
-        run: |
-          ruff check engines/ > /tmp/ruff-lint-engines.log 2>&1 || {
-            echo "::warning::ruff lint 在 engines/ 发现问题（仅警告，不拦截）"
-            tail -n 40 /tmp/ruff-lint-engines.log
-            exit 0
-          }
-          tail -n 5 /tmp/ruff-lint-engines.log
+      # S2. Python lint（engines/）
+      - name: Ruff lint engines
+        run: ruff check engines/
+
+      # S3. 静默吞异常（AST 检查，见 tools/check_gates.py）
+      - name: Silent exception check
+        run: python tools/check_gates.py --only silent-except
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -132,38 +125,17 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm ci
 
-      # A3. 前端代码检查（eslint）
-      - name: ESLint (warning only)
-        run: |
-          cd frontend
-          npm run lint > /tmp/eslint.log 2>&1 || {
-            echo "::warning::eslint 未通过（仅警告，不拦截）"
-            tail -n 40 /tmp/eslint.log
-            exit 0
-          }
-          tail -n 5 /tmp/eslint.log
+      # S4. 前端代码检查（eslint）
+      - name: ESLint
+        run: cd frontend && npm run lint
 
-      # A4. 前端类型检查（vue-tsc）
-      - name: TypeScript check (warning only)
-        run: |
-          cd frontend
-          npm run typecheck > /tmp/vue-tsc.log 2>&1 || {
-            echo "::warning::vue-tsc 报错（仅警告，不拦截）"
-            tail -n 40 /tmp/vue-tsc.log
-            exit 0
-          }
-          tail -n 5 /tmp/vue-tsc.log
+      # S5. 前端类型检查（vue-tsc）
+      - name: TypeScript check
+        run: cd frontend && npm run typecheck
 
-      # A5. Prettier 覆盖 .ts（既有 Prettier check 只查 vue/js/css）
-      - name: Prettier check ts (warning only)
-        run: |
-          cd frontend
-          npx prettier --check "src/**/*.ts" > /tmp/prettier-ts.log 2>&1 || {
-            echo "::warning::prettier 在 .ts 上发现问题（仅警告，不拦截）"
-            tail -n 40 /tmp/prettier-ts.log
-            exit 0
-          }
-          tail -n 5 /tmp/prettier-ts.log
+      # S6. Prettier 覆盖 .ts（既有 Prettier check 只查 vue/js/css）
+      - name: Prettier check ts
+        run: cd frontend && npx prettier --check "src/**/*.ts"
 
   # ═══════════════════════════════════════════
   # Job 3: 硬编码凭据安全扫描

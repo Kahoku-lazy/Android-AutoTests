@@ -6,6 +6,7 @@
 用法:
     python run.py check          # 推荐入口
     python tools/check_gates.py  # 直接运行
+    python tools/check_gates.py --only silent-except   # 只跑指定门禁（供 CI 调用）
 
 退出码:
     0  全部阻塞项通过（告警项失败不影响退出码）
@@ -14,6 +15,7 @@
 
 from __future__ import annotations
 
+import argparse
 import ast
 import os
 import re
@@ -205,7 +207,7 @@ def silent_except_gate() -> Gate:
     return Gate(
         "silent-except",
         "静默吞异常（捕获后什么都不做且无注释说明）",
-        blocking=False,
+        blocking=True,
         run=_run,
     )
 
@@ -276,32 +278,32 @@ def build_gates() -> list[Gate]:
             blocking=True,
             cwd=FRONTEND,
         ),
-        # Job 6 advisory-checks（本次接入 CI 的告警项）
+        # Job 6 static-checks（原告警项，2026-09-23 起转为拦截）
         cmd_gate(
             "ruff-engines-format",
-            "Python 格式（engines/，仅告警）",
+            "Python 格式（engines/）",
             [py, "-m", "ruff", "format", "--check", "engines/"],
-            blocking=False,
+            blocking=True,
         ),
         cmd_gate(
             "ruff-engines-lint",
-            "Python lint（engines/，仅告警）",
+            "Python lint（engines/）",
             [py, "-m", "ruff", "check", "engines/"],
-            blocking=False,
+            blocking=True,
         ),
-        cmd_gate("eslint", "前端代码检查（eslint，仅告警）", [NPM, "run", "lint"], False, FRONTEND),
+        cmd_gate("eslint", "前端代码检查（eslint）", [NPM, "run", "lint"], True, FRONTEND),
         cmd_gate(
             "vue-tsc",
-            "前端类型检查（vue-tsc，仅告警）",
+            "前端类型检查（vue-tsc）",
             [NPM, "run", "typecheck"],
-            blocking=False,
+            blocking=True,
             cwd=FRONTEND,
         ),
         cmd_gate(
             "prettier-ts",
-            "前端格式（prettier，.ts，仅告警）",
+            "前端格式（prettier，.ts）",
             [NPX, "prettier", "--check", "src/**/*.ts"],
-            blocking=False,
+            blocking=True,
             cwd=FRONTEND,
         ),
         # Job 3 security-scan（规则 3 在 CI 中仅提示，不置违规）
@@ -386,7 +388,21 @@ def main() -> int:
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
 
+    parser = argparse.ArgumentParser(description="本地质量门禁执行器")
+    parser.add_argument("--only", default="", help="只运行指定门禁，逗号分隔（供 CI 单独调用某项）")
+    args = parser.parse_args()
+
     gates = build_gates()
+    if args.only:
+        wanted = {name.strip() for name in args.only.split(",") if name.strip()}
+        known = {gate.name for gate in gates}
+        unknown = wanted - known
+        if unknown:
+            print(f"未知门禁：{', '.join(sorted(unknown))}")
+            print(f"可用门禁：{', '.join(sorted(known))}")
+            return 2
+        gates = [gate for gate in gates if gate.name in wanted]
+
     results: list[tuple[Gate, bool, list[str]]] = []
     for gate in gates:
         ok, lines = gate.run()

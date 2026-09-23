@@ -2,7 +2,7 @@
 /** 设备卡片 — 横向长方形极简几何 */
 import { computed } from 'vue'
 import { statusTag, displayModel, deviceAddress, formatRelativeTime } from '../helpers'
-import { RUNNER_OCCUPIED_PREFIXES } from '../constants'
+import { isRunnerOccupied } from '@/shared/helpers/deviceOccupancy'
 import type { DeviceRecord } from '@/shared/types/device'
 
 const props = defineProps<{
@@ -28,11 +28,7 @@ const statusText = computed(() => statusTag(props.device.status).text)
 
 const isWifi = computed(() => props.device.connection_type === 'WIFI')
 
-const isRunnerOccupied = computed(
-  () =>
-    !!props.device.occupied_by &&
-    RUNNER_OCCUPIED_PREFIXES.some((p) => props.device.occupied_by!.startsWith(p)),
-)
+const runnerOccupied = computed(() => isRunnerOccupied(props.device.occupied_by))
 
 function go() {
   emit('click', props.device)
@@ -98,7 +94,7 @@ function go() {
           @click.stop="emit('lock', device)"
         >{{ device.locked ? '解锁' : '锁定' }}</button>
         <button
-          v-if="device.occupied_by && !isRunnerOccupied"
+          v-if="device.occupied_by && !runnerOccupied"
           type="button"
           class="card-btn card-btn--warn"
           @click.stop="emit('release', device)"

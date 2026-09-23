@@ -2,7 +2,7 @@
 /** 设备操作列 — 锁定/公开、强制释放、删除 */
 import { computed } from 'vue'
 import type { DeviceRecord } from '@/shared/types/device'
-import { RUNNER_OCCUPIED_PREFIXES } from '../constants'
+import { isRunnerOccupied } from '@/shared/helpers/deviceOccupancy'
 
 const props = defineProps<{
   device: DeviceRecord
@@ -14,10 +14,7 @@ const emit = defineEmits<{
   disconnect: [device: DeviceRecord]
 }>()
 
-const isRunnerOccupied = computed(() =>
-  !!props.device.occupied_by &&
-  RUNNER_OCCUPIED_PREFIXES.some((p) => props.device.occupied_by!.startsWith(p)),
-)
+const runnerOccupied = computed(() => isRunnerOccupied(props.device.occupied_by))
 </script>
 
 <template>
@@ -29,7 +26,7 @@ const isRunnerOccupied = computed(() =>
       @click="emit('lock', device)"
     >{{ device.locked ? '已锁定' : '公开' }}</el-button>
     <el-button
-      v-if="device.occupied_by && !isRunnerOccupied"
+      v-if="device.occupied_by && !runnerOccupied"
       size="small" type="warning" plain
       @click="emit('release', device)"
     >强制释放</el-button>

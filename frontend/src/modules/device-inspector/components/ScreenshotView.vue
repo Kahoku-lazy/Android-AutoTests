@@ -1,8 +1,9 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { animate } from 'animejs'
-import { mediaUrl } from '../store'
+import { mediaUrl } from '@/shared/helpers/mediaUrl'
 import { IconDevice } from '@/shared/icons'
+import { boxOf, pickElementAt } from '../helpers/screenshotGeometry'
 
 /** groupColor 未传或非法时的兜底色（沿用历史分组框的蓝，避免整屏无框线） */
 const FALLBACK_GROUP_COLOR = '#409eff'
@@ -119,7 +120,7 @@ watch(() => props.screenshotPath, (val) => {
 })
 
 /** 坐标与比例的唯一基准：已加载截图的真实像素（截图就是整屏图）。
- *  截图未就绪时用传入的屏幕尺寸兜底——已保存页面不携带屏幕尺寸，不能拿它当基准。 */
+ *  截图未就绪（或历史快照缺屏幕尺寸）时，用传入的 screen_w / screen_h 兜底。 */
 function sourceSize() {
   const img = imgRef.value
   const w = img?.naturalWidth || props.screenW
@@ -204,33 +205,6 @@ function elKey(el) {
   if (el._idx !== undefined) return `i${el._idx}`
   if (el.seq !== undefined) return `s${el.seq}`
   return el
-}
-
-/** 框归一化：优先取 coords{x,y,w,h}（分层接口形态），其次 x/y/width/height，最后从 bounds 文本解析 */
-function boxOf(el) {
-  const coords = el?.coords
-  if (coords) {
-    const cx = Number(coords.x)
-    const cy = Number(coords.y)
-    const cw = Number(coords.w)
-    const ch = Number(coords.h)
-    if ([cx, cy, cw, ch].every(Number.isFinite)) return { x: cx, y: cy, w: cw, h: ch }
-  }
-  let x = Number(el?.x)
-  let y = Number(el?.y)
-  let w = Number(el?.width)
-  let h = Number(el?.height)
-  if (![x, y, w, h].every(Number.isFinite) && typeof el?.bounds === 'string') {
-    const m = el.bounds.match(/\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]/)
-    if (m) {
-      x = Number(m[1])
-      y = Number(m[2])
-      w = Number(m[3]) - x
-      h = Number(m[4]) - y
-    }
-  }
-  if (![x, y, w, h].every(Number.isFinite)) return null
-  return { x, y, w, h }
 }
 
 function strokeBox(ctx, box, scale) {
@@ -364,6 +338,7 @@ watch(() => props.elements, () => scheduleGroupDraw())
 watch(() => props.groupColor, () => scheduleGroupDraw())
 watch([() => props.screenW, () => props.screenH], () => scheduleGroupDraw())
 
+/** 鼠标位置 → 画布坐标（DOM 基准换算留在这里），命中取舍交给纯函数 */
 function hitTest(clientX, clientY) {
   const img = imgRef.value
   if (!img) return null
@@ -372,20 +347,7 @@ function hitTest(clientX, clientY) {
   if (!s) return null
   const x = Math.round((clientX - rect.left) / s)
   const y = Math.round((clientY - rect.top) / s)
-  let best = null
-  let bestArea = Infinity
-  for (const el of props.elements) {
-    const box = boxOf(el)
-    if (!box || box.w <= 0 || box.h <= 0) continue
-    if (x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h) {
-      const area = box.w * box.h
-      if (area > 0 && area < bestArea) {
-        bestArea = area
-        best = el
-      }
-    }
-  }
-  return best
+  return pickElementAt(props.elements, x, y)
 }
 
 function onScreenClick(e) {

@@ -191,26 +191,9 @@
    3. 统一信封。
 4. **校验** —— 1 条：「无效的分页参数」（`int()` 转换失败时）。
 
-快照详情接口：GET api/inspector/snapshots/{id}/
-
-1. **入口**
-   1. 方法与路径：`GET api/inspector/snapshots/{id}/`；尾斜杠必须带。
-   2. **需要登录**；携带路径参数 `id`（快照 ID）。
-   `apps/device_inspector/urls.py`
-2. **业务规则**
-   1. 只读，不改任何东西。
-   2. **只给本人的快照** —— 按 `id + created_by` 联合查询；不存在或非本人一律同一个结论，不透露他人快照是否存在。
-   3. 返回体与「获取快照」成功体同构（`snapshot_to_dict` 共用）。
-   `views.py` · `api.py`
-3. **返回**
-   1. `200` 快照全量 JSON。
-   2. `404`「快照不存在」。
-   3. 统一信封。
-4. **校验** —— 1 条：「快照不存在」。
-
 #### 数据表单
 
-无表单，只读 `di_snapshots`；列表不返回 `dump_json` / `ocr_json`，详情返回。
+无表单，只读 `di_snapshots`；列表不返回 `dump_json` / `ocr_json`（快照全量 JSON 已随详情端点退役，不再对外提供）。
 
 ### 元素分组（分层查询）
 
@@ -511,7 +494,7 @@
    - 未选设备【业务规则 2】—— WHEN `serial` 为空 → THEN `409`「未选择设备，请先连接设备」
    - 未注册设备【业务规则 2】—— WHEN `serial` 不在设备池 → THEN `409`「设备未注册」
    - 方式非法【业务规则 1】—— WHEN `method` 不是 `dump` / `ocr` → THEN `400`「无效的获取方法」
-   - 成功落库【业务规则 8】—— WHEN 校验通过且抓取成功 → THEN `di_snapshots` 多一行，`created_by` 为当前用户，返回体与详情端点同构
+   - 成功落库【业务规则 8】—— WHEN 校验通过且抓取成功 → THEN `di_snapshots` 多一行，`created_by` 为当前用户，返回体与快照全量 JSON 同构（`snapshot_to_dict`）
    - 失败不落库【业务规则 7】—— WHEN dump 抓取抛异常 → THEN 返回 `500`，且不产生快照行、本批截图与缩略图被清理
    - 不占设备【业务规则 3 · 10】—— WHEN 完成一次抓取 → THEN 设备的 `occupied_by` 与 `status` 未被本模块改写，Redis 无新键
 
@@ -546,7 +529,6 @@
    - 列表分页【业务规则 1 · 2】—— WHEN 带 `offset/limit` 请求 → THEN 只返回本人快照、按创建时间倒序
    - limit 上限【入口 3】—— WHEN `limit=500` → THEN 实际返回不超过保留上限 10 条，而 `total` 仍是真实总数
    - 分页参数非法【校验】—— WHEN `offset` / `limit` 非整数 → THEN `400`「无效的分页参数」
-   - 详情只给本人【业务规则 2】—— WHEN 用他人的快照 ID 请求详情 → THEN `404`「快照不存在」，不透露存在性
 
    > **对应规格**：`device-inspector-page`（快照列表如实反映总量）
 
@@ -555,9 +537,7 @@
    | 编号 | 标题 | 请求 | 期望 |
    |---|---|---|---|
    | TC-INS-002 | 快照列表未登录 | `GET /api/inspector/snapshots/`（无 token） | `HTTP 401` +「请先登录」|
-   | TC-INS-003 | 快照详情未登录 | `GET /api/inspector/snapshots/1/`（无 token） | `HTTP 401` +「请先登录」|
    | TC-INS-020 | 快照列表正常返回 | 带 token | `HTTP 200` + schema `snapshot_list`（`{total, items}`）|
-   | TC-INS-030 | 快照详情不存在 | `.../snapshots/999999999/` | `HTTP 404` +「快照不存在」|
 
    > **未落地**：**跨用户归属**（需两个账号）与 `limit` 截断到保留上限的边界断言。
 
@@ -717,15 +697,15 @@
 
 3. **自动化覆盖的测试用例**
    - `frontend/tests/device-inspector/p0/store.spec.ts` —— 覆盖「捕获后端原因」与「按来源重试」，是模块内论证最完整的一段
-   - **缺口：`snapshot`（详情）重试分支未断言；错误条组件本身未测。**
+   - **缺口：错误条组件本身未测（四类重试来源已由 store 用例覆盖）。**
 
 ### 怎么跑这些测试
 
 ```
-python -m pytest tests/api/test_inspector.py -q             # 检查器接口用例（14 条；需后端 :8766 已启动）
+python -m pytest tests/api/test_inspector.py -q             # 检查器接口用例（10 条；需后端 :8766 已启动）
 python -m pytest tests/graybox/unit -q                      # 灰盒单元层（含 test_element_layers.py · test_inspector_*.py）
 python -m pytest tests/graybox/integration -q               # 灰盒集成层（含 test_inspector_layers_api.py 等四个文件）
-cd frontend && npx vitest run tests/device-inspector        # 前端检查器 P0（4 个文件 / 19 个用例）
+cd frontend && npx vitest run tests/device-inspector        # 前端检查器 P0（6 个文件 / 39 个用例）
 ```
 
 > 端到端层（`python -m pytest tests/e2e`）当前只覆盖登录模块，**不含检查器用例**。
@@ -736,7 +716,7 @@ cd frontend && npx vitest run tests/device-inspector        # 前端检查器 P0
 
 1. **接口文档有两处与代码相反** —— `dev_docs/DEV_TEST/接口文档/API-设备检查器.md` 的 save-elements 错误表写「目录最多嵌套 5 层」（`:380`），而实际执行路径 `apps/element_locator/api_snapshot.py:48` 是 `MAX_DEPTH = 20`、文案也是 20 层（文档里的 5 层来自 `page_tree.MAX_PAGE_TREE_DEPTH`，是元素定位页面树自己的口径）；同一张表还列了「同名节点「{segment}」不是目录」，**全仓代码里不存在这句文案**（目录解析只查 `LocatorDirectory`，不会撞到页面节点）。本 PRD 以**代码**为准。
 
-2. **同一资源的不存在语义有两套状态码** —— 快照详情 / 删除两处在「不存在或非本人」时返回 `404`，而保存端点的同一条件返回 `400`（`apps/device_inspector/api.py:210` 抛 `ValueError`，`views.py:98-99` 统一翻 400）。原因是该分支与「页面名称不能为空」共用 `ValueError` 出口。前端按文案呈现，不受影响；但契约上不一致。
+2. **同一资源的不存在语义有两套状态码** —— 快照删除端点在「不存在或非本人」时返回 `404`，而保存端点的同一条件返回 `400`（`apps/device_inspector/api.py:210` 抛 `ValueError`，`views.py:98-99` 统一翻 400）。原因是该分支与「页面名称不能为空」共用 `ValueError` 出口。前端按文案呈现，不受影响；但契约上不一致。
 
 3. ~~**页面回看端点没有归属过滤**~~（端点已随功能删除） —— `api.get_page_view(page_id)` 直接转发 `element_locator.api.get_page_full`，**不带 `created_by` 条件**（`apps/device_inspector/api.py:258-262`）；而快照的五个端点全部按 `created_by` 限定本人。任何已登录用户只要知道（或枚举）`page_id` 就能读到任意元素定位页面的截图路径与元素，属跨用户越权的潜在面。本次只登记，不改动。
 
@@ -748,12 +728,12 @@ cd frontend && npx vitest run tests/device-inspector        # 前端检查器 P0
 
 7. **`release_occupy` 的文案与真实归属已漂移** —— 视图与 manager 的 docstring 都写「释放设备检查器占用」（`apps/device_pool/views.py:325`、`manager.py:514`），但检查器抓取全程**只读不写** `occupied_by`；实际占用者是设备管理的观察连接（`occupy_observe`，把 `occupied_by` 设为 `user_id`）。用「释放」键前需知道它解除的不是检查器。
 
-9. **快照详情端点已无前端调用方** —— `GET /api/inspector/snapshots/{id}/` 仍在路由表与接口文档中、并有两条接口用例（未登录 401 / 不存在 404），但前端已改为一律消费分层端点：`store.viewSnapshot` 内部就是 `fetchLayers`（`store.ts:237-241`），`api.ts` 中已无 `apiGetSnapshot`。端点的去留与「已无产品入口的端点如何处理」是产品决定，本次只登记。
+9. ~~**快照详情端点已无前端调用方**~~ —— 已由变更 `harden-inspector-frontend-and-retire-detail-api` 解决：路由、视图、公开 API 函数 `get_snapshot`、接口文档章节与两条接口用例（未登录 401 / 不存在 404）一并退役，快照回看一律经分层端点（`store.viewSnapshot` → `fetchLayers`）。
 
 10. ~~**「保存到元素定位」前端已冻结，而规格仍按可用描述**~~ —— 已由变更 `rework-save-to-elements` 解决：入口已解冻，勾选以**坐标顺序序号**为唯一口径，未勾选时在入口与弹窗确认两处拦截；规格 `device-inspector-page` 与 `inspector-save-to-elements` 已按新口径改写。
 
-8. **测试覆盖仍不完整** —— 现存资产：接口 `tests/api/case/inspector.yaml` 14 条；灰盒单元 `test_element_layers.py` / `test_inspector_capture_dump.py` / `test_inspector_ocr_tool.py`；灰盒集成 `test_inspector_layers_api.py` / `test_inspector_snapshot_retention.py` / `test_inspector_snapshot_media.py` / `test_inspector_save_element_aliases.py`；前端 P0 `frontend/tests/device-inspector/p0/` 4 个文件。**空白有三块**：
-   1. **手机屏幕的绘制无自动化** —— canvas 上的分组框（实线 / 虚线）、悬停命中、选中后滚动，jsdom 下无法覆盖，只有代码阅读与人工验证。
-   2. **组件层只覆盖了元素表** —— 结构面板的分页与缩略图列有断言，但勾选筛减、内联重命名、快照抽屉的删除二次确认之外的交互，以及保存弹窗仍无断言。
+8. **测试覆盖仍不完整** —— 现存资产：接口 `tests/api/case/inspector.yaml` 10 条；灰盒单元 `test_element_layers.py` / `test_inspector_capture_dump.py` / `test_inspector_ocr_tool.py`；灰盒集成 `test_inspector_layers_api.py` / `test_inspector_snapshot_retention.py` / `test_inspector_snapshot_media.py` / `test_inspector_save_element_aliases.py`；前端 P0 `frontend/tests/device-inspector/p0/` 6 个文件（39 个用例）。**空白有三块**：
+   1. **手机屏幕的绘制无自动化** —— 框归一化与命中取舍已抽成纯函数并有单测（`helpers/screenshotGeometry.ts`），但 canvas 上的分组框（实线 / 虚线）、悬停与选中的实际绘制、选中后滚动仍无法在 jsdom 覆盖，只有代码阅读与人工验证。
+   2. **组件层覆盖仍不完整** —— 结构面板的分页 / 缩略图列与保存弹窗的目录来源、两条提交分支已有断言，但勾选筛减、内联重命名、快照抽屉的删除二次确认之外的交互仍无断言。
    3. **端到端层为 0** —— 端到端套件目前只覆盖登录模块，检查器的骨架常驻、灰键门槛、删除与清空复位、保存筛减都没有真链路守护。
    另需注意：**抓取成功路径本身需要真机**，接口层按约定留给集成测试与真机验证，因此 `capture` 的成功体、占用冲突与失败清理在任何自动化层都还没有守护。

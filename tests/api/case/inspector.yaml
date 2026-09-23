@@ -33,19 +33,6 @@
     check:
       message: "请先登录"
 
-- id: "TC-INS-003"
-  name: "snapshot-detail-no-token"
-  title: "快照详情未登录"
-  point: "无 Bearer token 访问详情，返回 401 请先登录"
-  auth: "none"
-  method: "GET"
-  path: "/api/inspector/snapshots/1/"
-  expect:
-    status: 401
-    schema: "error"
-    check:
-      message: "请先登录"
-
 - id: "TC-INS-005"
   name: "snapshot-delete-no-token"
   title: "快照删除未登录"
@@ -137,19 +124,6 @@
   expect:
     status: 200
     schema: "snapshot_list"
-
-- id: "TC-INS-030"
-  name: "snapshot-detail-not-exist"
-  title: "快照详情不存在"
-  point: "快照 ID 不存在返回 404 快照不存在"
-  auth: "required"
-  method: "GET"
-  path: "/api/inspector/snapshots/999999999/"
-  expect:
-    status: 404
-    schema: "error"
-    check:
-      message: "快照不存在"
 
 - id: "TC-INS-050"
   name: "snapshot-delete-not-exist"

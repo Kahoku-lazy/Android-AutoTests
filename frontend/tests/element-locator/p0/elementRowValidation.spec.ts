@@ -12,7 +12,6 @@ import {
 } from '@/modules/element-locator/helpers/elementRowValidation'
 import {
   INTERACTION_FLAGS,
-  elementThumbnailUrl,
   interactionLabels,
 } from '@/modules/element-locator/helpers/elementPresentation'
 
@@ -45,11 +44,6 @@ describe('[P0] elementRowValidation', () => {
 })
 
 describe('[P0] elementPresentation', () => {
-  it('elementThumbnailUrl：有路径才产 /media/ URL', () => {
-    expect(elementThumbnailUrl('locator/pages/1/el_a.png')).toBe('/media/locator/pages/1/el_a.png')
-    expect(elementThumbnailUrl('')).toBe('')
-  })
-
   it('interactionLabels：七项交互标注只列真值为真的项', () => {
     expect(INTERACTION_FLAGS).toHaveLength(7)
     expect(

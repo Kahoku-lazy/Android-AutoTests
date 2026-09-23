@@ -8,6 +8,7 @@ import type {
   TaskRunToolTrace,
   TaskRunVerifierOut,
 } from '@/shared/types/ai'
+import { mediaUrl } from '@/shared/helpers/mediaUrl'
 
 export type TaskStepPhase = 'pending' | 'running' | 'pass' | 'fail'
 
@@ -17,7 +18,7 @@ export interface TaskStepAttempt {
   executorMessage: string
   verifierResult: string
   actual: string
-  /** 验收证据截图 URL（/media/...），无图为空 */
+  /** 验收证据截图 URL（媒体相对路径经共享登记处拼接），无图为空 */
   screenshotUrl: string
   executorTrace: TaskRunRoleTrace
   verifierTrace: TaskRunRoleTrace
@@ -141,7 +142,7 @@ export function attemptScreenshotUrl(rel?: string): string {
   const path = (rel || '').trim()
   if (!path) return ''
   if (path.startsWith('http') || path.startsWith('data:') || path.startsWith('/')) return path
-  return `/media/${path}`
+  return mediaUrl(path)
 }
 
 function lastAttemptPassed(attempts: TaskStepAttempt[]): boolean {

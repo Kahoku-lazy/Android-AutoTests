@@ -84,6 +84,6 @@
 |---|---|---|---|
 | 登录鉴权 | tests/api/test_login_page.py | case/login.yaml、case/register.yaml | 登录 / 注册 |
 | 设备管理 | tests/api/test_devices.py | case/devices.yaml | 设备列表 / 锁定 / 连接 / 断开 / 释放 / 心跳 / 当前设备 |
-| 设备检查器 | tests/api/test_inspector.py | case/inspector.yaml | 快照抓取 / 列表 / 详情 / 删除 / 保存到元素定位 / 页面回看 |
+| 设备检查器 | tests/api/test_inspector.py | case/inspector.yaml | 快照抓取 / 列表 / 删除 / 保存到元素定位（覆盖未登录、非法入参、资源不存在）|
 
 > 其余模块（元素定位 / 用例管理 / 执行引擎 / 测试报告 / AI 助手 / 工作流 / 评估器）接口测试脚本待补充。

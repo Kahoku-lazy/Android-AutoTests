@@ -10,7 +10,6 @@ __all__ = [
     "capture_snapshot",
     "clear_snapshots",
     "delete_snapshot",
-    "get_snapshot",
     "list_layers",
     "list_snapshots",
     "ocr_screen",
@@ -303,16 +302,6 @@ def list_layers(
         "limit": limit,
         "elements": matched[offset:] if limit is None else matched[offset : offset + limit],
     }
-
-
-def get_snapshot(snapshot_id: int, user_id: str = "") -> dict | None:
-    """快照详情全量 JSON（仅本人快照）；不存在返回 None。"""
-    from .models import Snapshot
-
-    snapshot = Snapshot.objects.filter(id=snapshot_id, created_by=user_id).first()
-    if snapshot is None:
-        return None
-    return snapshot_to_dict(snapshot)
 
 
 def _media_referenced(screenshot_path: str, thumbs_dir_rel: str) -> bool:

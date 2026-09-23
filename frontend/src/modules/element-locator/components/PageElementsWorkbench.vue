@@ -12,6 +12,7 @@ import AppTable from '@/shared/components/AppTable.vue'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import SkeletonCard from '@/shared/components/patterns/SkeletonCard.vue'
+import { mediaUrl } from '@/shared/helpers/mediaUrl'
 import EditableCell from './EditableCell.vue'
 import PageElementFormDialog from './PageElementFormDialog.vue'
 import type { PageElementFields } from '../api'
@@ -22,7 +23,7 @@ import {
   validateText,
   type TextField,
 } from '../helpers/elementRowValidation'
-import { elementThumbnailUrl, interactionLabels } from '../helpers/elementPresentation'
+import { interactionLabels } from '../helpers/elementPresentation'
 
 const props = defineProps<{ pageId: number }>()
 
@@ -168,7 +169,7 @@ defineExpose({ reload: load })
           <template #cell-thumbnail_path="{ row }">
             <img
               v-if="row.thumbnail_path && !brokenThumbs.has(row.id)"
-              :src="elementThumbnailUrl(row.thumbnail_path)"
+              :src="mediaUrl(row.thumbnail_path)"
               class="page-elements-thumb"
               alt=""
               @error="markThumbBroken(row)"

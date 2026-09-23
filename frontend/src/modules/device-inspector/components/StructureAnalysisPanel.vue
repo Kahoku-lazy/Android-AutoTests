@@ -6,7 +6,7 @@
  *  主定位一律取后端 primary，页面不再自行从候选里挑选。
  */
 import { ref, computed, nextTick, shallowRef, toRef, watch, watchPostEffect } from 'vue'
-import { useElementStore, mediaUrl } from '../store'
+import { useElementStore } from '../store'
 import {
   DEFAULT_PAGE_SIZE,
   ELEMENT_COLUMN_WIDTHS,
@@ -17,6 +17,7 @@ import {
 } from '../constants'
 import { usePagination } from '@/shared/composables/usePagination'
 import { useTableDragScroll } from '@/shared/composables/useTableDragScroll'
+import { mediaUrl } from '@/shared/helpers/mediaUrl'
 import { IconEdit } from '@/shared/icons'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import AppTable from '@/shared/components/AppTable.vue'

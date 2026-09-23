@@ -62,9 +62,6 @@ export const CONNECTION_TYPE_LABEL: ConnectionTypeLabelMap = {
   USB: 'USB 有线',
 }
 
-// ── Runner/占用前缀 ──
-export const RUNNER_OCCUPIED_PREFIXES: string[] = ['ai_agent', 'runner-', 'task-', 'run-']
-
 // ── 空状态文案 ──
 export const EMPTY_TEXT = {
   noDevices: '还没有可用设备',

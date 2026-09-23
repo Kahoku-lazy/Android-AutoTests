@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { ElMessage } from 'element-plus'
 import { formatApiError } from '@/shared/api-client'
+import { isExecutionOccupied } from '@/shared/helpers/deviceOccupancy'
 import {
   KEY_DISABLED_MESSAGE,
   LAYER_GROUPS,
@@ -19,20 +20,6 @@ import {
   apiSaveToElements,
   apiGetDevices,
 } from './api'
-
-// 执行引擎占用前缀：不可用于 capture
-const EXEC_PREFIXES = ['runner-', 'ai_agent', 'task-', 'run-']
-
-function isExecutionOccupied(device) {
-  return device.status === 'BUSY' && device.occupied_by &&
-    EXEC_PREFIXES.some(p => device.occupied_by.startsWith(p))
-}
-
-/** 缩略图 / 截图相对路径 → 媒体 URL */
-export function mediaUrl(path) {
-  if (!path) return ''
-  return `/media/${path}`
-}
 
 export const useElementStore = defineStore('device-inspector', () => {
   // ── Device ──

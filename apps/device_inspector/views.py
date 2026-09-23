@@ -61,16 +61,6 @@ def snapshots_clear(request):
     return Response({"deleted": api.clear_snapshots(_user_id(request))})
 
 
-@extend_schema(responses=OpenApiTypes.OBJECT, operation_id="inspector_snapshot_detail")
-@api_view(["GET"])
-def snapshot_detail(request, snapshot_id: int):
-    """GET /api/inspector/snapshots/{id} — 快照详情 JSON。"""
-    data = api.get_snapshot(snapshot_id, _user_id(request))
-    if data is None:
-        return Response({"message": "快照不存在"}, status=404)
-    return Response(data)
-
-
 @extend_schema(responses=OpenApiTypes.OBJECT)
 @api_view(["DELETE"])
 def snapshot_delete(request, snapshot_id: int):

@@ -1,9 +1,4 @@
-/** 元素定位呈现面的两个纯函数：缩略图 URL 与交互标注文案（组件只做渲染）。 */
-
-/** 后端媒体约定：相对路径拼 /media/；无路径时不产 URL（避免请求站点根）。 */
-export function elementThumbnailUrl(path: string): string {
-  return path ? `/media/${path}` : ''
-}
+/** 元素定位呈现面的纯函数：交互标注文案（缩略图 URL 走共享登记处，组件只做渲染）。 */
 
 /** 七项交互标志的展示口径（与 element-layering 的 flags 键同源、顺序固定） */
 export const INTERACTION_FLAGS: Array<{ key: string; label: string }> = [

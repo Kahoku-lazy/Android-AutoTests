@@ -1,6 +1,6 @@
 # API-设备检查器 — /api/inspector/*
 
-> 设备检查器（device_inspector）快照化 REST 全集 8 个端点：抓取 / 列表 / 详情 / 分层查询 / 删除 / 一键清空 / 保存到元素定位 / 页面只读回看。
+> 设备检查器（device_inspector）快照化 REST 全集 6 个端点：抓取 / 列表 / 分层查询 / 删除 / 一键清空 / 保存到元素定位。
 > 真相源：`apps/device_inspector/urls.py` + `views.py` + `api.py` + `service.py`；元素落盘契约跨 `apps/element_locator/api_snapshot.py`。
 
 ## 1. 总览
@@ -9,7 +9,6 @@
 |---|---|---|---|
 | 快照抓取接口 | POST /api/inspector/capture/ | 需登录(Bearer) | 一键抓取（dump/OCR）→ 快照落库 |
 | 快照列表接口 | GET /api/inspector/snapshots/ | 需登录(Bearer) | 快照列表（倒序，最多返回保留上限 10 条） |
-| 快照详情接口 | GET /api/inspector/snapshots/{id} | 需登录(Bearer) | 快照全量 JSON |
 | 快照分层查询接口 | GET /api/inspector/snapshots/{id}/layers/ | 需登录(Bearer) | 两级分组 + 筛减分页；分层即时计算，含被展示裁剪丢弃的元素 |
 | 快照删除接口 | DELETE /api/inspector/snapshots/{id}/delete | 需登录(Bearer) | 删除快照记录 + 截图/缩略图文件 |
 | 一键清空接口 | DELETE /api/inspector/snapshots/clear/ | 需登录(Bearer) | 清空本人全部历史快照，返回删除条数 |
@@ -19,7 +18,7 @@
 
 - 路径**必须带尾斜杠**，缺失即 404（`APPEND_SLASH=False`；容错中间件已删除，见 `openspec/specs/api-path-convention`）。
 - 响应信封：成功 `{status: true, data}`，失败 `{status: false, message}`（`EnvelopeJSONRenderer` 统一包裹）。
-- **全部 8 个端点均需登录**，携带 `Authorization: Bearer <access_token>`（DRF 默认 `IsAuthenticated`，无 AllowAny 覆盖；未登录统一返回 401）。
+- **全部 6 个端点均需登录**，携带 `Authorization: Bearer <access_token>`（DRF 默认 `IsAuthenticated`，无 AllowAny 覆盖；未登录统一返回 401）。
 - 快照截图/缩略图以**相对路径字符串**落库并返回（`inspector/shots/…`、`inspector/thumbs/…`），前端经 `/media/` 拉取文件，**不是** JSON 内嵌 base64，也不是 FileResponse。
 - 本模块**无 WS/SSE**；`snapshots/{id}/layers` 基于已存快照的全量节点索引即时计算，不落库、无设备交互、无 LLM。
 
@@ -56,7 +55,7 @@
     "screen_h": 1920,                            # 屏幕高（px）
     "element_count": 42,                         # 元素总数（裁剪后）
     "actionable_count": 18,                      # 可交互元素数（clickable/text/resource_id/content_desc）
-    "elements": [                                # 全量元素（裁剪后），结构见第 11 节元素对象
+    "elements": [                                # 全量元素（裁剪后），结构见第 9 节元素对象
       {
         "depth": 1,                              # 层级深度
         "class_name": "android.widget.TextView", # 类全名
@@ -186,50 +185,7 @@
 
 ---
 
-## 5. 快照详情接口：GET /api/inspector/snapshots/{id}
-
-| 项 | 值 |
-|---|---|
-| 鉴权 | 需登录（Bearer Token） |
-
-### 请求
-
-无请求体；路径参数 `id` 为快照 ID。
-
-### 成功响应（200）
-
-```json
-{
-  "status": true,                   # 请求是否成功，恒为 true
-  "data": {                         # 快照全量 JSON（字段与第 3 节 capture 成功响应一致）
-    "snapshot_id": 1,
-    "serial": "emulator-5554",
-    "method": "dump",
-    "package": "com.example.app",
-    "activity": "com.example.app.MainActivity",
-    "screen_w": 1080,
-    "screen_h": 1920,
-    "element_count": 42,
-    "actionable_count": 18,
-    "elements": [ "…" ],            # 元素数组（结构见第 11 节）
-    "actionable": [ "…" ],          # 可交互元素数组
-    "ocr_count": 10,
-    "texts": [ "…" ],               # OCR 文本数组
-    "screenshot_path": "inspector/shots/capture_20260101_120000_000001.png",
-    "created_at": "2026-01-01T12:00:00"
-  }
-}
-```
-
-### 错误码与文案
-
-| HTTP | message | 触发条件 |
-|---|---|---|
-| 404 | 快照不存在 | 快照 ID 不存在或非本人快照 |
-
----
-
-## 6. 快照分层查询接口：GET /api/inspector/snapshots/{id}/layers/
+## 5. 快照分层查询接口：GET /api/inspector/snapshots/{id}/layers/
 
 | 项 | 值 |
 |---|---|
@@ -281,7 +237,7 @@
     "total_matched": 140,
     "offset": 0,
     "limit": null,                     // 缺省不截断时为 null；显式分页时才是请求的条数
-    "elements": [ /* 结构见第 11 节；每元素只带一条 primary，MUST NOT 含候选列表 */ ]
+    "elements": [ /* 结构见第 9 节；每元素只带一条 primary，MUST NOT 含候选列表 */ ]
   }
 }
 ```
@@ -300,7 +256,7 @@
 
 ---
 
-## 7. 快照删除接口：DELETE /api/inspector/snapshots/{id}/delete
+## 6. 快照删除接口：DELETE /api/inspector/snapshots/{id}/delete
 
 | 项 | 值 |
 |---|---|
@@ -331,7 +287,7 @@
 
 ---
 
-## 8. 元素保存接口：POST /api/inspector/snapshots/{id}/save-elements
+## 7. 元素保存接口：POST /api/inspector/snapshots/{id}/save-elements
 
 | 项 | 值 |
 |---|---|
@@ -384,7 +340,7 @@
 | 400 | 目标页面不存在 | page_id 无效（不存在或为目录节点） |
 | 409 | 目录最多嵌套 5 层 | folder_path 目录层级超 MAX_PAGE_TREE_DEPTH=5 |
 
-## 10. 一键清空接口：DELETE /api/inspector/snapshots/clear/
+## 8. 一键清空接口：DELETE /api/inspector/snapshots/clear/
 
 | 项 | 值 |
 |---|---|
@@ -413,7 +369,7 @@
 
 ---
 
-## 11. 附：元素对象结构（dump_json.elements 通用）
+## 9. 附：元素对象结构（dump_json.elements 通用）
 
 > 快照 `elements` / `actionable` 中的元素来自 `models/ui_nodes.py` 的 `Node` 转 dict，并追加 `xpaths`（候选列表）与 `thumbnail_path`（仅可交互元素、截图裁剪落盘后回填）。
 

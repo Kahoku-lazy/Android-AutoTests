@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /** 设备状态列 — el-tag + 占用/锁定 Badge */
 import { statusTag } from '../helpers'
-import { RUNNER_OCCUPIED_PREFIXES } from '../constants'
+import { isExecutionOccupied } from '@/shared/helpers/deviceOccupancy'
 import type { DeviceRecord } from '@/shared/types/device'
 
 defineProps<{
@@ -18,8 +18,7 @@ defineProps<{
       round
     >{{ statusTag(device.status).text }}</el-tag>
     <el-tooltip
-      v-if="device.occupied_by && device.status === 'BUSY'
-        && RUNNER_OCCUPIED_PREFIXES.some(p => device.occupied_by.startsWith(p))"
+      v-if="isExecutionOccupied(device)"
       :content="device.occupied_by" placement="top"
     >
       <span class="badge badge-exec">执行中</span>

@@ -28,7 +28,7 @@ export const NODE_REGISTRY: Record<string, NodeRegistryEntry> = {
     size: [140, 60],
     elementPool: 'popup',
   },
-  /** 起点：无入口；支持 4 种模式 — 启动App / 页面入口 / 打开URL / 调用API */
+  /** 起点：无入口；支持 2 种模式 — 启动App / 页面入口 */
   StartNode: {
     category: 'start',
     displayName: '起点',
@@ -39,17 +39,6 @@ export const NODE_REGISTRY: Record<string, NodeRegistryEntry> = {
     maxInstances: 1,
     size: [200, 0],
     elementPool: 'page',
-  },
-  /** API 节点：无默认端口，关联 API 端点后从 schema 动态生成 */
-  ApiNode: {
-    category: 'page',
-    displayName: 'API 节点',
-    defaultInputs: [],
-    defaultOutputs: [],
-    color: 'orange',
-    icon: '📡',
-    maxInstances: 20,
-    size: [220, 0],
   },
   /** 终点：仅入口、无输出 */
   EndNode: {
@@ -74,13 +63,3 @@ export const COLOR_STYLES: Record<string, { bg: string; border: string; fill: st
   green: { bg: 'rgba(111,186,44,0.08)', border: '#6fba2c', fill: '#6fba2c' },
   slate: { bg: 'rgba(138,138,150,0.08)', border: '#8a8a96', fill: '#8a8a96' },
 }
-
-// HTTP 方法色（数据编码分类色板：API 节点徽标与接口选择列表共用，在此集中声明一次，2026-09-15 由两处字面量副本收敛）
-export const METHOD_COLORS: Record<string, string> = {
-  GET: '#6fba2c',
-  POST: '#889df0',
-  PUT: '#f7cd67',
-  DELETE: '#e85f5f',
-  PATCH: '#b39ef3',
-}
-export const METHOD_COLOR_FALLBACK = '#8b7355'

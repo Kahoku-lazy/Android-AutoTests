@@ -118,7 +118,7 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     return node
   }
 
-  /** Switch StartNode mode: app | page | url | api */
+  /** Switch StartNode mode: app | page */
   function setStartKind(nodeId: string, kind: StartKind): void {
     const node = findNode(nodeId)
     if (!node || node.type !== 'StartNode') return
@@ -130,25 +130,17 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
       ...node.properties,
       start_kind: kind,
       package_name: (node.properties?.package_name as string) || 'com.example.app',
-      start_url: (node.properties?.start_url as string) || 'https://',
-      start_api: (node.properties?.start_api as string) || 'http://localhost/api/',
     }
 
-    const labelMap: Record<string, string> = { app: '启动 App', page: '起始页面', url: '打开 URL', api: '调用 API' }
+    const labelMap: Record<string, string> = { app: '启动 App', page: '起始页面' }
     const statusMap: Record<string, string> = {
       app: '起点已设为：启动 App（包名启动）',
       page: '起点已设为：页面（关联页面+元素）',
-      url: '起点已设为：打开 URL（导航到网页）',
-      api: '起点已设为：调用 API（发送 HTTP 请求）',
     }
 
     if (kind === 'app') {
       clearElementOutputs(nodeId)
       node.outputs = [{ name: '启动', type: PORT_TYPE.NAVIGATION, slot_index: 0, link: null, links: [] }]
-    } else if (kind === 'url') {
-      node.outputs = [{ name: '导航', type: PORT_TYPE.NAVIGATION, slot_index: 0, link: null, links: [] }]
-    } else if (kind === 'api') {
-      node.outputs = [{ name: '请求', type: PORT_TYPE.NAVIGATION, slot_index: 0, link: null, links: [] }]
     } else {
       node.outputs = []
       delete node.properties.linked_page_id
@@ -163,18 +155,6 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     const node = findNode(nodeId)
     if (!node || node.type !== 'StartNode') return
     node.properties = { ...node.properties, package_name: pkg.trim() || 'com.example.app' }
-  }
-
-  function setStartUrl(nodeId: string, url: string): void {
-    const node = findNode(nodeId)
-    if (!node || node.type !== 'StartNode') return
-    node.properties = { ...node.properties, start_url: url.trim() || 'https://' }
-  }
-
-  function setStartApi(nodeId: string, api: string): void {
-    const node = findNode(nodeId)
-    if (!node || node.type !== 'StartNode') return
-    node.properties = { ...node.properties, start_api: api.trim() || 'http://localhost/api/' }
   }
 
   function removeNode(id: string): void {
@@ -249,21 +229,6 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     node.size = [180, 0]
   }
 
-  /** 为 API 节点新增单个响应字段端口 */
-  function addApiPort(nodeId: string, fieldName: string): void {
-    const node = findNode(nodeId)
-    if (!node || node.type !== 'ApiNode') return
-    if (node.outputs.some(p => p.name === fieldName)) return
-    const si = node.outputs.length
-    node.outputs.push({
-      name: fieldName,
-      type: PORT_TYPE.DATA,
-      slot_index: si,
-      link: null,
-      links: [],
-    })
-  }
-
   /** Clear all element output ports (and their links) */
   function clearElementOutputs(nodeId: string): void {
     const node = findNode(nodeId)
@@ -304,7 +269,6 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
       ...node.properties,
       linked_page_id: page.id,
       linked_page_name: page.name,
-      linked_page_domain: page.domain || 'android',
       linked_elements: page.elements,
     }
     node.widgets_values = [page.name, node.widgets_values[1] || 'teal']
@@ -647,66 +611,6 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     return true // PageNode 始终可以
   }
 
-  /** 关联 API 端点：解析 schema 生成输入（请求参数）和输出（响应字段）端口 */
-  function linkApiEndpoint(
-    nodeId: string,
-    endpoint: { id: string; name: string; method: string; url: string; request_body_schema?: Record<string, any>; response_body_schema?: Record<string, any> }
-  ): void {
-    const node = findNode(nodeId)
-    if (!node || node.type !== 'ApiNode') return
-
-    // Clean old ports
-    const outIds = links.value.filter(l => l.origin_id === nodeId).map(l => l.id)
-    for (const lid of outIds) removeLink(lid)
-
-    const inputs: PortDefinition[] = []
-    const outputs: PortDefinition[] = []
-
-    // Generate input ports from request body schema keys (flatten 1 level)
-    const reqSchema = endpoint.request_body_schema || {}
-    let inIdx = 0
-    for (const [key, val] of Object.entries(reqSchema)) {
-      if (val && typeof val === 'object' && !Array.isArray(val)) {
-        for (const [childKey, childVal] of Object.entries(val as Record<string, any>)) {
-          const typeHint = typeof childVal === 'string' ? childVal : typeof childVal
-          inputs.push({ name: `body.${key}.${childKey}`, type: PORT_TYPE.DATA, slot_index: inIdx++, link: null, links: [] })
-        }
-      } else {
-        const typeHint = typeof val === 'string' ? val : typeof val
-        inputs.push({ name: `body.${key}`, type: PORT_TYPE.DATA, slot_index: inIdx++, link: null, links: [] })
-      }
-    }
-
-    // Generate output ports from response body schema keys (flatten 1 level)
-    const respSchema = endpoint.response_body_schema || {}
-    let outIdx = 0
-    for (const [key, val] of Object.entries(respSchema)) {
-      if (val && typeof val === 'object' && !Array.isArray(val)) {
-        for (const [childKey, childVal] of Object.entries(val as Record<string, any>)) {
-          const typeHint = typeof childVal === 'string' ? childVal : typeof childVal
-          outputs.push({ name: `resp.${key}.${childKey}`, type: PORT_TYPE.DATA, slot_index: outIdx++, link: null, links: [] })
-        }
-      } else {
-        const typeHint = typeof val === 'string' ? val : typeof val
-        outputs.push({ name: `resp.${key}`, type: PORT_TYPE.DATA, slot_index: outIdx++, link: null, links: [] })
-      }
-    }
-
-    node.inputs = inputs
-    node.outputs = outputs
-    node.properties = {
-      ...node.properties,
-      linked_endpoint_id: endpoint.id,
-      linked_endpoint_name: endpoint.name,
-      api_method: endpoint.method,
-      api_url: endpoint.url,
-      response_body_schema: endpoint.response_body_schema || {},
-    }
-    node.widgets_values[0] = endpoint.name || endpoint.url
-    node.widgets_values[1] = 'orange'
-    setStatus(`已关联「${endpoint.name}」(${inputs.length} 入参, ${outputs.length} 出参)`)
-  }
-
   function canBeSource(node: WorkflowNode): boolean {
     return node.outputs.length > 0
   }
@@ -793,11 +697,7 @@ export const useWorkflowStore = defineStore('wf-workflow', () => {
     updateNodePosition,
     setStartKind,
     setStartPackage,
-    linkApiEndpoint,
-    setStartUrl,
-    setStartApi,
     addPort,
-    addApiPort,
     addPortFromElement,
     clearElementOutputs,
     linkPage,

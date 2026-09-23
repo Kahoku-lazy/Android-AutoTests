@@ -49,10 +49,10 @@ export interface PortDefinition {
 export const MULTI_IN_PORT_TYPES: ReadonlySet<string> = new Set([PORT_TYPE.ENTRY])
 
 
-export type WorkflowNodeType = 'PageNode' | 'PopupNode' | 'StartNode' | 'EndNode' | 'ApiNode'
+export type WorkflowNodeType = 'PageNode' | 'PopupNode' | 'StartNode' | 'EndNode'
 export type WorkflowCategory = 'page' | 'popup' | 'start' | 'end'
-/** StartNode: launch app / open URL / call API / page-as-entry */
-export type StartKind = 'app' | 'page' | 'url' | 'api'
+/** StartNode: launch app / page-as-entry */
+export type StartKind = 'app' | 'page'
 
 export interface WorkflowNode {
   id: string

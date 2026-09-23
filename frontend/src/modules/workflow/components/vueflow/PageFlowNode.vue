@@ -7,7 +7,6 @@ import { portHandleColor } from '@/modules/workflow/composables/useVueFlowAdapte
 import { useWorkflowStore } from '@/modules/workflow/stores/workflowStore'
 import { ELEMENT_ICONS, MULTI_IN_PORT_TYPES } from '@/modules/workflow/types/workflow'
 import type { StartKind } from '@/modules/workflow/types/workflow'
-import { METHOD_COLORS, METHOD_COLOR_FALLBACK } from '@/modules/workflow/registry/nodeRegistry'
 
 const props = defineProps<NodeProps<PageFlowNodeData>>()
 const store = useWorkflowStore()
@@ -19,29 +18,21 @@ const refreshFlow = inject<() => void>('vfRefresh', () => {})
 const isPopup = computed(() => props.data.nodeType === 'PopupNode')
 const isStart = computed(() => props.data.nodeType === 'StartNode')
 const isEnd = computed(() => props.data.nodeType === 'EndNode')
-const isApi = computed(() => props.data.nodeType === 'ApiNode')
 const startKind = computed<StartKind>(() => props.data.startKind || 'app')
 
 const accent = computed(() => {
   if (isStart.value) return 'var(--c-workflow)'
   if (isEnd.value) return '#8a8a96'
   if (isPopup.value) return '#e85f5f'
-  if (isApi.value) return '#f5a623'
   return '#6f9fd8'
 })
 
 const icon = computed(() => {
-  if (isApi.value) return '📡'
   if (isStart.value) return '▶'
   if (isEnd.value) return '⏹'
   if (isPopup.value) return '⚠️'
   return '📱'
 })
-
-/** HTTP 方法徽标色：取自节点注册表的集中方法色板（原为本地字面量副本） */
-function methodColor(m?: string): string {
-  return METHOD_COLORS[m || 'GET'] || METHOD_COLOR_FALLBACK
-}
 
 function onRename(e: Event) {
   const v = (e.target as HTMLInputElement).value.trim()
@@ -95,7 +86,6 @@ watch(
       popup: isPopup,
       start: isStart,
       end: isEnd,
-      api: isApi,
     }"
     :style="{ '--accent': accent }"
   >
@@ -109,42 +99,24 @@ watch(
       />
     </div>
 
-    <!-- Start: app / page / url / api -->
+    <!-- Start: app / page -->
     <div v-if="isStart" class="pf-kind nodrag" @mousedown.stop>
       <button type="button" class="kind-btn" :class="{ active: startKind === 'app' }"
         @click.stop="onStartKind('app')">启动 App</button>
       <button type="button" class="kind-btn" :class="{ active: startKind === 'page' }"
         @click.stop="onStartKind('page')">页面</button>
-      <button type="button" class="kind-btn" :class="{ active: startKind === 'url' }"
-        @click.stop="onStartKind('url')">URL</button>
-      <button type="button" class="kind-btn" :class="{ active: startKind === 'api' }"
-        @click.stop="onStartKind('api')">API</button>
     </div>
 
     <div v-if="isStart && startKind === 'app'" class="pf-pkg nodrag" @mousedown.stop>
       <label>包名</label>
       <input class="pkg-input" :value="data.packageName" placeholder="com.example.app" @change="onPackageChange" />
     </div>
-    <div v-if="isStart && startKind === 'url'" class="pf-pkg nodrag" @mousedown.stop>
-      <label>URL</label>
-      <input class="pkg-input" :value="data.startUrl" placeholder="https://example.com" @change="(e) => { store.setStartUrl(props.id, (e.target as HTMLInputElement).value); refreshFlow() }" />
-    </div>
-    <div v-if="isStart && startKind === 'api'" class="pf-pkg nodrag" @mousedown.stop>
-      <label>API 地址</label>
-      <input class="pkg-input" :value="data.startApi" placeholder="http://localhost/api/endpoint" @change="(e) => { store.setStartApi(props.id, (e.target as HTMLInputElement).value); refreshFlow() }" />
-    </div>
-
-    <!-- API Node: method badge + URL -->
-    <div v-if="data.isApiNode" class="pf-api nodrag" @mousedown.stop>
-      <span class="api-method" :style="{background: methodColor(data.apiMethod)}">{{ data.apiMethod }}</span>
-      <span class="api-url">{{ data.apiUrl }}</span>
-    </div>
 
     <div class="pf-sub">
       <template v-if="isStart && startKind === 'app'">
         无入口 · 从「启动」连到页面入口
       </template>
-      <template v-else-if="isStart && (startKind === 'page' || startKind === 'url' || startKind === 'api')">
+      <template v-else-if="isStart && startKind === 'page'">
         <template v-if="data.linkedPageName">
           关联: {{ data.linkedPageName }} · 已选 {{ data.outputs.filter(o => o.el).length }} 个元素
         </template>
@@ -241,8 +213,6 @@ watch(
   box-shadow: var(--app-shadow-sm);
   /* ── 本模块私有色：tokens.css 未登记，登记在节点自身根类 ── */
   --wf-node-selected-ring: var(--color-cyan-74-a30) /* -> --color-cyan-74-a30 */; /* 选中态外发光（工作流蓝 28%） */
-  --wf-node-api-glow: var(--color-orange-55-a18) /* -> --color-orange-55-a18 */;       /* API 节点外发光（橙 16%） */
-  --wf-node-api-bg: var(--color-orange-55-a10) /* -> --color-orange-55-a10 */;         /* API 行底色（橙 8%） */
   --wf-node-in-count-fg: var(--color-blue-53) /* -> --color-blue-53 */;                     /* 入端口计数文字（蓝紫） */
   --wf-node-in-count-bg: var(--color-blue-68-s64-a18) /* -> --color-blue-68-s64-a18 */;    /* 入端口计数底（蓝紫 20%） */
   --wf-node-handle-ring: var(--color-blue-82-a30) /* -> --color-blue-82-a30 */;    /* 端口圆点描边光晕 */
@@ -263,33 +233,7 @@ watch(
 }
 .pf-node.api {
   min-width: 240px;
-  box-shadow: 0 0 8px var(--wf-node-api-glow);
-}
-.pf-api {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px var(--app-space-sm);
-  background: var(--wf-node-api-bg);
-  border-radius: 8px;
-  margin-bottom: var(--app-space-xs);
-}
-.api-method {
-  display: inline-block;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: var(--app-size-xs);
-  font-weight: 800;
-  color: var(--app-text-inverse);
-  flex-shrink: 0;
-}
-.api-url {
-  font-size: var(--app-size-xs);
-  color: var(--app-text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--app-font-mono);
+  box-shadow: var(--app-shadow-md);
 }
 .pf-header {
   display: flex;
@@ -302,7 +246,7 @@ watch(
   height: 26px;
   display: grid;
   place-items: center;
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   background: var(--app-bg-subtle);
   font-size: var(--app-size-sm);
 }
@@ -311,7 +255,7 @@ watch(
   min-width: 0;
   background: transparent;
   border: 2px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   color: var(--ink);
   font-size: var(--app-size-sm);
   font-weight: 800;
@@ -329,13 +273,13 @@ watch(
   margin: 6px 0 var(--app-space-xs);
   padding: 3px;
   background: var(--app-bg-subtle);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   border: 1px solid var(--ac-border-soft);
 }
 .kind-btn {
   flex: 1;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--app-radius-sm);
   padding: 5px var(--app-space-sm);
   font-size: var(--app-size-xs);
   font-weight: 700;
@@ -343,7 +287,7 @@ watch(
   background: transparent;
   color: var(--app-text-secondary);
   cursor: pointer;
-  transition: background 0.12s var(--app-ease), color 0.12s var(--app-ease);
+  transition: background var(--app-duration-fast) var(--app-ease), color var(--app-duration-fast) var(--app-ease);
 }
 .kind-btn.active {
   background: var(--app-bg-card);
@@ -372,13 +316,13 @@ watch(
   min-width: 0;
   padding: 5px 9px;
   border: 1.5px solid var(--ink);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   background: var(--app-bg-card);
   color: var(--ink);
   font-size: var(--app-size-xs);
   font-family: var(--app-font-mono);
   outline: none;
-  transition: border-color 0.12s var(--app-ease);
+  transition: border-color var(--app-duration-fast) var(--app-ease);
 }
 .pkg-input:focus {
   border-color: var(--c-workflow);
@@ -407,7 +351,7 @@ watch(
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
   border: 1px solid var(--ink);
-  border-radius: 6px;
+  border-radius: var(--app-radius-sm);
   padding: 0 5px;
   cursor: help;
   user-select: none;
@@ -418,7 +362,7 @@ watch(
   font-weight: 800;
   color: var(--wf-node-in-count-fg);
   background: var(--wf-node-in-count-bg);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   padding: 0 6px;
   line-height: 16px;
 }
@@ -430,7 +374,7 @@ watch(
 .pf-actions button {
   background: var(--app-bg-card);
   border: 1px solid var(--ink);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   color: var(--app-text-secondary);
   font-size: var(--app-size-xs);
   cursor: pointer;
@@ -474,14 +418,14 @@ watch(
   margin-top: var(--app-space-sm);
   padding: 7px;
   border: 2px dashed var(--ink);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   background: var(--ac-accent-soft);
   color: var(--ac-accent-deep);
   font-size: var(--app-size-sm);
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
-  transition: border-color 0.12s var(--app-ease);
+  transition: border-color var(--app-duration-fast) var(--app-ease);
 }
 .pf-add:hover {
   border-color: var(--c-workflow);

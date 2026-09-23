@@ -10,21 +10,15 @@ type WorkflowStore = ReturnType<typeof useWorkflowStore>
 
 export interface PageFlowNodeData {
   label: string
-  nodeType: 'PageNode' | 'PopupNode' | 'StartNode' | 'EndNode' | 'ApiNode'
+  nodeType: 'PageNode' | 'PopupNode' | 'StartNode' | 'EndNode'
   color: string
   inputs: PortDefinition[]
   outputs: PortDefinition[]
   canCreateOutput: boolean
   linkedPageId?: string
   linkedPageName?: string
-  linkedPageDomain?: string
-  isApiNode?: boolean
-  apiMethod?: string
-  apiUrl?: string
-  startKind?: 'app' | 'page' | 'url' | 'api'
+  startKind?: 'app' | 'page'
   packageName?: string
-  startUrl?: string
-  startApi?: string
 }
 
 export function toVueFlowNodes(store: WorkflowStore): Node<PageFlowNodeData>[] {
@@ -41,25 +35,12 @@ export function toVueFlowNodes(store: WorkflowStore): Node<PageFlowNodeData>[] {
       canCreateOutput: store.canCreateOutput(n),
       linkedPageId: n.properties?.linked_page_id as string | undefined,
       linkedPageName: n.properties?.linked_page_name as string | undefined,
-      linkedPageDomain: n.properties?.linked_page_domain as string | undefined,
+      // 起点模式只认 page，其余（含历史 url / api 取值）一律按「启动 App」呈现
       startKind: n.type === 'StartNode'
-        ? ((n.properties?.start_kind as 'app' | 'page' | 'url' | 'api') || 'app')
+        ? (n.properties?.start_kind === 'page' ? 'page' : 'app')
         : undefined,
       packageName: n.type === 'StartNode'
         ? ((n.properties?.package_name as string) || 'com.example.app')
-        : undefined,
-      startUrl: n.type === 'StartNode'
-        ? ((n.properties?.start_url as string) || 'https://')
-        : undefined,
-      startApi: n.type === 'StartNode'
-        ? ((n.properties?.start_api as string) || 'http://localhost/api/')
-        : undefined,
-      isApiNode: n.type === 'ApiNode',
-      apiMethod: n.type === 'ApiNode'
-        ? ((n.properties?.api_method as string) || 'GET')
-        : undefined,
-      apiUrl: n.type === 'ApiNode'
-        ? ((n.properties?.api_url as string) || '/api/')
         : undefined,
     },
   }))
@@ -126,19 +107,6 @@ export function explainConnection(
   const targetNode = store.findNode(connection.target)
   if (!sourceNode || !targetNode) {
     return { ok: false, reason: '节点不存在', normalized: connection }
-  }
-
-  // Cross-domain check: Android pages cannot connect to Web pages
-  const srcDomain = sourceNode.properties?.linked_page_domain as string | undefined
-  const tgtDomain = targetNode.properties?.linked_page_domain as string | undefined
-  if (srcDomain && tgtDomain && srcDomain !== tgtDomain) {
-    const srcLabel = srcDomain === 'android' ? 'Android 页面' : 'Web 页面'
-    const tgtLabel = tgtDomain === 'android' ? 'Android 页面' : 'Web 页面'
-    return {
-      ok: false,
-      reason: `跨域连线不允许：${srcLabel}不能连接到${tgtLabel}。Android 与 Web 元素管理相互独立，请在各自域内连接。`,
-      normalized: connection,
-    }
   }
 
   let outSlot = parseHandleSlot(connection.sourceHandle, 'out')

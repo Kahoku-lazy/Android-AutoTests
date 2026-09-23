@@ -5,11 +5,10 @@
 ``get_document_digest`` / ``list_document_summaries``。
 
 字段口径（与前端 types/workflow.ts 对齐）：
-  - 节点 type: StartNode/PageNode/PopupNode/ApiNode/EndNode → start/page/popup/api/end
+  - 节点 type: StartNode/PageNode/PopupNode/EndNode → start/page/popup/end
   - 端口 type: entry/navigation/popup_trigger/popup_fixed/popup_close/data
   - 元素来源（不实时 join 元素库，快照为准）:
       snapshot      数字 ID（元素定位库快照）
-      web_snapshot  web_ 前缀（Web 元素分组快照）
       builtin_pool  el_/pe_ 前缀（前端静态元素池，无归属页面）
       unknown       无法识别
 """
@@ -34,7 +33,6 @@ _NODE_TYPE_MAP = {
     "StartNode": "start",
     "PageNode": "page",
     "PopupNode": "popup",
-    "ApiNode": "api",
     "EndNode": "end",
 }
 
@@ -62,10 +60,8 @@ def _name_of(node: dict) -> str:
 
 
 def _element_source(el_id: str) -> str:
-    """元素 ID 前缀 → 来源标注。"""
+    """元素 ID 前缀 → 来源标注（Web 元素下线后不再有 web_snapshot 来源）。"""
     el_id = _str(el_id)
-    if el_id.startswith("web_"):
-        return "web_snapshot"
     if el_id.startswith("el_") or el_id.startswith("pe_"):
         return "builtin_pool"
     if el_id.isdigit():
@@ -73,8 +69,9 @@ def _element_source(el_id: str) -> str:
     return "unknown"
 
 
-def _element_domain(el_id: str) -> str:
-    return "web" if _str(el_id).startswith("web_") else "android"
+def _element_domain() -> str:
+    """页面所属域：元素定位收敛为单一 android 项目后恒为 android。"""
+    return "android"
 
 
 def _slot_int(v: Any) -> int | None:
@@ -299,14 +296,13 @@ def build_graph_digest(config: Any, doc: Any = None) -> dict:
             summary["page"] = {
                 "page_id": page_id or None,
                 "page_name": page_name or None,
-                "domain": _str(props.get("linked_page_domain")) or _element_domain(page_id),
+                "domain": _str(props.get("linked_page_domain")) or _element_domain(),
             }
 
         if node_type == "start":
             summary["start_kind"] = _str(props.get("start_kind"))
-            for key in ("package_name", "start_url", "start_api"):
-                if props.get(key):
-                    summary[key] = _str(props[key])
+            if props.get("package_name"):
+                summary["package_name"] = _str(props["package_name"])
         elif node_type == "api":
             summary["api"] = {
                 "endpoint_id": _str(props.get("linked_endpoint_id")),

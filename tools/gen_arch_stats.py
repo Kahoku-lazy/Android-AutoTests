@@ -3,14 +3,14 @@
 Architecture stats generator — 扫描代码库，输出当前架构的可度量事实。
 
 用途:
-  - architect agent 被调用时自动运行，对比 ARCH-00-平台总体架构.md 的 auto 区域
+  - architect agent 被调用时自动运行，对比指定架构文档的 auto 区域
   - 发现 drift 后自动更新文档的事实部分
   - 也支持 --json 输出，供 CI/hook 消费
 
 用法:
-  python tools/gen_arch_stats.py              # 输出 Markdown 片段
-  python tools/gen_arch_stats.py --json        # 输出 JSON
-  python tools/gen_arch_stats.py --check-md    # 对比 ARCH-00-平台总体架构.md，输出 drift 报告
+  python tools/gen_arch_stats.py                             # 输出 Markdown 片段
+  python tools/gen_arch_stats.py --json                      # 输出 JSON
+  python tools/gen_arch_stats.py --check-md --doc <文档路径>   # 对比架构文档，输出 drift 报告
 """
 
 import ast
@@ -796,11 +796,10 @@ def generate_json():
     )
 
 
-def check_drift():
-    """对比 ARCH-00-平台总体架构.md 中的 auto 区域，检测 drift。"""
-    doc_path = PROJECT_ROOT / "dev_docs" / "03-设计与架构" / "ARCH-00-平台总体架构.md"
+def check_drift(doc_path: Path):
+    """对比给定架构文档中的 auto 区域，检测 drift。"""
     if not doc_path.exists():
-        return {"status": "no_doc", "message": "ARCH-00-平台总体架构.md 不存在"}
+        return {"status": "no_doc", "message": f"{doc_path.name} 不存在"}
 
     doc_content = doc_path.read_text(encoding="utf-8")
     current = generate_markdown()
@@ -810,7 +809,7 @@ def check_drift():
     if not match:
         return {
             "status": "no_auto_section",
-            "message": "ARCH-00-平台总体架构.md 中无 ARCH_STATS 区域，需要初始化",
+            "message": f"{doc_path.name} 中无 ARCH_STATS 区域，需要初始化",
         }
 
     existing = match.group(0)
@@ -1177,15 +1176,18 @@ if __name__ == "__main__":
             print(f"✅ 无新增前端文件超标（已知 {known} 个文件在白名单中）")
             sys.exit(0)
     elif "--check-md" in sys.argv:
-        result = check_drift()
+        if "--doc" not in sys.argv or sys.argv.index("--doc") + 1 >= len(sys.argv):
+            print("用法: python tools/gen_arch_stats.py --check-md --doc <架构文档路径>")
+            sys.exit(2)
+        result = check_drift(Path(sys.argv[sys.argv.index("--doc") + 1]))
         if result["status"] == "drift":
             print(f"🔴 架构文档落后于代码: {', '.join(result['items'])}")
             sys.exit(1)
         elif result["status"] == "no_auto_section":
-            print("💡 ARCH-00-平台总体架构.md 需要初始化 ARCH_STATS 区域")
+            print(f"💡 {result['message']}")
             sys.exit(0)
         elif result["status"] == "no_doc":
-            print("💡 ARCH-00-平台总体架构.md 不存在")
+            print(f"💡 {result['message']}")
             sys.exit(0)
         else:
             print("✅ 架构文档与实际代码一致")

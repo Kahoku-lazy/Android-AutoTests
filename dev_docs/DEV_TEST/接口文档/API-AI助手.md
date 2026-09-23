@@ -64,6 +64,8 @@
 | 提示词历史详情 | GET /api/ai/device-prompt-archives/{id}/ | 需登录(Bearer)，仅超级管理员 | 单份存档全文 |
 | 提示词覆盖当前 | POST /api/ai/device-prompt-archives/{id}/restore/ | 需登录(Bearer)，仅超级管理员 | 用该存档覆盖当前提示词（覆盖前先留自动档） |
 | 提示词永久档删除 | POST /api/ai/device-prompt-archives/{id}/delete/ | 需登录(Bearer)，仅超级管理员 | 仅永久档可删，自动档由滚动淘汰 |
+| 模型调试配置 | GET /api/ai/model-debug/{role}/ | 需登录(Bearer)，仅超级管理员 | 单角色生效配置（提示词 / 模型 / 工具 / Skill / 知识库） |
+| 模型调试对话 | POST /api/ai/model-debug/{role}/chat | 需登录(Bearer)，仅超级管理员 | 单角色对话（挂该角色真实工具、会真机操作、不落库；不设前端等待上限） |
 | 平台工具启停 | POST /api/ai/platform-tools/toggle/ | 需登录(Bearer) | 全局启停（仅超管） |
 | 平台工具调试 schema | GET /api/ai/platform-tools/{name} | 需登录(Bearer) | 入参 schema（剥 user_id；设备参数附候选） |
 | 平台工具调试调用 | POST /api/ai/platform-tools/{name}/invoke | 需登录(Bearer) | 真实调用；写工具仅超管 |
@@ -1904,6 +1906,115 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 | 400 | 自动存档不可手动删除 | 目标存档是自动档（自动档只由滚动淘汰管理） |
 | 403 | Forbidden | 非超级管理员 |
 | 404 | archive not found | 存档不存在 |
+
+---
+
+### 9.2g 模型调试配置接口：GET /api/ai/model-debug/{role}/
+
+工具箱「模型调试」来源与单模型调试页的数据源。role 取值 planner / executor / verifier。
+
+| 项 | 值 |
+|---|---|
+| 鉴权 | 需登录(Bearer)，仅超级管理员 |
+
+#### 成功响应（200）
+
+```json
+{
+  "status": true,
+  "data": {
+    "agent_id": 10,
+    "agent_name": "自动化小助手",
+    "role": {
+      "role": "executor",
+      "label": "执行模型 Executor",
+      "vision": true,
+      "needs_device": true,
+      "model": { "provider": "deepseek", "model_name": "deepseek-chat", "has_api_key": true, "configured": true },
+      "prompt": "## 角色 …",
+      "tools": [
+        { "name": "tap_screen", "read_only": false, "category": "设备控制", "enabled": true }
+      ]
+    },
+    "skills": { "gate_on": true, "shared_by_roles": true, "items": [{ "name": "skill-a", "path": "/abs/path" }] },
+    "knowledge": {
+      "gate_on": false, "enabled_source_ids": [], "file_count": 3,
+      "files": [{ "id": "doc/a.md", "name": "a.md", "type": "root" }],
+      "wired_to_runtime": false
+    }
+  }
+}
+```
+
+| 字段 | 说明 |
+|---|---|
+| role.tools | 该角色**实际装配**的工具子集（取自引擎角色类，非另抄常量）：规划=页面流工具、执行=视觉/设备操作工具集、验收=截图工具 |
+| role.needs_device | 该角色工具子集里是否有工具需要设备（按工具签名是否含 `serial` 参数判定）：规划=false、执行/验收=true；前端据此决定是否要求先选设备 |
+| role.model | 模型连接摘要；**只回是否已配置（has_api_key），不回 api_key / base_url 明文** |
+| skills.shared_by_roles | 恒 true：Skill 由装配链路整组下发，**三模型共用**（非按角色分配） |
+| knowledge.wired_to_runtime | 恒 false：知识库当前只到配置层，**设备执行链路未挂载 RAG** |
+
+#### 错误码与文案
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 400 | 未知角色: {role}，可选 planner, executor, verifier | role 不在白名单 |
+| 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
+| 403 | Forbidden | 非超级管理员 |
+| 404 | platform agent not found | 平台唯一智能体不存在 |
+
+---
+
+### 9.2h 单角色调试对话接口：POST /api/ai/model-debug/{role}/chat
+
+用该角色的系统提示词、模型连接与**真实工具子集**发起一次对话，用于确认提示词修改是否生效。**挂载该角色实际装配的工具（可能真实操作设备）**，**不写入会话 / 消息表**。前端不设等待上限（模型多轮 ReAct + 抓屏可能远超 5 分钟）。
+
+| 项 | 值 |
+|---|---|
+| 鉴权 | 需登录(Bearer)，仅超级管理员 |
+| Content-Type | application/json |
+
+#### 请求体
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| text | string | 是 | 发给该角色的文本（去空白后不可空） |
+| serial | string | 条件必填 | 该角色 `needs_device=true` 时必填；服务端校验其**对请求者可见 + 在线 + 未被占用**，不满足返回 400 且不触发模型调用。以 `当前设备 serial：{serial}` 前缀进入模型输入 |
+
+#### 成功响应（200）
+
+```json
+{
+  "status": true,
+  "data": {
+    "role": "executor", "label": "执行模型 Executor", "model_name": "deepseek-chat",
+    "reply": "…模型回复…", "thinking": ["…思考块…"],
+    "tool_usage": [
+      { "type": "call", "name": "current_app", "input": { "serial": "R5CT62RH88F" } },
+      { "type": "result", "name": "current_app", "state": "success", "output": "{\"package\": \"com.govee.home\"}" }
+    ],
+    "usage": { "input_tokens": 1200, "output_tokens": 300 }, "cost": 0.0012
+  }
+}
+```
+
+| 字段 | 说明 |
+|---|---|
+| tool_usage | 本轮工具调用轨迹（引擎从上下文回溯，脱敏无 base64）：`type=call` 带 `input`，`type=result` 带 `state` / `output` |
+
+#### 错误码与文案
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 400 | 未知角色: {role}，可选 planner, executor, verifier | role 不在白名单 |
+| 400 | 调试内容不能为空 | text 缺失或去空白后为空 |
+| 400 | 「{角色}」需要先选定一台设备（候选：对当前用户可见 + 在线 + 未被占用） | 该角色 needs_device=true 但未给 serial |
+| 400 | 设备 {serial} 当前不可用（需对当前用户可见、状态在线且未被占用），请重新选择 | serial 不可见 / 不在线 / 已被占用 |
+| 400 | 「{角色}」的 model_name 未配置，请到智能体配置页填写 … | 该角色模型未配置（装配**之前**校验） |
+| 400 | 「{角色}」的 api_key 未配置（或无法解密），请到智能体配置页重新填写 | API Key 缺失或解密失败 |
+| 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
+| 403 | Forbidden | 非超级管理员 |
+| 404 | platform agent not found | 平台唯一智能体不存在 |
 
 ---
 

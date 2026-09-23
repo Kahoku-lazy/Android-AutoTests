@@ -36,6 +36,7 @@ from .views_knowledge_drf import (
     KnowledgeReindexAPIView,
     KnowledgeStatusAPIView,
 )
+from .views_model_debug_drf import ModelDebugChatAPIView, ModelDebugConfigAPIView
 from .views_prompts_drf import (
     DevicePromptArchiveDeleteAPIView,
     DevicePromptArchiveDetailAPIView,
@@ -76,6 +77,16 @@ special_patterns = [
     ),
     path("platform-config/", PlatformConfigAPIView.as_view(), name="platform_config"),
     path("platform-config/update/", PlatformConfigAPIView.as_view(), name="platform_config_update"),
+    path(
+        "model-debug/<str:role>/",
+        ModelDebugConfigAPIView.as_view(),
+        name="model_debug_config",
+    ),
+    path(
+        "model-debug/<str:role>/chat/",
+        ModelDebugChatAPIView.as_view(),
+        name="model_debug_chat",
+    ),
     path("device-prompts/", DevicePromptsAPIView.as_view(), name="device_prompts"),
     path("device-prompts/update/", DevicePromptsAPIView.as_view(), name="device_prompts_update"),
     path(

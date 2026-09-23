@@ -92,6 +92,62 @@ export function toolDebugRoute(name: string): string {
   return `/ai-assistant/toolbox/tools/${encodeURIComponent(name)}`
 }
 
+/** 调试台角色分段项（页内完整角色名取自接口 role.label） */
+export const MODEL_DEBUG_ROLE_TABS = [
+  { role: 'planner', label: '规划模型' },
+  { role: 'executor', label: '执行模型' },
+  { role: 'verifier', label: '验收模型' },
+] as const
+
+/** 单模型调试页（role = planner / executor / verifier） */
+export function modelDebugRoute(role: string): string {
+  return `/ai-assistant/toolbox/models/${encodeURIComponent(role)}`
+}
+
+// ── 模型调试：归属标注（避免让人误以为按角色分配 / 已挂 RAG）──
+
+/** Skill 是三模型共用（装配链路整组传同一批目录，非按角色分配） */
+export const SKILL_SHARED_NOTE = '三模型共用（装配时整组下发，非按角色分配）'
+
+/** 知识库只到配置层：设备执行链路当前未挂载 RAG */
+export const KNOWLEDGE_RAG_NOTE = '执行链路当前未挂载 RAG（此处仅展示配置层来源）'
+
+// ── 模型调试：调试对话的区块标题（返回结果与思考过程必须一眼可分）──
+
+/** 助手消息里「模型返回结果」区块的标题 */
+export const MODEL_DEBUG_ANSWER_LABEL = '回复'
+
+/** 助手消息里调用失败时该区块的标题 */
+export const MODEL_DEBUG_ANSWER_ERROR_LABEL = '调用失败'
+
+/** 助手消息里「模型思考过程」区块的标题 */
+export const MODEL_DEBUG_THINKING_LABEL = '思考过程'
+
+/** 助手消息里「工具调用」轨迹区块的标题 */
+export const MODEL_DEBUG_TRACE_LABEL = '工具调用'
+
+/** 轨迹里单条入参/返回的最大展示字符数 */
+export const MODEL_DEBUG_TRACE_DETAIL_MAX = 160
+
+/** 调试范围说明：如实描述当前行为（挂真实工具、会真机操作） */
+export const MODEL_DEBUG_SCOPE_NOTE =
+  '只发这一个角色 · 挂载该角色真实工具 · 会真实操作所选设备 · 对话不落库'
+
+/** 需要设备的角色未选设备时的提示 */
+export const MODEL_DEBUG_DEVICE_REQUIRED_HINT = '请先选择调试设备（需可见 + 在线 + 未被占用）'
+
+/** 真机调试发送前的二次确认标题 */
+export const MODEL_DEBUG_DEVICE_CONFIRM_TITLE = '确认真机调试？'
+
+/** 真机调试二次确认正文：必须写明目标设备与写工具数量 */
+export function modelDebugDeviceConfirmText(deviceLabel: string, writeToolCount: number): string {
+  const scope =
+    writeToolCount > 0
+      ? `将挂载 ${writeToolCount} 个写工具，会真实操作该设备`
+      : '本次只挂只读工具，不会修改该设备'
+  return `目标设备：${deviceLabel}\n${scope}。是否继续？`
+}
+
 /** 智能体线路（任务卡片「智能体」下拉） */
 export const AGENT_ROUTES = [
   { value: 'device_control', label: '控制设备' },

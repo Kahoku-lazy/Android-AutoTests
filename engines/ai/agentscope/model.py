@@ -34,10 +34,7 @@ from engines.ai.registry import ConfigurationError
 from .billing import model_cost
 from .config import (
     DEVICE_PLANNER_TOOLS,
-    PLANNER_PROMPT,
-    VERIFIER_PROMPT,
     VERIFIER_TOOLS,
-    VISION_PROMPT,
     VISION_TOOLS,
     DeviceExecutionConfig,
     ModelConfig,
@@ -147,7 +144,7 @@ class RoleSpec:
 
     Attributes:
         role: 角色名（planner / executor / verifier），用于 Agent 名、日志与用量按角色聚合。
-        prompt: 系统提示词（config.py 的 *_PROMPT）。
+        prompt: 已废弃占位（恒为空）；系统提示词由 Django 经 TaskRequest 注入。
         tool_names: 该角色可见的工具名子集（config.py 的 *_TOOLS）。
         vision: 是否多模态（executor / verifier 需截图输入）。
         context_config: 上下文配置（如 {"max_image_num": 5}）。
@@ -291,6 +288,7 @@ class AgentRole:
         tools: list[ToolSpec],
         user_id: str = "",
         skill_dirs: list[str] | None = None,
+        system_prompt: str = "",
     ):
         """装配本角色：1 份角色配置 + 1 份模型连接 + 全量工具 → 1 个 Agent。
 
@@ -299,9 +297,11 @@ class AgentRole:
             tools: 平台全量工具（内部按 self.spec.tool_names 子集装配）。
             user_id: 注入工具包装层（写工具鉴权/归属）。
             skill_dirs: 启用的 skill 文件夹绝对路径（空则不挂 Skill）。
+            system_prompt: Django 从库注入的系统提示词（引擎常量留空，不做回退）。
         """
         self.config = config
-        self.agent = self._assemble(config, tools, user_id, skill_dirs or [])
+        self.system_prompt = system_prompt
+        self.agent = self._assemble(config, tools, user_id, skill_dirs or [], system_prompt)
 
     @property
     def model_name(self) -> str:
@@ -314,12 +314,13 @@ class AgentRole:
         tools: list[ToolSpec],
         user_id: str,
         skill_dirs: list[str],
+        system_prompt: str,
     ) -> Agent:
         """装配：模型连接 + 系统提示词 + 工具子集 → AgentScope Agent。"""
         model = create_model(config, stream=False, vision=self.spec.vision)
         return Agent(
             name=self.spec.role,
-            system_prompt=self.spec.prompt,
+            system_prompt=system_prompt,
             model=model,
             toolkit=build_toolkit(
                 self._select_tools(tools), user_id=user_id, skill_dirs=skill_dirs
@@ -334,6 +335,17 @@ class AgentRole:
         """按 spec.tool_names 子集从全量 tools 选取（保持顺序，跳过不存在的名）。"""
         by_name = {t.name: t for t in tools}
         return [by_name[n] for n in self.spec.tool_names if n in by_name]
+
+    async def ask(self, content: str) -> RoleResult:
+        """单轮问答：供调试台 / 工具对本角色说一句话（复用执行骨架，不改动它）。
+
+        Args:
+            content: 要发给本角色的纯文本。
+
+        Returns:
+            RoleResult（本轮的输出 / 思考 / 用量）。
+        """
+        return await self._execute(content)
 
     async def _execute(self, content: str | list) -> RoleResult:
         """执行任务骨架：调本角色 Agent → 打日志 → 解析成任务报告。
@@ -523,7 +535,7 @@ class PlannerRole(AgentRole):
 
     spec = RoleSpec(
         role="planner",
-        prompt=PLANNER_PROMPT,
+        prompt="",
         tool_names=tuple(DEVICE_PLANNER_TOOLS),
     )
 
@@ -548,7 +560,7 @@ class ExecutorRole(AgentRole):
 
     spec = RoleSpec(
         role="executor",
-        prompt=VISION_PROMPT,
+        prompt="",
         tool_names=tuple(VISION_TOOLS),
         vision=True,
         context_config={"max_image_num": 5},
@@ -597,7 +609,7 @@ class VerifierRole(AgentRole):
 
     spec = RoleSpec(
         role="verifier",
-        prompt=VERIFIER_PROMPT,
+        prompt="",
         tool_names=tuple(VERIFIER_TOOLS),
         vision=True,
         context_config={"max_image_num": 5},
@@ -665,6 +677,7 @@ def build_device_models(
     tools: list[ToolSpec],
     user_id: str = "",
     skill_dirs: list[str] | None = None,
+    system_prompts: dict[str, str] | None = None,
 ) -> tuple[PlannerRole, ExecutorRole, VerifierRole]:
     """按三角色配置创建三个角色对象（planner / executor / verifier）。
 
@@ -673,13 +686,19 @@ def build_device_models(
         tools: 平台全量工具（各角色按自己的 RoleSpec.tool_names 子集取用）。
         user_id: 注入工具包装层（写工具鉴权/归属）。
         skill_dirs: 启用的 skill 文件夹绝对路径。
+        system_prompts: 三角色系统提示词（键 planner/executor/verifier）。
 
     Returns:
         (planner, executor, verifier) 三个角色对象。
     """
     dirs = skill_dirs or []
+    prompts = system_prompts or {}
     return (
-        PlannerRole(config.planner, tools, user_id, dirs),
-        ExecutorRole(config.executor, tools, user_id, dirs),
-        VerifierRole(config.verifier, tools, user_id, dirs),
+        PlannerRole(config.planner, tools, user_id, dirs, system_prompt=prompts.get("planner", "")),
+        ExecutorRole(
+            config.executor, tools, user_id, dirs, system_prompt=prompts.get("executor", "")
+        ),
+        VerifierRole(
+            config.verifier, tools, user_id, dirs, system_prompt=prompts.get("verifier", "")
+        ),
     )

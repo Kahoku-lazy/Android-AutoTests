@@ -619,6 +619,37 @@ DEBUG_PARAM_OPTIONS: dict[tuple[str, str], str] = {
     ("xpath_action", "serial"): "devices:available",
 }
 
+# 候选来源标识：可用设备。平台工具调试页（HTTP schema）与模型调试页（真机操作前校验）
+# 共用下面的实现，避免两份过滤口径漂移。
+_DEVICE_OPTIONS_SOURCE = "devices:available"
+
+
+def available_device_options(user_id: str) -> list[dict]:
+    """候选设备：对请求者可见、状态在线且当前未被占用。
+
+    可见性口径复用 device_pool 的 api（与设备管理列表同源），本函数不另做可见性判定。
+    """
+    from apps.device_pool.api import list_devices
+    from models.constants import DeviceStatus
+
+    options = []
+    for dev in list_devices(user_id=user_id):
+        if dev.get("status") != DeviceStatus.ONLINE or dev.get("occupied_by"):
+            continue
+        serial = str(dev.get("serial") or "")
+        if not serial:
+            continue
+        label = str(dev.get("name") or dev.get("model") or serial)
+        options.append({"value": serial, "label": f"{label} ({serial})"})
+    return options
+
+
+def resolve_param_options(source: str, user_id: str) -> list[dict]:
+    """候选来源标识 → 候选项清单；未知来源返回空清单。"""
+    if source == _DEVICE_OPTIONS_SOURCE:
+        return available_device_options(user_id)
+    return []
+
 
 def get_tool_debug_schema(name: str) -> dict:
     """按工具名返回调试用入参 schema（不含 user_id）。未注册则 ToolNotFoundError。"""

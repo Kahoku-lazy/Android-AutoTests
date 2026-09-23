@@ -77,6 +77,16 @@ vi.mock('@/modules/ai-assistant/composables/useDevicePrompts', () => ({
     startEdit: vi.fn(),
     cancelEdit: vi.fn(),
     save: vi.fn(),
+    // 历史存档（DevicePromptHistoryDrawer 的入参）
+    archives: ref([]),
+    archivesLoading: ref(false),
+    historyVisible: ref(false),
+    preview: ref(null),
+    openHistory: vi.fn(),
+    previewArchive: vi.fn(),
+    restoreArchive: vi.fn(),
+    removePermanentArchive: vi.fn(),
+    autoSaveIfDirty: vi.fn(),
   }),
 }))
 

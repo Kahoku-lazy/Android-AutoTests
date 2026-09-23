@@ -1,0 +1,557 @@
+/* ModelDebugPage — 模型调试台（三层语义：角色带 / 生效装配 / 参考数据 + 右栏对话）
+   全部外观值取自 T0 令牌，不新增本地自定义属性 */
+
+.md-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-md);
+}
+
+/* ── 左配置 / 右对话（变体 C 分栏台）── */
+.md-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  gap: var(--app-space-md);
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .md-split { grid-template-columns: 1fr; }
+}
+
+.md-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-md);
+  min-width: 0;
+}
+
+/* ── ① 角色带 ── */
+.md-role {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+  padding: var(--app-space-md) var(--app-space-lg);
+  background: var(--app-bg-card);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.md-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-space-sm);
+}
+
+.md-tab {
+  font-family: inherit;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--ink);
+  padding: var(--app-space-xs) 12px;
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-subtle);
+  cursor: pointer;
+  transition: background var(--app-duration-fast), transform var(--app-duration-fast);
+}
+
+.md-tab:hover {
+  background: var(--app-highlight);
+  transform: translateY(-1px);
+}
+
+.md-tab.active {
+  background: color-mix(in srgb, var(--c-ai) 18%, var(--app-bg-card));
+  transform: rotate(0);
+}
+
+.md-role-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--app-space-sm);
+}
+
+.md-role-name {
+  margin: 0;
+  font-size: var(--app-size-lg);
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.md-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-space-sm) var(--app-space-lg);
+  margin: 0;
+}
+
+.md-fact {
+  display: flex;
+  align-items: baseline;
+  gap: var(--app-space-xs);
+}
+
+.md-fact dt {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-muted);
+}
+
+.md-fact dd {
+  margin: 0;
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ── ② / ③ 语义分区标题（顶层分区不加壳）── */
+.md-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+}
+
+.md-section-title {
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+  color: var(--ink);
+}
+
+/* ── 纸面面板与组头 ── */
+.md-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+  padding: var(--app-space-md) var(--app-space-lg);
+  background: var(--app-bg-card);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.md-group-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--app-space-sm);
+  padding-bottom: var(--app-space-xs);
+  border-bottom: 1.5px dashed var(--dot);
+  color: var(--ink);
+  text-align: left;
+}
+
+.md-group-head--toggle {
+  width: 100%;
+  font-family: inherit;
+  background: none;
+  border: 0;
+  border-bottom: 1.5px dashed var(--dot);
+  cursor: pointer;
+}
+
+.md-group-title {
+  font-size: var(--app-size-sm);
+  font-weight: 800;
+}
+
+.md-caret {
+  font-size: var(--app-size-xs);
+}
+
+.md-prompt-meta {
+  margin-left: auto;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-muted);
+}
+
+.md-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+}
+
+.md-group-sub {
+  margin: 0;
+  font-size: var(--app-size-xs);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--app-text-secondary);
+}
+
+/* ── 徽标 ── */
+.md-badge {
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  padding: 2px var(--app-space-sm);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-subtle);
+  white-space: nowrap;
+}
+
+.md-badge.on {
+  background: var(--app-highlight);
+}
+
+.md-badge.off {
+  color: var(--app-text-muted);
+}
+
+.md-badge.ro {
+  background: var(--app-bg-card);
+}
+
+.md-badge.wr {
+  background: var(--app-highlight);
+}
+
+/* 归属标注：文案较长，允许换行 */
+.md-badge.shared {
+  white-space: normal;
+  background: color-mix(in srgb, var(--c-ai) 18%, var(--app-bg-card));
+}
+
+.md-badge.warn {
+  white-space: normal;
+  color: var(--app-status-danger);
+  background: color-mix(in srgb, var(--app-status-danger) 14%, var(--app-bg-card));
+}
+
+/* 组头徽标靠右，与折叠头的字数标识同侧 */
+.md-group-head .md-badge {
+  margin-left: auto;
+}
+
+/* ── 工具条目 ── */
+.md-tools {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+}
+
+.md-tool {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  padding: var(--app-space-xs) var(--app-space-sm);
+  background: var(--app-bg-subtle);
+  border-radius: var(--app-radius-sm);
+}
+
+.md-tool-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* ── 文本块 ── */
+.md-note {
+  margin: 0;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+.md-list {
+  margin: 0;
+  padding-left: var(--app-space-md);
+  font-size: var(--app-size-sm);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.md-md {
+  font-size: var(--app-size-sm);
+  line-height: 1.6;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.md-empty {
+  margin: 0;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-muted);
+}
+
+.md-empty-title {
+  margin: 0;
+}
+
+.md-examples {
+  margin: var(--app-space-xs) 0 0;
+  padding-left: var(--app-space-md);
+}
+
+/* ── ④ 调试对话（右栏常驻：只有消息区滚动）── */
+.md-msgs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+  max-height: 52vh;
+  overflow-y: auto;
+}
+
+.md-msg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+  padding: var(--app-space-sm) var(--app-space-md);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  background: var(--app-bg-card);
+}
+
+.md-msg.user {
+  background: var(--app-bg-subtle);
+}
+
+.md-msg-role {
+  margin: 0;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--app-text-secondary);
+}
+
+.md-msg-text {
+  margin: 0;
+  font-size: var(--app-size-sm);
+  line-height: 1.6;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.md-msg-text.err {
+  color: var(--app-status-danger);
+}
+
+/* ── 消息内两个区块：返回结果 / 思考过程（必须一眼可分）── */
+.md-answer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+}
+
+.md-answer-label {
+  margin: 0;
+  font-size: var(--app-size-xs);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--app-text-secondary);
+}
+
+.md-think {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+  margin-top: var(--app-space-xs);
+  padding: var(--app-space-sm);
+  background: var(--app-bg-subtle);
+  border-top: 1.5px dashed var(--dot);
+  border-radius: var(--app-radius-sm);
+}
+
+.md-think-head {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  width: 100%;
+  padding: 0;
+  font-family: inherit;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.md-think-title {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.md-think-meta {
+  margin-left: auto;
+  font-weight: 700;
+}
+
+.md-think-body {
+  margin: 0;
+  font-size: var(--app-size-xs);
+  line-height: 1.6;
+  color: var(--app-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* ── 工具调用轨迹（白底虚线框，与思考块的浅底区分）── */
+.md-trace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+  margin-top: var(--app-space-xs);
+  padding: var(--app-space-sm);
+  background: var(--app-bg-card);
+  border: 1.5px dashed var(--ink);
+  border-radius: var(--app-radius-sm);
+}
+
+.md-trace-head {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  margin: 0;
+}
+
+.md-trace-title {
+  font-size: var(--app-size-xs);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--app-text-secondary);
+}
+
+.md-trace-meta {
+  margin-left: auto;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--app-text-muted);
+}
+
+.md-trace-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+}
+
+.md-trace-item {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--app-space-xs);
+  font-size: var(--app-size-xs);
+  color: var(--ink);
+}
+
+.md-trace-kind {
+  font-weight: 800;
+  color: var(--app-text-secondary);
+}
+
+.md-trace-name {
+  font-weight: 700;
+}
+
+.md-trace-state {
+  color: var(--app-text-muted);
+}
+
+.md-trace-detail {
+  flex: 1 1 100%;
+  min-width: 0;
+  color: var(--app-text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* ── 调试设备（仅需要设备的角色）── */
+.md-device {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--app-space-sm);
+}
+
+.md-device-label {
+  font-size: var(--app-size-xs);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--app-text-secondary);
+}
+
+.md-device-select {
+  min-width: 220px;
+}
+
+.md-device-empty {
+  font-size: var(--app-size-xs);
+  color: var(--app-status-danger);
+}
+
+.md-chat-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+  margin-top: auto;
+}
+
+.md-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: var(--app-size-sm);
+  padding: var(--app-space-sm);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  background: var(--app-bg-card);
+  color: var(--ink);
+  resize: vertical;
+}
+
+.md-textarea:focus {
+  outline: 2px solid var(--c-ai);
+  outline-offset: 1px;
+}
+
+.md-chat-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--app-space-sm);
+}
+
+.md-btn {
+  font-family: inherit;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--ink);
+  padding: 6px 12px;
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-card);
+  box-shadow: 2px 2px 0 var(--ink);
+  cursor: pointer;
+  transition: background var(--app-duration-fast), transform var(--app-duration-fast);
+}
+
+.md-btn:hover:not(:disabled) {
+  background: var(--app-highlight);
+  transform: translateY(-1px);
+}
+
+.md-btn--primary {
+  background: var(--c-ai);
+}
+
+.md-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-tab,
+  .md-btn { transition: none; }
+}

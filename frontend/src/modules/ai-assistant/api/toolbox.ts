@@ -218,6 +218,98 @@ export async function restoreDevicePromptArchive(
   return data
 }
 
+// ── 单模型调试（工具箱「模型调试」）──
+
+export type ModelDebugRole = 'planner' | 'executor' | 'verifier'
+
+export interface ModelDebugTool {
+  name: string
+  read_only: boolean
+  category: string
+  enabled: boolean
+}
+
+export interface ModelDebugModelSummary {
+  provider: string
+  model_name: string
+  has_api_key: boolean
+  configured: boolean
+}
+
+export interface ModelDebugRoleConfig {
+  role: ModelDebugRole
+  label: string
+  vision: boolean
+  /** 该角色工具子集里是否有工具需要设备（决定页内是否必须选设备） */
+  needs_device: boolean
+  model: ModelDebugModelSummary
+  prompt: string
+  tools: ModelDebugTool[]
+}
+
+export interface ModelDebugSkills {
+  gate_on: boolean
+  shared_by_roles: boolean
+  items: { name: string; path: string }[]
+}
+
+export interface ModelDebugKnowledge {
+  gate_on: boolean
+  enabled_source_ids: string[]
+  file_count: number
+  files: { id: string; name: string; type: string }[]
+  wired_to_runtime: boolean
+}
+
+export interface ModelDebugConfig {
+  agent_id: number
+  agent_name: string
+  role: ModelDebugRoleConfig
+  skills: ModelDebugSkills
+  knowledge: ModelDebugKnowledge
+}
+
+/** 引擎回溯出的工具调用/返回记录（type=call 带 input，type=result 带 output/state） */
+export interface ModelDebugToolCall {
+  type: 'call' | 'result'
+  name: string
+  input?: Record<string, unknown>
+  output?: string
+  state?: string
+}
+
+export interface ModelDebugReply {
+  role: ModelDebugRole
+  label: string
+  model_name: string
+  reply: string
+  thinking?: string[]
+  /** 本轮工具调用轨迹（调试对话挂真实工具，故会非空） */
+  tool_usage?: ModelDebugToolCall[]
+  usage?: Record<string, number>
+  cost?: number
+}
+
+export async function fetchModelDebugConfig(
+  role: ModelDebugRole | string,
+): Promise<{ status: boolean; data?: ModelDebugConfig; message?: string }> {
+  const { data } = await djangoClient.get(`/ai/model-debug/${encodeURIComponent(role)}/`)
+  return data
+}
+
+/** 单角色调试对话：挂该角色真实工具，可能真机操作，故不设等待上限（serial 条件必填） */
+export async function chatWithModelDebug(
+  role: ModelDebugRole | string,
+  text: string,
+  serial = '',
+): Promise<{ status: boolean; data?: ModelDebugReply; message?: string }> {
+  const { data } = await djangoClient.post(`/ai/model-debug/${encodeURIComponent(role)}/chat/`, {
+    text,
+    serial,
+  })
+  return data
+}
+
 // ── Platform tools ──
 
 export interface PlatformToolItem {

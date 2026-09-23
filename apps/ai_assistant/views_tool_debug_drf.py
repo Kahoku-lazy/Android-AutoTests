@@ -21,7 +21,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .permissions import _is_superuser
-from .tools import TOOLS, ToolNotFoundError, get_tool_debug_schema, invoke_platform_tool
+from .tools import (
+    TOOLS,
+    ToolNotFoundError,
+    get_tool_debug_schema,
+    invoke_platform_tool,
+    resolve_param_options,
+)
 
 logger = logging.getLogger("ai_assistant")
 
@@ -38,36 +44,6 @@ def _user_id(request) -> str:
     return str(getattr(request, "user_id", "") or "")
 
 
-_DEVICE_OPTIONS_SOURCE = "devices:available"
-
-
-def _available_device_options(user_id: str) -> list[dict]:
-    """候选设备：对请求者可见、状态在线且当前未被占用。
-
-    可见性口径复用 device_pool 的 api（与设备管理列表同源），本函数不另做可见性判定。
-    """
-    from apps.device_pool.api import list_devices
-    from models.constants import DeviceStatus
-
-    options = []
-    for dev in list_devices(user_id=user_id):
-        if dev.get("status") != DeviceStatus.ONLINE or dev.get("occupied_by"):
-            continue
-        serial = str(dev.get("serial") or "")
-        if not serial:
-            continue
-        label = str(dev.get("name") or dev.get("model") or serial)
-        options.append({"value": serial, "label": f"{label} ({serial})"})
-    return options
-
-
-def _resolve_param_options(source: str, user_id: str) -> list[dict]:
-    """候选来源标识 → 候选项清单；未知来源返回空清单。"""
-    if source == _DEVICE_OPTIONS_SOURCE:
-        return _available_device_options(user_id)
-    return []
-
-
 class PlatformToolSchemaAPIView(APIView):
     """GET /api/ai/platform-tools/<name> — 调试入参 schema（候选值按请求者收窄）。"""
 
@@ -82,7 +58,7 @@ class PlatformToolSchemaAPIView(APIView):
         for param in schema["parameters"]:
             source = param.pop("options_source", None)
             if source:
-                param["options"] = _resolve_param_options(source, user_id)
+                param["options"] = resolve_param_options(source, user_id)
         return Response(schema)
 
 

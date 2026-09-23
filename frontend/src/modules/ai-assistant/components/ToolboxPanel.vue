@@ -246,6 +246,34 @@
             </div>
           </template>
 
+          <template v-else-if="activeSource === 'debug'">
+            <EmptyState
+              v-if="!debugRolesLoading && !debugRoles.length"
+              icon="🧪"
+              text="暂无角色配置"
+            />
+            <div v-else v-loading="debugRolesLoading" class="tb-debug-grid">
+              <button
+                v-for="item in debugRoles"
+                :key="item.role"
+                type="button"
+                class="tb-debug-card"
+                :data-role="item.role"
+                @click="openModelDebug(item.role)"
+              >
+                <span class="tb-debug-head">
+                  <span class="tb-debug-name">{{ item.label }}</span>
+                  <span v-if="item.vision" class="tb-debug-badge">视觉</span>
+                </span>
+                <span class="tb-debug-model">{{ item.model.model_name || '（未配置模型）' }}</span>
+                <span class="tb-debug-meta">
+                  {{ item.tools.length }} 个工具 ·
+                  {{ item.model.configured ? '已配置' : '缺 API Key' }}
+                </span>
+              </button>
+            </div>
+          </template>
+
           <template v-else>
             <el-collapse v-model="promptExpanded" class="tb-prompt-collapse">
               <el-collapse-item
@@ -314,9 +342,10 @@ import { usePlatformTools } from '../composables/usePlatformTools'
 import { usePlatformConfig } from '../composables/usePlatformConfig'
 import { useToolboxAssembly } from '../composables/useToolboxAssembly'
 import { useDevicePrompts } from '../composables/useDevicePrompts'
+import { useModelDebugRoles } from '../composables/useModelDebug'
 import { renderSkillMarkdown } from '../helpers/skill-markdown'
 import { gatedSources } from '../helpers/toolbox-assembly'
-import { skillViewerRoute, toolDebugRoute } from '../constants'
+import { modelDebugRoute, skillViewerRoute, toolDebugRoute } from '../constants'
 import type { AssemblySourceDef } from '../helpers/toolbox-assembly'
 import type { SharedToolItem } from '../api/toolbox'
 
@@ -375,6 +404,17 @@ const {
   autoSaveIfDirty: autoSavePromptsIfDirty,
 } = useDevicePrompts()
 
+const {
+  roles: debugRoles,
+  loading: debugRolesLoading,
+  load: loadDebugRoles,
+} = useModelDebugRoles()
+
+/** 进入「模型调试」来源时按需拉三角色概览（三个角色各一次只读配置） */
+watch(activeSource, (now) => {
+  if (now === 'debug' && !debugRoles.value.length) void loadDebugRoles()
+})
+
 /** 默认只展开规划；编辑时展开全部便于对照 */
 const promptExpanded = ref<string[]>(['planner'])
 watch(promptEditing, (on) => {
@@ -413,6 +453,10 @@ function openSkill(item: SharedToolItem) {
 
 function openToolDebug(name: string) {
   router.push(toolDebugRoute(name))
+}
+
+function openModelDebug(role: string) {
+  router.push(modelDebugRoute(role))
 }
 
 function renderMd(src: string) {

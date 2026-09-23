@@ -2,9 +2,9 @@
 name: html-report
 description: |
   HTML 报告生成器 — 为所有 skill 提供统一的 animal-island-ui 设计规范，确保项目内所有 HTML 输出（方案文档、分析报告、测试报告、质量报告、架构图等）视觉风格一致。
-  包含完整 design token、26 组件样式规格、阴影系统、硬性规则和自包含 HTML 模板。
-  Keywords: HTML报告, 设计规范, design token, animal-island-ui, 配色, 字体, 圆角, 阴影, 动画, 报告模板, 方案文档, 分析报告
-  Trigger: 任何 skill 需要输出 HTML 报告/方案文档/分析文档/流程图时，必须加载 references/PROMPT.md 获取设计规范。
+  包含完整 design token、26 组件样式规格、阴影系统、硬性规则和自包含 HTML 模板；并提供「后端 Django 方案设计」文档的章节契约与骨架。
+  Keywords: HTML报告, 设计规范, design token, animal-island-ui, 配色, 字体, 圆角, 阴影, 动画, 报告模板, 方案文档, 分析报告, Django方案, 后端方案设计, 后端设计文档, 架构方案, API契约, 数据模型, 迁移
+  Trigger: 任何 skill 需要输出 HTML 报告/方案文档/分析文档/流程图时，必须加载 references/PROMPT.md 获取设计规范；用户要求「写后端 Django 方案设计 / 后端设计方案 / 后端架构方案 / 接口契约设计」时，另加载 references/django-design-doc.md 获取章节契约与骨架。
 ---
 
 # HTML Report — animal-island-ui 设计规范与 HTML 报告生成
@@ -25,6 +25,7 @@ description: |
 | 用户要求"生成 HTML 报告/方案文档" | 完整 SKILL.md + `references/PROMPT.md` | 获取规范和模板 |
 | 新 skill 集成 HTML 输出能力 | `references/PROMPT.md` | 参考规范，在关联文件表中注册 |
 | 检查已有 HTML 是否符合规范 | `references/PROMPT.md` HARD RULES 部分 | 逐条对照 14 条硬性规则 |
+| 输出「后端 Django 方案设计」文档 | `references/django-design-doc.md` + `references/PROMPT.md` | 章节契约与骨架；视觉仍以 PROMPT.md 为准 |
 
 ---
 
@@ -149,6 +150,24 @@ duration: fast 0.15s / base 0.25s / slow 0.35s
 
 ---
 
+## 后端 Django 方案设计输出
+
+生成**后端变更的方案设计**（动手前给人评审的稿子）时，除本 skill 的视觉规范外，还必须加载 `references/django-design-doc.md`，它给出内容契约：
+
+- **12 章必填契约**：背景与目标 / 影响面 / 分层落位 D0–D5 / 数据模型与迁移 / API 契约 / 写库与模块边界 / 通道与协议 / 鉴权与安全 / 兼容与回滚 / 测试与验收 / 批次与顺序 / 风险与未知
+- **已验证的自包含骨架**：从 `报告-Django设计系统分层D0-D5检查.html` 抽出的 vanilla CSS（ribbon / kpis / callout / table+tag / ul.checks / footer + D0–D5 层级色），复制即可，别重新发明
+- **硬性核对清单 12 条**
+
+三处最容易翻车：
+
+1. **API 契约章占半壁**：逐端点列 方法 / 路径 / 入参 / 出参信封 / 错误码，写成散文即不合格。信封 `{status, data}` / `{status, message}`，HTTP JSON 一律 **snake_case**；legacy 平铺特例（report `/reports/*`、workflow 非 router 路径）**禁止新增**；改路径或字段必须 前端 api + 接口文档 + Serializer 三处同步。
+2. **写库口径**：写库只经 `api.py`；跨 App 读 Model 可以，跨 App 写必须走对方 `api.py`。方案里每个写操作都要指明落在哪个 App 的 `api.py`。
+3. **时态诚实**：方案设计写"将实现"，检查报告写"已实现"，两者不可混。产物按项目文档位置约定存放。
+
+**验收不归本 skill**：方案中承诺的门禁命令，落地后由 `django-backend-check` 逐条复核，边界/防火墙/体积由 `boundary-check` 复核。
+
+---
+
 ## 与其他 Skill 的关系
 
 ```
@@ -194,4 +213,5 @@ html-report (本 skill)
 | 文件 | 用途 |
 |------|------|
 | `references/PROMPT.md` | 完整 design token + 26 组件样式规格 + self-contained HTML 生成提示词 |
+| `references/django-design-doc.md` | 后端 Django 方案设计的 12 章内容契约 + 已验证自包含骨架 + 12 条核对清单 |
 | `reviewer` skill §3 | 动森 UI 组件 API 陷阱（type=danger→primary danger / Tabs 具名 slot / el-cascader emitPath） |

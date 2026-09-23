@@ -495,4 +495,4 @@ function App() {
 Wrap the entire file content in a single fenced ` ```html ` code block so the user can copy-paste it as-is. After the code block, list any spec line you intentionally relaxed (e.g., simplified an animation) and why.
 ````
 
-> 这个提示词是 self-contained 的：不需要打开 `AI_USAGE.md` 或 `skill/SKILL.md` 也能让 AI 工具复现 95%+ 视觉。要 100% 像素级还原，**项目内**直接 `npm i animal-island-ui` + `import` 真实组件即可。
+> 这个提示词是 self-contained 的：不依赖 animal-island-ui 包内的其它文档也能让 AI 工具复现 95%+ 视觉。要 100% 像素级还原，**项目内**直接 `npm i animal-island-ui` + `import` 真实组件即可。

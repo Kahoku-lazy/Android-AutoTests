@@ -1,6 +1,6 @@
 # Doodle Craft 页面层 — 布局骨架与滚动规则
 
-> 来源：本文件（页面规则以此为准；原 `DESIGN_SYSTEM.md` §四已并入）。令牌值以 tokens.css 为准。
+> 来源：本文件（页面规则以此为准）。令牌值以 tokens.css 为准。
 
 ## 4.1 标准页面骨架
 
@@ -96,4 +96,4 @@ background-color: var(--paper); /* #fffef5 */
 
 所有 fetch 页面用同一骨架（script + template），只改标注「← 改这里」的部分：导入 api、数据变量名、API 调用、响应字段、错误文案、模板内容。
 
-> 完整代码模板可从 git 历史恢复（原 DESIGN_SYSTEM.md §4.7）。
+> 完整代码模板可从 git 历史恢复。

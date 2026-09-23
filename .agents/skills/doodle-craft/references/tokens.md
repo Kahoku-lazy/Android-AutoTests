@@ -43,7 +43,7 @@
 
 ## 1.4 字号刻度
 
-字号最小 12px，只允许 6 档，**禁止硬编码 `font-size`**。
+字号最小 12px，只允许 7 档，**禁止硬编码 `font-size`**。
 
 | 刻度 | CSS 变量 | 值 | 场景 |
 |------|------|:--:|------|
@@ -53,6 +53,7 @@
 | lg | `--app-size-lg` | 20px | 段落标题、弹窗标题 |
 | xl | `--app-size-xl` | 24px | 页面标题 |
 | 2xl | `--app-size-2xl` | 32px | KPI 数字、Hero 数字 |
+| 3xl | `--app-size-3xl` | 48px | 品牌展示级（仅首屏品牌标题，当前唯一消费点：登录页 Hero 标题）|
 
 ## 1.5 字体层级
 
@@ -60,7 +61,7 @@
 |------|------|:--:|------|
 | 页面标题 | `--app-font-display` Cascadia Mono / Noto Sans SC | 400–700 | `--app-size-xl` 24px |
 | 段落标题 | `--app-font-display` | 400–700 | `--app-size-lg` 20px |
-| 品牌文字 | `--app-font-brand` Ziku FeiYang（字库星球飞扬体）| 400 | 22–32px（登录页 Hero / 侧边栏品牌）|
+| 品牌文字 | `--app-font-brand` Ziku FeiYang（字库星球飞扬体）| 400 | 22–48px（登录页 Hero / 侧边栏品牌）|
 | KPI 数字 | `--app-font` Cascadia Mono / Noto Sans SC | 800 | `--app-size-2xl` 32px |
 | UI 正文 | `--app-font` Cascadia Mono / Noto Sans SC | 500 | `--app-size-sm` 14px |
 | 辅助文字 | `--app-font` | 500 | `--app-size-xs` 12px |

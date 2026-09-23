@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>方案+原型 · 全站模块与子页面涂鸦改版</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #2c2c2c;
+      --paper: #fffef5;
+      --paper-card: #fffdf0;
+      --red: #ff6b6b;
+      --teal: #4ecdc4;
+      --yellow: #ffd93d;
+      --sidebar-w: 248px;
+      --topbar-h: 78px;
+      --font: "Albert Sans", "Segoe UI", system-ui, sans-serif;
+      --dash: 2.5px dashed var(--ink);
+      --radius: 2px;
+      --c-dashboard: #F7C948;
+      --c-device: #6BCB77;
+      --c-element: #A78BFA;
+      --c-case: #4ECDC4;
+      --c-runner: #FFB5A7;
+      --c-report: #7C6F83;
+      --c-ai: #E879F9;
+      --c-workflow: #89CFF0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      font-family: var(--font);
+      color: var(--ink);
+      background: var(--paper);
+      overflow: hidden;
+    }
+    button { font: inherit; color: inherit; cursor: pointer; }
+    code {
+      font-family: inherit;
+      font-weight: 700;
+      background: rgba(255, 217, 61, 0.35);
+      padding: 0 0.25em;
+    }
+    .marker {
+      background: linear-gradient(transparent 55%, rgba(255, 217, 61, 0.72) 55%);
+      padding: 0 0.08em;
+    }
+    .wavy-teal {
+      text-decoration-line: underline;
+      text-decoration-style: wavy;
+      text-decoration-color: var(--teal);
+      text-underline-offset: 4px;
+    }
+    .wavy-red {
+      text-decoration-line: underline;
+      text-decoration-style: wavy;
+      text-decoration-color: var(--red);
+      text-underline-offset: 4px;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      height: 100%;
+    }
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      border-right: var(--dash);
+      background: #fffdf8;
+      padding: 0 14px 16px;
+      overflow: auto;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: var(--topbar-h);
+      margin: 0 -14px 16px;
+      padding: 0 18px;
+      font-weight: 800;
+      border-bottom: var(--dash);
+      flex-shrink: 0;
+    }
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border: 2.5px solid var(--ink);
+      background: var(--yellow);
+      box-shadow: 2px 2px 0 0 var(--teal);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+    }
+    .brand-sub {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      opacity: 0.55;
+      margin-top: 2px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .nav-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.45;
+      padding: 0 10px 8px;
+    }
+    .nav { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 12px;
+      border: 2.5px solid transparent;
+      border-radius: var(--radius);
+      background: transparent;
+      font-weight: 700;
+      font-size: 13.5px;
+      text-align: left;
+    }
+    .nav-item:hover { background: rgba(255, 217, 61, 0.25); transform: rotate(-0.4deg); }
+    .nav-item.active {
+      border: var(--dash);
+      background: var(--yellow);
+      box-shadow: 3px 3px 0 0 var(--teal);
+      transform: rotate(-0.8deg);
+    }
+    .nav-item[data-page="hub"].active { box-shadow: 3px 3px 0 0 var(--c-element); }
+    .nav-item[data-page="ai"].active { box-shadow: 3px 3px 0 0 var(--c-ai); }
+    .nav-item[data-page="matrix"].active { box-shadow: 3px 3px 0 0 var(--c-report); }
+    .nav-item[data-page="nav"].active { box-shadow: 3px 3px 0 0 var(--c-case); }
+    .nav-ico {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--ink);
+      border-radius: var(--radius);
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 800;
+      background: #fff;
+      flex-shrink: 0;
+    }
+    .sidebar-foot {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: var(--dash);
+      font-size: 11px;
+      opacity: 0.55;
+      padding-left: 8px;
+      line-height: 1.45;
+    }
+
+    .stage { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }
+    .page-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      height: var(--topbar-h);
+      padding: 0 28px;
+      border-bottom: var(--dash);
+      flex-shrink: 0;
+      background: var(--paper);
+    }
+    .page-header h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
+    .page-header .kicker {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--teal);
+    }
+    .page { display: none; flex: 1; overflow: auto; padding: 24px 28px 56px; }
+    .page.active { display: block; }
+    .page-lead { max-width: 760px; font-size: 15px; margin-bottom: 22px; line-height: 1.55; }
+
+    h2 {
+      font-size: 18px;
+      font-weight: 800;
+      margin: 10px 0 12px;
+      display: inline-block;
+      background: linear-gradient(transparent 60%, rgba(255, 217, 61, 0.7) 60%);
+      padding: 0 4px;
+    }
+    .sub { font-size: 13px; opacity: 0.7; margin: -4px 0 14px; }
+    .meta { font-size: 12px; opacity: 0.65; font-weight: 600; }
+    .clickable { cursor: pointer; }
+    .chip-busy { background: #FFF9E0; }
+    .chip-ok { background: #C8F5D0; }
+
+    .panel {
+      border: var(--dash);
+      background: var(--paper-card);
+      padding: 20px;
+      box-shadow: 4px 4px 0 0 var(--teal);
+      position: relative;
+      margin-bottom: 16px;
+    }
+    .panel.flat { box-shadow: 3px 3px 0 0 var(--ink); }
+    .pin {
+      position: absolute;
+      top: -7px;
+      left: 50%;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--ink);
+      transform: translateX(-50%);
+      background: var(--red);
+    }
+    .pin.teal { background: var(--teal); }
+    .pin.yellow { background: var(--yellow); }
+    .pin.green { background: var(--c-device); }
+    .pin.purple { background: var(--c-element); }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+    .mini {
+      border: var(--dash);
+      background: #fff;
+      padding: 14px;
+    }
+    .mini h3 { font-size: 15px; font-weight: 800; margin-bottom: 6px; }
+    .mini p, .mini li { font-size: 12.5px; opacity: 0.88; line-height: 1.45; }
+    .mini ul { list-style: none; display: grid; gap: 5px; margin-top: 8px; }
+    .mini:nth-child(4n+1) { transform: rotate(-0.6deg); box-shadow: 3px 3px 0 0 var(--red); }
+    .mini:nth-child(4n+2) { transform: rotate(0.5deg); box-shadow: 3px 3px 0 0 var(--teal); }
+    .mini:nth-child(4n+3) { transform: rotate(-0.3deg); box-shadow: 3px 3px 0 0 var(--yellow); }
+    .mini:nth-child(4n) { transform: rotate(0.4deg); box-shadow: 3px 3px 0 0 var(--c-element); }
+
+    .sticky { border: var(--dash); padding: 16px; }
+    .sticky.do { background: #e8fbf8; transform: rotate(-0.6deg); box-shadow: 4px 4px 0 0 var(--teal); }
+    .sticky.dont { background: #ffe8e8; transform: rotate(0.7deg); box-shadow: 4px 4px 0 0 var(--red); }
+    .sticky h3 { font-size: 16px; font-weight: 800; margin-bottom: 8px; }
+    .sticky ul { list-style: none; display: grid; gap: 7px; }
+    .sticky li { padding-left: 18px; position: relative; font-size: 13px; }
+    .sticky li::before { content: "✓"; position: absolute; left: 0; font-weight: 800; color: var(--teal); }
+    .sticky.dont li::before { content: "✕"; color: var(--red); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 34px;
+      padding: 0 12px;
+      border: 2.5px solid var(--ink);
+      border-radius: var(--radius);
+      background: #fff;
+      font-weight: 800;
+      font-size: 12.5px;
+      box-shadow: 2px 2px 0 0 var(--ink);
+    }
+    .btn:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 0 var(--ink); }
+    .btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 0 var(--ink); }
+    .btn-yellow { background: var(--yellow); }
+    .btn-teal { background: var(--teal); }
+    .btn-device { background: var(--c-device); }
+    .btn-ghost { background: #fff; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      border: 1.5px solid var(--ink);
+      border-radius: var(--radius);
+      padding: 1px 7px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .chip-ok { background: #C8F5D0; }
+    .chip-busy { background: #FFF9E0; }
+    .chip-mod { background: rgba(167, 139, 250, 0.35); }
+
+    table.map {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    table.map th {
+      text-align: left;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 10px 12px;
+      background: #fffdf0;
+      border-bottom: 2px solid var(--ink);
+    }
+    table.map td {
+      padding: 10px 12px;
+      border-bottom: 1.5px solid #d8d2c4;
+      vertical-align: top;
+    }
+    table.map tr:hover td {
+      background: linear-gradient(transparent 55%, rgba(255, 217, 61, 0.4) 55%);
+    }
+    .depth {
+      font-weight: 800;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+    }
+    .depth-1 { color: #2d7a2d; }
+    .depth-2 { color: #7a5a10; }
+    .depth-3 { color: #5a3fa0; }
+
+    /* ── Prototype shells ── */
+    .wb {
+      border: var(--dash);
+      background: #fff;
+      box-shadow: 5px 5px 0 0 var(--c-element);
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+    .wb[data-accent="ai"] { box-shadow: 5px 5px 0 0 var(--c-ai); }
+    .wb[data-accent="case"] { box-shadow: 5px 5px 0 0 var(--c-case); }
+    .wb[data-accent="report"] { box-shadow: 5px 5px 0 0 var(--c-report); }
+    .wb[data-accent="workflow"] { box-shadow: 5px 5px 0 0 var(--c-workflow); }
+    .wb[data-accent="device"] { box-shadow: 5px 5px 0 0 var(--c-device); }
+
+    .wb-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: var(--dash);
+      background: var(--paper-card);
+      flex-wrap: wrap;
+    }
+    .wb-head h3 { font-size: 18px; font-weight: 800; }
+    .wb-head .meta { font-size: 12px; opacity: 0.65; font-weight: 600; }
+    .crumbs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .crumbs button {
+      border: 0;
+      background: transparent;
+      font-weight: 800;
+      text-decoration: underline wavy var(--teal);
+      text-underline-offset: 3px;
+      padding: 0;
+    }
+    .crumbs .here {
+      background: linear-gradient(transparent 55%, rgba(255, 217, 61, 0.72) 55%);
+      padding: 0 0.15em;
+    }
+    .crumbs .sep { opacity: 0.4; }
+    .back-chip {
+      border: var(--dash);
+      background: #fff;
+      padding: 5px 10px;
+      font-weight: 800;
+      font-size: 12px;
+      box-shadow: 2px 2px 0 0 var(--ink);
+    }
+    .wb-body { padding: 16px; }
+    .wb-split {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 320px;
+    }
+    .wb-split.inspector { grid-template-columns: 1fr 340px; }
+    .tree-pane {
+      border-right: var(--dash);
+      padding: 14px;
+      background: #fffdf8;
+    }
+    .tree-pane h4 {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.5;
+      margin-bottom: 10px;
+    }
+    .tree-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 8px 10px;
+      border: 2px solid transparent;
+      border-radius: var(--radius);
+      background: transparent;
+      font-weight: 700;
+      font-size: 13px;
+      text-align: left;
+      margin-bottom: 4px;
+    }
+    .tree-item:hover { background: rgba(255, 217, 61, 0.2); }
+    .tree-item.active {
+      border: var(--dash);
+      background: var(--yellow);
+      box-shadow: 2px 2px 0 0 var(--c-element);
+    }
+    .tree-item.folder { opacity: 0.85; }
+    .tree-item .indent { width: 14px; }
+    .content-pane { padding: 16px; min-width: 0; }
+
+    .proj-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+    }
+    .proj-card {
+      border: var(--dash);
+      background: #fff;
+      padding: 16px 14px 12px;
+      text-align: left;
+      box-shadow: 3px 3px 0 0 var(--c-element);
+      position: relative;
+    }
+    .proj-card:nth-child(3n+1) { transform: rotate(-0.7deg); }
+    .proj-card:nth-child(3n+2) { transform: rotate(0.5deg); box-shadow: 3px 3px 0 0 var(--c-case); }
+    .proj-card:nth-child(3n) { transform: rotate(-0.3deg); box-shadow: 3px 3px 0 0 var(--teal); }
+    .proj-card:hover { transform: rotate(0) scale(1.02); z-index: 2; }
+    .proj-card .tape {
+      position: absolute;
+      top: -7px;
+      left: 50%;
+      width: 44px;
+      height: 12px;
+      transform: translateX(-50%) rotate(-2deg);
+      background: rgba(255, 217, 61, 0.5);
+      border: 1.5px solid var(--ink);
+    }
+    .proj-card strong { display: block; font-size: 15px; margin-bottom: 4px; }
+    .proj-card span { font-size: 12px; opacity: 0.65; }
+
+    .sheet {
+      border: var(--dash);
+      background: #fff;
+      box-shadow: 3px 3px 0 0 var(--c-report);
+      overflow: hidden;
+    }
+    .sheet table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .sheet th {
+      text-align: left;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 9px 12px;
+      background: #fffdf0;
+      border-bottom: 2px solid var(--ink);
+    }
+    .sheet td {
+      padding: 10px 12px;
+      border-bottom: 1.5px solid #d8d2c4;
+    }
+    .sheet tr:hover td {
+      background: linear-gradient(transparent 55%, rgba(255, 217, 61, 0.4) 55%);
+    }
+    .sheet tr.clickable { cursor: pointer; }
+
+    .ai-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .ai-tab {
+      border: 2px solid transparent;
+      background: transparent;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 7px 12px;
+      color: #888;
+    }
+    .ai-tab:hover { color: var(--ink); }
+    .ai-tab.active {
+      border: var(--dash);
+      background: var(--yellow);
+      color: var(--ink);
+      box-shadow: 2px 2px 0 0 var(--c-ai);
+    }
+
+    .canvas-mock {
+      border: var(--dash);
+      background:
+        radial-gradient(circle at 20% 30%, rgba(137, 207, 240, 0.2), transparent 40%),
+        radial-gradient(circle at 70% 60%, rgba(255, 217, 61, 0.15), transparent 35%),
+        #fff;
+      min-height: 280px;
+      position: relative;
+      padding: 24px;
+    }
+    .node {
+      position: absolute;
+      border: 2.5px solid var(--ink);
+      background: #fff;
+      padding: 10px 14px;
+      font-weight: 800;
+      font-size: 12px;
+      box-shadow: 3px 3px 0 0 var(--c-workflow);
+    }
+    .node.start { left: 40px; top: 40px; background: var(--yellow); }
+    .node.page { left: 180px; top: 100px; }
+    .node.end { left: 340px; top: 180px; background: #C8F5D0; }
+    .node-line {
+      position: absolute;
+      left: 120px;
+      top: 70px;
+      width: 80px;
+      height: 2px;
+      background: var(--ink);
+      transform: rotate(25deg);
+      opacity: 0.5;
+    }
+    .node-line2 {
+      position: absolute;
+      left: 270px;
+      top: 140px;
+      width: 80px;
+      height: 2px;
+      background: var(--ink);
+      transform: rotate(30deg);
+      opacity: 0.5;
+    }
+
+    .insp-shot {
+      border: var(--dash);
+      background: #f0ede8;
+      min-height: 260px;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      opacity: 0.7;
+    }
+    .insp-list {
+      display: grid;
+      gap: 6px;
+      max-height: 260px;
+      overflow: auto;
+    }
+    .insp-el {
+      border: 1.5px dashed var(--ink);
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #fff;
+      text-align: left;
+    }
+    .insp-el.active {
+      background: rgba(107, 203, 119, 0.25);
+      border-style: solid;
+    }
+
+    .excel-mock {
+      border: var(--dash);
+      overflow: auto;
+    }
+    .excel-mock table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 640px; }
+    .excel-mock th {
+      background: #fffdf0;
+      border: 1px solid #d8d2c4;
+      padding: 8px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .excel-mock td {
+      border: 1px solid #e8e2d4;
+      padding: 8px;
+    }
+
+    .step-rail {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .step {
+      border: var(--dash);
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 800;
+      background: #fff;
+      opacity: 0.55;
+    }
+    .step.on {
+      opacity: 1;
+      background: var(--yellow);
+      box-shadow: 2px 2px 0 0 var(--ink);
+    }
+
+    .hidden { display: none !important; }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      border: var(--dash);
+      background: var(--yellow);
+      padding: 10px 14px;
+      font-weight: 800;
+      font-size: 13px;
+      box-shadow: 3px 3px 0 0 var(--ink);
+      display: none;
+      z-index: 30;
+    }
+    .toast.show { display: block; }
+
+    .prio {
+      display: inline-block;
+      border: 1.5px solid var(--ink);
+      padding: 0 6px;
+      font-size: 10px;
+      font-weight: 800;
+      margin-right: 6px;
+    }
+    .prio-p0 { background: #FFB5A7; }
+    .prio-p1 { background: var(--yellow); }
+    .prio-p2 { background: #e8fbf8; }
+
+    @media (max-width: 960px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { max-height: 32vh; border-right: 0; border-bottom: var(--dash); }
+      .grid-2, .grid-3, .grid-4, .wb-split, .wb-split.inspector { grid-template-columns: 1fr; }
+      .tree-pane { border-right: 0; border-bottom: var(--dash); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .nav-item, .mini, .proj-card, .sticky { transform: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">M</span>
+        <div>
+          Module Map
+          <span class="brand-sub">Sub-pages kit</span>
+        </div>
+      </div>
+      <div class="nav-label">Explore</div>
+      <nav class="nav" aria-label="方案章节">
+        <button class="nav-item active" type="button" data-page="plan">
+          <span class="nav-ico" style="background:#ffd93d">▣</span> 总方案
+        </button>
+        <button class="nav-item" type="button" data-page="nav">
+          <span class="nav-ico" style="background:#4ECDC4">⇢</span> 子页导航
+        </button>
+        <button class="nav-item" type="button" data-page="hub">
+          <span class="nav-ico" style="background:#A78BFA">▤</span> 列表→工作台
+        </button>
+        <button class="nav-item" type="button" data-page="ai">
+          <span class="nav-ico" style="background:#E879F9">✦</span> AI 子导航
+        </button>
+        <button class="nav-item" type="button" data-page="matrix">
+          <span class="nav-ico" style="background:#7C6F83;color:#fff">◎</span> 其它模块
+        </button>
+      </nav>
+      <div class="sidebar-foot">
+        不改平台代码 · 仅方案与原型<br />
+        DNA = hand-drawn-doodle-sidebar<br />
+        已有：设备表 / 仪表盘钉板
+      </div>
+    </aside>
+
+    <main class="stage">
+      <header class="page-header">
+        <div>
+          <div class="kicker" id="kicker">PROPOSAL</div>
+          <h1 id="title">全站模块怎么改 · 子页面怎么走</h1>
+        </div>
+      </header>
+
+      <!-- PLAN -->
+      <section class="page active" id="page-plan">
+        <p class="page-lead">
+          对照 <span class="wavy-teal">Hand-Drawn Doodle</span> 与真实路由。
+          设备管理已有「表格一张纸」方案；本页补齐<span class="marker">其余模块 + 子页面深度</span>。
+          业务与 API 不动；改的是版式变体、子页导航、可复用纸面组件。
+        </p>
+
+        <h2>信息架构（按真实路由）</h2>
+        <p class="sub">深度 = 从侧栏入口点进去要经过几层页面。</p>
+        <div class="panel flat" style="overflow:auto">
+          <div class="pin yellow"></div>
+          <table class="map">
+            <thead>
+              <tr>
+                <th>模块</th>
+                <th>深度</th>
+                <th>路由链</th>
+                <th>版式变体</th>
+                <th>改什么</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>仪表盘</strong></td>
+                <td><span class="depth depth-1">L1 单页</span></td>
+                <td><code>/dashboard</code></td>
+                <td>A 钉板 KPI</td>
+                <td>已有章节钉板方案，对齐即可</td>
+              </tr>
+              <tr>
+                <td><strong>设备管理</strong></td>
+                <td><span class="depth depth-1">L1 单页</span></td>
+                <td><code>/devices</code></td>
+                <td>B 表 / 卡切换</td>
+                <td>已有 SketchTable 方案</td>
+              </tr>
+              <tr>
+                <td><strong>设备检查器</strong></td>
+                <td><span class="depth depth-1">L1 单页</span></td>
+                <td><code>/inspector</code></td>
+                <td>C 分栏工作台</td>
+                <td>左截图右列表虚线纸；抽屉也走 Dialog 纸</td>
+              </tr>
+              <tr>
+                <td><strong>元素定位</strong></td>
+                <td><span class="depth depth-3">L3 三级</span></td>
+                <td><code>/elements</code> → <code>.../projects/:code</code> → <code>.../files/:fileId</code></td>
+                <td>Hub 卡 → C 树台 → 详情</td>
+                <td><span class="marker">子页导航 + 撕纸项目卡</span></td>
+              </tr>
+              <tr>
+                <td><strong>用例管理</strong></td>
+                <td><span class="depth depth-3">L3 三级</span></td>
+                <td><code>/cases</code> → <code>.../projects/:id</code> → <code>.../files/:fileId</code></td>
+                <td>Hub 卡 → C 树台 → Excel 纸</td>
+                <td>与元素定位同一套「Hub→台→叶」</td>
+              </tr>
+              <tr>
+                <td><strong>测试报告</strong></td>
+                <td><span class="depth depth-2">L2 列表→详情</span></td>
+                <td><code>/reports</code> → run / task / cases</td>
+                <td>A+B → 详情纸</td>
+                <td>列表用 SketchTable；详情用章节纸</td>
+              </tr>
+              <tr>
+                <td><strong>页面流</strong></td>
+                <td><span class="depth depth-2">L2</span></td>
+                <td><code>/workflow</code> → <code>.../prototypes/:id</code></td>
+                <td>Hub 卡 → 画布台</td>
+                <td>列表撕纸卡；画布外框虚线，节点勿旋转</td>
+              </tr>
+              <tr>
+                <td><strong>AI 助手</strong></td>
+                <td><span class="depth depth-2">侧栏子项 + 深链</span></td>
+                <td>agents/toolbox/knowledge/evaluator → agent/task/skill</td>
+                <td>侧栏子导航 + 详情全屏</td>
+                <td>四子项共用壳；深链要面包屑回退</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>版式变体（复制不发明）</h2>
+        <div class="grid-4" style="margin-bottom:18px">
+          <article class="mini">
+            <h3>A · 钉板</h3>
+            <p>KPI / 入口卡网格 + 微倾。仪表盘、报告摘要。</p>
+          </article>
+          <article class="mini">
+            <h3>B · 表格纸</h3>
+            <p>SketchTable 一张纸。设备、报告列表、任何扁列表。</p>
+          </article>
+          <article class="mini">
+            <h3>C · 分栏台</h3>
+            <p>左树/面板 + 右内容。元素/用例工作台、检查器。</p>
+          </article>
+          <article class="mini">
+            <h3>H · Hub 入口</h3>
+            <p>项目/原型撕纸卡网格，点进下一层。元素、用例、页面流共用。</p>
+          </article>
+        </div>
+
+        <h2>子页面的硬约束</h2>
+        <div class="grid-2" style="margin-bottom:18px">
+          <div class="sticky do">
+            <h3>Do</h3>
+            <ul>
+              <li>L2+ 页头必有「返回」或波浪面包屑</li>
+              <li>同模块三级共用同一模块色硬阴影</li>
+              <li>Hub 用 SketchCard；工作台用分栏；叶子用纸（表/Excel/详情）</li>
+              <li>AI 四子项侧栏切换，深链页独立全屏 + 回退</li>
+              <li>画布 / 表体 / Excel 禁止旋转</li>
+            </ul>
+          </div>
+          <div class="sticky dont">
+            <h3>Don't</h3>
+            <ul>
+              <li>不要每层再包一层 el-card</li>
+              <li>不要用浏览器原生 history 当唯一导航（要页内可见回退）</li>
+              <li>不要在侧栏再复制一套模块内 Tab 顶栏（AI 例外：侧栏已是子项）</li>
+              <li>不要三级页各写一套私有皮肤</li>
+              <li>不要改路由深度或拆合业务</li>
+            </ul>
+          </div>
+        </div>
+
+        <h2>建议落地顺序</h2>
+        <div class="panel flat">
+          <div class="pin green"></div>
+          <p style="font-size:13.5px;line-height:1.7">
+            <span class="prio prio-p0">P0</span>共享件：SketchTable / SketchCard(Hub) / 面包屑条 / DialogForm<br />
+            <span class="prio prio-p0">P0</span>设备管理（已有原型）→ 报告列表接同一张表纸<br />
+            <span class="prio prio-p1">P1</span>元素定位 + 用例管理「Hub→台→叶」成对落地（同一导航模版）<br />
+            <span class="prio prio-p1">P1</span>AI 四子项壳 + 任务/智能体详情回退<br />
+            <span class="prio prio-p2">P2</span>页面流列表 + 画布外框；检查器分栏纸；仪表盘钉板收尾
+          </p>
+        </div>
+      </section>
+
+      <!-- NAV RULES -->
+      <section class="page" id="page-nav">
+        <p class="page-lead">
+          子页面最容易翻车的是<span class="marker">「人找不到上一层」</span>。
+          下面三种导航模版覆盖本平台全部深度。
+        </p>
+
+        <h2>三种导航模版</h2>
+        <div class="grid-3" style="margin-bottom:18px">
+          <article class="mini">
+            <h3>① 面包屑条</h3>
+            <p>Hub → 工作台 → 叶子。元素/用例/页面流用。</p>
+            <ul>
+              <li>页头下方一条</li>
+              <li>祖先可点，当前项黄马克笔</li>
+              <li>可选左侧「← 返回」芯片</li>
+            </ul>
+          </article>
+          <article class="mini">
+            <h3>② 侧栏子项</h3>
+            <p>AI 助手四子路由。侧栏即导航，页内不再叠顶 Tab。</p>
+            <ul>
+              <li>WorkbenchHeader 随路由换标题</li>
+              <li>深链（任务/Skill）跳出四子项，用面包屑回</li>
+            </ul>
+          </article>
+          <article class="mini">
+            <h3>③ 列表行进入</h3>
+            <p>报告 run/task、AI 任务卡。行点击进详情。</p>
+            <ul>
+              <li>详情顶：返回列表 + 标题</li>
+              <li>不新开浏览器 Tab</li>
+            </ul>
+          </article>
+        </div>
+
+        <h2>面包屑视觉（规范片段）</h2>
+        <div class="wb" data-accent="case">
+          <div class="wb-head">
+            <button class="back-chip" type="button">← 返回</button>
+            <div>
+              <div class="crumbs">
+                <button type="button">用例管理</button>
+                <span class="sep">/</span>
+                <button type="button">家电回归</button>
+                <span class="sep">/</span>
+                <span class="here">登录用例表.xlsx</span>
+              </div>
+              <h3 style="margin-top:4px">登录用例表</h3>
+              <div class="meta">叶子页 · Excel 纸 · 模块色青绿硬阴影</div>
+            </div>
+          </div>
+          <div class="wb-body">
+            <p class="sub" style="margin:0">祖先链接用波浪青绿下划线；当前页黄马克笔。返回芯片与面包屑二选一可并存，但必须至少有一个。</p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="panel flat">
+            <div class="pin teal"></div>
+            <strong>同构模块配对</strong>
+            <p style="font-size:13px;margin-top:8px;line-height:1.55;opacity:.88">
+              元素定位与用例管理路由同构（列表→项目台→文件）。落地时抽
+              <code>HubProjectPage</code> + <code>TreeWorkbench</code> + <code>FileLeafPage</code>
+              三个壳，只换模块色与叶子内容（元素详情 vs Excel）。
+            </p>
+          </div>
+          <div class="panel flat">
+            <div class="pin purple"></div>
+            <strong>AI 特殊处</strong>
+            <p style="font-size:13px;margin-top:8px;line-height:1.55;opacity:.88">
+              四子项已在侧栏，页内不要再做一套 FilterTabs 顶栏重复导航。
+              仅在进入 <code>/agent/:id</code>、<code>/tasks/:id</code>、<code>/skills/:name</code>
+              时切换为「面包屑 + 返回到对应子项」。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- HUB → WORKSPACE → LEAF -->
+      <section class="page" id="page-hub">
+        <p class="page-lead">
+          可点原型：模拟 <span class="marker">元素定位 / 用例管理</span> 的三级路径。
+          点项目卡 → 树工作台 → 文件叶子。顶部步骤条表示当前深度。
+        </p>
+
+        <div class="step-rail" id="hub-steps">
+          <span class="step on" data-step="1">1 Hub 项目列表</span>
+          <span class="step" data-step="2">2 树工作台</span>
+          <span class="step" data-step="3">3 文件叶子</span>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="wb" id="hub-1" data-accent="element">
+          <div class="wb-head">
+            <div>
+              <div class="meta">ELEMENT LOCATOR · HUB</div>
+              <h3>元素定位</h3>
+              <div class="meta">三个系统项目 · 撕纸卡进入</div>
+            </div>
+          </div>
+          <div class="wb-body">
+            <div class="proj-grid">
+              <button class="proj-card" type="button" data-enter="android">
+                <span class="tape"></span>
+                <strong>Android 页面</strong>
+                <span>128 个文件 · 点进工作台</span>
+              </button>
+              <button class="proj-card" type="button" data-enter="web">
+                <span class="tape"></span>
+                <strong>Web 元素</strong>
+                <span>64 个文件 · 点进工作台</span>
+              </button>
+              <button class="proj-card" type="button" data-enter="api">
+                <span class="tape"></span>
+                <strong>API 接口</strong>
+                <span>41 个文件 · 点进工作台</span>
+              </button>
+            </div>
+            <p class="sub" style="margin-top:14px;margin-bottom:0">用例管理同款：Hub 卡换成「项目名 + 文件数」，进 <code>/cases/projects/:id</code>。</p>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="wb hidden" id="hub-2" data-accent="element">
+          <div class="wb-head">
+            <button class="back-chip" type="button" id="hub-back-1">← 项目列表</button>
+            <div>
+              <div class="crumbs">
+                <button type="button" id="hub-crumb-root">元素定位</button>
+                <span class="sep">/</span>
+                <span class="here" id="hub-proj-name">Android 页面</span>
+              </div>
+              <h3 style="margin-top:4px">项目工作台</h3>
+              <div class="meta">左树右空态 · 点文件进叶子</div>
+            </div>
+          </div>
+          <div class="wb-split">
+            <div class="tree-pane">
+              <h4>Directory</h4>
+              <button class="tree-item folder" type="button">📁 首页</button>
+              <button class="tree-item active" type="button" data-file="home">📄 首页结构.json</button>
+              <button class="tree-item folder" type="button">📁 商城</button>
+              <button class="tree-item" type="button" data-file="mall">📄 商城列表.json</button>
+              <button class="tree-item" type="button" data-file="mine">📄 我的.json</button>
+            </div>
+            <div class="content-pane">
+              <div class="panel flat" style="margin:0;box-shadow:3px 3px 0 0 var(--c-element)">
+                <div class="pin purple"></div>
+                <strong>选中文件后打开</strong>
+                <p style="font-size:13px;margin-top:8px;opacity:.8">工作台本身不嵌详情编辑器（用例模块约定：台里只有树）。点左侧文件进入第 3 层。</p>
+                <div class="btn-row" style="margin-top:12px">
+                  <button class="btn btn-yellow" type="button" id="hub-open-file">打开「首页结构.json」</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="wb hidden" id="hub-3" data-accent="case">
+          <div class="wb-head">
+            <button class="back-chip" type="button" id="hub-back-2">← 工作台</button>
+            <div>
+              <div class="crumbs">
+                <button type="button" class="hub-to-root">元素定位</button>
+                <span class="sep">/</span>
+                <button type="button" id="hub-to-ws">Android 页面</button>
+                <span class="sep">/</span>
+                <span class="here" id="hub-file-name">首页结构.json</span>
+              </div>
+              <h3 style="margin-top:4px">文件叶子</h3>
+              <div class="meta">元素详情纸 · 用例模块则换成 Excel 纸（示意如下）</div>
+            </div>
+            <div style="margin-left:auto" class="btn-row">
+              <button class="btn btn-ghost" type="button">保存</button>
+              <button class="btn btn-teal" type="button">完成</button>
+            </div>
+          </div>
+          <div class="wb-body">
+            <div class="excel-mock">
+              <table>
+                <thead>
+                  <tr>
+                    <th>名称</th>
+                    <th>类型</th>
+                    <th>定位</th>
+                    <th>备注</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>搜索框</td>
+                    <td><span class="chip">EditText</span></td>
+                    <td><span class="marker">resource-id/search</span></td>
+                    <td>首页顶栏</td>
+                  </tr>
+                  <tr>
+                    <td>商城 Tab</td>
+                    <td><span class="chip">TextView</span></td>
+                    <td><span class="marker">text=商城</span></td>
+                    <td>底栏</td>
+                  </tr>
+                  <tr>
+                    <td>加入购物车</td>
+                    <td><span class="chip">Button</span></td>
+                    <td><span class="marker">rid/btn_cart</span></td>
+                    <td>详情页</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="sub" style="margin-top:12px;margin-bottom:0">用例叶子：同一壳，表头换成「测试类型 / 标题 / 步骤 / 预期」；脏离开确认逻辑保留。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- AI -->
+      <section class="page" id="page-ai">
+        <p class="page-lead">
+          AI 助手：侧栏四子项切换内容；进入任务详情后变为深链回退。
+          <span class="wavy-red">页内不要再做第二套顶 Tab</span>。
+        </p>
+
+        <div class="wb" data-accent="ai" id="ai-shell">
+          <div class="wb-head">
+            <div id="ai-head-main">
+              <div class="meta">AI ASSISTANT · SIDE NAV</div>
+              <h3 id="ai-title">平台小助手</h3>
+              <div class="meta" id="ai-sub">助手看板 + 任务列表</div>
+            </div>
+            <div class="hidden" id="ai-head-deep">
+              <button class="back-chip" type="button" id="ai-back">← 平台小助手</button>
+              <div>
+                <div class="crumbs">
+                  <button type="button" id="ai-crumb">平台小助手</button>
+                  <span class="sep">/</span>
+                  <span class="here">任务详情</span>
+                </div>
+                <h3 style="margin-top:4px">制冰机回归巡检</h3>
+                <div class="meta">深链 · 左右分栏步骤纸</div>
+              </div>
+            </div>
+          </div>
+          <div class="wb-body">
+            <div class="ai-tabs" id="ai-tabs">
+              <button class="ai-tab active" type="button" data-ai="agents">平台小助手</button>
+              <button class="ai-tab" type="button" data-ai="toolbox">AI工具箱</button>
+              <button class="ai-tab" type="button" data-ai="knowledge">知识库</button>
+              <button class="ai-tab" type="button" data-ai="evaluator">评测中心</button>
+            </div>
+
+            <div id="ai-view-agents">
+              <div class="grid-2" style="margin-bottom:14px">
+                <div class="panel flat" style="margin:0;box-shadow:3px 3px 0 0 var(--c-ai)">
+                  <div class="pin" style="background:var(--c-ai)"></div>
+                  <strong>控制设备</strong>
+                  <p style="font-size:12.5px;margin-top:6px;opacity:.8">线路卡 · 连通徽标 · 勿用大圆角 EP Card</p>
+                  <span class="chip chip-ok">已连通</span>
+                </div>
+                <div class="panel flat" style="margin:0;box-shadow:3px 3px 0 0 var(--yellow)">
+                  <div class="pin yellow"></div>
+                  <strong>新建任务</strong>
+                  <p style="font-size:12.5px;margin-top:6px;opacity:.8">DialogForm 虚线纸；主按钮黄马克笔</p>
+                </div>
+              </div>
+              <div class="sheet">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>任务</th>
+                      <th>状态</th>
+                      <th>设备</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="clickable" data-open-task="1">
+                      <td><strong>制冰机回归巡检</strong></td>
+                      <td><span class="chip chip-busy">运行中</span></td>
+                      <td>Pixel 8</td>
+                      <td><button class="btn btn-ghost" type="button" data-open-task="1">详情</button></td>
+                    </tr>
+                    <tr class="clickable" data-open-task="2">
+                      <td><strong>商城下单冒烟</strong></td>
+                      <td><span class="chip chip-ok">成功</span></td>
+                      <td>Galaxy S23</td>
+                      <td><button class="btn btn-ghost" type="button" data-open-task="2">详情</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="hidden" id="ai-view-toolbox">
+              <div class="panel flat" style="margin:0">
+                <div class="pin yellow"></div>
+                <strong>装配台</strong>
+                <p style="font-size:13px;margin-top:8px;opacity:.85">上：生效芯片。下：左两源 + 右目录。Skill 卡点击进深链 <code>/toolbox/skills/:name</code>，同样要面包屑回工具箱。</p>
+              </div>
+            </div>
+            <div class="hidden" id="ai-view-knowledge">
+              <div class="panel flat" style="margin:0">
+                <div class="pin teal"></div>
+                <strong>知识库</strong>
+                <p style="font-size:13px;margin-top:8px;opacity:.85">状态卡 + 文档表纸；重建索引用确认 DialogForm。</p>
+              </div>
+            </div>
+            <div class="hidden" id="ai-view-evaluator">
+              <div class="panel flat" style="margin:0">
+                <div class="pin green"></div>
+                <strong>评测中心</strong>
+                <p style="font-size:13px;margin-top:8px;opacity:.85">描述输入（NoteField）+ 设备选择 + 生成/执行。表单走涂鸦字段态。</p>
+              </div>
+            </div>
+
+            <div class="hidden" id="ai-view-task">
+              <div class="wb-split">
+                <div class="tree-pane">
+                  <h4>Steps</h4>
+                  <button class="tree-item active" type="button">1 启动 App</button>
+                  <button class="tree-item" type="button">2 进入商城</button>
+                  <button class="tree-item" type="button">3 断言价格</button>
+                </div>
+                <div class="content-pane">
+                  <strong>步骤 1 · 启动 App</strong>
+                  <p style="font-size:13px;margin-top:8px;opacity:.8;line-height:1.5">操作 / 断言 / 重试记录放在同一张纸。左右分栏可读优先，节点与日志区不旋转。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MATRIX -->
+      <section class="page" id="page-matrix">
+        <p class="page-lead">
+          其余模块的改法一览 + 迷你原型。报告走「表纸→详情」；页面流走「Hub→画布」；检查器走「分栏台」。
+        </p>
+
+        <h2>测试报告 · 列表 → 详情</h2>
+        <div class="wb" data-accent="report" style="margin-bottom:22px">
+          <div class="wb-head">
+            <div id="rep-head-list">
+              <div class="meta">REPORT · LIST</div>
+              <h3>测试报告</h3>
+              <div class="meta">KPI 钉板 + SketchTable · 行进入详情</div>
+            </div>
+            <div class="hidden" id="rep-head-detail">
+              <button class="back-chip" type="button" id="rep-back">← 报告列表</button>
+              <div>
+                <div class="crumbs">
+                  <button type="button" id="rep-crumb">测试报告</button>
+                  <span class="sep">/</span>
+                  <span class="here">Run #1042</span>
+                </div>
+                <h3 style="margin-top:4px">商城冒烟 · Pixel 8</h3>
+              </div>
+            </div>
+          </div>
+          <div class="wb-body">
+            <div id="rep-list">
+              <div class="grid-3" style="margin-bottom:14px">
+                <div class="mini" style="transform:none;box-shadow:3px 3px 0 0 var(--c-report)">
+                  <h3>通过率</h3>
+                  <p style="font-size:22px;font-weight:800;opacity:1">92%</p>
+                </div>
+                <div class="mini" style="transform:none;box-shadow:3px 3px 0 0 var(--c-device)">
+                  <h3>本周 Runs</h3>
+                  <p style="font-size:22px;font-weight:800;opacity:1">18</p>
+                </div>
+                <div class="mini" style="transform:none;box-shadow:3px 3px 0 0 var(--yellow)">
+                  <h3>失败</h3>
+                  <p style="font-size:22px;font-weight:800;opacity:1">3</p>
+                </div>
+              </div>
+              <div class="sheet">
+                <table>
+                  <thead>
+                    <tr><th>Run</th><th>任务</th><th>状态</th><th>通过率</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr class="clickable" id="rep-row">
+                      <td><span class="marker">#1042</span></td>
+                      <td>商城冒烟</td>
+                      <td><span class="chip chip-ok">PASSED</span></td>
+                      <td>96%</td>
+                    </tr>
+                    <tr>
+                      <td>#1041</td>
+                      <td>登录回归</td>
+                      <td><span class="chip chip-busy">FAILED</span></td>
+                      <td>71%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="hidden" id="rep-detail">
+              <div class="panel flat" style="margin:0;box-shadow:3px 3px 0 0 var(--c-report)">
+                <div class="pin" style="background:var(--c-report)"></div>
+                <strong>详情纸</strong>
+                <p style="font-size:13px;margin-top:8px;line-height:1.55;opacity:.85">
+                  KPI 一行 + 用例表纸 + 下载按钮。task / cases 细分页同一壳，只换标题与列。
+                  下载仍走 FileResponse，不改协议。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h2>页面流 · Hub → 画布</h2>
+        <div class="wb" data-accent="workflow" style="margin-bottom:22px">
+          <div class="wb-head">
+            <div id="wf-head-list">
+              <div class="meta">WORKFLOW · HUB</div>
+              <h3>页面流</h3>
+            </div>
+            <div class="hidden" id="wf-head-canvas">
+              <button class="back-chip" type="button" id="wf-back">← 原型列表</button>
+              <div>
+                <div class="crumbs">
+                  <button type="button" id="wf-crumb">页面流</button>
+                  <span class="sep">/</span>
+                  <span class="here">Govee App 主路径</span>
+                </div>
+                <h3 style="margin-top:4px">原型工作台</h3>
+              </div>
+            </div>
+            <div style="margin-left:auto" class="btn-row" id="wf-actions">
+              <button class="btn btn-yellow" type="button" id="wf-enter">打开示例原型</button>
+            </div>
+          </div>
+          <div class="wb-body">
+            <div id="wf-list">
+              <div class="proj-grid">
+                <button class="proj-card" type="button" id="wf-card" style="box-shadow:3px 3px 0 0 var(--c-workflow)">
+                  <span class="tape"></span>
+                  <strong>Govee App 主路径</strong>
+                  <span>12 个页面流 · 点进画布</span>
+                </button>
+              </div>
+            </div>
+            <div class="hidden" id="wf-canvas">
+              <div class="wb-split">
+                <div class="tree-pane">
+                  <h4>Directories</h4>
+                  <button class="tree-item active" type="button">📄 首页→商城</button>
+                  <button class="tree-item" type="button">📄 下单接口流</button>
+                </div>
+                <div class="content-pane" style="padding:0">
+                  <div class="canvas-mock">
+                    <div class="node start">Start</div>
+                    <div class="node-line"></div>
+                    <div class="node page">Home</div>
+                    <div class="node-line2"></div>
+                    <div class="node end">Mall</div>
+                  </div>
+                  <p class="sub" style="padding:10px 14px;margin:0">画布外框虚线；节点近直角硬阴影；图内部状态仍走 VueFlow 适配层，不改编排逻辑。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h2>设备检查器 · 分栏台</h2>
+        <div class="wb" data-accent="device">
+          <div class="wb-head">
+            <div>
+              <div class="meta">INSPECTOR · VARIANT C</div>
+              <h3>设备检查器</h3>
+              <div class="meta">单页工作台 · 无子路由，但有抽屉/弹层</div>
+            </div>
+            <div style="margin-left:auto" class="btn-row">
+              <button class="btn btn-ghost" type="button">快照历史</button>
+              <button class="btn btn-device" type="button">抓取</button>
+            </div>
+          </div>
+          <div class="wb-split inspector">
+            <div class="content-pane">
+              <div class="insp-shot">Screenshot · 虚线相纸框</div>
+            </div>
+            <div class="tree-pane" style="border-right:0;border-left:var(--dash)">
+              <h4>Elements</h4>
+              <div class="insp-list">
+                <button class="insp-el active" type="button">FrameLayout · root</button>
+                <button class="insp-el" type="button">TextView · 商城</button>
+                <button class="insp-el" type="button">EditText · 搜索</button>
+                <button class="insp-el" type="button">Button · 加入购物车</button>
+              </div>
+              <p class="sub" style="margin-top:12px;margin-bottom:0">筛选用 FilterTabs（近直角）；保存到元素定位走 DialogForm。</p>
+            </div>
+          </div>
+        </div>
+
+        <h2 style="margin-top:22px">与已有方案的关系</h2>
+        <div class="panel flat">
+          <div class="pin yellow"></div>
+          <ul style="list-style:none;display:grid;gap:8px;font-size:13.5px">
+            <li>· <strong>设备管理涂鸦表格模版</strong> — SketchTable 首个消费方</li>
+            <li>· <strong>涂鸦表单与表格模版</strong> — DialogForm / FilterBar 字段态</li>
+            <li>· <strong>仪表盘章节钉板</strong> — 变体 A</li>
+            <li>· <strong>本文件</strong> — 子页面深度 + Hub/分栏/深链导航，串起全站</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const PAGES = {
+      plan: ["PROPOSAL", "全站模块怎么改 · 子页面怎么走"],
+      nav: ["NAV RULES", "子页导航三种模版"],
+      hub: ["PROTOTYPE", "列表 → 工作台 → 叶子"],
+      ai: ["PROTOTYPE", "AI 侧栏子项 + 深链"],
+      matrix: ["PROTOTYPE", "报告 / 页面流 / 检查器"],
+    };
+
+    document.querySelectorAll(".nav-item").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".nav-item").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        const id = btn.dataset.page;
+        document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
+        document.getElementById("page-" + id).classList.add("active");
+        document.getElementById("kicker").textContent = PAGES[id][0];
+        document.getElementById("title").textContent = PAGES[id][1];
+      });
+    });
+
+    function toast(msg) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 1400);
+    }
+
+    function setHubStep(n) {
+      document.querySelectorAll("#hub-steps .step").forEach((s) => {
+        s.classList.toggle("on", Number(s.dataset.step) === n);
+      });
+      document.getElementById("hub-1").classList.toggle("hidden", n !== 1);
+      document.getElementById("hub-2").classList.toggle("hidden", n !== 2);
+      document.getElementById("hub-3").classList.toggle("hidden", n !== 3);
+    }
+
+    document.querySelectorAll("[data-enter]").forEach((card) => {
+      card.addEventListener("click", () => {
+        const names = { android: "Android 页面", web: "Web 元素", api: "API 接口" };
+        document.getElementById("hub-proj-name").textContent = names[card.dataset.enter];
+        document.getElementById("hub-to-ws").textContent = names[card.dataset.enter];
+        setHubStep(2);
+        toast("进入工作台 · " + names[card.dataset.enter]);
+      });
+    });
+
+    function openFile(name) {
+      document.getElementById("hub-file-name").textContent = name;
+      setHubStep(3);
+      toast("打开叶子 · " + name);
+    }
+
+    document.getElementById("hub-open-file").addEventListener("click", () => openFile("首页结构.json"));
+    document.querySelectorAll("[data-file]").forEach((item) => {
+      item.addEventListener("click", () => {
+        document.querySelectorAll(".tree-item").forEach((t) => t.classList.remove("active"));
+        item.classList.add("active");
+        const map = { home: "首页结构.json", mall: "商城列表.json", mine: "我的.json" };
+        openFile(map[item.dataset.file] || "文件.json");
+      });
+    });
+
+    document.getElementById("hub-back-1").addEventListener("click", () => setHubStep(1));
+    document.getElementById("hub-crumb-root").addEventListener("click", () => setHubStep(1));
+    document.getElementById("hub-back-2").addEventListener("click", () => setHubStep(2));
+    document.getElementById("hub-to-ws").addEventListener("click", () => setHubStep(2));
+    document.querySelectorAll(".hub-to-root").forEach((b) => {
+      b.addEventListener("click", () => setHubStep(1));
+    });
+
+    /* AI */
+    const aiTitles = {
+      agents: ["平台小助手", "助手看板 + 任务列表"],
+      toolbox: ["AI工具箱", "装配台 · 两源目录"],
+      knowledge: ["知识库", "向量库状态与文档"],
+      evaluator: ["评测中心", "描述 → 生成 / 执行"],
+    };
+
+    function showAiMain(key) {
+      document.getElementById("ai-head-main").classList.remove("hidden");
+      document.getElementById("ai-head-deep").classList.add("hidden");
+      document.getElementById("ai-tabs").classList.remove("hidden");
+      ["agents", "toolbox", "knowledge", "evaluator", "task"].forEach((k) => {
+        document.getElementById("ai-view-" + k).classList.toggle("hidden", k !== key);
+      });
+      document.getElementById("ai-title").textContent = aiTitles[key][0];
+      document.getElementById("ai-sub").textContent = aiTitles[key][1];
+      document.querySelectorAll("#ai-tabs .ai-tab").forEach((t) => {
+        t.classList.toggle("active", t.dataset.ai === key);
+      });
+    }
+
+    function showAiTask() {
+      document.getElementById("ai-head-main").classList.add("hidden");
+      document.getElementById("ai-head-deep").classList.remove("hidden");
+      document.getElementById("ai-tabs").classList.add("hidden");
+      ["agents", "toolbox", "knowledge", "evaluator"].forEach((k) => {
+        document.getElementById("ai-view-" + k).classList.add("hidden");
+      });
+      document.getElementById("ai-view-task").classList.remove("hidden");
+    }
+
+    document.querySelectorAll("#ai-tabs .ai-tab").forEach((tab) => {
+      tab.addEventListener("click", () => showAiMain(tab.dataset.ai));
+    });
+    document.querySelectorAll("[data-open-task]").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        showAiTask();
+        toast("进入任务详情深链");
+      });
+    });
+    document.getElementById("ai-back").addEventListener("click", () => showAiMain("agents"));
+    document.getElementById("ai-crumb").addEventListener("click", () => showAiMain("agents"));
+
+    /* Report */
+    document.getElementById("rep-row").addEventListener("click", () => {
+      document.getElementById("rep-list").classList.add("hidden");
+      document.getElementById("rep-detail").classList.remove("hidden");
+      document.getElementById("rep-head-list").classList.add("hidden");
+      document.getElementById("rep-head-detail").classList.remove("hidden");
+      toast("进入报告详情");
+    });
+    function backRep() {
+      document.getElementById("rep-list").classList.remove("hidden");
+      document.getElementById("rep-detail").classList.add("hidden");
+      document.getElementById("rep-head-list").classList.remove("hidden");
+      document.getElementById("rep-head-detail").classList.add("hidden");
+    }
+    document.getElementById("rep-back").addEventListener("click", backRep);
+    document.getElementById("rep-crumb").addEventListener("click", backRep);
+
+    /* Workflow */
+    function enterWf() {
+      document.getElementById("wf-list").classList.add("hidden");
+      document.getElementById("wf-canvas").classList.remove("hidden");
+      document.getElementById("wf-head-list").classList.add("hidden");
+      document.getElementById("wf-head-canvas").classList.remove("hidden");
+      document.getElementById("wf-actions").classList.add("hidden");
+      toast("进入原型画布");
+    }
+    function backWf() {
+      document.getElementById("wf-list").classList.remove("hidden");
+      document.getElementById("wf-canvas").classList.add("hidden");
+      document.getElementById("wf-head-list").classList.remove("hidden");
+      document.getElementById("wf-head-canvas").classList.add("hidden");
+      document.getElementById("wf-actions").classList.remove("hidden");
+    }
+    document.getElementById("wf-enter").addEventListener("click", enterWf);
+    document.getElementById("wf-card").addEventListener("click", enterWf);
+    document.getElementById("wf-back").addEventListener("click", backWf);
+    document.getElementById("wf-crumb").addEventListener("click", backWf);
+  </script>
+</body>
+</html>

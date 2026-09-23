@@ -65,6 +65,6 @@ dsh --profile web --patch dsh-plugins/patch.yml --dump-config
 
 ## 后续扩展路线（同目录新增插件）
 
-- `doc-drift`：写 `dev_docs/**` 后跑 `gen_arch_stats.py --check-md`
+- `doc-drift`：写完需求 / 架构文档后跑 `gen_arch_stats.py --check-md --doc <path>`
 - `auto-format`：写 `apps/**/*.py` 后跑 `ruff format`（先 dry-run 再提醒）
 - `session-health`：`agent/session-start` 时跑 `python run.py status`

@@ -1,6 +1,6 @@
 # Doodle Craft 组件规格（像素级）
 
-> 唯一真相源：`vue-frontend-check/references/checklist.md`（组件规格验收）+ `frontend/src/shared/styles/tokens.css`（令牌）。
+> 唯一真相源：本文件（组件规格与验收）+ `frontend/src/shared/styles/tokens.css`（令牌）。
 > **令牌值以 tokens.css 为准**；新增/修改组件时同步更新本文件。
 
 共 23 个组件：基础 UI 原子层（Element Plus 覆盖）10 个 + 组件层（业务组件）13 个。

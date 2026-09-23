@@ -9,8 +9,8 @@ description: |
 
 > 极简几何 · 粗线涂鸦 · 彩绘卡通 · 手稿纸
 > 令牌唯一真相源：`frontend/src/shared/styles/tokens.css`
-> 风格约束与验收：`.agents/skills/vue-frontend-check/references/checklist.md`（组件规格验收；原 `frontend/DESIGN_SYSTEM.md` 已并入该文件）
-> 前端编码规范（嵌套深度 / z-index / 文件组织 / 脚手架）：`frontend/AGENTS.md`（Vue 代码编写规范 + L0–L3 速查）
+> 风格约束与验收：本技能 `references/tokens.md`、`references/components.md` 与文末「做完之后：自检」清单
+> 前端编码规范（嵌套深度 / z-index / 文件组织 / 脚手架）：遵循工作区前端规范（Vue 代码编写规范 + L0–L3 速查）
 
 本技能用于**做页面 / 做组件 / 改样式**，以及**维护迭代 Doodle Craft 主题**。
 
@@ -25,7 +25,7 @@ description: |
 | 文件 | 内容 | 何时用 |
 |------|------|--------|
 | `frontend/src/shared/styles/tokens.css` | 设计令牌唯一真相源 | 改令牌值 |
-| `references/tokens.md` + `vue-frontend-check/references/checklist.md` | 风格约束（硬编码值）+ 验收前端设计 | 验收 / 查约束 |
+| `references/tokens.md` + `references/components.md` | 风格约束（硬编码值）+ 组件验收 | 验收 / 查约束 |
 | `references/tokens.md`（本技能） | 视觉皮肤层：色板 / 模块色 / 状态色 / 字号 / 字体 / 圆角 / 阴影 / 间距 / 动效 / 颜色使用规则 | 改视觉属性时查精确值 |
 | `references/components.md`（本技能） | 20 个组件像素级规格（Element Plus 原子 10 + 业务组件 10） | 做/改组件时查精确值 |
 | `references/layout.md`（本技能） | 页面层：骨架 / 点阵背景 / 微旋转 / 滚动规则 / flex 规则 / 宽度规则 / 页面变体 | 改布局时查规则 |
@@ -96,4 +96,4 @@ const NAV_ICONS = {
 [ ] 新 .vue 文件 ≤ 500 行
 ```
 
-> 完整分组验收标准见 `vue-frontend-check/references/checklist.md`；工程门禁（布局/契约/可达性/四态）用 `vue-frontend-check` skill。
+> 工程门禁（布局/契约/可达性/四态）用 `vue-frontend-check` skill。

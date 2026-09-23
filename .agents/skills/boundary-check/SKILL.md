@@ -85,7 +85,7 @@ description: |
 
 ## 三、通信通道边界（四条内部通道）
 
-> 规则真相源：`dev_docs/03-设计与架构/ARCH-00-平台总体架构.md` §1.4 五条通信通道（逐通道「链路 / 能做 / 不能做 / 校验」）。
+> 规则：逐通道「链路 / 能做 / 不能做 / 校验」如下。
 
 ### ① 前端 ↔ Django — HTTP REST + JWT
 
@@ -178,7 +178,7 @@ grep -rn "grpc\|kafka\|rabbitmq\|graphql\|mqtt\|webrtc" apps/ gateway/ --include
 
 | 文件 | 说明 |
 |------|------|
-| `dev_docs/03-设计与架构/ARCH-00-平台总体架构.md` | §1.4 五条通信通道 · §1.3 分层包图与防火墙 · §3.1 模块依赖关系 |
+| 本 skill §三（通信通道边界） | 四条内部通道逐通道「链路 / 能做 / 不能做 / 校验」（已内联于本文件） |
 | 本 skill §一（模块边界） | 防火墙 #1–#4 完整规则（已内联于本文件） |
 | `tools/gen_arch_stats.py --check-boundaries` | 防火墙 #1/#2 + 引擎边界自动校验（含白名单） |
 | `tools/boundary-whitelist.json` | 已知技术债白名单（TD-01~TD-06） |

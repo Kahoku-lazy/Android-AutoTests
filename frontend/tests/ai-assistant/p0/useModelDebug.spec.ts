@@ -2,8 +2,12 @@
  * [P0] 单模型调试台：接口契约（无固定超时 + serial）、设备候选与授权确认、
  * 对话编排、工具调用轨迹、调试页三层结构与归属标注
  */
+// @ts-nocheck — 版式用例用 node:fs 读样式源校验分栏契约，不纳入浏览器 DOM 类型
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { mount, type VueWrapper } from '@vue/test-utils'
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { ref, nextTick } from 'vue'
 
 const { confirmMock } = vi.hoisted(() => ({ confirmMock: vi.fn() }))
@@ -534,5 +538,38 @@ describe('ModelDebugPage', () => {
     expect(text).not.toContain('最长 5 分钟')
     expect(text).not.toContain('不挂工具')
     expect(text).not.toContain('不碰真机')
+  })
+})
+
+/** 分栏比例无法在 jsdom 里按布局计算断言，改为读样式源断言声明值（同 WorkbenchCrumbs.spec.ts 做法） */
+describe('ModelDebugPage 版式：对话栏占正文三分之二', () => {
+  const styleSrc = readFileSync(
+    resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      '../../../src/modules/ai-assistant/ModelDebugPage.style.css',
+    ),
+    'utf8',
+  )
+
+  it('分栏为配置区 1fr : 对话栏 2fr，且无固定宽度上限', () => {
+    expect(styleSrc).toMatch(
+      /\.md-split\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(0,\s*2fr\)/,
+    )
+    // 旧的 420px 上限是本次要消灭的根因：还在就等于没改
+    expect(styleSrc).not.toMatch(/420px/)
+  })
+
+  it('正文过窄时改为上下单列，断点在 1200px', () => {
+    expect(styleSrc).toMatch(
+      /@media\s*\(max-width:\s*1200px\)\s*\{\s*\.md-split\s*\{\s*grid-template-columns:\s*1fr;?\s*\}\s*\}/,
+    )
+    expect(styleSrc).not.toMatch(/max-width:\s*960px/)
+  })
+
+  it('消息区高度上限为屏幕三分之二（66vh）且仍独立滚动', () => {
+    expect(styleSrc).toMatch(/\.md-msgs\s*\{[^}]*max-height:\s*66vh/)
+    expect(styleSrc).toMatch(/\.md-msgs\s*\{[^}]*overflow-y:\s*auto/)
+    // 旧上限 52vh 低于 2/3 屏高：还在就等于没改
+    expect(styleSrc).not.toMatch(/max-height:\s*52vh/)
   })
 })

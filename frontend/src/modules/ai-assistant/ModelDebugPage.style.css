@@ -7,16 +7,19 @@
   gap: var(--app-space-md);
 }
 
-/* ── 左配置 / 右对话（变体 C 分栏台）── */
+/* ── 左配置 / 右对话（变体 C 分栏台：对话栏占正文 2/3，配置区 1/3）── */
 .md-split {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
   gap: var(--app-space-md);
   align-items: start;
 }
 
-@media (max-width: 960px) {
-  .md-split { grid-template-columns: 1fr; }
+/* 不足以让两侧同时可读时改为上下单列：对话栏占满正文宽度 */
+@media (max-width: 1200px) {
+  .md-split {
+    grid-template-columns: 1fr;
+  }
 }
 
 .md-main {
@@ -54,7 +57,9 @@
   border-radius: var(--app-radius-sm);
   background: var(--app-bg-subtle);
   cursor: pointer;
-  transition: background var(--app-duration-fast), transform var(--app-duration-fast);
+  transition:
+    background var(--app-duration-fast),
+    transform var(--app-duration-fast);
 }
 
 .md-tab:hover {
@@ -290,7 +295,7 @@
   padding-left: var(--app-space-md);
 }
 
-/* ── ④ 调试对话（右栏常驻：只有消息区滚动）── */
+/* ── ④ 调试对话（右栏常驻：消息区 2/3 屏高，超出只在消息区内滚动）── */
 .md-msgs {
   list-style: none;
   margin: 0;
@@ -298,7 +303,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--app-space-sm);
-  max-height: 52vh;
+  max-height: 66vh;
   overflow-y: auto;
 }
 
@@ -534,7 +539,9 @@
   background: var(--app-bg-card);
   box-shadow: 2px 2px 0 var(--ink);
   cursor: pointer;
-  transition: background var(--app-duration-fast), transform var(--app-duration-fast);
+  transition:
+    background var(--app-duration-fast),
+    transform var(--app-duration-fast);
 }
 
 .md-btn:hover:not(:disabled) {
@@ -553,5 +560,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .md-tab,
-  .md-btn { transition: none; }
+  .md-btn {
+    transition: none;
+  }
 }

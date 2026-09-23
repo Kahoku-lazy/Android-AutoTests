@@ -6,7 +6,7 @@ import { selectPop, iconBounce } from '@/shared/animations'
 import {
   listAgents, checkAgentsHealth, testAgent,
 } from './api/agents'
-import type { AgentRecord, RouteModelTestResult, ViewMode } from '@/shared/types/ai'
+import type { AgentRecord, RouteConnStatus, RouteModelTestResult, ViewMode } from '@/shared/types/ai'
 import {
   agentDetailRoute,
   HEALTH_CHECK_INTERVAL_MS,
@@ -16,7 +16,7 @@ import {
 
 export const PAGE_HEADER = {
   title: 'AI 助手',
-  subtitle: '智能体看板贴便签，工具箱与评测一站管理',
+  subtitle: '智能体看板贴便签，工具箱与知识库一站管理',
   icon: 'bot' as const,
   iconGradient: 'linear-gradient(135deg, var(--ai-teal), var(--ai-teal-hover))',
 }
@@ -36,6 +36,7 @@ export interface AgentBoardState {
   testingRoute: Ref<string | null>
   healthResults: Ref<Record<number, { is_connected: boolean; last_checked?: string }>>
   routeTestResults: Ref<Record<string, Record<string, RouteModelTestResult>>>
+  routeConnStatus: Ref<Record<string, RouteConnStatus>>
   // helpers
   PAGE_HEADER: typeof PAGE_HEADER
   noteRotation: (agent: AgentRecord) => number
@@ -65,7 +66,12 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
   const healthTimer = ref<ReturnType<typeof setInterval> | null>(null)
   const healthResults = ref<Record<number, { is_connected: boolean; last_checked?: string }>>({})
   const routeTestResults = ref<Record<string, Record<string, RouteModelTestResult>>>({})
+  const routeConnStatus = ref<Record<string, RouteConnStatus>>({})
   const agentsError = ref('')
+
+  function isRouteConnStatus(v: unknown): v is RouteConnStatus {
+    return v === 'ready' || v === 'unusable' || v === 'offline'
+  }
 
   // ── Derived ──
 
@@ -140,20 +146,30 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
   function hydrateRouteTests(list: AgentRecord[]) {
     const configs = list[0]?.route_configs || {}
     for (const key of ['device_control'] as const) {
-      const results = configs[key]?.health?.results
+      const health = configs[key]?.health
+      const results = health?.results
       if (results && Object.keys(results).length) {
         routeTestResults.value[key] = results
+      }
+      if (isRouteConnStatus(health?.status)) {
+        routeConnStatus.value[key] = health.status
       }
     }
   }
 
   function applyHealthRoutes(
-    routes?: Record<string, { results?: Record<string, RouteModelTestResult> }>,
+    routes?: Record<
+      string,
+      { status?: RouteConnStatus | null; results?: Record<string, RouteModelTestResult> }
+    >,
   ) {
     if (!routes) return
     for (const [key, payload] of Object.entries(routes)) {
       if (payload?.results && Object.keys(payload.results).length) {
         routeTestResults.value[key] = payload.results
+      }
+      if (isRouteConnStatus(payload?.status)) {
+        routeConnStatus.value[key] = payload.status
       }
     }
   }
@@ -181,8 +197,16 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
         if (routeKey && payload.results) {
           routeTestResults.value[routeKey] = payload.results
         }
-        if (payload.connected) { ElMessage.success(`${agent.name} 连接成功`) }
-        else ElMessage.warning(`${agent.name} 连接失败: ${payload.message || '存在未连通的模型'}`)
+        if (routeKey && isRouteConnStatus(payload.status)) {
+          routeConnStatus.value[routeKey] = payload.status
+        }
+        if (payload.status === 'ready' || payload.connected) {
+          ElMessage.success(`${agent.name} 已连通，可执行任务`)
+        } else if (payload.status === 'unusable') {
+          ElMessage.warning(`${agent.name} 秘钥已连接，但无法使用`)
+        } else {
+          ElMessage.warning(`${agent.name} 连接失败，小助手断线${payload.message ? `: ${payload.message}` : ''}`)
+        }
       }
     } catch { ElMessage.error(`${agent.name} 检测请求失败`) }
     testingRoute.value = null
@@ -209,6 +233,7 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
 
   return {
     viewMode, agents, loading, agentsError, testingRoute, healthResults, routeTestResults,
+    routeConnStatus,
     PAGE_HEADER,
     noteRotation, tapeHue,
     agentStatusText, agentStatusClass,

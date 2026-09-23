@@ -63,13 +63,22 @@ def _agent(**overrides) -> SimpleNamespace:
         "max_loops": 3,
         "owner_id": "1",
         "enable_skills": False,
+        "prompt_planner": "## planner prompt",
+        "prompt_executor": "## executor prompt",
+        "prompt_verifier": "## verifier prompt",
     }
     fields.update(overrides)
     return SimpleNamespace(**fields)
 
 
 def _task(device_serial: str = "SERIAL-1") -> SimpleNamespace:
-    return SimpleNamespace(device_serial=device_serial, goal="打开应用", id=7)
+    return SimpleNamespace(
+        device_serial=device_serial,
+        title="打开应用",
+        goal="打开应用",
+        attachment="",
+        id=7,
+    )
 
 
 # ── 装配期配置 fail-fast ──
@@ -144,6 +153,22 @@ def test_online_device_fallback(monkeypatch):
     req = engine_adapter.build_request(_task(device_serial=""), _agent())
 
     assert req.device_serial == "ONLINE-1"
+
+
+def test_blank_system_prompt_raises():
+    """某角色系统提示词为空 → 装配期报错并指明角色。"""
+    with pytest.raises(ValueError, match="executor"):
+        engine_adapter.build_request(_task(), _agent(prompt_executor="   "))
+
+
+def test_system_prompts_injected():
+    """库中提示词进入 TaskRequest.system_prompts。"""
+    req = engine_adapter.build_request(_task(), _agent())
+    assert req.system_prompts == {
+        "planner": "## planner prompt",
+        "executor": "## executor prompt",
+        "verifier": "## verifier prompt",
+    }
 
 
 # ── provider 配置单一真相源 ──

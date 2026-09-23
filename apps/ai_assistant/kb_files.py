@@ -131,14 +131,20 @@ def save_upload(filename: str, content: bytes, subdir: str = "") -> dict:
     }
 
 
-def _parse_docx(filepath: str) -> str:
+TASK_ATTACHMENT_EXTENSIONS = {".docx", ".pdf"}
+TASK_ATTACHMENT_MAX_SIZE = MAX_UPLOAD_SIZE  # 20MB，与知识库/通用上传对齐
+
+
+def parse_docx_to_markdown(filepath: str) -> str:
+    """Word → Markdown 文本（段落拼接）。知识库预览与任务附件共用。"""
     from docx import Document
 
     doc = Document(filepath)
     return "\n".join(p.text for p in doc.paragraphs if p.text.strip())
 
 
-def _parse_pdf(filepath: str) -> str:
+def parse_pdf_to_markdown(filepath: str) -> str:
+    """PDF → Markdown 文本（按页加二级标题）。知识库预览与任务附件共用。"""
     import fitz
 
     pdf = fitz.open(filepath)
@@ -148,6 +154,44 @@ def _parse_pdf(filepath: str) -> str:
         if text.strip():
             parts.append(f"## 第 {page.number + 1} 页\n\n{text.strip()}")
     return "\n\n".join(parts) if parts else "（PDF 无可用文本）"
+
+
+# 兼容旧内部名（预览路径仍可调用）
+_parse_docx = parse_docx_to_markdown
+_parse_pdf = parse_pdf_to_markdown
+
+
+def parse_task_attachment_bytes(filename: str, content: bytes) -> tuple[str, str]:
+    """任务附件：仅 .docx/.pdf → (markdown, 安全文件名)。失败抛 KbFileError。"""
+    if len(content) > TASK_ATTACHMENT_MAX_SIZE:
+        raise KbFileError("文件过大")
+    raw = str(filename or "").replace("\\", "/").strip()
+    base = Path(raw).name.strip()
+    if not base or base in {".", ".."}:
+        raise KbFileError("非法文件名")
+    ext = Path(base).suffix.lower()
+    if ext not in TASK_ATTACHMENT_EXTENSIONS:
+        raise KbFileError("仅支持 Word（.docx）与 PDF")
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+    try:
+        try:
+            md = (
+                parse_pdf_to_markdown(tmp_path)
+                if ext == ".pdf"
+                else parse_docx_to_markdown(tmp_path)
+            )
+        except KbFileError:
+            raise
+        except Exception as exc:
+            logger.exception("任务附件解析失败: %s", base)
+            raise KbFileError(f"文档解析失败: {exc}") from None
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+    return md, base
 
 
 def _read_text(path: Path) -> str:

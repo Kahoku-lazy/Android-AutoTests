@@ -74,23 +74,19 @@ const finalToneClass = computed(() => {
       :subtitle="detail?.title || detail?.goal || '逐步执行过程'"
       icon="clipboard-list"
       icon-gradient="linear-gradient(135deg, var(--c-ai), var(--td-icon-grad-end))"
-    >
-      <template #nav>
-        <WorkbenchCrumbs
-          back-to="/ai-assistant/agents"
-          back-label="返回任务列表"
-          :items="[
-            { label: '平台小助手', to: '/ai-assistant/agents' },
-            { label: '任务详情' },
-          ]"
-        />
-      </template>
-    </WorkbenchHeader>
+    />
 
-    <ErrorState v-if="error" :message="error" @retry="retry" />
-
-    <div v-else v-loading="loading" class="doc-body td-page">
-      <template v-if="detail">
+    <div class="doc-body td-page" v-loading="loading">
+      <WorkbenchCrumbs
+        back-to="/ai-assistant/agents"
+        back-label="返回任务列表"
+        :items="[
+          { label: '平台小助手', to: '/ai-assistant/agents' },
+          { label: '任务详情' },
+        ]"
+      />
+      <ErrorState v-if="error" :message="error" @retry="retry" />
+      <template v-else-if="detail">
         <!-- 上区可滚动：概要 + KPI + 步骤分栏 -->
         <div class="td-main">
           <div class="td-top">
@@ -241,6 +237,9 @@ const finalToneClass = computed(() => {
   /* 覆盖全局 .doc-page--fixed .doc-body { overflow-y:auto } */
   overflow: hidden !important;
 }
+.td-page > :first-child {
+  flex-shrink: 0;
+}
 .td-main {
   flex: 1 1 0;
   min-height: 0;
@@ -386,7 +385,7 @@ const finalToneClass = computed(() => {
   font-weight: 800;
   padding: 2px var(--app-space-sm);
   border: 1.5px solid var(--ink);
-  border-radius: 3px 6px 3px 6px;
+  border-radius: var(--el-border-radius-small);
   white-space: nowrap;
 }
 .td-tag--pass { background: var(--app-status-success-bg); color: var(--app-status-success-text); }
@@ -425,7 +424,7 @@ const finalToneClass = computed(() => {
   font-size: var(--app-size-xs);
   font-weight: 700;
   padding: 2px 7px;
-  border-radius: 3px 6px 3px 6px;
+  border-radius: var(--el-border-radius-small);
   border: 1.5px solid var(--ink);
   white-space: nowrap;
 }

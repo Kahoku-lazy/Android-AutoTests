@@ -2,12 +2,13 @@
 import type { PlatformToolCategory } from '../api/toolbox'
 import type { SharedToolItem } from '../api/toolbox'
 
-export type AssemblySourceKey = 'biz' | 'skill'
+export type AssemblySourceKey = 'biz' | 'skill' | 'prompt' | 'debug'
 
 export interface AssemblySourceDef {
   key: AssemblySourceKey
   name: string
   desc: string
+  /** 空串 = 无「交给助手」总闸（如设备提示词） */
   gateKey: string
   accent: string
 }
@@ -26,6 +27,20 @@ export const ASSEMBLY_SOURCES: AssemblySourceDef[] = [
     desc: 'engines/ai/skills 下的本地与上传 Skill',
     gateKey: 'enable_skills',
     accent: 'var(--c-runner)',
+  },
+  {
+    key: 'prompt',
+    name: '设备提示词',
+    desc: '规划 / 执行 / 验收三角色系统提示词（Markdown）',
+    gateKey: '',
+    accent: 'var(--c-ai)',
+  },
+  {
+    key: 'debug',
+    name: '模型调试',
+    desc: '单模型调试台：提示词 / 工具 / Skill / 知识库 + 对话验证',
+    gateKey: '',
+    accent: 'var(--c-ai)',
   },
 ]
 
@@ -65,4 +80,9 @@ export function matchQuery(text: string, query: string): boolean {
   const q = query.trim().toLowerCase()
   if (!q) return true
   return text.toLowerCase().includes(q)
+}
+
+/** 有总闸的来源才参与「未装配」提示 */
+export function gatedSources(): AssemblySourceDef[] {
+  return ASSEMBLY_SOURCES.filter((s) => Boolean(s.gateKey))
 }

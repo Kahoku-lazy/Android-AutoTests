@@ -1,7 +1,7 @@
 /** 任务列表 — 加载 / 刷新 / 按线路筛选 / 运行态轮询 */
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { listTasks, deleteTask, clearTasks } from '../api/tasks'
+import { listTasks, deleteTask, clearTasks, rerunTask } from '../api/tasks'
 import { useFilterTabs } from '@/shared/composables/useFilterTabs'
 import {
   TASK_FILTER_TABS,
@@ -21,6 +21,7 @@ export function useTaskList() {
   const tasks = ref<TaskRecord[]>([])
   const loading = ref(false)
   const error = ref('')
+  const rerunningId = ref<number | null>(null)
   let pollTimer: ReturnType<typeof setInterval> | null = null
 
   const { activeFilter, filterTabs, filteredItems } = useFilterTabs(
@@ -113,12 +114,33 @@ export function useTaskList() {
     }
   }
 
+  async function rerun(task: TaskRecord) {
+    if (rerunningId.value != null) return
+    if (taskStatusTone(task.status) !== 'failed') {
+      ElMessage.warning('仅失败任务可重新执行')
+      return
+    }
+    rerunningId.value = task.id
+    try {
+      const data = await rerunTask(task.id)
+      if (data.status) {
+        ElMessage.success('已新建任务并重新执行')
+        await load(true)
+      } else {
+        ElMessage.error(data.message || '重新执行失败')
+      }
+    } catch {
+      ElMessage.error('重新执行失败，请检查网络连接')
+    }
+    rerunningId.value = null
+  }
+
   onMounted(load)
   onUnmounted(stopPoll)
 
   return {
-    tasks, loading, error, load,
+    tasks, loading, error, load, rerunningId,
     activeFilter, filterTabs, filteredItems, groupedByStatus, expandedGroups, emptyCopy,
-    remove, clearAll,
+    remove, clearAll, rerun,
   }
 }

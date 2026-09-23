@@ -77,7 +77,7 @@ watch(() => props.path, loadPreview, { immediate: true })
 .kb-preview-md :deep(pre) {
   overflow: auto;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   background: var(--kb-md-code-bg);
 }
 .kb-preview-text {

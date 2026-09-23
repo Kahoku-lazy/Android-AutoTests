@@ -7,7 +7,6 @@ import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import WbLoader from './components/WbLoader.vue'
 import AgentRouteCard from './components/AgentRouteCard.vue'
 import KnowledgeBase from './KnowledgeBase.vue'
-import EvaluatorTab from './EvaluatorTab.vue'
 import ToolboxPanel from './components/ToolboxPanel.vue'
 import TaskBoard from './components/TaskBoard.vue'
 import { useAgentBoard } from './index.logic'
@@ -19,7 +18,7 @@ const route = useRoute()
 const dutyRosterRef = ref<HTMLElement | null>(null)
 const {
   agents, loading, agentsError,
-  PAGE_HEADER, testingRoute, routeTestResults,
+  PAGE_HEADER, testingRoute, routeConnStatus,
   loadAgents, editAgent, testConnection,
 } = useAgentBoard(dutyRosterRef)
 
@@ -35,7 +34,6 @@ const routeCards = computed(() => {
   return [
     {
       key: 'device_control',
-      label: '控制设备',
       config: configs.device_control,
       agentName: configs.device_control?.name || fallbackName,
       agentAvatar: configs.device_control?.avatar || fallbackAvatar,
@@ -43,32 +41,27 @@ const routeCards = computed(() => {
   ]
 })
 
-// ── 视图（侧边栏子项路由驱动，/ai-assistant/agents|toolbox|knowledge|evaluator）──
+// ── 视图（侧边栏子项路由驱动，/ai-assistant/agents|toolbox|knowledge）──
 const VIEW_BY_PATH: Record<string, ViewMode> = {
   '/ai-assistant/agents': 'agents',
   '/ai-assistant/toolbox': 'toolbox',
   '/ai-assistant/knowledge': 'knowledge',
-  '/ai-assistant/evaluator': 'evaluator',
 }
 const viewMode = computed<ViewMode>(() => VIEW_BY_PATH[route.path] || 'agents')
 
 // ── 顶部 WorkbenchHeader 随侧边栏子项变化 ──
 const VIEW_META: Record<ViewMode, { title: string; subtitle: string }> = {
   agents: {
-    title: '平台小助手 Platform Assistant',
+    title: '平台小助手',
     subtitle: '助手看板 + 任务卡片列表：配置两条线路、新建任务并下发执行',
   },
   toolbox: {
-    title: 'AI工具箱 AI Toolbox',
+    title: 'AI工具箱',
     subtitle: '先看助手此刻能用什么，再按来源开关目录 · 两条线路共用同一套装配',
   },
   knowledge: {
-    title: '知识库 Knowledge Base',
+    title: '知识库',
     subtitle: 'ChromaDB 向量库状态与可索引文档，支持重建索引',
-  },
-  evaluator: {
-    title: '评测中心 Evaluation Center',
-    subtitle: '自然语言用例生成与执行：描述输入 → 设备选择 → 生成或直接执行',
   },
 }
 const pageMeta = computed(() => VIEW_META[viewMode.value])
@@ -98,12 +91,12 @@ const pageMeta = computed(() => VIEW_META[viewMode.value])
           </div>
           <AgentRouteCard
             v-for="rc in routeCards" :key="rc.key"
-            :label="rc.label" :config="rc.config"
+            :config="rc.config"
             :agent-name="rc.agentName"
             :agent-avatar="rc.agentAvatar"
             :can-manage="isAdmin"
             :testing="testingRoute === rc.key"
-            :test-results="routeTestResults[rc.key]"
+            :route-status="routeConnStatus[rc.key]"
             @edit="editAgent(agents[0]?.id ?? 0, rc.key)"
             @test="agents[0] && testConnection(agents[0], rc.key)"
           />
@@ -117,7 +110,6 @@ const pageMeta = computed(() => VIEW_META[viewMode.value])
 
       <ToolboxPanel v-if="viewMode === 'toolbox'" class="tb-host" :can-manage="isAdmin" />
       <KnowledgeBase v-if="viewMode === 'knowledge'" class="kb-host" :can-manage="isAdmin" />
-      <EvaluatorTab v-if="viewMode === 'evaluator'" class="eval-host" />
     </div>
   </div>
 </template>
@@ -127,8 +119,9 @@ const pageMeta = computed(() => VIEW_META[viewMode.value])
 <style scoped>
 .route-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), max-content));
   gap: var(--app-space-md);
   align-items: start;
+  justify-items: start;
 }
 </style>

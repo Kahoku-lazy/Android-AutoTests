@@ -56,7 +56,7 @@ class AgentScopeEngine:
             max_loops=req.max_loops,
         )
         planner, executor, verifier = build_device_models(
-            config, req.tools, req.user_id, skill_dirs=req.skill_dirs
+            config, req.tools, req.user_id, skill_dirs=req.skill_dirs, system_prompts=req.system_prompts
         )
         wf = DeviceExecutionWorkflow(
             planner,

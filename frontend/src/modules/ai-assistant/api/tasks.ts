@@ -5,13 +5,14 @@ import type {
   TaskDeleteResponse,
   TaskDetailResponse,
   TaskListResponse,
-  TaskSubmitPayload,
   TaskSubmitResponse,
 } from '@/shared/types/ai'
 
-/** 提交任务 */
-export async function submitTask(payload: TaskSubmitPayload): Promise<TaskSubmitResponse> {
-  const { data } = await djangoClient.post<TaskSubmitResponse>('/ai/tasks/submit/', payload)
+/** 提交任务（multipart：title/goal/可选 attachment 文件/device_*） */
+export async function submitTask(payload: FormData): Promise<TaskSubmitResponse> {
+  const { data } = await djangoClient.post<TaskSubmitResponse>('/ai/tasks/submit/', payload, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
   return data
 }
 
@@ -24,6 +25,12 @@ export async function listTasks(): Promise<TaskListResponse> {
 /** 删除任务卡片 */
 export async function deleteTask(taskId: number): Promise<TaskDeleteResponse> {
   const { data } = await djangoClient.post<TaskDeleteResponse>(`/ai/agent-tasks/${taskId}/delete/`)
+  return data
+}
+
+/** 失败任务克隆新建并调度 */
+export async function rerunTask(taskId: number): Promise<TaskSubmitResponse> {
+  const { data } = await djangoClient.post<TaskSubmitResponse>(`/ai/agent-tasks/${taskId}/rerun/`)
   return data
 }
 

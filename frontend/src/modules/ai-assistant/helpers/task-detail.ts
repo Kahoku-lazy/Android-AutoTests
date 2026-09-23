@@ -55,6 +55,10 @@ export function formatTaskDuration(start?: string, end?: string): string {
   return `≈ ${m}m ${s}s`
 }
 
+export function formatTaskCost(cost?: number): string {
+  return `${Number(cost ?? 0).toFixed(4)} 元`
+}
+
 function normalizeResult(raw: unknown): string {
   if (typeof raw === 'boolean') return raw ? 'pass' : 'fail'
   if (typeof raw === 'string') {

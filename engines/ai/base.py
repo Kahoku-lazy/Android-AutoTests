@@ -58,6 +58,8 @@ class TaskRequest:
     media_root: str = ""  # 绝对路径；空则跳过截图落盘
     on_progress: ProgressCallback | None = None  # 规划/每轮/每目标检查点；引擎不写库
     skill_dirs: list[str] = field(default_factory=list)  # enable_skills 打开时注入的 skill 目录
+    # 三角色系统提示词（Django 从库读取后注入；引擎常量留空，不做回退）
+    system_prompts: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass

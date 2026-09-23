@@ -54,7 +54,7 @@ export async function uploadFile(formData: FormData): Promise<AgentOpResponse> {
 
 /** 保存 Agent（新建或更新） */
 export async function saveAgent(isNew: boolean, agentId: number | null, payload: object): Promise<AgentDetailResponse> {
-  const url = isNew ? "/ai/agents/create" : `/ai/agents/${agentId}/update`
+  const url = isNew ? "/ai/agents/create/" : `/ai/agents/${agentId}/update/`
   const { data } = await djangoClient.post<AgentDetailResponse>(url, payload)
   return data
 }

@@ -20,8 +20,7 @@
   padding-bottom: 12px;
 }
 .kb-host,
-.tb-host,
-.eval-host {
+.tb-host {
   flex: 1;
   min-height: 0;
   min-width: 0;
@@ -36,13 +35,11 @@
   min-height: 0;
 }
 
-.doc-section__header {
-  display: flex;
+/* 只保留本模块真实差异；display / justify-content / gap / margin-bottom 由全局 .doc-section__header 提供
+   （frontend-l3-container「共享骨架块不得无作用域重定义」） */
+.ai-workbench .doc-section__header {
   align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
   flex-shrink: 0;
-  margin-bottom: var(--app-space-sm);
 }
 
 .filter-count {
@@ -63,7 +60,7 @@
   align-content: flex-start;
   align-items: flex-start;
   padding: 28px 22px var(--app-space-lg);
-  border-radius: 18px;
+  border-radius: var(--app-radius-lg);
   background-color: var(--app-bg-card);
   background-image: radial-gradient(var(--ai-dot-grid) 1.1px, transparent 1.1px);
   background-size: 18px 18px;

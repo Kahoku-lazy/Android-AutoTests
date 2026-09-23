@@ -156,9 +156,10 @@ async function testConnection() {
     const data = await testAgent(agentId.value, { route: activeRoute.value });
     if (data.status && data.data) {
       if (data.data.results) testResults.value = data.data.results;
-      const connected = data.data.connected;
-      if (connected) ElMessage.success("连接成功");
-      else ElMessage.warning("存在未连通的模型");
+      const st = data.data.status;
+      if (st === "ready" || data.data.connected) ElMessage.success("已连通，可执行任务");
+      else if (st === "unusable") ElMessage.warning("秘钥已连接，但无法使用");
+      else ElMessage.warning("连接失败，小助手断线");
     } else {
       ElMessage.error(data.message || "校验失败");
     }
@@ -182,22 +183,19 @@ async function testConnection() {
       "
       icon="settings"
       icon-gradient="linear-gradient(135deg, var(--ai-teal), var(--ai-teal-hover))"
-    >
-      <template #nav>
-        <WorkbenchCrumbs
-          back-to="/ai-assistant/agents"
-          back-label="返回智能体列表"
-          :items="[
-            { label: '平台小助手', to: '/ai-assistant/agents' },
-            { label: isNew ? '新建智能体' : (agent?.name || '编辑智能体') },
-          ]"
-        />
-      </template>
-    </WorkbenchHeader>
-
-    <ErrorState v-if="loadError" :message="loadError" @retry="loadAgentDetail" />
+    />
 
     <div class="doc-body agent-body">
+      <WorkbenchCrumbs
+        back-to="/ai-assistant/agents"
+        back-label="返回智能体列表"
+        :items="[
+          { label: '平台小助手', to: '/ai-assistant/agents' },
+          { label: isNew ? '新建智能体' : (agent?.name || '编辑智能体') },
+        ]"
+      />
+      <ErrorState v-if="loadError" :message="loadError" @retry="loadAgentDetail" />
+      <template v-else>
       <input
         type="file"
         ref="fileInput"
@@ -241,14 +239,20 @@ async function testConnection() {
         <div v-if="testResults" class="test-results">
           <div v-for="(r, role) in testResults" :key="role" class="test-row">
             <span class="test-role">{{ ROLE_LABELS[role] || role }}</span>
-            <span class="test-state" :class="r.connected ? 'ok' : 'fail'">
-              {{ r.connected ? '✓ 已连通' : '✗ ' + (r.message || '未连通') }}
+            <span
+              class="test-state"
+              :class="r.connected ? 'ok' : (r.key_ok ? 'warn' : 'fail')"
+            >
+              <template v-if="r.connected">✓ 可用于执行</template>
+              <template v-else-if="r.key_ok">△ 密钥可达但不可用{{ r.message ? '：' + r.message : '' }}</template>
+              <template v-else>✗ {{ r.message || '未连通' }}</template>
             </span>
           </div>
         </div>
       </section>
 
       <AgentFormFooter :is-new="isNew" @save="save" />
+      </template>
     </div>
   </div>
 </template>
@@ -263,17 +267,18 @@ async function testConnection() {
 /* ── Back button ── */
 :deep(.section-num) {
   display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;
-  border-radius: 10px; background: linear-gradient(135deg,var(--ai-teal),var(--ai-teal-hover));
+  border-radius: var(--app-radius-md); background: linear-gradient(135deg,var(--ai-teal),var(--ai-teal-hover));
   color: var(--app-bg-card); font-size: var(--app-size-md); font-weight: 700; box-shadow: var(--app-shadow-sm);
 }
 .agent-form :deep(.el-form-item__label) { font-size: var(--app-size-md); font-weight: 600; color: var(--ai-ink-subtle); }
 .agent-form :deep(.el-input__wrapper),
-.agent-form :deep(.el-textarea__inner) { border-radius: 10px; font-size: var(--app-size-md); }
+.agent-form :deep(.el-textarea__inner) { border-radius: var(--app-radius-md); font-size: var(--app-size-md); }
 .form-hint { font-size: var(--app-size-sm); color: var(--ai-ink-muted); margin-left: 10px; }
 .test-results { display: flex; flex-direction: column; gap: var(--app-space-sm); margin-top: var(--app-space-md); }
 .test-row { display: flex; align-items: center; gap: 12px; font-size: var(--app-size-sm); }
 .test-role { font-weight: 700; color: var(--ai-ink-muted); min-width: 72px; }
 .test-state.ok { color: var(--ai-teal-text); font-weight: 700; }
+.test-state.warn { color: var(--c-dashboard); font-weight: 700; }
 .test-state.fail { color: var(--el-color-danger); font-weight: 700; }
 </style>
 

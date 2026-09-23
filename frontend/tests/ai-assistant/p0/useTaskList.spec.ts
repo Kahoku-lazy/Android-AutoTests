@@ -15,6 +15,7 @@ vi.mock('@/modules/ai-assistant/api/tasks', () => ({
   listDevices: vi.fn(),
   deleteTask: vi.fn(),
   clearTasks: vi.fn(),
+  rerunTask: vi.fn(),
 }))
 
 function makeTask(id: number): TaskRecord {
@@ -122,6 +123,33 @@ describe('[P0] useTaskList', () => {
 
     expect(taskApi.clearTasks).toHaveBeenCalled()
     expect(result.tasks.value).toHaveLength(0)
+
+    wrapper.unmount()
+  })
+
+  it('rerun 失败任务：调用 API 并刷新列表；非失败不调用', async () => {
+    const failed = { ...makeTask(1), status: 'failed', assistant_name: 'UI 视觉自动化' }
+    const ok = { ...makeTask(2), status: 'completed', assistant_name: 'UI 视觉自动化' }
+    vi.mocked(taskApi.listTasks)
+      .mockResolvedValueOnce({ status: true, data: { tasks: [failed, ok] } })
+      .mockResolvedValueOnce({
+        status: true,
+        data: { tasks: [failed, ok, { ...makeTask(3), status: 'pending', assistant_name: 'UI 视觉自动化' }] },
+      })
+    vi.mocked(taskApi.rerunTask).mockResolvedValue({ status: true, data: { id: 3, status: 'pending' } })
+
+    const { result, wrapper } = await mountComposable(() => useTaskList())
+    await flushPromises()
+
+    await result.rerun(ok)
+    await flushPromises()
+    expect(taskApi.rerunTask).not.toHaveBeenCalled()
+
+    await result.rerun(failed)
+    await flushPromises()
+    expect(taskApi.rerunTask).toHaveBeenCalledWith(1)
+    expect(result.tasks.value).toHaveLength(3)
+    expect(result.tasks.value.every((t: TaskRecord) => t.assistant_name === 'UI 视觉自动化')).toBe(true)
 
     wrapper.unmount()
   })

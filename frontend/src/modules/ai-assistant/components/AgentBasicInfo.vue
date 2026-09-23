@@ -58,14 +58,12 @@ const emit = defineEmits<{ 'trigger-upload': [] }>()
 <style scoped>
 .avatar-row {
   display: flex; align-items: center; gap: var(--app-space-md); flex-wrap: wrap;
-  /* 头像预览卡投影（暖墨低透明） */
-  --avatar-shadow: 0 2px 8px rgba(61, 52, 40, 0.08);
 }
 .avatar-preview {
-  width: 64px; height: 64px; border-radius: 14px; background-size: cover;
+  width: 64px; height: 64px; border-radius: var(--app-radius-lg); background-size: cover;
   background-position: center; background-color: var(--ai-warm-bg);
   display: flex; align-items: center; justify-content: center;
   font-size: var(--app-size-2xl); border: 2px solid var(--ai-warm-border); flex-shrink: 0;
-  box-shadow: var(--avatar-shadow);
+  box-shadow: var(--app-shadow-sm);
 }
 </style>

@@ -38,22 +38,19 @@ function retryFile() {
       subtitle="查看 Skill 目录与文件内容"
       icon="book-open"
       icon-gradient="linear-gradient(135deg, var(--c-ai), var(--sv-icon-grad-end))"
-    >
-      <template #nav>
-        <WorkbenchCrumbs
-          back-to="/ai-assistant/toolbox"
-          back-label="返回工具箱"
-          :items="[
-            { label: 'AI工具箱', to: '/ai-assistant/toolbox' },
-            { label: skillName || 'Skill' },
-          ]"
-        />
-      </template>
-    </WorkbenchHeader>
+    />
 
-    <ErrorState v-if="treeError" :message="treeError" @retry="loadTree" />
-
-    <div v-else class="doc-body sv-page">
+    <div class="doc-body">
+      <WorkbenchCrumbs
+        back-to="/ai-assistant/toolbox"
+        back-label="返回工具箱"
+        :items="[
+          { label: 'AI工具箱', to: '/ai-assistant/toolbox' },
+          { label: skillName || 'Skill' },
+        ]"
+      />
+      <ErrorState v-if="treeError" :message="treeError" @retry="loadTree" />
+      <div v-else class="sv-page">
       <aside class="sv-tree panel">
         <div class="sv-tree-label">目录</div>
         <div v-loading="treeLoading" class="sv-tree-body">
@@ -104,6 +101,7 @@ function retryFile() {
           <pre v-else-if="file?.kind === 'text'" class="sv-code">{{ file.content }}</pre>
         </div>
       </section>
+    </div>
     </div>
   </div>
 </template>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import type { FormInstance } from 'element-plus'
+import type { FormInstance, UploadRawFile } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import FilterTabs from '@/shared/components/FilterTabs.vue'
@@ -9,12 +10,15 @@ import ConfirmButton from '@/shared/components/patterns/ConfirmButton.vue'
 import DoodleNote from '@/shared/components/DoodleNote.vue'
 import DoodleBtn from '@/shared/components/DoodleBtn.vue'
 import {
+  TASK_STATUS_LABELS,
   taskDetailRoute,
   taskStatusTone,
   type TaskStatusTone,
 } from '../constants'
+import { formatTaskCost, formatTaskDuration } from '../helpers/task-detail'
 import { useTaskPublish } from '../composables/useTaskPublish'
 import { useTaskList } from '../composables/useTaskList'
+import type { TaskRecord } from '@/shared/types/ai'
 
 /** 任务态 → sticky 底色：成功 Do / 失败 Dont / 执行中 / 等待 */
 function stickyStatus(tone: TaskStatusTone): 'ok' | 'run' | 'fail' | 'wait' {
@@ -24,29 +28,75 @@ function stickyStatus(tone: TaskStatusTone): 'ok' | 'run' | 'fail' | 'wait' {
   return 'wait'
 }
 
+function deviceDisplay(t: TaskRecord): string {
+  return (t.device_label || t.device_serial || '—').trim() || '—'
+}
+
+function statusLabel(status: string): string {
+  return TASK_STATUS_LABELS[status] || TASK_STATUS_LABELS[taskStatusTone(status)] || status || '—'
+}
+
 const router = useRouter()
-const { form, submitting, devices, dialogVisible, openDialog, closeDialog, submit } = useTaskPublish()
+const {
+  form,
+  submitting,
+  devices,
+  dialogVisible,
+  ATTACH_ACCEPT,
+  openDialog,
+  closeDialog,
+  submit,
+  canSubmit,
+  onAttachChange,
+  clearAttach,
+} = useTaskPublish()
 
 const taskFormRef = ref<FormInstance>()
-/** 任务目标必填（EP 字段级校验；原由提交按钮 :disabled 兜底） */
 const taskRules = {
+  title: [{ required: true, message: '请填写任务标题', trigger: 'blur' }],
   goal: [{ required: true, message: '请填写任务目标', trigger: 'blur' }],
 }
 const {
   tasks, loading, error, load,
   activeFilter, filterTabs, filteredItems, groupedByStatus, expandedGroups, emptyCopy,
-  clearAll,
+  clearAll, rerun, rerunningId,
 } = useTaskList()
 
 function openDetail(taskId: number) {
   router.push(taskDetailRoute(taskId))
 }
 
+function isFailed(t: TaskRecord): boolean {
+  return taskStatusTone(t.status) === 'failed'
+}
+
+function beforeAttachUpload(raw: UploadRawFile) {
+  const name = raw.name || ''
+  const ok = /\.(docx|pdf)$/i.test(name)
+  if (!ok) {
+    ElMessage.error('仅支持 Word（.docx）与 PDF')
+    return false
+  }
+  if (raw.size > 20 * 1024 * 1024) {
+    ElMessage.error('文件过大（上限 20MB）')
+    return false
+  }
+  onAttachChange(raw)
+  return false // 阻止 el-upload 自动上传；随表单一起提交
+}
+
+function onAttachRemove() {
+  clearAttach()
+}
+
+function onAttachExceed() {
+  ElMessage.warning('每条任务最多一份附件')
+}
+
 async function onSubmit() {
   try {
     await taskFormRef.value?.validate()
   } catch {
-    // 校验失败：EP 的 validate 以 reject 表示，交由字段内联提示（非静默吞错）
     return
   }
   await submit(() => {
@@ -79,11 +129,28 @@ async function onSubmit() {
     <!-- 新建任务弹窗 -->
     <el-dialog v-model="dialogVisible" title="新建任务" width="640px" :close-on-click-modal="false">
       <el-form ref="taskFormRef" :model="form" :rules="taskRules" label-width="120px" @submit.prevent>
+        <el-form-item label="任务标题" prop="title">
+          <el-input v-model="form.title" placeholder="例如：校准 H705F 色温" maxlength="200" show-word-limit />
+        </el-form-item>
         <el-form-item label="任务目标" prop="goal">
           <el-input v-model="form.goal" type="textarea" :rows="2" placeholder="例如：拖动 H705F 的色温滑块到最左端" />
         </el-form-item>
-        <el-form-item label="任务附件文件">
-          <el-input v-model="form.attachment" placeholder="附件路径 / URL（可选）" />
+        <el-form-item label="任务附件">
+          <el-upload
+            :accept="ATTACH_ACCEPT"
+            :limit="1"
+            :auto-upload="false"
+            :show-file-list="true"
+            :before-upload="beforeAttachUpload"
+            :on-remove="onAttachRemove"
+            :on-exceed="onAttachExceed"
+          >
+            <el-button size="small">选择 Word / PDF</el-button>
+            <template #tip>
+              <div class="el-upload__tip">可选；仅 .docx / .pdf，上传后解析为 Markdown 供规划模型使用</div>
+            </template>
+          </el-upload>
+          <p v-if="form.attachmentFile" class="task-attach-name">已选：{{ form.attachmentFile.name }}</p>
         </el-form-item>
         <el-form-item label="设备">
           <el-select v-model="form.device_serial" style="width:100%" clearable filterable placeholder="留空则第一台在线设备">
@@ -98,7 +165,7 @@ async function onSubmit() {
       </el-form>
       <template #footer>
         <el-button @click="closeDialog">取消</el-button>
-        <el-button type="primary" :loading="submitting" :disabled="!form.goal.trim()" @click="onSubmit">提交</el-button>
+        <el-button type="primary" :loading="submitting" :disabled="!canSubmit()" @click="onSubmit">提交</el-button>
       </template>
     </el-dialog>
 
@@ -133,9 +200,25 @@ async function onSubmit() {
               :tilt="taskStatusTone(t.status) === 'failed' ? 1.2 : -1.1"
             >
               <template #header>
-                <h4 class="task-card__title">{{ t.title || t.goal }}</h4>
+                <h4 class="task-card__title">{{ t.title || '未命名任务' }}</h4>
               </template>
+              <ul class="task-card__meta">
+                <li><span class="task-card__meta-k">状态</span>{{ statusLabel(t.status) }}</li>
+                <li><span class="task-card__meta-k">创建</span>{{ t.created_at || '—' }}</li>
+                <li><span class="task-card__meta-k">设备</span>{{ deviceDisplay(t) }}</li>
+                <li><span class="task-card__meta-k">助手</span>{{ t.assistant_name || '—' }}</li>
+                <li><span class="task-card__meta-k">费用</span>{{ formatTaskCost(t.deepseek_cost) }}</li>
+                <li><span class="task-card__meta-k">耗时</span>{{ formatTaskDuration(t.started_at, t.finished_at) }}</li>
+              </ul>
               <template #actions>
+                <DoodleBtn
+                  v-if="isFailed(t)"
+                  tone="yellow"
+                  :disabled="rerunningId === t.id"
+                  @click="rerun(t)"
+                >
+                  {{ rerunningId === t.id ? '重新执行中…' : '重新执行' }}
+                </DoodleBtn>
                 <DoodleBtn tone="teal" @click="openDetail(t.id)">详情</DoodleBtn>
               </template>
             </DoodleNote>
@@ -161,13 +244,34 @@ async function onSubmit() {
   gap: var(--app-space-sm);
 }
 .task-board__body { min-height: var(--app-space-2xl); }
+.task-attach-name {
+  margin: var(--app-space-xs) 0 0;
+  font-size: var(--app-size-xs);
+  color: var(--ai-ink-muted);
+}
+.task-card__meta {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--app-size-sm);
+  color: var(--ai-ink-soft);
+}
+.task-card__meta-k {
+  display: inline-block;
+  min-width: 2.5em;
+  margin-right: var(--app-space-xs);
+  font-weight: 700;
+  color: var(--ai-ink-muted);
+}
 .task-status-collapse { --el-collapse-border-color: transparent; --el-collapse-header-height: 36px; }
 .task-status-collapse :deep(.el-collapse-item) {
   background: var(--app-bg-card);
   border: 2px solid var(--ai-warm-border);
   border-radius: var(--app-radius-lg);
   margin-bottom: var(--app-space-sm);
-  /* 可见：sticky 胶带 / 硬阴影 / 微倾不被裁切 */
   overflow: visible;
 }
 .task-status-collapse :deep(.el-collapse-item__header) {
@@ -225,7 +329,6 @@ async function onSubmit() {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: var(--app-space-md);
-  /* 胶带探出与微倾留白 */
   padding-top: var(--app-space-sm);
 }
 .task-card__title {
@@ -235,7 +338,7 @@ async function onSubmit() {
 .task-status-head__label {
   flex-shrink: 0;
   font-size: var(--app-size-xs); font-weight: 700; padding: 2px 7px;
-  border-radius: 3px 6px 3px 6px; border: 1.5px solid var(--ink); white-space: nowrap;
+  border-radius: var(--el-border-radius-small); border: 1.5px solid var(--ink); white-space: nowrap;
   line-height: 1.2;
 }
 .task-status-head__label.is-pending {

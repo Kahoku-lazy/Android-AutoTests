@@ -41,6 +41,11 @@ def _build_device_models(agent):
         tools=build_tool_specs(),
         user_id=str(agent.owner_id or ""),
         skill_dirs=list_enabled_skill_dirs() if agent.enable_skills else [],
+        system_prompts={
+            "planner": agent.prompt_planner or "",
+            "executor": agent.prompt_executor or "",
+            "verifier": agent.prompt_verifier or "",
+        },
     )
     return config, planner, executor, verifier
 

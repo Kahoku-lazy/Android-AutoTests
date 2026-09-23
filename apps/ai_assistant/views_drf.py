@@ -22,22 +22,18 @@
 
 import json
 import logging
-import threading
 
 from datetime import datetime, timedelta
 
-from django.conf import settings
-from django.db import close_old_connections
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from engines.ai.registry import get_ai_engine
-from models.constants import AgentStatus, MessageRole, TaskStatus
+from models.constants import AgentStatus, MessageRole
 
 from . import api, engine_adapter
 from .models import AIAgent, AIConversation, AIMessage, AITask
@@ -63,6 +59,9 @@ from .serializers import (
     RenameInputSerializer,
     TaskSubmitInputSerializer,
 )
+
+# 测试与旧调用方仍从 views_drf 导入进度落库入口
+from .task_runner import persist_task_progress_safe  # noqa: F401
 
 logger = logging.getLogger("ai_assistant")
 
@@ -130,51 +129,76 @@ def call_model_api(agent, path, method="GET", body=None):
     return _call_config_api(base, api_key, path, method, body)
 
 
-def _test_model_config(provider, api_key, base_url, model_name):
-    """按显式模型配置测连通；返回 (connected, available_models, last_error)。"""
-    provider_cfg = get_provider_config(provider, base_url)
-    base = provider_cfg["base_url"]
-    if not base:
-        return False, [], "No base_url configured"
-
-    available_models = []
-    connected = False
+def _probe_model_list(base: str, api_key: str) -> tuple[bool, list, str]:
+    """GET 模型目录；返回 (key_ok, available_models, last_error)。"""
+    available_models: list = []
     last_error = ""
-
     for path in _MODEL_LIST_PATHS:
         resp, err = _call_config_api(base, api_key, path)
         if err:
             last_error = err
             continue
         if resp is not None and 200 <= resp.status_code < 300:
-            connected = True
-            data = resp.json()
-            available_models = _extract_model_ids(data)
-            if available_models:
-                available_models.sort(key=lambda x: (x != model_name, x))
-            break
-        else:
-            last_error = f"HTTP {resp.status_code}"
+            available_models = _extract_model_ids(resp.json())
+            return True, available_models, ""
+        last_error = f"HTTP {resp.status_code}" if resp is not None else last_error
+    return False, available_models, last_error
 
-    if not connected and not last_error:
-        chat_body = {
-            "model": model_name,
-            "messages": [{"role": MessageRole.USER, "content": "hi"}],
-            "max_tokens": 5,
-        }
-        resp, err = _call_config_api(base, api_key, "/chat/completions", "POST", chat_body)
-        if err:
-            last_error = err
-        elif resp and 200 <= resp.status_code < 300:
-            connected = True
-        elif resp:
-            last_error = f"HTTP {resp.status_code}: {resp.text[:200]}"
 
-    return connected, available_models, last_error
+def _probe_chat(base: str, api_key: str, model_name: str) -> tuple[bool, str]:
+    """极短 chat/completions；返回 (ok, error)。"""
+    chat_body = {
+        "model": model_name,
+        "messages": [{"role": MessageRole.USER, "content": "hi"}],
+        "max_tokens": 5,
+    }
+    resp, err = _call_config_api(base, api_key, "/chat/completions", "POST", chat_body)
+    if err:
+        return False, err
+    if resp is not None and 200 <= resp.status_code < 300:
+        return True, ""
+    if resp is not None:
+        return False, f"HTTP {resp.status_code}: {resp.text[:200]}"
+    return False, "推理探测无响应"
+
+
+def _test_model_config(provider, api_key, base_url, model_name, *, list_cache=None):
+    """两段探测：list 只证明密钥可达；chat 成功才算可用于执行。
+
+    返回 (connected, key_ok, available_models, last_error)。
+    list_cache: 可选 (key_ok, available_models, list_error)，供同密钥合并目录探测。
+    """
+    provider_cfg = get_provider_config(provider, base_url)
+    base = provider_cfg["base_url"]
+    if not base:
+        return False, False, [], "No base_url configured"
+
+    if list_cache is not None:
+        key_ok, available_models, list_error = list_cache
+    else:
+        key_ok, available_models, list_error = _probe_model_list(base, api_key)
+
+    if available_models:
+        available_models = sorted(available_models, key=lambda x: (x != model_name, x))
+
+    # 目录缺失不硬拦：实验/视觉模型常不在 /models 列表里，以 chat 成败为准
+    catalog_hint = ""
+    if key_ok and available_models and model_name and model_name not in available_models:
+        catalog_hint = f"模型 {model_name} 不在供应商目录中"
+
+    chat_ok, chat_error = _probe_chat(base, api_key, model_name)
+    if chat_ok:
+        # 推理成功即证明鉴权可用（即便目录未列出该模型）
+        return True, True, available_models, ""
+    err = chat_error or catalog_hint or list_error or "推理探测失败"
+    return False, key_ok, available_models, err
 
 
 _ROUTE_KEYS = ("device_control",)
 _ROUTE_ROLES = ("planner", "executor", "verifier")
+_ROUTE_STATUS_READY = "ready"
+_ROUTE_STATUS_UNUSABLE = "unusable"
+_ROUTE_STATUS_OFFLINE = "offline"
 _HEALTH_TTL = timedelta(minutes=30)
 
 
@@ -191,8 +215,16 @@ def _parse_checked_at(raw) -> datetime | None:
 
 
 def _health_is_stale(health: dict | None) -> bool:
-    """超过 30 分钟或从未检测则视为过期。"""
-    checked = _parse_checked_at((health or {}).get("last_checked_at"))
+    """缺 status、从未检测或超过 30 分钟则视为过期。"""
+    if not isinstance(health, dict):
+        return True
+    if health.get("status") not in (
+        _ROUTE_STATUS_READY,
+        _ROUTE_STATUS_UNUSABLE,
+        _ROUTE_STATUS_OFFLINE,
+    ):
+        return True
+    checked = _parse_checked_at(health.get("last_checked_at"))
     if not checked:
         return True
     return (datetime.now() - checked) > _HEALTH_TTL
@@ -207,51 +239,106 @@ def _route_has_model(agent, route: str) -> bool:
     return False
 
 
+def _aggregate_route_status(results: dict) -> str:
+    """三角色结果 → ready / unusable / offline。"""
+    if not results:
+        return _ROUTE_STATUS_OFFLINE
+    if all(bool(r.get("connected")) for r in results.values()):
+        return _ROUTE_STATUS_READY
+    if any(bool(r.get("key_ok")) for r in results.values()):
+        return _ROUTE_STATUS_UNUSABLE
+    return _ROUTE_STATUS_OFFLINE
+
+
 def _public_route_health(health: dict | None) -> dict:
     """健康检查对外字段（不含密钥）。"""
     if not isinstance(health, dict) or not health.get("last_checked_at"):
-        return {"is_connected": None, "last_checked": None, "results": None}
+        return {
+            "is_connected": None,
+            "status": None,
+            "last_checked": None,
+            "results": None,
+        }
+    status = health.get("status")
+    if status not in (
+        _ROUTE_STATUS_READY,
+        _ROUTE_STATUS_UNUSABLE,
+        _ROUTE_STATUS_OFFLINE,
+    ):
+        status = _ROUTE_STATUS_READY if health.get("is_connected") else _ROUTE_STATUS_OFFLINE
     return {
-        "is_connected": bool(health.get("is_connected")),
+        "is_connected": status == _ROUTE_STATUS_READY,
+        "status": status,
         "last_checked": health.get("last_checked_at"),
         "results": health.get("results") or {},
     }
 
 
-def _test_agent_route(agent, route: str) -> tuple[bool, dict]:
-    """校验一条线路的规划/执行/校验模型；返回 (overall, results)。"""
-    results = {}
+def _role_incomplete_result(model_name: str, message: str) -> dict:
+    return {
+        "connected": False,
+        "key_ok": False,
+        "model_name": model_name,
+        "message": message,
+    }
+
+
+def _test_agent_route(agent, route: str) -> tuple[str, dict]:
+    """校验一条线路；返回 (status, results)。同密钥合并 list，按模型分别 chat。"""
+    role_cfgs: dict[str, dict] = {}
     for role in _ROUTE_ROLES:
-        cfg = api.get_route_model_config(agent, route, role)
+        role_cfgs[role] = api.get_route_model_config(agent, route, role)
+
+    # 同 (provider, base_url, api_key) 合并目录探测
+    list_by_cred: dict[tuple[str, str, str], tuple[bool, list, str]] = {}
+    for role, cfg in role_cfgs.items():
+        provider = (cfg.get("provider") or "").strip()
+        model_name = (cfg.get("model_name") or "").strip()
+        api_key = (cfg.get("api_key") or "").strip()
+        base_url = (cfg.get("base_url") or "").strip()
+        if not (model_name and provider and api_key):
+            continue
+        cred = (provider, base_url, api_key)
+        if cred in list_by_cred:
+            continue
+        base = get_provider_config(provider, base_url)["base_url"]
+        if not base:
+            list_by_cred[cred] = (False, [], "No base_url configured")
+        else:
+            list_by_cred[cred] = _probe_model_list(base, api_key)
+
+    results: dict[str, dict] = {}
+    for role, cfg in role_cfgs.items():
         provider = (cfg.get("provider") or "").strip()
         model_name = (cfg.get("model_name") or "").strip()
         api_key = (cfg.get("api_key") or "").strip()
         base_url = (cfg.get("base_url") or "").strip()
         if not model_name:
-            results[role] = {"connected": False, "model_name": "", "message": "未配置模型名"}
+            results[role] = _role_incomplete_result("", "未配置模型名")
             continue
         if not provider:
-            results[role] = {
-                "connected": False,
-                "model_name": model_name,
-                "message": "未配置模型服务",
-            }
+            results[role] = _role_incomplete_result(model_name, "未配置模型服务")
             continue
         if not api_key:
-            results[role] = {
-                "connected": False,
-                "model_name": model_name,
-                "message": "未配置 API Key",
-            }
+            results[role] = _role_incomplete_result(model_name, "未配置 API Key")
             continue
-        connected, _, err = _test_model_config(provider, api_key, base_url, model_name)
+        cred = (provider, base_url, api_key)
+        connected, key_ok, _, err = _test_model_config(
+            provider,
+            api_key,
+            base_url,
+            model_name,
+            list_cache=list_by_cred.get(cred),
+        )
         results[role] = {
             "connected": connected,
+            "key_ok": key_ok,
             "model_name": model_name,
             "message": err if not connected else "",
         }
-    overall = all(r["connected"] for r in results.values()) if results else False
-    return overall, results
+
+    status = _aggregate_route_status(results)
+    return status, results
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -365,10 +452,16 @@ class AgentViewSet(
 
         if route:
             # 按线路校验：只测该线路自己的配置，禁止回退到智能体顶层模型
-            overall, results = _test_agent_route(a, route)
+            status, results = _test_agent_route(a, route)
+            overall = status == _ROUTE_STATUS_READY
             now = datetime.now()
             api.update_route_connectivity(
-                a, route, connected=overall, checked_at=now, results=results
+                a,
+                route,
+                connected=overall,
+                checked_at=now,
+                results=results,
+                status=status,
             )
             fail_msgs = [
                 f"{role}:{r['message']}"
@@ -378,6 +471,7 @@ class AgentViewSet(
             return Response(
                 {
                     "connected": overall,
+                    "status": status,
                     "results": results,
                     "last_checked": now.isoformat(sep=" ", timespec="seconds"),
                     "message": "" if overall else ("；".join(fail_msgs) or "存在未连通的模型"),
@@ -389,7 +483,7 @@ class AgentViewSet(
         api_key = api.decrypt_key(a.api_key) if a.api_key else ""
         base_url = a.base_url
 
-        connected, available_models, last_error = _test_model_config(
+        connected, _key_ok, available_models, last_error = _test_model_config(
             provider, api_key, base_url, model_name
         )
 
@@ -465,19 +559,45 @@ class AgentHealthAPIView(APIView):
             for route in _ROUTE_KEYS:
                 stored = ((a.route_configs or {}).get(route) or {}).get("health")
                 if not _route_has_model(a, route):
-                    routes_out[route] = _public_route_health(
-                        stored if isinstance(stored, dict) else None
-                    )
+                    # 无任何角色配置 → 落 offline，保证看板只有三态
+                    if (
+                        isinstance(stored, dict)
+                        and stored.get("status") == _ROUTE_STATUS_OFFLINE
+                        and not _health_is_stale(stored)
+                    ):
+                        routes_out[route] = _public_route_health(stored)
+                    else:
+                        api.update_route_connectivity(
+                            a,
+                            route,
+                            connected=False,
+                            checked_at=now,
+                            results={},
+                            status=_ROUTE_STATUS_OFFLINE,
+                        )
+                        routes_out[route] = {
+                            "is_connected": False,
+                            "status": _ROUTE_STATUS_OFFLINE,
+                            "last_checked": now.isoformat(sep=" ", timespec="seconds"),
+                            "results": {},
+                        }
                     continue
                 if isinstance(stored, dict) and not _health_is_stale(stored):
                     routes_out[route] = _public_route_health(stored)
                     continue
-                overall, role_results = _test_agent_route(a, route)
+                status, role_results = _test_agent_route(a, route)
+                overall = status == _ROUTE_STATUS_READY
                 api.update_route_connectivity(
-                    a, route, connected=overall, checked_at=now, results=role_results
+                    a,
+                    route,
+                    connected=overall,
+                    checked_at=now,
+                    results=role_results,
+                    status=status,
                 )
                 routes_out[route] = {
                     "is_connected": overall,
+                    "status": status,
                     "last_checked": now.isoformat(sep=" ", timespec="seconds"),
                     "results": role_results,
                 }
@@ -776,79 +896,8 @@ class TaskBoardAPIView(APIView):
 # ═══════════════════════════════════════════════════════════════════
 
 
-def persist_task_progress_safe(task_id: int, payload: dict) -> None:
-    """运行中增量写 result。必须可从 asyncio 事件循环线程安全调用。
-
-    工作流在 ``asyncio.run`` 内同步回调本函数；若在此线程直接 ORM，
-    Django 会抛 ``SynchronousOnlyOperation``，详情页一直空。
-    """
-    result_snapshot = api.dump_task_run_payload(payload)
-    usage = payload.get("usage") if isinstance(payload.get("usage"), dict) else None
-
-    def _persist() -> None:
-        close_old_connections()
-        try:
-            api.patch_task_progress(
-                AITask.objects.get(id=task_id),
-                result=result_snapshot,
-                usage=usage,
-            )
-        except Exception:
-            logger.exception("task progress persist failed id=%s", task_id)
-        finally:
-            close_old_connections()
-
-    t = threading.Thread(target=_persist, daemon=True)
-    t.start()
-    t.join(timeout=30)
-    if t.is_alive():
-        logger.error("task progress persist timed out id=%s", task_id)
-
-
-def _run_task_async(task_id: int, agent_id: int) -> None:
-    """后台线程入口：经引擎工厂执行并落终态（completed/failed + result + usage）。"""
-
-    def _on_progress(payload: dict) -> None:
-        persist_task_progress_safe(task_id, payload)
-
-    try:
-        agent = AIAgent.objects.get(id=agent_id)
-        task = AITask.objects.get(id=task_id)
-        req = engine_adapter.build_request(task, agent)
-        req.on_progress = _on_progress
-        result = get_ai_engine(settings.AI_ENGINE).run(req)
-        status = TaskStatus.COMPLETED if result.status == "success" else TaskStatus.FAILED
-        payload = {
-            "status": result.status,
-            "summary": result.summary,
-            "reason": result.reason,
-            "completed": result.completed or [],
-            "failed": result.failed or [],
-            "plans": result.plans or [],
-            "log": result.log or [],
-            "usage": result.usage or {},
-            "models": result.models
-            or {role: getattr(spec, "model_name", "") for role, spec in (req.models or {}).items()},
-            "max_loops": req.max_loops,
-        }
-        api.finalize_task(
-            task,
-            status=status,
-            result=api.dump_task_run_payload(payload),
-            usage=result.usage,
-        )
-    except Exception as exc:
-        logger.exception("async task failed id=%s", task_id)
-        try:
-            api.finalize_task(
-                AITask.objects.get(id=task_id), status=TaskStatus.FAILED, result=f"执行异常: {exc}"
-            )
-        except Exception:
-            logger.exception("finalize async task failed id=%s", task_id)
-
-
 class TaskSubmitAPIView(APIView):
-    """POST /api/ai/tasks/submit — 提交任务并异步执行（后台线程，立即返回）。"""
+    """POST /api/ai/tasks/submit — 提交任务；按设备调度（同设备排队 / 异设备并行）。"""
 
     @extend_schema(request=TaskSubmitInputSerializer, responses=OpenApiTypes.OBJECT)
     def post(self, request):
@@ -860,23 +909,42 @@ class TaskSubmitAPIView(APIView):
         if agent is None:
             raise NotFound("platform agent not found")
 
+        title = data["title"]
         goal = data["goal"]
-        device_serial = data.get("device_serial", "")
+        device_serial = (data.get("device_serial") or "").strip()
+        device_label = (data.get("device_label") or "").strip()
+
+        try:
+            device_serial = engine_adapter.resolve_device_serial(device_serial)
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+
+        attachment_md = ""
+        attachment_filename = ""
+        uploaded = data.get("attachment")
+        if uploaded is not None:
+            from .kb_files import KbFileError, parse_task_attachment_bytes
+
+            raw = uploaded.read()
+            try:
+                attachment_md, attachment_filename = parse_task_attachment_bytes(
+                    getattr(uploaded, "name", "") or "attachment",
+                    raw,
+                )
+            except KbFileError as exc:
+                raise ValidationError(str(exc)) from exc
+
         task = api.create_task(
             agent,
-            title=goal[:100],
+            title=title,
             goal=goal,
-            attachment=data.get("attachment", ""),
+            attachment=attachment_md,
+            attachment_filename=attachment_filename,
             device_serial=device_serial,
+            device_label=device_label,
         )
-        api.start_task(task)
-
-        threading.Thread(
-            target=_run_task_async,
-            args=(task.id, agent.id),
-            daemon=True,
-        ).start()
-
+        api.dispatch_device(device_serial)
+        task.refresh_from_db()
         return Response({"id": task.id, "status": task.status, "result": ""})
 
 
@@ -888,7 +956,7 @@ class AgentTaskListAPIView(APIView):
         agent = api.get_platform_agent()
         if agent is None:
             return Response({"tasks": []})
-        tasks = AITask.objects.filter(agent=agent).order_by("-id")[:100]
+        tasks = AITask.objects.filter(agent=agent).select_related("agent").order_by("-id")[:100]
         return Response({"tasks": [api.serialize_agent_task_row(t) for t in tasks]})
 
 
@@ -906,6 +974,28 @@ class AgentTaskDeleteAPIView(APIView):
             raise NotFound("任务不存在")
         api.delete_task(task)
         return Response({})
+
+
+class AgentTaskRerunAPIView(APIView):
+    """POST /api/ai/agent-tasks/{task_id}/rerun — 失败任务克隆新建并调度。"""
+
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
+    def post(self, request, task_id: int):
+        from models.constants import TaskStatus
+
+        agent = api.get_platform_agent()
+        if agent is None:
+            raise NotFound("任务不存在")
+        try:
+            task = AITask.objects.select_related("agent").get(id=task_id, agent=agent)
+        except AITask.DoesNotExist:
+            raise NotFound("任务不存在")
+        if task.status != TaskStatus.FAILED:
+            raise ValidationError("仅失败任务可重新执行")
+        new_task = api.rerun_task(task)
+        api.dispatch_device(new_task.device_serial or "")
+        new_task.refresh_from_db()
+        return Response({"id": new_task.id, "status": new_task.status})
 
 
 class AgentTaskClearAPIView(APIView):
@@ -929,7 +1019,7 @@ class AgentTaskDetailAPIView(APIView):
         if agent is None:
             raise NotFound("任务不存在")
         try:
-            task = AITask.objects.get(id=task_id, agent=agent)
+            task = AITask.objects.select_related("agent").get(id=task_id, agent=agent)
         except AITask.DoesNotExist:
             raise NotFound("任务不存在")
         return Response(api.serialize_agent_task_detail(task))

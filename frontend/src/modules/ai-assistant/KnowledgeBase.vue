@@ -296,20 +296,20 @@ onMounted(() => { loadAll() })
 .kb-doc-card {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px var(--app-space-md); border: 1.5px solid var(--ai-warm-border);
-  border-radius: 12px; background: var(--app-bg-card); transition: border-color .15s;
+  border-radius: var(--app-radius-md); background: var(--app-bg-card); transition: border-color var(--app-duration);
 }
 .kb-doc-card:hover { border-color: var(--ai-teal); }
 .kb-doc-card-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .kb-doc-card-name { font-weight: 600; font-size: var(--app-size-sm); color: var(--ink); }
 .kb-doc-card-meta { font-size: var(--app-size-xs); color: var(--app-text-secondary); }
 .kb-doc-card-right { display: flex; align-items: center; gap: var(--app-space-sm); flex-shrink: 0; }
-.kb-doc-toggle { font-size:var(--app-size-md); cursor: pointer; opacity: 0.5; transition: opacity .15s; }
+.kb-doc-toggle { font-size:var(--app-size-md); cursor: pointer; opacity: 0.5; transition: opacity var(--app-duration); }
 .kb-doc-toggle.on { opacity: 1; }
 .kb-doc-toggle:hover { opacity: 0.8; }
 .kb-doc-remove-btn {
   background: none; border: none; color: var(--app-text-secondary);
-  font-size:var(--app-size-sm); cursor: pointer; padding: 2px 6px; border-radius: 4px;
-  transition: all .15s;
+  font-size:var(--app-size-sm); cursor: pointer; padding: 2px 6px; border-radius: var(--app-radius-sm);
+  transition: all var(--app-duration);
 }
 .kb-doc-remove-btn:hover { color: var(--app-status-danger-text); background: var(--app-status-danger-bg); }
 
@@ -352,7 +352,7 @@ onMounted(() => { loadAll() })
 .kb-filter-btn {
   padding: 6px var(--app-space-md);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   background: var(--kb-filter-bg);
   font-size: var(--app-size-sm);
   font-weight: 700;

@@ -9,6 +9,17 @@
   height: 100%;
 }
 
+.skill-viewer-page .doc-body {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.skill-viewer-page .doc-body > :first-child {
+  flex-shrink: 0;
+}
+
 .sv-page {
   flex: 1 1 0;
   min-height: 0;

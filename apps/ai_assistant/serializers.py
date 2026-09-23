@@ -96,7 +96,7 @@ class ModelDetectInputSerializer(serializers.Serializer):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Agent 输出 DTO（字段契约对齐 PRD-08 §5.2）
+# Agent 输出 DTO（字段契约与需求一致）
 # ═══════════════════════════════════════════════════════════════════
 
 
@@ -131,8 +131,12 @@ class AgentListSerializer(serializers.Serializer):
                     }
             health = route_data.get("health")
             if isinstance(health, dict):
+                status = health.get("status")
+                if status not in ("ready", "unusable", "offline"):
+                    status = "ready" if health.get("is_connected") else None
                 entry["health"] = {
-                    "is_connected": bool(health.get("is_connected")),
+                    "is_connected": status == "ready",
+                    "status": status,
                     "last_checked_at": health.get("last_checked_at") or "",
                     "results": health.get("results") or {},
                 }
@@ -295,14 +299,40 @@ class MessageListSerializer(serializers.Serializer):
 
 
 class TaskSubmitInputSerializer(serializers.Serializer):
-    """任务提交入参 — goal 必填。"""
+    """任务提交入参 — title/goal 必填；attachment 为可选文件。"""
 
+    title = serializers.CharField(required=True, allow_blank=False)
     goal = serializers.CharField(required=True, allow_blank=False)
-    attachment = serializers.CharField(required=False, allow_blank=True, default="")
     device_serial = serializers.CharField(required=False, allow_blank=True, default="")
+    device_label = serializers.CharField(required=False, allow_blank=True, default="")
+    attachment = serializers.FileField(required=False, allow_null=True)
+
+    def validate_title(self, value):
+        title = (value or "").strip()
+        if not title:
+            raise serializers.ValidationError("任务标题不能为空")
+        return title
 
     def validate_goal(self, value):
         goal = (value or "").strip()
         if not goal:
             raise serializers.ValidationError("任务目标不能为空")
         return goal
+
+    def validate_device_serial(self, value):
+        return (value or "").strip()
+
+    def validate_device_label(self, value):
+        return (value or "").strip()
+
+    def validate_attachment(self, uploaded):
+        if uploaded is None:
+            return None
+        name = getattr(uploaded, "name", "") or ""
+        ext = ("." + name.rsplit(".", 1)[-1].lower()) if "." in name else ""
+        if ext not in {".docx", ".pdf"}:
+            raise serializers.ValidationError("仅支持 Word（.docx）与 PDF")
+        size = getattr(uploaded, "size", None)
+        if size is not None and size > 20 * 1024 * 1024:
+            raise serializers.ValidationError("文件过大")
+        return uploaded

@@ -17,15 +17,14 @@ const emit = defineEmits<{ save: [] }>()
 <style scoped>
 .step-nav {
   display: flex; justify-content: center; gap: var(--app-space-md); padding: 20px 0;
-  /* 保存按钮渐变终点（青绿加深档）与 hover 光晕 */
+  /* 保存按钮渐变终点（青绿加深档） */
   --nav-save-teal-deep: var(--color-teal-30) /* -> --color-teal-30 */;
-  --nav-save-glow: var(--color-teal-49-a30) /* -> --color-teal-49-a30 */;
 }
 .nav-btn {
   display: inline-flex; align-items: center; gap: var(--app-space-sm); padding: 12px 28px;
-  border: 2px solid var(--ink); border-radius: 12px; font-size: var(--app-size-md); font-weight: 700;
-  font-family: inherit; cursor: pointer; transition: all 0.2s ease;
+  border: 2px solid var(--ink); border-radius: var(--app-radius-md); font-size: var(--app-size-md); font-weight: 700;
+  font-family: inherit; cursor: pointer; transition: all var(--app-duration-slow) var(--app-ease);
 }
 .nav-save { background: linear-gradient(135deg, var(--ai-teal), var(--ai-teal-hover)); color: var(--app-bg-card); border-color: var(--ai-teal); }
-.nav-save:hover { background: linear-gradient(135deg, var(--ai-teal-hover), var(--nav-save-teal-deep)); transform: translateY(-2px); box-shadow: 0 4px 14px var(--nav-save-glow); }
+.nav-save:hover { background: linear-gradient(135deg, var(--ai-teal-hover), var(--nav-save-teal-deep)); transform: translateY(-2px); box-shadow: var(--app-shadow-lg); }
 </style>

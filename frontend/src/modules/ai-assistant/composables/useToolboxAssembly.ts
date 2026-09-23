@@ -5,6 +5,7 @@ import {
   ASSEMBLY_SOURCES,
   LIVE_CHIP_PREVIEW,
   buildLiveChips,
+  gatedSources,
   matchQuery,
   type AssemblySourceDef,
   type AssemblySourceKey,
@@ -28,6 +29,7 @@ export function useToolboxAssembly(deps: {
   )
 
   function isGateOn(gateKey: string): boolean {
+    if (!gateKey) return true
     return Boolean(deps.platformConfig.value[gateKey])
   }
 
@@ -44,14 +46,16 @@ export function useToolboxAssembly(deps: {
     chipsExpanded.value ? liveChips.value : liveChips.value.slice(0, LIVE_CHIP_PREVIEW)
   ))
 
-  const unarmedSources = computed(() => ASSEMBLY_SOURCES.filter((s) => !isGateOn(s.gateKey)))
+  const unarmedSources = computed(() => gatedSources().filter((s) => !isGateOn(s.gateKey)))
 
   function sourceLiveCount(src: AssemblySourceDef): number {
+    if (src.key === 'prompt') return 3
     if (!isGateOn(src.gateKey)) return 0
     return liveChips.value.filter((c) => c.source === src.key).length
   }
 
   function sourceCatalogTotal(src: AssemblySourceDef): number {
+    if (src.key === 'prompt') return 3
     if (src.key === 'biz') {
       return deps.platformCategories.value.reduce((n, c) => n + c.tools.length, 0)
     }
@@ -59,6 +63,7 @@ export function useToolboxAssembly(deps: {
   }
 
   function sourceMeta(src: AssemblySourceDef): string {
+    if (src.key === 'prompt') return '规划 / 执行 / 验收 · 始终交给助手'
     if (!isGateOn(src.gateKey)) return '总闸关闭 · 目录启停不会进入运行时'
     return `${sourceLiveCount(src)}/${sourceCatalogTotal(src)} 生效`
   }

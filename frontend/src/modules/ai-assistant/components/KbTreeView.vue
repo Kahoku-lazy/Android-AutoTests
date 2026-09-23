@@ -114,7 +114,7 @@ const typeLabel = (type?: string) => {
 .kb-tree-node { display: flex; flex-direction: column; }
 .kb-tree-row {
   display: flex; align-items: center; gap: 6px; padding: var(--app-space-sm) 10px;
-  border-radius: 8px; cursor: pointer; transition: background .12s;
+  border-radius: var(--app-radius-md); cursor: pointer; transition: background var(--app-duration-fast);
   border: 1.5px solid transparent;
 }
 .kb-tree-row:hover { background: var(--kb-tree-row-tint); }
@@ -127,7 +127,7 @@ const typeLabel = (type?: string) => {
 .kb-tree-dir-hint {
   flex-shrink: 0; font-size: var(--app-size-xs); font-weight: 600;
   color: var(--kb-tree-dir-ink); background: var(--ai-teal-bg);
-  padding: 1px var(--app-space-sm); border-radius: 6px;
+  padding: 1px var(--app-space-sm); border-radius: var(--app-radius-sm);
 }
 .kb-tree-check { display: inline-flex; flex-shrink: 0; }
 </style>

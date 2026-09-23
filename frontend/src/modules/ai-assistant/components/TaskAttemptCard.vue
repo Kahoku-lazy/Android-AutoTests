@@ -135,7 +135,7 @@ const sides = computed(() => attemptTraceSides(props.attempt))
 <style scoped>
 .tac {
   padding: var(--app-space-sm) var(--app-space-md);
-  border: 1.5px dashed var(--ai-warm-border, var(--app-border));
+  border: 1.5px dashed var(--ai-warm-border);
   border-radius: var(--app-radius-md);
   background: var(--app-bg-card);
   display: flex;
@@ -170,7 +170,7 @@ const sides = computed(() => attemptTraceSides(props.attempt))
 .tac-result {
   padding: var(--app-space-sm);
   border-left: 3px solid var(--ink);
-  background: var(--ai-sticky-bg, var(--app-bg-muted));
+  background: var(--ai-sticky-bg);
   border-radius: 0 var(--app-radius-sm) var(--app-radius-sm) 0;
 }
 .tac-result__title {
@@ -216,7 +216,7 @@ const sides = computed(() => attemptTraceSides(props.attempt))
 .tac__img {
   width: 100%;
   max-height: 220px;
-  border: 1.5px solid var(--ai-warm-border, var(--app-border));
+  border: 1.5px solid var(--ai-warm-border);
   border-radius: var(--app-radius-sm);
   background: var(--app-bg-subtle, var(--paper));
   cursor: zoom-in;
@@ -248,7 +248,7 @@ const sides = computed(() => attemptTraceSides(props.attempt))
   padding: 0 0 var(--app-space-xs);
 }
 .tac-trace :deep(.el-collapse-item) {
-  border-left: 2px solid var(--ai-warm-border, var(--app-border));
+  border-left: 2px solid var(--ai-warm-border);
   padding-left: var(--app-space-sm);
   margin-bottom: var(--app-space-xs);
 }

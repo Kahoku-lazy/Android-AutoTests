@@ -1,28 +1,21 @@
 <script setup lang="ts">
+/**
+ * 元素定位目录树：新建 / 重命名 / 删除之外，还支持拖动移动与批量勾选移动。
+ * 拖动与勾选的判定逻辑在 composables/useLocatorTreeMove.ts，本组件只做渲染与事件绑定。
+ */
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
-import {
-  FILE_KIND_BY_CODE,
-  isLocatorProjectCode,
-  type LocatorFileKind,
-  type LocatorProjectCode,
-  type LocatorTreeNode,
-} from '../types'
-
-interface UiTreeNode {
-  key: string
-  type: 'directory' | 'file'
-  id: number
-  name: string
-  kind?: LocatorFileKind
-  children?: UiTreeNode[]
-}
+import type { LocatorMoveItem } from '../api'
+import { type LocatorFileKind, type LocatorTreeNode } from '../types'
+import { useLocatorTreeMove, type UiTreeNode } from '../composables/useLocatorTreeMove'
+import MoveToDirectoryDialog from './MoveToDirectoryDialog.vue'
 
 const props = defineProps<{
   treeData: LocatorTreeNode[]
   activeFileId: number | null
-  projectCode: string
+  moveItems: (items: LocatorMoveItem[], parentDirectoryId: number | null) => Promise<boolean>
+  deleteItems: (items: LocatorMoveItem[]) => Promise<boolean>
 }>()
 
 const emit = defineEmits<{
@@ -34,54 +27,66 @@ const emit = defineEmits<{
   deleteFile: [payload: { fileId: number; kind: LocatorFileKind }]
 }>()
 
-function toUiNodes(nodes: LocatorTreeNode[]): UiTreeNode[] {
-  return nodes.map((node) => {
-    if (node.type === 'directory') {
-      return {
-        key: `d-${node.id}`,
-        type: 'directory',
-        id: node.id,
-        name: node.name,
-        children: toUiNodes(node.children || []),
-      }
-    }
-    return {
-      key: `f-${node.id}`,
-      type: 'file',
-      id: node.id,
-      name: node.name,
-      kind: node.kind,
-    }
-  })
-}
+const {
+  uiTree: elTreeData,
+  selectMode,
+  checkedCount,
+  checkedItems,
+  toggleSelectMode,
+  onCheck,
+  clearSelection,
+  moveCheckedTo,
+  allowDrag,
+  allowDrop,
+  onNodeDragStart,
+  onNodeDragEnd,
+  onNodeDrop,
+  onRootDrop,
+  touchActive,
+  touchSourceKey,
+  touchTargetId,
+  touchOnRoot,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
+  onTouchCancel,
+} = useLocatorTreeMove({
+  treeData: () => props.treeData,
+  moveItems: (items, directoryId) => props.moveItems(items, directoryId),
+})
 
-const elTreeData = computed(() => toUiNodes(props.treeData))
 const activeKey = computed(() => (props.activeFileId != null ? `f-${props.activeFileId}` : undefined))
 const defaultExpanded = computed(() =>
   elTreeData.value.filter((n) => n.type === 'directory').map((n) => n.key),
 )
 
-const resolvedCode = computed<LocatorProjectCode | null>(() =>
-  isLocatorProjectCode(props.projectCode) ? props.projectCode : null,
-)
-const createFileLabel = computed(() => {
-  const code = resolvedCode.value
-  if (code === 'android') return '新建页面'
-  if (code === 'web') return '新建 Web 元素'
-  if (code === 'api') return '新建接口'
-  return '新建文件'
-})
-
-function fileKindOf(data: UiTreeNode): LocatorFileKind {
-  if (data.kind) return data.kind
-  const code = resolvedCode.value
-  return code ? FILE_KIND_BY_CODE[code] : 'page'
-}
-
 function childCount(data: UiTreeNode): number {
   return data.children?.length ?? 0
 }
 
+// ── 移动到…（批量勾选后选目标目录）──
+const moveDialogVisible = ref(false)
+
+async function confirmMoveTo(directoryId: number | null) {
+  await moveCheckedTo(directoryId)
+}
+
+async function confirmDeleteChecked() {
+  if (!checkedItems.value.length) return
+  try {
+    await ElMessageBox.confirm(
+      `确认删除选中的 ${checkedItems.value.length} 项？目录将连同其下全部页面一并删除。`,
+      '确认批量删除',
+      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' },
+    )
+  } catch {
+    return
+  }
+  const ok = await props.deleteItems(checkedItems.value)
+  if (ok) clearSelection()
+}
+
+// ── 右键菜单 ──
 const menuVisible = ref(false)
 const menuX = ref(0)
 const menuY = ref(0)
@@ -103,6 +108,7 @@ function closeMenu() {
 onMounted(() => document.addEventListener('click', closeMenu))
 onUnmounted(() => document.removeEventListener('click', closeMenu))
 
+// ── 新建 / 重命名弹窗 ──
 const dialogVisible = ref(false)
 const dialogKind = ref<'dir-create' | 'dir-rename' | 'file-create'>('dir-create')
 const dialogName = ref('')
@@ -112,7 +118,7 @@ const dialogNodeId = ref<number | null>(null)
 const dialogTitle = computed(() => {
   if (dialogKind.value === 'dir-create') return '新建目录'
   if (dialogKind.value === 'dir-rename') return '重命名目录'
-  return createFileLabel.value
+  return '新建页面'
 })
 
 function openCreateRootDir() {
@@ -193,7 +199,7 @@ async function onDeleteDirectory() {
 async function onDeleteFile() {
   if (!menuNode.value || menuNode.value.type !== 'file') return
   const fileId = menuNode.value.id
-  const kind = fileKindOf(menuNode.value)
+  const kind: LocatorFileKind = 'page'
   const name = menuNode.value.name
   closeMenu()
   try {
@@ -209,6 +215,8 @@ async function onDeleteFile() {
 }
 
 function handleNodeClick(data: UiTreeNode) {
+  // 批量选择模式下点击只用于勾选，不进入页面详情
+  if (selectMode.value) return
   if (data.type === 'file') emit('selectFile', data.id)
 }
 
@@ -218,6 +226,8 @@ function rowClass(data: UiTreeNode) {
     'locator-row--dir': data.type === 'directory',
     'locator-row--file': data.type === 'file',
     'locator-row--active': data.type === 'file' && data.id === props.activeFileId,
+    'locator-row--drop-target': data.type === 'directory' && data.id === touchTargetId.value,
+    'locator-row--dragging': data.key === touchSourceKey.value,
   }
 }
 </script>
@@ -227,11 +237,46 @@ function rowClass(data: UiTreeNode) {
     <div class="locator-tree__toolbar">
       <button type="button" class="ex-btn" @click="openCreateRootDir">+ 目录</button>
       <button type="button" class="ex-btn ex-btn--primary" @click="openCreateRootFile">
-        + {{ createFileLabel.replace('新建', '') }}
+        + 页面
       </button>
+      <button
+        type="button"
+        class="ex-btn"
+        :class="{ 'ex-btn--active': selectMode }"
+        @click="toggleSelectMode"
+      >
+        {{ selectMode ? '退出批量选择' : '批量选择' }}
+      </button>
+      <template v-if="selectMode">
+        <span class="locator-tree__count">已选 {{ checkedCount }} 项</span>
+        <button type="button" class="ex-btn" :disabled="!checkedCount" @click="moveDialogVisible = true">
+          移动到…
+        </button>
+        <button type="button" class="ex-btn ex-btn--danger" :disabled="!checkedCount" @click="confirmDeleteChecked">
+          删除
+        </button>
+      </template>
     </div>
 
-    <div class="locator-tree__body">
+    <div
+      class="locator-tree__body"
+      @touchstart="onTouchStart"
+      @touchmove="onTouchMove"
+      @touchend="onTouchEnd"
+      @touchcancel="onTouchCancel"
+    >
+      <!-- 项目根落点：桌面用原生 drop，触摸用命中测试高亮 -->
+      <div
+        class="locator-tree__root-drop"
+        :class="{ 'locator-tree__root-drop--over': touchOnRoot }"
+        data-root-drop="1"
+        @dragover.prevent
+        @drop.prevent="onRootDrop"
+      >
+        <span aria-hidden="true">🏠</span>
+        <span>项目根（把节点拖到这里移出目录）</span>
+      </div>
+
       <EmptyState
         v-if="!treeData.length"
         icon="📁"
@@ -250,11 +295,20 @@ function rowClass(data: UiTreeNode) {
         :expand-on-click-node="true"
         highlight-current
         :current-node-key="activeKey"
+        :draggable="!touchActive"
+        :allow-drag="allowDrag"
+        :allow-drop="allowDrop"
+        :show-checkbox="selectMode"
+        :check-strictly="true"
         @node-click="handleNodeClick"
         @node-contextmenu="handleContextMenu"
+        @node-drag-start="onNodeDragStart"
+        @node-drag-end="onNodeDragEnd"
+        @node-drop="onNodeDrop"
+        @check="onCheck"
       >
         <template #default="{ data, node }">
-          <div :class="rowClass(data)">
+          <div :class="rowClass(data)" :data-node-key="data.key" :data-node-type="data.type">
             <span class="locator-row__ico" aria-hidden="true">
               {{ data.type === 'file' ? '📄' : node.expanded ? '📂' : '📁' }}
             </span>
@@ -276,7 +330,7 @@ function rowClass(data: UiTreeNode) {
     >
       <template v-if="menuNode?.type === 'directory'">
         <div class="context-menu__item" @click="openCreateSubDir">+ 新建子目录</div>
-        <div class="context-menu__item" @click="openCreateFile">+ {{ createFileLabel }}</div>
+        <div class="context-menu__item" @click="openCreateFile">+ 新建页面</div>
         <div class="context-menu__item" @click="openRename">重命名</div>
         <div class="context-menu__divider" />
         <div class="context-menu__item context-menu__item--danger" @click="onDeleteDirectory">
@@ -305,125 +359,13 @@ function rowClass(data: UiTreeNode) {
         <el-button type="primary" @click="confirmDialog">确定</el-button>
       </template>
     </el-dialog>
+
+    <MoveToDirectoryDialog
+      v-model="moveDialogVisible"
+      :tree-data="treeData"
+      @confirm="confirmMoveTo"
+    />
   </div>
 </template>
 
-<style scoped>
-.locator-tree {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-}
-.locator-tree__toolbar {
-  display: flex;
-  gap: var(--app-space-sm);
-  padding: var(--app-space-sm) var(--app-space-md);
-  border-bottom: 2px solid var(--app-border-light);
-  flex-shrink: 0;
-  flex-wrap: wrap;
-}
-.ex-btn {
-  border: 2px solid var(--ink);
-  background: var(--paper);
-  border-radius: var(--app-radius-sm);
-  padding: 6px 12px;
-  font-weight: 700;
-  font-size: var(--app-size-xs);
-  cursor: pointer;
-  font-family: inherit;
-  color: var(--ink);
-  line-height: 1.2;
-}
-.ex-btn:hover {
-  background: var(--app-highlight);
-}
-.ex-btn--primary {
-  background: var(--c-element);
-}
-.locator-tree__body {
-  flex: 1 1 0;
-  min-height: 0;
-  overflow-y: auto;
-  padding: var(--app-space-sm);
-}
-.locator-tree__el {
-  background: transparent;
-  --el-tree-node-hover-bg-color: transparent;
-}
-.locator-tree__el :deep(.el-tree-node__content) {
-  height: auto;
-  padding: 0 0 var(--app-space-xs);
-  background: transparent !important;
-}
-.locator-row {
-  display: flex;
-  align-items: center;
-  gap: var(--app-space-sm);
-  width: 100%;
-  min-width: 0;
-  border: 2px solid var(--ink);
-  background: var(--paper);
-  border-radius: var(--app-radius-md);
-  padding: var(--app-space-xs) var(--app-space-sm);
-}
-.locator-row--active {
-  box-shadow: var(--app-shadow-sm);
-  background: color-mix(in srgb, var(--c-element) 16%, var(--paper));
-}
-.locator-row__ico {
-  flex-shrink: 0;
-}
-.locator-row__name {
-  flex: 1;
-  min-width: 0;
-  font-weight: 700;
-  font-size: var(--app-size-sm);
-  color: var(--ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.locator-row__meta {
-  flex-shrink: 0;
-  font-size: var(--app-size-xs);
-  color: var(--app-text-secondary);
-}
-.locator-row__enter {
-  flex-shrink: 0;
-  font-size: var(--app-size-xs);
-  font-weight: 700;
-  color: var(--c-element);
-  opacity: 0.85;
-}
-.locator-row--file:hover .locator-row__enter {
-  opacity: 1;
-}
-.context-menu {
-  position: fixed;
-  z-index: 80;
-  background: var(--paper);
-  border: 2px solid var(--ink);
-  border-radius: var(--app-radius-md);
-  padding: var(--app-space-xs) 0;
-  min-width: 160px;
-  box-shadow: var(--app-shadow-md);
-}
-.context-menu__item {
-  padding: var(--app-space-sm) var(--app-space-md);
-  font-size: var(--app-size-sm);
-  cursor: pointer;
-}
-.context-menu__item:hover {
-  background: color-mix(in srgb, var(--c-element) 18%, var(--paper));
-}
-.context-menu__item--danger:hover {
-  background: var(--app-status-danger-bg);
-  color: var(--app-status-danger-text);
-}
-.context-menu__divider {
-  height: 1px;
-  background: var(--app-border-light);
-  margin: var(--app-space-xs) var(--app-space-sm);
-}
-</style>
+<style scoped src="./LocatorTree.style.css"></style>

@@ -24,14 +24,6 @@ const routes: RouteRecordRaw[] = [
     redirect: '/elements/projects/android',
   },
   {
-    path: '/elements/web',
-    redirect: '/elements/projects/web',
-  },
-  {
-    path: '/elements/api',
-    redirect: '/elements/projects/api',
-  },
-  {
     path: '/element-mgr',
     redirect: '/elements/projects/android',
   },

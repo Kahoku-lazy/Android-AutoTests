@@ -20,7 +20,7 @@ from apps.dashboard.ai_usage import (
     ai_usage_stats,
 )
 from apps.device_pool.models import Device
-from apps.element_locator.models import ApiEndpoint, Element, Page, WebElement
+from apps.element_locator.models import Element, Page
 from apps.workflow.models import WorkflowDocument
 
 logger = logging.getLogger(__name__)
@@ -81,11 +81,9 @@ def _cases_breakdown(user_id=None):
 
 
 def _elements_breakdown():
-    """Return per-type element breakdown (Android / Web / API)."""
+    """Return the element breakdown —— Web/API 两域随元素定位下线，只保留 Android。"""
     return [
         {"type": "android", "label": "Android元素", "total": Element.objects.count()},
-        {"type": "web", "label": "Web元素", "total": _safe_count(WebElement)},
-        {"type": "api", "label": "API接口", "total": _safe_count(ApiEndpoint)},
     ]
 
 

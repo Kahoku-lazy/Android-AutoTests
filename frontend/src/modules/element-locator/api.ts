@@ -1,21 +1,15 @@
 /** element-locator API client functions — persistent element repository CRUD */
 import client from '@/shared/api-client'
 import type { DjangoResponse } from '@/shared/api-client'
-import type {
-  ApiEndpointDetail,
-  LocatorFileKind,
-  LocatorProject,
-  LocatorTreePayload,
-  WebElementDetail,
-} from './types'
+import type { LocatorProject, LocatorTreePayload } from './types'
 
 type Envelope<T> = Promise<{ data: DjangoResponse<T> }>
 
 // 路径约定：全平台 /api/ 路径以 / 结尾（见 openspec/specs/api-path-convention）。
-// web / web-groups / api-groups / api-endpoints / flows / web-flows 由 DRF router 提供，
-// 其 legacy 手写实现（无尾斜杠）已删除 —— 本文件只保留 router 形式。
+// Web 元素与 API 接口两组封装随元素定位的 Web、API 两域整体下线而移除
+// （变更 remove-element-locator-web-api）；本文件只保留 router 形式。
 
-// ── Projects / directories / move（标准 {status,data} 信封）──
+// ── Projects / directories（标准 {status,data} 信封）──
 
 export function listLocatorProjects(): Envelope<LocatorProject[]> {
   return client.get<DjangoResponse<LocatorProject[]>>('/elements/projects/')
@@ -44,162 +38,70 @@ export function deleteLocatorDirectory(id: number): Envelope<{ id: number }> {
   return client.delete<DjangoResponse<{ id: number }>>(`/elements/directories/${id}/`)
 }
 
-export function moveLocatorItem(body: {
-  kind: 'directory' | LocatorFileKind
-  id: number
-  parent_directory_id?: number | null
-}): Envelope<Record<string, unknown>> {
-  return client.post<DjangoResponse<Record<string, unknown>>>('/elements/move/', body)
-}
-
-export function batchDeleteLocatorFiles(body: {
-  kind: LocatorFileKind
-  ids: number[]
-}): Envelope<{ kind: string; deleted: number }> {
-  return client.post<DjangoResponse<{ kind: string; deleted: number }>>(
-    '/elements/files/batch-delete/',
-    body,
-  )
-}
-
-export function apiGetWebElement(id: number): Envelope<WebElementDetail> {
-  return client.get<DjangoResponse<WebElementDetail>>(`/elements/web/${id}/`)
-}
-
-export function apiGetApiEndpoint(id: number): Envelope<ApiEndpointDetail> {
-  return client.get<DjangoResponse<ApiEndpointDetail>>(`/elements/api-endpoints/${id}/`)
-}
-
 // ── Pages ──
 
-export function apiPages()        { return client.get('/elements/pages/') }
-export function apiUpdatePage(id,label) { return client.put(`/elements/pages/${id}/`,{label}) }
 export function apiPageItems(id,f,limit=500) { return client.get(`/elements/pages/${id}/items/`,{params:{filter:f,limit}}) }
 
 // ── Elements ──
 
-export function apiUpdateElement(id,d) { return client.put(`/elements/items/${id}/`,d) }
+/**
+ * 元素行可写字段（wire snake_case）。
+ * 更新只接受 元素名称 / 文本 / 主定位 / 测试点；新增额外接受备注与去重键（resource_id / bounds）。
+ */
+export interface PageElementFields {
+  alias?: string
+  text_val?: string
+  primary_xpath?: string
+  notes?: string
+  is_test_point?: boolean
+  resource_id?: string
+  bounds?: string
+}
 
-// ── Flows（router）──
+export function apiUpdateElement(id: number, data: PageElementFields) {
+  return client.put(`/elements/items/${id}/`, data)
+}
 
-export function apiFlows()        { return client.get('/elements/flows/') }
-export function apiCreateFlow(f)  { return client.post('/elements/flows/',f) }
-export function apiDeleteFlow(id) { return client.delete(`/elements/flows/${id}/`) }
+/** 新增一条元素行（create-only：撞同页既有的 resource-id + bounds 会返回 409） */
+export function createPageElement(pageId: number, data: PageElementFields) {
+  return client.post(`/elements/pages/${pageId}/elements/`, data)
+}
+
+/** 批量删除元素行（原子） */
+export function batchDeleteElements(ids: number[]) {
+  return client.post('/elements/items/batch-delete/', { ids })
+}
 
 // ── Element Manager (page & element CRUD) ──
 
 export function apiGetPages()          { return client.get('/elements/pages/') }
 export function apiCreatePage(data)    { return client.post('/elements/pages/create/', data) }
 export function apiDeletePage(id)      { return client.delete(`/elements/pages/${id}/`) }
-export function apiGetPageElements(pid) { return client.get(`/elements/pages/${pid}/items/`) }
-export function apiAddElementToPage(pid, el) { return client.post(`/elements/pages/${pid}/elements/`, el) }
-export function apiBatchAddElementsToPage(pid, elements, strategy) { return client.post(`/elements/pages/${pid}/elements/batch/`, { elements, strategy }) }
-export function apiClearAll(ids?: (string | number)[] | null) { return client.post('/elements/pages/clear/', ids ? { page_ids: ids } : {}) }
-export function apiBatchMovePages(pageIds, parentId) {
-  return client.post('/elements/pages/batch-move/', {
-    page_ids: pageIds,
-    parent_id: parentId ?? null,
-  })
+
+// ── Move ──
+
+export interface LocatorMoveItem {
+  kind: 'directory' | 'page'
+  id: number
 }
 
-// ── Web element management（router）──
-
-export function apiListWebElements(params = {}) {
-  return client.get('/elements/web/', { params })
+/** 单件拖动与批量勾选共用同一端点：items 只有 1 项时即单件移动 */
+export function moveLocatorItems(body: {
+  items: LocatorMoveItem[]
+  parent_directory_id: number | null
+}): Envelope<{ moved: number; skipped: number }> {
+  return client.post<DjangoResponse<{ moved: number; skipped: number }>>(
+    '/elements/batch-move/',
+    body,
+  )
 }
 
-export function apiCreateWebElement(data) {
-  return client.post('/elements/web/', data)
-}
-
-export function apiUpdateWebElement(id, data) {
-  return client.put(`/elements/web/${id}/`, data)
-}
-
-export function apiDeleteWebElement(id) {
-  return client.delete(`/elements/web/${id}/`)
-}
-
-export function apiBatchImportWebElements(elements) {
-  return client.post('/elements/web/batch/', { elements })
-}
-
-// ── Web group management（router；写操作由后端返回 410 Gone）──
-
-export function apiListWebGroups() {
-  return client.get('/elements/web-groups/')
-}
-
-export function apiCreateWebGroup(data) {
-  return client.post('/elements/web-groups/', data)
-}
-
-export function apiUpdateWebGroup(id, data) {
-  return client.put(`/elements/web-groups/${id}/`, data)
-}
-
-export function apiDeleteWebGroup(id) {
-  return client.delete(`/elements/web-groups/${id}/`)
-}
-
-export function apiBatchMoveWebGroups(groupIds, parentId) {
-  return client.post('/elements/web-groups/batch-move/', {
-    group_ids: groupIds,
-    parent_id: parentId ?? null,
-  })
-}
-
-// ── API group management（router；写操作由后端返回 410 Gone）──
-
-export function apiListApiGroups() {
-  return client.get('/elements/api-groups/')
-}
-
-export function apiCreateApiGroup(data) {
-  return client.post('/elements/api-groups/', data)
-}
-
-export function apiUpdateApiGroup(id, data) {
-  return client.put(`/elements/api-groups/${id}/`, data)
-}
-
-export function apiDeleteApiGroup(id) {
-  return client.delete(`/elements/api-groups/${id}/`)
-}
-
-export function apiBatchMoveApiGroups(groupIds, parentId) {
-  return client.post('/elements/api-groups/batch-move/', {
-    group_ids: groupIds,
-    parent_id: parentId ?? null,
-  })
-}
-
-// ── API endpoints（router）──
-
-export function apiListApiEndpoints(params = {}) {
-  return client.get('/elements/api-endpoints/', { params })
-}
-
-export function apiCreateApiEndpoint(data) {
-  return client.post('/elements/api-endpoints/', data)
-}
-
-export function apiUpdateApiEndpoint(id, data) {
-  return client.put(`/elements/api-endpoints/${id}/`, data)
-}
-
-export function apiDeleteApiEndpoint(id) {
-  return client.delete(`/elements/api-endpoints/${id}/`)
-}
-
-// ── Web page flows（router）──
-
-export function apiListWebFlows() {
-  return client.get('/elements/web-flows/')
-}
-export function apiCreateWebFlow(data) {
-  return client.post('/elements/web-flows/', data)
-}
-export function apiDeleteWebFlow(id) {
-  return client.delete(`/elements/web-flows/${id}/`)
+/** 批量删除勾选节点；删除目录会连同其下子目录、页面与元素一并删除 */
+export function deleteLocatorItems(body: {
+  items: LocatorMoveItem[]
+}): Envelope<{ deleted: number; pages: number; elements: number }> {
+  return client.post<DjangoResponse<{ deleted: number; pages: number; elements: number }>>(
+    '/elements/batch-delete/',
+    body,
+  )
 }

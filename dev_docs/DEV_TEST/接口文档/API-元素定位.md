@@ -12,12 +12,17 @@
 | `/api/elements/projects/{code}/` | GET | code=`android\|web\|api` |
 | `/api/elements/projects/{code}/tree/` | GET | 目录+文件树（file.kind） |
 | `/api/elements/directories/` | POST | `{project_code,name,parent_id?}` |
-| `/api/elements/directories/{id}/` | PATCH/DELETE | 改名 / 级联删 |
+| `/api/elements/directories/{id}/` | PATCH/DELETE | 改名 / 级联删除整棵子树（含其下页面与元素）|
 | `/api/elements/move/` | POST | `{kind,id,parent_directory_id?}` |
-| `/api/elements/files/batch-delete/` | POST | `{kind,ids}` |
+| `/api/elements/batch-move/` | POST | `{items:[{kind,id}],parent_directory_id?}` — 原子批量移动（目录/页面可混合） |
+| `/api/elements/batch-delete/` | POST | `{items:[{kind,id}]}` — 原子批量删除（目录连同其下页面与元素） |
+| `/api/elements/files/batch-delete/` | POST | `{kind,ids}`（legacy，只支持 `kind=page`，无调用方） |
 
 - 项目 `POST/PATCH/DELETE` → **405**
 - 分组写（web-groups / api-groups 创建改删/batch-move）→ **410**
+- 批量移动 `batch-move/`：`items` 每项 `{kind: "directory"|"page", id}`，`parent_directory_id` 缺省或 `null` 表示项目根；成功信封 `{status:true, data:{moved, skipped}}`。整批**全有或全无**：目标目录不存在 **404**；目标不属于本项目、目录移入自身/子孙、目标位置同级重名 **409**；集合为空或 `kind` 非法 **400**。祖先已在本批集合中的后代会被去重并计入 `skipped`；单件拖动复用本端点（`items` 只有 1 项）。
+- 批量删除 `batch-delete/`：`items` 每项 `{kind: "directory"|"page", id}`；成功信封 `{status:true, data:{deleted, pages, elements}}` —— 分别是删除的**顶层节点数**、实际删除的**页面数**、实际删除的**元素数**（不是 ORM 级联对象总数）。整批**全有或全无**：节点不存在 **404**、集合为空或 `kind` 非法 **400**。删除目录会连同其下全部子目录、页面与元素一并删除，页面**不会**浮回项目根；祖先已在本批集合中的后代会被去重。删除**不触碰磁盘媒体**（孤儿副本由媒体维护命令回收）。
+- `DELETE /api/elements/directories/{id}/`：级联删除该目录**整棵子树**（子目录 + 其下页面 + 元素），单事务；页面不会浮回项目根。
 - 叶子创建仍走 pages/web/api-endpoints，body 带 `directory_id`
 
 ## 1. 总览
@@ -76,9 +81,10 @@
 | 重命名页面 | PUT /api/elements/pages/{page_id} | 需登录(Bearer) | 重命名页面/目录 |
 | 删除页面 | DELETE /api/elements/pages/{page_id} | 需登录(Bearer) | 删除页面 |
 | 页面元素列表 | GET /api/elements/pages/{page_id}/items | 需登录(Bearer) | 页面元素（filter/分页） |
-| 添加元素 | POST /api/elements/pages/{page_id}/elements | 需登录(Bearer) | 手动添加元素（upsert） |
+| 添加元素 | POST /api/elements/pages/{page_id}/elements | 需登录(Bearer) | 手动新增元素（仅新增；撞同页 resource-id + bounds → 409）|
 | 批量保存元素 | POST /api/elements/pages/{page_id}/elements/batch | 需登录(Bearer) | 批量保存元素 |
-| 更新元素 | PUT /api/elements/items/{el_id} | 需登录(Bearer) | 更新元素元数据 |
+| 更新元素 | PUT /api/elements/items/{el_id} | 需登录(Bearer) | 更新元素定位字段（逐列校验；400/404）|
+| 批量删除元素 | POST /api/elements/items/batch-delete | 需登录(Bearer) | 按 id 列表原子删除元素行 |
 | 页面流列表 | GET /api/elements/flows/ | 需登录(Bearer) | 页面流列表（legacy） |
 | 创建页面流 | POST /api/elements/flows/ | 需登录(Bearer) | 创建页面流（legacy） |
 | 删除页面流 | DELETE /api/elements/flows/{flow_id} | 需登录(Bearer) | 删除页面流（legacy） |
@@ -996,23 +1002,23 @@
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | alias | string | 是 | 元素名称 |
-| xpath | string | 否 | 手动 XPath（无 xpath_candidates 时使用） |
-| xpath_candidates | array | 否 | XPath 候选列表（优先） |
+| resource_id | string | 条件 | 与 bounds 至少填一个 |
+| bounds | string | 条件 | `[x1,y1][x2,y2]`；与 resource_id 至少填一个 |
+| xpath | string | 否 | 单条 XPath；写库时覆盖为 `[{type:"manual",xpath,count:1}]` |
+| xpath_candidates | array | 否 | 候选列表（与 xpath 同时给出时以 xpath 为准） |
 | class_name | string | 否 | 类名 |
-| text_val / text | string | 否 | 文本（text 为兼容别名） |
+| text_val | string | 否 | 文本 |
 | content_desc | string | 否 | content-desc |
-| resource_id | string | 否 | resource-id |
-| bounds | string | 否 | 位置 |
 | clickable | boolean | 否 | 可点击，默认 false |
 | enabled | boolean | 否 | 可用，默认 true |
 | notes | string | 否 | 备注 |
+| is_test_point | boolean | 否 | 是否测试点，默认 false |
 
 成功响应（200）
 
 ```json
 {
   "status": true,
-  "updated": false,                     # 是否命中已有元素（upsert 更新）
   "element": {
     "id": 21,                           # 元素 ID
     "page_id": 10,
@@ -1047,8 +1053,12 @@
 | 404 | 页面不存在 | page_id 不存在 |
 | 400 | 目录节点不能添加元素，请选择子页面 | 目标节点是目录 |
 | 400 | 元素名称(alias)必填 | alias 为空 |
-| 409 | 该元素已在当前页面中（相同 resource-id 与位置），请到「元素管理」查看 | 唯一约束冲突 |
-| 500 | 保存元素失败，请稍后重试 | 其它异常（含 detail） |
+| 400 | resource-id 与坐标至少填一个 | resource_id 与 bounds 都为空 |
+| 400 | 坐标格式应为 [x1,y1][x2,y2] / 坐标右下角不能小于左上角 | bounds 非法 |
+| 400 | 不支持修改字段 &lt;key&gt; | 传了可写白名单外的字段 |
+| 409 | 该元素已在当前页面中（相同 resource-id 与位置）| 同页已有相同 (resource_id, bounds) |
+
+> 注：本端点**仅新增**，不再 upsert（变更 element-locator-element-table-editing）。
 
 ---
 
@@ -1084,14 +1094,21 @@
 
 **更新元素接口：PUT /api/elements/items/{el_id}**
 
-请求体（字段任选，只更新传入字段）
+请求体（字段任选，只更新传入字段；白名单外字段 → 400）
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | alias | string | 否 | 别名 |
-| tags | string | 否 | 标签 |
+| text_val | string | 否 | 文本 |
+| content_desc | string | 否 | content-desc |
+| class_name | string | 否 | 类名 |
+| resource_id | string | 否 | resource-id |
+| bounds | string | 否 | 坐标；解析后同步写入 x/y/width/height |
+| xpath | string | 否 | 单条 XPath；覆盖为单条人工候选 |
+| xpath_candidates | array | 否 | 候选列表（与 xpath 同时给出时以 xpath 为准） |
+| is_test_point / clickable / enabled / scrollable / checked | boolean | 否 | 标记与交互 |
 | notes | string | 否 | 备注 |
-| is_test_point | boolean | 否 | 是否测试点（bool 化） |
+| tags | string | 否 | 标签 |
 
 成功响应（200）
 
@@ -1101,7 +1118,43 @@
 }
 ```
 
-> 注：不校验元素存在性，不存在也返回 status=true（`api.update_element` 静默更新 0 行）。
+错误码与文案
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 400 | 无效的 JSON 请求体 | body 非 JSON |
+| 400 | 坐标格式应为 [x1,y1][x2,y2] / 坐标右下角不能小于左上角 | bounds 非法 |
+| 400 | &lt;field&gt; 最长 N 个字符 | 超模型列宽 |
+| 400 | 不支持修改字段 &lt;key&gt; | 白名单外字段 |
+| 404 | 元素不存在 | el_id 不存在 |
+
+---
+
+**批量删除元素接口：POST /api/elements/items/batch-delete**
+
+请求体
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| ids | int[] | 是 | 元素 id 列表 |
+
+成功响应（200）
+
+```json
+{
+  "status": true,
+  "data": { "deleted": 3 }              # 实际删除条数
+}
+```
+
+错误码与文案
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 400 | 无效的 JSON 请求体 | body 非 JSON |
+| 400 | 元素 id 不能为空 | ids 为空数组 |
+| 400 | 元素 id 必须是整数 | ids 含非整数 |
+| 404 | 元素不存在 | 含不存在的 id（整批不落库）|
 
 ---
 

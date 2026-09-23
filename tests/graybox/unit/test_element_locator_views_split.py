@@ -22,9 +22,8 @@ APP_DIR = pathlib.Path(__file__).resolve().parents[3] / "apps" / "element_locato
 
 # (相对路径, url_name, 预期视图函数名 | None) —— 与 urls.py 逐条对齐。
 # 只覆盖**没有 router 对应**的手写路径：pages / items / move / files。
-# web、web-groups、api-groups、api-endpoints、flows、web-flows 的 legacy 手写实现
-# 已随尾斜杠约定统一而删除（原先靠"无斜杠→legacy / 带斜杠→router"并存），
-# 那些路径改由下方的 ROUTER_ROUTES 守护。
+# Web / Web 分组 / API 分组 / API 接口 / Web 跳转流五组路由随元素定位的 Web、API 两域
+# 整体下线而移除（变更 remove-element-locator-web-api），故不再出现在本表与 ROUTER_ROUTES。
 # func_name 为 None 的条目其视图是 `@api_view` 装饰器产物（`__name__` 恒为 'view'），
 # 故只校验路由契约。
 LEGACY_ROUTES = [
@@ -38,30 +37,20 @@ LEGACY_ROUTES = [
     ("pages/1/elements/", "page_add_element", "add_element_to_page"),
     ("pages/1/elements/batch/", "page_batch_add_elements", "batch_add_elements"),
     ("items/1/", "item_update", "update_element"),
+    ("items/batch-delete/", "el_items_batch_delete", None),
     ("move/", "el_move", None),
+    ("batch-move/", "el_batch_move", None),
+    ("batch-delete/", "el_batch_delete", None),
     ("files/batch-delete/", "el_files_batch_delete", None),
 ]
 
 ROUTER_ROUTES = [
     ("projects/", "LocatorProjectViewSet"),
     ("directories/", "LocatorDirectoryViewSet"),
-    ("web-groups/", "WebGroupViewSet"),
-    ("web/", "WebElementViewSet"),
-    ("api-groups/", "ApiGroupViewSet"),
-    ("api-endpoints/", "ApiEndpointViewSet"),
     ("flows/", "PageFlowViewSet"),
-    ("web-flows/", "WebPageFlowViewSet"),
-    # 以下路径原先由 legacy 手写实现服务（与 router 靠尾斜杠差异并存），现收敛到 router：
-    # 它们必须仍然可达，且由对应 ViewSet 处理 —— 这是"删 legacy 没删掉能力"的护栏。
-    ("web/batch/", "WebElementViewSet"),
-    ("web/1/", "WebElementViewSet"),
-    ("web-groups/batch-move/", "WebGroupViewSet"),
-    ("web-groups/1/", "WebGroupViewSet"),
-    ("api-groups/batch-move/", "ApiGroupViewSet"),
-    ("api-groups/1/", "ApiGroupViewSet"),
-    ("api-endpoints/1/", "ApiEndpointViewSet"),
+    # flows 原先与 legacy 手写实现靠尾斜杠差异并存，现收敛到 router：
+    # 它必须仍然可达，且由对应 ViewSet 处理 —— 这是"删 legacy 没删掉能力"的护栏。
     ("flows/1/", "PageFlowViewSet"),
-    ("web-flows/1/", "WebPageFlowViewSet"),
 ]
 
 VIEWS_LINE_LIMIT = 300

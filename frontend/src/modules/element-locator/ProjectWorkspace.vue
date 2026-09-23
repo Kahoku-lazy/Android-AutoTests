@@ -8,9 +8,9 @@ import { useRoute, useRouter } from 'vue-router'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
+import SkeletonCard from '@/shared/components/patterns/SkeletonCard.vue'
 import LocatorTree from './components/LocatorTree.vue'
 import { useLocatorTree } from './composables/useLocatorTree'
-import { type LocatorFileKind } from './types'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,6 +20,7 @@ const projectCode = computed(() => String(route.params.code || ''))
 const {
   project,
   tree,
+  loading,
   error: treeError,
   loadTree,
   addDirectory,
@@ -27,6 +28,8 @@ const {
   removeDirectory,
   addFile,
   removeFile,
+  moveItems,
+  deleteItems,
 } = useLocatorTree(() => projectCode.value)
 
 const pageTitle = computed(() => project.value?.name || '元素项目')
@@ -52,8 +55,8 @@ async function onCreateFile(payload: { name: string; directoryId: number | null 
   if (createdId) await selectFile(createdId)
 }
 
-async function onDeleteFile(payload: { fileId: number; kind: LocatorFileKind }) {
-  await removeFile(payload.fileId, payload.kind)
+async function onDeleteFile(payload: { fileId: number }) {
+  await removeFile(payload.fileId)
 }
 
 watch(projectCode, () => {
@@ -66,53 +69,63 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="doc-page doc-page--fixed wb-shell project-workspace">
+  <div class="doc-page doc-page--fixed wb-shell locator-workbench locator-project-workspace">
     <WorkbenchHeader
       :title="pageTitle"
       subtitle="目录树 · 点击文件进入详情查看元素"
       icon="crosshair"
       :icon-gradient="'linear-gradient(135deg,var(--c-element),var(--locator-header-icon-end))'"
-    >
-      <template #nav>
-        <WorkbenchCrumbs
-          back-to="/elements"
-          back-label="返回项目列表"
-          :items="[
-            { label: '元素定位', to: '/elements' },
-            { label: pageTitle },
-          ]"
-        />
-      </template>
-    </WorkbenchHeader>
+    />
 
-    <ErrorState v-if="treeError && !tree.length" :message="treeError" @retry="loadTree" />
-
-    <div v-else class="doc-body">
-      <LocatorTree
-        :tree-data="tree"
-        :active-file-id="null"
-        :project-code="projectCode"
-        @select-file="selectFile"
-        @create-directory="onCreateDirectory"
-        @rename-directory="onRenameDirectory"
-        @delete-directory="onDeleteDirectory"
-        @create-file="onCreateFile"
-        @delete-file="onDeleteFile"
+    <div class="doc-body">
+      <WorkbenchCrumbs
+        back-to="/elements"
+        back-label="返回项目列表"
+        :items="[
+          { label: '元素定位', to: '/elements' },
+          { label: pageTitle },
+        ]"
       />
+      <div class="locator-workspace-main">
+        <SkeletonCard v-if="loading" variant="list" :lines="6" />
+        <ErrorState
+          v-else-if="treeError && !tree.length"
+          :message="treeError"
+          @retry="loadTree"
+        />
+        <LocatorTree
+          v-else
+          :tree-data="tree"
+          :active-file-id="null"
+          :move-items="moveItems"
+          :delete-items="deleteItems"
+          @select-file="selectFile"
+          @create-directory="onCreateDirectory"
+          @rename-directory="onRenameDirectory"
+          @delete-directory="onDeleteDirectory"
+          @create-file="onCreateFile"
+          @delete-file="onDeleteFile"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* 页面根/主体骨架由 .doc-page / .doc-body 提供；本页主体自带分隔线（纸面纯色，禁自绘点阵） */
-/* 页头图标渐变末端色：tokens.css 未登记 #c4b5fd，登记在本页根作用域，随根元素继承给页头图标块 */
-.project-workspace {
-  --locator-header-icon-end: var(--color-indigo-84) /* -> --color-indigo-84 */;
-}
-.project-workspace .doc-body {
+/* 页面根/主体骨架由 .doc-page / .doc-body 提供；本页主体自带分隔线（纸面由 L0 透出，禁自绘点阵） */
+.locator-project-workspace .doc-body {
   width: 100%;
   overflow: hidden;
   border-top: 2px solid var(--app-border-light);
-  background-color: var(--paper);
+}
+.locator-project-workspace .doc-body > :first-child {
+  flex-shrink: 0;
+}
+.locator-workspace-main {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 </style>

@@ -1,17 +1,19 @@
 """
-CLI 工具 — 元素定位 + 用例管理 CRUD
+CLI 工具 — 用例管理 CRUD
 用法:
-  python tools/cli.py element list    [--page-url /login] [--search 关键词]
-  python tools/cli.py element create  --name xxx --type css_selector --value "xxx" --page-url /login [--group 分组名]
-  python tools/cli.py element delete  <element_id>
-  python tools/cli.py element batch   --file elements.json
-
   python tools/cli.py case list       [--type web] [--search 关键词]
   python tools/cli.py case create     --type web --title xxx [--file case.json]
   python tools/cli.py case show       <case_id>
   python tools/cli.py case delete     <case_id>
 
+  python tools/cli.py dir list        [--type web] [--parent-id N]
+  python tools/cli.py dir create      --name xxx [--type web] [--parent-id N]
+  python tools/cli.py dir tree
+
 输出: JSON {ok, data/error}
+
+注：原 element 域（Web 元素 CRUD）随元素定位的 Web/API 两域整体下线而移除
+（变更 remove-element-locator-web-api）。
 """
 
 import argparse
@@ -26,7 +28,6 @@ import django
 django.setup()
 
 from apps.case_manager.models import CaseDirectory, CaseProject, TestDefinition  # noqa: E402
-from apps.element_locator.models import WebElement, WebGroup  # noqa: E402
 
 # ═══════════════════════════════════════════
 # helpers
@@ -40,112 +41,6 @@ def ok(data=None):
 def err(msg):
     print(json.dumps({"status": False, "message": msg}, ensure_ascii=False, indent=2))
     sys.exit(1)
-
-
-def get_or_create_group(name, parent=None):
-    """Find or create a WebGroup. Returns (group, created)."""
-    qs = WebGroup.objects.filter(name=name)
-    if parent:
-        qs = qs.filter(parent=parent)
-    g = qs.first()
-    if g:
-        return g, False
-    g = WebGroup.objects.create(name=name, parent=parent, is_folder=False)
-    return g, True
-
-
-# ═══════════════════════════════════════════
-# element commands
-# ═══════════════════════════════════════════
-
-
-def element_list(args):
-    qs = WebElement.objects.all()
-    if args.page_url:
-        qs = qs.filter(page_url__icontains=args.page_url)
-    if args.search:
-        from django.db.models import Q
-
-        qs = qs.filter(
-            Q(name__icontains=args.search)
-            | Q(locator_value__icontains=args.search)
-            | Q(description__icontains=args.search)
-        )
-    rows = []
-    for el in qs.select_related("group").order_by("page_url", "group__name", "name"):
-        rows.append(
-            {
-                "id": el.id,
-                "name": el.name,
-                "locator_type": el.locator_type,
-                "locator_value": el.locator_value,
-                "page_url": el.page_url,
-                "group": el.group.name if el.group else None,
-                "description": el.description,
-                "is_test_point": el.is_test_point,
-            }
-        )
-    ok({"count": len(rows), "elements": rows})
-
-
-def element_create(args):
-    group = None
-    if args.group:
-        group, _ = get_or_create_group(args.group)
-    el = WebElement.objects.create(
-        name=args.name,
-        locator_type=args.type,
-        locator_value=args.value,
-        page_url=args.page_url,
-        description=args.description or "",
-        group=group,
-    )
-    ok({"id": el.id, "name": el.name, "action": "created"})
-
-
-def element_delete(args):
-    try:
-        el = WebElement.objects.get(id=args.id)
-        name = el.name
-        el.delete()
-        ok({"id": args.id, "name": name, "action": "deleted"})
-    except WebElement.DoesNotExist:
-        err(f"元素不存在: {args.id}")
-
-
-def element_batch(args):
-    with open(args.file, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    groups = data.get("groups", {})
-    elements = data.get("elements", [])
-
-    created_groups = {}
-    group_cache = {g.name: g for g in WebGroup.objects.all()}
-
-    # Create/find groups
-    for gkey, ginfo in groups.items():
-        parent = group_cache.get(ginfo.get("parent")) if ginfo.get("parent") else None
-        g, is_new = get_or_create_group(ginfo["name"], parent=parent)
-        created_groups[gkey] = g
-        if is_new:
-            group_cache[g.name] = g
-
-    objs = []
-    for item in elements:
-        g = created_groups.get(item.get("_group")) if item.get("_group") else None
-        objs.append(
-            WebElement(
-                group=g,
-                name=item["name"],
-                locator_type=item["locator_type"],
-                locator_value=item["locator_value"],
-                page_url=item.get("page_url", ""),
-                description=item.get("description", ""),
-                is_test_point=item.get("is_test_point", False),
-            )
-        )
-    WebElement.objects.bulk_create(objs)
-    ok({"created": len(objs), "groups": len(created_groups)})
 
 
 # ═══════════════════════════════════════════
@@ -258,49 +153,8 @@ def dir_tree(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="CLI 工具 — 元素定位 + 用例管理 CRUD")
-    sub = parser.add_subparsers(dest="domain", help="操作域: element | case")
-
-    # ── element ──
-    ep = sub.add_parser("element", help="Web 元素 CRUD")
-    esp = ep.add_subparsers(dest="action")
-
-    p = esp.add_parser("list", help="列出 Web 元素")
-    p.add_argument("--page-url", help="按页面 URL 过滤")
-    p.add_argument("--search", help="搜索 name/locator_value/description")
-
-    p = esp.add_parser("create", help="创建 Web 元素")
-    p.add_argument("--name", required=True, help="元素名称")
-    p.add_argument(
-        "--type",
-        required=True,
-        dest="type",
-        choices=[
-            "css_selector",
-            "xpath",
-            "id",
-            "class_name",
-            "name",
-            "tag_name",
-            "link_text",
-            "partial_link_text",
-            "text",
-            "test_id",
-            "role",
-            "placeholder",
-        ],
-        help="定位器类型",
-    )
-    p.add_argument("--value", required=True, dest="value", help="定位器值")
-    p.add_argument("--page-url", required=True, dest="page_url", help="页面 URL")
-    p.add_argument("--group", help="元素分组名称")
-    p.add_argument("--description", help="元素描述")
-
-    p = esp.add_parser("delete", help="删除 Web 元素")
-    p.add_argument("id", type=int, help="元素 ID")
-
-    p = esp.add_parser("batch", help="批量导入 Web 元素")
-    p.add_argument("--file", required=True, dest="file", help="JSON 文件路径")
+    parser = argparse.ArgumentParser(description="CLI 工具 — 用例管理 CRUD")
+    sub = parser.add_subparsers(dest="domain", help="操作域: case | dir")
 
     # ── case ──
     cp = sub.add_parser("case", help="测试用例 CRUD")
@@ -351,10 +205,6 @@ def main():
 
     # Dispatch
     dispatch = {
-        ("element", "list"): element_list,
-        ("element", "create"): element_create,
-        ("element", "delete"): element_delete,
-        ("element", "batch"): element_batch,
         ("case", "list"): case_list,
         ("case", "create"): case_create,
         ("case", "show"): case_show,

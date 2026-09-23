@@ -1,4 +1,4 @@
-"""Locator project list / tree — system-locked android|web|api."""
+"""Locator project list / tree — system-locked android."""
 
 from __future__ import annotations
 
@@ -6,10 +6,8 @@ from typing import Any
 
 from .models import (
     SYSTEM_PROJECTS,
-    ApiEndpoint,
     LocatorProject,
     Page,
-    WebElement,
 )
 
 __all__ = [
@@ -32,7 +30,7 @@ class ConflictError(Exception):
 
 
 def ensure_system_projects() -> list[LocatorProject]:
-    """Ensure the three locked projects exist; return them in stable order."""
+    """Ensure the locked project exists; return it in stable order."""
     projects: list[LocatorProject] = []
     for code, name in SYSTEM_PROJECTS:
         obj, created = LocatorProject.objects.get_or_create(
@@ -47,12 +45,7 @@ def ensure_system_projects() -> list[LocatorProject]:
 
 
 def serialize_project(obj: LocatorProject) -> dict[str, Any]:
-    if obj.code == "android":
-        file_count = Page.objects.filter(is_folder=False).count()
-    elif obj.code == "web":
-        file_count = WebElement.objects.count()
-    else:
-        file_count = ApiEndpoint.objects.count()
+    file_count = Page.objects.filter(is_folder=False).count()
     return {
         "id": obj.id,
         "code": obj.code,
@@ -116,34 +109,17 @@ def get_project_tree(*, code: str) -> dict[str, Any]:
         children_map.setdefault(d.parent_id, []).append(d)
 
     files_by_dir: dict[int | None, list] = {}
-    if project.code == "android":
-        pages = Page.objects.filter(is_folder=False).order_by("id")
-        # Prefer directory FK; unmigrated pages fall back to root
-        for page in pages:
-            dir_id = page.directory_id
-            files_by_dir.setdefault(dir_id, []).append(
-                _serialize_file_node(
-                    kind="page",
-                    file_id=page.id,
-                    name=page.label or f"页面 #{page.id}",
-                )
+    pages = Page.objects.filter(is_folder=False).order_by("id")
+    # Prefer directory FK; unmigrated pages fall back to root
+    for page in pages:
+        dir_id = page.directory_id
+        files_by_dir.setdefault(dir_id, []).append(
+            _serialize_file_node(
+                kind="page",
+                file_id=page.id,
+                name=page.label or f"页面 #{page.id}",
             )
-    elif project.code == "web":
-        for el in WebElement.objects.all().order_by("id"):
-            files_by_dir.setdefault(el.directory_id, []).append(
-                _serialize_file_node(
-                    kind="web_element", file_id=el.id, name=el.name or f"元素 #{el.id}"
-                )
-            )
-    else:
-        for ep in ApiEndpoint.objects.all().order_by("id"):
-            files_by_dir.setdefault(ep.directory_id, []).append(
-                _serialize_file_node(
-                    kind="api_endpoint",
-                    file_id=ep.id,
-                    name=ep.name or f"{ep.method} #{ep.id}",
-                )
-            )
+        )
 
     # Only include root files that belong to this project's directories or null
     dir_ids = {d.id for d in directories}

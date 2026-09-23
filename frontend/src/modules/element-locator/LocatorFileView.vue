@@ -8,6 +8,7 @@ import { useRoute, useRouter } from 'vue-router'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import WorkbenchCrumbs from '@/shared/components/WorkbenchCrumbs.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
+import SkeletonCard from '@/shared/components/patterns/SkeletonCard.vue'
 import LocatorFilePanel from './components/LocatorFilePanel.vue'
 import { useLocatorTree } from './composables/useLocatorTree'
 import { getLocatorProjectTree } from './api'
@@ -15,7 +16,6 @@ import { formatApiError } from '@/shared/api-client'
 import {
   FILE_KIND_BY_CODE,
   isLocatorProjectCode,
-  type LocatorFileKind,
   type LocatorFileNode,
   type LocatorTreeNode,
 } from './types'
@@ -88,8 +88,8 @@ async function goBackToTree() {
   await router.push(`/elements/projects/${projectCode.value}`)
 }
 
-async function onDeleteFile(payload: { fileId: number; kind: LocatorFileKind }) {
-  const ok = await removeFile(payload.fileId, payload.kind)
+async function onDeleteFile(payload: { fileId: number }) {
+  const ok = await removeFile(payload.fileId)
   if (ok) await goBackToTree()
 }
 
@@ -111,51 +111,92 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="doc-page doc-page--fixed wb-shell file-view">
+  <div class="doc-page doc-page--fixed wb-shell locator-workbench file-view">
     <WorkbenchHeader
       :title="headerTitle"
       :subtitle="headerSubtitle"
       icon="crosshair"
       :icon-gradient="'linear-gradient(135deg,var(--c-element),var(--locator-header-icon-end))'"
-    >
-      <template #nav>
-        <WorkbenchCrumbs
-          :back-to="`/elements/projects/${projectCode}`"
-          back-label="返回目录"
-          :items="[
-            { label: '元素定位', to: '/elements' },
-            { label: projectName || projectCode, to: `/elements/projects/${projectCode}` },
-            { label: headerTitle },
-          ]"
-        />
-      </template>
-    </WorkbenchHeader>
+    />
 
-    <div v-if="loading" class="doc-body">
-      <el-skeleton :rows="6" animated />
-    </div>
-    <ErrorState v-else-if="error" :message="error" @retry="loadFileMeta" />
-    <div v-else-if="file" class="doc-body">
-      <LocatorFilePanel
-        :key="`${file.kind}-${file.id}`"
-        :file="file"
-        hide-identity
-        @delete-file="onDeleteFile"
-        @back="goBackToTree"
+    <div class="doc-body">
+      <WorkbenchCrumbs
+        :back-to="`/elements/projects/${projectCode}`"
+        back-label="返回目录"
+        :items="[
+          { label: '元素定位', to: '/elements' },
+          { label: projectName || projectCode, to: `/elements/projects/${projectCode}` },
+          { label: headerTitle },
+        ]"
       />
+      <div class="file-view-main">
+        <SkeletonCard v-if="loading" variant="list" :lines="6" />
+        <ErrorState v-else-if="error" :message="error" @retry="loadFileMeta" />
+        <LocatorFilePanel
+          v-else-if="file"
+          :key="`${file.kind}-${file.id}`"
+          :file="file"
+          hide-identity
+          @delete-file="onDeleteFile"
+          @back="goBackToTree"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* 页面根/主体骨架由 .doc-page / .doc-body 提供；本页主体自带分隔线（纸面纯色，禁自绘点阵） */
-/* 页头图标渐变末端色：tokens.css 未登记 #c4b5fd，登记在本页根作用域，随根元素继承给页头图标块 */
-.file-view {
-  --locator-header-icon-end: var(--color-indigo-84) /* -> --color-indigo-84 */;
-}
+/* 页面根/主体骨架由 .doc-page / .doc-body 提供；本页主体自带分隔线（纸面由 L0 透出，禁自绘点阵） */
 .file-view .doc-body {
   overflow: hidden;
   border-top: 2px solid var(--app-border-light);
-  background-color: var(--paper);
+}
+.file-view .doc-body > :first-child {
+  flex-shrink: 0;
+}
+.file-view-main {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ═══════════════════════════════════════════
+   硬边按键皮肤（作用域：本页 .file-view）
+   几何基准 = 侧栏「退出」与 .device-workbench / .inspector-workbench：
+   2px 墨色实边 + 2px 近直角 + 2px 偏移硬阴影；hover 左上 1px、阴影增至 3px。
+   共享件 DoodleBtn / FilterTabs / ErrorState 与全局主题不变。
+   ═══════════════════════════════════════════ */
+.file-view :deep(.el-button:not(.is-text):not(.is-link)) {
+  border: 2px solid var(--ink) !important;
+  border-radius: 2px !important;
+  font-weight: 700 !important;
+  box-shadow: 2px 2px 0 0 var(--ink) !important;
+  transition:
+    transform var(--app-duration-fast) var(--app-ease),
+    box-shadow var(--app-duration-fast) var(--app-ease),
+    background var(--app-duration-fast) var(--app-ease) !important;
+}
+.file-view :deep(.el-button:not(.is-text):not(.is-link):not(:disabled):hover) {
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 3px 3px 0 0 var(--ink) !important;
+}
+
+/* 删除键：危险红底 + 浅色字（对齐 logout 几何，对比度 ≥ 4.5:1） */
+.file-view :deep(.el-button--danger:not(.is-text):not(.is-link)) {
+  background: var(--app-marker-red) !important;
+  border-color: var(--ink) !important;
+  color: var(--app-bg-card) !important;
+}
+.file-view :deep(.el-button--danger:not(.is-text):not(.is-link):not(:disabled):hover) {
+  background: var(--app-marker-red) !important;
+  border-color: var(--ink) !important;
+  color: var(--app-bg-card) !important;
+}
+
+/* 表纸线型登记：实线；宽度与颜色仍取 --comp-sheet-border */
+.file-view :deep(.sketch-sheet) {
+  border-style: solid;
 }
 </style>

@@ -1,4 +1,4 @@
-"""全部调用方与后端路由表的一致性守护（前端 / 测试 / 接口用例 / 端点资产目录）。
+"""全部调用方与后端路由表的一致性守护（前端 / 测试 / 接口用例）。
 
 为什么要这个测试
 ----------------
@@ -17,12 +17,12 @@
 本模块把源文件整体读入后用支持跨行的正则匹配，行号由匹配起点反推，
 并用 `test_multiline_call_sites_are_captured` 把这个能力钉住。
 
-四个面都参与 resolve 断言
+三个面都参与 resolve 断言
 ------------------------
-端点资产目录（`tools/seed_api_endpoints.py`）是平台 API 的镜像，曾被对账过：
-在此之前它有 61 条条目指向已不存在的路由（`/api/ai/auth/*`、`/api/cases/*/definitions/*` …），
-本模块当时只能对它退化为"只断言尾斜杠"。现已把 5 条改名为新路径、56 条失效项删除，
-四个面因此**一并**纳入 resolve 断言 —— 目录再漂移就会直接失败。
+前端 API 层、`tests/` 调用面与 `tests/api/case/*.yaml` 三个面**一并**纳入 resolve 断言。
+原第四个面「端点资产目录」（`tools/seed_api_endpoints.py`）已随元素定位的 Web/API 两域
+整体下线而退役（变更 remove-element-locator-web-api，规格 `api-endpoint-catalog` 已移除），
+其扫描分支与规模下限同步删除 —— 面不存在就不留恒为 0 的空面。
 
 规格：`openspec/specs/api-path-convention`。
 """
@@ -43,7 +43,6 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 FRONTEND_SRC = REPO_ROOT / "frontend" / "src"
 TESTS_DIR = REPO_ROOT / "tests"
 YAML_CASE_DIR = TESTS_DIR / "api" / "case"
-ENDPOINT_CATALOG = REPO_ROOT / "tools" / "seed_api_endpoints.py"
 
 API_BASE = "/api"
 
@@ -83,10 +82,9 @@ EXCEPTIONS = (
 # 各面的规模下限（后方为实测值，下限取 ~95%）。
 # 识别规则退化时计数骤降，测试随即失败，而不是给出虚假的“全部一致”。
 MIN_PER_SURFACE = {
-    "frontend": 130,  # 实测 136
-    "tests": 35,  # 实测 41
+    "frontend": 83,  # 实测 88（变更 remove-element-locator-web-api：本变更自身贡献 111→102，元素定位 6 + workflow 2 + pageCatalog 1 = 9 个被扫到的调用点；其后**并发会话**继续改写 frontend/src，实测进一步降至 88，故按 apply 当下实测重登记。非扫描器退化）
+    "tests": 32,  # 实测 34（本变更改写两个 element_locator 测试删去 2 个字面量调用点；其余下降来自并发会话对 tests/ 的改动）
     "yaml": 42,  # 实测 45
-    "catalog": 120,  # 实测 127（对账后）
 }
 
 # 认证链路：本守护最初要解决的问题，单独钉住
@@ -193,16 +191,6 @@ def _scan_yaml_case_paths() -> list[Caller]:
     return found
 
 
-def _scan_catalog_paths() -> list[Caller]:
-    """端点资产目录：只取出 /api/ 字面量（不是“调用点”，没有调用动词）。"""
-    found: list[Caller] = []
-    text = ENDPOINT_CATALOG.read_text(encoding="utf-8")
-    for index, line in enumerate(text.splitlines(), 1):
-        for match in _API_IN_LITERAL_RX.finditer(line):
-            found.append(Caller("catalog", ENDPOINT_CATALOG, index, index, match.group(0)))
-    return found
-
-
 def _collect_callers() -> list[Caller]:
     frontend = sorted(p for p in FRONTEND_SRC.rglob("*") if p.suffix in (".ts", ".vue"))
     tests = sorted(p for p in TESTS_DIR.rglob("*.py"))
@@ -210,12 +198,11 @@ def _collect_callers() -> list[Caller]:
         _scan_call_sites("frontend", frontend)
         + _scan_call_sites("tests", tests)
         + _scan_yaml_case_paths()
-        + _scan_catalog_paths()
     )
 
 
 CALLERS = _collect_callers()
-# 四个面全部参与 resolve 断言（目录已对齐到路由表）
+# 三个面全部参与 resolve 断言
 
 
 def _is_excepted(caller: Caller) -> bool:
@@ -277,7 +264,7 @@ def test_auth_chain_is_covered_by_the_scan():
 
 
 def test_every_caller_path_ends_with_slash():
-    """全部四个面的 /api/ 路径都必须带尾斜杠（例外清单除外）。"""
+    """全部三个面的 /api/ 路径都必须带尾斜杠（例外清单除外）。"""
     bad = [c.where for c in CALLERS if not c.path.endswith("/") and not _is_excepted(c)]
     assert bad == [], (
         "以下调用方缺尾斜杠（约定见 openspec/specs/api-path-convention）："
@@ -287,7 +274,7 @@ def test_every_caller_path_ends_with_slash():
 
 
 def test_every_caller_path_resolves_to_a_view():
-    """**四个面**的每条路径都必须在后端路由表里命中（含端点资产目录）。"""
+    """**三个面**的每条路径都必须在后端路由表里命中。"""
     failures = []
     for caller in CALLERS:
         if _is_excepted(caller):

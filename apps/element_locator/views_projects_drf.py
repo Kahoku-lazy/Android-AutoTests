@@ -140,6 +140,36 @@ def move_items(request):
 
 @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
+def batch_move_items(request):
+    """POST /api/elements/batch-move — 批量移动目录 / 页面到目标目录（原子）。"""
+
+    body = request.data or {}
+    parent_id = body.get("parent_directory_id", body.get("parent_id"))
+    try:
+        data = el_api.batch_move_items(
+            items=body.get("items") or [],
+            parent_directory_id=int(parent_id) if parent_id is not None else None,
+        )
+    except Exception as exc:
+        return _raise_or_conflict(exc)
+    return Response(data)
+
+
+@extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+@api_view(["POST"])
+def batch_delete_items(request):
+    """POST /api/elements/batch-delete — 批量删除目录 / 页面（目录连同其下内容，原子）。"""
+
+    body = request.data or {}
+    try:
+        data = el_api.batch_delete_items(items=body.get("items") or [])
+    except Exception as exc:
+        return _raise_or_conflict(exc)
+    return Response(data)
+
+
+@extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+@api_view(["POST"])
 def batch_delete_files(request):
     """POST /api/elements/files/batch-delete — 按 kind 批量删除文件。"""
 

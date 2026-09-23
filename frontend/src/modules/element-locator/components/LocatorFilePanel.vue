@@ -1,27 +1,11 @@
 <script setup lang="ts">
 /**
  * 文件详情面板（独立页使用）。
- * 页面：左表右截图联动；Web/API：简易表单编辑。
+ * 元素定位收敛为单一 Android 项目后，叶子类型只有「页面」：直接渲染页面元素工作台。
  */
-import { computed, ref, watch } from 'vue'
-import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
-import ErrorState from '@/shared/components/patterns/ErrorState.vue'
-import { formatApiError } from '@/shared/api-client'
-import {
-  apiGetApiEndpoint,
-  apiGetWebElement,
-  apiUpdateApiEndpoint,
-  apiUpdateWebElement,
-} from '../api'
-import {
-  API_METHODS,
-  FILE_KIND_LABELS,
-  WEB_LOCATOR_TYPES,
-  type ApiEndpointDetail,
-  type LocatorFileKind,
-  type LocatorFileNode,
-  type WebElementDetail,
-} from '../types'
+import { computed } from 'vue'
+import { ElMessageBox } from 'element-plus'
+import { FILE_KIND_LABELS, type LocatorFileKind, type LocatorFileNode } from '../types'
 import PageElementsWorkbench from './PageElementsWorkbench.vue'
 
 const props = defineProps<{
@@ -35,157 +19,7 @@ const emit = defineEmits<{
   back: []
 }>()
 
-const loading = ref(false)
-const saving = ref(false)
-const error = ref('')
-
-const webFormRef = ref<FormInstance>()
-const apiFormRef = ref<FormInstance>()
-/** Web 元素表单的字段级校验（按 L4 口径走 EP :rules，取代原 Toast 空值守卫） */
-const webRules = {
-  name: [{ required: true, message: '请填写名称', trigger: 'blur' }],
-  locator_value: [{ required: true, message: '请填写定位值', trigger: 'blur' }],
-}
-/** API 端点表单的字段级校验 */
-const apiRules = {
-  name: [{ required: true, message: '请填写名称', trigger: 'blur' }],
-  url: [{ required: true, message: '请填写 URL', trigger: 'blur' }],
-}
-
-const webForm = ref<WebElementDetail>({
-  id: 0,
-  name: '',
-  locator_type: 'css_selector',
-  locator_value: '',
-})
-const apiForm = ref<ApiEndpointDetail>({
-  id: 0,
-  name: '',
-  method: 'GET',
-  url: '',
-})
-
 const kindLabel = computed(() => FILE_KIND_LABELS[props.file.kind])
-
-function unwrapDetail<T>(payload: unknown): T | null {
-  if (!payload || typeof payload !== 'object') return null
-  const body = payload as { status?: boolean; data?: T; id?: number }
-  if (body.status && body.data && typeof body.data === 'object') {
-    return body.data
-  }
-  if (body.status && body.id != null) {
-    return payload as T
-  }
-  return null
-}
-
-async function loadDetail() {
-  if (props.file.kind === 'page') {
-    error.value = ''
-    loading.value = false
-    return
-  }
-  loading.value = true
-  error.value = ''
-  try {
-    if (props.file.kind === 'web_element') {
-      const { data } = await apiGetWebElement(props.file.id)
-      const detail = unwrapDetail<WebElementDetail>(data)
-      if (detail) {
-        webForm.value = {
-          id: Number(detail.id),
-          name: String(detail.name || props.file.name),
-          locator_type: String(detail.locator_type || 'css_selector'),
-          locator_value: String(detail.locator_value || ''),
-        }
-      } else {
-        error.value = (data as { message?: string }).message || 'Web 元素加载失败'
-      }
-      return
-    }
-
-    const { data } = await apiGetApiEndpoint(props.file.id)
-    const detail = unwrapDetail<ApiEndpointDetail>(data)
-    if (detail) {
-      apiForm.value = {
-        id: Number(detail.id),
-        name: String(detail.name || props.file.name),
-        method: String(detail.method || 'GET'),
-        url: String(detail.url || ''),
-      }
-    } else {
-      error.value = (data as { message?: string }).message || '接口加载失败'
-    }
-  } catch (e: unknown) {
-    error.value = formatApiError(e as never, '加载失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-watch(
-  () => [props.file.id, props.file.kind] as const,
-  () => {
-    void loadDetail()
-  },
-  { immediate: true },
-)
-
-async function saveWeb() {
-  try {
-    await webFormRef.value?.validate()
-  } catch {
-    // 校验失败：EP 的 validate 以 reject 表示，交由字段内联提示（非静默吞错）
-    return
-  }
-  const name = webForm.value.name.trim()
-  const locatorValue = webForm.value.locator_value.trim()
-  saving.value = true
-  try {
-    const { data } = await apiUpdateWebElement(props.file.id, {
-      name,
-      locator_type: webForm.value.locator_type,
-      locator_value: locatorValue,
-    })
-    if ((data as { status?: boolean }).status) {
-      ElMessage.success('已保存')
-    } else {
-      ElMessage.error((data as { message?: string }).message || '保存失败')
-    }
-  } catch (e: unknown) {
-    ElMessage.error(formatApiError(e as never, '保存失败'))
-  } finally {
-    saving.value = false
-  }
-}
-
-async function saveApi() {
-  try {
-    await apiFormRef.value?.validate()
-  } catch {
-    // 校验失败：EP 的 validate 以 reject 表示，交由字段内联提示（非静默吞错）
-    return
-  }
-  const name = apiForm.value.name.trim()
-  const url = apiForm.value.url.trim()
-  saving.value = true
-  try {
-    const { data } = await apiUpdateApiEndpoint(props.file.id, {
-      name,
-      method: apiForm.value.method,
-      url,
-    })
-    if ((data as { status?: boolean }).status) {
-      ElMessage.success('已保存')
-    } else {
-      ElMessage.error((data as { message?: string }).message || '保存失败')
-    }
-  } catch (e: unknown) {
-    ElMessage.error(formatApiError(e as never, '保存失败'))
-  } finally {
-    saving.value = false
-  }
-}
 
 async function confirmDelete() {
   try {
@@ -209,65 +43,11 @@ async function confirmDelete() {
         <h2 class="file-panel__title">{{ file.name }}</h2>
       </div>
       <div v-else class="file-panel__spacer" />
-      <el-button type="danger" plain @click="confirmDelete">删除</el-button>
+      <el-button type="danger" @click="confirmDelete">删除</el-button>
     </header>
 
-    <div v-if="file.kind === 'page'" class="file-panel__body file-panel__body--page">
+    <div class="file-panel__body file-panel__body--page">
       <PageElementsWorkbench :page-id="file.id" />
-    </div>
-
-    <div v-else-if="loading" class="file-panel__body">
-      <el-skeleton :rows="5" animated />
-    </div>
-    <ErrorState v-else-if="error" :message="error" @retry="loadDetail" />
-
-    <div v-else class="file-panel__body">
-      <el-form
-        v-if="file.kind === 'web_element'"
-        ref="webFormRef"
-        :model="webForm"
-        :rules="webRules"
-        label-position="top"
-        class="file-panel__form"
-      >
-        <el-form-item label="名称" prop="name">
-          <el-input v-model="webForm.name" maxlength="200" />
-        </el-form-item>
-        <el-form-item label="定位方式">
-          <el-select v-model="webForm.locator_type">
-            <el-option
-              v-for="item in WEB_LOCATOR_TYPES"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="定位值" prop="locator_value">
-          <el-input v-model="webForm.locator_value" type="textarea" :rows="3" />
-        </el-form-item>
-        <el-button type="primary" :loading="saving" @click="saveWeb">保存</el-button>
-      </el-form>
-
-      <el-form v-else ref="apiFormRef" :model="apiForm" :rules="apiRules" label-position="top" class="file-panel__form">
-        <el-form-item label="名称" prop="name">
-          <el-input v-model="apiForm.name" maxlength="200" />
-        </el-form-item>
-        <el-form-item label="方法">
-          <el-select v-model="apiForm.method">
-            <el-option
-              v-for="method in API_METHODS"
-              :key="method"
-              :label="method"
-              :value="method"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="URL" prop="url">
-          <el-input v-model="apiForm.url" />
-        </el-form-item>
-        <el-button type="primary" :loading="saving" @click="saveApi">保存</el-button>
-      </el-form>
     </div>
   </section>
 </template>
@@ -312,9 +92,5 @@ async function confirmDelete() {
 }
 .file-panel__body--page {
   overflow: hidden;
-}
-.file-panel__form {
-  max-width: 640px;
-  overflow-y: auto;
 }
 </style>

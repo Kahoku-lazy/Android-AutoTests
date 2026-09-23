@@ -14,28 +14,22 @@ __all__ = [
     "simple_yaml_dump",
     "get_test_points",
     "get_flows",
-    "get_web_elements",
-    "get_web_groups",
     "create_page",
     "create_page_manually",
     "rename_page",
     "delete_page",
     "update_page_parent",
     "upsert_element",
+    "create_element",
     "update_element",
+    "delete_elements",
+    "CREATE_FIELDS",
+    "UPDATE_FIELDS",
+    "normalize_element_fields",
     "create_flow",
     "get_or_create_flow",
     "delete_flow",
     "clear_all",
-    "create_web_element",
-    "update_web_element",
-    "delete_web_element",
-    "batch_import_web_elements",
-    "create_web_page_flow",
-    "delete_web_page_flow",
-    "create_api_endpoint",
-    "update_api_endpoint",
-    "delete_api_endpoint",
     # projects / directories
     "ConflictError",
     "ensure_system_projects",
@@ -47,12 +41,18 @@ __all__ = [
     "update_directory",
     "delete_directory",
     "move_item",
+    "batch_move_items",
     "batch_delete_files",
+    "batch_delete_items",
     "serialize_directory",
 ]
 
+from django.db import transaction
+
 from .api_directories import (
     batch_delete_files,
+    batch_delete_items,
+    batch_move_items,
     create_directory,
     delete_directory,
     move_item,
@@ -68,6 +68,11 @@ from .api_projects import (
     serialize_project,
 )
 from .api_snapshot import ImportConflictError, get_page_full, import_snapshot_page
+from .element_fields import (
+    CREATE_FIELDS,
+    UPDATE_FIELDS,
+    normalize_element_fields,
+)
 from .models import Element, Page, PageFlow
 from .service import simple_yaml_dump
 
@@ -85,25 +90,6 @@ def get_test_points(page_ids=None):
 def get_flows():
     """Get all page flows with page labels."""
     return list(PageFlow.objects.select_related("from_page", "to_page", "trigger_element"))
-
-
-def get_web_elements(locator_type=None, is_test_point=None):
-    """Get web elements, optionally filtered."""
-    from .models import WebElement
-
-    qs = WebElement.objects.all()
-    if locator_type:
-        qs = qs.filter(locator_type=locator_type)
-    if is_test_point is not None:
-        qs = qs.filter(is_test_point=is_test_point)
-    return list(qs.order_by("name"))
-
-
-def get_web_groups():
-    """Get all web groups ordered by name."""
-    from .models import WebGroup
-
-    return list(WebGroup.objects.order_by("sort_order", "name"))
 
 
 # ── Page 写操作 ──
@@ -180,10 +166,64 @@ def upsert_element(page, fields):
     return el, False
 
 
+def create_element(page, fields):
+    """仅新增一条元素（不做 upsert）。
+
+    必填口径：`alias` 非空，且 `resource_id` 与 `bounds` 至少一个非空——两者皆空时
+    多行会撞 `(page, resource_id, bounds)` 唯一约束。命中同页既有时抛 ConflictError。
+    """
+    normalized = normalize_element_fields(fields, CREATE_FIELDS)
+    if not normalized.get("alias"):
+        raise ValueError("元素名称(alias)必填")
+    if not normalized.get("resource_id") and not normalized.get("bounds"):
+        raise ValueError("resource-id 与坐标至少填一个")
+    duplicated = Element.objects.filter(
+        page=page,
+        resource_id=normalized.get("resource_id", ""),
+        bounds=normalized.get("bounds", ""),
+    ).exists()
+    if duplicated:
+        raise ConflictError("该元素已在当前页面中（相同 resource-id 与位置）")
+    element = Element.objects.create(page=page, **normalized)
+    page.element_count = Element.objects.filter(page=page).count()
+    page.save(update_fields=["element_count"])
+    return element
+
+
 def update_element(el_id, updates):
-    """Update element metadata fields."""
-    if updates:
-        Element.objects.filter(id=el_id).update(**updates)
+    """按元素 id 定点更新呈现列里可编辑的四项（元素名称/文本/主定位/测试点）。
+
+    越界字段与非法值抛 ValueError（视图映射 400），元素不存在抛 LookupError（视图映射 404）。
+    """
+    normalized = normalize_element_fields(updates, UPDATE_FIELDS)
+    if not normalized:
+        return
+    if not Element.objects.filter(id=el_id).update(**normalized):
+        raise LookupError("元素不存在")
+
+
+def delete_elements(element_ids):
+    """按元素 id 整批删除（原子），并回写受影响页面的 element_count。
+
+    空集合抛 ValueError（视图映射 400）；任一 id 不存在抛 LookupError（视图映射 404），
+    此时整批不落库。
+    """
+    try:
+        ids = sorted({int(item) for item in element_ids})
+    except (TypeError, ValueError):
+        raise ValueError("元素 id 必须是整数") from None
+    if not ids:
+        raise ValueError("元素 id 不能为空")
+    rows = list(Element.objects.filter(id__in=ids).values_list("id", "page_id"))
+    if len(rows) != len(ids):
+        raise LookupError("元素不存在")
+    page_ids = {page_id for _, page_id in rows}
+    with transaction.atomic():
+        Element.objects.filter(id__in=ids).delete()
+        for page_id in page_ids:
+            remaining = Element.objects.filter(page_id=page_id).count()
+            Page.objects.filter(id=page_id).update(element_count=remaining)
+    return {"deleted": len(ids)}
 
 
 # ── Flow 写操作 ──
@@ -227,192 +267,3 @@ def clear_all():
     Element.objects.all().delete()
     PageFlow.objects.all().delete()
     Page.objects.all().delete()
-
-
-# ── WebElement 写操作 ──
-
-
-def create_web_element(
-    group,
-    name,
-    locator_type,
-    locator_value,
-    page_url="",
-    description="",
-    tags="",
-    is_test_point=False,
-    directory_id=None,
-):
-    """Create a web element."""
-    from .models import WebElement
-
-    return WebElement.objects.create(
-        group=group,
-        directory_id=directory_id,
-        name=name,
-        locator_type=locator_type,
-        locator_value=locator_value,
-        page_url=page_url,
-        description=description,
-        tags=tags,
-        is_test_point=is_test_point,
-    )
-
-
-def update_web_element(el_id, updates):
-    """Update a web element's fields (partial, by field presence)."""
-    from .models import WebElement
-
-    try:
-        el = WebElement.objects.get(id=el_id)
-    except WebElement.DoesNotExist:
-        return None
-    update_fields = []
-    for k in [
-        "name",
-        "locator_type",
-        "locator_value",
-        "page_url",
-        "description",
-        "tags",
-        "is_test_point",
-        "group",
-    ]:
-        if k in updates:
-            setattr(el, k, updates[k])
-            update_fields.append(k)
-    if update_fields:
-        el.save(update_fields=update_fields + ["updated_at"])
-    return el
-
-
-def delete_web_element(el_id):
-    """Delete a web element."""
-    from .models import WebElement
-
-    WebElement.objects.filter(id=el_id).delete()
-
-
-def batch_import_web_elements(items):
-    """Batch import web elements. Returns (saved, skipped, errors)."""
-    from .models import WebElement
-
-    saved = 0
-    skipped = 0
-    errors = []
-    for item in items:
-        name = (item.get("name") or "").strip()
-        locator_type = item.get("locator_type", "css_selector")
-        locator_value = (item.get("locator_value") or "").strip()
-        if not name or not locator_value:
-            skipped += 1
-            continue
-        try:
-            WebElement.objects.create(
-                name=name,
-                locator_type=locator_type,
-                locator_value=locator_value,
-                page_url=item.get("page_url", ""),
-                description=item.get("description", ""),
-                tags=item.get("tags", ""),
-                is_test_point=bool(item.get("is_test_point", False)),
-            )
-            saved += 1
-        except Exception as e:
-            errors.append(f"{name}: {e}")
-            skipped += 1
-    return saved, skipped, errors
-
-
-# ── WebPageFlow 写操作 ──
-
-
-def create_web_page_flow(from_group, to_group, trigger_element_id=None, trigger_action="click"):
-    """Create a web page flow.
-
-    Returns:
-        dict: {"id": int} —— api 不返回 ORM（apps/AGENTS.md §6 规则 4）。
-    """
-    from .models import WebPageFlow
-
-    flow = WebPageFlow.objects.create(
-        from_group=from_group,
-        to_group=to_group,
-        trigger_element_id=trigger_element_id,
-        trigger_action=trigger_action,
-    )
-    return {"id": flow.id}
-
-
-def delete_web_page_flow(flow_id):
-    """Delete a web page flow."""
-    from .models import WebPageFlow
-
-    WebPageFlow.objects.filter(id=flow_id).delete()
-
-
-# ── ApiEndpoint 写操作 ──
-
-
-def create_api_endpoint(
-    group,
-    name,
-    method,
-    url,
-    headers=None,
-    request_body_schema=None,
-    response_body_schema=None,
-    description="",
-    tags="",
-    is_test_point=False,
-    directory_id=None,
-):
-    """Create an api endpoint."""
-    from .models import ApiEndpoint
-
-    return ApiEndpoint.objects.create(
-        group=group,
-        directory_id=directory_id,
-        name=name,
-        method=method,
-        url=url,
-        headers=headers or {},
-        request_body_schema=request_body_schema or {},
-        response_body_schema=response_body_schema or {},
-        description=description,
-        tags=tags,
-        is_test_point=is_test_point,
-    )
-
-
-def update_api_endpoint(el_id, updates):
-    """Update an api endpoint's fields (partial, by field presence)."""
-    from .models import ApiEndpoint
-
-    try:
-        e = ApiEndpoint.objects.get(id=el_id)
-    except ApiEndpoint.DoesNotExist:
-        return None
-    for k in [
-        "name",
-        "method",
-        "url",
-        "headers",
-        "request_body_schema",
-        "response_body_schema",
-        "description",
-        "tags",
-        "is_test_point",
-        "group",
-    ]:
-        if k in updates:
-            setattr(e, k, updates[k])
-    e.save()
-    return e
-
-
-def delete_api_endpoint(el_id):
-    """Delete an api endpoint."""
-    from .models import ApiEndpoint
-
-    ApiEndpoint.objects.filter(id=el_id).delete()

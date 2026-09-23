@@ -1,270 +1,213 @@
 <script setup lang="ts">
 /**
- * 页面元素工作台：左侧截图矩形 + 右侧表格，双向高亮联动。
+ * 页面元素工作台：每页 10 行的元素定位信息表。
+ *
+ * 呈现列与可编辑字段按收敛口径：列 = 缩略图 / 元素名称 / 序号 / 文本 / 主定位 / 交互标注 / 测试点；
+ * 只有元素名称、文本、主定位与测试点可改（校验见 helpers/elementRowValidation.ts）；
+ * 支持新增一行与勾选多行批量删除；状态与编排见 composables/usePageElements.ts。
  */
-import { computed, nextTick, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { computed, ref } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import AppTable from '@/shared/components/AppTable.vue'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
-import { formatApiError } from '@/shared/api-client'
-import { apiPageItems, apiUpdateElement } from '../api'
-import PageScreenshotOverlay from './PageScreenshotOverlay.vue'
+import ErrorState from '@/shared/components/patterns/ErrorState.vue'
+import SkeletonCard from '@/shared/components/patterns/SkeletonCard.vue'
+import EditableCell from './EditableCell.vue'
+import PageElementFormDialog from './PageElementFormDialog.vue'
+import type { PageElementFields } from '../api'
+import { usePageElements, type EditableField, type PageElementRow } from '../composables/usePageElements'
+import { validatePrimaryXPath, validateText, type TextField } from '../helpers/elementRowValidation'
+import { elementThumbnailUrl, interactionLabels } from '../helpers/elementPresentation'
 
-export interface PageElementRow {
-  id: number
-  alias: string
-  text_val: string
-  resource_id: string
-  bounds: string
-  x: number
-  y: number
-  width: number
-  height: number
-  is_test_point: boolean
-  clickable: boolean
-  class_name: string
-  _first_xpath: string
-}
+const props = defineProps<{ pageId: number }>()
 
-const props = defineProps<{
-  pageId: number
-}>()
+const {
+  loading,
+  error,
+  rows,
+  total,
+  truncated,
+  currentPage,
+  totalPages,
+  pagedItems,
+  goPage,
+  selectedIds,
+  allSelectedOnPage,
+  isSelected,
+  toggleRow,
+  toggleAllOnPage,
+  load,
+  updateField,
+  createRow,
+  removeSelected,
+} = usePageElements(() => props.pageId)
 
-const loading = ref(false)
-const error = ref('')
-const pageElements = ref<PageElementRow[]>([])
-const screenshotPath = ref('')
-const elementFilter = ref<'all' | 'clickable' | 'text' | 'testpoint'>('all')
-const selectedId = ref<number | null>(null)
-const appTableRef = ref<InstanceType<typeof AppTable> | null>(null)
+const formVisible = ref(false)
+const selectedCount = computed(() => selectedIds.value.length)
+/** 加载失败的缩略图（按行 id 记，避免浏览器破图） */
+const brokenThumbs = ref(new Set<number>())
 
-const elementCount = computed(() => pageElements.value.length)
-
-function xpathItemToString(item: unknown): string {
-  if (item == null) return ''
-  if (typeof item === 'string') return item
-  if (typeof item === 'object') {
-    const obj = item as Record<string, unknown>
-    for (const key of ['xpath', 'path', 'value', 'expr']) {
-      if (typeof obj[key] === 'string' && obj[key]) return obj[key] as string
-    }
-  }
-  return ''
-}
-
-function firstXpath(raw: unknown): string {
-  if (raw == null) return ''
-  if (Array.isArray(raw)) return xpathItemToString(raw[0])
-  if (typeof raw === 'object') return xpathItemToString(raw)
-  if (typeof raw !== 'string') return ''
-  const text = raw.trim()
-  if (!text) return ''
-  try {
-    const parsed = JSON.parse(text)
-    if (Array.isArray(parsed)) return xpathItemToString(parsed[0])
-    return xpathItemToString(parsed) || text
-  } catch {
-    return text
-  }
-}
-
-function mapPageElements(list: Record<string, unknown>[]): PageElementRow[] {
-  return list.map((e) => ({
-    id: Number(e.id),
-    alias: String(e.alias || ''),
-    text_val: String(e.text_val || ''),
-    resource_id: String(e.resource_id || ''),
-    bounds: String(e.bounds || ''),
-    x: Number(e.x) || 0,
-    y: Number(e.y) || 0,
-    width: Number(e.width) || 0,
-    height: Number(e.height) || 0,
-    is_test_point: Boolean(e.is_test_point),
-    clickable: Boolean(e.clickable),
-    class_name: String(e.class_name || ''),
-    _first_xpath: firstXpath(e.xpath_candidates),
-  }))
-}
-
-async function loadElements() {
-  loading.value = true
-  error.value = ''
-  try {
-    const { data } = await apiPageItems(props.pageId, elementFilter.value, 500)
-    const payload = data as {
-      status?: boolean
-      elements?: Record<string, unknown>[]
-      screenshot_path?: string
-      message?: string
-    }
-    if (payload.status) {
-      pageElements.value = mapPageElements(payload.elements || [])
-      screenshotPath.value = String(payload.screenshot_path || '')
-      if (
-        selectedId.value != null &&
-        !pageElements.value.some((row) => row.id === selectedId.value)
-      ) {
-        selectedId.value = null
-      }
-    } else {
-      error.value = payload.message || '页面元素加载失败'
-      pageElements.value = []
-      screenshotPath.value = ''
-    }
-  } catch (e: unknown) {
-    error.value = formatApiError(e as never, '加载失败')
-    pageElements.value = []
-    screenshotPath.value = ''
-  } finally {
-    loading.value = false
-  }
-}
-
-watch(
-  () => [props.pageId, elementFilter.value] as const,
-  () => {
-    selectedId.value = null
-    void loadElements()
-  },
-  { immediate: true },
-)
-
-function rowClassName({ row }: { row: PageElementRow }) {
-  return row.id === selectedId.value ? 'page-row--active' : ''
-}
-
-/** 页面元素表列定义（别名 / 文本 / resource-id / XPath / 坐标 / 测试点） */
+/** 列定义：收敛后的七列（顺序即展示顺序） */
 const ELEMENT_COLUMNS = [
-  { dataIndex: 'alias', minWidth: 120, label: '别名', showOverflowTooltip: false },
-  { dataIndex: 'text_val', minWidth: 100, label: '文本' },
-  { dataIndex: 'resource_id', minWidth: 140, label: 'resource-id' },
-  { dataIndex: 'xpath', minWidth: 180, label: 'XPath' },
-  { dataIndex: 'bounds', minWidth: 120, label: '坐标' },
-  { dataIndex: 'test_point', width: 88, align: 'center', label: '测试点', showOverflowTooltip: false },
+  { key: '_select', width: 44, align: 'center', label: '', showOverflowTooltip: false },
+  { dataIndex: 'thumbnail_path', width: 66, label: '缩略图', showOverflowTooltip: false },
+  { dataIndex: 'alias', minWidth: 120, label: '元素名称', showOverflowTooltip: false },
+  { dataIndex: 'seq', width: 64, align: 'center', label: '序号', showOverflowTooltip: false },
+  { dataIndex: 'text_val', minWidth: 120, label: '文本', showOverflowTooltip: false },
+  { dataIndex: 'primary_xpath', minWidth: 220, label: '主定位', showOverflowTooltip: false },
+  { dataIndex: 'flags', minWidth: 200, label: '交互标注', showOverflowTooltip: false },
+  { dataIndex: 'is_test_point', width: 88, align: 'center', label: '测试点', showOverflowTooltip: false },
 ]
 
-async function scrollRowIntoView(id: number) {
-  await nextTick()
-  const root = appTableRef.value?.tableRef?.$el as HTMLElement | undefined
-  if (!root) return
-  const tr = root.querySelector(
-    `.el-table__body tr[data-row-key="${id}"]`,
-  ) as HTMLElement | null
-  tr?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+/** 行内可编辑的文本列（元素名称 / 文本 / 主定位） */
+const TEXT_FIELDS: Array<[string, TextField]> = [
+  ['alias', 'alias'],
+  ['text_val', 'text_val'],
+  ['primary_xpath', 'primary_xpath'],
+]
+
+/** 每列的校验函数；返回 undefined 表示该列不做前端校验 */
+function validateFor(field: string): ((value: string) => string | null) | undefined {
+  if (field === 'primary_xpath') return validatePrimaryXPath
+  const entry = TEXT_FIELDS.find(([key]) => key === field)
+  return entry ? (value: string) => validateText(entry[1], value) : undefined
 }
 
-async function selectElement(id: number, source: 'table' | 'shot') {
-  selectedId.value = id
-  const row = pageElements.value.find((item) => item.id === id)
-  if (row) appTableRef.value?.tableRef?.setCurrentRow(row)
-  if (source === 'shot') await scrollRowIntoView(id)
+function markThumbBroken(row: PageElementRow) {
+  brokenThumbs.value = new Set(brokenThumbs.value).add(row.id)
 }
 
-function onRowClick(row: PageElementRow) {
-  void selectElement(row.id, 'table')
+function onEdit(row: PageElementRow, field: EditableField, value: string) {
+  void updateField(row, field, value)
 }
 
-function onShotSelect(id: number) {
-  void selectElement(id, 'shot')
+function onTestPointChange(row: PageElementRow, value: string | number | boolean) {
+  void updateField(row, 'is_test_point', Boolean(value))
 }
 
-async function updatePageElement(
-  row: PageElementRow,
-  field: 'alias' | 'is_test_point',
-  value: string | boolean,
-) {
+function onToggleAll(value: string | number | boolean) {
+  toggleAllOnPage(Boolean(value))
+}
+
+async function onCreate(fields: PageElementFields) {
+  const ok = await createRow(fields)
+  if (ok) formVisible.value = false
+}
+
+async function onRemoveSelected() {
+  if (!selectedCount.value) return
   try {
-    const { data } = await apiUpdateElement(row.id, { [field]: value })
-    if (!(data as { status?: boolean }).status) {
-      ElMessage.error((data as { message?: string }).message || '更新失败')
-      return
-    }
-    const src = pageElements.value.find((x) => x.id === row.id)
-    if (!src) return
-    if (field === 'alias') src.alias = String(value)
-    if (field === 'is_test_point') src.is_test_point = Boolean(value)
-  } catch (e: unknown) {
-    ElMessage.error(formatApiError(e as never, '更新失败'))
+    await ElMessageBox.confirm(
+      `确认删除选中的 ${selectedCount.value} 行元素？`,
+      '确认批量删除',
+      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' },
+    )
+  } catch {
+    return
   }
+  await removeSelected()
 }
 
-function onAliasChange(row: unknown, value: string) {
-  void updatePageElement(row as PageElementRow, 'alias', value)
+function rowClassName({ row }: { row: PageElementRow }) {
+  return isSelected(row.id) ? 'is-selected' : ''
 }
 
-function onTestPointChange(row: unknown, value: string | number | boolean) {
-  void updatePageElement(row as PageElementRow, 'is_test_point', Boolean(value))
-}
-
-defineExpose({ reload: loadElements })
+defineExpose({ reload: load })
 </script>
 
 <template>
   <div class="page-workbench">
     <div class="page-workbench__toolbar">
-      <span class="page-workbench__count">共 {{ elementCount }} 个元素</span>
-      <el-radio-group v-model="elementFilter" size="small">
-        <el-radio-button value="all">全部</el-radio-button>
-        <el-radio-button value="clickable">可点击</el-radio-button>
-        <el-radio-button value="text">有文本</el-radio-button>
-        <el-radio-button value="testpoint">测试点</el-radio-button>
-      </el-radio-group>
+      <span class="page-workbench__count">共 {{ total }} 个元素</span>
+      <el-button size="small" @click="formVisible = true">+ 新增一行</el-button>
+      <el-button size="small" type="danger" :disabled="!selectedCount" @click="onRemoveSelected">
+        删除选中{{ selectedCount ? `（${selectedCount}）` : '' }}
+      </el-button>
+      <span v-if="truncated" class="page-workbench__hint">
+        接口一次最多取回 {{ rows.length }} 条，当前仅显示这些（共 {{ total }} 条）
+      </span>
     </div>
 
-    <div v-if="loading" class="page-workbench__loading">
-      <el-skeleton :rows="6" animated />
+    <div v-if="loading" class="page-workbench__state">
+      <SkeletonCard variant="list" :lines="6" />
     </div>
-    <div v-else-if="error" class="page-workbench__error">
-      <el-alert :title="error" type="error" show-icon :closable="false" />
-      <el-button @click="loadElements">重试</el-button>
-    </div>
+    <ErrorState v-else-if="error" :message="error" @retry="load" />
 
-    <div v-else class="page-workbench__split">
-      <aside class="page-workbench__shot">
-        <PageScreenshotOverlay
-          :screenshot-path="screenshotPath"
-          :elements="pageElements"
-          :selected-id="selectedId"
-          @select="onShotSelect"
-        />
-      </aside>
-
-      <section class="page-workbench__table">
-        <EmptyState
-          v-if="!pageElements.length"
-          icon="📋"
-          text="该页面暂无元素"
-          hint="可从设备检查器导入快照"
-        />
+    <section v-else class="page-workbench__table">
+      <EmptyState
+        v-if="!rows.length"
+        icon="📋"
+        text="该页面暂无元素"
+        hint="可从设备检查器导入快照，或点「+ 新增一行」手写一条"
+      />
+      <div v-else class="page-workbench__grid">
         <AppTable
-          v-else
-          ref="appTableRef"
           :columns="ELEMENT_COLUMNS"
-          :data-source="pageElements"
+          :data-source="pagedItems"
+          accent="var(--c-element)"
           border
-          stripe
+          :striped="true"
           height="100%"
           class="page-elements-table"
           row-key="id"
-          highlight-current-row
-          empty-text="暂无元素"
           :row-class-name="rowClassName"
-          @row-click="onRowClick"
+          empty-text="暂无元素"
         >
+          <template #header-_select>
+            <el-checkbox :model-value="allSelectedOnPage" @change="onToggleAll" />
+          </template>
+          <template #cell-_select="{ row }">
+            <el-checkbox :model-value="isSelected(row.id)" @click.stop @change="() => toggleRow(row.id)" />
+          </template>
+          <template #cell-thumbnail_path="{ row }">
+            <img
+              v-if="row.thumbnail_path && !brokenThumbs.has(row.id)"
+              :src="elementThumbnailUrl(row.thumbnail_path)"
+              class="page-elements-thumb"
+              alt=""
+              @error="markThumbBroken(row)"
+            />
+            <span v-else class="page-elements-empty">—</span>
+          </template>
           <template #cell-alias="{ row }">
-            <el-input
-              :model-value="row.alias"
-              size="small"
+            <EditableCell
+              :value="row.alias"
+              :validate="validateFor('alias')"
               placeholder="未命名"
-              @click.stop
-              @change="(v: string) => onAliasChange(row, v)"
+              @commit="(v: string) => onEdit(row, 'alias', v)"
             />
           </template>
-          <template #cell-xpath="{ row }">
-            <code v-if="row._first_xpath" class="cell-code">{{ row._first_xpath }}</code>
-            <span v-else class="cell-muted">—</span>
+          <template #cell-seq="{ row }">
+            <span class="page-elements-seq">{{ row.seq || '—' }}</span>
           </template>
-          <template #cell-test_point="{ row }">
+          <template #cell-text_val="{ row }">
+            <EditableCell
+              :value="row.text_val"
+              :validate="validateFor('text_val')"
+              @commit="(v: string) => onEdit(row, 'text_val', v)"
+            />
+          </template>
+          <template #cell-primary_xpath="{ row }">
+            <EditableCell
+              :value="row.primary_xpath"
+              :validate="validateFor('primary_xpath')"
+              placeholder="主定位表达式"
+              @commit="(v: string) => onEdit(row, 'primary_xpath', v)"
+            />
+          </template>
+          <template #cell-flags="{ row }">
+            <div class="page-elements-flags">
+              <template v-if="interactionLabels(row).length">
+                <span
+                  v-for="label in interactionLabels(row)"
+                  :key="label"
+                  class="page-elements-flag"
+                >{{ label }}</span>
+              </template>
+              <span v-else class="page-elements-empty">—</span>
+            </div>
+          </template>
+          <template #cell-is_test_point="{ row }">
             <el-switch
               :model-value="row.is_test_point"
               @click.stop
@@ -272,8 +215,19 @@ defineExpose({ reload: loadElements })
             />
           </template>
         </AppTable>
-      </section>
-    </div>
+      </div>
+      <div class="page-workbench__pager">
+        <span>第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ total }} 条</span>
+        <el-button size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">
+          上一页
+        </el-button>
+        <el-button size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">
+          下一页
+        </el-button>
+      </div>
+    </section>
+
+    <PageElementFormDialog v-model="formVisible" @confirm="onCreate" />
   </div>
 </template>
 
@@ -288,7 +242,6 @@ defineExpose({ reload: loadElements })
 .page-workbench__toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--app-space-md);
   flex-wrap: wrap;
   flex-shrink: 0;
@@ -298,51 +251,68 @@ defineExpose({ reload: loadElements })
   font-weight: 700;
   color: var(--ink);
 }
-.page-workbench__loading,
-.page-workbench__error {
+.page-workbench__hint {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+.page-workbench__state {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   gap: var(--app-space-md);
 }
-.page-workbench__split {
+.page-workbench__table {
   flex: 1 1 0;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.15fr);
-  gap: var(--app-space-md);
-}
-.page-workbench__table,
-.page-workbench__shot {
   min-width: 0;
   min-height: 0;
-  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
   overflow: hidden;
+}
+.page-workbench__grid {
+  flex: 1 1 0;
+  min-height: 0;
+}
+.page-workbench__pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--app-space-sm);
+  flex-shrink: 0;
+  font-size: var(--app-size-sm);
+  color: var(--ink);
 }
 .page-elements-table {
   height: 100%;
 }
-.page-elements-table :deep(.page-row--active > td.el-table__cell) {
-  background: color-mix(in srgb, var(--c-element) 18%, var(--paper)) !important;
+/* 缩略图格：固定尺寸（同检查器口径），失效或无图都落占位，不出现破图 */
+.page-elements-thumb {
+  display: block;
+  width: 46px;
+  height: 34px;
+  object-fit: contain;
+  border: 1px solid var(--ink);
+  background: var(--app-bg-input);
 }
-.page-elements-table :deep(.el-table__body tr.current-row > td.el-table__cell) {
-  background: color-mix(in srgb, var(--c-element) 18%, var(--paper)) !important;
-}
-.cell-code {
-  font-family: var(--app-font-mono, ui-monospace, monospace);
-  font-size: var(--app-size-xs);
+.page-elements-seq {
   color: var(--ink);
 }
-.cell-muted {
-  color: var(--app-text-secondary);
+.page-elements-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-space-xs);
 }
-
-@media (max-width: 1100px) {
-  .page-workbench__split {
-    grid-template-columns: 1fr;
-    /* 窄屏：上截图、下表格 */
-    grid-template-rows: minmax(280px, 1.1fr) minmax(240px, 0.9fr);
-  }
+.page-elements-flag {
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  padding: 0 var(--app-space-xs);
+  font-size: var(--app-size-xs);
+  color: var(--ink);
+  background: var(--app-bg-input);
+}
+.page-elements-empty {
+  color: var(--app-text-secondary);
 }
 </style>

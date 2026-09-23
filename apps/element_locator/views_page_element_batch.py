@@ -10,6 +10,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from . import api
+from .element_fields import CREATE_FIELDS, normalize_element_fields
 from .models import Page
 
 
@@ -17,10 +18,11 @@ from .models import Page
 def batch_add_elements(request, page_id):
     """POST /api/elements/pages/{page_id}/elements/batch — Batch save elements.
 
-    Body: { elements: [{ alias, xpath, xpath_candidates, class_name, text_val,
-            resource_id, bounds, clickable, content_desc }], strategy: "resource-id" }
+    Body（收敛口径）: { elements: [{ alias, text_val?, primary_xpath?, resource_id?,
+            bounds?, notes?, is_test_point? }] }
 
-    Each element already has its pre-selected XPath. Same per-element upsert logic.
+    逐条按与工作台「新增一行」相同的字段集规整（越界字段计入 errors 并跳过），
+    命中同页 (resource_id, bounds) 的按 upsert 更新。
     """
     try:
         page = Page.objects.get(id=page_id)
@@ -39,51 +41,25 @@ def batch_add_elements(request, page_id):
     skipped = 0
     errors = []
 
-    # Pre-process items and prepare fields
+    # 逐条按收敛后的新增字段集规整（与工作台「新增一行」同一口径）
     prepared = []
     for item in items:
-        alias = item.get("alias", "").strip()
+        alias = str(item.get("alias") or "").strip()
         if not alias:
             skipped += 1
             continue
-
-        xpath_candidates_data = item.get("xpath_candidates")
-        if xpath_candidates_data:
-            xpaths = json.dumps(xpath_candidates_data)
-        else:
-            xpath = item.get("xpath", "")
-            if xpath:
-                xpaths = json.dumps(
-                    [
-                        {
-                            "type": item.get("xpath_type", "manual"),
-                            "xpath": xpath,
-                            "count": item.get("xpath_count", 1),
-                        }
-                    ]
-                )
-            else:
-                xpaths = "[]"
-
-        rid = item.get("resource_id", "")
-        bounds = item.get("bounds", "")
+        try:
+            fields = normalize_element_fields({**item, "alias": alias}, CREATE_FIELDS)
+        except ValueError as exc:
+            errors.append(f"{alias}: {exc}")
+            skipped += 1
+            continue
         prepared.append(
             {
                 "alias": alias,
-                "resource_id": rid,
-                "bounds": bounds,
-                "fields": {
-                    "alias": alias,
-                    "class_name": item.get("class_name", ""),
-                    "text_val": item.get("text_val", ""),
-                    "content_desc": item.get("content_desc", ""),
-                    "resource_id": rid,
-                    "bounds": bounds,
-                    "xpath_candidates": xpaths,
-                    "clickable": bool(item.get("clickable", False)),
-                    "enabled": bool(item.get("enabled", True)),
-                    "notes": item.get("notes", ""),
-                },
+                "resource_id": fields.get("resource_id", ""),
+                "bounds": fields.get("bounds", ""),
+                "fields": fields,
             }
         )
 
@@ -118,3 +94,22 @@ def batch_add_elements(request, page_id):
     if errors:
         result["errors"] = errors[:5]
     return JsonResponse(result)
+
+
+@csrf_exempt
+def batch_delete_elements(request):
+    """POST /api/elements/items/batch-delete — 批量删除元素（原子）。
+
+    Body: { ids: [int, ...] }；空集合 → 400，元素不存在 → 404（整批不落库）。
+    """
+    try:
+        body = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"status": False, "message": "无效的 JSON 请求体"}, status=400)
+    try:
+        result = api.delete_elements(body.get("ids") or [])
+    except LookupError as exc:
+        return JsonResponse({"status": False, "message": str(exc)}, status=404)
+    except ValueError as exc:
+        return JsonResponse({"status": False, "message": str(exc)}, status=400)
+    return JsonResponse({"status": True, "data": result})

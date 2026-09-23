@@ -1,0 +1,9 @@
+/* element-locator 模块令牌（T1）
+   作用域：.locator-workbench（模块页面根类，3 个页面共挂）——消费点都在该根类内
+   口径：值 MUST 引用 T0 主 token 原子；本文件不得出现字面量色值
+   来源：变更 unify-module-token-files（自 3 个页根的内联声明上收）
+*/
+
+.locator-workbench {
+  --locator-header-icon-end: var(--color-indigo-84) /* -> --color-indigo-84 */;  /* 页头图标渐变收尾色 */
+}

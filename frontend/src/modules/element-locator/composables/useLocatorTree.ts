@@ -3,23 +3,18 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { formatApiError } from '@/shared/api-client'
 import {
-  apiCreateApiEndpoint,
   apiCreatePage,
-  apiCreateWebElement,
-  apiDeleteApiEndpoint,
   apiDeletePage,
-  apiDeleteWebElement,
-  batchDeleteLocatorFiles,
   createLocatorDirectory,
   deleteLocatorDirectory,
+  deleteLocatorItems,
   getLocatorProjectTree,
-  moveLocatorItem,
+  moveLocatorItems,
   updateLocatorDirectory,
 } from '../api'
+import type { LocatorMoveItem } from '../api'
 import {
-  FILE_KIND_BY_CODE,
   isLocatorProjectCode,
-  type LocatorFileKind,
   type LocatorProject,
   type LocatorProjectCode,
   type LocatorTreeNode,
@@ -31,7 +26,7 @@ function createdLeafId(payload: Record<string, unknown>): number | null {
     const id = (nested as { id: unknown }).id
     if (typeof id === 'number') return id
   }
-  for (const key of ['page', 'element', 'endpoint'] as const) {
+  for (const key of ['page'] as const) {
     const node = payload[key]
     if (node && typeof node === 'object' && node !== null && 'id' in node) {
       const id = (node as { id: unknown }).id
@@ -136,27 +131,8 @@ export function useLocatorTree(projectCode: () => string) {
     if (!code) return null
     const trimmed = name.trim()
     try {
-      let payload: Record<string, unknown>
-      if (code === 'android') {
-        const { data } = await apiCreatePage({ label: trimmed, directory_id: directoryId })
-        payload = data as Record<string, unknown>
-      } else if (code === 'web') {
-        const { data } = await apiCreateWebElement({
-          name: trimmed,
-          locator_type: 'css_selector',
-          locator_value: 'body',
-          directory_id: directoryId,
-        })
-        payload = data as Record<string, unknown>
-      } else {
-        const { data } = await apiCreateApiEndpoint({
-          name: trimmed,
-          method: 'GET',
-          url: '/',
-          directory_id: directoryId,
-        })
-        payload = data as Record<string, unknown>
-      }
+      const { data } = await apiCreatePage({ label: trimmed, directory_id: directoryId })
+      const payload = data as Record<string, unknown>
       if (payload.status) {
         ElMessage.success('文件已创建')
         await loadTree()
@@ -170,21 +146,10 @@ export function useLocatorTree(projectCode: () => string) {
     }
   }
 
-  async function removeFile(fileId: number, kind?: LocatorFileKind) {
-    const resolvedKind = kind || (resolvedCode() ? FILE_KIND_BY_CODE[resolvedCode() as LocatorProjectCode] : null)
-    if (!resolvedKind) return false
+  async function removeFile(fileId: number) {
     try {
-      let ok = false
-      if (resolvedKind === 'page') {
-        const { data } = await apiDeletePage(fileId)
-        ok = Boolean((data as { status?: boolean }).status)
-      } else if (resolvedKind === 'web_element') {
-        const { data } = await apiDeleteWebElement(fileId)
-        ok = Boolean((data as { status?: boolean }).status)
-      } else {
-        const { data } = await apiDeleteApiEndpoint(fileId)
-        ok = Boolean((data as { status?: boolean }).status)
-      }
+      const { data } = await apiDeletePage(fileId)
+      const ok = Boolean((data as { status?: boolean }).status)
       if (ok) {
         ElMessage.success('文件已删除')
         await loadTree()
@@ -198,39 +163,40 @@ export function useLocatorTree(projectCode: () => string) {
     }
   }
 
-  async function removeFiles(ids: number[]) {
-    const code = resolvedCode()
-    if (!code || !ids.length) return false
+  /** 批量删除节点（目录连同其下页面与元素一并删除）。成功后重载目录树。 */
+  async function deleteItems(items: LocatorMoveItem[]): Promise<boolean> {
+    if (!items.length) {
+      ElMessage.warning('请先选择要删除的节点')
+      return false
+    }
     try {
-      const { data } = await batchDeleteLocatorFiles({
-        kind: FILE_KIND_BY_CODE[code],
-        ids,
-      })
+      const { data } = await deleteLocatorItems({ items })
       if (data.status) {
-        ElMessage.success('已删除选中文件')
+        ElMessage.success(`已删除 ${data.data?.deleted ?? items.length} 项`)
         await loadTree()
         return true
       }
-      ElMessage.error(data.message || '批量删除失败')
+      ElMessage.error(data.message || '删除失败')
       return false
     } catch (e: unknown) {
-      ElMessage.error(formatApiError(e, '批量删除失败'))
+      ElMessage.error(formatApiError(e, '删除失败'))
       return false
     }
   }
 
-  async function moveTreeItem(
-    kind: 'directory' | LocatorFileKind,
-    itemId: number,
+  /** 移动节点（单件拖动 = 1 项的批量，与勾选批量走同一端点）。成功后重载目录树。 */
+  async function moveItems(
+    items: LocatorMoveItem[],
     parentDirectoryId: number | null,
-  ) {
+  ): Promise<boolean> {
+    if (!items.length) {
+      ElMessage.warning('请先选择要移动的节点')
+      return false
+    }
     try {
-      const { data } = await moveLocatorItem({
-        kind,
-        id: itemId,
-        parent_directory_id: parentDirectoryId,
-      })
+      const { data } = await moveLocatorItems({ items, parent_directory_id: parentDirectoryId })
       if (data.status) {
+        ElMessage.success(`已移动 ${data.data?.moved ?? items.length} 项`)
         await loadTree()
         return true
       }
@@ -253,7 +219,7 @@ export function useLocatorTree(projectCode: () => string) {
     removeDirectory,
     addFile,
     removeFile,
-    removeFiles,
-    moveTreeItem,
+    moveItems,
+    deleteItems,
   }
 }

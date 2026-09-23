@@ -20,8 +20,10 @@ logger = logging.getLogger(__name__)
 def import_snapshot(request):
     """POST /api/elements/pages/import-snapshot — 快照导入（检查器 / AI 保存工具）。
 
-    Body: { page_label, folder_path?, package?, activity?, screenshot_path?,
+    Body: { page_label, folder_path?, package?, activity?,
             ocr_json?, snapshot_id?, elements[] }
+
+    不接受也不保存整屏截图（rework-save-to-elements）：`screenshot_path` 入参已移除。
     响应统一信封 {status, data} / {status, message}（新端点新契约）。
     """
     try:
@@ -34,7 +36,6 @@ def import_snapshot(request):
             folder_path=(body.get("folder_path") or "").strip(),
             package=body.get("package", ""),
             activity=body.get("activity", ""),
-            screenshot_path=body.get("screenshot_path", ""),
             ocr_json=body.get("ocr_json"),
             snapshot_id=body.get("snapshot_id"),
             elements=body.get("elements") or [],

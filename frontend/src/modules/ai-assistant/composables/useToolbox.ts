@@ -6,6 +6,7 @@ import {
   uploadSharedSkill, toggleSharedTool,
   type SharedToolItem,
 } from '../api/toolbox'
+import { formatApiError } from '@/shared/api-client'
 
 export function useToolbox() {
   const items = ref<SharedToolItem[]>([])
@@ -50,7 +51,7 @@ export function useToolbox() {
       } else {
         ElMessage.error(data.message || '上传失败')
       }
-    } catch (e) { ElMessage.error('上传失败') }
+    } catch (e) { ElMessage.error(formatApiError(e, '上传失败')) }
     loading.value = false
     ;(e.target as HTMLInputElement).value = ''
   }

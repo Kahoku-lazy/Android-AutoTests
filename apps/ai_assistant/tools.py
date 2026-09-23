@@ -7,7 +7,10 @@
 
 from __future__ import annotations
 
+import inspect
 import json
+
+from contextlib import contextmanager
 
 # ═══════════════════════════════════════════════════════════════════
 # 结果序列化辅助
@@ -35,16 +38,25 @@ def _jsonable(obj) -> str:
     return json.dumps(obj, ensure_ascii=False, default=str)
 
 
+@contextmanager
+def _device_engine(serial: str):
+    """打开目标设备引擎（短连接，退出即断开）；先校验设备可用并切为当前设备。"""
+    from apps.device_pool.api import use_device
+    from apps.device_pool.models import Device
+    from engines.device.registry import close_engine, open_engine
+
+    use_device(serial)
+    dev = Device.objects.get(serial=serial)
+    engine = open_engine(serial, dev.connection_addr or serial)
+    try:
+        yield engine
+    finally:
+        close_engine(engine)
+
+
 # ═══════════════════════════════════════════════════════════════════
 # 设备管理工具（获取设备信息 + 执行控制操作）
 # ═══════════════════════════════════════════════════════════════════
-
-
-def get_online_devices(user_id: str = "") -> str:
-    """查询平台当前在线的 Android 设备列表（不含使用中设备）。"""
-    from apps.device_pool.api import get_online_devices as _f
-
-    return _jsonable(_f())
 
 
 def list_devices(user_id: str = "") -> str:
@@ -85,38 +97,19 @@ def release_device(serial: str, reason: str = "manual", user_id: str = "") -> st
     return _jsonable(_f(serial, reason=reason))
 
 
-def device_action(
+def app_control(
     serial: str,
     action: str,
     package: str = "",
-    x: int = 0,
-    y: int = 0,
-    direction: str = "up",
-    distance: int = 500,
-    text: str = "",
-    clear_first: bool = True,
     user_id: str = "",
 ) -> str:
-    """控制指定 Android 设备执行 UI 动作：启动/停止 App、点击坐标、长按、滑动、返回、输入文本、读取当前前台；每次返回 package/activity 用于判断页面是否跳转。
+    """启动或停止指定设备上的 App；每次返回 package/activity 用于判断页面是否跳转。
     Args:
         serial: 设备序列号（先 list_devices 查询）
-        action: 动作类型: start_app/stop_app/click/long_click/swipe/back/input_text/current
-        package: start_app/stop_app 时的包名
-        x: 点击/输入坐标 x（像素）
-        y: 点击/输入坐标 y（像素）
-        direction: swipe 方向: up/down/left/right，默认 up
-        distance: swipe 距离，默认 500
-        text: input_text 的文本
-        clear_first: input_text 前是否清空，默认 True
+        action: start_app 启动 / stop_app 停止
+        package: 目标 App 包名
     """
-    from apps.device_pool.api import use_device
-    from apps.device_pool.models import Device
-    from engines.device.registry import close_engine, open_engine
-
-    use_device(serial)
-    dev = Device.objects.get(serial=serial)
-    engine = open_engine(serial, dev.connection_addr or serial)
-    try:
+    with _device_engine(serial) as engine:
         if action == "start_app":
             if not package:
                 raise ValueError("start_app 需要 package 参数")
@@ -125,27 +118,90 @@ def device_action(
             if not package:
                 raise ValueError("stop_app 需要 package 参数")
             engine.stop_app(package)
-        elif action == "back":
-            engine.press_key("back")
-        elif action == "click":
+        else:
+            raise ValueError(f"不支持的 App 动作: {action}")
+        return _jsonable(engine.app_current())
+
+
+def tap_screen(
+    serial: str,
+    mode: str = "click",
+    x: int = 0,
+    y: int = 0,
+    user_id: str = "",
+) -> str:
+    """按像素坐标点击或长按设备屏幕；每次返回 package/activity 用于判断页面是否跳转。
+    Args:
+        serial: 设备序列号（先 list_devices 查询）
+        mode: click 点击 / long_click 长按
+        x: 坐标 x（像素）
+        y: 坐标 y（像素）
+    """
+    with _device_engine(serial) as engine:
+        if mode == "click":
             if not x or not y:
                 raise ValueError("click 需要 x/y 坐标")
             engine.click(x, y)
-        elif action == "long_click":
+        elif mode == "long_click":
             if not x or not y:
                 raise ValueError("long_click 需要 x/y 坐标")
             engine.long_click(x, y)
-        elif action == "swipe":
-            engine.swipe_direction(direction or "up", int(distance or 500))
-        elif action == "input_text":
-            engine.input_text(text or "", clear_first=bool(clear_first))
-        elif action == "current":
-            pass
         else:
-            raise ValueError(f"不支持的设备动作: {action}")
+            raise ValueError(f"不支持的点击方式: {mode}")
         return _jsonable(engine.app_current())
-    finally:
-        close_engine(engine)
+
+
+def swipe_screen(
+    serial: str,
+    direction: str = "up",
+    distance: int = 500,
+    user_id: str = "",
+) -> str:
+    """按方向滑动设备屏幕；每次返回 package/activity 用于判断页面是否跳转。
+    Args:
+        serial: 设备序列号（先 list_devices 查询）
+        direction: 滑动方向 up/down/left/right，默认 up
+        distance: 滑动距离，默认 500
+    """
+    with _device_engine(serial) as engine:
+        engine.swipe_direction(direction or "up", int(distance or 500))
+        return _jsonable(engine.app_current())
+
+
+def press_key(serial: str, user_id: str = "") -> str:
+    """按设备返回键（BACK）返回上一页；每次返回 package/activity 用于判断页面是否跳转。
+    Args:
+        serial: 设备序列号（先 list_devices 查询）
+    """
+    with _device_engine(serial) as engine:
+        engine.press_key("back")
+        return _jsonable(engine.app_current())
+
+
+def input_text(
+    serial: str,
+    text: str,
+    clear_first: bool = True,
+    user_id: str = "",
+) -> str:
+    """向设备当前输入框输入文本；每次返回 package/activity 用于判断页面是否跳转。
+    Args:
+        serial: 设备序列号（先 list_devices 查询）
+        text: 要输入的文本
+        clear_first: 输入前是否清空输入框，默认 True
+    """
+    with _device_engine(serial) as engine:
+        engine.input_text(text or "", clear_first=bool(clear_first))
+        return _jsonable(engine.app_current())
+
+
+def current_app(serial: str, user_id: str = "") -> str:
+    """只读设备当前前台 App（package/activity/pid），不改变设备状态。
+    Args:
+        serial: 设备序列号（先 list_devices 查询）
+    """
+    with _device_engine(serial) as engine:
+        return _jsonable(engine.app_current())
 
 
 def click_ratio(serial: str, nx: float, ny: float, user_id: str = "") -> str:
@@ -322,25 +378,37 @@ def screenshot_page(serial: str, keep_local: bool = True, user_id: str = "") -> 
     }
 
 
-# ═══════════════════════════════════════════════════════════════════
-# 工作流工具
-# ═══════════════════════════════════════════════════════════════════
+def ocr_page(serial: str, texts: str = "", user_id: str = "") -> str:
+    """OCR 识别设备当前页面的文本，返回文本、置信度、原始角点坐标与归一化中心点。
 
+    中心点为 0~1 的归一化坐标，可直接作为点击/拖拽工具的入参使用。
+    页面文本很多时用 texts 收窄结果，避免返回无关文本。
 
-def list_page_flows(
-    query: str = "", directory_id: int = 0, limit: int = 20, user_id: str = ""
-) -> str:
-    """列出页面流文档。
     Args:
-        query: 搜索关键词
-        directory_id: 目录ID
-        limit: 最多返回条数
+        serial: 设备序列号
+        texts: 要查找的文本，可一次指定多个，用逗号/顿号/换行分隔（如「设置,WiFi」）；
+            命中任一即返回（忽略大小写的子串匹配）；留空返回整页全部文本
+    """
+    from apps.device_inspector.api import ocr_screen
+
+    return _jsonable(ocr_screen(serial, texts))
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 页面流工具
+# ═══════════════════════════════════════════════════════════════════
+
+
+def list_page_flows(query: str = "", user_id: str = "") -> str:
+    """列出平台全部页面流文档（不截断）；每条含 directory_path（目录完整路径）与
+    directory_depth（根目录下为 1，未归类为 0）。
+    Args:
+        query: 可选关键词，按标题或文档 ID 收窄；留空返回全部
     """
     from apps.workflow.api import list_document_summaries
 
-    return _jsonable(
-        list_document_summaries(query=query, directory_id=directory_id or None, limit=limit)
-    )
+    documents = list_document_summaries(query=query)
+    return _jsonable({"total": len(documents), "documents": documents})
 
 
 def get_page_flow(doc_id: str, user_id: str = "") -> str:
@@ -361,11 +429,15 @@ def get_page_flow(doc_id: str, user_id: str = "") -> str:
 # ═══════════════════════════════════════════════════════════════════
 
 # 设备管理/控制类工具自动放行（不走 HITL）：acquire/release 是占用记账、
-# device_action/click_ratio/drag_ratio/xpath_action 是用户明确要求"控制设备"时的核心动作。
+# 其余是用户明确要求"控制设备"时的核心写动作（只读的 current_app 走只读分支放行）。
 AUTO_ALLOW_TOOLS = {
     "acquire_device",
     "release_device",
-    "device_action",
+    "app_control",
+    "tap_screen",
+    "swipe_screen",
+    "press_key",
+    "input_text",
     "click_ratio",
     "drag_ratio",
     "xpath_action",
@@ -373,19 +445,25 @@ AUTO_ALLOW_TOOLS = {
 
 TOOLS: dict[str, tuple] = {
     # 设备管理（获取设备信息）
-    "get_online_devices": (get_online_devices, True),
     "list_devices": (list_devices, True),
     "acquire_device": (acquire_device, False),
     "release_device": (release_device, False),
     "list_apps": (list_apps, True),
     # 设备管理（执行控制操作）
-    "device_action": (device_action, False),
+    "app_control": (app_control, False),
+    "tap_screen": (tap_screen, False),
+    "swipe_screen": (swipe_screen, False),
+    "press_key": (press_key, False),
+    "input_text": (input_text, False),
+    "current_app": (current_app, True),
     "click_ratio": (click_ratio, False),
     "drag_ratio": (drag_ratio, False),
     "xpath_action": (xpath_action, False),
     # 设备检查器
     "screenshot_page": (screenshot_page, True),
-    # 工作流（获取工作流信息）
+    # 视觉识别
+    "ocr_page": (ocr_page, True),
+    # 页面流工具（获取页面流信息）
     "list_page_flows": (list_page_flows, True),
     "get_page_flow": (get_page_flow, True),
 }
@@ -395,28 +473,41 @@ TOOLS: dict[str, tuple] = {
 # 工具分类元数据（供管理端 available-tools / 工具箱 / HTTP 网关）
 # ═══════════════════════════════════════════════════════════════════
 
+# 分类是工具箱「整类启停」的单位（views_drf.PlatformToolToggleAPIView 按 category 批量写库），
+# 因此按工具性质分组：台账（不碰手机）/ 控制（会在手机上产生副作用）/ 信息（只读但要连设备）。
 TOOL_CATEGORIES = [
     {"key": "设备管理", "icon": "📱", "color": "#6BCB77"},
+    {"key": "设备控制", "icon": "🎮", "color": "#F7C948"},
+    {"key": "设备信息", "icon": "📋", "color": "#4ECDC4"},
     {"key": "设备检查器", "icon": "📸", "color": "#FFB5A7"},
-    {"key": "工作流", "icon": "🧭", "color": "#38BDF8"},
+    {"key": "视觉识别工具", "icon": "🔍", "color": "#A78BFA"},
+    {"key": "页面流工具", "icon": "🧭", "color": "#38BDF8"},
 ]
 
 _CATEGORY_ICON = {c["key"]: c["icon"] for c in TOOL_CATEGORIES}
 
 # 工具名 → (分类, module, action)
 TOOL_META: dict[str, tuple[str, str, str]] = {
-    "get_online_devices": ("设备管理", "devices", "list_online"),
+    # 设备管理：设备池台账，不操作手机
     "list_devices": ("设备管理", "devices", "list_all"),
     "acquire_device": ("设备管理", "devices", "acquire"),
     "release_device": ("设备管理", "devices", "release"),
-    "list_apps": ("设备管理", "devices", "list_apps"),
-    "device_action": ("设备管理", "devices", "action"),
-    "click_ratio": ("设备管理", "devices", "click_ratio"),
-    "drag_ratio": ("设备管理", "devices", "drag_ratio"),
-    "xpath_action": ("设备管理", "devices", "xpath_action"),
+    # 设备控制：会在手机上产生副作用，可整类关闭
+    "app_control": ("设备控制", "devices", "app_control"),
+    "tap_screen": ("设备控制", "devices", "tap_screen"),
+    "swipe_screen": ("设备控制", "devices", "swipe_screen"),
+    "press_key": ("设备控制", "devices", "press_key"),
+    "input_text": ("设备控制", "devices", "input_text"),
+    "click_ratio": ("设备控制", "devices", "click_ratio"),
+    "drag_ratio": ("设备控制", "devices", "drag_ratio"),
+    "xpath_action": ("设备控制", "devices", "xpath_action"),
+    # 设备信息：只读，但要连设备取数
+    "list_apps": ("设备信息", "devices", "list_apps"),
+    "current_app": ("设备信息", "devices", "current_app"),
     "screenshot_page": ("设备检查器", "inspector", "screenshot"),
-    "list_page_flows": ("工作流", "workflow", "list_page_flows"),
-    "get_page_flow": ("工作流", "workflow", "get_page_flow"),
+    "ocr_page": ("视觉识别工具", "inspector", "ocr"),
+    "list_page_flows": ("页面流工具", "workflow", "list_page_flows"),
+    "get_page_flow": ("页面流工具", "workflow", "get_page_flow"),
 }
 
 
@@ -445,3 +536,142 @@ def resolve_by_module_action(module: str, action: str):
         if m == module and a == action:
             return TOOLS[name][0]
     return None
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 调试：入参 schema + 按名调用（JWT 管理面，非内部网关）
+# ═══════════════════════════════════════════════════════════════════
+
+
+class ToolNotFoundError(LookupError):
+    """平台工具名未在 TOOLS 注册。"""
+
+
+def _annotation_type_name(annotation) -> str:
+    """类型注解 → 调试表单用的简单类型名（str/int/float/bool）。"""
+    if annotation is inspect.Parameter.empty:
+        return "str"
+    if isinstance(annotation, str):
+        base = annotation.split("|", 1)[0].strip()
+        if base in ("int", "float", "bool", "str"):
+            return base
+        return "str"
+    if annotation is int:
+        return "int"
+    if annotation is float:
+        return "float"
+    if annotation is bool:
+        return "bool"
+    return "str"
+
+
+def _coerce_param(value, annotation):
+    """按注解把表单/JSON 值转成工具期望类型；无法转换则 ValueError。"""
+    type_name = _annotation_type_name(annotation)
+    if value is None:
+        return None
+    if type_name == "bool":
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            low = value.strip().lower()
+            if low in ("true", "1", "yes"):
+                return True
+            if low in ("false", "0", "no"):
+                return False
+        raise ValueError(f"无法转换为 bool: {value!r}")
+    if type_name == "int":
+        try:
+            return int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"无法转换为 int: {value!r}") from exc
+    if type_name == "float":
+        try:
+            return float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"无法转换为 float: {value!r}") from exc
+    return str(value) if value is not None else ""
+
+
+def _normalize_debug_result(result):
+    """工具返回 → 可 JSON 化对象（str 尝试 parse，与内部网关语义一致）。"""
+    if isinstance(result, str):
+        try:
+            return json.loads(result)
+        except (json.JSONDecodeError, TypeError):
+            return result
+    return result
+
+
+# 调试候选登记：工具名 → 参数名 → 候选来源标识。
+# 命中的参数在 schema 里声明候选来源，由 HTTP 视图按请求者身份解析成候选清单
+# （见 views_tool_debug_drf）。只登记「需要 serial 并经开引擎取数」的设备管理工具：
+# acquire/release 是设备池占用记账、不操作手机，不提供候选。
+DEBUG_PARAM_OPTIONS: dict[tuple[str, str], str] = {
+    ("list_apps", "serial"): "devices:available",
+    ("input_text", "serial"): "devices:available",
+    ("tap_screen", "serial"): "devices:available",
+    ("swipe_screen", "serial"): "devices:available",
+    ("press_key", "serial"): "devices:available",
+    ("current_app", "serial"): "devices:available",
+    ("click_ratio", "serial"): "devices:available",
+    ("drag_ratio", "serial"): "devices:available",
+    ("xpath_action", "serial"): "devices:available",
+}
+
+
+def get_tool_debug_schema(name: str) -> dict:
+    """按工具名返回调试用入参 schema（不含 user_id）。未注册则 ToolNotFoundError。"""
+    if name not in TOOLS:
+        raise ToolNotFoundError(name)
+    func, read_only = TOOLS[name]
+    parameters = []
+    for pname, param in inspect.signature(func).parameters.items():
+        if pname == "user_id":
+            continue
+        has_default = param.default is not inspect.Parameter.empty
+        entry = {
+            "name": pname,
+            "type": _annotation_type_name(param.annotation),
+            "required": not has_default,
+        }
+        if has_default:
+            entry["default"] = param.default
+        options_source = DEBUG_PARAM_OPTIONS.get((name, pname))
+        if options_source:
+            entry["options_source"] = options_source
+        parameters.append(entry)
+    return {
+        "name": name,
+        "summary": (func.__doc__ or "").strip().split("\n")[0],
+        "read_only": read_only,
+        "parameters": parameters,
+    }
+
+
+def invoke_platform_tool(name: str, user_id: str, params: dict | None = None):
+    """按名调用平台工具：丢弃 body.user_id，拒绝未知键，注入 JWT user_id。"""
+    if name not in TOOLS:
+        raise ToolNotFoundError(name)
+    func, _read_only = TOOLS[name]
+    raw = dict(params or {})
+    raw.pop("user_id", None)
+
+    sig = inspect.signature(func)
+    allowed = {pname for pname in sig.parameters if pname != "user_id"}
+    unknown = set(raw) - allowed
+    if unknown:
+        raise ValueError(f"未知参数: {', '.join(sorted(unknown))}")
+
+    kwargs = {}
+    for key, value in raw.items():
+        kwargs[key] = _coerce_param(value, sig.parameters[key].annotation)
+
+    for pname, param in sig.parameters.items():
+        if pname == "user_id":
+            continue
+        if param.default is inspect.Parameter.empty and pname not in kwargs:
+            raise ValueError(f"缺少必填参数: {pname}")
+
+    result = func(user_id=str(user_id or ""), **kwargs)
+    return _normalize_debug_result(result)

@@ -86,6 +86,42 @@ def _detect_skill_features(file_names: list[str]) -> str:
     return ", ".join(parts) if parts else "Unknown"
 
 
+def _skill_folder_name(request) -> str:
+    """请求声明的 skill 名（即用户选择的文件夹名）。"""
+    name = (request.data.get("name") or "").strip()
+    if not name:
+        raise ValidationError("name is required")
+    if "/" in name or "\\" in name or ".." in name:
+        raise ValidationError(f"非法文件夹名: {name}")
+    return name
+
+
+def _skill_file_paths(request, files) -> list[str]:
+    """读取客户端提交的每个文件的相对路径（与 `files` 一一对应且顺序一致）。
+
+    Django 会把上传文件名归一为 basename（`UploadedFile._set_name` 内的
+    `os.path.basename`），目录层级无法从文件名取得，只能由客户端用独立的
+    `paths` 字段显式提交。缺了它就是非法请求——不能拿「文件名里有没有斜杠」
+    当判据，那会把合法的文件夹上传全部挡死。
+    """
+    raw_paths = request.data.getlist("paths")
+    if not raw_paths:
+        raise ValidationError("缺少文件的相对路径信息，请重新选择整个 Skill 文件夹后再上传")
+    if len(raw_paths) != len(files):
+        raise ValidationError(
+            f"相对路径数量({len(raw_paths)})与文件数量({len(files)})不一致，请重新选择 Skill 文件夹"
+        )
+    rel_paths = []
+    for raw in raw_paths:
+        rel = (raw or "").strip().replace("\\", "/")
+        if not rel:
+            raise ValidationError("存在缺少相对路径的文件，请重新选择 Skill 文件夹")
+        if rel.startswith("/") or ".." in rel.split("/"):
+            raise ValidationError(f"非法相对路径: {raw}")
+        rel_paths.append(rel)
+    return rel_paths
+
+
 # ═══════════════════════════════════════════════════════════════════
 # 共享工具箱 ViewSet
 # ═══════════════════════════════════════════════════════════════════
@@ -202,26 +238,25 @@ class ToolboxViewSet(
         if not files:
             raise ValidationError("no files uploaded")
 
-        # 只接受文件夹上传：webkitRelativePath 带路径分隔，取第一段为文件夹名
-        first_rel = files[0].name.replace("\\", "/")
-        if "/" not in first_rel:
-            raise ValidationError("只接受文件夹上传，请选择包含 SKILL.md 的文件夹")
-        folder_name = first_rel.split("/", 1)[0].strip()
-        if not folder_name or ".." in folder_name:
-            raise ValidationError(f"非法文件夹名: {folder_name}")
+        # 相对路径由客户端显式提交（见 _skill_file_paths），文件夹名以请求声明的 name 为准
+        folder_name = _skill_folder_name(request)
+        rel_paths = _skill_file_paths(request, files)
 
-        # 所有文件必须在同一文件夹下，且无路径穿越
-        for f in files:
-            rel = f.name.replace("\\", "/")
-            if not rel.startswith(folder_name + "/") or ".." in rel:
-                raise ValidationError(f"非法文件名: {f.name}")
+        # 每个文件都必须在该文件夹内（含子目录），且顶层目录名与 name 一致
+        for rel in rel_paths:
+            top, _, sub = rel.partition("/")
+            if not sub:
+                raise ValidationError(f"只接受文件夹上传，请选择包含 SKILL.md 的文件夹: {rel}")
+            if top != folder_name:
+                raise ValidationError(f"文件不在 skill 文件夹 {folder_name}/ 下: {rel}")
 
         # 校验根目录 SKILL.md 的 frontmatter（name / description 必填）
-        skill_md_file = next(
-            (f for f in files if f.name.replace("\\", "/") == f"{folder_name}/SKILL.md"), None
+        skill_md_index = next(
+            (i for i, rel in enumerate(rel_paths) if rel == f"{folder_name}/SKILL.md"), None
         )
-        if skill_md_file is None:
+        if skill_md_index is None:
             raise ValidationError("文件夹根目录缺少 SKILL.md")
+        skill_md_file = files[skill_md_index]
         skill_md_raw = skill_md_file.read().decode("utf-8")
         skill_md_file.seek(0)
         try:
@@ -230,18 +265,20 @@ class ToolboxViewSet(
             raise ValidationError(f"SKILL.md 解析失败: {e}")
         if not str(parsed.get("name") or "").strip():
             raise ValidationError("SKILL.md 缺少 frontmatter 的 name 字段")
-        if not str(parsed.get("description") or "").strip():
+        skill_description = str(parsed.get("description") or "").strip()
+        if not skill_description:
             raise ValidationError("SKILL.md 缺少 frontmatter 的 description 字段")
 
         # 文件类型 + 大小校验
         total_size = 0
         file_names = []
-        for f in files:
-            _, ext = os.path.splitext(f.name)
+        for f, rel in zip(files, rel_paths):
+            _, ext = os.path.splitext(rel)
             if ext.lower() not in _SKILL_EXTENSIONS:
-                raise ValidationError(f"不支持的文件类型: {ext or '无后缀'}")
+                raise ValidationError(f"不支持的文件类型: {ext or '无后缀'}（{rel}）")
             total_size += f.size
-            file_names.append(f.name)
+            # 特征统计沿用 basename，与既有 ensure_disk_skills 的口径一致
+            file_names.append(os.path.basename(rel))
         size_mb = total_size / (1024 * 1024)
         if size_mb > _SHARED_SKILL_MAX_MB:
             raise ValidationError(f"总大小 {size_mb:.1f}MB 超过 {_SHARED_SKILL_MAX_MB}MB 限制")
@@ -251,18 +288,22 @@ class ToolboxViewSet(
         if os.path.isdir(skill_dir):
             raise ValidationError(f"已存在同名 skill 文件夹: {folder_name}")
 
-        # DB 记录（name = 文件夹名）
+        # DB 记录（name = 文件夹名；介绍取自 SKILL.md frontmatter，与本地 Skill 同一来源）
         features = _detect_skill_features(file_names)
         item = api.create_shared_skill(
-            folder_name, len(files), total_size, features, origin="uploaded"
+            folder_name,
+            len(files),
+            total_size,
+            features,
+            origin="uploaded",
+            description=skill_description,
         )
 
-        # 写文件到 engines/ai/skills/{folder_name}/（去掉文件夹名前缀）
+        # 写文件到 engines/ai/skills/{folder_name}/，按客户端相对路径还原子目录层级
         os.makedirs(skill_dir, exist_ok=True)
-        for f in files:
-            rel = f.name.replace("\\", "/")
-            rel = rel[len(folder_name) + 1 :]
-            dest = os.path.join(skill_dir, rel)
+        for f, rel in zip(files, rel_paths):
+            rel_in_skill = rel[len(folder_name) + 1 :]
+            dest = os.path.join(skill_dir, *rel_in_skill.split("/"))
             os.makedirs(os.path.dirname(dest) or skill_dir, exist_ok=True)
             with open(dest, "wb") as dst:
                 for chunk in f.chunks():

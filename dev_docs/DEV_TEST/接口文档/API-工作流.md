@@ -47,10 +47,11 @@
 
 - **基础路径**：`/api/workflow/`（`config/urls.py` 挂载 `apps.workflow.urls`）。
 - **层级**：`WorkflowPrototype`（原型）→ `WorkflowDirectory`（目录）→ `WorkflowDocument`（页面流）。
-- **尾斜杠**：DRF router 路径**带尾斜杠**；legacy 路径**不带尾斜杠**。二者并存、行为一致。
+- **尾斜杠**：DRF router 与 `views.py` 中登记的 legacy 路径均**带尾斜杠**（`APPEND_SLASH=False`）。
+- **重叠 GET 只达 router**：`apps/workflow/urls.py` 为 `urlpatterns = router.urls + legacy_patterns`。与 router 相同的 GET（`/prototypes/`、`/directories/`、`/documents/` 及带 id 的详情/export）**只**命中 ViewSet + 标准信封 `{status, data}`；下表 legacy 同行不可达。仍可达的 legacy 是独有后缀（如 `POST .../create/`、`POST .../import/`）。
 - **响应信封（双口径，本模块特例 ARCH-09）**：
   - router 路径走全局标准信封：成功 `{status: true, data}`，失败 `{status: false, message}`。
-  - legacy 平铺路径：`{status, prototype|prototypes|directory|document|documents|directories|tree|envelope, ...}`，**无 `data` 层**。
+  - 仍可达的 legacy 平铺路径：`{status, prototype|directory|document|envelope, ...}`，**无 `data` 层**。
 - **鉴权**：全部端点需登录。
 - **无分页**：列表返回完整数组。
 - **doc_type 仅支持 `page_flow`**。
@@ -790,7 +791,7 @@ envelope 对象字段：
 1. **router 导入路径带下划线**：`/documents/_import/`（方法名 `_import` 直接成为 URL 段），与 `views_api.py` docstring 中的 `/documents/import/` 不符，以 URL 注册为准。
 2. **`doc_count` 字段不一致**：`WorkflowDirectorySerializer` 声明了 `doc_count`，但 `WorkflowDirectory` 模型无该属性且查询未 `annotate`，故 router 目录 create/retrieve/update 响应**实际不返回** `doc_count`；而列表/树/移动（走 `serialize_directory`）**返回** `doc_count`。
 3. **信封双口径**：router 走 `{status, data}`；legacy 平铺（无 `data`）。两套路径并存，行为一致（ARCH-09）。
-4. **非 HTTP 数据出口（不入本文档端点表）**：`api.py` 导出的 `get_document_digest`、`list_document_summaries` 仅供 AI 工具进程内只读直调；`list_document_summaries` 支持 `prototype_id` 过滤。
+4. **非 HTTP 数据出口（不入本文档端点表）**：`api.py` 导出的 `get_document_digest`、`list_document_summaries` 仅供 AI 工具进程内只读直调。`list_document_summaries` 支持 `prototype_id`/`query`/`directory_id` 过滤，`limit` 缺省为 **None = 不限量**（要"列出全部"时不必猜条数）；每行含 `directory_path`（祖先目录名以 `/` 连接）与 `directory_depth`（根目录下为 1，未归入目录为 0、`directory_id` 为 null），层级由一次取数 + 记忆化构链得到（含环保护）。
 5. **本模块无 WS/SSE**（见 `apps/workflow/AGENTS.md`）。
 6. **`doc_type` 仅 `page_flow`**：其它类型新建/导入 400，列表查询返回空。
 7. **原型作用域**：目录/文档须归属 `prototype_id`；禁止跨原型移动；历史数据已迁入「默认原型」。

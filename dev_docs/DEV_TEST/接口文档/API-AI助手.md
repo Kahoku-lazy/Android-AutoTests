@@ -61,7 +61,7 @@
 | 设备提示词读取 | GET /api/ai/device-prompts/ | 需登录(Bearer) | 规划/执行/验收系统提示词 |
 | 设备提示词更新 | POST /api/ai/device-prompts/update/ | 需登录(Bearer) | 更新三份提示词（仅超管） |
 | 平台工具启停 | POST /api/ai/platform-tools/toggle/ | 需登录(Bearer) | 全局启停（仅超管） |
-| 平台工具调试 schema | GET /api/ai/platform-tools/{name} | 需登录(Bearer) | 入参 schema（剥 user_id） |
+| 平台工具调试 schema | GET /api/ai/platform-tools/{name} | 需登录(Bearer) | 入参 schema（剥 user_id；设备参数附候选） |
 | 平台工具调试调用 | POST /api/ai/platform-tools/{name}/invoke | 需登录(Bearer) | 真实调用；写工具仅超管 |
 | **legacy tool gateway** | | | |
 | 工具 schema | GET /api/ai/tools/schemas/ | 内部令牌 | 全部工具定义（服务间） |
@@ -602,9 +602,9 @@
   "data": {
     "categories": [                     # 按分类聚合
       {
-        "key": "设备管理",              # 分类名
+        "key": "设备管理",              # 分类名（设备池台账，不操作手机）
         "icon": "📱",                   # 分类图标
-        "color": "#6BCB77",             # 分类颜色
+        "color": "#6BCB77",             # 分类颜色（T0 色阶 --color-green-61）
         "tools": [                      # 该分类下工具
           {
             "name": "list_devices",     # 工具名
@@ -614,11 +614,55 @@
             "enabled": true             # 全局启用状态
           }
         ]
+      },
+      {
+        "key": "设备控制",              # 分类名（会在手机上产生副作用，可整类停用）
+        "icon": "🎮",
+        "color": "#F7C948",             # T0 色阶 --color-yellow-63
+        "tools": [
+          {
+            "name": "app_control",      # 启停 App（另有 tap_screen / swipe_screen / press_key / input_text / click_ratio / drag_ratio / xpath_action）
+            "summary": "启动或停止指定设备上的 App；每次返回 package/activity。",
+            "icon": "🎮",
+            "read_only": false,
+            "enabled": true
+          }
+        ]
+      },
+      {
+        "key": "设备信息",              # 分类名（只读，但要连设备取数）
+        "icon": "📋",
+        "color": "#4ECDC4",             # T0 色阶 --color-teal-49
+        "tools": [
+          {
+            "name": "current_app",      # 只读当前前台（另有 list_apps）
+            "summary": "只读设备当前前台 App（package/activity/pid），不改变设备状态。",
+            "icon": "📋",
+            "read_only": true,
+            "enabled": true
+          }
+        ]
+      },
+      {
+        "key": "视觉识别工具",           # 分类名（OCR 文本与坐标）
+        "icon": "🔍",
+        "color": "#A78BFA",
+        "tools": [
+          {
+            "name": "ocr_page",         # OCR 识别设备当前页面文本
+            "summary": "OCR 识别设备当前页面的文本，返回文本、置信度、原始角点坐标与归一化中心点。",
+            "icon": "🔍",
+            "read_only": true,          # 只读：无设备副作用
+            "enabled": true
+          }
+        ]
       }
     ]
   }
 }
 ```
+
+> `categories` 恒为 **6 类**，顺序同后端 `TOOL_CATEGORIES`：设备管理（台账 3）/ 设备控制（有手机副作用的 8 个）/ 设备信息（只读连设备 2）/ 设备检查器（1）/ 视觉识别工具（1）/ 页面流工具（2）。分类是工具箱「整类启停」的单位。
 
 #### 错误码与文案
 
@@ -1293,6 +1337,10 @@
 
 ### 6.6 上传共享 Skill 接口：POST /api/ai/toolbox/upload-skill/
 
+以「文件夹」为单位上传自定义 Skill。浏览器 `<input type="file" webkitdirectory>` 选中的文件夹里，
+每个文件的**相对路径**由前端经 `paths` 字段显式提交——Django 会把上传文件名归一为 basename
+（`UploadedFile._set_name` 内的 `os.path.basename`），文件名里拿不到目录层级。
+
 | 项 | 值 |
 |---|---|
 | 鉴权 | 需登录(Bearer) |
@@ -1302,15 +1350,22 @@
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| files | file[] | 是 | 多个文件（`request.FILES.getlist("files")`） |
-| name | string | 是 | skill 名称（非空） |
+| files | file[] | 是 | 文件夹内全部文件（`request.FILES.getlist("files")`） |
+| paths | string[] | 是 | 与 `files` **一一对应且顺序一致**的相对路径，值取浏览器的 `webkitRelativePath`（如 `my-skill/references/a.md`） |
+| name | string | 是 | skill 名 = 文件夹名；必须与 `paths` 的顶层目录名一致 |
+
+约束：文件夹根目录必须存在 `SKILL.md`，其 frontmatter 必须含非空 `name` 与 `description`；
+该 Skill 的**介绍**（列表返回的 `description`）即取自 `SKILL.md` frontmatter 的 `description`（去首尾空白），
+与本地 Skill 同一来源——不使用文件数量/类型统计摘要；
+文件后缀必须在白名单内（`py/sh/bash/js/ts/json/yaml/yml/md/markdown/txt/toml/cfg/ini/env`）；
+整个文件夹总大小不超过 50MB；`engines/ai/skills/{文件夹名}` 已存在时拒绝且不改动既有内容。
 
 #### 成功响应（200）
 
 ```json
 {
   "status": true,
-  "data": { "id": 1 }                   # 新 skill 项 ID（文件存 engines/ai/skills/{id}/）
+  "data": { "id": 1 }                   # 新 skill 项 ID（文件存 engines/ai/skills/{文件夹名}/，子目录层级保留）
 }
 ```
 
@@ -1321,9 +1376,21 @@
 | 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
 | 400 | no files uploaded | 无文件 |
 | 400 | name is required | name 缺失或空 |
-| 400 | 非法文件名: {name} | 文件名含 `..` 或以 `/` 开头 |
-| 400 | 不支持的文件类型: {ext或'无后缀'} | 后缀不在白名单 |
+| 400 | 非法文件夹名: {name} | name 含 `/`、`\` 或 `..` |
+| 400 | 缺少文件的相对路径信息，请重新选择整个 Skill 文件夹后再上传 | 未提交 `paths` |
+| 400 | 相对路径数量({n})与文件数量({m})不一致，请重新选择 Skill 文件夹 | `paths` 与 `files` 数量不等 |
+| 400 | 存在缺少相对路径的文件，请重新选择 Skill 文件夹 | 某条相对路径为空 |
+| 400 | 非法相对路径: {raw} | 绝对路径或含 `..` 段 |
+| 400 | 只接受文件夹上传，请选择包含 SKILL.md 的文件夹: {rel} | 相对路径缺少子路径（单文件） |
+| 400 | 文件不在 skill 文件夹 {name}/ 下: {rel} | 顶层目录名与 `name` 不一致 |
+| 400 | 文件夹根目录缺少 SKILL.md | 根目录无 `SKILL.md` |
+| 400 | SKILL.md 解析失败: {err} | frontmatter 无法解析 |
+| 400 | SKILL.md 缺少 frontmatter 的 name/description 字段 | frontmatter 字段缺失或为空 |
+| 400 | 不支持的文件类型: {ext或'无后缀'}（{rel}） | 后缀不在白名单 |
 | 400 | 总大小 {size_mb}MB 超过 50MB 限制 | 总大小超 50MB |
+| 400 | 已存在同名 skill 文件夹: {name} | 目标目录已存在 |
+
+> 校验全部在创建记录与写盘之前完成；失败时既不落库也不写文件。
 
 ---
 
@@ -1787,6 +1854,35 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 > `parameters` **不含** `user_id`（由服务端从 JWT 注入）。停用工具仍可查询 schema。
 
+带 `options` 的参数是**候选值**：调试页把它渲染为可选择控件，同时保留手输。
+
+```json
+{
+  "status": true,
+  "data": {
+    "name": "tap_screen",
+    "summary": "按像素坐标点击或长按设备屏幕",
+    "read_only": false,
+    "parameters": [
+      {
+        "name": "serial",
+        "type": "str",
+        "required": true,
+        "options": [{ "value": "RF8N21MSW7A", "label": "Pixel 6 (RF8N21MSW7A)" }]
+      },
+      { "name": "mode", "type": "str", "required": false, "default": "click" },
+      { "name": "x", "type": "int", "required": false, "default": 0 },
+      { "name": "y", "type": "int", "required": false, "default": 0 }
+    ]
+  }
+}
+```
+
+> - `options[].value` 可直接提交；`options[].label` 为展示标签。
+> - 设备类候选（当前为 `list_apps` / `input_text` / `tap_screen` / `swipe_screen` / `press_key` / `current_app` / `click_ratio` / `drag_ratio` / `xpath_action` 的 `serial`）只返回**对请求者可见、在线且未被占用**的设备，可见性口径与设备管理列表一致。
+> - 候选为空数组表示当前没有可选设备，仍可手输后提交。
+> - `acquire_device` / `release_device` 属设备池占用记账、不操作手机，其 `serial` 不带候选。
+
 #### 错误码与文案
 
 | HTTP | message | 触发条件 |
@@ -1826,8 +1922,12 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 |---|---|---|
 | 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
 | 403 | Forbidden | 非超管调用写工具 |
-| 400 | 未知参数 / 缺少必填参数 / 工具执行失败… | 入参或执行错误 |
+| 400 | 未知参数 / 缺少必填参数 / 请求体必须是 JSON 对象 / 设备未注册… | 入参或前置条件错误（请求者可自行修正） |
 | 404 | tool not found | name 不在平台工具表 |
+| 500 | 工具执行失败: … | **工具或引擎内部故障**（实现缺陷、设备侧异常）；服务端同时记录含工具名与请求者的错误日志 |
+
+> 失败按成因区分状态码：4xx = 请求者可修正的入参与前置条件问题；5xx = 工具/引擎内部故障。
+> **不得**把内部故障折成 4xx（否则排查时会把工具 Bug 误判成参数问题）。
 
 ---
 
@@ -1865,7 +1965,8 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
   "status": true,
   "data": {
     "categories": [                     # 工具分类元数据
-      { "key": "设备管理", "icon": "📱", "color": "#6BCB77" }
+      { "key": "设备管理", "icon": "📱", "color": "#6BCB77" },
+      { "key": "视觉识别工具", "icon": "🔍", "color": "#A78BFA" }
     ],
     "tools": [                          # 全部工具 schema
       {

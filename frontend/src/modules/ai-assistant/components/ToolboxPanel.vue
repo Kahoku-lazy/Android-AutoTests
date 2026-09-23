@@ -8,7 +8,7 @@
         </div>
         <div class="tb-live-stats">
           <span
-            v-for="src in ASSEMBLY_SOURCES"
+            v-for="src in gatedLiveSources"
             :key="src.key"
             class="tb-stat"
             :class="isGateOn(src.gateKey) ? 'on' : 'off'"
@@ -64,15 +64,15 @@
           :key="src.key"
           type="button"
           class="tb-source"
-          :class="{ active: activeSource === src.key, dimmed: !isGateOn(src.gateKey) }"
+          :class="{ active: activeSource === src.key, dimmed: src.gateKey && !isGateOn(src.gateKey) }"
           @click="activeSource = src.key"
         >
           <div class="tb-source-top">
             <span class="tb-source-name">{{ src.name }}</span>
-            <span v-if="!isGateOn(src.gateKey)" class="tb-badge-off">未装配</span>
+            <span v-if="src.gateKey && !isGateOn(src.gateKey)" class="tb-badge-off">未装配</span>
           </div>
           <div class="tb-source-meta">{{ sourceMeta(src) }}</div>
-          <div class="tb-source-gate" @click.stop>
+          <div v-if="src.gateKey" class="tb-source-gate" @click.stop>
             <span>交给助手</span>
             <el-switch
               :model-value="isGateOn(src.gateKey)"
@@ -89,10 +89,15 @@
           <div>
             <h3 class="tb-cat-title">{{ activeSourceDef.name }}</h3>
             <p class="tb-cat-sub">
-              {{ activeSourceDef.desc }} ·
-              {{ isGateOn(activeSourceDef.gateKey)
-                ? '开关立即影响生效清单'
-                : '总闸关闭：下面的启停不会进入运行时' }}
+              <template v-if="activeSource === 'prompt'">
+                {{ activeSourceDef.desc }} · 始终注入运行时 · Markdown 渲染
+              </template>
+              <template v-else>
+                {{ activeSourceDef.desc }} ·
+                {{ isGateOn(activeSourceDef.gateKey)
+                  ? '开关立即影响生效清单'
+                  : '总闸关闭：下面的启停不会进入运行时' }}
+              </template>
             </p>
           </div>
           <div v-if="props.canManage" class="tb-cat-actions">
@@ -100,10 +105,24 @@
               + Skill 文件夹
               <input type="file" webkitdirectory multiple hidden @change="onSkillFolderPicked" />
             </label>
+            <template v-if="activeSource === 'prompt'">
+              <button
+                v-if="!promptEditing"
+                type="button"
+                class="tb-btn tb-btn-primary"
+                @click="startEdit"
+              >编辑</button>
+              <template v-else>
+                <button type="button" class="tb-btn" :disabled="promptSaving" @click="cancelEdit">取消</button>
+                <button type="button" class="tb-btn tb-btn-primary" :disabled="promptSaving" @click="save">
+                  {{ promptSaving ? '保存中…' : '保存' }}
+                </button>
+              </template>
+            </template>
           </div>
         </div>
 
-        <div class="tb-search">
+        <div v-if="activeSource !== 'prompt'" class="tb-search">
           <input
             v-model="searchQuery"
             type="search"
@@ -163,6 +182,11 @@
                       <span class="pt-tool-state" :class="tool.enabled ? 'on' : 'off'">
                         {{ tool.enabled ? '已启用' : '已停用' }}
                       </span>
+                      <button
+                        type="button"
+                        class="pt-action-btn pt-debug-btn"
+                        @click.stop="openToolDebug(tool.name)"
+                      >调试</button>
                       <el-switch
                         v-if="props.canManage"
                         class="pt-tool-sw"
@@ -178,7 +202,7 @@
             </el-collapse>
           </template>
 
-          <template v-else>
+          <template v-else-if="activeSource === 'skill'">
             <EmptyState
               v-if="!loading && !filteredSkillItems.length"
               icon="📁"
@@ -221,6 +245,40 @@
               </div>
             </div>
           </template>
+
+          <template v-else>
+            <el-collapse v-model="promptExpanded" class="tb-prompt-collapse">
+              <el-collapse-item
+                v-for="role in PROMPT_ROLES"
+                :key="role.key"
+                :name="role.key"
+              >
+                <template #title>
+                  <div class="tb-prompt-head">
+                    <span class="tb-prompt-name">{{ role.label }}</span>
+                    <span class="tb-prompt-key">{{ role.key }}</span>
+                  </div>
+                </template>
+                <div v-if="promptEditing" class="tb-prompt-edit">
+                  <textarea
+                    v-model="promptDraft[role.key]"
+                    class="tb-prompt-textarea"
+                    rows="12"
+                    :placeholder="`${role.label} Markdown`"
+                  />
+                  <article
+                    class="tb-prompt-md tb-prompt-preview"
+                    v-html="renderMd(promptDraft[role.key])"
+                  />
+                </div>
+                <article
+                  v-else
+                  class="tb-prompt-md"
+                  v-html="renderMd(promptSaved[role.key])"
+                />
+              </el-collapse-item>
+            </el-collapse>
+          </template>
         </div>
       </section>
     </div>
@@ -228,16 +286,25 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import { useToolbox } from '../composables/useToolbox'
 import { usePlatformTools } from '../composables/usePlatformTools'
 import { usePlatformConfig } from '../composables/usePlatformConfig'
 import { useToolboxAssembly } from '../composables/useToolboxAssembly'
-import { skillViewerRoute } from '../constants'
+import { useDevicePrompts } from '../composables/useDevicePrompts'
+import { renderSkillMarkdown } from '../helpers/skill-markdown'
+import { gatedSources } from '../helpers/toolbox-assembly'
+import { skillViewerRoute, toolDebugRoute } from '../constants'
 import type { AssemblySourceDef } from '../helpers/toolbox-assembly'
 import type { SharedToolItem } from '../api/toolbox'
+
+const PROMPT_ROLES = [
+  { key: 'planner' as const, label: '规划模型 Planner' },
+  { key: 'executor' as const, label: '执行模型 Executor' },
+  { key: 'verifier' as const, label: '验收模型 Verifier' },
+]
 
 const props = defineProps<{ canManage?: boolean }>()
 const router = useRouter()
@@ -273,13 +340,31 @@ const {
   sharedItems: items,
 })
 
+const {
+  prompts: promptSaved,
+  draft: promptDraft,
+  loading: promptLoading,
+  saving: promptSaving,
+  editing: promptEditing,
+  startEdit, cancelEdit, save,
+} = useDevicePrompts()
+
+/** 默认只展开规划；编辑时展开全部便于对照 */
+const promptExpanded = ref<string[]>(['planner'])
+watch(promptEditing, (on) => {
+  if (on) promptExpanded.value = PROMPT_ROLES.map((r) => r.key)
+})
+
+const gatedLiveSources = computed(() => gatedSources())
+
 const catalogLoading = computed(() => {
   if (activeSource.value === 'biz') return platformLoading.value
+  if (activeSource.value === 'prompt') return promptLoading.value
   return loading.value
 })
 
 function armSource(src: AssemblySourceDef) {
-  if (!props.canManage) return
+  if (!props.canManage || !src.gateKey) return
   toggleFlag(src.gateKey, true)
   activeSource.value = src.key
 }
@@ -287,6 +372,14 @@ function armSource(src: AssemblySourceDef) {
 function openSkill(item: SharedToolItem) {
   if (item.missing) return
   router.push(skillViewerRoute(item.name))
+}
+
+function openToolDebug(name: string) {
+  router.push(toolDebugRoute(name))
+}
+
+function renderMd(src: string) {
+  return renderSkillMarkdown(src || '_（空）_')
 }
 </script>
 

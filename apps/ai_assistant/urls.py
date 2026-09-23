@@ -18,6 +18,7 @@ from .views_drf import (
     AgentTaskDeleteAPIView,
     AgentTaskDetailAPIView,
     AgentTaskListAPIView,
+    AgentTaskRerunAPIView,
     AgentViewSet,
     AvailableSkillsAPIView,
     AvailableToolsAPIView,
@@ -35,6 +36,8 @@ from .views_knowledge_drf import (
     KnowledgeReindexAPIView,
     KnowledgeStatusAPIView,
 )
+from .views_prompts_drf import DevicePromptsAPIView
+from .views_tool_debug_drf import PlatformToolInvokeAPIView, PlatformToolSchemaAPIView
 from .views_toolbox_drf import SkillFileAPIView, SkillTreeAPIView, ToolboxViewSet
 from .views_upload_drf import UploadAvatarAPIView, UploadFileAPIView
 
@@ -55,8 +58,20 @@ special_patterns = [
     path(
         "platform-tools/toggle/", PlatformToolToggleAPIView.as_view(), name="platform_tools_toggle"
     ),
+    path(
+        "platform-tools/<str:name>/",
+        PlatformToolSchemaAPIView.as_view(),
+        name="platform_tool_schema",
+    ),
+    path(
+        "platform-tools/<str:name>/invoke/",
+        PlatformToolInvokeAPIView.as_view(),
+        name="platform_tool_invoke",
+    ),
     path("platform-config/", PlatformConfigAPIView.as_view(), name="platform_config"),
     path("platform-config/update/", PlatformConfigAPIView.as_view(), name="platform_config_update"),
+    path("device-prompts/", DevicePromptsAPIView.as_view(), name="device_prompts"),
+    path("device-prompts/update/", DevicePromptsAPIView.as_view(), name="device_prompts_update"),
     path("toolbox/skills/<str:name>/tree/", SkillTreeAPIView.as_view(), name="toolbox_skill_tree"),
     path("toolbox/skills/<str:name>/file/", SkillFileAPIView.as_view(), name="toolbox_skill_file"),
     # Workbench task board
@@ -74,6 +89,11 @@ special_patterns = [
         "agent-tasks/<int:task_id>/delete/",
         AgentTaskDeleteAPIView.as_view(),
         name="ai_agent_task_delete",
+    ),
+    path(
+        "agent-tasks/<int:task_id>/rerun/",
+        AgentTaskRerunAPIView.as_view(),
+        name="ai_agent_task_rerun",
     ),
     # Knowledge base
     path("knowledge/status/", KnowledgeStatusAPIView.as_view(), name="kb_status"),

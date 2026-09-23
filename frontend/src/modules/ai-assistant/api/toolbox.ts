@@ -94,7 +94,11 @@ export async function uploadSharedSkill(files: File[], name: string): Promise<Ag
   const formData = new FormData()
   formData.append('name', name)
   for (const file of files) {
-    formData.append('files', file, (file as unknown as { webkitRelativePath?: string }).webkitRelativePath || file.name)
+    // 服务端框架会把上传文件名归一为 basename，目录层级只能靠 paths 显式提交；
+    // files 与 paths 必须保持一一对应的提交顺序
+    const relativePath = file.webkitRelativePath || file.name
+    formData.append('files', file, relativePath)
+    formData.append('paths', relativePath)
   }
   const { data } = await djangoClient.post<AgentOpResponse>('/ai/toolbox/upload-skill/', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -199,11 +203,20 @@ export async function togglePlatformTool(payload: {
 
 // ── 平台工具调试（JWT schema + invoke，禁止走 /ai/tools/ 内部网关）──
 
+export interface PlatformToolOption {
+  /** 可直接提交的取值（如设备序列号） */
+  value: string
+  /** 展示标签（设备名称/型号 + 序列号） */
+  label: string
+}
+
 export interface PlatformToolParamSchema {
   name: string
   type: 'str' | 'int' | 'float' | 'bool' | string
   required: boolean
   default?: unknown
+  /** 服务端按请求者可见性给出的候选值；缺省 = 自由输入 */
+  options?: PlatformToolOption[]
 }
 
 export interface PlatformToolDebugSchema {

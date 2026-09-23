@@ -46,7 +46,7 @@
   align-items: center;
   gap: 6px;
   border: 2px solid var(--ink);
-  border-radius: 3px 6px 3px 6px;
+  border-radius: var(--el-border-radius-small);
   padding: var(--app-space-xs) 10px;
   font-size: var(--app-size-xs);
   font-weight: 700;
@@ -62,7 +62,7 @@
   align-items: center;
   gap: 6px;
   border: 2px solid var(--ink);
-  border-radius: 3px 6px 3px 6px;
+  border-radius: var(--el-border-radius-small);
   padding: 5px 10px;
   font-size: var(--app-size-xs);
   font-weight: 700;
@@ -70,7 +70,7 @@
   cursor: pointer;
   font-family: inherit;
   color: var(--ink);
-  transition: background var(--app-duration, 0.15s), transform var(--app-duration, 0.15s);
+  transition: background var(--app-duration), transform var(--app-duration);
 }
 .tb-chip:nth-child(3n+1) { transform: rotate(-0.5deg); }
 .tb-chip:nth-child(3n+2) { transform: rotate(0.4deg); }
@@ -110,7 +110,7 @@
   font-weight: 600;
   color: var(--app-text-secondary);
   border: 2px dashed var(--tb-unarmed-border);
-  border-radius: 3px 6px 3px 6px;
+  border-radius: var(--el-border-radius-small);
   padding: var(--app-space-xs) 10px;
   background: var(--app-bg-subtle);
   cursor: pointer;
@@ -157,13 +157,13 @@
   cursor: pointer;
   font-family: inherit;
   color: var(--ink);
-  transition: transform var(--app-duration, 0.15s), background var(--app-duration, 0.15s);
+  transition: transform var(--app-duration), background var(--app-duration);
 }
 .tb-source:nth-child(2) { transform: rotate(-0.4deg); }
 .tb-source:nth-child(3) { transform: rotate(0.35deg); }
 .tb-source:nth-child(4) { transform: rotate(-0.3deg); }
 .tb-source:nth-child(5) { transform: rotate(0.25deg); }
-.tb-source:hover { transform: rotate(0) scale(1.02); z-index: 2; }
+.tb-source:hover { transform: rotate(0) scale(1.02); z-index: var(--z-raised); }
 .tb-source.active {
   background: color-mix(in srgb, var(--c-ai) 16%, var(--app-bg-card));
   box-shadow: 2px 2px 0 var(--ink);
@@ -182,7 +182,7 @@
   background: var(--app-bg-subtle);
   border: 1.5px solid var(--tb-unarmed-border);
   color: var(--app-text-secondary);
-  border-radius: 3px 6px 3px 6px;
+  border-radius: var(--el-border-radius-small);
   padding: 1px 6px;
   font-size: var(--app-size-xs);
   font-weight: 800;
@@ -254,7 +254,7 @@
   box-shadow: 2px 2px 0 var(--ink);
   background: var(--app-bg-card);
   color: var(--ink);
-  transition: transform 0.12s, background 0.12s;
+  transition: transform var(--app-duration-fast), background var(--app-duration-fast);
 }
 .tb-btn:hover { background: var(--app-highlight); transform: translateY(-1px); }
 .tb-btn-primary { background: var(--c-ai); }
@@ -339,7 +339,7 @@
   color: var(--ink);
   background: color-mix(in srgb, var(--mc-color, var(--c-ai)) 22%, var(--app-bg-card));
   border: 1.5px solid var(--ink);
-  border-radius: 3px 6px 3px 6px;
+  border-radius: var(--el-border-radius-small);
 }
 .cat-actions {
   margin-left: auto;
@@ -355,7 +355,7 @@
   border: 1.5px solid var(--app-border-light);
   border-radius: var(--app-radius-md);
   padding: var(--app-space-sm) var(--app-space-md);
-  transition: border-color var(--app-duration, 0.15s), background var(--app-duration, 0.15s);
+  transition: border-color var(--app-duration), background var(--app-duration);
 }
 .pt-tool:hover { border-color: var(--mc-color, var(--c-ai)); }
 .pt-tool.flash,
@@ -387,6 +387,9 @@
   line-height: 1.5;
 }
 .pt-tool-sw { margin-left: auto; }
+.pt-debug-btn { margin-left: auto; }
+.pt-tool-sw + .pt-debug-btn,
+.pt-debug-btn + .pt-tool-sw { margin-left: 0; }
 .pt-tool-state {
   font-size: var(--app-size-xs);
   font-weight: 700;
@@ -425,12 +428,12 @@
   flex-direction: column;
   gap: var(--app-space-sm);
   box-shadow: 2px 2px 0 var(--ink);
-  transition: transform var(--app-duration, 0.15s);
+  transition: transform var(--app-duration);
 }
 .tb-card:nth-child(3n+1) { transform: rotate(-0.5deg); }
 .tb-card:nth-child(3n+2) { transform: rotate(0.4deg); }
 .tb-card:nth-child(3n+3) { transform: rotate(-0.3deg); }
-.tb-card:hover { transform: rotate(0) scale(1.02); z-index: 2; }
+.tb-card:hover { transform: rotate(0) scale(1.02); z-index: var(--z-raised); }
 .tb-card.clickable { cursor: pointer; }
 .tb-card-header { display: flex; align-items: center; gap: var(--app-space-sm); flex-wrap: wrap; }
 .tb-card-name {
@@ -444,7 +447,7 @@
   font-size: var(--app-size-xs);
   font-weight: 700;
   padding: 2px var(--app-space-sm);
-  border-radius: 3px 6px 3px 6px;
+  border-radius: var(--el-border-radius-small);
   border: 1.5px solid var(--ink);
 }
 .tb-type-mcp { background: var(--app-status-success-bg); color: var(--app-status-success-text); }
@@ -473,3 +476,144 @@
 .tb-card-btn:hover { background: var(--app-highlight); color: var(--ink); }
 .tb-card-btn.danger { color: var(--app-status-danger-text); }
 .tb-card-btn.danger:hover { background: var(--app-status-danger-bg); }
+
+/* ── 设备提示词（可折叠） ── */
+.tb-prompt-collapse {
+  --el-collapse-border-color: transparent;
+  border: none;
+}
+.tb-prompt-collapse :deep(.el-collapse-item) {
+  background: var(--app-bg-subtle);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  margin-bottom: var(--app-space-md);
+  overflow: hidden;
+}
+.tb-prompt-collapse :deep(.el-collapse-item__header) {
+  height: auto;
+  min-height: 44px;
+  line-height: 1.3;
+  padding: var(--app-space-sm) var(--app-space-md);
+  background: transparent;
+  border-bottom: none;
+  color: var(--ink);
+}
+.tb-prompt-collapse :deep(.el-collapse-item__wrap) {
+  background: transparent;
+  border-bottom: none;
+}
+.tb-prompt-collapse :deep(.el-collapse-item__content) {
+  padding: 0 var(--app-space-md) var(--app-space-md);
+}
+.tb-prompt-head {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  flex-wrap: wrap;
+}
+.tb-prompt-name {
+  font-weight: 800;
+  font-size: var(--app-size-sm);
+  color: var(--ink);
+}
+.tb-prompt-key {
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  padding: 2px 8px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--el-border-radius-small);
+  background: color-mix(in srgb, var(--c-ai) 18%, var(--app-bg-card));
+}
+.tb-prompt-edit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--app-space-md);
+}
+@media (max-width: 900px) {
+  .tb-prompt-edit { grid-template-columns: 1fr; }
+}
+.tb-prompt-textarea {
+  width: 100%;
+  min-height: 220px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--app-size-xs);
+  line-height: 1.5;
+  padding: var(--app-space-sm);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-card);
+  color: var(--ink);
+  resize: vertical;
+}
+.tb-prompt-md {
+  font-size: var(--app-size-sm);
+  line-height: 1.65;
+  color: var(--ink);
+  overflow-wrap: break-word;
+  word-break: break-word;
+  background: var(--app-bg-card);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  padding: var(--app-space-md);
+}
+.tb-prompt-md :deep(h1),
+.tb-prompt-md :deep(h2),
+.tb-prompt-md :deep(h3) {
+  margin: var(--app-space-sm) 0 var(--app-space-xs);
+  font-weight: 800;
+  color: var(--ink);
+}
+.tb-prompt-md :deep(h1) { font-size: var(--app-size-md); }
+.tb-prompt-md :deep(h2) { font-size: var(--app-size-sm); }
+.tb-prompt-md :deep(h3) { font-size: var(--app-size-sm); }
+.tb-prompt-md :deep(p) {
+  margin: 0 0 var(--app-space-sm);
+}
+/* 给序号/圆点留出内侧空间，避免 marker 溢出卡片 */
+.tb-prompt-md :deep(ul),
+.tb-prompt-md :deep(ol) {
+  margin: 0 0 var(--app-space-sm);
+  padding-inline-start: 1.75em;
+  list-style-position: outside;
+}
+.tb-prompt-md :deep(li) {
+  margin: 0.2em 0;
+  padding-inline-start: 0.15em;
+}
+.tb-prompt-md :deep(li > ul),
+.tb-prompt-md :deep(li > ol) {
+  margin-top: 0.2em;
+  margin-bottom: 0;
+}
+.tb-prompt-md :deep(pre),
+.tb-prompt-md :deep(code) {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--app-size-xs);
+}
+.tb-prompt-md :deep(code) {
+  background: var(--app-bg-subtle);
+  padding: 1px 6px;
+  border-radius: var(--app-radius-sm);
+}
+.tb-prompt-md :deep(pre) {
+  padding: var(--app-space-sm);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  overflow-x: auto;
+  background: var(--app-bg-subtle);
+}
+.tb-prompt-md :deep(pre code) {
+  background: transparent;
+  padding: 0;
+}
+.tb-prompt-preview {
+  border-style: dashed;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* 减少动效：关闭位移 / 旋转 / 缩放（颜色过渡不受影响） */
+@media (prefers-reduced-motion: reduce) {
+  .tb-chip, .tb-source, .tb-btn, .tb-card { transition: none; }
+}
+

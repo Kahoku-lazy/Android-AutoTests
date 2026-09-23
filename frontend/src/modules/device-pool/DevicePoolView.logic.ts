@@ -32,7 +32,7 @@ import {
   formatRelativeTime,
   statusTag,
 } from './helpers'
-import { useTableDragScroll } from './composables/useTableDragScroll'
+import { useTableDragScroll } from '@/shared/composables/useTableDragScroll'
 
 // ── 返回类型接口 ──
 
@@ -83,7 +83,6 @@ export interface DevicePoolViewState {
   cancelDisconnectDialog: () => void
   // helpers
   isRowSelected: (record: DeviceRecord) => boolean
-  deviceRowClassName: (data: { row: DeviceRecord }) => string
   displayModel: typeof displayModel
   connectionLabel: typeof connectionLabel
   deviceAddress: typeof deviceAddress
@@ -196,12 +195,6 @@ export function useDevicePoolView(): DevicePoolViewState {
     return record && record.serial === pool.selectedSerial.value
   }
 
-  function deviceRowClassName({ row }: { row: DeviceRecord }): string {
-    if (row?.status === 'ONLINE') return 'row-online'
-    if (row?.status === 'BUSY') return 'row-busy'
-    return ''
-  }
-
   // 12. Lifecycle
   onMounted(() => {
     actions.loadDevices()
@@ -256,7 +249,6 @@ export function useDevicePoolView(): DevicePoolViewState {
     cancelDisconnectDialog: actions.cancelDisconnectDialog,
     // helpers
     isRowSelected,
-    deviceRowClassName,
     displayModel,
     connectionLabel,
     deviceAddress,

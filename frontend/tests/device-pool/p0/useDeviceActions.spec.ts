@@ -14,7 +14,7 @@ import type { UseDevicePoolStateReturn } from '@/modules/device-pool/composables
 
 vi.mock('animejs', () => ({ animate: vi.fn(), stagger: vi.fn() }))
 vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), warning: vi.fn(), error: vi.fn() } }))
-vi.mock('@/shared/auth/token-storage', () => ({ getActive: vi.fn(() => 'u1'), getActiveUsername: vi.fn(() => 'u1') }))
+vi.mock('@/shared/auth/token-storage', () => ({ getUsername: vi.fn(() => 'u1') }))
 
 function makeDevice(serial: string, extra: Partial<DeviceRecord> = {}): DeviceRecord {
   return {

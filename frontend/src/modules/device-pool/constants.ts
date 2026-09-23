@@ -41,8 +41,8 @@ export const TABLE_ROW_HEIGHT_PX = 64
 /** 表格内容最小宽度（≈ 各列 minWidth 之和） */
 export const TABLE_MIN_WIDTH_PX = 980
 
-// ── 分页配置（默认 5；去掉 20）──
-export const PAGE_SIZE_OPTIONS: number[] = [5, 10]
+// ── 分页配置（只有 5；默认 5）──
+export const PAGE_SIZE_OPTIONS: number[] = [5]
 export const DEFAULT_PAGE_SIZE = 5
 
 // ── 心跳轮询间隔 (ms) ──

@@ -51,14 +51,14 @@
   white-space: nowrap;
   padding: var(--app-space-xs) 10px;
   background: var(--app-bg-subtle);
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
 }
 .dev-mock-toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: var(--app-space-xs) 10px;
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   background: var(--app-bg-subtle);
   border: 1px solid var(--app-border-light);
 }
@@ -69,43 +69,87 @@
   white-space: nowrap;
 }
 
+/* 分段容器只做排布：统一皮肤后每个按键自带 2px 实边与偏移硬阴影，
+   容器再画描边会重复、overflow:hidden 会把阴影裁掉 */
 .view-toggle {
   display: flex;
-  gap: 0;
-  border: 1px solid var(--app-border-light);
-  border-radius: var(--app-radius-sm);
-  overflow: hidden;
-  background: var(--app-bg-card);
+  gap: 6px;
 }
 .view-btn {
   padding: 5px 12px;
   font-size: var(--app-size-xs);
-  font-weight: 700;
-  background: transparent;
-  color: var(--app-text-secondary);
-  border: none;
   cursor: pointer;
   font-family: inherit;
-  transition: all 0.12s;
-  border-right: 1px solid var(--app-border-light);
 }
-.view-btn:last-child { border-right: none; }
-.view-btn.active { background: var(--app-bg-subtle); color: var(--ink); }
-.view-btn:hover:not(.active) { color: var(--ink); }
 
 .action-bar-btn {
   gap: 5px !important;
   padding: 5px 14px !important;
-  border-radius: var(--app-radius-sm) !important;
-  border: 2px solid var(--ink) !important;
-  background: var(--app-bg-card) !important;
-  color: var(--ink) !important;
-  font-weight: 700 !important;
-  box-shadow: none !important;
 }
-.action-bar-btn:hover { background: var(--app-bg-subtle) !important; }
+/* 工具条按键底色分配：局域网紫、刷新绿（其余组见下方统一皮肤） */
+.action-bar-btn--network {
+  background: var(--c-element) !important;
+}
 .action-bar-btn--primary {
   background: var(--c-device) !important;
+}
+
+/* ═══════════════════════════════════════════
+   统一按键皮肤
+
+   几何基准 = 侧栏底部「退出」按钮（AppSidebar.style.css:439-455）：
+   2px 墨色实边 + 2px 近直角 + 2px 偏移硬阴影；hover 左上位移 1px、阴影增至 3px。
+   底色按角色分配：切换类未选中天蓝 / 选中柠黄，「局域网」紫，「刷新」绿，
+   其余按键沿用各自既有语义底色。文字统一墨色（四组底色对比度均 ≥ 4.5:1）。
+   作用域限定本页 —— 共享件 FilterTabs / ErrorState 与 .wb-btn 的默认皮肤不变。
+   ═══════════════════════════════════════════ */
+.device-workbench :deep(.el-button),
+.device-workbench :deep(.filter-tab),
+.device-workbench :deep(.error-state__btn),
+.device-workbench :deep(.card-btn),
+.device-workbench .view-btn,
+.device-workbench .page-size-btn {
+  border: 2px solid var(--ink) !important;
+  border-radius: 2px !important;
+  color: var(--ink) !important;
+  font-weight: 700 !important;
+  box-shadow: 2px 2px 0 0 var(--ink) !important;
+  transition:
+    transform var(--app-duration-fast) var(--app-ease),
+    box-shadow var(--app-duration-fast) var(--app-ease),
+    background var(--app-duration-fast) var(--app-ease) !important;
+}
+.device-workbench :deep(.el-button:not(:disabled):hover),
+.device-workbench :deep(.filter-tab:not(:disabled):hover),
+.device-workbench :deep(.error-state__btn:not(:disabled):hover),
+.device-workbench :deep(.card-btn:not(:disabled):hover),
+.device-workbench .view-btn:not(:disabled):hover,
+.device-workbench .page-size-btn:not(:disabled):hover {
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 3px 3px 0 0 var(--ink) !important;
+}
+/* Element Plus 实心 danger 的底色是深红（--el-color-danger = --color-red-46），
+   墨字压深红只有 2.78:1，跌破 frontend-l0-design-tokens 的 4.5:1 门槛；
+   故沿用主题既有的浅色文字（tokens.css:485 已注明该底色"白字仍可读"）。 */
+.device-workbench :deep(.el-button--danger:not(.is-plain)) {
+  color: var(--color-white) !important;
+}
+/* 不可点：降透明度并撤掉位移阴影，避免与可用态混淆 */
+.device-workbench :deep(.el-button.is-disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none !important;
+}
+/* 切换类二态：未选中天蓝、选中柠黄（黄与 AppTabs / el-radio-button 选中态同口径） */
+.device-workbench .view-btn:not(.active),
+.device-workbench .page-size-btn:not(.active),
+.device-workbench :deep(.filter-tab:not(.active)) {
+  background: var(--c-workflow) !important;
+}
+.device-workbench .view-btn.active,
+.device-workbench .page-size-btn.active,
+.device-workbench :deep(.filter-tab.active) {
+  background: var(--c-dashboard) !important;
 }
 
 /* ── 卡片分组 ── */
@@ -140,7 +184,7 @@
   color: var(--app-text-secondary);
   background: var(--app-bg-subtle);
   padding: 2px 9px;
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   border: 1px solid var(--app-border-light);
 }
 .card-group-grid {
@@ -149,17 +193,8 @@
   justify-content: start;
   gap: var(--app-space-md);
 }
-.card-group-grid > :nth-child(3n+1) { transform: rotate(-0.6deg); }
-.card-group-grid > :nth-child(3n+2) { transform: rotate(0.4deg); }
-.card-group-grid > :nth-child(3n) { transform: rotate(-0.3deg); }
-.card-group-grid > :hover {
-  transform: rotate(0deg) scale(1.03);
-  z-index: 5;
-}
-@media (prefers-reduced-motion: reduce) {
-  .card-group-grid > :nth-child(n) { transform: none; }
-  .card-group-grid > :hover { transform: none; }
-}
+/* 微倾 / hover / reduced-motion 由共享 AppCard 的 .ac-card 承担（父级注入 sketchTiltAt），
+   此处不再重复实现一套 nth-child 轮转 —— 两套都会写 transform，必然互相压过。 */
 
 /* ── 表格工具栏 ── */
 .table-toolbar {
@@ -182,20 +217,8 @@
 .page-size-btn {
   min-width: 36px;
   padding: var(--app-space-xs) 10px;
-  border-radius: var(--app-radius-sm);
-  border: 1px solid var(--app-border-light);
-  background: var(--app-bg-card);
-  color: var(--app-text-secondary);
   font-size: var(--app-size-sm);
-  font-weight: 700;
   cursor: pointer;
-  transition: all 0.15s;
-}
-.page-size-btn:hover { border-color: var(--app-border-lighter); color: var(--ink); }
-.page-size-btn.active {
-  background: color-mix(in srgb, var(--c-device) 22%, var(--app-bg-card));
-  border-color: var(--ink);
-  color: var(--ink);
 }
 .table-toolbar-right {
   display: flex;
@@ -287,87 +310,33 @@
 .device-table-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
 .device-table-wrapper::-webkit-scrollbar-thumb {
   background: var(--c-workflow);
-  border-radius: 4px;
+  border-radius: var(--app-radius-sm);
 }
 .device-table-wrapper::-webkit-scrollbar-track { background: var(--app-bg-subtle); }
 
-/* ── 表头：大字号居中 + 分色底边 ── */
+/* ── 表纸外框线型：虚线 → 实线（本页登记的线型；宽度与颜色仍取共享令牌 --comp-sheet-border，
+      不改令牌本身，故 /reports、/elements 的表纸仍为虚线） ── */
+.device-workbench :deep(.sketch-sheet) {
+  border-style: solid;
+}
+
+/* ── 表头：居中 + 浅底（排版单一来源：全局 .el-table th 的 --app-size-xs / 700 / uppercase） ── */
 .device-table-wrapper :deep(.el-table th.el-table__cell) {
   background: linear-gradient(180deg, var(--app-bg-subtle), color-mix(in srgb, var(--app-bg-subtle) 40%, transparent)) !important;
   color: var(--ink) !important;
-  font-size: var(--app-size-md) !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.02em;
-  border-bottom-width: 3px !important;
-  border-bottom-style: solid !important;
   padding: 14px 12px !important;
 }
-.device-table-wrapper :deep(.el-table th.el-table__cell:nth-child(1)) {
-  border-bottom-color: var(--c-device) !important;
-}
-.device-table-wrapper :deep(.el-table th.el-table__cell:nth-child(2)) {
-  border-bottom-color: var(--c-dashboard) !important;
-}
-.device-table-wrapper :deep(.el-table th.el-table__cell:nth-child(3)) {
-  border-bottom-color: var(--c-case) !important;
-}
-.device-table-wrapper :deep(.el-table th.el-table__cell:nth-child(4)) {
-  border-bottom-color: var(--c-element) !important;
-}
-.device-table-wrapper :deep(.el-table th.el-table__cell:nth-child(5)) {
-  border-bottom-color: var(--c-workflow) !important;
-}
-.device-table-wrapper :deep(.el-table th.el-table__cell:nth-child(6)) {
-  border-bottom-color: var(--c-runner) !important;
-}
-.device-table-wrapper :deep(.el-table th.el-table__cell:nth-child(7)) {
-  border-bottom-color: var(--c-report) !important;
-}
 
-/* 列间浅分隔 */
-.device-table-wrapper :deep(.el-table th.el-table__cell + th.el-table__cell),
-.device-table-wrapper :deep(.el-table td.el-table__cell + td.el-table__cell) {
-  border-left: 2px solid var(--app-border-light) !important;
-}
-
-/* 行间彩色虚线 */
+/* 纸面风格不画网格线：行线、列线与表头分栏底线均不绘制
+   （frontend-l4-data-surface「Tables draw no visible grid lines」） */
 .device-table-wrapper :deep(.el-table td.el-table__cell) {
   color: var(--ink);
   font-size: var(--app-size-sm);
   padding: 14px 12px !important;
-  border-bottom-width: 2px !important;
-  border-bottom-style: dashed !important;
   position: relative;
-}
-.device-table-wrapper :deep(.el-table__body tr:nth-child(3n+1) td.el-table__cell) {
-  border-bottom-color: color-mix(in srgb, var(--c-device) 45%, var(--app-bg-card)) !important;
-}
-.device-table-wrapper :deep(.el-table__body tr:nth-child(3n+2) td.el-table__cell) {
-  border-bottom-color: color-mix(in srgb, var(--c-dashboard) 55%, var(--app-bg-card)) !important;
-}
-.device-table-wrapper :deep(.el-table__body tr:nth-child(3n) td.el-table__cell) {
-  border-bottom-color: color-mix(in srgb, var(--c-element) 50%, var(--app-bg-card)) !important;
 }
 .device-table-wrapper :deep(.el-table__body tr:hover > td.el-table__cell) {
   background: color-mix(in srgb, var(--c-device) 12%, var(--app-bg-card)) !important;
-}
-
-/* 左侧状态色条 */
-.device-table-wrapper :deep(.el-table__body tr.row-online > td.el-table__cell:first-child::before),
-.device-table-wrapper :deep(.el-table__body tr.row-busy > td.el-table__cell:first-child::before) {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 8px;
-  bottom: 8px;
-  width: 4px;
-  border-radius: 0 3px 3px 0;
-}
-.device-table-wrapper :deep(.el-table__body tr.row-online > td.el-table__cell:first-child::before) {
-  background: var(--app-status-success);
-}
-.device-table-wrapper :deep(.el-table__body tr.row-busy > td.el-table__cell:first-child::before) {
-  background: var(--c-dashboard);
 }
 
 .device-table-wrapper :deep(.el-table td:last-child .cell) {

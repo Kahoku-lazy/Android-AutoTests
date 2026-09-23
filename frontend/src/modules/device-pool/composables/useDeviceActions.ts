@@ -7,7 +7,7 @@
 import { ref, nextTick, type Ref } from 'vue'
 import { animate, stagger } from 'animejs'
 import { ElMessage } from 'element-plus'
-import { getActive } from '@/shared/auth/token-storage'
+import { getUsername } from '@/shared/auth/token-storage'
 import {
   DEFAULT_DIALOGS,
   LIST_ANIMATION,
@@ -49,7 +49,7 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
   let prevDevicesJson = ''
 
   // ── Current user ──
-  const currentUser = getActive()
+  const currentUser = getUsername()
 
   // ── Animation ──
   function animateDeviceRows() {

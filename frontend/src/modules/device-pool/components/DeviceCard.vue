@@ -4,10 +4,15 @@ import { computed } from 'vue'
 import { statusTag, displayModel, deviceAddress, formatRelativeTime } from '../helpers'
 import { isRunnerOccupied } from '@/shared/helpers/deviceOccupancy'
 import type { DeviceRecord } from '@/shared/types/device'
+import AppCard from '@/shared/components/AppCard.vue'
 
 const props = defineProps<{
   device: DeviceRecord
   currentUser?: string
+  /** 钉板壳 accent（同排按 index 循环，父级注入 sketchToneAt） */
+  tone?: string
+  /** 钉板壳微倾角度（父级注入 sketchTiltAt） */
+  tilt?: number
 }>()
 
 const emit = defineEmits<{
@@ -36,9 +41,10 @@ function go() {
 </script>
 
 <template>
-  <div
+  <AppCard
     class="device-card"
-    :class="status"
+    :tone="tone"
+    :tilt="tilt"
     role="button"
     tabindex="0"
     @click="go"
@@ -102,24 +108,21 @@ function go() {
         <button
           v-if="isWifi"
           type="button"
-          class="card-btn card-btn--ghost"
+          class="card-btn"
           :disabled="device.status === 'BUSY'"
           @click.stop="emit('disconnect', device)"
         >删除</button>
       </div>
     </div>
-  </div>
+  </AppCard>
 </template>
 
 <style scoped>
+/* 壳（虚线边 / 近直角 / 模块色硬阴影 / 图钉 / 微倾）由 AppCard 的 .ac-card 承担；
+   这里只保留卡片自身的布局。状态由 .status-chip（文字 + 几何 + 三态配色）承载，
+   不再用左侧色条做第二套仅靠颜色的状态载体。 */
 .device-card {
-  --card-accent: var(--c-device);
-  background: var(--app-bg-card);
-  border: 2px solid var(--ink);
-  border-radius: var(--app-radius-md);
-  box-shadow: var(--app-shadow-sm);
   padding: 0;
-  overflow: hidden;
   cursor: pointer;
   position: relative;
   display: flex;
@@ -131,20 +134,18 @@ function go() {
   max-height: 168px;
   transition: transform var(--app-duration) var(--app-ease);
 }
-.device-card.busy { --card-accent: var(--c-dashboard); }
-.device-card.offline { --card-accent: var(--app-border-light); }
-
-.device-card::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: var(--card-accent);
+/* 保持改造前的内部排布：AppCard 的 body 填满卡片并继续做纵向 flex 容器。
+   内边距必须清零：共享规则 .wb-shell .ac-card .el-card__body 的特异性高于本选择器，
+   故此处需要 !important（原卡片无 body 内边距，各内部区自带 padding）。 */
+.device-card :deep(.el-card__body) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 !important;
 }
 
-.device-card:hover { z-index: 2; }
+.device-card:hover { z-index: var(--z-raised); }
 .device-card:focus-visible {
   outline: 2px solid var(--app-status-purple);
   outline-offset: 3px;
@@ -310,28 +311,21 @@ function go() {
   gap: var(--app-space-xs);
   flex-shrink: 0;
 }
+/* 外形（边/圆角/硬阴影/文字色）由页面统一按键皮肤承担，此处只留卡片内布局与语义底色 */
 .card-btn {
-  border: 1.5px solid var(--ink);
   background: var(--app-bg-card);
-  border-radius: var(--app-radius-sm);
   padding: 2px var(--app-space-sm);
   font: inherit;
   font-size: var(--app-size-xs);
-  font-weight: 800;
-  color: var(--ink);
   cursor: pointer;
-  transition: background 0.12s, transform 0.12s;
 }
 .card-btn:hover {
   background: var(--app-highlight);
-  transform: translate(1px, 1px);
 }
-.card-btn--ghost { border-style: dashed; }
 .card-btn--warn { background: var(--app-status-warning-bg); }
 .card-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  transform: none;
 }
 
 @media (max-width: 720px) {

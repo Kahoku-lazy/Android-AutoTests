@@ -46,32 +46,22 @@ const runnerOccupied = computed(() => isRunnerOccupied(props.device.occupied_by)
   min-height: 26px;
   padding: var(--app-space-xs) 10px;
   font-size: var(--app-size-xs);
-  font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
-  border-radius: 999px !important;
-  border-width: 1px !important;
 }
+/* 底色保留操作语义；外形（边/圆角/阴影/文字色）由页面统一按键皮肤承担 */
 .action-bar :deep(.el-button--primary) {
   background: var(--app-status-purple-bg) !important;
-  border-color: var(--app-status-purple-border) !important;
-  color: var(--app-status-purple-text) !important;
 }
 .action-bar :deep(.el-button--primary:hover) { background: var(--app-btn-hover-purple) !important; }
 .action-bar :deep(.el-button--danger.is-plain) {
   background: var(--app-status-danger-bg) !important;
-  border-color: var(--app-status-danger) !important;
-  color: var(--app-status-danger-text) !important;
 }
 .action-bar :deep(.el-button--danger.is-plain:hover) { background: var(--app-btn-hover-danger) !important; }
 .action-bar :deep(.el-button--warning.is-plain) {
   background: var(--app-status-warning-bg) !important;
-  border-color: var(--c-dashboard) !important;
-  color: var(--app-warning-text) !important;
 }
 .action-bar :deep(.el-button.is-disabled) {
   background: var(--app-bg-subtle) !important;
-  border-color: var(--app-border-light) !important;
-  color: var(--app-btn-disabled-color) !important;
 }
 </style>

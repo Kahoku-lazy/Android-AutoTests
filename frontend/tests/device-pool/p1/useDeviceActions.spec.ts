@@ -19,8 +19,7 @@ vi.mock('element-plus', () => ({
 }))
 vi.mock('animejs', () => ({ animate: vi.fn(), stagger: vi.fn() }))
 vi.mock('@/shared/auth/token-storage', () => ({
-  getActive: vi.fn(() => 'u1'),
-  getActiveUsername: vi.fn(() => 'u1'),
+  getUsername: vi.fn(() => 'u1'),
 }))
 
 function makeDevice(serial: string, extra: Partial<DeviceRecord> = {}): DeviceRecord {

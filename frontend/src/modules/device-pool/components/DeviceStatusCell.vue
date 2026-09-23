@@ -38,7 +38,7 @@ defineProps<{
 <style scoped>
 .status-cell { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; justify-content: center; }
 .status-cell :deep(.el-tag) {
-  border-radius: 999px !important;
+  border-radius: var(--app-radius-pill) !important;
   font-weight: 700 !important;
   font-size: var(--app-size-xs) !important;
   border: 1px solid transparent !important;
@@ -51,7 +51,7 @@ defineProps<{
 .badge {
   font-size: var(--app-size-xs);
   padding: 1px var(--app-space-sm);
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   font-weight: 700;
   max-width: 130px;
   overflow: hidden;

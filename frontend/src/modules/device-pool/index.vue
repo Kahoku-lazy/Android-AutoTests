@@ -11,6 +11,7 @@ import DisconnectDialog from './components/DisconnectDialog.vue'
 import NetworkConnectDialog from './components/NetworkConnectDialog.vue'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import { IconWifi, IconRefresh } from '@/shared/icons/index'
+import { sketchToneAt, sketchTiltAt } from '@/shared/helpers/sketchCard'
 import { useDevicePoolView } from './DevicePoolView.logic'
 
 const {
@@ -43,7 +44,6 @@ const {
   handleDisconnectConfirm,
   cancelDisconnectDialog,
   isRowSelected,
-  deviceRowClassName,
   displayModel,
   deviceAddress,
   formatDateTime,
@@ -101,7 +101,7 @@ const {
                 @change="toggleDevMock"
               />
             </div>
-            <el-button class="action-bar-btn" size="small" @click="openNetworkDialog">
+            <el-button class="action-bar-btn action-bar-btn--network" size="small" @click="openNetworkDialog">
               <IconWifi :size="14" /> 局域网
             </el-button>
             <el-button
@@ -157,7 +157,6 @@ const {
                 :loading="loading"
                 table-layout="fixed"
                 empty-text="还没有可用设备"
-                :row-class-name="deviceRowClassName"
                 accent="var(--c-device)"
                 @row-click="handleRowClick"
               >
@@ -226,10 +225,12 @@ const {
               </div>
               <div class="card-group-grid">
                 <DeviceCard
-                  v-for="dev in groupedDevices[group.key]"
+                  v-for="(dev, i) in groupedDevices[group.key]"
                   :key="dev.serial"
                   :device="dev"
                   :current-user="currentUser"
+                  :tone="sketchToneAt(i)"
+                  :tilt="sketchTiltAt(i)"
                   @click="handleRowClick"
                   @lock="handleLockClick"
                   @release="(d) => handleRelease(d.serial)"

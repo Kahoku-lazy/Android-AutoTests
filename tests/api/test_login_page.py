@@ -11,7 +11,13 @@ import pytest
 
 from tests.api.loader import execute_case, load_cases
 
-CASES = load_cases("login.yaml") + load_cases("register.yaml")
+# 只取单请求用例：带 setup（多步流程，见 test_auth_session_flow.py）或
+# concurrent（多请求，见 test_auth_register_concurrency.py）的用例由各自驱动执行。
+CASES = [
+    case
+    for case in load_cases("login.yaml") + load_cases("register.yaml")
+    if not case.get("setup") and not case.get("concurrent")
+]
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda c: f"{c['id']} {c['name']}")

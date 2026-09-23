@@ -19,11 +19,14 @@ import re
 
 import pytest
 
+from apps.accounts.serializers import LoginSerializer, RegisterSerializer
+
 pytestmark = pytest.mark.unit
 
 NL = chr(10)
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 FRONTEND_FORM = REPO_ROOT / "frontend/src/shared/composables/useLoginForm.ts"
+AUTH_FLOW = REPO_ROOT / "frontend/src/views/composables/useAuthFlow.ts"
 BACKEND_SERIALIZERS = REPO_ROOT / "apps/accounts/serializers.py"
 
 # 前端：errs.<字段> = '文案'   /   后端：ValidationError("文案")
@@ -137,3 +140,92 @@ def test_threshold_sets_are_identical():
         + NL
         + f"  仅后端：{sorted(backend - frontend)}"
     )
+
+# ── 空白归一化口径：密码两侧一致（都去掉首尾空白），账号两侧有意不同 ──
+#
+# 规格：openspec/specs/auth-form-validation ›「密码首尾空白的归一化口径在两侧一致」
+# 变更：align-password-trim-parity
+#
+# 后端侧断言**真实对象的行为**，不读源码字面量 —— 断的是口径本身，不是它的写法（换成自定义
+# 字段或改写选项时，这里仍描述行为）。前端是 TS，Python 侧只能读源码，沿用本模块既有范式。
+
+MIN_CALLS_PER_SIDE = 1
+
+
+def _trim_flag(serializer, field_name: str) -> bool:
+    """字段声明的首尾空白去除口径。缺该属性的自定义字段一律判为「不生效」。"""
+    return bool(getattr(serializer.fields[field_name], "trim_whitespace", False))
+
+
+def _auth_call_rx(fn_name: str) -> re.Pattern[str]:
+    """匹配 `await <fn>(...)` 并捕获实参。
+
+    实参里含 `.trim()` 这类一层括号，故不能用 `[^)]*`（会在第一个 `)` 处截断）。
+    """
+    return re.compile(r"await\s+" + fn_name + r"\(([^()\n]*(?:\([^()\n]*\)[^()\n]*)*)\)")
+
+
+def _auth_call_args(fn_name: str) -> list[list[str]]:
+    """读出 useAuthFlow.ts 里所有 `await <fn>(...)` 的实参列表。"""
+    matches = _auth_call_rx(fn_name).findall(_read(AUTH_FLOW))
+    return [[part.strip() for part in m.split(",") if part.strip()] for m in matches]
+
+
+def test_backend_trim_stance_is_declared_per_field():
+    """口径声明：密码去首尾空白、账号不去 —— 两者有意不同。"""
+    serializer = LoginSerializer()
+    password_flag = _trim_flag(serializer, "password")
+    username_flag = _trim_flag(serializer, "username")
+    assert password_flag is True and username_flag is False, (
+        "空白归一化口径漂移：期望 密码=True / 账号=False，"
+        f"实际 密码={password_flag} / 账号={username_flag}"
+    )
+
+
+def test_backend_login_password_strips_surrounding_whitespace():
+    """登录密码：首尾空白在核对身份前被去掉，与注册侧最终口径一致。"""
+    assert LoginSerializer().fields["password"].run_validation("  abc123  ") == "abc123"
+
+
+def test_backend_password_inner_whitespace_is_kept():
+    """密码内部的空白属于密码本身，不得被顺手去掉。"""
+    field = LoginSerializer().fields["password"]
+    assert field.run_validation("a b\tc\nd") == "a b\tc\nd"
+
+
+def test_backend_login_username_is_kept_as_typed():
+    """账号按原样核对 —— 不得匹配到去掉空白后的账号（TC-LOGIN-015 的同一条口径）。"""
+    assert LoginSerializer().fields["username"].run_validation("  admin  ") == "  admin  "
+
+
+def test_backend_register_strips_password_surrounding_whitespace():
+    """注册侧同样去掉密码首尾空白：注册时输入的值与登录时输入的值归一化后相同。"""
+    attrs = RegisterSerializer().validate(
+        {
+            "username": "  abc  ",
+            "password": "  abc123  ",
+            "password2": "  abc123  ",
+            "email": "  a@b.com  ",
+        }
+    )
+    assert attrs["password"] == "abc123"
+    assert attrs["username"] == "abc"
+    assert attrs["email"] == "a@b.com"
+
+
+def test_frontend_login_export_does_not_trim_password():
+    """登录出口不自行去空白：去除由接口统一负责，前端不得抢先改写用户输入。"""
+    calls = _auth_call_args("login")
+    assert len(calls) >= MIN_CALLS_PER_SIDE, "提取规则可能失效：没读到 await login(...)"
+    assert [args[1] for args in calls] == ["password"] * len(calls)
+
+
+def test_frontend_register_export_trims_password():
+    """注册出口自带去空白，与后端 strip 同口径。"""
+    calls = _auth_call_args("register")
+    assert len(calls) >= MIN_CALLS_PER_SIDE, "提取规则可能失效：没读到 await register(...)"
+    for args in calls:
+        assert args[1] == "password.trim()"
+        assert args[2] == "password2!.trim()"
+        assert args[3] == "email!.trim()"
+

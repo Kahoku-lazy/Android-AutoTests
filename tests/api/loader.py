@@ -53,6 +53,9 @@ def execute_case(base_url: str, api_session, case: dict, ctx: dict) -> None:
     url = f"{base_url}{case['path']}"
     if "raw_body" in case:
         resp = api_session.request(method, url, data=case["raw_body"])
+    elif method.upper() == "GET":
+        # GET 不带请求体：没有 body 的 GET 不需要塞一个空 JSON 进去
+        resp = api_session.request(method, url)
     else:
         body = resolve(case.get("body", {}), **ctx)
         resp = api_session.request(method, url, json=body)

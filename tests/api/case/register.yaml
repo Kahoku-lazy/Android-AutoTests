@@ -187,3 +187,55 @@
     schema: "error"
     check:
       message: "用户名已存在"
+
+- id: "TC-REG-021"
+  name: "username-with-spaces"
+  title: "用户名前后带空格"
+  point: "用户名先 strip 再校验与入库：带首尾空格的用户名注册成功，回显为去空格后的值"
+  method: "POST"
+  path: "/api/auth/register/"
+  body:
+    username: "  {{unique_username}}  "
+    password: "Test123456"
+    password2: "Test123456"
+    email: "{{unique_username}}@test.local"
+  expect:
+    status: 200
+    schema: "register_success"
+    check:
+      data.user.username: "{{unique_username}}"
+
+- id: "TC-REG-022"
+  name: "email-with-spaces"
+  title: "邮箱前后带空格"
+  point: "邮箱同样 strip：带首尾空格的邮箱注册成功，回显为去空格后的值"
+  method: "POST"
+  path: "/api/auth/register/"
+  body:
+    username: "{{unique_username}}"
+    password: "Test123456"
+    password2: "Test123456"
+    email: "  {{unique_username}}@test.local  "
+  expect:
+    status: 200
+    schema: "register_success"
+    check:
+      data.user.email: "{{unique_username}}@test.local"
+
+- id: "TC-REG-023"
+  name: "concurrent-same-username"
+  title: "并发同名注册"
+  point: "唯一性以数据库约束为权威、校验层不判重：两个请求同时注册同一用户名，恰好一个 200、一个 409，绝不出现 500"
+  concurrent: 2
+  method: "POST"
+  path: "/api/auth/register/"
+  body:
+    username: "{{unique_username}}"
+    password: "Test123456"
+    password2: "Test123456"
+    email: "{{unique_username}}@test.local"
+  expect:
+    status: 409
+    schema: "error"
+    check:
+      message: "用户名已存在"

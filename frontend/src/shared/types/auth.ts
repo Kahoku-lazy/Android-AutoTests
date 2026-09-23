@@ -1,12 +1,3 @@
-/** 单个账号的 token 对（localStorage.auth_accounts 的 value） */
-interface AccountTokens {
-  access_token: string
-  refresh_token: string
-}
-
-/** localStorage.auth_accounts 的完整存储格式 */
-export type AuthPool = Record<string, AccountTokens>
-
 /** 登录/注册成功时 data 载荷 */
 interface AuthTokenData {
   access_token: string

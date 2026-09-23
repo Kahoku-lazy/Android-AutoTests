@@ -1,0 +1,61 @@
+# POST /api/auth/logout 单接口用例
+# 字段：id 编号 / name 英文短名(node id) / title 测试标题 / point 测试点 /
+#       method|path 请求 / body|raw_body 请求体 / auth 是否带令牌(none|required) /
+#       setup 前置步骤(只由 tests/api/test_auth_session_flow.py 执行，值 logout = 先登出当前会话) /
+#       expect 期望(status|schema|check)
+# 令牌占位符：{{admin_access_token}} / {{admin_refresh_token}} —— 由 admin_login fixture 现场登录签发
+# （见 tests/api/conftest.py），不写死令牌以免过期。
+
+- id: "TC-LOGOUT-001"
+  name: "logout-success"
+  title: "正常登出"
+  point: "带令牌登出返回 200，data 为空对象（本端点不返回业务数据）"
+  method: "POST"
+  path: "/api/auth/logout/"
+  auth: "required"
+  expect:
+    status: 200
+    schema: "logout_success"
+
+- id: "TC-LOGOUT-004"
+  name: "logout-without-authorization"
+  title: "未带 Authorization 头登出"
+  point: "鉴权网关先拦：不带 Authorization 头的登出返回 401 请先登录，不进入视图"
+  method: "POST"
+  path: "/api/auth/logout/"
+  auth: "none"
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "请先登录"
+
+- id: "TC-LOGOUT-002"
+  name: "me-after-logout"
+  title: "登出后再用原 access 请求 me"
+  point: "登出即作废整个会话：原 access 令牌随后访问 me 被拒（401）"
+  method: "GET"
+  path: "/api/auth/me/"
+  auth: "required"
+  setup: "logout"
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "登录已过期或令牌无效"
+
+- id: "TC-LOGOUT-003"
+  name: "refresh-after-logout"
+  title: "登出后再用原 refresh 刷新"
+  point: "会话级吊销覆盖刷新令牌：登出后原 refresh 无法再换新 access（401）"
+  method: "POST"
+  path: "/api/auth/refresh/"
+  auth: "required"
+  setup: "logout"
+  body:
+    refresh_token: "{{admin_refresh_token}}"
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "刷新令牌无效或已过期"

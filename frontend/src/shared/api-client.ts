@@ -6,7 +6,6 @@ import {
   setToken,
   clearToken,
   getRefreshToken,
-  getActive,
 } from "@/shared/auth/token-storage"
 import { attachAuthInterceptors } from "@/shared/api-auth-interceptors"
 
@@ -29,7 +28,6 @@ attachAuthInterceptors(client, {
   setToken,
   clearToken,
   getRefreshToken,
-  getActive,
   refreshRequest: (body) => axios.post("/api/auth/refresh/", body),
   redirectToLogin: () => {
     window.location.href = "/login"

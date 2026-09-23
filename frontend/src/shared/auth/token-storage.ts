@@ -1,90 +1,55 @@
-/** token-storage — 多账号 token 存储的唯一真相源。
+/** token-storage — 单账号会话存储的唯一真相源。
  *
- *  api-client 和 useAuthPool.ts 都从这里读写，消除双源竞态。
+ *  api-client 与页面都从这里读写，避免双源竞态。
  *
  *  存储格式：
- *    localStorage.auth_accounts  = { admin: {access_token, refresh_token}, ... }
- *    sessionStorage.auth_active  = "admin"  (per-tab 隔离)
+ *    localStorage.access_token  = "<jwt>"
+ *    localStorage.refresh_token = "<jwt>"
+ *    localStorage.username      = "<账号名>"
  */
 
-import type { AuthPool } from "@/shared/types/auth"
+const ACCESS_KEY = "access_token"
+const REFRESH_KEY = "refresh_token"
+const USERNAME_KEY = "username"
 
-export const POOL_KEY = "auth_accounts"
-const ACTIVE_KEY = "auth_active"
+/** 多账号时代遗留的账号池键：写入新会话时顺带清掉，避免残留结构与新键长期并存 */
+const LEGACY_POOL_KEY = "auth_accounts"
 
-// ── 纯函数：底层存储读写 ──
-
-export function readPool(): AuthPool {
-  // 兼容旧单 token 格式迁移
-  const oldToken = localStorage.getItem("access_token")
-  if (oldToken) {
-    const oldRefresh = localStorage.getItem("refresh_token") || ""
-    const oldUser = localStorage.getItem("username") || "admin"
-    const pool: AuthPool = { [oldUser]: { access_token: oldToken, refresh_token: oldRefresh } }
-    localStorage.setItem(POOL_KEY, JSON.stringify(pool))
-    sessionStorage.setItem(ACTIVE_KEY, oldUser)
-    localStorage.removeItem("access_token")
-    localStorage.removeItem("refresh_token")
-    localStorage.removeItem("username")
-    return pool
-  }
-  try {
-    return JSON.parse(localStorage.getItem(POOL_KEY) || "{}")
-  } catch {
-    return {}
-  }
-}
-
-export function writePool(pool: AuthPool): void {
-  localStorage.setItem(POOL_KEY, JSON.stringify(pool))
-}
-
-export function getActive(): string {
-  const pool = readPool()
-  const active = sessionStorage.getItem(ACTIVE_KEY) || Object.keys(pool)[0] || ""
-  // 确保 active 账号仍在池中
-  if (active && !pool[active]) {
-    const first = Object.keys(pool)[0] || ""
-    sessionStorage.setItem(ACTIVE_KEY, first)
-    return first
-  }
-  return active
-}
-
-export function setActive(username: string): void {
-  sessionStorage.setItem(ACTIVE_KEY, username)
-}
-
-// ── 便捷函数：给 api-client 用 ──
+// ── 会话读取 ──
 
 export function getToken(): string {
-  const pool = readPool()
-  const active = getActive()
-  return pool[active]?.access_token || ""
-}
-
-export function setToken(token: string): void {
-  const pool = readPool()
-  const active = getActive()
-  if (active && pool[active]) {
-    pool[active].access_token = token
-    writePool(pool)
-  }
-}
-
-export function clearToken(): void {
-  const pool = readPool()
-  const active = getActive()
-  if (active) {
-    delete pool[active]
-    writePool(pool)
-    const remaining = Object.keys(pool)
-    setActive(remaining.length > 0 ? remaining[0] : "")
-  }
+  return localStorage.getItem(ACCESS_KEY) || ""
 }
 
 export function getRefreshToken(): string {
-  const pool = readPool()
-  const active = getActive()
-  return pool[active]?.refresh_token || ""
+  return localStorage.getItem(REFRESH_KEY) || ""
 }
+
+export function getUsername(): string {
+  return localStorage.getItem(USERNAME_KEY) || ""
+}
+
+// ── 会话写入 ──
+
+/** 登录/注册成功后写入整个会话（一次只保留一个账号） */
+export function saveSession(username: string, access_token: string, refresh_token: string): void {
+  localStorage.setItem(ACCESS_KEY, access_token)
+  localStorage.setItem(REFRESH_KEY, refresh_token)
+  localStorage.setItem(USERNAME_KEY, username)
+  localStorage.removeItem(LEGACY_POOL_KEY)
+}
+
+/** 续期成功后只轮换 access，不动账号名与 refresh */
+export function setToken(token: string): void {
+  localStorage.setItem(ACCESS_KEY, token)
+}
+
+/** 登出/续期失败时清空整个会话 */
+export function clearSession(): void {
+  localStorage.removeItem(ACCESS_KEY)
+  localStorage.removeItem(REFRESH_KEY)
+  localStorage.removeItem(USERNAME_KEY)
+}
+
+/** 拦截器沿用 clearToken 这个名字；语义与 clearSession 相同 */
+export const clearToken = clearSession

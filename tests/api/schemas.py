@@ -170,10 +170,70 @@ SNAPSHOT_LIST_SCHEMA = {
 }
 
 
+REFRESH_SUCCESS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "status": {"const": True},
+        "data": {
+            "type": "object",
+            "properties": {
+                "access_token": {"type": "string", "minLength": 10},
+                "token_type": {"const": "bearer"},
+            },
+            "required": ["access_token", "token_type"],
+            "additionalProperties": False,
+        },
+    },
+    "required": ["status", "data"],
+    "additionalProperties": False,
+}
+
+
+ME_SUCCESS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "status": {"const": True},
+        "data": {
+            "type": "object",
+            "properties": {
+                "user": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "username": {"type": "string"},
+                        "is_superuser": {"type": "boolean"},
+                    },
+                    "required": ["id", "username", "is_superuser"],
+                    "additionalProperties": False,
+                },
+            },
+            "required": ["user"],
+            "additionalProperties": False,
+        },
+    },
+    "required": ["status", "data"],
+    "additionalProperties": False,
+}
+
+
+LOGOUT_SUCCESS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "status": {"const": True},
+        "data": {"type": "object", "properties": {}, "additionalProperties": False},
+    },
+    "required": ["status", "data"],
+    "additionalProperties": False,
+}
+
+
 # YAML expect.schema 引用名 -> schema 对象
 SCHEMAS = {
     "auth_success": AUTH_SUCCESS_SCHEMA,
     "register_success": REGISTER_SUCCESS_SCHEMA,
+    "refresh_success": REFRESH_SUCCESS_SCHEMA,
+    "me_success": ME_SUCCESS_SCHEMA,
+    "logout_success": LOGOUT_SUCCESS_SCHEMA,
     "error": ERROR_SCHEMA,
     "device_list": DEVICE_LIST_SCHEMA,
     "heartbeat": HEARTBEAT_SCHEMA,

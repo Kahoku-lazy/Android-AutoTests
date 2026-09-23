@@ -73,16 +73,14 @@ const meetingTitle = computed(() => (viewState.value === 'register' ? '注册' :
 
     <div class="hero">
       <div class="hero__intro">
-        <p class="hero__eyebrow">AI 自动化测试</p>
         <header class="hero__header">
           <div class="hero__title-row">
             <h1 class="hero-title">AI 自动化测试平台</h1>
-            <span class="hero__version" aria-label="当前版本 v2.1">v2.1</span>
+            <span class="hero__version" aria-label="当前版本 v3.0">v3.0</span>
           </div>
-          <p class="hero__desc">
-            <span class="hero__desc-line">AI 自动化测试平台，让AI来做测试</span>
-            <span class="hero__desc-line">让测试工作摆脱重复的劳动，专注于创造价值</span>
-          </p>
+          <p class="hero__tagline">实现让AI来做测试</p>
+          <p class="hero__tagline">让测试工作摆脱重复的劳动</p>
+          <p class="hero__tagline">专注于创造价值</p>
         </header>
 
         <div

@@ -11,10 +11,9 @@ export interface AuthInterceptorDeps {
   setToken: (token: string) => void
   clearToken: () => void
   getRefreshToken: () => string
-  getActive: () => string
   /** 刷新请求（生产用 axios.post，测试可 mock） */
   refreshRequest: (body: { refresh_token: string }) => Promise<{ data: AuthResponse }>
-  /** 无剩余账号时跳转登录 */
+  /** 清空会话后跳转登录页 */
   redirectToLogin: () => void
   /** 用新 token 重试原请求 */
   retryRequest: (config: InternalAxiosRequestConfig) => Promise<unknown>
@@ -91,10 +90,7 @@ export function createAuthInterceptors(deps: AuthInterceptorDeps): AuthIntercept
         } catch {
           refreshPromise = null
           deps.clearToken()
-          const active = deps.getActive()
-          if (!active) {
-            deps.redirectToLogin()
-          }
+          deps.redirectToLogin()
         }
       }
     }

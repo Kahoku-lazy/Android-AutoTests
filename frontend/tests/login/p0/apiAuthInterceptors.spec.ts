@@ -1,5 +1,5 @@
 /**
- * [P0] 必测 — api-client 鉴权拦截器（并发 refresh / 重试 / 多账号失败）
+ * [P0] 必测 — api-client 鉴权拦截器（并发 refresh / 重试 / 续期失败）
  * 目录：tests/login/p0/
  */
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -28,7 +28,6 @@ describe("[P0] createAuthInterceptors", () => {
   const setToken = vi.fn()
   const clearToken = vi.fn()
   const getRefreshToken = vi.fn(() => "valid-refresh")
-  const getActive = vi.fn(() => "")
   const refreshRequest = vi.fn()
   const redirectToLogin = vi.fn()
   const retryRequest = vi.fn()
@@ -39,13 +38,11 @@ describe("[P0] createAuthInterceptors", () => {
     vi.clearAllMocks()
     getToken.mockReturnValue("old-access")
     getRefreshToken.mockReturnValue("valid-refresh")
-    getActive.mockReturnValue("")
     interceptors = createAuthInterceptors({
       getToken,
       setToken,
       clearToken,
       getRefreshToken,
-      getActive,
       refreshRequest,
       redirectToLogin,
       retryRequest,
@@ -126,8 +123,7 @@ describe("[P0] createAuthInterceptors", () => {
     expect(retryRequest).toHaveBeenCalledTimes(2)
   })
 
-  it("refresh 失败且无剩余账号：清 token 并跳转 /login", async () => {
-    getActive.mockReturnValue("")
+  it("refresh 失败：清 token 并跳转 /login", async () => {
     refreshRequest.mockRejectedValue(new Error("refresh failed"))
     const config = { headers: {}, url: "/x" } as InternalAxiosRequestConfig
 
@@ -136,17 +132,6 @@ describe("[P0] createAuthInterceptors", () => {
     expect(clearToken).toHaveBeenCalled()
     expect(redirectToLogin).toHaveBeenCalled()
     expect(retryRequest).not.toHaveBeenCalled()
-  })
-
-  it("refresh 失败但仍有剩余账号：清当前账号，不跳转登录", async () => {
-    getActive.mockReturnValue("bob")
-    refreshRequest.mockRejectedValue(new Error("refresh failed"))
-    const config = { headers: {}, url: "/x" } as InternalAxiosRequestConfig
-
-    await expect(interceptors.authErrorInterceptor(make401(config))).rejects.toBeTruthy()
-
-    expect(clearToken).toHaveBeenCalled()
-    expect(redirectToLogin).not.toHaveBeenCalled()
   })
 
   it("无 refresh_token 时：直接拒绝，不跳转", async () => {

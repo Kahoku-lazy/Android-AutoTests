@@ -1,0 +1,82 @@
+# POST /api/auth/refresh 单接口用例
+# 字段：id 编号 / name 英文短名(node id) / title 测试标题 / point 测试点 /
+#       method|path 请求 / body|raw_body 请求体 / auth 是否带令牌(none|required) /
+#       setup 前置步骤(只由 tests/api/test_auth_session_flow.py 执行，值 logout = 先登出当前会话) /
+#       expect 期望(status|schema|check)
+# 令牌占位符：{{admin_access_token}} / {{admin_refresh_token}} —— 由 admin_login fixture 现场登录签发
+# （见 tests/api/conftest.py），不写死令牌以免过期。
+
+- id: "TC-REFRESH-001"
+  name: "refresh-success"
+  title: "正常续期"
+  point: "用有效刷新令牌换取新的访问令牌，返回 200 与新令牌"
+  method: "POST"
+  path: "/api/auth/refresh/"
+  auth: "none"
+  body:
+    refresh_token: "{{admin_refresh_token}}"
+  expect:
+    status: 200
+    schema: "refresh_success"
+    check:
+      data.token_type: "bearer"
+
+- id: "TC-REFRESH-002"
+  name: "access-token-as-refresh"
+  title: "用访问令牌冒充刷新令牌"
+  point: "令牌类型必须匹配：拿 access 去续期被拒，返回 401 令牌类型错误"
+  method: "POST"
+  path: "/api/auth/refresh/"
+  auth: "none"
+  body:
+    refresh_token: "{{admin_access_token}}"
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "令牌类型错误，需要刷新令牌"
+
+- id: "TC-REFRESH-003"
+  name: "garbage-refresh-token"
+  title: "刷新令牌是乱码"
+  point: "签名 / 格式校验：乱码令牌返回 401 刷新令牌无效或已过期"
+  method: "POST"
+  path: "/api/auth/refresh/"
+  auth: "none"
+  body:
+    refresh_token: "garbage.token.value"
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "刷新令牌无效或已过期"
+
+- id: "TC-REFRESH-004"
+  name: "refresh-after-logout"
+  title: "登出后再刷新"
+  point: "会话级吊销：登出后原刷新令牌立即失效（同一 sid 的 access 与 refresh 一起吊销）"
+  method: "POST"
+  path: "/api/auth/refresh/"
+  auth: "none"
+  setup: "logout"
+  body:
+    refresh_token: "{{admin_refresh_token}}"
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "刷新令牌无效或已过期"
+
+- id: "TC-REFRESH-005"
+  name: "missing-refresh-token"
+  title: "缺 refresh_token 字段"
+  point: "空令牌走同一拒绝路径：请求体没有 refresh_token 也返回 401，不出现 500"
+  method: "POST"
+  path: "/api/auth/refresh/"
+  auth: "none"
+  body: {}
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "刷新令牌无效或已过期"

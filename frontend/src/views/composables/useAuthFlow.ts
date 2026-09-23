@@ -9,12 +9,10 @@ import { useRouter } from "vue-router"
 import { ElMessage } from "element-plus"
 
 import { login, register } from "@/shared/api/auth"
+import { saveSession } from "@/shared/auth/token-storage"
 import { getApiErrorMessage } from "@/shared/types/api-error"
-import type { UseAuthPoolReturn } from "@/shared/composables/useAuthPool"
 
 export interface UseAuthFlowParams {
-  /** useAuthPool 返回值 */
-  auth: UseAuthPoolReturn
   /** useSavedUsername 返回值 */
   saveUsername: (username: string) => void
 }
@@ -33,7 +31,7 @@ export interface UseAuthFlowReturn {
   }) => Promise<void>
 }
 
-export function useAuthFlow({ auth, saveUsername }: UseAuthFlowParams): UseAuthFlowReturn {
+export function useAuthFlow({ saveUsername }: UseAuthFlowParams): UseAuthFlowReturn {
   const router = useRouter()
   const loading = ref(false)
   const serverError = ref("")
@@ -59,13 +57,14 @@ export function useAuthFlow({ auth, saveUsername }: UseAuthFlowParams): UseAuthF
     loading.value = true
     try {
       const name = username.trim()
-      // 登录密码不 trim（与 LoginSerializer / authenticate 一致）；注册字段与后端 strip 对齐
+      // 登录密码前端不 trim：首尾空白由后端接口统一去掉，与注册侧最终口径一致。
+      // 注册四个字段前端先 strip（后端同样 strip，两侧同口径）。
       const data =
         mode === "login"
           ? await login(name, password)
           : await register(name, password.trim(), password2!.trim(), email!.trim())
       if (data.status && "refresh_token" in data.data) {
-        auth.loginAccount(name, data.data.access_token, data.data.refresh_token)
+        saveSession(name, data.data.access_token, data.data.refresh_token)
         if (mode === "login") saveUsername(name)
         const successMsg = mode === "login" ? "登录成功，正在跳转..." : "注册成功，正在跳转..."
         ElMessage.success(successMsg)

@@ -132,3 +132,59 @@
     schema: "error"
     check:
       message: "请求格式错误"
+
+- id: "TC-LOGIN-015"
+  name: "username-with-spaces"
+  title: "账号前后带空格"
+  point: "账号不 trim：带首尾空格的账号按原样核对，返回 401 而不是匹配到 admin（守护 trim_whitespace=False）"
+  method: "POST"
+  path: "/api/auth/login/"
+  body:
+    username: "  admin  "
+    password: "admin123"
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "用户名或密码错误"
+
+- id: "TC-LOGIN-016"
+  name: "password-with-spaces"
+  title: "密码前后带空格"
+  point: "密码走 DRF CharField 默认 trim：首尾空格被去掉后仍能登录成功（与注册侧 strip 一致，两侧口径相同）"
+  method: "POST"
+  path: "/api/auth/login/"
+  body:
+    username: "admin"
+    password: "  admin123  "
+  expect:
+    status: 200
+    schema: "auth_success"
+    check:
+      data.user.username: "admin"
+
+- id: "TC-LOGIN-017"
+  name: "json-array-body"
+  title: "请求体是 JSON 数组"
+  point: "非对象请求体兜底：返回 400 而非 500（文案由框架生成，不做逐字断言）"
+  method: "POST"
+  path: "/api/auth/login/"
+  raw_body: "[1, 2]"
+  expect:
+    status: 400
+    schema: "error"
+
+- id: "TC-LOGIN-018"
+  name: "public-endpoint-without-auth"
+  title: "公开端点不带 Authorization"
+  point: "登录属公开端点：请求不带 Authorization 头也应正常签发令牌（网关公开路径白名单生效）"
+  method: "POST"
+  path: "/api/auth/login/"
+  body:
+    username: "admin"
+    password: "admin123"
+  expect:
+    status: 200
+    schema: "auth_success"
+    check:
+      data.user.username: "admin"

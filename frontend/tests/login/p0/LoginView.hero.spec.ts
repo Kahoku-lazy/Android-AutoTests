@@ -76,6 +76,19 @@ describe('[P0] LoginView Hero', () => {
     expect(text).toContain('AI 自动化测试平台')
   })
 
+  it('左栏呈现四行品牌文案与 v3.0 版本徽标', async () => {
+    const wrapper = await mountLogin()
+    expect(wrapper.find('.hero-title').text()).toBe('AI 自动化测试平台')
+    expect(wrapper.findAll('.hero__tagline').map((el) => el.text())).toEqual([
+      '实现让AI来做测试',
+      '让测试工作摆脱重复的劳动',
+      '专注于创造价值',
+    ])
+    expect(wrapper.find('.hero__version').text()).toBe('v3.0')
+    // 眉标整块已移除：左栏不再有独立成行的「AI 自动化测试」
+    expect(wrapper.find('.hero__eyebrow').exists()).toBe(false)
+  })
+
   it('默认 Meeting 标题为登录，并显示登录卡', async () => {
     const wrapper = await mountLogin()
     expect(wrapper.find('[data-testid="meeting-title"]').text()).toBe('登录')

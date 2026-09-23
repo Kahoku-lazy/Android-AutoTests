@@ -4,12 +4,11 @@
  *
  * 表单校验在 LoginView.logic（调用方）；本文件只测网络层与副作用。
  */
-import { computed, ref } from "vue"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ElMessage } from "element-plus"
 import { login, register } from "@/shared/api/auth"
+import { saveSession } from "@/shared/auth/token-storage"
 import { useAuthFlow } from "@/views/composables/useAuthFlow"
-import type { UseAuthPoolReturn } from "@/shared/composables/useAuthPool"
 import { mountComposable } from "../../helpers/mountComposable"
 
 vi.mock("@/shared/api/auth", () => ({
@@ -24,15 +23,9 @@ vi.mock("element-plus", () => ({
   },
 }))
 
-function makeAuth(): UseAuthPoolReturn {
-  return {
-    activeAccount: ref(""),
-    accountList: computed(() => []),
-    loginAccount: vi.fn(),
-    switchAccount: vi.fn(),
-    logoutAccount: vi.fn(),
-  }
-}
+vi.mock("@/shared/auth/token-storage", () => ({
+  saveSession: vi.fn(),
+}))
 
 describe("[P0] useAuthFlow", () => {
   beforeEach(() => {
@@ -48,9 +41,8 @@ describe("[P0] useAuthFlow", () => {
       },
     } as never)
 
-    const auth = makeAuth()
     const saveUsername = vi.fn()
-    const { result, router } = await mountComposable(() => useAuthFlow({ auth, saveUsername }))
+    const { result, router } = await mountComposable(() => useAuthFlow({ saveUsername }))
     const push = vi.spyOn(router, "push")
 
     await result.authenticate({
@@ -60,7 +52,7 @@ describe("[P0] useAuthFlow", () => {
     })
 
     expect(login).toHaveBeenCalledWith("alice", "secret")
-    expect(auth.loginAccount).toHaveBeenCalledWith("alice", "a1", "r1")
+    expect(saveSession).toHaveBeenCalledWith("alice", "a1", "r1")
     expect(saveUsername).toHaveBeenCalledWith("alice")
     expect(ElMessage.success).toHaveBeenCalled()
     expect(push).toHaveBeenCalledWith("/dashboard")
@@ -73,8 +65,7 @@ describe("[P0] useAuthFlow", () => {
       message: "密码错误",
     } as never)
 
-    const auth = makeAuth()
-    const { result } = await mountComposable(() => useAuthFlow({ auth, saveUsername: vi.fn() }))
+    const { result } = await mountComposable(() => useAuthFlow({ saveUsername: vi.fn() }))
 
     await result.authenticate({
       mode: "login",
@@ -83,7 +74,7 @@ describe("[P0] useAuthFlow", () => {
     })
 
     expect(result.serverError.value).toBe("密码错误")
-    expect(auth.loginAccount).not.toHaveBeenCalled()
+    expect(saveSession).not.toHaveBeenCalled()
   })
 
   it("登录抛错：写入 serverError", async () => {
@@ -91,8 +82,7 @@ describe("[P0] useAuthFlow", () => {
       response: { data: { message: "服务不可用" } },
     })
 
-    const auth = makeAuth()
-    const { result } = await mountComposable(() => useAuthFlow({ auth, saveUsername: vi.fn() }))
+    const { result } = await mountComposable(() => useAuthFlow({ saveUsername: vi.fn() }))
 
     await result.authenticate({
       mode: "login",
@@ -112,9 +102,8 @@ describe("[P0] useAuthFlow", () => {
       },
     } as never)
 
-    const auth = makeAuth()
     const saveUsername = vi.fn()
-    const { result, router } = await mountComposable(() => useAuthFlow({ auth, saveUsername }))
+    const { result, router } = await mountComposable(() => useAuthFlow({ saveUsername }))
     const push = vi.spyOn(router, "push")
 
     await result.authenticate({
@@ -126,14 +115,13 @@ describe("[P0] useAuthFlow", () => {
     })
 
     expect(register).toHaveBeenCalledWith("bob", "123456", "123456", "bob@example.com")
-    expect(auth.loginAccount).toHaveBeenCalledWith("bob", "a2", "r2")
+    expect(saveSession).toHaveBeenCalledWith("bob", "a2", "r2")
     expect(saveUsername).not.toHaveBeenCalled()
     expect(push).toHaveBeenCalledWith("/dashboard")
   })
 
   it("clearServerError：清空错误", async () => {
-    const auth = makeAuth()
-    const { result } = await mountComposable(() => useAuthFlow({ auth, saveUsername: vi.fn() }))
+    const { result } = await mountComposable(() => useAuthFlow({ saveUsername: vi.fn() }))
     result.serverError.value = "oops"
     result.clearServerError()
     expect(result.serverError.value).toBe("")

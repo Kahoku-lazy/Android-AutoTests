@@ -6,7 +6,6 @@
 import { ref, type Ref, type ComputedRef } from "vue"
 import { ElMessage } from "element-plus"
 
-import { useAuthPool } from "@/shared/composables/useAuthPool"
 import { useLoginForm } from "@/shared/composables/useLoginForm"
 import type { ViewState, FieldErrors } from "@/shared/types/auth"
 
@@ -38,7 +37,6 @@ export interface LoginViewState {
 export function useLoginView(): LoginViewState {
   // ── 子 composable 组合 ──
 
-  const auth = useAuthPool()
   const { loginUsername, rememberMe, saveUsername } = useSavedUsername()
 
   // ── 表单 ref ──
@@ -59,10 +57,7 @@ export function useLoginView(): LoginViewState {
   )
 
   // ── 认证流程（必须在 useViewStateMachine 之前，因为后者需要 clearServerError）──
-  const { loading, serverError, clearServerError, authenticate } = useAuthFlow({
-    auth,
-    saveUsername,
-  })
+  const { loading, serverError, clearServerError, authenticate } = useAuthFlow({ saveUsername })
 
   const { viewState, switchMode: baseSwitchMode } = useViewStateMachine(clearServerError)
 

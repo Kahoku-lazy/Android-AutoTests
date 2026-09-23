@@ -27,14 +27,27 @@ def unique_username() -> str:
 
 
 @pytest.fixture(scope="function")
-def auth_session(base_url) -> requests.Session:
-    """登录获取 access_token，返回带 Authorization 头的 session（供鉴权端点用）。"""
+def admin_login(base_url) -> tuple[requests.Session, dict]:
+    """现场登录种子账号，返回 (带 Authorization 头的 session, {"access_token", "refresh_token"})。
+
+    令牌现场签发而不是写进 YAML：JWT 默认 1 小时过期，写死的令牌第二天就会让用例变红；
+    同时保证「登出 → 断言失效」类用例吊销的正是这份凭证所属的那个会话（同 sid）。
+    """
     session = requests.Session()
     session.headers.update({"Content-Type": "application/json"})
     resp = session.post(
         f"{base_url}/api/auth/login/", json={"username": "admin", "password": "admin123"}
     )
     assert resp.status_code == 200, f"登录失败: {resp.text}"
-    token = resp.json()["data"]["access_token"]
-    session.headers.update({"Authorization": f"Bearer {token}"})
-    return session
+    data = resp.json()["data"]
+    session.headers.update({"Authorization": f"Bearer {data['access_token']}"})
+    return session, {
+        "access_token": data["access_token"],
+        "refresh_token": data["refresh_token"],
+    }
+
+
+@pytest.fixture(scope="function")
+def auth_session(admin_login) -> requests.Session:
+    """带 Authorization 头的 session（供鉴权端点用）；令牌来源见 admin_login。"""
+    return admin_login[0]

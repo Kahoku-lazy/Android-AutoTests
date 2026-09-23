@@ -77,31 +77,22 @@
   min-width: 0;
 }
 
-.hero__eyebrow {
-  margin: 0;
-  font-size: var(--app-size-xs);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--c-case);
-  transform: rotate(-1.5deg);
-  align-self: flex-start;
-}
-
 .hero__header {
-  text-align: left;
+  max-width: 520px;
+  text-align: center;
 }
 
 .hero__title-row {
   display: flex;
   align-items: flex-start;
+  justify-content: center;
   gap: var(--app-space-sm);
-  margin-bottom: var(--app-space-md);
+  margin-bottom: var(--app-space-lg);
 }
 
 .hero-title {
   margin: 0;
-  font-size: var(--app-size-2xl);
+  font-size: var(--app-size-3xl);
   font-family: var(--app-font-brand);
   font-weight: 400;
   color: var(--ink);
@@ -123,24 +114,25 @@
   margin-top: var(--app-space-xs);
 }
 
-.hero__desc {
-  font-size: var(--app-size-md);
+.hero__tagline {
+  font-size: var(--app-size-2xl);
   font-family: var(--app-font-brand);
   color: var(--app-text-secondary);
   line-height: 1.7;
   margin: 0;
-  max-width: 520px;
 }
 
-.hero__desc-line {
-  display: block;
+.hero__tagline + .hero__tagline {
+  margin-top: var(--app-space-lg);
 }
 
 /* ── CTA（对齐 showcase primary / ghost）── */
 .hero__cta {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: var(--app-space-md);
+  max-width: 520px;
 }
 
 .hero-cta {
@@ -333,31 +325,13 @@
     padding: var(--app-space-xl) var(--app-space-md);
   }
 
-  .hero__header {
-    text-align: center;
-  }
-
-  .hero__title-row {
-    justify-content: center;
-  }
-
-  .hero__eyebrow {
-    align-self: center;
-  }
-
-  .hero__desc {
-    margin-left: auto;
-    margin-right: auto;
-    font-size: var(--app-size-sm);
-  }
-
-  .hero__cta {
-    justify-content: center;
-  }
-
   .hero-title {
-    font-size: var(--app-size-xl);
+    font-size: var(--app-size-2xl);
     transform: none;
+  }
+
+  .hero__tagline {
+    font-size: var(--app-size-xl);
   }
 
   .hero-sketch {
@@ -377,11 +351,11 @@
   }
 
   .hero-title {
-    font-size: var(--app-size-lg);
+    font-size: var(--app-size-xl);
   }
 
-  .hero__desc {
-    font-size: var(--app-size-xs);
+  .hero__tagline {
+    font-size: var(--app-size-lg);
   }
 
   .login-footer {

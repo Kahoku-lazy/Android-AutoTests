@@ -1,0 +1,48 @@
+# GET /api/auth/me 单接口用例
+# 字段：id 编号 / name 英文短名(node id) / title 测试标题 / point 测试点 /
+#       method|path 请求 / body|raw_body 请求体 / auth 是否带令牌(none|required) /
+#       setup 前置步骤(只由 tests/api/test_auth_session_flow.py 执行，值 logout = 先登出当前会话) /
+#       expect 期望(status|schema|check)
+# 令牌占位符：{{admin_access_token}} / {{admin_refresh_token}} —— 由 admin_login fixture 现场登录签发
+# （见 tests/api/conftest.py），不写死令牌以免过期。
+
+- id: "TC-ME-001"
+  name: "me-success"
+  title: "正常读取身份"
+  point: "带有效令牌读取当前身份，返回 id / username / is_superuser 三个字段"
+  method: "GET"
+  path: "/api/auth/me/"
+  auth: "required"
+  expect:
+    status: 200
+    schema: "me_success"
+    check:
+      data.user.username: "admin"
+      data.user.is_superuser: true
+
+- id: "TC-ME-002"
+  name: "me-without-token"
+  title: "不带令牌"
+  point: "未登录访问 me 被网关拦下，返回 401 请先登录"
+  method: "GET"
+  path: "/api/auth/me/"
+  auth: "none"
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "请先登录"
+
+- id: "TC-ME-003"
+  name: "me-after-logout"
+  title: "登出后再读"
+  point: "登出即作废会话：原 access 令牌再访问 me 返回 401"
+  method: "GET"
+  path: "/api/auth/me/"
+  auth: "required"
+  setup: "logout"
+  expect:
+    status: 401
+    schema: "error"
+    check:
+      message: "登录已过期或令牌无效"

@@ -73,8 +73,8 @@ export const TABLE_MIN_WIDTH_PX = Object.values(ELEMENT_COLUMN_WIDTHS)
 /** 空表文案：任何无数据情形（未选设备 / 未获取 / 分组无元素）统一这一句 */
 export const EMPTY_TEXT = { noDevice: '未选中设备' }
 
-/** 冻结入口的原因文案（下标口径冲突时保留入口但不可用） */
-export const FROZEN_REASONS = {
-  savedPage: '存量已保存页面数据已作废，功能冻结',
-  saveToElements: '元素下标口径已随全量元素展示变更，保存链路待后续变更对齐，暂不可用',
-}
+/** 不可用（灰底）按键的统一提示文案：index.vue / CaptureForm.vue 与 store 共用 */
+export const KEY_DISABLED_MESSAGE = '按键不可用，请先选择设备'
+
+/** 「保存到元素定位」在未勾选任何元素时的提示文案（入口与弹窗确认共用同一句） */
+export const NO_SELECTION_MESSAGE = '至少勾选一个元素才能保存'

@@ -199,22 +199,22 @@
    1. 页头 —— 标题取文件（页面）名，副标题「项目名 · 元素详情」。
    2. 面包屑 —— 元素定位 / 当前项目 / 当前文件。
    3. 面板头 —— 右上角一个「删除」键（危险色）。
-   4. 元素工作台 —— 工具条「共 N 个元素」；下面一张全宽表，列固定六项：**别名 · 文本 · resource-id · XPath · 坐标 · 测试点**。
+   4. 元素工作台 —— 工具条「共 N 个元素」+「+ 新增一行」+「删除选中」；下面一张全宽表，列固定七项：**缩略图 · 元素名称 · 序号 · 文本 · 主定位 · 交互标注 · 测试点**；每页固定 10 行（变更 `element-locator-element-table-editing`），行勾选可整批删除。
    5. 空态 —— 「该页面暂无元素 / 可从设备检查器导入快照」。
    `LocatorFileView.vue` · `components/LocatorFilePanel.vue` · `components/PageElementsWorkbench.vue`
 2. **业务逻辑**
    1. **页面元信息从项目树推导** —— 进页面先拉项目树，在树里找到该 fileId 拿到文件名与类型。
    2. **树里找不到就兜底** —— 用「文件 #id」作为临时名继续渲染，面板仍会按 id 拉元素，不因树与文件的瞬时不一致而白屏。
    3. **地址非法直接拦下** —— fileId 非正数或 code 不是已知项目 → 显示「无效的文件地址」，不发请求。
-   4. **只有两个字段可改** —— 别名（行内输入框）与测试点（行内开关）；文本 / resource-id / XPath / 坐标是只读展示。
+   4. **只有四个字段可改** —— 元素名称、文本、主定位（单元格双击进入编辑，Enter 提交 / Esc 或失焦取消）与测试点（行内开关）；缩略图、序号与交互标注是采集产物，保持只读（变更 `rework-save-to-elements`）。
    5. **改完就地更新** —— 保存成功后只改本行数据，不整表重载，不清空滚动位置与选中。
-   6. **XPath 只显示第一个候选** —— 从元素落库的候选列表里取第一条；没有候选显示「—」。候选既可能是 JSON 字符串也可能是数组，两种都能解析。
+   6. **主定位是一等字段** —— 「主定位」列直接取元素的 `primary_xpath`（保存时按开放规格选出的那一条），页面**不再**从候选列表里另挑；手工填写的主定位落库时标记为不稳定。
    7. **不带筛选** —— 元素表**恒拉全部已保存元素**（单次上限 500），页面上没有「可点击 / 有文本 / 测试点」分段筛选，也没有截图圈选面板。
    8. 加载失败显示错误条 +「重试」；加载成功但该页没元素显示空态。
    `components/PageElementsWorkbench.vue`
 3. **样式** —— 以实际代码为准。删除键与表内 EP 按键走 `.file-view` 作用域的硬边皮肤（2px 墨线 + 2px 近直角 + 2px 偏移硬阴影），删除键为危险红底 + 浅色字；元素表用共享 `AppTable` 的 SketchTable 表纸，强调色 `--c-element`、实线描边，**不外套 `el-card`**。
    `LocatorFileView.vue` · `components/PageElementsWorkbench.vue`
-4. **校验** —— 无字段级校验；别名允许清空（保存空串），测试点是布尔开关。
+4. **校验** —— 与后端 `element_fields.py` 同口径：字符串列宽（元素名称 500 / 文本 2000 / 主定位 2000）、主定位非空、坐标格式 `[x1,y1][x2,y2]`；非法输入就地提示并恢复原值，不写库。
 5. **出口**
    1. `GET /api/elements/pages/{page_id}/items/`
    2. `PUT /api/elements/items/{el_id}/`
@@ -233,28 +233,28 @@
    1. **分页参数容错不报错** —— `offset` / `limit` 非整数时**静默回退**到 0 / 100，而不是返回错误。
    2. 元素按 `id` 升序返回。
    3. 页面不存在 → `404`，文案为英文 `page not found`。
-   4. 响应同时带该页的 `screenshot_path`（本页 UI 不再消费截图）。
+   4. 响应**不再**返回页面 `screenshot_path`，也不再返回候选 XPath 列表（元素定位不保存也不关联截图，变更 `rework-save-to-elements`）。
    `views_page_elements.py`（`page_elements`）
-3. **返回** —— `200` **平铺信封** `{status: true, elements, total, screenshot_path}`；每个元素含 `id` · `page_id` · `class_name` · `text_val` · `content_desc` · `resource_id` · `bounds` · 坐标四件套 · `depth` · `index` · `scrollable` · `checked` · `thumbnail_path` · `xpath_candidates` · `clickable` · `enabled` · `alias` · `tags` · `is_test_point` · `notes` · `created_at`。
+3. **返回** —— `200` **平铺信封** `{status: true, elements, total}`；每个元素含收敛字段：`id` · `page_id` · `alias`（元素名称） · `seq`（序号） · `text_val` · `primary_xpath` · `primary_stable` · `thumbnail_path` · 七项交互标志（`clickable` / `long_clickable` / `scrollable` / `checkable` / `checked` / `enabled` / `focusable`） · `is_test_point` · `notes` · `created_at`，以及去重键 `resource_id` · `bounds`（不呈现）。
 4. **校验** —— 无字段级校验；只有「页面不存在」一条 404。
 
 元素更新接口：PUT api/elements/items/{el_id}/
 
 1. **入口** —— `PUT api/elements/items/{el_id}/`，需登录，body 只取传入字段。
 2. **业务规则**
-   1. **白名单四字段** —— 只认 `alias` / `tags` / `notes` / `is_test_point`；`is_test_point` 强转布尔值，其余原样写入。落在白名单外的字段被静默忽略。
-   2. **无存在性校验** —— 传入不存在的 id 也会返回成功。
-   3. body 不是合法 JSON → 解析异常未被捕获 → `500`。
+   1. **白名单四字段**（变更 `rework-save-to-elements`）—— 只认 `alias`（元素名称） / `text_val` / `primary_xpath` / `is_test_point`；`is_test_point` 强转布尔值，主定位写入时覆盖为单条表达式并把 `primary_stable` 置假。
+   2. **越界字段被拒** —— 白名单外字段（含 `class_name` / `content_desc` / `resource_id` / `bounds` / `xpath_candidates`）回 `400`「不支持修改字段 <key>」，不再静默忽略。
+   3. **存在性校验** —— 元素不存在 → `404`「元素不存在」；body 非法 JSON → `400`「无效的 JSON 请求体」。
    `views_page_elements.py`（`update_element`）· `api.py`（`update_element`）
 3. **返回** —— `200` 平铺 `{status: true}`（无 data）。
-4. **校验** —— 无。
+4. **校验** —— 列宽（`alias` 500 / `text_val` 2000 / `primary_xpath` 2000）与主定位非空。
 
 手动添加元素 / 批量添加元素接口：POST api/elements/pages/{page_id}/elements/ · …/elements/batch/
 
 1. **入口** —— 两条 `POST` 手写路由，需登录；前者接单个元素，后者接 `elements` 数组。
 2. **业务规则**
    1. **upsert 口径** —— 按 `(page, resource_id, bounds)` 去重：命中即更新，否则新增；新增后重算页面 `element_count`。
-   2. **XPath 落库口径** —— 优先用传入的 `xpath_candidates`；否则把单个 `xpath` 包成「manual 候选」；两者都空则存 `"[]"`。
+   2. **字段口径收敛**（变更 `rework-save-to-elements`）—— 只接受 `alias` / `text_val` / `primary_xpath` / `notes` / `is_test_point` 与去重键 `resource_id` / `bounds`；越界字段（类名、content-desc、候选列表等）按同一规整口径被拒（批量接口把该条计入 `errors` 并跳过）。
    3. **页面校验** —— 页面不存在时单条接口回 `404`「页面不存在」，批量接口回 **`400`**（同一条件两种状态码）；目录节点回 `400`「目录节点不能添加元素」。
    4. **别名必填** —— 别名为空时单条接口回 **`200`** + `{status:false, message:"元素名称(alias)必填"}`；批量接口则把该条计入 `skipped` 继续处理其余条目。
    5. 批量接口逐条 try/except，单条失败不中断整批，错误信息截断保留 5 条。
@@ -268,10 +268,12 @@
 
 | 表单 | 字段 | 类型 | 必填 | 约束 | 落到哪一列 |
 |---|---|---|---|---|---|
-| 元素表 · 别名 | `alias` | 字符串 | 否（添加接口必填） | 允许空串；无唯一约束 | `el_elements.alias` |
+| 元素表 · 元素名称 | `alias` | 字符串 | 否（新增接口必填） | 列宽 500；允许空串 | `el_elements.alias` |
+| 元素表 · 文本 | `text_val` | 字符串 | 否 | 列宽 2000 | `el_elements.text_val` |
+| 元素表 · 主定位 | `primary_xpath` | 字符串 | 否 | 列宽 2000；非空校验；写入即 `primary_stable=false` | `el_elements.primary_xpath` · `primary_stable` |
 | 元素表 · 测试点 | `is_test_point` | 布尔 | 否 | 受影响的行会被打上标记并建索引 | `el_elements.is_test_point` |
-| 添加元素 | `xpath` / `xpath_candidates` | 字符串 / 数组 | 否 | 数组优先；单个会被包成 manual 候选 | `el_elements.xpath_candidates`（JSON 字符串） |
-| 添加元素 | `resource_id` · `bounds` | 字符串 | 否 | 与 page 组成 upsert 键 | `el_elements.resource_id` · `bounds` |
+| 新增一行 · 去重键 | `resource_id` · `bounds` | 字符串 | 二者至少一个 | `bounds` 须为 `[x1,y1][x2,y2]`；与 page 组成唯一键 | `el_elements.resource_id` · `bounds`（+ 解析出的坐标分量） |
+| 新增一行 · 备注 | `notes` | 字符串 | 否 | 无长度约束 | `el_elements.notes` |
 
 `el_elements` 的列（★ 是元素表 UI 真正读写的列）：
 
@@ -279,21 +281,25 @@
 |---|---|---|---|
 | ★ `id` | BigAutoField | — | 主键 |
 | `page_id` | ForeignKey(`Page`) | — | 非空；`CASCADE` |
-| `class_name` | CharField | 500 | 默认空串 |
+| `class_name` | CharField | 500 | 默认空串；**不在呈现口径内**（检查器保存不再写入） |
 | ★ `text_val` | CharField | 2000 | 默认空串；**注意与快照侧的 `text` 不同名** |
-| `content_desc` | CharField | 2000 | 默认空串 |
-| ★ `resource_id` | CharField | 500 | 默认空串；upsert 键之一 |
-| ★ `bounds` | CharField | 200 | 默认空串；upsert 键之一 |
-| ★ `xpath_candidates` | TextField | — | 默认 `"[]"`；JSON 字符串，读回时解析成 list |
-| 坐标四件套 `x` / `y` / `width` / `height` | IntegerField | — | 默认 0；元素表「坐标」列显示 bounds 字符串 |
-| `depth` | IntegerField | — | 默认 0 |
-| `index` | CharField | 50 | 默认空串 |
-| `clickable` / `enabled` / `scrollable` / `checked` | BooleanField | — | 默认 False |
-| `thumbnail_path` | CharField | 1000 | 默认空串 |
-| ★ `alias` | CharField | 500 | 默认空串；**列名与「别名」列对应** |
-| `tags` | CharField | 500 | 默认空串；元素表 UI 不展示，仅接口预留 |
-| ★ `is_test_point` | BooleanField | — | 默认 False；建索引 |
-| `notes` | TextField | — | 默认空串 |
+| `content_desc` | CharField | 2000 | 默认空串；不在呈现口径内 |
+| `resource_id` | CharField | 500 | 默认空串；去重键之一（不呈现） |
+| `bounds` | CharField | 200 | 默认空串；去重键之一（不呈现） |
+| `xpath_candidates` | TextField | — | 默认 `"[]"`；已被 `primary_xpath` 取代，检查器保存不再写入 |
+| ★ `primary_xpath` | CharField | 2000 | 默认空串；主定位表达式（表格列「主定位」） |
+| ★ `primary_stable` | BooleanField | — | 默认 False；主定位是否稳定（人工写入恒为 False） |
+| ★ `seq` | IntegerField | — | 默认 0；快照内坐标顺序序号（表格列「序号」；手工新增为 0） |
+| 坐标四件套 `x` / `y` / `width` / `height` | IntegerField | — | 默认 0；检查器保存不再写入（手工新增按 bounds 解析） |
+| `depth` | IntegerField | — | 默认 0；不在呈现口径内 |
+| `index` | CharField | 50 | 默认空串；父内序号，不在呈现口径内 |
+| ★ `clickable` / `enabled` / `scrollable` / `checked` | BooleanField | — | 默认 False；交互标注四项（表格列「交互标注」） |
+| ★ `long_clickable` / `checkable` / `focusable` | BooleanField | — | 默认 False；交互标注补齐的三项 |
+| ★ `thumbnail_path` | CharField | 1000 | 默认空串；元素缩略图副本路径（表格列「缩略图」） |
+| ★ `alias` | CharField | 500 | 默认空串；**表格列「元素名称」** |
+| `tags` | CharField | 500 | 默认空串；不呈现，仅接口预留 |
+| ★ `is_test_point` | BooleanField | — | 默认 False；建索引（表格列「测试点」） |
+| `notes` | TextField | — | 默认空串；不呈现列（新增表单可填） |
 | `created_at` | DateTimeField | — | `auto_now_add` |
 
 唯一约束 `uq_el_element_page_attrs` = `(page, resource_id, bounds)`。
@@ -347,9 +353,10 @@
 
 1. **模版** —— **无界面**。真实入口在设备检查器的「保存到元素定位」弹窗，走的是检查器自己的端点；元素定位侧只暴露同进程写口与一条 HTTP 兜底路径。
 2. **业务逻辑**
-   1. 检查器把勾选的元素与目标（已有页面 id 或新页面名 + 目录路径）交给 `element_locator.api.import_snapshot_page`。
+   1. 检查器把勾选的元素（按**坐标顺序序号**）与目标（已有页面 id 或新页面名 + 目录路径）交给 `element_locator.api.import_snapshot_page`；缩略图在检查器侧按元素 bounds 从快照截图裁好后随元素传入。
    2. 页面级 OCR 不再落库 —— 调用方恒传 `ocr_json=None`，叠加数据迁移 0014 的清空动作，`el_pages.ocr_json` 对新数据恒为空。
-   3. 元素逐个按 `(page, resource_id, bounds)` upsert，别名兜底顺序 `alias` → `text` → `resource_id`；最后重算 `element_count`。
+   3. 元素逐个按 `(page, resource_id, bounds)` upsert，别名兜底顺序 `alias` → `text` → `resource_id`；只写入收敛后的六项（缩略图 / 元素名称 / 序号 / 文本 / 主定位 / 交互标注）+ 去重键，最后重算 `element_count`。
+   4. **不保存也不关联整屏截图** —— 页面 `screenshot_path` 恒为空；缩略图复制到元素定位自有目录，源缩略图缺失时该元素缩略图留空 + 告警（导入仍成功）。
 3. **样式** —— 无。
 4. **校验** —— 见下方契约的提示清单。
 5. **出口** —— HTTP 上是 `POST /api/elements/pages/import-snapshot/`；实际调用方走同进程 `element_locator.api`。
@@ -361,12 +368,12 @@
 1. **入口**
    1. 方法与路径：`POST api/elements/pages/import-snapshot/`；手写路由但**采用标准 `{status, data}` 信封**（新端点新契约）。
    2. **需要登录**；`@csrf_exempt`。
-   3. 请求字段：`page_label` / `folder_path` / `package` / `activity` / `screenshot_path` / `ocr_json` / `snapshot_id` / `elements`。
+   3. 请求字段：`page_label` / `folder_path` / `package` / `activity` / `ocr_json` / `snapshot_id` / `elements`（**不再接受 `screenshot_path`**，变更 `rework-save-to-elements`）。
    `views_snapshot.py` · `api_snapshot.py`
 2. **业务规则**
    1. **两种模式** —— 有 `page_id` 即写入已有页面（元素 upsert 追加）；否则按 `page_label` + `folder_path` 新建页面。
    2. **目录按路径解析** —— `folder_path` 以 `/` 切段，逐级在 `android` 项目下查找或创建目录；层级上限 `MAX_DEPTH = 20`，超出 → `409`。
-   3. **已有页面补全不覆盖** —— 目标页面的截图 / OCR / `snapshot_id` 仅在自身为空时补上。
+   3. **已有页面补全不覆盖** —— 目标页面的 OCR / `snapshot_id` 仅在自身为空时补上（截图不再参与）。
    4. **新建页面查重** —— 同级已有同名非目录页面 → `409`「同级页面「label」已存在」，由数据库唯一性裁决。
    5. **元素去重** —— 按 `(page, resource_id, bounds)` upsert，命中即更新。
    6. **不写页面级 OCR** —— `ocr_json` 传空则页面 `ocr_json` 保持空。
@@ -396,7 +403,7 @@
 | 快照导入 | `page_label` | 字符串 | 新建模式必填 | trim 后非空；同级不可重名 | `el_pages.label` |
 | 快照导入 | `folder_path` | 字符串 | 否 | 按 `/` 逐段查找或创建；最多 20 层 | `el_locator_directories` |
 | 快照导入 | `snapshot_id` | int | 否 | 来源检查器快照 ID，用于溯源 | `el_pages.snapshot_id` |
-| 快照导入 | `elements`（数组） | 数组 | 必填（非空） | 每项含 class_name / text / content_desc / resource_id / bounds / xpaths / 坐标 / 交互标志 / thumbnail_path / alias | `el_elements` |
+| 快照导入 | `elements`（数组） | 数组 | 必填（非空） | 每项含 `seq` / `alias` / `text` / `primary_xpath` / `primary_stable` / `flags`（七项交互标志）/ `resource_id` / `bounds` / `thumbnail_path` | `el_elements` |
 
 `el_pages` 的列（★ 是元素定位 UI 真正读写的列）：
 
@@ -409,7 +416,7 @@
 | `is_folder` | BooleanField | — | 默认 False；建索引；legacy 树遗留 |
 | ★ `label` | CharField | 500 | 默认空串；建索引；页面显示名 |
 | `package` / `activity` | CharField | 500 | 默认空串 |
-| `screenshot_path` | CharField | 1000 | 默认空串 |
+| `screenshot_path` | CharField | 1000 | 默认空串；**新导入恒为空**（元素定位不保存也不关联截图；历史存量可能仍有值） |
 | `ocr_json` | JSONField | — | 默认 `{}`；页面级 OCR **已下线**（迁移 0014 清空，新数据恒空） |
 | `snapshot_id` | IntegerField | — | 可空；来源快照溯源 |
 | ★ `element_count` | IntegerField | — | 默认 0；写元素后重算 |
@@ -425,12 +432,12 @@
 2. **业务逻辑**
    1. 工作流在前端用自己的封装直调元素定位的**平铺页面接口**，拉页面列表与某页元素，用于画布的页面节点与元素列表。
    2. 仪表盘在后端**直接读模型**（跨 App 读放开）出计数，不经过 `element_locator.api`。
-   3. 设备检查器写经 `api.import_snapshot_page`、读经 `api.get_page_full`，不直写 `el_` 表。
+   3. 设备检查器**只写不读**：写经 `api.import_snapshot_page`，不直写 `el_` 表（读口 `get_page_full` 已随检查器的「已保存页面」回看功能一并删除）。
 3. **样式** —— 无（消费方各自的皮肤）。
 4. **校验** —— 无；沿用被调端点自身的校验。
 5. **出口**
    1. `GET /api/elements/pages/` · `GET /api/elements/pages/{id}/items/`（工作流前端直调）
-   2. `apps.element_locator.api.get_page_full` · `import_snapshot_page`（同进程白名单）
+   2. `apps.element_locator.api.import_snapshot_page`（同进程白名单）
    `frontend/src/modules/workflow/api.ts` · `apps/dashboard/views.py` · `apps/device_inspector/api.py`
 
 #### API契约
@@ -617,7 +624,7 @@
    - 工作流取页面素材【业务逻辑 1】—— WHEN 页面流画布需要页面列表 → THEN 直调页面平铺接口拿到全量页面
    - 工作流取某页元素【业务逻辑 1】—— WHEN 需要某页元素 → THEN 直调该页 items 接口
    - 仪表盘出计数【业务逻辑 2】—— WHEN 渲染 KPI → THEN 直接读 `Page` / `Element` 模型，不经 api 白名单
-   - 检查器读写收敛【业务逻辑 3】—— WHEN 检查器要写元素 → THEN 只经 `element_locator.api.import_snapshot_page`，读经 `get_page_full`
+   - 检查器写库收敛【业务逻辑 3】—— WHEN 检查器要写元素 → THEN 只经 `element_locator.api.import_snapshot_page`
 
 2. **测试用例** —— 无专有自动化。
 

@@ -142,7 +142,7 @@ function nameValue(row) {
   return store.nameOverrides[row._idx] || row.alias || row.text || row.resource_id || '—'
 }
 
-/** 回看已保存页面（无 snapshot_id）无处回写，名称格只读展示 */
+/** 快照来源缺失（无 snapshot_id）时无处回写，名称格只读展示 */
 const canRename = computed(() => !!store.snapshot?.snapshot_id)
 
 function startEdit(row) {
@@ -451,4 +451,5 @@ function centerText(row) {
   white-space: nowrap;
 }
 </style>
+
 

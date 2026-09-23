@@ -4,7 +4,6 @@ from django.urls import path
 
 from .views import (
     capture,
-    page_view,
     save_elements,
     snapshot_delete,
     snapshot_detail,
@@ -23,5 +22,4 @@ urlpatterns = [
     path("snapshots/<int:snapshot_id>/layers/", snapshot_layers, name="snapshot_layers"),
     path("snapshots/<int:snapshot_id>/delete/", snapshot_delete, name="snapshot_delete"),
     path("snapshots/<int:snapshot_id>/save-elements/", save_elements, name="save_elements"),
-    path("pages/<int:page_id>/", page_view, name="page_view"),
 ]

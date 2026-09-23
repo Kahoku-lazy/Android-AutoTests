@@ -1,27 +1,4 @@
-# element-locator-page-workbench Specification
-
-## Purpose
-定义元素定位模块打开 Android 页面叶子后的元素工作台：以全宽表格呈现与编辑该页元素定位信息，不再提供截图圈选或工具栏分段筛选。
-
-## Requirements
-
-### Requirement: File-view chrome uses doodle hard-edge and sketch paper
-
-打开 Android 页面叶子的文件详情时，主工作区的操作按键 MUST 采用硬边按键皮肤（几何与侧栏「退出」一致）。元素定位信息表 MUST 以 SketchTable 表纸呈现（共享 `AppTable` 皮肤、模块强调色 `--c-element`、实线描边）。系统 SHALL NOT 在该页为表格另包 `el-card`，SHALL NOT 把删除操作保留为 Element Plus 默认圆角 plain 危险按钮。列字段、行内编辑与无截图/无分段筛选的契约 MUST 保持成立。
-
-#### Scenario: Delete key matches logout geometry
-
-- **WHEN** 用户打开元素定位项目中的一个 Android 页面叶子并测量「删除」按键
-- **THEN** 其 `border-width` 为 `2px`、`border-style` 为 `solid`、四角 `border-radius` 为 `2px`
-- **AND** `box-shadow` 为 `2px 2px 0 0` 加墨色且模糊半径为 `0`
-- **AND** 悬停时计算 `transform` 呈左上位移 1px，阴影偏移增至 `3px 3px 0 0`
-
-#### Scenario: Element table uses sketch paper
-
-- **WHEN** 该页已保存元素并渲染表格
-- **THEN** 表格由共享 `AppTable` 渲染，外框为墨色实线表纸与 `--c-element` 硬阴影
-- **AND** 表格外不套 `el-card`
-- **AND** 表体计算 transform 旋转为 none
+## MODIFIED Requirements
 
 ### Requirement: 元素行增删改接口契约
 
@@ -66,6 +43,22 @@
 - **WHEN** 客户端提交空集合，或集合中含不存在的元素 id
 - **THEN** 分别返回 HTTP 400 与 HTTP 404 并带中文原因
 - **AND** MUST NOT 删除任何元素
+
+## REMOVED Requirements
+
+### Requirement: Page workbench is a full-width element table
+
+**Reason**: 元素定位的元素字段收敛为「缩略图 / 元素名称 / 序号 / 文本 / 主定位 / 交互标注 / 测试点」，原要求把列集合写成「至少包含别名、文本、resource-id、XPath、坐标、测试点列」，与收敛后的呈现口径不再一致。
+
+**Migration**: 由新增要求「元素工作台按收敛字段集呈现」承接——「不渲染截图圈选面板」「不提供分段筛选」「列表展示全部已保存元素」三条不变量逐条保留，并把前置变更 `element-locator-element-table-editing` 交付的「每页固定 10 行分页」「翻页不改变集合」一并承接到新要求中。
+
+### Requirement: Locator fields remain editable in the table
+
+**Reason**: 可编辑面重定义为与呈现列一一对应（元素名称 / 文本 / 主定位 / 测试点）；原要求的可编辑集合（别名、文本、content-desc、class、resource-id、XPath、bounds、测试点、备注）中，content-desc、class、resource-id 与 bounds 已不在收敛后的字段集合内。
+
+**Migration**: 由新增要求「元素行按收敛字段集编辑」承接——「双击进入编辑 / 逐列校验 / 新增一行 / 批量删除 / 加载失败可见」五组行为逐条保留，可编辑列集合与主定位的单条写入口径按收敛口径重写；主定位的字段与接口契约见 `element-locator-element-fields`。
+
+## ADDED Requirements
 
 ### Requirement: 元素工作台按收敛字段集呈现
 

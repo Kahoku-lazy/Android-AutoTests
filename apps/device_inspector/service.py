@@ -79,6 +79,47 @@ def _crop_thumbnail(source: str, box: tuple[int, int, int, int], dest: str) -> b
         return False
 
 
+def crop_save_thumbnails(
+    screenshot_rel: str, jobs: list[tuple[int, tuple[int, int, int, int]]]
+) -> dict[int, str]:
+    """保存到元素定位时，按 bounds 从快照整屏截图批量裁剪缩略图。
+
+    Args:
+        screenshot_rel: 快照整屏截图的相对路径（media 目录内）。
+        jobs: [(元素序号, (left, top, right, bottom)), ...]
+
+    Returns:
+        {元素序号: 缩略图相对路径}。截图缺失、元素无尺寸或单张裁剪失败时该序号不入表，
+        由调用方留空；失败一律写告警日志，不让保存整次失败。
+    """
+    if not screenshot_rel or not jobs:
+        return {}
+    import logging
+
+    from pathlib import Path
+
+    from django.conf import settings
+
+    logger = logging.getLogger(__name__)
+    source = Path(settings.MEDIA_ROOT) / screenshot_rel
+    if not source.is_file():
+        logger.warning("保存到元素定位时快照截图不存在，缩略图留空: %s", screenshot_rel)
+        return {}
+
+    # 缩略图与快照截图同批（同一 ts 目录），随快照清理流程一并回收
+    ts = Path(screenshot_rel).stem.removeprefix("capture_")
+    thumbs = _shot_dir() / "thumbs" / ts
+    result: dict[int, str] = {}
+    for index, box in jobs:
+        if box[2] <= box[0] or box[3] <= box[1]:
+            continue
+        thumbs.mkdir(parents=True, exist_ok=True)
+        dest = thumbs / f"save_{index}.png"
+        if _crop_thumbnail(str(source), box, str(dest)):
+            result[index] = f"inspector/thumbs/{ts}/save_{index}.png"
+    return result
+
+
 def capture_dump_payload(engine, ts: str) -> dict:
     """抓取 UI 层级 + XPath 候选 + 元素缩略图落盘，返回 dump_json。"""
     # 引擎只给层级原始 XML，解析归算法层（引擎不 import algorithms）

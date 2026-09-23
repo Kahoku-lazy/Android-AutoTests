@@ -74,18 +74,6 @@
     check:
       message: "请先登录"
 
-- id: "TC-INS-007"
-  name: "page-view-no-token"
-  title: "页面只读回看未登录"
-  point: "无 Bearer token 访问 pages，返回 401 请先登录"
-  auth: "none"
-  method: "GET"
-  path: "/api/inspector/pages/1/"
-  expect:
-    status: 401
-    schema: "error"
-    check:
-      message: "请先登录"
 
 # ── 参数校验：capture 非法 method / 空 serial / 未注册 serial ──
 
@@ -191,15 +179,3 @@
     check:
       message: "快照不存在"
 
-- id: "TC-INS-070"
-  name: "page-view-not-exist"
-  title: "页面只读回看不存在"
-  point: "页面 ID 不存在返回 404 页面不存在"
-  auth: "required"
-  method: "GET"
-  path: "/api/inspector/pages/999999999/"
-  expect:
-    status: 404
-    schema: "error"
-    check:
-      message: "页面不存在"

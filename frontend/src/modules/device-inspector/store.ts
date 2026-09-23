@@ -3,7 +3,13 @@ import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { ElMessage } from 'element-plus'
 import { formatApiError } from '@/shared/api-client'
-import { FROZEN_REASONS, LAYER_GROUPS, elementInGroup, groupCount } from './constants'
+import {
+  KEY_DISABLED_MESSAGE,
+  LAYER_GROUPS,
+  NO_SELECTION_MESSAGE,
+  elementInGroup,
+  groupCount,
+} from './constants'
 import {
   apiCapture,
   apiGetSnapshots,
@@ -11,7 +17,6 @@ import {
   apiDeleteSnapshot,
   apiClearSnapshots,
   apiSaveToElements,
-  apiGetPageView,
   apiGetDevices,
 } from './api'
 
@@ -28,20 +33,6 @@ export function mediaUrl(path) {
   if (!path) return ''
   return `/media/${path}`
 }
-
-/** 不可用（灰底）按键的统一提示文案：index.vue 与 CaptureForm.vue 共用，避免同一文案两处硬编码 */
-const KEY_DISABLED_MESSAGE = '按键不可用，请先选择设备'
-
-/**
- * 「保存到元素定位」冻结开关。
- * 原因：本页改为展示全量元素（含被展示裁剪丢弃的），行序不再是 snapshot 的展示元素下标，
- * 而保存链路按展示元素下标收参 —— 口径冲突，入口保留但冻结，待后续变更对齐前端下标口径。
- * 解冻时：去掉此开关与该守卫，并按新下标口径重写 saveToElements 的 element_ids 组装。
- */
-const SAVE_TO_ELEMENTS_FROZEN = true
-
-/** 「已保存页面」冻结开关：存量数据已作废，入口保留但冻结使用 */
-const SAVED_PAGE_FROZEN = true
 
 export const useElementStore = defineStore('device-inspector', () => {
   // ── Device ──
@@ -82,14 +73,30 @@ export const useElementStore = defineStore('device-inspector', () => {
   const groupElements = computed(() =>
     elements.value.filter(el => elementInGroup(el, activeGroup.value))
   )
-  /** 数据来源：index=全量节点索引；legacy=历史快照降级为保留集；saved-page=已保存页面（冻结入口） */
+  /** 数据来源：index=全量节点索引；legacy=历史快照降级为保留集 */
   const layerSource = computed(() => layers.value?.source || '')
 
   const selected = ref(null)      // 选中元素（截图联动）
   const nameOverrides = ref<Record<string, string>>({})   // { [元素 seq]: 自定义元素名称 }（表格内联重命名）
 
-  // ── 勾选（保存到元素定位的筛减；key = _rowKey）──
+  // ── 勾选（保存到元素定位的筛减；key = _rowKey，即 `s{seq}`）──
   const checkedIds = ref(new Set())
+
+  /**
+   * 勾选集合 → 元素序号（1 基，与元素表「序号」列同源）。
+   * 后端按该序号在快照全量节点索引中取元素，不再使用展示保留集的下标。
+   */
+  function checkedSeqs() {
+    const seqs = []
+    for (const key of checkedIds.value) {
+      const seq = Number(String(key).replace(/^s/, ''))
+      if (Number.isInteger(seq) && seq > 0) seqs.push(seq)
+    }
+    return seqs.sort((a, b) => a - b)
+  }
+  /** 勾选数量（入口守卫与提示共用，避免先把非法行键算进去） */
+  const checkedCount = computed(() => checkedSeqs().length)
+
   function toggleCheck(row) {
     if (!row || typeof row !== 'object') return
     const id = row._rowKey ?? row._idx
@@ -103,10 +110,9 @@ export const useElementStore = defineStore('device-inspector', () => {
     checkedIds.value = new Set()
   }
 
-  // ── 快照抽屉 / 保存弹窗 / 回看选择器状态 ──
+  // ── 快照抽屉 / 保存弹窗状态 ──
   const drawerVisible = ref(false)
   const saveDialogVisible = ref(false)
-  const pickerVisible = ref(false)
   const saving = ref(false)
 
   // ── Actions ──
@@ -287,34 +293,31 @@ export const useElementStore = defineStore('device-inspector', () => {
   }
 
   async function saveToElements(payload) {
-    if (SAVE_TO_ELEMENTS_FROZEN) {
-      ElMessage.warning(FROZEN_REASONS.saveToElements)
-      return null
-    }
     if (!snapshot.value) return null
-    if (checkedIds.value.size === 0) {
-      ElMessage.warning('请先勾选要保存的数据')
+    const seqs = checkedSeqs()
+    if (seqs.length === 0) {
+      ElMessage.warning(NO_SELECTION_MESSAGE)
       return null
     }
     saving.value = true
     try {
       const body: {
         page_label: string; folder_path: string;
-        element_ids?: number[]; page_id?: number;
+        element_ids: number[]; page_id?: number;
         element_aliases?: { index: number; name: string }[];
       } = {
         page_label: payload.pageLabel || '',
         folder_path: payload.folderPath || '',
+        element_ids: seqs,
       }
       if (payload.pageId) body.page_id = payload.pageId
-      // 表格内联重命名的「元素名称」→ 按元素行键逐元素回填；
+      // 表格内联重命名的「元素名称」→ 按元素序号逐元素回填；
       // 不能再按 resource_id 组装（同名 rid 的多个元素会被同一个名字覆盖）
-      const all = elements.value
       const elementAliases: { index: number; name: string }[] = []
       for (const [seq, name] of Object.entries(nameOverrides.value)) {
         const i = Number(seq)
         const v = (name || '').trim()
-        if (Number.isInteger(i) && i >= 0 && i < all.length && v) elementAliases.push({ index: i, name: v })
+        if (Number.isInteger(i) && i > 0 && v) elementAliases.push({ index: i, name: v })
       }
       if (elementAliases.length) body.element_aliases = elementAliases
       const { data } = await apiSaveToElements(snapshot.value.snapshot_id, body)
@@ -334,49 +337,6 @@ export const useElementStore = defineStore('device-inspector', () => {
     return null
   }
 
-  /**
-   * 已保存页面回看 —— 入口已冻结（存量数据作废），代码路径保留以便解冻。
-   * 这里不再伪造页面分区：直接把元素挂进分层视图，分组摘要留空。
-   */
-  async function viewSavedPage(pageId) {
-    if (SAVED_PAGE_FROZEN) {
-      ElMessage.warning(FROZEN_REASONS.savedPage)
-      return null
-    }
-    try {
-      const { data } = await apiGetPageView(pageId)
-      if (data.status) {
-        const pageElements = (data.data?.elements || []).map((e, i) => ({
-          seq: i + 1,
-          level1: '',
-          level2: null,
-          content_kind: '',
-          class_name: e.class_name, class_simple: e.class_name, text: e.text_val, alias: e.alias,
-          content_desc: e.content_desc, resource_id: e.resource_id, bounds: e.bounds,
-          xpaths: e.xpaths || [], coords: { x: e.x, y: e.y, w: e.width, h: e.height, bounds: e.bounds },
-          clickable: e.clickable, enabled: e.enabled, scrollable: e.scrollable, checked: e.checked,
-          thumbnail_path: e.thumbnail_path, kept_in_snapshot: true, primary: { xpath: '', stable: false },
-          _idx: i + 1, _rowKey: `s${i + 1}`,
-        }))
-        applyLayers({
-          snapshot_id: null,
-          source: 'saved-page',
-          package: data.data?.package || '',
-          activity: data.data?.activity || '',
-          screen: { w: 0, h: 0 },
-          screenshot_path: data.data?.screenshot_path || '',
-          summary: { total: pageElements.length, groups: [] },
-          elements: pageElements,
-        })
-        pickerVisible.value = false
-        return data.data
-      }
-      ElMessage.error(data.message || '页面加载失败')
-    } catch (e) {
-      ElMessage.error(formatApiError(e, '页面加载失败'))
-    }
-    return null
-  }
 
   function selectElement(el) {
     selected.value = el
@@ -403,10 +363,10 @@ export const useElementStore = defineStore('device-inspector', () => {
     captureSerial, availableDevices,
     layers, snapshot, layerSource, groupBadges, activeGroup, activeGroupId, groupElements, elements,
     snapshots, snapshotTotal, captLoading, error,
-    selected, nameOverrides, checkedIds,
-    drawerVisible, saveDialogVisible, pickerVisible, saving,
+    selected, nameOverrides, checkedIds, checkedCount,
+    drawerVisible, saveDialogVisible, saving,
     fetchDevices, capture, fetchSnapshots, fetchLayers, viewSnapshot, deleteSnapshot,
-    clearSnapshots, saveToElements, viewSavedPage,
+    clearSnapshots, saveToElements,
     toggleCheck,
     selectElement, setElementName, retry, notify, notifyKeyUnavailable,
   }

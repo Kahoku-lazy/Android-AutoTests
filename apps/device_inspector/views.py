@@ -83,7 +83,10 @@ def snapshot_delete(request, snapshot_id: int):
 @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def save_elements(request, snapshot_id: int):
-    """POST /api/inspector/snapshots/{id}/save-elements — 筛减保存到元素定位。"""
+    """POST /api/inspector/snapshots/{id}/save-elements — 筛减保存到元素定位。
+
+    `element_ids` 为元素在快照全量索引中的坐标顺序序号（1 基）；越界序号 → 400。
+    """
     from apps.element_locator.api import ImportConflictError
 
     body = request.data or {}
@@ -151,14 +154,4 @@ def snapshot_layers(request, snapshot_id: int):
         return Response({"message": str(e)}, status=400)
     if data is None:
         return Response({"message": "快照不存在"}, status=404)
-    return Response(data)
-
-
-@extend_schema(responses=OpenApiTypes.OBJECT)
-@api_view(["GET"])
-def page_view(request, page_id: int):
-    """GET /api/inspector/pages/{page_id} — 元素定位已保存页面只读视图。"""
-    data = api.get_page_view(page_id)
-    if data is None:
-        return Response({"message": "页面不存在"}, status=404)
     return Response(data)

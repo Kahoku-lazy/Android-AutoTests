@@ -27,7 +27,6 @@ _UNSAFE_FILENAME_CHARS = re.compile(r"[^A-Za-z0-9_.-]")
 
 __all__ = [
     "ImportConflictError",
-    "get_page_full",
     "import_snapshot_page",
 ]
 
@@ -247,44 +246,3 @@ def import_snapshot_page(
     page.element_count = Element.objects.filter(page=page).count()
     page.save(update_fields=["element_count"])
     return {"saved": saved, "updated": updated, "skipped": skipped, "page_id": page.id}
-
-
-def get_page_full(page_id: int) -> dict | None:
-    """元素定位已保存页面只读视图（供设备检查器回看）；不存在返回 None。"""
-    page = Page.objects.filter(id=page_id, is_folder=False).first()
-    if page is None:
-        return None
-    elements = list(Element.objects.filter(page=page).order_by("id"))
-    return {
-        "page_id": page.id,
-        "label": page.label,
-        "package": page.package,
-        "activity": page.activity,
-        "screenshot_path": page.screenshot_path,
-        "element_count": page.element_count,
-        "ocr_json": page.ocr_json or None,
-        "elements": [_element_dict(e) for e in elements],
-    }
-
-
-def _element_dict(el: Element) -> dict:
-    """元素模型 → dict（收敛口径：呈现字段 + 去重键）。"""
-    return {
-        "id": el.id,
-        "alias": el.alias,
-        "text_val": el.text_val,
-        "resource_id": el.resource_id,
-        "bounds": el.bounds,
-        "seq": el.seq,
-        "primary_xpath": el.primary_xpath,
-        "primary_stable": el.primary_stable,
-        "thumbnail_path": el.thumbnail_path,
-        "clickable": el.clickable,
-        "long_clickable": el.long_clickable,
-        "scrollable": el.scrollable,
-        "checkable": el.checkable,
-        "checked": el.checked,
-        "enabled": el.enabled,
-        "focusable": el.focusable,
-        "is_test_point": el.is_test_point,
-    }

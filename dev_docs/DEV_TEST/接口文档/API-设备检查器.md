@@ -14,7 +14,6 @@
 | 快照删除接口 | DELETE /api/inspector/snapshots/{id}/delete | 需登录(Bearer) | 删除快照记录 + 截图/缩略图文件 |
 | 一键清空接口 | DELETE /api/inspector/snapshots/clear/ | 需登录(Bearer) | 清空本人全部历史快照，返回删除条数 |
 | 元素保存接口 | POST /api/inspector/snapshots/{id}/save-elements | 需登录(Bearer) | 筛减保存到元素定位（经 element_locator api） |
-| 页面只读视图接口 | GET /api/inspector/pages/{id} | 需登录(Bearer) | 元素定位已保存页面只读回看 |
 
 ## 2. 通用约定
 
@@ -341,7 +340,12 @@
 
 > 筛减保存快照到元素定位（写元素资产经 `element_locator.api.import_snapshot_page`，禁止本模块直接 ORM 写 `el_` 表）。
 > 两种模式：传 `page_id` = 保存到已有页面（元素 upsert 追加）；否则传 `page_label`（+ `folder_path`）= 新建页面。
-> 页面级 OCR 不再随保存写入（变更 `rework-inspector-view`）：快照自身 OCR 仍存于 `di_snapshots.ocr_json`，
+> **只保存六项**（变更 `rework-save-to-elements`）：缩略图、元素名称、序号、文本、主定位、交互标注；
+> 类名 / 内容描述 / 坐标分量 / 层级 / 父内序号 / 候选 XPath 不再写入（`resource_id` 与 `bounds` 仍写入，作为去重键）。
+> **缩略图**在保存时按元素 bounds 从该快照已存的整屏截图裁剪（检查器侧），再复制到元素定位自有目录；
+> 截图缺失或裁剪失败时该元素缩略图留空 + 告警，保存不失败。
+> **不保存也不关联整屏截图**：页面 `screenshot_path` 恒为空。
+> 页面级 OCR 不随保存写入（变更 `rework-inspector-view`）：快照自身 OCR 仍存于 `di_snapshots.ocr_json`，
 > 元素定位页面 `ocr_json` 恒为空。
 
 ### 请求体
@@ -351,8 +355,9 @@
 | page_label | string | 否 | 新建页面名称；与 page_id 二选一（无 page_id 时必填，空 → 400） |
 | folder_path | string | 否 | 目录路径，按 `/` 逐级查找或创建（空 = 根目录） |
 | page_id | int | 否 | 已有页面 ID（须为整数字符串）；与 page_label/folder_path 二选一 |
-| element_ids | array[int] | 否 | 勾选元素下标列表（对应 dump_json.elements 的下标）；空 = 全部 |
+| element_ids | array[int] | 否 | 勾选元素的**坐标顺序序号**（1 基，与分层端点 `seq` / 元素表「序号」列同源）；空 = 全部 |
 | aliases | object | 否 | `{resource_id: 中文别名}` 映射，按 resource_id 回填到元素 alias |
+| element_aliases | array | 否 | `[{index, name}]`，index 为坐标顺序序号；优先于 aliases，同一 resource_id 的多个元素互不覆盖 |
 
 ### 成功响应（200）
 
@@ -374,76 +379,10 @@
 |---|---|---|
 | 400 | 快照不存在 | 快照 ID 不存在或非本人快照 |
 | 400 | 页面名称不能为空 | 未传 page_id 且 page_label 为空 |
-| 400 | 该快照无元素数据 | 快照 dump_json.elements 为空 |
-| 400 | 元素数据不能为空 | 筛减后元素列表为空 |
+| 400 | 该快照无全量元素索引，无法保存 | 快照没有 nodes_json（历史快照） |
+| 400 | 元素序号不存在：{值} | `element_ids` 含不在该快照全量元素序号内的值 |
 | 400 | 目标页面不存在 | page_id 无效（不存在或为目录节点） |
 | 409 | 目录最多嵌套 5 层 | folder_path 目录层级超 MAX_PAGE_TREE_DEPTH=5 |
-| 409 | 同名节点「{segment}」不是目录 | 目录路径中同名节点是页面（非目录） |
-| 409 | 同级页面「{page_label}」已存在 | 新建模式下同级已存在同名页面 |
-| 500 | 保存失败 | 其他未捕获异常 |
-
----
-
-## 9. 页面只读视图接口：GET /api/inspector/pages/{id}
-
-| 项 | 值 |
-|---|---|
-| 鉴权 | 需登录（Bearer Token） |
-
-### 请求
-
-无请求体；路径参数 `id` 为元素定位页面 ID（`el_pages`，非快照 ID）。
-
-### 成功响应（200）
-
-```json
-{
-  "status": true,                    # 请求是否成功，恒为 true
-  "data": {
-    "page_id": 5,                    # 页面 ID
-    "label": "登录页",                # 页面标签
-    "package": "com.example.app",    # 包名
-    "activity": "com.example.app.MainActivity",  # Activity 名
-    "screenshot_path": "inspector/shots/capture_20260101_120000_000001.png",  # 截图相对路径
-    "element_count": 4,              # 元素数
-    "ocr_json": { "texts": [ "…" ], "ocr_count": 10 },  # OCR 数据（无则 null）
-    "elements": [                    # 已保存元素（元素定位模型字段）
-      {
-        "id": 101,                   # 元素 ID
-        "class_name": "android.widget.Button",  # 类全名
-        "text_val": "",              # 文本（元素定位字段名 text_val，注意与快照 text 不同）
-        "content_desc": "",          # 内容描述
-        "resource_id": "com.example.app:id/login_btn",  # 资源 ID
-        "bounds": "[0,200][1080,300]",  # bounds 字符串
-        "xpaths": [                  # XPath 候选（存库为 JSON 字符串，返回时解析为 list）
-          {"type": "resource-id", "xpath": "//*[@resource-id='com.example.app:id/login_btn']", "count": 1}
-        ],
-        "x": 0,                      # 左上角 x
-        "y": 200,                    # 左上角 y
-        "width": 1080,               # 宽
-        "height": 100,               # 高
-        "depth": 1,                  # 层级深度
-        "index": "1",                # 同级下标（字符串）
-        "clickable": true,           # 是否可点击
-        "enabled": true,             # 是否可用
-        "scrollable": false,         # 是否可滚动
-        "checked": false,            # 是否已勾选
-        "thumbnail_path": "inspector/thumbs/20260101_120000_000001/el_0.png",  # 缩略图相对路径
-        "alias": "登录按钮",          # 别名（保存时 alias 或 text/resource_id 兜底）
-        "is_test_point": false       # 是否测试点标记
-      }
-    ]
-  }
-}
-```
-
-### 错误码与文案
-
-| HTTP | message | 触发条件 |
-|---|---|---|
-| 404 | 页面不存在 | 页面 ID 不存在（或为目录节点） |
-
----
 
 ## 10. 一键清空接口：DELETE /api/inspector/snapshots/clear/
 

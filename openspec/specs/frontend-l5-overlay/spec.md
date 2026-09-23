@@ -125,7 +125,7 @@
 
 #### Scenario: Read-only overlay stays dismissible
 
-- **WHEN** 打开纯展示 / 预览 / 只读列表选择的弹层（缩略图放大、快照抽屉、已保存页面选择、知识预览、步骤截图预览）
+- **WHEN** 打开纯展示 / 预览 / 只读列表选择的弹层（缩略图放大、快照抽屉、知识预览、步骤截图预览）
 - **THEN** 点遮罩即可关闭（保持默认）
 - **AND** 该弹层不写 `close-on-click-modal`
 

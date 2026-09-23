@@ -9,7 +9,6 @@ __all__ = [
     "Element",
     "PageFlow",
     "ImportConflictError",
-    "get_page_full",
     "import_snapshot_page",
     "simple_yaml_dump",
     "get_test_points",
@@ -67,7 +66,7 @@ from .api_projects import (
     list_projects,
     serialize_project,
 )
-from .api_snapshot import ImportConflictError, get_page_full, import_snapshot_page
+from .api_snapshot import ImportConflictError, import_snapshot_page
 from .element_fields import (
     CREATE_FIELDS,
     UPDATE_FIELDS,

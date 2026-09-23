@@ -463,7 +463,7 @@ function onMouseLeave() {
           <p class="no-signal__hint">
             {{ shotFailed
               ? '该页面的截图文件已不存在，请重新获取或换一份快照回看'
-              : '选择设备后点击「获取」，或从快照列表 / 已保存页面回看' }}
+              : '选择设备后点击「获取」，或从快照列表回看' }}
           </p>
         </div>
       </div>

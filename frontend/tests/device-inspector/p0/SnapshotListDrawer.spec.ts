@@ -23,7 +23,6 @@ vi.mock('@/modules/device-inspector/api', () => ({
   apiDeleteSnapshot: vi.fn(),
   apiClearSnapshots: vi.fn(),
   apiSaveToElements: vi.fn(),
-  apiGetPageView: vi.fn(),
   apiGetDevices: vi.fn(),
 }))
 

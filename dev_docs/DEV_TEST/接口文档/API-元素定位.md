@@ -833,12 +833,14 @@
 | folder_path | string | 否 | 目录路径，按「/」逐级查找或创建 |
 | package | string | 否 | 应用包名 |
 | activity | string | 否 | Activity |
-| screenshot_path | string | 否 | 截图路径 |
 | ocr_json | object | 否 | 页面级 OCR 结果 |
 | snapshot_id | integer | 否 | 来源检查器快照 ID |
 | elements | array | 是 | 元素数组（见下） |
 
-元素对象字段：`alias`/`text`/`resource_id`/`class_name`/`content_desc`/`bounds`/`xpaths`/`x`/`y`/`width`/`height`/`depth`/`index`/`clickable`/`enabled`/`scrollable`/`checked`/`thumbnail_path`（元素按 `(page, resource_id, bounds)` upsert）。
+> **不保存也不关联整屏截图**（变更 `rework-save-to-elements`）：`screenshot_path` 入参已移除，导入后页面 `screenshot_path` 恒为空。
+> 元素缩略图由调用方按元素 bounds 裁好后以 `thumbnail_path` 传入，导入时复制到元素定位自有目录。
+
+元素对象字段（收敛口径）：`seq`（快照全量元素的坐标顺序序号）/`alias`（元素名称）/`text`/`primary_xpath`/`primary_stable`/`flags`（七项交互标志）/`resource_id`/`bounds`/`thumbnail_path`；元素按 `(page, resource_id, bounds)` upsert。源缩略图缺失时该元素 `thumbnail_path` 留空并写告警，导入仍然成功。
 
 成功响应（200）
 
@@ -961,36 +963,35 @@
 ```json
 {
   "status": true,
-  "elements": [                         # 元素数组
+  "elements": [                         # 元素数组（收敛口径：呈现字段 + 去重键）
     {
       "id": 20,                         # 元素 ID
       "page_id": 10,                    # 所属页面 ID
-      "class_name": "android.widget.Button", # 类名
+      "alias": "登录按钮",              # 元素名称（表格列「元素名称」）
+      "seq": 3,                         # 快照内坐标顺序序号（表格列「序号」）
       "text_val": "登录",               # 文本
-      "content_desc": "",               # content-desc
-      "resource_id": "com.example:id/btn_login", # resource-id
-      "bounds": "[0,0][100,50]",        # 位置 bounds
-      "x": 0,                           # 坐标 x
-      "y": 0,                           # 坐标 y
-      "width": 100,                     # 宽
-      "height": 50,                     # 高
-      "depth": 2,                       # 树深度
-      "index": "0",                     # 兄弟索引
-      "scrollable": false,              # 可滚动
-      "checked": false,                 # 勾选态
-      "thumbnail_path": "",             # 缩略图路径
-      "xpath_candidates": "[{"type":"manual","xpath":"..."}]", # XPath 候选（JSON 字符串）
-      "clickable": true,                # 可点击
-      "enabled": true,                  # 可用
-      "alias": "登录按钮",              # 别名
-      "tags": "",                       # 标签
-      "is_test_point": false,           # 是否测试点
-      "notes": "",                      # 备注
+      "primary_xpath": "//android.widget.Button[@resource-id='com.example:id/btn_login']", # 主定位表达式
+      "primary_stable": true,           # 主定位是否稳定（同页唯一匹配）
+      "resource_id": "com.example:id/btn_login", # 去重键（不呈现）
+      "bounds": "[0,0][100,50]",        # 去重键（不呈现）
+      "thumbnail_path": "locator/pages/10/el_com.example_id_btn_login_1a2b3c4d.png", # 缩略图
+      "clickable": true,                # 交互标注：可点击
+      "long_clickable": false,          # 交互标注：可长按
+      "scrollable": false,              # 交互标注：可滚动
+      "checkable": false,               # 交互标注：可勾选
+      "checked": false,                 # 交互标注：已勾选
+      "enabled": true,                  # 交互标注：启用
+      "focusable": true,                # 交互标注：可聚焦
+      "is_test_point": false,           # 是否测试点（表格列「测试点」）
+      "notes": "",                      # 备注（不呈现列）
       "created_at": "2026-08-21 10:00:00"
     }
   ],
   "total": 1                            # 总数（分页前）
 }
+```
+
+> 变更 `rework-save-to-elements` 后：响应**不再返回** `xpath_candidates`（候选列表）与页面 `screenshot_path`，也不再返回类名 / content-desc / 坐标分量 / 层级 / 父内序号 —— 元素定位的元素数据只呈现「缩略图 / 元素名称 / 序号 / 文本 / 主定位 / 交互标注 / 测试点」。
 ```
 
 ---
@@ -1002,46 +1003,41 @@
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | alias | string | 是 | 元素名称 |
-| resource_id | string | 条件 | 与 bounds 至少填一个 |
-| bounds | string | 条件 | `[x1,y1][x2,y2]`；与 resource_id 至少填一个 |
-| xpath | string | 否 | 单条 XPath；写库时覆盖为 `[{type:"manual",xpath,count:1}]` |
-| xpath_candidates | array | 否 | 候选列表（与 xpath 同时给出时以 xpath 为准） |
-| class_name | string | 否 | 类名 |
+| resource_id | string | 条件 | 去重键；与 bounds 至少填一个 |
+| bounds | string | 条件 | 去重键，`[x1,y1][x2,y2]`；与 resource_id 至少填一个 |
 | text_val | string | 否 | 文本 |
-| content_desc | string | 否 | content-desc |
-| clickable | boolean | 否 | 可点击，默认 false |
-| enabled | boolean | 否 | 可用，默认 true |
+| primary_xpath | string | 否 | 主定位表达式（单条；写库时 `primary_stable` 置 false） |
 | notes | string | 否 | 备注 |
 | is_test_point | boolean | 否 | 是否测试点，默认 false |
+
+> 收敛口径（变更 `rework-save-to-elements`）：不再接受 `class_name` / `content_desc` / `xpath` / `xpath_candidates` / 交互标志 / `tags`，传入即 400。
 
 成功响应（200）
 
 ```json
 {
   "status": true,
-  "element": {
+  "element": {                         # 与「页面元素列表」同一元素 payload
     "id": 21,                           # 元素 ID
     "page_id": 10,
     "alias": "登录按钮",
-    "class_name": "android.widget.Button",
     "text_val": "登录",
-    "content_desc": "",
     "resource_id": "com.example:id/btn_login",
-    "clickable": true,
-    "enabled": true,
-    "scrollable": false,
-    "checked": false,
     "bounds": "[0,0][100,50]",
-    "x": 0,
-    "y": 0,
-    "width": 100,
-    "height": 50,
-    "depth": 0,
-    "index": "",
+    "seq": 0,                           # 手工新增无快照序号 → 0（表格显示占位）
+    "primary_xpath": "",
+    "primary_stable": false,
     "thumbnail_path": "",
-    "xpath_candidates": "[]",
+    "clickable": false,
+    "long_clickable": false,
+    "scrollable": false,
+    "checkable": false,
+    "checked": false,
+    "enabled": false,
+    "focusable": false,
     "is_test_point": false,
-    "notes": ""
+    "notes": "",
+    "created_at": "2026-08-21 10:00:00"
   }
 }
 ```
@@ -1068,7 +1064,7 @@
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| elements | array | 是 | 元素数组（字段同「添加元素」+ xpath_type/xpath_count） |
+| elements | array | 是 | 元素数组（每条字段同「添加元素」；越界字段计入 `errors` 并跳过该条） |
 
 成功响应（200）
 
@@ -1098,17 +1094,12 @@
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| alias | string | 否 | 别名 |
+| alias | string | 否 | 元素名称 |
 | text_val | string | 否 | 文本 |
-| content_desc | string | 否 | content-desc |
-| class_name | string | 否 | 类名 |
-| resource_id | string | 否 | resource-id |
-| bounds | string | 否 | 坐标；解析后同步写入 x/y/width/height |
-| xpath | string | 否 | 单条 XPath；覆盖为单条人工候选 |
-| xpath_candidates | array | 否 | 候选列表（与 xpath 同时给出时以 xpath 为准） |
-| is_test_point / clickable / enabled / scrollable / checked | boolean | 否 | 标记与交互 |
-| notes | string | 否 | 备注 |
-| tags | string | 否 | 标签 |
+| primary_xpath | string | 否 | 主定位表达式（覆盖为单条；`primary_stable` 置 false） |
+| is_test_point | boolean | 否 | 是否测试点 |
+
+> 收敛口径（变更 `rework-save-to-elements`）：更新只接受这四项；`class_name` / `content_desc` / `resource_id` / `bounds` / `xpath_candidates` 等已不在呈现口径内，传入即 400。
 
 成功响应（200）
 
@@ -1123,9 +1114,9 @@
 | HTTP | message | 触发条件 |
 |---|---|---|
 | 400 | 无效的 JSON 请求体 | body 非 JSON |
-| 400 | 坐标格式应为 [x1,y1][x2,y2] / 坐标右下角不能小于左上角 | bounds 非法 |
+| 400 | 主定位表达式不能为空 | `primary_xpath` 为空白 |
 | 400 | &lt;field&gt; 最长 N 个字符 | 超模型列宽 |
-| 400 | 不支持修改字段 &lt;key&gt; | 白名单外字段 |
+| 400 | 不支持修改字段 &lt;key&gt; | 白名单外字段（含 content-desc / class / resource-id / bounds / 候选列表） |
 | 404 | 元素不存在 | el_id 不存在 |
 
 ---

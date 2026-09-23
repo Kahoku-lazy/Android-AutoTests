@@ -23,7 +23,6 @@ vi.mock('@/modules/device-inspector/api', () => ({
   apiDeleteSnapshot: vi.fn(),
   apiClearSnapshots: vi.fn(),
   apiSaveToElements: vi.fn(),
-  apiGetPageView: vi.fn(),
   apiGetDevices: vi.fn(),
 }))
 
@@ -214,20 +213,6 @@ describe('设备检查器 store', () => {
     expect(store.elements.every(e => e.kept_in_snapshot)).toBe(true)
   })
 
-  it('冻结入口不发请求：保存与已保存页面回看都只提示原因', async () => {
-    const store = useElementStore()
-    vi.mocked(inspectorApi.apiGetLayers).mockResolvedValueOnce(ok(layersPayload()) as never)
-    await store.fetchLayers(7)
-
-    const saved = await store.saveToElements({ pageLabel: '页面', folderPath: '' })
-    const page = await store.viewSavedPage(3)
-
-    expect(saved).toBeNull()
-    expect(page).toBeNull()
-    expect(inspectorApi.apiSaveToElements).not.toHaveBeenCalled()
-    expect(inspectorApi.apiGetPageView).not.toHaveBeenCalled()
-    expect(ElMessage.warning).toHaveBeenCalledTimes(2)
-  })
 
   it('一键清空成功后列表与分层状态一起复位', async () => {
     const store = useElementStore()
@@ -260,5 +245,41 @@ describe('设备检查器 store', () => {
     expect(ElMessage.error).toHaveBeenCalledWith('清空失败')
     expect(store.layers).not.toBeNull()
     expect(store.snapshot).not.toBeNull()
+  })
+})
+
+describe('保存到元素定位：解冻后的勾选必选与序号口径', () => {
+  it('未勾选任何元素时提示「至少勾选一个元素才能保存」且不发请求', async () => {
+    const store = useElementStore()
+    vi.mocked(inspectorApi.apiGetLayers).mockResolvedValue(ok(layersPayload()) as never)
+    await store.fetchLayers(7)
+
+    await store.saveToElements({ pageLabel: '新页面', folderPath: '' })
+
+    expect(ElMessage.warning).toHaveBeenCalledWith('至少勾选一个元素才能保存')
+    expect(inspectorApi.apiSaveToElements).not.toHaveBeenCalled()
+  })
+
+  it('勾选后请求体按元素序号组装：element_ids 为整数序号，内联名称按序号回填', async () => {
+    const store = useElementStore()
+    vi.mocked(inspectorApi.apiGetLayers).mockResolvedValue(ok(layersPayload()) as never)
+    vi.mocked(inspectorApi.apiSaveToElements).mockResolvedValue(
+      ok({ saved: 2, updated: 0, skipped: 0, page_id: 9 }) as never,
+    )
+    await store.fetchLayers(7)
+
+    store.toggleCheck({ _rowKey: 's1', _idx: 1 })
+    store.toggleCheck({ _rowKey: 's3', _idx: 3 })
+    store.setElementName(3, '设置项')
+
+    await store.saveToElements({ pageLabel: '新页面', folderPath: '目录A' })
+
+    expect(store.checkedCount).toBe(2)
+    expect(inspectorApi.apiSaveToElements).toHaveBeenCalledWith(7, {
+      page_label: '新页面',
+      folder_path: '目录A',
+      element_ids: [1, 3],
+      element_aliases: [{ index: 3, name: '设置项' }],
+    })
   })
 })

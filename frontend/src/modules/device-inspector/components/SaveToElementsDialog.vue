@@ -1,12 +1,22 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+/**
+ * 「保存到元素定位」弹窗：目录路径与目标页面都取自元素定位的**项目树**
+ * （`el_locator_directories` + `el_pages.directory_id`）。
+ *
+ * 不能再用 legacy 的 `Page.parent_id` / `is_folder` 过滤：项目化迁移（0013）之后
+ * 目录已独立成表，`is_folder` 恒为假、`parent_id` 恒为空，按旧口径过滤会得到空级联。
+ */
+import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { apiGetPages } from '@/modules/element-locator/api'
+import { formatApiError } from '@/shared/api-client'
+import { getLocatorProjectTree } from '@/modules/element-locator/api'
+import { LOCATOR_PROJECT_CODES } from '@/modules/element-locator/types'
 import { useElementStore } from '../store'
 
 const store = useElementStore()
 
-const pages = ref([])
+/** 元素定位项目树节点：{type:"directory", id, name, children} / {type:"file", kind:"page", id, name} */
+const tree = ref([])
 const loading = ref(false)
 
 const mode = ref('existing')            // 'existing' | 'create'
@@ -21,27 +31,33 @@ const saveRules = {
   newPageLabel: [{ required: true, message: '请填写新页面名称', trigger: 'blur' }],
 }
 
-// ── 页面树 → 级联目录 options（仅目录节点，逐层嵌套）──
-function buildTree(pid) {
-  return pages.value
-    .filter(p => p.is_folder && (p.parent_id ?? null) === pid)
-    .map(f => ({ value: f.label, label: f.label, children: buildTree(f.id) }))
+/** ── 项目树 → 级联目录 options（只取目录节点，逐层嵌套）──
+ *  value 用目录名：保存请求按 `folder_path` 逐段按名字查找或创建（`_resolve_folder`）。
+ */
+function buildDirOptions(nodes) {
+  return (nodes || [])
+    .filter((node) => node.type === 'directory')
+    .map((node) => ({ value: node.name, label: node.name, children: buildDirOptions(node.children) }))
 }
-const folderOptions = computed(() => buildTree(null))
+const folderOptions = computed(() => buildDirOptions(tree.value))
 
-/** 当前所选目录（末层 label）下挂的页面 */
+/** 按 label 路径在项目树里定位目录节点；越界或不存在时返回 undefined */
+function findDirectory(nodes, path, depth = 0) {
+  if (depth >= path.length) return undefined
+  const node = (nodes || []).find((item) => item.type === 'directory' && item.name === path[depth])
+  if (!node) return undefined
+  if (depth === path.length - 1) return node
+  return findDirectory(node.children, path, depth + 1)
+}
+
+/** 当前所选目录（末层）下挂的页面；未选目录时列项目根下的页面 */
 const selectedFolderPages = computed(() => {
-  if (!folderPath.value.length) {
-    return pages.value.filter(p => !p.is_folder && (p.parent_id ?? null) === null)
-  }
-  const path = [...folderPath.value]
-  let parentId = null
-  for (let i = 0; i < path.length; i++) {
-    const node = pages.value.find(p => p.is_folder && p.label === path[i] && (p.parent_id ?? null) === parentId)
-    if (!node) return []
-    parentId = node.id
-  }
-  return pages.value.filter(p => !p.is_folder && p.parent_id === parentId)
+  const nodes = folderPath.value.length
+    ? findDirectory(tree.value, folderPath.value)?.children || []
+    : tree.value
+  return nodes
+    .filter((node) => node.type === 'file' && node.kind === 'page')
+    .map((node) => ({ id: node.id, label: node.name }))
 })
 
 const folderPathText = computed(() => folderPath.value.join(' / '))
@@ -54,9 +70,15 @@ watch(() => store.saveDialogVisible, async (v) => {
   selectedPageId.value = null
   newPageLabel.value = store.snapshot?.package || ''
   try {
-    const { data } = await apiGetPages()
-    if (data.status) pages.value = data.pages || []
-  } catch (e) { console.error(e) } finally {
+    const { data } = await getLocatorProjectTree(LOCATOR_PROJECT_CODES[0])
+    if (data.status) {
+      tree.value = data.data?.tree || []
+    } else {
+      ElMessage.error(data.message || '目录加载失败')
+    }
+  } catch (e) {
+    ElMessage.error(formatApiError(e, '目录加载失败'))
+  } finally {
     loading.value = false
   }
 })

@@ -17,17 +17,17 @@
 
 1. **模版** —— 一张检查器工作台（路由 `/inspector`，标题「设备检查器」），从上到下：
    1. 页头 —— 标题「设备检查器」，副标题「选择设备一键获取页面元素快照，回看、筛减并保存到元素管理」。
-   2. 工具条 —— 设备选择框 ·「获取」·「历史快照」·「已保存页面」（禁用）·「保存到元素定位」（禁用）；右侧「N 元素」（当前分组元素数）；历史快照缺全量索引时另有一条如实提示；失败时再出现一条错误条。
+   2. 工具条 —— 设备选择框 ·「获取」·「历史快照」·「保存到元素定位」（有快照时可用）；右侧「N 元素」（当前分组元素数）；历史快照缺全量索引时另有一条如实提示；失败时再出现一条错误条。
    3. 工作区 —— 两栏：左＝「元素分组 + 元素档案表」面板（分组列表与表格在面板内并排）→ 右＝手机屏幕。
    4. 页脚 —— 「就绪」· 元素数 · `serial · package`。
-   5. 三个覆盖层 ——「历史快照」抽屉、「保存到元素定位」弹窗、「已保存页面」弹窗（后两者当前处在冻结入口之后）。
+   5. 两个覆盖层 ——「历史快照」抽屉、「保存到元素定位」弹窗。
    `index.vue` · `components/CaptureForm.vue`
 2. **业务逻辑**
    1. **骨架常驻** —— 尚无快照时，工具条、元素分组列表、元素表格列与手机屏幕列都照常渲染；每个数据区以空态表达「无数据」，**不整块隐藏区域**。
    2. **设备列表** —— 进页面即拉一次设备；只把「在线」与「使用中」两类放进下拉，其中**被执行引擎占用**（`occupied_by` 以 `runner-` / `ai_agent` / `task-` / `run-` 开头）的设备排除。
    3. **下拉项文案** —— `型号或品牌 (serial) · 在线|使用中`。
    4. **未选设备** —— 「获取」与「保存到元素定位」呈灰底；点灰键**不发请求**，只提示「按键不可用，请先选择设备」（原生 disabled 不派发 click，故由 click 守卫承担）。
-   5. **两个入口冻结** —— 「已保存页面」与「保存到元素定位」保留可见但处于禁用态（原因分别是「存量已保存页面数据已作废，功能冻结」与「元素下标口径已随全量元素展示变更，保存链路待后续变更对齐，暂不可用」）；点按只提示原因、不发请求、不改动当前分组、表格与画面。
+   5. **入口可用性** —— 「保存到元素定位」在无快照时灰键提示「按键不可用，请先选择设备」，有快照但未勾选任何元素时提示「至少勾选一个元素才能保存」且不打开弹窗（变更 `rework-save-to-elements`）。
    6. **响应式** —— 窗口宽度 ≤1200px 时工作区折成上下两行（分组 + 表格在上、手机屏幕在下）。
    `store.ts`（`availableDevices` · `captureSerial` · `notifyKeyUnavailable`）· `index.vue`（`canSaveToElements`）
 3. **样式** —— 以实际代码为准。工具条与分组筹码的硬边按键皮肤、设备选择框白底无阴影，由页面根类 `.inspector-workbench` 作用域承担；模块私有的间距与固定尺寸登记在模块 `tokens.css` 的 `--insp-*` 令牌。
@@ -279,12 +279,12 @@
 
 ### 保存到元素定位
 
-> **当前冻结**：「保存到元素定位」入口处于禁用态（原因「元素下标口径已随全量元素展示变更，保存链路待后续变更对齐，暂不可用」），点按只提示原因、不发请求；下列是冻结前的实现口径，后端端点与代码路径均保留。
+> **已解冻**（变更 `rework-save-to-elements`）：入口在有快照（`snapshot_id`）时可用；未勾选任何元素时点它只提示「至少勾选一个元素才能保存」，不打开弹窗、不发请求。保存只写六项（缩略图 / 元素名称 / 序号 / 文本 / 主定位 / 交互标注）+ 去重键，且不再保存也不关联整屏截图。
 
 #### UI交互
 
 1. **模版** —— 「保存到元素定位」弹窗（宽 520px，点遮罩不关闭）：
-   1. 目录路径 —— 级联选择器，占位「逐层选择目录（不选 = 根目录）」，清空即根目录，只列目录节点。
+   1. 目录路径 —— 级联选择器，占位「逐层选择目录（不选 = 根目录）」，清空即根目录，只列目录节点；目录与「选择页面」下拉都取自元素定位的**项目树接口**（`GET /api/elements/projects/android/tree/`），与元素定位工作台同一棵树。
    2. 保存目标 —— 单选「已有页面 / 新建页面」。
    3. 已有页面 —— 下拉「选择该目录下的页面」。
    4. 新建页面 —— 输入「新页面名称」，打开时默认填当前快照的 `package`。
@@ -292,18 +292,17 @@
    `components/SaveToElementsDialog.vue`
 2. **业务逻辑**
    1. 打开即拉元素定位的页面树，并把表单复位到「已有页面」。
-   2. **筛减口径** —— 勾选非空且少于全量时按勾选筛减；勾选为空（点击时）直接拦截；勾选为全量时不带 `element_ids`（等价全量）。
-   3. **内联重命名 → 别名** —— 结构表里改过的「元素名称」按 `resource_id` 映射成 `aliases` 一起提交；`resource_id` 为空的元素不带别名。
+   2. **筛减口径** —— 勾选集合以元素的**坐标顺序序号**（1 基，与元素表「序号」列同源）为唯一口径；勾选为空时在**入口**就拦截（提示「至少勾选一个元素才能保存」，不打开弹窗、不发请求），弹窗内确认保存时同一校验再执行一次。
+   3. **内联重命名 → 别名** —— 结构表里改过的「元素名称」按元素序号组装成 `element_aliases: [{index, name}]` 一起提交（同名 `resource_id` 的多个元素互不覆盖）；未改名的行不提交。
    4. 成功提示「已保存 N 个元素（M 个已更新，K 个跳过）」，关闭弹窗并刷新历史快照列表。
    5. 失败提示后端给的可读原因（同级重名等冲突文案原样呈现），**不吞成通用文案**。
-   6. **回看态不可保存** —— 当前展示的是「已保存页面」时（无 `snapshot_id`），「保存到元素定位」是灰键，点它只提示。
    `store.ts`（`saveToElements` · `checkedIds` · `nameOverrides`）· `index.vue`
 3. **样式** —— 以实际代码为准（弹窗内 EP 按键沿用页面作用域的硬边皮肤）。
 4. **校验** —— 2 条表单必填（走 EP `:rules`，字段内联提示）：
    1. 已有页面模式：「请选择要保存到的页面」
    2. 新建页面模式：「请填写新页面名称」
-   另 1 条门槛提示（非表单校验）：「请先勾选要保存的数据」（勾选为空时拦截，**不发请求**）。
-5. **出口** —— `POST /api/inspector/snapshots/{id}/save-elements/`，请求体 `{page_label, folder_path, page_id?, element_ids?, aliases?}`，**恒不带 `include_ocr`**。
+   另 1 条门槛提示（非表单校验）：「至少勾选一个元素才能保存」（勾选为空时在入口与弹窗确认两处拦截，**不发请求**）。
+5. **出口** —— `POST /api/inspector/snapshots/{id}/save-elements/`，请求体 `{page_label, folder_path, page_id?, element_ids, element_aliases?, aliases?}`，**恒不带 `include_ocr`**；`element_ids` 为坐标顺序序号（1 基）。
    `api.ts`（`apiSaveToElements`）
 
 #### API契约
@@ -313,33 +312,34 @@
 1. **入口**
    1. 方法与路径：`POST api/inspector/snapshots/{id}/save-elements/`；尾斜杠必须带。
    2. **需要登录**；路径参数 `id` 为快照 ID。
-   3. 请求字段：`page_label` / `folder_path` / `page_id` / `element_ids` / `aliases`，全部可选，按组合决定模式。
+   3. 请求字段：`page_label` / `folder_path` / `page_id` / `element_ids` / `element_aliases` / `aliases`，全部可选，按组合决定模式。
    `apps/device_inspector/urls.py` · `views.py`
 2. **业务规则**
    1. **两种模式** —— 传 `page_id`（须为整数字符串）= 保存到已有页面（元素 upsert 追加）；否则 `page_label`（+ `folder_path`）= 新建页面（目录按 `/` 逐层查找或创建）。
    2. **本地校验三连**（全部经 `ValueError` 翻译成 `400`）：
       - 快照不存在或非本人 → 「快照不存在」；
       - 未传 `page_id` 且 `page_label` 为空 → 「页面名称不能为空」；
-      - 快照 `dump_json.elements` 为空 → 「该快照无元素数据」。
-   3. **筛减** —— 按下标取勾选元素（越界 / 非整数下标直接丢弃）；勾选为空则取全量。
+      - 快照没有全量节点索引（`nodes_json` 为空的历史快照） → 「该快照无全量元素索引，无法保存」。
+   3. **筛减** —— 按**坐标顺序序号**取勾选元素（序号不在该快照序号范围内或非整数 → `400`「元素序号不存在：{值}」，不再静默丢弃）；`element_ids` 为空则取全量。
    4. **别名回填** —— 按 `resource_id` 命中 `aliases` 的元素写入 `alias`。
    5. **写库经对方白名单** —— 元素与页面一律经 `element_locator.api.import_snapshot_page`，**本模块不直接 ORM 写 `el_` 表**（防火墙）。
    6. **元素 upsert 口径** —— 按 `(page, resource_id, bounds)` 去重；命中即更新，否则新增；别名兜底顺序 `alias` → `text` → `resource_id`；最后重算目标页面的 `element_count`。
-   7. **已有页面补全** —— 目标页面的截图 / OCR / `snapshot_id` 为空时才补，已有内容不覆盖。
+   7. **缩略图与不落截图** —— 保存时按元素 bounds 从该快照已存的整屏截图裁剪缩略图（检查器侧），再复制到元素定位自有目录；截图缺失或裁剪失败时该元素缩略图留空 + 告警，保存不失败。整屏截图**不写入**元素定位（页面 `screenshot_path` 恒为空）。
+   8. **已有页面补全** —— 目标页面的 OCR / `snapshot_id` 为空时才补，已有内容不覆盖。
    8. **页面级 OCR 不落库** —— 传给 `import_snapshot_page` 的 `ocr_json` 恒为 `None`；快照自身的 OCR 仍留在 `di_snapshots.ocr_json`。
    9. **冲突翻译** —— 目录层级超限 / 同级页面重名 / 目标目录异常经 `ImportConflictError` 翻成 `409`。
    `apps/device_inspector/api.py`（`save_snapshot_to_elements`）· `apps/element_locator/api_snapshot.py`（`import_snapshot_page`）
 3. **返回**
    1. `200` `{saved, updated, skipped, page_id}`（`skipped` 当前实现恒为 0，是预留字段）。
-   2. `400` 快照不存在 / 页面名称不能为空 / 该快照无元素数据 / 元素数据不能为空 / 目标页面不存在。
+   2. `400` 快照不存在 / 页面名称不能为空 / 该快照无全量元素索引，无法保存 / 元素序号不存在：{值} / 目标页面不存在。
    3. `409` 同级页面已存在 / 目录层级超限 / Android 项目或目标目录异常。
    4. `500`「保存失败」（其它未捕获异常，已记日志）。
    5. 统一信封。
 4. **校验** —— 这个端点会给出的提示（按源码顺序）：
    1.「快照不存在」
    2.「页面名称不能为空」
-   3.「该快照无元素数据」
-   4.「元素数据不能为空」
+   3.「该快照无全量元素索引，无法保存」
+   4.「元素序号不存在：{值}」
    5.「目标页面不存在」
    6.「同级页面「{page_label}」已存在」
    7.「目录最多嵌套 20 层」
@@ -356,65 +356,20 @@
 | 保存到元素定位 | `page_label`（新页面名称） | 字符串 | 新建模式必填 | 去空白后非空；同级不可重名 | `el_pages.label` |
 | 保存到元素定位 | `folder_path`（目录路径） | 字符串 | 否 | 按 `/` 逐段查找或创建；空 = 项目根 | `el_directories`（跨模块） |
 | 保存到元素定位 | `page_id`（已有页面 ID） | int | 与上二者二选一 | 必须指向非目录页面 | `el_pages.id` |
-| 保存到元素定位 | `element_ids`（勾选下标） | int[] | 否 | 相对 `dump_json.elements` 的下标；空 = 全部 | 决定写入 `el_elements` 的行集合 |
-| 保存到元素定位 | `aliases`（别名映射） | object | 否 | `{resource_id: 中文别名}` | `el_elements.alias` |
+| 保存到元素定位 | `element_ids`（勾选序号） | int[] | 否 | 元素在快照全量索引中的**坐标顺序序号**（1 基）；空 = 全部 | 决定写入 `el_elements` 的行集合 |
+| 保存到元素定位 | `element_aliases`（逐元素名称） | array | 否 | `[{index, name}]`，index 为坐标顺序序号；优先于 `aliases` | `el_elements.alias` |
+| 保存到元素定位 | `aliases`（别名映射） | object | 否 | `{resource_id: 中文别名}`（AI 工具口径） | `el_elements.alias` |
 
 写入目标（跨模块，字段名以元素定位为准）：
 
 | 表 | 键字段 | 本接口写入方式 |
 |---|---|---|
-| `el_pages` | `label` · `package` · `activity` · `screenshot_path` · `snapshot_id` · `element_count` | 新建一行，或对已有页面补全空值 |
-| `el_elements` | `class_name` · `text_val` · `content_desc` · `resource_id` · `bounds` · `xpath_candidates` · 坐标四件套 · 交互标志 · `thumbnail_path` · `alias` | 按 `(page, resource_id, bounds)` upsert |
+| `el_pages` | `label` · `package` · `activity` · `snapshot_id` · `element_count` | 新建一行，或对已有页面补全空值（**`screenshot_path` 不再写入**） |
+| `el_elements` | `alias`（元素名称） · `seq`（序号） · `text_val` · `primary_xpath` · `primary_stable` · 七项交互标志 · `thumbnail_path` · `resource_id` · `bounds`（去重键） | 按 `(page, resource_id, bounds)` upsert |
 
-> 快照元素字段名与元素定位字段名不同名：快照是 `text`，元素定位是 `text_val`；`xpaths` 落库时序列化成 `xpath_candidates` 字符串，读回时解析为 list。
+> 快照元素字段名与元素定位字段名不同名：快照是 `text`，元素定位是 `text_val`；主定位取自分层口径的 `primary`（表达式 + 是否稳定）。
+> 收敛后**不再写入**类名 / 内容描述 / 坐标分量 / 层级 / 父内序号 / 候选 XPath 列表（变更 `rework-save-to-elements`）。
 
-### 已保存页面只读回看
-
-> **当前冻结**：「已保存页面」入口处于禁用态（原因「存量已保存页面数据已作废，功能冻结」），点按只提示原因、不发请求；下列是冻结前的实现口径，入口与代码路径均保留（见规格 `device-inspector-page` 的「已保存页面入口冻结」）。
-
-#### UI交互
-
-1. **模版** —— 「已保存页面」弹窗（宽 560px）：
-   1. 自绘标题 —— 「已保存页面」+ 一枚「只读」标签。
-   2. 页面树 —— 目录节点可展开 / 收起，页面节点为叶子；页面节点两行：名称一行，`package（无则 —） · 元素 N` 一行；目录下的页面与子目录相对父目录逐层缩进。
-   3. 空态 —— 「暂无已保存页面 / 请先在元素定位保存页面」。
-   `components/SavedPagePicker.vue`
-2. **业务逻辑**
-   1. 打开即拉元素定位页面树并默认展开所有目录。
-   2. **点目录只展开 / 收起**，不切换回看；**点页面**才打开该页的只读回看，弹窗随即关闭。
-   3. 回看态把元素挂进**同一张结构表格**：分组列按后端摘要照常显示、主定位列按条目如实显示（**无「指标」列**）；缩略图 / 元素名称 / 资源标识 / 文本 / 主定位 / 坐标六列口径与快照视图一致。
-   4. 回看态**不伪造分组** —— 不调分层端点，直接把已保存页面视图的元素塞进结构视图。
-   5. 回看态的 `snapshot_id` 为空 → 「保存到元素定位」自动变灰键。
-   6. 请求失败给出可读原因。
-   `store.ts`（`viewSavedPage`）· `components/SavedPagePicker.vue`
-3. **样式** —— 以实际代码为准（页面节点有墨线卡片与悬停高亮，目录节点无卡片；树行最小高 52px 以容纳两行）。
-4. **校验** —— 本选择器**不提供**搜索、删除或重命名；无字段级校验。
-5. **出口** —— `GET /api/inspector/pages/{page_id}/`（页面树本身来自元素定位的页面列表接口）。
-   `api.ts`（`apiGetPageView`）
-
-#### API契约
-
-页面只读视图接口：GET api/inspector/pages/{id}/
-
-1. **入口**
-   1. 方法与路径：`GET api/inspector/pages/{id}/`；尾斜杠必须带。
-   2. **需要登录**；路径参数 `id` 是**元素定位页面 ID**（`el_pages`），不是快照 ID。
-   `apps/device_inspector/urls.py` · `views.py`
-2. **业务规则**
-   1. 只读，不改任何东西。
-   2. 页面不存在、或该节点其实是目录 → `404`「页面不存在」。
-   3. 转发给 `element_locator.api.get_page_full`，返回元素定位自己的字段口径（`text_val` / `alias` / `is_test_point` 等）。
-   4. 该端点**没有按 `created_by` 过滤** —— 见文末附录第 3 条。
-   `apps/device_inspector/api.py`（`get_page_view`）· `apps/element_locator/api_snapshot.py`（`get_page_full`）
-3. **返回**
-   1. `200` `{page_id, label, package, activity, screenshot_path, element_count, ocr_json, elements[]}`；`elements[]` 含 `id` / `class_name` / `text_val` / `content_desc` / `resource_id` / `bounds` / `xpaths` / 坐标四件套 / `depth` / `index` / `clickable` / `enabled` / `scrollable` / `checked` / `thumbnail_path` / `alias` / `is_test_point`。
-   2. `404`「页面不存在」。
-   3. 统一信封。
-4. **校验** —— 1 条：「页面不存在」。
-
-#### 数据表单
-
-无表单、不写库；只读 `el_pages` 与 `el_elements`。前端把 `text_val` 映射回 `text`、补上 `_idx` / `_rowKey` 后复用同一张结构表。
 
 ### 删除快照
 
@@ -534,8 +489,7 @@
    - 骨架常驻【模版 · 业务逻辑 1】—— WHEN 打开 `/inspector` 且无任何快照 → THEN 工具条、元素分组列表、元素表列与手机屏幕列同时出现，各数据区显示空态
    - 未选设备时灰键【业务逻辑 4】—— WHEN 没选设备就点「获取」或「保存到元素定位」→ THEN 不发请求，只提示「按键不可用，请先选择设备」
    - 下拉过滤【业务逻辑 2】—— WHEN 设备列表里有被执行引擎占用的设备 → THEN 它不出现在下拉里
-   - 已保存页面回看态的保存键【业务逻辑 5】—— WHEN 当前展示的是已保存页面 → THEN 「保存到元素定位」为灰键
-   - 窄屏折行【业务逻辑 6】—— WHEN 窗口宽度 ≤1200px → THEN 结构区与手机屏幕折成上下两行
+      - 窄屏折行【业务逻辑 6】—— WHEN 窗口宽度 ≤1200px → THEN 结构区与手机屏幕折成上下两行
 
 2. **测试用例** —— **无自动化**：本功能的接口资产不在检查器内（设备列表归设备管理），前端骨架断言目前零覆盖。
 
@@ -661,8 +615,7 @@
    - 内联重命名变别名【业务逻辑 3】—— WHEN 改过「元素名称」再保存 → THEN 别名按 `resource_id` 映射写入元素
    - 保存冲突显示后端原因【业务逻辑 5】—— WHEN 同级重名（409）→ THEN 提示含冲突原因，不是「保存失败」
    - 保存成功提示与刷新【业务逻辑 4】—— WHEN 保存成功 → THEN 提示「已保存 N 个元素（M 个已更新，K 个跳过）」并关弹窗刷新列表
-   - 回看态不可保存【业务逻辑 6】—— WHEN 当前是已保存页面回看 → THEN 保存键灰着
-
+   
    **业务功能侧**
    - 新建页面模式【业务规则 1】—— WHEN 只传 `page_label`（+ `folder_path`）→ THEN 逐层建目录并新建页面，写入元素
    - 已有页面模式【业务规则 1 · 7】—— WHEN 传 `page_id` → THEN 元素 upsert 追加，页面截图 / OCR / `snapshot_id` 仅在为空时补全
@@ -697,38 +650,8 @@
 3. **自动化覆盖的测试用例**
    - `tests/api/test_inspector.py` —— 鉴权 + 快照不存在的 400 分支
    - `frontend/tests/device-inspector/p0/store.spec.ts` —— store 层的失败原因 / 重试 / 删除复位
-   - **缺口：勾选筛减、必填校验、别名回填、409 冲突呈现四条零覆盖；保存弹窗与已保存页面选择器两个组件零覆盖。**
+   - **缺口：勾选筛减、必填校验、别名回填、409 冲突呈现四条零覆盖；保存弹窗组件零覆盖。**
 
-### 已保存页面只读回看
-
-1. **业务场景**
-
-   **UI交互侧**
-   - 名称与元信息分行【模版 2】—— WHEN 页面有包名与元素数 → THEN 名称单独一行，下一行是「包名 · 元素 N」
-   - 无包名仍分行【模版 2】—— WHEN 页面没有包名 → THEN 下一行以「—」表示包名并带上元素数
-   - 点目录不打开【业务逻辑 2】—— WHEN 点目录节点 → THEN 只展开 / 收起，不回看
-   - 点页面只读打开【业务逻辑 2 · 3】—— WHEN 点页面 → THEN 以只读方式打开该页，走**同一张结构表**，弹窗关闭
-   - 回看态不伪造分组【业务逻辑 4】—— WHEN 打开已保存页面 → THEN 分组列按后端摘要显示、无「指标」列（该入口当前冻结）
-   - 空列表提示【模版 3】—— WHEN 元素定位里没有任何页面 → THEN 提示「暂无已保存页面」
-
-   **业务功能侧**
-   - 读页面视图【业务规则 3】—— WHEN 带有效令牌请求存在的页面 → THEN `200` 并返回元素定位字段口径（`text_val` / `alias` 等），且**只读**
-   - 页面不存在【业务规则 2】—— WHEN 页面 ID 不存在或该节点是目录 → THEN `404`「页面不存在」
-
-   > **对应规格**：`device-inspector-page`（已保存页面选择器按行展示 · 回看用同一张表格）
-
-2. **测试用例** —— 活体用例**已落地**（`tests/api/case/inspector.yaml`）：
-
-   | 编号 | 标题 | 请求 | 期望 |
-   |---|---|---|---|
-   | TC-INS-007 | 页面只读回看未登录 | `GET /api/inspector/pages/1/`（无 token） | `HTTP 401` +「请先登录」|
-   | TC-INS-070 | 页面只读回看不存在 | `GET /api/inspector/pages/999999999/` | `HTTP 404` +「页面不存在」|
-
-   > **未落地**：真实已保存页面的字段映射（`text_val` → `text`）、目录节点 404、以及跨用户归属（见附录第 3 条）。
-
-3. **自动化覆盖的测试用例**
-   - `tests/api/test_inspector.py` —— 仅覆盖鉴权与 404
-   - **缺口：页面选择器组件与回看态字段映射零覆盖。**
 
 ### 删除快照
 
@@ -759,6 +682,7 @@
    - `tests/api/test_inspector.py` —— 鉴权与 404
    - `frontend/tests/device-inspector/p0/store.spec.ts` —— 「删除当前展示的快照后，元素分组与选中元素一起复位」（store 层，不发真实请求）
    - **缺口：二次确认框（取消不删、ESC 关闭）与文件清理零覆盖。**
+
 
 ### 跨模块消费：AI 截图
 
@@ -814,7 +738,7 @@ cd frontend && npx vitest run tests/device-inspector        # 前端检查器 P0
 
 2. **同一资源的不存在语义有两套状态码** —— 快照详情 / 删除两处在「不存在或非本人」时返回 `404`，而保存端点的同一条件返回 `400`（`apps/device_inspector/api.py:210` 抛 `ValueError`，`views.py:98-99` 统一翻 400）。原因是该分支与「页面名称不能为空」共用 `ValueError` 出口。前端按文案呈现，不受影响；但契约上不一致。
 
-3. **页面回看端点没有归属过滤** —— `api.get_page_view(page_id)` 直接转发 `element_locator.api.get_page_full`，**不带 `created_by` 条件**（`apps/device_inspector/api.py:258-262`）；而快照的五个端点全部按 `created_by` 限定本人。任何已登录用户只要知道（或枚举）`page_id` 就能读到任意元素定位页面的截图路径与元素，属跨用户越权的潜在面。本次只登记，不改动。
+3. ~~**页面回看端点没有归属过滤**~~（端点已随功能删除） —— `api.get_page_view(page_id)` 直接转发 `element_locator.api.get_page_full`，**不带 `created_by` 条件**（`apps/device_inspector/api.py:258-262`）；而快照的五个端点全部按 `created_by` 限定本人。任何已登录用户只要知道（或枚举）`page_id` 就能读到任意元素定位页面的截图路径与元素，属跨用户越权的潜在面。本次只登记，不改动。
 
 4. **`page_id` 非整数会漏出 Python 内部文案** —— `views.py:91` 的 `int(page_id) if page_id else None` 在传字符串（如 `"abc"`）时抛 `ValueError`，被 `views.py:98-99` 捕获后 `str(e)` 直接进 `message`，前端会显示 `invalid literal for int() with base 10: 'abc'`。接口文档要求 `page_id` 为整数字符串，但非法输入没有被翻成产品文案。
 
@@ -826,10 +750,10 @@ cd frontend && npx vitest run tests/device-inspector        # 前端检查器 P0
 
 9. **快照详情端点已无前端调用方** —— `GET /api/inspector/snapshots/{id}/` 仍在路由表与接口文档中、并有两条接口用例（未登录 401 / 不存在 404），但前端已改为一律消费分层端点：`store.viewSnapshot` 内部就是 `fetchLayers`（`store.ts:237-241`），`api.ts` 中已无 `apiGetSnapshot`。端点的去留与「已无产品入口的端点如何处理」是产品决定，本次只登记。
 
-10. **「保存到元素定位」前端已冻结，而规格仍按可用描述** —— 前端 `SAVE_TO_ELEMENTS_FROZEN = true`（`store.ts:41`），入口为灰键、点按只提示「元素下标口径已随全量元素展示变更，保存链路待后续变更对齐，暂不可用」；但规格 `device-inspector-page` 的「元素表格勾选驱动保存」等条款仍按链路可用描述（含「勾选 3 行后保存」的场景）。规格与实现在此分歧，本次只登记，不改规格也不改代码。
+10. ~~**「保存到元素定位」前端已冻结，而规格仍按可用描述**~~ —— 已由变更 `rework-save-to-elements` 解决：入口已解冻，勾选以**坐标顺序序号**为唯一口径，未勾选时在入口与弹窗确认两处拦截；规格 `device-inspector-page` 与 `inspector-save-to-elements` 已按新口径改写。
 
 8. **测试覆盖仍不完整** —— 现存资产：接口 `tests/api/case/inspector.yaml` 14 条；灰盒单元 `test_element_layers.py` / `test_inspector_capture_dump.py` / `test_inspector_ocr_tool.py`；灰盒集成 `test_inspector_layers_api.py` / `test_inspector_snapshot_retention.py` / `test_inspector_snapshot_media.py` / `test_inspector_save_element_aliases.py`；前端 P0 `frontend/tests/device-inspector/p0/` 4 个文件。**空白有三块**：
    1. **手机屏幕的绘制无自动化** —— canvas 上的分组框（实线 / 虚线）、悬停命中、选中后滚动，jsdom 下无法覆盖，只有代码阅读与人工验证。
-   2. **组件层只覆盖了元素表** —— 结构面板的分页与缩略图列有断言，但勾选筛减、内联重命名、快照抽屉的删除二次确认之外的交互，以及保存弹窗、已保存页面选择器仍无断言。
+   2. **组件层只覆盖了元素表** —— 结构面板的分页与缩略图列有断言，但勾选筛减、内联重命名、快照抽屉的删除二次确认之外的交互，以及保存弹窗仍无断言。
    3. **端到端层为 0** —— 端到端套件目前只覆盖登录模块，检查器的骨架常驻、灰键门槛、删除与清空复位、保存筛减都没有真链路守护。
    另需注意：**抓取成功路径本身需要真机**，接口层按约定留给集成测试与真机验证，因此 `capture` 的成功体、占用冲突与失败清理在任何自动化层都还没有守护。

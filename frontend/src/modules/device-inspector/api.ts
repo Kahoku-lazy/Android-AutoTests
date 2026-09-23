@@ -27,12 +27,6 @@ export function apiSaveToElements(id, payload) {
   return client.post(`/inspector/snapshots/${id}/save-elements/`, payload)
 }
 
-// ── Saved page view (read-only) ──
-
-export function apiGetPageView(pageId) {
-  return client.get(`/inspector/pages/${pageId}/`)
-}
-
 // ── Device integration (device-pool) ──
 
 export function apiGetDevices() {

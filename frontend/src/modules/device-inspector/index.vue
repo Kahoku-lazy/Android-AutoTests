@@ -2,13 +2,12 @@
 /** Device Inspector — 一键 Dump 获取 → 快照落库回看 → 按五分组查看全量元素 → 图上按分组圈选。 */
 import { onMounted, computed } from 'vue'
 import { useElementStore } from './store'
-import { FROZEN_REASONS } from './constants'
+import { KEY_DISABLED_MESSAGE, NO_SELECTION_MESSAGE } from './constants'
 import CaptureForm from './components/CaptureForm.vue'
 import ScreenshotView from './components/ScreenshotView.vue'
 import StructureAnalysisPanel from './components/StructureAnalysisPanel.vue'
 import SnapshotListDrawer from './components/SnapshotListDrawer.vue'
 import SaveToElementsDialog from './components/SaveToElementsDialog.vue'
-import SavedPagePicker from './components/SavedPagePicker.vue'
 import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
 import { IconClock, IconLayers, IconSave } from '@/shared/icons'
@@ -28,13 +27,27 @@ onMounted(async () => {
   await store.fetchSnapshots()
 })
 
+/** 「保存到元素定位」的可用前提：当前展示的是自有快照（有 snapshot_id） */
+const canSaveToElements = computed(() => !!store.snapshot?.snapshot_id)
+
 function onElementClick(el) {
   store.selectElement(el)
 }
 
-/** 冻结入口：保留可见但不可用，点击只说明原因，不发请求（原生 disabled 不派发 click，故由此守卫承担） */
-function onFrozenClick(reason) {
-  store.notify(reason)
+/**
+ * 「保存到元素定位」：无快照时按键灰底并提示原因；未勾选任何元素时只提示、
+ * 不打开弹窗、不发请求（弹窗内确认保存时 store 会再做一次同一校验）。
+ */
+function onSaveToElementsClick() {
+  if (!canSaveToElements.value) {
+    store.notifyKeyUnavailable()
+    return
+  }
+  if (store.checkedCount === 0) {
+    store.notify(NO_SELECTION_MESSAGE)
+    return
+  }
+  store.saveDialogVisible = true
 }
 </script>
 
@@ -60,20 +73,12 @@ function onFrozenClick(reason) {
             <IconClock :size="14" />历史快照
           </button>
           <button
-            class="action-btn action-btn--unavailable"
-            aria-disabled="true"
-            data-testid="saved-page-btn"
-            :title="FROZEN_REASONS.savedPage"
-            @click="onFrozenClick(FROZEN_REASONS.savedPage)"
-          >
-            <IconLayers :size="14" />已保存页面
-          </button>
-          <button
-            class="action-btn action-btn--unavailable"
-            aria-disabled="true"
+            class="action-btn"
+            :class="{ 'action-btn--unavailable': !canSaveToElements }"
+            :aria-disabled="canSaveToElements ? 'false' : 'true'"
             data-testid="save-to-elements-btn"
-            :title="FROZEN_REASONS.saveToElements"
-            @click="onFrozenClick(FROZEN_REASONS.saveToElements)"
+            :title="canSaveToElements ? '' : KEY_DISABLED_MESSAGE"
+            @click="onSaveToElementsClick"
           >
             <IconSave :size="14" />保存到元素定位
           </button>
@@ -118,7 +123,6 @@ function onFrozenClick(reason) {
 
     <SnapshotListDrawer />
     <SaveToElementsDialog />
-    <SavedPagePicker />
   </div>
 </template>
 

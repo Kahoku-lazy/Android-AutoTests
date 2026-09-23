@@ -10,7 +10,6 @@ __all__ = [
     "capture_snapshot",
     "clear_snapshots",
     "delete_snapshot",
-    "get_page_view",
     "get_snapshot",
     "list_layers",
     "list_snapshots",
@@ -444,15 +443,20 @@ def save_snapshot_to_elements(
     Args:
         page_id: 目标已有页面 ID（与 page_label/folder_path 二选一：有 page_id
             为「保存到已有页面」，否则为「新建页面」）。
-        element_ids: 勾选的元素索引列表（对应 dump_json.elements 的下标）；空 = 全部。
+        element_ids: 勾选元素的**坐标顺序序号**（1 基，与分层端点 `seq` 同源）；空 = 全部。
+            出现不在该快照序号范围内的值即抛 ValueError（视图映射 400），不静默丢弃。
         aliases: {resource_id: alias} 中文别名映射，按 resource_id 回填到元素（AI 工具口径）。
-        element_aliases: [{index, name}] 逐元素中文名称，index 为 dump_json.elements
-            下标（与 element_ids 同源）；优先于 aliases，同一 resource_id 的多个元素互不覆盖。
+        element_aliases: [{index, name}] 逐元素中文名称，index 为坐标顺序序号；优先于
+            aliases，同一 resource_id 的多个元素互不覆盖。
 
-    页面级 OCR 不再随保存落库（rework-inspector-view）：快照自身的 OCR 仍存于
+    缩略图在保存时按元素 bounds 从该快照的整屏截图裁剪（检查器侧）；整屏截图本身不写入
+    元素定位，页面级 OCR 也不落库（rework-inspector-view）：快照自身的 OCR 仍存于
     di_snapshots.ocr_json，元素定位侧 ocr_json 恒为空。
     """
+    from algorithms.element_layers import build_layers
+
     from .models import Snapshot
+    from .service import crop_save_thumbnails
 
     snapshot = Snapshot.objects.filter(id=snapshot_id, created_by=user_id).first()
     if snapshot is None:
@@ -460,19 +464,28 @@ def save_snapshot_to_elements(
     if not page_id and not page_label:
         raise ValueError("页面名称不能为空")
 
-    dump = snapshot.dump_json or {}
-    elements = dump.get("elements") or []
-    if not elements:
-        raise ValueError("该快照无元素数据")
+    nodes = [dict(node) for node in (snapshot.nodes_json or [])]
+    if not nodes:
+        raise ValueError("该快照无全量元素索引，无法保存")
+    # 分层算法给出与检查器表格同源的坐标顺序序号（1 基）与主定位口径
+    entries = build_layers(nodes)["elements"]
+    by_seq = {entry["seq"]: entry for entry in entries}
 
-    # 保留原始下标：逐元素名称必须按 dump_json.elements 的下标回填（勾选子集时位置会变）
+    seqs: list[int] = []
     if element_ids:
-        pairs = [
-            (i, elements[i]) for i in element_ids if isinstance(i, int) and 0 <= i < len(elements)
-        ]
+        for raw in element_ids:
+            if not isinstance(raw, int) or raw not in by_seq:
+                raise ValueError(f"元素序号不存在：{raw!r}")
+            seqs.append(raw)
     else:
-        pairs = list(enumerate(elements))
-    selected = [dict(e) for _, e in pairs]
+        seqs = [entry["seq"] for entry in entries]
+
+    selected = [_locator_element(by_seq[seq]) for seq in seqs]
+    thumbs = crop_save_thumbnails(
+        snapshot.screenshot_path, [(seq, _thumbnail_box(by_seq[seq])) for seq in seqs]
+    )
+    for item in selected:
+        item["thumbnail_path"] = thumbs.get(item["seq"], "")
 
     aliases = aliases or {}
     for e in selected:
@@ -485,15 +498,15 @@ def save_snapshot_to_elements(
     for item in element_aliases or []:
         if not isinstance(item, dict):
             continue
-        idx = item.get("index")
+        index = item.get("index")
         name = (item.get("name") or "").strip()
-        if isinstance(idx, int) and name:
-            index_aliases[idx] = name
+        if isinstance(index, int) and name:
+            index_aliases[index] = name
     if index_aliases:
-        for (i, _), copy in zip(pairs, selected):
-            name = index_aliases.get(i)
+        for e in selected:
+            name = index_aliases.get(e["seq"])
             if name:
-                copy["alias"] = name
+                e["alias"] = name
 
     from apps.element_locator.api import import_snapshot_page
 
@@ -503,18 +516,35 @@ def save_snapshot_to_elements(
         page_id=page_id,
         package=snapshot.package,
         activity=snapshot.activity,
-        screenshot_path=snapshot.screenshot_path,
         ocr_json=None,
         snapshot_id=snapshot.id,
         elements=selected,
     )
 
 
-def get_page_view(page_id: int) -> dict | None:
-    """元素定位已保存页面只读视图（供检查器回看）；不存在返回 None。"""
-    from apps.element_locator.api import get_page_full
+def _locator_element(entry: dict) -> dict:
+    """分层元素条目 → 元素定位写入载荷（收敛后的六项 + 去重键）。"""
+    primary = entry.get("primary") or {}
+    coords = entry.get("coords") or {}
+    return {
+        "seq": entry["seq"],
+        "alias": "",
+        "text": entry.get("text", ""),
+        "primary_xpath": primary.get("xpath", "") or "",
+        "primary_stable": bool(primary.get("stable", False)),
+        "flags": entry.get("flags") or {},
+        "resource_id": entry.get("resource_id", ""),
+        "bounds": coords.get("bounds", ""),
+        "thumbnail_path": "",
+    }
 
-    return get_page_full(page_id)
+
+def _thumbnail_box(entry: dict) -> tuple[int, int, int, int]:
+    """分层元素条目 → PIL 裁剪盒 (left, top, right, bottom)。"""
+    coords = entry.get("coords") or {}
+    x = int(coords.get("x") or 0)
+    y = int(coords.get("y") or 0)
+    return (x, y, x + int(coords.get("w") or 0), y + int(coords.get("h") or 0))
 
 
 # ═══════════════════════════════════════════════

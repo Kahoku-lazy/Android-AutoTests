@@ -16,11 +16,23 @@ vi.mock('element-plus', () => ({
   ElMessageBox: { confirm: confirmMock },
 }))
 
-const { routerPush } = vi.hoisted(() => ({ routerPush: vi.fn() }))
-vi.mock('vue-router', () => ({
-  useRoute: () => ({ params: { role: 'executor' } }),
-  useRouter: () => ({ push: routerPush }),
+const { routerPush, routeCtl } = vi.hoisted(() => ({
+  routerPush: vi.fn(),
+  // 路由参数控制器：mock 工厂实例化响应式 params 后把改写入口挂到这里，
+  // 用于验证「切换角色后折叠态重置」
+  routeCtl: { setRole: (_role: string) => {} },
 }))
+vi.mock('vue-router', async () => {
+  const { reactive } = await import('vue')
+  const params = reactive({ role: 'executor' })
+  routeCtl.setRole = (role: string) => {
+    params.role = role
+  }
+  return {
+    useRoute: () => ({ params }),
+    useRouter: () => ({ push: routerPush }),
+  }
+})
 
 const post = vi.fn()
 const get = vi.fn()
@@ -251,6 +263,7 @@ describe('ModelDebugPage', () => {
     confirmMock.mockReset()
     get.mockReset()
     mockDeviceList()
+    routeCtl.setRole('executor')
   })
 
   function mountPage() {
@@ -273,10 +286,10 @@ describe('ModelDebugPage', () => {
     })
   }
 
-  /** 等配置到位再断言，避免与取数竞态 */
+  /** 等配置到位再断言，避免与取数竞态（工具条目默认收起，改等角色带就绪） */
   async function mountLoaded() {
     const wrapper = mountPage()
-    await vi.waitFor(() => expect(wrapper.text()).toContain('tap_screen'))
+    await vi.waitFor(() => expect(wrapper.find('.md-facts').text()).toContain('deepseek-chat'))
     await nextTick()
     return wrapper
   }
@@ -301,17 +314,62 @@ describe('ModelDebugPage', () => {
     expect(wrapper.find('.md-chat .md-textarea').exists()).toBe(true)
   })
 
-  it('工具按分类分组，组头显示启用数与总数', async () => {
+  it('工具按分类分组且默认全部收起，展开后才渲染工具条目', async () => {
     const wrapper = await mountLoaded()
 
     const groups = wrapper.findAll('.md-group-sub')
     expect(groups.map((node) => node.text())).toEqual([
-      '设备控制 · 2/2 启用',
-      '设备检查器 · 0/1 启用',
+      '▸设备控制 · 2/2 启用',
+      '▸设备检查器 · 0/1 启用',
     ])
+    // 默认收起：组头计数可见，工具条目一条都不渲染
+    expect(wrapper.find('.md-tool').exists()).toBe(false)
     expect(wrapper.find('.md-group-head').text()).toContain('2/3 启用')
+
+    await groups[0].trigger('click')
+    await nextTick()
+
+    expect(wrapper.findAll('.md-tool').map((node) => node.find('.md-tool-name').text())).toEqual([
+      'tap_screen',
+      'input_text',
+    ])
+    expect(wrapper.find('.md-tool').text()).toContain('写')
+    expect(wrapper.find('.md-tool').text()).toContain('已启用')
+
+    await groups[1].trigger('click')
+    await nextTick()
+
     expect(wrapper.text()).toContain('已停用')
     expect(wrapper.text()).toContain('只读')
+  })
+
+  it('工具分组逐组独立开合，再点一次收起', async () => {
+    const wrapper = await mountLoaded()
+    const groups = wrapper.findAll('.md-group-sub')
+
+    await groups[1].trigger('click')
+    await nextTick()
+
+    expect(wrapper.findAll('.md-tool')).toHaveLength(1)
+    expect(wrapper.find('.md-tool-name').text()).toBe('screenshot_page')
+
+    await groups[1].trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.md-tool').exists()).toBe(false)
+    expect(groups[1].text()).toContain('0/1 启用')
+  })
+
+  it('切换角色后工具分组回到全部收起', async () => {
+    const wrapper = await mountLoaded()
+
+    await wrapper.findAll('.md-group-sub')[0].trigger('click')
+    await nextTick()
+    expect(wrapper.find('.md-tool').exists()).toBe(true)
+
+    routeCtl.setRole('planner')
+    await nextTick()
+    await vi.waitFor(() => expect(wrapper.find('.md-tool').exists()).toBe(false))
   })
 
   it('提示词默认折叠，展开后才渲染 Markdown 正文', async () => {
@@ -555,8 +613,9 @@ describe('ModelDebugPage 版式：对话栏占正文三分之二', () => {
     expect(styleSrc).toMatch(
       /\.md-split\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(0,\s*2fr\)/,
     )
-    // 旧的 420px 上限是本次要消灭的根因：还在就等于没改
+    // 旧的 420px 上限与中途试过的 1/3 权重（2fr : 1fr）都不该再出现
     expect(styleSrc).not.toMatch(/420px/)
+    expect(styleSrc).not.toMatch(/minmax\(0,\s*2fr\)\s+minmax\(0,\s*1fr\)/)
   })
 
   it('正文过窄时改为上下单列，断点在 1200px', () => {
@@ -566,10 +625,22 @@ describe('ModelDebugPage 版式：对话栏占正文三分之二', () => {
     expect(styleSrc).not.toMatch(/max-width:\s*960px/)
   })
 
-  it('消息区高度上限为屏幕三分之二（66vh）且仍独立滚动', () => {
-    expect(styleSrc).toMatch(/\.md-msgs\s*\{[^}]*max-height:\s*66vh/)
-    expect(styleSrc).toMatch(/\.md-msgs\s*\{[^}]*overflow-y:\s*auto/)
-    // 旧上限 52vh 低于 2/3 屏高：还在就等于没改
-    expect(styleSrc).not.toMatch(/max-height:\s*52vh/)
+  it('消息区固定为 2/3 屏高（66vh）并承担内部滚动', () => {
+    expect(styleSrc).toMatch(/\.md-chat-body\s*\{[^}]*height:\s*66vh/)
+    expect(styleSrc).toMatch(/\.md-chat-body\s*\{[^}]*overflow-y:\s*auto/)
+    // 1.3 屏高（132vh）是被需求方否掉的中间版本，不该再出现
+    expect(styleSrc).not.toMatch(/height:\s*132vh/)
+  })
+
+  it('对话栏整体不超出首屏，且只允许消息区被压缩', () => {
+    // 面板上限 = 视口 − 页头 − 面包屑与页面内边距
+    expect(styleSrc).toMatch(
+      /\.md-chat\s*\{[^}]*max-height:\s*calc\(100vh - var\(--app-topbar-h, 96px\) - 72px\)/,
+    )
+    // 消息区可被压缩（否则面板收缩时会溢出首屏）
+    expect(styleSrc).toMatch(/\.md-chat-body\s*\{[^}]*min-height:\s*0/)
+    // 输入区与标题 / 说明不参与收缩，不会被压扁
+    expect(styleSrc).toMatch(/\.md-chat > \.md-chat-input\s*\{[^}]*flex:\s*none/)
+    expect(styleSrc).toMatch(/\.md-chat > \.md-section-title,[\s\S]*?flex:\s*none/)
   })
 })

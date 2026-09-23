@@ -314,11 +314,26 @@
   padding-left: var(--app-space-md);
 }
 
-/* ── ④ 调试对话（右栏常驻：消息区固定 1.3 屏高，超出只在该区内滚动）── */
+/* ── ④ 调试对话（右栏常驻：整块不超出首屏，消息区在块内独立滚动）── */
+/* 面板整体上限 = 视口 − 页头（与侧栏 header 同高） − 面包屑与页面内边距
+   （16px 文档区内边距 + 约 32px 面包屑 + 16px 正文间距 + 8px 余量 = 72px） */
+.md-chat {
+  max-height: calc(100vh - var(--app-topbar-h, 96px) - 72px);
+}
+
+/* 面板触到上限时只压缩消息区：标题 / 范围说明 / 输入区保持自身高度 */
+.md-chat > .md-section-title,
+.md-chat > .md-note,
+.md-chat > .md-chat-input {
+  flex: none;
+}
+
 /* 有消息（ul.md-msgs）与无消息（div.md-empty）共用同一高度：
    同一时刻只渲染其一，滚动归属始终唯一，空态也不会塌缩 */
 .md-chat-body {
-  height: 132vh;
+  height: 66vh;
+  flex: 0 1 auto;
+  min-height: 0;
   overflow-y: auto;
 }
 

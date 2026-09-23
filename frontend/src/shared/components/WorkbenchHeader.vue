@@ -77,7 +77,8 @@ watch(
   min-height: var(--app-topbar-h, 96px);
   box-sizing: border-box;
   padding: var(--app-space-sm) var(--app-space-lg);
-  background: var(--app-bg-card);
+  /* 页头不再做白卡片：底色取 L0 纸色（--paper），与侧栏 header / 正文同纸面 */
+  background: var(--paper);
   border-bottom: 2.5px solid var(--ink);
   flex-shrink: 0;
   /* 让下方 z-index 真正参与层叠（static 元素上的 z-index 无效） */

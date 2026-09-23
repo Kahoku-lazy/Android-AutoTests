@@ -35,8 +35,8 @@ const emit = defineEmits(['update:modelValue'])
   gap: 6px;
   padding: 5px 14px; font-size: var(--app-size-xs); font-weight: 700;
   color: var(--app-text-secondary); background: var(--app-bg-card);
-  border: 1px solid var(--app-border-light); border-radius: 999px;
-  cursor: pointer; font-family: inherit; transition: all 0.15s;
+  border: 1px solid var(--app-border-light); border-radius: var(--app-radius-pill);
+  cursor: pointer; font-family: inherit; transition: all var(--app-duration);
 }
 .filter-tab:hover { color: var(--ink); border-color: var(--app-border-lighter); }
 .filter-tab.active {
@@ -48,7 +48,7 @@ const emit = defineEmits(['update:modelValue'])
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   background: var(--app-bg-subtle);
   border: 1px solid var(--app-border-light);
   display: inline-grid;

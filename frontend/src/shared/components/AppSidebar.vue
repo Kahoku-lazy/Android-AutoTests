@@ -6,33 +6,16 @@ import { animate } from 'animejs'
 import { sidebarNavEnter } from '../animations'
 import { NAV_CATEGORIES, MOD_COLORS } from './sidebarNavConfig'
 import { useSidebarResize } from '../composables/useSidebarResize'
-import { useAuthPool } from '@/shared/composables/useAuthPool'
+import { clearSession, getUsername } from '@/shared/auth/token-storage'
 import { logout as logoutApi } from '@/shared/api/auth'
 import AnimatedMascot from './AnimatedMascot.vue'
 
 const router = useRouter()
 const route = useRoute()
 
-// ── Multi-account auth ──
-const { activeAccount, accountList, switchAccount, logoutAccount } = useAuthPool()
-
-const showAccountMenu = ref(false)
-
-function switchToAccount(name) {
-  if (switchAccount(name)) {
-    showAccountMenu.value = false
-    window.location.reload()
-  }
-}
-
-function finishLocalLogout() {
-  const hasRemaining = logoutAccount()
-  if (!hasRemaining) {
-    router.push('/login')
-  } else {
-    window.location.reload()
-  }
-}
+// ── 单账号会话 ──
+/** 账号名在组件生命周期内不变：登录会跳转、登出会导航 */
+const activeAccount = getUsername()
 
 async function logout() {
   try {
@@ -46,7 +29,8 @@ async function logout() {
     }
     // 其它失败（网络/已失效）：仍清本地，避免用户卡在已失效会话
   }
-  finishLocalLogout()
+  clearSession()
+  router.push('/login')
 }
 
 const {
@@ -212,21 +196,13 @@ onUnmounted(() => {
       </div>
     </nav>
 
-    <!-- 底部用户区 / 账号切换器 -->
+    <!-- 底部用户区 -->
     <div class="sidebar__footer">
       <div class="sidebar__user-card">
-        <button
-          type="button"
-          class="sidebar__user-display has-menu"
-          data-testid="sidebar-account-menu"
-          :title="collapsed ? activeAccount : ''"
-          :aria-expanded="showAccountMenu"
-          @click="showAccountMenu = !showAccountMenu"
-        >
+        <div class="sidebar__user-display" :title="collapsed ? activeAccount : ''">
           <AnimatedMascot :size="18" />
           <span v-show="!collapsed" class="sidebar__user-name" data-testid="sidebar-active-account">{{ activeAccount }}</span>
-          <span v-if="!collapsed" class="sidebar__user-arrow">▾</span>
-        </button>
+        </div>
         <div v-show="!collapsed" class="sidebar__user-row">
           <div class="sidebar__user-status">● 在线</div>
           <el-button
@@ -238,31 +214,6 @@ onUnmounted(() => {
             退出
           </el-button>
         </div>
-      </div>
-
-      <!-- Account dropdown -->
-      <div v-if="showAccountMenu && !collapsed" class="account-menu">
-        <button
-          v-for="name in accountList"
-          :key="name"
-          type="button"
-          class="account-menu__item"
-          :class="{ active: name === activeAccount }"
-          :data-testid="`sidebar-account-${name}`"
-          @click="switchToAccount(name)"
-        >
-          <span>{{ name }}</span>
-          <span v-if="name === activeAccount" class="account-menu__check">✓</span>
-        </button>
-        <div class="account-menu__divider"></div>
-        <router-link
-          :to="{ path: '/login', query: { add: '1' } }"
-          class="account-menu__item account-menu__item--add"
-          data-testid="sidebar-add-account"
-          @click="showAccountMenu = false"
-        >
-          添加账号
-        </router-link>
       </div>
 
       <button

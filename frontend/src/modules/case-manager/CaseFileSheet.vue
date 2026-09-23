@@ -157,17 +157,6 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
       icon="layers"
       :icon-gradient="'linear-gradient(135deg,var(--c-case),var(--case-icon-accent))'"
     >
-      <template #nav>
-        <WorkbenchCrumbs
-          :back-to="`/cases/projects/${projectId}`"
-          back-label="返回目录"
-          :items="[
-            { label: '用例管理', to: '/cases' },
-            { label: '项目工作台', to: `/cases/projects/${projectId}` },
-            { label: pageTitle },
-          ]"
-        />
-      </template>
       <template #actions>
         <el-button class="wb-btn" @click="startRename">重命名</el-button>
         <el-button class="wb-btn" :loading="saving" type="primary" @click="saveAll">
@@ -177,11 +166,19 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
       </template>
     </WorkbenchHeader>
 
-    <ErrorState v-if="error && !rows.length && !loading" :message="error" @retry="loadSheet" />
-
-    <div v-else class="doc-body" v-loading="loading">
+    <div class="doc-body" v-loading="loading">
+      <WorkbenchCrumbs
+        :back-to="`/cases/projects/${projectId}`"
+        back-label="返回目录"
+        :items="[
+          { label: '用例管理', to: '/cases' },
+          { label: '项目工作台', to: `/cases/projects/${projectId}` },
+          { label: pageTitle },
+        ]"
+      />
+      <ErrorState v-if="error && !rows.length && !loading" :message="error" @retry="loadSheet" />
       <EmptyState
-        v-if="!loading && !rows.length"
+        v-else-if="!loading && !rows.length"
         icon="📊"
         text="暂无用例行"
         hint="点击「新建行」开始填写；文本列双击编辑"
@@ -405,15 +402,11 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
 
 <style scoped>
 /* 模块作用域色板：登记本页用到的非全局色值（消费点都在页面根之内；页面根即组件根） */
-.case-workbench {
-  --case-icon-accent: var(--color-teal-67) /* -> --color-teal-67 */;  /* 页头图标渐变收尾色（与 --c-case 组成模块标识渐变） */
-}
 
 /* 页面根/主体骨架由 .doc-page / .doc-body 提供；表格区域仍由本页接管滚动 */
 .case-sheet .doc-body {
   overflow: auto;
   border-top: 2px solid var(--case-border-subtle);
-  background: var(--paper);
   padding: var(--app-space-lg);
 }
 .case-sheet__table-wrap {
@@ -448,7 +441,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
   font-weight: 700;
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: var(--z-base);
   text-align: center;
   padding: 10px var(--app-space-sm);
   border-color: var(--case-sheet-head-border);
@@ -537,7 +530,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
   align-items: center;
   gap: var(--app-space-xs);
   border: 2px solid var(--ink);
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   padding: var(--app-space-xs) 10px;
   font-size: var(--app-size-xs);
   font-weight: 700;
@@ -575,7 +568,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
   --case-menu-shadow: var(--color-indigo-13-a18) /* -> --color-indigo-13-a18 */;
   background: var(--app-bg-card);
   border: 2px solid var(--ink);
-  border-radius: 12px;
+  border-radius: var(--app-radius-md);
   padding: 6px;
   box-shadow: 4px 4px 0 var(--case-menu-shadow);
 }
@@ -586,7 +579,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
   border: none;
   background: transparent;
   padding: 6px var(--app-space-sm);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   cursor: pointer;
   font-family: inherit;
 }
@@ -602,7 +595,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
   min-width: 56px;
   height: 30px;
   padding: 0 12px;
-  border-radius: 12px;
+  border-radius: var(--app-radius-md);
   border: 2px solid var(--ink);
   background: var(--app-bg-card);
   color: var(--app-status-danger-text);

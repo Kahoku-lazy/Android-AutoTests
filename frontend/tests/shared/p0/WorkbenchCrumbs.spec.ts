@@ -44,6 +44,25 @@ describe('[P0] WorkbenchCrumbs', () => {
     expect(wrapper.find('.wb-crumbs__here').attributes('aria-current')).toBe('page')
   })
 
+  it('返回芯片在祖先链之后（靠右）', async () => {
+    const wrapper = await mountCrumbs()
+    const nav = wrapper.find('.wb-crumbs')
+    const children = nav.element.children
+    expect(children[0].classList.contains('wb-crumbs__list')).toBe(true)
+    expect(children[1].classList.contains('wb-crumbs__back')).toBe(true)
+  })
+
+  it('仅有返回芯片时仍渲染且源码靠右', async () => {
+    const wrapper = await mountCrumbs({ items: [] })
+    expect(wrapper.find('.wb-crumbs__back').exists()).toBe(true)
+    expect(wrapper.find('.wb-crumbs__list').exists()).toBe(false)
+    const src = readFileSync(
+      resolve(dirname(fileURLToPath(import.meta.url)), '../../../src/shared/components/WorkbenchCrumbs.vue'),
+      'utf8',
+    )
+    expect(src).toMatch(/\.wb-crumbs__back\s*\{[^}]*margin-left:\s*auto/)
+  })
+
   it('点击返回与祖先触发导航事件并 push', async () => {
     const wrapper = await mountCrumbs()
     const router = wrapper.vm.$.appContext.config.globalProperties.$router

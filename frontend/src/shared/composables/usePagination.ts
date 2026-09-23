@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 /**
  * Standard pagination for a filtered reactive list.
@@ -40,6 +40,12 @@ export function usePagination(source, { pageSize = 10, options = [10, 30, 50] } 
   const pagedItems = computed(() => {
     const start = (current.value - 1) * size.value
     return source.value.slice(start, start + size.value)
+  })
+
+  // 数据源缩小导致页数减少时夹取页码：否则分页会切出空片
+  // （各页不必再各写一遍 watch；「筛选变化回第 1 页」仍属页面语义，由页面自行声明）
+  watch(totalPages, (tp) => {
+    if (current.value > tp) current.value = tp
   })
 
   function setPageSize(s) {

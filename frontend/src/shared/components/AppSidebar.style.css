@@ -19,12 +19,12 @@
   flex-direction: column;
   overflow: hidden;
   position: relative;
-  z-index: 2;
+  z-index: var(--z-raised);
   border-right: var(--sidebar-dash);
   box-shadow: none;
   color: var(--ink);
   font-family: var(--app-font);
-  transition: width 0.2s ease, min-width 0.2s ease, max-width 0.2s ease, flex-basis 0.2s ease;
+  transition: width var(--app-duration-slow) var(--app-ease), min-width var(--app-duration-slow) var(--app-ease), max-width var(--app-duration-slow) var(--app-ease), flex-basis var(--app-duration-slow) var(--app-ease);
   border-radius: 0;
 }
 
@@ -58,7 +58,7 @@
   line-height: 1;
   display: grid;
   place-items: center;
-  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+  transition: transform var(--app-duration-fast) var(--app-ease), box-shadow var(--app-duration-fast) var(--app-ease), background var(--app-duration-fast) var(--app-ease);
 }
 .sidebar__toggle:hover {
   background: var(--sidebar-yellow);
@@ -110,7 +110,7 @@
   width: 6px;
   height: 100%;
   cursor: col-resize;
-  z-index: 10;
+  z-index: var(--z-header);
   transform: translateX(50%);
 }
 .sidebar__resizer::before {
@@ -123,7 +123,7 @@
   transform: translateX(-50%);
   border-radius: 1px;
   background: var(--dot);
-  transition: background 0.15s ease, width 0.15s ease;
+  transition: background var(--app-duration) var(--app-ease), width var(--app-duration) var(--app-ease);
 }
 .sidebar__resizer:hover::before,
 .sidebar__resizer.is-dragging::before {
@@ -234,7 +234,7 @@
   border: 2.5px solid transparent;
   border-radius: 2px;
   cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+  transition: transform var(--app-duration-fast) var(--app-ease), box-shadow var(--app-duration-fast) var(--app-ease), background var(--app-duration-fast) var(--app-ease), border-color var(--app-duration-fast) var(--app-ease);
   position: relative;
 }
 
@@ -344,7 +344,7 @@
   color: var(--ink);
   opacity: 0.55;
   line-height: 1;
-  transition: transform 0.15s ease;
+  transition: transform var(--app-duration) var(--app-ease);
 }
 .sidebar-menu__chevron.open {
   transform: rotate(180deg);
@@ -409,15 +409,6 @@
   text-align: left;
   margin: 3px 0;
 }
-.sidebar__user-display.has-menu {
-  cursor: pointer;
-}
-.sidebar__user-arrow {
-  font-size: var(--app-size-md);
-  margin-left: auto;
-  color: var(--ink);
-  opacity: 0.55;
-}
 .sidebar__user-status {
   font-size: var(--app-size-md);
   color: var(--app-status-success-text);
@@ -454,56 +445,7 @@
   box-shadow: 3px 3px 0 0 var(--ink) !important;
 }
 
-.account-menu {
-  position: absolute;
-  bottom: 100%;
-  left: 6px;
-  right: 6px;
-  margin-bottom: var(--app-space-xs);
-  background: #fff;
-  border: var(--sidebar-dash);
-  border-radius: 2px;
-  box-shadow: 3px 3px 0 0 var(--sidebar-teal);
-  overflow: hidden;
-  z-index: 100;
-}
-.account-menu__item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 9px 12px;
-  border: none;
-  background: transparent;
-  font-family: var(--app-font);
-  font-size: var(--app-size-md);
-  font-weight: 700;
-  color: var(--ink);
-  text-align: left;
-  text-decoration: none;
-  cursor: pointer;
-  transition: background 0.1s ease;
-}
-.account-menu__item:hover {
-  background: color-mix(in srgb, var(--sidebar-yellow) 35%, transparent);
-}
-.account-menu__item.active {
-  color: var(--ink);
-  font-weight: 800;
-}
-.account-menu__check {
-  font-size: var(--app-size-md);
-  color: var(--app-status-success-text);
-}
-.account-menu__item--add {
-  color: var(--ink);
-  opacity: 0.7;
-  font-size: var(--app-size-md);
-  font-weight: 600;
-  justify-content: center;
-}
-.account-menu__divider {
-  height: 0;
-  border-top: var(--sidebar-dash);
-  margin: 0 var(--app-space-sm);
+/* 减少动效：关闭位移 / 旋转 / 缩放（颜色过渡不受影响） */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar__toggle, .sidebar-menu__item, .sidebar-menu__chevron { transition: none; }
 }

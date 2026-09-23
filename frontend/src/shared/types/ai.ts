@@ -2,7 +2,7 @@
 
 // ── 字面量联合类型 ──
 
-export type ViewMode = 'agents' | 'toolbox' | 'knowledge' | 'evaluator'
+export type ViewMode = 'agents' | 'toolbox' | 'knowledge'
 export type AgentStatus = 'active' | 'paused' | 'error'
 export type ConnectionMode = 'sse' | 'django' | 'connecting' | 'unknown'
 export type ModelStatus = 'idle' | 'streaming' | 'thinking' | 'tool_calling' | 'calling_model' | 'done'
@@ -37,8 +37,13 @@ export interface RouteModelConfig {
   base_url?: string
 }
 
+/** 线路连通三态：可执行 / 密钥通但不可用 / 断线 */
+export type RouteConnStatus = 'ready' | 'unusable' | 'offline'
+
 export interface RouteHealth {
   is_connected?: boolean | null
+  /** ready | unusable | offline；缺省时前端按探测中处理 */
+  status?: RouteConnStatus | null
   last_checked_at?: string
   last_checked?: string
   results?: Record<string, RouteModelTestResult>
@@ -67,13 +72,21 @@ export interface TaskRecord {
   status: string
   result?: string
   device_serial?: string
+  /** 卡片展示用设备名（型号）；空则前端回退 serial */
+  device_label?: string
+  /** 当前线路助手名（实时派生，随改名同步） */
+  assistant_name?: string
   created_at?: string
+  started_at?: string
+  finished_at?: string
+  deepseek_cost?: number
 }
 
 export interface TaskSubmitPayload {
+  title: string
   goal: string
-  attachment?: string
   device_serial?: string
+  device_label?: string
 }
 
 export interface TaskListResponse {
@@ -179,6 +192,9 @@ export interface TaskDetail {
   goal: string
   status: string
   device_serial?: string
+  device_label?: string
+  assistant_name?: string
+  attachment_filename?: string
   created_at?: string
   started_at?: string
   finished_at?: string
@@ -342,6 +358,8 @@ export interface AgentOpResponse {
 
 export interface RouteModelTestResult {
   connected?: boolean
+  /** 密钥能否访问供应商（list 或等价鉴权） */
+  key_ok?: boolean
   model_name?: string
   message?: string
 }
@@ -350,6 +368,8 @@ export interface AgentTestResponse {
   status?: boolean
   data?: {
     connected?: boolean
+    /** 线路三态；与 connected（仅 ready）对齐 */
+    status?: RouteConnStatus
     available_models?: string[]
     message?: string
     results?: Record<string, RouteModelTestResult>

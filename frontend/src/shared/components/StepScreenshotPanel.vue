@@ -118,7 +118,7 @@ function stepTypeColor(type) {
 
     <!-- 大图预览 -->
     <el-dialog v-model="previewVisible" :title="previewTitle" width="90%" top="2vh">
-      <img :src="previewSrc" style="width:100%;border-radius:8px;" />
+      <img :src="previewSrc" style="width:100%;border-radius: var(--app-radius-md);" />
     </el-dialog>
   </section>
 </template>

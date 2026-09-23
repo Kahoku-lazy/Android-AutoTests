@@ -106,19 +106,46 @@ body {
 }
 .el-table td {
   background: var(--app-bg-card) !important;
-  border-bottom: 1px solid var(--app-border-light) !important;
+  /* 纸面风格不画行网格线：保留 1px 占位以维持行高，故用 transparent 而非删除声明 */
+  border-bottom: 1px solid transparent !important;
 }
 .el-table tbody tr:hover > td { background: var(--paper) !important; }
 
-.el-tag { border-radius: 3px 6px 3px 6px !important; font-weight: 700 !important; }
+.el-tag { border-radius: var(--el-border-radius-small) !important; font-weight: 700 !important; }
+
+/* ── 表单校验错误文字：与按钮底色解耦，取项目危险文字色保证可读 ── */
+.el-form-item__error { color: var(--app-status-danger-text); }
+
+/* ── 分段控件（el-radio-button）：显式不对称圆角 + 黄底墨字选中态
+       --el-border-radius-base 是两个值（4px 8px），EP 把它与额外值组合会生成 6 值非法声明，
+       在 computed-value 阶段失效并回落 initial(0)；该声明已在层叠中胜出，
+       低特异性规则无法接管，故必须 !important。选中态与 .ac-tabs 口径一致 ── */
+.el-radio-button__inner {
+  border-radius: var(--app-radius-sm) !important;
+}
+.el-radio-button__original-radio:not(:disabled) + .el-radio-button__inner:hover {
+  color: var(--ink);
+}
+.el-radio-button.is-active .el-radio-button__original-radio:not(:disabled) + .el-radio-button__inner {
+  color: var(--ink);
+  background-color: var(--c-dashboard);
+  border-color: var(--ink);
+  box-shadow: none;
+}
+
+/* ── 开关：轨道圆角与墨色描边落到主题 ── */
+.el-switch__core {
+  border-radius: var(--app-radius-sm);
+  border: 2px solid var(--ink);
+}
 
 .el-input__wrapper,
 .el-select .el-input__wrapper {
   background: var(--app-bg-input) !important;
-  border-radius: 4px 8px 4px 8px !important;
+  border-radius: var(--app-radius-sm) !important;
   border: 2px solid var(--ink) !important;
   box-shadow: none !important;
-  transition: border-color 0.12s;
+  transition: border-color var(--app-duration-fast);
 }
 .el-input__wrapper:hover,
 .el-select .el-input__wrapper:hover { border-color: var(--c-dashboard) !important; }
@@ -131,7 +158,7 @@ body {
 /* ── Button active feedback ── */
 .el-button:active {
   transform: scale(0.97);
-  transition: transform 0.1s var(--app-ease);
+  transition: transform var(--app-duration-fast) var(--app-ease);
 }
 
 /* ── 代码字体 ── */
@@ -146,7 +173,7 @@ h4 { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); font-fa
 /* ── Toast ── */
 .el-message {
   background: var(--app-bg-card) !important;
-  border-radius: 4px 8px 4px 8px !important;
+  border-radius: var(--app-radius-sm) !important;
   border: 2.5px solid var(--ink) !important;
   box-shadow: 2px 3px 0 rgba(0,0,0,0.06) !important;
 }
@@ -177,7 +204,7 @@ h4 { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); font-fa
   background: #fff;
   border-radius: var(--app-radius-md);
   border: 2.5px solid var(--ink);
-  padding: var(--app-space-lg); position: relative; z-index: 1;
+  padding: var(--app-space-lg); position: relative; z-index: var(--z-base);
   box-shadow: var(--app-shadow-sm);
 }
 
@@ -199,7 +226,7 @@ h4 { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); font-fa
 }
 
 .doc-tag {
-  font-size: var(--app-size-xs); padding: 2px var(--app-space-sm); border-radius: 3px 6px 3px 6px;
+  font-size: var(--app-size-xs); padding: 2px var(--app-space-sm); border-radius: var(--el-border-radius-small);
   background: #fff; color: var(--ink); font-weight: 700;
   border: 1.5px solid var(--ink); opacity: 0.6;
 }
@@ -239,3 +266,9 @@ h4 { font-size: var(--app-size-sm); font-weight: 700; color: var(--ink); font-fa
   .doc-body { padding: 18px var(--app-space-md) var(--app-space-2xl); }
   .doc-section { padding: 18px; }
 }
+
+/* 减少动效：关闭位移 / 旋转 / 缩放（颜色过渡不受影响） */
+@media (prefers-reduced-motion: reduce) {
+  .el-button:active { transform: none; }
+}
+

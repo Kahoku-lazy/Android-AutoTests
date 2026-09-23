@@ -43,7 +43,7 @@
   --wb-select-ring-color: rgba(162, 210, 255, 0.72);
   outline: 2px solid var(--wb-select-ring-color) !important;
   outline-offset: 3px;
-  transition: outline-color var(--app-duration) ease;
+  transition: outline-color var(--app-duration) var(--app-ease);
 }
 
 /* 路由切换淡入：时长/缓动/位移全部走设计令牌 */
@@ -71,7 +71,7 @@
 
 /* 卡片悬浮（排除 AppCard 钉板：.ac-card 自管硬阴影/微倾） */
 .wb-shell .el-card:not(.ac-card) {
-  transition: transform 0.22s var(--app-spring), box-shadow 0.22s ease;
+  transition: transform var(--app-duration-slow) var(--app-spring), box-shadow var(--app-duration-slow) var(--app-ease);
   will-change: transform;
 }
 .wb-shell .el-card:not(.ac-card):hover {
@@ -82,7 +82,7 @@
 /* 顶栏 brand-mark */
 .wb-header .brand-mark {
   cursor: default; transform-origin: center;
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow var(--app-duration-slow) var(--app-ease);
 }
 .wb-header .brand-mark:hover {
   box-shadow: var(--app-shadow-sm);

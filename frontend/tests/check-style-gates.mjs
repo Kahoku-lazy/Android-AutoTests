@@ -3,8 +3,9 @@
  *              批 3：非样式表载体按边界可解析 + 模块前缀声明值来源）
  *
  * 用法：
- *   node tests/check-style-gates.mjs            批 1 告警；批 2 为硬门禁（违规即 exit 1）
- *   node tests/check-style-gates.mjs --strict   批 1 也阻断
+ *   node tests/check-style-gates.mjs            全部批次均为硬门禁（违规即 exit 1）
+ *
+ * 批次：批 1 字号下限 · 批 1b 画布字号存量 · 批 2 T0 主 token · 批 3 载体边界解析 · 批 4 几何尺度
  *
  * 规则来源：
  *   - 批 1：tokens.css「字号刻度（6 档，最小 12px，禁止硬编码 font-size 字面量）」
@@ -16,6 +17,9 @@
  *   - 批 3：openspec/specs/frontend-l0-design-tokens
  *          「非样式表载体按边界溯源令牌」/「模块令牌值引用主 token」（变更 token-channel-provenance）
  *          变更 atomize-shared-design-tokens（T0 原子词表 + 兼容别名层）
+ *   - 批 4：openspec/specs/frontend-l0-design-tokens
+ *          「阴影模糊半径恒为 0」/「圆角取非对称纸张刻度」/「动效取时长令牌」
+ *          （变更 enforce-flat-shadow / consolidate-radius-scale / tokenize-motion-and-reduced-motion）
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
@@ -23,16 +27,30 @@ import { fileURLToPath } from 'node:url'
 
 const FRONTEND = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SRC = join(FRONTEND, 'src')
-const STRICT = process.argv.includes('--strict')
 
 /** 字号下限（px）—— 与 tokens.css 的 --font-size-xs 对齐 */
 const FONT_FLOOR = 12
 /** 只扫可能承载样式的文件类型 */
 const EXTS = ['.vue', '.css']
-/** 载体（<style> 块之外的外观值引用）可能出现的文件类型：含脚本侧 */
-const CARRIER_EXTS = ['.vue', '.ts', '.js']
+/** 载体（外观值引用）可能出现的文件类型：样式表 + 脚本侧全覆盖，缺一类即出现检查盲区 */
+const CARRIER_EXTS = ['.vue', '.css', '.ts', '.js']
 /** 只匹配字面量 px，命中 var(--font-size-*) 的写法不受影响 */
 const FONT_SIZE_RE = /font-size:\s*([0-9.]+)px/g
+/** 画布侧驼峰字号（ECharts / VueFlow 配置）：字号是图形参数，单独计量、只降不增 */
+const FONT_SIZE_CAMEL_RE = /\bfontSize:\s*([0-9.]+)/g
+/** 画布字号存量上限（只降不增） */
+const CANVAS_FONT_BASELINE = 18
+/** 画布字号中低于下限者（ECharts 轴标签常用 10px，属图形绘制而非排版字号） */
+const CANVAS_FONT_SUBFLOOR = 7
+/** 允许保留的圆角字面量 · 图形量：正圆/圆点（50%）、细线与小构件（1/2/3/5px）、清零 */
+const RADIUS_FIGURE = new Set([
+  '0', '0 !important', '0!important', '1px', '2px', '2px !important', '3px', '5px',
+  '50%', '50% !important',
+])
+/** 允许保留的圆角字面量 · 独立造型：非对称纸张角与四值独立形状（已逐个登记） */
+const RADIUS_SHAPE = new Set(['0 3px 3px 0', '0 4px 0 0', '3px 5px', '8px 16px 6px 14px', '14px 20px', '18px 26px'])
+/** 允许保留的动效裸时长：无限循环装饰动画（骨架 shimmer / 实时脉冲），均已有 reduced-motion 降级 */
+const DURATION_EXCEPTION = new Set(['1.4s', '1.5s'])
 
 /** T0 主 token 文件：全部字面量色值的唯一登记处 */
 const TOKENS = join(SRC, 'shared/styles/tokens.css')
@@ -133,14 +151,15 @@ function isCommentLine(line) {
   return t.startsWith('*') || t.startsWith('//') || t.startsWith('/*') || t.startsWith('<!--') || t.startsWith('*/')
 }
 
-/** 载体引用：.css 无载体；.vue 取 <style> 之外（块内字符替换为空格以保留行号）；.ts / .js 全文 */
-function carrierRefs(rel, text) {
+/**
+ * 载体引用：全文按行取 var(--x)。
+ * 修复历史盲区：早期实现对 .css 直接返回空、并把 .vue 的 <style> 块整体替换为空格，
+ * 使**真实 CSS 与 <style> 块完全不受引用完整性检查**（悬空令牌可长期存活）。
+ * 样式代码正是引用主战场，不得豁免；这里不再区分文件类型。
+ */
+function carrierRefs(text) {
   const out = []
-  if (rel.endsWith('.css')) return out
-  const scannable = rel.endsWith('.vue')
-    ? text.replace(/<style[^>]*>[\s\S]*?<\/style>/g, (m) => m.replace(/[^\n]/g, ' '))
-    : text
-  scannable.split(/\r?\n/).forEach((line, index) => {
+  text.split(/\r?\n/).forEach((line, index) => {
     if (isCommentLine(line)) return
     for (const m of line.matchAll(/var\((--[a-zA-Z0-9-]+)/g)) out.push({ name: m[1], line: index + 1 })
   })
@@ -206,8 +225,13 @@ function normalizeColor(value) {
 }
 
 // ───────────────────────── 批 1 · 字号下限 ─────────────────────────
+/* 样式侧 font-size 字面量低于下限 → 硬门禁（存量 0，可直接阻断）。
+   画布侧（ECharts / VueFlow 的 JS 配置）用驼峰 fontSize，字号是图形参数，
+   单独计量并保留存量上限：只降不增、不阻断。 */
 const violations = []
-for (const file of walk(SRC)) {
+const canvasFonts = []
+for (const file of walk(SRC, CARRIER_EXTS)) {
+  const rel = relOf(file)
   const lines = readFileSync(file, 'utf8').split(/\r?\n/)
   lines.forEach((text, index) => {
     for (const match of text.matchAll(FONT_SIZE_RE)) {
@@ -215,6 +239,9 @@ for (const file of walk(SRC)) {
       if (size < FONT_FLOOR) {
         violations.push({ file: relative(FRONTEND, file), line: index + 1, size, text: text.trim() })
       }
+    }
+    for (const match of text.matchAll(FONT_SIZE_CAMEL_RE)) {
+      canvasFonts.push({ at: rel + ':' + (index + 1), size: Number(match[1]) })
     }
   })
 }
@@ -296,15 +323,31 @@ for (const file of walk(SRC)) {
   }
 }
 
+const carrierFiles = walk(SRC, CARRIER_EXTS).map((file) => ({
+  rel: relOf(file),
+  text: readFileSync(file, 'utf8'),
+}))
+/*
+ * 运行时注入的载体名按**边界**汇集，而不是按文件。
+ * 原因：样式常被拆到同目录的 X.style.css（或由同边界的共享组件注入，如
+ * shared/components/AppCard.vue 注入 --ac-accent/--ac-tilt 供 shared/styles/workbench-theme.css 消费），
+ * 注入点与消费点不同文件。按边界汇集与批 3 其余判定同口径，也不会让 A 模块的注入
+ * 去正当化 B 模块的引用。
+ */
+const injectedByBoundary = new Map()
+for (const { rel, text } of carrierFiles) {
+  const boundary = boundaryOf(rel)
+  if (!injectedByBoundary.has(boundary)) injectedByBoundary.set(boundary, new Set())
+  for (const name of injectedNames(text)) injectedByBoundary.get(boundary).add(name)
+}
+
 const danglingRefs = []
 const crossBoundaryRefs = []
 let carrierTotal = 0
-for (const file of walk(SRC, CARRIER_EXTS)) {
-  const rel = relOf(file)
-  const text = readFileSync(file, 'utf8')
-  const injected = injectedNames(text)
+for (const { rel, text } of carrierFiles) {
   const boundary = boundaryOf(rel)
-  for (const ref of carrierRefs(rel, text)) {
+  const injected = injectedByBoundary.get(boundary)
+  for (const ref of carrierRefs(text)) {
     carrierTotal++
     // 运行时注入的载体：值由父级传入，不在本文件声明属正常
     if (injected.has(ref.name)) continue
@@ -325,6 +368,64 @@ if (moduleLiteralDecls.length) hard3.push(...moduleLiteralDecls.map((r) => 'G7 �
 // 消费位置裸色字面量：只照亮、不阻断（存量清单，只降不增）
 const consumption = []
 for (const file of walk(SRC)) consumption.push(...consumptionLiterals(relOf(file), readFileSync(file, 'utf8')))
+
+
+// ───────── 批 4 · 几何尺度：阴影模糊 / 圆角 / 动效时长（硬门禁） ─────────
+/*
+ * 这三类此前没有任何门禁，是"第二套尺度"与模糊阴影得以蔓延的直接原因。
+ * 规则真相源：openspec/specs/frontend-l0-design-tokens
+ *   「阴影模糊半径恒为 0」/「圆角取非对称纸张刻度」/「动效取时长令牌」。
+ */
+const geom = []
+for (const file of walk(SRC)) {
+  const rel = relOf(file)
+  const text = readFileSync(file, 'utf8')
+  const blocks = rel.endsWith('.css') ? [{ css: text, startLine: 1 }] : styleBlocks(text)
+  for (const b of blocks) {
+    b.css.split(/\r?\n/).forEach((raw, i) => {
+      const line = raw.replace(/\/\*[\s\S]*?\*\//g, '')
+      if (isCommentLine(line)) return
+      const at = rel + ':' + (b.startLine + i)
+      // G12 阴影模糊半径：层按逗号切分（var()/color-mix() 内逗号会多切一层，
+      // 但那些片段不以 px 数字开头，被 lens 解析自然跳过）；纯 var() 片段无 px 也不参与
+      for (const m of line.matchAll(/box-shadow\s*:\s*([^;}]+)/g)) {
+        for (const layer of m[1].split(',')) {
+          const lens = []
+          for (const tok of layer.trim().replace(/^inset\s+/, '').split(/\s+/)) {
+            if (/^-?[\d.]+px$/.test(tok)) { lens.push(parseFloat(tok)); continue }
+            if (tok === '0') { lens.push(0); continue }
+            break
+          }
+          if (lens.length >= 3 && lens[2] !== 0) {
+            geom.push('G12 模糊阴影 ' + at + '  ' + m[1].trim() + ' → 模糊半径必须为 0')
+          }
+        }
+      }
+      // G13 圆角：只取 --app-radius-* / --radius-*，或下方已登记的图形量与独立造型
+      for (const m of line.matchAll(/border-radius\s*:\s*([^;}]+)/g)) {
+        const v = m[1].trim()
+        if (/var\(/.test(v) || RADIUS_FIGURE.has(v) || RADIUS_SHAPE.has(v)) continue
+        const p = v.split(/\s+/)
+        const redundant = p.length === 4 && p[0] === p[2] && p[1] === p[3]
+        geom.push('G13 ' + (redundant ? '等价四值圆角 ' : '未登记圆角 ') + at + '  ' + v +
+          (redundant ? ' → 折叠为两值 A B' : ' → 改用 --app-radius-* 或登记例外'))
+      }
+      // G14 动效时长：transition/animation 简写里的裸时长必须取自令牌
+      for (const m of line.matchAll(/(?:transition|animation)\s*:\s*([^;}]+)/g)) {
+        const v = m[1].trim()
+        if (v === 'none') continue
+        for (const d of v.matchAll(/\b[\d.]+m?s\b/g)) {
+          if (!DURATION_EXCEPTION.has(d[0])) {
+            geom.push('G14 动效裸时长 ' + at + '  ' + v + '（' + d[0] + '）→ 改用 --app-duration-*')
+          }
+        }
+        if (/(?<![\w-])ease(?![\w-])/.test(v)) {
+          geom.push('G14 动效裸缓动 ' + at + '  ' + v + ' → 改用 var(--app-ease)')
+        }
+      }
+    })
+  }
+}
 
 // ───────────────────────── 输出与退出码 ─────────────────────────
 console.log(`[style-gates] 批 2 · T0 主 token：声明 ${tokenDecls.length} 条 · 颜色原子 ${colorSeen.size} 个 · 复合值登记 ${composites.length} 条`)
@@ -355,17 +456,30 @@ if (hard3.length) {
 }
 console.log('[style-gates] 批 3 通过：非样式表载体均按边界可解析 + 模块前缀声明值来源于 T0')
 
+console.log('[style-gates] 批 4 · 几何尺度：阴影模糊半径恒为 0 · 圆角取刻度或已登记例外 · 动效时长取令牌')
+if (geom.length) {
+  console.error('[style-gates] 批 4 硬门禁失败：' + geom.length + ' 处')
+  for (const g of geom.slice(0, 40)) console.error('  ' + g)
+  process.exit(1)
+}
+console.log('[style-gates] 批 4 通过：阴影无模糊 + 圆角无未登记字面量 + 动效无未登记裸时长')
+
+const canvasSub = canvasFonts.filter((f) => f.size < FONT_FLOOR)
+console.log('[style-gates] 批 1b · 画布字号 ' + canvasFonts.length + ' 处（上限 ' + CANVAS_FONT_BASELINE +
+  '；其中 < ' + FONT_FLOOR + 'px ' + canvasSub.length + ' 处，上限 ' + CANVAS_FONT_SUBFLOOR +
+  '）→ ECharts/VueFlow 图形参数，只降不增、不阻断')
+if (canvasFonts.length > CANVAS_FONT_BASELINE || canvasSub.length > CANVAS_FONT_SUBFLOOR) {
+  console.error('[style-gates] 批 1b 画布字号超上限（只降不增）')
+  process.exit(1)
+}
+
 if (violations.length === 0) {
   console.log(`[style-gates] 批 1 通过：无 font-size < ${FONT_FLOOR}px 的硬编码`)
   process.exit(0)
 }
 
-console.log(`[style-gates] 批 1 发现 ${violations.length} 处 font-size < ${FONT_FLOOR}px：`)
+console.error(`[style-gates] 批 1 硬门禁失败：${violations.length} 处 font-size < ${FONT_FLOOR}px`)
 for (const v of violations) {
-  console.log('  ' + v.file + ':' + v.line + '  ' + v.size + 'px  → 改用 var(--font-size-xs)')
+  console.error('  ' + v.file + ':' + v.line + '  ' + v.size + 'px  → 改用 var(--font-size-xs)')
 }
-if (STRICT) {
-  console.error('[style-gates] --strict 模式：门禁失败')
-  process.exit(1)
-}
-console.log('[style-gates] 批 1 当前为告警模式（未阻断）；清零后可在 CI 换成 --strict')
+process.exit(1)

@@ -6,6 +6,7 @@ import WorkbenchHeader from '@/shared/components/WorkbenchHeader.vue'
 import SketchCard from '@/shared/components/SketchCard.vue'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
 import ErrorState from '@/shared/components/patterns/ErrorState.vue'
+import SkeletonCard from '@/shared/components/patterns/SkeletonCard.vue'
 import { sketchTiltAt, sketchToneAt } from '@/shared/helpers/sketchCard'
 import { useProjects } from './composables/useProjects'
 
@@ -78,8 +79,8 @@ async function onDeleteProject(id: number, name: string) {
       </template>
     </WorkbenchHeader>
 
-    <div v-if="loading" class="doc-body project-list-page__loading">
-      <el-skeleton :rows="4" animated />
+    <div v-if="loading" class="doc-body">
+      <SkeletonCard variant="list" :lines="4" />
     </div>
 
     <ErrorState v-else-if="error" :message="error" @retry="loadProjects" />
@@ -147,17 +148,11 @@ async function onDeleteProject(id: number, name: string) {
 
 <style scoped>
 /* 模块作用域色板：登记本页用到的非全局色值（消费点都在页面根之内；页面根即组件根） */
-.case-workbench {
-  --case-icon-accent: var(--color-teal-67) /* -> --color-teal-67 */;  /* 页头图标渐变收尾色（与 --c-case 组成模块标识渐变） */
-}
 
 /* 页面根/主体骨架由 .doc-page / .doc-body 提供，这里只留本页增量 */
 .project-list-page .doc-body {
   overflow-y: auto;
   padding: var(--app-space-lg);
-}
-.project-list-page__loading {
-  max-width: 720px;
 }
 .project-grid {
   display: grid;

@@ -7,4 +7,6 @@
 .case-workbench {
   --case-border-subtle:     var(--color-blue-82-a18) /* alias -> --color-blue-82-a18 */;
   --case-border:            var(--color-blue-82-a30) /* alias -> --color-blue-82-a30 */;
+  --case-icon-accent:       var(--color-teal-67) /* alias -> --color-teal-67 */;  /* 页头图标渐变收尾色（与 --c-case 组成模块标识渐变） */
+  --case-z-context:         var(--z-overlay);   /* 目录树上下文菜单层叠（原引用悬空，computed 阶段回落 auto；对齐同类浮层的 80） */
 }

@@ -12,7 +12,6 @@ export const NAV_CATEGORIES = [
           { path: "/ai-assistant/agents", icon: "sticky-note", label: "平台小助手" },
           { path: "/ai-assistant/toolbox", icon: "wrench", label: "AI工具箱" },
           { path: "/ai-assistant/knowledge", icon: "book-open", label: "知识库" },
-          { path: "/ai-assistant/evaluator", icon: "activity", label: "评测中心" },
         ],
       },
     ],
@@ -50,6 +49,5 @@ export const MOD_COLORS = {
   "/ai-assistant/agents": "var(--c-ai)",
   "/ai-assistant/toolbox": "var(--c-ai)",
   "/ai-assistant/knowledge": "var(--c-ai)",
-  "/ai-assistant/evaluator": "var(--c-ai)",
   "/workflow": "var(--c-workflow)",
 }

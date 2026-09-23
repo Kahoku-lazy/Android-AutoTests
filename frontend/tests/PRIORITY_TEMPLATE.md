@@ -93,7 +93,7 @@ it('<场景>：<预期>')            // 一条用例只测一个行为；多预�
 | P0 | useSavedUsername | `login/p0/useSavedUsername.spec.ts` |
 | P0 | useViewStateMachine | `login/p0/useViewStateMachine.spec.ts` |
 | P0 | useAuthFlow | `login/p0/useAuthFlow.spec.ts` |
-| P0 | useAuthPool | `login/p0/useAuthPool.spec.ts` |
+| P0 | token-storage（单账号会话） | `login/p0/token-storage.spec.ts` |
 | P0 | LoginCard / RegisterCard | `login/p0/LoginCard.spec.ts` 等 |
 | P1 | useLoginView 切模式清表单 | `login/p1/LoginView.logic.spec.ts` |
 | P1 | LoginErrorOverlay | `login/p1/LoginErrorOverlay.spec.ts` |

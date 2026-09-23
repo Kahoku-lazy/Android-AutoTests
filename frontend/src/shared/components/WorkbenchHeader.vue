@@ -55,9 +55,6 @@ watch(() => props.icon, async () => {
         <slot name="actions" />
       </div>
     </div>
-    <div v-if="$slots.nav" class="wb-header__nav">
-      <slot name="nav" />
-    </div>
   </header>
 </template>
 
@@ -72,7 +69,7 @@ watch(() => props.icon, async () => {
   flex-direction: column;
   justify-content: center;
   gap: var(--app-space-xs);
-  /* 常规宽度 = --app-topbar-h（与侧栏 header 底边对齐）；动作区/导航换行时靠 min-height 增高，
+  /* 常规宽度 = --app-topbar-h（与侧栏 header 底边对齐）；动作区换行时靠 min-height 增高，
      把正文推开，而不是让内容溢出覆盖正文 */
   min-height: var(--app-topbar-h, 96px);
   box-sizing: border-box;
@@ -82,16 +79,12 @@ watch(() => props.icon, async () => {
   flex-shrink: 0;
   /* 让下方 z-index 真正参与层叠（static 元素上的 z-index 无效） */
   position: relative;
-  z-index: 10;
+  z-index: var(--z-header);
 }
 .wb-header__row {
   display: flex;
   align-items: center;
   gap: var(--app-space-md);
-  width: 100%;
-  min-width: 0;
-}
-.wb-header__nav {
   width: 100%;
   min-width: 0;
 }
@@ -163,7 +156,7 @@ watch(() => props.icon, async () => {
   border-radius: var(--app-radius-md) !important;
   padding: 5px 14px !important;
   font-family: inherit !important;
-  transition: all 0.12s !important;
+  transition: all var(--app-duration-fast) !important;
   box-shadow: none !important;
 }
 .wb-header :deep(.el-button:active) {

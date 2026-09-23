@@ -135,7 +135,7 @@ const rootStyle = computed(() => {
 /* 胶带：不拦截点击 */
 .doodle-note__tape {
   position: absolute;
-  z-index: 2;
+  z-index: var(--z-raised);
   top: -10px;
   left: 50%;
   width: 64px;

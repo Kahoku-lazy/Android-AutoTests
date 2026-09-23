@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * WorkbenchCrumbs — L2 子页可见回退（返回芯片 + 波浪面包屑）
- * 挂在 WorkbenchHeader #nav；祖先可点，末级马克笔且不可点。
+ * 挂在 L2 子页 `.doc-body` 顶部；祖先可点，末级马克笔且不可点。
  */
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
@@ -15,7 +15,7 @@ export type CrumbItem = {
 const props = withDefaults(
   defineProps<{
     items?: CrumbItem[]
-    /** 可选左侧返回芯片目标 */
+    /** 可选返回芯片目标（渲染在面包屑条右端） */
     backTo?: string
     backLabel?: string
   }>(),
@@ -51,14 +51,6 @@ function goCrumb(item: CrumbItem) {
 
 <template>
   <nav class="wb-crumbs" aria-label="面包屑">
-    <button
-      v-if="showBack"
-      type="button"
-      class="wb-crumbs__back"
-      @click="goBack"
-    >
-      ← {{ backLabel }}
-    </button>
     <ol v-if="crumbs.length" class="wb-crumbs__list">
       <li
         v-for="(item, idx) in crumbs"
@@ -81,6 +73,14 @@ function goCrumb(item: CrumbItem) {
         >{{ item.label }}</span>
       </li>
     </ol>
+    <button
+      v-if="showBack"
+      type="button"
+      class="wb-crumbs__back"
+      @click="goBack"
+    >
+      ← {{ backLabel }}
+    </button>
   </nav>
 </template>
 
@@ -95,13 +95,14 @@ function goCrumb(item: CrumbItem) {
 }
 
 .wb-crumbs__back {
+  margin-left: auto;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   min-height: 28px;
   padding: 2px 10px;
   border: 2px solid var(--comp-crumb-ink, var(--ink));
-  border-radius: 2px 6px 2px 4px;
+  border-radius: var(--comp-sheet-radius);
   background: var(--comp-crumb-back-bg, var(--app-bg-card));
   box-shadow: var(--comp-crumb-back-shadow, 2px 2px 0 0 var(--ink));
   color: var(--comp-crumb-ink, var(--ink));

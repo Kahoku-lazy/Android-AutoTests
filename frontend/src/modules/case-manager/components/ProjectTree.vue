@@ -556,9 +556,9 @@ function rowClass(data: UiTreeNode) {
 
 .ex-btn {
   border: 2px solid var(--ink);
-  background: var(--app-bg-card);
-  border-radius: 10px;
-  padding: 7px 12px;
+  background: var(--paper);
+  border-radius: var(--app-radius-sm);
+  padding: 6px 12px;
   font-weight: 700;
   font-size: var(--app-size-xs);
   cursor: pointer;
@@ -619,7 +619,7 @@ function rowClass(data: UiTreeNode) {
   width: 100%;
   border: 2px solid var(--ink);
   background: var(--app-bg-card);
-  border-radius: 14px;
+  border-radius: var(--app-radius-lg);
   padding: var(--app-space-sm) 12px;
   min-height: 44px;
 }
@@ -655,7 +655,7 @@ function rowClass(data: UiTreeNode) {
   font-weight: 800;
   text-align: center;
   border: 2px solid var(--ink);
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   padding: 2px var(--app-space-sm);
   line-height: 1.3;
 }
@@ -684,7 +684,7 @@ function rowClass(data: UiTreeNode) {
   z-index: var(--case-z-context);
   background: var(--app-bg-card);
   border: 2px solid var(--ink);
-  border-radius: 14px;
+  border-radius: var(--app-radius-lg);
   padding: 6px 0;
   min-width: 168px;
   /* 浮层硬阴影墨色（rgb(30,30,36) 即 --ink），本弹层自身登记 */

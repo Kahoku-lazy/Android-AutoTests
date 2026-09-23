@@ -33,7 +33,7 @@ router.beforeEach((to) => {
   if (!token && to.path !== '/login') {
     return '/login'
   }
-  if (token && to.path === '/login' && !to.query.add) {
+  if (token && to.path === '/login') {
     return '/dashboard'
   }
 })

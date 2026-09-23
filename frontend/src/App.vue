@@ -33,7 +33,7 @@ const showSidebar = computed(() => route.path !== '/login')
   /* 顺 L0 的 height:100% 链（html/body/#app 都是 100%）；用 100vh 会在移动端动态工具栏下比 #app 高，触发 #app 兜底滚动 */
   height: 100%;
   position: relative;
-  z-index: 1;
+  z-index: var(--z-base);
   background: var(--paper);
   overflow: hidden;
 }
@@ -45,7 +45,7 @@ const showSidebar = computed(() => route.path !== '/login')
   overflow: hidden;
   padding: 0;
   position: relative;
-  z-index: 1;
+  z-index: var(--z-base);
   background: transparent;
   display: flex;
   flex-direction: column;
@@ -54,7 +54,7 @@ const showSidebar = computed(() => route.path !== '/login')
 /* 策略① 滚动容器：内容层盖在涂鸦之上 */
 .main-content__body {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-base);
   flex: 1;
   min-height: 0;
   overflow-y: auto;

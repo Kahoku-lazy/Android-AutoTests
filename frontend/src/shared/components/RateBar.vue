@@ -51,13 +51,13 @@ const rateClass = computed(() => {
   height: 100%;
   background: var(--c-device);
   border-radius: 2px;
-  transition: width 0.3s var(--app-ease);
+  transition: width var(--app-duration-slow) var(--app-ease);
 }
 
 .rate-bar__fail {
   height: 100%;
   background: var(--c-runner);
-  transition: width 0.3s var(--app-ease);
+  transition: width var(--app-duration-slow) var(--app-ease);
 }
 
 .rate-bar__label {

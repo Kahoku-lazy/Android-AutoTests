@@ -1,21 +1,29 @@
 <script setup>
 /**
- * SkeletonCard — 卡片骨架屏
+ * SkeletonCard — 共享骨架屏（三态之「加载态」的唯一实现）
  *
- * 替代各模块手写的 shimmer 动画。垂直排列 N 条占位条。
+ * variant:
+ * - card（默认）：面向 KPI / 数据卡 —— 4 条固定布局占位（图标区 / 数值 / 标签 / 底栏）
+ * - list：面向列表 / 区块首屏 —— N 条等高占位条
  */
 defineProps({
   lines: { type: Number, default: 4 },
+  variant: { type: String, default: 'card' },
 })
 </script>
 
 <template>
-  <div class="skeleton-card" role="status" aria-label="加载中">
+  <div
+    class="skeleton-card"
+    :class="'skeleton-card--' + variant"
+    role="status"
+    aria-label="加载中"
+  >
     <div
       v-for="i in lines"
       :key="i"
       class="skeleton-card__bar"
-      :class="`skeleton-card__bar--${i}`"
+      :class="variant === 'card' ? 'skeleton-card__bar--' + i : 'skeleton-card__bar--row'"
     />
   </div>
 </template>
@@ -37,13 +45,17 @@ defineProps({
   );
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.4s linear infinite;
-  border-radius: 4px;
+  border-radius: var(--app-radius-sm);
 }
 /* 4 条标准布局：图标区 / 数值 / 标签 / 底栏 */
-.skeleton-card__bar--1 { height: 60px; border-radius: 3px 5px 3px 5px; }
+.skeleton-card__bar--1 { height: 60px; border-radius: 3px 5px; }
 .skeleton-card__bar--2 { width: 55%; height: 24px; }
 .skeleton-card__bar--3 { width: 80%; height: 12px; }
 .skeleton-card__bar--4 { height: 24px; margin-top: 2px; }
+
+/* list 档：N 条等高占位（列表 / 区块首屏），间距取刻度 */
+.skeleton-card--list { gap: var(--app-space-sm); }
+.skeleton-card__bar--row { height: 20px; }
 
 @keyframes skeleton-shimmer {
   0%   { background-position: 200% 0; }

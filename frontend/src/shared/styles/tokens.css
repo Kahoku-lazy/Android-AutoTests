@@ -174,6 +174,7 @@
   --font-size-lg: 20px;
   --font-size-xl: 24px;
   --font-size-2xl: 32px;
+  --font-size-3xl: 48px;
 
   /* ═══════════════════════════════════════════
      T0 主 token · 三、基础量原子（间距 / 圆角 / 阴影 / 动效 / 尺寸）
@@ -207,6 +208,21 @@
   --spring: cubic-bezier(0.34,1.56,0.64,1);
 
   /* ── 尺寸 ── */
+  /* ── 层叠 z-index（变更 establish-zindex-and-name-scope）：取值与登记前逐一相同，只做登记 ──
+     未纳入档位的一次性层叠值仍以字面量散落，登记如下：
+       0   静态/普通流内的层叠重置
+       3   局部浮起（单个组件内的小额提升）
+       5   局部浮起
+       20  模块内次级浮层
+       100 模块内高位浮层（高于 80 的 overlay 档）── */
+  --z-base: 1;
+  --z-raised: 2;
+  --z-header: 10;
+  --z-popup: 60;
+  --z-overlay: 80;
+  --z-modal-backdrop: 9990;
+  --z-modal: 9991;
+
   --size-border-width: 3px;
   --size-topbar-h: 96px;
   --size-sidebar-w: 228px;
@@ -222,6 +238,8 @@
   --comp-kpi-live-pulse: var(--color-red-69-a30);
   --comp-kpi-live-pulse-fade: var(--color-red-69-a05);
   --comp-kpi-pin-shadow: var(--color-ink-05-a10);
+  /* AppCard 钉板图钉的硬阴影：共享皮肤在各模块页根上生效，故必须落在 :root（不能依赖模块作用域令牌） */
+  --comp-ac-card-pin-shadow: var(--color-ink-05-a18);
   --comp-kpi-radius: 2px;
   --comp-kpi-shape-border: var(--color-white);
   --comp-kpi-tape-border: var(--color-indigo-13-a30);
@@ -267,6 +285,11 @@
   --comp-sheet-shadow-x: 4px;
   --comp-sheet-shadow-y: 4px;
   --comp-sheet-accent-fallback: var(--color-indigo-13);
+  /* 表格行选中态（frontend-l4-data-surface）：行状态底色必须画在单元格上，模块可覆写 accent */
+  --comp-table-row-accent: var(--c-element);
+  --comp-table-row-selected-bg: color-mix(in srgb, var(--comp-table-row-accent) 18%, var(--app-bg-card));
+  /* 表格斑马纹底色：暖色纸面族派生（EP 默认的 --el-fill-color-lighter 是冷灰 #fafafa） */
+  --comp-table-row-striped-bg: color-mix(in srgb, var(--color-orange-76) 25%, var(--app-bg-card));
   /* L5 对话框纸面补缺 */
   --comp-dialog-border: 2.5px dashed var(--color-indigo-13);
   --comp-dialog-shadow: 4px 4px 0 0 var(--color-indigo-13);
@@ -390,15 +413,16 @@
   --app-font-mono:     var(--font-mono) /* alias -> --font-mono */;
   --app-font-brand:    var(--font-brand) /* alias -> --font-brand */;  /* 品牌手写体，仅 400 字重 */
 
-  /* ── 字号刻度（6 档，最小 12px；**文本字号必须取本刻度**，禁止硬编码字面量）── */
+  /* ── 字号刻度（7 档，最小 12px；**文本字号必须取本刻度**，禁止硬编码字面量）── */
   /* 例外：图形/展示级字号可用字面量（树节点图标 18px · 空态 emoji 40px · 404 数字 96px）
-     判定语：表达图形尺寸而非文本层级；口径见 frontend/AGENTS.md 硬性规范 §1.14 */
+     判定语：表达图形尺寸而非文本层级；口径见 frontend/AGENTS.md 硬性规范 §1.7 */
   --app-size-xs:  var(--font-size-xs) /* alias -> --font-size-xs */;  /* 按钮文字、表格列头、标签、时间戳、Badge */
   --app-size-sm:  var(--font-size-sm) /* alias -> --font-size-sm */;  /* UI 正文（默认阅读字号） */
   --app-size-md:  var(--font-size-md) /* alias -> --font-size-md */;  /* 卡片标题、表单标签、模块标题 */
   --app-size-lg:  var(--font-size-lg) /* alias -> --font-size-lg */;  /* 段落标题、弹窗标题 */
   --app-size-xl:  var(--font-size-xl) /* alias -> --font-size-xl */;  /* 页面标题 */
   --app-size-2xl: var(--font-size-2xl) /* alias -> --font-size-2xl */;  /* KPI 数字、Hero 数字 */
+  --app-size-3xl: var(--font-size-3xl) /* alias -> --font-size-3xl */;  /* 品牌展示级：仅首屏品牌标题（当前唯一消费点：登录页 Hero 标题）*/
 
   /* ═══════════════════════════════════════════
      皮肤维度三 · 间距 Spacing
@@ -458,12 +482,28 @@
 
   --el-color-success:           var(--color-green-61) /* alias -> --color-green-61 */;
   --el-color-warning:           var(--color-yellow-63) /* alias -> --color-yellow-63 */;
-  --el-color-danger:            var(--color-red-83) /* alias -> --color-red-83 */;
+  /* danger 同时承担「实心底色」与「表单校验错误文字色」：取项目危险文字色，使各态对比度 ≥4.5:1 */
+  --el-color-danger:            var(--color-red-46) /* alias -> --color-red-46 */;
+  --el-color-danger-light-3:    var(--color-red-49) /* alias -> --color-red-49 */;   /* solid hover 底（白字仍可读） */
+  --el-color-danger-light-5:    var(--color-red-85) /* alias -> --color-red-85 */;   /* plain 描边 */
+  --el-color-danger-light-7:    var(--color-red-95) /* alias -> --color-red-95 */;
+  --el-color-danger-light-8:    var(--color-red-95) /* alias -> --color-red-95 */;
+  --el-color-danger-light-9:    var(--color-red-95) /* alias -> --color-red-95 */;   /* plain 底 */
+  --el-color-danger-dark-2:     var(--color-red-29) /* alias -> --color-red-29 */;   /* active 底 */
   --el-color-info:              var(--color-cyan-74) /* alias -> --color-cyan-74 */;
+  /* error 面（el-alert / el-message）同样落到已登记红色族，替代 EP 离板 #f56c6c / #fef0f0 */
+  --el-color-error:             var(--color-red-46) /* alias -> --color-red-46 */;
+  --el-color-error-light-3:     var(--color-red-49) /* alias -> --color-red-49 */;
+  --el-color-error-light-5:     var(--color-red-85) /* alias -> --color-red-85 */;
+  --el-color-error-light-7:     var(--color-red-95) /* alias -> --color-red-95 */;
+  --el-color-error-light-8:     var(--color-red-95) /* alias -> --color-red-95 */;
+  --el-color-error-light-9:     var(--color-red-95) /* alias -> --color-red-95 */;
 
   --el-bg-color:                var(--paper);
   --el-bg-color-overlay:        var(--color-white) /* alias -> --color-white */;
   --el-bg-color-page:           var(--paper);
+  --el-fill-color:              var(--color-orange-76) /* alias -> --color-orange-76 */;  /* 骨架/浅底：暖灰，替代 EP 冷灰 #f0f2f5 */
+  --el-fill-color-darker:       var(--color-orange-76) /* alias -> --color-orange-76 */;
   --el-fill-color-blank:        var(--color-white) /* alias -> --color-white */;
   --el-fill-color-light:        var(--color-lime-94) /* alias -> --color-lime-94 */;
 
@@ -477,6 +517,10 @@
 
   --el-border-color:            var(--ink);
   --el-border-color-light:      var(--color-lime-94) /* alias -> --color-lime-94 */;
+
+  /* 开关：开=成功色、关=离线灰（替代 EP 默认的 开=primary / 关=border-color(墨色)） */
+  --el-switch-on-color:         var(--app-status-success);
+  --el-switch-off-color:        var(--app-offline);
 
   --el-box-shadow-light:        var(--shadow-sm);
   --el-box-shadow:              var(--shadow-md);

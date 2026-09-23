@@ -29,7 +29,6 @@
 - 响应信封 `{status, data}` / `{status, message}`；HTTP JSON **snake_case**（前端 camelCase 转换在前端侧）。
 - **信封特例（legacy 平铺，禁止新增，未收敛前禁止改造成信封式）**：
   - report_generator `/reports/*`：平铺 + `FileResponse` 下载。
-  - workflow legacy 路径（非 router 路径）：平铺 `{status, directory|document|documents|...}`。
 - 契约对照：前端 api 层、本 App Serializer；改路径/字段必须双边同步。
 
 

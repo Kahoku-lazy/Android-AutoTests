@@ -1,7 +1,8 @@
-"""workflow 原型列表：router 标准信封 + 前端消费字段守护。
+"""workflow 原型接口：router 标准信封 + 前端消费字段守护。
 
-GET /api/workflow/prototypes/ 被 DefaultRouter 抢先命中 ViewSet，
-EnvelopeJSONRenderer 产出 {status, data}。前端必须读 data，不能读平铺 prototypes。
+页面流只剩 router 一套端点（变更 converge-workflow-http-endpoints），读写都由
+EnvelopeJSONRenderer 产出 `{status, data}`。前端必须读 `data`，不能读平铺的
+`prototypes` / `prototype` 键。
 """
 
 from __future__ import annotations
@@ -55,3 +56,13 @@ def test_use_prototypes_list_reads_envelope_data_not_prototypes():
     body = match.group(0)
     assert "data.data" in body
     assert "data.prototypes" not in body
+
+
+def test_use_prototypes_create_reads_envelope_data_not_prototype():
+    """创建走集合路由后同样是标准信封：读 `data.data`，不得读平铺 `data.prototype`。"""
+    text = USE_PROTOTYPES.read_text(encoding="utf-8")
+    match = re.search(r"async function addPrototype\(.*?\n  \}", text, re.DOTALL)
+    assert match, "找不到 addPrototype"
+    body = match.group(0)
+    assert "data.data" in body
+    assert "data.prototype" not in body

@@ -48,56 +48,6 @@ class WorkflowDirectorySerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at", "updated_at"]
 
 
-class WorkflowDirectoryTreeSerializer(serializers.ModelSerializer):
-    """目录树 — 递归 children + 文档摘要."""
-
-    children = serializers.SerializerMethodField()
-    documents = serializers.SerializerMethodField()
-
-    class Meta:
-        model = WorkflowDirectory
-        fields = [
-            "id",
-            "name",
-            "prototype_id",
-            "parent_id",
-            "sort_order",
-            "doc_count",
-            "created_at",
-            "updated_at",
-            "children",
-            "documents",
-        ]
-
-    def get_children(self, obj):
-        if not hasattr(obj, "_prefetched_children"):
-            children = obj.children.all().order_by("sort_order", "id")
-        else:
-            children = obj._prefetched_children
-        return WorkflowDirectoryTreeSerializer(children, many=True).data
-
-    def get_documents(self, obj):
-        if not hasattr(obj, "_prefetched_documents"):
-            docs = obj.documents.filter(doc_type__in=WorkflowDocument.SUPPORTED_TYPES).order_by(
-                "title"
-            )
-        else:
-            docs = [
-                d
-                for d in obj._prefetched_documents
-                if d.doc_type in WorkflowDocument.SUPPORTED_TYPES
-            ]
-        return [
-            {
-                "doc_id": d.doc_id,
-                "title": d.title,
-                "doc_type": d.doc_type,
-                "updated_at": d.updated_at.isoformat() if d.updated_at else "",
-            }
-            for d in docs
-        ]
-
-
 class WorkflowDocumentListSerializer(serializers.ModelSerializer):
     """文档列表 — 不含 config_json（体积大）."""
 
@@ -120,7 +70,12 @@ class WorkflowDocumentListSerializer(serializers.ModelSerializer):
 class WorkflowDocumentDetailSerializer(serializers.ModelSerializer):
     """文档详情 — 含 config_json（前端字段名 config，读写均支持）."""
 
-    config = serializers.JSONField(source="config_json")
+    # 写入统一经 api.py，故 config 非必填：局部提交（例如只改标题）不该被判"字段缺失"而 400。
+    config = serializers.JSONField(source="config_json", required=False)
+    # directory_id 为裸 ID（int/null，null = 移到原型根）；
+    # DRF 默认把 FK 的 attname 当只读字段，显式声明才可写。
+    # 存在性 / 跨原型判定属业务规则，归 api.py，故不用 PrimaryKeyRelatedField。
+    directory_id = serializers.IntegerField(allow_null=True, required=False)
 
     class Meta:
         model = WorkflowDocument

@@ -24,7 +24,14 @@
 整体下线而退役（变更 remove-element-locator-web-api，规格 `api-endpoint-catalog` 已移除），
 其扫描分支与规模下限同步删除 —— 面不存在就不留恒为 0 的空面。
 
-规格：`openspec/specs/api-path-convention`。
+「能 resolve」不等于「会被受理」
+--------------------------------
+只断言路径能命中路由，会放过一类真实故障：DRF router 的详情路由 `<collection>/<pk>/`
+把字面量段（`create` / `import`）当成主键抢占，请求落到只接受 get/put/patch/delete 的
+详情视图上，得到 405「方法 "POST" 不被允许。」（变更 fix-workflow-create-route-shadowing
+的起因）。因此扫描同时记录 HTTP 方法，命中 router 视图时断言方法在其动作白名单内。
+
+规格：`openspec/specs/api-path-convention`、`openspec/specs/workflow-http-envelope`。
 """
 
 from __future__ import annotations
@@ -51,12 +58,13 @@ _QUOTES = "\"'`"
 
 # 按“调用形态”匹配：动词 + （可选的 TS 泛型）+ 左括号 + 可选 f 前缀 + 第一个引号字面量。
 # 不加 re.MULTILINE：让 \s* 能跳过换行，这正是上一版漏扫的修法。
+# 动词单独成组：命中 router 视图时要断言该方法在动作白名单内（能 resolve ≠ 会被受理）。
 _CALL_RX = re.compile(
-    r"\.(?:get|post|put|patch|delete)\s*(?:<[^<>()]*>)?\s*\(\s*f?(["
+    r"\.(get|post|put|patch|delete)\s*(?:<[^<>()]*>)?\s*\(\s*f?(["
     + _QUOTES
     + r"])((?:[^"
     + _QUOTES
-    + r"])*)\1",
+    + r"])*)\2",
     re.S,
 )
 
@@ -76,6 +84,16 @@ EXCEPTIONS = (
         "tests/graybox/unit/test_api_path_convention.py",
         "/api/auth/login",
         "该用例断言的就是“缺失尾斜杠返回 404”，必须是违规写法",
+    ),
+    (
+        "tests/graybox/unit/test_workflow_single_path.py",
+        "/api/workflow/prototypes/create/",
+        "该用例断言的就是“旧平铺写地址已下线（必须 404）”，是负向用例",
+    ),
+    (
+        "tests/graybox/unit/test_workflow_single_path.py",
+        "/api/workflow/directories/create/",
+        "同上：断言旧写地址不再被任何实现应答",
     ),
 )
 
@@ -112,12 +130,15 @@ class Caller:
         call_line: int,
         line: int,
         path: str,
+        method: str | None = None,
     ) -> None:
         self.surface = surface
         self.file = file
         self.call_line = call_line
         self.line = line
         self.path = path
+        # HTTP 动词（小写）；YAML 用例暂无方法字段，故可为 None
+        self.method = method
 
     @property
     def rel(self) -> str:
@@ -155,7 +176,7 @@ def _scan_call_sites(surface: str, files) -> list[Caller]:
     for source in files:
         text = source.read_text(encoding="utf-8", errors="replace")
         for match in _CALL_RX.finditer(text):
-            literal = match.group(2)
+            literal = match.group(3)
             if surface == "frontend":
                 # 前端的调用写相对 baseURL 的路径（如 "/auth/login/"），
                 # 但 /login、/dashboard 是前端自身路由，不是端点。
@@ -174,8 +195,9 @@ def _scan_call_sites(surface: str, files) -> list[Caller]:
                     surface=surface,
                     file=source,
                     call_line=_line_of(text, match.start()),
-                    line=_line_of(text, match.start(2)),
+                    line=_line_of(text, match.start(3)),
                     path=path,
+                    method=match.group(1),
                 )
             )
     return found
@@ -285,6 +307,52 @@ def test_every_caller_path_resolves_to_a_view():
             failures.append(f"{caller.where}  →  resolve({caller.full_path!r}) 无匹配路由")
     assert failures == [], (
         "以下调用在后端不存在对应路由：" + NL + NL.join(f"  - {item}" for item in failures)
+    )
+
+
+def test_scanner_records_http_methods():
+    """方法必须真的被扫到 —— 否则下面的白名单断言会空跑通过。"""
+    by_method = {}
+    for caller in CALLERS:
+        if caller.method:
+            by_method[caller.method] = by_method.get(caller.method, 0) + 1
+    missing = [
+        verb for verb in ("get", "post", "put", "patch", "delete") if not by_method.get(verb)
+    ]
+    assert missing == [], (
+        "以下动词一个调用点都没扫到，说明 _CALL_RX 的动词捕获组退化了：" + ", ".join(missing)
+    )
+
+
+def test_every_caller_method_is_accepted_by_the_matched_view():
+    """**能 resolve ≠ 会被受理**：命中 router 视图时，方法必须在其动作白名单内。
+
+    起因：router 详情路由 `<collection>/<pk>/` 把字面量段（`create` / `import`）当成主键
+    抢占，请求落到只接受 get/put/patch/delete 的详情视图上，得到 405
+    「方法 "POST" 不被允许。」—— 只断言「路径能 resolve」放过了这类故障。
+
+    函数视图 / 非 router 视图的允许方法在运行期才判定，静态不可知，故不在本断言范围。
+    """
+    failures = []
+    for caller in CALLERS:
+        if caller.method is None or _is_excepted(caller):
+            continue
+        try:
+            match = resolve(caller.full_path)
+        except Resolver404:
+            continue  # 「路径不存在」由 test_every_caller_path_resolves_to_a_view 负责报错
+        actions = getattr(match.func, "actions", None)
+        if not actions:
+            continue  # 函数视图 / 非 router 视图：无静态白名单
+        if caller.method not in actions:
+            failures.append(
+                f"{caller.where}  {caller.method.upper()} → {match.func.cls.__name__} "
+                f"仅接受 {sorted(actions)}"
+            )
+    assert failures == [], (
+        "以下调用的方法不会被命中的视图受理（最终表现为 405）："
+        + NL
+        + NL.join(f"  - {item}" for item in failures)
     )
 
 

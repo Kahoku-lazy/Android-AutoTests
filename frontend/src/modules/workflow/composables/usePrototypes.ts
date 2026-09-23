@@ -50,10 +50,11 @@ export function usePrototypes() {
         name: trimmed,
         description: description.trim(),
       })
-      if (data.status && data.prototype) {
-        prototypes.value = [data.prototype, ...prototypes.value]
+      // 集合路由返回标准信封 {status, data: 原型}
+      if (data.status && data.data) {
+        prototypes.value = [data.data, ...prototypes.value]
         ElMessage.success('原型已创建')
-        return data.prototype as WorkflowPrototype
+        return data.data as WorkflowPrototype
       }
       ElMessage.error(data.message || '创建失败')
       return null

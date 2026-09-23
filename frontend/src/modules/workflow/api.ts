@@ -55,11 +55,11 @@ export function getWorkflowPrototype(id: number): Envelope<WorkflowPrototype> {
 }
 
 export function createWorkflowPrototype(payload) {
-  return client.post('/workflow/prototypes/create/', payload)
+  return client.post('/workflow/prototypes/', payload)
 }
 
 export function updateWorkflowPrototype(id, payload) {
-  return client.post(`/workflow/prototypes/${id}/`, payload)
+  return client.patch(`/workflow/prototypes/${id}/`, payload)
 }
 
 export function deleteWorkflowPrototype(id) {
@@ -76,15 +76,15 @@ export function listWorkflowDirectories(params = {}): Envelope<{
 }
 
 export function createWorkflowDirectory(payload) {
-  return client.post('/workflow/directories/create/', payload)
+  return client.post('/workflow/directories/', payload)
 }
 
 export function updateWorkflowDirectory(dirId, payload) {
-  return client.post(`/workflow/directories/${dirId}/`, { action: 'update', ...payload })
+  return client.patch(`/workflow/directories/${dirId}/`, payload)
 }
 
 export function deleteWorkflowDirectory(dirId) {
-  return client.post(`/workflow/directories/${dirId}/`, { action: 'delete' })
+  return client.delete(`/workflow/directories/${dirId}/`)
 }
 
 export function listWorkflowDocuments(params = {}): Envelope<WorkflowDocumentRow[]> {
@@ -95,9 +95,9 @@ export function getWorkflowDocument(docId: string): Envelope<WorkflowDocumentRow
   return client.get(`/workflow/documents/${encodeURIComponent(docId)}/`)
 }
 
-/** 创建（无 doc_id）或更新（带 doc_id） */
+/** 创建文档（集合路由）；更新走 updateWorkflowDocument */
 export function saveWorkflowDocument(payload) {
-  return client.post('/workflow/documents/create/', payload)
+  return client.post('/workflow/documents/', payload)
 }
 
 export function updateWorkflowDocument(docId, payload) {
@@ -108,9 +108,9 @@ export function deleteWorkflowDocument(docId) {
   return client.delete(`/workflow/documents/${encodeURIComponent(docId)}/`)
 }
 
-/** 导入 envelope；overwrite=true 覆盖同 doc_id */
+/** 导入 envelope（router 动作路由）；overwrite=true 覆盖同 doc_id */
 export function importWorkflowDocument(envelope, { overwrite = false } = {}) {
-  return client.post('/workflow/documents/import/', { ...envelope, overwrite }, {
+  return client.post('/workflow/documents/import/', envelope, {
     params: { overwrite: overwrite ? 1 : 0 },
   })
 }

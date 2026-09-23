@@ -216,7 +216,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
         prototype_id: requirePrototypeId(),
       })
       if (!res.data?.status) throw new Error(res.data?.message || '创建目录失败')
-      const node = mapDir(res.data.directory)
+      const node = mapDir(res.data.data)
       nodes.value.push(node)
       if (parentId) expanded.value[parentId] = true
       persistUi()
@@ -252,7 +252,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
         config: empty,
       })
       if (!res.data?.status) throw new Error(res.data?.message || '创建失败')
-      const doc = res.data.document
+      const doc = res.data.data
       const node = mapDoc(doc)
       if (!node) throw new Error('创建失败')
       configCache.value[node.id] = doc.config || empty
@@ -291,7 +291,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
           directory_id: parentToDirectoryId(n.parentId),
         })
         if (!res.data?.status) throw new Error(res.data?.message || '重命名失败')
-        if (res.data.document?.updated_at) n.updatedAt = res.data.document.updated_at
+        if (res.data.data?.updated_at) n.updatedAt = res.data.data.updated_at
       }
       n.name = title
       if (!n.updatedAt) n.updatedAt = nowIso()
@@ -429,9 +429,9 @@ export const useLibraryStore = defineStore('wf-library', () => {
       })
       if (!res.data?.status) throw new Error(res.data?.message || '保存失败')
       // 以服务端回写为准，保证缓存与库一致
-      const saved = res.data.document?.config ?? data
+      const saved = res.data.data?.config ?? data
       configCache.value[id] = saved
-      n.updatedAt = res.data.document?.updated_at || nowIso()
+      n.updatedAt = res.data.data?.updated_at || nowIso()
     } catch (e: any) {
       const msg = e?.response?.data?.message || e?.message || '保存失败'
       throw new Error(msg)
@@ -498,7 +498,7 @@ export const useLibraryStore = defineStore('wf-library', () => {
       const res = await importWorkflowDocument(payload, { overwrite: !!opts?.overwrite })
       if (!res.data?.status) throw new Error(res.data?.message || '导入失败')
       await refreshFromServer()
-      const doc = res.data.document
+      const doc = res.data.data
       if (doc?.config) configCache.value[doc.doc_id] = doc.config
       const mapped = doc ? mapDoc(doc) : null
       const node = (doc && findNode(doc.doc_id)) || mapped

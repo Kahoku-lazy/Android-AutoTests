@@ -24,6 +24,18 @@ def _q_prototype_id(request) -> int | None:
     return None
 
 
+def _directory_id_from(value) -> int | None:
+    """把请求里的 directory_id 归一为 int | None（null / 空串 → None，即原型根）."""
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        from rest_framework.exceptions import ValidationError
+
+        raise ValidationError({"directory_id": "必须是整数或 null"})
+
+
 class WorkflowPrototypeViewSet(ViewSet):
     """原型 CRUD — 标准信封由 EnvelopeJSONRenderer 包裹."""
 
@@ -31,6 +43,9 @@ class WorkflowPrototypeViewSet(ViewSet):
     # 声明后 drf-spectacular 才能推导 {id} 路径参数类型与原型响应结构，消除告警。
     serializer_class = WorkflowPrototypeSerializer
     queryset = WorkflowPrototype.objects.none()
+    # 主键只允许数字：字面量段（如历史的 `create/`）不再被详情路由当主键吃掉，
+    # 既让下线后的旧地址返回 404 而不是 405/500，也避免非数字主键触发 ValueError。
+    lookup_value_regex = r"\d+"
 
     def list(self, request):
         return Response(wf_api.list_prototypes())
@@ -75,6 +90,8 @@ class WorkflowDirectoryViewSet(viewsets.ModelViewSet):
 
     queryset = WorkflowDirectory.objects.order_by("sort_order", "id")
     serializer_class = WorkflowDirectorySerializer
+    # 同 WorkflowPrototypeViewSet：主键只允许数字，字面量段不再被详情路由吃掉。
+    lookup_value_regex = r"\d+"
 
     def list(self, request, *args, **kwargs):
         proto_id = _q_prototype_id(request)
@@ -117,7 +134,17 @@ class WorkflowDirectoryViewSet(viewsets.ModelViewSet):
         serializer.instance = WorkflowDirectory.objects.get(id=instance.id)
 
     def perform_destroy(self, instance):
-        wf_api.delete_directory(instance.id)
+        ok, result = wf_api.delete_directory(instance.id)
+        if not ok:
+            from rest_framework.exceptions import ValidationError
+
+            raise ValidationError({"detail": result})
+
+    def destroy(self, request, *args, **kwargs):
+        """返回 200 + 空 data，走信封 {status:true}；避免默认 204 空体让前端判失败。"""
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response({})
 
     @action(detail=True, methods=["post"])
     def move(self, request, pk=None):
@@ -162,15 +189,15 @@ class WorkflowDocumentViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        data = serializer.validated_data
+        raw = self.request.data
         ok, result, status = wf_api.upsert_document(
             doc_id=None,
-            title=data["title"],
-            doc_type=data["doc_type"],
-            config=data.get("config_json", {}),
-            directory_id=data.get("directory_id"),
-            description=data.get("description", ""),
-            prototype_id=self.request.data.get("prototype_id"),
+            title=raw.get("title") or raw.get("name") or "",
+            doc_type=raw.get("doc_type") or "",
+            config=raw.get("config") if raw.get("config") is not None else {},
+            directory_id=_directory_id_from(raw.get("directory_id")),
+            description=raw.get("description") or "",
+            prototype_id=raw.get("prototype_id"),
         )
         if not ok:
             from rest_framework.exceptions import ValidationError
@@ -179,17 +206,36 @@ class WorkflowDocumentViewSet(viewsets.ModelViewSet):
         serializer.instance = WorkflowDocument.objects.get(doc_id=result["doc_id"])
 
     def perform_update(self, serializer):
-        data = serializer.validated_data
+        """按提交字段合并：没提交的字段保持原值（与 legacy PUT 语义一致）。
+
+        不能用 `validated_data.get(字段, 空值)` 判断"没提交"——`validated_data` 不含未提交
+        字段，`get(..., 默认值)` 会把"没提交"读成"提交了空值"，曾造成「只改标题被 400」
+        与「保存时描述被清空」。故以 `request.data` 的键存在性为准。
+        """
+        raw = self.request.data
         doc_id = self.kwargs["doc_id"]
-        existing = wf_api.get_document(doc_id) or {}
+        existing = wf_api.get_document(doc_id)
+        if not existing:
+            from rest_framework.exceptions import NotFound
+
+            raise NotFound(detail="文档不存在")
+
+        if "directory_id" in raw:
+            directory_id = _directory_id_from(raw.get("directory_id"))
+            clear_directory = directory_id is None
+        else:
+            directory_id = existing.get("directory_id")
+            clear_directory = False
+
         ok, result, status = wf_api.upsert_document(
             doc_id=doc_id,
-            title=data.get("title"),
-            doc_type=data.get("doc_type"),
-            config=data.get("config_json", {}),
-            directory_id=data.get("directory_id"),
-            description=data.get("description", ""),
+            title=raw.get("title") or existing["title"],
+            doc_type=raw.get("doc_type") or existing["doc_type"],
+            config=raw["config"] if "config" in raw else existing["config"],
+            directory_id=directory_id,
+            description=raw.get("description", existing.get("description") or ""),
             allow_create=False,
+            clear_directory=clear_directory,
             prototype_id=existing.get("prototype_id"),
         )
         if not ok:
@@ -211,8 +257,9 @@ class WorkflowDocumentViewSet(viewsets.ModelViewSet):
         self.perform_destroy(instance)
         return Response({})
 
-    @action(detail=False, methods=["post"])
+    @action(detail=False, methods=["post"], url_path="import")
     def _import(self, request):
+        """POST /api/workflow/documents/import — 导入 envelope；?overwrite=1 覆盖同 doc_id."""
         overwrite = request.query_params.get("overwrite") in ("1", "true", "True")
         payload = (
             request.data.get("envelope")

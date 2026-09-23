@@ -1,0 +1,5 @@
+schema: android-autotests
+created: 2026-09-21
+# api-endpoint-catalog 能力整体退役（其唯一需求随 Web/API 域下线而移除）——
+# 经用户确认「一并下线接口资产目录能力」，此处声明该 marker 以允许归档删除主 spec。
+retire_capabilities: true

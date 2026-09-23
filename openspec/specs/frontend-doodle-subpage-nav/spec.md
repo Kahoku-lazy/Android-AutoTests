@@ -34,14 +34,15 @@
 系统 MUST 用且只用下列三种模版表达子页导航，不得在页内再叠与侧栏重复的顶栏 Tab：
 
 1. 面包屑条：Hub → 工作台 → 叶子（元素定位、用例管理；本轮不改页面流画布页头结构以外的画布）
-2. 侧栏子项：AI 助手四子路由由侧栏切换，页内不再叠一套同等导航
+2. 侧栏子项：AI 助手三子路由由侧栏切换，页内不再叠一套同等导航
 3. 列表行进入：报告 run/task/cases 与同类列表进详情，详情正文顶部提供回列表
 
-#### Scenario: AI four tabs stay in the sidebar
+#### Scenario: AI three tabs stay in the sidebar
 
-- **WHEN** 用户在平台小助手、工具箱、知识库、评测中心之间切换
-- **THEN** 切换发生在侧栏子项，页内没有第二套与四子项等价的顶栏 Tab
+- **WHEN** 用户在平台小助手、工具箱、知识库之间切换
+- **THEN** 切换发生在侧栏子项，页内没有第二套与三子项等价的顶栏 Tab
 - **AND** 页头标题随路由更换
+- **AND** 侧栏与路由均不出现评测中心
 
 #### Scenario: AI deep link returns to its sidebar child
 
@@ -71,3 +72,21 @@
 - **WHEN** 检查面包屑与返回芯片的样式声明
 - **THEN** 色值、字号、间距、阴影均引用令牌
 - **AND** 不出现未登记的纯色字面量
+
+### Requirement: Back chip sits at the right of the crumb row
+
+当 `.doc-body` 顶部的面包屑条同时渲染波浪祖先链与返回芯片时，返回芯片 MUST 位于该条右端（导航行右上角），祖先链 MUST 仍靠该条左端。系统 SHALL NOT 把返回芯片迁入 `.wb-header`。仅有祖先链、没有返回芯片时，祖先链仍靠左，不为此伪造芯片。仅有返回芯片、没有祖先链时，该芯片仍 MUST 靠该条右端。
+
+#### Scenario: Locator project workspace back chip is top-right of the crumb row
+
+- **WHEN** 用户打开元素定位某项目工作台（`.locator-project-workspace`）
+- **THEN** 「返回项目列表」芯片在 `.wb-crumbs` 内可见，且位于该条右端
+- **AND** 祖先链（元素定位 Hub → 当前项目）仍靠该条左端
+- **AND** `.wb-header` 内没有该芯片
+- **AND** 激活芯片后路由回到 `/elements`
+
+#### Scenario: Back-only crumb row still aligns the chip right
+
+- **WHEN** 某 L2 子页只传入返回芯片、不渲染祖先链
+- **THEN** 返回芯片仍位于 `.wb-crumbs` 右端
+- **AND** 激活后仍进入该芯片绑定的上一层路由

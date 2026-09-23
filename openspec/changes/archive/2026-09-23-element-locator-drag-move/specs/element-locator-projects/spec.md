@@ -1,46 +1,4 @@
-# element-locator-projects Specification
-
-## Purpose
-定义元素定位的系统内置单项目工作台：`android` 一个不可新建、改名、删除的项目，项目内的无限目录树与统一叶子类型（页面），以及迁移后叶子标识的保持。
-
-## Requirements
-
-### Requirement: System locator projects
-
-The system SHALL provide exactly one locator project with code `android`. Users MUST NOT create, rename, or delete this project. The project list API SHALL seed the missing project on read.
-
-#### Scenario: List locked projects
-
-- **WHEN** a logged-in user requests `GET /api/elements/projects/`
-- **THEN** the response envelope is `{status: true, data}` containing exactly one project with code `android`
-
-#### Scenario: Mutating projects is rejected
-
-- **WHEN** a client calls `POST`, `PATCH`, or `DELETE` on `/api/elements/projects/` or a project detail
-- **THEN** the server responds with HTTP 405 and a Chinese message
-
-### Requirement: Project workspace tree
-
-The project SHALL expose an unlimited-depth directory tree. Tree nodes SHALL be directories or files. File `kind` SHALL be `page`. Dragging a directory into its own descendant MUST return HTTP 409.
-
-#### Scenario: Create directory and file under project
-
-- **WHEN** the user creates a directory then creates a `page` file under it
-- **THEN** `GET /api/elements/projects/android/tree/` includes both nodes under the correct parent
-
-#### Scenario: Illegal directory move
-
-- **WHEN** the user moves a directory under one of its descendants
-- **THEN** the move fails with HTTP 409 and Chinese message
-
-### Requirement: Leaf identity preserved on migration
-
-Data migration SHALL place existing Android pages into the corresponding system project directories derived from former folders, preserving leaf primary keys whenever possible.
-
-#### Scenario: Existing page id still fetchable
-
-- **WHEN** migration completes for an existing Android page id N
-- **THEN** `GET /api/elements/pages/N` (or equivalent leaf read) still returns that page and its elements
+## ADDED Requirements
 
 ### Requirement: 目录树拖拽移动
 
@@ -214,3 +172,4 @@ Data migration SHALL place existing Android pages into the corresponding system 
 - **WHEN** 客户端提交空的节点集合或未知 kind
 - **THEN** 返回 HTTP 400 并带中文提示
 - **AND** MUST NOT 修改任何数据
+

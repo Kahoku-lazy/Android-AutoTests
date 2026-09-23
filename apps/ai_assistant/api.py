@@ -13,6 +13,7 @@ import shutil
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
@@ -20,6 +21,7 @@ from apps.ai_assistant.deepseek_billing import task_deepseek_cost
 from apps.ai_assistant.models import (
     AIAgent,
     AIConversation,
+    AIDevicePromptArchive,
     AIExecutionLog,
     AIMessage,
     AIPlatformTool,
@@ -47,6 +49,14 @@ __all__ = [
     "get_platform_agent",
     "get_platform_config",
     "update_platform_config",
+    "get_device_prompts",
+    "update_device_prompts",
+    "save_device_prompt_archive",
+    "list_device_prompt_archives",
+    "get_device_prompt_archive",
+    "read_device_prompt_archive",
+    "delete_device_prompt_archive",
+    "restore_device_prompt_from_archive",
     # 对话操作
     "get_conversation",
     "get_or_create_conversation",
@@ -68,14 +78,18 @@ __all__ = [
     "save_message",
     # 任务操作
     "create_task",
+    "rerun_task",
     "start_task",
     "patch_task_progress",
     "finalize_task",
     "delete_task",
     "clear_agent_tasks",
     "recover_orphaned_tasks",
+    "dispatch_device",
+    "build_planner_user_input",
     "parse_task_result",
     "task_result_preview",
+    "resolve_assistant_name",
     "serialize_agent_task_row",
     "serialize_agent_task_detail",
     "dump_task_run_payload",
@@ -89,7 +103,7 @@ __all__ = [
     "decrypt_route_configs",
     "mask_route_configs",
     "get_route_model_config",
-    # 跨模块接口（供 evaluator 等使用）
+    # 跨模块接口
     "get_kb_doc_count",
     "get_provider_config",
     "search_knowledge",
@@ -269,9 +283,19 @@ def update_agent_connectivity(
 
 
 def update_route_connectivity(
-    agent: AIAgent, route: str, *, connected: bool, checked_at, results: dict
+    agent: AIAgent,
+    route: str,
+    *,
+    connected: bool,
+    checked_at,
+    results: dict,
+    status: str | None = None,
 ) -> None:
-    """把某条线路的校验结果写入 route_configs.health，并同步智能体级连通字段。"""
+    """把某条线路的校验结果写入 route_configs.health，并同步智能体级连通字段。
+
+    status: ready / unusable / offline；缺省时仅由 connected 推导 ready/offline（兼容旧调用）。
+    is_connected 仅在 ready 时为 True。
+    """
     agent.refresh_from_db(fields=["route_configs"])
     configs = dict(agent.route_configs or {})
     current = dict(configs.get(route) or {})
@@ -280,8 +304,10 @@ def update_route_connectivity(
         if hasattr(checked_at, "isoformat")
         else str(checked_at)
     )
+    route_status = status or ("ready" if connected else "offline")
     current["health"] = {
-        "is_connected": bool(connected),
+        "is_connected": route_status == "ready",
+        "status": route_status,
         "last_checked_at": stamp,
         "results": results or {},
     }
@@ -290,9 +316,13 @@ def update_route_connectivity(
     healths = []
     for key in ("device_control",):
         health = (configs.get(key) or {}).get("health")
-        if isinstance(health, dict) and "is_connected" in health:
+        if isinstance(health, dict) and health.get("status") == "ready":
+            healths.append(True)
+        elif isinstance(health, dict) and "status" in health:
+            healths.append(False)
+        elif isinstance(health, dict) and "is_connected" in health:
             healths.append(bool(health["is_connected"]))
-    agent.is_connected = all(healths) if healths else bool(connected)
+    agent.is_connected = all(healths) if healths else (route_status == "ready")
     agent.last_checked_at = checked_at
     agent.save(update_fields=["route_configs", "is_connected", "last_checked_at", "updated_at"])
 
@@ -347,6 +377,160 @@ def update_platform_config(agent: AIAgent, data: dict) -> None:
         fields.append("knowledge_sources")
     if fields:
         agent.save(update_fields=fields + ["updated_at"])
+
+
+_DEVICE_PROMPT_KEYS = ("planner", "executor", "verifier")
+_DEVICE_PROMPT_FIELDS = {
+    "planner": "prompt_planner",
+    "executor": "prompt_executor",
+    "verifier": "prompt_verifier",
+}
+
+
+def get_device_prompts(agent: AIAgent) -> dict:
+    """读取设备控制三角色系统提示词（Markdown 源码）。"""
+    return {
+        "agent_id": agent.id,
+        "planner": agent.prompt_planner or "",
+        "executor": agent.prompt_executor or "",
+        "verifier": agent.prompt_verifier or "",
+    }
+
+
+def _write_device_prompts(agent: AIAgent, data: dict) -> dict[str, str]:
+    """校验并写入三角色提示词；任一份去空白后为空则拒绝，不部分更新。"""
+    cleaned: dict[str, str] = {}
+    for key in _DEVICE_PROMPT_KEYS:
+        if key not in data:
+            raise ValueError(f"缺少 {key} 系统提示词")
+        text = str(data[key] if data[key] is not None else "")
+        if not text.strip():
+            raise ValueError(f"{key} 系统提示词不能为空")
+        cleaned[key] = text
+    for key, field in _DEVICE_PROMPT_FIELDS.items():
+        setattr(agent, field, cleaned[key])
+    agent.save(update_fields=["prompt_planner", "prompt_executor", "prompt_verifier", "updated_at"])
+    return cleaned
+
+
+def update_device_prompts(
+    agent: AIAgent,
+    data: dict,
+    *,
+    archive: str = AIDevicePromptArchive.KIND_AUTO,
+    user_id: str = "",
+) -> dict:
+    """写库后按 archive 记账：auto 记一份自动档（滚动三份），permanent 覆盖永久档。"""
+    with transaction.atomic():
+        cleaned = _write_device_prompts(agent, data)
+        save_device_prompt_archive(agent, cleaned, kind=archive, user_id=user_id)
+    return get_device_prompts(agent)
+
+
+# ── 设备提示词历史存档（自动档滚动三份 / 永久档唯一）──
+
+DEVICE_PROMPT_AUTO_KEEP = 3
+
+
+def _archive_to_dict(archive: AIDevicePromptArchive) -> dict:
+    """存档 → 可下发字典（含三份正文）。"""
+    return {
+        "id": archive.id,
+        "kind": archive.kind,
+        "planner": archive.planner,
+        "executor": archive.executor,
+        "verifier": archive.verifier,
+        "created_by": archive.created_by,
+        "created_at": archive.created_at.isoformat(),
+        "updated_at": archive.updated_at.isoformat(),
+    }
+
+
+def _prune_auto_archives(agent: AIAgent) -> None:
+    """自动档只留最新 DEVICE_PROMPT_AUTO_KEEP 份，其余按 id 倒序删除。"""
+    stale_ids = list(
+        AIDevicePromptArchive.objects.filter(agent=agent, kind=AIDevicePromptArchive.KIND_AUTO)
+        .order_by("-id")
+        .values_list("id", flat=True)[DEVICE_PROMPT_AUTO_KEEP:]
+    )
+    if stale_ids:
+        AIDevicePromptArchive.objects.filter(id__in=stale_ids).delete()
+
+
+def save_device_prompt_archive(
+    agent: AIAgent, prompts: dict, *, kind: str, user_id: str = ""
+) -> AIDevicePromptArchive:
+    """写一份存档：auto 滚动保留三份；permanent 覆盖唯一永久档，MUST NOT 新增第二份。"""
+    if kind not in (AIDevicePromptArchive.KIND_AUTO, AIDevicePromptArchive.KIND_PERMANENT):
+        raise ValueError(f"未知存档类型: {kind}")
+    payload = {
+        "planner": str(prompts.get("planner") or ""),
+        "executor": str(prompts.get("executor") or ""),
+        "verifier": str(prompts.get("verifier") or ""),
+    }
+    with transaction.atomic():
+        if kind == AIDevicePromptArchive.KIND_PERMANENT:
+            archive, _created = AIDevicePromptArchive.objects.update_or_create(
+                agent=agent,
+                kind=kind,
+                defaults={**payload, "created_by": str(user_id or "")},
+            )
+        else:
+            archive = AIDevicePromptArchive.objects.create(
+                agent=agent, kind=kind, created_by=str(user_id or ""), **payload
+            )
+            _prune_auto_archives(agent)
+    return archive
+
+
+def list_device_prompt_archives(agent: AIAgent) -> list[dict]:
+    """历史存档列表（类型 / 时间 / 长度摘要；正文走详情接口按需拉取）。"""
+    return [
+        {
+            "id": a.id,
+            "kind": a.kind,
+            "created_by": a.created_by,
+            "created_at": a.created_at.isoformat(),
+            "updated_at": a.updated_at.isoformat(),
+            "planner_length": len(a.planner or ""),
+            "executor_length": len(a.executor or ""),
+            "verifier_length": len(a.verifier or ""),
+        }
+        for a in AIDevicePromptArchive.objects.filter(agent=agent)
+    ]
+
+
+def get_device_prompt_archive(archive_id: int) -> AIDevicePromptArchive:
+    """按 id 取存档；不存在时抛 DoesNotExist（由 View 转 404）。"""
+    return AIDevicePromptArchive.objects.get(id=int(archive_id))
+
+
+def read_device_prompt_archive(archive: AIDevicePromptArchive) -> dict:
+    """读单份存档全文。"""
+    return _archive_to_dict(archive)
+
+
+def delete_device_prompt_archive(archive: AIDevicePromptArchive) -> None:
+    """删除存档；只允许删永久档（自动档由滚动淘汰管理）。"""
+    if archive.kind != AIDevicePromptArchive.KIND_PERMANENT:
+        raise ValueError("自动存档不可手动删除")
+    archive.delete()
+
+
+def restore_device_prompt_from_archive(archive: AIDevicePromptArchive, user_id: str = "") -> dict:
+    """用存档正文覆盖当前提示词：先把当前状态留成自动档，再覆盖（同一事务，失败整体回滚）。"""
+    current = get_device_prompts(archive.agent)
+    payload = {
+        "planner": archive.planner,
+        "executor": archive.executor,
+        "verifier": archive.verifier,
+    }
+    with transaction.atomic():
+        save_device_prompt_archive(
+            archive.agent, current, kind=AIDevicePromptArchive.KIND_AUTO, user_id=user_id
+        )
+        _write_device_prompts(archive.agent, payload)
+    return get_device_prompts(archive.agent)
 
 
 def get_platform_tool_enabled_map() -> dict[str, bool]:
@@ -555,16 +739,25 @@ def save_message(
 
 
 def recover_orphaned_tasks() -> int:
-    """启动恢复：把上次进程遗留的 running 任务置为 failed，返回受影响行数。
+    """启动恢复：遗留 running → failed，再按设备拉起 pending。返回失败行数。
 
     仅服务进程启动时调用（见 apps.AiAssistantConfig._run_startup_recovery）；管理命令不触发。
     写库归口本模块（D3 契约：写操作只经 api.py）。
     """
-    return AITask.objects.filter(status=TaskStatus.RUNNING).update(
+    recovered = AITask.objects.filter(status=TaskStatus.RUNNING).update(
         status=TaskStatus.FAILED,
         result="执行中断：服务重启导致任务线程终止",
         finished_at=timezone.now(),
     )
+    serials = (
+        AITask.objects.filter(status=TaskStatus.PENDING)
+        .exclude(device_serial="")
+        .values_list("device_serial", flat=True)
+        .distinct()
+    )
+    for serial in serials:
+        dispatch_device(serial)
+    return recovered
 
 
 def create_task(
@@ -573,16 +766,36 @@ def create_task(
     title: str,
     goal: str,
     attachment: str = "",
+    attachment_filename: str = "",
     device_serial: str = "",
+    device_label: str = "",
 ) -> AITask:
-    """创建任务（任务发布）。"""
+    """创建任务（任务发布）；device_serial 须已在提交时固化。"""
     return AITask.objects.create(
         agent=agent,
         title=title,
         goal=goal,
         attachment=attachment,
+        attachment_filename=attachment_filename,
         device_serial=device_serial,
+        device_label=device_label,
         status=TaskStatus.PENDING,
+    )
+
+
+def rerun_task(task: AITask) -> AITask:
+    """失败任务克隆新建：复制标题/目标/附件/设备/agent，不改原记录。
+
+    调用方负责校验 status==failed，并在返回后 dispatch_device。
+    """
+    return create_task(
+        task.agent,
+        title=task.title or "",
+        goal=task.goal or "",
+        attachment=task.attachment or "",
+        attachment_filename=task.attachment_filename or "",
+        device_serial=task.device_serial or "",
+        device_label=task.device_label or "",
     )
 
 
@@ -592,6 +805,52 @@ def start_task(task: AITask) -> AITask:
     task.started_at = timezone.now()
     task.save(update_fields=["status", "started_at"])
     return task
+
+
+def build_planner_user_input(task) -> str:
+    """规划模型用户输入：四键中文 JSON（无 markdown 代码块）。"""
+    return json.dumps(
+        {
+            "任务标题": getattr(task, "title", None) or "",
+            "任务目标": getattr(task, "goal", None) or "",
+            "附件文本内容": getattr(task, "attachment", None) or "",
+            "设备ID": getattr(task, "device_serial", None) or "",
+        },
+        ensure_ascii=False,
+    )
+
+
+def dispatch_device(serial: str) -> AITask | None:
+    """按设备抢槽：同 serial 至多一条 running；否则 start 最早 pending 并起线程。"""
+    serial = (serial or "").strip()
+    if not serial:
+        return None
+
+    with transaction.atomic():
+        locked = (
+            AITask.objects.select_for_update()
+            .filter(
+                device_serial=serial,
+                status__in=[TaskStatus.PENDING, TaskStatus.RUNNING],
+            )
+            .order_by("id")
+        )
+        if locked.filter(status=TaskStatus.RUNNING).exists():
+            return None
+        next_task = locked.filter(status=TaskStatus.PENDING).first()
+        if next_task is None:
+            return None
+        claimed = start_task(next_task)
+        task_id = claimed.id
+        agent_id = claimed.agent_id
+
+        def _spawn() -> None:
+            from apps.ai_assistant.task_runner import spawn_task_thread
+
+            spawn_task_thread(task_id, agent_id)
+
+        transaction.on_commit(_spawn)
+        return claimed
 
 
 def patch_task_progress(
@@ -637,6 +896,9 @@ def finalize_task(
         task.by_role = usage.get("by_role") or {}
         fields += ["input_tokens", "output_tokens", "cache_input_tokens", "model_usage", "by_role"]
     task.save(update_fields=fields)
+    serial = (task.device_serial or "").strip()
+    if serial:
+        dispatch_device(serial)
     return task
 
 
@@ -679,6 +941,17 @@ def task_result_preview(raw: str, limit: int = 120) -> str:
     return summary
 
 
+def resolve_assistant_name(agent: AIAgent | None) -> str:
+    """当前控制设备线路名；空则回退智能体 name。"""
+    if agent is None:
+        return ""
+    route = (agent.route_configs or {}).get("device_control") or {}
+    route_name = str(route.get("name") or "").strip()
+    if route_name:
+        return route_name
+    return str(agent.name or "").strip()
+
+
 def serialize_agent_task_row(task: AITask) -> dict:
     """任务发布列表行。"""
     return {
@@ -688,7 +961,12 @@ def serialize_agent_task_row(task: AITask) -> dict:
         "status": task.status,
         "result": task_result_preview(task.result),
         "device_serial": task.device_serial,
+        "device_label": task.device_label or "",
+        "assistant_name": resolve_assistant_name(getattr(task, "agent", None)),
         "created_at": str(task.created_at) if task.created_at else "",
+        "started_at": str(task.started_at) if task.started_at else "",
+        "finished_at": str(task.finished_at) if task.finished_at else "",
+        "deepseek_cost": task_deepseek_cost(task),
     }
 
 
@@ -700,6 +978,9 @@ def serialize_agent_task_detail(task: AITask) -> dict:
         "goal": task.goal,
         "status": task.status,
         "device_serial": task.device_serial,
+        "device_label": task.device_label or "",
+        "assistant_name": resolve_assistant_name(getattr(task, "agent", None)),
+        "attachment_filename": task.attachment_filename or "",
         "created_at": str(task.created_at) if task.created_at else "",
         "started_at": str(task.started_at) if task.started_at else "",
         "finished_at": str(task.finished_at) if task.finished_at else "",
@@ -823,12 +1104,12 @@ def get_route_model_config(agent: AIAgent, route: str, role: str) -> dict:
     return cfg
 
 
-# ── 跨模块接口（供 evaluator 等使用，避免直接导入 agent_scope 内部模块）──
+# ── 跨模块接口（避免直接导入 agent_scope 内部模块）──
 
 
 def get_provider_config(provider: str, base_url: str = "", model_name: str = "") -> dict:
     """获取模型 provider 的 API 配置（base_url + api_key 模式）。
-    供 evaluator 等跨模块调用，避免直接导入 agent_scope.provider_registry。
+    供管理命令等跨模块调用，避免直接导入 agent_scope.provider_registry。
     """
     from apps.ai_assistant.provider_registry import get_provider_config as _get
 

@@ -19,13 +19,19 @@ export const WORKSPACE_TOOL_NAMES: readonly string[] = [
 
 /** Platform business tool names — registered by the Django backend. */
 export const PLATFORM_TOOL_NAMES: readonly string[] = [
-  "get_online_devices", "list_devices", "list_apps",
+  "list_devices", "list_apps",
   "acquire_device", "release_device",
-  "device_action", "click_ratio", "drag_ratio", "xpath_action",
+  "app_control", "tap_screen", "swipe_screen", "press_key", "input_text", "current_app",
+  "click_ratio", "drag_ratio", "xpath_action",
   "screenshot_page", "list_page_flows", "get_page_flow",
 ]
 
 // ── Timing ──
+
+/** 新建任务设备下拉轮询间隔，与设备管理 HEARTBEAT_INTERVAL（30s）对齐 */
+export const TASK_DEVICE_POLL_INTERVAL_MS = 30000
+
+
 
 /** SSE reply watchdog timeout (ms). If no reply within this window, post a disconnect notice.
  *  思考模型 + 多步设备操作（抓屏/点击/导航）单轮可远超 45s，放宽避免误报「等待回复超时」。 */
@@ -34,11 +40,19 @@ export const SSE_WATCHDOG_MS = 120_000
 /** Delay before resetting model status from "done" → "idle" (ms). */
 export const MODEL_STATUS_RESET_MS = 3_000
 
-/** Evaluator run polling interval (ms). */
-export const EVALUATOR_POLL_MS = 2_000
+// ── Device prompts（设备提示词历史存档）──
 
-/** Default top-k for knowledge base search. */
-export const KB_SEARCH_TOP_K = 5
+/** 「保存」会覆盖唯一永久存档，保存前必须让用户确认 */
+export const PROMPT_OVERWRITE_CONFIRM = '此次保存会覆盖之前的备份记录，请确认是否覆盖保存'
+
+/** 自动存档保留份数（与后端 api.DEVICE_PROMPT_AUTO_KEEP 一致） */
+export const PROMPT_AUTO_ARCHIVE_KEEP = 3
+
+/** 存档类型展示名（自动档滚动淘汰 / 永久档需手工删除） */
+export const PROMPT_ARCHIVE_KIND_LABELS: Record<'auto' | 'permanent', string> = {
+  auto: '自动存档',
+  permanent: '永久存档',
+}
 
 /** 知识库上传：落盘到 data/rag_datas */
 export const KB_UPLOAD_ACCEPT = '.md,.markdown,.txt,.docx,.pdf'
@@ -73,6 +87,11 @@ export function skillViewerRoute(name: string): string {
   return `/ai-assistant/toolbox/skills/${encodeURIComponent(name)}`
 }
 
+/** 平台工具调试页 */
+export function toolDebugRoute(name: string): string {
+  return `/ai-assistant/toolbox/tools/${encodeURIComponent(name)}`
+}
+
 /** 智能体线路（任务卡片「智能体」下拉） */
 export const AGENT_ROUTES = [
   { value: 'device_control', label: '控制设备' },
@@ -91,7 +110,7 @@ export const TASK_FILTER_TABS = {
   all: { label: '全部任务' },
 } as const
 
-/** 任务卡片六态（PRD-08-01：待执行 / 执行中 / 任务成功 / 任务失败 / 任务取消 / 任务暂停） */
+/** 任务卡片六态（待执行 / 执行中 / 任务成功 / 任务失败 / 任务取消 / 任务暂停） */
 export const TASK_STATUS_LABELS: Record<string, string> = {
   pending: '待执行',
   running: '执行中',

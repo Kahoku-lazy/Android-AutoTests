@@ -524,6 +524,12 @@
   border-radius: var(--el-border-radius-small);
   background: color-mix(in srgb, var(--c-ai) 18%, var(--app-bg-card));
 }
+.tb-prompt-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  margin-left: auto;
+}
 .tb-prompt-edit {
   display: grid;
   grid-template-columns: 1fr 1fr;

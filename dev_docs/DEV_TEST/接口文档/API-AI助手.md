@@ -59,7 +59,11 @@
 | 平台配置读取 | GET /api/ai/platform-config/ | 需登录(Bearer) | 平台唯一智能体能力配置 |
 | 平台配置更新 | POST /api/ai/platform-config/update/ | 需登录(Bearer) | 更新（仅超管） |
 | 设备提示词读取 | GET /api/ai/device-prompts/ | 需登录(Bearer) | 规划/执行/验收系统提示词 |
-| 设备提示词更新 | POST /api/ai/device-prompts/update/ | 需登录(Bearer) | 更新三份提示词（仅超管） |
+| 设备提示词更新 | POST /api/ai/device-prompts/update/ | 需登录(Bearer) | 更新三份提示词（仅超管，可带 `archive`） |
+| 提示词历史列表 | GET /api/ai/device-prompt-archives/ | 需登录(Bearer)，仅超级管理员 | 自动档（≤3）+ 永久档（≤1），不含正文 |
+| 提示词历史详情 | GET /api/ai/device-prompt-archives/{id}/ | 需登录(Bearer)，仅超级管理员 | 单份存档全文 |
+| 提示词覆盖当前 | POST /api/ai/device-prompt-archives/{id}/restore/ | 需登录(Bearer)，仅超级管理员 | 用该存档覆盖当前提示词（覆盖前先留自动档） |
+| 提示词永久档删除 | POST /api/ai/device-prompt-archives/{id}/delete/ | 需登录(Bearer)，仅超级管理员 | 仅永久档可删，自动档由滚动淘汰 |
 | 平台工具启停 | POST /api/ai/platform-tools/toggle/ | 需登录(Bearer) | 全局启停（仅超管） |
 | 平台工具调试 schema | GET /api/ai/platform-tools/{name} | 需登录(Bearer) | 入参 schema（剥 user_id；设备参数附候选） |
 | 平台工具调试调用 | POST /api/ai/platform-tools/{name}/invoke | 需登录(Bearer) | 真实调用；写工具仅超管 |
@@ -1774,6 +1778,11 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 | planner | string | 是 | 规划模型系统提示词（去空白后不可空） |
 | executor | string | 是 | 执行模型系统提示词（去空白后不可空） |
 | verifier | string | 是 | 验收模型系统提示词（去空白后不可空） |
+| archive | string | 否 | `auto`（缺省）= 写库并留一份自动档（滚动保留最近 3 份）；`permanent` = 写库并覆盖唯一永久档 |
+
+> 记账语义：**任何**写库都会留下自动档（含"退出编辑自动保存"）；点「保存」按钮等价于 `archive=permanent`，
+> 前端 MUST 先弹出确认「此次保存会覆盖之前的备份记录，请确认是否覆盖保存」，用户取消时不发请求。
+> 自动档最多保留最新 3 份，超出自动删最旧；永久档同一智能体最多 1 份，不被自动淘汰。
 
 #### 成功响应（200）
 
@@ -1784,9 +1793,117 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 | HTTP | message | 触发条件 |
 |---|---|---|
 | 400 | planner/executor/verifier 系统提示词不能为空 等 | 任一份去空白后为空，或缺少字段 |
+| 400 | 未知存档类型: {kind} | `archive` 不是 `auto` / `permanent` |
 | 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
 | 403 | Forbidden | 非超级管理员 |
 | 404 | platform agent not found | 平台唯一智能体不存在 |
+
+---
+
+### 9.2c 提示词历史列表接口：GET /api/ai/device-prompt-archives/
+
+| 项 | 值 |
+|---|---|
+| 鉴权 | 需登录(Bearer)，仅超级管理员 |
+
+#### 成功响应（200）
+
+```json
+{
+  "status": true,
+  "data": {
+    "items": [
+      {
+        "id": 41, "kind": "auto", "created_by": "1",
+        "created_at": "2026-09-23T11:02:10", "updated_at": "2026-09-23T11:02:10",
+        "planner_length": 1205, "executor_length": 1701, "verifier_length": 962
+      },
+      { "id": 40, "kind": "permanent", "created_by": "1", "...": "同上" }
+    ]
+  }
+}
+```
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | int | 存档 ID |
+| kind | string | `auto`（自动档，最多三份）｜`permanent`（永久档，最多一份） |
+| created_by | string | 操作者 user_id（空串表示系统/历史数据） |
+| created_at / updated_at | string | ISO 时间；永久档被覆盖时 updated_at 刷新 |
+| planner_length / executor_length / verifier_length | int | 三份正文长度摘要（列表不回正文） |
+
+#### 错误码与文案
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
+| 403 | Forbidden | 非超级管理员 |
+| 404 | platform agent not found | 平台唯一智能体不存在 |
+
+---
+
+### 9.2d 提示词历史详情接口：GET /api/ai/device-prompt-archives/{id}/
+
+| 项 | 值 |
+|---|---|
+| 鉴权 | 需登录(Bearer)，仅超级管理员 |
+
+#### 成功响应（200）
+
+在 §9.2c 每项字段之外，额外返回三份正文本体 `planner` / `executor` / `verifier`。
+
+#### 错误码与文案
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 403 | Forbidden | 非超级管理员 |
+| 404 | archive not found | 存档不存在 |
+
+---
+
+### 9.2e 用历史存档覆盖当前提示词：POST /api/ai/device-prompt-archives/{id}/restore/
+
+| 项 | 值 |
+|---|---|
+| 鉴权 | 需登录(Bearer)，仅超级管理员 |
+| Content-Type | application/json（请求体为空） |
+
+覆盖流程（服务端同一事务）：**先把当前提示词写一份自动档 → 再用该存档的三份正文覆盖当前提示词**。
+留档失败时整体回滚，当前提示词 MUST NOT 被改动；被用作来源的存档 MUST 保留（永久档覆盖后仍在）。
+
+#### 成功响应（200）
+
+与 §9.2a 相同（返回覆盖后的完整提示词）。
+
+#### 错误码与文案
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 400 | {role} 系统提示词不能为空 等 | 存档正文不合法（异常数据） |
+| 403 | Forbidden | 非超级管理员 |
+| 404 | archive not found | 存档不存在 |
+
+---
+
+### 9.2f 删除永久存档：POST /api/ai/device-prompt-archives/{id}/delete/
+
+| 项 | 值 |
+|---|---|
+| 鉴权 | 需登录(Bearer)，仅超级管理员 |
+
+#### 成功响应（200）
+
+```json
+{ "status": true, "data": { "id": 40 } }
+```
+
+#### 错误码与文案
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 400 | 自动存档不可手动删除 | 目标存档是自动档（自动档只由滚动淘汰管理） |
+| 403 | Forbidden | 非超级管理员 |
+| 404 | archive not found | 存档不存在 |
 
 ---
 

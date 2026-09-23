@@ -257,6 +257,15 @@
                   <div class="tb-prompt-head">
                     <span class="tb-prompt-name">{{ role.label }}</span>
                     <span class="tb-prompt-key">{{ role.key }}</span>
+                    <span v-if="props.canManage" class="tb-prompt-actions" @click.stop>
+                      <button
+                        type="button"
+                        class="tb-btn tb-btn-primary"
+                        :disabled="promptSaving"
+                        @click="save"
+                      >{{ promptSaving ? '保存中…' : '保存' }}</button>
+                      <button type="button" class="tb-btn" @click="openHistory">查看历史记录</button>
+                    </span>
                   </div>
                 </template>
                 <div v-if="promptEditing" class="tb-prompt-edit">
@@ -282,13 +291,24 @@
         </div>
       </section>
     </div>
+
+    <DevicePromptHistoryDrawer
+      v-model="promptHistoryVisible"
+      :archives="promptArchives"
+      :loading="promptArchivesLoading"
+      :preview="promptPreview"
+      @preview="previewArchive"
+      @restore="restoreArchive"
+      @remove="removePermanentArchive"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import EmptyState from '@/shared/components/patterns/EmptyState.vue'
+import DevicePromptHistoryDrawer from './DevicePromptHistoryDrawer.vue'
 import { useToolbox } from '../composables/useToolbox'
 import { usePlatformTools } from '../composables/usePlatformTools'
 import { usePlatformConfig } from '../composables/usePlatformConfig'
@@ -347,12 +367,29 @@ const {
   saving: promptSaving,
   editing: promptEditing,
   startEdit, cancelEdit, save,
+  archives: promptArchives,
+  archivesLoading: promptArchivesLoading,
+  historyVisible: promptHistoryVisible,
+  preview: promptPreview,
+  openHistory, previewArchive, restoreArchive, removePermanentArchive,
+  autoSaveIfDirty: autoSavePromptsIfDirty,
 } = useDevicePrompts()
 
 /** 默认只展开规划；编辑时展开全部便于对照 */
 const promptExpanded = ref<string[]>(['planner'])
 watch(promptEditing, (on) => {
   if (on) promptExpanded.value = PROMPT_ROLES.map((r) => r.key)
+})
+
+/** 退出编辑的两个出口：切换工具来源、卸载组件 —— 有改动先自动落库 */
+watch(activeSource, (now, prev) => {
+  if (prev === 'prompt' && now !== 'prompt' && promptEditing.value) {
+    void autoSavePromptsIfDirty()
+    promptEditing.value = false
+  }
+})
+onBeforeUnmount(() => {
+  if (promptEditing.value) void autoSavePromptsIfDirty()
 })
 
 const gatedLiveSources = computed(() => gatedSources())

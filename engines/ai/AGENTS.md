@@ -1,15 +1,13 @@
 # 平台 Agent 功能设计
 
+> **AGENTS 层级**：一级约束 —— 根 `AGENTS.md` 优先于本文件。
+
 > 涉及平台 AI助手 AgentScope 框架代码变动时 **必须** 阅读此文档
 
 ## 技术栈
 
 1. Agent框架当前版本： AgentScope 2.0.7.post1
 
-
-## AgentScope 开发文档
-
-1. 参考文档路径： `dev_docs/项目笔记/AgentScope`
 
 
 ## 测试

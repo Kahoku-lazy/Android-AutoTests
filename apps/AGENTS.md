@@ -1,5 +1,7 @@
 # Backend AGENTS.md — AI 约束
 
+> **AGENTS 层级**：一级约束 —— 根 `AGENTS.md` 优先于本文件；本文件优先于 `apps/{app}/AGENTS.md`。
+
 **口诀**：View 只分发，写库走 api，跨模块不碰内部实现，JSON snake_case，错误要上报，重构先问值不值。  
 **完成定义**：`manage.py check` + ruff 通过 ≠ 完成；相关单测/集成测与契约要对齐。
 
@@ -7,94 +9,36 @@
 
 ## 1. 职责与红线
 
-> 按执行时机分三类：**编写规范**（怎么写）· **分层与模块边界**（不许碰什么）· **契约规则**（接口必须长什么样）。
+1. 聚焦后端的**分层架构**设计与 **API约定**
 
 
-### 1.2 分层与模块边界
+### 1.1 分层与模块边界
 
-**内部层纪律**（口诀：View 只分发，写库走 api）：
+1. **内部层纪律** View 只分发，写库走 api
 
-| 层 | 只做 | 严禁 |
-|----|------|------|
-| `urls.py` | 路由 / `app_name` | 业务逻辑 |
-| `views` / ViewSet | 解析、鉴权上下文、调 api、封信封 | 直接 ORM 写；重业务堆砌 |
-| `serializers` | 入出参校验与 DTO | 复杂写副作用（写仍进 api） |
-| `api.py` | 跨模块写操作（`__all__`） | 收 `request`；返回 Model/JsonResponse |
-| `service` / executor | 本模块编排 | 被其他 App import |
-| `models` | 表结构 / `db_table` / 索引 | 业务编排 |
-| `consumers` | WS 推送 | 绕过 api 散落写库 |
+2. **写库路径**：View / Tool → `api.py` → ORM；跨 App 读 Model ✅，跨 App 写必须走对方 `api.py`。
 
-- **写库路径**：View / Tool → `api.py` → ORM；跨 App 读 Model ✅，跨 App 写必须走对方 `api.py`。
-- 改 api 签名：调用方、注解、docstring、单测同改；Serializer 与 Model/前端契约同改。
 
-**L4 总体禁止（适用于任何后端代码）**：
+### 1.2 硬性约束
 
-| 禁止 | 说明 |
-|------|------|
-| 跨 App 内部实现 import | 禁 import `service` / `runner` / `consumer` / `state_machine`（防火墙 #1） |
-| View / Consumer / Tool 直接 ORM 写 | INSERT/UPDATE/DELETE 必须走 api.py（读放开，写收敛） |
-| api.py 收 request / 返回 ORM | api 参数为简单类型，返回值可 JSON 化 |
-| 静默吞错 | 写操作 except 必须日志 + 对用户友好 `message` |
-| 技术术语给用户 | 错误文案不暴露堆栈/SQL/内部路径/Key |
+1. **严禁** 跨 App 内部实现 import
 
-**通道收敛（全项目硬约束，唯一真相源 → `dev_docs/03-设计与架构/ARCH-00-平台总体架构.md` §1.4 五条通信通道）**：
-
-- 通道封闭集合（四条内部通道 + 禁止新协议 + SSE 已移除 + Redis/外部 LLM 边界）以 `ARCH-00-平台总体架构.md` §1.4 为准，本文不复制。
-- WS 生产点唯一真相源 = `gateway/routing.py`（当前 1 个：编辑锁，**禁止新增**）；截图流已快照化，禁止恢复 WS 截图流。
-- 所有 Consumer 必须在 `gateway/routing.py` 注册。
-
-**App 边界索引（App 专属边界/契约/协议/关单项的唯一落点 → 各 `apps/{app}/AGENTS.md`）**：
-
-| App | 落点 | 一句话提示 |
-|------|------|-----------|
-| accounts | `apps/accounts/AGENTS.md` | 全站鉴权入口，公开路径与中间件一致 |
-| dashboard | `apps/dashboard/AGENTS.md` | 全平台唯一只读聚合区 |
-| device_pool | `apps/device_pool/AGENTS.md` | 设备生命周期 + 状态机，30s 心跳 |
-| device_inspector | `apps/device_inspector/AGENTS.md` | 快照抓取回看（REST），无 WS |
-| element_locator | `apps/element_locator/AGENTS.md` | 三域资产 CRUD |
-| case_manager | `apps/case_manager/AGENTS.md` | 用例定义编排 + 编辑锁 WS |
-| test_runner | `apps/test_runner/AGENTS.md` | 已下线（仅卸表迁移） |
-| report_generator | `apps/report_generator/AGENTS.md` | 报告只读 + FileResponse 下载 |
-| workflow | `apps/workflow/AGENTS.md` | 编排文档 CRUD（legacy 平铺信封） |
-| ai_assistant | `apps/ai_assistant/AGENTS.md` | 任务发布 + Tool 网关 |
-| evaluator | `apps/evaluator/AGENTS.md` | 评估题库/运行/框架适配（前端 ai-assistant 寄宿） |
-
-- 表前缀：`dp_` `el_` `cm_` `tr_` `rg_` `ai_` `wf_` `ev_` `di_`；`db_table` 显式指定。
-- 文件上限：`urls` 200 / `views` 300 / `api|service` 400 / executor 500；超阶梯必须拆分而非继续堆。
-
-**默认拒绝的重构**：无行为变化的大搬家；用函数内 import 掩盖循环依赖；过早万能 `helpers.py`；无测试保护的状态机/执行器迁移。**允许的低成本改进**：补类型注解、补 `__all__`、补友好错误文案、超限文件达阶梯阈值时附带拆分。
 
 ### 1.3 契约规则
 
 - 响应信封 `{status, data}` / `{status, message}`；HTTP JSON **snake_case**（前端 camelCase 转换在前端侧）。
-- **信封特例（legacy 平铺，已登记 ARCH-06/07/09 与前端 `AGENTS.md` §1.3，禁止新增，未收敛前禁止改造成信封式）**：
+- **信封特例（legacy 平铺，禁止新增，未收敛前禁止改造成信封式）**：
   - report_generator `/reports/*`：平铺 + `FileResponse` 下载。
   - workflow legacy 路径（非 router 路径）：平铺 `{status, directory|document|documents|...}`。
-- 契约对照：前端 api 层、`dev_docs/05-开发与测试/接口文档/API-*.md`、本 App Serializer；改路径/字段必须双边同步。
+- 契约对照：前端 api 层、本 App Serializer；改路径/字段必须双边同步。
 
-**前后端契约总表（后端 App ↔ 前端模块 ↔ 通道）**：
-
-| 后端 App | 前端模块 | 通道 |
-|---------|---------|------|
-| accounts | views/LoginView | HTTP |
-| dashboard | dashboard | HTTP |
-| device_pool | device-pool + device-inspector（设备列表） | HTTP |
-| device_inspector | device-inspector | HTTP（无 WS） |
-| element_locator | element-locator + case-manager/workflow（素材） | HTTP |
-| case_manager | case-manager | HTTP + **WS**（编辑锁） |
-| report_generator | report-generator | HTTP（下载走 FileResponse） |
-| workflow | workflow | HTTP |
-| ai_assistant | ai-assistant + 各业务 App（经 Tool） | HTTP |
-| evaluator | ai-assistant（寄宿） | HTTP |
-
----
 
 ## 2. 协议要点
 
 **HTTP / DRF**：`urls.py` 为路径真相源 → View/ViewSet → Serializer → `api.py`。  
 - 身份：`request.user_id`（JWTAuthenticationMiddleware 注入）；公开路径 `/api/ai/auth/*` `/admin/` `/static/`（真相源：`gateway/middleware.py` 的 `_is_public()`）。  
 - 错误带 HTTP 状态码（400/401/403/404/409/500）。  
-- 契约对照：前端 api、`dev_docs/05-开发与测试/接口文档/API-*.md`、本 App Serializer。
+- 契约对照：前端 api、本 App Serializer。
 
 **WS**：Consumer 必须在 `gateway/routing.py` 注册；事件 `type` 与前端一致；写库仍走 api。仅 1 生产点（§1.2 通道收敛）；事件表见 `apps/case_manager/AGENTS.md`（`case_updated`）。
 
@@ -115,4 +59,4 @@
 [ ] 自评 3 问：① 删这个 App，其他 App 是否只经 api/Model 读受影响？② 写操作是否都能被 Tool 与 View 复用同一 api？③ diff 每行可追溯到需求？
 ```
 
-App 级附加项（delta）→ 各 `apps/{app}/AGENTS.md` 关单段。详细门禁 → skill `django-backend-check`。完整自测命令 → `apps/自测与检测指令.md`。
+App 级附加项（delta）→ 各 `apps/{app}/AGENTS.md` 关单段。完整自测命令 → `apps/自测与检测指令.md`。

@@ -1,5 +1,7 @@
 # Frontend AGENTS.md
 
+> **AGENTS 层级**：一级约束 —— 根 `AGENTS.md` 优先于本文件；本文件优先于 `frontend/src/**/AGENTS.md`。
+
 ## 技术规范
 1. 编程语言： TypeScript 5.4 
 2. 前端框架： Vue 3.4 + Vite 5 + Element Plus
@@ -53,13 +55,3 @@ src/modules/{name}/
 
 7. 字号只能取 `tokens.css` 的字号刻度（T0 原子 `--font-size-*`；过渡期 `--app-size-*` 为等价别名，最小 12px），禁止硬编码 `font-size` 字面量。
 
-## 设计层地图产物（登录页）
-
-`temps/login-layer-map/` 是登录页设计层的**标注地图**（Playwright 真实渲染 + 逐元素测量），同时是 L5 覆盖层约束「遮罩必须跳出 transform 包含块」（`openspec/specs/frontend-l5-overlay`）在浏览器层的唯一证据。它内嵌了生成时的源码指纹。
-
-1. 改动下列文件后 **必须** 重跑生成器：`views/LoginView.vue`、`views/LoginView.logic.ts`、`views/LoginView.style.css`、`views/components/{LoginCard,RegisterCard,LoginErrorOverlay}.vue`、`views/styles/{login-card,auth-form-card}.css`，以及生成器与模板自身。
-2. 过期检查（秒级，不启浏览器、不依赖 dev server）：
-   `node temps/login-layer-map/login-layer-map.cjs --check` —— 已同步 exit 0；过期 exit 1 并列出变更文件。
-3. 重新生成：`node temps/login-layer-map/login-layer-map.cjs`（需 dev server 5173；D 节的失败登录还需后端 8766）。
-4. 已知边界：`REGIONS` 里的 `src: 'LoginView.vue:44'` 行号是手写的，重跑后需人工核对（`--check` 只覆盖文件内容漂移）。
-5. 该 bundle 位于 gitignore 的 `temps/`，属**可随时重新生成的临时产物**，不需要长期保存、不入库。注意生成器与模板本身也在该目录内，故「随时可重新生成」的前提是这个目录还在。

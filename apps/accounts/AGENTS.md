@@ -1,5 +1,7 @@
 # accounts — 模块约束
 
+> **AGENTS 层级**：二级约束 —— 根 `AGENTS.md` 与上级 `apps/AGENTS.md` 优先于本文件（本文件只写增量）。
+
 登录鉴权模块。**没有自有表**（无 `models.py`），直接使用 Django 内置 `auth_user`；
 写操作全部收敛在 `api.py`（`__all__ = ["create_user"]`）。
 规格真相源：`openspec/specs/auth-session/spec.md`。
@@ -29,11 +31,9 @@
 
 ## 路径约定
 
-`urls.py` 里的路径**不带尾斜杠**（`login` / `register` / `refresh` / `logout` / `me`）。
-`gateway.NormalizeTrailingSlashMiddleware` 现为**双向**容错：带斜杠请求会被去斜杠后命中，
-所以 `POST /api/auth/login` 与 `POST /api/auth/login/` 都能用。
-
-但**本模块自身的约定仍是无斜杠** —— 新增端点请沿用该写法，并保持 OpenAPI schema 一致。
+`urls.py` 里的路径**必须带尾斜杠**（`login/` / `register/` / `refresh/` / `logout/` / `me/`）。
+`POST /api/auth/login/` 命中；`POST /api/auth/login` 是 **404** —— 容错中间件已删除、
+`APPEND_SLASH=False`，缺失尾斜杠不会再被重定向或改写（见 `openspec/specs/api-path-convention`）。
 
 ## 错误码
 

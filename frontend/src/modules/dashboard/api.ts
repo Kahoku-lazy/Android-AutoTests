@@ -6,6 +6,13 @@ export function fetchDashboardStats() {
   return client.get<DjangoResponse<DashboardRawData>>('/dashboard/stats/')
 }
 
-export function fetchRecentActivities() {
-  return client.get<DjangoResponse<ActivityItem[]>>('/dashboard/activities/')
+export interface ActivityQuery {
+  limit?: number
+  offset?: number
+}
+
+export function fetchRecentActivities(params?: ActivityQuery) {
+  return client.get<DjangoResponse<ActivityItem[]>>('/dashboard/activities/', {
+    params: params ?? {},
+  })
 }

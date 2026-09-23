@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 
 from apps.ai_assistant.api import filter_agents_for_user
 from apps.ai_assistant.models import AIAgent
+from apps.case_manager.api import list_projects
 from apps.case_manager.models import CaseProject, TestDefinition
 from apps.dashboard.ai_usage import (
     ai_daily_series,
@@ -18,6 +19,7 @@ from apps.dashboard.ai_usage import (
     ai_task_daily_execution,
     ai_task_execution_summary,
     ai_usage_stats,
+    platform_activities,
 )
 from apps.device_pool.models import Device
 from apps.element_locator.models import Element, Page
@@ -70,14 +72,18 @@ def _device_dashboard_stats():
 
 
 def _cases_breakdown(user_id=None):
-    """Return per test_type breakdown for document cases owned by the user."""
-    cq = _user_cases_q(user_id)
-    labels = {"app": "APP", "web": "WEB", "api": "API", "func": "FUNC"}
-    rows = []
-    for key, label in labels.items():
-        total = _safe_count(TestDefinition, {"test_type": key}, q_filter=cq)
-        rows.append({"type": key, "label": label, "total": total, "enabled": total})
-    return rows
+    """Return per-project breakdown for document cases owned by the user."""
+    if user_id is None:
+        return []
+    projects = list_projects(user_id=str(user_id))
+    return [
+        {
+            "project_id": p["id"],
+            "name": p["name"],
+            "total": p["case_count"],
+        }
+        for p in projects
+    ]
 
 
 def _elements_breakdown():
@@ -103,7 +109,7 @@ class DashboardStatsAPIView(APIView):
         # Totals derive from breakdown (single source of truth — no double counting)
         cases_breakdown = _cases_breakdown(user_id)
         case_total = sum(row["total"] for row in cases_breakdown)
-        case_enabled = sum(row["enabled"] for row in cases_breakdown)
+        case_enabled = case_total  # 文档用例无独立 enabled，与 total 同值
         run_total = 0
         run_active = 0
         agent_total = filter_agents_for_user(AIAgent.objects.all(), user_id).count()
@@ -158,30 +164,50 @@ class DashboardStatsAPIView(APIView):
         )
 
 
+def _parse_activity_paging(request):
+    """解析 limit/offset；非法时返回 (None, None, message)。"""
+    raw_limit = request.query_params.get("limit")
+    raw_offset = request.query_params.get("offset")
+
+    if raw_limit is None or raw_limit == "":
+        limit = 10
+    else:
+        try:
+            limit = int(raw_limit)
+        except (TypeError, ValueError):
+            return None, None, "limit 必须是整数"
+        if limit < 1 or limit > 50:
+            return None, None, "limit 须为 1–50 的整数"
+
+    if raw_offset is None or raw_offset == "":
+        offset = 0
+    else:
+        try:
+            offset = int(raw_offset)
+        except (TypeError, ValueError):
+            return None, None, "offset 必须是非负整数"
+        if offset < 0:
+            return None, None, "offset 必须是非负整数"
+
+    return limit, offset, None
+
+
 # 该视图直接返回 list（活动条目数组），故用 ANY 描述，避免声明成 object
 @extend_schema(responses=OpenApiTypes.ANY)
 class DashboardActivitiesAPIView(APIView):
-    """GET /api/dashboard/activities/ — recent events across the platform."""
+    """GET /api/dashboard/activities/ — recent events across the platform.
+
+    查询参数：limit（缺省 10，最大 50）、offset（缺省 0）。
+    data 仍为活动数组（非对象包裹）。
+    """
 
     def get(self, request):
-        items = []
+        limit, offset, err = _parse_activity_paging(request)
+        if err:
+            return Response({"message": err}, status=400)
 
-        # Recent agents
         user_id = _user_id(request)
-        for agent in filter_agents_for_user(AIAgent.objects.all(), user_id).order_by("-updated_at")[
-            :3
-        ]:
-            items.append(
-                {
-                    "type": "agent",
-                    "action": f"智能体更新: {agent.name}",
-                    "detail": f"模型: {agent.model_provider}/{agent.model_name}",
-                    "time": agent.updated_at.strftime("%Y-%m-%d %H:%M"),
-                }
-            )
-
-        items.sort(key=lambda x: x.get("time", ""), reverse=True)
-        return Response(items[:10])
+        return Response(platform_activities(user_id, limit=limit, offset=offset))
 
 
 @extend_schema(responses=OpenApiTypes.OBJECT)

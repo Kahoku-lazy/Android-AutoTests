@@ -3,13 +3,7 @@
    对齐原型：dashboard-chapter-board-proto.html
    ═══════════════════════════════════════════ */
 
-/* ── 页面根 / 主体 ── */
-.dashboard-workbench .doc-page {
-  display: flex;
-  flex-direction: column;
-  /* 纸面纯色：装饰只由 PaperDoodles 提供，禁自绘点阵 */
-  background-color: var(--paper);
-}
+/* ── 主体（页根纸面由 L0 壳层透出，不在此画不透明 --paper） ── */
 .dashboard-workbench .doc-body {
   flex: 1;
   min-height: 0;
@@ -121,7 +115,7 @@
   background: #fff;
   font-size: var(--app-size-xs);
   font-weight: 700;
-  border-radius: 3px 6px 3px 6px;
+  border-radius: var(--el-border-radius-small);
   color: var(--ink);
 }
 .chip b { font-weight: 800; }
@@ -163,6 +157,23 @@
   .asset-cols { grid-template-columns: 1fr; }
   .chapter-head { flex-direction: column; }
   .chip-row { justify-content: flex-start; max-width: none; }
+}
+
+.cases-empty {
+  padding: var(--app-space-md) 0;
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-sm);
+}
+.cases-empty__text {
+  margin: 0 0 var(--app-space-xs);
+  font-weight: 700;
+  color: var(--ink);
+}
+.cases-empty__link {
+  color: var(--ink);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* ── Stats Grid ── */

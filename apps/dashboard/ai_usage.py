@@ -274,3 +274,57 @@ def ai_recent_tasks(user_id, limit=8):
             }
         )
     return items
+
+
+# 活动时间线合并窗口：各源最多取 WINDOW，合并排序后再截 WINDOW，分页在窗口内切片
+_ACTIVITY_WINDOW = 100
+
+
+def platform_activities(user_id, *, limit=10, offset=0):
+    """平台活动时间线：助手任务卡（run）+ 智能体更新（agent），按 time 倒序。
+
+    各源最多取 _ACTIVITY_WINDOW 条，合并后截断为 _ACTIVITY_WINDOW，再按
+    offset/limit 切片。不查询已删除的 TestRunRecord。
+    """
+    items = []
+
+    try:
+        tasks = list(
+            _task_qs(user_id)
+            .order_by("-created_at")
+            .only("title", "goal", "status", "created_at")[:_ACTIVITY_WINDOW]
+        )
+    except (OperationalError, ProgrammingError):
+        tasks = []
+    for t in tasks:
+        title = t.title or t.goal or "未命名任务"
+        created = t.created_at.strftime("%Y-%m-%d %H:%M") if t.created_at else ""
+        items.append(
+            {
+                "type": "run",
+                "action": f"助手任务: {title}",
+                "detail": f"状态: {_panel_status(t.status)}",
+                "time": created,
+            }
+        )
+
+    try:
+        agents = list(
+            filter_agents_for_user(AIAgent.objects.all(), user_id)
+            .order_by("-updated_at")[:_ACTIVITY_WINDOW]
+        )
+    except (OperationalError, ProgrammingError):
+        agents = []
+    for agent in agents:
+        items.append(
+            {
+                "type": "agent",
+                "action": f"智能体更新: {agent.name}",
+                "detail": f"模型: {agent.model_provider}/{agent.model_name}",
+                "time": agent.updated_at.strftime("%Y-%m-%d %H:%M") if agent.updated_at else "",
+            }
+        )
+
+    items.sort(key=lambda x: x.get("time", ""), reverse=True)
+    window = items[:_ACTIVITY_WINDOW]
+    return window[offset : offset + limit]

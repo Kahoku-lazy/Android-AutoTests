@@ -77,10 +77,24 @@ describe('[P0] StatsCard', () => {
   it('点击「进入」按钮：同样跳转且不重复触发', async () => {
     const wrapper = mountCard({ value: 3, path: '/devices' })
 
+    expect(wrapper.find('.kpi-card__enter').exists()).toBe(true)
     await wrapper.find('.kpi-card__enter').trigger('click')
 
     expect(pushMock).toHaveBeenCalledTimes(1)
     expect(pushMock).toHaveBeenCalledWith('/devices')
+  })
+
+  it('showEnter=false：有 path 时无进入按钮，点击整卡仍跳转', async () => {
+    const wrapper = mountCard({ value: 3, path: '/ai-assistant', showEnter: false })
+    const card = wrapper.find('.kpi-card')
+
+    expect(wrapper.find('.kpi-card__enter').exists()).toBe(false)
+    expect(card.attributes('role')).toBe('button')
+
+    await card.trigger('click')
+
+    expect(pushMock).toHaveBeenCalledTimes(1)
+    expect(pushMock).toHaveBeenCalledWith('/ai-assistant')
   })
 
   it('无 path：不可点、无进入按钮，点击不跳转', async () => {

@@ -125,7 +125,7 @@ function openTask(task: RecentTask) {
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  border-radius: 999px;
+  border-radius: var(--app-radius-pill);
   font-size: var(--app-size-sm);
   font-weight: 700;
   border: 1px solid var(--app-border-light);
@@ -172,7 +172,7 @@ function openTask(task: RecentTask) {
   border-color: var(--app-border-lighter);
 }
 .task-row__status {
-  width: 28px; height: 28px; border-radius: 8px;
+  width: 28px; height: 28px; border-radius: var(--app-radius-md);
   display: flex; align-items: center; justify-content: center;
   font-size: var(--app-size-sm); font-weight: 800; flex-shrink: 0;
 }
@@ -187,7 +187,7 @@ function openTask(task: RecentTask) {
 
 .task-row__cases { display: flex; flex-wrap: wrap; gap: var(--app-space-xs); margin-bottom: 3px; }
 .case-icon {
-  width: 20px; height: 20px; border-radius: 6px;
+  width: 20px; height: 20px; border-radius: var(--app-radius-sm);
   display: inline-flex; align-items: center; justify-content: center;
   font-size: var(--app-size-xs); font-weight: 800;
 }

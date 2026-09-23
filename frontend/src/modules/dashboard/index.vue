@@ -39,9 +39,8 @@ const {
   activities,
   loadData,
   refreshData,
-  caseBreakdown,
+  caseProjectCards,
   elementBreakdown,
-  getBreakdownItem,
   getElementItem,
   tokenSeries,
   costSeries,
@@ -138,13 +137,6 @@ const {
             </div>
           </div>
           <div class="chip-row">
-            <span class="chip chip--pink">
-              累计 Token <b>{{ (stats.aiUsage.totalTokens.total / 1000000).toFixed(2) }}M</b>
-            </span>
-            <span class="chip">任务 <b>{{ stats.aiUsage.taskCount.total }}</b></span>
-            <span class="chip chip--yellow">
-              费用 <b>{{ stats.aiUsage.deepseekCost.total.toFixed(2) }}</b> 元
-            </span>
             <span class="chip chip--violet">角色·累计 {{ roleBreakdown.total }}</span>
             <span class="chip chip--violet">角色·今日 {{ roleBreakdown.today }}</span>
           </div>
@@ -155,6 +147,7 @@ const {
             :value="stats.aiUsage.taskCount.total"
             color="gray"
             path="/ai-assistant"
+            :show-enter="false"
             :loading="loading"
             :desc="`今日 ${stats.aiUsage.taskCount.today.toLocaleString()}`"
           >
@@ -167,6 +160,7 @@ const {
             :decimals="2"
             color="sage"
             path="/ai-assistant"
+            :show-enter="false"
             :loading="loading"
             :desc="`今日 ${(stats.aiUsage.totalTokens.today / 1000000).toFixed(2)}M`"
           >
@@ -179,6 +173,7 @@ const {
             :decimals="1"
             color="deep"
             path="/ai-assistant"
+            :show-enter="false"
             :loading="loading"
             :desc="`今日 ${stats.aiUsage.cacheHitRate.today}%`"
           >
@@ -191,6 +186,7 @@ const {
             :decimals="1"
             color="cream"
             path="/ai-assistant"
+            :show-enter="false"
             :loading="loading"
             :desc="`今日 ${(stats.aiUsage.avgTokensPerTask.today / 1000).toFixed(1)}K`"
           >
@@ -203,6 +199,7 @@ const {
             :decimals="2"
             color="dust"
             path="/ai-assistant"
+            :show-enter="false"
             :loading="loading"
             :desc="`今日 ${stats.aiUsage.deepseekCost.today.toFixed(2)} 元`"
           >
@@ -231,20 +228,24 @@ const {
         <div class="asset-cols">
           <div>
             <div class="subhead">测试用例 <span class="subhead__tag">Cases</span></div>
-            <div class="dashboard__stats-grid">
+            <div v-if="caseProjectCards.length" class="dashboard__stats-grid">
               <StatsAppCard
-                v-for="item in caseBreakdown"
-                :key="item.type"
-                :label="item.label"
-                :value="getBreakdownItem(item.type).total"
+                v-for="item in caseProjectCards"
+                :key="item.projectId"
+                :label="item.name"
+                :value="item.total"
                 :color="item.color"
-                path="/cases"
+                :path="item.path"
                 :loading="loading"
               >
                 <template #icon>
-                  <component :is="item.icon" :size="15" />
+                  <IconLayers :size="15" />
                 </template>
               </StatsAppCard>
+            </div>
+            <div v-else-if="!loading" class="cases-empty">
+              <p class="cases-empty__text">暂无用例项目</p>
+              <RouterLink class="cases-empty__link" to="/cases">前往用例管理创建</RouterLink>
             </div>
           </div>
           <div>

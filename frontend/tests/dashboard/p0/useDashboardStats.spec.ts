@@ -35,7 +35,7 @@ function makeRaw(): DashboardRawData {
     cases: {
       total: 20,
       enabled: 18,
-      breakdown: [{ type: 'ui_automation', total: 8, enabled: 7 }],
+      breakdown: [{ project_id: 1, name: '冒烟项目', total: 8 }],
     },
     elements: {
       total: 42,
@@ -189,7 +189,7 @@ describe('[P0] mapStatsResponse（纯映射）', () => {
     expect(mapped.stats.cases).toEqual({
       total: 20,
       enabled: 18,
-      breakdown: [{ type: 'ui_automation', total: 8, enabled: 7 }],
+      breakdown: [{ project_id: 1, name: '冒烟项目', total: 8 }],
     })
     expect(mapped.stats.elements.typeBreakdown).toEqual([{ type: 'android', total: 30 }])
     expect(mapped.stats.workflow).toEqual({ total: 7 })

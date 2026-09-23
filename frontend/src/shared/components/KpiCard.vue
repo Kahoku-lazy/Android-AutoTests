@@ -190,7 +190,7 @@ function onKeydown(e: KeyboardEvent) {
 .kpi-card__pin,
 .kpi-card__tape {
   position: absolute;
-  z-index: 2;
+  z-index: var(--z-raised);
   pointer-events: none;
 }
 
@@ -380,14 +380,14 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 .kpi-card--entry .kpi-card__value,
-.kpi-card__stat :deep(strong) {
+.kpi-card--entry .kpi-card__stat :deep(strong) {
   display: block;
   font-family: var(--app-font-display, var(--app-font, inherit));
   font-size: var(--app-size-2xl, 28px);
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1;
-  color: var(--ink);
+  color: var(--kpi-accent);
 }
 
 .kpi-card__stat :deep(small) {

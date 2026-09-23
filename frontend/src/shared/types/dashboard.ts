@@ -3,9 +3,11 @@
 // ── 统计细分项 ──
 
 export interface CaseBreakdownItem {
-  type: string // 'ui_automation' | 'web_automation' | 'api_testing' | 'storage'
+  project_id: number
+  name: string
   total: number
-  enabled: number
+  /** 文档用例无独立 enabled；有则与 total 同值 */
+  enabled?: number
 }
 
 export interface ElementBreakdownItem {
@@ -150,11 +152,12 @@ export interface DashboardRawData {
 
 // ── 模板展示辅助 ──
 
-export interface CaseBreakdownDisplay {
-  type: string
-  label: string
+export interface CaseProjectCardDisplay {
+  projectId: number
+  name: string
+  total: number
   color: string
-  icon: object // component ref (Vue Component)
+  path: string
 }
 
 export interface ElementBreakdownDisplay {

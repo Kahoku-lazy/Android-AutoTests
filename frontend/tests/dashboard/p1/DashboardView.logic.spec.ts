@@ -1,6 +1,6 @@
 /**
  * [P1] 建议测 — DashboardView.logic 编排层
- * 数据获取已在 P0 覆盖；这里测编排独有行为（挂载自动加载、分项查询回退、展示配置）。
+ * 数据获取已在 P0 覆盖；这里测编排独有行为（挂载自动加载、项目卡映射、元素分项）。
  * 目录：tests/dashboard/p1/
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -33,11 +33,11 @@ function makeRaw(): DashboardRawData {
   return {
     devices: { online: 3, total: 5 },
     cases: {
-      total: 20,
-      enabled: 18,
+      total: 12,
+      enabled: 12,
       breakdown: [
-        { type: 'ui_automation', total: 8, enabled: 7 },
-        { type: 'api_testing', total: 4, enabled: 4 },
+        { project_id: 10, name: '家电冒烟', total: 8 },
+        { project_id: 11, name: '空项目', total: 0 },
       ],
     },
     elements: {
@@ -90,24 +90,34 @@ describe('[P1] useDashboardView（编排）', () => {
     expect(result.loading.value).toBe(false)
   })
 
-  it('getBreakdownItem 命中：返回对应 breakdown 项', async () => {
+  it('caseProjectCards：按项目映射名称、计数与工作台路径', async () => {
     const result = await mountView()
 
-    expect(result.getBreakdownItem('api_testing')).toEqual({
-      type: 'api_testing',
-      total: 4,
-      enabled: 4,
-    })
+    expect(result.caseProjectCards.value).toEqual([
+      {
+        projectId: 10,
+        name: '家电冒烟',
+        total: 8,
+        color: 'deep',
+        path: '/cases/projects/10',
+      },
+      {
+        projectId: 11,
+        name: '空项目',
+        total: 0,
+        color: 'sage',
+        path: '/cases/projects/11',
+      },
+    ])
+    expect(result.stats.value.cases.breakdown).toHaveLength(2)
   })
 
-  it('getBreakdownItem 未命中：回退零值项', async () => {
-    const result = await mountView()
+  it('无项目时 caseProjectCards 为空', async () => {
+    const raw = makeRaw()
+    raw.cases = { total: 0, enabled: 0, breakdown: [] }
+    const result = await mountView(raw)
 
-    expect(result.getBreakdownItem('storage')).toEqual({
-      type: 'storage',
-      total: 0,
-      enabled: 0,
-    })
+    expect(result.caseProjectCards.value).toEqual([])
   })
 
   it('getElementItem 命中：返回 typeBreakdown 项', async () => {
@@ -122,19 +132,10 @@ describe('[P1] useDashboardView（编排）', () => {
     expect(result.getElementItem('api')).toEqual({ type: 'api', total: 0 })
   })
 
-  it('暴露展示配置：页头与四类用例 / 三类元素', () => {
-    // 展示配置为静态导出，直接断言（无需挂载）
-    return mountView().then((result) => {
-      expect(result.PAGE_HEADER.title).toBe('仪表盘')
-      expect(result.caseBreakdown).toHaveLength(4)
-      expect(result.caseBreakdown.map((c) => c.type)).toEqual([
-        'ui_automation',
-        'web_automation',
-        'api_testing',
-        'storage',
-      ])
-      expect(result.elementBreakdown).toHaveLength(1)
-      expect(result.elementBreakdown.map((e) => e.type)).toEqual(['android'])
-    })
+  it('暴露展示配置：页头与 Android 元素分项', async () => {
+    const result = await mountView()
+    expect(result.PAGE_HEADER.title).toBe('仪表盘')
+    expect(result.elementBreakdown).toHaveLength(1)
+    expect(result.elementBreakdown.map((e) => e.type)).toEqual(['android'])
   })
 })

@@ -25,6 +25,8 @@ export interface StatsCardProps {
   trendLabel?: string
   deco?: 'none' | 'pin' | 'tape'
   tilt?: number
+  /** entry：是否显示「进入」；有 path 时整卡仍可点 */
+  showEnter?: boolean
 }
 
 const props = withDefaults(defineProps<StatsCardProps>(), {
@@ -41,6 +43,7 @@ const props = withDefaults(defineProps<StatsCardProps>(), {
   trendLabel: '',
   deco: 'pin',
   tilt: undefined,
+  showEnter: true,
 })
 
 const router = useRouter()
@@ -115,7 +118,7 @@ function navigate() {
       :deco="deco"
       :tilt="tilt"
       :clickable="!!path"
-      enter-label="进入"
+      :enter-label="showEnter ? '进入' : ''"
       @click="navigate"
     >
       <template #icon>
@@ -167,7 +170,6 @@ function navigate() {
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1;
-  color: var(--ink);
 }
 
 .stats-card__stat small {

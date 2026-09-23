@@ -310,8 +310,9 @@ def platform_activities(user_id, *, limit=10, offset=0):
 
     try:
         agents = list(
-            filter_agents_for_user(AIAgent.objects.all(), user_id)
-            .order_by("-updated_at")[:_ACTIVITY_WINDOW]
+            filter_agents_for_user(AIAgent.objects.all(), user_id).order_by("-updated_at")[
+                :_ACTIVITY_WINDOW
+            ]
         )
     except (OperationalError, ProgrammingError):
         agents = []

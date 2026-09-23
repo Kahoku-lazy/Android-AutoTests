@@ -23,7 +23,6 @@ urlpatterns = [
     path("api/reports/", include("apps.report_generator.urls")),
     path("api/auth/", include("apps.accounts.urls")),
     path("api/ai/", include("apps.ai_assistant.urls")),
-    path("api/evaluator/", include("apps.evaluator.urls")),
     # ── DRF API documentation (drf-spectacular + Swagger UI) ──
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/swagger/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger"),

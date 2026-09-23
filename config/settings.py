@@ -73,7 +73,7 @@ INSTALLED_APPS = [
     # Framework
     "gateway",
     "shared",
-    # Django Apps（11 个；其中 test_runner 已下线，仅保留卸表迁移）
+    # Django Apps（11 个；其中 test_runner、evaluator 已下线，仅保留卸表迁移）
     "apps.device_inspector",
     "apps.element_locator",
     "apps.device_pool",
@@ -324,7 +324,6 @@ SPECTACULAR_SETTINGS = {
         {"name": "workflow", "description": "工作流：编排文档 CRUD 与导入导出"},
         {"name": "auth", "description": "登录鉴权：登录 / 注册 / 刷新 / 登出 / 当前用户"},
         {"name": "ai", "description": "AI 助手：智能体、会话、知识库与任务发布"},
-        {"name": "evaluator", "description": "评估器：评估题库 / 运行 / 框架适配"},
         {"name": "schema", "description": "OpenAPI schema 端点（drf-spectacular 自带）"},
     ],
 }

@@ -1,5 +1,5 @@
 /**
- * [P0] 设备提示词历史存档：保存二次确认、退出编辑自动保存、历史覆盖与永久档删除
+ * [P0] 设备提示词：按角色独立编辑 / 独立保存、退出编辑自动保存、历史覆盖与永久档删除
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
@@ -63,9 +63,10 @@ describe('useDevicePrompts 保存与退出编辑', () => {
     vi.mocked(ElMessageBox.confirm).mockResolvedValueOnce('confirm' as never)
     updatePrompts.mockResolvedValueOnce(SAVED)
 
-    const { save, draft } = useDevicePrompts()
+    const { save, draft, startEdit } = useDevicePrompts()
     await vi.waitFor(() => expect(draft.value.planner).toBe('p0'))
-    await save()
+    startEdit('planner')
+    await save('planner')
 
     expect(ElMessageBox.confirm).toHaveBeenCalledWith(
       PROMPT_OVERWRITE_CONFIRM,
@@ -77,9 +78,12 @@ describe('useDevicePrompts 保存与退出编辑', () => {
   it('取消确认时不写库', async () => {
     vi.mocked(ElMessageBox.confirm).mockRejectedValueOnce('cancel')
 
-    const { save } = useDevicePrompts()
+    const { save, draft, startEdit } = useDevicePrompts()
+    await vi.waitFor(() => expect(draft.value.planner).toBe('p0'))
+    startEdit('planner')
+    draft.value.planner = 'p1'
 
-    expect(await save()).toBe(false)
+    expect(await save('planner')).toBe(false)
     expect(updatePrompts).not.toHaveBeenCalled()
   })
 
@@ -87,14 +91,56 @@ describe('useDevicePrompts 保存与退出编辑', () => {
     vi.mocked(ElMessageBox.confirm).mockResolvedValueOnce('confirm' as never)
     updatePrompts.mockResolvedValueOnce(SAVED)
 
-    const { save, draft } = useDevicePrompts()
+    const { save, draft, startEdit } = useDevicePrompts()
     await vi.waitFor(() => expect(draft.value.planner).toBe('p0'))
-    await save()
+    startEdit('planner')
+    await save('planner')
 
     expect(updatePrompts).toHaveBeenCalledWith(
       expect.objectContaining({ planner: 'p0' }),
       'permanent',
     )
+  })
+
+  it('保存一份时另两份取已保存值，不带入另一份未保存的草稿', async () => {
+    vi.mocked(ElMessageBox.confirm).mockResolvedValueOnce('confirm' as never)
+    updatePrompts.mockResolvedValueOnce({
+      status: true,
+      data: { planner: 'p1', executor: 'e0', verifier: 'v0' },
+    })
+
+    const { save, draft, prompts, startEdit, isEditing } = useDevicePrompts()
+    await vi.waitFor(() => expect(prompts.value.planner).toBe('p0'))
+
+    startEdit('planner')
+    startEdit('executor')
+    draft.value.planner = 'p1'
+    draft.value.executor = 'e1'
+
+    expect(await save('planner')).toBe(true)
+    expect(updatePrompts).toHaveBeenCalledWith(
+      { planner: 'p1', executor: 'e0', verifier: 'v0' },
+      'permanent',
+    )
+    // 执行既没被写库、也没被退出编辑态或清掉草稿
+    expect(prompts.value.executor).toBe('e0')
+    expect(draft.value.executor).toBe('e1')
+    expect(isEditing('executor')).toBe(true)
+    expect(isEditing('planner')).toBe(false)
+  })
+
+  it('进入一份编辑不影响另一份的编辑态与草稿', async () => {
+    const { draft, prompts, startEdit, isEditing } = useDevicePrompts()
+    await vi.waitFor(() => expect(prompts.value.planner).toBe('p0'))
+
+    startEdit('planner')
+    draft.value.planner = 'p1'
+    startEdit('executor')
+
+    expect(isEditing('planner')).toBe(true)
+    expect(isEditing('executor')).toBe(true)
+    expect(draft.value.planner).toBe('p1')
+    expect(draft.value.executor).toBe('e0')
   })
 
   it('无改动退出编辑不发请求', async () => {
@@ -106,8 +152,9 @@ describe('useDevicePrompts 保存与退出编辑', () => {
   })
 
   it('有改动退出编辑按 auto 自动保存', async () => {
-    const { draft, autoSaveIfDirty, prompts } = useDevicePrompts()
+    const { draft, autoSaveIfDirty, prompts, startEdit } = useDevicePrompts()
     await vi.waitFor(() => expect(prompts.value.planner).toBe('p0'))
+    startEdit('planner')
     draft.value.planner = 'p1'
     updatePrompts.mockResolvedValueOnce({
       status: true,
@@ -119,9 +166,46 @@ describe('useDevicePrompts 保存与退出编辑', () => {
     expect(prompts.value.planner).toBe('p1')
   })
 
-  it('覆盖历史档后当前提示词被替换', async () => {
-    const { prompts, restoreArchive: doRestore } = useDevicePrompts()
+  it('取消一份只处理该份：另一份仍在编辑态且草稿不被写库', async () => {
+    const { draft, prompts, startEdit, cancelEdit, isEditing } = useDevicePrompts()
     await vi.waitFor(() => expect(prompts.value.planner).toBe('p0'))
+
+    startEdit('planner')
+    startEdit('executor')
+    draft.value.planner = 'p1'
+    draft.value.executor = 'e1'
+    updatePrompts.mockResolvedValueOnce({
+      status: true,
+      data: { planner: 'p0', executor: 'e1', verifier: 'v0' },
+    })
+
+    await cancelEdit('executor')
+
+    expect(updatePrompts).toHaveBeenCalledTimes(1)
+    expect(updatePrompts).toHaveBeenCalledWith(
+      { planner: 'p0', executor: 'e1', verifier: 'v0' },
+      'auto',
+    )
+    expect(isEditing('executor')).toBe(false)
+    expect(isEditing('planner')).toBe(true)
+    expect(draft.value.planner).toBe('p1')
+  })
+
+  it('取消未改动的一份不写库', async () => {
+    const { prompts, startEdit, cancelEdit, isEditing } = useDevicePrompts()
+    await vi.waitFor(() => expect(prompts.value.planner).toBe('p0'))
+
+    startEdit('verifier')
+    await cancelEdit('verifier')
+
+    expect(updatePrompts).not.toHaveBeenCalled()
+    expect(isEditing('verifier')).toBe(false)
+  })
+
+  it('覆盖历史档后当前提示词被替换且退出全部编辑态', async () => {
+    const { prompts, startEdit, isEditing, restoreArchive: doRestore } = useDevicePrompts()
+    await vi.waitFor(() => expect(prompts.value.planner).toBe('p0'))
+    startEdit('planner')
     vi.mocked(ElMessageBox.confirm).mockResolvedValueOnce('confirm' as never)
     restoreArchive.mockResolvedValueOnce({
       status: true,
@@ -131,6 +215,7 @@ describe('useDevicePrompts 保存与退出编辑', () => {
     expect(await doRestore(7)).toBe(true)
     expect(restoreArchive).toHaveBeenCalledWith(7)
     expect(prompts.value.planner).toBe('old')
+    expect(isEditing('planner')).toBe(false)
   })
 
   it('打开历史记录拉列表，删除永久档走 delete 接口', async () => {

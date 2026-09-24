@@ -88,294 +88,215 @@
       </aside>
 
       <section class="tb-catalog panel">
-        <div class="tb-cat-head">
-          <div>
-            <h3 class="tb-cat-title">{{ activeSourceDef.name }}</h3>
-            <p class="tb-cat-sub">
-              <template v-if="activeSource === 'prompt'">
-                {{ activeSourceDef.desc }} · 始终注入运行时 · Markdown 渲染
-              </template>
-              <template v-else>
+        <DevicePromptPanel v-if="activeSource === 'prompt'" :can-manage="props.canManage" />
+
+        <template v-else>
+          <div class="tb-cat-head">
+            <div>
+              <h3 class="tb-cat-title">{{ activeSourceDef.name }}</h3>
+              <p class="tb-cat-sub">
                 {{ activeSourceDef.desc }} ·
                 {{
                   isGateOn(activeSourceDef.gateKey)
                     ? "开关立即影响生效清单"
                     : "总闸关闭：下面的启停不会进入运行时"
                 }}
-              </template>
-            </p>
+              </p>
+            </div>
+            <div v-if="props.canManage" class="tb-cat-actions">
+              <label v-if="activeSource === 'skill'" class="tb-btn tb-btn-primary">
+                + Skill 文件夹
+                <input type="file" webkitdirectory multiple hidden @change="onSkillFolderPicked" />
+              </label>
+            </div>
           </div>
-          <div v-if="props.canManage" class="tb-cat-actions">
-            <label v-if="activeSource === 'skill'" class="tb-btn tb-btn-primary">
-              + Skill 文件夹
-              <input type="file" webkitdirectory multiple hidden @change="onSkillFolderPicked" />
-            </label>
-            <template v-if="activeSource === 'prompt'">
-              <button
-                v-if="!promptEditing"
-                type="button"
-                class="tb-btn tb-btn-primary"
-                @click="startEdit"
-              >
-                编辑
-              </button>
-              <template v-else>
-                <button type="button" class="tb-btn" :disabled="promptSaving" @click="cancelEdit">
-                  取消
-                </button>
-                <button
-                  type="button"
-                  class="tb-btn tb-btn-primary"
-                  :disabled="promptSaving"
-                  @click="save"
-                >
-                  {{ promptSaving ? "保存中…" : "保存" }}
-                </button>
-              </template>
-            </template>
-          </div>
-        </div>
 
-        <div v-if="activeSource !== 'prompt'" class="tb-search">
-          <input
-            v-model="searchQuery"
-            type="search"
-            class="tb-search-input"
-            placeholder="搜索工具名 / 说明…"
-          />
-        </div>
-
-        <div v-loading="catalogLoading" class="tb-cat-body">
-          <template v-if="activeSource === 'biz'">
-            <EmptyState
-              v-if="!platformLoading && !filteredCategories.length"
-              icon="🔌"
-              text="暂无平台业务工具"
+          <div class="tb-search">
+            <input
+              v-model="searchQuery"
+              type="search"
+              class="tb-search-input"
+              placeholder="搜索工具名 / 说明…"
             />
-            <el-collapse v-else v-model="platformExpanded" class="platform-collapse">
-              <el-collapse-item v-for="cat in filteredCategories" :key="cat.key" :name="cat.key">
-                <template #title>
-                  <div class="cat-head" :style="{ '--mc-color': cat.color }">
-                    <span class="cat-icon">{{ cat.icon }}</span>
-                    <span class="cat-name">{{ cat.key }}</span>
-                    <span class="cat-count"
-                      >{{ enabledCount(cat) }}/{{ cat.tools.length }} 已启用</span
+          </div>
+
+          <div v-loading="catalogLoading" class="tb-cat-body">
+            <template v-if="activeSource === 'biz'">
+              <EmptyState
+                v-if="!platformLoading && !filteredCategories.length"
+                icon="🔌"
+                text="暂无平台业务工具"
+              />
+              <el-collapse v-else v-model="platformExpanded" class="platform-collapse">
+                <el-collapse-item v-for="cat in filteredCategories" :key="cat.key" :name="cat.key">
+                  <template #title>
+                    <div class="cat-head" :style="{ '--mc-color': cat.color }">
+                      <span class="cat-icon">{{ cat.icon }}</span>
+                      <span class="cat-name">{{ cat.key }}</span>
+                      <span class="cat-count"
+                        >{{ enabledCount(cat) }}/{{ cat.tools.length }} 已启用</span
+                      >
+                      <span v-if="props.canManage" class="cat-actions">
+                        <button
+                          type="button"
+                          class="pt-action-btn"
+                          :disabled="allEnabled(cat) || platformToggling"
+                          @click.stop="toggleCategory(cat, true)"
+                        >
+                          全部启用
+                        </button>
+                        <button
+                          type="button"
+                          class="pt-action-btn"
+                          :disabled="enabledCount(cat) === 0 || platformToggling"
+                          @click.stop="toggleCategory(cat, false)"
+                        >
+                          全部关闭
+                        </button>
+                      </span>
+                    </div>
+                  </template>
+                  <div class="cat-tools" :style="{ '--mc-color': cat.color }">
+                    <div
+                      v-for="tool in filterTools(cat.tools)"
+                      :id="toolDomId('biz', tool.name)"
+                      :key="tool.name"
+                      class="pt-tool"
+                      :class="{ flash: highlightName === tool.name }"
                     >
-                    <span v-if="props.canManage" class="cat-actions">
-                      <button
-                        type="button"
-                        class="pt-action-btn"
-                        :disabled="allEnabled(cat) || platformToggling"
-                        @click.stop="toggleCategory(cat, true)"
-                      >
-                        全部启用
-                      </button>
-                      <button
-                        type="button"
-                        class="pt-action-btn"
-                        :disabled="enabledCount(cat) === 0 || platformToggling"
-                        @click.stop="toggleCategory(cat, false)"
-                      >
-                        全部关闭
-                      </button>
+                      <div class="pt-tool-head">
+                        <span class="pt-tool-icon">{{ tool.icon }}</span>
+                        <span class="pt-tool-name">{{ tool.name }}</span>
+                        <span
+                          class="pt-tool-badge"
+                          :class="tool.read_only ? 'pt-badge-ro' : 'pt-badge-wr'"
+                        >
+                          {{ tool.read_only ? "只读" : "写" }}
+                        </span>
+                        <span class="pt-tool-state" :class="tool.enabled ? 'on' : 'off'">
+                          {{ tool.enabled ? "已启用" : "已停用" }}
+                        </span>
+                        <button
+                          type="button"
+                          class="pt-action-btn pt-debug-btn"
+                          @click.stop="openToolDebug(tool.name)"
+                        >
+                          调试
+                        </button>
+                        <el-switch
+                          v-if="props.canManage"
+                          class="pt-tool-sw"
+                          :model-value="tool.enabled"
+                          :disabled="platformToggling"
+                          @update:model-value="toggleTool(tool.name, $event as boolean)"
+                        />
+                      </div>
+                      <p class="pt-tool-summary">{{ tool.summary }}</p>
+                    </div>
+                  </div>
+                </el-collapse-item>
+              </el-collapse>
+            </template>
+
+            <template v-else-if="activeSource === 'skill'">
+              <EmptyState
+                v-if="!loading && !filteredSkillItems.length"
+                icon="📁"
+                text="暂无 Skill，请把文件夹放到 engines/ai/skills 或点击右上角上传"
+              />
+              <div v-else class="toolbox-grid">
+                <div
+                  v-for="item in filteredSkillItems"
+                  :id="toolDomId('skill', item.name)"
+                  :key="item.id"
+                  class="tb-card"
+                  :class="{ flash: highlightName === item.name, clickable: !item.missing }"
+                  @click="openSkill(item)"
+                >
+                  <div class="tb-card-header">
+                    <span class="tb-card-name">{{ item.name }}</span>
+                    <span
+                      class="tb-card-type"
+                      :class="item.origin === 'local' ? 'tb-type-local' : 'tb-type-skill'"
+                    >
+                      {{ item.origin === "local" ? "本地" : "上传" }}
+                    </span>
+                    <span v-if="item.missing" class="pt-tool-state off">目录缺失</span>
+                    <span v-else class="pt-tool-state" :class="item.enabled ? 'on' : 'off'">
+                      {{ item.enabled ? "已启用" : "已停用" }}
                     </span>
                   </div>
-                </template>
-                <div class="cat-tools" :style="{ '--mc-color': cat.color }">
-                  <div
-                    v-for="tool in filterTools(cat.tools)"
-                    :id="toolDomId('biz', tool.name)"
-                    :key="tool.name"
-                    class="pt-tool"
-                    :class="{ flash: highlightName === tool.name }"
-                  >
-                    <div class="pt-tool-head">
-                      <span class="pt-tool-icon">{{ tool.icon }}</span>
-                      <span class="pt-tool-name">{{ tool.name }}</span>
-                      <span
-                        class="pt-tool-badge"
-                        :class="tool.read_only ? 'pt-badge-ro' : 'pt-badge-wr'"
-                      >
-                        {{ tool.read_only ? "只读" : "写" }}
-                      </span>
-                      <span class="pt-tool-state" :class="tool.enabled ? 'on' : 'off'">
-                        {{ tool.enabled ? "已启用" : "已停用" }}
-                      </span>
-                      <button
-                        type="button"
-                        class="pt-action-btn pt-debug-btn"
-                        @click.stop="openToolDebug(tool.name)"
-                      >
-                        调试
-                      </button>
-                      <el-switch
-                        v-if="props.canManage"
-                        class="pt-tool-sw"
-                        :model-value="tool.enabled"
-                        :disabled="platformToggling"
-                        @update:model-value="toggleTool(tool.name, $event as boolean)"
-                      />
-                    </div>
-                    <p class="pt-tool-summary">{{ tool.summary }}</p>
+                  <p v-if="item.description" class="tb-card-desc">{{ item.description }}</p>
+                  <div class="tb-card-footer" @click.stop>
+                    <span class="tb-card-date">{{ item.created_at?.slice(0, 10) }}</span>
+                    <el-switch
+                      v-if="props.canManage && !item.missing"
+                      :model-value="item.enabled"
+                      @update:model-value="() => toggleItem(item)"
+                    />
+                    <button
+                      v-if="item.origin === 'uploaded'"
+                      type="button"
+                      class="tb-card-btn danger"
+                      @click="removeItem(item)"
+                    >
+                      删除
+                    </button>
                   </div>
-                </div>
-              </el-collapse-item>
-            </el-collapse>
-          </template>
-
-          <template v-else-if="activeSource === 'skill'">
-            <EmptyState
-              v-if="!loading && !filteredSkillItems.length"
-              icon="📁"
-              text="暂无 Skill，请把文件夹放到 engines/ai/skills 或点击右上角上传"
-            />
-            <div v-else class="toolbox-grid">
-              <div
-                v-for="item in filteredSkillItems"
-                :id="toolDomId('skill', item.name)"
-                :key="item.id"
-                class="tb-card"
-                :class="{ flash: highlightName === item.name, clickable: !item.missing }"
-                @click="openSkill(item)"
-              >
-                <div class="tb-card-header">
-                  <span class="tb-card-name">{{ item.name }}</span>
-                  <span
-                    class="tb-card-type"
-                    :class="item.origin === 'local' ? 'tb-type-local' : 'tb-type-skill'"
-                  >
-                    {{ item.origin === "local" ? "本地" : "上传" }}
-                  </span>
-                  <span v-if="item.missing" class="pt-tool-state off">目录缺失</span>
-                  <span v-else class="pt-tool-state" :class="item.enabled ? 'on' : 'off'">
-                    {{ item.enabled ? "已启用" : "已停用" }}
-                  </span>
-                </div>
-                <p v-if="item.description" class="tb-card-desc">{{ item.description }}</p>
-                <div class="tb-card-footer" @click.stop>
-                  <span class="tb-card-date">{{ item.created_at?.slice(0, 10) }}</span>
-                  <el-switch
-                    v-if="props.canManage && !item.missing"
-                    :model-value="item.enabled"
-                    @update:model-value="() => toggleItem(item)"
-                  />
-                  <button
-                    v-if="item.origin === 'uploaded'"
-                    type="button"
-                    class="tb-card-btn danger"
-                    @click="removeItem(item)"
-                  >
-                    删除
-                  </button>
                 </div>
               </div>
-            </div>
-          </template>
+            </template>
 
-          <template v-else-if="activeSource === 'debug'">
-            <EmptyState
-              v-if="!debugRolesLoading && !debugRoles.length"
-              icon="🧪"
-              text="暂无角色配置"
-            />
-            <div v-else v-loading="debugRolesLoading" class="tb-debug-grid">
-              <button
-                v-for="item in debugRoles"
-                :key="item.role"
-                type="button"
-                class="tb-debug-card"
-                :data-role="item.role"
-                @click="openModelDebug(item.role)"
-              >
-                <span class="tb-debug-head">
-                  <span class="tb-debug-name">{{ item.label }}</span>
-                  <span v-if="item.vision" class="tb-debug-badge">视觉</span>
-                </span>
-                <span class="tb-debug-model">{{ item.model.model_name || "（未配置模型）" }}</span>
-                <span class="tb-debug-meta">
-                  {{ item.tools.length }} 个工具 ·
-                  {{ item.model.configured ? "已配置" : "缺 API Key" }}
-                </span>
-              </button>
-            </div>
-          </template>
-
-          <template v-else>
-            <el-collapse v-model="promptExpanded" class="tb-prompt-collapse">
-              <el-collapse-item v-for="role in PROMPT_ROLES" :key="role.key" :name="role.key">
-                <template #title>
-                  <div class="tb-prompt-head">
-                    <span class="tb-prompt-name">{{ role.label }}</span>
-                    <span class="tb-prompt-key">{{ role.key }}</span>
-                    <span v-if="props.canManage" class="tb-prompt-actions" @click.stop>
-                      <button
-                        type="button"
-                        class="tb-btn tb-btn-primary"
-                        :disabled="promptSaving"
-                        @click="save"
-                      >
-                        {{ promptSaving ? "保存中…" : "保存" }}
-                      </button>
-                      <button type="button" class="tb-btn" @click="openHistory">
-                        查看历史记录
-                      </button>
-                    </span>
-                  </div>
-                </template>
-                <div v-if="promptEditing" class="tb-prompt-edit">
-                  <textarea
-                    v-model="promptDraft[role.key]"
-                    class="tb-prompt-textarea"
-                    rows="12"
-                    :placeholder="`${role.label} Markdown`"
-                  />
-                  <article
-                    class="tb-prompt-md tb-prompt-preview"
-                    v-html="renderMd(promptDraft[role.key])"
-                  />
-                </div>
-                <article v-else class="tb-prompt-md" v-html="renderMd(promptSaved[role.key])" />
-              </el-collapse-item>
-            </el-collapse>
-          </template>
-        </div>
+            <template v-else-if="activeSource === 'debug'">
+              <EmptyState
+                v-if="!debugRolesLoading && !debugRoles.length"
+                icon="🧪"
+                text="暂无角色配置"
+              />
+              <div v-else v-loading="debugRolesLoading" class="tb-debug-grid">
+                <button
+                  v-for="item in debugRoles"
+                  :key="item.role"
+                  type="button"
+                  class="tb-debug-card"
+                  :data-role="item.role"
+                  @click="openModelDebug(item.role)"
+                >
+                  <span class="tb-debug-head">
+                    <span class="tb-debug-name">{{ item.label }}</span>
+                    <span v-if="item.vision" class="tb-debug-badge">视觉</span>
+                  </span>
+                  <span class="tb-debug-model">{{
+                    item.model.model_name || "（未配置模型）"
+                  }}</span>
+                  <span class="tb-debug-meta">
+                    {{ item.tools.length }} 个工具 ·
+                    {{ item.model.configured ? "已配置" : "缺 API Key" }}
+                  </span>
+                </button>
+              </div>
+            </template>
+          </div>
+        </template>
       </section>
     </div>
-
-    <DevicePromptHistoryDrawer
-      v-model="promptHistoryVisible"
-      :archives="promptArchives"
-      :loading="promptArchivesLoading"
-      :preview="promptPreview"
-      @preview="previewArchive"
-      @restore="restoreArchive"
-      @remove="removePermanentArchive"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onBeforeUnmount } from "vue"
+import { computed, watch } from "vue"
 import { useRouter } from "vue-router"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
-import DevicePromptHistoryDrawer from "./DevicePromptHistoryDrawer.vue"
+import DevicePromptPanel from "./DevicePromptPanel.vue"
 import { useToolbox } from "../composables/useToolbox"
 import { usePlatformTools } from "../composables/usePlatformTools"
 import { usePlatformConfig } from "../composables/usePlatformConfig"
 import { useToolboxAssembly } from "../composables/useToolboxAssembly"
-import { useDevicePrompts } from "../composables/useDevicePrompts"
 import { useModelDebugRoles } from "../composables/useModelDebug"
-import { renderSkillMarkdown } from "../helpers/skill-markdown"
 import { gatedSources } from "../helpers/toolbox-assembly"
 import { modelDebugRoute, skillViewerRoute, toolDebugRoute } from "../constants"
 import type { AssemblySourceDef } from "../helpers/toolbox-assembly"
 import type { SharedToolItem } from "../api/toolbox"
-
-const PROMPT_ROLES = [
-  { key: "planner" as const, label: "规划模型 Planner" },
-  { key: "executor" as const, label: "执行模型 Executor" },
-  { key: "verifier" as const, label: "验收模型 Verifier" },
-]
 
 const props = defineProps<{ canManage?: boolean }>()
 const router = useRouter()
@@ -421,26 +342,6 @@ const {
   sharedItems: items,
 })
 
-const {
-  prompts: promptSaved,
-  draft: promptDraft,
-  loading: promptLoading,
-  saving: promptSaving,
-  editing: promptEditing,
-  startEdit,
-  cancelEdit,
-  save,
-  archives: promptArchives,
-  archivesLoading: promptArchivesLoading,
-  historyVisible: promptHistoryVisible,
-  preview: promptPreview,
-  openHistory,
-  previewArchive,
-  restoreArchive,
-  removePermanentArchive,
-  autoSaveIfDirty: autoSavePromptsIfDirty,
-} = useDevicePrompts()
-
 const { roles: debugRoles, loading: debugRolesLoading, load: loadDebugRoles } = useModelDebugRoles()
 
 /** 进入「模型调试」来源时按需拉三角色概览（三个角色各一次只读配置） */
@@ -448,28 +349,10 @@ watch(activeSource, (now) => {
   if (now === "debug" && !debugRoles.value.length) void loadDebugRoles()
 })
 
-/** 默认只展开规划；编辑时展开全部便于对照 */
-const promptExpanded = ref<string[]>(["planner"])
-watch(promptEditing, (on) => {
-  if (on) promptExpanded.value = PROMPT_ROLES.map((r) => r.key)
-})
-
-/** 退出编辑的两个出口：切换工具来源、卸载组件 —— 有改动先自动落库 */
-watch(activeSource, (now, prev) => {
-  if (prev === "prompt" && now !== "prompt" && promptEditing.value) {
-    void autoSavePromptsIfDirty()
-    promptEditing.value = false
-  }
-})
-onBeforeUnmount(() => {
-  if (promptEditing.value) void autoSavePromptsIfDirty()
-})
-
 const gatedLiveSources = computed(() => gatedSources())
 
 const catalogLoading = computed(() => {
   if (activeSource.value === "biz") return platformLoading.value
-  if (activeSource.value === "prompt") return promptLoading.value
   return loading.value
 })
 
@@ -490,10 +373,6 @@ function openToolDebug(name: string) {
 
 function openModelDebug(role: string) {
   router.push(modelDebugRoute(role))
-}
-
-function renderMd(src: string) {
-  return renderSkillMarkdown(src || "_（空）_")
 }
 </script>
 

@@ -68,6 +68,20 @@ export const PROMPT_ARCHIVE_KIND_LABELS: Record<"auto" | "permanent", string> = 
   permanent: "永久存档",
 }
 
+/** 设备控制三角色（单一真相源：装配台 / 设备提示词编辑组件 / 历史抽屉共用） */
+export const PROMPT_ROLES = [
+  { key: "planner", label: "规划模型 Planner" },
+  { key: "executor", label: "执行模型 Executor" },
+  { key: "verifier", label: "验收模型 Verifier" },
+] as const
+
+export type PromptRole = (typeof PROMPT_ROLES)[number]["key"]
+
+/** 角色展示名（面向用户的提示文案用） */
+export function promptRoleLabel(role: PromptRole): string {
+  return PROMPT_ROLES.find((item) => item.key === role)?.label || role
+}
+
 /** 知识库上传：落盘到 data/rag_datas */
 export const KB_UPLOAD_ACCEPT = ".md,.markdown,.txt,.docx,.pdf"
 

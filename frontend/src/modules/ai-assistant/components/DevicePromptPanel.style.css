@@ -1,0 +1,220 @@
+/* DevicePromptPanel — 设备提示词来源区（Doodle Craft 令牌）
+ *
+ * 前两段（目录头 / 通用按键）是从 ToolboxPanel.style.css 镜像来的同名壳样式：
+ * 该组件与装配台同级渲染，需自带一份；数值只引用令牌，保持两侧同值。
+ * 第三段起为本组件专属的提示词区样式（随区块从装配台迁出）。
+ */
+
+/* ── 右侧目录头（镜像 ToolboxPanel.style.css）── */
+.tb-cat-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--app-space-md);
+  padding: var(--app-space-md) var(--app-space-lg);
+  border-bottom: 2px solid var(--ink);
+  background: var(--app-bg-subtle);
+  flex-wrap: wrap;
+}
+.tb-cat-title {
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+  color: var(--ink);
+}
+.tb-cat-sub {
+  margin: var(--app-space-xs) 0 0;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+.tb-cat-actions {
+  display: flex;
+  gap: var(--app-space-sm);
+}
+.tb-cat-body {
+  padding: var(--app-space-md) var(--app-space-lg) var(--app-space-lg);
+  min-height: 200px;
+}
+
+/* ── 通用按键（镜像 ToolboxPanel.style.css）── */
+.tb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+  padding: 6px 12px;
+  border-radius: var(--app-radius-sm);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  border: 2px solid var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 2px 2px 0 var(--ink);
+  background: var(--app-bg-card);
+  color: var(--ink);
+  transition:
+    transform var(--app-duration-fast),
+    background var(--app-duration-fast);
+}
+.tb-btn:hover {
+  background: var(--app-highlight);
+  transform: translateY(-1px);
+}
+.tb-btn-primary {
+  background: var(--c-ai);
+}
+
+/* ── 设备提示词（可折叠）── */
+.tb-prompt-collapse {
+  --el-collapse-border-color: transparent;
+  border: none;
+}
+.tb-prompt-collapse :deep(.el-collapse-item) {
+  background: var(--app-bg-subtle);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  margin-bottom: var(--app-space-md);
+  overflow: hidden;
+}
+.tb-prompt-collapse :deep(.el-collapse-item__header) {
+  height: auto;
+  min-height: 44px;
+  line-height: 1.3;
+  padding: var(--app-space-sm) var(--app-space-md);
+  background: transparent;
+  border-bottom: none;
+  color: var(--ink);
+}
+.tb-prompt-collapse :deep(.el-collapse-item__wrap) {
+  background: transparent;
+  border-bottom: none;
+}
+.tb-prompt-collapse :deep(.el-collapse-item__content) {
+  padding: 0 var(--app-space-md) var(--app-space-md);
+}
+.tb-prompt-head {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  flex-wrap: wrap;
+}
+.tb-prompt-name {
+  font-weight: 800;
+  font-size: var(--app-size-sm);
+  color: var(--ink);
+}
+.tb-prompt-key {
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  padding: 2px 8px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--el-border-radius-small);
+  background: color-mix(in srgb, var(--c-ai) 18%, var(--app-bg-card));
+}
+.tb-prompt-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  margin-left: auto;
+}
+.tb-prompt-edit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--app-space-md);
+}
+@media (max-width: 900px) {
+  .tb-prompt-edit {
+    grid-template-columns: 1fr;
+  }
+}
+.tb-prompt-textarea {
+  width: 100%;
+  min-height: 220px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--app-size-xs);
+  line-height: 1.5;
+  padding: var(--app-space-sm);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-card);
+  color: var(--ink);
+  resize: vertical;
+}
+.tb-prompt-md {
+  font-size: var(--app-size-sm);
+  line-height: 1.65;
+  color: var(--ink);
+  overflow-wrap: break-word;
+  word-break: break-word;
+  background: var(--app-bg-card);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  padding: var(--app-space-md);
+}
+.tb-prompt-md :deep(h1),
+.tb-prompt-md :deep(h2),
+.tb-prompt-md :deep(h3) {
+  margin: var(--app-space-sm) 0 var(--app-space-xs);
+  font-weight: 800;
+  color: var(--ink);
+}
+.tb-prompt-md :deep(h1) {
+  font-size: var(--app-size-md);
+}
+.tb-prompt-md :deep(h2) {
+  font-size: var(--app-size-sm);
+}
+.tb-prompt-md :deep(h3) {
+  font-size: var(--app-size-sm);
+}
+.tb-prompt-md :deep(p) {
+  margin: 0 0 var(--app-space-sm);
+}
+/* 给序号/圆点留出内侧空间，避免 marker 溢出卡片 */
+.tb-prompt-md :deep(ul),
+.tb-prompt-md :deep(ol) {
+  margin: 0 0 var(--app-space-sm);
+  padding-inline-start: 1.75em;
+  list-style-position: outside;
+}
+.tb-prompt-md :deep(li) {
+  margin: 0.2em 0;
+  padding-inline-start: 0.15em;
+}
+.tb-prompt-md :deep(li > ul),
+.tb-prompt-md :deep(li > ol) {
+  margin-top: 0.2em;
+  margin-bottom: 0;
+}
+.tb-prompt-md :deep(pre),
+.tb-prompt-md :deep(code) {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--app-size-xs);
+}
+.tb-prompt-md :deep(code) {
+  background: var(--app-bg-subtle);
+  padding: 1px 6px;
+  border-radius: var(--app-radius-sm);
+}
+.tb-prompt-md :deep(pre) {
+  padding: var(--app-space-sm);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  overflow-x: auto;
+  background: var(--app-bg-subtle);
+}
+.tb-prompt-md :deep(pre code) {
+  background: transparent;
+  padding: 0;
+}
+.tb-prompt-preview {
+  border-style: dashed;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* 减少动效：关闭位移 / 旋转 / 缩放（颜色过渡不受影响） */
+@media (prefers-reduced-motion: reduce) {
+  .tb-btn {
+    transition: none;
+  }
+}

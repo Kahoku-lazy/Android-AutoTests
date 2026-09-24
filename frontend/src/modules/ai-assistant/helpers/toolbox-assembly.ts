@@ -86,3 +86,10 @@ export function matchQuery(text: string, query: string): boolean {
 export function gatedSources(): AssemblySourceDef[] {
   return ASSEMBLY_SOURCES.filter((s) => Boolean(s.gateKey))
 }
+
+/** 按 key 取来源定义（名称 / 说明的唯一真相源，子区块不得自行硬编码） */
+export function sourceDef(key: AssemblySourceKey): AssemblySourceDef {
+  const def = ASSEMBLY_SOURCES.find((s) => s.key === key)
+  if (!def) throw new Error(`未登记的工具来源: ${key}`)
+  return def
+}

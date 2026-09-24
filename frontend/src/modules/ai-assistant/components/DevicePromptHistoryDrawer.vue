@@ -62,7 +62,7 @@
 <script setup lang="ts">
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import { renderSkillMarkdown } from "../helpers/skill-markdown"
-import { PROMPT_ARCHIVE_KIND_LABELS, PROMPT_AUTO_ARCHIVE_KEEP } from "../constants"
+import { PROMPT_ARCHIVE_KIND_LABELS, PROMPT_AUTO_ARCHIVE_KEEP, PROMPT_ROLES } from "../constants"
 import type { DevicePromptArchive, DevicePromptArchiveKind } from "../api/toolbox"
 
 const props = defineProps<{
@@ -78,12 +78,6 @@ const emit = defineEmits<{
   (e: "restore", id: number): void
   (e: "remove", id: number): void
 }>()
-
-const PROMPT_ROLES = [
-  { key: "planner" as const, label: "规划模型 Planner" },
-  { key: "executor" as const, label: "执行模型 Executor" },
-  { key: "verifier" as const, label: "验收模型 Verifier" },
-]
 
 const keep = PROMPT_AUTO_ARCHIVE_KEEP
 

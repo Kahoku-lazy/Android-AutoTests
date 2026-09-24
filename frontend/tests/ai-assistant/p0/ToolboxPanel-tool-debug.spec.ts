@@ -67,29 +67,6 @@ vi.mock('@/modules/ai-assistant/composables/usePlatformConfig', () => ({
   }),
 }))
 
-vi.mock('@/modules/ai-assistant/composables/useDevicePrompts', () => ({
-  useDevicePrompts: () => ({
-    prompts: ref({ planner: '', executor: '', verifier: '' }),
-    draft: ref({ planner: '', executor: '', verifier: '' }),
-    loading: ref(false),
-    saving: ref(false),
-    editing: ref(false),
-    startEdit: vi.fn(),
-    cancelEdit: vi.fn(),
-    save: vi.fn(),
-    // 历史存档（DevicePromptHistoryDrawer 的入参）
-    archives: ref([]),
-    archivesLoading: ref(false),
-    historyVisible: ref(false),
-    preview: ref(null),
-    openHistory: vi.fn(),
-    previewArchive: vi.fn(),
-    restoreArchive: vi.fn(),
-    removePermanentArchive: vi.fn(),
-    autoSaveIfDirty: vi.fn(),
-  }),
-}))
-
 const push = vi.fn()
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push }),

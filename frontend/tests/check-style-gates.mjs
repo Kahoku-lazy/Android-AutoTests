@@ -189,23 +189,39 @@ function consumptionLiterals(rel, text) {
 /**
  * 严格声明扫描：只认「声明位置」的 --name: value。
  * 否则 BEM 修饰符选择器（.x--danger:hover）会被误当成声明（实测 14 处误命中）。
+ * 值允许跨行书写（字体族栈 `--font-body:` 一类）：先把跨行声明折叠成一条逻辑行再匹配，
+ * 行号仍取声明起始行。否则跨行声明的名字进不了 declared 集合，G4 会对它的消费点误报「未声明」。
  */
 function scanDeclarations(css) {
   const out = []
-  const lines = css.split(/\r?\n/)
   const re = /(--[a-zA-Z0-9-]+)\s*:\s*([^;}]+)/g
-  lines.forEach((line, index) => {
+  const logical = []
+  let buffer = ''
+  let startLine = 0
+  css.split(/\r?\n/).forEach((line, index) => {
+    if (buffer === '') startLine = index + 1
+    buffer = buffer === '' ? line : buffer + ' ' + line.trim()
+    // 一条逻辑行到 ; 结束；或该行闭合了块；或注释在此收尾（注释文本不许粘到后面的声明前缀上，
+    // 否则前缀规则会把紧跟注释的那条声明判成"非声明位置"而漏登记）
+    if (/(;|\{|\})\s*$/.test(buffer) || /\*\/\s*$/.test(buffer)) {
+      logical.push({ text: buffer, line: startLine })
+      buffer = ''
+    }
+  })
+  if (buffer !== '') logical.push({ text: buffer, line: startLine })
+
+  for (const entry of logical) {
     re.lastIndex = 0
     let match
-    while ((match = re.exec(line)) !== null) {
-      const prefix = line.slice(0, match.index)
+    while ((match = re.exec(entry.text)) !== null) {
+      const prefix = entry.text.slice(0, match.index)
       if (prefix.trim() !== '') {
         const last = prefix.replace(/\s+$/, '').slice(-1)
         if (last !== '{' && last !== ';') continue
       }
-      out.push({ line: index + 1, name: match[1], value: match[2].trim() })
+      out.push({ line: entry.line, name: match[1], value: match[2].trim() })
     }
-  })
+  }
   return out
 }
 

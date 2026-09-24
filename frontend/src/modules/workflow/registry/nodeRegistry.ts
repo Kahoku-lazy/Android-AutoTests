@@ -13,7 +13,7 @@ export const NODE_REGISTRY: Record<string, NodeRegistryEntry> = {
     defaultOutputs: [], // 从元素池动态创建
     color: "teal",
     icon: "📱",
-    maxInstances: 10,
+    maxInstances: 50,
     size: [180, 0],
     elementPool: "page",
   },

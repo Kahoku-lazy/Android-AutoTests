@@ -3,6 +3,8 @@ import { ref, watch, onMounted } from "vue"
 import { ElMessageBox } from "element-plus"
 import type { CatalogPage } from "@/modules/workflow/data/pageCatalog"
 import { fetchCatalogPages } from "@/modules/workflow/data/pageCatalog"
+import { NODE_MENU_SIZE } from "@/modules/workflow/helpers/overlayPosition"
+import { useContainedOverlay } from "@/modules/workflow/composables/useContainedOverlay"
 
 const props = defineProps<{
   show: boolean
@@ -28,7 +30,17 @@ const catalogError = ref("")
 const loading = ref(false)
 const search = ref("")
 const source = ref<string>("")
-const menuRef = ref<HTMLDivElement | null>(null)
+/** 浮层根元素 + 已收敛到屏内的位置（光标锚点越界时向屏内平移） */
+const { el: menuRef, position, place } = useContainedOverlay(NODE_MENU_SIZE)
+
+function reposition() {
+  if (!props.show) return
+  void place({ x: props.x, y: props.y })
+}
+
+watch(() => [props.show, props.x, props.y] as const, reposition, { immediate: true })
+// 切到「选择 Android 页面」后浮层更高，需要按新尺寸再收敛一次
+watch(mode, reposition)
 
 async function loadPages() {
   loading.value = true
@@ -62,10 +74,12 @@ function onOutside(e: MouseEvent) {
   }
 }
 
-function openLink() {
+async function openLink() {
   mode.value = "link"
   search.value = ""
-  loadPages()
+  await loadPages()
+  // 列表渲染后浮层更高：按新尺寸再收敛一次，避免底部超出视口
+  reposition()
 }
 
 function selectPage(page: CatalogPage) {
@@ -116,7 +130,7 @@ onMounted(() => {
       v-if="show"
       ref="menuRef"
       class="node-menu"
-      :style="{ left: x + 'px', top: y + 'px' }"
+      :style="{ left: position.x + 'px', top: position.y + 'px' }"
       @click.stop
     >
       <!-- Root menu -->
@@ -176,7 +190,9 @@ onMounted(() => {
   position: fixed;
   z-index: var(--z-popup);
   width: 288px;
-  max-height: 420px;
+  /* 视口兜底：窗口比浮层还矮时按视口收敛（脚本未执行的首帧也不会超出屏幕） */
+  max-height: min(420px, calc(100vh - 16px));
+  max-height: min(420px, calc(100dvh - 16px));
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -269,8 +285,10 @@ onMounted(() => {
   border-color: var(--c-workflow);
 }
 .list {
+  /* 高度交给外层 max-height：收敛后条目区自行滚动，条目不会被裁掉 */
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  max-height: 260px;
 }
 .page-item {
   width: 100%;

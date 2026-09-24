@@ -19,8 +19,17 @@ import PageFlowNode from "./PageFlowNode.vue"
 import NodeContextMenu from "./NodeContextMenu.vue"
 import EdgeContextMenu from "./EdgeContextMenu.vue"
 import { PAGE_ELEMENTS, POPUP_ELEMENTS, ELEMENT_ICONS } from "@/modules/workflow/types/workflow"
+import type { WorkflowNode } from "@/modules/workflow/types/workflow"
 import { NODE_REGISTRY } from "@/modules/workflow/registry/nodeRegistry"
 import { NODE_TYPES, NODE_TYPE_LABELS, type FlowDocType } from "@/modules/workflow/constants"
+import { ELEMENT_PICKER_SIZE } from "@/modules/workflow/helpers/overlayPosition"
+import {
+  clientToFlowPoint,
+  flowPointToNodePos,
+  stackingOffset,
+  type NodeSize,
+} from "@/modules/workflow/helpers/canvasPlacement"
+import { useContainedOverlay } from "@/modules/workflow/composables/useContainedOverlay"
 
 /** 元素卡片 xpath 展示 — 兼容可选字段 */
 function elXpath(el: { xpath?: string; type: string }): string {
@@ -60,6 +69,8 @@ const {
   onEdgeContextMenu,
   fitView,
   updateNodeInternals,
+  getViewport,
+  findNode: findFlowNode,
 } = useVueFlow()
 
 const nodeTypes = { pageFlow: markRaw(PageFlowNode) }
@@ -70,6 +81,20 @@ const edges = ref(toVueFlowEdges(store))
 const status = ref("")
 
 const picker = ref({ show: false, nodeId: "", search: "", x: 200, y: 120 })
+/** 元素选择器浮层：锚点固定，收敛保证不出屏 */
+const {
+  el: pickerRef,
+  position: pickerPosition,
+  place: placePicker,
+} = useContainedOverlay(ELEMENT_PICKER_SIZE)
+
+/** 画布根元素 + 鼠标最后停留位置（客户端坐标）：新建页面节点的落点来源 */
+const canvasRef = ref<HTMLElement | null>(null)
+const lastPointer = ref<{ x: number; y: number } | null>(null)
+
+function onCanvasPointerMove(e: MouseEvent) {
+  lastPointer.value = { x: e.clientX, y: e.clientY }
+}
 
 const ctxMenu = ref({
   show: false,
@@ -149,6 +174,7 @@ async function refreshFromStore() {
 
 provide("vfOpenPicker", (nodeId: string) => {
   picker.value = { show: true, nodeId, search: "", x: 280, y: 140 }
+  void placePicker({ x: picker.value.x, y: picker.value.y })
 })
 
 provide("vfRefresh", () => {
@@ -256,16 +282,128 @@ function handleEdgeDelete(id: number) {
   edgeMenu.value.show = false
 }
 
-function addPage() {
-  const n = store.createNode(
-    "PageNode",
-    180 + store.pageNodes.length * 40,
-    160 + store.pageNodes.length * 20,
-  )
-  if (n) {
-    n.widgets_values = [`页面${store.pageNodes.length}`, "teal"]
-    refreshFromStore()
+/** 同一落点连续新建时的最小错位（避免新节点被已有节点完全压住） */
+const PAGE_STACK_STEP: [number, number] = [24, 16]
+
+/** 鼠标位置缺失时退到画布可视区域中心；画布还没尺寸时返回 null（再退阶梯位置） */
+function canvasCenterClientPoint(): { x: number; y: number } | null {
+  const rect = canvasRef.value?.getBoundingClientRect()
+  if (!rect || rect.width <= 0 || rect.height <= 0) return null
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+}
+
+/** 落点参照的客户端坐标：鼠标最后停留处 → 画布可视区域中心 */
+function dropClientPoint(): { x: number; y: number } | null {
+  return lastPointer.value ?? canvasCenterClientPoint()
+}
+
+/** 屏幕坐标 → 画布坐标（走本模块纯函数，不做网格吸附；吸附会让中心偏离鼠标） */
+function clientToFlow(client: { x: number; y: number }): { x: number; y: number } | null {
+  const rect = canvasRef.value?.querySelector<HTMLElement>(".vue-flow")?.getBoundingClientRect()
+  if (!rect) return null
+  return clientToFlowPoint(client, { left: rect.left, top: rect.top }, getViewport())
+}
+
+/** 新页面节点的落点（节点左上角）：参照点对应的画布坐标 + 重叠错位 */
+function pageDropPosition(
+  node: WorkflowNode,
+  center: { x: number; y: number } | null,
+  size: NodeSize,
+): [number, number] {
+  if (!center) {
+    // 既无鼠标位置也无画布尺寸（如未布局的测试环境）：沿用旧的阶梯位置
+    return [180 + store.pageNodes.length * 40, 160 + store.pageNodes.length * 20]
   }
+  return flowPointToNodePos(center, size)
+}
+
+/** 新增页面节点后等它被 VueFlow 量出尺寸（量完 DOM 才有），最长约 320ms */
+const NODE_SIZE_POLLS = 20
+const NODE_SIZE_POLL_MS = 16
+
+async function waitForNodeSize(nodeId: string): Promise<NodeSize | null> {
+  for (let i = 0; i < NODE_SIZE_POLLS; i++) {
+    const dims = findFlowNode(nodeId)?.dimensions
+    if (dims && dims.width > 0 && dims.height > 0) {
+      return { width: dims.width, height: dims.height }
+    }
+    await new Promise((resolve) => setTimeout(resolve, NODE_SIZE_POLL_MS))
+  }
+  return null
+}
+
+/**
+ * 同类节点已被 VueFlow 量出的尺寸（画布单位）。
+ * 注册表尺寸（180×82）只是端口布局用的模型，与节点 CSS 实际尺寸（min-width 228 + 动态高度）不同；
+ * 能拿到实测值就用实测值，落位一次到位、错位判断也按同一基准比较。画布上还没有同类节点时返回 null。
+ */
+function measuredSizeFor(type: string): NodeSize | null {
+  for (const n of store.nodes) {
+    if (n.type !== type) continue
+    const dims = findFlowNode(n.id)?.dimensions
+    if (dims && dims.width > 0 && dims.height > 0) {
+      return { width: dims.width, height: dims.height }
+    }
+  }
+  return null
+}
+
+/** 节点的画布尺寸与中心：优先 VueFlow 实测尺寸，取不到就按注册表估算 */
+function nodeSize(node: WorkflowNode): NodeSize {
+  const dims = findFlowNode(node.id)?.dimensions
+  if (dims && dims.width > 0 && dims.height > 0) return { width: dims.width, height: dims.height }
+  return { width: node.size[0] || 180, height: store.computeNodeHeight(node) }
+}
+
+function nodeCenter(node: WorkflowNode): { x: number; y: number } {
+  const size = nodeSize(node)
+  return { x: node.pos[0] + size.width / 2, y: node.pos[1] + size.height / 2 }
+}
+
+/**
+ * 定稿落位：按新节点实测尺寸把中心对到参照点，并按节点中心再查一次重叠错位。
+ * 与首帧落位同一套规则，只是尺寸从「估算」换成「实测」，因此不会来回漂。
+ */
+async function finalizePlacement(nodeId: string, client: { x: number; y: number }): Promise<void> {
+  const node = store.findNode(nodeId)
+  const center = clientToFlow(client)
+  const size = await waitForNodeSize(nodeId)
+  if (!node || !center || !size) return
+  const target = stackingOffset(center, occupiedCenters(nodeId), PAGE_STACK_STEP)
+  node.pos = flowPointToNodePos(target, size)
+  refreshFromStore()
+}
+
+/** 除自己以外的节点中心（用于重叠错位判断） */
+function occupiedCenters(nodeId: string): { x: number; y: number }[] {
+  return store.nodes.filter((n) => n.id !== nodeId).map(nodeCenter)
+}
+
+function addPage() {
+  // 先建节点（数量上限在这里判定），再把它挪到鼠标处：节点高度由 store 按端口数算出，无需猜
+  const n = store.createNode("PageNode", 0, 0)
+  if (!n) {
+    // 达上限：把原因显示到工具栏状态行，与「+ 起点」「+ 终点」同形态（非静默失败）
+    status.value = store.statusMessage || "页面节点数量已达上限"
+    return
+  }
+  const client = dropClientPoint()
+  const center = client ? clientToFlow(client) : null
+  // 首帧：有同类节点的实测尺寸就用它，落位就近；没有就按注册表估算（渲染后定稿会修正）
+  const size = measuredSizeFor(n.type) ?? {
+    width: n.size[0] || 180,
+    height: store.computeNodeHeight(n),
+  }
+  if (center) {
+    const target = stackingOffset(center, occupiedCenters(n.id), PAGE_STACK_STEP)
+    n.pos = flowPointToNodePos(target, size)
+  } else {
+    n.pos = pageDropPosition(n, null, size)
+  }
+  n.widgets_values = [`页面${store.pageNodes.length}`, "teal"]
+  refreshFromStore()
+  // 渲染后按新节点自身实测尺寸定稿（尺寸与中心都与首帧同源，避免节点跳位）
+  if (client) void finalizePlacement(n.id, client)
 }
 
 function addPopup() {
@@ -436,7 +574,7 @@ watch(
       </div>
     </div>
 
-    <div class="vf-canvas">
+    <div ref="canvasRef" class="vf-canvas" @mousemove="onCanvasPointerMove">
       <VueFlow
         v-model:nodes="nodes"
         v-model:edges="edges"
@@ -478,8 +616,9 @@ watch(
       <div v-if="picker.show" class="el-picker-backdrop" @click="picker.show = false" />
       <div
         v-if="picker.show"
+        ref="pickerRef"
         class="el-picker"
-        :style="{ left: picker.x + 'px', top: picker.y + 'px' }"
+        :style="{ left: pickerPosition.x + 'px', top: pickerPosition.y + 'px' }"
         @click.stop
       >
         <div class="el-picker-head">
@@ -771,6 +910,9 @@ watch(
   z-index: var(--z-modal);
   width: 340px;
   max-height: 420px;
+  /* 视口兜底：窗口比浮层还矮时按视口收敛 */
+  max-height: min(420px, calc(100vh - 16px));
+  max-height: min(420px, calc(100dvh - 16px));
   display: flex;
   flex-direction: column;
   background: var(--app-bg-card);
@@ -832,10 +974,11 @@ watch(
   border-color: var(--wf-picker-focus);
 }
 .el-picker-list {
-  flex: 1;
+  /* 高度交给外层 max-height：收敛后条目区自行滚动，条目不会被裁掉 */
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
   padding: 6px var(--app-space-sm) 12px;
-  max-height: 300px;
   background: var(--app-bg-card);
 }
 .el-picker-item {

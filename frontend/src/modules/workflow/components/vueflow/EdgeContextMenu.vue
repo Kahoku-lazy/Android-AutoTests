@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, watch } from "vue"
 import { ElMessageBox } from "element-plus"
+import { EDGE_MENU_SIZE } from "@/modules/workflow/helpers/overlayPosition"
+import { useContainedOverlay } from "@/modules/workflow/composables/useContainedOverlay"
 
 const props = defineProps<{
   show: boolean
@@ -21,7 +23,17 @@ const emit = defineEmits<{
 
 const renaming = ref(false)
 const name = ref("")
-const menuRef = ref<HTMLDivElement | null>(null)
+/** 浮层根元素 + 已收敛到屏内的位置（光标锚点越界时向屏内平移） */
+const { el: menuRef, position, place } = useContainedOverlay(EDGE_MENU_SIZE)
+
+function reposition() {
+  if (!props.show) return
+  void place({ x: props.x, y: props.y })
+}
+
+watch(() => [props.show, props.x, props.y] as const, reposition, { immediate: true })
+// 重命名态浮层更高，按新尺寸再收敛一次
+watch(renaming, reposition)
 
 watch(
   () => props.show,
@@ -73,7 +85,7 @@ async function doDelete() {
       v-if="show"
       ref="menuRef"
       class="edge-menu"
-      :style="{ left: x + 'px', top: y + 'px' }"
+      :style="{ left: position.x + 'px', top: position.y + 'px' }"
       @click.stop
     >
       <template v-if="!renaming">
@@ -111,6 +123,10 @@ async function doDelete() {
   position: fixed;
   z-index: var(--z-popup);
   width: 248px;
+  /* 视口兜底：窗口比浮层还矮时按视口收敛 */
+  max-height: min(200px, calc(100vh - 16px));
+  max-height: min(200px, calc(100dvh - 16px));
+  overflow: hidden;
   padding: 6px;
   background: var(--app-bg-card);
   border: 2.5px solid var(--ink);

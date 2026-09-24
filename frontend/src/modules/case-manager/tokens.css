@@ -11,4 +11,7 @@
   --case-z-context: var(
     --z-overlay
   ); /* 目录树上下文菜单层叠（原引用悬空，computed 阶段回落 auto；对齐同类浮层的 80） */
+  --case-tree-pane-w: var(
+    --layout-pane-left
+  ); /* 工作台左栏（目录树）宽度：取 T0 统一分栏档位，不写字面量 */
 }

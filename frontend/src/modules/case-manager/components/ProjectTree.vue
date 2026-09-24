@@ -104,12 +104,10 @@ function childCount(data: UiTreeNode): number {
   return data.children?.length ?? 0
 }
 
-function formatTime(iso?: string): string {
-  if (!iso) return "—"
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso.slice(0, 16).replace("T", " ")
-  const p = (n: number) => String(n).padStart(2, "0")
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+/** 目录子项为 0 时用「空」表达（与元素定位同口径，不显示数字 0） */
+function childCountLabel(data: UiTreeNode): string {
+  const count = childCount(data)
+  return count === 0 ? "空" : String(count)
 }
 
 const elTreeData = computed(() => toUiNodes(props.treeData))
@@ -386,11 +384,6 @@ function rowClass(data: UiTreeNode) {
 <template>
   <div class="project-tree">
     <div v-if="!selectMode" class="explorer-toolbar">
-      <div class="explorer-crumbs">
-        <span class="explorer-crumbs__root">项目根</span>
-        <span class="explorer-crumbs__sep">/</span>
-        <span>全部</span>
-      </div>
       <div class="explorer-toolbar__actions">
         <button type="button" class="ex-btn" @click="openCreateRootDir">+ 新建目录</button>
         <button type="button" class="ex-btn ex-btn--primary" @click="openCreateRootFile">
@@ -453,21 +446,11 @@ function rowClass(data: UiTreeNode) {
               {{ data.type === "file" ? "📄" : node.expanded ? "📂" : "📁" }}
             </span>
             <span class="explorer-row__name" :title="data.name">{{ data.name }}</span>
-            <span
-              class="explorer-row__kind"
-              :class="
-                data.type === 'directory' ? 'explorer-row__kind--dir' : 'explorer-row__kind--file'
-              "
-            >
-              {{ data.type === "directory" ? "目录" : "文件" }}
+            <span v-if="data.type === 'file'" class="explorer-row__enter" aria-hidden="true">
+              进入 ›
             </span>
-            <span class="explorer-row__meta">
-              {{
-                data.type === "directory" ? `${childCount(data)} 项` : formatTime(data.updated_at)
-              }}
-            </span>
-            <span class="explorer-row__hint">
-              {{ data.type === "directory" ? "展开 / 收起" : "进入表格 →" }}
+            <span v-if="data.type === 'directory'" class="explorer-row__meta">
+              {{ childCountLabel(data) }}
             </span>
           </div>
         </template>
@@ -542,34 +525,27 @@ function rowClass(data: UiTreeNode) {
   align-items: center;
   justify-content: space-between;
   gap: var(--app-space-sm);
-  padding: 10px 14px;
+  padding: var(--app-space-sm) var(--app-space-md);
   border-bottom: 2px solid var(--case-border-subtle);
-  background: color-mix(in srgb, var(--app-bg-card) 70%, transparent);
   flex-shrink: 0;
   flex-wrap: wrap;
 }
 .explorer-toolbar--select {
   background: color-mix(in srgb, var(--c-case) 12%, var(--app-bg-card));
 }
-.explorer-crumbs {
+.explorer-toolbar__actions {
+  display: flex;
+  gap: var(--app-space-sm);
+  flex-wrap: wrap;
+}
+
+.explorer-toolbar--select .explorer-crumbs {
   font-size: var(--app-size-sm);
   font-weight: 700;
   color: var(--ink);
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
-}
-.explorer-crumbs__root {
-  color: var(--ink);
-}
-.explorer-crumbs__sep {
-  color: var(--app-text-secondary);
-  font-weight: 500;
-}
-.explorer-toolbar__actions {
-  display: flex;
-  gap: var(--app-space-sm);
   flex-wrap: wrap;
 }
 
@@ -584,26 +560,32 @@ function rowClass(data: UiTreeNode) {
   font-family: inherit;
   color: var(--ink);
   line-height: 1.2;
+  transition:
+    transform var(--app-duration-fast) var(--app-ease),
+    background var(--app-duration-fast) var(--app-ease);
 }
 .ex-btn:hover:not(:disabled) {
   background: var(--app-highlight);
+  transform: translate(-1px, -1px);
 }
 .ex-btn:disabled {
-  opacity: 0.45;
+  opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 .ex-btn--primary {
   background: var(--c-case);
 }
 .ex-btn--danger {
-  color: var(--app-status-danger-text);
+  background: var(--app-marker-red);
+  color: var(--app-bg-card);
 }
 
 .explorer-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 12px 14px 20px;
+  padding: var(--app-space-sm);
 }
 
 .explorer-tree {
@@ -613,89 +595,72 @@ function rowClass(data: UiTreeNode) {
 .explorer-tree :deep(.el-tree-node__content) {
   height: auto;
   min-height: 0;
-  padding: 0 0 var(--app-space-sm);
+  padding: 0 0 var(--app-space-xs);
   background: transparent !important;
 }
-.explorer-tree :deep(.el-tree-node__expand-icon) {
-  display: none;
-}
-.explorer-tree :deep(.el-tree-node__content > .el-tree-node__expand-icon) {
-  display: none;
+/* 层级引导线：子层容器左边界（缩进由 el-tree 的 indent 提供），与元素定位同源 */
+.explorer-tree :deep(.el-tree-node__children) {
+  border-left: 2px dotted var(--color-orange-76);
+  padding-left: 0;
 }
 .explorer-tree :deep(.el-checkbox) {
   margin-right: var(--app-space-sm);
   margin-left: var(--app-space-xs);
 }
-.explorer-tree :deep(.el-tree-node__children) {
-  padding-left: 0;
-}
 
+/* 树行：与元素定位 .locator-row 逐属性同源（默认无可见描边 / 悬停底色 / 选中墨框 + 硬阴影） */
 .explorer-row {
-  display: grid;
-  grid-template-columns: 28px minmax(120px, 1fr) 72px 140px 100px;
+  display: flex;
   align-items: center;
   gap: var(--app-space-sm);
   width: 100%;
-  border: 2px solid var(--ink);
-  background: var(--app-bg-card);
-  border-radius: var(--app-radius-lg);
-  padding: var(--app-space-sm) 12px;
-  min-height: 44px;
+  min-width: 0;
+  border: 2px solid transparent;
+  background: transparent;
+  border-radius: var(--app-radius-md);
+  padding: var(--app-space-xs) var(--app-space-sm);
+  transition:
+    background var(--app-duration-fast) var(--app-ease),
+    border-color var(--app-duration-fast) var(--app-ease);
 }
-.explorer-row--dir {
-  background: var(--paper);
-}
-.explorer-row--file:hover {
-  background: color-mix(in srgb, var(--c-case) 8%, var(--app-bg-card));
-}
-.explorer-row--dir:hover {
-  background: color-mix(in srgb, var(--c-dashboard) 16%, var(--app-bg-card));
+.explorer-row:hover {
+  background: color-mix(in srgb, var(--c-case) 10%, var(--paper));
 }
 .explorer-row--active {
-  box-shadow: 3px 3px 0 var(--ink);
-  background: color-mix(in srgb, var(--c-case) 8%, var(--app-bg-card));
+  border-color: var(--ink);
+  box-shadow: var(--app-shadow-sm);
+  background: color-mix(in srgb, var(--c-case) 16%, var(--paper));
 }
 .explorer-row__ico {
-  font-size: 18px;
-  text-align: center;
-  line-height: 1;
+  flex-shrink: 0;
 }
 .explorer-row__name {
+  flex: 0 1 auto;
+  min-width: 0;
   font-weight: 700;
   font-size: var(--app-size-sm);
   color: var(--ink);
-  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.explorer-row__kind {
+/* 进入指示紧贴名称；剩余空间由尾随信息的 margin-left:auto 吸收 */
+.explorer-row__enter {
+  flex-shrink: 0;
   font-size: var(--app-size-xs);
-  font-weight: 800;
-  text-align: center;
-  border: 2px solid var(--ink);
-  border-radius: var(--app-radius-pill);
-  padding: 2px var(--app-space-sm);
-  line-height: 1.3;
+  font-weight: 700;
+  color: var(--c-case);
+  opacity: 0.85;
 }
-.explorer-row__kind--dir {
-  background: color-mix(in srgb, var(--c-dashboard) 16%, var(--app-bg-card));
+.explorer-row--file:hover .explorer-row__enter {
+  opacity: 1;
 }
-.explorer-row__kind--file {
-  background: color-mix(in srgb, var(--c-case) 12%, var(--app-bg-card));
-}
-.explorer-row__meta,
-.explorer-row__hint {
+.explorer-row__meta {
+  margin-left: auto;
+  flex-shrink: 0;
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
   white-space: nowrap;
-}
-.explorer-row__hint {
-  text-align: right;
-  font-weight: 600;
-}
-.explorer-row--file .explorer-row__hint {
-  color: color-mix(in srgb, var(--c-case) 55%, var(--ink));
 }
 
 .context-menu {
@@ -729,13 +694,20 @@ function rowClass(data: UiTreeNode) {
   margin: var(--app-space-xs) var(--app-space-sm);
 }
 
+/* 窗口极窄时（工作台已退化为单栏）隐藏行尾信息，先保住名称与进入指示 */
 @media (max-width: 900px) {
-  .explorer-row {
-    grid-template-columns: 28px minmax(80px, 1fr) 64px;
-  }
-  .explorer-row__meta,
-  .explorer-row__hint {
+  .explorer-row__meta {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ex-btn,
+  .explorer-row {
+    transition: none;
+  }
+  .ex-btn:hover:not(:disabled) {
+    transform: none;
   }
 }
 </style>

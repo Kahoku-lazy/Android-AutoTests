@@ -136,7 +136,7 @@ onMounted(() => {
           { label: headerTitle },
         ]"
       />
-      <div class="file-view-main">
+      <div class="file-view-main element-detail-pane">
         <SkeletonCard v-if="loading" variant="list" :lines="6" />
         <ErrorState v-else-if="error" :message="error" @retry="loadFileMeta" />
         <LocatorFilePanel
@@ -149,6 +149,9 @@ onMounted(() => {
     </div>
   </div>
 </template>
+
+<!-- 硬边按键皮肤与表纸线型：与工作台右栏共用同一份（components/elementDetailSkin.css） -->
+<style scoped src="./components/elementDetailSkin.css"></style>
 
 <style scoped>
 /* 页面根/主体骨架由 .doc-page / .doc-body 提供；本页主体自带分隔线（纸面由 L0 透出，禁自绘点阵） */
@@ -165,43 +168,5 @@ onMounted(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-}
-
-/* ═══════════════════════════════════════════
-   硬边按键皮肤（作用域：本页 .file-view）
-   几何基准 = 侧栏「退出」与 .device-workbench / .inspector-workbench：
-   2px 墨色实边 + 2px 近直角 + 2px 偏移硬阴影；hover 左上 1px、阴影增至 3px。
-   共享件 DoodleBtn / FilterTabs / ErrorState 与全局主题不变。
-   ═══════════════════════════════════════════ */
-.file-view :deep(.el-button:not(.is-text):not(.is-link)) {
-  border: 2px solid var(--ink) !important;
-  border-radius: 2px !important;
-  font-weight: 700 !important;
-  box-shadow: 2px 2px 0 0 var(--ink) !important;
-  transition:
-    transform var(--app-duration-fast) var(--app-ease),
-    box-shadow var(--app-duration-fast) var(--app-ease),
-    background var(--app-duration-fast) var(--app-ease) !important;
-}
-.file-view :deep(.el-button:not(.is-text):not(.is-link):not(:disabled):hover) {
-  transform: translate(-1px, -1px) !important;
-  box-shadow: 3px 3px 0 0 var(--ink) !important;
-}
-
-/* 删除键：危险红底 + 浅色字（对齐 logout 几何，对比度 ≥ 4.5:1） */
-.file-view :deep(.el-button--danger:not(.is-text):not(.is-link)) {
-  background: var(--app-marker-red) !important;
-  border-color: var(--ink) !important;
-  color: var(--app-bg-card) !important;
-}
-.file-view :deep(.el-button--danger:not(.is-text):not(.is-link):not(:disabled):hover) {
-  background: var(--app-marker-red) !important;
-  border-color: var(--ink) !important;
-  color: var(--app-bg-card) !important;
-}
-
-/* 表纸线型登记：实线；宽度与颜色仍取 --comp-sheet-border */
-.file-view :deep(.sketch-sheet) {
-  border-style: solid;
 }
 </style>

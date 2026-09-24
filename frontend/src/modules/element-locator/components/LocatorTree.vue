@@ -66,6 +66,26 @@ function childCount(data: UiTreeNode): number {
   return data.children?.length ?? 0
 }
 
+/** 目录子项为 0 时用「空」表达，不显示数字 0 */
+function childCountLabel(data: UiTreeNode): string {
+  const count = childCount(data)
+  return count === 0 ? "空" : String(count)
+}
+
+// ── 项目根落点区：只在拖拽进行中或批量选择模式下出现（判定逻辑不变）──
+const dragging = ref(false)
+const showRootDrop = computed(() => selectMode.value || touchActive.value || dragging.value)
+
+function onDragStart(...args: Parameters<typeof onNodeDragStart>) {
+  dragging.value = true
+  onNodeDragStart(...args)
+}
+
+function onDragEnd(...args: Parameters<typeof onNodeDragEnd>) {
+  dragging.value = false
+  onNodeDragEnd(...args)
+}
+
 // ── 移动到…（批量勾选后选目标目录）──
 const moveDialogVisible = ref(false)
 
@@ -276,8 +296,9 @@ function rowClass(data: UiTreeNode) {
       @touchend="onTouchEnd"
       @touchcancel="onTouchCancel"
     >
-      <!-- 项目根落点：桌面用原生 drop，触摸用命中测试高亮 -->
+      <!-- 项目根落点：仅在拖拽中或批量选择模式下出现，平时不占行 -->
       <div
+        v-if="showRootDrop"
         class="locator-tree__root-drop"
         :class="{ 'locator-tree__root-drop--over': touchOnRoot }"
         data-root-drop="1"
@@ -301,7 +322,7 @@ function rowClass(data: UiTreeNode) {
         :data="elTreeData"
         :props="{ children: 'children', label: 'name' }"
         node-key="key"
-        :indent="12"
+        :indent="18"
         :default-expanded-keys="defaultExpanded"
         :expand-on-click-node="true"
         highlight-current
@@ -313,8 +334,8 @@ function rowClass(data: UiTreeNode) {
         :check-strictly="true"
         @node-click="handleNodeClick"
         @node-contextmenu="handleContextMenu"
-        @node-drag-start="onNodeDragStart"
-        @node-drag-end="onNodeDragEnd"
+        @node-drag-start="onDragStart"
+        @node-drag-end="onDragEnd"
         @node-drop="onNodeDrop"
         @check="onCheck"
       >
@@ -325,9 +346,12 @@ function rowClass(data: UiTreeNode) {
             </span>
             <span class="locator-row__name" :title="data.name">{{ data.name }}</span>
             <span v-if="data.type === 'directory'" class="locator-row__meta">
-              {{ childCount(data) }}
+              {{ childCountLabel(data) }}
             </span>
-            <span v-else class="locator-row__enter" aria-hidden="true">进入 ›</span>
+            <template v-else>
+              <span class="locator-row__enter" aria-hidden="true">进入 ›</span>
+              <span class="locator-row__gap" aria-hidden="true" />
+            </template>
           </div>
         </template>
       </el-tree>

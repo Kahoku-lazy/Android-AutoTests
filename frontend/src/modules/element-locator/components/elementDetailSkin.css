@@ -1,0 +1,47 @@
+/* 元素详情共用皮肤（文件详情页 + 工作台右栏两处生效）
+   作用域：.element-detail-pane —— 由 LocatorFileView 与 ProjectWorkspace 各自挂在详情主体上。
+   几何基准 = 侧栏「退出」与 .device-workbench / .inspector-workbench：
+   2px 墨色实边 + 2px 近直角 + 2px 偏移硬阴影；hover 左上 1px、阴影增至 3px。
+   共享件 DoodleBtn / FilterTabs / ErrorState 与全局主题不变。
+   （皮肤真相源在本文件；两处不得各自复制一套。） */
+
+.element-detail-pane :deep(.el-button:not(.is-text):not(.is-link)) {
+  border: 2px solid var(--ink) !important;
+  border-radius: 2px !important;
+  font-weight: 700 !important;
+  box-shadow: 2px 2px 0 0 var(--ink) !important;
+  transition:
+    transform var(--app-duration-fast) var(--app-ease),
+    box-shadow var(--app-duration-fast) var(--app-ease),
+    background var(--app-duration-fast) var(--app-ease) !important;
+}
+.element-detail-pane :deep(.el-button:not(.is-text):not(.is-link):not(:disabled):hover) {
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 3px 3px 0 0 var(--ink) !important;
+}
+
+/* 删除键：危险红底 + 浅色字（对齐 logout 几何，对比度 ≥ 4.5:1） */
+.element-detail-pane :deep(.el-button--danger:not(.is-text):not(.is-link)) {
+  background: var(--app-marker-red) !important;
+  border-color: var(--ink) !important;
+  color: var(--app-bg-card) !important;
+}
+.element-detail-pane :deep(.el-button--danger:not(.is-text):not(.is-link):not(:disabled):hover) {
+  background: var(--app-marker-red) !important;
+  border-color: var(--ink) !important;
+  color: var(--app-bg-card) !important;
+}
+
+/* 表纸线型登记：实线；宽度与颜色仍取 --comp-sheet-border */
+.element-detail-pane :deep(.sketch-sheet) {
+  border-style: solid;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .element-detail-pane :deep(.el-button:not(.is-text):not(.is-link)) {
+    transition: none !important;
+  }
+  .element-detail-pane :deep(.el-button:not(.is-text):not(.is-link):not(:disabled):hover) {
+    transform: none !important;
+  }
+}

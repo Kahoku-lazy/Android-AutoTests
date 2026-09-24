@@ -6,4 +6,7 @@
 
 .locator-workbench {
   --locator-header-icon-end: var(--color-indigo-84); /* 页头图标渐变收尾色 */
+  --locator-tree-pane-w: var(
+    --layout-pane-left
+  ); /* 工作台左栏（目录树）宽度：取 T0 统一分栏档位，不写字面量 */
 }

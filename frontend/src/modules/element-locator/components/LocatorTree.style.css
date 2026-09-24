@@ -1,4 +1,9 @@
-/* LocatorTree 样式：自 LocatorTree.vue 拆出（frontend/AGENTS.md 500 行约束）。 */
+/* LocatorTree 样式：自 LocatorTree.vue 拆出（frontend/AGENTS.md 500 行约束）。
+   紧凑呈现口径（relayout-locator-workspace）：
+   - 行默认不绘制可见描边（用 2px 透明边占位，保证 hover/选中不出行高跳动）
+   - 悬停给底色，选中行给 2px 墨框 + 硬阴影
+   - 层级用 18px 缩进（el-tree indent）+ 子层容器左边界虚线引导线
+   - 目录尾随直接子项数（0 显示「空」），页面的进入指示紧贴名称 */
 
 .locator-tree {
   display: flex;
@@ -26,13 +31,18 @@
   font-family: inherit;
   color: var(--ink);
   line-height: 1.2;
+  transition:
+    transform var(--app-duration-fast) var(--app-ease),
+    background var(--app-duration-fast) var(--app-ease);
 }
 .ex-btn:hover {
   background: var(--app-highlight);
+  transform: translate(-1px, -1px);
 }
 .ex-btn:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+  transform: none;
 }
 .ex-btn--primary {
   background: var(--c-element);
@@ -55,7 +65,7 @@
   overflow-y: auto;
   padding: var(--app-space-sm);
 }
-/* 项目根落点：常驻，可把节点拖回最外层 */
+/* 项目根落点：按需出现（拖拽中 / 批量选择模式），可把节点拖回最外层 */
 .locator-tree__root-drop {
   display: flex;
   align-items: center;
@@ -81,18 +91,29 @@
   padding: 0 0 var(--app-space-xs);
   background: transparent !important;
 }
+/* 层级引导线：子层容器左边界（缩进由 el-tree 的 indent 提供） */
+.locator-tree__el :deep(.el-tree-node__children) {
+  border-left: 2px dotted var(--color-orange-76);
+}
 .locator-row {
   display: flex;
   align-items: center;
   gap: var(--app-space-sm);
   width: 100%;
   min-width: 0;
-  border: 2px solid var(--ink);
-  background: var(--paper);
+  border: 2px solid transparent;
+  background: transparent;
   border-radius: var(--app-radius-md);
   padding: var(--app-space-xs) var(--app-space-sm);
+  transition:
+    background var(--app-duration-fast) var(--app-ease),
+    border-color var(--app-duration-fast) var(--app-ease);
+}
+.locator-row:hover {
+  background: color-mix(in srgb, var(--c-element) 10%, var(--paper));
 }
 .locator-row--active {
+  border-color: var(--ink);
   box-shadow: var(--app-shadow-sm);
   background: color-mix(in srgb, var(--c-element) 16%, var(--paper));
 }
@@ -107,7 +128,7 @@
   flex-shrink: 0;
 }
 .locator-row__name {
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
   font-weight: 700;
   font-size: var(--app-size-sm);
@@ -116,11 +137,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.locator-row__meta {
-  flex-shrink: 0;
-  font-size: var(--app-size-xs);
-  color: var(--app-text-secondary);
-}
+/* 进入指示紧贴名称；剩余空间由 gap 吸收（不把指示推到行尾） */
 .locator-row__enter {
   flex-shrink: 0;
   font-size: var(--app-size-xs);
@@ -128,8 +145,17 @@
   color: var(--c-element);
   opacity: 0.85;
 }
+.locator-row__gap {
+  flex: 1 1 auto;
+}
 .locator-row--file:hover .locator-row__enter {
   opacity: 1;
+}
+.locator-row__meta {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
 }
 .context-menu {
   position: fixed;
@@ -157,4 +183,14 @@
   height: 1px;
   background: var(--app-border-light);
   margin: var(--app-space-xs) var(--app-space-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ex-btn,
+  .locator-row {
+    transition: none;
+  }
+  .ex-btn:hover {
+    transform: none;
+  }
 }

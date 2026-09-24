@@ -59,6 +59,88 @@ export function formatTaskCost(cost?: number): string {
   return `${Number(cost ?? 0).toFixed(4)} 元`
 }
 
+/** JSON 代码块缩进宽度（展示口径，与后端下发文本无关） */
+const JSON_BLOCK_INDENT = "  "
+/** 控制字符转义表：换行不在表内，由渲染规则转为真实换行 */
+const JSON_ESCAPE_TABLE: Record<string, string> = {
+  "\\": "\\\\",
+  '"': '\\"',
+  "\b": "\\b",
+  "\f": "\\f",
+  "\t": "\\t",
+}
+
+/** 换行符：后随空行或已到串尾时不补缩进，避免悬挂空格 */
+function lineBreakText(whole: string, index: number, pad: string): string {
+  const next = whole[index + 1]
+  return next === undefined || next === "\n" || next === "\r" ? "\n" : `\n${pad}`
+}
+
+/** 表外字符：控制字符按 \uXXXX 转义，其余（含多字节字符）原样保留 */
+function escapeOtherChar(ch: string): string {
+  const code = ch.charCodeAt(0)
+  return code < 0x20 ? `\\u${code.toString(16).padStart(4, "0")}` : ch
+}
+
+/** 字符串字面量：内部换行按真实换行呈现，续行缩进到该值所在层级 */
+function renderJsonString(value: string, depth: number): string {
+  const pad = JSON_BLOCK_INDENT.repeat(depth)
+  let body = ""
+  for (let i = 0; i < value.length; i += 1) {
+    const ch = value[i]
+    if (ch === "\n") {
+      body += lineBreakText(value, i, pad)
+      continue
+    }
+    // CRLF 只换一次行：\r 让位给紧随的 \n
+    if (ch === "\r") {
+      if (value[i + 1] !== "\n") body += lineBreakText(value, i, pad)
+      continue
+    }
+    body += JSON_ESCAPE_TABLE[ch] ?? escapeOtherChar(ch)
+  }
+  return `"${body}"`
+}
+
+/** 单值渲染：首行不带缩进，结构与字符串续行按 depth 层级缩进 */
+function renderJsonValue(value: unknown, depth: number): string {
+  const pad = JSON_BLOCK_INDENT.repeat(depth)
+  if (value === null || value === undefined) return "null"
+  if (typeof value === "string") return renderJsonString(value, depth)
+  if (typeof value === "number" || typeof value === "boolean") return JSON.stringify(value)
+  if (Array.isArray(value)) {
+    if (!value.length) return "[]"
+    const items = value.map((item) => pad + JSON_BLOCK_INDENT + renderJsonValue(item, depth + 1))
+    return `[\n${items.join(",\n")}\n${pad}]`
+  }
+  const entries = Object.entries(value as Record<string, unknown>)
+  if (!entries.length) return "{}"
+  const lines = entries.map(
+    ([key, item]) =>
+      pad + JSON_BLOCK_INDENT + `${JSON.stringify(key)}: ${renderJsonValue(item, depth + 1)}`,
+  )
+  return `{\n${lines.join(",\n")}\n${pad}}`
+}
+
+/**
+ * 规划输入的展示形态：缩进 JSON 代码块，字符串值内的换行按真实换行呈现。
+ *
+ * 只做渲染期派生，后端下发的原文不被改写（「展示 == 入模」以接口字段为准）；
+ * 非法 JSON 原样回退，空值返回空串交由调用方走空态。
+ */
+export function formatPlannerInputText(raw?: string): string {
+  const text = (raw ?? "").trim()
+  if (!text) return ""
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    // 历史脏数据 / 非 JSON 文本：原样展示，不吞内容
+    return text
+  }
+  return renderJsonValue(parsed, 0)
+}
+
 function normalizeResult(raw: unknown): string {
   if (typeof raw === "boolean") return raw ? "pass" : "fail"
   if (typeof raw === "string") {

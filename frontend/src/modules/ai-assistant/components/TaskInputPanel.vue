@@ -5,9 +5,11 @@
  * 数据来自任务详情接口（planner_input / attachment / attachment_filename），
  * 本组件只负责展示：两个默认收起的折叠区块，正文区块内部定高滚动。
  */
+import { computed } from "vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
+import { formatPlannerInputText } from "../helpers/task-detail"
 
-defineProps<{
+const props = defineProps<{
   /** 引擎实际交给规划模型的四键 JSON 原文 */
   plannerInput?: string
   /** 附件解析后的 Markdown 正文全文（无附件为空串） */
@@ -15,6 +17,9 @@ defineProps<{
   /** 附件原始文件名 */
   attachmentFilename?: string
 }>()
+
+/** 规划输入展示态：缩进 JSON 代码块（原文不改写，渲染期派生） */
+const plannerInputText = computed(() => formatPlannerInputText(props.plannerInput))
 </script>
 
 <template>
@@ -23,7 +28,7 @@ defineProps<{
       <template #title>
         <span class="ti-title">送给规划模型的输入<span class="ti-tag">Planner Input</span></span>
       </template>
-      <pre v-if="plannerInput" class="ti-pre">{{ plannerInput }}</pre>
+      <pre v-if="plannerInputText" class="ti-pre">{{ plannerInputText }}</pre>
       <p v-else class="ti-empty">本条任务没有规划输入记录</p>
     </el-collapse-item>
 

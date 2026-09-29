@@ -11,13 +11,14 @@ from django.contrib.auth import get_user_model
 from apps.ai_assistant import model_debug
 from apps.ai_assistant.api import encrypt_key
 from apps.ai_assistant.models import AIAgent, AIConversation, AIMessage
-from engines.ai.agentscope.config import (
+from engines.ai.agents.config import (
     DEVICE_PLANNER_TOOLS,
     VERIFIER_TOOLS,
+    VISION_PROMPT,
     VISION_TOOLS,
     ModelConfig,
 )
-from engines.ai.agentscope.model import RoleResult
+from engines.ai.agents.model import RoleResult
 from shared.auth.jwt_auth import create_access_token
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db(transaction=True)]
@@ -60,9 +61,6 @@ def agent(admin):
     return AIAgent.objects.create(
         owner=admin,
         name="调试智能体",
-        prompt_planner="PLANNER-PROMPT-v1",
-        prompt_executor="EXECUTOR-PROMPT-v1",
-        prompt_verifier="VERIFIER-PROMPT-v1",
         route_configs=_route_cfg(),
     )
 
@@ -90,11 +88,15 @@ def test_role_config_declares_needs_device(agent):
     assert _role_cfg(agent, "verifier")["needs_device"] is True
 
 
-def test_role_prompt_and_vision(agent):
+def test_role_vision_flags(agent):
     assert _role_cfg(agent, "planner")["vision"] is False
     assert _role_cfg(agent, "executor")["vision"] is True
-    assert _role_cfg(agent, "planner")["prompt"] == "PLANNER-PROMPT-v1"
-    assert _role_cfg(agent, "executor")["prompt"] == "EXECUTOR-PROMPT-v1"
+
+
+def test_config_carries_no_prompt(agent):
+    """提示词随引擎走（config.py），不再下发给前端：配置里没有该字段。"""
+    for role in ("planner", "executor", "verifier"):
+        assert "prompt" not in _role_cfg(agent, role)
 
 
 def test_config_leaks_no_plaintext_secret(agent):
@@ -222,7 +224,7 @@ def _patch_model_layer(monkeypatch, reply: str = "REPLY") -> dict:
     captured: dict = {}
 
     def _build(agent, role, model_cfg, user_id=""):
-        prompt = model_debug.role_prompt(agent, role)
+        prompt = VISION_PROMPT
         captured["prompt"] = prompt
         role_obj = _FakeRole(system_prompt=prompt, reply=reply)
         captured["role_obj"] = role_obj
@@ -258,25 +260,14 @@ def test_chat_uses_role_prompt_and_writes_no_records(client, admin, agent, monke
     data = resp.json()["data"]
     assert data["role"] == "executor"
     assert data["model_name"] == "stub-model"
-    assert data["reply"] == "REPLY|EXECUTOR-PROMPT-v1|当前设备 serial：DEV-1\n你好"
-    assert captured["prompt"] == "EXECUTOR-PROMPT-v1"
+    assert data["reply"] == f"REPLY|{VISION_PROMPT}|当前设备 serial：DEV-1\n你好"
+    assert captured["prompt"] == VISION_PROMPT
     # 工具调用轨迹透出（前端据此展示"调了什么工具"）
     assert data["tool_usage"][0]["name"] == "current_app"
     assert data["tool_usage"][0]["type"] == "call"
     # 调试对话 MUST NOT 落库
     assert AIConversation.objects.count() == before_conv
     assert AIMessage.objects.count() == before_msg
-
-
-def test_chat_reflects_updated_prompt(agent, admin, monkeypatch):
-    captured = _patch_model_layer(monkeypatch, reply="v2")
-    agent.prompt_planner = "PLANNER-PROMPT-v2"
-    agent.save(update_fields=["prompt_planner"])
-
-    result = model_debug.run_role_chat(agent, "planner", "问一句", user_id=str(admin.id))
-
-    assert captured["prompt"] == "PLANNER-PROMPT-v2"
-    assert "PLANNER-PROMPT-v2" in result["reply"]
 
 
 def _stub_cfg() -> ModelConfig:
@@ -292,7 +283,9 @@ def test_debug_role_mounts_role_tool_subset(agent):
     # 与生产装配同源：工具名取自角色规格，不再以空工具集运行
     assert role.spec.tool_names == tuple(VISION_TOOLS)
     assert role.spec.vision is True
-    assert role.system_prompt == "EXECUTOR-PROMPT-v1"
+    # 提示词唯一真相源：角色 spec 直接取 config.py 常量
+    assert role.system_prompt == VISION_PROMPT
+    assert role.system_prompt == role.spec.prompt
     assert model_debug.build_debug_role(agent, "planner", cfg).spec.tool_names == tuple(
         DEVICE_PLANNER_TOOLS
     )
@@ -302,7 +295,7 @@ def test_debug_role_mounts_role_tool_subset(agent):
 
 
 def test_debug_role_mounts_real_tools_but_no_skill(agent, monkeypatch):
-    from engines.ai.agentscope import model as engine_model
+    from engines.ai.agents import model as engine_model
 
     seen: dict = {}
     real_build_toolkit = engine_model.build_toolkit

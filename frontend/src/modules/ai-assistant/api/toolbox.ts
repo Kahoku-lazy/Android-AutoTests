@@ -149,81 +149,6 @@ export async function updatePlatformConfig(
   return data
 }
 
-// ── 设备控制三角色系统提示词 ──
-
-export interface DevicePrompts {
-  agent_id?: number
-  planner: string
-  executor: string
-  verifier: string
-}
-
-export async function fetchDevicePrompts(): Promise<{
-  status: boolean
-  data?: DevicePrompts
-  message?: string
-}> {
-  const { data } = await djangoClient.get("/ai/device-prompts/")
-  return data
-}
-
-/** 存档类型：auto = 每次写库滚动保留三份；permanent = 手工保存的唯一长期存档 */
-export type DevicePromptArchiveKind = "auto" | "permanent"
-
-export interface DevicePromptArchive {
-  id: number
-  kind: DevicePromptArchiveKind
-  created_by?: string
-  created_at?: string
-  updated_at?: string
-  /** 列表接口只回长度摘要，正文本体走详情接口 */
-  planner_length?: number
-  executor_length?: number
-  verifier_length?: number
-  /** 仅详情接口返回 */
-  planner?: string
-  executor?: string
-  verifier?: string
-}
-
-export async function updateDevicePrompts(
-  payload: { planner: string; executor: string; verifier: string },
-  archive: DevicePromptArchiveKind = "auto",
-): Promise<{ status: boolean; data?: DevicePrompts; message?: string }> {
-  const { data } = await djangoClient.post("/ai/device-prompts/update/", { ...payload, archive })
-  return data
-}
-
-export async function fetchDevicePromptArchives(): Promise<{
-  status: boolean
-  data?: { items: DevicePromptArchive[] }
-  message?: string
-}> {
-  const { data } = await djangoClient.get("/ai/device-prompt-archives/")
-  return data
-}
-
-export async function fetchDevicePromptArchive(
-  archiveId: number,
-): Promise<{ status: boolean; data?: DevicePromptArchive; message?: string }> {
-  const { data } = await djangoClient.get(`/ai/device-prompt-archives/${archiveId}/`)
-  return data
-}
-
-export async function deleteDevicePromptArchive(archiveId: number): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>(
-    `/ai/device-prompt-archives/${archiveId}/delete/`,
-  )
-  return data
-}
-
-export async function restoreDevicePromptArchive(
-  archiveId: number,
-): Promise<{ status: boolean; data?: DevicePrompts; message?: string }> {
-  const { data } = await djangoClient.post(`/ai/device-prompt-archives/${archiveId}/restore/`)
-  return data
-}
-
 // ── 单模型调试（工具箱「模型调试」）──
 
 export type ModelDebugRole = "planner" | "executor" | "verifier"
@@ -249,7 +174,6 @@ export interface ModelDebugRoleConfig {
   /** 该角色工具子集里是否有工具需要设备（决定页内是否必须选设备） */
   needs_device: boolean
   model: ModelDebugModelSummary
-  prompt: string
   tools: ModelDebugTool[]
 }
 

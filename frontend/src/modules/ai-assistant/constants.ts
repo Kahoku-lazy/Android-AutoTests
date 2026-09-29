@@ -56,34 +56,6 @@ export const SSE_WATCHDOG_MS = 120_000
 /** Delay before resetting model status from "done" → "idle" (ms). */
 export const MODEL_STATUS_RESET_MS = 3_000
 
-// ── Device prompts（设备提示词历史存档）──
-
-/** 「保存」会覆盖唯一永久存档，保存前必须让用户确认 */
-export const PROMPT_OVERWRITE_CONFIRM = "此次保存会覆盖之前的备份记录，请确认是否覆盖保存"
-
-/** 自动存档保留份数（与后端 api.DEVICE_PROMPT_AUTO_KEEP 一致） */
-export const PROMPT_AUTO_ARCHIVE_KEEP = 3
-
-/** 存档类型展示名（自动档滚动淘汰 / 永久档需手工删除） */
-export const PROMPT_ARCHIVE_KIND_LABELS: Record<"auto" | "permanent", string> = {
-  auto: "自动存档",
-  permanent: "永久存档",
-}
-
-/** 设备控制三角色（单一真相源：装配台 / 设备提示词编辑组件 / 历史抽屉共用） */
-export const PROMPT_ROLES = [
-  { key: "planner", label: "规划模型 Planner" },
-  { key: "executor", label: "执行模型 Executor" },
-  { key: "verifier", label: "验收模型 Verifier" },
-] as const
-
-export type PromptRole = (typeof PROMPT_ROLES)[number]["key"]
-
-/** 角色展示名（面向用户的提示文案用） */
-export function promptRoleLabel(role: PromptRole): string {
-  return PROMPT_ROLES.find((item) => item.key === role)?.label || role
-}
-
 /** Agent health check interval (ms). */
 export const HEALTH_CHECK_INTERVAL_MS = 30 * 60 * 1000
 
@@ -123,6 +95,43 @@ export const MODEL_DEBUG_ROLE_TABS = [
 export function modelDebugRoute(role: string): string {
   return `/ai-assistant/toolbox/models/${encodeURIComponent(role)}`
 }
+
+// ── 模型调试：三层语义分区标题（编号与规格口径一致：角色带① / 生效装配② / 参考数据③）──
+
+export const MODEL_DEBUG_LAYER_TITLES = {
+  role: "① 角色带 · 当前是谁",
+  assembly: "② 生效装配 · 能干什么",
+  reference: "③ 参考数据 · 有哪些资产",
+  chat: "调试对话 · 常驻右栏",
+} as const
+
+// ── 模型调试：生效装配区底部如实描述当前行为（挂真实工具、会真机操作）──
+
+/** 调试对话实际挂载该角色工具子集，故不得再写「不挂工具 / 不碰真机」 */
+export const MODEL_DEBUG_ASSEMBLY_NOTE =
+  "调试对话挂载上述工具：会真实调用该角色工具子集，需要设备的角色会真实操作所选设备；对话不落库"
+
+// ── 模型调试：参考数据区（设备与 Skill 目录，整区只读）──
+
+/** 参考数据区设备块的资格徽标（该角色是否需要设备） */
+export const MODEL_DEBUG_DEVICE_NEEDED_BADGE = "需要设备"
+
+export const MODEL_DEBUG_DEVICE_NOT_NEEDED_BADGE = "不需要设备"
+
+/** 该角色工具子集不含设备操作工具时的如实说明 */
+export const MODEL_DEBUG_DEVICE_NOT_NEEDED_NOTE =
+  "该角色工具子集不含设备操作工具，调试对话不会操作设备"
+
+export const MODEL_DEBUG_DEVICE_EMPTY_NOTE = "当前没有可用设备（需对当前用户可见、在线且未被占用）"
+
+export const MODEL_DEBUG_DEVICE_LOADING_NOTE = "正在加载可用设备…"
+
+/** 参考数据区 Skill 目录块标题（列目录路径，与生效装配区的清单区分） */
+export const MODEL_DEBUG_SKILL_DIR_TITLE = "Skill 目录"
+
+export const MODEL_DEBUG_SKILL_DIR_EMPTY_NOTE = "总闸已开，但目录下没有可用 Skill"
+
+export const MODEL_DEBUG_SKILL_GATE_OFF_NOTE = "「自定义 Skill」总闸未开"
 
 // ── 模型调试：归属标注（避免让人误以为按角色分配）──
 

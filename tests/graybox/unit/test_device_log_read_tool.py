@@ -25,7 +25,7 @@ from apps.ai_assistant.tools import (
     list_tool_schemas,
     read_device_log,
 )
-from engines.ai.agentscope.config import VERIFIER_TOOLS, VISION_TOOLS
+from engines.ai.agents.config import VERIFIER_TOOLS, VISION_TOOLS
 from engines.device.logbus import (
     BEIJING_TZ,
     LogBus,

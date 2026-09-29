@@ -11,9 +11,9 @@ from django.core.management.base import BaseCommand, CommandError
 from apps.ai_assistant.api import decrypt_key, get_platform_agent, get_provider_config
 from apps.ai_assistant.engine_adapter import build_tool_specs
 from apps.ai_assistant.skills_catalog import list_enabled_skill_dirs
-from engines.ai.agentscope.config import DeviceExecutionConfig, ModelConfig
-from engines.ai.agentscope.model import build_device_models
-from engines.ai.agentscope.workflow import DeviceExecutionWorkflow
+from engines.ai.agents.config import DeviceExecutionConfig, ModelConfig
+from engines.ai.agents.model import build_device_models
+from engines.ai.agents.workflow import DeviceExecutionWorkflow
 
 
 def _build_device_models(agent):
@@ -41,11 +41,6 @@ def _build_device_models(agent):
         tools=build_tool_specs(),
         user_id=str(agent.owner_id or ""),
         skill_dirs=list_enabled_skill_dirs() if agent.enable_skills else [],
-        system_prompts={
-            "planner": agent.prompt_planner or "",
-            "executor": agent.prompt_executor or "",
-            "verifier": agent.prompt_verifier or "",
-        },
     )
     return config, planner, executor, verifier
 

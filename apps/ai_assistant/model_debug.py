@@ -35,19 +35,18 @@ from apps.ai_assistant.log_history import (
 )
 from apps.ai_assistant.skills_catalog import list_enabled_skill_dirs
 from apps.ai_assistant.tools import TOOL_META, TOOLS, available_device_options
-from engines.ai.agentscope.config import DeviceExecutionConfig, ModelConfig
-from engines.ai.agentscope.logcheck import (
+from engines.ai.agents.config import DeviceExecutionConfig, ModelConfig
+from engines.ai.agents.logcheck import (
     build_executor_log_check,
     checked_log_keywords,
     render_log_evidence,
 )
-from engines.ai.agentscope.model import (
+from engines.ai.agents.model import (
     AgentRole,
     ExecutorRole,
     PlannerRole,
     RoleSpec,
     VerifierRole,
-    build_device_models,
 )
 
 logger = logging.getLogger("ai_assistant.model_debug")
@@ -74,11 +73,6 @@ def normalize_role(role: str) -> str:
     if name not in ROLE_CLASSES:
         raise ValueError(f"未知角色: {role or '(空)'}，可选 {', '.join(ROLES)}")
     return name
-
-
-def role_prompt(agent, role: str) -> str:
-    """该角色的系统提示词（DB 为唯一真相源）。"""
-    return str(getattr(agent, f"prompt_{role}", "") or "")
 
 
 # ── 三角色模型装配（命令行 model_test 与本服务共用）──
@@ -109,7 +103,6 @@ def build_device_models_for_agent(agent):
         tools=build_tool_specs(),
         user_id=str(agent.owner_id or ""),
         skill_dirs=list_enabled_skill_dirs() if agent.enable_skills else [],
-        system_prompts={role: role_prompt(agent, role) for role in ROLES},
     )
     return config, planner, executor, verifier
 
@@ -188,7 +181,10 @@ def _skills(agent) -> dict:
 
 
 def build_role_debug_configs(agent) -> dict:
-    """三角色只读调试配置（提示词 / 模型连接 / 工具子集 + 技能归属）。"""
+    """三角色只读调试配置（模型连接 / 工具子集 + 技能归属）。
+
+    不下发系统提示词：提示词随引擎走（engines/ai/agents/config.py），前端不展示。
+    """
     return {
         "agent_id": agent.id,
         "agent_name": agent.name,
@@ -200,7 +196,6 @@ def build_role_debug_configs(agent) -> dict:
                 # 前端据此决定是否要求选设备（判定口径在 role_needs_device）
                 "needs_device": role_needs_device(role),
                 "model": _model_summary(agent, role),
-                "prompt": role_prompt(agent, role),
                 "tools": _role_tools(role),
             }
             for role in ROLES
@@ -249,7 +244,8 @@ def build_debug_role(agent, role: str, model_cfg: ModelConfig, user_id: str = ""
     base = ROLE_CLASSES[role].spec
     spec = RoleSpec(
         role=base.role,
-        prompt="",
+        # 提示词随角色走：与生产同源，不从库读
+        prompt=base.prompt,
         tool_names=base.tool_names,
         vision=base.vision,
         context_config=base.context_config,
@@ -265,7 +261,6 @@ def build_debug_role(agent, role: str, model_cfg: ModelConfig, user_id: str = ""
         tools=build_tool_specs(),
         user_id=str(user_id or agent.owner_id or ""),
         skill_dirs=[],  # 调试对话不挂 Skill（与生产的差异见变更非目标）
-        system_prompt=role_prompt(agent, role),
     )
 
 

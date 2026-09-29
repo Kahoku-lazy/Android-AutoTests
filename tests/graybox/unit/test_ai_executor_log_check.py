@@ -14,8 +14,8 @@ import json
 
 from types import SimpleNamespace
 
-from engines.ai.agentscope.logcheck import build_executor_log_check
-from engines.ai.agentscope.workflow import (
+from engines.ai.agents.logcheck import build_executor_log_check
+from engines.ai.agents.workflow import (
     ExecutionOutput,
     Step,
     VerificationOutput,

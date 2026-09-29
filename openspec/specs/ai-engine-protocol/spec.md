@@ -90,20 +90,18 @@ Django 侧组装任务时 SHALL 校验配置完整性：`device_control` 线路�
 - **WHEN** 运行一致性测试
 - **THEN** 引擎侧可处理的 provider 集合与 Django 侧合法 provider 集合完全相等
 
-### Requirement: TaskRequest 携带三角色系统提示词
-Django SHALL 通过 `TaskRequest` 传入规划 / 执行 / 验收三份系统提示词（Markdown 源码字符串）。引擎装配 Agent 时 MUST 使用请求中的对应提示词作为该角色 `system_prompt`。引擎内置提示词常量 MUST 为空字符串，MUST NOT 在运行时作为回退填入 Agent。
+### Requirement: 系统提示词随引擎走
+规划 / 执行 / 验收三份系统提示词 MUST 由引擎侧的提示词常量（`engines/ai/agents/config.py`）提供，MUST NOT 经 `TaskRequest` 由 Django 注入，MUST NOT 从数据库读取。引擎装配 Agent 时 MUST 取该角色自己声明的提示词常量。`TaskRequest` MUST NOT 存在系统提示词字段；装配工厂 MUST NOT 接受提示词入参。
 
-#### Scenario: 注入库中提示词
-- **WHEN** Django 组装 `TaskRequest` 且平台智能体三份提示词均非空
-- **THEN** 引擎三个角色的系统提示词分别等于库中对应正文
+#### Scenario: 角色提示词来自引擎常量
+- **WHEN** 引擎装配任一角色
+- **THEN** 该角色的 `system_prompt` 等于引擎该角色的提示词常量
+- **AND** 无需 Django 传入任何提示词
 
-#### Scenario: 引擎常量不再回退
-- **WHEN** 请求已携带系统提示词
-- **THEN** 引擎不得用内置常量覆盖或补全请求中的提示词
+#### Scenario: TaskRequest 无提示词通道
+- **WHEN** Django 组装 `TaskRequest`
+- **THEN** 该对象不含系统提示词字段，引擎侧也无从外部覆盖提示词的入参
 
-### Requirement: 系统提示词装配 fail-fast
-Django 侧组装任务时 SHALL 校验规划 / 执行 / 验收三份系统提示词去空白后均非空。任一份缺失或为空时 SHALL 在装配阶段抛出可读错误（指明角色），任务以失败终态结束，MUST NOT 以空系统提示词进入工作流。
-
-#### Scenario: 某角色提示词为空
-- **WHEN** 平台智能体某角色系统提示词去空白后为空
-- **THEN** 任务在装配阶段失败，错误文案指明该角色，不进入工作流
+#### Scenario: 三份常量均非空
+- **WHEN** 读取引擎三份提示词常量
+- **THEN** 规划 / 执行 / 验收三份均非空且为 Markdown 正文

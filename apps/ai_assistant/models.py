@@ -31,10 +31,6 @@ class AIAgent(models.Model):
     route_configs = models.JSONField(default=dict, blank=True)
     # 工作流循环次数：executor ↔ verifier 内层循环的最大重试次数
     max_loops = models.IntegerField(default=3)
-    # 设备控制三角色系统提示词（Markdown）；运行时唯一真相源，引擎常量留空
-    prompt_planner = models.TextField(default="", blank=True)
-    prompt_executor = models.TextField(default="", blank=True)
-    prompt_verifier = models.TextField(default="", blank=True)
     api_key = models.CharField(max_length=500, default="", blank=True)
     base_url = models.CharField(max_length=500, default="", blank=True)
     # Per-agent workspace skill toggles.
@@ -264,38 +260,3 @@ class AIExecutionLog(models.Model):
 
     def __str__(self):
         return f"[{self.level}] {self.message[:60]}"
-
-
-class AIDevicePromptArchive(models.Model):
-    """设备提示词历史存档 → ai_device_prompt_archives。
-
-    kind=auto：每次写库留一份，同一智能体只保留最新 DEVICE_PROMPT_AUTO_KEEP 份
-    （见 api.save_device_prompt_archive）；kind=permanent：手工保存产生的唯一长期
-    存档，不参与自动淘汰，只在被手工覆盖或手工删除时变动。
-    """
-
-    KIND_AUTO = "auto"
-    KIND_PERMANENT = "permanent"
-    KIND_CHOICES = [(KIND_AUTO, "自动"), (KIND_PERMANENT, "永久")]
-
-    agent = models.ForeignKey(AIAgent, on_delete=models.CASCADE, related_name="prompt_archives")
-    kind = models.CharField(max_length=16, choices=KIND_CHOICES, default=KIND_AUTO)
-    planner = models.TextField(default="", blank=True)
-    executor = models.TextField(default="", blank=True)
-    verifier = models.TextField(default="", blank=True)
-    # 操作者 user_id（Denormalized：存档要保留"谁改的"，不随用户删除而消失）
-    created_by = models.CharField(max_length=64, default="", blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = "ai_device_prompt_archives"
-        ordering = ["-created_at", "-id"]
-        indexes = [
-            models.Index(fields=["agent", "kind", "-created_at"], name="ai_dpa_agent_kind_idx")
-        ]
-        verbose_name = "设备提示词存档"
-        verbose_name_plural = "设备提示词存档"
-
-    def __str__(self):
-        return f"agent={self.agent_id} {self.kind} @{self.created_at:%Y-%m-%d %H:%M:%S}"

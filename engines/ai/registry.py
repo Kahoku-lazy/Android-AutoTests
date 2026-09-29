@@ -22,7 +22,7 @@ class ConfigurationError(RuntimeError):
 
 # 引擎名 → 实现类 import 路径（懒加载，实例化延迟到首次取用）
 AI_ENGINE_REGISTRY = {
-    "agentscope": "engines.ai.agentscope.engine.AgentScopeEngine",
+    "agentscope": "engines.ai.agents.engine.AgentScopeEngine",
     # 未来插槽示例： "langchain": "engines.ai.langchain.engine.LangChainEngine",
 }
 

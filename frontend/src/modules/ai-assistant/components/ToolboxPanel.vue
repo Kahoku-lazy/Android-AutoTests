@@ -88,9 +88,7 @@
       </aside>
 
       <section class="tb-catalog panel">
-        <DevicePromptPanel v-if="activeSource === 'prompt'" :can-manage="props.canManage" />
-
-        <WifiPortPanel v-else-if="activeSource === 'port'" :can-manage="props.canManage" />
+        <WifiPortPanel v-if="activeSource === 'port'" :can-manage="props.canManage" />
 
         <LogKeywordPanel v-else-if="activeSource === 'keywords'" />
 
@@ -206,7 +204,7 @@
               <EmptyState
                 v-if="!loading && !filteredSkillItems.length"
                 icon="📁"
-                text="暂无 Skill，请把文件夹放到 engines/ai/skills 或点击右上角上传"
+                text="暂无 Skill，请把文件夹放到仓库的 Skill 目录或点击右上角上传"
               />
               <div v-else class="toolbox-grid">
                 <div
@@ -291,7 +289,6 @@
 import { computed, watch } from "vue"
 import { useRouter } from "vue-router"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
-import DevicePromptPanel from "./DevicePromptPanel.vue"
 import LogKeywordPanel from "./LogKeywordPanel.vue"
 import WifiPortPanel from "./WifiPortPanel.vue"
 import { useToolbox } from "../composables/useToolbox"

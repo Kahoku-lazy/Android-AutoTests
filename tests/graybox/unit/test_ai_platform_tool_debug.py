@@ -253,7 +253,7 @@ def test_schema_bookkeeping_tools_have_no_serial_options():
 def test_device_action_split_into_single_purpose_tools():
     """device_action 已拆成 6 个单职责工具，注册表/只读标记/引擎子集同步。"""
     from apps.ai_assistant.tools import TOOL_META, TOOLS
-    from engines.ai.agentscope.config import VISION_TOOLS
+    from engines.ai.agents.config import VISION_TOOLS
 
     assert "device_action" not in TOOLS
     assert "device_action" not in TOOL_META

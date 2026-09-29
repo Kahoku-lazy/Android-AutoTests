@@ -22,8 +22,8 @@ import pytest
 
 from apps.ai_assistant import api, engine_adapter
 from apps.ai_assistant.provider_registry import VALID_PROVIDERS
-from engines.ai.agentscope.config import ModelConfig
-from engines.ai.agentscope.model import (
+from engines.ai.agents.config import ModelConfig
+from engines.ai.agents.model import (
     OPENAI_COMPATIBLE_PROVIDERS,
     SUPPORTED_PROVIDERS,
     create_model,
@@ -63,9 +63,6 @@ def _agent(**overrides) -> SimpleNamespace:
         "max_loops": 3,
         "owner_id": "1",
         "enable_skills": False,
-        "prompt_planner": "## planner prompt",
-        "prompt_executor": "## executor prompt",
-        "prompt_verifier": "## verifier prompt",
     }
     fields.update(overrides)
     return SimpleNamespace(**fields)
@@ -155,20 +152,10 @@ def test_online_device_fallback(monkeypatch):
     assert req.device_serial == "ONLINE-1"
 
 
-def test_blank_system_prompt_raises():
-    """某角色系统提示词为空 → 装配期报错并指明角色。"""
-    with pytest.raises(ValueError, match="executor"):
-        engine_adapter.build_request(_task(), _agent(prompt_executor="   "))
-
-
-def test_system_prompts_injected():
-    """库中提示词进入 TaskRequest.system_prompts。"""
+def test_request_carries_no_system_prompts():
+    """提示词随引擎走：TaskRequest 不再有 system_prompts 注入通道。"""
     req = engine_adapter.build_request(_task(), _agent())
-    assert req.system_prompts == {
-        "planner": "## planner prompt",
-        "executor": "## executor prompt",
-        "verifier": "## verifier prompt",
-    }
+    assert not hasattr(req, "system_prompts")
 
 
 # ── provider 配置单一真相源 ──
@@ -195,7 +182,7 @@ def _capture_chat_model(monkeypatch, name: str) -> dict:
         def __init__(self, **kwargs):
             captured.update(kwargs)
 
-    monkeypatch.setattr(f"engines.ai.agentscope.model.{name}", _FakeChatModel)
+    monkeypatch.setattr(f"engines.ai.agents.model.{name}", _FakeChatModel)
     return captured
 
 

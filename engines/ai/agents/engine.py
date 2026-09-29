@@ -60,7 +60,6 @@ class AgentScopeEngine:
             req.tools,
             req.user_id,
             skill_dirs=req.skill_dirs,
-            system_prompts=req.system_prompts,
         )
         wf = DeviceExecutionWorkflow(
             planner,

@@ -60,6 +60,9 @@ vi.mock('@/modules/ai-assistant/api/toolbox', () => ({
 import {
   MODEL_DEBUG_ANSWER_ERROR_LABEL,
   MODEL_DEBUG_ANSWER_LABEL,
+  MODEL_DEBUG_ASSEMBLY_NOTE,
+  MODEL_DEBUG_DEVICE_NOT_NEEDED_NOTE,
+  MODEL_DEBUG_LAYER_TITLES,
   MODEL_DEBUG_SCOPE_NOTE,
   MODEL_DEBUG_THINKING_LABEL,
   MODEL_DEBUG_TRACE_LABEL,
@@ -96,12 +99,34 @@ const CONFIG = {
         has_api_key: true,
         configured: true,
       },
-      prompt: 'EXECUTOR-PROMPT',
       tools: [
         { name: 'tap_screen', read_only: false, category: '设备控制', enabled: true },
         { name: 'input_text', read_only: false, category: '设备控制', enabled: true },
         { name: 'screenshot_page', read_only: true, category: '设备检查器', enabled: false },
       ],
+    },
+    skills: { gate_on: true, shared_by_roles: true, items: [{ name: 'skill-a', path: '/p/a' }] },
+  },
+}
+
+/** 规划角色夹具：工具子集不含设备操作工具，故不需要设备 */
+const PLANNER_CONFIG = {
+  status: true,
+  data: {
+    agent_id: 10,
+    agent_name: '自动化小助手',
+    role: {
+      role: 'planner',
+      label: '规划模型 Planner',
+      vision: false,
+      needs_device: false,
+      model: {
+        provider: 'deepseek',
+        model_name: 'deepseek-chat',
+        has_api_key: true,
+        configured: true,
+      },
+      tools: [{ name: 'list_page_flows', read_only: true, category: '页面流', enabled: true }],
     },
     skills: { gate_on: true, shared_by_roles: true, items: [{ name: 'skill-a', path: '/p/a' }] },
   },
@@ -299,9 +324,10 @@ describe('ModelDebugPage', () => {
     expect(facts).toContain('1 个')
 
     const text = wrapper.text()
-    expect(text).toContain('① 生效装配 · 能干什么')
-    expect(text).toContain('② 参考数据 · 有哪些资产')
-    expect(text).toContain('③ 调试对话 · 常驻右栏')
+    expect(text).toContain(MODEL_DEBUG_LAYER_TITLES.role)
+    expect(text).toContain(MODEL_DEBUG_LAYER_TITLES.assembly)
+    expect(text).toContain(MODEL_DEBUG_LAYER_TITLES.reference)
+    expect(text).toContain(MODEL_DEBUG_LAYER_TITLES.chat)
     expect(wrapper.find('.md-chat .md-textarea').exists()).toBe(true)
   })
 
@@ -363,19 +389,16 @@ describe('ModelDebugPage', () => {
     await vi.waitFor(() => expect(wrapper.find('.md-tool').exists()).toBe(false))
   })
 
-  it('提示词默认折叠，展开后才渲染 Markdown 正文', async () => {
+  it('不展示系统提示词：既无折叠块也无提示词正文', async () => {
     const wrapper = await mountLoaded()
 
+    // 不得有提示词区块（折叠头 / 字数标识），也不得渲染提示词正文
+    expect(wrapper.find('.md-group-head--toggle').exists()).toBe(false)
     expect(wrapper.find('.md-md').exists()).toBe(false)
-    const toggle = wrapper.find('.md-group-head--toggle')
-    expect(toggle.text()).toContain(String(CONFIG.data.role.prompt.length) + ' 字')
-    expect(toggle.text()).toContain('库中当前值')
-
-    await toggle.trigger('click')
-    await nextTick()
-
-    expect(wrapper.find('.md-md').exists()).toBe(true)
-    expect(wrapper.find('.md-md').text()).toContain('EXECUTOR-PROMPT')
+    // 提示词正文锚点（引擎侧 PLANNER_PROMPT 的开头）不得出现在页面上
+    expect(wrapper.text()).not.toContain('## 角色')
+    // 整页文本也不得出现「系统提示词」四字（空态示例已去掉会反问提示词原文的问法）
+    expect(wrapper.text()).not.toContain('系统提示词')
   })
 
   it('归属标注出现在对应区块的组头内', async () => {
@@ -581,9 +604,47 @@ describe('ModelDebugPage', () => {
 
     const text = wrapper.text()
     expect(text).toContain(MODEL_DEBUG_SCOPE_NOTE)
+    // 生效装配区底部必须如实写明「挂真实工具、会真机操作」
+    expect(text).toContain(MODEL_DEBUG_ASSEMBLY_NOTE)
     expect(text).not.toContain('最长 5 分钟')
     expect(text).not.toContain('不挂工具')
     expect(text).not.toContain('不碰真机')
+    // 旧文案原句（不挂载 / 不触碰）不得再出现
+    expect(text).not.toContain('不挂载这些工具')
+    expect(text).not.toContain('不触碰真机')
+  })
+
+  it('参考数据区：需要设备的角色给出可用设备候选，整区只读', async () => {
+    const wrapper = await mountLoaded()
+
+    const band = wrapper.find('[data-testid="model-debug-reference"]')
+    expect(band.exists()).toBe(true)
+    expect(band.text()).toContain(MODEL_DEBUG_LAYER_TITLES.reference)
+
+    // 候选口径与调试设备下拉同源：仅在线且未被占用
+    await vi.waitFor(() =>
+      expect(band.find('[data-testid="model-debug-ref-devices"]').exists()).toBe(true),
+    )
+    const devices = band.find('[data-testid="model-debug-ref-devices"]')
+    expect(devices.text()).toContain('SM-S9010')
+    expect(devices.text()).toContain('ONLINE-1')
+    expect(devices.text()).not.toContain('BUSY-1')
+    expect(devices.text()).not.toContain('OFF-1')
+
+    // 只读：没有按钮与输入控件
+    expect(band.find('button').exists()).toBe(false)
+    expect(band.find('input').exists()).toBe(false)
+  })
+
+  it('参考数据区：不需要设备的角色如实说明，并列出 Skill 目录路径', async () => {
+    fetchConfig.mockResolvedValue(PLANNER_CONFIG)
+    const wrapper = await mountLoaded()
+
+    const band = wrapper.find('[data-testid="model-debug-reference"]')
+    expect(band.find('[data-testid="model-debug-ref-device-note"]').text()).toBe(
+      MODEL_DEBUG_DEVICE_NOT_NEEDED_NOTE,
+    )
+    expect(band.find('[data-testid="model-debug-ref-skills"]').text()).toContain('/p/a')
   })
 })
 

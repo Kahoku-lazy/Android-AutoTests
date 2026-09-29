@@ -89,27 +89,12 @@ def resolve_device_serial(task_device_serial: str = "") -> str:
 _resolve_device_serial = resolve_device_serial
 
 
-def _system_prompts(agent) -> dict[str, str]:
-    """从智能体表字段读取三角色系统提示词；任一份为空则装配失败。"""
-    field_by_role = {
-        "planner": "prompt_planner",
-        "executor": "prompt_executor",
-        "verifier": "prompt_verifier",
-    }
-    out: dict[str, str] = {}
-    for role, field in field_by_role.items():
-        text = str(getattr(agent, field, "") or "")
-        if not text.strip():
-            raise ValueError(f"智能体配置 {role} 系统提示词为空，无法组装任务")
-        out[role] = text
-    return out
-
-
 def build_request(task, agent) -> TaskRequest:
     """AITask + AIAgent → TaskRequest（任务表单 + 三角色模型 + 工具清单）。
 
-    装配期 fail-fast：线路 / 角色 / provider / 设备串 / 系统提示词任一项缺失或非法即抛错。
+    装配期 fail-fast：线路 / 角色 / provider / 设备串任一项缺失或非法即抛错。
     规划用户输入为四键中文 JSON，仍经 TaskRequest.goal 传入引擎。
+    系统提示词不在此组装：它随引擎走（engines/ai/agents/config.py），不经 TaskRequest 注入。
     """
     from django.conf import settings
 
@@ -127,7 +112,6 @@ def build_request(task, agent) -> TaskRequest:
         task_id=int(getattr(task, "id", 0) or 0),
         media_root=str(getattr(settings, "MEDIA_ROOT", "") or ""),
         skill_dirs=list_enabled_skill_dirs() if agent.enable_skills else [],
-        system_prompts=_system_prompts(agent),
         # 设备日志证据：按需启动常驻采集并注入；开关关闭 / 启动失败时为 None（验收降级为只看截图）
         log_evidence=ensure_log_evidence(),
         # 当前关键词表（关键词 → 功能点）：验收模型据此报出要检查的关键词

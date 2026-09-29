@@ -25,8 +25,8 @@ from apps.ai_assistant import model_debug
 from apps.ai_assistant.api import encrypt_key
 from apps.ai_assistant.log_history import NOTE_NO_LISTEN
 from apps.ai_assistant.models import AIAgent
-from engines.ai.agentscope.config import ModelConfig
-from engines.ai.agentscope.model import RoleResult
+from engines.ai.agents.config import ModelConfig
+from engines.ai.agents.model import RoleResult
 from shared.auth.jwt_auth import create_access_token
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db(transaction=True)]
@@ -136,9 +136,6 @@ def agent(admin):
     return AIAgent.objects.create(
         owner=admin,
         name="调试智能体",
-        prompt_planner="P",
-        prompt_executor="E",
-        prompt_verifier="V",
         route_configs=_route_cfg(),
     )
 

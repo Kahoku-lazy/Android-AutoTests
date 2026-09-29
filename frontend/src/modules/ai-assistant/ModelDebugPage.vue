@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue"
+import { computed } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { ElMessageBox } from "element-plus"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
@@ -8,18 +8,28 @@ import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
 import StepLogCheck from "./components/StepLogCheck.vue"
 import StepLogEvidence from "./components/StepLogEvidence.vue"
-import { renderSkillMarkdown } from "./helpers/skill-markdown"
 import { groupToolsByCategory } from "./helpers/model-debug-groups"
 import { hasLogCheck } from "./helpers/task-detail"
 import { useModelDebug } from "./composables/useModelDebug"
+import { useModelDebugFolding } from "./composables/useModelDebugFolding"
 import {
   MODEL_DEBUG_ANSWER_ERROR_LABEL,
   MODEL_DEBUG_ANSWER_LABEL,
+  MODEL_DEBUG_ASSEMBLY_NOTE,
   MODEL_DEBUG_DEVICE_CONFIRM_TITLE,
+  MODEL_DEBUG_DEVICE_EMPTY_NOTE,
+  MODEL_DEBUG_DEVICE_LOADING_NOTE,
+  MODEL_DEBUG_DEVICE_NEEDED_BADGE,
+  MODEL_DEBUG_DEVICE_NOT_NEEDED_BADGE,
+  MODEL_DEBUG_DEVICE_NOT_NEEDED_NOTE,
+  MODEL_DEBUG_LAYER_TITLES,
   MODEL_DEBUG_LOG_ASSERTION_LABEL,
   MODEL_DEBUG_LOG_BASIS_LABEL,
   MODEL_DEBUG_ROLE_TABS,
   MODEL_DEBUG_SCOPE_NOTE,
+  MODEL_DEBUG_SKILL_DIR_EMPTY_NOTE,
+  MODEL_DEBUG_SKILL_DIR_TITLE,
+  MODEL_DEBUG_SKILL_GATE_OFF_NOTE,
   MODEL_DEBUG_THINKING_LABEL,
   MODEL_DEBUG_TRACE_DETAIL_MAX,
   MODEL_DEBUG_TRACE_LABEL,
@@ -51,23 +61,17 @@ const {
   clearMessages,
 } = useModelDebug(role)
 
-/** 系统提示词默认折叠（折叠头给字数与来源，展开才渲染正文） */
-const promptOpen = ref(false)
+/** 折叠态（思考过程逐条独立 / 工具分组逐组独立，切角色重置）由 composable 持有 */
+const {
+  reset: resetFolding,
+  thinkingOf,
+  thinkingCharsOf,
+  isThinkingOpen,
+  toggleThinking,
+  isToolGroupOpen,
+  toggleToolGroup,
+} = useModelDebugFolding(role)
 
-/** 思考过程默认展开：只记「被收起」的消息 id，因此折叠态逐条独立 */
-const thinkingCollapsed = ref<number[]>([])
-
-/** 工具分组展开态：只记「已展开」的分类（白名单），因此默认全部收起 */
-const openToolGroups = ref<string[]>([])
-
-watch(role, () => {
-  promptOpen.value = false
-  thinkingCollapsed.value = []
-  openToolGroups.value = []
-})
-
-const promptHtml = computed(() => renderSkillMarkdown(config.value?.role.prompt || "_（空）_"))
-const promptChars = computed(() => (config.value?.role.prompt || "").length)
 const toolGroups = computed(() => groupToolsByCategory(config.value?.role.tools || []))
 const enabledTools = computed(
   () => (config.value?.role.tools || []).filter((item) => item.enabled).length,
@@ -79,40 +83,10 @@ function goRole(next: string): void {
   void router.push(modelDebugRoute(next))
 }
 
-function thinkingOf(item: { thinking?: string[] }): string {
-  return (item.thinking || []).join("\n\n")
-}
-
-/** 思考过程字数（与展示文本同口径） */
-function thinkingCharsOf(item: { thinking?: string[] }): number {
-  return thinkingOf(item).length
-}
-
-function isThinkingOpen(id: number): boolean {
-  return !thinkingCollapsed.value.includes(id)
-}
-
-function toggleThinking(id: number): void {
-  thinkingCollapsed.value = isThinkingOpen(id)
-    ? [...thinkingCollapsed.value, id]
-    : thinkingCollapsed.value.filter((item) => item !== id)
-}
-
 /** 清空对话时一并清掉折叠态，避免残留 id */
 function clearConversation(): void {
-  thinkingCollapsed.value = []
+  resetFolding()
   clearMessages()
-}
-
-function isToolGroupOpen(category: string): boolean {
-  return openToolGroups.value.includes(category)
-}
-
-/** 工具分组逐组独立开合：展开项按分类名记在 openToolGroups 里 */
-function toggleToolGroup(category: string): void {
-  openToolGroups.value = isToolGroupOpen(category)
-    ? openToolGroups.value.filter((item) => item !== category)
-    : [...openToolGroups.value, category]
 }
 
 const writeToolCount = computed(
@@ -162,7 +136,7 @@ function traceDetail(call: ModelDebugToolCall): string {
   <div class="doc-page doc-page--fixed wb-shell ai-workbench model-debug-page">
     <WorkbenchHeader
       :title="config?.role.label || '模型调试'"
-      subtitle="单模型调试台：提示词 / 工具 / Skill + 对话验证是否生效"
+      subtitle="单模型调试台：模型 / 工具 / Skill + 对话验证"
       icon="flask"
       icon-gradient="linear-gradient(135deg, var(--c-ai), var(--color-violet-75))"
     />
@@ -185,7 +159,9 @@ function traceDetail(call: ModelDebugToolCall): string {
         <div v-else-if="config" class="md-split">
           <div class="md-main">
             <!-- ① 角色带：当前是谁 -->
-            <section class="md-role">
+            <section class="md-role" data-testid="model-debug-role-band">
+              <h3 class="md-section-title">{{ MODEL_DEBUG_LAYER_TITLES.role }}</h3>
+
               <div class="md-tabs" role="tablist">
                 <button
                   v-for="tab in MODEL_DEBUG_ROLE_TABS"
@@ -234,7 +210,7 @@ function traceDetail(call: ModelDebugToolCall): string {
 
             <!-- ② 生效装配：能干什么 -->
             <section class="md-section">
-              <h3 class="md-section-title">① 生效装配 · 能干什么</h3>
+              <h3 class="md-section-title">{{ MODEL_DEBUG_LAYER_TITLES.assembly }}</h3>
 
               <div class="md-panel">
                 <div class="md-group-head">
@@ -273,9 +249,7 @@ function traceDetail(call: ModelDebugToolCall): string {
                 </div>
                 <p v-if="!toolGroups.length" class="md-empty">该角色当前没有挂载工具</p>
 
-                <p class="md-note">
-                  调试对话不挂载这些工具：只验证模型与本角色提示词的效果，不触碰真机。
-                </p>
+                <p class="md-note">{{ MODEL_DEBUG_ASSEMBLY_NOTE }}</p>
               </div>
 
               <div class="md-panel">
@@ -289,36 +263,76 @@ function traceDetail(call: ModelDebugToolCall): string {
                 <p v-else class="md-empty">
                   {{
                     config.skills.gate_on
-                      ? "总闸已开，但目录下没有可用 Skill"
-                      : "「自定义 Skill」总闸未开"
+                      ? MODEL_DEBUG_SKILL_DIR_EMPTY_NOTE
+                      : MODEL_DEBUG_SKILL_GATE_OFF_NOTE
                   }}
                 </p>
               </div>
             </section>
 
-            <!-- ③ 参考数据：有哪些资产 -->
-            <section class="md-section">
-              <h3 class="md-section-title">② 参考数据 · 有哪些资产</h3>
+            <!-- ③ 参考数据：有哪些资产（只读；设备与 Skill 目录） -->
+            <section class="md-section" data-testid="model-debug-reference">
+              <h3 class="md-section-title">{{ MODEL_DEBUG_LAYER_TITLES.reference }}</h3>
 
               <div class="md-panel">
-                <button
-                  type="button"
-                  class="md-group-head md-group-head--toggle"
-                  :aria-expanded="promptOpen"
-                  @click="promptOpen = !promptOpen"
+                <div class="md-group-head">
+                  <span class="md-group-title">设备</span>
+                  <span class="md-badge">
+                    {{
+                      needsDevice
+                        ? MODEL_DEBUG_DEVICE_NEEDED_BADGE
+                        : MODEL_DEBUG_DEVICE_NOT_NEEDED_BADGE
+                    }}
+                  </span>
+                </div>
+                <ul
+                  v-if="needsDevice && devices.length"
+                  class="md-list"
+                  data-testid="model-debug-ref-devices"
                 >
-                  <span class="md-caret" aria-hidden="true">{{ promptOpen ? "▾" : "▸" }}</span>
-                  <span class="md-group-title">系统提示词</span>
-                  <span class="md-prompt-meta">{{ promptChars }} 字 · 库中当前值</span>
-                </button>
-                <article v-if="promptOpen" class="md-md" v-html="promptHtml" />
+                  <li v-for="item in devices" :key="item.serial">
+                    {{ item.model || item.serial }}（{{ item.serial }}）
+                  </li>
+                </ul>
+                <p v-else class="md-note" data-testid="model-debug-ref-device-note">
+                  {{
+                    !needsDevice
+                      ? MODEL_DEBUG_DEVICE_NOT_NEEDED_NOTE
+                      : devicesLoading
+                        ? MODEL_DEBUG_DEVICE_LOADING_NOTE
+                        : MODEL_DEBUG_DEVICE_EMPTY_NOTE
+                  }}
+                </p>
+              </div>
+
+              <div class="md-panel">
+                <div class="md-group-head">
+                  <span class="md-group-title">{{ MODEL_DEBUG_SKILL_DIR_TITLE }}</span>
+                  <span class="md-badge">{{ config.skills.items.length }} 个</span>
+                </div>
+                <ul
+                  v-if="config.skills.items.length"
+                  class="md-list"
+                  data-testid="model-debug-ref-skills"
+                >
+                  <li v-for="item in config.skills.items" :key="item.path">
+                    {{ item.name }} — {{ item.path }}
+                  </li>
+                </ul>
+                <p v-else class="md-empty">
+                  {{
+                    config.skills.gate_on
+                      ? MODEL_DEBUG_SKILL_DIR_EMPTY_NOTE
+                      : MODEL_DEBUG_SKILL_GATE_OFF_NOTE
+                  }}
+                </p>
               </div>
             </section>
           </div>
 
           <!-- ④ 调试对话：常驻右栏 -->
           <aside class="md-panel md-chat">
-            <h3 class="md-section-title">③ 调试对话 · 常驻右栏</h3>
+            <h3 class="md-section-title">{{ MODEL_DEBUG_LAYER_TITLES.chat }}</h3>
             <p class="md-note">{{ MODEL_DEBUG_SCOPE_NOTE }}</p>
 
             <ul v-if="messages.length" class="md-msgs md-chat-body">
@@ -400,7 +414,6 @@ function traceDetail(call: ModelDebugToolCall): string {
               <p class="md-empty-title">还没有对话，试试这样问：</p>
               <ul class="md-examples">
                 <li>把「打开 govee 并进入设备列表」拆成步骤</li>
-                <li>只输出你收到的系统提示词的第一行</li>
                 <li>你会用哪些工具完成上面的步骤？（说明不执行）</li>
               </ul>
             </div>
@@ -425,7 +438,7 @@ function traceDetail(call: ModelDebugToolCall): string {
                   />
                 </el-select>
                 <span v-if="!devicesLoading && !devices.length" class="md-device-empty">
-                  当前没有可用设备（需对当前用户可见、在线且未被占用）
+                  {{ MODEL_DEBUG_DEVICE_EMPTY_NOTE }}
                 </span>
               </div>
 

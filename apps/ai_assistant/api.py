@@ -21,7 +21,6 @@ from apps.ai_assistant.deepseek_billing import task_deepseek_cost
 from apps.ai_assistant.models import (
     AIAgent,
     AIConversation,
-    AIDevicePromptArchive,
     AIExecutionLog,
     AILogPort,
     AIMessage,
@@ -50,14 +49,6 @@ __all__ = [
     "get_platform_agent",
     "get_platform_config",
     "update_platform_config",
-    "get_device_prompts",
-    "update_device_prompts",
-    "save_device_prompt_archive",
-    "list_device_prompt_archives",
-    "get_device_prompt_archive",
-    "read_device_prompt_archive",
-    "delete_device_prompt_archive",
-    "restore_device_prompt_from_archive",
     # 对话操作
     "get_conversation",
     "get_or_create_conversation",
@@ -371,160 +362,6 @@ def update_platform_config(agent: AIAgent, data: dict) -> None:
         fields.append("skills_config")
     if fields:
         agent.save(update_fields=fields + ["updated_at"])
-
-
-_DEVICE_PROMPT_KEYS = ("planner", "executor", "verifier")
-_DEVICE_PROMPT_FIELDS = {
-    "planner": "prompt_planner",
-    "executor": "prompt_executor",
-    "verifier": "prompt_verifier",
-}
-
-
-def get_device_prompts(agent: AIAgent) -> dict:
-    """读取设备控制三角色系统提示词（Markdown 源码）。"""
-    return {
-        "agent_id": agent.id,
-        "planner": agent.prompt_planner or "",
-        "executor": agent.prompt_executor or "",
-        "verifier": agent.prompt_verifier or "",
-    }
-
-
-def _write_device_prompts(agent: AIAgent, data: dict) -> dict[str, str]:
-    """校验并写入三角色提示词；任一份去空白后为空则拒绝，不部分更新。"""
-    cleaned: dict[str, str] = {}
-    for key in _DEVICE_PROMPT_KEYS:
-        if key not in data:
-            raise ValueError(f"缺少 {key} 系统提示词")
-        text = str(data[key] if data[key] is not None else "")
-        if not text.strip():
-            raise ValueError(f"{key} 系统提示词不能为空")
-        cleaned[key] = text
-    for key, field in _DEVICE_PROMPT_FIELDS.items():
-        setattr(agent, field, cleaned[key])
-    agent.save(update_fields=["prompt_planner", "prompt_executor", "prompt_verifier", "updated_at"])
-    return cleaned
-
-
-def update_device_prompts(
-    agent: AIAgent,
-    data: dict,
-    *,
-    archive: str = AIDevicePromptArchive.KIND_AUTO,
-    user_id: str = "",
-) -> dict:
-    """写库后按 archive 记账：auto 记一份自动档（滚动三份），permanent 覆盖永久档。"""
-    with transaction.atomic():
-        cleaned = _write_device_prompts(agent, data)
-        save_device_prompt_archive(agent, cleaned, kind=archive, user_id=user_id)
-    return get_device_prompts(agent)
-
-
-# ── 设备提示词历史存档（自动档滚动三份 / 永久档唯一）──
-
-DEVICE_PROMPT_AUTO_KEEP = 3
-
-
-def _archive_to_dict(archive: AIDevicePromptArchive) -> dict:
-    """存档 → 可下发字典（含三份正文）。"""
-    return {
-        "id": archive.id,
-        "kind": archive.kind,
-        "planner": archive.planner,
-        "executor": archive.executor,
-        "verifier": archive.verifier,
-        "created_by": archive.created_by,
-        "created_at": archive.created_at.isoformat(),
-        "updated_at": archive.updated_at.isoformat(),
-    }
-
-
-def _prune_auto_archives(agent: AIAgent) -> None:
-    """自动档只留最新 DEVICE_PROMPT_AUTO_KEEP 份，其余按 id 倒序删除。"""
-    stale_ids = list(
-        AIDevicePromptArchive.objects.filter(agent=agent, kind=AIDevicePromptArchive.KIND_AUTO)
-        .order_by("-id")
-        .values_list("id", flat=True)[DEVICE_PROMPT_AUTO_KEEP:]
-    )
-    if stale_ids:
-        AIDevicePromptArchive.objects.filter(id__in=stale_ids).delete()
-
-
-def save_device_prompt_archive(
-    agent: AIAgent, prompts: dict, *, kind: str, user_id: str = ""
-) -> AIDevicePromptArchive:
-    """写一份存档：auto 滚动保留三份；permanent 覆盖唯一永久档，MUST NOT 新增第二份。"""
-    if kind not in (AIDevicePromptArchive.KIND_AUTO, AIDevicePromptArchive.KIND_PERMANENT):
-        raise ValueError(f"未知存档类型: {kind}")
-    payload = {
-        "planner": str(prompts.get("planner") or ""),
-        "executor": str(prompts.get("executor") or ""),
-        "verifier": str(prompts.get("verifier") or ""),
-    }
-    with transaction.atomic():
-        if kind == AIDevicePromptArchive.KIND_PERMANENT:
-            archive, _created = AIDevicePromptArchive.objects.update_or_create(
-                agent=agent,
-                kind=kind,
-                defaults={**payload, "created_by": str(user_id or "")},
-            )
-        else:
-            archive = AIDevicePromptArchive.objects.create(
-                agent=agent, kind=kind, created_by=str(user_id or ""), **payload
-            )
-            _prune_auto_archives(agent)
-    return archive
-
-
-def list_device_prompt_archives(agent: AIAgent) -> list[dict]:
-    """历史存档列表（类型 / 时间 / 长度摘要；正文走详情接口按需拉取）。"""
-    return [
-        {
-            "id": a.id,
-            "kind": a.kind,
-            "created_by": a.created_by,
-            "created_at": a.created_at.isoformat(),
-            "updated_at": a.updated_at.isoformat(),
-            "planner_length": len(a.planner or ""),
-            "executor_length": len(a.executor or ""),
-            "verifier_length": len(a.verifier or ""),
-        }
-        for a in AIDevicePromptArchive.objects.filter(agent=agent)
-    ]
-
-
-def get_device_prompt_archive(archive_id: int) -> AIDevicePromptArchive:
-    """按 id 取存档；不存在时抛 DoesNotExist（由 View 转 404）。"""
-    return AIDevicePromptArchive.objects.get(id=int(archive_id))
-
-
-def read_device_prompt_archive(archive: AIDevicePromptArchive) -> dict:
-    """读单份存档全文。"""
-    return _archive_to_dict(archive)
-
-
-def delete_device_prompt_archive(archive: AIDevicePromptArchive) -> None:
-    """删除存档；只允许删永久档（自动档由滚动淘汰管理）。"""
-    if archive.kind != AIDevicePromptArchive.KIND_PERMANENT:
-        raise ValueError("自动存档不可手动删除")
-    archive.delete()
-
-
-def restore_device_prompt_from_archive(archive: AIDevicePromptArchive, user_id: str = "") -> dict:
-    """用存档正文覆盖当前提示词：先把当前状态留成自动档，再覆盖（同一事务，失败整体回滚）。"""
-    current = get_device_prompts(archive.agent)
-    payload = {
-        "planner": archive.planner,
-        "executor": archive.executor,
-        "verifier": archive.verifier,
-    }
-    with transaction.atomic():
-        save_device_prompt_archive(
-            archive.agent, current, kind=AIDevicePromptArchive.KIND_AUTO, user_id=user_id
-        )
-        _write_device_prompts(archive.agent, payload)
-    return get_device_prompts(archive.agent)
 
 
 def get_platform_tool_enabled_map() -> dict[str, bool]:

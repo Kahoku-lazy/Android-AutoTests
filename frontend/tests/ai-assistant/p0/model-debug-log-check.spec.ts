@@ -61,7 +61,6 @@ const CONFIG = {
       has_api_key: true,
       configured: true,
     },
-    prompt: "P",
     tools: [],
   },
   skills: { gate_on: false, shared_by_roles: true, items: [] },

@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from engines.ai.agentscope.workflow import ExecutionOutput, _coerce, _exec_evidence_text
+from engines.ai.agents.workflow import ExecutionOutput, _coerce, _exec_evidence_text
 
 
 def test_contract_has_exactly_three_fields() -> None:

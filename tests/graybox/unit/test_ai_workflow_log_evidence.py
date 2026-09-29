@@ -12,8 +12,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from engines.ai.agentscope.config import DeviceExecutionConfig
-from engines.ai.agentscope.workflow import (
+from engines.ai.agents.config import DeviceExecutionConfig
+from engines.ai.agents.workflow import (
     DeviceExecutionWorkflow,
     ExecutionOutput,
     Plan,

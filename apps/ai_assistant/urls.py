@@ -36,13 +36,6 @@ from .views_log_ports_drf import (
     LogPortToggleAPIView,
 )
 from .views_model_debug_drf import ModelDebugChatAPIView, ModelDebugConfigAPIView
-from .views_prompts_drf import (
-    DevicePromptArchiveDeleteAPIView,
-    DevicePromptArchiveDetailAPIView,
-    DevicePromptArchiveListAPIView,
-    DevicePromptArchiveRestoreAPIView,
-    DevicePromptsAPIView,
-)
 from .views_tool_debug_drf import PlatformToolInvokeAPIView, PlatformToolSchemaAPIView
 from .views_toolbox_drf import SkillFileAPIView, SkillTreeAPIView, ToolboxViewSet
 from .views_upload_drf import UploadAvatarAPIView, UploadFileAPIView
@@ -91,28 +84,6 @@ special_patterns = [
         "model-debug/<str:role>/chat/",
         ModelDebugChatAPIView.as_view(),
         name="model_debug_chat",
-    ),
-    path("device-prompts/", DevicePromptsAPIView.as_view(), name="device_prompts"),
-    path("device-prompts/update/", DevicePromptsAPIView.as_view(), name="device_prompts_update"),
-    path(
-        "device-prompt-archives/",
-        DevicePromptArchiveListAPIView.as_view(),
-        name="device_prompt_archives",
-    ),
-    path(
-        "device-prompt-archives/<int:pk>/",
-        DevicePromptArchiveDetailAPIView.as_view(),
-        name="device_prompt_archive_detail",
-    ),
-    path(
-        "device-prompt-archives/<int:pk>/delete/",
-        DevicePromptArchiveDeleteAPIView.as_view(),
-        name="device_prompt_archive_delete",
-    ),
-    path(
-        "device-prompt-archives/<int:pk>/restore/",
-        DevicePromptArchiveRestoreAPIView.as_view(),
-        name="device_prompt_archive_restore",
     ),
     path("toolbox/skills/<str:name>/tree/", SkillTreeAPIView.as_view(), name="toolbox_skill_tree"),
     path("toolbox/skills/<str:name>/file/", SkillFileAPIView.as_view(), name="toolbox_skill_file"),

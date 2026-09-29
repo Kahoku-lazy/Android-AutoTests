@@ -2,13 +2,13 @@
 import type { PlatformToolCategory } from "../api/toolbox"
 import type { SharedToolItem } from "../api/toolbox"
 
-export type AssemblySourceKey = "biz" | "skill" | "prompt" | "port" | "debug" | "keywords"
+export type AssemblySourceKey = "biz" | "skill" | "port" | "debug" | "keywords"
 
 export interface AssemblySourceDef {
   key: AssemblySourceKey
   name: string
   desc: string
-  /** 空串 = 无「交给助手」总闸（如设备提示词） */
+  /** 空串 = 无「交给助手」总闸（如无线端口 / 模型调试 / 日志关键词） */
   gateKey: string
   /**
    * 来源行副标题文案。无总闸来源必填——它们不参与「交给助手」装配，
@@ -32,14 +32,6 @@ export const ASSEMBLY_SOURCES: AssemblySourceDef[] = [
     desc: "engines/ai/skills 下的本地与上传 Skill",
     gateKey: "enable_skills",
     accent: "var(--c-runner)",
-  },
-  {
-    key: "prompt",
-    name: "设备提示词",
-    desc: "规划 / 执行 / 验收三角色系统提示词（Markdown）",
-    gateKey: "",
-    meta: "规划 / 执行 / 验收 · 始终交给助手",
-    accent: "var(--c-ai)",
   },
   {
     key: "port",

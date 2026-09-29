@@ -89,8 +89,6 @@ class TaskRequest:
     log_evidence: LogEvidenceProvider | None = None
     # 当前日志关键词表文本（关键词 → 功能点；Django 从运行时索引渲染后注入，空 = 不附）
     log_keywords: str = ""
-    # 三角色系统提示词（Django 从库读取后注入；引擎常量留空，不做回退）
-    system_prompts: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass

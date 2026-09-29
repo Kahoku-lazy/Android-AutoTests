@@ -72,10 +72,13 @@ class TestAgentScopeChannel:
 
     def test_agent_scope_no_adapters_or_rag(self):
         """AgentScope 引擎不得自建数据库适配器（adapters/）或检索增强（rag/）。"""
-        scope = ROOT / "engines" / "ai" / "agentscope"
-        assert scope.is_dir(), "engines/ai/agentscope 目录不存在"
-        assert not (scope / "adapters").exists(), "engines/ai/agentscope 下禁止新增 adapters/"
-        assert not (scope / "rag").exists(), "engines/ai/agentscope 下禁止新增 rag/"
+        scope = ROOT / "engines" / "ai" / "agents"
+        assert scope.is_dir(), "engines/ai/agents 目录不存在"
+        assert not (ROOT / "engines" / "ai" / "agentscope").exists(), (
+            "引擎目录已改名为 engines/ai/agents，禁止再出现 engines/ai/agentscope"
+        )
+        assert not (scope / "adapters").exists(), "engines/ai/agents 下禁止新增 adapters/"
+        assert not (scope / "rag").exists(), "engines/ai/agents 下禁止新增 rag/"
 
 
 class TestEngineChannel:

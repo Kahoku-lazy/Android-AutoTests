@@ -1,7 +1,7 @@
 """平台工具 — 框架无关的纯函数 + 工具注册表（Django 层）。
 
 工具 = 普通函数（类型注解 + docstring 自动推导 schema），只调各 App api.py。
-框架包装（PlatformFunctionTool / build_toolkit）在 `engines.ai.agentscope.tool_wrapper`，
+框架包装（PlatformFunctionTool / build_toolkit）在 `engines.ai.agents.tool_wrapper`，
 经 `TaskRequest.tools` 注入引擎；`user_id` 由包装层构造时注入。
 """
 

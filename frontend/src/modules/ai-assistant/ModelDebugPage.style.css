@@ -148,15 +148,6 @@
   text-align: left;
 }
 
-.md-group-head--toggle {
-  width: 100%;
-  font-family: inherit;
-  background: none;
-  border: 0;
-  border-bottom: 1.5px dashed var(--dot);
-  cursor: pointer;
-}
-
 .md-group-title {
   font-size: var(--app-size-sm);
   font-weight: 800;
@@ -164,12 +155,6 @@
 
 .md-caret {
   font-size: var(--app-size-xs);
-}
-
-.md-prompt-meta {
-  margin-left: auto;
-  font-size: var(--app-size-xs);
-  color: var(--app-text-muted);
 }
 
 .md-group {
@@ -282,13 +267,6 @@
   margin: 0;
   padding-left: var(--app-space-md);
   font-size: var(--app-size-sm);
-  color: var(--ink);
-  overflow-wrap: anywhere;
-}
-
-.md-md {
-  font-size: var(--app-size-sm);
-  line-height: 1.6;
   color: var(--ink);
   overflow-wrap: anywhere;
 }

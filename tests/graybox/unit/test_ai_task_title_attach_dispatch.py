@@ -83,9 +83,6 @@ def test_build_request_embeds_planner_json():
         max_loops=3,
         owner_id="1",
         enable_skills=False,
-        prompt_planner="## p",
-        prompt_executor="## e",
-        prompt_verifier="## v",
     )
     req = engine_adapter.build_request(task, agent)
     data = json.loads(req.goal)
@@ -221,9 +218,6 @@ def _agent_stub() -> SimpleNamespace:
         max_loops=3,
         owner_id="1",
         enable_skills=False,
-        prompt_planner="## p",
-        prompt_executor="## e",
-        prompt_verifier="## v",
     )
 
 
